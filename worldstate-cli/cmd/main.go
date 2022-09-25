@@ -3,6 +3,7 @@ package main
 
 import (
 	"github.com/Fantom-foundation/Aida-Testing/worldstate-cli/cmd/build"
+	"github.com/Fantom-foundation/Aida-Testing/worldstate-cli/internal/db"
 	"github.com/urfave/cli/v2"
 	"log"
 	"os"
@@ -19,6 +20,7 @@ func main() {
 		Version:   build.Version,
 		Commands: []*cli.Command{
 			&build.CmdVersion,
+			&db.StateDumpCommand,
 		},
 	}
 
