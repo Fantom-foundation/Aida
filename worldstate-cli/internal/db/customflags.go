@@ -4,30 +4,41 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// rootHashFlag specifies root of the trie
-var rootHashFlag = cli.StringFlag{
-	Name:  "root-hash",
-	Usage: "Root of trie.",
-	Value: "",
-}
-
-// dbDirFlag defines directory to store Lachesis state and user's wallets
-var dbDirFlag = cli.PathFlag{
-	Name:  "db-dir",
-	Usage: "Data directory for the database.",
-	Value: "",
-}
-
-// dbNameFlag defines database file name
-var dbNameFlag = cli.StringFlag{
-	Name:  "db-name",
-	Usage: "Database name.",
-	Value: "main",
-}
-
-// dbNameFlag defines database file name
-var dbTypeFlag = cli.StringFlag{
-	Name:  "db-type",
-	Usage: "Type of database (\"ldb\" or \"pbl\") (default: ldb)",
-	Value: "ldb",
-}
+var (
+	// rootHashFlag specifies root of the trie
+	rootHashFlag = cli.StringFlag{
+		Name:  "root-hash",
+		Usage: "Root of trie.",
+		Value: "",
+	}
+	// stateDbDirFlag defines path to opera state database
+	stateDbDirFlag = cli.PathFlag{
+		Name:  "state-db-dir",
+		Usage: "Path for the opera state database.",
+		Value: "",
+	}
+	// substateDirFlag defines directory to substate database
+	substateDirFlag = cli.PathFlag{
+		Name:  "substate-db-dir",
+		Usage: "Substate database directory.",
+		Value: "",
+	}
+	// dbNameFlag defines database file name
+	dbNameFlag = cli.StringFlag{
+		Name:  "db-name",
+		Usage: "Database name.",
+		Value: "main",
+	}
+	// dbNameFlag defines database file name
+	dbTypeFlag = cli.StringFlag{
+		Name:  "state-db-type",
+		Usage: "Type of database (\"ldb\" or \"pbl\") (default: ldb)",
+		Value: "ldb",
+	}
+	// workersFlag defines number of worker threads that execute in parallel
+	workersFlag = cli.IntFlag{
+		Name:  "workers",
+		Usage: "Number of worker threads that execute in parallel",
+		Value: 4,
+	}
+)
