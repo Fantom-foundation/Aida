@@ -2,7 +2,6 @@ package dump
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"github.com/Fantom-foundation/Aida-Testing/worldstate-cli/internal/accstate"
 	"github.com/Fantom-foundation/Aida-Testing/worldstate-cli/internal/dump/kvdb2ethdb"
@@ -29,13 +28,12 @@ const (
 	OutAccountsBufferSize = 10
 )
 
-// TODO: fix args names
 // StateDumpCommand command
 var StateDumpCommand = cli.Command{
 	Action:    stateDumpAction,
 	Name:      "state-dump",
-	Usage:     "collect contents of mpt tree from opera database into world state database",
-	ArgsUsage: "<root-hash> <state-dump-dir> <accstate-dump-dir> <dump-name> <state-dump-type> <workers>",
+	Usage:     "Dumps state of mpt tree at given root from input database into state snapshot database.",
+	ArgsUsage: "<root> <input-db> <output-db> <input-db-name> <input-db-type> <workers>",
 	Flags: []cli.Flag{
 		&rootHashFlag,
 		&stateDBFlag,
@@ -45,7 +43,10 @@ var StateDumpCommand = cli.Command{
 		&workersFlag,
 	},
 	Description: `
-	"State dump dumps evm storage database from MPT tree at state of given root."`,
+	The worldstate-cli state-dump command requires three arguments:
+		<root> containing root hash of the state trie  
+		<input-db> path to input database
+		<output-db> path to output database`,
 }
 
 var (
@@ -73,7 +74,12 @@ func stateDumpAction(ctx *cli.Context) error {
 		log.Println("Error while opening database: ", err)
 		return err
 	}
-	defer kvdbDB.Close()
+	defer func(kvdbDB kvdb.Store) {
+		err = kvdbDB.Close()
+		if err != nil {
+			log.Println("Unable to close input database", "error", err)
+		}
+	}(kvdbDB)
 
 	// evm data are stored under prefix M
 	evmDB := table.New(kvdbDB, []byte(("M")))
@@ -83,11 +89,16 @@ func stateDumpAction(ctx *cli.Context) error {
 	// try to open output DB
 	outputDB, err := accstate.OpenOutputDB(cfg.outputDBDir)
 	if err != nil {
-		err = errors.New(fmt.Sprintf("error opening accstate %s %s: %v", cfg.dbType, cfg.outputDBDir, err))
+		err = fmt.Errorf("error opening accstate %s %s: %v", cfg.dbType, cfg.outputDBDir, err)
 		log.Println(err)
 		return err
 	}
-	defer outputDB.Backend.Close()
+	defer func(Backend accstate.BackendDatabase) {
+		err = Backend.Close()
+		if err != nil {
+			log.Println("Unable to close output database", "error", err)
+		}
+	}(outputDB.Backend)
 
 	// outAccounts channel is used to send prepared account data for writing to the output DB
 	outAccounts := make(chan accstate.Account, OutAccountsBufferSize)
@@ -129,10 +140,9 @@ func handleAccounts(evmState state.Database, inAccounts chan accstate.Account, o
 			return
 		}
 
-		err := assembleAccount(evmState, &acc, outAccounts)
+		err := assembleAccount(evmState, &acc)
 		if err != nil {
-			// TODO: log the reason, account
-			panic(err)
+			log.Fatal("assembleAccount", "account", acc, "error", err)
 		}
 		outAccounts <- acc
 	}
@@ -177,7 +187,7 @@ func getDBProducer(cfg *Config) (kvdb.IterableDBProducer, error) {
 	}
 
 	if db == nil {
-		return nil, errors.New("failed to recognise dump type")
+		return nil, fmt.Errorf("failed to recognise inputdb type")
 	}
 
 	return db, nil
@@ -214,12 +224,12 @@ func evmStateIterator(evmState state.Database, rootHash common.Hash, inAccounts 
 		log.Fatalf("EVM state trie %s iteration error: %s", rootHash.String(), stateIt.Error())
 	}
 
+	// right after iteration is done closing inAccounts channel to let workers know that their work is finished
 	close(inAccounts)
 }
 
-// assembleAccount assembles Account data
-// then sends them trough outAccounts to be written in database
-func assembleAccount(evmState state.Database, acc *accstate.Account, outAccounts chan accstate.Account) error {
+// assembleAccount assembles to account its code and storage
+func assembleAccount(evmState state.Database, acc *accstate.Account) error {
 	var err error
 
 	// extract account code

@@ -19,37 +19,37 @@ var (
 	// rootHashFlag specifies root of the trie
 	rootHashFlag = cli.StringFlag{
 		Name:  "root",
-		Usage: "Root hash of the state trie.",
+		Usage: "Root hash of the state trie",
 		Value: "",
 	}
 	// stateDBFlag defines path to opera state database
 	stateDBFlag = cli.PathFlag{
 		Name:  "input-db",
-		Usage: "Input state database path.",
+		Usage: "Input state database path",
 		Value: "",
 	}
 	// outputDBFlag defines directory to account-state database
 	outputDBFlag = cli.PathFlag{
 		Name:  "output-db",
-		Usage: "Output state snapshot database path.",
+		Usage: "Output state snapshot database path",
 		Value: "",
 	}
 	// dbNameFlag defines database file name
 	dbNameFlag = cli.StringFlag{
 		Name:  "input-db-name",
-		Usage: "Input state database name. (default: main)",
+		Usage: "Input state database name",
 		Value: "main",
 	}
 	// dbNameFlag defines database file name
 	dbTypeFlag = cli.StringFlag{
 		Name:  "input-db-type",
-		Usage: "Type of input database, (\"ldb\" or \"pbl\") (default: ldb)",
+		Usage: "Type of input database (\"ldb\" or \"pbl\")",
 		Value: "ldb",
 	}
 	// workersFlag defines number of handleAccounts threads that execute in parallel
 	workersFlag = cli.IntFlag{
 		Name:  "workers",
-		Usage: "Number of account processing threads. (default: 4)",
+		Usage: "Number of account processing threads",
 		Value: 4,
 	}
 )

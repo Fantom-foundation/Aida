@@ -7,16 +7,16 @@ import (
 	"sort"
 )
 
-// TODO: comments
-// Account is modification of GenesisAccount in core/genesis.go
+// Account is modification of SubstateAccount in substate/substate.go
 type Account struct {
-	//hash of account addr
+	//hash of account address
 	Hash    common.Hash
 	Storage map[common.Hash]common.Hash
 	Code    []byte
 	state.Account
 }
 
+// StoredAccount contains data from Account in RLP supported formats
 type StoredAccount struct {
 	Nonce    uint64
 	Balance  *big.Int
@@ -24,6 +24,7 @@ type StoredAccount struct {
 	CodeHash []byte
 }
 
+// StoredAccount converts Account into StoredAccount
 func (a *Account) StoredAccount() *StoredAccount {
 	var sa StoredAccount
 
@@ -31,6 +32,7 @@ func (a *Account) StoredAccount() *StoredAccount {
 	sa.Balance = new(big.Int).Set(a.Balance)
 	sa.CodeHash = a.CodeHash
 
+	// sorting storage by keys
 	sortedKeys := make([]common.Hash, 0, len(a.Storage))
 	for key := range a.Storage {
 		sortedKeys = append(sortedKeys, key)
@@ -39,6 +41,7 @@ func (a *Account) StoredAccount() *StoredAccount {
 		return sortedKeys[i].Big().Cmp(sortedKeys[j].Big()) < 0
 	})
 
+	// inserting sorted database into storage
 	sa.Storage = make([][2]common.Hash, 0, len(a.Storage))
 	for _, key := range sortedKeys {
 		value := a.Storage[key]

@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	stage1CodePrefix = "1c" // stage1CodePrefix + codeHash (256-bit) -> code
+	CodePrefix = "1c" // CodePrefix + codeHash (256-bit) -> code
 )
 
 type StateDB struct {
@@ -28,6 +28,7 @@ type BackendDatabase interface {
 	io.Closer
 }
 
+// OpenOutputDB opens StateDB database
 func OpenOutputDB(subStateDataDir string) (*StateDB, error) {
 	backend, err := rawdb.NewLevelDBDatabase(subStateDataDir, 1024, 100, "substatedir", false)
 	if err != nil {
@@ -37,6 +38,7 @@ func OpenOutputDB(subStateDataDir string) (*StateDB, error) {
 	return &StateDB{Backend: backend}, nil
 }
 
+// PutCode inserts Account code into database
 func (db *StateDB) PutCode(code []byte) error {
 	if len(code) == 0 {
 		return nil
@@ -46,6 +48,7 @@ func (db *StateDB) PutCode(code []byte) error {
 	return db.Backend.Put(key, code)
 }
 
+// PutAccount inserts Account into database
 func (db *StateDB) PutAccount(acc Account) error {
 	accountBytes, err := rlp.EncodeToBytes(acc.StoredAccount())
 	if err != nil {
@@ -55,7 +58,8 @@ func (db *StateDB) PutAccount(acc Account) error {
 	return db.Backend.Put(acc.Hash.Bytes(), accountBytes)
 }
 
+// CodeKey retrieves storing DB key for supplied codeHash
 func CodeKey(codeHash common.Hash) []byte {
-	prefix := []byte(stage1CodePrefix)
+	prefix := []byte(CodePrefix)
 	return append(prefix, codeHash.Bytes()...)
 }
