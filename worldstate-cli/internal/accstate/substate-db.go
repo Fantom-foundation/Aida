@@ -28,8 +28,8 @@ type BackendDatabase interface {
 	io.Closer
 }
 
-func OpenOutputDB(substateDatadir string) (*StateDB, error) {
-	backend, err := rawdb.NewLevelDBDatabase(substateDatadir, 1024, 100, "substatedir", false)
+func OpenOutputDB(subStateDataDir string) (*StateDB, error) {
+	backend, err := rawdb.NewLevelDBDatabase(subStateDataDir, 1024, 100, "substatedir", false)
 	if err != nil {
 		return nil, err
 	}
@@ -42,12 +42,12 @@ func (db *StateDB) PutCode(code []byte) error {
 		return nil
 	}
 	codeHash := crypto.Keccak256Hash(code)
-	key := Stage1CodeKey(codeHash)
+	key := CodeKey(codeHash)
 	return db.Backend.Put(key, code)
 }
 
 func (db *StateDB) PutAccount(acc Account) error {
-	accountBytes, err := rlp.EncodeToBytes(acc.NewAccountStorageRLP())
+	accountBytes, err := rlp.EncodeToBytes(acc.StoredAccount())
 	if err != nil {
 		log.Fatal("Encoding acc to rlp", "addrHash", acc.Hash, "error", err)
 	}
@@ -55,7 +55,7 @@ func (db *StateDB) PutAccount(acc Account) error {
 	return db.Backend.Put(acc.Hash.Bytes(), accountBytes)
 }
 
-func Stage1CodeKey(codeHash common.Hash) []byte {
+func CodeKey(codeHash common.Hash) []byte {
 	prefix := []byte(stage1CodePrefix)
 	return append(prefix, codeHash.Bytes()...)
 }
