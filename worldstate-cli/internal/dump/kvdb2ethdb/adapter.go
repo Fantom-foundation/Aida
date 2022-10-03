@@ -9,8 +9,6 @@ type Adapter struct {
 	kvdb.Store
 }
 
-var _ ethdb.KeyValueStore = (*Adapter)(nil)
-
 func Wrap(v kvdb.Store) *Adapter {
 	return &Adapter{v}
 }

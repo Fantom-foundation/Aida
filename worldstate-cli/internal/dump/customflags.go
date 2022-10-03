@@ -1,4 +1,4 @@
-package db
+package dump
 
 import (
 	"github.com/urfave/cli/v2"
@@ -11,34 +11,34 @@ var (
 		Usage: "Root of trie.",
 		Value: "",
 	}
-	// stateDbDirFlag defines path to opera state database
-	stateDbDirFlag = cli.PathFlag{
-		Name:  "state-db-dir",
+	// stateDBFlag defines path to opera state database
+	stateDBFlag = cli.PathFlag{
+		Name:  "state-dump-dir",
 		Usage: "Path for the opera state database.",
 		Value: "",
 	}
-	// substateDirFlag defines directory to substate database
-	substateDirFlag = cli.PathFlag{
-		Name:  "substate-db-dir",
+	// outputDBFlag defines directory to account-state database
+	outputDBFlag = cli.PathFlag{
+		Name:  "accstate-dump-dir",
 		Usage: "Substate database directory.",
 		Value: "",
 	}
 	// dbNameFlag defines database file name
 	dbNameFlag = cli.StringFlag{
-		Name:  "db-name",
+		Name:  "dump-name",
 		Usage: "Database name.",
 		Value: "main",
 	}
 	// dbNameFlag defines database file name
 	dbTypeFlag = cli.StringFlag{
-		Name:  "state-db-type",
+		Name:  "state-dump-type",
 		Usage: "Type of database (\"ldb\" or \"pbl\") (default: ldb)",
 		Value: "ldb",
 	}
-	// workersFlag defines number of worker threads that execute in parallel
+	// workersFlag defines number of handleAccounts threads that execute in parallel
 	workersFlag = cli.IntFlag{
 		Name:  "workers",
-		Usage: "Number of worker threads that execute in parallel",
+		Usage: "Number of handleAccounts threads that execute in parallel",
 		Value: 4,
 	}
 )
