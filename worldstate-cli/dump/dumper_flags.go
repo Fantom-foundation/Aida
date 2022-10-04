@@ -16,38 +16,38 @@ type Config struct {
 }
 
 var (
-	// rootHashFlag specifies root of the trie
-	rootHashFlag = cli.StringFlag{
+	// RootHashFlag specifies root of the trie
+	RootHashFlag = cli.StringFlag{
 		Name:  "root",
 		Usage: "Root hash of the state trie",
 		Value: "",
 	}
-	// stateDBFlag defines path to opera state database
-	stateDBFlag = cli.PathFlag{
+	// StateDBFlag defines path to opera state database
+	StateDBFlag = cli.PathFlag{
 		Name:  "input-db",
 		Usage: "Input state database path",
 		Value: "",
 	}
-	// outputDBFlag defines directory to account-state database
-	outputDBFlag = cli.PathFlag{
+	// OutputDBFlag defines directory to account-state database
+	OutputDBFlag = cli.PathFlag{
 		Name:  "output-db",
 		Usage: "Output state snapshot database path",
 		Value: "",
 	}
-	// dbNameFlag defines database file name
-	dbNameFlag = cli.StringFlag{
+	// DbNameFlag defines database file name
+	DbNameFlag = cli.StringFlag{
 		Name:  "input-db-name",
 		Usage: "Input state database name",
 		Value: "main",
 	}
-	// dbNameFlag defines database file name
-	dbTypeFlag = cli.StringFlag{
+	// DbNameFlag defines database file name
+	DbTypeFlag = cli.StringFlag{
 		Name:  "input-db-type",
 		Usage: "Type of input database (\"ldb\" or \"pbl\")",
 		Value: "ldb",
 	}
-	// workersFlag defines number of handleAccounts threads that execute in parallel
-	workersFlag = cli.IntFlag{
+	// WorkersFlag defines number of handleAccounts threads that execute in parallel
+	WorkersFlag = cli.IntFlag{
 		Name:  "workers",
 		Usage: "Number of account processing threads",
 		Value: 4,
@@ -57,16 +57,16 @@ var (
 // parseArguments parse arguments into Config
 func parseArguments(ctx *cli.Context) *Config {
 	// check whether supplied rootHash is not empty
-	rootHash := common.HexToHash(ctx.String(rootHashFlag.Name))
+	rootHash := common.HexToHash(ctx.String(RootHashFlag.Name))
 	if rootHash == emptyHash {
 		log.Panicln("Root hash is not defined.")
 	}
 
 	return &Config{
 		rootHash:         rootHash,
-		operaStateDBDir:  ctx.Path(stateDBFlag.Name),
-		outputDBDir:      ctx.Path(outputDBFlag.Name),
-		operaStateDBName: ctx.String(dbNameFlag.Name),
-		dbType:           ctx.String(dbTypeFlag.Name),
-		workers:          ctx.Int(workersFlag.Name)}
+		operaStateDBDir:  ctx.Path(StateDBFlag.Name),
+		outputDBDir:      ctx.Path(OutputDBFlag.Name),
+		operaStateDBName: ctx.String(DbNameFlag.Name),
+		dbType:           ctx.String(DbTypeFlag.Name),
+		workers:          ctx.Int(WorkersFlag.Name)}
 }

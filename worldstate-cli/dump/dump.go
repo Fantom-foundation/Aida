@@ -3,8 +3,8 @@ package dump
 import (
 	"bytes"
 	"fmt"
-	"github.com/Fantom-foundation/Aida-Testing/worldstate-cli/internal/accstate"
-	"github.com/Fantom-foundation/Aida-Testing/worldstate-cli/internal/dump/kvdb2ethdb"
+	"github.com/Fantom-foundation/Aida-Testing/worldstate-cli/dump/kvdb2ethdb"
+	accstate2 "github.com/Fantom-foundation/Aida-Testing/worldstate-cli/state-operation"
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/leveldb"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/nokeyiserr"
@@ -28,27 +28,6 @@ const (
 	OutAccountsBufferSize = 10
 )
 
-// StateDumpCommand command
-var StateDumpCommand = cli.Command{
-	Action:    stateDumpAction,
-	Name:      "state-dump",
-	Usage:     "Dumps state of mpt tree at given root from input database into state snapshot database.",
-	ArgsUsage: "<root> <input-db> <output-db> <input-db-name> <input-db-type> <workers>",
-	Flags: []cli.Flag{
-		&rootHashFlag,
-		&stateDBFlag,
-		&outputDBFlag,
-		&dbNameFlag,
-		&dbTypeFlag,
-		&workersFlag,
-	},
-	Description: `
-	The worldstate-cli state-dump command requires three arguments:
-		<root> containing root hash of the state trie  
-		<input-db> path to input database
-		<output-db> path to output database`,
-}
-
 var (
 	log       = logging.Default()
 	emptyHash = common.Hash{}
@@ -58,8 +37,8 @@ var (
 	emptyCodeHash = common.BytesToHash(EmptyCode)
 )
 
-// stateDumpAction: dumps state of evm storage into account-state database
-func stateDumpAction(ctx *cli.Context) error {
+// StateDumpAction dumps state of evm storage into account-state database
+func StateDumpAction(ctx *cli.Context) error {
 	cfg := parseArguments(ctx)
 
 	// try to get DB producer
@@ -87,13 +66,13 @@ func stateDumpAction(ctx *cli.Context) error {
 	evmState := state.NewDatabaseWithConfig(wrappedEvmDB, &trie.Config{})
 
 	// try to open output DB
-	outputDB, err := accstate.OpenOutputDB(cfg.outputDBDir)
+	outputDB, err := accstate2.OpenOutputDB(cfg.outputDBDir)
 	if err != nil {
-		err = fmt.Errorf("error opening accstate %s %s: %v", cfg.dbType, cfg.outputDBDir, err)
+		err = fmt.Errorf("error opening state-operation %s %s: %v", cfg.dbType, cfg.outputDBDir, err)
 		log.Println(err)
 		return err
 	}
-	defer func(Backend accstate.BackendDatabase) {
+	defer func(Backend accstate2.BackendDatabase) {
 		err = Backend.Close()
 		if err != nil {
 			log.Println("Unable to close output database", "error", err)
@@ -101,7 +80,7 @@ func stateDumpAction(ctx *cli.Context) error {
 	}(outputDB.Backend)
 
 	// outAccounts channel is used to send prepared account data for writing to the output DB
-	outAccounts := make(chan accstate.Account, OutAccountsBufferSize)
+	outAccounts := make(chan accstate2.Account, OutAccountsBufferSize)
 	go stateIterator(evmState, cfg.rootHash, cfg.workers, outAccounts)
 
 	dbWriter(outputDB, outAccounts)
@@ -112,9 +91,9 @@ func stateDumpAction(ctx *cli.Context) error {
 
 // stateIterator iterates trough evmState at given rootHash
 // starts workers number of threads, which are used for assembling account states
-func stateIterator(evmState state.Database, rootHash common.Hash, workers int, outAccounts chan accstate.Account) {
+func stateIterator(evmState state.Database, rootHash common.Hash, workers int, outAccounts chan accstate2.Account) {
 	// channel used for sending prepared accounts into workers
-	inAccounts := make(chan accstate.Account, InAccountsBufferSize)
+	inAccounts := make(chan accstate2.Account, InAccountsBufferSize)
 	// main tree which feeds data trough inAccounts to workers
 	go evmStateIterator(evmState, rootHash, inAccounts)
 
@@ -132,7 +111,7 @@ func stateIterator(evmState state.Database, rootHash common.Hash, workers int, o
 }
 
 // handleAccounts listens on outAccounts channel for accounts then assembles all requested data
-func handleAccounts(evmState state.Database, inAccounts chan accstate.Account, outAccounts chan accstate.Account, wg *sync.WaitGroup) {
+func handleAccounts(evmState state.Database, inAccounts chan accstate2.Account, outAccounts chan accstate2.Account, wg *sync.WaitGroup) {
 	for {
 		acc, ok := <-inAccounts
 		if !ok {
@@ -149,7 +128,7 @@ func handleAccounts(evmState state.Database, inAccounts chan accstate.Account, o
 }
 
 // dbWriter inserts received Accounts into database
-func dbWriter(db *accstate.StateDB, accounts chan accstate.Account) {
+func dbWriter(db *accstate2.StateDB, accounts chan accstate2.Account) {
 	// listening to accounts channel until it gets closed
 	for {
 		acc, ok := <-accounts
@@ -194,7 +173,7 @@ func getDBProducer(cfg *Config) (kvdb.IterableDBProducer, error) {
 }
 
 // evmStateIterator iterates over evm state then sends individual accounts to inAccounts channel
-func evmStateIterator(evmState state.Database, rootHash common.Hash, inAccounts chan accstate.Account) {
+func evmStateIterator(evmState state.Database, rootHash common.Hash, inAccounts chan accstate2.Account) {
 	stateTrie, err := evmState.OpenTrie(rootHash)
 	found := stateTrie != nil && err == nil
 	if !found {
@@ -213,7 +192,7 @@ func evmStateIterator(evmState state.Database, rootHash common.Hash, inAccounts 
 				log.Fatalf("Failed to decode account as %s addr: %s", addrHash.String(), err.Error())
 			}
 
-			inAccounts <- accstate.Account{
+			inAccounts <- accstate2.Account{
 				Hash:    addrHash,
 				Account: stateAcc,
 			}
@@ -229,7 +208,7 @@ func evmStateIterator(evmState state.Database, rootHash common.Hash, inAccounts 
 }
 
 // assembleAccount assembles to account its code and storage
-func assembleAccount(evmState state.Database, acc *accstate.Account) error {
+func assembleAccount(evmState state.Database, acc *accstate2.Account) error {
 	var err error
 
 	// extract account code
@@ -253,7 +232,7 @@ func assembleAccount(evmState state.Database, acc *accstate.Account) error {
 }
 
 // contractStorage assembles contract storage state map
-func contractStorage(account *accstate.Account, evmState state.Database, addrHash common.Hash) (map[common.Hash]common.Hash, error) {
+func contractStorage(account *accstate2.Account, evmState state.Database, addrHash common.Hash) (map[common.Hash]common.Hash, error) {
 	accStorageTmp := map[common.Hash]common.Hash{}
 	storageTrie, storageErr := evmState.OpenStorageTrie(addrHash, account.Root)
 	if storageErr != nil {
