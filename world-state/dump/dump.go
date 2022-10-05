@@ -93,8 +93,8 @@ func dumpState(ctx *cli.Context) error {
 	defer db.MustCloseSnapshotDB(outputDB)
 
 	// load accounts from the given root
-	root := common.HexToHash(ctx.String(flagInputDBType))
-	workers := ctx.Int(ctx.String(flagWorkers))
+	root := common.HexToHash(ctx.String(flagStateRoot))
+	workers := ctx.Int(flagWorkers)
 
 	// what we do
 	log.Printf("dumping state snapshot for root %s using %d workers\n", root.String(), workers)
