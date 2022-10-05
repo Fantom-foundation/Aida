@@ -33,8 +33,7 @@ var CmdDumpState = cli.Command{
 	Action: dumpState,
 	Name:   "dump",
 	Usage:  "Extracts world state MPT trie at given root from input database into state snapshot output database.",
-	Description: `
-	The dump creates a snapshot of all accounts state (including contracts) exporting:
+	Description: `The dump creates a snapshot of all accounts state (including contracts) exporting:
 		- Balance
 		- Nonce
 		- Code (separate storage slot is used to store code data)
@@ -42,19 +41,22 @@ var CmdDumpState = cli.Command{
 	ArgsUsage: "<root> <input-db> <output-db> <input-db-name> <input-db-type> <workers>",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
-			Name:  flagStateRoot,
-			Usage: "Root hash of the state trie",
-			Value: "",
+			Name:     flagStateRoot,
+			Usage:    "Root hash of the state trie",
+			Value:    "",
+			Required: true,
 		},
 		&cli.PathFlag{
-			Name:  flagInputDBPath,
-			Usage: "Input state database path",
-			Value: "",
+			Name:     flagInputDBPath,
+			Usage:    "Input state database path",
+			Value:    "",
+			Required: true,
 		},
 		&cli.PathFlag{
-			Name:  flagOutputDBPath,
-			Usage: "Output state snapshot database path",
-			Value: "",
+			Name:     flagOutputDBPath,
+			Usage:    "Output state snapshot database path",
+			Value:    "",
+			Required: true,
 		},
 		&cli.StringFlag{
 			Name:  flagStateDBName,
