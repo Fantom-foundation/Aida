@@ -1,4 +1,4 @@
-package state_operation
+package types
 
 import (
 	"github.com/ethereum/go-ethereum/common"
@@ -9,7 +9,6 @@ import (
 
 // Account is modification of SubstateAccount in substate/substate.go
 type Account struct {
-	//hash of account address
 	Hash    common.Hash
 	Storage map[common.Hash]common.Hash
 	Code    []byte
@@ -24,8 +23,8 @@ type StoredAccount struct {
 	CodeHash []byte
 }
 
-// StoredAccount converts Account into StoredAccount
-func (a *Account) StoredAccount() *StoredAccount {
+// ToStoredAccount converts Account into StoredAccount
+func (a *Account) ToStoredAccount() *StoredAccount {
 	var sa StoredAccount
 
 	sa.Nonce = a.Nonce

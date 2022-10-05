@@ -1,5 +1,5 @@
 // Package build provides build time information from the make process.
-package build
+package version
 
 import (
 	"regexp"
@@ -15,7 +15,7 @@ func TestVersionInfoGivesOutput(t *testing.T) {
 		"Compiler":    regexp.MustCompile(`(?m)^\[\d+(;\d+)?mCompiler:\[\d+(;\d+)?m\s+\w+`),
 	}
 
-	v := VersionInfo()
+	v := Long()
 	for n, r := range expected {
 		if !r.MatchString(v) {
 			t.Fatalf("VersionInfo() expected to contain %s information, returns:\n%s\n", n, v)
