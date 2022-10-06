@@ -2,6 +2,7 @@
 package dump
 
 import (
+	"context"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/db"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -100,7 +101,7 @@ func dumpState(ctx *cli.Context) error {
 	log.Printf("dumping state snapshot for root %s using %d workers\n", root.String(), workers)
 
 	// load assembled accounts for the given root and write them into the snapshot database
-	accounts, failed := LoadAccounts(inputDB, root, workers)
+	accounts, failed := LoadAccounts(context.Background(), inputDB, root, workers)
 	dbWriter(outputDB, accounts)
 
 	// any errors during the processing?
