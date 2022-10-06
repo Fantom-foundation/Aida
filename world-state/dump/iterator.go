@@ -43,13 +43,13 @@ func loadAccounts(ctx context.Context, db state.Database, root common.Hash, out 
 	raw, rawErr := LoadRawAccounts(ca, db, root, log)
 	defer func() {
 		cancel()
-		close(out)
 
 		// do we have a raw accounts read error? copy the error to error output; this waits for the raw loader closing
 		if err := <-rawErr; err != nil {
 			fail <- err
 		}
 		close(fail)
+		close(out)
 	}()
 
 	// monitor error channel and cancel context if an error is detected; this also closes the raw loader above
