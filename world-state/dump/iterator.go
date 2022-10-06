@@ -27,7 +27,7 @@ func LoadAccounts(ctx context.Context, db state.Database, root common.Hash, work
 
 	// we need to be able collect errors from all workers + raw account loader
 	err := make(chan error, workers+1)
-	out := make(chan types.Account, 25)
+	out := make(chan types.Account, workers)
 
 	go loadAccounts(ctx, db, root, out, err, workers, log)
 	return out, err
