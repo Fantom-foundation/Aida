@@ -4,10 +4,10 @@ package dump
 import (
 	"context"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/db"
+	"github.com/Fantom-foundation/Aida-Testing/world-state/logger"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/urfave/cli/v2"
-	"log"
 )
 
 const (
@@ -97,18 +97,18 @@ func dumpState(ctx *cli.Context) error {
 	root := common.HexToHash(ctx.String(flagStateRoot))
 	workers := ctx.Int(flagWorkers)
 
-	// what we do
-	log.Printf("dumping state snapshot for root %s using %d workers\n", root.String(), workers)
+	// make logger
+	log := logger.New(ctx.App.Writer, "info")
 
 	// load assembled accounts for the given root and write them into the snapshot database
-	accounts, failed := LoadAccounts(context.Background(), inputDB, root, workers)
+	accounts, failed := LoadAccounts(context.Background(), inputDB, root, workers, log)
 	dbWriter(outputDB, accounts)
 
 	// any errors during the processing?
 	for err = <-failed; err != nil; err = <-failed {
-		log.Println(err.Error())
+		log.Error(err.Error())
 	}
 
-	log.Println("done")
+	log.Info("done")
 	return nil
 }
