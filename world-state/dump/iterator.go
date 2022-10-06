@@ -16,6 +16,7 @@ import (
 
 // Logger defines a logging receiver for the loader.
 type Logger interface {
+	Errorf(format string, args ...interface{})
 	Infof(format string, args ...interface{})
 	Debugf(format string, args ...interface{})
 }
@@ -37,17 +38,22 @@ func LoadAccounts(ctx context.Context, db state.Database, root common.Hash, work
 func loadAccounts(ctx context.Context, db state.Database, root common.Hash, out chan types.Account, fail chan error, workers int, log Logger) {
 	// signal issue between workers
 	ca, cancel := context.WithCancel(ctx)
-	defer func() {
-		cancel()
-		close(out)
-		close(fail)
-	}()
 
 	// load account base data from the state DB into the workers input channel
 	raw, rawErr := LoadRawAccounts(ca, db, root, log)
+	defer func() {
+		cancel()
+		close(out)
+
+		// do we have a raw accounts read error? copy the error to error output; this waits for the raw loader closing
+		if err := <-rawErr; err != nil {
+			fail <- err
+		}
+		close(fail)
+	}()
 
 	// monitor error channel and cancel context if an error is detected; this also closes the raw loader above
-	go cancelCtxOnError(ca, cancel, fail)
+	go cancelCtxOnError(ca, cancel, fail, log)
 
 	// start individual workers to extend accounts with code and storage and wait for them to finish
 	var wg sync.WaitGroup
@@ -56,21 +62,20 @@ func loadAccounts(ctx context.Context, db state.Database, root common.Hash, out 
 		go finaliseAccounts(ca, i, db, raw, out, fail, &wg, log)
 	}
 	wg.Wait()
-
-	// do we have a raw accounts read error? copy the error to error output; this waits for the raw loader closing
-	if err := <-rawErr; err != nil {
-		fail <- err
-	}
 }
 
 // cancelCtxOnError monitors the error channel and cancels the context if an error is received.
-func cancelCtxOnError(ctx context.Context, cancel context.CancelFunc, fail chan error) {
+func cancelCtxOnError(ctx context.Context, cancel context.CancelFunc, fail chan error, log Logger) {
 	select {
 	case <-ctx.Done():
 		return
-	case err := <-fail:
+	case err, open := <-fail:
 		cancel()
-		fail <- err // re-feed consumed error
+		if open {
+			fail <- err // re-inject consumed error
+			return
+		}
+		log.Errorf("worker error not propagated; %s", err.Error())
 	}
 }
 
@@ -95,8 +100,6 @@ func loadRawAccounts(ctx context.Context, db state.Database, root common.Hash, r
 		tick.Stop()
 		close(raw)
 		close(fail)
-
-		log.Infof("%d accounts done", count)
 	}()
 
 	// access trie
@@ -137,6 +140,8 @@ func loadRawAccounts(ctx context.Context, db state.Database, root common.Hash, r
 	if stateIt.Error() != nil {
 		fail <- fmt.Errorf("failed iterating trie at root %s; %s", root.String(), stateIt.Error())
 	}
+
+	log.Infof("%d accounts done", count)
 }
 
 // finaliseAccounts worker processes incomplete accounts from input queue and sends completed accounts to output.
