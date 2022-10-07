@@ -8,11 +8,11 @@ import (
 	"math/big"
 	"os"
 
+	"github.com/Fantom-foundation/aida/tracer"
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/Fantom-foundation/go-opera/opera"
 	"github.com/Fantom-foundation/substate-cli/cmd/substate-cli/replay"
 	"github.com/Fantom-foundation/substate-cli/state"
-	"github.com/Fantom-foundation/aida/tracer"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -33,9 +33,6 @@ var TraceRecordCommand = cli.Command{
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		substate.WorkersFlag,
-		substate.SkipTransferTxsFlag,
-		substate.SkipCallTxsFlag,
-		substate.SkipCreateTxsFlag,
 		substate.SubstateDirFlag,
 		ChainIDFlag,
 		TraceDirectoryFlag,
@@ -48,7 +45,7 @@ The substate-cli trace command requires two arguments:
 last block of the inclusive range of blocks to trace transactions.`,
 }
 
-// traceTask generates storage traces for each transaction
+// traceRecordTask generates storage traces for each transaction
 func traceRecordTask(block uint64, tx int, recording *substate.Substate, dCtx *tracer.DictionaryContext, ch chan tracer.Operation) error {
 
 	inputAlloc := recording.InputAlloc
@@ -84,7 +81,6 @@ func traceRecordTask(block uint64, tx int, recording *substate.Substate, dCtx *t
 		return h
 	}
 
-	// TODO: drop slower OffTheChain DB??
 	var statedb state.StateDB
 	statedb = state.MakeInMemoryStateDB(&inputAlloc)
 	statedb = tracer.NewStateProxyDB(statedb, dCtx, ch)
@@ -184,12 +180,10 @@ func OperationWriter(ctx context.Context, done chan struct{}, ch chan tracer.Ope
 	for {
 		select {
 		case op := <-ch:
-			// TODO: have flag for debug information
-
 			// print debug information
 			tracer.Debug(dCtx, op)
 
-			// is it a pseudo operation?
+			// update index
 			switch op.GetOpId() {
 			case tracer.BeginBlockID:
 				tOp, ok := op.(*tracer.BeginBlock)
@@ -201,11 +195,10 @@ func OperationWriter(ctx context.Context, done chan struct{}, ch chan tracer.Ope
 					log.Fatalf("Cannot retrieve current file position. Error: %v", err)
 				}
 				iCtx.BlockIndex.Add(tOp.BlockNumber, offset)
-
-			default:
-				tracer.WriteOperation(file, op)
 			}
 
+			// write operation to file
+			tracer.WriteOperation(file, op)
 
 		case <-ctx.Done():
 			if len(ch) == 0 {

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ethereum/go-ethereum/substate"
 	"github.com/Fantom-foundation/aida/cmd/trace"
 	"github.com/Fantom-foundation/go-opera/flags"
+	"github.com/ethereum/go-ethereum/substate"
 	cli "gopkg.in/urfave/cli.v1"
 )
 

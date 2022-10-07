@@ -54,7 +54,7 @@ func compareStorage(recordedAlloc substate.SubstateAlloc, traceAlloc substate.Su
 	}
 
 	// checks for unexpected accounts in replayed substate
-	for account, _ := range traceAlloc {
+	for account := range traceAlloc {
 		if _, exist := recordedAlloc[account]; !exist {
 			return fmt.Errorf("Error: unexpected account %v\n", account)
 		}
@@ -64,7 +64,7 @@ func compareStorage(recordedAlloc substate.SubstateAlloc, traceAlloc substate.Su
 
 func storageDriver(first uint64, last uint64) error {
 	// load dictionaries & indexes
-	dCtx := tracer.ReadDictionaryContext() 
+	dCtx := tracer.ReadDictionaryContext()
 	iCtx := tracer.ReadIndexContext()
 
 	// Create dummy statedb to make it compile

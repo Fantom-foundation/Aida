@@ -29,18 +29,18 @@ func NewDictionaryContext() *DictionaryContext {
 // TODO: Error handling is missing
 func ReadDictionaryContext() *DictionaryContext {
 	ctx := NewDictionaryContext()
-	ctx.ContractDictionary.Read(TraceDir+"contract-dictionary.dat")
-	ctx.StorageDictionary.Read(TraceDir+"storage-dictionary.dat")
-	ctx.ValueDictionary.Read(TraceDir+"value-dictionary.dat")
+	ctx.ContractDictionary.Read(TraceDir + "contract-dictionary.dat")
+	ctx.StorageDictionary.Read(TraceDir + "storage-dictionary.dat")
+	ctx.ValueDictionary.Read(TraceDir + "value-dictionary.dat")
 	return ctx
 }
 
 // Write dictionary context to files.
 // TODO: Error handling is missing
 func (ctx *DictionaryContext) Write() {
-	ctx.ContractDictionary.Write(TraceDir+"contract-dictionary.dat")
-	ctx.StorageDictionary.Write(TraceDir+"storage-dictionary.dat")
-	ctx.ValueDictionary.Write(TraceDir+"value-dictionary.dat")
+	ctx.ContractDictionary.Write(TraceDir + "contract-dictionary.dat")
+	ctx.StorageDictionary.Write(TraceDir + "storage-dictionary.dat")
+	ctx.ValueDictionary.Write(TraceDir + "value-dictionary.dat")
 }
 
 // Get the contract address for a given index.
@@ -69,6 +69,7 @@ func (ctx *DictionaryContext) getValue(vIdx uint64) common.Hash {
 	}
 	return value
 }
+
 // Encode a given contract address and return a contract index.
 func (ctx *DictionaryContext) encodeContract(contract common.Address) uint32 {
 	cIdx, err := ctx.ContractDictionary.Encode(contract)
@@ -95,5 +96,3 @@ func (ctx *DictionaryContext) encodeValue(value common.Hash) uint64 {
 	}
 	return vIdx
 }
-
-
