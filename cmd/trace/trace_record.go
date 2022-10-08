@@ -171,7 +171,7 @@ func OperationWriter(ctx context.Context, done chan struct{}, ch chan tracer.Ope
 	defer close(done)
 
 	// open trace file
-	file, err := os.OpenFile("trace.dat", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	file, err := os.OpenFile(tracer.TraceDir + "trace.dat", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
 		log.Fatalf("Cannot open trace file. Error: %v", err)
 	}

@@ -15,12 +15,12 @@ func NewIndexContext() *IndexContext {
 // TODO: Error handling
 func ReadIndexContext() *IndexContext {
 	ctx := NewIndexContext()
-	ctx.BlockIndex.Read("block-index.dat")
+	ctx.BlockIndex.Read(TraceDir + "block-index.dat")
 	return ctx
 }
 
 // Write block index
 // TODO: Error handling
 func (ctx *IndexContext) Write() {
-	ctx.BlockIndex.Write("block-index.dat")
+	ctx.BlockIndex.Write(TraceDir + "block-index.dat")
 }

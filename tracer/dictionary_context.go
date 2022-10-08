@@ -10,7 +10,7 @@ import (
 ////////////////////////////////////////////////////////////
 
 // DictionaryContext is a Facade for all dictionaries used
-// to encode state operations on file. 
+// to encode state operations on file.
 
 type DictionaryContext struct {
 	ContractDictionary *ContractDictionary // dictionary to compact contract addresses
@@ -97,4 +97,3 @@ func (ctx *DictionaryContext) decodeValue(vIdx uint64) common.Hash {
 	}
 	return value
 }
-
