@@ -1,6 +1,6 @@
 package tracer
 
-// IndexContext encapsulates all index data strutures.
+// IndexContext encapsulates index data strutures.
 type IndexContext struct {
 	BlockIndex *BlockIndex
 }
@@ -12,15 +12,19 @@ func NewIndexContext() *IndexContext {
 }
 
 // Read a new index context from files.
-// TODO: Error handling
 func ReadIndexContext() *IndexContext {
 	ctx := NewIndexContext()
-	ctx.BlockIndex.Read(TraceDir + "block-index.dat")
+	err := ctx.BlockIndex.Read(TraceDir + "block-index.dat")
+	if (err != nil) { 
+		log.Fatalf("Cannot read block index. Error: %v", err)
+	}
 	return ctx
 }
 
 // Write block index
-// TODO: Error handling
 func (ctx *IndexContext) Write() {
-	ctx.BlockIndex.Write(TraceDir + "block-index.dat")
+	err := ctx.BlockIndex.Write(TraceDir + "block-index.dat")
+	if (err != nil) { 
+		log.Fatalf("Cannot write block index. Error: %v", err)
+	}
 }
