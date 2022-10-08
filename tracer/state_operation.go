@@ -252,16 +252,16 @@ func (op *GetState) WriteOperation(f *os.File) {
 
 // Execute the get-state operation.
 func (op *GetState) Execute(db state.StateDB, ctx *DictionaryContext) {
-	contract := ctx.getContract(op.ContractIndex)
-	storage := ctx.getStorage(op.StorageIndex)
+	contract := ctx.decodeContract(op.ContractIndex)
+	storage := ctx.decodeStorage(op.StorageIndex)
 	db.GetState(contract, storage)
 }
 
 // Print a debug message.
 func (op *GetState) Debug(ctx *DictionaryContext) {
 	fmt.Printf("\tcontract: %v\t storage: %v\n",
-		ctx.getContract(op.ContractIndex),
-		ctx.getStorage(op.StorageIndex))
+		ctx.decodeContract(op.ContractIndex),
+		ctx.decodeStorage(op.StorageIndex))
 }
 
 ////////////////////////////////////////////////////////////
@@ -300,18 +300,18 @@ func (op *SetState) WriteOperation(f *os.File) {
 
 // Execute the set-state operation.
 func (op *SetState) Execute(db state.StateDB, ctx *DictionaryContext) {
-	contract := ctx.getContract(op.ContractIndex)
-	storage := ctx.getStorage(op.StorageIndex)
-	value := ctx.getValue(op.ValueIndex)
+	contract := ctx.decodeContract(op.ContractIndex)
+	storage := ctx.decodeStorage(op.StorageIndex)
+	value := ctx.decodeValue(op.ValueIndex)
 	db.SetState(contract, storage, value)
 }
 
 // Print a debug message for set-state.
 func (op *SetState) Debug(ctx *DictionaryContext) {
 	fmt.Printf("\tcontract: %v\t storage: %v\t value: %v\n",
-		ctx.getContract(op.ContractIndex),
-		ctx.getStorage(op.StorageIndex),
-		ctx.getValue(op.ValueIndex))
+		ctx.decodeContract(op.ContractIndex),
+		ctx.decodeStorage(op.StorageIndex),
+		ctx.decodeValue(op.ValueIndex))
 }
 
 ////////////////////////////////////////////////////////////
@@ -349,16 +349,16 @@ func (op *GetCommittedState) WriteOperation(f *os.File) {
 
 // Execute the get-committed-state operation.
 func (op *GetCommittedState) Execute(db state.StateDB, ctx *DictionaryContext) {
-	contract := ctx.getContract(op.ContractIndex)
-	storage := ctx.getStorage(op.StorageIndex)
+	contract := ctx.decodeContract(op.ContractIndex)
+	storage := ctx.decodeStorage(op.StorageIndex)
 	db.GetCommittedState(contract, storage)
 }
 
 // Print debug message for get-committed-state.
 func (op *GetCommittedState) Debug(ctx *DictionaryContext) {
 	fmt.Printf("\tcontract: %v\t storage: %v\n",
-		ctx.getContract(op.ContractIndex),
-		ctx.getStorage(op.StorageIndex))
+		ctx.decodeContract(op.ContractIndex),
+		ctx.decodeStorage(op.StorageIndex))
 }
 
 ////////////////////////////////////////////////////////////
@@ -474,13 +474,13 @@ func (op *CreateAccount) WriteOperation(f *os.File) {
 
 // Execute the create account operation.
 func (op *CreateAccount) Execute(db state.StateDB, ctx *DictionaryContext) {
-	contract := ctx.getContract(op.ContractIndex)
+	contract := ctx.decodeContract(op.ContractIndex)
 	db.CreateAccount(contract)
 }
 
 // Print a debug message for snapshot operation.
 func (op *CreateAccount) Debug(ctx *DictionaryContext) {
-	fmt.Printf("\tcontract: %v\n", ctx.getContract(op.ContractIndex))
+	fmt.Printf("\tcontract: %v\n", ctx.decodeContract(op.ContractIndex))
 }
 
 ////////////////////////////////////////////////////////////
@@ -517,13 +517,13 @@ func (op *GetBalance) WriteOperation(f *os.File) {
 
 // Execute the get-balance operation.
 func (op *GetBalance) Execute(db state.StateDB, ctx *DictionaryContext) {
-	contract := ctx.getContract(op.ContractIndex)
+	contract := ctx.decodeContract(op.ContractIndex)
 	db.GetBalance(contract)
 }
 
 // Print a debug message for get-balance.
 func (op *GetBalance) Debug(ctx *DictionaryContext) {
-	fmt.Printf("\tcontract: %v\n", ctx.getContract(op.ContractIndex))
+	fmt.Printf("\tcontract: %v\n", ctx.decodeContract(op.ContractIndex))
 }
 
 ////////////////////////////////////////////////////////////
@@ -560,13 +560,13 @@ func (op *GetCodeHash) WriteOperation(f *os.File) {
 
 // Execute the get-code-hash operation.
 func (op *GetCodeHash) Execute(db state.StateDB, ctx *DictionaryContext) {
-	contract := ctx.getContract(op.ContractIndex)
+	contract := ctx.decodeContract(op.ContractIndex)
 	db.GetCodeHash(contract)
 }
 
 // Print a debug message for get-code-hash.
 func (op *GetCodeHash) Debug(ctx *DictionaryContext) {
-	fmt.Printf("\tcontract: %v\n", ctx.getContract(op.ContractIndex))
+	fmt.Printf("\tcontract: %v\n", ctx.decodeContract(op.ContractIndex))
 }
 
 ////////////////////////////////////////////////////////////
@@ -603,13 +603,13 @@ func (op *Suicide) WriteOperation(f *os.File) {
 
 // Execute the suicide operation.
 func (op *Suicide) Execute(db state.StateDB, ctx *DictionaryContext) {
-	contract := ctx.getContract(op.ContractIndex)
+	contract := ctx.decodeContract(op.ContractIndex)
 	db.Suicide(contract)
 }
 
 // Print a debug message for suicide.
 func (op *Suicide) Debug(ctx *DictionaryContext) {
-	fmt.Printf("\tcontract: %v\n", ctx.getContract(op.ContractIndex))
+	fmt.Printf("\tcontract: %v\n", ctx.decodeContract(op.ContractIndex))
 }
 
 ////////////////////////////////////////////////////////////
@@ -646,13 +646,13 @@ func (op *Exist) WriteOperation(f *os.File) {
 
 // Execute the exist operation.
 func (op *Exist) Execute(db state.StateDB, ctx *DictionaryContext) {
-	contract := ctx.getContract(op.ContractIndex)
+	contract := ctx.decodeContract(op.ContractIndex)
 	db.Exist(contract)
 }
 
 // Print a debug message for exist.
 func (op *Exist) Debug(ctx *DictionaryContext) {
-	fmt.Printf("\tcontract: %v\n", ctx.getContract(op.ContractIndex))
+	fmt.Printf("\tcontract: %v\n", ctx.decodeContract(op.ContractIndex))
 }
 
 ////////////////////////////////////////////////////////////
