@@ -30,15 +30,15 @@ func NewDictionaryContext() *DictionaryContext {
 func ReadDictionaryContext() *DictionaryContext {
 	ctx := NewDictionaryContext()
 	err := ctx.ContractDictionary.Read(TraceDir + "contract-dictionary.dat")
-	if (err != nil) { 
+	if err != nil {
 		log.Fatalf("Cannot read contract dictionary. Error: %v", err)
 	}
 	err = ctx.StorageDictionary.Read(TraceDir + "storage-dictionary.dat")
-	if (err != nil) { 
+	if err != nil {
 		log.Fatalf("Cannot read storage dictionary. Error: %v", err)
 	}
 	err = ctx.ValueDictionary.Read(TraceDir + "value-dictionary.dat")
-	if (err != nil) { 
+	if err != nil {
 		log.Fatalf("Cannot read value dictionary. Error: %v", err)
 	}
 	return ctx
@@ -47,15 +47,15 @@ func ReadDictionaryContext() *DictionaryContext {
 // Write dictionary context to files.
 func (ctx *DictionaryContext) Write() {
 	err := ctx.ContractDictionary.Write(TraceDir + "contract-dictionary.dat")
-	if (err != nil) { 
+	if err != nil {
 		log.Fatalf("Cannot write contract dictionary. Error: %v", err)
 	}
 	err = ctx.StorageDictionary.Write(TraceDir + "storage-dictionary.dat")
-	if (err != nil) { 
+	if err != nil {
 		log.Fatalf("Cannot write storage dictionary. Error: %v", err)
 	}
 	err = ctx.ValueDictionary.Write(TraceDir + "value-dictionary.dat")
-	if (err != nil) { 
+	if err != nil {
 		log.Fatalf("Cannot write value dictionary. Error: %v", err)
 	}
 }

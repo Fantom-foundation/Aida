@@ -15,7 +15,7 @@ func NewIndexContext() *IndexContext {
 func ReadIndexContext() *IndexContext {
 	ctx := NewIndexContext()
 	err := ctx.BlockIndex.Read(TraceDir + "block-index.dat")
-	if (err != nil) { 
+	if err != nil {
 		log.Fatalf("Cannot read block index. Error: %v", err)
 	}
 	return ctx
@@ -24,7 +24,7 @@ func ReadIndexContext() *IndexContext {
 // Write block index
 func (ctx *IndexContext) Write() {
 	err := ctx.BlockIndex.Write(TraceDir + "block-index.dat")
-	if (err != nil) { 
+	if err != nil {
 		log.Fatalf("Cannot write block index. Error: %v", err)
 	}
 }
