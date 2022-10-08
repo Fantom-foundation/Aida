@@ -255,7 +255,7 @@ func traceRecordAction(ctx *cli.Context) error {
 		// close off old block with an end-block operation
 		if oldBlock != tx.Block {
 			if oldBlock != math.MaxUint64 {
-				opChannel <- tracer.NewEndBlock(oldBlock)
+				opChannel <- tracer.NewEndBlock()
 			}
 			if tx.Block > last {
 				break
@@ -266,6 +266,9 @@ func traceRecordAction(ctx *cli.Context) error {
 		}
 		traceRecordTask(tx.Block, tx.Transaction, tx.Substate, dCtx, opChannel)
 		opChannel <- tracer.NewEndTransaction()
+	}
+	if oldBlock != math.MaxUint64 {
+		opChannel <- tracer.NewEndBlock()
 	}
 
 	// write dictionaries and indexes

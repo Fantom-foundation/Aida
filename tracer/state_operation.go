@@ -167,7 +167,7 @@ func ReadBeginBlock(file *os.File) (Operation, error) {
 	return data, err
 }
 
-// Write the begin-block operation .
+// Write the begin-block operation to file.
 func (op *BeginBlock) WriteOperation(files *os.File) {
 	var data = []any{op.BlockNumber}
 	writeSlice(f, data)
@@ -177,7 +177,7 @@ func (op *BeginBlock) WriteOperation(files *os.File) {
 func (op *BeginBlock) Execute(db state.StateDB, ctx *DictionaryContext) {
 }
 
-// Print a debug message.
+// Print a debug message for begin-block.
 func (op *BeginBlock) Debug(ctx *DictionaryContext) {
 	fmt.Printf("\tblock number: %v\n", op.BlockNumber)
 }
@@ -188,7 +188,6 @@ func (op *BeginBlock) Debug(ctx *DictionaryContext) {
 
 // End-block operation data structure
 type EndBlock struct {
-	BlockNumber uint64 // block number
 }
 
 // Return the end-block operation identifier.
@@ -197,30 +196,25 @@ func (op *EndBlock) GetOpId() byte {
 }
 
 // Create a new end-block operation.
-func NewEndBlock(ebNum uint64) *EndBlock {
-	return &EndBlock{BlockNumber: ebNum}
+func NewEndBlock() *EndBlock {
+	return &EndBlock{}
 }
 
 // Read an end-block operation from file.
 func ReadEndBlock(file *os.File) (Operation, error) {
-	data := new(EndBlock)
-	err := binary.Read(file, binary.LittleEndian, data)
-	return data, err
+	return NewEndBlock(), nil
 }
 
-// Write the end-block operation .
+// Write the end-block operation to file.
 func (op *EndBlock) WriteOperation(files *os.File) {
-	var data = []any{op.BlockNumber}
-	writeSlice(f, data)
 }
 
 // Execute the end-block operation.
 func (op *EndBlock) Execute(db state.StateDB, ctx *DictionaryContext) {
 }
 
-// Print a debug message
+// Print a debug message for end-block.
 func (op *EndBlock) Debug(ctx *DictionaryContext) {
-	fmt.Printf("\tblock number: %v\n", op.BlockNumber)
 }
 
 ////////////////////////////////////////////////////////////
@@ -250,7 +244,7 @@ func ReadGetState(file *os.File) (Operation, error) {
 	return data, err
 }
 
-// Write the get-state operation .
+// Write the get-state operation to file.
 func (op *GetState) WriteOperation(f *os.File) {
 	var data = []any{op.ContractIndex, op.StorageIndex}
 	writeSlice(f, data)
@@ -298,7 +292,7 @@ func ReadSetState(file *os.File) (Operation, error) {
 	return data, err
 }
 
-// Write the set-state operation.
+// Write the set-state operation to file.
 func (op *SetState) WriteOperation(f *os.File) {
 	var data = []any{op.ContractIndex, op.StorageIndex, op.ValueIndex}
 	writeSlice(f, data)
@@ -347,7 +341,7 @@ func ReadGetCommittedState(file *os.File) (Operation, error) {
 	return data, err
 }
 
-// Write the get-commited-state operation.
+// Write the get-commited-state operation to file.
 func (op *GetCommittedState) WriteOperation(f *os.File) {
 	var data = []any{op.ContractIndex, op.StorageIndex}
 	writeSlice(f, data)
@@ -390,7 +384,7 @@ func ReadSnapshot(file *os.File) (Operation, error) {
 	return NewSnapshot(), nil
 }
 
-// Write the snapshot operation in binary format to file.
+// Write the snapshot operation to file.
 func (op *Snapshot) WriteOperation(f *os.File) {
 }
 
@@ -430,7 +424,7 @@ func ReadRevertToSnapshot(file *os.File) (Operation, error) {
 	return op, err
 }
 
-// Write the revert-to-snapshot operation in binary format to file.
+// Write the revert-to-snapshot operation to file.
 func (op *RevertToSnapshot) WriteOperation(f *os.File) {
 	var data = []any{int32(op.SnapshotID)}
 	writeSlice(f, data)
@@ -726,7 +720,7 @@ func ReadEndTransaction() *EndTransaction {
 	return new(EndTransaction), nil
 }
 
-// Write the end-transaction operation in binary format to file.
+// Write the end-transaction operation to file.
 func (op *EndTransaction) WriteOperation(f *os.File) {
 }
 
