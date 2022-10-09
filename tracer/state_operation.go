@@ -168,7 +168,7 @@ func ReadBeginBlock(file *os.File) (Operation, error) {
 }
 
 // Write the begin-block operation to file.
-func (op *BeginBlock) WriteOperation(files *os.File) {
+func (op *BeginBlock) WriteOperation(f *os.File) {
 	var data = []any{op.BlockNumber}
 	writeSlice(f, data)
 }
@@ -206,7 +206,7 @@ func ReadEndBlock(file *os.File) (Operation, error) {
 }
 
 // Write the end-block operation to file.
-func (op *EndBlock) WriteOperation(files *os.File) {
+func (op *EndBlock) WriteOperation(f *os.File) {
 }
 
 // Execute the end-block operation.
@@ -716,7 +716,7 @@ func NewEndTransaction() *EndTransaction {
 }
 
 // Read a new end-transaction operation from file.
-func ReadEndTransaction() *EndTransaction {
+func ReadEndTransaction(*os.File) (Operation, error) {
 	return new(EndTransaction), nil
 }
 

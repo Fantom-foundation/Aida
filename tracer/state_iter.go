@@ -34,7 +34,7 @@ func NewTraceIterator(iCtx *IndexContext, first uint64, last uint64) *TraceItera
 	}
 
 	// set file position
-	_, err := file.Seek(iCtx.GetBlock(first), 0)
+	_, err = p.file.Seek(iCtx.GetBlock(first), 0)
 	if err != nil {
 		log.Fatalf("Cannot set position in trace file. Error: %v", err)
 	}
@@ -44,14 +44,15 @@ func NewTraceIterator(iCtx *IndexContext, first uint64, last uint64) *TraceItera
 
 // Get next state operation from trace file.
 func (ti *TraceIterator) Next() bool {
-	// get file positions
-	pos, err := file.Seek(0, 1)
-	if err != nil {
-		log.Fatalf("Cannot get file position in trace file. Error: %v", err)
-	}
-	// check whether we have processed all blocks
-	if iCtx.ExistsBlock(ti.last + 1) {
-		if pos >= iCtx.GetBlock(ti.last+1) {
+	// check whether we have processed all blocks in range
+	if ti.iCtx.ExistsBlock(ti.lastBlock + 1) {
+		// get file positions
+		pos, err := ti.file.Seek(0, 1)
+		if err != nil {
+			log.Fatalf("Cannot get file position in trace file. Error: %v", err)
+		}
+		// end reached?
+		if pos >= ti.iCtx.GetBlock(ti.lastBlock+1) {
 			return false
 		}
 	}

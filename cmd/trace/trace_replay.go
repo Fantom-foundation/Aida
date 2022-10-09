@@ -69,9 +69,9 @@ func storageDriver(first uint64, last uint64) error {
 	iCtx := tracer.ReadIndexContext()
 
 	// TODO: 1) compute full-state for "first" block, and
-        //       2) transcribe full-state to the StateDB object
-        //          under test.
-          
+	//       2) transcribe full-state to the StateDB object
+	//          under test.
+
 	// iterate substate (for in-membory state)
 	stateIter := substate.NewSubstateIterator(first, 4)
 	defer stateIter.Release()
@@ -89,7 +89,7 @@ func storageDriver(first uint64, last uint64) error {
 		for traceIter.Next() {
 			op := traceIter.Value()
 			op.Execute(db, dCtx)
-			if (traceDebug) {
+			if traceDebug {
 				tracer.Debug(dCtx, op)
 			}
 

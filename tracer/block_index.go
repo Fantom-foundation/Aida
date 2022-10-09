@@ -37,7 +37,7 @@ func (oIdx *BlockIndex) Add(block uint64, fpos int64) error {
 
 // Check whether block-index has a file position for a block number.
 func (oIdx *BlockIndex) Exists(block uint64) (bool, error) {
-	operation, ok := oIdx.blockToFPos[block]
+	_, ok := oIdx.blockToFPos[block]
 	return ok, nil
 }
 
@@ -64,7 +64,7 @@ func (oIdx *BlockIndex) Write(filename string) error {
 	// write all dictionary entries
 	for block, fpos := range oIdx.blockToFPos {
 		var data = []any{block, fpos}
-		writeSlice(data)
+		writeSlice(f, data)
 	}
 	return nil
 }

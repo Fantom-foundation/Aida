@@ -29,8 +29,8 @@ var (
 		Value: "./",
 	}
 	TraceDebugFlag = cli.BoolFlag{
-			Name:  "trace-debug",
-			Usage: "enable debug output for tracing",
+		Name:  "trace-debug",
+		Usage: "enable debug output for tracing",
 	}
 )
 

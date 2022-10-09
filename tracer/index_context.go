@@ -1,5 +1,9 @@
 package tracer
 
+import (
+	"log"
+)
+
 // Index-context encapsulates all index data strutures.
 type IndexContext struct {
 	BlockIndex *BlockIndex // block-index
@@ -43,11 +47,11 @@ func (ctx *IndexContext) GetBlock(block uint64) int64 {
 	if err != nil {
 		log.Fatalf("Getting block from block-index failed. Error: %v", err)
 	}
-	return block
+	return fpos
 }
 
 // Check whether block exists in block index.
-func (ctx *IndexContext) ExistsBlock(block uint64) block {
+func (ctx *IndexContext) ExistsBlock(block uint64) bool {
 	exists, err := ctx.BlockIndex.Exists(block)
 	if err != nil {
 		log.Fatalf("Checking block from block-index failed. Error: %v", err)
