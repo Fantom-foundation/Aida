@@ -5,13 +5,8 @@ import (
 	"log"
 )
 
-////////////////////////////////////////////////////////////
-// Dictionary Context
-////////////////////////////////////////////////////////////
-
 // DictionaryContext is a Facade for all dictionaries used
-// to encode state operations on file.
-
+// to encode/decode state operations on file.
 type DictionaryContext struct {
 	ContractDictionary *ContractDictionary // dictionary to compact contract addresses
 	StorageDictionary  *StorageDictionary  // dictionary to compact storage addresses
@@ -64,7 +59,7 @@ func (ctx *DictionaryContext) Write() {
 func (ctx *DictionaryContext) encodeContract(contract common.Address) uint32 {
 	cIdx, err := ctx.ContractDictionary.Encode(contract)
 	if err != nil {
-		log.Fatalf("Contract could not be encoded. Error: %v", err)
+		log.Fatalf("Contract address could not be encoded. Error: %v", err)
 	}
 	return cIdx
 }
@@ -73,7 +68,7 @@ func (ctx *DictionaryContext) encodeContract(contract common.Address) uint32 {
 func (ctx *DictionaryContext) encodeStorage(storage common.Hash) uint32 {
 	sIdx, err := ctx.StorageDictionary.Encode(storage)
 	if err != nil {
-		log.Fatalf("Storage could not be encoded. Error: %v", err)
+		log.Fatalf("Storage address could not be encoded. Error: %v", err)
 	}
 	return sIdx
 }
@@ -82,7 +77,7 @@ func (ctx *DictionaryContext) encodeStorage(storage common.Hash) uint32 {
 func (ctx *DictionaryContext) encodeValue(value common.Hash) uint64 {
 	vIdx, err := ctx.ValueDictionary.Encode(value)
 	if err != nil {
-		log.Fatalf("Value could not be encoded. Error: %v", err)
+		log.Fatalf("Storage value could not be encoded. Error: %v", err)
 	}
 	return vIdx
 }

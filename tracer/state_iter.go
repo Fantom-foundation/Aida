@@ -22,11 +22,10 @@ func NewTraceIterator(iCtx *IndexContext, first uint64, last uint64) *TraceItera
 	p.iCtx = iCtx
 	p.lastBlock = last
 
-	// TODO: Add trace directory to filename
 	var err error
 	p.file, err = os.OpenFile(TraceDir+"trace.dat", os.O_RDONLY|os.O_CREATE, 0644)
 	if err != nil {
-		log.Fatalf("Cannot open trace file.")
+		log.Fatalf("Cannot open trace file. Error: %v", err)
 	}
 	// TODO: set file position to the first position using seek
 	//_, err := file.Seek(iCtx.BlockIndex.Get(first), 0)
@@ -61,6 +60,6 @@ func (ti *TraceIterator) Value() Operation {
 func (ti *TraceIterator) Release() {
 	err := ti.file.Close()
 	if err != nil {
-		log.Fatalf("Cannot close trace file")
+		log.Fatalf("Cannot close trace file. Error: %v", err)
 	}
 }
