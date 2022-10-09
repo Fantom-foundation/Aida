@@ -18,6 +18,7 @@ var TraceReplayCommand = cli.Command{
 	Flags: []cli.Flag{
 		substate.SubstateDirFlag,
 		TraceDirectoryFlag,
+		TraceDebugFlag,
 	},
 	Description: `
 The substate-cli trace-replay command requires two arguments:
@@ -67,9 +68,10 @@ func storageDriver(first uint64, last uint64) error {
 	dCtx := tracer.ReadDictionaryContext()
 	iCtx := tracer.ReadIndexContext()
 
-	// Create dummy statedb to make it compile
-	// TODO: plug-in real DBs and prime DB at block "first"
-
+	// TODO: 1) compute full-state for "first" block, and
+        //       2) transcribe full-state to the StateDB object
+        //          under test.
+          
 	// iterate substate (for in-membory state)
 	stateIter := substate.NewSubstateIterator(first, 4)
 	defer stateIter.Release()
@@ -83,21 +85,21 @@ func storageDriver(first uint64, last uint64) error {
 		if tx.Block > last {
 			break
 		}
-		//db := state.MakeOffTheChainStateDB(tx.Substate.InputAlloc)
 		db := state.MakeOffTheChainStateDB(tx.Substate.InputAlloc)
-		fmt.Printf("Block %v Tx %v\n", tx.Block, tx.Transaction)
 		for traceIter.Next() {
 			op := traceIter.Value()
 			op.Execute(db, dCtx)
-			tracer.Debug(dCtx, op)
+			if (traceDebug) {
+				tracer.Debug(dCtx, op)
+			}
 
-			//find end of transaction
+			// find end of transaction
 			if op.GetOpId() == tracer.EndTransactionID {
 				break
 			}
 		}
 
-		//Compare stateDB and OuputAlloc
+		// compare stateDB and OuputAlloc
 		traceAlloc := db.GetSubstatePostAlloc()
 		recordedAlloc := tx.Substate.OutputAlloc
 		err := compareStorage(recordedAlloc, traceAlloc)
@@ -112,20 +114,24 @@ func storageDriver(first uint64, last uint64) error {
 func traceReplayAction(ctx *cli.Context) error {
 	var err error
 
-	tracer.TraceDir = ctx.String(TraceDirectoryFlag.Name) + "/"
-
+	// process arguments
 	if len(ctx.Args()) != 2 {
-		return fmt.Errorf("substate-cli replay-trace command requires exactly 2 arguments")
+		return fmt.Errorf("trace replay-trace command requires exactly 2 arguments")
 	}
-
+	tracer.TraceDir = ctx.String(TraceDirectoryFlag.Name) + "/"
+	if ctx.Bool("trace-debug") {
+		traceDebug = true
+	}
 	first, last, argErr := SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
 	if argErr != nil {
 		return argErr
 	}
+
+	// run storage driver
 	substate.SetSubstateFlags(ctx)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
-
 	err = storageDriver(first, last)
+
 	return err
 }

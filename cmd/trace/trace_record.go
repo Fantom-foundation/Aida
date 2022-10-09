@@ -36,6 +36,7 @@ var TraceRecordCommand = cli.Command{
 		substate.SubstateDirFlag,
 		ChainIDFlag,
 		TraceDirectoryFlag,
+		TraceDebugFlag,
 	},
 	Description: `
 The substate-cli trace command requires two arguments:
@@ -181,20 +182,25 @@ func OperationWriter(ctx context.Context, done chan struct{}, ch chan tracer.Ope
 		select {
 		case op := <-ch:
 			// print debug information
-			tracer.Debug(dCtx, op)
+			if traceDebug {
+				tracer.Debug(dCtx, op)
+			}
 
 			// update index
 			switch op.GetOpId() {
 			case tracer.BeginBlockID:
+				// downcast op to BeginBlock for accessing block number
 				tOp, ok := op.(*tracer.BeginBlock)
 				if !ok {
 					log.Fatalf("Begin block operation downcasting failed")
 				}
+				// retrieve current file position
 				offset, err := file.Seek(0, 1)
 				if err != nil {
 					log.Fatalf("Cannot retrieve current file position. Error: %v", err)
 				}
-				iCtx.BlockIndex.Add(tOp.BlockNumber, offset)
+				// add to block-index
+				iCtx.AddBlock(tOp.BlockNumber, offset)
 			}
 
 			// write operation to file
@@ -219,7 +225,7 @@ func traceRecordAction(ctx *cli.Context) error {
 	var err error
 
 	if len(ctx.Args()) != 2 {
-		return fmt.Errorf("substate-cli trace command requires exactly 2 arguments")
+		return fmt.Errorf("trace record command requires exactly 2 arguments")
 	}
 
 	dCtx := tracer.NewDictionaryContext()
@@ -235,9 +241,12 @@ func traceRecordAction(ctx *cli.Context) error {
 		<-(cancelChannel) // wait for writer to finish
 	}()
 
+	// process arguments
 	chainID = ctx.Int(ChainIDFlag.Name)
 	tracer.TraceDir = ctx.String(TraceDirectoryFlag.Name) + "/"
-
+	if ctx.Bool("trace-debug") {
+		traceDebug = true
+	}
 	first, last, argErr := replay.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
 	if argErr != nil {
 		return argErr

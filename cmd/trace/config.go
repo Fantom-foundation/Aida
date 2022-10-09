@@ -13,6 +13,9 @@ var (
 	gitDate   = ""
 )
 
+// trace debugging
+var traceDebug bool = false
+
 // command line options
 var (
 	ChainIDFlag = cli.IntFlag{
@@ -24,6 +27,10 @@ var (
 		Name:  "trace-dir",
 		Usage: "set storage trace's output directory",
 		Value: "./",
+	}
+	TraceDebugFlag = cli.BoolFlag{
+			Name:  "trace-debug",
+			Usage: "enable debug output for tracing",
 	}
 )
 
