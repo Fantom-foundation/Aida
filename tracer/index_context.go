@@ -2,7 +2,7 @@ package tracer
 
 // Index-context encapsulates all index data strutures.
 type IndexContext struct {
-	BlockIndex *BlockIndex  // block-index
+	BlockIndex *BlockIndex // block-index
 }
 
 // Create a new index context.
@@ -29,11 +29,10 @@ func (ctx *IndexContext) Write() {
 	}
 }
 
-
 // Add block to block index.
 func (ctx *IndexContext) AddBlock(block uint64, fpos int64) {
 	err := ctx.BlockIndex.Add(block, fpos)
-	if (err != nil) {
+	if err != nil {
 		log.Fatalf("Adding block to block-index failed. Error: %v", err)
 	}
 }
@@ -41,7 +40,7 @@ func (ctx *IndexContext) AddBlock(block uint64, fpos int64) {
 // Get block from block index.
 func (ctx *IndexContext) GetBlock(block uint64) int64 {
 	fpos, err := ctx.BlockIndex.Get(block)
-	if (err != nil) {
+	if err != nil {
 		log.Fatalf("Getting block from block-index failed. Error: %v", err)
 	}
 	return block
@@ -50,7 +49,7 @@ func (ctx *IndexContext) GetBlock(block uint64) int64 {
 // Check whether block exists in block index.
 func (ctx *IndexContext) ExistsBlock(block uint64) block {
 	exists, err := ctx.BlockIndex.Exists(block)
-	if (err != nil) {
+	if err != nil {
 		log.Fatalf("Checking block from block-index failed. Error: %v", err)
 	}
 	return exists

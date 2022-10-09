@@ -27,26 +27,35 @@ func NewTraceIterator(iCtx *IndexContext, first uint64, last uint64) *TraceItera
 	if err != nil {
 		log.Fatalf("Cannot open trace file. Error: %v", err)
 	}
-	// TODO: set file position to the first position using seek
-	//_, err := file.Seek(iCtx.BlockIndex.Get(first), 0)
-	//if err != nil {
-	//		log.Fatalf("Cannot set position in trace file. Error: %v", err)
-	//}
+
+	// check whether first block exists
+	if !iCtx.ExistsBlock(first) {
+		log.Fatalf("First block does not exist. Error: %v", err)
+	}
+
+	// set file position
+	_, err := file.Seek(iCtx.GetBlock(first), 0)
+	if err != nil {
+		log.Fatalf("Cannot set position in trace file. Error: %v", err)
+	}
+
 	return p
 }
 
 // Get next state operation from trace file.
 func (ti *TraceIterator) Next() bool {
-	// TODO: get file position for checking last
-	//pos, err := file.Seek(0, 1)
-	//if err != nil {
-	//		log.Fatalf("Cannot set position in trace file. Error: %v", err)
-	//}
-	// if iCtx.BlockIndex.Exists(ti.last+1) {
-	//  if pos >= iCtx.BlockIndex.Get(ti.last+1) {
-	//       return false
-	//  }
-	// }
+	// get file positions
+	pos, err := file.Seek(0, 1)
+	if err != nil {
+		log.Fatalf("Cannot get file position in trace file. Error: %v", err)
+	}
+	// check whether we have processed all blocks
+	if iCtx.ExistsBlock(ti.last + 1) {
+		if pos >= iCtx.GetBlock(ti.last+1) {
+			return false
+		}
+	}
+	// read next state operation
 	ti.currentOp = ReadOperation(ti.file)
 	return ti.currentOp != nil
 }
