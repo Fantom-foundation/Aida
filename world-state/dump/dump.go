@@ -91,16 +91,14 @@ func dumpState(ctx *cli.Context) error {
 	log := logger.New(ctx.App.Writer, "info")
 
 	// load accounts from the given root
+	// if the root has not been provided, try to use the latest
 	root := common.HexToHash(ctx.String(flagStateRoot))
-	workers := ctx.Int(flagWorkers)
-
-	// if the root has was not provided, try to use the latest
 	if root == zeroHash {
 		root = LatestStateRoot(store, log)
 	}
 
 	// load assembled accounts for the given root and write them into the snapshot database
-	accounts, failed := LoadAccounts(context.Background(), db.OpenStateTrie(store), root, workers, log)
+	accounts, failed := LoadAccounts(context.Background(), db.OpenStateTrie(store), root, ctx.Int(flagWorkers), log)
 	dbWriter(outputDB, accounts)
 
 	// any errors during the processing?
