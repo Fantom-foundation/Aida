@@ -17,10 +17,11 @@ type Account struct {
 
 // StoredAccount contains data from Account in RLP supported formats
 type StoredAccount struct {
-	Nonce    uint64
-	Balance  *big.Int
-	Storage  [][2]common.Hash
-	CodeHash []byte
+	Nonce       uint64
+	Balance     *big.Int
+	StorageRoot common.Hash
+	CodeHash    []byte
+	Storage     [][2]common.Hash
 }
 
 // ToStoredAccount converts Account into StoredAccount
@@ -30,6 +31,7 @@ func (a *Account) ToStoredAccount() *StoredAccount {
 	sa.Nonce = a.Nonce
 	sa.Balance = new(big.Int).Set(a.Balance)
 	sa.CodeHash = a.CodeHash
+	sa.StorageRoot = a.Root
 
 	// sorting storage by keys
 	sortedKeys := make([]common.Hash, 0, len(a.Storage))
@@ -48,4 +50,22 @@ func (a *Account) ToStoredAccount() *StoredAccount {
 	}
 
 	return &sa
+}
+
+// ToAccount converts stored account to Account structure.
+func (sa *StoredAccount) ToAccount() *Account {
+	var ac Account
+
+	ac.Nonce = sa.Nonce
+	ac.Balance = sa.Balance
+	ac.CodeHash = sa.CodeHash
+	ac.Root = sa.StorageRoot
+
+	// convert the storage representation to the hash map
+	ac.Storage = make(map[common.Hash]common.Hash, len(sa.Storage))
+	for _, si := range sa.Storage {
+		ac.Storage[si[0]] = si[1]
+	}
+
+	return &ac
 }
