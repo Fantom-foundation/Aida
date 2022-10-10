@@ -100,7 +100,7 @@ func BlockEpochState(s kvdb.Store) (*types.BlockEpochState, error) {
 func LatestStateRoot(s kvdb.Store) (common.Hash, error) {
 	bes, err := BlockEpochState(s)
 	if err != nil {
-		return [32]byte{}, err
+		return common.Hash{}, err
 	}
 	return bes.BlockState.FinalizedStateRoot, nil
 }

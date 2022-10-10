@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 	"github.com/ethereum/go-ethereum/rlp"
+	"io"
 	"math/big"
 )
 
@@ -103,7 +104,7 @@ type Upgrades struct {
 	Llr    bool
 }
 
-// DecodeRLP is for RLP serialization.
+// DecodeRLP decodes Rules structure from the RLP stream.
 func (r *Rules) DecodeRLP(s *rlp.Stream) error {
 	kind, _, err := s.Kind()
 	if err != nil {
@@ -144,7 +145,36 @@ func (r *Rules) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
-// DecodeRLP is for RLP serialization.
+// EncodeRLP encodes Rules structure nto the RLP stream.
+func (r *Rules) EncodeRLP(w io.Writer) error {
+	// write the type
+	rType := uint8(0)
+	if r.Upgrades != (Upgrades{}) {
+		rType = 1
+		_, err := w.Write([]byte{rType})
+		if err != nil {
+			return err
+		}
+	}
+
+	// write the main body
+	rlpR := RulesRLP(*r)
+	err := rlp.Encode(w, &rlpR)
+	if err != nil {
+		return err
+	}
+
+	// write additional fields, depending on the type
+	if rType > 0 {
+		err := rlp.Encode(w, &r.Upgrades)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// DecodeRLP decodes Upgrades structure from RLP stream.
 func (u *Upgrades) DecodeRLP(s *rlp.Stream) error {
 	bitmap := struct {
 		V uint64
@@ -159,7 +189,24 @@ func (u *Upgrades) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
-// DecodeRLP is for RLP serialization.
+// EncodeRLP encodes Upgrades into the RLP stream.
+func (u *Upgrades) EncodeRLP(w io.Writer) error {
+	bitmap := struct {
+		V uint64
+	}{}
+	if u.Berlin {
+		bitmap.V |= berlinBit
+	}
+	if u.London {
+		bitmap.V |= londonBit
+	}
+	if u.Llr {
+		bitmap.V |= llrBit
+	}
+	return rlp.Encode(w, &bitmap)
+}
+
+// DecodeRLP decodes Gas Rules from the RLP stream.
 func (r *GasRules) DecodeRLP(s *rlp.Stream) error {
 	kind, _, err := s.Kind()
 	if err != nil {
@@ -198,5 +245,28 @@ func (r *GasRules) DecodeRLP(s *rlp.Stream) error {
 		return nil
 	} else {
 		return s.Decode((*GasRulesRLPV1)(r))
+	}
+}
+
+// EncodeRLP encodes Gas Rules into the RLP stream.
+func (r *GasRules) EncodeRLP(w io.Writer) error {
+	// write the type
+	rType := uint8(0)
+	if r.EpochVoteGas != 0 || r.MisbehaviourProofGas != 0 || r.BlockVotesBaseGas != 0 || r.BlockVoteGas != 0 {
+		rType = 1
+		_, err := w.Write([]byte{rType})
+		if err != nil {
+			return err
+		}
+	}
+	if rType == 0 {
+		return rlp.Encode(w, &GasRulesRLPV0{
+			MaxEventGas:  r.MaxEventGas,
+			EventGas:     r.EventGas,
+			ParentGas:    r.ParentGas,
+			ExtraDataGas: r.ExtraDataGas,
+		})
+	} else {
+		return rlp.Encode(w, (*GasRulesRLPV1)(r))
 	}
 }
