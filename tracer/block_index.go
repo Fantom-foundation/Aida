@@ -75,7 +75,7 @@ func (oIdx *BlockIndex) Read(filename string) error {
 	oIdx.Init()
 
 	// open storage dictionary file for reading
-	f, err := os.OpenFile(TraceDir+filename, os.O_CREATE|os.O_RDONLY, 0644)
+	f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDONLY, 0644)
 	if err != nil {
 		return err
 	}
