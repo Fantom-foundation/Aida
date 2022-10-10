@@ -5,6 +5,7 @@ import (
 	"github.com/Fantom-foundation/Aida-Testing/cmd/gen-world-state/version"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/account"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/dump"
+	"github.com/Fantom-foundation/Aida-Testing/world-state/evolve"
 	"github.com/urfave/cli/v2"
 	"log"
 	"os"
@@ -21,6 +22,7 @@ func main() {
 		Version:   version.Version,
 		Commands: []*cli.Command{
 			&dump.CmdDumpState,
+			&evolve.CmdEvolveState,
 			&account.CmdAccount,
 			&version.CmdVersion,
 		},
