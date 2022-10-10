@@ -53,7 +53,7 @@ func (oIdx *BlockIndex) Get(block uint64) (int64, error) {
 // Write the block-index to a file.
 func (oIdx *BlockIndex) Write(filename string) error {
 	// open index file for writing
-	f, err := os.OpenFile(TraceDir+filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	f, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
 		return err
 	}
