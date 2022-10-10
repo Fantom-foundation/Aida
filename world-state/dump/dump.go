@@ -74,7 +74,7 @@ var CmdDumpState = cli.Command{
 // dumpState dumps state from given EVM trie into an output account-state database
 func dumpState(ctx *cli.Context) error {
 	// open the source trie DB
-	store, inputDB, err := db.OpenStateTrie(ctx.String(flagInputDBType), ctx.Path(flagInputDBPath), ctx.Path(flagStateDBName))
+	store, err := db.Connect(ctx.String(flagInputDBType), ctx.Path(flagInputDBPath), ctx.Path(flagStateDBName))
 	if err != nil {
 		return err
 	}
@@ -95,7 +95,7 @@ func dumpState(ctx *cli.Context) error {
 	log := logger.New(ctx.App.Writer, "info")
 
 	// load assembled accounts for the given root and write them into the snapshot database
-	accounts, failed := LoadAccounts(context.Background(), inputDB, root, workers, log)
+	accounts, failed := LoadAccounts(context.Background(), db.OpenStateTrie(store), root, workers, log)
 	dbWriter(outputDB, accounts)
 
 	// any errors during the processing?

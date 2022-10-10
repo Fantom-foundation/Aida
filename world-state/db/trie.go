@@ -34,26 +34,30 @@ func connect(dbType string, path string) (kvdb.IterableDBProducer, error) {
 	return nil, fmt.Errorf("invalid DB type; expected (ldb, pbl), %s given", dbType)
 }
 
-// OpenStateTrie opens the EVM state trie on the provided DB connection.
-func OpenStateTrie(dbType string, dbPath string, dbName string) (kvdb.Store, state.Database, error) {
+// Connect specified database.
+func Connect(dbType string, dbPath string, dbName string) (kvdb.Store, error) {
 	// connect the KV database
 	kv, err := connect(dbType, dbPath)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	// try to open the Store
 	store, err := kv.OpenDB(dbName)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
+	return store, nil
+}
+
+// OpenStateTrie opens the EVM state trie on the provided DB connection.
+func OpenStateTrie(store kvdb.Store) state.Database {
 	// evm data are stored under prefix M
 	evmDB := table.New(store, []byte(("M")))
 	wrappedEvmDB := rawdb.NewDatabase(kvdb2ethdb.Wrap(nokeyiserr.Wrap(evmDB)))
-	st := state.NewDatabaseWithConfig(wrappedEvmDB, &trie.Config{})
 
-	return store, st, nil
+	return state.NewDatabaseWithConfig(wrappedEvmDB, &trie.Config{})
 }
 
 // MustCloseStateTrie closes opened trie store without raising any error.
