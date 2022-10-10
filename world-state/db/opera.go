@@ -74,3 +74,8 @@ func MustCloseStore(s kvdb.Store) {
 		}
 	}
 }
+
+// OpenBlocks opens the Opera blocks database.
+func OpenBlocks(store kvdb.Store) kvdb.Store {
+	return table.New(store, []byte(("b")))
+}

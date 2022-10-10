@@ -90,22 +90,62 @@ func dumpState(ctx *cli.Context) error {
 	// make logger
 	log := logger.New(ctx.App.Writer, "info")
 
+	// blockNumber number to be stored in output db
+	var blockNumber uint64 = 0
+
 	// load accounts from the given root
 	// if the root has not been provided, try to use the latest
 	root := common.HexToHash(ctx.String(flagStateRoot))
 	if root == zeroHash {
-		root = LatestStateRoot(store, log)
+		root, blockNumber = LatestStateRoot(store, log)
+	}
+
+	var blockNumberChan chan uint64 = nil
+	// root was not in BlockEpochState, search for blockNumber of given root in block records
+	if blockNumber == 0 {
+		blockNumberChan = RootBlock(store, root, log)
 	}
 
 	// load assembled accounts for the given root and write them into the snapshot database
 	accounts, failed := LoadAccounts(context.Background(), db.OpenStateTrie(store), root, ctx.Int(flagWorkers), log)
 	dbWriter(outputDB, accounts)
 
+	errorOccurred := false
+
 	// any errors during the processing?
 	for err = <-failed; err != nil; err = <-failed {
+		errorOccurred = true
 		log.Error(err.Error())
+	}
+
+	// no errors during processing write block number into database
+	if !errorOccurred {
+		storeBlockNumber(blockNumberChan, blockNumber, outputDB, log)
 	}
 
 	log.Info("done")
 	return nil
+}
+
+// storeBlockNumber inserts block number to the output database
+// blockNumber contains result only when root matched root of last block in database
+func storeBlockNumber(blockNumberChan chan uint64, blockNumber uint64, outputDB *db.StateSnapshotDB, log Logger) {
+	// blockNumberChan is only initialized when result isn't contained in blockNumber
+	if blockNumberChan != nil {
+		var ok bool
+		blockNumber, ok = <-blockNumberChan
+		if !ok {
+			blockNumber = 0
+		}
+	}
+
+	if blockNumber == 0 {
+		log.Errorf("Block number for given root wasn't found in database; %s")
+	}
+
+	log.Infof("Inserting block number %d into database", blockNumber)
+	err := outputDB.PutBlockNumber(blockNumber)
+	if err != nil {
+		log.Errorf("PutBlockNumber; %s", err.Error())
+	}
 }
