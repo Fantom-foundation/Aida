@@ -2,7 +2,10 @@ module github.com/Fantom-foundation/Aida-Testing
 
 go 1.19
 
-require github.com/status-im/keycard-go v0.0.0-20190424133014-d95853db0f48
+require (
+	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
+	github.com/status-im/keycard-go v0.0.0-20190424133014-d95853db0f48
+)
 
 require (
 	github.com/DataDog/zstd v1.5.2 // indirect
@@ -25,7 +28,6 @@ require (
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
-	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/rivo/uniseg v0.4.2 // indirect
@@ -39,7 +41,6 @@ require (
 	golang.org/x/exp v0.0.0-20221004215720-b9f4876ce741 // indirect
 	golang.org/x/sys v0.0.0-20220928140112-f11e5e49a4ec // indirect
 	golang.org/x/text v0.3.7 // indirect
-	gopkg.in/urfave/cli.v1 v1.20.0 // indirect
 )
 
 require (
@@ -48,8 +49,9 @@ require (
 	github.com/ethereum/go-ethereum v1.10.25
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20210305035536-64b5b1c73954
-	github.com/urfave/cli/v2 v2.17.1
+	github.com/urfave/cli/v2 v2.19.2
 )
 
-//replace github.com/ethereum/go-ethereum => github.com/Fantom-foundation/go-ethereum v1.10.8-ftm-rc7
-replace github.com/ethereum/go-ethereum => github.com/Fantom-foundation/go-ethereum-substate v1.1.0
+replace github.com/ethereum/go-ethereum => github.com/Fantom-foundation/go-ethereum v1.10.8-ftm-rc7
+
+// replace github.com/ethereum/go-ethereum => github.com/Fantom-foundation/go-ethereum-substate v1.1.0
