@@ -4,13 +4,16 @@ package db
 import (
 	"fmt"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/db/kvdb2ethdb"
+	"github.com/Fantom-foundation/Aida-Testing/world-state/types"
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/leveldb"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/nokeyiserr"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/pebble"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/table"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 	"log"
@@ -73,4 +76,31 @@ func MustCloseStore(s kvdb.Store) {
 			log.Printf("could not close store; %s\n", err.Error())
 		}
 	}
+}
+
+// BlockEpochState provides joined block and epoch state stored in the provided Opera database.
+func BlockEpochState(s kvdb.Store) (*types.BlockEpochState, error) {
+	ebs := OpenBlockEpochState(s)
+
+	data, err := ebs.Get([]byte("s"))
+	if err != nil {
+		return nil, fmt.Errorf("block state not found; %s", err.Error())
+	}
+
+	bes := types.BlockEpochState{}
+	err = rlp.DecodeBytes(data, &bes)
+	if err != nil {
+		return nil, fmt.Errorf("could not decode block/epoch state information; %s", err.Error())
+	}
+
+	return &bes, nil
+}
+
+// LatestStateRoot provides the latest block state root hash.
+func LatestStateRoot(s kvdb.Store) (common.Hash, error) {
+	bes, err := BlockEpochState(s)
+	if err != nil {
+		return [32]byte{}, err
+	}
+	return bes.BlockState.FinalizedStateRoot, nil
 }

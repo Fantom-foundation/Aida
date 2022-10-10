@@ -94,7 +94,13 @@ func dumpState(ctx *cli.Context) error {
 	// if the root has not been provided, try to use the latest
 	root := common.HexToHash(ctx.String(flagStateRoot))
 	if root == zeroHash {
-		root = LatestStateRoot(store, log)
+		root, err = db.LatestStateRoot(store)
+		if err != nil {
+			log.Errorf("state root not found; %s", err.Error())
+			return err
+		}
+
+		log.Infof("state root not provided, using the latest %s", root.String())
 	}
 
 	// load assembled accounts for the given root and write them into the snapshot database
