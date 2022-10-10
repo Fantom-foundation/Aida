@@ -7,12 +7,12 @@ import (
 
 // Add()
 // Positive Test: Add a new set of blocks and compare the size of index map
-func TestPositiveOperationIndexAdd(t *testing.T) {
+func TestPositiveBlockIndexAdd(t *testing.T) {
 	var blk1 uint64 = 1
 	var blk2 uint64 = 2
-	var pos1 uint64 = 0
-	var pos2 uint64 = 1
-	opIdx := NewOperationIndex()
+	var pos1 int64 = 0
+	var pos2 int64 = 1
+	opIdx := NewBlockIndex()
 
 	err1 := opIdx.Add(blk1, pos1)
 	if err1 != nil {
@@ -23,17 +23,17 @@ func TestPositiveOperationIndexAdd(t *testing.T) {
 		t.Fatalf("Failed to add new block: %v", err2)
 	}
 	want := 2
-	have := len(opIdx.blockToOperation)
+	have := len(opIdx.blockToFPos)
 	if have != want {
 		t.Fatalf("Unexpected map size")
 	}
 }
 
 // Negative Test: Add a duplicate block and compare whether the values are added twice
-func TestNegativeOperationIndexAdd(t *testing.T) {
+func TestNegativeBlockIndexAdd(t *testing.T) {
 	var blk uint64 = 1
-	var pos uint64 = 0
-	opIdx := NewOperationIndex()
+	var pos int64 = 0
+	opIdx := NewBlockIndex()
 
 	err1 := opIdx.Add(blk, pos)
 	if err1 != nil {
@@ -45,18 +45,18 @@ func TestNegativeOperationIndexAdd(t *testing.T) {
 	}
 
 	want := 1
-	have := len(opIdx.blockToOperation)
+	have := len(opIdx.blockToFPos)
 	if have != want {
 		t.Fatalf("Unexpectd map size")
 	}
 }
 
 // Get()
-// Positive Test: Get file positions from OperationIndex and compare index postions
-func TestPositiveOperationIndexGet(t *testing.T) {
+// Positive Test: Get file positions from BlockIndex and compare index postions
+func TestPositiveBlockIndexGet(t *testing.T) {
 	var blk uint64 = 1
-	var pos uint64 = 8
-	opIdx := NewOperationIndex()
+	var pos int64 = 8
+	opIdx := NewBlockIndex()
 
 	opIdx.Add(blk, pos)
 	opnum, err := opIdx.Get(blk)
@@ -68,11 +68,11 @@ func TestPositiveOperationIndexGet(t *testing.T) {
 	}
 }
 
-// Negative Test: Get file positions of a block whcih is not in OperationIndex
-func TestNegativeOperationIndexGet(t *testing.T) {
+// Negative Test: Get file positions of a block whcih is not in BlockIndex
+func TestNegativeBlockIndexGet(t *testing.T) {
 	var blk uint64 = 1
-	var pos uint64 = 8
-	opIdx := NewOperationIndex()
+	var pos int64 = 8
+	opIdx := NewBlockIndex()
 
 	opIdx.Add(blk, pos)
 	_, err := opIdx.Get(blk + 1)
@@ -84,12 +84,12 @@ func TestNegativeOperationIndexGet(t *testing.T) {
 // Read and Write()
 // Positive Tetst: Write a set of postion index to a binary file and read from it.
 // Compare whether indices are the same.
-func TestPositiveOperationIndexReadWrite(t *testing.T) {
+func TestPositiveBlockIndexReadWrite(t *testing.T) {
 	var blk uint64 = 1
-	var pos uint64 = 3
+	var pos int64 = 3
 	filename := "./operation_index_test.dat"
 
-	wOpIdx := NewOperationIndex()
+	wOpIdx := NewBlockIndex()
 	wOpIdx.Add(blk, pos)
 
 	err1 := wOpIdx.Write(filename)
@@ -97,7 +97,7 @@ func TestPositiveOperationIndexReadWrite(t *testing.T) {
 	if err1 != nil {
 		t.Fatalf("Failed to write file. %v", err1)
 	}
-	rOpIdx := NewOperationIndex()
+	rOpIdx := NewBlockIndex()
 	err2 := rOpIdx.Read(filename)
 	if err2 != nil {
 		t.Fatalf("Failed to read file. %v", err2)
@@ -113,7 +113,7 @@ func TestPositiveOperationIndexReadWrite(t *testing.T) {
 
 // Positive Tetst: Create
 // Negative Tetst: Write a corrupted file and read from it.
-func TestNegativeOperationIndexWrite(t *testing.T) {
+func TestNegativeBlockIndexWrite(t *testing.T) {
 	filename := "./operation_index_test.dat"
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
@@ -129,7 +129,7 @@ func TestNegativeOperationIndexWrite(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to close file")
 	}
-	opIdx := NewOperationIndex()
+	opIdx := NewBlockIndex()
 	err = opIdx.Read(filename)
 	if err == nil {
 		t.Fatalf("Failed to report error when reading a corrupted file")

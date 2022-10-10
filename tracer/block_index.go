@@ -13,6 +13,11 @@ type BlockIndex struct {
 	blockToFPos map[uint64]int64 // block number -> file position
 }
 
+type BlockFPos struct {
+	Block uint64
+	FPos  int64
+}
+
 // Initialize a block-index.
 func (oIdx *BlockIndex) Init() {
 	oIdx.blockToFPos = make(map[uint64]int64)
@@ -63,8 +68,8 @@ func (oIdx *BlockIndex) Write(filename string) error {
 
 	// write all dictionary entries
 	for block, fpos := range oIdx.blockToFPos {
-		var data = []any{block, fpos}
-		writeSlice(f, data)
+		data := BlockFPos{Block: block, FPos: fpos}
+		writeStruct(f, data)
 	}
 	return nil
 }
@@ -86,10 +91,7 @@ func (oIdx *BlockIndex) Read(filename string) error {
 	// read entries from file
 	for {
 		// read next entry
-		var data struct {
-			Block uint64
-			FPos  int64
-		}
+		var data BlockFPos
 		err := binary.Read(f, binary.LittleEndian, &data)
 		if err == io.EOF {
 			break

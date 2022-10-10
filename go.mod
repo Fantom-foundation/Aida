@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/Fantom-foundation/go-opera v1.1.1-rc.2
-	github.com/Fantom-foundation/substate-cli v0.0.0-20221004075829-2692dab2c2f1
+	github.com/Fantom-foundation/substate-cli v0.0.0-20221010072404-3fea36aee3a5
 	github.com/ethereum/go-ethereum v1.10.8
 	gopkg.in/urfave/cli.v1 v1.20.0
 )
@@ -39,10 +39,8 @@ require (
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 )
 
-replace github.com/Fantom-foundation/substate-cli => ../substate-cli
-
-replace github.com/ethereum/go-ethereum => ../go-ethereum-substate
-
-replace github.com/Fantom-foundation/go-opera => ../go-opera-substate
-
 replace github.com/dvyukov/go-fuzz => github.com/guzenok/go-fuzz v0.0.0-20210103140116-f9104dfb626f
+
+replace github.com/ethereum/go-ethereum => github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20220922142900-25737df3c953
+
+replace github.com/Fantom-foundation/go-opera => github.com/Fantom-foundation/go-opera-substate v1.0.1-0.20221010085351-fcd736e326f0
