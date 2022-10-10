@@ -90,11 +90,14 @@ func dumpState(ctx *cli.Context) error {
 	// make logger
 	log := logger.New(ctx.App.Writer, "info")
 
+	// blockNumber number to be stored in output db
+	var blockNumber uint64 = 0
+
 	// load accounts from the given root
 	// if the root has not been provided, try to use the latest
 	root := common.HexToHash(ctx.String(flagStateRoot))
 	if root == db.ZeroHash {
-		root, err = db.LatestStateRoot(store)
+		root, blockNumber, err = db.LatestStateRoot(store)
 		if err != nil {
 			log.Errorf("state root not found; %s", err.Error())
 			return err
@@ -103,13 +106,27 @@ func dumpState(ctx *cli.Context) error {
 		log.Infof("state root not provided, using the latest %s", root.String())
 	}
 
+	var blockNumberChan chan uint64 = nil
+	// root was not in BlockEpochState, search for blockNumber of given root in block records
+	if blockNumber == 0 {
+		blockNumberChan = RootBlock(store, root, log)
+	}
+
 	// load assembled accounts for the given root and write them into the snapshot database
 	accounts, failed := LoadAccounts(context.Background(), db.OpenStateTrie(store), root, ctx.Int(flagWorkers), log)
 	dbWriter(outputDB, accounts)
 
+	errorOccurred := false
+
 	// any errors during the processing?
 	for err = <-failed; err != nil; err = <-failed {
+		errorOccurred = true
 		log.Error(err.Error())
+	}
+
+	// no errors during processing write block number into database
+	if !errorOccurred {
+		storeBlockNumber(blockNumberChan, blockNumber, outputDB, log)
 	}
 
 	log.Info("done")

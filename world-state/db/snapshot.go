@@ -19,6 +19,10 @@ const (
 	CodePrefix = "1c"
 )
 
+var (
+	BlockNumberKey = []byte("blockNumberKey")
+)
+
 // ZeroHash represents an empty hash.
 var ZeroHash = common.Hash{}
 
@@ -129,4 +133,14 @@ func (db *StateSnapshotDB) Account(addr common.Address) (*types.Account, error) 
 func CodeKey(codeHash common.Hash) []byte {
 	prefix := []byte(CodePrefix)
 	return append(prefix, codeHash.Bytes()...)
+}
+
+// PutBlockNumber inserts block number into database
+func (db *StateSnapshotDB) PutBlockNumber(i uint64) error {
+	enc, err := rlp.EncodeToBytes(i)
+	if err != nil {
+		return fmt.Errorf("failed encoding blockID %d to RLP; %s", i, err.Error())
+	}
+
+	return db.Backend.Put(BlockNumberKey, enc)
 }
