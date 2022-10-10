@@ -60,12 +60,17 @@ func OpenStateTrie(store kvdb.Store) state.Database {
 	return state.NewDatabaseWithConfig(wrappedEvmDB, &trie.Config{})
 }
 
-// MustCloseStateTrie closes opened trie store without raising any error.
-func MustCloseStateTrie(s kvdb.Store) {
+// OpenBlockEpochState opens the Opera block/epoch state database.
+func OpenBlockEpochState(store kvdb.Store) kvdb.Store {
+	return table.New(store, []byte(("D")))
+}
+
+// MustCloseStore closes opened store without raising any error.
+func MustCloseStore(s kvdb.Store) {
 	if s != nil {
 		err := s.Close()
 		if err != nil {
-			log.Printf("could not close state trie; %s\n", err.Error())
+			log.Printf("could not close store; %s\n", err.Error())
 		}
 	}
 }

@@ -20,6 +20,7 @@ const (
 )
 
 var (
+	zeroHash      = common.Hash{}
 	emptyCode     = crypto.Keccak256(nil)
 	emptyCodeHash = common.BytesToHash(emptyCode)
 )
@@ -42,10 +43,9 @@ var CmdDumpState = cli.Command{
 	ArgsUsage: "<root> <input-db> <input-db-name> <input-db-type> <workers>",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
-			Name:     flagStateRoot,
-			Usage:    "Root hash of the state trie",
-			Value:    "",
-			Required: true,
+			Name:  flagStateRoot,
+			Usage: "Root hash of the state trie",
+			Value: "",
 		},
 		&cli.PathFlag{
 			Name:     flagInputDBPath,
@@ -78,7 +78,7 @@ func dumpState(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	defer db.MustCloseStateTrie(store)
+	defer db.MustCloseStore(store)
 
 	// try to open output DB
 	outputDB, err := db.OpenStateSnapshotDB(ctx.Path(flagOutputDBPath))
@@ -87,12 +87,17 @@ func dumpState(ctx *cli.Context) error {
 	}
 	defer db.MustCloseSnapshotDB(outputDB)
 
+	// make logger
+	log := logger.New(ctx.App.Writer, "info")
+
 	// load accounts from the given root
 	root := common.HexToHash(ctx.String(flagStateRoot))
 	workers := ctx.Int(flagWorkers)
 
-	// make logger
-	log := logger.New(ctx.App.Writer, "info")
+	// if the root has was not provided, try to use the latest
+	if root == zeroHash {
+		root = LatestStateRoot(store, log)
+	}
 
 	// load assembled accounts for the given root and write them into the snapshot database
 	accounts, failed := LoadAccounts(context.Background(), db.OpenStateTrie(store), root, workers, log)
