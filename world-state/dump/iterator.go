@@ -146,7 +146,7 @@ func loadRawAccounts(ctx context.Context, db state.Database, root common.Hash, r
 
 // finaliseAccounts worker processes incomplete accounts from input queue and sends completed accounts to output.
 func finaliseAccounts(ctx context.Context, wid int, db state.Database, in chan types.Account, out chan types.Account, fail chan error, wg *sync.WaitGroup, log Logger) {
-	tick := time.NewTicker(10 * time.Second)
+	tick := time.NewTicker(20 * time.Second)
 	defer func() {
 		tick.Stop()
 		wg.Done()

@@ -9,6 +9,9 @@ type Adapter struct {
 	kvdb.Store
 }
 
+var _ ethdb.KeyValueStore = (*Adapter)(nil)
+
+// Wrap encapsulates provided K-V store in the Adapter to extend it with required EthDB functionality.
 func Wrap(v kvdb.Store) *Adapter {
 	return &Adapter{v}
 }

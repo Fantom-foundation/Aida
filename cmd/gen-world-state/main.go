@@ -22,6 +22,14 @@ func main() {
 			&version.CmdVersion,
 			&dump.CmdDumpState,
 		},
+		Flags: []cli.Flag{
+			&cli.PathFlag{
+				Name:     "db",
+				Usage:    "World state snapshot database path.",
+				Value:    "",
+				Required: true,
+			},
+		},
 	}
 
 	// execute the application based on provided arguments

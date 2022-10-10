@@ -14,7 +14,7 @@ const (
 	flagInputDBPath  = "input-db"
 	flagInputDBType  = "input-db-type"
 	flagStateDBName  = "input-db-name"
-	flagOutputDBPath = "output-db"
+	flagOutputDBPath = "db"
 	flagStateRoot    = "root"
 	flagWorkers      = "workers"
 )
@@ -39,7 +39,7 @@ var CmdDumpState = cli.Command{
 		- Nonce
 		- Code (separate storage slot is used to store code data)
 		- Contract Storage`,
-	ArgsUsage: "<root> <input-db> <output-db> <input-db-name> <input-db-type> <workers>",
+	ArgsUsage: "<root> <input-db> <input-db-name> <input-db-type> <workers>",
 	Flags: []cli.Flag{
 		&cli.StringFlag{
 			Name:     flagStateRoot,
@@ -49,19 +49,13 @@ var CmdDumpState = cli.Command{
 		},
 		&cli.PathFlag{
 			Name:     flagInputDBPath,
-			Usage:    "Input state database path",
-			Value:    "",
-			Required: true,
-		},
-		&cli.PathFlag{
-			Name:     flagOutputDBPath,
-			Usage:    "Output state snapshot database path",
+			Usage:    "Input database path with the state MPT",
 			Value:    "",
 			Required: true,
 		},
 		&cli.StringFlag{
 			Name:  flagStateDBName,
-			Usage: "Input state database name",
+			Usage: "Input state trie database table name",
 			Value: "main",
 		},
 		&cli.StringFlag{
@@ -72,7 +66,7 @@ var CmdDumpState = cli.Command{
 		&cli.IntFlag{
 			Name:  flagWorkers,
 			Usage: "Number of account processing threads",
-			Value: 25,
+			Value: 50,
 		},
 	},
 }
