@@ -81,6 +81,17 @@ func (db *StateSnapshotDB) PutAccount(acc *types.Account) error {
 	return db.Backend.Put(acc.Hash.Bytes(), enc)
 }
 
+// GetAccount retrieves Account from database
+func (db *StateSnapshotDB) GetAccount(key common.Hash) (*types.StoredAccount, error) {
+	data, err := db.Backend.Get(key.Bytes())
+	if err != nil {
+		return nil, err
+	}
+	var acc = types.StoredAccount{}
+	err = rlp.DecodeBytes(data, &acc)
+	return &acc, err
+}
+
 // CodeKey retrieves storing DB key for supplied codeHash
 func CodeKey(codeHash common.Hash) []byte {
 	prefix := []byte(CodePrefix)
@@ -95,4 +106,20 @@ func (db *StateSnapshotDB) PutBlockNumber(i uint64) error {
 	}
 
 	return db.Backend.Put(BlockNumberKey, enc)
+}
+
+// GetBlockNumber retrieves block number from database
+func (db *StateSnapshotDB) GetBlockNumber() (uint64, error) {
+	data, err := db.Backend.Get(BlockNumberKey)
+	if err != nil {
+		return 0, fmt.Errorf("block number not found in database; %s", err.Error())
+	}
+
+	var blockNumber uint64
+	err = rlp.DecodeBytes(data, &blockNumber)
+	if err != nil {
+		return 0, fmt.Errorf("failed decoding block number from RLP; %s", err.Error())
+	}
+
+	return blockNumber, err
 }

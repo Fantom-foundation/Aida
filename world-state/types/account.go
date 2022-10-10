@@ -3,6 +3,7 @@ package types
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/substate"
 	"math/big"
 	"sort"
 )
@@ -21,6 +22,25 @@ type StoredAccount struct {
 	Balance  *big.Int
 	Storage  [][2]common.Hash
 	CodeHash []byte
+}
+
+func (a StoredAccount) Equal(account *substate.SubstateAccount) bool {
+	if a.Nonce != account.Nonce {
+		return false
+	}
+
+	if a.Balance != account.Balance {
+		return false
+	}
+
+	//TODO compare code and storage
+
+	//a.CodeHash
+	//
+	//for _, hashes := range a.Storage {
+	//}
+
+	return true
 }
 
 // ToStoredAccount converts Account into StoredAccount
