@@ -22,6 +22,7 @@ const flagWithStorage = "with-storage"
 // build/gen-world-state --db=<path> account info "0xFC00FACE00000000000000000000000000000000"
 var cmdAccountInfo = cli.Command{
 	Action:      accountInfo,
+	Aliases:     []string{"i"},
 	Name:        "info",
 	Usage:       "Provides detailed information about the target account.",
 	Description: "Command provides detailed information about the account specified as an argument.",

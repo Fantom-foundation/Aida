@@ -20,9 +20,9 @@ func main() {
 		Copyright: "(c) 2022 Fantom Foundation",
 		Version:   version.Version,
 		Commands: []*cli.Command{
-			&version.CmdVersion,
 			&dump.CmdDumpState,
 			&account.CmdAccount,
+			&version.CmdVersion,
 		},
 		Flags: []cli.Flag{
 			&cli.PathFlag{

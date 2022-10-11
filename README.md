@@ -22,13 +22,14 @@ alternative client subsystems execution, profiling, and testing. It should not b
 as a target client database.
 
 ### Building the World State Manager
-You need a configured Go language environment to build the CLI application. Please check the [Go documentation](https://go.dev)
+You need a configured Go language environment to build the CLI application. 
+Please check the [Go documentation](https://go.dev)
 for the details of installing the language compiler on your system.
 
-To build the `worldstate-cli` application, run `make` inside the `/worldstate-cli` subdirectory.
+To build the `gen-world-state` application, run `make gen-world-state`.
 
 The build process downloads all the needed modules and libraries, you don't need to install these manually.
-The `worldstate-cli` executable application will be created in `/worldstate-cli/build` folder.
+The `gen-world-state` executable application will be created in `/build` folder.
 
 ### Running the World State Manager
 To use Aida World State manager, execute the compiled binary with the command and flags for the desired operation.
@@ -39,8 +40,9 @@ worldstate-cli [global options] command [command options] [arguments...]
 
 #### Available commands
 
-| command    | description                                                  |
-|------------|--------------------------------------------------------------|
-| version, v | Provides information about the application version and build |
-| help, h    | Shows a list of commands or help for one command             |
->>>>>>> feature/worldstate-cli
+| command    | description                                                        |
+|------------|--------------------------------------------------------------------|
+| account, a | Displays information of an individual account in exported state DB |
+| dump, d    | Extracts world state MPT at a given state root into an external DB |
+| version, v | Provides information about the application version and build       |
+| help, h    | Shows a list of commands or help for one command                   |

@@ -9,8 +9,9 @@ const (
 
 // CmdAccount defines a CLI command set for managing single account data in the state dump database.
 var CmdAccount = cli.Command{
-	Name:  "account",
-	Usage: `Provides information and management function for individual accounts in state dump database.`,
+	Name:    "account",
+	Aliases: []string{"a"},
+	Usage:   `Provides information and management function for individual accounts in state dump database.`,
 	Subcommands: []*cli.Command{
 		&cmdAccountInfo,
 	},

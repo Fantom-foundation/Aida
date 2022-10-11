@@ -31,9 +31,10 @@ var (
 //   - Code (hash + separate storage)
 //   - Contract Storage
 var CmdDumpState = cli.Command{
-	Action: dumpState,
-	Name:   "dump",
-	Usage:  "Extracts world state MPT trie at given root from input database into state snapshot output database.",
+	Action:  dumpState,
+	Name:    "dump",
+	Aliases: []string{"d"},
+	Usage:   "Extracts world state MPT trie at given root from input database into state snapshot output database.",
 	Description: `The dump creates a snapshot of all accounts state (including contracts) exporting:
 		- Balance
 		- Nonce
