@@ -89,6 +89,9 @@ func (db *StateSnapshotDB) PutAccount(acc *types.Account) error {
 			return err
 		}
 		acc.CodeHash = ch.Bytes()
+	} else {
+		//when PutAccount is used to update account, then CodeHash needs to be either updated or explicitly set to nil
+		acc.CodeHash = nil
 	}
 
 	enc, err := rlp.EncodeToBytes(acc)
