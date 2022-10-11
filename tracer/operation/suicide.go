@@ -9,10 +9,6 @@ import (
 	"github.com/Fantom-foundation/substate-cli/state"
 )
 
-////////////////////////////////////////////////////////////
-// Suicide Operation
-////////////////////////////////////////////////////////////
-
 // Suicide data structure
 type Suicide struct {
 	ContractIndex uint32 // encoded contract address

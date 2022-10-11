@@ -10,10 +10,6 @@ import (
 	"github.com/Fantom-foundation/substate-cli/state"
 )
 
-////////////////////////////////////////////////////////////
-// Begin Block Operation (Pseudo Operation)
-////////////////////////////////////////////////////////////
-
 // Begin-block operation data structure
 type BeginBlock struct {
 	BlockNumber uint64 // block number

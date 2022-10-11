@@ -7,10 +7,6 @@ import (
 	"github.com/Fantom-foundation/substate-cli/state"
 )
 
-////////////////////////////////////////////////////////////
-// End Block Operation (Pseudo Operation)
-////////////////////////////////////////////////////////////
-
 // End-block operation data structure
 type EndBlock struct {
 }

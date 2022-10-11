@@ -9,10 +9,6 @@ import (
 	"github.com/Fantom-foundation/substate-cli/state"
 )
 
-////////////////////////////////////////////////////////////
-// CreateAccount Operation
-////////////////////////////////////////////////////////////
-
 // Create-account data structure
 type CreateAccount struct {
 	ContractIndex uint32 // encoded contract address

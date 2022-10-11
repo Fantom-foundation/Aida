@@ -9,10 +9,6 @@ import (
 	"github.com/Fantom-foundation/substate-cli/state"
 )
 
-////////////////////////////////////////////////////////////
-// SetState Operation
-////////////////////////////////////////////////////////////
-
 // Set-state data structure
 type SetState struct {
 	ContractIndex uint32 // encoded contract address

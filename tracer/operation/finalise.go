@@ -9,10 +9,6 @@ import (
 	"github.com/Fantom-foundation/substate-cli/state"
 )
 
-////////////////////////////////////////////////////////////
-// Finalise Operation
-////////////////////////////////////////////////////////////
-
 // Finalise data structure
 type Finalise struct {
 	DeleteEmptyObjects bool

@@ -9,10 +9,6 @@ import (
 	"github.com/Fantom-foundation/substate-cli/state"
 )
 
-////////////////////////////////////////////////////////////
-// GetBalance Operation
-////////////////////////////////////////////////////////////
-
 // GetBalance data structure
 type GetBalance struct {
 	ContractIndex uint32

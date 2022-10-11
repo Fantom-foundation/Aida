@@ -9,10 +9,6 @@ import (
 	"github.com/Fantom-foundation/substate-cli/state"
 )
 
-////////////////////////////////////////////////////////////
-// GetState Operation
-////////////////////////////////////////////////////////////
-
 // Get-state data structure
 type GetState struct {
 	ContractIndex uint32 // encoded contract address

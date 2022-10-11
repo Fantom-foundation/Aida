@@ -9,10 +9,6 @@ import (
 	"github.com/Fantom-foundation/substate-cli/state"
 )
 
-////////////////////////////////////////////////////////////
-// Exist Operation
-////////////////////////////////////////////////////////////
-
 // Exist data structure
 type Exist struct {
 	ContractIndex uint32 // encoded contract address

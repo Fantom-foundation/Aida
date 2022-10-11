@@ -9,10 +9,6 @@ import (
 	"github.com/Fantom-foundation/substate-cli/state"
 )
 
-////////////////////////////////////////////////////////////
-// RevertToSnapshot Operation
-////////////////////////////////////////////////////////////
-
 // Revert-to-snapshot operation's data structure with returned snapshot id
 type RevertToSnapshot struct {
 	SnapshotID int

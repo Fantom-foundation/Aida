@@ -7,10 +7,6 @@ import (
 	"github.com/Fantom-foundation/substate-cli/state"
 )
 
-////////////////////////////////////////////////////////////
-// End of transaction Operation
-////////////////////////////////////////////////////////////
-
 // End-transaction operation's data structure
 type EndTransaction struct {
 }

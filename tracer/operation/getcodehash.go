@@ -9,10 +9,6 @@ import (
 	"github.com/Fantom-foundation/substate-cli/state"
 )
 
-////////////////////////////////////////////////////////////
-// GetCodeHash Operation
-////////////////////////////////////////////////////////////
-
 // Get-code-hash data structure
 type GetCodeHash struct {
 	ContractIndex uint32 // encoded contract address
