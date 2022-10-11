@@ -3,8 +3,9 @@ package types
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/rlp"
+	"io"
 	"math/big"
-	"sort"
 )
 
 // Account is modification of SubstateAccount in substate/substate.go
@@ -15,57 +16,69 @@ type Account struct {
 	state.Account
 }
 
-// StoredAccount contains data from Account in RLP supported formats
-type StoredAccount struct {
+// accountRLP contains data from Account in RLP supported formats
+type accountRLP struct {
 	Nonce       uint64
 	Balance     *big.Int
-	StorageRoot common.Hash
 	CodeHash    []byte
-	Storage     [][2]common.Hash
+	StorageSize uint64
 }
 
-// ToStoredAccount converts Account into StoredAccount
-func (a *Account) ToStoredAccount() *StoredAccount {
-	var sa StoredAccount
+// accStorageItmRLP represents a pair of storage key and value in RLP stream
+type accStorageItmRLP struct {
+	Key   common.Hash
+	Value common.Hash
+}
 
-	sa.Nonce = a.Nonce
-	sa.Balance = new(big.Int).Set(a.Balance)
-	sa.CodeHash = a.CodeHash
-	sa.StorageRoot = a.Root
-
-	// sorting storage by keys
-	sortedKeys := make([]common.Hash, 0, len(a.Storage))
-	for key := range a.Storage {
-		sortedKeys = append(sortedKeys, key)
-	}
-	sort.Slice(sortedKeys, func(i, j int) bool {
-		return sortedKeys[i].Big().Cmp(sortedKeys[j].Big()) < 0
+// EncodeRLP encodes given Account into a RLP stream.
+func (a *Account) EncodeRLP(w io.Writer) error {
+	// write the base
+	err := rlp.Encode(w, &accountRLP{
+		Nonce:       a.Nonce,
+		Balance:     a.Balance,
+		CodeHash:    a.CodeHash,
+		StorageSize: uint64(len(a.Storage)),
 	})
-
-	// inserting sorted database into storage
-	sa.Storage = make([][2]common.Hash, 0, len(a.Storage))
-	for _, key := range sortedKeys {
-		value := a.Storage[key]
-		sa.Storage = append(sa.Storage, [2]common.Hash{key, value})
+	if err != nil {
+		return err
 	}
 
-	return &sa
+	// write the storage map
+	for k, v := range a.Storage {
+		err = rlp.Encode(w, &accStorageItmRLP{
+			Key:   k,
+			Value: v,
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-// ToAccount converts stored account to Account structure.
-func (sa *StoredAccount) ToAccount() *Account {
-	var ac Account
-
-	ac.Nonce = sa.Nonce
-	ac.Balance = sa.Balance
-	ac.CodeHash = sa.CodeHash
-	ac.Root = sa.StorageRoot
-
-	// convert the storage representation to the hash map
-	ac.Storage = make(map[common.Hash]common.Hash, len(sa.Storage))
-	for _, si := range sa.Storage {
-		ac.Storage[si[0]] = si[1]
+// DecodeRLP decodes Account from RLP stream.
+func (a *Account) DecodeRLP(s *rlp.Stream) error {
+	// decode the base data
+	ac := accountRLP{}
+	err := s.Decode(&ac)
+	if err != nil {
+		return err
 	}
 
-	return &ac
+	a.Nonce = ac.Nonce
+	a.Balance = ac.Balance
+	a.CodeHash = ac.CodeHash
+	a.Storage = make(map[common.Hash]common.Hash, ac.StorageSize)
+
+	// load the storage
+	for i := 0; i < int(ac.StorageSize); i++ {
+		itm := accStorageItmRLP{}
+		err = s.Decode(&itm)
+		if err != nil {
+			return err
+		}
+
+		a.Storage[itm.Key] = itm.Value
+	}
+	return nil
 }
