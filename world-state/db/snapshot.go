@@ -87,7 +87,7 @@ func (db *StateSnapshotDB) PutAccount(acc *types.Account) error {
 		acc.CodeHash = ch.Bytes()
 	}
 
-	enc, err := rlp.EncodeToBytes(acc.ToStoredAccount())
+	enc, err := rlp.EncodeToBytes(acc)
 	if err != nil {
 		return fmt.Errorf("failed encoding account %s to RLP; %s", acc.Hash.String(), err.Error())
 	}
@@ -103,13 +103,13 @@ func (db *StateSnapshotDB) Account(addr common.Address) (*types.Account, error) 
 		return nil, err
 	}
 
-	sa := types.StoredAccount{}
-	err = rlp.DecodeBytes(data, &sa)
+	acc := types.Account{}
+	err = rlp.DecodeBytes(data, &acc)
 	if err != nil {
 		return nil, err
 	}
 
-	acc := sa.ToAccount()
+	// update the account hash
 	acc.Hash = h
 
 	// any code to be loaded?
@@ -122,7 +122,7 @@ func (db *StateSnapshotDB) Account(addr common.Address) (*types.Account, error) 
 		}
 	}
 
-	return acc, nil
+	return &acc, nil
 }
 
 // CodeKey retrieves storing DB key for supplied codeHash
