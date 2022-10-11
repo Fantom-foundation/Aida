@@ -11,16 +11,15 @@ import (
 )
 
 const (
+	FlagOutputDBPath = "db"
 	flagInputDBPath  = "input-db"
 	flagInputDBType  = "input-db-type"
 	flagStateDBName  = "input-db-name"
-	flagOutputDBPath = "db"
 	flagStateRoot    = "root"
 	flagWorkers      = "workers"
 )
 
 var (
-	zeroHash      = common.Hash{}
 	emptyCode     = crypto.Keccak256(nil)
 	emptyCodeHash = common.BytesToHash(emptyCode)
 )
@@ -81,7 +80,7 @@ func dumpState(ctx *cli.Context) error {
 	defer db.MustCloseStore(store)
 
 	// try to open output DB
-	outputDB, err := db.OpenStateSnapshotDB(ctx.Path(flagOutputDBPath))
+	outputDB, err := db.OpenStateSnapshotDB(ctx.Path(FlagOutputDBPath))
 	if err != nil {
 		return err
 	}
@@ -93,7 +92,7 @@ func dumpState(ctx *cli.Context) error {
 	// load accounts from the given root
 	// if the root has not been provided, try to use the latest
 	root := common.HexToHash(ctx.String(flagStateRoot))
-	if root == zeroHash {
+	if root == db.ZeroHash {
 		root, err = db.LatestStateRoot(store)
 		if err != nil {
 			log.Errorf("state root not found; %s", err.Error())
