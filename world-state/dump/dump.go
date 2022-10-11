@@ -132,3 +132,26 @@ func dumpState(ctx *cli.Context) error {
 	log.Info("done")
 	return nil
 }
+
+// storeBlockNumber inserts block number to the output database
+// blockNumber contains result only when root matched root of last block in database
+func storeBlockNumber(blockNumberChan chan uint64, blockNumber uint64, outputDB *db.StateSnapshotDB, log Logger) {
+	// blockNumberChan is only initialized when result isn't contained in blockNumber
+	if blockNumberChan != nil {
+		var ok bool
+		blockNumber, ok = <-blockNumberChan
+		if !ok {
+			blockNumber = 0
+		}
+	}
+
+	if blockNumber == 0 {
+		log.Errorf("Block number for given root wasn't found in database; %s")
+	}
+
+	log.Infof("Inserting block number %d into database", blockNumber)
+	err := outputDB.PutBlockNumber(blockNumber)
+	if err != nil {
+		log.Errorf("PutBlockNumber; %s", err.Error())
+	}
+}
