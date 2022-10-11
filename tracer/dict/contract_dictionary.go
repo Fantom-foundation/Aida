@@ -1,10 +1,11 @@
-package tracer
+package dict
 
 import (
 	"errors"
-	"github.com/ethereum/go-ethereum/common"
 	"math"
 	"os"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 // Entry limit of contract dictionary

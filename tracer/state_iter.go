@@ -3,6 +3,8 @@ package tracer
 import (
 	"log"
 	"os"
+
+	"github.com/Fantom-foundation/aida/tracer/operation"
 )
 
 // Iterator data structure for storage traces
@@ -10,7 +12,7 @@ type TraceIterator struct {
 	lastBlock uint64        // last block to process
 	iCtx      *IndexContext // index context
 	file      *os.File      // trace file
-	currentOp Operation     // current state operation
+	currentOp operation.Operation     // current state operation
 }
 
 // Output directory
@@ -57,12 +59,12 @@ func (ti *TraceIterator) Next() bool {
 		}
 	}
 	// read next state operation
-	ti.currentOp = ReadOperation(ti.file)
+	ti.currentOp = operation.ReadOperation(ti.file)
 	return ti.currentOp != nil
 }
 
 // Retrieve current state operation of the iterator.
-func (ti *TraceIterator) Value() Operation {
+func (ti *TraceIterator) Value() operation.Operation {
 	return ti.currentOp
 }
 

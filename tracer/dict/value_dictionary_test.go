@@ -1,4 +1,4 @@
-package tracer
+package dict
 
 import (
 	"github.com/ethereum/go-ethereum/common"

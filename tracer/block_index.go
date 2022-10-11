@@ -69,7 +69,9 @@ func (oIdx *BlockIndex) Write(filename string) error {
 	// write all dictionary entries
 	for block, fpos := range oIdx.blockToFPos {
 		data := BlockFPos{Block: block, FPos: fpos}
-		writeStruct(f, data)
+		if err := binary.Write(f, binary.LittleEndian, data); err != nil {
+			return err 
+		}
 	}
 	return nil
 }

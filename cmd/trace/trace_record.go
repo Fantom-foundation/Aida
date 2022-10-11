@@ -9,6 +9,8 @@ import (
 	"os"
 
 	"github.com/Fantom-foundation/aida/tracer"
+	"github.com/Fantom-foundation/aida/tracer/operation"
+	"github.com/Fantom-foundation/aida/tracer/dict"
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/Fantom-foundation/go-opera/opera"
 	"github.com/Fantom-foundation/substate-cli/cmd/substate-cli/replay"
@@ -47,7 +49,7 @@ last block of the inclusive range of blocks to trace transactions.`,
 }
 
 // traceRecordTask generates storage traces for each transaction
-func traceRecordTask(block uint64, tx int, recording *substate.Substate, dCtx *tracer.DictionaryContext, ch chan tracer.Operation) error {
+func traceRecordTask(block uint64, tx int, recording *substate.Substate, dCtx *dict.DictionaryContext, ch chan operation.Operation) error {
 
 	inputAlloc := recording.InputAlloc
 	inputEnv := recording.Env
@@ -168,7 +170,7 @@ func traceRecordTask(block uint64, tx int, recording *substate.Substate, dCtx *t
 }
 
 // Read state operations from channel and write them into their files.
-func OperationWriter(ctx context.Context, done chan struct{}, ch chan tracer.Operation, dCtx *tracer.DictionaryContext, iCtx *tracer.IndexContext) {
+func OperationWriter(ctx context.Context, done chan struct{}, ch chan operation.Operation, dCtx *dict.DictionaryContext, iCtx *tracer.IndexContext) {
 	defer close(done)
 
 	// open trace file
@@ -183,14 +185,14 @@ func OperationWriter(ctx context.Context, done chan struct{}, ch chan tracer.Ope
 		case op := <-ch:
 			// print debug information
 			if traceDebug {
-				tracer.Debug(dCtx, op)
+				operation.Debug(dCtx, op)
 			}
 
 			// update index
 			switch op.GetOpId() {
-			case tracer.BeginBlockID:
+			case operation.BeginBlockID:
 				// downcast op to BeginBlock for accessing block number
-				tOp, ok := op.(*tracer.BeginBlock)
+				tOp, ok := op.(*operation.BeginBlock)
 				if !ok {
 					log.Fatalf("Begin block operation downcasting failed")
 				}
@@ -204,7 +206,7 @@ func OperationWriter(ctx context.Context, done chan struct{}, ch chan tracer.Ope
 			}
 
 			// write operation to file
-			tracer.WriteOperation(file, op)
+			operation.WriteOperation(file, op)
 
 		case <-ctx.Done():
 			if len(ch) == 0 {
@@ -228,9 +230,9 @@ func traceRecordAction(ctx *cli.Context) error {
 		return fmt.Errorf("trace record command requires exactly 2 arguments")
 	}
 
-	dCtx := tracer.NewDictionaryContext()
+	dCtx := dict.NewDictionaryContext()
 	iCtx := tracer.NewIndexContext()
-	opChannel := make(chan tracer.Operation, 10000)
+	opChannel := make(chan operation.Operation, 10000)
 
 	cctx, cancel := context.WithCancel(context.Background())
 	cancelChannel := make(chan struct{})
@@ -264,17 +266,17 @@ func traceRecordAction(ctx *cli.Context) error {
 		// close off old block with an end-block operation
 		if oldBlock != tx.Block {
 			if oldBlock != math.MaxUint64 {
-				opChannel <- tracer.NewEndBlock()
+				opChannel <- operation.NewEndBlock()
 			}
 			if tx.Block > last {
 				break
 			}
 			oldBlock = tx.Block
 			// open new block with a begin-block operation
-			opChannel <- tracer.NewBeginBlock(tx.Block)
+			opChannel <- operation.NewBeginBlock(tx.Block)
 		}
 		traceRecordTask(tx.Block, tx.Transaction, tx.Substate, dCtx, opChannel)
-		opChannel <- tracer.NewEndTransaction()
+		opChannel <- operation.NewEndTransaction()
 	}
 
 	// write dictionaries and indexes

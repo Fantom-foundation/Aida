@@ -5,6 +5,8 @@ import (
 	cli "gopkg.in/urfave/cli.v1"
 
 	"github.com/Fantom-foundation/aida/tracer"
+	"github.com/Fantom-foundation/aida/tracer/operation"
+	"github.com/Fantom-foundation/aida/tracer/dict"
 	"github.com/Fantom-foundation/substate-cli/state"
 	"github.com/ethereum/go-ethereum/substate"
 )
@@ -65,7 +67,7 @@ func compareStorage(recordedAlloc substate.SubstateAlloc, traceAlloc substate.Su
 
 func storageDriver(first uint64, last uint64) error {
 	// load dictionaries & indexes
-	dCtx := tracer.ReadDictionaryContext()
+	dCtx := dict.ReadDictionaryContext()
 	iCtx := tracer.ReadIndexContext()
 
 	// TODO: 1) compute full-state for "first" block, and
@@ -73,6 +75,7 @@ func storageDriver(first uint64, last uint64) error {
 	//          under test.
 
 	// iterate substate (for in-membory state)
+	// TODO set configurable number of workers
 	stateIter := substate.NewSubstateIterator(first, 4)
 	defer stateIter.Release()
 
@@ -90,11 +93,11 @@ func storageDriver(first uint64, last uint64) error {
 			op := traceIter.Value()
 			op.Execute(db, dCtx)
 			if traceDebug {
-				tracer.Debug(dCtx, op)
+				operation.Debug(dCtx, op)
 			}
 
 			// find end of transaction
-			if op.GetOpId() == tracer.EndTransactionID {
+			if op.GetOpId() == operation.EndTransactionID {
 				break
 			}
 		}

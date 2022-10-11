@@ -1,4 +1,4 @@
-package tracer
+package dict
 
 import (
 	"github.com/ethereum/go-ethereum/common"
@@ -21,18 +21,20 @@ func NewDictionaryContext() *DictionaryContext {
 		ValueDictionary:    NewValueDictionary()}
 }
 
+var DictDir string = "./"
+
 // Read dictionary context from files.
 func ReadDictionaryContext() *DictionaryContext {
 	ctx := NewDictionaryContext()
-	err := ctx.ContractDictionary.Read(TraceDir + "contract-dictionary.dat")
+	err := ctx.ContractDictionary.Read(DictDir + "contract-dictionary.dat")
 	if err != nil {
 		log.Fatalf("Cannot read contract dictionary. Error: %v", err)
 	}
-	err = ctx.StorageDictionary.Read(TraceDir + "storage-dictionary.dat")
+	err = ctx.StorageDictionary.Read(DictDir + "storage-dictionary.dat")
 	if err != nil {
 		log.Fatalf("Cannot read storage dictionary. Error: %v", err)
 	}
-	err = ctx.ValueDictionary.Read(TraceDir + "value-dictionary.dat")
+	err = ctx.ValueDictionary.Read(DictDir + "value-dictionary.dat")
 	if err != nil {
 		log.Fatalf("Cannot read value dictionary. Error: %v", err)
 	}
@@ -41,22 +43,22 @@ func ReadDictionaryContext() *DictionaryContext {
 
 // Write dictionary context to files.
 func (ctx *DictionaryContext) Write() {
-	err := ctx.ContractDictionary.Write(TraceDir + "contract-dictionary.dat")
+	err := ctx.ContractDictionary.Write(DictDir + "contract-dictionary.dat")
 	if err != nil {
 		log.Fatalf("Cannot write contract dictionary. Error: %v", err)
 	}
-	err = ctx.StorageDictionary.Write(TraceDir + "storage-dictionary.dat")
+	err = ctx.StorageDictionary.Write(DictDir + "storage-dictionary.dat")
 	if err != nil {
 		log.Fatalf("Cannot write storage dictionary. Error: %v", err)
 	}
-	err = ctx.ValueDictionary.Write(TraceDir + "value-dictionary.dat")
+	err = ctx.ValueDictionary.Write(DictDir + "value-dictionary.dat")
 	if err != nil {
 		log.Fatalf("Cannot write value dictionary. Error: %v", err)
 	}
 }
 
 // Encode a given contract address and return a contract index.
-func (ctx *DictionaryContext) encodeContract(contract common.Address) uint32 {
+func (ctx *DictionaryContext) EncodeContract(contract common.Address) uint32 {
 	cIdx, err := ctx.ContractDictionary.Encode(contract)
 	if err != nil {
 		log.Fatalf("Contract address could not be encoded. Error: %v", err)
@@ -65,7 +67,7 @@ func (ctx *DictionaryContext) encodeContract(contract common.Address) uint32 {
 }
 
 // Endcode a given storage address and retrun a storage address index.
-func (ctx *DictionaryContext) encodeStorage(storage common.Hash) uint32 {
+func (ctx *DictionaryContext) EncodeStorage(storage common.Hash) uint32 {
 	sIdx, err := ctx.StorageDictionary.Encode(storage)
 	if err != nil {
 		log.Fatalf("Storage address could not be encoded. Error: %v", err)
@@ -74,7 +76,7 @@ func (ctx *DictionaryContext) encodeStorage(storage common.Hash) uint32 {
 }
 
 // Encode a storage value and return a value index.
-func (ctx *DictionaryContext) encodeValue(value common.Hash) uint64 {
+func (ctx *DictionaryContext) EncodeValue(value common.Hash) uint64 {
 	vIdx, err := ctx.ValueDictionary.Encode(value)
 	if err != nil {
 		log.Fatalf("Storage value could not be encoded. Error: %v", err)
@@ -83,7 +85,7 @@ func (ctx *DictionaryContext) encodeValue(value common.Hash) uint64 {
 }
 
 // Decode the contract address for a given index.
-func (ctx *DictionaryContext) decodeContract(cIdx uint32) common.Address {
+func (ctx *DictionaryContext) DecodeContract(cIdx uint32) common.Address {
 	contract, err := ctx.ContractDictionary.Decode(cIdx)
 	if err != nil {
 		log.Fatalf("Contract index could not be decoded. Error: %v", err)
@@ -92,7 +94,7 @@ func (ctx *DictionaryContext) decodeContract(cIdx uint32) common.Address {
 }
 
 // Decode the storage address for a given index.
-func (ctx *DictionaryContext) decodeStorage(sIdx uint32) common.Hash {
+func (ctx *DictionaryContext) DecodeStorage(sIdx uint32) common.Hash {
 	storage, err := ctx.StorageDictionary.Decode(sIdx)
 	if err != nil {
 		log.Fatalf("Storage index could not be decoded. Error: %v", err)
@@ -101,7 +103,7 @@ func (ctx *DictionaryContext) decodeStorage(sIdx uint32) common.Hash {
 }
 
 // Decode the storage value for a given index.
-func (ctx *DictionaryContext) decodeValue(vIdx uint64) common.Hash {
+func (ctx *DictionaryContext) DecodeValue(vIdx uint64) common.Hash {
 	value, err := ctx.ValueDictionary.Decode(vIdx)
 	if err != nil {
 		log.Fatalf("Value index could not be decoded. Error: %v", err)
