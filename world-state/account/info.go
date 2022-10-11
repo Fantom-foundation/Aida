@@ -10,6 +10,8 @@ import (
 	"github.com/fatih/color"
 	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli/v2"
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
 	"io"
 	"log"
 	"math/big"
@@ -36,8 +38,8 @@ var cmdAccountInfo = cli.Command{
 	},
 }
 
-// balanceDecimals represents a decimal correction we do for the displayed balance (4 digits => 18 - 4 = 14 decimals).
-var balanceDecimals = big.NewInt(100_000_000_000_000)
+// balanceDecimals represents a decimal correction we do for the displayed balance (6 digits).
+var balanceDecimals = big.NewInt(1_000_000_000_000)
 
 // accountInfo sends detailed account information to the console output stream.
 func accountInfo(ctx *cli.Context) error {
@@ -74,22 +76,22 @@ func accountInfo(ctx *cli.Context) error {
 // baseInfo sends formatted base account information to the output writer.
 func baseInfo(w io.Writer, addr common.Address, acc *types.Account) {
 	bold := color.New(color.Bold).SprintfFunc()
+	colored := color.New(color.FgBlue, color.Bold).SprintfFunc()
+	m := message.NewPrinter(language.English)
 
-	output(w, "Account:\t%s\n", bold(addr.String()))
-	output(w, "DB Hash:\t%s\n", bold(acc.Hash.String()))
+	output(w, "Account:\t%s\n", colored(addr.String()))
+	output(w, "DB Hash:\t%s\n", colored(acc.Hash.String()))
 
-	balance := float64(new(big.Int).Div(acc.Balance, balanceDecimals).Int64()) / 10000.0
-	output(w, "Balance:\t%s\n", bold("%0.4f FTM", balance))
+	balance := float64(new(big.Int).Div(acc.Balance, balanceDecimals).Int64()) / 1000000.0
+	output(w, "Balance:\t%s\n", bold(m.Sprintf("%0.6f FTM", balance)))
 
-	output(w, "Nonce:\t\t%s\n", bold("%d", acc.Nonce))
+	output(w, "Nonce:\t\t%s\n", bold(m.Sprintf("%d", acc.Nonce)))
 
 	hash := common.Hash{}
 	hash.SetBytes(acc.CodeHash)
 	output(w, "Code Hash:\t%s\n", bold(hash.String()))
-	output(w, "Code Length:\t%s bytes\n", bold("%d", len(acc.Code)))
-
-	output(w, "Storage Root:\t%s\n", bold(acc.Root.String()))
-	output(w, "Storage Items:\t%s\n", bold("%d", len(acc.Storage)))
+	output(w, "Code Length:\t%s bytes\n", bold(m.Sprintf("%d", len(acc.Code))))
+	output(w, "Storage Items:\t%s\n", bold(m.Sprintf("%d", len(acc.Storage))))
 }
 
 // accStorage sends formatted table of account storage content into the output writer.
