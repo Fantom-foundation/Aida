@@ -1,32 +1,36 @@
 package evolve
 
 import (
+	"fmt"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/db"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/logger"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/types"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/substate"
 	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
+	"time"
 )
 
 const (
-	flagUntilBlock       = "untilblock"
-	flagSubstateDBPath   = "substate-db"
 	flagWorldStateDBPath = "db"
+	flagTargetBlock      = "target"
+	flagSubstateDBPath   = "substatedir"
 	flagWorkers          = "workers"
 )
 
-// CmdEvolveState evolves state of
+// CmdEvolveState evolves state of World State database to given target block by using substateDB data about accounts
 var CmdEvolveState = cli.Command{
 	Action:      evolveState,
 	Name:        "evolve",
-	Usage:       "",
-	Description: ``,
-	ArgsUsage:   "",
+	Aliases:     []string{"e"},
+	Usage:       "Evolves world state snapshot database into selected target block",
+	Description: `The evolve evolves state of stored accounts in world state snapshot database.`,
+	ArgsUsage:   "<target> <substatedir> <workers>",
 	Flags: []cli.Flag{
 		&cli.IntFlag{
-			Name:     flagUntilBlock,
+			Name:     flagTargetBlock,
 			Usage:    "Evolve database only until given block is reached",
 			Required: true,
 		},
@@ -37,7 +41,7 @@ var CmdEvolveState = cli.Command{
 		},
 		&cli.IntFlag{
 			Name:  flagWorkers,
-			Usage: "Number of account processing threads",
+			Usage: "Number of SubState processing threads",
 			Value: 5,
 		},
 	},
@@ -52,85 +56,142 @@ func evolveState(ctx *cli.Context) error {
 	}
 	defer db.MustCloseSnapshotDB(stateDB)
 
-	// try to open sub state DB
-	subDB, err := db.OpenSubstateDB(ctx.Path(flagSubstateDBPath))
-	if err != nil {
-		return err
-	}
-	defer db.MustCloseSubstateDB(subDB)
-	substateDB := substate.NewSubstateDB(subDB.Backend)
-
 	// evolution until given block
-	targetBlock := ctx.Uint64(flagUntilBlock)
+	targetBlock := ctx.Uint64(flagTargetBlock)
 
 	// make logger
 	log := logger.New(ctx.App.Writer, "info")
 
-	blockNumber, err := stateDB.GetBlockNumber()
+	err = EvolveState(stateDB, ctx.Path(flagSubstateDBPath), targetBlock, ctx.Int(flagWorkers), log)
+
+	log.Info("done")
+	return err
+}
+
+// EvolveState evolves stateDB to target block
+func EvolveState(stateDB *db.StateSnapshotDB, substateDBPath string, targetBlock uint64, workers int, log *logging.Logger) error {
+	// retrieving block number from world state database
+	firstBlock, err := stateDB.GetBlockNumber()
 	if err != nil {
 		return err
 	}
+	log.Infof("Database is currently at block %d", firstBlock)
 
-	log.Info("starting block number", blockNumber, "target block", targetBlock)
-
-	task := func(block uint64, tx int, recording *substate.Substate, taskPool *substate.SubstateTaskPool) error {
-		return evolve(block, tx, recording, stateDB, log)
+	if firstBlock == targetBlock {
+		log.Info("World state database is already at target block %d", targetBlock)
+		return nil
 	}
 
-	sst := substate.SubstateTaskPool{
-		Name:     "evolve",
-		TaskFunc: task,
-
-		First: blockNumber,
-		Last:  targetBlock,
-
-		Workers: ctx.Int(flagWorkers),
-
-		DB: substateDB,
+	if firstBlock > targetBlock {
+		err = fmt.Errorf("target block %d can't be lower than current block in database", targetBlock)
+		log.Error(err.Error())
+		return err
 	}
-	err = sst.Execute()
 
-	log.Info("done")
+	// try to open sub state DB
+	substate.SetSubstateDirectory(substateDBPath)
+	substate.OpenSubstateDBReadOnly()
+	defer substate.CloseSubstateDB()
+
+	lastProcessedBlock, err := evolution(stateDB, firstBlock, targetBlock, workers, log)
+	if err != nil {
+		log.Error(err.Error())
+		return err
+	}
+
+	// if evolution to desired state didn't complete successfully
+	if lastProcessedBlock != targetBlock {
+		log.Infof("last processed block was %d, substateDB didn't contain data for other blocks till target %d", lastProcessedBlock, targetBlock)
+	}
+
+	// insert new block number into database
+	err = stateDB.PutBlockNumber(lastProcessedBlock)
+	if err != nil {
+		log.Errorf("Unable to insert block number into db; %s", err.Error())
+		return err
+	}
+	log.Infof("Database was successfully evolved to %d block", lastProcessedBlock)
 	return nil
 }
 
-func evolve(block uint64, tx int, recording *substate.Substate, stateDB *db.StateSnapshotDB, log *logging.Logger) error {
-	log.Info("block", block, "tx", tx, recording.InputAlloc)
+// evolution iterates trough Substates between first and target blocks
+// anticipates that SubstateDB is already open
+func evolution(stateDB *db.StateSnapshotDB, firstBlock uint64, targetBlock uint64, workers int, log *logging.Logger) (uint64, error) {
+	log.Info("starting evolution block number", firstBlock, "target block", targetBlock)
 
-	//check state of accounts before transaction
-	//for address, account := range recording.InputAlloc {
-	//	acc, err := stateDB.GetAccount(address)
-	//	if err != nil {
-	//		log.Errorf("Account %s was not found in snapshot database; %s", address.String(), err.Error())
-	//	}
-	//	if !acc.Equal(account) {
-	//		log.Errorf("Account %s data are not matching in snapshot and substate databases.")
-	//		return nil
-	//	}
-	//}
+	// contains last block id
+	var lastProcessedBlock uint64 = 0
 
-	for address, account := range recording.OutputAlloc {
-		addrHash := crypto.Keccak256Hash(address.Bytes())
-		_, err := stateDB.GetAccount(addrHash)
-		if err != nil {
-			log.Errorf("Account %s was not found in snapshot database; %s", address.String(), err.Error())
+	// iterator starting from first block - current block of stateDB
+	iter := substate.NewSubstateIterator(firstBlock, workers)
+	defer iter.Release()
+
+	// timer for printing progress
+	tick := time.NewTicker(20 * time.Second)
+	defer func() {
+		tick.Stop()
+	}()
+
+	// iteration trough substates
+	for iter.Next() {
+		tx := iter.Value()
+		if tx.Block > targetBlock {
 			break
 		}
 
-		// no need to insert if codeHash is already in database?
-		err = stateDB.PutCode(account.Code)
-		if err != nil {
-			return err
+		// print progress
+		select {
+		case <-tick.C:
+			log.Infof("evolving %d/%d", tx.Block, targetBlock)
+		default:
 		}
 
-		newAccount := types.Account{Hash: addrHash, Storage: account.Storage, Code: account.Code}
-		newAccount.Nonce = account.Nonce
-		newAccount.Balance = account.Balance
-		newAccount.CodeHash = account.CodeHash().Bytes()
-
-		err = stateDB.PutAccount(&newAccount)
+		// evolution database by single Substate Output values
+		err := evolveSubstate(&tx.Substate.OutputAlloc, stateDB, log)
 		if err != nil {
-			log.Errorf("Unable to update account %s in database; %s", address.String(), err.Error())
+			return 0, err
+		}
+		lastProcessedBlock = tx.Block
+	}
+	return lastProcessedBlock, nil
+}
+
+// evolveSubstate evolves world state db supplied substate.substateOut containing data of accounts at the end of one transaction
+func evolveSubstate(substateOut *substate.SubstateAlloc, stateDB *db.StateSnapshotDB, log *logging.Logger) error {
+	for address, substateAccount := range *substateOut {
+		acc, err := stateDB.Account(address)
+		if err != nil {
+			// account was not found in database therefore we need to create new instance
+			addrHash := crypto.Keccak256Hash(address.Bytes())
+			acc = &types.Account{Hash: addrHash}
+
+			if len(substateAccount.Storage) > 0 {
+				acc.Storage = make(map[common.Hash]common.Hash, len(substateAccount.Storage))
+			}
+		}
+
+		// updating account data
+		acc.Code = substateAccount.Code
+		acc.Nonce = substateAccount.Nonce
+		acc.Balance = substateAccount.Balance
+
+		// overwriting all changed values in storage
+		for key, value := range substateAccount.Storage {
+			if value == db.ZeroHash {
+				if _, found := acc.Storage[key]; found {
+					// value was removed from storage
+					delete(acc.Storage, key)
+				}
+				continue
+			}
+			// storing new value or updating old value
+			acc.Storage[key] = value
+		}
+
+		// inserting updated account into database
+		err = stateDB.PutAccount(acc)
+		if err != nil {
+			log.Errorf("Unable to insert account %s in database; %s", address.String(), err.Error())
 			break
 		}
 

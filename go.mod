@@ -3,8 +3,10 @@ module github.com/Fantom-foundation/Aida-Testing
 go 1.19
 
 require (
+	github.com/fatih/color v1.13.0
+	github.com/olekukonko/tablewriter v0.0.5
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
-	github.com/status-im/keycard-go v0.0.0-20190424133014-d95853db0f48
+	golang.org/x/text v0.3.7
 )
 
 require (
@@ -16,7 +18,6 @@ require (
 	github.com/cockroachdb/logtags v0.0.0-20211118104740-dabe8e521a4f // indirect
 	github.com/cockroachdb/pebble v0.0.0-20220524133354-f30672e7240b // indirect
 	github.com/cockroachdb/redact v1.1.3 // indirect
-	github.com/fatih/color v1.13.0 // indirect
 	github.com/getsentry/sentry-go v0.14.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-stack/stack v1.8.1 // indirect
@@ -30,7 +31,6 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
-	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/rivo/uniseg v0.4.2 // indirect
@@ -43,7 +43,6 @@ require (
 	golang.org/x/crypto v0.0.0-20221005025214-4161e89ecf1b // indirect
 	golang.org/x/exp v0.0.0-20221004215720-b9f4876ce741 // indirect
 	golang.org/x/sys v0.0.0-20220928140112-f11e5e49a4ec // indirect
-	golang.org/x/text v0.3.7 // indirect
 	gopkg.in/urfave/cli.v1 v1.20.0 // indirect
 )
 
@@ -58,4 +57,4 @@ require (
 
 //replace github.com/ethereum/go-ethereum => github.com/Fantom-foundation/go-ethereum v1.10.8-ftm-rc7
 
-replace github.com/ethereum/go-ethereum => github.com/Fantom-foundation/go-ethereum-substate v1.1.0
+replace github.com/ethereum/go-ethereum => github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20220922142900-25737df3c953
