@@ -17,13 +17,14 @@ BUILD_COMPILER := $(shell go version)
 BUILD_COMMIT := $(shell git show --format="%H" --no-patch)
 BUILD_COMMIT_TIME := $(shell git show --format="%cD" --no-patch)
 
-all: worldstate-cli
+all: gen-world-state
 
-worldstate-cli:
+gen-world-state:
 	@go build \
-		-ldflags="-X 'github.com/Fantom-foundation/Aida-Testing/worldstate-cli/cmd/build.Version=$(APP_VERSION)' -X 'github.com/Fantom-foundation/Aida-Testing/worldstate-cli/cmd/build.Time=$(BUILD_DATE)' -X 'github.com/Fantom-foundation/Aida-Testing/worldstate-cli/cmd/build.Compiler=$(BUILD_COMPILER)' -X 'github.com/Fantom-foundation/Aida-Testing/worldstate-cli/cmd/build.Commit=$(BUILD_COMMIT)' -X 'github.com/Fantom-foundation/Aida-Testing/worldstate-cli/cmd/build.CommitTime=$(BUILD_COMMIT_TIME)'" \
-		-o $(GO_BIN)/worldstate-cli \
-		./cmd
+		-ldflags="-X 'github.com/Fantom-foundation/Aida-Testing/cmd/gen-world-state/version.Version=$(APP_VERSION)' -X 'github.com/Fantom-foundation/Aida-Testing/cmd/gen-world-state/version.Time=$(BUILD_DATE)' -X 'github.com/Fantom-foundation/Aida-Testing/cmd/gen-world-state/version.Compiler=$(BUILD_COMPILER)' -X 'github.com/Fantom-foundation/Aida-Testing/cmd/gen-world-state/version.Commit=$(BUILD_COMMIT)' -X 'github.com/Fantom-foundation/Aida-Testing/cmd/gen-world-state/version.CommitTime=$(BUILD_COMMIT_TIME)'" \
+		-o $(GO_BIN)/gen-world-state \
+		-v \
+		./cmd/gen-world-state
 
 test:
 	@go test ./...

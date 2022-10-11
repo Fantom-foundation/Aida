@@ -2,8 +2,8 @@
 package main
 
 import (
-	"github.com/Fantom-foundation/Aida-Testing/worldstate-cli/cmd/build"
-	"github.com/Fantom-foundation/Aida-Testing/worldstate-cli/internal/db"
+	"github.com/Fantom-foundation/Aida-Testing/cmd/gen-world-state/version"
+	"github.com/Fantom-foundation/Aida-Testing/world-state/dump"
 	"github.com/urfave/cli/v2"
 	"log"
 	"os"
@@ -14,13 +14,21 @@ func main() {
 	// prep the application, pull in all the available command
 	app := &cli.App{
 		Name:      "Aida World State Manager",
-		HelpName:  "worldstate-cli",
+		HelpName:  "gen-world-state",
 		Usage:     "creates and manages copy of EVM world state for off-the-chain testing and profiling",
 		Copyright: "(c) 2022 Fantom Foundation",
-		Version:   build.Version,
+		Version:   version.Version,
 		Commands: []*cli.Command{
-			&build.CmdVersion,
-			&db.StateDumpCommand,
+			&version.CmdVersion,
+			&dump.CmdDumpState,
+		},
+		Flags: []cli.Flag{
+			&cli.PathFlag{
+				Name:     "db",
+				Usage:    "World state snapshot database path.",
+				Value:    "",
+				Required: true,
+			},
 		},
 	}
 
