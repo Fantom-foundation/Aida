@@ -38,7 +38,7 @@ type OperationDictionary struct {
 	readfunc func(*os.File) (Operation, error)
 }
 
-// opDict contains a dictionary of operation's label and read function
+// opDict contains a dictionary of operation's label and read function.
 var opDict = map[byte]OperationDictionary{
 	GetStateID:          {label: "GetState", readfunc: ReadGetState},
 	SetStateID:          {label: "SetState", readfunc: ReadSetState},
@@ -56,7 +56,7 @@ var opDict = map[byte]OperationDictionary{
 	EndBlockID:          {label: "EndBlock", readfunc: ReadEndBlock},
 }
 
-// Get a label of a state operation
+// Get a label of a state operation.
 func getLabel(i byte) string {
 	if i < 0 || i >= NumOperations {
 		log.Fatalf("getLabel failed; index is out-of-bound")
@@ -64,11 +64,7 @@ func getLabel(i byte) string {
 	return opDict[i].label
 }
 
-////////////////////////////////////////////////////////////
-// State Operation Interface
-////////////////////////////////////////////////////////////
-
-// State-operation interface
+// Operation interface.
 type Operation interface {
 	GetOpId() byte                                  // obtain operation identifier
 	Write(*os.File) error                           // write operation
@@ -76,7 +72,7 @@ type Operation interface {
 	Debug(*dict.DictionaryContext)                  // print debug message for operation
 }
 
-// Read a state operation from file.
+// Read an operation from file.
 func ReadOperation(f *os.File) Operation {
 	var (
 		op Operation
@@ -105,7 +101,7 @@ func ReadOperation(f *os.File) Operation {
 	return op
 }
 
-// Write state operation to file.
+// Write an operation to file.
 func WriteOperation(f *os.File, op Operation) {
 	// write ID to file
 	ID := op.GetOpId()
@@ -119,7 +115,7 @@ func WriteOperation(f *os.File, op Operation) {
 	}
 }
 
-// Print debug information of a state operation.
+// Print debug information of an operation.
 func Debug(ctx *dict.DictionaryContext, op Operation) {
 	fmt.Printf("%v:\n", getLabel(op.GetOpId()))
 	op.Debug(ctx)
