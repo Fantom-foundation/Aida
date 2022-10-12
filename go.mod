@@ -3,6 +3,7 @@ module github.com/Fantom-foundation/aida
 go 1.18
 
 require (
+	github.com/Fantom-foundation/Carmen/go v0.0.0-20221012110807-9e1452a18755
 	github.com/Fantom-foundation/go-opera v1.1.1-rc.2
 	github.com/Fantom-foundation/substate-cli v0.0.0-20221010072404-3fea36aee3a5
 	github.com/ethereum/go-ethereum v1.10.8
@@ -20,6 +21,7 @@ require (
 	github.com/edsrzf/mmap-go v1.0.0 // indirect
 	github.com/go-ole/go-ole v1.2.1 // indirect
 	github.com/go-stack/stack v1.8.0 // indirect
+	github.com/golang/mock v1.6.0 // indirect
 	github.com/golang/snappy v0.0.3 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect
@@ -44,3 +46,7 @@ replace github.com/dvyukov/go-fuzz => github.com/guzenok/go-fuzz v0.0.0-20210103
 replace github.com/ethereum/go-ethereum => github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20220922142900-25737df3c953
 
 replace github.com/Fantom-foundation/go-opera => github.com/Fantom-foundation/go-opera-substate v1.0.1-0.20221010085351-fcd736e326f0
+
+// The Carmen project is integrated as a git-submodule since we need to run extra
+// build steps when importing the project. This is handled in the Makefile.
+replace github.com/Fantom-foundation/Carmen/go => ./carmen/go
