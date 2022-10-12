@@ -9,17 +9,9 @@ import (
 
 // dbWriter inserts received Accounts into database
 func dbWriter(db *snapshot.StateDB, in chan types.Account) {
-	for {
-		// get all the found accounts from the input channel
-		account, ok := <-in
-		if !ok {
-			return
-		}
-
-		// insert account data
-		err := db.PutAccount(&account)
-		if err != nil {
-			log.Printf("can not write account %s; %s\n", account.Hash.String(), err.Error())
-		}
+	e := snapshot.NewQueueWriter(db, in)
+	err := <-e
+	if err != nil {
+		log.Printf(err.Error())
 	}
 }
