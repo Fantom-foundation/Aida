@@ -14,7 +14,7 @@ var (
 	gitCommit = "" // Git SHA1 commit hash of the release (set via linker flags)
 	gitDate   = ""
 
-	app = flags.NewApp(gitCommit, gitDate, "Fantom storage trace command line interface")
+	app = flags.NewApp(gitCommit, gitDate, "Fantom trace command line interface")
 )
 
 // inits configures flags and sub-commands of trace cli

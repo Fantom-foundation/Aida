@@ -24,6 +24,7 @@ simulates transaction execution from block 5,000,000 to (and including) block 5,
 **Options**
 `--substate-dir` sets directory contain substate database. Default: `./substate.fantom`
 `--trace-dir` sets trace file output directory. Default: `./`
+`--trace-debug` print recorded operations. 
 
 ### Trace Replay
 
@@ -33,3 +34,4 @@ reads the recorded traces and re-execute state operations from block 5,050,000 t
 
 **Options**
 `--trace-dir` sets trace file directory. Default: `./`
+`--trace-debug` print replayed operations. 

@@ -24,7 +24,7 @@ var TraceReplayCommand = cli.Command{
 		TraceDebugFlag,
 	},
 	Description: `
-The substate-cli trace-replay command requires two arguments:
+The trace replay command requires two arguments:
 <blockNumFirst> <blockNumLast>
 
 <blockNumFirst> and <blockNumLast> are the first and

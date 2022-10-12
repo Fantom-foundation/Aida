@@ -39,7 +39,7 @@ var TraceRecordCommand = cli.Command{
 		TraceDebugFlag,
 	},
 	Description: `
-The trace command requires two arguments:
+The trace record command requires two arguments:
 <blockNumFirst> <blockNumLast>
 
 <blockNumFirst> and <blockNumLast> are the first and
