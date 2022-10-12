@@ -38,11 +38,11 @@ func SetBlockRange(firstArg string, lastArg string) (uint64, uint64, error) {
 	first, ferr := strconv.ParseUint(firstArg, 10, 64)
 	last, lerr := strconv.ParseUint(lastArg, 10, 64)
 	if ferr != nil || lerr != nil {
-		err = fmt.Errorf("substate-cli replay: error in parsing parameters: block number not an integer")
+		err = fmt.Errorf("error: block number not an integer")
 	} else if first < 0 || last < 0 {
-		err = fmt.Errorf("substate-cli replay: error: block number must be greater than 0")
+		err = fmt.Errorf("error: block number must be greater than 0")
 	} else if first > last {
-		err = fmt.Errorf("substate-cli replay: error: first block has larger number than last block")
+		err = fmt.Errorf("error: first block has larger number than last block")
 	}
 	return first, last, err
 }

@@ -29,7 +29,7 @@ import (
 var TraceRecordCommand = cli.Command{
 	Action:    traceRecordAction,
 	Name:      "record",
-	Usage:     "executes full state transitions and check output consistency",
+	Usage:     "captures and records StateDB operations while processing blocks",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		substate.WorkersFlag,
@@ -39,7 +39,7 @@ var TraceRecordCommand = cli.Command{
 		TraceDebugFlag,
 	},
 	Description: `
-The substate-cli trace command requires two arguments:
+The trace command requires two arguments:
 <blockNumFirst> <blockNumLast>
 
 <blockNumFirst> and <blockNumLast> are the first and
@@ -167,7 +167,7 @@ func traceRecordTask(block uint64, tx int, recording *substate.Substate, dCtx *d
 	return nil
 }
 
-// Read state operations from channel and write them into a trace file.
+// Read operations from channel and write them into a trace file.
 func OperationWriter(ctx context.Context, done chan struct{}, ch chan operation.Operation, dCtx *dict.DictionaryContext, iCtx *tracer.IndexContext) {
 	defer close(done)
 
