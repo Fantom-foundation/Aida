@@ -3,7 +3,7 @@ package account
 
 import (
 	"fmt"
-	"github.com/Fantom-foundation/Aida-Testing/world-state/db"
+	"github.com/Fantom-foundation/Aida-Testing/world-state/db/snapshot"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/dump"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/types"
 	"github.com/ethereum/go-ethereum/common"
@@ -49,11 +49,11 @@ func accountInfo(ctx *cli.Context) error {
 	}
 
 	// try to open output DB
-	snapDB, err := db.OpenStateSnapshotDB(ctx.Path(dump.FlagOutputDBPath))
+	snapDB, err := snapshot.OpenStateDB(ctx.Path(dump.FlagOutputDBPath))
 	if err != nil {
 		return err
 	}
-	defer db.MustCloseSnapshotDB(snapDB)
+	defer snapshot.MustCloseStateDB(snapDB)
 
 	// try to get the account
 	addr := common.HexToAddress(ctx.Args().Get(0))

@@ -2,13 +2,13 @@
 package dump
 
 import (
-	"github.com/Fantom-foundation/Aida-Testing/world-state/db"
+	"github.com/Fantom-foundation/Aida-Testing/world-state/db/snapshot"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/types"
 	"log"
 )
 
 // dbWriter inserts received Accounts into database
-func dbWriter(db *db.StateSnapshotDB, in chan types.Account) {
+func dbWriter(db *snapshot.StateDB, in chan types.Account) {
 	for {
 		// get all the found accounts from the input channel
 		account, ok := <-in

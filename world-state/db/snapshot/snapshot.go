@@ -1,5 +1,5 @@
 // Package db implements database interfaces for the world state manager.
-package db
+package snapshot
 
 import (
 	"fmt"
@@ -22,13 +22,13 @@ const (
 // ZeroHash represents an empty hash.
 var ZeroHash = common.Hash{}
 
-// StateSnapshotDB represents the state snapshot database handle.
-type StateSnapshotDB struct {
+// StateDB represents the state snapshot database handle.
+type StateDB struct {
 	hashing crypto.KeccakState
 	Backend BackendDatabase
 }
 
-// BackendDatabase represents the underlying KV store used for the StateSnapshotDB
+// BackendDatabase represents the underlying KV store used for the StateDB
 type BackendDatabase interface {
 	ethdb.KeyValueReader
 	ethdb.KeyValueWriter
@@ -39,18 +39,18 @@ type BackendDatabase interface {
 	io.Closer
 }
 
-// OpenStateSnapshotDB opens state snapshot database at the given path.
-func OpenStateSnapshotDB(path string) (*StateSnapshotDB, error) {
+// OpenStateDB opens state snapshot database at the given path.
+func OpenStateDB(path string) (*StateDB, error) {
 	backend, err := rawdb.NewLevelDBDatabase(path, 1024, 100, "substatedir", false)
 	if err != nil {
 		return nil, err
 	}
 
-	return &StateSnapshotDB{Backend: backend, hashing: crypto.NewKeccakState()}, nil
+	return &StateDB{Backend: backend, hashing: crypto.NewKeccakState()}, nil
 }
 
-// MustCloseSnapshotDB closes the state snapshot database without raising an error.
-func MustCloseSnapshotDB(db *StateSnapshotDB) {
+// MustCloseStateDB closes the state snapshot database without raising an error.
+func MustCloseStateDB(db *StateDB) {
 	if db != nil {
 		err := db.Backend.Close()
 		if err != nil {
@@ -60,7 +60,7 @@ func MustCloseSnapshotDB(db *StateSnapshotDB) {
 }
 
 // PutCode inserts Account code into database
-func (db *StateSnapshotDB) PutCode(code []byte) (common.Hash, error) {
+func (db *StateDB) PutCode(code []byte) (common.Hash, error) {
 	// anything to store?
 	if len(code) == 0 {
 		return common.Hash{}, nil
@@ -72,12 +72,12 @@ func (db *StateSnapshotDB) PutCode(code []byte) (common.Hash, error) {
 }
 
 // Code loads account code from the database, if available.
-func (db *StateSnapshotDB) Code(h common.Hash) ([]byte, error) {
+func (db *StateDB) Code(h common.Hash) ([]byte, error) {
 	return db.Backend.Get(CodeKey(h))
 }
 
 // PutAccount inserts Account into database
-func (db *StateSnapshotDB) PutAccount(acc *types.Account) error {
+func (db *StateDB) PutAccount(acc *types.Account) error {
 	// store the code, if any
 	if len(acc.Code) > 0 {
 		ch, err := db.PutCode(acc.Code)
@@ -96,7 +96,7 @@ func (db *StateSnapshotDB) PutAccount(acc *types.Account) error {
 }
 
 // Account tries to read details of the given account address.
-func (db *StateSnapshotDB) Account(addr common.Address) (*types.Account, error) {
+func (db *StateDB) Account(addr common.Address) (*types.Account, error) {
 	h := crypto.HashData(db.hashing, addr.Bytes())
 	data, err := db.Backend.Get(h.Bytes())
 	if err != nil {
