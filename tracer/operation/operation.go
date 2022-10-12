@@ -10,24 +10,26 @@ import (
 	"github.com/Fantom-foundation/aida/tracer/dict"
 	"github.com/Fantom-foundation/substate-cli/state"
 )
-// Stored Operations
-const GetStateID = 0
-const SetStateID = 1
-const GetCommittedStateID = 2
-const SnapshotID = 3
-const RevertToSnapshotID = 4
-const CreateAccountID = 5
-const GetBalanceID = 6
-const GetCodeHashID = 7
-const SuicideID = 8
-const ExistID = 9
-const FinaliseID = 10
-const EndTransactionID = 11 //last
-const BeginBlockID = 12
-const EndBlockID = 13
 
-// Number of state operation identifiers
-const NumOperations = EndBlockID + 1 //last op + 1
+// Operation IDs of the StateDB interface
+const (	GetStateID = iota
+	SetStateID
+	GetCommittedStateID
+	SnapshotID
+	RevertToSnapshotID
+	CreateAccountID 
+	GetBalanceID
+	GetCodeHashID
+	SuicideID
+	ExistID
+	FinaliseID 
+	EndTransactionID
+	BeginBlockID
+	EndBlockID
+
+	// Number of operations (must be last)
+	NumOperations
+)
 
 // Dictionary data structure contains label and read function of an operation
 type OperationDictionary struct {
