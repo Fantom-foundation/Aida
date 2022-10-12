@@ -11,7 +11,7 @@ import (
 
 // Revert-to-snapshot operation's data structure with returned snapshot id
 type RevertToSnapshot struct {
-	SnapshotID int
+	SnapshotID int32
 }
 
 // Return the revert-to-snapshot operation identifier.
@@ -21,13 +21,13 @@ func (op *RevertToSnapshot) GetOpId() byte {
 
 // Create a new revert-to-snapshot operation.
 func NewRevertToSnapshot(SnapshotID int) *RevertToSnapshot {
-	return &RevertToSnapshot{SnapshotID: SnapshotID}
+	return &RevertToSnapshot{SnapshotID: int32(SnapshotID)}
 }
 
 // Read a revert-to-snapshot operation from file.
 func ReadRevertToSnapshot(file *os.File) (Operation, error) {
 	data := new(RevertToSnapshot)
-	err := binary.Read(file, binary.LittleEndian, &data)
+	err := binary.Read(file, binary.LittleEndian, data)
 	return data, err
 }
 
@@ -39,7 +39,7 @@ func (op *RevertToSnapshot) Write(f *os.File) error {
 
 // Execute the revert-to-snapshot operation.
 func (op *RevertToSnapshot) Execute(db state.StateDB, ctx *dict.DictionaryContext) {
-	db.RevertToSnapshot(op.SnapshotID)
+	db.RevertToSnapshot(int(op.SnapshotID))
 }
 
 // Print a debug message for revert-to-snapshot operation.
