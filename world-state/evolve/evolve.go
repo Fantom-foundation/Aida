@@ -62,6 +62,7 @@ func evolveState(ctx *cli.Context) error {
 	// make logger
 	log := logger.New(ctx.App.Writer, "info")
 
+	// call evolveState with prepared arguments
 	err = EvolveState(stateDB, ctx.Path(flagSubstateDBPath), targetBlock, ctx.Int(flagWorkers), log)
 
 	log.Info("done")
@@ -93,6 +94,7 @@ func EvolveState(stateDB *db.StateSnapshotDB, substateDBPath string, targetBlock
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
+	// evolution of stateDB
 	lastProcessedBlock, err := evolution(stateDB, firstBlock, targetBlock, workers, log)
 	if err != nil {
 		log.Error(err.Error())
@@ -110,6 +112,8 @@ func EvolveState(stateDB *db.StateSnapshotDB, substateDBPath string, targetBlock
 		log.Errorf("Unable to insert block number into db; %s", err.Error())
 		return err
 	}
+
+	// log last processed block
 	log.Infof("Database was successfully evolved to %d block", lastProcessedBlock)
 	return nil
 }
@@ -146,19 +150,21 @@ func evolution(stateDB *db.StateSnapshotDB, firstBlock uint64, targetBlock uint6
 		default:
 		}
 
-		// evolution database by single Substate Output values
+		// evolution of database by single Substate Output values
 		err := evolveSubstate(&tx.Substate.OutputAlloc, stateDB, log)
 		if err != nil {
 			return 0, err
 		}
 		lastProcessedBlock = tx.Block
 	}
+
 	return lastProcessedBlock, nil
 }
 
 // evolveSubstate evolves world state db supplied substate.substateOut containing data of accounts at the end of one transaction
 func evolveSubstate(substateOut *substate.SubstateAlloc, stateDB *db.StateSnapshotDB, log *logging.Logger) error {
 	for address, substateAccount := range *substateOut {
+		// get account stored in state snapshot database
 		acc, err := stateDB.Account(address)
 		if err != nil {
 			// account was not found in database therefore we need to create new instance
@@ -179,7 +185,7 @@ func evolveSubstate(substateOut *substate.SubstateAlloc, stateDB *db.StateSnapsh
 		for key, value := range substateAccount.Storage {
 			if value == db.ZeroHash {
 				if _, found := acc.Storage[key]; found {
-					// value was removed from storage
+					// removing key with empty value from storage
 					delete(acc.Storage, key)
 				}
 				continue
