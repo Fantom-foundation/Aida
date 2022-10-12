@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/Fantom-foundation/aida/tracer/dict"
-	"github.com/Fantom-foundation/substate-cli/state"
+	"github.com/Fantom-foundation/aida/tracer/state"
 )
 
 // Revert-to-snapshot operation's data structure with returned snapshot id

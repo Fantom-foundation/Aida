@@ -2,12 +2,13 @@ package trace
 
 import (
 	"fmt"
+
 	cli "gopkg.in/urfave/cli.v1"
 
 	"github.com/Fantom-foundation/aida/tracer"
 	"github.com/Fantom-foundation/aida/tracer/dict"
 	"github.com/Fantom-foundation/aida/tracer/operation"
-	"github.com/Fantom-foundation/substate-cli/state"
+	"github.com/Fantom-foundation/aida/tracer/state"
 	"github.com/ethereum/go-ethereum/substate"
 )
 
@@ -22,6 +23,8 @@ var TraceReplayCommand = cli.Command{
 		substate.WorkersFlag,
 		TraceDirectoryFlag,
 		TraceDebugFlag,
+		stateDbImplementation,
+		validateEndState,
 	},
 	Description: `
 The substate-cli trace-replay command requires two arguments:
@@ -29,6 +32,17 @@ The substate-cli trace-replay command requires two arguments:
 
 <blockNumFirst> and <blockNumLast> are the first and
 last block of the inclusive range of blocks to replay storage traces.`,
+}
+
+var stateDbImplementation = cli.StringFlag{
+	Name:  "db-impl",
+	Usage: "select state DB implementation",
+	Value: "geth",
+}
+
+var validateEndState = cli.BoolFlag{
+	Name:  "validate",
+	Usage: "enables end-state validation",
 }
 
 // comareStorage compares substae after replay traces to recorded substate
@@ -65,6 +79,18 @@ func compareStorage(recordedAlloc substate.SubstateAlloc, traceAlloc substate.Su
 	return nil
 }
 
+// makeStateDb parses the db-impl command line flag and creates a corresponding DB instance.
+func makeStateDb(cliCtx *cli.Context) (state.StateDB, error) {
+	impl := cliCtx.String(stateDbImplementation.Name)
+	switch impl {
+	case "geth":
+		return state.MakeGethInMemoryStateDB(), nil
+	case "carmen":
+		return state.MakeCarmenStateDB()
+	}
+	return nil, fmt.Errorf("Unknown DB implementation (--%v): %v", stateDbImplementation.Name, impl)
+}
+
 // storageDriver simulates storage operations from storage traces on stateDB
 func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 	// load dictionaries & indexes
@@ -84,14 +110,21 @@ func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 	traceIter := tracer.NewTraceIterator(iCtx, first, last)
 	defer traceIter.Release()
 
-	var db state.StateDB
+	// Get validation flag
+	validation_enabled := cliCtx.Bool(validateEndState.Name)
+
+	// Instantiate the state DB under testing
+	db, err := makeStateDb(cliCtx)
+	if err != nil {
+		return err
+	}
 
 	for stateIter.Next() {
 		tx := stateIter.Value()
 		if tx.Block > last || !iCtx.ExistsBlock(tx.Block){
 			break
 		}
-		db = state.MakeInMemoryStateDB(&tx.Substate.InputAlloc)
+		db.PrepareSubstate(&tx.Substate.InputAlloc)
 		for traceIter.Next() {
 			op := traceIter.Value()
 			op.Execute(db, dCtx)
@@ -106,18 +139,20 @@ func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 		}
 
 		// Validate stateDB and OuputAlloc
-		traceAlloc := db.GetSubstatePostAlloc()
-		recordedAlloc := tx.Substate.OutputAlloc
-		err := compareStorage(recordedAlloc, traceAlloc)
-		if err != nil {
-			return err
+		if validation_enabled {
+			traceAlloc := db.GetSubstatePostAlloc()
+			recordedAlloc := tx.Substate.OutputAlloc
+			err := compareStorage(recordedAlloc, traceAlloc)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
 	// replay the last EndBlock()
 	hasNext := traceIter.Next()
 	op := traceIter.Value()
-	if !hasNext || op.GetOpId() != operation.EndBlockID{
+	if !hasNext || op.GetOpId() != operation.EndBlockID {
 		return fmt.Errorf("Last opertion isn't EndBlock")
 	} else {
 		op.Execute(db, dCtx)

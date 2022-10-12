@@ -8,7 +8,7 @@ import (
 	"os"
 
 	"github.com/Fantom-foundation/aida/tracer/dict"
-	"github.com/Fantom-foundation/substate-cli/state"
+	"github.com/Fantom-foundation/aida/tracer/state"
 )
 
 // Operation IDs of the StateDB interface
