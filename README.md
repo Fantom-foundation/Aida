@@ -23,11 +23,11 @@ Trace cli tool provides storage trace recording and replaying functionality.
 simulates transaction execution from block 5,000,000 to (and including) block 5,100,000 using [substate](github.com/Fantom-foundation/substate-cli). Storage operations executed during transaction processing are recorded into a compressed file format.
 
 **Options**
-
+`--chainid` sets the chain-id (useful if recording from testnet). Default: 250 (mainnet)`
 `--substatedir` sets directory contain substate database. Default: `./substate.fantom`
-
 `--trace-dir` sets trace file output directory. Default: `./`
 `--trace-debug` print recorded operations. 
+`--workers` sets the number of worker threads.
 
 ### Trace Replay
 
@@ -38,8 +38,9 @@ reads the recorded traces and re-execute state operations from block 5,050,000 t
 
 **Options**
 
+`--db-impl` select between `geth` and `carmen`. Default: `geth`
 `--substatedir` sets directory contain substate database. Default: `./substate.fantom`
-
 `--trace-dir` sets trace file directory. Default: `./`
 `--trace-debug` print replayed operations. 
-`--db-impl` select between `geth` and `carmen`. Default: `geth`
+`--validate` validate the state after replaying traces.
+`--workers` sets the number of worker threads.

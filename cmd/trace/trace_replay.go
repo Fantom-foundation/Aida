@@ -45,7 +45,7 @@ var validateEndState = cli.BoolFlag{
 	Usage: "enables end-state validation",
 }
 
-// comareStorage compares substae after replay traces to recorded substate
+// Compare state after replaying traces with recorded state.
 func compareStorage(recordedAlloc substate.SubstateAlloc, traceAlloc substate.SubstateAlloc) error {
 	for account, recordAccount := range recordedAlloc {
 		// account exists in both substate
