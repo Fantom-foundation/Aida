@@ -26,10 +26,9 @@ func NewRevertToSnapshot(SnapshotID int) *RevertToSnapshot {
 
 // Read a revert-to-snapshot operation from file.
 func ReadRevertToSnapshot(file *os.File) (Operation, error) {
-	var data int32
+	data := new(RevertToSnapshot)
 	err := binary.Read(file, binary.LittleEndian, &data)
-	op := &RevertToSnapshot{SnapshotID: int(data)}
-	return op, err
+	return data, err
 }
 
 // Write the revert-to-snapshot operation to file.
