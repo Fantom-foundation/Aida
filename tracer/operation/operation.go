@@ -114,13 +114,8 @@ func WriteOperation(f *os.File, op Operation) {
 	}
 
 	// write details of operation to file
-	op.Write(f)
-}
-
-// Write slice in little-endian format to file (helper Function).
-func writeStruct(f *os.File, data any) {
-	if err := binary.Write(f, binary.LittleEndian, data); err != nil {
-		log.Fatalf("Failed to write binary data: %v", err)
+	if err := op.Write(f); err != nil {
+		log.Fatalf("Failed to write operation %v. Error: %v", getLabel(ID), err)
 	}
 }
 
