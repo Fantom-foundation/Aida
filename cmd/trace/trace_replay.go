@@ -5,8 +5,8 @@ import (
 	cli "gopkg.in/urfave/cli.v1"
 
 	"github.com/Fantom-foundation/aida/tracer"
-	"github.com/Fantom-foundation/aida/tracer/operation"
 	"github.com/Fantom-foundation/aida/tracer/dict"
+	"github.com/Fantom-foundation/aida/tracer/operation"
 	"github.com/Fantom-foundation/substate-cli/state"
 	"github.com/ethereum/go-ethereum/substate"
 )

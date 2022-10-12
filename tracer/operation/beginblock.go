@@ -3,7 +3,6 @@ package operation
 import (
 	"encoding/binary"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/Fantom-foundation/aida/tracer/dict"
@@ -33,10 +32,9 @@ func ReadBeginBlock(file *os.File) (Operation, error) {
 }
 
 // Write the begin-block operation to file.
-func (op *BeginBlock) writeOperation(f *os.File) {
-	if err := binary.Write(f, binary.LittleEndian, *op); err != nil {
-		log.Fatalf("Failed to write binary data: %v", err)
-	}
+func (op *BeginBlock) Write(f *os.File) error {
+	err := binary.Write(f, binary.LittleEndian, *op)
+	return err
 }
 
 // Execute the begin-block operation.

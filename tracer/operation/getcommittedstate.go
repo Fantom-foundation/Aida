@@ -33,9 +33,9 @@ func ReadGetCommittedState(file *os.File) (Operation, error) {
 }
 
 // Write the get-commited-state operation to file.
-func (op *GetCommittedState) writeOperation(f *os.File) {
-	//var data = []any{op.ContractIndex, op.StorageIndex}
-	writeStruct(f, op)
+func (op *GetCommittedState) Write(f *os.File) error {
+	err := binary.Write(f, binary.LittleEndian, *op)
+	return err
 }
 
 // Execute the get-committed-state operation.

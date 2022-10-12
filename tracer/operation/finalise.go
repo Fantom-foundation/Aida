@@ -32,9 +32,9 @@ func ReadFinalise(file *os.File) (Operation, error) {
 }
 
 // Write the finalise operation to a file.
-func (op *Finalise) writeOperation(f *os.File) {
-	//var data = []any{op.DeleteEmptyObjects}
-	writeStruct(f, op)
+func (op *Finalise) Write(f *os.File) error {
+	err := binary.Write(f, binary.LittleEndian, *op)
+	return err
 }
 
 // Execute the finalise operation.

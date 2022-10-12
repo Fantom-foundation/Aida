@@ -1,6 +1,7 @@
 package operation
 
 import (
+	"encoding/binary"
 	"os"
 
 	"github.com/Fantom-foundation/aida/tracer/dict"
@@ -27,7 +28,9 @@ func ReadSnapshot(file *os.File) (Operation, error) {
 }
 
 // Write the snapshot operation to file.
-func (op *Snapshot) writeOperation(f *os.File) {
+func (op *Snapshot) Write(f *os.File) error {
+	err := binary.Write(f, binary.LittleEndian, *op)
+	return err
 }
 
 // Execute the snapshot operation.

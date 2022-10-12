@@ -3,20 +3,20 @@ package tracer
 import (
 	"math/big"
 
-	"github.com/Fantom-foundation/substate-cli/state"
-	"github.com/Fantom-foundation/aida/tracer/operation"
 	"github.com/Fantom-foundation/aida/tracer/dict"
+	"github.com/Fantom-foundation/aida/tracer/operation"
+	"github.com/Fantom-foundation/substate-cli/state"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/substate"
 )
 
-// ProxyRecorder datastructure for capturing and recording 
+// ProxyRecorder datastructure for capturing and recording
 // invoked StateDB operations.
 type ProxyRecorder struct {
-	db   state.StateDB      // state db
-	dctx *dict.DictionaryContext // dictionary context for decoding information
-	ch   chan operation.Operation     // channel used for streaming captured operation
+	db   state.StateDB            // state db
+	dctx *dict.DictionaryContext  // dictionary context for decoding information
+	ch   chan operation.Operation // channel used for streaming captured operation
 }
 
 // Create a new StateDB proxy.

@@ -27,7 +27,8 @@ func ReadEndBlock(file *os.File) (Operation, error) {
 }
 
 // Write the end-block operation to file.
-func (op *EndBlock) writeOperation(f *os.File) {
+func (op *EndBlock) Write(f *os.File) error {
+	return nil
 }
 
 // Execute the end-block operation.

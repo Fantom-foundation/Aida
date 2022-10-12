@@ -12,17 +12,18 @@ import (
 )
 
 // Operation IDs of the StateDB interface
-const (	GetStateID = iota
+const (
+	GetStateID = iota
 	SetStateID
 	GetCommittedStateID
 	SnapshotID
 	RevertToSnapshotID
-	CreateAccountID 
+	CreateAccountID
 	GetBalanceID
 	GetCodeHashID
 	SuicideID
 	ExistID
-	FinaliseID 
+	FinaliseID
 	EndTransactionID
 	BeginBlockID
 	EndBlockID
@@ -33,26 +34,26 @@ const (	GetStateID = iota
 
 // Dictionary data structure contains label and read function of an operation
 type OperationDictionary struct {
-	label string
+	label    string
 	readfunc func(*os.File) (Operation, error)
 }
 
 // opDict contains a dictionary of operation's label and read function
 var opDict = map[byte]OperationDictionary{
-	GetStateID:		OperationDictionary{label: "GetState", readfunc: ReadGetState},
-	SetStateID:		OperationDictionary{label: "SetState", readfunc: ReadSetState},
-	GetCommittedStateID:	OperationDictionary{label: "GetCommittedState", readfunc: ReadGetCommittedState},
-	SnapshotID:		OperationDictionary{label: "Snapshot", readfunc: ReadSnapshot},
-	RevertToSnapshotID:	OperationDictionary{label: "RevertToSnapshot", readfunc: ReadRevertToSnapshot},
-	CreateAccountID:	OperationDictionary{label: "CreateAccount", readfunc: ReadCreateAccount},
-	GetBalanceID:		OperationDictionary{label: "GetBalance", readfunc: ReadGetBalance},
-	GetCodeHashID:		OperationDictionary{label: "GetCodeHash", readfunc: ReadGetCodeHash},
-	SuicideID:		OperationDictionary{label: "Suicide", readfunc: ReadSuicide},
-	ExistID:		OperationDictionary{label: "Exist", readfunc: ReadExist},
-	FinaliseID:		OperationDictionary{label: "Finalise", readfunc: ReadFinalise},
-	EndTransactionID:	OperationDictionary{label: "EndTransaction", readfunc: ReadEndTransaction},
-	BeginBlockID:		OperationDictionary{label: "BeginBlock", readfunc: ReadBeginBlock},
-	EndBlockID:		OperationDictionary{label: "EndBlock", readfunc: ReadEndBlock},
+	GetStateID:          {label: "GetState", readfunc: ReadGetState},
+	SetStateID:          {label: "SetState", readfunc: ReadSetState},
+	GetCommittedStateID: {label: "GetCommittedState", readfunc: ReadGetCommittedState},
+	SnapshotID:          {label: "Snapshot", readfunc: ReadSnapshot},
+	RevertToSnapshotID:  {label: "RevertToSnapshot", readfunc: ReadRevertToSnapshot},
+	CreateAccountID:     {label: "CreateAccount", readfunc: ReadCreateAccount},
+	GetBalanceID:        {label: "GetBalance", readfunc: ReadGetBalance},
+	GetCodeHashID:       {label: "GetCodeHash", readfunc: ReadGetCodeHash},
+	SuicideID:           {label: "Suicide", readfunc: ReadSuicide},
+	ExistID:             {label: "Exist", readfunc: ReadExist},
+	FinaliseID:          {label: "Finalise", readfunc: ReadFinalise},
+	EndTransactionID:    {label: "EndTransaction", readfunc: ReadEndTransaction},
+	BeginBlockID:        {label: "BeginBlock", readfunc: ReadBeginBlock},
+	EndBlockID:          {label: "EndBlock", readfunc: ReadEndBlock},
 }
 
 // Get a label of a state operation
@@ -69,8 +70,8 @@ func getLabel(i byte) string {
 
 // State-operation interface
 type Operation interface {
-	GetOpId() byte                             // obtain operation identifier
-	writeOperation(*os.File)                   // write operation
+	GetOpId() byte                                  // obtain operation identifier
+	Write(*os.File) error                           // write operation
 	Execute(state.StateDB, *dict.DictionaryContext) // execute operation
 	Debug(*dict.DictionaryContext)                  // print debug message for operation
 }
@@ -113,7 +114,7 @@ func WriteOperation(f *os.File, op Operation) {
 	}
 
 	// write details of operation to file
-	op.writeOperation(f)
+	op.Write(f)
 }
 
 // Write slice in little-endian format to file (helper Function).

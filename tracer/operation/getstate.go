@@ -33,9 +33,9 @@ func ReadGetState(file *os.File) (Operation, error) {
 }
 
 // Write the get-state operation to file.
-func (op *GetState) writeOperation(f *os.File) {
-	//var data = []any{op.ContractIndex, op.StorageIndex}
-	writeStruct(f, op)
+func (op *GetState) Write(f *os.File) error {
+	err := binary.Write(f, binary.LittleEndian, *op)
+	return err
 }
 
 // Execute the get-state operation.

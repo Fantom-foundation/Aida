@@ -32,9 +32,9 @@ func ReadCreateAccount(file *os.File) (Operation, error) {
 }
 
 // Write the create account operation to file.
-func (op *CreateAccount) writeOperation(f *os.File) {
-	//var data = []any{op.ContractIndex}
-	writeStruct(f, op)
+func (op *CreateAccount) Write(f *os.File) error {
+	err := binary.Write(f, binary.LittleEndian, *op)
+	return err
 }
 
 // Execute the create account operation.

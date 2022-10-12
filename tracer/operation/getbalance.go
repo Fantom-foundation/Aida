@@ -32,9 +32,9 @@ func ReadGetBalance(file *os.File) (Operation, error) {
 }
 
 // Write the get-balance operation.
-func (op *GetBalance) writeOperation(f *os.File) {
-	//var data = []any{op.ContractIndex}
-	writeStruct(f, op)
+func (op *GetBalance) Write(f *os.File) error {
+	err := binary.Write(f, binary.LittleEndian, *op)
+	return err
 }
 
 // Execute the get-balance operation.

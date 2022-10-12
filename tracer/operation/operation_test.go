@@ -17,12 +17,12 @@ func TestPositiveWriteReadGetState(t *testing.T) {
 	}
 	// write first object
 	var sop = &GetState{ContractIndex: 1, StorageIndex: 2}
-	sop.writeOperation(f)
+	sop.Write(f)
 	defer os.Remove(filename)
 	// write second object
 	sop.ContractIndex = 100
 	sop.StorageIndex = 200
-	sop.writeOperation(f)
+	sop.Write(f)
 	err = f.Close()
 	if err != nil {
 		t.Fatalf("Failed to close file for writing")
@@ -66,13 +66,13 @@ func TestPositiveWriteReadSetState(t *testing.T) {
 	}
 	// write first object
 	var sop = &SetState{ContractIndex: 1, StorageIndex: 2, Value: common.HexToHash("0x1000312211312312321312")}
-	sop.writeOperation(f)
+	sop.Write(f)
 	defer os.Remove(filename)
 	// write second object
 	sop.ContractIndex = 100
 	sop.StorageIndex = 200
 	sop.Value = common.HexToHash("0x123111231231283012083")
-	sop.writeOperation(f)
+	sop.Write(f)
 	err = f.Close()
 	if err != nil {
 		t.Fatalf("Failed to close file for writing")
@@ -116,12 +116,12 @@ func TestPositiveWriteReadGetCommittedState(t *testing.T) {
 	}
 	// write first object
 	var sop = &GetCommittedState{ContractIndex: 1, StorageIndex: 2}
-	sop.writeOperation(f)
+	sop.Write(f)
 	defer os.Remove(filename)
 	// write second object
 	sop.ContractIndex = 100
 	sop.StorageIndex = 200
-	sop.writeOperation(f)
+	sop.Write(f)
 	err = f.Close()
 	if err != nil {
 		t.Fatalf("Failed to close file for writing")
@@ -165,10 +165,10 @@ func TestPositiveWriteReadSnapshotState(t *testing.T) {
 	}
 	// write first object
 	var sop = &Snapshot{}
-	sop.writeOperation(f)
+	sop.Write(f)
 	defer os.Remove(filename)
 	// write second object
-	sop.writeOperation(f)
+	sop.Write(f)
 	err = f.Close()
 	if err != nil {
 		t.Fatalf("Failed to close file for writing")
@@ -253,10 +253,10 @@ func TestPositiveWriteReadEndTransactionState(t *testing.T) {
 	}
 	// write first object
 	var sop = &EndTransaction{}
-	sop.writeOperation(f)
+	sop.Write(f)
 	defer os.Remove(filename)
 	// write second object
-	sop.writeOperation(f)
+	sop.Write(f)
 	err = f.Close()
 	if err != nil {
 		t.Fatalf("Failed to close file for writing")

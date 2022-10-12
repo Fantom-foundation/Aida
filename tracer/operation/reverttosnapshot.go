@@ -33,9 +33,9 @@ func ReadRevertToSnapshot(file *os.File) (Operation, error) {
 }
 
 // Write the revert-to-snapshot operation to file.
-func (op *RevertToSnapshot) writeOperation(f *os.File) {
-	data := int32(op.SnapshotID)
-	writeStruct(f, data)
+func (op *RevertToSnapshot) Write(f *os.File) error {
+	err := binary.Write(f, binary.LittleEndian, *op)
+	return err
 }
 
 // Execute the revert-to-snapshot operation.

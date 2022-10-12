@@ -70,7 +70,7 @@ func (oIdx *BlockIndex) Write(filename string) error {
 	for block, fpos := range oIdx.blockToFPos {
 		data := BlockFPos{Block: block, FPos: fpos}
 		if err := binary.Write(f, binary.LittleEndian, data); err != nil {
-			return err 
+			return err
 		}
 	}
 	return nil

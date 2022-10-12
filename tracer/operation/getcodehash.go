@@ -32,9 +32,9 @@ func ReadGetCodeHash(file *os.File) (Operation, error) {
 }
 
 // Write the get-code-hash operation to a file.
-func (op *GetCodeHash) writeOperation(f *os.File) {
-	//var data = []any{op.ContractIndex}
-	writeStruct(f, op)
+func (op *GetCodeHash) Write(f *os.File) error {
+	err := binary.Write(f, binary.LittleEndian, *op)
+	return err
 }
 
 // Execute the get-code-hash operation.

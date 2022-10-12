@@ -9,10 +9,10 @@ import (
 
 // Iterator data structure for storage traces
 type TraceIterator struct {
-	lastBlock uint64        // last block to process
-	iCtx      *IndexContext // index context
-	file      *os.File      // trace file
-	currentOp operation.Operation     // current state operation
+	lastBlock uint64              // last block to process
+	iCtx      *IndexContext       // index context
+	file      *os.File            // trace file
+	currentOp operation.Operation // current state operation
 }
 
 // Output directory
