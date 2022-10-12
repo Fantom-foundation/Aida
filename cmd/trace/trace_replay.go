@@ -19,6 +19,7 @@ var TraceReplayCommand = cli.Command{
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		substate.SubstateDirFlag,
+		substate.WorkersFlag,
 		TraceDirectoryFlag,
 		TraceDebugFlag,
 	},
@@ -32,24 +33,23 @@ last block of the inclusive range of blocks to replay storage traces.`,
 
 // comareStorage compares substae after replay traces to recorded substate
 func compareStorage(recordedAlloc substate.SubstateAlloc, traceAlloc substate.SubstateAlloc) error {
-	for account, xAlloc := range recordedAlloc {
+	for account, recordAccount := range recordedAlloc {
 		// account exists in both substate
-		if yAlloc, exist := traceAlloc[account]; exist {
-			for k, xv := range xAlloc.Storage {
+		if replayAccout, exist := traceAlloc[account]; exist {
+			for k, xv := range recordAccount.Storage {
 				// mismatched value or key dones't exist
-				if yv, exist := yAlloc.Storage[k]; !exist || xv != yv {
+				if yv, exist := replayAccout.Storage[k]; !exist || xv != yv {
 					return fmt.Errorf("Error: mismatched value at storage key %v. want %v have %v\n", k, xv, yv)
 				}
 			}
-			for k, yv := range yAlloc.Storage {
+			for k, yv := range replayAccout.Storage {
 				// key exists when expecting nil
-				if xv, exist := xAlloc.Storage[k]; !exist {
+				if xv, exist := recordAccount.Storage[k]; !exist {
 					return fmt.Errorf("Error: mismatched value at storage key %v. want %v have %v\n", k, xv, yv)
 				}
 			}
 		} else {
-			// checks for accounts that don't exists in replayed substate
-			if len(xAlloc.Storage) > 0 {
+			if len(recordAccount.Storage) > 0 {
 				return fmt.Errorf("Error: account %v doesn't exist\n", account)
 			}
 			//else ignores accounts which has no storage
@@ -65,7 +65,8 @@ func compareStorage(recordedAlloc substate.SubstateAlloc, traceAlloc substate.Su
 	return nil
 }
 
-func storageDriver(first uint64, last uint64) error {
+// storageDriver simulates storage operations from storage traces on stateDB
+func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 	// load dictionaries & indexes
 	dCtx := dict.ReadDictionaryContext()
 	iCtx := tracer.ReadIndexContext()
@@ -76,19 +77,21 @@ func storageDriver(first uint64, last uint64) error {
 
 	// iterate substate (for in-membory state)
 	// TODO set configurable number of workers
-	stateIter := substate.NewSubstateIterator(first, 4)
+	stateIter := substate.NewSubstateIterator(first, cliCtx.Int(substate.WorkersFlag.Name))
 	defer stateIter.Release()
 
 	// replay storage trace
 	traceIter := tracer.NewTraceIterator(iCtx, first, last)
 	defer traceIter.Release()
 
+	var db state.StateDB
+
 	for stateIter.Next() {
 		tx := stateIter.Value()
 		if tx.Block > last {
 			break
 		}
-		db := state.MakeOffTheChainStateDB(tx.Substate.InputAlloc)
+		db = state.MakeInMemoryStateDB(&tx.Substate.InputAlloc)
 		for traceIter.Next() {
 			op := traceIter.Value()
 			op.Execute(db, dCtx)
@@ -102,7 +105,7 @@ func storageDriver(first uint64, last uint64) error {
 			}
 		}
 
-		// compare stateDB and OuputAlloc
+		// Validate stateDB and OuputAlloc
 		traceAlloc := db.GetSubstatePostAlloc()
 		recordedAlloc := tx.Substate.OutputAlloc
 		err := compareStorage(recordedAlloc, traceAlloc)
@@ -110,10 +113,23 @@ func storageDriver(first uint64, last uint64) error {
 			return err
 		}
 	}
+
+	// replay the last EndBlock()
+	hasNext := traceIter.Next()
+	op := traceIter.Value()
+	if !hasNext || op.GetOpId() != operation.EndBlockID{
+		return fmt.Errorf("Last opertion isn't EndBlock")
+	} else {
+		op.Execute(db, dCtx)
+		if traceDebug {
+			operation.Debug(dCtx, op)
+		}
+	}
+
 	return nil
 }
 
-// record-replay: func traceReplayAction for replaying
+// traceReplayAction configures applications acocrding to cli flags then replays traces
 func traceReplayAction(ctx *cli.Context) error {
 	var err error
 
@@ -122,6 +138,7 @@ func traceReplayAction(ctx *cli.Context) error {
 		return fmt.Errorf("trace replay-trace command requires exactly 2 arguments")
 	}
 	tracer.TraceDir = ctx.String(TraceDirectoryFlag.Name) + "/"
+	dict.DictDir = ctx.String(TraceDirectoryFlag.Name) + "/"
 	if ctx.Bool("trace-debug") {
 		traceDebug = true
 	}
@@ -134,7 +151,7 @@ func traceReplayAction(ctx *cli.Context) error {
 	substate.SetSubstateFlags(ctx)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
-	err = storageDriver(first, last)
+	err = storageDriver(first, last, ctx)
 
 	return err
 }

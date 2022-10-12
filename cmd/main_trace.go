@@ -17,6 +17,7 @@ var (
 	app = flags.NewApp(gitCommit, gitDate, "Fantom storage trace command line interface")
 )
 
+// inits configures flags and sub-commands of trace cli
 func init() {
 	app.Flags = []cli.Flag{}
 	app.Commands = []cli.Command{
@@ -26,6 +27,7 @@ func init() {
 	cli.CommandHelpTemplate = flags.CommandHelpTemplate
 }
 
+// main implements "trace" cli application entry point
 func main() {
 	substate.RecordReplay = true
 	if err := app.Run(os.Args); err != nil {

@@ -25,8 +25,6 @@ import (
 	cli "gopkg.in/urfave/cli.v1"
 )
 
-const FPosBlockMultiple = 4
-
 // record-trace: trace record command
 var TraceRecordCommand = cli.Command{
 	Action:    traceRecordAction,
@@ -169,7 +167,7 @@ func traceRecordTask(block uint64, tx int, recording *substate.Substate, dCtx *d
 	return nil
 }
 
-// Read state operations from channel and write them into their files.
+// Read state operations from channel and write them into a trace file.
 func OperationWriter(ctx context.Context, done chan struct{}, ch chan operation.Operation, dCtx *dict.DictionaryContext, iCtx *tracer.IndexContext) {
 	defer close(done)
 
@@ -246,6 +244,7 @@ func traceRecordAction(ctx *cli.Context) error {
 	// process arguments
 	chainID = ctx.Int(ChainIDFlag.Name)
 	tracer.TraceDir = ctx.String(TraceDirectoryFlag.Name) + "/"
+	dict.DictDir = ctx.String(TraceDirectoryFlag.Name) + "/"
 	if ctx.Bool("trace-debug") {
 		traceDebug = true
 	}
