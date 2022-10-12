@@ -25,7 +25,7 @@ import (
 	cli "gopkg.in/urfave/cli.v1"
 )
 
-// record-trace: trace record command
+// trace record command
 var TraceRecordCommand = cli.Command{
 	Action:    traceRecordAction,
 	Name:      "record",
@@ -220,7 +220,7 @@ func OperationWriter(ctx context.Context, done chan struct{}, ch chan operation.
 	}
 }
 
-// record-trace: func traceAction for trace command
+// func traceAction for trace command
 func traceRecordAction(ctx *cli.Context) error {
 	var err error
 

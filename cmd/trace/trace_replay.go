@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/substate"
 )
 
-// record-replay: substate-cli replay command
+// trace replay command
 var TraceReplayCommand = cli.Command{
 	Action:    traceReplayAction,
 	Name:      "replay",
@@ -88,7 +88,7 @@ func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 
 	for stateIter.Next() {
 		tx := stateIter.Value()
-		if tx.Block > last {
+		if tx.Block > last || !iCtx.ExistsBlock(tx.Block){
 			break
 		}
 		db = state.MakeInMemoryStateDB(&tx.Substate.InputAlloc)
