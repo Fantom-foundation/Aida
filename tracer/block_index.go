@@ -13,9 +13,10 @@ type BlockIndex struct {
 	blockToFPos map[uint64]int64 // block number -> file position
 }
 
+// Data structure to read/write an entry in block index.
 type BlockFPos struct {
-	Block uint64
-	FPos  int64
+	Block uint64 // block number
+	FPos  int64  // file position of first operation in block
 }
 
 // Initialize a block-index.
