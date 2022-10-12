@@ -37,4 +37,8 @@ reads the recorded traces and re-execute state operations from block 5,050,000 t
 
 **Options**
 
+`--substatedir` sets directory contain substate database. Default: `./substate.fantom`
+
 `--trace-dir` sets trace file directory. Default: `./`
+
+`--db-impl` select between `geth` and `carmen`. Default: `geth`
