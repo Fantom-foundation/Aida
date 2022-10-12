@@ -73,7 +73,7 @@ type Operation interface {
 }
 
 // Read an operation from file.
-func ReadOperation(f *os.File) Operation {
+func Read(f *os.File) Operation {
 	var (
 		op Operation
 		ID byte
@@ -102,7 +102,7 @@ func ReadOperation(f *os.File) Operation {
 }
 
 // Write an operation to file.
-func WriteOperation(f *os.File, op Operation) {
+func Write(f *os.File, op Operation) {
 	// write ID to file
 	ID := op.GetOpId()
 	if err := binary.Write(f, binary.LittleEndian, &ID); err != nil {

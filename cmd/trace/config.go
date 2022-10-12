@@ -3,17 +3,17 @@ package trace
 
 import (
 	"fmt"
-	"strconv"
 	cli "gopkg.in/urfave/cli.v1"
+	"strconv"
 )
 
-// chain id is needed for executing EVM in trace record
+// Chain id for recording either mainnet or testnets.
 var chainID int
 
-// trace debugging
+// Trace debugging flag
 var traceDebug bool = false
 
-// command line options
+// Command line options for common flags in record and replay
 var (
 	ChainIDFlag = cli.IntFlag{
 		Name:  "chainid",
@@ -31,8 +31,7 @@ var (
 	}
 )
 
-// SetBlockRange checks validity of a block range from command line arguments and
-// returns the first and last block as uint 64
+// Check the validity of a block range and return the first and last block as numbers.
 func SetBlockRange(firstArg string, lastArg string) (uint64, uint64, error) {
 	var err error = nil
 	first, ferr := strconv.ParseUint(firstArg, 10, 64)

@@ -59,7 +59,7 @@ func (ti *TraceIterator) Next() bool {
 		}
 	}
 	// read next state operation
-	ti.currentOp = operation.ReadOperation(ti.file)
+	ti.currentOp = operation.Read(ti.file)
 	return ti.currentOp != nil
 }
 

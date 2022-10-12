@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/substate"
 )
 
-// trace replay command
+// Trace replay command
 var TraceReplayCommand = cli.Command{
 	Action:    traceReplayAction,
 	Name:      "replay",
@@ -79,7 +79,7 @@ func compareStorage(recordedAlloc substate.SubstateAlloc, traceAlloc substate.Su
 	return nil
 }
 
-// makeStateDb parses the db-impl command line flag and creates a corresponding DB instance.
+// Create a new DB instance based on cli argument.
 func makeStateDb(cliCtx *cli.Context) (state.StateDB, error) {
 	impl := cliCtx.String(stateDbImplementation.Name)
 	switch impl {
@@ -91,7 +91,7 @@ func makeStateDb(cliCtx *cli.Context) (state.StateDB, error) {
 	return nil, fmt.Errorf("Unknown DB implementation (--%v): %v", stateDbImplementation.Name, impl)
 }
 
-// storageDriver simulates storage operations from storage traces on stateDB
+// Simulate storage operations from storage traces on stateDB.
 func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 	// load dictionaries & indexes
 	dCtx := dict.ReadDictionaryContext()
@@ -121,7 +121,7 @@ func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 
 	for stateIter.Next() {
 		tx := stateIter.Value()
-		if tx.Block > last || !iCtx.ExistsBlock(tx.Block){
+		if tx.Block > last || !iCtx.ExistsBlock(tx.Block) {
 			break
 		}
 		db.PrepareSubstate(&tx.Substate.InputAlloc)
@@ -164,7 +164,7 @@ func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 	return nil
 }
 
-// traceReplayAction configures applications acocrding to cli flags then replays traces
+// Implements trace command for replaying.
 func traceReplayAction(ctx *cli.Context) error {
 	var err error
 

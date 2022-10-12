@@ -46,7 +46,7 @@ The trace record command requires two arguments:
 last block of the inclusive range of blocks to trace transactions.`,
 }
 
-// traceRecordTask generates storage traces for each transaction
+// Generate storage traces for a transaction.
 func traceRecordTask(block uint64, tx int, recording *substate.Substate, dCtx *dict.DictionaryContext, ch chan operation.Operation) error {
 
 	inputAlloc := recording.InputAlloc
@@ -167,7 +167,7 @@ func traceRecordTask(block uint64, tx int, recording *substate.Substate, dCtx *d
 	return nil
 }
 
-// Read operations from channel and write them into a trace file.
+// Read operations from the operation channel and write them into a trace file.
 func OperationWriter(ctx context.Context, done chan struct{}, ch chan operation.Operation, dCtx *dict.DictionaryContext, iCtx *tracer.IndexContext) {
 	defer close(done)
 
@@ -199,12 +199,12 @@ func OperationWriter(ctx context.Context, done chan struct{}, ch chan operation.
 				if err != nil {
 					log.Fatalf("Cannot retrieve current file position. Error: %v", err)
 				}
-				// add to block-index
+				// add to block index
 				iCtx.AddBlock(tOp.BlockNumber, offset)
 			}
 
 			// write operation to file
-			operation.WriteOperation(file, op)
+			operation.Write(file, op)
 
 		case <-ctx.Done():
 			if len(ch) == 0 {
@@ -220,7 +220,7 @@ func OperationWriter(ctx context.Context, done chan struct{}, ch chan operation.
 	}
 }
 
-// func traceAction for trace command
+// Implements trace command for recording.
 func traceRecordAction(ctx *cli.Context) error {
 	var err error
 
