@@ -3,6 +3,7 @@ package operation
 import (
 	"encoding/binary"
 	"os"
+	"fmt"
 
 	"github.com/Fantom-foundation/aida/tracer/dict"
 	"github.com/Fantom-foundation/aida/tracer/state"
@@ -10,6 +11,7 @@ import (
 
 // Snapshot data structure
 type Snapshot struct {
+	SnapshotID int32 // returned ID (for later mapping)
 }
 
 // Return the snapshot operation identifier.
@@ -18,13 +20,15 @@ func (op *Snapshot) GetOpId() byte {
 }
 
 // Create a new snapshot operation.
-func NewSnapshot() *Snapshot {
-	return &Snapshot{}
+func NewSnapshot(SnapshotID int32) *Snapshot {
+	return &Snapshot{SnapshotID: SnapshotID}
 }
 
 // Read a snapshot operation from a file.
 func ReadSnapshot(file *os.File) (Operation, error) {
-	return NewSnapshot(), nil
+	data := new(Snapshot)
+	err := binary.Read(file, binary.LittleEndian, data)
+	return data, err
 }
 
 // Write the snapshot operation to file.
@@ -35,9 +39,12 @@ func (op *Snapshot) Write(f *os.File) error {
 
 // Execute the snapshot operation.
 func (op *Snapshot) Execute(db state.StateDB, ctx *dict.DictionaryContext) {
-	db.Snapshot()
+	ID := db.Snapshot()
+	// TODO: check that ID does not exceed 32bit
+	ctx.AddSnapshot(op.SnapshotID, int32(ID))
 }
 
 // Print the details for the snapshot operation.
 func (op *Snapshot) Debug(*dict.DictionaryContext) {
+	fmt.Printf("\trecorded snapshot id: %v (%b)\n", op.SnapshotID)
 }

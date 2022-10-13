@@ -39,7 +39,8 @@ func (op *RevertToSnapshot) Write(f *os.File) error {
 
 // Execute the revert-to-snapshot operation.
 func (op *RevertToSnapshot) Execute(db state.StateDB, ctx *dict.DictionaryContext) {
-	db.RevertToSnapshot(int(op.SnapshotID))
+	id := ctx.GetSnapshot(op.SnapshotID)
+	db.RevertToSnapshot(int(id))
 }
 
 // Print a debug message for revert-to-snapshot operation.

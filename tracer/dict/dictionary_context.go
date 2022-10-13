@@ -11,6 +11,8 @@ type DictionaryContext struct {
 	ContractDictionary *ContractDictionary // dictionary to compact contract addresses
 	StorageDictionary  *StorageDictionary  // dictionary to compact storage addresses
 	ValueDictionary    *ValueDictionary    // dictionary to compact storage values
+
+	SnapshotIndex     *SnapshotIndex       // Snapshot index for execution (not for recording/replaying)
 }
 
 // Create new dictionary context.
@@ -18,7 +20,8 @@ func NewDictionaryContext() *DictionaryContext {
 	return &DictionaryContext{
 		ContractDictionary: NewContractDictionary(),
 		StorageDictionary:  NewStorageDictionary(),
-		ValueDictionary:    NewValueDictionary()}
+		ValueDictionary:    NewValueDictionary(),
+		SnapshotIndex:      NewSnapshotIndex()}
 }
 
 var DictDir string = "./"
@@ -109,4 +112,26 @@ func (ctx *DictionaryContext) DecodeValue(vIdx uint64) common.Hash {
 		log.Fatalf("Value index could not be decoded. Error: %v", err)
 	}
 	return value
+}
+
+// Init snaphot map.
+func (ctx *DictionaryContext) InitSnapshot() {
+	ctx.SnapshotIndex.Init()
+}
+
+// Add snaphot-id mapping for execution of RevertSnapshot.
+func (ctx *DictionaryContext) AddSnapshot(recordedID int32, replayedID int32) {
+	err := ctx.SnapshotIndex.Add(recordedID, replayedID)
+	if err != nil {
+		log.Fatalf("Snapshot mapping could not be added. Error: %v", err)
+	}
+}
+
+// Get snaphot-id.
+func (ctx *DictionaryContext) GetSnapshot(recordedID int32) int32 {
+	replayedID, err := ctx.SnapshotIndex.Get(recordedID)
+	if err != nil {
+		log.Fatalf("Replayed Snapshot ID is missing. Error: %v", err)
+	}
+	return replayedID
 }

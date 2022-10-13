@@ -206,8 +206,9 @@ func (s *ProxyRecorder) RevertToSnapshot(snapshot int) {
 
 // Return an identifier for the current revision of the state.
 func (s *ProxyRecorder) Snapshot() int {
-	s.ch <- operation.NewSnapshot()
 	snapshot := s.db.Snapshot()
+	// TODO: check overrun 
+	s.ch <- operation.NewSnapshot(int32(snapshot))
 	return snapshot
 }
 

@@ -35,6 +35,7 @@ func (op *EndTransaction) Write(f *os.File) error {
 
 // Execute the end-transaction operation.
 func (op *EndTransaction) Execute(db state.StateDB, ctx *dict.DictionaryContext) {
+	ctx.InitSnapshot()
 }
 
 // Print a debug message for end-transaction.
