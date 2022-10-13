@@ -21,8 +21,8 @@ var TraceReplayCommand = cli.Command{
 	Flags: []cli.Flag{
 		substate.SubstateDirFlag,
 		substate.WorkersFlag,
-		TraceDirectoryFlag,
-		TraceDebugFlag,
+		traceDirectoryFlag,
+		traceDebugFlag,
 		stateDbImplementation,
 		validateEndState,
 	},
@@ -32,17 +32,6 @@ The trace replay command requires two arguments:
 
 <blockNumFirst> and <blockNumLast> are the first and
 last block of the inclusive range of blocks to replay storage traces.`,
-}
-
-var stateDbImplementation = cli.StringFlag{
-	Name:  "db-impl",
-	Usage: "select state DB implementation",
-	Value: "geth",
-}
-
-var validateEndState = cli.BoolFlag{
-	Name:  "validate",
-	Usage: "enables end-state validation",
 }
 
 // Compare state after replaying traces with recorded state.
@@ -172,9 +161,9 @@ func traceReplayAction(ctx *cli.Context) error {
 	if len(ctx.Args()) != 2 {
 		return fmt.Errorf("trace replay-trace command requires exactly 2 arguments")
 	}
-	tracer.TraceDir = ctx.String(TraceDirectoryFlag.Name) + "/"
-	dict.DictDir = ctx.String(TraceDirectoryFlag.Name) + "/"
-	if ctx.Bool("trace-debug") {
+	tracer.TraceDir = ctx.String(traceDirectoryFlag.Name) + "/"
+	dict.DictDir = ctx.String(traceDirectoryFlag.Name) + "/"
+	if ctx.Bool(traceDebugFlag.Name) {
 		traceDebug = true
 	}
 	first, last, argErr := SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))

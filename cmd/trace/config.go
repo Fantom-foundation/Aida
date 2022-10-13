@@ -15,20 +15,31 @@ var traceDebug bool = false
 
 // Command line options for common flags in record and replay
 var (
-	ChainIDFlag = cli.IntFlag{
+	chainIDFlag = cli.IntFlag{
 		Name:  "chainid",
 		Usage: "ChainID for replayer",
 		Value: 250,
 	}
-	TraceDirectoryFlag = cli.StringFlag{
+	traceDirectoryFlag = cli.StringFlag{
 		Name:  "trace-dir",
 		Usage: "set storage trace's output directory",
 		Value: "./",
 	}
-	TraceDebugFlag = cli.BoolFlag{
+	traceDebugFlag = cli.BoolFlag{
 		Name:  "trace-debug",
 		Usage: "enable debug output for tracing",
 	}
+	stateDbImplementation = cli.StringFlag{
+		Name:  "db-impl",
+		Usage: "select state DB implementation",
+		Value: "geth",
+	}
+	validateEndState = cli.BoolFlag{
+		Name:  "validate",
+		Usage: "enables end-state validation",
+	}
+
+
 )
 
 // Check the validity of a block range and return the first and last block as numbers.

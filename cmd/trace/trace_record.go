@@ -34,9 +34,9 @@ var TraceRecordCommand = cli.Command{
 	Flags: []cli.Flag{
 		substate.WorkersFlag,
 		substate.SubstateDirFlag,
-		ChainIDFlag,
-		TraceDirectoryFlag,
-		TraceDebugFlag,
+		chainIDFlag,
+		traceDirectoryFlag,
+		traceDebugFlag,
 	},
 	Description: `
 The trace record command requires two arguments:
@@ -242,10 +242,10 @@ func traceRecordAction(ctx *cli.Context) error {
 	}()
 
 	// process arguments
-	chainID = ctx.Int(ChainIDFlag.Name)
-	tracer.TraceDir = ctx.String(TraceDirectoryFlag.Name) + "/"
-	dict.DictDir = ctx.String(TraceDirectoryFlag.Name) + "/"
-	if ctx.Bool("trace-debug") {
+	chainID = ctx.Int(chainIDFlag.Name)
+	tracer.TraceDir = ctx.String(traceDirectoryFlag.Name) + "/"
+	dict.DictDir = ctx.String(traceDirectoryFlag.Name) + "/"
+	if ctx.Bool(traceDebugFlag.Name) {
 		traceDebug = true
 	}
 	first, last, argErr := replay.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
@@ -264,11 +264,11 @@ func traceRecordAction(ctx *cli.Context) error {
 		tx := iter.Value()
 		// close off old block with an end-block operation
 		if oldBlock != tx.Block {
-			if oldBlock != math.MaxUint64 {
-				opChannel <- operation.NewEndBlock()
-			}
 			if tx.Block > last {
 				break
+			}
+			if oldBlock != math.MaxUint64 {
+				opChannel <- operation.NewEndBlock()
 			}
 			oldBlock = tx.Block
 			// open new block with a begin-block operation
@@ -277,6 +277,8 @@ func traceRecordAction(ctx *cli.Context) error {
 		traceRecordTask(tx.Block, tx.Transaction, tx.Substate, dCtx, opChannel)
 		opChannel <- operation.NewEndTransaction()
 	}
+	// insert the last EndBlock
+	opChannel <- operation.NewEndBlock()
 
 	// write dictionaries and indexes
 	dCtx.Write()
