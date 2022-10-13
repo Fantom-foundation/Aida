@@ -1,23 +1,25 @@
-// Package db implements database interfaces for the world state manager.
-package db
+// Package opera implements Opera specific database interfaces for the world state manager.
+package opera
 
 import (
 	"fmt"
-	"github.com/Fantom-foundation/Aida-Testing/world-state/db/kvdb2ethdb"
-	"github.com/Fantom-foundation/Aida-Testing/world-state/types"
+	"github.com/Fantom-foundation/Aida-Testing/world-state/db/opera/kvdb2ethdb"
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/leveldb"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/nokeyiserr"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/pebble"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/table"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 	"log"
 )
+
+// StateDB implements Opera specific state database interface.
+type StateDB struct {
+	state.Database
+}
 
 // Connect opens the source database based on provided path and DB type.
 func connect(dbType string, path string) (kvdb.IterableDBProducer, error) {
@@ -54,18 +56,15 @@ func Connect(dbType string, dbPath string, dbName string) (kvdb.Store, error) {
 	return store, nil
 }
 
-// OpenStateTrie opens the EVM state trie on the provided DB connection.
-func OpenStateTrie(store kvdb.Store) state.Database {
+// OpenStateDB opens the EVM state trie on the provided DB connection.
+func OpenStateDB(store kvdb.Store) state.Database {
 	// evm data are stored under prefix M
 	evmDB := table.New(store, []byte(("M")))
 	wrappedEvmDB := rawdb.NewDatabase(kvdb2ethdb.Wrap(nokeyiserr.Wrap(evmDB)))
 
-	return state.NewDatabaseWithConfig(wrappedEvmDB, &trie.Config{})
-}
-
-// OpenBlockEpochState opens the Opera block/epoch state database.
-func OpenBlockEpochState(store kvdb.Store) kvdb.Store {
-	return table.New(store, []byte(("D")))
+	return &StateDB{
+		Database: state.NewDatabaseWithConfig(wrappedEvmDB, &trie.Config{}),
+	}
 }
 
 // MustCloseStore closes opened store without raising any error.
@@ -85,7 +84,7 @@ func OpenBlocks(store kvdb.Store) kvdb.Store {
 
 // BlockEpochState provides joined block and epoch state stored in the provided Opera database.
 func BlockEpochState(s kvdb.Store) (*types.BlockEpochState, error) {
-	ebs := OpenBlockEpochState(s)
+	ebs := opera.OpenBlockEpochState(s)
 
 	data, err := ebs.Get([]byte("s"))
 	if err != nil {

@@ -3,10 +3,10 @@ package dump
 
 import (
 	"context"
-	"github.com/Fantom-foundation/Aida-Testing/world-state/db"
+	"github.com/Fantom-foundation/Aida-Testing/world-state/db/opera"
+	"github.com/Fantom-foundation/Aida-Testing/world-state/db/snapshot"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/logger"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/urfave/cli/v2"
 )
 
@@ -17,11 +17,6 @@ const (
 	flagStateDBName  = "input-db-name"
 	flagStateRoot    = "root"
 	flagWorkers      = "workers"
-)
-
-var (
-	emptyCode     = crypto.Keccak256(nil)
-	emptyCodeHash = common.BytesToHash(emptyCode)
 )
 
 // CmdDumpState defines a CLI command for dumping world state from a source database.
@@ -74,18 +69,18 @@ var CmdDumpState = cli.Command{
 // dumpState dumps state from given EVM trie into an output account-state database
 func dumpState(ctx *cli.Context) error {
 	// open the source trie DB
-	store, err := db.Connect(ctx.String(flagInputDBType), ctx.Path(flagInputDBPath), ctx.Path(flagStateDBName))
+	store, err := opera.Connect(ctx.String(flagInputDBType), ctx.Path(flagInputDBPath), ctx.Path(flagStateDBName))
 	if err != nil {
 		return err
 	}
-	defer db.MustCloseStore(store)
+	defer opera.MustCloseStore(store)
 
 	// try to open output DB
-	outputDB, err := db.OpenStateSnapshotDB(ctx.Path(FlagOutputDBPath))
+	outputDB, err := snapshot.OpenStateDB(ctx.Path(FlagOutputDBPath))
 	if err != nil {
 		return err
 	}
-	defer db.MustCloseSnapshotDB(outputDB)
+	defer snapshot.MustCloseStateDB(outputDB)
 
 	// make logger
 	log := logger.New(ctx.App.Writer, "info")
@@ -96,8 +91,8 @@ func dumpState(ctx *cli.Context) error {
 	// load accounts from the given root
 	// if the root has not been provided, try to use the latest
 	root := common.HexToHash(ctx.String(flagStateRoot))
-	if root == db.ZeroHash {
-		root, blockNumber, err = db.LatestStateRoot(store)
+	if root == snapshot.ZeroHash {
+		root, blockNumber, err = opera.LatestStateRoot(store)
 		if err != nil {
 			log.Errorf("state root not found; %s", err.Error())
 			return err
@@ -113,7 +108,7 @@ func dumpState(ctx *cli.Context) error {
 	}
 
 	// load assembled accounts for the given root and write them into the snapshot database
-	accounts, failed := LoadAccounts(context.Background(), db.OpenStateTrie(store), root, ctx.Int(flagWorkers), log)
+	accounts, failed := LoadAccounts(context.Background(), opera.OpenStateDB(store), root, ctx.Int(flagWorkers), log)
 	dbWriter(outputDB, accounts)
 
 	errorOccurred := false

@@ -4,6 +4,7 @@ package main
 import (
 	"github.com/Fantom-foundation/Aida-Testing/cmd/gen-world-state/version"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/account"
+	"github.com/Fantom-foundation/Aida-Testing/world-state/clone"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/dump"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/evolve"
 	"github.com/urfave/cli/v2"
@@ -24,6 +25,7 @@ func main() {
 			&dump.CmdDumpState,
 			&evolve.CmdEvolveState,
 			&account.CmdAccount,
+			&clone.CmdClone,
 			&version.CmdVersion,
 		},
 		Flags: []cli.Flag{
