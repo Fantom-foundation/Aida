@@ -20,7 +20,7 @@ var CmdCompareState = cli.Command{
 	Aliases:     []string{"cmp"},
 	Usage:       "Compare whether states of two databases are identical",
 	Description: `Compares given snapshot database against target snapshot database.`,
-	ArgsUsage:   "<ref-db>",
+	ArgsUsage:   "<to>",
 	Flags: []cli.Flag{
 		&cli.PathFlag{
 			Name:     flagRefDBPath,
