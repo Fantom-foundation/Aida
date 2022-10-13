@@ -4,9 +4,10 @@ package clone
 import (
 	"github.com/Fantom-foundation/Aida-Testing/world-state/db/snapshot"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/dump"
+	"github.com/Fantom-foundation/Aida-Testing/world-state/logger"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/types"
 	"github.com/urfave/cli/v2"
-	"log"
+	"time"
 )
 
 const (
@@ -45,10 +46,20 @@ func cloneDB(ctx *cli.Context) error {
 	}
 	defer snapshot.MustCloseStateDB(outputDB)
 
+	// make logger
+	log := logger.New(ctx.App.Writer, "info")
+	logTick := time.NewTicker(2 * time.Second)
+	defer logTick.Stop()
+
 	var count int
 	err = inputDB.Copy(outputDB, func(_ *types.Account) {
 		count++
+		select {
+		case <-logTick.C:
+			log.Infof("transferred %d accounts", count)
+		default:
+		}
 	})
-	log.Printf("processed %d accounts", count)
+	log.Infof("%d accounts done", count)
 	return err
 }
