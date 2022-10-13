@@ -25,6 +25,7 @@ func (db *StateDB) Copy(ctx context.Context, to *StateDB, onAccount func(*types.
 	defer it.Release()
 
 	// iterate source database
+	ctxDone := ctx.Done()
 	for it.Next() {
 		acc := it.Value()
 		if it.Error() != nil {
@@ -32,6 +33,8 @@ func (db *StateDB) Copy(ctx context.Context, to *StateDB, onAccount func(*types.
 		}
 
 		select {
+		case <-ctxDone:
+			return ctx.Err()
 		case err := <-wFail:
 			if err != nil {
 				return err
@@ -53,14 +56,16 @@ func NewQueueWriter(ctx context.Context, db *StateDB, in chan types.Account) cha
 
 	go func(fail chan error) {
 		defer close(fail)
+
+		ctxDone := ctx.Done()
 		for {
 			// get all the found accounts from the input channel
 			select {
-			case <-ctx.Done():
+			case <-ctxDone:
 				return
 			case account, open := <-in:
 				if !open {
-					break
+					return
 				}
 
 				// insert account data

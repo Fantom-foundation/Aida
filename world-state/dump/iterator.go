@@ -50,6 +50,8 @@ func loadAccounts(ctx context.Context, db state.Database, root common.Hash, out 
 		}
 		close(fail)
 		close(out)
+
+		log.Infof("account loader done")
 	}()
 
 	// monitor error channel and cancel context if an error is detected; this also closes the raw loader above
@@ -111,6 +113,7 @@ func loadRawAccounts(ctx context.Context, db state.Database, root common.Hash, r
 	}
 
 	//  check existence of every code hash and rootHash of every storage trie
+	ctxDone := ctx.Done()
 	stateIt := stateTrie.NodeIterator(nil)
 	for stateIt.Next(true) {
 		if stateIt.Leaf() {
@@ -124,7 +127,7 @@ func loadRawAccounts(ctx context.Context, db state.Database, root common.Hash, r
 			}
 
 			select {
-			case <-ctx.Done():
+			case <-ctxDone:
 				return
 			case raw <- types.Account{Hash: addr, Account: acc}:
 			}
@@ -150,13 +153,16 @@ func finaliseAccounts(ctx context.Context, wid int, db state.Database, in chan t
 	defer func() {
 		tick.Stop()
 		wg.Done()
+
+		log.Infof("worker %d closed", wid)
 	}()
 
 	var last common.Hash
 	var dur time.Duration
+	ctxDone := ctx.Done()
 	for {
 		select {
-		case <-ctx.Done():
+		case <-ctxDone:
 			return
 		case <-tick.C:
 			log.Infof("worker #%d last account %s loaded in %s", wid, last.String(), dur.String())
@@ -212,9 +218,10 @@ func loadStorage(ctx context.Context, db state.Database, acc *types.Account) (ma
 	}
 
 	iter := st.NodeIterator(nil)
+	ctxDone := ctx.Done()
 	for iter.Next(true) {
 		select {
-		case <-ctx.Done():
+		case <-ctxDone:
 			return storage, ctx.Err()
 		default:
 		}

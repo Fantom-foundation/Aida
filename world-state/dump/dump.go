@@ -113,7 +113,7 @@ func dumpState(ctx *cli.Context) error {
 	go lookupBlock(ctx.Context, store, outputDB, root, blockNumber, dumpError, wg, log)
 
 	// wait for the writer to finish
-	dbWriter(ctx.Context, outputDB, accounts)
+	dbWriter(ctx.Context, outputDB, accounts, log)
 
 	// any errors during the writer processing?
 	for err = <-failed; err != nil; err = <-failed {
