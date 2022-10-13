@@ -7,7 +7,6 @@ import (
 	"github.com/Fantom-foundation/Aida-Testing/world-state/db/snapshot"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/logger"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/urfave/cli/v2"
 )
 
@@ -18,11 +17,6 @@ const (
 	flagStateDBName  = "input-db-name"
 	flagStateRoot    = "root"
 	flagWorkers      = "workers"
-)
-
-var (
-	emptyCode     = crypto.Keccak256(nil)
-	emptyCodeHash = common.BytesToHash(emptyCode)
 )
 
 // CmdDumpState defines a CLI command for dumping world state from a source database.
