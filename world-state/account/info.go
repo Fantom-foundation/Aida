@@ -28,7 +28,7 @@ var cmdAccountInfo = cli.Command{
 	Name:        "info",
 	Usage:       "Provides detailed information about the target account.",
 	Description: "Command provides detailed information about the account specified as an argument.",
-	ArgsUsage:   "<address>",
+	ArgsUsage:   "<address|hash>",
 	Flags: []cli.Flag{
 		&cli.BoolFlag{
 			Name:  flagWithStorage,
@@ -44,8 +44,8 @@ var balanceDecimals = big.NewInt(1_000_000_000_000)
 // accountInfo sends detailed account information to the console output stream.
 func accountInfo(ctx *cli.Context) error {
 	// check if we have an address
-	if ctx.Args().Len() < 1 || !common.IsHexAddress(ctx.Args().Get(0)) {
-		return fmt.Errorf("valid account address not provided")
+	if ctx.Args().Len() < 1 {
+		return fmt.Errorf("please provide account address, or account key hash")
 	}
 
 	// try to open output DB
@@ -56,8 +56,17 @@ func accountInfo(ctx *cli.Context) error {
 	defer snapshot.MustCloseStateDB(snapDB)
 
 	// try to get the account
-	addr := common.HexToAddress(ctx.Args().Get(0))
-	acc, err := snapDB.Account(addr)
+	var acc *types.Account
+	var addr common.Address
+
+	// regular address provided
+	if common.IsHexAddress(ctx.Args().Get(0)) {
+		addr = common.HexToAddress(ctx.Args().Get(0))
+		acc, err = snapDB.Account(addr)
+	} else {
+		acc, err = snapDB.AccountByHash(common.HexToHash(ctx.Args().Get(0)))
+	}
+
 	if err != nil {
 		return err
 	}
@@ -69,7 +78,6 @@ func accountInfo(ctx *cli.Context) error {
 	if ctx.Bool(flagWithStorage) {
 		accStorage(ctx.App.Writer, acc)
 	}
-
 	return nil
 }
 

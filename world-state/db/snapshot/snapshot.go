@@ -119,7 +119,7 @@ func (db *StateDB) AccountByHash(hash common.Hash) (*types.Account, error) {
 	key := AccountKey(hash)
 	data, err := db.Backend.Get(key)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("key %s not found; %s", common.Bytes2Hex(key), err.Error())
 	}
 
 	return db.decodeAccount(key, data)
@@ -130,7 +130,7 @@ func (db *StateDB) decodeAccount(key []byte, data []byte) (*types.Account, error
 	acc := types.Account{}
 	err := rlp.DecodeBytes(data, &acc)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("can not decode account; %s", err.Error())
 	}
 
 	// update the account hash

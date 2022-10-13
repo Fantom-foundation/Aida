@@ -11,13 +11,8 @@ import (
 // The copy does not erase previous data from the target database.
 // If you want a clean copy, make sure you use an empty DB.
 func (db *StateDB) Copy(ctx context.Context, to *StateDB, onAccount func(*types.Account)) error {
-	// make a buffer for reader/writer account exchange
+	// store data to the target database using a buffered channel
 	wb := make(chan types.Account, 100)
-	defer func() {
-		close(wb)
-	}()
-
-	// store data to the target database
 	wFail := NewQueueWriter(ctx, to, wb)
 
 	// we will use iterator to get all the source accounts
@@ -46,6 +41,19 @@ func (db *StateDB) Copy(ctx context.Context, to *StateDB, onAccount func(*types.
 		}
 	}
 
+	// close the writer buffer
+	close(wb)
+
+	// wait for the writer to finish
+	select {
+	case <-ctxDone:
+		return ctx.Err()
+	case err := <-wFail:
+		if err != nil {
+			return err
+		}
+	}
+
 	// release resources
 	return it.Error()
 }
@@ -62,6 +70,7 @@ func NewQueueWriter(ctx context.Context, db *StateDB, in chan types.Account) cha
 			// get all the found accounts from the input channel
 			select {
 			case <-ctxDone:
+				fail <- ctx.Err()
 				return
 			case account, open := <-in:
 				if !open {
