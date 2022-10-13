@@ -110,7 +110,7 @@ func dumpState(ctx *cli.Context) error {
 
 	// load assembled accounts for the given root and write them into the snapshot database
 	accounts, failed := LoadAccounts(context.Background(), opera.OpenStateDB(store), root, ctx.Int(flagWorkers), log)
-	dbWriter(outputDB, accounts)
+	dbWriter(ctx.Context, outputDB, accounts)
 
 	errorOccurred := false
 

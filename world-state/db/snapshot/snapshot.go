@@ -111,7 +111,12 @@ func (db *StateDB) PutAccount(acc *types.Account) error {
 
 // Account tries to read details of the given account address.
 func (db *StateDB) Account(addr common.Address) (*types.Account, error) {
-	key := AccountKey(crypto.HashData(db.hashing, addr.Bytes()))
+	return db.AccountByHash(crypto.HashData(db.hashing, addr.Bytes()))
+}
+
+// AccountByHash tries to read details of the given account by the account hash.
+func (db *StateDB) AccountByHash(hash common.Hash) (*types.Account, error) {
+	key := AccountKey(hash)
 	data, err := db.Backend.Get(key)
 	if err != nil {
 		return nil, err
@@ -161,71 +166,6 @@ func AccountKey(hash common.Hash) []byte {
 	copy(key[1:], hash.Bytes())
 
 	return key
-}
-
-// Copy creates a copy of the state snapshot database to the given output handle.
-// The copy does not erase previous data from the target database.
-// If you want a clean copy, make sure you use an empty DB.
-func (db *StateDB) Copy(to *StateDB, onAccount func(*types.Account)) error {
-	// make a buffer for reader/writer account exchange
-	wb := make(chan types.Account, 100)
-	defer func() {
-		close(wb)
-	}()
-
-	// store data to the target database
-	wFail := NewQueueWriter(to, wb)
-
-	// we will use iterator to get all the source accounts
-	it := db.NewAccountIterator()
-	defer it.Release()
-
-	// iterate source database
-	for it.Next() {
-		acc := it.Value()
-		if it.Error() != nil {
-			break
-		}
-
-		select {
-		case err := <-wFail:
-			if err != nil {
-				return err
-			}
-		case wb <- *acc:
-			if onAccount != nil {
-				onAccount(acc)
-			}
-		}
-	}
-
-	// release resources
-	return it.Error()
-}
-
-// NewQueueWriter creates a writer thread, which inserts Accounts from an input queue into the given database.
-func NewQueueWriter(db *StateDB, in chan types.Account) chan error {
-	e := make(chan error, 1)
-
-	go func(fail chan error) {
-		defer close(fail)
-		for {
-			// get all the found accounts from the input channel
-			account, open := <-in
-			if !open {
-				break
-			}
-
-			// insert account data
-			err := db.PutAccount(&account)
-			if err != nil {
-				fail <- fmt.Errorf("can not write account %s; %s\n", account.Hash.String(), err.Error())
-				return
-			}
-		}
-	}(e)
-
-	return e
 }
 
 // PutBlockNumber inserts block number into database

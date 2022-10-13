@@ -2,6 +2,7 @@
 package snapshot
 
 import (
+	"context"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/state"
@@ -81,9 +82,17 @@ func makeTestDB(t *testing.T) (*StateDB, map[common.Hash]types.Account) {
 }
 
 func TestStateDB_NewAccountIterator(t *testing.T) {
-	db, ta := makeTestDB(t)
+	dl, ok := t.Deadline()
+	if !ok {
+		t.Fatalf("test deadline exceeded")
+	}
 
-	iter := db.NewAccountIterator()
+	// compare the DB to itself
+	ctx, cancel := context.WithDeadline(context.Background(), dl)
+	defer cancel()
+
+	db, ta := makeTestDB(t)
+	iter := db.NewAccountIterator(ctx)
 	defer iter.Release()
 
 	var count int
@@ -111,7 +120,11 @@ func TestStateDB_NewAccountIterator(t *testing.T) {
 		}
 	}
 
+	// the number of iterations should match the number of items in the account set
 	if count != len(ta) {
 		t.Errorf("failed accounts iterated; expected to iterate %dx, iterated %dx", len(ta), count)
 	}
+
+	// we release the iterator; the subsequent deferred iterator release should not fail later
+	iter.Release()
 }

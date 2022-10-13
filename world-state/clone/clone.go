@@ -2,6 +2,7 @@
 package clone
 
 import (
+	"context"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/db/snapshot"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/dump"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/logger"
@@ -52,7 +53,7 @@ func cloneDB(ctx *cli.Context) error {
 	defer logTick.Stop()
 
 	var count int
-	err = inputDB.Copy(outputDB, func(_ *types.Account) {
+	err = inputDB.Copy(context.Background(), outputDB, func(_ *types.Account) {
 		count++
 		select {
 		case <-logTick.C:

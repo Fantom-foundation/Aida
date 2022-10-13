@@ -21,4 +21,13 @@ func TestVersionInfoGivesOutput(t *testing.T) {
 			t.Fatalf("VersionInfo() expected to contain %s information, returns:\n%s\n", n, v)
 		}
 	}
+
+	// check the cmd name
+	if CmdVersion.Name != "version" {
+		t.Errorf("failed command; expected <test>, found %s", CmdVersion.Name)
+	}
+
+	if CmdVersion.Aliases == nil || len(CmdVersion.Aliases) == 0 {
+		t.Errorf("failed command alias; expected at least 1 alias, none found")
+	}
 }
