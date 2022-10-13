@@ -2,12 +2,14 @@
 package snapshot
 
 import (
+	"context"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/types"
 	"github.com/ethereum/go-ethereum/ethdb"
 )
 
 // AccountIterator implements an iterator over the whole account space in the snapshot database.
 type AccountIterator struct {
+	ctx     context.Context
 	err     error
 	iter    ethdb.Iterator
 	item    *accountIteratorItem
@@ -23,8 +25,9 @@ type accountIteratorItem struct {
 }
 
 // NewAccountIterator creates a new iterator for traversing account space in state snapshot DB.
-func (db *StateDB) NewAccountIterator() *AccountIterator {
+func (db *StateDB) NewAccountIterator(ctx context.Context) *AccountIterator {
 	ai := AccountIterator{
+		ctx:     ctx,
 		iter:    db.Backend.NewIterator([]byte{AccountPrefix}, nil),
 		items:   make(chan accountIteratorItem, 50),
 		closed:  make(chan any),
@@ -64,6 +67,9 @@ func (ai *AccountIterator) load() {
 		}
 
 		select {
+		case <-ai.ctx.Done():
+			ai.err = ai.ctx.Err()
+			return
 		case <-ai.closed:
 			return
 		case ai.items <- itm:
@@ -75,6 +81,8 @@ func (ai *AccountIterator) load() {
 // iterator is exhausted.
 func (ai *AccountIterator) Next() bool {
 	select {
+	case <-ai.ctx.Done():
+		ai.err = ai.ctx.Err()
 	case <-ai.closed:
 	case itm, open := <-ai.items:
 		if open {
