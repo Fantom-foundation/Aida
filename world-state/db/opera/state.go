@@ -2,6 +2,7 @@
 package opera
 
 import (
+	"context"
 	"encoding/binary"
 	"fmt"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/types"
@@ -43,71 +44,52 @@ func LatestStateRoot(s kvdb.Store) (common.Hash, uint64, error) {
 	return bes.BlockState.FinalizedStateRoot, bes.BlockState.LastBlock.Idx, nil
 }
 
-// OpenBlocks opens the Opera blocks database.
-func OpenBlocks(store kvdb.Store) kvdb.Store {
-	return table.New(store, []byte(("b")))
-}
-
-// RootBlock provides the block number for given root hash.
-func RootBlock(s kvdb.Store, root common.Hash) (chan uint64, chan error) {
-	blockNumberChan := make(chan uint64, 1)
-	err := make(chan error, 1)
-
-	go rootBLock(s, root, blockNumberChan, err)
-
-	return blockNumberChan, err
-}
-
-// rootBLock iterate the blocks to find block with given root hash
-func rootBLock(s kvdb.Store, root common.Hash, blockNumberChan chan uint64, fail chan error) {
-	defer func() {
-		close(blockNumberChan)
-		close(fail)
-	}()
-
+// RootBLock iterate the blocks to find block with given root hash
+func RootBLock(ctx context.Context, s kvdb.Store, root common.Hash) (uint64, error) {
 	lastStateRoot, lastBlock, err := LatestStateRoot(s)
 	if err != nil {
-		fail <- fmt.Errorf("Last state root of database not found;  %s", root)
-		return
+		return 0, fmt.Errorf("last state root of database not found;  %s", root)
 	}
 
 	// database doesn't have information recent information about blocks
 	if lastBlock == 0 {
-		fail <- fmt.Errorf("Last state root of database returned %d;  %s", lastBlock, root)
-		return
+		return 0, fmt.Errorf("last state root of database returned %d;  %s", lastBlock, root)
 	}
 
 	// searched root is from last block
 	if root == lastStateRoot {
-		blockNumberChan <- lastBlock
-		return
+		return lastBlock, nil
 	}
 
-	ebs := OpenBlocks(s)
+	ebs := table.New(s, []byte(("b")))
 	b := make([]byte, 8)
 
+	ctxDone := ctx.Done()
 	for i := lastBlock; i >= 0; i-- {
+		select {
+		case <-ctxDone:
+			return 0, ctx.Err()
+		default:
+		}
+
 		binary.BigEndian.PutUint64(b, i)
 		data, err := ebs.Get(b)
 		if err != nil {
-			fail <- fmt.Errorf("block %d info not found; %s", i, err.Error())
-			return
+			return 0, fmt.Errorf("block %d info not found; %s", i, err.Error())
 		}
 
 		block := types.Block{}
 		err = rlp.DecodeBytes(data, &block)
 		if err != nil {
-			fail <- fmt.Errorf("could not decode block %d information; %s", i, err.Error())
-			return
+			return 0, fmt.Errorf("could not decode block %d information; %s", i, err.Error())
 		}
 
 		// block with current index has matching root
 		if common.Hash(block.Root) == root {
 			// successfully found block number
-			blockNumberChan <- i
-			return
+			return i, nil
 		}
 	}
 
-	fail <- fmt.Errorf("block for root %s was not found in database", root)
+	return 0, fmt.Errorf("block for root %s was not found in database", root)
 }
