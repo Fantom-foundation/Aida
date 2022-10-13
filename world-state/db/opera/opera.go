@@ -76,35 +76,3 @@ func MustCloseStore(s kvdb.Store) {
 		}
 	}
 }
-
-// OpenBlocks opens the Opera blocks database.
-func OpenBlocks(store kvdb.Store) kvdb.Store {
-	return table.New(store, []byte(("b")))
-}
-
-// BlockEpochState provides joined block and epoch state stored in the provided Opera database.
-func BlockEpochState(s kvdb.Store) (*types.BlockEpochState, error) {
-	ebs := opera.OpenBlockEpochState(s)
-
-	data, err := ebs.Get([]byte("s"))
-	if err != nil {
-		return nil, fmt.Errorf("block state not found; %s", err.Error())
-	}
-
-	bes := types.BlockEpochState{}
-	err = rlp.DecodeBytes(data, &bes)
-	if err != nil {
-		return nil, fmt.Errorf("could not decode block/epoch state information; %s", err.Error())
-	}
-
-	return &bes, nil
-}
-
-// LatestStateRoot provides the latest block state root hash.
-func LatestStateRoot(s kvdb.Store) (common.Hash, uint64, error) {
-	bes, err := BlockEpochState(s)
-	if err != nil {
-		return common.Hash{}, 0, err
-	}
-	return bes.BlockState.FinalizedStateRoot, bes.BlockState.LastBlock.Idx, nil
-}

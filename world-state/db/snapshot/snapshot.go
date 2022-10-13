@@ -26,6 +26,9 @@ const (
 var (
 	// ZeroHash represents an empty hash.
 	ZeroHash = common.Hash{}
+
+	// BlockNumberKey is key under which block number is stored in database
+	BlockNumberKey = []byte("blockNumberKey")
 )
 
 // StateDB represents the state snapshot database handle.
@@ -223,4 +226,30 @@ func NewQueueWriter(db *StateDB, in chan types.Account) chan error {
 	}(e)
 
 	return e
+}
+
+// PutBlockNumber inserts block number into database
+func (db *StateDB) PutBlockNumber(i uint64) error {
+	enc, err := rlp.EncodeToBytes(i)
+	if err != nil {
+		return fmt.Errorf("failed encoding blockID %d to RLP; %s", i, err.Error())
+	}
+
+	return db.Backend.Put(BlockNumberKey, enc)
+}
+
+// GetBlockNumber retrieves block number from database
+func (db *StateDB) GetBlockNumber() (uint64, error) {
+	data, err := db.Backend.Get(BlockNumberKey)
+	if err != nil {
+		return 0, fmt.Errorf("block number not found in database; %s", err.Error())
+	}
+
+	var blockNumber uint64
+	err = rlp.DecodeBytes(data, &blockNumber)
+	if err != nil {
+		return 0, fmt.Errorf("failed decoding block number from RLP; %s", err.Error())
+	}
+
+	return blockNumber, err
 }

@@ -2,7 +2,7 @@ package evolve
 
 import (
 	"fmt"
-	"github.com/Fantom-foundation/Aida-Testing/world-state/db"
+	"github.com/Fantom-foundation/Aida-Testing/world-state/db/snapshot"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/logger"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/types"
 	"github.com/ethereum/go-ethereum/common"
@@ -50,11 +50,11 @@ var CmdEvolveState = cli.Command{
 // evolveState dumps state from given EVM trie into an output account-state database
 func evolveState(ctx *cli.Context) error {
 	// try to open state DB
-	stateDB, err := db.OpenStateSnapshotDB(ctx.Path(flagWorldStateDBPath))
+	stateDB, err := snapshot.OpenStateDB(ctx.Path(flagWorldStateDBPath))
 	if err != nil {
 		return err
 	}
-	defer db.MustCloseSnapshotDB(stateDB)
+	defer snapshot.MustCloseStateDB(stateDB)
 
 	// evolution until given block
 	targetBlock := ctx.Uint64(flagTargetBlock)
@@ -70,7 +70,7 @@ func evolveState(ctx *cli.Context) error {
 }
 
 // EvolveState evolves stateDB to target block
-func EvolveState(stateDB *db.StateSnapshotDB, substateDBPath string, targetBlock uint64, workers int, log *logging.Logger) error {
+func EvolveState(stateDB *snapshot.StateDB, substateDBPath string, targetBlock uint64, workers int, log *logging.Logger) error {
 	// retrieving block number from world state database
 	firstBlock, err := stateDB.GetBlockNumber()
 	if err != nil {
@@ -120,7 +120,7 @@ func EvolveState(stateDB *db.StateSnapshotDB, substateDBPath string, targetBlock
 
 // evolution iterates trough Substates between first and target blocks
 // anticipates that SubstateDB is already open
-func evolution(stateDB *db.StateSnapshotDB, firstBlock uint64, targetBlock uint64, workers int, log *logging.Logger) (uint64, error) {
+func evolution(stateDB *snapshot.StateDB, firstBlock uint64, targetBlock uint64, workers int, log *logging.Logger) (uint64, error) {
 	log.Info("starting evolution block number", firstBlock, "target block", targetBlock)
 
 	// contains last block id
@@ -162,7 +162,7 @@ func evolution(stateDB *db.StateSnapshotDB, firstBlock uint64, targetBlock uint6
 }
 
 // evolveSubstate evolves world state db supplied substate.substateOut containing data of accounts at the end of one transaction
-func evolveSubstate(substateOut *substate.SubstateAlloc, stateDB *db.StateSnapshotDB, log *logging.Logger) error {
+func evolveSubstate(substateOut *substate.SubstateAlloc, stateDB *snapshot.StateDB, log *logging.Logger) error {
 	for address, substateAccount := range *substateOut {
 		// get account stored in state snapshot database
 		acc, err := stateDB.Account(address)
@@ -183,7 +183,7 @@ func evolveSubstate(substateOut *substate.SubstateAlloc, stateDB *db.StateSnapsh
 
 		// overwriting all changed values in storage
 		for key, value := range substateAccount.Storage {
-			if value == db.ZeroHash {
+			if value == snapshot.ZeroHash {
 				if _, found := acc.Storage[key]; found {
 					// removing key with empty value from storage
 					delete(acc.Storage, key)

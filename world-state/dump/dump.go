@@ -102,9 +102,10 @@ func dumpState(ctx *cli.Context) error {
 	}
 
 	var blockNumberChan chan uint64 = nil
-	// root was not in BlockEpochState, search for blockNumber of given root in block records
+	var blockNumberFailChan chan error = nil
+	// root was not in blockEpochState, search for blockNumber of given root in block records
 	if blockNumber == 0 {
-		blockNumberChan = RootBlock(store, root, log)
+		blockNumberChan, blockNumberFailChan = opera.RootBlock(store, root)
 	}
 
 	// load assembled accounts for the given root and write them into the snapshot database
@@ -121,7 +122,7 @@ func dumpState(ctx *cli.Context) error {
 
 	// no errors during processing write block number into database
 	if !errorOccurred {
-		storeBlockNumber(blockNumberChan, blockNumber, outputDB, log)
+		storeBlockNumber(blockNumberChan, blockNumberFailChan, blockNumber, outputDB, log)
 	}
 
 	log.Info("done")
@@ -130,7 +131,15 @@ func dumpState(ctx *cli.Context) error {
 
 // storeBlockNumber inserts block number to the output database
 // blockNumber contains result only when root matched root of last block in database
-func storeBlockNumber(blockNumberChan chan uint64, blockNumber uint64, outputDB *db.StateSnapshotDB, log Logger) {
+func storeBlockNumber(blockNumberChan chan uint64, fail chan error, blockNumber uint64, outputDB *snapshot.StateDB, log Logger) {
+	if fail != nil {
+		err, ok := <-fail
+		if err != nil && ok {
+			log.Errorf("Error while getting block number from opera database occurred; %s", err.Error())
+			return
+		}
+	}
+
 	// blockNumberChan is only initialized when result isn't contained in blockNumber
 	if blockNumberChan != nil {
 		var ok bool
@@ -141,7 +150,8 @@ func storeBlockNumber(blockNumberChan chan uint64, blockNumber uint64, outputDB 
 	}
 
 	if blockNumber == 0 {
-		log.Errorf("Block number for given root wasn't found in database; %s")
+		log.Errorf("Block number for given root wasn't found in database")
+		return
 	}
 
 	log.Infof("Inserting block number %d into database", blockNumber)
