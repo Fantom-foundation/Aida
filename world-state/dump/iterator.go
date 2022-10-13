@@ -184,8 +184,8 @@ func assembleAccount(ctx context.Context, db state.Database, acc *types.Account)
 	var err error
 
 	// extract account code
-	codeHash := common.BytesToHash(acc.CodeHash)
-	if codeHash != emptyCodeHash {
+	if !bytes.Equal(acc.CodeHash, types.EmptyCode) {
+		codeHash := common.BytesToHash(acc.CodeHash)
 		acc.Code, err = db.ContractCode(acc.Hash, codeHash)
 		if err != nil {
 			return fmt.Errorf("failed getting code %s at %s; %s", codeHash.String(), acc.Hash.String(), err.Error())

@@ -2,6 +2,7 @@
 package snapshot
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/types"
 	"github.com/ethereum/go-ethereum/common"
@@ -22,8 +23,10 @@ const (
 	AccountPrefix = 0x0a
 )
 
-// ZeroHash represents an empty hash.
-var ZeroHash = common.Hash{}
+var (
+	// ZeroHash represents an empty hash.
+	ZeroHash = common.Hash{}
+)
 
 // StateDB represents the state snapshot database handle.
 type StateDB struct {
@@ -69,14 +72,14 @@ func MustCloseStateDB(db *StateDB) {
 }
 
 // PutCode inserts Account code into database
-func (db *StateDB) PutCode(code []byte) (common.Hash, error) {
+func (db *StateDB) PutCode(code []byte) ([]byte, error) {
 	// anything to store?
-	if len(code) == 0 {
-		return common.Hash{}, nil
+	if code == nil {
+		return types.EmptyCode, nil
 	}
 
 	codeHash := crypto.Keccak256Hash(code)
-	return codeHash, db.Backend.Put(CodeKey(codeHash), code)
+	return codeHash.Bytes(), db.Backend.Put(CodeKey(codeHash), code)
 }
 
 // Code loads account code from the database, if available.
@@ -86,16 +89,15 @@ func (db *StateDB) Code(h common.Hash) ([]byte, error) {
 
 // PutAccount inserts Account into database
 func (db *StateDB) PutAccount(acc *types.Account) error {
+	var err error
+
 	// store the code, if any
-	acc.CodeHash = ZeroHash.Bytes()
-	if len(acc.Code) > 0 {
-		ch, err := db.PutCode(acc.Code)
-		if err != nil {
-			return err
-		}
-		acc.CodeHash = ch.Bytes()
+	acc.CodeHash, err = db.PutCode(acc.Code)
+	if err != nil {
+		return err
 	}
 
+	// encode the account itself
 	enc, err := rlp.EncodeToBytes(acc)
 	if err != nil {
 		return fmt.Errorf("failed encoding account %s to RLP; %s", acc.Hash.String(), err.Error())
@@ -127,10 +129,10 @@ func (db *StateDB) decodeAccount(key []byte, data []byte) (*types.Account, error
 	acc.Hash.SetBytes(key[1:])
 
 	// any code to be loaded?
-	codeHash := common.Hash{}
-	codeHash.SetBytes(acc.CodeHash)
+	if !bytes.Equal(acc.CodeHash, ZeroHash.Bytes()) && !bytes.Equal(acc.CodeHash, types.EmptyCode) {
+		codeHash := common.Hash{}
+		codeHash.SetBytes(acc.CodeHash)
 
-	if codeHash != ZeroHash {
 		acc.Code, err = db.Code(codeHash)
 		if err != nil {
 			return nil, fmt.Errorf("contract code not found; %s", err.Error())

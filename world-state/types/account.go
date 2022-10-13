@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
 	"io"
 	"math/big"
@@ -31,6 +32,15 @@ type accStorageItmRLP struct {
 	Key   common.Hash
 	Value common.Hash
 }
+
+var (
+	// EmptyCode represents hash bytes of an empty code account.
+	EmptyCode = crypto.Keccak256(nil)
+
+	// EmptyCodeHash is used by create to ensure deployment is disallowed to already
+	// deployed contract addresses (relevant after the account abstraction).
+	EmptyCodeHash = common.BytesToHash(EmptyCode)
+)
 
 var (
 	ErrAccountHash         = fmt.Errorf("different account hash")
@@ -94,6 +104,11 @@ func (a *Account) DecodeRLP(s *rlp.Stream) error {
 		a.Storage[itm.Key] = itm.Value
 	}
 	return nil
+}
+
+// IsEmpty checks if the account is empty.
+func (a *Account) IsEmpty() bool {
+	return a.Nonce == 0 && a.Balance.Sign() == 0 && bytes.Equal(a.CodeHash, EmptyCode)
 }
 
 // IsIdentical compares the account to another instance
