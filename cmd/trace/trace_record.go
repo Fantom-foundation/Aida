@@ -22,7 +22,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/substate"
-	cli "gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 )
 
 // trace record command
@@ -32,11 +32,11 @@ var TraceRecordCommand = cli.Command{
 	Usage:     "captures and records StateDB operations while processing blocks",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
-		substate.WorkersFlag,
-		substate.SubstateDirFlag,
-		chainIDFlag,
-		traceDirectoryFlag,
-		traceDebugFlag,
+		&substate.WorkersFlag,
+		&substate.SubstateDirFlag,
+		&chainIDFlag,
+		&traceDirectoryFlag,
+		&traceDebugFlag,
 	},
 	Description: `
 The trace record command requires two arguments:
@@ -226,7 +226,7 @@ func OperationWriter(ctx context.Context, done chan struct{}, ch chan operation.
 func traceRecordAction(ctx *cli.Context) error {
 	var err error
 
-	if len(ctx.Args()) != 2 {
+	if ctx.Args().Len() != 2 {
 		return fmt.Errorf("trace record command requires exactly 2 arguments")
 	}
 
