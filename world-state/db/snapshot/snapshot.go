@@ -21,14 +21,14 @@ const (
 
 	// AccountPrefix is used to store accounts.
 	AccountPrefix = 0x0a
+
+	// BlockNumberKey is key under which block number is stored in database
+	BlockNumberKey = 0xbb
 )
 
 var (
 	// ZeroHash represents an empty hash.
 	ZeroHash = common.Hash{}
-
-	// BlockNumberKey is key under which block number is stored in database
-	BlockNumberKey = []byte("blockNumberKey")
 )
 
 // StateDB represents the state snapshot database handle.
@@ -175,12 +175,12 @@ func (db *StateDB) PutBlockNumber(i uint64) error {
 		return fmt.Errorf("failed encoding blockID %d to RLP; %s", i, err.Error())
 	}
 
-	return db.Backend.Put(BlockNumberKey, enc)
+	return db.Backend.Put([]byte{BlockNumberKey}, enc)
 }
 
 // GetBlockNumber retrieves block number from database
 func (db *StateDB) GetBlockNumber() (uint64, error) {
-	data, err := db.Backend.Get(BlockNumberKey)
+	data, err := db.Backend.Get([]byte{BlockNumberKey})
 	if err != nil {
 		return 0, fmt.Errorf("block number not found in database; %s", err.Error())
 	}
