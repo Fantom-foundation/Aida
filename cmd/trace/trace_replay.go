@@ -110,7 +110,7 @@ func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 
 	for stateIter.Next() {
 		tx := stateIter.Value()
-		if tx.Block > last || !iCtx.ExistsBlock(tx.Block) {
+		if tx.Block > last {
 			break
 		}
 		db.PrepareSubstate(&tx.Substate.InputAlloc)
