@@ -12,7 +12,7 @@ type DictionaryContext struct {
 	StorageDictionary  *StorageDictionary  // dictionary to compact storage addresses
 	ValueDictionary    *ValueDictionary    // dictionary to compact storage values
 
-	SnapshotIndex     *SnapshotIndex       // Snapshot index for execution (not for recording/replaying)
+	SnapshotIndex *SnapshotIndex // Snapshot index for execution (not for recording/replaying)
 }
 
 // Create new dictionary context.

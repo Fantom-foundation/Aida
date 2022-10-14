@@ -2,8 +2,8 @@ package operation
 
 import (
 	"encoding/binary"
-	"os"
 	"fmt"
+	"os"
 
 	"github.com/Fantom-foundation/aida/tracer/dict"
 	"github.com/Fantom-foundation/aida/tracer/state"
@@ -46,5 +46,5 @@ func (op *Snapshot) Execute(db state.StateDB, ctx *dict.DictionaryContext) {
 
 // Print the details for the snapshot operation.
 func (op *Snapshot) Debug(*dict.DictionaryContext) {
-	fmt.Printf("\trecorded snapshot id: %v (%b)\n", op.SnapshotID)
+	fmt.Printf("\trecorded snapshot id: %v\n", op.SnapshotID)
 }
