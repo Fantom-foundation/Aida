@@ -24,7 +24,7 @@ func makeTestDB(t *testing.T) (*StateDB, map[common.Hash]types.Account) {
 
 	// TestAccounts represents the test set for accounts.
 	var ta = map[common.Hash]types.Account{}
-	for i := 0; i < 5; i++ {
+	for i := 0; i < 500; i++ {
 		pk, err := crypto.GenerateKey()
 		if err != nil {
 			t.Fatalf("failed test data build; could not create random keys; %s", err.Error())
