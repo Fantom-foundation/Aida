@@ -8,6 +8,7 @@ import (
 	"github.com/Fantom-foundation/Aida-Testing/world-state/compare"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/dump"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/evolve"
+	"github.com/Fantom-foundation/Aida-Testing/world-state/root"
 	"github.com/urfave/cli/v2"
 	"log"
 	"os"
@@ -28,6 +29,7 @@ func main() {
 			&account.CmdAccount,
 			&clone.CmdClone,
 			&compare.CmdCompareState,
+			&root.CmdRoot,
 			&version.CmdVersion,
 		},
 		Flags: []cli.Flag{

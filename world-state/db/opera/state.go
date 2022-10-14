@@ -93,3 +93,23 @@ func RootBLock(ctx context.Context, s kvdb.Store, root common.Hash) (uint64, err
 
 	return 0, fmt.Errorf("block for root %s was not found in database", root)
 }
+
+// RootOfBLock retrieves root hash from given block number
+func RootOfBLock(s kvdb.Store, bn uint64) (common.Hash, error) {
+	ebs := table.New(s, []byte(("b")))
+
+	key := make([]byte, 8)
+	binary.BigEndian.PutUint64(key, bn)
+	data, err := ebs.Get(key)
+	if err != nil {
+		return common.Hash{}, fmt.Errorf("block %d info not found in database; %s", bn, err.Error())
+	}
+
+	block := types.Block{}
+	err = rlp.DecodeBytes(data, &block)
+	if err != nil {
+		return common.Hash{}, fmt.Errorf("could not decode block %d information; %s", bn, err.Error())
+	}
+
+	return common.Hash(block.Root), nil
+}
