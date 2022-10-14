@@ -38,8 +38,6 @@ var (
 		Name:  "validate",
 		Usage: "enables end-state validation",
 	}
-
-
 )
 
 // Check the validity of a block range and return the first and last block as numbers.

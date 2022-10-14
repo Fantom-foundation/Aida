@@ -208,15 +208,17 @@ func OperationWriter(ctx context.Context, done chan struct{}, ch chan operation.
 
 		case <-ctx.Done():
 			if len(ch) == 0 {
+				// close trace file
+				err = file.Close()
+				if err != nil {
+					log.Fatalf("Cannot close trace file. Error: %v", err)
+				}
+				// write dictionaries and indexes
+				dCtx.Write()
+				iCtx.Write()
 				return
 			}
 		}
-	}
-
-	// close trace file
-	err = file.Close()
-	if err != nil {
-		log.Fatalf("Cannot close trace file. Error: %v", err)
 	}
 }
 
@@ -279,10 +281,6 @@ func traceRecordAction(ctx *cli.Context) error {
 	}
 	// insert the last EndBlock
 	opChannel <- operation.NewEndBlock()
-
-	// write dictionaries and indexes
-	dCtx.Write()
-	iCtx.Write()
 
 	return err
 }
