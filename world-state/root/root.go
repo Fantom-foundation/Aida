@@ -40,7 +40,7 @@ var CmdRoot = cli.Command{
 	},
 }
 
-// compareState compares state of two databases
+// root retrieves root hash of given block number
 func root(ctx *cli.Context) error {
 	// open the source trie DB
 	store, err := opera.Connect(ctx.String(flagInputDBType), ctx.Path(flagInputDBPath), ctx.Path(flagStateDBName))
@@ -52,6 +52,7 @@ func root(ctx *cli.Context) error {
 	// make logger
 	log := logger.New(ctx.App.Writer, "info")
 
+	//look up root hash from block number
 	root, err := opera.RootOfBLock(store, ctx.Uint64(flagBlock))
 	if err != nil {
 		log.Errorf("Unable to find root hash for block number %d; %s", ctx.Uint64(flagBlock), err.Error())
