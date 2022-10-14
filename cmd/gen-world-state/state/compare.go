@@ -1,46 +1,39 @@
-package compare
+// Package state implements executable entry points to the world state generator app.
+package state
 
 import (
 	"context"
 	"fmt"
+	"github.com/Fantom-foundation/Aida-Testing/cmd/gen-world-state/flags"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/db/snapshot"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/logger"
 	"github.com/urfave/cli/v2"
 )
 
-const (
-	flagStateDBPath = "db"
-	flagRefDBPath   = "to"
-)
-
 // CmdCompareState compares states of two databases whether they are identical
 var CmdCompareState = cli.Command{
-	Action:      compareState,
+	Action:      compareDb,
 	Name:        "compare",
 	Aliases:     []string{"cmp"},
 	Usage:       "Compare whether states of two databases are identical",
 	Description: `Compares given snapshot database against target snapshot database.`,
 	ArgsUsage:   "<to>",
 	Flags: []cli.Flag{
-		&cli.PathFlag{
-			Name:     flagRefDBPath,
-			Usage:    "Path to target snapshot database",
-			Required: true,
-		},
+		&flags.TargetDBPath,
 	},
 }
 
-// compareState compares state of two databases
-func compareState(ctx *cli.Context) error {
+// compareDb compares world state stored inside source and destination databases.
+func compareDb(ctx *cli.Context) error {
 	// try to open state DB
-	stateDB, err := snapshot.OpenStateDB(ctx.Path(flagStateDBPath))
+	stateDB, err := snapshot.OpenStateDB(ctx.Path(flags.StateDBPath.Name))
 	if err != nil {
 		return err
 	}
 	defer snapshot.MustCloseStateDB(stateDB)
 
 	// try to open target state DB
-	stateRefDB, err := snapshot.OpenStateDB(ctx.Path(flagRefDBPath))
+	stateRefDB, err := snapshot.OpenStateDB(DefaultPath(ctx, &flags.TargetDBPath, "clone"))
 	if err != nil {
 		return err
 	}
@@ -48,16 +41,14 @@ func compareState(ctx *cli.Context) error {
 
 	// make logger
 	log := logger.New(ctx.App.Writer, "info")
-
-	log.Infof("Comparing %s against %s", ctx.Path(flagStateDBPath), ctx.Path(flagRefDBPath))
+	log.Infof("comparing %s against %s", ctx.Path(flags.StateDBPath.Name), ctx.Path(flags.TargetDBPath.Name))
 
 	// call CompareTo against target database
 	err = stateDB.CompareTo(context.Background(), stateRefDB)
 	if err != nil {
-		err = fmt.Errorf("while comparing %s against %s ; %s", ctx.Path(flagStateDBPath), ctx.Path(flagRefDBPath), err.Error())
-		return err
+		return fmt.Errorf("compare failed; %s", err.Error())
 	}
-	log.Info("Databases are identical")
-	log.Info("done")
+
+	log.Info("databases are identical")
 	return nil
 }

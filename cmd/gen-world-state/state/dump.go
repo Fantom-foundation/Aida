@@ -1,41 +1,171 @@
-// Package dump implements world state trie dump into a snapshot database.
-package dump
+// Package state implements executable entry points to the world state generator app.
+package state
 
 import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/Fantom-foundation/Aida-Testing/cmd/gen-world-state/flags"
+	"github.com/Fantom-foundation/Aida-Testing/world-state/db/opera"
+	"github.com/Fantom-foundation/Aida-Testing/world-state/db/snapshot"
+	"github.com/Fantom-foundation/Aida-Testing/world-state/logger"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/types"
+	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/state"
-	eth "github.com/ethereum/go-ethereum/core/types"
+	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/op/go-logging"
+	"github.com/urfave/cli/v2"
 	"sync"
 	"time"
 )
 
-// Logger defines a logging receiver for the loader.
-type Logger interface {
-	Errorf(format string, args ...interface{})
-	Infof(format string, args ...interface{})
-	Debugf(format string, args ...interface{})
+// CmdDumpState defines a CLI command for dumping world state from a source database.
+// We export all accounts (including contracts) with:
+//   - Balance
+//   - Nonce
+//   - Code (hash + separate storage)
+//   - Contract Storage
+var CmdDumpState = cli.Command{
+	Action:  dumpState,
+	Name:    "dump",
+	Aliases: []string{"d"},
+	Usage:   "Extracts world state MPT trie at given root from input database into state snapshot output database.",
+	Description: `The dump creates a snapshot of all accounts state (including contracts) exporting:
+		- Balance
+		- Nonce
+		- Code (separate storage slot is used to store code data)
+		- Contract Storage`,
+	ArgsUsage: "<root> <input-db> <input-db-name> <input-db-type> <workers>",
+	Flags: []cli.Flag{
+		&flags.SourceDBPath,
+		&flags.SourceDBType,
+		&flags.SourceTableName,
+		&flags.TrieRootHash,
+		&flags.Workers,
+	},
 }
 
-// LoadAccounts iterates over EVM state trie at given root hash and sends assembled accounts into a channel.
+// dumpState dumps state from given EVM trie into an output account-state database
+func dumpState(ctx *cli.Context) error {
+	// open the source trie DB
+	store, err := opera.Connect(ctx.String(flags.SourceDBType.Name), DefaultPath(ctx, &flags.SourceDBPath, ".opera/chaindata/leveldb-fsh"), ctx.String(flags.SourceTableName.Name))
+	if err != nil {
+		return err
+	}
+	defer opera.MustCloseStore(store)
+
+	// try to open output DB
+	outputDB, err := snapshot.OpenStateDB(ctx.Path(flags.StateDBPath.Name))
+	if err != nil {
+		return err
+	}
+	defer snapshot.MustCloseStateDB(outputDB)
+
+	log := logger.New(ctx.App.Writer, "info")
+
+	// blockNumber number to be stored in output db
+	var blockNumber uint64 = 0
+
+	// load accounts from the given root
+	// if the root has not been provided, try to use the latest
+	root := common.HexToHash(ctx.String(flags.TrieRootHash.Name))
+	if root == snapshot.ZeroHash {
+		root, blockNumber, err = opera.LatestStateRoot(store)
+		if err != nil {
+			log.Errorf("state root not found; %s", err.Error())
+			return err
+		}
+
+		log.Infof("state root not provided, using the latest %s", root.String())
+	}
+
+	// load assembled accounts for the given root and write them into the snapshot database
+	accounts, readFailed := loadAccounts(ctx.Context, opera.OpenStateDB(store), root, ctx.Int(flags.Workers.Name), log)
+	writeFailed := snapshot.NewQueueWriter(ctx.Context, outputDB, accounts)
+
+	// find block information for the used state root hash
+	// and write it eventually int the output DB once the read/write is done
+	block, lkpFailed := lookupBlock(ctx.Context, store, root, blockNumber)
+
+	// check for any errors in above execution;
+	// this will block until all the workers above close their error channels
+	err = getChannelError(readFailed, writeFailed, lkpFailed)
+	if err != nil {
+		return err
+	}
+
+	// write the block number into the database
+	err = outputDB.PutBlockNumber(<-block)
+	if err != nil {
+		return err
+	}
+
+	// wait for all the threads to be done
+	log.Info("done")
+	return nil
+}
+
+// getChannelError checks given error channels for an error.
+// Please note this will block thread execution if any of the given channels are not closed yet.
+func getChannelError(ec ...chan error) error {
+	for _, e := range ec {
+		err := <-e
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// lookupBlock searches for a block ID by root hash; if a block ID is already known, the search is skipped.
+func lookupBlock(ctx context.Context, sourceDB kvdb.Store, root common.Hash, bn uint64) (chan uint64, chan error) {
+	block := make(chan uint64, 1)
+	fail := make(chan error, 1)
+
+	// we may already have the block number from the state finder;
+	// if we do, just push it, and we are done
+	if bn > 0 {
+		block <- bn
+		close(block)
+		close(fail)
+
+		return block, fail
+	}
+
+	// do the slow search in a thread
+	go func() {
+		defer close(block)
+		defer close(fail)
+
+		blk, err := opera.RootBLock(ctx, sourceDB, root)
+		if err != nil {
+			fail <- err
+			return
+		}
+
+		block <- blk
+	}()
+
+	return block, fail
+}
+
+// loadAccounts iterates over EVM state trie at given root hash and sends assembled accounts into a channel.
 // The provided output channel is closed when all accounts were sent.
-func LoadAccounts(ctx context.Context, db state.Database, root common.Hash, workers int, log Logger) (chan types.Account, chan error) {
+func loadAccounts(ctx context.Context, db state.Database, root common.Hash, workers int, log *logging.Logger) (chan types.Account, chan error) {
 	log.Infof("loading world state at root %s using %d worker threads", root.String(), workers)
 
 	// we need to be able collect errors from all workers + raw account loader
 	err := make(chan error, workers+1)
 	out := make(chan types.Account, workers)
 
-	go loadAccounts(ctx, db, root, out, err, workers, log)
+	go doLoadAccounts(ctx, db, root, out, err, workers, log)
 	return out, err
 }
 
-// iterate the state proxying account state assembly to workers.
-func loadAccounts(ctx context.Context, db state.Database, root common.Hash, out chan types.Account, fail chan error, workers int, log Logger) {
+// doLoadAccounts the state proxying account state assembly to workers.
+func doLoadAccounts(ctx context.Context, db state.Database, root common.Hash, out chan types.Account, fail chan error, workers int, log *logging.Logger) {
 	// signal issue between workers
 	ca, cancel := context.WithCancel(ctx)
 
@@ -67,7 +197,7 @@ func loadAccounts(ctx context.Context, db state.Database, root common.Hash, out 
 }
 
 // cancelCtxOnError monitors the error channel and cancels the context if an error is received.
-func cancelCtxOnError(ctx context.Context, cancel context.CancelFunc, fail chan error, log Logger) {
+func cancelCtxOnError(ctx context.Context, cancel context.CancelFunc, fail chan error, log *logging.Logger) {
 	select {
 	case <-ctx.Done():
 		return
@@ -84,7 +214,7 @@ func cancelCtxOnError(ctx context.Context, cancel context.CancelFunc, fail chan 
 // LoadRawAccounts iterates over EVM state and sends raw accounts to provided channel.
 // The chanel is closed when all the available accounts were loaded.
 // Raw accounts are not complete, e.g. contract storage and contract code is not loaded.
-func LoadRawAccounts(ctx context.Context, db state.Database, root common.Hash, log Logger) (chan types.Account, chan error) {
+func LoadRawAccounts(ctx context.Context, db state.Database, root common.Hash, log *logging.Logger) (chan types.Account, chan error) {
 	log.Infof("loading accounts at root %s", root.String())
 
 	assembly := make(chan types.Account, 25)
@@ -95,7 +225,7 @@ func LoadRawAccounts(ctx context.Context, db state.Database, root common.Hash, l
 }
 
 // loadRawAccounts iterates over evm state then sends individual accounts to inAccounts channel
-func loadRawAccounts(ctx context.Context, db state.Database, root common.Hash, raw chan types.Account, fail chan error, log Logger) {
+func loadRawAccounts(ctx context.Context, db state.Database, root common.Hash, raw chan types.Account, fail chan error, log *logging.Logger) {
 	var count int64
 	tick := time.NewTicker(5 * time.Second)
 	defer func() {
@@ -148,7 +278,7 @@ func loadRawAccounts(ctx context.Context, db state.Database, root common.Hash, r
 }
 
 // finaliseAccounts worker processes incomplete accounts from input queue and sends completed accounts to output.
-func finaliseAccounts(ctx context.Context, wid int, db state.Database, in chan types.Account, out chan types.Account, fail chan error, wg *sync.WaitGroup, log Logger) {
+func finaliseAccounts(ctx context.Context, wid int, db state.Database, in chan types.Account, out chan types.Account, fail chan error, wg *sync.WaitGroup, log *logging.Logger) {
 	tick := time.NewTicker(20 * time.Second)
 	defer func() {
 		tick.Stop()
@@ -199,7 +329,7 @@ func assembleAccount(ctx context.Context, db state.Database, acc *types.Account)
 	}
 
 	// extract account storage
-	if acc.Root != eth.EmptyRootHash {
+	if acc.Root != ethTypes.EmptyRootHash {
 		acc.Storage, err = loadStorage(ctx, db, acc)
 		if err != nil {
 			return fmt.Errorf("failed loading storage %s at %s; %s\n", acc.Root.String(), acc.Hash.String(), err.Error())

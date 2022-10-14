@@ -1,10 +1,10 @@
-// Package account implements information providers for individual accounts in the state dump database.
-package account
+// Package state implements executable entry points to the world state generator app.
+package state
 
 import (
 	"fmt"
+	"github.com/Fantom-foundation/Aida-Testing/cmd/gen-world-state/flags"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/db/snapshot"
-	"github.com/Fantom-foundation/Aida-Testing/world-state/dump"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/fatih/color"
@@ -17,8 +17,15 @@ import (
 	"math/big"
 )
 
-// flagWithStorage represents a flag for displaying the full storage content.
-const flagWithStorage = "with-storage"
+// CmdAccount defines a CLI command set for managing single account data in the state dump database.
+var CmdAccount = cli.Command{
+	Name:    "account",
+	Aliases: []string{"a"},
+	Usage:   `Provides information and management function for individual accounts in state dump database.`,
+	Subcommands: []*cli.Command{
+		&cmdAccountInfo,
+	},
+}
 
 // cmdAccountInfo is the sub-command for providing details account information.
 // build/gen-world-state --db=<path> account info "0xFC00FACE00000000000000000000000000000000"
@@ -30,11 +37,7 @@ var cmdAccountInfo = cli.Command{
 	Description: "Command provides detailed information about the account specified as an argument.",
 	ArgsUsage:   "<address|hash>",
 	Flags: []cli.Flag{
-		&cli.BoolFlag{
-			Name:  flagWithStorage,
-			Usage: "display full storage content",
-			Value: false,
-		},
+		&flags.IsStorageIncluded,
 	},
 }
 
@@ -49,7 +52,7 @@ func accountInfo(ctx *cli.Context) error {
 	}
 
 	// try to open output DB
-	snapDB, err := snapshot.OpenStateDB(ctx.Path(dump.FlagOutputDBPath))
+	snapDB, err := snapshot.OpenStateDB(ctx.Path(flags.StateDBPath.Name))
 	if err != nil {
 		return err
 	}
@@ -75,7 +78,7 @@ func accountInfo(ctx *cli.Context) error {
 	baseInfo(ctx.App.Writer, addr, acc)
 
 	// display the storage content if requested
-	if ctx.Bool(flagWithStorage) {
+	if ctx.Bool(flags.IsStorageIncluded.Name) {
 		accStorage(ctx.App.Writer, acc)
 	}
 	return nil

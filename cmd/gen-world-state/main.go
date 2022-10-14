@@ -2,13 +2,10 @@
 package main
 
 import (
+	"github.com/Fantom-foundation/Aida-Testing/cmd/gen-world-state/flags"
+	"github.com/Fantom-foundation/Aida-Testing/cmd/gen-world-state/state"
 	"github.com/Fantom-foundation/Aida-Testing/cmd/gen-world-state/version"
-	"github.com/Fantom-foundation/Aida-Testing/world-state/account"
-	"github.com/Fantom-foundation/Aida-Testing/world-state/clone"
-	"github.com/Fantom-foundation/Aida-Testing/world-state/compare"
-	"github.com/Fantom-foundation/Aida-Testing/world-state/dump"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/evolve"
-	"github.com/Fantom-foundation/Aida-Testing/world-state/root"
 	"github.com/urfave/cli/v2"
 	"log"
 	"os"
@@ -24,26 +21,27 @@ func main() {
 		Copyright: "(c) 2022 Fantom Foundation",
 		Version:   version.Version,
 		Commands: []*cli.Command{
-			&dump.CmdDumpState,
+			&state.CmdAccount,
+			&state.CmdClone,
+			&state.CmdCompareState,
+			&state.CmdDumpState,
 			&evolve.CmdEvolveState,
-			&account.CmdAccount,
-			&clone.CmdClone,
-			&compare.CmdCompareState,
-			&root.CmdRoot,
 			&version.CmdVersion,
 		},
 		Flags: []cli.Flag{
-			&cli.PathFlag{
-				Name:     "db",
-				Usage:    "World state snapshot database path.",
-				Value:    "",
-				Required: true,
-			},
+			&flags.StateDBPath,
 		},
+		Before: assertDBPath,
 	}
 
 	// execute the application based on provided arguments
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// assertDBPath makes sure a default world state path is set in the calling flags.
+func assertDBPath(ctx *cli.Context) error {
+	state.DefaultPath(ctx, &flags.StateDBPath, ".aida/world-state")
+	return nil
 }
