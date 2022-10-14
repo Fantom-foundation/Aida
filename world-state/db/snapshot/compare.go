@@ -65,13 +65,13 @@ func (db *StateDB) compareAllAccounts(ctx context.Context, target *StateDB) erro
 		// get the other account
 		other, err := target.AccountByHash(iter.Value().Hash)
 		if err != nil {
-			return fmt.Errorf("target account not loaded for %s; %s", iter.Value().Hash.String(), err.Error())
+			return fmt.Errorf("target account %s not found; %s", iter.Value().Hash.String(), err.Error())
 		}
 
 		// compare accounts
 		err = other.IsDifferent(iter.Value())
 		if err != nil {
-			return fmt.Errorf("target account different; %s", err.Error())
+			return fmt.Errorf("target account %s is different; %s", iter.Value().Hash.String(), err.Error())
 		}
 	}
 

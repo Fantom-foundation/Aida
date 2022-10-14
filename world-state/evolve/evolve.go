@@ -182,7 +182,12 @@ func evolveSubstate(substateOut *substate.SubstateAlloc, stateDB *snapshot.State
 		acc.Balance = substateAccount.Balance
 
 		// overwriting all changed values in storage
-		for key, value := range substateAccount.Storage {
+		for keyRaw, value := range substateAccount.Storage {
+			// generation of key
+			// keyRaw consists of unhashed ordered keys
+			// eg. keyRaw=0x0000000000000000000000000000000000000000000000000000000000000001 (substate record key)
+			// 	   key=0xb10e2d527612073b26eecdfd717e6a320cf44b4afac2b0732d9fcbe2b7fa0cf6 (snapshot record key)
+			key := common.BytesToHash(crypto.Keccak256(keyRaw.Bytes()))
 			if value == snapshot.ZeroHash {
 				if _, found := acc.Storage[key]; found {
 					// removing key with empty value from storage
