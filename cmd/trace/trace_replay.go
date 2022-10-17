@@ -2,14 +2,12 @@ package trace
 
 import (
 	"fmt"
-
-	cli "gopkg.in/urfave/cli.v1"
-
 	"github.com/Fantom-foundation/aida/tracer"
 	"github.com/Fantom-foundation/aida/tracer/dict"
 	"github.com/Fantom-foundation/aida/tracer/operation"
 	"github.com/Fantom-foundation/aida/tracer/state"
 	"github.com/ethereum/go-ethereum/substate"
+	"github.com/urfave/cli/v2"
 )
 
 // Trace replay command
@@ -19,12 +17,12 @@ var TraceReplayCommand = cli.Command{
 	Usage:     "executes storage trace",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
-		substate.SubstateDirFlag,
-		substate.WorkersFlag,
-		traceDirectoryFlag,
-		traceDebugFlag,
-		stateDbImplementation,
-		validateEndState,
+		&stateDbImplementation,
+		&substate.SubstateDirFlag,
+		&substate.WorkersFlag,
+		&traceDirectoryFlag,
+		&traceDebugFlag,
+		&validateEndState,
 	},
 	Description: `
 The trace replay command requires two arguments:
@@ -158,7 +156,7 @@ func traceReplayAction(ctx *cli.Context) error {
 	var err error
 
 	// process arguments
-	if len(ctx.Args()) != 2 {
+	if ctx.Args().Len() != 2 {
 		return fmt.Errorf("trace replay-trace command requires exactly 2 arguments")
 	}
 	tracer.TraceDir = ctx.String(traceDirectoryFlag.Name) + "/"
