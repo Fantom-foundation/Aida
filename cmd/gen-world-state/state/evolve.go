@@ -53,18 +53,18 @@ func evolveState(ctx *cli.Context) error {
 // EvolveState evolves stateDB to target block
 func EvolveState(stateDB *snapshot.StateDB, substateDBPath string, targetBlock uint64, workers int, log *logging.Logger) error {
 	// retrieving block number from world state database
-	firstBlock, err := stateDB.GetBlockNumber()
+	currentBlock, err := stateDB.GetBlockNumber()
 	if err != nil {
 		return err
 	}
-	log.Infof("Database is currently at block %d", firstBlock)
+	log.Infof("Database is currently at block %d", currentBlock)
 
-	if firstBlock == targetBlock {
+	if currentBlock == targetBlock {
 		log.Info("World state database is already at target block %d", targetBlock)
 		return nil
 	}
 
-	if firstBlock > targetBlock {
+	if currentBlock > targetBlock {
 		err = fmt.Errorf("target block %d can't be lower than current block in database", targetBlock)
 		log.Error(err.Error())
 		return err
@@ -75,8 +75,11 @@ func EvolveState(stateDB *snapshot.StateDB, substateDBPath string, targetBlock u
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
+	// database has already current block completed therefore starting at following block
+	startingBlock := currentBlock + 1
+
 	// evolution of stateDB
-	lastProcessedBlock, err := evolution(stateDB, firstBlock, targetBlock, workers, log)
+	lastProcessedBlock, err := evolution(stateDB, startingBlock, targetBlock, workers, log)
 	if err != nil {
 		log.Error(err.Error())
 		return err
