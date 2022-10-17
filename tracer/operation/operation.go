@@ -136,13 +136,13 @@ func Execute(op Operation, db state.StateDB, ctx *dict.DictionaryContext) {
 	}
 	op.Execute(db, ctx)
 	if Profiling {
-		op := op.GetOpId()
 		elapsed := time.Since(start)
+		op := op.GetOpId()
 		// check if measuring this operation first time
-		_, isNewOp := operationFrequency[op]
+		_, opExists := operationFrequency[op]
 		// compute old mean of operation
 		oldMean := float64(0.0)
-		if isNewOp {
+		if opExists {
 			// express in seconds
 			oldMean = float64(operationDuration[op]) / float64(operationFrequency[op])
 		}
@@ -150,7 +150,7 @@ func Execute(op Operation, db state.StateDB, ctx *dict.DictionaryContext) {
 		operationDuration[op] += elapsed
 		operationFrequency[op]++
 		// update min/max
-		if !isNewOp {
+		if opExists {
 			if operationMaxDuration[op] < elapsed {
 				operationMaxDuration[op] = elapsed
 			}
@@ -162,7 +162,7 @@ func Execute(op Operation, db state.StateDB, ctx *dict.DictionaryContext) {
 			operationMaxDuration[op] = elapsed
 		}
 		// update variance
-		if isNewOp {
+		if opExists {
 			n := float64(operationFrequency[op])
 			newMean := float64(operationDuration[op]) / n
 			operationVariance[op] = (n-2)*operationVariance[op]/(n-1) + (newMean-oldMean)*(newMean-oldMean)/n
