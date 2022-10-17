@@ -26,6 +26,7 @@ func main() {
 			&state.CmdDumpState,
 			&state.CmdEvolveState,
 			&state.CmdRoot,
+			&state.CmdInfo,
 			&version.CmdVersion,
 		},
 		Flags: []cli.Flag{
