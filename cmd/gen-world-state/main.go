@@ -5,7 +5,6 @@ import (
 	"github.com/Fantom-foundation/Aida-Testing/cmd/gen-world-state/flags"
 	"github.com/Fantom-foundation/Aida-Testing/cmd/gen-world-state/state"
 	"github.com/Fantom-foundation/Aida-Testing/cmd/gen-world-state/version"
-	"github.com/Fantom-foundation/Aida-Testing/world-state/evolve"
 	"github.com/urfave/cli/v2"
 	"log"
 	"os"
@@ -25,13 +24,15 @@ func main() {
 			&state.CmdClone,
 			&state.CmdCompareState,
 			&state.CmdDumpState,
-			&evolve.CmdEvolveState,
+			&state.CmdEvolveState,
 			&version.CmdVersion,
 		},
 		Flags: []cli.Flag{
 			&flags.StateDBPath,
+			&flags.LogLevel,
 		},
-		Before: assertDBPath,
+		Before:                 assertDBPath,
+		UseShortOptionHandling: true,
 	}
 
 	// execute the application based on provided arguments

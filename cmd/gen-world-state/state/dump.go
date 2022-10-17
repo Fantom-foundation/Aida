@@ -8,7 +8,6 @@ import (
 	"github.com/Fantom-foundation/Aida-Testing/cmd/gen-world-state/flags"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/db/opera"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/db/snapshot"
-	"github.com/Fantom-foundation/Aida-Testing/world-state/logger"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/types"
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"github.com/ethereum/go-ethereum/common"
@@ -63,7 +62,7 @@ func dumpState(ctx *cli.Context) error {
 	}
 	defer snapshot.MustCloseStateDB(outputDB)
 
-	log := logger.New(ctx.App.Writer, "info")
+	log := Logger(ctx, "dump")
 
 	// blockNumber number to be stored in output db
 	var blockNumber uint64 = 0
@@ -78,7 +77,7 @@ func dumpState(ctx *cli.Context) error {
 			return err
 		}
 
-		log.Infof("state root not provided, using the latest %s", root.String())
+		log.Noticef("state root not provided, using the latest %s", root.String())
 	}
 
 	// load assembled accounts for the given root and write them into the snapshot database
@@ -86,29 +85,29 @@ func dumpState(ctx *cli.Context) error {
 	writeFailed := snapshot.NewQueueWriter(ctx.Context, outputDB, accounts)
 
 	// find block information for the used state root hash
-	// and write it eventually int the output DB once the read/write is done
 	block, lkpFailed := lookupBlock(ctx.Context, store, root, blockNumber)
 
-	// check for any errors in above execution;
-	// this will block until all the workers above close their error channels
+	// check for any error in above execution threads;
+	// this will block until all threads above close their error channels
 	err = getChannelError(readFailed, writeFailed, lkpFailed)
 	if err != nil {
 		return err
 	}
 
 	// write the block number into the database
-	err = outputDB.PutBlockNumber(<-block)
+	blockNumber = <-block
+	err = outputDB.PutBlockNumber(blockNumber)
 	if err != nil {
 		return err
 	}
 
 	// wait for all the threads to be done
-	log.Info("done")
+	log.Noticef("block #%d done", blockNumber)
 	return nil
 }
 
-// getChannelError checks given error channels for an error.
-// Please note this will block thread execution if any of the given channels are not closed yet.
+// getChannelError checks for any pending error in a list of error channels.
+// Please note this will block thread execution if any of the given channels is not closed yet.
 func getChannelError(ec ...chan error) error {
 	for _, e := range ec {
 		err := <-e
@@ -124,8 +123,8 @@ func lookupBlock(ctx context.Context, sourceDB kvdb.Store, root common.Hash, bn 
 	block := make(chan uint64, 1)
 	fail := make(chan error, 1)
 
-	// we may already have the block number from the state finder;
-	// if we do, just push it, and we are done
+	// we may already have a block number from the committed state check;
+	// if we do, just push it to output and cleanup channels
 	if bn > 0 {
 		block <- bn
 		close(block)
@@ -134,7 +133,7 @@ func lookupBlock(ctx context.Context, sourceDB kvdb.Store, root common.Hash, bn 
 		return block, fail
 	}
 
-	// do the slow search in a thread
+	// do a slow search in a separate thread
 	go func() {
 		defer close(block)
 		defer close(fail)
@@ -181,7 +180,7 @@ func doLoadAccounts(ctx context.Context, db state.Database, root common.Hash, ou
 		close(fail)
 		close(out)
 
-		log.Infof("account loader done")
+		log.Debugf("account loader done")
 	}()
 
 	// monitor error channel and cancel context if an error is detected; this also closes the raw loader above
@@ -215,7 +214,7 @@ func cancelCtxOnError(ctx context.Context, cancel context.CancelFunc, fail chan 
 // The chanel is closed when all the available accounts were loaded.
 // Raw accounts are not complete, e.g. contract storage and contract code is not loaded.
 func LoadRawAccounts(ctx context.Context, db state.Database, root common.Hash, log *logging.Logger) (chan types.Account, chan error) {
-	log.Infof("loading accounts at root %s", root.String())
+	log.Debugf("loading accounts at root %s", root.String())
 
 	assembly := make(chan types.Account, 25)
 	err := make(chan error, 1)
@@ -274,17 +273,20 @@ func loadRawAccounts(ctx context.Context, db state.Database, root common.Hash, r
 		fail <- fmt.Errorf("failed iterating trie at root %s; %s", root.String(), stateIt.Error())
 	}
 
-	log.Infof("%d accounts done", count)
+	log.Noticef("done %d accounts", count)
 }
 
-// finaliseAccounts worker processes incomplete accounts from input queue and sends completed accounts to output.
+// finaliseAccounts worker finalizes accounts taken from an input queue by loading their code and storage;
+// finalized accounts are send to output queue.
+// This is done in parallel since some accounts with large storage space will take significant amount of time
+// to be fully collected from the state trie.
 func finaliseAccounts(ctx context.Context, wid int, db state.Database, in chan types.Account, out chan types.Account, fail chan error, wg *sync.WaitGroup, log *logging.Logger) {
 	tick := time.NewTicker(20 * time.Second)
 	defer func() {
 		tick.Stop()
 		wg.Done()
 
-		log.Infof("worker %d closed", wid)
+		log.Debugf("worker %d closed", wid)
 	}()
 
 	var last common.Hash
@@ -295,7 +297,7 @@ func finaliseAccounts(ctx context.Context, wid int, db state.Database, in chan t
 		case <-ctxDone:
 			return
 		case <-tick.C:
-			log.Infof("worker #%d last account %s loaded in %s", wid, last.String(), dur.String())
+			log.Debugf("worker #%d last account %s loaded in %s", wid, last.String(), dur.String())
 		case acc, ok := <-in:
 			if !ok {
 				return

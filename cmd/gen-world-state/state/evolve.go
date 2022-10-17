@@ -1,9 +1,9 @@
-package evolve
+package state
 
 import (
 	"fmt"
+	"github.com/Fantom-foundation/Aida-Testing/cmd/gen-world-state/flags"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/db/snapshot"
-	"github.com/Fantom-foundation/Aida-Testing/world-state/logger"
 	"github.com/Fantom-foundation/Aida-Testing/world-state/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -11,13 +11,6 @@ import (
 	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 	"time"
-)
-
-const (
-	flagWorldStateDBPath = "db"
-	flagTargetBlock      = "target"
-	flagSubstateDBPath   = "substatedir"
-	flagWorkers          = "workers"
 )
 
 // CmdEvolveState evolves state of World State database to given target block by using substateDB data about accounts
@@ -29,41 +22,29 @@ var CmdEvolveState = cli.Command{
 	Description: `The evolve evolves state of stored accounts in world state snapshot database.`,
 	ArgsUsage:   "<target> <substatedir> <workers>",
 	Flags: []cli.Flag{
-		&cli.IntFlag{
-			Name:     flagTargetBlock,
-			Usage:    "Evolve database only until given block is reached",
-			Required: true,
-		},
-		&cli.PathFlag{
-			Name:     flagSubstateDBPath,
-			Usage:    "Input SubState database path",
-			Required: true,
-		},
-		&cli.IntFlag{
-			Name:  flagWorkers,
-			Usage: "Number of SubState processing threads",
-			Value: 5,
-		},
+		&flags.TargetBlock,
+		&flags.SubstateDBPath,
+		&flags.Workers,
 	},
 }
 
 // evolveState dumps state from given EVM trie into an output account-state database
 func evolveState(ctx *cli.Context) error {
 	// try to open state DB
-	stateDB, err := snapshot.OpenStateDB(ctx.Path(flagWorldStateDBPath))
+	stateDB, err := snapshot.OpenStateDB(ctx.Path(flags.StateDBPath.Name))
 	if err != nil {
 		return err
 	}
 	defer snapshot.MustCloseStateDB(stateDB)
 
 	// evolution until given block
-	targetBlock := ctx.Uint64(flagTargetBlock)
+	targetBlock := ctx.Uint64(flags.TargetBlock.Name)
 
 	// make logger
-	log := logger.New(ctx.App.Writer, "info")
+	log := Logger(ctx, "evolve")
 
 	// call evolveState with prepared arguments
-	err = EvolveState(stateDB, ctx.Path(flagSubstateDBPath), targetBlock, ctx.Int(flagWorkers), log)
+	err = EvolveState(stateDB, ctx.Path(flags.SubstateDBPath.Name), targetBlock, ctx.Int(flags.Workers.Name), log)
 
 	log.Info("done")
 	return err

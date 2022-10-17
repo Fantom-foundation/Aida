@@ -6,8 +6,17 @@ import "github.com/urfave/cli/v2"
 var (
 	// StateDBPath defines the path to the world state snapshot database
 	StateDBPath = cli.PathFlag{
-		Name:  "db",
-		Usage: "World state snapshot database path.",
+		Name:    "db",
+		Aliases: []string{"d"},
+		Usage:   "world state snapshot database path",
+	}
+
+	// LogLevel defines the level of logging of the app
+	LogLevel = cli.StringFlag{
+		Name:    "log",
+		Aliases: []string{"l"},
+		Usage:   "Level of the logging of the app action (\"critical\", \"error\", \"warning\", \"notice\", \"info\", \"debug\")",
+		Value:   "info",
 	}
 
 	// SourceDBPath represents the path of a source DB
@@ -34,6 +43,22 @@ var (
 	TargetDBPath = cli.PathFlag{
 		Name:  "to",
 		Usage: "target database path",
+	}
+
+	// SubstateDBPath represents the path of a substate DB
+	SubstateDBPath = cli.PathFlag{
+		Name:     "substate",
+		Aliases:  []string{"substatedir", "sub"},
+		Usage:    "substate database path",
+		Required: true,
+	}
+
+	// TargetBlock represents the ID of target block to be reached by state evolve process
+	TargetBlock = cli.IntFlag{
+		Name:     "target",
+		Aliases:  []string{"block", "blk"},
+		Usage:    "target block ID",
+		Required: true,
 	}
 
 	// TrieRootHash represents a hash of a state trie root to be decoded
