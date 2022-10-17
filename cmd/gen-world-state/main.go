@@ -25,6 +25,7 @@ func main() {
 			&state.CmdCompareState,
 			&state.CmdDumpState,
 			&state.CmdEvolveState,
+			&state.CmdRoot,
 			&version.CmdVersion,
 		},
 		Flags: []cli.Flag{
