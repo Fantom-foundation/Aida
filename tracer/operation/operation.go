@@ -9,8 +9,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/Fantom-foundation/aida/tracer/dict"
-	"github.com/Fantom-foundation/aida/tracer/state"
+	"github.com/Fantom-foundation/Aida-Testing/tracer/dict"
+	"github.com/Fantom-foundation/Aida-Testing/tracer/state"
 )
 
 var Profiling = false

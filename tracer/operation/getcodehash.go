@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Fantom-foundation/aida/tracer/dict"
-	"github.com/Fantom-foundation/aida/tracer/state"
+	"github.com/Fantom-foundation/Aida-Testing/tracer/dict"
+	"github.com/Fantom-foundation/Aida-Testing/tracer/state"
 )
 
 // Get-code-hash data structure
