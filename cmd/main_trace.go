@@ -19,6 +19,7 @@ func main() {
 		Commands: []*cli.Command{
 			&trace.TraceRecordCommand,
 			&trace.TraceReplayCommand,
+			&trace.TraceDebugCompareCommand,
 		},
 	}
 	substate.RecordReplay = true
