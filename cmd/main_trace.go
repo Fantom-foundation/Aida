@@ -12,7 +12,7 @@ import (
 // Implement "trace" cli application
 func main() {
 	app := &cli.App{
-		Name:      "Aida Storage Trace Manger",
+		Name:      "Aida Storage Trace Manager",
 		HelpName:  "trace",
 		Copyright: "(c) 2022 Fantom Foundation",
 		Flags:     []cli.Flag{},
