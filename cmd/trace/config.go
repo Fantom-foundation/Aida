@@ -3,7 +3,7 @@ package trace
 
 import (
 	"fmt"
-	cli "gopkg.in/urfave/cli.v1"
+	"github.com/urfave/cli/v2"
 	"strconv"
 )
 
