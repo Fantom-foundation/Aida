@@ -121,10 +121,7 @@ func (ctx *DictionaryContext) InitSnapshot() {
 
 // Add snaphot-id mapping for execution of RevertSnapshot.
 func (ctx *DictionaryContext) AddSnapshot(recordedID int32, replayedID int32) {
-	err := ctx.SnapshotIndex.Add(recordedID, replayedID)
-	if err != nil {
-		log.Fatalf("Snapshot mapping could not be added. Error: %v", err)
-	}
+	ctx.SnapshotIndex.Add(recordedID, replayedID)
 }
 
 // Get snaphot-id.
