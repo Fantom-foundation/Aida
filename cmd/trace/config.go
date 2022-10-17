@@ -38,6 +38,10 @@ var (
 		Name:  "validate",
 		Usage: "enables end-state validation",
 	}
+	profileFlag = cli.BoolFlag{
+		Name:  "profile",
+		Usage: "enables profiling",
+	}
 )
 
 // Check the validity of a block range and return the first and last block as numbers.
