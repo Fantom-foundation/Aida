@@ -12,8 +12,11 @@ import (
 	"testing"
 )
 
+// testDBSize is the number of account we put into the test DB
+const testDBSize = 250
+
 // makeTestDB primes test DB for the other tests using randomized account data.
-func makeTestDB(t *testing.T) (*StateDB, map[common.Hash]types.Account) {
+func makeTestDB(t *testing.T) (*StateDB, map[common.Hash]types.Account, map[common.Hash]common.Address) {
 	// create in-memory database
 	db, err := OpenStateDB("")
 	if err != nil {
@@ -22,9 +25,11 @@ func makeTestDB(t *testing.T) (*StateDB, map[common.Hash]types.Account) {
 
 	var hashing = crypto.NewKeccakState()
 
+	var ta = make(map[common.Hash]types.Account, testDBSize)
+	var adh = make(map[common.Hash]common.Address, testDBSize)
+
 	// TestAccounts represents the test set for accounts.
-	var ta = map[common.Hash]types.Account{}
-	for i := 0; i < 500; i++ {
+	for i := 0; i < testDBSize; i++ {
 		pk, err := crypto.GenerateKey()
 		if err != nil {
 			t.Fatalf("failed test data build; could not create random keys; %s", err.Error())
@@ -32,6 +37,7 @@ func makeTestDB(t *testing.T) (*StateDB, map[common.Hash]types.Account) {
 
 		addr := crypto.PubkeyToAddress(pk.PublicKey)
 		hash := crypto.HashData(hashing, addr.Bytes())
+		adh[hash] = addr
 
 		// add this account to the map
 		acc := types.Account{
@@ -78,7 +84,7 @@ func makeTestDB(t *testing.T) (*StateDB, map[common.Hash]types.Account) {
 		}
 	}
 
-	return db, ta
+	return db, ta, adh
 }
 
 func TestStateDB_NewAccountIterator(t *testing.T) {
@@ -91,7 +97,7 @@ func TestStateDB_NewAccountIterator(t *testing.T) {
 	ctx, cancel := context.WithDeadline(context.Background(), dl)
 	defer cancel()
 
-	db, ta := makeTestDB(t)
+	db, ta, _ := makeTestDB(t)
 	iter := db.NewAccountIterator(ctx)
 	defer iter.Release()
 
