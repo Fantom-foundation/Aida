@@ -37,13 +37,13 @@ func root(ctx *cli.Context) error {
 	targetBlock := ctx.Uint64(flags.TargetBlock.Name)
 
 	//look up root hash from block number
-	root, err := opera.RootOfBLock(store, targetBlock)
+	rootHash, err := opera.RootOfBLock(store, targetBlock)
 	if err != nil {
 		log.Errorf("Unable to find root hash for block number %d; %s", targetBlock, err.Error())
 		return err
 	}
 
-	log.Infof("Block %d has root hash %s", targetBlock, root)
+	log.Infof("Block %d has root hash %s", targetBlock, rootHash)
 	log.Info("done")
 	return nil
 }
