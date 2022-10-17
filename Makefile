@@ -16,8 +16,11 @@ BUILD_DATE := $(shell date "+%a, %d %b %Y %T")
 BUILD_COMPILER := $(shell go version)
 BUILD_COMMIT := $(shell git show --format="%H" --no-patch)
 BUILD_COMMIT_TIME := $(shell git show --format="%cD" --no-patch)
+GOPROXY ?= "https://proxy.golang.org,direct"
 
-all: gen-world-state
+.PHONY: all clean help test
+
+all: gen-world-state trace
 
 gen-world-state:
 	@go build \
@@ -26,13 +29,29 @@ gen-world-state:
 		-v \
 		./cmd/gen-world-state
 
+trace:
+	cd carmen/go ; \
+	go generate ./... ; \
+	cd ../.. ; \
+	GOPROXY=$(GOPROXY) \
+	GOPRIVATE=github.com/Fantom-foundation/Carmen \
+	@go build -ldflags "-s -w" \
+       	-o $(GO_BIN)/trace \
+	./cmd/
+
 test:
 	@go test ./...
+
+clean:
+	cd carmen/go ; \
+	rm -f lib/libstate.so ; \
+	cd ../cpp ; \
+	bazel clean ; \
+	cd ../.. ; \
+	rm -fr ./build/*
 
 help: Makefile
 	@echo "Choose a make command in "$(PROJECT)":"
 	@echo
 	@sed -n 's/^##//p' $< | column -t -s ':' |  sed -e 's/^/ /'
 	@echo
-
-.PHONY: all
