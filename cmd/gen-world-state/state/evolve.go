@@ -15,7 +15,7 @@ var CmdEvolveState = cli.Command{
 	Action:      evolveState,
 	Name:        "evolve",
 	Aliases:     []string{"e"},
-	Usage:       "Evolves world state snapshot database into selected target block",
+	Usage:       "Evolves world state snapshot database into selected target block.",
 	Description: `The evolve evolves state of stored accounts in world state snapshot database.`,
 	ArgsUsage:   "<target> <substatedir> <workers>",
 	Flags: []cli.Flag{

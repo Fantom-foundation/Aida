@@ -11,7 +11,7 @@ var CmdInfo = cli.Command{
 	Action:      info,
 	Name:        "info",
 	Aliases:     []string{"i"},
-	Usage:       "Retrieves basic info about snapshot database",
+	Usage:       "Retrieves basic info about snapshot database.",
 	Description: `Looks up current block number of database.`,
 	ArgsUsage:   "",
 	Flags:       []cli.Flag{},

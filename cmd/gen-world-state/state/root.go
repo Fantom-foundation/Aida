@@ -11,7 +11,7 @@ var CmdRoot = cli.Command{
 	Action:      root,
 	Name:        "root",
 	Aliases:     []string{"r"},
-	Usage:       "Retrieve root hash of given block number",
+	Usage:       "Retrieve root hash of given block number.",
 	Description: `Searches opera database for root hash for supplied block number.`,
 	ArgsUsage:   "<target>",
 	Flags: []cli.Flag{
