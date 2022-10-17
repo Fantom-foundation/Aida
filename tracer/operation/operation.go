@@ -5,11 +5,15 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"os"
+	"time"
 
 	"github.com/Fantom-foundation/aida/tracer/dict"
 	"github.com/Fantom-foundation/aida/tracer/state"
 )
+
+var Profiling = false
 
 // Operation IDs of the StateDB interface
 const (
@@ -55,6 +59,15 @@ var opDict = map[byte]OperationDictionary{
 	BeginBlockID:        {label: "BeginBlock", readfunc: ReadBeginBlock},
 	EndBlockID:          {label: "EndBlock", readfunc: ReadEndBlock},
 }
+
+// Profiling data structures for executed operations.
+var (
+	operationFrequency   = map[byte]uint64{}        // operation frequency stats
+	operationDuration    = map[byte]time.Duration{} // accumulated operation duration
+	operationMinDuration = map[byte]time.Duration{} // min runtime observerd
+	operationMaxDuration = map[byte]time.Duration{} // max runtime observerd
+	operationVariance    = map[byte]float64{}       // duration variance
+)
 
 // Get a label of a state operation.
 func getLabel(i byte) string {
@@ -115,8 +128,69 @@ func Write(f *os.File, op Operation) {
 	}
 }
 
+// Execute an operation.
+func Execute(op Operation, db state.StateDB, ctx *dict.DictionaryContext) {
+	var start time.Time
+	if Profiling {
+		start = time.Now()
+	}
+	op.Execute(db, ctx)
+	if Profiling {
+		elapsed := time.Since(start)
+		op := op.GetOpId()
+		// check if measuring this operation first time
+		_, opExists := operationFrequency[op]
+		// compute old mean of operation
+		oldMean := float64(0.0)
+		if opExists {
+			// express in seconds
+			oldMean = float64(operationDuration[op]) / float64(operationFrequency[op])
+		}
+		// update accumulated duration and frequency
+		operationDuration[op] += elapsed
+		operationFrequency[op]++
+		// update min/max
+		if opExists {
+			if operationMaxDuration[op] < elapsed {
+				operationMaxDuration[op] = elapsed
+			}
+			if operationMinDuration[op] > elapsed {
+				operationMinDuration[op] = elapsed
+			}
+		} else {
+			operationMinDuration[op] = elapsed
+			operationMaxDuration[op] = elapsed
+		}
+		// update variance
+		if opExists {
+			n := float64(operationFrequency[op])
+			newMean := float64(operationDuration[op]) / n
+			operationVariance[op] = (n-2)*operationVariance[op]/(n-1) + (newMean-oldMean)*(newMean-oldMean)/n
+		} else {
+			operationVariance[op] = 0.0
+		}
+	}
+}
+
 // Print debug information of an operation.
 func Debug(ctx *dict.DictionaryContext, op Operation) {
 	fmt.Printf("%v:\n", getLabel(op.GetOpId()))
 	op.Debug(ctx)
+}
+
+// PrintProfiling prints replay profiling information for executed operation.
+func PrintProfiling() {
+	fmt.Printf("op, n, mean(us), std(us), min(us), max(us)\n")
+	total := float64(0)
+	timeUnit := float64(time.Microsecond)
+	for op, n := range operationFrequency {
+		total += float64(operationDuration[op])
+		mean := float64(operationDuration[op]) / float64(n) / timeUnit
+		variance := operationVariance[op]
+		std := math.Sqrt(variance) / timeUnit
+		min := float64(operationMinDuration[op]) / timeUnit
+		max := float64(operationMaxDuration[op]) / timeUnit
+		fmt.Printf("%v, %v, %v, %v, %v, %v\n", getLabel(op), n, mean, std, min, max)
+	}
+	fmt.Printf("Total StateDB net execution time=%v (s)\n", total/float64(time.Second))
 }

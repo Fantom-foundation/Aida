@@ -17,6 +17,7 @@ var TraceReplayCommand = cli.Command{
 	Usage:     "executes storage trace",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
+		&profileFlag,
 		&stateDbImplementation,
 		&substate.SubstateDirFlag,
 		&substate.WorkersFlag,
@@ -100,6 +101,9 @@ func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 	// Get validation flag
 	validation_enabled := cliCtx.Bool(validateEndState.Name)
 
+	// Get profiling flag
+	operation.Profiling = cliCtx.Bool(profileFlag.Name)
+
 	// Instantiate the state DB under testing
 	db, err := makeStateDb(cliCtx)
 	if err != nil {
@@ -114,7 +118,7 @@ func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 		db.PrepareSubstate(&tx.Substate.InputAlloc)
 		for traceIter.Next() {
 			op := traceIter.Value()
-			op.Execute(db, dCtx)
+			operation.Execute(op, db, dCtx)
 			if traceDebug {
 				operation.Debug(dCtx, op)
 			}
@@ -142,10 +146,15 @@ func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 	if !hasNext || op.GetOpId() != operation.EndBlockID {
 		return fmt.Errorf("Last opertion isn't EndBlock")
 	} else {
-		op.Execute(db, dCtx)
+		operation.Execute(op, db, dCtx)
 		if traceDebug {
 			operation.Debug(dCtx, op)
 		}
+	}
+
+	// print profile statistics (if enabled)
+	if operation.Profiling {
+		operation.PrintProfiling()
 	}
 
 	return nil
