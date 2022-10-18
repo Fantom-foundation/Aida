@@ -2,7 +2,7 @@ package snapshot
 
 import (
 	"context"
-	"github.com/Fantom-foundation/Aida-Testing/world-state/types"
+	"github.com/Fantom-foundation/Aida/world-state/types"
 	"testing"
 )
 

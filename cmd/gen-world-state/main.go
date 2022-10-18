@@ -2,9 +2,9 @@
 package main
 
 import (
-	"github.com/Fantom-foundation/Aida-Testing/cmd/gen-world-state/flags"
-	"github.com/Fantom-foundation/Aida-Testing/cmd/gen-world-state/state"
-	"github.com/Fantom-foundation/Aida-Testing/cmd/gen-world-state/version"
+	"github.com/Fantom-foundation/Aida/cmd/gen-world-state/flags"
+	"github.com/Fantom-foundation/Aida/cmd/gen-world-state/state"
+	"github.com/Fantom-foundation/Aida/cmd/gen-world-state/version"
 	"github.com/urfave/cli/v2"
 	"log"
 	"os"

@@ -4,7 +4,7 @@ package snapshot
 import (
 	"context"
 	"fmt"
-	"github.com/Fantom-foundation/Aida-Testing/world-state/types"
+	"github.com/Fantom-foundation/Aida/world-state/types"
 )
 
 // Copy creates a copy of the state snapshot database to the given output handle.

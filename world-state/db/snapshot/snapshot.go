@@ -4,7 +4,7 @@ package snapshot
 import (
 	"bytes"
 	"fmt"
-	"github.com/Fantom-foundation/Aida-Testing/world-state/types"
+	"github.com/Fantom-foundation/Aida/world-state/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/crypto"
