@@ -1,4 +1,4 @@
-module github.com/Fantom-foundation/Aida-Testing
+module github.com/Fantom-foundation/Aida
 
 go 1.19
 

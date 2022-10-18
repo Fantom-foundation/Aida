@@ -3,7 +3,7 @@ package opera
 
 import (
 	"fmt"
-	"github.com/Fantom-foundation/Aida-Testing/world-state/db/opera/kvdb2ethdb"
+	"github.com/Fantom-foundation/Aida/world-state/db/opera/kvdb2ethdb"
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/leveldb"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/nokeyiserr"

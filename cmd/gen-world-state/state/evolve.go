@@ -2,8 +2,8 @@ package state
 
 import (
 	"fmt"
-	"github.com/Fantom-foundation/Aida-Testing/cmd/gen-world-state/flags"
-	"github.com/Fantom-foundation/Aida-Testing/world-state/db/snapshot"
+	"github.com/Fantom-foundation/Aida/cmd/gen-world-state/flags"
+	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	"github.com/ethereum/go-ethereum/substate"
 	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"

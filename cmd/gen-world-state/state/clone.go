@@ -3,9 +3,9 @@ package state
 
 import (
 	"context"
-	"github.com/Fantom-foundation/Aida-Testing/cmd/gen-world-state/flags"
-	"github.com/Fantom-foundation/Aida-Testing/world-state/db/snapshot"
-	"github.com/Fantom-foundation/Aida-Testing/world-state/types"
+	"github.com/Fantom-foundation/Aida/cmd/gen-world-state/flags"
+	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
+	"github.com/Fantom-foundation/Aida/world-state/types"
 	"github.com/urfave/cli/v2"
 	"time"
 )
