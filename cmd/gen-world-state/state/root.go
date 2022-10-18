@@ -1,8 +1,8 @@
 package state
 
 import (
-	"github.com/Fantom-foundation/aida/cmd/gen-world-state/flags"
-	"github.com/Fantom-foundation/aida/world-state/db/opera"
+	"github.com/Fantom-foundation/Aida/cmd/gen-world-state/flags"
+	"github.com/Fantom-foundation/Aida/world-state/db/opera"
 	"github.com/urfave/cli/v2"
 )
 
