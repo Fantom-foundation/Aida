@@ -8,7 +8,7 @@ import (
 )
 
 // Entry limit of storage dictionary
-var StorageDictionaryLimit uint32 = math.MaxUint32
+var StorageDictionaryLimit uint32 = math.MaxUint32 - 1
 
 // Dictionary data structure encodes/decodes a storage address
 // to a dictionary index or vice versa.

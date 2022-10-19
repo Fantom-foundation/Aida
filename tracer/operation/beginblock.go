@@ -39,6 +39,7 @@ func (op *BeginBlock) Write(f *os.File) error {
 
 // Execute the begin-block operation.
 func (op *BeginBlock) Execute(db state.StateDB, ctx *dict.DictionaryContext) {
+	ctx.ClearIndexCaches()
 }
 
 // Print a debug message for begin-block.

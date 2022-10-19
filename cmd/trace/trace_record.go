@@ -84,7 +84,7 @@ func traceRecordTask(block uint64, tx int, recording *substate.Substate, dCtx *d
 
 	var statedb state.StateDB
 	statedb = state.MakeInMemoryStateDB(&inputAlloc)
-	statedb = tracer.NewProxyRecorder(statedb, dCtx, ch)
+	statedb = tracer.NewProxyRecorder(statedb, dCtx, ch, traceDebug)
 
 	// Apply Message
 	var (
@@ -168,7 +168,10 @@ func traceRecordTask(block uint64, tx int, recording *substate.Substate, dCtx *d
 }
 
 // Read operations from the operation channel and write them into a trace file.
-func OperationWriter(ctx context.Context, done chan struct{}, ch chan operation.Operation, dCtx *dict.DictionaryContext, iCtx *tracer.IndexContext) {
+// (NB: Debug messages cannot be written because they would destroy caches; the
+// writer cannot only take the Operation structs and write them to file).
+func OperationWriter(ctx context.Context, done chan struct{}, ch chan operation.Operation, iCtx *tracer.IndexContext) {
+	// send done signal when closing writer
 	defer close(done)
 
 	// open trace file
@@ -176,16 +179,18 @@ func OperationWriter(ctx context.Context, done chan struct{}, ch chan operation.
 	if err != nil {
 		log.Fatalf("Cannot open trace file. Error: %v", err)
 	}
+	defer func() {
+		// close trace file
+		err := file.Close()
+		if err != nil {
+			log.Fatalf("Cannot close trace file. Error: %v", err)
+		}
+	}()
 
 	// read from channel until receiving cancel signal
 	for {
 		select {
 		case op := <-ch:
-			// print debug information
-			if traceDebug {
-				operation.Debug(dCtx, op)
-			}
-
 			// update index
 			switch op.GetOpId() {
 			case operation.BeginBlockID:
@@ -208,17 +213,17 @@ func OperationWriter(ctx context.Context, done chan struct{}, ch chan operation.
 
 		case <-ctx.Done():
 			if len(ch) == 0 {
-				// close trace file
-				err = file.Close()
-				if err != nil {
-					log.Fatalf("Cannot close trace file. Error: %v", err)
-				}
-				// write dictionaries and indexes
-				dCtx.Write()
-				iCtx.Write()
 				return
 			}
 		}
+	}
+}
+
+// send an operation
+func sendOperation(dCtx *dict.DictionaryContext, ch chan operation.Operation, op operation.Operation) {
+	ch <- op
+	if traceDebug {
+		operation.Debug(dCtx, op)
 	}
 }
 
@@ -230,18 +235,15 @@ func traceRecordAction(ctx *cli.Context) error {
 		return fmt.Errorf("trace record command requires exactly 2 arguments")
 	}
 
+	// create dictionary and index contexts
 	dCtx := dict.NewDictionaryContext()
 	iCtx := tracer.NewIndexContext()
-	opChannel := make(chan operation.Operation, 10000)
 
+	// spawn writer
+	opChannel := make(chan operation.Operation, 10000)
 	cctx, cancel := context.WithCancel(context.Background())
 	cancelChannel := make(chan struct{})
-	go OperationWriter(cctx, cancelChannel, opChannel, dCtx, iCtx)
-	defer func() {
-		// cancel writers
-		(cancel)()        // stop writer
-		<-(cancelChannel) // wait for writer to finish
-	}()
+	go OperationWriter(cctx, cancelChannel, opChannel, iCtx)
 
 	// process arguments
 	chainID = ctx.Int(chainIDFlag.Name)
@@ -255,10 +257,10 @@ func traceRecordAction(ctx *cli.Context) error {
 		return argErr
 	}
 
+	// iterate through subsets in sequence
 	substate.SetSubstateFlags(ctx)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
-
 	iter := substate.NewSubstateIterator(first, ctx.Int(substate.WorkersFlag.Name))
 	defer iter.Release()
 	oldBlock := uint64(math.MaxUint64) // set to an infeasible block
@@ -270,17 +272,27 @@ func traceRecordAction(ctx *cli.Context) error {
 				break
 			}
 			if oldBlock != math.MaxUint64 {
-				opChannel <- operation.NewEndBlock()
+				sendOperation(dCtx, opChannel, operation.NewEndBlock())
 			}
 			oldBlock = tx.Block
-			// open new block with a begin-block operation
-			opChannel <- operation.NewBeginBlock(tx.Block)
+			// open new block with a begin-block operation and clear index cache
+			sendOperation(dCtx, opChannel, operation.NewBeginBlock(tx.Block))
+			dCtx.ClearIndexCaches()
 		}
 		traceRecordTask(tx.Block, tx.Transaction, tx.Substate, dCtx, opChannel)
-		opChannel <- operation.NewEndTransaction()
+		sendOperation(dCtx, opChannel, operation.NewEndTransaction())
 	}
+
 	// insert the last EndBlock
-	opChannel <- operation.NewEndBlock()
+	sendOperation(dCtx, opChannel, operation.NewEndBlock())
+
+	// cancel writer
+	(cancel)()        // stop writer
+	<-(cancelChannel) // wait for writer to finish
+
+	// write dictionaries and indexes
+	dCtx.Write()
+	iCtx.Write()
 
 	return err
 }
