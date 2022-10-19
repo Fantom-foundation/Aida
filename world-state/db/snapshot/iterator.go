@@ -3,7 +3,7 @@ package snapshot
 
 import (
 	"context"
-	"github.com/Fantom-foundation/Aida-Testing/world-state/types"
+	"github.com/Fantom-foundation/aida/world-state/types"
 	"github.com/ethereum/go-ethereum/ethdb"
 )
 
