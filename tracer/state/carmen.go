@@ -122,10 +122,7 @@ func (s *carmenStateDB) Snapshot() int {
 }
 
 func (s *carmenStateDB) RevertToSnapshot(id int) {
-	if !getCodeHashCalled {
-		fmt.Printf("WARNING: RevertToSnaphshot not implemented\n")
-		getCodeHashCalled = true
-	}
+	s.db.RevertToSnapshot(id)
 }
 
 func (s *carmenStateDB) Finalise(deleteEmptyObjects bool) {
