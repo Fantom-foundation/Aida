@@ -37,7 +37,7 @@ func captureDebugLog(traceFunc func(*cli.Context) error, ctx *cli.Context) (stri
 		os.Stdout = stdout
 	}(os.Stdout)
 
-	// create tmp file storing debug trances
+	// create tmp file storing debug traces
 	tmpfile, fileErr := os.CreateTemp("", "debug_trace_tmp")
 	if fileErr != nil {
 		return "", fileErr
@@ -67,6 +67,7 @@ func captureDebugLog(traceFunc func(*cli.Context) error, ctx *cli.Context) (stri
 
 // isLogEqual returns true if input debug traces are identical.
 func isLogEqual(record string, replay string) bool {
+	// remove log messages from substateDB before comparing
 	re := regexp.MustCompile("(?m)[\r\n]+^.*record-replay.*$")
 	record = re.ReplaceAllString(record, "")
 	replay = re.ReplaceAllString(replay, "")
