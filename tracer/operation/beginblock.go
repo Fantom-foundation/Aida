@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Fantom-foundation/aida/tracer/dict"
-	"github.com/Fantom-foundation/aida/tracer/state"
+	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/Fantom-foundation/Aida/tracer/state"
 )
 
 // Begin-block operation data structure
