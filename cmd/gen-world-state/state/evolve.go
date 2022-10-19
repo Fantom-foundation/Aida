@@ -2,8 +2,8 @@ package state
 
 import (
 	"fmt"
-	"github.com/Fantom-foundation/aida/cmd/gen-world-state/flags"
-	"github.com/Fantom-foundation/aida/world-state/db/snapshot"
+	"github.com/Fantom-foundation/Aida/cmd/gen-world-state/flags"
+	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	"github.com/ethereum/go-ethereum/substate"
 	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
@@ -17,7 +17,7 @@ var CmdEvolveState = cli.Command{
 	Aliases:     []string{"e"},
 	Usage:       "Evolves world state snapshot database into selected target block.",
 	Description: `The evolve evolves state of stored accounts in world state snapshot database.`,
-	ArgsUsage:   "<target> <substatedir> <workers>",
+	ArgsUsage:   "<block> <substatedir> <workers>",
 	Flags: []cli.Flag{
 		&flags.TargetBlock,
 		&flags.SubstateDBPath,
@@ -115,7 +115,7 @@ func factoryMakeLogger(start uint64, end uint64, log *logging.Logger) func(uint6
 		// print progress
 		select {
 		case <-tick.C:
-			log.Infof("evolving #%d from #%d", blk, end)
+			log.Infof("evolving #%d ; until #d% ; %d blocks left", blk, end, end-blk)
 		default:
 		}
 	}

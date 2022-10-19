@@ -24,7 +24,7 @@ all: gen-world-state trace
 
 gen-world-state:
 	@go build \
-		-ldflags="-X 'github.com/Fantom-foundation/Aida-Testing/cmd/gen-world-state/version.Version=$(APP_VERSION)' -X 'github.com/Fantom-foundation/Aida-Testing/cmd/gen-world-state/version.Time=$(BUILD_DATE)' -X 'github.com/Fantom-foundation/Aida-Testing/cmd/gen-world-state/version.Compiler=$(BUILD_COMPILER)' -X 'github.com/Fantom-foundation/Aida-Testing/cmd/gen-world-state/version.Commit=$(BUILD_COMMIT)' -X 'github.com/Fantom-foundation/Aida-Testing/cmd/gen-world-state/version.CommitTime=$(BUILD_COMMIT_TIME)'" \
+		-ldflags="-X 'github.com/Fantom-foundation/Aida/cmd/gen-world-state/version.Version=$(APP_VERSION)' -X 'github.com/Fantom-foundation/Aida/cmd/gen-world-state/version.Time=$(BUILD_DATE)' -X 'github.com/Fantom-foundation/Aida/cmd/gen-world-state/version.Compiler=$(BUILD_COMPILER)' -X 'github.com/Fantom-foundation/Aida/cmd/gen-world-state/version.Commit=$(BUILD_COMMIT)' -X 'github.com/Fantom-foundation/Aida/cmd/gen-world-state/version.CommitTime=$(BUILD_COMMIT_TIME)'" \
 		-o $(GO_BIN)/gen-world-state \
 		-v \
 		./cmd/gen-world-state
