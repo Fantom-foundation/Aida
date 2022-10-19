@@ -12,14 +12,9 @@ func TestPositiveSnapshotIndexAdd(t *testing.T) {
 	var replayedID1 int32 = 0
 	var replayedID2 int32 = 1
 	snapshotIdx := NewSnapshotIndex()
-	err1 := snapshotIdx.Add(recordedID1, replayedID1)
-	if err1 != nil {
-		t.Fatalf("Failed to add new ID: %v", err1)
-	}
-	err2 := snapshotIdx.Add(recordedID2, replayedID2)
-	if err2 != nil {
-		t.Fatalf("Failed to add new ID: %v", err2)
-	}
+	snapshotIdx.Add(recordedID1, replayedID1)
+	snapshotIdx.Add(recordedID2, replayedID2)
+
 	want := 2
 	have := len(snapshotIdx.recordedToReplayed)
 	if have != want {
@@ -27,23 +22,23 @@ func TestPositiveSnapshotIndexAdd(t *testing.T) {
 	}
 }
 
-// Negative Test: Add an ID twice, and check for failure.
-func TestNegativeSnapshotIndexAdd(t *testing.T) {
+// Positive Test: Add an ID twice, and check index result.
+func TestPositiveSnapshotIndexAddDuplicateID(t *testing.T) {
 	var recordedID int32 = 1
 	var replayedID int32 = 0
 	snapshotIdx := NewSnapshotIndex()
-	err1 := snapshotIdx.Add(recordedID, replayedID)
-	if err1 != nil {
-		t.Fatalf("Failed to add mapping. Error: %v", err1)
-	}
-	err2 := snapshotIdx.Add(recordedID, replayedID)
-	if err2 == nil {
-		t.Fatalf("Expected an error when adding same mapping")
-	}
+	snapshotIdx.Add(recordedID, replayedID)
+	replayedID = 2
+	snapshotIdx.Add(recordedID, replayedID)
 	want := 1
 	have := len(snapshotIdx.recordedToReplayed)
 	if have != want {
 		t.Fatalf("Unexpected map size")
+	}
+
+	ID, _ := snapshotIdx.Get(recordedID)
+	if ID != replayedID {
+		t.Fatalf("Unexpected replayed snapshot index")
 	}
 }
 
