@@ -2,10 +2,10 @@ package trace
 
 import (
 	"fmt"
-	"github.com/Fantom-foundation/Aida-Testing/tracer"
-	"github.com/Fantom-foundation/Aida-Testing/tracer/dict"
-	"github.com/Fantom-foundation/Aida-Testing/tracer/operation"
-	"github.com/Fantom-foundation/Aida-Testing/tracer/state"
+	"github.com/Fantom-foundation/aida/tracer"
+	"github.com/Fantom-foundation/aida/tracer/dict"
+	"github.com/Fantom-foundation/aida/tracer/operation"
+	"github.com/Fantom-foundation/aida/tracer/state"
 	"github.com/ethereum/go-ethereum/substate"
 	"github.com/urfave/cli/v2"
 )

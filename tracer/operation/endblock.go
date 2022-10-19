@@ -3,8 +3,8 @@ package operation
 import (
 	"os"
 
-	"github.com/Fantom-foundation/Aida-Testing/tracer/dict"
-	"github.com/Fantom-foundation/Aida-Testing/tracer/state"
+	"github.com/Fantom-foundation/aida/tracer/dict"
+	"github.com/Fantom-foundation/aida/tracer/state"
 )
 
 // End-block operation data structure

@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/Fantom-foundation/Aida-Testing/tracer/operation"
+	"github.com/Fantom-foundation/aida/tracer/operation"
 )
 
 // Iterator data structure for storage traces
