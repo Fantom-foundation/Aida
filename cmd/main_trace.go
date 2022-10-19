@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Fantom-foundation/Aida-Testing/cmd/trace"
+	"github.com/Fantom-foundation/Aida/cmd/trace"
 	"github.com/ethereum/go-ethereum/substate"
 	"github.com/urfave/cli/v2"
 )

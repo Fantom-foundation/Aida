@@ -4,8 +4,8 @@ import (
 	"encoding/binary"
 	"os"
 
-	"github.com/Fantom-foundation/Aida-Testing/tracer/dict"
-	"github.com/Fantom-foundation/Aida-Testing/tracer/state"
+	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/Fantom-foundation/Aida/tracer/state"
 )
 
 // End-transaction operation's data structure

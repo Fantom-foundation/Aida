@@ -8,9 +8,9 @@ import (
 	"math/big"
 	"os"
 
-	"github.com/Fantom-foundation/Aida-Testing/tracer"
-	"github.com/Fantom-foundation/Aida-Testing/tracer/dict"
-	"github.com/Fantom-foundation/Aida-Testing/tracer/operation"
+	"github.com/Fantom-foundation/Aida/tracer"
+	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/Fantom-foundation/go-opera/opera"
 	"github.com/Fantom-foundation/substate-cli/cmd/substate-cli/replay"
