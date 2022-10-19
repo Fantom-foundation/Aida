@@ -3,8 +3,9 @@ package trace
 
 import (
 	"fmt"
-	"github.com/urfave/cli/v2"
 	"strconv"
+
+	"github.com/urfave/cli/v2"
 )
 
 // Chain id for recording either mainnet or testnets.
@@ -41,6 +42,10 @@ var (
 	profileFlag = cli.BoolFlag{
 		Name:  "profile",
 		Usage: "enables profiling",
+	}
+	cpuProfileFlag = cli.StringFlag{
+		Name:  "cpuprofile",
+		Usage: "enables CPU profiling",
 	}
 )
 

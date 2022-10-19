@@ -2,6 +2,9 @@ package trace
 
 import (
 	"fmt"
+	"os"
+	"runtime/pprof"
+
 	"github.com/Fantom-foundation/Aida/tracer"
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
@@ -18,6 +21,7 @@ var TraceReplayCommand = cli.Command{
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		&profileFlag,
+		&cpuProfileFlag,
 		&stateDbImplementation,
 		&substate.SubstateDirFlag,
 		&substate.WorkersFlag,
@@ -103,6 +107,16 @@ func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 
 	// Get profiling flag
 	operation.Profiling = cliCtx.Bool(profileFlag.Name)
+
+	// Start CPU profiling if requested.
+	if profile_file_name := cliCtx.String(cpuProfileFlag.Name); profile_file_name != "" {
+		f, err := os.Create(profile_file_name)
+		if err != nil {
+			return err
+		}
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
 
 	// Instantiate the state DB under testing
 	db, err := makeStateDb(cliCtx)
