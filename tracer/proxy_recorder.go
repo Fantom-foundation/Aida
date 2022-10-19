@@ -3,8 +3,8 @@ package tracer
 import (
 	"math/big"
 
-	"github.com/Fantom-foundation/Aida-Testing/tracer/dict"
-	"github.com/Fantom-foundation/Aida-Testing/tracer/operation"
+	"github.com/Fantom-foundation/aida/tracer/dict"
+	"github.com/Fantom-foundation/aida/tracer/operation"
 	"github.com/Fantom-foundation/substate-cli/state"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"

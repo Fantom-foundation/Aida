@@ -3,10 +3,12 @@ package operation
 import (
 	"encoding/binary"
 	"fmt"
+	"log"
+	"math"
 	"os"
 
-	"github.com/Fantom-foundation/Aida-Testing/tracer/dict"
-	"github.com/Fantom-foundation/Aida-Testing/tracer/state"
+	"github.com/Fantom-foundation/aida/tracer/dict"
+	"github.com/Fantom-foundation/aida/tracer/state"
 )
 
 // Snapshot data structure
@@ -40,7 +42,9 @@ func (op *Snapshot) Write(f *os.File) error {
 // Execute the snapshot operation.
 func (op *Snapshot) Execute(db state.StateDB, ctx *dict.DictionaryContext) {
 	ID := db.Snapshot()
-	// TODO: check that ID does not exceed 32bit
+	if ID > math.MaxInt32 {
+		log.Fatalf("Snapshot ID exceeds 32 bit")
+	}
 	ctx.AddSnapshot(op.SnapshotID, int32(ID))
 }
 

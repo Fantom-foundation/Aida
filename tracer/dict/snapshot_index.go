@@ -26,13 +26,8 @@ func NewSnapshotIndex() *SnapshotIndex {
 }
 
 // Add new snapshot-id mapping.
-func (oIdx *SnapshotIndex) Add(recordedID int32, replayedID int32) error {
-	var err error = nil
-	if _, ok := oIdx.recordedToReplayed[recordedID]; ok {
-		err = errors.New("snapshot-id already exists")
-	}
+func (oIdx *SnapshotIndex) Add(recordedID int32, replayedID int32) {
 	oIdx.recordedToReplayed[recordedID] = replayedID
-	return err
 }
 
 // Retrieve replayed snapshot-id from a recorded-id.

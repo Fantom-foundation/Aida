@@ -3,9 +3,9 @@ package state
 
 import (
 	"fmt"
-	"github.com/Fantom-foundation/Aida-Testing/cmd/gen-world-state/flags"
-	"github.com/Fantom-foundation/Aida-Testing/world-state/db/snapshot"
-	"github.com/Fantom-foundation/Aida-Testing/world-state/types"
+	"github.com/Fantom-foundation/aida/cmd/gen-world-state/flags"
+	"github.com/Fantom-foundation/aida/world-state/db/snapshot"
+	"github.com/Fantom-foundation/aida/world-state/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/fatih/color"
 	"github.com/olekukonko/tablewriter"

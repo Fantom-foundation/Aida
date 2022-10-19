@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Fantom-foundation/Aida-Testing/cmd/trace"
+	"github.com/Fantom-foundation/aida/cmd/trace"
 	"github.com/ethereum/go-ethereum/substate"
 	"github.com/urfave/cli/v2"
 )
@@ -19,6 +19,7 @@ func main() {
 		Commands: []*cli.Command{
 			&trace.TraceRecordCommand,
 			&trace.TraceReplayCommand,
+			&trace.TraceCompareLogCommand,
 		},
 	}
 	substate.RecordReplay = true
