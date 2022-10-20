@@ -80,6 +80,11 @@ func (s *gethStateDb) RevertToSnapshot(id int) {
 	s.db.RevertToSnapshot(id)
 }
 
+func (s *gethStateDb) EndTransaction() error {
+	// Nothing to do, all covered in Finalise.
+	return nil
+}
+
 func (s *gethStateDb) Finalise(deleteEmptyObjects bool) {
 	s.db.Finalise(deleteEmptyObjects)
 }

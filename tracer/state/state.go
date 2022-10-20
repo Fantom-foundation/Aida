@@ -36,6 +36,7 @@ type StateDB interface {
 	// Transaction handling
 	Snapshot() int
 	RevertToSnapshot(int)
+	EndTransaction() error
 	Finalise(bool)
 
 	// ---- Optional Development & Debugging Features ----
