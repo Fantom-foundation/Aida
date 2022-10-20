@@ -9,7 +9,7 @@ import (
 )
 
 // Entry limit of contract dictionary
-var ContractDictionaryLimit uint32 = math.MaxUint32
+var ContractDictionaryLimit uint32 = math.MaxUint32 - 1
 
 // Dictionary data structure encodes/decodes a contract address
 // to a dictionary index or vice versa.
