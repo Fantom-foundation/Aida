@@ -90,3 +90,5 @@ reads the recorded traces and re-execute state operations from block 5,050,000 t
  - `--trace-debug` print replayed operations. 
  - `--validate` validate the state after replaying traces.
  - `--workers` sets the number of worker threads.
+ - `--profile` records and displays summary information on operation performance
+ - `--cpuprofile` records a CPU profile for the replay to be inspected using `pprof`
