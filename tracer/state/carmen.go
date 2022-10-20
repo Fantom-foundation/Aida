@@ -92,6 +92,11 @@ func (s *carmenStateDB) RevertToSnapshot(id int) {
 	s.db.RevertToSnapshot(id)
 }
 
+func (s *carmenStateDB) EndTransaction() error {
+	s.db.EndTransaction()
+	return nil // TODO: check for errors
+}
+
 func (s *carmenStateDB) Finalise(deleteEmptyObjects bool) {
 	// nothing to do
 }
