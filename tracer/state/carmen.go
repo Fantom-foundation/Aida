@@ -22,79 +22,46 @@ type carmenStateDB struct {
 	db carmen.StateDB
 }
 
-var (
-	createAccountCalled bool
-	existCalled         bool
-	getBalanceCalled    bool
-	addBalanceCalled    bool
-	subBalanceCalled    bool
-	getNonceCalled      bool
-	setNonceCalled      bool
-	getCodeHashCalled   bool
-)
+var getCodeHashCalled bool
 
 func (s *carmenStateDB) CreateAccount(addr common.Address) {
-	if !createAccountCalled {
-		fmt.Printf("Warning: CreateAccount not implemented\n")
-		createAccountCalled = true
-	}
+	s.db.CreateAccount(cc.Address(addr))
 }
 
 func (s *carmenStateDB) Exist(addr common.Address) bool {
-	if !existCalled {
-		fmt.Printf("Warning: Exist not implemented\n")
-		existCalled = true
-	}
-	return true
+	return s.db.Exist(cc.Address(addr))
 }
 
 func (s *carmenStateDB) Empty(addr common.Address) bool {
-	panic("Not implemented")
+	return s.db.Empty(cc.Address(addr))
 }
 
 func (s *carmenStateDB) Suicide(addr common.Address) {
-	panic("Not implemented")
+	s.db.Suicide(cc.Address(addr))
 }
 
 func (s *carmenStateDB) HasSuicided(addr common.Address) bool {
-	panic("Not implemented")
+	return s.db.HasSuicided(cc.Address(addr))
 }
 
 func (s *carmenStateDB) GetBalance(addr common.Address) *big.Int {
-	if !getBalanceCalled {
-		fmt.Printf("WARNING: GetBalance not implemented\n")
-		getBalanceCalled = true
-	}
-	return nil
+	return s.db.GetBalance(cc.Address(addr))
 }
 
 func (s *carmenStateDB) AddBalance(addr common.Address, value *big.Int) {
-	if !addBalanceCalled {
-		fmt.Printf("WARNING: AddBalance not implemented\n")
-		addBalanceCalled = true
-	}
+	s.db.AddBalance(cc.Address(addr), value)
 }
 
 func (s *carmenStateDB) SubBalance(addr common.Address, value *big.Int) {
-	if !subBalanceCalled {
-		fmt.Printf("WARNING: SubBalance not implemented\n")
-		subBalanceCalled = true
-	}
+	s.db.SubBalance(cc.Address(addr), value)
 }
 
 func (s *carmenStateDB) GetNonce(addr common.Address) uint64 {
-	if !getNonceCalled {
-		fmt.Printf("WARNING: GetNonce not implemented\n")
-		getNonceCalled = true
-	}
-	return 0
+	return s.db.GetNonce(cc.Address(addr))
 }
 
 func (s *carmenStateDB) SetNonce(addr common.Address, value uint64) {
-	if !setNonceCalled {
-		fmt.Printf("WARNING: SetNonce not implemented\n")
-		setNonceCalled = true
-	}
+	s.db.SetNonce(cc.Address(addr), value)
 }
 
 func (s *carmenStateDB) GetCommittedState(addr common.Address, key common.Hash) common.Hash {
@@ -122,10 +89,7 @@ func (s *carmenStateDB) Snapshot() int {
 }
 
 func (s *carmenStateDB) RevertToSnapshot(id int) {
-	if !getCodeHashCalled {
-		fmt.Printf("WARNING: RevertToSnaphshot not implemented\n")
-		getCodeHashCalled = true
-	}
+	s.db.RevertToSnapshot(id)
 }
 
 func (s *carmenStateDB) Finalise(deleteEmptyObjects bool) {
