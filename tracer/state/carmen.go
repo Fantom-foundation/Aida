@@ -92,13 +92,10 @@ func (s *carmenStateDB) RevertToSnapshot(id int) {
 	s.db.RevertToSnapshot(id)
 }
 
-func (s *carmenStateDB) EndTransaction() error {
-	s.db.EndTransaction()
-	return nil // TODO: check for errors
-}
-
 func (s *carmenStateDB) Finalise(deleteEmptyObjects bool) {
-	// nothing to do
+	// In Geth 'Finalise' is called to end a transaction and seal its effects.
+	// In Carmen, this event is called 'EndTransaction'.
+	s.db.EndTransaction()
 }
 
 func (s *carmenStateDB) PrepareSubstate(substate *substate.SubstateAlloc) {
