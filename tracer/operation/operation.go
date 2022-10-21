@@ -18,7 +18,7 @@ var Profiling = false
 // Operation IDs of the StateDB interface
 const (
 	GetStateID = iota
-	LastGetStateID
+	GetStateLclsID
 	GetStateLcID
 	GetStateLccsID
 	SetStateID
@@ -48,7 +48,7 @@ type OperationDictionary struct {
 // opDict contains a dictionary of operation's label and read function.
 var opDict = map[byte]OperationDictionary{
 	GetStateID:          {label: "GetState", readfunc: ReadGetState},
-	LastGetStateID:      {label: "LastGetState", readfunc: ReadLastGetState},
+	GetStateLclsID:      {label: "GetStateLcls", readfunc: ReadGetStateLcls},
 	GetStateLcID:        {label: "GetStateLc", readfunc: ReadGetStateLc},
 	GetStateLccsID:      {label: "GetStateLccs", readfunc: ReadGetStateLccs},
 	SetStateID:          {label: "SetState", readfunc: ReadSetState},
