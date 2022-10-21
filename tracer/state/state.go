@@ -7,13 +7,13 @@ import (
 	"github.com/ethereum/go-ethereum/substate"
 )
 
-type StateDB interface {
+type BasicStateDB interface {
 	// Account management.
 	CreateAccount(common.Address)
 	Exist(common.Address) bool
 	Empty(common.Address) bool
 
-	Suicide(common.Address)
+	Suicide(common.Address) bool
 	HasSuicided(common.Address) bool
 
 	// Balance
@@ -38,11 +38,16 @@ type StateDB interface {
 	RevertToSnapshot(int)
 	Finalise(bool)
 
+	// Substate specific
+	GetSubstatePostAlloc() substate.SubstateAlloc
+}
+
+type StateDB interface {
+	BasicStateDB
+
 	// ---- Optional Development & Debugging Features ----
 
 	// Used to initiate the state DB for the next transaction.
 	// This is mainly for development purposes to support in-memory DB implementations.
 	PrepareSubstate(*substate.SubstateAlloc)
-
-	GetSubstatePostAlloc() substate.SubstateAlloc
 }

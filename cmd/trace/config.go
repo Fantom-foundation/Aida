@@ -33,7 +33,7 @@ var (
 	stateDbImplementation = cli.StringFlag{
 		Name:  "db-impl",
 		Usage: "select state DB implementation",
-		Value: "geth",
+		Value: "memory",
 	}
 	validateEndState = cli.BoolFlag{
 		Name:  "validate",

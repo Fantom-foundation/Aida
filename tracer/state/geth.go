@@ -1,19 +1,35 @@
 package state
 
 import (
+	"io/ioutil"
 	"math/big"
 
-	geth "github.com/Fantom-foundation/substate-cli/state"
 	"github.com/ethereum/go-ethereum/common"
+	rawdb "github.com/ethereum/go-ethereum/core/rawdb"
+	geth "github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/substate"
 )
 
-func MakeGethInMemoryStateDB() StateDB {
-	return &gethStateDb{}
+func MakeGethStateDB() (StateDB, error) {
+	dir, err := ioutil.TempDir("", "geth_db_*")
+	if err != nil {
+		return nil, err
+	}
+	const cache_size = 512
+	const file_handle = 128
+	ldb, err := rawdb.NewLevelDBDatabase(dir, cache_size, file_handle, "", false)
+	if err != nil {
+		return nil, err
+	}
+	db, err := geth.New(common.Hash{}, geth.NewDatabase(ldb), nil)
+	if err != nil {
+		return nil, err
+	}
+	return &gethStateDb{db}, nil
 }
 
 type gethStateDb struct {
-	db geth.StateDB
+	db BasicStateDB
 }
 
 func (s *gethStateDb) CreateAccount(addr common.Address) {
@@ -28,8 +44,8 @@ func (s *gethStateDb) Empty(addr common.Address) bool {
 	return s.db.Empty(addr)
 }
 
-func (s *gethStateDb) Suicide(addr common.Address) {
-	s.db.Suicide(addr)
+func (s *gethStateDb) Suicide(addr common.Address) bool {
+	return s.db.Suicide(addr)
 }
 
 func (s *gethStateDb) HasSuicided(addr common.Address) bool {
@@ -85,7 +101,7 @@ func (s *gethStateDb) Finalise(deleteEmptyObjects bool) {
 }
 
 func (s *gethStateDb) PrepareSubstate(substate *substate.SubstateAlloc) {
-	s.db = geth.MakeInMemoryStateDB(substate)
+	// ignored
 }
 
 func (s *gethStateDb) GetSubstatePostAlloc() substate.SubstateAlloc {

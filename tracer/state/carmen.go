@@ -36,8 +36,9 @@ func (s *carmenStateDB) Empty(addr common.Address) bool {
 	return s.db.Empty(cc.Address(addr))
 }
 
-func (s *carmenStateDB) Suicide(addr common.Address) {
+func (s *carmenStateDB) Suicide(addr common.Address) bool {
 	s.db.Suicide(cc.Address(addr))
+	return false // TODO: support an actual return value
 }
 
 func (s *carmenStateDB) HasSuicided(addr common.Address) bool {
