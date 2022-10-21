@@ -22,6 +22,7 @@ const (
 	GetStateLcID
 	GetStateLccsID
 	SetStateID
+	SetStateLclsID
 	GetCommittedStateID
 	SnapshotID
 	RevertToSnapshotID
@@ -52,6 +53,7 @@ var opDict = map[byte]OperationDictionary{
 	GetStateLcID:        {label: "GetStateLc", readfunc: ReadGetStateLc},
 	GetStateLccsID:      {label: "GetStateLccs", readfunc: ReadGetStateLccs},
 	SetStateID:          {label: "SetState", readfunc: ReadSetState},
+	SetStateLclsID:      {label: "SetStateLcls", readfunc: ReadSetStateLcls},
 	GetCommittedStateID: {label: "GetCommittedState", readfunc: ReadGetCommittedState},
 	SnapshotID:          {label: "Snapshot", readfunc: ReadSnapshot},
 	RevertToSnapshotID:  {label: "RevertToSnapshot", readfunc: ReadRevertToSnapshot},
@@ -80,6 +82,10 @@ func getLabel(i byte) string {
 	if i < 0 || i >= NumOperations {
 		log.Fatalf("getLabel failed; index is out-of-bound")
 	}
+	if _, ok := opDict[i]; !ok {
+		log.Fatalf("operation is not defined")
+	}
+
 	return opDict[i].label
 }
 
