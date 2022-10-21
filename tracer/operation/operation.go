@@ -39,7 +39,7 @@ const (
 	NumOperations
 )
 
-// Dictionary data structure contains label and read function of an operation
+// OperationDictionary data structure contains label and read function of an operation
 type OperationDictionary struct {
 	label    string
 	readfunc func(*os.File) (Operation, error)
@@ -68,14 +68,14 @@ var opDict = map[byte]OperationDictionary{
 
 // Profiling data structures for executed operations.
 var (
-	operationFrequency   = map[byte]uint64{}        // operation frequency stats
-	operationDuration    = map[byte]time.Duration{} // accumulated operation duration
-	operationMinDuration = map[byte]time.Duration{} // min runtime observerd
-	operationMaxDuration = map[byte]time.Duration{} // max runtime observerd
-	operationVariance    = map[byte]float64{}       // duration variance
+	opFrequencyy  [NumOperations]uint64        // operation frequency stats
+	opDuration    [NumOperations]time.Duration // accumulated operation duration
+	opMinDuration [NumOperations]time.Duration // min runtime observerd
+	opMaxDuration [NumOperations]time.Duration // max runtime observerd
+	opVariance    [NumOperations]float64       // duration variance
 )
 
-// Get a label of a state operation.
+// getLabel retrieves a label of a state operation.
 func getLabel(i byte) string {
 	if i < 0 || i >= NumOperations {
 		log.Fatalf("getLabel failed; index is out-of-bound")
@@ -85,9 +85,9 @@ func getLabel(i byte) string {
 
 // Operation interface.
 type Operation interface {
-	GetOpId() byte                                  // obtain operation identifier
-	Write(*os.File) error                           // write operation
-	Execute(state.StateDB, *dict.DictionaryContext) // execute operation
+	GetOpId() byte                                  // get operation identifier
+	Write(*os.File) error                           // write operation to a file
+	Execute(state.StateDB, *dict.DictionaryContext) // execute operation on a stateDB instance
 	Debug(*dict.DictionaryContext)                  // print debug message for operation
 }
 
@@ -134,7 +134,7 @@ func Write(f *os.File, op Operation) {
 	}
 }
 
-// Execute an operation.
+// Execute an operation and profile it.
 func Execute(op Operation, db state.StateDB, ctx *dict.DictionaryContext) {
 	var start time.Time
 	if Profiling {
@@ -144,41 +144,44 @@ func Execute(op Operation, db state.StateDB, ctx *dict.DictionaryContext) {
 	if Profiling {
 		elapsed := time.Since(start)
 		op := op.GetOpId()
-		// check if measuring this operation first time
-		_, opExists := operationFrequency[op]
-		// compute old mean of operation
-		oldMean := float64(0.0)
-		if opExists {
-			// express in seconds
-			oldMean = float64(operationDuration[op]) / float64(operationFrequency[op])
-		}
-		// update accumulated duration and frequency
-		operationDuration[op] += elapsed
-		operationFrequency[op]++
-		// update min/max
-		if opExists {
-			if operationMaxDuration[op] < elapsed {
-				operationMaxDuration[op] = elapsed
+		n := opFrequencyy[op]
+		duration := opDuration[op]
+		// update min/max values
+		if n > 0 {
+			if opMaxDuration[op] < elapsed {
+				opMaxDuration[op] = elapsed
 			}
-			if operationMinDuration[op] > elapsed {
-				operationMinDuration[op] = elapsed
+			if opMinDuration[op] > elapsed {
+				opMinDuration[op] = elapsed
 			}
 		} else {
-			operationMinDuration[op] = elapsed
-			operationMaxDuration[op] = elapsed
+			opMinDuration[op] = elapsed
+			opMaxDuration[op] = elapsed
+		}
+		// compute previous mean
+		prevMean := float64(0.0)
+		if n > 0 {
+			prevMean = float64(opDuration[op]) / float64(n)
 		}
 		// update variance
-		if opExists {
-			n := float64(operationFrequency[op])
-			newMean := float64(operationDuration[op]) / n
-			operationVariance[op] = (n-2)*operationVariance[op]/(n-1) + (newMean-oldMean)*(newMean-oldMean)/n
+		newDuration := duration + elapsed
+		if n > 0 {
+			newMean := float64(newDuration) / float64(n+1)
+			opVariance[op] = float64(n-1)*opVariance[op]/float64(n) +
+				(newMean-prevMean)*(newMean-prevMean)/float64(n+1)
 		} else {
-			operationVariance[op] = 0.0
+			opVariance[op] = 0.0
 		}
+
+		// update execution frequency
+		opFrequencyy[op] = n + 1
+
+		// update accumulated duration and frequency
+		opDuration[op] = newDuration
 	}
 }
 
-// Print debug information of an operation.
+// Debug prints debug information of an operation.
 func Debug(ctx *dict.DictionaryContext, op Operation) {
 	fmt.Printf("%v:\n", getLabel(op.GetOpId()))
 	op.Debug(ctx)
@@ -186,17 +189,19 @@ func Debug(ctx *dict.DictionaryContext, op Operation) {
 
 // PrintProfiling prints replay profiling information for executed operation.
 func PrintProfiling() {
-	fmt.Printf("op, n, mean(us), std(us), min(us), max(us)\n")
-	total := float64(0)
 	timeUnit := float64(time.Microsecond)
-	for op, n := range operationFrequency {
-		total += float64(operationDuration[op])
-		mean := float64(operationDuration[op]) / float64(n) / timeUnit
-		variance := operationVariance[op]
-		std := math.Sqrt(variance) / timeUnit
-		min := float64(operationMinDuration[op]) / timeUnit
-		max := float64(operationMaxDuration[op]) / timeUnit
+	tuStr := "us"
+	fmt.Printf("op, n, mean(%v), std(%v), min(%v), max(%v)\n", tuStr, tuStr, tuStr, tuStr)
+	total := float64(0)
+	for op := byte(0); op < NumOperations; op++ {
+		n := opFrequencyy[op]
+		mean := (float64(opDuration[op]) / float64(n)) / timeUnit
+		std := math.Sqrt(opVariance[op]) / timeUnit
+		min := float64(opMinDuration[op]) / timeUnit
+		max := float64(opMaxDuration[op]) / timeUnit
 		fmt.Printf("%v, %v, %v, %v, %v, %v\n", getLabel(op), n, mean, std, min, max)
+
+		total += float64(opDuration[op])
 	}
 	fmt.Printf("Total StateDB net execution time=%v (s)\n", total/float64(time.Second))
 }
