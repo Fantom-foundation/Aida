@@ -1,16 +1,16 @@
 package trace
 
 import (
-	"math/big"
+	"context"
+	"fmt"
 	"log"
 	"math"
+	"math/big"
 	"os"
-	"context"
 
 	"github.com/Fantom-foundation/Aida/tracer"
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
-	"fmt"
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/Fantom-foundation/go-opera/opera"
 	"github.com/Fantom-foundation/substate-cli/cmd/substate-cli/replay"
@@ -220,10 +220,10 @@ func OperationWriter(ctx context.Context, done chan struct{}, ch chan operation.
 }
 
 // send an operation
-func sendOperation(dCtx *dict.DictionaryContext, ch chan operation.Operation, op operation.Operation ) {
+func sendOperation(dCtx *dict.DictionaryContext, ch chan operation.Operation, op operation.Operation) {
 	ch <- op
 	if traceDebug {
-		operation.Debug( dCtx, op)
+		operation.Debug(dCtx, op)
 	}
 }
 
