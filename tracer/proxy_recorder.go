@@ -132,7 +132,7 @@ func (r *ProxyRecorder) GetState(addr common.Address, key common.Hash) common.Ha
 	var op operation.Operation
 	if cIdx == prevCIdx {
 		if sPos == 0 {
-			op = operation.NewLastGetState()
+			op = operation.NewGetStateLcls()
 		} else if sPos != -1 {
 			op = operation.NewGetStateLccs(sPos)
 		} else {
