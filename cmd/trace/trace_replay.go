@@ -158,7 +158,7 @@ func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 	hasNext := traceIter.Next()
 	op := traceIter.Value()
 	if !hasNext || op.GetOpId() != operation.EndBlockID {
-		return fmt.Errorf("Last opertion isn't EndBlock")
+		return fmt.Errorf("Last operation isn't an EndBlock")
 	} else {
 		operation.Execute(op, db, dCtx)
 		if traceDebug {
