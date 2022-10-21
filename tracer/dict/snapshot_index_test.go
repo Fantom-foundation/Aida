@@ -7,10 +7,10 @@ import (
 // Add()
 // Positive Test: Add a new set of mappings and compare the size of index map
 func TestPositiveSnapshotIndexAdd(t *testing.T) {
-	var recordedID1 int32 = 1
-	var recordedID2 int32 = 2
-	var replayedID1 int32 = 0
-	var replayedID2 int32 = 1
+	var recordedID1 uint16 = 1
+	var recordedID2 uint16 = 2
+	var replayedID1 uint16 = 0
+	var replayedID2 uint16 = 1
 	snapshotIdx := NewSnapshotIndex()
 	snapshotIdx.Add(recordedID1, replayedID1)
 	snapshotIdx.Add(recordedID2, replayedID2)
@@ -24,8 +24,8 @@ func TestPositiveSnapshotIndexAdd(t *testing.T) {
 
 // Positive Test: Add an ID twice, and check index result.
 func TestPositiveSnapshotIndexAddDuplicateID(t *testing.T) {
-	var recordedID int32 = 1
-	var replayedID int32 = 0
+	var recordedID uint16 = 1
+	var replayedID uint16 = 0
 	snapshotIdx := NewSnapshotIndex()
 	snapshotIdx.Add(recordedID, replayedID)
 	replayedID = 2
@@ -45,8 +45,8 @@ func TestPositiveSnapshotIndexAddDuplicateID(t *testing.T) {
 // Get()
 // Positive Test: Add ID to SnapshotIndex and compare with index result.
 func TestPositiveSnapshotIndexGet(t *testing.T) {
-	var recordedID int32 = 1
-	var replayedID int32 = 8
+	var recordedID uint16 = 1
+	var replayedID uint16 = 8
 	snapshotIdx := NewSnapshotIndex()
 	snapshotIdx.Add(recordedID, replayedID)
 	ID, err := snapshotIdx.Get(recordedID)
@@ -60,8 +60,8 @@ func TestPositiveSnapshotIndexGet(t *testing.T) {
 
 // Negative Test: ID of Get mismatches.
 func TestNegativeSnapshotIndexGet(t *testing.T) {
-	var recordedID int32 = 1
-	var replayedID int32 = 8
+	var recordedID uint16 = 1
+	var replayedID uint16 = 8
 	snapshotIdx := NewSnapshotIndex()
 	snapshotIdx.Add(recordedID, replayedID)
 	_, err := snapshotIdx.Get(recordedID + 1)
