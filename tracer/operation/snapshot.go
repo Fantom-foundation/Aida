@@ -13,7 +13,7 @@ import (
 
 // Snapshot data structure
 type Snapshot struct {
-	SnapshotID int32 // returned ID (for later mapping)
+	SnapshotID uint16 // returned ID (for later mapping)
 }
 
 // Return the snapshot operation identifier.
@@ -22,8 +22,11 @@ func (op *Snapshot) GetOpId() byte {
 }
 
 // Create a new snapshot operation.
-func NewSnapshot(SnapshotID int32) *Snapshot {
-	return &Snapshot{SnapshotID: SnapshotID}
+func NewSnapshot(snapshotID int) *Snapshot {
+	if snapshotID > math.MaxUint16 {
+		log.Fatalf("Snapshot ID exceeds 16 bit")
+	}
+	return &Snapshot{SnapshotID: uint16(snapshotID)}
 }
 
 // Read a snapshot operation from a file.
@@ -42,10 +45,10 @@ func (op *Snapshot) Write(f *os.File) error {
 // Execute the snapshot operation.
 func (op *Snapshot) Execute(db state.StateDB, ctx *dict.DictionaryContext) {
 	ID := db.Snapshot()
-	if ID > math.MaxInt32 {
-		log.Fatalf("Snapshot ID exceeds 32 bit")
+	if ID > math.MaxUint16 {
+		log.Fatalf("Snapshot ID exceeds 16 bit")
 	}
-	ctx.AddSnapshot(op.SnapshotID, int32(ID))
+	ctx.AddSnapshot(op.SnapshotID, uint16(ID))
 }
 
 // Print the details for the snapshot operation.
