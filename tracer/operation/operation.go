@@ -30,6 +30,7 @@ const (
 	CreateAccountID
 	GetBalanceID
 	GetCodeHashID
+	GetCodeHashLcID
 	SuicideID
 	ExistID
 	FinaliseID
@@ -62,6 +63,7 @@ var opDict = map[byte]OperationDictionary{
 	CreateAccountID:         {label: "CreateAccount", readfunc: ReadCreateAccount},
 	GetBalanceID:            {label: "GetBalance", readfunc: ReadGetBalance},
 	GetCodeHashID:           {label: "GetCodeHash", readfunc: ReadGetCodeHash},
+	GetCodeHashLcID:         {label: "GetCodeLcHash", readfunc: ReadGetCodeHashLc},
 	SuicideID:               {label: "Suicide", readfunc: ReadSuicide},
 	ExistID:                 {label: "Exist", readfunc: ReadExist},
 	FinaliseID:              {label: "Finalise", readfunc: ReadFinalise},

@@ -76,8 +76,14 @@ func (r *ProxyRecorder) SetNonce(addr common.Address, nonce uint64) {
 
 // GetCodeHash returns the hash of the EVM bytecode.
 func (r *ProxyRecorder) GetCodeHash(addr common.Address) common.Hash {
+	prevCIdx := r.dctx.PrevContractIndex
 	cIdx := r.dctx.EncodeContract(addr)
-	r.send(operation.NewGetCodeHash(cIdx))
+	if prevCIdx == cIdx {
+		r.send(operation.NewGetCodeHashLc())
+	} else {
+		r.send(operation.NewGetCodeHash(cIdx))
+	}
+
 	hash := r.db.GetCodeHash(addr)
 	return hash
 }
