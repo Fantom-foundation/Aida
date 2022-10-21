@@ -75,8 +75,10 @@ func compareStorage(recordedAlloc substate.SubstateAlloc, traceAlloc substate.Su
 func makeStateDb(cliCtx *cli.Context) (state.StateDB, error) {
 	impl := cliCtx.String(stateDbImplementation.Name)
 	switch impl {
-	case "geth":
+	case "memory":
 		return state.MakeGethInMemoryStateDB(), nil
+	case "geth":
+		return state.MakeGethStateDB()
 	case "carmen":
 		return state.MakeCarmenStateDB()
 	}
