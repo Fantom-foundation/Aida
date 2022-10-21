@@ -8,7 +8,7 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/state"
 )
 
-// Get-state data structure for last contract and last storage address.
+// Get-committed-state data structure for last contract and last storage address.
 type GetCommittedStateLcls struct {
 }
 
