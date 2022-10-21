@@ -24,6 +24,7 @@ const (
 	SetStateID
 	SetStateLclsID
 	GetCommittedStateID
+	GetCommittedStateLclsID
 	SnapshotID
 	RevertToSnapshotID
 	CreateAccountID
@@ -48,24 +49,25 @@ type OperationDictionary struct {
 
 // opDict contains a dictionary of operation's label and read function.
 var opDict = map[byte]OperationDictionary{
-	GetStateID:          {label: "GetState", readfunc: ReadGetState},
-	GetStateLclsID:      {label: "GetStateLcls", readfunc: ReadGetStateLcls},
-	GetStateLcID:        {label: "GetStateLc", readfunc: ReadGetStateLc},
-	GetStateLccsID:      {label: "GetStateLccs", readfunc: ReadGetStateLccs},
-	SetStateID:          {label: "SetState", readfunc: ReadSetState},
-	SetStateLclsID:      {label: "SetStateLcls", readfunc: ReadSetStateLcls},
-	GetCommittedStateID: {label: "GetCommittedState", readfunc: ReadGetCommittedState},
-	SnapshotID:          {label: "Snapshot", readfunc: ReadSnapshot},
-	RevertToSnapshotID:  {label: "RevertToSnapshot", readfunc: ReadRevertToSnapshot},
-	CreateAccountID:     {label: "CreateAccount", readfunc: ReadCreateAccount},
-	GetBalanceID:        {label: "GetBalance", readfunc: ReadGetBalance},
-	GetCodeHashID:       {label: "GetCodeHash", readfunc: ReadGetCodeHash},
-	SuicideID:           {label: "Suicide", readfunc: ReadSuicide},
-	ExistID:             {label: "Exist", readfunc: ReadExist},
-	FinaliseID:          {label: "Finalise", readfunc: ReadFinalise},
-	EndTransactionID:    {label: "EndTransaction", readfunc: ReadEndTransaction},
-	BeginBlockID:        {label: "BeginBlock", readfunc: ReadBeginBlock},
-	EndBlockID:          {label: "EndBlock", readfunc: ReadEndBlock},
+	GetStateID:              {label: "GetState", readfunc: ReadGetState},
+	GetStateLclsID:          {label: "GetStateLcls", readfunc: ReadGetStateLcls},
+	GetStateLcID:            {label: "GetStateLc", readfunc: ReadGetStateLc},
+	GetStateLccsID:          {label: "GetStateLccs", readfunc: ReadGetStateLccs},
+	SetStateID:              {label: "SetState", readfunc: ReadSetState},
+	SetStateLclsID:          {label: "SetStateLcls", readfunc: ReadSetStateLcls},
+	GetCommittedStateID:     {label: "GetCommittedState", readfunc: ReadGetCommittedState},
+	GetCommittedStateLclsID: {label: "GetCommittedStateLcls", readfunc: ReadGetCommittedStateLcls},
+	SnapshotID:              {label: "Snapshot", readfunc: ReadSnapshot},
+	RevertToSnapshotID:      {label: "RevertToSnapshot", readfunc: ReadRevertToSnapshot},
+	CreateAccountID:         {label: "CreateAccount", readfunc: ReadCreateAccount},
+	GetBalanceID:            {label: "GetBalance", readfunc: ReadGetBalance},
+	GetCodeHashID:           {label: "GetCodeHash", readfunc: ReadGetCodeHash},
+	SuicideID:               {label: "Suicide", readfunc: ReadSuicide},
+	ExistID:                 {label: "Exist", readfunc: ReadExist},
+	FinaliseID:              {label: "Finalise", readfunc: ReadFinalise},
+	EndTransactionID:        {label: "EndTransaction", readfunc: ReadEndTransaction},
+	BeginBlockID:            {label: "BeginBlock", readfunc: ReadBeginBlock},
+	EndBlockID:              {label: "EndBlock", readfunc: ReadEndBlock},
 }
 
 // Profiling data structures for executed operations.

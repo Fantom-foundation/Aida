@@ -117,9 +117,14 @@ func (r *ProxyRecorder) GetRefund() uint64 {
 
 // GetCommittedState retrieves a value that is already committed.
 func (r *ProxyRecorder) GetCommittedState(addr common.Address, key common.Hash) common.Hash {
+	prevCIdx := r.dctx.PrevContractIndex
 	cIdx := r.dctx.EncodeContract(addr)
-	sIdx, _ := r.dctx.EncodeStorage(key)
-	r.send(operation.NewGetCommittedState(cIdx, sIdx))
+	sIdx, sPos := r.dctx.EncodeStorage(key)
+	if prevCIdx == cIdx && sPos == 0 {
+		r.send(operation.NewGetCommittedStateLcls())
+	} else {
+		r.send(operation.NewGetCommittedState(cIdx, sIdx))
+	}
 	value := r.db.GetCommittedState(addr, key)
 	return value
 }
