@@ -32,7 +32,7 @@ jobs:
          key: bazel
 
       - name: Check code formating
-        run: find . -name '*.go' -exec gofmt -d -s {} \;
+        run: diff -u <(echo -n)  <(find . -path ./carmen -prune -o  -name '*.go' -exec gofmt -d -s {} \;)
 
       - name: Build
         run: make
