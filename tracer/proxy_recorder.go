@@ -148,10 +148,15 @@ func (r *ProxyRecorder) GetState(addr common.Address, key common.Hash) common.Ha
 
 // SetState sets a value in the StateDB.
 func (r *ProxyRecorder) SetState(addr common.Address, key common.Hash, value common.Hash) {
+	prevCIdx := r.dctx.PrevContractIndex
 	cIdx := r.dctx.EncodeContract(addr)
-	sIdx, _ := r.dctx.EncodeStorage(key)
+	sIdx, sPos := r.dctx.EncodeStorage(key)
 	vIdx := r.dctx.EncodeValue(value)
-	r.send(operation.NewSetState(cIdx, sIdx, vIdx))
+	if cIdx == prevCIdx && sPos == 0 {
+		r.send(operation.NewSetStateLcls(vIdx))
+	} else {
+		r.send(operation.NewSetState(cIdx, sIdx, vIdx))
+	}
 	r.db.SetState(addr, key, value)
 }
 
