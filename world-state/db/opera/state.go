@@ -44,8 +44,8 @@ func LatestStateRoot(s kvdb.Store) (common.Hash, uint64, error) {
 	return bes.BlockState.FinalizedStateRoot, bes.BlockState.LastBlock.Idx, nil
 }
 
-// RootBLock iterate the blocks to find block with given root hash
-func RootBLock(ctx context.Context, s kvdb.Store, root common.Hash) (uint64, error) {
+// BlockNumberByRoot iterate the blocks to find block with given root hash
+func BlockNumberByRoot(ctx context.Context, s kvdb.Store, root common.Hash) (uint64, error) {
 	lastStateRoot, lastBlock, err := LatestStateRoot(s)
 	if err != nil {
 		return 0, fmt.Errorf("last state root of database not found;  %s", root)
@@ -94,8 +94,8 @@ func RootBLock(ctx context.Context, s kvdb.Store, root common.Hash) (uint64, err
 	return 0, fmt.Errorf("block for root %s was not found in database", root)
 }
 
-// RootOfBLock retrieves root hash from given block number
-func RootOfBLock(s kvdb.Store, bn uint64) (common.Hash, error) {
+// RootByBlockNumber retrieves root hash from given block number
+func RootByBlockNumber(s kvdb.Store, bn uint64) (common.Hash, error) {
 	ebs := table.New(s, []byte(("b")))
 
 	key := make([]byte, 8)
@@ -112,4 +112,36 @@ func RootOfBLock(s kvdb.Store, bn uint64) (common.Hash, error) {
 	}
 
 	return common.Hash(block.Root), nil
+}
+
+// GetBlockNumberByRoot searches for a block ID by root hash; if a block ID is already known, the search is skipped.
+func GetBlockNumberByRoot(ctx context.Context, sourceDB kvdb.Store, root common.Hash, blockNumber uint64) (<-chan uint64, <-chan error) {
+	block := make(chan uint64, 1)
+	fail := make(chan error, 1)
+
+	// we may already have a block number from the committed state check;
+	// if we do, just push it to output and cleanup channels
+	if blockNumber > 0 {
+		block <- blockNumber
+		close(block)
+		close(fail)
+
+		return block, fail
+	}
+
+	// do a slow search in a separate thread
+	go func() {
+		defer close(block)
+		defer close(fail)
+
+		blk, err := BlockNumberByRoot(ctx, sourceDB, root)
+		if err != nil {
+			fail <- err
+			return
+		}
+
+		block <- blk
+	}()
+
+	return block, fail
 }

@@ -59,7 +59,7 @@ func (db *StateDB) Copy(ctx context.Context, to *StateDB, onAccount func(*types.
 }
 
 // NewQueueWriter creates a writer thread, which inserts Accounts from an input queue into the given database.
-func NewQueueWriter(ctx context.Context, db *StateDB, in chan types.Account) chan error {
+func NewQueueWriter(ctx context.Context, db *StateDB, in <-chan types.Account) <-chan error {
 	e := make(chan error, 1)
 
 	go func(fail chan error) {
