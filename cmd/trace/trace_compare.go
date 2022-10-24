@@ -17,6 +17,7 @@ var TraceCompareLogCommand = cli.Command{
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		&chainIDFlag,
+		&disableProgressFlag,
 		&stateDbImplementation,
 		&substate.SubstateDirFlag,
 		&substate.WorkersFlag,
@@ -78,7 +79,7 @@ func isLogEqual(record string, replay string) bool {
 func traceCompareLogAction(ctx *cli.Context) error {
 	// process arguments
 	if ctx.Args().Len() != 2 {
-		return fmt.Errorf("trace replay-trace command requires exactly 2 arguments")
+		return fmt.Errorf("trace compare-log command requires exactly 2 arguments")
 	}
 
 	// enable debug-trace
@@ -88,17 +89,26 @@ func traceCompareLogAction(ctx *cli.Context) error {
 			return ctxErr
 		}
 	}
-	fmt.Printf("Capture record trace\n")
+	// disable progress log
+	if !ctx.IsSet(disableProgressFlag.Name) {
+		ctxErr := ctx.Set(disableProgressFlag.Name, "true")
+		if ctxErr != nil {
+			return ctxErr
+		}
+	}
+
+	fmt.Printf("Capture record trace...\n")
 	recordLog, recErr := captureDebugLog(traceRecordAction, ctx)
 	if recErr != nil {
 		return recErr
 	}
-	fmt.Printf("Capture replay trace\n")
+	fmt.Printf("Capture replay trace...\n")
 	replayLog, repErr := captureDebugLog(traceReplayAction, ctx)
 	if repErr != nil {
 		return recErr
 	}
 
+	fmt.Printf("Compare traces...\n")
 	if !isLogEqual(recordLog, replayLog) {
 		return fmt.Errorf("Replay trace doesn't match record trace.")
 	} else {

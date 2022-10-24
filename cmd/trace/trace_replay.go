@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"runtime/pprof"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer"
 	"github.com/Fantom-foundation/Aida/tracer/dict"
@@ -20,8 +21,9 @@ var TraceReplayCommand = cli.Command{
 	Usage:     "executes storage trace",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
-		&profileFlag,
 		&cpuProfileFlag,
+		&disableProgressFlag,
+		&profileFlag,
 		&stateDbImplementation,
 		&substate.SubstateDirFlag,
 		&substate.WorkersFlag,
@@ -110,6 +112,9 @@ func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 	// Get profiling flag
 	operation.Profiling = cliCtx.Bool(profileFlag.Name)
 
+	// Get progress flag
+	enableProgress := !cliCtx.Bool(disableProgressFlag.Name)
+
 	// Start CPU profiling if requested.
 	if profile_file_name := cliCtx.String(cpuProfileFlag.Name); profile_file_name != "" {
 		f, err := os.Create(profile_file_name)
@@ -126,6 +131,16 @@ func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 		return err
 	}
 
+	var (
+		start   time.Time
+		sec     float64
+		lastSec float64
+	)
+	if enableProgress {
+		start = time.Now()
+		sec = time.Since(start).Seconds()
+		lastSec = time.Since(start).Seconds()
+	}
 	for stateIter.Next() {
 		tx := stateIter.Value()
 		if tx.Block > last || !iCtx.ExistsBlock(tx.Block) {
@@ -154,6 +169,14 @@ func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 				return err
 			}
 		}
+		if enableProgress {
+			// report progress
+			sec = time.Since(start).Seconds()
+			if sec-lastSec >= 15 {
+				fmt.Printf("trace replay: elasped time: %.0f s, at block %v\n", sec, tx.Block)
+				lastSec = sec
+			}
+		}
 	}
 
 	// replay the last EndBlock()
@@ -166,6 +189,11 @@ func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 		if traceDebug {
 			operation.Debug(dCtx, op)
 		}
+	}
+
+	if enableProgress {
+		sec = time.Since(start).Seconds()
+		fmt.Printf("trace replay: total elasped time: %.3f s, processed %v blocks\n", sec, last-first+1)
 	}
 
 	// print profile statistics (if enabled)
@@ -182,7 +210,7 @@ func traceReplayAction(ctx *cli.Context) error {
 
 	// process arguments
 	if ctx.Args().Len() != 2 {
-		return fmt.Errorf("trace replay-trace command requires exactly 2 arguments")
+		return fmt.Errorf("trace replay command requires exactly 2 arguments")
 	}
 	tracer.TraceDir = ctx.String(traceDirectoryFlag.Name) + "/"
 	dict.DictDir = ctx.String(traceDirectoryFlag.Name) + "/"
