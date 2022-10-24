@@ -13,6 +13,11 @@ type gethInMemoryStateDb struct {
 	gethStateDb
 }
 
+func (s *gethInMemoryStateDb) Close() error {
+	// Nothing to do.
+	return nil
+}
+
 func (s *gethInMemoryStateDb) PrepareSubstate(substate *substate.SubstateAlloc) {
 	s.db = geth.MakeInMemoryStateDB(substate)
 }

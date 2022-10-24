@@ -45,6 +45,10 @@ type BasicStateDB interface {
 type StateDB interface {
 	BasicStateDB
 
+	// Requests the StateDB to flush all its content to secondary storage and shut down.
+	// After this call no more operations will be allowed on the state.
+	Close() error
+
 	// ---- Optional Development & Debugging Features ----
 
 	// Used to initiate the state DB for the next transaction.

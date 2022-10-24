@@ -10,7 +10,8 @@ import (
 	"github.com/ethereum/go-ethereum/substate"
 )
 
-func MakeCarmenStateDB() (StateDB, error) {
+func MakeCarmenStateDB(directory string) (StateDB, error) {
+	// TODO: use directory!
 	db, err := carmen.CreateStateDB()
 	if err != nil {
 		return nil, err
@@ -105,4 +106,9 @@ func (s *carmenStateDB) PrepareSubstate(substate *substate.SubstateAlloc) {
 
 func (s *carmenStateDB) GetSubstatePostAlloc() substate.SubstateAlloc {
 	return substate.SubstateAlloc{}
+}
+
+func (s *carmenStateDB) Close() error {
+	// TODO: implement
+	return nil
 }
