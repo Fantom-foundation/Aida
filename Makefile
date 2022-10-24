@@ -30,9 +30,9 @@ gen-world-state:
 		./cmd/gen-world-state
 
 trace:
-	@cd carmen/go ; \
-	go generate ./... ; \
-	cd ../.. ; \
+	@cd carmen/go/lib ; \
+	./build_libcarmen.sh ; \
+	cd ../../.. ; \
 	GOPROXY=$(GOPROXY) \
 	GOPRIVATE=github.com/Fantom-foundation/Carmen \
 	go build -ldflags "-s -w" \
