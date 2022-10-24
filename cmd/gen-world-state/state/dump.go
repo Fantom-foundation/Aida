@@ -2,11 +2,15 @@
 package state
 
 import (
+	"context"
 	"github.com/Fantom-foundation/Aida/cmd/gen-world-state/flags"
 	"github.com/Fantom-foundation/Aida/world-state/db/opera"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
+	"github.com/Fantom-foundation/Aida/world-state/types"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
+	"time"
 )
 
 // CmdDumpState defines a CLI command for dumping world state from a source database.
@@ -70,8 +74,9 @@ func dumpState(ctx *cli.Context) error {
 	}
 
 	// load assembled accounts for the given root and write them into the snapshot database
-	accounts, readFailed := opera.LoadAccounts(ctx.Context, opera.OpenStateDB(store), root, ctx.Int(flags.Workers.Name))
-	writeFailed := snapshot.NewQueueWriter(ctx.Context, outputDB, accounts)
+	workers := ctx.Int(flags.Workers.Name)
+	accounts, readFailed := opera.LoadAccounts(ctx.Context, opera.OpenStateDB(store), root, workers)
+	writeFailed := snapshot.NewQueueWriter(ctx.Context, outputDB, dumpProgressFactory(ctx.Context, accounts, workers, log))
 
 	// find block information for the used state root hash
 	block, lkpFailed := opera.GetBlockNumberByRoot(ctx.Context, store, root, blockNumber)
@@ -93,6 +98,44 @@ func dumpState(ctx *cli.Context) error {
 	// wait for all the threads to be done
 	log.Noticef("block #%d done", blockNumber)
 	return nil
+}
+
+// dumpProgressFactory setups and executes dump progress logger.
+func dumpProgressFactory(ctx context.Context, in <-chan types.Account, size int, log *logging.Logger) <-chan types.Account {
+	out := make(chan types.Account, size)
+	go dumpProgress(ctx, in, out, log)
+	return out
+}
+
+// dumpProgress executes account channel proxying logging the progress by observing data passed.
+func dumpProgress(ctx context.Context, in <-chan types.Account, out chan<- types.Account, log *logging.Logger) {
+	var count int
+	var last common.Hash
+	tick := time.NewTicker(2 * time.Second)
+
+	defer func() {
+		tick.Stop()
+		close(out)
+	}()
+
+	ctxDone := ctx.Done()
+	for {
+		select {
+		case <-ctxDone:
+			return
+		case <-tick.C:
+			log.Infof("processed %d accounts; visited %s", count, last.String())
+		case acc, open := <-in:
+			if !open {
+				log.Noticef("%d accounts finished", count)
+				return
+			}
+
+			out <- acc
+			last = acc.Hash
+			count++
+		}
+	}
 }
 
 // getChannelError checks for any pending error in a list of error channels.
