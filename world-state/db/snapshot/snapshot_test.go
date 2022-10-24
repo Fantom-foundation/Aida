@@ -1,6 +1,8 @@
 package snapshot
 
 import (
+	"bytes"
+	"github.com/ethereum/go-ethereum/crypto"
 	"math/rand"
 	"testing"
 	"time"
@@ -32,6 +34,7 @@ func TestStateDB_PutGetBlock(t *testing.T) {
 func TestStateDB_Account(t *testing.T) {
 	db, nodes, addr := makeTestDB(t)
 
+	// try existing and expected accounts
 	for h, a := range addr {
 		ac, err := db.Account(a)
 		if err != nil {
@@ -47,5 +50,33 @@ func TestStateDB_Account(t *testing.T) {
 			err = ac.IsDifferent(&bc)
 			t.Errorf("failed account check; expected to load identical account %s, got %s", a.String(), err.Error())
 		}
+
+		adr, err := db.HashToAccountAddress(bc.Hash)
+		if err != nil {
+			t.Errorf("failed account check; expected to find address %s, address not found, got %s", a.String(), err.Error())
+		}
+
+		if !bytes.Equal(a.Bytes(), adr.Bytes()) {
+			t.Errorf("failed account check; expected to find address %s, got %s", a.String(), adr.String())
+		}
+	}
+
+	// try non-existing account address
+	pk, err := crypto.GenerateKey()
+	if err != nil {
+		t.Fatalf("failed test data build; could not create random key; %s", err.Error())
+	}
+
+	a := crypto.PubkeyToAddress(pk.PublicKey)
+	ac, err := db.Account(a)
+	if err == nil {
+		t.Errorf("failed unknown account get; expected to get error, got account %s", ac.Hash.String())
+	}
+
+	var hashing = crypto.NewKeccakState()
+	hash := crypto.HashData(hashing, a.Bytes())
+	adr, err := db.HashToAccountAddress(hash)
+	if err == nil {
+		t.Errorf("failed unknown account check; expected to get error, got address %s", adr.String())
 	}
 }

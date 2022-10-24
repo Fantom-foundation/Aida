@@ -2,19 +2,23 @@
 package state
 
 import (
+	"context"
 	"fmt"
 	"github.com/Fantom-foundation/Aida/cmd/gen-world-state/flags"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	"github.com/Fantom-foundation/Aida/world-state/types"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/substate"
 	"github.com/fatih/color"
 	"github.com/olekukonko/tablewriter"
+	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
 	"io"
 	"log"
 	"math/big"
+	"time"
 )
 
 // CmdAccount defines a CLI command set for managing single account data in the state dump database.
@@ -24,6 +28,7 @@ var CmdAccount = cli.Command{
 	Usage:   `Provides information and management function for individual accounts in state dump database.`,
 	Subcommands: []*cli.Command{
 		&cmdAccountInfo,
+		&cmdAccountCollect,
 	},
 }
 
@@ -41,8 +46,90 @@ var cmdAccountInfo = cli.Command{
 	},
 }
 
+// cmdAccountCollect collects known accounts from the SubState database.
+var cmdAccountCollect = cli.Command{
+	Action:      collectAccounts,
+	Name:        "collect",
+	Usage:       "Collects known account addresses from substate database.",
+	Description: "Command updates internal map of account hashes for the known accounts in substate database.",
+	Aliases:     []string{"c"},
+	Flags: []cli.Flag{
+		&flags.SubstateDBPath,
+		&flags.StartingBlock,
+		&flags.EndingBlock,
+		&flags.Workers,
+	},
+}
+
 // balanceDecimals represents a decimal correction we do for the displayed balance (6 digits).
 var balanceDecimals = big.NewInt(1_000_000_000_000)
+
+// collectAccounts collects known accounts from the substate database.
+func collectAccounts(ctx *cli.Context) error {
+	// try to open state DB
+	stateDB, err := snapshot.OpenStateDB(ctx.Path(flags.StateDBPath.Name))
+	if err != nil {
+		return err
+	}
+	defer snapshot.MustCloseStateDB(stateDB)
+
+	// try to open sub state DB
+	substate.SetSubstateDirectory(ctx.Path(flags.SubstateDBPath.Name))
+	substate.OpenSubstateDBReadOnly()
+	defer substate.CloseSubstateDB()
+
+	workers := ctx.Int(flags.Workers.Name)
+	iter := substate.NewSubstateIterator(ctx.Uint64(flags.StartingBlock.Name), workers)
+	defer iter.Release()
+
+	// load rwa accounts
+	accounts := snapshot.CollectAccounts(ctx.Context, &iter, ctx.Uint64(flags.EndingBlock.Name), workers)
+
+	// filter unique addresses before writing
+	unique := make(chan common.Address, cap(accounts))
+	go snapshot.FilterUniqueAccounts(ctx.Context, accounts, unique)
+
+	// write what we found
+	return snapshot.WriteAccountAddresses(ctx.Context, accCollectProgressFactory(ctx.Context, unique, Logger(ctx, "addr")), stateDB)
+}
+
+// accCollectProgressFactory observes progress in account scanning.
+func accCollectProgressFactory(ctx context.Context, in <-chan common.Address, log *logging.Logger) <-chan common.Address {
+	out := make(chan common.Address, cap(in))
+	go accCollectProgress(ctx, in, out, log)
+	return out
+}
+
+// accCollectProgress reports progress on accounts collector stream.
+func accCollectProgress(ctx context.Context, in <-chan common.Address, out chan<- common.Address, log *logging.Logger) {
+	var count int
+	var last common.Address
+	tick := time.NewTicker(2 * time.Second)
+
+	defer func() {
+		tick.Stop()
+		close(out)
+	}()
+
+	ctxDone := ctx.Done()
+	for {
+		select {
+		case <-ctxDone:
+			return
+		case <-tick.C:
+			log.Infof("observed %d addresses; last one is %s", count, last.String())
+		case adr, open := <-in:
+			if !open {
+				log.Noticef("found %d addresses", count)
+				return
+			}
+
+			out <- adr
+			last = adr
+			count++
+		}
+	}
+}
 
 // accountInfo sends detailed account information to the console output stream.
 func accountInfo(ctx *cli.Context) error {
