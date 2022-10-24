@@ -36,7 +36,7 @@ func loadAccounts(ctx context.Context, db state.Database, root common.Hash, outA
 
 	// sync the workers closing
 	var wg sync.WaitGroup
-	rawAccount := make(chan types.Account, workers)
+	rawAccount := make(chan types.Account, workers*2)
 	workError := make(chan error, workers+1)
 
 	// load account base data from the state DB into the workers input channel
