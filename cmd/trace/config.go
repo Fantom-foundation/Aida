@@ -21,31 +21,35 @@ var (
 		Usage: "ChainID for replayer",
 		Value: 250,
 	}
-	traceDirectoryFlag = cli.StringFlag{
-		Name:  "trace-dir",
-		Usage: "set storage trace's output directory",
-		Value: "./",
+	cpuProfileFlag = cli.StringFlag{
+		Name:  "cpuprofile",
+		Usage: "enables CPU profiling",
 	}
-	traceDebugFlag = cli.BoolFlag{
-		Name:  "trace-debug",
-		Usage: "enable debug output for tracing",
+	profileFlag = cli.BoolFlag{
+		Name:  "profile",
+		Usage: "enables profiling",
+	}
+	disableProgressFlag = cli.BoolFlag{
+		Name:  "disable-progress",
+		Usage: "disable progress report",
 	}
 	stateDbImplementation = cli.StringFlag{
 		Name:  "db-impl",
 		Usage: "select state DB implementation",
 		Value: "memory",
 	}
+	traceDebugFlag = cli.BoolFlag{
+		Name:  "trace-debug",
+		Usage: "enable debug output for tracing",
+	}
+	traceDirectoryFlag = cli.StringFlag{
+		Name:  "trace-dir",
+		Usage: "set storage trace's output directory",
+		Value: "./",
+	}
 	validateEndState = cli.BoolFlag{
 		Name:  "validate",
 		Usage: "enables end-state validation",
-	}
-	profileFlag = cli.BoolFlag{
-		Name:  "profile",
-		Usage: "enables profiling",
-	}
-	cpuProfileFlag = cli.StringFlag{
-		Name:  "cpuprofile",
-		Usage: "enables CPU profiling",
 	}
 )
 

@@ -7,6 +7,7 @@ import (
 	"math"
 	"math/big"
 	"os"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer"
 	"github.com/Fantom-foundation/Aida/tracer/dict"
@@ -32,6 +33,7 @@ var TraceRecordCommand = cli.Command{
 	Usage:     "captures and records StateDB operations while processing blocks",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
+		&disableProgressFlag,
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
 		&chainIDFlag,
@@ -235,6 +237,9 @@ func traceRecordAction(ctx *cli.Context) error {
 		return fmt.Errorf("trace record command requires exactly 2 arguments")
 	}
 
+	// Get progress flag
+	enableProgress := !ctx.Bool(disableProgressFlag.Name)
+
 	// create dictionary and index contexts
 	dCtx := dict.NewDictionaryContext()
 	iCtx := tracer.NewIndexContext()
@@ -264,6 +269,16 @@ func traceRecordAction(ctx *cli.Context) error {
 	iter := substate.NewSubstateIterator(first, ctx.Int(substate.WorkersFlag.Name))
 	defer iter.Release()
 	oldBlock := uint64(math.MaxUint64) // set to an infeasible block
+	var (
+		start   time.Time
+		sec     float64
+		lastSec float64
+	)
+	if enableProgress {
+		start = time.Now()
+		sec = time.Since(start).Seconds()
+		lastSec = time.Since(start).Seconds()
+	}
 	for iter.Next() {
 		tx := iter.Value()
 		// close off old block with an end-block operation
@@ -281,8 +296,22 @@ func traceRecordAction(ctx *cli.Context) error {
 		}
 		traceRecordTask(tx.Block, tx.Transaction, tx.Substate, dCtx, opChannel)
 		sendOperation(dCtx, opChannel, operation.NewEndTransaction())
+
+		if enableProgress {
+			// report progress
+			sec = time.Since(start).Seconds()
+			if sec-lastSec >= 15 {
+				fmt.Printf("trace record: elasped time: %.0f s, at block %v\n", sec, oldBlock)
+				lastSec = sec
+			}
+		}
+
 	}
 
+	if enableProgress {
+		sec = time.Since(start).Seconds()
+		fmt.Printf("trace record: total elasped time: %.3f s, processed %v blocks\n", sec, last-first+1)
+	}
 	// insert the last EndBlock
 	sendOperation(dCtx, opChannel, operation.NewEndBlock())
 
