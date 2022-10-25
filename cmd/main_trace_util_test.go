@@ -35,7 +35,7 @@ func setup() {
 		fmt.Errorf("unable to create direcotry. %v", err)
 	}
 
-	fmt.Printf("main_trace_test.go: setup completed\n")
+	fmt.Printf("Setup completed\n")
 }
 
 // teardown removes temp directories
@@ -43,7 +43,7 @@ func teardown() {
 	// Do something here.
 	os.RemoveAll(testTraceDir)
 	os.RemoveAll("substate.test")
-	fmt.Printf("main_trace_test.go: teardown completed\n")
+	fmt.Printf("Teardown completed\n")
 }
 
 // setupTestSubstateDB downloads compressed substates and extract in local directory
