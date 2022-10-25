@@ -2,7 +2,10 @@ package trace
 
 import (
 	"fmt"
+	"io/fs"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"runtime/pprof"
 	"time"
 
@@ -74,17 +77,32 @@ func compareStorage(recordedAlloc substate.SubstateAlloc, traceAlloc substate.Su
 }
 
 // Create a new DB instance based on cli argument.
-func makeStateDb(cliCtx *cli.Context) (state.StateDB, error) {
+func makeStateDb(directory string, cliCtx *cli.Context) (state.StateDB, error) {
 	impl := cliCtx.String(stateDbImplementation.Name)
 	switch impl {
 	case "memory":
 		return state.MakeGethInMemoryStateDB(), nil
 	case "geth":
-		return state.MakeGethStateDB()
+		return state.MakeGethStateDB(directory)
 	case "carmen":
-		return state.MakeCarmenStateDB()
+		return state.MakeCarmenStateDB(directory)
 	}
 	return nil, fmt.Errorf("Unknown DB implementation (--%v): %v", stateDbImplementation.Name, impl)
+}
+
+// getDirectorySize computes the size of all files in the given directoy in bytes.
+func getDirectorySize(directory string) int64 {
+	var sum int64 = 0
+	filepath.Walk(directory, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return nil
+		}
+		if !info.IsDir() {
+			sum += info.Size()
+		}
+		return nil
+	})
+	return sum
 }
 
 // Simulate storage operations from storage traces on stateDB.
@@ -125,8 +143,14 @@ func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 		defer pprof.StopCPUProfile()
 	}
 
+	// Create a directory for the store to place all its files.
+	state_directory, err := ioutil.TempDir("", "state_db_*")
+	if err != nil {
+		return err
+	}
+
 	// Instantiate the state DB under testing
-	db, err := makeStateDb(cliCtx)
+	db, err := makeStateDb(state_directory, cliCtx)
 	if err != nil {
 		return err
 	}
@@ -200,6 +224,14 @@ func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 	if operation.Profiling {
 		operation.PrintProfiling()
 	}
+
+	// close the DB and print disk usage
+	start = time.Now()
+	if err := db.Close(); err != nil {
+		fmt.Printf("Failed to close database: %v", err)
+	}
+	fmt.Printf("Closing DB took %v\n", time.Since(start))
+	fmt.Printf("Final disk usage: %v MiB\n", float32(getDirectorySize(state_directory))/float32(1024*1024))
 
 	return nil
 }

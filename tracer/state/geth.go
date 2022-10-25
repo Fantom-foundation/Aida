@@ -1,7 +1,6 @@
 package state
 
 import (
-	"io/ioutil"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -10,18 +9,18 @@ import (
 	"github.com/ethereum/go-ethereum/substate"
 )
 
-func MakeGethStateDB() (StateDB, error) {
-	dir, err := ioutil.TempDir("", "geth_db_*")
-	if err != nil {
-		return nil, err
-	}
+func MakeGethStateDB(directory string) (StateDB, error) {
+	return OpenGethStateDB(directory, common.Hash{})
+}
+
+func OpenGethStateDB(directory string, root_hash common.Hash) (StateDB, error) {
 	const cache_size = 512
 	const file_handle = 128
-	ldb, err := rawdb.NewLevelDBDatabase(dir, cache_size, file_handle, "", false)
+	ldb, err := rawdb.NewLevelDBDatabase(directory, cache_size, file_handle, "", false)
 	if err != nil {
 		return nil, err
 	}
-	db, err := geth.New(common.Hash{}, geth.NewDatabase(ldb), nil)
+	db, err := geth.New(root_hash, geth.NewDatabase(ldb), nil)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +96,18 @@ func (s *gethStateDb) RevertToSnapshot(id int) {
 }
 
 func (s *gethStateDb) Finalise(deleteEmptyObjects bool) {
-	s.db.Finalise(deleteEmptyObjects)
+	// IntermediateRoot implicitly calls Finalise but also commits changes.
+	// Without calling this, no changes are ever committed.
+	state, ok := s.db.(*geth.StateDB)
+	if ok {
+		// Until we have an initial world state, we do not delete empty objects.
+		// This would remove changes to unknown accounts, and thus not commit
+		// anything. TODO: re-evaluate once world state is available.
+		//state.IntermediateRoot(deleteEmptyObjects)
+		state.IntermediateRoot(false)
+	} else {
+		s.db.Finalise(deleteEmptyObjects)
+	}
 }
 
 func (s *gethStateDb) PrepareSubstate(substate *substate.SubstateAlloc) {
@@ -106,4 +116,26 @@ func (s *gethStateDb) PrepareSubstate(substate *substate.SubstateAlloc) {
 
 func (s *gethStateDb) GetSubstatePostAlloc() substate.SubstateAlloc {
 	return s.db.GetSubstatePostAlloc()
+}
+
+func (s *gethStateDb) Close() error {
+	// Skip closing if implementation is not Geth based.
+	state, ok := s.db.(*geth.StateDB)
+	if !ok {
+		return nil
+	}
+	// Commit data to trie.
+	hash, err := state.Commit(true)
+	if err != nil {
+		return err
+	}
+
+	// Close underlying trie caching intermediate results.
+	db := state.Database().TrieDB()
+	if err := db.Commit(hash, true, nil); err != nil {
+		return err
+	}
+
+	// Close underlying LevelDB instance.
+	return db.DiskDB().Close()
 }
