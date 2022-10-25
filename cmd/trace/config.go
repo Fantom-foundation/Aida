@@ -43,7 +43,7 @@ var (
 		Usage: "enable debug output for tracing",
 	}
 	traceDirectoryFlag = cli.StringFlag{
-		Name:  "trace-dir",
+		Name:  "tracedir",
 		Usage: "set storage trace's output directory",
 		Value: "./",
 	}
