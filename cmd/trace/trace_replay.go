@@ -42,6 +42,23 @@ The trace replay command requires two arguments:
 last block of the inclusive range of blocks to replay storage traces.`,
 }
 
+// generateUpdateDatabase generates an update set for a block range.
+func generateUpdateSet(first uint64, last uint64, cliCtx *cli.Context) substate.SubstateAlloc {
+	stateIter := substate.NewSubstateIterator(first, cliCtx.Int(substate.WorkersFlag.Name))
+	defer stateIter.Release()
+	var update substate.SubstateAlloc
+	for stateIter.Next() {
+		tx := stateIter.Value()
+		// exceeded block range?
+		if tx.Block > last {
+			break
+		}
+		// merge output sub-state to update
+		update.Merge(tx.Substate.OutputAlloc)
+	}
+	return update
+}
+
 // Compare state after replaying traces with recorded state.
 func compareStorage(recordedAlloc substate.SubstateAlloc, traceAlloc substate.SubstateAlloc) error {
 	for account, recordAccount := range recordedAlloc {
