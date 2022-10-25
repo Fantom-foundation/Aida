@@ -11,8 +11,7 @@ import (
 )
 
 func MakeCarmenStateDB(directory string) (StateDB, error) {
-	// TODO: use directory!
-	db, err := carmen.CreateStateDB()
+	db, err := carmen.CreateStateDB(directory)
 	if err != nil {
 		return nil, err
 	}
