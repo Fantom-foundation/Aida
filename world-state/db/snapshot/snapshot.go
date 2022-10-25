@@ -29,6 +29,9 @@ const (
 var (
 	// ZeroHash represents an empty hash.
 	ZeroHash = common.Hash{}
+
+	// HashToAddressPrefix is a prefix used to store and retrieve hash to account address
+	HashToAddressPrefix = []byte{0x68, 0x32, 0x61, 0x2d}
 )
 
 // StateDB represents the state snapshot database handle.
@@ -192,4 +195,37 @@ func (db *StateDB) GetBlockNumber() (uint64, error) {
 	}
 
 	return blockNumber, err
+}
+
+// PutHashToAccountAddress puts hash to account address mapping records into the database.
+func (db *StateDB) PutHashToAccountAddress(hash common.Hash, adr common.Address) error {
+	return db.Backend.Put(Hash2AddressKey(hash), adr.Bytes())
+}
+
+// HashToAccountAddress tries to find account address mapped to the specified hash in the state DB.
+func (db *StateDB) HashToAccountAddress(hash common.Hash) (common.Address, error) {
+	var adr common.Address
+
+	// read mapping data from the database
+	data, err := db.Backend.Get(Hash2AddressKey(hash))
+	if err != nil {
+		return adr, err
+	}
+
+	adr.SetBytes(data)
+	return adr, nil
+}
+
+// AccountAddressToHash returns account address hash for the given address.
+func (db *StateDB) AccountAddressToHash(adr common.Address) common.Hash {
+	return crypto.HashData(db.hashing, adr.Bytes())
+}
+
+// Hash2AddressKey generates storage key for hash -> account address mapping.
+// We assume 4 bytes prefix + 32 bytes hash.
+func Hash2AddressKey(h common.Hash) []byte {
+	k := make([]byte, 36)
+	copy(k[:4], HashToAddressPrefix)
+	copy(k[4:], h.Bytes())
+	return k
 }

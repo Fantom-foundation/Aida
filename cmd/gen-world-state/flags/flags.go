@@ -53,6 +53,21 @@ var (
 		Required: true,
 	}
 
+	// StartingBlock represents the ID of starting block
+	StartingBlock = cli.Uint64Flag{
+		Name:    "from",
+		Aliases: []string{"from-block"},
+		Usage:   "starting block ID",
+		Value:   1,
+	}
+
+	// EndingBlock represents the ID of ending block
+	EndingBlock = cli.Uint64Flag{
+		Name:    "to",
+		Aliases: []string{"to-block"},
+		Usage:   "ending block ID",
+	}
+
 	// TargetBlock represents the ID of target block to be reached by state evolve process
 	TargetBlock = cli.IntFlag{
 		Name:     "target",

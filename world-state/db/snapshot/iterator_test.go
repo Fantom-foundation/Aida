@@ -39,6 +39,12 @@ func makeTestDB(t *testing.T) (*StateDB, map[common.Hash]types.Account, map[comm
 		hash := crypto.HashData(hashing, addr.Bytes())
 		adh[hash] = addr
 
+		// write the mapping into the test DB
+		err = db.PutHashToAccountAddress(hash, addr)
+		if err != nil {
+			t.Fatalf("failed test data build; could not write hash to address mapping; %s", err.Error())
+		}
+
 		// add this account to the map
 		acc := types.Account{
 			Hash:    hash,
