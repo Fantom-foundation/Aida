@@ -82,15 +82,26 @@ func collectAccounts(ctx *cli.Context) error {
 	iter := substate.NewSubstateIterator(ctx.Uint64(flags.StartingBlock.Name), workers)
 	defer iter.Release()
 
-	// load rwa accounts
-	accounts := snapshot.CollectAccounts(ctx.Context, &iter, ctx.Uint64(flags.EndingBlock.Name), workers)
+	// load raw accounts
+	accounts, storage := snapshot.CollectAccounts(ctx.Context, &iter, ctx.Uint64(flags.EndingBlock.Name), workers)
 
-	// filter unique addresses before writing
-	unique := make(chan common.Address, cap(accounts))
-	go snapshot.FilterUniqueAccounts(ctx.Context, accounts, unique)
+	// filter uniqueAccount addresses before writing
+	uniqueAccount := make(chan common.Address, cap(accounts))
+	go snapshot.FilterUniqueAccounts(ctx.Context, accounts, uniqueAccount)
 
-	// write what we found
-	return snapshot.WriteAccountAddresses(ctx.Context, accCollectProgressFactory(ctx.Context, unique, Logger(ctx, "addr")), stateDB)
+	// filter uniqueStorage hashes before writing
+	uniqueStorage := make(chan common.Hash, cap(storage))
+	go snapshot.FilterUniqueHashes(ctx.Context, storage, uniqueStorage)
+
+	// write found addresses
+	errAcc := snapshot.WriteAccountAddresses(ctx.Context, accCollectProgressFactory(ctx.Context, uniqueAccount, Logger(ctx, "addr")), stateDB)
+
+	// write found storage hashes
+	errStorage := snapshot.WriteStorageHashes(ctx.Context, storageCollectProgressFactory(ctx.Context, uniqueStorage, Logger(ctx, "storage")), stateDB)
+
+	// check for any error in above execution threads;
+	// this will block until all threads above close their error channels
+	return getChannelError(errAcc, errStorage)
 }
 
 // accCollectProgressFactory observes progress in account scanning.
@@ -126,6 +137,44 @@ func accCollectProgress(ctx context.Context, in <-chan common.Address, out chan<
 
 			out <- adr
 			last = adr
+			count++
+		}
+	}
+}
+
+// storageCollectProgressFactory observes progress in storage hashes scanning.
+func storageCollectProgressFactory(ctx context.Context, in <-chan common.Hash, log *logging.Logger) <-chan common.Hash {
+	out := make(chan common.Hash, cap(in))
+	go storageCollectProgress(ctx, in, out, log)
+	return out
+}
+
+// storageCollectProgress reports progress on storage hashes collector stream.
+func storageCollectProgress(ctx context.Context, in <-chan common.Hash, out chan<- common.Hash, log *logging.Logger) {
+	var count int
+	var last common.Hash
+	tick := time.NewTicker(2 * time.Second)
+
+	defer func() {
+		tick.Stop()
+		close(out)
+	}()
+
+	ctxDone := ctx.Done()
+	for {
+		select {
+		case <-ctxDone:
+			return
+		case <-tick.C:
+			log.Infof("observed %d storage hashes; last one is %s", count, last.String())
+		case hash, open := <-in:
+			if !open {
+				log.Noticef("found %d storage hashes", count)
+				return
+			}
+
+			out <- hash
+			last = hash
 			count++
 		}
 	}
