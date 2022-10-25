@@ -180,12 +180,12 @@ func (ctx *DictionaryContext) InitSnapshot() {
 }
 
 // Add snaphot-id mapping for execution of RevertSnapshot.
-func (ctx *DictionaryContext) AddSnapshot(recordedID uint16, replayedID uint16) {
+func (ctx *DictionaryContext) AddSnapshot(recordedID int32, replayedID int32) {
 	ctx.SnapshotIndex.Add(recordedID, replayedID)
 }
 
 // Get snaphot-id.
-func (ctx *DictionaryContext) GetSnapshot(recordedID uint16) uint16 {
+func (ctx *DictionaryContext) GetSnapshot(recordedID int32) int32 {
 	replayedID, err := ctx.SnapshotIndex.Get(recordedID)
 	if err != nil {
 		log.Fatalf("Replayed Snapshot ID is missing. Error: %v", err)
@@ -194,7 +194,7 @@ func (ctx *DictionaryContext) GetSnapshot(recordedID uint16) uint16 {
 }
 
 ////////////////////////////////////////////////////////////////
-// Index cache methods
+// Snapshot methods
 ////////////////////////////////////////////////////////////////
 
 // Clear count queues.

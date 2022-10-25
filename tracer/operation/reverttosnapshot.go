@@ -12,7 +12,7 @@ import (
 
 // Revert-to-snapshot operation's data structure with returned snapshot id
 type RevertToSnapshot struct {
-	SnapshotID uint16
+	SnapshotID int32
 }
 
 // Return the revert-to-snapshot operation identifier.
@@ -22,7 +22,7 @@ func (op *RevertToSnapshot) GetOpId() byte {
 
 // Create a new revert-to-snapshot operation.
 func NewRevertToSnapshot(SnapshotID int) *RevertToSnapshot {
-	return &RevertToSnapshot{SnapshotID: uint16(SnapshotID)}
+	return &RevertToSnapshot{SnapshotID: int32(SnapshotID)}
 }
 
 // Read a revert-to-snapshot operation from file.
