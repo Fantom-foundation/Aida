@@ -85,6 +85,7 @@ reads the recorded traces and re-execute state operations from block 5,050,000 t
 **Options**
 
  - `--db-impl` select between `geth` and `carmen`. Default: `geth`
+ - `--db-variant` select between implementation specific sub-variants, e.g. `go-ldb` or `cpp-file`
  - `--substatedir` sets directory contain substate database. Default: `./substate.fantom`
  - `--trace-dir` sets trace file directory. Default: `./`
  - `--trace-debug` print replayed operations. 

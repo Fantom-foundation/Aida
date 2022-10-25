@@ -38,6 +38,11 @@ var (
 		Usage: "select state DB implementation",
 		Value: "memory",
 	}
+	stateDbVariant = cli.StringFlag{
+		Name:  "db-variant",
+		Usage: "select a state DB variant",
+		Value: "",
+	}
 	traceDebugFlag = cli.BoolFlag{
 		Name:  "trace-debug",
 		Usage: "enable debug output for tracing",
