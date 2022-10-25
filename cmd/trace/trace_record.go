@@ -7,6 +7,7 @@ import (
 	"math"
 	"math/big"
 	"os"
+	"runtime/pprof"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer"
@@ -33,6 +34,7 @@ var TraceRecordCommand = cli.Command{
 	Usage:     "captures and records StateDB operations while processing blocks",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
+		&cpuProfileFlag,
 		&disableProgressFlag,
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
@@ -235,6 +237,16 @@ func traceRecordAction(ctx *cli.Context) error {
 
 	if ctx.Args().Len() != 2 {
 		return fmt.Errorf("trace record command requires exactly 2 arguments")
+	}
+
+	// Start CPU profiling if requested.
+	if profileFileName := ctx.String(cpuProfileFlag.Name); profileFileName != "" {
+		f, err := os.Create(profileFileName)
+		if err != nil {
+			return err
+		}
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
 	}
 
 	// Get progress flag
