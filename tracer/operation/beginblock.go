@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/Fantom-foundation/Aida/tracer/state"
@@ -38,8 +39,9 @@ func (op *BeginBlock) Write(f *os.File) error {
 }
 
 // Execute the begin-block operation.
-func (op *BeginBlock) Execute(db state.StateDB, ctx *dict.DictionaryContext) {
+func (op *BeginBlock) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
 	ctx.ClearIndexCaches()
+	return time.Duration(0)
 }
 
 // Print a debug message for begin-block.

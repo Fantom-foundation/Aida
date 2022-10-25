@@ -3,6 +3,7 @@ package operation
 import (
 	"encoding/binary"
 	"os"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/Fantom-foundation/Aida/tracer/state"
@@ -34,8 +35,9 @@ func (op *EndTransaction) Write(f *os.File) error {
 }
 
 // Execute the end-transaction operation.
-func (op *EndTransaction) Execute(db state.StateDB, ctx *dict.DictionaryContext) {
+func (op *EndTransaction) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
 	ctx.InitSnapshot()
+	return time.Duration(0)
 }
 
 // Print a debug message for end-transaction.

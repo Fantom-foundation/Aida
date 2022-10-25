@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/Fantom-foundation/Aida/tracer/state"
@@ -38,9 +39,11 @@ func (op *GetBalance) Write(f *os.File) error {
 }
 
 // Execute the get-balance operation.
-func (op *GetBalance) Execute(db state.StateDB, ctx *dict.DictionaryContext) {
+func (op *GetBalance) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
 	contract := ctx.DecodeContract(op.ContractIndex)
+	start := time.Now()
 	db.GetBalance(contract)
+	return time.Since(start)
 }
 
 // Print a debug message for get-balance.

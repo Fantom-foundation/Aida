@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/Fantom-foundation/Aida/tracer/state"
@@ -38,8 +39,10 @@ func (op *Finalise) Write(f *os.File) error {
 }
 
 // Execute the finalise operation.
-func (op *Finalise) Execute(db state.StateDB, ctx *dict.DictionaryContext) {
+func (op *Finalise) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
+	start := time.Now()
 	db.Finalise(op.DeleteEmptyObjects)
+	return time.Since(start)
 }
 
 // Print a debug message for finalise.

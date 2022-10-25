@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/Fantom-foundation/Aida/tracer/state"
@@ -39,10 +40,12 @@ func (op *GetCommittedState) Write(f *os.File) error {
 }
 
 // Execute the get-committed-state operation.
-func (op *GetCommittedState) Execute(db state.StateDB, ctx *dict.DictionaryContext) {
+func (op *GetCommittedState) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
 	contract := ctx.DecodeContract(op.ContractIndex)
 	storage := ctx.DecodeStorage(op.StorageIndex)
+	start := time.Now()
 	db.GetCommittedState(contract, storage)
+	return time.Since(start)
 }
 
 // Print debug message for get-committed-state.

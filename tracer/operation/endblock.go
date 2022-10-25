@@ -2,6 +2,7 @@ package operation
 
 import (
 	"os"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/Fantom-foundation/Aida/tracer/state"
@@ -32,7 +33,8 @@ func (op *EndBlock) Write(f *os.File) error {
 }
 
 // Execute the end-block operation.
-func (op *EndBlock) Execute(db state.StateDB, ctx *dict.DictionaryContext) {
+func (op *EndBlock) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
+	return time.Duration(0)
 }
 
 // Print a debug message for end-block.

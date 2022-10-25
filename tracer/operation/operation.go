@@ -95,10 +95,10 @@ func getLabel(i byte) string {
 
 // Operation interface.
 type Operation interface {
-	GetOpId() byte                                  // get operation identifier
-	Write(*os.File) error                           // write operation to a file
-	Execute(state.StateDB, *dict.DictionaryContext) // execute operation on a stateDB instance
-	Debug(*dict.DictionaryContext)                  // print debug message for operation
+	GetOpId() byte                                                // get operation identifier
+	Write(*os.File) error                                         // write operation to a file
+	Execute(state.StateDB, *dict.DictionaryContext) time.Duration // execute operation on a stateDB instance
+	Debug(*dict.DictionaryContext)                                // print debug message for operation
 }
 
 // Read an operation from file.
@@ -146,13 +146,8 @@ func Write(f *os.File, op Operation) {
 
 // Execute an operation and profile it.
 func Execute(op Operation, db state.StateDB, ctx *dict.DictionaryContext) {
-	var start time.Time
+	elapsed := op.Execute(db, ctx)
 	if Profiling {
-		start = time.Now()
-	}
-	op.Execute(db, ctx)
-	if Profiling {
-		elapsed := time.Since(start)
 		op := op.GetOpId()
 		n := opFrequencyy[op]
 		duration := opDuration[op]
