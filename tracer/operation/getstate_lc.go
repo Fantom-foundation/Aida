@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/Fantom-foundation/Aida/tracer/state"
@@ -38,10 +39,12 @@ func (op *GetStateLc) Write(f *os.File) error {
 }
 
 // Execute the get-state-lc operation.
-func (op *GetStateLc) Execute(db state.StateDB, ctx *dict.DictionaryContext) {
+func (op *GetStateLc) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
 	contract := ctx.LastContractAddress()
 	storage := ctx.DecodeStorage(op.StorageIndex)
+	start := time.Now()
 	db.GetState(contract, storage)
+	return time.Since(start)
 }
 
 // Print a debug message.

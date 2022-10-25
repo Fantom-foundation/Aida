@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/Fantom-foundation/Aida/tracer/state"
@@ -38,9 +39,11 @@ func (op *RevertToSnapshot) Write(f *os.File) error {
 }
 
 // Execute the revert-to-snapshot operation.
-func (op *RevertToSnapshot) Execute(db state.StateDB, ctx *dict.DictionaryContext) {
+func (op *RevertToSnapshot) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
 	id := ctx.GetSnapshot(op.SnapshotID)
+	start := time.Now()
 	db.RevertToSnapshot(int(id))
+	return time.Since(start)
 }
 
 // Print a debug message for revert-to-snapshot operation.

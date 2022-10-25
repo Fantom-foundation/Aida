@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/Fantom-foundation/Aida/tracer/state"
@@ -38,9 +39,11 @@ func (op *GetCodeHash) Write(f *os.File) error {
 }
 
 // Execute the get-code-hash operation.
-func (op *GetCodeHash) Execute(db state.StateDB, ctx *dict.DictionaryContext) {
+func (op *GetCodeHash) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
 	contract := ctx.DecodeContract(op.ContractIndex)
+	start := time.Now()
 	db.GetCodeHash(contract)
+	return time.Since(start)
 }
 
 // Print a debug message for get-code-hash.

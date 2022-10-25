@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/Fantom-foundation/Aida/tracer/state"
@@ -38,9 +39,11 @@ func (op *CreateAccount) Write(f *os.File) error {
 }
 
 // Execute the create account operation.
-func (op *CreateAccount) Execute(db state.StateDB, ctx *dict.DictionaryContext) {
+func (op *CreateAccount) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
 	contract := ctx.DecodeContract(op.ContractIndex)
+	start := time.Now()
 	db.CreateAccount(contract)
+	return time.Since(start)
 }
 
 // Print a debug message for snapshot operation.

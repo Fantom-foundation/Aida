@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/Fantom-foundation/Aida/tracer/state"
@@ -39,11 +40,13 @@ func (op *SetStateLcls) Write(f *os.File) error {
 }
 
 // Execute the set-state-lcls operation.
-func (op *SetStateLcls) Execute(db state.StateDB, ctx *dict.DictionaryContext) {
+func (op *SetStateLcls) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
 	contract := ctx.LastContractAddress()
 	storage := ctx.LookupStorage(0)
 	value := ctx.DecodeValue(op.ValueIndex)
+	start := time.Now()
 	db.SetState(contract, storage, value)
+	return time.Since(start)
 }
 
 // Print a debug message for set-state-lcls.

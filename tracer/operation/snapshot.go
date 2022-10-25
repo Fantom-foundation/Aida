@@ -6,6 +6,7 @@ import (
 	"log"
 	"math"
 	"os"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/Fantom-foundation/Aida/tracer/state"
@@ -43,12 +44,15 @@ func (op *Snapshot) Write(f *os.File) error {
 }
 
 // Execute the snapshot operation.
-func (op *Snapshot) Execute(db state.StateDB, ctx *dict.DictionaryContext) {
+func (op *Snapshot) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
+	start := time.Now()
 	ID := db.Snapshot()
+	elapsed := time.Since(start)
 	if ID > math.MaxUint16 {
 		log.Fatalf("Snapshot ID exceeds 16 bit")
 	}
 	ctx.AddSnapshot(op.SnapshotID, uint16(ID))
+	return elapsed
 }
 
 // Print the details for the snapshot operation.
