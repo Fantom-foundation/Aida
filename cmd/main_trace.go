@@ -9,9 +9,10 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// Implement "trace" cli application
-func main() {
-	app := &cli.App{
+// initTraceApp initializes a trace app. This function is called by the main
+// function and unit tests
+func initTraceApp() *cli.App {
+	return &cli.App{
 		Name:      "Aida Storage Trace Manager",
 		HelpName:  "trace",
 		Copyright: "(c) 2022 Fantom Foundation",
@@ -22,7 +23,12 @@ func main() {
 			&trace.TraceCompareLogCommand,
 		},
 	}
+}
+
+// Implement "trace" cli traceApplication
+func main() {
 	substate.RecordReplay = true
+	app := initTraceApp()
 	if err := app.Run(os.Args); err != nil {
 		code := 1
 		fmt.Fprintln(os.Stderr, err)
