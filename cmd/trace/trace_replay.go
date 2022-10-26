@@ -43,8 +43,8 @@ last block of the inclusive range of blocks to replay storage traces.`,
 }
 
 // generateUpdateDatabase generates an update set for a block range.
-func generateUpdateSet(first uint64, last uint64, cliCtx *cli.Context) substate.SubstateAlloc {
-	stateIter := substate.NewSubstateIterator(first, cliCtx.Int(substate.WorkersFlag.Name))
+func generateUpdateSet(first uint64, last uint64, int numWorkers) substate.SubstateAlloc {
+	stateIter := substate.NewSubstateIterator(first, numWorkers)
 	defer stateIter.Release()
 	var update substate.SubstateAlloc
 	for stateIter.Next() {
@@ -59,7 +59,68 @@ func generateUpdateSet(first uint64, last uint64, cliCtx *cli.Context) substate.
 	return update
 }
 
+// generateWorldState generates a world-state for a block
+func  generateWorldState(block uint64, int numWorkers) substate.SubstateAlloc {
+	// load initial worldstate for block 4.5M
+	// load here
+	// ws := loadInitWorldState()
+	ws substate.SubstateAlloc = make(substate.SubstateAlloc)
+	
+	// generate world state for block 
+	update := generateUpdateSet(45000000,last, numWorkers)
+	ws.Merge(update)
+	return ws
+}
+
+// prime database 
+func primeDatabase(worldState substate.SubstateAlloc, db state.StateDB) {
+	// TODO: Extend so that priming order is randomized
+	for  addr, account := range recordedAlloc {
+		db.CreateAccount(addr)	
+		db.AddBalance(addr, account.Balance)
+		db.SetNonce(addr, account.Nonce)
+		db.SetCode(addr, account.Code)
+		for key, value := account.Storage {
+			db.SetState(addr, key, value)
+		}
+	}
+}
+
+// validate database 
+// NB: We can only check what must be in the db (but cannot check 
+// whether db stores more)
+// Perhaps reuse some of the code from 
+fund validateDatabase(worldState substate.SubstateAlloc, db state.StateDB) bool {
+	// TODO: Extend so that priming order is randomized
+	for  addr, account := range recordedAlloc {
+		if  db.Exist(addr) {
+			log.Fatalf("Account %v does not exist", addr.Hex())
+		}
+		if  db.GetBalance(addr) != account.GetBalance() {
+			// TODO: print more detail
+			log.Fatalf("Failed to validate balance for account %v", addr.Hex())
+		}
+		if  db.SetNonce(addr, account.Nonce) != account.GetNonce() {
+			// TODO: print more detail
+			log.Fatalf("Failed to validate nonce for account %v", addr.Hex())
+		}
+		if  db.GetCode(addr, account.Nonce) != account.GetNonce() {
+			// TODO: print more detail
+			log.Fatalf("Failed to validate code for account %v", addr.Hex())
+		}
+		// db.SetCode(addr, account.Code)
+		for key, value := account.Storage {
+			if db.GetState(addr, key, value) != acccount.GetState(addr, key, value) {
+				// TODO: print more detail
+				log.Fatalf("Failed to validate nonce for account %v", addr.Hex())
+			}
+		}
+	}
+	return true
+}
+
 // Compare state after replaying traces with recorded state.
+// TODO: Perhaps retire this or move to a test-case??
 func compareStorage(recordedAlloc substate.SubstateAlloc, traceAlloc substate.SubstateAlloc) error {
 	for account, recordAccount := range recordedAlloc {
 		// account exists in both substate
