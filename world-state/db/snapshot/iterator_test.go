@@ -14,9 +14,10 @@ import (
 
 // testDBSize is the number of account we put into the test DB
 const testDBSize = 250
+const testAccountStorageSize = 10
 
 // makeTestDB primes test DB for the other tests using randomized account data.
-func makeTestDB(t *testing.T) (*StateDB, map[common.Hash]types.Account, map[common.Hash]common.Address) {
+func makeTestDB(t *testing.T) (*StateDB, map[common.Hash]types.Account, map[common.Hash]common.Address, map[common.Hash]common.Hash) {
 	// create in-memory database
 	db, err := OpenStateDB("")
 	if err != nil {
@@ -27,6 +28,7 @@ func makeTestDB(t *testing.T) (*StateDB, map[common.Hash]types.Account, map[comm
 
 	var ta = make(map[common.Hash]types.Account, testDBSize)
 	var adh = make(map[common.Hash]common.Address, testDBSize)
+	var sdh = make(map[common.Hash]common.Hash, testDBSize*testAccountStorageSize)
 
 	// TestAccounts represents the test set for accounts.
 	for i := 0; i < testDBSize; i++ {
@@ -67,12 +69,20 @@ func makeTestDB(t *testing.T) (*StateDB, map[common.Hash]types.Account, map[comm
 
 		// fill the storage map
 		buffer := make([]byte, 32)
-		for j := 0; j < 10; j++ {
+		for j := 0; j < testAccountStorageSize; j++ {
 			_, err = rand.Read(buffer)
 			if err != nil {
 				t.Fatalf("failed test data build; can not generate random code; %s", err.Error())
 			}
-			k := crypto.HashData(hashing, buffer)
+			h := common.BytesToHash(buffer)
+			k := crypto.HashData(hashing, h.Bytes())
+
+			sdh[k] = h
+			// write the mapping into the test DB
+			err = db.PutHashToStorage(k, h)
+			if err != nil {
+				t.Fatalf("failed test data build; could not write storage hash to hash mapping; %s", err.Error())
+			}
 
 			_, err = rand.Read(buffer)
 			if err != nil {
@@ -90,7 +100,7 @@ func makeTestDB(t *testing.T) (*StateDB, map[common.Hash]types.Account, map[comm
 		}
 	}
 
-	return db, ta, adh
+	return db, ta, adh, sdh
 }
 
 func TestStateDB_NewAccountIterator(t *testing.T) {
@@ -103,7 +113,7 @@ func TestStateDB_NewAccountIterator(t *testing.T) {
 	ctx, cancel := context.WithDeadline(context.Background(), dl)
 	defer cancel()
 
-	db, ta, _ := makeTestDB(t)
+	db, ta, _, _ := makeTestDB(t)
 	iter := db.NewAccountIterator(ctx)
 	defer iter.Release()
 

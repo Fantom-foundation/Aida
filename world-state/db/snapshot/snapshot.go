@@ -30,6 +30,9 @@ var (
 
 	// HashToAddressPrefix is a prefix used to store and retrieve hash to account address
 	HashToAddressPrefix = []byte{0x68, 0x32, 0x61, 0x2d}
+
+	// HashToStoragePrefix is a prefix used to store and retrieve hash to storage hash
+	HashToStoragePrefix = []byte{0x68, 0x32, 0x68, 0x73}
 )
 
 // StateDB represents the state snapshot database handle.
@@ -224,6 +227,39 @@ func (db *StateDB) AccountAddressToHash(adr common.Address) common.Hash {
 func Hash2AddressKey(h common.Hash) []byte {
 	k := make([]byte, 36)
 	copy(k[:4], HashToAddressPrefix)
+	copy(k[4:], h.Bytes())
+	return k
+}
+
+// PutHashToStorage puts hash to storage hash mapping records into the database.
+func (db *StateDB) PutHashToStorage(hash common.Hash, storage common.Hash) error {
+	return db.Backend.Put(Hash2StorageKey(hash), storage.Bytes())
+}
+
+// HashToStorage tries to find storage hash mapped to the specified hash in the state DB.
+func (db *StateDB) HashToStorage(hash common.Hash) (common.Hash, error) {
+	var adr common.Hash
+
+	// read mapping data from the database
+	data, err := db.Backend.Get(Hash2StorageKey(hash))
+	if err != nil {
+		return adr, err
+	}
+
+	adr.SetBytes(data)
+	return adr, nil
+}
+
+// StorageToHash returns account hash hash for the given storage hash.
+func (db *StateDB) StorageToHash(adr common.Hash) common.Hash {
+	return crypto.HashData(db.hashing, adr.Bytes())
+}
+
+// Hash2StorageKey generates storage key for hash -> account hash mapping.
+// We assume 4 bytes prefix + 32 bytes hash.
+func Hash2StorageKey(h common.Hash) []byte {
+	k := make([]byte, 36)
+	copy(k[:4], HashToStoragePrefix)
 	copy(k[4:], h.Bytes())
 	return k
 }
