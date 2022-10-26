@@ -27,12 +27,25 @@ func generateUpdateSet(first uint64, last uint64, numWorkers int) substate.Subst
 			break
 		}
 		// merge output sub-state to update
+		// Refine it so that we don't have redundant 
+		// entries by double-checking the InputAlloc
+		// Calculate the difference between 
+		// tx.Substate.InputAlloc and tx.Substate.OutputAlloc
+		// => In the past we observed redundant entries
+		// caused by reads. Note that we need to keep 
+		// 0 entries in Output (deletions!).
+		// Unfortunately, we don't have a diff semantics 
+		// for Nonce, Balance, and Code. This will be always
+		// overwritten. 
+		// Optimisation: If there is the same (key,value) pair
+		// in input and output, we can remove the (key, value) pair
+		// from Storage in output.
 		update.Merge(tx.Substate.OutputAlloc)
 	}
 	return update
 }
 
-// generateWorldState generates a world-state for a block
+// generateWorldState generates an initial world-state for a block.
 func  generateWorldState(block uint64, numWorkers int) substate.SubstateAlloc {
 	// Todo load initial worldstate for block 4.5M
 	// ws := loadInitWorldState()
@@ -44,6 +57,7 @@ func  generateWorldState(block uint64, numWorkers int) substate.SubstateAlloc {
 	return ws
 }
 
+// advanceWorldState updates the world state to the state of the last block.
 func advanceWorldState(ws substate.SubstateAlloc, first uint64, block uint64, numWorkers int) {
 	update := generateUpdateSet(first, block, numWorkers)
 	ws.Merge(update)
@@ -68,7 +82,7 @@ func makeStateDB(directory string, cliCtx *cli.Context) (state.StateDB, error) {
 	return nil, fmt.Errorf("Unknown DB implementation (--%v): %v", stateDbImplementation.Name, impl)
 }
 
-// primeStateDB primes database with accounts from the world state
+// primeStateDB primes database with accounts from the world state.
 func primeStateDB(ws substate.SubstateAlloc, db state.StateDB) {
 	// TODO: Extend so that priming order is randomized
 	for  addr, account := range ws {
@@ -85,7 +99,7 @@ func primeStateDB(ws substate.SubstateAlloc, db state.StateDB) {
 /////////////////////////////////////////////////
 // Validation
 /////////////////////////////////////////////////
-// validate database 
+// validateDatabase validates whether the world-state is contained in the db object
 // NB: We can only check what must be in the db (but cannot check 
 // whether db stores more)
 // Perhaps reuse some of the code from 
