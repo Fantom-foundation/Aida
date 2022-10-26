@@ -16,14 +16,14 @@ func TestStateDB_CompareTo(t *testing.T) {
 	ctx, cancel := context.WithDeadline(context.Background(), dl)
 	defer cancel()
 
-	dba, _, _ := makeTestDB(t)
+	dba, _, _, _ := makeTestDB(t)
 	err := dba.CompareTo(ctx, dba)
 	if err != nil {
 		t.Errorf("failed identical DB comparison; expected no error, got %s", err.Error())
 	}
 
 	// compare the DB to another one
-	dbb, _, _ := makeTestDB(t)
+	dbb, _, _, _ := makeTestDB(t)
 	err = dba.CompareTo(ctx, dbb)
 	if err == nil {
 		t.Errorf("failed different DB comparison; expected to receive error, got none")
