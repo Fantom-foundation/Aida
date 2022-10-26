@@ -70,6 +70,7 @@ simulates transaction execution from block 5,000,000 to (and including) block 5,
 
 **Options**
  - `--chainid` sets the chain-id (useful if recording from testnet). Default: 250 (mainnet)`
+ - `--cpuprofile` records a CPU profile for the replay to be inspected using `pprof`
  - `--substatedir` sets directory contain substate database. Default: `./substate.fantom`
  - `--trace-dir` sets trace file output directory. Default: `./`
  - `--trace-debug` print recorded operations. 
@@ -84,11 +85,12 @@ reads the recorded traces and re-execute state operations from block 5,050,000 t
 
 **Options**
 
+ - `--cpuprofile` records a CPU profile for the replay to be inspected using `pprof`
  - `--db-impl` select between `geth` and `carmen`. Default: `geth`
+ - `--db-variant` select between implementation specific sub-variants, e.g. `go-ldb` or `cpp-file`
+ - `--profile` records and displays summary information on operation performance
  - `--substatedir` sets directory contain substate database. Default: `./substate.fantom`
  - `--trace-dir` sets trace file directory. Default: `./`
  - `--trace-debug` print replayed operations. 
  - `--validate` validate the state after replaying traces.
  - `--workers` sets the number of worker threads.
- - `--profile` records and displays summary information on operation performance
- - `--cpuprofile` records a CPU profile for the replay to be inspected using `pprof`

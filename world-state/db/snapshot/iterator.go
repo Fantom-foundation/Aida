@@ -28,7 +28,7 @@ type accountIteratorItem struct {
 func (db *StateDB) NewAccountIterator(ctx context.Context) *AccountIterator {
 	ai := AccountIterator{
 		ctx:     ctx,
-		iter:    db.Backend.NewIterator([]byte{AccountPrefix}, nil),
+		iter:    db.Backend.NewIterator(AccountPrefix, nil),
 		items:   make(chan accountIteratorItem, 50),
 		closed:  make(chan any),
 		decoder: db.decodeAccount,

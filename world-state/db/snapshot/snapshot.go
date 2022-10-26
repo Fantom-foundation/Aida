@@ -14,21 +14,19 @@ import (
 	"log"
 )
 
-const (
-	// CodePrefix represents a prefix added to the code hash to separate code and state data in the KV database.
-	// CodePrefix + codeHash (256-bit) -> code
-	CodePrefix = 0xc0
-
-	// AccountPrefix is used to store accounts.
-	AccountPrefix = 0x0a
-
-	// BlockNumberKey is key under which block number is stored in database
-	BlockNumberKey = 0xbb
-)
-
 var (
 	// ZeroHash represents an empty hash.
 	ZeroHash = common.Hash{}
+
+	// CodePrefix represents a prefix added to the code hash to separate code and state data in the KV database.
+	// CodePrefix + codeHash (256-bit) -> code
+	CodePrefix = []byte{0xc0, 0xcc, 0xcc, 0xcc}
+
+	// AccountPrefix is used to store accounts.
+	AccountPrefix = []byte{0x0a, 0xaa, 0xaa, 0xaa}
+
+	// BlockNumberKey is key under which block number is stored in database
+	BlockNumberKey = []byte{0xbb, 0xbb, 0xbb, 0xbb}
 
 	// HashToAddressPrefix is a prefix used to store and retrieve hash to account address
 	HashToAddressPrefix = []byte{0x68, 0x32, 0x61, 0x2d}
@@ -155,18 +153,18 @@ func (db *StateDB) decodeAccount(key []byte, data []byte) (*types.Account, error
 
 // CodeKey retrieves storing DB key of a code for supplied codeHash
 func CodeKey(codeHash common.Hash) []byte {
-	key := make([]byte, common.HashLength+1)
-	key[0] = CodePrefix
-	copy(key[1:], codeHash.Bytes())
+	key := make([]byte, common.HashLength+4)
+	copy(key[:4], CodePrefix)
+	copy(key[4:], codeHash.Bytes())
 
 	return key
 }
 
 // AccountKey retrieves storing DB key of an account for supplied hash
 func AccountKey(hash common.Hash) []byte {
-	key := make([]byte, common.HashLength+1)
-	key[0] = AccountPrefix
-	copy(key[1:], hash.Bytes())
+	key := make([]byte, common.HashLength+4)
+	copy(key[:4], AccountPrefix)
+	copy(key[4:], hash.Bytes())
 
 	return key
 }
@@ -178,12 +176,12 @@ func (db *StateDB) PutBlockNumber(i uint64) error {
 		return fmt.Errorf("failed encoding blockID %d to RLP; %s", i, err.Error())
 	}
 
-	return db.Backend.Put([]byte{BlockNumberKey}, enc)
+	return db.Backend.Put(BlockNumberKey, enc)
 }
 
 // GetBlockNumber retrieves block number from database
 func (db *StateDB) GetBlockNumber() (uint64, error) {
-	data, err := db.Backend.Get([]byte{BlockNumberKey})
+	data, err := db.Backend.Get(BlockNumberKey)
 	if err != nil {
 		return 0, fmt.Errorf("block number not found in database; %s", err.Error())
 	}

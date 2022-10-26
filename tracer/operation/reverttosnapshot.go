@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/Fantom-foundation/Aida/tracer/state"
@@ -11,7 +12,7 @@ import (
 
 // Revert-to-snapshot operation's data structure with returned snapshot id
 type RevertToSnapshot struct {
-	SnapshotID uint16
+	SnapshotID int32
 }
 
 // Return the revert-to-snapshot operation identifier.
@@ -21,7 +22,7 @@ func (op *RevertToSnapshot) GetOpId() byte {
 
 // Create a new revert-to-snapshot operation.
 func NewRevertToSnapshot(SnapshotID int) *RevertToSnapshot {
-	return &RevertToSnapshot{SnapshotID: uint16(SnapshotID)}
+	return &RevertToSnapshot{SnapshotID: int32(SnapshotID)}
 }
 
 // Read a revert-to-snapshot operation from file.
@@ -38,9 +39,11 @@ func (op *RevertToSnapshot) Write(f *os.File) error {
 }
 
 // Execute the revert-to-snapshot operation.
-func (op *RevertToSnapshot) Execute(db state.StateDB, ctx *dict.DictionaryContext) {
+func (op *RevertToSnapshot) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
 	id := ctx.GetSnapshot(op.SnapshotID)
+	start := time.Now()
 	db.RevertToSnapshot(int(id))
+	return time.Since(start)
 }
 
 // Print a debug message for revert-to-snapshot operation.

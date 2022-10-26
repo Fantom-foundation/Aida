@@ -1,6 +1,7 @@
 package state
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -9,7 +10,10 @@ import (
 	"github.com/ethereum/go-ethereum/substate"
 )
 
-func MakeGethStateDB(directory string) (StateDB, error) {
+func MakeGethStateDB(directory, variant string) (StateDB, error) {
+	if variant != "" {
+		return nil, fmt.Errorf("unkown variant: %v", variant)
+	}
 	return OpenGethStateDB(directory, common.Hash{})
 }
 

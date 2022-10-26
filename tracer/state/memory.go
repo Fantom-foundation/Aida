@@ -1,12 +1,17 @@
 package state
 
 import (
+	"fmt"
+
 	geth "github.com/Fantom-foundation/substate-cli/state"
 	"github.com/ethereum/go-ethereum/substate"
 )
 
-func MakeGethInMemoryStateDB() StateDB {
-	return &gethInMemoryStateDb{}
+func MakeGethInMemoryStateDB(variant string) (StateDB, error) {
+	if variant != "" {
+		return nil, fmt.Errorf("unkown variant: %v", variant)
+	}
+	return &gethInMemoryStateDb{}, nil
 }
 
 type gethInMemoryStateDb struct {

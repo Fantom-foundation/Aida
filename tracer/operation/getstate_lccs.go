@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/Fantom-foundation/Aida/tracer/state"
@@ -43,10 +44,12 @@ func (op *GetStateLccs) Write(f *os.File) error {
 }
 
 // Execute the get-state-lccs operation.
-func (op *GetStateLccs) Execute(db state.StateDB, ctx *dict.DictionaryContext) {
+func (op *GetStateLccs) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
 	contract := ctx.LastContractAddress()
 	storage := ctx.LookupStorage(int(op.StoragePosition))
+	start := time.Now()
 	db.GetState(contract, storage)
+	return time.Since(start)
 }
 
 // Print a debug message.

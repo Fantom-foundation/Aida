@@ -28,6 +28,7 @@ var TraceReplayCommand = cli.Command{
 		&disableProgressFlag,
 		&profileFlag,
 		&stateDbImplementation,
+		&stateDbVariant,
 		&substate.SubstateDirFlag,
 		&substate.WorkersFlag,
 		&traceDirectoryFlag,
@@ -157,13 +158,19 @@ func compareStorage(recordedAlloc substate.SubstateAlloc, traceAlloc substate.Su
 // Create a new DB instance based on cli argument.
 func makeStateDb(directory string, cliCtx *cli.Context) (state.StateDB, error) {
 	impl := cliCtx.String(stateDbImplementation.Name)
+	variant := cliCtx.String(stateDbVariant.Name)
+	fmt.Printf("record-replay: Creating database instance of type '%v", impl)
+	if variant != "" {
+		fmt.Printf(" (%v)", variant)
+	}
+	fmt.Println("'")
 	switch impl {
 	case "memory":
-		return state.MakeGethInMemoryStateDB(), nil
+		return state.MakeGethInMemoryStateDB(variant)
 	case "geth":
-		return state.MakeGethStateDB(directory)
+		return state.MakeGethStateDB(directory, variant)
 	case "carmen":
-		return state.MakeCarmenStateDB(directory)
+		return state.MakeCarmenStateDB(directory, variant)
 	}
 	return nil, fmt.Errorf("Unknown DB implementation (--%v): %v", stateDbImplementation.Name, impl)
 }

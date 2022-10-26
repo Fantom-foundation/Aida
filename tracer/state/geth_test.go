@@ -11,7 +11,7 @@ import (
 const N = 1000
 
 func fillDb(t *testing.T, directory string) (common.Hash, error) {
-	db, err := MakeGethStateDB(directory)
+	db, err := MakeGethStateDB(directory, "")
 	if err != nil {
 		t.Fatalf("Failed to create DB: %v", err)
 	}

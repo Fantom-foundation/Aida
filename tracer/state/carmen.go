@@ -10,13 +10,29 @@ import (
 	"github.com/ethereum/go-ethereum/substate"
 )
 
-func MakeCarmenStateDB(directory string) (StateDB, error) {
-	// TODO: use directory!
-	db, err := carmen.CreateStateDB()
+func MakeCarmenStateDB(directory, variant string) (StateDB, error) {
+	if variant == "" {
+		variant = "go-memory"
+	}
+
+	var db carmen.State
+	var err error
+	switch variant {
+	case "go-memory":
+		db, err = carmen.NewGoInMemoryState()
+	case "go-ldb":
+		db, err = carmen.NewGoLevelDbState(directory)
+	case "cpp-memory":
+		db, err = carmen.NewCppInMemoryState()
+	case "cpp-file":
+		db, err = carmen.NewCppFileBasedState(directory)
+	default:
+		return nil, fmt.Errorf("unkown variant: %v", variant)
+	}
 	if err != nil {
 		return nil, err
 	}
-	return &carmenStateDB{db}, nil
+	return &carmenStateDB{carmen.CreateStateDBUsing(db)}, nil
 }
 
 type carmenStateDB struct {
