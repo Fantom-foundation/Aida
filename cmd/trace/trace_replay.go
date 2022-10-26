@@ -282,7 +282,7 @@ func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 			// report progress
 			sec = time.Since(start).Seconds()
 			if sec-lastSec >= 15 {
-				fmt.Printf("trace replay: elasped time: %.0f s, at block %v\n", sec, tx.Block)
+				fmt.Printf("trace replay: Elapsed time: %.0f s, at block %v\n", sec, tx.Block)
 				lastSec = sec
 			}
 		}
@@ -302,7 +302,7 @@ func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 
 	if enableProgress {
 		sec = time.Since(start).Seconds()
-		fmt.Printf("trace replay: total elasped time: %.3f s, processed %v blocks\n", sec, last-first+1)
+		fmt.Printf("trace replay: Total elapsed time: %.3f s, processed %v blocks\n", sec, last-first+1)
 	}
 
 	// print profile statistics (if enabled)
@@ -315,8 +315,10 @@ func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 	if err := db.Close(); err != nil {
 		fmt.Printf("Failed to close database: %v", err)
 	}
-	fmt.Printf("Closing DB took %v\n", time.Since(start))
-	fmt.Printf("Final disk usage: %v MiB\n", float32(getDirectorySize(state_directory))/float32(1024*1024))
+	if enableProgress {
+		fmt.Printf("trace replay: Closing DB took %v\n", time.Since(start))
+		fmt.Printf("trace replay: Final disk usage: %v MiB\n", float32(getDirectorySize(state_directory))/float32(1024*1024))
+	}
 
 	return nil
 }

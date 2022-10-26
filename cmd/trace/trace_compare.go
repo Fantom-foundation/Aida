@@ -97,22 +97,22 @@ func traceCompareLogAction(ctx *cli.Context) error {
 		}
 	}
 
-	fmt.Printf("Capture record trace...\n")
+	fmt.Printf("trace compare-log: Capture record trace...\n")
 	recordLog, recErr := captureDebugLog(traceRecordAction, ctx)
 	if recErr != nil {
 		return recErr
 	}
-	fmt.Printf("Capture replay trace...\n")
+	fmt.Printf("trace compare-log: Capture replay trace...\n")
 	replayLog, repErr := captureDebugLog(traceReplayAction, ctx)
 	if repErr != nil {
 		return recErr
 	}
 
-	fmt.Printf("Compare traces...\n")
+	fmt.Printf("trace compare-log: Compare traces...\n")
 	if !isLogEqual(recordLog, replayLog) {
-		return fmt.Errorf("Replay trace doesn't match record trace.")
+		return fmt.Errorf("trace compare-log: Replay trace doesn't match record trace")
 	} else {
-		fmt.Printf("Replay trace matches record trace.\n")
+		fmt.Printf("trace compare-log: Replay trace matches record trace\n")
 	}
 
 	return nil
