@@ -95,10 +95,10 @@ func collectAccounts(ctx *cli.Context) error {
 	go snapshot.FilterUnique(ctx.Context, storage, uniqueStorage)
 
 	// write found addresses
-	errAcc := snapshot.Write(ctx.Context, collectProgressFactory(ctx.Context, uniqueAccount, "account", Logger(ctx, "addr")), stateDB)
+	errAcc := snapshot.WriteAccounts(ctx.Context, collectProgressFactory(ctx.Context, uniqueAccount, "account", Logger(ctx, "addr")), stateDB)
 
 	// write found storage hashes
-	errStorage := snapshot.Write(ctx.Context, collectProgressFactory(ctx.Context, uniqueStorage, "storage", Logger(ctx, "storage")), stateDB)
+	errStorage := snapshot.WriteAccounts(ctx.Context, collectProgressFactory(ctx.Context, uniqueStorage, "storage", Logger(ctx, "storage")), stateDB)
 
 	// check for any error in above execution threads;
 	// this will block until all threads above close their error channels

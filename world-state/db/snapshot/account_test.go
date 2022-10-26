@@ -286,8 +286,8 @@ func TestWriteAccountAddresses(t *testing.T) {
 
 	addr, storage := CollectAccounts(context.Background(), ti, uint64(len(ti.list)), 5)
 
-	errAcc := Write(context.Background(), addr, db)
-	errStorage := Write(context.Background(), storage, db)
+	errAcc := WriteAccounts(context.Background(), addr, db)
+	errStorage := WriteAccounts(context.Background(), storage, db)
 
 	err, ok := <-errAcc
 	if ok && err != nil {

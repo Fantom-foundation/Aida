@@ -30,8 +30,8 @@ func CollectAccounts(ctx context.Context, in SubstateIterator, toBlock uint64, w
 	return outAddr, outStorage
 }
 
-// Write writes storage hashes and addresses received from an input queue into world state snapshot database.
-func Write(ctx context.Context, in <-chan any, db *StateDB) chan error {
+// WriteAccounts writes storage hashes and addresses received from an input queue into world state snapshot database.
+func WriteAccounts(ctx context.Context, in <-chan any, db *StateDB) chan error {
 	errChan := make(chan error, 1)
 	go func() {
 		defer close(errChan)
