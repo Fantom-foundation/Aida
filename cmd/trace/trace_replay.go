@@ -201,6 +201,7 @@ func getDirectorySize(directory string) int64 {
 }
 
 // Simulate storage operations from storage traces on stateDB.
+// TODO: Remove substate loop
 func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 	// load dictionaries & indexes
 	dCtx := dict.ReadDictionaryContext()
