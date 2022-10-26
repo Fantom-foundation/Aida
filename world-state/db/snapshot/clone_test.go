@@ -17,7 +17,7 @@ func TestStateDB_CloneTo(t *testing.T) {
 	defer cancel()
 
 	// prep source DB
-	fromDB, nodes, _ := makeTestDB(t)
+	fromDB, nodes, _, _ := makeTestDB(t)
 
 	// create target in-memory database
 	toDB, err := OpenStateDB("")
