@@ -103,7 +103,7 @@ func traceCompareLogAction(ctx *cli.Context) error {
 		return recErr
 	}
 	fmt.Printf("trace compare-log: Capture replay trace...\n")
-	replayLog, repErr := captureDebugLog(traceReplayAction, ctx)
+	replayLog, repErr := captureDebugLog(traceReplaySubstateAction, ctx)
 	if repErr != nil {
 		return recErr
 	}

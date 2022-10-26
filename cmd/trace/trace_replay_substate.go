@@ -14,11 +14,11 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// Trace replay command
-var TraceReplayCommand = cli.Command{
-	Action:    traceReplayAction,
-	Name:      "replay",
-	Usage:     "executes storage trace",
+// Trace replay-substate command
+var TraceReplaySubstateCommand = cli.Command{
+	Action:    traceReplaySubstateAction,
+	Name:      "replay-substate",
+	Usage:     "executes storage trace using substates",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		&cpuProfileFlag,
@@ -33,21 +33,29 @@ var TraceReplayCommand = cli.Command{
 		&validateEndState,
 	},
 	Description: `
-The trace replay command requires two arguments:
+The trace replay-substate command requires two arguments:
 <blockNumFirst> <blockNumLast>
 
 <blockNumFirst> and <blockNumLast> are the first and
 last block of the inclusive range of blocks to replay storage traces.`,
 }
 
-// traceReplayTask simulates storage operations from storage traces on stateDB.
-func traceReplayTask(first uint64, last uint64, cliCtx *cli.Context) error {
+// traceReplaySubstateTask simulates storage operations from storage traces on stateDB.
+func traceReplaySubstateTask(first uint64, last uint64, cliCtx *cli.Context) error {
 	// load dictionaries & indexes
 	dCtx := dict.ReadDictionaryContext()
 	iCtx := tracer.ReadIndexContext()
 
+	// iterate substate (for in-membory state)
+	stateIter := substate.NewSubstateIterator(first, cliCtx.Int(substate.WorkersFlag.Name))
+	defer stateIter.Release()
+
+	// replay storage trace
+	traceIter := tracer.NewTraceIterator(iCtx, first, last)
+	defer traceIter.Release()
+
 	// Get validation flag
-	validationEnabled := cliCtx.Bool(validateEndState.Name)
+	validation_enabled := cliCtx.Bool(validateEndState.Name)
 
 	// Get profiling flag
 	operation.Profiling = cliCtx.Bool(profileFlag.Name)
@@ -65,16 +73,6 @@ func traceReplayTask(first uint64, last uint64, cliCtx *cli.Context) error {
 		defer pprof.StopCPUProfile()
 	}
 
-	workers := cliCtx.Int(substate.WorkersFlag.Name)
-
-	// intialize the world state of the first block
-	ws := generateWorldState(first, workers)
-
-	// replay storage trace
-	traceIter := tracer.NewTraceIterator(iCtx, first, last)
-	defer traceIter.Release()
-
-
 	// Create a directory for the store to place all its files.
 	state_directory, err := ioutil.TempDir("", "state_db_*")
 	if err != nil {
@@ -86,15 +84,7 @@ func traceReplayTask(first uint64, last uint64, cliCtx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	if cliCtx.String(stateDbImplementation.Name) != "memory" {
-		primeStateDB(ws, db)
-	} else {
-		db.PrepareSubstate(&ws)
-	}
 
-	if err := validateStateDB(ws, db); err != nil {
-		return fmt.Errorf("Pre: Validation failed. %v\n", err)
-	}
 	var (
 		start   time.Time
 		sec     float64
@@ -105,40 +95,59 @@ func traceReplayTask(first uint64, last uint64, cliCtx *cli.Context) error {
 		sec = time.Since(start).Seconds()
 		lastSec = time.Since(start).Seconds()
 	}
+	for stateIter.Next() {
+		tx := stateIter.Value()
+		if tx.Block > last || !iCtx.ExistsBlock(tx.Block) {
+			break
+		}
+		db.PrepareSubstate(&tx.Substate.InputAlloc)
+		for traceIter.Next() {
+			op := traceIter.Value()
+			operation.Execute(op, db, dCtx)
+			if traceDebug {
+				operation.Debug(dCtx, op)
+			}
 
-	for traceIter.Next() {
-		op := traceIter.Value()
-		if op.GetOpId() == operation.BeginBlockID {
-			block := op.(*operation.BeginBlock).BlockNumber
-			if block > last {
+			// find end of transaction
+			if op.GetOpId() == operation.EndTransactionID {
 				break
 			}
-			if enableProgress {
-				// report progress
-				sec = time.Since(start).Seconds()
-				if sec-lastSec >= 15 {
-					fmt.Printf("trace replay: Elapsed time: %.0f s, at block %v\n", sec, block)
-					lastSec = sec
-				}
-			}
-
-
 		}
+
+		// Validate stateDB and OuputAlloc
+		if validation_enabled {
+			traceAlloc := db.GetSubstatePostAlloc()
+			recordedAlloc := tx.Substate.OutputAlloc
+			err := compareSubstateStorage(recordedAlloc, traceAlloc)
+			if err != nil {
+				return err
+			}
+		}
+		if enableProgress {
+			// report progress
+			sec = time.Since(start).Seconds()
+			if sec-lastSec >= 15 {
+				fmt.Printf("trace replay-substate: Elapsed time: %.0f s, at block %v\n", sec, tx.Block)
+				lastSec = sec
+			}
+		}
+	}
+
+	// replay the last EndBlock()
+	hasNext := traceIter.Next()
+	op := traceIter.Value()
+	if !hasNext || op.GetOpId() != operation.EndBlockID {
+		return fmt.Errorf("Last operation isn't an EndBlock")
+	} else {
 		operation.Execute(op, db, dCtx)
 		if traceDebug {
 			operation.Debug(dCtx, op)
 		}
-
 	}
 
-	sec = time.Since(start).Seconds()
-
-	advanceWorldState(ws, first, last, workers)
-	// Validate stateDB
-	if validationEnabled {
-		if err := validateStateDB(ws, db); err != nil {
-			return fmt.Errorf("Post: Validation failed. %v\n", err)
-		}
+	if enableProgress {
+		sec = time.Since(start).Seconds()
+		fmt.Printf("trace replay-substate: Total elapsed time: %.3f s, processed %v blocks\n", sec, last-first+1)
 	}
 
 	// print profile statistics (if enabled)
@@ -152,23 +161,21 @@ func traceReplayTask(first uint64, last uint64, cliCtx *cli.Context) error {
 		fmt.Printf("Failed to close database: %v", err)
 	}
 
-	// print progress summary
 	if enableProgress {
-		fmt.Printf("trace replay: Total elapsed time: %.3f s, processed %v blocks\n", sec, last-first+1)
-		fmt.Printf("trace replay: Closing DB took %v\n", time.Since(start))
-		fmt.Printf("trace replay: Final disk usage: %v MiB\n", float32(getDirectorySize(state_directory))/float32(1024*1024))
+		fmt.Printf("trace replay-substate: Closing DB took %v\n", time.Since(start))
+		fmt.Printf("trace replay-substate: Final disk usage: %v MiB\n", float32(getDirectorySize(state_directory))/float32(1024*1024))
 	}
 
 	return nil
 }
 
 // Implements trace command for replaying.
-func traceReplayAction(ctx *cli.Context) error {
+func traceReplaySubstateAction(ctx *cli.Context) error {
 	var err error
 
 	// process arguments
 	if ctx.Args().Len() != 2 {
-		return fmt.Errorf("trace replay command requires exactly 2 arguments")
+		return fmt.Errorf("trace replay-substate command requires exactly 2 arguments")
 	}
 	tracer.TraceDir = ctx.String(traceDirectoryFlag.Name) + "/"
 	dict.DictDir = ctx.String(traceDirectoryFlag.Name) + "/"
@@ -184,7 +191,7 @@ func traceReplayAction(ctx *cli.Context) error {
 	substate.SetSubstateFlags(ctx)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
-	err = traceReplayTask(first, last, ctx)
+	err = traceReplaySubstateTask(first, last, ctx)
 
 	return err
 }
