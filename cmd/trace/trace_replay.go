@@ -54,16 +54,30 @@ func generateUpdateSet(first uint64, last uint64, int numWorkers) substate.Subst
 			break
 		}
 		// merge output sub-state to update
+		// Refine it so that we don't have redundant 
+		// entries by double-checking the InputAlloc
+		// Calculate the difference between 
+		// tx.Substate.InputAlloc and tx.Substate.OutputAlloc
+		// => In the past we observed redundant entries
+		// caused by reads. Note that we need to keep 
+		// 0 entries in Output (deletions!).
+		// Unfortunately, we don't have a diff semantics 
+		// for Nonce, Balance, and Code. This will be always
+		// overwritten. 
+		// Optimisation: If there is the same (key,value) pair
+		// in input and output, we can remove the (key, value) pair
+		// from Storage in output.
 		update.Merge(tx.Substate.OutputAlloc)
 	}
 	return update
 }
 
-// generateWorldState generates a world-state for a block
+// generateWorldState generates a world-state for a block.
 func  generateWorldState(block uint64, int numWorkers) substate.SubstateAlloc {
 	// load initial worldstate for block 4.5M
 	// load here
-	// ws := loadInitWorldState()
+	// ws := loadInitWorldState() // missing from Jiri's team
+	// let's assume empty world-state
 	ws substate.SubstateAlloc = make(substate.SubstateAlloc)
 	
 	// generate world state for block 
@@ -72,28 +86,31 @@ func  generateWorldState(block uint64, int numWorkers) substate.SubstateAlloc {
 	return ws
 }
 
-// prime database 
-func primeDatabase(worldState substate.SubstateAlloc, db state.StateDB) {
+// primeDatabase primes/initializes a db object with a worldstate.
+func primeDatabase(ws substate.SubstateAlloc, db state.StateDB) {
 	// TODO: Extend so that priming order is randomized
-	for  addr, account := range recordedAlloc {
-		db.CreateAccount(addr)	
+	// (this is important for Carmen. Not important for geth
+	// because the structure is invariant for orderings)
+	for  addr, account := range ws {
+		db.CreateAccount(addr)
 		db.AddBalance(addr, account.Balance)
 		db.SetNonce(addr, account.Nonce)
-		db.SetCode(addr, account.Code)
+		// db.SetCode(addr, account.Code)
 		for key, value := account.Storage {
 			db.SetState(addr, key, value)
 		}
 	}
 }
 
-// validate database 
+// validateDatabase validates whether the world-state is contained in the db 
+// object.
 // NB: We can only check what must be in the db (but cannot check 
 // whether db stores more)
 // Perhaps reuse some of the code from 
-fund validateDatabase(worldState substate.SubstateAlloc, db state.StateDB) bool {
+fund validateDatabase(ws substate.SubstateAlloc, db state.StateDB) bool {
 	// TODO: Extend so that priming order is randomized
-	for  addr, account := range recordedAlloc {
-		if  db.Exist(addr) {
+	for  addr, account := range ws {
+		if !db.Exist(addr) {
 			log.Fatalf("Account %v does not exist", addr.Hex())
 		}
 		if  db.GetBalance(addr) != account.GetBalance() {
@@ -104,7 +121,7 @@ fund validateDatabase(worldState substate.SubstateAlloc, db state.StateDB) bool 
 			// TODO: print more detail
 			log.Fatalf("Failed to validate nonce for account %v", addr.Hex())
 		}
-		if  db.GetCode(addr, account.Nonce) != account.GetNonce() {
+		if  db.GetCode(addr, account.Nonce) != account.GetCode() {
 			// TODO: print more detail
 			log.Fatalf("Failed to validate code for account %v", addr.Hex())
 		}
