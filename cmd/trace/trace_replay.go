@@ -197,7 +197,7 @@ func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 			// report progress
 			sec = time.Since(start).Seconds()
 			if sec-lastSec >= 15 {
-				fmt.Printf("trace replay: Elasped time: %.0f s, at block %v\n", sec, tx.Block)
+				fmt.Printf("trace replay: Elapsed time: %.0f s, at block %v\n", sec, tx.Block)
 				lastSec = sec
 			}
 		}
@@ -217,7 +217,7 @@ func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 
 	if enableProgress {
 		sec = time.Since(start).Seconds()
-		fmt.Printf("trace replay: Total elasped time: %.3f s, processed %v blocks\n", sec, last-first+1)
+		fmt.Printf("trace replay: Total elapsed time: %.3f s, processed %v blocks\n", sec, last-first+1)
 	}
 
 	// print profile statistics (if enabled)

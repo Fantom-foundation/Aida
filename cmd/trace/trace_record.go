@@ -313,7 +313,7 @@ func traceRecordAction(ctx *cli.Context) error {
 			// report progress
 			sec = time.Since(start).Seconds()
 			if sec-lastSec >= 15 {
-				fmt.Printf("trace record: Elasped time: %.0f s, at block %v\n", sec, oldBlock)
+				fmt.Printf("trace record: Elapsed time: %.0f s, at block %v\n", sec, oldBlock)
 				lastSec = sec
 			}
 		}
@@ -322,7 +322,7 @@ func traceRecordAction(ctx *cli.Context) error {
 
 	if enableProgress {
 		sec = time.Since(start).Seconds()
-		fmt.Printf("trace record: Total elasped time: %.3f s, processed %v blocks\n", sec, last-first+1)
+		fmt.Printf("trace record: Total elapsed time: %.3f s, processed %v blocks\n", sec, last-first+1)
 	}
 	// insert the last EndBlock
 	sendOperation(dCtx, opChannel, operation.NewEndBlock())
