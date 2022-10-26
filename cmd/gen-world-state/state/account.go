@@ -18,6 +18,7 @@ import (
 	"io"
 	"log"
 	"math/big"
+	"reflect"
 	"time"
 )
 
@@ -86,35 +87,36 @@ func collectAccounts(ctx *cli.Context) error {
 	accounts, storage := snapshot.CollectAccounts(ctx.Context, &iter, ctx.Uint64(flags.EndingBlock.Name), workers)
 
 	// filter uniqueAccount addresses before writing
-	uniqueAccount := make(chan common.Address, cap(accounts))
-	go snapshot.FilterUniqueAccounts(ctx.Context, accounts, uniqueAccount)
+	uniqueAccount := make(chan any, cap(accounts))
+	go snapshot.FilterUnique(ctx.Context, accounts, uniqueAccount)
 
 	// filter uniqueStorage hashes before writing
-	uniqueStorage := make(chan common.Hash, cap(storage))
-	go snapshot.FilterUniqueHashes(ctx.Context, storage, uniqueStorage)
+	uniqueStorage := make(chan any, cap(storage))
+	go snapshot.FilterUnique(ctx.Context, storage, uniqueStorage)
 
 	// write found addresses
-	errAcc := snapshot.WriteAccountAddresses(ctx.Context, accCollectProgressFactory(ctx.Context, uniqueAccount, Logger(ctx, "addr")), stateDB)
+	errAcc := snapshot.Write(ctx.Context, collectProgressFactory(ctx.Context, uniqueAccount, "account", Logger(ctx, "addr")), stateDB)
 
 	// write found storage hashes
-	errStorage := snapshot.WriteStorageHashes(ctx.Context, storageCollectProgressFactory(ctx.Context, uniqueStorage, Logger(ctx, "storage")), stateDB)
+	errStorage := snapshot.Write(ctx.Context, collectProgressFactory(ctx.Context, uniqueStorage, "storage", Logger(ctx, "storage")), stateDB)
 
 	// check for any error in above execution threads;
 	// this will block until all threads above close their error channels
 	return getChannelError(errAcc, errStorage)
 }
 
-// accCollectProgressFactory observes progress in account scanning.
-func accCollectProgressFactory(ctx context.Context, in <-chan common.Address, log *logging.Logger) <-chan common.Address {
-	out := make(chan common.Address, cap(in))
-	go accCollectProgress(ctx, in, out, log)
+// collectProgressFactory observes progress in scanning.
+func collectProgressFactory(ctx context.Context, in <-chan any, label string, log *logging.Logger) <-chan any {
+	out := make(chan any, cap(in))
+	go collectProgress(ctx, in, out, label, log)
 	return out
 }
 
-// accCollectProgress reports progress on accounts collector stream.
-func accCollectProgress(ctx context.Context, in <-chan common.Address, out chan<- common.Address, log *logging.Logger) {
+// collectProgress reports progress on collector stream.
+func collectProgress(ctx context.Context, in <-chan any, out chan<- any, label string, log *logging.Logger) {
 	var count int
-	var last common.Address
+	var last string
+	var err error
 	tick := time.NewTicker(2 * time.Second)
 
 	defer func() {
@@ -128,56 +130,33 @@ func accCollectProgress(ctx context.Context, in <-chan common.Address, out chan<
 		case <-ctxDone:
 			return
 		case <-tick.C:
-			log.Infof("observed %d addresses; last one is %s", count, last.String())
+			log.Infof("observed %d %s; last one is %s", count, label, last)
 		case adr, open := <-in:
 			if !open {
-				log.Noticef("found %d addresses", count)
+				log.Noticef("found %d %s", count, label)
 				return
+			}
+
+			last, err = getType(adr)
+			if err != nil {
+				log.Warning(err)
+				continue
 			}
 
 			out <- adr
-			last = adr
 			count++
 		}
 	}
 }
 
-// storageCollectProgressFactory observes progress in storage hashes scanning.
-func storageCollectProgressFactory(ctx context.Context, in <-chan common.Hash, log *logging.Logger) <-chan common.Hash {
-	out := make(chan common.Hash, cap(in))
-	go storageCollectProgress(ctx, in, out, log)
-	return out
-}
-
-// storageCollectProgress reports progress on storage hashes collector stream.
-func storageCollectProgress(ctx context.Context, in <-chan common.Hash, out chan<- common.Hash, log *logging.Logger) {
-	var count int
-	var last common.Hash
-	tick := time.NewTicker(2 * time.Second)
-
-	defer func() {
-		tick.Stop()
-		close(out)
-	}()
-
-	ctxDone := ctx.Done()
-	for {
-		select {
-		case <-ctxDone:
-			return
-		case <-tick.C:
-			log.Infof("observed %d storage hashes; last one is %s", count, last.String())
-		case hash, open := <-in:
-			if !open {
-				log.Noticef("found %d storage hashes", count)
-				return
-			}
-
-			out <- hash
-			last = hash
-			count++
-		}
+func getType(adr any) (string, error) {
+	switch d := adr.(type) {
+	case common.Address:
+		return d.String(), nil
+	case common.Hash:
+		return d.String(), nil
 	}
+	return "", fmt.Errorf("unexpected type while writting to database %s", reflect.TypeOf(adr))
 }
 
 // accountInfo sends detailed account information to the console output stream.

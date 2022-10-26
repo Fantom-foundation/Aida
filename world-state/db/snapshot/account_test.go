@@ -7,14 +7,22 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/substate"
+	"math/rand"
+	"strconv"
 	"testing"
+	"time"
 )
 
 // mockIteratorSize represents the number of accounts created in the iterator
 const mockIteratorSize = 50
 
+type mockSubstate struct {
+	addr    common.Address
+	storage map[common.Hash]common.Hash
+}
+
 type mockSubstateIterator struct {
-	list    []common.Address
+	list    []mockSubstate
 	hashing crypto.KeccakState
 	current int
 }
@@ -26,9 +34,16 @@ func (i *mockSubstateIterator) Next() bool {
 
 func (i *mockSubstateIterator) Address() common.Address {
 	if i.current >= 0 && i.current < len(i.list) {
-		return i.list[i.current]
+		return i.list[i.current].addr
 	}
 	return common.Address{}
+}
+
+func (i *mockSubstateIterator) Storage() map[common.Hash]common.Hash {
+	if i.current >= 0 && i.current < len(i.list) {
+		return i.list[i.current].storage
+	}
+	return map[common.Hash]common.Hash{}
 }
 
 func (i *mockSubstateIterator) Value() *substate.Transaction {
@@ -42,20 +57,20 @@ func (i *mockSubstateIterator) Value() *substate.Transaction {
 		Transaction: i.current,
 		Substate: &substate.Substate{
 			InputAlloc: map[common.Address]*substate.SubstateAccount{
-				i.list[i.current]: {},
+				i.list[i.current].addr: {Storage: i.list[i.current].storage},
 			},
 			OutputAlloc: map[common.Address]*substate.SubstateAccount{
-				i.list[i.current]: {},
+				i.list[i.current].addr: {Storage: i.list[i.current].storage},
 			},
 			Env: &substate.SubstateEnv{
-				Coinbase: i.list[i.current],
+				Coinbase: i.list[i.current].addr,
 			},
 			Message: &substate.SubstateMessage{
-				From: i.list[i.current],
-				To:   &i.list[i.current],
+				From: i.list[i.current].addr,
+				To:   &i.list[i.current].addr,
 			},
 			Result: &substate.SubstateResult{
-				ContractAddress: i.list[i.current],
+				ContractAddress: i.list[i.current].addr,
 			},
 		},
 	}
@@ -68,9 +83,21 @@ func (i *mockSubstateIterator) Release() {
 
 func (i *mockSubstateIterator) IsKnown(a common.Address) bool {
 	for j := 0; j < mockIteratorSize; j++ {
-		if bytes.Equal(a.Bytes(), i.list[j].Bytes()) {
+		if bytes.Equal(a.Bytes(), i.list[j].addr.Bytes()) {
 			return true
 		}
+	}
+	return false
+}
+
+func (i *mockSubstateIterator) IsStored(a common.Hash) bool {
+	for j := 0; j < mockIteratorSize; j++ {
+		for hash := range i.list[j].storage {
+			if bytes.Equal(a.Bytes(), hash.Bytes()) {
+				return true
+			}
+		}
+
 	}
 	return false
 }
@@ -78,7 +105,7 @@ func (i *mockSubstateIterator) IsKnown(a common.Address) bool {
 // makeMockIterator creates an instance of mock substate iterator for testing.
 func makeMockIterator(t *testing.T) *mockSubstateIterator {
 	iter := mockSubstateIterator{
-		list:    make([]common.Address, mockIteratorSize),
+		list:    make([]mockSubstate, mockIteratorSize),
 		hashing: crypto.NewKeccakState(),
 		current: -1, // we do not point to any valid account at the beginning
 	}
@@ -89,7 +116,14 @@ func makeMockIterator(t *testing.T) *mockSubstateIterator {
 			t.Fatalf("failed test data build; could not create random keys; %s", err.Error())
 		}
 
-		iter.list[i] = crypto.PubkeyToAddress(pk.PublicKey)
+		rand.Seed(time.Now().UnixNano())
+		storageSize := rand.Intn(4)
+		ms := mockSubstate{addr: crypto.PubkeyToAddress(pk.PublicKey), storage: make(map[common.Hash]common.Hash, storageSize)}
+		for k := 0; k < storageSize; k++ {
+			addrHash := crypto.HashData(iter.hashing, []byte(strconv.Itoa(k)))
+			ms.storage[addrHash] = addrHash
+		}
+		iter.list[i] = ms
 	}
 
 	return &iter
@@ -101,7 +135,17 @@ func TestCollectAccounts(t *testing.T) {
 
 	// collect accounts from the iterator
 	visited := make(map[common.Address]int, len(ti.list))
-	ac := CollectAccounts(context.Background(), ti, 0, 5)
+	ac, storage := CollectAccounts(context.Background(), ti, 0, 5)
+
+	//draining storages to avoid deadlock
+	go func() {
+		for {
+			_, ok := <-storage
+			if !ok {
+				return
+			}
+		}
+	}()
 
 	for {
 		ac, open := <-ac
@@ -109,12 +153,17 @@ func TestCollectAccounts(t *testing.T) {
 			break
 		}
 
+		acc, ok := ac.(common.Address)
+		if !ok {
+			t.Fatalf("account %s has invalid type %T", acc.String(), ac)
+		}
+
 		// increase visited counter to verify number of appearances
-		visited[ac]++
+		visited[acc]++
 
 		// check if the address is in the mock iterator
-		if !ti.IsKnown(ac) {
-			t.Fatalf("failed account check; expected to know %s, iterator reported FALSE", ac.String())
+		if !ti.IsKnown(acc) {
+			t.Fatalf("failed account check; expected to know %s, iterator reported FALSE", acc.String())
 		}
 	}
 
@@ -126,15 +175,73 @@ func TestCollectAccounts(t *testing.T) {
 	}
 }
 
+func TestCollectStorages(t *testing.T) {
+	// prep mock iterator
+	ti := makeMockIterator(t)
+
+	// collect total number of storages
+	totalCount := 0
+	ac, storage := CollectAccounts(context.Background(), ti, 0, 5)
+
+	//draining accounts to avoid deadlock
+	go func() {
+		for {
+			_, ok := <-ac
+			if !ok {
+				return
+			}
+		}
+	}()
+
+	for {
+		st, open := <-storage
+		if !open {
+			break
+		}
+
+		hash, ok := st.(common.Hash)
+		if !ok {
+			t.Fatalf("account %s has invalid type %T", hash.String(), st)
+		}
+
+		totalCount++
+
+		// check if the hash is in the mock iterator
+		if !ti.IsStored(hash) {
+			t.Fatalf("failed storage check; expected to know %s, iterator reported FALSE", hash.String())
+		}
+	}
+
+	count := 0
+	for _, mockSS := range ti.list {
+		// 2 times count since storage is mentioned in both inInputAlloc andOutputAlloc
+		count += 2 * len(mockSS.storage)
+	}
+
+	if totalCount != count {
+		t.Errorf("number of extracted storages %d doesnt match the originally inserted storages %d", totalCount, count)
+	}
+}
+
 func TestFilterUniqueAccounts(t *testing.T) {
 	// prep mock iterator
 	ti := makeMockIterator(t)
 
-	ac := CollectAccounts(context.Background(), ti, 0, 5)
+	ac, storage := CollectAccounts(context.Background(), ti, 0, 5)
 
-	visited := make(map[common.Address]bool, len(ti.list))
-	unique := make(chan common.Address, cap(ac))
-	go FilterUniqueAccounts(context.Background(), ac, unique)
+	//draining storages to avoid deadlock
+	go func() {
+		for {
+			_, ok := <-storage
+			if !ok {
+				return
+			}
+		}
+	}()
+
+	visited := make(map[string]bool, len(ti.list))
+	unique := make(chan any, cap(ac))
+	go FilterUnique(context.Background(), ac, unique)
 
 	var count int
 	for {
@@ -143,14 +250,19 @@ func TestFilterUniqueAccounts(t *testing.T) {
 			break
 		}
 
-		// check if the address is in the mock iterator
-		if !ti.IsKnown(ac) {
-			t.Fatalf("failed account check; expected to know %s, iterator reported FALSE", ac.String())
+		acc, ok := ac.(common.Address)
+		if !ok {
+			t.Fatalf("account %s has invalid type %T", acc.String(), ac)
 		}
 
-		_, found := visited[ac]
+		// check if the address is in the mock iterator
+		if !ti.IsKnown(acc) {
+			t.Fatalf("failed account check; expected to know %s, iterator reported FALSE", acc.String())
+		}
+
+		_, found := visited[acc.Hex()]
 		if found {
-			t.Fatalf("failed unique account check; expected to see %s only once, got repeated occurence", ac.String())
+			t.Fatalf("failed unique account check; expected to see %s only once, got repeated occurence", acc.String())
 		}
 
 		count++
@@ -172,9 +284,19 @@ func TestWriteAccountAddresses(t *testing.T) {
 	// prep mock iterator
 	ti := makeMockIterator(t)
 
-	err = WriteAccountAddresses(context.Background(), CollectAccounts(context.Background(), ti, uint64(len(ti.list)), 5), db)
-	if err != nil {
+	addr, storage := CollectAccounts(context.Background(), ti, uint64(len(ti.list)), 5)
+
+	errAcc := Write(context.Background(), addr, db)
+	errStorage := Write(context.Background(), storage, db)
+
+	err, ok := <-errAcc
+	if ok && err != nil {
 		t.Fatalf("failed to write accounts; expected no error, got %s", err.Error())
+	}
+
+	err, ok = <-errStorage
+	if ok && err != nil {
+		t.Fatalf("failed to write storage hashes; expected no error, got %s", err.Error())
 	}
 
 	// loop all accounts and check their mapping exists in the database
@@ -190,5 +312,19 @@ func TestWriteAccountAddresses(t *testing.T) {
 		if !bytes.Equal(ti.Address().Bytes(), adr.Bytes()) {
 			t.Errorf("failed hash address check; expected to get %s, got %s", ti.Address().String(), adr.String())
 		}
+
+		for hash := range ti.Storage() {
+			s := db.StorageToHash(hash)
+
+			sh, err := db.HashToStorage(s)
+			if err != nil {
+				t.Fatalf("failed hash to storage; expected to find hash %s, got error %s", sh.String(), err.Error())
+			}
+
+			if !bytes.Equal(hash.Bytes(), sh.Bytes()) {
+				t.Errorf("failed hash storage check; expected to get %s, got %s", hash.String(), sh.String())
+			}
+		}
+
 	}
 }

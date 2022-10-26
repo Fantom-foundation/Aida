@@ -4,9 +4,11 @@ package snapshot
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/substate"
+	"reflect"
 	"sync"
 )
 
@@ -21,15 +23,15 @@ type SubstateIterator interface {
 var ZeroAddressBytes = common.Address{}.Bytes()
 
 // CollectAccounts collects accounts and storage hashes from the substate database iterator and sends them for processing.
-func CollectAccounts(ctx context.Context, in SubstateIterator, toBlock uint64, workers int) (<-chan common.Address, <-chan common.Hash) {
-	outAddr := make(chan common.Address, workers*10)
-	outStorage := make(chan common.Hash, workers*10)
+func CollectAccounts(ctx context.Context, in SubstateIterator, toBlock uint64, workers int) (<-chan any, <-chan any) {
+	outAddr := make(chan any, workers*10)
+	outStorage := make(chan any, workers*10)
 	go collectSubStateAccounts(ctx, in, toBlock, outAddr, outStorage, workers)
 	return outAddr, outStorage
 }
 
-// WriteAccountAddresses writes account addresses received from an input queue into world state snapshot database.
-func WriteAccountAddresses(ctx context.Context, in <-chan common.Address, db *StateDB) chan error {
+// Write writes storage hashes and addresses received from an input queue into world state snapshot database.
+func Write(ctx context.Context, in <-chan any, db *StateDB) chan error {
 	errChan := make(chan error, 1)
 	go func() {
 		defer close(errChan)
@@ -40,13 +42,24 @@ func WriteAccountAddresses(ctx context.Context, in <-chan common.Address, db *St
 			select {
 			case <-ctxDone:
 				errChan <- ctx.Err()
-			case adr, open := <-in:
+			case data, open := <-in:
 				if !open {
 					return
 				}
 
-				// calculate the hash of the account
-				err := db.PutHashToAccountAddress(crypto.HashData(hashing, adr.Bytes()), adr)
+				var err error
+				switch d := data.(type) {
+				case common.Address:
+					// calculate the hash of the account
+					err = db.PutHashToAccountAddress(crypto.HashData(hashing, d.Bytes()), d)
+				case common.Hash:
+					// calculate the hash of the account
+					err = db.PutHashToStorage(crypto.HashData(hashing, d.Bytes()), d)
+				default:
+					err = fmt.Errorf("unexpected type while writting to database %s", reflect.TypeOf(data))
+					return
+				}
+
 				if err != nil {
 					errChan <- err
 					return
@@ -57,85 +70,34 @@ func WriteAccountAddresses(ctx context.Context, in <-chan common.Address, db *St
 	return errChan
 }
 
-// WriteStorageHashes writes storage hashes received from an input queue into world state snapshot database.
-func WriteStorageHashes(ctx context.Context, in <-chan common.Hash, db *StateDB) chan error {
-	errChan := make(chan error, 1)
-	go func() {
-		defer close(errChan)
-		var hashing = crypto.NewKeccakState()
-
-		ctxDone := ctx.Done()
-		for {
-			select {
-			case <-ctxDone:
-				errChan <- ctx.Err()
-			case adr, open := <-in:
-				if !open {
-					return
-				}
-
-				// calculate the hash of the account
-				err := db.PutHashToStorage(crypto.HashData(hashing, adr.Bytes()), adr)
-				if err != nil {
-					errChan <- err
-					return
-				}
-			}
-		}
-	}()
-	return errChan
-}
-
-// FilterUniqueAccounts extracts accounts from input queue and sends only unique occurrences to the output.
-// The filter will close output channel once done processing incoming accounts.
-func FilterUniqueAccounts(ctx context.Context, in <-chan common.Address, out chan<- common.Address) {
-	defer close(out)
-
-	visited := make(map[common.Address]bool, 20_000_000)
-	ctxDone := ctx.Done()
-	for {
-		select {
-		case <-ctxDone:
-			return
-		case adr, open := <-in:
-			if !open {
-				return
-			}
-
-			// is this a unique address?
-			_, found := visited[adr]
-			if found {
-				continue
-			}
-
-			select {
-			case <-ctxDone:
-				return
-			case out <- adr:
-				visited[adr] = true
-			}
-		}
-	}
-}
-
-// FilterUniqueHashes extracts storage hashes from input queue and sends only unique occurrences to the output.
+// FilterUnique extracts storage hashes and addresses from input queue and sends only unique occurrences to the output.
 // The filter will close output channel once done processing incoming storage hashes.
-func FilterUniqueHashes(ctx context.Context, in <-chan common.Hash, out chan<- common.Hash) {
+func FilterUnique(ctx context.Context, in <-chan any, out chan<- any) {
 	defer close(out)
 
-	visited := make(map[common.Hash]bool, 20_000_000)
+	visited := make(map[string]bool, 20_000_000)
 	ctxDone := ctx.Done()
 	for {
 		select {
 		case <-ctxDone:
 			return
-		case adr, open := <-in:
+		case data, open := <-in:
 			if !open {
 				return
 			}
 
+			var hex string
+			switch d := data.(type) {
+			case common.Address:
+				hex = d.Hex()
+			case common.Hash:
+				hex = d.Hex()
+			default:
+				//	TODO deal with error
+			}
+
 			// is this a unique address?
-			_, found := visited[adr]
+			_, found := visited[hex]
 			if found {
 				continue
 			}
@@ -143,8 +105,8 @@ func FilterUniqueHashes(ctx context.Context, in <-chan common.Hash, out chan<- c
 			select {
 			case <-ctxDone:
 				return
-			case out <- adr:
-				visited[adr] = true
+			case out <- data:
+				visited[hex] = true
 			}
 		}
 	}
@@ -152,7 +114,7 @@ func FilterUniqueHashes(ctx context.Context, in <-chan common.Hash, out chan<- c
 
 // collectSubStateAccounts iterates SubState database transactions and sends them for processing to a worker channel.
 // The iteration walker will close output channel once all the internal workers are done collecting addresses.
-func collectSubStateAccounts(ctx context.Context, in SubstateIterator, toBlock uint64, outAddr chan<- common.Address, outStorage chan<- common.Hash, workers int) {
+func collectSubStateAccounts(ctx context.Context, in SubstateIterator, toBlock uint64, outAddr chan<- any, outStorage chan<- any, workers int) {
 	defer close(outAddr)
 	defer close(outStorage)
 
@@ -190,7 +152,7 @@ func collectSubStateAccounts(ctx context.Context, in SubstateIterator, toBlock u
 // Found account addresses are sent to an output queue for processing.
 // We do not care about sending unique address from the worker since it's expected to run in parallel,
 // the filtering should be done later down the queue line.
-func extractSubStateAccounts(ctx context.Context, in <-chan *substate.Transaction, outAddr chan<- common.Address, outStorage chan<- common.Hash, wg *sync.WaitGroup) {
+func extractSubStateAccounts(ctx context.Context, in <-chan *substate.Transaction, outAddr chan<- any, outStorage chan<- any, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	ctxDone := ctx.Done()
