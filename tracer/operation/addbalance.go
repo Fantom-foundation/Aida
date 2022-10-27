@@ -3,6 +3,7 @@ package operation
 import (
 	"encoding/binary"
 	"fmt"
+	"log"
 	"math/big"
 	"os"
 	"time"
@@ -24,6 +25,9 @@ func (op *AddBalance) GetOpId() byte {
 
 // NewAddBalance creates a new add-balance operation.
 func NewAddBalance(cIdx uint32, amount *big.Int) *AddBalance {
+	if amount.BitLen() > 256 {
+		log.Fatalf("Amount exceeds 256 bit")
+	}
 	amountBytes := make([]byte, 16)
 	amount.FillBytes(amountBytes)
 	return &AddBalance{ContractIndex: cIdx, Amount: *(*[16]byte)(amountBytes)}

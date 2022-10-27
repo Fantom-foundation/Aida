@@ -3,6 +3,7 @@ package operation
 import (
 	"encoding/binary"
 	"fmt"
+	"log"
 	"math/big"
 	"os"
 	"time"
@@ -24,6 +25,9 @@ func (op *SubBalance) GetOpId() byte {
 
 // NewSubBalance creates a new sub-balance operation.
 func NewSubBalance(cIdx uint32, amount *big.Int) *SubBalance {
+	if amount.BitLen() > 256 {
+		log.Fatalf("Amount exceeds 256 bit")
+	}
 	amountBytes := make([]byte, 16)
 	amount.FillBytes(amountBytes)
 	return &SubBalance{ContractIndex: cIdx, Amount: *(*[16]byte)(amountBytes)}
