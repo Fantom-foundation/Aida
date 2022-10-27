@@ -17,17 +17,17 @@ type Snapshot struct {
 	SnapshotID int32 // returned ID (for later mapping)
 }
 
-// Return the snapshot operation identifier.
+// GetOpId returns the snapshot operation identifier.
 func (op *Snapshot) GetOpId() byte {
 	return SnapshotID
 }
 
-// Create a new snapshot operation.
+// NewSnapshot creates a new snapshot operation.
 func NewSnapshot(SnapshotID int32) *Snapshot {
 	return &Snapshot{SnapshotID: SnapshotID}
 }
 
-// Read a snapshot operation from a file.
+// ReadSnapshot reads a snapshot operation from a file.
 func ReadSnapshot(file *os.File) (Operation, error) {
 	data := new(Snapshot)
 	err := binary.Read(file, binary.LittleEndian, data)
@@ -52,7 +52,7 @@ func (op *Snapshot) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.
 	return elapsed
 }
 
-// Print the details for the snapshot operation.
+// Debug prints the details for the snapshot operation.
 func (op *Snapshot) Debug(*dict.DictionaryContext) {
 	fmt.Printf("\trecorded snapshot id: %v\n", op.SnapshotID)
 }

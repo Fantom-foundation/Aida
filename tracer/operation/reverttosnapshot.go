@@ -10,22 +10,22 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/state"
 )
 
-// Revert-to-snapshot operation's data structure with returned snapshot id
+// RevertToSnapshot data structure
 type RevertToSnapshot struct {
-	SnapshotID int32
+	SnapshotID int32 // snapshot id limited to 32 bits.
 }
 
-// Return the revert-to-snapshot operation identifier.
+// RevertToSnapshot returns the revert-to-snapshot operation identifier.
 func (op *RevertToSnapshot) GetOpId() byte {
 	return RevertToSnapshotID
 }
 
-// Create a new revert-to-snapshot operation.
+// NewRevertToSnapshot creates a new revert-to-snapshot operation.
 func NewRevertToSnapshot(SnapshotID int) *RevertToSnapshot {
 	return &RevertToSnapshot{SnapshotID: int32(SnapshotID)}
 }
 
-// Read a revert-to-snapshot operation from file.
+// ReadRevertToSnapshot reads revert-to-snapshot operation from file.
 func ReadRevertToSnapshot(file *os.File) (Operation, error) {
 	data := new(RevertToSnapshot)
 	err := binary.Read(file, binary.LittleEndian, data)
@@ -46,7 +46,7 @@ func (op *RevertToSnapshot) Execute(db state.StateDB, ctx *dict.DictionaryContex
 	return time.Since(start)
 }
 
-// Print a debug message for revert-to-snapshot operation.
+// Debug prints a debug message for the revert-to-snapshot operation.
 func (op *RevertToSnapshot) Debug(ctx *dict.DictionaryContext) {
 	fmt.Printf("\tsnapshot id: %v\n", op.SnapshotID)
 }

@@ -9,21 +9,21 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/state"
 )
 
-// End-transaction operation's data structure
+// EndTransaction data structure
 type EndTransaction struct {
 }
 
-// Return the end-transaction operation identifier.
+// GetOpId returns the end-transaction operation identifier.
 func (op *EndTransaction) GetOpId() byte {
 	return EndTransactionID
 }
 
-// Create a new end-transaction operation.
+// NewEndTransaction creates a new end-transaction operation.
 func NewEndTransaction() *EndTransaction {
 	return &EndTransaction{}
 }
 
-// Read a new end-transaction operation from file.
+// ReadEndTransaction reads a new end-transaction operation from file.
 func ReadEndTransaction(*os.File) (Operation, error) {
 	return new(EndTransaction), nil
 }
@@ -40,6 +40,6 @@ func (op *EndTransaction) Execute(db state.StateDB, ctx *dict.DictionaryContext)
 	return time.Duration(0)
 }
 
-// Print a debug message for end-transaction.
+// Debug prints a debug message for the end-transaction operation.
 func (op *EndTransaction) Debug(*dict.DictionaryContext) {
 }

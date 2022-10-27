@@ -49,13 +49,13 @@ const (
 	NumOperations
 )
 
-// OperationDictionary data structure contains label and read function of an operation
+// OperationDictionary data structure contains a label and a read function for an operation
 type OperationDictionary struct {
-	label    string
-	readfunc func(*os.File) (Operation, error)
+	label    string                            // operation's label
+	readfunc func(*os.File) (Operation, error) // operation's read-function
 }
 
-// opDict contains a dictionary of operation's label and read function.
+// opDict relates an operation's id with its label and read-function.
 var opDict = map[byte]OperationDictionary{
 	GetStateID:              {label: "GetState", readfunc: ReadGetState},
 	GetStateLclsID:          {label: "GetStateLcls", readfunc: ReadGetStateLcls},
@@ -86,7 +86,7 @@ var opDict = map[byte]OperationDictionary{
 	EndBlockID:              {label: "EndBlock", readfunc: ReadEndBlock},
 }
 
-// Profiling data structures for executed operations.
+// Profiling data structures for executing operations.
 var (
 	opFrequencyy  [NumOperations]uint64        // operation frequency stats
 	opDuration    [NumOperations]time.Duration // accumulated operation duration

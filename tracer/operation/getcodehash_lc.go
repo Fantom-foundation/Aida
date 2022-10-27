@@ -9,21 +9,26 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/state"
 )
 
-// Get-code-hash data structure with last contract address
+// GetCodeHashLc is a GetCodeHash operations whose
+// contract address refers to previously recorded/
+// replayed operations.
+// (NB: Lc = last contract address)
+
+// GetCodeHashLc data structure
 type GetCodeHashLc struct {
 }
 
-// Return the get-code-hash-lc operation identifier.
+// GetOpId returns the get-code-hash-lc operation identifier.
 func (op *GetCodeHashLc) GetOpId() byte {
 	return GetCodeHashLcID
 }
 
-// Create a new get-code-hash-lc operation.
+// NewGetCodeHashLc creates a new get-code-hash-lc operation.
 func NewGetCodeHashLc() *GetCodeHashLc {
 	return &GetCodeHashLc{}
 }
 
-// Read a get-code-hash-lc operation from a file.
+// ReadGetCodeHashLc reads a get-code-hash-lc operation from a file.
 func ReadGetCodeHashLc(file *os.File) (Operation, error) {
 	return NewGetCodeHashLc(), nil
 }
@@ -41,7 +46,7 @@ func (op *GetCodeHashLc) Execute(db state.StateDB, ctx *dict.DictionaryContext) 
 	return time.Since(start)
 }
 
-// Print a debug message for get-code-hash-lc.
+// Debug prints a debug message for the get-code-hash-lc operation.
 func (op *GetCodeHashLc) Debug(ctx *dict.DictionaryContext) {
 	contract := ctx.LastContractAddress()
 	fmt.Printf("\tcontract: %v\n", contract)
