@@ -85,8 +85,8 @@ var cmdAccountImport = cli.Command{
 	Action:      accountImport,
 	Name:        "import",
 	Aliases:     []string{"csv"},
-	Usage:       "Imports account address for hash mapping from a CSV file.",
-	Description: "Command imports accounts for account hash to account address mapping from a given CSV file.",
+	Usage:       "Imports account addresses for hash mapping from a CSV file.",
+	Description: "Command imports account hash to account address mapping from a CSV file.",
 	ArgsUsage:   "<csv file path|- for stdin>",
 	Flags: []cli.Flag{
 		&flags.IsVerbose,
@@ -349,7 +349,7 @@ func accountImport(ctx *cli.Context) error {
 	var re io.Reader
 	var err error
 
-	// where do we tahe the address data?
+	// where do we the address data?
 	switch ctx.Args().Get(0) {
 	case "-":
 		// standard input pipe
