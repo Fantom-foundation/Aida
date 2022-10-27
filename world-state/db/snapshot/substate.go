@@ -6,8 +6,8 @@ import (
 	"github.com/ethereum/go-ethereum/substate"
 )
 
-// SubstateAlloc extract substate database
-func (db *StateDB) SubstateAlloc(ctx context.Context) (substate.SubstateAlloc, error) {
+// ToSubstateAlloc converts snapshot world state database into SubstateAlloc format
+func (db *StateDB) ToSubstateAlloc(ctx context.Context) (substate.SubstateAlloc, error) {
 	ssAccounts := make(substate.SubstateAlloc)
 	iter := db.NewAccountIterator(ctx)
 	defer iter.Release()

@@ -3,9 +3,12 @@ package snapshot
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"github.com/Fantom-foundation/Aida/world-state/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/substate"
+	"math/rand"
+	"reflect"
 	"testing"
 )
 
@@ -15,7 +18,7 @@ func TestStateDB_Substate(t *testing.T) {
 	db, nodes, a2h, s2h := makeTestDB(t)
 	defer MustCloseStateDB(db)
 
-	ssDB, err := db.SubstateAlloc(context.Background())
+	ssDB, err := db.ToSubstateAlloc(context.Background())
 	if err != nil {
 		t.Fatalf("failed substate test; expected no error, got %s", err.Error())
 	}
@@ -23,50 +26,95 @@ func TestStateDB_Substate(t *testing.T) {
 	for hash, account := range nodes {
 		for h, address := range a2h {
 			if h == hash {
-				compare(t, account, address, ssDB, s2h)
+				err = compare(account, address, ssDB, s2h)
+				if err != nil {
+					t.Fatalf("%v", err)
+				}
 				break
 			}
 		}
 	}
-
 }
 
-// compare compares one world state account to one in substateAlloc
-func compare(t *testing.T, account types.Account, address common.Address, ssDB substate.SubstateAlloc, s2h map[common.Hash]common.Hash) {
+// compare checks one world state account to one in SubstateAlloc
+func compare(account types.Account, address common.Address, ssDB substate.SubstateAlloc, s2h map[common.Hash]common.Hash) error {
 	ss, found := ssDB[address]
 	if !found {
-		t.Fatalf("failed to find account %s in substate", address)
+		return fmt.Errorf("failed to find account %s in substate", address)
 	}
 
 	if account.Nonce != ss.Nonce {
-		t.Fatalf("failed account %s in substate has different nonce", address)
+		return fmt.Errorf("failed account %s in substate has different nonce", address)
 	}
 
 	if account.Balance.Cmp(ss.Balance) != 0 {
-		t.Fatalf("failed account %s in substate has different balance", address)
+		return fmt.Errorf("failed account %s in substate has different balance", address)
 	}
 
 	if bytes.Compare(account.Code, ss.Code) != 0 {
-		t.Fatalf("failed account %s in substate has different code", address)
+		return fmt.Errorf("failed account %s in substate has different code", address)
 	}
 
 	if len(account.Storage) != len(ss.Storage) {
-		t.Fatalf("storage sizes did not match; %s - expected %d received %d", address, len(account.Storage), len(ss.Storage))
+		return fmt.Errorf("storage sizes did not match; %s - expected %d received %d", address, len(account.Storage), len(ss.Storage))
 	}
 
 	for hash, v := range account.Storage {
 		us, f := s2h[hash]
 		if !f {
-			t.Fatalf("incorrect translation table for storage hashes")
+			return fmt.Errorf("incorrect translation table for storage hashes")
 		}
 
 		v2, f2 := ss.Storage[us]
 		if !f2 {
-			t.Fatalf("incorrect substate storage data")
+			return fmt.Errorf("incorrect substate storage data")
 		}
 
 		if v != v2 {
-			t.Fatalf("storage values not matching")
+			return fmt.Errorf("storage values not matching")
 		}
 	}
+	return nil
+}
+
+// TestStateDB_Substate_Skipping check whether addresses with missing translations are omitted
+func TestStateDB_Substate_Skipping(t *testing.T) {
+	// prep source DB
+	db, nodes, a2h, s2h, errExpected := makeIncompleteTestDB(t)
+	defer MustCloseStateDB(db)
+
+	ssDB, err := db.ToSubstateAlloc(context.Background())
+	if err != nil {
+		t.Fatalf("failed substate test; expected no error, got %s", err.Error())
+	}
+
+	errorCount := 0
+	for hash, account := range nodes {
+		for h, address := range a2h {
+			if h == hash {
+				err = compare(account, address, ssDB, s2h)
+				if err != nil {
+					errorCount++
+				}
+				break
+			}
+		}
+	}
+
+	// count accounts which were not inserted into ssDB because of missing a2h
+	errorCount += len(nodes) - len(ssDB)
+
+	if errorCount != errExpected {
+		t.Fatalf("number of expected errors %d did not match actual amount of errors %d", errExpected, errorCount)
+	}
+}
+
+func getRandomAccount(t *testing.T, db *StateDB, a2h map[common.Hash]common.Address) *types.Account {
+	a2hKeys := reflect.ValueOf(a2h).MapKeys()
+	keyToRandomAccount := a2hKeys[rand.Intn(len(a2hKeys))].Interface().(common.Hash)
+	acc, err := db.AccountByHash(keyToRandomAccount)
+	if err != nil {
+		t.Fatalf("unable to retrieve random account from dummy database; %s", err)
+	}
+	return acc
 }

@@ -10,6 +10,7 @@ import (
 	"math/big"
 	"math/rand"
 	"testing"
+	"time"
 )
 
 // testDBSize is the number of account we put into the test DB
@@ -101,6 +102,65 @@ func makeTestDB(t *testing.T) (*StateDB, map[common.Hash]types.Account, map[comm
 	}
 
 	return db, ta, adh, sdh
+}
+
+// makeIncompleteTestDB on top of TestDB adds accounts and storages without original addresses in indexing tables
+// adding one account to db and nodes without inserting record to a2h
+// adding one storage to one random existing account  without inserting record to s2h
+func makeIncompleteTestDB(t *testing.T) (*StateDB, map[common.Hash]types.Account, map[common.Hash]common.Address, map[common.Hash]common.Hash, int) {
+	// prep source DB
+	db, nodes, a2h, s2h := makeTestDB(t)
+
+	// number of records missing in a2h and s2h combined
+	missing := 0
+
+	rand.Seed(time.Now().UnixNano())
+
+	// add storage to existing account
+	acc := getRandomAccount(t, db, a2h)
+	var hashing = crypto.NewKeccakState()
+	// fill the storage map
+	buffer := make([]byte, 32)
+	_, err := rand.Read(buffer)
+	if err != nil {
+		t.Fatalf("failed test data build; can not generate random code; %s", err.Error())
+	}
+
+	h := common.BytesToHash(buffer)
+	k := crypto.HashData(hashing, h.Bytes())
+	acc.Storage[k] = h
+	nodes[acc.Hash] = *acc
+	err = db.PutAccount(acc)
+	if err != nil {
+		t.Fatalf("unable to update account in database; %s", err.Error())
+	}
+	missing++
+
+	//put new account
+	_, err = rand.Read(buffer)
+	if err != nil {
+		t.Fatalf("failed test data build; can not generate random code; %s", err.Error())
+	}
+	hash := common.BytesToHash(buffer)
+	newAcc := types.Account{
+		Hash:    hash,
+		Storage: map[common.Hash]common.Hash{},
+		Code:    make([]byte, rand.Intn(2048)),
+		Account: state.Account{
+			Nonce:    uint64(rand.Int63()),
+			Balance:  big.NewInt(rand.Int63()),
+			Root:     common.Hash{},
+			CodeHash: common.Hash{}.Bytes(),
+		},
+	}
+	nodes[hash] = newAcc
+	err = db.PutAccount(&newAcc)
+	if err != nil {
+		t.Fatalf("unable to insert account in database; %s", err.Error())
+	}
+	missing++
+
+	return db, nodes, a2h, s2h, missing
 }
 
 func TestStateDB_NewAccountIterator(t *testing.T) {
