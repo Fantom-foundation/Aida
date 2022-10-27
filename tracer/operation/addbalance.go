@@ -15,7 +15,7 @@ import (
 // AddBalance data structure
 type AddBalance struct {
 	ContractIndex uint32   // encoded contract address
-	Amount        [16]byte // byte array of an amount to be added to the balance
+	Amount        [16]byte // truncated amount to 16 bytes
 }
 
 // GetOpId returns the add-balance operation identifier.

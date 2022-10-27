@@ -15,7 +15,7 @@ import (
 // SubBalance data structure
 type SubBalance struct {
 	ContractIndex uint32   // encoded contract address
-	Amount        [16]byte // byte array of an amount to be added to the balance
+	Amount        [16]byte // truncated amount to 16 bytes
 }
 
 // GetOpId returns the sub-balance operation identifier.
