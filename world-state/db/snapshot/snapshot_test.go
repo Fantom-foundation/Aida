@@ -9,7 +9,7 @@ import (
 )
 
 func TestStateDB_PutGetBlock(t *testing.T) {
-	db, _, _ := makeTestDB(t)
+	db, _, _, _ := makeTestDB(t)
 
 	rand.Seed(time.Now().UnixNano())
 	bln := uint64(rand.Int63())
@@ -32,7 +32,7 @@ func TestStateDB_PutGetBlock(t *testing.T) {
 }
 
 func TestStateDB_Account(t *testing.T) {
-	db, nodes, addr := makeTestDB(t)
+	db, nodes, addr, _ := makeTestDB(t)
 
 	// try existing and expected accounts
 	for h, a := range addr {

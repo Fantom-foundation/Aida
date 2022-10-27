@@ -47,11 +47,15 @@ func (r *ProxyRecorder) CreateAccount(addr common.Address) {
 
 // SubtractBalance subtracts amount from a contract address.
 func (r *ProxyRecorder) SubBalance(addr common.Address, amount *big.Int) {
+	cIdx := r.dctx.EncodeContract(addr)
+	r.send(operation.NewSubBalance(cIdx, amount))
 	r.db.SubBalance(addr, amount)
 }
 
 // AddBalance adds amount to a contract address.
 func (r *ProxyRecorder) AddBalance(addr common.Address, amount *big.Int) {
+	cIdx := r.dctx.EncodeContract(addr)
+	r.send(operation.NewAddBalance(cIdx, amount))
 	r.db.AddBalance(addr, amount)
 }
 
@@ -65,12 +69,16 @@ func (r *ProxyRecorder) GetBalance(addr common.Address) *big.Int {
 
 // GetNonce retrieves the nonce of a contract address.
 func (r *ProxyRecorder) GetNonce(addr common.Address) uint64 {
+	cIdx := r.dctx.EncodeContract(addr)
+	r.send(operation.NewGetNonce(cIdx))
 	nonce := r.db.GetNonce(addr)
 	return nonce
 }
 
 // SetNonce sets the nonce of a contract address.
 func (r *ProxyRecorder) SetNonce(addr common.Address, nonce uint64) {
+	cIdx := r.dctx.EncodeContract(addr)
+	r.send(operation.NewSetNonce(cIdx, nonce))
 	r.db.SetNonce(addr, nonce)
 }
 
@@ -90,17 +98,24 @@ func (r *ProxyRecorder) GetCodeHash(addr common.Address) common.Hash {
 
 // GetCode returns the EVM bytecode of a contract.
 func (r *ProxyRecorder) GetCode(addr common.Address) []byte {
+	cIdx := r.dctx.EncodeContract(addr)
+	r.send(operation.NewGetCode(cIdx))
 	code := r.db.GetCode(addr)
 	return code
 }
 
 // Setcode sets the EVM bytecode of a contract.
 func (r *ProxyRecorder) SetCode(addr common.Address, code []byte) {
+	cIdx := r.dctx.EncodeContract(addr)
+	bcIdx := r.dctx.EncodeCode(code)
+	r.send(operation.NewSetCode(cIdx, bcIdx))
 	r.db.SetCode(addr, code)
 }
 
 // GetCodeSize returns the EVM bytecode's size.
 func (r *ProxyRecorder) GetCodeSize(addr common.Address) int {
+	cIdx := r.dctx.EncodeContract(addr)
+	r.send(operation.NewGetCodeSize(cIdx))
 	size := r.db.GetCodeSize(addr)
 	return size
 }
