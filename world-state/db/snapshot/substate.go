@@ -2,7 +2,6 @@ package snapshot
 
 import (
 	"context"
-	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/substate"
 )
@@ -25,7 +24,9 @@ func (db *StateDB) SubstateAlloc(ctx context.Context) (substate.SubstateAlloc, e
 		acc := iter.Value()
 		address, err := db.HashToAccountAddress(acc.Hash)
 		if err != nil {
-			return nil, fmt.Errorf("target account %s not found; %s", acc.Hash.String(), err.Error())
+			// not all storage addresses are currently exportable - missing pre genesis data
+			//return nil, fmt.Errorf("target storage %s not found; %s", acc.Hash.String(), err.Error())
+			continue
 		}
 		storage := make(map[common.Hash]common.Hash, len(acc.Storage))
 		for h, v := range acc.Storage {
