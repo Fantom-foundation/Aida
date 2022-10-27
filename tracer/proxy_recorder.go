@@ -47,11 +47,15 @@ func (r *ProxyRecorder) CreateAccount(addr common.Address) {
 
 // SubtractBalance subtracts amount from a contract address.
 func (r *ProxyRecorder) SubBalance(addr common.Address, amount *big.Int) {
+	cIdx := r.dctx.EncodeContract(addr)
+	r.send(operation.NewSubBalance(cIdx, amount))
 	r.db.SubBalance(addr, amount)
 }
 
 // AddBalance adds amount to a contract address.
 func (r *ProxyRecorder) AddBalance(addr common.Address, amount *big.Int) {
+	cIdx := r.dctx.EncodeContract(addr)
+	r.send(operation.NewAddBalance(cIdx, amount))
 	r.db.AddBalance(addr, amount)
 }
 
