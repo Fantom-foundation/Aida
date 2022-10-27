@@ -14,8 +14,8 @@ import (
 
 // SubBalance data structure
 type SubBalance struct {
-	ContractIndex uint32 // encoded contract address
-	Amount        [16]byte
+	ContractIndex uint32   // encoded contract address
+	Amount        [16]byte // byte array of an amount to be added to the balance
 }
 
 // GetOpId returns the sub-balance operation identifier.
@@ -25,12 +25,14 @@ func (op *SubBalance) GetOpId() byte {
 
 // NewSubBalance creates a new sub-balance operation.
 func NewSubBalance(cIdx uint32, amount *big.Int) *SubBalance {
+	// check if amount requires more than 256 bits (16 bytes)
 	if amount.BitLen() > 256 {
 		log.Fatalf("Amount exceeds 256 bit")
 	}
-	amountBytes := make([]byte, 16)
-	amount.FillBytes(amountBytes)
-	return &SubBalance{ContractIndex: cIdx, Amount: *(*[16]byte)(amountBytes)}
+	ret := &SubBalance{ContractIndex: cIdx}
+	// copy amount to a 16-byte array with leading zeros
+	amount.FillBytes(ret.Amount[:])
+	return ret
 }
 
 // ReadSubBalance reads a sub-balance operation from a file.
@@ -49,15 +51,16 @@ func (op *SubBalance) Write(f *os.File) error {
 // Execute executes the sub-balance operation.
 func (op *SubBalance) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
 	// skip to avoid errors causing by negative balance when running on an empty db
-	//contract := ctx.DecodeContract(op.ContractIndex)
-	//amount := new(big.Int).SetBytes(op.Amount[:])
-	//start := time.Now()
-	//db.SubBalance(contract, amount)
-	//return time.Since(start)
+	// contract := ctx.DecodeContract(op.ContractIndex)
+	// construct bit.Int from a byte array
+	// amount := new(big.Int).SetBytes(op.Amount[:])
+	// start := time.Now()
+	// db.SubBalance(contract, amount)
+	// return time.Since(start)
 	return time.Duration(0)
 }
 
 // Debug prints a debug message for sub-balance.
 func (op *SubBalance) Debug(ctx *dict.DictionaryContext) {
-	fmt.Printf("\tcontract: %v\t sub amount: %v\n", ctx.DecodeContract(op.ContractIndex), new(big.Int).SetBytes(op.Amount[:]))
+	fmt.Printf("\tcontract: %v\t amount: %v\n", ctx.DecodeContract(op.ContractIndex), new(big.Int).SetBytes(op.Amount[:]))
 }

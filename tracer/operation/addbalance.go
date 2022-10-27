@@ -14,8 +14,8 @@ import (
 
 // AddBalance data structure
 type AddBalance struct {
-	ContractIndex uint32 // encoded contract address
-	Amount        [16]byte
+	ContractIndex uint32   // encoded contract address
+	Amount        [16]byte // byte array of an amount to be added to the balance
 }
 
 // GetOpId returns the add-balance operation identifier.
@@ -25,12 +25,14 @@ func (op *AddBalance) GetOpId() byte {
 
 // NewAddBalance creates a new add-balance operation.
 func NewAddBalance(cIdx uint32, amount *big.Int) *AddBalance {
+	// check if amount requires more than 256 bits (16 bytes)
 	if amount.BitLen() > 256 {
 		log.Fatalf("Amount exceeds 256 bit")
 	}
-	amountBytes := make([]byte, 16)
-	amount.FillBytes(amountBytes)
-	return &AddBalance{ContractIndex: cIdx, Amount: *(*[16]byte)(amountBytes)}
+	ret := &AddBalance{ContractIndex: cIdx}
+	// copy amount to a 16-byte array with leading zeros
+	amount.FillBytes(ret.Amount[:])
+	return ret
 }
 
 // ReadAddBalance reads a add-balance operation from a file.
@@ -49,6 +51,7 @@ func (op *AddBalance) Write(f *os.File) error {
 // Execute executes the add-balance operation.
 func (op *AddBalance) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
 	contract := ctx.DecodeContract(op.ContractIndex)
+	// construct bit.Int from a byte array
 	amount := new(big.Int).SetBytes(op.Amount[:])
 	start := time.Now()
 	db.AddBalance(contract, amount)
