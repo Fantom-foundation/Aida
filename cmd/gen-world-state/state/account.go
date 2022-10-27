@@ -30,6 +30,7 @@ var CmdAccount = cli.Command{
 	Subcommands: []*cli.Command{
 		&cmdAccountInfo,
 		&cmdAccountCollect,
+		&cmdAccountUnknown,
 	},
 }
 
@@ -59,6 +60,19 @@ var cmdAccountCollect = cli.Command{
 		&flags.StartingBlock,
 		&flags.EndingBlock,
 		&flags.Workers,
+	},
+}
+
+// cmdAccountUnknown scans the account map vs. account hashes and provides a list of unknown accounts
+// in the world state.
+var cmdAccountUnknown = cli.Command{
+	Action:      listUnknownAccounts,
+	Name:        "unknown",
+	Usage:       "Lists unknown account addresses from the world state database.",
+	Description: "Command scans for addresses in the world state database and shows those not available in the address map.",
+	Aliases:     []string{"u"},
+	Flags: []cli.Flag{
+		&flags.IsVerbose,
 	},
 }
 
@@ -239,4 +253,70 @@ func output(w io.Writer, format string, a ...any) {
 	if err != nil {
 		log.Println("output error", err.Error())
 	}
+}
+
+// listUnknownAccounts implements entry point for unknown accounts scan.
+func listUnknownAccounts(ctx *cli.Context) error {
+	// try to open output DB
+	db, err := snapshot.OpenStateDB(ctx.Path(flags.StateDBPath.Name))
+	if err != nil {
+		return err
+	}
+	defer snapshot.MustCloseStateDB(db)
+
+	// out what we do
+	_, err = fmt.Fprintf(ctx.App.Writer, "Unknown Account Hashes\n----------------------------------------\n")
+	if err != nil {
+		return fmt.Errorf("could not write output; %s", err.Error())
+	}
+
+	// we want an iterator of all the known addresses
+	ite := db.NewAccountIterator(ctx.Context)
+	defer ite.Release()
+
+	// iterate all known addresses
+	var ah common.Hash
+	var all, missing int
+
+	verbose := ctx.Bool(flags.IsVerbose.Name)
+	tick := time.NewTicker(500 * time.Millisecond)
+	defer tick.Stop()
+
+	for ite.Next() {
+		all++
+		ah.SetBytes(ite.Key())
+
+		_, err := db.HashToAccountAddress(ah)
+		if err != nil {
+			err = nil
+			missing++
+
+			// display unknown account hash
+			if verbose {
+				_, err = fmt.Fprintln(ctx.App.Writer, ah.String())
+			}
+		}
+
+		// display progress in non-verbose mode
+		select {
+		case <-tick.C:
+			if !verbose {
+				_, err = fmt.Fprintf(ctx.App.Writer, "\rChecked: %10d  Missing: %10d", all, missing)
+			}
+		default:
+		}
+
+		// output error reached?
+		if err != nil {
+			return fmt.Errorf("could not finish scan; %s", err.Error())
+		}
+	}
+
+	// out total
+	_, err = fmt.Fprintf(ctx.App.Writer, "\r----------------------------------------\nAccounts Checked:%23d\nUnknown Hashes:%25d\n", all, missing)
+	if err != nil {
+		return fmt.Errorf("could not write output; %s", err.Error())
+	}
+
+	return nil
 }
