@@ -29,8 +29,10 @@ const (
 	RevertToSnapshotID
 	CreateAccountID
 	GetBalanceID
+	GetCodeID
 	GetCodeHashID
 	GetCodeHashLcID
+	GetCodeSizeID
 	SuicideID
 	ExistID
 	FinaliseID
@@ -62,6 +64,8 @@ var opDict = map[byte]OperationDictionary{
 	RevertToSnapshotID:      {label: "RevertToSnapshot", readfunc: ReadRevertToSnapshot},
 	CreateAccountID:         {label: "CreateAccount", readfunc: ReadCreateAccount},
 	GetBalanceID:            {label: "GetBalance", readfunc: ReadGetBalance},
+	GetCodeID:               {label: "GetCode", readfunc: ReadGetCode},
+	GetCodeSizeID:           {label: "GetCodeSize", readfunc: ReadGetCodeSize},
 	GetCodeHashID:           {label: "GetCodeHash", readfunc: ReadGetCodeHash},
 	GetCodeHashLcID:         {label: "GetCodeLcHash", readfunc: ReadGetCodeHashLc},
 	SuicideID:               {label: "Suicide", readfunc: ReadSuicide},

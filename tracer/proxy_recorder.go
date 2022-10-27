@@ -90,6 +90,8 @@ func (r *ProxyRecorder) GetCodeHash(addr common.Address) common.Hash {
 
 // GetCode returns the EVM bytecode of a contract.
 func (r *ProxyRecorder) GetCode(addr common.Address) []byte {
+	cIdx := r.dctx.EncodeContract(addr)
+	r.send(operation.NewGetCode(cIdx))
 	code := r.db.GetCode(addr)
 	return code
 }
@@ -101,6 +103,8 @@ func (r *ProxyRecorder) SetCode(addr common.Address, code []byte) {
 
 // GetCodeSize returns the EVM bytecode's size.
 func (r *ProxyRecorder) GetCodeSize(addr common.Address) int {
+	cIdx := r.dctx.EncodeContract(addr)
+	r.send(operation.NewGetCodeSize(cIdx))
 	size := r.db.GetCodeSize(addr)
 	return size
 }
