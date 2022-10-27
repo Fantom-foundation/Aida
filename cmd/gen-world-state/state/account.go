@@ -2,6 +2,7 @@
 package state
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"github.com/Fantom-foundation/Aida/cmd/gen-world-state/flags"
@@ -18,6 +19,7 @@ import (
 	"io"
 	"log"
 	"math/big"
+	"os"
 	"reflect"
 	"time"
 )
@@ -30,6 +32,7 @@ var CmdAccount = cli.Command{
 	Subcommands: []*cli.Command{
 		&cmdAccountInfo,
 		&cmdAccountCollect,
+		&cmdAccountImport,
 		&cmdAccountUnknown,
 	},
 }
@@ -71,6 +74,20 @@ var cmdAccountUnknown = cli.Command{
 	Usage:       "Lists unknown account addresses from the world state database.",
 	Description: "Command scans for addresses in the world state database and shows those not available in the address map.",
 	Aliases:     []string{"u"},
+	Flags: []cli.Flag{
+		&flags.IsVerbose,
+	},
+}
+
+// cmdAccountImport imports accounts from a simple CSV account list and fills the HASH to Account Address mapping.
+// build/gen-world-state --db=<path> account import <csv file path>
+var cmdAccountImport = cli.Command{
+	Action:      accountImport,
+	Name:        "import",
+	Aliases:     []string{"csv"},
+	Usage:       "Imports account addresses for hash mapping from a CSV file.",
+	Description: "Command imports account hash to account address mapping from a CSV file.",
+	ArgsUsage:   "<csv file path|- for stdin>",
 	Flags: []cli.Flag{
 		&flags.IsVerbose,
 	},
@@ -314,6 +331,102 @@ func listUnknownAccounts(ctx *cli.Context) error {
 
 	// out total
 	_, err = fmt.Fprintf(ctx.App.Writer, "\r----------------------------------------\nAccounts Checked:%23d\nUnknown Hashes:%25d\n", all, missing)
+	if err != nil {
+		return fmt.Errorf("could not write output; %s", err.Error())
+	}
+
+	return nil
+}
+
+// accountImport implements entry point for account addresses import from given CSV file.
+// The file is expected to contain only account addresses in hex format, non-address lines are ignored.
+func accountImport(ctx *cli.Context) error {
+	// check if we have a CSV file path
+	if ctx.Args().Len() < 1 {
+		return fmt.Errorf("please provide path to accounts list, use single dash for stdin")
+	}
+
+	// we prep the reader
+	var re io.Reader
+	var err error
+
+	// where do we the address data?
+	switch ctx.Args().Get(0) {
+	case "-":
+		// standard input pipe
+		re, err = stdinReader()
+	default:
+		// a given CSV file
+		re, err = os.Open(ctx.Args().Get(0))
+	}
+
+	// any error open the input file?
+	if err != nil {
+		return err
+	}
+
+	// try to open output DB
+	db, err := snapshot.OpenStateDB(ctx.Path(flags.StateDBPath.Name))
+	if err != nil {
+		return err
+	}
+	defer snapshot.MustCloseStateDB(db)
+
+	return importCsvAddresses(ctx.App.Writer, re, db)
+}
+
+// stdinReader opens standard input for reading, if possible.
+func stdinReader() (io.Reader, error) {
+	// get the standard input stats
+	info, err := os.Stdin.Stat()
+	if err != nil {
+		return nil, err
+	}
+
+	// check if we have the right access mode
+	if info.Mode()&os.ModeCharDevice != 0 || info.Size() <= 0 {
+		return nil, fmt.Errorf("please provide valid account address pipe")
+	}
+
+	return bufio.NewReader(os.Stdin), nil
+}
+
+// importCsvAddresses imports addresses mapping from the given reader.
+func importCsvAddresses(w io.Writer, r io.Reader, db *snapshot.StateDB) error {
+	scan := bufio.NewScanner(r)
+	scan.Split(bufio.ScanLines)
+
+	var count int
+	tick := time.NewTicker(500 * time.Millisecond)
+	defer tick.Stop()
+
+	// read all the lines
+	for scan.Scan() {
+		// skip non-address lines
+		if common.IsHexAddress(scan.Text()) {
+			adr := common.HexToAddress(scan.Text())
+			ha := db.AccountAddressToHash(adr)
+
+			err := db.PutHashToAccountAddress(ha, adr)
+			if err != nil {
+				return err
+			}
+
+			count++
+			select {
+			case <-tick.C:
+				// print progress
+				_, err = fmt.Fprintf(w, "\rImported:%10d accounts", count)
+				if err != nil {
+					return fmt.Errorf("could not write output; %s", err.Error())
+				}
+			default:
+			}
+		}
+	}
+
+	// print total result
+	_, err := fmt.Fprintf(w, "\rImport finished, %d accounts loaded.\n", count)
 	if err != nil {
 		return fmt.Errorf("could not write output; %s", err.Error())
 	}
