@@ -15,7 +15,7 @@ import (
 // SubBalance data structure
 type SubBalance struct {
 	ContractIndex uint32 // encoded contract address
-	Amount [16]byte
+	Amount        [16]byte
 }
 
 // GetOpId returns the sub-balance operation identifier.
