@@ -16,6 +16,7 @@ type DictionaryContext struct {
 	StorageDictionary  *StorageDictionary  // dictionary to compact storage addresses
 	StorageCache       *IndexCache         // storage address cache
 	ValueDictionary    *ValueDictionary    // dictionary to compact storage values
+	CodeDictionary     *CodeDictionary     // dictionary to compact the bytecode of contracts
 	SnapshotIndex      *SnapshotIndex      // snapshot index for execution (not for recording/replaying)
 }
 
@@ -191,6 +192,28 @@ func (ctx *DictionaryContext) GetSnapshot(recordedID int32) int32 {
 		log.Fatalf("Replayed Snapshot ID is missing. Error: %v", err)
 	}
 	return replayedID
+}
+
+////////////////////////////////////////////////////////////////
+// Code methods
+////////////////////////////////////////////////////////////////
+
+// Encode a bytecode to an index.
+func (ctx *DictionaryContext) EncodeCode(code []byte) uint32 {
+	bcIdx, err := ctx.CodeDictionary.Encode(code)
+	if err != nil {
+		log.Fatalf("Byte-code could not be encoded. Error: %v", err)
+	}
+	return bcIdx
+}
+
+// Decode the bytecode from an index.
+func (ctx *DictionaryContext) DecodeCode(bcIdx uint32) []byte {
+	code, err := ctx.CodeDictionary.Decode(bcIdx)
+	if err != nil {
+		log.Fatalf("Byte-code index could not be decoded. Error: %v", err)
+	}
+	return code
 }
 
 ////////////////////////////////////////////////////////////////
