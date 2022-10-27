@@ -68,8 +68,8 @@ var cmdAccountCollect = cli.Command{
 var cmdAccountUnknown = cli.Command{
 	Action:      listUnknownAccounts,
 	Name:        "unknown",
-	Usage:       "Lists unknown account addresses from world state database.",
-	Description: "Command scans for addresses in world state database and shows those not available in address map.",
+	Usage:       "Lists unknown account addresses from the world state database.",
+	Description: "Command scans for addresses in the world state database and shows those not available in the address map.",
 	Aliases:     []string{"u"},
 	Flags: []cli.Flag{
 		&flags.IsVerbose,
@@ -267,7 +267,7 @@ func listUnknownAccounts(ctx *cli.Context) error {
 	// out what we do
 	_, err = fmt.Fprintf(ctx.App.Writer, "Unknown Account Hashes\n----------------------------------------\n")
 	if err != nil {
-		return fmt.Errorf("cound not write output; %s", err.Error())
+		return fmt.Errorf("could not write output; %s", err.Error())
 	}
 
 	// we want an iterator of all the known addresses
@@ -297,6 +297,7 @@ func listUnknownAccounts(ctx *cli.Context) error {
 			}
 		}
 
+		// display progress in non-verbose mode
 		select {
 		case <-tick.C:
 			if !verbose {
@@ -305,16 +306,16 @@ func listUnknownAccounts(ctx *cli.Context) error {
 		default:
 		}
 
-		// error reached?
+		// output error reached?
 		if err != nil {
-			return fmt.Errorf("cound not finish scan; %s", err.Error())
+			return fmt.Errorf("could not finish scan; %s", err.Error())
 		}
 	}
 
 	// out total
 	_, err = fmt.Fprintf(ctx.App.Writer, "\r----------------------------------------\nAccounts Checked:%23d\nUnknown Hashes:%25d\n", all, missing)
 	if err != nil {
-		return fmt.Errorf("cound not write output; %s", err.Error())
+		return fmt.Errorf("could not write output; %s", err.Error())
 	}
 
 	return nil
