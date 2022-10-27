@@ -35,6 +35,7 @@ const (
 	GetCodeHashID
 	GetCodeHashLcID
 	GetCodeSizeID
+	SetCodeID
 	SuicideID
 	ExistID
 	FinaliseID
@@ -70,6 +71,7 @@ var opDict = map[byte]OperationDictionary{
 	SetNonceID:              {label: "SetNonce", readfunc: ReadSetNonce},
 	GetCodeID:               {label: "GetCode", readfunc: ReadGetCode},
 	GetCodeSizeID:           {label: "GetCodeSize", readfunc: ReadGetCodeSize},
+	SetCodeID:               {label: "SetCode", readfunc: ReadSetCode},
 	GetCodeHashID:           {label: "GetCodeHash", readfunc: ReadGetCodeHash},
 	GetCodeHashLcID:         {label: "GetCodeLcHash", readfunc: ReadGetCodeHashLc},
 	SuicideID:               {label: "Suicide", readfunc: ReadSuicide},
