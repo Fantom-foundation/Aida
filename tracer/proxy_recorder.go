@@ -65,12 +65,16 @@ func (r *ProxyRecorder) GetBalance(addr common.Address) *big.Int {
 
 // GetNonce retrieves the nonce of a contract address.
 func (r *ProxyRecorder) GetNonce(addr common.Address) uint64 {
+	cIdx := r.dctx.EncodeContract(addr)
+	r.send(operation.NewGetNonce(cIdx))
 	nonce := r.db.GetNonce(addr)
 	return nonce
 }
 
 // SetNonce sets the nonce of a contract address.
 func (r *ProxyRecorder) SetNonce(addr common.Address, nonce uint64) {
+	cIdx := r.dctx.EncodeContract(addr)
+	r.send(operation.NewSetNonce(cIdx, nonce))
 	r.db.SetNonce(addr, nonce)
 }
 
