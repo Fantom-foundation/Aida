@@ -7,20 +7,20 @@ import (
 	"testing"
 )
 
-// Positive Test: Encode an address, and compare whether the decoded address is the same,
-// and its index is zero.
+// TestPositiveContractDictionarySimple1 encodes an address, and compares whether the decoded
+// address is the same, and its index is zero.
 func TestPositiveContractDictionarySimple1(t *testing.T) {
 	encodedAddr := common.HexToAddress("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
 	dict := NewContractDictionary()
 	idx, err1 := dict.Encode(encodedAddr)
 	decodedAddr, err2 := dict.Decode(idx)
 	if encodedAddr != decodedAddr || err1 != nil || err2 != nil || idx != 0 {
-		t.Fatalf("Encoding/Decoding failed")
+		t.Fatalf("Encoding/decoding address failed")
 	}
 }
 
-// Negative Test: Encode two addresses, and compare whether the decoded addresses are the same,
-// and their dictionary indices are zero and one.
+// TestPositiveContractDictionarySimple2 encodes two addresses, and compares whether
+// the decoded addresses are the same, and their dictionary indices are zero and one.
 func TestPositiveContractDictionarySimple2(t *testing.T) {
 	encodedAddr1 := common.HexToAddress("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
 	encodedAddr2 := common.HexToAddress("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F273")
@@ -30,14 +30,14 @@ func TestPositiveContractDictionarySimple2(t *testing.T) {
 	decodedAddr1, err3 := dict.Decode(idx1)
 	decodedAddr2, err4 := dict.Decode(idx2)
 	if encodedAddr1 != decodedAddr1 || err1 != nil || err3 != nil || idx1 != 0 {
-		t.Fatalf("Encoding/Decoding failed")
+		t.Fatalf("Encoding/decoding address (1) failed")
 	}
 	if encodedAddr2 != decodedAddr2 || err2 != nil || err4 != nil || idx2 != 1 {
-		t.Fatalf("Encoding/Decoding failed")
+		t.Fatalf("Encoding/decoding address (2) failed")
 	}
 }
 
-// Positive Test: Encode one address twice and check that its address
+// TestPositiveContractDictionarySimple3 encodes one address twice and check that its address
 // is encoded only once, and its index is zero.
 func TestPositiveContractDictionarySimple3(t *testing.T) {
 	encodedAddr1 := common.HexToAddress("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
@@ -47,14 +47,14 @@ func TestPositiveContractDictionarySimple3(t *testing.T) {
 	decodedAddr1, err3 := dict.Decode(idx1)
 	decodedAddr2, err4 := dict.Decode(idx2)
 	if encodedAddr1 != decodedAddr1 || err1 != nil || err3 != nil || idx1 != 0 {
-		t.Fatalf("Encoding/Decoding failed")
+		t.Fatalf("Encoding/decoding address (1) failed")
 	}
 	if encodedAddr1 != decodedAddr2 || err2 != nil || err4 != nil || idx2 != 0 {
-		t.Fatalf("Encoding/Decoding failed")
+		t.Fatalf("Encoding/decoding address (2) failed")
 	}
 }
 
-// Negative Test: Check whether dictionary overflows can be captured.
+// TestNegativeContractDictionaryOverflow checks whether dictionary overflows can be captured.
 func TestNegativeContractDictionaryOverflow(t *testing.T) {
 	encodedAddr1 := common.HexToAddress("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
 	encodedAddr2 := common.HexToAddress("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F273")
@@ -73,8 +73,8 @@ func TestNegativeContractDictionaryOverflow(t *testing.T) {
 	ContractDictionaryLimit = math.MaxUint32
 }
 
-// Negative Test: Check whether invalid index for Decode() can be captured.
-// (Retrieving index 0 on an empty dictionary)
+// TestNegativeContractDictionaryDecodingFailure1 checks whether invalid index for Decode()
+// can be captured (retrieving index 0 on an empty dictionary).
 func TestNegativeContractDictionaryDecodingFailure1(t *testing.T) {
 	dict := NewContractDictionary()
 	_, err := dict.Decode(0)
@@ -83,8 +83,8 @@ func TestNegativeContractDictionaryDecodingFailure1(t *testing.T) {
 	}
 }
 
-// Negative Test: Check whether invalid index for Decode() can be captured.
-// (Retrieving index MaxUint32 on an empty dictionary)
+// TestNegativeContractDictionaryDecodingFailure2 checks whether invalid index for
+// Decode() can be captured (retrieving index MaxUint32 on an empty dictionary).
 func TestNegativeContractDictionaryDecodingFailure2(t *testing.T) {
 	dict := NewContractDictionary()
 	_, err := dict.Decode(math.MaxUint32)
@@ -93,7 +93,7 @@ func TestNegativeContractDictionaryDecodingFailure2(t *testing.T) {
 	}
 }
 
-// Negative Test: Create corrupted file and read file as dictionary.
+// TestNegativeContractDictionaryReadFailure creates corrupted file and read file as dictionary.
 func TestNegativeContractDictionaryReadFailure(t *testing.T) {
 	filename := "./test.dict"
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
@@ -117,8 +117,9 @@ func TestNegativeContractDictionaryReadFailure(t *testing.T) {
 	}
 }
 
-// Positive Test: Encode two addresses, write them to file, and read them from file.
-// Check whether the newly created dictionary read from file is identical.
+// TestPositiveContractDictionaryReadWrite encodes two addresses, write them to file,
+// and read them from file. Check whether the newly created dictionary (read from
+// file) is identical.
 func TestPositiveContractDictionaryReadWrite(t *testing.T) {
 	filename := "./test.dict"
 	encodedAddr1 := common.HexToAddress("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
@@ -139,9 +140,9 @@ func TestPositiveContractDictionaryReadWrite(t *testing.T) {
 	decodedAddr1, err3 := rDict.Decode(idx1)
 	decodedAddr2, err4 := rDict.Decode(idx2)
 	if encodedAddr1 != decodedAddr1 || err1 != nil || err3 != nil || idx1 != 0 {
-		t.Fatalf("Encoding/Decoding failed")
+		t.Fatalf("Encoding/decoding address (1) failed")
 	}
 	if encodedAddr2 != decodedAddr2 || err2 != nil || err4 != nil || idx2 != 1 {
-		t.Fatalf("Encoding/Decoding failed")
+		t.Fatalf("Encoding/decoding address (2) failed")
 	}
 }

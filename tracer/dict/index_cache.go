@@ -5,19 +5,16 @@ import (
 	"math"
 )
 
-// Length of cache (i.e. 2^8)
+// CacheLength sets the length of the cache (i.e. 2^8).
 const CacheLength = 256
 
-// IndexCache data structure for implementing a LRU cache
-// policy.
+// IndexCache data structure
 type IndexCache struct {
-	top  int                 // last accessed inde
-	data [CacheLength]uint32 // data elements of cache
+	top  int                 // last accessed element
+	data [CacheLength]uint32 // data elements of index cache
 }
 
-// ClearIndexCache clears the count queue by setting
-// all data elements to MaxUint32, which is an an
-// invalid index.
+// ClearIndexCache clears the index cache.
 func (q *IndexCache) ClearIndexCache() {
 	q.top = 0
 	for i := 0; i < CacheLength; i++ {
@@ -25,14 +22,14 @@ func (q *IndexCache) ClearIndexCache() {
 	}
 }
 
-// NewIndexCache creates a new queue for counting positions.
+// NewIndexCache creates an index cache.
 func NewIndexCache() *IndexCache {
 	q := new(IndexCache)
 	q.ClearIndexCache()
 	return q
 }
 
-// Place puts a new element into cache.
+// Place puts a new element into index cache.
 func (q *IndexCache) Place(item uint32) int {
 	// find the index in cache
 	for i := 0; i < CacheLength; i++ {
@@ -56,7 +53,7 @@ func (q *IndexCache) Place(item uint32) int {
 	return -1
 }
 
-// Look up an element given a position in cache.
+// Lookup an element in the index cache.
 func (q *IndexCache) Lookup(pos int) (uint32, error) {
 	if pos < 0 || pos >= CacheLength {
 		return 0, errors.New("Position out of bound")

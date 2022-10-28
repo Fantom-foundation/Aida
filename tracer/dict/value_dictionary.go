@@ -1,43 +1,43 @@
 package dict
 
 import (
-	"errors"
 	"github.com/ethereum/go-ethereum/common"
 	"math"
 	"os"
+	"fmt"
 )
 
-// Entry limit of storage dictionary
+// ValueDictionaryLimit sets size of storage dictionary.
 var ValueDictionaryLimit uint64 = math.MaxUint64 - 1
 
-// Dictionary data structure encodes/decodes a storage address
-// to a dictionary index or vice versa.
+// ValueDictionary data structure encodes/decodes a value 
+// to an index or vice versa.
 type ValueDictionary struct {
-	storageToIdx map[common.Hash]uint64 // storage address to index map for encoding
-	idxToValue   []common.Hash          // storage address slice for decoding
+	storageToIdx map[common.Hash]uint64 // value to index map for encoding
+	idxToValue   []common.Hash          // value array for decoding
 }
 
-// Init initializes or clears a storage dictionary.
+// Init initializes or clears a value dictionary.
 func (sDict *ValueDictionary) Init() {
 	sDict.storageToIdx = map[common.Hash]uint64{}
 	sDict.idxToValue = []common.Hash{}
 }
 
-// Create a new storage dictionary.
+// NewValueDictionary creates a new value dictionary.
 func NewValueDictionary() *ValueDictionary {
 	p := new(ValueDictionary)
 	p.Init()
 	return p
 }
 
-// Encode an storage address to a dictionary index.
+// Encode a value to an index.
 func (sDict *ValueDictionary) Encode(addr common.Hash) (uint64, error) {
 	// find storage address
 	idx, ok := sDict.storageToIdx[addr]
 	if !ok {
 		idx = uint64(len(sDict.idxToValue))
 		if idx >= ValueDictionaryLimit {
-			return 0, errors.New("Value dictionary exhausted")
+			return 0, fmt.Errorf("Value dictionary exhausted")
 		}
 		sDict.storageToIdx[addr] = idx
 		sDict.idxToValue = append(sDict.idxToValue, addr)
@@ -45,12 +45,12 @@ func (sDict *ValueDictionary) Encode(addr common.Hash) (uint64, error) {
 	return idx, nil
 }
 
-// Decode a dictionary index to an address.
+// Decode an index to a value.
 func (sDict *ValueDictionary) Decode(idx uint64) (common.Hash, error) {
 	if idx < uint64(len(sDict.idxToValue)) {
 		return sDict.idxToValue[idx], nil
 	} else {
-		return common.Hash{}, errors.New("Index out-of-bound")
+		return common.Hash{}, fmt.Errorf("Index out-of-bound")
 	}
 }
 
@@ -96,8 +96,10 @@ func (sDict *ValueDictionary) Read(filename string) error {
 		n, err := f.Read(data)
 		if n == 0 {
 			break
-		} else if n < len(data) || err != nil {
-			return errors.New("Value dictionary file/reading is corrupted")
+		} else if n < len(data) {
+			return fmt.Errorf("Error reading value/wrong size")
+		} else if err != nil {
+			return fmt.Errorf("Error reading value. Error: %v", err)
 		}
 
 		// encode entry
@@ -105,7 +107,7 @@ func (sDict *ValueDictionary) Read(filename string) error {
 		if err != nil {
 			return err
 		} else if idx != ctr {
-			return errors.New("Corrupted storage dictionary file entries")
+			return fmt.Errorf("Corrupted storage dictionary file entries")
 		}
 	}
 	return nil

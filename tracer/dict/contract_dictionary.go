@@ -1,18 +1,17 @@
 package dict
 
 import (
-	"errors"
+	"fmt"
 	"math"
 	"os"
 
 	"github.com/ethereum/go-ethereum/common"
 )
 
-// Entry limit of contract dictionary
+// ContractDictionaryLimit sets the size of the contract dictionary.
 var ContractDictionaryLimit uint32 = math.MaxUint32 - 1
 
-// Dictionary data structure encodes/decodes a contract address
-// to a dictionary index or vice versa.
+// ContractDictionary data structure encodes/decodes a contract address to an index or vice versa.
 type ContractDictionary struct {
 	contractToIdx map[common.Address]uint32 // contract address to index map for encoding
 	idxToContract []common.Address          // contract address slice for decoding
@@ -38,7 +37,7 @@ func (cDict *ContractDictionary) Encode(addr common.Address) (uint32, error) {
 	if !ok {
 		idx = uint32(len(cDict.idxToContract))
 		if idx >= ContractDictionaryLimit {
-			return 0, errors.New("Contract dictionary exhausted")
+			return 0, fmt.Errorf("Contract dictionary exhausted")
 		}
 		cDict.contractToIdx[addr] = idx
 		cDict.idxToContract = append(cDict.idxToContract, addr)
@@ -51,7 +50,7 @@ func (cDict *ContractDictionary) Decode(idx uint32) (common.Address, error) {
 	if idx < uint32(len(cDict.idxToContract)) {
 		return cDict.idxToContract[idx], nil
 	} else {
-		return common.Address{}, errors.New("Index out-of-bound")
+		return common.Address{}, fmt.Errorf("Index out-of-bound")
 	}
 }
 
@@ -60,7 +59,7 @@ func (cDict *ContractDictionary) Write(filename string) error {
 	// open contract dictionary file for writing
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed opening dictionary file. Error:%v", err)
 	}
 	defer func() {
 		f.Close()
@@ -84,7 +83,7 @@ func (cDict *ContractDictionary) Read(filename string) error {
 	// open contract dictionary file for reading
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDONLY, 0644)
 	if err != nil {
-		return err
+		return fmt.Errorf("Failed to open dictionary file. Error:%v", err)
 	}
 	defer func() {
 		f.Close()
@@ -97,16 +96,18 @@ func (cDict *ContractDictionary) Read(filename string) error {
 		n, err := f.Read(data)
 		if n == 0 {
 			break
-		} else if n < len(data) || err != nil {
-			return errors.New("Contract dictionary file/reading is corrupted")
+		} else if n < len(data) {
+			return fmt.Errorf("Error reading address/wrong size")
+		} else if err != nil {
+			return fmt.Errorf("Error reading address. Error:%v", err)
 		}
 
 		// encode entry
 		idx, err := cDict.Encode(common.BytesToAddress(data))
 		if err != nil {
-			return err
+			return fmt.Errorf("Error encoding address. Error:%v", err)
 		} else if idx != ctr {
-			return errors.New("Corrupted contract dictionary file entries")
+			return fmt.Errorf("Corrupted contract dictionary file entries")
 		}
 	}
 	return nil
