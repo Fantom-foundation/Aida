@@ -163,9 +163,11 @@ func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 	}
 
 	var (
-		start   time.Time
-		sec     float64
-		lastSec float64
+		start       time.Time
+		sec         float64
+		lastSec     float64
+		lastTxCount uint64
+		txCount     uint64
 	)
 	if enableProgress {
 		start = time.Now()
@@ -187,6 +189,7 @@ func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 
 			// find end of transaction
 			if op.GetOpId() == operation.EndTransactionID {
+				txCount++
 				break
 			}
 		}
@@ -203,8 +206,11 @@ func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 		if enableProgress {
 			// report progress
 			sec = time.Since(start).Seconds()
-			if sec-lastSec >= 15 {
-				fmt.Printf("trace replay: Elapsed time: %.0f s, at block %v\n", sec, tx.Block)
+			diff := sec - lastSec
+			if diff >= 15 {
+				numTx := txCount - lastTxCount
+				lastTxCount = txCount
+				fmt.Printf("trace replay: Elapsed time: %.0f s, at block %v (~%.1f Tx/s)\n", sec, tx.Block, float64(numTx)/diff)
 				lastSec = sec
 			}
 		}
@@ -224,7 +230,7 @@ func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 
 	if enableProgress {
 		sec = time.Since(start).Seconds()
-		fmt.Printf("trace replay: Total elapsed time: %.3f s, processed %v blocks\n", sec, last-first+1)
+		fmt.Printf("trace replay: Total elapsed time: %.3f s, processed %v blocks (~%.1f Tx/s)\n", sec, last-first+1, float64(txCount)/sec)
 	}
 
 	// print profile statistics (if enabled)
