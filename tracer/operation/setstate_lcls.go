@@ -10,23 +10,26 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/state"
 )
 
-// SetStateLcls data structure for last contract address and last storage
-// address.
+// The SetStateLcls operation is a SetState operation whose
+// addresses refer to previously recorded/replayed addresses.
+// (NB: Lc = last contract address, Ls = last storage address)
+
+// SetStateLcls data structure
 type SetStateLcls struct {
 	ValueIndex uint64 // encoded storage value
 }
 
-// Return the set-state-lcls identifier
+// GetOpId returns the set-state-lcls identifier.
 func (op *SetStateLcls) GetOpId() byte {
 	return SetStateLclsID
 }
 
-// Create a new set-state-lcls operation.
+// SetStateLcls creates a new set-state-lcls operation.
 func NewSetStateLcls(vIdx uint64) *SetStateLcls {
 	return &SetStateLcls{ValueIndex: vIdx}
 }
 
-// Read a set-state-lcls operation from file.
+// ReadSetStateLcls reads a set-state-lcls operation from file.
 func ReadSetStateLcls(file *os.File) (Operation, error) {
 	data := new(SetStateLcls)
 	err := binary.Read(file, binary.LittleEndian, data)
@@ -49,7 +52,7 @@ func (op *SetStateLcls) Execute(db state.StateDB, ctx *dict.DictionaryContext) t
 	return time.Since(start)
 }
 
-// Print a debug message for set-state-lcls.
+// Debug prints a debug message for the set-state-lcls operation.
 func (op *SetStateLcls) Debug(ctx *dict.DictionaryContext) {
 	contract := ctx.LastContractAddress()
 	storage := ctx.ReadStorage(0)

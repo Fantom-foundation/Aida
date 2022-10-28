@@ -11,18 +11,23 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/state"
 )
 
-// Get-state data structure for using last contract address
-// and cached storage address (lccs)
+// The GetStateLccs operation is a GetState operation whose
+// addresses refer to previously recorded/replayed operations.
+// (NB: Lc = last contract address, cs = cached storage
+// address referring to a position in an indexed cache
+// for storage addresses.)
+
+// GetStateLccs  data structure
 type GetStateLccs struct {
-	StoragePosition uint8 // position in storage cache
+	StoragePosition uint8 // position in storage index-cache
 }
 
-// Return the get-state-lccs operation identifier.
+// GetOpId returns the get-state-lccs operation identifier.
 func (op *GetStateLccs) GetOpId() byte {
 	return GetStateLccsID
 }
 
-// Create a new get-state-lccs operation.
+// NewGetStateLccs creates a new get-state-lccs operation.
 func NewGetStateLccs(sPos int) *GetStateLccs {
 	if sPos < 0 || sPos > 255 {
 		log.Fatalf("Position out of range")
@@ -30,7 +35,7 @@ func NewGetStateLccs(sPos int) *GetStateLccs {
 	return &GetStateLccs{StoragePosition: uint8(sPos)}
 }
 
-// Read a get-state-lccs operation from a file.
+// ReadGetStateLccs reads a get-state-lccs operation from a file.
 func ReadGetStateLccs(file *os.File) (Operation, error) {
 	data := new(GetStateLccs)
 	err := binary.Read(file, binary.LittleEndian, data)
@@ -52,7 +57,7 @@ func (op *GetStateLccs) Execute(db state.StateDB, ctx *dict.DictionaryContext) t
 	return time.Since(start)
 }
 
-// Print a debug message.
+// Debug prints a debug message for the get-state-lccs operation.
 func (op *GetStateLccs) Debug(ctx *dict.DictionaryContext) {
 	contract := ctx.LastContractAddress()
 	storage := ctx.ReadStorage(int(op.StoragePosition))

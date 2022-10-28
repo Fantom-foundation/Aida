@@ -48,7 +48,7 @@ func (op *GetCode) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.D
 	return time.Duration(0)
 }
 
-// Debug prints a debug message for get-code.
+// Debug prints a debug message for the get-code operation.
 func (op *GetCode) Debug(ctx *dict.DictionaryContext) {
 	fmt.Printf("\tcontract: %v\n", ctx.DecodeContract(op.ContractIndex))
 }

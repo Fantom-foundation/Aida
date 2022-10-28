@@ -15,17 +15,17 @@ type Finalise struct {
 	DeleteEmptyObjects bool
 }
 
-// Return the finalise operation identifier.
+// GetOpId returns the finalise operation identifier.
 func (op *Finalise) GetOpId() byte {
 	return FinaliseID
 }
 
-// Create a new finalise operation.
+// NewFinalise creates a new finalise operation.
 func NewFinalise(deleteEmptyObjects bool) *Finalise {
 	return &Finalise{DeleteEmptyObjects: deleteEmptyObjects}
 }
 
-// Read a finalise operation from a file.
+// ReadFinalise reads a finalise operation from a file.
 func ReadFinalise(file *os.File) (Operation, error) {
 	data := new(Finalise)
 	err := binary.Read(file, binary.LittleEndian, data)
@@ -45,7 +45,7 @@ func (op *Finalise) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.
 	return time.Since(start)
 }
 
-// Print a debug message for finalise.
+// Debug prints a debug message for the finalise operation.
 func (op *Finalise) Debug(ctx *dict.DictionaryContext) {
 	fmt.Printf("\tdelete empty objects: %v\n", op.DeleteEmptyObjects)
 }

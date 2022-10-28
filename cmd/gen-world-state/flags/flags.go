@@ -94,4 +94,11 @@ var (
 		Name:  "with-storage",
 		Usage: "display full storage content",
 	}
+
+	// IsVerbose represents a flag for detailed output
+	IsVerbose = cli.BoolFlag{
+		Name:    "verbose",
+		Usage:   "display more information about the data",
+		Aliases: []string{"v"},
+	}
 )
