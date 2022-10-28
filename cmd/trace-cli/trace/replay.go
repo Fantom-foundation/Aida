@@ -138,7 +138,6 @@ func traceReplayTask(first uint64, last uint64, cliCtx *cli.Context) error {
 
 	sec = time.Since(start).Seconds()
 
-
 	// validate stateDB
 	if validationEnabled {
 		// advance the world state from the first block to the last block
