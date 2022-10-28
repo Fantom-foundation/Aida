@@ -10,24 +10,24 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/state"
 )
 
-// Set-state data structure
+// SetState data structure
 type SetState struct {
 	ContractIndex uint32 // encoded contract address
 	StorageIndex  uint32 // encoded storage address
 	ValueIndex    uint64 // encoded storage value
 }
 
-// Return the set-state identifier
+// GetOpId returns the set-state identifier.
 func (op *SetState) GetOpId() byte {
 	return SetStateID
 }
 
-// Create a new set-state operation.
+// NewSetState creates a new set-state operation.
 func NewSetState(cIdx uint32, sIdx uint32, vIdx uint64) *SetState {
 	return &SetState{ContractIndex: cIdx, StorageIndex: sIdx, ValueIndex: vIdx}
 }
 
-// Read a set-state operation from file.
+// ReadSetState reads a set-state operation from file.
 func ReadSetState(file *os.File) (Operation, error) {
 	data := new(SetState)
 	err := binary.Read(file, binary.LittleEndian, data)
@@ -50,7 +50,7 @@ func (op *SetState) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.
 	return time.Since(start)
 }
 
-// Print a debug message for set-state.
+// Debug prints a debug message for the set-state operation.
 func (op *SetState) Debug(ctx *dict.DictionaryContext) {
 	fmt.Printf("\tcontract: %v\t storage: %v\t value: %v\n",
 		ctx.DecodeContract(op.ContractIndex),

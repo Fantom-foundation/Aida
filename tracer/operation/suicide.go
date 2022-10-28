@@ -15,17 +15,17 @@ type Suicide struct {
 	ContractIndex uint32 // encoded contract address
 }
 
-// Return the suicide operation identifier.
+// GetOpId returns the suicide operation identifier.
 func (op *Suicide) GetOpId() byte {
 	return SuicideID
 }
 
-// Create a new suicide operation.
+// NewSuicide creates a new suicide operation.
 func NewSuicide(cIdx uint32) *Suicide {
 	return &Suicide{ContractIndex: cIdx}
 }
 
-// Read a suicide operation from a file.
+// ReadSuicide reads a suicide operation from a file.
 func ReadSuicide(file *os.File) (Operation, error) {
 	data := new(Suicide)
 	err := binary.Read(file, binary.LittleEndian, data)
@@ -46,7 +46,7 @@ func (op *Suicide) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.D
 	return time.Since(start)
 }
 
-// Print a debug message for suicide.
+// Debug prints a debug message for the suicide operation.
 func (op *Suicide) Debug(ctx *dict.DictionaryContext) {
 	fmt.Printf("\tcontract: %v\n", ctx.DecodeContract(op.ContractIndex))
 }

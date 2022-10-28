@@ -10,22 +10,27 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/state"
 )
 
-// Get-state data structure with last contract address
+// The GetStateLc operation is a GetState operation
+// whose contract address refers to previously
+// recorded/replayed operations.
+// (NB: Lc = last contract addresss used)
+
+// GetStateLc data structure
 type GetStateLc struct {
 	StorageIndex uint32 // encoded storage address
 }
 
-// Return the get-state-lc operation identifier.
+// GetOpId returns the get-state-lc operation identifier.
 func (op *GetStateLc) GetOpId() byte {
 	return GetStateLcID
 }
 
-// Create a new get-state-lc operation.
+// GetStateLc creates a new get-state-lc operation.
 func NewGetStateLc(sIdx uint32) *GetStateLc {
 	return &GetStateLc{StorageIndex: sIdx}
 }
 
-// Read a get-state-lc operation from a file.
+// ReadGetStateLc reads a get-state-lc operation from a file.
 func ReadGetStateLc(file *os.File) (Operation, error) {
 	data := new(GetStateLc)
 	err := binary.Read(file, binary.LittleEndian, data)
@@ -47,7 +52,7 @@ func (op *GetStateLc) Execute(db state.StateDB, ctx *dict.DictionaryContext) tim
 	return time.Since(start)
 }
 
-// Print a debug message.
+// Debug prints a debug message for the get-state-lc operation.
 func (op *GetStateLc) Debug(ctx *dict.DictionaryContext) {
 	contract := ctx.LastContractAddress()
 	storage := ctx.DecodeStorage(op.StorageIndex)

@@ -8,21 +8,21 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/state"
 )
 
-// End-block operation data structure
+// Endblock data structure
 type EndBlock struct {
 }
 
-// Return the end-block operation identifier.
+// GetOpId returns the end-block operation identifier.
 func (op *EndBlock) GetOpId() byte {
 	return EndBlockID
 }
 
-// Create a new end-block operation.
+// NewEndBlock creates a new end-block operation.
 func NewEndBlock() *EndBlock {
 	return &EndBlock{}
 }
 
-// Read an end-block operation from file.
+// ReadEndBlock reads an end-block operation from file.
 func ReadEndBlock(file *os.File) (Operation, error) {
 	return NewEndBlock(), nil
 }
@@ -37,6 +37,6 @@ func (op *EndBlock) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.
 	return time.Duration(0)
 }
 
-// Print a debug message for end-block.
+// Debug prints a debug message for the end-block operation.
 func (op *EndBlock) Debug(ctx *dict.DictionaryContext) {
 }
