@@ -7,6 +7,7 @@ import (
 	"runtime/pprof"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/cmd/gen-world-state/flags"
 	"github.com/Fantom-foundation/Aida/tracer"
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
@@ -23,6 +24,7 @@ var TraceReplayCommand = cli.Command{
 	Flags: []cli.Flag{
 		&cpuProfileFlag,
 		&disableProgressFlag,
+		&flags.StateDBPath,
 		&profileFlag,
 		&stateDbImplementation,
 		&stateDbVariant,
@@ -46,16 +48,13 @@ func traceReplayTask(first uint64, last uint64, cliCtx *cli.Context) error {
 	dCtx := dict.ReadDictionaryContext()
 	iCtx := tracer.ReadIndexContext()
 
-	// Get validation flag
+	// get validation flag
 	validationEnabled := cliCtx.Bool(validateEndState.Name)
-
-	// Get profiling flag
+	// get profiling flag
 	operation.Profiling = cliCtx.Bool(profileFlag.Name)
-
-	// Get progress flag
+	// get progress flag
 	enableProgress := !cliCtx.Bool(disableProgressFlag.Name)
-
-	// Start CPU profiling if requested.
+	// start CPU profiling if requested.
 	if profile_file_name := cliCtx.String(cpuProfileFlag.Name); profile_file_name != "" {
 		f, err := os.Create(profile_file_name)
 		if err != nil {
@@ -64,37 +63,42 @@ func traceReplayTask(first uint64, last uint64, cliCtx *cli.Context) error {
 		pprof.StartCPUProfile(f)
 		defer pprof.StopCPUProfile()
 	}
-
+	// get number of workers
 	workers := cliCtx.Int(substate.WorkersFlag.Name)
 
-	// intialize the world state of the first block
-	ws := generateWorldState(first, workers)
+	// intialize the world state and advance it to the first block
+	fmt.Printf("trace replay: Load and advance worldstate to block %v\n", first-1)
+	ws, err := generateWorldState(cliCtx.String(flags.StateDBPath.Name), first-1, workers)
+	if err != nil {
+		return err
+	}
 
-	// replay storage trace
-	traceIter := tracer.NewTraceIterator(iCtx, first, last)
-	defer traceIter.Release()
-
-
-	// Create a directory for the store to place all its files.
+	// create a directory for the store to place all its files.
 	state_directory, err := ioutil.TempDir("", "state_db_*")
 	if err != nil {
 		return err
 	}
 
-	// Instantiate the state DB under testing
-	db, err := makeStateDB(state_directory, cliCtx)
+	// instantiate the state DB under testing
+	impl := cliCtx.String(stateDbImplementation.Name)
+	variant := cliCtx.String(stateDbVariant.Name)
+	db, err := makeStateDB(state_directory, impl, variant)
 	if err != nil {
 		return err
 	}
+
+	// prime stateDB
+	fmt.Printf("trace replay: Prime stateDB\n")
 	if cliCtx.String(stateDbImplementation.Name) != "memory" {
 		primeStateDB(ws, db)
 	} else {
 		db.PrepareSubstate(&ws)
 	}
 
-	if err := validateStateDB(ws, db); err != nil {
-		return fmt.Errorf("Pre: Validation failed. %v\n", err)
-	}
+	// initialize trace interator
+	traceIter := tracer.NewTraceIterator(iCtx, first, last)
+	defer traceIter.Release()
+
 	var (
 		start   time.Time
 		sec     float64
@@ -106,6 +110,8 @@ func traceReplayTask(first uint64, last uint64, cliCtx *cli.Context) error {
 		lastSec = time.Since(start).Seconds()
 	}
 
+	// replace storage trace
+	fmt.Printf("trace replay: Replay storage operations\n")
 	for traceIter.Next() {
 		op := traceIter.Value()
 		if op.GetOpId() == operation.BeginBlockID {
@@ -122,7 +128,6 @@ func traceReplayTask(first uint64, last uint64, cliCtx *cli.Context) error {
 				}
 			}
 
-
 		}
 		operation.Execute(op, db, dCtx)
 		if traceDebug {
@@ -133,11 +138,13 @@ func traceReplayTask(first uint64, last uint64, cliCtx *cli.Context) error {
 
 	sec = time.Since(start).Seconds()
 
-	advanceWorldState(ws, first, last, workers)
-	// Validate stateDB
+
+	// validate stateDB
 	if validationEnabled {
+		// advance the world state from the first block to the last block
+		advanceWorldState(ws, first, last, workers)
 		if err := validateStateDB(ws, db); err != nil {
-			return fmt.Errorf("Post: Validation failed. %v\n", err)
+			return fmt.Errorf("Validation failed. %v\n", err)
 		}
 	}
 
@@ -162,7 +169,7 @@ func traceReplayTask(first uint64, last uint64, cliCtx *cli.Context) error {
 	return nil
 }
 
-// Implements trace command for replaying.
+// traceReplayAction implements trace command for replaying.
 func traceReplayAction(ctx *cli.Context) error {
 	var err error
 

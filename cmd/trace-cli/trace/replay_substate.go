@@ -80,7 +80,9 @@ func traceReplaySubstateTask(first uint64, last uint64, cliCtx *cli.Context) err
 	}
 
 	// Instantiate the state DB under testing
-	db, err := makeStateDB(state_directory, cliCtx)
+	impl := cliCtx.String(stateDbImplementation.Name)
+	variant := cliCtx.String(stateDbVariant.Name)
+	db, err := makeStateDB(state_directory, impl, variant)
 	if err != nil {
 		return err
 	}
@@ -103,6 +105,10 @@ func traceReplaySubstateTask(first uint64, last uint64, cliCtx *cli.Context) err
 		db.PrepareSubstate(&tx.Substate.InputAlloc)
 		for traceIter.Next() {
 			op := traceIter.Value()
+			// skip execution of sub balance if carmen or geth is used
+			if op.GetOpId() == operation.SubBalanceID && impl != "memory" {
+				continue
+			}
 			operation.Execute(op, db, dCtx)
 			if traceDebug {
 				operation.Debug(dCtx, op)

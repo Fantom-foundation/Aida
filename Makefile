@@ -37,7 +37,7 @@ trace:
 	GOPRIVATE=github.com/Fantom-foundation/Carmen \
 	go build -ldflags "-s -w" \
        	-o $(GO_BIN)/trace \
-	./cmd/
+	./cmd/trace-cli
 
 test:
 	@go test ./...
