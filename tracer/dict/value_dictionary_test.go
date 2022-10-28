@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// TestPositiveValueDictionarySimple1 encodes an value, and compares whether the 
+// TestPositiveValueDictionarySimple1 encodes an value, and compares whether the
 // decoded value is the same, and its index is zero.
 func TestPositiveValueDictionarySimple1(t *testing.T) {
 	encodedValue := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
@@ -19,7 +19,7 @@ func TestPositiveValueDictionarySimple1(t *testing.T) {
 	}
 }
 
-// TestPositiveValueDictionarySimple2 encodes two valuees, and compares whether the 
+// TestPositiveValueDictionarySimple2 encodes two valuees, and compares whether the
 // decoded valuees are the same, and their dictionary indices are zero and one.
 func TestPositiveValueDictionarySimple2(t *testing.T) {
 	encodedValue1 := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
@@ -73,7 +73,7 @@ func TestNegativeValueDictionaryOverflow(t *testing.T) {
 	ValueDictionaryLimit = math.MaxUint32
 }
 
-// TestNegativeValueDictionaryDecodingFailure1 checks whether invalid index for 
+// TestNegativeValueDictionaryDecodingFailure1 checks whether invalid index for
 // Decode() can be captured (retrieving index 0 on an empty dictionary).
 func TestNegativeValueDictionaryDecodingFailure1(t *testing.T) {
 	dict := NewValueDictionary()
@@ -83,7 +83,7 @@ func TestNegativeValueDictionaryDecodingFailure1(t *testing.T) {
 	}
 }
 
-// TestNegativeValueDictionaryDecodingFailure2 checks whether invalid index for 
+// TestNegativeValueDictionaryDecodingFailure2 checks whether invalid index for
 // Decode() can be captured (retrieving index MaxUint32 on an empty dictionary).
 func TestNegativeValueDictionaryDecodingFailure2(t *testing.T) {
 	dict := NewValueDictionary()
@@ -117,7 +117,7 @@ func TestNegativeValueDictionaryReadFailure(t *testing.T) {
 	os.Remove(filename)
 }
 
-// TestPositiveValueDictionaryReadWrite encodes two valuees, write them to file, and 
+// TestPositiveValueDictionaryReadWrite encodes two valuees, write them to file, and
 // read them from file. Check whether the newly created dictionary read from file is identical.
 func TestPositiveValueDictionaryReadWrite(t *testing.T) {
 	filename := "./test.dict"

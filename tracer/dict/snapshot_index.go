@@ -10,7 +10,7 @@ import (
 // for reverting a snapshot.
 
 type SnapshotIndex struct {
-	recordedToReplayed map[int32]int32  // recorded/replayed snapshot map
+	recordedToReplayed map[int32]int32 // recorded/replayed snapshot map
 }
 
 // Init initializes a snapshot index.

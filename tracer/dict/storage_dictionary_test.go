@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// TestPositiveStorageDictionarySimple1 encodes an address, and compares whether 
+// TestPositiveStorageDictionarySimple1 encodes an address, and compares whether
 // the decoded address is the same, and its index is zero.
 func TestPositiveStorageDictionarySimple1(t *testing.T) {
 	encodedAddr := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
@@ -19,7 +19,7 @@ func TestPositiveStorageDictionarySimple1(t *testing.T) {
 	}
 }
 
-// TestPositiveStorageDictionarySimple2 encodes two addresses, and compares whether 
+// TestPositiveStorageDictionarySimple2 encodes two addresses, and compares whether
 // the decoded addresses are the same, and their dictionary indices are zero and one.
 func TestPositiveStorageDictionarySimple2(t *testing.T) {
 	encodedAddr1 := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
@@ -73,7 +73,7 @@ func TestNegativeStorageDictionaryOverflow(t *testing.T) {
 	StorageDictionaryLimit = math.MaxUint32
 }
 
-// TestNegativeStorageDictionaryDecodingFailure1 checks whether invalid index for Decode() 
+// TestNegativeStorageDictionaryDecodingFailure1 checks whether invalid index for Decode()
 // can be captured (retrieving index 0 on an empty dictionary).
 func TestNegativeStorageDictionaryDecodingFailure1(t *testing.T) {
 	dict := NewStorageDictionary()
@@ -83,8 +83,8 @@ func TestNegativeStorageDictionaryDecodingFailure1(t *testing.T) {
 	}
 }
 
-// TestNegativeStorageDictionaryDecodingFailure2 checks whether invalid 
-// index for Decode() can be captured (retrieving index MaxUint32 on an 
+// TestNegativeStorageDictionaryDecodingFailure2 checks whether invalid
+// index for Decode() can be captured (retrieving index MaxUint32 on an
 // empty dictionary).
 func TestNegativeStorageDictionaryDecodingFailure2(t *testing.T) {
 	dict := NewStorageDictionary()
@@ -94,7 +94,7 @@ func TestNegativeStorageDictionaryDecodingFailure2(t *testing.T) {
 	}
 }
 
-// TestNegativeStorageDictionaryReadFailure creates corrupted file and 
+// TestNegativeStorageDictionaryReadFailure creates corrupted file and
 // reads file as dictionary.
 func TestNegativeStorageDictionaryReadFailure(t *testing.T) {
 	filename := "./test.dict"
@@ -119,8 +119,8 @@ func TestNegativeStorageDictionaryReadFailure(t *testing.T) {
 	os.Remove(filename)
 }
 
-// TestPositiveStorageDictionaryReadWrite encodes two addresses, writes them to file, 
-// and reads them from file. Check whether the newly created dictionary read from 
+// TestPositiveStorageDictionaryReadWrite encodes two addresses, writes them to file,
+// and reads them from file. Check whether the newly created dictionary read from
 // file is identical.
 func TestPositiveStorageDictionaryReadWrite(t *testing.T) {
 	filename := "./test.dict"

@@ -9,20 +9,20 @@ import (
 // InvalidContractIndex used to indicate that the previously used contract index is not valid.
 const InvalidContractIndex = math.MaxUint32
 
-// DictionaryContext is a Facade for all dictionaries used to encode/decode contract/storage 
+// DictionaryContext is a Facade for all dictionaries used to encode/decode contract/storage
 // addresss, values, and snapshots.
 type DictionaryContext struct {
 	ContractDictionary *ContractDictionary // dictionary to compact contract addresses
 	PrevContractIndex  uint32              // previously used contract index
 
-	StorageDictionary  *StorageDictionary  // dictionary to compact storage addresses
-	StorageCache       *IndexCache         // storage address cache
+	StorageDictionary *StorageDictionary // dictionary to compact storage addresses
+	StorageCache      *IndexCache        // storage address cache
 
-	ValueDictionary    *ValueDictionary    // dictionary to compact storage values
+	ValueDictionary *ValueDictionary // dictionary to compact storage values
 
-	CodeDictionary     *CodeDictionary     // dictionary to compact the bytecode of contracts
+	CodeDictionary *CodeDictionary // dictionary to compact the bytecode of contracts
 
-	SnapshotIndex      *SnapshotIndex      // snapshot index for execution (not for recording/replaying)
+	SnapshotIndex *SnapshotIndex // snapshot index for execution (not for recording/replaying)
 }
 
 // NewDictionaryContext creates a new dictionary context.
@@ -39,7 +39,6 @@ func NewDictionaryContext() *DictionaryContext {
 ////////////////////////////////////////////////////////////////
 // I/O
 ////////////////////////////////////////////////////////////////
-
 
 // DictionaryContextDir is the dictionaries' directory of the context.
 var DictionaryContextDir string = "./"

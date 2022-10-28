@@ -1,16 +1,16 @@
 package dict
 
 import (
+	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"math"
 	"os"
-	"fmt"
 )
 
 // ValueDictionaryLimit sets size of storage dictionary.
 var ValueDictionaryLimit uint64 = math.MaxUint64 - 1
 
-// ValueDictionary data structure encodes/decodes a value 
+// ValueDictionary data structure encodes/decodes a value
 // to an index or vice versa.
 type ValueDictionary struct {
 	storageToIdx map[common.Hash]uint64 // value to index map for encoding

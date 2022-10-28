@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// TestPositiveCodeDictionarySimple1 encodes byte-code, and compares whether the 
+// TestPositiveCodeDictionarySimple1 encodes byte-code, and compares whether the
 // decoded bytecode is the same, and its index is zero.
 func TestPositiveCodeDictionarySimple1(t *testing.T) {
 	encodedCode := []byte{0x1, 0x0, 0x02, 0x5, 0x7}
