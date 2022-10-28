@@ -114,6 +114,8 @@ func (s *carmenStateDB) Finalise(deleteEmptyObjects bool) {
 	// In Geth 'Finalise' is called to end a transaction and seal its effects.
 	// In Carmen, this event is called 'EndTransaction'.
 	s.db.EndTransaction()
+	// To be fair to the geth implementation, we comput the state hash after each transaction.
+	s.db.GetHash()
 }
 
 func (s *carmenStateDB) PrepareSubstate(substate *substate.SubstateAlloc) {
