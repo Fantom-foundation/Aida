@@ -222,5 +222,7 @@ func PrintProfiling() {
 
 		total += float64(opDuration[op])
 	}
-	fmt.Printf("Total StateDB net execution time=%v (s)\n", total/float64(time.Second))
+	sec := total / float64(time.Second)
+	tps := float64(opFrequencyy[EndTransactionID]) / sec
+	fmt.Printf("Total StateDB net execution time=%v (s) / ~%.1f Tx/s\n", sec, tps)
 }
