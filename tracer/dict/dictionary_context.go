@@ -29,11 +29,13 @@ type DictionaryContext struct {
 func NewDictionaryContext() *DictionaryContext {
 	return &DictionaryContext{
 		ContractDictionary: NewContractDictionary(),
-		StorageDictionary:  NewStorageDictionary(),
-		ValueDictionary:    NewValueDictionary(),
-		SnapshotIndex:      NewSnapshotIndex(),
 		PrevContractIndex:  InvalidContractIndex,
-		StorageCache:       NewIndexCache()}
+		StorageDictionary:  NewStorageDictionary(),
+		StorageCache:       NewIndexCache(),
+		ValueDictionary:    NewValueDictionary(),
+		CodeDictionary:     NewCodeDictionary(),
+		SnapshotIndex:      NewSnapshotIndex(),
+	}
 }
 
 ////////////////////////////////////////////////////////////////
@@ -225,7 +227,7 @@ func (ctx *DictionaryContext) DecodeCode(bcIdx uint32) []byte {
 }
 
 ////////////////////////////////////////////////////////////////
-// Snapshot methods
+// Index-cache methods
 ////////////////////////////////////////////////////////////////
 
 // ClearIndexCaches clears index caches and previous addresses.
