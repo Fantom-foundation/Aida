@@ -16,7 +16,7 @@ type DictionaryContext struct {
 	PrevContractIndex  uint32              // previously used contract index
 
 	StorageDictionary *StorageDictionary // dictionary to compact storage addresses
-	StorageCache      *IndexCache        // storage address cache
+	StorageIndexCache *IndexCache        // storage address cache
 
 	ValueDictionary *ValueDictionary // dictionary to compact storage values
 
@@ -31,7 +31,7 @@ func NewDictionaryContext() *DictionaryContext {
 		ContractDictionary: NewContractDictionary(),
 		PrevContractIndex:  InvalidContractIndex,
 		StorageDictionary:  NewStorageDictionary(),
-		StorageCache:       NewIndexCache(),
+		StorageIndexCache:  NewIndexCache(),
 		ValueDictionary:    NewValueDictionary(),
 		CodeDictionary:     NewCodeDictionary(),
 		SnapshotIndex:      NewSnapshotIndex(),
@@ -121,7 +121,7 @@ func (ctx *DictionaryContext) EncodeStorage(storage common.Hash) (uint32, int) {
 	if err != nil {
 		log.Fatalf("Storage address could not be encoded. Error: %v", err)
 	}
-	pos := ctx.StorageCache.Place(sIdx)
+	pos := ctx.StorageIndexCache.Place(sIdx)
 	return sIdx, pos
 }
 
@@ -131,14 +131,14 @@ func (ctx *DictionaryContext) DecodeStorage(sIdx uint32) common.Hash {
 	if err != nil {
 		log.Fatalf("Storage index could not be decoded. Error: %v", err)
 	}
-	ctx.StorageCache.Place(sIdx)
+	ctx.StorageIndexCache.Place(sIdx)
 	return storage
 }
 
 // ReadStorage reads index-cache and returns the storage address.
 // TODO: rename method
 func (ctx *DictionaryContext) ReadStorage(sPos int) common.Hash {
-	sIdx, err := ctx.StorageCache.Get(sPos)
+	sIdx, err := ctx.StorageIndexCache.Get(sPos)
 	if err != nil {
 		log.Fatalf("Storage position could not be found. Error: %v", err)
 	}
@@ -152,7 +152,7 @@ func (ctx *DictionaryContext) ReadStorage(sPos int) common.Hash {
 // LookupStorage reads and updates index-cache.
 // TODO: rename method
 func (ctx *DictionaryContext) LookupStorage(sPos int) common.Hash {
-	sIdx, err := ctx.StorageCache.Get(sPos)
+	sIdx, err := ctx.StorageIndexCache.Get(sPos)
 	if err != nil {
 		log.Fatalf("Storage position could not be found. Error: %v", err)
 	}
@@ -233,5 +233,5 @@ func (ctx *DictionaryContext) DecodeCode(bcIdx uint32) []byte {
 // ClearIndexCaches clears index caches and previous addresses.
 func (ctx *DictionaryContext) ClearIndexCaches() {
 	ctx.PrevContractIndex = InvalidContractIndex
-	ctx.StorageCache.Clear()
+	ctx.StorageIndexCache.Clear()
 }
