@@ -15,17 +15,17 @@ type GetBalance struct {
 	ContractIndex uint32
 }
 
-// Return the get-balance operation identifier.
+// GetOpId returns the get-balance operation identifier.
 func (op *GetBalance) GetOpId() byte {
 	return GetBalanceID
 }
 
-// Create a new get-balance operation.
+// NewGetBalance creates a new get-balance operation.
 func NewGetBalance(cIdx uint32) *GetBalance {
 	return &GetBalance{ContractIndex: cIdx}
 }
 
-// Read a get-balance operation from a file.
+// ReadGetBalance reads a get-balance operation from a file.
 func ReadGetBalance(file *os.File) (Operation, error) {
 	data := new(GetBalance)
 	err := binary.Read(file, binary.LittleEndian, data)
@@ -46,7 +46,7 @@ func (op *GetBalance) Execute(db state.StateDB, ctx *dict.DictionaryContext) tim
 	return time.Since(start)
 }
 
-// Print a debug message for get-balance.
+// Debug prints a debug message for the get-balance operation.
 func (op *GetBalance) Debug(ctx *dict.DictionaryContext) {
 	fmt.Printf("\tcontract: %v\n", ctx.DecodeContract(op.ContractIndex))
 }

@@ -9,21 +9,27 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/state"
 )
 
-// Get-state data structure for last contract and last storage address.
+// The GetStateLcls operation is a GetState operation
+// whose addresses refer to previous recorded/replayed
+// operations.
+// (NB: Lc = last contract addreess, ls = last storage
+// address)
+
+// GetStateLcls data structure
 type GetStateLcls struct {
 }
 
-// Return the get-state-lcls operation identifier.
+// GetOpId returns the get-state-lcls operation identifier.
 func (op *GetStateLcls) GetOpId() byte {
 	return GetStateLclsID
 }
 
-// Create a new get-state-lcls operation.
+// NewGetStateLcls creates a new get-state-lcls operation.
 func NewGetStateLcls() *GetStateLcls {
 	return new(GetStateLcls)
 }
 
-// Read a get-state-lcls operation from a file.
+// ReadGetStateLcls reads a get-state-lcls operation from a file.
 func ReadGetStateLcls(file *os.File) (Operation, error) {
 	return NewGetStateLcls(), nil
 }
@@ -42,9 +48,9 @@ func (op *GetStateLcls) Execute(db state.StateDB, ctx *dict.DictionaryContext) t
 	return time.Since(start)
 }
 
-// Print a debug message for get-state-lcls operation.
+// Debug prints a debug message for the get-state-lcls operation.
 func (op *GetStateLcls) Debug(ctx *dict.DictionaryContext) {
 	contract := ctx.LastContractAddress()
-	storage := ctx.LookupStorage(0)
+	storage := ctx.ReadStorage(0)
 	fmt.Printf("\tcontract: %v\t storage: %v\n", contract, storage)
 }

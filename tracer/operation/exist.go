@@ -15,17 +15,17 @@ type Exist struct {
 	ContractIndex uint32 // encoded contract address
 }
 
-// Return the exist operation identifier.
+// GetOpId returns the exist operation identifier.
 func (op *Exist) GetOpId() byte {
 	return ExistID
 }
 
-// Create a new exist operation.
+// NewExist creates a new exist operation.
 func NewExist(cIdx uint32) *Exist {
 	return &Exist{ContractIndex: cIdx}
 }
 
-// Read a exist operation from a file.
+// ReadExist reads an exist operation from a file.
 func ReadExist(file *os.File) (Operation, error) {
 	data := new(Exist)
 	err := binary.Read(file, binary.LittleEndian, data)
@@ -46,7 +46,7 @@ func (op *Exist) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Dur
 	return time.Since(start)
 }
 
-// Print a debug message for exist.
+// Debug prints a debug message for the exist operation.
 func (op *Exist) Debug(ctx *dict.DictionaryContext) {
 	fmt.Printf("\tcontract: %v\n", ctx.DecodeContract(op.ContractIndex))
 }

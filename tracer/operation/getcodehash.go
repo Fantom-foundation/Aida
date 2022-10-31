@@ -10,22 +10,22 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/state"
 )
 
-// Get-code-hash data structure
+// GetCodeHash data structure
 type GetCodeHash struct {
 	ContractIndex uint32 // encoded contract address
 }
 
-// Return the get-code-hash operation identifier.
+// GetOpId returns the get-code-hash operation identifier.
 func (op *GetCodeHash) GetOpId() byte {
 	return GetCodeHashID
 }
 
-// Create a new get-code-hash operation.
+// NewGetCodeHash creates a new get-code-hash operation.
 func NewGetCodeHash(cIdx uint32) *GetCodeHash {
 	return &GetCodeHash{ContractIndex: cIdx}
 }
 
-// Read a get-code-hash operation from a file.
+// ReadGetHash reads a get-code-hash operation from a file.
 func ReadGetCodeHash(file *os.File) (Operation, error) {
 	data := new(GetCodeHash)
 	err := binary.Read(file, binary.LittleEndian, data)
@@ -46,7 +46,7 @@ func (op *GetCodeHash) Execute(db state.StateDB, ctx *dict.DictionaryContext) ti
 	return time.Since(start)
 }
 
-// Print a debug message for get-code-hash.
+// Debug prints a debug message for the get-code-hash operation.
 func (op *GetCodeHash) Debug(ctx *dict.DictionaryContext) {
 	fmt.Printf("\tcontract: %v\n", ctx.DecodeContract(op.ContractIndex))
 }

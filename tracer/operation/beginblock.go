@@ -15,17 +15,17 @@ type BeginBlock struct {
 	BlockNumber uint64 // block number
 }
 
-// Return the begin-block operation identifier.
+// GetOpId returns the begin-block operation identifier.
 func (op *BeginBlock) GetOpId() byte {
 	return BeginBlockID
 }
 
-// Create a new begin-block operation.
+// NewBeginBlock creates a new begin-block operation.
 func NewBeginBlock(bbNum uint64) *BeginBlock {
 	return &BeginBlock{BlockNumber: bbNum}
 }
 
-// Read a begin-block operation from file.
+// ReadBeginBlock reads a begin-block operation from file.
 func ReadBeginBlock(file *os.File) (Operation, error) {
 	data := new(BeginBlock)
 	err := binary.Read(file, binary.LittleEndian, data)
@@ -44,7 +44,7 @@ func (op *BeginBlock) Execute(db state.StateDB, ctx *dict.DictionaryContext) tim
 	return time.Duration(0)
 }
 
-// Print a debug message for begin-block.
+// Debug prints a debug message for the begin-block operation.
 func (op *BeginBlock) Debug(ctx *dict.DictionaryContext) {
 	fmt.Printf("\tblock number: %v\n", op.BlockNumber)
 }

@@ -42,25 +42,23 @@ func ReadSubBalance(file *os.File) (Operation, error) {
 	return data, err
 }
 
-// Write writes the sub-balance operation to a file.
+// Write the sub-balance operation to a file.
 func (op *SubBalance) Write(f *os.File) error {
 	err := binary.Write(f, binary.LittleEndian, *op)
 	return err
 }
 
-// Execute executes the sub-balance operation.
+// Execute the sub-balance operation.
 func (op *SubBalance) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
-	// skip to avoid errors causing by negative balance when running on an empty db
-	// contract := ctx.DecodeContract(op.ContractIndex)
+	contract := ctx.DecodeContract(op.ContractIndex)
 	// construct bit.Int from a byte array
-	// amount := new(big.Int).SetBytes(op.Amount[:])
-	// start := time.Now()
-	// db.SubBalance(contract, amount)
-	// return time.Since(start)
-	return time.Duration(0)
+	amount := new(big.Int).SetBytes(op.Amount[:])
+	start := time.Now()
+	db.SubBalance(contract, amount)
+	return time.Since(start)
 }
 
-// Debug prints a debug message for sub-balance.
+// Debug prints a debug message for the sub-balance operation.
 func (op *SubBalance) Debug(ctx *dict.DictionaryContext) {
 	fmt.Printf("\tcontract: %v\t amount: %v\n", ctx.DecodeContract(op.ContractIndex), new(big.Int).SetBytes(op.Amount[:]))
 }

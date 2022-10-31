@@ -46,7 +46,7 @@ func (op *GetNonce) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.
 	return time.Since(start)
 }
 
-// Debug prints a debug message for get-nonce.
+// Debug prints a debug message for the get-nonce operation.
 func (op *GetNonce) Debug(ctx *dict.DictionaryContext) {
 	fmt.Printf("\tcontract: %v\n", ctx.DecodeContract(op.ContractIndex))
 }

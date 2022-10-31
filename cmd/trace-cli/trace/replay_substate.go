@@ -2,26 +2,23 @@ package trace
 
 import (
 	"fmt"
-	"io/fs"
 	"io/ioutil"
 	"os"
-	"path/filepath"
 	"runtime/pprof"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer"
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
-	"github.com/Fantom-foundation/Aida/tracer/state"
 	"github.com/ethereum/go-ethereum/substate"
 	"github.com/urfave/cli/v2"
 )
 
-// Trace replay command
-var TraceReplayCommand = cli.Command{
-	Action:    traceReplayAction,
-	Name:      "replay",
-	Usage:     "executes storage trace",
+// Trace replay-substate command
+var TraceReplaySubstateCommand = cli.Command{
+	Action:    traceReplaySubstateAction,
+	Name:      "replay-substate",
+	Usage:     "executes storage trace using substates",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		&cpuProfileFlag,
@@ -36,94 +33,20 @@ var TraceReplayCommand = cli.Command{
 		&validateEndState,
 	},
 	Description: `
-The trace replay command requires two arguments:
+The trace replay-substate command requires two arguments:
 <blockNumFirst> <blockNumLast>
 
 <blockNumFirst> and <blockNumLast> are the first and
 last block of the inclusive range of blocks to replay storage traces.`,
 }
 
-// Compare state after replaying traces with recorded state.
-func compareStorage(recordedAlloc substate.SubstateAlloc, traceAlloc substate.SubstateAlloc) error {
-	for account, recordAccount := range recordedAlloc {
-		// account exists in both substate
-		if replayAccout, exist := traceAlloc[account]; exist {
-			for k, xv := range recordAccount.Storage {
-				// mismatched value or key dones't exist
-				if yv, exist := replayAccout.Storage[k]; !exist || xv != yv {
-					return fmt.Errorf("Error: mismatched value at storage key %v. want %v have %v\n", k, xv, yv)
-				}
-			}
-			for k, yv := range replayAccout.Storage {
-				// key exists when expecting nil
-				if xv, exist := recordAccount.Storage[k]; !exist {
-					return fmt.Errorf("Error: mismatched value at storage key %v. want %v have %v\n", k, xv, yv)
-				}
-			}
-		} else {
-			if len(recordAccount.Storage) > 0 {
-				return fmt.Errorf("Error: account %v doesn't exist\n", account)
-			}
-			//else ignores accounts which has no storage
-		}
-	}
-
-	// checks for unexpected accounts in replayed substate
-	for account := range traceAlloc {
-		if _, exist := recordedAlloc[account]; !exist {
-			return fmt.Errorf("Error: unexpected account %v\n", account)
-		}
-	}
-	return nil
-}
-
-// Create a new DB instance based on cli argument.
-func makeStateDb(directory string, cliCtx *cli.Context) (state.StateDB, error) {
-	impl := cliCtx.String(stateDbImplementation.Name)
-	variant := cliCtx.String(stateDbVariant.Name)
-	fmt.Printf("record-replay: Creating database instance of type '%v", impl)
-	if variant != "" {
-		fmt.Printf(" (%v)", variant)
-	}
-	fmt.Println("'")
-	switch impl {
-	case "memory":
-		return state.MakeGethInMemoryStateDB(variant)
-	case "geth":
-		return state.MakeGethStateDB(directory, variant)
-	case "carmen":
-		return state.MakeCarmenStateDB(directory, variant)
-	}
-	return nil, fmt.Errorf("Unknown DB implementation (--%v): %v", stateDbImplementation.Name, impl)
-}
-
-// getDirectorySize computes the size of all files in the given directoy in bytes.
-func getDirectorySize(directory string) int64 {
-	var sum int64 = 0
-	filepath.Walk(directory, func(path string, info fs.FileInfo, err error) error {
-		if err != nil {
-			return nil
-		}
-		if !info.IsDir() {
-			sum += info.Size()
-		}
-		return nil
-	})
-	return sum
-}
-
-// Simulate storage operations from storage traces on stateDB.
-func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
+// traceReplaySubstateTask simulates storage operations from storage traces on stateDB.
+func traceReplaySubstateTask(first uint64, last uint64, cliCtx *cli.Context) error {
 	// load dictionaries & indexes
 	dCtx := dict.ReadDictionaryContext()
 	iCtx := tracer.ReadIndexContext()
 
-	// TODO: 1) compute full-state for "first" block, and
-	//       2) transcribe full-state to the StateDB object
-	//          under test.
-
 	// iterate substate (for in-membory state)
-	// TODO set configurable number of workers
 	stateIter := substate.NewSubstateIterator(first, cliCtx.Int(substate.WorkersFlag.Name))
 	defer stateIter.Release()
 
@@ -157,15 +80,19 @@ func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 	}
 
 	// Instantiate the state DB under testing
-	db, err := makeStateDb(state_directory, cliCtx)
+	impl := cliCtx.String(stateDbImplementation.Name)
+	variant := cliCtx.String(stateDbVariant.Name)
+	db, err := makeStateDB(state_directory, impl, variant)
 	if err != nil {
 		return err
 	}
 
 	var (
-		start   time.Time
-		sec     float64
-		lastSec float64
+		start       time.Time
+		sec         float64
+		lastSec     float64
+		lastTxCount uint64
+		txCount     uint64
 	)
 	if enableProgress {
 		start = time.Now()
@@ -180,6 +107,10 @@ func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 		db.PrepareSubstate(&tx.Substate.InputAlloc)
 		for traceIter.Next() {
 			op := traceIter.Value()
+			// skip execution of sub balance if carmen or geth is used
+			if op.GetOpId() == operation.SubBalanceID && impl != "memory" {
+				continue
+			}
 			operation.Execute(op, db, dCtx)
 			if traceDebug {
 				operation.Debug(dCtx, op)
@@ -187,6 +118,7 @@ func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 
 			// find end of transaction
 			if op.GetOpId() == operation.EndTransactionID {
+				txCount++
 				break
 			}
 		}
@@ -195,7 +127,7 @@ func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 		if validation_enabled {
 			traceAlloc := db.GetSubstatePostAlloc()
 			recordedAlloc := tx.Substate.OutputAlloc
-			err := compareStorage(recordedAlloc, traceAlloc)
+			err := compareSubstateStorage(recordedAlloc, traceAlloc)
 			if err != nil {
 				return err
 			}
@@ -203,8 +135,11 @@ func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 		if enableProgress {
 			// report progress
 			sec = time.Since(start).Seconds()
-			if sec-lastSec >= 15 {
-				fmt.Printf("trace replay: Elapsed time: %.0f s, at block %v\n", sec, tx.Block)
+			diff := sec - lastSec
+			if diff >= 15 {
+				numTx := txCount - lastTxCount
+				lastTxCount = txCount
+				fmt.Printf("trace replay-substate: Elapsed time: %.0f s, at block %v (~%.1f Tx/s)\n", sec, tx.Block, float64(numTx)/diff)
 				lastSec = sec
 			}
 		}
@@ -224,7 +159,7 @@ func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 
 	if enableProgress {
 		sec = time.Since(start).Seconds()
-		fmt.Printf("trace replay: Total elapsed time: %.3f s, processed %v blocks\n", sec, last-first+1)
+		fmt.Printf("trace replay-substate: Total elapsed time: %.3f s, processed %v blocks (~%.1f Tx/s)\n", sec, last-first+1, float64(txCount)/sec)
 	}
 
 	// print profile statistics (if enabled)
@@ -237,21 +172,22 @@ func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 	if err := db.Close(); err != nil {
 		fmt.Printf("Failed to close database: %v", err)
 	}
+
 	if enableProgress {
-		fmt.Printf("trace replay: Closing DB took %v\n", time.Since(start))
-		fmt.Printf("trace replay: Final disk usage: %v MiB\n", float32(getDirectorySize(state_directory))/float32(1024*1024))
+		fmt.Printf("trace replay-substate: Closing DB took %v\n", time.Since(start))
+		fmt.Printf("trace replay-substate: Final disk usage: %v MiB\n", float32(getDirectorySize(state_directory))/float32(1024*1024))
 	}
 
 	return nil
 }
 
 // Implements trace command for replaying.
-func traceReplayAction(ctx *cli.Context) error {
+func traceReplaySubstateAction(ctx *cli.Context) error {
 	var err error
 
 	// process arguments
 	if ctx.Args().Len() != 2 {
-		return fmt.Errorf("trace replay command requires exactly 2 arguments")
+		return fmt.Errorf("trace replay-substate command requires exactly 2 arguments")
 	}
 	tracer.TraceDir = ctx.String(traceDirectoryFlag.Name) + "/"
 	dict.DictionaryContextDir = ctx.String(traceDirectoryFlag.Name) + "/"
@@ -267,7 +203,7 @@ func traceReplayAction(ctx *cli.Context) error {
 	substate.SetSubstateFlags(ctx)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
-	err = storageDriver(first, last, ctx)
+	err = traceReplaySubstateTask(first, last, ctx)
 
 	return err
 }
