@@ -3,7 +3,7 @@ package operation
 import (
 	"encoding/binary"
 	"fmt"
-	"os"
+	"io"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
@@ -26,14 +26,14 @@ func NewFinalise(deleteEmptyObjects bool) *Finalise {
 }
 
 // ReadFinalise reads a finalise operation from a file.
-func ReadFinalise(file *os.File) (Operation, error) {
+func ReadFinalise(file io.Reader) (Operation, error) {
 	data := new(Finalise)
 	err := binary.Read(file, binary.LittleEndian, data)
 	return data, err
 }
 
 // Write the finalise operation to a file.
-func (op *Finalise) Write(f *os.File) error {
+func (op *Finalise) Write(f io.Writer) error {
 	err := binary.Write(f, binary.LittleEndian, *op)
 	return err
 }

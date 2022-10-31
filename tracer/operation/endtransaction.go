@@ -2,7 +2,7 @@ package operation
 
 import (
 	"encoding/binary"
-	"os"
+	"io"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
@@ -24,12 +24,12 @@ func NewEndTransaction() *EndTransaction {
 }
 
 // ReadEndTransaction reads a new end-transaction operation from file.
-func ReadEndTransaction(*os.File) (Operation, error) {
+func ReadEndTransaction(io.Reader) (Operation, error) {
 	return new(EndTransaction), nil
 }
 
 // Write the end-transaction operation to file.
-func (op *EndTransaction) Write(f *os.File) error {
+func (op *EndTransaction) Write(f io.Writer) error {
 	err := binary.Write(f, binary.LittleEndian, *op)
 	return err
 }

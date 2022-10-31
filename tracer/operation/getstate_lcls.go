@@ -2,7 +2,7 @@ package operation
 
 import (
 	"fmt"
-	"os"
+	"io"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
@@ -30,12 +30,12 @@ func NewGetStateLcls() *GetStateLcls {
 }
 
 // ReadGetStateLcls reads a get-state-lcls operation from a file.
-func ReadGetStateLcls(file *os.File) (Operation, error) {
+func ReadGetStateLcls(file io.Reader) (Operation, error) {
 	return NewGetStateLcls(), nil
 }
 
 // Write the get-state-lcls operation to file.
-func (op *GetStateLcls) Write(f *os.File) error {
+func (op *GetStateLcls) Write(f io.Writer) error {
 	return nil
 }
 

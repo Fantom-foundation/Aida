@@ -2,7 +2,7 @@ package operation
 
 import (
 	"fmt"
-	"os"
+	"io"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
@@ -29,12 +29,12 @@ func NewGetCodeHashLc() *GetCodeHashLc {
 }
 
 // ReadGetCodeHashLc reads a get-code-hash-lc operation from a file.
-func ReadGetCodeHashLc(file *os.File) (Operation, error) {
+func ReadGetCodeHashLc(file io.Reader) (Operation, error) {
 	return NewGetCodeHashLc(), nil
 }
 
 // Write the get-code-hash-lc operation to a file.
-func (op *GetCodeHashLc) Write(f *os.File) error {
+func (op *GetCodeHashLc) Write(f io.Writer) error {
 	return nil
 }
 
