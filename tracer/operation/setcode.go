@@ -3,7 +3,7 @@ package operation
 import (
 	"encoding/binary"
 	"fmt"
-	"os"
+	"io"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
@@ -27,14 +27,14 @@ func NewSetCode(cIdx uint32, bcIdx uint32) *SetCode {
 }
 
 // ReadSetCode reads a set-code operation from a file.
-func ReadSetCode(file *os.File) (Operation, error) {
+func ReadSetCode(file io.Reader) (Operation, error) {
 	data := new(SetCode)
 	err := binary.Read(file, binary.LittleEndian, data)
 	return data, err
 }
 
 // Write the set-code operation to a file.
-func (op *SetCode) Write(f *os.File) error {
+func (op *SetCode) Write(f io.Writer) error {
 	err := binary.Write(f, binary.LittleEndian, *op)
 	return err
 }

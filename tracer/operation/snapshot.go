@@ -3,9 +3,9 @@ package operation
 import (
 	"encoding/binary"
 	"fmt"
+	"io"
 	"log"
 	"math"
-	"os"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
@@ -28,14 +28,14 @@ func NewSnapshot(SnapshotID int32) *Snapshot {
 }
 
 // ReadSnapshot reads a snapshot operation from a file.
-func ReadSnapshot(file *os.File) (Operation, error) {
+func ReadSnapshot(file io.Reader) (Operation, error) {
 	data := new(Snapshot)
 	err := binary.Read(file, binary.LittleEndian, data)
 	return data, err
 }
 
 // Write the snapshot operation to file.
-func (op *Snapshot) Write(f *os.File) error {
+func (op *Snapshot) Write(f io.Writer) error {
 	err := binary.Write(f, binary.LittleEndian, *op)
 	return err
 }

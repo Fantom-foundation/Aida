@@ -3,7 +3,7 @@ package operation
 import (
 	"encoding/binary"
 	"fmt"
-	"os"
+	"io"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
@@ -27,14 +27,14 @@ func NewGetState(cIdx uint32, sIdx uint32) *GetState {
 }
 
 // ReadGetState reads a get-state operation from a file.
-func ReadGetState(file *os.File) (Operation, error) {
+func ReadGetState(file io.Reader) (Operation, error) {
 	data := new(GetState)
 	err := binary.Read(file, binary.LittleEndian, data)
 	return data, err
 }
 
 // Write the get-state operation to file.
-func (op *GetState) Write(f *os.File) error {
+func (op *GetState) Write(f io.Writer) error {
 	err := binary.Write(f, binary.LittleEndian, *op)
 	return err
 }

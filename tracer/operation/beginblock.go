@@ -3,7 +3,7 @@ package operation
 import (
 	"encoding/binary"
 	"fmt"
-	"os"
+	"io"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
@@ -26,14 +26,14 @@ func NewBeginBlock(bbNum uint64) *BeginBlock {
 }
 
 // ReadBeginBlock reads a begin-block operation from file.
-func ReadBeginBlock(file *os.File) (Operation, error) {
+func ReadBeginBlock(file io.Reader) (Operation, error) {
 	data := new(BeginBlock)
 	err := binary.Read(file, binary.LittleEndian, data)
 	return data, err
 }
 
 // Write the begin-block operation to file.
-func (op *BeginBlock) Write(f *os.File) error {
+func (op *BeginBlock) Write(f io.Writer) error {
 	err := binary.Write(f, binary.LittleEndian, *op)
 	return err
 }

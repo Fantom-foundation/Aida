@@ -3,7 +3,7 @@ package operation
 import (
 	"encoding/binary"
 	"fmt"
-	"os"
+	"io"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
@@ -26,14 +26,14 @@ func NewRevertToSnapshot(SnapshotID int) *RevertToSnapshot {
 }
 
 // ReadRevertToSnapshot reads revert-to-snapshot operation from file.
-func ReadRevertToSnapshot(file *os.File) (Operation, error) {
+func ReadRevertToSnapshot(file io.Reader) (Operation, error) {
 	data := new(RevertToSnapshot)
 	err := binary.Read(file, binary.LittleEndian, data)
 	return data, err
 }
 
 // Write the revert-to-snapshot operation to file.
-func (op *RevertToSnapshot) Write(f *os.File) error {
+func (op *RevertToSnapshot) Write(f io.Writer) error {
 	err := binary.Write(f, binary.LittleEndian, *op)
 	return err
 }
