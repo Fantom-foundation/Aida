@@ -108,7 +108,7 @@ func traceReplaySubstateTask(first uint64, last uint64, cliCtx *cli.Context) err
 		for traceIter.Next() {
 			op := traceIter.Value()
 			// skip execution of sub balance if carmen or geth is used
-			if op.GetOpId() == operation.SubBalanceID && impl != "memory" {
+			if op.GetId() == operation.SubBalanceID && impl != "memory" {
 				continue
 			}
 			operation.Execute(op, db, dCtx)
