@@ -1,9 +1,11 @@
 package trace
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/Fantom-foundation/Aida/tracer/state"
 	"github.com/ethereum/go-ethereum/substate"
+	"log"
 )
 
 // validateDatabase validates whether the world-state is contained in the db object
@@ -25,7 +27,7 @@ func validateStateDB(ws substate.SubstateAlloc, db state.StateDB) error {
 				"\thave %v",
 				addr.Hex(), account.Nonce, db.GetNonce(addr))
 		}
-		if db.GetCode(addr) != account.GetCode() {
+		if bytes.Compare(db.GetCode(addr), account.Code) != 0 {
 			log.Fatalf("Failed to validate code for account %v", addr.Hex())
 		}
 		for key, value := range account.Storage {
