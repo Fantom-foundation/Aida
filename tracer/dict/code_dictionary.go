@@ -2,17 +2,16 @@ package dict
 
 import (
 	"encoding/binary"
-	"errors"
+	"fmt"
 	"io"
 	"math"
 	"os"
 )
 
-// Entry limit of code dictionary
+// CodeDictionaryLimit sets the size of the code dictionary.
 var CodeDictionaryLimit uint32 = math.MaxUint32 - 1
 
-// Dictionary data structure encodes/decodes byte code to a
-// dictionary index or vice versa.
+// CodeDictionary data structure encodes/decodes byte-code to an index or vice versa.
 type CodeDictionary struct {
 	codeToIdx map[string]uint32 // code (as string) to an index map for encoding
 	idxToCode []string          // code  slice for decoding
@@ -31,7 +30,7 @@ func NewCodeDictionary() *CodeDictionary {
 	return p
 }
 
-// Encode byte code to a dictionary index.
+// Encode byte-code to a dictionary index.
 func (d *CodeDictionary) Encode(code []byte) (uint32, error) {
 	// find byte code
 	sCode := string(code)
@@ -39,7 +38,7 @@ func (d *CodeDictionary) Encode(code []byte) (uint32, error) {
 	if !ok {
 		idx = uint32(len(d.idxToCode))
 		if idx >= CodeDictionaryLimit {
-			return 0, errors.New("Code dictionary exhausted")
+			return 0, fmt.Errorf("Code dictionary exhausted")
 		}
 		d.codeToIdx[sCode] = idx
 		d.idxToCode = append(d.idxToCode, sCode)
@@ -47,12 +46,12 @@ func (d *CodeDictionary) Encode(code []byte) (uint32, error) {
 	return idx, nil
 }
 
-// Decode a dictionary index to byte code.
+// Decode a dictionary index to byte-code.
 func (d *CodeDictionary) Decode(idx uint32) ([]byte, error) {
 	if idx < uint32(len(d.idxToCode)) {
 		return []byte(d.idxToCode[idx]), nil
 	} else {
-		return nil, errors.New("Index out-of-bound")
+		return nil, fmt.Errorf("Index out-of-bound")
 	}
 }
 
@@ -69,19 +68,20 @@ func (d *CodeDictionary) Write(filename string) error {
 
 	// write all dictionary entries
 	for _, code := range d.idxToCode {
+
 		// write length of code block
 		if len(code) >= math.MaxUint32 {
-			return errors.New("Code size exceeds uint32")
+			return fmt.Errorf("Code is too large to write")
 		}
 		length := uint32(len(code))
 		err := binary.Write(f, binary.LittleEndian, &length)
 		if err != nil {
-			return err
+			return fmt.Errorf("Error writing code length. Error: %v", err)
 		}
 
 		// write code
 		if _, err := f.Write([]byte(code)); err != nil {
-			return err
+			return fmt.Errorf("Error writing byte-code. Error: %v", err)
 		}
 	}
 	return nil
@@ -111,25 +111,24 @@ func (d *CodeDictionary) Read(filename string) error {
 		if err == io.EOF {
 			return nil
 		} else if err != nil {
-			return errors.New("Code dictionary file/reading is corrupted")
+			return fmt.Errorf("Code dictionary file/reading is corrupted. Error: %v", err)
 		}
 
 		// read byte code
 		code := make([]byte, length)
 		n, err := f.Read(code)
 		if err != nil {
-			return errors.New("Code dictionary file/reading is corrupted")
+			return fmt.Errorf("Error reading code length/file is corrupted. Error: %v", err)
 		} else if n != int(length) {
-			return errors.New("Code byte has wrong file size.")
+			return fmt.Errorf("Error reading code length/wrong size")
 		}
 
 		// encode entry
 		idx, err := d.Encode(code)
-
 		if err != nil {
-			return err
+			return fmt.Errorf("Failed to encode byte-code while reading. Error: %v", err)
 		} else if idx != ctr {
-			return errors.New("Corrupted code dictionary file entries")
+			return fmt.Errorf("Corrupted code dictionary file entries")
 		}
 	}
 	return nil

@@ -7,8 +7,8 @@ import (
 	"testing"
 )
 
-// Positive Test: Encode an address, and compare whether the decoded address is the same,
-// and its index is zero.
+// TestPositiveStorageDictionarySimple1 encodes an address, and compares whether
+// the decoded address is the same, and its index is zero.
 func TestPositiveStorageDictionarySimple1(t *testing.T) {
 	encodedAddr := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
 	dict := NewStorageDictionary()
@@ -19,8 +19,8 @@ func TestPositiveStorageDictionarySimple1(t *testing.T) {
 	}
 }
 
-// Negative Test: Encode two addresses, and compare whether the decoded addresses are the same,
-// and their dictionary indices are zero and one.
+// TestPositiveStorageDictionarySimple2 encodes two addresses, and compares whether
+// the decoded addresses are the same, and their dictionary indices are zero and one.
 func TestPositiveStorageDictionarySimple2(t *testing.T) {
 	encodedAddr1 := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
 	encodedAddr2 := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F273")
@@ -37,7 +37,7 @@ func TestPositiveStorageDictionarySimple2(t *testing.T) {
 	}
 }
 
-// Positive Test: Encode one address twice and check that its address
+// TestPositiveStorageDictionarySimple3 encodes one address twice and check that its address
 // is encoded only once, and its index is zero.
 func TestPositiveStorageDictionarySimple3(t *testing.T) {
 	encodedAddr1 := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
@@ -54,7 +54,7 @@ func TestPositiveStorageDictionarySimple3(t *testing.T) {
 	}
 }
 
-// Negative Test: Check whether dictionary overflows can be captured.
+// TestNegativeStorageDictionaryOverflow checks whether dictionary overflows can be captured.
 func TestNegativeStorageDictionaryOverflow(t *testing.T) {
 	encodedAddr1 := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
 	encodedAddr2 := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F273")
@@ -73,8 +73,8 @@ func TestNegativeStorageDictionaryOverflow(t *testing.T) {
 	StorageDictionaryLimit = math.MaxUint32
 }
 
-// Negative Test: Check whether invalid index for Decode() can be captured.
-// (Retrieving index 0 on an empty dictionary)
+// TestNegativeStorageDictionaryDecodingFailure1 checks whether invalid index for Decode()
+// can be captured (retrieving index 0 on an empty dictionary).
 func TestNegativeStorageDictionaryDecodingFailure1(t *testing.T) {
 	dict := NewStorageDictionary()
 	_, err := dict.Decode(0)
@@ -83,8 +83,9 @@ func TestNegativeStorageDictionaryDecodingFailure1(t *testing.T) {
 	}
 }
 
-// Negative Test: Check whether invalid index for Decode() can be captured.
-// (Retrieving index MaxUint32 on an empty dictionary)
+// TestNegativeStorageDictionaryDecodingFailure2 checks whether invalid
+// index for Decode() can be captured (retrieving index MaxUint32 on an
+// empty dictionary).
 func TestNegativeStorageDictionaryDecodingFailure2(t *testing.T) {
 	dict := NewStorageDictionary()
 	_, err := dict.Decode(math.MaxUint32)
@@ -93,7 +94,8 @@ func TestNegativeStorageDictionaryDecodingFailure2(t *testing.T) {
 	}
 }
 
-// Negative Test: Create corrupted file and read file as dictionary.
+// TestNegativeStorageDictionaryReadFailure creates corrupted file and
+// reads file as dictionary.
 func TestNegativeStorageDictionaryReadFailure(t *testing.T) {
 	filename := "./test.dict"
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
@@ -117,8 +119,9 @@ func TestNegativeStorageDictionaryReadFailure(t *testing.T) {
 	os.Remove(filename)
 }
 
-// Positive Test: Encode two addresses, write them to file, and read them from file.
-// Check whether the newly created dictionary read from file is identical.
+// TestPositiveStorageDictionaryReadWrite encodes two addresses, writes them to file,
+// and reads them from file. Check whether the newly created dictionary read from
+// file is identical.
 func TestPositiveStorageDictionaryReadWrite(t *testing.T) {
 	filename := "./test.dict"
 	encodedAddr1 := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")

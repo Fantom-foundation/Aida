@@ -3,8 +3,8 @@ package operation
 import (
 	"encoding/binary"
 	"fmt"
+	"io"
 	"log"
-	"os"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
@@ -36,14 +36,14 @@ func NewGetStateLccs(sPos int) *GetStateLccs {
 }
 
 // ReadGetStateLccs reads a get-state-lccs operation from a file.
-func ReadGetStateLccs(file *os.File) (Operation, error) {
+func ReadGetStateLccs(file io.Reader) (Operation, error) {
 	data := new(GetStateLccs)
 	err := binary.Read(file, binary.LittleEndian, data)
 	return data, err
 }
 
 // Write the get-state-lccs operation to file.
-func (op *GetStateLccs) Write(f *os.File) error {
+func (op *GetStateLccs) Write(f io.Writer) error {
 	err := binary.Write(f, binary.LittleEndian, *op)
 	return err
 }

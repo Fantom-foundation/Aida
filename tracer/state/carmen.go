@@ -39,6 +39,7 @@ type carmenStateDB struct {
 	db carmen.StateDB
 }
 
+var getCodeCalled bool
 var getCodeHashCalled bool
 
 func (s *carmenStateDB) CreateAccount(addr common.Address) {
@@ -102,6 +103,14 @@ func (s *carmenStateDB) GetCodeHash(addr common.Address) common.Hash {
 	return common.Hash{}
 }
 
+func (s *carmenStateDB) GetCode(addr common.Address) []byte {
+	if !getCodeCalled {
+		fmt.Printf("WARNING: GetCode not implemented\n")
+		getCodeCalled = true
+	}
+	return []byte{}
+}
+
 func (s *carmenStateDB) Snapshot() int {
 	return s.db.Snapshot()
 }
@@ -114,6 +123,8 @@ func (s *carmenStateDB) Finalise(deleteEmptyObjects bool) {
 	// In Geth 'Finalise' is called to end a transaction and seal its effects.
 	// In Carmen, this event is called 'EndTransaction'.
 	s.db.EndTransaction()
+	// To be fair to the geth implementation, we comput the state hash after each transaction.
+	s.db.GetHash()
 }
 
 func (s *carmenStateDB) PrepareSubstate(substate *substate.SubstateAlloc) {

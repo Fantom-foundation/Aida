@@ -1,13 +1,13 @@
 package dict
 
 import (
-	"errors"
+	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"math"
 	"os"
 )
 
-// Entry limit of storage dictionary
+// StorageDictionaryLimit sets the size of storage dictionary.
 var StorageDictionaryLimit uint32 = math.MaxUint32 - 1
 
 // Dictionary data structure encodes/decodes a storage address
@@ -23,21 +23,21 @@ func (sDict *StorageDictionary) Init() {
 	sDict.idxToStorage = []common.Hash{}
 }
 
-// Create a new storage dictionary.
+// NewStorageDictionary creates a new storage dictionary.
 func NewStorageDictionary() *StorageDictionary {
 	p := new(StorageDictionary)
 	p.Init()
 	return p
 }
 
-// Encode an storage address to a dictionary index.
+// Encode an storage address to an index.
 func (sDict *StorageDictionary) Encode(addr common.Hash) (uint32, error) {
 	// find storage address
 	idx, ok := sDict.storageToIdx[addr]
 	if !ok {
 		idx = uint32(len(sDict.idxToStorage))
 		if idx >= StorageDictionaryLimit {
-			return 0, errors.New("Storage dictionary exhausted")
+			return 0, fmt.Errorf("Storage dictionary exhausted")
 		}
 		sDict.storageToIdx[addr] = idx
 		sDict.idxToStorage = append(sDict.idxToStorage, addr)
@@ -50,7 +50,7 @@ func (sDict *StorageDictionary) Decode(idx uint32) (common.Hash, error) {
 	if idx < uint32(len(sDict.idxToStorage)) {
 		return sDict.idxToStorage[idx], nil
 	} else {
-		return common.Hash{}, errors.New("Index out-of-bound")
+		return common.Hash{}, fmt.Errorf("Index out-of-bound")
 	}
 }
 
@@ -96,8 +96,10 @@ func (sDict *StorageDictionary) Read(filename string) error {
 		n, err := f.Read(data)
 		if n == 0 {
 			break
-		} else if n < len(data) || err != nil {
-			return errors.New("Storage dictionary file/reading is corrupted")
+		} else if n < len(data) {
+			return fmt.Errorf("Error reading storage address/wrong size.")
+		} else if err != nil {
+			return fmt.Errorf("Error reading storage address. Error: %v", err)
 		}
 
 		// encode entry
@@ -105,7 +107,7 @@ func (sDict *StorageDictionary) Read(filename string) error {
 		if err != nil {
 			return err
 		} else if idx != ctr {
-			return errors.New("Corrupted storage dictionary file entries")
+			return fmt.Errorf("Corrupted storage dictionary file entries")
 		}
 	}
 	return nil

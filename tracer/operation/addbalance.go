@@ -3,9 +3,9 @@ package operation
 import (
 	"encoding/binary"
 	"fmt"
+	"io"
 	"log"
 	"math/big"
-	"os"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
@@ -36,14 +36,14 @@ func NewAddBalance(cIdx uint32, amount *big.Int) *AddBalance {
 }
 
 // ReadAddBalance reads a add-balance operation from a file.
-func ReadAddBalance(file *os.File) (Operation, error) {
+func ReadAddBalance(file io.Reader) (Operation, error) {
 	data := new(AddBalance)
 	err := binary.Read(file, binary.LittleEndian, data)
 	return data, err
 }
 
 // Write writes the add-balance operation to a file.
-func (op *AddBalance) Write(f *os.File) error {
+func (op *AddBalance) Write(f io.Writer) error {
 	err := binary.Write(f, binary.LittleEndian, *op)
 	return err
 }

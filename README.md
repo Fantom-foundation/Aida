@@ -80,8 +80,28 @@ simulates transaction execution from block 5,000,000 to (and including) block 5,
 
 **Run**
 
-`./build/trace replay 5050000 5100000`
-reads the recorded traces and re-execute state operations from block 5,050,000 to 5,100,000. The storage operations are executed sequentially in the order they were recorded. The tool iterates through substates to construct a partial stateDB such that the replayed storage operations can simulate read/write with actual data.
+`./build/trace replay --db path/to/world-state-4564025 5050000 5100000`
+reads the recorded traces and re-executes state operations from block 5,050,000 to 5,100,000. The tool initializes stateDB with accounts in the world state at block 4564025 from `path/to/world-state-4564025`. The storage operations are executed and update the stateDB sequentially in the order they were recorded. 
+
+**Options**
+
+ - `--cpuprofile` records a CPU profile for the replay to be inspected using `pprof`
+ - `--db` sets direcory contain world state.
+ - `--db-impl` select between `geth` and `carmen`. Default: `geth`
+ - `--db-variant` select between implementation specific sub-variants, e.g. `go-ldb` or `cpp-file`
+ - `--profile` records and displays summary information on operation performance
+ - `--substatedir` sets directory contain substate database. Default: `./substate.fantom`
+ - `--tracedir` sets trace file directory. Default: `./`
+ - `--trace-debug` print replayed operations. 
+ - `--validate` validate the state after replaying traces.
+ - `--workers` sets the number of worker threads.
+
+### Trace Replay Substate
+
+**Run**
+
+`./build/trace replay-substate 5050000 5100000`
+reads the recorded traces and re-executes state operations from block 5,050,000 to 5,100,000. The storage operations are executed sequentially in the order they were recorded. The tool iterates through substates to construct a partial stateDB such that the replayed storage operations can simulate read/write with actual data.
 
 **Options**
 
@@ -90,7 +110,7 @@ reads the recorded traces and re-execute state operations from block 5,050,000 t
  - `--db-variant` select between implementation specific sub-variants, e.g. `go-ldb` or `cpp-file`
  - `--profile` records and displays summary information on operation performance
  - `--substatedir` sets directory contain substate database. Default: `./substate.fantom`
- - `--trace-dir` sets trace file directory. Default: `./`
+ - `--tracedir` sets trace file directory. Default: `./`
  - `--trace-debug` print replayed operations. 
  - `--validate` validate the state after replaying traces.
  - `--workers` sets the number of worker threads.

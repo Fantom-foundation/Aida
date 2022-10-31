@@ -3,7 +3,7 @@ package operation
 import (
 	"encoding/binary"
 	"fmt"
-	"os"
+	"io"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
@@ -26,14 +26,14 @@ func NewGetCodeSize(cIdx uint32) *GetCodeSize {
 }
 
 // ReadGetCodeSize reads a get-code-size operation from a file.
-func ReadGetCodeSize(file *os.File) (Operation, error) {
+func ReadGetCodeSize(file io.Reader) (Operation, error) {
 	data := new(GetCodeSize)
 	err := binary.Read(file, binary.LittleEndian, data)
 	return data, err
 }
 
 // Write the get-code-size operation to a file.
-func (op *GetCodeSize) Write(f *os.File) error {
+func (op *GetCodeSize) Write(f io.Writer) error {
 	err := binary.Write(f, binary.LittleEndian, *op)
 	return err
 }

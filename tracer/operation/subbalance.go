@@ -3,9 +3,9 @@ package operation
 import (
 	"encoding/binary"
 	"fmt"
+	"io"
 	"log"
 	"math/big"
-	"os"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
@@ -36,28 +36,26 @@ func NewSubBalance(cIdx uint32, amount *big.Int) *SubBalance {
 }
 
 // ReadSubBalance reads a sub-balance operation from a file.
-func ReadSubBalance(file *os.File) (Operation, error) {
+func ReadSubBalance(file io.Reader) (Operation, error) {
 	data := new(SubBalance)
 	err := binary.Read(file, binary.LittleEndian, data)
 	return data, err
 }
 
 // Write the sub-balance operation to a file.
-func (op *SubBalance) Write(f *os.File) error {
+func (op *SubBalance) Write(f io.Writer) error {
 	err := binary.Write(f, binary.LittleEndian, *op)
 	return err
 }
 
 // Execute the sub-balance operation.
 func (op *SubBalance) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
-	// skip to avoid errors causing by negative balance when running on an empty db
-	// contract := ctx.DecodeContract(op.ContractIndex)
+	contract := ctx.DecodeContract(op.ContractIndex)
 	// construct bit.Int from a byte array
-	// amount := new(big.Int).SetBytes(op.Amount[:])
-	// start := time.Now()
-	// db.SubBalance(contract, amount)
-	// return time.Since(start)
-	return time.Duration(0)
+	amount := new(big.Int).SetBytes(op.Amount[:])
+	start := time.Now()
+	db.SubBalance(contract, amount)
+	return time.Since(start)
 }
 
 // Debug prints a debug message for the sub-balance operation.

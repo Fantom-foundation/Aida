@@ -3,7 +3,7 @@ package operation
 import (
 	"encoding/binary"
 	"fmt"
-	"os"
+	"io"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
@@ -27,14 +27,14 @@ func NewSetNonce(cIdx uint32, nonce uint64) *SetNonce {
 }
 
 // ReadSetNonce reads a set-nonce operation from a file.
-func ReadSetNonce(file *os.File) (Operation, error) {
+func ReadSetNonce(file io.Reader) (Operation, error) {
 	data := new(SetNonce)
 	err := binary.Read(file, binary.LittleEndian, data)
 	return data, err
 }
 
 // Write the set-nonce operation to a file.
-func (op *SetNonce) Write(f *os.File) error {
+func (op *SetNonce) Write(f io.Writer) error {
 	err := binary.Write(f, binary.LittleEndian, *op)
 	return err
 }

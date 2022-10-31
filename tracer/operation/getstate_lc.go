@@ -3,7 +3,7 @@ package operation
 import (
 	"encoding/binary"
 	"fmt"
-	"os"
+	"io"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
@@ -31,14 +31,14 @@ func NewGetStateLc(sIdx uint32) *GetStateLc {
 }
 
 // ReadGetStateLc reads a get-state-lc operation from a file.
-func ReadGetStateLc(file *os.File) (Operation, error) {
+func ReadGetStateLc(file io.Reader) (Operation, error) {
 	data := new(GetStateLc)
 	err := binary.Read(file, binary.LittleEndian, data)
 	return data, err
 }
 
 // Write the get-state-lc operation to file.
-func (op *GetStateLc) Write(f *os.File) error {
+func (op *GetStateLc) Write(f io.Writer) error {
 	err := binary.Write(f, binary.LittleEndian, *op)
 	return err
 }

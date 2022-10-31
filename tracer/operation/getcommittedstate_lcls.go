@@ -2,7 +2,7 @@ package operation
 
 import (
 	"fmt"
-	"os"
+	"io"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
@@ -30,12 +30,12 @@ func NewGetCommittedStateLcls() *GetCommittedStateLcls {
 }
 
 // ReadGetCommittedStateLcls reads a get-committed-state-lcls operation from a file.
-func ReadGetCommittedStateLcls(file *os.File) (Operation, error) {
+func ReadGetCommittedStateLcls(file io.Reader) (Operation, error) {
 	return NewGetCommittedStateLcls(), nil
 }
 
 // Write the get-committed-state-lcls operation to file.
-func (op *GetCommittedStateLcls) Write(f *os.File) error {
+func (op *GetCommittedStateLcls) Write(f io.Writer) error {
 	return nil
 }
 

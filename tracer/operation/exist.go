@@ -3,7 +3,7 @@ package operation
 import (
 	"encoding/binary"
 	"fmt"
-	"os"
+	"io"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
@@ -26,14 +26,14 @@ func NewExist(cIdx uint32) *Exist {
 }
 
 // ReadExist reads an exist operation from a file.
-func ReadExist(file *os.File) (Operation, error) {
+func ReadExist(file io.Reader) (Operation, error) {
 	data := new(Exist)
 	err := binary.Read(file, binary.LittleEndian, data)
 	return data, err
 }
 
 // Write the exist operation to a file.
-func (op *Exist) Write(f *os.File) error {
+func (op *Exist) Write(f io.Writer) error {
 	err := binary.Write(f, binary.LittleEndian, *op)
 	return err
 }

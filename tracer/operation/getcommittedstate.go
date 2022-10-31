@@ -3,7 +3,7 @@ package operation
 import (
 	"encoding/binary"
 	"fmt"
-	"os"
+	"io"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
@@ -27,14 +27,14 @@ func NewGetCommittedState(cIdx uint32, sIdx uint32) *GetCommittedState {
 }
 
 // ReadGetCommittedState reads a get-commited-state operation from file.
-func ReadGetCommittedState(file *os.File) (Operation, error) {
+func ReadGetCommittedState(file io.Reader) (Operation, error) {
 	data := new(GetCommittedState)
 	err := binary.Read(file, binary.LittleEndian, data)
 	return data, err
 }
 
 // Write the get-commited-state operation to file.
-func (op *GetCommittedState) Write(f *os.File) error {
+func (op *GetCommittedState) Write(f io.Writer) error {
 	err := binary.Write(f, binary.LittleEndian, *op)
 	return err
 }

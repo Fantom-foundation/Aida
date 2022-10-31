@@ -1,7 +1,7 @@
 package operation
 
 import (
-	"os"
+	"io"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
@@ -23,12 +23,12 @@ func NewEndBlock() *EndBlock {
 }
 
 // ReadEndBlock reads an end-block operation from file.
-func ReadEndBlock(file *os.File) (Operation, error) {
+func ReadEndBlock(file io.Reader) (Operation, error) {
 	return NewEndBlock(), nil
 }
 
 // Write the end-block operation to file.
-func (op *EndBlock) Write(f *os.File) error {
+func (op *EndBlock) Write(f io.Writer) error {
 	return nil
 }
 

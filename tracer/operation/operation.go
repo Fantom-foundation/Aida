@@ -6,7 +6,6 @@ import (
 	"io"
 	"log"
 	"math"
-	"os"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
@@ -51,8 +50,8 @@ const (
 
 // OperationDictionary data structure contains a label and a read function for an operation
 type OperationDictionary struct {
-	label    string                            // operation's label
-	readfunc func(*os.File) (Operation, error) // operation's read-function
+	label    string                             // operation's label
+	readfunc func(io.Reader) (Operation, error) // operation's read-function
 }
 
 // opDict relates an operation's id with its label and read-function.
@@ -109,14 +108,14 @@ func getLabel(i byte) string {
 
 // Operation interface.
 type Operation interface {
-	GetId() byte                                                // get operation identifier
-	Write(*os.File) error                                         // write operation to a file
+	GetId() byte                                                  // get operation identifier
+	Write(io.Writer) error                                        // write operation to a file
 	Execute(state.StateDB, *dict.DictionaryContext) time.Duration // execute operation on a stateDB instance
 	Debug(*dict.DictionaryContext)                                // print debug message for operation
 }
 
 // Read an operation from file.
-func Read(f *os.File) Operation {
+func Read(f io.Reader) Operation {
 	var (
 		op Operation
 		ID byte
@@ -145,7 +144,7 @@ func Read(f *os.File) Operation {
 }
 
 // Write an operation to file.
-func Write(f *os.File, op Operation) {
+func Write(f io.Writer, op Operation) {
 	// write ID to file
 	ID := op.GetId()
 	if err := binary.Write(f, binary.LittleEndian, &ID); err != nil {

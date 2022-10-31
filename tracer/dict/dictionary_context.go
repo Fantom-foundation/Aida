@@ -6,21 +6,26 @@ import (
 	"math"
 )
 
+// InvalidContractIndex used to indicate that the previously used contract index is not valid.
 const InvalidContractIndex = math.MaxUint32
 
-// DictionaryContext is a Facade for all dictionaries used
-// to encode/decode state operations on file.
+// DictionaryContext is a Facade for all dictionaries used to encode/decode contract/storage
+// addresss, values, and snapshots.
 type DictionaryContext struct {
 	ContractDictionary *ContractDictionary // dictionary to compact contract addresses
 	PrevContractIndex  uint32              // previously used contract index
-	StorageDictionary  *StorageDictionary  // dictionary to compact storage addresses
-	StorageCache       *IndexCache         // storage address cache
-	ValueDictionary    *ValueDictionary    // dictionary to compact storage values
-	CodeDictionary     *CodeDictionary     // dictionary to compact the bytecode of contracts
-	SnapshotIndex      *SnapshotIndex      // snapshot index for execution (not for recording/replaying)
+
+	StorageDictionary *StorageDictionary // dictionary to compact storage addresses
+	StorageCache      *IndexCache        // storage address cache
+
+	ValueDictionary *ValueDictionary // dictionary to compact storage values
+
+	CodeDictionary *CodeDictionary // dictionary to compact the bytecode of contracts
+
+	SnapshotIndex *SnapshotIndex // snapshot index for execution (not for recording/replaying)
 }
 
-// Create new dictionary context.
+// NewDictionaryContext creates a new dictionary context.
 func NewDictionaryContext() *DictionaryContext {
 	return &DictionaryContext{
 		ContractDictionary: NewContractDictionary(),
@@ -35,20 +40,21 @@ func NewDictionaryContext() *DictionaryContext {
 // I/O
 ////////////////////////////////////////////////////////////////
 
-var DictDir string = "./"
+// DictionaryContextDir is the dictionaries' directory of the context.
+var DictionaryContextDir string = "./"
 
-// Read dictionary context from files.
+// ReadDictionaryContext reads dictionaries from files and creates a new dictionary context.
 func ReadDictionaryContext() *DictionaryContext {
 	ctx := NewDictionaryContext()
-	err := ctx.ContractDictionary.Read(DictDir + "contract-dictionary.dat")
+	err := ctx.ContractDictionary.Read(DictionaryContextDir + "contract-dictionary.dat")
 	if err != nil {
 		log.Fatalf("Cannot read contract dictionary. Error: %v", err)
 	}
-	err = ctx.StorageDictionary.Read(DictDir + "storage-dictionary.dat")
+	err = ctx.StorageDictionary.Read(DictionaryContextDir + "storage-dictionary.dat")
 	if err != nil {
 		log.Fatalf("Cannot read storage dictionary. Error: %v", err)
 	}
-	err = ctx.ValueDictionary.Read(DictDir + "value-dictionary.dat")
+	err = ctx.ValueDictionary.Read(DictionaryContextDir + "value-dictionary.dat")
 	if err != nil {
 		log.Fatalf("Cannot read value dictionary. Error: %v", err)
 	}
@@ -57,15 +63,15 @@ func ReadDictionaryContext() *DictionaryContext {
 
 // Write dictionary context to files.
 func (ctx *DictionaryContext) Write() {
-	err := ctx.ContractDictionary.Write(DictDir + "contract-dictionary.dat")
+	err := ctx.ContractDictionary.Write(DictionaryContextDir + "contract-dictionary.dat")
 	if err != nil {
 		log.Fatalf("Cannot write contract dictionary. Error: %v", err)
 	}
-	err = ctx.StorageDictionary.Write(DictDir + "storage-dictionary.dat")
+	err = ctx.StorageDictionary.Write(DictionaryContextDir + "storage-dictionary.dat")
 	if err != nil {
 		log.Fatalf("Cannot write storage dictionary. Error: %v", err)
 	}
-	err = ctx.ValueDictionary.Write(DictDir + "value-dictionary.dat")
+	err = ctx.ValueDictionary.Write(DictionaryContextDir + "value-dictionary.dat")
 	if err != nil {
 		log.Fatalf("Cannot write value dictionary. Error: %v", err)
 	}
@@ -75,7 +81,7 @@ func (ctx *DictionaryContext) Write() {
 // Contract methods
 ////////////////////////////////////////////////////////////////
 
-// Encode a given contract address and return a contract index.
+// EncodeContract encodes a given contract address and returns a contract index.
 func (ctx *DictionaryContext) EncodeContract(contract common.Address) uint32 {
 	cIdx, err := ctx.ContractDictionary.Encode(contract)
 	if err != nil {
@@ -85,7 +91,7 @@ func (ctx *DictionaryContext) EncodeContract(contract common.Address) uint32 {
 	return cIdx
 }
 
-// Decode the contract address for a given index.
+// DecodeContract decodes the contract address.
 func (ctx *DictionaryContext) DecodeContract(cIdx uint32) common.Address {
 	contract, err := ctx.ContractDictionary.Decode(cIdx)
 	if err != nil {
@@ -95,7 +101,7 @@ func (ctx *DictionaryContext) DecodeContract(cIdx uint32) common.Address {
 	return contract
 }
 
-// Read the contract address for a given index.
+// LastContractAddress returns the previously used contract address.
 func (ctx *DictionaryContext) LastContractAddress() common.Address {
 	if ctx.PrevContractIndex == InvalidContractIndex {
 		log.Fatalf("Last contract address undefined")
@@ -107,7 +113,7 @@ func (ctx *DictionaryContext) LastContractAddress() common.Address {
 // Storage methods
 ////////////////////////////////////////////////////////////////
 
-// Endcode a given storage address and retrun a storage address index.
+// EndcodeStorage encodes a storage address and returns an index.
 func (ctx *DictionaryContext) EncodeStorage(storage common.Hash) (uint32, int) {
 	sIdx, err := ctx.StorageDictionary.Encode(storage)
 	if err != nil {
@@ -117,7 +123,7 @@ func (ctx *DictionaryContext) EncodeStorage(storage common.Hash) (uint32, int) {
 	return sIdx, pos
 }
 
-// Decode the storage address for a given index.
+// DecodeStorage decodes a storage address.
 func (ctx *DictionaryContext) DecodeStorage(sIdx uint32) common.Hash {
 	storage, err := ctx.StorageDictionary.Decode(sIdx)
 	if err != nil {
@@ -127,9 +133,10 @@ func (ctx *DictionaryContext) DecodeStorage(sIdx uint32) common.Hash {
 	return storage
 }
 
-// Read the storage address for a given index.
+// ReadStorage reads index-cache and returns the storage address.
+// TODO: rename method
 func (ctx *DictionaryContext) ReadStorage(sPos int) common.Hash {
-	sIdx, err := ctx.StorageCache.Lookup(sPos)
+	sIdx, err := ctx.StorageCache.Get(sPos)
 	if err != nil {
 		log.Fatalf("Storage position could not be found. Error: %v", err)
 	}
@@ -140,9 +147,10 @@ func (ctx *DictionaryContext) ReadStorage(sPos int) common.Hash {
 	return storage
 }
 
-// Look up the storage address for a given index.
+// LookupStorage reads and updates index-cache.
+// TODO: rename method
 func (ctx *DictionaryContext) LookupStorage(sPos int) common.Hash {
-	sIdx, err := ctx.StorageCache.Lookup(sPos)
+	sIdx, err := ctx.StorageCache.Get(sPos)
 	if err != nil {
 		log.Fatalf("Storage position could not be found. Error: %v", err)
 	}
@@ -153,7 +161,7 @@ func (ctx *DictionaryContext) LookupStorage(sPos int) common.Hash {
 // Value methods
 ////////////////////////////////////////////////////////////////
 
-// Encode a storage value and return a value index.
+// EncodeValue encodes a value and returns an index.
 func (ctx *DictionaryContext) EncodeValue(value common.Hash) uint64 {
 	vIdx, err := ctx.ValueDictionary.Encode(value)
 	if err != nil {
@@ -162,7 +170,7 @@ func (ctx *DictionaryContext) EncodeValue(value common.Hash) uint64 {
 	return vIdx
 }
 
-// Decode the storage value for a given index.
+// DecodeValue decodes a value.
 func (ctx *DictionaryContext) DecodeValue(vIdx uint64) common.Hash {
 	value, err := ctx.ValueDictionary.Decode(vIdx)
 	if err != nil {
@@ -175,17 +183,17 @@ func (ctx *DictionaryContext) DecodeValue(vIdx uint64) common.Hash {
 // Snapshot methods
 ////////////////////////////////////////////////////////////////
 
-// Init snaphot map.
+// InitSnapshot initializes snaphot map.
 func (ctx *DictionaryContext) InitSnapshot() {
 	ctx.SnapshotIndex.Init()
 }
 
-// Add snaphot-id mapping for execution of RevertSnapshot.
+// AddSnapshot adds map between recorded/replayed snapshot-id.
 func (ctx *DictionaryContext) AddSnapshot(recordedID int32, replayedID int32) {
 	ctx.SnapshotIndex.Add(recordedID, replayedID)
 }
 
-// Get snaphot-id.
+// GetSnapshot gets snaphot-id.
 func (ctx *DictionaryContext) GetSnapshot(recordedID int32) int32 {
 	replayedID, err := ctx.SnapshotIndex.Get(recordedID)
 	if err != nil {
@@ -198,7 +206,7 @@ func (ctx *DictionaryContext) GetSnapshot(recordedID int32) int32 {
 // Code methods
 ////////////////////////////////////////////////////////////////
 
-// Encode a bytecode to an index.
+// EncodeCode encodes byte-code to an index.
 func (ctx *DictionaryContext) EncodeCode(code []byte) uint32 {
 	bcIdx, err := ctx.CodeDictionary.Encode(code)
 	if err != nil {
@@ -207,7 +215,7 @@ func (ctx *DictionaryContext) EncodeCode(code []byte) uint32 {
 	return bcIdx
 }
 
-// Decode the bytecode from an index.
+// DecodeCode decodes byte-code from an index.
 func (ctx *DictionaryContext) DecodeCode(bcIdx uint32) []byte {
 	code, err := ctx.CodeDictionary.Decode(bcIdx)
 	if err != nil {
@@ -220,8 +228,8 @@ func (ctx *DictionaryContext) DecodeCode(bcIdx uint32) []byte {
 // Snapshot methods
 ////////////////////////////////////////////////////////////////
 
-// Clear count queues.
+// ClearIndexCaches clears index caches and previous addresses.
 func (ctx *DictionaryContext) ClearIndexCaches() {
 	ctx.PrevContractIndex = InvalidContractIndex
-	ctx.StorageCache.ClearIndexCache()
+	ctx.StorageCache.Clear()
 }
