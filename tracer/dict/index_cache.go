@@ -1,74 +1,79 @@
 package dict
 
 import (
-	"errors"
+	"fmt"
 	"math"
 )
 
-// Length of cache (i.e. 2^8)
-const CacheLength = 256
+// IndexCacheLength sets the length of index cache (i.e. 2^8)
+const IndexCacheLength = 256
 
-// IndexCache data structure for implementing a LRU cache
-// policy.
+// IndexCache data structure for implementing an LRU cache policy.
 type IndexCache struct {
-	top  int                 // last accessed inde
-	data [CacheLength]uint32 // data elements of cache
+	top  int                      // last accessed inde
+	data [IndexCacheLength]uint32 // indexes of cache
 }
 
-// ClearIndexCache clears the count queue by setting
-// all data elements to MaxUint32, which is an an
-// invalid index.
-func (q *IndexCache) ClearIndexCache() {
+// Clear the index cache by setting all indexes to MaxUint32
+// (representing an invalid index).
+func (q *IndexCache) Clear() {
 	q.top = 0
-	for i := 0; i < CacheLength; i++ {
+	for i := 0; i < IndexCacheLength; i++ {
 		q.data[i] = math.MaxUint32
 	}
 }
 
-// NewIndexCache creates a new queue for counting positions.
+// NewIndexCache creates a new index cache.
 func NewIndexCache() *IndexCache {
 	q := new(IndexCache)
-	q.ClearIndexCache()
+	q.Clear()
 	return q
 }
 
-// Place puts a new element into cache.
+// Place puts a new index into the index cache.
 func (q *IndexCache) Place(item uint32) int {
 	// find the index in cache
-	for i := 0; i < CacheLength; i++ {
+	for i := 0; i < IndexCacheLength; i++ {
 		if q.data[i] == item {
 			// calculate position in queue
 			// relevant for encoding
-			j := (q.top - i) % CacheLength
+			j := (q.top - i) % IndexCacheLength
 			if j < 0 {
-				j += CacheLength
+				j += IndexCacheLength
 			}
+			// Note that we don't preserve the temporal
+			// order in the cache by the following triangular swap.
+			// However, experiments showed that the gains
+			// preserving the temporal order inside the cahce
+			// are small (<= 0.01%).
 			tmp := q.data[q.top]
 			q.data[q.top] = q.data[i]
 			q.data[i] = tmp
 			return j
 		}
 	}
-	// element is not found => place it as the most recent one
+	// index is not found => place it as the most recent one
 	q.top++
-	q.top = q.top % CacheLength
+	q.top = q.top % IndexCacheLength
 	q.data[q.top] = item
+	// return an undefined position
 	return -1
 }
 
-// Look up an element given a position in cache.
-func (q *IndexCache) Lookup(pos int) (uint32, error) {
-	if pos < 0 || pos >= CacheLength {
-		return 0, errors.New("Position out of bound")
+// Get an index for a cache position.
+func (q *IndexCache) Get(pos int) (uint32, error) {
+	if pos < 0 || pos >= IndexCacheLength {
+		return 0, fmt.Errorf("Position %v out of bound", pos)
 	}
-	// calculate position in queue
-	// relevant for encoding
-	j := (q.top - pos) % CacheLength
+	// calculate position in index cache
+	j := (q.top - pos) % IndexCacheLength
 	if j < 0 {
-		j += CacheLength
+		j += IndexCacheLength
 	}
+	// check index
 	if q.data[j] == math.MaxUint32 {
-		return 0, errors.New("Undefined index in cache")
+		return 0, fmt.Errorf("Position %v is an undefined index", pos)
 	}
+	// return index
 	return q.data[j], nil
 }
