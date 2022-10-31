@@ -15,8 +15,8 @@ type Finalise struct {
 	DeleteEmptyObjects bool
 }
 
-// GetOpId returns the finalise operation identifier.
-func (op *Finalise) GetOpId() byte {
+// GetId returns the finalise operation identifier.
+func (op *Finalise) GetId() byte {
 	return FinaliseID
 }
 

@@ -23,7 +23,7 @@ func TestGetCodeSimple(t *testing.T) {
 	}
 
 	// check id
-	if op.GetOpId() != GetCodeID {
+	if op.GetId() != GetCodeID {
 		t.Fatalf("Wrong ID returned")
 	}
 }
@@ -40,7 +40,7 @@ func TestGetCodeReadWrite(t *testing.T) {
 	if op1 == nil {
 		t.Fatalf("Failed to create operation")
 	}
-	if op1.GetOpId() != GetCodeID {
+	if op1.GetId() != GetCodeID {
 		t.Fatalf("Wrong ID returned")
 	}
 	op1Buffer := bytes.NewBufferString("")
@@ -72,7 +72,7 @@ func TestGetCodeDebug(t *testing.T) {
 	if op == nil {
 		t.Fatalf("Failed to create operation")
 	}
-	if op.GetOpId() != GetCodeID {
+	if op.GetId() != GetCodeID {
 		t.Fatalf("Wrong ID returned")
 	}
 
@@ -108,7 +108,7 @@ func TestGetCodeExecute(t *testing.T) {
 		t.Fatalf("Failed to create operation")
 	}
 	// check id
-	if op.GetOpId() != GetCodeID {
+	if op.GetId() != GetCodeID {
 		t.Fatalf("Wrong ID returned")
 	}
 

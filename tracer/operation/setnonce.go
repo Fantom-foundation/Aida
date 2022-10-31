@@ -16,8 +16,8 @@ type SetNonce struct {
 	Nonce         uint64 // nonce
 }
 
-// GetOpId returns the set-nonce operation identifier.
-func (op *SetNonce) GetOpId() byte {
+// GetId returns the set-nonce operation identifier.
+func (op *SetNonce) GetId() byte {
 	return SetNonceID
 }
 

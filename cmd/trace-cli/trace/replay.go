@@ -114,7 +114,7 @@ func traceReplayTask(first uint64, last uint64, cliCtx *cli.Context) error {
 	fmt.Printf("trace replay: Replay storage operations\n")
 	for traceIter.Next() {
 		op := traceIter.Value()
-		if op.GetOpId() == operation.BeginBlockID {
+		if op.GetId() == operation.BeginBlockID {
 			block := op.(*operation.BeginBlock).BlockNumber
 			if block > last {
 				break

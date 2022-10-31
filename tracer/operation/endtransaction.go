@@ -13,8 +13,8 @@ import (
 type EndTransaction struct {
 }
 
-// GetOpId returns the end-transaction operation identifier.
-func (op *EndTransaction) GetOpId() byte {
+// GetId returns the end-transaction operation identifier.
+func (op *EndTransaction) GetId() byte {
 	return EndTransactionID
 }
 

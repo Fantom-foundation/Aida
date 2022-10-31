@@ -18,8 +18,8 @@ type AddBalance struct {
 	Amount        [16]byte // truncated amount to 16 bytes
 }
 
-// GetOpId returns the add-balance operation identifier.
-func (op *AddBalance) GetOpId() byte {
+// GetId returns the add-balance operation identifier.
+func (op *AddBalance) GetId() byte {
 	return AddBalanceID
 }
 

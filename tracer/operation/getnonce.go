@@ -15,8 +15,8 @@ type GetNonce struct {
 	ContractIndex uint32 // encoded contract address
 }
 
-// GetOpId returns the get-nonce operation identifier.
-func (op *GetNonce) GetOpId() byte {
+// GetId returns the get-nonce operation identifier.
+func (op *GetNonce) GetId() byte {
 	return GetNonceID
 }
 

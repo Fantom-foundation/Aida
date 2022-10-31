@@ -19,8 +19,8 @@ type SetStateLcls struct {
 	ValueIndex uint64 // encoded storage value
 }
 
-// GetOpId returns the set-state-lcls identifier.
-func (op *SetStateLcls) GetOpId() byte {
+// GetId returns the set-state-lcls identifier.
+func (op *SetStateLcls) GetId() byte {
 	return SetStateLclsID
 }
 

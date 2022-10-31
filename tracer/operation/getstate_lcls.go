@@ -19,8 +19,8 @@ import (
 type GetStateLcls struct {
 }
 
-// GetOpId returns the get-state-lcls operation identifier.
-func (op *GetStateLcls) GetOpId() byte {
+// GetId returns the get-state-lcls operation identifier.
+func (op *GetStateLcls) GetId() byte {
 	return GetStateLclsID
 }
 

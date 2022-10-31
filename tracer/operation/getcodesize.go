@@ -16,7 +16,7 @@ type GetCodeSize struct {
 }
 
 // GetCodeSize returns the get-code-size operation identifier.
-func (op *GetCodeSize) GetOpId() byte {
+func (op *GetCodeSize) GetId() byte {
 	return GetCodeSizeID
 }
 

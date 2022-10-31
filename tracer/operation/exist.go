@@ -15,8 +15,8 @@ type Exist struct {
 	ContractIndex uint32 // encoded contract address
 }
 
-// GetOpId returns the exist operation identifier.
-func (op *Exist) GetOpId() byte {
+// GetId returns the exist operation identifier.
+func (op *Exist) GetId() byte {
 	return ExistID
 }
 

@@ -108,7 +108,7 @@ func getLabel(i byte) string {
 
 // Operation interface.
 type Operation interface {
-	GetOpId() byte                                                // get operation identifier
+	GetId() byte                                                  // get operation identifier
 	Write(io.Writer) error                                        // write operation to a file
 	Execute(state.StateDB, *dict.DictionaryContext) time.Duration // execute operation on a stateDB instance
 	Debug(*dict.DictionaryContext)                                // print debug message for operation
@@ -137,8 +137,8 @@ func Read(f io.Reader) Operation {
 	if err != nil {
 		log.Fatalf("Failed to read operation %v. Error %v", getLabel(ID), err)
 	}
-	if op.GetOpId() != ID {
-		log.Fatalf("Generated object of type %v has wrong ID (%v) ", getLabel(op.GetOpId()), getLabel(ID))
+	if op.GetId() != ID {
+		log.Fatalf("Generated object of type %v has wrong ID (%v) ", getLabel(op.GetId()), getLabel(ID))
 	}
 	return op
 }
@@ -146,7 +146,7 @@ func Read(f io.Reader) Operation {
 // Write an operation to file.
 func Write(f io.Writer, op Operation) {
 	// write ID to file
-	ID := op.GetOpId()
+	ID := op.GetId()
 	if err := binary.Write(f, binary.LittleEndian, &ID); err != nil {
 		log.Fatalf("Failed to write ID for operation %v. Error: %v", getLabel(ID), err)
 	}
@@ -161,7 +161,7 @@ func Write(f io.Writer, op Operation) {
 func Execute(op Operation, db state.StateDB, ctx *dict.DictionaryContext) {
 	elapsed := op.Execute(db, ctx)
 	if Profiling {
-		op := op.GetOpId()
+		op := op.GetId()
 		n := opFrequencyy[op]
 		duration := opDuration[op]
 		// update min/max values
@@ -201,7 +201,7 @@ func Execute(op Operation, db state.StateDB, ctx *dict.DictionaryContext) {
 
 // Debug prints debug information of an operation.
 func Debug(ctx *dict.DictionaryContext, op Operation) {
-	fmt.Printf("%v:\n", getLabel(op.GetOpId()))
+	fmt.Printf("%v:\n", getLabel(op.GetId()))
 	op.Debug(ctx)
 }
 

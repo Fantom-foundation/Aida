@@ -108,7 +108,7 @@ func traceReplaySubstateTask(first uint64, last uint64, cliCtx *cli.Context) err
 		for traceIter.Next() {
 			op := traceIter.Value()
 			// skip execution of sub balance if carmen or geth is used
-			if op.GetOpId() == operation.SubBalanceID && impl != "memory" {
+			if op.GetId() == operation.SubBalanceID && impl != "memory" {
 				continue
 			}
 			operation.Execute(op, db, dCtx)
@@ -117,7 +117,7 @@ func traceReplaySubstateTask(first uint64, last uint64, cliCtx *cli.Context) err
 			}
 
 			// find end of transaction
-			if op.GetOpId() == operation.EndTransactionID {
+			if op.GetId() == operation.EndTransactionID {
 				txCount++
 				break
 			}
@@ -148,7 +148,7 @@ func traceReplaySubstateTask(first uint64, last uint64, cliCtx *cli.Context) err
 	// replay the last EndBlock()
 	hasNext := traceIter.Next()
 	op := traceIter.Value()
-	if !hasNext || op.GetOpId() != operation.EndBlockID {
+	if !hasNext || op.GetId() != operation.EndBlockID {
 		return fmt.Errorf("Last operation isn't an EndBlock")
 	} else {
 		operation.Execute(op, db, dCtx)

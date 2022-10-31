@@ -196,7 +196,7 @@ func OperationWriter(ctx context.Context, done chan struct{}, ch chan operation.
 		select {
 		case op := <-ch:
 			// update index
-			switch op.GetOpId() {
+			switch op.GetId() {
 			case operation.BeginBlockID:
 				// downcast op to BeginBlock for accessing block number
 				tOp, ok := op.(*operation.BeginBlock)

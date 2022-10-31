@@ -19,8 +19,8 @@ import (
 type GetCommittedStateLcls struct {
 }
 
-// GetOpId returns the get-committed-state-lcls operation identifier.
-func (op *GetCommittedStateLcls) GetOpId() byte {
+// GetId returns the get-committed-state-lcls operation identifier.
+func (op *GetCommittedStateLcls) GetId() byte {
 	return GetCommittedStateLclsID
 }
 

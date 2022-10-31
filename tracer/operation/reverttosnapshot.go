@@ -16,7 +16,7 @@ type RevertToSnapshot struct {
 }
 
 // RevertToSnapshot returns the revert-to-snapshot operation identifier.
-func (op *RevertToSnapshot) GetOpId() byte {
+func (op *RevertToSnapshot) GetId() byte {
 	return RevertToSnapshotID
 }
 
