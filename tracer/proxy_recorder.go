@@ -1,6 +1,8 @@
 package tracer
 
 import (
+	"log"
+	"math"
 	"math/big"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
@@ -261,7 +263,9 @@ func (r *ProxyRecorder) RevertToSnapshot(snapshot int) {
 // Snapshot returns an identifier for the current revision of the state.
 func (r *ProxyRecorder) Snapshot() int {
 	snapshot := r.db.Snapshot()
-	// TODO: check overrun
+	if snapshot <= math.MinInt32 || snapshot >= math.MaxInt32 {
+		log.Fatalf("Snapshot overflow (%v) in proxy recorder", snapshot)
+	}
 	r.send(operation.NewSnapshot(int32(snapshot)))
 	return snapshot
 }
