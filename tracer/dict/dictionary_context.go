@@ -129,7 +129,7 @@ func (ctx *DictionaryContext) DecodeStorage(sIdx uint32) common.Hash {
 
 // Read the storage address for a given index.
 func (ctx *DictionaryContext) ReadStorage(sPos int) common.Hash {
-	sIdx, err := ctx.StorageCache.Lookup(sPos)
+	sIdx, err := ctx.StorageCache.Get(sPos)
 	if err != nil {
 		log.Fatalf("Storage position could not be found. Error: %v", err)
 	}
@@ -142,7 +142,7 @@ func (ctx *DictionaryContext) ReadStorage(sPos int) common.Hash {
 
 // Look up the storage address for a given index.
 func (ctx *DictionaryContext) LookupStorage(sPos int) common.Hash {
-	sIdx, err := ctx.StorageCache.Lookup(sPos)
+	sIdx, err := ctx.StorageCache.Get(sPos)
 	if err != nil {
 		log.Fatalf("Storage position could not be found. Error: %v", err)
 	}
@@ -223,5 +223,5 @@ func (ctx *DictionaryContext) DecodeCode(bcIdx uint32) []byte {
 // Clear count queues.
 func (ctx *DictionaryContext) ClearIndexCaches() {
 	ctx.PrevContractIndex = InvalidContractIndex
-	ctx.StorageCache.ClearIndexCache()
+	ctx.StorageCache.Clear()
 }
