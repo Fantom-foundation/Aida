@@ -263,7 +263,7 @@ func (r *ProxyRecorder) RevertToSnapshot(snapshot int) {
 // Snapshot returns an identifier for the current revision of the state.
 func (r *ProxyRecorder) Snapshot() int {
 	snapshot := r.db.Snapshot()
-	if snapshot <= math.MinInt32 || snapshot >= math.MaxInt32 {
+	if snapshot < math.MinInt32 || snapshot > math.MaxInt32 {
 		log.Fatalf("Snapshot overflow (%v) in proxy recorder", snapshot)
 	}
 	r.send(operation.NewSnapshot(int32(snapshot)))
