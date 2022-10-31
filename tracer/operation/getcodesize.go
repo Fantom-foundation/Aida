@@ -40,12 +40,10 @@ func (op *GetCodeSize) Write(f io.Writer) error {
 
 // Execute the get-code-size operation.
 func (op *GetCodeSize) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
-	// TODO: GetCodeSize not implemented yet
-	// contract := ctx.DecodeContract(op.ContractIndex)
-	// start := time.Now()
-	// db.GetCodeSize(contract)
-	// return time.Since(start)
-	return time.Duration(0)
+	contract := ctx.DecodeContract(op.ContractIndex)
+	start := time.Now()
+	db.GetCodeSize(contract)
+	return time.Since(start)
 }
 
 // Debug prints a debug message for get-code-size.
