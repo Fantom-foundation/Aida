@@ -25,10 +25,9 @@ func validateStateDB(ws substate.SubstateAlloc, db state.StateDB) error {
 				"\thave %v",
 				addr.Hex(), account.Nonce, db.GetNonce(addr))
 		}
-		// TODO: GetCode not implemented yet
-		// if  db.GetCode(addr) != account.GetCode() {
-		// 	log.Fatalf("Failed to validate code for account %v", addr.Hex())
-		// }
+		if db.GetCode(addr) != account.GetCode() {
+			log.Fatalf("Failed to validate code for account %v", addr.Hex())
+		}
 		for key, value := range account.Storage {
 			if db.GetState(addr, key) != value {
 				return fmt.Errorf("Failed to validate storage for account %v, key %v\n"+

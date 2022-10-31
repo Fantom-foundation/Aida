@@ -41,13 +41,11 @@ func (op *SetCode) Write(f io.Writer) error {
 
 // Execute the set-code operation.
 func (op *SetCode) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
-	// TODO: Uncomment when SetCode is implemented.
-	// contract := ctx.DecodeContract(op.ContractIndex)
-	// code := ctx.DecodeCode(op.CodeIndex)
-	// start := time.Now()
-	// db.SetCode(contract, code)
-	// return time.Since(start)
-	return time.Duration(0)
+	contract := ctx.DecodeContract(op.ContractIndex)
+	code := ctx.DecodeCode(op.CodeIndex)
+	start := time.Now()
+	db.SetCode(contract, code)
+	return time.Since(start)
 }
 
 // Debug prints a debug message for the set-code operation.

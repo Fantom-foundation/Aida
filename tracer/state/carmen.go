@@ -40,7 +40,9 @@ type carmenStateDB struct {
 }
 
 var getCodeCalled bool
+var getCodeSizeCalled bool
 var getCodeHashCalled bool
+var setCodeCalled bool
 
 func (s *carmenStateDB) CreateAccount(addr common.Address) {
 	s.db.CreateAccount(cc.Address(addr))
@@ -95,6 +97,22 @@ func (s *carmenStateDB) SetState(addr common.Address, key common.Hash, value com
 	s.db.SetState(cc.Address(addr), cc.Key(key), cc.Value(value))
 }
 
+func (s *carmenStateDB) GetCode(addr common.Address) []byte {
+	if !getCodeCalled {
+		fmt.Printf("WARNING: GetCode not implemented\n")
+		getCodeCalled = true
+	}
+	return []byte{}
+}
+
+func (s *carmenStateDB) GetCodeSize(addr common.Address) int {
+	if !getCodeSizeCalled {
+		fmt.Printf("WARNING: GetCodeSize not implemented\n")
+		getCodeSizeCalled = true
+	}
+	return 0
+}
+
 func (s *carmenStateDB) GetCodeHash(addr common.Address) common.Hash {
 	if !getCodeHashCalled {
 		fmt.Printf("WARNING: GetCodeHash not implemented\n")
@@ -103,12 +121,11 @@ func (s *carmenStateDB) GetCodeHash(addr common.Address) common.Hash {
 	return common.Hash{}
 }
 
-func (s *carmenStateDB) GetCode(addr common.Address) []byte {
-	if !getCodeCalled {
-		fmt.Printf("WARNING: GetCode not implemented\n")
-		getCodeCalled = true
+func (s *carmenStateDB) SetCode(addr common.Address, code []byte) {
+	if !setCodeCalled {
+		fmt.Printf("WARNING: SetCode not implemented\n")
+		setCodeCalled = true
 	}
-	return []byte{}
 }
 
 func (s *carmenStateDB) Snapshot() int {

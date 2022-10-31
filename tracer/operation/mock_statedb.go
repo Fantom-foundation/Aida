@@ -93,6 +93,15 @@ func (s *MockStateDB) GetCodeHash(addr common.Address) common.Hash {
 	return common.Hash{}
 }
 
+func (s *MockStateDB) GetCodeSize(addr common.Address) int {
+	s.msg = fmt.Sprintf("GetCodeSize: %v", addr.Hex())
+	return 0
+}
+
+func (s *MockStateDB) SetCode(addr common.Address, code []byte) {
+	s.msg = fmt.Sprintf("GetCodeSize: %v %x", addr.Hex(), code)
+}
+
 func (s *MockStateDB) Snapshot() int {
 	s.msg = fmt.Sprintf("Snapshot:")
 	return 0

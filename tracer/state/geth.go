@@ -87,12 +87,20 @@ func (s *gethStateDb) SetState(addr common.Address, key common.Hash, value commo
 	s.db.SetState(addr, key, value)
 }
 
+func (s *gethStateDb) GetCode(addr common.Address) []byte {
+	return s.db.GetCode(addr)
+}
+
 func (s *gethStateDb) GetCodeHash(addr common.Address) common.Hash {
 	return s.db.GetCodeHash(addr)
 }
 
-func (s *gethStateDb) GetCode(addr common.Address) []byte {
-	return s.db.GetCode(addr)
+func (s *gethStateDb) GetCodeSize(addr common.Address) int {
+	return s.db.GetCodeSize(addr)
+}
+
+func (s *gethStateDb) SetCode(addr common.Address, code []byte) {
+	s.db.SetCode(addr, code)
 }
 
 func (s *gethStateDb) Snapshot() int {
