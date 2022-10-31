@@ -8,7 +8,6 @@ import (
 
 // validateDatabase validates whether the world-state is contained in the db object
 // NB: We can only check what must be in the db (but cannot check whether db stores more)
-// Perhaps reuse some of the code from
 func validateStateDB(ws substate.SubstateAlloc, db state.StateDB) error {
 	for addr, account := range ws {
 		if !db.Exist(addr) {
@@ -26,7 +25,7 @@ func validateStateDB(ws substate.SubstateAlloc, db state.StateDB) error {
 				"\thave %v",
 				addr.Hex(), account.Nonce, db.GetNonce(addr))
 		}
-		// GetCode not implemented
+		// TODO: GetCode not implemented yet
 		// if  db.GetCode(addr) != account.GetCode() {
 		// 	log.Fatalf("Failed to validate code for account %v", addr.Hex())
 		// }
@@ -43,8 +42,8 @@ func validateStateDB(ws substate.SubstateAlloc, db state.StateDB) error {
 	return nil
 }
 
-// compareSubstateStorage compares an output substate of a transaction to a
-// substate genereated from stateDB by the trace replayer
+// compareSubstateStorage compares an output substate of a transaction with
+// a substate genereated from stateDB by the trace replayer
 func compareSubstateStorage(record, replay substate.SubstateAlloc) error {
 	for addr, recAcc := range record {
 		// addr exists in both substate

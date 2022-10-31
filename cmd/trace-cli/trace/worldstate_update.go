@@ -21,19 +21,6 @@ func generateUpdateSet(first uint64, last uint64, numWorkers int) substate.Subst
 			break
 		}
 		// merge output sub-state to update
-		// Refine it so that we don't have redundant
-		// entries by double-checking the InputAlloc
-		// Calculate the difference between
-		// tx.Substate.InputAlloc and tx.Substate.OutputAlloc
-		// => In the past we observed redundant entries
-		// caused by reads. Note that we need to keep
-		// 0 entries in Output (deletions!).
-		// Unfortunately, we don't have a diff semantics
-		// for Nonce, Balance, and Code. This will be always
-		// overwritten.
-		// Optimisation: If there is the same (key,value) pair
-		// in input and output, we can remove the (key, value) pair
-		// from Storage in output.
 		update.Merge(tx.Substate.OutputAlloc)
 	}
 	return update

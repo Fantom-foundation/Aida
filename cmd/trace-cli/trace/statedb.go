@@ -29,7 +29,7 @@ func primeStateDB(ws substate.SubstateAlloc, db state.StateDB) {
 		db.CreateAccount(addr)
 		db.AddBalance(addr, account.Balance)
 		db.SetNonce(addr, account.Nonce)
-		// not implemented yet
+		// TODO: GetCode not implemented yet
 		// db.SetCode(addr, account.Code)
 		for key, value := range account.Storage {
 			db.SetState(addr, key, value)
