@@ -10,7 +10,7 @@ const IndexCacheLength = 256
 
 // IndexCache data structure for implementing an LRU cache policy.
 type IndexCache struct {
-	top  int                      // last accessed inde
+	top  int                      // last accessed index
 	data [IndexCacheLength]uint32 // indexes of cache
 }
 

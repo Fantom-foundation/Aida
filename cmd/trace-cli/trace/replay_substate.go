@@ -190,7 +190,7 @@ func traceReplaySubstateAction(ctx *cli.Context) error {
 		return fmt.Errorf("trace replay-substate command requires exactly 2 arguments")
 	}
 	tracer.TraceDir = ctx.String(traceDirectoryFlag.Name) + "/"
-	dict.DictDir = ctx.String(traceDirectoryFlag.Name) + "/"
+	dict.DictionaryContextDir = ctx.String(traceDirectoryFlag.Name) + "/"
 	if ctx.Bool(traceDebugFlag.Name) {
 		traceDebug = true
 	}

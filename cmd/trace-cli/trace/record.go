@@ -265,7 +265,7 @@ func traceRecordAction(ctx *cli.Context) error {
 	// process arguments
 	chainID = ctx.Int(chainIDFlag.Name)
 	tracer.TraceDir = ctx.String(traceDirectoryFlag.Name) + "/"
-	dict.DictDir = ctx.String(traceDirectoryFlag.Name) + "/"
+	dict.DictionaryContextDir = ctx.String(traceDirectoryFlag.Name) + "/"
 	if ctx.Bool(traceDebugFlag.Name) {
 		traceDebug = true
 	}
