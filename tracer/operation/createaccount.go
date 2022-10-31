@@ -15,8 +15,8 @@ type CreateAccount struct {
 	ContractIndex uint32 // encoded contract address
 }
 
-// GetOpId returns the create-account operation identifier.
-func (op *CreateAccount) GetOpId() byte {
+// GetId returns the create-account operation identifier.
+func (op *CreateAccount) GetId() byte {
 	return CreateAccountID
 }
 

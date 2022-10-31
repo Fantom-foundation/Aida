@@ -18,8 +18,8 @@ import (
 type GetCodeHashLc struct {
 }
 
-// GetOpId returns the get-code-hash-lc operation identifier.
-func (op *GetCodeHashLc) GetOpId() byte {
+// GetId returns the get-code-hash-lc operation identifier.
+func (op *GetCodeHashLc) GetId() byte {
 	return GetCodeHashLcID
 }
 

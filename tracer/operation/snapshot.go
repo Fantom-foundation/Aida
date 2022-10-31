@@ -17,8 +17,8 @@ type Snapshot struct {
 	SnapshotID int32 // returned ID (for later mapping)
 }
 
-// GetOpId returns the snapshot operation identifier.
-func (op *Snapshot) GetOpId() byte {
+// GetId returns the snapshot operation identifier.
+func (op *Snapshot) GetId() byte {
 	return SnapshotID
 }
 

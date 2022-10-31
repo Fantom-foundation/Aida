@@ -16,8 +16,8 @@ type GetCommittedState struct {
 	StorageIndex  uint32 // encoded storage address
 }
 
-// GetOpId returns the get-commited-state-operation identifier.
-func (op *GetCommittedState) GetOpId() byte {
+// GetId returns the get-commited-state-operation identifier.
+func (op *GetCommittedState) GetId() byte {
 	return GetCommittedStateID
 }
 

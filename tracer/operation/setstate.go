@@ -17,8 +17,8 @@ type SetState struct {
 	ValueIndex    uint64 // encoded storage value
 }
 
-// GetOpId returns the set-state identifier.
-func (op *SetState) GetOpId() byte {
+// GetId returns the set-state identifier.
+func (op *SetState) GetId() byte {
 	return SetStateID
 }
 

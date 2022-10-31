@@ -18,8 +18,8 @@ type SubBalance struct {
 	Amount        [16]byte // truncated amount to 16 bytes
 }
 
-// GetOpId returns the sub-balance operation identifier.
-func (op *SubBalance) GetOpId() byte {
+// GetId returns the sub-balance operation identifier.
+func (op *SubBalance) GetId() byte {
 	return SubBalanceID
 }
 

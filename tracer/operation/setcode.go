@@ -16,8 +16,8 @@ type SetCode struct {
 	CodeIndex     uint32 // encoded bytecode
 }
 
-// GetOpId returns the set-code operation identifier.
-func (op *SetCode) GetOpId() byte {
+// GetId returns the set-code operation identifier.
+func (op *SetCode) GetId() byte {
 	return SetCodeID
 }
 

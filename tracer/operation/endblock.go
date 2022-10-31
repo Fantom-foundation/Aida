@@ -12,8 +12,8 @@ import (
 type EndBlock struct {
 }
 
-// GetOpId returns the end-block operation identifier.
-func (op *EndBlock) GetOpId() byte {
+// GetId returns the end-block operation identifier.
+func (op *EndBlock) GetId() byte {
 	return EndBlockID
 }
 

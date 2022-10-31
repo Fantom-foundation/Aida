@@ -188,7 +188,7 @@ func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 			}
 
 			// find end of transaction
-			if op.GetOpId() == operation.EndTransactionID {
+			if op.GetId() == operation.EndTransactionID {
 				txCount++
 				break
 			}
@@ -219,7 +219,7 @@ func storageDriver(first uint64, last uint64, cliCtx *cli.Context) error {
 	// replay the last EndBlock()
 	hasNext := traceIter.Next()
 	op := traceIter.Value()
-	if !hasNext || op.GetOpId() != operation.EndBlockID {
+	if !hasNext || op.GetId() != operation.EndBlockID {
 		return fmt.Errorf("Last operation isn't an EndBlock")
 	} else {
 		operation.Execute(op, db, dCtx)

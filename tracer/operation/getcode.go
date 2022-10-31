@@ -15,8 +15,8 @@ type GetCode struct {
 	ContractIndex uint32 // encoded contract address
 }
 
-// GetOpId returns the get-code operation identifier.
-func (op *GetCode) GetOpId() byte {
+// GetId returns the get-code operation identifier.
+func (op *GetCode) GetId() byte {
 	return GetCodeID
 }
 

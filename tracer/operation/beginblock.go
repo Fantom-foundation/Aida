@@ -15,8 +15,8 @@ type BeginBlock struct {
 	BlockNumber uint64 // block number
 }
 
-// GetOpId returns the begin-block operation identifier.
-func (op *BeginBlock) GetOpId() byte {
+// GetId returns the begin-block operation identifier.
+func (op *BeginBlock) GetId() byte {
 	return BeginBlockID
 }
 

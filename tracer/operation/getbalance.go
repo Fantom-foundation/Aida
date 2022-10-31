@@ -15,8 +15,8 @@ type GetBalance struct {
 	ContractIndex uint32
 }
 
-// GetOpId returns the get-balance operation identifier.
-func (op *GetBalance) GetOpId() byte {
+// GetId returns the get-balance operation identifier.
+func (op *GetBalance) GetId() byte {
 	return GetBalanceID
 }
 

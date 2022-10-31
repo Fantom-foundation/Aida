@@ -20,8 +20,8 @@ type GetStateLc struct {
 	StorageIndex uint32 // encoded storage address
 }
 
-// GetOpId returns the get-state-lc operation identifier.
-func (op *GetStateLc) GetOpId() byte {
+// GetId returns the get-state-lc operation identifier.
+func (op *GetStateLc) GetId() byte {
 	return GetStateLcID
 }
 

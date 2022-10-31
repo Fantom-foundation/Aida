@@ -22,8 +22,8 @@ type GetStateLccs struct {
 	StoragePosition uint8 // position in storage index-cache
 }
 
-// GetOpId returns the get-state-lccs operation identifier.
-func (op *GetStateLccs) GetOpId() byte {
+// GetId returns the get-state-lccs operation identifier.
+func (op *GetStateLccs) GetId() byte {
 	return GetStateLccsID
 }
 

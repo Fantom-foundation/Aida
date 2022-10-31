@@ -15,8 +15,8 @@ type Suicide struct {
 	ContractIndex uint32 // encoded contract address
 }
 
-// GetOpId returns the suicide operation identifier.
-func (op *Suicide) GetOpId() byte {
+// GetId returns the suicide operation identifier.
+func (op *Suicide) GetId() byte {
 	return SuicideID
 }
 

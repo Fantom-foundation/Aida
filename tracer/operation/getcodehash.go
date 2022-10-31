@@ -15,8 +15,8 @@ type GetCodeHash struct {
 	ContractIndex uint32 // encoded contract address
 }
 
-// GetOpId returns the get-code-hash operation identifier.
-func (op *GetCodeHash) GetOpId() byte {
+// GetId returns the get-code-hash operation identifier.
+func (op *GetCodeHash) GetId() byte {
 	return GetCodeHashID
 }
 
