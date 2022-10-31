@@ -32,6 +32,7 @@ type BasicStateDB interface {
 
 	// Code handling.
 	GetCodeHash(common.Address) common.Hash
+	GetCode(common.Address) []byte
 
 	// Transaction handling
 	Snapshot() int

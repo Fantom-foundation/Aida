@@ -3,7 +3,7 @@ package operation
 import (
 	"encoding/binary"
 	"fmt"
-	"os"
+	"io"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
@@ -26,14 +26,14 @@ func NewCreateAccount(cIdx uint32) *CreateAccount {
 }
 
 // ReadCreateAccount reads a create-account operation from a file.
-func ReadCreateAccount(file *os.File) (Operation, error) {
+func ReadCreateAccount(file io.Reader) (Operation, error) {
 	data := new(CreateAccount)
 	err := binary.Read(file, binary.LittleEndian, data)
 	return data, err
 }
 
 // Write the create-account operation to file.
-func (op *CreateAccount) Write(f *os.File) error {
+func (op *CreateAccount) Write(f io.Writer) error {
 	err := binary.Write(f, binary.LittleEndian, *op)
 	return err
 }

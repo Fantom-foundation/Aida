@@ -91,6 +91,10 @@ func (s *gethStateDb) GetCodeHash(addr common.Address) common.Hash {
 	return s.db.GetCodeHash(addr)
 }
 
+func (s *gethStateDb) GetCode(addr common.Address) []byte {
+	return s.db.GetCode(addr)
+}
+
 func (s *gethStateDb) Snapshot() int {
 	return s.db.Snapshot()
 }

@@ -136,7 +136,7 @@ func (ctx *DictionaryContext) DecodeStorage(sIdx uint32) common.Hash {
 // ReadStorage reads index-cache and returns the storage address.
 // TODO: rename method
 func (ctx *DictionaryContext) ReadStorage(sPos int) common.Hash {
-	sIdx, err := ctx.StorageCache.Lookup(sPos)
+	sIdx, err := ctx.StorageCache.Get(sPos)
 	if err != nil {
 		log.Fatalf("Storage position could not be found. Error: %v", err)
 	}
@@ -150,7 +150,7 @@ func (ctx *DictionaryContext) ReadStorage(sPos int) common.Hash {
 // LookupStorage reads and updates index-cache.
 // TODO: rename method
 func (ctx *DictionaryContext) LookupStorage(sPos int) common.Hash {
-	sIdx, err := ctx.StorageCache.Lookup(sPos)
+	sIdx, err := ctx.StorageCache.Get(sPos)
 	if err != nil {
 		log.Fatalf("Storage position could not be found. Error: %v", err)
 	}
@@ -231,5 +231,5 @@ func (ctx *DictionaryContext) DecodeCode(bcIdx uint32) []byte {
 // ClearIndexCaches clears index caches and previous addresses.
 func (ctx *DictionaryContext) ClearIndexCaches() {
 	ctx.PrevContractIndex = InvalidContractIndex
-	ctx.StorageCache.ClearIndexCache()
+	ctx.StorageCache.Clear()
 }

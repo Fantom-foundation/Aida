@@ -3,7 +3,7 @@ package operation
 import (
 	"encoding/binary"
 	"fmt"
-	"os"
+	"io"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
@@ -26,14 +26,14 @@ func NewSuicide(cIdx uint32) *Suicide {
 }
 
 // ReadSuicide reads a suicide operation from a file.
-func ReadSuicide(file *os.File) (Operation, error) {
+func ReadSuicide(file io.Reader) (Operation, error) {
 	data := new(Suicide)
 	err := binary.Read(file, binary.LittleEndian, data)
 	return data, err
 }
 
 // Write the suicide operation to a file.
-func (op *Suicide) Write(f *os.File) error {
+func (op *Suicide) Write(f io.Writer) error {
 	err := binary.Write(f, binary.LittleEndian, *op)
 	return err
 }

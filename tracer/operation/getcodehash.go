@@ -3,7 +3,7 @@ package operation
 import (
 	"encoding/binary"
 	"fmt"
-	"os"
+	"io"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
@@ -26,14 +26,14 @@ func NewGetCodeHash(cIdx uint32) *GetCodeHash {
 }
 
 // ReadGetHash reads a get-code-hash operation from a file.
-func ReadGetCodeHash(file *os.File) (Operation, error) {
+func ReadGetCodeHash(file io.Reader) (Operation, error) {
 	data := new(GetCodeHash)
 	err := binary.Read(file, binary.LittleEndian, data)
 	return data, err
 }
 
 // Write the get-code-hash operation to a file.
-func (op *GetCodeHash) Write(f *os.File) error {
+func (op *GetCodeHash) Write(f io.Writer) error {
 	err := binary.Write(f, binary.LittleEndian, *op)
 	return err
 }

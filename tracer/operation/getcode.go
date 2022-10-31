@@ -3,7 +3,7 @@ package operation
 import (
 	"encoding/binary"
 	"fmt"
-	"os"
+	"io"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
@@ -26,26 +26,24 @@ func NewGetCode(cIdx uint32) *GetCode {
 }
 
 // ReadGetCode reads a get-code operation from a file.
-func ReadGetCode(file *os.File) (Operation, error) {
+func ReadGetCode(file io.Reader) (Operation, error) {
 	data := new(GetCode)
 	err := binary.Read(file, binary.LittleEndian, data)
 	return data, err
 }
 
 // Write the get-code operation to a file.
-func (op *GetCode) Write(f *os.File) error {
+func (op *GetCode) Write(f io.Writer) error {
 	err := binary.Write(f, binary.LittleEndian, *op)
 	return err
 }
 
 // Execute the get-code operation.
 func (op *GetCode) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
-	// contract := ctx.DecodeContract(op.ContractIndex)
-	// start := time.Now()
-	// TODO: not implemented yet
-	// db.GetCode(contract)
-	// return time.Since(start)
-	return time.Duration(0)
+	contract := ctx.DecodeContract(op.ContractIndex)
+	start := time.Now()
+	db.GetCode(contract)
+	return time.Since(start)
 }
 
 // Debug prints a debug message for the get-code operation.

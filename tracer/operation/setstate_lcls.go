@@ -3,7 +3,7 @@ package operation
 import (
 	"encoding/binary"
 	"fmt"
-	"os"
+	"io"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
@@ -30,14 +30,14 @@ func NewSetStateLcls(vIdx uint64) *SetStateLcls {
 }
 
 // ReadSetStateLcls reads a set-state-lcls operation from file.
-func ReadSetStateLcls(file *os.File) (Operation, error) {
+func ReadSetStateLcls(file io.Reader) (Operation, error) {
 	data := new(SetStateLcls)
 	err := binary.Read(file, binary.LittleEndian, data)
 	return data, err
 }
 
 // Write the set-state-lcls operation to file.
-func (op *SetStateLcls) Write(f *os.File) error {
+func (op *SetStateLcls) Write(f io.Writer) error {
 	err := binary.Write(f, binary.LittleEndian, *op)
 	return err
 }
