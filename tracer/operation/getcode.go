@@ -40,12 +40,10 @@ func (op *GetCode) Write(f io.Writer) error {
 
 // Execute the get-code operation.
 func (op *GetCode) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
-	// contract := ctx.DecodeContract(op.ContractIndex)
-	// start := time.Now()
-	// TODO: not implemented yet
-	// db.GetCode(contract)
-	// return time.Since(start)
-	return time.Duration(0)
+	contract := ctx.DecodeContract(op.ContractIndex)
+	start := time.Now()
+	db.GetCode(contract)
+	return time.Since(start)
 }
 
 // Debug prints a debug message for the get-code operation.

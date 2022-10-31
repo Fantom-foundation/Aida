@@ -95,3 +95,27 @@ func TestGetCodeDebug(t *testing.T) {
 		t.Fatalf("Wrong debug message: %v", buf.String())
 	}
 }
+
+// TestGetCodeExecute creates a new GetCode object and checks its execution signature.
+func TestGetCodeExecute(t *testing.T) {
+	// create dictionary context
+	dict := dict.NewDictionaryContext()
+	cIdx := dict.EncodeContract(common.HexToAddress("0x213129039821098302981"))
+
+	// create new operation
+	op := NewGetCode(cIdx)
+	if op == nil {
+		t.Fatalf("Failed to create operation")
+	}
+	// check id
+	if op.GetOpId() != GetCodeID {
+		t.Fatalf("Wrong ID returned")
+	}
+
+	// check execution
+	mock := NewMockStateDB()
+	op.Execute(mock, dict)
+	if mock.GetSignature() != "GetCode: 0x0000000000000000000213129039821098302981" {
+		t.Fatalf("Execution signature fails: %v", mock.GetSignature())
+	}
+}

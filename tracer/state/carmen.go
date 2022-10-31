@@ -39,6 +39,7 @@ type carmenStateDB struct {
 	db carmen.StateDB
 }
 
+var getCodeCalled bool
 var getCodeHashCalled bool
 
 func (s *carmenStateDB) CreateAccount(addr common.Address) {
@@ -100,6 +101,14 @@ func (s *carmenStateDB) GetCodeHash(addr common.Address) common.Hash {
 		getCodeHashCalled = true
 	}
 	return common.Hash{}
+}
+
+func (s *carmenStateDB) GetCode(addr common.Address) []byte {
+	if !getCodeCalled {
+		fmt.Printf("WARNING: GetCode not implemented\n")
+		getCodeCalled = true
+	}
+	return []byte{}
 }
 
 func (s *carmenStateDB) Snapshot() int {
