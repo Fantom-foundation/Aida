@@ -21,7 +21,7 @@ func TestPositiveRecord(t *testing.T) {
 }
 
 // TestPositiveReplay executes replay command for 101 block
-func TestPositiveReplay(t *testing.T) {
+func TestPositiveReplaySubstate(t *testing.T) {
 	app := initTraceApp()
 	// record
 	os.Args = []string{
@@ -37,7 +37,7 @@ func TestPositiveReplay(t *testing.T) {
 	dbTypes := []string{"memory", "geth", "carmen"}
 	for _, db := range dbTypes {
 		os.Args = []string{
-			"trace", "replay",
+			"trace", "replay-substate",
 			"--tracedir", testTraceDir,
 			"--db-impl", db,
 			"--substatedir", "substate.test",
@@ -50,7 +50,7 @@ func TestPositiveReplay(t *testing.T) {
 }
 
 // TestPositiveReplayValidate executes replay command then validate last state
-func TestPositiveReplayValidate(t *testing.T) {
+func TestPositiveReplaySubstateValidate(t *testing.T) {
 	app := initTraceApp()
 	// record
 	os.Args = []string{
@@ -66,7 +66,7 @@ func TestPositiveReplayValidate(t *testing.T) {
 	dbTypes := []string{"memory"}
 	for _, db := range dbTypes {
 		os.Args = []string{
-			"trace", "replay",
+			"trace", "replay-substate",
 			"--tracedir", testTraceDir,
 			"--db-impl", db,
 			"--substatedir", "substate.test",

@@ -50,14 +50,12 @@ func (op *SubBalance) Write(f *os.File) error {
 
 // Execute the sub-balance operation.
 func (op *SubBalance) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
-	// skip to avoid errors causing by negative balance when running on an empty db
-	// contract := ctx.DecodeContract(op.ContractIndex)
+	contract := ctx.DecodeContract(op.ContractIndex)
 	// construct bit.Int from a byte array
-	// amount := new(big.Int).SetBytes(op.Amount[:])
-	// start := time.Now()
-	// db.SubBalance(contract, amount)
-	// return time.Since(start)
-	return time.Duration(0)
+	amount := new(big.Int).SetBytes(op.Amount[:])
+	start := time.Now()
+	db.SubBalance(contract, amount)
+	return time.Since(start)
 }
 
 // Debug prints a debug message for the sub-balance operation.

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Fantom-foundation/Aida/cmd/trace"
+	"github.com/Fantom-foundation/Aida/cmd/trace-cli/trace"
 	"github.com/ethereum/go-ethereum/substate"
 	"github.com/urfave/cli/v2"
 )
@@ -18,9 +18,10 @@ func initTraceApp() *cli.App {
 		Copyright: "(c) 2022 Fantom Foundation",
 		Flags:     []cli.Flag{},
 		Commands: []*cli.Command{
+			&trace.TraceCompareLogCommand,
 			&trace.TraceRecordCommand,
 			&trace.TraceReplayCommand,
-			&trace.TraceCompareLogCommand,
+			&trace.TraceReplaySubstateCommand,
 		},
 	}
 }
