@@ -14,7 +14,7 @@ import (
 func TestDictionaryContextWriteReadEmpty(t *testing.T) {
 	DictionaryContextDir = "./test_dictionary_context/"
 	want := []string{"code-dictionary.dat", "contract-dictionary.dat",
-			 "storage-dictionary.dat", "value-dictionary.dat"}
+		"storage-dictionary.dat", "value-dictionary.dat"}
 	have := []string{}
 
 	if err := os.Mkdir(DictionaryContextDir, 0700); err != nil {
