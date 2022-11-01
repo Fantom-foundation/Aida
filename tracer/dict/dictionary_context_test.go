@@ -2,24 +2,42 @@ package dict
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	"io/ioutil"
 	"os"
 	"reflect"
+	"sort"
 	"testing"
 )
 
 // TestDictionaryContextWriteReadEmpty writes and reads an empty dictionary
-// context to a directory.
+// context to a directory and validate file names.
 func TestDictionaryContextWriteReadEmpty(t *testing.T) {
-	DictionaryContextDir := "./test_dictionary_context"
+	DictionaryContextDir = "./test_dictionary_context/"
+	want := []string{"code-dictionary.dat", "contract-dictionary.dat",
+			 "storage-dictionary.dat", "value-dictionary.dat"}
+	have := []string{}
+
 	if err := os.Mkdir(DictionaryContextDir, 0700); err != nil {
 		t.Fatalf("Failed to create test directory")
 	}
 	defer os.RemoveAll(DictionaryContextDir)
 	ctx1 := NewDictionaryContext()
 	ctx1.Write()
+	files, err := ioutil.ReadDir(DictionaryContextDir)
+	if err != nil {
+		t.Fatalf("Dictionary context directory not found. %v", err)
+	}
+	for _, f := range files {
+		have = append(have, f.Name())
+	}
+	sort.Strings(want)
+	sort.Strings(have)
+	if !reflect.DeepEqual(want, have) {
+		t.Fatalf("Failed to write dictionary context files.\n\twant %v\n\thave %v", want, have)
+	}
 	ctx2 := ReadDictionaryContext()
 	if ctx2 == nil {
-		t.Fatalf("Failed to read dictonary context")
+		t.Fatalf("Failed to read dictonary context files")
 	}
 }
 

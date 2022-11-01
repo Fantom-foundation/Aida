@@ -50,7 +50,7 @@ func (op *SetCode) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.D
 
 // Debug prints a debug message for the set-code operation.
 func (op *SetCode) Debug(ctx *dict.DictionaryContext) {
-	fmt.Sprintf("\tcontract: %v code: %x\n",
+	fmt.Printf("\tcontract: %v code size: %v\n",
 		ctx.DecodeContract(op.ContractIndex),
-		ctx.DecodeCode(op.CodeIndex))
+		len(ctx.DecodeCode(op.CodeIndex)))
 }

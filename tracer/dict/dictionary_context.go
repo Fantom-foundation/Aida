@@ -60,6 +60,10 @@ func ReadDictionaryContext() *DictionaryContext {
 	if err != nil {
 		log.Fatalf("Cannot read value dictionary. Error: %v", err)
 	}
+	err = ctx.CodeDictionary.Read(DictionaryContextDir + "code-dictionary.dat")
+	if err != nil {
+		log.Fatalf("Cannot read code dictionary. Error: %v", err)
+	}
 	return ctx
 }
 
@@ -76,6 +80,10 @@ func (ctx *DictionaryContext) Write() {
 	err = ctx.ValueDictionary.Write(DictionaryContextDir + "value-dictionary.dat")
 	if err != nil {
 		log.Fatalf("Cannot write value dictionary. Error: %v", err)
+	}
+	err = ctx.CodeDictionary.Write(DictionaryContextDir + "code-dictionary.dat")
+	if err != nil {
+		log.Fatalf("Cannot write code dictionary. Error: %v", err)
 	}
 }
 
