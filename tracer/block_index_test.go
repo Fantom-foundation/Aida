@@ -5,8 +5,8 @@ import (
 	"testing"
 )
 
-// Add()
-// Positive Test: Add a new set of blocks and compare the size of index map.
+// TestPositiveBlockIndexAdd adds a new set of blocks and
+// compares the size of index map.
 func TestPositiveBlockIndexAdd(t *testing.T) {
 	var blk1 uint64 = 1
 	var blk2 uint64 = 2
@@ -28,7 +28,8 @@ func TestPositiveBlockIndexAdd(t *testing.T) {
 	}
 }
 
-// Negative Test: Add a duplicate block and compare whether the values are added twice.
+// TestNegativeBlockIndexAdd adds a duplicate block and compares
+// whether the values are added twice.
 func TestNegativeBlockIndexAdd(t *testing.T) {
 	var blk uint64 = 1
 	var pos int64 = 0
@@ -48,8 +49,8 @@ func TestNegativeBlockIndexAdd(t *testing.T) {
 	}
 }
 
-// Get()
-// Positive Test: Get file positions from BlockIndex and compare index postions
+// TestPositiveBlockIndexGet gets file positions from BlockIndex and
+// compares index postions
 func TestPositiveBlockIndexGet(t *testing.T) {
 	var blk uint64 = 1
 	var pos int64 = 8
@@ -64,7 +65,7 @@ func TestPositiveBlockIndexGet(t *testing.T) {
 	}
 }
 
-// Negative Test: Get file positions of a block which is not in BlockIndex.
+// Negative Test: Get file positions of a block that is not in BlockIndex.
 func TestNegativeBlockIndexGet(t *testing.T) {
 	var blk uint64 = 1
 	var pos int64 = 8
@@ -76,9 +77,9 @@ func TestNegativeBlockIndexGet(t *testing.T) {
 	}
 }
 
-// Read and Write()
-// Positive Tetst: Write a set of postion index to a binary file and read from it.
-// Compare whether indices are the same.
+// TestPositiveBlockIndexReadWrite writes a set of postion index
+// to a binary file and reads from it. Compare whether indices are
+// the same.
 func TestPositiveBlockIndexReadWrite(t *testing.T) {
 	var blk uint64 = 1
 	var pos int64 = 3
@@ -104,8 +105,7 @@ func TestPositiveBlockIndexReadWrite(t *testing.T) {
 	}
 }
 
-// Positive Tetst: Create
-// Negative Tetst: Write a corrupted file and read from it.
+// TestNegativeBlockIndexWrite writes a corrupted file and read from it.
 func TestNegativeBlockIndexWrite(t *testing.T) {
 	filename := "./block_index_test.dat"
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)

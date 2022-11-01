@@ -4,18 +4,18 @@ import (
 	"log"
 )
 
-// Index-context encapsulates all index data strutures.
+// IndexContext encapsulates all index data strutures.
 type IndexContext struct {
 	BlockIndex *BlockIndex // block-index
 }
 
-// Create a new index context.
+// NewIndexContext creates a new index context.
 func NewIndexContext() *IndexContext {
 	return &IndexContext{
 		BlockIndex: NewBlockIndex()}
 }
 
-// Read a new index context from file(s).
+// ReadIndexContext reads a new index context from file(s).
 func ReadIndexContext() *IndexContext {
 	ctx := NewIndexContext()
 	err := ctx.BlockIndex.Read(TraceDir + "block-index.dat")
@@ -33,7 +33,7 @@ func (ctx *IndexContext) Write() {
 	}
 }
 
-// Add block to block index.
+// AddBlock adds a block to the block index.
 func (ctx *IndexContext) AddBlock(block uint64, fpos int64) {
 	err := ctx.BlockIndex.Add(block, fpos)
 	if err != nil {
@@ -41,7 +41,7 @@ func (ctx *IndexContext) AddBlock(block uint64, fpos int64) {
 	}
 }
 
-// Get block from block index.
+// GetBlock gets a block from the block index.
 func (ctx *IndexContext) GetBlock(block uint64) int64 {
 	fpos, err := ctx.BlockIndex.Get(block)
 	if err != nil {
@@ -50,7 +50,7 @@ func (ctx *IndexContext) GetBlock(block uint64) int64 {
 	return fpos
 }
 
-// Check whether block exists in block index.
+// ExistsBlock checks whether block exists in block index.
 func (ctx *IndexContext) ExistsBlock(block uint64) bool {
 	exists, err := ctx.BlockIndex.Exists(block)
 	if err != nil {

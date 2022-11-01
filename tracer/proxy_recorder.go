@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/substate"
 )
 
-// ProxyRecorder datastructure for capturing and recording
+// ProxyRecorder data structure for capturing and recording
 // invoked StateDB operations.
 type ProxyRecorder struct {
 	db    state.StateDB            // state db
