@@ -7,7 +7,7 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 )
 
-// Iterator data structure for storage traces
+// TraceIterator data structure for storing state of a trace iterator
 type TraceIterator struct {
 	lastBlock uint64              // last block to process
 	iCtx      *IndexContext       // index context
@@ -15,10 +15,10 @@ type TraceIterator struct {
 	currentOp operation.Operation // current state operation
 }
 
-// Output directory
+// TraceDir is the directory of the trace files.
 var TraceDir string = "./"
 
-// Create new trace iterator.
+// NewTraceIterator creates a new trace iterator.
 func NewTraceIterator(iCtx *IndexContext, first uint64, last uint64) *TraceIterator {
 	p := new(TraceIterator)
 	p.iCtx = iCtx
@@ -44,7 +44,7 @@ func NewTraceIterator(iCtx *IndexContext, first uint64, last uint64) *TraceItera
 	return p
 }
 
-// Get next state operation from trace file.
+// Next gets next operation from the trace file.
 func (ti *TraceIterator) Next() bool {
 	// check whether we have processed all blocks in range
 	if ti.iCtx.ExistsBlock(ti.lastBlock + 1) {
@@ -63,7 +63,7 @@ func (ti *TraceIterator) Next() bool {
 	return ti.currentOp != nil
 }
 
-// Retrieve current state operation of the iterator.
+// Value retrieves teh current state operation of the trace file.
 func (ti *TraceIterator) Value() operation.Operation {
 	return ti.currentOp
 }

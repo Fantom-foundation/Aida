@@ -9,7 +9,7 @@ import (
 	"regexp"
 )
 
-// Trace compare-log command
+// TraceCompareLogCommand data structure for compare-log command.
 var TraceCompareLogCommand = cli.Command{
 	Action:    traceCompareLogAction,
 	Name:      "compare-log",

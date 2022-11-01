@@ -23,7 +23,7 @@ func (cDict *ContractDictionary) Init() {
 	cDict.idxToContract = []common.Address{}
 }
 
-// Create a new contract dictionary.
+// NewContractDictionary creates a new contract dictionary.
 func NewContractDictionary() *ContractDictionary {
 	p := new(ContractDictionary)
 	p.Init()

@@ -14,7 +14,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// Trace replay-substate command
+// TraceReplaySubstateCommand data structure for the replay-substate app
 var TraceReplaySubstateCommand = cli.Command{
 	Action:    traceReplaySubstateAction,
 	Name:      "replay-substate",
@@ -181,7 +181,7 @@ func traceReplaySubstateTask(first uint64, last uint64, cliCtx *cli.Context) err
 	return nil
 }
 
-// Implements trace command for replaying.
+// traceReplaySubstateAction implements trace command for replaying.
 func traceReplaySubstateAction(ctx *cli.Context) error {
 	var err error
 

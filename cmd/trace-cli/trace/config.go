@@ -8,10 +8,10 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// Chain id for recording either mainnet or testnets.
+// chainId for recording either mainnet or testnets.
 var chainID int
 
-// Trace debugging flag
+// traceDebug for enabling/disabling debugging
 var traceDebug bool = false
 
 // Command line options for common flags in record and replay
@@ -58,7 +58,7 @@ var (
 	}
 )
 
-// Check the validity of a block range and return the first and last block as numbers.
+// SetBlockRange checks the validity of a block range and return the first and last block as numbers.
 func SetBlockRange(firstArg string, lastArg string) (uint64, uint64, error) {
 	var err error = nil
 	first, ferr := strconv.ParseUint(firstArg, 10, 64)

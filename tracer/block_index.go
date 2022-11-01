@@ -13,18 +13,18 @@ type BlockIndex struct {
 	blockToFPos map[uint64]int64 // block number -> file position
 }
 
-// Data structure to read/write an entry in block index.
+// BlockFPos data structure for storing index.
 type BlockFPos struct {
 	Block uint64 // block number
 	FPos  int64  // file position of first operation in block
 }
 
-// Initialize a block-index.
+// Init initializes a block-index.
 func (oIdx *BlockIndex) Init() {
 	oIdx.blockToFPos = make(map[uint64]int64)
 }
 
-// Create new block-index data structure.
+// NewBlockIndex creates new block-index data structure.
 func NewBlockIndex() *BlockIndex {
 	p := new(BlockIndex)
 	p.Init()
@@ -41,13 +41,13 @@ func (oIdx *BlockIndex) Add(block uint64, fpos int64) error {
 	return err
 }
 
-// Check whether block-index has a file position for a block number.
+// Exists checks whether block-index has a file position for a block number.
 func (oIdx *BlockIndex) Exists(block uint64) (bool, error) {
 	_, ok := oIdx.blockToFPos[block]
 	return ok, nil
 }
 
-// Obtain file position number for a block number.
+// Get the file position number for a block number.
 func (oIdx *BlockIndex) Get(block uint64) (int64, error) {
 	operation, ok := oIdx.blockToFPos[block]
 	if !ok {
@@ -77,7 +77,7 @@ func (oIdx *BlockIndex) Write(filename string) error {
 	return nil
 }
 
-// Read block-index from a file.
+// Read a block-index from a file.
 func (oIdx *BlockIndex) Read(filename string) error {
 	// clear storage dictionary
 	oIdx.Init()

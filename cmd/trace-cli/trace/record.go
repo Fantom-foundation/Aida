@@ -27,7 +27,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// trace record command
+// TraceRecordCommand data structure for the record app
 var TraceRecordCommand = cli.Command{
 	Action:    traceRecordAction,
 	Name:      "record",
@@ -50,7 +50,7 @@ The trace record command requires two arguments:
 last block of the inclusive range of blocks to trace transactions.`,
 }
 
-// Generate storage traces for a transaction.
+// traceRecordTask generates storage traces for a transaction.
 func traceRecordTask(block uint64, tx int, recording *substate.Substate, dCtx *dict.DictionaryContext, ch chan operation.Operation) error {
 
 	inputAlloc := recording.InputAlloc
@@ -171,9 +171,8 @@ func traceRecordTask(block uint64, tx int, recording *substate.Substate, dCtx *d
 	return nil
 }
 
-// Read operations from the operation channel and write them into a trace file.
-// (NB: Debug messages cannot be written because they would destroy caches; the
-// writer cannot only take the Operation structs and write them to file).
+// OperationWriter reads operations from the operation channel and writes
+// them into a trace file.
 func OperationWriter(ctx context.Context, done chan struct{}, ch chan operation.Operation, iCtx *tracer.IndexContext) {
 	// send done signal when closing writer
 	defer close(done)
@@ -223,7 +222,7 @@ func OperationWriter(ctx context.Context, done chan struct{}, ch chan operation.
 	}
 }
 
-// send an operation
+// sendOperation sends an operation onto the channel.
 func sendOperation(dCtx *dict.DictionaryContext, ch chan operation.Operation, op operation.Operation) {
 	ch <- op
 	if traceDebug {
@@ -231,7 +230,7 @@ func sendOperation(dCtx *dict.DictionaryContext, ch chan operation.Operation, op
 	}
 }
 
-// Implements trace command for recording.
+// traceRecordAction implements trace command for recording.
 func traceRecordAction(ctx *cli.Context) error {
 	var err error
 
