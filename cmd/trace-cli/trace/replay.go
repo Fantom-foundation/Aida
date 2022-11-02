@@ -7,7 +7,6 @@ import (
 	"runtime/pprof"
 	"time"
 
-	"github.com/Fantom-foundation/Aida/cmd/gen-world-state/flags"
 	"github.com/Fantom-foundation/Aida/tracer"
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
@@ -24,7 +23,6 @@ var TraceReplayCommand = cli.Command{
 	Flags: []cli.Flag{
 		&cpuProfileFlag,
 		&disableProgressFlag,
-		&flags.StateDBPath,
 		&profileFlag,
 		&stateDbImplementation,
 		&stateDbVariant,
@@ -33,6 +31,7 @@ var TraceReplayCommand = cli.Command{
 		&traceDirectoryFlag,
 		&traceDebugFlag,
 		&validateEndState,
+		&worldStateDirFlag,
 	},
 	Description: `
 The trace replay command requires two arguments:
@@ -68,7 +67,7 @@ func traceReplayTask(first uint64, last uint64, cliCtx *cli.Context) error {
 
 	// intialize the world state and advance it to the first block
 	fmt.Printf("trace replay: Load and advance worldstate to block %v\n", first-1)
-	ws, err := generateWorldState(cliCtx.String(flags.StateDBPath.Name), first-1, workers)
+	ws, err := generateWorldState(cliCtx.String(worldStateDirFlag.Name), first-1, workers)
 	if err != nil {
 		return err
 	}
