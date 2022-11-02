@@ -56,6 +56,10 @@ var (
 		Name:  "validate",
 		Usage: "enables end-state validation",
 	}
+	worldStateDirFlag = cli.PathFlag{
+		Name:  "worldstatedir",
+		Usage: "world state snapshot database path",
+	}
 )
 
 // SetBlockRange checks the validity of a block range and return the first and last block as numbers.
