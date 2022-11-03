@@ -19,9 +19,9 @@ func MakeCarmenStateDB(directory, variant string) (StateDB, error) {
 	var err error
 	switch variant {
 	case "go-memory":
-		db, err = carmen.NewGoInMemoryState()
+		db, err = carmen.NewMemory()
 	case "go-ldb":
-		db, err = carmen.NewGoLevelDbState(directory)
+		db, err = carmen.NewLeveLIndexAndStore(directory)
 	case "cpp-memory":
 		db, err = carmen.NewCppInMemoryState()
 	case "cpp-file":
@@ -98,34 +98,19 @@ func (s *carmenStateDB) SetState(addr common.Address, key common.Hash, value com
 }
 
 func (s *carmenStateDB) GetCode(addr common.Address) []byte {
-	if !getCodeCalled {
-		fmt.Printf("WARNING: GetCode not implemented\n")
-		getCodeCalled = true
-	}
-	return []byte{}
+	return s.db.GetCode(cc.Address(addr))
 }
 
 func (s *carmenStateDB) GetCodeSize(addr common.Address) int {
-	if !getCodeSizeCalled {
-		fmt.Printf("WARNING: GetCodeSize not implemented\n")
-		getCodeSizeCalled = true
-	}
-	return 0
+	return s.db.GetCodeSize(cc.Address(addr))
 }
 
 func (s *carmenStateDB) GetCodeHash(addr common.Address) common.Hash {
-	if !getCodeHashCalled {
-		fmt.Printf("WARNING: GetCodeHash not implemented\n")
-		getCodeHashCalled = true
-	}
-	return common.Hash{}
+	return common.Hash(s.db.GetCodeHash(cc.Address(addr)))
 }
 
 func (s *carmenStateDB) SetCode(addr common.Address, code []byte) {
-	if !setCodeCalled {
-		fmt.Printf("WARNING: SetCode not implemented\n")
-		setCodeCalled = true
-	}
+	s.db.SetCode(cc.Address(addr), code)
 }
 
 func (s *carmenStateDB) Snapshot() int {
