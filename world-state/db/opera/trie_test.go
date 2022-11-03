@@ -1,7 +1,10 @@
 package opera
 
 import (
+	"context"
+	"fmt"
 	"github.com/Fantom-foundation/Aida/world-state/types"
+	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
@@ -15,16 +18,18 @@ import (
 )
 
 // testDBSize defines how many test accounts will be injected into the test trie
-const testDBSize = 500
+const (
+	testDBSize      = 500
+	numberOfWorkers = 20
+)
 
 // makeTestTrie creates a testing MPT trie filled with random accounts
 // Returns state DB, root hash of state trie, map of testing accounts and map of account hashes -> account addresses
-func makeTestTrie(t *testing.T) (state.Database, common.Hash, map[common.Hash]types.Account, map[common.Hash]common.Address) {
+func makeTestTrie(t *testing.T, store kvdb.Store) (state.Database, common.Hash, map[common.Hash]types.Account, map[common.Hash]common.Address) {
 	// open the source trie DB
-	store, _ := Connect("ldb", "", "test")
+	stateDB := OpenStateDB(store)
 
 	// try to create empty MPT
-	stateDB := OpenStateDB(store)
 	stateTrie, err := stateDB.OpenTrie(common.Hash{})
 	opened := stateTrie != nil && err == nil
 	if !opened {
@@ -32,13 +37,13 @@ func makeTestTrie(t *testing.T) (state.Database, common.Hash, map[common.Hash]ty
 	}
 
 	// create test accounts
-	ta, adh := makeTestAccounts(t, stateDB)
+	ta, h2a := makeTestAccounts(t, stateDB)
 
 	// create state trie
-	sth := buildTrie(t, ta, stateTrie)
+	sth := buildTrie(t, ta, h2a, stateTrie)
 
 	// returns structure representing new MPT and state trie DB
-	return stateDB, sth, ta, adh
+	return stateDB, sth, ta, h2a
 }
 
 // makeTestAccounts method creates randomized testing accounts
@@ -64,9 +69,8 @@ func makeTestAccounts(t *testing.T, stateDB state.Database) (map[common.Hash]typ
 
 		// create account
 		acc := types.Account{
-			Hash:    hash,
-			Code:    []byte{},
-			Storage: map[common.Hash]common.Hash{},
+			Hash: hash,
+			Code: []byte{},
 		}
 		acc.Nonce = rand.Uint64()
 		acc.Balance = big.NewInt(rand.Int63())
@@ -75,6 +79,9 @@ func makeTestAccounts(t *testing.T, stateDB state.Database) (map[common.Hash]typ
 
 		// quarter of the accounts are going to represent as contracts
 		if i%4 == 0 {
+			// Initialize empty storage
+			acc.Storage = map[common.Hash]common.Hash{}
+
 			// generate account code
 			ch := makeAccountCode(t, &acc, stateDB)
 			acc.CodeHash = ch
@@ -141,13 +148,16 @@ func makeAccountStorage(t *testing.T, account *types.Account, stateDB state.Data
 		// generate randomized storage value
 		var sv []byte
 		sv, err = generateStorageValue()
+
 		if err != nil {
 			t.Fatalf("failed test data build; can not generate random storage value; %s", err.Error())
 		}
 
-		// try to update storage
-		account.Storage[k] = crypto.HashData(hashing, buffer)
-		err = st.TryUpdate(k.Bytes(), sv)
+		// store storage value without prefix
+		account.Storage[k] = common.BytesToHash(sv[1:])
+
+		// try to update storage trie
+		err = st.TryUpdate(buffer, sv)
 		if err != nil {
 			t.Fatalf("failed test data build; can not update storage trie; %s", err.Error())
 		}
@@ -170,7 +180,7 @@ func generateStorageValue() ([]byte, error) {
 	// seed the PRNG
 	rand.Seed(time.Now().UnixNano())
 
-	// get randomized storage value length
+	//get randomized storage value length
 	rangeLower := 5
 	rangeUpper := 20
 	l := rangeLower + rand.Intn(rangeUpper-rangeLower+1)
@@ -191,18 +201,21 @@ func generateStorageValue() ([]byte, error) {
 
 // buildTrie constructs state trie
 // returns root hash of trie
-func buildTrie(t *testing.T, ta map[common.Hash]types.Account, stateTrie state.Trie) common.Hash {
+func buildTrie(t *testing.T, ta map[common.Hash]types.Account, adh map[common.Hash]common.Address, stateTrie state.Trie) common.Hash {
 	// iterate over slice of accounts
 	for hash, account := range ta {
 		// encode account hash and all the account data
-		accHash := hash.Bytes()
+		address, f := adh[hash]
+		if !f {
+			t.Fatalf("not found")
+		}
 		acc, err := rlp.EncodeToBytes(account.Account)
 		if err != nil {
 			t.Fatalf("failed test data build; could not encode account; %s", err.Error())
 		}
 
 		// try to update trie with encoded data
-		err = stateTrie.TryUpdate(accHash, acc)
+		err = stateTrie.TryUpdate(address.Bytes(), acc)
 		if err != nil {
 			t.Fatalf("failed test data build; could not update trie; %s", err.Error())
 		}
@@ -215,4 +228,71 @@ func buildTrie(t *testing.T, ta map[common.Hash]types.Account, stateTrie state.T
 	}
 
 	return rh
+}
+
+func TestLoadedAccountsValidity(t *testing.T) {
+	store, _ := Connect("ldb", "", "test")
+	defer func(store kvdb.Store) {
+		err := store.Close()
+		if err != nil {
+			t.Fatalf("failed test data build; could not close store; %s", err.Error())
+		}
+	}(store)
+
+	stateDB, sth, ta, _ := makeTestTrie(t, store)
+	inAccounts, inErrors := LoadAccounts(context.Background(), stateDB, sth, numberOfWorkers)
+	counter := 0
+
+	for {
+		account, ok := <-inAccounts
+
+		if !ok {
+			break
+		}
+
+		counter++
+		acc, f := ta[account.Hash]
+		if !f {
+			t.Fatalf("failed to load account with hash: %s", account.Hash)
+		}
+
+		err := acc.IsDifferent(&account)
+
+		if err != nil {
+			t.Fatalf("accounts are NOT indetical: %s", err.Error())
+		}
+	}
+
+	err, _ := <-inErrors
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+
+	if counter != testDBSize {
+		t.Fatalf("failed to load all the accounts from testing db, db size: %d, loaded accounts: %d", testDBSize, counter)
+	}
+}
+
+func TestLoadAccountsWithRandomRootHash(t *testing.T) {
+	var randomRootHash = make([]byte, 32)
+	_, err := rand.Read(randomRootHash)
+	if err != nil {
+		t.Fatalf("could not generate randomized byte array; %s", err.Error())
+	}
+
+	store, _ := Connect("ldb", "", "test")
+	defer func(store kvdb.Store) {
+		err := store.Close()
+		if err != nil {
+			t.Fatalf("failed test data build; could not close store; %s", err.Error())
+		}
+	}(store)
+
+	stateDB, _, _, _ := makeTestTrie(t, store)
+	_, inErrors := LoadAccounts(context.Background(), stateDB, common.BytesToHash(randomRootHash), numberOfWorkers)
+
+	err, _ = <-inErrors
+	if err == nil || err.Error() != fmt.Sprintf("root hash %s not found", common.BytesToHash(randomRootHash)) {
+		t.Fatalf("should NOT be able open trie with invalid root hash: %s", err.Error())
+	}
 }
