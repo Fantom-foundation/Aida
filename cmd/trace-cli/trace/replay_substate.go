@@ -44,14 +44,13 @@ last block of the inclusive range of blocks to replay storage traces.`,
 func traceReplaySubstateTask(first uint64, last uint64, cliCtx *cli.Context) error {
 	// load dictionaries & indexes
 	dCtx := dict.ReadDictionaryContext()
-	iCtx := tracer.ReadIndexContext()
 
 	// iterate substate (for in-membory state)
 	stateIter := substate.NewSubstateIterator(first, cliCtx.Int(substate.WorkersFlag.Name))
 	defer stateIter.Release()
 
 	// replay storage trace
-	traceIter := tracer.NewTraceIterator(iCtx, first, last)
+	traceIter := tracer.NewTraceIterator(first, last)
 	defer traceIter.Release()
 
 	// Get validation flag
@@ -101,7 +100,7 @@ func traceReplaySubstateTask(first uint64, last uint64, cliCtx *cli.Context) err
 	}
 	for stateIter.Next() {
 		tx := stateIter.Value()
-		if tx.Block > last || !iCtx.ExistsBlock(tx.Block) {
+		if tx.Block > last {
 			break
 		}
 		db.PrepareSubstate(&tx.Substate.InputAlloc)

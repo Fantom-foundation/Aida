@@ -28,6 +28,7 @@ require (
 	github.com/cockroachdb/redact v1.1.3 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/deckarep/golang-set v1.7.1 // indirect
+	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/edsrzf/mmap-go v1.0.0 // indirect
 	github.com/getsentry/sentry-go v0.14.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect

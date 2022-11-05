@@ -233,13 +233,3 @@ func (ctx *DictionaryContext) DecodeCode(bcIdx uint32) []byte {
 	}
 	return code
 }
-
-////////////////////////////////////////////////////////////////
-// Index-cache methods
-////////////////////////////////////////////////////////////////
-
-// ClearIndexCaches clears index caches and previous addresses.
-func (ctx *DictionaryContext) ClearIndexCaches() {
-	ctx.PrevContractIndex = InvalidContractIndex
-	ctx.StorageIndexCache.Clear()
-}

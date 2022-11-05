@@ -1,77 +1,83 @@
 package tracer
 
 import (
+	"bufio"
+	"github.com/Fantom-foundation/Aida/tracer/operation"
+	"github.com/dsnet/compress/bzip2"
 	"log"
 	"os"
-
-	"github.com/Fantom-foundation/Aida/tracer/operation"
 )
 
 // TraceIterator data structure for storing state of a trace iterator
 type TraceIterator struct {
-	lastBlock uint64              // last block to process
-	iCtx      *IndexContext       // index context
-	file      *os.File            // trace file
-	currentOp operation.Operation // current state operation
+	firstBlock   uint64              // last block to process
+	currentBlock uint64              // current block to process
+	lastBlock    uint64              // last block to process
+	file         *os.File            // trace file
+	reader       *bufio.Reader       // read buffer
+	zreader      *bzip2.Reader       // compressed stream
+	currentOp    operation.Operation // current state operation
 }
 
 // TraceDir is the directory of the trace files.
 var TraceDir string = "./"
 
 // NewTraceIterator creates a new trace iterator.
-func NewTraceIterator(iCtx *IndexContext, first uint64, last uint64) *TraceIterator {
-	p := new(TraceIterator)
-	p.iCtx = iCtx
-	p.lastBlock = last
+func NewTraceIterator(first uint64, last uint64) *TraceIterator {
+	// create new iterator object
+	ti := new(TraceIterator)
+	ti.firstBlock = first
+	ti.currentBlock = 0
+	ti.lastBlock = last
 
+	// open trace file,read buffer, and gzip stream
 	var err error
-	p.file, err = os.OpenFile(TraceDir+"trace.dat", os.O_RDONLY|os.O_CREATE, 0644)
-	if err != nil {
+	if ti.file, err = os.Open(TraceDir + "trace.dat"); err != nil {
 		log.Fatalf("Cannot open trace file. Error: %v", err)
 	}
-
-	// check whether first block exists
-	if !iCtx.ExistsBlock(first) {
-		log.Fatalf("First block does not exist. Error: %v", err)
-	}
-
-	// set file position
-	_, err = p.file.Seek(iCtx.GetBlock(first), 0)
+	ti.zreader, err = bzip2.NewReader(ti.file, &bzip2.ReaderConfig{})
 	if err != nil {
-		log.Fatalf("Cannot set position in trace file. Error: %v", err)
+		log.Fatalf("Cannot open bzip stream. Error: %v", err)
 	}
-
-	return p
+	ti.reader = bufio.NewReaderSize(ti.zreader, 65536*256) // set buffer to 1MB
+	return ti
 }
 
-// Next gets next operation from the trace file.
+// Next loads the next operation from the trace file.
 func (ti *TraceIterator) Next() bool {
-	// check whether we have processed all blocks in range
-	if ti.iCtx.ExistsBlock(ti.lastBlock + 1) {
-		// get file positions
-		pos, err := ti.file.Seek(0, 1)
-		if err != nil {
-			log.Fatalf("Cannot get file position in trace file. Error: %v", err)
-		}
-		// end reached?
-		if pos >= ti.iCtx.GetBlock(ti.lastBlock+1) {
+	for {
+		// read next operation
+		if ti.currentOp = operation.Read(ti.reader); ti.currentOp == nil {
 			return false
 		}
+
+		// update current block number
+		if ti.currentOp.GetId() == operation.BeginBlockID {
+			bb, ok := ti.currentOp.(*operation.BeginBlock)
+			if !ok {
+				log.Fatalf("Downcasting basic-block failed.")
+			}
+			ti.currentBlock = bb.BlockNumber
+		}
+
+		// break out loop if first block surpassed
+		if ti.currentBlock >= ti.firstBlock {
+			return true
+		}
 	}
-	// read next state operation
-	ti.currentOp = operation.Read(ti.file)
-	return ti.currentOp != nil
 }
 
-// Value retrieves teh current state operation of the trace file.
+// Value retrieves the current state operation of the trace file.
 func (ti *TraceIterator) Value() operation.Operation {
 	return ti.currentOp
 }
 
 // Release the storage trace iterator.
 func (ti *TraceIterator) Release() {
-	err := ti.file.Close()
-	if err != nil {
+	if err := ti.zreader.Close(); err != nil {
+		log.Fatalf("Cannot close compressed stream. Error: %v", err)
+	}
+	if err := ti.file.Close(); err != nil {
 		log.Fatalf("Cannot close trace file. Error: %v", err)
 	}
 }

@@ -252,20 +252,3 @@ func TestDictionaryContextDecodeCode(t *testing.T) {
 		t.Fatalf("Decoding byte-code failed")
 	}
 }
-
-// TestDictionaryContextClearIndexContext clears index caches and previous addresses
-// and confirms empty values.
-func TestDictionaryContextClearIndexContext(t *testing.T) {
-	ctx := NewDictionaryContext()
-	encodedAddr := common.HexToAddress("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
-	encodedKey := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F274")
-	ctx.EncodeContract(encodedAddr)
-	ctx.EncodeStorage(encodedKey)
-	ctx.ClearIndexCaches()
-	if ctx.PrevContractIndex != InvalidContractIndex {
-		t.Fatalf("Failed to clear previous contract index")
-	}
-	if pos, err := ctx.StorageIndexCache.Get(0); err == nil || pos != 0 {
-		t.Fatalf("Failed to clear storge cache")
-	}
-}

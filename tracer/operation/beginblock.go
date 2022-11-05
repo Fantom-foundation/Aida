@@ -40,7 +40,6 @@ func (op *BeginBlock) Write(f io.Writer) error {
 
 // Execute the begin-block operation.
 func (op *BeginBlock) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
-	ctx.ClearIndexCaches()
 	return time.Duration(0)
 }
 
