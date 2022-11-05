@@ -1,6 +1,7 @@
 package tracer
 
 import (
+	"bufio"
 	"log"
 	"os"
 
@@ -12,6 +13,7 @@ type TraceIterator struct {
 	lastBlock uint64              // last block to process
 	iCtx      *IndexContext       // index context
 	file      *os.File            // trace file
+	reader    *bufio.Reader       // buffered i/o file
 	currentOp operation.Operation // current state operation
 }
 
@@ -41,26 +43,33 @@ func NewTraceIterator(iCtx *IndexContext, first uint64, last uint64) *TraceItera
 		log.Fatalf("Cannot set position in trace file. Error: %v", err)
 	}
 
+	// start buffering I/O
+	p.reader = bufio.NewReaderSize(p.file, 65536*16)
+
 	return p
 }
 
 // Next gets next operation from the trace file.
 func (ti *TraceIterator) Next() bool {
-	// check whether we have processed all blocks in range
-	if ti.iCtx.ExistsBlock(ti.lastBlock + 1) {
-		// get file positions
-		pos, err := ti.file.Seek(0, 1)
-		if err != nil {
-			log.Fatalf("Cannot get file position in trace file. Error: %v", err)
-		}
-		// end reached?
-		if pos >= ti.iCtx.GetBlock(ti.lastBlock+1) {
-			return false
-		}
-	}
+
 	// read next state operation
-	ti.currentOp = operation.Read(ti.file)
-	return ti.currentOp != nil
+	ti.currentOp = operation.Read(ti.reader)
+
+	// check whether we have reached end of block range
+	if ti.currentOp != nil {
+		if ti.currentOp.GetId() == operation.BeginBlockID {
+			beginBlock := ti.currentOp.(*operation.BeginBlock)
+			if beginBlock == nil {
+				log.Fatalf("Downcasting for BeginBlock failed.")
+			}
+			if beginBlock.BlockNumber > ti.lastBlock {
+				return false
+			}
+		}
+		return true
+	} else {
+		return false
+	}
 }
 
 // Value retrieves teh current state operation of the trace file.
