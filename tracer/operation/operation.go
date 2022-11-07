@@ -15,37 +15,89 @@ var stats *ProfileStats = new(ProfileStats)
 
 // Operation IDs of the StateDB interface
 const (
-	GetStateID = iota
-	GetStateLclsID
-	GetStateLcID
-	GetStateLccsID
-	SetStateID
-	SetStateLclsID
+	AddBalanceID = iota
+	BeginBlockID
+	CreateAccountID
+	EmptyID
+	EndBlockID
+	EndTransactionID
+	ExistID
+	FinaliseID
+	GetBalanceID
+	GetCodeHashID
+	GetCodeHashLcID
+	GetCodeID
+	GetCodeSizeID
 	GetCommittedStateID
 	GetCommittedStateLclsID
 	GetNonceID
-	SetNonceID
-	SnapshotID
+	GetStateID
+	GetStateLcID
+	GetStateLccsID
+	GetStateLclsID
+	HasSuicidedID
 	RevertToSnapshotID
-	CreateAccountID
-	AddBalanceID
-	GetBalanceID
-	SubBalanceID
-	GetCodeID
-	GetCodeHashID
-	GetCodeHashLcID
-	GetCodeSizeID
 	SetCodeID
+	SetNonceID
+	SetStateID
+	SetStateLclsID
+	SnapshotID
+	SubBalanceID
 	SuicideID
-	ExistID
-	FinaliseID
-	EndTransactionID
-	BeginBlockID
-	EndBlockID
 
-	// Number of operations (must be last)
-	NumOperations
+	// NumProfiledOperations is number of profiled operations (must be last)
+	NumProfiledOperations
+
+	AddAddressToAccessListID
+	AddLogID
+	AddPreimageID
+	AddRefundID
+	AddressInAccessListID
+	AddSlotToAccessListID
+	CloseID
+	ForEachStorageID
+	GetLogsID
+	GetRefundID
+	IntermediateRootID
+	PrepareAccessListID
+	PrepareID
+	SlotInAccessListID
+	SubRefundID
 )
+
+// operationLabels is used for retrieving labels in debug printing
+var operationLabels = map[int]string{
+	AddBalanceID:            "AddBalance",
+	BeginBlockID:            "BeginBlock",
+	CreateAccountID:         "CreateAccount",
+	EmptyID:                 "Empty",
+	EndBlockID:              "EndBlock",
+	EndTransactionID:        "EndTransaction",
+	ExistID:                 "Exist",
+	FinaliseID:              "Finalise",
+	GetBalanceID:            "GetBalance",
+	GetCodeHashID:           "GetCodeHash",
+	GetCodeHashLcID:         "GetCodeHashLc",
+	GetCodeID:               "GetCode",
+	GetCodeSizeID:           "GetCodeSize",
+	GetCommittedStateID:     "GetCommittedState",
+	GetCommittedStateLclsID: "GetCommittedStateLcls",
+	GetNonceID:              "GetNonce",
+	GetStateID:              "GetState",
+	GetStateLcID:            "GetStateLc",
+	GetStateLccsID:          "GetStateLccs",
+	GetStateLclsID:          "GetStateLcls",
+	HasSuicidedID:           "HasSuicided",
+	RevertToSnapshotID:      "RevertToSnapshot",
+	SetCodeID:               "SetCode",
+	SetNonceID:              "SetNonce",
+	SetStateID:              "SetState",
+	SetStateLclsID:          "SetStateLcls",
+	SnapshotID:              "Snapshot",
+	SubBalanceID:            "SubBalance",
+	SuicideID:               "Suicide",
+	CloseID:                 "Close",
+}
 
 // OperationDictionary data structure contains a label and a read function for an operation
 type OperationDictionary struct {
@@ -55,38 +107,40 @@ type OperationDictionary struct {
 
 // opDict relates an operation's id with its label and read-function.
 var opDict = map[byte]OperationDictionary{
-	GetStateID:              {label: "GetState", readfunc: ReadGetState},
-	GetStateLclsID:          {label: "GetStateLcls", readfunc: ReadGetStateLcls},
-	GetStateLcID:            {label: "GetStateLc", readfunc: ReadGetStateLc},
-	GetStateLccsID:          {label: "GetStateLccs", readfunc: ReadGetStateLccs},
-	SetStateID:              {label: "SetState", readfunc: ReadSetState},
-	SetStateLclsID:          {label: "SetStateLcls", readfunc: ReadSetStateLcls},
-	GetCommittedStateID:     {label: "GetCommittedState", readfunc: ReadGetCommittedState},
-	GetCommittedStateLclsID: {label: "GetCommittedStateLcls", readfunc: ReadGetCommittedStateLcls},
-	SnapshotID:              {label: "Snapshot", readfunc: ReadSnapshot},
-	RevertToSnapshotID:      {label: "RevertToSnapshot", readfunc: ReadRevertToSnapshot},
-	CreateAccountID:         {label: "CreateAccount", readfunc: ReadCreateAccount},
 	AddBalanceID:            {label: "AddBalance", readfunc: ReadAddBalance},
-	GetBalanceID:            {label: "GetBalance", readfunc: ReadGetBalance},
-	SubBalanceID:            {label: "SubBalance", readfunc: ReadSubBalance},
-	GetNonceID:              {label: "GetNonce", readfunc: ReadGetNonce},
-	SetNonceID:              {label: "SetNonce", readfunc: ReadSetNonce},
-	GetCodeID:               {label: "GetCode", readfunc: ReadGetCode},
-	GetCodeSizeID:           {label: "GetCodeSize", readfunc: ReadGetCodeSize},
-	SetCodeID:               {label: "SetCode", readfunc: ReadSetCode},
-	GetCodeHashID:           {label: "GetCodeHash", readfunc: ReadGetCodeHash},
-	GetCodeHashLcID:         {label: "GetCodeLcHash", readfunc: ReadGetCodeHashLc},
-	SuicideID:               {label: "Suicide", readfunc: ReadSuicide},
+	BeginBlockID:            {label: "BeginBlock", readfunc: ReadBeginBlock},
+	CreateAccountID:         {label: "CreateAccount", readfunc: ReadCreateAccount},
+	EmptyID:                 {label: "Exist", readfunc: ReadEmpty},
+	EndBlockID:              {label: "EndBlock", readfunc: ReadEndBlock},
+	EndTransactionID:        {label: "EndTransaction", readfunc: ReadEndTransaction},
 	ExistID:                 {label: "Exist", readfunc: ReadExist},
 	FinaliseID:              {label: "Finalise", readfunc: ReadFinalise},
-	EndTransactionID:        {label: "EndTransaction", readfunc: ReadEndTransaction},
-	BeginBlockID:            {label: "BeginBlock", readfunc: ReadBeginBlock},
-	EndBlockID:              {label: "EndBlock", readfunc: ReadEndBlock},
+	GetBalanceID:            {label: "GetBalance", readfunc: ReadGetBalance},
+	GetCodeHashID:           {label: "GetCodeHash", readfunc: ReadGetCodeHash},
+	GetCodeHashLcID:         {label: "GetCodeLcHash", readfunc: ReadGetCodeHashLc},
+	GetCodeID:               {label: "GetCode", readfunc: ReadGetCode},
+	GetCodeSizeID:           {label: "GetCodeSize", readfunc: ReadGetCodeSize},
+	GetCommittedStateID:     {label: "GetCommittedState", readfunc: ReadGetCommittedState},
+	GetCommittedStateLclsID: {label: "GetCommittedStateLcls", readfunc: ReadGetCommittedStateLcls},
+	GetNonceID:              {label: "GetNonce", readfunc: ReadGetNonce},
+	GetStateID:              {label: "GetState", readfunc: ReadGetState},
+	GetStateLcID:            {label: "GetStateLc", readfunc: ReadGetStateLc},
+	GetStateLccsID:          {label: "GetStateLccs", readfunc: ReadGetStateLccs},
+	GetStateLclsID:          {label: "GetStateLcls", readfunc: ReadGetStateLcls},
+	HasSuicidedID:           {label: "HasSuicided", readfunc: ReadHasSuicided},
+	RevertToSnapshotID:      {label: "RevertToSnapshot", readfunc: ReadRevertToSnapshot},
+	SetCodeID:               {label: "SetCode", readfunc: ReadSetCode},
+	SetNonceID:              {label: "SetNonce", readfunc: ReadSetNonce},
+	SetStateID:              {label: "SetState", readfunc: ReadSetState},
+	SetStateLclsID:          {label: "SetStateLcls", readfunc: ReadSetStateLcls},
+	SnapshotID:              {label: "Snapshot", readfunc: ReadSnapshot},
+	SubBalanceID:            {label: "SubBalance", readfunc: ReadSubBalance},
+	SuicideID:               {label: "Suicide", readfunc: ReadSuicide},
 }
 
 // GetLabel retrieves a label of a state operation.
 func GetLabel(i byte) string {
-	if i < 0 || i >= NumOperations {
+	if i < 0 || i >= NumProfiledOperations {
 		log.Fatalf("GetLabel failed; index is out-of-bound")
 	}
 	if _, ok := opDict[i]; !ok {
@@ -118,7 +172,7 @@ func Read(f io.Reader) Operation {
 	} else if err != nil {
 		log.Fatalf("Cannot read ID from file. Error:%v", err)
 	}
-	if ID >= NumOperations {
+	if ID >= NumProfiledOperations {
 		log.Fatalf("ID out of range %v", ID)
 	}
 

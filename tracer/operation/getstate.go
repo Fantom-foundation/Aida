@@ -50,7 +50,5 @@ func (op *GetState) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.
 
 // Debug prints a debug message for the get-state operation.
 func (op *GetState) Debug(ctx *dict.DictionaryContext) {
-	fmt.Printf("\tcontract: %v\t storage: %v\n",
-		ctx.DecodeContract(op.ContractIndex),
-		ctx.DecodeStorage(op.StorageIndex))
+	fmt.Printf("\t%s: %s, %s\n", operationLabels[GetStateID], ctx.DecodeContract(op.ContractIndex), ctx.DecodeStorage(op.StorageIndex))
 }

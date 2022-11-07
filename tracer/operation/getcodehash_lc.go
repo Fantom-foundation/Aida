@@ -49,5 +49,5 @@ func (op *GetCodeHashLc) Execute(db state.StateDB, ctx *dict.DictionaryContext) 
 // Debug prints a debug message for the get-code-hash-lc operation.
 func (op *GetCodeHashLc) Debug(ctx *dict.DictionaryContext) {
 	contract := ctx.LastContractAddress()
-	fmt.Printf("\tcontract: %v\n", contract)
+	fmt.Printf("\t%s: %s\n", operationLabels[GetCodeHashLcID], contract)
 }

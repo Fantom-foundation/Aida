@@ -45,5 +45,5 @@ func (op *BeginBlock) Execute(db state.StateDB, ctx *dict.DictionaryContext) tim
 
 // Debug prints a debug message for the begin-block operation.
 func (op *BeginBlock) Debug(ctx *dict.DictionaryContext) {
-	fmt.Printf("\tblock number: %v\n", op.BlockNumber)
+	fmt.Printf("\t%s: %d\n", operationLabels[BeginBlockID], op.BlockNumber)
 }

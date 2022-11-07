@@ -11,28 +11,33 @@ import (
 	"testing"
 )
 
-func initGetCode(t *testing.T) (*dict.DictionaryContext, *GetCode, common.Address) {
-	addr := getRandomAddress(t)
+func initGetStateLcls(t *testing.T) (*dict.DictionaryContext, *GetStateLcls, common.Address, common.Hash) {
 	// create dictionary context
 	dict := dict.NewDictionaryContext()
-	cIdx := dict.EncodeContract(addr)
 
 	// create new operation
-	op := NewGetCode(cIdx)
+	op := NewGetStateLcls()
 	if op == nil {
 		t.Fatalf("failed to create operation")
 	}
 	// check id
-	if op.GetId() != GetCodeID {
+	if op.GetId() != GetStateLclsID {
 		t.Fatalf("wrong ID returned")
 	}
-	return dict, op, addr
+
+	addr := getRandomAddress(t)
+	dict.EncodeContract(addr)
+
+	storage := getRandomAddress(t).Hash()
+	dict.EncodeStorage(storage)
+
+	return dict, op, addr, storage
 }
 
-// TestGetCodeReadWrite writes a new GetCode object into a buffer, reads from it,
+// TestGetStateLclsReadWrite writes a new GetStateLcls object into a buffer, reads from it,
 // and checks equality.
-func TestGetCodeReadWrite(t *testing.T) {
-	_, op1, _ := initGetCode(t)
+func TestGetStateLclsReadWrite(t *testing.T) {
+	_, op1, _, _ := initGetStateLcls(t)
 
 	op1Buffer := bytes.NewBufferString("")
 	err := op1.Write(op1Buffer)
@@ -42,7 +47,7 @@ func TestGetCodeReadWrite(t *testing.T) {
 
 	// read object from buffer
 	op2Buffer := bytes.NewBufferString(op1Buffer.String())
-	op2, err := ReadGetCode(op2Buffer)
+	op2, err := ReadGetStateLcls(op2Buffer)
 	if err != nil {
 		t.Fatalf("failed to read operation. Error: %v", err)
 	}
@@ -55,9 +60,9 @@ func TestGetCodeReadWrite(t *testing.T) {
 	}
 }
 
-// TestGetCodeDebug creates a new GetCode object and checks its Debug message.
-func TestGetCodeDebug(t *testing.T) {
-	dict, op, addr := initGetCode(t)
+// TestGetStateLclsDebug creates a new GetStateLcls object and checks its Debug message.
+func TestGetStateLclsDebug(t *testing.T) {
+	dict, op, addr, storage := initGetStateLcls(t)
 
 	// divert stdout to a buffer
 	old := os.Stdout
@@ -74,25 +79,25 @@ func TestGetCodeDebug(t *testing.T) {
 	io.Copy(&buf, r)
 
 	// check debug message
-	label, f := operationLabels[GetCodeID]
+	label, f := operationLabels[GetStateLclsID]
 	if !f {
-		t.Fatalf("label for %d not found", GetCodeID)
+		t.Fatalf("label for %d not found", GetStateLclsID)
 	}
 
-	if buf.String() != fmt.Sprintf("\t%s: %s\n", label, addr) {
+	if buf.String() != fmt.Sprintf("\t%s: %s, %s\n", label, addr, storage) {
 		t.Fatalf("wrong debug message: %s", buf.String())
 	}
 }
 
-// TestGetCodeExecute creates a new GetCode object and checks its execution signature.
-func TestGetCodeExecute(t *testing.T) {
-	dict, op, addr := initGetCode(t)
+// TestGetStateLclsExecute
+func TestGetStateLclsExecute(t *testing.T) {
+	dict, op, addr, storage := initGetStateLcls(t)
 
 	// check execution
 	mock := NewMockStateDB()
 	op.Execute(mock, dict)
 
 	// check whether methods were correctly called
-	expected := []Record{{GetCodeID, []any{addr}}}
+	expected := []Record{{GetStateID, []any{addr, storage}}}
 	mock.compareRecordings(expected, t)
 }

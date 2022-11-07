@@ -48,5 +48,5 @@ func (op *RevertToSnapshot) Execute(db state.StateDB, ctx *dict.DictionaryContex
 
 // Debug prints a debug message for the revert-to-snapshot operation.
 func (op *RevertToSnapshot) Debug(ctx *dict.DictionaryContext) {
-	fmt.Printf("\tsnapshot id: %v\n", op.SnapshotID)
+	fmt.Printf("\t%s: %d\n", operationLabels[RevertToSnapshotID], op.SnapshotID)
 }

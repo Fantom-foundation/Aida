@@ -48,5 +48,5 @@ func (op *Exist) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Dur
 
 // Debug prints a debug message for the exist operation.
 func (op *Exist) Debug(ctx *dict.DictionaryContext) {
-	fmt.Printf("\tcontract: %v\n", ctx.DecodeContract(op.ContractIndex))
+	fmt.Printf("\t%s: %s\n", operationLabels[ExistID], ctx.DecodeContract(op.ContractIndex))
 }

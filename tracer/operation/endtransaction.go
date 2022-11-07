@@ -2,6 +2,7 @@ package operation
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io"
 	"time"
 
@@ -42,4 +43,5 @@ func (op *EndTransaction) Execute(db state.StateDB, ctx *dict.DictionaryContext)
 
 // Debug prints a debug message for the end-transaction operation.
 func (op *EndTransaction) Debug(*dict.DictionaryContext) {
+	fmt.Printf("\t%s\n", operationLabels[EndTransactionID])
 }
