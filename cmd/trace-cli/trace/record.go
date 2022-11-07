@@ -1,6 +1,7 @@
 package trace
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"log"
@@ -17,6 +18,7 @@ import (
 	"github.com/Fantom-foundation/go-opera/opera"
 	"github.com/Fantom-foundation/substate-cli/cmd/substate-cli/replay"
 	"github.com/Fantom-foundation/substate-cli/state"
+	"github.com/dsnet/compress/bzip2"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -173,47 +175,39 @@ func traceRecordTask(block uint64, tx int, recording *substate.Substate, dCtx *d
 
 // OperationWriter reads operations from the operation channel and writes
 // them into a trace file.
-func OperationWriter(ctx context.Context, done chan struct{}, ch chan operation.Operation, iCtx *tracer.IndexContext) {
+func OperationWriter(ctx context.Context, done chan struct{}, ch chan operation.Operation) {
 	// send done signal when closing writer
 	defer close(done)
 
-	// open trace file
+	// open trace file, write buffer, and compressed stream
 	file, err := os.OpenFile(tracer.TraceDir+"trace.dat", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
 		log.Fatalf("Cannot open trace file. Error: %v", err)
 	}
+	bfile := bufio.NewWriterSize(file, 65536*16)
+	zfile, err := bzip2.NewWriter(bfile, &bzip2.WriterConfig{Level: 9})
+	if err != nil {
+		log.Fatalf("Cannot open bzip2 stream. Error: %v", err)
+	}
+
+	// defer closing compressed stream, flushing buffer, and closing trace file
 	defer func() {
-		// close trace file
-		err := file.Close()
-		if err != nil {
+		if err := zfile.Close(); err != nil {
+			log.Fatalf("Cannot close bzip2 writer. Error: %v", err)
+		}
+		if err := bfile.Flush(); err != nil {
+			log.Fatalf("Cannot flush buffer. Error: %v", err)
+		}
+		if err := file.Close(); err != nil {
 			log.Fatalf("Cannot close trace file. Error: %v", err)
 		}
 	}()
 
-	// read from channel until receiving cancel signal
+	// read operations from channel, and write them until receiving a cancel signal
 	for {
 		select {
 		case op := <-ch:
-			// update index
-			switch op.GetId() {
-			case operation.BeginBlockID:
-				// downcast op to BeginBlock for accessing block number
-				tOp, ok := op.(*operation.BeginBlock)
-				if !ok {
-					log.Fatalf("Begin block operation downcasting failed")
-				}
-				// retrieve current file position
-				offset, err := file.Seek(0, 1)
-				if err != nil {
-					log.Fatalf("Cannot retrieve current file position. Error: %v", err)
-				}
-				// add to block index
-				iCtx.AddBlock(tOp.BlockNumber, offset)
-			}
-
-			// write operation to file
-			operation.Write(file, op)
-
+			operation.Write(zfile, op)
 		case <-ctx.Done():
 			if len(ch) == 0 {
 				return
@@ -238,7 +232,7 @@ func traceRecordAction(ctx *cli.Context) error {
 		return fmt.Errorf("trace record command requires exactly 2 arguments")
 	}
 
-	// Start CPU profiling if requested.
+	// start CPU profiling if enabled.
 	if profileFileName := ctx.String(cpuProfileFlag.Name); profileFileName != "" {
 		f, err := os.Create(profileFileName)
 		if err != nil {
@@ -248,18 +242,17 @@ func traceRecordAction(ctx *cli.Context) error {
 		defer pprof.StopCPUProfile()
 	}
 
-	// Get progress flag
+	// get progress flag
 	enableProgress := !ctx.Bool(disableProgressFlag.Name)
 
 	// create dictionary and index contexts
 	dCtx := dict.NewDictionaryContext()
-	iCtx := tracer.NewIndexContext()
 
 	// spawn writer
-	opChannel := make(chan operation.Operation, 10000)
+	opChannel := make(chan operation.Operation, 100000)
 	cctx, cancel := context.WithCancel(context.Background())
 	cancelChannel := make(chan struct{})
-	go OperationWriter(cctx, cancelChannel, opChannel, iCtx)
+	go OperationWriter(cctx, cancelChannel, opChannel)
 
 	// process arguments
 	chainID = ctx.Int(chainIDFlag.Name)
@@ -303,11 +296,9 @@ func traceRecordAction(ctx *cli.Context) error {
 			oldBlock = tx.Block
 			// open new block with a begin-block operation and clear index cache
 			sendOperation(dCtx, opChannel, operation.NewBeginBlock(tx.Block))
-			dCtx.ClearIndexCaches()
 		}
 		traceRecordTask(tx.Block, tx.Transaction, tx.Substate, dCtx, opChannel)
 		sendOperation(dCtx, opChannel, operation.NewEndTransaction())
-
 		if enableProgress {
 			// report progress
 			sec = time.Since(start).Seconds()
@@ -318,11 +309,11 @@ func traceRecordAction(ctx *cli.Context) error {
 		}
 
 	}
-
 	if enableProgress {
 		sec = time.Since(start).Seconds()
 		fmt.Printf("trace record: Total elapsed time: %.3f s, processed %v blocks\n", sec, last-first+1)
 	}
+
 	// insert the last EndBlock
 	sendOperation(dCtx, opChannel, operation.NewEndBlock())
 
@@ -332,7 +323,5 @@ func traceRecordAction(ctx *cli.Context) error {
 
 	// write dictionaries and indexes
 	dCtx.Write()
-	iCtx.Write()
-
 	return err
 }

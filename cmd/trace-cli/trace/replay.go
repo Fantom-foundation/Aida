@@ -45,7 +45,6 @@ last block of the inclusive range of blocks to replay storage traces.`,
 func traceReplayTask(first uint64, last uint64, cliCtx *cli.Context) error {
 	// load dictionaries & indexes
 	dCtx := dict.ReadDictionaryContext()
-	iCtx := tracer.ReadIndexContext()
 
 	// get validation flag
 	validationEnabled := cliCtx.Bool(validateEndState.Name)
@@ -95,7 +94,7 @@ func traceReplayTask(first uint64, last uint64, cliCtx *cli.Context) error {
 	}
 
 	// initialize trace interator
-	traceIter := tracer.NewTraceIterator(iCtx, first, last)
+	traceIter := tracer.NewTraceIterator(first, last)
 	defer traceIter.Release()
 
 	var (
