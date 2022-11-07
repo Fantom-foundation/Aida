@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	rawdb "github.com/ethereum/go-ethereum/core/rawdb"
 	geth "github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/substate"
 )
 
@@ -24,94 +25,103 @@ func OpenGethStateDB(directory string, root_hash common.Hash) (StateDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	db, err := geth.New(root_hash, geth.NewDatabase(ldb), nil)
+	ethdb := geth.NewDatabase(ldb)
+	db, err := geth.New(root_hash, ethdb, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &gethStateDb{db}, nil
+	return &gethStateDB{db: db, ethdb: ethdb}, nil
 }
 
-type gethStateDb struct {
-	db BasicStateDB
+// BeginBlockApply creates a new statedb from an existing geth database
+func (s *gethStateDB) BeginBlockApply(root_hash common.Hash) error {
+	var err error
+	s.db, err = geth.NewWithSnapLayers(root_hash, s.ethdb, nil, 0)
+	return err
 }
 
-func (s *gethStateDb) CreateAccount(addr common.Address) {
+type gethStateDB struct {
+	db    BasicStateDB
+	ethdb geth.Database
+}
+
+func (s *gethStateDB) CreateAccount(addr common.Address) {
 	s.db.CreateAccount(addr)
 }
 
-func (s *gethStateDb) Exist(addr common.Address) bool {
+func (s *gethStateDB) Exist(addr common.Address) bool {
 	return s.db.Exist(addr)
 }
 
-func (s *gethStateDb) Empty(addr common.Address) bool {
+func (s *gethStateDB) Empty(addr common.Address) bool {
 	return s.db.Empty(addr)
 }
 
-func (s *gethStateDb) Suicide(addr common.Address) bool {
+func (s *gethStateDB) Suicide(addr common.Address) bool {
 	return s.db.Suicide(addr)
 }
 
-func (s *gethStateDb) HasSuicided(addr common.Address) bool {
+func (s *gethStateDB) HasSuicided(addr common.Address) bool {
 	return s.db.HasSuicided(addr)
 }
 
-func (s *gethStateDb) GetBalance(addr common.Address) *big.Int {
+func (s *gethStateDB) GetBalance(addr common.Address) *big.Int {
 	return s.db.GetBalance(addr)
 }
 
-func (s *gethStateDb) AddBalance(addr common.Address, value *big.Int) {
+func (s *gethStateDB) AddBalance(addr common.Address, value *big.Int) {
 	s.db.AddBalance(addr, value)
 }
 
-func (s *gethStateDb) SubBalance(addr common.Address, value *big.Int) {
+func (s *gethStateDB) SubBalance(addr common.Address, value *big.Int) {
 	s.db.SubBalance(addr, value)
 }
 
-func (s *gethStateDb) GetNonce(addr common.Address) uint64 {
+func (s *gethStateDB) GetNonce(addr common.Address) uint64 {
 	return s.db.GetNonce(addr)
 }
 
-func (s *gethStateDb) SetNonce(addr common.Address, value uint64) {
+func (s *gethStateDB) SetNonce(addr common.Address, value uint64) {
 	s.db.SetNonce(addr, value)
 }
 
-func (s *gethStateDb) GetCommittedState(addr common.Address, key common.Hash) common.Hash {
+func (s *gethStateDB) GetCommittedState(addr common.Address, key common.Hash) common.Hash {
 	return s.db.GetCommittedState(addr, key)
 }
 
-func (s *gethStateDb) GetState(addr common.Address, key common.Hash) common.Hash {
+func (s *gethStateDB) GetState(addr common.Address, key common.Hash) common.Hash {
 	return s.db.GetState(addr, key)
 }
 
-func (s *gethStateDb) SetState(addr common.Address, key common.Hash, value common.Hash) {
+func (s *gethStateDB) SetState(addr common.Address, key common.Hash, value common.Hash) {
 	s.db.SetState(addr, key, value)
 }
 
-func (s *gethStateDb) GetCode(addr common.Address) []byte {
+func (s *gethStateDB) GetCode(addr common.Address) []byte {
 	return s.db.GetCode(addr)
 }
 
-func (s *gethStateDb) GetCodeHash(addr common.Address) common.Hash {
+func (s *gethStateDB) GetCodeHash(addr common.Address) common.Hash {
 	return s.db.GetCodeHash(addr)
 }
 
-func (s *gethStateDb) GetCodeSize(addr common.Address) int {
+func (s *gethStateDB) GetCodeSize(addr common.Address) int {
 	return s.db.GetCodeSize(addr)
 }
 
-func (s *gethStateDb) SetCode(addr common.Address, code []byte) {
+func (s *gethStateDB) SetCode(addr common.Address, code []byte) {
 	s.db.SetCode(addr, code)
 }
 
-func (s *gethStateDb) Snapshot() int {
+func (s *gethStateDB) Snapshot() int {
 	return s.db.Snapshot()
 }
 
-func (s *gethStateDb) RevertToSnapshot(id int) {
+func (s *gethStateDB) RevertToSnapshot(id int) {
 	s.db.RevertToSnapshot(id)
 }
 
-func (s *gethStateDb) Finalise(deleteEmptyObjects bool) {
+func (s *gethStateDB) Finalise(deleteEmptyObjects bool) {
 	// IntermediateRoot implicitly calls Finalise but also commits changes.
 	// Without calling this, no changes are ever committed.
 	state, ok := s.db.(*geth.StateDB)
@@ -126,15 +136,23 @@ func (s *gethStateDb) Finalise(deleteEmptyObjects bool) {
 	}
 }
 
-func (s *gethStateDb) PrepareSubstate(substate *substate.SubstateAlloc) {
+func (s *gethStateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
+	return s.db.IntermediateRoot(deleteEmptyObjects)
+}
+
+func (s *gethStateDB) Prepare(thash common.Hash, ti int) {
+	s.db.Prepare(thash, ti)
+}
+
+func (s *gethStateDB) PrepareSubstate(substate *substate.SubstateAlloc) {
 	// ignored
 }
 
-func (s *gethStateDb) GetSubstatePostAlloc() substate.SubstateAlloc {
+func (s *gethStateDB) GetSubstatePostAlloc() substate.SubstateAlloc {
 	return s.db.GetSubstatePostAlloc()
 }
 
-func (s *gethStateDb) Close() error {
+func (s *gethStateDB) Close() error {
 	// Skip closing if implementation is not Geth based.
 	state, ok := s.db.(*geth.StateDB)
 	if !ok {
@@ -154,4 +172,45 @@ func (s *gethStateDb) Close() error {
 
 	// Close underlying LevelDB instance.
 	return db.DiskDB().Close()
+}
+
+func (s *gethStateDB) AddRefund(gas uint64) {
+	s.db.AddRefund(gas)
+}
+
+func (s *gethStateDB) SubRefund(gas uint64) {
+	s.db.SubRefund(gas)
+}
+func (s *gethStateDB) GetRefund() uint64 {
+	return s.db.GetRefund()
+}
+func (s *gethStateDB) PrepareAccessList(sender common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
+	s.db.PrepareAccessList(sender, dest, precompiles, txAccesses)
+}
+
+func (s *gethStateDB) AddressInAccessList(addr common.Address) bool {
+	return s.db.AddressInAccessList(addr)
+}
+func (s *gethStateDB) SlotInAccessList(addr common.Address, slot common.Hash) (addressOk bool, slotOk bool) {
+	return s.db.SlotInAccessList(addr, slot)
+}
+func (s *gethStateDB) AddAddressToAccessList(addr common.Address) {
+	s.db.AddAddressToAccessList(addr)
+}
+func (s *gethStateDB) AddSlotToAccessList(addr common.Address, slot common.Hash) {
+	s.db.AddSlotToAccessList(addr, slot)
+}
+
+func (s *gethStateDB) AddLog(log *types.Log) {
+	s.db.AddLog(log)
+}
+func (s *gethStateDB) AddPreimage(hash common.Hash, preimage []byte) {
+	panic("Add Preimage")
+	s.db.AddPreimage(hash, preimage)
+}
+func (s *gethStateDB) ForEachStorage(addr common.Address, cb func(common.Hash, common.Hash) bool) error {
+	return s.db.ForEachStorage(addr, cb)
+}
+func (s *gethStateDB) GetLogs(hash common.Hash, blockHash common.Hash) []*types.Log {
+	return s.db.GetLogs(hash, blockHash)
 }

@@ -42,59 +42,39 @@ last block of the inclusive range of blocks to replay storage traces.`,
 }
 
 // traceReplayTask simulates storage operations from storage traces on stateDB.
-func traceReplayTask(first uint64, last uint64, cliCtx *cli.Context) error {
+func traceReplayTask(cfg *TraceConfig) error {
 	// load dictionaries & indexes
 	dCtx := dict.ReadDictionaryContext()
 
-	// get validation flag
-	validationEnabled := cliCtx.Bool(validateEndState.Name)
-	// get profiling flag
-	operation.Profiling = cliCtx.Bool(profileFlag.Name)
-	// get progress flag
-	enableProgress := !cliCtx.Bool(disableProgressFlag.Name)
-	// start CPU profiling if requested.
-	if profile_file_name := cliCtx.String(cpuProfileFlag.Name); profile_file_name != "" {
-		f, err := os.Create(profile_file_name)
-		if err != nil {
-			return err
-		}
-		pprof.StartCPUProfile(f)
-		defer pprof.StopCPUProfile()
-	}
-	// get number of workers
-	workers := cliCtx.Int(substate.WorkersFlag.Name)
-
 	// intialize the world state and advance it to the first block
-	fmt.Printf("trace replay: Load and advance worldstate to block %v\n", first-1)
-	ws, err := generateWorldState(cliCtx.String(worldStateDirFlag.Name), first-1, workers)
+	fmt.Printf("trace replay: Load and advance worldstate to block %v\n", cfg.first-1)
+	ws, err := generateWorldState(cfg.worldStateDir, cfg.first-1, cfg.workers)
 	if err != nil {
 		return err
 	}
 
 	// create a directory for the store to place all its files.
-	state_directory, err := ioutil.TempDir("", "state_db_*")
+	stateDirectory, err := ioutil.TempDir("", "state_db_*")
 	if err != nil {
 		return err
 	}
 
 	// instantiate the state DB under testing
-	impl := cliCtx.String(stateDbImplementation.Name)
-	variant := cliCtx.String(stateDbVariant.Name)
-	db, err := makeStateDB(state_directory, impl, variant)
+	db, err := makeStateDB(stateDirectory, cfg.impl, cfg.variant)
 	if err != nil {
 		return err
 	}
 
 	// prime stateDB
 	fmt.Printf("trace replay: Prime stateDB\n")
-	if cliCtx.String(stateDbImplementation.Name) != "memory" {
-		primeStateDB(ws, db)
-	} else {
+	if cfg.impl == "memory" {
 		db.PrepareSubstate(&ws)
+	} else {
+		primeStateDB(ws, db)
 	}
 
 	// initialize trace interator
-	traceIter := tracer.NewTraceIterator(first, last)
+	traceIter := tracer.NewTraceIterator(cfg.first, cfg.last)
 	defer traceIter.Release()
 
 	var (
@@ -102,7 +82,7 @@ func traceReplayTask(first uint64, last uint64, cliCtx *cli.Context) error {
 		sec     float64
 		lastSec float64
 	)
-	if enableProgress {
+	if cfg.enableProgress {
 		start = time.Now()
 		sec = time.Since(start).Seconds()
 		lastSec = time.Since(start).Seconds()
@@ -114,10 +94,10 @@ func traceReplayTask(first uint64, last uint64, cliCtx *cli.Context) error {
 		op := traceIter.Value()
 		if op.GetId() == operation.BeginBlockID {
 			block := op.(*operation.BeginBlock).BlockNumber
-			if block > last {
+			if block > cfg.last {
 				break
 			}
-			if enableProgress {
+			if cfg.enableProgress {
 				// report progress
 				sec = time.Since(start).Seconds()
 				if sec-lastSec >= 15 {
@@ -128,7 +108,7 @@ func traceReplayTask(first uint64, last uint64, cliCtx *cli.Context) error {
 
 		}
 		operation.Execute(op, db, dCtx)
-		if traceDebug {
+		if cfg.debug {
 			operation.Debug(dCtx, op)
 		}
 
@@ -137,16 +117,16 @@ func traceReplayTask(first uint64, last uint64, cliCtx *cli.Context) error {
 	sec = time.Since(start).Seconds()
 
 	// validate stateDB
-	if validationEnabled {
+	if cfg.enableValidation {
 		// advance the world state from the first block to the last block
-		advanceWorldState(ws, first, last, workers)
+		advanceWorldState(ws, cfg.first, cfg.last, cfg.workers)
 		if err := validateStateDB(ws, db); err != nil {
 			return fmt.Errorf("Validation failed. %v\n", err)
 		}
 	}
 
 	// print profile statistics (if enabled)
-	if operation.Profiling {
+	if operation.EnableProfiling {
 		operation.PrintProfiling()
 	}
 
@@ -157,10 +137,10 @@ func traceReplayTask(first uint64, last uint64, cliCtx *cli.Context) error {
 	}
 
 	// print progress summary
-	if enableProgress {
-		fmt.Printf("trace replay: Total elapsed time: %.3f s, processed %v blocks\n", sec, last-first+1)
+	if cfg.enableProgress {
+		fmt.Printf("trace replay: Total elapsed time: %.3f s, processed %v blocks\n", sec, cfg.last-cfg.first+1)
 		fmt.Printf("trace replay: Closing DB took %v\n", time.Since(start))
-		fmt.Printf("trace replay: Final disk usage: %v MiB\n", float32(getDirectorySize(state_directory))/float32(1024*1024))
+		fmt.Printf("trace replay: Final disk usage: %v MiB\n", float32(getDirectorySize(stateDirectory))/float32(1024*1024))
 	}
 
 	return nil
@@ -169,26 +149,31 @@ func traceReplayTask(first uint64, last uint64, cliCtx *cli.Context) error {
 // traceReplayAction implements trace command for replaying.
 func traceReplayAction(ctx *cli.Context) error {
 	var err error
-
-	// process arguments
-	if ctx.Args().Len() != 2 {
-		return fmt.Errorf("trace replay command requires exactly 2 arguments")
+	cfg, err := NewTraceConfig(ctx)
+	if err != nil {
+		return err
 	}
+
+	operation.EnableProfiling = ctx.Bool(profileFlag.Name)
+	// set trace directory
 	tracer.TraceDir = ctx.String(traceDirectoryFlag.Name) + "/"
 	dict.DictionaryContextDir = ctx.String(traceDirectoryFlag.Name) + "/"
-	if ctx.Bool(traceDebugFlag.Name) {
-		traceDebug = true
-	}
-	first, last, argErr := SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
-	if argErr != nil {
-		return argErr
+
+	// start CPU profiling if requested.
+	if profileFileName := ctx.String(cpuProfileFlag.Name); profileFileName != "" {
+		f, err := os.Create(profileFileName)
+		if err != nil {
+			return err
+		}
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
 	}
 
 	// run storage driver
 	substate.SetSubstateFlags(ctx)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
-	err = traceReplayTask(first, last, ctx)
+	err = traceReplayTask(cfg)
 
 	return err
 }

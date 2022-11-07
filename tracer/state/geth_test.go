@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	geth "github.com/ethereum/go-ethereum/core/state"
 )
 
 const N = 1000
@@ -24,7 +23,7 @@ func fillDb(t *testing.T, directory string) (common.Hash, error) {
 		db.SetState(address, key, value)
 	}
 
-	hash := db.(*gethStateDb).db.(*geth.StateDB).IntermediateRoot(true)
+	hash := db.IntermediateRoot(true)
 	//hash := db.(*gethStateDb).db.(*geth.StateDB).Commit(true)
 	if err = db.Close(); err != nil {
 		t.Fatalf("Failed to close DB: %v", err)

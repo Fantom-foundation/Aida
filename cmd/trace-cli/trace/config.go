@@ -5,16 +5,17 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/ethereum/go-ethereum/substate"
 	"github.com/urfave/cli/v2"
 )
 
 // chainId for recording either mainnet or testnets.
 var chainID int
 
-// traceDebug for enabling/disabling debugging
+// traceDebug for enabling/disabling debugging.
 var traceDebug bool = false
 
-// Command line options for common flags in record and replay
+// Command line options for common flags in record and replay.
 var (
 	chainIDFlag = cli.IntFlag{
 		Name:  "chainid",
@@ -61,6 +62,51 @@ var (
 		Usage: "world state snapshot database path",
 	}
 )
+
+// execution configuration for replay command.
+type TraceConfig struct {
+	first            uint64 // first block
+	last             uint64 // last block
+	workers          int    // number of worker threads
+	enableValidation bool   // enable validation flag
+	enableProgress   bool   // enable progress report flag
+	debug            bool   // enable trace debug flag
+	worldStateDir    string // worldstate directory
+	impl             string // storage implementation
+	variant          string // database variant
+}
+
+// NewTraceConfig creates and initializes TraceConfig with commandline arguments.
+func NewTraceConfig(ctx *cli.Context) (*TraceConfig, error) {
+	// process arguments and flags
+	if ctx.Args().Len() != 2 {
+		return nil, fmt.Errorf("trace command requires exactly 2 arguments")
+	}
+	first, last, argErr := SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
+	if argErr != nil {
+		return nil, argErr
+	}
+
+	cfg := &TraceConfig{
+		first:            first,
+		last:             last,
+		workers:          ctx.Int(substate.WorkersFlag.Name),
+		enableValidation: ctx.Bool(validateEndState.Name),
+		enableProgress:   !ctx.Bool(disableProgressFlag.Name),
+		debug:            ctx.Bool(traceDebugFlag.Name),
+		worldStateDir:    ctx.String(worldStateDirFlag.Name),
+		impl:             ctx.String(stateDbImplementation.Name),
+		variant:          ctx.String(stateDbVariant.Name),
+	}
+
+	if cfg.enableProgress {
+		fmt.Printf("Run config:\n")
+		fmt.Printf("\tBlock range: %v to %v\n", cfg.first, cfg.last)
+		fmt.Printf("\tStorage system: %v, DB variant: %v\n", cfg.impl, cfg.variant)
+		fmt.Printf("\tWorld state directory: %v\n", cfg.worldStateDir)
+	}
+	return cfg, nil
+}
 
 // SetBlockRange checks the validity of a block range and return the first and last block as numbers.
 func SetBlockRange(firstArg string, lastArg string) (uint64, uint64, error) {

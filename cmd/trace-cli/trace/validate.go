@@ -7,8 +7,8 @@ import (
 	"github.com/ethereum/go-ethereum/substate"
 )
 
-// validateDatabase validates whether the world-state is contained in the db object
-// NB: We can only check what must be in the db (but cannot check whether db stores more)
+// validateStateDB validates whether the world-state is contained in the db object.
+// NB: We can only check what must be in the db (but cannot check whether db stores more).
 func validateStateDB(ws substate.SubstateAlloc, db state.StateDB) error {
 	for addr, account := range ws {
 		if !db.Exist(addr) {
@@ -43,7 +43,7 @@ func validateStateDB(ws substate.SubstateAlloc, db state.StateDB) error {
 }
 
 // compareSubstateStorage compares an output substate of a transaction with
-// a substate genereated from stateDB by the trace replayer
+// a substate genereated from stateDB by the trace replayer.
 func compareSubstateStorage(record, replay substate.SubstateAlloc) error {
 	for addr, recAcc := range record {
 		// addr exists in both substate
