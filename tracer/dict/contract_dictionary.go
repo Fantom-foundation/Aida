@@ -5,6 +5,7 @@ import (
 	"math"
 	"os"
 
+	"github.com/dsnet/compress/bzip2"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -57,20 +58,27 @@ func (cDict *ContractDictionary) Decode(idx uint32) (common.Address, error) {
 // Write dictionary to a binary file.
 func (cDict *ContractDictionary) Write(filename string) error {
 	// open contract dictionary file for writing
-	f, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
-		return fmt.Errorf("Failed opening dictionary file. Error:%v", err)
+		return fmt.Errorf("Cannot open contract-dictionary file. Error: %v", err)
 	}
-	defer func() {
-		f.Close()
-	}()
-
+	zfile, err := bzip2.NewWriter(file, &bzip2.WriterConfig{Level: 9})
+	if err != nil {
+		return fmt.Errorf("Cannot open bzip2 stream of contract-dictionary. Error: %v", err)
+	}
 	// write all dictionary entries
 	for _, addr := range cDict.idxToContract {
 		data := addr.Bytes()
-		if _, err := f.Write(data); err != nil {
+		if _, err := zfile.Write(data); err != nil {
 			return err
 		}
+	}
+	// close bzip2 stream and file
+	if err := zfile.Close(); err != nil {
+		return fmt.Errorf("Cannot close bzip2 stream of contract-dictionary. Error: %v", err)
+	}
+	if err := file.Close(); err != nil {
+		return fmt.Errorf("Cannot close contract-dictionary file. Error: %v", err)
 	}
 	return nil
 }
@@ -79,21 +87,20 @@ func (cDict *ContractDictionary) Write(filename string) error {
 func (cDict *ContractDictionary) Read(filename string) error {
 	// clear contract dictionary
 	cDict.Init()
-
-	// open contract dictionary file for reading
-	f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDONLY, 0644)
-	if err != nil {
-		return fmt.Errorf("Failed to open dictionary file. Error:%v", err)
+	// open code dictionary file for reading, read buffer, and gzip stream
+	file, err1 := os.Open(filename)
+	if err1 != nil {
+		return fmt.Errorf("Cannot open contract-dictionary file. Error: %v", err1)
 	}
-	defer func() {
-		f.Close()
-	}()
-
+	zfile, err2 := bzip2.NewReader(file, &bzip2.ReaderConfig{})
+	if err2 != nil {
+		return fmt.Errorf("Cannot open bzip2 stream of contract-dictionary. Error: %v", err2)
+	}
 	// read entries from file
 	data := common.Address{}.Bytes()
 	for ctr := uint32(0); true; ctr++ {
 		// read next entry
-		n, err := f.Read(data)
+		n, err := zfile.Read(data)
 		if n == 0 {
 			break
 		} else if n < len(data) {
@@ -101,7 +108,6 @@ func (cDict *ContractDictionary) Read(filename string) error {
 		} else if err != nil {
 			return fmt.Errorf("Error reading address. Error:%v", err)
 		}
-
 		// encode entry
 		idx, err := cDict.Encode(common.BytesToAddress(data))
 		if err != nil {
@@ -109,6 +115,13 @@ func (cDict *ContractDictionary) Read(filename string) error {
 		} else if idx != ctr {
 			return fmt.Errorf("Corrupted contract dictionary file entries")
 		}
+	}
+	// close file
+	if err := zfile.Close(); err != nil {
+		return fmt.Errorf("Cannot close bzip2 stream of contract-dictionary. Error: %v", err)
+	}
+	if err := file.Close(); err != nil {
+		return fmt.Errorf("Cannot close contract-dictionary file. Error: %v", err)
 	}
 	return nil
 }

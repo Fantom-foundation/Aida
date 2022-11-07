@@ -7,9 +7,9 @@ import (
 	"testing"
 )
 
-// TestPositiveValueDictionarySimple1 encodes an value, and compares whether the
+// TestValueDictionarySimple1 encodes an value, and compares whether the
 // decoded value is the same, and its index is zero.
-func TestPositiveValueDictionarySimple1(t *testing.T) {
+func TestValueDictionarySimple1(t *testing.T) {
 	encodedValue := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
 	dict := NewValueDictionary()
 	idx, err1 := dict.Encode(encodedValue)
@@ -19,9 +19,9 @@ func TestPositiveValueDictionarySimple1(t *testing.T) {
 	}
 }
 
-// TestPositiveValueDictionarySimple2 encodes two valuees, and compares whether the
+// TestValueDictionarySimple2 encodes two valuees, and compares whether the
 // decoded valuees are the same, and their dictionary indices are zero and one.
-func TestPositiveValueDictionarySimple2(t *testing.T) {
+func TestValueDictionarySimple2(t *testing.T) {
 	encodedValue1 := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
 	encodedValue2 := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F273")
 	dict := NewValueDictionary()
@@ -37,9 +37,9 @@ func TestPositiveValueDictionarySimple2(t *testing.T) {
 	}
 }
 
-// TestPositiveValueDictionarySimple3 encodes one value twice and checks that its value
+// TestValueDictionarySimple3 encodes one value twice and checks that its value
 // is encoded only once, and its index is zero.
-func TestPositiveValueDictionarySimple3(t *testing.T) {
+func TestValueDictionarySimple3(t *testing.T) {
 	encodedValue1 := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
 	dict := NewValueDictionary()
 	idx1, err1 := dict.Encode(encodedValue1)
@@ -54,8 +54,8 @@ func TestPositiveValueDictionarySimple3(t *testing.T) {
 	}
 }
 
-// TestNegativeValueDictionaryOverflow checks whether dictionary overflows can be captured.
-func TestNegativeValueDictionaryOverflow(t *testing.T) {
+// TestValueDictionaryOverflow checks whether dictionary overflows can be captured.
+func TestValueDictionaryOverflow(t *testing.T) {
 	encodedValue1 := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
 	encodedValue2 := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F273")
 	dict := NewValueDictionary()
@@ -73,9 +73,9 @@ func TestNegativeValueDictionaryOverflow(t *testing.T) {
 	ValueDictionaryLimit = math.MaxUint32
 }
 
-// TestNegativeValueDictionaryDecodingFailure1 checks whether invalid index for
+// TestValueDictionaryDecodingFailure1 checks whether invalid index for
 // Decode() can be captured (retrieving index 0 on an empty dictionary).
-func TestNegativeValueDictionaryDecodingFailure1(t *testing.T) {
+func TestValueDictionaryDecodingFailure1(t *testing.T) {
 	dict := NewValueDictionary()
 	_, err := dict.Decode(0)
 	if err == nil {
@@ -83,9 +83,9 @@ func TestNegativeValueDictionaryDecodingFailure1(t *testing.T) {
 	}
 }
 
-// TestNegativeValueDictionaryDecodingFailure2 checks whether invalid index for
+// TestValueDictionaryDecodingFailure2 checks whether invalid index for
 // Decode() can be captured (retrieving index MaxUint32 on an empty dictionary).
-func TestNegativeValueDictionaryDecodingFailure2(t *testing.T) {
+func TestValueDictionaryDecodingFailure2(t *testing.T) {
 	dict := NewValueDictionary()
 	_, err := dict.Decode(math.MaxUint32)
 	if err == nil {
@@ -93,8 +93,8 @@ func TestNegativeValueDictionaryDecodingFailure2(t *testing.T) {
 	}
 }
 
-// TestNegativeValueDictionaryReadFailure creates corrupted file and read file as dictionary.
-func TestNegativeValueDictionaryReadFailure(t *testing.T) {
+// TestValueDictionaryReadFailure creates corrupted file and read file as dictionary.
+func TestValueDictionaryReadFailure(t *testing.T) {
 	filename := "./test.dict"
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
@@ -117,9 +117,9 @@ func TestNegativeValueDictionaryReadFailure(t *testing.T) {
 	os.Remove(filename)
 }
 
-// TestPositiveValueDictionaryReadWrite encodes two valuees, write them to file, and
+// TestValueDictionaryReadWrite encodes two valuees, write them to file, and
 // read them from file. Check whether the newly created dictionary read from file is identical.
-func TestPositiveValueDictionaryReadWrite(t *testing.T) {
+func TestValueDictionaryReadWrite(t *testing.T) {
 	filename := "./test.dict"
 	encodedValue1 := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
 	encodedValue2 := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F273")

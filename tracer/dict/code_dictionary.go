@@ -6,6 +6,8 @@ import (
 	"io"
 	"math"
 	"os"
+
+	"github.com/dsnet/compress/bzip2"
 )
 
 // CodeDictionaryLimit sets the size of the code dictionary.
@@ -58,31 +60,35 @@ func (d *CodeDictionary) Decode(idx uint32) ([]byte, error) {
 // Write dictionary to a binary file.
 func (d *CodeDictionary) Write(filename string) error {
 	// open code dictionary file for writing
-	f, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
-		return err
+		return fmt.Errorf("Cannot open code-dictionary file. Error: %v", err)
 	}
-	defer func() {
-		f.Close()
-	}()
-
+	zfile, err := bzip2.NewWriter(file, &bzip2.WriterConfig{Level: 9})
+	if err != nil {
+		return fmt.Errorf("Cannot open bzip2 stream for code-dictionary. Error: %v", err)
+	}
 	// write all dictionary entries
 	for _, code := range d.idxToCode {
-
 		// write length of code block
 		if len(code) >= math.MaxUint32 {
 			return fmt.Errorf("Code is too large to write")
 		}
 		length := uint32(len(code))
-		err := binary.Write(f, binary.LittleEndian, &length)
+		err := binary.Write(zfile, binary.LittleEndian, &length)
 		if err != nil {
 			return fmt.Errorf("Error writing code length. Error: %v", err)
 		}
-
 		// write code
-		if _, err := f.Write([]byte(code)); err != nil {
+		if _, err := zfile.Write([]byte(code)); err != nil {
 			return fmt.Errorf("Error writing byte-code. Error: %v", err)
 		}
+	}
+	if err := zfile.Close(); err != nil {
+		return fmt.Errorf("Cannot close bzip2 stream of code-dictionary. Error: %v", err)
+	}
+	if err := file.Close(); err != nil {
+		return fmt.Errorf("Cannot close code-dictionary file. Error: %v", err)
 	}
 	return nil
 }
@@ -91,45 +97,46 @@ func (d *CodeDictionary) Write(filename string) error {
 func (d *CodeDictionary) Read(filename string) error {
 	// clear code dictionary
 	d.Init()
-
-	// open code dictionary file for reading
-	f, err := os.OpenFile(filename, os.O_CREATE|os.O_RDONLY, 0644)
-	if err != nil {
-		return err
+	// open code dictionary file for reading, read buffer, and gzip stream
+	file, err1 := os.Open(filename)
+	if err1 != nil {
+		return fmt.Errorf("Cannot open code-dictionary file. Error: %v", err1)
 	}
-	defer func() {
-		f.Close()
-	}()
-
+	zfile, err2 := bzip2.NewReader(file, &bzip2.ReaderConfig{})
+	if err2 != nil {
+		return fmt.Errorf("Cannot open bzip2 stream of code-dictionary. Error: %v", err2)
+	}
 	// read entries from file
 	for ctr := uint32(0); true; ctr++ {
-		// read next entry
-
-		// read length
+		// read length of byte-code
 		var length uint32
-		err := binary.Read(f, binary.LittleEndian, &length)
+		err := binary.Read(zfile, binary.LittleEndian, &length)
 		if err == io.EOF {
 			return nil
 		} else if err != nil {
 			return fmt.Errorf("Code dictionary file/reading is corrupted. Error: %v", err)
 		}
-
-		// read byte code
+		// read byte-code
 		code := make([]byte, length)
-		n, err := f.Read(code)
+		n, err := zfile.Read(code)
 		if err != nil {
 			return fmt.Errorf("Error reading code length/file is corrupted. Error: %v", err)
 		} else if n != int(length) {
 			return fmt.Errorf("Error reading code length/wrong size")
 		}
-
-		// encode entry
+		// encode byte-code entry
 		idx, err := d.Encode(code)
 		if err != nil {
 			return fmt.Errorf("Failed to encode byte-code while reading. Error: %v", err)
 		} else if idx != ctr {
 			return fmt.Errorf("Corrupted code dictionary file entries")
 		}
+	}
+	if err := zfile.Close(); err != nil {
+		return fmt.Errorf("Cannot close bzip2 stream of code-dictionary. Error: %v", err)
+	}
+	if err := file.Close(); err != nil {
+		return fmt.Errorf("Cannot close code-dictionary file. Error: %v", err)
 	}
 	return nil
 }
