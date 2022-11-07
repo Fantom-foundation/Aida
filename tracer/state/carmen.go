@@ -7,6 +7,7 @@ import (
 	cc "github.com/Fantom-foundation/Carmen/go/common"
 	carmen "github.com/Fantom-foundation/Carmen/go/state"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/substate"
 )
 
@@ -43,6 +44,10 @@ var getCodeCalled bool
 var getCodeSizeCalled bool
 var getCodeHashCalled bool
 var setCodeCalled bool
+
+func (s *carmenStateDB) BeginBlockApply(root_hash common.Hash) error {
+	return nil
+}
 
 func (s *carmenStateDB) CreateAccount(addr common.Address) {
 	s.db.CreateAccount(cc.Address(addr))
@@ -129,6 +134,15 @@ func (s *carmenStateDB) Finalise(deleteEmptyObjects bool) {
 	s.db.GetHash()
 }
 
+func (s *carmenStateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
+	s.db.EndTransaction()
+	return common.Hash(s.db.GetHash())
+}
+
+func (s *carmenStateDB) Prepare(thash common.Hash, ti int) {
+	//ignored
+}
+
 func (s *carmenStateDB) PrepareSubstate(substate *substate.SubstateAlloc) {
 	// ignored
 }
@@ -139,5 +153,57 @@ func (s *carmenStateDB) GetSubstatePostAlloc() substate.SubstateAlloc {
 
 func (s *carmenStateDB) Close() error {
 	// TODO: implement
+	return nil
+}
+
+func (s *carmenStateDB) AddRefund(uint64) {
+	// ignored
+}
+
+func (s *carmenStateDB) SubRefund(uint64) {
+	// ignored
+}
+
+func (s *carmenStateDB) GetRefund() uint64 {
+	// ignored
+	return uint64(0)
+}
+
+func (s *carmenStateDB) PrepareAccessList(sender common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
+	// ignored
+}
+
+func (s *carmenStateDB) AddressInAccessList(addr common.Address) bool {
+	// ignored
+	return false
+}
+func (s *carmenStateDB) SlotInAccessList(addr common.Address, slot common.Hash) (addressOk bool, slotOk bool) {
+	// ignored
+	return false, false
+}
+func (s *carmenStateDB) AddAddressToAccessList(addr common.Address) {
+	// ignored
+}
+func (s *carmenStateDB) AddSlotToAccessList(addr common.Address, slot common.Hash) {
+	// ignored
+}
+
+func (s *carmenStateDB) AddLog(*types.Log) {
+	// ignored
+}
+
+func (s *carmenStateDB) GetLogs(hash common.Hash, blockHash common.Hash) []*types.Log {
+	// ignored
+	return nil
+}
+
+func (s *carmenStateDB) AddPreimage(common.Hash, []byte) {
+	// ignored
+	panic("AddPreimage not implemented")
+}
+
+func (s *carmenStateDB) ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error {
+	// ignored
+	panic("ForEachStorage not implemented")
 	return nil
 }

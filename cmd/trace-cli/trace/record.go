@@ -226,6 +226,7 @@ func sendOperation(dCtx *dict.DictionaryContext, ch chan operation.Operation, op
 
 // traceRecordAction implements trace command for recording.
 func traceRecordAction(ctx *cli.Context) error {
+	substate.RecordReplay = true
 	var err error
 
 	if ctx.Args().Len() != 2 {

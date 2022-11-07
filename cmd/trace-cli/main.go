@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/Fantom-foundation/Aida/cmd/trace-cli/trace"
-	"github.com/ethereum/go-ethereum/substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -18,6 +17,7 @@ func initTraceApp() *cli.App {
 		Copyright: "(c) 2022 Fantom Foundation",
 		Flags:     []cli.Flag{},
 		Commands: []*cli.Command{
+			&trace.RunVMCommand,
 			&trace.TraceCompareLogCommand,
 			&trace.TraceRecordCommand,
 			&trace.TraceReplayCommand,
@@ -28,7 +28,6 @@ func initTraceApp() *cli.App {
 
 // main implements "trace" cli traceApplication.
 func main() {
-	substate.RecordReplay = true
 	app := initTraceApp()
 	if err := app.Run(os.Args); err != nil {
 		code := 1

@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"math"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/Fantom-foundation/Aida/tracer/state"
 )
 
-var Profiling = false
+var stats *ProfileStats = new(ProfileStats)
 
 // Operation IDs of the StateDB interface
 const (
@@ -85,19 +84,10 @@ var opDict = map[byte]OperationDictionary{
 	EndBlockID:              {label: "EndBlock", readfunc: ReadEndBlock},
 }
 
-// Profiling data structures for executing operations.
-var (
-	opFrequencyy  [NumOperations]uint64        // operation frequency stats
-	opDuration    [NumOperations]time.Duration // accumulated operation duration
-	opMinDuration [NumOperations]time.Duration // min runtime observerd
-	opMaxDuration [NumOperations]time.Duration // max runtime observerd
-	opVariance    [NumOperations]float64       // duration variance
-)
-
-// getLabel retrieves a label of a state operation.
-func getLabel(i byte) string {
+// GetLabel retrieves a label of a state operation.
+func GetLabel(i byte) string {
 	if i < 0 || i >= NumOperations {
-		log.Fatalf("getLabel failed; index is out-of-bound")
+		log.Fatalf("GetLabel failed; index is out-of-bound")
 	}
 	if _, ok := opDict[i]; !ok {
 		log.Fatalf("operation is not defined")
@@ -135,10 +125,10 @@ func Read(f io.Reader) Operation {
 	// read state operation
 	op, err = opDict[ID].readfunc(f)
 	if err != nil {
-		log.Fatalf("Failed to read operation %v. Error %v", getLabel(ID), err)
+		log.Fatalf("Failed to read operation %v. Error %v", GetLabel(ID), err)
 	}
 	if op.GetId() != ID {
-		log.Fatalf("Generated object of type %v has wrong ID (%v) ", getLabel(op.GetId()), getLabel(ID))
+		log.Fatalf("Generated object of type %v has wrong ID (%v) ", GetLabel(op.GetId()), GetLabel(ID))
 	}
 	return op
 }
@@ -148,80 +138,29 @@ func Write(f io.Writer, op Operation) {
 	// write ID to file
 	ID := op.GetId()
 	if err := binary.Write(f, binary.LittleEndian, &ID); err != nil {
-		log.Fatalf("Failed to write ID for operation %v. Error: %v", getLabel(ID), err)
+		log.Fatalf("Failed to write ID for operation %v. Error: %v", GetLabel(ID), err)
 	}
 
 	// write details of operation to file
 	if err := op.Write(f); err != nil {
-		log.Fatalf("Failed to write operation %v. Error: %v", getLabel(ID), err)
+		log.Fatalf("Failed to write operation %v. Error: %v", GetLabel(ID), err)
 	}
 }
 
 // Execute an operation and profile it.
 func Execute(op Operation, db state.StateDB, ctx *dict.DictionaryContext) {
 	elapsed := op.Execute(db, ctx)
-	if Profiling {
-		op := op.GetId()
-		n := opFrequencyy[op]
-		duration := opDuration[op]
-		// update min/max values
-		if n > 0 {
-			if opMaxDuration[op] < elapsed {
-				opMaxDuration[op] = elapsed
-			}
-			if opMinDuration[op] > elapsed {
-				opMinDuration[op] = elapsed
-			}
-		} else {
-			opMinDuration[op] = elapsed
-			opMaxDuration[op] = elapsed
-		}
-		// compute previous mean
-		prevMean := float64(0.0)
-		if n > 0 {
-			prevMean = float64(opDuration[op]) / float64(n)
-		}
-		// update variance
-		newDuration := duration + elapsed
-		if n > 0 {
-			newMean := float64(newDuration) / float64(n+1)
-			opVariance[op] = float64(n-1)*opVariance[op]/float64(n) +
-				(newMean-prevMean)*(newMean-prevMean)/float64(n+1)
-		} else {
-			opVariance[op] = 0.0
-		}
-
-		// update execution frequency
-		opFrequencyy[op] = n + 1
-
-		// update accumulated duration and frequency
-		opDuration[op] = newDuration
+	if EnableProfiling {
+		stats.Profile(op.GetId(), elapsed)
 	}
+}
+
+func PrintProfiling() {
+	stats.PrintProfiling()
 }
 
 // Debug prints debug information of an operation.
 func Debug(ctx *dict.DictionaryContext, op Operation) {
-	fmt.Printf("%v:\n", getLabel(op.GetId()))
+	fmt.Printf("%v:\n", GetLabel(op.GetId()))
 	op.Debug(ctx)
-}
-
-// PrintProfiling prints replay profiling information for executed operation.
-func PrintProfiling() {
-	timeUnit := float64(time.Microsecond)
-	tuStr := "us"
-	fmt.Printf("op, n, mean(%v), std(%v), min(%v), max(%v)\n", tuStr, tuStr, tuStr, tuStr)
-	total := float64(0)
-	for op := byte(0); op < NumOperations; op++ {
-		n := opFrequencyy[op]
-		mean := (float64(opDuration[op]) / float64(n)) / timeUnit
-		std := math.Sqrt(opVariance[op]) / timeUnit
-		min := float64(opMinDuration[op]) / timeUnit
-		max := float64(opMaxDuration[op]) / timeUnit
-		fmt.Printf("%v, %v, %v, %v, %v, %v\n", getLabel(op), n, mean, std, min, max)
-
-		total += float64(opDuration[op])
-	}
-	sec := total / float64(time.Second)
-	tps := float64(opFrequencyy[EndTransactionID]) / sec
-	fmt.Printf("Total StateDB net execution time=%v (s) / ~%.1f Tx/s\n", sec, tps)
 }

@@ -41,47 +41,26 @@ last block of the inclusive range of blocks to replay storage traces.`,
 }
 
 // traceReplaySubstateTask simulates storage operations from storage traces on stateDB.
-func traceReplaySubstateTask(first uint64, last uint64, cliCtx *cli.Context) error {
+func traceReplaySubstateTask(cfg *TraceConfig) error {
 	// load dictionaries & indexes
 	dCtx := dict.ReadDictionaryContext()
 
 	// iterate substate (for in-membory state)
-	stateIter := substate.NewSubstateIterator(first, cliCtx.Int(substate.WorkersFlag.Name))
+	stateIter := substate.NewSubstateIterator(cfg.first, cfg.workers)
 	defer stateIter.Release()
 
 	// replay storage trace
-	traceIter := tracer.NewTraceIterator(first, last)
+	traceIter := tracer.NewTraceIterator(cfg.first, cfg.last)
 	defer traceIter.Release()
 
-	// Get validation flag
-	validation_enabled := cliCtx.Bool(validateEndState.Name)
-
-	// Get profiling flag
-	operation.Profiling = cliCtx.Bool(profileFlag.Name)
-
-	// Get progress flag
-	enableProgress := !cliCtx.Bool(disableProgressFlag.Name)
-
-	// Start CPU profiling if requested.
-	if profile_file_name := cliCtx.String(cpuProfileFlag.Name); profile_file_name != "" {
-		f, err := os.Create(profile_file_name)
-		if err != nil {
-			return err
-		}
-		pprof.StartCPUProfile(f)
-		defer pprof.StopCPUProfile()
-	}
-
 	// Create a directory for the store to place all its files.
-	state_directory, err := ioutil.TempDir("", "state_db_*")
+	stateDirectory, err := ioutil.TempDir("", "state_db_*")
 	if err != nil {
 		return err
 	}
 
 	// Instantiate the state DB under testing
-	impl := cliCtx.String(stateDbImplementation.Name)
-	variant := cliCtx.String(stateDbVariant.Name)
-	db, err := makeStateDB(state_directory, impl, variant)
+	db, err := makeStateDB(stateDirectory, cfg.impl, cfg.variant)
 	if err != nil {
 		return err
 	}
@@ -93,25 +72,25 @@ func traceReplaySubstateTask(first uint64, last uint64, cliCtx *cli.Context) err
 		lastTxCount uint64
 		txCount     uint64
 	)
-	if enableProgress {
+	if cfg.enableProgress {
 		start = time.Now()
 		sec = time.Since(start).Seconds()
 		lastSec = time.Since(start).Seconds()
 	}
 	for stateIter.Next() {
 		tx := stateIter.Value()
-		if tx.Block > last {
+		if tx.Block > cfg.last {
 			break
 		}
-		db.PrepareSubstate(&tx.Substate.InputAlloc)
+		if cfg.impl == "memory" {
+			db.PrepareSubstate(&tx.Substate.InputAlloc)
+		} else {
+			primeStateDB(tx.Substate.InputAlloc, db)
+		}
 		for traceIter.Next() {
 			op := traceIter.Value()
-			// skip execution of sub balance if carmen or geth is used
-			if op.GetId() == operation.SubBalanceID && impl != "memory" {
-				continue
-			}
 			operation.Execute(op, db, dCtx)
-			if traceDebug {
+			if cfg.debug {
 				operation.Debug(dCtx, op)
 			}
 
@@ -123,7 +102,7 @@ func traceReplaySubstateTask(first uint64, last uint64, cliCtx *cli.Context) err
 		}
 
 		// Validate stateDB and OuputAlloc
-		if validation_enabled {
+		if cfg.enableValidation {
 			traceAlloc := db.GetSubstatePostAlloc()
 			recordedAlloc := tx.Substate.OutputAlloc
 			err := compareSubstateStorage(recordedAlloc, traceAlloc)
@@ -131,7 +110,7 @@ func traceReplaySubstateTask(first uint64, last uint64, cliCtx *cli.Context) err
 				return err
 			}
 		}
-		if enableProgress {
+		if cfg.enableProgress {
 			// report progress
 			sec = time.Since(start).Seconds()
 			diff := sec - lastSec
@@ -151,18 +130,14 @@ func traceReplaySubstateTask(first uint64, last uint64, cliCtx *cli.Context) err
 		return fmt.Errorf("Last operation isn't an EndBlock")
 	} else {
 		operation.Execute(op, db, dCtx)
-		if traceDebug {
+		if cfg.debug {
 			operation.Debug(dCtx, op)
 		}
 	}
-
-	if enableProgress {
-		sec = time.Since(start).Seconds()
-		fmt.Printf("trace replay-substate: Total elapsed time: %.3f s, processed %v blocks (~%.1f Tx/s)\n", sec, last-first+1, float64(txCount)/sec)
-	}
+	sec = time.Since(start).Seconds()
 
 	// print profile statistics (if enabled)
-	if operation.Profiling {
+	if operation.EnableProfiling {
 		operation.PrintProfiling()
 	}
 
@@ -172,9 +147,10 @@ func traceReplaySubstateTask(first uint64, last uint64, cliCtx *cli.Context) err
 		fmt.Printf("Failed to close database: %v", err)
 	}
 
-	if enableProgress {
+	if cfg.enableProgress {
 		fmt.Printf("trace replay-substate: Closing DB took %v\n", time.Since(start))
-		fmt.Printf("trace replay-substate: Final disk usage: %v MiB\n", float32(getDirectorySize(state_directory))/float32(1024*1024))
+		fmt.Printf("trace replay-substate: Final disk usage: %v MiB\n", float32(getDirectorySize(stateDirectory))/float32(1024*1024))
+		fmt.Printf("trace replay-substate: Total elapsed time: %.3f s, processed %v blocks (~%.1f Tx/s)\n", sec, cfg.last-cfg.first+1, float64(txCount)/sec)
 	}
 
 	return nil
@@ -182,27 +158,29 @@ func traceReplaySubstateTask(first uint64, last uint64, cliCtx *cli.Context) err
 
 // traceReplaySubstateAction implements trace command for replaying.
 func traceReplaySubstateAction(ctx *cli.Context) error {
-	var err error
-
-	// process arguments
-	if ctx.Args().Len() != 2 {
-		return fmt.Errorf("trace replay-substate command requires exactly 2 arguments")
+	substate.RecordReplay = true
+	cfg, err := NewTraceConfig(ctx)
+	if err != nil {
+		return err
 	}
-	tracer.TraceDir = ctx.String(traceDirectoryFlag.Name) + "/"
-	dict.DictionaryContextDir = ctx.String(traceDirectoryFlag.Name) + "/"
-	if ctx.Bool(traceDebugFlag.Name) {
-		traceDebug = true
-	}
-	first, last, argErr := SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
-	if argErr != nil {
-		return argErr
-	}
-
 	// run storage driver
 	substate.SetSubstateFlags(ctx)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
-	err = traceReplaySubstateTask(first, last, ctx)
+
+	// Get profiling flag
+	operation.EnableProfiling = ctx.Bool(profileFlag.Name)
+	// Start CPU profiling if requested.
+	if profileFileName := ctx.String(cpuProfileFlag.Name); profileFileName != "" {
+		f, err := os.Create(profileFileName)
+		if err != nil {
+			return err
+		}
+		pprof.StartCPUProfile(f)
+		defer pprof.StopCPUProfile()
+	}
+
+	err = traceReplaySubstateTask(cfg)
 
 	return err
 }
