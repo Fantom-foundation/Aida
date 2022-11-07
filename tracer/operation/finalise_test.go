@@ -1,12 +1,9 @@
 package operation
 
 import (
-	"bytes"
 	"fmt"
 	"github.com/Fantom-foundation/Aida/tracer/dict"
-	"io"
 	"math/rand"
-	"os"
 	"testing"
 	"time"
 )
@@ -40,30 +37,9 @@ func TestFinaliseReadWrite(t *testing.T) {
 // TestFinaliseDebug creates a new Finalise object and checks its Debug message.
 func TestFinaliseDebug(t *testing.T) {
 	dict, op, deleteEmpty := initFinalise(t)
-
-	// divert stdout to a buffer
-	old := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// print debug message
-	op.Debug(dict)
-
-	// restore stdout
-	w.Close()
-	os.Stdout = old
-	var buf bytes.Buffer
-	io.Copy(&buf, r)
-
-	// check debug message
-	label, f := operationLabels[FinaliseID]
-	if !f {
-		t.Fatalf("label for %d not found", FinaliseID)
-	}
-
-	if buf.String() != fmt.Sprintf("\t%s: %t\n", label, deleteEmpty) {
-		t.Fatalf("wrong debug message: %s", buf.String())
-	}
+	testOperationDebug(t, dict, op, FinaliseID, func(label string) string {
+		return fmt.Sprintf("\t%s: %t\n", label, deleteEmpty)
+	})
 }
 
 // TestFinaliseExecute

@@ -1,12 +1,9 @@
 package operation
 
 import (
-	"bytes"
 	"fmt"
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/ethereum/go-ethereum/common"
-	"io"
-	"os"
 	"testing"
 )
 
@@ -44,30 +41,9 @@ func TestSetStateReadWrite(t *testing.T) {
 // TestSetStateDebug creates a new SetState object and checks its Debug message.
 func TestSetStateDebug(t *testing.T) {
 	dict, op, addr, storage, value := initSetState(t)
-
-	// divert stdout to a buffer
-	old := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// print debug message
-	op.Debug(dict)
-
-	// restore stdout
-	w.Close()
-	os.Stdout = old
-	var buf bytes.Buffer
-	io.Copy(&buf, r)
-
-	// check debug message
-	label, f := operationLabels[SetStateID]
-	if !f {
-		t.Fatalf("label for %d not found", SetStateID)
-	}
-
-	if buf.String() != fmt.Sprintf("\t%s: %s, %s, %s\n", label, addr, storage, value) {
-		t.Fatalf("wrong debug message: %s", buf.String())
-	}
+	testOperationDebug(t, dict, op, SetStateID, func(label string) string {
+		return fmt.Sprintf("\t%s: %s, %s, %s\n", label, addr, storage, value)
+	})
 }
 
 // TestSetStateExecute

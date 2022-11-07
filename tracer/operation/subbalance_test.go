@@ -1,14 +1,11 @@
 package operation
 
 import (
-	"bytes"
 	"fmt"
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/ethereum/go-ethereum/common"
-	"io"
 	"math/big"
 	"math/rand"
-	"os"
 	"testing"
 	"time"
 )
@@ -43,30 +40,9 @@ func TestSubBalanceReadWrite(t *testing.T) {
 // TestSubBalanceDebug creates a new SubBalance object and checks its Debug message.
 func TestSubBalanceDebug(t *testing.T) {
 	dict, op, addr, value := initSubBalance(t)
-
-	// divert stdout to a buffer
-	old := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// print debug message
-	op.Debug(dict)
-
-	// restore stdout
-	w.Close()
-	os.Stdout = old
-	var buf bytes.Buffer
-	io.Copy(&buf, r)
-
-	// check debug message
-	label, f := operationLabels[SubBalanceID]
-	if !f {
-		t.Fatalf("label for %d not found", SubBalanceID)
-	}
-
-	if buf.String() != fmt.Sprintf("\t%s: %s, %s\n", label, addr, value) {
-		t.Fatalf("wrong debug message: %s", buf.String())
-	}
+	testOperationDebug(t, dict, op, SubBalanceID, func(label string) string {
+		return fmt.Sprintf("\t%s: %s, %s\n", label, addr, value)
+	})
 }
 
 // TestSubBalanceExecute

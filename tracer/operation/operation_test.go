@@ -2,12 +2,14 @@ package operation
 
 import (
 	"bytes"
+	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/substate"
 	"io"
 	"math/big"
+	"os"
 	"reflect"
 	"testing"
 )
@@ -261,5 +263,33 @@ func testOperationReadWrite(t *testing.T, op1 Operation, opRead func(file io.Rea
 	// check equivalence
 	if !reflect.DeepEqual(op1, op2) {
 		t.Fatalf("operations are not the same")
+	}
+}
+
+func testOperationDebug(t *testing.T, dict *dict.DictionaryContext, op Operation, opID int, s func(label string) string) {
+	// divert stdout to a buffer
+	old := os.Stdout
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+
+	// print debug message
+	op.Debug(dict)
+
+	// restore stdout
+	w.Close()
+	os.Stdout = old
+	var buf bytes.Buffer
+	io.Copy(&buf, r)
+
+	// check debug message
+	label, f := operationLabels[opID]
+	if !f {
+		t.Fatalf("label for %d not found", SuicideID)
+	}
+
+	expected := s(label)
+
+	if buf.String() != expected {
+		t.Fatalf("wrong debug message: %s", buf.String())
 	}
 }

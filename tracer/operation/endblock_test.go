@@ -1,11 +1,8 @@
 package operation
 
 import (
-	"bytes"
 	"fmt"
 	"github.com/Fantom-foundation/Aida/tracer/dict"
-	"io"
-	"os"
 	"testing"
 )
 
@@ -36,30 +33,9 @@ func TestEndBlockReadWrite(t *testing.T) {
 // TestEndBlockDebug creates a new EndBlock object and checks its Debug message.
 func TestEndBlockDebug(t *testing.T) {
 	dict, op := initEndBlock(t)
-
-	// divert stdout to a buffer
-	old := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// print debug message
-	op.Debug(dict)
-
-	// restore stdout
-	w.Close()
-	os.Stdout = old
-	var buf bytes.Buffer
-	io.Copy(&buf, r)
-
-	// check debug message
-	label, f := operationLabels[EndBlockID]
-	if !f {
-		t.Fatalf("label for %d not found", EndBlockID)
-	}
-
-	if buf.String() != fmt.Sprintf("\t%s\n", label) {
-		t.Fatalf("wrong debug message: %s", buf.String())
-	}
+	testOperationDebug(t, dict, op, EndBlockID, func(label string) string {
+		return fmt.Sprintf("\t%s\n", label)
+	})
 }
 
 // TestEndBlockExecute

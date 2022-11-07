@@ -1,12 +1,9 @@
 package operation
 
 import (
-	"bytes"
 	"fmt"
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/ethereum/go-ethereum/common"
-	"io"
-	"os"
 	"testing"
 )
 
@@ -39,30 +36,9 @@ func TestGetCodeSizeReadWrite(t *testing.T) {
 // TestGetCodeSizeDebug creates a new GetCodeSize object and checks its Debug message.
 func TestGetCodeSizeDebug(t *testing.T) {
 	dict, op, addr := initGetCodeSize(t)
-
-	// divert stdout to a buffer
-	old := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// print debug message
-	op.Debug(dict)
-
-	// restore stdout
-	w.Close()
-	os.Stdout = old
-	var buf bytes.Buffer
-	io.Copy(&buf, r)
-
-	// check debug message
-	label, f := operationLabels[GetCodeSizeID]
-	if !f {
-		t.Fatalf("label for %d not found", GetCodeSizeID)
-	}
-
-	if buf.String() != fmt.Sprintf("\t%s: %s\n", label, addr) {
-		t.Fatalf("wrong debug message: %s", buf.String())
-	}
+	testOperationDebug(t, dict, op, GetCodeSizeID, func(label string) string {
+		return fmt.Sprintf("\t%s: %s\n", label, addr)
+	})
 }
 
 // TestGetCodeSizeExecute creates a new GetCodeSize object and checks its execution signature.

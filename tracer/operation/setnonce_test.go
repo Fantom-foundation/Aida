@@ -1,13 +1,10 @@
 package operation
 
 import (
-	"bytes"
 	"fmt"
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/ethereum/go-ethereum/common"
-	"io"
 	"math/rand"
-	"os"
 	"testing"
 	"time"
 )
@@ -44,30 +41,9 @@ func TestSetNonceReadWrite(t *testing.T) {
 // TestSetNonceDebug creates a new SetNonce object and checks its Debug message.
 func TestSetNonceDebug(t *testing.T) {
 	dict, op, addr, value := initSetNonce(t)
-
-	// divert stdout to a buffer
-	old := os.Stdout
-	r, w, _ := os.Pipe()
-	os.Stdout = w
-
-	// print debug message
-	op.Debug(dict)
-
-	// restore stdout
-	w.Close()
-	os.Stdout = old
-	var buf bytes.Buffer
-	io.Copy(&buf, r)
-
-	// check debug message
-	label, f := operationLabels[SetNonceID]
-	if !f {
-		t.Fatalf("label for %d not found", SetNonceID)
-	}
-
-	if buf.String() != fmt.Sprintf("\t%s: %s, %d\n", label, addr, value) {
-		t.Fatalf("wrong debug message: %s", buf.String())
-	}
+	testOperationDebug(t, dict, op, SetNonceID, func(label string) string {
+		return fmt.Sprintf("\t%s: %s, %d\n", label, addr, value)
+	})
 }
 
 // TestSetNonceExecute
