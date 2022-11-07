@@ -9,7 +9,6 @@ import (
 	"math/big"
 	"math/rand"
 	"os"
-	"reflect"
 	"testing"
 	"time"
 )
@@ -38,26 +37,7 @@ func initSubBalance(t *testing.T) (*dict.DictionaryContext, *SubBalance, common.
 // and checks equality.
 func TestSubBalanceReadWrite(t *testing.T) {
 	_, op1, _, _ := initSubBalance(t)
-
-	op1Buffer := bytes.NewBufferString("")
-	err := op1.Write(op1Buffer)
-	if err != nil {
-		t.Fatalf("error operation write %v", err)
-	}
-
-	// read object from buffer
-	op2Buffer := bytes.NewBufferString(op1Buffer.String())
-	op2, err := ReadSubBalance(op2Buffer)
-	if err != nil {
-		t.Fatalf("failed to read operation. Error: %v", err)
-	}
-	if op2 == nil {
-		t.Fatalf("failed to create newly read operation from buffer")
-	}
-	// check equivalence
-	if !reflect.DeepEqual(op1, op2) {
-		t.Fatalf("operations are not the same")
-	}
+	testOperationReadWrite(t, op1, ReadSubBalance)
 }
 
 // TestSubBalanceDebug creates a new SubBalance object and checks its Debug message.

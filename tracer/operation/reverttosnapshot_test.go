@@ -6,7 +6,6 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"io"
 	"os"
-	"reflect"
 	"testing"
 )
 
@@ -44,26 +43,7 @@ func initRevertToSnapshot(t *testing.T) (*dict.DictionaryContext, *Snapshot, *Re
 // and checks equality.
 func TestRevertToSnapshotReadWrite(t *testing.T) {
 	_, _, op1, _, _ := initRevertToSnapshot(t)
-
-	op1Buffer := bytes.NewBufferString("")
-	err := op1.Write(op1Buffer)
-	if err != nil {
-		t.Fatalf("error operation write %v", err)
-	}
-
-	// read object from buffer
-	op2Buffer := bytes.NewBufferString(op1Buffer.String())
-	op2, err := ReadRevertToSnapshot(op2Buffer)
-	if err != nil {
-		t.Fatalf("failed to read operation. Error: %v", err)
-	}
-	if op2 == nil {
-		t.Fatalf("failed to create newly read operation from buffer")
-	}
-	// check equivalence
-	if !reflect.DeepEqual(op1, op2) {
-		t.Fatalf("operations are not the same")
-	}
+	testOperationReadWrite(t, op1, ReadRevertToSnapshot)
 }
 
 // TestRevertToSnapshotDebug creates a new RevertToSnapshot object and checks its Debug message.

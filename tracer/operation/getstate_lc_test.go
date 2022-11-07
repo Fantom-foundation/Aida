@@ -7,7 +7,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"io"
 	"os"
-	"reflect"
 	"testing"
 )
 
@@ -38,26 +37,7 @@ func initGetStateLc(t *testing.T) (*dict.DictionaryContext, *GetStateLc, common.
 // and checks equality.
 func TestGetStateLcReadWrite(t *testing.T) {
 	_, op1, _, _ := initGetStateLc(t)
-
-	op1Buffer := bytes.NewBufferString("")
-	err := op1.Write(op1Buffer)
-	if err != nil {
-		t.Fatalf("error operation write %v", err)
-	}
-
-	// read object from buffer
-	op2Buffer := bytes.NewBufferString(op1Buffer.String())
-	op2, err := ReadGetStateLc(op2Buffer)
-	if err != nil {
-		t.Fatalf("failed to read operation. Error: %v", err)
-	}
-	if op2 == nil {
-		t.Fatalf("failed to create newly read operation from buffer")
-	}
-	// check equivalence
-	if !reflect.DeepEqual(op1, op2) {
-		t.Fatalf("operations are not the same")
-	}
+	testOperationReadWrite(t, op1, ReadGetStateLc)
 }
 
 // TestGetStateLcDebug creates a new GetStateLc object and checks its Debug message.

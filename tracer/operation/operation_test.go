@@ -6,7 +6,9 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/substate"
+	"io"
 	"math/big"
+	"reflect"
 	"testing"
 )
 
@@ -213,7 +215,12 @@ func (s *MockStateDB) compareRecordings(expected []Record, t *testing.T) {
 	}
 }
 
+// areEqual compares two values whether they are identical
 func areEqual(v1 any, v2 any) bool {
+	if reflect.TypeOf(v1) != reflect.TypeOf(v2) {
+		return false
+	}
+
 	switch c1 := v1.(type) {
 	case []byte:
 		c2 := v2.([]byte)
@@ -234,4 +241,25 @@ func getRandomAddress(t *testing.T) common.Address {
 	}
 	// generate account address
 	return crypto.PubkeyToAddress(pk.PublicKey)
+}
+
+func testOperationReadWrite(t *testing.T, op1 Operation, opRead func(file io.Reader) (Operation, error)) {
+	opBuffer := bytes.NewBufferString("")
+	err := op1.Write(opBuffer)
+	if err != nil {
+		t.Fatalf("error operation write %v", err)
+	}
+
+	// read object from buffer
+	op2, err := opRead(opBuffer)
+	if err != nil {
+		t.Fatalf("failed to read operation. Error: %v", err)
+	}
+	if op2 == nil {
+		t.Fatalf("failed to create newly read operation from buffer")
+	}
+	// check equivalence
+	if !reflect.DeepEqual(op1, op2) {
+		t.Fatalf("operations are not the same")
+	}
 }

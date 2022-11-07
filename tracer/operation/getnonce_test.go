@@ -7,7 +7,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"io"
 	"os"
-	"reflect"
 	"testing"
 )
 
@@ -34,26 +33,7 @@ func initGetNonce(t *testing.T) (*dict.DictionaryContext, *GetNonce, common.Addr
 // and checks equality.
 func TestGetNonceReadWrite(t *testing.T) {
 	_, op1, _ := initGetNonce(t)
-
-	op1Buffer := bytes.NewBufferString("")
-	err := op1.Write(op1Buffer)
-	if err != nil {
-		t.Fatalf("error operation write %v", err)
-	}
-
-	// read object from buffer
-	op2Buffer := bytes.NewBufferString(op1Buffer.String())
-	op2, err := ReadGetNonce(op2Buffer)
-	if err != nil {
-		t.Fatalf("failed to read operation. Error: %v", err)
-	}
-	if op2 == nil {
-		t.Fatalf("failed to create newly read operation from buffer")
-	}
-	// check equivalence
-	if !reflect.DeepEqual(op1, op2) {
-		t.Fatalf("operations are not the same")
-	}
+	testOperationReadWrite(t, op1, ReadGetNonce)
 }
 
 // TestGetNonceDebug creates a new GetNonce object and checks its Debug message.
