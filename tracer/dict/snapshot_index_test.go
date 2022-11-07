@@ -4,8 +4,8 @@ import (
 	"testing"
 )
 
-// TestPositiveSnapshotIndexAdd adds a new set of mappings and compares the size of index map.
-func TestPositiveSnapshotIndexAdd(t *testing.T) {
+// TestSnapshotIndexAdd adds a new set of mappings and compares the size of index map.
+func TestSnapshotIndexAdd(t *testing.T) {
 	var recordedID1 int32 = 1
 	var recordedID2 int32 = 2
 	var replayedID1 int32 = 0
@@ -20,8 +20,8 @@ func TestPositiveSnapshotIndexAdd(t *testing.T) {
 	}
 }
 
-// TestPositiveSnapshotIndexAddDuplicateID adds an ID twice, and checks index result.
-func TestPositiveSnapshotIndexAddDuplicateID(t *testing.T) {
+// TestSnapshotIndexAddDuplicateID adds an ID twice, and checks index result.
+func TestSnapshotIndexAddDuplicateID(t *testing.T) {
 	var recordedID int32 = 1
 	var replayedID int32 = 0
 	snapshotIdx := NewSnapshotIndex()
@@ -39,8 +39,8 @@ func TestPositiveSnapshotIndexAddDuplicateID(t *testing.T) {
 	}
 }
 
-// TestPositiveSnapshotIndexGet adds ID to SnapshotIndex and compares with index result.
-func TestPositiveSnapshotIndexGet(t *testing.T) {
+// TestSnapshotIndexGet adds ID to SnapshotIndex and compares with index result.
+func TestSnapshotIndexGet1(t *testing.T) {
 	var recordedID int32 = 1
 	var replayedID int32 = 8
 	snapshotIdx := NewSnapshotIndex()
@@ -54,8 +54,8 @@ func TestPositiveSnapshotIndexGet(t *testing.T) {
 	}
 }
 
-// TestPositiveSnapshotIndexGet checks ID of Get mismatches.
-func TestNegativeSnapshotIndexGet(t *testing.T) {
+// TestSnapshotIndexGet checks ID of Get mismatches.
+func TestSnapshotIndexGet2(t *testing.T) {
 	var recordedID int32 = 1
 	var replayedID int32 = 8
 	snapshotIdx := NewSnapshotIndex()
