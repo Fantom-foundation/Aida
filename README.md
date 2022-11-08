@@ -122,7 +122,7 @@ reads the recorded traces and re-executes state operations from block 5,050,000 
 
 **Run**
 
-`./build/run-vm --worldstatedir path/to/world-state --db-impl [geth/carmen/memory] 4564026 5000000`
+`./build/trace run-vm --worldstatedir path/to/world-state --db-impl [geth/carmen/memory] 4564026 5000000`
 executes transactions from block 4,564,026 to 5,000,000. The tool initializes stateDB with accounts in the world state from option `--worldstatedir`. Each transaction calls VM which issues a series of StateDB operations to a selected storage system.
 
 **Options**
