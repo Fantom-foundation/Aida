@@ -45,9 +45,6 @@ const (
 	SubBalanceID
 	SuicideID
 
-	// NumProfiledOperations is number of profiled operations (must be last)
-	NumProfiledOperations
-
 	AddAddressToAccessListID
 	AddLogID
 	AddPreimageID
@@ -63,41 +60,10 @@ const (
 	PrepareID
 	SlotInAccessListID
 	SubRefundID
-)
 
-// operationLabels is used for retrieving labels in debug printing
-var operationLabels = map[int]string{
-	AddBalanceID:            "AddBalance",
-	BeginBlockID:            "BeginBlock",
-	CreateAccountID:         "CreateAccount",
-	EmptyID:                 "Empty",
-	EndBlockID:              "EndBlock",
-	EndTransactionID:        "EndTransaction",
-	ExistID:                 "Exist",
-	FinaliseID:              "Finalise",
-	GetBalanceID:            "GetBalance",
-	GetCodeHashID:           "GetCodeHash",
-	GetCodeHashLcID:         "GetCodeHashLc",
-	GetCodeID:               "GetCode",
-	GetCodeSizeID:           "GetCodeSize",
-	GetCommittedStateID:     "GetCommittedState",
-	GetCommittedStateLclsID: "GetCommittedStateLcls",
-	GetNonceID:              "GetNonce",
-	GetStateID:              "GetState",
-	GetStateLcID:            "GetStateLc",
-	GetStateLccsID:          "GetStateLccs",
-	GetStateLclsID:          "GetStateLcls",
-	HasSuicidedID:           "HasSuicided",
-	RevertToSnapshotID:      "RevertToSnapshot",
-	SetCodeID:               "SetCode",
-	SetNonceID:              "SetNonce",
-	SetStateID:              "SetState",
-	SetStateLclsID:          "SetStateLcls",
-	SnapshotID:              "Snapshot",
-	SubBalanceID:            "SubBalance",
-	SuicideID:               "Suicide",
-	CloseID:                 "Close",
-}
+	// NumProfiledOperations is number of profiled operations (must be last)
+	NumProfiledOperations
+)
 
 // OperationDictionary data structure contains a label and a read function for an operation
 type OperationDictionary struct {

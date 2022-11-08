@@ -40,5 +40,5 @@ func (op *EndBlock) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.
 
 // Debug prints a debug message for the end-block operation.
 func (op *EndBlock) Debug(ctx *dict.DictionaryContext) {
-	fmt.Printf("\t%s\n", operationLabels[EndBlockID])
+	fmt.Printf("\t%s\n", GetLabel(EndBlockID))
 }

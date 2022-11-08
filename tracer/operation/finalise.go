@@ -47,5 +47,5 @@ func (op *Finalise) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.
 
 // Debug prints a debug message for the finalise operation.
 func (op *Finalise) Debug(ctx *dict.DictionaryContext) {
-	fmt.Printf("\t%s: %t\n", operationLabels[FinaliseID], op.DeleteEmptyObjects)
+	fmt.Printf("\t%s: %t\n", GetLabel(FinaliseID), op.DeleteEmptyObjects)
 }

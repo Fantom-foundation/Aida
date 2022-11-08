@@ -35,7 +35,7 @@ func (s *MockStateDB) GetRecording() []Record {
 
 // Record structure
 type Record struct {
-	function  int   //signatures of called function
+	function  byte  //signatures of called function
 	arguments []any //arguments
 }
 
@@ -211,7 +211,7 @@ func (s *MockStateDB) compareRecordings(expected []Record, t *testing.T) {
 
 		for k, arg := range record.arguments {
 			if !areEqual(arg, expected[i].arguments[k]) {
-				t.Fatalf("wrong function %s argument: %s, expected %s", operationLabels[record.function], arg, expected[i].arguments[k])
+				t.Fatalf("wrong function %s argument: %s, expected %s", GetLabel(record.function), arg, expected[i].arguments[k])
 			}
 		}
 	}
@@ -266,7 +266,7 @@ func testOperationReadWrite(t *testing.T, op1 Operation, opRead func(file io.Rea
 	}
 }
 
-func testOperationDebug(t *testing.T, dict *dict.DictionaryContext, op Operation, opID int, s func(label string) string) {
+func testOperationDebug(t *testing.T, dict *dict.DictionaryContext, op Operation, opID byte, s func(label string) string) {
 	// divert stdout to a buffer
 	old := os.Stdout
 	r, w, _ := os.Pipe()
@@ -282,10 +282,7 @@ func testOperationDebug(t *testing.T, dict *dict.DictionaryContext, op Operation
 	io.Copy(&buf, r)
 
 	// check debug message
-	label, f := operationLabels[opID]
-	if !f {
-		t.Fatalf("label for %d not found", SuicideID)
-	}
+	label := GetLabel(opID)
 
 	expected := s(label)
 

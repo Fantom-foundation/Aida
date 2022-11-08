@@ -48,5 +48,5 @@ func (op *Suicide) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.D
 
 // Debug prints a debug message for the suicide operation.
 func (op *Suicide) Debug(ctx *dict.DictionaryContext) {
-	fmt.Printf("\t%s: %s\n", operationLabels[SuicideID], ctx.DecodeContract(op.ContractIndex))
+	fmt.Printf("\t%s: %s\n", GetLabel(SuicideID), ctx.DecodeContract(op.ContractIndex))
 }

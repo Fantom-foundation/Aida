@@ -48,5 +48,5 @@ func (op *GetCodeHash) Execute(db state.StateDB, ctx *dict.DictionaryContext) ti
 
 // Debug prints a debug message for the get-code-hash operation.
 func (op *GetCodeHash) Debug(ctx *dict.DictionaryContext) {
-	fmt.Printf("\t%s: %s\n", operationLabels[GetCodeHashID], ctx.DecodeContract(op.ContractIndex))
+	fmt.Printf("\t%s: %s\n", GetLabel(GetCodeHashID), ctx.DecodeContract(op.ContractIndex))
 }

@@ -60,5 +60,5 @@ func (op *AddBalance) Execute(db state.StateDB, ctx *dict.DictionaryContext) tim
 
 // Debug prints a debug message for the add-balance operation.
 func (op *AddBalance) Debug(ctx *dict.DictionaryContext) {
-	fmt.Printf("\t%s: %s, %s\n", operationLabels[AddBalanceID], ctx.DecodeContract(op.ContractIndex), new(big.Int).SetBytes(op.Amount[:]))
+	fmt.Printf("\t%s: %s, %s\n", GetLabel(AddBalanceID), ctx.DecodeContract(op.ContractIndex), new(big.Int).SetBytes(op.Amount[:]))
 }

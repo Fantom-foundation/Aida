@@ -48,5 +48,5 @@ func (op *Empty) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Dur
 
 // Debug prints a debug message for the Empty operation.
 func (op *Empty) Debug(ctx *dict.DictionaryContext) {
-	fmt.Printf("\t%s: %s\n", operationLabels[EmptyID], ctx.DecodeContract(op.ContractIndex))
+	fmt.Printf("\t%s: %s\n", GetLabel(EmptyID), ctx.DecodeContract(op.ContractIndex))
 }

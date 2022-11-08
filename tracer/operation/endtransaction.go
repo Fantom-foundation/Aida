@@ -43,5 +43,5 @@ func (op *EndTransaction) Execute(db state.StateDB, ctx *dict.DictionaryContext)
 
 // Debug prints a debug message for the end-transaction operation.
 func (op *EndTransaction) Debug(*dict.DictionaryContext) {
-	fmt.Printf("\t%s\n", operationLabels[EndTransactionID])
+	fmt.Printf("\t%s\n", GetLabel(EndTransactionID))
 }

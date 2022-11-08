@@ -48,5 +48,5 @@ func (op *GetCodeSize) Execute(db state.StateDB, ctx *dict.DictionaryContext) ti
 
 // Debug prints a debug message for get-code-size.
 func (op *GetCodeSize) Debug(ctx *dict.DictionaryContext) {
-	fmt.Printf("\t%s: %s\n", operationLabels[GetCodeSizeID], ctx.DecodeContract(op.ContractIndex))
+	fmt.Printf("\t%s: %s\n", GetLabel(GetCodeSizeID), ctx.DecodeContract(op.ContractIndex))
 }
