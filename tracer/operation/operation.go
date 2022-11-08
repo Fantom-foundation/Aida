@@ -45,6 +45,9 @@ const (
 	SubBalanceID
 	SuicideID
 
+	// NumProfiledOperations is number of profiled operations (must be last)
+	NumProfiledOperations
+
 	AddAddressToAccessListID
 	AddLogID
 	AddPreimageID
@@ -60,9 +63,6 @@ const (
 	PrepareID
 	SlotInAccessListID
 	SubRefundID
-
-	// NumProfiledOperations is number of profiled operations (must be last)
-	NumProfiledOperations
 )
 
 // OperationDictionary data structure contains a label and a read function for an operation
@@ -102,15 +102,29 @@ var opDict = map[byte]OperationDictionary{
 	SnapshotID:              {label: "Snapshot", readfunc: ReadSnapshot},
 	SubBalanceID:            {label: "SubBalance", readfunc: ReadSubBalance},
 	SuicideID:               {label: "Suicide", readfunc: ReadSuicide},
+
+	// for testing
+	AddAddressToAccessListID: {label: "AddAddressToAccessList", readfunc: ReadPanic},
+	AddLogID:                 {label: "AddLog", readfunc: ReadPanic},
+	AddPreimageID:            {label: "AddPreimage", readfunc: ReadPanic},
+	AddRefundID:              {label: "AddRefund", readfunc: ReadPanic},
+	AddressInAccessListID:    {label: "AddressInAccessList", readfunc: ReadPanic},
+	AddSlotToAccessListID:    {label: "AddSlotToAccessList", readfunc: ReadPanic},
+	CloseID:                  {label: "Close", readfunc: ReadPanic},
+	ForEachStorageID:         {label: "ForEachStorage", readfunc: ReadPanic},
+	GetLogsID:                {label: "GetLogs", readfunc: ReadPanic},
+	GetRefundID:              {label: "GetRefund", readfunc: ReadPanic},
+	IntermediateRootID:       {label: "IntermediateRoot", readfunc: ReadPanic},
+	PrepareAccessListID:      {label: "PrepareAccessList", readfunc: ReadPanic},
+	PrepareID:                {label: "Prepare", readfunc: ReadPanic},
+	SlotInAccessListID:       {label: "SlotInAccessList", readfunc: ReadPanic},
+	SubRefundID:              {label: "SubRefund", readfunc: ReadPanic},
 }
 
 // GetLabel retrieves a label of a state operation.
 func GetLabel(i byte) string {
-	if i < 0 || i >= NumProfiledOperations {
-		log.Fatalf("GetLabel failed; index is out-of-bound")
-	}
 	if _, ok := opDict[i]; !ok {
-		log.Fatalf("operation is not defined")
+		log.Fatalf("GetLabel failed; operation is not defined")
 	}
 
 	return opDict[i].label
@@ -151,6 +165,10 @@ func Read(f io.Reader) Operation {
 		log.Fatalf("Generated object of type %v has wrong ID (%v) ", GetLabel(op.GetId()), GetLabel(ID))
 	}
 	return op
+}
+
+func ReadPanic(file io.Reader) (Operation, error) {
+	panic("operation not implemented")
 }
 
 // Write an operation to file.
