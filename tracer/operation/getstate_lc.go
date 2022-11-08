@@ -56,5 +56,5 @@ func (op *GetStateLc) Execute(db state.StateDB, ctx *dict.DictionaryContext) tim
 func (op *GetStateLc) Debug(ctx *dict.DictionaryContext) {
 	contract := ctx.LastContractAddress()
 	storage := ctx.DecodeStorage(op.StorageIndex)
-	fmt.Printf("\t%s: %s, %s\n", GetLabel(GetStateLcID), contract, storage)
+	fmt.Print(contract, storage)
 }

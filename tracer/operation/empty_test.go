@@ -36,9 +36,7 @@ func TestEmptyReadWrite(t *testing.T) {
 // TestEmptyDebug creates a new Empty object and checks its Debug message.
 func TestEmptyDebug(t *testing.T) {
 	dict, op, addr := initEmpty(t)
-	testOperationDebug(t, dict, op, EmptyID, func(label string) string {
-		return fmt.Sprintf("\t%s: %s\n", label, addr)
-	})
+	testOperationDebug(t, dict, op, fmt.Sprint(addr))
 }
 
 // TestEmptyExecute

@@ -36,9 +36,7 @@ func TestGetBalanceReadWrite(t *testing.T) {
 // TestGetBalanceDebug creates a new GetBalance object and checks its Debug message.
 func TestGetBalanceDebug(t *testing.T) {
 	dict, op, addr := initGetBalance(t)
-	testOperationDebug(t, dict, op, GetBalanceID, func(label string) string {
-		return fmt.Sprintf("\t%s: %s\n", label, addr)
-	})
+	testOperationDebug(t, dict, op, fmt.Sprint(addr))
 }
 
 // TestGetBalanceExecute

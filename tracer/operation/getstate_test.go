@@ -39,9 +39,7 @@ func TestGetStateReadWrite(t *testing.T) {
 // TestGetStateDebug creates a new GetState object and checks its Debug message.
 func TestGetStateDebug(t *testing.T) {
 	dict, op, addr, storage := initGetState(t)
-	testOperationDebug(t, dict, op, GetStateID, func(label string) string {
-		return fmt.Sprintf("\t%s: %s, %s\n", label, addr, storage)
-	})
+	testOperationDebug(t, dict, op, fmt.Sprint(addr, storage))
 }
 
 // TestGetStateExecute

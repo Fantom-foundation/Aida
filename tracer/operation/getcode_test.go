@@ -35,9 +35,7 @@ func TestGetCodeReadWrite(t *testing.T) {
 // TestGetCodeDebug creates a new GetCode object and checks its Debug message.
 func TestGetCodeDebug(t *testing.T) {
 	dict, op, addr := initGetCode(t)
-	testOperationDebug(t, dict, op, GetCodeID, func(label string) string {
-		return fmt.Sprintf("\t%s: %s\n", label, addr)
-	})
+	testOperationDebug(t, dict, op, fmt.Sprint(addr))
 }
 
 // TestGetCodeExecute creates a new GetCode object and checks its execution signature.

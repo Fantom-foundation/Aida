@@ -40,9 +40,7 @@ func TestGetCommittedStateLclsReadWrite(t *testing.T) {
 // TestGetCommittedStateLclsDebug creates a new GetCommittedStateLcls object and checks its Debug message.
 func TestGetCommittedStateLclsDebug(t *testing.T) {
 	dict, op, addr, storage := initGetCommittedStateLcls(t)
-	testOperationDebug(t, dict, op, GetCommittedStateLclsID, func(label string) string {
-		return fmt.Sprintf("\t%s: %s, %s\n", label, addr, storage)
-	})
+	testOperationDebug(t, dict, op, fmt.Sprint(addr, storage))
 }
 
 // TestGetCommittedStateLclsExecute

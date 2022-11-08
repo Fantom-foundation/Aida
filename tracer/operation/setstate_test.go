@@ -41,9 +41,7 @@ func TestSetStateReadWrite(t *testing.T) {
 // TestSetStateDebug creates a new SetState object and checks its Debug message.
 func TestSetStateDebug(t *testing.T) {
 	dict, op, addr, storage, value := initSetState(t)
-	testOperationDebug(t, dict, op, SetStateID, func(label string) string {
-		return fmt.Sprintf("\t%s: %s, %s, %s\n", label, addr, storage, value)
-	})
+	testOperationDebug(t, dict, op, fmt.Sprint(addr, storage, value))
 }
 
 // TestSetStateExecute

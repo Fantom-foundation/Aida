@@ -33,9 +33,7 @@ func TestSnapshotReadWrite(t *testing.T) {
 // TestSnapshotDebug creates a new Snapshot object and checks its Debug message.
 func TestSnapshotDebug(t *testing.T) {
 	dict, op, snapID := initSnapshot(t)
-	testOperationDebug(t, dict, op, SnapshotID, func(label string) string {
-		return fmt.Sprintf("\t%s: %d\n", label, snapID)
-	})
+	testOperationDebug(t, dict, op, fmt.Sprint(snapID))
 }
 
 // TestSnapshotExecute

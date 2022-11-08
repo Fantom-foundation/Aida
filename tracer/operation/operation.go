@@ -181,6 +181,7 @@ func PrintProfiling() {
 
 // Debug prints debug information of an operation.
 func Debug(ctx *dict.DictionaryContext, op Operation) {
-	fmt.Printf("%v:\n", GetLabel(op.GetId()))
+	fmt.Printf("\t%s: ", GetLabel(op.GetId()))
 	op.Debug(ctx)
+	fmt.Println()
 }

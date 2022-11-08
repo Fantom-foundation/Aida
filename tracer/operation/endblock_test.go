@@ -1,7 +1,6 @@
 package operation
 
 import (
-	"fmt"
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"testing"
 )
@@ -33,9 +32,7 @@ func TestEndBlockReadWrite(t *testing.T) {
 // TestEndBlockDebug creates a new EndBlock object and checks its Debug message.
 func TestEndBlockDebug(t *testing.T) {
 	dict, op := initEndBlock(t)
-	testOperationDebug(t, dict, op, EndBlockID, func(label string) string {
-		return fmt.Sprintf("\t%s\n", label)
-	})
+	testOperationDebug(t, dict, op, "")
 }
 
 // TestEndBlockExecute

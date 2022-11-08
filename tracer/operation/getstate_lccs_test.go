@@ -47,9 +47,7 @@ func TestGetStateLccsReadWrite(t *testing.T) {
 // TestGetStateLccsDebug creates a new GetStateLccs object and checks its Debug message.
 func TestGetStateLccsDebug(t *testing.T) {
 	dict, op, addr, storage, _ := initGetStateLccs(t)
-	testOperationDebug(t, dict, op, GetStateLccsID, func(label string) string {
-		return fmt.Sprintf("\t%s: %s, %s\n", label, addr, storage)
-	})
+	testOperationDebug(t, dict, op, fmt.Sprint(addr, storage))
 }
 
 // TestGetStateLccsExecute

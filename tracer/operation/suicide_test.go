@@ -36,9 +36,7 @@ func TestSuicideReadWrite(t *testing.T) {
 // TestSuicideDebug creates a new Suicide object and checks its Debug message.
 func TestSuicideDebug(t *testing.T) {
 	dict, op, addr := initSuicide(t)
-	testOperationDebug(t, dict, op, SuicideID, func(label string) string {
-		return fmt.Sprintf("\t%s: %s\n", label, addr)
-	})
+	testOperationDebug(t, dict, op, fmt.Sprint(addr))
 }
 
 // TestSuicideExecute

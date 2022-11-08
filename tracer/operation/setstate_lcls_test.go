@@ -43,9 +43,7 @@ func TestSetStateLclsReadWrite(t *testing.T) {
 // TestSetStateLclsDebug creates a new SetStateLcls object and checks its Debug message.
 func TestSetStateLclsDebug(t *testing.T) {
 	dict, op, addr, storage, value := initSetStateLcls(t)
-	testOperationDebug(t, dict, op, SetStateLclsID, func(label string) string {
-		return fmt.Sprintf("\t%s: %s, %s, %s\n", label, addr, storage, value)
-	})
+	testOperationDebug(t, dict, op, fmt.Sprint(addr, storage, value))
 }
 
 // TestSetStateLclsExecute

@@ -47,5 +47,5 @@ func (op *HasSuicided) Execute(db state.StateDB, ctx *dict.DictionaryContext) ti
 
 // Debug prints a debug message for the HasSuicided operation.
 func (op *HasSuicided) Debug(ctx *dict.DictionaryContext) {
-	fmt.Printf("\t%s: %s\n", GetLabel(HasSuicidedID), ctx.DecodeContract(op.ContractIndex))
+	fmt.Print(ctx.DecodeContract(op.ContractIndex))
 }

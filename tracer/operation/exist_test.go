@@ -36,9 +36,7 @@ func TestExistReadWrite(t *testing.T) {
 // TestExistDebug creates a new Exist object and checks its Debug message.
 func TestExistDebug(t *testing.T) {
 	dict, op, addr := initExist(t)
-	testOperationDebug(t, dict, op, ExistID, func(label string) string {
-		return fmt.Sprintf("\t%s: %s\n", label, addr)
-	})
+	testOperationDebug(t, dict, op, fmt.Sprint(addr))
 }
 
 // TestExistExecute

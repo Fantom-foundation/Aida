@@ -46,9 +46,7 @@ func TestRevertToSnapshotReadWrite(t *testing.T) {
 // TestRevertToSnapshotDebug creates a new RevertToSnapshot object and checks its Debug message.
 func TestRevertToSnapshotDebug(t *testing.T) {
 	dict, _, op2, value, _ := initRevertToSnapshot(t)
-	testOperationDebug(t, dict, op2, RevertToSnapshotID, func(label string) string {
-		return fmt.Sprintf("\t%s: %d\n", label, value)
-	})
+	testOperationDebug(t, dict, op2, fmt.Sprint(value))
 }
 
 // TestRevertToSnapshotExecute

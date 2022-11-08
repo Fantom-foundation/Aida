@@ -36,9 +36,7 @@ func TestGetCodeSizeReadWrite(t *testing.T) {
 // TestGetCodeSizeDebug creates a new GetCodeSize object and checks its Debug message.
 func TestGetCodeSizeDebug(t *testing.T) {
 	dict, op, addr := initGetCodeSize(t)
-	testOperationDebug(t, dict, op, GetCodeSizeID, func(label string) string {
-		return fmt.Sprintf("\t%s: %s\n", label, addr)
-	})
+	testOperationDebug(t, dict, op, fmt.Sprint(addr))
 }
 
 // TestGetCodeSizeExecute creates a new GetCodeSize object and checks its execution signature.

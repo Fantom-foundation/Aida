@@ -36,9 +36,8 @@ func TestCreateAccountReadWrite(t *testing.T) {
 // TestCreateAccountDebug creates a new CreateAccount object and checks its Debug message.
 func TestCreateAccountDebug(t *testing.T) {
 	dict, op, addr := initCreateAccount(t)
-	testOperationDebug(t, dict, op, CreateAccountID, func(label string) string {
-		return fmt.Sprintf("\t%s: %s\n", label, addr)
-	})
+	testOperationDebug(t, dict, op, fmt.Sprint(addr))
+
 }
 
 // TestCreateAccountExecute

@@ -266,14 +266,14 @@ func testOperationReadWrite(t *testing.T, op1 Operation, opRead func(file io.Rea
 	}
 }
 
-func testOperationDebug(t *testing.T, dict *dict.DictionaryContext, op Operation, opID byte, s func(label string) string) {
+func testOperationDebug(t *testing.T, dict *dict.DictionaryContext, op Operation, args string) {
 	// divert stdout to a buffer
 	old := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	// print debug message
-	op.Debug(dict)
+	Debug(dict, op)
 
 	// restore stdout
 	w.Close()
@@ -282,11 +282,11 @@ func testOperationDebug(t *testing.T, dict *dict.DictionaryContext, op Operation
 	io.Copy(&buf, r)
 
 	// check debug message
-	label := GetLabel(opID)
+	label := GetLabel(op.GetId())
 
-	expected := s(label)
+	expected := "\t" + label + ": " + args + "\n"
 
 	if buf.String() != expected {
-		t.Fatalf("wrong debug message: %s", buf.String())
+		t.Fatalf("wrong debug message: %s vs %s; %d vs %d", buf.String(), expected, len(buf.String()), len(expected))
 	}
 }

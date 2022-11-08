@@ -43,9 +43,7 @@ func TestSetCodeReadWrite(t *testing.T) {
 // TestSetCodeDebug creates a new SetCode object and checks its Debug message.
 func TestSetCodeDebug(t *testing.T) {
 	dict, op, addr, value := initSetCode(t)
-	testOperationDebug(t, dict, op, SetCodeID, func(label string) string {
-		return fmt.Sprintf("\t%s: %s, %s\n", label, addr, value)
-	})
+	testOperationDebug(t, dict, op, fmt.Sprint(addr, value))
 }
 
 // TestSetCodeExecute

@@ -52,5 +52,5 @@ func (op *GetCommittedStateLcls) Execute(db state.StateDB, ctx *dict.DictionaryC
 func (op *GetCommittedStateLcls) Debug(ctx *dict.DictionaryContext) {
 	contract := ctx.LastContractAddress()
 	storage := ctx.ReadStorage(0)
-	fmt.Printf("\t%s: %s, %s\n", GetLabel(GetCommittedStateLclsID), contract, storage)
+	fmt.Print(contract, storage)
 }

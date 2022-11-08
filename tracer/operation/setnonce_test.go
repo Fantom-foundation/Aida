@@ -41,9 +41,7 @@ func TestSetNonceReadWrite(t *testing.T) {
 // TestSetNonceDebug creates a new SetNonce object and checks its Debug message.
 func TestSetNonceDebug(t *testing.T) {
 	dict, op, addr, value := initSetNonce(t)
-	testOperationDebug(t, dict, op, SetNonceID, func(label string) string {
-		return fmt.Sprintf("\t%s: %s, %d\n", label, addr, value)
-	})
+	testOperationDebug(t, dict, op, fmt.Sprint(addr, value))
 }
 
 // TestSetNonceExecute

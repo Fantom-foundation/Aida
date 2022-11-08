@@ -60,5 +60,5 @@ func (op *SubBalance) Execute(db state.StateDB, ctx *dict.DictionaryContext) tim
 
 // Debug prints a debug message for the sub-balance operation.
 func (op *SubBalance) Debug(ctx *dict.DictionaryContext) {
-	fmt.Printf("\t%s: %s, %s\n", GetLabel(SubBalanceID), ctx.DecodeContract(op.ContractIndex), new(big.Int).SetBytes(op.Amount[:]))
+	fmt.Print(ctx.DecodeContract(op.ContractIndex), new(big.Int).SetBytes(op.Amount[:]))
 }

@@ -48,5 +48,5 @@ func (op *CreateAccount) Execute(db state.StateDB, ctx *dict.DictionaryContext) 
 
 // Debug prints a debug message for the create-account operation.
 func (op *CreateAccount) Debug(ctx *dict.DictionaryContext) {
-	fmt.Printf("\t%s: %s\n", GetLabel(CreateAccountID), ctx.DecodeContract(op.ContractIndex))
+	fmt.Print(ctx.DecodeContract(op.ContractIndex))
 }

@@ -37,9 +37,7 @@ func TestFinaliseReadWrite(t *testing.T) {
 // TestFinaliseDebug creates a new Finalise object and checks its Debug message.
 func TestFinaliseDebug(t *testing.T) {
 	dict, op, deleteEmpty := initFinalise(t)
-	testOperationDebug(t, dict, op, FinaliseID, func(label string) string {
-		return fmt.Sprintf("\t%s: %t\n", label, deleteEmpty)
-	})
+	testOperationDebug(t, dict, op, fmt.Sprint(deleteEmpty))
 }
 
 // TestFinaliseExecute

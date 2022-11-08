@@ -40,9 +40,7 @@ func TestSubBalanceReadWrite(t *testing.T) {
 // TestSubBalanceDebug creates a new SubBalance object and checks its Debug message.
 func TestSubBalanceDebug(t *testing.T) {
 	dict, op, addr, value := initSubBalance(t)
-	testOperationDebug(t, dict, op, SubBalanceID, func(label string) string {
-		return fmt.Sprintf("\t%s: %s, %s\n", label, addr, value)
-	})
+	testOperationDebug(t, dict, op, fmt.Sprint(addr, value))
 }
 
 // TestSubBalanceExecute

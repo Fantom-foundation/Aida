@@ -36,9 +36,7 @@ func TestGetNonceReadWrite(t *testing.T) {
 // TestGetNonceDebug creates a new GetNonce object and checks its Debug message.
 func TestGetNonceDebug(t *testing.T) {
 	dict, op, addr := initGetNonce(t)
-	testOperationDebug(t, dict, op, GetNonceID, func(label string) string {
-		return fmt.Sprintf("\t%s: %s\n", label, addr)
-	})
+	testOperationDebug(t, dict, op, fmt.Sprint(addr))
 }
 
 // TestGetNonceExecute

@@ -38,9 +38,7 @@ func TestGetCommittedStateReadWrite(t *testing.T) {
 // TestGetCommittedStateDebug creates a new GetCommittedState object and checks its Debug message.
 func TestGetCommittedStateDebug(t *testing.T) {
 	dict, op, addr, storage := initGetCommittedState(t)
-	testOperationDebug(t, dict, op, GetCommittedStateID, func(label string) string {
-		return fmt.Sprintf("\t%s: %s, %s\n", label, addr, storage)
-	})
+	testOperationDebug(t, dict, op, fmt.Sprint(addr, storage))
 }
 
 // TestGetCommittedStateExecute

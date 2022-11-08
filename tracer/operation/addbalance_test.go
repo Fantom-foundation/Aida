@@ -40,9 +40,7 @@ func TestAddBalanceReadWrite(t *testing.T) {
 // TestAddBalanceDebug creates a new AddBalance object and checks its Debug message.
 func TestAddBalanceDebug(t *testing.T) {
 	dict, op, addr, value := initAddBalance(t)
-	testOperationDebug(t, dict, op, AddBalanceID, func(label string) string {
-		return fmt.Sprintf("\t%s: %s, %s\n", label, addr, value)
-	})
+	testOperationDebug(t, dict, op, fmt.Sprint(addr, value))
 }
 
 // TestAddBalanceExecute

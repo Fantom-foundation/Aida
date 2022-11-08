@@ -36,9 +36,7 @@ func TestGetCodeHashReadWrite(t *testing.T) {
 // TestGetCodeHashDebug creates a new GetCodeHash object and checks its Debug message.
 func TestGetCodeHashDebug(t *testing.T) {
 	dict, op, addr := initGetCodeHash(t)
-	testOperationDebug(t, dict, op, GetCodeHashID, func(label string) string {
-		return fmt.Sprintf("\t%s: %s\n", label, addr)
-	})
+	testOperationDebug(t, dict, op, fmt.Sprint(addr))
 }
 
 // TestGetCodeHashExecute

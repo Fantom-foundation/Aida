@@ -38,9 +38,7 @@ func TestBeginBlockReadWrite(t *testing.T) {
 // TestBeginBlockDebug creates a new BeginBlock object and checks its Debug message.
 func TestBeginBlockDebug(t *testing.T) {
 	dict, op, value := initBeginBlock(t)
-	testOperationDebug(t, dict, op, BeginBlockID, func(label string) string {
-		return fmt.Sprintf("\t%s: %d\n", label, value)
-	})
+	testOperationDebug(t, dict, op, fmt.Sprint(value))
 }
 
 // TestBeginBlockExecute

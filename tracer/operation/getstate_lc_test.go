@@ -40,9 +40,7 @@ func TestGetStateLcReadWrite(t *testing.T) {
 // TestGetStateLcDebug creates a new GetStateLc object and checks its Debug message.
 func TestGetStateLcDebug(t *testing.T) {
 	dict, op, addr, storage := initGetStateLc(t)
-	testOperationDebug(t, dict, op, GetStateLcID, func(label string) string {
-		return fmt.Sprintf("\t%s: %s, %s\n", label, addr, storage)
-	})
+	testOperationDebug(t, dict, op, fmt.Sprint(addr, storage))
 }
 
 // TestGetStateLcExecute
