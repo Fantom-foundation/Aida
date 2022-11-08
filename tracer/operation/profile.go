@@ -58,12 +58,11 @@ func (ps *ProfileStats) Profile(id byte, elapsed time.Duration) {
 
 // PrintProfiling prints profiling information for executed operation.
 func (ps *ProfileStats) PrintProfiling() {
-	var lastOpId byte = SuicideID // id of the last implemented operation
 	timeUnit := float64(time.Microsecond)
 	tuStr := "us"
 	fmt.Printf("id, n, mean(%v), std(%v), min(%v), max(%v)\n", tuStr, tuStr, tuStr, tuStr)
 	total := float64(0)
-	for id := byte(0); id <= lastOpId; id++ {
+	for id := byte(0); id < NumProfiledOperations; id++ {
 		n := ps.opFrequency[id]
 		mean := (float64(ps.opDuration[id]) / float64(n)) / timeUnit
 		std := math.Sqrt(ps.opVariance[id]) / timeUnit

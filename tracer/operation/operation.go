@@ -45,6 +45,9 @@ const (
 	SubBalanceID
 	SuicideID
 
+	// NumProfiledOperations is number of profiled operations (must be last)
+	NumProfiledOperations
+
 	AddAddressToAccessListID
 	AddLogID
 	AddPreimageID
@@ -60,9 +63,6 @@ const (
 	PrepareID
 	SlotInAccessListID
 	SubRefundID
-
-	// NumProfiledOperations is number of profiled operations (must be last)
-	NumProfiledOperations
 )
 
 // OperationDictionary data structure contains a label and a read function for an operation
@@ -123,11 +123,8 @@ var opDict = map[byte]OperationDictionary{
 
 // GetLabel retrieves a label of a state operation.
 func GetLabel(i byte) string {
-	if i < 0 || i >= NumProfiledOperations {
-		log.Fatalf("GetLabel failed; index is out-of-bound")
-	}
 	if _, ok := opDict[i]; !ok {
-		log.Fatalf("operation is not defined")
+		log.Fatalf("GetLabel failed; operation is not defined")
 	}
 
 	return opDict[i].label
