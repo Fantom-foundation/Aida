@@ -57,8 +57,5 @@ func (op *SetStateLcls) Debug(ctx *dict.DictionaryContext) {
 	contract := ctx.LastContractAddress()
 	storage := ctx.ReadStorage(0)
 	value := ctx.DecodeValue(op.ValueIndex)
-	fmt.Printf("\tcontract: %v\t storage: %v\t value: %v\n",
-		contract,
-		storage,
-		value)
+	fmt.Print(contract, storage, value)
 }

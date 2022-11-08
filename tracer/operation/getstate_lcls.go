@@ -52,5 +52,5 @@ func (op *GetStateLcls) Execute(db state.StateDB, ctx *dict.DictionaryContext) t
 func (op *GetStateLcls) Debug(ctx *dict.DictionaryContext) {
 	contract := ctx.LastContractAddress()
 	storage := ctx.ReadStorage(0)
-	fmt.Printf("\tcontract: %v\t storage: %v\n", contract, storage)
+	fmt.Print(contract, storage)
 }

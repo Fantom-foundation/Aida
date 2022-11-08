@@ -49,5 +49,5 @@ func (op *SetNonce) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.
 
 // Debug prints a debug message for the set-nonce operation.
 func (op *SetNonce) Debug(ctx *dict.DictionaryContext) {
-	fmt.Printf("\tcontract: %v nonce: %v\n", ctx.DecodeContract(op.ContractIndex), op.Nonce)
+	fmt.Print(ctx.DecodeContract(op.ContractIndex), op.Nonce)
 }

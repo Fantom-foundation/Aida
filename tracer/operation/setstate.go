@@ -52,8 +52,5 @@ func (op *SetState) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.
 
 // Debug prints a debug message for the set-state operation.
 func (op *SetState) Debug(ctx *dict.DictionaryContext) {
-	fmt.Printf("\tcontract: %v\t storage: %v\t value: %v\n",
-		ctx.DecodeContract(op.ContractIndex),
-		ctx.DecodeStorage(op.StorageIndex),
-		ctx.DecodeValue(op.ValueIndex))
+	fmt.Print(ctx.DecodeContract(op.ContractIndex), ctx.DecodeStorage(op.StorageIndex), ctx.DecodeValue(op.ValueIndex))
 }
