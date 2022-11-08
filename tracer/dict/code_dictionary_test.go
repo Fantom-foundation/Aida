@@ -8,9 +8,9 @@ import (
 	"testing"
 )
 
-// TestPositiveCodeDictionarySimple1 encodes byte-code, and compares whether the
+// TestCodeDictionarySimple1 encodes byte-code, and compares whether the
 // decoded bytecode is the same, and its index is zero.
-func TestPositiveCodeDictionarySimple1(t *testing.T) {
+func TestCodeDictionarySimple1(t *testing.T) {
 	encodedCode := []byte{0x1, 0x0, 0x02, 0x5, 0x7}
 	dict := NewCodeDictionary()
 	idx, err1 := dict.Encode(encodedCode)
@@ -20,9 +20,9 @@ func TestPositiveCodeDictionarySimple1(t *testing.T) {
 	}
 }
 
-// TestPositiveCodeDictionarySimple2 encoded two byte-codes, and compare whether the decoded
+// TestCodeDictionarySimple2 encoded two byte-codes, and compare whether the decoded
 // bytecode are not the same, and their indices are zero and one.
-func TestPositiveCodeDictionarySimple2(t *testing.T) {
+func TestCodeDictionarySimple2(t *testing.T) {
 	encodedCode1 := []byte{0x1, 0x0, 0x2, 0x0, 0x5}
 	encodedCode2 := []byte{0x1, 0x0, 0x2}
 	dict := NewCodeDictionary()
@@ -38,9 +38,9 @@ func TestPositiveCodeDictionarySimple2(t *testing.T) {
 	}
 }
 
-// TestPositiveCodeDictionarySimple3 encodes the same byte code twice and check that it
+// TestCodeDictionarySimple3 encodes the same byte code twice and check that it
 // is encoded only once, and its index is zero.
-func TestPositiveCodeDictionarySimple3(t *testing.T) {
+func TestCodeDictionarySimple3(t *testing.T) {
 	encodedCode := []byte{0x1, 0x02, 0x3, 0x4}
 	dict := NewCodeDictionary()
 	idx1, err1 := dict.Encode(encodedCode)
@@ -55,8 +55,8 @@ func TestPositiveCodeDictionarySimple3(t *testing.T) {
 	}
 }
 
-// TestNegativeCodeDictionaryOverflow checks whether dictionary overflows can be captured.
-func TestNegativeCodeDictionaryOverflow(t *testing.T) {
+// TestCodeDictionaryOverflow checks whether dictionary overflows can be captured.
+func TestCodeDictionaryOverflow(t *testing.T) {
 	encodedCode1 := []byte{0x1, 0x0, 0x2, 0x0, 0x5}
 	encodedCode2 := []byte{0x1, 0x0, 0x2}
 	dict := NewCodeDictionary()
@@ -74,9 +74,9 @@ func TestNegativeCodeDictionaryOverflow(t *testing.T) {
 	CodeDictionaryLimit = math.MaxUint32
 }
 
-// TestNegativeCodeDictionaryDecodingFailure1 checks whether invalid index for Decode() can be captured.
+// TestCodeDictionaryDecodingFailure1 checks whether invalid index for Decode() can be captured.
 // (Retrieving index 0 on an empty dictionary)
-func TestNegativeCodeDictionaryDecodingFailure1(t *testing.T) {
+func TestCodeDictionaryDecodingFailure1(t *testing.T) {
 	dict := NewCodeDictionary()
 	_, err := dict.Decode(0)
 	if err == nil {
@@ -84,9 +84,9 @@ func TestNegativeCodeDictionaryDecodingFailure1(t *testing.T) {
 	}
 }
 
-// TestNegativeCodeDictionaryDecodingFailure2 checks whether invalid index for Decode() can be captured.
+// TestCodeDictionaryDecodingFailure2 checks whether invalid index for Decode() can be captured.
 // (Retrieving index MaxUint32 on an empty dictionary)
-func TestNegativeCodeDictionaryDecodingFailure2(t *testing.T) {
+func TestCodeDictionaryDecodingFailure2(t *testing.T) {
 	dict := NewCodeDictionary()
 	_, err := dict.Decode(math.MaxUint32)
 	if err == nil {
@@ -94,8 +94,8 @@ func TestNegativeCodeDictionaryDecodingFailure2(t *testing.T) {
 	}
 }
 
-// TestNegativeCodeDictionaryReadFailure creates corrupted file and read file as dictionary.
-func TestNegativeCodeDictionaryReadFailure(t *testing.T) {
+// TestCodeDictionaryReadFailure creates corrupted file and read file as dictionary.
+func TestCodeDictionaryReadFailure(t *testing.T) {
 	filename := "./test.dict"
 	f, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
@@ -118,10 +118,10 @@ func TestNegativeCodeDictionaryReadFailure(t *testing.T) {
 	os.Remove(filename)
 }
 
-// TestPositiveCodeDictionaryReadWrite encodes two byte codes, writes them to file,
+// TestCodeDictionaryReadWrite encodes two byte codes, writes them to file,
 // and reads them from file. Check whether the newly created dictionary (read from
 // file) is identical.
-func TestPositiveCodeDictionaryReadWrite(t *testing.T) {
+func TestCodeDictionaryReadWrite(t *testing.T) {
 	filename := "./test.dict"
 	encodedCode1 := []byte{0x1, 0x0, 0x2, 0x0, 0x5}
 	encodedCode2 := []byte{0x1, 0x0, 0x2}
