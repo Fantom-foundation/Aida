@@ -113,7 +113,8 @@ func InitTransitions() Transitions {
 	EndBlock := func(c *stateContext) {
 	}
 
-	ops := []op{BeginBlock,
+	ops := []op{
+		BeginBlock,
 		GetState,
 		GetStateLcls,
 		GetStateLc,
