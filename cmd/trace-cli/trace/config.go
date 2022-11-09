@@ -61,6 +61,12 @@ var (
 		Name:  "worldstatedir",
 		Usage: "world state snapshot database path",
 	}
+	numberOfBlocksFlag = cli.IntFlag{
+		Name:    "number",
+		Aliases: []string{"n"},
+		Usage:   "Number of blocks",
+		Value:   1,
+	}
 )
 
 // execution configuration for replay command.
