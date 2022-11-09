@@ -4,14 +4,15 @@ package snapshot
 import (
 	"bytes"
 	"fmt"
+	"io"
+	"log"
+
 	"github.com/Fantom-foundation/Aida/world-state/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rlp"
-	"io"
-	"log"
 )
 
 var (
@@ -248,6 +249,31 @@ func (db *StateDB) HashToStorage(hash common.Hash) (common.Hash, error) {
 
 	adr.SetBytes(data)
 	return adr, nil
+}
+
+// HashsToStorage tries to resolve a set of hashed keys to their preimage.
+func (db *StateDB) HashsToStorage(keys map[common.Hash]int) (map[common.Hash]common.Hash, error) {
+	// It is way faster to iterate through all keys than to look them up one-by-one.
+	res := map[common.Hash]common.Hash{}
+	iter := db.Backend.NewIterator(HashToStoragePrefix, []byte{})
+	defer iter.Release()
+	for iter.Next() {
+		key := iter.Key()
+		if len(key) < 4 || !bytes.Equal(key[:4], HashToStoragePrefix) {
+			break
+		}
+		var hash common.Hash
+		hash.SetBytes(key[4:])
+		var value common.Hash
+		value.SetBytes(iter.Value())
+		if _, found := keys[hash]; found {
+			res[hash] = value
+		}
+	}
+	if iter.Error() != nil {
+		return nil, iter.Error()
+	}
+	return res, nil
 }
 
 // StorageToHash returns account hash hash for the given storage hash.
