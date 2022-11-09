@@ -52,7 +52,7 @@ last block of the inclusive range of blocks to trace transactions.`,
 var profile bool
 
 // runVMTask executes VM on a chosen storage system.
-func runVMTask(db state.StateDB, block uint64, tx int, recording *substate.Substate) error {
+func runVMTask(db state.StateDB, cfg *TraceConfig, block uint64, tx int, recording *substate.Substate) error {
 
 	inputAlloc := recording.InputAlloc
 	inputEnv := recording.Env
@@ -89,9 +89,11 @@ func runVMTask(db state.StateDB, block uint64, tx int, recording *substate.Subst
 	}
 
 	// validate whether the input alloc is contained in the db
-	if err := validateStateDB(inputAlloc, db); err != nil {
-		msg := fmt.Sprintf("Block: %v Transaction: %v\n", block, tx)
-		return fmt.Errorf(msg+"Input alloc is not contained in the stateDB. %v", err)
+	if cfg.enableValidation {
+		if err := validateStateDB(inputAlloc, db); err != nil {
+			msg := fmt.Sprintf("Block: %v Transaction: %v\n", block, tx)
+			return fmt.Errorf(msg+"Input alloc is not contained in the stateDB. %v", err)
+		}
 	}
 
 	// Apply Message
@@ -161,16 +163,18 @@ func runVMTask(db state.StateDB, block uint64, tx int, recording *substate.Subst
 	evmResult.GasUsed = msgResult.UsedGas
 
 	// check whether the outputAlloc substate is contained in the world-state db.
-	if err := validateStateDB(outputAlloc, db); err != nil {
-		msg := fmt.Sprintf("Block: %v Transaction: %v\n", block, tx)
-		return fmt.Errorf(msg+"Output alloc is not contained in the stateDB. %v", err)
-	}
-	r := outputResult.Equal(evmResult)
-	if !r {
-		fmt.Printf("Block: %v Transaction: %v\n", block, tx)
-		fmt.Printf("inconsistent output: result\n")
-		replay.PrintResultDiffSummary(outputResult, evmResult)
-		return fmt.Errorf("inconsistent output")
+	if cfg.enableValidation {
+		if err := validateStateDB(outputAlloc, db); err != nil {
+			msg := fmt.Sprintf("Block: %v Transaction: %v\n", block, tx)
+			return fmt.Errorf(msg+"Output alloc is not contained in the stateDB. %v", err)
+		}
+		r := outputResult.Equal(evmResult)
+		if !r {
+			fmt.Printf("Block: %v Transaction: %v\n", block, tx)
+			fmt.Printf("inconsistent output: result\n")
+			replay.PrintResultDiffSummary(outputResult, evmResult)
+			return fmt.Errorf("inconsistent output")
+		}
 	}
 	return nil
 }
@@ -231,6 +235,7 @@ func runVM(ctx *cli.Context) error {
 		primeStateDB(ws, db)
 	}
 	if cfg.enableValidation {
+		fmt.Printf("WARNING: validation enabled, reducing Tx throughput\n")
 		if err := validateStateDB(ws, db); err != nil {
 			return fmt.Errorf("Pre: World state is not contained in the stateDB. %v", err)
 		}
@@ -251,11 +256,11 @@ func runVM(ctx *cli.Context) error {
 	defer iter.Release()
 	for iter.Next() {
 		tx := iter.Value()
-		// close off old block with an end-block operation
+		// stop when reaching end of block range
 		if tx.Block > cfg.last {
 			break
 		}
-		if err := runVMTask(db, tx.Block, tx.Transaction, tx.Substate); err != nil {
+		if err := runVMTask(db, cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
 			return fmt.Errorf("VM execution failed. %v", err)
 		}
 		if cfg.enableProgress {
