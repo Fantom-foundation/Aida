@@ -242,9 +242,11 @@ func runVM(ctx *cli.Context) error {
 	}
 
 	var (
-		start   time.Time
-		sec     float64
-		lastSec float64
+		start       time.Time
+		sec         float64
+		lastSec     float64
+		txCount     int
+		lastTxCount int
 	)
 	if cfg.enableProgress {
 		start = time.Now()
@@ -260,6 +262,7 @@ func runVM(ctx *cli.Context) error {
 		if tx.Block > cfg.last {
 			break
 		}
+		txCount++
 		if err := runVMTask(db, cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
 			return fmt.Errorf("VM execution failed. %v", err)
 		}
@@ -267,15 +270,16 @@ func runVM(ctx *cli.Context) error {
 			// report progress
 			sec = time.Since(start).Seconds()
 			if sec-lastSec >= 15 {
-				fmt.Printf("trace record: Elapsed time: %.0f s, at block %v\n", sec, tx.Block)
+				fmt.Printf("trace record: Elapsed time: %.0f s, at block %v (~ %.1f Tx/s)\n", sec, tx.Block, float64(txCount-lastTxCount)/(sec-lastSec))
 				lastSec = sec
+				lastTxCount = txCount
 			}
 		}
 	}
 
 	if cfg.enableProgress {
 		sec = time.Since(start).Seconds()
-		fmt.Printf("trace record: Total elapsed time: %.3f s, processed %v blocks\n", sec, cfg.last-cfg.first+1)
+		fmt.Printf("trace record: Total elapsed time: %.3f s, processed %v blocks (~ %.1f Tx/s)\n", sec, cfg.last-cfg.first+1, float64(txCount)/(sec))
 	}
 	if cfg.enableValidation {
 		advanceWorldState(ws, cfg.first, cfg.last, cfg.workers)
