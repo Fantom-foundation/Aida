@@ -20,13 +20,13 @@ func MakeCarmenStateDB(directory, variant string) (StateDB, error) {
 	var err error
 	switch variant {
 	case "go-memory":
-		db, err = carmen.NewMemory()
+		db, err = carmen.NewMemory(directory)
 	case "go-file":
 		db, err = carmen.NewCachedLeveLIndexFileStore(directory)
 	case "go-ldb":
 		db, err = carmen.NewLeveLIndexAndStore(directory)
 	case "cpp-memory":
-		db, err = carmen.NewCppInMemoryState()
+		db, err = carmen.NewCppInMemoryState(directory)
 	case "cpp-file":
 		db, err = carmen.NewCppFileBasedState(directory)
 	default:
@@ -154,40 +154,52 @@ func (s *carmenStateDB) GetSubstatePostAlloc() substate.SubstateAlloc {
 }
 
 func (s *carmenStateDB) Close() error {
-	// TODO: implement
-	return nil
+	return s.db.Close()
 }
 
-func (s *carmenStateDB) AddRefund(uint64) {
-	// ignored
+func (s *carmenStateDB) AddRefund(amount uint64) {
+	s.db.AddRefund(amount)
 }
 
-func (s *carmenStateDB) SubRefund(uint64) {
-	// ignored
+func (s *carmenStateDB) SubRefund(amount uint64) {
+	s.db.SubRefund(amount)
 }
 
 func (s *carmenStateDB) GetRefund() uint64 {
-	// ignored
-	return uint64(0)
+	return s.db.GetRefund()
 }
 
 func (s *carmenStateDB) PrepareAccessList(sender common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
-	// ignored
+	s.db.ClearAccessList()
+	s.db.AddAddressToAccessList(cc.Address(sender))
+	if dest != nil {
+		s.db.AddAddressToAccessList(cc.Address(*dest))
+	}
+	for _, addr := range precompiles {
+		s.db.AddAddressToAccessList(cc.Address(addr))
+	}
+	for _, el := range txAccesses {
+		s.db.AddAddressToAccessList(cc.Address(el.Address))
+		for _, key := range el.StorageKeys {
+			s.db.AddSlotToAccessList(cc.Address(el.Address), cc.Key(key))
+		}
+	}
 }
 
 func (s *carmenStateDB) AddressInAccessList(addr common.Address) bool {
-	// ignored
-	return false
+	return s.db.IsAddressInAccessList(cc.Address(addr))
 }
+
 func (s *carmenStateDB) SlotInAccessList(addr common.Address, slot common.Hash) (addressOk bool, slotOk bool) {
-	// ignored
-	return false, false
+	return s.db.IsSlotInAccessList(cc.Address(addr), cc.Key(slot))
 }
+
 func (s *carmenStateDB) AddAddressToAccessList(addr common.Address) {
-	// ignored
+	s.db.AddAddressToAccessList(cc.Address(addr))
 }
+
 func (s *carmenStateDB) AddSlotToAccessList(addr common.Address, slot common.Hash) {
-	// ignored
+	s.db.AddSlotToAccessList(cc.Address(addr), cc.Key(slot))
 }
 
 func (s *carmenStateDB) AddLog(*types.Log) {
