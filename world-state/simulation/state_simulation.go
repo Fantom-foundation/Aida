@@ -6,72 +6,112 @@ import (
 	"fmt"
 	"github.com/Fantom-foundation/Carmen/go/common"
 	"github.com/Fantom-foundation/Carmen/go/state"
+	"math"
 	"math/big"
 	"math/rand"
+	"sync"
 	"time"
 )
 
 const KeysCacheSize = 256
-const OpsChanSize = 1000
+const BlocksChanSize = 1000
 
 // Simulate executes simulation from StartBlock and runs the Markov Chain until EndBlock is reached
-func Simulate(ctx context.Context, stateDB state.StateDB, dist common.Distribution, transitions Transitions, num uint) {
+func Simulate(ctx context.Context, stateDB state.StateDB, transitions Transitions, n uint, workers int) {
 	// simulate one block processing
-	ops := generateOperationsFactory(ctx, transitions, num)
+	ops := generateOperationsFactory(ctx, transitions, n, workers)
+
+	dist := common.Exponential.GetDistribution(math.MaxInt)
 
 	simulate(ctx, stateDB, dist, transitions, ops)
 }
 
 // simulate
-func simulate(ctx context.Context, stateDB state.StateDB, dist common.Distribution, transitions Transitions, ops chan byte) {
+func simulate(ctx context.Context, stateDB state.StateDB, dist common.Distribution, transitions Transitions, ops chan []byte) {
 	sc := newStateContext(stateDB, dist)
 
 	// run Markov chain
-	var previousState, currentState byte
-	var steps uint
+	var blockOps []byte
 	var ok bool
-	var blockNum = 1
+	var steps uint
+	var blockNum = 0
 
 	ctxDone := ctx.Done()
 	for {
 		select {
 		case <-ctxDone:
 			return
-		case currentState, ok = <-ops:
+		case blockOps, ok = <-ops:
 			if !ok {
 				return
 			}
-			steps++
+			blockNum++
+			steps = 0
+			for _, currentState := range blockOps {
+				steps++
 
-			// execute current state
-			sc.perform(transitions.ops[currentState])
+				// execute current state
+				sc.perform(transitions.ops[currentState])
 
-			fmt.Printf("Block: %3.0d - Step: %3.0d. %25s -> %25s, address: %x, key: %x, value: %x, balance: %x, nonce: %x \n", blockNum, steps, transitions.labels[previousState], transitions.labels[currentState], sc.address, sc.key, sc.value, sc.balance, sc.nonce)
-
-			if currentState == transitions.endBlockOpIdx {
-				steps = 0
-				blockNum++
+				fmt.Printf("Block: %3.0d - Step: %3.0d. %25s, address: %x, key: %x, value: %x, balance: %x, nonce: %x \n", blockNum, steps, transitions.labels[currentState], sc.address, sc.key, sc.value, sc.balance, sc.nonce)
 			}
-
-			previousState = currentState
 		}
 	}
 }
 
-func generateOperationsFactory(ctx context.Context, transitions Transitions, n uint) chan byte {
-	ops := make(chan byte, OpsChanSize)
-	go generateOperations(ctx, transitions, n, ops)
+func generateOperationsFactory(ctx context.Context, transitions Transitions, n uint, workers int) chan []byte {
+	ops := make(chan []byte, BlocksChanSize)
+
+	generate := filler(n, workers)
+
+	go func() {
+		var wg sync.WaitGroup
+		for i := 0; i < workers; i++ {
+			wg.Add(1)
+			go worker(ctx, generate, transitions, ops, &wg)
+		}
+		wg.Wait()
+		close(ops)
+	}()
+
 	return ops
 }
 
-func generateOperations(ctx context.Context, transitions Transitions, n uint, ops chan byte) {
-	defer close(ops)
+func filler(n uint, workers int) chan bool {
+	generate := make(chan bool, workers)
+	go func() {
+		defer close(generate)
+		var i uint = 0
+		for ; i < n; i++ {
+			generate <- true
+		}
+	}()
+	return generate
+}
+
+func worker(ctx context.Context, generate chan bool, transitions Transitions, ops chan []byte, wg *sync.WaitGroup) {
+	defer wg.Done()
+	ctxDone := ctx.Done()
+	for {
+		select {
+		case <-ctxDone:
+			return
+		case _, ok := <-generate:
+			if !ok {
+				return
+			}
+			generateBlock(transitions, ops)
+		}
+	}
+}
+
+func generateBlock(transitions Transitions, ops chan []byte) {
+	res := make([]byte, 0)
 
 	opLen := byte(len(transitions.ops))
-	ctxDone := ctx.Done()
 	// initializing current state to 0 - BeginBlock
 	currentState := transitions.beginBlockOpIdx
-	ops <- currentState
+	res = append(res, currentState)
 	for {
 		// determine next state
 		p := rand.Float64()
@@ -82,24 +122,19 @@ func generateOperations(ctx context.Context, transitions Transitions, n uint, op
 		for ; i < opLen; i++ {
 			sum += transitions.probabilities[i][currentState]
 			if p <= sum {
+				//fmt.Printf("%25s -> %25s \n", transitions.labels[currentState], transitions.labels[i])
 				currentState = i
 
-				select {
-				case <-ctxDone:
-					return
-				case ops <- currentState:
-				}
+				res = append(res, currentState)
 				break
 			}
 		}
-		// operations for another block generated
+
 		if currentState == transitions.endBlockOpIdx {
-			n--
-			if n == 0 {
-				// desired number of blocks was generated
-				break
-			}
+			ops <- res
+			break
 		}
+
 	}
 }
 
