@@ -20,7 +20,7 @@ func MakeCarmenStateDB(directory, variant string) (StateDB, error) {
 	var err error
 	switch variant {
 	case "go-memory":
-		db, err = carmen.NewMemory(directory)
+		db, err = carmen.NewMemory()
 	case "go-file":
 		db, err = carmen.NewCachedLeveLIndexFileStore(directory)
 	case "go-ldb":
