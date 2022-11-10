@@ -132,13 +132,15 @@ func (s *carmenStateDB) Finalise(deleteEmptyObjects bool) {
 	// In Geth 'Finalise' is called to end a transaction and seal its effects.
 	// In Carmen, this event is called 'EndTransaction'.
 	s.db.EndTransaction()
-	// To be fair to the geth implementation, we comput the state hash after each transaction.
-	s.db.GetHash()
 }
 
 func (s *carmenStateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	s.db.EndTransaction()
 	return common.Hash(s.db.GetHash())
+}
+
+func (s *carmenStateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
+	return common.Hash(s.db.GetHash()), nil
 }
 
 func (s *carmenStateDB) Prepare(thash common.Hash, ti int) {

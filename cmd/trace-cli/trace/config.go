@@ -65,15 +65,17 @@ var (
 
 // execution configuration for replay command.
 type TraceConfig struct {
-	first            uint64 // first block
-	last             uint64 // last block
-	workers          int    // number of worker threads
+	first uint64 // first block
+	last  uint64 // last block
+
+	debug            bool   // enable trace debug flag
 	enableValidation bool   // enable validation flag
 	enableProgress   bool   // enable progress report flag
-	debug            bool   // enable trace debug flag
-	worldStateDir    string // worldstate directory
 	impl             string // storage implementation
+	profile          bool   // enable micro profiling
 	variant          string // database variant
+	workers          int    // number of worker threads
+	worldStateDir    string // worldstate directory
 }
 
 // NewTraceConfig creates and initializes TraceConfig with commandline arguments.
@@ -88,15 +90,17 @@ func NewTraceConfig(ctx *cli.Context) (*TraceConfig, error) {
 	}
 
 	cfg := &TraceConfig{
-		first:            first,
-		last:             last,
-		workers:          ctx.Int(substate.WorkersFlag.Name),
+		first: first,
+		last:  last,
+
+		debug:            ctx.Bool(traceDebugFlag.Name),
 		enableValidation: ctx.Bool(validateEndState.Name),
 		enableProgress:   !ctx.Bool(disableProgressFlag.Name),
-		debug:            ctx.Bool(traceDebugFlag.Name),
-		worldStateDir:    ctx.String(worldStateDirFlag.Name),
 		impl:             ctx.String(stateDbImplementation.Name),
+		profile:          ctx.Bool(profileFlag.Name),
 		variant:          ctx.String(stateDbVariant.Name),
+		workers:          ctx.Int(substate.WorkersFlag.Name),
+		worldStateDir:    ctx.String(worldStateDirFlag.Name),
 	}
 
 	if cfg.enableProgress {

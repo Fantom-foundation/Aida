@@ -54,6 +54,7 @@ type BasicStateDB interface {
 	RevertToSnapshot(int)
 	Finalise(bool)
 	IntermediateRoot(bool) common.Hash
+	Commit(bool) (common.Hash, error)
 	Prepare(common.Hash, int)
 
 	AddLog(*types.Log)
