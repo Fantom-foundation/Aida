@@ -2,6 +2,7 @@ package snapshot
 
 import (
 	"context"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/substate"
 )
@@ -11,6 +12,8 @@ func (db *StateDB) ToSubstateAlloc(ctx context.Context) (substate.SubstateAlloc,
 	ssAccounts := make(substate.SubstateAlloc)
 	iter := db.NewAccountIterator(ctx)
 	defer iter.Release()
+
+	needed := map[common.Hash]int{}
 
 	// loop over all the accounts
 	for iter.Next() {
@@ -30,13 +33,10 @@ func (db *StateDB) ToSubstateAlloc(ctx context.Context) (substate.SubstateAlloc,
 		}
 		storage := make(map[common.Hash]common.Hash, len(acc.Storage))
 		for h, v := range acc.Storage {
-			s, err := db.HashToStorage(h)
-			if err != nil {
-				// not all storage addresses are currently exportable - missing pre genesis data
-				//return nil, fmt.Errorf("target storage %s not found; %s", acc.Hash.String(), err.Error())
-				continue
-			}
-			storage[s] = v
+			// We use the hashed keys in the first iteration, before resolving them in a bulk fetch
+			// from the DB and rewritting them below.
+			needed[h] = 0
+			storage[h] = v
 		}
 
 		ss := substate.SubstateAccount{
@@ -47,6 +47,27 @@ func (db *StateDB) ToSubstateAlloc(ctx context.Context) (substate.SubstateAlloc,
 		}
 
 		ssAccounts[address] = &ss
+	}
+
+	// Resolve all hashed slot addresses in one go.
+	resolved, err := db.HashsToStorage(needed)
+	if err != nil {
+		return nil, err
+	}
+
+	// Rewrite storage keys according to resolved keys.
+	for _, value := range ssAccounts {
+		storage := make(map[common.Hash]common.Hash, len(value.Storage))
+		for h, v := range value.Storage {
+			s, found := resolved[h]
+			if found {
+				storage[s] = v
+			} else {
+				// not all storage addresses are currently exportable - missing pre genesis data
+				//return nil, fmt.Errorf("target storage %s not found; %s", acc.Hash.String(), err.Error())
+			}
+		}
+		value.Storage = storage
 	}
 
 	return ssAccounts, nil
