@@ -2,10 +2,9 @@ package trace
 
 import (
 	"github.com/Fantom-foundation/Aida/world-state/simulation"
-	"github.com/Fantom-foundation/Carmen/go/common"
 	"github.com/Fantom-foundation/Carmen/go/state"
+	"github.com/ethereum/go-ethereum/substate"
 	"github.com/urfave/cli/v2"
-	"math"
 )
 
 // SimulateCommand simulates traffic by using Markov chains
@@ -16,6 +15,7 @@ var SimulateCommand = cli.Command{
 	ArgsUsage: "<blockNum>",
 	Flags: []cli.Flag{
 		&numberOfBlocksFlag,
+		&substate.WorkersFlag,
 	},
 	Description: `
 The simulate command requires two arguments:
@@ -27,11 +27,13 @@ func SimulateAction(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	// TODO - how to generate max range for Address and Keys?
-	dist := common.Exponential.GetDistribution(math.MaxInt)
 	t := simulation.InitTransitions()
 
-	blocksNum := ctx.Uint(numberOfBlocksFlag.Name)
-	simulation.Simulate(ctx.Context, state.CreateStateDBUsing(stateDB), dist, t, blocksNum)
+	// number of blocks to be generated
+	n := ctx.Uint(numberOfBlocksFlag.Name)
+
+	workers := ctx.Int(substate.WorkersFlag.Name)
+
+	simulation.Simulate(ctx.Context, state.CreateStateDBUsing(stateDB), t, n, workers)
 	return nil
 }
