@@ -73,6 +73,6 @@ func (ps *ProfileStats) PrintProfiling() {
 		total += float64(ps.opDuration[id])
 	}
 	sec := total / float64(time.Second)
-	tps := float64(ps.opFrequency[EndTransactionID]) / sec
+	tps := float64(ps.opFrequency[FinaliseID]) / sec
 	fmt.Printf("Total StateDB net execution time=%v (s) / ~%.1f Tx/s\n", sec, tps)
 }

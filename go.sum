@@ -49,8 +49,8 @@ github.com/Fantom-foundation/go-opera-substate v1.0.1-0.20221010085351-fcd736e32
 github.com/Fantom-foundation/lachesis-base v0.0.0-20220103160934-6b4931c60582/go.mod h1:E6+2LOvgADwSOv0U5YXhRJz4PlX8qJxvq8M93AOC1tM=
 github.com/Fantom-foundation/lachesis-base v0.0.0-20220904103856-4bb2a8448a22 h1:wlB+I8x5mf1a3zlIuOTumy2ye/zglOIGcmTOfJ2bi8s=
 github.com/Fantom-foundation/lachesis-base v0.0.0-20220904103856-4bb2a8448a22/go.mod h1:CFMonaK1v/QHwpjLszuycFDgLXNazZqZxciwhKwXDVQ=
-github.com/Fantom-foundation/substate-cli v0.0.0-20221014124903-8a7400c3b785 h1:s2JhLM1e8Tb7uQc6GoGT0FmglcGmVQxej/j3bynhCDQ=
-github.com/Fantom-foundation/substate-cli v0.0.0-20221014124903-8a7400c3b785/go.mod h1:3WT20aGqVRrF6lkw197BUGcrlAp49qy3X0zqGndpR4Y=
+github.com/Fantom-foundation/substate-cli v0.0.0-20221109110938-3d145e50b9b9 h1:lQDVpPp90qSgW3RYhi9jIlGnZ94FyU1mObKblUY5RGo=
+github.com/Fantom-foundation/substate-cli v0.0.0-20221109110938-3d145e50b9b9/go.mod h1:3WT20aGqVRrF6lkw197BUGcrlAp49qy3X0zqGndpR4Y=
 github.com/Joker/hpp v1.0.0/go.mod h1:8x5n+M1Hp5hC0g8okX3sR3vFQwynaX/UgSOM9MeBKzY=
 github.com/Joker/jade v1.0.1-0.20190614124447-d475f43051e7/go.mod h1:6E6s8o2AE4KhCrqr6GRJjdC/gNfTdxkIXvuGZZda2VM=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=

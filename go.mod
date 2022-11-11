@@ -6,7 +6,8 @@ require (
 	github.com/Fantom-foundation/Carmen/go v0.0.0-00010101000000-000000000000
 	github.com/Fantom-foundation/go-opera v1.1.1-rc.2
 	github.com/Fantom-foundation/lachesis-base v0.0.0-20220904103856-4bb2a8448a22
-	github.com/Fantom-foundation/substate-cli v0.0.0-20221014124903-8a7400c3b785
+	github.com/Fantom-foundation/substate-cli v0.0.0-20221109110938-3d145e50b9b9
+	github.com/dsnet/compress v0.0.1
 	github.com/ethereum/go-ethereum v1.10.25
 	github.com/fatih/color v1.13.0
 	github.com/olekukonko/tablewriter v0.0.5
@@ -28,7 +29,6 @@ require (
 	github.com/cockroachdb/redact v1.1.3 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/deckarep/golang-set v1.7.1 // indirect
-	github.com/dsnet/compress v0.0.1 // indirect
 	github.com/edsrzf/mmap-go v1.0.0 // indirect
 	github.com/getsentry/sentry-go v0.14.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
