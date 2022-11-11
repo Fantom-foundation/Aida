@@ -3,6 +3,7 @@ package trace
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/substate"
@@ -104,10 +105,10 @@ func NewTraceConfig(ctx *cli.Context) (*TraceConfig, error) {
 	}
 
 	if cfg.enableProgress {
-		fmt.Printf("Run config:\n")
-		fmt.Printf("\tBlock range: %v to %v\n", cfg.first, cfg.last)
-		fmt.Printf("\tStorage system: %v, DB variant: %v\n", cfg.impl, cfg.variant)
-		fmt.Printf("\tWorld state directory: %v\n", cfg.worldStateDir)
+		log.Printf("Run config:\n")
+		log.Printf("\tBlock range: %v to %v\n", cfg.first, cfg.last)
+		log.Printf("\tStorage system: %v, DB variant: %v\n", cfg.impl, cfg.variant)
+		log.Printf("\tWorld state directory: %v\n", cfg.worldStateDir)
 	}
 	return cfg, nil
 }
