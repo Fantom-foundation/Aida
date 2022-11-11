@@ -3,6 +3,7 @@ package trace
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"runtime/pprof"
 	"time"
@@ -41,42 +42,59 @@ The trace replay command requires two arguments:
 last block of the inclusive range of blocks to replay storage traces.`,
 }
 
+// readTrace reads operations from trace files and puts them into a channel.
+func readTrace(cfg *TraceConfig, ch chan operation.Operation) {
+	traceIter := tracer.NewTraceIterator(cfg.first, cfg.last)
+	defer traceIter.Release()
+	for traceIter.Next() {
+		op := traceIter.Value()
+		ch <- op
+	}
+	close(ch)
+}
+
 // traceReplayTask simulates storage operations from storage traces on stateDB.
 func traceReplayTask(cfg *TraceConfig) error {
+
+	// starting reading in parallel
+	log.Printf("Start reading operations in parallel")
+	opChannel := make(chan operation.Operation, 100000)
+	go readTrace(cfg, opChannel)
+
 	// load dictionaries & indexes
+	log.Printf("Load dictionaries")
 	dCtx := dict.ReadDictionaryContext()
 
 	// intialize the world state and advance it to the first block
-	fmt.Printf("trace replay: Load and advance worldstate to block %v\n", cfg.first-1)
+	log.Printf("Load and advance worldstate to block %v", cfg.first-1)
 	ws, err := generateWorldState(cfg.worldStateDir, cfg.first-1, cfg.workers)
 	if err != nil {
 		return err
 	}
 
-	// create a directory for the store to place all its files.
+	// create a directory for the store to place all its files, and
+	// instantiate the state DB under testing.
+	log.Printf("Create stateDB database")
 	stateDirectory, err := ioutil.TempDir("", "state_db_*")
 	if err != nil {
 		return err
 	}
-
-	// instantiate the state DB under testing
 	db, err := makeStateDB(stateDirectory, cfg.impl, cfg.variant)
 	if err != nil {
 		return err
 	}
 
 	// prime stateDB
-	fmt.Printf("trace replay: Prime stateDB\n")
+	log.Printf("Prime StateDB database with world-state")
 	if cfg.impl == "memory" {
 		db.PrepareSubstate(&ws)
 	} else {
 		primeStateDB(ws, db)
 	}
 
-	// initialize trace interator
-	traceIter := tracer.NewTraceIterator(cfg.first, cfg.last)
-	defer traceIter.Release()
+	log.Printf("Replay storage operations on StateDB database")
 
+	// progress message setup
 	var (
 		start   time.Time
 		sec     float64
@@ -89,9 +107,7 @@ func traceReplayTask(cfg *TraceConfig) error {
 	}
 
 	// replace storage trace
-	fmt.Printf("trace replay: Replay storage operations\n")
-	for traceIter.Next() {
-		op := traceIter.Value()
+	for op := range opChannel {
 		if op.GetId() == operation.BeginBlockID {
 			block := op.(*operation.BeginBlock).BlockNumber
 			if block > cfg.last {
@@ -101,23 +117,23 @@ func traceReplayTask(cfg *TraceConfig) error {
 				// report progress
 				sec = time.Since(start).Seconds()
 				if sec-lastSec >= 15 {
-					fmt.Printf("trace replay: Elapsed time: %.0f s, at block %v\n", sec, block)
+					log.Printf("Elapsed time: %.0f s, at block %v\n", sec, block)
 					lastSec = sec
 				}
 			}
-
 		}
 		operation.Execute(op, db, dCtx)
 		if cfg.debug {
 			operation.Debug(dCtx, op)
 		}
-
 	}
-
 	sec = time.Since(start).Seconds()
+
+	log.Printf("Finished replaying storage operations on StateDB database")
 
 	// validate stateDB
 	if cfg.enableValidation {
+		log.Printf("Validate final state")
 		// advance the world state from the first block to the last block
 		advanceWorldState(ws, cfg.first, cfg.last, cfg.workers)
 		if err := validateStateDB(ws, db); err != nil {
@@ -131,16 +147,17 @@ func traceReplayTask(cfg *TraceConfig) error {
 	}
 
 	// close the DB and print disk usage
+	log.Printf("Close StateDB database")
 	start = time.Now()
 	if err := db.Close(); err != nil {
-		fmt.Printf("Failed to close database: %v", err)
+		log.Printf("Failed to close database: %v", err)
 	}
 
 	// print progress summary
 	if cfg.enableProgress {
-		fmt.Printf("trace replay: Total elapsed time: %.3f s, processed %v blocks\n", sec, cfg.last-cfg.first+1)
-		fmt.Printf("trace replay: Closing DB took %v\n", time.Since(start))
-		fmt.Printf("trace replay: Final disk usage: %v MiB\n", float32(getDirectorySize(stateDirectory))/float32(1024*1024))
+		log.Printf("trace replay: Total elapsed time: %.3f s, processed %v blocks\n", sec, cfg.last-cfg.first+1)
+		log.Printf("trace replay: Closing DB took %v\n", time.Since(start))
+		log.Printf("trace replay: Final disk usage: %v MiB\n", float32(getDirectorySize(stateDirectory))/float32(1024*1024))
 	}
 
 	return nil
