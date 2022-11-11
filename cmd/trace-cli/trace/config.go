@@ -53,6 +53,11 @@ var (
 		Usage: "set storage trace's output directory",
 		Value: "./",
 	}
+	updateDirectoryFlag = cli.StringFlag{
+		Name:  "updatedir",
+		Usage: "set update-set database directory",
+		Value: "./updatedb",
+	}
 	validateEndState = cli.BoolFlag{
 		Name:  "validate",
 		Usage: "enables end-state validation",
