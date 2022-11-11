@@ -135,46 +135,64 @@ func (s *MockStateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	s.recording = append(s.recording, Record{IntermediateRootID, []any{deleteEmptyObjects}})
 	return common.Hash{}
 }
+
+func (s *MockStateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
+	s.recording = append(s.recording, Record{CommitID, []any{deleteEmptyObjects}})
+	return common.Hash{}, nil
+}
+
 func (s *MockStateDB) Prepare(thash common.Hash, ti int) {
 	s.recording = append(s.recording, Record{PrepareID, []any{thash, ti}})
 }
+
 func (s *MockStateDB) AddRefund(gas uint64) {
 	s.recording = append(s.recording, Record{AddRefundID, []any{gas}})
 }
+
 func (s *MockStateDB) SubRefund(gas uint64) {
 	s.recording = append(s.recording, Record{SubRefundID, []any{gas}})
 }
+
 func (s *MockStateDB) GetRefund() uint64 {
 	s.recording = append(s.recording, Record{GetRefundID, []any{}})
 	return uint64(0)
 }
+
 func (s *MockStateDB) PrepareAccessList(sender common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
 	s.recording = append(s.recording, Record{PrepareAccessListID, []any{sender, dest, precompiles, txAccesses}})
 }
+
 func (s *MockStateDB) AddressInAccessList(addr common.Address) bool {
 	s.recording = append(s.recording, Record{AddressInAccessListID, []any{addr}})
 	return false
 }
+
 func (s *MockStateDB) SlotInAccessList(addr common.Address, slot common.Hash) (addressOk bool, slotOk bool) {
 	s.recording = append(s.recording, Record{SlotInAccessListID, []any{addr, slot}})
 	return false, false
 }
+
 func (s *MockStateDB) AddAddressToAccessList(addr common.Address) {
 	s.recording = append(s.recording, Record{AddAddressToAccessListID, []any{addr}})
 }
+
 func (s *MockStateDB) AddSlotToAccessList(addr common.Address, slot common.Hash) {
 	s.recording = append(s.recording, Record{AddSlotToAccessListID, []any{addr, slot}})
 }
+
 func (s *MockStateDB) AddLog(log *types.Log) {
 	s.recording = append(s.recording, Record{AddLogID, []any{log}})
 }
+
 func (s *MockStateDB) AddPreimage(hash common.Hash, preimage []byte) {
 	s.recording = append(s.recording, Record{AddPreimageID, []any{hash, preimage}})
 }
+
 func (s *MockStateDB) ForEachStorage(addr common.Address, cb func(common.Hash, common.Hash) bool) error {
 	s.recording = append(s.recording, Record{ForEachStorageID, []any{addr, cb}})
 	return nil
 }
+
 func (s *MockStateDB) GetLogs(hash common.Hash, blockHash common.Hash) []*types.Log {
 	s.recording = append(s.recording, Record{GetLogsID, []any{hash, blockHash}})
 	return nil

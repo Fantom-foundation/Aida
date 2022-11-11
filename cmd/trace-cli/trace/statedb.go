@@ -34,6 +34,9 @@ func primeStateDB(ws substate.SubstateAlloc, db state.StateDB) {
 			db.SetState(addr, key, value)
 		}
 	}
+	// intermediate root implecitly calls commit
+	// don't delete empty objects
+	db.Commit(false)
 }
 
 // getDirectorySize computes the size of all files in the given directoy in bytes.

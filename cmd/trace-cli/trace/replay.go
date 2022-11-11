@@ -92,6 +92,9 @@ func traceReplayTask(cfg *TraceConfig) error {
 	fmt.Printf("trace replay: Replay storage operations\n")
 	for traceIter.Next() {
 		op := traceIter.Value()
+		if op.GetId() == operation.EndBlockID {
+			db.Commit(true)
+		}
 		if op.GetId() == operation.BeginBlockID {
 			block := op.(*operation.BeginBlock).BlockNumber
 			if block > cfg.last {
@@ -105,7 +108,6 @@ func traceReplayTask(cfg *TraceConfig) error {
 					lastSec = sec
 				}
 			}
-
 		}
 		operation.Execute(op, db, dCtx)
 		if cfg.debug {
@@ -154,7 +156,7 @@ func traceReplayAction(ctx *cli.Context) error {
 		return err
 	}
 
-	operation.EnableProfiling = ctx.Bool(profileFlag.Name)
+	operation.EnableProfiling = cfg.profile
 	// set trace directory
 	tracer.TraceDir = ctx.String(traceDirectoryFlag.Name) + "/"
 	dict.DictionaryContextDir = ctx.String(traceDirectoryFlag.Name) + "/"
