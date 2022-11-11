@@ -68,6 +68,14 @@ func ReadDictionaryContext() *DictionaryContext {
 }
 
 // Write dictionary context to files.
+func (ctx *DictionaryContext) WriteDistributions() {
+	err := ctx.StorageDictionary.WriteDistribution(DictionaryContextDir + "storage-distribution.dat")
+	if err != nil {
+		log.Fatalf("Cannot write contract dictionary. Error: %v", err)
+	}
+}
+
+// Write dictionary context to files.
 func (ctx *DictionaryContext) Write() {
 	err := ctx.ContractDictionary.Write(DictionaryContextDir + "contract-dictionary.dat")
 	if err != nil {

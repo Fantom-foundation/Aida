@@ -19,12 +19,14 @@ var StorageDictionaryLimit uint32 = math.MaxUint32 - 1
 type StorageDictionary struct {
 	storageToIdx map[common.Hash]uint32 // storage address to index map for encoding
 	idxToStorage []common.Hash          // storage address slice for decoding
+	frequency    []uint64               //storage address frequency
 }
 
 // Init initializes or clears a storage dictionary.
 func (d *StorageDictionary) Init() {
 	d.storageToIdx = map[common.Hash]uint32{}
 	d.idxToStorage = []common.Hash{}
+	d.frequency = []uint64{}
 }
 
 // NewStorageDictionary creates a new storage dictionary.
@@ -45,8 +47,18 @@ func (d *StorageDictionary) Encode(addr common.Hash) (uint32, error) {
 		}
 		d.storageToIdx[addr] = idx
 		d.idxToStorage = append(d.idxToStorage, addr)
+		d.frequency = append(d.frequency, 1)
+	} else {
+		d.frequency[idx]++
 	}
 	return idx, nil
+}
+
+// HashEncoded retuns whether address is already encoded.
+func (d *StorageDictionary) HashEncoded(addr common.Hash) bool {
+	// find storage address
+	_, ok := d.storageToIdx[addr]
+	return ok
 }
 
 // Decode a dictionary index to an address.
@@ -55,6 +67,31 @@ func (d *StorageDictionary) Decode(idx uint32) (common.Hash, error) {
 		return d.idxToStorage[idx], nil
 	} else {
 		return common.Hash{}, fmt.Errorf("Index out-of-bound")
+	}
+}
+
+// WriteDistribution
+func (d *StorageDictionary) WriteDistribution(filename string) error {
+	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		return fmt.Errorf("Cannot open storage-dictionary file. Error: %v", err)
+	}
+
+	var total uint64 = 0
+	for _, f := range d.frequency {
+		total += f
+	}
+
+	s := len(d.frequency)
+
+	frequencySorted := SORTbyFrequencyAcending(d.frequency)
+	for idx, f := range frequencySorted {
+		fmt.Fprintf(file, "%f - %f", float64(idx)/float64(s), float64(f)/float64(total))
+	}
+
+	err := file.Close()
+	if err != nil {
+		return fmt.Errorf("Cannot close storage-dictionary file. Error: %v", err)
 	}
 }
 

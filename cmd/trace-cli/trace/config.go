@@ -68,6 +68,16 @@ var (
 		Usage:   "Number of blocks",
 		Value:   1,
 	}
+	stochasticMatrixFlag = cli.StringFlag{
+		Name:  "stochastic-matrix",
+		Usage: "set stochastic matrix file",
+		Value: "stochastic-matrix.csv",
+	}
+	stochasticMatrixFormatFlag = cli.StringFlag{
+		Name:  "stochastic-matrix-format",
+		Usage: "type of the output matrix file (\"dot\" or \"csv\")",
+		Value: "csv",
+	}
 )
 
 // execution configuration for replay command.

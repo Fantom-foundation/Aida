@@ -14,10 +14,14 @@ import (
 // ProxyRecorder data structure for capturing and recording
 // invoked StateDB operations.
 type ProxyRecorder struct {
-	db    state.StateDB            // state db
-	dctx  *dict.DictionaryContext  // dictionary context for decoding information
-	ch    chan operation.Operation // channel used for streaming captured operation
-	debug bool
+	db              state.StateDB            // state db
+	dctx            *dict.DictionaryContext  // dictionary context for decoding information
+	ch              chan operation.Operation // channel used for streaming captured operation
+	debug           bool
+	newStorageFreq  []uint64
+	newContractFreq []uint64
+	newValuesFreq   []uint64
+	opFreq          []uint64
 }
 
 // NewProxyRecorder creates a new StateDB proxy.
@@ -27,6 +31,10 @@ func NewProxyRecorder(db state.StateDB, dctx *dict.DictionaryContext, ch chan op
 	r.dctx = dctx
 	r.ch = ch
 	r.debug = debug
+	r.newStorageFreq = []uint64{}
+	r.newContractFreq = []uint64{}
+	r.newValuesFreq = []uint64{}
+	r.opFreq = []uint64{}
 	return r
 }
 
@@ -152,8 +160,17 @@ func (r *ProxyRecorder) GetCommittedState(addr common.Address, key common.Hash) 
 
 // GetState retrieves a value from the StateDB.
 func (r *ProxyRecorder) GetState(addr common.Address, key common.Hash) common.Hash {
+	r.opFreq[operation.GetStateID]++
+
 	prevCIdx := r.dctx.PrevContractIndex
+	if !r.dctx.HasEncodedAddress(addr) {
+		//TODO initialize
+		r.newContractFreq[operation.GetStateID]++
+	}
 	cIdx := r.dctx.EncodeContract(addr)
+	if !r.dctx.HasEncodedContract(key) {
+
+	}
 	sIdx, sPos := r.dctx.EncodeStorage(key)
 	var op operation.Operation
 	if cIdx == prevCIdx {

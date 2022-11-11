@@ -170,6 +170,12 @@ func traceRecordTask(block uint64, tx int, recording *substate.Substate, dCtx *d
 		return fmt.Errorf("inconsistent output")
 	}
 
+	// TODO write frequencies from proxy recorder
+	//newStorageFreq  []uint64
+	//newContractFreq []uint64
+	//newValuesFreq   []uint64
+	//opFreq          []uint64
+
 	return nil
 }
 
