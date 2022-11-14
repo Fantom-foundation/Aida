@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer"
+	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/tracer/state"
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/Fantom-foundation/go-opera/opera"
@@ -234,8 +235,10 @@ func runVM(ctx *cli.Context) error {
 	}
 
 	// wrap stateDB for profiling
-	profileStateDB, stats := tracer.NewProxyProfiler(db, cfg.debug)
-	db = profileStateDB
+	var stats *operation.ProfileStats
+	if cfg.profile {
+		db, stats = tracer.NewProxyProfiler(db, cfg.debug)
+	}
 
 	if cfg.enableValidation {
 		fmt.Printf("WARNING: validation enabled, reducing Tx throughput\n")
