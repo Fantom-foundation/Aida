@@ -17,6 +17,7 @@ var stats *ProfileStats = new(ProfileStats)
 const (
 	AddBalanceID = iota
 	BeginBlockID
+	CommitID
 	CreateAccountID
 	EmptyID
 	EndBlockID
@@ -55,7 +56,6 @@ const (
 	AddressInAccessListID
 	AddSlotToAccessListID
 	CloseID
-	CommitID
 	ForEachStorageID
 	GetLogsID
 	GetRefundID
@@ -76,6 +76,7 @@ type OperationDictionary struct {
 var opDict = map[byte]OperationDictionary{
 	AddBalanceID:            {label: "AddBalance", readfunc: ReadAddBalance},
 	BeginBlockID:            {label: "BeginBlock", readfunc: ReadBeginBlock},
+	CommitID:                {label: "Commit", readfunc: ReadCommit},
 	CreateAccountID:         {label: "CreateAccount", readfunc: ReadCreateAccount},
 	EmptyID:                 {label: "Exist", readfunc: ReadEmpty},
 	EndBlockID:              {label: "EndBlock", readfunc: ReadEndBlock},
@@ -112,7 +113,6 @@ var opDict = map[byte]OperationDictionary{
 	AddressInAccessListID:    {label: "AddressInAccessList", readfunc: ReadPanic},
 	AddSlotToAccessListID:    {label: "AddSlotToAccessList", readfunc: ReadPanic},
 	CloseID:                  {label: "Close", readfunc: ReadPanic},
-	CommitID:                 {label: "Commit", readfunc: ReadPanic},
 	ForEachStorageID:         {label: "ForEachStorage", readfunc: ReadPanic},
 	GetLogsID:                {label: "GetLogs", readfunc: ReadPanic},
 	GetRefundID:              {label: "GetRefund", readfunc: ReadPanic},

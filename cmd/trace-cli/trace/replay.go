@@ -108,6 +108,9 @@ func traceReplayTask(cfg *TraceConfig) error {
 
 	// replace storage trace
 	for op := range opChannel {
+		if op.GetId() == operation.EndBlockID {
+			operation.Execute(operation.NewCommit(true), db, dCtx)
+		}
 		if op.GetId() == operation.BeginBlockID {
 			block := op.(*operation.BeginBlock).BlockNumber
 			if block > cfg.last {
