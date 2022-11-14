@@ -2,22 +2,22 @@ package trace
 
 import (
 	"fmt"
-	"log"
-	"os"
-	"runtime/pprof"
-
 	"github.com/Fantom-foundation/Aida/tracer"
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/ethereum/go-ethereum/substate"
 	"github.com/urfave/cli/v2"
+	"io/ioutil"
+	"log"
+	"os"
+	"runtime/pprof"
 )
 
-// StochasticCommand
+// StochasticCommand record frequencies of operations and distribution of their contract, storage, value accesses
 var StochasticCommand = cli.Command{
 	Action:    traceStochasticAction,
 	Name:      "stochastic",
-	Usage:     "executes storage trace",
+	Usage:     "executes stochastic distribution generation",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		&disableProgressFlag,
@@ -25,21 +25,49 @@ var StochasticCommand = cli.Command{
 		&substate.WorkersFlag,
 		&traceDirectoryFlag,
 		&traceDebugFlag,
+		&stateDbImplementation,
 		&stochasticMatrixFlag,
 		&stochasticMatrixFormatFlag,
 	},
 	Description: `
-The trace replay command requires two arguments:
+The stochastic command requires two arguments:
 <blockNumFirst> <blockNumLast>
 
 <blockNumFirst> and <blockNumLast> are the first and
-last block of the inclusive range of blocks to replay storage traces.`,
+last block of the inclusive range of blocks to calculate distributions.`,
 }
 
-// traceReplayTask simulates storage operations from storage traces on stateDB.
+// traceStochasticTask simulates storage operations from storage traces and calculates distributions of operations.
 func traceStochasticTask(cfg *TraceConfig) error {
 	// load dictionaries & indexes
 	dCtx := dict.ReadDictionaryContext()
+
+	// intialize the world state and advance it to the first block
+	log.Printf("Load and advance worldstate to block %v", cfg.first-1)
+	ws, err := generateWorldState(cfg.worldStateDir, cfg.first-1, cfg.workers)
+	if err != nil {
+		return err
+	}
+
+	// create a directory for the store to place all its files, and
+	// instantiate the state DB under testing.
+	log.Printf("Create stateDB database")
+	stateDirectory, err := ioutil.TempDir("", "state_db_*")
+	if err != nil {
+		return err
+	}
+	db, err := makeStateDB(stateDirectory, cfg.impl, cfg.variant)
+	if err != nil {
+		return err
+	}
+
+	// prime stateDB
+	log.Printf("Prime StateDB database with world-state")
+	if cfg.impl == "memory" {
+		db.PrepareSubstate(&ws)
+	} else {
+		primeStateDB(ws, db)
+	}
 
 	// initialize trace interator
 	traceIter := tracer.NewTraceIterator(cfg.first, cfg.last)
@@ -69,7 +97,7 @@ func traceStochasticTask(cfg *TraceConfig) error {
 			prevOpId = op.GetId()
 		}
 
-		operation.Execute(TODO)
+		operation.Execute(op, db, dCtx)
 		if cfg.debug {
 			operation.Debug(dCtx, op)
 		}
@@ -81,6 +109,12 @@ func traceStochasticTask(cfg *TraceConfig) error {
 	// print profile statistics (if enabled)
 	if operation.EnableProfiling {
 		operation.PrintProfiling()
+	}
+
+	// close the DB and print disk usage
+	log.Printf("Close StateDB database")
+	if err := db.Close(); err != nil {
+		log.Printf("Failed to close database: %v", err)
 	}
 
 	// write stochastic matrix
@@ -99,6 +133,7 @@ func writeStochasticMatrix(smFile string, f string, tFreq map[[2]byte]uint64) {
 	}
 }
 
+// writeStochasticMatrixCsv writes frequencies of operation chaining in csv format
 func writeStochasticMatrixCsv(smFile string, tFreq map[[2]byte]uint64) {
 	file, err := os.Create(smFile)
 	if err != nil {
@@ -145,6 +180,7 @@ func writeStochasticMatrixCsv(smFile string, tFreq map[[2]byte]uint64) {
 	}
 }
 
+// writeStochasticMatrixDot writes frequencies of operation chaining in dot format
 func writeStochasticMatrixDot(smFile string, tFreq map[[2]byte]uint64) {
 	file, err := os.Create(smFile)
 	if err != nil {
