@@ -89,7 +89,8 @@ func traceRecordTask(block uint64, tx int, recording *substate.Substate, dCtx *d
 
 	var statedb state.StateDB
 	statedb = state.MakeInMemoryStateDB(&inputAlloc)
-	statedb = tracer.NewProxyRecorder(statedb, dCtx, ch, traceDebug)
+	proxyRecorder := tracer.NewProxyRecorder(statedb, dCtx, ch, traceDebug)
+	statedb = proxyRecorder
 
 	// Apply Message
 	var (
@@ -169,13 +170,26 @@ func traceRecordTask(block uint64, tx int, recording *substate.Substate, dCtx *d
 		return fmt.Errorf("inconsistent output")
 	}
 
-	// TODO write frequencies from proxy recorder
-	//newStorageFreq  []uint64
-	//newContractFreq []uint64
-	//newValuesFreq   []uint64
-	//opFreq          []uint64
+	// write recorded frequencies
+	frequenciesWriter(proxyRecorder)
 
 	return nil
+}
+
+// frequenciesWriter writes frequencies from dictionary recording
+func frequenciesWriter(proxyRecorder *tracer.ProxyRecorder) {
+	file, err := os.OpenFile(tracer.TraceDir+"frequencies.dat", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		log.Fatalf("Cannot open trace file. Error: %v", err)
+	}
+	fmt.Fprintln(file, "operations: ", proxyRecorder.OpFreq)
+	fmt.Fprintln(file, "contractFreq: ", proxyRecorder.ContractFreq)
+	fmt.Fprintln(file, "storageFreq: ", proxyRecorder.StorageFreq)
+	fmt.Fprintln(file, "valueFreq: ", proxyRecorder.ValueFreq)
+
+	if err := file.Close(); err != nil {
+		log.Fatalf("Cannot close frequencies file. Error: %v", err)
+	}
 }
 
 // OperationWriter reads operations from the operation channel and writes

@@ -70,31 +70,6 @@ func (d *StorageDictionary) Decode(idx uint32) (common.Hash, error) {
 	}
 }
 
-// WriteDistribution
-func (d *StorageDictionary) WriteDistribution(filename string) error {
-	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-	if err != nil {
-		return fmt.Errorf("Cannot open storage-dictionary file. Error: %v", err)
-	}
-
-	var total uint64 = 0
-	for _, f := range d.frequency {
-		total += f
-	}
-
-	s := len(d.frequency)
-
-	frequencySorted := SORTbyFrequencyAcending(d.frequency)
-	for idx, f := range frequencySorted {
-		fmt.Fprintf(file, "%f - %f", float64(idx)/float64(s), float64(f)/float64(total))
-	}
-
-	err := file.Close()
-	if err != nil {
-		return fmt.Errorf("Cannot close storage-dictionary file. Error: %v", err)
-	}
-}
-
 // Write dictionary to a binary file.
 func (d *StorageDictionary) Write(filename string) error {
 	// open storage dictionary file for writing

@@ -1,9 +1,12 @@
 package dict
 
 import (
+	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"log"
 	"math"
+	"os"
+	"sort"
 )
 
 // InvalidContractIndex used to indicate that the previously used contract index is not valid.
@@ -23,6 +26,12 @@ type DictionaryContext struct {
 	CodeDictionary *CodeDictionary // dictionary to compact the bytecode of contracts
 
 	SnapshotIndex *SnapshotIndex // snapshot index for execution (not for recording/replaying)
+}
+
+// operationFrequency is used for distribution calculation of operations and their frequencies
+type operationFrequency struct {
+	opId      int
+	frequency uint64
 }
 
 // NewDictionaryContext creates a new dictionary context.
@@ -65,14 +74,6 @@ func ReadDictionaryContext() *DictionaryContext {
 		log.Fatalf("Cannot read code dictionary. Error: %v", err)
 	}
 	return ctx
-}
-
-// Write dictionary context to files.
-func (ctx *DictionaryContext) WriteDistributions() {
-	err := ctx.StorageDictionary.WriteDistribution(DictionaryContextDir + "storage-distribution.dat")
-	if err != nil {
-		log.Fatalf("Cannot write contract dictionary. Error: %v", err)
-	}
 }
 
 // Write dictionary context to files.
@@ -240,4 +241,79 @@ func (ctx *DictionaryContext) DecodeCode(bcIdx uint32) []byte {
 		log.Fatalf("Byte-code index could not be decoded. Error: %v", err)
 	}
 	return code
+}
+
+// HasEncodedContract checks whether given address has already been inserted into dictionary
+func (ctx *DictionaryContext) HasEncodedContract(addr common.Address) bool {
+	_, f := ctx.ContractDictionary.contractToIdx[addr]
+	return f
+}
+
+// HasEncodedStorage checks whether given storage has already been inserted into dictionary
+func (ctx *DictionaryContext) HasEncodedStorage(key common.Hash) bool {
+	_, f := ctx.StorageDictionary.storageToIdx[key]
+	return f
+}
+
+// HasEncodedValue checks whether given value has already been inserted into dictionary
+func (ctx *DictionaryContext) HasEncodedValue(value common.Hash) bool {
+	_, f := ctx.ValueDictionary.valueToIdx[value]
+	return f
+}
+
+// WriteDistributions dictionary distributions into files.
+func (ctx *DictionaryContext) WriteDistributions() {
+	err := ctx.WriteDistribution(DictionaryContextDir+"contract-distribution.dat", ctx.ContractDictionary.frequency)
+	if err != nil {
+		log.Fatalf("Cannot write contract distribution. Error: %v", err)
+	}
+	err = ctx.WriteDistribution(DictionaryContextDir+"storage-distribution.dat", ctx.StorageDictionary.frequency)
+	if err != nil {
+		log.Fatalf("Cannot write storage distribution. Error: %v", err)
+	}
+	err = ctx.WriteDistribution(DictionaryContextDir+"value-distribution.dat", ctx.ValueDictionary.frequency)
+	if err != nil {
+		log.Fatalf("Cannot write value distribution. Error: %v", err)
+	}
+}
+
+// WriteDistribution writes distribution of operations and frequencies into given file
+func (ctx *DictionaryContext) WriteDistribution(filename string, frequency []uint64) error {
+	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		return fmt.Errorf("Cannot open storage-dictionary file. Error: %v", err)
+	}
+
+	var total uint64 = 0
+	for _, f := range frequency {
+		total += f
+	}
+
+	s := len(frequency)
+
+	frequencySorted := sortByFrequencyAcending(frequency)
+	for _, fi := range frequencySorted {
+		fmt.Fprintf(file, "%f - %f", float64(fi.opId)/float64(s), float64(fi.frequency)/float64(total))
+	}
+
+	err = file.Close()
+	if err != nil {
+		return fmt.Errorf("Cannot close storage-dictionary file. Error: %v", err)
+	}
+	return nil
+}
+
+// sortByFrequencyAcending converts frequency slice with operation ids as indexes to structure,
+// then sorts them in ascending order according to their frequencies
+func sortByFrequencyAcending(frequency []uint64) []operationFrequency {
+	var arr []operationFrequency
+	for i, f := range frequency {
+		arr = append(arr, operationFrequency{i, f})
+	}
+
+	sort.Slice(arr[:], func(i, j int) bool {
+		return arr[i].frequency < arr[j].frequency
+	})
+
+	return arr
 }
