@@ -83,6 +83,7 @@ func genUpdateSet(ctx *cli.Context) error {
 					return fmt.Errorf("validation failed\n")
 				}
 			}
+			update = make(substate.SubstateAlloc)
 		}
 	}
 	return err
