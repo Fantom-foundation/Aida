@@ -62,6 +62,9 @@ func genUpdateSet(ctx *cli.Context) error {
 	iter := substate.NewSubstateIterator(first, workers)
 	checkPoint := ((first / interval) + 1) * interval
 	defer iter.Release()
+
+	txCount := uint64(0)
+
 	for iter.Next() {
 		tx := iter.Value()
 		// stop when reaching end of block range
@@ -69,13 +72,13 @@ func genUpdateSet(ctx *cli.Context) error {
 			break
 		}
 		update.Merge(tx.Substate.OutputAlloc)
+		txCount++
 
 		// write to update set db
 		if tx.Block >= checkPoint {
 			fmt.Printf("write block %v to updateDB\n", tx.Block)
-			// some block may not have any transactions.
-			// use checkpoint as key instead of block number for an easier lookup.
-			db.PutUpdateSet(checkPoint, &update)
+			fmt.Printf("\tTx: %v, Accounts: %v\n", txCount, len(update))
+			db.PutUpdateSet(tx.Block, &update)
 			checkPoint += interval
 			//validate
 			if validate {
@@ -84,6 +87,7 @@ func genUpdateSet(ctx *cli.Context) error {
 				}
 			}
 			update = make(substate.SubstateAlloc)
+			txCount = 0
 		}
 	}
 	return err
