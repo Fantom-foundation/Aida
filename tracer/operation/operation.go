@@ -17,7 +17,6 @@ var stats *ProfileStats = new(ProfileStats)
 const (
 	AddBalanceID = iota
 	BeginBlockID
-	CommitID
 	CreateAccountID
 	EmptyID
 	EndBlockID
@@ -76,7 +75,6 @@ type OperationDictionary struct {
 var opDict = map[byte]OperationDictionary{
 	AddBalanceID:            {label: "AddBalance", readfunc: ReadAddBalance},
 	BeginBlockID:            {label: "BeginBlock", readfunc: ReadBeginBlock},
-	CommitID:                {label: "Commit", readfunc: ReadCommit},
 	CreateAccountID:         {label: "CreateAccount", readfunc: ReadCreateAccount},
 	EmptyID:                 {label: "Exist", readfunc: ReadEmpty},
 	EndBlockID:              {label: "EndBlock", readfunc: ReadEndBlock},
