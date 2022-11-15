@@ -2,7 +2,6 @@ package trace
 
 import (
 	"bufio"
-	"context"
 	"fmt"
 	"log"
 	"math"
@@ -175,9 +174,7 @@ func traceRecordTask(block uint64, tx int, recording *substate.Substate, dCtx *d
 
 // OperationWriter reads operations from the operation channel and writes
 // them into a trace file.
-func OperationWriter(ctx context.Context, done chan struct{}, ch chan operation.Operation) {
-	// send done signal when closing writer
-	defer close(done)
+func OperationWriter(ch chan operation.Operation) {
 
 	// open trace file, write buffer, and compressed stream
 	file, err := os.OpenFile(tracer.TraceDir+"trace.dat", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
@@ -203,16 +200,9 @@ func OperationWriter(ctx context.Context, done chan struct{}, ch chan operation.
 		}
 	}()
 
-	// read operations from channel, and write them until receiving a cancel signal
-	for {
-		select {
-		case op := <-ch:
-			operation.Write(zfile, op)
-		case <-ctx.Done():
-			if len(ch) == 0 {
-				return
-			}
-		}
+	// read operations from channel, and write them
+	for op := range ch {
+		operation.Write(zfile, op)
 	}
 }
 
@@ -251,9 +241,7 @@ func traceRecordAction(ctx *cli.Context) error {
 
 	// spawn writer
 	opChannel := make(chan operation.Operation, 100000)
-	cctx, cancel := context.WithCancel(context.Background())
-	cancelChannel := make(chan struct{})
-	go OperationWriter(cctx, cancelChannel, opChannel)
+	go OperationWriter(opChannel)
 
 	// process arguments
 	chainID = ctx.Int(chainIDFlag.Name)
@@ -318,11 +306,11 @@ func traceRecordAction(ctx *cli.Context) error {
 	// insert the last EndBlock
 	sendOperation(dCtx, opChannel, operation.NewEndBlock())
 
-	// cancel writer
-	(cancel)()        // stop writer
-	<-(cancelChannel) // wait for writer to finish
+	// close channel
+	close(opChannel)
 
 	// write dictionaries and indexes
 	dCtx.Write()
+
 	return err
 }
