@@ -35,6 +35,11 @@ var (
 		Name:  "disable-progress",
 		Usage: "disable progress report",
 	}
+	vmImplementation = cli.StringFlag{
+		Name:  "vm-impl",
+		Usage: "select VM implementation",
+		Value: "geth",
+	}
 	stateDbImplementation = cli.StringFlag{
 		Name:  "db-impl",
 		Usage: "select state DB implementation",
