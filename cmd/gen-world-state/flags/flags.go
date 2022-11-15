@@ -68,12 +68,12 @@ var (
 		Usage:   "ending block ID",
 	}
 
-	// TargetBlock represents the ID of target block to be reached by state evolve process
+	// TargetBlock represents the ID of target block to be reached by state evolve process or in dump state
 	TargetBlock = cli.IntFlag{
-		Name:     "target",
-		Aliases:  []string{"block", "blk"},
-		Usage:    "target block ID",
-		Required: true,
+		Name:    "target",
+		Aliases: []string{"block", "blk"},
+		Usage:   "target block ID",
+		Value:   0,
 	}
 
 	// TrieRootHash represents a hash of a state trie root to be decoded

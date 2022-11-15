@@ -1,6 +1,7 @@
 package state
 
 import (
+	"fmt"
 	"github.com/Fantom-foundation/Aida/cmd/gen-world-state/flags"
 	"github.com/Fantom-foundation/Aida/world-state/db/opera"
 	"github.com/urfave/cli/v2"
@@ -35,6 +36,12 @@ func root(ctx *cli.Context) error {
 	log := Logger(ctx, "root")
 
 	targetBlock := ctx.Uint64(flags.TargetBlock.Name)
+
+	if targetBlock == 0 {
+		err = fmt.Errorf("supplied target block can't be %d", targetBlock)
+		log.Error(err)
+		return err
+	}
 
 	//look up root hash from block number
 	rootHash, err := opera.RootByBlockNumber(store, targetBlock)

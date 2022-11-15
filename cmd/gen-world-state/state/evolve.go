@@ -75,6 +75,10 @@ func getEvolutionBlockRange(ctx *cli.Context, stateDB *snapshot.StateDB, log *lo
 	// evolution until given target block
 	targetBlock := ctx.Uint64(flags.TargetBlock.Name)
 
+	if targetBlock == 0 {
+		return 0, 0, fmt.Errorf("supplied target block can't be %d", targetBlock)
+	}
+
 	// retrieving block number from world state database
 	currentBlock, err := stateDB.GetBlockNumber()
 	if err != nil {

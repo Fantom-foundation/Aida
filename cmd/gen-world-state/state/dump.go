@@ -7,6 +7,7 @@ import (
 	"github.com/Fantom-foundation/Aida/world-state/db/opera"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	"github.com/Fantom-foundation/Aida/world-state/types"
+	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
@@ -36,6 +37,7 @@ var CmdDumpState = cli.Command{
 		&flags.SourceTableName,
 		&flags.TrieRootHash,
 		&flags.Workers,
+		&flags.TargetBlock,
 	},
 }
 
@@ -58,19 +60,10 @@ func dumpState(ctx *cli.Context) error {
 	log := Logger(ctx, "dump")
 
 	// blockNumber number to be stored in output db
-	var blockNumber uint64 = 0
-
-	// load accounts from the given root
-	// if the root has not been provided, try to use the latest
-	root := common.HexToHash(ctx.String(flags.TrieRootHash.Name))
-	if root == snapshot.ZeroHash {
-		root, blockNumber, err = opera.LatestStateRoot(store)
-		if err != nil {
-			log.Errorf("state root not found; %s", err.Error())
-			return err
-		}
-
-		log.Noticef("state root not provided, using the latest %s", root.String())
+	// root is root hash of storage at given block number
+	blockNumber, root, err := blockNumberAndRoot(store, ctx.Uint64(flags.TargetBlock.Name), common.HexToHash(ctx.String(flags.TrieRootHash.Name)), log)
+	if err != nil {
+		return err
 	}
 
 	// load assembled accounts for the given root and write them into the snapshot database
@@ -98,6 +91,42 @@ func dumpState(ctx *cli.Context) error {
 	// wait for all the threads to be done
 	log.Noticef("block #%d done", blockNumber)
 	return nil
+}
+
+// blockNumberAndRoot requires that root hash is determined.
+// Also tries to load blockNumber, but it might still be 0 and required to be looked up outside of scope of this function.
+func blockNumberAndRoot(store kvdb.Store, blockNumber uint64, root common.Hash, log *logging.Logger) (uint64, common.Hash, error) {
+	var err error
+
+	// neither blockNumber nor root hash were provided, try to use lastStateRoot containing latest block and root
+	if root == snapshot.ZeroHash && blockNumber == 0 {
+		// if the root has not been provided, try to use the latest
+		root, blockNumber, err = opera.LatestStateRoot(store)
+		if err != nil {
+			log.Errorf("state root not found; %s", err.Error())
+			return 0, snapshot.ZeroHash, err
+		}
+
+		log.Noticef("state root nor number were provided, using the latest block")
+	}
+
+	if root == snapshot.ZeroHash {
+		// if only targetBlock was specified
+		// look up root hash from block number
+		root, err = opera.RootByBlockNumber(store, blockNumber)
+		if err != nil {
+			log.Errorf("unable to find root hash for block number %d; %s", blockNumber, err.Error())
+			return 0, snapshot.ZeroHash, err
+		}
+	}
+
+	if blockNumber != 0 {
+		log.Noticef("state root %s at %d", root.String(), blockNumber)
+	} else {
+		log.Noticef("state root %s", root.String())
+	}
+
+	return blockNumber, root, nil
 }
 
 // dumpProgressFactory setups and executes dump progress logger.
