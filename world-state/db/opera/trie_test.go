@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	"math/big"
 	"math/rand"
+	"os"
 	"testing"
 	"time"
 )
@@ -231,7 +232,7 @@ func buildTrie(t *testing.T, ta map[common.Hash]types.Account, adh map[common.Ha
 }
 
 func TestLoadedAccountsValidity(t *testing.T) {
-	store, _ := Connect("ldb", "", "test")
+	store, _ := Connect("ldb", os.TempDir(), "test")
 	defer func(store kvdb.Store) {
 		err := store.Close()
 		if err != nil {
@@ -280,7 +281,7 @@ func TestLoadAccountsWithRandomRootHash(t *testing.T) {
 		t.Fatalf("could not generate randomized byte array; %s", err.Error())
 	}
 
-	store, _ := Connect("ldb", "", "test")
+	store, _ := Connect("ldb", os.TempDir(), "test")
 	defer func(store kvdb.Store) {
 		err := store.Close()
 		if err != nil {
