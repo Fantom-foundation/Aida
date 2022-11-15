@@ -34,6 +34,7 @@ var RunVMCommand = cli.Command{
 		&cpuProfileFlag,
 		&disableProgressFlag,
 		&profileFlag,
+		&vmImplementation,
 		&stateDbImplementation,
 		&stateDbVariant,
 		&substate.WorkersFlag,
@@ -51,7 +52,7 @@ last block of the inclusive range of blocks to trace transactions.`,
 }
 
 // runVMTask executes VM on a chosen storage system.
-func runVMTask(db state.StateDB, cfg *TraceConfig, block uint64, tx int, recording *substate.Substate) error {
+func runVMTask(db state.StateDB, cfg *TraceConfig, block uint64, tx int, recording *substate.Substate, vmImpl string) error {
 
 	inputAlloc := recording.InputAlloc
 	inputEnv := recording.Env
@@ -67,6 +68,7 @@ func runVMTask(db state.StateDB, cfg *TraceConfig, block uint64, tx int, recordi
 
 	vmConfig = opera.DefaultVMConfig
 	vmConfig.NoBaseFee = true
+	vmConfig.InterpreterImpl = vmImpl
 
 	// mainnet chain configuration
 	chainConfig = params.AllEthashProtocolChanges
@@ -183,6 +185,8 @@ func runVM(ctx *cli.Context) error {
 	if argErr != nil {
 		return argErr
 	}
+	vmImpl := ctx.String(vmImplementation.Name)
+	fmt.Printf("Used VM implementation: %v\n", vmImpl)
 
 	// start CPU profiling if requested.
 	if profileFileName := ctx.String(cpuProfileFlag.Name); profileFileName != "" {
@@ -275,7 +279,7 @@ func runVM(ctx *cli.Context) error {
 		}
 
 		// run VM
-		if err := runVMTask(db, cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
+		if err := runVMTask(db, cfg, tx.Block, tx.Transaction, tx.Substate, vmImpl); err != nil {
 			return fmt.Errorf("VM execution failed. %v", err)
 		}
 		txCount++

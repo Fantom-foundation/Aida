@@ -138,3 +138,4 @@ executes transactions from block 4,564,026 to 5,000,000. The tool initializes st
  - `--trace-debug` print replayed operations.
  - `--validate` validate the state after replaying traces.
  - `--workers` sets the number of worker threads.
+ - `--vm-impl` select between `geth` and `lfvm`. Default: `geth`
