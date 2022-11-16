@@ -34,7 +34,9 @@ func (op *EndBlock) Write(f io.Writer) error {
 
 // Execute the end-block operation.
 func (op *EndBlock) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
-	return time.Duration(0)
+	start := time.Now()
+	db.Commit(true)
+	return time.Since(start)
 }
 
 // Debug prints a debug message for the end-block operation.

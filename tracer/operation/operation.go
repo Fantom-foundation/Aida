@@ -55,7 +55,6 @@ const (
 	AddressInAccessListID
 	AddSlotToAccessListID
 	CloseID
-	CommitID
 	ForEachStorageID
 	GetLogsID
 	GetRefundID
@@ -112,7 +111,6 @@ var opDict = map[byte]OperationDictionary{
 	AddressInAccessListID:    {label: "AddressInAccessList", readfunc: ReadPanic},
 	AddSlotToAccessListID:    {label: "AddSlotToAccessList", readfunc: ReadPanic},
 	CloseID:                  {label: "Close", readfunc: ReadPanic},
-	CommitID:                 {label: "Commit", readfunc: ReadPanic},
 	ForEachStorageID:         {label: "ForEachStorage", readfunc: ReadPanic},
 	GetLogsID:                {label: "GetLogs", readfunc: ReadPanic},
 	GetRefundID:              {label: "GetRefund", readfunc: ReadPanic},

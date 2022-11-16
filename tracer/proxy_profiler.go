@@ -361,7 +361,17 @@ func (p *ProxyProfiler) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 }
 
 func (p *ProxyProfiler) Commit(deleteEmptyObjects bool) (common.Hash, error) {
-	return p.db.Commit(deleteEmptyObjects)
+	start := time.Now()
+	hash, err := p.db.Commit(deleteEmptyObjects)
+	elapsed := time.Since(start)
+	// To align operation ID with the id used in record/replay.
+	// Commit is called by EndBlock operation.
+	p.ps.Profile(operation.EndBlockID, elapsed)
+	if p.debug {
+		label := operation.GetLabel(operation.EndBlockID)
+		fmt.Printf(label+": %v\n", deleteEmptyObjects)
+	}
+	return hash, err
 }
 
 // GetSubstatePostAlloc gets substate post allocation.

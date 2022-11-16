@@ -44,8 +44,6 @@ func TestEndBlockExecute(t *testing.T) {
 	op.Execute(mock, dict)
 
 	// check whether methods were correctly called
-	mock.compareRecordings([]Record{}, t)
-	// currently EndBlock isn't recorded
-	//expected := []Record{{EndBlockID, []any{}}}
-	//mock.compareRecordings(expected, t)
+	expected := []Record{{EndBlockID, []any{}}}
+	mock.compareRecordings(expected, t)
 }
