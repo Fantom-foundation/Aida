@@ -14,14 +14,10 @@ import (
 // ProxyRecorder data structure for capturing and recording
 // invoked StateDB operations.
 type ProxyRecorder struct {
-	db           state.StateDB            // state db
-	dctx         *dict.DictionaryContext  // dictionary context for decoding information
-	ch           chan operation.Operation // channel used for streaming captured operation
-	debug        bool
-	ContractFreq []uint64 // number of each operation accesses to contract
-	StorageFreq  []uint64 // number of each operation accesses to storage
-	ValueFreq    []uint64 // number of each operation accesses to value
-	OpFreq       []uint64 // number of operation invocations
+	db    state.StateDB            // state db
+	dctx  *dict.DictionaryContext  // dictionary context for decoding information
+	ch    chan operation.Operation // channel used for streaming captured operation
+	debug bool
 }
 
 // NewProxyRecorder creates a new StateDB proxy.
@@ -31,10 +27,6 @@ func NewProxyRecorder(db state.StateDB, dctx *dict.DictionaryContext, ch chan op
 	r.dctx = dctx
 	r.ch = ch
 	r.debug = debug
-	r.ContractFreq = make([]uint64, operation.NumProfiledOperations)
-	r.StorageFreq = make([]uint64, operation.NumProfiledOperations)
-	r.ValueFreq = make([]uint64, operation.NumProfiledOperations)
-	r.OpFreq = make([]uint64, operation.NumProfiledOperations)
 	return r
 }
 
@@ -46,26 +38,15 @@ func (r *ProxyRecorder) send(op operation.Operation) {
 	r.ch <- op
 }
 
-// CreateAccount creates a new account.
+// CreateAccounts creates a new account.
 func (r *ProxyRecorder) CreateAccount(addr common.Address) {
-	r.OpFreq[operation.CreateAccountID]++
-
-	if !r.dctx.HasEncodedContract(addr) {
-		r.ContractFreq[operation.CreateAccountID]++
-	}
 	cIdx := r.dctx.EncodeContract(addr)
 	r.send(operation.NewCreateAccount(cIdx))
 	r.db.CreateAccount(addr)
 }
 
-// SubBalance subtracts amount from a contract address.
+// SubtractBalance subtracts amount from a contract address.
 func (r *ProxyRecorder) SubBalance(addr common.Address, amount *big.Int) {
-	r.OpFreq[operation.SubBalanceID]++
-
-	if !r.dctx.HasEncodedContract(addr) {
-		r.ContractFreq[operation.SubBalanceID]++
-	}
-
 	cIdx := r.dctx.EncodeContract(addr)
 	r.send(operation.NewSubBalance(cIdx, amount))
 	r.db.SubBalance(addr, amount)
@@ -73,12 +54,6 @@ func (r *ProxyRecorder) SubBalance(addr common.Address, amount *big.Int) {
 
 // AddBalance adds amount to a contract address.
 func (r *ProxyRecorder) AddBalance(addr common.Address, amount *big.Int) {
-	r.OpFreq[operation.AddBalanceID]++
-
-	if !r.dctx.HasEncodedContract(addr) {
-		r.ContractFreq[operation.AddBalanceID]++
-	}
-
 	cIdx := r.dctx.EncodeContract(addr)
 	r.send(operation.NewAddBalance(cIdx, amount))
 	r.db.AddBalance(addr, amount)
@@ -86,12 +61,6 @@ func (r *ProxyRecorder) AddBalance(addr common.Address, amount *big.Int) {
 
 // GetBalance retrieves the amount of a contract address.
 func (r *ProxyRecorder) GetBalance(addr common.Address) *big.Int {
-	r.OpFreq[operation.GetBalanceID]++
-
-	if !r.dctx.HasEncodedContract(addr) {
-		r.ContractFreq[operation.GetBalanceID]++
-	}
-
 	cIdx := r.dctx.EncodeContract(addr)
 	r.send(operation.NewGetBalance(cIdx))
 	balance := r.db.GetBalance(addr)
@@ -100,12 +69,6 @@ func (r *ProxyRecorder) GetBalance(addr common.Address) *big.Int {
 
 // GetNonce retrieves the nonce of a contract address.
 func (r *ProxyRecorder) GetNonce(addr common.Address) uint64 {
-	r.OpFreq[operation.GetNonceID]++
-
-	if !r.dctx.HasEncodedContract(addr) {
-		r.ContractFreq[operation.GetNonceID]++
-	}
-
 	cIdx := r.dctx.EncodeContract(addr)
 	r.send(operation.NewGetNonce(cIdx))
 	nonce := r.db.GetNonce(addr)
@@ -114,12 +77,6 @@ func (r *ProxyRecorder) GetNonce(addr common.Address) uint64 {
 
 // SetNonce sets the nonce of a contract address.
 func (r *ProxyRecorder) SetNonce(addr common.Address, nonce uint64) {
-	r.OpFreq[operation.SetNonceID]++
-
-	if !r.dctx.HasEncodedContract(addr) {
-		r.ContractFreq[operation.SetNonceID]++
-	}
-
 	cIdx := r.dctx.EncodeContract(addr)
 	r.send(operation.NewSetNonce(cIdx, nonce))
 	r.db.SetNonce(addr, nonce)
@@ -127,17 +84,11 @@ func (r *ProxyRecorder) SetNonce(addr common.Address, nonce uint64) {
 
 // GetCodeHash returns the hash of the EVM bytecode.
 func (r *ProxyRecorder) GetCodeHash(addr common.Address) common.Hash {
-	if !r.dctx.HasEncodedContract(addr) {
-		r.ContractFreq[operation.GetCodeHashID]++
-	}
-
 	prevCIdx := r.dctx.PrevContractIndex
 	cIdx := r.dctx.EncodeContract(addr)
 	if prevCIdx == cIdx {
-		r.OpFreq[operation.GetCodeHashLcID]++
 		r.send(operation.NewGetCodeHashLc())
 	} else {
-		r.OpFreq[operation.GetCodeHashID]++
 		r.send(operation.NewGetCodeHash(cIdx))
 	}
 
@@ -147,12 +98,6 @@ func (r *ProxyRecorder) GetCodeHash(addr common.Address) common.Hash {
 
 // GetCode returns the EVM bytecode of a contract.
 func (r *ProxyRecorder) GetCode(addr common.Address) []byte {
-	r.OpFreq[operation.GetCodeID]++
-
-	if !r.dctx.HasEncodedContract(addr) {
-		r.ContractFreq[operation.GetCodeID]++
-	}
-
 	cIdx := r.dctx.EncodeContract(addr)
 	r.send(operation.NewGetCode(cIdx))
 	code := r.db.GetCode(addr)
@@ -161,12 +106,6 @@ func (r *ProxyRecorder) GetCode(addr common.Address) []byte {
 
 // Setcode sets the EVM bytecode of a contract.
 func (r *ProxyRecorder) SetCode(addr common.Address, code []byte) {
-	r.OpFreq[operation.SetCodeID]++
-
-	if !r.dctx.HasEncodedContract(addr) {
-		r.ContractFreq[operation.SetCodeID]++
-	}
-
 	cIdx := r.dctx.EncodeContract(addr)
 	bcIdx := r.dctx.EncodeCode(code)
 	r.send(operation.NewSetCode(cIdx, bcIdx))
@@ -175,12 +114,6 @@ func (r *ProxyRecorder) SetCode(addr common.Address, code []byte) {
 
 // GetCodeSize returns the EVM bytecode's size.
 func (r *ProxyRecorder) GetCodeSize(addr common.Address) int {
-	r.OpFreq[operation.GetCodeSizeID]++
-
-	if !r.dctx.HasEncodedContract(addr) {
-		r.ContractFreq[operation.GetCodeSizeID]++
-	}
-
 	cIdx := r.dctx.EncodeContract(addr)
 	r.send(operation.NewGetCodeSize(cIdx))
 	size := r.db.GetCodeSize(addr)
@@ -205,22 +138,12 @@ func (r *ProxyRecorder) GetRefund() uint64 {
 
 // GetCommittedState retrieves a value that is already committed.
 func (r *ProxyRecorder) GetCommittedState(addr common.Address, key common.Hash) common.Hash {
-	if !r.dctx.HasEncodedContract(addr) {
-		r.ContractFreq[operation.GetCommittedStateID]++
-	}
-
-	if !r.dctx.HasEncodedStorage(key) {
-		r.StorageFreq[operation.GetCommittedStateID]++
-	}
-
 	prevCIdx := r.dctx.PrevContractIndex
 	cIdx := r.dctx.EncodeContract(addr)
 	sIdx, sPos := r.dctx.EncodeStorage(key)
 	if prevCIdx == cIdx && sPos == 0 {
-		r.OpFreq[operation.GetCommittedStateLclsID]++
 		r.send(operation.NewGetCommittedStateLcls())
 	} else {
-		r.OpFreq[operation.GetCommittedStateID]++
 		r.send(operation.NewGetCommittedState(cIdx, sIdx))
 	}
 	value := r.db.GetCommittedState(addr, key)
@@ -229,31 +152,19 @@ func (r *ProxyRecorder) GetCommittedState(addr common.Address, key common.Hash) 
 
 // GetState retrieves a value from the StateDB.
 func (r *ProxyRecorder) GetState(addr common.Address, key common.Hash) common.Hash {
-	if !r.dctx.HasEncodedContract(addr) {
-		r.ContractFreq[operation.GetStateID]++
-	}
-
-	if !r.dctx.HasEncodedStorage(key) {
-		r.StorageFreq[operation.GetStateID]++
-	}
-
 	prevCIdx := r.dctx.PrevContractIndex
 	cIdx := r.dctx.EncodeContract(addr)
 	sIdx, sPos := r.dctx.EncodeStorage(key)
 	var op operation.Operation
 	if cIdx == prevCIdx {
 		if sPos == 0 {
-			r.OpFreq[operation.GetStateLclsID]++
 			op = operation.NewGetStateLcls()
 		} else if sPos != -1 {
-			r.OpFreq[operation.GetStateLccsID]++
 			op = operation.NewGetStateLccs(sPos)
 		} else {
-			r.OpFreq[operation.GetStateLcID]++
 			op = operation.NewGetStateLc(sIdx)
 		}
 	} else {
-		r.OpFreq[operation.GetStateID]++
 		op = operation.NewGetState(cIdx, sIdx)
 	}
 	r.send(op)
@@ -263,27 +174,13 @@ func (r *ProxyRecorder) GetState(addr common.Address, key common.Hash) common.Ha
 
 // SetState sets a value in the StateDB.
 func (r *ProxyRecorder) SetState(addr common.Address, key common.Hash, value common.Hash) {
-	if !r.dctx.HasEncodedContract(addr) {
-		r.ContractFreq[operation.SetStateID]++
-	}
-
-	if !r.dctx.HasEncodedStorage(key) {
-		r.StorageFreq[operation.SetStateID]++
-	}
-
-	if !r.dctx.HasEncodedValue(key) {
-		r.ValueFreq[operation.SetStateID]++
-	}
-
 	prevCIdx := r.dctx.PrevContractIndex
 	cIdx := r.dctx.EncodeContract(addr)
 	sIdx, sPos := r.dctx.EncodeStorage(key)
 	vIdx := r.dctx.EncodeValue(value)
 	if cIdx == prevCIdx && sPos == 0 {
-		r.OpFreq[operation.SetStateLclsID]++
 		r.send(operation.NewSetStateLcls(vIdx))
 	} else {
-		r.OpFreq[operation.SetStateID]++
 		r.send(operation.NewSetState(cIdx, sIdx, vIdx))
 	}
 	r.db.SetState(addr, key, value)
@@ -293,12 +190,6 @@ func (r *ProxyRecorder) SetState(addr common.Address, key common.Hash, value com
 // The account is still available until the state is committed;
 // return a non-nil account after Suicide.
 func (r *ProxyRecorder) Suicide(addr common.Address) bool {
-	r.OpFreq[operation.SuicideID]++
-
-	if !r.dctx.HasEncodedContract(addr) {
-		r.ContractFreq[operation.SuicideID]++
-	}
-
 	cIdx := r.dctx.EncodeContract(addr)
 	r.send(operation.NewSuicide(cIdx))
 	ok := r.db.Suicide(addr)
@@ -307,12 +198,6 @@ func (r *ProxyRecorder) Suicide(addr common.Address) bool {
 
 // HasSuicided checks whether a contract has been suicided.
 func (r *ProxyRecorder) HasSuicided(addr common.Address) bool {
-	r.OpFreq[operation.HasSuicidedID]++
-
-	if !r.dctx.HasEncodedContract(addr) {
-		r.ContractFreq[operation.HasSuicidedID]++
-	}
-
 	hasSuicided := r.db.HasSuicided(addr)
 	return hasSuicided
 }
@@ -320,12 +205,6 @@ func (r *ProxyRecorder) HasSuicided(addr common.Address) bool {
 // Exist checks whether the contract exists in the StateDB.
 // Notably this also returns true for suicided accounts.
 func (r *ProxyRecorder) Exist(addr common.Address) bool {
-	r.OpFreq[operation.ExistID]++
-
-	if !r.dctx.HasEncodedContract(addr) {
-		r.ContractFreq[operation.ExistID]++
-	}
-
 	cIdx := r.dctx.EncodeContract(addr)
 	r.send(operation.NewExist(cIdx))
 	return r.db.Exist(addr)
@@ -334,12 +213,6 @@ func (r *ProxyRecorder) Exist(addr common.Address) bool {
 // Empty checks whether the contract is either non-existent
 // or empty according to the EIP161 specification (balance = nonce = code = 0).
 func (r *ProxyRecorder) Empty(addr common.Address) bool {
-	r.OpFreq[operation.EmptyID]++
-
-	if !r.dctx.HasEncodedContract(addr) {
-		r.ContractFreq[operation.EmptyID]++
-	}
-
 	empty := r.db.Empty(addr)
 	return empty
 }
@@ -381,16 +254,12 @@ func (r *ProxyRecorder) AddSlotToAccessList(addr common.Address, slot common.Has
 
 // RevertToSnapshot reverts all state changes from a given revision.
 func (r *ProxyRecorder) RevertToSnapshot(snapshot int) {
-	r.OpFreq[operation.RevertToSnapshotID]++
-
 	r.send(operation.NewRevertToSnapshot(snapshot))
 	r.db.RevertToSnapshot(snapshot)
 }
 
 // Snapshot returns an identifier for the current revision of the state.
 func (r *ProxyRecorder) Snapshot() int {
-	r.OpFreq[operation.SnapshotID]++
-
 	snapshot := r.db.Snapshot()
 	// TODO: check overrun
 	r.send(operation.NewSnapshot(int32(snapshot)))
@@ -425,8 +294,6 @@ func (r *ProxyRecorder) Prepare(thash common.Hash, ti int) {
 
 // Finalise the state in StateDB.
 func (r *ProxyRecorder) Finalise(deleteEmptyObjects bool) {
-	r.OpFreq[operation.FinaliseID]++
-
 	r.send(operation.NewFinalise(deleteEmptyObjects))
 	r.db.Finalise(deleteEmptyObjects)
 }
