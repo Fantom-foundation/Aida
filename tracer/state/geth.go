@@ -23,7 +23,7 @@ func OpenGethStateDB(directory string, root_hash common.Hash) (StateDB, error) {
 	const file_handle = 128
 	ldb, err := rawdb.NewLevelDBDatabase(directory, cache_size, file_handle, "", false)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Failed to create a new Level DB. %v", err)
 	}
 	ethdb := geth.NewDatabase(ldb)
 	db, err := geth.New(root_hash, ethdb, nil)
@@ -122,22 +122,15 @@ func (s *gethStateDB) RevertToSnapshot(id int) {
 }
 
 func (s *gethStateDB) Finalise(deleteEmptyObjects bool) {
-	// IntermediateRoot implicitly calls Finalise but also commits changes.
-	// Without calling this, no changes are ever committed.
-	state, ok := s.db.(*geth.StateDB)
-	if ok {
-		// Until we have an initial world state, we do not delete empty objects.
-		// This would remove changes to unknown accounts, and thus not commit
-		// anything. TODO: re-evaluate once world state is available.
-		//state.IntermediateRoot(deleteEmptyObjects)
-		state.IntermediateRoot(false)
-	} else {
-		s.db.Finalise(deleteEmptyObjects)
-	}
+	s.db.Finalise(deleteEmptyObjects)
 }
 
 func (s *gethStateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	return s.db.IntermediateRoot(deleteEmptyObjects)
+}
+
+func (s *gethStateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
+	return s.db.Commit(deleteEmptyObjects)
 }
 
 func (s *gethStateDB) Prepare(thash common.Hash, ti int) {

@@ -103,11 +103,8 @@ func traceReplaySubstateTask(cfg *TraceConfig) error {
 
 		// Validate stateDB and OuputAlloc
 		if cfg.enableValidation {
-			traceAlloc := db.GetSubstatePostAlloc()
-			recordedAlloc := tx.Substate.OutputAlloc
-			err := compareSubstateStorage(recordedAlloc, traceAlloc)
-			if err != nil {
-				return err
+			if err := validateStateDB(tx.Substate.OutputAlloc, db); err != nil {
+				return fmt.Errorf("Validation failed. Block %v Tx %v\n\t%v\n", tx.Block, tx.Transaction, err)
 			}
 		}
 		if cfg.enableProgress {
@@ -169,7 +166,7 @@ func traceReplaySubstateAction(ctx *cli.Context) error {
 	defer substate.CloseSubstateDB()
 
 	// Get profiling flag
-	operation.EnableProfiling = ctx.Bool(profileFlag.Name)
+	operation.EnableProfiling = cfg.profile
 	// Start CPU profiling if requested.
 	if profileFileName := ctx.String(cpuProfileFlag.Name); profileFileName != "" {
 		f, err := os.Create(profileFileName)

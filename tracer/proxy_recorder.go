@@ -305,6 +305,10 @@ func (r *ProxyRecorder) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	return r.db.IntermediateRoot(deleteEmptyObjects)
 }
 
+func (r *ProxyRecorder) Commit(deleteEmptyObjects bool) (common.Hash, error) {
+	return r.db.Commit(deleteEmptyObjects)
+}
+
 // GetSubstatePostAlloc gets substate post allocation.
 func (r *ProxyRecorder) GetSubstatePostAlloc() substate.SubstateAlloc {
 	return r.db.GetSubstatePostAlloc()

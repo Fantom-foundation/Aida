@@ -34,25 +34,25 @@ var RunVMCommand = cli.Command{
 		&cpuProfileFlag,
 		&disableProgressFlag,
 		&profileFlag,
+		&vmImplementation,
 		&stateDbImplementation,
 		&stateDbVariant,
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
+		&traceDebugFlag,
 		&validateEndState,
 		&worldStateDirFlag,
 	},
 	Description: `
-The trace record command requires two arguments:
+The trace run-vm command requires two arguments:
 <blockNumFirst> <blockNumLast>
 
 <blockNumFirst> and <blockNumLast> are the first and
 last block of the inclusive range of blocks to trace transactions.`,
 }
 
-var profile bool
-
 // runVMTask executes VM on a chosen storage system.
-func runVMTask(db state.StateDB, cfg *TraceConfig, block uint64, tx int, recording *substate.Substate) error {
+func runVMTask(db state.StateDB, cfg *TraceConfig, block uint64, tx int, recording *substate.Substate, vmImpl string) error {
 
 	inputAlloc := recording.InputAlloc
 	inputEnv := recording.Env
@@ -68,6 +68,7 @@ func runVMTask(db state.StateDB, cfg *TraceConfig, block uint64, tx int, recordi
 
 	vmConfig = opera.DefaultVMConfig
 	vmConfig.NoBaseFee = true
+	vmConfig.InterpreterImpl = vmImpl
 
 	// mainnet chain configuration
 	chainConfig = params.AllEthashProtocolChanges
@@ -121,18 +122,15 @@ func runVMTask(db state.StateDB, cfg *TraceConfig, block uint64, tx int, recordi
 		blockCtx.BaseFee = new(big.Int).Set(inputEnv.BaseFee)
 	}
 
+	// call ApplyMessage
 	msg := inputMessage.AsMessage()
-
 	db.Prepare(txHash, txIndex)
-
 	txCtx := evmcore.NewEVMTxContext(msg)
-
 	evm := vm.NewEVM(blockCtx, txCtx, db, chainConfig, vmConfig)
-
 	snapshot := db.Snapshot()
-
 	msgResult, err := evmcore.ApplyMessage(evm, msg, gaspool)
 
+	// if transaction fails, revert to the first snapshot.
 	if err != nil {
 		db.RevertToSnapshot(snapshot)
 		return err
@@ -187,9 +185,10 @@ func runVM(ctx *cli.Context) error {
 	if argErr != nil {
 		return argErr
 	}
-	profile = ctx.Bool(profileFlag.Name)
+	vmImpl := ctx.String(vmImplementation.Name)
+	fmt.Printf("Used VM implementation: %v\n", vmImpl)
 
-	// Start CPU profiling if requested.
+	// start CPU profiling if requested.
 	if profileFileName := ctx.String(cpuProfileFlag.Name); profileFileName != "" {
 		f, err := os.Create(profileFileName)
 		if err != nil {
@@ -207,26 +206,25 @@ func runVM(ctx *cli.Context) error {
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
-	fmt.Printf("trace replay: Load and advance worldstate to block %v\n", cfg.first-1)
+	// create a directory for the store to place all its files.
+	stateDirectory, err := ioutil.TempDir("", "state_db_*")
+	if err != nil {
+		return fmt.Errorf("Failed to create a temp directory. %v", err)
+	}
+
+	// load the world state
+	fmt.Printf("trace replay: Load and advance world state to block %v\n", cfg.first-1)
 	ws, err := generateWorldState(cfg.worldStateDir, cfg.first-1, cfg.workers)
 	if err != nil {
 		return err
 	}
 
-	// create a directory for the store to place all its files.
-	stateDirectory, err := ioutil.TempDir("", "state_db_*")
-	if err != nil {
-		return err
-	}
 	// instantiate the state DB under testing
 	var db state.StateDB
 	db, err = makeStateDB(stateDirectory, cfg.impl, cfg.variant)
 	if err != nil {
 		return err
 	}
-	profileStateDB := tracer.NewProxyProfiler(db)
-	db = profileStateDB
-
 	// prime stateDB
 	fmt.Printf("trace replay: Prime stateDB\n")
 	if cfg.impl == "memory" {
@@ -234,6 +232,11 @@ func runVM(ctx *cli.Context) error {
 	} else {
 		primeStateDB(ws, db)
 	}
+
+	// wrap stateDB for profiling
+	profileStateDB, stats := tracer.NewProxyProfiler(db, cfg.debug)
+	db = profileStateDB
+
 	if cfg.enableValidation {
 		fmt.Printf("WARNING: validation enabled, reducing Tx throughput\n")
 		if err := validateStateDB(ws, db); err != nil {
@@ -254,18 +257,33 @@ func runVM(ctx *cli.Context) error {
 		lastSec = time.Since(start).Seconds()
 	}
 
+	var oldBlock uint64 = 0
 	iter := substate.NewSubstateIterator(cfg.first, cfg.workers)
 	defer iter.Release()
 	for iter.Next() {
+
 		tx := iter.Value()
-		// stop when reaching end of block range
-		if tx.Block > cfg.last {
-			break
+		// close off old block with an end-block operation
+		if oldBlock != tx.Block {
+			if tx.Block > cfg.last {
+				break
+
+			}
+			if oldBlock != 0 {
+				//commit at the end of a block
+				if _, err := db.Commit(true); err != nil {
+					return fmt.Errorf("StateDB commit failed\n")
+				}
+			}
+			oldBlock = tx.Block
 		}
-		txCount++
-		if err := runVMTask(db, cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
+
+		// run VM
+		if err := runVMTask(db, cfg, tx.Block, tx.Transaction, tx.Substate, vmImpl); err != nil {
 			return fmt.Errorf("VM execution failed. %v", err)
 		}
+		txCount++
+
 		if cfg.enableProgress {
 			// report progress
 			sec = time.Since(start).Seconds()
@@ -281,11 +299,16 @@ func runVM(ctx *cli.Context) error {
 		sec = time.Since(start).Seconds()
 		fmt.Printf("trace record: Total elapsed time: %.3f s, processed %v blocks (~ %.1f Tx/s)\n", sec, cfg.last-cfg.first+1, float64(txCount)/(sec))
 	}
+
 	if cfg.enableValidation {
 		advanceWorldState(ws, cfg.first, cfg.last, cfg.workers)
 		if err := validateStateDB(ws, db); err != nil {
 			return fmt.Errorf("World state is not contained in the stateDB. %v", err)
 		}
+	}
+
+	if cfg.profile {
+		stats.PrintProfiling()
 	}
 	return err
 }
