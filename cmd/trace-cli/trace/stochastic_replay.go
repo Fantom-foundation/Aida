@@ -7,10 +7,10 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// SimulateCommand simulates traffic by using Markov chains
-var SimulateCommand = cli.Command{
-	Action:    SimulateAction,
-	Name:      "simulate",
+// StochasticReplayCommand simulates traffic by using Markov chains
+var StochasticReplayCommand = cli.Command{
+	Action:    stochasticReplayAction,
+	Name:      "stochastic-replay",
 	Usage:     "",
 	ArgsUsage: "<blockNum>",
 	Flags: []cli.Flag{
@@ -22,7 +22,7 @@ The simulate command requires two arguments:
 <blockNum>`,
 }
 
-func SimulateAction(ctx *cli.Context) error {
+func stochasticReplayAction(ctx *cli.Context) error {
 	stateDB, err := state.NewMemory()
 	if err != nil {
 		return err

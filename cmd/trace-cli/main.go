@@ -22,8 +22,8 @@ func initTraceApp() *cli.App {
 			&trace.TraceRecordCommand,
 			&trace.TraceReplayCommand,
 			&trace.TraceReplaySubstateCommand,
-			&trace.SimulateCommand,
-			&trace.StochasticCommand,
+			&trace.StochasticRecordCommand,
+			&trace.StochasticReplayCommand,
 		},
 	}
 }
