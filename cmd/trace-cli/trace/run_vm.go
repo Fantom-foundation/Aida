@@ -3,6 +3,7 @@ package trace
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"math/big"
 	"os"
 	"runtime/pprof"
@@ -40,8 +41,8 @@ var RunVMCommand = cli.Command{
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
 		&traceDebugFlag,
+		&updateDBDirFlag,
 		&validateEndState,
-		&worldStateDirFlag,
 	},
 	Description: `
 The trace run-vm command requires two arguments:
@@ -133,7 +134,7 @@ func runVMTask(db state.StateDB, cfg *TraceConfig, block uint64, tx int, recordi
 	// if transaction fails, revert to the first snapshot.
 	if err != nil {
 		db.RevertToSnapshot(snapshot)
-		return err
+		return fmt.Errorf("Block: %v Transaction: %v\n%v", block, tx, err)
 	}
 	if hashError != nil {
 		return hashError
@@ -179,7 +180,14 @@ func runVMTask(db state.StateDB, cfg *TraceConfig, block uint64, tx int, recordi
 
 // runVM implements trace command for executing VM on a chosen storage system.
 func runVM(ctx *cli.Context) error {
-	var err error
+	var (
+		err         error
+		start       time.Time
+		sec         float64
+		lastSec     float64
+		txCount     int
+		lastTxCount int
+	)
 
 	cfg, argErr := NewTraceConfig(ctx)
 	if argErr != nil {
@@ -212,30 +220,38 @@ func runVM(ctx *cli.Context) error {
 		return fmt.Errorf("Failed to create a temp directory. %v", err)
 	}
 
-	// load the world state
-	fmt.Printf("trace replay: Load and advance world state to block %v\n", cfg.first-1)
-	ws, err := generateWorldState(cfg.worldStateDir, cfg.first-1, cfg.workers)
-	if err != nil {
-		return err
-	}
-
 	// instantiate the state DB under testing
 	var db state.StateDB
 	db, err = makeStateDB(stateDirectory, cfg.impl, cfg.variant)
 	if err != nil {
 		return err
 	}
+
+	// load the world state
+	start = time.Now()
+	log.Printf("Load and advance world state to block %v\n", cfg.first-1)
+	ws, err := generateWorldStateFromUpdateDB(cfg.updateDBDir, cfg.first-1, cfg.workers)
+	//ws, err := generateWorldState(cfg.updateDBDir, cfg.first-1, cfg.workers)
+	if err != nil {
+		return err
+	}
+	sec = time.Since(start).Seconds()
+	log.Printf("\tElapsed time: %.2f s, accounts: %v\n", sec, len(ws))
+
+	// wrap stateDB for profiling
+	profileStateDB, stats := tracer.NewProxyProfiler(db, cfg.debug)
+	db = profileStateDB
+
 	// prime stateDB
-	fmt.Printf("trace replay: Prime stateDB\n")
+	log.Printf("Prime stateDB\n")
+	start = time.Now()
 	if cfg.impl == "memory" {
 		db.PrepareSubstate(&ws)
 	} else {
 		primeStateDB(ws, db)
 	}
-
-	// wrap stateDB for profiling
-	profileStateDB, stats := tracer.NewProxyProfiler(db, cfg.debug)
-	db = profileStateDB
+	sec = time.Since(start).Seconds()
+	log.Printf("\tElapsed time: %.2f s\n", sec)
 
 	if cfg.enableValidation {
 		fmt.Printf("WARNING: validation enabled, reducing Tx throughput\n")
@@ -244,19 +260,13 @@ func runVM(ctx *cli.Context) error {
 		}
 	}
 
-	var (
-		start       time.Time
-		sec         float64
-		lastSec     float64
-		txCount     int
-		lastTxCount int
-	)
 	if cfg.enableProgress {
 		start = time.Now()
 		sec = time.Since(start).Seconds()
 		lastSec = time.Since(start).Seconds()
 	}
 
+	log.Printf("Run VM\n")
 	var oldBlock uint64 = 0
 	iter := substate.NewSubstateIterator(cfg.first, cfg.workers)
 	defer iter.Release()

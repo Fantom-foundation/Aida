@@ -2,6 +2,7 @@ package trace
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 
 	"github.com/ethereum/go-ethereum/substate"
@@ -17,8 +18,9 @@ var GenUpdateSetCommand = cli.Command{
 	Flags: []cli.Flag{
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
-		&updateDirectoryFlag,
+		&updateDBDirFlag,
 		&validateEndState,
+		&worldStateDirFlag,
 	},
 	Description: `
 The trace gen-update-set command requires two arguments:
@@ -47,7 +49,8 @@ func genUpdateSet(ctx *cli.Context) error {
 	}
 	workers := ctx.Int(substate.WorkersFlag.Name)
 	validate := ctx.Bool(validateEndState.Name)
-	updateDir := ctx.String(updateDirectoryFlag.Name)
+	updateDir := ctx.String(updateDBDirFlag.Name)
+	worldStateDir := ctx.String(worldStateDirFlag.Name)
 
 	// initialize updateDB
 	db := substate.OpenUpdateDB(updateDir)
@@ -59,36 +62,52 @@ func genUpdateSet(ctx *cli.Context) error {
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
+	// store world state
+	log.Printf("Load initial worldstate and store its substateAlloc\n")
+	ws, err := generateWorldState(worldStateDir, first-1, workers)
+	if err != nil {
+		return err
+	}
+	db.PutUpdateSet(FirstSubstateBlock-1, &ws)
+	log.Printf("\tAccounts: %v\n", len(ws))
+
 	iter := substate.NewSubstateIterator(first, workers)
-	checkPoint := ((first / interval) + 1) * interval
 	defer iter.Release()
 
+	checkPoint := ((first / interval) + 1) * interval
 	txCount := uint64(0)
+	oldBlock := uint64(0)
 
 	for iter.Next() {
 		tx := iter.Value()
-		// stop when reaching end of block range
-		if tx.Block > last {
-			break
+
+		// new block
+		if oldBlock != tx.Block {
+			// write an update-set until prev block to update-set db
+			if tx.Block > checkPoint {
+				log.Printf("write block %v to updateDB\n", oldBlock)
+				db.PutUpdateSet(oldBlock, &update)
+				log.Printf("\tTx: %v, Accounts: %v\n", txCount, len(update))
+				checkPoint += interval
+
+				if validate {
+					if !db.GetUpdateSet(oldBlock).Equal(update) {
+						return fmt.Errorf("validation failed\n")
+					}
+				}
+				update = make(substate.SubstateAlloc)
+				txCount = 0
+			}
+
+			// stop when reaching end of block range
+			if tx.Block > last {
+				break
+			}
+			oldBlock = tx.Block
 		}
+
 		update.Merge(tx.Substate.OutputAlloc)
 		txCount++
-
-		// write to update set db
-		if tx.Block >= checkPoint {
-			fmt.Printf("write block %v to updateDB\n", tx.Block)
-			fmt.Printf("\tTx: %v, Accounts: %v\n", txCount, len(update))
-			db.PutUpdateSet(tx.Block, &update)
-			checkPoint += interval
-			//validate
-			if validate {
-				if !db.GetUpdateSet(tx.Block).Equal(update) {
-					return fmt.Errorf("validation failed\n")
-				}
-			}
-			update = make(substate.SubstateAlloc)
-			txCount = 0
-		}
 	}
 	return err
 }
