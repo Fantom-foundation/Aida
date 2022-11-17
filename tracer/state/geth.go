@@ -135,7 +135,12 @@ func (s *gethStateDB) BeginBlock() {
 }
 
 func (s *gethStateDB) EndBlock(number uint64) {
-	// ignored
+	if number != 0 {
+		//commit at the end of a block
+		if _, err := s.Commit(true); err != nil {
+			panic(fmt.Errorf("StateDB commit failed\n"))
+		}
+	}
 }
 
 func (s *gethStateDB) BeginEpoch() {

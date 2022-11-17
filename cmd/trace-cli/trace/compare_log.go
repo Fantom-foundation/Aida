@@ -2,11 +2,12 @@ package trace
 
 import (
 	"fmt"
-	"github.com/ethereum/go-ethereum/substate"
-	"github.com/urfave/cli/v2"
 	"io/ioutil"
 	"os"
 	"regexp"
+
+	"github.com/ethereum/go-ethereum/substate"
+	"github.com/urfave/cli/v2"
 )
 
 // TraceCompareLogCommand data structure for compare-log command.

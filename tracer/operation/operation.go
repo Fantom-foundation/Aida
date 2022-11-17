@@ -17,9 +17,12 @@ var stats *ProfileStats = new(ProfileStats)
 const (
 	AddBalanceID = iota
 	BeginBlockID
+	BeginEpochID
+	BeginTransactionID
 	CreateAccountID
 	EmptyID
 	EndBlockID
+	EndEpochID
 	EndTransactionID
 	ExistID
 	FinaliseID
@@ -32,8 +35,8 @@ const (
 	GetCommittedStateLclsID
 	GetNonceID
 	GetStateID
-	GetStateLcID
 	GetStateLccsID
+	GetStateLcID
 	GetStateLclsID
 	HasSuicidedID
 	RevertToSnapshotID
@@ -63,10 +66,6 @@ const (
 	PrepareID
 	SlotInAccessListID
 	SubRefundID
-
-	BeginTransactionID
-	BeginEpochID
-	EndEpochID
 )
 
 // OperationDictionary data structure contains a label and a read function for an operation
@@ -78,13 +77,13 @@ type OperationDictionary struct {
 // opDict relates an operation's id with its label and read-function.
 var opDict = map[byte]OperationDictionary{
 	AddBalanceID:            {label: "AddBalance", readfunc: ReadAddBalance},
-	BeginEpochID:            {label: "BeginEpoch", readfunc: ReadPanic},
-	EndEpochID:              {label: "EndEpoch", readfunc: ReadPanic},
+	BeginEpochID:            {label: "BeginEpoch", readfunc: ReadBeginEpoch},
+	EndEpochID:              {label: "EndEpoch", readfunc: ReadEndEpoch},
 	BeginBlockID:            {label: "BeginBlock", readfunc: ReadBeginBlock},
 	EndBlockID:              {label: "EndBlock", readfunc: ReadEndBlock},
 	CreateAccountID:         {label: "CreateAccount", readfunc: ReadCreateAccount},
 	EmptyID:                 {label: "Exist", readfunc: ReadEmpty},
-	BeginTransactionID:      {label: "BeginTransaction", readfunc: ReadPanic},
+	BeginTransactionID:      {label: "BeginTransaction", readfunc: ReadBeginTransaction},
 	EndTransactionID:        {label: "EndTransaction", readfunc: ReadEndTransaction},
 	ExistID:                 {label: "Exist", readfunc: ReadExist},
 	FinaliseID:              {label: "Finalise", readfunc: ReadFinalise},

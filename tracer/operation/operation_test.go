@@ -132,7 +132,7 @@ func (s *MockStateDB) BeginTransaction() {
 	s.recording = append(s.recording, Record{BeginTransactionID, []any{}})
 }
 
-func (s *MockStateDB) EndTransaction(tx int) {
+func (s *MockStateDB) EndTransaction(tx uint32) {
 	s.recording = append(s.recording, Record{EndTransactionID, []any{tx}})
 }
 
@@ -140,7 +140,7 @@ func (s *MockStateDB) BeginBlock() {
 	s.recording = append(s.recording, Record{BeginBlockID, []any{}})
 }
 
-func (s *MockStateDB) EndBlock(blk int) {
+func (s *MockStateDB) EndBlock(blk uint64) {
 	s.recording = append(s.recording, Record{EndBlockID, []any{blk}})
 }
 
@@ -148,7 +148,7 @@ func (s *MockStateDB) BeginEpoch() {
 	s.recording = append(s.recording, Record{BeginEpochID, []any{}})
 }
 
-func (s *MockStateDB) EndEpoch(id int) {
+func (s *MockStateDB) EndEpoch(id uint64) {
 	s.recording = append(s.recording, Record{EndEpochID, []any{id}})
 }
 
@@ -330,6 +330,6 @@ func testOperationDebug(t *testing.T, dict *dict.DictionaryContext, op Operation
 	expected := "\t" + label + ": " + args + "\n"
 
 	if buf.String() != expected {
-		t.Fatalf("wrong debug message: %s vs %s; %d vs %d", buf.String(), expected, len(buf.String()), len(expected))
+		t.Fatalf("wrong debug message: %s vs %s; length of strings: %d vs %d", buf.String(), expected, len(buf.String()), len(expected))
 	}
 }
