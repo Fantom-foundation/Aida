@@ -16,15 +16,9 @@ const firstOperation = 255
 // ProxyStochastic data structure for capturing and recording
 // invoked StateDB operations.
 type ProxyStochastic struct {
-	db           state.StateDB           // state db
-	dctx         *dict.DictionaryContext // dictionary context for decoding information
-	debug        bool
-	ContractFreq []uint64 // number of each operation accesses to contract
-	StorageFreq  []uint64 // number of each operation accesses to storage
-	ValueFreq    []uint64 // number of each operation accesses to value
-	OpFreq       []uint64 // number of operation invocations
-	prevOpId     byte
-	TFreq        map[[2]byte]uint64
+	db    state.StateDB           // state db
+	dctx  *dict.DictionaryContext // dictionary context for decoding information
+	debug bool
 }
 
 // NewProxyStochastic creates a new StateDB proxy.
@@ -33,12 +27,6 @@ func NewProxyStochastic(db state.StateDB, dctx *dict.DictionaryContext, debug bo
 	r.db = db
 	r.dctx = dctx
 	r.debug = debug
-	r.ContractFreq = make([]uint64, operation.NumProfiledOperations)
-	r.StorageFreq = make([]uint64, operation.NumProfiledOperations)
-	r.ValueFreq = make([]uint64, operation.NumProfiledOperations)
-	r.OpFreq = make([]uint64, operation.NumProfiledOperations)
-	r.prevOpId = operation.BeginBlockID
-	r.TFreq = map[[2]byte]uint64{}
 	return r
 }
 
@@ -47,7 +35,7 @@ func (r *ProxyStochastic) CreateAccount(addr common.Address) {
 	r.recordOp(operation.CreateAccountID)
 
 	if !r.dctx.HasEncodedContract(addr) {
-		r.ContractFreq[operation.CreateAccountID]++
+		r.dctx.ContractFreq[operation.CreateAccountID]++
 	}
 	_ = r.dctx.EncodeContract(addr)
 	r.db.CreateAccount(addr)
@@ -58,7 +46,7 @@ func (r *ProxyStochastic) SubBalance(addr common.Address, amount *big.Int) {
 	r.recordOp(operation.SubBalanceID)
 
 	if !r.dctx.HasEncodedContract(addr) {
-		r.ContractFreq[operation.SubBalanceID]++
+		r.dctx.ContractFreq[operation.SubBalanceID]++
 	}
 
 	_ = r.dctx.EncodeContract(addr)
@@ -70,7 +58,7 @@ func (r *ProxyStochastic) AddBalance(addr common.Address, amount *big.Int) {
 	r.recordOp(operation.AddBalanceID)
 
 	if !r.dctx.HasEncodedContract(addr) {
-		r.ContractFreq[operation.AddBalanceID]++
+		r.dctx.ContractFreq[operation.AddBalanceID]++
 	}
 
 	_ = r.dctx.EncodeContract(addr)
@@ -82,7 +70,7 @@ func (r *ProxyStochastic) GetBalance(addr common.Address) *big.Int {
 	r.recordOp(operation.GetBalanceID)
 
 	if !r.dctx.HasEncodedContract(addr) {
-		r.ContractFreq[operation.GetBalanceID]++
+		r.dctx.ContractFreq[operation.GetBalanceID]++
 	}
 
 	_ = r.dctx.EncodeContract(addr)
@@ -95,7 +83,7 @@ func (r *ProxyStochastic) GetNonce(addr common.Address) uint64 {
 	r.recordOp(operation.GetNonceID)
 
 	if !r.dctx.HasEncodedContract(addr) {
-		r.ContractFreq[operation.GetNonceID]++
+		r.dctx.ContractFreq[operation.GetNonceID]++
 	}
 
 	_ = r.dctx.EncodeContract(addr)
@@ -108,7 +96,7 @@ func (r *ProxyStochastic) SetNonce(addr common.Address, nonce uint64) {
 	r.recordOp(operation.SetNonceID)
 
 	if !r.dctx.HasEncodedContract(addr) {
-		r.ContractFreq[operation.SetNonceID]++
+		r.dctx.ContractFreq[operation.SetNonceID]++
 	}
 
 	_ = r.dctx.EncodeContract(addr)
@@ -118,7 +106,7 @@ func (r *ProxyStochastic) SetNonce(addr common.Address, nonce uint64) {
 // GetCodeHash returns the hash of the EVM bytecode.
 func (r *ProxyStochastic) GetCodeHash(addr common.Address) common.Hash {
 	if !r.dctx.HasEncodedContract(addr) {
-		r.ContractFreq[operation.GetCodeHashID]++
+		r.dctx.ContractFreq[operation.GetCodeHashID]++
 	}
 
 	prevCIdx := r.dctx.PrevContractIndex
@@ -138,7 +126,7 @@ func (r *ProxyStochastic) GetCode(addr common.Address) []byte {
 	r.recordOp(operation.GetCodeID)
 
 	if !r.dctx.HasEncodedContract(addr) {
-		r.ContractFreq[operation.GetCodeID]++
+		r.dctx.ContractFreq[operation.GetCodeID]++
 	}
 
 	_ = r.dctx.EncodeContract(addr)
@@ -151,7 +139,7 @@ func (r *ProxyStochastic) SetCode(addr common.Address, code []byte) {
 	r.recordOp(operation.SetCodeID)
 
 	if !r.dctx.HasEncodedContract(addr) {
-		r.ContractFreq[operation.SetCodeID]++
+		r.dctx.ContractFreq[operation.SetCodeID]++
 	}
 
 	_ = r.dctx.EncodeContract(addr)
@@ -164,7 +152,7 @@ func (r *ProxyStochastic) GetCodeSize(addr common.Address) int {
 	r.recordOp(operation.GetCodeSizeID)
 
 	if !r.dctx.HasEncodedContract(addr) {
-		r.ContractFreq[operation.GetCodeSizeID]++
+		r.dctx.ContractFreq[operation.GetCodeSizeID]++
 	}
 
 	_ = r.dctx.EncodeContract(addr)
@@ -191,11 +179,11 @@ func (r *ProxyStochastic) GetRefund() uint64 {
 // GetCommittedState retrieves a value that is already committed.
 func (r *ProxyStochastic) GetCommittedState(addr common.Address, key common.Hash) common.Hash {
 	if !r.dctx.HasEncodedContract(addr) {
-		r.ContractFreq[operation.GetCommittedStateID]++
+		r.dctx.ContractFreq[operation.GetCommittedStateID]++
 	}
 
 	if !r.dctx.HasEncodedStorage(key) {
-		r.StorageFreq[operation.GetCommittedStateID]++
+		r.dctx.StorageFreq[operation.GetCommittedStateID]++
 	}
 
 	prevCIdx := r.dctx.PrevContractIndex
@@ -213,11 +201,11 @@ func (r *ProxyStochastic) GetCommittedState(addr common.Address, key common.Hash
 // GetState retrieves a value from the StateDB.
 func (r *ProxyStochastic) GetState(addr common.Address, key common.Hash) common.Hash {
 	if !r.dctx.HasEncodedContract(addr) {
-		r.ContractFreq[operation.GetStateID]++
+		r.dctx.ContractFreq[operation.GetStateID]++
 	}
 
 	if !r.dctx.HasEncodedStorage(key) {
-		r.StorageFreq[operation.GetStateID]++
+		r.dctx.StorageFreq[operation.GetStateID]++
 	}
 
 	prevCIdx := r.dctx.PrevContractIndex
@@ -241,15 +229,15 @@ func (r *ProxyStochastic) GetState(addr common.Address, key common.Hash) common.
 // SetState sets a value in the StateDB.
 func (r *ProxyStochastic) SetState(addr common.Address, key common.Hash, value common.Hash) {
 	if !r.dctx.HasEncodedContract(addr) {
-		r.ContractFreq[operation.SetStateID]++
+		r.dctx.ContractFreq[operation.SetStateID]++
 	}
 
 	if !r.dctx.HasEncodedStorage(key) {
-		r.StorageFreq[operation.SetStateID]++
+		r.dctx.StorageFreq[operation.SetStateID]++
 	}
 
 	if !r.dctx.HasEncodedValue(key) {
-		r.ValueFreq[operation.SetStateID]++
+		r.dctx.ValueFreq[operation.SetStateID]++
 	}
 
 	prevCIdx := r.dctx.PrevContractIndex
@@ -271,7 +259,7 @@ func (r *ProxyStochastic) Suicide(addr common.Address) bool {
 	r.recordOp(operation.SuicideID)
 
 	if !r.dctx.HasEncodedContract(addr) {
-		r.ContractFreq[operation.SuicideID]++
+		r.dctx.ContractFreq[operation.SuicideID]++
 	}
 
 	_ = r.dctx.EncodeContract(addr)
@@ -284,7 +272,7 @@ func (r *ProxyStochastic) HasSuicided(addr common.Address) bool {
 	r.recordOp(operation.HasSuicidedID)
 
 	if !r.dctx.HasEncodedContract(addr) {
-		r.ContractFreq[operation.HasSuicidedID]++
+		r.dctx.ContractFreq[operation.HasSuicidedID]++
 	}
 
 	hasSuicided := r.db.HasSuicided(addr)
@@ -297,7 +285,7 @@ func (r *ProxyStochastic) Exist(addr common.Address) bool {
 	r.recordOp(operation.ExistID)
 
 	if !r.dctx.HasEncodedContract(addr) {
-		r.ContractFreq[operation.ExistID]++
+		r.dctx.ContractFreq[operation.ExistID]++
 	}
 
 	_ = r.dctx.EncodeContract(addr)
@@ -310,7 +298,7 @@ func (r *ProxyStochastic) Empty(addr common.Address) bool {
 	r.recordOp(operation.EmptyID)
 
 	if !r.dctx.HasEncodedContract(addr) {
-		r.ContractFreq[operation.EmptyID]++
+		r.dctx.ContractFreq[operation.EmptyID]++
 	}
 	empty := r.db.Empty(addr)
 	return empty
@@ -414,11 +402,11 @@ func (r *ProxyStochastic) GetSubstatePostAlloc() substate.SubstateAlloc {
 }
 
 func (r *ProxyStochastic) recordOp(id byte) {
-	if r.prevOpId != firstOperation {
-		r.OpFreq[id]++
-		r.TFreq[[2]byte{r.prevOpId, id}]++
-		r.prevOpId = id
+	if r.dctx.PrevOpId != firstOperation {
+		r.dctx.OpFreq[id]++
+		r.dctx.TFreq[[2]byte{r.dctx.PrevOpId, id}]++
+		r.dctx.PrevOpId = id
 	} else {
-		r.prevOpId = id
+		r.dctx.PrevOpId = id
 	}
 }

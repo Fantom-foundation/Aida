@@ -26,6 +26,13 @@ type DictionaryContext struct {
 	CodeDictionary *CodeDictionary // dictionary to compact the bytecode of contracts
 
 	SnapshotIndex *SnapshotIndex // snapshot index for execution (not for recording/replaying)
+
+	ContractFreq []uint64 // number of each operation accesses to contract
+	StorageFreq  []uint64 // number of each operation accesses to storage
+	ValueFreq    []uint64 // number of each operation accesses to value
+	OpFreq       []uint64 // number of operation invocations
+	PrevOpId     byte
+	TFreq        map[[2]byte]uint64
 }
 
 // operationFrequency is used for distribution calculation of operations and their frequencies
@@ -44,6 +51,25 @@ func NewDictionaryContext() *DictionaryContext {
 		ValueDictionary:    NewValueDictionary(),
 		CodeDictionary:     NewCodeDictionary(),
 		SnapshotIndex:      NewSnapshotIndex(),
+	}
+}
+
+// NewDictionaryContext creates a new dictionary context.
+func NewDictionaryStochasticContext(beginBlockId byte, numProfiledOperations byte) *DictionaryContext {
+	return &DictionaryContext{
+		ContractDictionary: NewContractDictionary(),
+		PrevContractIndex:  InvalidContractIndex,
+		StorageDictionary:  NewStorageDictionary(),
+		StorageIndexCache:  NewIndexCache(),
+		ValueDictionary:    NewValueDictionary(),
+		CodeDictionary:     NewCodeDictionary(),
+		SnapshotIndex:      NewSnapshotIndex(),
+		ContractFreq:       make([]uint64, numProfiledOperations),
+		StorageFreq:        make([]uint64, numProfiledOperations),
+		ValueFreq:          make([]uint64, numProfiledOperations),
+		OpFreq:             make([]uint64, numProfiledOperations),
+		PrevOpId:           beginBlockId,
+		TFreq:              map[[2]byte]uint64{},
 	}
 }
 
@@ -293,7 +319,7 @@ func (ctx *DictionaryContext) WriteDistribution(filename string, frequency []uin
 
 	frequencySorted := sortByFrequencyAcending(frequency)
 	for _, fi := range frequencySorted {
-		fmt.Fprintf(file, "%f - %f", float64(fi.opId)/float64(s), float64(fi.frequency)/float64(total))
+		fmt.Fprintf(file, "%f - %f \n", float64(fi.opId)/float64(s), float64(fi.frequency)/float64(total))
 	}
 
 	err = file.Close()
@@ -301,6 +327,22 @@ func (ctx *DictionaryContext) WriteDistribution(filename string, frequency []uin
 		return fmt.Errorf("Cannot close storage-dictionary file. Error: %v", err)
 	}
 	return nil
+}
+
+// FrequenciesWriter writes frequencies from dictionary recording
+func (ctx *DictionaryContext) FrequenciesWriter() {
+	file, err := os.OpenFile(DictionaryContextDir+"frequencies.dat", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		log.Fatalf("Cannot open trace file. Error: %v", err)
+	}
+	fmt.Fprintln(file, "operations: ", ctx.OpFreq)
+	fmt.Fprintln(file, "contractFreq: ", ctx.ContractFreq)
+	fmt.Fprintln(file, "storageFreq: ", ctx.StorageFreq)
+	fmt.Fprintln(file, "valueFreq: ", ctx.ValueFreq)
+
+	if err := file.Close(); err != nil {
+		log.Fatalf("Cannot close frequencies file. Error: %v", err)
+	}
 }
 
 // sortByFrequencyAcending converts frequency slice with operation ids as indexes to structure,

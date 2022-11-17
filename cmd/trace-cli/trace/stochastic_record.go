@@ -170,31 +170,7 @@ func stochasticRecordTask(block uint64, tx int, recording *substate.Substate, dC
 		return fmt.Errorf("inconsistent output")
 	}
 
-	// write recorded frequencies
-	frequenciesWriter(proxyStochastic)
-
-	dCtx.WriteDistributions()
-
-	// write stochastic matrix
-	writeStochasticMatrix(stochasticMatrixFlag.Value, stochasticMatrixFormatFlag.Value, proxyStochastic.TFreq)
-
 	return nil
-}
-
-// frequenciesWriter writes frequencies from dictionary recording
-func frequenciesWriter(proxyStochastic *tracer.ProxyStochastic) {
-	file, err := os.OpenFile(tracer.TraceDir+"frequencies.dat", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-	if err != nil {
-		log.Fatalf("Cannot open trace file. Error: %v", err)
-	}
-	fmt.Fprintln(file, "operations: ", proxyStochastic.OpFreq)
-	fmt.Fprintln(file, "contractFreq: ", proxyStochastic.ContractFreq)
-	fmt.Fprintln(file, "storageFreq: ", proxyStochastic.StorageFreq)
-	fmt.Fprintln(file, "valueFreq: ", proxyStochastic.ValueFreq)
-
-	if err := file.Close(); err != nil {
-		log.Fatalf("Cannot close frequencies file. Error: %v", err)
-	}
 }
 
 // OperationStochasticWriter reads operations from the operation channel and writes
@@ -271,7 +247,7 @@ func stochasticRecordAction(ctx *cli.Context) error {
 	enableProgress := !ctx.Bool(disableProgressFlag.Name)
 
 	// create dictionary and index contexts
-	dCtx := dict.NewDictionaryContext()
+	dCtx := dict.NewDictionaryStochasticContext(operation.BeginBlockID, operation.NumProfiledOperations)
 
 	// spawn writer
 	opChannel := make(chan operation.Operation, 100000)
@@ -348,6 +324,15 @@ func stochasticRecordAction(ctx *cli.Context) error {
 
 	// write dictionaries and indexes
 	dCtx.Write()
+
+	// write recorded frequencies
+	dCtx.FrequenciesWriter()
+
+	dCtx.WriteDistributions()
+
+	// write stochastic matrix
+	writeStochasticMatrix(stochasticMatrixFlag.Value, stochasticMatrixFormatFlag.Value, dCtx.TFreq)
+
 	return err
 }
 
