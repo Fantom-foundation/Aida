@@ -239,10 +239,6 @@ func runVM(ctx *cli.Context) error {
 	sec = time.Since(start).Seconds()
 	log.Printf("\tElapsed time: %.2f s, accounts: %v\n", sec, len(ws))
 
-	// wrap stateDB for profiling
-	profileStateDB, stats := tracer.NewProxyProfiler(db, cfg.debug)
-	db = profileStateDB
-
 	// prime stateDB
 	log.Printf("Prime stateDB\n")
 	start = time.Now()
