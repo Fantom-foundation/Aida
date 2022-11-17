@@ -63,6 +63,10 @@ const (
 	PrepareID
 	SlotInAccessListID
 	SubRefundID
+
+	BeginTransactionID
+	BeginEpochID
+	EndEpochID
 )
 
 // OperationDictionary data structure contains a label and a read function for an operation
@@ -74,10 +78,13 @@ type OperationDictionary struct {
 // opDict relates an operation's id with its label and read-function.
 var opDict = map[byte]OperationDictionary{
 	AddBalanceID:            {label: "AddBalance", readfunc: ReadAddBalance},
+	BeginEpochID:            {label: "BeginEpoch", readfunc: ReadPanic},
+	EndEpochID:              {label: "EndEpoch", readfunc: ReadPanic},
 	BeginBlockID:            {label: "BeginBlock", readfunc: ReadBeginBlock},
+	EndBlockID:              {label: "EndBlock", readfunc: ReadEndBlock},
 	CreateAccountID:         {label: "CreateAccount", readfunc: ReadCreateAccount},
 	EmptyID:                 {label: "Exist", readfunc: ReadEmpty},
-	EndBlockID:              {label: "EndBlock", readfunc: ReadEndBlock},
+	BeginTransactionID:      {label: "BeginTransaction", readfunc: ReadPanic},
 	EndTransactionID:        {label: "EndTransaction", readfunc: ReadEndTransaction},
 	ExistID:                 {label: "Exist", readfunc: ReadExist},
 	FinaliseID:              {label: "Finalise", readfunc: ReadFinalise},

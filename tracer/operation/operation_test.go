@@ -2,16 +2,17 @@ package operation
 
 import (
 	"bytes"
-	"github.com/Fantom-foundation/Aida/tracer/dict"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/substate"
 	"io"
 	"math/big"
 	"os"
 	"reflect"
 	"testing"
+
+	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/substate"
 )
 
 // MockStateDB data structure
@@ -125,6 +126,30 @@ func (s *MockStateDB) Snapshot() int {
 
 func (s *MockStateDB) RevertToSnapshot(id int) {
 	s.recording = append(s.recording, Record{RevertToSnapshotID, []any{id}})
+}
+
+func (s *MockStateDB) BeginTransaction() {
+	s.recording = append(s.recording, Record{BeginTransactionID, []any{}})
+}
+
+func (s *MockStateDB) EndTransaction(tx int) {
+	s.recording = append(s.recording, Record{EndTransactionID, []any{tx}})
+}
+
+func (s *MockStateDB) BeginBlock() {
+	s.recording = append(s.recording, Record{BeginBlockID, []any{}})
+}
+
+func (s *MockStateDB) EndBlock(blk int) {
+	s.recording = append(s.recording, Record{EndBlockID, []any{blk}})
+}
+
+func (s *MockStateDB) BeginEpoch() {
+	s.recording = append(s.recording, Record{BeginEpochID, []any{}})
+}
+
+func (s *MockStateDB) EndEpoch(id int) {
+	s.recording = append(s.recording, Record{EndEpochID, []any{id}})
 }
 
 func (s *MockStateDB) Finalise(deleteEmptyObjects bool) {
