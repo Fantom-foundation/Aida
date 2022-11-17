@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer"
+	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/tracer/state"
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/Fantom-foundation/go-opera/opera"
@@ -238,10 +239,6 @@ func runVM(ctx *cli.Context) error {
 	sec = time.Since(start).Seconds()
 	log.Printf("\tElapsed time: %.2f s, accounts: %v\n", sec, len(ws))
 
-	// wrap stateDB for profiling
-	profileStateDB, stats := tracer.NewProxyProfiler(db, cfg.debug)
-	db = profileStateDB
-
 	// prime stateDB
 	log.Printf("Prime stateDB\n")
 	start = time.Now()
@@ -249,6 +246,11 @@ func runVM(ctx *cli.Context) error {
 		db.PrepareSubstate(&ws)
 	} else {
 		primeStateDB(ws, db)
+	}
+	// wrap stateDB for profiling
+	var stats *operation.ProfileStats
+	if cfg.profile {
+		db, stats = tracer.NewProxyProfiler(db, cfg.debug)
 	}
 	sec = time.Since(start).Seconds()
 	log.Printf("\tElapsed time: %.2f s\n", sec)
