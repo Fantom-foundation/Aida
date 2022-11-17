@@ -59,6 +59,11 @@ var (
 		Usage: "set storage trace's output directory",
 		Value: "./",
 	}
+	updateDBDirFlag = cli.StringFlag{
+		Name:  "updatedir",
+		Usage: "set update-set database directory",
+		Value: "./updatedb",
+	}
 	validateEndState = cli.BoolFlag{
 		Name:  "validate",
 		Usage: "enables end-state validation",
@@ -79,9 +84,9 @@ type TraceConfig struct {
 	enableProgress   bool   // enable progress report flag
 	impl             string // storage implementation
 	profile          bool   // enable micro profiling
+	updateDBDir      string // update-set directory
 	variant          string // database variant
 	workers          int    // number of worker threads
-	worldStateDir    string // worldstate directory
 }
 
 // NewTraceConfig creates and initializes TraceConfig with commandline arguments.
@@ -104,16 +109,16 @@ func NewTraceConfig(ctx *cli.Context) (*TraceConfig, error) {
 		enableProgress:   !ctx.Bool(disableProgressFlag.Name),
 		impl:             ctx.String(stateDbImplementation.Name),
 		profile:          ctx.Bool(profileFlag.Name),
+		updateDBDir:      ctx.String(updateDBDirFlag.Name),
 		variant:          ctx.String(stateDbVariant.Name),
 		workers:          ctx.Int(substate.WorkersFlag.Name),
-		worldStateDir:    ctx.String(worldStateDirFlag.Name),
 	}
 
 	if cfg.enableProgress {
 		log.Printf("Run config:\n")
 		log.Printf("\tBlock range: %v to %v\n", cfg.first, cfg.last)
 		log.Printf("\tStorage system: %v, DB variant: %v\n", cfg.impl, cfg.variant)
-		log.Printf("\tWorld state directory: %v\n", cfg.worldStateDir)
+		log.Printf("\tUpdate DB directory: %v\n", cfg.updateDBDir)
 	}
 	return cfg, nil
 }

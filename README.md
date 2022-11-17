@@ -72,7 +72,7 @@ simulates transaction execution from block 5,000,000 to (and including) block 5,
  - `--chainid` sets the chain-id (useful if recording from testnet). Default: 250 (mainnet)`
  - `--cpuprofile` records a CPU profile for the replay to be inspected using `pprof`
  - `--disable-progress` disable progress report. Default: `false`
- - `--substatedir` sets directory contain substate database. Default: `./substate.fantom`
+ - `--substatedir` sets directory containing substate database. Default: `./substate.fantom`
  - `--trace-dir` sets trace file output directory. Default: `./`
  - `--trace-debug` print recorded operations. 
  - `--workers` sets the number of worker threads.
@@ -91,12 +91,12 @@ reads the recorded traces and re-executes state operations from block 5,050,000 
  - `--db-variant` select between implementation specific sub-variants, e.g. `go-ldb` or `cpp-file`
  - `--disable-progress` disable progress report. Default: `false`
  - `--profile` records and displays summary information on operation performance
- - `--substatedir` sets directory contain substate database. Default: `./substate.fantom`
+ - `--substatedir` sets directory containing substate database. Default: `./substate.fantom`
  - `--tracedir` sets trace file directory. Default: `./`
  - `--trace-debug` print replayed operations.
+ - `--updatedir` sets directory containing update-set database.
  - `--validate` validate the state after replaying traces.
  - `--workers` sets the number of worker threads.
- - `--worldstatedir` sets direcory contain world state.
 
 ### Trace Replay Substate
 
@@ -112,7 +112,7 @@ reads the recorded traces and re-executes state operations from block 5,050,000 
  - `--db-variant` select between implementation specific sub-variants, e.g. `go-ldb` or `cpp-file`
  - `--disable-progress` disable progress report. Default: `false`
  - `--profile` records and displays summary information on operation performance
- - `--substatedir` sets directory contain substate database. Default: `./substate.fantom`
+ - `--substatedir` sets directory containing substate database. Default: `./substate.fantom`
  - `--tracedir` sets trace file directory. Default: `./`
  - `--trace-debug` print replayed operations.
  - `--validate` validate the state after replaying traces.
@@ -122,7 +122,7 @@ reads the recorded traces and re-executes state operations from block 5,050,000 
 
 **Run**
 
-`./build/trace run-vm --worldstatedir path/to/world-state --db-impl [geth/carmen/memory] 4564026 5000000`
+`./build/trace run-vm --updatedir path/to/updatedb --db-impl [geth/carmen/memory] 4564026 5000000`
 executes transactions from block 4,564,026 to 5,000,000. The tool initializes stateDB with accounts in the world state from option `--worldstatedir`. Each transaction calls VM which issues a series of StateDB operations to a selected storage system.
 
 **Options**
@@ -133,9 +133,25 @@ executes transactions from block 4,564,026 to 5,000,000. The tool initializes st
  - `--db-variant` select between implementation specific sub-variants, e.g. `go-ldb` or `cpp-file`
  - `--disable-progress` disable progress report. Default: `false`
  - `--profile` records and displays summary information on operation performance
- - `--substatedir` sets directory contain substate database. Default: `./substate.fantom`
+ - `--substatedir` sets directory containing substate database. Default: `./substate.fantom`
  - `--tracedir` sets trace file directory. Default: `./`
  - `--trace-debug` print replayed operations.
+ - `--updatedir` sets directory containing update-set database.
  - `--validate` validate the state after replaying traces.
  - `--workers` sets the number of worker threads.
  - `--vm-impl` select between `geth` and `lfvm`. Default: `geth`
+
+### Generate an update-set database
+
+**Run**
+
+`./build/trace gen-update-set --worldstatedir path/to/world-state --updatedir path/to/updatedb 4564026 41000000 1000000`
+generates piecewise update-sets (merges of output substates) at every 1000000 blocks starting from block 4564026 to block 41000000 and stores them in updateDB. SubstateAlloc of block 4564025 from the world state is reocrded as the first update-set if --worldstatedir is provided. The subsequence update-sets happen at block 5000000 and every 1000000 blocks afterwards. 
+
+**Options**
+
+ - `--substatedir` sets directory containing substate database. Default: `./substate.fantom`
+ - `--updatedir` sets directory containing update-set database.
+ - `--validate` validate the state after replaying traces.
+ - `--worldstatedir` sets directory containing world state database.
+ - `--workers` sets the number of worker threads.

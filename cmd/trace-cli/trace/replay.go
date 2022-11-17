@@ -31,8 +31,8 @@ var TraceReplayCommand = cli.Command{
 		&substate.WorkersFlag,
 		&traceDirectoryFlag,
 		&traceDebugFlag,
+		&updateDBDirFlag,
 		&validateEndState,
-		&worldStateDirFlag,
 	},
 	Description: `
 The trace replay command requires two arguments:
@@ -65,13 +65,6 @@ func traceReplayTask(cfg *TraceConfig) error {
 	log.Printf("Load dictionaries")
 	dCtx := dict.ReadDictionaryContext()
 
-	// intialize the world state and advance it to the first block
-	log.Printf("Load and advance worldstate to block %v", cfg.first-1)
-	ws, err := generateWorldState(cfg.worldStateDir, cfg.first-1, cfg.workers)
-	if err != nil {
-		return err
-	}
-
 	// create a directory for the store to place all its files, and
 	// instantiate the state DB under testing.
 	log.Printf("Create stateDB database")
@@ -80,6 +73,13 @@ func traceReplayTask(cfg *TraceConfig) error {
 		return err
 	}
 	db, err := makeStateDB(stateDirectory, cfg.impl, cfg.variant)
+	if err != nil {
+		return err
+	}
+
+	// intialize the world state and advance it to the first block
+	log.Printf("Load and advance worldstate to block %v", cfg.first-1)
+	ws, err := generateWorldStateFromUpdateDB(cfg.updateDBDir, cfg.first-1, cfg.workers)
 	if err != nil {
 		return err
 	}
