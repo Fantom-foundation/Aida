@@ -15,7 +15,8 @@ jobs:
       ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
     steps:
       - name: Configure github
-        run: git config --global url.https://$ACCESS_TOKEN@github.com/.insteadOf https://github.com/
+        run: git config --global url."https://wsodsong:${ACCESS_TOKEN}@github.com".insteadOf "https://github.com"
+
       - name: Checkout repository and submodules
         uses: actions/checkout@v3
         with:
