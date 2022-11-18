@@ -195,6 +195,9 @@ func runVM(ctx *cli.Context) error {
 	if argErr != nil {
 		return argErr
 	}
+	if cfg.impl == "memory" {
+		return fmt.Errorf("db-impl memory is not supported")
+	}
 	vmImpl := ctx.String(vmImplementation.Name)
 	fmt.Printf("Used VM implementation: %v\n", vmImpl)
 
@@ -240,11 +243,8 @@ func runVM(ctx *cli.Context) error {
 	// prime stateDB
 	log.Printf("Prime stateDB\n")
 	start = time.Now()
-	if cfg.impl == "memory" {
-		db.PrepareSubstate(&ws)
-	} else {
-		primeStateDB(ws, db)
-	}
+	primeStateDB(ws, db)
+
 	// wrap stateDB for profiling
 	var stats *operation.ProfileStats
 	if cfg.profile {
