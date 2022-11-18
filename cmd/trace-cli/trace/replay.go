@@ -24,7 +24,10 @@ var TraceReplayCommand = cli.Command{
 	Flags: []cli.Flag{
 		&cpuProfileFlag,
 		&disableProgressFlag,
+		&primeSeedFlag,
+		&primeCommitThresholdFlag,
 		&profileFlag,
+		&randomizePrimingFlag,
 		&stateDbImplementation,
 		&stateDbVariant,
 		&substate.SubstateDirFlag,
@@ -89,7 +92,7 @@ func traceReplayTask(cfg *TraceConfig) error {
 	if cfg.impl == "memory" {
 		db.PrepareSubstate(&ws)
 	} else {
-		primeStateDB(ws, db)
+		primeStateDB(ws, db, cfg.primeRandom, cfg.primeSeed, cfg.primeThreshold)
 	}
 
 	log.Printf("Replay storage operations on StateDB database")

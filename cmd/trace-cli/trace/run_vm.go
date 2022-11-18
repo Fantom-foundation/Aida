@@ -35,8 +35,10 @@ var RunVMCommand = cli.Command{
 		&chainIDFlag,
 		&cpuProfileFlag,
 		&disableProgressFlag,
+		&primeSeedFlag,
+		&primeCommitThresholdFlag,
 		&profileFlag,
-		&vmImplementation,
+		&randomizePrimingFlag,
 		&stateDbImplementation,
 		&stateDbVariant,
 		&substate.WorkersFlag,
@@ -44,6 +46,7 @@ var RunVMCommand = cli.Command{
 		&traceDebugFlag,
 		&updateDBDirFlag,
 		&validateEndState,
+		&vmImplementation,
 	},
 	Description: `
 The trace run-vm command requires two arguments:
@@ -189,11 +192,13 @@ func runVM(ctx *cli.Context) error {
 		txCount     int
 		lastTxCount int
 	)
-
+	// process general arguments
 	cfg, argErr := NewTraceConfig(ctx)
 	if argErr != nil {
 		return argErr
 	}
+
+	// process run-vm specific arguments
 	vmImpl := ctx.String(vmImplementation.Name)
 	fmt.Printf("Used VM implementation: %v\n", vmImpl)
 
@@ -240,12 +245,11 @@ func runVM(ctx *cli.Context) error {
 	log.Printf("\tElapsed time: %.2f s, accounts: %v\n", sec, len(ws))
 
 	// prime stateDB
-	log.Printf("Prime stateDB\n")
 	start = time.Now()
 	if cfg.impl == "memory" {
 		db.PrepareSubstate(&ws)
 	} else {
-		primeStateDB(ws, db)
+		primeStateDB(ws, db, cfg.primeRandom, cfg.primeSeed, cfg.primeThreshold)
 	}
 	// wrap stateDB for profiling
 	var stats *operation.ProfileStats
