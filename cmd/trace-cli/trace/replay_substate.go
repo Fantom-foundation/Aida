@@ -74,17 +74,36 @@ func traceReplaySubstateTask(cfg *TraceConfig) error {
 		lastSec     float64
 		lastTxCount uint64
 		txCount     uint64
+		firstBlock  = true
 	)
 	if cfg.enableProgress {
 		start = time.Now()
 		sec = time.Since(start).Seconds()
 		lastSec = time.Since(start).Seconds()
 	}
+
+	// A utility to run operations on the local context.
+	run := func(op operation.Operation) {
+		operation.Execute(op, db, dCtx)
+		if cfg.debug {
+			operation.Debug(dCtx, op)
+		}
+	}
+
 	for stateIter.Next() {
 		tx := stateIter.Value()
+
+		// The first Epoch begin and the final EpochEnd need to be artificially
+		// added since the range running on may not match epoch boundaries.
+		if firstBlock {
+			run(operation.NewBeginEpoch())
+			firstBlock = false
+		}
+
 		if tx.Block > cfg.last {
 			break
 		}
+
 		if cfg.impl == "memory" {
 			db.PrepareSubstate(&tx.Substate.InputAlloc)
 		} else {
@@ -92,10 +111,7 @@ func traceReplaySubstateTask(cfg *TraceConfig) error {
 		}
 		for traceIter.Next() {
 			op := traceIter.Value()
-			operation.Execute(op, db, dCtx)
-			if cfg.debug {
-				operation.Debug(dCtx, op)
-			}
+			run(op)
 
 			// find end of transaction
 			if op.GetId() == operation.EndTransactionID {
@@ -123,16 +139,14 @@ func traceReplaySubstateTask(cfg *TraceConfig) error {
 		}
 	}
 
-	// replay the last EndBlock()
+	// replay the last EndBlock() and EndEpoch()
 	hasNext := traceIter.Next()
 	op := traceIter.Value()
 	if !hasNext || op.GetId() != operation.EndBlockID {
 		return fmt.Errorf("Last operation isn't an EndBlock")
 	} else {
-		operation.Execute(op, db, dCtx)
-		if cfg.debug {
-			operation.Debug(dCtx, op)
-		}
+		run(op) // EndBlock
+		run(operation.NewEndEpoch(cfg.last / cfg.epochLength))
 	}
 	sec = time.Since(start).Seconds()
 

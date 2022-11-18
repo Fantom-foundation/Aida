@@ -49,22 +49,28 @@ type BasicStateDB interface {
 	AddAddressToAccessList(addr common.Address)
 	AddSlotToAccessList(addr common.Address, slot common.Hash)
 
-	// Transaction handling
-	Snapshot() int
-	RevertToSnapshot(int)
-	Finalise(bool)
-	IntermediateRoot(bool) common.Hash
-	Commit(bool) (common.Hash, error)
-	Prepare(common.Hash, int)
-
+	// Logging
 	AddLog(*types.Log)
 	GetLogs(common.Hash, common.Hash) []*types.Log
-	AddPreimage(common.Hash, []byte)
 
-	ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error
+	// Transaction handling
+	// There are 4 layers of concepts governing the visibility of state effects:
+	//  - snapshots .. enclosing (sub-)contract calls, supporting reverts (=rollbacks)
+	//  - transactions .. processing a single block chain event, comprising a hierachy of contract calls
+	//  - blocks .. groups of transactions, at boundaries effects become visible (and final) to API servers
+	//  - epochs .. groups of blocks, at boundaries state becomes syncable between nodes
 
-	// Substate specific
-	GetSubstatePostAlloc() substate.SubstateAlloc
+	Snapshot() int
+	RevertToSnapshot(int)
+
+	BeginTransaction()
+	EndTransaction(number uint32)
+
+	BeginBlock()
+	EndBlock(number uint64)
+
+	BeginEpoch()
+	EndEpoch(number uint64)
 }
 
 type StateDB interface {
@@ -77,7 +83,23 @@ type StateDB interface {
 	// stateDB handler
 	BeginBlockApply(common.Hash) error
 
+	// ---- Artefacts from Geth dependency ----
+
+	// The following functions may be used by StateDB implementations for backward-compatibilty
+	// and will be called accordingly by the tracer and EVM runner. However, implementations may
+	// chose to ignore those.
+
+	Prepare(common.Hash, int)
+	AddPreimage(common.Hash, []byte)
+	Finalise(bool)
+	IntermediateRoot(bool) common.Hash
+	Commit(bool) (common.Hash, error)
+	ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error
+
 	// ---- Optional Development & Debugging Features ----
+
+	// Substate specific
+	GetSubstatePostAlloc() substate.SubstateAlloc
 
 	// Used to initiate the state DB for the next transaction.
 	// This is mainly for development purposes to support in-memory DB implementations.

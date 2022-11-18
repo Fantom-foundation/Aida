@@ -87,7 +87,7 @@ reads the recorded traces and re-executes state operations from block 5,050,000 
 **Options**
 
  - `--cpuprofile` records a CPU profile for the replay to be inspected using `pprof`
- - `--db-impl` select between `memory`, `geth`, `carmen` and `flat`. Default: `geth`
+ - `--db-impl` select between `geth` and `carmen`. Default: `geth`
  - `--db-variant` select between implementation specific sub-variants, e.g. `go-ldb` or `cpp-file`
  - `--disable-progress` disable progress report. Default: `false`
  - `--profile` records and displays summary information on operation performance
@@ -108,7 +108,7 @@ reads the recorded traces and re-executes state operations from block 5,050,000 
 **Options**
 
  - `--cpuprofile` records a CPU profile for the replay to be inspected using `pprof`
- - `--db-impl` select between `memory`, `geth`, `carmen` and `flat`. Default: `geth`
+ - `--db-impl` select between `geth` and `carmen`. Default: `geth`
  - `--db-variant` select between implementation specific sub-variants, e.g. `go-ldb` or `cpp-file`
  - `--disable-progress` disable progress report. Default: `false`
  - `--profile` records and displays summary information on operation performance
@@ -122,14 +122,14 @@ reads the recorded traces and re-executes state operations from block 5,050,000 
 
 **Run**
 
-`./build/trace run-vm --updatedir path/to/updatedb --db-impl [geth/carmen/memory/flat] 4564026 5000000`
+`./build/trace run-vm --updatedir path/to/updatedb --db-impl [geth/carmen/memory] 4564026 5000000`
 executes transactions from block 4,564,026 to 5,000,000. The tool initializes stateDB with accounts in the world state from option `--worldstatedir`. Each transaction calls VM which issues a series of StateDB operations to a selected storage system.
 
 **Options**
 
  - `--chainid` sets the chain-id (useful if recording from testnet). Default: 250 (mainnet)`
  - `--cpuprofile` records a CPU profile for the replay to be inspected using `pprof`
- - `--db-impl` select between `memory`, `geth`, `carmen` and `flat`. Default: `geth`
+ - `--db-impl` select between `geth` and `carmen`. Default: `geth`
  - `--db-variant` select between implementation specific sub-variants, e.g. `go-ldb` or `cpp-file`
  - `--disable-progress` disable progress report. Default: `false`
  - `--prime-random` randomize order of accounts in StateDB priming.

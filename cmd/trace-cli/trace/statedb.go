@@ -22,8 +22,6 @@ func makeStateDB(directory, impl, variant string) (state.StateDB, error) {
 		return state.MakeGethStateDB(directory, variant)
 	case "carmen":
 		return state.MakeCarmenStateDB(directory, variant)
-	case "flat":
-		return state.MakeFlatStateDB(directory, variant)
 	}
 	return nil, fmt.Errorf("Unknown DB implementation (--%v): %v", stateDbImplementation.Name, impl)
 }

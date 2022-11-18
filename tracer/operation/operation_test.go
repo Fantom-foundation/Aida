@@ -2,16 +2,17 @@ package operation
 
 import (
 	"bytes"
-	"github.com/Fantom-foundation/Aida/tracer/dict"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/substate"
 	"io"
 	"math/big"
 	"os"
 	"reflect"
 	"testing"
+
+	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/substate"
 )
 
 // MockStateDB data structure
@@ -125,6 +126,30 @@ func (s *MockStateDB) Snapshot() int {
 
 func (s *MockStateDB) RevertToSnapshot(id int) {
 	s.recording = append(s.recording, Record{RevertToSnapshotID, []any{id}})
+}
+
+func (s *MockStateDB) BeginTransaction() {
+	s.recording = append(s.recording, Record{BeginTransactionID, []any{}})
+}
+
+func (s *MockStateDB) EndTransaction(tx uint32) {
+	s.recording = append(s.recording, Record{EndTransactionID, []any{tx}})
+}
+
+func (s *MockStateDB) BeginBlock() {
+	s.recording = append(s.recording, Record{BeginBlockID, []any{}})
+}
+
+func (s *MockStateDB) EndBlock(blk uint64) {
+	s.recording = append(s.recording, Record{EndBlockID, []any{blk}})
+}
+
+func (s *MockStateDB) BeginEpoch() {
+	s.recording = append(s.recording, Record{BeginEpochID, []any{}})
+}
+
+func (s *MockStateDB) EndEpoch(id uint64) {
+	s.recording = append(s.recording, Record{EndEpochID, []any{id}})
 }
 
 func (s *MockStateDB) Finalise(deleteEmptyObjects bool) {
@@ -305,6 +330,6 @@ func testOperationDebug(t *testing.T, dict *dict.DictionaryContext, op Operation
 	expected := "\t" + label + ": " + args + "\n"
 
 	if buf.String() != expected {
-		t.Fatalf("wrong debug message: %s vs %s; %d vs %d", buf.String(), expected, len(buf.String()), len(expected))
+		t.Fatalf("wrong debug message: %s vs %s; length of strings: %d vs %d", buf.String(), expected, len(buf.String()), len(expected))
 	}
 }

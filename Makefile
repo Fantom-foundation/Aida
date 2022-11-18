@@ -34,7 +34,7 @@ trace:
 	./build_libcarmen.sh ; \
 	cd ../../.. ; \
 	GOPROXY=$(GOPROXY) \
-	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/go-opera-fvm \
+	GOPRIVATE=github.com/Fantom-foundation/Carmen \
 	go build -ldflags "-s -w" \
        	-o $(GO_BIN)/trace \
 	./cmd/trace-cli

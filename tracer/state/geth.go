@@ -8,6 +8,7 @@ import (
 	rawdb "github.com/ethereum/go-ethereum/core/rawdb"
 	geth "github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
+	vm "github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/substate"
 )
 
@@ -41,7 +42,7 @@ func (s *gethStateDB) BeginBlockApply(root_hash common.Hash) error {
 }
 
 type gethStateDB struct {
-	db    BasicStateDB
+	db    vm.StateDB
 	ethdb geth.Database
 }
 
@@ -121,20 +122,59 @@ func (s *gethStateDB) RevertToSnapshot(id int) {
 	s.db.RevertToSnapshot(id)
 }
 
+func (s *gethStateDB) BeginTransaction() {
+	// ignored
+}
+
+func (s *gethStateDB) EndTransaction(number uint32) {
+	// ignored
+}
+
+func (s *gethStateDB) BeginBlock() {
+	// ignored
+}
+
+func (s *gethStateDB) EndBlock(number uint64) {
+	if number != 0 {
+		//commit at the end of a block
+		if _, err := s.Commit(true); err != nil {
+			panic(fmt.Errorf("StateDB commit failed\n"))
+		}
+	}
+}
+
+func (s *gethStateDB) BeginEpoch() {
+	// ignored
+}
+
+func (s *gethStateDB) EndEpoch(number uint64) {
+	// ignored
+}
+
 func (s *gethStateDB) Finalise(deleteEmptyObjects bool) {
-	s.db.Finalise(deleteEmptyObjects)
+	if db, ok := s.db.(*geth.StateDB); ok {
+		db.Finalise(deleteEmptyObjects)
+	}
 }
 
 func (s *gethStateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
-	return s.db.IntermediateRoot(deleteEmptyObjects)
+	if db, ok := s.db.(*geth.StateDB); ok {
+		return db.IntermediateRoot(deleteEmptyObjects)
+	}
+	return common.Hash{}
 }
 
 func (s *gethStateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
-	return s.db.Commit(deleteEmptyObjects)
+	if db, ok := s.db.(*geth.StateDB); ok {
+		return db.Commit(deleteEmptyObjects)
+	}
+	return common.Hash{}, nil
 }
 
 func (s *gethStateDB) Prepare(thash common.Hash, ti int) {
-	s.db.Prepare(thash, ti)
+	if db, ok := s.db.(*geth.StateDB); ok {
+		db.Prepare(thash, ti)
+	}
 }
 
 func (s *gethStateDB) PrepareSubstate(substate *substate.SubstateAlloc) {
@@ -142,7 +182,10 @@ func (s *gethStateDB) PrepareSubstate(substate *substate.SubstateAlloc) {
 }
 
 func (s *gethStateDB) GetSubstatePostAlloc() substate.SubstateAlloc {
-	return s.db.GetSubstatePostAlloc()
+	if db, ok := s.db.(*geth.StateDB); ok {
+		return db.GetSubstatePostAlloc()
+	}
+	return substate.SubstateAlloc{}
 }
 
 func (s *gethStateDB) Close() error {
@@ -205,5 +248,8 @@ func (s *gethStateDB) ForEachStorage(addr common.Address, cb func(common.Hash, c
 	return s.db.ForEachStorage(addr, cb)
 }
 func (s *gethStateDB) GetLogs(hash common.Hash, blockHash common.Hash) []*types.Log {
-	return s.db.GetLogs(hash, blockHash)
+	if db, ok := s.db.(*geth.StateDB); ok {
+		return db.GetLogs(hash, blockHash)
+	}
+	return []*types.Log{}
 }

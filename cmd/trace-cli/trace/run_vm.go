@@ -34,6 +34,7 @@ var RunVMCommand = cli.Command{
 	Flags: []cli.Flag{
 		&chainIDFlag,
 		&cpuProfileFlag,
+		&epochLengthFlag,
 		&disableProgressFlag,
 		&primeSeedFlag,
 		&primeCommitThresholdFlag,
@@ -212,9 +213,6 @@ func runVM(ctx *cli.Context) error {
 		defer pprof.StopCPUProfile()
 	}
 
-	// process arguments
-	chainID = ctx.Int(chainIDFlag.Name)
-
 	// iterate through subsets in sequence
 	substate.SetSubstateFlags(ctx)
 	substate.OpenSubstateDBReadOnly()
@@ -273,31 +271,47 @@ func runVM(ctx *cli.Context) error {
 	}
 
 	log.Printf("Run VM\n")
-	var oldBlock uint64 = 0
+	var curBlock uint64 = 0
+	var curEpoch = cfg.first / cfg.epochLength
 	iter := substate.NewSubstateIterator(cfg.first, cfg.workers)
+
+	// Initiate first epoch and block.
+	db.BeginEpoch()
+	db.BeginBlock()
+
 	defer iter.Release()
 	for iter.Next() {
 
 		tx := iter.Value()
-		// close off old block with an end-block operation
-		if oldBlock != tx.Block {
+		// close off old block and possibly epochs
+		if curBlock != tx.Block {
 			if tx.Block > cfg.last {
 				break
+			}
 
+			// Mark the end of the old block.
+			db.EndBlock(curBlock)
+
+			// Move on epochs if needed.
+			newEpoch := tx.Block / cfg.epochLength
+			for curEpoch < newEpoch {
+				db.EndEpoch(curEpoch)
+				curEpoch++
+				db.BeginEpoch()
 			}
-			if oldBlock != 0 {
-				//commit at the end of a block
-				if _, err := db.Commit(true); err != nil {
-					return fmt.Errorf("StateDB commit failed\n")
-				}
-			}
-			oldBlock = tx.Block
+
+			// Mark the begin of a new block
+			db.BeginBlock()
+
+			curBlock = tx.Block
 		}
 
 		// run VM
+		db.BeginTransaction()
 		if err := runVMTask(db, cfg, tx.Block, tx.Transaction, tx.Substate, vmImpl); err != nil {
 			return fmt.Errorf("VM execution failed. %v", err)
 		}
+		db.EndTransaction(uint32(tx.Transaction))
 		txCount++
 
 		if cfg.enableProgress {
@@ -310,6 +324,9 @@ func runVM(ctx *cli.Context) error {
 			}
 		}
 	}
+
+	db.EndBlock(curBlock)
+	db.EndEpoch(curEpoch)
 
 	if cfg.enableProgress {
 		sec = time.Since(start).Seconds()
