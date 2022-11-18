@@ -10,12 +10,17 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
+    env:
+      GOPRIVATE: github.com/Fantom-foundation/go-opera-fvm
+      ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
     steps:
+      - name: Configure github
+        run: git config --global url.https://$ACCESS_TOKEN@github.com/.insteadOf https://github.com/
       - name: Checkout repository and submodules
         uses: actions/checkout@v3
         with:
           submodules: recursive
-          token: ${{ secrets.ACCESS_TOKEN }}
+          token: $ACCESS_TOKEN
 
       - name: Set up Go 1.19
         uses: actions/setup-go@v3
