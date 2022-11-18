@@ -27,6 +27,11 @@ var (
 		Name:  "cpuprofile",
 		Usage: "enables CPU profiling",
 	}
+	epochLengthFlag = cli.IntFlag{
+		Name:  "epochlength",
+		Usage: "defines the number of blocks per epoch",
+		Value: 300, // ~ 300s = 5 minutes
+	}
 	profileFlag = cli.BoolFlag{
 		Name:  "profile",
 		Usage: "enables profiling",
@@ -82,6 +87,7 @@ type TraceConfig struct {
 	debug            bool   // enable trace debug flag
 	enableValidation bool   // enable validation flag
 	enableProgress   bool   // enable progress report flag
+	epochLength      uint64 // length of an epoch in number of blocks
 	impl             string // storage implementation
 	profile          bool   // enable micro profiling
 	updateDBDir      string // update-set directory
@@ -107,6 +113,7 @@ func NewTraceConfig(ctx *cli.Context) (*TraceConfig, error) {
 		debug:            ctx.Bool(traceDebugFlag.Name),
 		enableValidation: ctx.Bool(validateEndState.Name),
 		enableProgress:   !ctx.Bool(disableProgressFlag.Name),
+		epochLength:      ctx.Uint64(epochLengthFlag.Name),
 		impl:             ctx.String(stateDbImplementation.Name),
 		profile:          ctx.Bool(profileFlag.Name),
 		updateDBDir:      ctx.String(updateDBDirFlag.Name),
@@ -114,9 +121,14 @@ func NewTraceConfig(ctx *cli.Context) (*TraceConfig, error) {
 		workers:          ctx.Int(substate.WorkersFlag.Name),
 	}
 
+	if cfg.epochLength <= 0 {
+		cfg.epochLength = 300
+	}
+
 	if cfg.enableProgress {
 		log.Printf("Run config:\n")
 		log.Printf("\tBlock range: %v to %v\n", cfg.first, cfg.last)
+		log.Printf("\tEpoch length: %v\n", cfg.epochLength)
 		log.Printf("\tStorage system: %v, DB variant: %v\n", cfg.impl, cfg.variant)
 		log.Printf("\tUpdate DB directory: %v\n", cfg.updateDBDir)
 	}

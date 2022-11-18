@@ -1,16 +1,23 @@
 package operation
 
 import (
-	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"fmt"
+	"math/rand"
 	"testing"
+	"time"
+
+	"github.com/Fantom-foundation/Aida/tracer/dict"
 )
 
 func initEndTransaction(t *testing.T) (*dict.DictionaryContext, *EndTransaction) {
+	rand.Seed(time.Now().UnixNano())
+	num := rand.Uint32()
+
 	// create dictionary context
 	dict := dict.NewDictionaryContext()
 
 	// create new operation
-	op := NewEndTransaction()
+	op := NewEndTransaction(num)
 	if op == nil {
 		t.Fatalf("failed to create operation")
 	}
@@ -32,7 +39,7 @@ func TestEndTransactionReadWrite(t *testing.T) {
 // TestEndTransactionDebug creates a new EndTransaction object and checks its Debug message.
 func TestEndTransactionDebug(t *testing.T) {
 	dict, op := initEndTransaction(t)
-	testOperationDebug(t, dict, op, "")
+	testOperationDebug(t, dict, op, fmt.Sprintf("%v", op.TransactionNumber))
 }
 
 // TestEndTransactionExecute
@@ -44,8 +51,6 @@ func TestEndTransactionExecute(t *testing.T) {
 	op.Execute(mock, dict)
 
 	// check whether methods were correctly called
-	// currently EndTransaction isn't recorded
-	//expected := []Record{{EndTransactionID, []any{}}}
-	//mock.compareRecordings(expected, t)
-	mock.compareRecordings([]Record{}, t)
+	expected := []Record{{EndTransactionID, []any{op.TransactionNumber}}}
+	mock.compareRecordings(expected, t)
 }

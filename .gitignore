@@ -15,3 +15,6 @@ vendor/
 
 # Go workspace file
 go.work
+
+# Data produced by unit tests
+cmd/trace-cli/trace-test/

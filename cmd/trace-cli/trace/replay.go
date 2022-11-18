@@ -23,6 +23,7 @@ var TraceReplayCommand = cli.Command{
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		&cpuProfileFlag,
+		&epochLengthFlag,
 		&disableProgressFlag,
 		&profileFlag,
 		&stateDbImplementation,
@@ -96,9 +97,10 @@ func traceReplayTask(cfg *TraceConfig) error {
 
 	// progress message setup
 	var (
-		start   time.Time
-		sec     float64
-		lastSec float64
+		start      time.Time
+		sec        float64
+		lastSec    float64
+		firstBlock = true
 	)
 	if cfg.enableProgress {
 		start = time.Now()
@@ -106,11 +108,28 @@ func traceReplayTask(cfg *TraceConfig) error {
 		lastSec = time.Since(start).Seconds()
 	}
 
-	// replace storage trace
+	// A utility to run operations on the local context.
+	run := func(op operation.Operation) {
+		operation.Execute(op, db, dCtx)
+		if cfg.debug {
+			operation.Debug(dCtx, op)
+		}
+	}
+
+	// replay storage trace
 	for op := range opChannel {
-		if op.GetId() == operation.BeginBlockID {
-			block := op.(*operation.BeginBlock).BlockNumber
+		if beginBlock, ok := op.(*operation.BeginBlock); ok {
+			block := beginBlock.BlockNumber
+
+			// The first Epoch begin and the final EpochEnd need to be artificially
+			// added since the range running on may not match epoch boundaries.
+			if firstBlock {
+				run(operation.NewBeginEpoch())
+				firstBlock = false
+			}
+
 			if block > cfg.last {
+				run(operation.NewEndEpoch(cfg.last / cfg.epochLength))
 				break
 			}
 			if cfg.enableProgress {
@@ -122,11 +141,9 @@ func traceReplayTask(cfg *TraceConfig) error {
 				}
 			}
 		}
-		operation.Execute(op, db, dCtx)
-		if cfg.debug {
-			operation.Debug(dCtx, op)
-		}
+		run(op)
 	}
+
 	sec = time.Since(start).Seconds()
 
 	log.Printf("Finished replaying storage operations on StateDB database")

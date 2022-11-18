@@ -40,7 +40,9 @@ func (op *BeginBlock) Write(f io.Writer) error {
 
 // Execute the begin-block operation.
 func (op *BeginBlock) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
-	return time.Duration(0)
+	start := time.Now()
+	db.BeginBlock()
+	return time.Since(start)
 }
 
 // Debug prints a debug message for the begin-block operation.

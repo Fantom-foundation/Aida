@@ -2,6 +2,7 @@ package operation
 
 import (
 	"encoding/binary"
+	"fmt"
 	"io"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 
 // EndTransaction data structure
 type EndTransaction struct {
+	TransactionNumber uint32 // transaction number
 }
 
 // GetId returns the end-transaction operation identifier.
@@ -19,27 +21,30 @@ func (op *EndTransaction) GetId() byte {
 }
 
 // NewEndTransaction creates a new end-transaction operation.
-func NewEndTransaction() *EndTransaction {
-	return &EndTransaction{}
+func NewEndTransaction(tx uint32) *EndTransaction {
+	return &EndTransaction{tx}
 }
 
 // ReadEndTransaction reads a new end-transaction operation from file.
-func ReadEndTransaction(io.Reader) (Operation, error) {
-	return new(EndTransaction), nil
+func ReadEndTransaction(file io.Reader) (Operation, error) {
+	data := new(EndTransaction)
+	err := binary.Read(file, binary.LittleEndian, data)
+	return data, err
 }
 
 // Write the end-transaction operation to file.
 func (op *EndTransaction) Write(f io.Writer) error {
-	err := binary.Write(f, binary.LittleEndian, *op)
-	return err
+	return binary.Write(f, binary.LittleEndian, *op)
 }
 
 // Execute the end-transaction operation.
 func (op *EndTransaction) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
-	ctx.InitSnapshot()
-	return time.Duration(0)
+	start := time.Now()
+	db.EndTransaction(op.TransactionNumber)
+	return time.Since(start)
 }
 
 // Debug prints a debug message for the end-transaction operation.
 func (op *EndTransaction) Debug(*dict.DictionaryContext) {
+	fmt.Print(op.TransactionNumber)
 }

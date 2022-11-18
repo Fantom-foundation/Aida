@@ -2,13 +2,14 @@ package tracer
 
 import (
 	"fmt"
+	"math/big"
+	"time"
+
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/tracer/state"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/substate"
-	"math/big"
-	"time"
 )
 
 // ProxyProfiler data structure for capturing and recording
@@ -288,6 +289,19 @@ func (p *ProxyProfiler) AddSlotToAccessList(addr common.Address, slot common.Has
 	p.db.AddSlotToAccessList(addr, slot)
 }
 
+// Snapshot returns an identifier for the current revision of the state.
+func (p *ProxyProfiler) Snapshot() int {
+	start := time.Now()
+	snapshot := p.db.Snapshot()
+	elapsed := time.Since(start)
+	p.ps.Profile(operation.SnapshotID, elapsed)
+	if p.debug {
+		label := operation.GetLabel(operation.SnapshotID)
+		fmt.Printf(label+": %v\n", snapshot)
+	}
+	return snapshot
+}
+
 // RevertToSnapshot reverts all state changes from a given revision.
 func (p *ProxyProfiler) RevertToSnapshot(snapshot int) {
 	start := time.Now()
@@ -300,17 +314,58 @@ func (p *ProxyProfiler) RevertToSnapshot(snapshot int) {
 	}
 }
 
-// Snapshot returns an identifier for the current revision of the state.
-func (p *ProxyProfiler) Snapshot() int {
+func (p *ProxyProfiler) do(opId byte, op func(), args ...any) {
 	start := time.Now()
-	snapshot := p.db.Snapshot()
+	op()
 	elapsed := time.Since(start)
-	p.ps.Profile(operation.SnapshotID, elapsed)
+	p.ps.Profile(opId, elapsed)
 	if p.debug {
-		label := operation.GetLabel(operation.SnapshotID)
-		fmt.Printf(label+": %v\n", snapshot)
+		label := operation.GetLabel(opId)
+		fmt.Printf("%s:\n", label)
+		for _, cur := range args {
+			fmt.Printf(" %v", cur)
+		}
+		if len(args) == 0 {
+			fmt.Print(" -- no arguments --")
+		}
+		fmt.Printf("\n")
 	}
-	return snapshot
+}
+
+func (p *ProxyProfiler) BeginTransaction() {
+	p.do(operation.BeginTransactionID, func() {
+		p.db.BeginTransaction()
+	})
+}
+
+func (p *ProxyProfiler) EndTransaction(number uint32) {
+	p.do(operation.EndTransactionID, func() {
+		p.db.EndTransaction(number)
+	}, number)
+}
+
+func (p *ProxyProfiler) BeginBlock() {
+	p.do(operation.BeginBlockID, func() {
+		p.db.BeginBlock()
+	})
+}
+
+func (p *ProxyProfiler) EndBlock(number uint64) {
+	p.do(operation.EndBlockID, func() {
+		p.db.EndBlock(number)
+	}, number)
+}
+
+func (p *ProxyProfiler) BeginEpoch() {
+	p.do(operation.BeginEpochID, func() {
+		p.db.BeginEpoch()
+	})
+}
+
+func (p *ProxyProfiler) EndEpoch(number uint64) {
+	p.do(operation.EndEpochID, func() {
+		p.db.EndEpoch(number)
+	}, number)
 }
 
 // AddLog adds a log entry.
