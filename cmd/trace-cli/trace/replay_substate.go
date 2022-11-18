@@ -93,7 +93,7 @@ func traceReplaySubstateTask(cfg *TraceConfig) error {
 		// The first Epoch begin and the final EpochEnd need to be artificially
 		// added since the range running on may not match epoch boundaries.
 		if firstBlock {
-			run(operation.NewBeginEpoch())
+			run(operation.NewBeginEpoch(cfg.first / cfg.epochLength))
 			firstBlock = false
 		}
 
@@ -143,7 +143,7 @@ func traceReplaySubstateTask(cfg *TraceConfig) error {
 		return fmt.Errorf("Last operation isn't an EndBlock")
 	} else {
 		run(op) // EndBlock
-		run(operation.NewEndEpoch(cfg.last / cfg.epochLength))
+		run(operation.NewEndEpoch())
 	}
 	sec = time.Since(start).Seconds()
 

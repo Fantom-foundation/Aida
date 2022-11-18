@@ -51,6 +51,6 @@ func TestBeginBlockExecute(t *testing.T) {
 	op.Execute(mock, dict)
 
 	// check whether methods were correctly called
-	expected := []Record{{BeginBlockID, []any{}}}
+	expected := []Record{{BeginBlockID, []any{op.BlockNumber}}}
 	mock.compareRecordings(expected, t)
 }
