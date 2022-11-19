@@ -87,11 +87,7 @@ func traceReplayTask(cfg *TraceConfig) error {
 
 	// prime stateDB
 	log.Printf("Prime StateDB database with world-state")
-	if cfg.impl == "memory" {
-		db.PrepareSubstate(&ws)
-	} else {
-		primeStateDB(ws, db)
-	}
+	primeStateDB(ws, db)
 
 	log.Printf("Replay storage operations on StateDB database")
 
@@ -186,6 +182,9 @@ func traceReplayAction(ctx *cli.Context) error {
 	cfg, err := NewTraceConfig(ctx)
 	if err != nil {
 		return err
+	}
+	if cfg.impl == "memory" {
+		return fmt.Errorf("db-impl memory is not supported")
 	}
 
 	operation.EnableProfiling = cfg.profile
