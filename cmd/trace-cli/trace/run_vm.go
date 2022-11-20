@@ -199,7 +199,7 @@ func runVM(ctx *cli.Context) error {
 		return argErr
 	}
 
-  // process run-vm specific arguments
+	// process run-vm specific arguments
 	if cfg.impl == "memory" {
 		return fmt.Errorf("db-impl memory is not supported")
 	}
@@ -249,7 +249,7 @@ func runVM(ctx *cli.Context) error {
 	start = time.Now()
 	primeStateDB(ws, db, cfg.primeRandom, cfg.primeSeed, cfg.primeThreshold)
 
-  // wrap stateDB for profiling
+	// wrap stateDB for profiling
 	var stats *operation.ProfileStats
 	if cfg.profile {
 		db, stats = tracer.NewProxyProfiler(db, cfg.debug)
