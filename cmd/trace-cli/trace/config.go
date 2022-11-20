@@ -58,7 +58,7 @@ var (
 	stateDbImplementation = cli.StringFlag{
 		Name:  "db-impl",
 		Usage: "select state DB implementation",
-		Value: "memory",
+		Value: "geth",
 	}
 	stateDbVariant = cli.StringFlag{
 		Name:  "db-variant",
