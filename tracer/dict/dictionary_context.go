@@ -318,8 +318,11 @@ func (ctx *DictionaryContext) WriteDistribution(filename string, frequency []uin
 	s := len(frequency)
 
 	frequencySorted := sortByFrequencyAcending(frequency)
+
+	cummulated := 0.0
 	for _, fi := range frequencySorted {
-		fmt.Fprintf(file, "%f - %f \n", float64(fi.opId)/float64(s), float64(fi.frequency)/float64(total))
+		cummulated = cummulated + float64(fi.frequency)/float64(total)
+		fmt.Fprintf(file, "%f - %f \n", float64(fi.opId)/float64(s), cummulated)
 	}
 
 	err = file.Close()
