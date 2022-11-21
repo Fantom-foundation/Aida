@@ -23,6 +23,9 @@ var TraceReplaySubstateCommand = cli.Command{
 	Flags: []cli.Flag{
 		&cpuProfileFlag,
 		&disableProgressFlag,
+		&randomizePrimingFlag,
+		&primeSeedFlag,
+		&primeThresholdFlag,
 		&profileFlag,
 		&stateDbImplementation,
 		&stateDbVariant,
@@ -104,7 +107,7 @@ func traceReplaySubstateTask(cfg *TraceConfig) error {
 		if cfg.impl == "memory" {
 			db.PrepareSubstate(&tx.Substate.InputAlloc)
 		} else {
-			primeStateDB(tx.Substate.InputAlloc, db)
+			primeStateDB(tx.Substate.InputAlloc, db, cfg)
 		}
 		for traceIter.Next() {
 			op := traceIter.Value()

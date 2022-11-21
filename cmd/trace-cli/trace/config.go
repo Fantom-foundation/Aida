@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"time"
 
 	"github.com/ethereum/go-ethereum/substate"
 	"github.com/urfave/cli/v2"
@@ -40,10 +41,19 @@ var (
 		Name:  "disable-progress",
 		Usage: "disable progress report",
 	}
-	vmImplementation = cli.StringFlag{
-		Name:  "vm-impl",
-		Usage: "select VM implementation",
-		Value: "geth",
+	randomizePrimingFlag = cli.BoolFlag{
+		Name:  "prime-random",
+		Usage: "randomize order of accounts in StateDB priming",
+	}
+	primeSeedFlag = cli.Int64Flag{
+		Name:  "prime-seed",
+		Usage: "set seed for randomizing priming",
+		Value: time.Now().UnixNano(),
+	}
+	primeThresholdFlag = cli.IntFlag{
+		Name:  "prime-threshold",
+		Usage: "set number of accounts written to stateDB before applying pending state updates",
+		Value: 0,
 	}
 	stateDbImplementation = cli.StringFlag{
 		Name:  "db-impl",
@@ -73,6 +83,11 @@ var (
 		Name:  "validate",
 		Usage: "enables end-state validation",
 	}
+	vmImplementation = cli.StringFlag{
+		Name:  "vm-impl",
+		Usage: "select VM implementation",
+		Value: "geth",
+	}
 	worldStateDirFlag = cli.PathFlag{
 		Name:  "worldstatedir",
 		Usage: "world state snapshot database path",
@@ -89,6 +104,9 @@ type TraceConfig struct {
 	enableProgress   bool   // enable progress report flag
 	epochLength      uint64 // length of an epoch in number of blocks
 	impl             string // storage implementation
+	primeRandom      bool   // enable randomized priming
+	primeSeed        int64  // set random seed
+	primeThreshold   int    // set account threshold before commit
 	profile          bool   // enable micro profiling
 	updateDBDir      string // update-set directory
 	variant          string // database variant
@@ -115,6 +133,9 @@ func NewTraceConfig(ctx *cli.Context) (*TraceConfig, error) {
 		enableProgress:   !ctx.Bool(disableProgressFlag.Name),
 		epochLength:      ctx.Uint64(epochLengthFlag.Name),
 		impl:             ctx.String(stateDbImplementation.Name),
+		primeRandom:      ctx.Bool(randomizePrimingFlag.Name),
+		primeSeed:        ctx.Int64(primeSeedFlag.Name),
+		primeThreshold:   ctx.Int(primeThresholdFlag.Name),
 		profile:          ctx.Bool(profileFlag.Name),
 		updateDBDir:      ctx.String(updateDBDirFlag.Name),
 		variant:          ctx.String(stateDbVariant.Name),
