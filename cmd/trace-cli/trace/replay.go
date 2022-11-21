@@ -25,7 +25,10 @@ var TraceReplayCommand = cli.Command{
 		&cpuProfileFlag,
 		&epochLengthFlag,
 		&disableProgressFlag,
+		&primeSeedFlag,
+		&primeThresholdFlag,
 		&profileFlag,
+		&randomizePrimingFlag,
 		&stateDbImplementation,
 		&stateDbVariant,
 		&substate.SubstateDirFlag,
@@ -86,8 +89,7 @@ func traceReplayTask(cfg *TraceConfig) error {
 	}
 
 	// prime stateDB
-	log.Printf("Prime StateDB database with world-state")
-	primeStateDB(ws, db)
+	primeStateDB(ws, db, cfg)
 
 	log.Printf("Replay storage operations on StateDB database")
 

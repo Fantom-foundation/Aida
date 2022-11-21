@@ -36,8 +36,10 @@ var RunVMCommand = cli.Command{
 		&cpuProfileFlag,
 		&epochLengthFlag,
 		&disableProgressFlag,
+		&primeSeedFlag,
+		&primeThresholdFlag,
 		&profileFlag,
-		&vmImplementation,
+		&randomizePrimingFlag,
 		&stateDbImplementation,
 		&stateDbVariant,
 		&substate.WorkersFlag,
@@ -45,6 +47,7 @@ var RunVMCommand = cli.Command{
 		&traceDebugFlag,
 		&updateDBDirFlag,
 		&validateEndState,
+		&vmImplementation,
 	},
 	Description: `
 The trace run-vm command requires two arguments:
@@ -190,11 +193,13 @@ func runVM(ctx *cli.Context) error {
 		txCount     int
 		lastTxCount int
 	)
-
+	// process general arguments
 	cfg, argErr := NewTraceConfig(ctx)
 	if argErr != nil {
 		return argErr
 	}
+
+	// process run-vm specific arguments
 	if cfg.impl == "memory" {
 		return fmt.Errorf("db-impl memory is not supported")
 	}
@@ -230,8 +235,8 @@ func runVM(ctx *cli.Context) error {
 	}
 
 	// load the world state
-	start = time.Now()
 	log.Printf("Load and advance world state to block %v\n", cfg.first-1)
+	start = time.Now()
 	ws, err := generateWorldStateFromUpdateDB(cfg.updateDBDir, cfg.first-1, cfg.workers)
 	if err != nil {
 		return err
@@ -242,7 +247,7 @@ func runVM(ctx *cli.Context) error {
 	// prime stateDB
 	log.Printf("Prime stateDB\n")
 	start = time.Now()
-	primeStateDB(ws, db)
+	primeStateDB(ws, db, cfg)
 	sec = time.Since(start).Seconds()
 	log.Printf("\tElapsed time: %.2f s\n", sec)
 
