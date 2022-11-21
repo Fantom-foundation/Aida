@@ -63,14 +63,14 @@ type BasicStateDB interface {
 	Snapshot() int
 	RevertToSnapshot(int)
 
-	BeginTransaction()
-	EndTransaction(number uint32)
+	BeginTransaction(uint32)
+	EndTransaction()
 
-	BeginBlock()
-	EndBlock(number uint64)
+	BeginBlock(uint64)
+	EndBlock()
 
-	BeginEpoch()
-	EndEpoch(number uint64)
+	BeginEpoch(uint64)
+	EndEpoch()
 }
 
 type StateDB interface {

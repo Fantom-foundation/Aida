@@ -128,27 +128,27 @@ func (s *carmenStateDB) RevertToSnapshot(id int) {
 	s.db.RevertToSnapshot(id)
 }
 
-func (s *carmenStateDB) BeginTransaction() {
+func (s *carmenStateDB) BeginTransaction(number uint32) {
 	// TODO: implement
 }
 
-func (s *carmenStateDB) EndTransaction(number uint32) {
+func (s *carmenStateDB) EndTransaction() {
 	// TODO: implement
 }
 
-func (s *carmenStateDB) BeginBlock() {
+func (s *carmenStateDB) BeginBlock(number uint64) {
 	// TODO: implement
 }
 
-func (s *carmenStateDB) EndBlock(number uint64) {
+func (s *carmenStateDB) EndBlock() {
 	// TODO: implement
 }
 
-func (s *carmenStateDB) BeginEpoch() {
+func (s *carmenStateDB) BeginEpoch(number uint64) {
 	// TODO: implement
 }
 
-func (s *carmenStateDB) EndEpoch(number uint64) {
+func (s *carmenStateDB) EndEpoch() {
 	// TODO: implement
 }
 

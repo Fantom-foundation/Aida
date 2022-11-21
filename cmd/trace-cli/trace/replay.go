@@ -120,12 +120,12 @@ func traceReplayTask(cfg *TraceConfig) error {
 			// The first Epoch begin and the final EpochEnd need to be artificially
 			// added since the range running on may not match epoch boundaries.
 			if firstBlock {
-				run(operation.NewBeginEpoch())
+				run(operation.NewBeginEpoch(cfg.first / cfg.epochLength))
 				firstBlock = false
 			}
 
 			if block > cfg.last {
-				run(operation.NewEndEpoch(cfg.last / cfg.epochLength))
+				run(operation.NewEndEpoch())
 				break
 			}
 			if cfg.enableProgress {

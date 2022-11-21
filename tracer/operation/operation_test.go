@@ -128,28 +128,28 @@ func (s *MockStateDB) RevertToSnapshot(id int) {
 	s.recording = append(s.recording, Record{RevertToSnapshotID, []any{id}})
 }
 
-func (s *MockStateDB) BeginTransaction() {
-	s.recording = append(s.recording, Record{BeginTransactionID, []any{}})
+func (s *MockStateDB) BeginTransaction(tx uint32) {
+	s.recording = append(s.recording, Record{BeginTransactionID, []any{tx}})
 }
 
-func (s *MockStateDB) EndTransaction(tx uint32) {
-	s.recording = append(s.recording, Record{EndTransactionID, []any{tx}})
+func (s *MockStateDB) EndTransaction() {
+	s.recording = append(s.recording, Record{EndTransactionID, []any{}})
 }
 
-func (s *MockStateDB) BeginBlock() {
-	s.recording = append(s.recording, Record{BeginBlockID, []any{}})
+func (s *MockStateDB) BeginBlock(blk uint64) {
+	s.recording = append(s.recording, Record{BeginBlockID, []any{blk}})
 }
 
-func (s *MockStateDB) EndBlock(blk uint64) {
-	s.recording = append(s.recording, Record{EndBlockID, []any{blk}})
+func (s *MockStateDB) EndBlock() {
+	s.recording = append(s.recording, Record{EndBlockID, []any{}})
 }
 
-func (s *MockStateDB) BeginEpoch() {
-	s.recording = append(s.recording, Record{BeginEpochID, []any{}})
+func (s *MockStateDB) BeginEpoch(id uint64) {
+	s.recording = append(s.recording, Record{BeginEpochID, []any{id}})
 }
 
-func (s *MockStateDB) EndEpoch(id uint64) {
-	s.recording = append(s.recording, Record{EndEpochID, []any{id}})
+func (s *MockStateDB) EndEpoch() {
+	s.recording = append(s.recording, Record{EndEpochID, []any{}})
 }
 
 func (s *MockStateDB) Finalise(deleteEmptyObjects bool) {
