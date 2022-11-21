@@ -233,7 +233,6 @@ func runVM(ctx *cli.Context) error {
 	start = time.Now()
 	log.Printf("Load and advance world state to block %v\n", cfg.first-1)
 	ws, err := generateWorldStateFromUpdateDB(cfg.updateDBDir, cfg.first-1, cfg.workers)
-	//ws, err := generateWorldState(cfg.updateDBDir, cfg.first-1, cfg.workers)
 	if err != nil {
 		return err
 	}
@@ -244,14 +243,14 @@ func runVM(ctx *cli.Context) error {
 	log.Printf("Prime stateDB\n")
 	start = time.Now()
 	primeStateDB(ws, db)
+	sec = time.Since(start).Seconds()
+	log.Printf("\tElapsed time: %.2f s\n", sec)
 
 	// wrap stateDB for profiling
 	var stats *operation.ProfileStats
 	if cfg.profile {
 		db, stats = tracer.NewProxyProfiler(db, cfg.debug)
 	}
-	sec = time.Since(start).Seconds()
-	log.Printf("\tElapsed time: %.2f s\n", sec)
 
 	if cfg.enableValidation {
 		fmt.Printf("WARNING: validation enabled, reducing Tx throughput\n")
@@ -268,19 +267,22 @@ func runVM(ctx *cli.Context) error {
 
 	log.Printf("Run VM\n")
 	var curBlock uint64 = 0
-	var curEpoch = cfg.first / cfg.epochLength
+	var curEpoch uint64
+	isFirstBlock := true
 	iter := substate.NewSubstateIterator(cfg.first, cfg.workers)
-
-	// Initiate first epoch and block.
-	db.BeginEpoch(curBlock)
-	db.BeginBlock(cfg.first)
 
 	defer iter.Release()
 	for iter.Next() {
-
 		tx := iter.Value()
-		// close off old block and possibly epochs
-		if curBlock != tx.Block {
+		// initiate first epoch and block.
+		if isFirstBlock {
+			curEpoch = cfg.first / cfg.epochLength
+			db.BeginEpoch(curEpoch)
+			curBlock = tx.Block
+			db.BeginBlock(curBlock)
+			isFirstBlock = false
+			// close off old block and possibly epochs
+		} else if curBlock != tx.Block {
 			if tx.Block > cfg.last {
 				break
 			}
