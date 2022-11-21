@@ -40,8 +40,7 @@ func primeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *TraceConfig)
 		for addr, account := range ws {
 			primeOneAccount(addr, account, db)
 		}
-		// don't delete empty objects
-		db.Commit(false)
+		db.EndBlock()
 	}
 }
 
@@ -71,17 +70,17 @@ func primeStateDBRandom(ws substate.SubstateAlloc, db state.StateDB, cfg *TraceC
 	})
 
 	for i, c := range contracts {
+		// call EndBlock after k accounts have been primed
 		if i%cfg.primeThreshold == 0 && i != 0 {
-			db.Commit(false)
+			db.EndBlock()
 		}
 		addr := common.HexToAddress(c)
 		account := ws[addr]
 		primeOneAccount(addr, account, db)
-		// commit after k accounts have been primed
 
 	}
-	// commit the rest of accounts
-	db.Commit(false)
+	// call EndBlock for the remaining accounts
+	db.EndBlock()
 }
 
 // getDirectorySize computes the size of all files in the given directoy in bytes.
