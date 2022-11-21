@@ -26,7 +26,7 @@ var TraceReplayCommand = cli.Command{
 		&epochLengthFlag,
 		&disableProgressFlag,
 		&primeSeedFlag,
-		&primeCommitThresholdFlag,
+		&primeThresholdFlag,
 		&profileFlag,
 		&randomizePrimingFlag,
 		&stateDbImplementation,

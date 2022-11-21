@@ -50,9 +50,9 @@ var (
 		Usage: "set seed for randomizing priming",
 		Value: time.Now().UnixNano(),
 	}
-	primeCommitThresholdFlag = cli.IntFlag{
-		Name:  "prime-commit",
-		Usage: "set number of accounts written to stateDB before a commit",
+	primeThresholdFlag = cli.IntFlag{
+		Name:  "prime-threshold",
+		Usage: "set number of accounts written to stateDB before applying pending state updates",
 		Value: 0,
 	}
 	stateDbImplementation = cli.StringFlag{
@@ -135,7 +135,7 @@ func NewTraceConfig(ctx *cli.Context) (*TraceConfig, error) {
 		impl:             ctx.String(stateDbImplementation.Name),
 		primeRandom:      ctx.Bool(randomizePrimingFlag.Name),
 		primeSeed:        ctx.Int64(primeSeedFlag.Name),
-		primeThreshold:   ctx.Int(primeCommitThresholdFlag.Name),
+		primeThreshold:   ctx.Int(primeThresholdFlag.Name),
 		profile:          ctx.Bool(profileFlag.Name),
 		updateDBDir:      ctx.String(updateDBDirFlag.Name),
 		variant:          ctx.String(stateDbVariant.Name),

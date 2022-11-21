@@ -25,7 +25,7 @@ var TraceReplaySubstateCommand = cli.Command{
 		&disableProgressFlag,
 		&randomizePrimingFlag,
 		&primeSeedFlag,
-		&primeCommitThresholdFlag,
+		&primeThresholdFlag,
 		&profileFlag,
 		&stateDbImplementation,
 		&stateDbVariant,

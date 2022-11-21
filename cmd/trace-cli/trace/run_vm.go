@@ -37,7 +37,7 @@ var RunVMCommand = cli.Command{
 		&epochLengthFlag,
 		&disableProgressFlag,
 		&primeSeedFlag,
-		&primeCommitThresholdFlag,
+		&primeThresholdFlag,
 		&profileFlag,
 		&randomizePrimingFlag,
 		&stateDbImplementation,
