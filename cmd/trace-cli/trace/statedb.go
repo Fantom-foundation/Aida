@@ -27,14 +27,14 @@ func makeStateDB(directory, impl, variant string) (state.StateDB, error) {
 }
 
 // primeStateDB primes database with accounts from the world state.
-func primeStateDB(ws substate.SubstateAlloc, db state.StateDB, randomize bool, seed int64, k int) {
-	if randomize {
+func primeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *TraceConfig) {
+	if cfg.primeRandom {
 		//if 0, commit once after priming all accounts
-		if k == 0 {
-			k = len(ws)
+		if cfg.primeThreshold == 0 {
+			cfg.primeThreshold = len(ws)
 		}
-		log.Printf("Prime stateDB with seed %v and k %v\n", seed, k)
-		primeStateDBRandom(ws, db, seed, k)
+		log.Printf("Prime stateDB with seed %v and k %v\n", cfg.primeSeed, cfg.primeThreshold)
+		primeStateDBRandom(ws, db, cfg)
 	} else {
 		log.Printf("Prime stateDB\n")
 		for addr, account := range ws {
@@ -57,7 +57,7 @@ func primeOneAccount(addr common.Address, account *substate.SubstateAccount, db 
 }
 
 // primeStateDBRandom primes database with accounts from the world state in random order.
-func primeStateDBRandom(ws substate.SubstateAlloc, db state.StateDB, seed int64, k int) {
+func primeStateDBRandom(ws substate.SubstateAlloc, db state.StateDB, cfg *TraceConfig) {
 	contracts := make([]string, 0, len(ws))
 	for addr := range ws {
 		contracts = append(contracts, addr.Hex())
@@ -65,25 +65,23 @@ func primeStateDBRandom(ws substate.SubstateAlloc, db state.StateDB, seed int64,
 
 	sort.Strings(contracts)
 	// shuffle contract order
-	rand.NewSource(seed)
+	rand.NewSource(cfg.primeSeed)
 	rand.Shuffle(len(contracts), func(i, j int) {
 		contracts[i], contracts[j] = contracts[j], contracts[i]
 	})
 
 	for i, c := range contracts {
+		if i%cfg.primeThreshold == 0 && i != 0 {
+			db.Commit(false)
+		}
 		addr := common.HexToAddress(c)
 		account := ws[addr]
 		primeOneAccount(addr, account, db)
 		// commit after k accounts have been primed
-		if i%k == k-1 {
-			db.Commit(false)
-		}
 
 	}
 	// commit the rest of accounts
-	if len(contracts)%k != 0 {
-		db.Commit(false)
-	}
+	db.Commit(false)
 }
 
 // getDirectorySize computes the size of all files in the given directoy in bytes.

@@ -89,7 +89,7 @@ func traceReplayTask(cfg *TraceConfig) error {
 	}
 
 	// prime stateDB
-	primeStateDB(ws, db, cfg.primeRandom, cfg.primeSeed, cfg.primeThreshold)
+	primeStateDB(ws, db, cfg)
 
 	log.Printf("Replay storage operations on StateDB database")
 

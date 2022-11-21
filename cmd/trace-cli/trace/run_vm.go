@@ -247,8 +247,7 @@ func runVM(ctx *cli.Context) error {
 
 	// prime stateDB
 	start = time.Now()
-	primeStateDB(ws, db, cfg.primeRandom, cfg.primeSeed, cfg.primeThreshold)
-
+	primeStateDB(ws, db, cfg)
 	// wrap stateDB for profiling
 	var stats *operation.ProfileStats
 	if cfg.profile {

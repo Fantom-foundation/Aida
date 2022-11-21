@@ -107,7 +107,7 @@ func traceReplaySubstateTask(cfg *TraceConfig) error {
 		if cfg.impl == "memory" {
 			db.PrepareSubstate(&tx.Substate.InputAlloc)
 		} else {
-			primeStateDB(tx.Substate.InputAlloc, db, cfg.primeRandom, cfg.primeSeed, cfg.primeThreshold)
+			primeStateDB(tx.Substate.InputAlloc, db, cfg)
 		}
 		for traceIter.Next() {
 			op := traceIter.Value()
