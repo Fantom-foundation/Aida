@@ -332,40 +332,40 @@ func (p *ProxyProfiler) do(opId byte, op func(), args ...any) {
 	}
 }
 
-func (p *ProxyProfiler) BeginTransaction() {
+func (p *ProxyProfiler) BeginTransaction(number uint32) {
 	p.do(operation.BeginTransactionID, func() {
-		p.db.BeginTransaction()
-	})
+		p.db.BeginTransaction(number)
+	}, number)
 }
 
-func (p *ProxyProfiler) EndTransaction(number uint32) {
+func (p *ProxyProfiler) EndTransaction() {
 	p.do(operation.EndTransactionID, func() {
-		p.db.EndTransaction(number)
-	}, number)
+		p.db.EndTransaction()
+	})
 }
 
-func (p *ProxyProfiler) BeginBlock() {
+func (p *ProxyProfiler) BeginBlock(number uint64) {
 	p.do(operation.BeginBlockID, func() {
-		p.db.BeginBlock()
-	})
+		p.db.BeginBlock(number)
+	}, number)
 }
 
-func (p *ProxyProfiler) EndBlock(number uint64) {
+func (p *ProxyProfiler) EndBlock() {
 	p.do(operation.EndBlockID, func() {
-		p.db.EndBlock(number)
-	}, number)
-}
-
-func (p *ProxyProfiler) BeginEpoch() {
-	p.do(operation.BeginEpochID, func() {
-		p.db.BeginEpoch()
+		p.db.EndBlock()
 	})
 }
 
-func (p *ProxyProfiler) EndEpoch(number uint64) {
-	p.do(operation.EndEpochID, func() {
-		p.db.EndEpoch(number)
+func (p *ProxyProfiler) BeginEpoch(number uint64) {
+	p.do(operation.BeginEpochID, func() {
+		p.db.BeginEpoch(number)
 	}, number)
+}
+
+func (p *ProxyProfiler) EndEpoch() {
+	p.do(operation.EndEpochID, func() {
+		p.db.EndEpoch()
+	})
 }
 
 // AddLog adds a log entry.

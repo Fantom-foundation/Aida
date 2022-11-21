@@ -275,8 +275,8 @@ func runVM(ctx *cli.Context) error {
 	iter := substate.NewSubstateIterator(cfg.first, cfg.workers)
 
 	// Initiate first epoch and block.
-	db.BeginEpoch()
-	db.BeginBlock()
+	db.BeginEpoch(curBlock)
+	db.BeginBlock(cfg.first)
 
 	defer iter.Release()
 	for iter.Next() {
@@ -289,28 +289,27 @@ func runVM(ctx *cli.Context) error {
 			}
 
 			// Mark the end of the old block.
-			db.EndBlock(curBlock)
+			db.EndBlock()
 
 			// Move on epochs if needed.
 			newEpoch := tx.Block / cfg.epochLength
 			for curEpoch < newEpoch {
-				db.EndEpoch(curEpoch)
+				db.EndEpoch()
 				curEpoch++
-				db.BeginEpoch()
+				db.BeginEpoch(curEpoch)
 			}
 
 			// Mark the begin of a new block
-			db.BeginBlock()
-
 			curBlock = tx.Block
+			db.BeginBlock(curBlock)
 		}
 
 		// run VM
-		db.BeginTransaction()
+		db.BeginTransaction(uint32(tx.Transaction))
 		if err := runVMTask(db, cfg, tx.Block, tx.Transaction, tx.Substate, vmImpl); err != nil {
 			return fmt.Errorf("VM execution failed. %v", err)
 		}
-		db.EndTransaction(uint32(tx.Transaction))
+		db.EndTransaction()
 		txCount++
 
 		if cfg.enableProgress {
@@ -324,8 +323,8 @@ func runVM(ctx *cli.Context) error {
 		}
 	}
 
-	db.EndBlock(curBlock)
-	db.EndEpoch(curEpoch)
+	db.EndBlock()
+	db.EndEpoch()
 
 	if cfg.enableProgress {
 		sec = time.Since(start).Seconds()

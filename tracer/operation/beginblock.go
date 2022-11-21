@@ -41,7 +41,7 @@ func (op *BeginBlock) Write(f io.Writer) error {
 // Execute the begin-block operation.
 func (op *BeginBlock) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
 	start := time.Now()
-	db.BeginBlock()
+	db.BeginBlock(op.BlockNumber)
 	return time.Since(start)
 }
 

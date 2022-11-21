@@ -282,7 +282,7 @@ func traceRecordAction(ctx *cli.Context) error {
 	}
 
 	curEpoch := first / epochLength
-	sendOperation(dCtx, opChannel, operation.NewBeginEpoch())
+	sendOperation(dCtx, opChannel, operation.NewBeginEpoch(curEpoch))
 
 	for iter.Next() {
 		tx := iter.Value()
@@ -292,23 +292,22 @@ func traceRecordAction(ctx *cli.Context) error {
 				break
 			}
 			if oldBlock != math.MaxUint64 {
-				sendOperation(dCtx, opChannel, operation.NewEndBlock(oldBlock))
-
+				sendOperation(dCtx, opChannel, operation.NewEndBlock())
 				// Record epoch changes.
 				newEpoch := tx.Block / epochLength
 				for curEpoch < newEpoch {
-					sendOperation(dCtx, opChannel, operation.NewEndEpoch(curEpoch))
+					sendOperation(dCtx, opChannel, operation.NewEndEpoch())
 					curEpoch++
-					sendOperation(dCtx, opChannel, operation.NewBeginEpoch())
+					sendOperation(dCtx, opChannel, operation.NewBeginEpoch(curEpoch))
 				}
 			}
 			oldBlock = tx.Block
 			// open new block with a begin-block operation and clear index cache
 			sendOperation(dCtx, opChannel, operation.NewBeginBlock(tx.Block))
 		}
-		sendOperation(dCtx, opChannel, operation.NewBeginTransaction())
+		sendOperation(dCtx, opChannel, operation.NewBeginTransaction(uint32(tx.Transaction)))
 		traceRecordTask(tx.Block, tx.Transaction, tx.Substate, dCtx, opChannel)
-		sendOperation(dCtx, opChannel, operation.NewEndTransaction(uint32(tx.Transaction)))
+		sendOperation(dCtx, opChannel, operation.NewEndTransaction())
 		if enableProgress {
 			// report progress
 			sec = time.Since(start).Seconds()
@@ -322,9 +321,9 @@ func traceRecordAction(ctx *cli.Context) error {
 
 	// end last block
 	if oldBlock != math.MaxUint64 {
-		sendOperation(dCtx, opChannel, operation.NewEndBlock(oldBlock))
+		sendOperation(dCtx, opChannel, operation.NewEndBlock())
 	}
-	sendOperation(dCtx, opChannel, operation.NewEndEpoch(curEpoch))
+	sendOperation(dCtx, opChannel, operation.NewEndEpoch())
 
 	if enableProgress {
 		sec = time.Since(start).Seconds()

@@ -122,32 +122,30 @@ func (s *gethStateDB) RevertToSnapshot(id int) {
 	s.db.RevertToSnapshot(id)
 }
 
-func (s *gethStateDB) BeginTransaction() {
+func (s *gethStateDB) BeginTransaction(number uint32) {
 	// ignored
 }
 
-func (s *gethStateDB) EndTransaction(number uint32) {
+func (s *gethStateDB) EndTransaction() {
 	// ignored
 }
 
-func (s *gethStateDB) BeginBlock() {
+func (s *gethStateDB) BeginBlock(number uint64) {
 	// ignored
 }
 
-func (s *gethStateDB) EndBlock(number uint64) {
-	if number != 0 {
-		//commit at the end of a block
-		if _, err := s.Commit(true); err != nil {
-			panic(fmt.Errorf("StateDB commit failed\n"))
-		}
+func (s *gethStateDB) EndBlock() {
+	//commit at the end of a block
+	if _, err := s.Commit(true); err != nil {
+		panic(fmt.Errorf("StateDB commit failed\n"))
 	}
 }
 
-func (s *gethStateDB) BeginEpoch() {
+func (s *gethStateDB) BeginEpoch(number uint64) {
 	// ignored
 }
 
-func (s *gethStateDB) EndEpoch(number uint64) {
+func (s *gethStateDB) EndEpoch() {
 	// ignored
 }
 

@@ -1,17 +1,23 @@
 package operation
 
 import (
+	"fmt"
+	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 )
 
 func initBeginTransaction(t *testing.T) (*dict.DictionaryContext, *BeginTransaction) {
+	rand.Seed(time.Now().UnixNano())
+	num := rand.Uint32()
+
 	// create dictionary context
 	dict := dict.NewDictionaryContext()
 
 	// create new operation
-	op := NewBeginTransaction()
+	op := NewBeginTransaction(num)
 	if op == nil {
 		t.Fatalf("failed to create operation")
 	}
@@ -33,7 +39,7 @@ func TestBeginTransactionReadWrite(t *testing.T) {
 // TestBeginTransactionDebug creates a new BeginTransaction object and checks its Debug message.
 func TestBeginTransactionDebug(t *testing.T) {
 	dict, op := initBeginTransaction(t)
-	testOperationDebug(t, dict, op, "")
+	testOperationDebug(t, dict, op, fmt.Sprintf("%v", op.TransactionNumber))
 }
 
 // TestBeginTransactionExecute
@@ -45,6 +51,6 @@ func TestBeginTransactionExecute(t *testing.T) {
 	op.Execute(mock, dict)
 
 	// check whether methods were correctly called
-	expected := []Record{{BeginTransactionID, []any{}}}
+	expected := []Record{{BeginTransactionID, []any{op.TransactionNumber}}}
 	mock.compareRecordings(expected, t)
 }

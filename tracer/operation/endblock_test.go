@@ -1,23 +1,17 @@
 package operation
 
 import (
-	"fmt"
-	"math/rand"
 	"testing"
-	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 )
 
 func initEndBlock(t *testing.T) (*dict.DictionaryContext, *EndBlock) {
-	rand.Seed(time.Now().UnixNano())
-	blk := rand.Uint64()
-
 	// create dictionary context
 	dict := dict.NewDictionaryContext()
 
 	// create new operation
-	op := NewEndBlock(blk)
+	op := NewEndBlock()
 	if op == nil {
 		t.Fatalf("failed to create operation")
 	}
@@ -39,7 +33,7 @@ func TestEndBlockReadWrite(t *testing.T) {
 // TestEndBlockDebug creates a new EndBlock object and checks its Debug message.
 func TestEndBlockDebug(t *testing.T) {
 	dict, op := initEndBlock(t)
-	testOperationDebug(t, dict, op, fmt.Sprintf("%v", op.BlockNumber))
+	testOperationDebug(t, dict, op, "")
 }
 
 // TestEndBlockExecute
@@ -51,6 +45,6 @@ func TestEndBlockExecute(t *testing.T) {
 	op.Execute(mock, dict)
 
 	// check whether methods were correctly called
-	expected := []Record{{EndBlockID, []any{op.BlockNumber}}}
+	expected := []Record{{EndBlockID, []any{}}}
 	mock.compareRecordings(expected, t)
 }
