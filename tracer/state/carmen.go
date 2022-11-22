@@ -35,11 +35,12 @@ func MakeCarmenStateDB(directory, variant string) (StateDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &carmenStateDB{carmen.CreateStateDBUsing(db)}, nil
+	return &carmenStateDB{carmen.CreateStateDBUsing(db), 0}, nil
 }
 
 type carmenStateDB struct {
-	db carmen.StateDB
+	db          carmen.StateDB
+	epochNumber uint64
 }
 
 var getCodeCalled bool
@@ -128,55 +129,29 @@ func (s *carmenStateDB) RevertToSnapshot(id int) {
 	s.db.RevertToSnapshot(id)
 }
 
-func (s *carmenStateDB) BeginTransaction(number uint32) {
-	// TODO: implement
+func (s *carmenStateDB) BeginTransaction(uint32) {
+	s.db.BeginTransaction()
 }
 
 func (s *carmenStateDB) EndTransaction() {
-	// TODO: implement
+	s.db.EndTransaction()
 }
 
-func (s *carmenStateDB) BeginBlock(number uint64) {
-	// TODO: implement
+func (s *carmenStateDB) BeginBlock(uint64) {
+	s.db.BeginBlock()
 }
 
 func (s *carmenStateDB) EndBlock() {
-	// TODO: implement
+	s.db.EndBlock()
 }
 
 func (s *carmenStateDB) BeginEpoch(number uint64) {
-	// TODO: implement
+	s.db.BeginEpoch()
+	s.epochNumber = number
 }
 
 func (s *carmenStateDB) EndEpoch() {
-	// TODO: implement
-}
-
-func (s *carmenStateDB) Finalise(deleteEmptyObjects bool) {
-	// In Geth 'Finalise' is called to end a transaction and seal its effects.
-	// In Carmen, this event is called 'EndTransaction'.
-	s.db.EndTransaction()
-}
-
-func (s *carmenStateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
-	s.db.EndTransaction()
-	return common.Hash(s.db.GetHash())
-}
-
-func (s *carmenStateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
-	return common.Hash(s.db.GetHash()), nil
-}
-
-func (s *carmenStateDB) Prepare(thash common.Hash, ti int) {
-	//ignored
-}
-
-func (s *carmenStateDB) PrepareSubstate(substate *substate.SubstateAlloc) {
-	// ignored
-}
-
-func (s *carmenStateDB) GetSubstatePostAlloc() substate.SubstateAlloc {
-	return substate.SubstateAlloc{}
+	s.db.EndEpoch(s.epochNumber)
 }
 
 func (s *carmenStateDB) Close() error {
@@ -235,6 +210,33 @@ func (s *carmenStateDB) AddLog(*types.Log) {
 func (s *carmenStateDB) GetLogs(hash common.Hash, blockHash common.Hash) []*types.Log {
 	// ignored
 	return nil
+}
+
+func (s *carmenStateDB) Finalise(deleteEmptyObjects bool) {
+	// ignored
+}
+
+func (s *carmenStateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
+	// ignored
+	return common.Hash{}
+}
+
+func (s *carmenStateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
+	// ignored
+	return common.Hash{}, nil
+}
+
+func (s *carmenStateDB) Prepare(thash common.Hash, ti int) {
+	//ignored
+}
+
+func (s *carmenStateDB) PrepareSubstate(substate *substate.SubstateAlloc) {
+	// ignored
+}
+
+func (s *carmenStateDB) GetSubstatePostAlloc() substate.SubstateAlloc {
+	// ignored
+	return substate.SubstateAlloc{}
 }
 
 func (s *carmenStateDB) AddPreimage(common.Hash, []byte) {
