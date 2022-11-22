@@ -11,8 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/substate"
 )
 
-const firstOperation = 255
-
 // ProxyStochastic data structure for capturing and recording
 // invoked StateDB operations.
 type ProxyStochastic struct {
@@ -349,7 +347,6 @@ func (r *ProxyStochastic) RevertToSnapshot(snapshot int) {
 func (r *ProxyStochastic) Snapshot() int {
 	r.recordOp(operation.SnapshotID)
 	snapshot := r.db.Snapshot()
-	// TODO: check overrun
 	return snapshot
 }
 
@@ -402,11 +399,5 @@ func (r *ProxyStochastic) GetSubstatePostAlloc() substate.SubstateAlloc {
 }
 
 func (r *ProxyStochastic) recordOp(id byte) {
-	if r.dctx.PrevOpId != firstOperation {
-		r.dctx.OpFreq[id]++
-		r.dctx.TFreq[[2]byte{r.dctx.PrevOpId, id}]++
-		r.dctx.PrevOpId = id
-	} else {
-		r.dctx.PrevOpId = id
-	}
+	r.dctx.RecordOp(id)
 }

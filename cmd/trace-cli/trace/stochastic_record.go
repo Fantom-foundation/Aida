@@ -43,6 +43,8 @@ var StochasticRecordCommand = cli.Command{
 		&chainIDFlag,
 		&traceDirectoryFlag,
 		&traceDebugFlag,
+		&stochasticMatrixFlag,
+		&stochasticMatrixFormatFlag,
 	},
 	Description: `
 The trace record command requires two arguments:
@@ -219,6 +221,7 @@ func OperationStochasticWriter(ctx context.Context, done chan struct{}, ch chan 
 // sendStochasticOperation sends an operation onto the channel.
 func sendStochasticOperation(dCtx *dict.DictionaryContext, ch chan operation.Operation, op operation.Operation) {
 	ch <- op
+	dCtx.RecordOp(op.GetId())
 	if traceDebug {
 		operation.Debug(dCtx, op)
 	}
@@ -330,6 +333,11 @@ func stochasticRecordAction(ctx *cli.Context) error {
 
 	dCtx.WriteDistributions()
 
+	// if only one block was recorded - add EndBlock to BeginBlock transition
+	if last-first == 0 {
+		dCtx.TFreq[[2]byte{operation.EndBlockID, operation.BeginBlockID}]++
+	}
+
 	// write stochastic matrix
 	writeStochasticMatrix(stochasticMatrixFlag.Value, stochasticMatrixFormatFlag.Value, dCtx.TFreq)
 
@@ -337,6 +345,7 @@ func stochasticRecordAction(ctx *cli.Context) error {
 }
 
 func writeStochasticMatrix(smFile string, f string, tFreq map[[2]byte]uint64) {
+	fmt.Println("freq", tFreq)
 	// write stochastic-matrix
 	if f == "csv" {
 		writeStochasticMatrixCsv(smFile, tFreq)
@@ -363,15 +372,10 @@ func writeStochasticMatrixCsv(smFile string, tFreq map[[2]byte]uint64) {
 		for j := byte(0); j < operation.NumProfiledOperations; j++ {
 			total += tFreq[[2]byte{i, j}]
 		}
-		maxFreq := uint64(0)
+
 		for j := byte(0); j < operation.NumProfiledOperations; j++ {
-			if tFreq[[2]byte{i, j}] > maxFreq {
-				maxFreq = tFreq[[2]byte{i, j}]
-			}
-		}
-		for j := byte(0); j < operation.NumProfiledOperations; j++ {
-			//fmt.Fprintf(file, "\t%v -> %v [%v],",
-			//operation.GetLabel(i),
+			//fmt.Printf("\t%v -> %v [%v] \n",
+			//	operation.GetLabel(i),
 			//	operation.GetLabel(j),
 			//	float64(tFreq[[2]byte{i, j}])/float64(total))
 

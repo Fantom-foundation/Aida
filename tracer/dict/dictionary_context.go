@@ -9,6 +9,8 @@ import (
 	"sort"
 )
 
+const BYTE_MAX = 255
+
 // InvalidContractIndex used to indicate that the previously used contract index is not valid.
 const InvalidContractIndex = math.MaxUint32
 
@@ -68,7 +70,7 @@ func NewDictionaryStochasticContext(beginBlockId byte, numProfiledOperations byt
 		StorageFreq:        make([]uint64, numProfiledOperations),
 		ValueFreq:          make([]uint64, numProfiledOperations),
 		OpFreq:             make([]uint64, numProfiledOperations),
-		PrevOpId:           beginBlockId,
+		PrevOpId:           BYTE_MAX,
 		TFreq:              map[[2]byte]uint64{},
 	}
 }
@@ -338,14 +340,38 @@ func (ctx *DictionaryContext) FrequenciesWriter() {
 	if err != nil {
 		log.Fatalf("Cannot open trace file. Error: %v", err)
 	}
-	fmt.Fprintln(file, "operations: ", ctx.OpFreq)
-	fmt.Fprintln(file, "contractFreq: ", ctx.ContractFreq)
-	fmt.Fprintln(file, "storageFreq: ", ctx.StorageFreq)
-	fmt.Fprintln(file, "valueFreq: ", ctx.ValueFreq)
+
+	writeArray(file, ctx.OpFreq)
+	writeArray(file, ctx.ContractFreq)
+	writeArray(file, ctx.StorageFreq)
+	writeArray(file, ctx.ValueFreq)
 
 	if err := file.Close(); err != nil {
 		log.Fatalf("Cannot close frequencies file. Error: %v", err)
 	}
+}
+
+func writeArray(file *os.File, freq []uint64) {
+	for i, u := range freq {
+		fmt.Fprint(file, u)
+		if i != len(freq)-1 {
+			fmt.Fprint(file, ",")
+		}
+	}
+
+	fmt.Fprintln(file)
+}
+
+// RecordOp records operation frequencies and transitions between them
+func (ctx *DictionaryContext) RecordOp(id byte) {
+	ctx.OpFreq[id]++
+
+	// very first operation doesn't have predecessor, therefore no transition
+	if ctx.PrevOpId != BYTE_MAX {
+		ctx.TFreq[[2]byte{ctx.PrevOpId, id}]++
+	}
+
+	ctx.PrevOpId = id
 }
 
 // sortByFrequencyAcending converts frequency slice with operation ids as indexes to structure,

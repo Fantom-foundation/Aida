@@ -38,3 +38,7 @@ func (oIdx *SnapshotIndex) Get(recordedID int32) (int32, error) {
 	}
 	return replayedID, nil
 }
+
+func (oIdx *SnapshotIndex) Size() int {
+	return len(oIdx.recordedToReplayed)
+}

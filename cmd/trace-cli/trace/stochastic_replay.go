@@ -3,7 +3,7 @@ package trace
 import (
 	"bufio"
 	"fmt"
-	"github.com/Fantom-foundation/Aida/world-state/simulation"
+	"github.com/Fantom-foundation/Aida/tracer/simulation"
 	common_eth "github.com/ethereum/go-ethereum/common"
 	"io"
 	"io/ioutil"
@@ -25,7 +25,7 @@ import (
 // StochasticReplayCommand data structure for the StochasticReplay app
 var StochasticReplayCommand = cli.Command{
 	Action:    traceStochasticReplayAction,
-	Name:      "stochastic-replay-new",
+	Name:      "stochastic-replay",
 	Usage:     "executes storage trace",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
@@ -38,6 +38,7 @@ var StochasticReplayCommand = cli.Command{
 		&traceDirectoryFlag,
 		&traceDebugFlag,
 		&numberOfBlocksFlag,
+		&stochasticSeedFlag,
 	},
 	Description: `
 The trace StochasticReplay command requires two arguments:
@@ -49,9 +50,7 @@ last block of the inclusive range of blocks to StochasticReplay storage traces.`
 
 // traceStochasticReplayTask simulates storage operations from storage traces on stateDB.
 func traceStochasticReplayTask(cfg *TraceConfig) error {
-
 	dCtx := dict.NewDictionaryContext()
-	// TODO load data into dictionary
 
 	// create a directory for the store to place all its files, and
 	// instantiate the state DB under testing.
@@ -142,44 +141,44 @@ func traceStochasticReplayTask(cfg *TraceConfig) error {
 	return nil
 }
 
-func getGenerators(dCtx *dict.DictionaryContext) (simulation.Generator, simulation.Generator, simulation.Generator, error) {
+func getGenerators(dCtx *dict.DictionaryContext) (simulation.StochasticGenerator, simulation.StochasticGenerator, simulation.StochasticGenerator, error) {
 	newContract, newStorage, newValue, err := loadNewOccurances()
 	if err != nil {
-		return simulation.Generator{}, simulation.Generator{}, simulation.Generator{}, err
+		return simulation.StochasticGenerator{}, simulation.StochasticGenerator{}, simulation.StochasticGenerator{}, err
 	}
 
 	lambdaContract, err := loadLambda("contract-distribution.dat")
 	//if err != nil {
-	//	return simulation.Generator{}, simulation.Generator{}, simulation.Generator{}, err
+	//	return simulation.StochasticGenerator{}, simulation.StochasticGenerator{}, simulation.StochasticGenerator{}, err
 	//}
 	lambdaStorage, err := loadLambda("storage-distribution.dat")
 	//if err != nil {
-	//	return simulation.Generator{}, simulation.Generator{}, simulation.Generator{}, err
+	//	return simulation.StochasticGenerator{}, simulation.StochasticGenerator{}, simulation.StochasticGenerator{}, err
 	//}
 	lambdaValue, err := loadLambda("value-distribution.dat")
 	//if err != nil {
-	//	return simulation.Generator{}, simulation.Generator{}, simulation.Generator{}, err
+	//	return simulation.StochasticGenerator{}, simulation.StochasticGenerator{}, simulation.StochasticGenerator{}, err
 	//}
 
-	gc := simulation.Generator{C: newContract, Size: 0, E: lambdaContract}
-	gc.GetNew = func() []any {
-		gc.Size++
-		var address = common_eth.BytesToAddress(simulation.RetrieveValueAt(gc.Size))
+	gc := simulation.StochasticGenerator{C: newContract, Size: 0, E: lambdaContract}
+	gc.GetNew = func(g simulation.StochasticGenerator) []any {
+		g.Size++
+		var address = common_eth.BytesToAddress(simulation.RetrieveValueAt(g.Size))
 		idx := dCtx.EncodeContract(address)
 		return []any{idx}
 	}
-	gs := simulation.Generator{C: newStorage, Size: 0, E: lambdaStorage}
-	gs.GetNew = func() []any {
-		gs.Size++
-		key := common_eth.BytesToHash(simulation.RetrieveValueAt(gs.Size))
+	gs := simulation.StochasticGenerator{C: newStorage, Size: 0, E: lambdaStorage}
+	gs.GetNew = func(g simulation.StochasticGenerator) []any {
+		g.Size++
+		key := common_eth.BytesToHash(simulation.RetrieveValueAt(g.Size))
 		sIdx, pos := dCtx.EncodeStorage(common_eth.BytesToHash(key[:]))
 
 		return []any{sIdx, pos}
 	}
-	gv := simulation.Generator{C: newValue, Size: 0, E: lambdaValue}
-	gv.GetNew = func() []any {
-		gv.Size++
-		value := common_eth.BytesToHash(simulation.RetrieveValueAt(gv.Size))
+	gv := simulation.StochasticGenerator{C: newValue, Size: 0, E: lambdaValue}
+	gv.GetNew = func(g simulation.StochasticGenerator) []any {
+		g.Size++
+		value := common_eth.BytesToHash(simulation.RetrieveValueAt(g.Size))
 		idx := dCtx.EncodeValue(value)
 
 		return []any{idx}
@@ -199,8 +198,8 @@ func loadLambda(path string) (float64, error) {
 	// string is actually float32 but no need to parse
 	occurances := make(map[string]uint32)
 
+	rd := bufio.NewReader(file)
 	for {
-		rd := bufio.NewReader(file)
 		line, err := rd.ReadString('\n')
 		if err != nil {
 			if err == io.EOF {
@@ -225,7 +224,7 @@ func loadLambda(path string) (float64, error) {
 		s[occs]++
 	}
 
-	log.Print("hello", s, "\n")
+	log.Print("lambda: ", s, "\n")
 
 	return 0, nil
 }
@@ -241,9 +240,11 @@ func loadNewOccurances() ([]float32, []float32, []float32, error) {
 	}
 
 	for i := 0; i < operation.NumProfiledOperations; i++ {
-		newContract[i] = float32(f[1][i]) / float32(f[0][i])
-		newStorage[i] = float32(f[2][i]) / float32(f[0][i])
-		newValue[i] = float32(f[3][i]) / float32(f[0][i])
+		if f[0][i] != 0 {
+			newContract[i] = float32(f[1][i]) / float32(f[0][i])
+			newStorage[i] = float32(f[2][i]) / float32(f[0][i])
+			newValue[i] = float32(f[3][i]) / float32(f[0][i])
+		}
 	}
 
 	return newContract, newStorage, newValue, nil
@@ -259,8 +260,8 @@ func readFrequenciesFile() ([][]uint64, error) {
 	res := make([][]uint64, operation.NumProfiledOperations)
 
 	i := 0
+	rd := bufio.NewReader(file)
 	for {
-		rd := bufio.NewReader(file)
 		line, err := rd.ReadString('\n')
 		if err != nil {
 			if err == io.EOF {
@@ -284,7 +285,7 @@ func readFrequenciesFile() ([][]uint64, error) {
 			}
 			l[k] = j
 		}
-
+		res[i] = l
 		i++
 	}
 
@@ -297,9 +298,9 @@ func readFrequenciesFile() ([][]uint64, error) {
 }
 
 func loadTransitions() ([][]float64, error) {
-	file, err := os.Open(dict.DictionaryContextDir + "stochastic-matrix.csv")
+	file, err := os.Open(tracer.TraceDir + "stochastic-matrix.csv")
 	if err != nil {
-		log.Fatalf("Cannot open stochastic-matrix.dat file. Error: %v", err)
+		log.Fatalf("Cannot open stochastic-matrix.csv file. Error: %v", err)
 	}
 
 	res := make([][]float64, operation.NumProfiledOperations)

@@ -5,28 +5,28 @@ import (
 	"math/rand"
 )
 
-// Generator wraps a Label of the distribution and a function to get a next value withing the given distribution
-type Generator struct {
+// StochasticGenerator wraps a Label of the distribution and a function to get a next value withing the given distribution
+type StochasticGenerator struct {
 	C      []float32
 	Size   uint32
-	GetNew func() []any
+	GetNew func(g StochasticGenerator) []any
 	E      float64
 }
 
 var hasher = sha256.New()
 
-func (g Generator) GetNext(opId byte) []any {
+func (g StochasticGenerator) GetNext(opId byte) []any {
 	nc := rand.Float32()
-	if nc <= g.C[opId] {
+	if nc <= g.C[opId] || g.Size == 0 {
 		//	generating new value
-		return g.GetNew()
+		return g.GetNew(g)
 	} else {
 		//	using existing value
 		return []any{g.getExisting()}
 	}
 }
 
-func (g Generator) getExisting() uint32 {
+func (g StochasticGenerator) getExisting() uint32 {
 	var expRate float64
 	if g.E != 0 {
 		expRate = g.E
