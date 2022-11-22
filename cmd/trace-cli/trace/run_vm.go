@@ -281,9 +281,9 @@ func runVM(ctx *cli.Context) error {
 		tx := iter.Value()
 		// initiate first epoch and block.
 		if isFirstBlock {
-			curEpoch = cfg.first / cfg.epochLength
-			db.BeginEpoch(curEpoch)
+			curEpoch = tx.Block / cfg.epochLength
 			curBlock = tx.Block
+			db.BeginEpoch(curEpoch)
 			db.BeginBlock(curBlock)
 			isFirstBlock = false
 			// close off old block and possibly epochs
@@ -327,8 +327,10 @@ func runVM(ctx *cli.Context) error {
 		}
 	}
 
-	db.EndBlock()
-	db.EndEpoch()
+	if !isFirstBlock {
+		db.EndBlock()
+		db.EndEpoch()
+	}
 
 	if cfg.enableProgress {
 		sec = time.Since(start).Seconds()
