@@ -302,10 +302,10 @@ func runVM(ctx *cli.Context) error {
 				curEpoch++
 				db.BeginEpoch(curEpoch)
 			}
-
 			// Mark the begin of a new block
 			curBlock = tx.Block
 			db.BeginBlock(curBlock)
+			db.BeginBlockApply()
 		}
 
 		// run VM

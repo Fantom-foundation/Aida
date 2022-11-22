@@ -31,19 +31,20 @@ func OpenGethStateDB(directory string, root_hash common.Hash) (StateDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &gethStateDB{db: db, ethdb: ethdb}, nil
+	return &gethStateDB{db: db, ethdb: ethdb, stateRoot: root_hash}, nil
 }
 
 // BeginBlockApply creates a new statedb from an existing geth database
-func (s *gethStateDB) BeginBlockApply(root_hash common.Hash) error {
+func (s *gethStateDB) BeginBlockApply() error {
 	var err error
-	s.db, err = geth.NewWithSnapLayers(root_hash, s.ethdb, nil, 0)
+	s.db, err = geth.NewWithSnapLayers(s.stateRoot, s.ethdb, nil, 0)
 	return err
 }
 
 type gethStateDB struct {
-	db    vm.StateDB
-	ethdb geth.Database
+	db        vm.StateDB    // statedb
+	ethdb     geth.Database // key-value database
+	stateRoot common.Hash   // lastest root hash
 }
 
 func (s *gethStateDB) CreateAccount(addr common.Address) {
@@ -135,9 +136,17 @@ func (s *gethStateDB) BeginBlock(number uint64) {
 }
 
 func (s *gethStateDB) EndBlock() {
+	var err error
 	//commit at the end of a block
-	if _, err := s.Commit(true); err != nil {
+	s.stateRoot, err = s.Commit(true)
+	if err != nil {
 		panic(fmt.Errorf("StateDB commit failed\n"))
+	}
+	// flush trie to disk
+	// TODO only flush when a condition meet
+	if s.ethdb != nil {
+		triedb := s.ethdb.TrieDB()
+		triedb.Commit(s.stateRoot, false, nil)
 	}
 }
 

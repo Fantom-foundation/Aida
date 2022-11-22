@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	geth "github.com/Fantom-foundation/substate-cli/state"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/substate"
 )
 
@@ -19,7 +18,7 @@ type gethInMemoryStateDB struct {
 	gethStateDB
 }
 
-func (s *gethInMemoryStateDB) BeginBlockApply(root_hash common.Hash) error {
+func (s *gethInMemoryStateDB) BeginBlockApply() error {
 	return nil
 }
 

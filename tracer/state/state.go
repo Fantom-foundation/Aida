@@ -81,7 +81,7 @@ type StateDB interface {
 	Close() error
 
 	// stateDB handler
-	BeginBlockApply(common.Hash) error
+	BeginBlockApply() error
 
 	// ---- Artefacts from Geth dependency ----
 
