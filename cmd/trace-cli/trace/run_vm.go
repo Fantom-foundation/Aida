@@ -194,6 +194,7 @@ func runVM(ctx *cli.Context) error {
 		lastTxCount int
 	)
 	// process general arguments
+	chainID = ctx.Int(chainIDFlag.Name)
 	cfg, argErr := NewTraceConfig(ctx)
 	if argErr != nil {
 		return argErr
@@ -245,7 +246,6 @@ func runVM(ctx *cli.Context) error {
 	log.Printf("\tElapsed time: %.2f s, accounts: %v\n", sec, len(ws))
 
 	// prime stateDB
-	log.Printf("Prime stateDB\n")
 	start = time.Now()
 	primeStateDB(ws, db, cfg)
 	sec = time.Since(start).Seconds()
