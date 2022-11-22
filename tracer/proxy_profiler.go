@@ -321,7 +321,7 @@ func (p *ProxyProfiler) do(opId byte, op func(), args ...any) {
 	p.ps.Profile(opId, elapsed)
 	if p.debug {
 		label := operation.GetLabel(opId)
-		fmt.Printf("%s:\n", label)
+		fmt.Printf("%s:", label)
 		for _, cur := range args {
 			fmt.Printf(" %v", cur)
 		}

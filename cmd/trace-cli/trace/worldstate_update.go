@@ -2,6 +2,7 @@ package trace
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	"github.com/ethereum/go-ethereum/substate"
@@ -31,7 +32,9 @@ func generateUpdateSet(first uint64, last uint64, numWorkers int) substate.Subst
 func generateWorldStateFromUpdateDB(path string, target uint64, numWorkers int) (substate.SubstateAlloc, error) {
 	ws := make(substate.SubstateAlloc)
 	blockPos := uint64(FirstSubstateBlock - 1)
-
+	if target < blockPos {
+		return nil, fmt.Errorf("Error: the target block, %v, is earlier than the initial world state block, %v. The world state is not loaded.\n", target, blockPos)
+	}
 	// load pre-computed update-set from update-set db
 	db := substate.OpenUpdateDB(path)
 	defer db.Close()
