@@ -27,24 +27,25 @@ func makeStateDB(directory, impl, variant string) (state.StateDB, error) {
 
 // primeStateDB primes database with accounts from the world state.
 func primeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *TraceConfig) {
+	load := db.StartBulkLoad()
 	if cfg.primeRandom {
 		//if 0, commit once after priming all accounts
 		if cfg.primeThreshold == 0 {
 			cfg.primeThreshold = len(ws)
 		}
-		primeStateDBRandom(ws, db, cfg)
+		primeStateDBRandom(ws, load, cfg)
 	} else {
 		for addr, account := range ws {
-			primeOneAccount(addr, account, db)
+			primeOneAccount(addr, account, load)
 		}
-		db.EndBlock()
 	}
+	load.Close()
 }
 
 // primeOneAccount initializes an account on stateDB with substate
-func primeOneAccount(addr common.Address, account *substate.SubstateAccount, db state.StateDB) {
+func primeOneAccount(addr common.Address, account *substate.SubstateAccount, db state.BulkLoad) {
 	db.CreateAccount(addr)
-	db.AddBalance(addr, account.Balance)
+	db.SetBalance(addr, account.Balance)
 	db.SetNonce(addr, account.Nonce)
 	db.SetCode(addr, account.Code)
 	for key, value := range account.Storage {
@@ -53,7 +54,7 @@ func primeOneAccount(addr common.Address, account *substate.SubstateAccount, db 
 }
 
 // primeStateDBRandom primes database with accounts from the world state in random order.
-func primeStateDBRandom(ws substate.SubstateAlloc, db state.StateDB, cfg *TraceConfig) {
+func primeStateDBRandom(ws substate.SubstateAlloc, db state.BulkLoad, cfg *TraceConfig) {
 	contracts := make([]string, 0, len(ws))
 	for addr := range ws {
 		contracts = append(contracts, addr.Hex())
@@ -66,18 +67,12 @@ func primeStateDBRandom(ws substate.SubstateAlloc, db state.StateDB, cfg *TraceC
 		contracts[i], contracts[j] = contracts[j], contracts[i]
 	})
 
-	for i, c := range contracts {
-		// call EndBlock after k accounts have been primed
-		if i%cfg.primeThreshold == 0 && i != 0 {
-			db.EndBlock()
-		}
+	for _, c := range contracts {
 		addr := common.HexToAddress(c)
 		account := ws[addr]
 		primeOneAccount(addr, account, db)
 
 	}
-	// call EndBlock for the remaining accounts
-	db.EndBlock()
 }
 
 // getDirectorySize computes the size of all files in the given directoy in bytes.

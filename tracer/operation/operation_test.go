@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/Fantom-foundation/Aida/tracer/state"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -150,6 +151,11 @@ func (s *MockStateDB) BeginEpoch(id uint64) {
 
 func (s *MockStateDB) EndEpoch() {
 	s.recording = append(s.recording, Record{EndEpochID, []any{}})
+}
+
+func (s *MockStateDB) StartBulkLoad() state.BulkLoad {
+	panic("Bulk load not supported in mock")
+	return nil
 }
 
 func (s *MockStateDB) Finalise(deleteEmptyObjects bool) {

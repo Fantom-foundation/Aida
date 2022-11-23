@@ -441,3 +441,8 @@ func (p *ProxyProfiler) PrepareSubstate(substate *substate.SubstateAlloc) {
 func (p *ProxyProfiler) Close() error {
 	return p.db.Close()
 }
+
+func (p *ProxyProfiler) StartBulkLoad() state.BulkLoad {
+	panic("StartBulkLoad not supported by ProxyProfiler")
+	return nil
+}
