@@ -4,24 +4,15 @@ import (
 	"fmt"
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
-	"github.com/Fantom-foundation/Carmen/go/common"
 	"math/big"
 	"math/rand"
 )
 
-var KeysCacheSize = 256
-
 // StateContext wraps current state transition of the simulation
 type StateContext struct {
-	address         common.Address      // Current account address
-	key             common.Key          // Current contract slot address
-	value           common.Value        // Last returned slot value
-	balance         *big.Int            // Last returned account balance
-	nonce           uint64              // Last returned account nonce
-	usedKeys        []common.Key        // A cache of recently used contract slot keys
-	distContract    StochasticGenerator // Probabilistic distribution used to generate next address
-	distStorage     StochasticGenerator // Probabilistic distribution used to generate next storage
-	distValue       StochasticGenerator // Probabilistic distribution used to generate next value
+	distContract    *StochasticGenerator // Probabilistic distribution used to generate next address
+	distStorage     *StochasticGenerator // Probabilistic distribution used to generate next storage
+	distValue       *StochasticGenerator // Probabilistic distribution used to generate next value
 	dCtx            *dict.DictionaryContext
 	transitions     [][]float64
 	opDict          map[byte]func(sc *StateContext) operation.Operation
@@ -35,17 +26,12 @@ type StateContext struct {
 }
 
 // NewStateContext creates a new context, which contains current state of Transitions
-func NewStateContext(distContract StochasticGenerator, distStorage StochasticGenerator, distValue StochasticGenerator, t [][]float64, dCtx *dict.DictionaryContext) (StateContext, error) {
+func NewStateContext(distContract *StochasticGenerator, distStorage *StochasticGenerator, distValue *StochasticGenerator, t [][]float64, dCtx *dict.DictionaryContext) (StateContext, error) {
 	sc := StateContext{
-		address:         common.Address{},
-		key:             common.Key{},
-		value:           common.Value{},
 		snapshotCounter: 0,
-		balance:         &big.Int{},
 		distContract:    distContract,
 		distStorage:     distStorage,
 		distValue:       distValue,
-		usedKeys:        make([]common.Key, 0, KeysCacheSize),
 		dCtx:            dCtx,
 		transitions:     t,
 		currentBlock:    0,
@@ -65,15 +51,24 @@ func NewStateContext(distContract StochasticGenerator, distStorage StochasticGen
 	return sc, nil
 }
 
+// initOpDictionary initializes dictionary with all operation creation functions
 func (sc *StateContext) initOpDictionary() error {
 	sc.opDict[operation.AddBalanceID] = func(sc *StateContext) operation.Operation {
 		idx := sc.getNextAddress()
-		nw := sc.getNextBalance(idx)
+		nw := sc.getNextBalance()
+
 		cur, ok := sc.balances[idx]
 		if !ok {
 			sc.balances[idx] = nw
 		} else {
-			sc.balances[idx] = new(big.Int).Add(cur, nw)
+			v := new(big.Int).Add(cur, nw)
+			if v.IsUint64() {
+				// new value fits into uint64
+				sc.balances[idx] = v
+			} else {
+				// prevent value from overflowing - by adding just zero
+				nw.SetUint64(0)
+			}
 		}
 		return operation.NewAddBalance(idx, nw)
 	}
@@ -167,19 +162,6 @@ func (sc *StateContext) initOpDictionary() error {
 	}
 	sc.opDict[operation.GetStateLccsID] = func(sc *StateContext) operation.Operation {
 		{
-
-			////ctx.StorageIndexCache.Get(sPos) could be used aswell
-
-			//var p int
-			//if len(sc.usedPositions) == 0 {
-			//	//TODO fix
-			//	p = 0
-			//} else {
-			//	p = rand.Intn(len(sc.usedPositions))
-			//}
-
-			//return operation.NewGetStateLccs(p)
-
 			return operation.NewGetStateLccs(0)
 		}
 	}
@@ -195,7 +177,6 @@ func (sc *StateContext) initOpDictionary() error {
 	}
 	sc.opDict[operation.RevertToSnapshotID] = func(sc *StateContext) operation.Operation {
 		{
-
 			s := sc.snapshotCounter
 			var id int
 			if s > 0 {
@@ -239,16 +220,18 @@ func (sc *StateContext) initOpDictionary() error {
 	sc.opDict[operation.SubBalanceID] = func(sc *StateContext) operation.Operation {
 		{
 			idx := sc.getNextAddress()
-			nw := sc.getNextBalance(idx)
+			nw := big.NewInt(0)
+			//nw := sc.getNextBalance()
 			cur, ok := sc.balances[idx]
 			if !ok {
 				// No balance left can't sub anything
 				nw.SetUint64(0)
 			} else {
 				n := new(big.Int).Sub(cur, nw)
+
 				if n.Sign() == -1 {
 					// generated sub value was too big, reduce to current value for result to be zero
-					nw = cur
+					nw = nw.Set(cur)
 					n.SetUint64(0)
 				}
 				sc.balances[idx] = n
@@ -275,7 +258,7 @@ func (sc *StateContext) getNextNonce(idx uint32) uint64 {
 }
 
 // getNextBalance generates a new balance using the current random probabilistic distribution
-func (sc *StateContext) getNextBalance(idx uint32) *big.Int {
+func (sc *StateContext) getNextBalance() *big.Int {
 	var balance = new(big.Int)
 	v := rand.Uint64()
 	balance.SetUint64(v)
@@ -289,20 +272,28 @@ func (sc *StateContext) getNextValue() uint64 {
 
 // getNextAddress generates a new address using the current random probabilistic distribution
 func (sc *StateContext) getNextAddress() uint32 {
-	return (sc.distContract.GetNext(sc.opId)[0]).(uint32)
+	r := sc.distContract.GetNext(sc.opId)[0]
+	v, ok := r.(uint32)
+	if ok {
+		return v
+	}
+	return uint32(r.(uint64))
 }
 
 // getNextKey generates a new key using the current random probabilistic distribution
 func (sc *StateContext) getNextKey() uint32 {
 	r := sc.distStorage.GetNext(sc.opId)
+
+	if len(r) < 2 {
+		return uint32(r[0].(uint64))
+	}
 	i := r[0].(uint32)
 	pos := r[1].(int)
 	sc.usedPositions[pos] = true
-
 	return i
 }
 
-// getNextCode
+// getNextCode generates next code
 func (sc *StateContext) getNextCode() uint32 {
 	// TODO make code generation more realistic
 	buffer := make([]byte, 64)
@@ -312,6 +303,7 @@ func (sc *StateContext) getNextCode() uint32 {
 	return idxC
 }
 
+// NextOperation calculates next operation from current operation
 func (sc *StateContext) NextOperation() operation.Operation {
 	sc.opId = sc.getNextOp(sc.opId)
 	if sc.opId > operation.NumProfiledOperations-1 {
@@ -321,6 +313,7 @@ func (sc *StateContext) NextOperation() operation.Operation {
 	return op
 }
 
+// encodeIntoOperation creates new operation instance from given opId
 func (sc *StateContext) encodeIntoOperation() operation.Operation {
 	opF, ok := sc.opDict[sc.opId]
 	if !ok {
@@ -329,37 +322,19 @@ func (sc *StateContext) encodeIntoOperation() operation.Operation {
 	return opF(sc)
 }
 
+// getNextOp returns next operation while skipping the skip operations and appropriating chance for the rest of the operations
 func (sc *StateContext) getNextOp(op byte) byte {
-	// determine next state
-	p := rand.Float64()
+	skipOps := sc.toBeSkipped()
 
-	sum := 0.0
-
-	for i := 0; i < operation.NumProfiledOperations; i++ {
-		sum += sc.transitions[op][i]
-		if p <= sum {
-			// preventing RevertToSnapshotID being called when no snapshot is available
-			if i == operation.RevertToSnapshotID && sc.snapshotCounter == 0 {
-				return sc.getNextOpSkip(op, i)
-			}
-
-			return byte(i)
-		}
-	}
-	return byte(255)
-}
-
-// getNextOpSkip returns operation while skipping the skip operation and appropriating chance for the rest of the operations
-func (sc *StateContext) getNextOpSkip(op byte, skip int) byte {
-	modifier := sc.transitions[op][skip]
-	if modifier == 0 {
-		// could return getNextOp - but there might be deadlock
-		return byte(255)
+	var modifier = 0.0
+	for _, skip := range skipOps {
+		modifier += sc.transitions[op][skip]
 	}
 
-	//error if skipped operation is 100% chance
+	// error if skipped operation is 100% chance
+	// rounding error - shouldn't matter since last return of function will return same error
 	if modifier == 1 {
-		return byte(255)
+		return byte(dict.BYTE_MAX)
 	}
 
 	// determine next state
@@ -374,5 +349,25 @@ func (sc *StateContext) getNextOpSkip(op byte, skip int) byte {
 			return byte(i)
 		}
 	}
-	return byte(255)
+	return byte(dict.BYTE_MAX)
+}
+
+// toBeSkipped skipping operations which have to be skipped because their conditions aren't met
+func (sc *StateContext) toBeSkipped() []int {
+	var skipOps []int
+	// preventing RevertToSnapshotID being called when no snapshot is available
+	if sc.snapshotCounter == 0 {
+		skipOps = append(skipOps, operation.RevertToSnapshotID)
+	}
+
+	// preventing GetStateLclsID being called when StorageIndexCache is empty
+	// StorageIndexCache uses top always last value is at index 0
+	// we need to only check the 0 index to see whether Cache isn't empty
+	_, err := sc.dCtx.StorageIndexCache.Get(0)
+	if err != nil {
+		skipOps = append(skipOps, operation.GetStateLclsID)
+		skipOps = append(skipOps, operation.GetStateLccsID)
+	}
+
+	return skipOps
 }

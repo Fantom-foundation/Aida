@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/Fantom-foundation/Aida/tracer/simulation"
-	common_eth "github.com/ethereum/go-ethereum/common"
 	"io"
 	"io/ioutil"
 	"log"
@@ -86,7 +85,7 @@ func traceStochasticReplayTask(cfg *TraceConfig) error {
 		return err
 	}
 
-	sc, err := simulation.NewStateContext(distContract, distStorage, distValue, transitions, dCtx)
+	sc, err := simulation.NewStateContext(&distContract, &distStorage, &distValue, transitions, dCtx)
 	if err != nil {
 		return err
 	}
@@ -141,6 +140,7 @@ func traceStochasticReplayTask(cfg *TraceConfig) error {
 	return nil
 }
 
+// getGenerators retrieves contract, storage and value generators
 func getGenerators(dCtx *dict.DictionaryContext) (simulation.StochasticGenerator, simulation.StochasticGenerator, simulation.StochasticGenerator, error) {
 	newContract, newStorage, newValue, err := loadNewOccurances()
 	if err != nil {
@@ -160,29 +160,9 @@ func getGenerators(dCtx *dict.DictionaryContext) (simulation.StochasticGenerator
 	//	return simulation.StochasticGenerator{}, simulation.StochasticGenerator{}, simulation.StochasticGenerator{}, err
 	//}
 
-	gc := simulation.StochasticGenerator{C: newContract, Size: 0, E: lambdaContract}
-	gc.GetNew = func(g simulation.StochasticGenerator) []any {
-		g.Size++
-		var address = common_eth.BytesToAddress(simulation.RetrieveValueAt(g.Size))
-		idx := dCtx.EncodeContract(address)
-		return []any{idx}
-	}
-	gs := simulation.StochasticGenerator{C: newStorage, Size: 0, E: lambdaStorage}
-	gs.GetNew = func(g simulation.StochasticGenerator) []any {
-		g.Size++
-		key := common_eth.BytesToHash(simulation.RetrieveValueAt(g.Size))
-		sIdx, pos := dCtx.EncodeStorage(common_eth.BytesToHash(key[:]))
-
-		return []any{sIdx, pos}
-	}
-	gv := simulation.StochasticGenerator{C: newValue, Size: 0, E: lambdaValue}
-	gv.GetNew = func(g simulation.StochasticGenerator) []any {
-		g.Size++
-		value := common_eth.BytesToHash(simulation.RetrieveValueAt(g.Size))
-		idx := dCtx.EncodeValue(value)
-
-		return []any{idx}
-	}
+	gc := simulation.StochasticGenerator{T: simulation.TContract, C: newContract, DCtx: dCtx, E: lambdaContract}
+	gs := simulation.StochasticGenerator{T: simulation.TStorage, C: newStorage, DCtx: dCtx, E: lambdaStorage}
+	gv := simulation.StochasticGenerator{T: simulation.TValue, C: newValue, DCtx: dCtx, E: lambdaValue}
 
 	return gc, gs, gv, nil
 }
@@ -224,6 +204,8 @@ func loadLambda(path string) (float64, error) {
 		s[occs]++
 	}
 
+	// TODO not completed
+
 	log.Print("lambda: ", s, "\n")
 
 	return 0, nil
@@ -250,6 +232,7 @@ func loadNewOccurances() ([]float32, []float32, []float32, error) {
 	return newContract, newStorage, newValue, nil
 }
 
+// readFrequenciesFile loads frequencies data from file
 func readFrequenciesFile() ([][]uint64, error) {
 	file, err := os.Open(dict.DictionaryContextDir + "frequencies.dat")
 	if err != nil {
@@ -297,6 +280,7 @@ func readFrequenciesFile() ([][]uint64, error) {
 	return res, nil
 }
 
+// loadTransitions loads transitions from file
 func loadTransitions() ([][]float64, error) {
 	file, err := os.Open(tracer.TraceDir + "stochastic-matrix.csv")
 	if err != nil {

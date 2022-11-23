@@ -199,7 +199,7 @@ func (ctx *DictionaryContext) ReadStorage(sPos int) common.Hash {
 func (ctx *DictionaryContext) LookupStorage(sPos int) common.Hash {
 	sIdx, err := ctx.StorageIndexCache.Get(sPos)
 	if err != nil {
-		log.Fatalf("Storage position could not be found. Error: %v", err)
+		log.Fatalf("Storage position could not be looked up. Error: %v", err)
 	}
 	return ctx.DecodeStorage(sIdx)
 }
