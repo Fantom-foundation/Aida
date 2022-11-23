@@ -48,7 +48,7 @@ var getCodeSizeCalled bool
 var getCodeHashCalled bool
 var setCodeCalled bool
 
-func (s *carmenStateDB) BeginBlockApply(root_hash common.Hash) error {
+func (s *carmenStateDB) BeginBlockApply() error {
 	return nil
 }
 

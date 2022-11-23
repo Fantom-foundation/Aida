@@ -20,7 +20,7 @@ type MockStateDB struct {
 	recording []Record //signatures of called functions
 }
 
-func (s *MockStateDB) BeginBlockApply(root_hash common.Hash) error {
+func (s *MockStateDB) BeginBlockApply() error {
 	return nil
 }
 

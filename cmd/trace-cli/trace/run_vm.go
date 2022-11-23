@@ -107,9 +107,9 @@ func runVMTask(db state.StateDB, cfg *TraceConfig, block uint64, tx int, recordi
 	var (
 		gaspool = new(evmcore.GasPool)
 		//TODO check logs
-		//blockHash = common.Hash{0x01}
-		txHash  = common.Hash{0x02}
-		txIndex = tx
+		blockHash = common.Hash{0x01}
+		txHash    = common.Hash{0x02}
+		txIndex   = tx
 	)
 
 	gaspool.AddGas(inputEnv.GasLimit)
@@ -157,9 +157,7 @@ func runVMTask(db state.StateDB, cfg *TraceConfig, block uint64, tx int, recordi
 		evmResult.Status = types.ReceiptStatusSuccessful
 	}
 
-	// TODO clear state execution context and validate logs
-	//evmResult.Logs = db.GetLogs(txHash, blockHash)
-	evmResult.Logs = outputResult.Logs
+	evmResult.Logs = db.GetLogs(txHash, blockHash)
 	evmResult.Bloom = types.BytesToBloom(types.LogsBloom(evmResult.Logs))
 	if to := msg.To(); to == nil {
 		evmResult.ContractAddress = crypto.CreateAddress(evm.TxContext.Origin, msg.Nonce())
@@ -302,10 +300,10 @@ func runVM(ctx *cli.Context) error {
 				curEpoch++
 				db.BeginEpoch(curEpoch)
 			}
-
 			// Mark the begin of a new block
 			curBlock = tx.Block
 			db.BeginBlock(curBlock)
+			db.BeginBlockApply()
 		}
 
 		// run VM

@@ -31,8 +31,8 @@ func NewProxyProfiler(db state.StateDB, debug bool) (*ProxyProfiler, *operation.
 
 // BeginBlockApply creates a new object copying state from
 // the old stateDB or clears execution state of stateDB
-func (p *ProxyProfiler) BeginBlockApply(root_hash common.Hash) error {
-	err := p.db.BeginBlockApply(root_hash)
+func (p *ProxyProfiler) BeginBlockApply() error {
+	err := p.db.BeginBlockApply()
 	return err
 }
 
