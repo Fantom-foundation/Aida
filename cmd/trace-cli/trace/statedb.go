@@ -3,7 +3,6 @@ package trace
 import (
 	"fmt"
 	"io/fs"
-	"log"
 	"math/rand"
 	"path/filepath"
 	"sort"
@@ -33,10 +32,8 @@ func primeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *TraceConfig)
 		if cfg.primeThreshold == 0 {
 			cfg.primeThreshold = len(ws)
 		}
-		log.Printf("Prime stateDB with seed %v and k %v\n", cfg.primeSeed, cfg.primeThreshold)
 		primeStateDBRandom(ws, db, cfg)
 	} else {
-		log.Printf("Prime stateDB\n")
 		for addr, account := range ws {
 			primeOneAccount(addr, account, db)
 		}

@@ -152,6 +152,10 @@ func NewTraceConfig(ctx *cli.Context) (*TraceConfig, error) {
 		log.Printf("\tEpoch length: %v\n", cfg.epochLength)
 		log.Printf("\tStorage system: %v, DB variant: %v\n", cfg.impl, cfg.variant)
 		log.Printf("\tUpdate DB directory: %v\n", cfg.updateDBDir)
+		log.Printf("\tRandomized Priming: %v\n", cfg.primeRandom)
+		if cfg.primeRandom {
+			log.Printf("\t\tSeed: %v, threshold: %v\n", cfg.primeSeed, cfg.primeThreshold)
+		}
 	}
 	return cfg, nil
 }
