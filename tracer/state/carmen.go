@@ -249,3 +249,35 @@ func (s *carmenStateDB) ForEachStorage(common.Address, func(common.Hash, common.
 	panic("ForEachStorage not implemented")
 	return nil
 }
+
+func (s *carmenStateDB) StartBulkLoad() BulkLoad {
+	return &carmenBulkLoad{s.db.StartBulkLoad()}
+}
+
+type carmenBulkLoad struct {
+	load carmen.BulkLoad
+}
+
+func (l *carmenBulkLoad) CreateAccount(addr common.Address) {
+	l.load.CreateAccount(cc.Address(addr))
+}
+
+func (l *carmenBulkLoad) SetBalance(addr common.Address, value *big.Int) {
+	l.load.SetBalance(cc.Address(addr), value)
+}
+
+func (l *carmenBulkLoad) SetNonce(addr common.Address, nonce uint64) {
+	l.load.SetNonce(cc.Address(addr), nonce)
+}
+
+func (l *carmenBulkLoad) SetState(addr common.Address, key common.Hash, value common.Hash) {
+	l.load.SetState(cc.Address(addr), cc.Key(key), cc.Value(value))
+}
+
+func (l *carmenBulkLoad) SetCode(addr common.Address, code []byte) {
+	l.load.SetCode(cc.Address(addr), code)
+}
+
+func (l *carmenBulkLoad) Close() error {
+	return l.load.Close()
+}

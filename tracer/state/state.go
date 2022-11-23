@@ -83,6 +83,12 @@ type StateDB interface {
 	// stateDB handler
 	BeginBlockApply() error
 
+	// StartBulkLoad creates a interface supporting the efficient loading of large amount
+	// of data as it is, for instance, needed during priming. Only one bulk load operation
+	// may be active at any time and no other concurrent operations on the StateDB are
+	// while it is alive.
+	StartBulkLoad() BulkLoad
+
 	// ---- Artefacts from Geth dependency ----
 
 	// The following functions may be used by StateDB implementations for backward-compatibilty
@@ -104,4 +110,19 @@ type StateDB interface {
 	// Used to initiate the state DB for the next transaction.
 	// This is mainly for development purposes to support in-memory DB implementations.
 	PrepareSubstate(*substate.SubstateAlloc)
+}
+
+// BulkWrite is a faster interface to StateDB instances for writing data without
+// the overhead of snapshots or transactions. It is mainly intended for priming DB
+// instances before running evaluations.
+type BulkLoad interface {
+	CreateAccount(common.Address)
+	SetBalance(common.Address, *big.Int)
+	SetNonce(common.Address, uint64)
+	SetState(common.Address, common.Hash, common.Hash)
+	SetCode(common.Address, []byte)
+
+	// Close ends the bulk insertion, finalizes the internal state, and released the
+	// underlying StateDB instance for regular operations.
+	Close() error
 }
