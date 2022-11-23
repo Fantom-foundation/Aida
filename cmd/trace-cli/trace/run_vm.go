@@ -205,7 +205,7 @@ func runVM(ctx *cli.Context) error {
 		return fmt.Errorf("db-impl memory is not supported")
 	}
 	vmImpl := ctx.String(vmImplementation.Name)
-	fmt.Printf("Used VM implementation: %v\n", vmImpl)
+	log.Printf("\tUsed VM implementation: %v\n", vmImpl)
 
 	// start CPU profiling if requested.
 	if profileFileName := ctx.String(cpuProfileFlag.Name); profileFileName != "" {
@@ -246,6 +246,7 @@ func runVM(ctx *cli.Context) error {
 	log.Printf("\tElapsed time: %.2f s, accounts: %v\n", sec, len(ws))
 
 	// prime stateDB
+	log.Printf("Prime stateDB \n")
 	start = time.Now()
 	primeStateDB(ws, db, cfg)
 	sec = time.Since(start).Seconds()
