@@ -33,6 +33,10 @@ var (
 		Usage: "defines the number of blocks per epoch",
 		Value: 300, // ~ 300s = 5 minutes
 	}
+	memoryBreakdownFlag = cli.BoolFlag{
+		Name:  "memory-breakdown",
+		Usage: "enables printing of memory usage breakdown",
+	}
 	profileFlag = cli.BoolFlag{
 		Name:  "profile",
 		Usage: "enables profiling",
@@ -104,6 +108,7 @@ type TraceConfig struct {
 	enableProgress   bool   // enable progress report flag
 	epochLength      uint64 // length of an epoch in number of blocks
 	impl             string // storage implementation
+	memoryBreakdown  bool   // enable printing of memory breakdown
 	primeRandom      bool   // enable randomized priming
 	primeSeed        int64  // set random seed
 	primeThreshold   int    // set account threshold before commit
@@ -133,6 +138,7 @@ func NewTraceConfig(ctx *cli.Context) (*TraceConfig, error) {
 		enableProgress:   !ctx.Bool(disableProgressFlag.Name),
 		epochLength:      ctx.Uint64(epochLengthFlag.Name),
 		impl:             ctx.String(stateDbImplementation.Name),
+		memoryBreakdown:  ctx.Bool(memoryBreakdownFlag.Name),
 		primeRandom:      ctx.Bool(randomizePrimingFlag.Name),
 		primeSeed:        ctx.Int64(primeSeedFlag.Name),
 		primeThreshold:   ctx.Int(primeThresholdFlag.Name),

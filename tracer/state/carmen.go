@@ -253,6 +253,10 @@ func (s *carmenStateDB) ForEachStorage(common.Address, func(common.Hash, common.
 func (s *carmenStateDB) StartBulkLoad() BulkLoad {
 	return &carmenBulkLoad{s.db.StartBulkLoad()}
 }
+func (s *carmenStateDB) GetMemoryUsage() *MemoryUsage {
+	usage := s.db.GetMemoryFootprint()
+	return &MemoryUsage{uint64(usage.Total()), usage}
+}
 
 type carmenBulkLoad struct {
 	load carmen.BulkLoad

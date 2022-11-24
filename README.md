@@ -138,6 +138,7 @@ executes transactions from block 4,564,026 to 5,000,000. The tool initializes st
  - `--db-impl` select between `geth` and `carmen`. Default: `geth`
  - `--db-variant` select between implementation specific sub-variants, e.g. `go-ldb` or `cpp-file`
  - `--disable-progress` disable progress report. Default: `false`
+ - `--memory-breakdown` display detailed memory usage breakdown after priming and after the EVM runs
  - `--prime-random` randomize order of accounts in StateDB priming.
  - `--prime-seed` set seed for randomizing priming.
  - `--prime-threshold` set number of accounts written to stateDB before applying pending state updates.

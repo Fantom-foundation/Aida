@@ -446,3 +446,7 @@ func (p *ProxyProfiler) StartBulkLoad() state.BulkLoad {
 	panic("StartBulkLoad not supported by ProxyProfiler")
 	return nil
 }
+
+func (p *ProxyProfiler) GetMemoryUsage() *state.MemoryUsage {
+	return p.db.GetMemoryUsage()
+}
