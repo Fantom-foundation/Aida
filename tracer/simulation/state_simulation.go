@@ -11,40 +11,40 @@ import (
 
 // StateContext wraps current state transition of the simulation
 type StateContext struct {
-	distContract       *StochasticGenerator // Probabilistic distribution used to generate next address
-	distStorage        *StochasticGenerator // Probabilistic distribution used to generate next storage
-	distValue          *StochasticGenerator // Probabilistic distribution used to generate next value
-	dCtx               *dict.DictionaryContext
-	transitions        [][]float64
-	opDict             map[byte]func(sc *StateContext) operation.Operation
-	currentBlock       uint64
-	currentEpoch       uint64
-	currentSnapshot    int32  // Last returned snapshot
-	currentTransaction uint32 // Last returned transaction
-	opId               byte
-	nonces             map[uint32]uint64
-	balances           map[uint32]*big.Int
-	totalSnap          uint32
-	usedPositions      map[int]bool
+	distContract        *StochasticGenerator // Probabilistic distribution used to generate next address
+	distStorage         *StochasticGenerator // Probabilistic distribution used to generate next storage
+	distValue           *StochasticGenerator // Probabilistic distribution used to generate next value
+	dCtx                *dict.DictionaryContext
+	transitions         [][]float64
+	opDict              map[byte]func(sc *StateContext) operation.Operation
+	currentBlock        uint64
+	currentEpoch        uint64
+	currentSnapshot     int32  // Last returned snapshot
+	currentTransaction  uint32 // Last returned transaction
+	opId                byte
+	nonces              map[uint32]uint64
+	balances            map[uint32]*big.Int
+	balancesInSnapshots []map[uint32]*big.Int
+	usedPositions       map[int]bool
 }
 
 // NewStateContext creates a new context, which contains current state of Transitions
 func NewStateContext(distContract *StochasticGenerator, distStorage *StochasticGenerator, distValue *StochasticGenerator, t [][]float64, dCtx *dict.DictionaryContext) (StateContext, error) {
 	sc := StateContext{
-		currentSnapshot: 0,
-		distContract:    distContract,
-		distStorage:     distStorage,
-		distValue:       distValue,
-		dCtx:            dCtx,
-		transitions:     t,
-		currentBlock:    0,
-		currentEpoch:    0,
-		opId:            operation.EndBlockID,
-		opDict:          make(map[byte]func(sc *StateContext) operation.Operation, operation.NumProfiledOperations),
-		nonces:          make(map[uint32]uint64),
-		balances:        make(map[uint32]*big.Int),
-		totalSnap:       0,
-		usedPositions:   make(map[int]bool, 256),
+		currentSnapshot:     -1,
+		distContract:        distContract,
+		distStorage:         distStorage,
+		distValue:           distValue,
+		dCtx:                dCtx,
+		transitions:         t,
+		currentBlock:        0,
+		currentEpoch:        0,
+		opId:                operation.EndBlockID,
+		opDict:              make(map[byte]func(sc *StateContext) operation.Operation, operation.NumProfiledOperations),
+		nonces:              make(map[uint32]uint64),
+		balances:            make(map[uint32]*big.Int),
+		balancesInSnapshots: make([]map[uint32]*big.Int, 0),
+		usedPositions:       make(map[int]bool, 256),
 	}
 
 	err := sc.initOpDictionary()
@@ -61,14 +61,15 @@ func (sc *StateContext) initOpDictionary() error {
 		idx := sc.getNextAddress()
 		nw := sc.getNextBalance()
 
-		cur, ok := sc.balances[idx]
+		cur, ok := sc.getBalance(idx)
 		if !ok {
-			sc.balances[idx] = nw
+			sc.setBalance(idx, nw)
 		} else {
 			v := new(big.Int).Add(cur, nw)
-			if v.IsUint64() {
+
+			if isValidBalance(v) {
 				// new value fits into uint64
-				sc.balances[idx] = v
+				sc.setBalance(idx, v)
 			} else {
 				// prevent value from overflowing - by adding just zero
 				nw.SetUint64(0)
@@ -117,7 +118,9 @@ func (sc *StateContext) initOpDictionary() error {
 	}
 	sc.opDict[operation.EndTransactionID] = func(sc *StateContext) operation.Operation {
 		{
-			sc.currentSnapshot = 0
+			sc.commitSnapshotChanges()
+			sc.currentSnapshot = -1
+			sc.balancesInSnapshots = make([]map[uint32]*big.Int, 0)
 			return operation.NewEndTransaction()
 		}
 	}
@@ -200,13 +203,21 @@ func (sc *StateContext) initOpDictionary() error {
 	sc.opDict[operation.RevertToSnapshotID] = func(sc *StateContext) operation.Operation {
 		{
 			s := sc.currentSnapshot
-			var id int
+			var id = 0
 			if s > 0 {
 				id = rand.Intn(int(s))
 			}
 
-			//update remaining usable snapshots count
-			sc.currentSnapshot = int32(id)
+			// update remaining usable snapshots count
+			sc.currentSnapshot = int32(id) - 1
+
+			// dropping balance changes in reverted snapshots
+			nw := make([]map[uint32]*big.Int, 0)
+			var i int32 = 0
+			for ; i <= sc.currentSnapshot; i++ {
+				nw = append(nw, sc.balancesInSnapshots[i])
+			}
+			sc.balancesInSnapshots = nw
 
 			return operation.NewRevertToSnapshot(id)
 		}
@@ -234,17 +245,18 @@ func (sc *StateContext) initOpDictionary() error {
 	}
 	sc.opDict[operation.SnapshotID] = func(sc *StateContext) operation.Operation {
 		{
-			op := operation.NewSnapshot(sc.currentSnapshot)
 			sc.currentSnapshot++
+			op := operation.NewSnapshot(sc.currentSnapshot)
+			sc.balancesInSnapshots = append(sc.balancesInSnapshots, make(map[uint32]*big.Int))
 			return op
 		}
 	}
 	sc.opDict[operation.SubBalanceID] = func(sc *StateContext) operation.Operation {
 		{
 			idx := sc.getNextAddress()
-			nw := big.NewInt(0)
-			//nw := sc.getNextBalance()
-			cur, ok := sc.balances[idx]
+			//nw := big.NewInt(0)
+			nw := sc.getNextBalance()
+			cur, ok := sc.getBalance(idx)
 			if !ok {
 				// No balance left can't sub anything
 				nw.SetUint64(0)
@@ -256,7 +268,7 @@ func (sc *StateContext) initOpDictionary() error {
 					nw = nw.Set(cur)
 					n.SetUint64(0)
 				}
-				sc.balances[idx] = n
+				sc.setBalance(idx, n)
 			}
 			return operation.NewSubBalance(idx, nw)
 		}
@@ -271,6 +283,39 @@ func (sc *StateContext) initOpDictionary() error {
 		return fmt.Errorf("incompatible number of profiled operations")
 	}
 	return nil
+}
+
+func isValidBalance(v *big.Int) bool {
+	// TODO rewrite to 12 bytes (/16bytes)
+	return v.IsUint64()
+}
+
+// getBalance first attempts to load balance from uncommitted balances of snapshots, then in finalised balances states
+func (sc *StateContext) getBalance(idx uint32) (*big.Int, bool) {
+	// attempting to load most recent value from most recent snapshot
+	for i := sc.currentSnapshot; i >= 0; i-- {
+		b, ok := sc.balancesInSnapshots[i][idx]
+		if ok {
+			return b, true
+		}
+	}
+
+	// load balance from finalised balance states
+	b, ok := sc.balances[idx]
+	if ok {
+		return b, true
+	}
+	return nil, false
+}
+
+// setBalance stores new balance into current snapshot
+func (sc *StateContext) setBalance(idx uint32, v *big.Int) {
+	if sc.currentSnapshot > -1 {
+		sc.balancesInSnapshots[sc.currentSnapshot][idx] = v
+	} else {
+		sc.balances[idx] = v
+	}
+
 }
 
 // getNextNonce generates a new nonce using the current random probabilistic distribution
@@ -377,19 +422,12 @@ func (sc *StateContext) getNextOp(op byte) byte {
 	return byte(dict.BYTE_MAX)
 }
 
-var tmp = 0
-
 // toBeSkipped skipping operations which have to be skipped because their conditions aren't met
 func (sc *StateContext) toBeSkipped() []int {
 	var skipOps []int
 	// preventing RevertToSnapshotID being called when no snapshot is available
-	if sc.currentSnapshot == 0 {
+	if sc.currentSnapshot == -1 {
 		skipOps = append(skipOps, operation.RevertToSnapshotID)
-	}
-
-	tmp++
-	if tmp > 35 {
-		fmt.Printf("break")
 	}
 
 	// preventing GetStateLclsID being called when StorageIndexCache is empty
@@ -402,4 +440,15 @@ func (sc *StateContext) toBeSkipped() []int {
 	}
 
 	return skipOps
+}
+
+// commitSnapshotChanges commit snapshot changes into global values
+func (sc *StateContext) commitSnapshotChanges() {
+	// storing balances from snapshots into main balance dictionary
+	var i int32 = 0
+	for ; i <= sc.currentSnapshot; i++ {
+		for idx, v := range sc.balancesInSnapshots[i] {
+			sc.balances[idx] = v
+		}
+	}
 }
