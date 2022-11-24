@@ -4,37 +4,41 @@ import (
 	"fmt"
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
+	"golang.org/x/exp/slices"
 	"math/big"
 	"math/rand"
 )
 
 // StateContext wraps current state transition of the simulation
 type StateContext struct {
-	distContract    *StochasticGenerator // Probabilistic distribution used to generate next address
-	distStorage     *StochasticGenerator // Probabilistic distribution used to generate next storage
-	distValue       *StochasticGenerator // Probabilistic distribution used to generate next value
-	dCtx            *dict.DictionaryContext
-	transitions     [][]float64
-	opDict          map[byte]func(sc *StateContext) operation.Operation
-	currentBlock    uint64
-	opId            byte
-	nonces          map[uint32]uint64
-	balances        map[uint32]*big.Int
-	snapshotCounter int32 // Last returned snapshotCounter
-	totalSnap       uint32
-	usedPositions   map[int]bool
+	distContract       *StochasticGenerator // Probabilistic distribution used to generate next address
+	distStorage        *StochasticGenerator // Probabilistic distribution used to generate next storage
+	distValue          *StochasticGenerator // Probabilistic distribution used to generate next value
+	dCtx               *dict.DictionaryContext
+	transitions        [][]float64
+	opDict             map[byte]func(sc *StateContext) operation.Operation
+	currentBlock       uint64
+	currentEpoch       uint64
+	currentSnapshot    int32  // Last returned snapshot
+	currentTransaction uint32 // Last returned transaction
+	opId               byte
+	nonces             map[uint32]uint64
+	balances           map[uint32]*big.Int
+	totalSnap          uint32
+	usedPositions      map[int]bool
 }
 
 // NewStateContext creates a new context, which contains current state of Transitions
 func NewStateContext(distContract *StochasticGenerator, distStorage *StochasticGenerator, distValue *StochasticGenerator, t [][]float64, dCtx *dict.DictionaryContext) (StateContext, error) {
 	sc := StateContext{
-		snapshotCounter: 0,
+		currentSnapshot: 0,
 		distContract:    distContract,
 		distStorage:     distStorage,
 		distValue:       distValue,
 		dCtx:            dCtx,
 		transitions:     t,
 		currentBlock:    0,
+		currentEpoch:    0,
 		opId:            operation.EndBlockID,
 		opDict:          make(map[byte]func(sc *StateContext) operation.Operation, operation.NumProfiledOperations),
 		nonces:          make(map[uint32]uint64),
@@ -78,6 +82,18 @@ func (sc *StateContext) initOpDictionary() error {
 			return operation.NewBeginBlock(sc.currentBlock)
 		}
 	}
+	sc.opDict[operation.BeginEpochID] = func(sc *StateContext) operation.Operation {
+		{
+			sc.currentEpoch++
+			return operation.NewBeginEpoch(sc.currentBlock)
+		}
+	}
+	sc.opDict[operation.BeginTransactionID] = func(sc *StateContext) operation.Operation {
+		{
+			sc.currentTransaction++
+			return operation.NewBeginTransaction(sc.currentTransaction)
+		}
+	}
 	sc.opDict[operation.CreateAccountID] = func(sc *StateContext) operation.Operation {
 		{
 			return operation.NewCreateAccount(sc.getNextAddress())
@@ -90,12 +106,18 @@ func (sc *StateContext) initOpDictionary() error {
 	}
 	sc.opDict[operation.EndBlockID] = func(sc *StateContext) operation.Operation {
 		{
+			sc.currentTransaction = 0
 			return operation.NewEndBlock()
+		}
+	}
+	sc.opDict[operation.EndEpochID] = func(sc *StateContext) operation.Operation {
+		{
+			return operation.NewEndEpoch()
 		}
 	}
 	sc.opDict[operation.EndTransactionID] = func(sc *StateContext) operation.Operation {
 		{
-			sc.snapshotCounter = 0
+			sc.currentSnapshot = 0
 			return operation.NewEndTransaction()
 		}
 	}
@@ -155,14 +177,14 @@ func (sc *StateContext) initOpDictionary() error {
 			return operation.NewGetState(sc.getNextAddress(), sc.getNextKey())
 		}
 	}
-	sc.opDict[operation.GetStateLcID] = func(sc *StateContext) operation.Operation {
-		{
-			return operation.NewGetStateLc(sc.getNextKey())
-		}
-	}
 	sc.opDict[operation.GetStateLccsID] = func(sc *StateContext) operation.Operation {
 		{
 			return operation.NewGetStateLccs(0)
+		}
+	}
+	sc.opDict[operation.GetStateLcID] = func(sc *StateContext) operation.Operation {
+		{
+			return operation.NewGetStateLc(sc.getNextKey())
 		}
 	}
 	sc.opDict[operation.GetStateLclsID] = func(sc *StateContext) operation.Operation {
@@ -177,14 +199,14 @@ func (sc *StateContext) initOpDictionary() error {
 	}
 	sc.opDict[operation.RevertToSnapshotID] = func(sc *StateContext) operation.Operation {
 		{
-			s := sc.snapshotCounter
+			s := sc.currentSnapshot
 			var id int
 			if s > 0 {
 				id = rand.Intn(int(s))
 			}
 
 			//update remaining usable snapshots count
-			sc.snapshotCounter = int32(id)
+			sc.currentSnapshot = int32(id)
 
 			return operation.NewRevertToSnapshot(id)
 		}
@@ -212,8 +234,8 @@ func (sc *StateContext) initOpDictionary() error {
 	}
 	sc.opDict[operation.SnapshotID] = func(sc *StateContext) operation.Operation {
 		{
-			op := operation.NewSnapshot(sc.snapshotCounter)
-			sc.snapshotCounter++
+			op := operation.NewSnapshot(sc.currentSnapshot)
+			sc.currentSnapshot++
 			return op
 		}
 	}
@@ -344,6 +366,9 @@ func (sc *StateContext) getNextOp(op byte) byte {
 	sum := 0.0
 
 	for i := 0; i < operation.NumProfiledOperations; i++ {
+		if slices.Contains(skipOps, i) {
+			continue
+		}
 		sum += sc.transitions[op][i]
 		if p <= sum {
 			return byte(i)
@@ -352,12 +377,19 @@ func (sc *StateContext) getNextOp(op byte) byte {
 	return byte(dict.BYTE_MAX)
 }
 
+var tmp = 0
+
 // toBeSkipped skipping operations which have to be skipped because their conditions aren't met
 func (sc *StateContext) toBeSkipped() []int {
 	var skipOps []int
 	// preventing RevertToSnapshotID being called when no snapshot is available
-	if sc.snapshotCounter == 0 {
+	if sc.currentSnapshot == 0 {
 		skipOps = append(skipOps, operation.RevertToSnapshotID)
+	}
+
+	tmp++
+	if tmp > 35 {
+		fmt.Printf("break")
 	}
 
 	// preventing GetStateLclsID being called when StorageIndexCache is empty
