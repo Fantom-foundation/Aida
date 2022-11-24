@@ -8,6 +8,7 @@ import (
 	rawdb "github.com/ethereum/go-ethereum/core/rawdb"
 	geth "github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
+	vm "github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/substate"
 )
 
@@ -30,19 +31,20 @@ func OpenGethStateDB(directory string, root_hash common.Hash) (StateDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &gethStateDB{db: db, ethdb: ethdb}, nil
+	return &gethStateDB{db: db, ethdb: ethdb, stateRoot: root_hash}, nil
 }
 
 // BeginBlockApply creates a new statedb from an existing geth database
-func (s *gethStateDB) BeginBlockApply(root_hash common.Hash) error {
+func (s *gethStateDB) BeginBlockApply() error {
 	var err error
-	s.db, err = geth.NewWithSnapLayers(root_hash, s.ethdb, nil, 0)
+	s.db, err = geth.NewWithSnapLayers(s.stateRoot, s.ethdb, nil, 0)
 	return err
 }
 
 type gethStateDB struct {
-	db    BasicStateDB
-	ethdb geth.Database
+	db        vm.StateDB    // statedb
+	ethdb     geth.Database // key-value database
+	stateRoot common.Hash   // lastest root hash
 }
 
 func (s *gethStateDB) CreateAccount(addr common.Address) {
@@ -121,20 +123,65 @@ func (s *gethStateDB) RevertToSnapshot(id int) {
 	s.db.RevertToSnapshot(id)
 }
 
+func (s *gethStateDB) BeginTransaction(number uint32) {
+	// ignored
+}
+
+func (s *gethStateDB) EndTransaction() {
+	// ignored
+}
+
+func (s *gethStateDB) BeginBlock(number uint64) {
+	// ignored
+}
+
+func (s *gethStateDB) EndBlock() {
+	var err error
+	//commit at the end of a block
+	s.stateRoot, err = s.Commit(true)
+	if err != nil {
+		panic(fmt.Errorf("StateDB commit failed\n"))
+	}
+	// flush trie to disk
+	// TODO only flush when a condition meet
+	if s.ethdb != nil {
+		triedb := s.ethdb.TrieDB()
+		triedb.Commit(s.stateRoot, false, nil)
+	}
+}
+
+func (s *gethStateDB) BeginEpoch(number uint64) {
+	// ignored
+}
+
+func (s *gethStateDB) EndEpoch() {
+	// ignored
+}
+
 func (s *gethStateDB) Finalise(deleteEmptyObjects bool) {
-	s.db.Finalise(deleteEmptyObjects)
+	if db, ok := s.db.(*geth.StateDB); ok {
+		db.Finalise(deleteEmptyObjects)
+	}
 }
 
 func (s *gethStateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
-	return s.db.IntermediateRoot(deleteEmptyObjects)
+	if db, ok := s.db.(*geth.StateDB); ok {
+		return db.IntermediateRoot(deleteEmptyObjects)
+	}
+	return common.Hash{}
 }
 
 func (s *gethStateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
-	return s.db.Commit(deleteEmptyObjects)
+	if db, ok := s.db.(*geth.StateDB); ok {
+		return db.Commit(deleteEmptyObjects)
+	}
+	return common.Hash{}, nil
 }
 
 func (s *gethStateDB) Prepare(thash common.Hash, ti int) {
-	s.db.Prepare(thash, ti)
+	if db, ok := s.db.(*geth.StateDB); ok {
+		db.Prepare(thash, ti)
+	}
 }
 
 func (s *gethStateDB) PrepareSubstate(substate *substate.SubstateAlloc) {
@@ -142,7 +189,10 @@ func (s *gethStateDB) PrepareSubstate(substate *substate.SubstateAlloc) {
 }
 
 func (s *gethStateDB) GetSubstatePostAlloc() substate.SubstateAlloc {
-	return s.db.GetSubstatePostAlloc()
+	if db, ok := s.db.(*geth.StateDB); ok {
+		return db.GetSubstatePostAlloc()
+	}
+	return substate.SubstateAlloc{}
 }
 
 func (s *gethStateDB) Close() error {
@@ -205,5 +255,59 @@ func (s *gethStateDB) ForEachStorage(addr common.Address, cb func(common.Hash, c
 	return s.db.ForEachStorage(addr, cb)
 }
 func (s *gethStateDB) GetLogs(hash common.Hash, blockHash common.Hash) []*types.Log {
-	return s.db.GetLogs(hash, blockHash)
+	if db, ok := s.db.(*geth.StateDB); ok {
+		return db.GetLogs(hash, blockHash)
+	}
+	return []*types.Log{}
+}
+
+func (s *gethStateDB) StartBulkLoad() BulkLoad {
+	return &gethBulkLoad{db: s}
+}
+
+type gethBulkLoad struct {
+	db      *gethStateDB
+	num_ops int64
+}
+
+func (l *gethBulkLoad) CreateAccount(addr common.Address) {
+	l.db.CreateAccount(addr)
+	l.digest()
+}
+
+func (l *gethBulkLoad) SetBalance(addr common.Address, value *big.Int) {
+	old := l.db.GetBalance(addr)
+	value = value.Sub(value, old)
+	l.db.AddBalance(addr, value)
+	l.digest()
+}
+
+func (l *gethBulkLoad) SetNonce(addr common.Address, nonce uint64) {
+	l.db.SetNonce(addr, nonce)
+	l.digest()
+}
+
+func (l *gethBulkLoad) SetState(addr common.Address, key common.Hash, value common.Hash) {
+	l.db.SetState(addr, key, value)
+	l.digest()
+}
+
+func (l *gethBulkLoad) SetCode(addr common.Address, code []byte) {
+	l.db.SetCode(addr, code)
+	l.digest()
+}
+
+func (l *gethBulkLoad) Close() error {
+	l.db.EndBlock()
+	_, err := l.db.Commit(false)
+	return err
+}
+
+func (l *gethBulkLoad) digest() {
+	// Call EndBlock every 1M insert operation.
+	l.num_ops++
+	if l.num_ops%(1000*1000) != 0 {
+		return
+	}
+	l.db.EndBlock()
 }

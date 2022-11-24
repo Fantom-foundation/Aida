@@ -2,10 +2,11 @@ package operation
 
 import (
 	"fmt"
-	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/Fantom-foundation/Aida/tracer/dict"
 )
 
 func initBeginBlock(t *testing.T) (*dict.DictionaryContext, *BeginBlock, uint64) {
@@ -50,8 +51,6 @@ func TestBeginBlockExecute(t *testing.T) {
 	op.Execute(mock, dict)
 
 	// check whether methods were correctly called
-	mock.compareRecordings([]Record{}, t)
-	// currently BeginBlock isn't recorded
-	//expected := []Record{{BeginBlockID, []any{blId}}}
-	//mock.compareRecordings(expected, t)
+	expected := []Record{{BeginBlockID, []any{op.BlockNumber}}}
+	mock.compareRecordings(expected, t)
 }

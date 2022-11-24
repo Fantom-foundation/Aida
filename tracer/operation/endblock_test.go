@@ -1,8 +1,9 @@
 package operation
 
 import (
-	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"testing"
+
+	"github.com/Fantom-foundation/Aida/tracer/dict"
 )
 
 func initEndBlock(t *testing.T) (*dict.DictionaryContext, *EndBlock) {

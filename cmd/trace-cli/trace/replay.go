@@ -23,16 +23,20 @@ var TraceReplayCommand = cli.Command{
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		&cpuProfileFlag,
+		&epochLengthFlag,
 		&disableProgressFlag,
+		&primeSeedFlag,
+		&primeThresholdFlag,
 		&profileFlag,
+		&randomizePrimingFlag,
 		&stateDbImplementation,
 		&stateDbVariant,
 		&substate.SubstateDirFlag,
 		&substate.WorkersFlag,
 		&traceDirectoryFlag,
 		&traceDebugFlag,
+		&updateDBDirFlag,
 		&validateEndState,
-		&worldStateDirFlag,
 	},
 	Description: `
 The trace replay command requires two arguments:
@@ -65,13 +69,6 @@ func traceReplayTask(cfg *TraceConfig) error {
 	log.Printf("Load dictionaries")
 	dCtx := dict.ReadDictionaryContext()
 
-	// intialize the world state and advance it to the first block
-	log.Printf("Load and advance worldstate to block %v", cfg.first-1)
-	ws, err := generateWorldState(cfg.worldStateDir, cfg.first-1, cfg.workers)
-	if err != nil {
-		return err
-	}
-
 	// create a directory for the store to place all its files, and
 	// instantiate the state DB under testing.
 	log.Printf("Create stateDB database")
@@ -84,21 +81,25 @@ func traceReplayTask(cfg *TraceConfig) error {
 		return err
 	}
 
-	// prime stateDB
-	log.Printf("Prime StateDB database with world-state")
-	if cfg.impl == "memory" {
-		db.PrepareSubstate(&ws)
-	} else {
-		primeStateDB(ws, db)
+	// intialize the world state and advance it to the first block
+	log.Printf("Load and advance worldstate to block %v", cfg.first-1)
+	ws, err := generateWorldStateFromUpdateDB(cfg.updateDBDir, cfg.first-1, cfg.workers)
+	if err != nil {
+		return err
 	}
+
+	// prime stateDB
+	log.Printf("Prime stateDB \n")
+	primeStateDB(ws, db, cfg)
 
 	log.Printf("Replay storage operations on StateDB database")
 
 	// progress message setup
 	var (
-		start   time.Time
-		sec     float64
-		lastSec float64
+		start      time.Time
+		sec        float64
+		lastSec    float64
+		firstBlock = true
 	)
 	if cfg.enableProgress {
 		start = time.Now()
@@ -106,11 +107,28 @@ func traceReplayTask(cfg *TraceConfig) error {
 		lastSec = time.Since(start).Seconds()
 	}
 
-	// replace storage trace
+	// A utility to run operations on the local context.
+	run := func(op operation.Operation) {
+		operation.Execute(op, db, dCtx)
+		if cfg.debug {
+			operation.Debug(dCtx, op)
+		}
+	}
+
+	// replay storage trace
 	for op := range opChannel {
-		if op.GetId() == operation.BeginBlockID {
-			block := op.(*operation.BeginBlock).BlockNumber
+		if beginBlock, ok := op.(*operation.BeginBlock); ok {
+			block := beginBlock.BlockNumber
+
+			// The first Epoch begin and the final EpochEnd need to be artificially
+			// added since the range running on may not match epoch boundaries.
+			if firstBlock {
+				run(operation.NewBeginEpoch(cfg.first / cfg.epochLength))
+				firstBlock = false
+			}
+
 			if block > cfg.last {
+				run(operation.NewEndEpoch())
 				break
 			}
 			if cfg.enableProgress {
@@ -122,11 +140,9 @@ func traceReplayTask(cfg *TraceConfig) error {
 				}
 			}
 		}
-		operation.Execute(op, db, dCtx)
-		if cfg.debug {
-			operation.Debug(dCtx, op)
-		}
+		run(op)
 	}
+
 	sec = time.Since(start).Seconds()
 
 	log.Printf("Finished replaying storage operations on StateDB database")
@@ -169,6 +185,9 @@ func traceReplayAction(ctx *cli.Context) error {
 	cfg, err := NewTraceConfig(ctx)
 	if err != nil {
 		return err
+	}
+	if cfg.impl == "memory" {
+		return fmt.Errorf("db-impl memory is not supported")
 	}
 
 	operation.EnableProfiling = cfg.profile

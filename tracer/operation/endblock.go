@@ -1,6 +1,7 @@
 package operation
 
 import (
+	"encoding/binary"
 	"io"
 	"time"
 
@@ -24,18 +25,18 @@ func NewEndBlock() *EndBlock {
 
 // ReadEndBlock reads an end-block operation from file.
 func ReadEndBlock(file io.Reader) (Operation, error) {
-	return NewEndBlock(), nil
+	return new(EndBlock), nil
 }
 
 // Write the end-block operation to file.
 func (op *EndBlock) Write(f io.Writer) error {
-	return nil
+	return binary.Write(f, binary.LittleEndian, *op)
 }
 
 // Execute the end-block operation.
 func (op *EndBlock) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
 	start := time.Now()
-	db.Commit(true)
+	db.EndBlock()
 	return time.Since(start)
 }
 

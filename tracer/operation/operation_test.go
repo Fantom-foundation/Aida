@@ -2,16 +2,18 @@ package operation
 
 import (
 	"bytes"
-	"github.com/Fantom-foundation/Aida/tracer/dict"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/substate"
 	"io"
 	"math/big"
 	"os"
 	"reflect"
 	"testing"
+
+	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/Fantom-foundation/Aida/tracer/state"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/substate"
 )
 
 // MockStateDB data structure
@@ -19,7 +21,7 @@ type MockStateDB struct {
 	recording []Record //signatures of called functions
 }
 
-func (s *MockStateDB) BeginBlockApply(root_hash common.Hash) error {
+func (s *MockStateDB) BeginBlockApply() error {
 	return nil
 }
 
@@ -125,6 +127,35 @@ func (s *MockStateDB) Snapshot() int {
 
 func (s *MockStateDB) RevertToSnapshot(id int) {
 	s.recording = append(s.recording, Record{RevertToSnapshotID, []any{id}})
+}
+
+func (s *MockStateDB) BeginTransaction(tx uint32) {
+	s.recording = append(s.recording, Record{BeginTransactionID, []any{tx}})
+}
+
+func (s *MockStateDB) EndTransaction() {
+	s.recording = append(s.recording, Record{EndTransactionID, []any{}})
+}
+
+func (s *MockStateDB) BeginBlock(blk uint64) {
+	s.recording = append(s.recording, Record{BeginBlockID, []any{blk}})
+}
+
+func (s *MockStateDB) EndBlock() {
+	s.recording = append(s.recording, Record{EndBlockID, []any{}})
+}
+
+func (s *MockStateDB) BeginEpoch(id uint64) {
+	s.recording = append(s.recording, Record{BeginEpochID, []any{id}})
+}
+
+func (s *MockStateDB) EndEpoch() {
+	s.recording = append(s.recording, Record{EndEpochID, []any{}})
+}
+
+func (s *MockStateDB) StartBulkLoad() state.BulkLoad {
+	panic("Bulk load not supported in mock")
+	return nil
 }
 
 func (s *MockStateDB) Finalise(deleteEmptyObjects bool) {
@@ -305,6 +336,6 @@ func testOperationDebug(t *testing.T, dict *dict.DictionaryContext, op Operation
 	expected := "\t" + label + ": " + args + "\n"
 
 	if buf.String() != expected {
-		t.Fatalf("wrong debug message: %s vs %s; %d vs %d", buf.String(), expected, len(buf.String()), len(expected))
+		t.Fatalf("wrong debug message: %s vs %s; length of strings: %d vs %d", buf.String(), expected, len(buf.String()), len(expected))
 	}
 }

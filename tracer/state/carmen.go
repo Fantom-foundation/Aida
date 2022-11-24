@@ -35,11 +35,12 @@ func MakeCarmenStateDB(directory, variant string) (StateDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &carmenStateDB{carmen.CreateStateDBUsing(db)}, nil
+	return &carmenStateDB{carmen.CreateStateDBUsing(db), 0}, nil
 }
 
 type carmenStateDB struct {
-	db carmen.StateDB
+	db          carmen.StateDB
+	epochNumber uint64
 }
 
 var getCodeCalled bool
@@ -47,7 +48,7 @@ var getCodeSizeCalled bool
 var getCodeHashCalled bool
 var setCodeCalled bool
 
-func (s *carmenStateDB) BeginBlockApply(root_hash common.Hash) error {
+func (s *carmenStateDB) BeginBlockApply() error {
 	return nil
 }
 
@@ -128,31 +129,29 @@ func (s *carmenStateDB) RevertToSnapshot(id int) {
 	s.db.RevertToSnapshot(id)
 }
 
-func (s *carmenStateDB) Finalise(deleteEmptyObjects bool) {
-	// In Geth 'Finalise' is called to end a transaction and seal its effects.
-	// In Carmen, this event is called 'EndTransaction'.
+func (s *carmenStateDB) BeginTransaction(uint32) {
+	s.db.BeginTransaction()
+}
+
+func (s *carmenStateDB) EndTransaction() {
 	s.db.EndTransaction()
 }
 
-func (s *carmenStateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
-	s.db.EndTransaction()
-	return common.Hash(s.db.GetHash())
+func (s *carmenStateDB) BeginBlock(uint64) {
+	s.db.BeginBlock()
 }
 
-func (s *carmenStateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
-	return common.Hash(s.db.GetHash()), nil
+func (s *carmenStateDB) EndBlock() {
+	s.db.EndBlock()
 }
 
-func (s *carmenStateDB) Prepare(thash common.Hash, ti int) {
-	//ignored
+func (s *carmenStateDB) BeginEpoch(number uint64) {
+	s.db.BeginEpoch()
+	s.epochNumber = number
 }
 
-func (s *carmenStateDB) PrepareSubstate(substate *substate.SubstateAlloc) {
-	// ignored
-}
-
-func (s *carmenStateDB) GetSubstatePostAlloc() substate.SubstateAlloc {
-	return substate.SubstateAlloc{}
+func (s *carmenStateDB) EndEpoch() {
+	s.db.EndEpoch(s.epochNumber)
 }
 
 func (s *carmenStateDB) Close() error {
@@ -213,6 +212,33 @@ func (s *carmenStateDB) GetLogs(hash common.Hash, blockHash common.Hash) []*type
 	return nil
 }
 
+func (s *carmenStateDB) Finalise(deleteEmptyObjects bool) {
+	// ignored
+}
+
+func (s *carmenStateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
+	// ignored
+	return common.Hash{}
+}
+
+func (s *carmenStateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
+	// ignored
+	return common.Hash{}, nil
+}
+
+func (s *carmenStateDB) Prepare(thash common.Hash, ti int) {
+	//ignored
+}
+
+func (s *carmenStateDB) PrepareSubstate(substate *substate.SubstateAlloc) {
+	// ignored
+}
+
+func (s *carmenStateDB) GetSubstatePostAlloc() substate.SubstateAlloc {
+	// ignored
+	return substate.SubstateAlloc{}
+}
+
 func (s *carmenStateDB) AddPreimage(common.Hash, []byte) {
 	// ignored
 	panic("AddPreimage not implemented")
@@ -222,4 +248,36 @@ func (s *carmenStateDB) ForEachStorage(common.Address, func(common.Hash, common.
 	// ignored
 	panic("ForEachStorage not implemented")
 	return nil
+}
+
+func (s *carmenStateDB) StartBulkLoad() BulkLoad {
+	return &carmenBulkLoad{s.db.StartBulkLoad()}
+}
+
+type carmenBulkLoad struct {
+	load carmen.BulkLoad
+}
+
+func (l *carmenBulkLoad) CreateAccount(addr common.Address) {
+	l.load.CreateAccount(cc.Address(addr))
+}
+
+func (l *carmenBulkLoad) SetBalance(addr common.Address, value *big.Int) {
+	l.load.SetBalance(cc.Address(addr), value)
+}
+
+func (l *carmenBulkLoad) SetNonce(addr common.Address, nonce uint64) {
+	l.load.SetNonce(cc.Address(addr), nonce)
+}
+
+func (l *carmenBulkLoad) SetState(addr common.Address, key common.Hash, value common.Hash) {
+	l.load.SetState(cc.Address(addr), cc.Key(key), cc.Value(value))
+}
+
+func (l *carmenBulkLoad) SetCode(addr common.Address, code []byte) {
+	l.load.SetCode(cc.Address(addr), code)
+}
+
+func (l *carmenBulkLoad) Close() error {
+	return l.load.Close()
 }

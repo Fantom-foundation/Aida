@@ -42,8 +42,10 @@ github.com/DATA-DOG/go-sqlmock v1.3.3/go.mod h1:f/Ixk793poVmq4qj/V1dPUg2JEAKC73Q
 github.com/DataDog/zstd v1.4.5/go.mod h1:1jcaCB/ufaK+sKp1NBhlGmpz41jOoPQ35bpF36t7BBo=
 github.com/DataDog/zstd v1.5.2 h1:vUG4lAyuPCXO0TLbXvPv7EB7cNK1QV/luu55UHLrrn8=
 github.com/DataDog/zstd v1.5.2/go.mod h1:g4AWEaM3yOg3HYfnJ3YIawPnVdXJh9QME85blwSAmyw=
-github.com/Fantom-foundation/go-ethereum-substate v0.0.0-20221115052231-d8847e9bb8a6 h1:bVSAcxgPBid8Q8Mlmx3MvkwuHnzoMMZuO9Nx0aPMwFs=
-github.com/Fantom-foundation/go-ethereum-substate v0.0.0-20221115052231-d8847e9bb8a6/go.mod h1:mEJqEShOolRbUDJYmmTz7kf8sLhLIOPp9JIOtQ7yM6A=
+github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20221116095818-3b5e66de9a95 h1:hvjt0UQpFOn1SZw85n1hXlaOW9xJOEpw7SagX3lczZs=
+github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20221116095818-3b5e66de9a95/go.mod h1:mEJqEShOolRbUDJYmmTz7kf8sLhLIOPp9JIOtQ7yM6A=
+github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20221122081954-83c4c54e8655 h1:QO89puGXxvrZL8FUIOkPpN/mwJGEvuRBPmJXDv2ayv4=
+github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20221122081954-83c4c54e8655/go.mod h1:mEJqEShOolRbUDJYmmTz7kf8sLhLIOPp9JIOtQ7yM6A=
 github.com/Fantom-foundation/go-opera-substate v1.0.1-0.20221010085351-fcd736e326f0 h1:3a+fu+0Tg39zoINTxE4U4fV8guY8k8lLALG08IruZOc=
 github.com/Fantom-foundation/go-opera-substate v1.0.1-0.20221010085351-fcd736e326f0/go.mod h1:wwHuXwLIix8U55thkWjnSXsl/uLSdbXCXodEZnZJniE=
 github.com/Fantom-foundation/lachesis-base v0.0.0-20220103160934-6b4931c60582/go.mod h1:E6+2LOvgADwSOv0U5YXhRJz4PlX8qJxvq8M93AOC1tM=

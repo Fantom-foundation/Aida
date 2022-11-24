@@ -49,22 +49,28 @@ type BasicStateDB interface {
 	AddAddressToAccessList(addr common.Address)
 	AddSlotToAccessList(addr common.Address, slot common.Hash)
 
-	// Transaction handling
-	Snapshot() int
-	RevertToSnapshot(int)
-	Finalise(bool)
-	IntermediateRoot(bool) common.Hash
-	Commit(bool) (common.Hash, error)
-	Prepare(common.Hash, int)
-
+	// Logging
 	AddLog(*types.Log)
 	GetLogs(common.Hash, common.Hash) []*types.Log
-	AddPreimage(common.Hash, []byte)
 
-	ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error
+	// Transaction handling
+	// There are 4 layers of concepts governing the visibility of state effects:
+	//  - snapshots .. enclosing (sub-)contract calls, supporting reverts (=rollbacks)
+	//  - transactions .. processing a single block chain event, comprising a hierachy of contract calls
+	//  - blocks .. groups of transactions, at boundaries effects become visible (and final) to API servers
+	//  - epochs .. groups of blocks, at boundaries state becomes syncable between nodes
 
-	// Substate specific
-	GetSubstatePostAlloc() substate.SubstateAlloc
+	Snapshot() int
+	RevertToSnapshot(int)
+
+	BeginTransaction(uint32)
+	EndTransaction()
+
+	BeginBlock(uint64)
+	EndBlock()
+
+	BeginEpoch(uint64)
+	EndEpoch()
 }
 
 type StateDB interface {
@@ -75,11 +81,48 @@ type StateDB interface {
 	Close() error
 
 	// stateDB handler
-	BeginBlockApply(common.Hash) error
+	BeginBlockApply() error
+
+	// StartBulkLoad creates a interface supporting the efficient loading of large amount
+	// of data as it is, for instance, needed during priming. Only one bulk load operation
+	// may be active at any time and no other concurrent operations on the StateDB are
+	// while it is alive.
+	StartBulkLoad() BulkLoad
+
+	// ---- Artefacts from Geth dependency ----
+
+	// The following functions may be used by StateDB implementations for backward-compatibilty
+	// and will be called accordingly by the tracer and EVM runner. However, implementations may
+	// chose to ignore those.
+
+	Prepare(common.Hash, int)
+	AddPreimage(common.Hash, []byte)
+	Finalise(bool)
+	IntermediateRoot(bool) common.Hash
+	Commit(bool) (common.Hash, error)
+	ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error
 
 	// ---- Optional Development & Debugging Features ----
+
+	// Substate specific
+	GetSubstatePostAlloc() substate.SubstateAlloc
 
 	// Used to initiate the state DB for the next transaction.
 	// This is mainly for development purposes to support in-memory DB implementations.
 	PrepareSubstate(*substate.SubstateAlloc)
+}
+
+// BulkWrite is a faster interface to StateDB instances for writing data without
+// the overhead of snapshots or transactions. It is mainly intended for priming DB
+// instances before running evaluations.
+type BulkLoad interface {
+	CreateAccount(common.Address)
+	SetBalance(common.Address, *big.Int)
+	SetNonce(common.Address, uint64)
+	SetState(common.Address, common.Hash, common.Hash)
+	SetCode(common.Address, []byte)
+
+	// Close ends the bulk insertion, finalizes the internal state, and released the
+	// underlying StateDB instance for regular operations.
+	Close() error
 }

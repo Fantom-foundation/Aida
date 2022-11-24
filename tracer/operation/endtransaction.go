@@ -37,7 +37,9 @@ func (op *EndTransaction) Write(f io.Writer) error {
 // Execute the end-transaction operation.
 func (op *EndTransaction) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
 	ctx.InitSnapshot()
-	return time.Duration(0)
+	start := time.Now()
+	db.EndTransaction()
+	return time.Since(start)
 }
 
 // Debug prints a debug message for the end-transaction operation.

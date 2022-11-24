@@ -36,6 +36,7 @@ var TraceRecordCommand = cli.Command{
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		&cpuProfileFlag,
+		&epochLengthFlag,
 		&disableProgressFlag,
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
@@ -222,6 +223,13 @@ func traceRecordAction(ctx *cli.Context) error {
 		return fmt.Errorf("trace record command requires exactly 2 arguments")
 	}
 
+	// Fetch length of epoch from command line.
+	epochLength := ctx.Uint64(epochLengthFlag.Name)
+	if epochLength <= 0 {
+		epochLength = 300
+	}
+	log.Printf("Using epoch length of %d blocks\n", epochLength)
+
 	// start CPU profiling if enabled.
 	if profileFileName := ctx.String(cpuProfileFlag.Name); profileFileName != "" {
 		f, err := os.Create(profileFileName)
@@ -271,6 +279,10 @@ func traceRecordAction(ctx *cli.Context) error {
 		sec = time.Since(start).Seconds()
 		lastSec = time.Since(start).Seconds()
 	}
+
+	curEpoch := first / epochLength
+	sendOperation(dCtx, opChannel, operation.NewBeginEpoch(curEpoch))
+
 	for iter.Next() {
 		tx := iter.Value()
 		// close off old block with an end-block operation
@@ -280,11 +292,19 @@ func traceRecordAction(ctx *cli.Context) error {
 			}
 			if oldBlock != math.MaxUint64 {
 				sendOperation(dCtx, opChannel, operation.NewEndBlock())
+				// Record epoch changes.
+				newEpoch := tx.Block / epochLength
+				for curEpoch < newEpoch {
+					sendOperation(dCtx, opChannel, operation.NewEndEpoch())
+					curEpoch++
+					sendOperation(dCtx, opChannel, operation.NewBeginEpoch(curEpoch))
+				}
 			}
 			oldBlock = tx.Block
 			// open new block with a begin-block operation and clear index cache
 			sendOperation(dCtx, opChannel, operation.NewBeginBlock(tx.Block))
 		}
+		sendOperation(dCtx, opChannel, operation.NewBeginTransaction(uint32(tx.Transaction)))
 		traceRecordTask(tx.Block, tx.Transaction, tx.Substate, dCtx, opChannel)
 		sendOperation(dCtx, opChannel, operation.NewEndTransaction())
 		if enableProgress {
@@ -297,13 +317,17 @@ func traceRecordAction(ctx *cli.Context) error {
 		}
 
 	}
+
+	// end last block
+	if oldBlock != math.MaxUint64 {
+		sendOperation(dCtx, opChannel, operation.NewEndBlock())
+	}
+	sendOperation(dCtx, opChannel, operation.NewEndEpoch())
+
 	if enableProgress {
 		sec = time.Since(start).Seconds()
 		fmt.Printf("trace record: Total elapsed time: %.3f s, processed %v blocks\n", sec, last-first+1)
 	}
-
-	// insert the last EndBlock
-	sendOperation(dCtx, opChannel, operation.NewEndBlock())
 
 	// close channel
 	close(opChannel)

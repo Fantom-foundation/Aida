@@ -17,9 +17,12 @@ var stats *ProfileStats = new(ProfileStats)
 const (
 	AddBalanceID = iota
 	BeginBlockID
+	BeginEpochID
+	BeginTransactionID
 	CreateAccountID
 	EmptyID
 	EndBlockID
+	EndEpochID
 	EndTransactionID
 	ExistID
 	FinaliseID
@@ -32,8 +35,8 @@ const (
 	GetCommittedStateLclsID
 	GetNonceID
 	GetStateID
-	GetStateLcID
 	GetStateLccsID
+	GetStateLcID
 	GetStateLclsID
 	HasSuicidedID
 	RevertToSnapshotID
@@ -67,67 +70,70 @@ const (
 
 // OperationDictionary data structure contains a Label and a read function for an operation
 type OperationDictionary struct {
-	Label    string                             // operation's Label
-	Readfunc func(io.Reader) (Operation, error) // operation's read-function
+	label    string                             // operation's Label
+	readfunc func(io.Reader) (Operation, error) // operation's read-function
 }
 
-// OpDict relates an operation's id with its Label and read-function.
-var OpDict = map[byte]OperationDictionary{
-	AddBalanceID:            {Label: "AddBalance", Readfunc: ReadAddBalance},
-	BeginBlockID:            {Label: "BeginBlock", Readfunc: ReadBeginBlock},
-	CreateAccountID:         {Label: "CreateAccount", Readfunc: ReadCreateAccount},
-	EmptyID:                 {Label: "Exist", Readfunc: ReadEmpty},
-	EndBlockID:              {Label: "EndBlock", Readfunc: ReadEndBlock},
-	EndTransactionID:        {Label: "EndTransaction", Readfunc: ReadEndTransaction},
-	ExistID:                 {Label: "Exist", Readfunc: ReadExist},
-	FinaliseID:              {Label: "Finalise", Readfunc: ReadFinalise},
-	GetBalanceID:            {Label: "GetBalance", Readfunc: ReadGetBalance},
-	GetCodeHashID:           {Label: "GetCodeHash", Readfunc: ReadGetCodeHash},
-	GetCodeHashLcID:         {Label: "GetCodeLcHash", Readfunc: ReadGetCodeHashLc},
-	GetCodeID:               {Label: "GetCode", Readfunc: ReadGetCode},
-	GetCodeSizeID:           {Label: "GetCodeSize", Readfunc: ReadGetCodeSize},
-	GetCommittedStateID:     {Label: "GetCommittedState", Readfunc: ReadGetCommittedState},
-	GetCommittedStateLclsID: {Label: "GetCommittedStateLcls", Readfunc: ReadGetCommittedStateLcls},
-	GetNonceID:              {Label: "GetNonce", Readfunc: ReadGetNonce},
-	GetStateID:              {Label: "GetState", Readfunc: ReadGetState},
-	GetStateLcID:            {Label: "GetStateLc", Readfunc: ReadGetStateLc},
-	GetStateLccsID:          {Label: "GetStateLccs", Readfunc: ReadGetStateLccs},
-	GetStateLclsID:          {Label: "GetStateLcls", Readfunc: ReadGetStateLcls},
-	HasSuicidedID:           {Label: "HasSuicided", Readfunc: ReadHasSuicided},
-	RevertToSnapshotID:      {Label: "RevertToSnapshot", Readfunc: ReadRevertToSnapshot},
-	SetCodeID:               {Label: "SetCode", Readfunc: ReadSetCode},
-	SetNonceID:              {Label: "SetNonce", Readfunc: ReadSetNonce},
-	SetStateID:              {Label: "SetState", Readfunc: ReadSetState},
-	SetStateLclsID:          {Label: "SetStateLcls", Readfunc: ReadSetStateLcls},
-	SnapshotID:              {Label: "Snapshot", Readfunc: ReadSnapshot},
-	SubBalanceID:            {Label: "SubBalance", Readfunc: ReadSubBalance},
-	SuicideID:               {Label: "Suicide", Readfunc: ReadSuicide},
+// opDict relates an operation's id with its label and read-function.
+var opDict = map[byte]OperationDictionary{
+	AddBalanceID:            {label: "AddBalance", readfunc: ReadAddBalance},
+	BeginEpochID:            {label: "BeginEpoch", readfunc: ReadBeginEpoch},
+	EndEpochID:              {label: "EndEpoch", readfunc: ReadEndEpoch},
+	BeginBlockID:            {label: "BeginBlock", readfunc: ReadBeginBlock},
+	EndBlockID:              {label: "EndBlock", readfunc: ReadEndBlock},
+	CreateAccountID:         {label: "CreateAccount", readfunc: ReadCreateAccount},
+	EmptyID:                 {label: "Exist", readfunc: ReadEmpty},
+	BeginTransactionID:      {label: "BeginTransaction", readfunc: ReadBeginTransaction},
+	EndTransactionID:        {label: "EndTransaction", readfunc: ReadEndTransaction},
+	ExistID:                 {label: "Exist", readfunc: ReadExist},
+	FinaliseID:              {label: "Finalise", readfunc: ReadFinalise},
+	GetBalanceID:            {label: "GetBalance", readfunc: ReadGetBalance},
+	GetCodeHashID:           {label: "GetCodeHash", readfunc: ReadGetCodeHash},
+	GetCodeHashLcID:         {label: "GetCodeLcHash", readfunc: ReadGetCodeHashLc},
+	GetCodeID:               {label: "GetCode", readfunc: ReadGetCode},
+	GetCodeSizeID:           {label: "GetCodeSize", readfunc: ReadGetCodeSize},
+	GetCommittedStateID:     {label: "GetCommittedState", readfunc: ReadGetCommittedState},
+	GetCommittedStateLclsID: {label: "GetCommittedStateLcls", readfunc: ReadGetCommittedStateLcls},
+	GetNonceID:              {label: "GetNonce", readfunc: ReadGetNonce},
+	GetStateID:              {label: "GetState", readfunc: ReadGetState},
+	GetStateLcID:            {label: "GetStateLc", readfunc: ReadGetStateLc},
+	GetStateLccsID:          {label: "GetStateLccs", readfunc: ReadGetStateLccs},
+	GetStateLclsID:          {label: "GetStateLcls", readfunc: ReadGetStateLcls},
+	HasSuicidedID:           {label: "HasSuicided", readfunc: ReadHasSuicided},
+	RevertToSnapshotID:      {label: "RevertToSnapshot", readfunc: ReadRevertToSnapshot},
+	SetCodeID:               {label: "SetCode", readfunc: ReadSetCode},
+	SetNonceID:              {label: "SetNonce", readfunc: ReadSetNonce},
+	SetStateID:              {label: "SetState", readfunc: ReadSetState},
+	SetStateLclsID:          {label: "SetStateLcls", readfunc: ReadSetStateLcls},
+	SnapshotID:              {label: "Snapshot", readfunc: ReadSnapshot},
+	SubBalanceID:            {label: "SubBalance", readfunc: ReadSubBalance},
+	SuicideID:               {label: "Suicide", readfunc: ReadSuicide},
 
 	// for testing
-	AddAddressToAccessListID: {Label: "AddAddressToAccessList", Readfunc: ReadPanic},
-	AddLogID:                 {Label: "AddLog", Readfunc: ReadPanic},
-	AddPreimageID:            {Label: "AddPreimage", Readfunc: ReadPanic},
-	AddRefundID:              {Label: "AddRefund", Readfunc: ReadPanic},
-	AddressInAccessListID:    {Label: "AddressInAccessList", Readfunc: ReadPanic},
-	AddSlotToAccessListID:    {Label: "AddSlotToAccessList", Readfunc: ReadPanic},
-	CloseID:                  {Label: "Close", Readfunc: ReadPanic},
-	ForEachStorageID:         {Label: "ForEachStorage", Readfunc: ReadPanic},
-	GetLogsID:                {Label: "GetLogs", Readfunc: ReadPanic},
-	GetRefundID:              {Label: "GetRefund", Readfunc: ReadPanic},
-	IntermediateRootID:       {Label: "IntermediateRoot", Readfunc: ReadPanic},
-	PrepareAccessListID:      {Label: "PrepareAccessList", Readfunc: ReadPanic},
-	PrepareID:                {Label: "Prepare", Readfunc: ReadPanic},
-	SlotInAccessListID:       {Label: "SlotInAccessList", Readfunc: ReadPanic},
-	SubRefundID:              {Label: "SubRefund", Readfunc: ReadPanic},
+	AddAddressToAccessListID: {label: "AddAddressToAccessList", readfunc: ReadPanic},
+	AddLogID:                 {label: "AddLog", readfunc: ReadPanic},
+	AddPreimageID:            {label: "AddPreimage", readfunc: ReadPanic},
+	AddRefundID:              {label: "AddRefund", readfunc: ReadPanic},
+	AddressInAccessListID:    {label: "AddressInAccessList", readfunc: ReadPanic},
+	AddSlotToAccessListID:    {label: "AddSlotToAccessList", readfunc: ReadPanic},
+	CloseID:                  {label: "Close", readfunc: ReadPanic},
+	ForEachStorageID:         {label: "ForEachStorage", readfunc: ReadPanic},
+	GetLogsID:                {label: "GetLogs", readfunc: ReadPanic},
+	GetRefundID:              {label: "GetRefund", readfunc: ReadPanic},
+	IntermediateRootID:       {label: "IntermediateRoot", readfunc: ReadPanic},
+	PrepareAccessListID:      {label: "PrepareAccessList", readfunc: ReadPanic},
+	PrepareID:                {label: "Prepare", readfunc: ReadPanic},
+	SlotInAccessListID:       {label: "SlotInAccessList", readfunc: ReadPanic},
+	SubRefundID:              {label: "SubRefund", readfunc: ReadPanic},
 }
 
-// GetLabel retrieves a Label of a state operation.
+// GetLabel retrieves a label of a state operation.
 func GetLabel(i byte) string {
-	if _, ok := OpDict[i]; !ok {
+	if _, ok := opDict[i]; !ok {
 		log.Fatalf("GetLabel failed; operation is not defined")
 	}
 
-	return OpDict[i].Label
+	return opDict[i].label
 }
 
 // Operation interface.
@@ -157,7 +163,7 @@ func Read(f io.Reader) Operation {
 	}
 
 	// read state operation
-	op, err = OpDict[ID].Readfunc(f)
+	op, err = opDict[ID].readfunc(f)
 	if err != nil {
 		log.Fatalf("Failed to read operation %v. Error %v", GetLabel(ID), err)
 	}

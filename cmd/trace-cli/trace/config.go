@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"time"
 
 	"github.com/ethereum/go-ethereum/substate"
 	"github.com/urfave/cli/v2"
@@ -27,6 +28,11 @@ var (
 		Name:  "cpuprofile",
 		Usage: "enables CPU profiling",
 	}
+	epochLengthFlag = cli.IntFlag{
+		Name:  "epochlength",
+		Usage: "defines the number of blocks per epoch",
+		Value: 300, // ~ 300s = 5 minutes
+	}
 	profileFlag = cli.BoolFlag{
 		Name:  "profile",
 		Usage: "enables profiling",
@@ -35,15 +41,24 @@ var (
 		Name:  "disable-progress",
 		Usage: "disable progress report",
 	}
-	vmImplementation = cli.StringFlag{
-		Name:  "vm-impl",
-		Usage: "select VM implementation",
-		Value: "geth",
+	randomizePrimingFlag = cli.BoolFlag{
+		Name:  "prime-random",
+		Usage: "randomize order of accounts in StateDB priming",
+	}
+	primeSeedFlag = cli.Int64Flag{
+		Name:  "prime-seed",
+		Usage: "set seed for randomizing priming",
+		Value: time.Now().UnixNano(),
+	}
+	primeThresholdFlag = cli.IntFlag{
+		Name:  "prime-threshold",
+		Usage: "set number of accounts written to stateDB before applying pending state updates",
+		Value: 0,
 	}
 	stateDbImplementation = cli.StringFlag{
 		Name:  "db-impl",
 		Usage: "select state DB implementation",
-		Value: "memory",
+		Value: "geth",
 	}
 	stateDbVariant = cli.StringFlag{
 		Name:  "db-variant",
@@ -59,9 +74,19 @@ var (
 		Usage: "set storage trace's output directory",
 		Value: "./",
 	}
+	updateDBDirFlag = cli.StringFlag{
+		Name:  "updatedir",
+		Usage: "set update-set database directory",
+		Value: "./updatedb",
+	}
 	validateEndState = cli.BoolFlag{
 		Name:  "validate",
 		Usage: "enables end-state validation",
+	}
+	vmImplementation = cli.StringFlag{
+		Name:  "vm-impl",
+		Usage: "select VM implementation",
+		Value: "geth",
 	}
 	worldStateDirFlag = cli.PathFlag{
 		Name:  "worldstatedir",
@@ -99,11 +124,15 @@ type TraceConfig struct {
 	debug            bool   // enable trace debug flag
 	enableValidation bool   // enable validation flag
 	enableProgress   bool   // enable progress report flag
+	epochLength      uint64 // length of an epoch in number of blocks
 	impl             string // storage implementation
+	primeRandom      bool   // enable randomized priming
+	primeSeed        int64  // set random seed
+	primeThreshold   int    // set account threshold before commit
 	profile          bool   // enable micro profiling
+	updateDBDir      string // update-set directory
 	variant          string // database variant
 	workers          int    // number of worker threads
-	worldStateDir    string // worldstate directory
 }
 
 // NewTraceConfig creates and initializes TraceConfig with commandline arguments.
@@ -134,18 +163,31 @@ func NewTraceConfig(ctx *cli.Context) (*TraceConfig, error) {
 		debug:            ctx.Bool(traceDebugFlag.Name),
 		enableValidation: ctx.Bool(validateEndState.Name),
 		enableProgress:   !ctx.Bool(disableProgressFlag.Name),
+		epochLength:      ctx.Uint64(epochLengthFlag.Name),
 		impl:             ctx.String(stateDbImplementation.Name),
+		primeRandom:      ctx.Bool(randomizePrimingFlag.Name),
+		primeSeed:        ctx.Int64(primeSeedFlag.Name),
+		primeThreshold:   ctx.Int(primeThresholdFlag.Name),
 		profile:          ctx.Bool(profileFlag.Name),
+		updateDBDir:      ctx.String(updateDBDirFlag.Name),
 		variant:          ctx.String(stateDbVariant.Name),
 		workers:          ctx.Int(substate.WorkersFlag.Name),
-		worldStateDir:    ctx.String(worldStateDirFlag.Name),
+	}
+
+	if cfg.epochLength <= 0 {
+		cfg.epochLength = 300
 	}
 
 	if cfg.enableProgress {
 		log.Printf("Run config:\n")
 		log.Printf("\tBlock range: %v to %v\n", cfg.first, cfg.last)
+		log.Printf("\tEpoch length: %v\n", cfg.epochLength)
 		log.Printf("\tStorage system: %v, DB variant: %v\n", cfg.impl, cfg.variant)
-		log.Printf("\tWorld state directory: %v\n", cfg.worldStateDir)
+		log.Printf("\tUpdate DB directory: %v\n", cfg.updateDBDir)
+		log.Printf("\tRandomized Priming: %v\n", cfg.primeRandom)
+		if cfg.primeRandom {
+			log.Printf("\t\tSeed: %v, threshold: %v\n", cfg.primeSeed, cfg.primeThreshold)
+		}
 	}
 	return cfg, nil
 }

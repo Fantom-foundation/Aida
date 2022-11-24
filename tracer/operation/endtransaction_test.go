@@ -1,8 +1,9 @@
 package operation
 
 import (
-	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"testing"
+
+	"github.com/Fantom-foundation/Aida/tracer/dict"
 )
 
 func initEndTransaction(t *testing.T) (*dict.DictionaryContext, *EndTransaction) {
@@ -44,8 +45,6 @@ func TestEndTransactionExecute(t *testing.T) {
 	op.Execute(mock, dict)
 
 	// check whether methods were correctly called
-	// currently EndTransaction isn't recorded
-	//expected := []Record{{EndTransactionID, []any{}}}
-	//mock.compareRecordings(expected, t)
-	mock.compareRecordings([]Record{}, t)
+	expected := []Record{{EndTransactionID, []any{}}}
+	mock.compareRecordings(expected, t)
 }
