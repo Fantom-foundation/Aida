@@ -10,7 +10,7 @@ import (
 
 // EvolveState iterates trough Substates between first and target blocks
 // anticipates that SubstateDB is already open
-func EvolveState(stateDB *StateDB, firstBlock uint64, targetBlock uint64, workers int, progress func(uint64)) (uint64, error) {
+func EvolveState(stateDB *StateDB, firstBlock uint64, targetBlock uint64, validate bool, workers int, progress func(uint64)) (uint64, error) {
 	// contains last block id
 	var lastProcessedBlock uint64 = 0
 
@@ -31,7 +31,7 @@ func EvolveState(stateDB *StateDB, firstBlock uint64, targetBlock uint64, worker
 		}
 
 		// EvolveState of database by single Substate Output values
-		err := evolveSubstate(&tx.Substate.OutputAlloc, stateDB)
+		err := evolveSubstate(tx.Substate, stateDB, validate)
 		if err != nil {
 			return 0, err
 		}
@@ -42,8 +42,24 @@ func EvolveState(stateDB *StateDB, firstBlock uint64, targetBlock uint64, worker
 }
 
 // evolveSubstate evolves world state db supplied substate.substateOut containing data of accounts at the end of one transaction
-func evolveSubstate(substateOut *substate.SubstateAlloc, stateDB *StateDB) error {
-	for address, substateAccount := range *substateOut {
+func evolveSubstate(substate *substate.Substate, stateDB *StateDB, validate bool) error {
+	// validation of InputAlloc state
+	if validate {
+		for address, substateAccount := range substate.InputAlloc {
+			acc, err := stateDB.Account(address)
+			if err != nil {
+				return fmt.Errorf("validate: unable  find account %s in database", address.String())
+			}
+			err = acc.IsDifferentToSubstate(substateAccount)
+			if err != nil {
+				//return fmt.Errorf("validate: account %s is different to InputAlloc; %v", address.String(), err)
+				err := fmt.Errorf("validate: account %s is different to InputAlloc; %v", address.String(), err)
+				fmt.Printf("ERR: %v\n", err)
+			}
+		}
+	}
+
+	for address, substateAccount := range substate.OutputAlloc {
 		// get account stored in state snapshot database
 		acc, err := stateDB.Account(address)
 		if err != nil {

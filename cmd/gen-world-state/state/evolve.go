@@ -21,6 +21,7 @@ var CmdEvolveState = cli.Command{
 	Flags: []cli.Flag{
 		&flags.TargetBlock,
 		&flags.SubstateDBPath,
+		&flags.Validate,
 		&flags.Workers,
 	},
 }
@@ -51,11 +52,14 @@ func evolveState(ctx *cli.Context) error {
 	log.Info("starting evolution from block", startBlock, "target block", targetBlock)
 
 	// call evolveState with prepared arguments
-	finalBlock, err := snapshot.EvolveState(stateDB, startBlock, targetBlock, ctx.Int(flags.Workers.Name), factoryMakeLogger(startBlock, targetBlock, log))
+	finalBlock, err := snapshot.EvolveState(stateDB, startBlock, targetBlock, ctx.Bool(flags.Validate.Name), ctx.Int(flags.Workers.Name), factoryMakeLogger(startBlock, targetBlock, log))
+	if err != nil {
+		log.Errorf("unable to EvolveState; %s", err.Error())
+	}
 
 	// if evolution to desired state didn't complete successfully
 	if finalBlock != targetBlock {
-		log.Warning("last processed block was %d, substateDB didn't contain data for other blocks till target %d", finalBlock, targetBlock)
+		log.Warningf("last processed block was %d, substateDB didn't contain data for other blocks till target %d", finalBlock, targetBlock)
 	}
 
 	// insert new block number into database
