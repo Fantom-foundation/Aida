@@ -82,6 +82,13 @@ var (
 		Usage: "state trie root hash to be analysed",
 	}
 
+	// Validate enables validation of inputSubstates in snapshot evolution
+	Validate = cli.BoolFlag{
+		Name:  "validate",
+		Usage: "validate evolution",
+		Value: false,
+	}
+
 	// Workers represents a number of worker threads to be used for computation
 	Workers = cli.IntFlag{
 		Name:  "workers",
