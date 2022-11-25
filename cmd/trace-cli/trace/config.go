@@ -26,6 +26,10 @@ var (
 		Usage: "ChainID for replayer",
 		Value: 250,
 	}
+	continueOnFailureFlag = cli.BoolFlag{
+		Name:  "continue-on-failure",
+		Usage: "continue execute after validation failure detected",
+	}
 	cpuProfileFlag = cli.StringFlag{
 		Name:  "cpuprofile",
 		Usage: "enables CPU profiling",
@@ -101,18 +105,19 @@ type TraceConfig struct {
 	first uint64 // first block
 	last  uint64 // last block
 
-	debug            bool   // enable trace debug flag
-	enableValidation bool   // enable validation flag
-	enableProgress   bool   // enable progress report flag
-	epochLength      uint64 // length of an epoch in number of blocks
-	impl             string // storage implementation
-	primeRandom      bool   // enable randomized priming
-	primeSeed        int64  // set random seed
-	primeThreshold   int    // set account threshold before commit
-	profile          bool   // enable micro profiling
-	updateDBDir      string // update-set directory
-	variant          string // database variant
-	workers          int    // number of worker threads
+	debug             bool   // enable trace debug flag
+	continueOnFailure bool   // continue validation when an error detected
+	enableValidation  bool   // enable validation flag
+	enableProgress    bool   // enable progress report flag
+	epochLength       uint64 // length of an epoch in number of blocks
+	impl              string // storage implementation
+	primeRandom       bool   // enable randomized priming
+	primeSeed         int64  // set random seed
+	primeThreshold    int    // set account threshold before commit
+	profile           bool   // enable micro profiling
+	updateDBDir       string // update-set directory
+	variant           string // database variant
+	workers           int    // number of worker threads
 }
 
 // getChainConnfig returns chain configuration of either mainnet or testnets.
@@ -149,18 +154,19 @@ func NewTraceConfig(ctx *cli.Context) (*TraceConfig, error) {
 		first: first,
 		last:  last,
 
-		debug:            ctx.Bool(traceDebugFlag.Name),
-		enableValidation: ctx.Bool(validateEndState.Name),
-		enableProgress:   !ctx.Bool(disableProgressFlag.Name),
-		epochLength:      ctx.Uint64(epochLengthFlag.Name),
-		impl:             ctx.String(stateDbImplementation.Name),
-		primeRandom:      ctx.Bool(randomizePrimingFlag.Name),
-		primeSeed:        ctx.Int64(primeSeedFlag.Name),
-		primeThreshold:   ctx.Int(primeThresholdFlag.Name),
-		profile:          ctx.Bool(profileFlag.Name),
-		updateDBDir:      ctx.String(updateDBDirFlag.Name),
-		variant:          ctx.String(stateDbVariant.Name),
-		workers:          ctx.Int(substate.WorkersFlag.Name),
+		debug:             ctx.Bool(traceDebugFlag.Name),
+		continueOnFailure: ctx.Bool(continueOnFailureFlag.Name),
+		enableValidation:  ctx.Bool(validateEndState.Name),
+		enableProgress:    !ctx.Bool(disableProgressFlag.Name),
+		epochLength:       ctx.Uint64(epochLengthFlag.Name),
+		impl:              ctx.String(stateDbImplementation.Name),
+		primeRandom:       ctx.Bool(randomizePrimingFlag.Name),
+		primeSeed:         ctx.Int64(primeSeedFlag.Name),
+		primeThreshold:    ctx.Int(primeThresholdFlag.Name),
+		profile:           ctx.Bool(profileFlag.Name),
+		updateDBDir:       ctx.String(updateDBDirFlag.Name),
+		variant:           ctx.String(stateDbVariant.Name),
+		workers:           ctx.Int(substate.WorkersFlag.Name),
 	}
 
 	if cfg.epochLength <= 0 {

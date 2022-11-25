@@ -24,6 +24,10 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const MaxErrorCount = 50
+
+var errCount int
+
 // runVMCommand data structure for the record app
 var RunVMCommand = cli.Command{
 	Action:    runVM,
@@ -32,6 +36,7 @@ var RunVMCommand = cli.Command{
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		&chainIDFlag,
+		&continueOnFailureFlag,
 		&cpuProfileFlag,
 		&epochLengthFlag,
 		&disableProgressFlag,
@@ -92,9 +97,15 @@ func runVMTask(db state.StateDB, cfg *TraceConfig, block uint64, tx int, recordi
 
 	// validate whether the input alloc is contained in the db
 	if cfg.enableValidation {
-		if err := validateStateDB(inputAlloc, db); err != nil {
-			msg := fmt.Sprintf("Block: %v Transaction: %v\n", block, tx)
-			return fmt.Errorf(msg+"Input alloc is not contained in the stateDB. %v", err)
+		if err := validateStateDB(inputAlloc, db, true); err != nil {
+			errCount++
+			errMsg := fmt.Sprintf("Block: %v Transaction: %v\n", block, tx)
+			errMsg += fmt.Sprintf("  Input alloc is not contained in the stateDB.\n%v", err)
+			if cfg.continueOnFailure {
+				fmt.Println(errMsg)
+			} else {
+				return fmt.Errorf(errMsg)
+			}
 		}
 	}
 
@@ -134,7 +145,12 @@ func runVMTask(db state.StateDB, cfg *TraceConfig, block uint64, tx int, recordi
 	// if transaction fails, revert to the first snapshot.
 	if err != nil {
 		db.RevertToSnapshot(snapshot)
-		return fmt.Errorf("Block: %v Transaction: %v\n%v", block, tx, err)
+		errCount++
+		if cfg.continueOnFailure {
+			fmt.Printf("Block: %v Transaction: %v\n%v", block, tx, err)
+		} else {
+			return fmt.Errorf("Block: %v Transaction: %v\n%v", block, tx, err)
+		}
 	}
 	if hashError != nil {
 		return hashError
@@ -163,17 +179,31 @@ func runVMTask(db state.StateDB, cfg *TraceConfig, block uint64, tx int, recordi
 
 	// check whether the outputAlloc substate is contained in the world-state db.
 	if cfg.enableValidation {
-		if err := validateStateDB(outputAlloc, db); err != nil {
-			msg := fmt.Sprintf("Block: %v Transaction: %v\n", block, tx)
-			return fmt.Errorf(msg+"Output alloc is not contained in the stateDB. %v", err)
+		if err := validateStateDB(outputAlloc, db, false); err != nil {
+			errCount++
+			errMsg := fmt.Sprintf("Block: %v Transaction: %v\n", block, tx)
+			errMsg += fmt.Sprintf("  Output alloc is not contained in the stateDB. %v\n", err)
+			if cfg.continueOnFailure {
+				fmt.Println(errMsg)
+			} else {
+				return fmt.Errorf(errMsg)
+			}
 		}
 		r := outputResult.Equal(evmResult)
 		if !r {
-			fmt.Printf("Block: %v Transaction: %v\n", block, tx)
-			fmt.Printf("inconsistent output: result\n")
+			errCount++
+			errMsg := fmt.Sprintf("Block: %v Transaction: %v\n", block, tx)
+			errMsg += fmt.Sprintf("  Inconsistent output result.\n")
 			replay.PrintResultDiffSummary(outputResult, evmResult)
-			return fmt.Errorf("inconsistent output")
+			if cfg.continueOnFailure {
+				fmt.Println(errMsg)
+			} else {
+				return fmt.Errorf(errMsg)
+			}
 		}
+	}
+	if errCount > MaxErrorCount {
+		return fmt.Errorf("Too many errors.")
 	}
 	return nil
 }
@@ -249,13 +279,13 @@ func runVM(ctx *cli.Context) error {
 
 	// wrap stateDB for profiling
 	var stats *operation.ProfileStats
-	if cfg.profile {
+	if cfg.profile || cfg.debug {
 		db, stats = tracer.NewProxyProfiler(db, cfg.debug)
 	}
 
 	if cfg.enableValidation {
 		fmt.Printf("WARNING: validation enabled, reducing Tx throughput\n")
-		if err := validateStateDB(ws, db); err != nil {
+		if err := validateStateDB(ws, db, false); err != nil {
 			return fmt.Errorf("Pre: World state is not contained in the stateDB. %v", err)
 		}
 	}
@@ -335,7 +365,7 @@ func runVM(ctx *cli.Context) error {
 
 	if cfg.enableValidation {
 		advanceWorldState(ws, cfg.first, cfg.last, cfg.workers)
-		if err := validateStateDB(ws, db); err != nil {
+		if err := validateStateDB(ws, db, false); err != nil {
 			return fmt.Errorf("World state is not contained in the stateDB. %v", err)
 		}
 	}
