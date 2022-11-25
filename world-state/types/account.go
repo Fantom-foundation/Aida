@@ -191,7 +191,7 @@ func (a *Account) IsDifferentToSubstate(b *substate.SubstateAccount) error {
 	}
 
 	// storage must be initialized if substateAccount storage is initialized
-	if a.Storage == nil && b.Storage != nil {
+	if (a.Storage == nil && b.Storage != nil) || (a.Storage != nil && b.Storage == nil) {
 		return ErrAccountStorage
 	}
 
