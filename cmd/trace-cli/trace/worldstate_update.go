@@ -10,8 +10,6 @@ import (
 
 const FirstSubstateBlock = 4564026
 
-//const FirstSubstateBlock = 7650765
-
 // generateUpdateSet generates an update set for a block range.
 func generateUpdateSet(first uint64, last uint64, numWorkers int) substate.SubstateAlloc {
 	stateIter := substate.NewSubstateIterator(first, numWorkers)

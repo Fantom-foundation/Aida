@@ -142,7 +142,7 @@ func traceStochasticReplayTask(cfg *TraceConfig) error {
 
 // getGenerators retrieves contract, storage and value generators
 func getGenerators(dCtx *dict.DictionaryContext) (simulation.StochasticGenerator, simulation.StochasticGenerator, simulation.StochasticGenerator, error) {
-	newContract, newStorage, newValue, err := loadNewOccurances()
+	newContract, newStorage, newValue, err := loadNewOccurrences()
 	if err != nil {
 		return simulation.StochasticGenerator{}, simulation.StochasticGenerator{}, simulation.StochasticGenerator{}, err
 	}
@@ -211,7 +211,8 @@ func loadLambda(path string) (float64, error) {
 	return 0, nil
 }
 
-func loadNewOccurances() ([]float32, []float32, []float32, error) {
+// loadNewOccurrences loads probabilities of new values at individual operations
+func loadNewOccurrences() ([]float32, []float32, []float32, error) {
 	newContract := make([]float32, operation.NumProfiledOperations)
 	newStorage := make([]float32, operation.NumProfiledOperations)
 	newValue := make([]float32, operation.NumProfiledOperations)
