@@ -21,6 +21,7 @@ var CmdEvolveState = cli.Command{
 	Flags: []cli.Flag{
 		&flags.TargetBlock,
 		&flags.SubstateDBPath,
+		&flags.Validate,
 		&flags.Workers,
 	},
 }
@@ -50,12 +51,21 @@ func evolveState(ctx *cli.Context) error {
 
 	log.Info("starting evolution from block", startBlock, "target block", targetBlock)
 
+	// logging InputSubstate inconsistencies
+	var validateLog func(error)
+	if ctx.Bool(flags.Validate.Name) {
+		validateLog = factoryValidatorLogger(log)
+	}
+
 	// call evolveState with prepared arguments
-	finalBlock, err := snapshot.EvolveState(stateDB, startBlock, targetBlock, ctx.Int(flags.Workers.Name), factoryMakeLogger(startBlock, targetBlock, log))
+	finalBlock, err := snapshot.EvolveState(stateDB, startBlock, targetBlock, ctx.Int(flags.Workers.Name), factoryMakeLogger(startBlock, targetBlock, log), validateLog)
+	if err != nil {
+		log.Errorf("unable to EvolveState; %s", err.Error())
+	}
 
 	// if evolution to desired state didn't complete successfully
 	if finalBlock != targetBlock {
-		log.Warning("last processed block was %d, substateDB didn't contain data for other blocks till target %d", finalBlock, targetBlock)
+		log.Warningf("last processed block was %d, substateDB didn't contain data for other blocks till target %d", finalBlock, targetBlock)
 	}
 
 	// insert new block number into database
@@ -122,5 +132,13 @@ func factoryMakeLogger(start uint64, end uint64, log *logging.Logger) func(uint6
 			log.Infof("evolving #%d ; until #d% ; %d blocks left", blk, end, end-blk)
 		default:
 		}
+	}
+}
+
+// factoryValidatorLogger creates logging function with runtime context.
+func factoryValidatorLogger(log *logging.Logger) func(error) {
+	return func(err error) {
+		log.Warningf("%v", err)
+
 	}
 }
