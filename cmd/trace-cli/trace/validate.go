@@ -9,35 +9,57 @@ import (
 
 // validateStateDB validates whether the world-state is contained in the db object.
 // NB: We can only check what must be in the db (but cannot check whether db stores more).
-func validateStateDB(ws substate.SubstateAlloc, db state.StateDB) error {
+func validateStateDB(ws substate.SubstateAlloc, db state.StateDB, updateOnFail bool) error {
+	var err string
 	for addr, account := range ws {
 		if !db.Exist(addr) {
-			return fmt.Errorf("Account %v does not exist", addr.Hex())
+			err += fmt.Sprintf("  Account %v does not exist\n", addr.Hex())
+			if updateOnFail {
+				db.CreateAccount(addr)
+			}
 		}
-		if account.Balance.Cmp(db.GetBalance(addr)) != 0 {
-			return fmt.Errorf("Failed to validate balance for account %v\n"+
-				"\twant %v\n"+
-				"\thave %v",
-				addr.Hex(), account.Balance, db.GetBalance(addr))
+		if balance := db.GetBalance(addr); account.Balance.Cmp(balance) != 0 {
+			err += fmt.Sprintf("  Failed to validate balance for account %v\n"+
+				"    have %v\n"+
+				"    want %v\n",
+				addr.Hex(), account.Balance, balance)
+			if updateOnFail {
+				db.SubBalance(addr, balance)
+				db.AddBalance(addr, account.Balance)
+			}
 		}
-		if db.GetNonce(addr) != account.Nonce {
-			return fmt.Errorf("Failed to validate nonce for account %v\n"+
-				"\twant %v\n"+
-				"\thave %v",
-				addr.Hex(), account.Nonce, db.GetNonce(addr))
+		if nonce := db.GetNonce(addr); nonce != account.Nonce {
+			err += fmt.Sprintf("  Failed to validate nonce for account %v\n"+
+				"    have %v\n"+
+				"    want %v\n",
+				addr.Hex(), account.Nonce, nonce)
+			if updateOnFail {
+				db.SetNonce(addr, account.Nonce)
+			}
 		}
-		if bytes.Compare(db.GetCode(addr), account.Code) != 0 {
-			return fmt.Errorf("Failed to validate code for account %v", addr.Hex())
+		if code := db.GetCode(addr); bytes.Compare(code, account.Code) != 0 {
+			err += fmt.Sprintf("  Failed to validate code for account %v\n"+
+				"    have len %v\n"+
+				"    want len %v\n",
+				addr.Hex(), len(code), len(account.Code))
+			if updateOnFail {
+				db.SetCode(addr, account.Code)
+			}
 		}
 		for key, value := range account.Storage {
 			if db.GetState(addr, key) != value {
-				return fmt.Errorf("Failed to validate storage for account %v, key %v\n"+
-					"\twant %v\n"+
-					"\thave %v",
+				err += fmt.Sprintf("  Failed to validate storage for account %v, key %v\n"+
+					"    have %v\n"+
+					"    want %v\n",
 					addr.Hex(), key.Hex(), value.Hex(), db.GetState(addr, key).Hex())
+				if updateOnFail {
+					db.SetState(addr, key, value)
+				}
 			}
 		}
-
+	}
+	if len(err) > 0 {
+		return fmt.Errorf(err)
 	}
 	return nil
 }

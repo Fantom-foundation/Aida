@@ -152,7 +152,7 @@ func traceReplayTask(cfg *TraceConfig) error {
 		log.Printf("Validate final state")
 		// advance the world state from the first block to the last block
 		advanceWorldState(ws, cfg.first, cfg.last, cfg.workers)
-		if err := validateStateDB(ws, db); err != nil {
+		if err := validateStateDB(ws, db, false); err != nil {
 			return fmt.Errorf("Validation failed. %v\n", err)
 		}
 	}
