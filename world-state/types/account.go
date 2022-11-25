@@ -216,11 +216,11 @@ func (a *Account) IsDifferentToSubstate(b *substate.SubstateAccount) error {
 		}
 		va, ok := a.Storage[k]
 		if !ok {
-			return fmt.Errorf("%v - %v vs %v", ErrAccountStorageItem, vb.Bytes(), va.Bytes())
+			return fmt.Errorf("%v - %v", ErrAccountStorageItem, vb.Bytes())
 		}
 
 		if bytes.Compare(va.Bytes(), vb.Bytes()) != 0 {
-			return ErrAccountStorageValue
+			return fmt.Errorf("%v - %v vs %v", ErrAccountStorageValue, vb.Bytes(), va.Bytes())
 		}
 	}
 
