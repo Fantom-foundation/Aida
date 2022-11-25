@@ -4,9 +4,11 @@ package trace
 import (
 	"fmt"
 	"log"
+	"math/big"
 	"strconv"
 	"time"
 
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/substate"
 	"github.com/urfave/cli/v2"
 )
@@ -111,6 +113,25 @@ type TraceConfig struct {
 	updateDBDir      string // update-set directory
 	variant          string // database variant
 	workers          int    // number of worker threads
+}
+
+// getChainConnfig returns chain configuration of either mainnet or testnets.
+func getChainConfig(chainID int) *params.ChainConfig {
+	var chainConfig *params.ChainConfig
+	chainConfig = params.AllEthashProtocolChanges
+	chainConfig.ChainID = big.NewInt(int64(chainID))
+	if chainID == 250 {
+		// mainnet chainID 250
+		chainConfig.BerlinBlock = new(big.Int).SetUint64(37455223)
+		chainConfig.LondonBlock = new(big.Int).SetUint64(37534833)
+	} else if chainID == 4002 {
+		// testnet chainID 4002
+		chainConfig.BerlinBlock = new(big.Int).SetUint64(1559470)
+		chainConfig.LondonBlock = new(big.Int).SetUint64(7513335)
+	} else {
+		log.Printf("Warning: unknown chainID.\n")
+	}
+	return chainConfig
 }
 
 // NewTraceConfig creates and initializes TraceConfig with commandline arguments.
