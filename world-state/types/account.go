@@ -196,7 +196,7 @@ func (a *Account) IsDifferentToSubstate(b *substate.SubstateAccount) error {
 	}
 
 	// if there is no storage, we are done
-	if a.Storage == nil {
+	if b.Storage == nil {
 		return nil
 	}
 
