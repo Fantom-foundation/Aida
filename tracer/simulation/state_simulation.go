@@ -182,7 +182,18 @@ func (sc *StateContext) initOpDictionary() error {
 	}
 	sc.opDict[operation.GetStateLccsID] = func(sc *StateContext) operation.Operation {
 		{
-			return operation.NewGetStateLccs(0)
+			i := 0
+			for ; i < 256; i++ {
+				_, err := sc.dCtx.StorageIndexCache.Get(i)
+				if err != nil {
+					break
+				}
+			}
+
+			// 1 <= i <= 256
+			// should never be 0 because in that case this operation should have been skipped
+			pos := rand.Intn(i)
+			return operation.NewGetStateLccs(pos)
 		}
 	}
 	sc.opDict[operation.GetStateLcID] = func(sc *StateContext) operation.Operation {
