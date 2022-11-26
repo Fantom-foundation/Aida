@@ -23,7 +23,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/substate"
 	"github.com/urfave/cli/v2"
 )
@@ -62,17 +61,12 @@ func traceRecordTask(block uint64, tx int, recording *substate.Substate, dCtx *d
 	outputResult := recording.Result
 
 	var (
-		vmConfig    vm.Config
-		chainConfig *params.ChainConfig
+		vmConfig vm.Config
 	)
 
 	vmConfig = opera.DefaultVMConfig
 	vmConfig.NoBaseFee = true
-
-	chainConfig = params.AllEthashProtocolChanges
-	chainConfig.ChainID = big.NewInt(int64(chainID))
-	chainConfig.LondonBlock = new(big.Int).SetUint64(37534833)
-	chainConfig.BerlinBlock = new(big.Int).SetUint64(37455223)
+	chainConfig := getChainConfig(chainID)
 
 	var hashError error
 	getHash := func(num uint64) common.Hash {
