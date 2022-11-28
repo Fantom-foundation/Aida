@@ -22,7 +22,7 @@ func validateStateDB(ws substate.SubstateAlloc, db state.StateDB, updateOnFail b
 			err += fmt.Sprintf("  Failed to validate balance for account %v\n"+
 				"    have %v\n"+
 				"    want %v\n",
-				addr.Hex(), account.Balance, balance)
+				addr.Hex(), balance, account.Balance)
 			if updateOnFail {
 				db.SubBalance(addr, balance)
 				db.AddBalance(addr, account.Balance)
@@ -32,7 +32,7 @@ func validateStateDB(ws substate.SubstateAlloc, db state.StateDB, updateOnFail b
 			err += fmt.Sprintf("  Failed to validate nonce for account %v\n"+
 				"    have %v\n"+
 				"    want %v\n",
-				addr.Hex(), account.Nonce, nonce)
+				addr.Hex(), nonce, account.Nonce)
 			if updateOnFail {
 				db.SetNonce(addr, account.Nonce)
 			}
@@ -51,7 +51,7 @@ func validateStateDB(ws substate.SubstateAlloc, db state.StateDB, updateOnFail b
 				err += fmt.Sprintf("  Failed to validate storage for account %v, key %v\n"+
 					"    have %v\n"+
 					"    want %v\n",
-					addr.Hex(), key.Hex(), value.Hex(), db.GetState(addr, key).Hex())
+					addr.Hex(), key.Hex(), db.GetState(addr, key).Hex(), value.Hex())
 				if updateOnFail {
 					db.SetState(addr, key, value)
 				}
