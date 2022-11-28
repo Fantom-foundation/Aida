@@ -71,11 +71,7 @@ func stochasticRecordTask(block uint64, tx int, recording *substate.Substate, dC
 
 	vmConfig = opera.DefaultVMConfig
 	vmConfig.NoBaseFee = true
-
-	chainConfig = params.AllEthashProtocolChanges
-	chainConfig.ChainID = big.NewInt(int64(chainID))
-	chainConfig.LondonBlock = new(big.Int).SetUint64(37534833)
-	chainConfig.BerlinBlock = new(big.Int).SetUint64(37455223)
+	chainConfig = getChainConfig(chainID)
 
 	var hashError error
 	getHash := func(num uint64) common.Hash {
