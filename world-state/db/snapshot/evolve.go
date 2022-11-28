@@ -10,7 +10,7 @@ import (
 
 // EvolveState iterates trough Substates between first and target blocks
 // anticipates that SubstateDB is already open
-func EvolveState(stateDB *StateDB, firstBlock uint64, targetBlock uint64, workers int, progress func(uint64)) (uint64, error) {
+func EvolveState(stateDB *StateDB, firstBlock uint64, targetBlock uint64, workers int, progress func(uint64), validate func(error)) (uint64, error) {
 	// contains last block id
 	var lastProcessedBlock uint64 = 0
 
@@ -31,7 +31,7 @@ func EvolveState(stateDB *StateDB, firstBlock uint64, targetBlock uint64, worker
 		}
 
 		// EvolveState of database by single Substate Output values
-		err := evolveSubstate(&tx.Substate.OutputAlloc, stateDB)
+		err := evolveSubstate(tx, stateDB, validate)
 		if err != nil {
 			return 0, err
 		}
@@ -42,8 +42,23 @@ func EvolveState(stateDB *StateDB, firstBlock uint64, targetBlock uint64, worker
 }
 
 // evolveSubstate evolves world state db supplied substate.substateOut containing data of accounts at the end of one transaction
-func evolveSubstate(substateOut *substate.SubstateAlloc, stateDB *StateDB) error {
-	for address, substateAccount := range *substateOut {
+func evolveSubstate(tx *substate.Transaction, stateDB *StateDB, validate func(error)) error {
+	sub := tx.Substate
+	// validation of InputAlloc state
+	if validate != nil {
+		for address, substateAccount := range sub.InputAlloc {
+			acc, err := stateDB.Account(address)
+			if err != nil {
+				validate(fmt.Errorf("%d - %s not found in database", tx.Block, address.String()))
+			}
+			err = acc.IsDifferentToSubstate(substateAccount)
+			if err != nil {
+				validate(fmt.Errorf("%d - %s %v", tx.Block, address.String(), err))
+			}
+		}
+	}
+
+	for address, substateAccount := range sub.OutputAlloc {
 		// get account stored in state snapshot database
 		acc, err := stateDB.Account(address)
 		if err != nil {

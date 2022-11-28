@@ -37,7 +37,7 @@ func genUpdateSet(ctx *cli.Context) error {
 	var err error
 	// process arguments and flags
 	if ctx.Args().Len() != 3 {
-		return fmt.Errorf("trace command requires exactly 2 arguments")
+		return fmt.Errorf("trace command requires exactly 3 arguments")
 	}
 	first, last, argErr := SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
 	if argErr != nil {

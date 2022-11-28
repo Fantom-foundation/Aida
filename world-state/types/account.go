@@ -3,10 +3,12 @@ package types
 import (
 	"bytes"
 	"fmt"
+	"github.com/Fantom-foundation/lachesis-base/hash"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/ethereum/go-ethereum/substate"
 	"io"
 	"math/big"
 )
@@ -169,6 +171,56 @@ func (a *Account) IsDifferent(b *Account) error {
 
 		if bytes.Compare(va.Bytes(), vb.Bytes()) != 0 {
 			return ErrAccountStorageValue
+		}
+	}
+
+	return nil
+}
+
+// IsDifferentToSubstate compares the substate account
+// and returns an error if and only if the accounts are different.
+func (a *Account) IsDifferentToSubstate(b *substate.SubstateAccount) error {
+	// nonce must be the same
+	if a.Nonce != b.Nonce {
+		return ErrAccountNonce
+	}
+
+	// balance must be the same
+	if a.Balance.Cmp(b.Balance) != 0 {
+		return ErrAccountBalance
+	}
+
+	// storage must be initialized if substateAccount storage is initialized
+	if (a.Storage == nil && b.Storage != nil) || (a.Storage != nil && b.Storage == nil) {
+		return ErrAccountStorage
+	}
+
+	// if there is no storage, we are done
+	if b.Storage == nil {
+		return nil
+	}
+
+	// -----------------------
+	// expensive checks below
+	// -----------------------
+
+	// code must be the same
+	if bytes.Compare(a.Code, b.Code) != 0 {
+		return ErrAccountCode
+	}
+
+	// compare storage content; we already know both have the same number of items
+	for k, vb := range b.Storage {
+		if bytes.Compare(vb.Bytes(), hash.Zero.Bytes()) == 0 {
+			continue
+		}
+		va, ok := a.Storage[k]
+		if !ok {
+			return fmt.Errorf("%v - %v", ErrAccountStorageItem, vb.Bytes())
+		}
+
+		if bytes.Compare(va.Bytes(), vb.Bytes()) != 0 {
+			return fmt.Errorf("%v - %v vs %v", ErrAccountStorageValue, vb.Bytes(), va.Bytes())
 		}
 	}
 
