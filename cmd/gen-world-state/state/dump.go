@@ -57,6 +57,9 @@ func dumpState(ctx *cli.Context) error {
 	}
 	defer snapshot.MustCloseStateDB(outputDB)
 
+	dumpCtx, cancel := context.WithCancel(ctx.Context)
+	defer cancel()
+
 	log := Logger(ctx, "dump")
 
 	// blockNumber number to be stored in output db
@@ -68,16 +71,17 @@ func dumpState(ctx *cli.Context) error {
 
 	// load assembled accounts for the given root and write them into the snapshot database
 	workers := ctx.Int(flags.Workers.Name)
-	accounts, readFailed := opera.LoadAccounts(ctx.Context, opera.OpenStateDB(store), root, workers)
-	writeFailed := snapshot.NewQueueWriter(ctx.Context, outputDB, dumpProgressFactory(ctx.Context, accounts, workers, log))
+	accounts, readFailed := opera.LoadAccounts(dumpCtx, opera.OpenStateDB(store), root, workers)
+	writeFailed := snapshot.NewQueueWriter(dumpCtx, outputDB, dumpProgressFactory(ctx.Context, accounts, workers, log))
 
 	// find block information for the used state root hash
-	block, lkpFailed := opera.GetBlockNumberByRoot(ctx.Context, store, root, blockNumber)
+	block, lkpFailed := opera.GetBlockNumberByRoot(dumpCtx, store, root, blockNumber)
 
 	// check for any error in above execution threads;
 	// this will block until all threads above close their error channels
 	err = getChannelError(readFailed, writeFailed, lkpFailed)
 	if err != nil {
+		endGracefully(cancel, readFailed, writeFailed, lkpFailed)
 		return err
 	}
 
@@ -91,6 +95,19 @@ func dumpState(ctx *cli.Context) error {
 	// wait for all the threads to be done
 	log.Noticef("block #%d done", blockNumber)
 	return nil
+}
+
+// endGracefully waits until all routines finish - preventing database to be closed prematurely
+func endGracefully(cancel context.CancelFunc, ec ...<-chan error) {
+	cancel()
+	for i := 0; i < len(ec); i++ {
+		for {
+			_, ok := <-ec[i]
+			if !ok {
+				break
+			}
+		}
+	}
 }
 
 // blockNumberAndRoot requires that root hash is determined.
