@@ -158,6 +158,11 @@ func (s *MockStateDB) StartBulkLoad() state.BulkLoad {
 	return nil
 }
 
+func (s *MockStateDB) GetMemoryUsage() *state.MemoryUsage {
+	panic("GetMemoryUsage not supported in mock")
+	return nil
+}
+
 func (s *MockStateDB) Finalise(deleteEmptyObjects bool) {
 	s.recording = append(s.recording, Record{FinaliseID, []any{deleteEmptyObjects}})
 }

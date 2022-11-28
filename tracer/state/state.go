@@ -1,6 +1,7 @@
 package state
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -89,6 +90,10 @@ type StateDB interface {
 	// while it is alive.
 	StartBulkLoad() BulkLoad
 
+	// Requests a description of the current memory usage of this State DB. Implementations
+	// not supporting this may return nil.
+	GetMemoryUsage() *MemoryUsage
+
 	// ---- Artefacts from Geth dependency ----
 
 	// The following functions may be used by StateDB implementations for backward-compatibilty
@@ -125,4 +130,10 @@ type BulkLoad interface {
 	// Close ends the bulk insertion, finalizes the internal state, and released the
 	// underlying StateDB instance for regular operations.
 	Close() error
+}
+
+// A description of the memory usage of a StateDB implementation.
+type MemoryUsage struct {
+	UsedBytes uint64
+	Breakdown fmt.Stringer
 }

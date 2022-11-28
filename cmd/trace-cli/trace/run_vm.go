@@ -40,6 +40,7 @@ var RunVMCommand = cli.Command{
 		&cpuProfileFlag,
 		&epochLengthFlag,
 		&disableProgressFlag,
+		&memoryBreakdownFlag,
 		&primeSeedFlag,
 		&primeThresholdFlag,
 		&profileFlag,
@@ -277,6 +278,15 @@ func runVM(ctx *cli.Context) error {
 	sec = time.Since(start).Seconds()
 	log.Printf("\tElapsed time: %.2f s\n", sec)
 
+	// print memory usage after priming
+	if cfg.memoryBreakdown {
+		if usage := db.GetMemoryUsage(); usage != nil {
+			log.Printf("State DB memory usage: %d byte\n%s\n", usage.UsedBytes, usage.Breakdown)
+		} else {
+			log.Printf("Utilized storage solution does not support memory breakdowns.\n")
+		}
+	}
+
 	// wrap stateDB for profiling
 	var stats *operation.ProfileStats
 	if cfg.profile || cfg.debug {
@@ -367,6 +377,14 @@ func runVM(ctx *cli.Context) error {
 		advanceWorldState(ws, cfg.first, cfg.last, cfg.workers)
 		if err := validateStateDB(ws, db, false); err != nil {
 			return fmt.Errorf("World state is not contained in the stateDB. %v", err)
+		}
+	}
+
+	if cfg.memoryBreakdown {
+		if usage := db.GetMemoryUsage(); usage != nil {
+			log.Printf("State DB memory usage: %d byte\n%s\n", usage.UsedBytes, usage.Breakdown)
+		} else {
+			log.Printf("Utilized storage solution does not support memory breakdowns.\n")
 		}
 	}
 

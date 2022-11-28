@@ -265,6 +265,11 @@ func (s *gethStateDB) StartBulkLoad() BulkLoad {
 	return &gethBulkLoad{db: s}
 }
 
+func (s *gethStateDB) GetMemoryUsage() *MemoryUsage {
+	// not supported yet
+	return nil
+}
+
 type gethBulkLoad struct {
 	db      *gethStateDB
 	num_ops int64
