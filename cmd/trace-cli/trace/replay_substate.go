@@ -61,6 +61,7 @@ func traceReplaySubstateTask(cfg *TraceConfig) error {
 	if err != nil {
 		return err
 	}
+	defer os.RemoveAll(stateDirectory)
 
 	// Instantiate the state DB under testing
 	db, err := makeStateDB(stateDirectory, cfg.impl, cfg.variant)

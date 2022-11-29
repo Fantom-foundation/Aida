@@ -253,6 +253,7 @@ func runVM(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("Failed to create a temp directory. %v", err)
 	}
+	defer os.RemoveAll(stateDirectory)
 
 	// instantiate the state DB under testing
 	var db state.StateDB

@@ -76,6 +76,7 @@ func traceReplayTask(cfg *TraceConfig) error {
 	if err != nil {
 		return err
 	}
+	defer os.RemoveAll(stateDirectory)
 	db, err := makeStateDB(stateDirectory, cfg.impl, cfg.variant)
 	if err != nil {
 		return err
