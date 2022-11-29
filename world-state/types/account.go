@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/substate"
 	"io"
 	"math/big"
+	"sort"
 )
 
 // Account is modification of SubstateAccount in substate/substate.go
@@ -209,12 +210,30 @@ func (a *Account) IsDifferentToSubstate(b *substate.SubstateAccount) error {
 		return fmt.Errorf("%v - expected: %v, world-state %v", ErrAccountCode, b.Code, a.Code)
 	}
 
+	keys := make([]common.Hash, 0)
+	for k := range b.Storage {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return keys[i].Hex() > keys[j].Hex()
+	})
+
+	hashing := crypto.NewKeccakState()
+	hh := func(k []byte) common.Hash {
+		hashing.Reset()
+		hashing.Write(k)
+		return common.BytesToHash(hashing.Sum(nil))
+	}
+
 	// compare storage content; we already know both have the same number of items
-	for k, vb := range b.Storage {
+	for _, k := range keys {
+		vb := b.Storage[k]
 		if bytes.Compare(vb.Bytes(), hash.Zero.Bytes()) == 0 {
 			continue
 		}
-		va, ok := a.Storage[k]
+
+		kk := hh(k.Bytes())
+		va, ok := a.Storage[kk]
 		if !ok {
 			return fmt.Errorf("%v - key: %v, expected: %v", ErrAccountStorageItem, k, vb.Hex())
 		}
