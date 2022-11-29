@@ -33,7 +33,8 @@ var TraceReplaySubstateCommand = cli.Command{
 		&substate.WorkersFlag,
 		&traceDirectoryFlag,
 		&traceDebugFlag,
-		&validateEndState,
+		&validateFlag,
+		&validateWorldStateFlag,
 	},
 	Description: `
 The trace replay-substate command requires two arguments:
@@ -122,7 +123,7 @@ func traceReplaySubstateTask(cfg *TraceConfig) error {
 		}
 
 		// Validate stateDB and OuputAlloc
-		if cfg.enableValidation {
+		if cfg.validateWorldState {
 			if err := validateStateDB(tx.Substate.OutputAlloc, db, false); err != nil {
 				return fmt.Errorf("Validation failed. Block %v Tx %v\n\t%v\n", tx.Block, tx.Transaction, err)
 			}
