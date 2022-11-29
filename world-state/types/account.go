@@ -182,12 +182,12 @@ func (a *Account) IsDifferent(b *Account) error {
 func (a *Account) IsDifferentToSubstate(b *substate.SubstateAccount) error {
 	// nonce must be the same
 	if a.Nonce != b.Nonce {
-		return ErrAccountNonce
+		return fmt.Errorf("%v - expected: %v, world-state %v", ErrAccountNonce, b.Nonce, a.Nonce)
 	}
 
 	// balance must be the same
 	if a.Balance.Cmp(b.Balance) != 0 {
-		return ErrAccountBalance
+		return fmt.Errorf("%v - expected: %v, world-state %v", ErrAccountBalance, b.Balance, a.Balance)
 	}
 
 	// storage must be initialized if substateAccount storage is initialized
@@ -206,7 +206,7 @@ func (a *Account) IsDifferentToSubstate(b *substate.SubstateAccount) error {
 
 	// code must be the same
 	if bytes.Compare(a.Code, b.Code) != 0 {
-		return ErrAccountCode
+		return fmt.Errorf("%v - expected: %v, world-state %v", ErrAccountCode, b.Code, a.Code)
 	}
 
 	// compare storage content; we already know both have the same number of items
@@ -216,11 +216,11 @@ func (a *Account) IsDifferentToSubstate(b *substate.SubstateAccount) error {
 		}
 		va, ok := a.Storage[k]
 		if !ok {
-			return fmt.Errorf("%v - %v", ErrAccountStorageItem, vb.Bytes())
+			return fmt.Errorf("%v - key: %v, expected: %v", ErrAccountStorageItem, k, vb.Bytes())
 		}
 
 		if bytes.Compare(va.Bytes(), vb.Bytes()) != 0 {
-			return fmt.Errorf("%v - %v vs %v", ErrAccountStorageValue, vb.Bytes(), va.Bytes())
+			return fmt.Errorf("%v - key: %v, expected: %v, world-state: %v", ErrAccountStorageValue, k, vb.Bytes(), va.Bytes())
 		}
 	}
 
