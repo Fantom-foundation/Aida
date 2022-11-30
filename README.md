@@ -89,6 +89,9 @@ reads the recorded traces and re-executes state operations from block 5,050,000 
  - `--cpuprofile` records a CPU profile for the replay to be inspected using `pprof`
  - `--db-impl` select between `geth` and `carmen`. Default: `geth`
  - `--db-variant` select between implementation specific sub-variants, e.g. `go-ldb` or `cpp-file`
+ - `--db-logging` enables the logging of each StateDB operation
+ - `--db-shadow-impl` if set, a shadow DB implementation of the given type is running in parallel to the primary StateDB
+ - `--db-shadow-variant` the variant to be used for the shadow StateDB instance, if enabled
  - `--disable-progress` disable progress report. Default: `false`
  - `--prime-random` randomize order of accounts in StateDB priming.
  - `--prime-seed` set seed for randomizing priming.
@@ -114,6 +117,9 @@ reads the recorded traces and re-executes state operations from block 5,050,000 
  - `--db-impl` select between `geth` and `carmen`. Default: `geth`
  - `--db-variant` select between implementation specific sub-variants, e.g. `go-ldb` or `cpp-file`
  - `--db-tmp-dir` the directory to use for the temporary StateDB, uses system default if empty
+ - `--db-logging` enables the logging of each StateDB operation
+ - `--db-shadow-impl` if set, a shadow DB implementation of the given type is running in parallel to the primary StateDB
+ - `--db-shadow-variant` the variant to be used for the shadow StateDB instance, if enabled
  - `--disable-progress` disable progress report. Default: `false`
  - `--prime-random` randomize order of accounts in StateDB priming.
  - `--prime-seed` set seed for randomizing priming.
@@ -139,6 +145,9 @@ executes transactions from block 4,564,026 to 5,000,000. The tool initializes st
  - `--db-impl` select between `geth` and `carmen`. Default: `geth`
  - `--db-variant` select between implementation specific sub-variants, e.g. `go-ldb` or `cpp-file`
  - `--db-tmp-dir` the directory to use for the temporary StateDB, uses system default if empty
+ - `--db-logging` enables the logging of each StateDB operation
+ - `--db-shadow-impl` if set, a shadow DB implementation of the given type is running in parallel to the primary StateDB
+ - `--db-shadow-variant` the variant to be used for the shadow StateDB instance, if enabled
  - `--disable-progress` disable progress report. Default: `false`
  - `--memory-breakdown` display detailed memory usage breakdown after priming and after the EVM runs
  - `--prime-random` randomize order of accounts in StateDB priming.

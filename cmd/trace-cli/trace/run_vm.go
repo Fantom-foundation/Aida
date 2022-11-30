@@ -48,6 +48,9 @@ var RunVMCommand = cli.Command{
 		&stateDbImplementationFlag,
 		&stateDbVariantFlag,
 		&stateDbTempDirFlag,
+		&stateDbLoggingFlag,
+		&shadowDbImplementationFlag,
+		&shadowDbVariantFlag,
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
 		&traceDebugFlag,
@@ -230,7 +233,7 @@ func runVM(ctx *cli.Context) error {
 	}
 
 	// process run-vm specific arguments
-	if cfg.impl == "memory" {
+	if cfg.dbImpl == "memory" {
 		return fmt.Errorf("db-impl memory is not supported")
 	}
 	vmImpl := ctx.String(vmImplementation.Name)
@@ -261,7 +264,7 @@ func runVM(ctx *cli.Context) error {
 
 	// instantiate the state DB under testing
 	var db state.StateDB
-	db, err = makeStateDB(stateDirectory, cfg.impl, cfg.variant)
+	db, err = MakeStateDB(stateDirectory, cfg)
 	if err != nil {
 		return err
 	}

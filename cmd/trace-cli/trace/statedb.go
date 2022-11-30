@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/fs"
 	"math/rand"
+	"os"
 	"path/filepath"
 	"sort"
 
@@ -12,8 +13,44 @@ import (
 	"github.com/ethereum/go-ethereum/substate"
 )
 
-// makeStateDB creates a new DB instance based on cli argument.
-func makeStateDB(directory, impl, variant string) (state.StateDB, error) {
+// MakeStateDB creates a new DB instance based on cli argument.
+func MakeStateDB(directory string, cfg *TraceConfig) (state.StateDB, error) {
+	db, err := makeStateDBInternal(directory, cfg)
+	if err != nil {
+		return nil, err
+	}
+	if cfg.dbLogging {
+		db = state.MakeLoggingStateDB(db)
+	}
+	return db, nil
+}
+
+// makeStateDB creates a DB instance with a potential shadow instance.
+func makeStateDBInternal(directory string, cfg *TraceConfig) (state.StateDB, error) {
+	if cfg.shadowImpl == "" {
+		return makeStateDBVariant(directory, cfg.dbImpl, cfg.dbVariant)
+	}
+	primeDir := directory + "/prime"
+	if err := os.MkdirAll(primeDir, 0700); err != nil {
+		return nil, err
+	}
+	shadowDir := directory + "/shadow"
+	if err := os.MkdirAll(shadowDir, 0700); err != nil {
+		return nil, err
+	}
+	prime, err := makeStateDBVariant(primeDir, cfg.dbImpl, cfg.dbVariant)
+	if err != nil {
+		return nil, err
+	}
+	shadow, err := makeStateDBVariant(shadowDir, cfg.shadowImpl, cfg.shadowVariant)
+	if err != nil {
+		return nil, err
+	}
+	return state.MakeShadowStateDB(prime, shadow), nil
+}
+
+// makeStateDBVariant creates a DB instance of the requested kind.
+func makeStateDBVariant(directory, impl, variant string) (state.StateDB, error) {
 	switch impl {
 	case "memory":
 		return state.MakeGethInMemoryStateDB(variant)

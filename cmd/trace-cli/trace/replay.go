@@ -33,6 +33,9 @@ var TraceReplayCommand = cli.Command{
 		&stateDbImplementationFlag,
 		&stateDbVariantFlag,
 		&stateDbTempDirFlag,
+		&stateDbLoggingFlag,
+		&shadowDbImplementationFlag,
+		&shadowDbVariantFlag,
 		&substate.SubstateDirFlag,
 		&substate.WorkersFlag,
 		&traceDirectoryFlag,
@@ -81,7 +84,7 @@ func traceReplayTask(cfg *TraceConfig) error {
 	}
 	defer os.RemoveAll(stateDirectory)
 	log.Printf("\tTemporary state DB directory: %v\n", stateDirectory)
-	db, err := makeStateDB(stateDirectory, cfg.impl, cfg.variant)
+	db, err := MakeStateDB(stateDirectory, cfg)
 	if err != nil {
 		return err
 	}
@@ -208,7 +211,7 @@ func traceReplayAction(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	if cfg.impl == "memory" {
+	if cfg.dbImpl == "memory" {
 		return fmt.Errorf("db-impl memory is not supported")
 	}
 
