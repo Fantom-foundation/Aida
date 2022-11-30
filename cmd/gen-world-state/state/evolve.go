@@ -129,7 +129,7 @@ func factoryMakeLogger(start uint64, end uint64, log *logging.Logger) func(uint6
 		// print progress
 		select {
 		case <-tick.C:
-			log.Infof("evolving #%d ; until #d% ; %d blocks left", blk, end, end-blk)
+			log.Infof("evolving #%d ; until #%d ; %d blocks left", blk, end, end-blk)
 		default:
 		}
 	}
