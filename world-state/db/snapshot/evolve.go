@@ -51,10 +51,7 @@ func evolveSubstate(tx *substate.Transaction, stateDB *StateDB, validate func(er
 			if err != nil {
 				validate(fmt.Errorf("%d - %s not found in database", tx.Block, address.String()))
 			}
-			err = acc.IsDifferentToSubstate(substateAccount)
-			if err != nil {
-				validate(fmt.Errorf("%d - %s %v", tx.Block, address.String(), err))
-			}
+			acc.IsDifferentToSubstate(substateAccount, tx.Block, address.String(), validate)
 		}
 	}
 

@@ -11,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/substate"
 	"io"
 	"math/big"
-	"sort"
 )
 
 // Account is modification of SubstateAccount in substate/substate.go
@@ -43,6 +42,9 @@ var (
 	// EmptyCodeHash is used by create to ensure deployment is disallowed to already
 	// deployed contract addresses (relevant after the account abstraction).
 	EmptyCodeHash = common.BytesToHash(EmptyCode)
+
+	// validateHasher is used for hashing storage slots when validation evolve
+	validateHasher = crypto.NewKeccakState()
 )
 
 var (
@@ -180,25 +182,30 @@ func (a *Account) IsDifferent(b *Account) error {
 
 // IsDifferentToSubstate compares the substate account
 // and returns an error if and only if the accounts are different.
-func (a *Account) IsDifferentToSubstate(b *substate.SubstateAccount) error {
+func (a *Account) IsDifferentToSubstate(b *substate.SubstateAccount, block uint64, address string, validate func(error)) {
+	// adding header to found differences
+	v := func(err error) {
+		validate(fmt.Errorf("%d - %s %v", block, address, err))
+	}
+
 	// nonce must be the same
 	if a.Nonce != b.Nonce {
-		return fmt.Errorf("%v - expected: %v, world-state %v", ErrAccountNonce, b.Nonce, a.Nonce)
+		v(fmt.Errorf("%v - expected: %v, world-state %v", ErrAccountNonce, b.Nonce, a.Nonce))
 	}
 
 	// balance must be the same
 	if a.Balance.Cmp(b.Balance) != 0 {
-		return fmt.Errorf("%v - expected: %v, world-state %v", ErrAccountBalance, b.Balance, a.Balance)
+		v(fmt.Errorf("%v - expected: %v, world-state %v", ErrAccountBalance, b.Balance, a.Balance))
 	}
 
 	// storage must be initialized if substateAccount storage is initialized
 	if (a.Storage == nil && b.Storage != nil) || (a.Storage != nil && b.Storage == nil) {
-		return ErrAccountStorage
+		v(ErrAccountStorage)
 	}
 
 	// if there is no storage, we are done
 	if b.Storage == nil {
-		return nil
+		return
 	}
 
 	// -----------------------
@@ -207,41 +214,30 @@ func (a *Account) IsDifferentToSubstate(b *substate.SubstateAccount) error {
 
 	// code must be the same
 	if bytes.Compare(a.Code, b.Code) != 0 {
-		return fmt.Errorf("%v - expected: %v, world-state %v", ErrAccountCode, b.Code, a.Code)
-	}
-
-	keys := make([]common.Hash, 0)
-	for k := range b.Storage {
-		keys = append(keys, k)
-	}
-	sort.Slice(keys, func(i, j int) bool {
-		return keys[i].Hex() > keys[j].Hex()
-	})
-
-	hashing := crypto.NewKeccakState()
-	hh := func(k []byte) common.Hash {
-		hashing.Reset()
-		hashing.Write(k)
-		return common.BytesToHash(hashing.Sum(nil))
+		v(fmt.Errorf("%v - expected: %v, world-state %v", ErrAccountCode, b.Code, a.Code))
 	}
 
 	// compare storage content; we already know both have the same number of items
-	for _, k := range keys {
-		vb := b.Storage[k]
+	for k, vb := range b.Storage {
 		if bytes.Compare(vb.Bytes(), hash.Zero.Bytes()) == 0 {
 			continue
 		}
 
-		kk := hh(k.Bytes())
+		kk := slotHasher(k.Bytes())
 		va, ok := a.Storage[kk]
 		if !ok {
-			return fmt.Errorf("%v - key: %v, expected: %v", ErrAccountStorageItem, k, vb.Hex())
+			v(fmt.Errorf("%v - key: %v, expected: %v", ErrAccountStorageItem, k, vb.Hex()))
+			continue
 		}
 
 		if bytes.Compare(va.Bytes(), vb.Bytes()) != 0 {
-			return fmt.Errorf("%v - key: %v, expected: %v, world-state: %v", ErrAccountStorageValue, k, vb.Hex(), va.Hex())
+			v(fmt.Errorf("%v - key: %v, expected: %v, world-state: %v", ErrAccountStorageValue, k, vb.Hex(), va.Hex()))
 		}
 	}
+}
 
-	return nil
+func slotHasher(k []byte) common.Hash {
+	validateHasher.Reset()
+	validateHasher.Write(k)
+	return common.BytesToHash(validateHasher.Sum(nil))
 }
