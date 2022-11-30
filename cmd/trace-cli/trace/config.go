@@ -65,14 +65,19 @@ var (
 		Usage: "set number of accounts written to stateDB before applying pending state updates",
 		Value: 0,
 	}
-	stateDbImplementation = cli.StringFlag{
+	stateDbImplementationFlag = cli.StringFlag{
 		Name:  "db-impl",
 		Usage: "select state DB implementation",
 		Value: "geth",
 	}
-	stateDbVariant = cli.StringFlag{
+	stateDbVariantFlag = cli.StringFlag{
 		Name:  "db-variant",
 		Usage: "select a state DB variant",
+		Value: "",
+	}
+	stateDbTempDirFlag = cli.StringFlag{
+		Name:  "db-tmp-dir",
+		Usage: "sets the temporary directory where to place state DB data; uses system default if empty",
 		Value: "",
 	}
 	traceDebugFlag = cli.BoolFlag{
@@ -127,6 +132,7 @@ type TraceConfig struct {
 	primeSeed          int64  // set random seed
 	primeThreshold     int    // set account threshold before commit
 	profile            bool   // enable micro profiling
+	stateDbDir         string // directory to store State DB data
 	updateDBDir        string // update-set directory
 	validateTxState    bool   // validate stateDB before and after transaction
 	validateWorldState bool   // validate stateDB before and after replay block range
@@ -179,14 +185,15 @@ func NewTraceConfig(ctx *cli.Context) (*TraceConfig, error) {
 		continueOnFailure:  ctx.Bool(continueOnFailureFlag.Name),
 		enableProgress:     !ctx.Bool(disableProgressFlag.Name),
 		epochLength:        ctx.Uint64(epochLengthFlag.Name),
-		impl:               ctx.String(stateDbImplementation.Name),
+		impl:               ctx.String(stateDbImplementationFlag.Name),
 		memoryBreakdown:    ctx.Bool(memoryBreakdownFlag.Name),
 		primeRandom:        ctx.Bool(randomizePrimingFlag.Name),
 		primeSeed:          ctx.Int64(primeSeedFlag.Name),
 		primeThreshold:     ctx.Int(primeThresholdFlag.Name),
 		profile:            ctx.Bool(profileFlag.Name),
+		stateDbDir:         ctx.String(stateDbTempDirFlag.Name),
 		updateDBDir:        ctx.String(updateDBDirFlag.Name),
-		variant:            ctx.String(stateDbVariant.Name),
+		variant:            ctx.String(stateDbVariantFlag.Name),
 		validateTxState:    validateTxState,
 		validateWorldState: validateWorldState,
 		workers:            ctx.Int(substate.WorkersFlag.Name),
@@ -201,6 +208,7 @@ func NewTraceConfig(ctx *cli.Context) (*TraceConfig, error) {
 		log.Printf("\tBlock range: %v to %v\n", cfg.first, cfg.last)
 		log.Printf("\tEpoch length: %v\n", cfg.epochLength)
 		log.Printf("\tStorage system: %v, DB variant: %v\n", cfg.impl, cfg.variant)
+		log.Printf("\tStorage parent directory: %v\n", cfg.stateDbDir)
 		log.Printf("\tUpdate DB directory: %v\n", cfg.updateDBDir)
 		log.Printf("\tRandomized Priming: %v\n", cfg.primeRandom)
 		if cfg.primeRandom {

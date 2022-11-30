@@ -19,7 +19,7 @@ var TraceCompareLogCommand = cli.Command{
 	Flags: []cli.Flag{
 		&chainIDFlag,
 		&disableProgressFlag,
-		&stateDbImplementation,
+		&stateDbImplementationFlag,
 		&substate.SubstateDirFlag,
 		&substate.WorkersFlag,
 		&traceDebugFlag,

@@ -22,7 +22,7 @@ func makeStateDB(directory, impl, variant string) (state.StateDB, error) {
 	case "carmen":
 		return state.MakeCarmenStateDB(directory, variant)
 	}
-	return nil, fmt.Errorf("Unknown DB implementation (--%v): %v", stateDbImplementation.Name, impl)
+	return nil, fmt.Errorf("Unknown DB implementation (--%v): %v", stateDbImplementationFlag.Name, impl)
 }
 
 // primeStateDB primes database with accounts from the world state.
