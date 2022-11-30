@@ -36,7 +36,8 @@ var TraceReplayCommand = cli.Command{
 		&traceDirectoryFlag,
 		&traceDebugFlag,
 		&updateDBDirFlag,
-		&validateEndState,
+		&validateFlag,
+		&validateWorldStateFlag,
 	},
 	Description: `
 The trace replay command requires two arguments:
@@ -149,7 +150,7 @@ func traceReplayTask(cfg *TraceConfig) error {
 	log.Printf("Finished replaying storage operations on StateDB database")
 
 	// validate stateDB
-	if cfg.enableValidation {
+	if cfg.validateWorldState {
 		log.Printf("Validate final state")
 		// advance the world state from the first block to the last block
 		advanceWorldState(ws, cfg.first, cfg.last, cfg.workers)

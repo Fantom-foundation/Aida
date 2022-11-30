@@ -51,7 +51,9 @@ var RunVMCommand = cli.Command{
 		&substate.SubstateDirFlag,
 		&traceDebugFlag,
 		&updateDBDirFlag,
-		&validateEndState,
+		&validateTxStateFlag,
+		&validateWorldStateFlag,
+		&validateFlag,
 		&vmImplementation,
 	},
 	Description: `
@@ -97,7 +99,7 @@ func runVMTask(db state.StateDB, cfg *TraceConfig, block uint64, tx int, recordi
 	}
 
 	// validate whether the input alloc is contained in the db
-	if cfg.enableValidation {
+	if cfg.validateTxState {
 		if err := validateStateDB(inputAlloc, db, true); err != nil {
 			errCount++
 			errMsg := fmt.Sprintf("Block: %v Transaction: %v\n", block, tx)
@@ -179,7 +181,7 @@ func runVMTask(db state.StateDB, cfg *TraceConfig, block uint64, tx int, recordi
 	evmResult.GasUsed = msgResult.UsedGas
 
 	// check whether the outputAlloc substate is contained in the world-state db.
-	if cfg.enableValidation {
+	if cfg.validateTxState {
 		if err := validateStateDB(outputAlloc, db, false); err != nil {
 			errCount++
 			errMsg := fmt.Sprintf("Block: %v Transaction: %v\n", block, tx)
@@ -294,8 +296,7 @@ func runVM(ctx *cli.Context) error {
 		db, stats = tracer.NewProxyProfiler(db, cfg.debug)
 	}
 
-	if cfg.enableValidation {
-		fmt.Printf("WARNING: validation enabled, reducing Tx throughput\n")
+	if cfg.validateWorldState {
 		if err := validateStateDB(ws, db, false); err != nil {
 			return fmt.Errorf("Pre: World state is not contained in the stateDB. %v", err)
 		}
@@ -369,16 +370,14 @@ func runVM(ctx *cli.Context) error {
 		db.EndEpoch()
 	}
 
-	if cfg.enableProgress {
-		sec = time.Since(start).Seconds()
-		fmt.Printf("run-vm: Total elapsed time: %.3f s, processed %v blocks (~ %.1f Tx/s)\n", sec, cfg.last-cfg.first+1, float64(txCount)/(sec))
-	}
+	runtime := time.Since(start).Seconds()
 
 	if cfg.continueOnFailure {
 		fmt.Printf("run-vm: %v errors found\n", errCount)
 	}
 
-	if cfg.enableValidation {
+	if cfg.validateWorldState {
+		log.Printf("Validate final state\n")
 		advanceWorldState(ws, cfg.first, cfg.last, cfg.workers)
 		if err := validateStateDB(ws, db, false); err != nil {
 			return fmt.Errorf("World state is not contained in the stateDB. %v", err)
@@ -396,5 +395,20 @@ func runVM(ctx *cli.Context) error {
 	if cfg.profile {
 		stats.PrintProfiling()
 	}
+
+	// close the DB and print disk usage
+	log.Printf("Close StateDB database")
+	start = time.Now()
+	if err := db.Close(); err != nil {
+		log.Printf("Failed to close database: %v", err)
+	}
+
+	// print progress summary
+	if cfg.enableProgress {
+		log.Printf("run-vm: Total elapsed time: %.3f s, processed %v blocks (~ %.1f Tx/s)\n", runtime, cfg.last-cfg.first+1, float64(txCount)/(runtime))
+		log.Printf("run-vm: Closing DB took %v\n", time.Since(start))
+		log.Printf("run-vm: Final disk usage: %v MiB\n", float32(getDirectorySize(stateDirectory))/float32(1024*1024))
+	}
+
 	return err
 }

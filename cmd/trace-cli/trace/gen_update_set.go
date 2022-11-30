@@ -19,7 +19,7 @@ var GenUpdateSetCommand = cli.Command{
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
 		&updateDBDirFlag,
-		&validateEndState,
+		&validateFlag,
 		&worldStateDirFlag,
 	},
 	Description: `
@@ -48,7 +48,7 @@ func genUpdateSet(ctx *cli.Context) error {
 		return ferr
 	}
 	workers := ctx.Int(substate.WorkersFlag.Name)
-	validate := ctx.Bool(validateEndState.Name)
+	validate := ctx.Bool(validateFlag.Name)
 	updateDir := ctx.String(updateDBDirFlag.Name)
 	worldStateDir := ctx.String(worldStateDirFlag.Name)
 
