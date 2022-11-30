@@ -182,20 +182,15 @@ func (a *Account) IsDifferent(b *Account) error {
 
 // IsDifferentToSubstate compares the substate account
 // and returns an error if and only if the accounts are different.
-func (a *Account) IsDifferentToSubstate(b *substate.SubstateAccount, block uint64, address string, validate func(error)) {
-	// adding header to found differences
-	v := func(err error) {
-		validate(fmt.Errorf("%d - %s %v", block, address, err))
-	}
-
+func (a *Account) IsDifferentToSubstate(b *substate.SubstateAccount, block uint64, address string, v func(error)) {
 	// nonce must be the same
 	if a.Nonce != b.Nonce {
-		v(fmt.Errorf("%v - expected: %v, world-state %v", ErrAccountNonce, b.Nonce, a.Nonce))
+		v(fmt.Errorf("%d - %s %v - expected: %v, world-state %v", block, address, ErrAccountNonce, b.Nonce, a.Nonce))
 	}
 
 	// balance must be the same
 	if a.Balance.Cmp(b.Balance) != 0 {
-		v(fmt.Errorf("%v - expected: %v, world-state %v", ErrAccountBalance, b.Balance, a.Balance))
+		v(fmt.Errorf("%d - %s %v - expected: %v, world-state %v", block, address, ErrAccountBalance, b.Balance, a.Balance))
 	}
 
 	// storage must be initialized if substateAccount storage is initialized
@@ -214,7 +209,7 @@ func (a *Account) IsDifferentToSubstate(b *substate.SubstateAccount, block uint6
 
 	// code must be the same
 	if bytes.Compare(a.Code, b.Code) != 0 {
-		v(fmt.Errorf("%v - expected: %v, world-state %v", ErrAccountCode, b.Code, a.Code))
+		v(fmt.Errorf("%d - %s %v - expected: %v, world-state %v", block, address, ErrAccountCode, b.Code, a.Code))
 	}
 
 	// compare storage content; we already know both have the same number of items
@@ -223,20 +218,20 @@ func (a *Account) IsDifferentToSubstate(b *substate.SubstateAccount, block uint6
 			continue
 		}
 
-		kk := slotHasher(k.Bytes())
+		kk := slotHash(k.Bytes())
 		va, ok := a.Storage[kk]
 		if !ok {
-			v(fmt.Errorf("%v - key: %v, expected: %v", ErrAccountStorageItem, k, vb.Hex()))
+			v(fmt.Errorf("%d - %s %v - key: %v, expected: %v", block, address, ErrAccountStorageItem, k, vb.Hex()))
 			continue
 		}
 
 		if bytes.Compare(va.Bytes(), vb.Bytes()) != 0 {
-			v(fmt.Errorf("%v - key: %v, expected: %v, world-state: %v", ErrAccountStorageValue, k, vb.Hex(), va.Hex()))
+			v(fmt.Errorf("%d - %s %v - key: %v, expected: %v, world-state: %v", block, address, ErrAccountStorageValue, k, vb.Hex(), va.Hex()))
 		}
 	}
 }
 
-func slotHasher(k []byte) common.Hash {
+func slotHash(k []byte) common.Hash {
 	validateHasher.Reset()
 	validateHasher.Write(k)
 	return common.BytesToHash(validateHasher.Sum(nil))
