@@ -1,10 +1,15 @@
 package dict
 
 import (
+	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"log"
 	"math"
+	"os"
+	"sort"
 )
+
+const BYTE_MAX = 255
 
 // InvalidContractIndex used to indicate that the previously used contract index is not valid.
 const InvalidContractIndex = math.MaxUint32
@@ -23,6 +28,19 @@ type DictionaryContext struct {
 	CodeDictionary *CodeDictionary // dictionary to compact the bytecode of contracts
 
 	SnapshotIndex *SnapshotIndex // snapshot index for execution (not for recording/replaying)
+
+	ContractFreq []uint64 // number of each operation accesses to contract
+	StorageFreq  []uint64 // number of each operation accesses to storage
+	ValueFreq    []uint64 // number of each operation accesses to value
+	OpFreq       []uint64 // number of operation invocations
+	PrevOpId     byte
+	TFreq        map[[2]byte]uint64
+}
+
+// operationFrequency is used for distribution calculation of operations and their frequencies
+type operationFrequency struct {
+	opId      int
+	frequency uint64
 }
 
 // NewDictionaryContext creates a new dictionary context.
@@ -35,6 +53,25 @@ func NewDictionaryContext() *DictionaryContext {
 		ValueDictionary:    NewValueDictionary(),
 		CodeDictionary:     NewCodeDictionary(),
 		SnapshotIndex:      NewSnapshotIndex(),
+	}
+}
+
+// NewDictionaryContext creates a new dictionary context.
+func NewDictionaryStochasticContext(beginBlockId byte, numProfiledOperations byte) *DictionaryContext {
+	return &DictionaryContext{
+		ContractDictionary: NewContractDictionary(),
+		PrevContractIndex:  InvalidContractIndex,
+		StorageDictionary:  NewStorageDictionary(),
+		StorageIndexCache:  NewIndexCache(),
+		ValueDictionary:    NewValueDictionary(),
+		CodeDictionary:     NewCodeDictionary(),
+		SnapshotIndex:      NewSnapshotIndex(),
+		ContractFreq:       make([]uint64, numProfiledOperations),
+		StorageFreq:        make([]uint64, numProfiledOperations),
+		ValueFreq:          make([]uint64, numProfiledOperations),
+		OpFreq:             make([]uint64, numProfiledOperations),
+		PrevOpId:           BYTE_MAX,
+		TFreq:              map[[2]byte]uint64{},
 	}
 }
 
@@ -162,7 +199,7 @@ func (ctx *DictionaryContext) ReadStorage(sPos int) common.Hash {
 func (ctx *DictionaryContext) LookupStorage(sPos int) common.Hash {
 	sIdx, err := ctx.StorageIndexCache.Get(sPos)
 	if err != nil {
-		log.Fatalf("Storage position could not be found. Error: %v", err)
+		log.Fatalf("Storage position could not be looked up. Error: %v", err)
 	}
 	return ctx.DecodeStorage(sIdx)
 }
@@ -232,4 +269,122 @@ func (ctx *DictionaryContext) DecodeCode(bcIdx uint32) []byte {
 		log.Fatalf("Byte-code index could not be decoded. Error: %v", err)
 	}
 	return code
+}
+
+// HasEncodedContract checks whether given address has already been inserted into dictionary
+func (ctx *DictionaryContext) HasEncodedContract(addr common.Address) bool {
+	_, f := ctx.ContractDictionary.contractToIdx[addr]
+	return f
+}
+
+// HasEncodedStorage checks whether given storage has already been inserted into dictionary
+func (ctx *DictionaryContext) HasEncodedStorage(key common.Hash) bool {
+	_, f := ctx.StorageDictionary.storageToIdx[key]
+	return f
+}
+
+// HasEncodedValue checks whether given value has already been inserted into dictionary
+func (ctx *DictionaryContext) HasEncodedValue(value common.Hash) bool {
+	_, f := ctx.ValueDictionary.valueToIdx[value]
+	return f
+}
+
+// WriteDistributions dictionary distributions into files.
+func (ctx *DictionaryContext) WriteDistributions() {
+	err := ctx.WriteDistribution(DictionaryContextDir+"contract-distribution.dat", ctx.ContractDictionary.frequency)
+	if err != nil {
+		log.Fatalf("Cannot write contract distribution. Error: %v", err)
+	}
+	err = ctx.WriteDistribution(DictionaryContextDir+"storage-distribution.dat", ctx.StorageDictionary.frequency)
+	if err != nil {
+		log.Fatalf("Cannot write storage distribution. Error: %v", err)
+	}
+	err = ctx.WriteDistribution(DictionaryContextDir+"value-distribution.dat", ctx.ValueDictionary.frequency)
+	if err != nil {
+		log.Fatalf("Cannot write value distribution. Error: %v", err)
+	}
+}
+
+// WriteDistribution writes distribution of operations and frequencies into given file
+func (ctx *DictionaryContext) WriteDistribution(filename string, frequency []uint64) error {
+	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		return fmt.Errorf("Cannot open storage-dictionary file. Error: %v", err)
+	}
+
+	var total uint64 = 0
+	for _, f := range frequency {
+		total += f
+	}
+
+	s := len(frequency)
+
+	frequencySorted := sortByFrequencyAcending(frequency)
+
+	cummulated := 0.0
+	for _, fi := range frequencySorted {
+		cummulated = cummulated + float64(fi.frequency)/float64(total)
+		fmt.Fprintf(file, "%f - %f \n", float64(fi.opId)/float64(s), cummulated)
+	}
+
+	err = file.Close()
+	if err != nil {
+		return fmt.Errorf("Cannot close storage-dictionary file. Error: %v", err)
+	}
+	return nil
+}
+
+// FrequenciesWriter writes frequencies from dictionary recording
+func (ctx *DictionaryContext) FrequenciesWriter() {
+	file, err := os.OpenFile(DictionaryContextDir+"frequencies.dat", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		log.Fatalf("Cannot open trace file. Error: %v", err)
+	}
+
+	writeArray(file, ctx.OpFreq)
+	writeArray(file, ctx.ContractFreq)
+	writeArray(file, ctx.StorageFreq)
+	writeArray(file, ctx.ValueFreq)
+
+	if err := file.Close(); err != nil {
+		log.Fatalf("Cannot close frequencies file. Error: %v", err)
+	}
+}
+
+func writeArray(file *os.File, freq []uint64) {
+	for i, u := range freq {
+		fmt.Fprint(file, u)
+		if i != len(freq)-1 {
+			fmt.Fprint(file, ",")
+		}
+	}
+
+	fmt.Fprintln(file)
+}
+
+// RecordOp records operation frequencies and transitions between them
+func (ctx *DictionaryContext) RecordOp(id byte) {
+	ctx.OpFreq[id]++
+
+	// very first operation doesn't have predecessor, therefore no transition
+	if ctx.PrevOpId != BYTE_MAX {
+		ctx.TFreq[[2]byte{ctx.PrevOpId, id}]++
+	}
+
+	ctx.PrevOpId = id
+}
+
+// sortByFrequencyAcending converts frequency slice with operation ids as indexes to structure,
+// then sorts them in ascending order according to their frequencies
+func sortByFrequencyAcending(frequency []uint64) []operationFrequency {
+	var arr []operationFrequency
+	for i, f := range frequency {
+		arr = append(arr, operationFrequency{i, f})
+	}
+
+	sort.Slice(arr[:], func(i, j int) bool {
+		return arr[i].frequency < arr[j].frequency
+	})
+
+	return arr
 }

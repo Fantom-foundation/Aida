@@ -68,9 +68,9 @@ const (
 	SubRefundID
 )
 
-// OperationDictionary data structure contains a label and a read function for an operation
+// OperationDictionary data structure contains a Label and a read function for an operation
 type OperationDictionary struct {
-	label    string                             // operation's label
+	label    string                             // operation's Label
 	readfunc func(io.Reader) (Operation, error) // operation's read-function
 }
 

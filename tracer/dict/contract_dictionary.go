@@ -18,12 +18,14 @@ var ContractDictionaryLimit uint32 = math.MaxUint32 - 1
 type ContractDictionary struct {
 	contractToIdx map[common.Address]uint32 // contract address to index map for encoding
 	idxToContract []common.Address          // contract address slice for decoding
+	frequency     []uint64                  //storage address frequency
 }
 
 // Init initializes or clears a contract dictionary.
 func (cDict *ContractDictionary) Init() {
 	cDict.contractToIdx = map[common.Address]uint32{}
 	cDict.idxToContract = []common.Address{}
+	cDict.frequency = []uint64{}
 }
 
 // NewContractDictionary creates a new contract dictionary.
@@ -44,6 +46,9 @@ func (cDict *ContractDictionary) Encode(addr common.Address) (uint32, error) {
 		}
 		cDict.contractToIdx[addr] = idx
 		cDict.idxToContract = append(cDict.idxToContract, addr)
+		cDict.frequency = append(cDict.frequency, 1)
+	} else {
+		cDict.frequency[idx]++
 	}
 	return idx, nil
 }
