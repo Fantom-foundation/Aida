@@ -3,7 +3,6 @@ package trace
 import (
 	"bufio"
 	"fmt"
-	"github.com/Fantom-foundation/Aida/tracer/simulation"
 	"io"
 	"io/ioutil"
 	"log"
@@ -13,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/Fantom-foundation/Aida/tracer/simulation"
 
 	"github.com/Fantom-foundation/Aida/tracer"
 	"github.com/Fantom-foundation/Aida/tracer/dict"
@@ -33,6 +34,9 @@ var StochasticReplayCommand = cli.Command{
 		&profileFlag,
 		&stateDbImplementationFlag,
 		&stateDbVariantFlag,
+		&stateDbLoggingFlag,
+		&shadowDbImplementationFlag,
+		&shadowDbVariantFlag,
 		&substate.WorkersFlag,
 		&traceDirectoryFlag,
 		&traceDebugFlag,
@@ -58,7 +62,7 @@ func traceStochasticReplayTask(cfg *TraceConfig) error {
 	if err != nil {
 		return err
 	}
-	db, err := makeStateDB(stateDirectory, cfg.impl, cfg.variant)
+	db, err := MakeStateDB(stateDirectory, cfg)
 	if err != nil {
 		return err
 	}

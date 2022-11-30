@@ -78,6 +78,19 @@ var (
 	stateDbTempDirFlag = cli.StringFlag{
 		Name:  "db-tmp-dir",
 		Usage: "sets the temporary directory where to place state DB data; uses system default if empty",
+	}
+	stateDbLoggingFlag = cli.BoolFlag{
+		Name:  "db-logging",
+		Usage: "enable logging of all DB operations",
+	}
+	shadowDbImplementationFlag = cli.StringFlag{
+		Name:  "db-shadow-impl",
+		Usage: "select state DB implementation to shadow the prime DB implementation",
+		Value: "",
+	}
+	shadowDbVariantFlag = cli.StringFlag{
+		Name:  "db-shadow-variant",
+		Usage: "select a state DB variant to shadow the prime DB implementation",
 		Value: "",
 	}
 	traceDebugFlag = cli.BoolFlag{
@@ -146,19 +159,22 @@ type TraceConfig struct {
 
 	debug              bool   // enable trace debug flag
 	continueOnFailure  bool   // continue validation when an error detected
+	dbImpl             string // storage implementation
+	dbVariant          string // database variant
+	dbLogging          bool   // set to true if all DB operations should be logged
 	enableProgress     bool   // enable progress report flag
 	epochLength        uint64 // length of an epoch in number of blocks
-	impl               string // storage implementation
 	memoryBreakdown    bool   // enable printing of memory breakdown
 	primeRandom        bool   // enable randomized priming
 	primeSeed          int64  // set random seed
 	primeThreshold     int    // set account threshold before commit
 	profile            bool   // enable micro profiling
+	shadowImpl         string // implementation of the shadow DB to use, empty if disabled
+	shadowVariant      string // database variant of the shadow DB to be used
 	stateDbDir         string // directory to store State DB data
 	updateDBDir        string // update-set directory
 	validateTxState    bool   // validate stateDB before and after transaction
 	validateWorldState bool   // validate stateDB before and after replay block range
-	variant            string // database variant
 	workers            int    // number of worker threads
 }
 
@@ -217,15 +233,18 @@ func NewTraceConfig(ctx *cli.Context) (*TraceConfig, error) {
 		continueOnFailure:  ctx.Bool(continueOnFailureFlag.Name),
 		enableProgress:     !ctx.Bool(disableProgressFlag.Name),
 		epochLength:        ctx.Uint64(epochLengthFlag.Name),
-		impl:               ctx.String(stateDbImplementationFlag.Name),
+		dbImpl:             ctx.String(stateDbImplementationFlag.Name),
+		dbVariant:          ctx.String(stateDbVariantFlag.Name),
+		dbLogging:          ctx.Bool(stateDbLoggingFlag.Name),
 		memoryBreakdown:    ctx.Bool(memoryBreakdownFlag.Name),
 		primeRandom:        ctx.Bool(randomizePrimingFlag.Name),
 		primeSeed:          ctx.Int64(primeSeedFlag.Name),
 		primeThreshold:     ctx.Int(primeThresholdFlag.Name),
 		profile:            ctx.Bool(profileFlag.Name),
+		shadowImpl:         ctx.String(shadowDbImplementationFlag.Name),
+		shadowVariant:      ctx.String(shadowDbVariantFlag.Name),
 		stateDbDir:         ctx.String(stateDbTempDirFlag.Name),
 		updateDBDir:        ctx.String(updateDBDirFlag.Name),
-		variant:            ctx.String(stateDbVariantFlag.Name),
 		validateTxState:    validateTxState,
 		validateWorldState: validateWorldState,
 		workers:            ctx.Int(substate.WorkersFlag.Name),
@@ -239,7 +258,12 @@ func NewTraceConfig(ctx *cli.Context) (*TraceConfig, error) {
 		log.Printf("Run config:\n")
 		log.Printf("\tBlock range: %v to %v\n", cfg.first, cfg.last)
 		log.Printf("\tEpoch length: %v\n", cfg.epochLength)
-		log.Printf("\tStorage system: %v, DB variant: %v\n", cfg.impl, cfg.variant)
+		if cfg.shadowImpl == "" {
+			log.Printf("\tStorage system: %v, DB variant: %v\n", cfg.dbImpl, cfg.dbVariant)
+		} else {
+			log.Printf("\tPrime storage system: %v, DB variant: %v\n", cfg.dbImpl, cfg.dbVariant)
+			log.Printf("\tShadow storage system: %v, DB variant: %v\n", cfg.shadowImpl, cfg.shadowVariant)
+		}
 		log.Printf("\tStorage parent directory: %v\n", cfg.stateDbDir)
 		log.Printf("\tUpdate DB directory: %v\n", cfg.updateDBDir)
 		log.Printf("\tRandomized Priming: %v\n", cfg.primeRandom)
@@ -251,6 +275,12 @@ func NewTraceConfig(ctx *cli.Context) (*TraceConfig, error) {
 
 	if cfg.validateTxState {
 		log.Printf("WARNING: validation enabled, reducing Tx throughput\n")
+	}
+	if cfg.shadowImpl != "" {
+		log.Printf("WARNING: DB shadowing enabled, reducing Tx throughput and increasing memory and storage usage\n")
+	}
+	if cfg.dbLogging {
+		log.Printf("WARNING: DB logging enabled, reducing Tx throughput\n")
 	}
 	return cfg, nil
 }

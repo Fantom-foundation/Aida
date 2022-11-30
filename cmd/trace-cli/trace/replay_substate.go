@@ -29,6 +29,9 @@ var TraceReplaySubstateCommand = cli.Command{
 		&profileFlag,
 		&stateDbImplementationFlag,
 		&stateDbVariantFlag,
+		&stateDbLoggingFlag,
+		&shadowDbImplementationFlag,
+		&shadowDbVariantFlag,
 		&substate.SubstateDirFlag,
 		&substate.WorkersFlag,
 		&traceDirectoryFlag,
@@ -65,7 +68,7 @@ func traceReplaySubstateTask(cfg *TraceConfig) error {
 	defer os.RemoveAll(stateDirectory)
 
 	// Instantiate the state DB under testing
-	db, err := makeStateDB(stateDirectory, cfg.impl, cfg.variant)
+	db, err := MakeStateDB(stateDirectory, cfg)
 	if err != nil {
 		return err
 	}
@@ -106,7 +109,7 @@ func traceReplaySubstateTask(cfg *TraceConfig) error {
 			break
 		}
 
-		if cfg.impl == "memory" {
+		if cfg.dbImpl == "memory" {
 			db.PrepareSubstate(&tx.Substate.InputAlloc)
 		} else {
 			primeStateDB(tx.Substate.InputAlloc, db, cfg)
