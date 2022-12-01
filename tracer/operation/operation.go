@@ -82,7 +82,7 @@ var opDict = map[byte]OperationDictionary{
 	BeginBlockID:            {label: "BeginBlock", readfunc: ReadBeginBlock},
 	EndBlockID:              {label: "EndBlock", readfunc: ReadEndBlock},
 	CreateAccountID:         {label: "CreateAccount", readfunc: ReadCreateAccount},
-	EmptyID:                 {label: "Exist", readfunc: ReadEmpty},
+	EmptyID:                 {label: "Empty", readfunc: ReadEmpty},
 	BeginTransactionID:      {label: "BeginTransaction", readfunc: ReadBeginTransaction},
 	EndTransactionID:        {label: "EndTransaction", readfunc: ReadEndTransaction},
 	ExistID:                 {label: "Exist", readfunc: ReadExist},
