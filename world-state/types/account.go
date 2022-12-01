@@ -42,6 +42,9 @@ var (
 	// EmptyCodeHash is used by create to ensure deployment is disallowed to already
 	// deployed contract addresses (relevant after the account abstraction).
 	EmptyCodeHash = common.BytesToHash(EmptyCode)
+
+	// validateHasher is used for hashing storage slots when validation evolve
+	validateHasher = crypto.NewKeccakState()
 )
 
 var (
@@ -179,25 +182,25 @@ func (a *Account) IsDifferent(b *Account) error {
 
 // IsDifferentToSubstate compares the substate account
 // and returns an error if and only if the accounts are different.
-func (a *Account) IsDifferentToSubstate(b *substate.SubstateAccount) error {
+func (a *Account) IsDifferentToSubstate(b *substate.SubstateAccount, block uint64, address string, v func(error)) {
 	// nonce must be the same
 	if a.Nonce != b.Nonce {
-		return ErrAccountNonce
+		v(fmt.Errorf("%d - %s %v - expected: %v, world-state %v", block, address, ErrAccountNonce, b.Nonce, a.Nonce))
 	}
 
 	// balance must be the same
 	if a.Balance.Cmp(b.Balance) != 0 {
-		return ErrAccountBalance
+		v(fmt.Errorf("%d - %s %v - expected: %v, world-state %v", block, address, ErrAccountBalance, b.Balance, a.Balance))
 	}
 
 	// storage must be initialized if substateAccount storage is initialized
 	if (a.Storage == nil && b.Storage != nil) || (a.Storage != nil && b.Storage == nil) {
-		return ErrAccountStorage
+		v(ErrAccountStorage)
 	}
 
 	// if there is no storage, we are done
 	if b.Storage == nil {
-		return nil
+		return
 	}
 
 	// -----------------------
@@ -206,7 +209,7 @@ func (a *Account) IsDifferentToSubstate(b *substate.SubstateAccount) error {
 
 	// code must be the same
 	if bytes.Compare(a.Code, b.Code) != 0 {
-		return ErrAccountCode
+		v(fmt.Errorf("%d - %s %v - expected: %v, world-state %v", block, address, ErrAccountCode, b.Code, a.Code))
 	}
 
 	// compare storage content; we already know both have the same number of items
@@ -214,15 +217,22 @@ func (a *Account) IsDifferentToSubstate(b *substate.SubstateAccount) error {
 		if bytes.Compare(vb.Bytes(), hash.Zero.Bytes()) == 0 {
 			continue
 		}
-		va, ok := a.Storage[k]
+
+		kk := slotHash(k.Bytes())
+		va, ok := a.Storage[kk]
 		if !ok {
-			return fmt.Errorf("%v - %v", ErrAccountStorageItem, vb.Bytes())
+			v(fmt.Errorf("%d - %s %v - key: %v, expected: %v", block, address, ErrAccountStorageItem, k, vb.Hex()))
+			continue
 		}
 
 		if bytes.Compare(va.Bytes(), vb.Bytes()) != 0 {
-			return fmt.Errorf("%v - %v vs %v", ErrAccountStorageValue, vb.Bytes(), va.Bytes())
+			v(fmt.Errorf("%d - %s %v - key: %v, expected: %v, world-state: %v", block, address, ErrAccountStorageValue, k, vb.Hex(), va.Hex()))
 		}
 	}
+}
 
-	return nil
+func slotHash(k []byte) common.Hash {
+	validateHasher.Reset()
+	validateHasher.Write(k)
+	return common.BytesToHash(validateHasher.Sum(nil))
 }

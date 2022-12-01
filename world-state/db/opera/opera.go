@@ -30,9 +30,9 @@ func connect(dbType string, path string) (kvdb.IterableDBProducer, error) {
 			return 100 * opt.MiB, 1000
 		}), nil
 	case "pbl":
-		pebble.NewProducer(path, func(string) (int, int) {
+		return pebble.NewProducer(path, func(string) (int, int) {
 			return 100 * opt.MiB, 1000
-		})
+		}), nil
 	}
 
 	// invalid DB type
