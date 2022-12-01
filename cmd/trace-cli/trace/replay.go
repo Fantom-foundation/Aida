@@ -30,8 +30,9 @@ var TraceReplayCommand = cli.Command{
 		&primeThresholdFlag,
 		&profileFlag,
 		&randomizePrimingFlag,
-		&stateDbImplementation,
-		&stateDbVariant,
+		&stateDbImplementationFlag,
+		&stateDbVariantFlag,
+		&stateDbTempDirFlag,
 		&substate.SubstateDirFlag,
 		&substate.WorkersFlag,
 		&traceDirectoryFlag,
@@ -74,11 +75,12 @@ func traceReplayTask(cfg *TraceConfig) error {
 	// create a directory for the store to place all its files, and
 	// instantiate the state DB under testing.
 	log.Printf("Create stateDB database")
-	stateDirectory, err := ioutil.TempDir("", "state_db_*")
+	stateDirectory, err := ioutil.TempDir(cfg.stateDbDir, "state_db_*")
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(stateDirectory)
+	log.Printf("\tTemporary state DB directory: %v\n", stateDirectory)
 	db, err := makeStateDB(stateDirectory, cfg.impl, cfg.variant)
 	if err != nil {
 		return err

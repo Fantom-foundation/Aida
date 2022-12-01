@@ -45,8 +45,9 @@ var RunVMCommand = cli.Command{
 		&primeThresholdFlag,
 		&profileFlag,
 		&randomizePrimingFlag,
-		&stateDbImplementation,
-		&stateDbVariant,
+		&stateDbImplementationFlag,
+		&stateDbVariantFlag,
+		&stateDbTempDirFlag,
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
 		&traceDebugFlag,
@@ -251,11 +252,12 @@ func runVM(ctx *cli.Context) error {
 	defer substate.CloseSubstateDB()
 
 	// create a directory for the store to place all its files.
-	stateDirectory, err := ioutil.TempDir("", "state_db_*")
+	stateDirectory, err := ioutil.TempDir(cfg.stateDbDir, "state_db_*")
 	if err != nil {
 		return fmt.Errorf("Failed to create a temp directory. %v", err)
 	}
 	defer os.RemoveAll(stateDirectory)
+	log.Printf("\tTemporary state DB directory: %v\n", stateDirectory)
 
 	// instantiate the state DB under testing
 	var db state.StateDB
