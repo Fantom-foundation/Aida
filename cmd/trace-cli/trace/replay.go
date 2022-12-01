@@ -25,6 +25,7 @@ var TraceReplayCommand = cli.Command{
 		&cpuProfileFlag,
 		&epochLengthFlag,
 		&disableProgressFlag,
+		&memoryBreakdownFlag,
 		&primeSeedFlag,
 		&primeThresholdFlag,
 		&profileFlag,
@@ -94,6 +95,15 @@ func traceReplayTask(cfg *TraceConfig) error {
 	log.Printf("Prime stateDB \n")
 	primeStateDB(ws, db, cfg)
 
+	// print memory usage after priming
+	if cfg.memoryBreakdown {
+		if usage := db.GetMemoryUsage(); usage != nil {
+			log.Printf("State DB memory usage: %d byte\n%s\n", usage.UsedBytes, usage.Breakdown)
+		} else {
+			log.Printf("Utilized storage solution does not support memory breakdowns.\n")
+		}
+	}
+
 	log.Printf("Replay storage operations on StateDB database")
 
 	// progress message setup
@@ -156,6 +166,14 @@ func traceReplayTask(cfg *TraceConfig) error {
 		advanceWorldState(ws, cfg.first, cfg.last, cfg.workers)
 		if err := validateStateDB(ws, db, false); err != nil {
 			return fmt.Errorf("Validation failed. %v\n", err)
+		}
+	}
+
+	if cfg.memoryBreakdown {
+		if usage := db.GetMemoryUsage(); usage != nil {
+			log.Printf("State DB memory usage: %d byte\n%s\n", usage.UsedBytes, usage.Breakdown)
+		} else {
+			log.Printf("Utilized storage solution does not support memory breakdowns.\n")
 		}
 	}
 
