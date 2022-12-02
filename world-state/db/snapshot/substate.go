@@ -2,7 +2,6 @@ package snapshot
 
 import (
 	"context"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/substate"
 )
@@ -13,7 +12,7 @@ func (db *StateDB) ToSubstateAlloc(ctx context.Context) (substate.SubstateAlloc,
 	iter := db.NewAccountIterator(ctx)
 	defer iter.Release()
 
-	needed := map[common.Hash]int{}
+	needed := map[common.Hash]bool{}
 
 	// loop over all the accounts
 	for iter.Next() {
@@ -35,7 +34,7 @@ func (db *StateDB) ToSubstateAlloc(ctx context.Context) (substate.SubstateAlloc,
 		for h, v := range acc.Storage {
 			// We use the hashed keys in the first iteration, before resolving them in a bulk fetch
 			// from the DB and rewritting them below.
-			needed[h] = 0
+			needed[h] = true
 			storage[h] = v
 		}
 
@@ -50,7 +49,7 @@ func (db *StateDB) ToSubstateAlloc(ctx context.Context) (substate.SubstateAlloc,
 	}
 
 	// Resolve all hashed slot addresses in one go.
-	resolved, err := db.HashsToStorage(needed)
+	resolved, err := db.HashesToStorage(needed)
 	if err != nil {
 		return nil, err
 	}
