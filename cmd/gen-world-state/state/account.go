@@ -74,14 +74,14 @@ var cmdUnknown = cli.Command{
 	Description: "Command scans for addresses in the world state database and shows those not available in the address map.",
 	Aliases:     []string{"u"},
 	Subcommands: []*cli.Command{
-		&cmdStorageUnknown,
-		&cmdAccountUnknown,
+		&cmdUnknownStorage,
+		&cmdUnknownAddress,
 	},
 }
 
-// cmdStorageUnknown scans the account map vs. account hashes and provides a list of unknown accounts
+// cmdUnknownStorage scans the account map vs. account hashes and provides a list of unknown accounts
 // in the world state.
-var cmdStorageUnknown = cli.Command{
+var cmdUnknownStorage = cli.Command{
 	Action:      listUnknownStorages,
 	Name:        "storage",
 	Usage:       "Lists unknown account storages from the world state database.",
@@ -91,11 +91,11 @@ var cmdStorageUnknown = cli.Command{
 	},
 }
 
-// cmdAccountUnknown scans the account map vs. account hashes and provides a list of unknown storage keys
+// cmdUnknownAddress scans the account map vs. account hashes and provides a list of unknown storage keys
 // in the world state.
-var cmdAccountUnknown = cli.Command{
-	Action:      listUnknownAccounts,
-	Name:        "account",
+var cmdUnknownAddress = cli.Command{
+	Action:      listUnknownAddress,
+	Name:        "address",
 	Usage:       "Lists unknown account addresses from the world state database.",
 	Description: "Command scans for addresses in the world state database and shows those not available in the address map.",
 	Flags: []cli.Flag{
@@ -296,8 +296,8 @@ func output(w io.Writer, format string, a ...any) {
 	}
 }
 
-// listUnknownAccounts implements unknown accounts scan.
-func listUnknownAccounts(ctx *cli.Context) error {
+// listUnknownAddress implements unknown accounts scan.
+func listUnknownAddress(ctx *cli.Context) error {
 	// try to open output DB
 	db, err := snapshot.OpenStateDB(ctx.Path(flags.StateDBPath.Name))
 	if err != nil {
@@ -392,7 +392,7 @@ func listUnknownStorages(ctx *cli.Context) error {
 		all++
 		acc := ite.Value()
 
-		for _, h := range acc.Storage {
+		for h := range acc.Storage {
 			storagesCount++
 			_, err := db.HashToStorage(h)
 			if err != nil {
@@ -488,7 +488,7 @@ func importCsv(w io.Writer, r io.Reader, db *snapshot.StateDB) error {
 	scan := bufio.NewScanner(r)
 	scan.Split(bufio.ScanLines)
 
-	var count int
+	var countAcc, countStorage int
 	tick := time.NewTicker(500 * time.Millisecond)
 	defer tick.Stop()
 
@@ -504,7 +504,7 @@ func importCsv(w io.Writer, r io.Reader, db *snapshot.StateDB) error {
 			if err != nil {
 				return err
 			}
-			count++
+			countAcc++
 		} else if isHash(text) {
 			s := common.HexToHash(text)
 			ha := db.StorageToHash(s)
@@ -513,13 +513,13 @@ func importCsv(w io.Writer, r io.Reader, db *snapshot.StateDB) error {
 			if err != nil {
 				return err
 			}
-			count++
+			countStorage++
 		}
 
 		select {
 		case <-tick.C:
 			// print progress
-			_, err := fmt.Fprintf(w, "\rImported:%10d accounts", count)
+			_, err := fmt.Fprintf(w, "\rImported:%10d accounts, %10d storages.", countAcc)
 			if err != nil {
 				return fmt.Errorf("could not write output; %s", err.Error())
 			}
@@ -528,7 +528,7 @@ func importCsv(w io.Writer, r io.Reader, db *snapshot.StateDB) error {
 	}
 
 	// print total result
-	_, err := fmt.Fprintf(w, "\rImport finished, %d accounts loaded.\n", count)
+	_, err := fmt.Fprintf(w, "\rImport finished, %d accounts loaded, %d storages loaded.\n", countAcc, countStorage)
 	if err != nil {
 		return fmt.Errorf("could not write output; %s", err.Error())
 	}
