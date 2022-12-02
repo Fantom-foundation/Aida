@@ -21,6 +21,7 @@ import (
 	"math/big"
 	"os"
 	"reflect"
+	"strings"
 	"time"
 )
 
@@ -493,9 +494,10 @@ func importCsv(w io.Writer, r io.Reader, db *snapshot.StateDB) error {
 
 	// read all the lines
 	for scan.Scan() {
+		text := strings.TrimSpace(scan.Text())
 		// skip non-address lines
-		if common.IsHexAddress(scan.Text()) {
-			adr := common.HexToAddress(scan.Text())
+		if common.IsHexAddress(text) {
+			adr := common.HexToAddress(text)
 			ha := db.AccountAddressToHash(adr)
 
 			err := db.PutHashToAccountAddress(ha, adr)
@@ -503,8 +505,8 @@ func importCsv(w io.Writer, r io.Reader, db *snapshot.StateDB) error {
 				return err
 			}
 			count++
-		} else if isHash(scan.Text()) {
-			s := common.HexToHash(scan.Text())
+		} else if isHash(text) {
+			s := common.HexToHash(text)
 			ha := db.StorageToHash(s)
 
 			err := db.PutHashToStorage(ha, s)
@@ -535,7 +537,15 @@ func importCsv(w io.Writer, r io.Reader, db *snapshot.StateDB) error {
 }
 
 func isHash(s string) bool {
+	if has0xPrefix(s) {
+		s = s[2:]
+	}
 	return len(s) == 2*common.HashLength && isHex(s)
+}
+
+// has0xPrefix validates str begins with '0x' or '0X'.
+func has0xPrefix(str string) bool {
+	return len(str) >= 2 && str[0] == '0' && (str[1] == 'x' || str[1] == 'X')
 }
 
 // isHexCharacter returns bool of c being a valid hexadecimal.
