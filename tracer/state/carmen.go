@@ -21,10 +21,14 @@ func MakeCarmenStateDB(directory, variant string) (StateDB, error) {
 	switch variant {
 	case "go-memory":
 		db, err = carmen.NewMemory()
+	case "go-file-nocache":
+		db, err = carmen.NewLeveLIndexFileStore(directory)
 	case "go-file":
 		db, err = carmen.NewCachedLeveLIndexFileStore(directory)
-	case "go-ldb":
+	case "go-ldb-nocache":
 		db, err = carmen.NewLeveLIndexAndStore(directory)
+	case "go-ldb":
+		db, err = carmen.NewCachedLeveLIndexAndStore(directory)
 	case "cpp-memory":
 		db, err = carmen.NewCppInMemoryState(directory)
 	case "cpp-file":
