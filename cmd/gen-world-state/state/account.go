@@ -519,7 +519,7 @@ func importCsv(w io.Writer, r io.Reader, db *snapshot.StateDB) error {
 		select {
 		case <-tick.C:
 			// print progress
-			_, err := fmt.Fprintf(w, "\rImported:%10d accounts, %10d storages.", countAcc)
+			_, err := fmt.Fprintf(w, "\rImported:%10d accounts, %10d storages.", countAcc, countStorage)
 			if err != nil {
 				return fmt.Errorf("could not write output; %s", err.Error())
 			}
