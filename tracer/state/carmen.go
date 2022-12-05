@@ -29,6 +29,8 @@ func MakeCarmenStateDB(directory, variant string) (StateDB, error) {
 		db, err = carmen.NewCppInMemoryState(directory)
 	case "cpp-file":
 		db, err = carmen.NewCppFileBasedState(directory)
+	case "cpp-ldb":
+		db, err = carmen.NewCppLevelDbBasedState(directory)
 	default:
 		return nil, fmt.Errorf("unkown variant: %v", variant)
 	}
