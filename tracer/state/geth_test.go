@@ -2,6 +2,7 @@ package state
 
 import (
 	"io/ioutil"
+	"os"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -10,7 +11,7 @@ import (
 const N = 1000
 
 func fillDb(t *testing.T, directory string) (common.Hash, error) {
-	db, err := MakeGethStateDB(directory, "")
+	db, err := MakeGethStateDB(directory, "", false)
 	if err != nil {
 		t.Fatalf("Failed to create DB: %v", err)
 	}
@@ -33,6 +34,7 @@ func fillDb(t *testing.T, directory string) (common.Hash, error) {
 
 func TestGethDbFilling(t *testing.T) {
 	dir, err := ioutil.TempDir("", "test_db_*")
+	defer os.RemoveAll(dir)
 	if err != nil {
 		t.Fatalf("Failed to create temporary directory: %v", dir)
 	}
@@ -43,6 +45,7 @@ func TestGethDbFilling(t *testing.T) {
 
 func TestGethDbReloadData(t *testing.T) {
 	dir, err := ioutil.TempDir("", "test_db_*")
+	defer os.RemoveAll(dir)
 	if err != nil {
 		t.Fatalf("Failed to create temporary directory: %v", dir)
 	}
@@ -52,7 +55,7 @@ func TestGethDbReloadData(t *testing.T) {
 	}
 
 	// Re-open the data base.
-	db, err := OpenGethStateDB(dir, hash)
+	db, err := OpenGethStateDB(dir, hash, false)
 	if err != nil {
 		t.Fatalf("Failed to open DB: %v", err)
 	}

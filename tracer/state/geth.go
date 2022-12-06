@@ -5,46 +5,63 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/prque"
 	rawdb "github.com/ethereum/go-ethereum/core/rawdb"
 	geth "github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	vm "github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/substate"
 )
 
-func MakeGethStateDB(directory, variant string) (StateDB, error) {
+const (
+	triesInMemory    = 16
+	memoryUpperLimit = 256 * 1024 * 1024
+	imgUpperLimit    = 4 * 1024 * 1024
+)
+
+func MakeGethStateDB(directory, variant string, isArchiveMode bool) (StateDB, error) {
 	if variant != "" {
 		return nil, fmt.Errorf("unkown variant: %v", variant)
 	}
-	return OpenGethStateDB(directory, common.Hash{})
+	return OpenGethStateDB(directory, common.Hash{}, isArchiveMode)
 }
 
-func OpenGethStateDB(directory string, root_hash common.Hash) (StateDB, error) {
+func OpenGethStateDB(directory string, root_hash common.Hash, isArchiveMode bool) (StateDB, error) {
 	const cache_size = 512
 	const file_handle = 128
 	ldb, err := rawdb.NewLevelDBDatabase(directory, cache_size, file_handle, "", false)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to create a new Level DB. %v", err)
 	}
-	ethdb := geth.NewDatabase(ldb)
-	db, err := geth.New(root_hash, ethdb, nil)
+	evmState := geth.NewDatabase(ldb)
+	db, err := geth.New(root_hash, evmState, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &gethStateDB{db: db, ethdb: ethdb, stateRoot: root_hash}, nil
+	return &gethStateDB{
+		db:            db,
+		evmState:      evmState,
+		stateRoot:     root_hash,
+		triegc:        prque.New(nil),
+		isArchiveMode: isArchiveMode,
+	}, nil
 }
 
 // BeginBlockApply creates a new statedb from an existing geth database
 func (s *gethStateDB) BeginBlockApply() error {
 	var err error
-	s.db, err = geth.NewWithSnapLayers(s.stateRoot, s.ethdb, nil, 0)
+	s.db, err = geth.NewWithSnapLayers(s.stateRoot, s.evmState, nil, 0)
 	return err
 }
 
 type gethStateDB struct {
-	db        vm.StateDB    // statedb
-	ethdb     geth.Database // key-value database
-	stateRoot common.Hash   // lastest root hash
+	db            vm.StateDB    // statedb
+	evmState      geth.Database // key-value database
+	stateRoot     common.Hash   // lastest root hash
+	triegc        *prque.Prque
+	isArchiveMode bool
+	block         uint64
 }
 
 func (s *gethStateDB) CreateAccount(addr common.Address) {
@@ -132,7 +149,7 @@ func (s *gethStateDB) EndTransaction() {
 }
 
 func (s *gethStateDB) BeginBlock(number uint64) {
-	// ignored
+	s.block = number
 }
 
 func (s *gethStateDB) EndBlock() {
@@ -142,11 +159,10 @@ func (s *gethStateDB) EndBlock() {
 	if err != nil {
 		panic(fmt.Errorf("StateDB commit failed\n"))
 	}
-	// flush trie to disk
-	// TODO only flush when a condition meet
-	if s.ethdb != nil {
-		triedb := s.ethdb.TrieDB()
-		triedb.Commit(s.stateRoot, false, nil)
+	// if archival node, flush trie to disk after each block
+	if s.evmState != nil {
+		s.trieCommit()
+		s.trieCap()
 	}
 }
 
@@ -155,7 +171,11 @@ func (s *gethStateDB) BeginEpoch(number uint64) {
 }
 
 func (s *gethStateDB) EndEpoch() {
-	// ignored
+	// if not archival node, flush trie to disk after each epoch
+	if s.evmState != nil && !s.isArchiveMode {
+		s.trieCleanCommit()
+		s.trieCap()
+	}
 }
 
 func (s *gethStateDB) Finalise(deleteEmptyObjects bool) {
@@ -315,4 +335,71 @@ func (l *gethBulkLoad) digest() {
 		return
 	}
 	l.db.EndBlock()
+}
+
+// tireCommit commits changes to disk if archive node; otherwise, performs garbage collection.
+func (s *gethStateDB) trieCommit() error {
+	triedb := s.evmState.TrieDB()
+	// If we're applying genesis or running an archive node, always flush
+	if s.isArchiveMode {
+		if err := triedb.Commit(s.stateRoot, false, nil); err != nil {
+			return fmt.Errorf("Failed to flush trie DB into main DB. %v", err)
+		}
+	} else {
+		// Full but not archive node, do proper garbage collection
+		triedb.Reference(s.stateRoot, common.Hash{}) // metadata reference to keep trie alive
+		s.triegc.Push(s.stateRoot, -int64(s.block))
+
+		if current := uint64(s.block); current > triesInMemory {
+			// If we exceeded our memory allowance, flush matured singleton nodes to disk
+			s.trieCap()
+
+			// Find the next state trie we need to commit
+			chosen := current - triesInMemory
+
+			// Garbage collect all below the chosen block
+			for !s.triegc.Empty() {
+				root, number := s.triegc.Pop()
+				if uint64(-number) > chosen {
+					s.triegc.Push(root, number)
+					break
+				}
+				triedb.Dereference(root.(common.Hash))
+			}
+		}
+	}
+	return nil
+}
+
+// trieCleanCommit cleans old state trie and commit changes.
+func (s *gethStateDB) trieCleanCommit() error {
+	// Don't need to reference the current state root
+	// due to it already be referenced on `Commit()` function
+	triedb := s.evmState.TrieDB()
+	if current := uint64(s.block); current > triesInMemory {
+		// Find the next state trie we need to commit
+		chosen := current - triesInMemory
+		// Garbage collect all below the chosen block
+		for !s.triegc.Empty() {
+			root, number := s.triegc.Pop()
+			if uint64(-number) > chosen {
+				s.triegc.Push(root, number)
+				break
+			}
+			triedb.Dereference(root.(common.Hash))
+		}
+	}
+	// commit the state trie after clean up
+	err := triedb.Commit(s.stateRoot, false, nil)
+	return err
+}
+
+// trieCap flushes matured singleton nodes to disk.
+func (s *gethStateDB) trieCap() {
+	triedb := s.evmState.TrieDB()
+	nodes, imgs := triedb.Size()
+	if nodes > memoryUpperLimit+ethdb.IdealBatchSize || imgs > imgUpperLimit {
+		//If we exceeded our memory allowance, flush matured singleton nodes to disk
+		triedb.Cap(memoryUpperLimit)
+	}
 }
