@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/big"
 	"os"
+	"runtime"
 	"runtime/pprof"
 	"time"
 
@@ -38,6 +39,7 @@ var RunVMCommand = cli.Command{
 		&chainIDFlag,
 		&continueOnFailureFlag,
 		&cpuProfileFlag,
+		&memProfileFlag,
 		&epochLengthFlag,
 		&disableProgressFlag,
 		&memoryBreakdownFlag,
@@ -243,9 +245,11 @@ func runVM(ctx *cli.Context) error {
 	if profileFileName := ctx.String(cpuProfileFlag.Name); profileFileName != "" {
 		f, err := os.Create(profileFileName)
 		if err != nil {
-			return err
+			return fmt.Errorf("could not create CPU profile: %s", err)
 		}
-		pprof.StartCPUProfile(f)
+		if err := pprof.StartCPUProfile(f); err != nil {
+			return fmt.Errorf("could not start CPU profile: %s", err)
+		}
 		defer pprof.StopCPUProfile()
 	}
 
@@ -375,7 +379,7 @@ func runVM(ctx *cli.Context) error {
 		db.EndEpoch()
 	}
 
-	runtime := time.Since(start).Seconds()
+	runTime := time.Since(start).Seconds()
 
 	if cfg.continueOnFailure {
 		fmt.Printf("run-vm: %v errors found\n", errCount)
@@ -410,9 +414,21 @@ func runVM(ctx *cli.Context) error {
 
 	// print progress summary
 	if cfg.enableProgress {
-		log.Printf("run-vm: Total elapsed time: %.3f s, processed %v blocks (~ %.1f Tx/s)\n", runtime, cfg.last-cfg.first+1, float64(txCount)/(runtime))
+		log.Printf("run-vm: Total elapsed time: %.3f s, processed %v blocks (~ %.1f Tx/s)\n", runTime, cfg.last-cfg.first+1, float64(txCount)/(runTime))
 		log.Printf("run-vm: Closing DB took %v\n", time.Since(start))
 		log.Printf("run-vm: Final disk usage: %v MiB\n", float32(getDirectorySize(stateDirectory))/float32(1024*1024))
+	}
+
+	// write memory profile if requested
+	if profileFileName := ctx.String(memProfileFlag.Name); profileFileName != "" && err == nil {
+		f, err := os.Create(profileFileName)
+		if err != nil {
+			return fmt.Errorf("could not create memory profile: %s", err)
+		}
+		runtime.GC() // get up-to-date statistics
+		if err := pprof.WriteHeapProfile(f); err != nil {
+			return fmt.Errorf("could not write memory profile: %s", err)
+		}
 	}
 
 	return err
