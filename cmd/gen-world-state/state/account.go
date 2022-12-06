@@ -21,6 +21,7 @@ import (
 	"math/big"
 	"os"
 	"reflect"
+	"strings"
 	"time"
 )
 
@@ -33,7 +34,7 @@ var CmdAccount = cli.Command{
 		&cmdAccountInfo,
 		&cmdAccountCollect,
 		&cmdAccountImport,
-		&cmdAccountUnknown,
+		&cmdUnknown,
 	},
 }
 
@@ -66,14 +67,37 @@ var cmdAccountCollect = cli.Command{
 	},
 }
 
-// cmdAccountUnknown scans the account map vs. account hashes and provides a list of unknown accounts
-// in the world state.
-var cmdAccountUnknown = cli.Command{
-	Action:      listUnknownAccounts,
+// cmdUnknown is command for storage and account unknown searches
+var cmdUnknown = cli.Command{
 	Name:        "unknown",
-	Usage:       "Lists unknown account addresses from the world state database.",
+	Usage:       "Lists unknown account addresses or storages from the world state database.",
 	Description: "Command scans for addresses in the world state database and shows those not available in the address map.",
 	Aliases:     []string{"u"},
+	Subcommands: []*cli.Command{
+		&cmdUnknownStorage,
+		&cmdUnknownAddress,
+	},
+}
+
+// cmdUnknownStorage scans the account map vs. account hashes and provides a list of unknown accounts
+// in the world state.
+var cmdUnknownStorage = cli.Command{
+	Action:      listUnknownStorages,
+	Name:        "storage",
+	Usage:       "Lists unknown account storages from the world state database.",
+	Description: "Command scans for storage keys in the world state database and shows those not available in the address map.",
+	Flags: []cli.Flag{
+		&flags.IsVerbose,
+	},
+}
+
+// cmdUnknownAddress scans the account map vs. account hashes and provides a list of unknown storage keys
+// in the world state.
+var cmdUnknownAddress = cli.Command{
+	Action:      listUnknownAddress,
+	Name:        "address",
+	Usage:       "Lists unknown account addresses from the world state database.",
+	Description: "Command scans for addresses in the world state database and shows those not available in the address map.",
 	Flags: []cli.Flag{
 		&flags.IsVerbose,
 	},
@@ -85,7 +109,7 @@ var cmdAccountImport = cli.Command{
 	Action:      accountImport,
 	Name:        "import",
 	Aliases:     []string{"csv"},
-	Usage:       "Imports account addresses for hash mapping from a CSV file.",
+	Usage:       "Imports account addresses or storages for hash mapping from a CSV file.",
 	Description: "Command imports account hash to account address mapping from a CSV file.",
 	ArgsUsage:   "<csv file path|- for stdin>",
 	Flags: []cli.Flag{
@@ -105,7 +129,7 @@ func collectAccounts(ctx *cli.Context) error {
 	}
 	defer snapshot.MustCloseStateDB(stateDB)
 
-	// try to open sub state DB
+	// try to open substate DB
 	substate.SetSubstateDirectory(ctx.Path(flags.SubstateDBPath.Name))
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
@@ -272,8 +296,8 @@ func output(w io.Writer, format string, a ...any) {
 	}
 }
 
-// listUnknownAccounts implements entry point for unknown accounts scan.
-func listUnknownAccounts(ctx *cli.Context) error {
+// listUnknownAddress implements unknown accounts scan.
+func listUnknownAddress(ctx *cli.Context) error {
 	// try to open output DB
 	db, err := snapshot.OpenStateDB(ctx.Path(flags.StateDBPath.Name))
 	if err != nil {
@@ -338,6 +362,74 @@ func listUnknownAccounts(ctx *cli.Context) error {
 	return nil
 }
 
+// listUnknownStorages implements unknown storages scan.
+func listUnknownStorages(ctx *cli.Context) error {
+	// try to open output DB
+	db, err := snapshot.OpenStateDB(ctx.Path(flags.StateDBPath.Name))
+	if err != nil {
+		return err
+	}
+	defer snapshot.MustCloseStateDB(db)
+
+	// out what we do
+	_, err = fmt.Fprintf(ctx.App.Writer, "Unknown Storage Hashes\n----------------------------------------\n")
+	if err != nil {
+		return fmt.Errorf("could not write output; %s", err.Error())
+	}
+
+	// we want an iterator of all the known storages
+	ite := db.NewAccountIterator(ctx.Context)
+	defer ite.Release()
+
+	// iterate all known addresses
+	var all, storagesCount, missing uint64
+
+	verbose := ctx.Bool(flags.IsVerbose.Name)
+	tick := time.NewTicker(500 * time.Millisecond)
+	defer tick.Stop()
+
+	for ite.Next() {
+		all++
+		acc := ite.Value()
+
+		for h := range acc.Storage {
+			storagesCount++
+			_, err := db.HashToStorage(h)
+			if err != nil {
+				err = nil
+				missing++
+
+				// display unknown storage hash
+				if verbose {
+					_, err = fmt.Fprintln(ctx.App.Writer, h.String())
+				}
+			}
+		}
+
+		// display progress in non-verbose mode
+		select {
+		case <-tick.C:
+			if !verbose {
+				_, err = fmt.Fprintf(ctx.App.Writer, "\rChecked: %10d  Missing: %10d", storagesCount, missing)
+			}
+		default:
+		}
+
+		// output error reached?
+		if err != nil {
+			return fmt.Errorf("could not finish scan; %s", err.Error())
+		}
+	}
+
+	// out total
+	_, err = fmt.Fprintf(ctx.App.Writer, "\r----------------------------------------\nAccounts Checked:%23d\nStorages Checked:%23d\nUnknown Storage Hashes:%25d\n", all, storagesCount, missing)
+	if err != nil {
+		return fmt.Errorf("could not write output; %s", err.Error())
+	}
+
+	return nil
+}
+
 // accountImport implements entry point for account addresses import from given CSV file.
 // The file is expected to contain only account addresses in hex format, non-address lines are ignored.
 func accountImport(ctx *cli.Context) error {
@@ -372,7 +464,7 @@ func accountImport(ctx *cli.Context) error {
 	}
 	defer snapshot.MustCloseStateDB(db)
 
-	return importCsvAddresses(ctx.App.Writer, re, db)
+	return importCsv(ctx.App.Writer, re, db)
 }
 
 // stdinReader opens standard input for reading, if possible.
@@ -391,45 +483,85 @@ func stdinReader() (io.Reader, error) {
 	return bufio.NewReader(os.Stdin), nil
 }
 
-// importCsvAddresses imports addresses mapping from the given reader.
-func importCsvAddresses(w io.Writer, r io.Reader, db *snapshot.StateDB) error {
+// importCsv imports addresses or storages mapping from the given reader.
+func importCsv(w io.Writer, r io.Reader, db *snapshot.StateDB) error {
 	scan := bufio.NewScanner(r)
 	scan.Split(bufio.ScanLines)
 
-	var count int
+	var countAcc, countStorage int
 	tick := time.NewTicker(500 * time.Millisecond)
 	defer tick.Stop()
 
 	// read all the lines
 	for scan.Scan() {
+		text := strings.TrimSpace(scan.Text())
 		// skip non-address lines
-		if common.IsHexAddress(scan.Text()) {
-			adr := common.HexToAddress(scan.Text())
+		if common.IsHexAddress(text) {
+			adr := common.HexToAddress(text)
 			ha := db.AccountAddressToHash(adr)
 
 			err := db.PutHashToAccountAddress(ha, adr)
 			if err != nil {
 				return err
 			}
+			countAcc++
+		} else if isHash(text) {
+			s := common.HexToHash(text)
+			ha := db.StorageToHash(s)
 
-			count++
-			select {
-			case <-tick.C:
-				// print progress
-				_, err = fmt.Fprintf(w, "\rImported:%10d accounts", count)
-				if err != nil {
-					return fmt.Errorf("could not write output; %s", err.Error())
-				}
-			default:
+			err := db.PutHashToStorage(ha, s)
+			if err != nil {
+				return err
 			}
+			countStorage++
+		}
+
+		select {
+		case <-tick.C:
+			// print progress
+			_, err := fmt.Fprintf(w, "\rImported:%10d accounts, %10d storages.", countAcc, countStorage)
+			if err != nil {
+				return fmt.Errorf("could not write output; %s", err.Error())
+			}
+		default:
 		}
 	}
 
 	// print total result
-	_, err := fmt.Fprintf(w, "\rImport finished, %d accounts loaded.\n", count)
+	_, err := fmt.Fprintf(w, "\rImport finished, %d accounts loaded, %d storages loaded.\n", countAcc, countStorage)
 	if err != nil {
 		return fmt.Errorf("could not write output; %s", err.Error())
 	}
 
 	return nil
+}
+
+func isHash(s string) bool {
+	if has0xPrefix(s) {
+		s = s[2:]
+	}
+	return len(s) == 2*common.HashLength && isHex(s)
+}
+
+// has0xPrefix validates str begins with '0x' or '0X'.
+func has0xPrefix(str string) bool {
+	return len(str) >= 2 && str[0] == '0' && (str[1] == 'x' || str[1] == 'X')
+}
+
+// isHexCharacter returns bool of c being a valid hexadecimal.
+func isHexCharacter(c byte) bool {
+	return ('0' <= c && c <= '9') || ('a' <= c && c <= 'f') || ('A' <= c && c <= 'F')
+}
+
+// isHex validates whether each byte is valid hexadecimal string.
+func isHex(str string) bool {
+	if len(str)%2 != 0 {
+		return false
+	}
+	for _, c := range []byte(str) {
+		if !isHexCharacter(c) {
+			return false
+		}
+	}
+	return true
 }

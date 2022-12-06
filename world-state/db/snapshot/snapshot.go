@@ -251,8 +251,8 @@ func (db *StateDB) HashToStorage(hash common.Hash) (common.Hash, error) {
 	return adr, nil
 }
 
-// HashsToStorage tries to resolve a set of hashed keys to their preimage.
-func (db *StateDB) HashsToStorage(keys map[common.Hash]int) (map[common.Hash]common.Hash, error) {
+// HashesToStorage tries to resolve a set of hashed keys to their preimage.
+func (db *StateDB) HashesToStorage(keys map[common.Hash]bool) (map[common.Hash]common.Hash, error) {
 	// It is way faster to iterate through all keys than to look them up one-by-one.
 	res := map[common.Hash]common.Hash{}
 	iter := db.Backend.NewIterator(HashToStoragePrefix, []byte{})
