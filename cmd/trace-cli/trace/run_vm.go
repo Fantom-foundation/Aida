@@ -219,6 +219,7 @@ func runVMTask(db state.StateDB, cfg *TraceConfig, block uint64, tx int, recordi
 
 // runVM implements trace command for executing VM on a chosen storage system.
 func runVM(ctx *cli.Context) error {
+	const progressReportBlockInterval uint64 = 100_000
 	var (
 		err          error
 		start        time.Time
@@ -228,6 +229,11 @@ func runVM(ctx *cli.Context) error {
 		lastTxCount  int
 		gasCount     = new(big.Int)
 		lastGasCount = new(big.Int)
+		// Progress reporting (block based)
+		lastBlockProgressReportBlock    uint64
+		lastBlockProgressReportTime     time.Time
+		lastBlockProgressReportTxCount  int
+		lastBlockProgressReportGasCount = new(big.Int)
 	)
 	// process general arguments
 	cfg, argErr := NewTraceConfig(ctx)
@@ -307,7 +313,6 @@ func runVM(ctx *cli.Context) error {
 
 	if cfg.enableProgress {
 		start = time.Now()
-		sec = time.Since(start).Seconds()
 		lastSec = time.Since(start).Seconds()
 	}
 
@@ -326,6 +331,9 @@ func runVM(ctx *cli.Context) error {
 			curBlock = tx.Block
 			db.BeginEpoch(curEpoch)
 			db.BeginBlock(curBlock)
+			lastBlockProgressReportBlock = tx.Block
+			lastBlockProgressReportBlock -= lastBlockProgressReportBlock % progressReportBlockInterval
+			lastBlockProgressReportTime = time.Now()
 			isFirstBlock = false
 			// close off old block and possibly epochs
 		} else if curBlock != tx.Block {
@@ -363,14 +371,38 @@ func runVM(ctx *cli.Context) error {
 		if cfg.enableProgress {
 			// report progress
 			sec = time.Since(start).Seconds()
+
+			// Report progress on a regular time interval (wall time).
 			if sec-lastSec >= 15 {
 				d := new(big.Int).Sub(gasCount, lastGasCount)
 				g := new(big.Float).Quo(new(big.Float).SetInt(d), new(big.Float).SetFloat64(sec-lastSec))
 
-				fmt.Printf("run-vm: Elapsed time: %.0f s, at block %v (~ %.1f Tx/s, ~ %.1f Gas/s)\n", sec, tx.Block, float64(txCount-lastTxCount)/(sec-lastSec), g)
+				txRate := float64(txCount-lastTxCount)/(sec-lastSec)
+
+				fmt.Printf("run-vm: Elapsed time: %.0f s, at block %v (~ %.1f Tx/s, ~ %.1f Gas/s)\n", sec, tx.Block, txRate, g)
 				lastSec = sec
 				lastTxCount = txCount
 				lastGasCount.Set(gasCount)
+			}
+
+			// Report progress on a regular block interval (simulation time).
+			for tx.Block >= lastBlockProgressReportBlock+progressReportBlockInterval {
+				numTransactions := txCount - lastBlockProgressReportTxCount
+				lastBlockProgressReportTxCount = txCount
+
+				gasUsed := new(big.Int).Sub(gasCount, lastBlockProgressReportGasCount)
+				lastBlockProgressReportGasCount.Set(gasCount)
+
+				now := time.Now()
+				intervalTime := now.Sub(lastBlockProgressReportTime)
+				lastBlockProgressReportTime = now
+
+				txRate := float64(numTransactions) / intervalTime.Seconds()
+				gasRate, _ := new(big.Float).SetInt(gasUsed).Float64()
+				gasRate = gasRate / intervalTime.Seconds()
+
+				fmt.Printf("run-vm: Reached block %d, last interval rate ~ %.1f Tx/s, ~ %.1f Gas/s\n", tx.Block, txRate, gasRate)
+				lastBlockProgressReportBlock += progressReportBlockInterval
 			}
 		}
 	}
