@@ -34,6 +34,10 @@ var (
 		Name:  "cpuprofile",
 		Usage: "enables CPU profiling",
 	}
+	memProfileFlag = cli.StringFlag{
+		Name:  "memprofile",
+		Usage: "enables memory allocation profiling",
+	}
 	epochLengthFlag = cli.IntFlag{
 		Name:  "epochlength",
 		Usage: "defines the number of blocks per epoch",

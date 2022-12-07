@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"runtime"
 	"runtime/pprof"
 	"time"
 
@@ -23,6 +24,7 @@ var TraceReplayCommand = cli.Command{
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		&cpuProfileFlag,
+		&memProfileFlag,
 		&epochLengthFlag,
 		&disableProgressFlag,
 		&memoryBreakdownFlag,
@@ -224,9 +226,11 @@ func traceReplayAction(ctx *cli.Context) error {
 	if profileFileName := ctx.String(cpuProfileFlag.Name); profileFileName != "" {
 		f, err := os.Create(profileFileName)
 		if err != nil {
-			return err
+			return fmt.Errorf("could not create CPU profile: %s", err)
 		}
-		pprof.StartCPUProfile(f)
+		if err := pprof.StartCPUProfile(f); err != nil {
+			return fmt.Errorf("could not start CPU profile: %s", err)
+		}
 		defer pprof.StopCPUProfile()
 	}
 
@@ -235,6 +239,18 @@ func traceReplayAction(ctx *cli.Context) error {
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 	err = traceReplayTask(cfg)
+
+	// write memory profile if requested
+	if profileFileName := ctx.String(memProfileFlag.Name); profileFileName != "" && err == nil {
+		f, err := os.Create(profileFileName)
+		if err != nil {
+			return fmt.Errorf("could not create memory profile: %s", err)
+		}
+		runtime.GC() // get up-to-date statistics
+		if err := pprof.WriteHeapProfile(f); err != nil {
+			return fmt.Errorf("could not write memory profile: %s", err)
+		}
+	}
 
 	return err
 }
