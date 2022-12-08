@@ -71,7 +71,7 @@ last block of the inclusive range of blocks to trace transactions.`,
 }
 
 // runVMTask executes VM on a chosen storage system.
-func runVMTask(db state.StateDB, cfg *TraceConfig, block uint64, tx int, recording *substate.Substate, vmImpl string) error {
+func runVMTask(db state.StateDB, cfg *TraceConfig, block uint64, tx int, recording *substate.Substate, vmImpl string) (*substate.SubstateResult, error) {
 
 	inputAlloc := recording.InputAlloc
 	inputEnv := recording.Env
@@ -113,7 +113,7 @@ func runVMTask(db state.StateDB, cfg *TraceConfig, block uint64, tx int, recordi
 			if cfg.continueOnFailure {
 				fmt.Println(errMsg)
 			} else {
-				return fmt.Errorf(errMsg)
+				return nil, fmt.Errorf(errMsg)
 			}
 		}
 	}
@@ -158,11 +158,11 @@ func runVMTask(db state.StateDB, cfg *TraceConfig, block uint64, tx int, recordi
 		if cfg.continueOnFailure {
 			fmt.Printf("Block: %v Transaction: %v\n%v", block, tx, err)
 		} else {
-			return fmt.Errorf("Block: %v Transaction: %v\n%v", block, tx, err)
+			return nil, fmt.Errorf("Block: %v Transaction: %v\n%v", block, tx, err)
 		}
 	}
 	if hashError != nil {
-		return hashError
+		return nil, hashError
 	}
 	if chainConfig.IsByzantium(blockCtx.BlockNumber) {
 		db.Finalise(true)
@@ -195,7 +195,7 @@ func runVMTask(db state.StateDB, cfg *TraceConfig, block uint64, tx int, recordi
 			if cfg.continueOnFailure {
 				fmt.Println(errMsg)
 			} else {
-				return fmt.Errorf(errMsg)
+				return nil, fmt.Errorf(errMsg)
 			}
 		}
 		r := outputResult.Equal(evmResult)
@@ -207,25 +207,27 @@ func runVMTask(db state.StateDB, cfg *TraceConfig, block uint64, tx int, recordi
 			if cfg.continueOnFailure {
 				fmt.Println(errMsg)
 			} else {
-				return fmt.Errorf(errMsg)
+				return nil, fmt.Errorf(errMsg)
 			}
 		}
 	}
 	if errCount > MaxErrorCount {
-		return fmt.Errorf("Too many errors.")
+		return nil, fmt.Errorf("too many errors")
 	}
-	return nil
+	return evmResult, nil
 }
 
 // runVM implements trace command for executing VM on a chosen storage system.
 func runVM(ctx *cli.Context) error {
 	var (
-		err         error
-		start       time.Time
-		sec         float64
-		lastSec     float64
-		txCount     int
-		lastTxCount int
+		err          error
+		start        time.Time
+		sec          float64
+		lastSec      float64
+		txCount      int
+		lastTxCount  int
+		gasCount     = new(big.Int)
+		lastGasCount = new(big.Int)
 	)
 	// process general arguments
 	chainID = ctx.Int(chainIDFlag.Name)
@@ -357,19 +359,25 @@ func runVM(ctx *cli.Context) error {
 
 		// run VM
 		db.BeginTransaction(uint32(tx.Transaction))
-		if err := runVMTask(db, cfg, tx.Block, tx.Transaction, tx.Substate, vmImpl); err != nil {
+		result, err := runVMTask(db, cfg, tx.Block, tx.Transaction, tx.Substate, vmImpl)
+		if err != nil {
 			return fmt.Errorf("VM execution failed. %v", err)
 		}
 		db.EndTransaction()
 		txCount++
+		gasCount = new(big.Int).Add(gasCount, new(big.Int).SetUint64(result.GasUsed))
 
 		if cfg.enableProgress {
 			// report progress
 			sec = time.Since(start).Seconds()
 			if sec-lastSec >= 15 {
-				fmt.Printf("run-vm: Elapsed time: %.0f s, at block %v (~ %.1f Tx/s)\n", sec, tx.Block, float64(txCount-lastTxCount)/(sec-lastSec))
+				d := new(big.Int).Sub(gasCount, lastGasCount)
+				g := new(big.Float).Quo(new(big.Float).SetInt(d), new(big.Float).SetFloat64(sec-lastSec))
+
+				fmt.Printf("run-vm: Elapsed time: %.0f s, at block %v (~ %.1f Tx/s, ~ %.1f Gas/s)\n", sec, tx.Block, float64(txCount-lastTxCount)/(sec-lastSec), g)
 				lastSec = sec
 				lastTxCount = txCount
+				lastGasCount.Set(gasCount)
 			}
 		}
 	}
@@ -414,7 +422,9 @@ func runVM(ctx *cli.Context) error {
 
 	// print progress summary
 	if cfg.enableProgress {
-		log.Printf("run-vm: Total elapsed time: %.3f s, processed %v blocks (~ %.1f Tx/s)\n", runTime, cfg.last-cfg.first+1, float64(txCount)/(runTime))
+		g := new(big.Float).Quo(new(big.Float).SetInt(gasCount), new(big.Float).SetFloat64(runTime))
+
+		log.Printf("run-vm: Total elapsed time: %.3f s, processed %v blocks (~ %.1f Tx/s) (~ %.1f Gas/s)\n", runTime, cfg.last-cfg.first+1, float64(txCount)/(runTime), g)
 		log.Printf("run-vm: Closing DB took %v\n", time.Since(start))
 		log.Printf("run-vm: Final disk usage: %v MiB\n", float32(getDirectorySize(stateDirectory))/float32(1024*1024))
 	}
