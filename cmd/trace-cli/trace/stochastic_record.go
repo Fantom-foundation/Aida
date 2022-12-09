@@ -55,7 +55,7 @@ last block of the inclusive range of blocks to trace transactions.`,
 }
 
 // stochasticRecordTask generates storage traces for a transaction.
-func stochasticRecordTask(block uint64, tx int, recording *substate.Substate, dCtx *dict.DictionaryContext) error {
+func stochasticRecordTask(block uint64, tx, chainID int, recording *substate.Substate, dCtx *dict.DictionaryContext) error {
 
 	inputAlloc := recording.InputAlloc
 	inputEnv := recording.Env
@@ -255,7 +255,7 @@ func stochasticRecordAction(ctx *cli.Context) error {
 	go OperationStochasticWriter(cctx, cancelChannel, opChannel)
 
 	// process arguments
-	chainID = ctx.Int(chainIDFlag.Name)
+	chainID := ctx.Int(chainIDFlag.Name)
 	tracer.TraceDir = ctx.String(traceDirectoryFlag.Name) + "/"
 	dict.DictionaryContextDir = ctx.String(traceDirectoryFlag.Name) + "/"
 	if ctx.Bool(traceDebugFlag.Name) {
@@ -297,7 +297,7 @@ func stochasticRecordAction(ctx *cli.Context) error {
 			// open new block with a begin-block operation and clear index cache
 			sendStochasticOperation(dCtx, opChannel, operation.NewBeginBlock(tx.Block))
 		}
-		stochasticRecordTask(tx.Block, tx.Transaction, tx.Substate, dCtx)
+		stochasticRecordTask(tx.Block, tx.Transaction, chainID, tx.Substate, dCtx)
 		sendStochasticOperation(dCtx, opChannel, operation.NewEndTransaction())
 		if enableProgress {
 			// report progress

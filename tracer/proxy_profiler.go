@@ -1,7 +1,6 @@
 package tracer
 
 import (
-	"fmt"
 	"math/big"
 	"time"
 
@@ -15,17 +14,15 @@ import (
 // ProxyProfiler data structure for capturing and recording
 // invoked StateDB operations.
 type ProxyProfiler struct {
-	db    state.StateDB           // state db
-	ps    *operation.ProfileStats // operation statistics
-	debug bool                    // enable debug message
+	db state.StateDB           // state db
+	ps *operation.ProfileStats // operation statistics
 }
 
 // NewProxyProfiler creates a new StateDB proxy.
-func NewProxyProfiler(db state.StateDB, debug bool) (*ProxyProfiler, *operation.ProfileStats) {
+func NewProxyProfiler(db state.StateDB) (*ProxyProfiler, *operation.ProfileStats) {
 	p := new(ProxyProfiler)
 	p.db = db
 	p.ps = new(operation.ProfileStats)
-	p.debug = debug
 	return p, p.ps
 }
 
@@ -42,10 +39,6 @@ func (p *ProxyProfiler) CreateAccount(addr common.Address) {
 	p.db.CreateAccount(addr)
 	elapsed := time.Since(start)
 	p.ps.Profile(operation.CreateAccountID, elapsed)
-	if p.debug {
-		label := operation.GetLabel(operation.CreateAccountID)
-		fmt.Printf(label+": %v\n", addr)
-	}
 }
 
 // SubtractBalance subtracts amount from a contract address.
@@ -54,10 +47,6 @@ func (p *ProxyProfiler) SubBalance(addr common.Address, amount *big.Int) {
 	p.db.SubBalance(addr, amount)
 	elapsed := time.Since(start)
 	p.ps.Profile(operation.SubBalanceID, elapsed)
-	if p.debug {
-		label := operation.GetLabel(operation.SubBalanceID)
-		fmt.Printf(label+": %v %v\n", addr, amount)
-	}
 }
 
 // AddBalance adds amount to a contract address.
@@ -66,10 +55,6 @@ func (p *ProxyProfiler) AddBalance(addr common.Address, amount *big.Int) {
 	p.db.AddBalance(addr, amount)
 	elapsed := time.Since(start)
 	p.ps.Profile(operation.AddBalanceID, elapsed)
-	if p.debug {
-		label := operation.GetLabel(operation.AddBalanceID)
-		fmt.Printf(label+": %v %v\n", addr, amount)
-	}
 }
 
 // GetBalance retrieves the amount of a contract address.
@@ -78,10 +63,6 @@ func (p *ProxyProfiler) GetBalance(addr common.Address) *big.Int {
 	balance := p.db.GetBalance(addr)
 	elapsed := time.Since(start)
 	p.ps.Profile(operation.GetBalanceID, elapsed)
-	if p.debug {
-		label := operation.GetLabel(operation.GetBalanceID)
-		fmt.Printf(label+": %v %v\n", addr, balance)
-	}
 	return balance
 }
 
@@ -91,10 +72,6 @@ func (p *ProxyProfiler) GetNonce(addr common.Address) uint64 {
 	nonce := p.db.GetNonce(addr)
 	elapsed := time.Since(start)
 	p.ps.Profile(operation.GetBalanceID, elapsed)
-	if p.debug {
-		label := operation.GetLabel(operation.GetNonceID)
-		fmt.Printf(label+": %v %v\n", addr, nonce)
-	}
 	return nonce
 }
 
@@ -104,10 +81,6 @@ func (p *ProxyProfiler) SetNonce(addr common.Address, nonce uint64) {
 	p.db.SetNonce(addr, nonce)
 	elapsed := time.Since(start)
 	p.ps.Profile(operation.SetNonceID, elapsed)
-	if p.debug {
-		label := operation.GetLabel(operation.SetNonceID)
-		fmt.Printf(label+": %v %v\n", addr, nonce)
-	}
 }
 
 // GetCodeHash returns the hash of the EVM bytecode.
@@ -116,10 +89,6 @@ func (p *ProxyProfiler) GetCodeHash(addr common.Address) common.Hash {
 	hash := p.db.GetCodeHash(addr)
 	elapsed := time.Since(start)
 	p.ps.Profile(operation.GetCodeHashID, elapsed)
-	if p.debug {
-		label := operation.GetLabel(operation.GetCodeHashID)
-		fmt.Printf(label+": %v %v\n", addr, hash)
-	}
 	return hash
 }
 
@@ -129,10 +98,6 @@ func (p *ProxyProfiler) GetCode(addr common.Address) []byte {
 	code := p.db.GetCode(addr)
 	elapsed := time.Since(start)
 	p.ps.Profile(operation.GetCodeID, elapsed)
-	if p.debug {
-		label := operation.GetLabel(operation.GetCodeID)
-		fmt.Printf(label+": %v\n", addr, len(code))
-	}
 	return code
 }
 
@@ -142,10 +107,6 @@ func (p *ProxyProfiler) SetCode(addr common.Address, code []byte) {
 	p.db.SetCode(addr, code)
 	elapsed := time.Since(start)
 	p.ps.Profile(operation.SetCodeID, elapsed)
-	if p.debug {
-		label := operation.GetLabel(operation.SetCodeID)
-		fmt.Printf(label+": %v %v\n", addr, len(code))
-	}
 }
 
 // GetCodeSize returns the EVM bytecode's size.
@@ -154,10 +115,6 @@ func (p *ProxyProfiler) GetCodeSize(addr common.Address) int {
 	size := p.db.GetCodeSize(addr)
 	elapsed := time.Since(start)
 	p.ps.Profile(operation.GetCodeSizeID, elapsed)
-	if p.debug {
-		label := operation.GetLabel(operation.GetCodeSizeID)
-		fmt.Printf(label+": %v %v\n", addr, size)
-	}
 	return size
 }
 
@@ -182,10 +139,6 @@ func (p *ProxyProfiler) GetCommittedState(addr common.Address, key common.Hash) 
 	value := p.db.GetCommittedState(addr, key)
 	elapsed := time.Since(start)
 	p.ps.Profile(operation.GetCommittedStateID, elapsed)
-	if p.debug {
-		label := operation.GetLabel(operation.GetCommittedStateID)
-		fmt.Printf(label+": %v %v %v\n", addr, key, value)
-	}
 	return value
 }
 
@@ -195,10 +148,6 @@ func (p *ProxyProfiler) GetState(addr common.Address, key common.Hash) common.Ha
 	value := p.db.GetState(addr, key)
 	elapsed := time.Since(start)
 	p.ps.Profile(operation.GetStateID, elapsed)
-	if p.debug {
-		label := operation.GetLabel(operation.GetStateID)
-		fmt.Printf(label+": %v %v %v\n", addr.Hex(), key.Hex(), value.Hex())
-	}
 	return value
 }
 
@@ -208,10 +157,6 @@ func (p *ProxyProfiler) SetState(addr common.Address, key common.Hash, value com
 	p.db.SetState(addr, key, value)
 	elapsed := time.Since(start)
 	p.ps.Profile(operation.SetStateID, elapsed)
-	if p.debug {
-		label := operation.GetLabel(operation.SetStateID)
-		fmt.Printf(label+": %v %v %v\n", addr, key, value)
-	}
 }
 
 // Suicide marks the given account as suicided. This clears the account balance.
@@ -222,10 +167,6 @@ func (p *ProxyProfiler) Suicide(addr common.Address) bool {
 	suicide := p.db.Suicide(addr)
 	elapsed := time.Since(start)
 	p.ps.Profile(operation.SuicideID, elapsed)
-	if p.debug {
-		label := operation.GetLabel(operation.SuicideID)
-		fmt.Printf(label+": %v %v\n", addr, suicide)
-	}
 	return suicide
 }
 
@@ -241,10 +182,6 @@ func (p *ProxyProfiler) Exist(addr common.Address) bool {
 	exist := p.db.Exist(addr)
 	elapsed := time.Since(start)
 	p.ps.Profile(operation.ExistID, elapsed)
-	if p.debug {
-		label := operation.GetLabel(operation.ExistID)
-		fmt.Printf(label+": %v %v\n", addr, exist)
-	}
 	return exist
 }
 
@@ -295,10 +232,6 @@ func (p *ProxyProfiler) Snapshot() int {
 	snapshot := p.db.Snapshot()
 	elapsed := time.Since(start)
 	p.ps.Profile(operation.SnapshotID, elapsed)
-	if p.debug {
-		label := operation.GetLabel(operation.SnapshotID)
-		fmt.Printf(label+": %v\n", snapshot)
-	}
 	return snapshot
 }
 
@@ -308,10 +241,6 @@ func (p *ProxyProfiler) RevertToSnapshot(snapshot int) {
 	p.db.RevertToSnapshot(snapshot)
 	elapsed := time.Since(start)
 	p.ps.Profile(operation.RevertToSnapshotID, elapsed)
-	if p.debug {
-		label := operation.GetLabel(operation.RevertToSnapshotID)
-		fmt.Printf(label+": %v\n", snapshot)
-	}
 }
 
 func (p *ProxyProfiler) do(opId byte, op func(), args ...any) {
@@ -319,17 +248,6 @@ func (p *ProxyProfiler) do(opId byte, op func(), args ...any) {
 	op()
 	elapsed := time.Since(start)
 	p.ps.Profile(opId, elapsed)
-	if p.debug {
-		label := operation.GetLabel(opId)
-		fmt.Printf("%s:", label)
-		for _, cur := range args {
-			fmt.Printf(" %v", cur)
-		}
-		if len(args) == 0 {
-			fmt.Print(" -- no arguments --")
-		}
-		fmt.Printf("\n")
-	}
 }
 
 func (p *ProxyProfiler) BeginTransaction(number uint32) {
@@ -401,10 +319,6 @@ func (p *ProxyProfiler) Finalise(deleteEmptyObjects bool) {
 	p.db.Finalise(deleteEmptyObjects)
 	elapsed := time.Since(start)
 	p.ps.Profile(operation.FinaliseID, elapsed)
-	if p.debug {
-		label := operation.GetLabel(operation.FinaliseID)
-		fmt.Printf(label+": %v\n", deleteEmptyObjects)
-	}
 }
 
 // IntermediateRoot computes the current hash of the StateDB.
@@ -422,10 +336,6 @@ func (p *ProxyProfiler) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 	// To align operation ID with the id used in record/replay.
 	// Commit is called by EndBlock operation.
 	p.ps.Profile(operation.EndBlockID, elapsed)
-	if p.debug {
-		label := operation.GetLabel(operation.EndBlockID)
-		fmt.Printf(label+": %v\n", deleteEmptyObjects)
-	}
 	return hash, err
 }
 

@@ -51,7 +51,7 @@ last block of the inclusive range of blocks to trace transactions.`,
 }
 
 // traceRecordTask generates storage traces for a transaction.
-func traceRecordTask(block uint64, tx int, recording *substate.Substate, dCtx *dict.DictionaryContext, ch chan operation.Operation) error {
+func traceRecordTask(block uint64, tx, chainID int, recording *substate.Substate, dCtx *dict.DictionaryContext, ch chan operation.Operation) error {
 
 	inputAlloc := recording.InputAlloc
 	inputEnv := recording.Env
@@ -245,7 +245,7 @@ func traceRecordAction(ctx *cli.Context) error {
 	go OperationWriter(opChannel)
 
 	// process arguments
-	chainID = ctx.Int(chainIDFlag.Name)
+	chainID := ctx.Int(chainIDFlag.Name)
 	tracer.TraceDir = ctx.String(traceDirectoryFlag.Name) + "/"
 	dict.DictionaryContextDir = ctx.String(traceDirectoryFlag.Name) + "/"
 	if ctx.Bool(traceDebugFlag.Name) {
@@ -299,7 +299,7 @@ func traceRecordAction(ctx *cli.Context) error {
 			sendOperation(dCtx, opChannel, operation.NewBeginBlock(tx.Block))
 		}
 		sendOperation(dCtx, opChannel, operation.NewBeginTransaction(uint32(tx.Transaction)))
-		traceRecordTask(tx.Block, tx.Transaction, tx.Substate, dCtx, opChannel)
+		traceRecordTask(tx.Block, tx.Transaction, chainID, tx.Substate, dCtx, opChannel)
 		sendOperation(dCtx, opChannel, operation.NewEndTransaction())
 		if enableProgress {
 			// report progress

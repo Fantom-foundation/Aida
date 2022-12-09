@@ -13,11 +13,10 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// chainId for recording either mainnet or testnets.
-var chainID int
-
-// traceDebug for enabling/disabling debugging.
-var traceDebug bool = false
+var (
+	FirstSubstateBlock uint64         // id of the first block in substate
+	traceDebug         bool   = false // traceDebug for enabling/disabling debugging.
+)
 
 // Command line options for common flags in record and replay.
 var (
@@ -163,6 +162,7 @@ type TraceConfig struct {
 
 	debug              bool   // enable trace debug flag
 	continueOnFailure  bool   // continue validation when an error detected
+	chainID            int    // Blockchain ID (mainnet: 250/testnet: 4002)
 	dbImpl             string // storage implementation
 	dbVariant          string // database variant
 	dbLogging          bool   // set to true if all DB operations should be logged
@@ -179,6 +179,7 @@ type TraceConfig struct {
 	updateDBDir        string // update-set directory
 	validateTxState    bool   // validate stateDB before and after transaction
 	validateWorldState bool   // validate stateDB before and after replay block range
+	vmImpl             string // vm implementation (geth/lfvm)
 	workers            int    // number of worker threads
 }
 
@@ -196,9 +197,19 @@ func getChainConfig(chainID int) *params.ChainConfig {
 		chainConfig.BerlinBlock = new(big.Int).SetUint64(1559470)
 		chainConfig.LondonBlock = new(big.Int).SetUint64(7513335)
 	} else {
-		log.Printf("Warning: unknown chainID.\n")
+		log.Fatalf("unknown chain id %v", chainID)
 	}
 	return chainConfig
+}
+
+func setFirstBlockFromChainID(chainID int) {
+	if chainID == 250 {
+		FirstSubstateBlock = 4564026
+	} else if chainID == 4002 {
+		FirstSubstateBlock = 479327
+	} else {
+		log.Fatalf("unknown chain id %v", chainID)
+	}
 }
 
 // NewTraceConfig creates and initializes TraceConfig with commandline arguments.
@@ -234,6 +245,7 @@ func NewTraceConfig(ctx *cli.Context) (*TraceConfig, error) {
 		last:  last,
 
 		debug:              ctx.Bool(traceDebugFlag.Name),
+		chainID:            ctx.Int(chainIDFlag.Name),
 		continueOnFailure:  ctx.Bool(continueOnFailureFlag.Name),
 		enableProgress:     !ctx.Bool(disableProgressFlag.Name),
 		epochLength:        ctx.Uint64(epochLengthFlag.Name),
@@ -251,9 +263,10 @@ func NewTraceConfig(ctx *cli.Context) (*TraceConfig, error) {
 		updateDBDir:        ctx.String(updateDBDirFlag.Name),
 		validateTxState:    validateTxState,
 		validateWorldState: validateWorldState,
+		vmImpl:             ctx.String(vmImplementation.Name),
 		workers:            ctx.Int(substate.WorkersFlag.Name),
 	}
-
+	setFirstBlockFromChainID(cfg.chainID)
 	if cfg.epochLength <= 0 {
 		cfg.epochLength = 300
 	}
@@ -261,6 +274,7 @@ func NewTraceConfig(ctx *cli.Context) (*TraceConfig, error) {
 	if cfg.enableProgress {
 		log.Printf("Run config:\n")
 		log.Printf("\tBlock range: %v to %v\n", cfg.first, cfg.last)
+		log.Printf("\tChain id: %v (record & run-vm only)\n", cfg.chainID)
 		log.Printf("\tEpoch length: %v\n", cfg.epochLength)
 		if cfg.shadowImpl == "" {
 			log.Printf("\tStorage system: %v, DB variant: %v\n", cfg.dbImpl, cfg.dbVariant)
@@ -269,6 +283,7 @@ func NewTraceConfig(ctx *cli.Context) (*TraceConfig, error) {
 			log.Printf("\tShadow storage system: %v, DB variant: %v\n", cfg.shadowImpl, cfg.shadowVariant)
 		}
 		log.Printf("\tStorage parent directory: %v\n", cfg.stateDbDir)
+		log.Printf("\tUsed VM implementation: %v\n", cfg.vmImpl)
 		log.Printf("\tUpdate DB directory: %v\n", cfg.updateDBDir)
 		log.Printf("\tRandomized Priming: %v\n", cfg.primeRandom)
 		if cfg.primeRandom {
