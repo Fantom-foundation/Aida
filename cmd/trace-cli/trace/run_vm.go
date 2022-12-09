@@ -70,7 +70,7 @@ last block of the inclusive range of blocks to trace transactions.`,
 }
 
 // runVMTask executes VM on a chosen storage system.
-func runVMTask(db state.StateDB, cfg *TraceConfig, block uint64, tx int, recording *substate.Substate, vmImpl string) (*substate.SubstateResult, error) {
+func runVMTask(db state.StateDB, cfg *TraceConfig, block uint64, tx int, recording *substate.Substate) (*substate.SubstateResult, error) {
 
 	inputAlloc := recording.InputAlloc
 	inputEnv := recording.Env
@@ -355,7 +355,7 @@ func runVM(ctx *cli.Context) error {
 
 		// run VM
 		db.BeginTransaction(uint32(tx.Transaction))
-		result, err := runVMTask(db, cfg, tx.Block, tx.Transaction, tx.Substate, vmImpl)
+		result, err := runVMTask(db, cfg, tx.Block, tx.Transaction, tx.Substate)
 		if err != nil {
 			return fmt.Errorf("VM execution failed. %v", err)
 		}
