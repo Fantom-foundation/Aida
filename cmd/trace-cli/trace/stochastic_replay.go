@@ -29,6 +29,7 @@ var StochasticReplayCommand = cli.Command{
 	Usage:     "executes storage trace",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
+		&chainIDFlag,
 		&cpuProfileFlag,
 		&disableProgressFlag,
 		&profileFlag,

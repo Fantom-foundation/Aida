@@ -14,8 +14,9 @@ var GenUpdateSetCommand = cli.Command{
 	Action:    genUpdateSet,
 	Name:      "gen-update-set",
 	Usage:     "generate update set database",
-	ArgsUsage: "<blockNumFirst> <blockNumLast> <blockRange>",
+	ArgsUsage: "<blockNumLast> <blockRange>",
 	Flags: []cli.Flag{
+		&chainIDFlag,
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
 		&updateDBDirFlag,
@@ -24,10 +25,9 @@ var GenUpdateSetCommand = cli.Command{
 	},
 	Description: `
 The trace gen-update-set command requires two arguments:
-<blockNumFirst> <blockNumLast> <blockRange>
+<blockNumLast> <blockRange>
 
-<blockNumFirst> and <blockNumLast> are the first and
-last block of the inclusive range of blocks to trace transactions.
+<blockNumLast> is last block of the inclusive range of blocks to generate update set.
 
 <blockRange> is the interval of writing update set to updateDB.`,
 }
@@ -36,14 +36,14 @@ last block of the inclusive range of blocks to trace transactions.
 func genUpdateSet(ctx *cli.Context) error {
 	var err error
 	// process arguments and flags
-	if ctx.Args().Len() != 3 {
-		return fmt.Errorf("trace command requires exactly 3 arguments")
+	if ctx.Args().Len() != 2 {
+		return fmt.Errorf("trace command requires exactly 2 arguments")
 	}
-	first, last, argErr := SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
+	last, argErr := strconv.ParseUint(ctx.Args().Get(0), 10, 64)
 	if argErr != nil {
 		return argErr
 	}
-	interval, ferr := strconv.ParseUint(ctx.Args().Get(2), 10, 64)
+	interval, ferr := strconv.ParseUint(ctx.Args().Get(1), 10, 64)
 	if ferr != nil {
 		return ferr
 	}
@@ -51,6 +51,8 @@ func genUpdateSet(ctx *cli.Context) error {
 	validate := ctx.Bool(validateFlag.Name)
 	updateDir := ctx.String(updateDBDirFlag.Name)
 	worldStateDir := ctx.String(worldStateDirFlag.Name)
+	setFirstBlockFromChainID(ctx.Int(chainIDFlag.Name))
+	log.Printf("first block %v\n", FirstSubstateBlock)
 
 	// initialize updateDB
 	db := substate.OpenUpdateDB(updateDir)
@@ -63,24 +65,30 @@ func genUpdateSet(ctx *cli.Context) error {
 	defer substate.CloseSubstateDB()
 
 	// store world state
+	first := FirstSubstateBlock
 	log.Printf("Load initial worldstate and store its substateAlloc\n")
 	ws, err := generateWorldState(worldStateDir, first-1, workers)
 	if err != nil {
 		return err
 	}
-	db.PutUpdateSet(FirstSubstateBlock-1, &ws)
+	log.Printf("write block %v to updateDB\n", first-1)
+	db.PutUpdateSet(first-1, &ws)
 	log.Printf("\tAccounts: %v\n", len(ws))
 
 	iter := substate.NewSubstateIterator(first, workers)
 	defer iter.Release()
 
-	checkPoint := ((first / interval) + 1) * interval
 	txCount := uint64(0)
 	oldBlock := uint64(0)
+	isFirst := true
+	var checkPoint uint64
 
 	for iter.Next() {
 		tx := iter.Value()
-
+		if isFirst {
+			checkPoint = (((tx.Block/interval)+1)*interval - 1)
+			isFirst = false
+		}
 		// new block
 		if oldBlock != tx.Block {
 			// write an update-set until prev block to update-set db

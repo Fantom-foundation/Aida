@@ -21,6 +21,7 @@ var TraceReplaySubstateCommand = cli.Command{
 	Usage:     "executes storage trace using substates",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
+		&chainIDFlag,
 		&cpuProfileFlag,
 		&disableProgressFlag,
 		&randomizePrimingFlag,

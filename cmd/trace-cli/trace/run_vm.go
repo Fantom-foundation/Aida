@@ -55,7 +55,6 @@ var RunVMCommand = cli.Command{
 		&shadowDbVariantFlag,
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
-		&traceDebugFlag,
 		&updateDBDirFlag,
 		&validateTxStateFlag,
 		&validateWorldStateFlag,
@@ -71,7 +70,7 @@ last block of the inclusive range of blocks to trace transactions.`,
 }
 
 // runVMTask executes VM on a chosen storage system.
-func runVMTask(db state.StateDB, cfg *TraceConfig, block uint64, tx int, recording *substate.Substate, vmImpl string) (*substate.SubstateResult, error) {
+func runVMTask(db state.StateDB, cfg *TraceConfig, block uint64, tx int, recording *substate.Substate) (*substate.SubstateResult, error) {
 
 	inputAlloc := recording.InputAlloc
 	inputEnv := recording.Env
@@ -86,10 +85,10 @@ func runVMTask(db state.StateDB, cfg *TraceConfig, block uint64, tx int, recordi
 
 	vmConfig = opera.DefaultVMConfig
 	vmConfig.NoBaseFee = true
-	vmConfig.InterpreterImpl = vmImpl
+	vmConfig.InterpreterImpl = cfg.vmImpl
 
 	// get chain configuration
-	chainConfig := getChainConfig(chainID)
+	chainConfig := getChainConfig(cfg.chainID)
 
 	var hashError error
 	getHash := func(num uint64) common.Hash {
@@ -230,7 +229,6 @@ func runVM(ctx *cli.Context) error {
 		lastGasCount = new(big.Int)
 	)
 	// process general arguments
-	chainID = ctx.Int(chainIDFlag.Name)
 	cfg, argErr := NewTraceConfig(ctx)
 	if argErr != nil {
 		return argErr
@@ -240,8 +238,6 @@ func runVM(ctx *cli.Context) error {
 	if cfg.dbImpl == "memory" {
 		return fmt.Errorf("db-impl memory is not supported")
 	}
-	vmImpl := ctx.String(vmImplementation.Name)
-	log.Printf("\tUsed VM implementation: %v\n", vmImpl)
 
 	// start CPU profiling if requested.
 	if profileFileName := ctx.String(cpuProfileFlag.Name); profileFileName != "" {
@@ -303,8 +299,8 @@ func runVM(ctx *cli.Context) error {
 
 	// wrap stateDB for profiling
 	var stats *operation.ProfileStats
-	if cfg.profile || cfg.debug {
-		db, stats = tracer.NewProxyProfiler(db, cfg.debug)
+	if cfg.profile {
+		db, stats = tracer.NewProxyProfiler(db)
 	}
 
 	if cfg.validateWorldState {
@@ -359,7 +355,7 @@ func runVM(ctx *cli.Context) error {
 
 		// run VM
 		db.BeginTransaction(uint32(tx.Transaction))
-		result, err := runVMTask(db, cfg, tx.Block, tx.Transaction, tx.Substate, vmImpl)
+		result, err := runVMTask(db, cfg, tx.Block, tx.Transaction, tx.Substate)
 		if err != nil {
 			return fmt.Errorf("VM execution failed. %v", err)
 		}
