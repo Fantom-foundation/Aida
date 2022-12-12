@@ -36,6 +36,7 @@ var RunVMCommand = cli.Command{
 	Usage:     "run VM on the world-state",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
+		&archiveModeFlag,
 		&chainIDFlag,
 		&continueOnFailureFlag,
 		&cpuProfileFlag,

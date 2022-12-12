@@ -20,6 +20,10 @@ var (
 
 // Command line options for common flags in record and replay.
 var (
+	archiveModeFlag = cli.BoolFlag{
+		Name:  "archive",
+		Usage: "set node type to archival mode. If set, the node keep all the EVM state history; otherwise the state history will be pruned.",
+	}
 	chainIDFlag = cli.IntFlag{
 		Name:  "chainid",
 		Usage: "ChainID for replayer",
@@ -168,6 +172,7 @@ type TraceConfig struct {
 	dbLogging          bool   // set to true if all DB operations should be logged
 	enableProgress     bool   // enable progress report flag
 	epochLength        uint64 // length of an epoch in number of blocks
+	archiveMode        bool
 	memoryBreakdown    bool   // enable printing of memory breakdown
 	primeRandom        bool   // enable randomized priming
 	primeSeed          int64  // set random seed
@@ -252,6 +257,7 @@ func NewTraceConfig(ctx *cli.Context) (*TraceConfig, error) {
 		dbImpl:             ctx.String(stateDbImplementationFlag.Name),
 		dbVariant:          ctx.String(stateDbVariantFlag.Name),
 		dbLogging:          ctx.Bool(stateDbLoggingFlag.Name),
+		archiveMode:        ctx.Bool(archiveModeFlag.Name),
 		memoryBreakdown:    ctx.Bool(memoryBreakdownFlag.Name),
 		primeRandom:        ctx.Bool(randomizePrimingFlag.Name),
 		primeSeed:          ctx.Int64(primeSeedFlag.Name),

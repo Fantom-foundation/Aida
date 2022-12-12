@@ -28,7 +28,7 @@ func MakeStateDB(directory string, cfg *TraceConfig) (state.StateDB, error) {
 // makeStateDB creates a DB instance with a potential shadow instance.
 func makeStateDBInternal(directory string, cfg *TraceConfig) (state.StateDB, error) {
 	if cfg.shadowImpl == "" {
-		return makeStateDBVariant(directory, cfg.dbImpl, cfg.dbVariant)
+		return makeStateDBVariant(directory, cfg)
 	}
 	primeDir := directory + "/prime"
 	if err := os.MkdirAll(primeDir, 0700); err != nil {
@@ -38,11 +38,11 @@ func makeStateDBInternal(directory string, cfg *TraceConfig) (state.StateDB, err
 	if err := os.MkdirAll(shadowDir, 0700); err != nil {
 		return nil, err
 	}
-	prime, err := makeStateDBVariant(primeDir, cfg.dbImpl, cfg.dbVariant)
+	prime, err := makeStateDBVariant(primeDir, cfg)
 	if err != nil {
 		return nil, err
 	}
-	shadow, err := makeStateDBVariant(shadowDir, cfg.shadowImpl, cfg.shadowVariant)
+	shadow, err := makeStateDBVariant(shadowDir, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -50,16 +50,16 @@ func makeStateDBInternal(directory string, cfg *TraceConfig) (state.StateDB, err
 }
 
 // makeStateDBVariant creates a DB instance of the requested kind.
-func makeStateDBVariant(directory, impl, variant string) (state.StateDB, error) {
-	switch impl {
+func makeStateDBVariant(directory string, cfg *TraceConfig) (state.StateDB, error) {
+	switch cfg.dbImpl {
 	case "memory":
-		return state.MakeGethInMemoryStateDB(variant)
+		return state.MakeGethInMemoryStateDB(cfg.dbVariant)
 	case "geth":
-		return state.MakeGethStateDB(directory, variant)
+		return state.MakeGethStateDB(directory, cfg.dbVariant, cfg.archiveMode)
 	case "carmen":
-		return state.MakeCarmenStateDB(directory, variant)
+		return state.MakeCarmenStateDB(directory, cfg.dbVariant)
 	}
-	return nil, fmt.Errorf("Unknown DB implementation (--%v): %v", stateDbImplementationFlag.Name, impl)
+	return nil, fmt.Errorf("Unknown DB implementation (--%v): %v", stateDbImplementationFlag.Name, cfg.dbImpl)
 }
 
 // primeStateDB primes database with accounts from the world state.
