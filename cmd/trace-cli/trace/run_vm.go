@@ -284,6 +284,16 @@ func runVM(ctx *cli.Context) error {
 	sec = time.Since(start).Seconds()
 	log.Printf("\tElapsed time: %.2f s\n", sec)
 
+	// prime stateDB
+	log.Printf("Delete destroyed accounts \n")
+	start = time.Now()
+	err = deleteDestroyedAccounts(db, cfg)
+	sec = time.Since(start).Seconds()
+	log.Printf("\tElapsed time: %.2f s\n", sec)
+	if err != nil {
+		return err
+	}
+
 	// print memory usage after priming
 	if cfg.memoryBreakdown {
 		if usage := db.GetMemoryUsage(); usage != nil {
