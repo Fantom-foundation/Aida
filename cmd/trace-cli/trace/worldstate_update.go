@@ -36,7 +36,7 @@ func generateWorldStateFromUpdateDB(path string, target uint64, numWorkers int) 
 	// load pre-computed update-set from update-set db
 	db := substate.OpenUpdateDBReadOnly(path)
 	defer db.Close()
-	updateIter := substate.NewUpdateSetIterator(db, blockPos, 1)
+	updateIter := substate.NewUpdateSetIterator(db, blockPos, target, numWorkers)
 	for updateIter.Next() {
 		blk := updateIter.Value()
 		if blk.Block > target {
