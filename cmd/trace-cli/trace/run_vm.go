@@ -235,11 +235,6 @@ func runVM(ctx *cli.Context) error {
 		return argErr
 	}
 
-	// process run-vm specific arguments
-	if cfg.dbImpl == "memory" {
-		return fmt.Errorf("db-impl memory is not supported")
-	}
-
 	// start CPU profiling if requested.
 	if profileFileName := ctx.String(cpuProfileFlag.Name); profileFileName != "" {
 		f, err := os.Create(profileFileName)
@@ -355,6 +350,7 @@ func runVM(ctx *cli.Context) error {
 		}
 
 		// run VM
+		db.PrepareSubstate(&tx.Substate.InputAlloc)
 		db.BeginTransaction(uint32(tx.Transaction))
 		result, err := runVMTask(db, cfg, tx.Block, tx.Transaction, tx.Substate)
 		if err != nil {
