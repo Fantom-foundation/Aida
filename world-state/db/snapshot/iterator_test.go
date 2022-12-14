@@ -3,14 +3,15 @@ package snapshot
 
 import (
 	"context"
-	"github.com/Fantom-foundation/Aida/world-state/types"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/crypto"
 	"math/big"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/Fantom-foundation/Aida/world-state/types"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 // testDBSize is the number of account we put into the test DB
@@ -209,4 +210,24 @@ func TestStateDB_NewAccountIterator(t *testing.T) {
 
 	// we release the iterator; the subsequent deferred iterator release should not fail later
 	iter.Release()
+}
+
+// TestStateDB_NewAccountIterator_CtxFail tests NewAccountIterator function in the context expiration state
+func TestStateDB_NewAccountIterator_CtxFail(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), cCtxNoTime)
+	defer cancel()
+
+	db, _, _, _ := makeTestDB(t)
+	iter := db.NewAccountIterator(ctx)
+	defer iter.Release()
+
+	for iter.Next() {
+		if iter.Error() != nil {
+			break
+		}
+	}
+
+	if iter.Error() != context.DeadlineExceeded {
+		t.Errorf("failed iterator test on context expiration; expected DeadlineExceeded error, got %s", errorStr(iter.Error()))
+	}
 }

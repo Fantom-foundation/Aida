@@ -2,8 +2,9 @@ package snapshot
 
 import (
 	"context"
-	"github.com/Fantom-foundation/Aida/world-state/types"
 	"testing"
+
+	"github.com/Fantom-foundation/Aida/world-state/types"
 )
 
 func TestStateDB_CloneTo(t *testing.T) {
@@ -47,6 +48,30 @@ func TestStateDB_CloneTo(t *testing.T) {
 
 	if count != len(nodes) {
 		t.Fatalf("failed clone test; expected %d accounts, got %d", len(nodes), count)
+	}
+
+	MustCloseStateDB(fromDB)
+	MustCloseStateDB(toDB)
+}
+
+// TestStateDB_CloneTo_CtxFail tests Copy function in the context expiration state
+func TestStateDB_CloneTo_CtxFail(t *testing.T) {
+	// context expiration
+	ctx, cancel := context.WithTimeout(context.Background(), cCtxNoTime)
+	defer cancel()
+
+	// prep source DB
+	fromDB, _, _, _ := makeTestDB(t)
+
+	// create target in-memory database
+	toDB, err := OpenStateDB("")
+	if err != nil {
+		t.Fatalf("failed test data build; could not create empty target DB; %s", err.Error())
+	}
+
+	err = fromDB.Copy(ctx, toDB, nil)
+	if err != context.DeadlineExceeded {
+		t.Errorf("failed clone test on context expiration; expected DeadlineExceeded error, got %s", errorStr(err))
 	}
 
 	MustCloseStateDB(fromDB)
