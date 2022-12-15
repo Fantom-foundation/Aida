@@ -25,7 +25,7 @@ func (s *loggingStateDB) BeginBlockApply() error {
 }
 
 func (s *loggingStateDB) CreateAccount(addr common.Address) {
-	log.Printf("CreateAccont, %v\n", addr)
+	log.Printf("CreateAccount, %v\n", addr)
 	s.db.CreateAccount(addr)
 }
 
