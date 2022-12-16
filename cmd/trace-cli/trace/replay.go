@@ -25,10 +25,11 @@ var TraceReplayCommand = cli.Command{
 	Flags: []cli.Flag{
 		&chainIDFlag,
 		&cpuProfileFlag,
-		&memProfileFlag,
-		&epochLengthFlag,
+		&deletedAccountDirFlag,
 		&disableProgressFlag,
+		&epochLengthFlag,
 		&memoryBreakdownFlag,
+		&memProfileFlag,
 		&primeSeedFlag,
 		&primeThresholdFlag,
 		&profileFlag,
@@ -112,6 +113,13 @@ func traceReplayTask(cfg *TraceConfig) error {
 		}
 	}
 
+	// delete destroyed accounts from stateDB
+	log.Printf("Delete destroyed accounts \n")
+	// remove destroyed accounts until one block before the first block
+	if err = deleteDestroyedAccountsFromStateDB(db, cfg.deletedAccountDir, cfg.first-1); err != nil {
+		return err
+	}
+
 	log.Printf("Replay storage operations on StateDB database")
 
 	// progress message setup
@@ -172,6 +180,9 @@ func traceReplayTask(cfg *TraceConfig) error {
 		log.Printf("Validate final state")
 		// advance the world state from the first block to the last block
 		advanceWorldState(ws, cfg.first, cfg.last, cfg.workers)
+		if err = deleteDestroyedAccountsFromWorldState(ws, cfg.deletedAccountDir, cfg.last); err != nil {
+			return fmt.Errorf("Failed to remove detroyed accounts. %v\n", err)
+		}
 		if err := validateStateDB(ws, db, false); err != nil {
 			return fmt.Errorf("Validation failed. %v\n", err)
 		}

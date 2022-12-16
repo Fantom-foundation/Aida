@@ -13,7 +13,7 @@ func MakeGethInMemoryStateDB(variant string) (StateDB, error) {
 	if variant != "" {
 		return nil, fmt.Errorf("unkown variant: %v", variant)
 	}
-	return &gethInMemoryStateDB{}, nil
+	return &gethInMemoryStateDB{gethStateDB{db: geth.MakeInMemoryStateDB(&substate.SubstateAlloc{})}}, nil
 }
 
 type gethInMemoryStateDB struct {

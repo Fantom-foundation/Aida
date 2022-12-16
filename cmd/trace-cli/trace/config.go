@@ -37,6 +37,10 @@ var (
 		Name:  "cpuprofile",
 		Usage: "enables CPU profiling",
 	}
+	deletedAccountDirFlag = cli.StringFlag{
+		Name:  "deleted-account-dir",
+		Usage: "sets the directory containing deleted accounts database",
+	}
 	memProfileFlag = cli.StringFlag{
 		Name:  "memprofile",
 		Usage: "enables memory allocation profiling",
@@ -170,9 +174,10 @@ type TraceConfig struct {
 	dbImpl             string // storage implementation
 	dbVariant          string // database variant
 	dbLogging          bool   // set to true if all DB operations should be logged
+	deletedAccountDir  string // directory of deleted account database
 	enableProgress     bool   // enable progress report flag
 	epochLength        uint64 // length of an epoch in number of blocks
-	archiveMode        bool
+	archiveMode        bool   // enable archive mode
 	memoryBreakdown    bool   // enable printing of memory breakdown
 	primeRandom        bool   // enable randomized priming
 	primeSeed          int64  // set random seed
@@ -257,6 +262,7 @@ func NewTraceConfig(ctx *cli.Context) (*TraceConfig, error) {
 		dbImpl:             ctx.String(stateDbImplementationFlag.Name),
 		dbVariant:          ctx.String(stateDbVariantFlag.Name),
 		dbLogging:          ctx.Bool(stateDbLoggingFlag.Name),
+		deletedAccountDir:  ctx.String(deletedAccountDirFlag.Name),
 		archiveMode:        ctx.Bool(archiveModeFlag.Name),
 		memoryBreakdown:    ctx.Bool(memoryBreakdownFlag.Name),
 		primeRandom:        ctx.Bool(randomizePrimingFlag.Name),
