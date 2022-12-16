@@ -377,7 +377,7 @@ func runVM(ctx *cli.Context) error {
 				d := new(big.Int).Sub(gasCount, lastGasCount)
 				g := new(big.Float).Quo(new(big.Float).SetInt(d), new(big.Float).SetFloat64(sec-lastSec))
 
-				txRate := float64(txCount-lastTxCount)/(sec-lastSec)
+				txRate := float64(txCount-lastTxCount) / (sec - lastSec)
 
 				fmt.Printf("run-vm: Elapsed time: %.0f s, at block %v (~ %.1f Tx/s, ~ %.1f Gas/s)\n", sec, tx.Block, txRate, g)
 				lastSec = sec
