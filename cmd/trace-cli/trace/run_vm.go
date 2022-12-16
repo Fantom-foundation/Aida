@@ -40,10 +40,11 @@ var RunVMCommand = cli.Command{
 		&chainIDFlag,
 		&continueOnFailureFlag,
 		&cpuProfileFlag,
-		&memProfileFlag,
-		&epochLengthFlag,
+		&deletedAccountDirFlag,
 		&disableProgressFlag,
+		&epochLengthFlag,
 		&memoryBreakdownFlag,
+		&memProfileFlag,
 		&primeSeedFlag,
 		&primeThresholdFlag,
 		&profileFlag,
@@ -290,6 +291,17 @@ func runVM(ctx *cli.Context) error {
 	sec = time.Since(start).Seconds()
 	log.Printf("\tElapsed time: %.2f s\n", sec)
 
+	// delete destroyed accounts from stateDB
+	log.Printf("Delete destroyed accounts \n")
+	start = time.Now()
+	// remove destroyed accounts until one block before the first block
+	err = deleteDestroyedAccountsFromStateDB(db, cfg.deletedAccountDir, cfg.first-1)
+	sec = time.Since(start).Seconds()
+	log.Printf("\tElapsed time: %.2f s\n", sec)
+	if err != nil {
+		return err
+	}
+
 	// print memory usage after priming
 	if cfg.memoryBreakdown {
 		if usage := db.GetMemoryUsage(); usage != nil {
@@ -306,6 +318,9 @@ func runVM(ctx *cli.Context) error {
 	}
 
 	if cfg.validateWorldState {
+		if err := deleteDestroyedAccountsFromWorldState(ws, cfg.deletedAccountDir, cfg.first-1); err != nil {
+			return fmt.Errorf("Failed to remove deleted accoount from the world state. %v", err)
+		}
 		if err := validateStateDB(ws, db, false); err != nil {
 			return fmt.Errorf("Pre: World state is not contained in the stateDB. %v", err)
 		}
@@ -421,6 +436,9 @@ func runVM(ctx *cli.Context) error {
 	if cfg.validateWorldState {
 		log.Printf("Validate final state\n")
 		advanceWorldState(ws, cfg.first, cfg.last, cfg.workers)
+		if err := deleteDestroyedAccountsFromWorldState(ws, cfg.deletedAccountDir, cfg.last); err != nil {
+			return fmt.Errorf("Failed to remove deleted accoount from the world state. %v", err)
+		}
 		if err := validateStateDB(ws, db, false); err != nil {
 			return fmt.Errorf("World state is not contained in the stateDB. %v", err)
 		}

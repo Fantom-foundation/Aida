@@ -3,6 +3,7 @@ package trace
 import (
 	"fmt"
 	"io/fs"
+	"log"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -110,6 +111,52 @@ func primeStateDBRandom(ws substate.SubstateAlloc, db state.BulkLoad, cfg *Trace
 		primeOneAccount(addr, account, db)
 
 	}
+}
+
+// deleteDestroyedAccountsFromWorldState removes previously suicided accounts from
+// the world state.
+func deleteDestroyedAccountsFromWorldState(ws substate.SubstateAlloc, directory string, target uint64) error {
+	if _, err := os.Stat(directory); os.IsNotExist(err) {
+		log.Printf("WARNING: deleted-account-dir is not provided or does not exist")
+		return nil
+	}
+	src := substate.OpenDestroyedAccountDBReadOnly(directory)
+	list, err := src.GetAccountsDestroyedInRange(0, target)
+	if err != nil {
+		return err
+	}
+	for _, cur := range list {
+		if _, found := ws[cur]; found {
+			delete(ws, cur)
+		}
+	}
+	return nil
+}
+
+// deleteDestroyedAccountsFromStateDB performs suicide operations on previously
+// self-destructed accounts.
+func deleteDestroyedAccountsFromStateDB(db state.StateDB, directory string, target uint64) error {
+	if _, err := os.Stat(directory); os.IsNotExist(err) {
+		log.Printf("WARNING: deleted-account-dir is not provided or does not exist")
+		return nil
+	}
+	src := substate.OpenDestroyedAccountDBReadOnly(directory)
+	list, err := src.GetAccountsDestroyedInRange(0, target)
+	if err != nil {
+		return err
+	}
+	log.Printf("Deleting %d accounts ..\n", len(list))
+	db.BeginEpoch(0)
+	db.BeginBlock(0)
+	db.BeginTransaction(0)
+	for _, cur := range list {
+		db.Suicide(cur)
+	}
+	db.Finalise(true)
+	db.EndTransaction()
+	db.EndBlock()
+	db.EndEpoch()
+	return nil
 }
 
 // getDirectorySize computes the size of all files in the given directoy in bytes.
