@@ -77,3 +77,34 @@ func TestStateDB_CloneTo_CtxFail(t *testing.T) {
 	MustCloseStateDB(fromDB)
 	MustCloseStateDB(toDB)
 }
+
+func TestStateDB_CloneToAndCompare(t *testing.T) {
+	ctx := context.Background()
+
+	// prep source DB
+	fromDB, _, _, _ := makeTestDB(t)
+
+	// create target in-memory database
+	toDB, err := OpenStateDB("")
+	if err != nil {
+		t.Fatalf("failed test data build; could not create empty target DB; %s", err.Error())
+	}
+
+	err = fromDB.Copy(ctx, toDB, nil)
+	if err != nil {
+		t.Fatalf("failed clone test; expected no error, got %s", err.Error())
+	}
+
+	err = fromDB.CompareTo(context.Background(), toDB)
+	if err != nil {
+		t.Fatalf("failed DB cloning; the target DB is not identical to the original DB; %s", err.Error())
+	}
+
+	err = toDB.CompareTo(context.Background(), fromDB)
+	if err != nil {
+		t.Fatalf("failed DB cloning; the original DB is not identical to the target DB; %s", err.Error())
+	}
+
+	MustCloseStateDB(fromDB)
+	MustCloseStateDB(toDB)
+}
