@@ -2,6 +2,7 @@ package snapshot
 
 import (
 	"context"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/substate"
 )
@@ -16,6 +17,10 @@ func (db *StateDB) ToSubstateAlloc(ctx context.Context) (substate.SubstateAlloc,
 
 	// loop over all the accounts
 	for iter.Next() {
+		if iter.Error() != nil {
+			break
+		}
+
 		// make sure to check the context status
 		select {
 		case <-ctx.Done():
@@ -46,6 +51,10 @@ func (db *StateDB) ToSubstateAlloc(ctx context.Context) (substate.SubstateAlloc,
 		}
 
 		ssAccounts[address] = &ss
+	}
+
+	if iter.Error() != nil {
+		return nil, iter.Error()
 	}
 
 	// Resolve all hashed slot addresses in one go.

@@ -18,6 +18,9 @@ func (db *StateDB) CompareTo(ctx context.Context, target *StateDB) error {
 	fail := make(chan error, 2)
 	defer close(fail)
 
+	// context exit control
+	ctxDone := ctx.Done()
+
 	wg := new(sync.WaitGroup)
 	wg.Add(2)
 	go checkAccounts(ctx, cancel, wg, db, target, fail)
@@ -28,6 +31,8 @@ func (db *StateDB) CompareTo(ctx context.Context, target *StateDB) error {
 
 	// any error received?
 	select {
+	case <-ctxDone:
+		return ctx.Err()
 	case err := <-fail:
 		return err
 	default:

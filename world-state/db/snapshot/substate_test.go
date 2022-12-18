@@ -4,12 +4,13 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"github.com/Fantom-foundation/Aida/world-state/types"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/substate"
 	"math/rand"
 	"reflect"
 	"testing"
+
+	"github.com/Fantom-foundation/Aida/world-state/types"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/substate"
 )
 
 // TestStateDB_Substate check whether generated substatAlloc is identical to the original database
@@ -33,6 +34,21 @@ func TestStateDB_Substate(t *testing.T) {
 				break
 			}
 		}
+	}
+}
+
+// TestStateDB_Substate_CtxFail tests ToSubstateAlloc function in the context expiration state
+func TestStateDB_Substate_CtxFail(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), cCtxNoTime)
+	defer cancel()
+
+	// prep source DB
+	db, _, _, _ := makeTestDB(t)
+	defer MustCloseStateDB(db)
+
+	_, err := db.ToSubstateAlloc(ctx)
+	if err != context.DeadlineExceeded {
+		t.Errorf("failed substate test on context expiration; expected DeadlineExceeded error, got %s", errorStr(err))
 	}
 }
 
