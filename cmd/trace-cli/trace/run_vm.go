@@ -324,6 +324,9 @@ func runVM(ctx *cli.Context) error {
 		if err := validateStateDB(ws, db, false); err != nil {
 			return fmt.Errorf("Pre: World state is not contained in the stateDB. %v", err)
 		}
+	} else {
+		// Release world state to free memory.
+		ws = substate.SubstateAlloc{}
 	}
 
 	if cfg.enableProgress {
