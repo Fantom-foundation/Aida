@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -248,11 +249,30 @@ func (s stringStringer) String() string {
 }
 
 func (s *shadowStateDB) GetMemoryUsage() *MemoryUsage {
+	var (
+		breakdown strings.Builder
+		usedBytes uint64 = 0
+	)
+
+	breakdown.WriteString("Primary:\n")
 	resP := s.prime.GetMemoryUsage()
+	if resP != nil {
+		fmt.Fprintf(&breakdown, "%v\n", resP.Breakdown)
+		usedBytes += resP.UsedBytes
+	} else {
+		breakdown.WriteString("\tMemory breakdown not supported.\n")
+	}
+	breakdown.WriteString("Shadow:\n")
 	resS := s.shadow.GetMemoryUsage()
+	if resS != nil {
+		fmt.Fprintf(&breakdown, "%v\n", resS.Breakdown)
+		usedBytes += resS.UsedBytes
+	} else {
+		breakdown.WriteString("\tMemory breakdown not supported.\n")
+	}
 	return &MemoryUsage{
-		UsedBytes: resP.UsedBytes + resS.UsedBytes,
-		Breakdown: stringStringer{fmt.Sprintf("Primary:\n%v\nShadow:\n%v\n", resP.Breakdown, resS.Breakdown)},
+		UsedBytes: usedBytes,
+		Breakdown: stringStringer{breakdown.String()},
 	}
 }
 
