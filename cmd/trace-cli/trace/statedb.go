@@ -121,6 +121,7 @@ func deleteDestroyedAccountsFromWorldState(ws substate.SubstateAlloc, directory 
 		return nil
 	}
 	src := substate.OpenDestroyedAccountDBReadOnly(directory)
+	defer src.Close()
 	list, err := src.GetAccountsDestroyedInRange(0, target)
 	if err != nil {
 		return err
@@ -141,6 +142,7 @@ func deleteDestroyedAccountsFromStateDB(db state.StateDB, directory string, targ
 		return nil
 	}
 	src := substate.OpenDestroyedAccountDBReadOnly(directory)
+	defer src.Close()
 	list, err := src.GetAccountsDestroyedInRange(0, target)
 	if err != nil {
 		return err

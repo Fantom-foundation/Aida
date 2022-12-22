@@ -179,7 +179,7 @@ func traceReplaySubstateTask(cfg *TraceConfig) error {
 // traceReplaySubstateAction implements trace command for replaying.
 func traceReplaySubstateAction(ctx *cli.Context) error {
 	substate.RecordReplay = true
-	cfg, err := NewTraceConfig(ctx)
+	cfg, err := NewTraceConfig(ctx, blockRangeArgs)
 	if err != nil {
 		return err
 	}

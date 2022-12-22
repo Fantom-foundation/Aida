@@ -237,7 +237,7 @@ func runVM(ctx *cli.Context) error {
 		lastBlockProgressReportGasCount = new(big.Int)
 	)
 	// process general arguments
-	cfg, argErr := NewTraceConfig(ctx)
+	cfg, argErr := NewTraceConfig(ctx, blockRangeArgs)
 	if argErr != nil {
 		return argErr
 	}
@@ -277,7 +277,7 @@ func runVM(ctx *cli.Context) error {
 	// load the world state
 	log.Printf("Load and advance world state to block %v\n", cfg.first-1)
 	start = time.Now()
-	ws, err := generateWorldStateFromUpdateDB(cfg.updateDBDir, cfg.first-1, cfg.workers)
+	ws, err := generateWorldStateFromUpdateDB(cfg, cfg.first-1)
 	if err != nil {
 		return err
 	}
@@ -324,10 +324,9 @@ func runVM(ctx *cli.Context) error {
 		if err := validateStateDB(ws, db, false); err != nil {
 			return fmt.Errorf("Pre: World state is not contained in the stateDB. %v", err)
 		}
-	} else {
-		// Release world state to free memory.
-		ws = substate.SubstateAlloc{}
 	}
+	// Release world state to free memory.
+	ws = substate.SubstateAlloc{}
 
 	if cfg.enableProgress {
 		start = time.Now()
@@ -438,7 +437,7 @@ func runVM(ctx *cli.Context) error {
 
 	if cfg.validateWorldState {
 		log.Printf("Validate final state\n")
-		advanceWorldState(ws, cfg.first, cfg.last, cfg.workers)
+		ws, err = generateWorldStateFromUpdateDB(cfg, cfg.last)
 		if err := deleteDestroyedAccountsFromWorldState(ws, cfg.deletedAccountDir, cfg.last); err != nil {
 			return fmt.Errorf("Failed to remove deleted accoount from the world state. %v", err)
 		}
