@@ -2,6 +2,7 @@ package state
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/Fantom-foundation/go-opera-fvm/flat"
 	"github.com/Fantom-foundation/go-opera-fvm/gossip/evmstore/state"
@@ -31,37 +32,67 @@ func MakeFlatStateDB(directory, variant string) (s StateDB, err error) {
 	}
 
 	fs := &flatStateDB{
-		db: flat.NewDatabase(db),
-	}
-	if substate.RecordReplay {
-		fs.substatePostAlloc = make(substate.SubstateAlloc)
+		db:        flat.NewDatabase(db),
+		stateRoot: common.Hash{},
 	}
 
+	// initialize stateDB
+	fs.BeginBlockApply()
 	s = fs
 	return
 }
 
 type flatStateDB struct {
-	db state.Database
+	db        state.Database
+	stateRoot common.Hash
 	*state.StateDB
-	substatePostAlloc substate.SubstateAlloc
 }
 
 // BeginBlockApply creates a new statedb from an existing geth database
-func (s *flatStateDB) BeginBlockApply(root_hash common.Hash) error {
-	state, err := state.New(root_hash, s.db)
-	s.StateDB = state
+func (s *flatStateDB) BeginBlockApply() error {
+	var err error
+	s.StateDB, err = state.New(s.stateRoot, s.db)
 	return err
+}
+
+func (s *flatStateDB) BeginTransaction(number uint32) {
+	// ignored
+}
+
+func (s *flatStateDB) EndTransaction() {
+	// ignored
+}
+
+func (s *flatStateDB) BeginBlock(number uint64) {
+	// ignored
+}
+
+func (s *flatStateDB) EndBlock() {
+	var err error
+	//commit at the end of a block
+	s.stateRoot, err = s.Commit(true)
+	if err != nil {
+		panic(fmt.Errorf("StateDB commit failed\n"))
+	}
+}
+
+func (s *flatStateDB) BeginEpoch(number uint64) {
+	// ignored
+}
+
+func (s *flatStateDB) EndEpoch() {
+	// ignored
 }
 
 // PrepareSubstate initiates the state DB for the next transaction.
 func (s *flatStateDB) PrepareSubstate(*substate.SubstateAlloc) {
+	// ignored
 	return
 }
 
 func (s *flatStateDB) GetSubstatePostAlloc() substate.SubstateAlloc {
-	// TODO: use or delete
-	return s.substatePostAlloc
+	// ignored
+	return substate.SubstateAlloc{}
 }
 
 // Close requests the StateDB to flush all its content to secondary storage and shut down.
@@ -84,4 +115,61 @@ func (s *flatStateDB) Close() error {
 	}
 
 	return nil
+}
+
+func (s *flatStateDB) GetMemoryUsage() *MemoryUsage {
+	// not supported yet
+	return nil
+}
+
+func (s *flatStateDB) StartBulkLoad() BulkLoad {
+	return &flatBulkLoad{db: s}
+}
+
+// For priming initial state of stateDB
+type flatBulkLoad struct {
+	db      *flatStateDB
+	num_ops int64
+}
+
+func (l *flatBulkLoad) CreateAccount(addr common.Address) {
+	l.db.CreateAccount(addr)
+	l.digest()
+}
+
+func (l *flatBulkLoad) SetBalance(addr common.Address, value *big.Int) {
+	old := l.db.GetBalance(addr)
+	value = value.Sub(value, old)
+	l.db.AddBalance(addr, value)
+	l.digest()
+}
+
+func (l *flatBulkLoad) SetNonce(addr common.Address, nonce uint64) {
+	l.db.SetNonce(addr, nonce)
+	l.digest()
+}
+
+func (l *flatBulkLoad) SetState(addr common.Address, key common.Hash, value common.Hash) {
+	l.db.SetState(addr, key, value)
+	l.digest()
+}
+
+func (l *flatBulkLoad) SetCode(addr common.Address, code []byte) {
+	l.db.SetCode(addr, code)
+	l.digest()
+}
+
+func (l *flatBulkLoad) Close() error {
+	l.db.EndBlock()
+	_, err := l.db.Commit(false)
+	return err
+}
+
+func (l *flatBulkLoad) digest() {
+	// Call EndBlock every 1M insert operation.
+	l.num_ops++
+	if l.num_ops%(1000*1000) != 0 {
+		return
+	}
+	l.db.EndBlock()
 }
