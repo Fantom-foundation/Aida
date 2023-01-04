@@ -60,6 +60,8 @@ func makeStateDBVariant(directory, impl, variant string, cfg *TraceConfig) (stat
 		return state.MakeGethStateDB(directory, variant, cfg.archiveMode)
 	case "carmen":
 		return state.MakeCarmenStateDB(directory, variant)
+	case "flat":
+		return state.MakeFlatStateDB(directory, variant)
 	}
 	return nil, fmt.Errorf("unknown DB implementation (--%v): %v", stateDbImplementationFlag.Name, impl)
 }
