@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/state"
 	"github.com/ethereum/go-ethereum/common"
@@ -66,33 +67,64 @@ func makeStateDBVariant(directory, impl, variant string, cfg *TraceConfig) (stat
 // primeStateDB primes database with accounts from the world state.
 func primeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *TraceConfig) {
 	load := db.StartBulkLoad()
+
+	numValues := 0
+	for _, account := range ws {
+		numValues += len(account.Storage)
+	}
+	log.Printf("\tLoading %d accounts with %d values ..\n", len(ws), numValues)
+
+	j := 0
+	start := time.Now()
+	last := start
+	rate := 0.0
+	progressTracker := func() {
+		const step = 100000
+		j++
+		if j%step == 0 {
+			now := time.Now()
+			currentRate := step / now.Sub(last).Seconds()
+			rate = currentRate*0.1 + rate*0.9
+			last = now
+			progress := float32(j) / float32(numValues)
+			time := int(now.Sub(start).Seconds())
+			eta := int(float64(numValues-j) / rate)
+			log.Printf("\t\tLoading state ... %8.1f slots/s, %5.1f%%, time: %d:%02d, ETA: %d:%02d\n", currentRate, progress*100, time/60, time%60, eta/60, eta%60)
+		}
+	}
+
 	if cfg.primeRandom {
 		//if 0, commit once after priming all accounts
 		if cfg.primeThreshold == 0 {
 			cfg.primeThreshold = len(ws)
 		}
-		primeStateDBRandom(ws, load, cfg)
+		primeStateDBRandom(ws, load, cfg, progressTracker)
 	} else {
 		for addr, account := range ws {
-			primeOneAccount(addr, account, load)
+			primeOneAccount(addr, account, load, progressTracker)
 		}
+
 	}
+	log.Printf("\t\tHashing and flushing ...\n")
 	load.Close()
 }
 
 // primeOneAccount initializes an account on stateDB with substate
-func primeOneAccount(addr common.Address, account *substate.SubstateAccount, db state.BulkLoad) {
+func primeOneAccount(addr common.Address, account *substate.SubstateAccount, db state.BulkLoad, afterLoad func()) {
 	db.CreateAccount(addr)
 	db.SetBalance(addr, account.Balance)
 	db.SetNonce(addr, account.Nonce)
 	db.SetCode(addr, account.Code)
 	for key, value := range account.Storage {
 		db.SetState(addr, key, value)
+		if afterLoad != nil {
+			afterLoad()
+		}
 	}
 }
 
 // primeStateDBRandom primes database with accounts from the world state in random order.
-func primeStateDBRandom(ws substate.SubstateAlloc, db state.BulkLoad, cfg *TraceConfig) {
+func primeStateDBRandom(ws substate.SubstateAlloc, db state.BulkLoad, cfg *TraceConfig, afterLoad func()) {
 	contracts := make([]string, 0, len(ws))
 	for addr := range ws {
 		contracts = append(contracts, addr.Hex())
@@ -108,7 +140,7 @@ func primeStateDBRandom(ws substate.SubstateAlloc, db state.BulkLoad, cfg *Trace
 	for _, c := range contracts {
 		addr := common.HexToAddress(c)
 		account := ws[addr]
-		primeOneAccount(addr, account, db)
+		primeOneAccount(addr, account, db, afterLoad)
 
 	}
 }
