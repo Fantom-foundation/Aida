@@ -377,9 +377,12 @@ func runVM(ctx *cli.Context) error {
 		// run VM
 		db.PrepareSubstate(&tx.Substate.InputAlloc)
 		db.BeginTransaction(uint32(tx.Transaction))
-		result, err := runVMTask(db, cfg, tx.Block, tx.Transaction, tx.Substate)
+		var result *substate.SubstateResult
+		result, err = runVMTask(db, cfg, tx.Block, tx.Transaction, tx.Substate)
 		if err != nil {
-			return fmt.Errorf("VM execution failed. %v", err)
+			log.Printf("\tRun VM failed.\n")
+			err = fmt.Errorf("Error: VM execution failed. %w", err)
+			break
 		}
 		db.EndTransaction()
 		txCount++
@@ -424,7 +427,7 @@ func runVM(ctx *cli.Context) error {
 		}
 	}
 
-	if !isFirstBlock {
+	if !isFirstBlock && err == nil {
 		db.EndBlock()
 		db.EndEpoch()
 	}
@@ -432,10 +435,10 @@ func runVM(ctx *cli.Context) error {
 	runTime := time.Since(start).Seconds()
 
 	if cfg.continueOnFailure {
-		fmt.Printf("run-vm: %v errors found\n", errCount)
+		log.Printf("run-vm: %v errors found\n", errCount)
 	}
 
-	if cfg.validateWorldState {
+	if cfg.validateWorldState && err == nil {
 		log.Printf("Validate final state\n")
 		ws, err = generateWorldStateFromUpdateDB(cfg, cfg.last)
 		if err := deleteDestroyedAccountsFromWorldState(ws, cfg.deletedAccountDir, cfg.last); err != nil {
@@ -455,7 +458,9 @@ func runVM(ctx *cli.Context) error {
 	}
 
 	if cfg.profile {
+		fmt.Printf("=================Statistics=================\n")
 		stats.PrintProfiling()
+		fmt.Printf("============================================\n")
 	}
 
 	// close the DB and print disk usage
@@ -469,7 +474,7 @@ func runVM(ctx *cli.Context) error {
 	if cfg.enableProgress {
 		g := new(big.Float).Quo(new(big.Float).SetInt(gasCount), new(big.Float).SetFloat64(runTime))
 
-		log.Printf("run-vm: Total elapsed time: %.3f s, processed %v blocks (~ %.1f Tx/s) (~ %.1f Gas/s)\n", runTime, cfg.last-cfg.first+1, float64(txCount)/(runTime), g)
+		log.Printf("run-vm: Total elapsed time: %.3f s, processed %v blocks, %v transactions (~ %.1f Tx/s) (~ %.1f Gas/s)\n", runTime, cfg.last-cfg.first+1, txCount, float64(txCount)/(runTime), g)
 		log.Printf("run-vm: Closing DB took %v\n", time.Since(start))
 		log.Printf("run-vm: Final disk usage: %v MiB\n", float32(getDirectorySize(stateDirectory))/float32(1024*1024))
 	}
