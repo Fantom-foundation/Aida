@@ -95,7 +95,7 @@ func traceReplayTask(cfg *TraceConfig) error {
 
 	// intialize the world state and advance it to the first block
 	log.Printf("Load and advance worldstate to block %v", cfg.first-1)
-	ws, err := generateWorldStateFromUpdateDB(cfg.updateDBDir, cfg.first-1, cfg.workers)
+	ws, err := generateWorldStateFromUpdateDB(cfg, cfg.first-1)
 	if err != nil {
 		return err
 	}
@@ -113,10 +113,13 @@ func traceReplayTask(cfg *TraceConfig) error {
 		}
 	}
 
+	// Release world state to free memory.
+	ws = substate.SubstateAlloc{}
+
 	// delete destroyed accounts from stateDB
 	log.Printf("Delete destroyed accounts \n")
 	// remove destroyed accounts until one block before the first block
-	if err = deleteDestroyedAccountsFromStateDB(db, cfg.deletedAccountDir, cfg.first-1); err != nil {
+	if err = deleteDestroyedAccountsFromStateDB(db, cfg, cfg.first-1); err != nil {
 		return err
 	}
 
@@ -178,9 +181,8 @@ func traceReplayTask(cfg *TraceConfig) error {
 	// validate stateDB
 	if cfg.validateWorldState {
 		log.Printf("Validate final state")
-		// advance the world state from the first block to the last block
-		advanceWorldState(ws, cfg.first, cfg.last, cfg.workers)
-		if err = deleteDestroyedAccountsFromWorldState(ws, cfg.deletedAccountDir, cfg.last); err != nil {
+		ws, err := generateWorldStateFromUpdateDB(cfg, cfg.last)
+		if err = deleteDestroyedAccountsFromWorldState(ws, cfg, cfg.last); err != nil {
 			return fmt.Errorf("Failed to remove detroyed accounts. %v\n", err)
 		}
 		if err := validateStateDB(ws, db, false); err != nil {
@@ -221,7 +223,7 @@ func traceReplayTask(cfg *TraceConfig) error {
 // traceReplayAction implements trace command for replaying.
 func traceReplayAction(ctx *cli.Context) error {
 	var err error
-	cfg, err := NewTraceConfig(ctx)
+	cfg, err := NewTraceConfig(ctx, blockRangeArgs)
 	if err != nil {
 		return err
 	}

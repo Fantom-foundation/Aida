@@ -333,7 +333,7 @@ func loadTransitions() ([][]float64, error) {
 // traceStochasticReplayAction implements trace command for StochasticReplaying.
 func traceStochasticReplayAction(ctx *cli.Context) error {
 	var err error
-	cfg, err := NewTraceConfig(ctx)
+	cfg, err := NewTraceConfig(ctx, lastBlockArg)
 	if err != nil {
 		return err
 	}
