@@ -295,7 +295,7 @@ func runVM(ctx *cli.Context) error {
 	log.Printf("Delete destroyed accounts \n")
 	start = time.Now()
 	// remove destroyed accounts until one block before the first block
-	err = deleteDestroyedAccountsFromStateDB(db, cfg.deletedAccountDir, cfg.first-1)
+	err = deleteDestroyedAccountsFromStateDB(db, cfg, cfg.first-1)
 	sec = time.Since(start).Seconds()
 	log.Printf("\tElapsed time: %.2f s\n", sec)
 	if err != nil {
@@ -318,7 +318,7 @@ func runVM(ctx *cli.Context) error {
 	}
 
 	if cfg.validateWorldState {
-		if err := deleteDestroyedAccountsFromWorldState(ws, cfg.deletedAccountDir, cfg.first-1); err != nil {
+		if err := deleteDestroyedAccountsFromWorldState(ws, cfg, cfg.first-1); err != nil {
 			return fmt.Errorf("Failed to remove deleted accoount from the world state. %v", err)
 		}
 		if err := validateStateDB(ws, db, false); err != nil {
@@ -441,7 +441,7 @@ func runVM(ctx *cli.Context) error {
 	if cfg.validateWorldState && err == nil {
 		log.Printf("Validate final state\n")
 		ws, err = generateWorldStateFromUpdateDB(cfg, cfg.last)
-		if err := deleteDestroyedAccountsFromWorldState(ws, cfg.deletedAccountDir, cfg.last); err != nil {
+		if err := deleteDestroyedAccountsFromWorldState(ws, cfg, cfg.last); err != nil {
 			return fmt.Errorf("Failed to remove deleted accoount from the world state. %v", err)
 		}
 		if err := validateStateDB(ws, db, false); err != nil {

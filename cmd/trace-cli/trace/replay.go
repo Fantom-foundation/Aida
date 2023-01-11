@@ -119,7 +119,7 @@ func traceReplayTask(cfg *TraceConfig) error {
 	// delete destroyed accounts from stateDB
 	log.Printf("Delete destroyed accounts \n")
 	// remove destroyed accounts until one block before the first block
-	if err = deleteDestroyedAccountsFromStateDB(db, cfg.deletedAccountDir, cfg.first-1); err != nil {
+	if err = deleteDestroyedAccountsFromStateDB(db, cfg, cfg.first-1); err != nil {
 		return err
 	}
 
@@ -182,7 +182,7 @@ func traceReplayTask(cfg *TraceConfig) error {
 	if cfg.validateWorldState {
 		log.Printf("Validate final state")
 		ws, err := generateWorldStateFromUpdateDB(cfg, cfg.last)
-		if err = deleteDestroyedAccountsFromWorldState(ws, cfg.deletedAccountDir, cfg.last); err != nil {
+		if err = deleteDestroyedAccountsFromWorldState(ws, cfg, cfg.last); err != nil {
 			return fmt.Errorf("Failed to remove detroyed accounts. %v\n", err)
 		}
 		if err := validateStateDB(ws, db, false); err != nil {

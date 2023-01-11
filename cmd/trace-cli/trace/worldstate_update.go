@@ -38,8 +38,8 @@ func generateUpdateSet(first uint64, last uint64, cfg *TraceConfig) substate.Sub
 				log.Fatalf("failed to get deleted account. %v", err)
 			}
 			// reset storage
-			resetStorageFromList(update, destroyed)
-			resetStorageFromList(update, resurrected)
+			clearAccountStorage(update, destroyed)
+			clearAccountStorage(update, resurrected)
 		}
 
 		// merge output substate to update
@@ -69,7 +69,7 @@ func generateWorldStateFromUpdateDB(cfg *TraceConfig, target uint64) (substate.S
 		// Reset accessed storage locations of suicided accounts prior to updateset block.
 		// The known accessed storage locations in the updateset range has already been
 		// reset when generating update set database.
-		resetStorageFromList(ws, blk.DeletedAccounts)
+		clearAccountStorage(ws, blk.DeletedAccounts)
 		ws.Merge(*blk.UpdateSet)
 	}
 	updateIter.Release()
@@ -81,11 +81,11 @@ func generateWorldStateFromUpdateDB(cfg *TraceConfig, target uint64) (substate.S
 	return ws, nil
 }
 
-// resetStorageFromList sets storage of addresses in a list to common.Hash{}
-func resetStorageFromList(ws substate.SubstateAlloc, addresses []common.Address) {
-	for _, addr := range addresses {
-		if _, found := ws[addr]; found {
-			ws[addr].Storage = make(map[common.Hash]common.Hash)
+// clearAccountStorage clears storage
+func clearAccountStorage(update substate.SubstateAlloc, accounts []common.Address) {
+	for _, addr := range accounts {
+		if _, found := update[addr]; found {
+			update[addr].Storage = make(map[common.Hash]common.Hash)
 		}
 	}
 }

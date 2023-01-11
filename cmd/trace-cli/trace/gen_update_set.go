@@ -134,12 +134,3 @@ func genUpdateSet(ctx *cli.Context) error {
 	}
 	return err
 }
-
-// clearAccountStorage clears storage
-func clearAccountStorage(update substate.SubstateAlloc, accounts []common.Address) {
-	for _, addr := range accounts {
-		if _, found := update[addr]; found {
-			update[addr].Storage = make(map[common.Hash]common.Hash)
-		}
-	}
-}

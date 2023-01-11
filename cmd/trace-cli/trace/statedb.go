@@ -115,12 +115,12 @@ func primeStateDBRandom(ws substate.SubstateAlloc, db state.BulkLoad, cfg *Trace
 
 // deleteDestroyedAccountsFromWorldState removes previously suicided accounts from
 // the world state.
-func deleteDestroyedAccountsFromWorldState(ws substate.SubstateAlloc, directory string, target uint64) error {
-	if _, err := os.Stat(directory); os.IsNotExist(err) {
-		log.Printf("WARNING: deleted-account-dir is not provided or does not exist")
+func deleteDestroyedAccountsFromWorldState(ws substate.SubstateAlloc, cfg *TraceConfig, target uint64) error {
+	if !cfg.hasDeletedAccounts {
+		log.Printf("Database not provided. Ignore deleted accounts.\n")
 		return nil
 	}
-	src := substate.OpenDestroyedAccountDBReadOnly(directory)
+	src := substate.OpenDestroyedAccountDBReadOnly(cfg.deletedAccountDir)
 	defer src.Close()
 	list, err := src.GetAccountsDestroyedInRange(0, target)
 	if err != nil {
@@ -136,12 +136,12 @@ func deleteDestroyedAccountsFromWorldState(ws substate.SubstateAlloc, directory 
 
 // deleteDestroyedAccountsFromStateDB performs suicide operations on previously
 // self-destructed accounts.
-func deleteDestroyedAccountsFromStateDB(db state.StateDB, directory string, target uint64) error {
-	if _, err := os.Stat(directory); os.IsNotExist(err) {
-		log.Printf("WARNING: deleted-account-dir is not provided or does not exist")
+func deleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *TraceConfig, target uint64) error {
+	if !cfg.hasDeletedAccounts {
+		log.Printf("Database not provided. Ignore deleted accounts.\n")
 		return nil
 	}
-	src := substate.OpenDestroyedAccountDBReadOnly(directory)
+	src := substate.OpenDestroyedAccountDBReadOnly(cfg.deletedAccountDir)
 	defer src.Close()
 	list, err := src.GetAccountsDestroyedInRange(0, target)
 	if err != nil {
