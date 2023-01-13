@@ -218,16 +218,16 @@ func loadLambda(path string) (float64, error) {
 
 // loadNewOccurrences loads probabilities of new values at individual operations
 func loadNewOccurrences() ([]float32, []float32, []float32, error) {
-	newContract := make([]float32, operation.NumProfiledOperations)
-	newStorage := make([]float32, operation.NumProfiledOperations)
-	newValue := make([]float32, operation.NumProfiledOperations)
+	newContract := make([]float32, operation.NumOperations)
+	newStorage := make([]float32, operation.NumOperations)
+	newValue := make([]float32, operation.NumOperations)
 
 	f, err := readFrequenciesFile()
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	for i := 0; i < operation.NumProfiledOperations; i++ {
+	for i := 0; i < operation.NumOperations; i++ {
 		if f[0][i] != 0 {
 			newContract[i] = float32(f[1][i]) / float32(f[0][i])
 			newStorage[i] = float32(f[2][i]) / float32(f[0][i])
@@ -246,7 +246,7 @@ func readFrequenciesFile() ([][]uint64, error) {
 	}
 	defer file.Close()
 
-	res := make([][]uint64, operation.NumProfiledOperations)
+	res := make([][]uint64, operation.NumOperations)
 
 	i := 0
 	rd := bufio.NewReader(file)
@@ -261,11 +261,11 @@ func readFrequenciesFile() ([][]uint64, error) {
 		}
 
 		p := strings.Split(line, ",")
-		if len(p) != operation.NumProfiledOperations {
+		if len(p) != operation.NumOperations {
 			err = fmt.Errorf("frequencies.dat file doesn't contain correct number of operations")
 			return nil, err
 		}
-		l := make([]uint64, operation.NumProfiledOperations)
+		l := make([]uint64, operation.NumOperations)
 		for k, s := range p {
 			//TrimSuffix last item has new line
 			j, err := strconv.ParseUint(strings.TrimSuffix(s, "\n"), 10, 64)
@@ -293,7 +293,7 @@ func loadTransitions() ([][]float64, error) {
 		log.Fatalf("Cannot open stochastic-matrix.csv file. Error: %v", err)
 	}
 
-	res := make([][]float64, operation.NumProfiledOperations)
+	res := make([][]float64, operation.NumOperations)
 	i := 0
 	rd := bufio.NewReader(file)
 	for {
@@ -306,11 +306,11 @@ func loadTransitions() ([][]float64, error) {
 			return nil, err
 		}
 		p := strings.Split(line, ",")
-		if len(p) != operation.NumProfiledOperations {
+		if len(p) != operation.NumOperations {
 			err = fmt.Errorf("stochastic-matrix file doesn't contain correct number of operations")
 			return nil, err
 		}
-		l := make([]float64, operation.NumProfiledOperations)
+		l := make([]float64, operation.NumOperations)
 		for k, s := range p {
 			//TrimSuffix last item has new line
 			j, err := strconv.ParseFloat(strings.TrimSuffix(s, "\n"), 64)
@@ -323,7 +323,7 @@ func loadTransitions() ([][]float64, error) {
 		i++
 	}
 
-	if i != operation.NumProfiledOperations {
+	if i != operation.NumOperations {
 		err = fmt.Errorf("stochastic-matrix file doesn't contain correct number of rows")
 		return nil, err
 	}

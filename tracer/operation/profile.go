@@ -10,11 +10,11 @@ var EnableProfiling = false
 
 // ProfileStats data structure contains statedb operation statistics.
 type ProfileStats struct {
-	opFrequency   [NumProfiledOperations]uint64        // operation frequency stats
-	opDuration    [NumProfiledOperations]time.Duration // accumulated operation duration
-	opMinDuration [NumProfiledOperations]time.Duration // min runtime observerd
-	opMaxDuration [NumProfiledOperations]time.Duration // max runtime observerd
-	opVariance    [NumProfiledOperations]float64       // duration variance
+	opFrequency   [NumOperations]uint64        // operation frequency stats
+	opDuration    [NumOperations]time.Duration // accumulated operation duration
+	opMinDuration [NumOperations]time.Duration // min runtime observerd
+	opMaxDuration [NumOperations]time.Duration // max runtime observerd
+	opVariance    [NumOperations]float64       // duration variance
 }
 
 // Profiling records runtime and calculates statistics after
@@ -62,7 +62,7 @@ func (ps *ProfileStats) PrintProfiling() {
 	tuStr := "us"
 	fmt.Printf("id, n, mean(%v), std(%v), min(%v), max(%v)\n", tuStr, tuStr, tuStr, tuStr)
 	total := float64(0)
-	for id := byte(0); id < NumProfiledOperations; id++ {
+	for id := byte(0); id < NumOperations; id++ {
 		n := ps.opFrequency[id]
 		mean := (float64(ps.opDuration[id]) / float64(n)) / timeUnit
 		std := math.Sqrt(ps.opVariance[id]) / timeUnit

@@ -246,7 +246,7 @@ func stochasticRecordAction(ctx *cli.Context) error {
 	enableProgress := !ctx.Bool(disableProgressFlag.Name)
 
 	// create dictionary and index contexts
-	dCtx := dict.NewDictionaryStochasticContext(operation.BeginBlockID, operation.NumProfiledOperations)
+	dCtx := dict.NewDictionaryStochasticContext(operation.BeginBlockID, operation.NumOperations)
 
 	// spawn writer
 	opChannel := make(chan operation.Operation, 100000)
@@ -363,13 +363,13 @@ func writeStochasticMatrixCsv(smFile string, tFreq map[[2]byte]uint64) {
 		}
 	}()
 
-	for i := byte(0); i < operation.NumProfiledOperations; i++ {
+	for i := byte(0); i < operation.NumOperations; i++ {
 		total := uint64(0)
-		for j := byte(0); j < operation.NumProfiledOperations; j++ {
+		for j := byte(0); j < operation.NumOperations; j++ {
 			total += tFreq[[2]byte{i, j}]
 		}
 
-		for j := byte(0); j < operation.NumProfiledOperations; j++ {
+		for j := byte(0); j < operation.NumOperations; j++ {
 			//fmt.Printf("\t%v -> %v [%v] \n",
 			//	operation.GetLabel(i),
 			//	operation.GetLabel(j),
@@ -384,7 +384,7 @@ func writeStochasticMatrixCsv(smFile string, tFreq map[[2]byte]uint64) {
 
 			fmt.Fprintf(file, "%v", n)
 
-			if j != operation.NumProfiledOperations-1 {
+			if j != operation.NumOperations-1 {
 				fmt.Fprint(file, ",")
 			}
 		}
@@ -405,18 +405,18 @@ func writeStochasticMatrixDot(smFile string, tFreq map[[2]byte]uint64) {
 		}
 	}()
 	fmt.Fprintf(file, "digraph C {\n")
-	for i := byte(0); i < operation.NumProfiledOperations; i++ {
+	for i := byte(0); i < operation.NumOperations; i++ {
 		total := uint64(0)
-		for j := byte(0); j < operation.NumProfiledOperations; j++ {
+		for j := byte(0); j < operation.NumOperations; j++ {
 			total += tFreq[[2]byte{i, j}]
 		}
 		maxFreq := uint64(0)
-		for j := byte(0); j < operation.NumProfiledOperations; j++ {
+		for j := byte(0); j < operation.NumOperations; j++ {
 			if tFreq[[2]byte{i, j}] > maxFreq {
 				maxFreq = tFreq[[2]byte{i, j}]
 			}
 		}
-		for j := byte(0); j < operation.NumProfiledOperations; j++ {
+		for j := byte(0); j < operation.NumOperations; j++ {
 			if tFreq[[2]byte{i, j}] != 0 {
 				if tFreq[[2]byte{i, j}] != maxFreq {
 					fmt.Fprintf(file, "\t%v -> %v [label=\"%v\"]\n",
