@@ -149,6 +149,7 @@ executes transactions from block 4,564,026 to 5,000,000. The tool initializes st
  - `--db-shadow-impl` if set, a shadow DB implementation of the given type is running in parallel to the primary StateDB
  - `--db-shadow-variant` the variant to be used for the shadow StateDB instance, if enabled
  - `--disable-progress` disable progress report. Default: `false`
+ - `--max-transactions` limit the maximum number of processed transactions, default: unlimited (`-1`)
  - `--memory-breakdown` display detailed memory usage breakdown after priming and after the EVM runs
  - `--prime-random` randomize order of accounts in StateDB priming.
  - `--prime-seed` set seed for randomizing priming.

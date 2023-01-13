@@ -43,6 +43,7 @@ var RunVMCommand = cli.Command{
 		&deletedAccountDirFlag,
 		&disableProgressFlag,
 		&epochLengthFlag,
+		&maxNumTransactionsFlag,
 		&memoryBreakdownFlag,
 		&memProfileFlag,
 		&primeSeedFlag,
@@ -372,6 +373,9 @@ func runVM(ctx *cli.Context) error {
 			curBlock = tx.Block
 			db.BeginBlock(curBlock)
 			db.BeginBlockApply()
+		}
+		if cfg.maxNumTransactions >= 0 && txCount >= cfg.maxNumTransactions {
+			break
 		}
 
 		// run VM

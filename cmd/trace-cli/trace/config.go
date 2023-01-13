@@ -155,6 +155,11 @@ var (
 		Required: true,
 		Value:    0,
 	}
+	maxNumTransactionsFlag = cli.IntFlag{
+		Name:  "max-transactions",
+		Usage: "limit the maximum number of processed transactions, default: unlimited",
+		Value: -1,
+	}
 	stochasticMatrixFlag = cli.StringFlag{
 		Name:  "stochastic-matrix",
 		Usage: "set stochastic matrix file",
@@ -188,6 +193,7 @@ type TraceConfig struct {
 	epochLength        uint64 // length of an epoch in number of blocks
 	archiveMode        bool   // enable archive mode
 	hasDeletedAccounts bool   // true if deletedAccountDir is not empty; otherwise false
+	maxNumTransactions int    // the maximum number of processed transactions
 	memoryBreakdown    bool   // enable printing of memory breakdown
 	primeRandom        bool   // enable randomized priming
 	primeSeed          int64  // set random seed
@@ -285,6 +291,7 @@ func NewTraceConfig(ctx *cli.Context, mode ArgumentMode) (*TraceConfig, error) {
 		deletedAccountDir:  ctx.String(deletedAccountDirFlag.Name),
 		archiveMode:        ctx.Bool(archiveModeFlag.Name),
 		hasDeletedAccounts: true,
+		maxNumTransactions: ctx.Int(maxNumTransactionsFlag.Name),
 		memoryBreakdown:    ctx.Bool(memoryBreakdownFlag.Name),
 		primeRandom:        ctx.Bool(randomizePrimingFlag.Name),
 		primeSeed:          ctx.Int64(primeSeedFlag.Name),
@@ -307,6 +314,9 @@ func NewTraceConfig(ctx *cli.Context, mode ArgumentMode) (*TraceConfig, error) {
 	if cfg.enableProgress {
 		log.Printf("Run config:\n")
 		log.Printf("\tBlock range: %v to %v\n", cfg.first, cfg.last)
+		if cfg.maxNumTransactions >= 0 {
+			log.Printf("\tTransaction limit: %d\n", cfg.maxNumTransactions)
+		}
 		log.Printf("\tChain id: %v (record & run-vm only)\n", cfg.chainID)
 		log.Printf("\tEpoch length: %v\n", cfg.epochLength)
 		if cfg.shadowImpl == "" {
