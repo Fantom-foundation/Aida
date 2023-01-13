@@ -125,6 +125,7 @@ reads the recorded traces and re-executes state operations from block 5,050,000 
  - `--prime-seed` set seed for randomizing priming.
  - `--prime-threshold` set number of accounts written to stateDB before applying pending state updates.
  - `--profile` records and displays summary information on operation performance
+ - `--skip-priming` if set, priming will be skipped and no data will be preloaded in the stateDB
  - `--substatedir` sets directory containing substate database. Default: `./substate.fantom`
  - `--tracedir` sets trace file directory. Default: `./`
  - `--trace-debug` print replayed operations.
@@ -155,6 +156,7 @@ executes transactions from block 4,564,026 to 5,000,000. The tool initializes st
  - `--prime-seed` set seed for randomizing priming.
  - `--prime-threshold` set number of accounts written to stateDB before applying pending state updates.
  - `--profile` records and displays summary information on operation performance
+ - `--skip-priming` if set, priming will be skipped and no data will be preloaded in the stateDB
  - `--substatedir` sets directory containing substate database. Default: `./substate.fantom`
  - `--tracedir` sets trace file directory. Default: `./`
  - `--trace-debug` print replayed operations.

@@ -34,6 +34,7 @@ var TraceReplayCommand = cli.Command{
 		&primeThresholdFlag,
 		&profileFlag,
 		&randomizePrimingFlag,
+		&skipPrimingFlag,
 		&stateDbImplementationFlag,
 		&stateDbVariantFlag,
 		&stateDbTempDirFlag,
@@ -93,34 +94,35 @@ func traceReplayTask(cfg *TraceConfig) error {
 		return err
 	}
 
-	// intialize the world state and advance it to the first block
-	log.Printf("Load and advance worldstate to block %v", cfg.first-1)
-	ws, err := generateWorldStateFromUpdateDB(cfg, cfg.first-1)
-	if err != nil {
-		return err
-	}
-
-	// prime stateDB
-	log.Printf("Prime stateDB \n")
-	primeStateDB(ws, db, cfg)
-
-	// print memory usage after priming
-	if cfg.memoryBreakdown {
-		if usage := db.GetMemoryUsage(); usage != nil {
-			log.Printf("State DB memory usage: %d byte\n%s\n", usage.UsedBytes, usage.Breakdown)
-		} else {
-			log.Printf("Utilized storage solution does not support memory breakdowns.\n")
+	if cfg.skipPriming {
+		log.Printf("Skipping DB priming.\n")
+	} else {
+		// intialize the world state and advance it to the first block
+		log.Printf("Load and advance worldstate to block %v", cfg.first-1)
+		ws, err := generateWorldStateFromUpdateDB(cfg, cfg.first-1)
+		if err != nil {
+			return err
 		}
-	}
 
-	// Release world state to free memory.
-	ws = substate.SubstateAlloc{}
+		// prime stateDB
+		log.Printf("Prime stateDB \n")
+		primeStateDB(ws, db, cfg)
 
-	// delete destroyed accounts from stateDB
-	log.Printf("Delete destroyed accounts \n")
-	// remove destroyed accounts until one block before the first block
-	if err = deleteDestroyedAccountsFromStateDB(db, cfg, cfg.first-1); err != nil {
-		return err
+		// print memory usage after priming
+		if cfg.memoryBreakdown {
+			if usage := db.GetMemoryUsage(); usage != nil {
+				log.Printf("State DB memory usage: %d byte\n%s\n", usage.UsedBytes, usage.Breakdown)
+			} else {
+				log.Printf("Utilized storage solution does not support memory breakdowns.\n")
+			}
+		}
+
+		// delete destroyed accounts from stateDB
+		log.Printf("Delete destroyed accounts \n")
+		// remove destroyed accounts until one block before the first block
+		if err = deleteDestroyedAccountsFromStateDB(db, cfg, cfg.first-1); err != nil {
+			return err
+		}
 	}
 
 	log.Printf("Replay storage operations on StateDB database")
