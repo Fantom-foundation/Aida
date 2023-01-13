@@ -48,24 +48,28 @@ const (
 	SubBalanceID
 	SuicideID
 
-	// NumProfiledOperations is number of profiled operations (must be last)
-	NumProfiledOperations
-
 	AddAddressToAccessListID
+	AddressInAccessListID
+	AddSlotToAccessListID
+	PrepareAccessListID
+	SlotInAccessListID
+
 	AddLogID
 	AddPreimageID
 	AddRefundID
-	AddressInAccessListID
-	AddSlotToAccessListID
 	CloseID
 	ForEachStorageID
 	GetLogsID
 	GetRefundID
 	IntermediateRootID
-	PrepareAccessListID
 	PrepareID
-	SlotInAccessListID
 	SubRefundID
+
+	// WARNING: New IDs should be added here. Any change in the order of the
+	// IDs above invalidates persisted data -- in particular storage traces.
+
+	// NumOperations is number of distinct operations (must be last)
+	NumOperations
 )
 
 // OperationDictionary data structure contains a Label and a read function for an operation
@@ -158,7 +162,7 @@ func Read(f io.Reader) Operation {
 	} else if err != nil {
 		log.Fatalf("Cannot read ID from file. Error:%v", err)
 	}
-	if ID >= NumProfiledOperations {
+	if ID >= NumOperations {
 		log.Fatalf("ID out of range %v", ID)
 	}
 

@@ -2,11 +2,12 @@ package simulation
 
 import (
 	"fmt"
+	"math/big"
+	"math/rand"
+
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"golang.org/x/exp/slices"
-	"math/big"
-	"math/rand"
 )
 
 // StateContext wraps current state transition of the simulation
@@ -40,7 +41,7 @@ func NewStateContext(distContract *StochasticGenerator, distStorage *StochasticG
 		currentBlock:        0,
 		currentEpoch:        0,
 		opId:                operation.EndBlockID,
-		opDict:              make(map[byte]func(sc *StateContext) operation.Operation, operation.NumProfiledOperations),
+		opDict:              make(map[byte]func(sc *StateContext) operation.Operation, operation.NumOperations),
 		nonces:              make(map[uint32]uint64),
 		balances:            make(map[uint32]*big.Int),
 		balancesInSnapshots: make([]map[uint32]*big.Int, 0),
@@ -290,7 +291,7 @@ func (sc *StateContext) initOpDictionary() error {
 		}
 	}
 
-	if len(sc.opDict) != operation.NumProfiledOperations {
+	if len(sc.opDict) != operation.NumOperations {
 		return fmt.Errorf("incompatible number of profiled operations")
 	}
 	return nil
@@ -384,7 +385,7 @@ func (sc *StateContext) getNextCode() uint32 {
 // NextOperation calculates next operation from current operation
 func (sc *StateContext) NextOperation() operation.Operation {
 	sc.opId = sc.getNextOp(sc.opId)
-	if sc.opId > operation.NumProfiledOperations-1 {
+	if sc.opId > operation.NumOperations-1 {
 		return nil
 	}
 	op := sc.encodeIntoOperation()
@@ -421,7 +422,7 @@ func (sc *StateContext) getNextOp(op byte) byte {
 
 	sum := 0.0
 
-	for i := 0; i < operation.NumProfiledOperations; i++ {
+	for i := 0; i < operation.NumOperations; i++ {
 		if slices.Contains(skipOps, i) {
 			continue
 		}

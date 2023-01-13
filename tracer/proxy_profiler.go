@@ -120,17 +120,25 @@ func (p *ProxyProfiler) GetCodeSize(addr common.Address) int {
 
 // AddRefund adds gas to the refund counter.
 func (p *ProxyProfiler) AddRefund(gas uint64) {
-	p.db.AddRefund(gas)
+	p.do(operation.AddRefundID, func() {
+		p.db.AddRefund(gas)
+	})
 }
 
 // SubRefund subtracts gas to the refund counter.
 func (p *ProxyProfiler) SubRefund(gas uint64) {
-	p.db.SubRefund(gas)
+	p.do(operation.SubRefundID, func() {
+		p.db.SubRefund(gas)
+	})
 }
 
 // GetRefund returns the current value of the refund counter.
 func (p *ProxyProfiler) GetRefund() uint64 {
-	return p.db.GetRefund()
+	var res uint64
+	p.do(operation.GetRefundID, func() {
+		res = p.db.GetRefund()
+	})
+	return res
 }
 
 // GetCommittedState retrieves a value that is already committed.
@@ -172,7 +180,11 @@ func (p *ProxyProfiler) Suicide(addr common.Address) bool {
 
 // HasSuicided checks whether a contract has been suicided.
 func (p *ProxyProfiler) HasSuicided(addr common.Address) bool {
-	return p.db.HasSuicided(addr)
+	var res bool
+	p.do(operation.HasSuicidedID, func() {
+		res = p.db.HasSuicided(addr)
+	})
+	return res
 }
 
 // Exist checks whether the contract exists in the StateDB.
@@ -188,7 +200,10 @@ func (p *ProxyProfiler) Exist(addr common.Address) bool {
 // Empty checks whether the contract is either non-existent
 // or empty according to the EIP161 specification (balance = nonce = code = 0).
 func (p *ProxyProfiler) Empty(addr common.Address) bool {
-	empty := p.db.Empty(addr)
+	var empty bool
+	p.do(operation.EmptyID, func() {
+		empty = p.db.Empty(addr)
+	})
 	return empty
 }
 
@@ -202,28 +217,41 @@ func (p *ProxyProfiler) Empty(addr common.Address) bool {
 //
 // This method should only be called if Berlin/2929+2930 is applicable at the current number.
 func (p *ProxyProfiler) PrepareAccessList(render common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
-	p.db.PrepareAccessList(render, dest, precompiles, txAccesses)
+	p.do(operation.PrepareAccessListID, func() {
+		p.db.PrepareAccessList(render, dest, precompiles, txAccesses)
+	})
 }
 
 // AddAddressToAccessList adds an address to the access list.
 func (p *ProxyProfiler) AddAddressToAccessList(addr common.Address) {
-	p.db.AddAddressToAccessList(addr)
+	p.do(operation.AddAddressToAccessListID, func() {
+		p.db.AddAddressToAccessList(addr)
+	})
 }
 
 // AddressInAccessList checks whether an address is in the access list.
 func (p *ProxyProfiler) AddressInAccessList(addr common.Address) bool {
-	return p.db.AddressInAccessList(addr)
+	res := false
+	p.do(operation.AddressInAccessListID, func() {
+		res = p.db.AddressInAccessList(addr)
+	})
+	return res
 }
 
 // SlotInAccessList checks whether the (address, slot)-tuple is in the access list.
 func (p *ProxyProfiler) SlotInAccessList(addr common.Address, slot common.Hash) (bool, bool) {
-	addressOk, slotOk := p.db.SlotInAccessList(addr, slot)
+	var addressOk, slotOk bool
+	p.do(operation.SlotInAccessListID, func() {
+		addressOk, slotOk = p.db.SlotInAccessList(addr, slot)
+	})
 	return addressOk, slotOk
 }
 
 // AddSlotToAccessList adds the given (address, slot)-tuple to the access list
 func (p *ProxyProfiler) AddSlotToAccessList(addr common.Address, slot common.Hash) {
-	p.db.AddSlotToAccessList(addr, slot)
+	p.do(operation.AddSlotToAccessListID, func() {
+		p.db.AddSlotToAccessList(addr, slot)
+	})
 }
 
 // Snapshot returns an identifier for the current revision of the state.
@@ -243,7 +271,7 @@ func (p *ProxyProfiler) RevertToSnapshot(snapshot int) {
 	p.ps.Profile(operation.RevertToSnapshotID, elapsed)
 }
 
-func (p *ProxyProfiler) do(opId byte, op func(), args ...any) {
+func (p *ProxyProfiler) do(opId byte, op func()) {
 	start := time.Now()
 	op()
 	elapsed := time.Since(start)
@@ -253,7 +281,7 @@ func (p *ProxyProfiler) do(opId byte, op func(), args ...any) {
 func (p *ProxyProfiler) BeginTransaction(number uint32) {
 	p.do(operation.BeginTransactionID, func() {
 		p.db.BeginTransaction(number)
-	}, number)
+	})
 }
 
 func (p *ProxyProfiler) EndTransaction() {
@@ -265,7 +293,7 @@ func (p *ProxyProfiler) EndTransaction() {
 func (p *ProxyProfiler) BeginBlock(number uint64) {
 	p.do(operation.BeginBlockID, func() {
 		p.db.BeginBlock(number)
-	}, number)
+	})
 }
 
 func (p *ProxyProfiler) EndBlock() {
@@ -277,7 +305,7 @@ func (p *ProxyProfiler) EndBlock() {
 func (p *ProxyProfiler) BeginEpoch(number uint64) {
 	p.do(operation.BeginEpochID, func() {
 		p.db.BeginEpoch(number)
-	}, number)
+	})
 }
 
 func (p *ProxyProfiler) EndEpoch() {
@@ -288,29 +316,40 @@ func (p *ProxyProfiler) EndEpoch() {
 
 // AddLog adds a log entry.
 func (p *ProxyProfiler) AddLog(log *types.Log) {
-	p.db.AddLog(log)
+	p.do(operation.AddLogID, func() {
+		p.db.AddLog(log)
+	})
 }
 
 // GetLogs retrieves log entries.
-func (p *ProxyProfiler) GetLogs(hash common.Hash, blockHash common.Hash) []*types.Log {
-	logs := p.db.GetLogs(hash, blockHash)
-	return logs
+func (p *ProxyProfiler) GetLogs(hash common.Hash, blockHash common.Hash) (logs []*types.Log) {
+	p.do(operation.GetLogsID, func() {
+		logs = p.db.GetLogs(hash, blockHash)
+	})
+	return
 }
 
 // AddPreimage adds a SHA3 preimage.
 func (p *ProxyProfiler) AddPreimage(addr common.Hash, image []byte) {
-	p.db.AddPreimage(addr, image)
+	p.do(operation.AddPreimageID, func() {
+		p.db.AddPreimage(addr, image)
+	})
 }
 
 // ForEachStorage performs a function over all storage locations in a contract.
 func (p *ProxyProfiler) ForEachStorage(addr common.Address, fn func(common.Hash, common.Hash) bool) error {
-	err := p.db.ForEachStorage(addr, fn)
+	var err error
+	p.do(operation.ForEachStorageID, func() {
+		err = p.db.ForEachStorage(addr, fn)
+	})
 	return err
 }
 
 // Prepare sets the current transaction hash and index.
 func (p *ProxyProfiler) Prepare(thash common.Hash, ti int) {
-	p.db.Prepare(thash, ti)
+	p.do(operation.PrepareID, func() {
+		p.db.Prepare(thash, ti)
+	})
 }
 
 // Finalise the state in StateDB.
@@ -325,7 +364,10 @@ func (p *ProxyProfiler) Finalise(deleteEmptyObjects bool) {
 // It is called in between transactions to get the root hash that
 // goes into transaction receipts.
 func (p *ProxyProfiler) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
-	hash := p.db.IntermediateRoot(deleteEmptyObjects)
+	var hash common.Hash
+	p.do(operation.IntermediateRootID, func() {
+		hash = p.db.IntermediateRoot(deleteEmptyObjects)
+	})
 	return hash
 }
 
@@ -349,7 +391,11 @@ func (p *ProxyProfiler) PrepareSubstate(substate *substate.SubstateAlloc) {
 }
 
 func (p *ProxyProfiler) Close() error {
-	return p.db.Close()
+	var err error
+	p.do(operation.CloseID, func() {
+		err = p.db.Close()
+	})
+	return err
 }
 
 func (p *ProxyProfiler) StartBulkLoad() state.BulkLoad {
