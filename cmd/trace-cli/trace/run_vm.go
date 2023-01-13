@@ -50,6 +50,7 @@ var RunVMCommand = cli.Command{
 		&primeThresholdFlag,
 		&profileFlag,
 		&randomizePrimingFlag,
+		&skipPrimingFlag,
 		&stateDbImplementationFlag,
 		&stateDbVariantFlag,
 		&stateDbTempDirFlag,
@@ -275,32 +276,37 @@ func runVM(ctx *cli.Context) error {
 		return err
 	}
 
-	// load the world state
-	log.Printf("Load and advance world state to block %v\n", cfg.first-1)
-	start = time.Now()
-	ws, err := generateWorldStateFromUpdateDB(cfg, cfg.first-1)
-	if err != nil {
-		return err
-	}
-	sec = time.Since(start).Seconds()
-	log.Printf("\tElapsed time: %.2f s, accounts: %v\n", sec, len(ws))
+	ws := substate.SubstateAlloc{}
+	if cfg.skipPriming {
+		log.Printf("Skipping DB priming.\n")
+	} else {
+		// load the world state
+		log.Printf("Load and advance world state to block %v\n", cfg.first-1)
+		start = time.Now()
+		ws, err = generateWorldStateFromUpdateDB(cfg, cfg.first-1)
+		if err != nil {
+			return err
+		}
+		sec = time.Since(start).Seconds()
+		log.Printf("\tElapsed time: %.2f s, accounts: %v\n", sec, len(ws))
 
-	// prime stateDB
-	log.Printf("Prime stateDB \n")
-	start = time.Now()
-	primeStateDB(ws, db, cfg)
-	sec = time.Since(start).Seconds()
-	log.Printf("\tElapsed time: %.2f s\n", sec)
+		// prime stateDB
+		log.Printf("Prime stateDB \n")
+		start = time.Now()
+		primeStateDB(ws, db, cfg)
+		sec = time.Since(start).Seconds()
+		log.Printf("\tElapsed time: %.2f s\n", sec)
 
-	// delete destroyed accounts from stateDB
-	log.Printf("Delete destroyed accounts \n")
-	start = time.Now()
-	// remove destroyed accounts until one block before the first block
-	err = deleteDestroyedAccountsFromStateDB(db, cfg, cfg.first-1)
-	sec = time.Since(start).Seconds()
-	log.Printf("\tElapsed time: %.2f s\n", sec)
-	if err != nil {
-		return err
+		// delete destroyed accounts from stateDB
+		log.Printf("Delete destroyed accounts \n")
+		start = time.Now()
+		// remove destroyed accounts until one block before the first block
+		err = deleteDestroyedAccountsFromStateDB(db, cfg, cfg.first-1)
+		sec = time.Since(start).Seconds()
+		log.Printf("\tElapsed time: %.2f s\n", sec)
+		if err != nil {
+			return err
+		}
 	}
 
 	// print memory usage after priming
@@ -326,6 +332,7 @@ func runVM(ctx *cli.Context) error {
 			return fmt.Errorf("Pre: World state is not contained in the stateDB. %v", err)
 		}
 	}
+
 	// Release world state to free memory.
 	ws = substate.SubstateAlloc{}
 
@@ -444,7 +451,9 @@ func runVM(ctx *cli.Context) error {
 
 	if cfg.validateWorldState && err == nil {
 		log.Printf("Validate final state\n")
-		ws, err = generateWorldStateFromUpdateDB(cfg, cfg.last)
+		if ws, err = generateWorldStateFromUpdateDB(cfg, cfg.last); err != nil {
+			return err
+		}
 		if err := deleteDestroyedAccountsFromWorldState(ws, cfg, cfg.last); err != nil {
 			return fmt.Errorf("Failed to remove deleted accoount from the world state. %v", err)
 		}

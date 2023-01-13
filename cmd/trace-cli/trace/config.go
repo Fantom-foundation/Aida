@@ -85,6 +85,10 @@ var (
 		Usage: "set number of accounts written to stateDB before applying pending state updates",
 		Value: 0,
 	}
+	skipPrimingFlag = cli.BoolFlag{
+		Name:  "skip-priming",
+		Usage: "if set, DB priming should be skipped; most useful with the 'memory' DB implementation",
+	}
 	stateDbImplementationFlag = cli.StringFlag{
 		Name:  "db-impl",
 		Usage: "select state DB implementation",
@@ -199,6 +203,7 @@ type TraceConfig struct {
 	primeSeed          int64  // set random seed
 	primeThreshold     int    // set account threshold before commit
 	profile            bool   // enable micro profiling
+	skipPriming        bool   // skip priming of the state DB
 	shadowImpl         string // implementation of the shadow DB to use, empty if disabled
 	shadowVariant      string // database variant of the shadow DB to be used
 	stateDbDir         string // directory to store State DB data
@@ -211,8 +216,7 @@ type TraceConfig struct {
 
 // getChainConnfig returns chain configuration of either mainnet or testnets.
 func getChainConfig(chainID int) *params.ChainConfig {
-	var chainConfig *params.ChainConfig
-	chainConfig = params.AllEthashProtocolChanges
+	chainConfig := params.AllEthashProtocolChanges
 	chainConfig.ChainID = big.NewInt(int64(chainID))
 	if chainID == 250 {
 		// mainnet chainID 250
@@ -297,6 +301,7 @@ func NewTraceConfig(ctx *cli.Context, mode ArgumentMode) (*TraceConfig, error) {
 		primeSeed:          ctx.Int64(primeSeedFlag.Name),
 		primeThreshold:     ctx.Int(primeThresholdFlag.Name),
 		profile:            ctx.Bool(profileFlag.Name),
+		skipPriming:        ctx.Bool(skipPrimingFlag.Name),
 		shadowImpl:         ctx.String(shadowDbImplementationFlag.Name),
 		shadowVariant:      ctx.String(shadowDbVariantFlag.Name),
 		stateDbDir:         ctx.String(stateDbTempDirFlag.Name),
@@ -328,9 +333,13 @@ func NewTraceConfig(ctx *cli.Context, mode ArgumentMode) (*TraceConfig, error) {
 		log.Printf("\tStorage parent directory: %v\n", cfg.stateDbDir)
 		log.Printf("\tUsed VM implementation: %v\n", cfg.vmImpl)
 		log.Printf("\tUpdate DB directory: %v\n", cfg.updateDBDir)
-		log.Printf("\tRandomized Priming: %v\n", cfg.primeRandom)
-		if cfg.primeRandom {
-			log.Printf("\t\tSeed: %v, threshold: %v\n", cfg.primeSeed, cfg.primeThreshold)
+		if cfg.skipPriming {
+			log.Printf("\tPriming: Skipped\n")
+		} else {
+			log.Printf("\tRandomized Priming: %v\n", cfg.primeRandom)
+			if cfg.primeRandom {
+				log.Printf("\t\tSeed: %v, threshold: %v\n", cfg.primeSeed, cfg.primeThreshold)
+			}
 		}
 		log.Printf("\tValidate world state: %v, validate tx state: %v\n", cfg.validateWorldState, cfg.validateTxState)
 	}
@@ -349,6 +358,12 @@ func NewTraceConfig(ctx *cli.Context, mode ArgumentMode) (*TraceConfig, error) {
 		log.Printf("WARNING: deleted-account-dir is not provided or does not exist")
 		cfg.hasDeletedAccounts = false
 	}
+
+	if cfg.skipPriming && cfg.validateWorldState {
+		log.Printf("ERROR: skipPriming and validation of world state can not be enabled at the same time\n")
+		return cfg, fmt.Errorf("skipPriming and world-state validation can not be enabled at the same time")
+	}
+
 	return cfg, nil
 }
 
