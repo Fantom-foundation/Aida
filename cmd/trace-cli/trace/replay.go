@@ -200,6 +200,18 @@ func traceReplayTask(cfg *TraceConfig) error {
 		}
 	}
 
+	// write memory profile if requested
+	if cfg.memoryProfile != "" {
+		f, err := os.Create(cfg.memoryProfile)
+		if err != nil {
+			return fmt.Errorf("could not create memory profile: %s", err)
+		}
+		runtime.GC() // get up-to-date statistics
+		if err := pprof.WriteHeapProfile(f); err != nil {
+			return fmt.Errorf("could not write memory profile: %s", err)
+		}
+	}
+
 	// print profile statistics (if enabled)
 	if operation.EnableProfiling {
 		operation.PrintProfiling()
@@ -255,18 +267,6 @@ func traceReplayAction(ctx *cli.Context) error {
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 	err = traceReplayTask(cfg)
-
-	// write memory profile if requested
-	if profileFileName := ctx.String(memProfileFlag.Name); profileFileName != "" && err == nil {
-		f, err := os.Create(profileFileName)
-		if err != nil {
-			return fmt.Errorf("could not create memory profile: %s", err)
-		}
-		runtime.GC() // get up-to-date statistics
-		if err := pprof.WriteHeapProfile(f); err != nil {
-			return fmt.Errorf("could not write memory profile: %s", err)
-		}
-	}
 
 	return err
 }
