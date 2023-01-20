@@ -212,6 +212,7 @@ type TraceConfig struct {
 	validateWorldState bool   // validate stateDB before and after replay block range
 	vmImpl             string // vm implementation (geth/lfvm)
 	workers            int    // number of worker threads
+	memoryProfile      string // capture the memory heap profile into the file
 }
 
 // getChainConnfig returns chain configuration of either mainnet or testnets.
@@ -310,6 +311,7 @@ func NewTraceConfig(ctx *cli.Context, mode ArgumentMode) (*TraceConfig, error) {
 		validateWorldState: validateWorldState,
 		vmImpl:             ctx.String(vmImplementation.Name),
 		workers:            ctx.Int(substate.WorkersFlag.Name),
+		memoryProfile:      ctx.String(memProfileFlag.Name),
 	}
 	setFirstBlockFromChainID(cfg.chainID)
 	if cfg.epochLength <= 0 {

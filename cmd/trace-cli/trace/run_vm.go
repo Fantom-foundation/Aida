@@ -376,7 +376,7 @@ func runVM(ctx *cli.Context) error {
 				curEpoch++
 				db.BeginEpoch(curEpoch)
 			}
-			// Mark the begin of a new block
+			// Mark the beginning of a new block
 			curBlock = tx.Block
 			db.BeginBlock(curBlock)
 			db.BeginBlockApply()
@@ -470,6 +470,18 @@ func runVM(ctx *cli.Context) error {
 		}
 	}
 
+	// write memory profile if requested
+	if profileFileName := ctx.String(memProfileFlag.Name); profileFileName != "" && err == nil {
+		f, err := os.Create(profileFileName)
+		if err != nil {
+			return fmt.Errorf("could not create memory profile: %s", err)
+		}
+		runtime.GC() // get up-to-date statistics
+		if err := pprof.WriteHeapProfile(f); err != nil {
+			return fmt.Errorf("could not write memory profile: %s", err)
+		}
+	}
+
 	if cfg.profile {
 		fmt.Printf("=================Statistics=================\n")
 		stats.PrintProfiling()
@@ -490,18 +502,6 @@ func runVM(ctx *cli.Context) error {
 		log.Printf("run-vm: Total elapsed time: %.3f s, processed %v blocks, %v transactions (~ %.1f Tx/s) (~ %.1f Gas/s)\n", runTime, cfg.last-cfg.first+1, txCount, float64(txCount)/(runTime), g)
 		log.Printf("run-vm: Closing DB took %v\n", time.Since(start))
 		log.Printf("run-vm: Final disk usage: %v MiB\n", float32(getDirectorySize(stateDirectory))/float32(1024*1024))
-	}
-
-	// write memory profile if requested
-	if profileFileName := ctx.String(memProfileFlag.Name); profileFileName != "" && err == nil {
-		f, err := os.Create(profileFileName)
-		if err != nil {
-			return fmt.Errorf("could not create memory profile: %s", err)
-		}
-		runtime.GC() // get up-to-date statistics
-		if err := pprof.WriteHeapProfile(f); err != nil {
-			return fmt.Errorf("could not write memory profile: %s", err)
-		}
 	}
 
 	return err
