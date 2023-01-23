@@ -173,7 +173,7 @@ func (s *MockStateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 }
 
 func (s *MockStateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
-	s.recording = append(s.recording, Record{EndBlockID, []any{}})
+	s.recording = append(s.recording, Record{CommitID, []any{deleteEmptyObjects}})
 	return common.Hash{}, nil
 }
 
