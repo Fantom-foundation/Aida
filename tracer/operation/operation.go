@@ -20,6 +20,7 @@ const (
 	BeginEpochID
 	BeginTransactionID
 	CreateAccountID
+	CommitID
 	EmptyID
 	EndBlockID
 	EndEpochID
@@ -81,13 +82,14 @@ type OperationDictionary struct {
 // opDict relates an operation's id with its label and read-function.
 var opDict = map[byte]OperationDictionary{
 	AddBalanceID:            {label: "AddBalance", readfunc: ReadAddBalance},
-	BeginEpochID:            {label: "BeginEpoch", readfunc: ReadBeginEpoch},
-	EndEpochID:              {label: "EndEpoch", readfunc: ReadEndEpoch},
 	BeginBlockID:            {label: "BeginBlock", readfunc: ReadBeginBlock},
-	EndBlockID:              {label: "EndBlock", readfunc: ReadEndBlock},
+	BeginEpochID:            {label: "BeginEpoch", readfunc: ReadBeginEpoch},
+	BeginTransactionID:      {label: "BeginTransaction", readfunc: ReadBeginTransaction},
+	CommitID:                {label: "Commit", readfunc: ReadPanic},
 	CreateAccountID:         {label: "CreateAccount", readfunc: ReadCreateAccount},
 	EmptyID:                 {label: "Empty", readfunc: ReadEmpty},
-	BeginTransactionID:      {label: "BeginTransaction", readfunc: ReadBeginTransaction},
+	EndBlockID:              {label: "EndBlock", readfunc: ReadEndBlock},
+	EndEpochID:              {label: "EndEpoch", readfunc: ReadEndEpoch},
 	EndTransactionID:        {label: "EndTransaction", readfunc: ReadEndTransaction},
 	ExistID:                 {label: "Exist", readfunc: ReadExist},
 	FinaliseID:              {label: "Finalise", readfunc: ReadFinalise},
