@@ -13,6 +13,7 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/tracer/state"
+	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/Fantom-foundation/go-opera/opera"
 	"github.com/Fantom-foundation/substate-cli/cmd/substate-cli/replay"
@@ -36,34 +37,34 @@ var RunVMCommand = cli.Command{
 	Usage:     "run VM on the world-state",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
-		&archiveModeFlag,
-		&chainIDFlag,
-		&continueOnFailureFlag,
-		&cpuProfileFlag,
-		&deletedAccountDirFlag,
-		&disableProgressFlag,
-		&epochLengthFlag,
-		&maxNumTransactionsFlag,
-		&memoryBreakdownFlag,
-		&memProfileFlag,
-		&primeSeedFlag,
-		&primeThresholdFlag,
-		&profileFlag,
-		&randomizePrimingFlag,
-		&skipPrimingFlag,
-		&stateDbImplementationFlag,
-		&stateDbVariantFlag,
-		&stateDbTempDirFlag,
-		&stateDbLoggingFlag,
-		&shadowDbImplementationFlag,
-		&shadowDbVariantFlag,
+		&utils.ArchiveModeFlag,
+		&utils.ChainIDFlag,
+		&utils.ContinueOnFailureFlag,
+		&utils.CpuProfileFlag,
+		&utils.DeletedAccountDirFlag,
+		&utils.DisableProgressFlag,
+		&utils.EpochLengthFlag,
+		&utils.MaxNumTransactionsFlag,
+		&utils.MemoryBreakdownFlag,
+		&utils.MemProfileFlag,
+		&utils.PrimeSeedFlag,
+		&utils.PrimeThresholdFlag,
+		&utils.ProfileFlag,
+		&utils.RandomizePrimingFlag,
+		&utils.SkipPrimingFlag,
+		&utils.StateDbImplementationFlag,
+		&utils.StateDbVariantFlag,
+		&utils.StateDbTempDirFlag,
+		&utils.StateDbLoggingFlag,
+		&utils.ShadowDbImplementationFlag,
+		&utils.ShadowDbVariantFlag,
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
-		&updateDBDirFlag,
-		&validateTxStateFlag,
-		&validateWorldStateFlag,
-		&validateFlag,
-		&vmImplementation,
+		&utils.UpdateDBDirFlag,
+		&utils.ValidateTxStateFlag,
+		&utils.ValidateWorldStateFlag,
+		&utils.ValidateFlag,
+		&utils.VmImplementation,
 	},
 	Description: `
 The trace run-vm command requires two arguments:
@@ -74,7 +75,7 @@ last block of the inclusive range of blocks to trace transactions.`,
 }
 
 // runVMTask executes VM on a chosen storage system.
-func runVMTask(db state.StateDB, cfg *TraceConfig, block uint64, tx int, recording *substate.Substate) (*substate.SubstateResult, error) {
+func runVMTask(db state.StateDB, cfg *utils.TraceConfig, block uint64, tx int, recording *substate.Substate) (*substate.SubstateResult, error) {
 
 	inputAlloc := recording.InputAlloc
 	inputEnv := recording.Env
@@ -89,10 +90,10 @@ func runVMTask(db state.StateDB, cfg *TraceConfig, block uint64, tx int, recordi
 
 	vmConfig = opera.DefaultVMConfig
 	vmConfig.NoBaseFee = true
-	vmConfig.InterpreterImpl = cfg.vmImpl
+	vmConfig.InterpreterImpl = cfg.VmImpl
 
 	// get chain configuration
-	chainConfig := getChainConfig(cfg.chainID)
+	chainConfig := utils.GetChainConfig(cfg.ChainID)
 
 	var hashError error
 	getHash := func(num uint64) common.Hash {
@@ -108,12 +109,12 @@ func runVMTask(db state.StateDB, cfg *TraceConfig, block uint64, tx int, recordi
 	}
 
 	// validate whether the input alloc is contained in the db
-	if cfg.validateTxState {
+	if cfg.ValidateTxState {
 		if err := validateStateDB(inputAlloc, db, true); err != nil {
 			errCount++
 			errMsg := fmt.Sprintf("Block: %v Transaction: %v\n", block, tx)
 			errMsg += fmt.Sprintf("  Input alloc is not contained in the stateDB.\n%v", err)
-			if cfg.continueOnFailure {
+			if cfg.ContinueOnFailure {
 				fmt.Println(errMsg)
 			} else {
 				return nil, fmt.Errorf(errMsg)
@@ -158,7 +159,7 @@ func runVMTask(db state.StateDB, cfg *TraceConfig, block uint64, tx int, recordi
 	if err != nil {
 		db.RevertToSnapshot(snapshot)
 		errCount++
-		if cfg.continueOnFailure {
+		if cfg.ContinueOnFailure {
 			fmt.Printf("Block: %v Transaction: %v\n%v", block, tx, err)
 		} else {
 			return nil, fmt.Errorf("Block: %v Transaction: %v\n%v", block, tx, err)
@@ -190,12 +191,12 @@ func runVMTask(db state.StateDB, cfg *TraceConfig, block uint64, tx int, recordi
 	evmResult.GasUsed = msgResult.UsedGas
 
 	// check whether the outputAlloc substate is contained in the world-state db.
-	if cfg.validateTxState {
+	if cfg.ValidateTxState {
 		if err := validateStateDB(outputAlloc, db, false); err != nil {
 			errCount++
 			errMsg := fmt.Sprintf("Block: %v Transaction: %v\n", block, tx)
 			errMsg += fmt.Sprintf("  Output alloc is not contained in the stateDB. %v\n", err)
-			if cfg.continueOnFailure {
+			if cfg.ContinueOnFailure {
 				fmt.Println(errMsg)
 			} else {
 				return nil, fmt.Errorf(errMsg)
@@ -207,7 +208,7 @@ func runVMTask(db state.StateDB, cfg *TraceConfig, block uint64, tx int, recordi
 			errMsg := fmt.Sprintf("Block: %v Transaction: %v\n", block, tx)
 			errMsg += fmt.Sprintf("  Inconsistent output result.\n")
 			replay.PrintResultDiffSummary(outputResult, evmResult)
-			if cfg.continueOnFailure {
+			if cfg.ContinueOnFailure {
 				fmt.Println(errMsg)
 			} else {
 				return nil, fmt.Errorf(errMsg)
@@ -239,13 +240,13 @@ func runVM(ctx *cli.Context) error {
 		lastBlockProgressReportGasCount = new(big.Int)
 	)
 	// process general arguments
-	cfg, argErr := NewTraceConfig(ctx, blockRangeArgs)
+	cfg, argErr := utils.NewTraceConfig(ctx, utils.BlockRangeArgs)
 	if argErr != nil {
 		return argErr
 	}
 
 	// start CPU profiling if requested.
-	if profileFileName := ctx.String(cpuProfileFlag.Name); profileFileName != "" {
+	if profileFileName := ctx.String(utils.CpuProfileFlag.Name); profileFileName != "" {
 		f, err := os.Create(profileFileName)
 		if err != nil {
 			return fmt.Errorf("could not create CPU profile: %s", err)
@@ -262,7 +263,7 @@ func runVM(ctx *cli.Context) error {
 	defer substate.CloseSubstateDB()
 
 	// create a directory for the store to place all its files.
-	stateDirectory, err := ioutil.TempDir(cfg.stateDbDir, "state_db_*")
+	stateDirectory, err := ioutil.TempDir(cfg.StateDbDir, "state_db_*")
 	if err != nil {
 		return fmt.Errorf("Failed to create a temp directory. %v", err)
 	}
@@ -271,19 +272,19 @@ func runVM(ctx *cli.Context) error {
 
 	// instantiate the state DB under testing
 	var db state.StateDB
-	db, err = MakeStateDB(stateDirectory, cfg)
+	db, err = utils.MakeStateDB(stateDirectory, cfg)
 	if err != nil {
 		return err
 	}
 
 	ws := substate.SubstateAlloc{}
-	if cfg.skipPriming {
+	if cfg.SkipPriming {
 		log.Printf("Skipping DB priming.\n")
 	} else {
 		// load the world state
-		log.Printf("Load and advance world state to block %v\n", cfg.first-1)
+		log.Printf("Load and advance world state to block %v\n", cfg.First-1)
 		start = time.Now()
-		ws, err = generateWorldStateFromUpdateDB(cfg, cfg.first-1)
+		ws, err = generateWorldStateFromUpdateDB(cfg, cfg.First-1)
 		if err != nil {
 			return err
 		}
@@ -293,7 +294,7 @@ func runVM(ctx *cli.Context) error {
 		// prime stateDB
 		log.Printf("Prime stateDB \n")
 		start = time.Now()
-		primeStateDB(ws, db, cfg)
+		utils.PrimeStateDB(ws, db, cfg)
 		sec = time.Since(start).Seconds()
 		log.Printf("\tElapsed time: %.2f s\n", sec)
 
@@ -301,7 +302,7 @@ func runVM(ctx *cli.Context) error {
 		log.Printf("Delete destroyed accounts \n")
 		start = time.Now()
 		// remove destroyed accounts until one block before the first block
-		err = deleteDestroyedAccountsFromStateDB(db, cfg, cfg.first-1)
+		err = utils.DeleteDestroyedAccountsFromStateDB(db, cfg, cfg.First-1)
 		sec = time.Since(start).Seconds()
 		log.Printf("\tElapsed time: %.2f s\n", sec)
 		if err != nil {
@@ -310,7 +311,7 @@ func runVM(ctx *cli.Context) error {
 	}
 
 	// print memory usage after priming
-	if cfg.memoryBreakdown {
+	if cfg.MemoryBreakdown {
 		if usage := db.GetMemoryUsage(); usage != nil {
 			log.Printf("State DB memory usage: %d byte\n%s\n", usage.UsedBytes, usage.Breakdown)
 		} else {
@@ -320,12 +321,12 @@ func runVM(ctx *cli.Context) error {
 
 	// wrap stateDB for profiling
 	var stats *operation.ProfileStats
-	if cfg.profile {
+	if cfg.Profile {
 		db, stats = tracer.NewProxyProfiler(db)
 	}
 
-	if cfg.validateWorldState {
-		if err := deleteDestroyedAccountsFromWorldState(ws, cfg, cfg.first-1); err != nil {
+	if cfg.ValidateWorldState {
+		if err := utils.DeleteDestroyedAccountsFromWorldState(ws, cfg, cfg.First-1); err != nil {
 			return fmt.Errorf("Failed to remove deleted accoount from the world state. %v", err)
 		}
 		if err := validateStateDB(ws, db, false); err != nil {
@@ -336,7 +337,7 @@ func runVM(ctx *cli.Context) error {
 	// Release world state to free memory.
 	ws = substate.SubstateAlloc{}
 
-	if cfg.enableProgress {
+	if cfg.EnableProgress {
 		start = time.Now()
 		lastSec = time.Since(start).Seconds()
 	}
@@ -345,14 +346,14 @@ func runVM(ctx *cli.Context) error {
 	var curBlock uint64 = 0
 	var curEpoch uint64
 	isFirstBlock := true
-	iter := substate.NewSubstateIterator(cfg.first, cfg.workers)
+	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
 
 	defer iter.Release()
 	for iter.Next() {
 		tx := iter.Value()
 		// initiate first epoch and block.
 		if isFirstBlock {
-			curEpoch = tx.Block / cfg.epochLength
+			curEpoch = tx.Block / cfg.EpochLength
 			curBlock = tx.Block
 			db.BeginEpoch(curEpoch)
 			db.BeginBlock(curBlock)
@@ -362,7 +363,7 @@ func runVM(ctx *cli.Context) error {
 			isFirstBlock = false
 			// close off old block and possibly epochs
 		} else if curBlock != tx.Block {
-			if tx.Block > cfg.last {
+			if tx.Block > cfg.Last {
 				break
 			}
 
@@ -370,7 +371,7 @@ func runVM(ctx *cli.Context) error {
 			db.EndBlock()
 
 			// Move on epochs if needed.
-			newEpoch := tx.Block / cfg.epochLength
+			newEpoch := tx.Block / cfg.EpochLength
 			for curEpoch < newEpoch {
 				db.EndEpoch()
 				curEpoch++
@@ -381,7 +382,7 @@ func runVM(ctx *cli.Context) error {
 			db.BeginBlock(curBlock)
 			db.BeginBlockApply()
 		}
-		if cfg.maxNumTransactions >= 0 && txCount >= cfg.maxNumTransactions {
+		if cfg.MaxNumTransactions >= 0 && txCount >= cfg.MaxNumTransactions {
 			break
 		}
 
@@ -399,7 +400,7 @@ func runVM(ctx *cli.Context) error {
 		txCount++
 		gasCount = new(big.Int).Add(gasCount, new(big.Int).SetUint64(result.GasUsed))
 
-		if cfg.enableProgress {
+		if cfg.EnableProgress {
 			// report progress
 			sec = time.Since(start).Seconds()
 
@@ -445,16 +446,16 @@ func runVM(ctx *cli.Context) error {
 
 	runTime := time.Since(start).Seconds()
 
-	if cfg.continueOnFailure {
+	if cfg.ContinueOnFailure {
 		log.Printf("run-vm: %v errors found\n", errCount)
 	}
 
-	if cfg.validateWorldState && err == nil {
+	if cfg.ValidateWorldState && err == nil {
 		log.Printf("Validate final state\n")
-		if ws, err = generateWorldStateFromUpdateDB(cfg, cfg.last); err != nil {
+		if ws, err = generateWorldStateFromUpdateDB(cfg, cfg.Last); err != nil {
 			return err
 		}
-		if err := deleteDestroyedAccountsFromWorldState(ws, cfg, cfg.last); err != nil {
+		if err := utils.DeleteDestroyedAccountsFromWorldState(ws, cfg, cfg.Last); err != nil {
 			return fmt.Errorf("Failed to remove deleted accoount from the world state. %v", err)
 		}
 		if err := validateStateDB(ws, db, false); err != nil {
@@ -462,7 +463,7 @@ func runVM(ctx *cli.Context) error {
 		}
 	}
 
-	if cfg.memoryBreakdown {
+	if cfg.MemoryBreakdown {
 		if usage := db.GetMemoryUsage(); usage != nil {
 			log.Printf("State DB memory usage: %d byte\n%s\n", usage.UsedBytes, usage.Breakdown)
 		} else {
@@ -471,7 +472,7 @@ func runVM(ctx *cli.Context) error {
 	}
 
 	// write memory profile if requested
-	if profileFileName := ctx.String(memProfileFlag.Name); profileFileName != "" && err == nil {
+	if profileFileName := ctx.String(utils.MemProfileFlag.Name); profileFileName != "" && err == nil {
 		f, err := os.Create(profileFileName)
 		if err != nil {
 			return fmt.Errorf("could not create memory profile: %s", err)
@@ -482,7 +483,7 @@ func runVM(ctx *cli.Context) error {
 		}
 	}
 
-	if cfg.profile {
+	if cfg.Profile {
 		fmt.Printf("=================Statistics=================\n")
 		stats.PrintProfiling()
 		fmt.Printf("============================================\n")
@@ -496,12 +497,12 @@ func runVM(ctx *cli.Context) error {
 	}
 
 	// print progress summary
-	if cfg.enableProgress {
+	if cfg.EnableProgress {
 		g := new(big.Float).Quo(new(big.Float).SetInt(gasCount), new(big.Float).SetFloat64(runTime))
 
-		log.Printf("run-vm: Total elapsed time: %.3f s, processed %v blocks, %v transactions (~ %.1f Tx/s) (~ %.1f Gas/s)\n", runTime, cfg.last-cfg.first+1, txCount, float64(txCount)/(runTime), g)
+		log.Printf("run-vm: Total elapsed time: %.3f s, processed %v blocks, %v transactions (~ %.1f Tx/s) (~ %.1f Gas/s)\n", runTime, cfg.Last-cfg.First+1, txCount, float64(txCount)/(runTime), g)
 		log.Printf("run-vm: Closing DB took %v\n", time.Since(start))
-		log.Printf("run-vm: Final disk usage: %v MiB\n", float32(getDirectorySize(stateDirectory))/float32(1024*1024))
+		log.Printf("run-vm: Final disk usage: %v MiB\n", float32(utils.GetDirectorySize(stateDirectory))/float32(1024*1024))
 	}
 
 	return err

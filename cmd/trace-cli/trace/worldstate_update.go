@@ -7,18 +7,19 @@ import (
 	"log"
 
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
+	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/substate"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
 // generateUpdateSet generates an update set for a block range.
-func generateUpdateSet(first uint64, last uint64, cfg *TraceConfig) substate.SubstateAlloc {
+func generateUpdateSet(first uint64, last uint64, cfg *utils.TraceConfig) substate.SubstateAlloc {
 	var deletedAccountDB *substate.DestroyedAccountDB
-	stateIter := substate.NewSubstateIterator(first, cfg.workers)
+	stateIter := substate.NewSubstateIterator(first, cfg.Workers)
 	defer stateIter.Release()
-	if cfg.hasDeletedAccounts {
-		deletedAccountDB = substate.OpenDestroyedAccountDBReadOnly(cfg.deletedAccountDir)
+	if cfg.HasDeletedAccounts {
+		deletedAccountDB = substate.OpenDestroyedAccountDBReadOnly(cfg.DeletedAccountDir)
 		defer deletedAccountDB.Close()
 	}
 
@@ -31,7 +32,7 @@ func generateUpdateSet(first uint64, last uint64, cfg *TraceConfig) substate.Sub
 		}
 
 		// if this transaction has suicided accounts, clear their states.
-		if cfg.hasDeletedAccounts {
+		if cfg.HasDeletedAccounts {
 			destroyed, resurrected, err := deletedAccountDB.GetDestroyedAccounts(tx.Block, tx.Transaction)
 
 			if !(err == nil || errors.Is(err, leveldb.ErrNotFound)) {
@@ -50,16 +51,16 @@ func generateUpdateSet(first uint64, last uint64, cfg *TraceConfig) substate.Sub
 
 // generateWorldStateFromUpdateDB generates an initial world-state
 // from pre-computed update-set
-func generateWorldStateFromUpdateDB(cfg *TraceConfig, target uint64) (substate.SubstateAlloc, error) {
+func generateWorldStateFromUpdateDB(cfg *utils.TraceConfig, target uint64) (substate.SubstateAlloc, error) {
 	ws := make(substate.SubstateAlloc)
-	blockPos := uint64(FirstSubstateBlock - 1)
+	blockPos := uint64(utils.FirstSubstateBlock - 1)
 	if target < blockPos {
 		return nil, fmt.Errorf("Error: the target block, %v, is earlier than the initial world state block, %v. The world state is not loaded.\n", target, blockPos)
 	}
 	// load pre-computed update-set from update-set db
-	db := substate.OpenUpdateDBReadOnly(cfg.updateDBDir)
+	db := substate.OpenUpdateDBReadOnly(cfg.UpdateDBDir)
 	defer db.Close()
-	updateIter := substate.NewUpdateSetIterator(db, blockPos, target, cfg.workers)
+	updateIter := substate.NewUpdateSetIterator(db, blockPos, target, cfg.Workers)
 	for updateIter.Next() {
 		blk := updateIter.Value()
 		if blk.Block > target {
@@ -91,7 +92,7 @@ func clearAccountStorage(update substate.SubstateAlloc, accounts []common.Addres
 }
 
 // generateWorldState generates an initial world-state for a block.
-func generateWorldState(path string, block uint64, cfg *TraceConfig) (substate.SubstateAlloc, error) {
+func generateWorldState(path string, block uint64, cfg *utils.TraceConfig) (substate.SubstateAlloc, error) {
 	worldStateDB, err := snapshot.OpenStateDB(path)
 	if err != nil {
 		return nil, err
@@ -103,7 +104,7 @@ func generateWorldState(path string, block uint64, cfg *TraceConfig) (substate.S
 	}
 
 	// advance from the first block from substateDB to the target block
-	update := generateUpdateSet(FirstSubstateBlock, block, cfg)
+	update := generateUpdateSet(utils.FirstSubstateBlock, block, cfg)
 	ws.Merge(update)
 
 	return ws, nil

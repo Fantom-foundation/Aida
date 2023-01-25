@@ -6,6 +6,7 @@ import (
 	"os"
 	"regexp"
 
+	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/substate"
 	"github.com/urfave/cli/v2"
 )
@@ -17,13 +18,13 @@ var TraceCompareLogCommand = cli.Command{
 	Usage:     "compares storage debug log between record and replay",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
-		&chainIDFlag,
-		&disableProgressFlag,
-		&stateDbImplementationFlag,
+		&utils.ChainIDFlag,
+		&utils.DisableProgressFlag,
+		&utils.StateDbImplementationFlag,
 		&substate.SubstateDirFlag,
 		&substate.WorkersFlag,
-		&traceDebugFlag,
-		&traceDirectoryFlag,
+		&utils.TraceDebugFlag,
+		&utils.TraceDirectoryFlag,
 	},
 	Description: `
 The trace compare-log command requires two arguments:
@@ -84,15 +85,15 @@ func traceCompareLogAction(ctx *cli.Context) error {
 	}
 
 	// enable debug-trace
-	if !ctx.IsSet(traceDebugFlag.Name) {
-		ctxErr := ctx.Set(traceDebugFlag.Name, "true")
+	if !ctx.IsSet(utils.TraceDebugFlag.Name) {
+		ctxErr := ctx.Set(utils.TraceDebugFlag.Name, "true")
 		if ctxErr != nil {
 			return ctxErr
 		}
 	}
 	// disable progress log
-	if !ctx.IsSet(disableProgressFlag.Name) {
-		ctxErr := ctx.Set(disableProgressFlag.Name, "true")
+	if !ctx.IsSet(utils.DisableProgressFlag.Name) {
+		ctxErr := ctx.Set(utils.DisableProgressFlag.Name, "true")
 		if ctxErr != nil {
 			return ctxErr
 		}

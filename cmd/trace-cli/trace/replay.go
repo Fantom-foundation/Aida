@@ -12,6 +12,7 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer"
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
+	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/substate"
 	"github.com/urfave/cli/v2"
 )
@@ -23,31 +24,31 @@ var TraceReplayCommand = cli.Command{
 	Usage:     "executes storage trace",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
-		&chainIDFlag,
-		&cpuProfileFlag,
-		&deletedAccountDirFlag,
-		&disableProgressFlag,
-		&epochLengthFlag,
-		&memoryBreakdownFlag,
-		&memProfileFlag,
-		&primeSeedFlag,
-		&primeThresholdFlag,
-		&profileFlag,
-		&randomizePrimingFlag,
-		&skipPrimingFlag,
-		&stateDbImplementationFlag,
-		&stateDbVariantFlag,
-		&stateDbTempDirFlag,
-		&stateDbLoggingFlag,
-		&shadowDbImplementationFlag,
-		&shadowDbVariantFlag,
+		&utils.ChainIDFlag,
+		&utils.CpuProfileFlag,
+		&utils.DeletedAccountDirFlag,
+		&utils.DisableProgressFlag,
+		&utils.EpochLengthFlag,
+		&utils.MemoryBreakdownFlag,
+		&utils.MemProfileFlag,
+		&utils.PrimeSeedFlag,
+		&utils.PrimeThresholdFlag,
+		&utils.ProfileFlag,
+		&utils.RandomizePrimingFlag,
+		&utils.SkipPrimingFlag,
+		&utils.StateDbImplementationFlag,
+		&utils.StateDbVariantFlag,
+		&utils.StateDbTempDirFlag,
+		&utils.StateDbLoggingFlag,
+		&utils.ShadowDbImplementationFlag,
+		&utils.ShadowDbVariantFlag,
 		&substate.SubstateDirFlag,
 		&substate.WorkersFlag,
-		&traceDirectoryFlag,
-		&traceDebugFlag,
-		&updateDBDirFlag,
-		&validateFlag,
-		&validateWorldStateFlag,
+		&utils.TraceDirectoryFlag,
+		&utils.TraceDebugFlag,
+		&utils.UpdateDBDirFlag,
+		&utils.ValidateFlag,
+		&utils.ValidateWorldStateFlag,
 	},
 	Description: `
 The trace replay command requires two arguments:
@@ -58,8 +59,8 @@ last block of the inclusive range of blocks to replay storage traces.`,
 }
 
 // readTrace reads operations from trace files and puts them into a channel.
-func readTrace(cfg *TraceConfig, ch chan operation.Operation) {
-	traceIter := tracer.NewTraceIterator(cfg.first, cfg.last)
+func readTrace(cfg *utils.TraceConfig, ch chan operation.Operation) {
+	traceIter := tracer.NewTraceIterator(cfg.First, cfg.Last)
 	defer traceIter.Release()
 	for traceIter.Next() {
 		op := traceIter.Value()
@@ -69,7 +70,7 @@ func readTrace(cfg *TraceConfig, ch chan operation.Operation) {
 }
 
 // traceReplayTask simulates storage operations from storage traces on stateDB.
-func traceReplayTask(cfg *TraceConfig) error {
+func traceReplayTask(cfg *utils.TraceConfig) error {
 
 	// starting reading in parallel
 	log.Printf("Start reading operations in parallel")
@@ -83,33 +84,33 @@ func traceReplayTask(cfg *TraceConfig) error {
 	// create a directory for the store to place all its files, and
 	// instantiate the state DB under testing.
 	log.Printf("Create stateDB database")
-	stateDirectory, err := ioutil.TempDir(cfg.stateDbDir, "state_db_*")
+	stateDirectory, err := ioutil.TempDir(cfg.StateDbDir, "state_db_*")
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(stateDirectory)
 	log.Printf("\tTemporary state DB directory: %v\n", stateDirectory)
-	db, err := MakeStateDB(stateDirectory, cfg)
+	db, err := utils.MakeStateDB(stateDirectory, cfg)
 	if err != nil {
 		return err
 	}
 
-	if cfg.skipPriming {
+	if cfg.SkipPriming {
 		log.Printf("Skipping DB priming.\n")
 	} else {
 		// intialize the world state and advance it to the first block
-		log.Printf("Load and advance worldstate to block %v", cfg.first-1)
-		ws, err := generateWorldStateFromUpdateDB(cfg, cfg.first-1)
+		log.Printf("Load and advance worldstate to block %v", cfg.First-1)
+		ws, err := generateWorldStateFromUpdateDB(cfg, cfg.First-1)
 		if err != nil {
 			return err
 		}
 
 		// prime stateDB
 		log.Printf("Prime stateDB \n")
-		primeStateDB(ws, db, cfg)
+		utils.PrimeStateDB(ws, db, cfg)
 
 		// print memory usage after priming
-		if cfg.memoryBreakdown {
+		if cfg.MemoryBreakdown {
 			if usage := db.GetMemoryUsage(); usage != nil {
 				log.Printf("State DB memory usage: %d byte\n%s\n", usage.UsedBytes, usage.Breakdown)
 			} else {
@@ -120,7 +121,7 @@ func traceReplayTask(cfg *TraceConfig) error {
 		// delete destroyed accounts from stateDB
 		log.Printf("Delete destroyed accounts \n")
 		// remove destroyed accounts until one block before the first block
-		if err = deleteDestroyedAccountsFromStateDB(db, cfg, cfg.first-1); err != nil {
+		if err = utils.DeleteDestroyedAccountsFromStateDB(db, cfg, cfg.First-1); err != nil {
 			return err
 		}
 	}
@@ -134,7 +135,7 @@ func traceReplayTask(cfg *TraceConfig) error {
 		lastSec    float64
 		firstBlock = true
 	)
-	if cfg.enableProgress {
+	if cfg.EnableProgress {
 		start = time.Now()
 		sec = time.Since(start).Seconds()
 		lastSec = time.Since(start).Seconds()
@@ -143,7 +144,7 @@ func traceReplayTask(cfg *TraceConfig) error {
 	// A utility to run operations on the local context.
 	run := func(op operation.Operation) {
 		operation.Execute(op, db, dCtx)
-		if cfg.debug {
+		if cfg.Debug {
 			operation.Debug(dCtx, op)
 		}
 	}
@@ -156,15 +157,15 @@ func traceReplayTask(cfg *TraceConfig) error {
 			// The first Epoch begin and the final EpochEnd need to be artificially
 			// added since the range running on may not match epoch boundaries.
 			if firstBlock {
-				run(operation.NewBeginEpoch(cfg.first / cfg.epochLength))
+				run(operation.NewBeginEpoch(cfg.First / cfg.EpochLength))
 				firstBlock = false
 			}
 
-			if block > cfg.last {
+			if block > cfg.Last {
 				run(operation.NewEndEpoch())
 				break
 			}
-			if cfg.enableProgress {
+			if cfg.EnableProgress {
 				// report progress
 				sec = time.Since(start).Seconds()
 				if sec-lastSec >= 15 {
@@ -181,10 +182,10 @@ func traceReplayTask(cfg *TraceConfig) error {
 	log.Printf("Finished replaying storage operations on StateDB database")
 
 	// validate stateDB
-	if cfg.validateWorldState {
+	if cfg.ValidateWorldState {
 		log.Printf("Validate final state")
-		ws, err := generateWorldStateFromUpdateDB(cfg, cfg.last)
-		if err = deleteDestroyedAccountsFromWorldState(ws, cfg, cfg.last); err != nil {
+		ws, err := generateWorldStateFromUpdateDB(cfg, cfg.Last)
+		if err = utils.DeleteDestroyedAccountsFromWorldState(ws, cfg, cfg.Last); err != nil {
 			return fmt.Errorf("Failed to remove detroyed accounts. %v\n", err)
 		}
 		if err := validateStateDB(ws, db, false); err != nil {
@@ -192,7 +193,7 @@ func traceReplayTask(cfg *TraceConfig) error {
 		}
 	}
 
-	if cfg.memoryBreakdown {
+	if cfg.MemoryBreakdown {
 		if usage := db.GetMemoryUsage(); usage != nil {
 			log.Printf("State DB memory usage: %d byte\n%s\n", usage.UsedBytes, usage.Breakdown)
 		} else {
@@ -201,8 +202,8 @@ func traceReplayTask(cfg *TraceConfig) error {
 	}
 
 	// write memory profile if requested
-	if cfg.memoryProfile != "" {
-		f, err := os.Create(cfg.memoryProfile)
+	if cfg.MemoryProfile != "" {
+		f, err := os.Create(cfg.MemoryProfile)
 		if err != nil {
 			return fmt.Errorf("could not create memory profile: %s", err)
 		}
@@ -225,10 +226,10 @@ func traceReplayTask(cfg *TraceConfig) error {
 	}
 
 	// print progress summary
-	if cfg.enableProgress {
-		log.Printf("trace replay: Total elapsed time: %.3f s, processed %v blocks\n", sec, cfg.last-cfg.first+1)
+	if cfg.EnableProgress {
+		log.Printf("trace replay: Total elapsed time: %.3f s, processed %v blocks\n", sec, cfg.Last-cfg.First+1)
 		log.Printf("trace replay: Closing DB took %v\n", time.Since(start))
-		log.Printf("trace replay: Final disk usage: %v MiB\n", float32(getDirectorySize(stateDirectory))/float32(1024*1024))
+		log.Printf("trace replay: Final disk usage: %v MiB\n", float32(utils.GetDirectorySize(stateDirectory))/float32(1024*1024))
 	}
 
 	return nil
@@ -237,21 +238,21 @@ func traceReplayTask(cfg *TraceConfig) error {
 // traceReplayAction implements trace command for replaying.
 func traceReplayAction(ctx *cli.Context) error {
 	var err error
-	cfg, err := NewTraceConfig(ctx, blockRangeArgs)
+	cfg, err := utils.NewTraceConfig(ctx, utils.BlockRangeArgs)
 	if err != nil {
 		return err
 	}
-	if cfg.dbImpl == "memory" {
+	if cfg.DbImpl == "memory" {
 		return fmt.Errorf("db-impl memory is not supported")
 	}
 
-	operation.EnableProfiling = cfg.profile
+	operation.EnableProfiling = cfg.Profile
 	// set trace directory
-	tracer.TraceDir = ctx.String(traceDirectoryFlag.Name) + "/"
-	dict.DictionaryContextDir = ctx.String(traceDirectoryFlag.Name) + "/"
+	tracer.TraceDir = ctx.String(utils.TraceDirectoryFlag.Name) + "/"
+	dict.DictionaryContextDir = ctx.String(utils.TraceDirectoryFlag.Name) + "/"
 
 	// start CPU profiling if requested.
-	if profileFileName := ctx.String(cpuProfileFlag.Name); profileFileName != "" {
+	if profileFileName := ctx.String(utils.CpuProfileFlag.Name); profileFileName != "" {
 		f, err := os.Create(profileFileName)
 		if err != nil {
 			return fmt.Errorf("could not create CPU profile: %s", err)
