@@ -1,4 +1,4 @@
-package trace
+package stochastic
 
 import (
 	"bufio"
@@ -13,11 +13,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Fantom-foundation/Aida/tracer/simulation"
-
 	"github.com/Fantom-foundation/Aida/tracer"
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
+	"github.com/Fantom-foundation/Aida/tracer/simulation"
+	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/substate"
 	"github.com/urfave/cli/v2"
 )
@@ -29,20 +29,20 @@ var StochasticReplayCommand = cli.Command{
 	Usage:     "executes storage trace",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
-		&chainIDFlag,
-		&cpuProfileFlag,
-		&disableProgressFlag,
-		&profileFlag,
-		&stateDbImplementationFlag,
-		&stateDbVariantFlag,
-		&stateDbLoggingFlag,
-		&shadowDbImplementationFlag,
-		&shadowDbVariantFlag,
+		&utils.ChainIDFlag,
+		&utils.CpuProfileFlag,
+		&utils.DisableProgressFlag,
+		&utils.ProfileFlag,
+		&utils.StateDbImplementationFlag,
+		&utils.StateDbVariantFlag,
+		&utils.StateDbLoggingFlag,
+		&utils.ShadowDbImplementationFlag,
+		&utils.ShadowDbVariantFlag,
 		&substate.WorkersFlag,
-		&traceDirectoryFlag,
-		&traceDebugFlag,
-		&numberOfBlocksFlag,
-		&stochasticSeedFlag,
+		&utils.TraceDirectoryFlag,
+		&utils.TraceDebugFlag,
+		&utils.NumberOfBlocksFlag,
+		&utils.StochasticSeedFlag,
 	},
 	Description: `
 The trace StochasticReplay command requires two arguments:
@@ -53,7 +53,7 @@ last block of the inclusive range of blocks to StochasticReplay storage traces.`
 }
 
 // traceStochasticReplayTask simulates storage operations from storage traces on stateDB.
-func traceStochasticReplayTask(cfg *TraceConfig) error {
+func traceStochasticReplayTask(cfg *utils.TraceConfig) error {
 	dCtx := dict.NewDictionaryContext()
 
 	// create a directory for the store to place all its files, and
@@ -63,7 +63,7 @@ func traceStochasticReplayTask(cfg *TraceConfig) error {
 	if err != nil {
 		return err
 	}
-	db, err := MakeStateDB(stateDirectory, cfg)
+	db, err := utils.MakeStateDB(stateDirectory, cfg)
 	if err != nil {
 		return err
 	}
@@ -74,7 +74,7 @@ func traceStochasticReplayTask(cfg *TraceConfig) error {
 		sec     float64
 		lastSec float64
 	)
-	if cfg.enableProgress {
+	if cfg.EnableProgress {
 		start = time.Now()
 		sec = time.Since(start).Seconds()
 		lastSec = time.Since(start).Seconds()
@@ -102,10 +102,10 @@ func traceStochasticReplayTask(cfg *TraceConfig) error {
 		}
 		if op.GetId() == operation.BeginBlockID {
 			block := op.(*operation.BeginBlock).BlockNumber
-			if block > cfg.last {
+			if block > cfg.Last {
 				break
 			}
-			if cfg.enableProgress {
+			if cfg.EnableProgress {
 				// report progress
 				sec = time.Since(start).Seconds()
 				if sec-lastSec >= 15 {
@@ -115,7 +115,7 @@ func traceStochasticReplayTask(cfg *TraceConfig) error {
 			}
 		}
 		operation.Execute(op, db, dCtx)
-		if cfg.debug {
+		if cfg.Debug {
 			operation.Debug(dCtx, op)
 		}
 	}
@@ -136,10 +136,10 @@ func traceStochasticReplayTask(cfg *TraceConfig) error {
 	}
 
 	// print progress summary
-	if cfg.enableProgress {
-		log.Printf("trace StochasticReplay: Total elapsed time: %.3f s, processed %v blocks\n", sec, cfg.last-cfg.first+1)
+	if cfg.EnableProgress {
+		log.Printf("trace StochasticReplay: Total elapsed time: %.3f s, processed %v blocks\n", sec, cfg.Last-cfg.First+1)
 		log.Printf("trace StochasticReplay: Closing DB took %v\n", time.Since(start))
-		log.Printf("trace StochasticReplay: Final disk usage: %v MiB\n", float32(getDirectorySize(stateDirectory))/float32(1024*1024))
+		log.Printf("trace StochasticReplay: Final disk usage: %v MiB\n", float32(utils.GetDirectorySize(stateDirectory))/float32(1024*1024))
 	}
 
 	return nil
@@ -333,25 +333,25 @@ func loadTransitions() ([][]float64, error) {
 // traceStochasticReplayAction implements trace command for StochasticReplaying.
 func traceStochasticReplayAction(ctx *cli.Context) error {
 	var err error
-	cfg, err := NewTraceConfig(ctx, lastBlockArg)
+	cfg, err := utils.NewTraceConfig(ctx, utils.LastBlockArg)
 	if err != nil {
 		return err
 	}
 
-	seed := ctx.Int64(stochasticSeedFlag.Name)
+	seed := ctx.Int64(utils.StochasticSeedFlag.Name)
 	if seed != -1 {
 		rand.Seed(seed)
 	} else {
 		rand.Seed(time.Now().UnixNano())
 	}
 
-	operation.EnableProfiling = cfg.profile
+	operation.EnableProfiling = cfg.Profile
 	// set trace directory
-	tracer.TraceDir = ctx.String(traceDirectoryFlag.Name) + "/"
-	dict.DictionaryContextDir = ctx.String(traceDirectoryFlag.Name) + "/"
+	tracer.TraceDir = ctx.String(utils.TraceDirectoryFlag.Name) + "/"
+	dict.DictionaryContextDir = ctx.String(utils.TraceDirectoryFlag.Name) + "/"
 
 	// start CPU profiling if requested.
-	if profileFileName := ctx.String(cpuProfileFlag.Name); profileFileName != "" {
+	if profileFileName := ctx.String(utils.CpuProfileFlag.Name); profileFileName != "" {
 		f, err := os.Create(profileFileName)
 		if err != nil {
 			return err

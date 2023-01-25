@@ -10,6 +10,7 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer"
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
+	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/substate"
 	"github.com/urfave/cli/v2"
 )
@@ -21,24 +22,24 @@ var TraceReplaySubstateCommand = cli.Command{
 	Usage:     "executes storage trace using substates",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
-		&chainIDFlag,
-		&cpuProfileFlag,
-		&disableProgressFlag,
-		&randomizePrimingFlag,
-		&primeSeedFlag,
-		&primeThresholdFlag,
-		&profileFlag,
-		&stateDbImplementationFlag,
-		&stateDbVariantFlag,
-		&stateDbLoggingFlag,
-		&shadowDbImplementationFlag,
-		&shadowDbVariantFlag,
+		&utils.ChainIDFlag,
+		&utils.CpuProfileFlag,
+		&utils.DisableProgressFlag,
+		&utils.RandomizePrimingFlag,
+		&utils.PrimeSeedFlag,
+		&utils.PrimeThresholdFlag,
+		&utils.ProfileFlag,
+		&utils.StateDbImplementationFlag,
+		&utils.StateDbVariantFlag,
+		&utils.StateDbLoggingFlag,
+		&utils.ShadowDbImplementationFlag,
+		&utils.ShadowDbVariantFlag,
 		&substate.SubstateDirFlag,
 		&substate.WorkersFlag,
-		&traceDirectoryFlag,
-		&traceDebugFlag,
-		&validateFlag,
-		&validateWorldStateFlag,
+		&utils.TraceDirectoryFlag,
+		&utils.TraceDebugFlag,
+		&utils.ValidateFlag,
+		&utils.ValidateWorldStateFlag,
 	},
 	Description: `
 The trace replay-substate command requires two arguments:
@@ -49,16 +50,16 @@ last block of the inclusive range of blocks to replay storage traces.`,
 }
 
 // traceReplaySubstateTask simulates storage operations from storage traces on stateDB.
-func traceReplaySubstateTask(cfg *TraceConfig) error {
+func traceReplaySubstateTask(cfg *utils.TraceConfig) error {
 	// load dictionaries & indexes
 	dCtx := dict.ReadDictionaryContext()
 
 	// iterate substate (for in-membory state)
-	stateIter := substate.NewSubstateIterator(cfg.first, cfg.workers)
+	stateIter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
 	defer stateIter.Release()
 
 	// replay storage trace
-	traceIter := tracer.NewTraceIterator(cfg.first, cfg.last)
+	traceIter := tracer.NewTraceIterator(cfg.First, cfg.Last)
 	defer traceIter.Release()
 
 	// Create a directory for the store to place all its files.
@@ -69,7 +70,7 @@ func traceReplaySubstateTask(cfg *TraceConfig) error {
 	defer os.RemoveAll(stateDirectory)
 
 	// Instantiate the state DB under testing
-	db, err := MakeStateDB(stateDirectory, cfg)
+	db, err := utils.MakeStateDB(stateDirectory, cfg)
 	if err != nil {
 		return err
 	}
@@ -82,7 +83,7 @@ func traceReplaySubstateTask(cfg *TraceConfig) error {
 		txCount     uint64
 		firstBlock  = true
 	)
-	if cfg.enableProgress {
+	if cfg.EnableProgress {
 		start = time.Now()
 		sec = time.Since(start).Seconds()
 		lastSec = time.Since(start).Seconds()
@@ -91,7 +92,7 @@ func traceReplaySubstateTask(cfg *TraceConfig) error {
 	// A utility to run operations on the local context.
 	run := func(op operation.Operation) {
 		operation.Execute(op, db, dCtx)
-		if cfg.debug {
+		if cfg.Debug {
 			operation.Debug(dCtx, op)
 		}
 	}
@@ -102,18 +103,18 @@ func traceReplaySubstateTask(cfg *TraceConfig) error {
 		// The first Epoch begin and the final EpochEnd need to be artificially
 		// added since the range running on may not match epoch boundaries.
 		if firstBlock {
-			run(operation.NewBeginEpoch(cfg.first / cfg.epochLength))
+			run(operation.NewBeginEpoch(cfg.First / cfg.EpochLength))
 			firstBlock = false
 		}
 
-		if tx.Block > cfg.last {
+		if tx.Block > cfg.Last {
 			break
 		}
 
-		if cfg.dbImpl == "memory" {
+		if cfg.DbImpl == "memory" {
 			db.PrepareSubstate(&tx.Substate.InputAlloc)
 		} else {
-			primeStateDB(tx.Substate.InputAlloc, db, cfg)
+			utils.PrimeStateDB(tx.Substate.InputAlloc, db, cfg)
 		}
 		for traceIter.Next() {
 			op := traceIter.Value()
@@ -127,12 +128,12 @@ func traceReplaySubstateTask(cfg *TraceConfig) error {
 		}
 
 		// Validate stateDB and OuputAlloc
-		if cfg.validateWorldState {
+		if cfg.ValidateWorldState {
 			if err := validateStateDB(tx.Substate.OutputAlloc, db, false); err != nil {
 				return fmt.Errorf("Validation failed. Block %v Tx %v\n\t%v\n", tx.Block, tx.Transaction, err)
 			}
 		}
-		if cfg.enableProgress {
+		if cfg.EnableProgress {
 			// report progress
 			sec = time.Since(start).Seconds()
 			diff := sec - lastSec
@@ -167,10 +168,10 @@ func traceReplaySubstateTask(cfg *TraceConfig) error {
 		fmt.Printf("Failed to close database: %v", err)
 	}
 
-	if cfg.enableProgress {
+	if cfg.EnableProgress {
 		fmt.Printf("trace replay-substate: Closing DB took %v\n", time.Since(start))
-		fmt.Printf("trace replay-substate: Final disk usage: %v MiB\n", float32(getDirectorySize(stateDirectory))/float32(1024*1024))
-		fmt.Printf("trace replay-substate: Total elapsed time: %.3f s, processed %v blocks (~%.1f Tx/s)\n", sec, cfg.last-cfg.first+1, float64(txCount)/sec)
+		fmt.Printf("trace replay-substate: Final disk usage: %v MiB\n", float32(utils.GetDirectorySize(stateDirectory))/float32(1024*1024))
+		fmt.Printf("trace replay-substate: Total elapsed time: %.3f s, processed %v blocks (~%.1f Tx/s)\n", sec, cfg.Last-cfg.First+1, float64(txCount)/sec)
 	}
 
 	return nil
@@ -179,7 +180,7 @@ func traceReplaySubstateTask(cfg *TraceConfig) error {
 // traceReplaySubstateAction implements trace command for replaying.
 func traceReplaySubstateAction(ctx *cli.Context) error {
 	substate.RecordReplay = true
-	cfg, err := NewTraceConfig(ctx, blockRangeArgs)
+	cfg, err := utils.NewTraceConfig(ctx, utils.BlockRangeArgs)
 	if err != nil {
 		return err
 	}
@@ -189,9 +190,9 @@ func traceReplaySubstateAction(ctx *cli.Context) error {
 	defer substate.CloseSubstateDB()
 
 	// Get profiling flag
-	operation.EnableProfiling = cfg.profile
+	operation.EnableProfiling = cfg.Profile
 	// Start CPU profiling if requested.
-	if profileFileName := ctx.String(cpuProfileFlag.Name); profileFileName != "" {
+	if profileFileName := ctx.String(utils.CpuProfileFlag.Name); profileFileName != "" {
 		f, err := os.Create(profileFileName)
 		if err != nil {
 			return err

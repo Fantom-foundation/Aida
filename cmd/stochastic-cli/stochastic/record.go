@@ -1,4 +1,4 @@
-package trace
+package stochastic
 
 import (
 	"bufio"
@@ -14,6 +14,7 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer"
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
+	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/Fantom-foundation/go-opera/opera"
 	"github.com/Fantom-foundation/substate-cli/cmd/substate-cli/replay"
@@ -36,15 +37,15 @@ var StochasticRecordCommand = cli.Command{
 	Usage:     "captures and records StateDB operations while processing blocks",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
-		&cpuProfileFlag,
-		&disableProgressFlag,
+		&utils.CpuProfileFlag,
+		&utils.DisableProgressFlag,
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
-		&chainIDFlag,
-		&traceDirectoryFlag,
-		&traceDebugFlag,
-		&stochasticMatrixFlag,
-		&stochasticMatrixFormatFlag,
+		&utils.ChainIDFlag,
+		&utils.TraceDirectoryFlag,
+		&utils.TraceDebugFlag,
+		&utils.StochasticMatrixFlag,
+		&utils.StochasticMatrixFormatFlag,
 	},
 	Description: `
 The trace record command requires two arguments:
@@ -71,7 +72,7 @@ func stochasticRecordTask(block uint64, tx, chainID int, recording *substate.Sub
 
 	vmConfig = opera.DefaultVMConfig
 	vmConfig.NoBaseFee = true
-	chainConfig = getChainConfig(chainID)
+	chainConfig = utils.GetChainConfig(chainID)
 
 	var hashError error
 	getHash := func(num uint64) common.Hash {
@@ -88,7 +89,7 @@ func stochasticRecordTask(block uint64, tx, chainID int, recording *substate.Sub
 
 	var statedb state.StateDB
 	statedb = state.MakeInMemoryStateDB(&inputAlloc)
-	proxyStochastic := tracer.NewProxyStochastic(statedb, dCtx, traceDebug)
+	proxyStochastic := tracer.NewProxyStochastic(statedb, dCtx, utils.TraceDebug)
 	statedb = proxyStochastic
 
 	// Apply Message
@@ -218,7 +219,7 @@ func OperationStochasticWriter(ctx context.Context, done chan struct{}, ch chan 
 func sendStochasticOperation(dCtx *dict.DictionaryContext, ch chan operation.Operation, op operation.Operation) {
 	ch <- op
 	dCtx.RecordOp(op.GetId())
-	if traceDebug {
+	if utils.TraceDebug {
 		operation.Debug(dCtx, op)
 	}
 }
@@ -233,7 +234,7 @@ func stochasticRecordAction(ctx *cli.Context) error {
 	}
 
 	// start CPU profiling if enabled.
-	if profileFileName := ctx.String(cpuProfileFlag.Name); profileFileName != "" {
+	if profileFileName := ctx.String(utils.CpuProfileFlag.Name); profileFileName != "" {
 		f, err := os.Create(profileFileName)
 		if err != nil {
 			return err
@@ -243,7 +244,7 @@ func stochasticRecordAction(ctx *cli.Context) error {
 	}
 
 	// get progress flag
-	enableProgress := !ctx.Bool(disableProgressFlag.Name)
+	enableProgress := !ctx.Bool(utils.DisableProgressFlag.Name)
 
 	// create dictionary and index contexts
 	dCtx := dict.NewDictionaryStochasticContext(operation.BeginBlockID, operation.NumOperations)
@@ -255,11 +256,11 @@ func stochasticRecordAction(ctx *cli.Context) error {
 	go OperationStochasticWriter(cctx, cancelChannel, opChannel)
 
 	// process arguments
-	chainID := ctx.Int(chainIDFlag.Name)
-	tracer.TraceDir = ctx.String(traceDirectoryFlag.Name) + "/"
-	dict.DictionaryContextDir = ctx.String(traceDirectoryFlag.Name) + "/"
-	if ctx.Bool(traceDebugFlag.Name) {
-		traceDebug = true
+	chainID := ctx.Int(utils.ChainIDFlag.Name)
+	tracer.TraceDir = ctx.String(utils.TraceDirectoryFlag.Name) + "/"
+	dict.DictionaryContextDir = ctx.String(utils.TraceDirectoryFlag.Name) + "/"
+	if ctx.Bool(utils.TraceDebugFlag.Name) {
+		utils.TraceDebug = true
 	}
 	first, last, argErr := replay.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
 	if argErr != nil {
@@ -335,7 +336,7 @@ func stochasticRecordAction(ctx *cli.Context) error {
 	}
 
 	// write stochastic matrix
-	writeStochasticMatrix(stochasticMatrixFlag.Value, stochasticMatrixFormatFlag.Value, dCtx.TFreq)
+	writeStochasticMatrix(utils.StochasticMatrixFlag.Value, utils.StochasticMatrixFormatFlag.Value, dCtx.TFreq)
 
 	return err
 }

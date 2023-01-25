@@ -6,6 +6,7 @@ import (
 	"log"
 	"strconv"
 
+	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/substate"
 	"github.com/syndtr/goleveldb/leveldb"
@@ -19,13 +20,13 @@ var GenUpdateSetCommand = cli.Command{
 	Usage:     "generate update set database",
 	ArgsUsage: "<blockNumLast> <blockRange>",
 	Flags: []cli.Flag{
-		&chainIDFlag,
-		&deletedAccountDirFlag,
+		&utils.ChainIDFlag,
+		&utils.DeletedAccountDirFlag,
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
-		&updateDBDirFlag,
-		&validateFlag,
-		&worldStateDirFlag,
+		&utils.UpdateDBDirFlag,
+		&utils.ValidateFlag,
+		&utils.WorldStateDirFlag,
 	},
 	Description: `
 The trace gen-update-set command requires two arguments:
@@ -46,7 +47,7 @@ func genUpdateSet(ctx *cli.Context) error {
 	if ctx.Args().Len() != 2 {
 		return fmt.Errorf("trace command requires exactly 2 arguments")
 	}
-	cfg, argErr := NewTraceConfig(ctx, lastBlockArg)
+	cfg, argErr := utils.NewTraceConfig(ctx, utils.LastBlockArg)
 	if argErr != nil {
 		return argErr
 	}
@@ -54,10 +55,10 @@ func genUpdateSet(ctx *cli.Context) error {
 	if ferr != nil {
 		return ferr
 	}
-	worldStateDir := ctx.String(worldStateDirFlag.Name)
+	worldStateDir := ctx.String(utils.WorldStateDirFlag.Name)
 
 	// initialize updateDB
-	db := substate.OpenUpdateDB(cfg.updateDBDir)
+	db := substate.OpenUpdateDB(cfg.UpdateDBDir)
 	defer db.Close()
 	update := make(substate.SubstateAlloc)
 
@@ -67,19 +68,19 @@ func genUpdateSet(ctx *cli.Context) error {
 	defer substate.CloseSubstateDB()
 
 	// store world state
-	cfg.first = FirstSubstateBlock
+	cfg.First = utils.FirstSubstateBlock
 	log.Printf("Load initial worldstate and store its substateAlloc\n")
-	ws, err := generateWorldState(worldStateDir, cfg.first-1, cfg)
+	ws, err := generateWorldState(worldStateDir, cfg.First-1, cfg)
 	if err != nil {
 		return err
 	}
-	log.Printf("write block %v to updateDB\n", cfg.first-1)
-	db.PutUpdateSet(cfg.first-1, &ws, destroyedAccounts)
+	log.Printf("write block %v to updateDB\n", cfg.First-1)
+	db.PutUpdateSet(cfg.First-1, &ws, destroyedAccounts)
 	log.Printf("\tAccounts: %v\n", len(ws))
 
-	iter := substate.NewSubstateIterator(cfg.first, cfg.workers)
+	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
 	defer iter.Release()
-	deletedAccountDB := substate.OpenDestroyedAccountDBReadOnly(cfg.deletedAccountDir)
+	deletedAccountDB := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletedAccountDir)
 	defer deletedAccountDB.Close()
 
 	txCount := uint64(0)
@@ -102,7 +103,7 @@ func genUpdateSet(ctx *cli.Context) error {
 				log.Printf("\tTx: %v, Accounts: %v, Suicided: %v\n", txCount, len(update), len(destroyedAccounts))
 				checkPoint += interval
 				destroyedAccounts = nil
-				if cfg.validateTxState {
+				if cfg.ValidateTxState {
 					if !db.GetUpdateSet(curBlock).Equal(update) {
 						return fmt.Errorf("validation failed\n")
 					}
@@ -112,7 +113,7 @@ func genUpdateSet(ctx *cli.Context) error {
 			}
 
 			// stop when reaching end of block range
-			if tx.Block > cfg.last {
+			if tx.Block > cfg.Last {
 				break
 			}
 			curBlock = tx.Block

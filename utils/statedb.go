@@ -1,4 +1,4 @@
-package trace
+package utils
 
 import (
 	"fmt"
@@ -21,7 +21,7 @@ func MakeStateDB(directory string, cfg *TraceConfig) (state.StateDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	if cfg.dbLogging {
+	if cfg.DbLogging {
 		db = state.MakeLoggingStateDB(db)
 	}
 	return db, nil
@@ -29,8 +29,8 @@ func MakeStateDB(directory string, cfg *TraceConfig) (state.StateDB, error) {
 
 // makeStateDB creates a DB instance with a potential shadow instance.
 func makeStateDBInternal(directory string, cfg *TraceConfig) (state.StateDB, error) {
-	if cfg.shadowImpl == "" {
-		return makeStateDBVariant(directory, cfg.dbImpl, cfg.dbVariant, cfg)
+	if cfg.ShadowImpl == "" {
+		return makeStateDBVariant(directory, cfg.DbImpl, cfg.DbVariant, cfg)
 	}
 	primeDir := directory + "/prime"
 	if err := os.MkdirAll(primeDir, 0700); err != nil {
@@ -40,11 +40,11 @@ func makeStateDBInternal(directory string, cfg *TraceConfig) (state.StateDB, err
 	if err := os.MkdirAll(shadowDir, 0700); err != nil {
 		return nil, err
 	}
-	prime, err := makeStateDBVariant(primeDir, cfg.dbImpl, cfg.dbVariant, cfg)
+	prime, err := makeStateDBVariant(primeDir, cfg.DbImpl, cfg.DbVariant, cfg)
 	if err != nil {
 		return nil, err
 	}
-	shadow, err := makeStateDBVariant(shadowDir, cfg.shadowImpl, cfg.shadowVariant, cfg)
+	shadow, err := makeStateDBVariant(shadowDir, cfg.ShadowImpl, cfg.ShadowVariant, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -57,17 +57,17 @@ func makeStateDBVariant(directory, impl, variant string, cfg *TraceConfig) (stat
 	case "memory":
 		return state.MakeGethInMemoryStateDB(variant)
 	case "geth":
-		return state.MakeGethStateDB(directory, variant, cfg.archiveMode)
+		return state.MakeGethStateDB(directory, variant, cfg.ArchiveMode)
 	case "carmen":
 		return state.MakeCarmenStateDB(directory, variant)
 	case "flat":
 		return state.MakeFlatStateDB(directory, variant)
 	}
-	return nil, fmt.Errorf("unknown DB implementation (--%v): %v", stateDbImplementationFlag.Name, impl)
+	return nil, fmt.Errorf("unknown DB implementation (--%v): %v", StateDbImplementationFlag.Name, impl)
 }
 
-// primeStateDB primes database with accounts from the world state.
-func primeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *TraceConfig) {
+// PrimeStateDB primes database with accounts from the world state.
+func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *TraceConfig) {
 	load := db.StartBulkLoad()
 
 	numValues := 0
@@ -95,12 +95,12 @@ func primeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *TraceConfig)
 		}
 	}
 
-	if cfg.primeRandom {
+	if cfg.PrimeRandom {
 		//if 0, commit once after priming all accounts
-		if cfg.primeThreshold == 0 {
-			cfg.primeThreshold = len(ws)
+		if cfg.PrimeThreshold == 0 {
+			cfg.PrimeThreshold = len(ws)
 		}
-		primeStateDBRandom(ws, load, cfg, progressTracker)
+		PrimeStateDBRandom(ws, load, cfg, progressTracker)
 	} else {
 		for addr, account := range ws {
 			primeOneAccount(addr, account, load, progressTracker)
@@ -125,8 +125,8 @@ func primeOneAccount(addr common.Address, account *substate.SubstateAccount, db 
 	}
 }
 
-// primeStateDBRandom primes database with accounts from the world state in random order.
-func primeStateDBRandom(ws substate.SubstateAlloc, db state.BulkLoad, cfg *TraceConfig, afterLoad func()) {
+// PrimeStateDBRandom primes database with accounts from the world state in random order.
+func PrimeStateDBRandom(ws substate.SubstateAlloc, db state.BulkLoad, cfg *TraceConfig, afterLoad func()) {
 	contracts := make([]string, 0, len(ws))
 	for addr := range ws {
 		contracts = append(contracts, addr.Hex())
@@ -134,7 +134,7 @@ func primeStateDBRandom(ws substate.SubstateAlloc, db state.BulkLoad, cfg *Trace
 
 	sort.Strings(contracts)
 	// shuffle contract order
-	rand.NewSource(cfg.primeSeed)
+	rand.NewSource(cfg.PrimeSeed)
 	rand.Shuffle(len(contracts), func(i, j int) {
 		contracts[i], contracts[j] = contracts[j], contracts[i]
 	})
@@ -147,14 +147,14 @@ func primeStateDBRandom(ws substate.SubstateAlloc, db state.BulkLoad, cfg *Trace
 	}
 }
 
-// deleteDestroyedAccountsFromWorldState removes previously suicided accounts from
+// DeleteDestroyedAccountsFromWorldState removes previously suicided accounts from
 // the world state.
-func deleteDestroyedAccountsFromWorldState(ws substate.SubstateAlloc, cfg *TraceConfig, target uint64) error {
-	if !cfg.hasDeletedAccounts {
+func DeleteDestroyedAccountsFromWorldState(ws substate.SubstateAlloc, cfg *TraceConfig, target uint64) error {
+	if !cfg.HasDeletedAccounts {
 		log.Printf("Database not provided. Ignore deleted accounts.\n")
 		return nil
 	}
-	src := substate.OpenDestroyedAccountDBReadOnly(cfg.deletedAccountDir)
+	src := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletedAccountDir)
 	defer src.Close()
 	list, err := src.GetAccountsDestroyedInRange(0, target)
 	if err != nil {
@@ -168,14 +168,14 @@ func deleteDestroyedAccountsFromWorldState(ws substate.SubstateAlloc, cfg *Trace
 	return nil
 }
 
-// deleteDestroyedAccountsFromStateDB performs suicide operations on previously
+// DeleteDestroyedAccountsFromStateDB performs suicide operations on previously
 // self-destructed accounts.
-func deleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *TraceConfig, target uint64) error {
-	if !cfg.hasDeletedAccounts {
+func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *TraceConfig, target uint64) error {
+	if !cfg.HasDeletedAccounts {
 		log.Printf("Database not provided. Ignore deleted accounts.\n")
 		return nil
 	}
-	src := substate.OpenDestroyedAccountDBReadOnly(cfg.deletedAccountDir)
+	src := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletedAccountDir)
 	defer src.Close()
 	list, err := src.GetAccountsDestroyedInRange(0, target)
 	if err != nil {
@@ -195,8 +195,8 @@ func deleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *TraceConfig, targ
 	return nil
 }
 
-// getDirectorySize computes the size of all files in the given directoy in bytes.
-func getDirectorySize(directory string) int64 {
+// GetDirectorySize computes the size of all files in the given directoy in bytes.
+func GetDirectorySize(directory string) int64 {
 	var sum int64 = 0
 	filepath.Walk(directory, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
