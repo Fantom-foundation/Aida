@@ -1,5 +1,5 @@
 // Package trace provides cli for recording and replaying storage traces.
-package trace
+package utils
 
 import (
 	"fmt"
@@ -18,163 +18,163 @@ type ArgumentMode int
 
 // An enums of argument modes used by trace subcommands
 const (
-	blockRangeArgs ArgumentMode = iota // requires 2 arguments: first block and last block
-	lastBlockArg                       // requires 1 argument: last block
+	BlockRangeArgs ArgumentMode = iota // requires 2 arguments: first block and last block
+	LastBlockArg                       // requires 1 argument: last block
 )
 
 var (
 	FirstSubstateBlock uint64         // id of the first block in substate
-	traceDebug         bool   = false // traceDebug for enabling/disabling debugging.
+	TraceDebug         bool   = false // TraceDebug for enabling/disabling debugging.
 )
 
 // Command line options for common flags in record and replay.
 var (
-	archiveModeFlag = cli.BoolFlag{
+	ArchiveModeFlag = cli.BoolFlag{
 		Name:  "archive",
 		Usage: "set node type to archival mode. If set, the node keep all the EVM state history; otherwise the state history will be pruned.",
 	}
-	chainIDFlag = cli.IntFlag{
+	ChainIDFlag = cli.IntFlag{
 		Name:  "chainid",
 		Usage: "ChainID for replayer",
 		Value: 250,
 	}
-	continueOnFailureFlag = cli.BoolFlag{
+	ContinueOnFailureFlag = cli.BoolFlag{
 		Name:  "continue-on-failure",
 		Usage: "continue execute after validation failure detected",
 	}
-	cpuProfileFlag = cli.StringFlag{
+	CpuProfileFlag = cli.StringFlag{
 		Name:  "cpuprofile",
 		Usage: "enables CPU profiling",
 	}
-	deletedAccountDirFlag = cli.StringFlag{
+	DeletedAccountDirFlag = cli.StringFlag{
 		Name:  "deleted-account-dir",
 		Usage: "sets the directory containing deleted accounts database",
 	}
-	memProfileFlag = cli.StringFlag{
+	MemProfileFlag = cli.StringFlag{
 		Name:  "memprofile",
 		Usage: "enables memory allocation profiling",
 	}
-	epochLengthFlag = cli.IntFlag{
+	EpochLengthFlag = cli.IntFlag{
 		Name:  "epochlength",
 		Usage: "defines the number of blocks per epoch",
 		Value: 300, // ~ 300s = 5 minutes
 	}
-	memoryBreakdownFlag = cli.BoolFlag{
+	MemoryBreakdownFlag = cli.BoolFlag{
 		Name:  "memory-breakdown",
 		Usage: "enables printing of memory usage breakdown",
 	}
-	profileFlag = cli.BoolFlag{
+	ProfileFlag = cli.BoolFlag{
 		Name:  "profile",
 		Usage: "enables profiling",
 	}
-	disableProgressFlag = cli.BoolFlag{
+	DisableProgressFlag = cli.BoolFlag{
 		Name:  "disable-progress",
 		Usage: "disable progress report",
 	}
-	randomizePrimingFlag = cli.BoolFlag{
+	RandomizePrimingFlag = cli.BoolFlag{
 		Name:  "prime-random",
 		Usage: "randomize order of accounts in StateDB priming",
 	}
-	primeSeedFlag = cli.Int64Flag{
+	PrimeSeedFlag = cli.Int64Flag{
 		Name:  "prime-seed",
 		Usage: "set seed for randomizing priming",
 		Value: time.Now().UnixNano(),
 	}
-	primeThresholdFlag = cli.IntFlag{
+	PrimeThresholdFlag = cli.IntFlag{
 		Name:  "prime-threshold",
 		Usage: "set number of accounts written to stateDB before applying pending state updates",
 		Value: 0,
 	}
-	skipPrimingFlag = cli.BoolFlag{
+	SkipPrimingFlag = cli.BoolFlag{
 		Name:  "skip-priming",
 		Usage: "if set, DB priming should be skipped; most useful with the 'memory' DB implementation",
 	}
-	stateDbImplementationFlag = cli.StringFlag{
+	StateDbImplementationFlag = cli.StringFlag{
 		Name:  "db-impl",
 		Usage: "select state DB implementation",
 		Value: "geth",
 	}
-	stateDbVariantFlag = cli.StringFlag{
+	StateDbVariantFlag = cli.StringFlag{
 		Name:  "db-variant",
 		Usage: "select a state DB variant",
 		Value: "",
 	}
-	stateDbTempDirFlag = cli.StringFlag{
+	StateDbTempDirFlag = cli.StringFlag{
 		Name:  "db-tmp-dir",
 		Usage: "sets the temporary directory where to place state DB data; uses system default if empty",
 	}
-	stateDbLoggingFlag = cli.BoolFlag{
+	StateDbLoggingFlag = cli.BoolFlag{
 		Name:  "db-logging",
 		Usage: "enable logging of all DB operations",
 	}
-	shadowDbImplementationFlag = cli.StringFlag{
+	ShadowDbImplementationFlag = cli.StringFlag{
 		Name:  "db-shadow-impl",
 		Usage: "select state DB implementation to shadow the prime DB implementation",
 		Value: "",
 	}
-	shadowDbVariantFlag = cli.StringFlag{
+	ShadowDbVariantFlag = cli.StringFlag{
 		Name:  "db-shadow-variant",
 		Usage: "select a state DB variant to shadow the prime DB implementation",
 		Value: "",
 	}
-	traceDebugFlag = cli.BoolFlag{
+	TraceDebugFlag = cli.BoolFlag{
 		Name:  "trace-debug",
 		Usage: "enable debug output for tracing",
 	}
-	traceDirectoryFlag = cli.StringFlag{
+	TraceDirectoryFlag = cli.StringFlag{
 		Name:  "tracedir",
 		Usage: "set storage trace's output directory",
 		Value: "./",
 	}
-	updateDBDirFlag = cli.StringFlag{
+	UpdateDBDirFlag = cli.StringFlag{
 		Name:  "updatedir",
 		Usage: "set update-set database directory",
 		Value: "./updatedb",
 	}
-	validateFlag = cli.BoolFlag{
+	ValidateFlag = cli.BoolFlag{
 		Name:  "validate",
 		Usage: "enables validation",
 	}
-	validateTxStateFlag = cli.BoolFlag{
+	ValidateTxStateFlag = cli.BoolFlag{
 		Name:  "validate-tx",
 		Usage: "enables transaction state validation",
 	}
-	validateWorldStateFlag = cli.BoolFlag{
+	ValidateWorldStateFlag = cli.BoolFlag{
 		Name:  "validate-ws",
 		Usage: "enables end-state validation",
 	}
-	vmImplementation = cli.StringFlag{
+	VmImplementation = cli.StringFlag{
 		Name:  "vm-impl",
 		Usage: "select VM implementation",
 		Value: "geth",
 	}
-	worldStateDirFlag = cli.PathFlag{
+	WorldStateDirFlag = cli.PathFlag{
 		Name:  "worldstatedir",
 		Usage: "world state snapshot database path",
 	}
-	numberOfBlocksFlag = cli.IntFlag{
+	NumberOfBlocksFlag = cli.IntFlag{
 		Name:     "number",
 		Aliases:  []string{"n"},
 		Usage:    "Number of blocks",
 		Required: true,
 		Value:    0,
 	}
-	maxNumTransactionsFlag = cli.IntFlag{
+	MaxNumTransactionsFlag = cli.IntFlag{
 		Name:  "max-transactions",
 		Usage: "limit the maximum number of processed transactions, default: unlimited",
 		Value: -1,
 	}
-	stochasticMatrixFlag = cli.StringFlag{
+	StochasticMatrixFlag = cli.StringFlag{
 		Name:  "stochastic-matrix",
 		Usage: "set stochastic matrix file",
 		Value: "stochastic-matrix.csv",
 	}
-	stochasticMatrixFormatFlag = cli.StringFlag{
+	StochasticMatrixFormatFlag = cli.StringFlag{
 		Name:  "stochastic-matrix-format",
 		Usage: "type of the output matrix file (\"dot\" or \"csv\")",
 		Value: "csv",
 	}
-	stochasticSeedFlag = cli.Int64Flag{
+	StochasticSeedFlag = cli.Int64Flag{
 		Name:  "seed",
 		Usage: "seed for pseudorandom number generator",
 		Value: -1,
@@ -183,40 +183,40 @@ var (
 
 // execution configuration for replay command.
 type TraceConfig struct {
-	first uint64 // first block
-	last  uint64 // last block
+	First uint64 // first block
+	Last  uint64 // last block
 
-	debug              bool   // enable trace debug flag
-	continueOnFailure  bool   // continue validation when an error detected
-	chainID            int    // Blockchain ID (mainnet: 250/testnet: 4002)
-	dbImpl             string // storage implementation
-	dbVariant          string // database variant
-	dbLogging          bool   // set to true if all DB operations should be logged
-	deletedAccountDir  string // directory of deleted account database
-	enableProgress     bool   // enable progress report flag
-	epochLength        uint64 // length of an epoch in number of blocks
-	archiveMode        bool   // enable archive mode
-	hasDeletedAccounts bool   // true if deletedAccountDir is not empty; otherwise false
-	maxNumTransactions int    // the maximum number of processed transactions
-	memoryBreakdown    bool   // enable printing of memory breakdown
-	primeRandom        bool   // enable randomized priming
-	primeSeed          int64  // set random seed
-	primeThreshold     int    // set account threshold before commit
-	profile            bool   // enable micro profiling
-	skipPriming        bool   // skip priming of the state DB
-	shadowImpl         string // implementation of the shadow DB to use, empty if disabled
-	shadowVariant      string // database variant of the shadow DB to be used
-	stateDbDir         string // directory to store State DB data
-	updateDBDir        string // update-set directory
-	validateTxState    bool   // validate stateDB before and after transaction
-	validateWorldState bool   // validate stateDB before and after replay block range
-	vmImpl             string // vm implementation (geth/lfvm)
-	workers            int    // number of worker threads
-	memoryProfile      string // capture the memory heap profile into the file
+	Debug              bool   // enable trace debug flag
+	ContinueOnFailure  bool   // continue validation when an error detected
+	ChainID            int    // Blockchain ID (mainnet: 250/testnet: 4002)
+	DbImpl             string // storage implementation
+	DbVariant          string // database variant
+	DbLogging          bool   // set to true if all DB operations should be logged
+	DeletedAccountDir  string // directory of deleted account database
+	EnableProgress     bool   // enable progress report flag
+	EpochLength        uint64 // length of an epoch in number of blocks
+	ArchiveMode        bool   // enable archive mode
+	HasDeletedAccounts bool   // true if deletedAccountDir is not empty; otherwise false
+	MaxNumTransactions int    // the maximum number of processed transactions
+	MemoryBreakdown    bool   // enable printing of memory breakdown
+	MemoryProfile      string // capture the memory heap profile into the file
+	PrimeRandom        bool   // enable randomized priming
+	PrimeSeed          int64  // set random seed
+	PrimeThreshold     int    // set account threshold before commit
+	Profile            bool   // enable micro profiling
+	SkipPriming        bool   // skip priming of the state DB
+	ShadowImpl         string // implementation of the shadow DB to use, empty if disabled
+	ShadowVariant      string // database variant of the shadow DB to be used
+	StateDbDir         string // directory to store State DB data
+	UpdateDBDir        string // update-set directory
+	ValidateTxState    bool   // validate stateDB before and after transaction
+	ValidateWorldState bool   // validate stateDB before and after replay block range
+	VmImpl             string // vm implementation (geth/lfvm)
+	Workers            int    // number of worker threads
 }
 
 // getChainConnfig returns chain configuration of either mainnet or testnets.
-func getChainConfig(chainID int) *params.ChainConfig {
+func GetChainConfig(chainID int) *params.ChainConfig {
 	chainConfig := params.AllEthashProtocolChanges
 	chainConfig.ChainID = big.NewInt(int64(chainID))
 	if chainID == 250 {
@@ -246,7 +246,7 @@ func setFirstBlockFromChainID(chainID int) {
 // NewTraceConfig creates and initializes TraceConfig with commandline arguments.
 func NewTraceConfig(ctx *cli.Context, mode ArgumentMode) (*TraceConfig, error) {
 	// number of blocks to be generated by Stochastic
-	n := ctx.Uint64(numberOfBlocksFlag.Name)
+	n := ctx.Uint64(NumberOfBlocksFlag.Name)
 
 	var first, last uint64
 	if n != 0 {
@@ -255,7 +255,7 @@ func NewTraceConfig(ctx *cli.Context, mode ArgumentMode) (*TraceConfig, error) {
 	} else {
 		var argErr error
 		switch mode {
-		case blockRangeArgs:
+		case BlockRangeArgs:
 			// process arguments and flags
 			if ctx.Args().Len() != 2 {
 				return nil, fmt.Errorf("trace command requires exactly 2 arguments")
@@ -264,7 +264,7 @@ func NewTraceConfig(ctx *cli.Context, mode ArgumentMode) (*TraceConfig, error) {
 			if argErr != nil {
 				return nil, argErr
 			}
-		case lastBlockArg:
+		case LastBlockArg:
 			last, argErr = strconv.ParseUint(ctx.Args().Get(0), 10, 64)
 			if argErr != nil {
 				return nil, argErr
@@ -275,93 +275,92 @@ func NewTraceConfig(ctx *cli.Context, mode ArgumentMode) (*TraceConfig, error) {
 	}
 
 	// --continue-on-failure implicitly enables transaction state validation
-	validateTxState := ctx.Bool(validateFlag.Name) ||
-		ctx.Bool(validateTxStateFlag.Name) ||
-		ctx.Bool(continueOnFailureFlag.Name)
-	validateWorldState := ctx.Bool(validateFlag.Name) ||
-		ctx.Bool(validateWorldStateFlag.Name)
+	validateTxState := ctx.Bool(ValidateFlag.Name) ||
+		ctx.Bool(ValidateTxStateFlag.Name) ||
+		ctx.Bool(ContinueOnFailureFlag.Name)
+	validateWorldState := ctx.Bool(ValidateFlag.Name) ||
+		ctx.Bool(ValidateWorldStateFlag.Name)
 
 	cfg := &TraceConfig{
-		first: first,
-		last:  last,
-
-		debug:              ctx.Bool(traceDebugFlag.Name),
-		chainID:            ctx.Int(chainIDFlag.Name),
-		continueOnFailure:  ctx.Bool(continueOnFailureFlag.Name),
-		enableProgress:     !ctx.Bool(disableProgressFlag.Name),
-		epochLength:        ctx.Uint64(epochLengthFlag.Name),
-		dbImpl:             ctx.String(stateDbImplementationFlag.Name),
-		dbVariant:          ctx.String(stateDbVariantFlag.Name),
-		dbLogging:          ctx.Bool(stateDbLoggingFlag.Name),
-		deletedAccountDir:  ctx.String(deletedAccountDirFlag.Name),
-		archiveMode:        ctx.Bool(archiveModeFlag.Name),
-		hasDeletedAccounts: true,
-		maxNumTransactions: ctx.Int(maxNumTransactionsFlag.Name),
-		memoryBreakdown:    ctx.Bool(memoryBreakdownFlag.Name),
-		primeRandom:        ctx.Bool(randomizePrimingFlag.Name),
-		primeSeed:          ctx.Int64(primeSeedFlag.Name),
-		primeThreshold:     ctx.Int(primeThresholdFlag.Name),
-		profile:            ctx.Bool(profileFlag.Name),
-		skipPriming:        ctx.Bool(skipPrimingFlag.Name),
-		shadowImpl:         ctx.String(shadowDbImplementationFlag.Name),
-		shadowVariant:      ctx.String(shadowDbVariantFlag.Name),
-		stateDbDir:         ctx.String(stateDbTempDirFlag.Name),
-		updateDBDir:        ctx.String(updateDBDirFlag.Name),
-		validateTxState:    validateTxState,
-		validateWorldState: validateWorldState,
-		vmImpl:             ctx.String(vmImplementation.Name),
-		workers:            ctx.Int(substate.WorkersFlag.Name),
-		memoryProfile:      ctx.String(memProfileFlag.Name),
+		ArchiveMode:        ctx.Bool(ArchiveModeFlag.Name),
+		Debug:              ctx.Bool(TraceDebugFlag.Name),
+		ChainID:            ctx.Int(ChainIDFlag.Name),
+		ContinueOnFailure:  ctx.Bool(ContinueOnFailureFlag.Name),
+		EnableProgress:     !ctx.Bool(DisableProgressFlag.Name),
+		EpochLength:        ctx.Uint64(EpochLengthFlag.Name),
+		First:              first,
+		DbImpl:             ctx.String(StateDbImplementationFlag.Name),
+		DbVariant:          ctx.String(StateDbVariantFlag.Name),
+		DbLogging:          ctx.Bool(StateDbLoggingFlag.Name),
+		DeletedAccountDir:  ctx.String(DeletedAccountDirFlag.Name),
+		HasDeletedAccounts: true,
+		Last:               last,
+		MaxNumTransactions: ctx.Int(MaxNumTransactionsFlag.Name),
+		MemoryBreakdown:    ctx.Bool(MemoryBreakdownFlag.Name),
+		PrimeRandom:        ctx.Bool(RandomizePrimingFlag.Name),
+		PrimeSeed:          ctx.Int64(PrimeSeedFlag.Name),
+		PrimeThreshold:     ctx.Int(PrimeThresholdFlag.Name),
+		Profile:            ctx.Bool(ProfileFlag.Name),
+		SkipPriming:        ctx.Bool(SkipPrimingFlag.Name),
+		ShadowImpl:         ctx.String(ShadowDbImplementationFlag.Name),
+		ShadowVariant:      ctx.String(ShadowDbVariantFlag.Name),
+		StateDbDir:         ctx.String(StateDbTempDirFlag.Name),
+		UpdateDBDir:        ctx.String(UpdateDBDirFlag.Name),
+		ValidateTxState:    validateTxState,
+		ValidateWorldState: validateWorldState,
+		VmImpl:             ctx.String(VmImplementation.Name),
+		Workers:            ctx.Int(substate.WorkersFlag.Name),
+		MemoryProfile:      ctx.String(MemProfileFlag.Name),
 	}
-	setFirstBlockFromChainID(cfg.chainID)
-	if cfg.epochLength <= 0 {
-		cfg.epochLength = 300
+	setFirstBlockFromChainID(cfg.ChainID)
+	if cfg.EpochLength <= 0 {
+		cfg.EpochLength = 300
 	}
 
-	if cfg.enableProgress {
+	if cfg.EnableProgress {
 		log.Printf("Run config:\n")
-		log.Printf("\tBlock range: %v to %v\n", cfg.first, cfg.last)
-		if cfg.maxNumTransactions >= 0 {
-			log.Printf("\tTransaction limit: %d\n", cfg.maxNumTransactions)
+		log.Printf("\tBlock range: %v to %v\n", cfg.First, cfg.Last)
+		if cfg.MaxNumTransactions >= 0 {
+			log.Printf("\tTransaction limit: %d\n", cfg.MaxNumTransactions)
 		}
-		log.Printf("\tChain id: %v (record & run-vm only)\n", cfg.chainID)
-		log.Printf("\tEpoch length: %v\n", cfg.epochLength)
-		if cfg.shadowImpl == "" {
-			log.Printf("\tStorage system: %v, DB variant: %v\n", cfg.dbImpl, cfg.dbVariant)
+		log.Printf("\tChain id: %v (record & run-vm only)\n", cfg.ChainID)
+		log.Printf("\tEpoch length: %v\n", cfg.EpochLength)
+		if cfg.ShadowImpl == "" {
+			log.Printf("\tStorage system: %v, DB variant: %v\n", cfg.DbImpl, cfg.DbVariant)
 		} else {
-			log.Printf("\tPrime storage system: %v, DB variant: %v\n", cfg.dbImpl, cfg.dbVariant)
-			log.Printf("\tShadow storage system: %v, DB variant: %v\n", cfg.shadowImpl, cfg.shadowVariant)
+			log.Printf("\tPrime storage system: %v, DB variant: %v\n", cfg.DbImpl, cfg.DbVariant)
+			log.Printf("\tShadow storage system: %v, DB variant: %v\n", cfg.ShadowImpl, cfg.ShadowVariant)
 		}
-		log.Printf("\tStorage parent directory: %v\n", cfg.stateDbDir)
-		log.Printf("\tUsed VM implementation: %v\n", cfg.vmImpl)
-		log.Printf("\tUpdate DB directory: %v\n", cfg.updateDBDir)
-		if cfg.skipPriming {
+		log.Printf("\tStorage parent directory: %v\n", cfg.StateDbDir)
+		log.Printf("\tUsed VM implementation: %v\n", cfg.VmImpl)
+		log.Printf("\tUpdate DB directory: %v\n", cfg.UpdateDBDir)
+		if cfg.SkipPriming {
 			log.Printf("\tPriming: Skipped\n")
 		} else {
-			log.Printf("\tRandomized Priming: %v\n", cfg.primeRandom)
-			if cfg.primeRandom {
-				log.Printf("\t\tSeed: %v, threshold: %v\n", cfg.primeSeed, cfg.primeThreshold)
+			log.Printf("\tRandomized Priming: %v\n", cfg.PrimeRandom)
+			if cfg.PrimeRandom {
+				log.Printf("\t\tSeed: %v, threshold: %v\n", cfg.PrimeSeed, cfg.PrimeThreshold)
 			}
 		}
-		log.Printf("\tValidate world state: %v, validate tx state: %v\n", cfg.validateWorldState, cfg.validateTxState)
+		log.Printf("\tValidate world state: %v, validate tx state: %v\n", cfg.ValidateWorldState, cfg.ValidateTxState)
 	}
 
 	// TODO: enrich warning with colored text
-	if cfg.validateTxState {
+	if cfg.ValidateTxState {
 		log.Printf("WARNING: validation enabled, reducing Tx throughput\n")
 	}
-	if cfg.shadowImpl != "" {
+	if cfg.ShadowImpl != "" {
 		log.Printf("WARNING: DB shadowing enabled, reducing Tx throughput and increasing memory and storage usage\n")
 	}
-	if cfg.dbLogging {
+	if cfg.DbLogging {
 		log.Printf("WARNING: DB logging enabled, reducing Tx throughput\n")
 	}
-	if _, err := os.Stat(cfg.deletedAccountDir); os.IsNotExist(err) {
+	if _, err := os.Stat(cfg.DeletedAccountDir); os.IsNotExist(err) {
 		log.Printf("WARNING: deleted-account-dir is not provided or does not exist")
-		cfg.hasDeletedAccounts = false
+		cfg.HasDeletedAccounts = false
 	}
 
-	if cfg.skipPriming && cfg.validateWorldState {
+	if cfg.SkipPriming && cfg.ValidateWorldState {
 		log.Printf("ERROR: skipPriming and validation of world state can not be enabled at the same time\n")
 		return cfg, fmt.Errorf("skipPriming and world-state validation can not be enabled at the same time")
 	}
