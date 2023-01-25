@@ -8,7 +8,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// initStochasticApp initializes a stochastic-cli app. This function is 
+// initStochasticApp initializes a stochastic-cli app. This function is
 // called by the main function and unit tests.
 func initStochasticApp() *cli.App {
 	return &cli.App{
