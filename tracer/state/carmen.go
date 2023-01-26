@@ -41,12 +41,13 @@ func MakeCarmenStateDB(directory, variant string) (StateDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &carmenStateDB{carmen.CreateStateDBUsing(db), 0}, nil
+	return &carmenStateDB{carmen.CreateStateDBUsing(db), 0, 0}, nil
 }
 
 type carmenStateDB struct {
 	db          carmen.StateDB
 	epochNumber uint64
+	blockNumber uint64
 }
 
 var getCodeCalled bool
@@ -142,12 +143,13 @@ func (s *carmenStateDB) EndTransaction() {
 	s.db.EndTransaction()
 }
 
-func (s *carmenStateDB) BeginBlock(uint64) {
+func (s *carmenStateDB) BeginBlock(block uint64) {
 	s.db.BeginBlock()
+	s.blockNumber = block
 }
 
 func (s *carmenStateDB) EndBlock() {
-	s.db.EndBlock()
+	s.db.EndBlock(s.blockNumber)
 }
 
 func (s *carmenStateDB) BeginEpoch(number uint64) {
