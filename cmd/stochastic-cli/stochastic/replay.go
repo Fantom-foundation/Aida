@@ -18,6 +18,7 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/tracer/simulation"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/substate"
 	"github.com/urfave/cli/v2"
 )
@@ -63,7 +64,7 @@ func traceStochasticReplayTask(cfg *utils.TraceConfig) error {
 	if err != nil {
 		return err
 	}
-	db, err := utils.MakeStateDB(stateDirectory, cfg)
+	db, err := utils.MakeStateDB(stateDirectory, cfg, common.Hash{})
 	if err != nil {
 		return err
 	}

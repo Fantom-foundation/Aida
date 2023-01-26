@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/params"
@@ -49,6 +50,10 @@ var (
 	DeletedAccountDirFlag = cli.StringFlag{
 		Name:  "deleted-account-dir",
 		Usage: "sets the directory containing deleted accounts database",
+	}
+	KeepStateDBFlag = cli.BoolFlag{
+		Name:  "keep-db",
+		Usage: "if set, statedb is not deleted after run",
 	}
 	MemProfileFlag = cli.StringFlag{
 		Name:  "memprofile",
@@ -99,8 +104,8 @@ var (
 		Usage: "select a state DB variant",
 		Value: "",
 	}
-	StateDbTempDirFlag = cli.StringFlag{
-		Name:  "db-tmp-dir",
+	StateDbDirFlag = cli.StringFlag{
+		Name:  "db-dir",
 		Usage: "sets the temporary directory where to place state DB data; uses system default if empty",
 	}
 	StateDbLoggingFlag = cli.BoolFlag{
@@ -197,6 +202,8 @@ type TraceConfig struct {
 	EpochLength        uint64 // length of an epoch in number of blocks
 	ArchiveMode        bool   // enable archive mode
 	HasDeletedAccounts bool   // true if deletedAccountDir is not empty; otherwise false
+	KeepStateDB        bool   // set to true if stateDB is kept after run
+	LoadedExistingDB   bool   // set to true if stateDB is loaded from an existing one
 	MaxNumTransactions int    // the maximum number of processed transactions
 	MemoryBreakdown    bool   // enable printing of memory breakdown
 	MemoryProfile      string // capture the memory heap profile into the file
@@ -294,6 +301,8 @@ func NewTraceConfig(ctx *cli.Context, mode ArgumentMode) (*TraceConfig, error) {
 		DbLogging:          ctx.Bool(StateDbLoggingFlag.Name),
 		DeletedAccountDir:  ctx.String(DeletedAccountDirFlag.Name),
 		HasDeletedAccounts: true,
+		KeepStateDB:        ctx.Bool(KeepStateDBFlag.Name),
+		LoadedExistingDB:   false,
 		Last:               last,
 		MaxNumTransactions: ctx.Int(MaxNumTransactionsFlag.Name),
 		MemoryBreakdown:    ctx.Bool(MemoryBreakdownFlag.Name),
@@ -304,7 +313,7 @@ func NewTraceConfig(ctx *cli.Context, mode ArgumentMode) (*TraceConfig, error) {
 		SkipPriming:        ctx.Bool(SkipPrimingFlag.Name),
 		ShadowImpl:         ctx.String(ShadowDbImplementationFlag.Name),
 		ShadowVariant:      ctx.String(ShadowDbVariantFlag.Name),
-		StateDbDir:         ctx.String(StateDbTempDirFlag.Name),
+		StateDbDir:         ctx.String(StateDbDirFlag.Name),
 		UpdateDBDir:        ctx.String(UpdateDBDirFlag.Name),
 		ValidateTxState:    validateTxState,
 		ValidateWorldState: validateWorldState,
@@ -358,6 +367,14 @@ func NewTraceConfig(ctx *cli.Context, mode ArgumentMode) (*TraceConfig, error) {
 	if _, err := os.Stat(cfg.DeletedAccountDir); os.IsNotExist(err) {
 		log.Printf("WARNING: deleted-account-dir is not provided or does not exist")
 		cfg.HasDeletedAccounts = false
+	}
+	if cfg.KeepStateDB && cfg.ShadowImpl != "" {
+		log.Printf("WARNING: keeping persistent stateDB with a shadow db is not supported yet")
+		cfg.KeepStateDB = false
+	}
+	if cfg.KeepStateDB && strings.Contains(cfg.DbVariant, "memory") {
+		log.Printf("WARNING: Unable to keep in-memory stateDB")
+		cfg.KeepStateDB = false
 	}
 
 	if cfg.SkipPriming && cfg.ValidateWorldState {

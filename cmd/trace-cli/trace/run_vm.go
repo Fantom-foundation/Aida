@@ -2,7 +2,6 @@ package trace
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math/big"
 	"os"
@@ -44,6 +43,7 @@ var RunVMCommand = cli.Command{
 		&utils.DeletedAccountDirFlag,
 		&utils.DisableProgressFlag,
 		&utils.EpochLengthFlag,
+		&utils.KeepStateDBFlag,
 		&utils.MaxNumTransactionsFlag,
 		&utils.MemoryBreakdownFlag,
 		&utils.MemProfileFlag,
@@ -54,7 +54,7 @@ var RunVMCommand = cli.Command{
 		&utils.SkipPrimingFlag,
 		&utils.StateDbImplementationFlag,
 		&utils.StateDbVariantFlag,
-		&utils.StateDbTempDirFlag,
+		&utils.StateDbDirFlag,
 		&utils.StateDbLoggingFlag,
 		&utils.ShadowDbImplementationFlag,
 		&utils.ShadowDbVariantFlag,
@@ -262,23 +262,17 @@ func runVM(ctx *cli.Context) error {
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
-	// create a directory for the store to place all its files.
-	stateDirectory, err := ioutil.TempDir(cfg.StateDbDir, "state_db_*")
-	if err != nil {
-		return fmt.Errorf("Failed to create a temp directory. %v", err)
-	}
-	defer os.RemoveAll(stateDirectory)
-	log.Printf("\tTemporary state DB directory: %v\n", stateDirectory)
-
-	// instantiate the state DB under testing
-	var db state.StateDB
-	db, err = utils.MakeStateDB(stateDirectory, cfg)
+	db, stateDirectory, err := utils.PrepareStateDB(cfg)
 	if err != nil {
 		return err
 	}
+	if !cfg.KeepStateDB {
+		log.Printf("WARNING: directory %v will be removed at the end of this run.\n", stateDirectory)
+		defer os.RemoveAll(stateDirectory)
+	}
 
 	ws := substate.SubstateAlloc{}
-	if cfg.SkipPriming {
+	if cfg.SkipPriming || cfg.LoadedExistingDB {
 		log.Printf("Skipping DB priming.\n")
 	} else {
 		// load the world state
@@ -326,6 +320,12 @@ func runVM(ctx *cli.Context) error {
 	}
 
 	if cfg.ValidateWorldState {
+		if len(ws) == 0 {
+			ws, err = generateWorldStateFromUpdateDB(cfg, cfg.First-1)
+			if err != nil {
+				return err
+			}
+		}
 		if err := utils.DeleteDestroyedAccountsFromWorldState(ws, cfg, cfg.First-1); err != nil {
 			return fmt.Errorf("Failed to remove deleted accoount from the world state. %v", err)
 		}
@@ -353,6 +353,9 @@ func runVM(ctx *cli.Context) error {
 		tx := iter.Value()
 		// initiate first epoch and block.
 		if isFirstBlock {
+			if tx.Block > cfg.Last {
+				break
+			}
 			curEpoch = tx.Block / cfg.EpochLength
 			curBlock = tx.Block
 			db.BeginEpoch(curEpoch)
@@ -385,7 +388,6 @@ func runVM(ctx *cli.Context) error {
 		if cfg.MaxNumTransactions >= 0 && txCount >= cfg.MaxNumTransactions {
 			break
 		}
-
 		// run VM
 		db.PrepareSubstate(&tx.Substate.InputAlloc)
 		db.BeginTransaction(uint32(tx.Transaction))
@@ -487,6 +489,17 @@ func runVM(ctx *cli.Context) error {
 		fmt.Printf("=================Statistics=================\n")
 		stats.PrintProfiling()
 		fmt.Printf("============================================\n")
+	}
+
+	if cfg.KeepStateDB && !isFirstBlock{
+		rootHash, _ := db.Commit(true)
+		utils.WriteStateDbInfo(stateDirectory, cfg, curBlock, rootHash)
+		//rename directory after closing db.
+		defer utils.RenameTempStateDBDirectory(cfg, stateDirectory, curBlock, cfg.LoadedExistingDB)
+	} else if cfg.KeepStateDB && isFirstBlock {
+		// no blocks were processed.
+		log.Printf("No blocks were processed. StateDB is not saved.\n")
+		defer os.RemoveAll(stateDirectory)
 	}
 
 	// close the DB and print disk usage

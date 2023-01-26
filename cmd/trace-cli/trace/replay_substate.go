@@ -11,6 +11,7 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/substate"
 	"github.com/urfave/cli/v2"
 )
@@ -70,7 +71,7 @@ func traceReplaySubstateTask(cfg *utils.TraceConfig) error {
 	defer os.RemoveAll(stateDirectory)
 
 	// Instantiate the state DB under testing
-	db, err := utils.MakeStateDB(stateDirectory, cfg)
+	db, err := utils.MakeStateDB(stateDirectory, cfg, common.Hash{})
 	if err != nil {
 		return err
 	}

@@ -20,29 +20,25 @@ const (
 	imgUpperLimit    = 4 * 1024 * 1024
 )
 
-func MakeGethStateDB(directory, variant string, isArchiveMode bool) (StateDB, error) {
+func MakeGethStateDB(directory, variant string, rootHash common.Hash, isArchiveMode bool) (StateDB, error) {
 	if variant != "" {
 		return nil, fmt.Errorf("unkown variant: %v", variant)
 	}
-	return OpenGethStateDB(directory, common.Hash{}, isArchiveMode)
-}
-
-func OpenGethStateDB(directory string, root_hash common.Hash, isArchiveMode bool) (StateDB, error) {
-	const cache_size = 512
-	const file_handle = 128
-	ldb, err := rawdb.NewLevelDBDatabase(directory, cache_size, file_handle, "", false)
+	const cacheSize = 512
+	const fileHandle = 128
+	ldb, err := rawdb.NewLevelDBDatabase(directory, cacheSize, fileHandle, "", false)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to create a new Level DB. %v", err)
 	}
 	evmState := geth.NewDatabase(ldb)
-	db, err := geth.New(root_hash, evmState, nil)
+	db, err := geth.New(rootHash, evmState, nil)
 	if err != nil {
 		return nil, err
 	}
 	return &gethStateDB{
 		db:            db,
 		evmState:      evmState,
-		stateRoot:     root_hash,
+		stateRoot:     rootHash,
 		triegc:        prque.New(nil),
 		isArchiveMode: isArchiveMode,
 	}, nil
@@ -324,6 +320,7 @@ func (l *gethBulkLoad) SetCode(addr common.Address, code []byte) {
 
 func (l *gethBulkLoad) Close() error {
 	l.db.EndBlock()
+	l.db.EndEpoch()
 	_, err := l.db.Commit(false)
 	return err
 }
