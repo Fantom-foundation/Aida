@@ -1,7 +1,11 @@
 package stochastic
 
 import (
+	"encoding/json"
+	"fmt"
+	"log"
 	"math/big"
+	"os"
 
 	"github.com/Fantom-foundation/substate-cli/state"
 	"github.com/ethereum/go-ethereum/common"
@@ -11,288 +15,307 @@ import (
 
 // EventProxy data structure for capturing StateDB events
 type EventProxy struct {
-	db       state.StateDB  // real StateDB object
-	registry EventRegistry  // event registry for determining statistical parameters
+	db       state.StateDB // real StateDB object
+	registry EventRegistry // event registry for determining statistical parameters
 }
 
 // NewEventProxy creates a new StateDB proxy for recording events.
 func NewEventProxy(db state.StateDB, registry EventRegistry) EventProxy {
-	return EventProxy { db, registry} 
+	return EventProxy{db, registry}
+}
+
+// Write event distributions
+func (p *EventProxy) Write(filename string) {
+	f, fErr := os.Create(filename)
+	if fErr != nil {
+		log.Fatalf("cannot open JSON file. Error: %v", fErr)
+	}
+	defer f.Close()
+
+	jOut, jErr := json.Marshal(p.registry.ProduceDistribution())
+	if jErr != nil {
+		log.Fatalf("failed to convert JSON file. Error: %v", jErr)
+	}
+
+	_, pErr := fmt.Println(string(jOut))
+	if pErr != nil {
+		log.Fatalf("failed to convert JSON file. Error: %v", pErr)
+	}
 }
 
 // CreateAccount creates a new account.
-func (s *EventProxy) CreateAccount(address common.Address) {
+func (p *EventProxy) CreateAccount(address common.Address) {
 	// register event
-	s.registry.RegisterAddressOp(StochasticCreateAccountID, &address)
+	p.registry.RegisterAddressOp(StochasticCreateAccountID, &address)
 
 	// call real StateDB
-	s.db.CreateAccount(address)
+	p.db.CreateAccount(address)
 }
 
 // SubBalance subtracts amount from a contract address.
-func (s *EventProxy) SubBalance(address common.Address, amount *big.Int) {
+func (p *EventProxy) SubBalance(address common.Address, amount *big.Int) {
 	// register event
-	s.registry.RegisterAddressOp(StochasticSubBalanceID, &address)
+	p.registry.RegisterAddressOp(StochasticSubBalanceID, &address)
 
 	// call real StateDB
-	s.db.SubBalance(address, amount)
+	p.db.SubBalance(address, amount)
 }
 
 // AddBalance adds amount to a contract address.
-func (s *EventProxy) AddBalance(address common.Address, amount *big.Int) {
+func (p *EventProxy) AddBalance(address common.Address, amount *big.Int) {
 	// register event
-	s.registry.RegisterAddressOp(StochasticAddBalanceID, &address)
+	p.registry.RegisterAddressOp(StochasticAddBalanceID, &address)
 
 	// call real StateDB
-	s.db.AddBalance(address, amount)
+	p.db.AddBalance(address, amount)
 }
 
 // GetBalance retrieves the amount of a contract address.
-func (s *EventProxy) GetBalance(address common.Address) *big.Int {
+func (p *EventProxy) GetBalance(address common.Address) *big.Int {
 	// register event
-	s.registry.RegisterAddressOp(StochasticGetBalanceID, &address)
+	p.registry.RegisterAddressOp(StochasticGetBalanceID, &address)
 
 	// call real StateDB
-	return s.db.GetBalance(address)
+	return p.db.GetBalance(address)
 }
 
 // GetNonce retrieves the nonce of a contract address.
-func (s *EventProxy) GetNonce(address common.Address) uint64 {
+func (p *EventProxy) GetNonce(address common.Address) uint64 {
 	// register event
-	s.registry.RegisterAddressOp(StochasticGetNonceID, &address)
+	p.registry.RegisterAddressOp(StochasticGetNonceID, &address)
 
 	// call real StateDB
-	return s.db.GetNonce(address)
+	return p.db.GetNonce(address)
 }
 
 // SetNonce sets the nonce of a contract address.
-func (s *EventProxy) SetNonce(address common.Address, nonce uint64) {
+func (p *EventProxy) SetNonce(address common.Address, nonce uint64) {
 	// register event
-	s.registry.RegisterAddressOp(StochasticSetNonceID, &address)
+	p.registry.RegisterAddressOp(StochasticSetNonceID, &address)
 
 	// call real StateDB
-	s.db.SetNonce(address, nonce)
+	p.db.SetNonce(address, nonce)
 }
 
 // GetCodeHash returns the hash of the EVM bytecode.
-func (s *EventProxy) GetCodeHash(address common.Address) common.Hash {
+func (p *EventProxy) GetCodeHash(address common.Address) common.Hash {
 	// register event
-	s.registry.RegisterAddressOp(StochasticGetCodeHashID, &address)
+	p.registry.RegisterAddressOp(StochasticGetCodeHashID, &address)
 
 	// call real StateDB
-	return s.db.GetCodeHash(address)
+	return p.db.GetCodeHash(address)
 }
 
 // GetCode returns the EVM bytecode of a contract.
-func (s *EventProxy) GetCode(address common.Address) []byte {
+func (p *EventProxy) GetCode(address common.Address) []byte {
 	// register event
-	s.registry.RegisterAddressOp(StochasticGetCodeID, &address)
+	p.registry.RegisterAddressOp(StochasticGetCodeID, &address)
 
 	// call real StateDB
-	return s.db.GetCode(address)
+	return p.db.GetCode(address)
 }
 
 // Setcode sets the EVM bytecode of a contract.
-func (s *EventProxy) SetCode(address common.Address, code []byte) {
+func (p *EventProxy) SetCode(address common.Address, code []byte) {
 	// register event
-	s.registry.RegisterAddressOp(StochasticSetCodeID, &address)
+	p.registry.RegisterAddressOp(StochasticSetCodeID, &address)
 
 	// call real StateDB
-	s.db.SetCode(address, code)
+	p.db.SetCode(address, code)
 }
 
 // GetCodeSize returns the EVM bytecode's size.
-func (s *EventProxy) GetCodeSize(address common.Address) int {
+func (p *EventProxy) GetCodeSize(address common.Address) int {
 	// register event
-	s.registry.RegisterAddressOp(StochasticGetCodeSizeID, &address)
+	p.registry.RegisterAddressOp(StochasticGetCodeSizeID, &address)
 
 	// call real StateDB
-	return s.db.GetCodeSize(address)
+	return p.db.GetCodeSize(address)
 }
 
 // AddRefund adds gas to the refund counter.
-func (s *EventProxy) AddRefund(gas uint64) {
+func (p *EventProxy) AddRefund(gas uint64) {
 	// call real StateDB
-	s.db.AddRefund(gas)
+	p.db.AddRefund(gas)
 }
 
 // SubRefund subtracts gas to the refund counter.
-func (s *EventProxy) SubRefund(gas uint64) {
+func (p *EventProxy) SubRefund(gas uint64) {
 	// call real StateDB
-	s.db.SubRefund(gas)
+	p.db.SubRefund(gas)
 }
 
 // GetRefund returns the current value of the refund counter.
-func (s *EventProxy) GetRefund() uint64 {
+func (p *EventProxy) GetRefund() uint64 {
 	// call real StateDB
-	return s.db.GetRefund()
+	return p.db.GetRefund()
 }
 
 // GetCommittedState retrieves a value that is already committed.
-func (s *EventProxy) GetCommittedState(address common.Address, key common.Hash) common.Hash {
+func (p *EventProxy) GetCommittedState(address common.Address, key common.Hash) common.Hash {
 	// register event
-	s.registry.RegisterKeyOp(StochasticGetCommittedStateID, &address, &key)
+	p.registry.RegisterKeyOp(StochasticGetCommittedStateID, &address, &key)
 
 	// call real StateDB
-	return s.db.GetCommittedState(address, key)
+	return p.db.GetCommittedState(address, key)
 }
 
 // GetState retrieves a value from the StateDB.
-func (s *EventProxy) GetState(address common.Address, key common.Hash) common.Hash {
+func (p *EventProxy) GetState(address common.Address, key common.Hash) common.Hash {
 	// register event
-	s.registry.RegisterKeyOp(StochasticGetStateID, &address, &key)
+	p.registry.RegisterKeyOp(StochasticGetStateID, &address, &key)
 
 	// call real StateDB
-	return s.db.GetState(address, key)
+	return p.db.GetState(address, key)
 }
 
 // SetState sets a value in the StateDB.
-func (s *EventProxy) SetState(address common.Address, key common.Hash, value common.Hash) {
+func (p *EventProxy) SetState(address common.Address, key common.Hash, value common.Hash) {
 	// register event
-	s.registry.RegisterValueOp(StochasticSetStateID, &address, &key, &value)
+	p.registry.RegisterValueOp(StochasticSetStateID, &address, &key, &value)
 
 	// call real StateDB
-	s.db.SetState(address, key, value)
+	p.db.SetState(address, key, value)
 }
 
 // Suicide an account.
-func (s *EventProxy) Suicide(address common.Address) bool {
+func (p *EventProxy) Suicide(address common.Address) bool {
 	// register event
-	s.registry.RegisterAddressOp(StochasticSuicideID, &address)
+	p.registry.RegisterAddressOp(StochasticSuicideID, &address)
 
 	// call real StateDB
-	return s.db.Suicide(address)
+	return p.db.Suicide(address)
 }
 
 // HasSuicided checks whether a contract has been suicided.
-func (s *EventProxy) HasSuicided(address common.Address) bool {
+func (p *EventProxy) HasSuicided(address common.Address) bool {
 	// register event
-	s.registry.RegisterAddressOp(StochasticHasSuicidedID, &address)
+	p.registry.RegisterAddressOp(StochasticHasSuicidedID, &address)
 
 	// call real StateDB
-	return s.db.HasSuicided(address)
+	return p.db.HasSuicided(address)
 }
 
 // Exist checks whether the contract exists in the StateDB.
-func (s *EventProxy) Exist(address common.Address) bool {
+func (p *EventProxy) Exist(address common.Address) bool {
 	// register event
-	s.registry.RegisterAddressOp(StochasticExistID, &address)
+	p.registry.RegisterAddressOp(StochasticExistID, &address)
 
 	// call real StateDB
-	return s.db.Exist(address)
+	return p.db.Exist(address)
 }
 
 // Empty checks whether the contract is either non-existent
 // or empty according to the EIP161 specification (balance = nonce = code = 0).
-func (s *EventProxy) Empty(address common.Address) bool {
+func (p *EventProxy) Empty(address common.Address) bool {
 	// register event
-	s.registry.RegisterAddressOp(StochasticEmptyID, &address)
+	p.registry.RegisterAddressOp(StochasticEmptyID, &address)
 
 	// call real StateDB
-	return s.db.Empty(address)
+	return p.db.Empty(address)
 }
 
 // PrepareAccessList handles the preparatory steps for executing a state transition.
-func (s *EventProxy) PrepareAccessList(render common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
+func (p *EventProxy) PrepareAccessList(render common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
 	// call real StateDB
-	s.db.PrepareAccessList(render, dest, precompiles, txAccesses)
+	p.db.PrepareAccessList(render, dest, precompiles, txAccesses)
 }
 
 // AddAddressToAccessList adds an address to the access list.
-func (s *EventProxy) AddAddressToAccessList(address common.Address) {
+func (p *EventProxy) AddAddressToAccessList(address common.Address) {
 	// call real StateDB
-	s.db.AddAddressToAccessList(address)
+	p.db.AddAddressToAccessList(address)
 }
 
 // AddressInAccessList checks whether an address is in the access list.
-func (s *EventProxy) AddressInAccessList(address common.Address) bool {
+func (p *EventProxy) AddressInAccessList(address common.Address) bool {
 	// call real StateDB
-	return s.db.AddressInAccessList(address)
+	return p.db.AddressInAccessList(address)
 }
 
 // SlotInAccessList checks whether the (address, slot)-tuple is in the access list.
-func (s *EventProxy) SlotInAccessList(address common.Address, slot common.Hash) (bool, bool) {
+func (p *EventProxy) SlotInAccessList(address common.Address, slot common.Hash) (bool, bool) {
 	// call real StateDB
-	return s.db.SlotInAccessList(address, slot)
+	return p.db.SlotInAccessList(address, slot)
 }
 
 // AddSlotToAccessList adds the given (address, slot)-tuple to the access list
-func (s *EventProxy) AddSlotToAccessList(address common.Address, slot common.Hash) {
+func (p *EventProxy) AddSlotToAccessList(address common.Address, slot common.Hash) {
 	// call real StateDB
-	s.db.AddSlotToAccessList(address, slot)
+	p.db.AddSlotToAccessList(address, slot)
 }
 
 // RevertToSnapshot reverts all state changes from a given revision.
-func (s *EventProxy) RevertToSnapshot(snapshot int) {
+func (p *EventProxy) RevertToSnapshot(snapshot int) {
 	// register event
-	s.registry.RegisterOp(StochasticRevertToSnapshotID)
+	p.registry.RegisterOp(StochasticRevertToSnapshotID)
 
 	// call real StateDB
-	s.db.RevertToSnapshot(snapshot)
+	p.db.RevertToSnapshot(snapshot)
 }
 
 // Snapshot returns an identifier for the current revision of the state.
-func (s *EventProxy) Snapshot() int {
+func (p *EventProxy) Snapshot() int {
 	// register event
-	s.registry.RegisterOp(StochasticSnapshotID)
+	p.registry.RegisterOp(StochasticSnapshotID)
 
 	// call real StateDB
-	return s.db.Snapshot()
+	return p.db.Snapshot()
 }
 
 // AddLog adds a log entry.
-func (s *EventProxy) AddLog(log *types.Log) {
+func (p *EventProxy) AddLog(log *types.Log) {
 	// call real StateDB
-	s.db.AddLog(log)
+	p.db.AddLog(log)
 }
 
 // GetLogs retrieves log entries.
-func (s *EventProxy) GetLogs(hash common.Hash, blockHash common.Hash) []*types.Log {
+func (p *EventProxy) GetLogs(hash common.Hash, blockHash common.Hash) []*types.Log {
 	// call real StateDB
-	return s.db.GetLogs(hash, blockHash)
+	return p.db.GetLogs(hash, blockHash)
 }
 
 // AddPreimage adds a SHA3 preimage.
-func (s *EventProxy) AddPreimage(address common.Hash, image []byte) {
+func (p *EventProxy) AddPreimage(address common.Hash, image []byte) {
 	// call real StateDB
-	s.db.AddPreimage(address, image)
+	p.db.AddPreimage(address, image)
 }
 
 // ForEachStorage performs a function over all storage locations in a contract.
-func (s *EventProxy) ForEachStorage(address common.Address, fn func(common.Hash, common.Hash) bool) error {
+func (p *EventProxy) ForEachStorage(address common.Address, fn func(common.Hash, common.Hash) bool) error {
 	// call real StateDB
-	return s.db.ForEachStorage(address, fn)
+	return p.db.ForEachStorage(address, fn)
 }
 
 // Prepare sets the current transaction hash and index.
-func (s *EventProxy) Prepare(thash common.Hash, ti int) {
+func (p *EventProxy) Prepare(thash common.Hash, ti int) {
 	// call real StateDB
-	s.db.Prepare(thash, ti)
+	p.db.Prepare(thash, ti)
 }
 
 // Finalise the state in StateDB.
-func (s *EventProxy) Finalise(deleteEmptyObjects bool) {
+func (p *EventProxy) Finalise(deleteEmptyObjects bool) {
 	// register event
-	s.registry.RegisterOp(StochasticFinaliseID)
+	p.registry.RegisterOp(StochasticFinaliseID)
 
 	// call real StateDB
-	s.db.Finalise(deleteEmptyObjects)
+	p.db.Finalise(deleteEmptyObjects)
 }
 
 // IntermediateRoot computes the current hash of the StateDB.
-func (s *EventProxy) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
+func (p *EventProxy) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	// call real StateDB
-	return s.db.IntermediateRoot(deleteEmptyObjects)
+	return p.db.IntermediateRoot(deleteEmptyObjects)
 }
 
 // Commit StateDB
-func (s *EventProxy) Commit(deleteEmptyObjects bool) (common.Hash, error) {
+func (p *EventProxy) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 	// call real StateDB
-	return s.db.Commit(deleteEmptyObjects)
+	return p.db.Commit(deleteEmptyObjects)
 }
 
 // GetSubstatePostAlloc gets substate post allocation.
-func (s *EventProxy) GetSubstatePostAlloc() substate.SubstateAlloc {
+func (p *EventProxy) GetSubstatePostAlloc() substate.SubstateAlloc {
 	// call real StateDB
-	return s.db.GetSubstatePostAlloc()
+	return p.db.GetSubstatePostAlloc()
 }

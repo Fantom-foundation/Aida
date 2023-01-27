@@ -35,7 +35,7 @@ const (
 
 // Operation text
 // NB: order must follow order as defined above.
-var operationText = []string { 
+var operationText = []string{
 	"Finalise",
 	"SnapshotID",
 	"RevertToSnapshotID",
@@ -60,7 +60,7 @@ var operationText = []string {
 
 // Operation text
 // NB: order must follow order as defined above.
-var operationNumArgs = []int {
+var operationNumArgs = []int{
 	0,
 	0,
 	0,
@@ -82,4 +82,3 @@ var operationNumArgs = []int {
 	2,
 	3,
 }
-

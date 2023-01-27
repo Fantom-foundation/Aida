@@ -12,7 +12,7 @@ const (
 
 // Classifications as strings
 // NB: Must follow order as defined above
-var classText = []string { "random", "recent", "previous", "new" }
+var classText = []string{"random", "recent", "previous", "new"}
 
 const defaultEntry = randomEntry // default classifier if no simulation argument exists
 
@@ -66,5 +66,5 @@ func (a *AccessStats[T]) Classify(data T) int {
 
 // ProduceDistribution for JSON output
 func (a *AccessStats[T]) ProduceDistribution() AccessDistribution {
-	return AccessDistribution{ a.stats.ProduceDistribution(), a.queue.ProduceDistribution() }
+	return AccessDistribution{a.stats.ProduceDistribution(), a.queue.ProduceDistribution()}
 }
