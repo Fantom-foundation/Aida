@@ -10,6 +10,9 @@ const (
 	numClasses
 )
 
+// defaultEntry is the class for no simulation arguments
+const defaultEntry = randomEntry
+
 // Classifications as strings
 // NB: Must follow order as defined above
 var classText = []string{"random", "recent", "previous", "new"}
