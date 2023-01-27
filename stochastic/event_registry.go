@@ -1,10 +1,10 @@
 package stochastic
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
 	"os"
-	"fmt"
-	"encoding/json"
 
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -252,4 +252,3 @@ func (r *EventRegistry) Write(filename string) {
 		log.Fatalf("failed to convert JSON file. Error: %v", pErr)
 	}
 }
-

@@ -181,7 +181,6 @@ func stochasticRecordAction(ctx *cli.Context) error {
 	// get progress flag
 	enableProgress := !ctx.Bool(utils.DisableProgressFlag.Name)
 
-
 	// process arguments
 	chainID := ctx.Int(utils.ChainIDFlag.Name)
 	if ctx.Bool(utils.TraceDebugFlag.Name) {
@@ -211,7 +210,7 @@ func stochasticRecordAction(ctx *cli.Context) error {
 	}
 
 	// create a new event registry
-	eventRegistry := stochastic.NewEventRegistry() 
+	eventRegistry := stochastic.NewEventRegistry()
 
 	// iterate over all substates in order
 	for iter.Next() {
@@ -245,4 +244,3 @@ func stochasticRecordAction(ctx *cli.Context) error {
 
 	return err
 }
-
