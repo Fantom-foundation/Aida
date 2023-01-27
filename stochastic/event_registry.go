@@ -33,12 +33,12 @@ type EventRegistry struct {
 
 // Event distribution for JSON.
 type EventDistribution struct {
-	OperationLabel [] string             // name of operations with argument classes
-	OperationDistribution [] float64 // empirical probability of an operation
-	StochasticMatrix [][]float64 // observed stochastic matrix 
-	ContractDistribution AccessDistribution 
-	KeyDistribution AccessDistribution
-	ValueDistribution AccessDistribution
+	OperationLabel        []string    // name of operations with argument classes
+	OperationDistribution []float64   // empirical probability of an operation
+	StochasticMatrix      [][]float64 // observed stochastic matrix
+	ContractDistribution  AccessDistribution
+	KeyDistribution       AccessDistribution
+	ValueDistribution     AccessDistribution
 }
 
 // NewEventRegistry creates a new event registry.
@@ -172,17 +172,16 @@ func (r *EventRegistry) putValue(value *common.Hash) {
 	r.valueStats.Put(*value)
 }
 
-
 func (r *EventRegistry) ProduceDistribution() EventDistribution {
 
 	// compute operation distribution and its labels
 	opDistribution := make([]float64, numArgEncodedOps)
 	opLabel := make([]string, numArgEncodedOps)
 	total := uint64(0)
-	for op:=0;op<numStochasticOps;op++ { 
-		for addrClass:=0;addrClass<numClasses;addrClass++ { 
-			for keyClass:=0;keyClass<numClasses;keyClass++ { 
-				for valueClass:=0;valueClass<numClasses;valueClass++ { 
+	for op := 0; op < numStochasticOps; op++ {
+		for addrClass := 0; addrClass < numClasses; addrClass++ {
+			for keyClass := 0; keyClass < numClasses; keyClass++ {
+				for valueClass := 0; valueClass < numClasses; valueClass++ {
 					// retrieve frequencies for distribution
 					sOp := encodeOp(op, addrClass, keyClass, valueClass)
 					freq := r.operationFrequency[op][addrClass][keyClass][valueClass]
@@ -190,46 +189,44 @@ func (r *EventRegistry) ProduceDistribution() EventDistribution {
 					total += freq
 
 					// generate label of operation
-					label := operationText[op]+"("
+					label := operationText[op] + "("
 					switch operationNumArgs[op] {
 					case 1:
 						label += classText[addrClass]
-					case 2: 
+					case 2:
 						label += classText[addrClass] + "," + classText[keyClass]
 					case 3:
 						label += classText[addrClass] + "," + classText[keyClass] + "," + classText[valueClass]
 					}
-					label +=")"
+					label += ")"
 					opLabel[op] = label
 				}
 			}
 		}
 	}
-	for op:=0;op<numArgEncodedOps;op++ { 
+	for op := 0; op < numArgEncodedOps; op++ {
 		// normalize distribution
-		opDistribution[op] = opDistribution[op]/float64(total)
+		opDistribution[op] = opDistribution[op] / float64(total)
 	}
 
 	// Compute stochastic matrix
 	stochasticMatrix := make([][]float64, numArgEncodedOps)
-	for i:=0;i<numArgEncodedOps;i++ { 
-		stochasticMatrix[i] = make([]float64, numArgEncodedOps) 
+	for i := 0; i < numArgEncodedOps; i++ {
+		stochasticMatrix[i] = make([]float64, numArgEncodedOps)
 		total := uint64(0)
-		for j:=0;j<numArgEncodedOps;j++ { 
+		for j := 0; j < numArgEncodedOps; j++ {
 			total += r.transitionFrequency[i][j]
 		}
-		for j:=0;j<numArgEncodedOps;j++ { 
-			stochasticMatrix[i][j] = float64(r.transitionFrequency[i][j])/float64(total)
+		for j := 0; j < numArgEncodedOps; j++ {
+			stochasticMatrix[i][j] = float64(r.transitionFrequency[i][j]) / float64(total)
 		}
 	}
-	return  EventDistribution {
-		OperationLabel: opLabel,
+	return EventDistribution{
+		OperationLabel:        opLabel,
 		OperationDistribution: opDistribution,
-		StochasticMatrix: stochasticMatrix,
+		StochasticMatrix:      stochasticMatrix,
 		ContractDistribution:  r.contractStats.ProduceDistribution(),
-		KeyDistribution: r.keyStats.ProduceDistribution(),
-		ValueDistribution: r.valueStats.ProduceDistribution(),
+		KeyDistribution:       r.keyStats.ProduceDistribution(),
+		ValueDistribution:     r.valueStats.ProduceDistribution(),
 	}
 }
-
-
