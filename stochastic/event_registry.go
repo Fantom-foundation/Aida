@@ -2,6 +2,9 @@ package stochastic
 
 import (
 	"log"
+	"os"
+	"fmt"
+	"encoding/json"
 
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -230,3 +233,23 @@ func (r *EventRegistry) ProduceDistribution() EventDistribution {
 		ValueDistribution:     r.valueStats.ProduceDistribution(),
 	}
 }
+
+// Write event distributions
+func (r *EventRegistry) Write(filename string) {
+	f, fErr := os.Create(filename)
+	if fErr != nil {
+		log.Fatalf("cannot open JSON file. Error: %v", fErr)
+	}
+	defer f.Close()
+
+	jOut, jErr := json.Marshal(r.ProduceDistribution())
+	if jErr != nil {
+		log.Fatalf("failed to convert JSON file. Error: %v", jErr)
+	}
+
+	_, pErr := fmt.Println(string(jOut))
+	if pErr != nil {
+		log.Fatalf("failed to convert JSON file. Error: %v", pErr)
+	}
+}
+

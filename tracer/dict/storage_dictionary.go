@@ -19,14 +19,12 @@ var StorageDictionaryLimit uint32 = math.MaxUint32 - 1
 type StorageDictionary struct {
 	storageToIdx map[common.Hash]uint32 // storage address to index map for encoding
 	idxToStorage []common.Hash          // storage address slice for decoding
-	frequency    []uint64               //storage address frequency
 }
 
 // Init initializes or clears a storage dictionary.
 func (d *StorageDictionary) Init() {
 	d.storageToIdx = map[common.Hash]uint32{}
 	d.idxToStorage = []common.Hash{}
-	d.frequency = []uint64{}
 }
 
 // NewStorageDictionary creates a new storage dictionary.
@@ -47,9 +45,6 @@ func (d *StorageDictionary) Encode(addr common.Hash) (uint32, error) {
 		}
 		d.storageToIdx[addr] = idx
 		d.idxToStorage = append(d.idxToStorage, addr)
-		d.frequency = append(d.frequency, 1)
-	} else {
-		d.frequency[idx]++
 	}
 	return idx, nil
 }

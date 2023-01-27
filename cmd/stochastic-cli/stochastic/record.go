@@ -1,25 +1,19 @@
 package stochastic
 
 import (
-	"bufio"
-	"context"
 	"fmt"
-	"log"
 	"math"
 	"math/big"
 	"os"
 	"runtime/pprof"
 	"time"
 
-	"github.com/Fantom-foundation/Aida/tracer"
-	"github.com/Fantom-foundation/Aida/tracer/dict"
-	"github.com/Fantom-foundation/Aida/tracer/operation"
+	"github.com/Fantom-foundation/Aida/stochastic"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/Fantom-foundation/go-opera/opera"
 	"github.com/Fantom-foundation/substate-cli/cmd/substate-cli/replay"
 	"github.com/Fantom-foundation/substate-cli/state"
-	"github.com/dsnet/compress/bzip2"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -42,13 +36,9 @@ var StochasticRecordCommand = cli.Command{
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
 		&utils.ChainIDFlag,
-		&utils.TraceDirectoryFlag,
-		&utils.TraceDebugFlag,
-		&utils.StochasticMatrixFlag,
-		&utils.StochasticMatrixFormatFlag,
 	},
 	Description: `
-The trace record command requires two arguments:
+The stochastic record command requires two arguments:
 <blockNumFirst> <blockNumLast>
 
 <blockNumFirst> and <blockNumLast> are the first and
@@ -56,7 +46,7 @@ last block of the inclusive range of blocks to trace transactions.`,
 }
 
 // stochasticRecordTask generates storage traces for a transaction.
-func stochasticRecordTask(block uint64, tx, chainID int, recording *substate.Substate, dCtx *dict.DictionaryContext) error {
+func stochasticRecordTask(block uint64, tx, chainID int, recording *substate.Substate, eventRegistry *stochastic.EventRegistry) error {
 
 	inputAlloc := recording.InputAlloc
 	inputEnv := recording.Env
@@ -87,10 +77,7 @@ func stochasticRecordTask(block uint64, tx, chainID int, recording *substate.Sub
 		return h
 	}
 
-	var statedb state.StateDB
-	statedb = state.MakeInMemoryStateDB(&inputAlloc)
-	proxyStochastic := tracer.NewProxyStochastic(statedb, dCtx, utils.TraceDebug)
-	statedb = proxyStochastic
+	var statedb state.StateDB = stochastic.NewEventProxy(state.MakeInMemoryStateDB(&inputAlloc), eventRegistry)
 
 	// Apply Message
 	var (
@@ -172,65 +159,13 @@ func stochasticRecordTask(block uint64, tx, chainID int, recording *substate.Sub
 	return nil
 }
 
-// OperationStochasticWriter reads operations from the operation channel and writes
-// them into a trace file.
-func OperationStochasticWriter(ctx context.Context, done chan struct{}, ch chan operation.Operation) {
-	// send done signal when closing writer
-	defer close(done)
-
-	// open trace file, write buffer, and compressed stream
-	file, err := os.OpenFile(tracer.TraceDir+"trace.dat", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-	if err != nil {
-		log.Fatalf("Cannot open trace file. Error: %v", err)
-	}
-	bfile := bufio.NewWriterSize(file, 65536*16)
-	zfile, err := bzip2.NewWriter(bfile, &bzip2.WriterConfig{Level: 9})
-	if err != nil {
-		log.Fatalf("Cannot open bzip2 stream. Error: %v", err)
-	}
-
-	// defer closing compressed stream, flushing buffer, and closing trace file
-	defer func() {
-		if err := zfile.Close(); err != nil {
-			log.Fatalf("Cannot close bzip2 writer. Error: %v", err)
-		}
-		if err := bfile.Flush(); err != nil {
-			log.Fatalf("Cannot flush buffer. Error: %v", err)
-		}
-		if err := file.Close(); err != nil {
-			log.Fatalf("Cannot close trace file. Error: %v", err)
-		}
-	}()
-
-	// read operations from channel, and write them until receiving a cancel signal
-	for {
-		select {
-		case op := <-ch:
-			operation.Write(zfile, op)
-		case <-ctx.Done():
-			if len(ch) == 0 {
-				return
-			}
-		}
-	}
-}
-
-// sendStochasticOperation sends an operation onto the channel.
-func sendStochasticOperation(dCtx *dict.DictionaryContext, ch chan operation.Operation, op operation.Operation) {
-	ch <- op
-	dCtx.RecordOp(op.GetId())
-	if utils.TraceDebug {
-		operation.Debug(dCtx, op)
-	}
-}
-
 // stochasticRecordAction implements trace command for recording.
 func stochasticRecordAction(ctx *cli.Context) error {
 	substate.RecordReplay = true
 	var err error
 
 	if ctx.Args().Len() != 2 {
-		return fmt.Errorf("trace record command requires exactly 2 arguments")
+		return fmt.Errorf("stochastic record command requires exactly 2 arguments")
 	}
 
 	// start CPU profiling if enabled.
@@ -246,19 +181,9 @@ func stochasticRecordAction(ctx *cli.Context) error {
 	// get progress flag
 	enableProgress := !ctx.Bool(utils.DisableProgressFlag.Name)
 
-	// create dictionary and index contexts
-	dCtx := dict.NewDictionaryStochasticContext(operation.BeginBlockID, operation.NumOperations)
-
-	// spawn writer
-	opChannel := make(chan operation.Operation, 100000)
-	cctx, cancel := context.WithCancel(context.Background())
-	cancelChannel := make(chan struct{})
-	go OperationStochasticWriter(cctx, cancelChannel, opChannel)
 
 	// process arguments
 	chainID := ctx.Int(utils.ChainIDFlag.Name)
-	tracer.TraceDir = ctx.String(utils.TraceDirectoryFlag.Name) + "/"
-	dict.DictionaryContextDir = ctx.String(utils.TraceDirectoryFlag.Name) + "/"
 	if ctx.Bool(utils.TraceDebugFlag.Name) {
 		utils.TraceDebug = true
 	}
@@ -284,6 +209,11 @@ func stochasticRecordAction(ctx *cli.Context) error {
 		sec = time.Since(start).Seconds()
 		lastSec = time.Since(start).Seconds()
 	}
+
+	// create a new event registry
+	eventRegistry := stochastic.NewEventRegistry() 
+
+	// iterate over all substates in order
 	for iter.Next() {
 		tx := iter.Value()
 		// close off old block with an end-block operation
@@ -291,20 +221,14 @@ func stochasticRecordAction(ctx *cli.Context) error {
 			if tx.Block > last {
 				break
 			}
-			if oldBlock != math.MaxUint64 {
-				sendStochasticOperation(dCtx, opChannel, operation.NewEndBlock())
-			}
 			oldBlock = tx.Block
-			// open new block with a begin-block operation and clear index cache
-			sendStochasticOperation(dCtx, opChannel, operation.NewBeginBlock(tx.Block))
 		}
-		stochasticRecordTask(tx.Block, tx.Transaction, chainID, tx.Substate, dCtx)
-		sendStochasticOperation(dCtx, opChannel, operation.NewEndTransaction())
+		stochasticRecordTask(tx.Block, tx.Transaction, chainID, tx.Substate, &eventRegistry)
 		if enableProgress {
 			// report progress
 			sec = time.Since(start).Seconds()
 			if sec-lastSec >= 15 {
-				fmt.Printf("trace record: Elapsed time: %.0f s, at block %v\n", sec, oldBlock)
+				fmt.Printf("stochastic record: Elapsed time: %.0f s, at block %v\n", sec, oldBlock)
 				lastSec = sec
 			}
 		}
@@ -312,126 +236,13 @@ func stochasticRecordAction(ctx *cli.Context) error {
 	}
 	if enableProgress {
 		sec = time.Since(start).Seconds()
-		fmt.Printf("trace record: Total elapsed time: %.3f s, processed %v blocks\n", sec, last-first+1)
+		fmt.Printf("stochastic record: Total elapsed time: %.3f s, processed %v blocks\n", sec, last-first+1)
 	}
 
-	// insert the last EndBlock
-	sendStochasticOperation(dCtx, opChannel, operation.NewEndBlock())
-
-	// cancel writer
-	(cancel)()        // stop writer
-	<-(cancelChannel) // wait for writer to finish
-
-	// write dictionaries and indexes
-	dCtx.Write()
-
-	// write recorded frequencies
-	dCtx.FrequenciesWriter()
-
-	dCtx.WriteDistributions()
-
-	// if only one block was recorded - add EndBlock to BeginBlock transition
-	if last-first == 0 {
-		dCtx.TFreq[[2]byte{operation.EndBlockID, operation.BeginBlockID}]++
-	}
-
-	// write stochastic matrix
-	writeStochasticMatrix(utils.StochasticMatrixFlag.Value, utils.StochasticMatrixFormatFlag.Value, dCtx.TFreq)
+	// writing event registry
+	fmt.Printf("stochastic record: write distribution file ...\n")
+	eventRegistry.Write("distribution.json")
 
 	return err
 }
 
-func writeStochasticMatrix(smFile string, f string, tFreq map[[2]byte]uint64) {
-	fmt.Println("freq", tFreq)
-	// write stochastic-matrix
-	if f == "csv" {
-		writeStochasticMatrixCsv(smFile, tFreq)
-	} else {
-		writeStochasticMatrixDot(smFile, tFreq)
-	}
-}
-
-// writeStochasticMatrixCsv writes frequencies of operation chaining in csv format
-func writeStochasticMatrixCsv(smFile string, tFreq map[[2]byte]uint64) {
-	file, err := os.Create(smFile)
-	if err != nil {
-		log.Fatalf("Cannot open stochastic matrix file. Error: %v", err)
-	}
-	defer func() {
-		err := file.Close()
-		if err != nil {
-			log.Fatalf("Cannot close stochastic matrix file. Error: %v", err)
-		}
-	}()
-
-	for i := byte(0); i < operation.NumOperations; i++ {
-		total := uint64(0)
-		for j := byte(0); j < operation.NumOperations; j++ {
-			total += tFreq[[2]byte{i, j}]
-		}
-
-		for j := byte(0); j < operation.NumOperations; j++ {
-			//fmt.Printf("\t%v -> %v [%v] \n",
-			//	operation.GetLabel(i),
-			//	operation.GetLabel(j),
-			//	float64(tFreq[[2]byte{i, j}])/float64(total))
-
-			var n float64
-			if total == 0 {
-				n = 0
-			} else {
-				n = float64(tFreq[[2]byte{i, j}]) / float64(total)
-			}
-
-			fmt.Fprintf(file, "%v", n)
-
-			if j != operation.NumOperations-1 {
-				fmt.Fprint(file, ",")
-			}
-		}
-		fmt.Fprintf(file, "\n")
-	}
-}
-
-// writeStochasticMatrixDot writes frequencies of operation chaining in dot format
-func writeStochasticMatrixDot(smFile string, tFreq map[[2]byte]uint64) {
-	file, err := os.Create(smFile)
-	if err != nil {
-		log.Fatalf("Cannot open stochastic matrix file. Error: %v", err)
-	}
-	defer func() {
-		err := file.Close()
-		if err != nil {
-			log.Fatalf("Cannot close stochastic matrix file. Error: %v", err)
-		}
-	}()
-	fmt.Fprintf(file, "digraph C {\n")
-	for i := byte(0); i < operation.NumOperations; i++ {
-		total := uint64(0)
-		for j := byte(0); j < operation.NumOperations; j++ {
-			total += tFreq[[2]byte{i, j}]
-		}
-		maxFreq := uint64(0)
-		for j := byte(0); j < operation.NumOperations; j++ {
-			if tFreq[[2]byte{i, j}] > maxFreq {
-				maxFreq = tFreq[[2]byte{i, j}]
-			}
-		}
-		for j := byte(0); j < operation.NumOperations; j++ {
-			if tFreq[[2]byte{i, j}] != 0 {
-				if tFreq[[2]byte{i, j}] != maxFreq {
-					fmt.Fprintf(file, "\t%v -> %v [label=\"%v\"]\n",
-						operation.GetLabel(i),
-						operation.GetLabel(j),
-						float64(tFreq[[2]byte{i, j}])/float64(total))
-				} else {
-					fmt.Fprintf(file, "\t%v -> %v [label=\"%v\", color=red]\n",
-						operation.GetLabel(i),
-						operation.GetLabel(j),
-						float64(tFreq[[2]byte{i, j}])/float64(total))
-				}
-			}
-		}
-	}
-	fmt.Fprintf(file, "}\n")
-}

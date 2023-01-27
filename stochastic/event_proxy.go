@@ -1,11 +1,7 @@
 package stochastic
 
 import (
-	"encoding/json"
-	"fmt"
-	"log"
 	"math/big"
-	"os"
 
 	"github.com/Fantom-foundation/substate-cli/state"
 	"github.com/ethereum/go-ethereum/common"
@@ -16,31 +12,12 @@ import (
 // EventProxy data structure for capturing StateDB events
 type EventProxy struct {
 	db       state.StateDB // real StateDB object
-	registry EventRegistry // event registry for determining statistical parameters
+	registry *EventRegistry // event registry for deriving statistical parameters
 }
 
 // NewEventProxy creates a new StateDB proxy for recording events.
-func NewEventProxy(db state.StateDB, registry EventRegistry) EventProxy {
-	return EventProxy{db, registry}
-}
-
-// Write event distributions
-func (p *EventProxy) Write(filename string) {
-	f, fErr := os.Create(filename)
-	if fErr != nil {
-		log.Fatalf("cannot open JSON file. Error: %v", fErr)
-	}
-	defer f.Close()
-
-	jOut, jErr := json.Marshal(p.registry.ProduceDistribution())
-	if jErr != nil {
-		log.Fatalf("failed to convert JSON file. Error: %v", jErr)
-	}
-
-	_, pErr := fmt.Println(string(jOut))
-	if pErr != nil {
-		log.Fatalf("failed to convert JSON file. Error: %v", pErr)
-	}
+func NewEventProxy(db state.StateDB, registry *EventRegistry) *EventProxy {
+	return &EventProxy{db, registry}
 }
 
 // CreateAccount creates a new account.
