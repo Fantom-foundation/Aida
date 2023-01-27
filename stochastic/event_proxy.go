@@ -11,7 +11,7 @@ import (
 
 // EventProxy data structure for capturing StateDB events
 type EventProxy struct {
-	db       state.StateDB // real StateDB object
+	db       state.StateDB  // real StateDB object
 	registry *EventRegistry // event registry for deriving statistical parameters
 }
 
