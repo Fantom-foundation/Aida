@@ -46,7 +46,7 @@ func TestStatisticsSimple3(t *testing.T) {
 	}
 }
 
-// TestStatisticsSimple4 checks produced distribution.
+// TestStatisticsSimple4 tests JSON output of distribution.
 func TestStatisticsSimple4(t *testing.T) {
 	stats := NewStatistics[int]()
 	for i := 1; i <= 10; i++ {

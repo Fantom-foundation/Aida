@@ -88,8 +88,8 @@ func TestQueueSimple2(t *testing.T) {
 	}
 }
 
-// TestQueueSimple3 produce queue distribution as JSON.
-func TestQueueSimple3(t *testing.T) {
+// TestQueueDistribution tests JSON output of distribution.
+func TestQueueDistribution(t *testing.T) {
 	// create index queue
 	queue := NewQueue[int]()
 
