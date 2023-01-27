@@ -1,6 +1,7 @@
 package stochastic
 
 import (
+	"encoding/json"
 	"github.com/ethereum/go-ethereum/common"
 	"testing"
 )
@@ -43,4 +44,25 @@ func TestStatisticsSimple3(t *testing.T) {
 	if frequency1 != 1 || frequency2 != 1 || !stats.Exists(address1) || !stats.Exists(address2) {
 		t.Fatalf("Counting failed failed")
 	}
+}
+
+// TestStatisticsSimple4 checks produced distribution.
+func TestStatisticsSimple4(t *testing.T) {
+	stats := NewStatistics[int]()
+	for i := 1; i <= 10; i++ {
+		stats.Count(i)
+	}
+	stats.Count(1)
+	stats.Count(10)
+
+	// produce distribution in JSON format
+	jOut, err := json.Marshal(stats.ProduceDistribution())
+	if err != nil {
+		t.Fatalf("Marshalling failed to produce distribution")
+	}
+	expected := `{"NumData":10,"TotalFreq":12,"X":[0,0.05,0.15,0.25,0.35,0.45,0.55,0.65,0.75,0.85,0.95,1],"P":[0,0.08333333333333333,0.16666666666666666,0.25,0.3333333333333333,0.41666666666666663,0.5,0.5833333333333333,0.6666666666666666,0.8333333333333333,1,1]}`
+	if string(jOut) != expected {
+		t.Fatalf("produced wrong JSON output")
+	}
+
 }
