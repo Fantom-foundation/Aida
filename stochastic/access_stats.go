@@ -9,15 +9,26 @@ const (
 
 	numClasses
 )
+
+// Classifications as strings
+// NB: Must follow order as defined above
+var classText = []string { "random", "recent", "previous", "new" }
+
 const defaultEntry = randomEntry // default classifier if no simulation argument exists
 
 // AccessStats for tracking access classes
 type AccessStats[T comparable] struct {
 	// counting statistics for data
-	stats *Statistics[T]
+	stats Statistics[T]
 
 	// queue of recent data accesses
-	queue *Queue[T]
+	queue Queue[T]
+}
+
+// Acccess Distribution for JSON output
+type AccessDistribution struct {
+	Distribution StatisticsDistribution
+	Queue        QueueDistribution
 }
 
 // NewAccessStats creates a new access.
@@ -53,8 +64,7 @@ func (a *AccessStats[T]) Classify(data T) int {
 	}
 }
 
-// Write access statistics to file.
-func (a *AccessStats[T]) WriteStats(prefix string) {
-	a.stats.WriteStats(prefix + "_stats.csv")
-	a.queue.WriteStats(prefix + "_queue.csv")
+// ProduceDistribution for JSON output
+func (a *AccessStats[T]) ProduceDistribution() AccessDistribution {
+	return AccessDistribution{ a.stats.ProduceDistribution(), a.queue.ProduceDistribution() }
 }

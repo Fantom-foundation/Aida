@@ -1,9 +1,6 @@
 package stochastic
 
 import (
-	"fmt"
-	"log"
-	"os"
 	"sort"
 )
 
@@ -16,9 +13,17 @@ type Statistics[T comparable] struct {
 	distribution map[T]uint64 // frequencies of hashes
 }
 
+// StatisticsDistribution for JSON
+type StatisticsDistribution struct {
+	NumData   int
+	TotalFreq uint64
+	X         []float64 // Value of random variable
+	P         []float64 // Probability of random variable
+}
+
 // NewStatistics creates a new statistics.
-func NewStatistics[T comparable]() *Statistics[T] {
-	return &Statistics[T]{map[T]uint64{}}
+func NewStatistics[T comparable]() Statistics[T] {
+	return Statistics[T]{map[T]uint64{}}
 }
 
 // Count increments the distribution of a hash by one.
@@ -39,13 +44,7 @@ func (s *Statistics[T]) Exists(data T) bool {
 
 // Write empirical cumulative distribution as as comma-separated file.
 // We write out only 100 equi-distant data points
-func (s *Statistics[T]) WriteStats(filename string) {
-	// open output file
-	f, err := os.Create(filename)
-	if err != nil {
-		log.Fatalf("failed to open file " + filename)
-	}
-	defer f.Close()
+func (s *Statistics[T]) ProduceDistribution() StatisticsDistribution {
 
 	// sort data according to their ascending frequency
 	// and compute totalFreq frequency.
@@ -60,35 +59,44 @@ func (s *Statistics[T]) WriteStats(filename string) {
 		return s.distribution[entries[i]] < s.distribution[entries[j]]
 	})
 
-	// Print quantities as a first row
-	fmt.Fprintf(f, "%v, %v\n", numData, totalFreq)
+	X := []float64{}
+	P := []float64{}
 
 	// if no data-points, nothing to plot
-	if numPoints == 0 {
-		return
+	if numPoints != 0 {
+
+		// compute distance between points in the distribution
+		// to limit the number of printed points
+		d := numData / numPoints
+		if d < 1 {
+			d = 1
+		}
+
+		// print points of the empirical cumulative distribution
+		// in subsequent rows.
+		sum := float64(0.0)
+		c := float64(0.0)
+		X = append(X, 0.0)
+		P = append(P, 0.0)
+		for i := 0; i < numData; i += d {
+			// Implement Kahan's summation to avoid errors
+			// for accumulated probabilities (they might be very small)
+			// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
+			y := float64(s.distribution[entries[i]])/float64(totalFreq) - c
+			t := sum + y
+			c = (t - sum) - y
+			sum = t
+			X = append(X, (float64(i)+0.5)/float64(numData))
+			P = append(P, sum)
+		}
+		X = append(X, 1.0)
+		P = append(P, 1.0)
 	}
 
-	// compute distance between points in the distribution
-	// to limit the number of printed points
-	d := numData / numPoints
-	if d < 1 {
-		d = 1
+	return StatisticsDistribution{
+		NumData:   numData,
+		TotalFreq: totalFreq,
+		X:         X,
+		P:         P,
 	}
-
-	// print points of the empirical cumulative distribution
-	// in subsequent rows.
-	sum := float64(0.0)
-	c := float64(0.0)
-	fmt.Fprintf(f, "%v, %v\n", 0.0, 0.0)
-	for i := 0; i < numData; i += d {
-		// Implement Kahan's summation to avoid errors
-		// for accumulated probabilities (they might be very small)
-		// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
-		y := float64(s.distribution[entries[i]])/float64(totalFreq) - c
-		t := sum + y
-		c = (t - sum) - y
-		sum = t
-		fmt.Fprintf(f, "%v, %v\n", (float64(i)+0.5)/float64(numData), sum)
-	}
-	fmt.Fprintf(f, "%v, %v\n", 1.0, 1.0)
 }

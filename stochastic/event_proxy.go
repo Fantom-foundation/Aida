@@ -12,15 +12,12 @@ import (
 // EventProxy data structure for capturing StateDB events
 type EventProxy struct {
 	db       state.StateDB  // real StateDB object
-	registry *EventRegistry // event registry for determining statistical parameters
+	registry EventRegistry  // event registry for determining statistical parameters
 }
 
 // NewEventProxy creates a new StateDB proxy for recording events.
-func NewEventProxy(db state.StateDB, registry *EventRegistry) *EventProxy {
-	s := new(EventProxy)
-	s.db = db
-	s.registry = registry
-	return s
+func NewEventProxy(db state.StateDB, registry EventRegistry) EventProxy {
+	return EventProxy { db, registry} 
 }
 
 // CreateAccount creates a new account.
