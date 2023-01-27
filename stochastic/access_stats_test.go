@@ -11,35 +11,35 @@ func TestAccessStatsSimple(t *testing.T) {
 	accessStat := NewAccessStats[int]()
 
 	// place elements into the queue and ensure it overfills
-	for i:=0;i < 300;i++ {
+	for i := 0; i < 300; i++ {
 		accessStat.Put(i)
 	}
 
 	// check previous element's class
 	class := accessStat.Classify(299)
-	if class !=  previousEntry {
+	if class != previousEntry {
 		t.Fatalf("wrong classification (previous item)")
 	}
 
 	// check recent elements's class (ones placed in the queue)
-	for i:=300-256;i < 299;i++ {
+	for i := 300 - 256; i < 299; i++ {
 		class := accessStat.Classify(i)
-		if class !=  recentEntry {
+		if class != recentEntry {
 			t.Fatalf("wrong classification (recent data)")
 		}
 	}
 
 	// check class of elements that fell out of the queue
-	for i:=0;i < 300-256;i++ {
+	for i := 0; i < 300-256; i++ {
 		class := accessStat.Classify(i)
-		if class !=  randomEntry {
+		if class != randomEntry {
 			t.Fatalf("wrong classification (random data)")
 		}
 	}
 
-	// check class of new elements 
+	// check class of new elements
 	class = accessStat.Classify(512)
-	if class !=  newEntry {
+	if class != newEntry {
 		t.Fatalf("wrong classification (new data)")
 	}
 }
@@ -52,7 +52,7 @@ func TestAccessStatsDistribution(t *testing.T) {
 	// place first element
 	for i := 0; i < 512; i++ {
 		accessStat.Put(i)
-		accessStat.Classify(i-10)
+		accessStat.Classify(i - 10)
 	}
 
 	// produce distribution in JSON format

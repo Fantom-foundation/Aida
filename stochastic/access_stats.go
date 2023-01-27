@@ -14,8 +14,6 @@ const (
 // NB: Must follow order as defined above
 var classText = []string{"random", "recent", "previous", "new"}
 
-const defaultEntry = randomEntry // default classifier if no simulation argument exists
-
 // AccessStats for tracking access classes
 type AccessStats[T comparable] struct {
 	// counting statistics for data
