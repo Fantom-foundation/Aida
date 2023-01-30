@@ -20,7 +20,7 @@ GOPROXY ?= "https://proxy.golang.org,direct"
 
 .PHONY: all clean help test
 
-all: gen-world-state trace aida-stochastic
+all: gen-world-state trace
 
 gen-world-state:
 	@go build \
@@ -38,16 +38,6 @@ trace:
 	go build -ldflags "-s -w" \
        	-o $(GO_BIN)/trace \
 	./cmd/trace-cli
-
-aida-stochastic:
-	@cd carmen/go/lib ; \
-	./build_libcarmen.sh ; \
-	cd ../../.. ; \
-	GOPROXY=$(GOPROXY) \
-	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/go-opera-fvm \
-	go build -ldflags "-s -w" \
-	-o $(GO_BIN)/aida-stochastic \
-	./cmd/stochastic-cli
 
 test:
 	@go test ./...
