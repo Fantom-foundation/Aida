@@ -491,7 +491,7 @@ func runVM(ctx *cli.Context) error {
 		fmt.Printf("============================================\n")
 	}
 
-	if cfg.KeepStateDB && !isFirstBlock{
+	if cfg.KeepStateDB && !isFirstBlock {
 		rootHash, _ := db.Commit(true)
 		utils.WriteStateDbInfo(stateDirectory, cfg, curBlock, rootHash)
 		//rename directory after closing db.

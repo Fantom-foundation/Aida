@@ -13,11 +13,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+// StateDB meta information
 type StateDbInfo struct {
-	Impl     string      `json:"db-impl"`
-	Variant  string      `json:"db-variant"`
-	Block    uint64      `json:"block"`
-	RootHash common.Hash `json:"roothash"`
+	Impl     string      `json:"db-impl"`    // type of db engine
+	Variant  string      `json:"db-variant"` // type of db variant
+	Block    uint64      `json:"block"`      // last block height
+	RootHash common.Hash `json:"roothash"`   // rooth hash of the last block height
 }
 
 // copyFile copies a single file from src to dst
@@ -81,8 +82,8 @@ func copyDir(src string, dst string) error {
 	return nil
 }
 
-// WriteStateDbInfo write stateDB implementation info and block height to a file
-// for a compatibility check when reusing
+// WriteStateDbInfo writes stateDB implementation info and block height to a file
+// for a compatibility check when reloading
 func WriteStateDbInfo(directory string, cfg *TraceConfig, block uint64, root common.Hash) error {
 	dbinfo := &StateDbInfo{Impl: cfg.DbImpl, Variant: cfg.DbVariant, Block: block, RootHash: root}
 	filename := filepath.Join(directory, "statedb_info.json")
@@ -96,6 +97,8 @@ func WriteStateDbInfo(directory string, cfg *TraceConfig, block uint64, root com
 	return nil
 }
 
+// ReadStateDbInfo reads meta file of loaded stateDB then check compatability with
+// the current run configuration
 func ReadStateDbInfo(directory string, cfg *TraceConfig) (StateDbInfo, error) {
 	var dbinfo StateDbInfo
 	file, err := os.ReadFile(filepath.Join(directory, "statedb_info.json"))
@@ -105,18 +108,20 @@ func ReadStateDbInfo(directory string, cfg *TraceConfig) (StateDbInfo, error) {
 	if err := json.Unmarshal(file, &dbinfo); err != nil {
 		return dbinfo, err
 	}
-	// check DB type
+	// working stateDB must match the type of loaded stateDB
 	if dbinfo.Impl != cfg.DbImpl {
 		return dbinfo, fmt.Errorf("Wrong DB implementation.\n\thave %v\n\twant %v", dbinfo.Impl, cfg.DbImpl)
+		// working stateDB variant must match the type of loaded stateDB variant
 	} else if dbinfo.Variant != cfg.DbVariant {
 		return dbinfo, fmt.Errorf("Wrong DB variant.\n\thave %v\n\twant %v", dbinfo.Variant, cfg.DbVariant)
-	} else if dbinfo.Block+1 != cfg.First { //the first block must start after the head block in the stateDB
+		// the first block must start after the head block in the stateDB
+	} else if dbinfo.Block+1 != cfg.First {
 		return dbinfo, fmt.Errorf("The first block is earlier than stateDB.\n\thave %v\n\twant %v", dbinfo.Block+1, cfg.First)
 	}
 	return dbinfo, nil
 }
 
-// RenameTempStateDBDirectory renames a temp directory to a meaningful name if KeepStateDB is set
+// RenameTempStateDBDirectory renames a temp directory to a meaningful name
 func RenameTempStateDBDirectory(cfg *TraceConfig, oldDirectory string, block uint64, preloaded bool) {
 	newDirectory := oldDirectory
 	if cfg.DbImpl != "geth" {
