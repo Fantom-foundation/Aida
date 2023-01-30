@@ -17,8 +17,7 @@ type Statistics[T comparable] struct {
 type StatisticsDistribution struct {
 	NumData   int
 	TotalFreq uint64
-	X         []float64 // Value of random variable
-	P         []float64 // Probability of random variable
+	ECdf      [][2]float64 // Value of random variable
 }
 
 // NewStatistics creates a new statistics.
@@ -56,11 +55,10 @@ func (s *Statistics[T]) ProduceDistribution() StatisticsDistribution {
 		totalFreq += freq
 	}
 	sort.SliceStable(entries, func(i, j int) bool {
-		return s.distribution[entries[i]] < s.distribution[entries[j]]
+		return s.distribution[entries[i]] > s.distribution[entries[j]]
 	})
 
-	X := []float64{}
-	P := []float64{}
+	ECdf := [][2]float64{}
 
 	// if no data-points, nothing to plot
 	if numPoints != 0 {
@@ -76,9 +74,9 @@ func (s *Statistics[T]) ProduceDistribution() StatisticsDistribution {
 		// in subsequent rows.
 		sum := float64(0.0)
 		c := float64(0.0)
-		X = append(X, 0.0)
-		P = append(P, 0.0)
-		for i := 0; i < numData; i += d {
+		ECdf = append(ECdf, [2]float64{0.0, 0.0})
+		j := 0
+		for i := 0; i < numData; i++ {
 			// Implement Kahan's summation to avoid errors
 			// for accumulated probabilities (they might be very small)
 			// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
@@ -86,17 +84,19 @@ func (s *Statistics[T]) ProduceDistribution() StatisticsDistribution {
 			t := sum + y
 			c = (t - sum) - y
 			sum = t
-			X = append(X, (float64(i)+0.5)/float64(numData))
-			P = append(P, sum)
+			if j < d {
+				j++
+			} else {
+				ECdf = append(ECdf, [2]float64{(float64(i) + 0.5) / float64(numData), sum})
+				j = 0
+			}
 		}
-		X = append(X, 1.0)
-		P = append(P, 1.0)
+		ECdf = append(ECdf, [2]float64{1.0, 1.0})
 	}
 
 	return StatisticsDistribution{
 		NumData:   numData,
 		TotalFreq: totalFreq,
-		X:         X,
-		P:         P,
+		ECdf:      ECdf,
 	}
 }

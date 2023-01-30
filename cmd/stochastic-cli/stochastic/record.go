@@ -27,7 +27,7 @@ import (
 // StochasticRecordCommand data structure for the record app
 var StochasticRecordCommand = cli.Command{
 	Action:    stochasticRecordAction,
-	Name:      "stochastic-record",
+	Name:      "record",
 	Usage:     "captures and records StateDB operations while processing blocks",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{

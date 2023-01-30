@@ -18,6 +18,7 @@ func initStochasticApp() *cli.App {
 		Flags:     []cli.Flag{},
 		Commands: []*cli.Command{
 			&stochastic.StochasticRecordCommand,
+			&stochastic.StochasticEstimatorCommand,
 		},
 	}
 }

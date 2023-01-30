@@ -55,7 +55,7 @@ func NewEventRegistry() EventRegistry {
 }
 
 // RegisterOp registers an operation with no simulation arguments
-func (r *EventRegistry) RegisterOp(op byte) {
+func (r *EventRegistry) RegisterOp(op int) {
 	if op >= numStochasticOps {
 		log.Fatalf("invalid stochastic operation ID")
 	}
@@ -69,7 +69,7 @@ func (r *EventRegistry) RegisterOp(op byte) {
 }
 
 // RegisterAddressOp registers an operation with a contract-address argument
-func (r *EventRegistry) RegisterAddressOp(op byte, address *common.Address) {
+func (r *EventRegistry) RegisterAddressOp(op int, address *common.Address) {
 	// check ID
 	if op >= numStochasticOps {
 		log.Fatalf("invalid stochastic operation ID")
@@ -87,7 +87,7 @@ func (r *EventRegistry) RegisterAddressOp(op byte, address *common.Address) {
 }
 
 // RegisterAddressKeyOp registers an operation with a contract-address and a storage-key arguments.
-func (r *EventRegistry) RegisterKeyOp(op byte, address *common.Address, key *common.Hash) {
+func (r *EventRegistry) RegisterKeyOp(op int, address *common.Address, key *common.Hash) {
 	// check ID
 	if op >= numStochasticOps {
 		log.Fatalf("invalid stochastic operation ID")
@@ -106,14 +106,14 @@ func (r *EventRegistry) RegisterKeyOp(op byte, address *common.Address, key *com
 }
 
 // RegisterAddressKeyOp registers an operation with a contract-address, a storage-key and storage-value arguments.
-func (r *EventRegistry) RegisterValueOp(op byte, address *common.Address, key *common.Hash, value *common.Hash) {
+func (r *EventRegistry) RegisterValueOp(op int, address *common.Address, key *common.Hash, value *common.Hash) {
 	// check ID
 	if op >= numStochasticOps {
 		log.Fatalf("invalid stochastic operation ID")
 	}
 
 	// classify simulation arguments
-	addrClass, keyClass, valueClass := r.classifyAddress(address), r.classifyKey(key), r.classifyKey(value)
+	addrClass, keyClass, valueClass := r.classifyAddress(address), r.classifyKey(key), r.classifyValue(value)
 
 	// update operations's frequency and transition frequency
 	// depending on type of simulation arguments
@@ -126,12 +126,12 @@ func (r *EventRegistry) RegisterValueOp(op byte, address *common.Address, key *c
 }
 
 // update operation and transition frequency depending on simulation argument class
-func (r *EventRegistry) updateFrequency(op byte, addrClass int, keyClass int, valueClass int) {
+func (r *EventRegistry) updateFrequency(op int, addrClass int, keyClass int, valueClass int) {
 	// increment operation's frequency depending on argument class
 	r.operationFrequency[op][addrClass][keyClass][valueClass]++
 
 	// encode argument classes to compute specialized operation using a Horner's scheme
-	sOp := (((int(op)*numClasses)+addrClass)*numClasses+keyClass)*numClasses + valueClass
+	sOp := encodeOp(op, addrClass, keyClass, valueClass)
 
 	// skip counting for the first operation
 	if r.prevOp < numArgEncodedOps {
@@ -207,9 +207,11 @@ func (r *EventRegistry) ProduceDistribution() EventDistribution {
 			}
 		}
 	}
-	for op := 0; op < numArgEncodedOps; op++ {
-		// normalize distribution
-		opDistribution[op] = opDistribution[op] / float64(total)
+	if total > 0 {
+		for op := 0; op < numArgEncodedOps; op++ {
+			// normalize distribution
+			opDistribution[op] = opDistribution[op] / float64(total)
+		}
 	}
 
 	// Compute stochastic matrix
@@ -221,7 +223,9 @@ func (r *EventRegistry) ProduceDistribution() EventDistribution {
 			total += r.transitionFrequency[i][j]
 		}
 		for j := 0; j < numArgEncodedOps; j++ {
-			stochasticMatrix[i][j] = float64(r.transitionFrequency[i][j]) / float64(total)
+			if total > 0 {
+				stochasticMatrix[i][j] = float64(r.transitionFrequency[i][j]) / float64(total)
+			}
 		}
 	}
 	return EventDistribution{
@@ -247,7 +251,7 @@ func (r *EventRegistry) Write(filename string) {
 		log.Fatalf("failed to convert JSON file. Error: %v", jErr)
 	}
 
-	_, pErr := fmt.Println(string(jOut))
+	_, pErr := fmt.Fprintln(f, string(jOut))
 	if pErr != nil {
 		log.Fatalf("failed to convert JSON file. Error: %v", pErr)
 	}
