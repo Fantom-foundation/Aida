@@ -19,14 +19,12 @@ var ValueDictionaryLimit uint64 = math.MaxUint64 - 1
 type ValueDictionary struct {
 	valueToIdx map[common.Hash]uint64 // value to index map for encoding
 	idxToValue []common.Hash          // value array for decoding
-	frequency  []uint64               //storage address frequency
 }
 
 // Init initializes or clears a value dictionary.
 func (d *ValueDictionary) Init() {
 	d.valueToIdx = map[common.Hash]uint64{}
 	d.idxToValue = []common.Hash{}
-	d.frequency = []uint64{}
 }
 
 // NewValueDictionary creates a new value dictionary.
@@ -47,9 +45,6 @@ func (d *ValueDictionary) Encode(value common.Hash) (uint64, error) {
 		}
 		d.valueToIdx[value] = idx
 		d.idxToValue = append(d.idxToValue, value)
-		d.frequency = append(d.frequency, 1)
-	} else {
-		d.frequency[idx]++
 	}
 	return idx, nil
 }

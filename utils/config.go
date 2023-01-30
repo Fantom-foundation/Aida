@@ -169,21 +169,6 @@ var (
 		Usage: "limit the maximum number of processed transactions, default: unlimited",
 		Value: -1,
 	}
-	StochasticMatrixFlag = cli.StringFlag{
-		Name:  "stochastic-matrix",
-		Usage: "set stochastic matrix file",
-		Value: "stochastic-matrix.csv",
-	}
-	StochasticMatrixFormatFlag = cli.StringFlag{
-		Name:  "stochastic-matrix-format",
-		Usage: "type of the output matrix file (\"dot\" or \"csv\")",
-		Value: "csv",
-	}
-	StochasticSeedFlag = cli.Int64Flag{
-		Name:  "seed",
-		Usage: "seed for pseudorandom number generator",
-		Value: -1,
-	}
 )
 
 // execution configuration for replay command.
