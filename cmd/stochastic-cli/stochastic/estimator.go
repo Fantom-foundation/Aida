@@ -1,10 +1,10 @@
 package stochastic
 
 import (
-	"fmt"
 	"encoding/json"
-	"os"
+	"fmt"
 	"io/ioutil"
+	"os"
 
 	"github.com/Fantom-foundation/Aida/stochastic"
 	"github.com/urfave/cli/v2"
@@ -16,8 +16,7 @@ var StochasticEstimatorCommand = cli.Command{
 	Name:      "estimator",
 	Usage:     "captures and estimators StateDB operations while processing blocks",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
-	Flags: []cli.Flag{
-	},
+	Flags:     []cli.Flag{},
 	Description: `
 The stochastic estimator command requires one argument:
 <EventDistribution.json>
@@ -26,8 +25,7 @@ The stochastic estimator command requires one argument:
 the recorder.`,
 }
 
-
-// stochasticEstimatorAction implements estimator command for deriving 
+// stochasticEstimatorAction implements estimator command for deriving
 // statistical parameter
 func stochasticEstimatorAction(ctx *cli.Context) error {
 	if ctx.Args().Len() != 1 {
@@ -35,7 +33,7 @@ func stochasticEstimatorAction(ctx *cli.Context) error {
 	}
 
 	// open file
-	file, err := os.Open(ctx.Args().Get(0))	
+	file, err := os.Open(ctx.Args().Get(0))
 	if err != nil {
 		return fmt.Errorf("failed opening distribution file")
 	}
@@ -47,10 +45,10 @@ func stochasticEstimatorAction(ctx *cli.Context) error {
 		return fmt.Errorf("failed reading distribution file")
 	}
 
-	var distribution stochastic.EventDistribution 
+	var distribution stochastic.EventDistribution
 	json.Unmarshal(contents, &distribution)
 
-	// prepare web-data for rendering 
+	// prepare web-data for rendering
 	stochastic.PrepareWebData(distribution)
 
 	// render web-page
