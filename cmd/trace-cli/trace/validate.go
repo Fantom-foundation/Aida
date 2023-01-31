@@ -9,6 +9,7 @@ import (
 
 // validateStateDB validates whether the world-state is contained in the db object.
 // NB: We can only check what must be in the db (but cannot check whether db stores more).
+// TODO fix it for erigon case
 func validateStateDB(ws substate.SubstateAlloc, db state.StateDB, updateOnFail bool) error {
 	var err string
 	for addr, account := range ws {

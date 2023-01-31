@@ -1,3 +1,6 @@
 [submodule "carmen"]
 	path = carmen
 	url = git@github.com:Fantom-foundation/Carmen.git
+[submodule "libmdbx"]
+	path = libmdbx
+	url = https://github.com/torquem-ch/libmdbx.git

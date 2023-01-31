@@ -62,6 +62,8 @@ func makeStateDBVariant(directory, impl, variant string, cfg *TraceConfig) (stat
 		return state.MakeCarmenStateDB(directory, variant)
 	case "flat":
 		return state.MakeFlatStateDB(directory, variant)
+	case "erigon":
+		return state.MakeErigonStateDB(directory, variant)
 	}
 	return nil, fmt.Errorf("unknown DB implementation (--%v): %v", StateDbImplementationFlag.Name, impl)
 }
@@ -170,6 +172,7 @@ func DeleteDestroyedAccountsFromWorldState(ws substate.SubstateAlloc, cfg *Trace
 
 // DeleteDestroyedAccountsFromStateDB performs suicide operations on previously
 // self-destructed accounts.
+// TODO rewrite it for erigon case
 func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *TraceConfig, target uint64) error {
 	if !cfg.HasDeletedAccounts {
 		log.Printf("Database not provided. Ignore deleted accounts.\n")
