@@ -11,30 +11,35 @@ import (
 	"github.com/ethereum/go-ethereum/substate"
 )
 
-func MakeCarmenStateDB(directory, variant string) (StateDB, error) {
+func MakeCarmenStateDB(directory, variant string, withArchive bool) (StateDB, error) {
 	if variant == "" {
 		variant = "go-memory"
+	}
+
+	params := carmen.Parameters{
+		Directory:   directory,
+		WithArchive: withArchive,
 	}
 
 	var db carmen.State
 	var err error
 	switch variant {
 	case "go-memory":
-		db, err = carmen.NewGoMemoryState()
+		db, err = carmen.NewGoMemoryState(params)
 	case "go-file-nocache":
-		db, err = carmen.NewGoFileState(directory)
+		db, err = carmen.NewGoFileState(params)
 	case "go-file":
-		db, err = carmen.NewGoCachedFileState(directory)
+		db, err = carmen.NewGoCachedFileState(params)
 	case "go-ldb-nocache":
-		db, err = carmen.NewGoLeveLIndexAndStoreState(directory)
+		db, err = carmen.NewGoLeveLIndexAndStoreState(params)
 	case "go-ldb":
-		db, err = carmen.NewGoCachedLeveLIndexAndStoreState(directory)
+		db, err = carmen.NewGoCachedLeveLIndexAndStoreState(params)
 	case "cpp-memory":
-		db, err = carmen.NewCppInMemoryState(directory)
+		db, err = carmen.NewCppInMemoryState(params)
 	case "cpp-file":
-		db, err = carmen.NewCppFileBasedState(directory)
+		db, err = carmen.NewCppFileBasedState(params)
 	case "cpp-ldb":
-		db, err = carmen.NewCppLevelDbBasedState(directory)
+		db, err = carmen.NewCppLevelDbBasedState(params)
 	default:
 		return nil, fmt.Errorf("unkown variant: %v", variant)
 	}

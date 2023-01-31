@@ -59,7 +59,7 @@ func makeStateDBVariant(directory, impl, variant string, cfg *TraceConfig) (stat
 	case "geth":
 		return state.MakeGethStateDB(directory, variant, cfg.ArchiveMode)
 	case "carmen":
-		return state.MakeCarmenStateDB(directory, variant)
+		return state.MakeCarmenStateDB(directory, variant, cfg.ArchiveMode)
 	case "flat":
 		return state.MakeFlatStateDB(directory, variant)
 	}

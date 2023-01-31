@@ -316,6 +316,11 @@ func NewTraceConfig(ctx *cli.Context, mode ArgumentMode) (*TraceConfig, error) {
 			log.Printf("\tPrime storage system: %v, DB variant: %v\n", cfg.DbImpl, cfg.DbVariant)
 			log.Printf("\tShadow storage system: %v, DB variant: %v\n", cfg.ShadowImpl, cfg.ShadowVariant)
 		}
+		if cfg.ArchiveMode {
+			log.Printf("\tArchive mode: enabled\n")
+		} else {
+			log.Printf("\tArchive mode: disabled\n")
+		}
 		log.Printf("\tStorage parent directory: %v\n", cfg.StateDbDir)
 		log.Printf("\tUsed VM implementation: %v\n", cfg.VmImpl)
 		log.Printf("\tUpdate DB directory: %v\n", cfg.UpdateDBDir)
