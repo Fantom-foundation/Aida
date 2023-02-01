@@ -50,7 +50,7 @@ last block of the inclusive range of blocks to replay storage traces.`,
 }
 
 // traceReplaySubstateTask simulates storage operations from storage traces on stateDB.
-func traceReplaySubstateTask(cfg *utils.TraceConfig) error {
+func traceReplaySubstateTask(cfg *utils.Config) error {
 	// load dictionaries & indexes
 	dCtx := dict.ReadDictionaryContext()
 
@@ -180,7 +180,7 @@ func traceReplaySubstateTask(cfg *utils.TraceConfig) error {
 // traceReplaySubstateAction implements trace command for replaying.
 func traceReplaySubstateAction(ctx *cli.Context) error {
 	substate.RecordReplay = true
-	cfg, err := utils.NewTraceConfig(ctx, utils.BlockRangeArgs)
+	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if err != nil {
 		return err
 	}

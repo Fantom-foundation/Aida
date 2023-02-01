@@ -3,11 +3,11 @@ package operation
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/Fantom-foundation/Aida/state"
 	"io"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
-	"github.com/Fantom-foundation/Aida/tracer/state"
 )
 
 // Exist data structure

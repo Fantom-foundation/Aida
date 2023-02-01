@@ -14,7 +14,7 @@ import (
 )
 
 // generateUpdateSet generates an update set for a block range.
-func generateUpdateSet(first uint64, last uint64, cfg *utils.TraceConfig) substate.SubstateAlloc {
+func generateUpdateSet(first uint64, last uint64, cfg *utils.Config) substate.SubstateAlloc {
 	var deletedAccountDB *substate.DestroyedAccountDB
 	stateIter := substate.NewSubstateIterator(first, cfg.Workers)
 	defer stateIter.Release()
@@ -51,7 +51,7 @@ func generateUpdateSet(first uint64, last uint64, cfg *utils.TraceConfig) substa
 
 // generateWorldStateFromUpdateDB generates an initial world-state
 // from pre-computed update-set
-func generateWorldStateFromUpdateDB(cfg *utils.TraceConfig, target uint64) (substate.SubstateAlloc, error) {
+func generateWorldStateFromUpdateDB(cfg *utils.Config, target uint64) (substate.SubstateAlloc, error) {
 	ws := make(substate.SubstateAlloc)
 	blockPos := uint64(utils.FirstSubstateBlock - 1)
 	if target < blockPos {
@@ -92,7 +92,7 @@ func clearAccountStorage(update substate.SubstateAlloc, accounts []common.Addres
 }
 
 // generateWorldState generates an initial world-state for a block.
-func generateWorldState(path string, block uint64, cfg *utils.TraceConfig) (substate.SubstateAlloc, error) {
+func generateWorldState(path string, block uint64, cfg *utils.Config) (substate.SubstateAlloc, error) {
 	worldStateDB, err := snapshot.OpenStateDB(path)
 	if err != nil {
 		return nil, err
