@@ -28,6 +28,9 @@ var (
 	TraceDebug         bool   = false // TraceDebug for enabling/disabling debugging.
 )
 
+// GitCommit represents the GitHub commit hash the app was built from.
+var GitCommit = "0000000000000000000000000000000000000000"
+
 // Command line options for common flags in record and replay.
 var (
 	ArchiveModeFlag = cli.BoolFlag{
@@ -104,8 +107,12 @@ var (
 		Usage: "select a state DB variant",
 		Value: "",
 	}
-	StateDbDirFlag = cli.StringFlag{
-		Name:  "db-dir",
+	StateDbSrcDirFlag = cli.StringFlag{
+		Name:  "db-src-dir",
+		Usage: "sets the directory contains source state DB data",
+	}
+	StateDbTempDirFlag = cli.StringFlag{
+		Name:  "db-tmp-dir",
 		Usage: "sets the temporary directory where to place state DB data; uses system default if empty",
 	}
 	StateDbLoggingFlag = cli.BoolFlag{
@@ -188,7 +195,6 @@ type TraceConfig struct {
 	ArchiveMode        bool   // enable archive mode
 	HasDeletedAccounts bool   // true if deletedAccountDir is not empty; otherwise false
 	KeepStateDB        bool   // set to true if stateDB is kept after run
-	LoadedExistingDB   bool   // set to true if stateDB is loaded from an existing one
 	MaxNumTransactions int    // the maximum number of processed transactions
 	MemoryBreakdown    bool   // enable printing of memory breakdown
 	MemoryProfile      string // capture the memory heap profile into the file
@@ -199,7 +205,8 @@ type TraceConfig struct {
 	SkipPriming        bool   // skip priming of the state DB
 	ShadowImpl         string // implementation of the shadow DB to use, empty if disabled
 	ShadowVariant      string // database variant of the shadow DB to be used
-	StateDbDir         string // directory to store State DB data
+	StateDbSrcDir      string // directory to load an existing State DB data
+	StateDbTempDir     string // directory to store a working copy of State DB data
 	UpdateDBDir        string // update-set directory
 	ValidateTxState    bool   // validate stateDB before and after transaction
 	ValidateWorldState bool   // validate stateDB before and after replay block range
@@ -287,7 +294,6 @@ func NewTraceConfig(ctx *cli.Context, mode ArgumentMode) (*TraceConfig, error) {
 		DeletedAccountDir:  ctx.String(DeletedAccountDirFlag.Name),
 		HasDeletedAccounts: true,
 		KeepStateDB:        ctx.Bool(KeepStateDBFlag.Name),
-		LoadedExistingDB:   false,
 		Last:               last,
 		MaxNumTransactions: ctx.Int(MaxNumTransactionsFlag.Name),
 		MemoryBreakdown:    ctx.Bool(MemoryBreakdownFlag.Name),
@@ -298,7 +304,8 @@ func NewTraceConfig(ctx *cli.Context, mode ArgumentMode) (*TraceConfig, error) {
 		SkipPriming:        ctx.Bool(SkipPrimingFlag.Name),
 		ShadowImpl:         ctx.String(ShadowDbImplementationFlag.Name),
 		ShadowVariant:      ctx.String(ShadowDbVariantFlag.Name),
-		StateDbDir:         ctx.String(StateDbDirFlag.Name),
+		StateDbSrcDir:      ctx.String(StateDbSrcDirFlag.Name),
+		StateDbTempDir:     ctx.String(StateDbTempDirFlag.Name),
 		UpdateDBDir:        ctx.String(UpdateDBDirFlag.Name),
 		ValidateTxState:    validateTxState,
 		ValidateWorldState: validateWorldState,
@@ -325,7 +332,8 @@ func NewTraceConfig(ctx *cli.Context, mode ArgumentMode) (*TraceConfig, error) {
 			log.Printf("\tPrime storage system: %v, DB variant: %v\n", cfg.DbImpl, cfg.DbVariant)
 			log.Printf("\tShadow storage system: %v, DB variant: %v\n", cfg.ShadowImpl, cfg.ShadowVariant)
 		}
-		log.Printf("\tStorage parent directory: %v\n", cfg.StateDbDir)
+		log.Printf("\tSource storage directory (empty if new): %v\n", cfg.StateDbSrcDir)
+		log.Printf("\tWorking storage directory: %v\n", cfg.StateDbTempDir)
 		log.Printf("\tUsed VM implementation: %v\n", cfg.VmImpl)
 		log.Printf("\tUpdate DB directory: %v\n", cfg.UpdateDBDir)
 		if cfg.SkipPriming {

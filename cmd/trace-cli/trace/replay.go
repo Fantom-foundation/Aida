@@ -38,7 +38,8 @@ var TraceReplayCommand = cli.Command{
 		&utils.SkipPrimingFlag,
 		&utils.StateDbImplementationFlag,
 		&utils.StateDbVariantFlag,
-		&utils.StateDbDirFlag,
+		&utils.StateDbSrcDirFlag,
+		&utils.StateDbTempDirFlag,
 		&utils.StateDbLoggingFlag,
 		&utils.ShadowDbImplementationFlag,
 		&utils.ShadowDbVariantFlag,
@@ -84,7 +85,7 @@ func traceReplayTask(cfg *utils.TraceConfig) error {
 	// create a directory for the store to place all its files, and
 	// instantiate the state DB under testing.
 	log.Printf("Create stateDB database")
-	db, stateDirectory, err := utils.PrepareStateDB(cfg)
+	db, stateDirectory, loadedExistingDB, err := utils.PrepareStateDB(cfg)
 	if err != nil {
 		return err
 	}
@@ -93,7 +94,7 @@ func traceReplayTask(cfg *utils.TraceConfig) error {
 		defer os.RemoveAll(stateDirectory)
 	}
 
-	if cfg.SkipPriming || cfg.LoadedExistingDB {
+	if cfg.SkipPriming || loadedExistingDB {
 		log.Printf("Skipping DB priming.\n")
 	} else {
 		// intialize the world state and advance it to the first block
@@ -220,9 +221,11 @@ func traceReplayTask(cfg *utils.TraceConfig) error {
 
 	if cfg.KeepStateDB {
 		rootHash, _ := db.Commit(true)
-		utils.WriteStateDbInfo(stateDirectory, cfg, lastBlock, rootHash)
+		if err := utils.WriteStateDbInfo(stateDirectory, cfg, lastBlock, rootHash); err != nil {
+			log.Println(err)
+		}
 		//rename directory after closing db.
-		defer utils.RenameTempStateDBDirectory(cfg, stateDirectory, lastBlock, cfg.LoadedExistingDB)
+		defer utils.RenameTempStateDBDirectory(cfg, stateDirectory, lastBlock)
 	}
 
 	// close the DB and print disk usage

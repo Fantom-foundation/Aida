@@ -54,7 +54,8 @@ var RunVMCommand = cli.Command{
 		&utils.SkipPrimingFlag,
 		&utils.StateDbImplementationFlag,
 		&utils.StateDbVariantFlag,
-		&utils.StateDbDirFlag,
+		&utils.StateDbSrcDirFlag,
+		&utils.StateDbTempDirFlag,
 		&utils.StateDbLoggingFlag,
 		&utils.ShadowDbImplementationFlag,
 		&utils.ShadowDbVariantFlag,
@@ -262,7 +263,7 @@ func runVM(ctx *cli.Context) error {
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
-	db, stateDirectory, err := utils.PrepareStateDB(cfg)
+	db, stateDirectory, loadedExistingDB, err := utils.PrepareStateDB(cfg)
 	if err != nil {
 		return err
 	}
@@ -272,7 +273,7 @@ func runVM(ctx *cli.Context) error {
 	}
 
 	ws := substate.SubstateAlloc{}
-	if cfg.SkipPriming || cfg.LoadedExistingDB {
+	if cfg.SkipPriming || loadedExistingDB {
 		log.Printf("Skipping DB priming.\n")
 	} else {
 		// load the world state
@@ -493,9 +494,11 @@ func runVM(ctx *cli.Context) error {
 
 	if cfg.KeepStateDB && !isFirstBlock {
 		rootHash, _ := db.Commit(true)
-		utils.WriteStateDbInfo(stateDirectory, cfg, curBlock, rootHash)
+		if err := utils.WriteStateDbInfo(stateDirectory, cfg, curBlock, rootHash); err != nil {
+			log.Println(err)
+		}
 		//rename directory after closing db.
-		defer utils.RenameTempStateDBDirectory(cfg, stateDirectory, curBlock, cfg.LoadedExistingDB)
+		defer utils.RenameTempStateDBDirectory(cfg, stateDirectory, curBlock)
 	} else if cfg.KeepStateDB && isFirstBlock {
 		// no blocks were processed.
 		log.Printf("No blocks were processed. StateDB is not saved.\n")

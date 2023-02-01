@@ -2,7 +2,6 @@ package trace
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"runtime/pprof"
 	"time"
@@ -11,7 +10,6 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/substate"
 	"github.com/urfave/cli/v2"
 )
@@ -64,17 +62,11 @@ func traceReplaySubstateTask(cfg *utils.TraceConfig) error {
 	defer traceIter.Release()
 
 	// Create a directory for the store to place all its files.
-	stateDirectory, err := ioutil.TempDir("", "state_db_*")
+	db, stateDirectory, _, err := utils.PrepareStateDB(cfg)
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(stateDirectory)
-
-	// Instantiate the state DB under testing
-	db, err := utils.MakeStateDB(stateDirectory, cfg, common.Hash{})
-	if err != nil {
-		return err
-	}
 
 	var (
 		start       time.Time

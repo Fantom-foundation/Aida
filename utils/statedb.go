@@ -18,8 +18,8 @@ import (
 )
 
 // MakeStateDB creates a new DB instance based on cli argument.
-func MakeStateDB(directory string, cfg *TraceConfig, rootHash common.Hash) (state.StateDB, error) {
-	db, err := makeStateDBInternal(directory, cfg, rootHash)
+func MakeStateDB(directory string, cfg *TraceConfig, rootHash common.Hash, isExistingDB bool) (state.StateDB, error) {
+	db, err := makeStateDBInternal(directory, cfg, rootHash, isExistingDB)
 	if err != nil {
 		return nil, err
 	}
@@ -30,11 +30,11 @@ func MakeStateDB(directory string, cfg *TraceConfig, rootHash common.Hash) (stat
 }
 
 // makeStateDB creates a DB instance with a potential shadow instance.
-func makeStateDBInternal(directory string, cfg *TraceConfig, rootHash common.Hash) (state.StateDB, error) {
+func makeStateDBInternal(directory string, cfg *TraceConfig, rootHash common.Hash, isExistingDB bool) (state.StateDB, error) {
 	if cfg.ShadowImpl == "" {
 		return makeStateDBVariant(directory, cfg.DbImpl, cfg.DbVariant, rootHash, cfg.ArchiveMode)
 	}
-	if cfg.LoadedExistingDB {
+	if isExistingDB {
 		return nil, fmt.Errorf("Using an existing stateDB with a shadow DB is not supported.")
 	}
 	primeDir := directory + "/prime"
@@ -216,44 +216,60 @@ func GetDirectorySize(directory string) int64 {
 }
 
 // PrepareStateDB creates stateDB or load existing stateDB
-func PrepareStateDB(cfg *TraceConfig) (db state.StateDB, workingDirectory string, err error) {
-	var exists bool = false
-	// check if block_root.dat files exist
-	if _, err = os.Stat(filepath.Join(cfg.StateDbDir, "statedb_info.json")); err == nil {
+func PrepareStateDB(cfg *TraceConfig) (db state.StateDB, workingDirectory string, loadedExistingDB bool, err error) {
+	var exists bool
+	roothash := common.Hash{}
+	loadedExistingDB = false
+
+	//create a temporary working directory
+	workingDirectory, err = ioutil.TempDir(cfg.StateDbTempDir, "state_db_tmp_*")
+	if err != nil {
+		err = fmt.Errorf("Failed to create a temporary directory. %v", err)
+		return
+	}
+
+	// check if statedb_info.json files exist
+	dbInfoFile := filepath.Join(cfg.StateDbSrcDir, DbInfoName)
+	if _, err = os.Stat(dbInfoFile); err == nil {
 		exists = true
-	} else if !errors.Is(err, os.ErrNotExist) {
+	} else if errors.Is(err, os.ErrNotExist) {
+		exists = false
+		if cfg.StateDbSrcDir != "" {
+			log.Printf("WARNING: File %v does not exist. Create an empty StateDB.\n", dbInfoFile)
+		}
+	} else {
 		return
 	}
 
 	if exists {
-		// if this is an existing statedb, open
-		parentDirectory := filepath.Clean(filepath.Join(cfg.StateDbDir, ".."))
-		workingDirectory, err = ioutil.TempDir(parentDirectory, "state_db_tmp_*")
-		if err != nil {
-			err = fmt.Errorf("Failed to create a temp directory. %v", err)
-			return
-		}
-		log.Printf("\tTemporary state DB directory: %v\n", workingDirectory)
-		// make a copy of stateDB directory
-		copyDir(cfg.StateDbDir, workingDirectory)
-
-		dbinfo, ferr := ReadStateDbInfo(workingDirectory, cfg)
+		dbinfo, ferr := ReadStateDbInfo(dbInfoFile)
 		if ferr != nil {
-			err = fmt.Errorf("Failed to load StateDB info from %v. %v", workingDirectory, ferr)
+			err = fmt.Errorf("Failed to read %v. %v", dbInfoFile, ferr)
 			return
 		}
-		cfg.LoadedExistingDB = true
-		// open the directory
-		db, err = MakeStateDB(workingDirectory, cfg, dbinfo.RootHash)
-	} else {
-		// else create a directory for the store to place all its files.
-		workingDirectory, err = ioutil.TempDir(cfg.StateDbDir, "state_db_tmp_*")
+		if dbinfo.Impl != cfg.DbImpl {
+			err = fmt.Errorf("Mismatch DB implementation.\n\thave %v\n\twant %v", dbinfo.Impl, cfg.DbImpl)
+		} else if dbinfo.Variant != cfg.DbVariant {
+			err = fmt.Errorf("Mismatch DB variant.\n\thave %v\n\twant %v", dbinfo.Variant, cfg.DbVariant)
+		} else if dbinfo.Block+1 != cfg.First {
+			err = fmt.Errorf("The first block is earlier than stateDB.\n\thave %v\n\twant %v", dbinfo.Block+1, cfg.First)
+		} else if dbinfo.ArchiveMode != cfg.ArchiveMode {
+			err = fmt.Errorf("Mismatch archive mode.\n\thave %v\n\twant %v", dbinfo.ArchiveMode, cfg.ArchiveMode)
+		}
 		if err != nil {
-			err = fmt.Errorf("Failed to create a temp directory. %v", err)
 			return
 		}
-		log.Printf("\tTemporary state DB directory: %v\n", workingDirectory)
-		db, err = MakeStateDB(workingDirectory, cfg, common.Hash{})
+
+		// make a copy of stateDB directory
+		copyDir(cfg.StateDbSrcDir, workingDirectory)
+		loadedExistingDB = true
+
+		// if this is an existing statedb, open
+		roothash = dbinfo.RootHash
 	}
+
+	log.Printf("\tTemporary state DB directory: %v\n", workingDirectory)
+	db, err = MakeStateDB(workingDirectory, cfg, roothash, loadedExistingDB)
+
 	return
 }
