@@ -2,6 +2,7 @@ package utils
 
 import (
 	"fmt"
+	state2 "github.com/Fantom-foundation/Aida/state"
 	"io/fs"
 	"log"
 	"math/rand"
@@ -10,25 +11,24 @@ import (
 	"sort"
 	"time"
 
-	"github.com/Fantom-foundation/Aida/tracer/state"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/substate"
 )
 
 // MakeStateDB creates a new DB instance based on cli argument.
-func MakeStateDB(directory string, cfg *TraceConfig) (state.StateDB, error) {
+func MakeStateDB(directory string, cfg *Config) (state2.StateDB, error) {
 	db, err := makeStateDBInternal(directory, cfg)
 	if err != nil {
 		return nil, err
 	}
 	if cfg.DbLogging {
-		db = state.MakeLoggingStateDB(db)
+		db = state2.MakeLoggingStateDB(db)
 	}
 	return db, nil
 }
 
 // makeStateDB creates a DB instance with a potential shadow instance.
-func makeStateDBInternal(directory string, cfg *TraceConfig) (state.StateDB, error) {
+func makeStateDBInternal(directory string, cfg *Config) (state2.StateDB, error) {
 	if cfg.ShadowImpl == "" {
 		return makeStateDBVariant(directory, cfg.DbImpl, cfg.DbVariant, cfg)
 	}
@@ -48,26 +48,26 @@ func makeStateDBInternal(directory string, cfg *TraceConfig) (state.StateDB, err
 	if err != nil {
 		return nil, err
 	}
-	return state.MakeShadowStateDB(prime, shadow), nil
+	return state2.MakeShadowStateDB(prime, shadow), nil
 }
 
 // makeStateDBVariant creates a DB instance of the requested kind.
-func makeStateDBVariant(directory, impl, variant string, cfg *TraceConfig) (state.StateDB, error) {
+func makeStateDBVariant(directory, impl, variant string, cfg *Config) (state2.StateDB, error) {
 	switch impl {
 	case "memory":
-		return state.MakeGethInMemoryStateDB(variant)
+		return state2.MakeGethInMemoryStateDB(variant)
 	case "geth":
-		return state.MakeGethStateDB(directory, variant, cfg.ArchiveMode)
+		return state2.MakeGethStateDB(directory, variant, cfg.ArchiveMode)
 	case "carmen":
-		return state.MakeCarmenStateDB(directory, variant)
+		return state2.MakeCarmenStateDB(directory, variant)
 	case "flat":
-		return state.MakeFlatStateDB(directory, variant)
+		return state2.MakeFlatStateDB(directory, variant)
 	}
 	return nil, fmt.Errorf("unknown DB implementation (--%v): %v", StateDbImplementationFlag.Name, impl)
 }
 
 // PrimeStateDB primes database with accounts from the world state.
-func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *TraceConfig) {
+func PrimeStateDB(ws substate.SubstateAlloc, db state2.StateDB, cfg *Config) {
 	load := db.StartBulkLoad()
 
 	numValues := 0
@@ -112,7 +112,7 @@ func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *TraceConfig)
 }
 
 // primeOneAccount initializes an account on stateDB with substate
-func primeOneAccount(addr common.Address, account *substate.SubstateAccount, db state.BulkLoad, afterLoad func()) {
+func primeOneAccount(addr common.Address, account *substate.SubstateAccount, db state2.BulkLoad, afterLoad func()) {
 	db.CreateAccount(addr)
 	db.SetBalance(addr, account.Balance)
 	db.SetNonce(addr, account.Nonce)
@@ -126,7 +126,7 @@ func primeOneAccount(addr common.Address, account *substate.SubstateAccount, db 
 }
 
 // PrimeStateDBRandom primes database with accounts from the world state in random order.
-func PrimeStateDBRandom(ws substate.SubstateAlloc, db state.BulkLoad, cfg *TraceConfig, afterLoad func()) {
+func PrimeStateDBRandom(ws substate.SubstateAlloc, db state2.BulkLoad, cfg *Config, afterLoad func()) {
 	contracts := make([]string, 0, len(ws))
 	for addr := range ws {
 		contracts = append(contracts, addr.Hex())
@@ -149,7 +149,7 @@ func PrimeStateDBRandom(ws substate.SubstateAlloc, db state.BulkLoad, cfg *Trace
 
 // DeleteDestroyedAccountsFromWorldState removes previously suicided accounts from
 // the world state.
-func DeleteDestroyedAccountsFromWorldState(ws substate.SubstateAlloc, cfg *TraceConfig, target uint64) error {
+func DeleteDestroyedAccountsFromWorldState(ws substate.SubstateAlloc, cfg *Config, target uint64) error {
 	if !cfg.HasDeletedAccounts {
 		log.Printf("Database not provided. Ignore deleted accounts.\n")
 		return nil
@@ -170,7 +170,7 @@ func DeleteDestroyedAccountsFromWorldState(ws substate.SubstateAlloc, cfg *Trace
 
 // DeleteDestroyedAccountsFromStateDB performs suicide operations on previously
 // self-destructed accounts.
-func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *TraceConfig, target uint64) error {
+func DeleteDestroyedAccountsFromStateDB(db state2.StateDB, cfg *Config, target uint64) error {
 	if !cfg.HasDeletedAccounts {
 		log.Printf("Database not provided. Ignore deleted accounts.\n")
 		return nil

@@ -2,6 +2,7 @@ package operation
 
 import (
 	"bytes"
+	"github.com/Fantom-foundation/Aida/state"
 	"io"
 	"math/big"
 	"os"
@@ -9,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
-	"github.com/Fantom-foundation/Aida/tracer/state"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"

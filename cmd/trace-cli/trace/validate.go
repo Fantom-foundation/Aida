@@ -3,7 +3,7 @@ package trace
 import (
 	"bytes"
 	"fmt"
-	"github.com/Fantom-foundation/Aida/tracer/state"
+	"github.com/Fantom-foundation/Aida/state"
 	"github.com/ethereum/go-ethereum/substate"
 )
 

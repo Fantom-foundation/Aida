@@ -3,12 +3,12 @@ package operation
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/Fantom-foundation/Aida/state"
 	"io"
 	"log"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
-	"github.com/Fantom-foundation/Aida/tracer/state"
 )
 
 var stats *ProfileStats = new(ProfileStats)
