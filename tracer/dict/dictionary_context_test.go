@@ -1,12 +1,13 @@
 package dict
 
 import (
-	"github.com/ethereum/go-ethereum/common"
 	"io/ioutil"
 	"os"
 	"reflect"
 	"sort"
 	"testing"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 // TestDictionaryContextWriteReadEmpty writes and reads an empty dictionary

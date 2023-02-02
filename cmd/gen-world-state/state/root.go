@@ -2,6 +2,7 @@ package state
 
 import (
 	"fmt"
+
 	"github.com/Fantom-foundation/Aida/cmd/gen-world-state/flags"
 	"github.com/Fantom-foundation/Aida/world-state/db/opera"
 	"github.com/urfave/cli/v2"

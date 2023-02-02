@@ -3,11 +3,12 @@ package state
 
 import (
 	"fmt"
+	"os"
+	"path"
+
 	"github.com/Fantom-foundation/Aida/cmd/gen-world-state/flags"
 	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
-	"os"
-	"path"
 )
 
 // defaultLogFormat defines the format used for log output.

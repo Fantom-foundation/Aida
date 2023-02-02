@@ -2,10 +2,11 @@ package types
 
 import (
 	"fmt"
-	"github.com/Fantom-foundation/lachesis-base/inter/idx"
-	"github.com/ethereum/go-ethereum/rlp"
 	"io"
 	"math/big"
+
+	"github.com/Fantom-foundation/lachesis-base/inter/idx"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 const (

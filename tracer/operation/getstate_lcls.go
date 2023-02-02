@@ -2,9 +2,10 @@ package operation
 
 import (
 	"fmt"
-	"github.com/Fantom-foundation/Aida/state"
 	"io"
 	"time"
+
+	"github.com/Fantom-foundation/Aida/state"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 )

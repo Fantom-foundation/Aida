@@ -2,12 +2,13 @@ package operation
 
 import (
 	"fmt"
-	"github.com/Fantom-foundation/Aida/tracer/dict"
-	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 func initSubBalance(t *testing.T) (*dict.DictionaryContext, *SubBalance, common.Address, *big.Int) {

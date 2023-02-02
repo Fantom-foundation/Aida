@@ -2,9 +2,10 @@ package operation
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/ethereum/go-ethereum/common"
-	"testing"
 )
 
 func initGetCommittedState(t *testing.T) (*dict.DictionaryContext, *GetCommittedState, common.Address, common.Hash) {

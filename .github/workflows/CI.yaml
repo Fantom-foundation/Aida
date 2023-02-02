@@ -29,7 +29,12 @@ jobs:
          path: "~/.cache/bazel"
          key: bazel
 
-      - name: Check code formating
+      - name: Install goimports
+        run: go get golang.org/x/tools/cmd/goimports
+      - name: Check import formatting
+        run: diff -u <(echo -n) <(find . -path ./carmen -prune -o  -name '*.go' -exec goimports -l {} \;)
+
+      - name: Check code formatting
         run: diff -u <(echo -n)  <(find . -path ./carmen -prune -o  -name '*.go' -exec gofmt -d -s {} \;)
 
       - name: Build
