@@ -47,7 +47,7 @@ func genUpdateSet(ctx *cli.Context) error {
 	if ctx.Args().Len() != 2 {
 		return fmt.Errorf("trace command requires exactly 2 arguments")
 	}
-	cfg, argErr := utils.NewTraceConfig(ctx, utils.LastBlockArg)
+	cfg, argErr := utils.NewConfig(ctx, utils.LastBlockArg)
 	if argErr != nil {
 		return argErr
 	}

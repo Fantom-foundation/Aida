@@ -59,7 +59,7 @@ last block of the inclusive range of blocks to replay storage traces.`,
 }
 
 // readTrace reads operations from trace files and puts them into a channel.
-func readTrace(cfg *utils.TraceConfig, ch chan operation.Operation) {
+func readTrace(cfg *utils.Config, ch chan operation.Operation) {
 	traceIter := tracer.NewTraceIterator(cfg.First, cfg.Last)
 	defer traceIter.Release()
 	for traceIter.Next() {
@@ -70,7 +70,7 @@ func readTrace(cfg *utils.TraceConfig, ch chan operation.Operation) {
 }
 
 // traceReplayTask simulates storage operations from storage traces on stateDB.
-func traceReplayTask(cfg *utils.TraceConfig) error {
+func traceReplayTask(cfg *utils.Config) error {
 
 	// starting reading in parallel
 	log.Printf("Start reading operations in parallel")
@@ -238,7 +238,7 @@ func traceReplayTask(cfg *utils.TraceConfig) error {
 // traceReplayAction implements trace command for replaying.
 func traceReplayAction(ctx *cli.Context) error {
 	var err error
-	cfg, err := utils.NewTraceConfig(ctx, utils.BlockRangeArgs)
+	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if err != nil {
 		return err
 	}

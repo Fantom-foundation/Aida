@@ -2,11 +2,11 @@ package operation
 
 import (
 	"encoding/binary"
+	"github.com/Fantom-foundation/Aida/state"
 	"io"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
-	"github.com/Fantom-foundation/Aida/tracer/state"
 )
 
 // Endblock data structure
