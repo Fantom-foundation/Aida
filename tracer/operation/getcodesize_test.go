@@ -2,9 +2,10 @@ package operation
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/ethereum/go-ethereum/common"
-	"testing"
 )
 
 func initGetCodeSize(t *testing.T) (*dict.DictionaryContext, *GetCodeSize, common.Address) {

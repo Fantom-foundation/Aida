@@ -1,9 +1,10 @@
 package tracer
 
 import (
-	"github.com/Fantom-foundation/Aida/state"
 	"math/big"
 	"time"
+
+	"github.com/Fantom-foundation/Aida/state"
 
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/ethereum/go-ethereum/common"

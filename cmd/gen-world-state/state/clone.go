@@ -3,11 +3,12 @@ package state
 
 import (
 	"context"
+	"time"
+
 	"github.com/Fantom-foundation/Aida/cmd/gen-world-state/flags"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	"github.com/Fantom-foundation/Aida/world-state/types"
 	"github.com/urfave/cli/v2"
-	"time"
 )
 
 // CmdClone defines a CLI command for cloning world state dump database.

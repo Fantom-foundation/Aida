@@ -3,11 +3,12 @@ package operation
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/Fantom-foundation/Aida/state"
 	"io"
 	"log"
 	"math"
 	"time"
+
+	"github.com/Fantom-foundation/Aida/state"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 )

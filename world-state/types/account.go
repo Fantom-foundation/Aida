@@ -3,14 +3,15 @@ package types
 import (
 	"bytes"
 	"fmt"
+	"io"
+	"math/big"
+
 	"github.com/Fantom-foundation/lachesis-base/hash"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/substate"
-	"io"
-	"math/big"
 )
 
 // Account is modification of SubstateAccount in substate/substate.go

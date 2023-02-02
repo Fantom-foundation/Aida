@@ -2,9 +2,10 @@ package operation
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/ethereum/go-ethereum/common"
-	"testing"
 )
 
 func initSetStateLcls(t *testing.T) (*dict.DictionaryContext, *SetStateLcls, common.Address, common.Hash, common.Hash) {

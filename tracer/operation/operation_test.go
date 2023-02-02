@@ -2,12 +2,13 @@ package operation
 
 import (
 	"bytes"
-	"github.com/Fantom-foundation/Aida/state"
 	"io"
 	"math/big"
 	"os"
 	"reflect"
 	"testing"
+
+	"github.com/Fantom-foundation/Aida/state"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/ethereum/go-ethereum/common"

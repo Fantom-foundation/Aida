@@ -2,11 +2,12 @@ package operation
 
 import (
 	"fmt"
-	"github.com/Fantom-foundation/Aida/tracer/dict"
-	"github.com/ethereum/go-ethereum/common"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 func initSetNonce(t *testing.T) (*dict.DictionaryContext, *SetNonce, common.Address, uint64) {

@@ -2,7 +2,6 @@ package trace
 
 import (
 	"fmt"
-	"github.com/Fantom-foundation/Aida/state"
 	"io/ioutil"
 	"log"
 	"math/big"
@@ -10,6 +9,8 @@ import (
 	"runtime"
 	"runtime/pprof"
 	"time"
+
+	"github.com/Fantom-foundation/Aida/state"
 
 	"github.com/Fantom-foundation/Aida/tracer"
 	"github.com/Fantom-foundation/Aida/tracer/operation"

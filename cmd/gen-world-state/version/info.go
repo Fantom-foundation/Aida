@@ -6,8 +6,9 @@ package version
 
 import (
 	"fmt"
-	"github.com/urfave/cli/v2"
 	"strings"
+
+	"github.com/urfave/cli/v2"
 )
 
 // markReset represents a token for terminal style reset.

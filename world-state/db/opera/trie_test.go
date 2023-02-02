@@ -3,6 +3,12 @@ package opera
 import (
 	"context"
 	"fmt"
+	"math/big"
+	"math/rand"
+	"os"
+	"testing"
+	"time"
+
 	"github.com/Fantom-foundation/Aida/world-state/types"
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"github.com/ethereum/go-ethereum/common"
@@ -11,11 +17,6 @@ import (
 	ethTypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
-	"math/big"
-	"math/rand"
-	"os"
-	"testing"
-	"time"
 )
 
 // testDBSize defines how many test accounts will be injected into the test trie

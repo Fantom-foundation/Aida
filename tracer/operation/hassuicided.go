@@ -3,10 +3,11 @@ package operation
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/Fantom-foundation/Aida/state"
-	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"io"
 	"time"
+
+	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/tracer/dict"
 )
 
 // HasSuicided data structure

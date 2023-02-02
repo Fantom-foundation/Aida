@@ -1,9 +1,10 @@
 package dict
 
 import (
-	"github.com/ethereum/go-ethereum/common"
 	"log"
 	"math"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 // InvalidContractIndex used to indicate that the previously used contract index is not valid.

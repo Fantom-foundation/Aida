@@ -4,6 +4,7 @@ package snapshot
 import (
 	"context"
 	"fmt"
+
 	"github.com/Fantom-foundation/Aida/world-state/types"
 )
 

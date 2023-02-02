@@ -1,10 +1,11 @@
 package dict
 
 import (
-	"github.com/ethereum/go-ethereum/common"
 	"math"
 	"os"
 	"testing"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 // TestValueDictionarySimple1 encodes an value, and compares whether the

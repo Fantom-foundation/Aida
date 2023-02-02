@@ -3,6 +3,8 @@ package state
 
 import (
 	"context"
+	"time"
+
 	"github.com/Fantom-foundation/Aida/cmd/gen-world-state/flags"
 	"github.com/Fantom-foundation/Aida/world-state/db/opera"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
@@ -11,7 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
-	"time"
 )
 
 // CmdDumpState defines a CLI command for dumping world state from a source database.
