@@ -2,8 +2,9 @@ package operation
 
 import (
 	"fmt"
-	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"testing"
+
+	"github.com/Fantom-foundation/Aida/tracer/dict"
 )
 
 func initSnapshot(t *testing.T) (*dict.DictionaryContext, *Snapshot, int32) {

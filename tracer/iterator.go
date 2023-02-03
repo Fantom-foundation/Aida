@@ -2,10 +2,11 @@ package tracer
 
 import (
 	"bufio"
-	"github.com/Fantom-foundation/Aida/tracer/operation"
-	"github.com/dsnet/compress/bzip2"
 	"log"
 	"os"
+
+	"github.com/Fantom-foundation/Aida/tracer/operation"
+	"github.com/dsnet/compress/bzip2"
 )
 
 // TraceIterator data structure for storing state of a trace iterator

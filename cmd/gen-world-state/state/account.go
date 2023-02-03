@@ -5,6 +5,14 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io"
+	"log"
+	"math/big"
+	"os"
+	"reflect"
+	"strings"
+	"time"
+
 	"github.com/Fantom-foundation/Aida/cmd/gen-world-state/flags"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	"github.com/Fantom-foundation/Aida/world-state/types"
@@ -16,13 +24,6 @@ import (
 	"github.com/urfave/cli/v2"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
-	"io"
-	"log"
-	"math/big"
-	"os"
-	"reflect"
-	"strings"
-	"time"
 )
 
 // CmdAccount defines a CLI command set for managing single account data in the state dump database.

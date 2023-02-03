@@ -3,6 +3,8 @@ package opera
 
 import (
 	"fmt"
+	"log"
+
 	"github.com/Fantom-foundation/Aida/world-state/db/opera/kvdb2ethdb"
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"github.com/Fantom-foundation/lachesis-base/kvdb/leveldb"
@@ -13,7 +15,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/trie"
 	"github.com/syndtr/goleveldb/leveldb/opt"
-	"log"
 )
 
 // StateDB implements Opera specific state database interface.

@@ -4,6 +4,7 @@ package state
 import (
 	"context"
 	"fmt"
+
 	"github.com/Fantom-foundation/Aida/cmd/gen-world-state/flags"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	"github.com/urfave/cli/v2"

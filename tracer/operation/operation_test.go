@@ -8,8 +8,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/Fantom-foundation/Aida/state"
+
 	"github.com/Fantom-foundation/Aida/tracer/dict"
-	"github.com/Fantom-foundation/Aida/tracer/state"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"

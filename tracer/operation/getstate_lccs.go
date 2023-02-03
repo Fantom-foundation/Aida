@@ -7,8 +7,9 @@ import (
 	"log"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/state"
+
 	"github.com/Fantom-foundation/Aida/tracer/dict"
-	"github.com/Fantom-foundation/Aida/tracer/state"
 )
 
 // The GetStateLccs operation is a GetState operation whose

@@ -2,9 +2,10 @@ package operation
 
 import (
 	"fmt"
+	"testing"
+
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/ethereum/go-ethereum/common"
-	"testing"
 )
 
 func initGetStateLc(t *testing.T) (*dict.DictionaryContext, *GetStateLc, common.Address, common.Hash) {

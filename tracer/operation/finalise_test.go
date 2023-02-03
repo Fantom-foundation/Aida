@@ -2,10 +2,11 @@ package operation
 
 import (
 	"fmt"
-	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/Fantom-foundation/Aida/tracer/dict"
 )
 
 func initFinalise(t *testing.T) (*dict.DictionaryContext, *Finalise, bool) {

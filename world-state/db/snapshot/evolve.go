@@ -2,6 +2,7 @@ package snapshot
 
 import (
 	"fmt"
+
 	"github.com/Fantom-foundation/Aida/world-state/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"

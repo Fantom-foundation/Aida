@@ -1,9 +1,10 @@
 package types
 
 import (
+	"math/big"
+
 	"github.com/Fantom-foundation/lachesis-base/inter/idx"
 	"github.com/ethereum/go-ethereum/rlp"
-	"math/big"
 )
 
 // ValidatorBlockState represents the state of a validator on the block processing.

@@ -5,8 +5,9 @@ import (
 	"io"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/state"
+
 	"github.com/Fantom-foundation/Aida/tracer/dict"
-	"github.com/Fantom-foundation/Aida/tracer/state"
 )
 
 // GetCommittedStateLcls is a GetCommittedState operation

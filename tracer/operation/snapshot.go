@@ -8,8 +8,9 @@ import (
 	"math"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/state"
+
 	"github.com/Fantom-foundation/Aida/tracer/dict"
-	"github.com/Fantom-foundation/Aida/tracer/state"
 )
 
 // Snapshot data structure

@@ -9,9 +9,10 @@ import (
 	"runtime/pprof"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/state"
+
 	"github.com/Fantom-foundation/Aida/tracer"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
-	"github.com/Fantom-foundation/Aida/tracer/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/Fantom-foundation/go-opera/opera"
@@ -76,7 +77,7 @@ last block of the inclusive range of blocks to trace transactions.`,
 }
 
 // runVMTask executes VM on a chosen storage system.
-func runVMTask(db state.StateDB, cfg *utils.TraceConfig, block uint64, tx int, recording *substate.Substate) (*substate.SubstateResult, error) {
+func runVMTask(db state.StateDB, cfg *utils.Config, block uint64, tx int, recording *substate.Substate) (*substate.SubstateResult, error) {
 
 	inputAlloc := recording.InputAlloc
 	inputEnv := recording.Env
@@ -241,7 +242,7 @@ func runVM(ctx *cli.Context) error {
 		lastBlockProgressReportGasCount = new(big.Int)
 	)
 	// process general arguments
-	cfg, argErr := utils.NewTraceConfig(ctx, utils.BlockRangeArgs)
+	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if argErr != nil {
 		return argErr
 	}

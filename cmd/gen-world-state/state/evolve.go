@@ -2,12 +2,13 @@ package state
 
 import (
 	"fmt"
+	"time"
+
 	"github.com/Fantom-foundation/Aida/cmd/gen-world-state/flags"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	"github.com/ethereum/go-ethereum/substate"
 	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
-	"time"
 )
 
 // CmdEvolveState evolves state of World State database to given target block by using substateDB data about accounts

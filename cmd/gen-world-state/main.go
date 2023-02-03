@@ -2,12 +2,13 @@
 package main
 
 import (
+	"log"
+	"os"
+
 	"github.com/Fantom-foundation/Aida/cmd/gen-world-state/flags"
 	"github.com/Fantom-foundation/Aida/cmd/gen-world-state/state"
 	"github.com/Fantom-foundation/Aida/cmd/gen-world-state/version"
 	"github.com/urfave/cli/v2"
-	"log"
-	"os"
 )
 
 // main implements World State CLI application entry point

@@ -2,10 +2,11 @@ package snapshot
 
 import (
 	"bytes"
-	"github.com/ethereum/go-ethereum/crypto"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 func TestStateDB_PutGetBlock(t *testing.T) {
