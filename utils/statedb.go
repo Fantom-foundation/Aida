@@ -1,8 +1,10 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"os"
@@ -16,8 +18,8 @@ import (
 )
 
 // MakeStateDB creates a new DB instance based on cli argument.
-func MakeStateDB(directory string, cfg *Config) (state.StateDB, error) {
-	db, err := makeStateDBInternal(directory, cfg)
+func MakeStateDB(directory string, cfg *Config, rootHash common.Hash, isExistingDB bool) (state.StateDB, error) {
+	db, err := makeStateDBInternal(directory, cfg, rootHash, isExistingDB)
 	if err != nil {
 		return nil, err
 	}
@@ -28,9 +30,12 @@ func MakeStateDB(directory string, cfg *Config) (state.StateDB, error) {
 }
 
 // makeStateDB creates a DB instance with a potential shadow instance.
-func makeStateDBInternal(directory string, cfg *Config) (state.StateDB, error) {
+func makeStateDBInternal(directory string, cfg *Config, rootHash common.Hash, isExistingDB bool) (state.StateDB, error) {
 	if cfg.ShadowImpl == "" {
-		return makeStateDBVariant(directory, cfg.DbImpl, cfg.DbVariant, cfg)
+		return makeStateDBVariant(directory, cfg.DbImpl, cfg.DbVariant, rootHash, cfg.ArchiveMode)
+	}
+	if isExistingDB {
+		return nil, fmt.Errorf("Using an existing stateDB with a shadow DB is not supported.")
 	}
 	primeDir := directory + "/prime"
 	if err := os.MkdirAll(primeDir, 0700); err != nil {
@@ -40,11 +45,11 @@ func makeStateDBInternal(directory string, cfg *Config) (state.StateDB, error) {
 	if err := os.MkdirAll(shadowDir, 0700); err != nil {
 		return nil, err
 	}
-	prime, err := makeStateDBVariant(primeDir, cfg.DbImpl, cfg.DbVariant, cfg)
+	prime, err := makeStateDBVariant(primeDir, cfg.DbImpl, cfg.DbVariant, rootHash, cfg.ArchiveMode)
 	if err != nil {
 		return nil, err
 	}
-	shadow, err := makeStateDBVariant(shadowDir, cfg.ShadowImpl, cfg.ShadowVariant, cfg)
+	shadow, err := makeStateDBVariant(shadowDir, cfg.ShadowImpl, cfg.ShadowVariant, rootHash, cfg.ArchiveMode)
 	if err != nil {
 		return nil, err
 	}
@@ -52,16 +57,16 @@ func makeStateDBInternal(directory string, cfg *Config) (state.StateDB, error) {
 }
 
 // makeStateDBVariant creates a DB instance of the requested kind.
-func makeStateDBVariant(directory, impl, variant string, cfg *Config) (state.StateDB, error) {
+func makeStateDBVariant(directory, impl, variant string, rootHash common.Hash, archiveMode bool) (state.StateDB, error) {
 	switch impl {
 	case "memory":
 		return state.MakeGethInMemoryStateDB(variant)
 	case "geth":
-		return state.MakeGethStateDB(directory, variant, cfg.ArchiveMode)
+		return state.MakeGethStateDB(directory, variant, rootHash, archiveMode)
 	case "carmen":
-		return state.MakeCarmenStateDB(directory, variant, cfg.ArchiveMode)
+		return state.MakeCarmenStateDB(directory, variant, archiveMode)
 	case "flat":
-		return state.MakeFlatStateDB(directory, variant)
+		return state.MakeFlatStateDB(directory, variant, rootHash)
 	}
 	return nil, fmt.Errorf("unknown DB implementation (--%v): %v", StateDbImplementationFlag.Name, impl)
 }
@@ -208,4 +213,63 @@ func GetDirectorySize(directory string) int64 {
 		return nil
 	})
 	return sum
+}
+
+// PrepareStateDB creates stateDB or load existing stateDB
+func PrepareStateDB(cfg *Config) (db state.StateDB, workingDirectory string, loadedExistingDB bool, err error) {
+	var exists bool
+	roothash := common.Hash{}
+	loadedExistingDB = false
+
+	//create a temporary working directory
+	workingDirectory, err = ioutil.TempDir(cfg.StateDbTempDir, "state_db_tmp_*")
+	if err != nil {
+		err = fmt.Errorf("Failed to create a temporary directory. %v", err)
+		return
+	}
+
+	// check if statedb_info.json files exist
+	dbInfoFile := filepath.Join(cfg.StateDbSrcDir, DbInfoName)
+	if _, err = os.Stat(dbInfoFile); err == nil {
+		exists = true
+	} else if errors.Is(err, os.ErrNotExist) {
+		exists = false
+		if cfg.StateDbSrcDir != "" {
+			log.Printf("WARNING: File %v does not exist. Create an empty StateDB.\n", dbInfoFile)
+		}
+	} else {
+		return
+	}
+
+	if exists {
+		dbinfo, ferr := ReadStateDbInfo(dbInfoFile)
+		if ferr != nil {
+			err = fmt.Errorf("Failed to read %v. %v", dbInfoFile, ferr)
+			return
+		}
+		if dbinfo.Impl != cfg.DbImpl {
+			err = fmt.Errorf("Mismatch DB implementation.\n\thave %v\n\twant %v", dbinfo.Impl, cfg.DbImpl)
+		} else if dbinfo.Variant != cfg.DbVariant {
+			err = fmt.Errorf("Mismatch DB variant.\n\thave %v\n\twant %v", dbinfo.Variant, cfg.DbVariant)
+		} else if dbinfo.Block+1 != cfg.First {
+			err = fmt.Errorf("The first block is earlier than stateDB.\n\thave %v\n\twant %v", dbinfo.Block+1, cfg.First)
+		} else if dbinfo.ArchiveMode != cfg.ArchiveMode {
+			err = fmt.Errorf("Mismatch archive mode.\n\thave %v\n\twant %v", dbinfo.ArchiveMode, cfg.ArchiveMode)
+		}
+		if err != nil {
+			return
+		}
+
+		// make a copy of stateDB directory
+		copyDir(cfg.StateDbSrcDir, workingDirectory)
+		loadedExistingDB = true
+
+		// if this is an existing statedb, open
+		roothash = dbinfo.RootHash
+	}
+
+	log.Printf("\tTemporary state DB directory: %v\n", workingDirectory)
+	db, err = MakeStateDB(workingDirectory, cfg, roothash, loadedExistingDB)
+
+	return
 }

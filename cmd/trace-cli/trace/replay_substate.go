@@ -2,7 +2,6 @@ package trace
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"runtime/pprof"
 	"time"
@@ -63,17 +62,11 @@ func traceReplaySubstateTask(cfg *utils.Config) error {
 	defer traceIter.Release()
 
 	// Create a directory for the store to place all its files.
-	stateDirectory, err := ioutil.TempDir("", "state_db_*")
+	db, stateDirectory, _, err := utils.PrepareStateDB(cfg)
 	if err != nil {
 		return err
 	}
 	defer os.RemoveAll(stateDirectory)
-
-	// Instantiate the state DB under testing
-	db, err := utils.MakeStateDB(stateDirectory, cfg)
-	if err != nil {
-		return err
-	}
 
 	var (
 		start       time.Time

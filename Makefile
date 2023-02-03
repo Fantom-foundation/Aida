@@ -35,7 +35,7 @@ trace:
 	cd ../../.. ; \
 	GOPROXY=$(GOPROXY) \
 	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/go-opera-fvm \
-	go build -ldflags "-s -w" \
+	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
        	-o $(GO_BIN)/trace \
 	./cmd/trace-cli
 

@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/substate"
 )
 
-func MakeFlatStateDB(directory, variant string) (s StateDB, err error) {
+func MakeFlatStateDB(directory, variant string, rootHash common.Hash) (s StateDB, err error) {
 	var db ethdb.Database
 
 	switch variant {
@@ -33,7 +33,7 @@ func MakeFlatStateDB(directory, variant string) (s StateDB, err error) {
 
 	fs := &flatStateDB{
 		db:        flat.NewDatabase(db),
-		stateRoot: common.Hash{},
+		stateRoot: rootHash,
 	}
 
 	// initialize stateDB

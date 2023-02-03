@@ -2,7 +2,6 @@ package trace
 
 import (
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"runtime"
@@ -29,6 +28,7 @@ var TraceReplayCommand = cli.Command{
 		&utils.DeletedAccountDirFlag,
 		&utils.DisableProgressFlag,
 		&utils.EpochLengthFlag,
+		&utils.KeepStateDBFlag,
 		&utils.MemoryBreakdownFlag,
 		&utils.MemProfileFlag,
 		&utils.PrimeSeedFlag,
@@ -38,6 +38,7 @@ var TraceReplayCommand = cli.Command{
 		&utils.SkipPrimingFlag,
 		&utils.StateDbImplementationFlag,
 		&utils.StateDbVariantFlag,
+		&utils.StateDbSrcDirFlag,
 		&utils.StateDbTempDirFlag,
 		&utils.StateDbLoggingFlag,
 		&utils.ShadowDbImplementationFlag,
@@ -84,18 +85,16 @@ func traceReplayTask(cfg *utils.Config) error {
 	// create a directory for the store to place all its files, and
 	// instantiate the state DB under testing.
 	log.Printf("Create stateDB database")
-	stateDirectory, err := ioutil.TempDir(cfg.StateDbDir, "state_db_*")
+	db, stateDirectory, loadedExistingDB, err := utils.PrepareStateDB(cfg)
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(stateDirectory)
-	log.Printf("\tTemporary state DB directory: %v\n", stateDirectory)
-	db, err := utils.MakeStateDB(stateDirectory, cfg)
-	if err != nil {
-		return err
+	if !cfg.KeepStateDB {
+		log.Printf("WARNING: directory %v will be removed at the end of this run.\n", stateDirectory)
+		defer os.RemoveAll(stateDirectory)
 	}
 
-	if cfg.SkipPriming {
+	if cfg.SkipPriming || loadedExistingDB {
 		log.Printf("Skipping DB priming.\n")
 	} else {
 		// intialize the world state and advance it to the first block
@@ -149,6 +148,7 @@ func traceReplayTask(cfg *utils.Config) error {
 		}
 	}
 
+	var lastBlock uint64
 	// replay storage trace
 	for op := range opChannel {
 		if beginBlock, ok := op.(*operation.BeginBlock); ok {
@@ -165,6 +165,7 @@ func traceReplayTask(cfg *utils.Config) error {
 				run(operation.NewEndEpoch())
 				break
 			}
+			lastBlock = block // track the last processed block
 			if cfg.EnableProgress {
 				// report progress
 				sec = time.Since(start).Seconds()
@@ -216,6 +217,15 @@ func traceReplayTask(cfg *utils.Config) error {
 	// print profile statistics (if enabled)
 	if operation.EnableProfiling {
 		operation.PrintProfiling()
+	}
+
+	if cfg.KeepStateDB {
+		rootHash, _ := db.Commit(true)
+		if err := utils.WriteStateDbInfo(stateDirectory, cfg, lastBlock, rootHash); err != nil {
+			log.Println(err)
+		}
+		//rename directory after closing db.
+		defer utils.RenameTempStateDBDirectory(cfg, stateDirectory, lastBlock)
 	}
 
 	// close the DB and print disk usage

@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/params"
@@ -26,6 +27,9 @@ var (
 	FirstSubstateBlock uint64         // id of the first block in substate
 	TraceDebug         bool   = false // TraceDebug for enabling/disabling debugging.
 )
+
+// GitCommit represents the GitHub commit hash the app was built from.
+var GitCommit = "0000000000000000000000000000000000000000"
 
 // Command line options for common flags in record and replay.
 var (
@@ -49,6 +53,10 @@ var (
 	DeletedAccountDirFlag = cli.StringFlag{
 		Name:  "deleted-account-dir",
 		Usage: "sets the directory containing deleted accounts database",
+	}
+	KeepStateDBFlag = cli.BoolFlag{
+		Name:  "keep-db",
+		Usage: "if set, statedb is not deleted after run",
 	}
 	MemProfileFlag = cli.StringFlag{
 		Name:  "memprofile",
@@ -98,6 +106,10 @@ var (
 		Name:  "db-variant",
 		Usage: "select a state DB variant",
 		Value: "",
+	}
+	StateDbSrcDirFlag = cli.StringFlag{
+		Name:  "db-src-dir",
+		Usage: "sets the directory contains source state DB data",
 	}
 	StateDbTempDirFlag = cli.StringFlag{
 		Name:  "db-tmp-dir",
@@ -182,6 +194,7 @@ type Config struct {
 	EpochLength        uint64 // length of an epoch in number of blocks
 	ArchiveMode        bool   // enable archive mode
 	HasDeletedAccounts bool   // true if deletedAccountDir is not empty; otherwise false
+	KeepStateDB        bool   // set to true if stateDB is kept after run
 	MaxNumTransactions int    // the maximum number of processed transactions
 	MemoryBreakdown    bool   // enable printing of memory breakdown
 	MemoryProfile      string // capture the memory heap profile into the file
@@ -192,7 +205,8 @@ type Config struct {
 	SkipPriming        bool   // skip priming of the state DB
 	ShadowImpl         string // implementation of the shadow DB to use, empty if disabled
 	ShadowVariant      string // database variant of the shadow DB to be used
-	StateDbDir         string // directory to store State DB data
+	StateDbSrcDir      string // directory to load an existing State DB data
+	StateDbTempDir     string // directory to store a working copy of State DB data
 	UpdateDBDir        string // update-set directory
 	ValidateTxState    bool   // validate stateDB before and after transaction
 	ValidateWorldState bool   // validate stateDB before and after replay block range
@@ -279,6 +293,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		DbLogging:          ctx.Bool(StateDbLoggingFlag.Name),
 		DeletedAccountDir:  ctx.String(DeletedAccountDirFlag.Name),
 		HasDeletedAccounts: true,
+		KeepStateDB:        ctx.Bool(KeepStateDBFlag.Name),
 		Last:               last,
 		MaxNumTransactions: ctx.Int(MaxNumTransactionsFlag.Name),
 		MemoryBreakdown:    ctx.Bool(MemoryBreakdownFlag.Name),
@@ -289,7 +304,8 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		SkipPriming:        ctx.Bool(SkipPrimingFlag.Name),
 		ShadowImpl:         ctx.String(ShadowDbImplementationFlag.Name),
 		ShadowVariant:      ctx.String(ShadowDbVariantFlag.Name),
-		StateDbDir:         ctx.String(StateDbTempDirFlag.Name),
+		StateDbSrcDir:      ctx.String(StateDbSrcDirFlag.Name),
+		StateDbTempDir:     ctx.String(StateDbTempDirFlag.Name),
 		UpdateDBDir:        ctx.String(UpdateDBDirFlag.Name),
 		ValidateTxState:    validateTxState,
 		ValidateWorldState: validateWorldState,
@@ -316,12 +332,13 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 			log.Printf("\tPrime storage system: %v, DB variant: %v\n", cfg.DbImpl, cfg.DbVariant)
 			log.Printf("\tShadow storage system: %v, DB variant: %v\n", cfg.ShadowImpl, cfg.ShadowVariant)
 		}
+		log.Printf("\tSource storage directory (empty if new): %v\n", cfg.StateDbSrcDir)
+		log.Printf("\tWorking storage directory: %v\n", cfg.StateDbTempDir)
 		if cfg.ArchiveMode {
 			log.Printf("\tArchive mode: enabled\n")
 		} else {
 			log.Printf("\tArchive mode: disabled\n")
 		}
-		log.Printf("\tStorage parent directory: %v\n", cfg.StateDbDir)
 		log.Printf("\tUsed VM implementation: %v\n", cfg.VmImpl)
 		log.Printf("\tUpdate DB directory: %v\n", cfg.UpdateDBDir)
 		if cfg.SkipPriming {
@@ -348,6 +365,14 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	if _, err := os.Stat(cfg.DeletedAccountDir); os.IsNotExist(err) {
 		log.Printf("WARNING: deleted-account-dir is not provided or does not exist")
 		cfg.HasDeletedAccounts = false
+	}
+	if cfg.KeepStateDB && cfg.ShadowImpl != "" {
+		log.Printf("WARNING: keeping persistent stateDB with a shadow db is not supported yet")
+		cfg.KeepStateDB = false
+	}
+	if cfg.KeepStateDB && strings.Contains(cfg.DbVariant, "memory") {
+		log.Printf("WARNING: Unable to keep in-memory stateDB")
+		cfg.KeepStateDB = false
 	}
 
 	if cfg.SkipPriming && cfg.ValidateWorldState {
