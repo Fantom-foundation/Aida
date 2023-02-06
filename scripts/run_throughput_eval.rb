@@ -97,7 +97,7 @@ puts "OK"
 def runAida (iteration, evm, db, variant) 
 
     puts "Running for #{evm} with #{db}/#{variant} .."
-    cmd = "timeout #{MaxDuration} ./build/trace run-vm --substatedir #{SubstateDir} --updatedir #{UpdateDir} --deleted-account-dir #{DeletedAccountDir} --db-impl #{db} --db-variant \"#{variant}\" --vm-impl #{evm} --cpuprofile=#{PROFILE_FILE_PREFIX}_profile_#{evm}_#{db}_#{variant}_#{StartBlock}_#{EndBlock}_#{iteration}.dat #{ExtraFlags} #{StartBlock} #{EndBlock}"
+    cmd = "timeout #{MaxDuration} ./build/aida-runvm --substatedir #{SubstateDir} --updatedir #{UpdateDir} --deleted-account-dir #{DeletedAccountDir} --db-impl #{db} --db-variant \"#{variant}\" --vm-impl #{evm} --cpuprofile=#{PROFILE_FILE_PREFIX}_profile_#{evm}_#{db}_#{variant}_#{StartBlock}_#{EndBlock}_#{iteration}.dat #{ExtraFlags} #{StartBlock} #{EndBlock}"
 
     puts "Running #{cmd}\n"
     

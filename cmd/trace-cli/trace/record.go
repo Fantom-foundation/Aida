@@ -84,7 +84,7 @@ func traceRecordTask(block uint64, tx, chainID int, recording *substate.Substate
 
 	var statedb state.StateDB
 	statedb = state.MakeInMemoryStateDB(&inputAlloc)
-	statedb = tracer.NewProxyRecorder(statedb, dCtx, ch, utils.TraceDebug)
+	statedb = NewProxyRecorder(statedb, dCtx, ch, utils.TraceDebug)
 
 	// Apply Message
 	var (
