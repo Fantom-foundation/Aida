@@ -70,7 +70,7 @@ func genUpdateSet(ctx *cli.Context) error {
 	// store world state
 	cfg.First = utils.FirstSubstateBlock
 	log.Printf("Load initial worldstate and store its substateAlloc\n")
-	ws, err := generateWorldState(worldStateDir, cfg.First-1, cfg)
+	ws, err := utils.GenerateWorldState(worldStateDir, cfg.First-1, cfg)
 	if err != nil {
 		return err
 	}
@@ -125,8 +125,8 @@ func genUpdateSet(ctx *cli.Context) error {
 		if !(err == nil || errors.Is(err, leveldb.ErrNotFound)) {
 			return err
 		}
-		clearAccountStorage(update, destroyed)
-		clearAccountStorage(update, resurrected)
+		utils.ClearAccountStorage(update, destroyed)
+		utils.ClearAccountStorage(update, resurrected)
 		destroyedAccounts = append(destroyedAccounts, destroyed...)
 		destroyedAccounts = append(destroyedAccounts, resurrected...)
 

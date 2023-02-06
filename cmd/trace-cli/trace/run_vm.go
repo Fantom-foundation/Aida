@@ -112,7 +112,7 @@ func runVMTask(db state.StateDB, cfg *utils.Config, block uint64, tx int, record
 
 	// validate whether the input alloc is contained in the db
 	if cfg.ValidateTxState {
-		if err := validateStateDB(inputAlloc, db, true); err != nil {
+		if err := utils.ValidateStateDB(inputAlloc, db, true); err != nil {
 			errCount++
 			errMsg := fmt.Sprintf("Block: %v Transaction: %v\n", block, tx)
 			errMsg += fmt.Sprintf("  Input alloc is not contained in the stateDB.\n%v", err)
@@ -194,7 +194,7 @@ func runVMTask(db state.StateDB, cfg *utils.Config, block uint64, tx int, record
 
 	// check whether the outputAlloc substate is contained in the world-state db.
 	if cfg.ValidateTxState {
-		if err := validateStateDB(outputAlloc, db, false); err != nil {
+		if err := utils.ValidateStateDB(outputAlloc, db, false); err != nil {
 			errCount++
 			errMsg := fmt.Sprintf("Block: %v Transaction: %v\n", block, tx)
 			errMsg += fmt.Sprintf("  Output alloc is not contained in the stateDB. %v\n", err)
@@ -280,7 +280,7 @@ func runVM(ctx *cli.Context) error {
 		// load the world state
 		log.Printf("Load and advance world state to block %v\n", cfg.First-1)
 		start = time.Now()
-		ws, err = generateWorldStateFromUpdateDB(cfg, cfg.First-1)
+		ws, err = utils.GenerateWorldStateFromUpdateDB(cfg, cfg.First-1)
 		if err != nil {
 			return err
 		}
@@ -323,7 +323,7 @@ func runVM(ctx *cli.Context) error {
 
 	if cfg.ValidateWorldState {
 		if len(ws) == 0 {
-			ws, err = generateWorldStateFromUpdateDB(cfg, cfg.First-1)
+			ws, err = utils.GenerateWorldStateFromUpdateDB(cfg, cfg.First-1)
 			if err != nil {
 				return err
 			}
@@ -331,7 +331,7 @@ func runVM(ctx *cli.Context) error {
 		if err := utils.DeleteDestroyedAccountsFromWorldState(ws, cfg, cfg.First-1); err != nil {
 			return fmt.Errorf("Failed to remove deleted accoount from the world state. %v", err)
 		}
-		if err := validateStateDB(ws, db, false); err != nil {
+		if err := utils.ValidateStateDB(ws, db, false); err != nil {
 			return fmt.Errorf("Pre: World state is not contained in the stateDB. %v", err)
 		}
 	}
@@ -456,13 +456,13 @@ func runVM(ctx *cli.Context) error {
 
 	if cfg.ValidateWorldState && err == nil {
 		log.Printf("Validate final state\n")
-		if ws, err = generateWorldStateFromUpdateDB(cfg, cfg.Last); err != nil {
+		if ws, err = utils.GenerateWorldStateFromUpdateDB(cfg, cfg.Last); err != nil {
 			return err
 		}
 		if err := utils.DeleteDestroyedAccountsFromWorldState(ws, cfg, cfg.Last); err != nil {
 			return fmt.Errorf("Failed to remove deleted accoount from the world state. %v", err)
 		}
-		if err := validateStateDB(ws, db, false); err != nil {
+		if err := utils.ValidateStateDB(ws, db, false); err != nil {
 			return fmt.Errorf("World state is not contained in the stateDB. %v", err)
 		}
 	}

@@ -1,4 +1,4 @@
-package trace
+package utils
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/substate"
@@ -14,7 +13,7 @@ import (
 )
 
 // generateUpdateSet generates an update set for a block range.
-func generateUpdateSet(first uint64, last uint64, cfg *utils.Config) substate.SubstateAlloc {
+func generateUpdateSet(first uint64, last uint64, cfg *Config) substate.SubstateAlloc {
 	var deletedAccountDB *substate.DestroyedAccountDB
 	stateIter := substate.NewSubstateIterator(first, cfg.Workers)
 	defer stateIter.Release()
@@ -39,8 +38,8 @@ func generateUpdateSet(first uint64, last uint64, cfg *utils.Config) substate.Su
 				log.Fatalf("failed to get deleted account. %v", err)
 			}
 			// reset storage
-			clearAccountStorage(update, destroyed)
-			clearAccountStorage(update, resurrected)
+			ClearAccountStorage(update, destroyed)
+			ClearAccountStorage(update, resurrected)
 		}
 
 		// merge output substate to update
@@ -49,11 +48,11 @@ func generateUpdateSet(first uint64, last uint64, cfg *utils.Config) substate.Su
 	return update
 }
 
-// generateWorldStateFromUpdateDB generates an initial world-state
+// GenerateWorldStateFromUpdateDB generates an initial world-state
 // from pre-computed update-set
-func generateWorldStateFromUpdateDB(cfg *utils.Config, target uint64) (substate.SubstateAlloc, error) {
+func GenerateWorldStateFromUpdateDB(cfg *Config, target uint64) (substate.SubstateAlloc, error) {
 	ws := make(substate.SubstateAlloc)
-	blockPos := uint64(utils.FirstSubstateBlock - 1)
+	blockPos := uint64(FirstSubstateBlock - 1)
 	if target < blockPos {
 		return nil, fmt.Errorf("Error: the target block, %v, is earlier than the initial world state block, %v. The world state is not loaded.\n", target, blockPos)
 	}
@@ -69,8 +68,8 @@ func generateWorldStateFromUpdateDB(cfg *utils.Config, target uint64) (substate.
 		blockPos = blk.Block
 		// Reset accessed storage locations of suicided accounts prior to updateset block.
 		// The known accessed storage locations in the updateset range has already been
-		// reset when generating update set database.
-		clearAccountStorage(ws, blk.DeletedAccounts)
+		// reset when generating the update set database.
+		ClearAccountStorage(ws, blk.DeletedAccounts)
 		ws.Merge(*blk.UpdateSet)
 	}
 	updateIter.Release()
@@ -82,8 +81,8 @@ func generateWorldStateFromUpdateDB(cfg *utils.Config, target uint64) (substate.
 	return ws, nil
 }
 
-// clearAccountStorage clears storage
-func clearAccountStorage(update substate.SubstateAlloc, accounts []common.Address) {
+// ClearAccountStorage clears storage of all input accounts.
+func ClearAccountStorage(update substate.SubstateAlloc, accounts []common.Address) {
 	for _, addr := range accounts {
 		if _, found := update[addr]; found {
 			update[addr].Storage = make(map[common.Hash]common.Hash)
@@ -91,8 +90,8 @@ func clearAccountStorage(update substate.SubstateAlloc, accounts []common.Addres
 	}
 }
 
-// generateWorldState generates an initial world-state for a block.
-func generateWorldState(path string, block uint64, cfg *utils.Config) (substate.SubstateAlloc, error) {
+// GenerateWorldState generates an initial world-state for a block.
+func GenerateWorldState(path string, block uint64, cfg *Config) (substate.SubstateAlloc, error) {
 	worldStateDB, err := snapshot.OpenStateDB(path)
 	if err != nil {
 		return nil, err
@@ -104,7 +103,7 @@ func generateWorldState(path string, block uint64, cfg *utils.Config) (substate.
 	}
 
 	// advance from the first block from substateDB to the target block
-	update := generateUpdateSet(utils.FirstSubstateBlock, block, cfg)
+	update := generateUpdateSet(FirstSubstateBlock, block, cfg)
 	ws.Merge(update)
 
 	return ws, nil
