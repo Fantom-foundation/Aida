@@ -1,12 +1,12 @@
 package stochastic
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 	"math"
 	"math/big"
 	"os"
-	"log"
-	"encoding/json"
 	"runtime/pprof"
 	"time"
 
