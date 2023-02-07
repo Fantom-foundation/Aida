@@ -99,7 +99,7 @@ func traceReplayTask(cfg *utils.Config) error {
 	} else {
 		// intialize the world state and advance it to the first block
 		log.Printf("Load and advance worldstate to block %v", cfg.First-1)
-		ws, err := generateWorldStateFromUpdateDB(cfg, cfg.First-1)
+		ws, err := utils.GenerateWorldStateFromUpdateDB(cfg, cfg.First-1)
 		if err != nil {
 			return err
 		}
@@ -185,11 +185,11 @@ func traceReplayTask(cfg *utils.Config) error {
 	// validate stateDB
 	if cfg.ValidateWorldState {
 		log.Printf("Validate final state")
-		ws, err := generateWorldStateFromUpdateDB(cfg, cfg.Last)
+		ws, err := utils.GenerateWorldStateFromUpdateDB(cfg, cfg.Last)
 		if err = utils.DeleteDestroyedAccountsFromWorldState(ws, cfg, cfg.Last); err != nil {
 			return fmt.Errorf("Failed to remove detroyed accounts. %v\n", err)
 		}
-		if err := validateStateDB(ws, db, false); err != nil {
+		if err := utils.ValidateStateDB(ws, db, false); err != nil {
 			return fmt.Errorf("Validation failed. %v\n", err)
 		}
 	}

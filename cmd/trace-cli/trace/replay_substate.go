@@ -122,7 +122,7 @@ func traceReplaySubstateTask(cfg *utils.Config) error {
 
 		// Validate stateDB and OuputAlloc
 		if cfg.ValidateWorldState {
-			if err := validateStateDB(tx.Substate.OutputAlloc, db, false); err != nil {
+			if err := utils.ValidateStateDB(tx.Substate.OutputAlloc, db, false); err != nil {
 				return fmt.Errorf("Validation failed. Block %v Tx %v\n\t%v\n", tx.Block, tx.Transaction, err)
 			}
 		}
