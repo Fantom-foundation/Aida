@@ -176,6 +176,10 @@ var (
 		Usage: "limit the maximum number of processed transactions, default: unlimited",
 		Value: -1,
 	}
+	OutputFlag = cli.StringFlag{
+		Name:  "output",
+		Usage: "output filename",
+	}
 )
 
 // execution configuration for replay command.
