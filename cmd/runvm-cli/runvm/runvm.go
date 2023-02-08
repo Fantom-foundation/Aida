@@ -1,4 +1,4 @@
-package trace
+package runvm
 
 import (
 	"fmt"
@@ -11,7 +11,6 @@ import (
 
 	"github.com/Fantom-foundation/Aida/state"
 
-	"github.com/Fantom-foundation/Aida/tracer"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/go-opera/evmcore"
@@ -26,55 +25,8 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-const MaxErrorCount = 50
-
-var errCount int
-
-// runVMCommand data structure for the record app
-var RunVMCommand = cli.Command{
-	Action:    runVM,
-	Name:      "run-vm",
-	Usage:     "run VM on the world-state",
-	ArgsUsage: "<blockNumFirst> <blockNumLast>",
-	Flags: []cli.Flag{
-		&utils.ArchiveModeFlag,
-		&utils.ChainIDFlag,
-		&utils.ContinueOnFailureFlag,
-		&utils.CpuProfileFlag,
-		&utils.DeletedAccountDirFlag,
-		&utils.DisableProgressFlag,
-		&utils.EpochLengthFlag,
-		&utils.KeepStateDBFlag,
-		&utils.MaxNumTransactionsFlag,
-		&utils.MemoryBreakdownFlag,
-		&utils.MemProfileFlag,
-		&utils.PrimeSeedFlag,
-		&utils.PrimeThresholdFlag,
-		&utils.ProfileFlag,
-		&utils.RandomizePrimingFlag,
-		&utils.SkipPrimingFlag,
-		&utils.StateDbImplementationFlag,
-		&utils.StateDbVariantFlag,
-		&utils.StateDbSrcDirFlag,
-		&utils.StateDbTempDirFlag,
-		&utils.StateDbLoggingFlag,
-		&utils.ShadowDbImplementationFlag,
-		&utils.ShadowDbVariantFlag,
-		&substate.WorkersFlag,
-		&substate.SubstateDirFlag,
-		&utils.UpdateDBDirFlag,
-		&utils.ValidateTxStateFlag,
-		&utils.ValidateWorldStateFlag,
-		&utils.ValidateFlag,
-		&utils.VmImplementation,
-	},
-	Description: `
-The trace run-vm command requires two arguments:
-<blockNumFirst> <blockNumLast>
-
-<blockNumFirst> and <blockNumLast> are the first and
-last block of the inclusive range of blocks to trace transactions.`,
-}
+const MaxErrorCount = 50 // maximum number of errors before terminating program
+var errCount int         // number of errors encountered
 
 // runVMTask executes VM on a chosen storage system.
 func runVMTask(db state.StateDB, cfg *utils.Config, block uint64, tx int, recording *substate.Substate) (*substate.SubstateResult, error) {
@@ -223,8 +175,8 @@ func runVMTask(db state.StateDB, cfg *utils.Config, block uint64, tx int, record
 	return evmResult, nil
 }
 
-// runVM implements trace command for executing VM on a chosen storage system.
-func runVM(ctx *cli.Context) error {
+// RunVM implements trace command for executing VM on a chosen storage system.
+func RunVM(ctx *cli.Context) error {
 	const progressReportBlockInterval uint64 = 100_000
 	var (
 		err          error
@@ -318,7 +270,7 @@ func runVM(ctx *cli.Context) error {
 	// wrap stateDB for profiling
 	var stats *operation.ProfileStats
 	if cfg.Profile {
-		db, stats = tracer.NewProxyProfiler(db)
+		db, stats = NewProxyProfiler(db)
 	}
 
 	if cfg.ValidateWorldState {

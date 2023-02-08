@@ -66,7 +66,7 @@ puts "OK"
 def runAida (startBlock) 
 
     puts "Running evaluation at block #{startBlock} .."
-    cmd = "./build/trace run-vm --substatedir #{SubstateDir} --updatedir #{UpdateDir} --deleted-account-dir #{DeletedAccountDir} --db-impl memory --vm-impl lfvm --skip-priming --max-transactions #{NumTransactionsPerEval} --profile #{ExtraFlags} #{startBlock} 100000000"
+    cmd = "./build/aida-runvm --substatedir #{SubstateDir} --updatedir #{UpdateDir} --deleted-account-dir #{DeletedAccountDir} --db-impl memory --vm-impl lfvm --skip-priming --max-transactions #{NumTransactionsPerEval} --profile #{ExtraFlags} #{startBlock} 100000000"
 
     puts "Running #{cmd}\n"
     

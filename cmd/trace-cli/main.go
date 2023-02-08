@@ -18,7 +18,6 @@ func initTraceApp() *cli.App {
 		Flags:     []cli.Flag{},
 		Commands: []*cli.Command{
 			&trace.GenUpdateSetCommand,
-			&trace.RunVMCommand,
 			&trace.TraceCompareLogCommand,
 			&trace.TraceRecordCommand,
 			&trace.TraceReplayCommand,
