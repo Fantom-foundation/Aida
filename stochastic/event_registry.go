@@ -85,7 +85,7 @@ func (r *EventRegistry) RegisterAddressOp(op int, address *common.Address) {
 	r.updateFreq(op, addrClass, keyClass, valueClass)
 
 	// update contract address for subsequent classification
-	r.contracts.Put(*address)
+	r.contracts.Place(*address)
 }
 
 // RegisterAddressKeyOp registers an operation with a contract-address and a storage-key arguments.
@@ -105,8 +105,8 @@ func (r *EventRegistry) RegisterKeyOp(op int, address *common.Address, key *comm
 	r.updateFreq(op, addrClass, keyClass, valueClass)
 
 	// update contract address and storage key for subsequent classification
-	r.contracts.Put(*address)
-	r.keys.Put(*key)
+	r.contracts.Place(*address)
+	r.keys.Place(*key)
 }
 
 // RegisterAddressKeyOp registers an operation with a contract-address, a storage-key and storage-value arguments.
@@ -126,9 +126,9 @@ func (r *EventRegistry) RegisterValueOp(op int, address *common.Address, key *co
 	r.updateFreq(op, addrClass, keyClass, valueClass)
 
 	// update contract address and storage key for subsequent classification
-	r.contracts.Put(*address)
-	r.keys.Put(*key)
-	r.values.Put(*value)
+	r.contracts.Place(*address)
+	r.keys.Place(*key)
+	r.values.Place(*value)
 }
 
 // updateFreq updates operation and transition frequency.

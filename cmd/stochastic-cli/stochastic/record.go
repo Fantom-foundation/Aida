@@ -45,10 +45,10 @@ The stochastic record command requires two arguments:
 <blockNumFirst> <blockNumLast>
 
 <blockNumFirst> and <blockNumLast> are the first and
-last block of the inclusive range of blocks to trace transactions.`,
+last block for recording events.`,
 }
 
-// stochasticRecordTask generates storage traces for a transaction.
+// stochasticRecordTask generates events for a transaction.
 func stochasticRecordTask(block uint64, tx, chainID int, recording *substate.Substate, eventRegistry *stochastic.EventRegistry) error {
 
 	inputAlloc := recording.InputAlloc

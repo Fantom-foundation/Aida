@@ -13,7 +13,7 @@ func TestAccessStatsSimple(t *testing.T) {
 	const offset = 10
 	// place elements into the queue and ensure it overfills
 	for i := 0; i < qstatsLen+offset; i++ {
-		accessStat.Put(i)
+		accessStat.Place(i)
 	}
 
 	// check previous element's class
@@ -58,7 +58,7 @@ func TestAccessStatsDistribution(t *testing.T) {
 
 	// place first element
 	for i := 0; i < 512; i++ {
-		accessStat.Put(i)
+		accessStat.Place(i)
 		accessStat.Classify(i - 10)
 	}
 

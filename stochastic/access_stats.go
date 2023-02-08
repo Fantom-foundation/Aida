@@ -42,8 +42,8 @@ func NewAccessStats[T comparable]() AccessStats[T] {
 	return AccessStats[T]{NewCountingStats[T](), NewQueuingStats[T]()}
 }
 
-// Put an access into the access statistics.
-func (a *AccessStats[T]) Put(data T) {
+// Places an access into the access statistics.
+func (a *AccessStats[T]) Place(data T) {
 	// don't place zero constant into queue/counting stats
 	var zeroValue T
 	if data == zeroValue {
@@ -51,7 +51,7 @@ func (a *AccessStats[T]) Put(data T) {
 	}
 
 	// Update counting statistics
-	a.cstats.Count(data)
+	a.cstats.Place(data)
 
 	// Place data into queuing statistics
 	a.qstats.Place(data)

@@ -20,14 +20,9 @@ func NewCountingStats[T comparable]() CountingStats[T] {
 	return CountingStats[T]{map[T]uint64{}}
 }
 
-// Count increments the frequency of a data item by one.
-func (s *CountingStats[T]) Count(data T) {
+// Places an item into the counting statistics.
+func (s *CountingStats[T]) Place(data T) {
 	s.freq[data]++
-}
-
-// Frequency returns the count frequency of a data item value.
-func (s *CountingStats[T]) Frequency(data T) uint64 {
-	return s.freq[data]
 }
 
 // Exists check whether data item exists in the counting statistics.

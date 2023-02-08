@@ -9,11 +9,10 @@ import (
 // its freq is one.
 func TestCountingStatsSimple1(t *testing.T) {
 	stats := NewCountingStats[int]()
-	stats.Count(100)
-	freq := stats.Frequency(100)
-	if freq != 1 {
+	if stats.Exists(100) {
 		t.Fatalf("Counting failed")
 	}
+	stats.Place(100)
 	if !stats.Exists(100) {
 		t.Fatalf("Counting failed")
 	}
@@ -24,10 +23,12 @@ func TestCountingStatsSimple1(t *testing.T) {
 func TestCountingStatsSimple2(t *testing.T) {
 	stats := NewCountingStats[int]()
 	data := 200
-	stats.Count(data)
-	stats.Count(data)
-	freq := stats.Frequency(data)
-	if freq != 2 {
+	if stats.Exists(data) {
+		t.Fatalf("Counting failed")
+	}
+	stats.Place(data)
+	stats.Place(data)
+	if !stats.Exists(data) {
 		t.Fatalf("Counting failed")
 	}
 }
@@ -38,11 +39,9 @@ func TestCountingStatsSimple3(t *testing.T) {
 	stats := NewCountingStats[int]()
 	data1 := 10
 	data2 := 11
-	stats.Count(data1)
-	stats.Count(data2)
-	freq1 := stats.Frequency(data1)
-	freq2 := stats.Frequency(data2)
-	if freq1 != 1 || freq2 != 1 || !stats.Exists(data1) || !stats.Exists(data2) {
+	stats.Place(data1)
+	stats.Place(data2)
+	if !stats.Exists(data1) || !stats.Exists(data2) {
 		t.Fatalf("Counting failed failed")
 	}
 }
@@ -62,10 +61,10 @@ func TestCountingStatsSimple4(t *testing.T) {
 	}
 
 	for i := 1; i <= 10; i++ {
-		stats.Count(i)
+		stats.Place(i)
 	}
-	stats.Count(1)
-	stats.Count(10)
+	stats.Place(1)
+	stats.Place(10)
 
 	// produce distribution in JSON format
 	// Case 1: number entries are smaller than observerd number of items.
