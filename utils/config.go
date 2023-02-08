@@ -180,6 +180,10 @@ var (
 		Name:  "output",
 		Usage: "output filename",
 	}
+	VisualizeFlag = cli.BoolFlag{
+		Name:  "visualize",
+		Usage: "enable visualization",
+	}
 )
 
 // execution configuration for replay command.

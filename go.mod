@@ -11,11 +11,14 @@ require (
 	github.com/dsnet/compress v0.0.1
 	github.com/ethereum/go-ethereum v1.10.25
 	github.com/fatih/color v1.13.0
+	github.com/go-echarts/go-echarts/v2 v2.2.5
+	github.com/goccy/go-graphviz v0.1.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
 	github.com/syndtr/goleveldb v1.0.1-0.20210305035536-64b5b1c73954
 	github.com/urfave/cli/v2 v2.19.2
 	golang.org/x/text v0.3.7
+	gonum.org/v1/gonum v0.6.0
 )
 
 require (
@@ -31,10 +34,12 @@ require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/edsrzf/mmap-go v1.0.0 // indirect
+	github.com/fogleman/gg v1.3.0 // indirect
 	github.com/getsentry/sentry-go v0.14.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-stack/stack v1.8.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/golang/freetype v0.0.0-20170609003504-e2365dfdc4a0 // indirect
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
@@ -60,6 +65,7 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	golang.org/x/crypto v0.0.0-20221005025214-4161e89ecf1b // indirect
 	golang.org/x/exp v0.0.0-20221004215720-b9f4876ce741 // indirect
+	golang.org/x/image v0.0.0-20200119044424-58c23975cae1 // indirect
 	golang.org/x/sys v0.0.0-20220928140112-f11e5e49a4ec // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 )
