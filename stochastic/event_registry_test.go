@@ -130,8 +130,7 @@ func checkFrequencies(r *EventRegistry, opFreq [numArgOps]uint64, transitFreq [n
 	return true
 }
 
-// TestEventRegistryLabel checks registration
-// TODO: have more of similar tests with previous/recent address/key/value
+// TestEventRegistryOperation checks registration for operations
 func TestEventRegistryOperation(t *testing.T) {
 	// operation/transit frequencies
 	var (
@@ -181,6 +180,55 @@ func TestEventRegistryOperation(t *testing.T) {
 	argop4 := encodeOp(snapshotID, noArgEntry, noArgEntry, noArgEntry)
 	opFreq[argop4]++
 	transitFreq[argop3][argop4]++
+	if !checkFrequencies(&r, opFreq, transitFreq) {
+		t.Fatalf("operation/transit frequency diverges")
+	}
+}
+
+// TestEventRegistryZeroOperation checks zero value, new and previous argument classes.
+func TestEventRegistryZeroOperation(t *testing.T) {
+	// operation/transit frequencies
+	var (
+		opFreq      [numArgOps]uint64
+		transitFreq [numArgOps][numArgOps]uint64
+	)
+
+	// create new event registry
+	r := NewEventRegistry()
+
+	// check that frequencies are zero.
+	if !checkFrequencies(&r, opFreq, transitFreq) {
+		t.Fatalf("operation/transit frequency diverges")
+	}
+
+	// inject first operation and check frequencies.
+	addr := common.Address{}
+	key := common.Hash{}
+	value := common.Hash{}
+	r.RegisterValueOp(setStateID, &addr, &key, &value)
+	argop1 := encodeOp(setStateID, zeroEntry, zeroEntry, zeroEntry)
+	opFreq[argop1]++
+	if !checkFrequencies(&r, opFreq, transitFreq) {
+		t.Fatalf("operation/transit frequency diverges")
+	}
+
+	// inject second operation and check frequencies.
+	addr = common.HexToAddress("0x12312121212")
+	key = common.HexToHash("0x232313123123213")
+	value = common.HexToHash("0x2301238021830912830")
+	r.RegisterValueOp(setStateID, &addr, &key, &value)
+	argop2 := encodeOp(setStateID, newEntry, newEntry, newEntry)
+	opFreq[argop2]++
+	transitFreq[argop1][argop2]++
+	if !checkFrequencies(&r, opFreq, transitFreq) {
+		t.Fatalf("operation/transit frequency diverges")
+	}
+
+	// inject third operation and check frequencies.
+	r.RegisterValueOp(setStateID, &addr, &key, &value)
+	argop3 := encodeOp(setStateID, previousEntry, previousEntry, previousEntry)
+	opFreq[argop3]++
+	transitFreq[argop2][argop3]++
 	if !checkFrequencies(&r, opFreq, transitFreq) {
 		t.Fatalf("operation/transit frequency diverges")
 	}
