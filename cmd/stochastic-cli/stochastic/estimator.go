@@ -25,26 +25,26 @@ var StochasticEstimatorCommand = cli.Command{
 The stochastic estimator command requires one argument:
 <events.json>
 
-<events.json> is the event distribution produced by the stochastic recorder.`,
+<events.json> is the event file produced by the stochastic recorder.`,
 }
 
 // stochasticEstimatorAction implements estimator command for computing statistical parameters.
 func stochasticEstimatorAction(ctx *cli.Context) error {
 	if ctx.Args().Len() != 1 {
-		return fmt.Errorf("missing distribution file")
+		return fmt.Errorf("missing event file")
 	}
 
 	// open file
 	file, err := os.Open(ctx.Args().Get(0))
 	if err != nil {
-		return fmt.Errorf("failed opening distribution file")
+		return fmt.Errorf("failed opening event file")
 	}
 	defer file.Close()
 
 	// read file
 	contents, err := ioutil.ReadAll(file)
 	if err != nil {
-		return fmt.Errorf("failed reading distribution file")
+		return fmt.Errorf("failed reading event file")
 	}
 
 	var eventRegistry stochastic.EventRegistryJSON
@@ -60,15 +60,15 @@ func stochasticEstimatorAction(ctx *cli.Context) error {
 	WriteSimulation(&estimationModel, outputFileName)
 
 	// visualize estimator results
-	if ctx.Bool(utils.VisualizeFlag.Name) {
+	if addr := ctx.String(utils.VisualizeFlag.Name); addr != "" {
 		// populate viewing model
 		eventModel := stochastic.GetEventsData()
 		eventModel.PopulateEventData(&eventRegistry)
 
 		// fire-up web-server
-		fmt.Println("Open web browser with http://localhost:8080")
+		fmt.Println("Open web browser with http://localhost:" + addr)
 		fmt.Println("Cancel estimator with ^C")
-		stochastic.FireUpWeb()
+		stochastic.FireUpWeb(addr)
 	}
 
 	return nil

@@ -8,6 +8,15 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
+const (
+	approxEps       = 1e-9   // epsilon for terminating the bi-section for finding minimal LSE
+	approxMaxSteps  = 10000  // maximum number of iterations for finding minimal LSE
+	approxInfLambda = 1.0    // lower bound for searching minimal LSE
+	approxSupLambda = 1000.0 // upper bound for searching minimal LSE
+
+	dLseEps = 1e-6 // epsilon for numerical differentiation of the LSE function
+)
+
 // EstimationModelJSON is the output of the estimator in JSON format.
 type EstimationModelJSON struct {
 	Operations       []string    `json:"operations"`
@@ -84,19 +93,16 @@ func LSE(lambda float64, points [][2]float64) float64 {
 
 // dLSE computes the derivative of the least square error function.
 func dLSE(lambda float64, points [][2]float64) float64 {
-	eps := 1e-6
-	errL := LSE(lambda-eps, points)
-	errR := LSE(lambda+eps, points)
-	return (errR - errL) / eps
+	errL := LSE(lambda-dLseEps, points)
+	errR := LSE(lambda+dLseEps, points)
+	return (errR - errL) / dLseEps
 }
 
 // ApproximateLambda applies a bisection algorithm to find the best fitting lambda by minimising the LSE.
 func ApproximateLambda(points [][2]float64) (float64, error) {
-	const maxSteps = 1000
-	left := float64(1.0)
-	right := float64(1000)
-	eps := float64(1.e-2)
-	for i := 0; i < maxSteps; i++ {
+	left := approxInfLambda
+	right := approxSupLambda
+	for i := 0; i < approxMaxSteps; i++ {
 		mid := (right + left) / 2.0
 		dErr := dLSE(mid, points)
 		// check direction of LSE's tangent
@@ -105,11 +111,11 @@ func ApproximateLambda(points [][2]float64) (float64, error) {
 		} else {
 			left = mid
 		}
-		if math.Abs(right-left) < eps {
+		if math.Abs(right-left) < approxEps {
 			return mid, nil
 		}
 	}
-	return 0.0, fmt.Errorf("Failed to converge after %v steps", maxSteps)
+	return 0.0, fmt.Errorf("Failed to converge after %v steps", approxMaxSteps)
 }
 
 // PiecewiseLinearCdf is an approximation of the cumulative distribution function via sampling with n points.

@@ -232,11 +232,11 @@ func renderMarkovChain(w http.ResponseWriter, r *http.Request) {
 }
 
 // FireUpWeb fires up a new web-server for data visualisation.
-func FireUpWeb() {
+func FireUpWeb(addr string) {
 	http.HandleFunc("/", renderMain)
 	http.HandleFunc("/"+countingRef, renderCountingStats)
 	http.HandleFunc("/"+queuingRef, renderQueuingStats)
 	http.HandleFunc("/"+operationRef, renderOperationStats)
 	http.HandleFunc("/"+markovRef, renderMarkovChain)
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(":"+addr, nil)
 }

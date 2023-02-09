@@ -180,9 +180,11 @@ var (
 		Name:  "output",
 		Usage: "output filename",
 	}
-	VisualizeFlag = cli.BoolFlag{
-		Name:  "visualize",
-		Usage: "enable visualization",
+	VisualizeFlag = cli.StringFlag{
+		Name:        "visualize",
+		Aliases:     []string{"v"},
+		Usage:       "enable visualization on `PORT`",
+		DefaultText: "8080",
 	}
 )
 
