@@ -180,6 +180,12 @@ var (
 		Name:  "output",
 		Usage: "output filename",
 	}
+	VisualizeFlag = cli.StringFlag{
+		Name:        "visualize",
+		Aliases:     []string{"v"},
+		Usage:       "enable visualization on `PORT`",
+		DefaultText: "8080",
+	}
 )
 
 // execution configuration for replay command.
