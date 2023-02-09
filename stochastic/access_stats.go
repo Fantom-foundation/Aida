@@ -1,27 +1,5 @@
 package stochastic
 
-// Classifications of data entries in an access statistics
-const (
-	noArgEntry    = iota // default label (for no argument)
-	zeroEntry            // zero value access
-	newEntry             // newly occurring value access
-	previousEntry        // value that was previously accessed
-	recentEntry          // value that recently accessed (time-window is fixed to qstatsLen)
-	randomEntry          // random access (everything else)
-
-	numClasses
-)
-
-// classTest maps ids to character code for a classification (NB: Must follow order as defined above)
-var classText = []string{
-	"",  // no argument entry
-	"z", // zero value entry
-	"n", // new entry
-	"p", // previous entry
-	"q", // recent entry
-	"r", // random entry
-}
-
 // AccessStats for tracking access classes
 type AccessStats[T comparable] struct {
 	// counting statistics for data accesses
@@ -62,24 +40,24 @@ func (a *AccessStats[T]) Classify(data T) int {
 	// check zero value
 	var zeroValue T
 	if data == zeroValue {
-		return zeroEntry
+		return zeroValueID
 	}
 	switch a.qstats.Find(data) {
 	case -1:
 		// data not found in the queuing statistics
 		// => check counting statistics
 		if !a.cstats.Exists(data) {
-			return newEntry
+			return newValueID
 		} else {
-			return randomEntry
+			return randomValueID
 		}
 	case 0:
 		// previous entry
-		return previousEntry
+		return previousValueID
 	default:
 		// data found in queuing statistics
 		// but not previously accessed
-		return recentEntry
+		return recentValueID
 	}
 }
 
