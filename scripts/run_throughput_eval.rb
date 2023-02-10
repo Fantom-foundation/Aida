@@ -29,6 +29,12 @@ require 'time'
 
 # ----------------------------- Configuration ---------------------------------
 
+# Define the list of modes to be tested.
+MODEs = [
+    "validator",
+    "archive",
+]
+
 # Define the list of EVMs to be used. The cross-product of each EVM listed here
 # and storage solution configured below will be executed.
 EVMs = [
@@ -94,10 +100,15 @@ puts "OK"
 
 
 # Step 2 - run Aida under various configurations
-def runAida (iteration, evm, db, variant) 
+def runAida (mode, evm, db, variant, iteration)
 
-    puts "Running for #{evm} with #{db}/#{variant} .."
-    cmd = "timeout #{MaxDuration} ./build/aida-runvm --substatedir #{SubstateDir} --updatedir #{UpdateDir} --deleted-account-dir #{DeletedAccountDir} --db-impl #{db} --db-variant \"#{variant}\" --vm-impl #{evm} --cpuprofile=#{PROFILE_FILE_PREFIX}_profile_#{evm}_#{db}_#{variant}_#{StartBlock}_#{EndBlock}_#{iteration}.dat #{ExtraFlags} #{StartBlock} #{EndBlock}"
+    extraFlags = ExtraFlags
+    if mode == "archive" then
+        extraFlags += " --archive"
+    end
+
+    puts "Running #{mode} with #{evm} and #{db}/#{variant} .."
+    cmd = "timeout #{MaxDuration} ./build/aida-runvm --substatedir #{SubstateDir} --updatedir #{UpdateDir} --deleted-account-dir #{DeletedAccountDir} --db-impl #{db} --db-variant \"#{variant}\" --vm-impl #{evm} --cpuprofile=#{PROFILE_FILE_PREFIX}_profile_#{mode}_#{evm}_#{db}_#{variant}_#{StartBlock}_#{EndBlock}_#{iteration}.dat #{extraFlags} #{StartBlock} #{EndBlock}"
 
     puts "Running #{cmd}\n"
     
@@ -107,7 +118,7 @@ def runAida (iteration, evm, db, variant)
     	stdout_and_stderr.each {|line|
     	        rt = (Time.now - start).to_i
     	        rt_str = "%2d:%02d:%02d" % [rt/3600,(rt%3600)/60,rt%60]
-    		puts "#{DateTime.now.strftime("%Y-%m-%d %H:%M:%S.%L")} | #{rt_str} | #{iteration} | #{evm} | #{db} | #{variant} | #{line}"
+    		puts "#{DateTime.now.strftime("%Y-%m-%d %H:%M:%S.%L")} | #{rt_str} | #{iteration} | #{mode} | #{evm} | #{db} | #{variant} | #{line}"
                 $stdout.flush
     		out.concat(line)
     	}
@@ -118,9 +129,9 @@ def runAida (iteration, evm, db, variant)
     return res
 end
 
-$res = ["vm, db, db-variant, iteration, interval_end, tx_rate, gas_rate"]
-def addResult (iteration, vm, db, variant, rates)
-    rates.each{|block,tx_rate,gas_rate| $res.append("#{vm}, #{db}, #{variant}, #{iteration}, #{block}, #{tx_rate}, #{gas_rate}") }
+$res = ["mode, vm, db, db-variant, iteration, interval_end, tx_rate, gas_rate"]
+def addResult (mode, vm, db, variant, iteration, rates)
+    rates.each{|block,tx_rate,gas_rate| $res.append("#{mode}, #{vm}, #{db}, #{variant}, #{iteration}, #{block}, #{tx_rate}, #{gas_rate}") }
     $res.each{ |l| puts "#{l}\n" }
 end
 
@@ -130,10 +141,12 @@ end
 
 iteration = 1
 while true do
-    EVMs.each do |evm|
-        DB_IMPLs.each do |impl,variant|
-            rates = runAida(iteration, evm, impl, variant)
-            addResult(iteration, evm, impl, variant, rates)
+    MODEs.each do |mode|
+        EVMs.each do |evm|
+            DB_IMPLs.each do |impl,variant|
+                rates = runAida(mode, evm, impl, variant, iteration)
+                addResult(mode, evm, impl, variant, iteration, rates)
+            end
         end
     end
     break unless ENDLESS
