@@ -18,14 +18,14 @@ func TestAccessStatsSimple(t *testing.T) {
 
 	// check previous element's class
 	class := accessStat.Classify(qstatsLen + offset - 1)
-	if class != previousEntry {
+	if class != previousValueID {
 		t.Fatalf("wrong classification (previous item)")
 	}
 
 	// check recent element's class (ones that should be in the queue)
 	for i := offset; i < qstatsLen+offset-1; i++ {
 		class := accessStat.Classify(i)
-		if class != recentEntry {
+		if class != recentValueID {
 			t.Fatalf("wrong classification %v (recent data)", i)
 		}
 	}
@@ -33,20 +33,20 @@ func TestAccessStatsSimple(t *testing.T) {
 	// check class of elements that fell out of the queue
 	for i := 1; i < offset; i++ {
 		class := accessStat.Classify(i)
-		if class != randomEntry {
+		if class != randomValueID {
 			t.Fatalf("wrong classification %v (random data)", i)
 		}
 	}
 
 	// check class of new elements
 	class = accessStat.Classify(qstatsLen + offset)
-	if class != newEntry {
+	if class != newValueID {
 		t.Fatalf("wrong classification (new data)")
 	}
 
 	// check class of new elements
 	class = accessStat.Classify(0)
-	if class != zeroEntry {
+	if class != zeroValueID {
 		t.Fatalf("wrong classification (new data)")
 	}
 }

@@ -1,7 +1,6 @@
 package stochastic
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -59,9 +58,9 @@ func (r *EventRegistry) RegisterOp(op int) {
 	}
 
 	// classify simulation arguments
-	addrClass := noArgEntry
-	keyClass := noArgEntry
-	valueClass := noArgEntry
+	addrClass := noArgID
+	keyClass := noArgID
+	valueClass := noArgID
 
 	// update operations's frequency and transition frequency
 	// depending on type of simulation arguments
@@ -77,8 +76,8 @@ func (r *EventRegistry) RegisterAddressOp(op int, address *common.Address) {
 
 	// classify simulation arguments
 	addrClass := r.contracts.Classify(*address)
-	keyClass := noArgEntry
-	valueClass := noArgEntry
+	keyClass := noArgID
+	valueClass := noArgID
 
 	// update operations's frequency and transition frequency
 	// depending on type of simulation arguments
@@ -98,7 +97,7 @@ func (r *EventRegistry) RegisterKeyOp(op int, address *common.Address, key *comm
 	// classify simulation arguments
 	addrClass := r.contracts.Classify(*address)
 	keyClass := r.keys.Classify(*key)
-	valueClass := noArgEntry
+	valueClass := noArgID
 
 	// update operations's frequency and transition frequency
 	// depending on type of simulation arguments
@@ -134,7 +133,7 @@ func (r *EventRegistry) RegisterValueOp(op int, address *common.Address, key *co
 // updateFreq updates operation and transition frequency.
 func (r *EventRegistry) updateFreq(op int, addr int, key int, value int) {
 	// encode argument classes to compute specialized operation using a Horner's scheme
-	argOp := encodeOp(op, addr, key, value)
+	argOp := EncodeArgOp(op, addr, key, value)
 
 	// increment operation's frequency depending on argument class
 	r.argOpFreq[argOp]++
@@ -146,48 +145,6 @@ func (r *EventRegistry) updateFreq(op int, addr int, key int, value int) {
 	r.prevArgOp = argOp
 }
 
-// encodeOp encodes operation and argument classes via Horner's scheme to a single value.
-func encodeOp(op int, addr int, key int, value int) int {
-	if op < 0 || op >= numOps {
-		log.Fatalf("invalid range for operation")
-	}
-	if addr < 0 || addr >= numClasses {
-		log.Fatalf("invalid range for contract-address")
-	}
-	if key < 0 || key >= numClasses {
-		log.Fatalf("invalid range for storage-key")
-	}
-	if value < 0 || value >= numClasses {
-		log.Fatalf("invalid range for storage-value")
-	}
-	return (((int(op)*numClasses)+addr)*numClasses+key)*numClasses + value
-}
-
-// decodeOp decodes operation with arguments.
-func decodeOp(argop int) (int, int, int, int) {
-	if argop < 0 || argop >= numArgOps {
-		log.Fatalf("invalid range for decoding")
-	}
-
-	value := argop % numClasses
-	argop = argop / numClasses
-
-	key := argop % numClasses
-	argop = argop / numClasses
-
-	addr := argop % numClasses
-	argop = argop / numClasses
-
-	op := argop
-
-	return op, addr, key, value
-}
-
-// opLabel produces a label for an operation with its argument classes.
-func opLabel(op int, addr int, key int, value int) string {
-	return fmt.Sprintf("%v%v%v%v", opText[op], classText[addr], classText[key], classText[value])
-}
-
 // NewEventRegistry produces the JSON output for an event registry.
 func (r *EventRegistry) NewEventRegistryJSON() EventRegistryJSON {
 	// generate labels for observable operations
@@ -195,8 +152,8 @@ func (r *EventRegistry) NewEventRegistryJSON() EventRegistryJSON {
 	for argop := 0; argop < numArgOps; argop++ {
 		if r.argOpFreq[argop] > 0 {
 			// decode argument-encoded operation
-			op, addr, key, value := decodeOp(argop)
-			label = append(label, opLabel(op, addr, key, value))
+			op, addr, key, value := decodeArgOp(argop)
+			label = append(label, EncodeOpcode(op, addr, key, value))
 		}
 	}
 	// Compute stochastic matrix for observable operations with their arguments
