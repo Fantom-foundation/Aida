@@ -2,9 +2,10 @@ package replay
 
 import (
 	"fmt"
-	"github.com/Fantom-foundation/Aida/utils"
 	"log"
 	"sync"
+
+	"github.com/Fantom-foundation/Aida/utils"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/substate"

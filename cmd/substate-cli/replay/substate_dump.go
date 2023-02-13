@@ -3,6 +3,7 @@ package replay
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/Fantom-foundation/Aida/utils"
 
 	"github.com/ethereum/go-ethereum/substate"

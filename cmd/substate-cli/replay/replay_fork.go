@@ -4,11 +4,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/Fantom-foundation/Aida/utils"
 	"math/big"
 	"sort"
 	"strings"
 	"sync"
+
+	"github.com/Fantom-foundation/Aida/utils"
 
 	"github.com/Fantom-foundation/Aida/substate-cli/state"
 	"github.com/ethereum/go-ethereum/common"

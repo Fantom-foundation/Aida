@@ -2,8 +2,9 @@ package replay
 
 import (
 	"fmt"
-	"github.com/Fantom-foundation/Aida/utils"
 	"sort"
+
+	"github.com/Fantom-foundation/Aida/utils"
 
 	"github.com/ethereum/go-ethereum/substate"
 	"github.com/urfave/cli/v2"
