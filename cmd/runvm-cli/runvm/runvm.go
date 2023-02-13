@@ -2,13 +2,14 @@ package runvm
 
 import (
 	"fmt"
-	"github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
 	"log"
 	"math/big"
 	"os"
 	"runtime"
 	"runtime/pprof"
 	"time"
+
+	"github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
 
 	"github.com/Fantom-foundation/Aida/state"
 

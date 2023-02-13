@@ -2,9 +2,10 @@ package main
 
 import (
 	"fmt"
+	"os"
+
 	db2 "github.com/Fantom-foundation/Aida/cmd/substate-cli/db"
 	replay2 "github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
-	"os"
 
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/substate"

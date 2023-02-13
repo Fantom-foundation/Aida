@@ -2,8 +2,9 @@ package replay
 
 import (
 	"fmt"
-	"github.com/urfave/cli/v2"
 	"strconv"
+
+	"github.com/urfave/cli/v2"
 )
 
 // chain id

@@ -3,13 +3,14 @@ package trace
 import (
 	"bufio"
 	"fmt"
-	replay2 "github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
 	"log"
 	"math"
 	"math/big"
 	"os"
 	"runtime/pprof"
 	"time"
+
+	replay2 "github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
 
 	"github.com/Fantom-foundation/Aida/substate-cli/state"
 	"github.com/Fantom-foundation/Aida/tracer"
