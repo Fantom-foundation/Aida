@@ -85,7 +85,7 @@ func (s *flatStateDB) EndEpoch() {
 }
 
 // PrepareSubstate initiates the state DB for the next transaction.
-func (s *flatStateDB) PrepareSubstate(*substate.SubstateAlloc) {
+func (s *flatStateDB) PrepareSubstate(*substate.SubstateAlloc, uint64) {
 	// ignored
 	return
 }

@@ -242,7 +242,7 @@ func (s *carmenStateDB) Prepare(thash common.Hash, ti int) {
 	//ignored
 }
 
-func (s *carmenStateDB) PrepareSubstate(substate *substate.SubstateAlloc) {
+func (s *carmenStateDB) PrepareSubstate(substate *substate.SubstateAlloc, block uint64) {
 	// ignored
 }
 

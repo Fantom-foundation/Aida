@@ -3,6 +3,7 @@ package stochastic
 import (
 	"encoding/json"
 	"fmt"
+	replay2 "github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
 	"log"
 	"math"
 	"math/big"
@@ -11,11 +12,10 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/stochastic"
+	"github.com/Fantom-foundation/Aida/substate-cli/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/Fantom-foundation/go-opera/opera"
-	"github.com/Fantom-foundation/substate-cli/cmd/substate-cli/replay"
-	"github.com/Fantom-foundation/substate-cli/state"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -80,7 +80,7 @@ func stochasticRecordTask(block uint64, tx, chainID int, recording *substate.Sub
 		return h
 	}
 
-	var statedb state.StateDB = stochastic.NewEventProxy(state.MakeInMemoryStateDB(&inputAlloc), eventRegistry)
+	var statedb state.StateDB = stochastic.NewEventProxy(state.MakeInMemoryStateDB(&inputAlloc, inputEnv.Number), eventRegistry)
 
 	// Apply Message
 	var (
@@ -150,11 +150,11 @@ func stochasticRecordTask(block uint64, tx, chainID int, recording *substate.Sub
 		fmt.Printf("Block: %v Transaction: %v\n", block, tx)
 		if !r {
 			fmt.Printf("inconsistent output: result\n")
-			replay.PrintResultDiffSummary(outputResult, evmResult)
+			replay2.PrintResultDiffSummary(outputResult, evmResult)
 		}
 		if !a {
 			fmt.Printf("inconsistent output: alloc\n")
-			replay.PrintAllocationDiffSummary(&outputAlloc, &evmAlloc)
+			replay2.PrintAllocationDiffSummary(&outputAlloc, &evmAlloc)
 		}
 		return fmt.Errorf("inconsistent output")
 	}
@@ -189,7 +189,7 @@ func stochasticRecordAction(ctx *cli.Context) error {
 	if ctx.Bool(utils.TraceDebugFlag.Name) {
 		utils.TraceDebug = true
 	}
-	first, last, argErr := replay.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
+	first, last, argErr := replay2.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
 	if argErr != nil {
 		return argErr
 	}

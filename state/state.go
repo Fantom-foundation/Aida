@@ -114,7 +114,7 @@ type StateDB interface {
 
 	// Used to initiate the state DB for the next transaction.
 	// This is mainly for development purposes to support in-memory DB implementations.
-	PrepareSubstate(*substate.SubstateAlloc)
+	PrepareSubstate(*substate.SubstateAlloc, uint64)
 }
 
 // BulkWrite is a faster interface to StateDB instances for writing data without

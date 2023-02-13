@@ -4,16 +4,16 @@ import (
 	"fmt"
 	"math/big"
 
-	geth "github.com/Fantom-foundation/substate-cli/state"
+	geth "github.com/Fantom-foundation/Aida/substate-cli/state"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/substate"
 )
 
-func MakeGethInMemoryStateDB(variant string) (StateDB, error) {
+func MakeGethInMemoryStateDB(variant string, block uint64) (StateDB, error) {
 	if variant != "" {
 		return nil, fmt.Errorf("unkown variant: %v", variant)
 	}
-	return &gethInMemoryStateDB{gethStateDB{db: geth.MakeInMemoryStateDB(&substate.SubstateAlloc{})}}, nil
+	return &gethInMemoryStateDB{gethStateDB{db: geth.MakeInMemoryStateDB(&substate.SubstateAlloc{}, block)}}, nil
 }
 
 type gethInMemoryStateDB struct {
@@ -29,8 +29,8 @@ func (s *gethInMemoryStateDB) Close() error {
 	return nil
 }
 
-func (s *gethInMemoryStateDB) PrepareSubstate(substate *substate.SubstateAlloc) {
-	s.db = geth.MakeInMemoryStateDB(substate)
+func (s *gethInMemoryStateDB) PrepareSubstate(substate *substate.SubstateAlloc, block uint64) {
+	s.db = geth.MakeInMemoryStateDB(substate, block)
 }
 
 func (s *gethInMemoryStateDB) StartBulkLoad() BulkLoad {

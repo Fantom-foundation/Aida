@@ -200,7 +200,7 @@ func (s *gethStateDB) Prepare(thash common.Hash, ti int) {
 	}
 }
 
-func (s *gethStateDB) PrepareSubstate(substate *substate.SubstateAlloc) {
+func (s *gethStateDB) PrepareSubstate(substate *substate.SubstateAlloc, block uint64) {
 	// ignored
 }
 

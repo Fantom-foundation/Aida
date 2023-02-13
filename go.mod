@@ -7,7 +7,6 @@ require (
 	github.com/Fantom-foundation/go-opera v1.1.1-rc.2
 	github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230112084156-680f281ea1cb
 	github.com/Fantom-foundation/lachesis-base v0.0.0-20220904103856-4bb2a8448a22
-	github.com/Fantom-foundation/substate-cli v0.0.0-20221109110938-3d145e50b9b9
 	github.com/dsnet/compress v0.0.1
 	github.com/ethereum/go-ethereum v1.10.25
 	github.com/fatih/color v1.13.0

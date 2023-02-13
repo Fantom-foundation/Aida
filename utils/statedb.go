@@ -19,8 +19,8 @@ import (
 )
 
 // MakeStateDB creates a new DB instance based on cli argument.
-func MakeStateDB(directory string, cfg *Config, rootHash common.Hash, isExistingDB bool) (state.StateDB, error) {
-	db, err := makeStateDBInternal(directory, cfg, rootHash, isExistingDB)
+func MakeStateDB(directory string, cfg *Config, rootHash common.Hash, block uint64, isExistingDB bool) (state.StateDB, error) {
+	db, err := makeStateDBInternal(directory, cfg, rootHash, block, isExistingDB)
 	if err != nil {
 		return nil, err
 	}
@@ -31,9 +31,9 @@ func MakeStateDB(directory string, cfg *Config, rootHash common.Hash, isExisting
 }
 
 // makeStateDB creates a DB instance with a potential shadow instance.
-func makeStateDBInternal(directory string, cfg *Config, rootHash common.Hash, isExistingDB bool) (state.StateDB, error) {
+func makeStateDBInternal(directory string, cfg *Config, rootHash common.Hash, block uint64, isExistingDB bool) (state.StateDB, error) {
 	if cfg.ShadowImpl == "" {
-		return makeStateDBVariant(directory, cfg.DbImpl, cfg.DbVariant, rootHash, cfg.ArchiveMode)
+		return makeStateDBVariant(directory, cfg.DbImpl, cfg.DbVariant, rootHash, block, cfg.ArchiveMode)
 	}
 	if isExistingDB {
 		return nil, fmt.Errorf("Using an existing stateDB with a shadow DB is not supported.")
@@ -46,11 +46,11 @@ func makeStateDBInternal(directory string, cfg *Config, rootHash common.Hash, is
 	if err := os.MkdirAll(shadowDir, 0700); err != nil {
 		return nil, err
 	}
-	prime, err := makeStateDBVariant(primeDir, cfg.DbImpl, cfg.DbVariant, rootHash, cfg.ArchiveMode)
+	prime, err := makeStateDBVariant(primeDir, cfg.DbImpl, cfg.DbVariant, rootHash, block, cfg.ArchiveMode)
 	if err != nil {
 		return nil, err
 	}
-	shadow, err := makeStateDBVariant(shadowDir, cfg.ShadowImpl, cfg.ShadowVariant, rootHash, cfg.ArchiveMode)
+	shadow, err := makeStateDBVariant(shadowDir, cfg.ShadowImpl, cfg.ShadowVariant, rootHash, block, cfg.ArchiveMode)
 	if err != nil {
 		return nil, err
 	}
@@ -58,10 +58,10 @@ func makeStateDBInternal(directory string, cfg *Config, rootHash common.Hash, is
 }
 
 // makeStateDBVariant creates a DB instance of the requested kind.
-func makeStateDBVariant(directory, impl, variant string, rootHash common.Hash, archiveMode bool) (state.StateDB, error) {
+func makeStateDBVariant(directory, impl, variant string, rootHash common.Hash, block uint64, archiveMode bool) (state.StateDB, error) {
 	switch impl {
 	case "memory":
-		return state.MakeGethInMemoryStateDB(variant)
+		return state.MakeGethInMemoryStateDB(variant, block)
 	case "geth":
 		return state.MakeGethStateDB(directory, variant, rootHash, archiveMode)
 	case "carmen":
@@ -220,6 +220,7 @@ func GetDirectorySize(directory string) int64 {
 func PrepareStateDB(cfg *Config) (db state.StateDB, workingDirectory string, loadedExistingDB bool, err error) {
 	var exists bool
 	roothash := common.Hash{}
+	var block uint64
 	loadedExistingDB = false
 
 	//create a temporary working directory
@@ -267,10 +268,11 @@ func PrepareStateDB(cfg *Config) (db state.StateDB, workingDirectory string, loa
 
 		// if this is an existing statedb, open
 		roothash = dbinfo.RootHash
+		block = dbinfo.Block
 	}
 
 	log.Printf("\tTemporary state DB directory: %v\n", workingDirectory)
-	db, err = MakeStateDB(workingDirectory, cfg, roothash, loadedExistingDB)
+	db, err = MakeStateDB(workingDirectory, cfg, roothash, block, loadedExistingDB)
 
 	return
 }

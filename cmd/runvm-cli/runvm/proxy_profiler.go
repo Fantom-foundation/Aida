@@ -385,8 +385,8 @@ func (p *ProxyProfiler) GetSubstatePostAlloc() substate.SubstateAlloc {
 	return p.db.GetSubstatePostAlloc()
 }
 
-func (p *ProxyProfiler) PrepareSubstate(substate *substate.SubstateAlloc) {
-	p.db.PrepareSubstate(substate)
+func (p *ProxyProfiler) PrepareSubstate(substate *substate.SubstateAlloc, block uint64) {
+	p.db.PrepareSubstate(substate, block)
 }
 
 func (p *ProxyProfiler) Close() error {
