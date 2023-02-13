@@ -15,10 +15,10 @@ type RandomAccess struct {
 	// lambda parameter of exponential distribution
 	lambda float64
 
-	// queue for indexes
+	// queue for indexes  (always fixed length qStatslen)
 	queue []int
 
-	// probability distribution of queue
+	// probability distribution of queue (always fixed length qStatslen)
 	qpdf []float64
 }
 

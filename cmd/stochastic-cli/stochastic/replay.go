@@ -33,7 +33,7 @@ The stochastic replay command requires two argument:
 // provides simulation file and simulation as arguments.
 func stochasticReplayAction(ctx *cli.Context) error {
 	if ctx.Args().Len() != 2 {
-		return fmt.Errorf("missing simulation file")
+		return fmt.Errorf("missing simulation file and simulation length as parameter")
 	}
 	simLength, perr := strconv.ParseInt(ctx.Args().Get(1), 10, 64)
 	if perr != nil {
