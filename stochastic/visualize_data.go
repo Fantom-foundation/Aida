@@ -142,7 +142,7 @@ func renderQueuingStats(w http.ResponseWriter, r *http.Request) {
 	scatter.Render(w)
 }
 
-// convertOperationData produces the data series for the steady-state.
+// convertOperationData produces the data series for the sationary distribution.
 func convertOperationData(data []OpData) []opts.BarData {
 	items := []opts.BarData{}
 	for i := 0; i < len(data); i++ {
@@ -160,7 +160,7 @@ func convertOperationLabel(data []OpData) []string {
 	return items
 }
 
-// renderOperationStats renders the steady-state distribution.
+// renderOperationStats renders the stationary distribution.
 func renderOperationStats(w http.ResponseWriter, r *http.Request) {
 	events := GetEventsData()
 	bar := charts.NewBar()
@@ -185,7 +185,7 @@ func renderOperationStats(w http.ResponseWriter, r *http.Request) {
 		charts.WithTitleOpts(opts.Title{
 			Title: "StateDB Operations",
 		}))
-	bar.SetXAxis(convertOperationLabel(events.SteadyState)).AddSeries("Steady-State Distribution", convertOperationData(events.SteadyState))
+	bar.SetXAxis(convertOperationLabel(events.Stationary)).AddSeries("Stationary Distribution", convertOperationData(events.Stationary))
 	bar.XYReversal()
 	bar.Render(w)
 }
