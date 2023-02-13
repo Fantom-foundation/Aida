@@ -1,6 +1,7 @@
 package stochastic
 
 // qstatsLen sets the length of queuing statistics.
+// NB: must be greater than one.
 const qstatsLen = 32
 
 // QueuingStats data structure for a generic FIFO queue.
