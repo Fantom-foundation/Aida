@@ -11,6 +11,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/utils"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 
@@ -118,16 +120,7 @@ func replayTask(config ReplayConfig, block uint64, tx int, recording *substate.S
 	vmConfig = opera.DefaultVMConfig
 	vmConfig.NoBaseFee = true
 
-	chainConfig = params.AllEthashProtocolChanges
-	chainConfig.ChainID = big.NewInt(int64(chainID))
-	switch chainID {
-	case 250:
-		chainConfig.LondonBlock = new(big.Int).SetUint64(37534833)
-		chainConfig.BerlinBlock = new(big.Int).SetUint64(37455223)
-	case 4002:
-		chainConfig.LondonBlock = new(big.Int).SetUint64(7513335)
-		chainConfig.BerlinBlock = new(big.Int).SetUint64(1559470)
-	}
+	chainConfig = utils.GetChainConfig(chainID)
 
 	var hashError error
 	getHash := func(num uint64) common.Hash {
@@ -426,7 +419,7 @@ func replayAction(ctx *cli.Context) error {
 	fmt.Printf("git-date: %v\n", gitDate)
 	fmt.Printf("git-commit: %v\n", gitCommit)
 
-	first, last, argErr := SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
+	first, last, argErr := utils.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
 	if argErr != nil {
 		return argErr
 	}

@@ -3,6 +3,7 @@ package replay
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/Fantom-foundation/Aida/utils"
 
 	"github.com/ethereum/go-ethereum/substate"
 	"github.com/urfave/cli/v2"
@@ -59,10 +60,10 @@ func substateDumpAction(ctx *cli.Context) error {
 	var err error
 
 	if ctx.Args().Len() != 2 {
-		return fmt.Errorf("substate-cli dump cammand requires exactly 2 arguments")
+		return fmt.Errorf("substate-cli dump command requires exactly 2 arguments")
 	}
 
-	first, last, argErr := SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
+	first, last, argErr := utils.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
 	if argErr != nil {
 		return argErr
 	}

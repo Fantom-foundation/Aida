@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"github.com/Fantom-foundation/Aida/utils"
 	"math/big"
 	"sort"
 	"strings"
@@ -337,7 +338,7 @@ func replayForkAction(ctx *cli.Context) error {
 		return fmt.Errorf("substate-cli replay-fork command requires exactly 2 arguments")
 	}
 
-	first, last, argErr := SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
+	first, last, argErr := utils.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
 	if argErr != nil {
 		return argErr
 	}

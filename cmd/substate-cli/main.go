@@ -5,8 +5,8 @@ import (
 	"os"
 
 	db2 "github.com/Fantom-foundation/Aida/cmd/substate-cli/db"
-	replay2 "github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
 
+	"github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/substate"
 	"github.com/urfave/cli/v2"
@@ -37,14 +37,14 @@ func main() {
 		Copyright: "(c) 2022 Fantom Foundation",
 		Flags:     []cli.Flag{},
 		Commands: []*cli.Command{
-			&replay2.ReplayCommand,
-			&replay2.GetStorageUpdateSizeCommand,
-			&replay2.GetCodeCommand,
-			&replay2.GetCodeSizeCommand,
-			&replay2.SubstateDumpCommand,
-			&replay2.GetAddressStatsCommand,
-			&replay2.GetKeyStatsCommand,
-			&replay2.GetLocationStatsCommand,
+			&replay.ReplayCommand,
+			&replay.GetStorageUpdateSizeCommand,
+			&replay.GetCodeCommand,
+			&replay.GetCodeSizeCommand,
+			&replay.SubstateDumpCommand,
+			&replay.GetAddressStatsCommand,
+			&replay.GetKeyStatsCommand,
+			&replay.GetLocationStatsCommand,
 			&dbCommand,
 		},
 	}

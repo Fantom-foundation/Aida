@@ -10,9 +10,7 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
-
 	"github.com/Fantom-foundation/Aida/state"
-
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/go-opera/evmcore"

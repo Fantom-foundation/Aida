@@ -2,6 +2,7 @@ package replay
 
 import (
 	"fmt"
+	"github.com/Fantom-foundation/Aida/utils"
 	"sort"
 
 	"github.com/ethereum/go-ethereum/substate"
@@ -108,7 +109,7 @@ func getReferenceStatsActionWithConsumer[T comparable](ctx *cli.Context, cli_com
 	fmt.Printf("git-commit: %v\n", gitCommit)
 	fmt.Printf("contract-db: %v\n", ContractDB)
 
-	first, last, argErr := SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
+	first, last, argErr := utils.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
 	if argErr != nil {
 		return argErr
 	}

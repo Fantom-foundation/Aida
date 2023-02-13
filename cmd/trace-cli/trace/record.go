@@ -10,8 +10,7 @@ import (
 	"runtime/pprof"
 	"time"
 
-	replay2 "github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
-
+	"github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
 	"github.com/Fantom-foundation/Aida/substate-cli/state"
 	"github.com/Fantom-foundation/Aida/tracer"
 	"github.com/Fantom-foundation/Aida/tracer/dict"
@@ -156,11 +155,11 @@ func traceRecordTask(block uint64, tx, chainID int, recording *substate.Substate
 		fmt.Printf("Block: %v Transaction: %v\n", block, tx)
 		if !r {
 			fmt.Printf("inconsistent output: result\n")
-			replay2.PrintResultDiffSummary(outputResult, evmResult)
+			replay.PrintResultDiffSummary(outputResult, evmResult)
 		}
 		if !a {
 			fmt.Printf("inconsistent output: alloc\n")
-			replay2.PrintAllocationDiffSummary(&outputAlloc, &evmAlloc)
+			replay.PrintAllocationDiffSummary(&outputAlloc, &evmAlloc)
 		}
 		return fmt.Errorf("inconsistent output")
 	}
@@ -253,7 +252,7 @@ func traceRecordAction(ctx *cli.Context) error {
 	if ctx.Bool(utils.TraceDebugFlag.Name) {
 		utils.TraceDebug = true
 	}
-	first, last, argErr := replay2.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
+	first, last, argErr := utils.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
 	if argErr != nil {
 		return argErr
 	}

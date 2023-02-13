@@ -1,9 +1,6 @@
 package replay
 
 import (
-	"fmt"
-	"strconv"
-
 	"github.com/urfave/cli/v2"
 )
 
@@ -66,18 +63,3 @@ var (
 		Value: "./contracts.db",
 	}
 )
-
-func SetBlockRange(firstArg string, lastArg string) (uint64, uint64, error) {
-	first, ferr := strconv.ParseUint(firstArg, 10, 64)
-	last, lerr := strconv.ParseUint(lastArg, 10, 64)
-	if ferr != nil || lerr != nil {
-		return first, last, fmt.Errorf("substate-cli replay: error in parsing parameters: block number not an integer")
-	}
-	if first < 0 || last < 0 {
-		return first, last, fmt.Errorf("substate-cli replay: error: block number must be greater than 0")
-	}
-	if first > last {
-		return first, last, fmt.Errorf("substate-cli replay: error: first block has larger number than last block")
-	}
-	return first, last, nil
-}

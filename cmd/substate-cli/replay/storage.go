@@ -2,6 +2,7 @@ package replay
 
 import (
 	"fmt"
+	"github.com/Fantom-foundation/Aida/utils"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/substate"
@@ -114,7 +115,7 @@ func getStorageUpdateSizeAction(ctx *cli.Context) error {
 	fmt.Printf("git-date: %v\n", gitDate)
 	fmt.Printf("git-commit: %v\n", gitCommit)
 
-	first, last, argErr := SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
+	first, last, argErr := utils.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
 	if argErr != nil {
 		return argErr
 	}
