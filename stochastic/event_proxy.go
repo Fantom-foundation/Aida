@@ -25,7 +25,7 @@ func NewEventProxy(db state.StateDB, registry *EventRegistry) *EventProxy {
 // CreateAccount creates a new account.
 func (p *EventProxy) CreateAccount(address common.Address) {
 	// register event
-	p.registry.RegisterAddressOp(createAccountID, &address)
+	p.registry.RegisterAddressOp(CreateAccountID, &address)
 
 	// call real StateDB
 	p.db.CreateAccount(address)
@@ -34,7 +34,7 @@ func (p *EventProxy) CreateAccount(address common.Address) {
 // SubBalance subtracts amount from a contract address.
 func (p *EventProxy) SubBalance(address common.Address, amount *big.Int) {
 	// register event
-	p.registry.RegisterAddressOp(subBalanceID, &address)
+	p.registry.RegisterAddressOp(SubBalanceID, &address)
 
 	// call real StateDB
 	p.db.SubBalance(address, amount)
@@ -43,7 +43,7 @@ func (p *EventProxy) SubBalance(address common.Address, amount *big.Int) {
 // AddBalance adds amount to a contract address.
 func (p *EventProxy) AddBalance(address common.Address, amount *big.Int) {
 	// register event
-	p.registry.RegisterAddressOp(addBalanceID, &address)
+	p.registry.RegisterAddressOp(AddBalanceID, &address)
 
 	// call real StateDB
 	p.db.AddBalance(address, amount)
@@ -52,7 +52,7 @@ func (p *EventProxy) AddBalance(address common.Address, amount *big.Int) {
 // GetBalance retrieves the amount of a contract address.
 func (p *EventProxy) GetBalance(address common.Address) *big.Int {
 	// register event
-	p.registry.RegisterAddressOp(getBalanceID, &address)
+	p.registry.RegisterAddressOp(GetBalanceID, &address)
 
 	// call real StateDB
 	return p.db.GetBalance(address)
@@ -61,7 +61,7 @@ func (p *EventProxy) GetBalance(address common.Address) *big.Int {
 // GetNonce retrieves the nonce of a contract address.
 func (p *EventProxy) GetNonce(address common.Address) uint64 {
 	// register event
-	p.registry.RegisterAddressOp(getNonceID, &address)
+	p.registry.RegisterAddressOp(GetNonceID, &address)
 
 	// call real StateDB
 	return p.db.GetNonce(address)
@@ -70,7 +70,7 @@ func (p *EventProxy) GetNonce(address common.Address) uint64 {
 // SetNonce sets the nonce of a contract address.
 func (p *EventProxy) SetNonce(address common.Address, nonce uint64) {
 	// register event
-	p.registry.RegisterAddressOp(setNonceID, &address)
+	p.registry.RegisterAddressOp(SetNonceID, &address)
 
 	// call real StateDB
 	p.db.SetNonce(address, nonce)
@@ -79,7 +79,7 @@ func (p *EventProxy) SetNonce(address common.Address, nonce uint64) {
 // GetCodeHash returns the hash of the EVM bytecode.
 func (p *EventProxy) GetCodeHash(address common.Address) common.Hash {
 	// register event
-	p.registry.RegisterAddressOp(getCodeHashID, &address)
+	p.registry.RegisterAddressOp(GetCodeHashID, &address)
 
 	// call real StateDB
 	return p.db.GetCodeHash(address)
@@ -88,7 +88,7 @@ func (p *EventProxy) GetCodeHash(address common.Address) common.Hash {
 // GetCode returns the EVM bytecode of a contract.
 func (p *EventProxy) GetCode(address common.Address) []byte {
 	// register event
-	p.registry.RegisterAddressOp(getCodeID, &address)
+	p.registry.RegisterAddressOp(GetCodeID, &address)
 
 	// call real StateDB
 	return p.db.GetCode(address)
@@ -97,7 +97,7 @@ func (p *EventProxy) GetCode(address common.Address) []byte {
 // Setcode sets the EVM bytecode of a contract.
 func (p *EventProxy) SetCode(address common.Address, code []byte) {
 	// register event
-	p.registry.RegisterAddressOp(setCodeID, &address)
+	p.registry.RegisterAddressOp(SetCodeID, &address)
 
 	// call real StateDB
 	p.db.SetCode(address, code)
@@ -106,7 +106,7 @@ func (p *EventProxy) SetCode(address common.Address, code []byte) {
 // GetCodeSize returns the EVM bytecode's size.
 func (p *EventProxy) GetCodeSize(address common.Address) int {
 	// register event
-	p.registry.RegisterAddressOp(getCodeSizeID, &address)
+	p.registry.RegisterAddressOp(GetCodeSizeID, &address)
 
 	// call real StateDB
 	return p.db.GetCodeSize(address)
@@ -133,7 +133,7 @@ func (p *EventProxy) GetRefund() uint64 {
 // GetCommittedState retrieves a value that is already committed.
 func (p *EventProxy) GetCommittedState(address common.Address, key common.Hash) common.Hash {
 	// register event
-	p.registry.RegisterKeyOp(getCommittedStateID, &address, &key)
+	p.registry.RegisterKeyOp(GetCommittedStateID, &address, &key)
 
 	// call real StateDB
 	return p.db.GetCommittedState(address, key)
@@ -142,7 +142,7 @@ func (p *EventProxy) GetCommittedState(address common.Address, key common.Hash) 
 // GetState retrieves a value from the StateDB.
 func (p *EventProxy) GetState(address common.Address, key common.Hash) common.Hash {
 	// register event
-	p.registry.RegisterKeyOp(getStateID, &address, &key)
+	p.registry.RegisterKeyOp(GetStateID, &address, &key)
 
 	// call real StateDB
 	return p.db.GetState(address, key)
@@ -151,7 +151,7 @@ func (p *EventProxy) GetState(address common.Address, key common.Hash) common.Ha
 // SetState sets a value in the StateDB.
 func (p *EventProxy) SetState(address common.Address, key common.Hash, value common.Hash) {
 	// register event
-	p.registry.RegisterValueOp(setStateID, &address, &key, &value)
+	p.registry.RegisterValueOp(SetStateID, &address, &key, &value)
 
 	// call real StateDB
 	p.db.SetState(address, key, value)
@@ -160,7 +160,7 @@ func (p *EventProxy) SetState(address common.Address, key common.Hash, value com
 // Suicide an account.
 func (p *EventProxy) Suicide(address common.Address) bool {
 	// register event
-	p.registry.RegisterAddressOp(suicideID, &address)
+	p.registry.RegisterAddressOp(SuicideID, &address)
 
 	// call real StateDB
 	return p.db.Suicide(address)
@@ -169,7 +169,7 @@ func (p *EventProxy) Suicide(address common.Address) bool {
 // HasSuicided checks whether a contract has been suicided.
 func (p *EventProxy) HasSuicided(address common.Address) bool {
 	// register event
-	p.registry.RegisterAddressOp(hasSuicidedID, &address)
+	p.registry.RegisterAddressOp(HasSuicidedID, &address)
 
 	// call real StateDB
 	return p.db.HasSuicided(address)
@@ -178,7 +178,7 @@ func (p *EventProxy) HasSuicided(address common.Address) bool {
 // Exist checks whether the contract exists in the StateDB.
 func (p *EventProxy) Exist(address common.Address) bool {
 	// register event
-	p.registry.RegisterAddressOp(existID, &address)
+	p.registry.RegisterAddressOp(ExistID, &address)
 
 	// call real StateDB
 	return p.db.Exist(address)
@@ -188,7 +188,7 @@ func (p *EventProxy) Exist(address common.Address) bool {
 // or empty according to the EIP161 specification (balance = nonce = code = 0).
 func (p *EventProxy) Empty(address common.Address) bool {
 	// register event
-	p.registry.RegisterAddressOp(emptyID, &address)
+	p.registry.RegisterAddressOp(EmptyID, &address)
 
 	// call real StateDB
 	return p.db.Empty(address)
@@ -227,7 +227,7 @@ func (p *EventProxy) AddSlotToAccessList(address common.Address, slot common.Has
 // RevertToSnapshot reverts all state changes from a given revision.
 func (p *EventProxy) RevertToSnapshot(snapshot int) {
 	// register event
-	p.registry.RegisterOp(revertToSnapshotID)
+	p.registry.RegisterOp(RevertToSnapshotID)
 
 	// call real StateDB
 	p.db.RevertToSnapshot(snapshot)
@@ -236,7 +236,7 @@ func (p *EventProxy) RevertToSnapshot(snapshot int) {
 // Snapshot returns an identifier for the current revision of the state.
 func (p *EventProxy) Snapshot() int {
 	// register event
-	p.registry.RegisterOp(snapshotID)
+	p.registry.RegisterOp(SnapshotID)
 
 	// call real StateDB
 	return p.db.Snapshot()
@@ -275,7 +275,7 @@ func (p *EventProxy) Prepare(thash common.Hash, ti int) {
 // Finalise the state in StateDB.
 func (p *EventProxy) Finalise(deleteEmptyObjects bool) {
 	// register event
-	p.registry.RegisterOp(finaliseID)
+	p.registry.RegisterOp(FinaliseID)
 
 	// call real StateDB
 	p.db.Finalise(deleteEmptyObjects)

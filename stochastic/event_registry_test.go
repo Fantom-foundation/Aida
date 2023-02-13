@@ -24,7 +24,7 @@ func TestEventRegistryUpdateFreq(t *testing.T) {
 	}
 
 	// inject first operation
-	op := createAccountID
+	op := CreateAccountID
 	addr := randomValueID
 	key := noArgID
 	value := noArgID
@@ -47,7 +47,7 @@ func TestEventRegistryUpdateFreq(t *testing.T) {
 	}
 
 	// inject second operation
-	op = setStateID
+	op = SetStateID
 	addr = randomValueID
 	key = previousValueID
 	value = zeroValueID
@@ -106,8 +106,8 @@ func TestEventRegistryOperation(t *testing.T) {
 
 	// inject first operation and check frequencies.
 	addr := common.HexToAddress("0x000000010")
-	r.RegisterAddressOp(createAccountID, &addr)
-	argop1 := EncodeArgOp(createAccountID, newValueID, noArgID, noArgID)
+	r.RegisterAddressOp(CreateAccountID, &addr)
+	argop1 := EncodeArgOp(CreateAccountID, newValueID, noArgID, noArgID)
 	opFreq[argop1]++
 	if !checkFrequencies(&r, opFreq, transitFreq) {
 		t.Fatalf("operation/transit frequency diverges")
@@ -115,8 +115,8 @@ func TestEventRegistryOperation(t *testing.T) {
 
 	// inject second operation and check frequencies.
 	key := common.HexToHash("0x000000200")
-	r.RegisterKeyOp(getStateID, &addr, &key)
-	argop2 := EncodeArgOp(getStateID, previousValueID, newValueID, noArgID)
+	r.RegisterKeyOp(GetStateID, &addr, &key)
+	argop2 := EncodeArgOp(GetStateID, previousValueID, newValueID, noArgID)
 	opFreq[argop2]++
 	transitFreq[argop1][argop2]++
 	if !checkFrequencies(&r, opFreq, transitFreq) {
@@ -125,8 +125,8 @@ func TestEventRegistryOperation(t *testing.T) {
 
 	// inject third operation and check frequencies.
 	value := common.Hash{}
-	r.RegisterValueOp(setStateID, &addr, &key, &value)
-	argop3 := EncodeArgOp(setStateID, previousValueID, previousValueID, zeroValueID)
+	r.RegisterValueOp(SetStateID, &addr, &key, &value)
+	argop3 := EncodeArgOp(SetStateID, previousValueID, previousValueID, zeroValueID)
 	opFreq[argop3]++
 	transitFreq[argop2][argop3]++
 	if !checkFrequencies(&r, opFreq, transitFreq) {
@@ -134,8 +134,8 @@ func TestEventRegistryOperation(t *testing.T) {
 	}
 
 	// inject forth operation and check frequencies.
-	r.RegisterOp(snapshotID)
-	argop4 := EncodeArgOp(snapshotID, noArgID, noArgID, noArgID)
+	r.RegisterOp(SnapshotID)
+	argop4 := EncodeArgOp(SnapshotID, noArgID, noArgID, noArgID)
 	opFreq[argop4]++
 	transitFreq[argop3][argop4]++
 	if !checkFrequencies(&r, opFreq, transitFreq) {
@@ -163,8 +163,8 @@ func TestEventRegistryZeroOperation(t *testing.T) {
 	addr := common.Address{}
 	key := common.Hash{}
 	value := common.Hash{}
-	r.RegisterValueOp(setStateID, &addr, &key, &value)
-	argop1 := EncodeArgOp(setStateID, zeroValueID, zeroValueID, zeroValueID)
+	r.RegisterValueOp(SetStateID, &addr, &key, &value)
+	argop1 := EncodeArgOp(SetStateID, zeroValueID, zeroValueID, zeroValueID)
 	opFreq[argop1]++
 	if !checkFrequencies(&r, opFreq, transitFreq) {
 		t.Fatalf("operation/transit frequency diverges")
@@ -174,8 +174,8 @@ func TestEventRegistryZeroOperation(t *testing.T) {
 	addr = common.HexToAddress("0x12312121212")
 	key = common.HexToHash("0x232313123123213")
 	value = common.HexToHash("0x2301238021830912830")
-	r.RegisterValueOp(setStateID, &addr, &key, &value)
-	argop2 := EncodeArgOp(setStateID, newValueID, newValueID, newValueID)
+	r.RegisterValueOp(SetStateID, &addr, &key, &value)
+	argop2 := EncodeArgOp(SetStateID, newValueID, newValueID, newValueID)
 	opFreq[argop2]++
 	transitFreq[argop1][argop2]++
 	if !checkFrequencies(&r, opFreq, transitFreq) {
@@ -183,8 +183,8 @@ func TestEventRegistryZeroOperation(t *testing.T) {
 	}
 
 	// inject third operation and check frequencies.
-	r.RegisterValueOp(setStateID, &addr, &key, &value)
-	argop3 := EncodeArgOp(setStateID, previousValueID, previousValueID, previousValueID)
+	r.RegisterValueOp(SetStateID, &addr, &key, &value)
+	argop3 := EncodeArgOp(SetStateID, previousValueID, previousValueID, previousValueID)
 	opFreq[argop3]++
 	transitFreq[argop2][argop3]++
 	if !checkFrequencies(&r, opFreq, transitFreq) {
