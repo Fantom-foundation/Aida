@@ -35,6 +35,7 @@ var StochasticRecordCommand = cli.Command{
 	Flags: []cli.Flag{
 		&utils.CpuProfileFlag,
 		&utils.DisableProgressFlag,
+		&utils.EpochLengthFlag,
 		&utils.OutputFlag,
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
@@ -171,6 +172,13 @@ func stochasticRecordAction(ctx *cli.Context) error {
 		return fmt.Errorf("stochastic record command requires exactly 2 arguments")
 	}
 
+	// Fetch length of epoch from command line.
+	epochLength := ctx.Uint64(utils.EpochLengthFlag.Name)
+	if epochLength <= 0 {
+		epochLength = 300
+	}
+	log.Printf("Using epoch length of %d blocks\n", epochLength)
+
 	// start CPU profiling if enabled.
 	if profileFileName := ctx.String(utils.CpuProfileFlag.Name); profileFileName != "" {
 		f, err := os.Create(profileFileName)
@@ -215,6 +223,9 @@ func stochasticRecordAction(ctx *cli.Context) error {
 	// create a new event registry
 	eventRegistry := stochastic.NewEventRegistry()
 
+	curEpoch := first / epochLength
+	eventRegistry.RegisterOp(stochastic.BeginEpochID)
+
 	// iterate over all substates in order
 	for iter.Next() {
 		tx := iter.Value()
@@ -223,9 +234,22 @@ func stochasticRecordAction(ctx *cli.Context) error {
 			if tx.Block > last {
 				break
 			}
+			if oldBlock != math.MaxUint64 {
+				eventRegistry.RegisterOp(stochastic.EndBlockID)
+				newEpoch := tx.Block / epochLength
+				for curEpoch < newEpoch {
+					eventRegistry.RegisterOp(stochastic.EndEpochID)
+					curEpoch++
+					eventRegistry.RegisterOp(stochastic.BeginEpochID)
+				}
+			}
+			// open new block with a begin-block operation and clear index cache
+			eventRegistry.RegisterOp(stochastic.BeginBlockID)
 			oldBlock = tx.Block
 		}
+		eventRegistry.RegisterOp(stochastic.BeginTransactionID)
 		stochasticRecordTask(tx.Block, tx.Transaction, chainID, tx.Substate, &eventRegistry)
+		eventRegistry.RegisterOp(stochastic.EndTransactionID)
 		if enableProgress {
 			// report progress
 			sec = time.Since(start).Seconds()
@@ -234,8 +258,13 @@ func stochasticRecordAction(ctx *cli.Context) error {
 				lastSec = sec
 			}
 		}
-
 	}
+	// end last block
+	if oldBlock != math.MaxUint64 {
+		eventRegistry.RegisterOp(stochastic.EndBlockID)
+	}
+	eventRegistry.RegisterOp(stochastic.EndEpochID)
+
 	if enableProgress {
 		sec = time.Since(start).Seconds()
 		fmt.Printf("stochastic record: Total elapsed time: %.3f s, processed %v blocks\n", sec, last-first+1)

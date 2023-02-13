@@ -7,26 +7,32 @@ import (
 
 // IDs of StateDB Operations
 const (
-	addBalanceID = iota
-	createAccountID
-	emptyID
-	existID
-	finaliseID
-	getBalanceID
-	getCodeHashID
-	getCodeID
-	getCodeSizeID
-	getCommittedStateID
-	getNonceID
-	getStateID
-	hasSuicidedID
-	revertToSnapshotID
-	setCodeID
-	setNonceID
-	setStateID
-	snapshotID
-	subBalanceID
-	suicideID
+	AddBalanceID = iota
+	BeginBlockID
+	BeginEpochID
+	BeginTransactionID
+	CreateAccountID
+	EmptyID
+	EndBlockID
+	EndEpochID
+	EndTransactionID
+	ExistID
+	FinaliseID
+	GetBalanceID
+	GetCodeHashID
+	GetCodeID
+	GetCodeSizeID
+	GetCommittedStateID
+	GetNonceID
+	GetStateID
+	HasSuicidedID
+	RevertToSnapshotID
+	SetCodeID
+	SetNonceID
+	SetStateID
+	SnapshotID
+	SubBalanceID
+	SuicideID
 
 	numOps
 )
@@ -45,74 +51,92 @@ const (
 
 // opMnemo is a mnemonics table for operations.
 var opMnemo = map[int]string{
-	addBalanceID:        "AB",
-	createAccountID:     "CA",
-	emptyID:             "EM",
-	existID:             "EX",
-	finaliseID:          "FI",
-	getBalanceID:        "GB",
-	getCodeHashID:       "GH",
-	getCodeID:           "GC",
-	getCodeSizeID:       "GZ",
-	getCommittedStateID: "GM",
-	getNonceID:          "GN",
-	getStateID:          "GS",
-	hasSuicidedID:       "HS",
-	revertToSnapshotID:  "RS",
-	setCodeID:           "SC",
-	setNonceID:          "SO",
-	snapshotID:          "SN",
-	subBalanceID:        "SB",
-	setStateID:          "SS",
-	suicideID:           "SU",
+	AddBalanceID:        "AB",
+	BeginBlockID:        "BB",
+	BeginEpochID:        "BE",
+	BeginTransactionID:  "BT",
+	CreateAccountID:     "CA",
+	EmptyID:             "EM",
+	EndBlockID:          "EB",
+	EndEpochID:          "EE",
+	EndTransactionID:    "ET",
+	ExistID:             "EX",
+	FinaliseID:          "FI",
+	GetBalanceID:        "GB",
+	GetCodeHashID:       "GH",
+	GetCodeID:           "GC",
+	GetCodeSizeID:       "GZ",
+	GetCommittedStateID: "GM",
+	GetNonceID:          "GN",
+	GetStateID:          "GS",
+	HasSuicidedID:       "HS",
+	RevertToSnapshotID:  "RS",
+	SetCodeID:           "SC",
+	SetNonceID:          "SO",
+	SetStateID:          "SS",
+	SnapshotID:          "SN",
+	SubBalanceID:        "SB",
+	SuicideID:           "SU",
 }
 
 // opNumArgs is an argument number table for operations.
 var opNumArgs = map[int]int{
-	addBalanceID:        1,
-	createAccountID:     1,
-	emptyID:             1,
-	existID:             1,
-	finaliseID:          0,
-	getBalanceID:        1,
-	getCodeHashID:       1,
-	getCodeID:           1,
-	getCodeSizeID:       1,
-	getCommittedStateID: 2,
-	getNonceID:          1,
-	getStateID:          2,
-	hasSuicidedID:       1,
-	revertToSnapshotID:  0,
-	setCodeID:           1,
-	setNonceID:          1,
-	snapshotID:          0,
-	subBalanceID:        1,
-	setStateID:          3,
-	suicideID:           1,
+	AddBalanceID:        1,
+	BeginBlockID:        0,
+	BeginEpochID:        0,
+	BeginTransactionID:  0,
+	CreateAccountID:     1,
+	EmptyID:             1,
+	EndBlockID:          0,
+	EndEpochID:          0,
+	EndTransactionID:    0,
+	ExistID:             1,
+	FinaliseID:          0,
+	GetBalanceID:        1,
+	GetCodeHashID:       1,
+	GetCodeID:           1,
+	GetCodeSizeID:       1,
+	GetCommittedStateID: 2,
+	GetNonceID:          1,
+	GetStateID:          2,
+	HasSuicidedID:       1,
+	RevertToSnapshotID:  0,
+	SetCodeID:           1,
+	SetNonceID:          1,
+	SetStateID:          3,
+	SnapshotID:          0,
+	SubBalanceID:        1,
+	SuicideID:           1,
 }
 
 // opId is an operation ID table.
 var opId = map[string]int{
-	"AB": addBalanceID,
-	"CA": createAccountID,
-	"EM": emptyID,
-	"EX": existID,
-	"FI": finaliseID,
-	"GB": getBalanceID,
-	"GH": getCodeHashID,
-	"GC": getCodeID,
-	"GZ": getCodeSizeID,
-	"GM": getCommittedStateID,
-	"GN": getNonceID,
-	"GS": getStateID,
-	"HS": hasSuicidedID,
-	"RS": revertToSnapshotID,
-	"SC": setCodeID,
-	"SO": setNonceID,
-	"SN": snapshotID,
-	"SB": subBalanceID,
-	"SS": setStateID,
-	"SU": suicideID,
+	"AB": AddBalanceID,
+	"BB": BeginBlockID,
+	"BE": BeginEpochID,
+	"BT": BeginTransactionID,
+	"CA": CreateAccountID,
+	"EM": EmptyID,
+	"EB": EndBlockID,
+	"EE": EndEpochID,
+	"ET": EndTransactionID,
+	"EX": ExistID,
+	"FI": FinaliseID,
+	"GB": GetBalanceID,
+	"GH": GetCodeHashID,
+	"GC": GetCodeID,
+	"GZ": GetCodeSizeID,
+	"GM": GetCommittedStateID,
+	"GN": GetNonceID,
+	"GS": GetStateID,
+	"HS": HasSuicidedID,
+	"RS": RevertToSnapshotID,
+	"SC": SetCodeID,
+	"SO": SetNonceID,
+	"SN": SnapshotID,
+	"SB": SubBalanceID,
+	"SS": SetStateID,
+	"SU": SuicideID,
 }
 
 // argMnemo is the argument-class mnemonics table.
