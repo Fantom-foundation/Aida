@@ -1,6 +1,7 @@
 package stochastic
 
 import (
+	"math/rand"
 	"testing"
 
 	"gonum.org/v1/gonum/stat/distuv"
@@ -8,21 +9,17 @@ import (
 
 // TextNextState checks transition of a deterministic Markovian process.
 func TestNextState(t *testing.T) {
-	t.Parallel()
 	var A = [][]float64{{0.0, 1.0}, {1.0, 0.0}}
-	i := nextState(A, 0)
-	if i != 1 {
+	if nextState(A, 0) != 1 {
 		t.Fatalf("Illegal state transition (row 0)")
 	}
-	i = nextState(A, 1)
-	if i != 0 {
+	if nextState(A, 1) != 0 {
 		t.Fatalf("Illegal state transition (row 1)")
 	}
 }
 
 // TextNextState2 checks transition of a deterministic Markovian process.
 func TestNextState2(t *testing.T) {
-	t.Parallel()
 	var A = [][]float64{
 		{0.0, 1.0, 0.0},
 		{0.0, 0.0, 1.0},
@@ -44,10 +41,8 @@ func TestNextState2(t *testing.T) {
 
 // TextNextStateFail checks whether nextState fails if Markov property does not hold.
 func TestNextStateFail(t *testing.T) {
-	t.Parallel()
 	var A = [][]float64{{0.0, 0.0}, {0.0, 0.0}}
-	i := nextState(A, 0)
-	if i != -1 {
+	if nextState(A, 0) != -1 {
 		t.Fatalf("Could not capture faulty stochastic matrix")
 	}
 }
@@ -84,6 +79,7 @@ func checkUniformMarkov(n int, numSteps int) bool {
 	expected := float64(numSteps) / float64(n)
 	for _, v := range counts {
 		err := expected - float64(v)
+		// fmt.Printf("Err: %v %v\n", v, expected)
 		chi2 += (err * err) / expected
 	}
 
@@ -92,31 +88,34 @@ func checkUniformMarkov(n int, numSteps int) bool {
 	// number of states in the uniform Markovian process.
 	alpha := 0.05
 	df := float64(n - 1)
-	chiCritical := distuv.ChiSquared{K: df, Src: nil}.Quantile(1.0 - alpha)
-	return chi2 > chiCritical
+	chi2Critical := distuv.ChiSquared{K: df, Src: nil}.Quantile(1.0 - alpha)
+	// fmt.Printf("Chi^2 value: %v Chi^2 critical value: %v n: %v\n", chi2, chi2Critical, n)
+
+	return chi2 <= chi2Critical
 }
 
 // TestRandomNextState checks whether a uniform Markovian process
 // produces a uniform state distribution via a chi-squared test
 // for various number of states.
 func TestRandomNextState(t *testing.T) {
-	t.Parallel()
-	for n := 2; n < 20; n += 4 {
-		// TODO: complex interaction between number of steps
-		// in the Markovian process and the statistical test.
-		// If the number of steps is too low, our statistical
-		// test will fail because we are still too far from the
-		// stationary distribution.
-		if checkUniformMarkov(n, 100000) {
-			t.Fatalf("Uniform Markovian process is not unbiased for %v states.", n)
-		}
+	// set random seed to make test deterministic
+	// (make sure that these tests are not performed in parallel)
+	rand.Seed(4711)
+
+	// test small markov chain
+	if !checkUniformMarkov(4, 100) {
+		t.Fatalf("Uniform Markovian process is not unbiased for small test.")
+	}
+
+	// test large markov chain
+	if !checkUniformMarkov(5400, 25*5400) {
+		t.Fatalf("Uniform Markovian process is not unbiased for large test.")
 	}
 }
 
 // TestInitialState checks function initialState
 // for returning the correct intial state.
 func TestInitialState(t *testing.T) {
-	t.Parallel()
 	opcode := []string{"A", "B", "C"}
 	if initialState(opcode, "A") != 0 {
 		t.Fatalf("Cannot find first state A")
