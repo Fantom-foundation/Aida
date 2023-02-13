@@ -101,13 +101,13 @@ func checkUniformMarkov(n int, numSteps int) bool {
 // for various number of states.
 func TestRandomNextState(t *testing.T) {
 	t.Parallel()
-	for n := 2; n < 10; n++ {
+	for n := 2; n < 20; n += 4 {
 		// TODO: complex interaction between number of steps
 		// in the Markovian process and the statistical test.
 		// If the number of steps are too low, our statistical
 		// test will fail because we are still to far from the
 		// stationary distribution.
-		if checkUniformMarkov(n, 1000) {
+		if checkUniformMarkov(n, 100000) {
 			t.Fatalf("Uniform Markovian process is not unbiased for %v states.", n)
 		}
 	}
