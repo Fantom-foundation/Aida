@@ -2,6 +2,7 @@ package stochastic
 
 import (
 	"fmt"
+	"log"
 	"math/rand"
 )
 
@@ -34,9 +35,9 @@ func RunStochasticReplay(e *EstimationModelJSON, simLength int, verbose bool) {
 	)
 
 	// set initial state (ensure that zero is a start-state)
-	state := firstState(opcode, "SN")
+	state := initialState(opcode, "SN")
 	if state == -1 {
-		panic("First state cannot be observed in Markov chain")
+		log.Fatalf("Initial state cannot be observed in Markov chain/recording failed.")
 	}
 
 	for i := 0; i < simLength; i++ {
@@ -78,8 +79,8 @@ func executeState(op, addr, key, value int) {
 	// 2) issue stateDB operations (for the execution we may need some state, e.g., balance, etc)
 }
 
-// firstState returns the row/column index of the first state in the stochastic matrix.
-func firstState(operations []string, opcode string) int {
+// initialState returns the row/column index of the first state in the stochastic matrix.
+func initialState(operations []string, opcode string) int {
 	for i, opc := range operations {
 		if opc == opcode {
 			return i
@@ -88,12 +89,12 @@ func firstState(operations []string, opcode string) int {
 	return -1
 }
 
-// nextState produces the next state in the Markov-chain.
+// nextState produces the next state in the Markovian process.
 func nextState(A [][]float64, i int) int {
-	// retrieve a random number in [0,1.0)
+	// Retrieve a random number in [0,1.0).
 	r := rand.Float64()
 
-	// use Kahan's sum for summing values
+	// Use Kahan's sum for summing values
 	// in case we have a combination of very small
 	// and very large values.
 	sum := float64(0.0)
@@ -103,7 +104,7 @@ func nextState(A [][]float64, i int) int {
 		y := A[i][j] - c
 		t := sum + y
 		c = (t - sum) - y
-		sum := t
+		sum = t
 		if r <= sum {
 			return j
 		}
