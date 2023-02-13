@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	approxEps       = 1e-9   // epsilon for terminating the bi-section for finding minimal LSE
+	estimationEps   = 1e-9   // epsilon for bi-section,  and stationary distribution
 	approxMaxSteps  = 10000  // maximum number of iterations for finding minimal LSE
 	approxInfLambda = 1.0    // lower bound for searching minimal LSE
 	approxSupLambda = 1000.0 // upper bound for searching minimal LSE
@@ -111,7 +111,7 @@ func ApproximateLambda(points [][2]float64) (float64, error) {
 		} else {
 			left = mid
 		}
-		if math.Abs(right-left) < approxEps {
+		if math.Abs(right-left) < estimationEps {
 			return mid, nil
 		}
 	}
@@ -130,9 +130,9 @@ func PiecewiseLinearCdf(lambda float64, n int) [][2]float64 {
 	return fn
 }
 
-// SteadyStateDistribution computes the steady-state for a stochastic matrix.
-func SteadyStateDistribution(M [][]float64) []float64 {
-	// compute eigen-value/vector of stochastic matrix
+// StationaryDistribution computes the stationary distribution for a stochastic matrix.
+func StationaryDistribution(M [][]float64) ([]float64, error) {
+	// flatten matrix for gonum package
 	n := len(M)
 	elements := []float64{}
 	for i := 0; i < n; i++ {
@@ -141,22 +141,44 @@ func SteadyStateDistribution(M [][]float64) []float64 {
 		}
 	}
 	a := mat.NewDense(n, n, elements)
+
+	// perform eigenvalue decomposition
 	var eig mat.Eigen
 	ok := eig.Factorize(a, mat.EigenLeft)
 	if !ok {
-		log.Fatal("eigen-decomposition failed")
+		return nil, fmt.Errorf("eigen-value decomposition failed")
 	}
+
+	// find index for eigenvalue of one
+	// (note that it is not necessarily the first index)
+	v := eig.Values(nil)
+	k := -1
+	for i, eigenValue := range v {
+		if math.Abs(real(eigenValue)-1.0) < estimationEps && math.Abs(imag(eigenValue)) < estimationEps {
+			k = i
+		}
+	}
+	if k == -1 {
+		return nil, fmt.Errorf("eigen-decomposition failed; no eigenvalue of one found")
+	}
+
+	// find left eigenvectors of decomposition
 	var ev mat.CDense
 	eig.LeftVectorsTo(&ev)
-	// compute total of the first left eigenvector
-	total := float64(0)
+
+	// compute total for eigenvector with eigenvalue of one.
+	total := complex128(0)
 	for i := 0; i < n; i++ {
-		total += math.Abs(real(ev.At(i, 0)))
+		total += ev.At(i, k)
 	}
-	// steady state is the normalized, first left eigenvector
-	steadyState := []float64{}
+	if imag(total) > estimationEps {
+		return nil, fmt.Errorf("eigen-decomposition failed; eigen-vector is a complex number")
+	}
+
+	// normalize eigenvector by total
+	stationary := []float64{}
 	for i := 0; i < n; i++ {
-		steadyState = append(steadyState, math.Abs(real(ev.At(i, 0)))/total)
+		stationary = append(stationary, math.Abs(real(ev.At(i, k))/real(total)))
 	}
-	return steadyState
+	return stationary, nil
 }

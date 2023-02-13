@@ -11,7 +11,7 @@ type EventData struct {
 	Keys      AccessData // storage-key view model
 	Values    AccessData // storage-value view model
 
-	SteadyState      []OpData    // steady-state model
+	Stationary       []OpData    // stationary distribution model
 	OperationLabel   []string    // operation labels for stochastic matrix
 	StochasticMatrix [][]float64 // stochastic Matrix
 }
@@ -50,20 +50,20 @@ func (e *EventData) PopulateEventData(d *EventRegistryJSON) {
 	// populate access stats for storage values
 	e.Values.PopulateAccessStats(&d.Values)
 
-	// Sort entries of the steady and populate
+	// Sort entries of the stationary distribution and populate
 	n := len(d.Operations)
-	steadyState := SteadyStateDistribution(d.StochasticMatrix)
+	stationary, _ := StationaryDistribution(d.StochasticMatrix)
 	data := []OpData{}
 	for i := 0; i < n; i++ {
 		data = append(data, OpData{
 			label: d.Operations[i],
-			p:     steadyState[i],
+			p:     stationary[i],
 		})
 	}
 	sort.Slice(data, func(i, j int) bool {
 		return data[i].p < data[j].p
 	})
-	e.SteadyState = data
+	e.Stationary = data
 
 	// Populate stochastic matrix
 	e.OperationLabel = make([]string, len(d.Operations))
