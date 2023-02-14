@@ -2,12 +2,13 @@ package state
 
 import (
 	"bytes"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 	"math/big"
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 // makeAccountAddress creates randomly generated address
