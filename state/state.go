@@ -90,6 +90,11 @@ type StateDB interface {
 	// while it is alive.
 	StartBulkLoad() BulkLoad
 
+	// GetArchiveState creates a state instance linked to a historic block state in an
+	// optionally present archive. The operation fails if there is no archive or the
+	// specified block is not present in the archive.
+	GetArchiveState(block uint64) (StateDB, error)
+
 	// Requests a description of the current memory usage of this State DB. Implementations
 	// not supporting this may return nil.
 	GetMemoryUsage() *MemoryUsage

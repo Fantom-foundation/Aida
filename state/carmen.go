@@ -259,12 +259,20 @@ func (s *carmenStateDB) AddPreimage(common.Hash, []byte) {
 func (s *carmenStateDB) ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error {
 	// ignored
 	panic("ForEachStorage not implemented")
-	return nil
 }
 
 func (s *carmenStateDB) StartBulkLoad() BulkLoad {
 	return &carmenBulkLoad{s.db.StartBulkLoad()}
 }
+
+func (s *carmenStateDB) GetArchiveState(block uint64) (StateDB, error) {
+	state, err := s.db.GetArchiveStateDB(block)
+	if err != nil {
+		return nil, err
+	}
+	return &carmenStateDB{state, 0, 0}, nil
+}
+
 func (s *carmenStateDB) GetMemoryUsage() *MemoryUsage {
 	usage := s.db.GetMemoryFootprint()
 	return &MemoryUsage{uint64(usage.Total()), usage}

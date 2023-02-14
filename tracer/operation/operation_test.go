@@ -159,6 +159,10 @@ func (s *MockStateDB) StartBulkLoad() state.BulkLoad {
 	return nil
 }
 
+func (s *MockStateDB) GetArchiveState(block uint64) (state.StateDB, error) {
+	panic("Archive state not supported in mock")
+}
+
 func (s *MockStateDB) GetMemoryUsage() *state.MemoryUsage {
 	panic("GetMemoryUsage not supported in mock")
 	return nil
