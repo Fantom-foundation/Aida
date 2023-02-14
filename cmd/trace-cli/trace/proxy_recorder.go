@@ -3,9 +3,9 @@ package trace
 import (
 	"math/big"
 
+	"github.com/Fantom-foundation/Aida/substate-cli/state"
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
-	"github.com/Fantom-foundation/substate-cli/state"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/substate"

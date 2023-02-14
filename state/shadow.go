@@ -216,8 +216,8 @@ func (s *shadowStateDB) Prepare(thash common.Hash, ti int) {
 	s.run("Prepare", func(s StateDB) { s.Prepare(thash, ti) })
 }
 
-func (s *shadowStateDB) PrepareSubstate(substate *substate.SubstateAlloc) {
-	s.run("PrepareSubstate", func(s StateDB) { s.PrepareSubstate(substate) })
+func (s *shadowStateDB) PrepareSubstate(substate *substate.SubstateAlloc, block uint64) {
+	s.run("PrepareSubstate", func(s StateDB) { s.PrepareSubstate(substate, block) })
 }
 
 func (s *shadowStateDB) GetSubstatePostAlloc() substate.SubstateAlloc {

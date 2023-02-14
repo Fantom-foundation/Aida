@@ -235,7 +235,7 @@ func (s *MockStateDB) GetLogs(hash common.Hash, blockHash common.Hash) []*types.
 	return nil
 }
 
-func (s *MockStateDB) PrepareSubstate(substate *substate.SubstateAlloc) {
+func (s *MockStateDB) PrepareSubstate(substate *substate.SubstateAlloc, block uint64) {
 	// ignored
 }
 

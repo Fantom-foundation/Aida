@@ -10,14 +10,14 @@ import (
 	"runtime/pprof"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
+	"github.com/Fantom-foundation/Aida/substate-cli/state"
 	"github.com/Fantom-foundation/Aida/tracer"
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/Fantom-foundation/go-opera/opera"
-	"github.com/Fantom-foundation/substate-cli/cmd/substate-cli/replay"
-	"github.com/Fantom-foundation/substate-cli/state"
 	"github.com/dsnet/compress/bzip2"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
@@ -83,7 +83,7 @@ func traceRecordTask(block uint64, tx, chainID int, recording *substate.Substate
 	}
 
 	var statedb state.StateDB
-	statedb = state.MakeInMemoryStateDB(&inputAlloc)
+	statedb = state.MakeInMemoryStateDB(&inputAlloc, inputEnv.Number)
 	statedb = NewProxyRecorder(statedb, dCtx, ch, utils.TraceDebug)
 
 	// Apply Message
@@ -252,7 +252,7 @@ func traceRecordAction(ctx *cli.Context) error {
 	if ctx.Bool(utils.TraceDebugFlag.Name) {
 		utils.TraceDebug = true
 	}
-	first, last, argErr := replay.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
+	first, last, argErr := utils.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
 	if argErr != nil {
 		return argErr
 	}

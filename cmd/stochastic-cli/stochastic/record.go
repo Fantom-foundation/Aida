@@ -10,12 +10,12 @@ import (
 	"runtime/pprof"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
 	"github.com/Fantom-foundation/Aida/stochastic"
+	"github.com/Fantom-foundation/Aida/substate-cli/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/Fantom-foundation/go-opera/opera"
-	"github.com/Fantom-foundation/substate-cli/cmd/substate-cli/replay"
-	"github.com/Fantom-foundation/substate-cli/state"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -81,7 +81,7 @@ func stochasticRecordTask(block uint64, tx, chainID int, recording *substate.Sub
 		return h
 	}
 
-	var statedb state.StateDB = stochastic.NewEventProxy(state.MakeInMemoryStateDB(&inputAlloc), eventRegistry)
+	var statedb state.StateDB = stochastic.NewEventProxy(state.MakeInMemoryStateDB(&inputAlloc, inputEnv.Number), eventRegistry)
 
 	// Apply Message
 	var (
@@ -197,7 +197,7 @@ func stochasticRecordAction(ctx *cli.Context) error {
 	if ctx.Bool(utils.TraceDebugFlag.Name) {
 		utils.TraceDebug = true
 	}
-	first, last, argErr := replay.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
+	first, last, argErr := utils.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
 	if argErr != nil {
 		return argErr
 	}

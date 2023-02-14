@@ -9,13 +9,12 @@ import (
 	"runtime/pprof"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
 	"github.com/Fantom-foundation/Aida/state"
-
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/Fantom-foundation/go-opera/opera"
-	"github.com/Fantom-foundation/substate-cli/cmd/substate-cli/replay"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -343,7 +342,7 @@ func RunVM(ctx *cli.Context) error {
 			break
 		}
 		// run VM
-		db.PrepareSubstate(&tx.Substate.InputAlloc)
+		db.PrepareSubstate(&tx.Substate.InputAlloc, tx.Substate.Env.Number)
 		db.BeginTransaction(uint32(tx.Transaction))
 		var result *substate.SubstateResult
 		result, err = runVMTask(db, cfg, tx.Block, tx.Transaction, tx.Substate)

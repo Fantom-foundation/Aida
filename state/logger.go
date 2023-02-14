@@ -243,8 +243,8 @@ func (s *loggingStateDB) Prepare(thash common.Hash, ti int) {
 	log.Printf("Prepare, %v, %v\n", thash, ti)
 }
 
-func (s *loggingStateDB) PrepareSubstate(substate *substate.SubstateAlloc) {
-	s.db.PrepareSubstate(substate)
+func (s *loggingStateDB) PrepareSubstate(substate *substate.SubstateAlloc, block uint64) {
+	s.db.PrepareSubstate(substate, block)
 	log.Printf("PrepareSubstate, %v\n", substate)
 }
 

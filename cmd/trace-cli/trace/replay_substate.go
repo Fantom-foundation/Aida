@@ -105,7 +105,7 @@ func traceReplaySubstateTask(cfg *utils.Config) error {
 		}
 
 		if cfg.DbImpl == "memory" {
-			db.PrepareSubstate(&tx.Substate.InputAlloc)
+			db.PrepareSubstate(&tx.Substate.InputAlloc, tx.Substate.Env.Number)
 		} else {
 			utils.PrimeStateDB(tx.Substate.InputAlloc, db, cfg)
 		}
