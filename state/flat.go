@@ -126,6 +126,10 @@ func (s *flatStateDB) StartBulkLoad() BulkLoad {
 	return &flatBulkLoad{db: s}
 }
 
+func (s *flatStateDB) GetArchiveState(block uint64) (StateDB, error) {
+	return nil, fmt.Errorf("archive states are not (yet) supported by this DB implementation")
+}
+
 // For priming initial state of stateDB
 type flatBulkLoad struct {
 	db      *flatStateDB

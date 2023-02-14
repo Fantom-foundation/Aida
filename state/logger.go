@@ -268,6 +268,12 @@ func (s *loggingStateDB) StartBulkLoad() BulkLoad {
 	// no loggin in this case
 	return s.db.StartBulkLoad()
 }
+
+func (s *loggingStateDB) GetArchiveState(block uint64) (StateDB, error) {
+	// no loggin in this case
+	return s.db.GetArchiveState(block)
+}
+
 func (s *loggingStateDB) GetMemoryUsage() *MemoryUsage {
 	// no loggin in this case
 	return s.db.GetMemoryUsage()

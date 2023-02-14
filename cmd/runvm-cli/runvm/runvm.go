@@ -28,7 +28,7 @@ const MaxErrorCount = 50 // maximum number of errors before terminating program
 var errCount int         // number of errors encountered
 
 // runVMTask executes VM on a chosen storage system.
-func runVMTask(db state.StateDB, cfg *utils.Config, block uint64, tx int, recording *substate.Substate) (*substate.SubstateResult, error) {
+func RunVMTask(db state.StateDB, cfg *utils.Config, block uint64, tx int, recording *substate.Substate) (*substate.SubstateResult, error) {
 
 	inputAlloc := recording.InputAlloc
 	inputEnv := recording.Env
@@ -345,7 +345,7 @@ func RunVM(ctx *cli.Context) error {
 		db.PrepareSubstate(&tx.Substate.InputAlloc, tx.Substate.Env.Number)
 		db.BeginTransaction(uint32(tx.Transaction))
 		var result *substate.SubstateResult
-		result, err = runVMTask(db, cfg, tx.Block, tx.Transaction, tx.Substate)
+		result, err = RunVMTask(db, cfg, tx.Block, tx.Transaction, tx.Substate)
 		if err != nil {
 			log.Printf("\tRun VM failed.\n")
 			err = fmt.Errorf("Error: VM execution failed. %w", err)

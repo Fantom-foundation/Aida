@@ -28,6 +28,7 @@ var RunVMApp = cli.App{
 		&utils.DeletedAccountDirFlag,
 		&utils.DisableProgressFlag,
 		&utils.EpochLengthFlag,
+		&utils.KeepStateDBFlag,
 		&utils.MaxNumTransactionsFlag,
 		&utils.MemoryBreakdownFlag,
 		&utils.MemProfileFlag,

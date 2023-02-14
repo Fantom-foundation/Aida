@@ -189,7 +189,7 @@ func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *Config, target ui
 	}
 	log.Printf("Deleting %d accounts ..\n", len(list))
 	db.BeginEpoch(0)
-	db.BeginBlock(0)
+	db.BeginBlock(1) // block 0 is the priming, block 1 the deletion
 	db.BeginTransaction(0)
 	for _, cur := range list {
 		db.Suicide(cur)

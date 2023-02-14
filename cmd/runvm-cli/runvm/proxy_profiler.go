@@ -1,6 +1,7 @@
 package runvm
 
 import (
+	"fmt"
 	"math/big"
 	"time"
 
@@ -400,6 +401,10 @@ func (p *ProxyProfiler) Close() error {
 func (p *ProxyProfiler) StartBulkLoad() state.BulkLoad {
 	panic("StartBulkLoad not supported by ProxyProfiler")
 	return nil
+}
+
+func (p *ProxyProfiler) GetArchiveState(block uint64) (state.StateDB, error) {
+	return nil, fmt.Errorf("archive states are not (yet) supported by the profiling proxy")
 }
 
 func (p *ProxyProfiler) GetMemoryUsage() *state.MemoryUsage {

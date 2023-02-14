@@ -233,11 +233,22 @@ func (s *shadowStateDB) AddPreimage(hash common.Hash, plain []byte) {
 func (s *shadowStateDB) ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error {
 	// ignored
 	panic("ForEachStorage not implemented")
-	return nil
 }
 
 func (s *shadowStateDB) StartBulkLoad() BulkLoad {
 	return &shadowBulkLoad{s.prime.StartBulkLoad(), s.shadow.StartBulkLoad()}
+}
+
+func (s *shadowStateDB) GetArchiveState(block uint64) (StateDB, error) {
+	var prime, shadow StateDB
+	var err error
+	if prime, err = s.prime.GetArchiveState(block); err != nil {
+		return nil, err
+	}
+	if shadow, err = s.shadow.GetArchiveState(block); err != nil {
+		return nil, err
+	}
+	return MakeShadowStateDB(prime, shadow), err
 }
 
 type stringStringer struct {

@@ -165,6 +165,27 @@ executes transactions from block 4,564,026 to 5,000,000. The tool initializes st
  - `--workers` sets the number of worker threads.
  - `--vm-impl` select between `geth` and `lfvm`. Default: `geth`
 
+
+### Run Archive
+
+**Run**
+
+`./build/aida-runarchive --substatedir path/to/substatedb --db-src-dir path/to/statedb/with/archive 4564026 5000000`
+executes transactions from block 4,564,026 to 5,000,000 using the historic data in the provided archive. Each transaction
+loads the historic state of its block and executes the transaction on it in read-only mode.
+
+**Options**
+
+ - `--chainid` sets the chain-id (useful if recording from testnet). Default: 250 (mainnet)`
+ - `--cpuprofile` records a CPU profile for the replay to be inspected using `pprof`
+ - `--db-impl` select between `memory`, `geth`, `carmen` and `flat`. Default: `geth`
+ - `--db-variant` select between implementation specific sub-variants, e.g. `go-ldb` or `cpp-file`
+ - `--disable-progress` disable progress report. Default: `false`
+ - `--substatedir` sets directory containing substate database. Default: `./substate.fantom`
+ - `--validate-tx` validate the effects of each transaction.
+ - `--workers` sets the number of worker threads.
+ - `--vm-impl` select between `geth` and `lfvm`. Default: `geth`
+
 ### Generate an update-set database
 
 **Run**
