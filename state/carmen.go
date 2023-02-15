@@ -74,11 +74,6 @@ type carmenStateDB struct {
 	blockNumber uint64
 }
 
-var getCodeCalled bool
-var getCodeSizeCalled bool
-var getCodeHashCalled bool
-var setCodeCalled bool
-
 func (s *carmenStateDB) BeginBlockApply() error {
 	return nil
 }
