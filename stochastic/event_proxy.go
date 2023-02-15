@@ -5,7 +5,7 @@ package stochastic
 import (
 	"math/big"
 
-	"github.com/Fantom-foundation/Aida/substate-cli/state"
+	"github.com/Fantom-foundation/Aida/state"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/substate"
@@ -297,4 +297,51 @@ func (p *EventProxy) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 func (p *EventProxy) GetSubstatePostAlloc() substate.SubstateAlloc {
 	// call real StateDB
 	return p.db.GetSubstatePostAlloc()
+}
+
+func (p *EventProxy) PrepareSubstate(substate *substate.SubstateAlloc, block uint64) {
+	p.db.PrepareSubstate(substate, block)
+}
+
+func (p *EventProxy) BeginTransaction(number uint32) {
+	p.db.BeginTransaction(number)
+}
+
+func (p *EventProxy) EndTransaction() {
+	p.db.EndTransaction()
+}
+
+func (p *EventProxy) BeginBlock(number uint64) {
+	p.db.BeginBlock(number)
+}
+
+func (p *EventProxy) EndBlock() {
+	p.db.EndBlock()
+}
+
+func (p *EventProxy) BeginEpoch(number uint64) {
+	p.db.BeginEpoch(number)
+}
+
+func (p *EventProxy) EndEpoch() {
+	p.db.EndEpoch()
+}
+
+// BeginBlockApply creates a new object copying state from
+// the old stateDB or clears execution state of stateDB
+func (p *EventProxy) BeginBlockApply() error {
+	return p.db.BeginBlockApply()
+}
+
+func (p *EventProxy) Close() error {
+	return p.db.Close()
+}
+
+func (p *EventProxy) StartBulkLoad() state.BulkLoad {
+	panic("StartBulkLoad not supported by EventProxy")
+	return nil
+}
+
+func (p *EventProxy) GetMemoryUsage() *state.MemoryUsage {
+	return p.db.GetMemoryUsage()
 }

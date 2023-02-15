@@ -9,9 +9,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
-
-	"github.com/Fantom-foundation/Aida/substate-cli/state"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -220,7 +219,7 @@ func replayForkTask(block uint64, tx int, recording *substate.Substate, taskPool
 	}
 	evmResult.GasUsed = msgResult.UsedGas
 
-	evmAlloc := statedb.SubstatePostAlloc
+	evmAlloc := statedb.GetSubstatePostAlloc()
 
 	if r, a := outputResult.Equal(evmResult), outputAlloc.Equal(evmAlloc); !(r && a) {
 		if outputResult.Status == types.ReceiptStatusSuccessful &&

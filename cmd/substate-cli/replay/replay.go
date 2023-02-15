@@ -16,14 +16,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 
-	//"github.com/ethereum/go-ethereum/core/state"
-	"github.com/Fantom-foundation/Aida/substate-cli/state"
+	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/Fantom-foundation/go-opera/opera"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/core/vm/lfvm"
-	_ "github.com/ethereum/go-ethereum/core/vm/lfvm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/substate"
@@ -137,7 +135,7 @@ func replayTask(config ReplayConfig, block uint64, tx int, recording *substate.S
 
 	var statedb state.StateDB
 	if config.use_in_memory_db {
-		statedb = state.MakeInMemoryStateDB(&inputAlloc, block)
+		statedb = state.MakeGethInMemoryStateDB(&inputAlloc, block)
 	} else {
 		statedb = state.MakeOffTheChainStateDB(inputAlloc)
 	}

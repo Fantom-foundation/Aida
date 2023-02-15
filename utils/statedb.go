@@ -61,7 +61,7 @@ func makeStateDBInternal(directory string, cfg *Config, rootHash common.Hash, is
 func makeStateDBVariant(directory, impl, variant string, rootHash common.Hash, archiveMode bool) (state.StateDB, error) {
 	switch impl {
 	case "memory":
-		return state.MakeGethInMemoryStateDB(variant, 0)
+		return state.MakeEmptyGethInMemoryStateDB(variant)
 	case "geth":
 		return state.MakeGethStateDB(directory, variant, rootHash, archiveMode)
 	case "carmen":
