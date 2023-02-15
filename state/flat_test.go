@@ -60,6 +60,7 @@ func makeAccountCode(t *testing.T) []byte {
 	return ch.Bytes()
 }
 
+// TestMakeFlatStateDBMemory tests creation of in-memory flat state DB
 func TestMakeFlatStateDBMemory(t *testing.T) {
 	_, err := MakeFlatStateDB("", "go-memory", common.Hash{})
 	if err != nil {
@@ -67,6 +68,7 @@ func TestMakeFlatStateDBMemory(t *testing.T) {
 	}
 }
 
+// TestMakeFlatStateDBLevelDB tests creation of flat state DB based on levelDB
 func TestMakeFlatStateDBLevelDB(t *testing.T) {
 	_, err := MakeFlatStateDB("testDB", "go-ldb", common.Hash{})
 	if err != nil {
@@ -74,6 +76,8 @@ func TestMakeFlatStateDBLevelDB(t *testing.T) {
 	}
 }
 
+// TestMakeFlatStateDBDefault tests creation of flat state DB without specifying a variant
+// should create in-memory DB
 func TestMakeFlatStateDBDefault(t *testing.T) {
 	_, err := MakeFlatStateDB("", "", common.Hash{})
 	if err == nil {
@@ -81,6 +85,7 @@ func TestMakeFlatStateDBDefault(t *testing.T) {
 	}
 }
 
+// TestCloseFlatDB tests closing flat state DB
 func TestCloseFlatDB(t *testing.T) {
 	fsDB, err := MakeFlatStateDB("", "go-memory", common.Hash{})
 	if err != nil {
@@ -93,6 +98,7 @@ func TestCloseFlatDB(t *testing.T) {
 	}
 }
 
+// TestBeginBlockApply tests if starting block apply will run successfully
 func TestBeginBlockApply(t *testing.T) {
 	fsDB, err := MakeFlatStateDB("", "go-memory", common.Hash{})
 	if err != nil {
@@ -105,6 +111,7 @@ func TestBeginBlockApply(t *testing.T) {
 	}
 }
 
+// TestStartBulkLoadAndClose tests starting and immediately closing bulk load without any operations
 func TestStartBulkLoadAndClose(t *testing.T) {
 	fsDB, err := MakeFlatStateDB("", "go-memory", common.Hash{})
 	if err != nil {
@@ -119,6 +126,7 @@ func TestStartBulkLoadAndClose(t *testing.T) {
 	}
 }
 
+// TestSetBalance tests setting random balance to an account in bulk load
 func TestSetBalance(t *testing.T) {
 	fsDB, err := MakeFlatStateDB("", "go-memory", common.Hash{})
 	if err != nil {
@@ -147,6 +155,7 @@ func TestSetBalance(t *testing.T) {
 	}
 }
 
+// TestSetNonce tests setting random nonce to an account in bulk load
 func TestSetNonce(t *testing.T) {
 	fsDB, err := MakeFlatStateDB("", "go-memory", common.Hash{})
 	if err != nil {
@@ -176,6 +185,7 @@ func TestSetNonce(t *testing.T) {
 	}
 }
 
+// TestSetState tests setting randomly generated state to an account in bulk load
 func TestSetState(t *testing.T) {
 	fsDB, err := MakeFlatStateDB("", "go-memory", common.Hash{})
 	if err != nil {
@@ -199,6 +209,7 @@ func TestSetState(t *testing.T) {
 	}
 }
 
+// TestSetCode tests setting randomly generated code to an account in bulk load
 func TestSetCode(t *testing.T) {
 	fsDB, err := MakeFlatStateDB("", "go-memory", common.Hash{})
 	if err != nil {
@@ -221,6 +232,8 @@ func TestSetCode(t *testing.T) {
 	}
 }
 
+// TestAutomaticBlockEnd creates 100 randomized accounts and runs 1 000 000 randomized operations in random order
+// to test automatic block ending
 func TestAutomaticBlockEnd(t *testing.T) {
 	fsDB, err := MakeFlatStateDB("", "go-memory", common.Hash{})
 	if err != nil {
