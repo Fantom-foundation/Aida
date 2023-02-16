@@ -345,3 +345,7 @@ func (p *EventProxy) StartBulkLoad() state.BulkLoad {
 func (p *EventProxy) GetMemoryUsage() *state.MemoryUsage {
 	return p.db.GetMemoryUsage()
 }
+
+func (p *EventProxy) GetArchiveState(block uint64) (state.StateDB, error) {
+	return p.db.GetArchiveState(block)
+}
