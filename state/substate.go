@@ -1,5 +1,6 @@
 package state
 
+// A legacy code for substate-cli
 import (
 	"errors"
 	"fmt"
@@ -121,7 +122,7 @@ func getHash(addr common.Address, code []byte) common.Hash {
 }
 
 // MakeOffTheChainStateDB returns an in-memory *state.StateDB initialized with alloc
-func MakeOffTheChainStateDB(alloc substate.SubstateAlloc) *state.StateDB {
+func MakeOffTheChainStateDB(alloc substate.SubstateAlloc) StateDB {
 	statedb := NewOffTheChainStateDB()
 	for addr, a := range alloc {
 		statedb.SetPrehashedCode(addr, getHash(addr, a.Code), a.Code)
@@ -138,5 +139,5 @@ func MakeOffTheChainStateDB(alloc substate.SubstateAlloc) *state.StateDB {
 	if err != nil {
 		panic(fmt.Errorf("error calling statedb.Commit() in MakeOffTheChainStateDB(): %v", err))
 	}
-	return statedb
+	return &gethStateDB{db: statedb}
 }

@@ -3,7 +3,7 @@ package trace
 import (
 	"math/big"
 
-	"github.com/Fantom-foundation/Aida/substate-cli/state"
+	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/ethereum/go-ethereum/common"
@@ -312,4 +312,51 @@ func (r *ProxyRecorder) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 // GetSubstatePostAlloc gets substate post allocation.
 func (r *ProxyRecorder) GetSubstatePostAlloc() substate.SubstateAlloc {
 	return r.db.GetSubstatePostAlloc()
+}
+
+func (r *ProxyRecorder) PrepareSubstate(substate *substate.SubstateAlloc, block uint64) {
+	r.db.PrepareSubstate(substate, block)
+}
+
+func (r *ProxyRecorder) BeginTransaction(number uint32) {
+	r.db.BeginTransaction(number)
+}
+
+func (r *ProxyRecorder) EndTransaction() {
+	r.db.EndTransaction()
+}
+
+func (r *ProxyRecorder) BeginBlock(number uint64) {
+	r.db.BeginBlock(number)
+}
+
+func (r *ProxyRecorder) EndBlock() {
+	r.db.EndBlock()
+}
+
+func (r *ProxyRecorder) BeginEpoch(number uint64) {
+	r.db.BeginEpoch(number)
+}
+
+func (r *ProxyRecorder) EndEpoch() {
+	r.db.EndEpoch()
+}
+
+// BeginBlockApply creates a new object copying state from
+// the old stateDB or clears execution state of stateDB
+func (r *ProxyRecorder) BeginBlockApply() error {
+	return r.db.BeginBlockApply()
+}
+
+func (r *ProxyRecorder) Close() error {
+	return r.db.Close()
+}
+
+func (r *ProxyRecorder) StartBulkLoad() state.BulkLoad {
+	panic("StartBulkLoad not supported by ProxyRecorder")
+	return nil
+}
+
+func (r *ProxyRecorder) GetMemoryUsage() *state.MemoryUsage {
+	return r.db.GetMemoryUsage()
 }

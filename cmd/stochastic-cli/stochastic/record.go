@@ -11,8 +11,8 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
+	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/stochastic"
-	"github.com/Fantom-foundation/Aida/substate-cli/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/Fantom-foundation/go-opera/opera"
@@ -81,7 +81,9 @@ func stochasticRecordTask(block uint64, tx, chainID int, recording *substate.Sub
 		return h
 	}
 
-	var statedb state.StateDB = stochastic.NewEventProxy(state.MakeInMemoryStateDB(&inputAlloc, inputEnv.Number), eventRegistry)
+	var statedb state.StateDB
+	statedb = state.MakeGethInMemoryStateDB(&inputAlloc, inputEnv.Number)
+	statedb = stochastic.NewEventProxy(statedb, eventRegistry)
 
 	// Apply Message
 	var (

@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
-	"github.com/Fantom-foundation/Aida/substate-cli/state"
+	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/tracer"
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
@@ -83,7 +83,7 @@ func traceRecordTask(block uint64, tx, chainID int, recording *substate.Substate
 	}
 
 	var statedb state.StateDB
-	statedb = state.MakeInMemoryStateDB(&inputAlloc, inputEnv.Number)
+	statedb = state.MakeGethInMemoryStateDB(&inputAlloc, inputEnv.Number)
 	statedb = NewProxyRecorder(statedb, dCtx, ch, utils.TraceDebug)
 
 	// Apply Message
@@ -300,7 +300,10 @@ func traceRecordAction(ctx *cli.Context) error {
 			sendOperation(dCtx, opChannel, operation.NewBeginBlock(tx.Block))
 		}
 		sendOperation(dCtx, opChannel, operation.NewBeginTransaction(uint32(tx.Transaction)))
-		traceRecordTask(tx.Block, tx.Transaction, chainID, tx.Substate, dCtx, opChannel)
+		err = traceRecordTask(tx.Block, tx.Transaction, chainID, tx.Substate, dCtx, opChannel)
+		if err != nil {
+			return err
+		}
 		sendOperation(dCtx, opChannel, operation.NewEndTransaction())
 		if enableProgress {
 			// report progress
