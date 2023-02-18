@@ -83,9 +83,12 @@ func (a *RandomAccess) NextIndex(class int) int {
 		return v + 1
 
 	case recentValueID:
-		v := a.recentQ()
-		a.placeQ(v)
-		return v + 1
+		if v := a.recentQ(); v != -1 {
+			a.placeQ(v)
+			return v + 1
+		} else {
+			return -1
+		}
 
 	default:
 		return -1
@@ -143,6 +146,8 @@ func invCdf(lambda float64, p float64) float64 {
 func (a *RandomAccess) getRandQPos() int {
 	// obtain random number in [0, 1.0)
 	r := rand.Float64()
+
+	// compute inverse CDF and select the index
 	sum := float64(0)
 	c := float64(0)
 	factor := 1.0 - a.qpdf[0]
@@ -167,15 +172,19 @@ func (a *RandomAccess) getRandQPos() int {
 
 // placeQ places element in the queue.
 func (a *RandomAccess) placeQ(elem int) {
-	a.queue = append(a.queue[1:], elem)
+	a.queue = append([]int{elem}, a.queue[0:qstatsLen-1]...)
 }
 
 // lastQ return previously queued element.
 func (a *RandomAccess) lastQ() int {
-	return a.queue[qstatsLen-1]
+	return a.queue[0]
 }
 
-// recentQ return some element in the queue.
+// recentQ return some element in the queue but not the previous one.
 func (a *RandomAccess) recentQ() int {
-	return a.queue[a.getRandQPos()]
+	if idx := a.getRandQPos(); idx != -1 {
+		return a.queue[a.getRandQPos()]
+	} else {
+		return -1
+	}
 }

@@ -28,8 +28,10 @@ func (a *AccessStats[T]) Place(data T) {
 		return
 	}
 
-	// Update counting statistics
-	a.cstats.Place(data)
+	// Update counting statistics only if not found in queue
+	if a.qstats.Find(data) == -1 {
+		a.cstats.Place(data)
+	}
 
 	// Place data into queuing statistics
 	a.qstats.Place(data)
