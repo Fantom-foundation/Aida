@@ -75,12 +75,23 @@ func (e *EventData) PopulateEventData(d *EventRegistryJSON) {
 		copy(e.StochasticMatrix[i], d.StochasticMatrix[i])
 	}
 
-	// Populate simplified stochastic matrix
+	// reduce stochastic matrix to a simplified matrix
 	for i := 0; i < n; i++ {
 		iop, _, _, _ := DecodeOpcode(d.Operations[i])
 		for j := 0; j < n; j++ {
 			jop, _, _, _ := DecodeOpcode(d.Operations[j])
 			e.SimplifiedMatrix[iop][jop] += d.StochasticMatrix[i][j]
+		}
+	}
+
+	// normalize row data after reduction
+	for i := 0; i < numOps; i++ {
+		sum := 0.0
+		for j := 0; j < numOps; j++ {
+			sum += e.SimplifiedMatrix[i][j]
+		}
+		for j := 0; j < numOps; j++ {
+			e.SimplifiedMatrix[i][j] /= sum
 		}
 	}
 }
