@@ -30,7 +30,7 @@ type AccessData struct {
 // OpData stores a single operation and its probability (for stead-state)
 type OpData struct {
 	label string  // operation's label
-	value float64 // operation's probability
+	value float64 // operation's value (either probability or frequency)
 }
 
 // events is the singleton for the viewing model.
@@ -97,7 +97,7 @@ func (e *EventData) PopulateEventData(d *EventRegistryJSON) {
 		for op := 0; op < numOps; op++ {
 			// exclude scoping operations
 			if op != BeginBlockID && op != EndBlockID && op != BeginEpochID && op != EndEpochID && op != BeginTransactionID && op != EndTransactionID {
-				// some all versions of an operation and normalize the value with the transcation proabiblity
+				// some all versions of an operation and normalize the value with the transaction's probability
 				sum := 0.0
 				for i := 0; i < n; i++ {
 					if sop, _, _, _ := DecodeOpcode(d.Operations[i]); sop == op {
