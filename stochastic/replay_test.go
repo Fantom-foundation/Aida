@@ -1,14 +1,16 @@
 package stochastic
 
 import (
+	"fmt"
+	"math"
 	"math/rand"
 	"testing"
 
 	"gonum.org/v1/gonum/stat/distuv"
 )
 
-// TextNextState checks transition of a deterministic Markovian process.
-func TestNextState(t *testing.T) {
+// TextDeterministicNextState checks transition of a deterministic Markovian process.
+func TestDeterministicNextState(t *testing.T) {
 	var A = [][]float64{{0.0, 1.0}, {1.0, 0.0}}
 	if nextState(A, 0) != 1 {
 		t.Fatalf("Illegal state transition (row 0)")
@@ -18,51 +20,45 @@ func TestNextState(t *testing.T) {
 	}
 }
 
-// TextNextState2 checks transition of a deterministic Markovian process.
-func TestNextState2(t *testing.T) {
+// TextDeterministicNextState2 checks transition of a deterministic Markovian process.
+func TestDeterministicNextState2(t *testing.T) {
 	var A = [][]float64{
 		{0.0, 1.0, 0.0},
 		{0.0, 0.0, 1.0},
 		{1.0, 0.0, 0.0},
 	}
-	i := nextState(A, 0)
-	if i != 1 {
+	if nextState(A, 0) != 1 {
 		t.Fatalf("Illegal state transition (row 0)")
 	}
-	i = nextState(A, 1)
-	if i != 2 {
+	if nextState(A, 1) != 2 {
 		t.Fatalf("Illegal state transition (row 1)")
 	}
-	i = nextState(A, 2)
-	if i != 0 {
+	if nextState(A, 2) != 0 {
 		t.Fatalf("Illegal state transition (row 1)")
 	}
 }
 
-// TextNextStateFail checks whether nextState fails if Markov property does not hold.
+// TextNextStateFail checks whether nextState fails if
+// stochastic matrix is broken.
 func TestNextStateFail(t *testing.T) {
-	var A = [][]float64{{0.0, 0.0}, {0.0, 0.0}}
+	var A = [][]float64{{0.0, 0.0}, {math.NaN(), 0.0}}
 	if nextState(A, 0) != -1 {
+		t.Fatalf("Could not capture faulty stochastic matrix")
+	}
+	if nextState(A, 1) != -1 {
 		t.Fatalf("Could not capture faulty stochastic matrix")
 	}
 }
 
-// checkUniformMarkov checks via chi-squared test whether
-// transitions are truly independent using the number of
-// observed states.
-func checkUniformMarkov(n int, numSteps int) bool {
+// checkMarkovChain checks via chi-squared test whether
+// transitions are independent using the number of
+// observed states. For this test, we assume that all
+// rows are identical to avoid the calculation of a stationary
+// distribution for an arbitrary matrix. Also the convergence
+// is too slow for an arbitrary matrix.
+func checkMarkovChain(A [][]float64, numSteps int) error {
 
-	// setup uniform Markovian process with
-	// uniform distributions. The stationary distribution
-	// of the uniform Markovian process is
-	// (1/n, , ... , 1/n)
-	A := make([][]float64, n)
-	for i := 0; i < n; i++ {
-		A[i] = make([]float64, n)
-		for j := 0; j < n; j++ {
-			A[i][j] = 1.0 / float64(n)
-		}
-	}
+	n := len(A)
 
 	// number of observed states
 	counts := make([]int, n)
@@ -70,16 +66,23 @@ func checkUniformMarkov(n int, numSteps int) bool {
 	// run Markovian process for numSteps time
 	state := 0
 	for steps := 0; steps < numSteps; steps++ {
+		oldState := state
 		state = nextState(A, state)
-		counts[state]++
+		if state != -1 {
+			counts[state]++
+		} else {
+			return fmt.Errorf("State failed in step %v with outgoing probabilities of (%v)", steps, A[oldState])
+		}
 	}
 
 	// compute chi-squared value for observations
+	// We assume that all rows are identical.
+	// For arbitrary stochastic matrix, the stationary
+	// distribution must be used instead of A[0].
 	chi2 := float64(0.0)
-	expected := float64(numSteps) / float64(n)
-	for _, v := range counts {
+	for i, v := range counts {
+		expected := float64(numSteps) * A[0][i]
 		err := expected - float64(v)
-		// fmt.Printf("Err: %v %v\n", v, expected)
 		chi2 += (err * err) / expected
 	}
 
@@ -89,27 +92,66 @@ func checkUniformMarkov(n int, numSteps int) bool {
 	alpha := 0.05
 	df := float64(n - 1)
 	chi2Critical := distuv.ChiSquared{K: df, Src: nil}.Quantile(1.0 - alpha)
-	// fmt.Printf("Chi^2 value: %v Chi^2 critical value: %v n: %v\n", chi2, chi2Critical, n)
 
-	return chi2 <= chi2Critical
+	if chi2 > chi2Critical {
+		return fmt.Errorf("Statistical test failed. Degree of freedom is %v and chi^2 value is %v; chi^2 critical value is %v", n, chi2, chi2Critical)
+	}
+	return nil
 }
 
-// TestRandomNextState checks whether a uniform Markovian process
-// produces a uniform state distribution via a chi-squared test
-// for various number of states.
+// TestRandomNextState checks whether a uniform Markovian process produces a uniform
+// state distribution via a chi-squared test for various number of states.
 func TestRandomNextState(t *testing.T) {
 	// set random seed to make test deterministic
 	// (make sure that these tests are not performed in parallel)
 	rand.Seed(4711)
 
-	// test small markov chain
-	if !checkUniformMarkov(4, 100) {
-		t.Fatalf("Uniform Markovian process is not unbiased for small test.")
+	// test small Markov chain by setting up a uniform Markovian process with
+	// uniform distributions. The stationary distribution of the uniform
+	// Markovian process is (1/n, , ... , 1/n).
+	n := 10
+	A := make([][]float64, n)
+	for i := 0; i < n; i++ {
+		A[i] = make([]float64, n)
+		for j := 0; j < n; j++ {
+			A[i][j] = 1.0 / float64(n)
+		}
+	}
+	if err := checkMarkovChain(A, n*n); err != nil {
+		t.Fatalf("Uniform Markovian process is not unbiased for a small test-case. Error: %v", err)
 	}
 
-	// test large markov chain
-	if !checkUniformMarkov(5400, 25*5400) {
-		t.Fatalf("Uniform Markovian process is not unbiased for large test.")
+	// test larger uniform markov chain
+	n = 5400
+	A = make([][]float64, n)
+	for i := 0; i < n; i++ {
+		A[i] = make([]float64, n)
+		for j := 0; j < n; j++ {
+			A[i][j] = 1.0 / float64(n)
+		}
+	}
+	if err := checkMarkovChain(A, 25*n); err != nil {
+		t.Fatalf("Uniform Markovian process is not unbiased for a larger test-case. Error: %v", err)
+	}
+
+	// Setup a Markovian process with a truncated geometric distributions for
+	// next states. The distribution has the following formula:
+	//  Pr(X=x_j) = (1-beta)*beta^n * (1-beta^n) / -beta ^ j
+	// for values {x_1, ..., x_n}  of random variable X and
+	// with distribution parameter beta.
+	n = 10
+	beta := 0.6
+	A = make([][]float64, n)
+	for i := 0; i < n; i++ {
+		A[i] = make([]float64, n)
+		for j := 0; j < n; j++ {
+			A[i][j] = ((1.0 - beta) * math.Pow(beta, float64(n)) /
+				(1.0 - math.Pow(beta, float64(n)))) *
+				math.Pow(beta, -float64(j+1))
+		}
+	}
+	if err := checkMarkovChain(A, n*n); err != nil {
+		t.Fatalf("Geometric Markovian process is not unbiased for a small experiment. Error: %v", err)
 	}
 }
 
