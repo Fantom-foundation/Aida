@@ -45,16 +45,6 @@ func (a *IndirectAccess) NextIndex(class int) int {
 	}
 }
 
-// findIndex finds the index in the translation table for a given index k.
-func (a *IndirectAccess) findIndex(k int) int {
-	for i := 0; i < len(a.translation); i++ {
-		if a.translation[i] == k {
-			return i
-		}
-	}
-	return -1
-}
-
 // DeleteIndex deletes an indirect index.
 func (a *IndirectAccess) DeleteIndex(k int) error {
 
@@ -71,4 +61,19 @@ func (a *IndirectAccess) DeleteIndex(k int) error {
 	}
 
 	return nil
+}
+
+// findIndex finds the index in the translation table for a given index k.
+func (a *IndirectAccess) findIndex(k int) int {
+	for i := 0; i < len(a.translation); i++ {
+		if a.translation[i] == k {
+			return i
+		}
+	}
+	return -1
+}
+
+// NumElem returns the number of elements
+func (a *IndirectAccess) NumElem() int {
+	return a.randAcc.numElem
 }
