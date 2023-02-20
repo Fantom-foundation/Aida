@@ -11,9 +11,10 @@ type EventData struct {
 	Keys      AccessData // storage-key view model
 	Values    AccessData // storage-value view model
 
-	Stationary       []OpData    // stationary distribution model
-	OperationLabel   []string    // operation labels for stochastic matrix
-	StochasticMatrix [][]float64 // stochastic Matrix
+	Stationary       []OpData                // stationary distribution model
+	OperationLabel   []string                // operation labels for stochastic matrix
+	StochasticMatrix [][]float64             // stochastic Matrix
+	SimplifiedMatrix [numOps][numOps]float64 // simplified stochastic matrix
 }
 
 // AccessData contains the statistical data for access statistics that is used for visualization.
@@ -72,6 +73,15 @@ func (e *EventData) PopulateEventData(d *EventRegistryJSON) {
 	for i := range d.StochasticMatrix {
 		e.StochasticMatrix[i] = make([]float64, len(d.StochasticMatrix[i]))
 		copy(e.StochasticMatrix[i], d.StochasticMatrix[i])
+	}
+
+	// Populate simplified stochastic matrix
+	for i := 0; i < n; i++ {
+		iop, _, _, _ := DecodeOpcode(d.Operations[i])
+		for j := 0; j < n; j++ {
+			jop, _, _, _ := DecodeOpcode(d.Operations[j])
+			e.SimplifiedMatrix[iop][jop] += d.StochasticMatrix[i][j]
+		}
 	}
 }
 
