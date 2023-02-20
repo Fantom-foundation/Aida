@@ -11,7 +11,7 @@ import (
 // containsQ checks whether an element is in the queue (ignoring the previous value).
 func containsQ(slice []int, x int) bool {
 	for i, n := range slice {
-		if x == n && i != qstatsLen-1 {
+		if x == n && i != 0 {
 			return true
 		}
 	}
