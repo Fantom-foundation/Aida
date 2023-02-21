@@ -5,7 +5,7 @@ import (
 )
 
 // containsQ checks whether an element is in the queue (ignoring the previous value).
-func containsIndirectQ(slice []int, x int) bool {
+func containsIndirectQ(slice []int64, x int64) bool {
 	for i, n := range slice {
 		if x == n && i != 0 {
 			return true
@@ -46,7 +46,7 @@ func TestIndirectAccessSimple(t *testing.T) {
 	// check previous value (must return the first element in the queue
 	// and the element + 1 is the returned value. The returned must be
 	// in the range between 1 and ra.num).
-	queue := make([]int, qstatsLen)
+	queue := make([]int64, qstatsLen)
 	copy(queue, ia.randAcc.queue)
 	if idx := ia.NextIndex(previousValueID); ia.translation[ia.randAcc.lastQ()] != idx || idx < 1 || idx > ia.randAcc.numElem {
 		t.Fatalf("accessing previous index failed (%v, %v)", idx, ia.translation[ia.randAcc.lastQ()])
@@ -118,7 +118,7 @@ func TestIndirectAcessDeleteIndex(t *testing.T) {
 	qpdf := make([]float64, qstatsLen)
 	ra := NewRandomAccess(1000, 5.0, qpdf)
 	ia := NewIndirectAccess(ra)
-	idx := 500 // choose an index in the middle of the range
+	idx := int64(500) // choose an index in the middle of the range
 
 	// delete previous element
 	err := ia.DeleteIndex(idx)
@@ -127,7 +127,7 @@ func TestIndirectAcessDeleteIndex(t *testing.T) {
 	}
 
 	// check whether index still exists
-	for i := 0; i < ia.randAcc.numElem; i++ {
+	for i := int64(0); i < ia.randAcc.numElem; i++ {
 		if ia.translation[i] == idx {
 			t.Fatalf("index still exists.")
 		}

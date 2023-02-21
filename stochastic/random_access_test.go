@@ -9,7 +9,7 @@ import (
 )
 
 // containsQ checks whether an element is in the queue (ignoring the previous value).
-func containsQ(slice []int, x int) bool {
+func containsQ(slice []int64, x int64) bool {
 	for i, n := range slice {
 		if x == n && i != 0 {
 			return true
@@ -45,7 +45,7 @@ func TestRandomAccessSimple(t *testing.T) {
 	// check previous value (must return the first element in the queue
 	// and the element + 1 is the returned value. The returned must be
 	// in the range between 1 and ra.num).
-	queue := make([]int, qstatsLen)
+	queue := make([]int64, qstatsLen)
 	copy(queue, ra.queue)
 	if idx := ra.NextIndex(previousValueID); queue[0]+1 != idx || idx < 1 || idx > ra.numElem {
 		t.Fatalf("accessing previous index failed")
@@ -142,7 +142,7 @@ func checkUniformQueueSelection(qpdf []float64, numSteps int) bool {
 	ra := NewRandomAccess(1000, 5.0, qpdf)
 
 	// number of observed queue positions
-	counts := make([]int, qstatsLen)
+	counts := make([]int64, qstatsLen)
 
 	// select numSteps queue position and count there occurrence
 	for steps := 0; steps < numSteps; steps++ {
@@ -213,10 +213,10 @@ func TestRandomAccessRandInd(t *testing.T) {
 	// parameters
 	lambda := 5.0
 	numSteps := 10000
-	idxRange := 10
+	idxRange := int64(10)
 
 	// populate buckets
-	counts := make([]int, idxRange)
+	counts := make([]int64, idxRange)
 	for steps := 0; steps < numSteps; steps++ {
 		counts[randIndex(lambda, idxRange)]++
 	}

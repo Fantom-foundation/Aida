@@ -29,7 +29,7 @@ type EstimationModelJSON struct {
 
 // EstimationStatsJSON is an estimated access statistics in JSON format.
 type EstimationStatsJSON struct {
-	NumKeys           int       `json:"n"`
+	NumKeys           int64     `json:"n"`
 	Lambda            float64   `json:"exponentialParameter"`
 	QueueDistribution []float64 `json:"queuingDistribution"`
 }

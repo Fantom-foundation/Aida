@@ -6,16 +6,16 @@ type IndirectAccess struct {
 
 	// translation table for converting compact index space to sparse
 	// permitting index deletion without later reuse.
-	translation []int
+	translation []int64
 
 	// counter for introducing new index values
-	ctr int
+	ctr int64
 }
 
 // NewIndirectAccess creates a new indirect index access-generator.
 func NewIndirectAccess(ra *RandomAccess) *IndirectAccess {
-	t := make([]int, ra.numElem)
-	for i := 0; i < ra.numElem; i++ {
+	t := make([]int64, ra.numElem)
+	for i := int64(0); i < ra.numElem; i++ {
 		t[i] = i + 1
 	}
 	return &IndirectAccess{
@@ -26,7 +26,7 @@ func NewIndirectAccess(ra *RandomAccess) *IndirectAccess {
 }
 
 // NextIndex returns the next index value based on the provided class.
-func (a *IndirectAccess) NextIndex(class int) int {
+func (a *IndirectAccess) NextIndex(class int) int64 {
 	v := a.randAcc.NextIndex(class)
 	if v == -1 {
 		return -1
@@ -46,7 +46,7 @@ func (a *IndirectAccess) NextIndex(class int) int {
 }
 
 // DeleteIndex deletes an indirect index.
-func (a *IndirectAccess) DeleteIndex(k int) error {
+func (a *IndirectAccess) DeleteIndex(k int64) error {
 
 	// find index in translation table
 	i := a.findIndex(k)
@@ -64,8 +64,8 @@ func (a *IndirectAccess) DeleteIndex(k int) error {
 }
 
 // findIndex finds the index in the translation table for a given index k.
-func (a *IndirectAccess) findIndex(k int) int {
-	for i := 0; i < len(a.translation); i++ {
+func (a *IndirectAccess) findIndex(k int64) int64 {
+	for i := int64(0); i < int64(len(a.translation)); i++ {
 		if a.translation[i] == k {
 			return i
 		}
@@ -74,6 +74,6 @@ func (a *IndirectAccess) findIndex(k int) int {
 }
 
 // NumElem returns the number of elements
-func (a *IndirectAccess) NumElem() int {
+func (a *IndirectAccess) NumElem() int64 {
 	return a.randAcc.numElem
 }

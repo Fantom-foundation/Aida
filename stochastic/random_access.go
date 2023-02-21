@@ -10,28 +10,28 @@ import (
 // RandomAccess data structure for producing random accesses.
 type RandomAccess struct {
 	// cardinality of set
-	numElem int
+	numElem int64
 
 	// lambda parameter of exponential distribution
 	lambda float64
 
 	// queue for indexes  (always fixed length qStatslen)
-	queue []int
+	queue []int64
 
 	// probability distribution of queue (always fixed length qStatslen)
 	qpdf []float64
 }
 
 // NewAccessStats creates a new access index.
-func NewRandomAccess(numElem int, lambda float64, qpdf []float64) *RandomAccess {
+func NewRandomAccess(numElem int64, lambda float64, qpdf []float64) *RandomAccess {
 	if numElem < qstatsLen {
 		log.Fatalf("NewRandomAccess: number of elements smaller than the queue length.")
 	}
 
 	// fill queue with uniform random indexes.
-	queue := []int{}
+	queue := []int64{}
 	for i := 0; i < qstatsLen; i++ {
-		queue = append(queue, rand.Intn(numElem))
+		queue = append(queue, rand.Int63n(numElem))
 	}
 
 	// create a copy of the queue distribution.
@@ -47,7 +47,7 @@ func NewRandomAccess(numElem int, lambda float64, qpdf []float64) *RandomAccess 
 }
 
 // NextIndex returns the next random index based on the provided class.
-func (a *RandomAccess) NextIndex(class int) int {
+func (a *RandomAccess) NextIndex(class int) int64 {
 	switch class {
 
 	case noArgID:
@@ -96,7 +96,7 @@ func (a *RandomAccess) NextIndex(class int) int {
 }
 
 // DeleteIndex deletes an access index.
-func (a *RandomAccess) DeleteIndex(v int) error {
+func (a *RandomAccess) DeleteIndex(v int64) error {
 	// check index
 	if v <= 0 || v >= a.numElem {
 		return fmt.Errorf("DeleteIndex: wrong index range")
@@ -120,7 +120,7 @@ func (a *RandomAccess) DeleteIndex(v int) error {
 }
 
 // findQElem finds an element in the queue.
-func (a *RandomAccess) findQElem(elem int) bool {
+func (a *RandomAccess) findQElem(elem int64) bool {
 	for i := 0; i < qstatsLen; i++ {
 		if a.queue[i] == elem {
 			return true
@@ -131,8 +131,8 @@ func (a *RandomAccess) findQElem(elem int) bool {
 
 // randIndex produces an index between 0 and n-1 using
 // an exponential distribution with parameter lambda n.
-func randIndex(lambda float64, n int) int {
-	return int(float64(n) * invCdf(lambda, rand.Float64()))
+func randIndex(lambda float64, n int64) int64 {
+	return int64(float64(n) * invCdf(lambda, rand.Float64()))
 }
 
 // invCdf is the inverse cumulative distribution function for
@@ -143,7 +143,7 @@ func invCdf(lambda float64, p float64) float64 {
 }
 
 // getRandQPos obtains the next queue position.
-func (a *RandomAccess) getRandQPos() int {
+func (a *RandomAccess) getRandQPos() int64 {
 	// obtain random number in [0, 1.0)
 	r := rand.Float64()
 
@@ -151,9 +151,9 @@ func (a *RandomAccess) getRandQPos() int {
 	sum := float64(0)
 	c := float64(0)
 	factor := 1.0 - a.qpdf[0]
-	j := -1
+	j := int64(-1)
 	// skip first slot (only used for previousValue)
-	for i := 1; i < qstatsLen; i++ {
+	for i := int64(1); i < qstatsLen; i++ {
 		y := (a.qpdf[i] / factor) - c
 		t := sum + y
 		c = (t - sum) - y
@@ -171,17 +171,17 @@ func (a *RandomAccess) getRandQPos() int {
 }
 
 // placeQ places element in the queue.
-func (a *RandomAccess) placeQ(elem int) {
-	a.queue = append([]int{elem}, a.queue[0:qstatsLen-1]...)
+func (a *RandomAccess) placeQ(elem int64) {
+	a.queue = append([]int64{elem}, a.queue[0:qstatsLen-1]...)
 }
 
 // lastQ return previously queued element.
-func (a *RandomAccess) lastQ() int {
+func (a *RandomAccess) lastQ() int64 {
 	return a.queue[0]
 }
 
 // recentQ return some element in the queue but not the previous one.
-func (a *RandomAccess) recentQ() int {
+func (a *RandomAccess) recentQ() int64 {
 	if idx := a.getRandQPos(); idx != -1 {
 		return a.queue[a.getRandQPos()]
 	} else {
