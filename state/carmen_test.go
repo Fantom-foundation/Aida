@@ -2,6 +2,7 @@ package state
 
 import (
 	"bytes"
+	"github.com/ethereum/go-ethereum/core/types"
 	"math/big"
 	"math/rand"
 	"testing"
@@ -60,6 +61,7 @@ func makeAccountCode(t *testing.T) []byte {
 	return ch.Bytes()
 }
 
+// TestMakeCarmenStateDBMemory tests db initialization with no variant specified
 func TestMakeCarmenStateDBMemory(t *testing.T) {
 	_, err := MakeCarmenStateDB("", "", false)
 	if err != nil {
@@ -67,6 +69,7 @@ func TestMakeCarmenStateDBMemory(t *testing.T) {
 	}
 }
 
+// TestMakeCarmenStateDBInvalid tests db initialization with invalid variant
 func TestMakeCarmenStateDBInvalid(t *testing.T) {
 	_, err := MakeCarmenStateDB("", "invalid-variant", false)
 	if err == nil {
@@ -74,6 +77,7 @@ func TestMakeCarmenStateDBInvalid(t *testing.T) {
 	}
 }
 
+// TestCloseCarmenDB test closing db immediately after initialization
 func TestCloseCarmenDB(t *testing.T) {
 	csDB, err := MakeCarmenStateDB("", "go-memory", false)
 	if err != nil {
@@ -86,6 +90,7 @@ func TestCloseCarmenDB(t *testing.T) {
 	}
 }
 
+// TestBeginBlockApply tests block apply start
 func TestBeginBlockApply(t *testing.T) {
 	csDB, err := MakeCarmenStateDB("", "go-memory", false)
 	if err != nil {
@@ -98,6 +103,7 @@ func TestBeginBlockApply(t *testing.T) {
 	}
 }
 
+// TestAccountLifecycle tests account operations - create, check if it exists, if it's empty, suicide and suicide confirmation
 func TestAccountLifecycle(t *testing.T) {
 	csDB, err := MakeCarmenStateDB("", "go-memory", false)
 	if err != nil {
@@ -125,6 +131,7 @@ func TestAccountLifecycle(t *testing.T) {
 	}
 }
 
+// TestAccountBalanceOperations tests balance operations - add, subtract and check if the value is correct
 func TestAccountBalanceOperations(t *testing.T) {
 	csDB, err := MakeCarmenStateDB("", "go-memory", false)
 	if err != nil {
@@ -161,6 +168,7 @@ func TestAccountBalanceOperations(t *testing.T) {
 	}
 }
 
+// TestNonceOperations tests account nonce updating
 func TestNonceOperations(t *testing.T) {
 	csDB, err := MakeCarmenStateDB("", "go-memory", false)
 	if err != nil {
@@ -188,6 +196,7 @@ func TestNonceOperations(t *testing.T) {
 	}
 }
 
+// TestCodeOperations tests account code updating
 func TestCodeOperations(t *testing.T) {
 	csDB, err := MakeCarmenStateDB("", "go-memory", false)
 	if err != nil {
@@ -216,20 +225,177 @@ func TestCodeOperations(t *testing.T) {
 	}
 }
 
-func TestStartBulkLoadAndClose(t *testing.T) {
+// TestStateOperations tests account state update
+func TestStateOperations(t *testing.T) {
 	csDB, err := MakeCarmenStateDB("", "go-memory", false)
 	if err != nil {
 		t.Fatalf("failed to create carmen state DB: %v", err)
 	}
 
-	cbl := csDB.StartBulkLoad()
+	addr := makeAccountAddress(t)
 
-	err = cbl.Close()
-	if err != nil {
-		t.Fatalf("failed to close bulk load: %v", err)
+	csDB.CreateAccount(addr)
+
+	// generate state key and value
+	key := makeRandomHash(t)
+	value := makeRandomHash(t)
+
+	csDB.SetState(addr, key, value)
+
+	if csDB.GetState(addr, key) != value {
+		t.Fatal("failed to update account state")
 	}
 }
 
+// TestTrxBlockEpochOperations tests creation of randomized epochs with blocks and transactions
+func TestTrxBlockEpochOperations(t *testing.T) {
+	csDB, err := MakeCarmenStateDB("", "go-memory", false)
+	if err != nil {
+		t.Fatalf("failed to create carmen state DB: %v", err)
+	}
+
+	blockNumber := 0
+	trxNumber := 0
+	for i := 0; i < 10; i++ {
+		csDB.BeginEpoch(uint64(i))
+
+		for j := 0; j < 100; j++ {
+			csDB.BeginBlock(uint64(blockNumber))
+			blockNumber++
+
+			for k := 0; k < 100; k++ {
+				csDB.BeginTransaction(uint32(trxNumber))
+				trxNumber++
+				csDB.EndTransaction()
+			}
+
+			csDB.EndBlock()
+		}
+
+		csDB.EndEpoch()
+	}
+}
+
+// TestRefundOperations tests adding and subtracting refund value
+func TestRefundOperations(t *testing.T) {
+	csDB, err := MakeCarmenStateDB("", "go-memory", false)
+	if err != nil {
+		t.Fatalf("failed to create carmen state DB: %v", err)
+	}
+
+	refundValue := uint64(56166560)
+	csDB.AddRefund(refundValue)
+
+	if csDB.GetRefund() != refundValue {
+		t.Fatal("failed to add refund")
+	}
+
+	reducedRefund := refundValue - uint64(30000000)
+
+	csDB.SubRefund(uint64(30000000))
+
+	if csDB.GetRefund() != reducedRefund {
+		t.Fatal("failed to subtract refund")
+	}
+}
+
+// TestAccessListOperations tests operations with creating, updating a checking AccessList
+func TestAccessListOperations(t *testing.T) {
+	csDB, err := MakeCarmenStateDB("", "go-memory", false)
+	if err != nil {
+		t.Fatalf("failed to create carmen state DB: %v", err)
+	}
+
+	// prepare content of access list
+	sender := makeAccountAddress(t)
+	dest := makeAccountAddress(t)
+	precompiles := []common.Address{
+		makeAccountAddress(t),
+		makeAccountAddress(t),
+		makeAccountAddress(t),
+	}
+	txAccesses := types.AccessList{
+		types.AccessTuple{
+			Address: makeAccountAddress(t),
+			StorageKeys: []common.Hash{
+				makeRandomHash(t),
+				makeRandomHash(t),
+			},
+		},
+		types.AccessTuple{
+			Address: makeAccountAddress(t),
+			StorageKeys: []common.Hash{
+				makeRandomHash(t),
+				makeRandomHash(t),
+				makeRandomHash(t),
+				makeRandomHash(t),
+			},
+		},
+	}
+
+	// create access list
+	csDB.PrepareAccessList(sender, &dest, precompiles, txAccesses)
+
+	// add some more data after the creation for good measure
+	newAddr := makeAccountAddress(t)
+	newSlot := makeRandomHash(t)
+	csDB.AddAddressToAccessList(newAddr)
+	csDB.AddSlotToAccessList(newAddr, newSlot)
+
+	// check content of access list
+	if !csDB.AddressInAccessList(sender) {
+		t.Fatal("failed to add sender address to access list")
+	}
+
+	if !csDB.AddressInAccessList(dest) {
+		t.Fatal("failed to add destination address to access list")
+	}
+
+	if !csDB.AddressInAccessList(newAddr) {
+		t.Fatal("failed to add new address to access list after it was already created")
+	}
+
+	for _, addr := range precompiles {
+		if !csDB.AddressInAccessList(addr) {
+			t.Fatal("failed to add precompile address to access list")
+		}
+	}
+
+	for _, txAccess := range txAccesses {
+		if !csDB.AddressInAccessList(txAccess.Address) {
+			t.Fatal("failed to add transaction access address to access list")
+		}
+
+		for _, storageKey := range txAccess.StorageKeys {
+			addrOK, slotOK := csDB.SlotInAccessList(txAccess.Address, storageKey)
+			if !addrOK || !slotOK {
+				t.Fatal("failed to add transaction access address to access list")
+			}
+		}
+	}
+
+	addrOK, slotOK := csDB.SlotInAccessList(newAddr, newSlot)
+	if !addrOK || !slotOK {
+		t.Fatal("failed to add new slot to access list after it was already created")
+	}
+}
+
+// TestGetArchiveState tests retrieving an archive state
+func TestGetArchiveState(t *testing.T) {
+	tmpDir := t.TempDir()
+	csDB, err := MakeCarmenStateDB(tmpDir, "go-ldb", true)
+	if err != nil {
+		t.Fatalf("failed to create carmen state DB: %v", err)
+	}
+
+	_, err = csDB.GetArchiveState(1)
+
+	if err != nil {
+		t.Fatalf("failed to retrieve archive state of carmen state DB: %v", err)
+	}
+}
+
+// TestSetBalance tests setting an accounts balance
 func TestSetBalance(t *testing.T) {
 	csDB, err := MakeCarmenStateDB("", "go-memory", false)
 	if err != nil {
@@ -253,11 +419,17 @@ func TestSetBalance(t *testing.T) {
 	newBalance := big.NewInt(int64(randomInt))
 	cbl.SetBalance(addr, newBalance)
 
+	err = cbl.Close()
+	if err != nil {
+		t.Fatal("failed to close bulk load")
+	}
+
 	if csDB.GetBalance(addr).Cmp(newBalance) != 0 {
 		t.Fatal("failed to update account balance")
 	}
 }
 
+// TestSetBalance tests setting an accounts nonce
 func TestSetNonce(t *testing.T) {
 	csDB, err := MakeCarmenStateDB("", "go-memory", false)
 	if err != nil {
@@ -282,11 +454,17 @@ func TestSetNonce(t *testing.T) {
 
 	cbl.SetNonce(addr, newNonce)
 
+	err = cbl.Close()
+	if err != nil {
+		t.Fatal("failed to close bulk load")
+	}
+
 	if csDB.GetNonce(addr) != newNonce {
 		t.Fatal("failed to update account nonce")
 	}
 }
 
+// TestSetBalance tests setting an accounts state
 func TestSetState(t *testing.T) {
 	csDB, err := MakeCarmenStateDB("", "go-memory", false)
 	if err != nil {
@@ -305,11 +483,17 @@ func TestSetState(t *testing.T) {
 
 	cbl.SetState(addr, key, value)
 
+	err = cbl.Close()
+	if err != nil {
+		t.Fatal("failed to close bulk load")
+	}
+
 	if csDB.GetState(addr, key) != value {
 		t.Fatal("failed to update account state")
 	}
 }
 
+// TestSetBalance tests setting an accounts code
 func TestSetCode(t *testing.T) {
 	csDB, err := MakeCarmenStateDB("", "go-memory", false)
 	if err != nil {
@@ -327,12 +511,18 @@ func TestSetCode(t *testing.T) {
 
 	cbl.SetCode(addr, code)
 
+	err = cbl.Close()
+	if err != nil {
+		t.Fatal("failed to close bulk load")
+	}
+
 	if bytes.Compare(csDB.GetCode(addr), code) != 0 {
 		t.Fatal("failed to update account code")
 	}
 }
 
-func TestAutomaticBlockEnd(t *testing.T) {
+// TestBulkloadOperations tests multiple operation in one bulkload
+func TestBulkloadOperations(t *testing.T) {
 	csDB, err := MakeCarmenStateDB("", "go-memory", false)
 	if err != nil {
 		t.Fatalf("failed to create carmen state DB: %v", err)
