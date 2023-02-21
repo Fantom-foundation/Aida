@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/Fantom-foundation/go-opera-fvm/flat"
-	"github.com/Fantom-foundation/go-opera-fvm/gossip/evmstore/state"
+	"github.com/Fantom-foundation/go-opera-fvm-flat/flat"
+	"github.com/Fantom-foundation/go-opera-fvm-flat/gossip/evmstore/state"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"

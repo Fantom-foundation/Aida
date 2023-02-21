@@ -70,6 +70,8 @@ func makeStateDBVariant(directory, impl, variant string, cfg *TraceConfig) (stat
 
 // PrimeStateDB primes database with accounts from the world state.
 func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *TraceConfig) {
+
+	// cast
 	load := db.StartBulkLoad()
 
 	numValues := 0
@@ -172,7 +174,6 @@ func DeleteDestroyedAccountsFromWorldState(ws substate.SubstateAlloc, cfg *Trace
 
 // DeleteDestroyedAccountsFromStateDB performs suicide operations on previously
 // self-destructed accounts.
-// TODO rewrite it for erigon case
 func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *TraceConfig, target uint64) error {
 	if !cfg.HasDeletedAccounts {
 		log.Printf("Database not provided. Ignore deleted accounts.\n")

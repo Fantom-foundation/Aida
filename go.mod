@@ -5,20 +5,15 @@ go 1.19
 require (
 	github.com/Fantom-foundation/Carmen/go v0.0.0-00010101000000-000000000000
 	github.com/Fantom-foundation/go-opera v1.1.1-rc.2
-	github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230112084156-680f281ea1cb
-	github.com/Fantom-foundation/lachesis-base v0.0.0-20220904103856-4bb2a8448a22
 	github.com/Fantom-foundation/substate-cli v0.0.0-20221109110938-3d145e50b9b9
 	github.com/dsnet/compress v0.0.1
 	github.com/ethereum/go-ethereum v1.10.25
 	github.com/fatih/color v1.13.0
-	github.com/ledgerwatch/erigon v1.9.7-0.20220421151921-057740ac2019
-	github.com/ledgerwatch/erigon-lib v0.0.0-20220421034346-3c5275752634
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
-	github.com/syndtr/goleveldb v1.0.1-0.20210305035536-64b5b1c73954
+	github.com/syndtr/goleveldb v1.0.1-0.20220614013038-64ee5596c38a
 	github.com/urfave/cli/v2 v2.19.2
-	golang.org/x/exp v0.0.0-20221004215720-b9f4876ce741
-	golang.org/x/text v0.3.7
+	golang.org/x/text v0.4.0
 )
 
 require (
@@ -34,7 +29,9 @@ require (
 	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
 	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/edsrzf/mmap-go v1.0.0 // indirect
+	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/getsentry/sentry-go v0.14.0 // indirect
+	github.com/go-kit/kit v0.10.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-stack/stack v1.8.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
@@ -51,6 +48,8 @@ require (
 	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/mattn/go-sqlite3 v2.0.2+incompatible // indirect
+	github.com/onsi/ginkgo v1.16.5 // indirect
+	github.com/onsi/gomega v1.19.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/rivo/uniseg v0.4.2 // indirect
@@ -61,8 +60,9 @@ require (
 	github.com/tklauser/numcpus v0.5.0 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
-	golang.org/x/crypto v0.0.0-20221005025214-4161e89ecf1b // indirect
-	golang.org/x/sys v0.0.0-20220928140112-f11e5e49a4ec // indirect
+	golang.org/x/crypto v0.1.0 // indirect
+	golang.org/x/exp v0.0.0-20221205204356-47842c84f3db // indirect
+	golang.org/x/sys v0.1.0 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 )
 
@@ -72,7 +72,11 @@ replace github.com/ethereum/go-ethereum => github.com/Fantom-foundation/go-ether
 
 replace github.com/Fantom-foundation/go-opera => github.com/Fantom-foundation/go-opera-substate v1.0.1-0.20221124030310-9d06e1f98a18
 
-replace github.com/Fantom-foundation/go-opera-fvm-erigon => github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230130110129-15cb882915ee
+replace github.com/Fantom-foundation/go-opera-fvm-erigon => github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230221041826-b239dbb44ffa
+
+replace github.com/Fantom-foundation/go-opera-fvm-flat => github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230112084156-680f281ea1cb
+
+replace github.com/ledgerwatch/erigon => github.com/ledgerwatch/erigon v1.9.7-0.20220421151921-057740ac2019
 
 // The Carmen project is integrated as a git-submodule since we need to run extra
 // build steps when importing the project. This is handled in the Makefile.

@@ -1,14 +1,16 @@
 package state
 
 import (
+	"context"
 	"fmt"
 	"math/big"
-	"context"
+	"path"
 
 	"github.com/Fantom-foundation/go-opera-fvm-erigon/erigon"
 	"github.com/Fantom-foundation/go-opera-fvm-erigon/evmcore"
+	"github.com/Fantom-foundation/go-opera-fvm-erigon-erigon/gossip/evmstore/erigonstate"
+	"github.com/Fantom-foundation/go-opera-fvm-erigon/cmd/opera/launcher"
 	"github.com/Fantom-foundation/go-opera-fvm-erigon/gossip/evmstore/erigonstate"
-	"github.com/Fantom-foundation/go-opera-fvm-erigon/logger"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/substate"
@@ -25,7 +27,7 @@ func MakeErigonStateDB(directory, variant string) (s StateDB, err error) {
 	case "go-memory":
 		chainKV = memdb.New()
 	case "go-erigon":
-		chainKV = erigon.MakeChainDatabase(logger.New("chain-kv"), kv.ChainDB, 0)
+		chainKV = launcher.InitChainKV(path.Join(directory, "erigon"))
 	default:
 		err = fmt.Errorf("unkown variant: %v", variant)
 		return
@@ -53,7 +55,7 @@ type erigonStateDB struct {
 
 // BeginBlockApply creates a new statedb from an existing geth database
 func (s *erigonStateDB) BeginBlockApply() error {
-	s.StateDB = evmcore.NewErigonAdapter(erigonstate.New())
+	s.StateDB = evmcore.NewErigonAdapter(erigonstate.NewWithChainKV(s.chainKV))
 	return nil
 }
 
@@ -68,24 +70,26 @@ func (s *erigonStateDB) EndTransaction() {
 func (s *erigonStateDB) BeginBlock(number uint64) {
 	// ignored
 }
+
 // TODO in erigon state root  is computed every epoch not every block
-// decide whether to compute it every block or not 
+// decide whether to compute it every block or not
+// TODO add a flag to enable erigon history writing, skip it for now, use NewPlainStateWriterNoHistory
+// TODO add an option to use DbStateWriter instead of estate.NewPlainStateWriterNoHistory(rwTx) to speed up an executution
+// TODO add caching
 func (s *erigonStateDB) EndBlock() {
-	// TODO check that s.rwTx not nil
-	blockWriter := estate.NewPlainStateWriter(s.rwTx, s.rwTx, s.block)
+
+	// opem rwTx transaction
+	rwTx, err := s.chainKV.BeginRw(context.Background())
+	if err != nil {
+		return err
+	}
+
+	defer rwTx.Roolback()
+
+	blockWriter := estate.NewPlainStateWriterNoHistory(rwTx)
 
 	// flush pending changes into erigon db
 	if err := s.StateDB.CommitBlock(blockWriter); err != nil {
-		panic(err)
-	}
-
-	// write changesets
-	if err := blockWriter.WriteChangeSets(); err != nil {
-		panic(err)
-	}
-
-	// write history index
-	if err := blockWriter.WriteHistory(); err != nil {
 		panic(err)
 	}
 
@@ -101,6 +105,10 @@ func (s *erigonStateDB) EndBlock() {
 	}
 
 	s.stateRoot = common.Hash(root)
+
+	if err := rwTx.Commit(); err != nil {
+		panic(err)
+	}
 }
 
 func (s *erigonStateDB) BeginEpoch(number uint64) {
@@ -125,25 +133,10 @@ func (s *erigonStateDB) GetSubstatePostAlloc() substate.SubstateAlloc {
 // Close requests the StateDB to flush all its content to secondary storage and shut down.
 // After this call no more operations will be allowed on the state.
 func (s *erigonStateDB) Close() error {
-	rwTx, err := s.chainKV.BeginRw(context.Background())
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		rwTx.Rollback()
-		s.chainKV.Close()
-	}()
-
-	s.rwTx = rwTx
-
 	// flush changes to erigon db
 	s.StateDB.EndBlock()
-
-	// commit rwTx
-	if err := s.rwTx.Commit(); err != nil {
-		return err
-	}
+	// close erigon db
+	s.chainKV.Close()
 
 	return nil
 }
@@ -154,13 +147,6 @@ func (s *erigonStateDB) GetMemoryUsage() *MemoryUsage {
 }
 
 func (s *erigonStateDB) StartBulkLoad() BulkLoad {
-	// open erigon rwTx transaction
-	rwTx, err := s.chainKV.BeginRw(context.Background())
-	if err != nil {
-		panic(err)
-	}
-
-	s.rwTx = rwTx
 	return &erigonBulkLoad{db: s}
 }
 
@@ -198,12 +184,8 @@ func (l *erigonBulkLoad) SetCode(addr common.Address, code []byte) {
 }
 
 func (l *erigonBulkLoad) Close() error {
-	defer l.db.rwTx.Rollback()
-
-	l.db.StateDB.EndBlock()
-
-	// commit rwTx
-	return l.db.rwTx.Commit()
+	l.db.EndBlock()
+	return nil
 }
 
 func (l *erigonBulkLoad) digest() {
@@ -212,5 +194,5 @@ func (l *erigonBulkLoad) digest() {
 	if l.num_ops%(1000*1000) != 0 {
 		return
 	}
-	l.db.StateDB.EndBlock()
+	l.db.EndBlock()
 }
