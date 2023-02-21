@@ -2,6 +2,7 @@ package state
 
 import (
 	"bytes"
+	"github.com/ethereum/go-ethereum/core/types"
 	"math/big"
 	"math/rand"
 	"testing"
