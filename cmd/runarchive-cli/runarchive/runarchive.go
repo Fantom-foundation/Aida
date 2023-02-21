@@ -67,16 +67,18 @@ func RunArchive(ctx *cli.Context) error {
 
 	// Start a goroutine retrieving transactions and grouping them into blocks.
 	blocks := make(chan []*substate.Transaction, 10*cfg.Workers)
-	go groupTransactions(iter, blocks, cfg)
+	abort := make(chan bool, 1)
+	go groupTransactions(iter, blocks, abort, cfg)
 
 	// Start multiple workers processing transactions block by block.
 	finishedTransaction := make(chan int, 10*cfg.Workers)
 	finishedBlock := make(chan uint64, 10*cfg.Workers)
+	issues := make(chan error, 10*cfg.Workers)
 	dones := []<-chan bool{}
 	for i := 0; i < cfg.Workers; i++ {
 		done := make(chan bool)
 		dones = append(dones, done)
-		go runBlocks(db, blocks, finishedTransaction, finishedBlock, done, cfg)
+		go runBlocks(db, blocks, finishedTransaction, finishedBlock, issues, done, cfg)
 	}
 
 	// Report progress while waiting for workers to complete.
@@ -84,6 +86,14 @@ func RunArchive(ctx *cli.Context) error {
 	var lastBlock uint64
 	for i < len(dones) {
 		select {
+		case issue := <-issues:
+			err = issue
+			// If an error is encountered, an abort is signaled.
+			// But we need to keep consuming inputs until all workers are done.
+			if abort != nil {
+				close(abort)
+				abort = nil
+			}
 		case <-finishedTransaction:
 			if !cfg.EnableProgress {
 				continue
@@ -152,11 +162,17 @@ func openStateDB(cfg *utils.Config) (state.StateDB, error) {
 	return utils.MakeStateDB(cfg.StateDbSrcDir, cfg, dbinfo.RootHash, true)
 }
 
-func groupTransactions(iter substate.SubstateIterator, blocks chan<- []*substate.Transaction, cfg *utils.Config) {
+func groupTransactions(iter substate.SubstateIterator, blocks chan<- []*substate.Transaction, abort <-chan bool, cfg *utils.Config) {
 	defer close(blocks)
 	var currentBlock uint64 = 0
 	transactions := []*substate.Transaction{}
 	for iter.Next() {
+		select {
+		case <-abort:
+			return
+		default:
+			/* keep going */
+		}
 		tx := iter.Value()
 		if tx.Block != currentBlock {
 			if tx.Block > cfg.Last {
@@ -176,6 +192,7 @@ func runBlocks(
 	blocks <-chan []*substate.Transaction,
 	transactionDone chan<- int,
 	blockDone chan<- uint64,
+	issues chan<- error,
 	done chan<- bool,
 	cfg *utils.Config) {
 	var err error
@@ -187,7 +204,7 @@ func runBlocks(
 		block := transactions[0].Block
 		var state state.StateDB
 		if state, err = db.GetArchiveState(block - 1); err != nil {
-			log.Printf("failed to get state for block %d: %v", block, err)
+			issues <- fmt.Errorf("failed to get state for block %d: %v", block, err)
 			continue
 		}
 
@@ -195,14 +212,14 @@ func runBlocks(
 		for _, tx := range transactions {
 			state.BeginTransaction(uint32(tx.Transaction))
 			if _, err = runvm.RunVMTask(state, cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
-				log.Printf("processing of transaction %d/%d failed: %v", block, tx.Transaction, err)
+				issues <- fmt.Errorf("processing of transaction %d/%d failed: %v", block, tx.Transaction, err)
 				break
 			}
 			state.EndTransaction()
 			transactionDone <- tx.Transaction
 		}
 		if err = state.Close(); err != nil {
-			log.Printf("failed to close state after block %d", block)
+			issues <- fmt.Errorf("failed to close state after block %d", block)
 		}
 		blockDone <- block
 	}
