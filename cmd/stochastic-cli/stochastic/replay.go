@@ -40,10 +40,10 @@ var StochasticReplayCommand = cli.Command{
 	},
 	Description: `
 The stochastic replay command requires two argument:
-<simulation.json> <simulation-length>
+<simulation-length> <simulation.json> 
 
-<simulation.json> contains the simulation parameters produced by the stochastic estimator.
-<simulation-length> determines the number of issued StateDB operations`,
+<simulation-length> determines the number of blocks
+<simulation.json> contains the simulation parameters produced by the stochastic estimator.`,
 }
 
 // stochasticReplayAction implements the replay command. The user
