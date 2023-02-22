@@ -153,6 +153,8 @@ func openStateDB(cfg *utils.Config) (state.StateDB, error) {
 		err = fmt.Errorf("the state DB does not cover the targeted block range.\n\thave %v\n\twant %v", dbinfo.Block, cfg.Last)
 	} else if !dbinfo.ArchiveMode {
 		err = fmt.Errorf("the targeted state DB does not include an archive")
+	} else if dbinfo.ArchiveVariant != cfg.ArchiveVariant {
+		err = fmt.Errorf("mismatch archive variant.\n\thave %v\n\twant %v", dbinfo.ArchiveVariant, cfg.ArchiveVariant)
 	}
 	if err != nil {
 		return nil, err
