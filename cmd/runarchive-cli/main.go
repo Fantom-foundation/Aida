@@ -21,6 +21,7 @@ var RunArchiveApp = cli.App{
 	Flags: []cli.Flag{
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
+		&utils.ArchiveVariantFlag,
 		&utils.CpuProfileFlag,
 		&utils.ChainIDFlag,
 		&utils.StateDbSrcDirFlag,
