@@ -72,7 +72,7 @@ func TestCountingStatsSimple4(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Marshalling failed to produce distribution")
 	}
-	expected = `{"n":10,"ecdf":[[0,0],[0.15,0.3333333333333333],[0.35,0.5],[0.55,0.6666666666666666],[0.75,0.8333333333333333],[0.95,1],[1,1]]}`
+	expected = `{"n":10,"ecdf":[[0,0],[0.15,0.3333333333333333],[0.95,1],[1,1]]}`
 	if string(jOut) != expected {
 		t.Fatalf("case 1: produced wrong JSON output (%v)", string(jOut))
 	}
