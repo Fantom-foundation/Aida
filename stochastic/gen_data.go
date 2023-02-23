@@ -75,13 +75,14 @@ func (e *EventData) PopulateEventData(d *EventRegistryJSON) {
 	blockProb := 0.0
 	epochProb := 0.0
 	for i := 0; i < n; i++ {
-		if sop, _, _, _ := DecodeOpcode(d.Operations[i]); sop == BeginTransactionID {
+		sop, _, _, _ := DecodeOpcode(d.Operations[i])
+		if sop == BeginTransactionID {
 			txProb = stationary[i]
 		}
-		if sop, _, _, _ := DecodeOpcode(d.Operations[i]); sop == BeginBlockID {
+		if sop == BeginBlockID {
 			blockProb = stationary[i]
 		}
-		if sop, _, _, _ := DecodeOpcode(d.Operations[i]); sop == BeginEpochID {
+		if sop == BeginEpochID {
 			epochProb = stationary[i]
 		}
 	}
@@ -97,7 +98,7 @@ func (e *EventData) PopulateEventData(d *EventRegistryJSON) {
 		for op := 0; op < numOps; op++ {
 			// exclude scoping operations
 			if op != BeginBlockID && op != EndBlockID && op != BeginEpochID && op != EndEpochID && op != BeginTransactionID && op != EndTransactionID {
-				// some all versions of an operation and normalize the value with the transaction's probability
+				// sum all versions of an operation and normalize the value with the transaction's probability
 				sum := 0.0
 				for i := 0; i < n; i++ {
 					if sop, _, _, _ := DecodeOpcode(d.Operations[i]); sop == op {
