@@ -14,6 +14,7 @@ require (
 	github.com/goccy/go-graphviz v0.1.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
+	github.com/paulmach/orb v0.9.0
 	github.com/syndtr/goleveldb v1.0.1-0.20210305035536-64b5b1c73954
 	github.com/urfave/cli/v2 v2.19.2
 	golang.org/x/text v0.3.7

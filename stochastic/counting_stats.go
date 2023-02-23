@@ -2,6 +2,9 @@ package stochastic
 
 import (
 	"sort"
+
+	"github.com/paulmach/orb"
+	"github.com/paulmach/orb/simplify"
 )
 
 // CountingStats for counting frequencies of data items.
@@ -36,6 +39,7 @@ func (s *CountingStats[T]) produceJSON(numPoints int) CountingStatsJSON {
 
 	// sort data according to their descending frequency
 	// and compute totalFreq frequency.
+
 	numKeys := len(s.freq)
 	entries := make([]T, 0, numKeys)
 	totalFreq := uint64(0)
@@ -47,15 +51,14 @@ func (s *CountingStats[T]) produceJSON(numPoints int) CountingStatsJSON {
 		return s.freq[entries[i]] > s.freq[entries[j]]
 	})
 
-	ECdf := [][2]float64{}
+	// simplified eCDF
+	var simplified orb.LineString
 
 	// if no data-points, nothing to plot
 	if numKeys > 0 {
-		// plotting distance of points in eCDF
-		d := numKeys / numPoints
-		if d < 1 {
-			d = 1
-		}
+
+		// construct full eCdf as LineString
+		ls := orb.LineString{}
 
 		// print points of the empirical cumulative freq
 		sumP := float64(0.0)
@@ -63,9 +66,8 @@ func (s *CountingStats[T]) produceJSON(numPoints int) CountingStatsJSON {
 		// Correction term for Kahan's sum
 		cP := float64(0.0)
 
-		// Prime ECDF and counter
-		ECdf = append(ECdf, [2]float64{0.0, 0.0})
-		ctr := 1
+		// add first point to line string
+		ls = append(ls, orb.Point{0.0, 0.0})
 
 		// iterate through all items
 		for i := 0; i < numKeys; i++ {
@@ -80,18 +82,24 @@ func (s *CountingStats[T]) produceJSON(numPoints int) CountingStatsJSON {
 			cP = (tP - sumP) - yP
 			sumP = tP
 
-			// Add only d-times a new point to the empirical cumulative
-			// distribution function, i.e, points in the ECDF will be
-			// equi-distant.
-			if ctr < d {
-				ctr++
-			} else {
-				ECdf = append(ECdf, [2]float64{x, sumP})
-				ctr = 1
-			}
+			// add new point to Ecdf
+			ls = append(ls, orb.Point{x, sumP})
 		}
+
 		// add last point
-		ECdf = append(ECdf, [2]float64{1.0, 1.0})
+		ls = append(ls, orb.Point{1.0, 1.0})
+
+		// reduce full ecdf using Visvalingam-Whyatt algorithm to
+		// "numPoints" points. See:
+		// https://en.wikipedia.org/wiki/Visvalingam-Whyatt_algorithm
+		simplifier := simplify.VisvalingamKeep(numPoints)
+		simplified = simplifier.Simplify(ls).(orb.LineString)
+	}
+
+	// convert orb.LineString to [][2]float64
+	ECdf := make([][2]float64, len(simplified))
+	for i := range simplified {
+		ECdf[i] = [2]float64(simplified[i])
 	}
 
 	return CountingStatsJSON{

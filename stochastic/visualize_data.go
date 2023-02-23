@@ -17,6 +17,7 @@ const countingRef = "counting-stats"
 const queuingRef = "queuing-stats"
 const operationRef = "operation-stats"
 const txoperationRef = "tx-operation-stats"
+const simplifiedMarkovRef = "simplified-markov-stats"
 const markovRef = "markov-stats"
 
 // MainHtml is the index page.
@@ -36,6 +37,7 @@ const MainHtml = `
     <li> <h3> <a href="/` + queuingRef + `"> Queuing Statistics </a> </h3> </li>
     <li> <h3> <a href="/` + txoperationRef + `"> Transactional Operation Statistics  </a> </h3> </li>
     <li> <h3> <a href="/` + operationRef + `"> Operation Statistics  </a> </h3> </li>
+    <li> <h3> <a href="/` + simplifiedMarkovRef + `"> Simplified Markov Chain </a> </h3> </li>
     <li> <h3> <a href="/` + markovRef + `"> Markov Chain </a> </h3> </li>
     </ul>
 </body>
@@ -222,6 +224,46 @@ func renderTransactionalOperationStats(w http.ResponseWriter, r *http.Request) {
 	bar.Render(w)
 }
 
+// renderSimplifiedMarkovChain renders a reduced markov chain whose nodes have no argument classes.
+func renderSimplifiedMarkovChain(w http.ResponseWriter, r *http.Request) {
+	events := GetEventsData()
+	g := graphviz.New()
+	graph, _ := g.Graph()
+	defer func() {
+		graph.Close()
+		g.Close()
+	}()
+	nodes := make([]*cgraph.Node, numOps)
+	for op := 0; op < numOps; op++ {
+		nodes[op], _ = graph.CreateNode(opMnemo[op])
+		nodes[op].SetLabel(opMnemo[op])
+	}
+	for i := 0; i < numOps; i++ {
+		for j := 0; j < numOps; j++ {
+			p := events.SimplifiedMatrix[i][j]
+			if p > 0.0 {
+				txt := fmt.Sprintf("%.2f", p)
+				e, _ := graph.CreateEdge("", nodes[i], nodes[j])
+				e.SetLabel(txt)
+				var color string
+				switch int(4 * p) {
+				case 0:
+					color = "gray"
+				case 1:
+					color = "green"
+				case 3:
+					color = "indianred"
+				case 4:
+					color = "red"
+				}
+				e.SetColor(color)
+			}
+		}
+	}
+	txt, _ := renderDotGraph("StateDB Simplified Markov-Chain", g, graph)
+	fmt.Fprint(w, txt)
+}
+
 // renderMarkovChain renders a markov chain.
 func renderMarkovChain(w http.ResponseWriter, r *http.Request) {
 	events := GetEventsData()
@@ -270,6 +312,7 @@ func FireUpWeb(addr string) {
 	http.HandleFunc("/"+queuingRef, renderQueuingStats)
 	http.HandleFunc("/"+operationRef, renderOperationStats)
 	http.HandleFunc("/"+txoperationRef, renderTransactionalOperationStats)
+	http.HandleFunc("/"+simplifiedMarkovRef, renderSimplifiedMarkovChain)
 	http.HandleFunc("/"+markovRef, renderMarkovChain)
 	http.ListenAndServe(":"+addr, nil)
 }
