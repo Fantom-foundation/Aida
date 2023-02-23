@@ -3,6 +3,7 @@ package state
 import (
 	"fmt"
 	"math/big"
+	"strings"
 
 	cc "github.com/Fantom-foundation/Carmen/go/common"
 	carmen "github.com/Fantom-foundation/Carmen/go/state"
@@ -11,14 +12,32 @@ import (
 	"github.com/ethereum/go-ethereum/substate"
 )
 
-func MakeCarmenStateDB(directory, variant string, withArchive bool) (StateDB, error) {
+func MakeCarmenStateDB(directory, variant, archive string) (StateDB, error) {
 	if variant == "" {
 		variant = "go-memory"
 	}
 
+	var archiveType carmen.ArchiveType
+	switch strings.ToLower(archive) {
+	case "none":
+		archiveType = carmen.NoArchive
+	case "": // = default option
+		fallthrough
+	case "ldb":
+		fallthrough
+	case "leveldb":
+		archiveType = carmen.LevelDbArchive
+	case "sql":
+		fallthrough
+	case "sqlite":
+		archiveType = carmen.SqliteArchive
+	default:
+		return nil, fmt.Errorf("unsupported archive type: %s", archive)
+	}
+
 	params := carmen.Parameters{
-		Directory:   directory,
-		WithArchive: withArchive,
+		Directory: directory,
+		Archive:   archiveType,
 	}
 
 	var db carmen.State

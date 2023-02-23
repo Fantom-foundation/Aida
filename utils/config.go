@@ -37,6 +37,10 @@ var (
 		Name:  "archive",
 		Usage: "set node type to archival mode. If set, the node keep all the EVM state history; otherwise the state history will be pruned.",
 	}
+	ArchiveVariantFlag = cli.StringFlag{
+		Name:  "archive-variant",
+		Usage: "set the archive implementation variant for the selected DB implementation, ignored if not running in archive mode",
+	}
 	ChainIDFlag = cli.IntFlag{
 		Name:  "chainid",
 		Usage: "ChainID for replayer",
@@ -208,6 +212,7 @@ type Config struct {
 	EnableProgress     bool   // enable progress report flag
 	EpochLength        uint64 // length of an epoch in number of blocks
 	ArchiveMode        bool   // enable archive mode
+	ArchiveVariant     string // selects the implementation variant of the archive
 	HasDeletedAccounts bool   // true if deletedAccountDir is not empty; otherwise false
 	KeepStateDB        bool   // set to true if stateDB is kept after run
 	MaxNumTransactions int    // the maximum number of processed transactions
@@ -297,6 +302,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 
 	cfg := &Config{
 		ArchiveMode:        ctx.Bool(ArchiveModeFlag.Name),
+		ArchiveVariant:     ctx.String(ArchiveVariantFlag.Name),
 		Debug:              ctx.Bool(TraceDebugFlag.Name),
 		ChainID:            ctx.Int(ChainIDFlag.Name),
 		ContinueOnFailure:  ctx.Bool(ContinueOnFailureFlag.Name),
@@ -351,6 +357,11 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		log.Printf("\tWorking storage directory: %v\n", cfg.StateDbTempDir)
 		if cfg.ArchiveMode {
 			log.Printf("\tArchive mode: enabled\n")
+			if cfg.ArchiveVariant == "" {
+				log.Printf("\tArchive variant: <implementation-default>\n")
+			} else {
+				log.Printf("\tArchive variant: %s\n", cfg.ArchiveVariant)
+			}
 		} else {
 			log.Printf("\tArchive mode: disabled\n")
 		}

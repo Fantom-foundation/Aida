@@ -1,69 +1,79 @@
 package stochastic
 
-// IndirectAccess data structure for producing random accesses.
+// IndirectAccess data structure for random access indices permitting deletion without reuse.
 type IndirectAccess struct {
 	randAcc *RandomAccess
 
-	// queue for indexes
-	translation []int
+	// translation table for converting compact index space to sparse
+	// permitting index deletion without later reuse.
+	translation []int64
 
-	// counter
-	ctr int
+	// counter for introducing new index values
+	ctr int64
 }
 
-// NewAccessStats creates a new access index.
+// NewIndirectAccess creates a new indirect index access-generator.
 func NewIndirectAccess(ra *RandomAccess) *IndirectAccess {
-	// translate values
-	t := make([]int, ra.numElem)
-	for i := 0; i < ra.numElem; i++ {
+	t := make([]int64, ra.numElem)
+	for i := int64(0); i < ra.numElem; i++ {
 		t[i] = i + 1
 	}
-	// initialise table!
 	return &IndirectAccess{
 		randAcc:     ra,
-		ctr:         ra.numElem + 1,
+		ctr:         ra.numElem,
 		translation: t,
 	}
 }
 
-// NextIndex returns the next random index based on the provided class.
-func (a *IndirectAccess) NextIndex(class int) int {
+// NextIndex returns the next index value based on the provided class.
+func (a *IndirectAccess) NextIndex(class int) int64 {
 	v := a.randAcc.NextIndex(class)
-	switch class {
-	case zeroValueID:
-		return 0
-	case newValueID:
+	if v == -1 {
+		return -1
+	} else if class == zeroValueID {
+		return v
+	} else if class == newValueID {
 		if v != a.randAcc.numElem {
-			panic("unexpected result of nextIndex")
+			panic("unexpected nextIndex result")
 		}
 		a.ctr++
 		v := a.ctr
 		a.translation = append(a.translation, v)
 		return v
-	case previousValueID:
-		return a.translation[a.randAcc.NextIndex(class)-1]
-	case recentValueID:
-		return a.translation[a.randAcc.NextIndex(class)-1]
-	case randomValueID:
-		return a.translation[a.randAcc.NextIndex(class)-1]
-	default:
-		return -1
+	} else {
+		return a.translation[v-1]
 	}
 }
 
-// DeleteIndex deletes an access index.
-func (a *IndirectAccess) DeleteIndex(i int) error {
+// DeleteIndex deletes an indirect index.
+func (a *IndirectAccess) DeleteIndex(k int64) error {
 
-	// delete element (by changing order)
-	a.translation[i] = a.translation[len(a.translation)-1]
-	a.translation[len(a.translation)-1] = 0
-	a.translation = a.translation[:len(a.translation)-1]
+	// find index in translation table
+	i := a.findIndex(k)
+	if i < 0 {
+		panic("index not found")
+	}
 
-	// delete element from queue and reduce cardinality
-	err := a.randAcc.DeleteIndex(i)
-	if err != nil {
+	// delete index i from the translation table and the random access generator.
+	a.translation = append(a.translation[:i], a.translation[i+1:]...)
+	if err := a.randAcc.DeleteIndex(i); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+// findIndex finds the index in the translation table for a given index k.
+func (a *IndirectAccess) findIndex(k int64) int64 {
+	for i := int64(0); i < int64(len(a.translation)); i++ {
+		if a.translation[i] == k {
+			return i
+		}
+	}
+	return -1
+}
+
+// NumElem returns the number of elements
+func (a *IndirectAccess) NumElem() int64 {
+	return a.randAcc.numElem
 }

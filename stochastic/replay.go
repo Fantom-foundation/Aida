@@ -74,7 +74,7 @@ func RunStochasticReplay(e *EstimationModelJSON, simLength int, verbose bool) {
 }
 
 // executeState executes StateDB operation
-func executeState(op, addr, key, value int) {
+func executeState(op int, addr, key, value int64) {
 	// 1) convert indices to 20-byte/ 32-byte addresses/hashes
 	// 2) issue stateDB operations (for the execution we may need some state, e.g., balance, etc)
 }

@@ -11,7 +11,7 @@ type CountingStats[T comparable] struct {
 
 // JSON output for a CountingStats object
 type CountingStatsJSON struct {
-	NumKeys int          `json:"n"`    // Number of data entries
+	NumKeys int64        `json:"n"`    // Number of data entries
 	ECdf    [][2]float64 `json:"ecdf"` // Empirical cumulative distribution function
 }
 
@@ -95,7 +95,7 @@ func (s *CountingStats[T]) produceJSON(numPoints int) CountingStatsJSON {
 	}
 
 	return CountingStatsJSON{
-		NumKeys: numKeys,
+		NumKeys: int64(numKeys),
 		ECdf:    ECdf,
 	}
 }

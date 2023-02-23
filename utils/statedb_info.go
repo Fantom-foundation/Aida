@@ -18,13 +18,14 @@ const DbInfoName = "statedb_info.json"
 
 // StateDB meta information
 type StateDbInfo struct {
-	Impl        string      `json:"dbImpl"`        // type of db engine
-	Variant     string      `json:"dbVariant"`     // type of db variant
-	ArchiveMode bool        `json:"archiveMode"`   // archive mode
-	Block       uint64      `json:"block"`         // last block height
-	RootHash    common.Hash `json:"rootHash"`      // rooth hash of the last block height
-	GitCommit   string      `json:"gitCommit"`     // Aida git version when creating stateDB
-	CreateTime  string      `json:"createTimeUTC"` // time of creation in utc timezone
+	Impl           string      `json:"dbImpl"`         // type of db engine
+	Variant        string      `json:"dbVariant"`      // type of db variant
+	ArchiveMode    bool        `json:"archiveMode"`    // archive mode
+	ArchiveVariant string      `json:"archiveVariant"` // archive variant
+	Block          uint64      `json:"block"`          // last block height
+	RootHash       common.Hash `json:"rootHash"`       // rooth hash of the last block height
+	GitCommit      string      `json:"gitCommit"`      // Aida git version when creating stateDB
+	CreateTime     string      `json:"createTimeUTC"`  // time of creation in utc timezone
 }
 
 // copyFile copies a single file from src to dst
@@ -92,13 +93,14 @@ func copyDir(src string, dst string) error {
 // for a compatibility check when reloading
 func WriteStateDbInfo(directory string, cfg *Config, block uint64, root common.Hash) error {
 	dbinfo := &StateDbInfo{
-		Impl:        cfg.DbImpl,
-		Variant:     cfg.DbVariant,
-		ArchiveMode: cfg.ArchiveMode,
-		Block:       block,
-		RootHash:    root,
-		GitCommit:   GitCommit,
-		CreateTime:  time.Now().UTC().Format(time.UnixDate),
+		Impl:           cfg.DbImpl,
+		Variant:        cfg.DbVariant,
+		ArchiveMode:    cfg.ArchiveMode,
+		ArchiveVariant: cfg.ArchiveVariant,
+		Block:          block,
+		RootHash:       root,
+		GitCommit:      GitCommit,
+		CreateTime:     time.Now().UTC().Format(time.UnixDate),
 	}
 	filename := filepath.Join(directory, DbInfoName)
 	jsonByte, err := json.MarshalIndent(dbinfo, "", "  ")
