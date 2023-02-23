@@ -12,6 +12,9 @@ type EventData struct {
 	Values    AccessData // storage-value view model
 
 	Stationary       []OpData                // stationary distribution model
+	TxOperation      []OpData                // average number of operations per Tx
+	TxPerBlock       float64                 // average number of transactions per block
+	BlocksPerEpoch   float64                 // average number of blocks per epoch
 	OperationLabel   []string                // operation labels for stochastic matrix
 	StochasticMatrix [][]float64             // stochastic Matrix
 	SimplifiedMatrix [numOps][numOps]float64 // simplified stochastic matrix
@@ -28,7 +31,7 @@ type AccessData struct {
 // OpData stores a single operation and its probability (for stead-state)
 type OpData struct {
 	label string  // operation's label
-	p     float64 // operation's probability
+	value float64 // operation's value (either probability or frequency)
 }
 
 // events is the singleton for the viewing model.
@@ -58,13 +61,62 @@ func (e *EventData) PopulateEventData(d *EventRegistryJSON) {
 	for i := 0; i < n; i++ {
 		data = append(data, OpData{
 			label: d.Operations[i],
-			p:     stationary[i],
+			value: stationary[i],
 		})
 	}
 	sort.Slice(data, func(i, j int) bool {
-		return data[i].p < data[j].p
+		return data[i].value < data[j].value
 	})
 	e.Stationary = data
+
+	// compute average number of operations per transaction
+
+	// find the BeginTransaction probability in the stationary distribution
+	txProb := 0.0
+	blockProb := 0.0
+	epochProb := 0.0
+	for i := 0; i < n; i++ {
+		sop, _, _, _ := DecodeOpcode(d.Operations[i])
+		if sop == BeginTransactionID {
+			txProb = stationary[i]
+		}
+		if sop == BeginBlockID {
+			blockProb = stationary[i]
+		}
+		if sop == BeginEpochID {
+			epochProb = stationary[i]
+		}
+	}
+	if blockProb > 0.0 {
+		e.TxPerBlock = txProb / blockProb
+	}
+	if epochProb > 0.0 {
+		e.BlocksPerEpoch = blockProb / epochProb
+	}
+
+	txData := []OpData{}
+	if txProb > 0.0 {
+		for op := 0; op < numOps; op++ {
+			// exclude scoping operations
+			if op != BeginBlockID && op != EndBlockID && op != BeginEpochID && op != EndEpochID && op != BeginTransactionID && op != EndTransactionID {
+				// sum all versions of an operation and normalize the value with the transaction's probability
+				sum := 0.0
+				for i := 0; i < n; i++ {
+					if sop, _, _, _ := DecodeOpcode(d.Operations[i]); sop == op {
+						sum += stationary[i]
+					}
+				}
+				txData = append(txData, OpData{
+					label: opMnemo[op],
+					value: sum / txProb})
+			}
+		}
+	}
+	// sort expected operation frequencies
+	sort.Slice(txData, func(i, j int) bool {
+		return txData[i].value > txData[j].value
+	})
+	e.TxOperation = txData
 
 	// Populate stochastic matrix
 	e.OperationLabel = make([]string, len(d.Operations))

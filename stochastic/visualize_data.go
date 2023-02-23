@@ -16,6 +16,7 @@ import (
 const countingRef = "counting-stats"
 const queuingRef = "queuing-stats"
 const operationRef = "operation-stats"
+const txoperationRef = "tx-operation-stats"
 const simplifiedMarkovRef = "simplified-markov-stats"
 const markovRef = "markov-stats"
 
@@ -34,6 +35,7 @@ const MainHtml = `
     <ul>
     <li> <h3> <a href="/` + countingRef + `"> Counting Statistics </a> </h3> </li>
     <li> <h3> <a href="/` + queuingRef + `"> Queuing Statistics </a> </h3> </li>
+    <li> <h3> <a href="/` + txoperationRef + `"> Transactional Operation Statistics  </a> </h3> </li>
     <li> <h3> <a href="/` + operationRef + `"> Operation Statistics  </a> </h3> </li>
     <li> <h3> <a href="/` + simplifiedMarkovRef + `"> Simplified Markov Chain </a> </h3> </li>
     <li> <h3> <a href="/` + markovRef + `"> Markov Chain </a> </h3> </li>
@@ -148,7 +150,7 @@ func renderQueuingStats(w http.ResponseWriter, r *http.Request) {
 func convertOperationData(data []OpData) []opts.BarData {
 	items := []opts.BarData{}
 	for i := 0; i < len(data); i++ {
-		items = append(items, opts.BarData{Value: data[i].p})
+		items = append(items, opts.BarData{Value: data[i].value})
 	}
 	return items
 }
@@ -189,6 +191,36 @@ func renderOperationStats(w http.ResponseWriter, r *http.Request) {
 		}))
 	bar.SetXAxis(convertOperationLabel(events.Stationary)).AddSeries("Stationary Distribution", convertOperationData(events.Stationary))
 	bar.XYReversal()
+	bar.Render(w)
+}
+
+// renderTransactionalOperationStats renders the average number of operations per transaction.
+func renderTransactionalOperationStats(w http.ResponseWriter, r *http.Request) {
+	events := GetEventsData()
+	title := fmt.Sprintf("Average %.1f Tx/Bl; %.1f Bl/Ep", events.TxPerBlock, events.BlocksPerEpoch)
+	bar := charts.NewBar()
+	bar.SetGlobalOptions(charts.WithInitializationOpts(opts.Initialization{
+		Theme:     types.ThemeChalk,
+		PageTitle: title,
+		Height:    "1300px",
+	}),
+		charts.WithToolboxOpts(opts.Toolbox{
+			Show: true,
+			Feature: &opts.ToolBoxFeature{
+				SaveAsImage: &opts.ToolBoxFeatureSaveAsImage{
+					Show:  true,
+					Title: "Save",
+				},
+				DataZoom: &opts.ToolBoxFeatureDataZoom{
+					Show: true,
+				},
+			},
+		}),
+		charts.WithLegendOpts(opts.Legend{Show: true}),
+		charts.WithTitleOpts(opts.Title{
+			Title: title,
+		}))
+	bar.SetXAxis(convertOperationLabel(events.TxOperation)).AddSeries("Ops/Tx", convertOperationData(events.TxOperation))
 	bar.Render(w)
 }
 
@@ -279,6 +311,7 @@ func FireUpWeb(addr string) {
 	http.HandleFunc("/"+countingRef, renderCountingStats)
 	http.HandleFunc("/"+queuingRef, renderQueuingStats)
 	http.HandleFunc("/"+operationRef, renderOperationStats)
+	http.HandleFunc("/"+txoperationRef, renderTransactionalOperationStats)
 	http.HandleFunc("/"+simplifiedMarkovRef, renderSimplifiedMarkovChain)
 	http.HandleFunc("/"+markovRef, renderMarkovChain)
 	http.ListenAndServe(":"+addr, nil)
