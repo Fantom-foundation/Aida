@@ -32,9 +32,6 @@ func (a *AccessStats[T]) Place(data T) {
 	if a.qstats.Find(data) == -1 {
 		a.cstats.Place(data)
 	}
-
-	// Place data into queuing statistics
-	a.qstats.Place(data)
 }
 
 // Classify an access depending on previous placements.
