@@ -22,14 +22,10 @@ var StochasticReplayCommand = cli.Command{
 	ArgsUsage: "<simulation-file>",
 	Flags: []cli.Flag{
 		&utils.VerboseFlag,
-		&utils.ChainIDFlag, // TODO: this flag does not make sense for stochastic replay/remove later
-		&utils.CpuProfileFlag,
-		&utils.DisableProgressFlag,
-		&utils.EpochLengthFlag,
-		&utils.KeepStateDBFlag,
+		// TODO: this flag does not make sense for stochastic replay/remove, however
+		// cannot be removed without rewriting config.go
+		&utils.ChainIDFlag,
 		&utils.MemoryBreakdownFlag,
-		&utils.MemProfileFlag,
-		&utils.ProfileFlag,
 		&utils.StateDbImplementationFlag,
 		&utils.StateDbVariantFlag,
 		&utils.StateDbSrcDirFlag,
@@ -80,10 +76,7 @@ func stochasticReplayAction(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	if !cfg.KeepStateDB {
-		log.Printf("WARNING: directory %v will be removed at the end of this run.\n", stateDirectory)
-		defer os.RemoveAll(stateDirectory)
-	}
+	defer os.RemoveAll(stateDirectory)
 
 	// run simulation.
 	fmt.Printf("stochastic replay: run simulation ...\n")
