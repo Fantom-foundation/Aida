@@ -193,7 +193,7 @@ func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *Config, target ui
 	}
 	log.Printf("Deleting %d accounts ..\n", len(list))
 	db.BeginEpoch(0)
-	db.BeginBlock(1) // block 0 is the priming, block 1 the deletion
+	db.BeginBlock(target) // block 0 is the priming, block (first-1) the deletion
 	db.BeginTransaction(0)
 	for _, cur := range list {
 		db.Suicide(cur)
@@ -205,7 +205,7 @@ func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *Config, target ui
 	return nil
 }
 
-// GetDirectorySize computes the size of all files in the given directoy in bytes.
+// GetDirectorySize computes the size of all files in the given directory in bytes.
 func GetDirectorySize(directory string) int64 {
 	var sum int64 = 0
 	filepath.Walk(directory, func(path string, info fs.FileInfo, err error) error {
