@@ -49,6 +49,36 @@ const (
 	numClasses
 )
 
+// opText translates IDs to operation's text
+var opText = map[int]string{
+	AddBalanceID:        "AddBalance",
+	BeginBlockID:        "BeginBlock",
+	BeginEpochID:        "BeginEpoch",
+	BeginTransactionID:  "BeginTransaction",
+	CreateAccountID:     "CreateAccount",
+	EmptyID:             "Empty",
+	EndBlockID:          "EndBlock",
+	EndEpochID:          "EndEpoch",
+	EndTransactionID:    "EndTransaction",
+	ExistID:             "Exist",
+	FinaliseID:          "Finalise",
+	GetBalanceID:        "GetBalance",
+	GetCodeHashID:       "GetCodeHash",
+	GetCodeID:           "GetCode",
+	GetCodeSizeID:       "GetCodeSize",
+	GetCommittedStateID: "GetCommittedState",
+	GetNonceID:          "GetNonce",
+	GetStateID:          "GetState",
+	HasSuicidedID:       "HasSuicided",
+	RevertToSnapshotID:  "RevertToSnapshot",
+	SetCodeID:           "SetCode",
+	SetNonceID:          "SetNonce",
+	SetStateID:          "SetState",
+	SnapshotID:          "Snapshot",
+	SubBalanceID:        "SubBalance",
+	SuicideID:           "Suicide",
+}
+
 // opMnemo is a mnemonics table for operations.
 var opMnemo = map[int]string{
 	AddBalanceID:        "AB",
