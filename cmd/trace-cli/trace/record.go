@@ -176,7 +176,7 @@ func OperationWriter(ch chan operation.Operation) {
 	if err != nil {
 		log.Fatalf("Cannot open trace file. Error: %v", err)
 	}
-	bfile := bufio.NewWriterSize(file, 65536*16)
+	bfile := bufio.NewWriterSize(file, 65536)
 	zfile, err := bzip2.NewWriter(bfile, &bzip2.WriterConfig{Level: 9})
 	if err != nil {
 		log.Fatalf("Cannot open bzip2 stream. Error: %v", err)
@@ -242,7 +242,7 @@ func traceRecordAction(ctx *cli.Context) error {
 	dCtx := dict.NewDictionaryContext()
 
 	// spawn writer
-	opChannel := make(chan operation.Operation, 100000)
+	opChannel := make(chan operation.Operation, 1000)
 	go OperationWriter(opChannel)
 
 	// process arguments
