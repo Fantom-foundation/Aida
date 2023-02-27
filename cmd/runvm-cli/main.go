@@ -23,6 +23,7 @@ var RunVMApp = cli.App{
 		&substate.SubstateDirFlag,
 		&utils.ArchiveModeFlag,
 		&utils.ArchiveVariantFlag,
+		&utils.CarmenSchemaFlag,
 		&utils.ChainIDFlag,
 		&utils.ContinueOnFailureFlag,
 		&utils.CpuProfileFlag,

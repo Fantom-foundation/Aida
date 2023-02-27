@@ -23,6 +23,7 @@ var TraceReplayCommand = cli.Command{
 	Usage:     "executes storage trace",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
+		&utils.CarmenSchemaFlag,
 		&utils.ChainIDFlag,
 		&utils.CpuProfileFlag,
 		&utils.DeletedAccountDirFlag,

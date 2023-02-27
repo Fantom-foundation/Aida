@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-func MakeCarmenStateDB(directory, variant, archive string) (StateDB, error) {
+func MakeCarmenStateDB(directory, variant, archive string, schema int) (StateDB, error) {
 	if variant == "" {
 		variant = "go-memory"
 	}
@@ -36,6 +36,7 @@ func MakeCarmenStateDB(directory, variant, archive string) (StateDB, error) {
 	}
 
 	params := carmen.Parameters{
+		Schema:    carmen.StateSchema(schema),
 		Directory: directory,
 		Archive:   archiveType,
 	}

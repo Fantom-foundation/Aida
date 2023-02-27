@@ -113,6 +113,7 @@ reads the recorded traces and re-executes state operations from block 5,050,000 
 
 **Options**
 
+- `--carmen-schema` selects between various DB schemas used by Carmen for its current state, `0` (=implementation defined), `1`, `2`, `3`, ...
  - `--cpuprofile` records a CPU profile for the replay to be inspected using `pprof`
  - `--db-impl` select between `memory`, `geth`, `carmen` and `flat`. Default: `geth`
  - `--db-variant` select between implementation specific sub-variants, e.g. `go-ldb` or `cpp-file`
@@ -143,6 +144,7 @@ executes transactions from block 4,564,026 to 5,000,000. The tool initializes st
 
  - `--archive` enable the recording of archive data
  - `--archive-variant` selects between different archive implementation variants. Options are empty (=implementation default), `ldb`, `sql`
+ - `--carmen-schema` selects between various DB schemas used by Carmen for its current state, `0` (=implementation defined), `1`, `2`, `3`, ...
  - `--chainid` sets the chain-id (useful if recording from testnet). Default: 250 (mainnet)`
  - `--cpuprofile` records a CPU profile for the replay to be inspected using `pprof`
  - `--db-impl` select between `memory`, `geth`, `carmen` and `flat`. Default: `geth`
@@ -179,6 +181,7 @@ loads the historic state of its block and executes the transaction on it in read
 **Options**
 
 - `--archive-variant` selects between different archive implementation variants. Options are empty (=implementation default), `ldb`, `sql`
+- `--carmen-schema` selects between various DB schemas used by Carmen for its current state, `0` (=implementation defined), `1`, `2`, `3`, ...
  - `--chainid` sets the chain-id (useful if recording from testnet). Default: 250 (mainnet)`
  - `--cpuprofile` records a CPU profile for the replay to be inspected using `pprof`
  - `--db-impl` select between `memory`, `geth`, `carmen` and `flat`. Default: `geth`
