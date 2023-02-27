@@ -5,10 +5,9 @@ import (
 	"os"
 
 	db2 "github.com/Fantom-foundation/Aida/cmd/substate-cli/db"
-
 	"github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/substate"
 	"github.com/urfave/cli/v2"
 )
 

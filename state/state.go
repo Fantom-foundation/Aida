@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"math/big"
 
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/substate"
 )
 
 type BasicStateDB interface {

@@ -4,9 +4,8 @@ import (
 	"fmt"
 
 	"github.com/Fantom-foundation/Aida/utils"
-
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/substate"
 	"github.com/urfave/cli/v2"
 )
 

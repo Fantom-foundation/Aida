@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/substate"
 )
 
 // MakeStateDB creates a new DB instance based on cli argument.

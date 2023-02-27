@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/world-state/types"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/substate"
 )
 
 // TestStateDB_Substate check whether generated substatAlloc is identical to the original database

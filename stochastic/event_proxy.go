@@ -6,9 +6,9 @@ import (
 	"math/big"
 
 	"github.com/Fantom-foundation/Aida/state"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/substate"
 )
 
 // EventProxy data structure for capturing StateDB events
