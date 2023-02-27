@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	substate "github.com/Fantom-foundation/Substate"
-
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/urfave/cli/v2"
 )

@@ -5,10 +5,9 @@ import (
 	"math/big"
 	"strings"
 
-	substate "github.com/Fantom-foundation/Substate"
-
 	cc "github.com/Fantom-foundation/Carmen/go/common"
 	carmen "github.com/Fantom-foundation/Carmen/go/state"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )

@@ -7,7 +7,6 @@ import (
 	"math/big"
 
 	substate "github.com/Fantom-foundation/Substate"
-
 	"github.com/Fantom-foundation/lachesis-base/hash"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/state"

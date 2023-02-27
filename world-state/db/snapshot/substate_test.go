@@ -8,9 +8,8 @@ import (
 	"reflect"
 	"testing"
 
-	substate "github.com/Fantom-foundation/Substate"
-
 	"github.com/Fantom-foundation/Aida/world-state/types"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 )
 

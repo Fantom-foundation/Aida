@@ -6,9 +6,8 @@ import (
 	"fmt"
 	"log"
 
-	substate "github.com/Fantom-foundation/Substate"
-
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/syndtr/goleveldb/leveldb"
 )

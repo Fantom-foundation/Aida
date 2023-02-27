@@ -11,7 +11,6 @@ import (
 	"time"
 
 	substate "github.com/Fantom-foundation/Substate"
-
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/urfave/cli/v2"
 )

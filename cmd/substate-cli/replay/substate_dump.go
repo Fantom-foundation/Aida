@@ -4,10 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	substate "github.com/Fantom-foundation/Substate"
-
 	"github.com/Fantom-foundation/Aida/utils"
-
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 
