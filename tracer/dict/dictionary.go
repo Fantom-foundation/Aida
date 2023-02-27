@@ -218,8 +218,9 @@ func (d *Dictionary[K]) ReadString(filename string, magic uint64) error {
 		if err := binary.Read(zfile, binary.LittleEndian, value); err != nil {
 			return fmt.Errorf("Error reading value length/file is corrupted. Error: %v", err)
 		}
+		str := string(value)
 		// envalue byte-value entry
-		idx, err := d.Encode(any(value).(K))
+		idx, err := d.Encode(any(str).(K))
 		if err != nil {
 			return fmt.Errorf("Failed to envalue byte-value while reading. Error: %v", err)
 		} else if idx != ctr {

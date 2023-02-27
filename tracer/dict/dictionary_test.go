@@ -156,8 +156,8 @@ func TestCodeDictionarySimple1(t *testing.T) {
 	dict := NewDictionary[string]()
 	idx, err1 := dict.Encode(string(encodedCode))
 	decodedCode, err2 := dict.Decode(idx)
-	if !reflect.DeepEqual(encodedCode, decodedCode) || err1 != nil || err2 != nil || idx != 0 {
-		t.Fatalf("Encoding/Decoding failed")
+	if !reflect.DeepEqual(encodedCode, []byte(decodedCode)) || err1 != nil || err2 != nil || idx != 0 {
+		t.Fatalf("Encoding/Decoding failed %v %v", encodedCode, decodedCode)
 	}
 }
 
@@ -171,10 +171,10 @@ func TestCodeDictionarySimple2(t *testing.T) {
 	idx2, err2 := dict.Encode(string(encodedCode2))
 	decodedCode1, err3 := dict.Decode(idx1)
 	decodedCode2, err4 := dict.Decode(idx2)
-	if !reflect.DeepEqual(encodedCode1, decodedCode1) || err1 != nil || err3 != nil || idx1 != 0 {
+	if !reflect.DeepEqual(encodedCode1, []byte(decodedCode1)) || err1 != nil || err3 != nil || idx1 != 0 {
 		t.Fatalf("Encoding/decoding byte-code (1) failed")
 	}
-	if !reflect.DeepEqual(encodedCode2, decodedCode2) || err2 != nil || err4 != nil || idx2 != 1 {
+	if !reflect.DeepEqual(encodedCode2, []byte(decodedCode2)) || err2 != nil || err4 != nil || idx2 != 1 {
 		t.Fatalf("Encoding/decoding byte-code (2) failed")
 	}
 }
@@ -188,10 +188,10 @@ func TestCodeDictionarySimple3(t *testing.T) {
 	idx2, err2 := dict.Encode(string(encodedCode))
 	decodedCode1, err3 := dict.Decode(idx1)
 	decodedCode2, err4 := dict.Decode(idx2)
-	if !reflect.DeepEqual(encodedCode, decodedCode1) || err1 != nil || err3 != nil || idx1 != 0 {
+	if !reflect.DeepEqual(encodedCode, []byte(decodedCode1)) || err1 != nil || err3 != nil || idx1 != 0 {
 		t.Fatalf("Encoding/decoding byte-code (1) failed")
 	}
-	if !reflect.DeepEqual(encodedCode, decodedCode2) || err2 != nil || err4 != nil || idx2 != 0 {
+	if !reflect.DeepEqual(encodedCode, []byte(decodedCode2)) || err2 != nil || err4 != nil || idx2 != 0 {
 		t.Fatalf("Encoding/decoding byte-code (2) failed")
 	}
 }
@@ -269,22 +269,22 @@ func TestCodeDictionaryReadWrite(t *testing.T) {
 	wDict := NewDictionary[string]()
 	idx1, err1 := wDict.Encode(string(encodedCode1))
 	idx2, err2 := wDict.Encode(string(encodedCode2))
-	err := wDict.Write(filename, 4711)
+	err := wDict.WriteString(filename, 4711)
 	if err != nil {
-		t.Fatalf("Failed to write file")
+		t.Fatalf("Failed to write file. Error: %v", err)
 	}
 	rDict := NewDictionary[string]()
-	err = rDict.Read(filename, 4711)
+	err = rDict.ReadString(filename, 4711)
 	if err != nil {
 		t.Fatalf("Failed to read file")
 	}
 	decodedCode1, err3 := rDict.Decode(idx1)
 	decodedCode2, err4 := rDict.Decode(idx2)
-	if !reflect.DeepEqual(encodedCode1, decodedCode1) || err1 != nil || err3 != nil || idx1 != 0 {
+	if !reflect.DeepEqual(encodedCode1, []byte(decodedCode1)) || err1 != nil || err3 != nil || idx1 != 0 {
 		fmt.Printf("%v %v\n", encodedCode1, decodedCode1)
 		t.Fatalf("Encoding/decoding byte-code (1) failed")
 	}
-	if !reflect.DeepEqual(encodedCode2, decodedCode2) || err2 != nil || err4 != nil || idx2 != 1 {
+	if !reflect.DeepEqual(encodedCode2, []byte(decodedCode2)) || err2 != nil || err4 != nil || idx2 != 1 {
 		fmt.Printf("%v %v\n", encodedCode2, decodedCode2)
 		t.Fatalf("Encoding/decoding byte-code (2) failed")
 	}
