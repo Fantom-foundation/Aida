@@ -6,10 +6,9 @@ import (
 	"math/big"
 	"path"
 
+	"github.com/Fantom-foundation/go-opera-fvm-erigon/cmd/opera/launcher"
 	"github.com/Fantom-foundation/go-opera-fvm-erigon/erigon"
 	"github.com/Fantom-foundation/go-opera-fvm-erigon/evmcore"
-	"github.com/Fantom-foundation/go-opera-fvm-erigon-erigon/gossip/evmstore/erigonstate"
-	"github.com/Fantom-foundation/go-opera-fvm-erigon/cmd/opera/launcher"
 	"github.com/Fantom-foundation/go-opera-fvm-erigon/gossip/evmstore/erigonstate"
 
 	"github.com/ethereum/go-ethereum/common"
