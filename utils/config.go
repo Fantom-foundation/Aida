@@ -10,8 +10,9 @@ import (
 	"strings"
 	"time"
 
+	substate "github.com/Fantom-foundation/Substate"
+
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/substate"
 	"github.com/urfave/cli/v2"
 )
 

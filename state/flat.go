@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"math/big"
 
+	substate "github.com/Fantom-foundation/Substate"
+
 	"github.com/Fantom-foundation/go-opera-fvm/flat"
 	"github.com/Fantom-foundation/go-opera-fvm/gossip/evmstore/state"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/substate"
 )
 
 func MakeFlatStateDB(directory, variant string, rootHash common.Hash) (s StateDB, err error) {

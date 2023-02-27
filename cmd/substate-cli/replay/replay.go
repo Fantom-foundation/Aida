@@ -11,6 +11,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	substate "github.com/Fantom-foundation/Substate"
+
 	"github.com/Fantom-foundation/Aida/utils"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -24,7 +26,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm/lfvm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/substate"
 	"github.com/urfave/cli/v2"
 )
 

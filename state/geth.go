@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"math/big"
 
+	substate "github.com/Fantom-foundation/Substate"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/prque"
 	rawdb "github.com/ethereum/go-ethereum/core/rawdb"
@@ -11,7 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	vm "github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/substate"
 )
 
 const (

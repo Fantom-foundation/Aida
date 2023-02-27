@@ -3,12 +3,13 @@ package trace
 import (
 	"math/big"
 
+	substate "github.com/Fantom-foundation/Substate"
+
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/substate"
 )
 
 // ProxyRecorder data structure for capturing and recording

@@ -8,9 +8,10 @@ import (
 	"reflect"
 	"sync"
 
+	substate "github.com/Fantom-foundation/Substate"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/substate"
 )
 
 // SubstateIterator defines an interface of substate iterator we use to collect addresses.

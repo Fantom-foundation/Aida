@@ -10,6 +10,8 @@ import (
 	"runtime/pprof"
 	"time"
 
+	substate "github.com/Fantom-foundation/Substate"
+
 	"github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/stochastic"
@@ -22,7 +24,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/substate"
 	"github.com/urfave/cli/v2"
 )
 

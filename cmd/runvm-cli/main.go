@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"os"
 
+	substate "github.com/Fantom-foundation/Substate"
+
 	"github.com/Fantom-foundation/Aida/cmd/runvm-cli/runvm"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/ethereum/go-ethereum/substate"
 	"github.com/urfave/cli/v2"
 )
 

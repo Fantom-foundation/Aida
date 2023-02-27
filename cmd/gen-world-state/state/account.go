@@ -13,11 +13,12 @@ import (
 	"strings"
 	"time"
 
+	substate "github.com/Fantom-foundation/Substate"
+
 	"github.com/Fantom-foundation/Aida/cmd/gen-world-state/flags"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	"github.com/Fantom-foundation/Aida/world-state/types"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/substate"
 	"github.com/fatih/color"
 	"github.com/olekukonko/tablewriter"
 	"github.com/op/go-logging"

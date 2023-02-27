@@ -4,11 +4,12 @@ import (
 	"fmt"
 	"os"
 
+	substate "github.com/Fantom-foundation/Substate"
+
 	db2 "github.com/Fantom-foundation/Aida/cmd/substate-cli/db"
 
 	"github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/substate"
 	"github.com/urfave/cli/v2"
 )
 

@@ -3,8 +3,9 @@ package snapshot
 import (
 	"context"
 
+	substate "github.com/Fantom-foundation/Substate"
+
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/substate"
 )
 
 // ToSubstateAlloc converts snapshot world state database into SubstateAlloc format
