@@ -106,7 +106,7 @@ func (ctx *DictionaryContext) EncodeContract(contract common.Address) uint32 {
 		log.Fatalf("Contract address could not be encoded. Error: %v", err)
 	}
 	if cIdx < 0 || cIdx > math.MaxUint32 {
-		log.Fatalf("Contract index space depleted.", err)
+		log.Fatalf("Contract index space depleted.")
 	}
 	ctx.PrevContractIndex = uint32(cIdx)
 	return uint32(cIdx)
@@ -141,7 +141,7 @@ func (ctx *DictionaryContext) EncodeStorage(storage common.Hash) (uint32, int) {
 		log.Fatalf("Storage address could not be encoded. Error: %v", err)
 	}
 	if sIdx < 0 || sIdx > math.MaxUint32 {
-		log.Fatalf("Contract index space depleted.", err)
+		log.Fatalf("Storage index space depleted.")
 	}
 	pos := ctx.StorageIndexCache.Place(uint32(sIdx))
 	return uint32(sIdx), pos
@@ -237,7 +237,7 @@ func (ctx *DictionaryContext) EncodeCode(code []byte) uint32 {
 		log.Fatalf("Byte-code could not be encoded. Error: %v", err)
 	}
 	if bcIdx < 0 || bcIdx > math.MaxUint32 {
-		log.Fatalf("Contract index space depleted.", err)
+		log.Fatalf("Byte-code index space depleted.")
 	}
 	return uint32(bcIdx)
 }
