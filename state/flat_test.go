@@ -2,303 +2,272 @@ package state
 
 import (
 	"bytes"
+	"fmt"
 	"math/big"
 	"math/rand"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
 )
 
-// makeAccountAddress creates randomly generated address
-func makeAccountAddress(t *testing.T) common.Address {
-	// generate public key
-	pk, err := crypto.GenerateKey()
-	if err != nil {
-		t.Fatalf("failed test data; could not create random key; %s", err.Error())
-	}
-
-	// generate account address
-	return crypto.PubkeyToAddress(pk.PublicKey)
+type testCase struct {
+	directory string
+	variant   string
+	rootHash  common.Hash
 }
 
-// makeRandomHash creates randomly generated 32-byte hash
-func makeRandomHash(t *testing.T) common.Hash {
-	hashing := crypto.NewKeccakState()
+func getTestCases(t *testing.T) []testCase {
+	testCases := []testCase{
+		{t.TempDir(), "go-memory", common.Hash{}},
+		{t.TempDir(), "go-ldb", common.Hash{}},
+	}
 
+	return testCases
+}
+
+// makeRandomByteSlice creates byte slice of given length with randomized values
+func makeRandomByteSlice(t *testing.T, bufferLength int) []byte {
 	// make byte slice
-	buffer := make([]byte, 32)
+	buffer := make([]byte, bufferLength)
 
 	// fill the slice with random data
 	_, err := rand.Read(buffer)
 	if err != nil {
-		t.Fatalf("failed test data; can not generate random state hash; %s", err.Error())
+		t.Fatalf("failed test data; can not generate random byte slice; %s", err.Error())
 	}
 
-	// hash buffer data
-	return crypto.HashData(hashing, buffer)
+	return buffer
 }
 
-// makeAccountCode creates randomly generated code byte slice
-func makeAccountCode(t *testing.T) []byte {
-	hashing := crypto.NewKeccakState()
-
-	// make code container
-	code := make([]byte, rand.Intn(2048))
-
-	// fill the code with random data
-	_, err := rand.Read(code)
-	if err != nil {
-		t.Fatalf("failed test data; can not generate randomized code; %s", err.Error())
-	}
-
-	// create code hash
-	ch := crypto.HashData(hashing, code)
-
-	// return code hash represented by bytes slice
-	return ch.Bytes()
-}
-
-// TestMakeFlatStateDBMemory tests creation of in-memory flat state DB
-func TestMakeFlatStateDBMemory(t *testing.T) {
-	_, err := MakeFlatStateDB("", "go-memory", common.Hash{})
-	if err != nil {
-		t.Fatalf("failed to create flat state DB: %v", err)
-	}
-}
-
-// TestMakeFlatStateDBLevelDB tests creation of flat state DB based on levelDB
-func TestMakeFlatStateDBLevelDB(t *testing.T) {
-	_, err := MakeFlatStateDB("testDB", "go-ldb", common.Hash{})
-	if err != nil {
-		t.Fatalf("failed to create flat state DB: %v", err)
-	}
-}
-
-// TestMakeFlatStateDBDefault tests creation of flat state DB without specifying a variant
-// should create in-memory DB
-func TestMakeFlatStateDBDefault(t *testing.T) {
-	_, err := MakeFlatStateDB("", "", common.Hash{})
-	if err == nil {
-		t.Fatalf("failed to throw error whale creating flat DB")
-	}
-}
-
-// TestCloseFlatDB tests closing flat state DB
-func TestCloseFlatDB(t *testing.T) {
-	fsDB, err := MakeFlatStateDB("", "go-memory", common.Hash{})
-	if err != nil {
-		t.Fatalf("failed to create flat state DB: %v", err)
-	}
-
-	err = fsDB.Close()
-	if err != nil {
-		t.Fatalf("failed to close flat state DB: %v", err)
-	}
-}
-
-// TestBeginBlockApply tests if starting block apply will run successfully
-func TestBeginBlockApply(t *testing.T) {
-	fsDB, err := MakeFlatStateDB("", "go-memory", common.Hash{})
-	if err != nil {
-		t.Fatalf("failed to create flat state DB: %v", err)
-	}
-
-	err = fsDB.BeginBlockApply()
-	if err != nil {
-		t.Fatalf("failed to begin block apply: %v", err)
-	}
-}
-
-// TestStartBulkLoadAndClose tests starting and immediately closing bulk load without any operations
-func TestStartBulkLoadAndClose(t *testing.T) {
-	fsDB, err := MakeFlatStateDB("", "go-memory", common.Hash{})
-	if err != nil {
-		t.Fatalf("failed to create flat state DB: %v", err)
-	}
-
-	fbl := fsDB.StartBulkLoad()
-
-	err = fbl.Close()
-	if err != nil {
-		t.Fatalf("failed to close bulk load: %v", err)
-	}
-}
-
-// TestSetBalance tests setting random balance to an account in bulk load
-func TestSetBalance(t *testing.T) {
-	fsDB, err := MakeFlatStateDB("", "go-memory", common.Hash{})
-	if err != nil {
-		t.Fatalf("failed to create flat state DB: %v", err)
-	}
-
-	fbl := fsDB.StartBulkLoad()
-
-	addr := makeAccountAddress(t)
-
-	fbl.CreateAccount(addr)
-
+func getRandom(rangeLower int, rangeUpper int) int {
 	// seed the PRNG
 	rand.Seed(time.Now().UnixNano())
 
 	// get randomized balance
-	rangeLower := 1
-	rangeUpper := 1000 * 5000
-	randomInt := rangeLower + rand.Intn(rangeUpper-rangeLower+1)
+	randInt := rangeLower + rand.Intn(rangeUpper-rangeLower+1)
+	return randInt
+}
 
-	newBalance := big.NewInt(int64(randomInt))
-	fbl.SetBalance(addr, newBalance)
+// TestFlatState_MakeFlatStateDBMemory tests creation of flat state DB and closing it immediately
+func TestFlatState_MakeFlatStateDBMemory(t *testing.T) {
+	for _, tc := range getTestCases(t) {
+		t.Run(fmt.Sprintf("DB variant: %s, archive enabled: %v", tc.variant, tc.rootHash), func(t *testing.T) {
+			fsDB, err := MakeFlatStateDB(tc.directory, tc.variant, tc.rootHash)
+			if err != nil {
+				t.Fatalf("failed to create flat state DB: %v", err)
+			}
 
-	if fsDB.GetBalance(addr).Cmp(newBalance) != 0 {
-		t.Fatal("failed to update account balance")
+			err = fsDB.Close()
+			if err != nil {
+				t.Fatalf("failed to close flat state DB: %v", err)
+			}
+		})
 	}
 }
 
-// TestSetNonce tests setting random nonce to an account in bulk load
-func TestSetNonce(t *testing.T) {
-	fsDB, err := MakeFlatStateDB("", "go-memory", common.Hash{})
-	if err != nil {
-		t.Fatalf("failed to create flat state DB: %v", err)
-	}
-
-	fbl := fsDB.StartBulkLoad()
-
-	addr := makeAccountAddress(t)
-
-	fbl.CreateAccount(addr)
-
-	// seed the PRNG
-	rand.Seed(time.Now().UnixNano())
-
-	// get randomized nonce
-	rangeLower := 1
-	rangeUpper := 1000 * 5000
-	randomInt := rangeLower + rand.Intn(rangeUpper-rangeLower+1)
-
-	newNonce := uint64(randomInt)
-
-	fbl.SetNonce(addr, newNonce)
-
-	if fsDB.GetNonce(addr) != newNonce {
-		t.Fatal("failed to update account nonce")
+// TestFlatState_MakeFlatStateDBInvalid tests creation of flat state DB without specifying a variant
+func TestFlatState_MakeFlatStateDBInvalid(t *testing.T) {
+	_, err := MakeFlatStateDB("", "", common.Hash{})
+	if err == nil {
+		t.Fatalf("failed to throw error while creating flat DB")
 	}
 }
 
-// TestSetState tests setting randomly generated state to an account in bulk load
-func TestSetState(t *testing.T) {
-	fsDB, err := MakeFlatStateDB("", "go-memory", common.Hash{})
-	if err != nil {
-		t.Fatalf("failed to create flat state DB: %v", err)
-	}
+// TestFlatState_BeginBlockApply tests if starting block apply will run successfully
+func TestFlatState_BeginBlockApply(t *testing.T) {
+	for _, tc := range getTestCases(t) {
+		t.Run(fmt.Sprintf("DB variant: %s, archive enabled: %v", tc.variant, tc.rootHash), func(t *testing.T) {
+			fsDB, err := MakeFlatStateDB(tc.directory, tc.variant, tc.rootHash)
+			if err != nil {
+				t.Fatalf("failed to create flat state DB: %v", err)
+			}
 
-	fbl := fsDB.StartBulkLoad()
-
-	addr := makeAccountAddress(t)
-
-	fbl.CreateAccount(addr)
-
-	// generate state key and value
-	key := makeRandomHash(t)
-	value := makeRandomHash(t)
-
-	fbl.SetState(addr, key, value)
-
-	if fsDB.GetState(addr, key) != value {
-		t.Fatal("failed to update account state")
+			err = fsDB.BeginBlockApply()
+			if err != nil {
+				t.Fatalf("failed to begin block apply: %v", err)
+			}
+		})
 	}
 }
 
-// TestSetCode tests setting randomly generated code to an account in bulk load
-func TestSetCode(t *testing.T) {
-	fsDB, err := MakeFlatStateDB("", "go-memory", common.Hash{})
-	if err != nil {
-		t.Fatalf("failed to create flat state DB: %v", err)
-	}
+// TestFlatState_StartBulkLoadAndClose tests starting and immediately closing bulk load without any operations
+func TestFlatState_StartBulkLoadAndClose(t *testing.T) {
+	for _, tc := range getTestCases(t) {
+		t.Run(fmt.Sprintf("DB variant: %s, archive enabled: %v", tc.variant, tc.rootHash), func(t *testing.T) {
+			fsDB, err := MakeFlatStateDB(tc.directory, tc.variant, tc.rootHash)
+			if err != nil {
+				t.Fatalf("failed to create flat state DB: %v", err)
+			}
 
-	fbl := fsDB.StartBulkLoad()
+			fbl := fsDB.StartBulkLoad()
 
-	addr := makeAccountAddress(t)
-
-	fbl.CreateAccount(addr)
-
-	// generate new randomized code
-	code := makeAccountCode(t)
-
-	fbl.SetCode(addr, code)
-
-	if bytes.Compare(fsDB.GetCode(addr), code) != 0 {
-		t.Fatal("failed to update account code")
+			err = fbl.Close()
+			if err != nil {
+				t.Fatalf("failed to close bulk load: %v", err)
+			}
+		})
 	}
 }
 
-// TestAutomaticBlockEnd creates 100 randomized accounts and runs 1 000 000 randomized operations in random order
-// to test automatic block ending
-func TestAutomaticBlockEnd(t *testing.T) {
-	fsDB, err := MakeFlatStateDB("", "go-memory", common.Hash{})
-	if err != nil {
-		t.Fatalf("failed to create flat state DB: %v", err)
-	}
+// TestFlatState_SetBalance tests setting random balance to an account in bulk load
+func TestFlatState_SetBalance(t *testing.T) {
+	for _, tc := range getTestCases(t) {
+		t.Run(fmt.Sprintf("DB variant: %s, archive enabled: %v", tc.variant, tc.rootHash), func(t *testing.T) {
+			fsDB, err := MakeFlatStateDB(tc.directory, tc.variant, tc.rootHash)
+			if err != nil {
+				t.Fatalf("failed to create flat state DB: %v", err)
+			}
 
-	fbl := fsDB.StartBulkLoad()
+			fbl := fsDB.StartBulkLoad()
 
-	// generate 100 randomized accounts
-	accounts := [100]common.Address{}
+			addr := common.BytesToAddress(makeRandomByteSlice(t, 40))
 
-	for i := 0; i < len(accounts); i++ {
-		accounts[i] = makeAccountAddress(t)
-	}
+			fbl.CreateAccount(addr)
 
-	for i := 0; i < (1000 * 1000); i++ {
-		// seed the PRNG
-		rand.Seed(time.Now().UnixNano())
-
-		// get random account index
-		rangeLower := 1
-		rangeUpper := 99
-		accIndex := rangeLower + rand.Intn(rangeUpper-rangeLower+1)
-		account := accounts[accIndex]
-
-		// randomized operation
-		rangeLower = 1
-		rangeUpper = 4
-		operationType := rangeLower + rand.Intn(rangeUpper-rangeLower+1)
-
-		switch {
-		case operationType == 1:
-			// set balance
-			rangeLower = 1
-			rangeUpper = 1000 * 5000
-			randomInt := rangeLower + rand.Intn(rangeUpper-rangeLower+1)
-
+			randomInt := getRandom(1, 1000*5000)
 			newBalance := big.NewInt(int64(randomInt))
+			fbl.SetBalance(addr, newBalance)
 
-			fbl.SetBalance(account, newBalance)
-		case operationType == 2:
-			// set code
-			code := makeAccountCode(t)
+			if fsDB.GetBalance(addr).Cmp(newBalance) != 0 {
+				t.Fatal("failed to update account balance")
+			}
+		})
+	}
+}
 
-			fbl.SetCode(account, code)
-		case operationType == 3:
-			// set state
-			key := makeRandomHash(t)
-			value := makeRandomHash(t)
+// TestFlatState_SetNonce tests setting random nonce to an account in bulk load
+func TestFlatState_SetNonce(t *testing.T) {
+	for _, tc := range getTestCases(t) {
+		t.Run(fmt.Sprintf("DB variant: %s, archive enabled: %v", tc.variant, tc.rootHash), func(t *testing.T) {
+			fsDB, err := MakeFlatStateDB(tc.directory, tc.variant, tc.rootHash)
+			if err != nil {
+				t.Fatalf("failed to create flat state DB: %v", err)
+			}
 
-			fbl.SetState(account, key, value)
-		case operationType == 4:
-			// set nonce
-			rangeLower = 1
-			rangeUpper = 1000 * 5000
-			randomInt := rangeLower + rand.Intn(rangeUpper-rangeLower+1)
+			fbl := fsDB.StartBulkLoad()
 
+			addr := common.BytesToAddress(makeRandomByteSlice(t, 40))
+
+			fbl.CreateAccount(addr)
+
+			randomInt := getRandom(1, 1000*5000)
 			newNonce := uint64(randomInt)
+			fbl.SetNonce(addr, newNonce)
 
-			fbl.SetNonce(account, newNonce)
-		default:
-			// set code by default
-			code := makeAccountCode(t)
+			if fsDB.GetNonce(addr) != newNonce {
+				t.Fatal("failed to update account nonce")
+			}
+		})
+	}
+}
 
-			fbl.SetCode(account, code)
-		}
+// TestFlatState_SetState tests setting randomly generated state to an account in bulk load
+func TestFlatState_SetState(t *testing.T) {
+	for _, tc := range getTestCases(t) {
+		t.Run(fmt.Sprintf("DB variant: %s, archive enabled: %v", tc.variant, tc.rootHash), func(t *testing.T) {
+			fsDB, err := MakeFlatStateDB(tc.directory, tc.variant, tc.rootHash)
+			if err != nil {
+				t.Fatalf("failed to create flat state DB: %v", err)
+			}
+
+			fbl := fsDB.StartBulkLoad()
+
+			addr := common.BytesToAddress(makeRandomByteSlice(t, 40))
+
+			fbl.CreateAccount(addr)
+
+			// generate state key and value
+			key := common.BytesToHash(makeRandomByteSlice(t, 32))
+			value := common.BytesToHash(makeRandomByteSlice(t, 32))
+
+			fbl.SetState(addr, key, value)
+
+			if fsDB.GetState(addr, key) != value {
+				t.Fatal("failed to update account state")
+			}
+		})
+	}
+}
+
+// TestFlatState_SetCode tests setting randomly generated code to an account in bulk load
+func TestFlatState_SetCode(t *testing.T) {
+	for _, tc := range getTestCases(t) {
+		t.Run(fmt.Sprintf("DB variant: %s, archive enabled: %v", tc.variant, tc.rootHash), func(t *testing.T) {
+			fsDB, err := MakeFlatStateDB(tc.directory, tc.variant, tc.rootHash)
+			if err != nil {
+				t.Fatalf("failed to create flat state DB: %v", err)
+			}
+
+			fbl := fsDB.StartBulkLoad()
+
+			addr := common.BytesToAddress(makeRandomByteSlice(t, 40))
+
+			fbl.CreateAccount(addr)
+
+			// generate new randomized code
+			code := makeRandomByteSlice(t, 2048)
+
+			fbl.SetCode(addr, code)
+
+			if bytes.Compare(fsDB.GetCode(addr), code) != 0 {
+				t.Fatal("failed to update account code")
+			}
+		})
+	}
+}
+
+// TestFlatState_AutomaticBlockEnd creates 100 randomized accounts and runs 1 000 000 randomized operations in random order
+// to test automatic block ending
+func TestFlatState_AutomaticBlockEnd(t *testing.T) {
+	for _, tc := range getTestCases(t) {
+		t.Run(fmt.Sprintf("DB variant: %s, archive enabled: %v", tc.variant, tc.rootHash), func(t *testing.T) {
+			fsDB, err := MakeFlatStateDB(tc.directory, tc.variant, tc.rootHash)
+			if err != nil {
+				t.Fatalf("failed to create flat state DB: %v", err)
+			}
+
+			fbl := fsDB.StartBulkLoad()
+
+			// generate 100 randomized accounts
+			accounts := [100]common.Address{}
+
+			for i := 0; i < len(accounts); i++ {
+				accounts[i] = common.BytesToAddress(makeRandomByteSlice(t, 40))
+			}
+
+			for i := 0; i < (1000 * 1000); i++ {
+				// get random account index
+				accIndex := getRandom(0, 99)
+				account := accounts[accIndex]
+
+				// randomized operation
+				operationType := getRandom(0, 4)
+
+				switch {
+				case operationType == 1:
+					// set balance
+					newBalance := big.NewInt(int64(getRandom(0, 1000*5000)))
+					fbl.SetBalance(account, newBalance)
+				case operationType == 2:
+					// set code
+					code := makeRandomByteSlice(t, 2048)
+					fbl.SetCode(account, code)
+				case operationType == 3:
+					// set state
+					key := common.BytesToHash(makeRandomByteSlice(t, 32))
+					value := common.BytesToHash(makeRandomByteSlice(t, 32))
+					fbl.SetState(account, key, value)
+				case operationType == 4:
+					// set nonce
+					newNonce := uint64(getRandom(0, 1000*5000))
+					fbl.SetNonce(account, newNonce)
+				default:
+					// set code by default
+					code := makeRandomByteSlice(t, 2048)
+					fbl.SetCode(account, code)
+				}
+			}
+		})
 	}
 }
