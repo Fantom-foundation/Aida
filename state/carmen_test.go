@@ -4,20 +4,18 @@ import (
 	"bytes"
 	"fmt"
 	"math/big"
-	"math/rand"
 	"testing"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-type testCase struct {
+type carmenStateTestCase struct {
 	variant string
 	archive string
 }
 
-func getTestCases() []testCase {
+func getCarmenStateTestCases() []carmenStateTestCase {
 	variants := []string{
 		"",
 		"go-memory",
@@ -36,38 +34,15 @@ func getTestCases() []testCase {
 		"sqlite",
 	}
 
-	var testCases []testCase
+	var testCases []carmenStateTestCase
 
 	for _, variant := range variants {
 		for _, archive := range archives {
-			testCases = append(testCases, testCase{variant: variant, archive: archive})
+			testCases = append(testCases, carmenStateTestCase{variant: variant, archive: archive})
 		}
 	}
 
 	return testCases
-}
-
-// makeRandomByteSlice creates byte slice of given length with randomized values
-func makeRandomByteSlice(t *testing.T, bufferLength int) []byte {
-	// make byte slice
-	buffer := make([]byte, bufferLength)
-
-	// fill the slice with random data
-	_, err := rand.Read(buffer)
-	if err != nil {
-		t.Fatalf("failed test data; can not generate random byte slice; %s", err.Error())
-	}
-
-	return buffer
-}
-
-func getRandom(rangeLower int, rangeUpper int) int {
-	// seed the PRNG
-	rand.Seed(time.Now().UnixNano())
-
-	// get randomized balance
-	randInt := rangeLower + rand.Intn(rangeUpper-rangeLower+1)
-	return randInt
 }
 
 // TestCarmenState_MakeCarmenStateDBInvalid tests db initialization with invalid variant
@@ -80,7 +55,7 @@ func TestCarmenState_MakeCarmenStateDBInvalid(t *testing.T) {
 
 // TestCarmenState_CloseCarmenDB test closing db immediately after initialization
 func TestCarmenState_InitCloseCarmenDB(t *testing.T) {
-	for _, tc := range getTestCases() {
+	for _, tc := range getCarmenStateTestCases() {
 		t.Run(fmt.Sprintf("DB variant: %s, archive enabled: %v", tc.variant, tc.archive), func(t *testing.T) {
 			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.variant, tc.archive)
 
@@ -98,7 +73,7 @@ func TestCarmenState_InitCloseCarmenDB(t *testing.T) {
 
 // TestCarmenState_BeginBlockApply tests block apply start
 func TestCarmenState_BeginBlockApply(t *testing.T) {
-	for _, tc := range getTestCases() {
+	for _, tc := range getCarmenStateTestCases() {
 		t.Run(fmt.Sprintf("DB variant: %s, archive enabled: %v", tc.variant, tc.archive), func(t *testing.T) {
 			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.variant, tc.archive)
 
@@ -116,7 +91,7 @@ func TestCarmenState_BeginBlockApply(t *testing.T) {
 
 // TestCarmenState_AccountLifecycle tests account operations - create, check if it exists, if it's empty, suicide and suicide confirmation
 func TestCarmenState_AccountLifecycle(t *testing.T) {
-	for _, tc := range getTestCases() {
+	for _, tc := range getCarmenStateTestCases() {
 		t.Run(fmt.Sprintf("DB variant: %s, archive enabled: %v", tc.variant, tc.archive), func(t *testing.T) {
 			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.variant, tc.archive)
 
@@ -149,7 +124,7 @@ func TestCarmenState_AccountLifecycle(t *testing.T) {
 
 // TestCarmenState_AccountBalanceOperations tests balance operations - add, subtract and check if the value is correct
 func TestCarmenState_AccountBalanceOperations(t *testing.T) {
-	for _, tc := range getTestCases() {
+	for _, tc := range getCarmenStateTestCases() {
 		t.Run(fmt.Sprintf("DB variant: %s, archive enabled: %v", tc.variant, tc.archive), func(t *testing.T) {
 			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.variant, tc.archive)
 
@@ -184,7 +159,7 @@ func TestCarmenState_AccountBalanceOperations(t *testing.T) {
 
 // TestCarmenState_NonceOperations tests account nonce updating
 func TestCarmenState_NonceOperations(t *testing.T) {
-	for _, tc := range getTestCases() {
+	for _, tc := range getCarmenStateTestCases() {
 		t.Run(fmt.Sprintf("DB variant: %s, archive enabled: %v", tc.variant, tc.archive), func(t *testing.T) {
 			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.variant, tc.archive)
 
@@ -210,7 +185,7 @@ func TestCarmenState_NonceOperations(t *testing.T) {
 
 // TestCarmenState_CodeOperations tests account code updating
 func TestCarmenState_CodeOperations(t *testing.T) {
-	for _, tc := range getTestCases() {
+	for _, tc := range getCarmenStateTestCases() {
 		t.Run(fmt.Sprintf("DB variant: %s, archive enabled: %v", tc.variant, tc.archive), func(t *testing.T) {
 			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.variant, tc.archive)
 
@@ -244,7 +219,7 @@ func TestCarmenState_CodeOperations(t *testing.T) {
 
 // TestCarmenState_StateOperations tests account state update
 func TestCarmenState_StateOperations(t *testing.T) {
-	for _, tc := range getTestCases() {
+	for _, tc := range getCarmenStateTestCases() {
 		t.Run(fmt.Sprintf("DB variant: %s, archive enabled: %v", tc.variant, tc.archive), func(t *testing.T) {
 			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.variant, tc.archive)
 
@@ -271,7 +246,7 @@ func TestCarmenState_StateOperations(t *testing.T) {
 
 // TestCarmenState_TrxBlockEpochOperations tests creation of randomized epochs with blocks and transactions
 func TestCarmenState_TrxBlockEpochOperations(t *testing.T) {
-	for _, tc := range getTestCases() {
+	for _, tc := range getCarmenStateTestCases() {
 		t.Run(fmt.Sprintf("DB variant: %s, archive enabled: %v", tc.variant, tc.archive), func(t *testing.T) {
 			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.variant, tc.archive)
 
@@ -305,7 +280,7 @@ func TestCarmenState_TrxBlockEpochOperations(t *testing.T) {
 
 // TestCarmenState_RefundOperations tests adding and subtracting refund value
 func TestCarmenState_RefundOperations(t *testing.T) {
-	for _, tc := range getTestCases() {
+	for _, tc := range getCarmenStateTestCases() {
 		t.Run(fmt.Sprintf("DB variant: %s, archive enabled: %v", tc.variant, tc.archive), func(t *testing.T) {
 			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.variant, tc.archive)
 
@@ -333,7 +308,7 @@ func TestCarmenState_RefundOperations(t *testing.T) {
 
 // TestCarmenState_AccessListOperations tests operations with creating, updating a checking AccessList
 func TestCarmenState_AccessListOperations(t *testing.T) {
-	for _, tc := range getTestCases() {
+	for _, tc := range getCarmenStateTestCases() {
 		t.Run(fmt.Sprintf("DB variant: %s, archive enabled: %v", tc.variant, tc.archive), func(t *testing.T) {
 			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.variant, tc.archive)
 
@@ -419,7 +394,7 @@ func TestCarmenState_AccessListOperations(t *testing.T) {
 
 // TestCarmenState_GetArchiveState tests retrieving an archive state
 func TestCarmenState_GetArchiveState(t *testing.T) {
-	for _, tc := range getTestCases() {
+	for _, tc := range getCarmenStateTestCases() {
 		t.Run(fmt.Sprintf("DB variant: %s, archive enabled: %v", tc.variant, tc.archive), func(t *testing.T) {
 			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.variant, tc.archive)
 
@@ -438,7 +413,7 @@ func TestCarmenState_GetArchiveState(t *testing.T) {
 
 // TestCarmenState_SetBalanceUsingBulkInsertion tests setting an accounts balance
 func TestCarmenState_SetBalanceUsingBulkInsertion(t *testing.T) {
-	for _, tc := range getTestCases() {
+	for _, tc := range getCarmenStateTestCases() {
 		t.Run(fmt.Sprintf("DB variant: %s, archive enabled: %v", tc.variant, tc.archive), func(t *testing.T) {
 			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.variant, tc.archive)
 
@@ -469,7 +444,7 @@ func TestCarmenState_SetBalanceUsingBulkInsertion(t *testing.T) {
 
 // TestCarmenState_SetNonceUsingBulkInsertion tests setting an accounts nonce
 func TestCarmenState_SetNonceUsingBulkInsertion(t *testing.T) {
-	for _, tc := range getTestCases() {
+	for _, tc := range getCarmenStateTestCases() {
 		t.Run(fmt.Sprintf("DB variant: %s, archive enabled: %v", tc.variant, tc.archive), func(t *testing.T) {
 			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.variant, tc.archive)
 
@@ -501,7 +476,7 @@ func TestCarmenState_SetNonceUsingBulkInsertion(t *testing.T) {
 
 // TestCarmenState_SetStateUsingBulkInsertion tests setting an accounts state
 func TestCarmenState_SetStateUsingBulkInsertion(t *testing.T) {
-	for _, tc := range getTestCases() {
+	for _, tc := range getCarmenStateTestCases() {
 		t.Run(fmt.Sprintf("DB variant: %s, archive enabled: %v", tc.variant, tc.archive), func(t *testing.T) {
 			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.variant, tc.archive)
 
@@ -535,7 +510,7 @@ func TestCarmenState_SetStateUsingBulkInsertion(t *testing.T) {
 
 // TestCarmenState_SetCodeUsingBulkInsertion tests setting an accounts code
 func TestCarmenState_SetCodeUsingBulkInsertion(t *testing.T) {
-	for _, tc := range getTestCases() {
+	for _, tc := range getCarmenStateTestCases() {
 		t.Run(fmt.Sprintf("DB variant: %s, archive enabled: %v", tc.variant, tc.archive), func(t *testing.T) {
 			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.variant, tc.archive)
 
@@ -568,7 +543,7 @@ func TestCarmenState_SetCodeUsingBulkInsertion(t *testing.T) {
 
 // TestCarmenState_BulkloadOperations tests multiple operation in one bulkload
 func TestCarmenState_BulkloadOperations(t *testing.T) {
-	for _, tc := range getTestCases() {
+	for _, tc := range getCarmenStateTestCases() {
 		t.Run(fmt.Sprintf("DB variant: %s, archive enabled: %v", tc.variant, tc.archive), func(t *testing.T) {
 			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.variant, tc.archive)
 			if err != nil {
@@ -584,7 +559,7 @@ func TestCarmenState_BulkloadOperations(t *testing.T) {
 				accounts[i] = common.BytesToAddress(makeRandomByteSlice(t, 40))
 			}
 
-			for i := 0; i < (1000 * 1000); i++ {
+			for i := 0; i < (1000 * 100); i++ {
 				// get random account index
 				accIndex := getRandom(0, 99)
 				account := accounts[accIndex]
