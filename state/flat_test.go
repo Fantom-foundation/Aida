@@ -3,57 +3,29 @@ package state
 import (
 	"bytes"
 	"fmt"
-	"math/big"
-	"math/rand"
-	"testing"
-	"time"
-
 	"github.com/ethereum/go-ethereum/common"
+	"math/big"
+	"testing"
 )
 
-type testCase struct {
-	directory string
-	variant   string
-	rootHash  common.Hash
+type flatStateTestCase struct {
+	variant string
 }
 
-func getTestCases(t *testing.T) []testCase {
-	testCases := []testCase{
-		{t.TempDir(), "go-memory", common.Hash{}},
-		{t.TempDir(), "go-ldb", common.Hash{}},
+func getFlatStateTestCases() []flatStateTestCase {
+	testCases := []flatStateTestCase{
+		{"go-memory"},
+		{"go-ldb"},
 	}
 
 	return testCases
 }
 
-// makeRandomByteSlice creates byte slice of given length with randomized values
-func makeRandomByteSlice(t *testing.T, bufferLength int) []byte {
-	// make byte slice
-	buffer := make([]byte, bufferLength)
-
-	// fill the slice with random data
-	_, err := rand.Read(buffer)
-	if err != nil {
-		t.Fatalf("failed test data; can not generate random byte slice; %s", err.Error())
-	}
-
-	return buffer
-}
-
-func getRandom(rangeLower int, rangeUpper int) int {
-	// seed the PRNG
-	rand.Seed(time.Now().UnixNano())
-
-	// get randomized balance
-	randInt := rangeLower + rand.Intn(rangeUpper-rangeLower+1)
-	return randInt
-}
-
 // TestFlatState_MakeFlatStateDBMemory tests creation of flat state DB and closing it immediately
 func TestFlatState_MakeFlatStateDBMemory(t *testing.T) {
-	for _, tc := range getTestCases(t) {
-		t.Run(fmt.Sprintf("DB variant: %s, archive enabled: %v", tc.variant, tc.rootHash), func(t *testing.T) {
-			fsDB, err := MakeFlatStateDB(tc.directory, tc.variant, tc.rootHash)
+	for _, tc := range getFlatStateTestCases() {
+		t.Run(fmt.Sprintf("DB variant: %s", tc.variant), func(t *testing.T) {
+			fsDB, err := MakeFlatStateDB(t.TempDir(), tc.variant, common.Hash{})
 			if err != nil {
 				t.Fatalf("failed to create flat state DB: %v", err)
 			}
@@ -76,9 +48,9 @@ func TestFlatState_MakeFlatStateDBInvalid(t *testing.T) {
 
 // TestFlatState_BeginBlockApply tests if starting block apply will run successfully
 func TestFlatState_BeginBlockApply(t *testing.T) {
-	for _, tc := range getTestCases(t) {
-		t.Run(fmt.Sprintf("DB variant: %s, archive enabled: %v", tc.variant, tc.rootHash), func(t *testing.T) {
-			fsDB, err := MakeFlatStateDB(tc.directory, tc.variant, tc.rootHash)
+	for _, tc := range getFlatStateTestCases() {
+		t.Run(fmt.Sprintf("DB variant: %s", tc.variant), func(t *testing.T) {
+			fsDB, err := MakeFlatStateDB(t.TempDir(), tc.variant, common.Hash{})
 			if err != nil {
 				t.Fatalf("failed to create flat state DB: %v", err)
 			}
@@ -93,9 +65,9 @@ func TestFlatState_BeginBlockApply(t *testing.T) {
 
 // TestFlatState_StartBulkLoadAndClose tests starting and immediately closing bulk load without any operations
 func TestFlatState_StartBulkLoadAndClose(t *testing.T) {
-	for _, tc := range getTestCases(t) {
-		t.Run(fmt.Sprintf("DB variant: %s, archive enabled: %v", tc.variant, tc.rootHash), func(t *testing.T) {
-			fsDB, err := MakeFlatStateDB(tc.directory, tc.variant, tc.rootHash)
+	for _, tc := range getFlatStateTestCases() {
+		t.Run(fmt.Sprintf("DB variant: %s", tc.variant), func(t *testing.T) {
+			fsDB, err := MakeFlatStateDB(t.TempDir(), tc.variant, common.Hash{})
 			if err != nil {
 				t.Fatalf("failed to create flat state DB: %v", err)
 			}
@@ -112,9 +84,9 @@ func TestFlatState_StartBulkLoadAndClose(t *testing.T) {
 
 // TestFlatState_SetBalance tests setting random balance to an account in bulk load
 func TestFlatState_SetBalance(t *testing.T) {
-	for _, tc := range getTestCases(t) {
-		t.Run(fmt.Sprintf("DB variant: %s, archive enabled: %v", tc.variant, tc.rootHash), func(t *testing.T) {
-			fsDB, err := MakeFlatStateDB(tc.directory, tc.variant, tc.rootHash)
+	for _, tc := range getFlatStateTestCases() {
+		t.Run(fmt.Sprintf("DB variant: %s", tc.variant), func(t *testing.T) {
+			fsDB, err := MakeFlatStateDB(t.TempDir(), tc.variant, common.Hash{})
 			if err != nil {
 				t.Fatalf("failed to create flat state DB: %v", err)
 			}
@@ -138,9 +110,9 @@ func TestFlatState_SetBalance(t *testing.T) {
 
 // TestFlatState_SetNonce tests setting random nonce to an account in bulk load
 func TestFlatState_SetNonce(t *testing.T) {
-	for _, tc := range getTestCases(t) {
-		t.Run(fmt.Sprintf("DB variant: %s, archive enabled: %v", tc.variant, tc.rootHash), func(t *testing.T) {
-			fsDB, err := MakeFlatStateDB(tc.directory, tc.variant, tc.rootHash)
+	for _, tc := range getFlatStateTestCases() {
+		t.Run(fmt.Sprintf("DB variant: %s", tc.variant), func(t *testing.T) {
+			fsDB, err := MakeFlatStateDB(t.TempDir(), tc.variant, common.Hash{})
 			if err != nil {
 				t.Fatalf("failed to create flat state DB: %v", err)
 			}
@@ -164,9 +136,9 @@ func TestFlatState_SetNonce(t *testing.T) {
 
 // TestFlatState_SetState tests setting randomly generated state to an account in bulk load
 func TestFlatState_SetState(t *testing.T) {
-	for _, tc := range getTestCases(t) {
-		t.Run(fmt.Sprintf("DB variant: %s, archive enabled: %v", tc.variant, tc.rootHash), func(t *testing.T) {
-			fsDB, err := MakeFlatStateDB(tc.directory, tc.variant, tc.rootHash)
+	for _, tc := range getFlatStateTestCases() {
+		t.Run(fmt.Sprintf("DB variant: %s", tc.variant), func(t *testing.T) {
+			fsDB, err := MakeFlatStateDB(t.TempDir(), tc.variant, common.Hash{})
 			if err != nil {
 				t.Fatalf("failed to create flat state DB: %v", err)
 			}
@@ -192,9 +164,9 @@ func TestFlatState_SetState(t *testing.T) {
 
 // TestFlatState_SetCode tests setting randomly generated code to an account in bulk load
 func TestFlatState_SetCode(t *testing.T) {
-	for _, tc := range getTestCases(t) {
-		t.Run(fmt.Sprintf("DB variant: %s, archive enabled: %v", tc.variant, tc.rootHash), func(t *testing.T) {
-			fsDB, err := MakeFlatStateDB(tc.directory, tc.variant, tc.rootHash)
+	for _, tc := range getFlatStateTestCases() {
+		t.Run(fmt.Sprintf("DB variant: %s", tc.variant), func(t *testing.T) {
+			fsDB, err := MakeFlatStateDB(t.TempDir(), tc.variant, common.Hash{})
 			if err != nil {
 				t.Fatalf("failed to create flat state DB: %v", err)
 			}
@@ -220,9 +192,9 @@ func TestFlatState_SetCode(t *testing.T) {
 // TestFlatState_AutomaticBlockEnd creates 100 randomized accounts and runs 1 000 000 randomized operations in random order
 // to test automatic block ending
 func TestFlatState_AutomaticBlockEnd(t *testing.T) {
-	for _, tc := range getTestCases(t) {
-		t.Run(fmt.Sprintf("DB variant: %s, archive enabled: %v", tc.variant, tc.rootHash), func(t *testing.T) {
-			fsDB, err := MakeFlatStateDB(tc.directory, tc.variant, tc.rootHash)
+	for _, tc := range getFlatStateTestCases() {
+		t.Run(fmt.Sprintf("DB variant: %s", tc.variant), func(t *testing.T) {
+			fsDB, err := MakeFlatStateDB(t.TempDir(), tc.variant, common.Hash{})
 			if err != nil {
 				t.Fatalf("failed to create flat state DB: %v", err)
 			}
