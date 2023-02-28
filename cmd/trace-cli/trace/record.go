@@ -176,7 +176,7 @@ func OperationWriter(ch chan operation.Operation) {
 	if err != nil {
 		log.Fatalf("Cannot open trace file. Error: %v", err)
 	}
-	bfile := bufio.NewWriterSize(file, 65536)
+	bfile := bufio.NewWriterSize(file, 16*65536)
 	zfile, err := bzip2.NewWriter(bfile, &bzip2.WriterConfig{Level: 9})
 	if err != nil {
 		log.Fatalf("Cannot open bzip2 stream. Error: %v", err)
