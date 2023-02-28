@@ -19,8 +19,6 @@ type DictionaryContext struct {
 	StorageDictionary *Dictionary[common.Hash] // dictionary to compact storage addresses
 	StorageIndexCache *IndexCache              // storage address cache
 
-	ValueDictionary *Dictionary[common.Hash] // dictionary to compact storage values
-
 	CodeDictionary *Dictionary[string] // dictionary to compact the bytecode of contracts
 
 	SnapshotIndex *SnapshotIndex // snapshot index for execution (not for recording/replaying)
@@ -33,7 +31,6 @@ func NewDictionaryContext() *DictionaryContext {
 		PrevContractIndex:  InvalidContractIndex,
 		StorageDictionary:  NewDictionary[common.Hash](),
 		StorageIndexCache:  NewIndexCache(),
-		ValueDictionary:    NewDictionary[common.Hash](),
 		CodeDictionary:     NewDictionary[string](),
 		SnapshotIndex:      NewSnapshotIndex(),
 	}
@@ -49,7 +46,6 @@ var DictionaryContextDir string = "./"
 const (
 	ContractMagic = 4711
 	StorageMagic  = 4712
-	ValueMagic    = 4713
 	CodeMagic     = 4714
 )
 
@@ -63,10 +59,6 @@ func ReadDictionaryContext() *DictionaryContext {
 	err = ctx.StorageDictionary.Read(DictionaryContextDir+"storage-dictionary.dat", StorageMagic)
 	if err != nil {
 		log.Fatalf("Cannot read storage dictionary. Error: %v", err)
-	}
-	err = ctx.ValueDictionary.Read(DictionaryContextDir+"value-dictionary.dat", ValueMagic)
-	if err != nil {
-		log.Fatalf("Cannot read value dictionary. Error: %v", err)
 	}
 	err = ctx.CodeDictionary.ReadString(DictionaryContextDir+"code-dictionary.dat", CodeMagic)
 	if err != nil {
@@ -84,10 +76,6 @@ func (ctx *DictionaryContext) Write() {
 	err = ctx.StorageDictionary.Write(DictionaryContextDir+"storage-dictionary.dat", StorageMagic)
 	if err != nil {
 		log.Fatalf("Cannot write storage dictionary. Error: %v", err)
-	}
-	err = ctx.ValueDictionary.Write(DictionaryContextDir+"value-dictionary.dat", ValueMagic)
-	if err != nil {
-		log.Fatalf("Cannot write value dictionary. Error: %v", err)
 	}
 	err = ctx.CodeDictionary.WriteString(DictionaryContextDir+"code-dictionary.dat", CodeMagic)
 	if err != nil {
@@ -182,28 +170,6 @@ func (ctx *DictionaryContext) LookupStorage(sPos int) common.Hash {
 }
 
 ////////////////////////////////////////////////////////////////
-// Value methods
-////////////////////////////////////////////////////////////////
-
-// EncodeValue encodes a value and returns an index.
-func (ctx *DictionaryContext) EncodeValue(value common.Hash) uint64 {
-	vIdx, err := ctx.ValueDictionary.Encode(value)
-	if err != nil {
-		log.Fatalf("Storage value could not be encoded. Error: %v", err)
-	}
-	return uint64(vIdx)
-}
-
-// DecodeValue decodes a value.
-func (ctx *DictionaryContext) DecodeValue(vIdx uint64) common.Hash {
-	value, err := ctx.ValueDictionary.Decode(int(vIdx))
-	if err != nil {
-		log.Fatalf("Value index could not be decoded. Error: %v", err)
-	}
-	return value
-}
-
-////////////////////////////////////////////////////////////////
 // Snapshot methods
 ////////////////////////////////////////////////////////////////
 
@@ -260,11 +226,5 @@ func (ctx *DictionaryContext) HasEncodedContract(addr common.Address) bool {
 // HasEncodedStorage checks whether given storage has already been inserted into dictionary
 func (ctx *DictionaryContext) HasEncodedStorage(key common.Hash) bool {
 	_, f := ctx.StorageDictionary.valueToIdx[key]
-	return f
-}
-
-// HasEncodedValue checks whether given value has already been inserted into dictionary
-func (ctx *DictionaryContext) HasEncodedValue(value common.Hash) bool {
-	_, f := ctx.ValueDictionary.valueToIdx[value]
 	return f
 }

@@ -7,15 +7,16 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/Fantom-foundation/Aida/tracer/dict"
 )
 
 // SetState data structure
 type SetState struct {
-	ContractIndex uint32 // encoded contract address
-	StorageIndex  uint32 // encoded storage address
-	ValueIndex    uint64 // encoded storage value
+	ContractIndex uint32      // encoded contract address
+	StorageIndex  uint32      // encoded storage address
+	Value         common.Hash // encoded storage value
 }
 
 // GetId returns the set-state identifier.
@@ -24,8 +25,8 @@ func (op *SetState) GetId() byte {
 }
 
 // NewSetState creates a new set-state operation.
-func NewSetState(cIdx uint32, sIdx uint32, vIdx uint64) *SetState {
-	return &SetState{ContractIndex: cIdx, StorageIndex: sIdx, ValueIndex: vIdx}
+func NewSetState(cIdx uint32, sIdx uint32, v *common.Hash) *SetState {
+	return &SetState{ContractIndex: cIdx, StorageIndex: sIdx, Value: *v}
 }
 
 // ReadSetState reads a set-state operation from file.
@@ -45,7 +46,7 @@ func (op *SetState) Write(f io.Writer) error {
 func (op *SetState) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
 	contract := ctx.DecodeContract(op.ContractIndex)
 	storage := ctx.DecodeStorage(op.StorageIndex)
-	value := ctx.DecodeValue(op.ValueIndex)
+	value := op.Value
 	start := time.Now()
 	db.SetState(contract, storage, value)
 	return time.Since(start)
@@ -53,5 +54,5 @@ func (op *SetState) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.
 
 // Debug prints a debug message for the set-state operation.
 func (op *SetState) Debug(ctx *dict.DictionaryContext) {
-	fmt.Print(ctx.DecodeContract(op.ContractIndex), ctx.DecodeStorage(op.StorageIndex), ctx.DecodeValue(op.ValueIndex))
+	fmt.Print(ctx.DecodeContract(op.ContractIndex), ctx.DecodeStorage(op.StorageIndex), op.Value)
 }
