@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	db2 "github.com/Fantom-foundation/Aida/cmd/substate-cli/db"
+	"github.com/Fantom-foundation/Aida/cmd/substate-cli/db"
 	"github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/params"
@@ -17,8 +17,8 @@ var (
 		Usage:       "A set of commands on substate DB",
 		Description: "",
 		Subcommands: []*cli.Command{
-			&db2.CloneCommand,
-			&db2.CompactCommand,
+			&db.CloneCommand,
+			&db.CompactCommand,
 		},
 	}
 )
@@ -37,6 +37,7 @@ func main() {
 		Flags:     []cli.Flag{},
 		Commands: []*cli.Command{
 			&replay.ReplayCommand,
+			&replay.GenDeletedAccountsCommand,
 			&replay.GetStorageUpdateSizeCommand,
 			&replay.GetCodeCommand,
 			&replay.GetCodeSizeCommand,
