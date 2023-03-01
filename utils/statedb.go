@@ -118,7 +118,9 @@ func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config) {
 
 	}
 	log.Printf("\t\tHashing and flushing ...\n")
-	load.Close()
+	if err := load.Close(); err != nil {
+		panic(fmt.Errorf("failed to prime StateDB: %v", err))
+	}
 }
 
 // primeOneAccount initializes an account on stateDB with substate
