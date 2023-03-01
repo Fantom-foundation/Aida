@@ -43,6 +43,8 @@ func NewDictionaryContext() *DictionaryContext {
 // DictionaryContextDir is the dictionaries' directory of the context.
 var DictionaryContextDir string = "./"
 
+// Magic constants as file identifiers for contract address, storage key
+// and byte-code index files.
 const (
 	ContractMagic = 4711
 	StorageMagic  = 4712
@@ -122,7 +124,7 @@ func (ctx *DictionaryContext) LastContractAddress() common.Address {
 // Storage methods
 ////////////////////////////////////////////////////////////////
 
-// EndcodeStorage encodes a storage address and returns an index.
+// EndcodeStorage encodes a storage key and returns an index.
 func (ctx *DictionaryContext) EncodeStorage(storage common.Hash) (uint32, int) {
 	sIdx, err := ctx.StorageDictionary.Encode(storage)
 	if err != nil {
@@ -196,7 +198,7 @@ func (ctx *DictionaryContext) GetSnapshot(recordedID int32) int32 {
 // Code methods
 ////////////////////////////////////////////////////////////////
 
-// EncodeCode encodes byte-code to an index.
+// EncodeCode encodes the given byte-code to an index and returns the index.
 func (ctx *DictionaryContext) EncodeCode(code []byte) uint32 {
 	bcIdx, err := ctx.CodeDictionary.Encode(string(code))
 	if err != nil {
@@ -208,7 +210,7 @@ func (ctx *DictionaryContext) EncodeCode(code []byte) uint32 {
 	return uint32(bcIdx)
 }
 
-// DecodeCode decodes byte-code from an index.
+// DecodeCode returns the byte-code for a given byte-code index.
 func (ctx *DictionaryContext) DecodeCode(bcIdx uint32) []byte {
 	code, err := ctx.CodeDictionary.Decode(int(bcIdx))
 	if err != nil {
@@ -217,13 +219,13 @@ func (ctx *DictionaryContext) DecodeCode(bcIdx uint32) []byte {
 	return []byte(code)
 }
 
-// HasEncodedContract checks whether given address has already been inserted into dictionary
+// HasEncodedContract checks whether a given contract address has already been inserted into dictionary
 func (ctx *DictionaryContext) HasEncodedContract(addr common.Address) bool {
 	_, f := ctx.ContractDictionary.valueToIdx[addr]
 	return f
 }
 
-// HasEncodedStorage checks whether given storage has already been inserted into dictionary
+// HasEncodedStorage checks whether a given storage key has already been inserted into dictionary
 func (ctx *DictionaryContext) HasEncodedStorage(key common.Hash) bool {
 	_, f := ctx.StorageDictionary.valueToIdx[key]
 	return f
