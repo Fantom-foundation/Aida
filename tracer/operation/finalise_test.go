@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 )
 
 func initFinalise(t *testing.T) (*dict.DictionaryContext, *Finalise, bool) {

@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer"
-	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/substate"

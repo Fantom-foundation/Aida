@@ -3,7 +3,7 @@ package operation
 import (
 	"testing"
 
-	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 )
 
 func initEndBlock(t *testing.T) (*dict.DictionaryContext, *EndBlock) {

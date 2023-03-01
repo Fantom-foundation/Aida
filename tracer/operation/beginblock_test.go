@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 )
 
 func initBeginBlock(t *testing.T) (*dict.DictionaryContext, *BeginBlock, uint64) {

@@ -15,7 +15,7 @@ import (
 func TestDictionaryContextWriteReadEmpty(t *testing.T) {
 	DictionaryContextDir = "./test_dictionary_context/"
 	want := []string{"code-dictionary.dat", "contract-dictionary.dat",
-		"storage-dictionary.dat", "value-dictionary.dat"}
+		"storage-dictionary.dat"}
 	have := []string{}
 
 	if err := os.Mkdir(DictionaryContextDir, 0700); err != nil {
@@ -185,30 +185,6 @@ func TestDictionaryContextLookupStorage(t *testing.T) {
 	cachedKey = ctx.LookupStorage(1)
 	if decodedKey2 != cachedKey {
 		t.Fatalf("Failed to lookup storage key (2) from index-cache")
-	}
-}
-
-// TestDictionaryContextEncodeValue encodes a value and compares the returned index.
-func TestDictionaryContextEncodeValue(t *testing.T) {
-	ctx := NewDictionaryContext()
-	encodedValue := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
-	if idx := ctx.EncodeValue(encodedValue); idx != 0 {
-		t.Fatalf("Encoding value failed")
-	}
-}
-
-// TestDictionaryContextDecodeValue encodes then decodes a storage value and
-// compares whether the values are the same.
-func TestDictionaryContextDecodeValue(t *testing.T) {
-	ctx := NewDictionaryContext()
-	encodedValue := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
-	idx := ctx.EncodeValue(encodedValue)
-	if idx != 0 {
-		t.Fatalf("Encoding value failed")
-	}
-	decodedValue := ctx.DecodeValue(idx)
-	if encodedValue != decodedValue {
-		t.Fatalf("Decoding value failed")
 	}
 }
 

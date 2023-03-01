@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 )
 
 func initRevertToSnapshot(t *testing.T) (*dict.DictionaryContext, *Snapshot, *RevertToSnapshot, int32, int32) {

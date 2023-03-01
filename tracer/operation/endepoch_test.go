@@ -3,7 +3,7 @@ package operation
 import (
 	"testing"
 
-	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 )
 
 func initEndEpoch(t *testing.T) (*dict.DictionaryContext, *EndEpoch) {
