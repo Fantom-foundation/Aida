@@ -17,10 +17,9 @@ func initSetState(t *testing.T) (*dict.DictionaryContext, *SetState, common.Addr
 	dict := dict.NewDictionaryContext()
 	cIdx := dict.EncodeContract(addr)
 	sIdx, _ := dict.EncodeStorage(storage)
-	vIdx := dict.EncodeValue(value)
 
 	// create new operation
-	op := NewSetState(cIdx, sIdx, vIdx)
+	op := NewSetState(cIdx, sIdx, &value)
 	if op == nil {
 		t.Fatalf("failed to create operation")
 	}

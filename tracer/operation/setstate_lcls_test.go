@@ -11,12 +11,8 @@ import (
 func initSetStateLcls(t *testing.T) (*dict.DictionaryContext, *SetStateLcls, common.Address, common.Hash, common.Hash) {
 	value := getRandomAddress(t).Hash()
 
-	// create dictionary context
-	dict := dict.NewDictionaryContext()
-	vIdx := dict.EncodeValue(value)
-
 	// create new operation
-	op := NewSetStateLcls(vIdx)
+	op := NewSetStateLcls(&value)
 	if op == nil {
 		t.Fatalf("failed to create operation")
 	}
@@ -24,6 +20,9 @@ func initSetStateLcls(t *testing.T) (*dict.DictionaryContext, *SetStateLcls, com
 	if op.GetId() != SetStateLclsID {
 		t.Fatalf("wrong ID returned")
 	}
+
+	// create dictionary context
+	dict := dict.NewDictionaryContext()
 
 	addr := getRandomAddress(t)
 	dict.EncodeContract(addr)
