@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/big"
 	"math/rand"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/ethereum/go-ethereum/common"
@@ -38,13 +39,14 @@ type stochasticState struct {
 	snapshot   []int                        // stack of active snapshots
 	accounts   map[int64]*stochasticAccount // account information using address index as key
 	balanceLog map[int64][]int64            // balance log keeping track of balances for snapshots
-	verbose    bool                         // verbose flag
+	traceDebug bool                         // trace-debug flag
 }
 
 // RunStochasticReplay runs the stochastic simulation for StateDB operations.
-// It requires the simulation model and simulation length. The verbose enables/disables
-// the printing of StateDB operations and their arguments on the screen.
-func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, simLength int, verbose bool) {
+// It requires the simulation model and simulation length. The trace-debug flag
+// enables/disables the printing of StateDB operations and their arguments on
+// the screen.
+func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, simLength int, traceDebug bool, disableProgress bool) {
 
 	// retrieve operations and stochastic matrix from simulation object
 	operations := e.Operations
@@ -71,7 +73,7 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, simLength int
 	)
 
 	// setup state
-	ss := NewStochasticState(db, contracts, keys, values, verbose)
+	ss := NewStochasticState(db, contracts, keys, values, traceDebug)
 
 	// create accounts in StateDB
 	ss.prime()
@@ -82,7 +84,20 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, simLength int
 		panic("BeginEpoch cannot be observed in stochastic matrix/recording failed.")
 	}
 
-	blocks := 0
+	// progress message setup
+	var (
+		start   time.Time
+		sec     float64
+		lastSec float64
+	)
+
+	if !disableProgress {
+		start = time.Now()
+		sec = time.Since(start).Seconds()
+		lastSec = time.Since(start).Seconds()
+	}
+
+	block := 0
 	for {
 
 		// decode opcode
@@ -93,19 +108,34 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, simLength int
 
 		// check for end of simulation
 		if op == EndBlockID {
-			blocks++
-			if blocks >= simLength {
+			block++
+			if block >= simLength {
 				break
+			}
+		}
+
+		//
+		if !disableProgress {
+			// report progress
+			sec = time.Since(start).Seconds()
+			if sec-lastSec >= 15 {
+				log.Printf("Elapsed time: %.0f s, at block %v\n", sec, block)
+				lastSec = sec
 			}
 		}
 
 		// transit to next state in Markovian process
 		state = nextState(A, state)
 	}
+
+	// print progress summary
+	if !disableProgress {
+		log.Printf("Total elapsed time: %.3f s, processed %v blocks\n", sec, block)
+	}
 }
 
 // NewStochasticState creates a new state for execution StateDB operations
-func NewStochasticState(db state.StateDB, contracts *IndirectAccess, keys *RandomAccess, values *RandomAccess, verbose bool) stochasticState {
+func NewStochasticState(db state.StateDB, contracts *IndirectAccess, keys *RandomAccess, values *RandomAccess, traceDebug bool) stochasticState {
 
 	// retrieve number of contracts
 	n := contracts.NumElem()
@@ -126,7 +156,7 @@ func NewStochasticState(db state.StateDB, contracts *IndirectAccess, keys *Rando
 		contracts:  contracts,
 		keys:       keys,
 		values:     values,
-		verbose:    verbose,
+		traceDebug: traceDebug,
 		balanceLog: make(map[int64][]int64),
 	}
 }
@@ -178,7 +208,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 	}
 
 	// print opcode and its arguments
-	if ss.verbose {
+	if ss.traceDebug {
 		// print operation
 		fmt.Printf("opcode:%v (%v)", opText[op], EncodeOpcode(op, addrCl, keyCl, valueCl))
 
@@ -197,27 +227,27 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 	switch op {
 	case AddBalanceID:
 		value := rand.Int63n(AddBalanceRange)
-		if ss.verbose {
+		if ss.traceDebug {
 			fmt.Printf(" value: %v", value)
 		}
 		ss.updateBalanceLog(addrIdx, value)
 		db.AddBalance(addr, big.NewInt(value))
 
 	case BeginBlockID:
-		if ss.verbose {
+		if ss.traceDebug {
 			fmt.Printf(" id: %v", ss.blockNum)
 		}
 		db.BeginBlock(ss.blockNum)
 		ss.txNum = 0
 
 	case BeginEpochID:
-		if ss.verbose {
+		if ss.traceDebug {
 			fmt.Printf(" id: %v", ss.epochNum)
 		}
 		db.BeginEpoch(ss.epochNum)
 
 	case BeginTransactionID:
-		if ss.verbose {
+		if ss.traceDebug {
 			fmt.Printf(" id: %v", ss.txNum)
 		}
 		db.BeginTransaction(ss.txNum)
@@ -280,7 +310,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 			// rather than the uniform distribution.
 			snapshotIdx := rand.Intn(snapshotNum)
 			snapshot := ss.snapshot[snapshotIdx]
-			if ss.verbose {
+			if ss.traceDebug {
 				fmt.Printf(" id: %v", snapshot)
 			}
 			db.RevertToSnapshot(snapshot)
@@ -292,7 +322,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 
 	case SetCodeID:
 		sz := rand.Intn(MaxCodeSize-1) + 1
-		if ss.verbose {
+		if ss.traceDebug {
 			fmt.Printf(" code-size: %v", sz)
 		}
 		code := make([]byte, sz)
@@ -311,7 +341,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 
 	case SnapshotID:
 		id := db.Snapshot()
-		if ss.verbose {
+		if ss.traceDebug {
 			fmt.Printf(" id: %v", id)
 		}
 		ss.snapshot = append(ss.snapshot, id)
@@ -322,7 +352,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 			// get a delta that does not exceed current balance
 			// in the current snapshot
 			value := rand.Int63n(balance)
-			if ss.verbose {
+			if ss.traceDebug {
 				fmt.Printf(" value: %v", value)
 			}
 			db.SubBalance(addr, big.NewInt(value))
@@ -336,7 +366,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 	default:
 		panic("invalid operation")
 	}
-	if ss.verbose {
+	if ss.traceDebug {
 		fmt.Println()
 	}
 }

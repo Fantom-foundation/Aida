@@ -195,11 +195,6 @@ var (
 		Usage:       "enable visualization on `PORT`",
 		DefaultText: "8080",
 	}
-	VerboseFlag = cli.BoolFlag{
-		Name:  "verbose",
-		Usage: "enable verbose",
-		Value: false,
-	}
 )
 
 // execution configuration for replay command.

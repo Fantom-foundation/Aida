@@ -21,7 +21,8 @@ var StochasticReplayCommand = cli.Command{
 	Usage:     "Simulates StateDB operations using a random generator with realistic distributions",
 	ArgsUsage: "<simulation-file>",
 	Flags: []cli.Flag{
-		&utils.VerboseFlag,
+		&utils.TraceDebugFlag,
+		&utils.DisableProgressFlag,
 		// TODO: this flag does not make sense for stochastic replay/remove, however
 		// cannot be removed without rewriting config.go
 		&utils.ChainIDFlag,
@@ -80,8 +81,9 @@ func stochasticReplayAction(ctx *cli.Context) error {
 
 	// run simulation.
 	fmt.Printf("stochastic replay: run simulation ...\n")
-	verbose := ctx.Bool(utils.VerboseFlag.Name)
-	stochastic.RunStochasticReplay(db, simulation, int(simLength), verbose)
+	traceDebug := ctx.Bool(utils.TraceDebugFlag.Name)
+	disableProgress := ctx.Bool(utils.DisableProgressFlag.Name)
+	stochastic.RunStochasticReplay(db, simulation, int(simLength), traceDebug, disableProgress)
 
 	// print memory usage after simulation
 	if cfg.MemoryBreakdown {
