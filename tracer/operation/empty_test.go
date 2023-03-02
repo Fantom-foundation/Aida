@@ -8,11 +8,11 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initEmpty(t *testing.T) (*dict.DictionaryContext, *Empty, common.Address) {
+func initEmpty(t *testing.T) (*dictionary.DictionaryContext, *Empty, common.Address) {
 	addr := getRandomAddress(t)
 	// create dictionary context
-	dict := dict.NewDictionaryContext()
-	cIdx := dict.EncodeContract(addr)
+	dict := dictionary.NewDictionaryContext()
+	cIdx := dictionary.EncodeContract(addr)
 
 	// create new operation
 	op := NewEmpty(cIdx)

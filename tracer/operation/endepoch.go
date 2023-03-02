@@ -36,12 +36,12 @@ func (op *EndEpoch) Write(f io.Writer) error {
 }
 
 // Execute the end-epoch operation.
-func (op *EndEpoch) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
+func (op *EndEpoch) Execute(db state.StateDB, ctx *dictionary.DictionaryContext) time.Duration {
 	start := time.Now()
 	db.EndEpoch()
 	return time.Since(start)
 }
 
 // Debug prints a debug message for the end-epoch operation.
-func (op *EndEpoch) Debug(ctx *dict.DictionaryContext) {
+func (op *EndEpoch) Debug(ctx *dictionary.DictionaryContext) {
 }

@@ -1,4 +1,4 @@
-package dict
+package dictionary
 
 import (
 	"fmt"
@@ -15,8 +15,8 @@ import (
 func TestDictionarySimple1(t *testing.T) {
 	encodedValue := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
 	dict := NewDictionary[common.Hash]()
-	idx, err1 := dict.Encode(encodedValue)
-	decodedValue, err2 := dict.Decode(idx)
+	idx, err1 := dictionary.Encode(encodedValue)
+	decodedValue, err2 := dictionary.Decode(idx)
 	if encodedValue != decodedValue || err1 != nil || err2 != nil || idx != 0 {
 		t.Fatalf("Encoding/decoding failed")
 	}
@@ -28,10 +28,10 @@ func TestDictionarySimple2(t *testing.T) {
 	encodedValue1 := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
 	encodedValue2 := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F273")
 	dict := NewDictionary[common.Hash]()
-	idx1, err1 := dict.Encode(encodedValue1)
-	idx2, err2 := dict.Encode(encodedValue2)
-	decodedValue1, err3 := dict.Decode(idx1)
-	decodedValue2, err4 := dict.Decode(idx2)
+	idx1, err1 := dictionary.Encode(encodedValue1)
+	idx2, err2 := dictionary.Encode(encodedValue2)
+	decodedValue1, err3 := dictionary.Decode(idx1)
+	decodedValue2, err4 := dictionary.Decode(idx2)
 	if encodedValue1 != decodedValue1 || err1 != nil || err3 != nil || idx1 != 0 {
 		t.Fatalf("Encoding/decoding value (1) failed")
 	}
@@ -45,10 +45,10 @@ func TestDictionarySimple2(t *testing.T) {
 func TestDictionarySimple3(t *testing.T) {
 	encodedValue1 := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
 	dict := NewDictionary[common.Hash]()
-	idx1, err1 := dict.Encode(encodedValue1)
-	idx2, err2 := dict.Encode(encodedValue1)
-	decodedValue1, err3 := dict.Decode(idx1)
-	decodedValue2, err4 := dict.Decode(idx2)
+	idx1, err1 := dictionary.Encode(encodedValue1)
+	idx2, err2 := dictionary.Encode(encodedValue1)
+	decodedValue1, err3 := dictionary.Decode(idx1)
+	decodedValue2, err4 := dictionary.Decode(idx2)
 	if encodedValue1 != decodedValue1 || err1 != nil || err3 != nil || idx1 != 0 {
 		t.Fatalf("Encoding/decoding value (1) failed")
 	}
@@ -64,11 +64,11 @@ func TestDictionaryOverflow(t *testing.T) {
 	dict := NewDictionary[common.Hash]()
 	// set limit to one storage
 	DictionaryLimit = 1
-	_, err1 := dict.Encode(encodedValue1)
+	_, err1 := dictionary.Encode(encodedValue1)
 	if err1 != nil {
 		t.Fatalf("Failed to encode a storage key")
 	}
-	_, err2 := dict.Encode(encodedValue2)
+	_, err2 := dictionary.Encode(encodedValue2)
 	if err2 == nil {
 		t.Fatalf("Failed to report error when adding an exising storage key")
 	}
@@ -80,7 +80,7 @@ func TestDictionaryOverflow(t *testing.T) {
 // Decode() can be captured (retrieving index 0 on an empty dictionary).
 func TestDictionaryDecodingFailure1(t *testing.T) {
 	dict := NewDictionary[common.Hash]()
-	_, err := dict.Decode(0)
+	_, err := dictionary.Decode(0)
 	if err == nil {
 		t.Fatalf("Failed to detect wrong index for Decode()")
 	}
@@ -90,7 +90,7 @@ func TestDictionaryDecodingFailure1(t *testing.T) {
 // Decode() can be captured (retrieving index MaxUint32 on an empty dictionary).
 func TestDictionaryDecodingFailure2(t *testing.T) {
 	dict := NewDictionary[common.Hash]()
-	_, err := dict.Decode(math.MaxUint32)
+	_, err := dictionary.Decode(math.MaxUint32)
 	if err == nil {
 		t.Fatalf("Failed to detect wrong index for Decode()")
 	}
@@ -154,8 +154,8 @@ func TestDictionaryReadWrite(t *testing.T) {
 func TestCodeDictionarySimple1(t *testing.T) {
 	encodedCode := []byte{0x1, 0x0, 0x02, 0x5, 0x7}
 	dict := NewDictionary[string]()
-	idx, err1 := dict.Encode(string(encodedCode))
-	decodedCode, err2 := dict.Decode(idx)
+	idx, err1 := dictionary.Encode(string(encodedCode))
+	decodedCode, err2 := dictionary.Decode(idx)
 	if !reflect.DeepEqual(encodedCode, []byte(decodedCode)) || err1 != nil || err2 != nil || idx != 0 {
 		t.Fatalf("Encoding/Decoding failed %v %v", encodedCode, decodedCode)
 	}
@@ -167,10 +167,10 @@ func TestCodeDictionarySimple2(t *testing.T) {
 	encodedCode1 := []byte{0x1, 0x0, 0x2, 0x0, 0x5}
 	encodedCode2 := []byte{0x1, 0x0, 0x2}
 	dict := NewDictionary[string]()
-	idx1, err1 := dict.Encode(string(encodedCode1))
-	idx2, err2 := dict.Encode(string(encodedCode2))
-	decodedCode1, err3 := dict.Decode(idx1)
-	decodedCode2, err4 := dict.Decode(idx2)
+	idx1, err1 := dictionary.Encode(string(encodedCode1))
+	idx2, err2 := dictionary.Encode(string(encodedCode2))
+	decodedCode1, err3 := dictionary.Decode(idx1)
+	decodedCode2, err4 := dictionary.Decode(idx2)
 	if !reflect.DeepEqual(encodedCode1, []byte(decodedCode1)) || err1 != nil || err3 != nil || idx1 != 0 {
 		t.Fatalf("Encoding/decoding byte-code (1) failed")
 	}
@@ -184,10 +184,10 @@ func TestCodeDictionarySimple2(t *testing.T) {
 func TestCodeDictionarySimple3(t *testing.T) {
 	encodedCode := []byte{0x1, 0x02, 0x3, 0x4}
 	dict := NewDictionary[string]()
-	idx1, err1 := dict.Encode(string(encodedCode))
-	idx2, err2 := dict.Encode(string(encodedCode))
-	decodedCode1, err3 := dict.Decode(idx1)
-	decodedCode2, err4 := dict.Decode(idx2)
+	idx1, err1 := dictionary.Encode(string(encodedCode))
+	idx2, err2 := dictionary.Encode(string(encodedCode))
+	decodedCode1, err3 := dictionary.Decode(idx1)
+	decodedCode2, err4 := dictionary.Decode(idx2)
 	if !reflect.DeepEqual(encodedCode, []byte(decodedCode1)) || err1 != nil || err3 != nil || idx1 != 0 {
 		t.Fatalf("Encoding/decoding byte-code (1) failed")
 	}
@@ -203,11 +203,11 @@ func TestCodeDictionaryOverflow(t *testing.T) {
 	dict := NewDictionary[string]()
 	// set limit to one storage
 	DictionaryLimit = 1
-	_, err1 := dict.Encode(string(encodedCode1))
+	_, err1 := dictionary.Encode(string(encodedCode1))
 	if err1 != nil {
 		t.Fatalf("Failed to encode a storage key")
 	}
-	_, err2 := dict.Encode(string(encodedCode2))
+	_, err2 := dictionary.Encode(string(encodedCode2))
 	if err2 == nil {
 		t.Fatalf("Failed to report error when adding an exising storage key")
 	}
@@ -219,7 +219,7 @@ func TestCodeDictionaryOverflow(t *testing.T) {
 // (Retrieving index 0 on an empty dictionary)
 func TestCodeDictionaryDecodingFailure1(t *testing.T) {
 	dict := NewDictionary[string]()
-	_, err := dict.Decode(0)
+	_, err := dictionary.Decode(0)
 	if err == nil {
 		t.Fatalf("Failed to detect wrong index for Decode()")
 	}
@@ -229,7 +229,7 @@ func TestCodeDictionaryDecodingFailure1(t *testing.T) {
 // (Retrieving index MaxUint32 on an empty dictionary)
 func TestCodeDictionaryDecodingFailure2(t *testing.T) {
 	dict := NewDictionary[string]()
-	_, err := dict.Decode(math.MaxUint32)
+	_, err := dictionary.Decode(math.MaxUint32)
 	if err == nil {
 		t.Fatalf("Failed to detect wrong index for Decode()")
 	}

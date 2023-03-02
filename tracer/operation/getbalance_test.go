@@ -8,11 +8,11 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initGetBalance(t *testing.T) (*dict.DictionaryContext, *GetBalance, common.Address) {
+func initGetBalance(t *testing.T) (*dictionary.DictionaryContext, *GetBalance, common.Address) {
 	addr := getRandomAddress(t)
 	// create dictionary context
-	dict := dict.NewDictionaryContext()
-	cIdx := dict.EncodeContract(addr)
+	dict := dictionary.NewDictionaryContext()
+	cIdx := dictionary.EncodeContract(addr)
 
 	// create new operation
 	op := NewGetBalance(cIdx)

@@ -7,9 +7,9 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 )
 
-func initRevertToSnapshot(t *testing.T) (*dict.DictionaryContext, *Snapshot, *RevertToSnapshot, int32, int32) {
+func initRevertToSnapshot(t *testing.T) (*dictionary.DictionaryContext, *Snapshot, *RevertToSnapshot, int32, int32) {
 	// create dictionary context
-	dict := dict.NewDictionaryContext()
+	dict := dictionary.NewDictionaryContext()
 
 	var recordedID int32 = 1
 	var replayedID int32 = 2
@@ -32,7 +32,7 @@ func initRevertToSnapshot(t *testing.T) (*dict.DictionaryContext, *Snapshot, *Re
 		t.Fatalf("wrong ID returned")
 	}
 
-	dict.AddSnapshot(recordedID, replayedID)
+	dictionary.AddSnapshot(recordedID, replayedID)
 
 	return dict, op1, op2, recordedID, replayedID
 }

@@ -41,7 +41,7 @@ func (op *GetCommittedStateLcls) Write(f io.Writer) error {
 }
 
 // Execute the get-committed-state-lcls operation.
-func (op *GetCommittedStateLcls) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
+func (op *GetCommittedStateLcls) Execute(db state.StateDB, ctx *dictionary.DictionaryContext) time.Duration {
 	contract := ctx.LastContractAddress()
 	storage := ctx.LookupStorage(0)
 	start := time.Now()
@@ -50,7 +50,7 @@ func (op *GetCommittedStateLcls) Execute(db state.StateDB, ctx *dict.DictionaryC
 }
 
 // Debug prints a debug message for the get-committed-state-lcls operation.
-func (op *GetCommittedStateLcls) Debug(ctx *dict.DictionaryContext) {
+func (op *GetCommittedStateLcls) Debug(ctx *dictionary.DictionaryContext) {
 	contract := ctx.LastContractAddress()
 	storage := ctx.ReadStorage(0)
 	fmt.Print(contract, storage)

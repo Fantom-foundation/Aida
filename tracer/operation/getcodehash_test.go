@@ -8,11 +8,11 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initGetCodeHash(t *testing.T) (*dict.DictionaryContext, *GetCodeHash, common.Address) {
+func initGetCodeHash(t *testing.T) (*dictionary.DictionaryContext, *GetCodeHash, common.Address) {
 	addr := getRandomAddress(t)
 	// create dictionary context
-	dict := dict.NewDictionaryContext()
-	cIdx := dict.EncodeContract(addr)
+	dict := dictionary.NewDictionaryContext()
+	cIdx := dictionary.EncodeContract(addr)
 
 	// create new operation
 	op := NewGetCodeHash(cIdx)

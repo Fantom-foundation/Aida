@@ -10,16 +10,16 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initSetCode(t *testing.T) (*dict.DictionaryContext, *SetCode, common.Address, []byte) {
+func initSetCode(t *testing.T) (*dictionary.DictionaryContext, *SetCode, common.Address, []byte) {
 	rand.Seed(time.Now().UnixNano())
 	addr := getRandomAddress(t)
 	code := make([]byte, 100)
 	rand.Read(code)
 
 	// create dictionary context
-	dict := dict.NewDictionaryContext()
-	cIdx := dict.EncodeContract(addr)
-	bcIdx := dict.EncodeCode(code)
+	dict := dictionary.NewDictionaryContext()
+	cIdx := dictionary.EncodeContract(addr)
+	bcIdx := dictionary.EncodeCode(code)
 
 	// create new operation
 	op := NewSetCode(cIdx, bcIdx)

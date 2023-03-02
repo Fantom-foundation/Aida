@@ -41,7 +41,7 @@ func (op *GetStateLcls) Write(f io.Writer) error {
 }
 
 // Execute the get-state-lcls operation.
-func (op *GetStateLcls) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
+func (op *GetStateLcls) Execute(db state.StateDB, ctx *dictionary.DictionaryContext) time.Duration {
 	contract := ctx.LastContractAddress()
 	storage := ctx.LookupStorage(0)
 	start := time.Now()
@@ -50,7 +50,7 @@ func (op *GetStateLcls) Execute(db state.StateDB, ctx *dict.DictionaryContext) t
 }
 
 // Debug prints a debug message for the get-state-lcls operation.
-func (op *GetStateLcls) Debug(ctx *dict.DictionaryContext) {
+func (op *GetStateLcls) Debug(ctx *dictionary.DictionaryContext) {
 	contract := ctx.LastContractAddress()
 	storage := ctx.ReadStorage(0)
 	fmt.Print(contract, storage)

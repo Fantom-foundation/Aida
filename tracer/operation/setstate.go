@@ -43,7 +43,7 @@ func (op *SetState) Write(f io.Writer) error {
 }
 
 // Execute the set-state operation.
-func (op *SetState) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
+func (op *SetState) Execute(db state.StateDB, ctx *dictionary.DictionaryContext) time.Duration {
 	contract := ctx.DecodeContract(op.ContractIndex)
 	storage := ctx.DecodeStorage(op.StorageIndex)
 	value := op.Value
@@ -53,6 +53,6 @@ func (op *SetState) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.
 }
 
 // Debug prints a debug message for the set-state operation.
-func (op *SetState) Debug(ctx *dict.DictionaryContext) {
+func (op *SetState) Debug(ctx *dictionary.DictionaryContext) {
 	fmt.Print(ctx.DecodeContract(op.ContractIndex), ctx.DecodeStorage(op.StorageIndex), op.Value)
 }

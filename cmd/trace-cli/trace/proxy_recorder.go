@@ -14,14 +14,14 @@ import (
 // ProxyRecorder data structure for capturing and recording
 // invoked StateDB operations.
 type ProxyRecorder struct {
-	db    state.StateDB            // state db
-	dctx  *dict.DictionaryContext  // dictionary context for decoding information
-	ch    chan operation.Operation // channel used for streaming captured operation
+	db    state.StateDB                 // state db
+	dctx  *dictionary.DictionaryContext // dictionary context for decoding information
+	ch    chan operation.Operation      // channel used for streaming captured operation
 	debug bool
 }
 
 // NewProxyRecorder creates a new StateDB proxy.
-func NewProxyRecorder(db state.StateDB, dctx *dict.DictionaryContext, ch chan operation.Operation, debug bool) *ProxyRecorder {
+func NewProxyRecorder(db state.StateDB, dctx *dictionary.DictionaryContext, ch chan operation.Operation, debug bool) *ProxyRecorder {
 	r := new(ProxyRecorder)
 	r.db = db
 	r.dctx = dctx

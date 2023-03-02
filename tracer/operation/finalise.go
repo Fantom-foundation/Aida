@@ -40,13 +40,13 @@ func (op *Finalise) Write(f io.Writer) error {
 }
 
 // Execute the finalise operation.
-func (op *Finalise) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
+func (op *Finalise) Execute(db state.StateDB, ctx *dictionary.DictionaryContext) time.Duration {
 	start := time.Now()
 	db.Finalise(op.DeleteEmptyObjects)
 	return time.Since(start)
 }
 
 // Debug prints a debug message for the finalise operation.
-func (op *Finalise) Debug(ctx *dict.DictionaryContext) {
+func (op *Finalise) Debug(ctx *dictionary.DictionaryContext) {
 	fmt.Print(op.DeleteEmptyObjects)
 }

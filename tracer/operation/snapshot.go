@@ -42,7 +42,7 @@ func (op *Snapshot) Write(f io.Writer) error {
 }
 
 // Execute the snapshot operation.
-func (op *Snapshot) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
+func (op *Snapshot) Execute(db state.StateDB, ctx *dictionary.DictionaryContext) time.Duration {
 	start := time.Now()
 	ID := db.Snapshot()
 	elapsed := time.Since(start)
@@ -54,6 +54,6 @@ func (op *Snapshot) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.
 }
 
 // Debug prints the details for the snapshot operation.
-func (op *Snapshot) Debug(*dict.DictionaryContext) {
+func (op *Snapshot) Debug(*dictionary.DictionaryContext) {
 	fmt.Print(op.SnapshotID)
 }

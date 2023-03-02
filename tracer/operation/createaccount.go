@@ -40,7 +40,7 @@ func (op *CreateAccount) Write(f io.Writer) error {
 }
 
 // Execute the create-account operation.
-func (op *CreateAccount) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
+func (op *CreateAccount) Execute(db state.StateDB, ctx *dictionary.DictionaryContext) time.Duration {
 	contract := ctx.DecodeContract(op.ContractIndex)
 	start := time.Now()
 	db.CreateAccount(contract)
@@ -48,6 +48,6 @@ func (op *CreateAccount) Execute(db state.StateDB, ctx *dict.DictionaryContext) 
 }
 
 // Debug prints a debug message for the create-account operation.
-func (op *CreateAccount) Debug(ctx *dict.DictionaryContext) {
+func (op *CreateAccount) Debug(ctx *dictionary.DictionaryContext) {
 	fmt.Print(ctx.DecodeContract(op.ContractIndex))
 }

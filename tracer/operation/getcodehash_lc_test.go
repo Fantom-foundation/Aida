@@ -8,12 +8,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initGetCodeHashLc(t *testing.T) (*dict.DictionaryContext, *GetCodeHashLc, common.Address) {
+func initGetCodeHashLc(t *testing.T) (*dictionary.DictionaryContext, *GetCodeHashLc, common.Address) {
 	// create dictionary context
-	dict := dict.NewDictionaryContext()
+	dict := dictionary.NewDictionaryContext()
 
 	addr := getRandomAddress(t)
-	dict.EncodeContract(addr)
+	dictionary.EncodeContract(addr)
 
 	// create new operation
 	op := NewGetCodeHashLc()

@@ -10,12 +10,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initGetStateLccs(t *testing.T) (*dict.DictionaryContext, *GetStateLccs, common.Address, common.Hash, common.Hash) {
+func initGetStateLccs(t *testing.T) (*dictionary.DictionaryContext, *GetStateLccs, common.Address, common.Hash, common.Hash) {
 	rand.Seed(time.Now().UnixNano())
 	pos := 0
 
 	// create dictionary context
-	dict := dict.NewDictionaryContext()
+	dict := dictionary.NewDictionaryContext()
 
 	// create new operation
 	op := NewGetStateLccs(pos)
@@ -28,10 +28,10 @@ func initGetStateLccs(t *testing.T) (*dict.DictionaryContext, *GetStateLccs, com
 	}
 
 	addr := getRandomAddress(t)
-	dict.EncodeContract(addr)
+	dictionary.EncodeContract(addr)
 
 	storage := getRandomAddress(t).Hash()
-	dict.EncodeStorage(storage)
+	dictionary.EncodeStorage(storage)
 
 	storage2 := getRandomAddress(t).Hash()
 
@@ -59,7 +59,7 @@ func TestGetStateLccsExecute(t *testing.T) {
 	mock := NewMockStateDB()
 	op.Execute(mock, dict)
 
-	dict.EncodeStorage(storage2)
+	dictionary.EncodeStorage(storage2)
 
 	op.Execute(mock, dict)
 

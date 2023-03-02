@@ -41,7 +41,7 @@ func (op *GetState) Write(f io.Writer) error {
 }
 
 // Execute the get-state operation.
-func (op *GetState) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
+func (op *GetState) Execute(db state.StateDB, ctx *dictionary.DictionaryContext) time.Duration {
 	contract := ctx.DecodeContract(op.ContractIndex)
 	storage := ctx.DecodeStorage(op.StorageIndex)
 	start := time.Now()
@@ -50,6 +50,6 @@ func (op *GetState) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.
 }
 
 // Debug prints a debug message for the get-state operation.
-func (op *GetState) Debug(ctx *dict.DictionaryContext) {
+func (op *GetState) Debug(ctx *dictionary.DictionaryContext) {
 	fmt.Print(ctx.DecodeContract(op.ContractIndex), ctx.DecodeStorage(op.StorageIndex))
 }

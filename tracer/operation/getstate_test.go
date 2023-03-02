@@ -8,14 +8,14 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initGetState(t *testing.T) (*dict.DictionaryContext, *GetState, common.Address, common.Hash) {
+func initGetState(t *testing.T) (*dictionary.DictionaryContext, *GetState, common.Address, common.Hash) {
 	addr := getRandomAddress(t)
 	storage := getRandomAddress(t).Hash()
 
 	// create dictionary context
-	dict := dict.NewDictionaryContext()
-	cIdx := dict.EncodeContract(addr)
-	sIdx, _ := dict.EncodeStorage(storage)
+	dict := dictionary.NewDictionaryContext()
+	cIdx := dictionary.EncodeContract(addr)
+	sIdx, _ := dictionary.EncodeStorage(storage)
 
 	// create new operation
 	op := NewGetState(cIdx, sIdx)

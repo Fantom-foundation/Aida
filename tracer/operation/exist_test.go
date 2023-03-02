@@ -8,11 +8,11 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initExist(t *testing.T) (*dict.DictionaryContext, *Exist, common.Address) {
+func initExist(t *testing.T) (*dictionary.DictionaryContext, *Exist, common.Address) {
 	addr := getRandomAddress(t)
 	// create dictionary context
-	dict := dict.NewDictionaryContext()
-	cIdx := dict.EncodeContract(addr)
+	dict := dictionary.NewDictionaryContext()
+	cIdx := dictionary.EncodeContract(addr)
 
 	// create new operation
 	op := NewExist(cIdx)

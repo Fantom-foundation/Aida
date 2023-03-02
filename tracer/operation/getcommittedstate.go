@@ -41,7 +41,7 @@ func (op *GetCommittedState) Write(f io.Writer) error {
 }
 
 // Execute the get-committed-state operation.
-func (op *GetCommittedState) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
+func (op *GetCommittedState) Execute(db state.StateDB, ctx *dictionary.DictionaryContext) time.Duration {
 	contract := ctx.DecodeContract(op.ContractIndex)
 	storage := ctx.DecodeStorage(op.StorageIndex)
 	start := time.Now()
@@ -50,6 +50,6 @@ func (op *GetCommittedState) Execute(db state.StateDB, ctx *dict.DictionaryConte
 }
 
 // Debug prints debug message for the get-committed-state operation.
-func (op *GetCommittedState) Debug(ctx *dict.DictionaryContext) {
+func (op *GetCommittedState) Debug(ctx *dictionary.DictionaryContext) {
 	fmt.Print(ctx.DecodeContract(op.ContractIndex), ctx.DecodeStorage(op.StorageIndex))
 }

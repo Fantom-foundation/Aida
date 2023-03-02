@@ -11,13 +11,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initSubBalance(t *testing.T) (*dict.DictionaryContext, *SubBalance, common.Address, *big.Int) {
+func initSubBalance(t *testing.T) (*dictionary.DictionaryContext, *SubBalance, common.Address, *big.Int) {
 	rand.Seed(time.Now().UnixNano())
 	addr := getRandomAddress(t)
 	value := big.NewInt(rand.Int63n(100000))
 	// create dictionary context
-	dict := dict.NewDictionaryContext()
-	cIdx := dict.EncodeContract(addr)
+	dict := dictionary.NewDictionaryContext()
+	cIdx := dictionary.EncodeContract(addr)
 
 	// create new operation
 	op := NewSubBalance(cIdx, value)

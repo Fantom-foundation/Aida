@@ -8,9 +8,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initGetStateLcls(t *testing.T) (*dict.DictionaryContext, *GetStateLcls, common.Address, common.Hash) {
+func initGetStateLcls(t *testing.T) (*dictionary.DictionaryContext, *GetStateLcls, common.Address, common.Hash) {
 	// create dictionary context
-	dict := dict.NewDictionaryContext()
+	dict := dictionary.NewDictionaryContext()
 
 	// create new operation
 	op := NewGetStateLcls()
@@ -23,10 +23,10 @@ func initGetStateLcls(t *testing.T) (*dict.DictionaryContext, *GetStateLcls, com
 	}
 
 	addr := getRandomAddress(t)
-	dict.EncodeContract(addr)
+	dictionary.EncodeContract(addr)
 
 	storage := getRandomAddress(t).Hash()
-	dict.EncodeStorage(storage)
+	dictionary.EncodeStorage(storage)
 
 	return dict, op, addr, storage
 }

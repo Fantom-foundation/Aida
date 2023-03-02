@@ -10,14 +10,14 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initSetNonce(t *testing.T) (*dict.DictionaryContext, *SetNonce, common.Address, uint64) {
+func initSetNonce(t *testing.T) (*dictionary.DictionaryContext, *SetNonce, common.Address, uint64) {
 	rand.Seed(time.Now().UnixNano())
 	addr := getRandomAddress(t)
 	nonce := rand.Uint64()
 
 	// create dictionary context
-	dict := dict.NewDictionaryContext()
-	cIdx := dict.EncodeContract(addr)
+	dict := dictionary.NewDictionaryContext()
+	cIdx := dictionary.EncodeContract(addr)
 
 	// create new operation
 	op := NewSetNonce(cIdx, nonce)

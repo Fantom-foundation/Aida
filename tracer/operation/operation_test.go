@@ -325,7 +325,7 @@ func testOperationReadWrite(t *testing.T, op1 Operation, opRead func(file io.Rea
 	}
 }
 
-func testOperationDebug(t *testing.T, dict *dict.DictionaryContext, op Operation, args string) {
+func testOperationDebug(t *testing.T, dict *dictionary.DictionaryContext, op Operation, args string) {
 	// divert stdout to a buffer
 	old := os.Stdout
 	r, w, _ := os.Pipe()
