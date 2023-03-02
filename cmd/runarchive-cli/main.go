@@ -6,7 +6,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/cmd/runarchive-cli/runarchive"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/ethereum/go-ethereum/substate"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -22,6 +22,7 @@ var RunArchiveApp = cli.App{
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
 		&utils.ArchiveVariantFlag,
+		&utils.CarmenSchemaFlag,
 		&utils.CpuProfileFlag,
 		&utils.ChainIDFlag,
 		&utils.StateDbSrcDirFlag,

@@ -11,7 +11,7 @@ import (
 	"github.com/Fantom-foundation/Aida/cmd/runvm-cli/runvm"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/ethereum/go-ethereum/substate"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -155,6 +155,8 @@ func openStateDB(cfg *utils.Config) (state.StateDB, error) {
 		err = fmt.Errorf("the targeted state DB does not include an archive")
 	} else if dbinfo.ArchiveVariant != cfg.ArchiveVariant {
 		err = fmt.Errorf("mismatch archive variant.\n\thave %v\n\twant %v", dbinfo.ArchiveVariant, cfg.ArchiveVariant)
+	} else if dbinfo.Schema != cfg.CarmenSchema {
+		err = fmt.Errorf("mismatch DB schema version.\n\thave %v\n\twant %v", dbinfo.Schema, cfg.CarmenSchema)
 	}
 	if err != nil {
 		return nil, err

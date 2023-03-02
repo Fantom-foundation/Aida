@@ -60,6 +60,14 @@ CARMEN_VARIANTs = [
 #  "cpp-ldb",
 ]
 
+# The current-state DB of Carmen can implement several different schemas.
+# With this option the set of schemas to be evaluated can be configured.
+CARMEN_SCHEMAs = [
+    1,   # address and key indexed, no reincarnation numbers
+    2,   # address indexed, keys not, no reincarnation numbers
+    3,   # address indexed, keys not, using reincarnation numbers
+]
+
 # If set to true, the evaluation will run in a loop continiously.
 ENDLESS = true
 
@@ -77,15 +85,18 @@ MaxDuration = "72h"
 PROFILE_FILE_PREFIX="/tmp/aida_profile_#{DateTime.now.strftime("%Y-%m-%d_%H%M%S")}"
 
 # The directories containing input data for Aida.
-SubstateDir = "/var/data/aida/substate.50M"
-UpdateDir = "/var/data/aida/updateset"
-DeletedAccountDir = "/var/data/aida/deleted_accounts"
+DATA_DIR = "/var/data/aida"
+SubstateDir = DATA_DIR + "/substate.50M"
+UpdateDir = DATA_DIR + "/updateset"
+DeletedAccountDir = DATA_DIR + "/deleted_accounts"
+
+
 
 # Optional extra flags to be passed to Aida.
 ExtraFlags = ""
 
 # Enable the following to enable transaction validation.
-#ExtraFlags += " --validate"
+#ExtraFlags += " --validate-tx"
 
 # ---------------------------------- Action -----------------------------------
 
@@ -100,15 +111,19 @@ puts "OK"
 
 
 # Step 2 - run Aida under various configurations
-def runAida (mode, evm, db, variant, iteration)
+def runAida (mode, evm, db, variant, schema, iteration)
 
     extraFlags = ExtraFlags
     if mode == "archive" then
         extraFlags += " --archive"
     end
 
-    puts "Running #{mode} with #{evm} and #{db}/#{variant} .."
-    cmd = "timeout #{MaxDuration} ./build/aida-runvm --substatedir #{SubstateDir} --updatedir #{UpdateDir} --deleted-account-dir #{DeletedAccountDir} --db-impl #{db} --db-variant \"#{variant}\" --vm-impl #{evm} --cpuprofile=#{PROFILE_FILE_PREFIX}_profile_#{mode}_#{evm}_#{db}_#{variant}_#{StartBlock}_#{EndBlock}_#{iteration}.dat #{extraFlags} #{StartBlock} #{EndBlock}"
+    if !schema then
+        schema = 0
+    end
+
+    puts "Running #{mode} with #{evm} and #{db}/#{variant}/s#{schema} .."
+    cmd = "timeout #{MaxDuration} ./build/aida-runvm --substatedir #{SubstateDir} --updatedir #{UpdateDir} --deleted-account-dir #{DeletedAccountDir} --db-impl #{db} --db-variant \"#{variant}\" --carmen-schema \"#{schema}\" --vm-impl #{evm} --cpuprofile=#{PROFILE_FILE_PREFIX}_profile_#{mode}_#{evm}_#{db}_#{variant}_#{StartBlock}_#{EndBlock}_#{iteration}.dat #{extraFlags} #{StartBlock} #{EndBlock}"
 
     puts "Running #{cmd}\n"
     
@@ -118,7 +133,7 @@ def runAida (mode, evm, db, variant, iteration)
     	stdout_and_stderr.each {|line|
     	        rt = (Time.now - start).to_i
     	        rt_str = "%2d:%02d:%02d" % [rt/3600,(rt%3600)/60,rt%60]
-    		puts "#{DateTime.now.strftime("%Y-%m-%d %H:%M:%S.%L")} | #{rt_str} | #{iteration} | #{mode} | #{evm} | #{db} | #{variant} | #{line}"
+    		puts "#{DateTime.now.strftime("%Y-%m-%d %H:%M:%S.%L")} | #{rt_str} | #{iteration} | #{mode} | #{evm} | #{db} | #{variant} | s#{schema} | #{line}"
                 $stdout.flush
     		out.concat(line)
     	}
@@ -129,23 +144,25 @@ def runAida (mode, evm, db, variant, iteration)
     return res
 end
 
-$res = ["mode, vm, db, db-variant, iteration, interval_end, tx_rate, gas_rate"]
-def addResult (mode, vm, db, variant, iteration, rates)
-    rates.each{|block,tx_rate,gas_rate| $res.append("#{mode}, #{vm}, #{db}, #{variant}, #{iteration}, #{block}, #{tx_rate}, #{gas_rate}") }
+$res = ["mode, vm, db, variant, schema, iteration, interval_end, tx_rate, gas_rate"]
+def addResult (mode, vm, db, variant, schema, iteration, rates)
+    rates.each{|block,tx_rate,gas_rate| $res.append("#{mode}, #{vm}, #{db}, #{variant}, #{schema}, #{iteration}, #{block}, #{tx_rate}, #{gas_rate}") }
     $res.each{ |l| puts "#{l}\n" }
 end
 
-CARMEN_VARIANTs.each do |variant| 
-    DB_IMPLs.append(["carmen",variant])
+CARMEN_VARIANTs.each do |variant|
+    CARMEN_SCHEMAs.each do |schema|
+        DB_IMPLs.append(["carmen",variant,schema])
+    end
 end
 
 iteration = 1
 while true do
     MODEs.each do |mode|
         EVMs.each do |evm|
-            DB_IMPLs.each do |impl,variant|
-                rates = runAida(mode, evm, impl, variant, iteration)
-                addResult(mode, evm, impl, variant, iteration, rates)
+            DB_IMPLs.each do |impl,variant,schema|
+                rates = runAida(mode, evm, impl, variant, schema, iteration)
+                addResult(mode, evm, impl, variant, schema, iteration, rates)
             end
         end
     end

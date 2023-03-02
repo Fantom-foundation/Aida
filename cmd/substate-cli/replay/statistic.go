@@ -5,8 +5,7 @@ import (
 	"sort"
 
 	"github.com/Fantom-foundation/Aida/utils"
-
-	"github.com/ethereum/go-ethereum/substate"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 

@@ -14,8 +14,8 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/substate"
 )
 
 // MakeStateDB creates a new DB instance based on cli argument.
@@ -33,7 +33,7 @@ func MakeStateDB(directory string, cfg *Config, rootHash common.Hash, isExisting
 // makeStateDB creates a DB instance with a potential shadow instance.
 func makeStateDBInternal(directory string, cfg *Config, rootHash common.Hash, isExistingDB bool) (state.StateDB, error) {
 	if cfg.ShadowImpl == "" {
-		return makeStateDBVariant(directory, cfg.DbImpl, cfg.DbVariant, cfg.ArchiveVariant, rootHash, cfg.ArchiveMode)
+		return makeStateDBVariant(directory, cfg.DbImpl, cfg.DbVariant, cfg.ArchiveVariant, rootHash, cfg)
 	}
 	if isExistingDB {
 		return nil, fmt.Errorf("Using an existing stateDB with a shadow DB is not supported.")
@@ -46,11 +46,11 @@ func makeStateDBInternal(directory string, cfg *Config, rootHash common.Hash, is
 	if err := os.MkdirAll(shadowDir, 0700); err != nil {
 		return nil, err
 	}
-	prime, err := makeStateDBVariant(primeDir, cfg.DbImpl, cfg.DbVariant, cfg.ArchiveVariant, rootHash, cfg.ArchiveMode)
+	prime, err := makeStateDBVariant(primeDir, cfg.DbImpl, cfg.DbVariant, cfg.ArchiveVariant, rootHash, cfg)
 	if err != nil {
 		return nil, err
 	}
-	shadow, err := makeStateDBVariant(shadowDir, cfg.ShadowImpl, cfg.ShadowVariant, cfg.ArchiveVariant, rootHash, cfg.ArchiveMode)
+	shadow, err := makeStateDBVariant(shadowDir, cfg.ShadowImpl, cfg.ShadowVariant, cfg.ArchiveVariant, rootHash, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -58,18 +58,18 @@ func makeStateDBInternal(directory string, cfg *Config, rootHash common.Hash, is
 }
 
 // makeStateDBVariant creates a DB instance of the requested kind.
-func makeStateDBVariant(directory, impl, variant, archiveVariant string, rootHash common.Hash, archiveMode bool) (state.StateDB, error) {
+func makeStateDBVariant(directory, impl, variant, archiveVariant string, rootHash common.Hash, cfg *Config) (state.StateDB, error) {
 	switch impl {
 	case "memory":
 		return state.MakeEmptyGethInMemoryStateDB(variant)
 	case "geth":
-		return state.MakeGethStateDB(directory, variant, rootHash, archiveMode)
+		return state.MakeGethStateDB(directory, variant, rootHash, cfg.ArchiveMode)
 	case "carmen":
 		// Disable archive if not enabled.
-		if !archiveMode {
+		if !cfg.ArchiveMode {
 			archiveVariant = "none"
 		}
-		return state.MakeCarmenStateDB(directory, variant, archiveVariant)
+		return state.MakeCarmenStateDB(directory, variant, archiveVariant, cfg.CarmenSchema)
 	case "flat":
 		return state.MakeFlatStateDB(directory, variant, rootHash)
 	}
@@ -118,7 +118,9 @@ func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config) {
 
 	}
 	log.Printf("\t\tHashing and flushing ...\n")
-	load.Close()
+	if err := load.Close(); err != nil {
+		panic(fmt.Errorf("failed to prime StateDB: %v", err))
+	}
 }
 
 // primeOneAccount initializes an account on stateDB with substate
@@ -262,6 +264,8 @@ func PrepareStateDB(cfg *Config) (db state.StateDB, workingDirectory string, loa
 			err = fmt.Errorf("Mismatch archive mode.\n\thave %v\n\twant %v", dbinfo.ArchiveMode, cfg.ArchiveMode)
 		} else if dbinfo.ArchiveVariant != cfg.ArchiveVariant {
 			err = fmt.Errorf("Mismatch archive variant.\n\thave %v\n\twant %v", dbinfo.ArchiveVariant, cfg.ArchiveVariant)
+		} else if dbinfo.Schema != cfg.CarmenSchema {
+			err = fmt.Errorf("Mismatch DB schema version.\n\thave %v\n\twant %v", dbinfo.Schema, cfg.CarmenSchema)
 		}
 		if err != nil {
 			return

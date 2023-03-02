@@ -6,12 +6,12 @@ import (
 	"io"
 	"math/big"
 
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/Fantom-foundation/lachesis-base/hash"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/ethereum/go-ethereum/substate"
 )
 
 // Account is modification of SubstateAccount in substate/substate.go

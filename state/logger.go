@@ -4,9 +4,9 @@ import (
 	"log"
 	"math/big"
 
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/substate"
 )
 
 // MakeLoggingStateDB wrapps the given StateDB instance into a logging wrapper causing
