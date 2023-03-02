@@ -19,7 +19,7 @@ type Context struct {
 	StorageDictionary *Dictionary[common.Hash] // dictionary to compact storage addresses
 	StorageIndexCache *IndexCache              // storage address cache
 
-	CodeDictionary *Dictionary[string] // dictionary to compact the bytecode of contracts
+	Code *Dictionary[string] // dictionary to compact the bytecode of contracts
 
 	SnapshotIndex *SnapshotIndex // snapshot index for execution (not for recording/replaying)
 }
@@ -31,7 +31,7 @@ func NewContext() *Context {
 		PrevContractIndex:  InvalidContractIndex,
 		StorageDictionary:  NewDictionary[common.Hash](),
 		StorageIndexCache:  NewIndexCache(),
-		CodeDictionary:     NewDictionary[string](),
+		Code:               NewDictionary[string](),
 		SnapshotIndex:      NewSnapshotIndex(),
 	}
 }
@@ -62,7 +62,7 @@ func ReadContext() *Context {
 	if err != nil {
 		log.Fatalf("Cannot read storage dictionary. Error: %v", err)
 	}
-	err = ctx.CodeDictionary.ReadString(ContextDir+"code-dictionary.dat", CodeMagic)
+	err = ctx.Code.ReadString(ContextDir+"code-dictionary.dat", CodeMagic)
 	if err != nil {
 		log.Fatalf("Cannot read code dictionary. Error: %v", err)
 	}
@@ -79,7 +79,7 @@ func (ctx *Context) Write() {
 	if err != nil {
 		log.Fatalf("Cannot write storage dictionary. Error: %v", err)
 	}
-	err = ctx.CodeDictionary.WriteString(ContextDir+"code-dictionary.dat", CodeMagic)
+	err = ctx.Code.WriteString(ContextDir+"code-dictionary.dat", CodeMagic)
 	if err != nil {
 		log.Fatalf("Cannot write code dictionary. Error: %v", err)
 	}
@@ -212,7 +212,7 @@ func (ctx *Context) GetSnapshot(recordedID int32) int32 {
 
 // EncodeCode encodes the given byte-code to an index and returns the index.
 func (ctx *Context) EncodeCode(code []byte) uint32 {
-	bcIdx, err := ctx.CodeDictionary.Encode(string(code))
+	bcIdx, err := ctx.Code.Encode(string(code))
 	if err != nil {
 		log.Fatalf("Byte-code could not be encoded. Error: %v", err)
 	}
@@ -224,7 +224,7 @@ func (ctx *Context) EncodeCode(code []byte) uint32 {
 
 // DecodeCode returns the byte-code for a given byte-code index.
 func (ctx *Context) DecodeCode(bcIdx uint32) []byte {
-	code, err := ctx.CodeDictionary.Decode(int(bcIdx))
+	code, err := ctx.Code.Decode(int(bcIdx))
 	if err != nil {
 		log.Fatalf("Byte-code index could not be decoded. Error: %v", err)
 	}
