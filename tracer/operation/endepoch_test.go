@@ -3,12 +3,12 @@ package operation
 import (
 	"testing"
 
-	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 )
 
-func initEndEpoch(t *testing.T) (*dict.DictionaryContext, *EndEpoch) {
+func initEndEpoch(t *testing.T) (*dictionary.Context, *EndEpoch) {
 	// create dictionary context
-	dict := dict.NewDictionaryContext()
+	dict := dictionary.NewContext()
 
 	// create new operation
 	op := NewEndEpoch()

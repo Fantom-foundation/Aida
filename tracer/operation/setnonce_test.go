@@ -6,17 +6,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initSetNonce(t *testing.T) (*dict.DictionaryContext, *SetNonce, common.Address, uint64) {
+func initSetNonce(t *testing.T) (*dictionary.Context, *SetNonce, common.Address, uint64) {
 	rand.Seed(time.Now().UnixNano())
 	addr := getRandomAddress(t)
 	nonce := rand.Uint64()
 
 	// create dictionary context
-	dict := dict.NewDictionaryContext()
+	dict := dictionary.NewContext()
 	cIdx := dict.EncodeContract(addr)
 
 	// create new operation

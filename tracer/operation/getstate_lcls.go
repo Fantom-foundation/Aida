@@ -7,7 +7,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/state"
 
-	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 )
 
 // The GetStateLcls operation is a GetState operation
@@ -41,17 +41,17 @@ func (op *GetStateLcls) Write(f io.Writer) error {
 }
 
 // Execute the get-state-lcls operation.
-func (op *GetStateLcls) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
-	contract := ctx.LastContractAddress()
-	storage := ctx.LookupStorage(0)
+func (op *GetStateLcls) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
+	contract := ctx.PrevContract()
+	storage := ctx.DecodeStorageCache(0)
 	start := time.Now()
 	db.GetState(contract, storage)
 	return time.Since(start)
 }
 
 // Debug prints a debug message for the get-state-lcls operation.
-func (op *GetStateLcls) Debug(ctx *dict.DictionaryContext) {
-	contract := ctx.LastContractAddress()
-	storage := ctx.ReadStorage(0)
+func (op *GetStateLcls) Debug(ctx *dictionary.Context) {
+	contract := ctx.PrevContract()
+	storage := ctx.ReadStorageCache(0)
 	fmt.Print(contract, storage)
 }

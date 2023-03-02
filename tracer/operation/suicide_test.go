@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initSuicide(t *testing.T) (*dict.DictionaryContext, *Suicide, common.Address) {
+func initSuicide(t *testing.T) (*dictionary.Context, *Suicide, common.Address) {
 	addr := getRandomAddress(t)
 	// create dictionary context
-	dict := dict.NewDictionaryContext()
+	dict := dictionary.NewContext()
 	cIdx := dict.EncodeContract(addr)
 
 	// create new operation

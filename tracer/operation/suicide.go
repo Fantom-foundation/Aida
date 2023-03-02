@@ -8,7 +8,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/state"
 
-	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 )
 
 // Suicide data structure
@@ -40,7 +40,7 @@ func (op *Suicide) Write(f io.Writer) error {
 }
 
 // Execute the suicide operation.
-func (op *Suicide) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
+func (op *Suicide) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
 	contract := ctx.DecodeContract(op.ContractIndex)
 	start := time.Now()
 	db.Suicide(contract)
@@ -48,6 +48,6 @@ func (op *Suicide) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.D
 }
 
 // Debug prints a debug message for the suicide operation.
-func (op *Suicide) Debug(ctx *dict.DictionaryContext) {
+func (op *Suicide) Debug(ctx *dictionary.Context) {
 	fmt.Print(ctx.DecodeContract(op.ContractIndex))
 }

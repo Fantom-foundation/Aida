@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/state"
-	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -324,7 +324,7 @@ func testOperationReadWrite(t *testing.T, op1 Operation, opRead func(file io.Rea
 	}
 }
 
-func testOperationDebug(t *testing.T, dict *dict.DictionaryContext, op Operation, args string) {
+func testOperationDebug(t *testing.T, dict *dictionary.Context, op Operation, args string) {
 	// divert stdout to a buffer
 	old := os.Stdout
 	r, w, _ := os.Pipe()

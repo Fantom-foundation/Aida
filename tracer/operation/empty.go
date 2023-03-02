@@ -8,7 +8,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/state"
 
-	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 )
 
 // Empty data structure
@@ -40,7 +40,7 @@ func (op *Empty) Write(f io.Writer) error {
 }
 
 // Execute the Empty operation.
-func (op *Empty) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
+func (op *Empty) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
 	contract := ctx.DecodeContract(op.ContractIndex)
 	start := time.Now()
 	db.Empty(contract)
@@ -48,6 +48,6 @@ func (op *Empty) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Dur
 }
 
 // Debug prints a debug message for the Empty operation.
-func (op *Empty) Debug(ctx *dict.DictionaryContext) {
+func (op *Empty) Debug(ctx *dictionary.Context) {
 	fmt.Print(ctx.DecodeContract(op.ContractIndex))
 }

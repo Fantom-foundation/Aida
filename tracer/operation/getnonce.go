@@ -8,7 +8,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/state"
 
-	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 )
 
 // GetNonce data structure
@@ -40,7 +40,7 @@ func (op *GetNonce) Write(f io.Writer) error {
 }
 
 // Execute the get-nonce operation.
-func (op *GetNonce) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
+func (op *GetNonce) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
 	contract := ctx.DecodeContract(op.ContractIndex)
 	start := time.Now()
 	db.GetNonce(contract)
@@ -48,6 +48,6 @@ func (op *GetNonce) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.
 }
 
 // Debug prints a debug message for the get-nonce operation.
-func (op *GetNonce) Debug(ctx *dict.DictionaryContext) {
+func (op *GetNonce) Debug(ctx *dictionary.Context) {
 	fmt.Print(ctx.DecodeContract(op.ContractIndex))
 }

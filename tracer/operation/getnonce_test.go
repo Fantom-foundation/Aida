@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initGetNonce(t *testing.T) (*dict.DictionaryContext, *GetNonce, common.Address) {
+func initGetNonce(t *testing.T) (*dictionary.Context, *GetNonce, common.Address) {
 	addr := getRandomAddress(t)
 	// create dictionary context
-	dict := dict.NewDictionaryContext()
+	dict := dictionary.NewContext()
 	cIdx := dict.EncodeContract(addr)
 
 	// create new operation

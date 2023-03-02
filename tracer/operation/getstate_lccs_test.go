@@ -6,16 +6,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initGetStateLccs(t *testing.T) (*dict.DictionaryContext, *GetStateLccs, common.Address, common.Hash, common.Hash) {
+func initGetStateLccs(t *testing.T) (*dictionary.Context, *GetStateLccs, common.Address, common.Hash, common.Hash) {
 	rand.Seed(time.Now().UnixNano())
 	pos := 0
 
 	// create dictionary context
-	dict := dict.NewDictionaryContext()
+	dict := dictionary.NewContext()
 
 	// create new operation
 	op := NewGetStateLccs(pos)

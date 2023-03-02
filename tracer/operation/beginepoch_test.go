@@ -6,15 +6,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 )
 
-func initBeginEpoch(t *testing.T) (*dict.DictionaryContext, *BeginEpoch) {
+func initBeginEpoch(t *testing.T) (*dictionary.Context, *BeginEpoch) {
 	rand.Seed(time.Now().UnixNano())
 	num := rand.Uint64()
 
 	// create dictionary context
-	dict := dict.NewDictionaryContext()
+	dict := dictionary.NewContext()
 
 	// create new operation
 	op := NewBeginEpoch(num)

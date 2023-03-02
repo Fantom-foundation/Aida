@@ -6,18 +6,18 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initSetCode(t *testing.T) (*dict.DictionaryContext, *SetCode, common.Address, []byte) {
+func initSetCode(t *testing.T) (*dictionary.Context, *SetCode, common.Address, []byte) {
 	rand.Seed(time.Now().UnixNano())
 	addr := getRandomAddress(t)
 	code := make([]byte, 100)
 	rand.Read(code)
 
 	// create dictionary context
-	dict := dict.NewDictionaryContext()
+	dict := dictionary.NewContext()
 	cIdx := dict.EncodeContract(addr)
 	bcIdx := dict.EncodeCode(code)
 

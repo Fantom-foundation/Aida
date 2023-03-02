@@ -4,7 +4,7 @@ import (
 	"math/big"
 
 	"github.com/Fantom-foundation/Aida/state"
-	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
@@ -15,13 +15,13 @@ import (
 // invoked StateDB operations.
 type ProxyRecorder struct {
 	db    state.StateDB            // state db
-	dctx  *dict.DictionaryContext  // dictionary context for decoding information
+	dctx  *dictionary.Context      // dictionary context for decoding information
 	ch    chan operation.Operation // channel used for streaming captured operation
 	debug bool
 }
 
 // NewProxyRecorder creates a new StateDB proxy.
-func NewProxyRecorder(db state.StateDB, dctx *dict.DictionaryContext, ch chan operation.Operation, debug bool) *ProxyRecorder {
+func NewProxyRecorder(db state.StateDB, dctx *dictionary.Context, ch chan operation.Operation, debug bool) *ProxyRecorder {
 	r := new(ProxyRecorder)
 	r.db = db
 	r.dctx = dctx
@@ -84,7 +84,7 @@ func (r *ProxyRecorder) SetNonce(addr common.Address, nonce uint64) {
 
 // GetCodeHash returns the hash of the EVM bytecode.
 func (r *ProxyRecorder) GetCodeHash(addr common.Address) common.Hash {
-	prevCIdx := r.dctx.PrevContractIndex
+	prevCIdx := r.dctx.PrevContractIdx()
 	cIdx := r.dctx.EncodeContract(addr)
 	if prevCIdx == cIdx {
 		r.send(operation.NewGetCodeHashLc())
@@ -138,7 +138,7 @@ func (r *ProxyRecorder) GetRefund() uint64 {
 
 // GetCommittedState retrieves a value that is already committed.
 func (r *ProxyRecorder) GetCommittedState(addr common.Address, key common.Hash) common.Hash {
-	prevCIdx := r.dctx.PrevContractIndex
+	prevCIdx := r.dctx.PrevContractIdx()
 	cIdx := r.dctx.EncodeContract(addr)
 	sIdx, sPos := r.dctx.EncodeStorage(key)
 	if prevCIdx == cIdx && sPos == 0 {
@@ -152,7 +152,7 @@ func (r *ProxyRecorder) GetCommittedState(addr common.Address, key common.Hash) 
 
 // GetState retrieves a value from the StateDB.
 func (r *ProxyRecorder) GetState(addr common.Address, key common.Hash) common.Hash {
-	prevCIdx := r.dctx.PrevContractIndex
+	prevCIdx := r.dctx.PrevContractIdx()
 	cIdx := r.dctx.EncodeContract(addr)
 	sIdx, sPos := r.dctx.EncodeStorage(key)
 	var op operation.Operation
@@ -174,14 +174,13 @@ func (r *ProxyRecorder) GetState(addr common.Address, key common.Hash) common.Ha
 
 // SetState sets a value in the StateDB.
 func (r *ProxyRecorder) SetState(addr common.Address, key common.Hash, value common.Hash) {
-	prevCIdx := r.dctx.PrevContractIndex
+	prevCIdx := r.dctx.PrevContractIdx()
 	cIdx := r.dctx.EncodeContract(addr)
 	sIdx, sPos := r.dctx.EncodeStorage(key)
-	vIdx := r.dctx.EncodeValue(value)
 	if cIdx == prevCIdx && sPos == 0 {
-		r.send(operation.NewSetStateLcls(vIdx))
+		r.send(operation.NewSetStateLcls(&value))
 	} else {
-		r.send(operation.NewSetState(cIdx, sIdx, vIdx))
+		r.send(operation.NewSetState(cIdx, sIdx, &value))
 	}
 	r.db.SetState(addr, key, value)
 }

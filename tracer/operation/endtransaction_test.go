@@ -3,12 +3,12 @@ package operation
 import (
 	"testing"
 
-	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 )
 
-func initEndTransaction(t *testing.T) (*dict.DictionaryContext, *EndTransaction) {
+func initEndTransaction(t *testing.T) (*dictionary.Context, *EndTransaction) {
 	// create dictionary context
-	dict := dict.NewDictionaryContext()
+	dict := dictionary.NewContext()
 
 	// create new operation
 	op := NewEndTransaction()

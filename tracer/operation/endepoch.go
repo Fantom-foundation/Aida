@@ -7,7 +7,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/state"
 
-	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 )
 
 // End-epoch operation data structure
@@ -36,12 +36,12 @@ func (op *EndEpoch) Write(f io.Writer) error {
 }
 
 // Execute the end-epoch operation.
-func (op *EndEpoch) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
+func (op *EndEpoch) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
 	start := time.Now()
 	db.EndEpoch()
 	return time.Since(start)
 }
 
 // Debug prints a debug message for the end-epoch operation.
-func (op *EndEpoch) Debug(ctx *dict.DictionaryContext) {
+func (op *EndEpoch) Debug(ctx *dictionary.Context) {
 }

@@ -10,7 +10,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/state"
 
-	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 )
 
 // Snapshot data structure
@@ -42,7 +42,7 @@ func (op *Snapshot) Write(f io.Writer) error {
 }
 
 // Execute the snapshot operation.
-func (op *Snapshot) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
+func (op *Snapshot) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
 	start := time.Now()
 	ID := db.Snapshot()
 	elapsed := time.Since(start)
@@ -54,6 +54,6 @@ func (op *Snapshot) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.
 }
 
 // Debug prints the details for the snapshot operation.
-func (op *Snapshot) Debug(*dict.DictionaryContext) {
+func (op *Snapshot) Debug(*dictionary.Context) {
 	fmt.Print(op.SnapshotID)
 }

@@ -13,7 +13,7 @@ import (
 	"github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/tracer"
-	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -26,6 +26,11 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/urfave/cli/v2"
+)
+
+const (
+	WriteBufferSize  = 1048576 // Size of write buffer for writing trace file.
+	WriteChannelSize = 1000    // Max. channel size for serialising StateDB operations.
 )
 
 // TraceRecordCommand data structure for the record app
@@ -52,7 +57,7 @@ last block of the inclusive range of blocks to trace transactions.`,
 }
 
 // traceRecordTask generates storage traces for a transaction.
-func traceRecordTask(block uint64, tx, chainID int, recording *substate.Substate, dCtx *dict.DictionaryContext, ch chan operation.Operation) error {
+func traceRecordTask(block uint64, tx, chainID int, recording *substate.Substate, dCtx *dictionary.Context, ch chan operation.Operation) error {
 
 	inputAlloc := recording.InputAlloc
 	inputEnv := recording.Env
@@ -176,7 +181,7 @@ func OperationWriter(ch chan operation.Operation) {
 	if err != nil {
 		log.Fatalf("Cannot open trace file. Error: %v", err)
 	}
-	bfile := bufio.NewWriterSize(file, 65536*16)
+	bfile := bufio.NewWriterSize(file, WriteBufferSize)
 	zfile, err := bzip2.NewWriter(bfile, &bzip2.WriterConfig{Level: 9})
 	if err != nil {
 		log.Fatalf("Cannot open bzip2 stream. Error: %v", err)
@@ -202,7 +207,7 @@ func OperationWriter(ch chan operation.Operation) {
 }
 
 // sendOperation sends an operation onto the channel.
-func sendOperation(dCtx *dict.DictionaryContext, ch chan operation.Operation, op operation.Operation) {
+func sendOperation(dCtx *dictionary.Context, ch chan operation.Operation, op operation.Operation) {
 	ch <- op
 	if utils.TraceDebug {
 		operation.Debug(dCtx, op)
@@ -239,16 +244,16 @@ func traceRecordAction(ctx *cli.Context) error {
 	enableProgress := !ctx.Bool(utils.DisableProgressFlag.Name)
 
 	// create dictionary and index contexts
-	dCtx := dict.NewDictionaryContext()
+	dCtx := dictionary.NewContext()
 
 	// spawn writer
-	opChannel := make(chan operation.Operation, 100000)
+	opChannel := make(chan operation.Operation, WriteChannelSize)
 	go OperationWriter(opChannel)
 
 	// process arguments
 	chainID := ctx.Int(utils.ChainIDFlag.Name)
 	tracer.TraceDir = ctx.String(utils.TraceDirectoryFlag.Name) + "/"
-	dict.DictionaryContextDir = ctx.String(utils.TraceDirectoryFlag.Name) + "/"
+	dictionary.ContextDir = ctx.String(utils.TraceDirectoryFlag.Name) + "/"
 	if ctx.Bool(utils.TraceDebugFlag.Name) {
 		utils.TraceDebug = true
 	}

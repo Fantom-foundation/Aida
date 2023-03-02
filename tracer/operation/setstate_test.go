@@ -4,23 +4,22 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initSetState(t *testing.T) (*dict.DictionaryContext, *SetState, common.Address, common.Hash, common.Hash) {
+func initSetState(t *testing.T) (*dictionary.Context, *SetState, common.Address, common.Hash, common.Hash) {
 	addr := getRandomAddress(t)
 	storage := getRandomAddress(t).Hash()
 	value := getRandomAddress(t).Hash()
 
 	// create dictionary context
-	dict := dict.NewDictionaryContext()
+	dict := dictionary.NewContext()
 	cIdx := dict.EncodeContract(addr)
 	sIdx, _ := dict.EncodeStorage(storage)
-	vIdx := dict.EncodeValue(value)
 
 	// create new operation
-	op := NewSetState(cIdx, sIdx, vIdx)
+	op := NewSetState(cIdx, sIdx, &value)
 	if op == nil {
 		t.Fatalf("failed to create operation")
 	}

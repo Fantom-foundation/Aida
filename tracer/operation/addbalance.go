@@ -9,8 +9,7 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
-
-	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 )
 
 // AddBalance data structure
@@ -50,7 +49,7 @@ func (op *AddBalance) Write(f io.Writer) error {
 }
 
 // Execute executes the add-balance operation.
-func (op *AddBalance) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
+func (op *AddBalance) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
 	contract := ctx.DecodeContract(op.ContractIndex)
 	// construct bit.Int from a byte array
 	amount := new(big.Int).SetBytes(op.Amount[:])
@@ -60,6 +59,6 @@ func (op *AddBalance) Execute(db state.StateDB, ctx *dict.DictionaryContext) tim
 }
 
 // Debug prints a debug message for the add-balance operation.
-func (op *AddBalance) Debug(ctx *dict.DictionaryContext) {
+func (op *AddBalance) Debug(ctx *dictionary.Context) {
 	fmt.Print(ctx.DecodeContract(op.ContractIndex), new(big.Int).SetBytes(op.Amount[:]))
 }

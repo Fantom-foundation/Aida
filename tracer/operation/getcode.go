@@ -8,7 +8,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/state"
 
-	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 )
 
 // GetCode data structure
@@ -40,7 +40,7 @@ func (op *GetCode) Write(f io.Writer) error {
 }
 
 // Execute the get-code operation.
-func (op *GetCode) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.Duration {
+func (op *GetCode) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
 	contract := ctx.DecodeContract(op.ContractIndex)
 	start := time.Now()
 	db.GetCode(contract)
@@ -48,6 +48,6 @@ func (op *GetCode) Execute(db state.StateDB, ctx *dict.DictionaryContext) time.D
 }
 
 // Debug prints a debug message for the get-code operation.
-func (op *GetCode) Debug(ctx *dict.DictionaryContext) {
+func (op *GetCode) Debug(ctx *dictionary.Context) {
 	fmt.Print(ctx.DecodeContract(op.ContractIndex))
 }

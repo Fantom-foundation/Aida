@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initGetStateLcls(t *testing.T) (*dict.DictionaryContext, *GetStateLcls, common.Address, common.Hash) {
+func initGetStateLcls(t *testing.T) (*dictionary.Context, *GetStateLcls, common.Address, common.Hash) {
 	// create dictionary context
-	dict := dict.NewDictionaryContext()
+	dict := dictionary.NewContext()
 
 	// create new operation
 	op := NewGetStateLcls()

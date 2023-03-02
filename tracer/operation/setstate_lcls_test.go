@@ -4,19 +4,15 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/Fantom-foundation/Aida/tracer/dict"
+	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initSetStateLcls(t *testing.T) (*dict.DictionaryContext, *SetStateLcls, common.Address, common.Hash, common.Hash) {
+func initSetStateLcls(t *testing.T) (*dictionary.Context, *SetStateLcls, common.Address, common.Hash, common.Hash) {
 	value := getRandomAddress(t).Hash()
 
-	// create dictionary context
-	dict := dict.NewDictionaryContext()
-	vIdx := dict.EncodeValue(value)
-
 	// create new operation
-	op := NewSetStateLcls(vIdx)
+	op := NewSetStateLcls(&value)
 	if op == nil {
 		t.Fatalf("failed to create operation")
 	}
@@ -24,6 +20,9 @@ func initSetStateLcls(t *testing.T) (*dict.DictionaryContext, *SetStateLcls, com
 	if op.GetId() != SetStateLclsID {
 		t.Fatalf("wrong ID returned")
 	}
+
+	// create dictionary context
+	dict := dictionary.NewContext()
 
 	addr := getRandomAddress(t)
 	dict.EncodeContract(addr)
