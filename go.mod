@@ -97,7 +97,7 @@ require (
 	github.com/stretchr/testify v1.8.2 // indirect
 	github.com/tklauser/go-sysconf v0.3.10 // indirect
 	github.com/tklauser/numcpus v0.5.0 // indirect
-	github.com/torquem-ch/mdbx-go v0.27.8 // indirect
+	github.com/torquem-ch/mdbx-go v0.23.2 // indirect
 	github.com/tyler-smith/go-bip39 v1.0.2 // indirect
 	github.com/uber/jaeger-client-go v2.20.1+incompatible // indirect
 	github.com/uber/jaeger-lib v2.2.0+incompatible // indirect
