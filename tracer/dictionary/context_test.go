@@ -66,33 +66,33 @@ func TestContextDecodeContract(t *testing.T) {
 	}
 }
 
-// TestContextLastContractAddress fetches the last used addresses
+// TestContextPrevContract fetches the last used addresses
 // after encodeing and decoding, then compares whether they match the actual
 // last used contract addresses.
-func TestContextLastContractAddress(t *testing.T) {
+func TestContextPrevContract(t *testing.T) {
 	ctx := NewContext()
 	encodedAddr1 := common.HexToAddress("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
 	idx1 := ctx.EncodeContract(encodedAddr1)
-	lastAddr := ctx.LastContractAddress()
+	lastAddr := ctx.PrevContract()
 	if encodedAddr1 != lastAddr {
 		t.Fatalf("Failed to get last contract address (1) after encoding")
 	}
 
 	encodedAddr2 := common.HexToAddress("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F274")
 	idx2 := ctx.EncodeContract(encodedAddr2)
-	lastAddr = ctx.LastContractAddress()
+	lastAddr = ctx.PrevContract()
 	if encodedAddr2 != lastAddr {
 		t.Fatalf("Failed to get last contract address (2) after encoding")
 	}
 
 	decodedAddr1 := ctx.DecodeContract(idx1)
-	lastAddr = ctx.LastContractAddress()
+	lastAddr = ctx.PrevContract()
 	if decodedAddr1 != lastAddr {
 		t.Fatalf("Failed to get last contract address (1) after decoding")
 	}
 
 	decodedAddr2 := ctx.DecodeContract(idx2)
-	lastAddr = ctx.LastContractAddress()
+	lastAddr = ctx.PrevContract()
 	if decodedAddr2 != lastAddr {
 		t.Fatalf("Failed to get last contract address (2) after decoding")
 	}
@@ -122,21 +122,21 @@ func TestContextDecodeStorage(t *testing.T) {
 	}
 }
 
-// TestContextReadStorage reads storage key from index-cache after
-// encoding/decoding new storage key. ReadStorage doesn't update top index.
-func TestContextReadStorage(t *testing.T) {
+// TestContextReadStorageCache reads storage key from index-cache after
+// encoding/decoding new storage key. ReadStorageCache doesn't update top index.
+func TestContextReadStorageCache(t *testing.T) {
 	ctx := NewContext()
 	encodedKey1 := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
 	idx1, _ := ctx.EncodeStorage(encodedKey1)
 	encodedKey2 := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F274")
 	idx2, _ := ctx.EncodeStorage(encodedKey2)
 
-	cachedKey := ctx.ReadStorage(1)
+	cachedKey := ctx.ReadStorageCache(1)
 	if encodedKey1 != cachedKey {
 		t.Fatalf("Failed to read storage key (1) from index-cache")
 	}
 
-	cachedKey = ctx.ReadStorage(0)
+	cachedKey = ctx.ReadStorageCache(0)
 	if encodedKey2 != cachedKey {
 		t.Fatalf("Failed to read storage key (2) from index-cache")
 	}
@@ -144,32 +144,32 @@ func TestContextReadStorage(t *testing.T) {
 	decodedKey1 := ctx.DecodeStorage(idx1)
 	decodedKey2 := ctx.DecodeStorage(idx2)
 
-	cachedKey = ctx.ReadStorage(1)
+	cachedKey = ctx.ReadStorageCache(1)
 	if decodedKey1 != cachedKey {
 		t.Fatalf("Failed to read storage key (1) from index-cache")
 	}
 
-	cachedKey = ctx.ReadStorage(0)
+	cachedKey = ctx.ReadStorageCache(0)
 	if decodedKey2 != cachedKey {
 		t.Fatalf("Failed to read storage key (2) from index-cache")
 	}
 }
 
 // TestContextLookup reads storage key from index-cache after
-// encoding/decoding new storage key. LookupStorage updates top index.
-func TestContextLookupStorage(t *testing.T) {
+// encoding/decoding new storage key. DecodeStorageCache updates top index.
+func TestContextDecodeStorageCache(t *testing.T) {
 	ctx := NewContext()
 	encodedKey1 := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
 	idx1, _ := ctx.EncodeStorage(encodedKey1)
 	encodedKey2 := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F274")
 	idx2, _ := ctx.EncodeStorage(encodedKey2)
 
-	cachedKey := ctx.LookupStorage(1)
+	cachedKey := ctx.DecodeStorageCache(1)
 	if encodedKey1 != cachedKey {
 		t.Fatalf("Failed to lookup storage key (1) from index-cache")
 	}
 
-	cachedKey = ctx.LookupStorage(1)
+	cachedKey = ctx.DecodeStorageCache(1)
 	if encodedKey2 != cachedKey {
 		t.Fatalf("Failed to lookup storage key (2) from index-cache")
 	}
@@ -177,12 +177,12 @@ func TestContextLookupStorage(t *testing.T) {
 	decodedKey1 := ctx.DecodeStorage(idx1)
 	decodedKey2 := ctx.DecodeStorage(idx2)
 
-	cachedKey = ctx.LookupStorage(1)
+	cachedKey = ctx.DecodeStorageCache(1)
 	if decodedKey1 != cachedKey {
 		t.Fatalf("Failed to lookup storage key (1) from index-cache")
 	}
 
-	cachedKey = ctx.LookupStorage(1)
+	cachedKey = ctx.DecodeStorageCache(1)
 	if decodedKey2 != cachedKey {
 		t.Fatalf("Failed to lookup storage key (2) from index-cache")
 	}

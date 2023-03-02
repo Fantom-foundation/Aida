@@ -46,8 +46,8 @@ func (op *SetStateLcls) Write(f io.Writer) error {
 
 // Execute the set-state-lcls operation.
 func (op *SetStateLcls) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
-	contract := ctx.LastContractAddress()
-	storage := ctx.LookupStorage(0)
+	contract := ctx.PrevContract()
+	storage := ctx.DecodeStorageCache(0)
 	start := time.Now()
 	db.SetState(contract, storage, op.Value)
 	return time.Since(start)
@@ -55,8 +55,8 @@ func (op *SetStateLcls) Execute(db state.StateDB, ctx *dictionary.Context) time.
 
 // Debug prints a debug message for the set-state-lcls operation.
 func (op *SetStateLcls) Debug(ctx *dictionary.Context) {
-	contract := ctx.LastContractAddress()
-	storage := ctx.ReadStorage(0)
+	contract := ctx.PrevContract()
+	storage := ctx.ReadStorageCache(0)
 	value := op.Value
 	fmt.Print(contract, storage, value)
 }

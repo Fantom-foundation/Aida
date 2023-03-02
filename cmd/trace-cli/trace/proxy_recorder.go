@@ -84,7 +84,7 @@ func (r *ProxyRecorder) SetNonce(addr common.Address, nonce uint64) {
 
 // GetCodeHash returns the hash of the EVM bytecode.
 func (r *ProxyRecorder) GetCodeHash(addr common.Address) common.Hash {
-	prevCIdx := r.dctx.PrevContractIndex
+	prevCIdx := r.dctx.PrevContractIdx()
 	cIdx := r.dctx.EncodeContract(addr)
 	if prevCIdx == cIdx {
 		r.send(operation.NewGetCodeHashLc())
@@ -138,7 +138,7 @@ func (r *ProxyRecorder) GetRefund() uint64 {
 
 // GetCommittedState retrieves a value that is already committed.
 func (r *ProxyRecorder) GetCommittedState(addr common.Address, key common.Hash) common.Hash {
-	prevCIdx := r.dctx.PrevContractIndex
+	prevCIdx := r.dctx.PrevContractIdx()
 	cIdx := r.dctx.EncodeContract(addr)
 	sIdx, sPos := r.dctx.EncodeStorage(key)
 	if prevCIdx == cIdx && sPos == 0 {
@@ -152,7 +152,7 @@ func (r *ProxyRecorder) GetCommittedState(addr common.Address, key common.Hash) 
 
 // GetState retrieves a value from the StateDB.
 func (r *ProxyRecorder) GetState(addr common.Address, key common.Hash) common.Hash {
-	prevCIdx := r.dctx.PrevContractIndex
+	prevCIdx := r.dctx.PrevContractIdx()
 	cIdx := r.dctx.EncodeContract(addr)
 	sIdx, sPos := r.dctx.EncodeStorage(key)
 	var op operation.Operation
@@ -174,7 +174,7 @@ func (r *ProxyRecorder) GetState(addr common.Address, key common.Hash) common.Ha
 
 // SetState sets a value in the StateDB.
 func (r *ProxyRecorder) SetState(addr common.Address, key common.Hash, value common.Hash) {
-	prevCIdx := r.dctx.PrevContractIndex
+	prevCIdx := r.dctx.PrevContractIdx()
 	cIdx := r.dctx.EncodeContract(addr)
 	sIdx, sPos := r.dctx.EncodeStorage(key)
 	if cIdx == prevCIdx && sPos == 0 {

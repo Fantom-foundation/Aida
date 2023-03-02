@@ -13,7 +13,7 @@ func initGetStateLc(t *testing.T) (*dictionary.Context, *GetStateLc, common.Addr
 
 	// create dictionary context
 	dict := dictionary.NewContext()
-	sIdx, _ := dictionary.EncodeStorage(storage)
+	sIdx, _ := dict.EncodeStorage(storage)
 
 	// create new operation
 	op := NewGetStateLc(sIdx)
@@ -26,7 +26,7 @@ func initGetStateLc(t *testing.T) (*dictionary.Context, *GetStateLc, common.Addr
 	}
 
 	addr := getRandomAddress(t)
-	dictionary.EncodeContract(addr)
+	dict.EncodeContract(addr)
 
 	return dict, op, addr, storage
 }

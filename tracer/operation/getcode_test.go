@@ -12,7 +12,7 @@ func initGetCode(t *testing.T) (*dictionary.Context, *GetCode, common.Address) {
 	addr := getRandomAddress(t)
 	// create dictionary context
 	dict := dictionary.NewContext()
-	cIdx := dictionary.EncodeContract(addr)
+	cIdx := dict.EncodeContract(addr)
 
 	// create new operation
 	op := NewGetCode(cIdx)

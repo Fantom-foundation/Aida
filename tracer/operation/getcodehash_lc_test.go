@@ -13,7 +13,7 @@ func initGetCodeHashLc(t *testing.T) (*dictionary.Context, *GetCodeHashLc, commo
 	dict := dictionary.NewContext()
 
 	addr := getRandomAddress(t)
-	dictionary.EncodeContract(addr)
+	dict.EncodeContract(addr)
 
 	// create new operation
 	op := NewGetCodeHashLc()

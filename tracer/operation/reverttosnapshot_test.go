@@ -32,7 +32,7 @@ func initRevertToSnapshot(t *testing.T) (*dictionary.Context, *Snapshot, *Revert
 		t.Fatalf("wrong ID returned")
 	}
 
-	dictionary.AddSnapshot(recordedID, replayedID)
+	dict.AddSnapshot(recordedID, replayedID)
 
 	return dict, op1, op2, recordedID, replayedID
 }

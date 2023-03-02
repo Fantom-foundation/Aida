@@ -25,10 +25,10 @@ func initSetStateLcls(t *testing.T) (*dictionary.Context, *SetStateLcls, common.
 	dict := dictionary.NewContext()
 
 	addr := getRandomAddress(t)
-	dictionary.EncodeContract(addr)
+	dict.EncodeContract(addr)
 
 	storage := getRandomAddress(t).Hash()
-	dictionary.EncodeStorage(storage)
+	dict.EncodeStorage(storage)
 
 	return dict, op, addr, storage, value
 }

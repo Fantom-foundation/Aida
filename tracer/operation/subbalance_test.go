@@ -17,7 +17,7 @@ func initSubBalance(t *testing.T) (*dictionary.Context, *SubBalance, common.Addr
 	value := big.NewInt(rand.Int63n(100000))
 	// create dictionary context
 	dict := dictionary.NewContext()
-	cIdx := dictionary.EncodeContract(addr)
+	cIdx := dict.EncodeContract(addr)
 
 	// create new operation
 	op := NewSubBalance(cIdx, value)

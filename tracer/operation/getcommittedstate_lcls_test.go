@@ -23,10 +23,10 @@ func initGetCommittedStateLcls(t *testing.T) (*dictionary.Context, *GetCommitted
 	}
 
 	addr := getRandomAddress(t)
-	dictionary.EncodeContract(addr)
+	dict.EncodeContract(addr)
 
 	storage := getRandomAddress(t).Hash()
-	dictionary.EncodeStorage(storage)
+	dict.EncodeStorage(storage)
 
 	return dict, op, addr, storage
 }

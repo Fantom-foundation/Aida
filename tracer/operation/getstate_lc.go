@@ -46,7 +46,7 @@ func (op *GetStateLc) Write(f io.Writer) error {
 
 // Execute the get-state-lc operation.
 func (op *GetStateLc) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
-	contract := ctx.LastContractAddress()
+	contract := ctx.PrevContract()
 	storage := ctx.DecodeStorage(op.StorageIndex)
 	start := time.Now()
 	db.GetState(contract, storage)
@@ -55,7 +55,7 @@ func (op *GetStateLc) Execute(db state.StateDB, ctx *dictionary.Context) time.Du
 
 // Debug prints a debug message for the get-state-lc operation.
 func (op *GetStateLc) Debug(ctx *dictionary.Context) {
-	contract := ctx.LastContractAddress()
+	contract := ctx.PrevContract()
 	storage := ctx.DecodeStorage(op.StorageIndex)
 	fmt.Print(contract, storage)
 }

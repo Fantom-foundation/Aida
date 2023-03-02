@@ -14,8 +14,8 @@ func initGetState(t *testing.T) (*dictionary.Context, *GetState, common.Address,
 
 	// create dictionary context
 	dict := dictionary.NewContext()
-	cIdx := dictionary.EncodeContract(addr)
-	sIdx, _ := dictionary.EncodeStorage(storage)
+	cIdx := dict.EncodeContract(addr)
+	sIdx, _ := dict.EncodeStorage(storage)
 
 	// create new operation
 	op := NewGetState(cIdx, sIdx)

@@ -12,7 +12,7 @@ func initExist(t *testing.T) (*dictionary.Context, *Exist, common.Address) {
 	addr := getRandomAddress(t)
 	// create dictionary context
 	dict := dictionary.NewContext()
-	cIdx := dictionary.EncodeContract(addr)
+	cIdx := dict.EncodeContract(addr)
 
 	// create new operation
 	op := NewExist(cIdx)

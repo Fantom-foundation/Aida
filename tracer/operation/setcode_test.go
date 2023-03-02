@@ -18,8 +18,8 @@ func initSetCode(t *testing.T) (*dictionary.Context, *SetCode, common.Address, [
 
 	// create dictionary context
 	dict := dictionary.NewContext()
-	cIdx := dictionary.EncodeContract(addr)
-	bcIdx := dictionary.EncodeCode(code)
+	cIdx := dict.EncodeContract(addr)
+	bcIdx := dict.EncodeCode(code)
 
 	// create new operation
 	op := NewSetCode(cIdx, bcIdx)

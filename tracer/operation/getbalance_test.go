@@ -12,7 +12,7 @@ func initGetBalance(t *testing.T) (*dictionary.Context, *GetBalance, common.Addr
 	addr := getRandomAddress(t)
 	// create dictionary context
 	dict := dictionary.NewContext()
-	cIdx := dictionary.EncodeContract(addr)
+	cIdx := dict.EncodeContract(addr)
 
 	// create new operation
 	op := NewGetBalance(cIdx)

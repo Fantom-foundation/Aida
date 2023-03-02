@@ -17,7 +17,7 @@ func initSetNonce(t *testing.T) (*dictionary.Context, *SetNonce, common.Address,
 
 	// create dictionary context
 	dict := dictionary.NewContext()
-	cIdx := dictionary.EncodeContract(addr)
+	cIdx := dict.EncodeContract(addr)
 
 	// create new operation
 	op := NewSetNonce(cIdx, nonce)

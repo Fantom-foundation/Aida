@@ -28,10 +28,10 @@ func initGetStateLccs(t *testing.T) (*dictionary.Context, *GetStateLccs, common.
 	}
 
 	addr := getRandomAddress(t)
-	dictionary.EncodeContract(addr)
+	dict.EncodeContract(addr)
 
 	storage := getRandomAddress(t).Hash()
-	dictionary.EncodeStorage(storage)
+	dict.EncodeStorage(storage)
 
 	storage2 := getRandomAddress(t).Hash()
 
@@ -59,7 +59,7 @@ func TestGetStateLccsExecute(t *testing.T) {
 	mock := NewMockStateDB()
 	op.Execute(mock, dict)
 
-	dictionary.EncodeStorage(storage2)
+	dict.EncodeStorage(storage2)
 
 	op.Execute(mock, dict)
 
