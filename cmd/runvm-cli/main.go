@@ -6,7 +6,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/cmd/runvm-cli/runvm"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/ethereum/go-ethereum/substate"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -23,6 +23,7 @@ var RunVMApp = cli.App{
 		&substate.SubstateDirFlag,
 		&utils.ArchiveModeFlag,
 		&utils.ArchiveVariantFlag,
+		&utils.CarmenSchemaFlag,
 		&utils.ChainIDFlag,
 		&utils.ContinueOnFailureFlag,
 		&utils.CpuProfileFlag,

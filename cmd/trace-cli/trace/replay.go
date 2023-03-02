@@ -12,7 +12,7 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/ethereum/go-ethereum/substate"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -23,6 +23,7 @@ var TraceReplayCommand = cli.Command{
 	Usage:     "executes storage trace",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
+		&utils.CarmenSchemaFlag,
 		&utils.ChainIDFlag,
 		&utils.CpuProfileFlag,
 		&utils.DeletedAccountDirFlag,

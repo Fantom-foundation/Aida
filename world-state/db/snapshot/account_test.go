@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/substate"
 )
 
 // mockIteratorSize represents the number of accounts created in the iterator

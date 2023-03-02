@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/ethereum/go-ethereum/substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -40,6 +40,11 @@ var (
 	ArchiveVariantFlag = cli.StringFlag{
 		Name:  "archive-variant",
 		Usage: "set the archive implementation variant for the selected DB implementation, ignored if not running in archive mode",
+	}
+	CarmenSchemaFlag = cli.IntFlag{
+		Name:  "carmen-schema",
+		Usage: "select the DB schema used by Carmen's current state DB",
+		Value: 0,
 	}
 	ChainIDFlag = cli.IntFlag{
 		Name:  "chainid",
@@ -203,6 +208,7 @@ type Config struct {
 	Last  uint64 // last block
 
 	Debug              bool   // enable trace debug flag
+	CarmenSchema       int    // the current DB schema ID to use in Carmen
 	ContinueOnFailure  bool   // continue validation when an error detected
 	ChainID            int    // Blockchain ID (mainnet: 250/testnet: 4002)
 	DbImpl             string // storage implementation
@@ -303,9 +309,10 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	cfg := &Config{
 		ArchiveMode:        ctx.Bool(ArchiveModeFlag.Name),
 		ArchiveVariant:     ctx.String(ArchiveVariantFlag.Name),
-		Debug:              ctx.Bool(TraceDebugFlag.Name),
+		CarmenSchema:       ctx.Int(CarmenSchemaFlag.Name),
 		ChainID:            ctx.Int(ChainIDFlag.Name),
 		ContinueOnFailure:  ctx.Bool(ContinueOnFailureFlag.Name),
+		Debug:              ctx.Bool(TraceDebugFlag.Name),
 		EnableProgress:     !ctx.Bool(DisableProgressFlag.Name),
 		EpochLength:        ctx.Uint64(EpochLengthFlag.Name),
 		First:              first,
@@ -347,11 +354,19 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		}
 		log.Printf("\tChain id: %v (record & run-vm only)\n", cfg.ChainID)
 		log.Printf("\tEpoch length: %v\n", cfg.EpochLength)
+
+		logDbMode := func(prefix, impl, variant string) {
+			if cfg.DbImpl == "carmen" {
+				log.Printf("\t%s: %v, DB variant: %v, DB schema: %d\n", prefix, impl, variant, cfg.CarmenSchema)
+			} else {
+				log.Printf("\t%s: %v, DB variant: %v\n", prefix, impl, variant)
+			}
+		}
 		if cfg.ShadowImpl == "" {
-			log.Printf("\tStorage system: %v, DB variant: %v\n", cfg.DbImpl, cfg.DbVariant)
+			logDbMode("Storage system", cfg.DbImpl, cfg.DbVariant)
 		} else {
-			log.Printf("\tPrime storage system: %v, DB variant: %v\n", cfg.DbImpl, cfg.DbVariant)
-			log.Printf("\tShadow storage system: %v, DB variant: %v\n", cfg.ShadowImpl, cfg.ShadowVariant)
+			logDbMode("Prime storage system", cfg.DbImpl, cfg.DbVariant)
+			logDbMode("Shadow storage system", cfg.ShadowImpl, cfg.ShadowVariant)
 		}
 		log.Printf("\tSource storage directory (empty if new): %v\n", cfg.StateDbSrcDir)
 		log.Printf("\tWorking storage directory: %v\n", cfg.StateDbTempDir)

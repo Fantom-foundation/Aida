@@ -22,6 +22,7 @@ type StateDbInfo struct {
 	Variant        string      `json:"dbVariant"`      // type of db variant
 	ArchiveMode    bool        `json:"archiveMode"`    // archive mode
 	ArchiveVariant string      `json:"archiveVariant"` // archive variant
+	Schema         int         `json:"schema"`         // DB schema version used
 	Block          uint64      `json:"block"`          // last block height
 	RootHash       common.Hash `json:"rootHash"`       // rooth hash of the last block height
 	GitCommit      string      `json:"gitCommit"`      // Aida git version when creating stateDB
@@ -97,6 +98,7 @@ func WriteStateDbInfo(directory string, cfg *Config, block uint64, root common.H
 		Variant:        cfg.DbVariant,
 		ArchiveMode:    cfg.ArchiveMode,
 		ArchiveVariant: cfg.ArchiveVariant,
+		Schema:         cfg.CarmenSchema,
 		Block:          block,
 		RootHash:       root,
 		GitCommit:      GitCommit,

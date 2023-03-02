@@ -7,12 +7,12 @@ import (
 
 	cc "github.com/Fantom-foundation/Carmen/go/common"
 	carmen "github.com/Fantom-foundation/Carmen/go/state"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/substate"
 )
 
-func MakeCarmenStateDB(directory, variant, archive string) (StateDB, error) {
+func MakeCarmenStateDB(directory, variant, archive string, schema int) (StateDB, error) {
 	if variant == "" {
 		variant = "go-memory"
 	}
@@ -36,6 +36,7 @@ func MakeCarmenStateDB(directory, variant, archive string) (StateDB, error) {
 	}
 
 	params := carmen.Parameters{
+		Schema:    carmen.StateSchema(schema),
 		Directory: directory,
 		Archive:   archiveType,
 	}
@@ -73,11 +74,6 @@ type carmenStateDB struct {
 	epochNumber uint64
 	blockNumber uint64
 }
-
-var getCodeCalled bool
-var getCodeSizeCalled bool
-var getCodeHashCalled bool
-var setCodeCalled bool
 
 func (s *carmenStateDB) BeginBlockApply() error {
 	return nil
