@@ -195,12 +195,12 @@ func (a *RandomAccess) lastQ() int64 {
 
 // recentQ returns some element in the queue but not the previous one.
 func (a *RandomAccess) recentQ() int64 {
-	if i := a.getRandQPos(); i != -1 {
-		if i == 0 {
-			panic("getRandPos() returned previous element.")
-		}
-		return a.queue[i]
-	} else {
+	i := a.getRandQPos()
+	if i == -1 {
 		return -1
+	else if i == 0 {
+		panic("getRandPos() returned previous element.")
+	} else {
+		return a.queue[i]
 	}
 }
