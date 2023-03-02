@@ -6,9 +6,9 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 )
 
-func initEndEpoch(t *testing.T) (*dictionary.DictionaryContext, *EndEpoch) {
+func initEndEpoch(t *testing.T) (*dictionary.Context, *EndEpoch) {
 	// create dictionary context
-	dict := dictionary.NewDictionaryContext()
+	dict := dictionary.NewContext()
 
 	// create new operation
 	op := NewEndEpoch()

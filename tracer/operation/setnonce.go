@@ -41,7 +41,7 @@ func (op *SetNonce) Write(f io.Writer) error {
 }
 
 // Execute the set-nonce operation.
-func (op *SetNonce) Execute(db state.StateDB, ctx *dictionary.DictionaryContext) time.Duration {
+func (op *SetNonce) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
 	contract := ctx.DecodeContract(op.ContractIndex)
 	start := time.Now()
 	db.SetNonce(contract, op.Nonce)
@@ -49,6 +49,6 @@ func (op *SetNonce) Execute(db state.StateDB, ctx *dictionary.DictionaryContext)
 }
 
 // Debug prints a debug message for the set-nonce operation.
-func (op *SetNonce) Debug(ctx *dictionary.DictionaryContext) {
+func (op *SetNonce) Debug(ctx *dictionary.Context) {
 	fmt.Print(ctx.DecodeContract(op.ContractIndex), op.Nonce)
 }

@@ -36,7 +36,7 @@ func (op *EndTransaction) Write(f io.Writer) error {
 }
 
 // Execute the end-transaction operation.
-func (op *EndTransaction) Execute(db state.StateDB, ctx *dictionary.DictionaryContext) time.Duration {
+func (op *EndTransaction) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
 	ctx.InitSnapshot()
 	start := time.Now()
 	db.EndTransaction()
@@ -44,5 +44,5 @@ func (op *EndTransaction) Execute(db state.StateDB, ctx *dictionary.DictionaryCo
 }
 
 // Debug prints a debug message for the end-transaction operation.
-func (op *EndTransaction) Debug(*dictionary.DictionaryContext) {
+func (op *EndTransaction) Debug(*dictionary.Context) {
 }

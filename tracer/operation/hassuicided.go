@@ -39,7 +39,7 @@ func (op *HasSuicided) Write(f io.Writer) error {
 }
 
 // Execute the HasSuicided operation.
-func (op *HasSuicided) Execute(db state.StateDB, ctx *dictionary.DictionaryContext) time.Duration {
+func (op *HasSuicided) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
 	contract := ctx.DecodeContract(op.ContractIndex)
 	start := time.Now()
 	db.HasSuicided(contract)
@@ -47,6 +47,6 @@ func (op *HasSuicided) Execute(db state.StateDB, ctx *dictionary.DictionaryConte
 }
 
 // Debug prints a debug message for the HasSuicided operation.
-func (op *HasSuicided) Debug(ctx *dictionary.DictionaryContext) {
+func (op *HasSuicided) Debug(ctx *dictionary.Context) {
 	fmt.Print(ctx.DecodeContract(op.ContractIndex))
 }

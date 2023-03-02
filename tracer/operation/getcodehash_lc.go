@@ -40,7 +40,7 @@ func (op *GetCodeHashLc) Write(f io.Writer) error {
 }
 
 // Execute the get-code-hash-lc operation.
-func (op *GetCodeHashLc) Execute(db state.StateDB, ctx *dictionary.DictionaryContext) time.Duration {
+func (op *GetCodeHashLc) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
 	contract := ctx.LastContractAddress()
 	start := time.Now()
 	db.GetCodeHash(contract)
@@ -48,7 +48,7 @@ func (op *GetCodeHashLc) Execute(db state.StateDB, ctx *dictionary.DictionaryCon
 }
 
 // Debug prints a debug message for the get-code-hash-lc operation.
-func (op *GetCodeHashLc) Debug(ctx *dictionary.DictionaryContext) {
+func (op *GetCodeHashLc) Debug(ctx *dictionary.Context) {
 	contract := ctx.LastContractAddress()
 	fmt.Print(contract)
 }

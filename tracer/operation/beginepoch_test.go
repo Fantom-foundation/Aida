@@ -9,12 +9,12 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 )
 
-func initBeginEpoch(t *testing.T) (*dictionary.DictionaryContext, *BeginEpoch) {
+func initBeginEpoch(t *testing.T) (*dictionary.Context, *BeginEpoch) {
 	rand.Seed(time.Now().UnixNano())
 	num := rand.Uint64()
 
 	// create dictionary context
-	dict := dictionary.NewDictionaryContext()
+	dict := dictionary.NewContext()
 
 	// create new operation
 	op := NewBeginEpoch(num)

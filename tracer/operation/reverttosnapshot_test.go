@@ -7,9 +7,9 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 )
 
-func initRevertToSnapshot(t *testing.T) (*dictionary.DictionaryContext, *Snapshot, *RevertToSnapshot, int32, int32) {
+func initRevertToSnapshot(t *testing.T) (*dictionary.Context, *Snapshot, *RevertToSnapshot, int32, int32) {
 	// create dictionary context
-	dict := dictionary.NewDictionaryContext()
+	dict := dictionary.NewContext()
 
 	var recordedID int32 = 1
 	var replayedID int32 = 2

@@ -39,13 +39,13 @@ func (op *BeginTransaction) Write(f io.Writer) error {
 }
 
 // Execute the begin-transaction operation.
-func (op *BeginTransaction) Execute(db state.StateDB, ctx *dictionary.DictionaryContext) time.Duration {
+func (op *BeginTransaction) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
 	start := time.Now()
 	db.BeginTransaction(op.TransactionNumber)
 	return time.Since(start)
 }
 
 // Debug prints a debug message for the begin-transaction operation.
-func (op *BeginTransaction) Debug(*dictionary.DictionaryContext) {
+func (op *BeginTransaction) Debug(*dictionary.Context) {
 	fmt.Print(op.TransactionNumber)
 }

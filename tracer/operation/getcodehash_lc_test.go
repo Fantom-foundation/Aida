@@ -8,9 +8,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initGetCodeHashLc(t *testing.T) (*dictionary.DictionaryContext, *GetCodeHashLc, common.Address) {
+func initGetCodeHashLc(t *testing.T) (*dictionary.Context, *GetCodeHashLc, common.Address) {
 	// create dictionary context
-	dict := dictionary.NewDictionaryContext()
+	dict := dictionary.NewContext()
 
 	addr := getRandomAddress(t)
 	dictionary.EncodeContract(addr)

@@ -40,7 +40,7 @@ func (op *GetBalance) Write(f io.Writer) error {
 }
 
 // Execute the get-balance operation.
-func (op *GetBalance) Execute(db state.StateDB, ctx *dictionary.DictionaryContext) time.Duration {
+func (op *GetBalance) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
 	contract := ctx.DecodeContract(op.ContractIndex)
 	start := time.Now()
 	db.GetBalance(contract)
@@ -48,6 +48,6 @@ func (op *GetBalance) Execute(db state.StateDB, ctx *dictionary.DictionaryContex
 }
 
 // Debug prints a debug message for the get-balance operation.
-func (op *GetBalance) Debug(ctx *dictionary.DictionaryContext) {
+func (op *GetBalance) Debug(ctx *dictionary.Context) {
 	fmt.Print(ctx.DecodeContract(op.ContractIndex))
 }

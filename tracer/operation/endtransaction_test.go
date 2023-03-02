@@ -6,9 +6,9 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 )
 
-func initEndTransaction(t *testing.T) (*dictionary.DictionaryContext, *EndTransaction) {
+func initEndTransaction(t *testing.T) (*dictionary.Context, *EndTransaction) {
 	// create dictionary context
-	dict := dictionary.NewDictionaryContext()
+	dict := dictionary.NewContext()
 
 	// create new operation
 	op := NewEndTransaction()

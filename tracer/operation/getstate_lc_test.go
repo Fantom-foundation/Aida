@@ -8,11 +8,11 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initGetStateLc(t *testing.T) (*dictionary.DictionaryContext, *GetStateLc, common.Address, common.Hash) {
+func initGetStateLc(t *testing.T) (*dictionary.Context, *GetStateLc, common.Address, common.Hash) {
 	storage := getRandomAddress(t).Hash()
 
 	// create dictionary context
-	dict := dictionary.NewDictionaryContext()
+	dict := dictionary.NewContext()
 	sIdx, _ := dictionary.EncodeStorage(storage)
 
 	// create new operation

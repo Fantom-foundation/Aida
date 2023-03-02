@@ -8,12 +8,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initGetCommittedState(t *testing.T) (*dictionary.DictionaryContext, *GetCommittedState, common.Address, common.Hash) {
+func initGetCommittedState(t *testing.T) (*dictionary.Context, *GetCommittedState, common.Address, common.Hash) {
 	addr := getRandomAddress(t)
 	storage := getRandomAddress(t).Hash()
 
 	// create dictionary context
-	dict := dictionary.NewDictionaryContext()
+	dict := dictionary.NewContext()
 	cIdx := dictionary.EncodeContract(addr)
 	sIdx, _ := dictionary.EncodeStorage(storage)
 

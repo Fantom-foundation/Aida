@@ -10,12 +10,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initGetStateLccs(t *testing.T) (*dictionary.DictionaryContext, *GetStateLccs, common.Address, common.Hash, common.Hash) {
+func initGetStateLccs(t *testing.T) (*dictionary.Context, *GetStateLccs, common.Address, common.Hash, common.Hash) {
 	rand.Seed(time.Now().UnixNano())
 	pos := 0
 
 	// create dictionary context
-	dict := dictionary.NewDictionaryContext()
+	dict := dictionary.NewContext()
 
 	// create new operation
 	op := NewGetStateLccs(pos)

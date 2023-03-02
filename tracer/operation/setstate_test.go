@@ -8,13 +8,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initSetState(t *testing.T) (*dictionary.DictionaryContext, *SetState, common.Address, common.Hash, common.Hash) {
+func initSetState(t *testing.T) (*dictionary.Context, *SetState, common.Address, common.Hash, common.Hash) {
 	addr := getRandomAddress(t)
 	storage := getRandomAddress(t).Hash()
 	value := getRandomAddress(t).Hash()
 
 	// create dictionary context
-	dict := dictionary.NewDictionaryContext()
+	dict := dictionary.NewContext()
 	cIdx := dictionary.EncodeContract(addr)
 	sIdx, _ := dictionary.EncodeStorage(storage)
 

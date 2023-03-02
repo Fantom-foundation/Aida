@@ -8,10 +8,10 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initCreateAccount(t *testing.T) (*dictionary.DictionaryContext, *CreateAccount, common.Address) {
+func initCreateAccount(t *testing.T) (*dictionary.Context, *CreateAccount, common.Address) {
 	addr := getRandomAddress(t)
 	// create dictionary context
-	dict := dictionary.NewDictionaryContext()
+	dict := dictionary.NewContext()
 	cIdx := dictionary.EncodeContract(addr)
 
 	// create new operation

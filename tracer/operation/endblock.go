@@ -35,12 +35,12 @@ func (op *EndBlock) Write(f io.Writer) error {
 }
 
 // Execute the end-block operation.
-func (op *EndBlock) Execute(db state.StateDB, ctx *dictionary.DictionaryContext) time.Duration {
+func (op *EndBlock) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
 	start := time.Now()
 	db.EndBlock()
 	return time.Since(start)
 }
 
 // Debug prints a debug message for the end-block operation.
-func (op *EndBlock) Debug(ctx *dictionary.DictionaryContext) {
+func (op *EndBlock) Debug(ctx *dictionary.Context) {
 }

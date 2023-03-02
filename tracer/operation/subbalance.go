@@ -50,7 +50,7 @@ func (op *SubBalance) Write(f io.Writer) error {
 }
 
 // Execute the sub-balance operation.
-func (op *SubBalance) Execute(db state.StateDB, ctx *dictionary.DictionaryContext) time.Duration {
+func (op *SubBalance) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
 	contract := ctx.DecodeContract(op.ContractIndex)
 	// construct bit.Int from a byte array
 	amount := new(big.Int).SetBytes(op.Amount[:])
@@ -60,6 +60,6 @@ func (op *SubBalance) Execute(db state.StateDB, ctx *dictionary.DictionaryContex
 }
 
 // Debug prints a debug message for the sub-balance operation.
-func (op *SubBalance) Debug(ctx *dictionary.DictionaryContext) {
+func (op *SubBalance) Debug(ctx *dictionary.Context) {
 	fmt.Print(ctx.DecodeContract(op.ContractIndex), new(big.Int).SetBytes(op.Amount[:]))
 }

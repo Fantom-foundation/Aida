@@ -40,7 +40,7 @@ func (op *GetNonce) Write(f io.Writer) error {
 }
 
 // Execute the get-nonce operation.
-func (op *GetNonce) Execute(db state.StateDB, ctx *dictionary.DictionaryContext) time.Duration {
+func (op *GetNonce) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
 	contract := ctx.DecodeContract(op.ContractIndex)
 	start := time.Now()
 	db.GetNonce(contract)
@@ -48,6 +48,6 @@ func (op *GetNonce) Execute(db state.StateDB, ctx *dictionary.DictionaryContext)
 }
 
 // Debug prints a debug message for the get-nonce operation.
-func (op *GetNonce) Debug(ctx *dictionary.DictionaryContext) {
+func (op *GetNonce) Debug(ctx *dictionary.Context) {
 	fmt.Print(ctx.DecodeContract(op.ContractIndex))
 }

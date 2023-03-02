@@ -40,7 +40,7 @@ func (op *GetCodeSize) Write(f io.Writer) error {
 }
 
 // Execute the get-code-size operation.
-func (op *GetCodeSize) Execute(db state.StateDB, ctx *dictionary.DictionaryContext) time.Duration {
+func (op *GetCodeSize) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
 	contract := ctx.DecodeContract(op.ContractIndex)
 	start := time.Now()
 	db.GetCodeSize(contract)
@@ -48,6 +48,6 @@ func (op *GetCodeSize) Execute(db state.StateDB, ctx *dictionary.DictionaryConte
 }
 
 // Debug prints a debug message for get-code-size.
-func (op *GetCodeSize) Debug(ctx *dictionary.DictionaryContext) {
+func (op *GetCodeSize) Debug(ctx *dictionary.Context) {
 	fmt.Print(ctx.DecodeContract(op.ContractIndex))
 }

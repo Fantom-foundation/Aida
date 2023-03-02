@@ -8,10 +8,10 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initSuicide(t *testing.T) (*dictionary.DictionaryContext, *Suicide, common.Address) {
+func initSuicide(t *testing.T) (*dictionary.Context, *Suicide, common.Address) {
 	addr := getRandomAddress(t)
 	// create dictionary context
-	dict := dictionary.NewDictionaryContext()
+	dict := dictionary.NewContext()
 	cIdx := dictionary.EncodeContract(addr)
 
 	// create new operation

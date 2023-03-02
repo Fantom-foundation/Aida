@@ -40,7 +40,7 @@ func (op *Exist) Write(f io.Writer) error {
 }
 
 // Execute the exist operation.
-func (op *Exist) Execute(db state.StateDB, ctx *dictionary.DictionaryContext) time.Duration {
+func (op *Exist) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
 	contract := ctx.DecodeContract(op.ContractIndex)
 	start := time.Now()
 	db.Exist(contract)
@@ -48,6 +48,6 @@ func (op *Exist) Execute(db state.StateDB, ctx *dictionary.DictionaryContext) ti
 }
 
 // Debug prints a debug message for the exist operation.
-func (op *Exist) Debug(ctx *dictionary.DictionaryContext) {
+func (op *Exist) Debug(ctx *dictionary.Context) {
 	fmt.Print(ctx.DecodeContract(op.ContractIndex))
 }

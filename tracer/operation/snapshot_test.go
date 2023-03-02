@@ -7,9 +7,9 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 )
 
-func initSnapshot(t *testing.T) (*dictionary.DictionaryContext, *Snapshot, int32) {
+func initSnapshot(t *testing.T) (*dictionary.Context, *Snapshot, int32) {
 	// create dictionary context
-	dict := dictionary.NewDictionaryContext()
+	dict := dictionary.NewContext()
 
 	var snapID int32 = 1
 	// create new operation

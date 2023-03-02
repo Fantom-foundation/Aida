@@ -6,9 +6,9 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 )
 
-func initEndBlock(t *testing.T) (*dictionary.DictionaryContext, *EndBlock) {
+func initEndBlock(t *testing.T) (*dictionary.Context, *EndBlock) {
 	// create dictionary context
-	dict := dictionary.NewDictionaryContext()
+	dict := dictionary.NewContext()
 
 	// create new operation
 	op := NewEndBlock()

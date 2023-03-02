@@ -9,11 +9,11 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 )
 
-func initFinalise(t *testing.T) (*dictionary.DictionaryContext, *Finalise, bool) {
+func initFinalise(t *testing.T) (*dictionary.Context, *Finalise, bool) {
 	rand.Seed(time.Now().UnixNano())
 	deleteEmpty := rand.Intn(2) == 1
 	// create dictionary context
-	dict := dictionary.NewDictionaryContext()
+	dict := dictionary.NewContext()
 
 	// create new operation
 	op := NewFinalise(deleteEmpty)

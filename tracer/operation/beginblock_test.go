@@ -9,12 +9,12 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 )
 
-func initBeginBlock(t *testing.T) (*dictionary.DictionaryContext, *BeginBlock, uint64) {
+func initBeginBlock(t *testing.T) (*dictionary.Context, *BeginBlock, uint64) {
 	rand.Seed(time.Now().UnixNano())
 	blId := rand.Uint64()
 
 	// create dictionary context
-	dict := dictionary.NewDictionaryContext()
+	dict := dictionary.NewContext()
 
 	// create new operation
 	op := NewBeginBlock(blId)

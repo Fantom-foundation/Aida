@@ -41,7 +41,7 @@ func (op *SetCode) Write(f io.Writer) error {
 }
 
 // Execute the set-code operation.
-func (op *SetCode) Execute(db state.StateDB, ctx *dictionary.DictionaryContext) time.Duration {
+func (op *SetCode) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
 	contract := ctx.DecodeContract(op.ContractIndex)
 	code := ctx.DecodeCode(op.CodeIndex)
 	start := time.Now()
@@ -50,6 +50,6 @@ func (op *SetCode) Execute(db state.StateDB, ctx *dictionary.DictionaryContext) 
 }
 
 // Debug prints a debug message for the set-code operation.
-func (op *SetCode) Debug(ctx *dictionary.DictionaryContext) {
+func (op *SetCode) Debug(ctx *dictionary.Context) {
 	fmt.Print(ctx.DecodeContract(op.ContractIndex), ctx.DecodeCode(op.CodeIndex))
 }

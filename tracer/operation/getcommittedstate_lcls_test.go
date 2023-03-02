@@ -8,9 +8,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initGetCommittedStateLcls(t *testing.T) (*dictionary.DictionaryContext, *GetCommittedStateLcls, common.Address, common.Hash) {
+func initGetCommittedStateLcls(t *testing.T) (*dictionary.Context, *GetCommittedStateLcls, common.Address, common.Hash) {
 	// create dictionary context
-	dict := dictionary.NewDictionaryContext()
+	dict := dictionary.NewContext()
 
 	// create new operation
 	op := NewGetCommittedStateLcls()

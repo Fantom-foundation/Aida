@@ -40,7 +40,7 @@ func (op *RevertToSnapshot) Write(f io.Writer) error {
 }
 
 // Execute the revert-to-snapshot operation.
-func (op *RevertToSnapshot) Execute(db state.StateDB, ctx *dictionary.DictionaryContext) time.Duration {
+func (op *RevertToSnapshot) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
 	id := ctx.GetSnapshot(op.SnapshotID)
 	start := time.Now()
 	db.RevertToSnapshot(int(id))
@@ -48,6 +48,6 @@ func (op *RevertToSnapshot) Execute(db state.StateDB, ctx *dictionary.Dictionary
 }
 
 // Debug prints a debug message for the revert-to-snapshot operation.
-func (op *RevertToSnapshot) Debug(ctx *dictionary.DictionaryContext) {
+func (op *RevertToSnapshot) Debug(ctx *dictionary.Context) {
 	fmt.Print(op.SnapshotID)
 }

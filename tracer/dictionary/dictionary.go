@@ -57,7 +57,7 @@ func (d *Dictionary[K]) Decode(idx int) (K, error) {
 	}
 }
 
-// Write dictionary to a binary file.
+// Write dictionary to a binary file. Keys have fixed length.
 func (d *Dictionary[K]) Write(filename string, magic uint64) error {
 	// open dictionary file for writing
 	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
@@ -88,7 +88,7 @@ func (d *Dictionary[K]) Write(filename string, magic uint64) error {
 	return nil
 }
 
-// Read dictionary from a binary file.
+// Read dictionary from a binary file. Keys have fixed length.
 func (d *Dictionary[K]) Read(filename string, magic uint64) error {
 	// clear dictionary
 	d.Init()
@@ -134,7 +134,7 @@ func (d *Dictionary[K]) Read(filename string, magic uint64) error {
 	return nil
 }
 
-// Write dictionary to a binary file.
+// Write dictionary to a binary file. Key is a string.
 func (d *Dictionary[K]) WriteString(filename string, magic uint64) error {
 	// open dictionary file for writing
 	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
@@ -175,7 +175,7 @@ func (d *Dictionary[K]) WriteString(filename string, magic uint64) error {
 	return nil
 }
 
-// Read dictionary from a binary file.
+// Read dictionary from a binary file. Key is a string.
 func (d *Dictionary[K]) ReadString(filename string, magic uint64) error {
 	// clear dictionary
 	d.Init()

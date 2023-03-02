@@ -8,10 +8,10 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initGetNonce(t *testing.T) (*dictionary.DictionaryContext, *GetNonce, common.Address) {
+func initGetNonce(t *testing.T) (*dictionary.Context, *GetNonce, common.Address) {
 	addr := getRandomAddress(t)
 	// create dictionary context
-	dict := dictionary.NewDictionaryContext()
+	dict := dictionary.NewContext()
 	cIdx := dictionary.EncodeContract(addr)
 
 	// create new operation

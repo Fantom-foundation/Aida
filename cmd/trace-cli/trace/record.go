@@ -57,7 +57,7 @@ last block of the inclusive range of blocks to trace transactions.`,
 }
 
 // traceRecordTask generates storage traces for a transaction.
-func traceRecordTask(block uint64, tx, chainID int, recording *substate.Substate, dCtx *dictionary.DictionaryContext, ch chan operation.Operation) error {
+func traceRecordTask(block uint64, tx, chainID int, recording *substate.Substate, dCtx *dictionary.Context, ch chan operation.Operation) error {
 
 	inputAlloc := recording.InputAlloc
 	inputEnv := recording.Env
@@ -207,7 +207,7 @@ func OperationWriter(ch chan operation.Operation) {
 }
 
 // sendOperation sends an operation onto the channel.
-func sendOperation(dCtx *dictionary.DictionaryContext, ch chan operation.Operation, op operation.Operation) {
+func sendOperation(dCtx *dictionary.Context, ch chan operation.Operation, op operation.Operation) {
 	ch <- op
 	if utils.TraceDebug {
 		operation.Debug(dCtx, op)
@@ -244,7 +244,7 @@ func traceRecordAction(ctx *cli.Context) error {
 	enableProgress := !ctx.Bool(utils.DisableProgressFlag.Name)
 
 	// create dictionary and index contexts
-	dCtx := dictionary.NewDictionaryContext()
+	dCtx := dictionary.NewContext()
 
 	// spawn writer
 	opChannel := make(chan operation.Operation, WriteChannelSize)
@@ -253,7 +253,7 @@ func traceRecordAction(ctx *cli.Context) error {
 	// process arguments
 	chainID := ctx.Int(utils.ChainIDFlag.Name)
 	tracer.TraceDir = ctx.String(utils.TraceDirectoryFlag.Name) + "/"
-	dictionary.DictionaryContextDir = ctx.String(utils.TraceDirectoryFlag.Name) + "/"
+	dictionary.ContextDir = ctx.String(utils.TraceDirectoryFlag.Name) + "/"
 	if ctx.Bool(utils.TraceDebugFlag.Name) {
 		utils.TraceDebug = true
 	}

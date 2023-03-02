@@ -10,21 +10,21 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-// TestDictionaryContextWriteReadEmpty writes and reads an empty dictionary
+// TestContextWriteReadEmpty writes and reads an empty dictionary
 // context to a directory and validate file names.
-func TestDictionaryContextWriteReadEmpty(t *testing.T) {
-	DictionaryContextDir = "./test_dictionary_context/"
+func TestContextWriteReadEmpty(t *testing.T) {
+	ContextDir = "./test_dictionary_context/"
 	want := []string{"code-dictionary.dat", "contract-dictionary.dat",
 		"storage-dictionary.dat"}
 	have := []string{}
 
-	if err := os.Mkdir(DictionaryContextDir, 0700); err != nil {
+	if err := os.Mkdir(ContextDir, 0700); err != nil {
 		t.Fatalf("Failed to create test directory")
 	}
-	defer os.RemoveAll(DictionaryContextDir)
-	ctx1 := NewDictionaryContext()
+	defer os.RemoveAll(ContextDir)
+	ctx1 := NewContext()
 	ctx1.Write()
-	files, err := ioutil.ReadDir(DictionaryContextDir)
+	files, err := ioutil.ReadDir(ContextDir)
 	if err != nil {
 		t.Fatalf("Dictionary context directory not found. %v", err)
 	}
@@ -36,25 +36,25 @@ func TestDictionaryContextWriteReadEmpty(t *testing.T) {
 	if !reflect.DeepEqual(want, have) {
 		t.Fatalf("Failed to write dictionary context files.\n\twant %v\n\thave %v", want, have)
 	}
-	ctx2 := ReadDictionaryContext()
+	ctx2 := ReadContext()
 	if ctx2 == nil {
 		t.Fatalf("Failed to read dictonary context files")
 	}
 }
 
-// TestDictionaryContextEncodeContract encodes an address and check the returned index.
-func TestDictionaryContextEncodeContract(t *testing.T) {
-	ctx := NewDictionaryContext()
+// TestContextEncodeContract encodes an address and check the returned index.
+func TestContextEncodeContract(t *testing.T) {
+	ctx := NewContext()
 	encodedAddr := common.HexToAddress("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
 	if idx := ctx.EncodeContract(encodedAddr); idx != 0 {
 		t.Fatalf("Encoding contract failed")
 	}
 }
 
-// TestDictionaryContextDecodeContract encodes then decodes an address and
+// TestContextDecodeContract encodes then decodes an address and
 // compares whether the addresses are not the same.
-func TestDictionaryContextDecodeContract(t *testing.T) {
-	ctx := NewDictionaryContext()
+func TestContextDecodeContract(t *testing.T) {
+	ctx := NewContext()
 	encodedAddr := common.HexToAddress("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
 	idx := ctx.EncodeContract(encodedAddr)
 	if idx != 0 {
@@ -66,11 +66,11 @@ func TestDictionaryContextDecodeContract(t *testing.T) {
 	}
 }
 
-// TestDictionaryContextLastContractAddress fetches the last used addresses
+// TestContextLastContractAddress fetches the last used addresses
 // after encodeing and decoding, then compares whether they match the actual
 // last used contract addresses.
-func TestDictionaryContextLastContractAddress(t *testing.T) {
-	ctx := NewDictionaryContext()
+func TestContextLastContractAddress(t *testing.T) {
+	ctx := NewContext()
 	encodedAddr1 := common.HexToAddress("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
 	idx1 := ctx.EncodeContract(encodedAddr1)
 	lastAddr := ctx.LastContractAddress()
@@ -98,19 +98,19 @@ func TestDictionaryContextLastContractAddress(t *testing.T) {
 	}
 }
 
-// TestDictionaryContextEncodeStorage encodes a storage key and checks the returned index.
-func TestDictionaryContextEncodeStorage(t *testing.T) {
-	ctx := NewDictionaryContext()
+// TestContextEncodeStorage encodes a storage key and checks the returned index.
+func TestContextEncodeStorage(t *testing.T) {
+	ctx := NewContext()
 	encodedKey := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
 	if idx, _ := ctx.EncodeStorage(encodedKey); idx != 0 {
 		t.Fatalf("Encoding storage key failed")
 	}
 }
 
-// TestDictionaryContextDecodeStorage encodes then decodes a storage key and compares
+// TestContextDecodeStorage encodes then decodes a storage key and compares
 // whether the storage keys are not matched.
-func TestDictionaryContextDecodeStorage(t *testing.T) {
-	ctx := NewDictionaryContext()
+func TestContextDecodeStorage(t *testing.T) {
+	ctx := NewContext()
 	encodedKey := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
 	idx, _ := ctx.EncodeStorage(encodedKey)
 	if idx != 0 {
@@ -122,10 +122,10 @@ func TestDictionaryContextDecodeStorage(t *testing.T) {
 	}
 }
 
-// TestDictionaryContextReadStorage reads storage key from index-cache after
+// TestContextReadStorage reads storage key from index-cache after
 // encoding/decoding new storage key. ReadStorage doesn't update top index.
-func TestDictionaryContextReadStorage(t *testing.T) {
-	ctx := NewDictionaryContext()
+func TestContextReadStorage(t *testing.T) {
+	ctx := NewContext()
 	encodedKey1 := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
 	idx1, _ := ctx.EncodeStorage(encodedKey1)
 	encodedKey2 := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F274")
@@ -155,10 +155,10 @@ func TestDictionaryContextReadStorage(t *testing.T) {
 	}
 }
 
-// TestDictionaryContextLookup reads storage key from index-cache after
+// TestContextLookup reads storage key from index-cache after
 // encoding/decoding new storage key. LookupStorage updates top index.
-func TestDictionaryContextLookupStorage(t *testing.T) {
-	ctx := NewDictionaryContext()
+func TestContextLookupStorage(t *testing.T) {
+	ctx := NewContext()
 	encodedKey1 := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
 	idx1, _ := ctx.EncodeStorage(encodedKey1)
 	encodedKey2 := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F274")
@@ -188,10 +188,10 @@ func TestDictionaryContextLookupStorage(t *testing.T) {
 	}
 }
 
-// TestDictionaryContextSnapshot adds a new snapshot pair to the snapshot
+// TestContextSnapshot adds a new snapshot pair to the snapshot
 // dictionary, then gets the replayed snapshot id from the dictionary.
-func TestDictionaryContextSnapshot(t *testing.T) {
-	ctx := NewDictionaryContext()
+func TestContextSnapshot(t *testing.T) {
+	ctx := NewContext()
 	recordedID := int32(39)
 	replayedID1 := int32(50)
 	ctx.AddSnapshot(recordedID, replayedID1)
@@ -205,9 +205,9 @@ func TestDictionaryContextSnapshot(t *testing.T) {
 	}
 }
 
-// TestDictionaryContextEncodeCode encodes byte-code to code dictionary.
-func TestDictionaryContextEncodeCode(t *testing.T) {
-	ctx := NewDictionaryContext()
+// TestContextEncodeCode encodes byte-code to code dictionary.
+func TestContextEncodeCode(t *testing.T) {
+	ctx := NewContext()
 	encodedCode := []byte{0x99, 0xe0, 0x5, 0xed, 0xce, 0xdf, 0xf5}
 	idx := ctx.EncodeCode(encodedCode)
 	if idx != 0 {
@@ -215,10 +215,10 @@ func TestDictionaryContextEncodeCode(t *testing.T) {
 	}
 }
 
-// TestDictionaryContextDecodeCode encodes then decodes byte-code, and compares
+// TestContextDecodeCode encodes then decodes byte-code, and compares
 // whether the byte-code arrays are matches.
-func TestDictionaryContextDecodeCode(t *testing.T) {
-	ctx := NewDictionaryContext()
+func TestContextDecodeCode(t *testing.T) {
+	ctx := NewContext()
 	encodedCode := []byte{0x99, 0xe0, 0x5, 0xed, 0xce, 0xdf, 0xf5}
 	idx := ctx.EncodeCode(encodedCode)
 	if idx != 0 {
