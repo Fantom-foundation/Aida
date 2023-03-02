@@ -2,12 +2,16 @@ package stochastic
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"math/rand"
 )
 
-// RandomAccess data structure for producing random accesses.
+// minRandomAccessSize must be substantially larger than qstatsLen
+// (Otherwise sampling for arguments with class RandomValueID may
+// take a very long time and would slow down the simulation.)
+const minRandomAccessSize = 10 * qstatsLen
+
+// RandomAccess data structure for producing random index accesses.
 type RandomAccess struct {
 	// cardinality of set
 	numElem int64
@@ -15,17 +19,19 @@ type RandomAccess struct {
 	// lambda parameter of exponential distribution
 	lambda float64
 
-	// queue for indexes  (always fixed length qStatslen)
+	// queue for indexes (always fixed to length qStatslen)
+	// Note that elements in queue are stored in the range from 0 to numElem-1
+	// and need to be shifted by one due to the zero value.
 	queue []int64
 
-	// probability distribution of queue (always fixed length qStatslen)
+	// probability distribution of queue for selecting recent values.
 	qpdf []float64
 }
 
 // NewAccessStats creates a new access index.
 func NewRandomAccess(numElem int64, lambda float64, qpdf []float64) *RandomAccess {
-	if numElem < qstatsLen {
-		log.Fatalf("NewRandomAccess: number of elements smaller than the queue length.")
+	if numElem < minRandomAccessSize {
+		return nil
 	}
 
 	// fill queue with uniform random indexes.
@@ -61,6 +67,9 @@ func (a *RandomAccess) NextIndex(class int) int64 {
 	case newValueID:
 		// increment population size of access set
 		// and return newly introduced element.
+		if a.numElem == math.MaxInt64 {
+			return -1
+		}
 		v := a.numElem
 		a.placeQ(v)
 		a.numElem++
@@ -77,7 +86,7 @@ func (a *RandomAccess) NextIndex(class int) int64 {
 		}
 
 	case previousValueID:
-		// return the value in the first position in the queue
+		// return the value of the first position in the queue
 		v := a.lastQ()
 		a.placeQ(v)
 		return v + 1
@@ -97,21 +106,24 @@ func (a *RandomAccess) NextIndex(class int) int64 {
 
 // DeleteIndex deletes an access index.
 func (a *RandomAccess) DeleteIndex(v int64) error {
-	// check index
-	if v <= 0 || v >= a.numElem {
+	// check index;
+	if v <= 0 || v > a.numElem {
+		// NB: cannot delete zero index!
 		return fmt.Errorf("DeleteIndex: wrong index range")
 	}
 
-	// reduce cardinality of set by one
+	// reduce cardinality by one
 	a.numElem--
-	if a.numElem < qstatsLen {
+	if a.numElem < minRandomAccessSize {
 		return fmt.Errorf("DeleteIndex: cardinality of set too low")
 	}
 
-	// replaced deleted index by a random index
+	// replace deleted index by a random index
+	// (necessary only in case if the deleted element
+	// is the last element of the set)
 	j := randIndex(a.lambda, a.numElem)
 	for i := 0; i < qstatsLen; i++ {
-		if a.queue[i] == v {
+		if a.queue[i]+1 == v {
 			a.queue[i] = j
 		}
 	}
@@ -143,7 +155,7 @@ func invCdf(lambda float64, p float64) float64 {
 }
 
 // getRandQPos obtains the next queue position.
-func (a *RandomAccess) getRandQPos() int64 {
+func (a *RandomAccess) getRandQPos() int {
 	// obtain random number in [0, 1.0)
 	r := rand.Float64()
 
@@ -151,9 +163,10 @@ func (a *RandomAccess) getRandQPos() int64 {
 	sum := float64(0)
 	c := float64(0)
 	factor := 1.0 - a.qpdf[0]
-	j := int64(-1)
+	j := -1
 	// skip first slot (only used for previousValue)
-	for i := int64(1); i < qstatsLen; i++ {
+	// use Kahan's sum for avoiding numerical issues.
+	for i := 1; i < qstatsLen; i++ {
 		y := (a.qpdf[i] / factor) - c
 		t := sum + y
 		c = (t - sum) - y
@@ -175,16 +188,20 @@ func (a *RandomAccess) placeQ(elem int64) {
 	a.queue = append([]int64{elem}, a.queue[0:qstatsLen-1]...)
 }
 
-// lastQ return previously queued element.
+// lastQ returns previously queued element.
 func (a *RandomAccess) lastQ() int64 {
 	return a.queue[0]
 }
 
-// recentQ return some element in the queue but not the previous one.
+// recentQ returns some element in the queue but not the previous one.
 func (a *RandomAccess) recentQ() int64 {
-	if idx := a.getRandQPos(); idx != -1 {
-		return a.queue[a.getRandQPos()]
-	} else {
+	i := a.getRandQPos()
+	switch i {
+	case 0:
+		panic("getRandPos() returned previous element.")
+	case -1:
 		return -1
+	default:
+		return a.queue[i]
 	}
 }

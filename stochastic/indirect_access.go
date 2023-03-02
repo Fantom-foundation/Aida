@@ -16,7 +16,7 @@ type IndirectAccess struct {
 func NewIndirectAccess(ra *RandomAccess) *IndirectAccess {
 	t := make([]int64, ra.numElem)
 	for i := int64(0); i < ra.numElem; i++ {
-		t[i] = i + 1
+		t[i] = i + 1 // shifted by one because of zero value
 	}
 	return &IndirectAccess{
 		randAcc:     ra,
@@ -34,7 +34,7 @@ func (a *IndirectAccess) NextIndex(class int) int64 {
 		return v
 	} else if class == newValueID {
 		if v != a.randAcc.numElem {
-			panic("unexpected nextIndex result")
+			panic("unexpected nextIndex result.")
 		}
 		a.ctr++
 		v := a.ctr
@@ -73,7 +73,7 @@ func (a *IndirectAccess) findIndex(k int64) int64 {
 	return -1
 }
 
-// NumElem returns the number of elements
+// NumElem returns the number of indexes
 func (a *IndirectAccess) NumElem() int64 {
 	return a.randAcc.numElem
 }

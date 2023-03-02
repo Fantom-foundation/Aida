@@ -38,7 +38,7 @@ func TestRandomAccessSimple(t *testing.T) {
 
 	// check a new value (must be equal to the number of elements
 	// in the index set and must be greater than zero).
-	if idx := ra.NextIndex(newValueID); idx != ra.numElem || idx < 1 {
+	if idx := ra.NextIndex(newValueID); idx != ra.numElem {
 		t.Fatalf("expected a new index")
 	}
 
@@ -63,9 +63,11 @@ func TestRandomAccessSimple(t *testing.T) {
 		qpdf[i] = 1.0 / float64(qstatsLen)
 	}
 	ra = NewRandomAccess(1000, 5.0, qpdf)
-	copy(queue, ra.queue)
-	if idx := ra.NextIndex(recentValueID); idx < 1 || idx > ra.numElem || !containsQ(queue, idx-1) {
-		t.Fatalf("index access not in queue")
+	for i := 0; i < minRandomAccessSize; i++ {
+		copy(queue, ra.queue)
+		if idx := ra.NextIndex(recentValueID); idx < 1 || idx > ra.numElem || !containsQ(queue, idx-1) {
+			t.Fatalf("index access not in queue")
+		}
 	}
 
 	// check random access (must not be contained in queue)
@@ -242,5 +244,46 @@ func TestRandomAccessRandInd(t *testing.T) {
 
 	if chi2 > chi2Critical {
 		t.Fatalf("The random index selection biased.")
+	}
+}
+
+// TestRandomAccessLimits checks limits.
+func TestRandomAccessLimits(t *testing.T) {
+	qpdf := make([]float64, qstatsLen)
+	ra := NewRandomAccess(math.MaxInt64, 5.0, qpdf)
+	if idx := ra.NextIndex(newValueID); idx != -1 {
+		t.Fatalf("Fails to detect cardinality integer overflow.")
+	}
+	ra = NewRandomAccess(minRandomAccessSize, 5.0, qpdf)
+	if err := ra.DeleteIndex(0); err == nil {
+		t.Fatalf("Fails to detect deleting zero element.")
+	}
+	if err := ra.DeleteIndex(1); err == nil {
+		t.Fatalf("Fails to detect depletion of elements.")
+	}
+	if ra := NewRandomAccess(minRandomAccessSize-1, 5.0, qpdf); ra != nil {
+		t.Fatalf("Fails to detect low cardinality.")
+	}
+}
+
+// TestRandomAccessQueue tests the queue operation
+func TestRandomAccessQueue(t *testing.T) {
+	qpdf := make([]float64, qstatsLen)
+	for i := 0; i < qstatsLen; i++ {
+		qpdf[i] = 1.0 / float64(qstatsLen)
+	}
+	ra := NewRandomAccess(1000, 5.0, qpdf)
+	ra.placeQ(2)
+	if idx := ra.lastQ(); idx != 2 {
+		t.Fatalf("Queuing of element 2 failed.")
+	}
+	if idx := ra.recentQ(); idx < 0 || idx >= ra.numElem || !containsQ(ra.queue, idx) {
+		t.Fatalf("RecentQ fetched invalid element.")
+	}
+	if idx := ra.recentQ(); idx < 0 || idx >= ra.numElem || !containsQ(ra.queue, idx) {
+		t.Fatalf("RecentQ fetched invalid element.")
+	}
+	if i := ra.getRandQPos(); i < 1 || i >= qstatsLen {
+		t.Fatalf("wrong randomized value")
 	}
 }

@@ -34,13 +34,13 @@ func TestIndirectAccessSimple(t *testing.T) {
 
 	// check a new value (must be equal to the number of elements
 	// in the index set and must be greater than zero).
-	if idx := ia.NextIndex(newValueID); idx != ia.randAcc.numElem || idx < 1 {
-		t.Fatalf("expected a new index (%v, %v)", idx, ia.randAcc.numElem)
+	if idx := ia.NextIndex(newValueID); idx != ia.NumElem() || idx < 1 {
+		t.Fatalf("expected a new index (%v, %v)", idx, ia.NumElem())
 	}
 
 	// run check again.
-	if idx := ia.NextIndex(newValueID); idx != ia.randAcc.numElem || idx < 1 {
-		t.Fatalf("expected a new index (%v, %v)", idx, ia.randAcc.numElem)
+	if idx := ia.NextIndex(newValueID); idx != ia.NumElem() || idx < 1 {
+		t.Fatalf("expected a new index (%v, %v)", idx, ia.NumElem())
 	}
 
 	// check previous value (must return the first element in the queue
@@ -48,7 +48,7 @@ func TestIndirectAccessSimple(t *testing.T) {
 	// in the range between 1 and ra.num).
 	queue := make([]int64, qstatsLen)
 	copy(queue, ia.randAcc.queue)
-	if idx := ia.NextIndex(previousValueID); ia.translation[ia.randAcc.lastQ()] != idx || idx < 1 || idx > ia.randAcc.numElem {
+	if idx := ia.NextIndex(previousValueID); ia.translation[ia.randAcc.lastQ()] != idx || idx < 1 || idx > ia.NumElem() {
 		t.Fatalf("accessing previous index failed (%v, %v)", idx, ia.translation[ia.randAcc.lastQ()])
 	}
 
@@ -66,13 +66,13 @@ func TestIndirectAccessSimple(t *testing.T) {
 
 	ia = NewIndirectAccess(NewRandomAccess(1000, 5.0, qpdf))
 	copy(queue, ia.randAcc.queue)
-	if idx := ia.NextIndex(recentValueID); idx < 1 || idx > ia.randAcc.numElem || !containsIndirectQ(queue, idx-1) {
+	if idx := ia.NextIndex(recentValueID); idx < 1 || idx > ia.NumElem() || !containsIndirectQ(queue, idx-1) {
 		t.Fatalf("index access not in queue")
 	}
 
 	// check random access (must not be contained in queue)
 	copy(queue, ia.randAcc.queue)
-	if idx := ia.NextIndex(randomValueID); idx < 1 || idx > ia.randAcc.numElem || containsIndirectQ(queue, idx-1) || queue[0]+1 == idx {
+	if idx := ia.NextIndex(randomValueID); idx < 1 || idx > ia.NumElem() || containsIndirectQ(queue, idx-1) || queue[0]+1 == idx {
 		t.Fatalf("index access must fail because no distribution was specified")
 	}
 }
@@ -127,7 +127,7 @@ func TestIndirectAcessDeleteIndex(t *testing.T) {
 	}
 
 	// check whether index still exists
-	for i := int64(0); i < ia.randAcc.numElem; i++ {
+	for i := int64(0); i < ia.NumElem(); i++ {
 		if ia.translation[i] == idx {
 			t.Fatalf("index still exists.")
 		}
