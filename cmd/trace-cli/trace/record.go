@@ -28,6 +28,11 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const (
+	WriteBufferSize  = 1048576 // Size of write buffer for writing trace file.
+	WriteChannelSize = 1000    // Max. channel size for serialising StateDB operations.
+)
+
 // TraceRecordCommand data structure for the record app
 var TraceRecordCommand = cli.Command{
 	Action:    traceRecordAction,
@@ -52,7 +57,7 @@ last block of the inclusive range of blocks to trace transactions.`,
 }
 
 // traceRecordTask generates storage traces for a transaction.
-func traceRecordTask(block uint64, tx, chainID int, recording *substate.Substate, dCtx *dict.DictionaryContext, ch chan operation.Operation) error {
+func traceRecordTask(block uint64, tx, chainID int, recording *substate.Substate, dCtx *dictionary.DictionaryContext, ch chan operation.Operation) error {
 
 	inputAlloc := recording.InputAlloc
 	inputEnv := recording.Env
@@ -176,7 +181,7 @@ func OperationWriter(ch chan operation.Operation) {
 	if err != nil {
 		log.Fatalf("Cannot open trace file. Error: %v", err)
 	}
-	bfile := bufio.NewWriterSize(file, 16*65536)
+	bfile := bufio.NewWriterSize(file, WriteBufferSize)
 	zfile, err := bzip2.NewWriter(bfile, &bzip2.WriterConfig{Level: 9})
 	if err != nil {
 		log.Fatalf("Cannot open bzip2 stream. Error: %v", err)
@@ -202,7 +207,7 @@ func OperationWriter(ch chan operation.Operation) {
 }
 
 // sendOperation sends an operation onto the channel.
-func sendOperation(dCtx *dict.DictionaryContext, ch chan operation.Operation, op operation.Operation) {
+func sendOperation(dCtx *dictionary.DictionaryContext, ch chan operation.Operation, op operation.Operation) {
 	ch <- op
 	if utils.TraceDebug {
 		operation.Debug(dCtx, op)
@@ -239,16 +244,16 @@ func traceRecordAction(ctx *cli.Context) error {
 	enableProgress := !ctx.Bool(utils.DisableProgressFlag.Name)
 
 	// create dictionary and index contexts
-	dCtx := dict.NewDictionaryContext()
+	dCtx := dictionary.NewDictionaryContext()
 
 	// spawn writer
-	opChannel := make(chan operation.Operation, 1000)
+	opChannel := make(chan operation.Operation, WriteChannelSize)
 	go OperationWriter(opChannel)
 
 	// process arguments
 	chainID := ctx.Int(utils.ChainIDFlag.Name)
 	tracer.TraceDir = ctx.String(utils.TraceDirectoryFlag.Name) + "/"
-	dict.DictionaryContextDir = ctx.String(utils.TraceDirectoryFlag.Name) + "/"
+	dictionary.DictionaryContextDir = ctx.String(utils.TraceDirectoryFlag.Name) + "/"
 	if ctx.Bool(utils.TraceDebugFlag.Name) {
 		utils.TraceDebug = true
 	}
