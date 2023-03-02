@@ -14,9 +14,9 @@ import (
 // ProxyRecorder data structure for capturing and recording
 // invoked StateDB operations.
 type ProxyRecorder struct {
-	db    state.StateDB                 // state db
-	dctx  *dictionary.Context // dictionary context for decoding information
-	ch    chan operation.Operation      // channel used for streaming captured operation
+	db    state.StateDB            // state db
+	dctx  *dictionary.Context      // dictionary context for decoding information
+	ch    chan operation.Operation // channel used for streaming captured operation
 	debug bool
 }
 

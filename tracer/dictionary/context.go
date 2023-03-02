@@ -10,8 +10,8 @@ import (
 // InvalidContractIndex used to indicate that the previously used contract index is not valid.
 const InvalidContractIndex = math.MaxUint32
 
-// Context is a Facade for all dictionaries used to encode/decode contract/storage
-// addresss, values, and snapshots.
+// Context is a facade for all dictionaries used to encode/decode contract/storage
+// addresss, and snapshots.
 type Context struct {
 	ContractDictionary *Dictionary[common.Address] // dictionary to compact contract addresses
 	PrevContractIndex  uint32                      // previously used contract index
@@ -120,6 +120,12 @@ func (ctx *Context) LastContractAddress() common.Address {
 	return ctx.DecodeContract(ctx.PrevContractIndex)
 }
 
+// HasEncodedContract checks whether a given contract address has already been inserted into dictionary
+func (ctx *Context) HasEncodedContract(addr common.Address) bool {
+	_, f := ctx.ContractDictionary.valueToIdx[addr]
+	return f
+}
+
 ////////////////////////////////////////////////////////////////
 // Storage methods
 ////////////////////////////////////////////////////////////////
@@ -171,6 +177,12 @@ func (ctx *Context) LookupStorage(sPos int) common.Hash {
 	return ctx.DecodeStorage(sIdx)
 }
 
+// HasEncodedStorage checks whether a given storage key has already been inserted into dictionary
+func (ctx *Context) HasEncodedStorage(key common.Hash) bool {
+	_, f := ctx.StorageDictionary.valueToIdx[key]
+	return f
+}
+
 ////////////////////////////////////////////////////////////////
 // Snapshot methods
 ////////////////////////////////////////////////////////////////
@@ -217,16 +229,4 @@ func (ctx *Context) DecodeCode(bcIdx uint32) []byte {
 		log.Fatalf("Byte-code index could not be decoded. Error: %v", err)
 	}
 	return []byte(code)
-}
-
-// HasEncodedContract checks whether a given contract address has already been inserted into dictionary
-func (ctx *Context) HasEncodedContract(addr common.Address) bool {
-	_, f := ctx.ContractDictionary.valueToIdx[addr]
-	return f
-}
-
-// HasEncodedStorage checks whether a given storage key has already been inserted into dictionary
-func (ctx *Context) HasEncodedStorage(key common.Hash) bool {
-	_, f := ctx.StorageDictionary.valueToIdx[key]
-	return f
 }
