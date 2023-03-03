@@ -11,8 +11,8 @@ type Access[T comparable] struct {
 
 // AccessJSON is the JSON output for Access.
 type AccessJSON struct {
-	Counting     CountingJSON
-	Queuing QueuingJSON
+	Counting CountingJSON
+	Queuing  QueuingJSON
 }
 
 // NewAccess creates a new access.
