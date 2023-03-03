@@ -7,9 +7,10 @@ import (
 
 // EventData contains the statistical data for events that is used for visualization.
 type EventData struct {
-	Contracts AccessData // contract-address view model
-	Keys      AccessData // storage-key view model
-	Values    AccessData // storage-value view model
+	Contracts AccessData   // contract-address view model
+	Keys      AccessData   // storage-key view model
+	Values    AccessData   // storage-value view model
+	Snapshot  SnapshotData // snapshot view model
 
 	Stationary       []OpData                // stationary distribution model
 	TxOperation      []OpData                // average number of operations per Tx
@@ -24,6 +25,13 @@ type EventData struct {
 type AccessData struct {
 	ECdf   [][2]float64 // empirical cumulative distribution function of counting stats
 	QPdf   []float64    // queuing distribution function
+	Lambda float64      // exponential Distribution Parameter
+	Cdf    [][2]float64 // parameterised cumulative distribution function
+}
+
+// SnapshotData contains the statistical data for snapshot deltas used for visualization.
+type SnapshotData struct {
+	ECdf   [][2]float64 // empirical cumulative distribution function
 	Lambda float64      // exponential Distribution Parameter
 	Cdf    [][2]float64 // parameterised cumulative distribution function
 }
@@ -53,6 +61,9 @@ func (e *EventData) PopulateEventData(d *EventRegistryJSON) {
 
 	// populate access stats for storage values
 	e.Values.PopulateAccessStats(&d.Values)
+
+	// populate access stats for storage values
+	e.Snapshot.PopulateSnapshotStats(d)
 
 	// Sort entries of the stationary distribution and populate
 	n := len(d.Operations)
@@ -160,4 +171,16 @@ func (a *AccessData) PopulateAccessStats(d *AccessStatsJSON) {
 	a.Cdf = PiecewiseLinearCdf(lambda, numDistributionPoints)
 	a.QPdf = make([]float64, len(d.QueuingStats.Distribution))
 	copy(a.QPdf, d.QueuingStats.Distribution)
+}
+
+// PopulateSnapStats populates snapshot stats model
+func (s *SnapshotData) PopulateSnapshotStats(d *EventRegistryJSON) {
+	s.ECdf = make([][2]float64, len(d.SnapshotEcdf))
+	copy(s.ECdf, d.SnapshotEcdf)
+	lambda, err := ApproximateLambda(d.SnapshotEcdf)
+	if err != nil {
+		log.Fatalf("Failed to approximate lambda parameter. Error: %v", err)
+	}
+	s.Lambda = lambda
+	s.Cdf = PiecewiseLinearCdf(lambda, numDistributionPoints)
 }

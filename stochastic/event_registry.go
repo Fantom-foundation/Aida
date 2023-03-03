@@ -4,6 +4,8 @@ import (
 	"log"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/paulmach/orb"
+	"github.com/paulmach/orb/simplify"
 )
 
 // numArgOps gives the number of operations with encoded argument classes
@@ -28,6 +30,9 @@ type EventRegistry struct {
 
 	// Previous argument-encoded operation
 	prevArgOp int
+
+	// Snapshot deltas
+	snapshotFreq map[int]uint64
 }
 
 // EventRegistryJSON is the JSON output for an event registry.
@@ -39,15 +44,19 @@ type EventRegistryJSON struct {
 	Contracts AccessStatsJSON `json:"contractStats"`
 	Keys      AccessStatsJSON `json:"keyStats"`
 	Values    AccessStatsJSON `json:"valueSats"`
+
+	// snapshot delta frequencies
+	SnapshotEcdf [][2]float64 `json:"snapshotEcdf"`
 }
 
 // NewEventRegistry creates a new event registry.
 func NewEventRegistry() EventRegistry {
 	return EventRegistry{
-		prevArgOp: numArgOps,
-		contracts: NewAccessStats[common.Address](),
-		keys:      NewAccessStats[common.Hash](),
-		values:    NewAccessStats[common.Hash](),
+		prevArgOp:    numArgOps,
+		contracts:    NewAccessStats[common.Address](),
+		keys:         NewAccessStats[common.Hash](),
+		values:       NewAccessStats[common.Hash](),
+		snapshotFreq: map[int]uint64{},
 	}
 }
 
@@ -145,6 +154,15 @@ func (r *EventRegistry) updateFreq(op int, addr int, key int, value int) {
 	r.prevArgOp = argOp
 }
 
+// RegisterSnapshotDelta counts the delta of a snapshot. The delta is the
+// the number of stack elements between the top-of-stack of the snapshot stack
+// and the reverted snapshot. A delta of zero means that the state is reverted
+// to the previously created snapshot, a delta of one means that the state is
+// reverted to the previous of the previous snapshot and so on.
+func (r *EventRegistry) RegisterSnapshotDelta(delta int) {
+	r.snapshotFreq[delta]++
+}
+
 // NewEventRegistry produces the JSON output for an event registry.
 func (r *EventRegistry) NewEventRegistryJSON() EventRegistryJSON {
 	// generate labels for observable operations
@@ -156,6 +174,7 @@ func (r *EventRegistry) NewEventRegistryJSON() EventRegistryJSON {
 			label = append(label, EncodeOpcode(op, addr, key, value))
 		}
 	}
+
 	// Compute stochastic matrix for observable operations with their arguments
 	A := [][]float64{}
 	for i := 0; i < numArgOps; i++ {
@@ -175,11 +194,72 @@ func (r *EventRegistry) NewEventRegistryJSON() EventRegistryJSON {
 			A = append(A, row)
 		}
 	}
+
+	// Compute ECDF of snapshot deltas
+	totalFreq := uint64(0)
+	maxDelta := 0
+	for delta, freq := range r.snapshotFreq {
+		totalFreq += freq
+		if maxDelta < delta {
+			maxDelta = delta
+		}
+	}
+	// simplified eCDF
+	var simplified orb.LineString
+
+	// if no data-points, nothing to plot
+	if len(r.snapshotFreq) > 0 {
+
+		// construct full eCdf as LineString
+		ls := orb.LineString{}
+
+		// print points of the empirical cumulative freq
+		sumP := float64(0.0)
+
+		// Correction term for Kahan's sum
+		cP := float64(0.0)
+
+		// add first point to line string
+		ls = append(ls, orb.Point{0.0, 0.0})
+
+		// iterate through all deltas
+		for delta := 0; delta <= maxDelta; delta++ {
+			// Implement Kahan's summation to avoid errors
+			// for accumulated probabilities (they might be very small)
+			// https://en.wikipedia.org/wiki/Kahan_summation_algorithm
+			f := float64(r.snapshotFreq[delta]) / float64(totalFreq)
+			x := float64(delta) / float64(maxDelta)
+
+			yP := f - cP
+			tP := sumP + yP
+			cP = (tP - sumP) - yP
+			sumP = tP
+
+			// add new point to Ecdf
+			ls = append(ls, orb.Point{x, sumP})
+		}
+
+		// add last point
+		ls = append(ls, orb.Point{1.0, 1.0})
+
+		// reduce full ecdf using Visvalingam-Whyatt algorithm to
+		// "numPoints" points. See:
+		// https://en.wikipedia.org/wiki/Visvalingam-Whyatt_algorithm
+		simplifier := simplify.VisvalingamKeep(numDistributionPoints)
+		simplified = simplifier.Simplify(ls).(orb.LineString)
+	}
+	// convert orb.LineString to [][2]float64
+	eCdf := make([][2]float64, len(simplified))
+	for i := range simplified {
+		eCdf[i] = [2]float64(simplified[i])
+	}
+
 	return EventRegistryJSON{
 		Operations:       label,
 		StochasticMatrix: A,
 		Contracts:        r.contracts.NewAccessStatsJSON(),
 		Keys:             r.keys.NewAccessStatsJSON(),
 		Values:           r.values.NewAccessStatsJSON(),
+		SnapshotEcdf:     eCdf,
 	}
 }
