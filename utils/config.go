@@ -197,8 +197,8 @@ var (
 		Name:  "output",
 		Usage: "output filename",
 	}
-	VisualizeFlag = cli.StringFlag{
-		Name:        "visualize",
+	PortFlag = cli.StringFlag{
+		Name:        "port",
 		Aliases:     []string{"v"},
 		Usage:       "enable visualization on `PORT`",
 		DefaultText: "8080",
