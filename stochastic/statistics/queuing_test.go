@@ -1,14 +1,14 @@
-package stochastic
+package statistics
 
 import (
 	"encoding/json"
 	"testing"
 )
 
-// TestQueuingStatsSimple tests for existence/non-existence of elements.
-func TestQueuingStatsSimple(t *testing.T) {
+// TestQueuingSimple tests for existence/non-existence of elements.
+func TestQueuingSimple(t *testing.T) {
 	// create index queue
-	queue := NewQueuingStats[int]()
+	queue := NewQueuing[int]()
 
 	// place first element
 	queue.Place(0)
@@ -26,10 +26,10 @@ func TestQueuingStatsSimple(t *testing.T) {
 	}
 }
 
-// TestQueuingStatsSimple1 tests for existence/non-existence of elements.
-func TestQueuingStatsSimple1(t *testing.T) {
+// TestQueuingSimple1 tests for existence/non-existence of elements.
+func TestQueuingSimple1(t *testing.T) {
 	// create index queue
-	queue := NewQueuingStats[int]()
+	queue := NewQueuing[int]()
 
 	// find first element
 	pos := queue.Find(0)
@@ -54,13 +54,13 @@ func TestQueuingStatsSimple1(t *testing.T) {
 	}
 }
 
-// TestQueuingStatsSimple2 tests for existence/non-existence of elements.
-func TestQueuingStatsSimple2(t *testing.T) {
+// TestQueuingSimple2 tests for existence/non-existence of elements.
+func TestQueuingSimple2(t *testing.T) {
 	// create index queue
-	queue := NewQueuingStats[int]()
+	queue := NewQueuing[int]()
 
 	// place first element
-	for i := 0; i < qstatsLen+1; i++ {
+	for i := 0; i < QueueLen+1; i++ {
 		queue.Place(i)
 	}
 
@@ -70,34 +70,34 @@ func TestQueuingStatsSimple2(t *testing.T) {
 		t.Fatalf("first element must not be found")
 	}
 	pos = queue.Find(1)
-	if pos != qstatsLen-1 {
+	if pos != QueueLen-1 {
 		t.Fatalf("second element must be found: %v", pos)
 	}
-	pos = queue.Find(qstatsLen)
+	pos = queue.Find(QueueLen)
 	if pos != 0 {
 		t.Fatalf("last element must be found")
 	}
 
-	queue.Place(qstatsLen + 1)
+	queue.Place(QueueLen + 1)
 
 	pos = queue.Find(1)
 	if pos != -1 {
 		t.Fatalf("second element must not be found")
 	}
 	pos = queue.Find(2)
-	if pos != qstatsLen-1 {
+	if pos != QueueLen-1 {
 		t.Fatalf("third element must be found: %v", pos)
 	}
-	pos = queue.Find(qstatsLen + 1)
+	pos = queue.Find(QueueLen + 1)
 	if pos != 0 {
 		t.Fatalf("last element must be found")
 	}
 }
 
-// TestQueuingStatsJSON tests JSON output of distribution.
-func TestQueuingStatsJSON(t *testing.T) {
+// TestQueuingJSON tests JSON output of distribution.
+func TestQueuingJSON(t *testing.T) {
 	// create index queue
-	queue := NewQueuingStats[int]()
+	queue := NewQueuing[int]()
 
 	// place first element
 	for i := 0; i < 300; i++ {
@@ -113,7 +113,7 @@ func TestQueuingStatsJSON(t *testing.T) {
 	}
 
 	// produce distribution in JSON format
-	jOut, err := json.Marshal(queue.NewQueuingStatsJSON())
+	jOut, err := json.Marshal(queue.NewQueuingJSON())
 	if err != nil {
 		t.Fatalf("Marshalling failed to produce distribution")
 	}

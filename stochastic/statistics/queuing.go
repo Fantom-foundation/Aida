@@ -1,39 +1,35 @@
-package stochastic
+package statistics
 
-// qstatsLen sets the length of queuing statistics.
-// NB: must be greater than one.
-const qstatsLen = 32
-
-// QueuingStats data structure for a generic FIFO queue.
-type QueuingStats[T comparable] struct {
+// Queuing data structure for a generic FIFO queue.
+type Queuing[T comparable] struct {
 	// queue structure
-	top  int          // index of first entry in queue
-	rear int          // index of last entry in queue
-	data [qstatsLen]T // queue data
+	top  int         // index of first entry in queue
+	rear int         // index of last entry in queue
+	data [QueueLen]T // queue data
 
 	// counting statistics for queue
 	// (counter for each position counting successful finds)
-	freq [qstatsLen]uint64
+	freq [QueueLen]uint64
 }
 
-// QueuingStatsJSON is the JSON output for queuing statistics.
-type QueuingStatsJSON struct {
+// QueuingJSON is the JSON output for queuing statistics.
+type QueuingJSON struct {
 	// probability of a position in the queue
 	Distribution []float64 `json:"distribution"`
 }
 
-// NewQueuingStats creates a new queue.
-func NewQueuingStats[T comparable]() QueuingStats[T] {
-	return QueuingStats[T]{
+// NewQueuing creates a new queue.
+func NewQueuing[T comparable]() Queuing[T] {
+	return Queuing[T]{
 		top:  -1,
 		rear: -1,
-		data: [qstatsLen]T{},
-		freq: [qstatsLen]uint64{},
+		data: [QueueLen]T{},
+		freq: [QueueLen]uint64{},
 	}
 }
 
 // Place a new item into the queue.
-func (q *QueuingStats[T]) Place(item T) {
+func (q *Queuing[T]) Place(item T) {
 	// is the queue empty => initialize top/rear
 	if q.top == -1 {
 		q.top, q.rear = 0, 0
@@ -42,17 +38,17 @@ func (q *QueuingStats[T]) Place(item T) {
 	}
 
 	// put new item into the queue
-	q.top = (q.top + 1) % qstatsLen
+	q.top = (q.top + 1) % QueueLen
 	q.data[q.top] = item
 
 	// update rear of queue
 	if q.top == q.rear {
-		q.rear = (q.rear + 1) % qstatsLen
+		q.rear = (q.rear + 1) % QueueLen
 	}
 }
 
 // Find the index position of an item.
-func (q *QueuingStats[T]) Find(item T) int {
+func (q *Queuing[T]) Find(item T) int {
 
 	// if queue is empty, return -1
 	if q.top == -1 {
@@ -64,7 +60,7 @@ func (q *QueuingStats[T]) Find(item T) int {
 	for {
 		// if found, return position in the FIFO queue
 		if q.data[i] == item {
-			idx := (q.top - i + qstatsLen) % qstatsLen
+			idx := (q.top - i + QueueLen) % QueueLen
 			q.freq[idx]++
 			return idx
 		}
@@ -75,28 +71,28 @@ func (q *QueuingStats[T]) Find(item T) int {
 		}
 
 		// go one element back
-		i = (i - 1 + qstatsLen) % qstatsLen
+		i = (i - 1 + QueueLen) % QueueLen
 	}
 }
 
-// NewQueuingStatsJSON produces JSON output for for a queuing statistics.
-func (q *QueuingStats[T]) NewQueuingStatsJSON() QueuingStatsJSON {
+// NewQueuingJSON produces JSON output for for a queuing statistics.
+func (q *Queuing[T]) NewQueuingJSON() QueuingJSON {
 	// Compute total frequency over all positions
 	total := uint64(0)
-	for i := 0; i < qstatsLen; i++ {
+	for i := 0; i < QueueLen; i++ {
 		total += q.freq[i]
 	}
 
 	// compute index probabilities
-	dist := make([]float64, qstatsLen)
+	dist := make([]float64, QueueLen)
 	if total > 0 {
-		for i := 0; i < qstatsLen; i++ {
+		for i := 0; i < QueueLen; i++ {
 			dist[i] = float64(q.freq[i]) / float64(total)
 		}
 	}
 
 	// populate new index probabilities
-	return QueuingStatsJSON{
+	return QueuingJSON{
 		Distribution: dist,
 	}
 }

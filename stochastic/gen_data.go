@@ -3,6 +3,10 @@ package stochastic
 import (
 	"log"
 	"sort"
+
+	"github.com/Fantom-foundation/Aida/stochastic/exponential"
+	"github.com/Fantom-foundation/Aida/stochastic/stationary"
+	"github.com/Fantom-foundation/Aida/stochastic/statistics"
 )
 
 // EventData contains the statistical data for events that is used for visualization.
@@ -54,20 +58,20 @@ func GetEventsData() *EventData {
 func (e *EventData) PopulateEventData(d *EventRegistryJSON) {
 
 	// populate access stats for contract addresses
-	e.Contracts.PopulateAccessStats(&d.Contracts)
+	e.Contracts.PopulateAccess(&d.Contracts)
 
 	// populate access stats for storage keys
-	e.Keys.PopulateAccessStats(&d.Keys)
+	e.Keys.PopulateAccess(&d.Keys)
 
 	// populate access stats for storage values
-	e.Values.PopulateAccessStats(&d.Values)
+	e.Values.PopulateAccess(&d.Values)
 
 	// populate access stats for storage values
 	e.Snapshot.PopulateSnapshotStats(d)
 
 	// Sort entries of the stationary distribution and populate
 	n := len(d.Operations)
-	stationary, _ := StationaryDistribution(d.StochasticMatrix)
+	stationary, _ := stationary.ComputeDistribution(d.StochasticMatrix)
 	data := []OpData{}
 	for i := 0; i < n; i++ {
 		data = append(data, OpData{
@@ -159,28 +163,28 @@ func (e *EventData) PopulateEventData(d *EventRegistryJSON) {
 	}
 }
 
-// PopulateAccessStats populates access stats model
-func (a *AccessData) PopulateAccessStats(d *AccessStatsJSON) {
-	a.ECdf = make([][2]float64, len(d.CountingStats.ECdf))
-	copy(a.ECdf, d.CountingStats.ECdf)
-	lambda, err := ApproximateLambda(d.CountingStats.ECdf)
+// PopulateAccess populates access stats model
+func (a *AccessData) PopulateAccess(d *statistics.AccessJSON) {
+	a.ECdf = make([][2]float64, len(d.Counting.ECdf))
+	copy(a.ECdf, d.Counting.ECdf)
+	lambda, err := exponential.ApproximateLambda(d.Counting.ECdf)
 	if err != nil {
 		log.Fatalf("Failed to approximate lambda parameter. Error: %v", err)
 	}
 	a.Lambda = lambda
-	a.Cdf = PiecewiseLinearCdf(lambda, numDistributionPoints)
-	a.QPdf = make([]float64, len(d.QueuingStats.Distribution))
-	copy(a.QPdf, d.QueuingStats.Distribution)
+	a.Cdf = exponential.PiecewiseLinearCdf(lambda, statistics.NumDistributionPoints)
+	a.QPdf = make([]float64, len(d.Queuing.Distribution))
+	copy(a.QPdf, d.Queuing.Distribution)
 }
 
 // PopulateSnapStats populates snapshot stats model
 func (s *SnapshotData) PopulateSnapshotStats(d *EventRegistryJSON) {
 	s.ECdf = make([][2]float64, len(d.SnapshotEcdf))
 	copy(s.ECdf, d.SnapshotEcdf)
-	lambda, err := ApproximateLambda(d.SnapshotEcdf)
+	lambda, err := exponential.ApproximateLambda(d.SnapshotEcdf)
 	if err != nil {
 		log.Fatalf("Failed to approximate lambda parameter. Error: %v", err)
 	}
 	s.Lambda = lambda
-	s.Cdf = PiecewiseLinearCdf(lambda, numDistributionPoints)
+	s.Cdf = exponential.PiecewiseLinearCdf(lambda, statistics.NumDistributionPoints)
 }
