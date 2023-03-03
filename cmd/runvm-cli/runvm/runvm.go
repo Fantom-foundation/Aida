@@ -9,170 +9,11 @@ import (
 	"runtime/pprof"
 	"time"
 
-	"github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
-	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
-	"github.com/Fantom-foundation/go-opera/evmcore"
-	"github.com/Fantom-foundation/go-opera/opera"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/urfave/cli/v2"
 )
-
-const MaxErrorCount = 50 // maximum number of errors before terminating program
-var errCount int         // number of errors encountered
-
-// runVMTask executes VM on a chosen storage system.
-func RunVMTask(db state.StateDB, cfg *utils.Config, block uint64, tx int, recording *substate.Substate) (*substate.SubstateResult, error) {
-
-	inputAlloc := recording.InputAlloc
-	inputEnv := recording.Env
-	inputMessage := recording.Message
-
-	outputAlloc := recording.OutputAlloc
-	outputResult := recording.Result
-
-	var (
-		vmConfig vm.Config
-	)
-
-	vmConfig = opera.DefaultVMConfig
-	vmConfig.NoBaseFee = true
-	vmConfig.InterpreterImpl = cfg.VmImpl
-
-	// get chain configuration
-	chainConfig := utils.GetChainConfig(cfg.ChainID)
-
-	var hashError error
-	getHash := func(num uint64) common.Hash {
-		if inputEnv.BlockHashes == nil {
-			hashError = fmt.Errorf("getHash(%d) invoked, no blockhashes provided", num)
-			return common.Hash{}
-		}
-		h, ok := inputEnv.BlockHashes[num]
-		if !ok {
-			hashError = fmt.Errorf("getHash(%d) invoked, blockhash for that block not provided", num)
-		}
-		return h
-	}
-
-	// validate whether the input alloc is contained in the db
-	if cfg.ValidateTxState {
-		if err := utils.ValidateStateDB(inputAlloc, db, true); err != nil {
-			errCount++
-			errMsg := fmt.Sprintf("Block: %v Transaction: %v\n", block, tx)
-			errMsg += fmt.Sprintf("  Input alloc is not contained in the stateDB.\n%v", err)
-			if cfg.ContinueOnFailure {
-				fmt.Println(errMsg)
-			} else {
-				return nil, fmt.Errorf(errMsg)
-			}
-		}
-	}
-
-	// Apply Message
-	var (
-		gaspool = new(evmcore.GasPool)
-		//TODO check logs
-		//blockHash = common.Hash{0x01}
-		txHash  = common.Hash{0x02}
-		txIndex = tx
-	)
-
-	gaspool.AddGas(inputEnv.GasLimit)
-	blockCtx := vm.BlockContext{
-		CanTransfer: core.CanTransfer,
-		Transfer:    core.Transfer,
-		Coinbase:    inputEnv.Coinbase,
-		BlockNumber: new(big.Int).SetUint64(inputEnv.Number),
-		Time:        new(big.Int).SetUint64(inputEnv.Timestamp),
-		Difficulty:  inputEnv.Difficulty,
-		GasLimit:    inputEnv.GasLimit,
-		GetHash:     getHash,
-	}
-	// If currentBaseFee is defined, add it to the vmContext.
-	if inputEnv.BaseFee != nil {
-		blockCtx.BaseFee = new(big.Int).Set(inputEnv.BaseFee)
-	}
-
-	// call ApplyMessage
-	msg := inputMessage.AsMessage()
-	db.Prepare(txHash, txIndex)
-	txCtx := evmcore.NewEVMTxContext(msg)
-	evm := vm.NewEVM(blockCtx, txCtx, db, chainConfig, vmConfig)
-	snapshot := db.Snapshot()
-	msgResult, err := evmcore.ApplyMessage(evm, msg, gaspool)
-
-	// if transaction fails, revert to the first snapshot.
-	if err != nil {
-		db.RevertToSnapshot(snapshot)
-		errCount++
-		if cfg.ContinueOnFailure {
-			fmt.Printf("Block: %v Transaction: %v\n%v", block, tx, err)
-		} else {
-			return nil, fmt.Errorf("Block: %v Transaction: %v\n%v", block, tx, err)
-		}
-	}
-	if hashError != nil {
-		return nil, hashError
-	}
-	if chainConfig.IsByzantium(blockCtx.BlockNumber) {
-		db.Finalise(true)
-	} else {
-		db.IntermediateRoot(chainConfig.IsEIP158(blockCtx.BlockNumber))
-	}
-
-	evmResult := &substate.SubstateResult{}
-	if msgResult.Failed() {
-		evmResult.Status = types.ReceiptStatusFailed
-	} else {
-		evmResult.Status = types.ReceiptStatusSuccessful
-	}
-
-	// TODO clear state execution context and validate logs
-	//evmResult.Logs = db.GetLogs(txHash, blockHash)
-	evmResult.Logs = outputResult.Logs
-	evmResult.Bloom = types.BytesToBloom(types.LogsBloom(evmResult.Logs))
-	if to := msg.To(); to == nil {
-		evmResult.ContractAddress = crypto.CreateAddress(evm.TxContext.Origin, msg.Nonce())
-	}
-	evmResult.GasUsed = msgResult.UsedGas
-
-	// check whether the outputAlloc substate is contained in the world-state db.
-	if cfg.ValidateTxState {
-		if err := utils.ValidateStateDB(outputAlloc, db, false); err != nil {
-			errCount++
-			errMsg := fmt.Sprintf("Block: %v Transaction: %v\n", block, tx)
-			errMsg += fmt.Sprintf("  Output alloc is not contained in the stateDB. %v\n", err)
-			if cfg.ContinueOnFailure {
-				fmt.Println(errMsg)
-			} else {
-				return nil, fmt.Errorf(errMsg)
-			}
-		}
-		r := outputResult.Equal(evmResult)
-		if !r {
-			errCount++
-			errMsg := fmt.Sprintf("Block: %v Transaction: %v\n", block, tx)
-			errMsg += fmt.Sprintf("  Inconsistent output result.\n")
-			replay.PrintResultDiffSummary(outputResult, evmResult)
-			if cfg.ContinueOnFailure {
-				fmt.Println(errMsg)
-			} else {
-				return nil, fmt.Errorf(errMsg)
-			}
-		}
-	}
-	if errCount > MaxErrorCount {
-		return nil, fmt.Errorf("too many errors")
-	}
-	return evmResult, nil
-}
 
 // RunVM implements trace command for executing VM on a chosen storage system.
 func RunVM(ctx *cli.Context) error {
@@ -194,6 +35,7 @@ func RunVM(ctx *cli.Context) error {
 	)
 	// process general arguments
 	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
+	cfg.StateValidationMode = utils.SubsetCheck
 	if argErr != nil {
 		return argErr
 	}
@@ -344,8 +186,7 @@ func RunVM(ctx *cli.Context) error {
 		// run VM
 		db.PrepareSubstate(&tx.Substate.InputAlloc, tx.Substate.Env.Number)
 		db.BeginTransaction(uint32(tx.Transaction))
-		var result *substate.SubstateResult
-		result, err = RunVMTask(db, cfg, tx.Block, tx.Transaction, tx.Substate)
+		err = utils.ProcessTx(db, cfg, tx.Block, tx.Transaction, tx.Substate)
 		if err != nil {
 			log.Printf("\tRun VM failed.\n")
 			err = fmt.Errorf("Error: VM execution failed. %w", err)
@@ -353,7 +194,7 @@ func RunVM(ctx *cli.Context) error {
 		}
 		db.EndTransaction()
 		txCount++
-		gasCount = new(big.Int).Add(gasCount, new(big.Int).SetUint64(result.GasUsed))
+		gasCount = new(big.Int).Add(gasCount, new(big.Int).SetUint64(tx.Substate.Result.GasUsed))
 
 		if cfg.EnableProgress {
 			// report progress
@@ -402,7 +243,7 @@ func RunVM(ctx *cli.Context) error {
 	runTime := time.Since(start).Seconds()
 
 	if cfg.ContinueOnFailure {
-		log.Printf("run-vm: %v errors found\n", errCount)
+		log.Printf("run-vm: %v errors found\n", utils.NumErrors)
 	}
 
 	if cfg.ValidateWorldState && err == nil {

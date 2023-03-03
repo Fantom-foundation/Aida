@@ -41,6 +41,7 @@ var RunVMApp = cli.App{
 		&utils.SkipPrimingFlag,
 		&utils.StateDbImplementationFlag,
 		&utils.StateDbVariantFlag,
+		&utils.StateDbSrcDirFlag,
 		&utils.StateDbTempDirFlag,
 		&utils.StateDbLoggingFlag,
 		&utils.ShadowDbImplementationFlag,

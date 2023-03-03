@@ -28,6 +28,14 @@ var (
 	TraceDebug         bool   = false // TraceDebug for enabling/disabling debugging.
 )
 
+// Type of validation performs on stateDB during Tx processing.
+type ValidationMode int
+
+const (
+	SubsetCheck   ValidationMode = iota // confirms whether a substate is contained in stateDB.
+	EqualityCheck                       // confirms whether a substate and StateDB are identical.
+)
+
 // GitCommit represents the GitHub commit hash the app was built from.
 var GitCommit = "0000000000000000000000000000000000000000"
 
@@ -204,40 +212,44 @@ var (
 
 // execution configuration for replay command.
 type Config struct {
+	AppName     string
+	CommandName string
+
 	First uint64 // first block
 	Last  uint64 // last block
 
-	Debug              bool   // enable trace debug flag
-	CarmenSchema       int    // the current DB schema ID to use in Carmen
-	ContinueOnFailure  bool   // continue validation when an error detected
-	ChainID            int    // Blockchain ID (mainnet: 250/testnet: 4002)
-	DbImpl             string // storage implementation
-	DbVariant          string // database variant
-	DbLogging          bool   // set to true if all DB operations should be logged
-	DeletedAccountDir  string // directory of deleted account database
-	EnableProgress     bool   // enable progress report flag
-	EpochLength        uint64 // length of an epoch in number of blocks
-	ArchiveMode        bool   // enable archive mode
-	ArchiveVariant     string // selects the implementation variant of the archive
-	HasDeletedAccounts bool   // true if deletedAccountDir is not empty; otherwise false
-	KeepStateDB        bool   // set to true if stateDB is kept after run
-	MaxNumTransactions int    // the maximum number of processed transactions
-	MemoryBreakdown    bool   // enable printing of memory breakdown
-	MemoryProfile      string // capture the memory heap profile into the file
-	PrimeRandom        bool   // enable randomized priming
-	PrimeSeed          int64  // set random seed
-	PrimeThreshold     int    // set account threshold before commit
-	Profile            bool   // enable micro profiling
-	SkipPriming        bool   // skip priming of the state DB
-	ShadowImpl         string // implementation of the shadow DB to use, empty if disabled
-	ShadowVariant      string // database variant of the shadow DB to be used
-	StateDbSrcDir      string // directory to load an existing State DB data
-	StateDbTempDir     string // directory to store a working copy of State DB data
-	UpdateDBDir        string // update-set directory
-	ValidateTxState    bool   // validate stateDB before and after transaction
-	ValidateWorldState bool   // validate stateDB before and after replay block range
-	VmImpl             string // vm implementation (geth/lfvm)
-	Workers            int    // number of worker threads
+	Debug               bool           // enable trace debug flag
+	CarmenSchema        int            // the current DB schema ID to use in Carmen
+	ContinueOnFailure   bool           // continue validation when an error detected
+	ChainID             int            // Blockchain ID (mainnet: 250/testnet: 4002)
+	DbImpl              string         // storage implementation
+	DbVariant           string         // database variant
+	DbLogging           bool           // set to true if all DB operations should be logged
+	DeletedAccountDir   string         // directory of deleted account database
+	EnableProgress      bool           // enable progress report flag
+	EpochLength         uint64         // length of an epoch in number of blocks
+	ArchiveMode         bool           // enable archive mode
+	ArchiveVariant      string         // selects the implementation variant of the archive
+	HasDeletedAccounts  bool           // true if deletedAccountDir is not empty; otherwise false
+	KeepStateDB         bool           // set to true if stateDB is kept after run
+	MaxNumTransactions  int            // the maximum number of processed transactions
+	MemoryBreakdown     bool           // enable printing of memory breakdown
+	MemoryProfile       string         // capture the memory heap profile into the file
+	PrimeRandom         bool           // enable randomized priming
+	PrimeSeed           int64          // set random seed
+	PrimeThreshold      int            // set account threshold before commit
+	Profile             bool           // enable micro profiling
+	SkipPriming         bool           // skip priming of the state DB
+	ShadowImpl          string         // implementation of the shadow DB to use, empty if disabled
+	ShadowVariant       string         // database variant of the shadow DB to be used
+	StateDbSrcDir       string         // directory to load an existing State DB data
+	StateDbTempDir      string         // directory to store a working copy of State DB data
+	StateValidationMode ValidationMode // state validation mode
+	UpdateDBDir         string         // update-set directory
+	ValidateTxState     bool           // validate stateDB before and after transaction
+	ValidateWorldState  bool           // validate stateDB before and after replay block range
+	VmImpl              string         // vm implementation (geth/lfvm)
+	Workers             int            // number of worker threads
 }
 
 // getChainConnfig returns chain configuration of either mainnet or testnets.
@@ -307,39 +319,43 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		ctx.Bool(ValidateWorldStateFlag.Name)
 
 	cfg := &Config{
-		ArchiveMode:        ctx.Bool(ArchiveModeFlag.Name),
-		ArchiveVariant:     ctx.String(ArchiveVariantFlag.Name),
-		CarmenSchema:       ctx.Int(CarmenSchemaFlag.Name),
-		ChainID:            ctx.Int(ChainIDFlag.Name),
-		ContinueOnFailure:  ctx.Bool(ContinueOnFailureFlag.Name),
-		Debug:              ctx.Bool(TraceDebugFlag.Name),
-		EnableProgress:     !ctx.Bool(DisableProgressFlag.Name),
-		EpochLength:        ctx.Uint64(EpochLengthFlag.Name),
-		First:              first,
-		DbImpl:             ctx.String(StateDbImplementationFlag.Name),
-		DbVariant:          ctx.String(StateDbVariantFlag.Name),
-		DbLogging:          ctx.Bool(StateDbLoggingFlag.Name),
-		DeletedAccountDir:  ctx.String(DeletedAccountDirFlag.Name),
-		HasDeletedAccounts: true,
-		KeepStateDB:        ctx.Bool(KeepStateDBFlag.Name),
-		Last:               last,
-		MaxNumTransactions: ctx.Int(MaxNumTransactionsFlag.Name),
-		MemoryBreakdown:    ctx.Bool(MemoryBreakdownFlag.Name),
-		PrimeRandom:        ctx.Bool(RandomizePrimingFlag.Name),
-		PrimeSeed:          ctx.Int64(PrimeSeedFlag.Name),
-		PrimeThreshold:     ctx.Int(PrimeThresholdFlag.Name),
-		Profile:            ctx.Bool(ProfileFlag.Name),
-		SkipPriming:        ctx.Bool(SkipPrimingFlag.Name),
-		ShadowImpl:         ctx.String(ShadowDbImplementationFlag.Name),
-		ShadowVariant:      ctx.String(ShadowDbVariantFlag.Name),
-		StateDbSrcDir:      ctx.String(StateDbSrcDirFlag.Name),
-		StateDbTempDir:     ctx.String(StateDbTempDirFlag.Name),
-		UpdateDBDir:        ctx.String(UpdateDBDirFlag.Name),
-		ValidateTxState:    validateTxState,
-		ValidateWorldState: validateWorldState,
-		VmImpl:             ctx.String(VmImplementation.Name),
-		Workers:            ctx.Int(substate.WorkersFlag.Name),
-		MemoryProfile:      ctx.String(MemProfileFlag.Name),
+		AppName:     ctx.App.HelpName,
+		CommandName: ctx.Command.Name,
+
+		ArchiveMode:         ctx.Bool(ArchiveModeFlag.Name),
+		ArchiveVariant:      ctx.String(ArchiveVariantFlag.Name),
+		CarmenSchema:        ctx.Int(CarmenSchemaFlag.Name),
+		ChainID:             ctx.Int(ChainIDFlag.Name),
+		ContinueOnFailure:   ctx.Bool(ContinueOnFailureFlag.Name),
+		Debug:               ctx.Bool(TraceDebugFlag.Name),
+		EnableProgress:      !ctx.Bool(DisableProgressFlag.Name),
+		EpochLength:         ctx.Uint64(EpochLengthFlag.Name),
+		First:               first,
+		DbImpl:              ctx.String(StateDbImplementationFlag.Name),
+		DbVariant:           ctx.String(StateDbVariantFlag.Name),
+		DbLogging:           ctx.Bool(StateDbLoggingFlag.Name),
+		DeletedAccountDir:   ctx.String(DeletedAccountDirFlag.Name),
+		HasDeletedAccounts:  true,
+		KeepStateDB:         ctx.Bool(KeepStateDBFlag.Name),
+		Last:                last,
+		MaxNumTransactions:  ctx.Int(MaxNumTransactionsFlag.Name),
+		MemoryBreakdown:     ctx.Bool(MemoryBreakdownFlag.Name),
+		PrimeRandom:         ctx.Bool(RandomizePrimingFlag.Name),
+		PrimeSeed:           ctx.Int64(PrimeSeedFlag.Name),
+		PrimeThreshold:      ctx.Int(PrimeThresholdFlag.Name),
+		Profile:             ctx.Bool(ProfileFlag.Name),
+		SkipPriming:         ctx.Bool(SkipPrimingFlag.Name),
+		ShadowImpl:          ctx.String(ShadowDbImplementationFlag.Name),
+		ShadowVariant:       ctx.String(ShadowDbVariantFlag.Name),
+		StateDbSrcDir:       ctx.String(StateDbSrcDirFlag.Name),
+		StateDbTempDir:      ctx.String(StateDbTempDirFlag.Name),
+		StateValidationMode: EqualityCheck,
+		UpdateDBDir:         ctx.String(UpdateDBDirFlag.Name),
+		ValidateTxState:     validateTxState,
+		ValidateWorldState:  validateWorldState,
+		VmImpl:              ctx.String(VmImplementation.Name),
+		Workers:             ctx.Int(substate.WorkersFlag.Name),
+		MemoryProfile:       ctx.String(MemProfileFlag.Name),
 	}
 	setFirstBlockFromChainID(cfg.ChainID)
 	if cfg.EpochLength <= 0 {
