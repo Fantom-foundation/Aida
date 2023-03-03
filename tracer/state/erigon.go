@@ -54,7 +54,7 @@ type erigonStateDB struct {
 
 // BeginBlockApply creates a new statedb from an existing geth database
 func (s *erigonStateDB) BeginBlockApply() error {
-	s.StateDB = evmcore.NewErigonAdapter(erigonstate.NewWithChainKV(s.chainKV))
+	s.StateDB = evmcore.StateDB(evmcore.NewErigonAdapter(erigonstate.NewWithChainKV(s.chainKV)))
 	return nil
 }
 
@@ -80,10 +80,10 @@ func (s *erigonStateDB) EndBlock() {
 	// opem rwTx transaction
 	rwTx, err := s.chainKV.BeginRw(context.Background())
 	if err != nil {
-		return err
+		panic(err)
 	}
 
-	defer rwTx.Roolback()
+	defer rwTx.Rollback()
 
 	blockWriter := estate.NewPlainStateWriterNoHistory(rwTx)
 
@@ -133,7 +133,7 @@ func (s *erigonStateDB) GetSubstatePostAlloc() substate.SubstateAlloc {
 // After this call no more operations will be allowed on the state.
 func (s *erigonStateDB) Close() error {
 	// flush changes to erigon db
-	s.StateDB.EndBlock()
+	s.EndBlock()
 	// close erigon db
 	s.chainKV.Close()
 

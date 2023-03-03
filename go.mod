@@ -13,7 +13,7 @@ require (
 	github.com/ethereum/go-ethereum v1.10.25
 	github.com/fatih/color v1.13.0
 	github.com/ledgerwatch/erigon v0.0.0-00010101000000-000000000000
-	github.com/ledgerwatch/erigon-lib v0.0.0-20220421034346-3c5275752634
+	github.com/ledgerwatch/erigon-lib v0.0.0-20220620073929-46bebb3317d9
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
 	github.com/syndtr/goleveldb v1.0.1-0.20220614013038-64ee5596c38a
@@ -26,6 +26,8 @@ require (
 	github.com/RoaringBitmap/roaring v1.2.3 // indirect
 	github.com/VictoriaMetrics/fastcache v1.12.0 // indirect
 	github.com/VictoriaMetrics/metrics v1.23.1 // indirect
+	github.com/anacrolix/log v0.13.1 // indirect
+	github.com/anacrolix/torrent v1.44.0 // indirect
 	github.com/bits-and-blooms/bitset v1.2.2 // indirect
 	github.com/btcsuite/btcd v0.22.0-beta // indirect
 	github.com/c2h5oh/datasize v0.0.0-20220606134207-859f65c6625b // indirect
@@ -40,20 +42,21 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/deckarep/golang-set v1.7.1 // indirect
 	github.com/deepmap/oapi-codegen v1.8.2 // indirect
-	github.com/dlclark/regexp2 v1.2.0 // indirect
-	github.com/dop251/goja v0.0.0-20200721192441-a695b0cdd498 // indirect
+	github.com/dlclark/regexp2 v1.4.1-0.20201116162257-a2a8dda75c91 // indirect
+	github.com/dop251/goja v0.0.0-20211011172007-d99e4b8cbf48 // indirect
 	github.com/dvyukov/go-fuzz v0.0.0-20201127111758-49e582c6c23d // indirect
 	github.com/edsrzf/mmap-go v1.1.0 // indirect
-	github.com/emirpasic/gods v1.12.0 // indirect
+	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/evalphobia/logrus_sentry v0.8.2 // indirect
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5 // indirect
 	github.com/gballet/go-libpcsclite v0.0.0-20191108122812-4678299bea08 // indirect
 	github.com/getsentry/raven-go v0.2.0 // indirect
 	github.com/getsentry/sentry-go v0.14.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
-	github.com/go-sourcemap/sourcemap v2.1.2+incompatible // indirect
+	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
 	github.com/go-stack/stack v1.8.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
+	github.com/golang-jwt/jwt/v4 v4.4.1 // indirect
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
@@ -64,7 +67,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect
 	github.com/holiman/bloomfilter/v2 v2.0.3 // indirect
 	github.com/holiman/uint256 v1.2.1 // indirect
-	github.com/huin/goupnp v1.0.2 // indirect
+	github.com/huin/goupnp v1.0.3 // indirect
 	github.com/influxdata/influxdb v1.8.3 // indirect
 	github.com/influxdata/influxdb-client-go/v2 v2.4.0 // indirect
 	github.com/influxdata/line-protocol v0.0.0-20210311194329-9aa0e372d097 // indirect
@@ -97,7 +100,7 @@ require (
 	github.com/stretchr/testify v1.8.2 // indirect
 	github.com/tklauser/go-sysconf v0.3.10 // indirect
 	github.com/tklauser/numcpus v0.5.0 // indirect
-	github.com/torquem-ch/mdbx-go v0.23.2 // indirect
+	github.com/torquem-ch/mdbx-go v0.24.3-0.20220614090901-342411560dde // indirect
 	github.com/tyler-smith/go-bip39 v1.0.2 // indirect
 	github.com/uber/jaeger-client-go v2.20.1+incompatible // indirect
 	github.com/uber/jaeger-lib v2.2.0+incompatible // indirect
@@ -114,6 +117,7 @@ require (
 	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/sys v0.5.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
+	golang.org/x/tools v0.6.0 // indirect
 	google.golang.org/genproto v0.0.0-20230202175211-008b39050e57 // indirect
 	google.golang.org/grpc v1.53.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
@@ -129,11 +133,13 @@ replace github.com/ethereum/go-ethereum => github.com/Fantom-foundation/go-ether
 
 replace github.com/Fantom-foundation/go-opera => github.com/Fantom-foundation/go-opera-substate v1.0.1-0.20221124030310-9d06e1f98a18
 
-replace github.com/Fantom-foundation/go-opera-fvm-erigon => github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230227084005-b034327cb763
-
-//replace github.com/Fantom-foundation/go-opera-fvm => github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230112084156-680f281ea1cb
+replace github.com/Fantom-foundation/go-opera-fvm-erigon => github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230303130156-4e092a66d111
 
 replace github.com/ledgerwatch/erigon => github.com/ledgerwatch/erigon v1.9.7-0.20220421151921-057740ac2019
+
+replace github.com/ugorji/go/codec => github.com/ugorji/go/codec v1.1.13
+
+replace github.com/ugorji/go/codec/codecgen => github.com/ugorji/go/codec/codecgen v1.1.13
 
 // The Carmen project is integrated as a git-submodule since we need to run extra
 // build steps when importing the project. This is handled in the Makefile.
