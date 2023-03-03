@@ -8,7 +8,6 @@ import (
 	"runtime/pprof"
 	"time"
 
-	"github.com/Fantom-foundation/Aida/cmd/runvm-cli/runvm"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -28,6 +27,7 @@ func RunArchive(ctx *cli.Context) error {
 
 	// process general arguments
 	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
+	cfg.StateValidationMode = utils.SubsetCheck
 	if argErr != nil {
 		return argErr
 	}
@@ -215,7 +215,7 @@ func runBlocks(
 		state.BeginBlock(block)
 		for _, tx := range transactions {
 			state.BeginTransaction(uint32(tx.Transaction))
-			if _, err = runvm.RunVMTask(state, cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
+			if err = utils.ProcessTx(db, cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
 				issues <- fmt.Errorf("processing of transaction %d/%d failed: %v", block, tx.Transaction, err)
 				break
 			}

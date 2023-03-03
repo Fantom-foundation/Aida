@@ -203,11 +203,11 @@ func genDeletedAccountsTask(block uint64, tx int, recording *substate.Substate, 
 	if !(r && a) {
 		if !r {
 			fmt.Printf("inconsistent output: result\n")
-			PrintResultDiffSummary(outputResult, evmResult)
+			utils.PrintResultDiffSummary(outputResult, evmResult)
 		}
 		if !a {
 			fmt.Printf("inconsistent output: alloc\n")
-			PrintAllocationDiffSummary(&outputAlloc, &evmAlloc)
+			utils.PrintAllocationDiffSummary(&outputAlloc, &evmAlloc)
 		}
 		return fmt.Errorf("inconsistent output")
 	}
