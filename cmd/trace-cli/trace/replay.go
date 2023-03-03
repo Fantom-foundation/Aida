@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"runtime"
-	"runtime/pprof"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer"
@@ -204,15 +202,8 @@ func traceReplayTask(cfg *utils.Config) error {
 	}
 
 	// write memory profile if requested
-	if cfg.MemoryProfile != "" {
-		f, err := os.Create(cfg.MemoryProfile)
-		if err != nil {
-			return fmt.Errorf("could not create memory profile: %s", err)
-		}
-		runtime.GC() // get up-to-date statistics
-		if err := pprof.WriteHeapProfile(f); err != nil {
-			return fmt.Errorf("could not write memory profile: %s", err)
-		}
+	if err := utils.StartMemoryProfile(cfg); err != nil {
+		return err
 	}
 
 	// print profile statistics (if enabled)
@@ -263,16 +254,10 @@ func traceReplayAction(ctx *cli.Context) error {
 	dictionary.ContextDir = ctx.String(utils.TraceDirectoryFlag.Name) + "/"
 
 	// start CPU profiling if requested.
-	if profileFileName := ctx.String(utils.CpuProfileFlag.Name); profileFileName != "" {
-		f, err := os.Create(profileFileName)
-		if err != nil {
-			return fmt.Errorf("could not create CPU profile: %s", err)
-		}
-		if err := pprof.StartCPUProfile(f); err != nil {
-			return fmt.Errorf("could not start CPU profile: %s", err)
-		}
-		defer pprof.StopCPUProfile()
+	if err := utils.StartCPUProfile(cfg); err != nil {
+		return err
 	}
+	defer utils.StopCPUProfile(cfg)
 
 	// run storage driver
 	substate.SetSubstateFlags(ctx)

@@ -213,18 +213,19 @@ type Config struct {
 	First uint64 // first block
 	Last  uint64 // last block
 
-	Debug               bool           // enable trace debug flag
+	ArchiveMode         bool           // enable archive mode
+	ArchiveVariant      string         // selects the implementation variant of the archive
 	CarmenSchema        int            // the current DB schema ID to use in Carmen
-	ContinueOnFailure   bool           // continue validation when an error detected
 	ChainID             int            // Blockchain ID (mainnet: 250/testnet: 4002)
+	ContinueOnFailure   bool           // continue validation when an error detected
+	CPUProfile          string         // pprof cpu profile output file name
 	DbImpl              string         // storage implementation
 	DbVariant           string         // database variant
 	DbLogging           bool           // set to true if all DB operations should be logged
+	Debug               bool           // enable trace debug flag
 	DeletedAccountDir   string         // directory of deleted account database
 	EnableProgress      bool           // enable progress report flag
 	EpochLength         uint64         // length of an epoch in number of blocks
-	ArchiveMode         bool           // enable archive mode
-	ArchiveVariant      string         // selects the implementation variant of the archive
 	HasDeletedAccounts  bool           // true if deletedAccountDir is not empty; otherwise false
 	KeepStateDB         bool           // set to true if stateDB is kept after run
 	MaxNumTransactions  int            // the maximum number of processed transactions
@@ -322,6 +323,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		CarmenSchema:        ctx.Int(CarmenSchemaFlag.Name),
 		ChainID:             ctx.Int(ChainIDFlag.Name),
 		ContinueOnFailure:   ctx.Bool(ContinueOnFailureFlag.Name),
+		CPUProfile:          ctx.String(CpuProfileFlag.Name),
 		Debug:               ctx.Bool(TraceDebugFlag.Name),
 		EnableProgress:      !ctx.Bool(DisableProgressFlag.Name),
 		EpochLength:         ctx.Uint64(EpochLengthFlag.Name),
@@ -335,6 +337,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		Last:                last,
 		MaxNumTransactions:  ctx.Int(MaxNumTransactionsFlag.Name),
 		MemoryBreakdown:     ctx.Bool(MemoryBreakdownFlag.Name),
+		MemoryProfile:       ctx.String(MemProfileFlag.Name),
 		PrimeRandom:         ctx.Bool(RandomizePrimingFlag.Name),
 		PrimeSeed:           ctx.Int64(PrimeSeedFlag.Name),
 		PrimeThreshold:      ctx.Int(PrimeThresholdFlag.Name),
@@ -350,7 +353,6 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		ValidateWorldState:  validateWorldState,
 		VmImpl:              ctx.String(VmImplementation.Name),
 		Workers:             ctx.Int(substate.WorkersFlag.Name),
-		MemoryProfile:       ctx.String(MemProfileFlag.Name),
 	}
 	setFirstBlockFromChainID(cfg.ChainID)
 	if cfg.EpochLength <= 0 {

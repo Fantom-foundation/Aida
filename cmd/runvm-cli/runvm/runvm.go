@@ -5,8 +5,6 @@ import (
 	"log"
 	"math/big"
 	"os"
-	"runtime"
-	"runtime/pprof"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/operation"
@@ -41,16 +39,10 @@ func RunVM(ctx *cli.Context) error {
 	}
 
 	// start CPU profiling if requested.
-	if profileFileName := ctx.String(utils.CpuProfileFlag.Name); profileFileName != "" {
-		f, err := os.Create(profileFileName)
-		if err != nil {
-			return fmt.Errorf("could not create CPU profile: %s", err)
-		}
-		if err := pprof.StartCPUProfile(f); err != nil {
-			return fmt.Errorf("could not start CPU profile: %s", err)
-		}
-		defer pprof.StopCPUProfile()
+	if err := utils.StartCPUProfile(cfg); err != nil {
+		return err
 	}
+	defer utils.StopCPUProfile(cfg)
 
 	// iterate through subsets in sequence
 	substate.SetSubstateFlags(ctx)
@@ -268,15 +260,8 @@ func RunVM(ctx *cli.Context) error {
 	}
 
 	// write memory profile if requested
-	if profileFileName := ctx.String(utils.MemProfileFlag.Name); profileFileName != "" && err == nil {
-		f, err := os.Create(profileFileName)
-		if err != nil {
-			return fmt.Errorf("could not create memory profile: %s", err)
-		}
-		runtime.GC() // get up-to-date statistics
-		if err := pprof.WriteHeapProfile(f); err != nil {
-			return fmt.Errorf("could not write memory profile: %s", err)
-		}
+	if err := utils.StartMemoryProfile(cfg); err != nil {
+		return err
 	}
 
 	if cfg.Profile {

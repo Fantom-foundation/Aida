@@ -6,7 +6,6 @@ import (
 	"log"
 	"math"
 	"os"
-	"runtime/pprof"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
@@ -52,14 +51,10 @@ func stochasticRecordAction(ctx *cli.Context) error {
 	cfg.ValidateTxState = true
 
 	// start CPU profiling if enabled.
-	if profileFileName := ctx.String(utils.CpuProfileFlag.Name); profileFileName != "" {
-		f, err := os.Create(profileFileName)
-		if err != nil {
-			return err
-		}
-		pprof.StartCPUProfile(f)
-		defer pprof.StopCPUProfile()
+	if err := utils.StartCPUProfile(cfg); err != nil {
+		return err
 	}
+	defer utils.StopCPUProfile(cfg)
 
 	if ctx.Bool(utils.TraceDebugFlag.Name) {
 		utils.TraceDebug = true

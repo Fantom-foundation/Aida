@@ -3,7 +3,6 @@ package trace
 import (
 	"fmt"
 	"os"
-	"runtime/pprof"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer"
@@ -185,14 +184,10 @@ func traceReplaySubstateAction(ctx *cli.Context) error {
 	// Get profiling flag
 	operation.EnableProfiling = cfg.Profile
 	// Start CPU profiling if requested.
-	if profileFileName := ctx.String(utils.CpuProfileFlag.Name); profileFileName != "" {
-		f, err := os.Create(profileFileName)
-		if err != nil {
-			return err
-		}
-		pprof.StartCPUProfile(f)
-		defer pprof.StopCPUProfile()
+	if err := utils.StartCPUProfile(cfg); err != nil {
+		return err
 	}
+	defer utils.StopCPUProfile(cfg)
 
 	err = traceReplaySubstateTask(cfg)
 
