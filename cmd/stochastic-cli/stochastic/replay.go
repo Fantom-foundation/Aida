@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"os"
 	"strconv"
 	"time"
@@ -23,10 +24,8 @@ var StochasticReplayCommand = cli.Command{
 	Flags: []cli.Flag{
 		&utils.TraceDebugFlag,
 		&utils.DisableProgressFlag,
-		// TODO: this flag does not make sense for stochastic replay/remove, however
-		// cannot be removed without rewriting config.go
-		&utils.ChainIDFlag,
 		&utils.MemoryBreakdownFlag,
+		&utils.RandomSeedFlag,
 		&utils.StateDbImplementationFlag,
 		&utils.StateDbVariantFlag,
 		&utils.StateDbSrcDirFlag,
@@ -83,6 +82,11 @@ func stochasticReplayAction(ctx *cli.Context) error {
 	fmt.Printf("stochastic replay: run simulation ...\n")
 	traceDebug := ctx.Bool(utils.TraceDebugFlag.Name)
 	disableProgress := ctx.Bool(utils.DisableProgressFlag.Name)
+
+	// set random seed so that runs are deterministic
+	randomSeed := ctx.Int(utils.RandomSeedFlag.Name)
+	rand.Seed(int64(randomSeed))
+
 	stochastic.RunStochasticReplay(db, simulation, int(simLength), traceDebug, disableProgress)
 
 	// print memory usage after simulation
