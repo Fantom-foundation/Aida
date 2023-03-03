@@ -336,8 +336,15 @@ func renderMarkovChain(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, txt)
 }
 
-// FireUpWeb fires up a new web-server for data visualisation.
-func FireUpWeb(addr string) {
+// FireUpWeb produces a data model for the recorded events and
+// visualizes with a local web-server.
+func FireUpWeb(eventRegistry *EventRegistryJSON, addr string) {
+
+	// create data model (as a singleton) for visualization
+	eventModel := GetEventsData()
+	eventModel.PopulateEventData(eventRegistry)
+
+	// create web server
 	http.HandleFunc("/", renderMain)
 	http.HandleFunc("/"+countingRef, renderCounting)
 	http.HandleFunc("/"+queuingRef, renderQueuing)
