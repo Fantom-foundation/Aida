@@ -9,6 +9,9 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/stochastic/exponential"
+	"github.com/Fantom-foundation/Aida/stochastic/generator"
+	"github.com/Fantom-foundation/Aida/stochastic/statistics"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -30,9 +33,9 @@ type stochasticAccount struct {
 // stochasticState keeps the execution state for the stochastic simulation
 type stochasticState struct {
 	db             state.StateDB                // StateDB database
-	contracts      *IndirectAccess              // index access generator for contracts
-	keys           *RandomAccess                // index access generator for keys
-	values         *RandomAccess                // index access generator for values
+	contracts      *generator.IndirectAccess    // index access generator for contracts
+	keys           *generator.RandomAccess      // index access generator for keys
+	values         *generator.RandomAccess      // index access generator for values
 	snapshotLambda float64                      // lambda parameter for snapshot delta distribution
 	txNum          uint32                       // current transaction number
 	blockNum       uint64                       // current block number
@@ -57,17 +60,17 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, simLength int
 	// storage-keys, and storage addresses.
 	// (NB: Contracts need an indirect access wrapper because
 	// contract addresses can be deleted by suicide.)
-	contracts := NewIndirectAccess(NewRandomAccess(
+	contracts := generator.NewIndirectAccess(generator.NewRandomAccess(
 		e.Contracts.NumKeys,
 		e.Contracts.Lambda,
 		e.Contracts.QueueDistribution,
 	))
-	keys := NewRandomAccess(
+	keys := generator.NewRandomAccess(
 		e.Keys.NumKeys,
 		e.Keys.Lambda,
 		e.Keys.QueueDistribution,
 	)
-	values := NewRandomAccess(
+	values := generator.NewRandomAccess(
 		e.Values.NumKeys,
 		e.Values.Lambda,
 		e.Values.QueueDistribution,
@@ -136,7 +139,7 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, simLength int
 }
 
 // NewStochasticState creates a new state for execution StateDB operations
-func NewStochasticState(db state.StateDB, contracts *IndirectAccess, keys *RandomAccess, values *RandomAccess, snapshotLambda float64, traceDebug bool) stochasticState {
+func NewStochasticState(db state.StateDB, contracts *generator.IndirectAccess, keys *generator.RandomAccess, values *generator.RandomAccess, snapshotLambda float64, traceDebug bool) stochasticState {
 
 	// retrieve number of contracts
 	n := contracts.NumElem()
@@ -190,8 +193,8 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 	valueIdx := ss.values.NextIndex(valueCl)
 
 	// convert index to address/hashes
-	if addrCl != noArgID {
-		if addrCl == newValueID {
+	if addrCl != statistics.NoArgID {
+		if addrCl == statistics.NewValueID {
 			// create a new internal representation of an account
 			// but don't create an account in StateDB; this is done
 			// by CreateAccount.
@@ -202,10 +205,10 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		}
 		addr = toAddress(addrIdx)
 	}
-	if keyCl != noArgID {
+	if keyCl != statistics.NoArgID {
 		key = toHash(keyIdx)
 	}
-	if valueCl != noArgID {
+	if valueCl != statistics.NoArgID {
 		value = toHash(valueIdx)
 	}
 
@@ -215,13 +218,13 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		fmt.Printf("opcode:%v (%v)", opText[op], EncodeOpcode(op, addrCl, keyCl, valueCl))
 
 		// print indexes of contract address, storage key, and storage value.
-		if addrCl != noArgID {
+		if addrCl != statistics.NoArgID {
 			fmt.Printf(" addr-idx: %v", addrIdx)
 		}
-		if keyCl != noArgID {
+		if keyCl != statistics.NoArgID {
 			fmt.Printf(" key-idx: %v", keyIdx)
 		}
-		if valueCl != noArgID {
+		if valueCl != statistics.NoArgID {
 			fmt.Printf(" value-idx: %v", valueIdx)
 		}
 	}
@@ -310,7 +313,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		if snapshotNum > 0 {
 			// TODO: consider a more realistic distribution
 			// rather than the uniform distribution.
-			snapshotIdx := snapshotNum - int(randIndex(ss.snapshotLambda, int64(snapshotNum))) - 1
+			snapshotIdx := snapshotNum - int(exponential.DiscreteSample(ss.snapshotLambda, int64(snapshotNum))) - 1
 			snapshot := ss.snapshot[snapshotIdx]
 			if ss.traceDebug {
 				fmt.Printf(" id: %v", snapshot)

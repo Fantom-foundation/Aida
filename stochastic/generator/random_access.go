@@ -1,15 +1,18 @@
-package stochastic
+package generator
 
 import (
 	"fmt"
 	"math"
 	"math/rand"
+
+	"github.com/Fantom-foundation/Aida/stochastic/exponential"
+	"github.com/Fantom-foundation/Aida/stochastic/statistics"
 )
 
-// minRandomAccessSize must be substantially larger than qstatsLen
+// minRandomAccessSize must be substantially larger than statistics.QueueLen
 // (Otherwise sampling for arguments with class RandomValueID may
 // take a very long time and would slow down the simulation.)
-const minRandomAccessSize = 10 * qstatsLen
+const minRandomAccessSize = 10 * statistics.QueueLen
 
 // RandomAccess data structure for producing random index accesses.
 type RandomAccess struct {
@@ -28,7 +31,7 @@ type RandomAccess struct {
 	qpdf []float64
 }
 
-// NewAccessStats creates a new access index.
+// NewAccess creates a new access index.
 func NewRandomAccess(numElem int64, lambda float64, qpdf []float64) *RandomAccess {
 	if numElem < minRandomAccessSize {
 		return nil
@@ -36,12 +39,12 @@ func NewRandomAccess(numElem int64, lambda float64, qpdf []float64) *RandomAcces
 
 	// fill queue with uniform random indexes.
 	queue := []int64{}
-	for i := 0; i < qstatsLen; i++ {
+	for i := 0; i < statistics.QueueLen; i++ {
 		queue = append(queue, rand.Int63n(numElem))
 	}
 
 	// create a copy of the queue distribution.
-	copyQpdf := make([]float64, qstatsLen)
+	copyQpdf := make([]float64, statistics.QueueLen)
 	copy(copyQpdf, qpdf)
 
 	return &RandomAccess{
@@ -56,15 +59,15 @@ func NewRandomAccess(numElem int64, lambda float64, qpdf []float64) *RandomAcces
 func (a *RandomAccess) NextIndex(class int) int64 {
 	switch class {
 
-	case noArgID:
+	case statistics.NoArgID:
 		return -1
 
-	case zeroValueID:
+	case statistics.ZeroValueID:
 		// only way to return zero value/all other access classes
 		// will result in a non-zero result.
 		return 0
 
-	case newValueID:
+	case statistics.NewValueID:
 		// increment population size of access set
 		// and return newly introduced element.
 		if a.numElem == math.MaxInt64 {
@@ -75,23 +78,23 @@ func (a *RandomAccess) NextIndex(class int) int64 {
 		a.numElem++
 		return v + 1
 
-	case randomValueID:
+	case statistics.RandomValueID:
 		// use randomised value that is not contained in the queue
 		for {
-			v := randIndex(a.lambda, a.numElem)
+			v := exponential.DiscreteSample(a.lambda, a.numElem)
 			if !a.findQElem(v) {
 				a.placeQ(v)
 				return v + 1
 			}
 		}
 
-	case previousValueID:
+	case statistics.PreviousValueID:
 		// return the value of the first position in the queue
 		v := a.lastQ()
 		a.placeQ(v)
 		return v + 1
 
-	case recentValueID:
+	case statistics.RecentValueID:
 		if v := a.recentQ(); v != -1 {
 			a.placeQ(v)
 			return v + 1
@@ -121,8 +124,8 @@ func (a *RandomAccess) DeleteIndex(v int64) error {
 	// replace deleted index by a random index
 	// (necessary only in case if the deleted element
 	// is the last element of the set)
-	j := randIndex(a.lambda, a.numElem)
-	for i := 0; i < qstatsLen; i++ {
+	j := exponential.DiscreteSample(a.lambda, a.numElem)
+	for i := 0; i < statistics.QueueLen; i++ {
 		if a.queue[i]+1 == v {
 			a.queue[i] = j
 		}
@@ -133,7 +136,7 @@ func (a *RandomAccess) DeleteIndex(v int64) error {
 
 // findQElem finds an element in the queue.
 func (a *RandomAccess) findQElem(elem int64) bool {
-	for i := 0; i < qstatsLen; i++ {
+	for i := 0; i < statistics.QueueLen; i++ {
 		if a.queue[i] == elem {
 			return true
 		}
@@ -141,20 +144,10 @@ func (a *RandomAccess) findQElem(elem int64) bool {
 	return false
 }
 
-// randIndex produces an index between 0 and n-1 using
-// an exponential distribution with parameter lambda n.
-func randIndex(lambda float64, n int64) int64 {
-	return int64(float64(n) * invCdf(lambda, rand.Float64()))
-}
-
-// invCdf is the inverse cumulative distribution function for
-// producing random values following the exponential distribution
-// with parameter lambda (providing probability p).
-func invCdf(lambda float64, p float64) float64 {
-	return math.Log(p*math.Exp(-lambda)-p+1) / -lambda
-}
-
 // getRandQPos obtains the next queue position.
+// TODO: Consider replacing the pdf with an
+// exponential distribution. A new value can be
+// produced much faster.
 func (a *RandomAccess) getRandQPos() int {
 	// obtain random number in [0, 1.0)
 	r := rand.Float64()
@@ -166,7 +159,7 @@ func (a *RandomAccess) getRandQPos() int {
 	j := -1
 	// skip first slot (only used for previousValue)
 	// use Kahan's sum for avoiding numerical issues.
-	for i := 1; i < qstatsLen; i++ {
+	for i := 1; i < statistics.QueueLen; i++ {
 		y := (a.qpdf[i] / factor) - c
 		t := sum + y
 		c = (t - sum) - y
@@ -185,7 +178,7 @@ func (a *RandomAccess) getRandQPos() int {
 
 // placeQ places element in the queue.
 func (a *RandomAccess) placeQ(elem int64) {
-	a.queue = append([]int64{elem}, a.queue[0:qstatsLen-1]...)
+	a.queue = append([]int64{elem}, a.queue[0:statistics.QueueLen-1]...)
 }
 
 // lastQ returns previously queued element.

@@ -6,10 +6,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/paulmach/orb"
 	"github.com/paulmach/orb/simplify"
+
+	"github.com/Fantom-foundation/Aida/stochastic/statistics"
 )
 
 // numArgOps gives the number of operations with encoded argument classes
-const numArgOps = numOps * numClasses * numClasses * numClasses
+const numArgOps = numOps * statistics.NumClasses * statistics.NumClasses * statistics.NumClasses
 
 // EventRegistry counts events and counts transition for the Markov-Process.
 type EventRegistry struct {
@@ -20,13 +22,13 @@ type EventRegistry struct {
 	transitFreq [numArgOps][numArgOps]uint64
 
 	// Contract-address access statistics
-	contracts AccessStats[common.Address]
+	contracts statistics.Access[common.Address]
 
 	// Storage-key access statistics
-	keys AccessStats[common.Hash]
+	keys statistics.Access[common.Hash]
 
 	// Storage-value access statistics
-	values AccessStats[common.Hash]
+	values statistics.Access[common.Hash]
 
 	// Previous argument-encoded operation
 	prevArgOp int
@@ -41,9 +43,9 @@ type EventRegistryJSON struct {
 	StochasticMatrix [][]float64 `json:"stochasticMatrix"` // observed stochastic matrix
 
 	// access statistics for contracts, keys, and values
-	Contracts AccessStatsJSON `json:"contractStats"`
-	Keys      AccessStatsJSON `json:"keyStats"`
-	Values    AccessStatsJSON `json:"valueSats"`
+	Contracts statistics.AccessJSON `json:"contractStats"`
+	Keys      statistics.AccessJSON `json:"keyStats"`
+	Values    statistics.AccessJSON `json:"valueSats"`
 
 	// snapshot delta frequencies
 	SnapshotEcdf [][2]float64 `json:"snapshotEcdf"`
@@ -53,9 +55,9 @@ type EventRegistryJSON struct {
 func NewEventRegistry() EventRegistry {
 	return EventRegistry{
 		prevArgOp:    numArgOps,
-		contracts:    NewAccessStats[common.Address](),
-		keys:         NewAccessStats[common.Hash](),
-		values:       NewAccessStats[common.Hash](),
+		contracts:    statistics.NewAccess[common.Address](),
+		keys:         statistics.NewAccess[common.Hash](),
+		values:       statistics.NewAccess[common.Hash](),
 		snapshotFreq: map[int]uint64{},
 	}
 }
@@ -67,9 +69,9 @@ func (r *EventRegistry) RegisterOp(op int) {
 	}
 
 	// classify simulation arguments
-	addrClass := noArgID
-	keyClass := noArgID
-	valueClass := noArgID
+	addrClass := statistics.NoArgID
+	keyClass := statistics.NoArgID
+	valueClass := statistics.NoArgID
 
 	// update operations's frequency and transition frequency
 	// depending on type of simulation arguments
@@ -85,8 +87,8 @@ func (r *EventRegistry) RegisterAddressOp(op int, address *common.Address) {
 
 	// classify simulation arguments
 	addrClass := r.contracts.Classify(*address)
-	keyClass := noArgID
-	valueClass := noArgID
+	keyClass := statistics.NoArgID
+	valueClass := statistics.NoArgID
 
 	// update operations's frequency and transition frequency
 	// depending on type of simulation arguments
@@ -106,7 +108,7 @@ func (r *EventRegistry) RegisterKeyOp(op int, address *common.Address, key *comm
 	// classify simulation arguments
 	addrClass := r.contracts.Classify(*address)
 	keyClass := r.keys.Classify(*key)
-	valueClass := noArgID
+	valueClass := statistics.NoArgID
 
 	// update operations's frequency and transition frequency
 	// depending on type of simulation arguments
@@ -245,7 +247,7 @@ func (r *EventRegistry) NewEventRegistryJSON() EventRegistryJSON {
 		// reduce full ecdf using Visvalingam-Whyatt algorithm to
 		// "numPoints" points. See:
 		// https://en.wikipedia.org/wiki/Visvalingam-Whyatt_algorithm
-		simplifier := simplify.VisvalingamKeep(numDistributionPoints)
+		simplifier := simplify.VisvalingamKeep(statistics.NumDistributionPoints)
 		simplified = simplifier.Simplify(ls).(orb.LineString)
 	}
 	// convert orb.LineString to [][2]float64
@@ -257,9 +259,9 @@ func (r *EventRegistry) NewEventRegistryJSON() EventRegistryJSON {
 	return EventRegistryJSON{
 		Operations:       label,
 		StochasticMatrix: A,
-		Contracts:        r.contracts.NewAccessStatsJSON(),
-		Keys:             r.keys.NewAccessStatsJSON(),
-		Values:           r.values.NewAccessStatsJSON(),
+		Contracts:        r.contracts.NewAccessJSON(),
+		Keys:             r.keys.NewAccessJSON(),
+		Values:           r.values.NewAccessJSON(),
 		SnapshotEcdf:     eCdf,
 	}
 }

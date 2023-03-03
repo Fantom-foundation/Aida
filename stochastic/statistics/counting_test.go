@@ -1,14 +1,14 @@
-package stochastic
+package statistics
 
 import (
 	"encoding/json"
 	"testing"
 )
 
-// TestCountingStatsSimple1 counts a single occurrence of an item and checks whether
+// TestCountingSimple1 counts a single occurrence of an item and checks whether
 // its freq is one.
-func TestCountingStatsSimple1(t *testing.T) {
-	stats := NewCountingStats[int]()
+func TestCountingSimple1(t *testing.T) {
+	stats := NewCounting[int]()
 	if stats.Exists(100) {
 		t.Fatalf("Counting failed")
 	}
@@ -18,10 +18,10 @@ func TestCountingStatsSimple1(t *testing.T) {
 	}
 }
 
-// TestCountingStatsSimple2 counts two occurrences of a data item and checks whether its
+// TestCountingSimple2 counts two occurrences of a data item and checks whether its
 // freq is two.
-func TestCountingStatsSimple2(t *testing.T) {
-	stats := NewCountingStats[int]()
+func TestCountingSimple2(t *testing.T) {
+	stats := NewCounting[int]()
 	data := 200
 	if stats.Exists(data) {
 		t.Fatalf("Counting failed")
@@ -33,10 +33,10 @@ func TestCountingStatsSimple2(t *testing.T) {
 	}
 }
 
-// TestCountingStatsSimple3 counts the single occurrence of two items and checks whether
+// TestCountingSimple3 counts the single occurrence of two items and checks whether
 // their frequencies are one and whether they exist.
-func TestCountingStatsSimple3(t *testing.T) {
-	stats := NewCountingStats[int]()
+func TestCountingSimple3(t *testing.T) {
+	stats := NewCounting[int]()
 	data1 := 10
 	data2 := 11
 	stats.Place(data1)
@@ -46,9 +46,9 @@ func TestCountingStatsSimple3(t *testing.T) {
 	}
 }
 
-// TestCountingStatsSimple4 tests JSON output of distribution.
-func TestCountingStatsSimple4(t *testing.T) {
-	stats := NewCountingStats[int]()
+// TestCountingSimple4 tests JSON output of distribution.
+func TestCountingSimple4(t *testing.T) {
+	stats := NewCounting[int]()
 	// produce distribution in JSON format
 	// Case 0: number entries are smaller than observerd number of items.
 	jOut, err := json.Marshal(stats.produceJSON(4))
