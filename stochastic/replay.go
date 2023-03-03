@@ -28,17 +28,18 @@ type stochasticAccount struct {
 
 // stochasticState keeps the execution state for the stochastic simulation
 type stochasticState struct {
-	db         state.StateDB                // StateDB database
-	contracts  *IndirectAccess              // index access generator for contracts
-	keys       *RandomAccess                // index access generator for keys
-	values     *RandomAccess                // index access generator for values
-	txNum      uint32                       // current transaction number
-	blockNum   uint64                       // current block number
-	epochNum   uint64                       // current epoch number
-	snapshot   []int                        // stack of active snapshots
-	accounts   map[int64]*stochasticAccount // account information using address index as key
-	balanceLog map[int64][]int64            // balance log keeping track of balances for snapshots
-	verbose    bool                         // verbose flag
+	db             state.StateDB                // StateDB database
+	contracts      *IndirectAccess              // index access generator for contracts
+	keys           *RandomAccess                // index access generator for keys
+	values         *RandomAccess                // index access generator for values
+	snapshotLambda float64                      // lambda parameter for snapshot delta distribution
+	txNum          uint32                       // current transaction number
+	blockNum       uint64                       // current block number
+	epochNum       uint64                       // current epoch number
+	snapshot       []int                        // stack of active snapshots
+	accounts       map[int64]*stochasticAccount // account information using address index as key
+	balanceLog     map[int64][]int64            // balance log keeping track of balances for snapshots
+	verbose        bool                         // verbose flag
 }
 
 // RunStochasticReplay runs the stochastic simulation for StateDB operations.
@@ -71,7 +72,7 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, simLength int
 	)
 
 	// setup state
-	ss := NewStochasticState(db, contracts, keys, values, verbose)
+	ss := NewStochasticState(db, contracts, keys, values, e.SnapshotLambda, verbose)
 
 	// create accounts in StateDB
 	ss.prime()
@@ -105,7 +106,7 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, simLength int
 }
 
 // NewStochasticState creates a new state for execution StateDB operations
-func NewStochasticState(db state.StateDB, contracts *IndirectAccess, keys *RandomAccess, values *RandomAccess, verbose bool) stochasticState {
+func NewStochasticState(db state.StateDB, contracts *IndirectAccess, keys *RandomAccess, values *RandomAccess, snapshotLambda float64, verbose bool) stochasticState {
 
 	// retrieve number of contracts
 	n := contracts.NumElem()
@@ -121,13 +122,14 @@ func NewStochasticState(db state.StateDB, contracts *IndirectAccess, keys *Rando
 
 	// return stochastic state
 	return stochasticState{
-		db:         db,
-		accounts:   accounts,
-		contracts:  contracts,
-		keys:       keys,
-		values:     values,
-		verbose:    verbose,
-		balanceLog: make(map[int64][]int64),
+		db:             db,
+		accounts:       accounts,
+		contracts:      contracts,
+		keys:           keys,
+		values:         values,
+		snapshotLambda: snapshotLambda,
+		verbose:        verbose,
+		balanceLog:     make(map[int64][]int64),
 	}
 }
 
@@ -278,7 +280,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		if snapshotNum > 0 {
 			// TODO: consider a more realistic distribution
 			// rather than the uniform distribution.
-			snapshotIdx := rand.Intn(snapshotNum)
+			snapshotIdx := snapshotNum - int(randIndex(ss.snapshotLambda, int64(snapshotNum))) - 1
 			snapshot := ss.snapshot[snapshotIdx]
 			if ss.verbose {
 				fmt.Printf(" id: %v", snapshot)

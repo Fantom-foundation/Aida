@@ -15,6 +15,7 @@ import (
 // HTML references for the rendered pages.
 const countingRef = "counting-stats"
 const queuingRef = "queuing-stats"
+const snapshotRef = "snapshot-stats"
 const operationRef = "operation-stats"
 const txoperationRef = "tx-operation-stats"
 const simplifiedMarkovRef = "simplified-markov-stats"
@@ -35,6 +36,7 @@ const MainHtml = `
     <ul>
     <li> <h3> <a href="/` + countingRef + `"> Counting Statistics </a> </h3> </li>
     <li> <h3> <a href="/` + queuingRef + `"> Queuing Statistics </a> </h3> </li>
+    <li> <h3> <a href="/` + snapshotRef + `"> Snapshot Statistics </a> </h3> </li>
     <li> <h3> <a href="/` + txoperationRef + `"> Transactional Operation Statistics  </a> </h3> </li>
     <li> <h3> <a href="/` + operationRef + `"> Operation Statistics  </a> </h3> </li>
     <li> <h3> <a href="/` + simplifiedMarkovRef + `"> Simplified Markov Chain </a> </h3> </li>
@@ -106,6 +108,35 @@ func renderCountingStats(w http.ResponseWriter, r *http.Request) {
 	page := components.NewPage()
 	page.AddCharts(contracts, keys, values)
 	page.Render(w)
+}
+
+// renderSnapshotStast renders a line chart for a snapshot statistics
+func renderSnapshotStats(w http.ResponseWriter, r *http.Request) {
+	chart := charts.NewLine()
+	chart.SetGlobalOptions(charts.WithInitializationOpts(opts.Initialization{
+		Theme: types.ThemeChalk,
+	}),
+		charts.WithToolboxOpts(opts.Toolbox{
+			Show: true,
+			Feature: &opts.ToolBoxFeature{
+				SaveAsImage: &opts.ToolBoxFeatureSaveAsImage{
+					Show:  true,
+					Title: "Save",
+				},
+				DataZoom: &opts.ToolBoxFeatureDataZoom{
+					Show: true,
+				},
+			},
+		}),
+		charts.WithLegendOpts(opts.Legend{Show: true}),
+		charts.WithTitleOpts(opts.Title{
+			Title:    "Snapshot Statistics",
+			Subtitle: "Delta Distribution",
+		}))
+	events := GetEventsData()
+	sLambda := fmt.Sprintf("%v", events.Snapshot.Lambda)
+	chart.AddSeries("eCDF", convertCountingData(events.Snapshot.ECdf)).AddSeries("CDF, λ="+sLambda, convertCountingData(events.Snapshot.Cdf))
+	chart.Render(w)
 }
 
 // convertQueuingData rendering plot data for the queuing statistics.
@@ -310,6 +341,7 @@ func FireUpWeb(addr string) {
 	http.HandleFunc("/", renderMain)
 	http.HandleFunc("/"+countingRef, renderCountingStats)
 	http.HandleFunc("/"+queuingRef, renderQueuingStats)
+	http.HandleFunc("/"+snapshotRef, renderSnapshotStats)
 	http.HandleFunc("/"+operationRef, renderOperationStats)
 	http.HandleFunc("/"+txoperationRef, renderTransactionalOperationStats)
 	http.HandleFunc("/"+simplifiedMarkovRef, renderSimplifiedMarkovChain)

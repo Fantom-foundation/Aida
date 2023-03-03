@@ -13,13 +13,18 @@ import (
 
 // EventProxy data structure for capturing StateDB events
 type EventProxy struct {
-	db       state.StateDB  // real StateDB object
-	registry *EventRegistry // event registry for deriving statistical parameters
+	db        state.StateDB  // real StateDB object
+	snapshots []int          // snapshot stack of currently active snapshots
+	registry  *EventRegistry // event registry for deriving statistical parameters
 }
 
 // NewEventProxy creates a new StateDB proxy for recording events.
 func NewEventProxy(db state.StateDB, registry *EventRegistry) *EventProxy {
-	return &EventProxy{db, registry}
+	return &EventProxy{
+		db:        db,
+		snapshots: []int{},
+		registry:  registry,
+	}
 }
 
 // CreateAccount creates a new account.
@@ -229,6 +234,18 @@ func (p *EventProxy) RevertToSnapshot(snapshot int) {
 	// register event
 	p.registry.RegisterOp(RevertToSnapshotID)
 
+	// find snapshot
+	for i, recordedSnapshot := range p.snapshots {
+		if recordedSnapshot == snapshot {
+			// register snapshot delta
+			p.registry.RegisterSnapshotDelta(len(p.snapshots) - i - 1)
+
+			// cull all elements between found snapshot and top-of-stack
+			p.snapshots = p.snapshots[0:i]
+			break
+		}
+	}
+
 	// call real StateDB
 	p.db.RevertToSnapshot(snapshot)
 }
@@ -239,7 +256,12 @@ func (p *EventProxy) Snapshot() int {
 	p.registry.RegisterOp(SnapshotID)
 
 	// call real StateDB
-	return p.db.Snapshot()
+	snapshot := p.db.Snapshot()
+
+	// add snapshot
+	p.snapshots = append(p.snapshots, snapshot)
+
+	return snapshot
 }
 
 // AddLog adds a log entry.
@@ -305,10 +327,16 @@ func (p *EventProxy) PrepareSubstate(substate *substate.SubstateAlloc, block uin
 
 func (p *EventProxy) BeginTransaction(number uint32) {
 	p.db.BeginTransaction(number)
+
+	// clear all snapshots
+	p.snapshots = []int{}
 }
 
 func (p *EventProxy) EndTransaction() {
 	p.db.EndTransaction()
+
+	// clear all snapshots
+	p.snapshots = []int{}
 }
 
 func (p *EventProxy) BeginBlock(number uint64) {

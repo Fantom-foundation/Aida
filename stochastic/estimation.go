@@ -25,6 +25,8 @@ type EstimationModelJSON struct {
 	Contracts EstimationStatsJSON `json:"contractStats"`
 	Keys      EstimationStatsJSON `json:"keyStats"`
 	Values    EstimationStatsJSON `json:"valueStats"`
+
+	SnapshotLambda float64 `json:"snapshotLambda"`
 }
 
 // EstimationStatsJSON is an estimated access statistics in JSON format.
@@ -47,12 +49,19 @@ func NewEstimationModelJSON(d *EventRegistryJSON) EstimationModelJSON {
 		copy(stochasticMatrix[i], d.StochasticMatrix[i])
 	}
 
+	// compute snapshot lambda
+	snapshotLambda, err := ApproximateLambda(d.SnapshotEcdf)
+	if err != nil {
+		log.Fatalf("Failed to approximate lambda parameter. Error: %v", err)
+	}
+
 	return EstimationModelJSON{
 		Operations:       operations,
 		StochasticMatrix: stochasticMatrix,
 		Contracts:        NewEstimationStats(&d.Contracts),
 		Keys:             NewEstimationStats(&d.Keys),
 		Values:           NewEstimationStats(&d.Values),
+		SnapshotLambda:   snapshotLambda,
 	}
 }
 
