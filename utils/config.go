@@ -110,6 +110,11 @@ var (
 		Usage: "set number of accounts written to stateDB before applying pending state updates",
 		Value: 0,
 	}
+	RandomSeedFlag = cli.IntFlag{
+		Name:  "random-seed",
+		Usage: "Set random seed",
+		Value: 42,
+	}
 	SkipPrimingFlag = cli.BoolFlag{
 		Name:  "skip-priming",
 		Usage: "if set, DB priming should be skipped; most useful with the 'memory' DB implementation",
@@ -351,6 +356,9 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		VmImpl:              ctx.String(VmImplementation.Name),
 		Workers:             ctx.Int(substate.WorkersFlag.Name),
 		MemoryProfile:       ctx.String(MemProfileFlag.Name),
+	}
+	if cfg.ChainID == 0 {
+		cfg.ChainID = ChainIDFlag.Value
 	}
 	setFirstBlockFromChainID(cfg.ChainID)
 	if cfg.EpochLength <= 0 {
