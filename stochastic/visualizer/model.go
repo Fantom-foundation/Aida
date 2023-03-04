@@ -1,9 +1,10 @@
-package stochastic
+package visualizer
 
 import (
 	"log"
 	"sort"
 
+	"github.com/Fantom-foundation/Aida/stochastic"
 	"github.com/Fantom-foundation/Aida/stochastic/exponential"
 	"github.com/Fantom-foundation/Aida/stochastic/stationary"
 	"github.com/Fantom-foundation/Aida/stochastic/statistics"
@@ -16,13 +17,13 @@ type EventData struct {
 	Values    AccessData   // storage-value view model
 	Snapshot  SnapshotData // snapshot view model
 
-	Stationary       []OpData                // stationary distribution model
-	TxOperation      []OpData                // average number of operations per Tx
-	TxPerBlock       float64                 // average number of transactions per block
-	BlocksPerEpoch   float64                 // average number of blocks per epoch
-	OperationLabel   []string                // operation labels for stochastic matrix
-	StochasticMatrix [][]float64             // stochastic Matrix
-	SimplifiedMatrix [numOps][numOps]float64 // simplified stochastic matrix
+	Stationary       []OpData                                      // stationary distribution model
+	TxOperation      []OpData                                      // average number of operations per Tx
+	TxPerBlock       float64                                       // average number of transactions per block
+	BlocksPerEpoch   float64                                       // average number of blocks per epoch
+	OperationLabel   []string                                      // operation labels for stochastic matrix
+	StochasticMatrix [][]float64                                   // stochastic Matrix
+	SimplifiedMatrix [stochastic.NumOps][stochastic.NumOps]float64 // simplified stochastic matrix
 }
 
 // AccessData contains the statistical data for access statistics that is used for visualization.
@@ -55,7 +56,7 @@ func GetEventsData() *EventData {
 }
 
 // PopulateEvents populates the event model from event registry.
-func (e *EventData) PopulateEventData(d *EventRegistryJSON) {
+func (e *EventData) PopulateEventData(d *stochastic.EventRegistryJSON) {
 
 	// populate access stats for contract addresses
 	e.Contracts.PopulateAccess(&d.Contracts)
@@ -91,14 +92,14 @@ func (e *EventData) PopulateEventData(d *EventRegistryJSON) {
 	blockProb := 0.0
 	epochProb := 0.0
 	for i := 0; i < n; i++ {
-		sop, _, _, _ := DecodeOpcode(d.Operations[i])
-		if sop == BeginTransactionID {
+		sop, _, _, _ := stochastic.DecodeOpcode(d.Operations[i])
+		if sop == stochastic.BeginTransactionID {
 			txProb = stationary[i]
 		}
-		if sop == BeginBlockID {
+		if sop == stochastic.BeginBlockID {
 			blockProb = stationary[i]
 		}
-		if sop == BeginEpochID {
+		if sop == stochastic.BeginEpochID {
 			epochProb = stationary[i]
 		}
 	}
@@ -111,18 +112,18 @@ func (e *EventData) PopulateEventData(d *EventRegistryJSON) {
 
 	txData := []OpData{}
 	if txProb > 0.0 {
-		for op := 0; op < numOps; op++ {
+		for op := 0; op < stochastic.NumOps; op++ {
 			// exclude scoping operations
-			if op != BeginBlockID && op != EndBlockID && op != BeginEpochID && op != EndEpochID && op != BeginTransactionID && op != EndTransactionID {
+			if op != stochastic.BeginBlockID && op != stochastic.EndBlockID && op != stochastic.BeginEpochID && op != stochastic.EndEpochID && op != stochastic.BeginTransactionID && op != stochastic.EndTransactionID {
 				// sum all versions of an operation and normalize the value with the transaction's probability
 				sum := 0.0
 				for i := 0; i < n; i++ {
-					if sop, _, _, _ := DecodeOpcode(d.Operations[i]); sop == op {
+					if sop, _, _, _ := stochastic.DecodeOpcode(d.Operations[i]); sop == op {
 						sum += stationary[i]
 					}
 				}
 				txData = append(txData, OpData{
-					label: opMnemo[op],
+					label: stochastic.OpMnemo(op),
 					value: sum / txProb})
 			}
 		}
@@ -144,20 +145,20 @@ func (e *EventData) PopulateEventData(d *EventRegistryJSON) {
 
 	// reduce stochastic matrix to a simplified matrix
 	for i := 0; i < n; i++ {
-		iop, _, _, _ := DecodeOpcode(d.Operations[i])
+		iop, _, _, _ := stochastic.DecodeOpcode(d.Operations[i])
 		for j := 0; j < n; j++ {
-			jop, _, _, _ := DecodeOpcode(d.Operations[j])
+			jop, _, _, _ := stochastic.DecodeOpcode(d.Operations[j])
 			e.SimplifiedMatrix[iop][jop] += d.StochasticMatrix[i][j]
 		}
 	}
 
 	// normalize row data after reduction
-	for i := 0; i < numOps; i++ {
+	for i := 0; i < stochastic.NumOps; i++ {
 		sum := 0.0
-		for j := 0; j < numOps; j++ {
+		for j := 0; j < stochastic.NumOps; j++ {
 			sum += e.SimplifiedMatrix[i][j]
 		}
-		for j := 0; j < numOps; j++ {
+		for j := 0; j < stochastic.NumOps; j++ {
 			e.SimplifiedMatrix[i][j] /= sum
 		}
 	}
@@ -178,7 +179,7 @@ func (a *AccessData) PopulateAccess(d *statistics.AccessJSON) {
 }
 
 // PopulateSnapStats populates snapshot stats model
-func (s *SnapshotData) PopulateSnapshotStats(d *EventRegistryJSON) {
+func (s *SnapshotData) PopulateSnapshotStats(d *stochastic.EventRegistryJSON) {
 	s.ECdf = make([][2]float64, len(d.SnapshotEcdf))
 	copy(s.ECdf, d.SnapshotEcdf)
 	lambda, err := exponential.ApproximateLambda(d.SnapshotEcdf)

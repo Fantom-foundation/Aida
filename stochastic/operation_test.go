@@ -10,7 +10,7 @@ import (
 func TestOperationDecoding(t *testing.T) {
 	// enumerate whole operation space with arguments
 	// and check encoding/decoding whether it is symmetric.
-	for op := 0; op < numOps; op++ {
+	for op := 0; op < NumOps; op++ {
 		for addr := 0; addr < statistics.NumClasses; addr++ {
 			for key := 0; key < statistics.NumClasses; key++ {
 				for value := 0; value < statistics.NumClasses; value++ {
@@ -40,7 +40,7 @@ func TestOperationDecoding(t *testing.T) {
 func TestOperationOpcode(t *testing.T) {
 	// enumerate whole operation space with arguments
 	// and check encoding/decoding whether it is symmetric.
-	for op := 0; op < numOps; op++ {
+	for op := 0; op < NumOps; op++ {
 		for addr := 0; addr < statistics.NumClasses; addr++ {
 			for key := 0; key < statistics.NumClasses; key++ {
 				for value := 0; value < statistics.NumClasses; value++ {

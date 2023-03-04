@@ -36,7 +36,7 @@ const (
 	SubBalanceID
 	SuicideID
 
-	numOps
+	NumOps
 )
 
 // opText translates IDs to operation's text
@@ -180,7 +180,7 @@ var argId = map[byte]int{
 
 // checkArgOp checks whether op/argument combination is valid.
 func checkArgOp(op int, addr int, key int, value int) bool {
-	if op < 0 || op >= numOps {
+	if op < 0 || op >= NumOps {
 		return false
 	}
 	if addr < 0 || addr >= statistics.NumClasses {
@@ -284,4 +284,9 @@ func DecodeOpcode(opc string) (int, int, int, int) {
 		contract, key, value = argId[opc[2]], argId[opc[3]], argId[opc[4]]
 	}
 	return op, contract, key, value
+}
+
+// OpMnemo retrieves the mnemonic code for an operation.
+func OpMnemo(op int) string {
+	return opMnemo[op]
 }

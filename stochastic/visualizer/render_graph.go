@@ -1,4 +1,4 @@
-package stochastic
+package visualizer
 
 import (
 	"bytes"
