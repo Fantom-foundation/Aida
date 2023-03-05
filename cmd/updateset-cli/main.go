@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Fantom-foundation/Aida/cmd/gen-update-set-cli/updateset"
+	"github.com/Fantom-foundation/Aida/cmd/updateset-cli/updateset"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"

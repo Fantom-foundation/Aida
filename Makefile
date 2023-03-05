@@ -20,14 +20,14 @@ GOPROXY ?= "https://proxy.golang.org,direct"
 
 .PHONY: all clean help test
 
-all: gen-world-state gen-update-set aida-trace aida-runarchive aida-runvm aida-stochastic aida-substate
+all: aida-worldstate aida-updateset aida-trace aida-runarchive aida-runvm aida-stochastic aida-substate
 
-gen-world-state:
+aida-worldstate:
 	@go build \
-		-ldflags="-X 'github.com/Fantom-foundation/Aida/cmd/gen-world-state/version.Version=$(APP_VERSION)' -X 'github.com/Fantom-foundation/Aida/cmd/gen-world-state/version.Time=$(BUILD_DATE)' -X 'github.com/Fantom-foundation/Aida/cmd/gen-world-state/version.Compiler=$(BUILD_COMPILER)' -X 'github.com/Fantom-foundation/Aida/cmd/gen-world-state/version.Commit=$(BUILD_COMMIT)' -X 'github.com/Fantom-foundation/Aida/cmd/gen-world-state/version.CommitTime=$(BUILD_COMMIT_TIME)'" \
-		-o $(GO_BIN)/gen-world-state \
+		-ldflags="-X 'github.com/Fantom-foundation/Aida/cmd/worldstate-cli/version.Version=$(APP_VERSION)' -X 'github.com/Fantom-foundation/Aida/cmd/worldstate-cli/version.Time=$(BUILD_DATE)' -X 'github.com/Fantom-foundation/Aida/cmd/worldstate-cli/version.Compiler=$(BUILD_COMPILER)' -X 'github.com/Fantom-foundation/Aida/cmd/worldstate-cli/version.Commit=$(BUILD_COMMIT)' -X 'github.com/Fantom-foundation/Aida/cmd/worldstate-cli/version.CommitTime=$(BUILD_COMMIT_TIME)'" \
+		-o $(GO_BIN)/aida-worldstate \
 		-v \
-		./cmd/gen-world-state
+		./cmd/worldstate-cli
 
 aida-stochastic:
 	@cd carmen/go/lib ; \
@@ -79,14 +79,14 @@ aida-substate:
        	-o $(GO_BIN)/aida-substate \
 	./cmd/substate-cli
 
-gen-update-set:
+aida-updateset:
 	@cd carmen/go/lib ; \
 	./build_libcarmen.sh ; \
 	cd ../../.. ; \
 	GOPROXY=$(GOPROXY) \
 	go build -ldflags "-s -w" \
-	-o $(GO_BIN)/gen-update-set \
-	./cmd/gen-update-set-cli
+	-o $(GO_BIN)/aida-updateset \
+	./cmd/updateset-cli
 
 
 test:
