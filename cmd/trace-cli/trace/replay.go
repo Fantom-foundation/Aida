@@ -79,10 +79,6 @@ func traceReplayTask(cfg *utils.Config) error {
 	opChannel := make(chan operation.Operation, 100000)
 	go readTrace(cfg, opChannel)
 
-	// load dictionaries & indexes
-	log.Printf("Load dictionaries")
-	dCtx := dictionary.ReadContext()
-
 	// create a directory for the store to place all its files, and
 	// instantiate the state DB under testing.
 	log.Printf("Create stateDB database")
@@ -127,6 +123,10 @@ func traceReplayTask(cfg *utils.Config) error {
 	}
 
 	log.Printf("Replay storage operations on StateDB database")
+
+	// load dictionaries & indexes
+	log.Printf("Load dictionaries")
+	dCtx := dictionary.ReadContext()
 
 	// progress message setup
 	var (
@@ -182,6 +182,9 @@ func traceReplayTask(cfg *utils.Config) error {
 	sec = time.Since(start).Seconds()
 
 	log.Printf("Finished replaying storage operations on StateDB database")
+
+	// destroy context to make space
+	dCtx = nil
 
 	// validate stateDB
 	if cfg.ValidateWorldState {

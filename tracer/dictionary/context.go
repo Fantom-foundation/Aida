@@ -50,18 +50,22 @@ const (
 // ReadContext reads dictionaries from files and creates a new dictionary context.
 func ReadContext() *Context {
 	ctx := NewContext()
+	log.Printf("Read dictionary context ...")
 	err := ctx.contract.Read(ContextDir+"contract-dictionary.dat", ContractMagic)
 	if err != nil {
 		log.Fatalf("Cannot read contract dictionary. Error: %v", err)
 	}
+	log.Printf("Read %v dictionary contract addresses from file.", ctx.contract.Size())
 	err = ctx.storage.Read(ContextDir+"storage-dictionary.dat", StorageMagic)
 	if err != nil {
 		log.Fatalf("Cannot read storage dictionary. Error: %v", err)
 	}
+	log.Printf("Read %v dictionary storage keys from file.", ctx.storage.Size())
 	err = ctx.code.ReadString(ContextDir+"code-dictionary.dat", CodeMagic)
 	if err != nil {
 		log.Fatalf("Cannot read code dictionary. Error: %v", err)
 	}
+	log.Printf("Read %v dictionary smart contracts from file.", ctx.code.Size())
 	return ctx
 }
 
@@ -100,7 +104,7 @@ func (ctx *Context) EncodeContract(contract common.Address) uint32 {
 
 // DecodeContract decodes the contract address.
 func (ctx *Context) DecodeContract(cIdx uint32) common.Address {
-	contract, err := ctx.contract.Decode(int(cIdx))
+	contract, err := ctx.contract.Decode(cIdx)
 	if err != nil {
 		log.Fatalf("Contract index could not be decoded. Error: %v", err)
 	}
@@ -146,7 +150,7 @@ func (ctx *Context) EncodeStorage(storage common.Hash) (uint32, int) {
 
 // DecodeStorage decodes a storage address.
 func (ctx *Context) DecodeStorage(sIdx uint32) common.Hash {
-	storage, err := ctx.storage.Decode(int(sIdx))
+	storage, err := ctx.storage.Decode(sIdx)
 	if err != nil {
 		log.Fatalf("Storage index could not be decoded. Error: %v", err)
 	}
@@ -175,7 +179,7 @@ func (ctx *Context) ReadStorageCache(sPos int) common.Hash {
 	if err != nil {
 		log.Fatalf("Storage position could not be found. Error: %v", err)
 	}
-	storage, err := ctx.storage.Decode(int(sIdx))
+	storage, err := ctx.storage.Decode(sIdx)
 	if err != nil {
 		log.Fatalf("Storage index could not be decoded. Error: %v", err)
 	}
@@ -223,7 +227,7 @@ func (ctx *Context) EncodeCode(code []byte) uint32 {
 
 // DecodeCode returns the byte-code for a given byte-code index.
 func (ctx *Context) DecodeCode(bcIdx uint32) []byte {
-	code, err := ctx.code.Decode(int(bcIdx))
+	code, err := ctx.code.Decode(bcIdx)
 	if err != nil {
 		log.Fatalf("Byte-code index could not be decoded. Error: %v", err)
 	}
