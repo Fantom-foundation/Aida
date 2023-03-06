@@ -1,4 +1,8 @@
-package stochastic
+package generator
+
+import (
+	"github.com/Fantom-foundation/Aida/stochastic/statistics"
+)
 
 // IndirectAccess data structure for random access indices permitting deletion without reuse.
 type IndirectAccess struct {
@@ -30,9 +34,9 @@ func (a *IndirectAccess) NextIndex(class int) int64 {
 	v := a.randAcc.NextIndex(class)
 	if v == -1 {
 		return -1
-	} else if class == zeroValueID {
+	} else if class == statistics.ZeroValueID {
 		return v
-	} else if class == newValueID {
+	} else if class == statistics.NewValueID {
 		if v != a.randAcc.numElem {
 			panic("unexpected nextIndex result.")
 		}

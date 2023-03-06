@@ -3,6 +3,7 @@ package stochastic
 import (
 	"testing"
 
+	"github.com/Fantom-foundation/Aida/stochastic/statistics"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -25,9 +26,9 @@ func TestEventRegistryUpdateFreq(t *testing.T) {
 
 	// inject first operation
 	op := CreateAccountID
-	addr := randomValueID
-	key := noArgID
-	value := noArgID
+	addr := statistics.RandomValueID
+	key := statistics.NoArgID
+	value := statistics.NoArgID
 	r.updateFreq(op, addr, key, value)
 	argop1 := EncodeArgOp(op, addr, key, value)
 
@@ -48,9 +49,9 @@ func TestEventRegistryUpdateFreq(t *testing.T) {
 
 	// inject second operation
 	op = SetStateID
-	addr = randomValueID
-	key = previousValueID
-	value = zeroValueID
+	addr = statistics.RandomValueID
+	key = statistics.PreviousValueID
+	value = statistics.ZeroValueID
 	r.updateFreq(op, addr, key, value)
 	argop2 := EncodeArgOp(op, addr, key, value)
 	for i := 0; i < numArgOps; i++ {
@@ -107,7 +108,7 @@ func TestEventRegistryOperation(t *testing.T) {
 	// inject first operation and check frequencies.
 	addr := common.HexToAddress("0x000000010")
 	r.RegisterAddressOp(CreateAccountID, &addr)
-	argop1 := EncodeArgOp(CreateAccountID, newValueID, noArgID, noArgID)
+	argop1 := EncodeArgOp(CreateAccountID, statistics.NewValueID, statistics.NoArgID, statistics.NoArgID)
 	opFreq[argop1]++
 	if !checkFrequencies(&r, opFreq, transitFreq) {
 		t.Fatalf("operation/transit frequency diverges")
@@ -116,7 +117,7 @@ func TestEventRegistryOperation(t *testing.T) {
 	// inject second operation and check frequencies.
 	key := common.HexToHash("0x000000200")
 	r.RegisterKeyOp(GetStateID, &addr, &key)
-	argop2 := EncodeArgOp(GetStateID, previousValueID, newValueID, noArgID)
+	argop2 := EncodeArgOp(GetStateID, statistics.PreviousValueID, statistics.NewValueID, statistics.NoArgID)
 	opFreq[argop2]++
 	transitFreq[argop1][argop2]++
 	if !checkFrequencies(&r, opFreq, transitFreq) {
@@ -126,7 +127,7 @@ func TestEventRegistryOperation(t *testing.T) {
 	// inject third operation and check frequencies.
 	value := common.Hash{}
 	r.RegisterValueOp(SetStateID, &addr, &key, &value)
-	argop3 := EncodeArgOp(SetStateID, previousValueID, previousValueID, zeroValueID)
+	argop3 := EncodeArgOp(SetStateID, statistics.PreviousValueID, statistics.PreviousValueID, statistics.ZeroValueID)
 	opFreq[argop3]++
 	transitFreq[argop2][argop3]++
 	if !checkFrequencies(&r, opFreq, transitFreq) {
@@ -135,7 +136,7 @@ func TestEventRegistryOperation(t *testing.T) {
 
 	// inject forth operation and check frequencies.
 	r.RegisterOp(SnapshotID)
-	argop4 := EncodeArgOp(SnapshotID, noArgID, noArgID, noArgID)
+	argop4 := EncodeArgOp(SnapshotID, statistics.NoArgID, statistics.NoArgID, statistics.NoArgID)
 	opFreq[argop4]++
 	transitFreq[argop3][argop4]++
 	if !checkFrequencies(&r, opFreq, transitFreq) {
@@ -164,7 +165,7 @@ func TestEventRegistryZeroOperation(t *testing.T) {
 	key := common.Hash{}
 	value := common.Hash{}
 	r.RegisterValueOp(SetStateID, &addr, &key, &value)
-	argop1 := EncodeArgOp(SetStateID, zeroValueID, zeroValueID, zeroValueID)
+	argop1 := EncodeArgOp(SetStateID, statistics.ZeroValueID, statistics.ZeroValueID, statistics.ZeroValueID)
 	opFreq[argop1]++
 	if !checkFrequencies(&r, opFreq, transitFreq) {
 		t.Fatalf("operation/transit frequency diverges")
@@ -175,7 +176,7 @@ func TestEventRegistryZeroOperation(t *testing.T) {
 	key = common.HexToHash("0x232313123123213")
 	value = common.HexToHash("0x2301238021830912830")
 	r.RegisterValueOp(SetStateID, &addr, &key, &value)
-	argop2 := EncodeArgOp(SetStateID, newValueID, newValueID, newValueID)
+	argop2 := EncodeArgOp(SetStateID, statistics.NewValueID, statistics.NewValueID, statistics.NewValueID)
 	opFreq[argop2]++
 	transitFreq[argop1][argop2]++
 	if !checkFrequencies(&r, opFreq, transitFreq) {
@@ -184,7 +185,7 @@ func TestEventRegistryZeroOperation(t *testing.T) {
 
 	// inject third operation and check frequencies.
 	r.RegisterValueOp(SetStateID, &addr, &key, &value)
-	argop3 := EncodeArgOp(SetStateID, previousValueID, previousValueID, previousValueID)
+	argop3 := EncodeArgOp(SetStateID, statistics.PreviousValueID, statistics.PreviousValueID, statistics.PreviousValueID)
 	opFreq[argop3]++
 	transitFreq[argop2][argop3]++
 	if !checkFrequencies(&r, opFreq, transitFreq) {

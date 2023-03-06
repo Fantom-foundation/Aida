@@ -15,12 +15,9 @@ import (
 // StochasticEstimatorCommand data structure for the estimator app
 var StochasticEstimatorCommand = cli.Command{
 	Action:    stochasticEstimatorAction,
-	Name:      "estimator",
+	Name:      "estimate",
 	Usage:     "estimates parameters of access distributions and produces a simulation file",
 	ArgsUsage: "<event-file>",
-	Flags: []cli.Flag{
-		&utils.VisualizeFlag,
-	},
 	Description: `
 The stochastic estimator command requires one argument:
 <events.json>
@@ -58,18 +55,6 @@ func stochasticEstimatorAction(ctx *cli.Context) error {
 		outputFileName = "./simulation.json"
 	}
 	WriteSimulation(&estimationModel, outputFileName)
-
-	// visualize estimator results
-	if addr := ctx.String(utils.VisualizeFlag.Name); addr != "" {
-		// populate viewing model
-		eventModel := stochastic.GetEventsData()
-		eventModel.PopulateEventData(&eventRegistry)
-
-		// fire-up web-server
-		fmt.Println("Open web browser with http://localhost:" + addr)
-		fmt.Println("Cancel estimator with ^C")
-		stochastic.FireUpWeb(addr)
-	}
 
 	return nil
 }

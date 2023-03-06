@@ -1,4 +1,4 @@
-package stochastic
+package statistics
 
 import (
 	"sort"
@@ -7,35 +7,35 @@ import (
 	"github.com/paulmach/orb/simplify"
 )
 
-// CountingStats for counting frequencies of data items.
-type CountingStats[T comparable] struct {
+// Counting for counting frequencies of data items.
+type Counting[T comparable] struct {
 	freq map[T]uint64 // frequency counts per item
 }
 
-// JSON output for a CountingStats object
-type CountingStatsJSON struct {
+// JSON output for a Counting object
+type CountingJSON struct {
 	NumKeys int64        `json:"n"`    // Number of data entries
 	ECdf    [][2]float64 `json:"ecdf"` // Empirical cumulative distribution function
 }
 
-// NewCountingStats creates a new counting statistics.
-func NewCountingStats[T comparable]() CountingStats[T] {
-	return CountingStats[T]{map[T]uint64{}}
+// NewCounting creates a new counting statistics.
+func NewCounting[T comparable]() Counting[T] {
+	return Counting[T]{map[T]uint64{}}
 }
 
 // Places an item into the counting statistics.
-func (s *CountingStats[T]) Place(data T) {
+func (s *Counting[T]) Place(data T) {
 	s.freq[data]++
 }
 
 // Exists check whether data item exists in the counting statistics.
-func (s *CountingStats[T]) Exists(data T) bool {
+func (s *Counting[T]) Exists(data T) bool {
 	_, ok := s.freq[data]
 	return ok
 }
 
 // produceJSON computes the ECDF and set the number field in the JSON struct.
-func (s *CountingStats[T]) produceJSON(numPoints int) CountingStatsJSON {
+func (s *Counting[T]) produceJSON(numPoints int) CountingJSON {
 
 	// sort data according to their descending frequency
 	// and compute totalFreq frequency.
@@ -102,13 +102,13 @@ func (s *CountingStats[T]) produceJSON(numPoints int) CountingStatsJSON {
 		ECdf[i] = [2]float64(simplified[i])
 	}
 
-	return CountingStatsJSON{
+	return CountingJSON{
 		NumKeys: int64(numKeys),
 		ECdf:    ECdf,
 	}
 }
 
-// NewCountingStatsJSON computes the ECDF of the counting stats.
-func (s *CountingStats[T]) NewCountingStatsJSON() CountingStatsJSON {
-	return s.produceJSON(numDistributionPoints)
+// NewCountingJSON computes the ECDF of the counting stats.
+func (s *Counting[T]) NewCountingJSON() CountingJSON {
+	return s.produceJSON(NumDistributionPoints)
 }

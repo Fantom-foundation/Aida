@@ -196,7 +196,7 @@ loads the historic state of its block and executes the transaction on it in read
 
 **Run**
 
-`./build/aida-trace gen-update-set --worldstatedir path/to/world-state --updatedir path/to/updatedb 4564026 41000000 1000000`
+`./build/gen-update-set --worldstatedir path/to/world-state --updatedir path/to/updatedb 4564026 41000000 1000000`
 generates piecewise update-sets (merges of output substates) at every 1000000 blocks starting from block 4564026 to block 41000000 and stores them in updateDB. SubstateAlloc of block 4564025 from the world state is reocrded as the first update-set if --worldstatedir is provided. The subsequence update-sets happen at block 5000000 and every 1000000 blocks afterwards. 
 
 **Options**

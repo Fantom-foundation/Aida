@@ -88,8 +88,8 @@ func newCountingChart(title string, subtitle string, lambda float64, ecdf [][2]f
 	return chart
 }
 
-// renderCountingStats renders counting statistics.
-func renderCountingStats(w http.ResponseWriter, r *http.Request) {
+// renderCounting renders counting statistics.
+func renderCounting(w http.ResponseWriter, r *http.Request) {
 	events := GetEventsData()
 	contracts := newCountingChart("Counting Statistics", "for Contract-Addresses",
 		events.Contracts.Lambda,
@@ -148,8 +148,8 @@ func convertQueuingData(data []float64) []opts.ScatterData {
 	return items
 }
 
-// renderQueuingStats renders a queuing statistics.
-func renderQueuingStats(w http.ResponseWriter, r *http.Request) {
+// renderQueuing renders a queuing statistics.
+func renderQueuing(w http.ResponseWriter, r *http.Request) {
 	events := GetEventsData()
 	scatter := charts.NewScatter()
 	scatter.SetGlobalOptions(charts.WithInitializationOpts(opts.Initialization{
@@ -336,11 +336,18 @@ func renderMarkovChain(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, txt)
 }
 
-// FireUpWeb fires up a new web-server for data visualisation.
-func FireUpWeb(addr string) {
+// FireUpWeb produces a data model for the recorded events and
+// visualizes with a local web-server.
+func FireUpWeb(eventRegistry *EventRegistryJSON, addr string) {
+
+	// create data model (as a singleton) for visualization
+	eventModel := GetEventsData()
+	eventModel.PopulateEventData(eventRegistry)
+
+	// create web server
 	http.HandleFunc("/", renderMain)
-	http.HandleFunc("/"+countingRef, renderCountingStats)
-	http.HandleFunc("/"+queuingRef, renderQueuingStats)
+	http.HandleFunc("/"+countingRef, renderCounting)
+	http.HandleFunc("/"+queuingRef, renderQueuing)
 	http.HandleFunc("/"+snapshotRef, renderSnapshotStats)
 	http.HandleFunc("/"+operationRef, renderOperationStats)
 	http.HandleFunc("/"+txoperationRef, renderTransactionalOperationStats)

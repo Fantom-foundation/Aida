@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"runtime/pprof"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
@@ -33,16 +32,10 @@ func RunArchive(ctx *cli.Context) error {
 	}
 
 	// start CPU profiling if requested
-	if profileFileName := ctx.String(utils.CpuProfileFlag.Name); profileFileName != "" {
-		f, err := os.Create(profileFileName)
-		if err != nil {
-			return fmt.Errorf("could not create CPU profile: %s", err)
-		}
-		if err := pprof.StartCPUProfile(f); err != nil {
-			return fmt.Errorf("could not start CPU profile: %s", err)
-		}
-		defer pprof.StopCPUProfile()
+	if err := utils.StartCPUProfile(cfg); err != nil {
+		return err
 	}
+	defer utils.StopCPUProfile(cfg)
 
 	// open the archive
 	db, err := openStateDB(cfg)

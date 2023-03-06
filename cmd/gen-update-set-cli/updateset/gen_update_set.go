@@ -1,4 +1,4 @@
-package trace
+package updateset
 
 import (
 	"errors"
@@ -13,39 +13,15 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// genUpdateSetCommand data structure for the record app
-var GenUpdateSetCommand = cli.Command{
-	Action:    genUpdateSet,
-	Name:      "gen-update-set",
-	Usage:     "generate update set database",
-	ArgsUsage: "<blockNumLast> <blockRange>",
-	Flags: []cli.Flag{
-		&utils.ChainIDFlag,
-		&utils.DeletedAccountDirFlag,
-		&substate.WorkersFlag,
-		&substate.SubstateDirFlag,
-		&utils.UpdateDBDirFlag,
-		&utils.ValidateFlag,
-		&utils.WorldStateDirFlag,
-	},
-	Description: `
-The trace gen-update-set command requires two arguments:
-<blockNumLast> <blockRange>
-
-<blockNumLast> is last block of the inclusive range of blocks to generate update set.
-
-<blockRange> is the interval of writing update set to updateDB.`,
-}
-
-// genUpdateSet implements trace command for executing VM on a chosen storage system.
-func genUpdateSet(ctx *cli.Context) error {
+// GenUpdateSet command generates a series of update sets from substate db.
+func GenUpdateSet(ctx *cli.Context) error {
 	var (
 		err               error
 		destroyedAccounts []common.Address
 	)
 	// process arguments and flags
 	if ctx.Args().Len() != 2 {
-		return fmt.Errorf("trace command requires exactly 2 arguments")
+		return fmt.Errorf("gen-update-set command requires exactly 2 arguments")
 	}
 	cfg, argErr := utils.NewConfig(ctx, utils.LastBlockArg)
 	if argErr != nil {

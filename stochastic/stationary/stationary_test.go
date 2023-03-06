@@ -1,30 +1,9 @@
-package stochastic
+package stationary
 
 import (
 	"math"
 	"testing"
 )
-
-// TestEstimation checks the correcntness of approximating
-// a lambda for a discrete CDF.
-func TestEstimation(t *testing.T) {
-	for l := 2; l < 900; l += 5 {
-		checkEstimation(t, float64(l))
-	}
-}
-
-// checkEstimation checks whether the approximate lambda can be
-// rediscovered from a discretized CDF.
-func checkEstimation(t *testing.T, expectedLambda float64) {
-	Cdf := PiecewiseLinearCdf(expectedLambda, 100)
-	computedLambda, err := ApproximateLambda(Cdf)
-	if err != nil {
-		t.Fatalf("Failed to approximate. Error: %v", err)
-	}
-	if math.Abs(expectedLambda-computedLambda) > estimationEps {
-		t.Fatalf("Failed to approximate. Expected Lambda:%v Computed Lambda: %v", expectedLambda, computedLambda)
-	}
-}
 
 // checkStationaryDistribution tests stationary distribution of a uniform Markovian process
 // whose transition probability is 1/n for n states.
@@ -37,7 +16,7 @@ func checkStationaryDistribution(t *testing.T, n int) {
 		}
 	}
 	eps := 1e-3
-	dist, err := StationaryDistribution(A)
+	dist, err := ComputeDistribution(A)
 	if err != nil {
 		t.Fatalf("Failed to compute stationary distribution. Error: %v", err)
 	}
