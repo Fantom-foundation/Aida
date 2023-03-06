@@ -212,7 +212,7 @@ func TestCodeDictionaryOverflow(t *testing.T) {
 		t.Fatalf("Failed to report error when adding an exising storage key")
 	}
 	// reset limit
-	DictionaryLimit = math.MaxInt - 1
+	DictionaryLimit = math.MaxUint32 - 1
 }
 
 // TestCodeDictionaryDecodingFailure1 checks whether invalid index for Decode() can be captured.
