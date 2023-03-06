@@ -50,7 +50,6 @@ const (
 // ReadContext reads dictionaries from files and creates a new dictionary context.
 func ReadContext() *Context {
 	ctx := NewContext()
-	log.Printf("Read dictionary context ...")
 	err := ctx.contract.Read(ContextDir+"contract-dictionary.dat", ContractMagic)
 	if err != nil {
 		log.Fatalf("Cannot read contract dictionary. Error: %v", err)
