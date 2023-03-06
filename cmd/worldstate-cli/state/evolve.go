@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Fantom-foundation/Aida/cmd/gen-world-state/flags"
+	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/flags"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/op/go-logging"

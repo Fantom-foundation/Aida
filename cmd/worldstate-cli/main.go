@@ -5,9 +5,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/Fantom-foundation/Aida/cmd/gen-world-state/flags"
-	"github.com/Fantom-foundation/Aida/cmd/gen-world-state/state"
-	"github.com/Fantom-foundation/Aida/cmd/gen-world-state/version"
+	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/flags"
+	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/state"
+	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/version"
 	"github.com/urfave/cli/v2"
 )
 
@@ -16,7 +16,7 @@ func main() {
 	// prep the application, pull in all the available command
 	app := &cli.App{
 		Name:      "Aida World State Manager",
-		HelpName:  "gen-world-state",
+		HelpName:  "aida-worldstate",
 		Usage:     "creates and manages copy of EVM world state for off-the-chain testing and profiling",
 		Copyright: "(c) 2022 Fantom Foundation",
 		Version:   version.Version,

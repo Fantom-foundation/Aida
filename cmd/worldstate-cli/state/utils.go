@@ -6,7 +6,7 @@ import (
 	"os"
 	"path"
 
-	"github.com/Fantom-foundation/Aida/cmd/gen-world-state/flags"
+	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/flags"
 	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )

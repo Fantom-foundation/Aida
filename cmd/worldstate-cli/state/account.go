@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Fantom-foundation/Aida/cmd/gen-world-state/flags"
+	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/flags"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	"github.com/Fantom-foundation/Aida/world-state/types"
 	substate "github.com/Fantom-foundation/Substate"
