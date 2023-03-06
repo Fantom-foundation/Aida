@@ -11,7 +11,7 @@ import (
 )
 
 // numArgOps gives the number of operations with encoded argument classes
-const numArgOps = numOps * statistics.NumClasses * statistics.NumClasses * statistics.NumClasses
+const numArgOps = NumOps * statistics.NumClasses * statistics.NumClasses * statistics.NumClasses
 
 // EventRegistry counts events and counts transition for the Markov-Process.
 type EventRegistry struct {
@@ -64,7 +64,7 @@ func NewEventRegistry() EventRegistry {
 
 // RegisterOp registers an operation with no simulation arguments
 func (r *EventRegistry) RegisterOp(op int) {
-	if op < 0 || op >= numOps {
+	if op < 0 || op >= NumOps {
 		log.Fatalf("invalid stochastic operation ID")
 	}
 
@@ -81,7 +81,7 @@ func (r *EventRegistry) RegisterOp(op int) {
 // RegisterAddressOp registers an operation with a contract-address argument
 func (r *EventRegistry) RegisterAddressOp(op int, address *common.Address) {
 	// check ID
-	if op < 0 || op >= numOps {
+	if op < 0 || op >= NumOps {
 		log.Fatalf("invalid stochastic operation ID")
 	}
 
@@ -101,7 +101,7 @@ func (r *EventRegistry) RegisterAddressOp(op int, address *common.Address) {
 // RegisterAddressKeyOp registers an operation with a contract-address and a storage-key arguments.
 func (r *EventRegistry) RegisterKeyOp(op int, address *common.Address, key *common.Hash) {
 	// check operation range
-	if op < 0 || op >= numOps {
+	if op < 0 || op >= NumOps {
 		log.Fatalf("invalid stochastic operation ID")
 	}
 
@@ -122,7 +122,7 @@ func (r *EventRegistry) RegisterKeyOp(op int, address *common.Address, key *comm
 // RegisterAddressKeyOp registers an operation with a contract-address, a storage-key and storage-value arguments.
 func (r *EventRegistry) RegisterValueOp(op int, address *common.Address, key *common.Hash, value *common.Hash) {
 	// check operation range
-	if op < 0 || op >= numOps {
+	if op < 0 || op >= NumOps {
 		log.Fatalf("invalid stochastic operation ID")
 	}
 
