@@ -210,6 +210,21 @@ var (
 		Usage:       "enable visualization on `PORT`",
 		DefaultText: "8080",
 	}
+	DeleteSourceDBsFlag = cli.BoolFlag{
+		Name:  "delete-source-dbs",
+		Usage: "delete source databases",
+		Value: false,
+	}
+	ProfileDBFlag = cli.StringFlag{
+		Name:  "db",
+		Usage: "set profiling database directory",
+		Value: "./db",
+	}
+	VerboseFlag = cli.BoolFlag{
+		Name:  "verbose",
+		Usage: "enable verbose",
+		Value: false,
+	}
 )
 
 // execution configuration for replay command.
