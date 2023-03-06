@@ -58,8 +58,8 @@ func (d *Dictionary[K]) Decode(idx uint32) (K, error) {
 }
 
 // Size returns the number of entries in the dictionary.
-func (d *Dictionary[K]) Size() int  {
-	return len(d.idxToValue) 
+func (d *Dictionary[K]) Size() int {
+	return len(d.idxToValue)
 }
 
 // Write dictionary to a binary file. Keys have fixed length.
