@@ -11,17 +11,17 @@ import (
 )
 
 // DictionaryLimit sets size of dictionary.
-var DictionaryLimit int = math.MaxInt - 1
+var DictionaryLimit uint32 = math.MaxUint32 - 1
 
 // Dictionary data structure encodes/decodes a value to an index or vice versa.
 type Dictionary[K comparable] struct {
-	valueToIdx map[K]int // value to index map for encoding
-	idxToValue []K       // value array for decoding
+	valueToIdx map[K]uint32 // value to index map for encoding
+	idxToValue []K          // value array for decoding
 }
 
 // Init initializes or clears a dictionary.
 func (d *Dictionary[K]) Init() {
-	d.valueToIdx = map[K]int{}
+	d.valueToIdx = map[K]uint32{}
 	d.idxToValue = []K{}
 }
 
@@ -33,28 +33,33 @@ func NewDictionary[K comparable]() *Dictionary[K] {
 }
 
 // Encode a value to an index.
-func (d *Dictionary[K]) Encode(value K) (int, error) {
+func (d *Dictionary[K]) Encode(value K) (uint32, error) {
 	// find value
 	idx, ok := d.valueToIdx[value]
 	if !ok {
-		idx = len(d.idxToValue)
+		idx = uint32(len(d.idxToValue))
 		if idx >= DictionaryLimit {
 			return 0, fmt.Errorf("dictionary exhausted")
 		}
-		d.valueToIdx[value] = idx
+		d.valueToIdx[value] = uint32(idx)
 		d.idxToValue = append(d.idxToValue, value)
 	}
 	return idx, nil
 }
 
 // Decode an index to a value.
-func (d *Dictionary[K]) Decode(idx int) (K, error) {
-	if idx >= 0 && idx < len(d.idxToValue) {
+func (d *Dictionary[K]) Decode(idx uint32) (K, error) {
+	if idx >= 0 && int(idx) < len(d.idxToValue) {
 		return d.idxToValue[idx], nil
 	} else {
 		var zeroValue K
 		return zeroValue, fmt.Errorf("Invalid index")
 	}
+}
+
+// Size returns the number of entries in the dictionary.
+func (d *Dictionary[K]) Size() int {
+	return len(d.idxToValue)
 }
 
 // Write dictionary to a binary file. Keys have fixed length.
@@ -108,13 +113,17 @@ func (d *Dictionary[K]) Read(filename string, magic uint64) error {
 	}
 	// read entries from file
 	var data K
-	for ctr := 0; true; ctr++ {
+	for ctr := uint32(0); true; ctr++ {
+		// check bounds
+		if ctr >= DictionaryLimit {
+			return fmt.Errorf("Too many entries in dictionary.")
+		}
 		// read next entry
 		if err := binary.Read(zfile, binary.LittleEndian, &data); err != nil {
 			if err == io.EOF {
 				break
 			}
-			return fmt.Errorf("Error reading storage address. Error: %v", err)
+			return fmt.Errorf("Error reading dictionary. Error: %v", err)
 		}
 		// encode entry
 		idx, err := d.Encode(data)
@@ -194,7 +203,11 @@ func (d *Dictionary[K]) ReadString(filename string, magic uint64) error {
 		return fmt.Errorf("Cannot read magic number; dictionary is corrupted. Error: %v", err)
 	}
 	// read entries from file
-	for ctr := 0; true; ctr++ {
+	for ctr := uint32(0); true; ctr++ {
+		// check bounds
+		if ctr >= DictionaryLimit {
+			return fmt.Errorf("Too many entries in dictionary.")
+		}
 		// read length of byte-value
 		var length uint32
 		err := binary.Read(zfile, binary.LittleEndian, &length)
