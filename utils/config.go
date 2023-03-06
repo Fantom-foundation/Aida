@@ -215,7 +215,7 @@ var (
 		Usage: "delete source databases",
 		Value: false,
 	}
-	DBFlag = cli.StringFlag{
+	ProfileDBFlag = cli.StringFlag{
 		Name:  "db",
 		Usage: "set profiling database directory",
 		Value: "./db",
