@@ -20,7 +20,7 @@ GOPROXY ?= "https://proxy.golang.org,direct"
 
 .PHONY: all clean help test
 
-all: aida-worldstate aida-updateset aida-trace aida-runarchive aida-runvm aida-stochastic aida-substate
+all: aida-worldstate aida-updateset aida-dbmerger aida-trace aida-runarchive aida-runvm aida-stochastic aida-substate
 
 aida-worldstate:
 	@go build \
@@ -88,6 +88,14 @@ aida-updateset:
 	-o $(GO_BIN)/aida-updateset \
 	./cmd/updateset-cli
 
+aida-dbmerger:
+	@cd carmen/go/lib ; \
+	./build_libcarmen.sh ; \
+	cd ../../.. ; \
+	GOPROXY=$(GOPROXY) \
+	go build -ldflags "-s -w" \
+	-o $(GO_BIN)/aida-dbmerger \
+	./cmd/db-merger
 
 test:
 	@go test ./...
