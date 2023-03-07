@@ -6,6 +6,7 @@ import (
 	"log"
 	"math"
 	"os"
+	"runtime"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
@@ -61,22 +62,20 @@ func OperationWriter(ch chan operation.Operation) {
 		log.Fatalf("Cannot open bzip2 stream. Error: %v", err)
 	}
 
-	// defer closing compressed stream, flushing buffer, and closing trace file
-	defer func() {
-		if err := zfile.Close(); err != nil {
-			log.Fatalf("Cannot close bzip2 writer. Error: %v", err)
-		}
-		if err := bfile.Flush(); err != nil {
-			log.Fatalf("Cannot flush buffer. Error: %v", err)
-		}
-		if err := file.Close(); err != nil {
-			log.Fatalf("Cannot close trace file. Error: %v", err)
-		}
-	}()
-
 	// read operations from channel, and write them
 	for op := range ch {
 		operation.Write(zfile, op)
+	}
+
+	// closing compressed stream, flushing buffer, and closing trace file
+	if err := zfile.Close(); err != nil {
+		log.Fatalf("Cannot close bzip2 writer. Error: %v", err)
+	}
+	if err := bfile.Flush(); err != nil {
+		log.Fatalf("Cannot flush buffer. Error: %v", err)
+	}
+	if err := file.Close(); err != nil {
+		log.Fatalf("Cannot close trace file. Error: %v", err)
 	}
 }
 
@@ -122,9 +121,7 @@ func traceRecordAction(ctx *cli.Context) error {
 	// iterate through subsets in sequence
 	substate.SetSubstateFlags(ctx)
 	substate.OpenSubstateDBReadOnly()
-	defer substate.CloseSubstateDB()
 	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
-	defer iter.Release()
 	curBlock := uint64(math.MaxUint64) // set to an infeasible block
 	var (
 		start   time.Time
@@ -192,11 +189,20 @@ func traceRecordAction(ctx *cli.Context) error {
 		fmt.Printf("trace record: Total elapsed time: %.3f s, processed %v blocks\n", sec, cfg.Last-cfg.First+1)
 	}
 
+	// close substate
+	substate.CloseSubstateDB()
+
+	// release iterator
+	iter.Release()
+
 	// close channel
 	close(opChannel)
 
 	// write dictionaries and indexes
 	dCtx.Write()
+
+	// wait for writer thread
+	runtime.Gosched()
 
 	return nil
 }
