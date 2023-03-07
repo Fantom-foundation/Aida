@@ -31,7 +31,7 @@ func DbMerger(ctx *cli.Context) error {
 	var substateCount, updatesetCount, deletedAccCount uint64
 
 	if !skipSubstate {
-		substateCount, err = copyFrom(substateDB, targetDB, nil)
+		substateCount, err = copyData(substateDB, targetDB, nil)
 		if err != nil {
 			return err
 		}
@@ -39,13 +39,13 @@ func DbMerger(ctx *cli.Context) error {
 	}
 
 	// previous updatesetDB used 1c prefix instead of 2c to avoid collision with substate prefix has to be replaced
-	updatesetCount, err = copyFrom(updatesetDB, targetDB, map[string]string{"1c": "2c"})
+	updatesetCount, err = copyData(updatesetDB, targetDB, map[string]string{"1c": "2c"})
 	if err != nil {
 		return err
 	}
 	log.Printf("updateset %d items\n", updatesetCount)
 
-	deletedAccCount, err = copyFrom(deletedAccountsDB, targetDB, nil)
+	deletedAccCount, err = copyData(deletedAccountsDB, targetDB, nil)
 	if err != nil {
 		return err
 	}
@@ -70,7 +70,13 @@ verifyLoop:
 	MustCloseDB(substateDB)
 	MustCloseDB(updatesetDB)
 	MustCloseDB(deletedAccountsDB)
+
+	// delete
 	if ctx.Bool(utils.DeleteSourceDBsFlag.Name) {
+		err = os.RemoveAll(substatePath)
+		if err != nil {
+			return err
+		}
 		err = os.RemoveAll(updatedbPath)
 		if err != nil {
 			return err
@@ -143,11 +149,12 @@ func checkCompatibility(substateDB ethdb.Database, updatesetDB ethdb.Database, d
 	return nil
 }
 
-// copyFrom copies data from source to target database, substitute
-func copyFrom(sourceDB ethdb.Database, targetDB ethdb.Database, substituteArr map[string]string) (uint64, error) {
+// copyData copies data from source to target database, substitute
+func copyData(sourceDB ethdb.Database, targetDB ethdb.Database, substituteArr map[string]string) (uint64, error) {
 	dbBatchWriter := targetDB.NewBatch()
 	var count uint64 = 0
 
+	var prefixes = map[string]string{}
 	iter := sourceDB.NewIterator(nil, nil)
 	for {
 		// do we have another available item?
@@ -159,10 +166,16 @@ func copyFrom(sourceDB ethdb.Database, targetDB ethdb.Database, substituteArr ma
 					return count, err
 				}
 			}
+			fmt.Printf("prefixes: %v\n", prefixes)
 			return count, nil
 		}
 		key := iter.Key()
 		pref := string(key[:2])
+		_, ok := prefixes[pref]
+		if !ok {
+			prefixes[pref] = pref
+		}
+
 		v, ok := substituteArr[pref]
 		if ok {
 			// fix to correct prefix
