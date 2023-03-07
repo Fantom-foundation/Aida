@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"strings"
 
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -26,47 +25,30 @@ func DbMerger(ctx *cli.Context) error {
 		return err
 	}
 
-	defer MustCloseDB(targetDB)
-
-	var substateCount, updatesetCount, deletedAccCount uint64
-
+	// if deletion of source data is enabled than substate data was already moved to target from source database path by renaming
 	if !skipSubstate {
-		substateCount, err = copyData(substateDB, targetDB, nil)
+		err = copyData(substateDB, targetDB)
 		if err != nil {
 			return err
 		}
-		log.Printf("substate %d items\n", substateCount)
+		log.Printf("substate move finished\n")
 	}
 
 	// previous updatesetDB used 1c prefix instead of 2c to avoid collision with substate prefix has to be replaced
-	updatesetCount, err = copyData(updatesetDB, targetDB, map[string]string{"1c": "2c"})
+	err = copyData(updatesetDB, targetDB)
 	if err != nil {
 		return err
 	}
-	log.Printf("updateset %d items\n", updatesetCount)
+	log.Printf("updateset move finished\n")
 
-	deletedAccCount, err = copyData(deletedAccountsDB, targetDB, nil)
+	err = copyData(deletedAccountsDB, targetDB)
 	if err != nil {
 		return err
 	}
-	log.Printf("deleted accounts %d items\n", deletedAccCount)
-
-	count := 0
-	prefixes := map[string]uint64{}
-	iter := targetDB.NewIterator(nil, nil)
-
-verifyLoop:
-	for {
-		// do we have another available item?
-		if !iter.Next() {
-			log.Printf("targetDB %d - %v\n", count, prefixes)
-			break verifyLoop
-		}
-		prefixes[string(iter.Key())[:2]]++
-		count++
-	}
+	log.Printf("deleted accounts move finished\n")
 
 	// close databases
+	MustCloseDB(targetDB)
 	MustCloseDB(substateDB)
 	MustCloseDB(updatesetDB)
 	MustCloseDB(deletedAccountsDB)
@@ -127,7 +109,7 @@ func openDatabases(ctx *cli.Context, targetPath string, substatePath string, upd
 		MustCloseDB(substateDB)
 		err = os.Rename(substatePath, targetPath)
 		if err == nil {
-			log.Print("substate moved completely\n")
+			log.Print("substate move finished\n")
 			skipSubstate = true
 		} else {
 			return nil, nil, nil, nil, false, err
@@ -145,16 +127,14 @@ func openDatabases(ctx *cli.Context, targetPath string, substatePath string, upd
 
 // checkCompatibility confirms that the given databases are compatible
 func checkCompatibility(substateDB ethdb.Database, updatesetDB ethdb.Database, deletedAccountsDB ethdb.Database) error {
-	// TODO
+	// TODO check block ranges of databases
 	return nil
 }
 
 // copyData copies data from source to target database, substitute
-func copyData(sourceDB ethdb.Database, targetDB ethdb.Database, substituteArr map[string]string) (uint64, error) {
+func copyData(sourceDB ethdb.Database, targetDB ethdb.Database) error {
 	dbBatchWriter := targetDB.NewBatch()
-	var count uint64 = 0
 
-	var prefixes = map[string]string{}
 	iter := sourceDB.NewIterator(nil, nil)
 	for {
 		// do we have another available item?
@@ -163,35 +143,22 @@ func copyData(sourceDB ethdb.Database, targetDB ethdb.Database, substituteArr ma
 			if dbBatchWriter.ValueSize() > 0 {
 				err := dbBatchWriter.Write()
 				if err != nil {
-					return count, err
+					return err
 				}
 			}
-			fmt.Printf("prefixes: %v\n", prefixes)
-			return count, nil
+			return nil
 		}
 		key := iter.Key()
-		pref := string(key[:2])
-		_, ok := prefixes[pref]
-		if !ok {
-			prefixes[pref] = pref
-		}
 
-		v, ok := substituteArr[pref]
-		if ok {
-			// fix to correct prefix
-			key = []byte(strings.Replace(string(key), pref, v, 1))
-		}
-
-		count++
 		err := dbBatchWriter.Put(key, iter.Value())
 		if err != nil {
-			return count, err
+			return err
 		}
 
 		if dbBatchWriter.ValueSize() > kvdb.IdealBatchSize {
 			err = dbBatchWriter.Write()
 			if err != nil {
-				return count, err
+				return err
 			}
 			dbBatchWriter.Reset()
 		}

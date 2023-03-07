@@ -20,7 +20,6 @@ var DbMergerApp = cli.App{
 	Copyright: "(c) 2022 Fantom Foundation",
 	ArgsUsage: "",
 	Flags: []cli.Flag{
-		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
 		&utils.DeletedAccountDirFlag,
 		&utils.UpdateDBDirFlag,
