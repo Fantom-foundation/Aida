@@ -96,15 +96,15 @@ func stochasticReplayAction(ctx *cli.Context) error {
 	}
 
 	// close the DB and print disk usage
+	if usage := db.GetMemoryUsage(); usage != nil {
+		log.Printf("stochastic replay: state DB memory usage: %d byte\n%s\n", usage.UsedBytes, usage.Breakdown)
+	}
 	start := time.Now()
 	if err := db.Close(); err != nil {
 		log.Printf("Failed to close database: %v", err)
 	}
 	log.Printf("stochastic replay: Closing DB took %v\n", time.Since(start))
 	log.Printf("stochastic replay: Final disk usage: %v MiB\n", float32(utils.GetDirectorySize(stateDirectory))/float32(1024*1024))
-	if usage := db.GetMemoryUsage(); usage != nil {
-		log.Printf("stochastic replay: state DB memory usage: %d byte\n%s\n", usage.UsedBytes, usage.Breakdown)
-	}
 
 	return nil
 }
