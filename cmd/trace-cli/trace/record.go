@@ -121,7 +121,13 @@ func traceRecordAction(ctx *cli.Context) error {
 	// iterate through subsets in sequence
 	substate.SetSubstateFlags(ctx)
 	substate.OpenSubstateDBReadOnly()
+	// close substate
+	defer substate.CloseSubstateDB()
+
 	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
+	// release iterator
+	defer iter.Release()
+
 	curBlock := uint64(math.MaxUint64) // set to an infeasible block
 	var (
 		start   time.Time
@@ -188,12 +194,6 @@ func traceRecordAction(ctx *cli.Context) error {
 		sec = time.Since(start).Seconds()
 		fmt.Printf("trace record: Total elapsed time: %.3f s, processed %v blocks\n", sec, cfg.Last-cfg.First+1)
 	}
-
-	// close substate
-	substate.CloseSubstateDB()
-
-	// release iterator
-	iter.Release()
 
 	// close channel
 	close(opChannel)
