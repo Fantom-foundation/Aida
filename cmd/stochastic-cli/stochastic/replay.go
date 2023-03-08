@@ -22,6 +22,7 @@ var StochasticReplayCommand = cli.Command{
 	Usage:     "Simulates StateDB operations using a random generator with realistic distributions",
 	ArgsUsage: "<simulation-file>",
 	Flags: []cli.Flag{
+		&utils.CarmenSchemaFlag,
 		&utils.TraceDebugFlag,
 		&utils.DisableProgressFlag,
 		&utils.MemoryBreakdownFlag,
