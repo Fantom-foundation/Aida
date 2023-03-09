@@ -31,7 +31,7 @@ func NewProxyRecorder(db state.StateDB, dctx *dictionary.Context, output io.Writ
 	return r
 }
 
-// write new operation on channel.
+// write new operation to file.
 func (r *ProxyRecorder) write(op operation.Operation) {
 	writeOperation(r.dctx, r.output, op)
 }
