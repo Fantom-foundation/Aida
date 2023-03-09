@@ -328,7 +328,7 @@ func replayAction(ctx *cli.Context) error {
 		vm.BasicBlockProfilingDB = ctx.String(DatabaseNameFlag.Name)
 	}
 
-	substate.SetSubstateFlags(ctx)
+	substate.SetSubstateFlags(ctx.String(substate.SubstateDirFlag.Name))
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 

@@ -15,7 +15,7 @@ import (
 
 // DbMerger implements merging command for combining all source data databases into single database used for profiling.
 func DbMerger(ctx *cli.Context) error {
-	targetPath := ctx.Path(utils.ProfileDBFlag.Name)
+	targetPath := ctx.Path(utils.DBFlag.Name)
 	substatePath := ctx.Path(substate.SubstateDirFlag.Name)
 	updatedbPath := ctx.Path(utils.UpdateDBDirFlag.Name)
 	deletedAccountsPath := ctx.Path(utils.DeletedAccountDirFlag.Name)

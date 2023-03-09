@@ -84,7 +84,7 @@ func traceRecordAction(ctx *cli.Context) error {
 	}
 
 	// iterate through subsets in sequence
-	substate.SetSubstateFlags(ctx)
+	substate.SetSubstateFlags(cfg.SubstateDBDir)
 	substate.OpenSubstateDBReadOnly()
 	// close substate
 	defer substate.CloseSubstateDB()

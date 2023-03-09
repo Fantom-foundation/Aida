@@ -68,7 +68,7 @@ func substateDumpAction(ctx *cli.Context) error {
 		return argErr
 	}
 
-	substate.SetSubstateFlags(ctx)
+	substate.SetSubstateFlags(ctx.String(substate.SubstateDirFlag.Name))
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
