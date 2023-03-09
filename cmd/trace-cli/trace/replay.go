@@ -263,7 +263,7 @@ func traceReplayAction(ctx *cli.Context) error {
 	defer utils.StopCPUProfile(cfg)
 
 	// run storage driver
-	substate.SetSubstateFlags(ctx)
+	substate.SetSubstateFlags(cfg.SubstateDBDir)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 	err = traceReplayTask(cfg)

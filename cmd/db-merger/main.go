@@ -24,7 +24,7 @@ var DbMergerApp = cli.App{
 		&utils.DeletedAccountDirFlag,
 		&utils.UpdateDBDirFlag,
 		&utils.DeleteSourceDBsFlag,
-		&utils.ProfileDBFlag,
+		&utils.DBFlag,
 	},
 	Description: `
 The dbmerger command merges databases with source data into one database which is used for profiling.

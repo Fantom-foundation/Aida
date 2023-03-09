@@ -177,7 +177,7 @@ func traceReplaySubstateAction(ctx *cli.Context) error {
 		return err
 	}
 	// run storage driver
-	substate.SetSubstateFlags(ctx)
+	substate.SetSubstateFlags(cfg.SubstateDBDir)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 

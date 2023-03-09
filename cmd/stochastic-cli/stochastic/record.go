@@ -61,7 +61,7 @@ func stochasticRecordAction(ctx *cli.Context) error {
 	}
 
 	// iterate through subsets in sequence
-	substate.SetSubstateFlags(ctx)
+	substate.SetSubstateFlags(cfg.SubstateDBDir)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 	iter := substate.NewSubstateIterator(cfg.First, ctx.Int(substate.WorkersFlag.Name))
