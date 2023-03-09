@@ -20,7 +20,7 @@ var StochasticReplayCommand = cli.Command{
 	Action:    stochasticReplayAction,
 	Name:      "replay",
 	Usage:     "Simulates StateDB operations using a random generator with realistic distributions",
-	ArgsUsage: "<simulation-file>",
+	ArgsUsage: "<simulation-length> <simulation-file>",
 	Flags: []cli.Flag{
 		&utils.CarmenSchemaFlag,
 		&utils.TraceDebugFlag,
@@ -29,7 +29,6 @@ var StochasticReplayCommand = cli.Command{
 		&utils.RandomSeedFlag,
 		&utils.StateDbImplementationFlag,
 		&utils.StateDbVariantFlag,
-		&utils.StateDbSrcDirFlag,
 		&utils.StateDbTempDirFlag,
 		&utils.StateDbLoggingFlag,
 		&utils.ShadowDbImplementationFlag,
