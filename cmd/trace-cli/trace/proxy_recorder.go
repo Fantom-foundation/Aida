@@ -1,6 +1,7 @@
 package trace
 
 import (
+	"io"
 	"math/big"
 
 	"github.com/Fantom-foundation/Aida/state"
@@ -14,55 +15,52 @@ import (
 // ProxyRecorder data structure for capturing and recording
 // invoked StateDB operations.
 type ProxyRecorder struct {
-	db    state.StateDB            // state db
-	dctx  *dictionary.Context      // dictionary context for decoding information
-	ch    chan operation.Operation // channel used for streaming captured operation
-	debug bool
+	db     state.StateDB       // state db
+	dctx   *dictionary.Context // dictionary context for decoding information
+	output io.Writer           // write output
+	debug  bool
 }
 
 // NewProxyRecorder creates a new StateDB proxy.
-func NewProxyRecorder(db state.StateDB, dctx *dictionary.Context, ch chan operation.Operation, debug bool) *ProxyRecorder {
+func NewProxyRecorder(db state.StateDB, dctx *dictionary.Context, output io.Writer, debug bool) *ProxyRecorder {
 	r := new(ProxyRecorder)
 	r.db = db
 	r.dctx = dctx
-	r.ch = ch
+	r.output = output
 	r.debug = debug
 	return r
 }
 
-// send new operation on channel.
-func (r *ProxyRecorder) send(op operation.Operation) {
-	if r.debug {
-		operation.Debug(r.dctx, op)
-	}
-	r.ch <- op
+// write new operation on channel.
+func (r *ProxyRecorder) write(op operation.Operation) {
+	writeOperation(r.dctx, r.output, op)
 }
 
 // CreateAccounts creates a new account.
 func (r *ProxyRecorder) CreateAccount(addr common.Address) {
 	cIdx := r.dctx.EncodeContract(addr)
-	r.send(operation.NewCreateAccount(cIdx))
+	r.write(operation.NewCreateAccount(cIdx))
 	r.db.CreateAccount(addr)
 }
 
 // SubtractBalance subtracts amount from a contract address.
 func (r *ProxyRecorder) SubBalance(addr common.Address, amount *big.Int) {
 	cIdx := r.dctx.EncodeContract(addr)
-	r.send(operation.NewSubBalance(cIdx, amount))
+	r.write(operation.NewSubBalance(cIdx, amount))
 	r.db.SubBalance(addr, amount)
 }
 
 // AddBalance adds amount to a contract address.
 func (r *ProxyRecorder) AddBalance(addr common.Address, amount *big.Int) {
 	cIdx := r.dctx.EncodeContract(addr)
-	r.send(operation.NewAddBalance(cIdx, amount))
+	r.write(operation.NewAddBalance(cIdx, amount))
 	r.db.AddBalance(addr, amount)
 }
 
 // GetBalance retrieves the amount of a contract address.
 func (r *ProxyRecorder) GetBalance(addr common.Address) *big.Int {
 	cIdx := r.dctx.EncodeContract(addr)
-	r.send(operation.NewGetBalance(cIdx))
+	r.write(operation.NewGetBalance(cIdx))
 	balance := r.db.GetBalance(addr)
 	return balance
 }
@@ -70,7 +68,7 @@ func (r *ProxyRecorder) GetBalance(addr common.Address) *big.Int {
 // GetNonce retrieves the nonce of a contract address.
 func (r *ProxyRecorder) GetNonce(addr common.Address) uint64 {
 	cIdx := r.dctx.EncodeContract(addr)
-	r.send(operation.NewGetNonce(cIdx))
+	r.write(operation.NewGetNonce(cIdx))
 	nonce := r.db.GetNonce(addr)
 	return nonce
 }
@@ -78,7 +76,7 @@ func (r *ProxyRecorder) GetNonce(addr common.Address) uint64 {
 // SetNonce sets the nonce of a contract address.
 func (r *ProxyRecorder) SetNonce(addr common.Address, nonce uint64) {
 	cIdx := r.dctx.EncodeContract(addr)
-	r.send(operation.NewSetNonce(cIdx, nonce))
+	r.write(operation.NewSetNonce(cIdx, nonce))
 	r.db.SetNonce(addr, nonce)
 }
 
@@ -87,9 +85,9 @@ func (r *ProxyRecorder) GetCodeHash(addr common.Address) common.Hash {
 	prevCIdx := r.dctx.PrevContractIdx()
 	cIdx := r.dctx.EncodeContract(addr)
 	if prevCIdx == cIdx {
-		r.send(operation.NewGetCodeHashLc())
+		r.write(operation.NewGetCodeHashLc())
 	} else {
-		r.send(operation.NewGetCodeHash(cIdx))
+		r.write(operation.NewGetCodeHash(cIdx))
 	}
 
 	hash := r.db.GetCodeHash(addr)
@@ -99,7 +97,7 @@ func (r *ProxyRecorder) GetCodeHash(addr common.Address) common.Hash {
 // GetCode returns the EVM bytecode of a contract.
 func (r *ProxyRecorder) GetCode(addr common.Address) []byte {
 	cIdx := r.dctx.EncodeContract(addr)
-	r.send(operation.NewGetCode(cIdx))
+	r.write(operation.NewGetCode(cIdx))
 	code := r.db.GetCode(addr)
 	return code
 }
@@ -108,14 +106,14 @@ func (r *ProxyRecorder) GetCode(addr common.Address) []byte {
 func (r *ProxyRecorder) SetCode(addr common.Address, code []byte) {
 	cIdx := r.dctx.EncodeContract(addr)
 	bcIdx := r.dctx.EncodeCode(code)
-	r.send(operation.NewSetCode(cIdx, bcIdx))
+	r.write(operation.NewSetCode(cIdx, bcIdx))
 	r.db.SetCode(addr, code)
 }
 
 // GetCodeSize returns the EVM bytecode's size.
 func (r *ProxyRecorder) GetCodeSize(addr common.Address) int {
 	cIdx := r.dctx.EncodeContract(addr)
-	r.send(operation.NewGetCodeSize(cIdx))
+	r.write(operation.NewGetCodeSize(cIdx))
 	size := r.db.GetCodeSize(addr)
 	return size
 }
@@ -142,9 +140,9 @@ func (r *ProxyRecorder) GetCommittedState(addr common.Address, key common.Hash) 
 	cIdx := r.dctx.EncodeContract(addr)
 	sIdx, sPos := r.dctx.EncodeStorage(key)
 	if prevCIdx == cIdx && sPos == 0 {
-		r.send(operation.NewGetCommittedStateLcls())
+		r.write(operation.NewGetCommittedStateLcls())
 	} else {
-		r.send(operation.NewGetCommittedState(cIdx, sIdx))
+		r.write(operation.NewGetCommittedState(cIdx, sIdx))
 	}
 	value := r.db.GetCommittedState(addr, key)
 	return value
@@ -167,7 +165,7 @@ func (r *ProxyRecorder) GetState(addr common.Address, key common.Hash) common.Ha
 	} else {
 		op = operation.NewGetState(cIdx, sIdx)
 	}
-	r.send(op)
+	r.write(op)
 	value := r.db.GetState(addr, key)
 	return value
 }
@@ -178,9 +176,9 @@ func (r *ProxyRecorder) SetState(addr common.Address, key common.Hash, value com
 	cIdx := r.dctx.EncodeContract(addr)
 	sIdx, sPos := r.dctx.EncodeStorage(key)
 	if cIdx == prevCIdx && sPos == 0 {
-		r.send(operation.NewSetStateLcls(&value))
+		r.write(operation.NewSetStateLcls(&value))
 	} else {
-		r.send(operation.NewSetState(cIdx, sIdx, &value))
+		r.write(operation.NewSetState(cIdx, sIdx, &value))
 	}
 	r.db.SetState(addr, key, value)
 }
@@ -190,7 +188,7 @@ func (r *ProxyRecorder) SetState(addr common.Address, key common.Hash, value com
 // return a non-nil account after Suicide.
 func (r *ProxyRecorder) Suicide(addr common.Address) bool {
 	cIdx := r.dctx.EncodeContract(addr)
-	r.send(operation.NewSuicide(cIdx))
+	r.write(operation.NewSuicide(cIdx))
 	ok := r.db.Suicide(addr)
 	return ok
 }
@@ -205,7 +203,7 @@ func (r *ProxyRecorder) HasSuicided(addr common.Address) bool {
 // Notably this also returns true for suicided accounts.
 func (r *ProxyRecorder) Exist(addr common.Address) bool {
 	cIdx := r.dctx.EncodeContract(addr)
-	r.send(operation.NewExist(cIdx))
+	r.write(operation.NewExist(cIdx))
 	return r.db.Exist(addr)
 }
 
@@ -219,7 +217,7 @@ func (r *ProxyRecorder) Empty(addr common.Address) bool {
 // PrepareAccessList handles the preparatory steps for executing a state transition with
 // regards to both EIP-2929 and EIP-2930:
 //
-// - Add sender to access list (2929)
+// - Add writeer to access list (2929)
 // - Add destination to access list (2929)
 // - Add precompiles to access list (2929)
 // - Add the contents of the optional tx access list (2930)
@@ -253,7 +251,7 @@ func (r *ProxyRecorder) AddSlotToAccessList(addr common.Address, slot common.Has
 
 // RevertToSnapshot reverts all state changes from a given revision.
 func (r *ProxyRecorder) RevertToSnapshot(snapshot int) {
-	r.send(operation.NewRevertToSnapshot(snapshot))
+	r.write(operation.NewRevertToSnapshot(snapshot))
 	r.db.RevertToSnapshot(snapshot)
 }
 
@@ -261,7 +259,7 @@ func (r *ProxyRecorder) RevertToSnapshot(snapshot int) {
 func (r *ProxyRecorder) Snapshot() int {
 	snapshot := r.db.Snapshot()
 	// TODO: check overrun
-	r.send(operation.NewSnapshot(int32(snapshot)))
+	r.write(operation.NewSnapshot(int32(snapshot)))
 	return snapshot
 }
 
@@ -293,7 +291,7 @@ func (r *ProxyRecorder) Prepare(thash common.Hash, ti int) {
 
 // Finalise the state in StateDB.
 func (r *ProxyRecorder) Finalise(deleteEmptyObjects bool) {
-	r.send(operation.NewFinalise(deleteEmptyObjects))
+	r.write(operation.NewFinalise(deleteEmptyObjects))
 	r.db.Finalise(deleteEmptyObjects)
 }
 
@@ -357,7 +355,6 @@ func (r *ProxyRecorder) Close() error {
 
 func (r *ProxyRecorder) StartBulkLoad() state.BulkLoad {
 	panic("StartBulkLoad not supported by ProxyRecorder")
-	return nil
 }
 
 func (r *ProxyRecorder) GetMemoryUsage() *state.MemoryUsage {
