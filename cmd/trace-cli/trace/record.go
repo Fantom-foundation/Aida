@@ -3,6 +3,7 @@ package trace
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"log"
 	"math"
 	"os"
@@ -47,41 +48,9 @@ The trace record command requires two arguments:
 last block of the inclusive range of blocks to trace transactions.`,
 }
 
-// OperationWriter reads operations from the operation channel and writes
-// them into a trace file.
-func OperationWriter(ch chan operation.Operation) {
-
-	// open trace file, write buffer, and compressed stream
-	file, err := os.OpenFile(tracer.TraceDir+"trace.dat", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-	if err != nil {
-		log.Fatalf("Cannot open trace file. Error: %v", err)
-	}
-	bfile := bufio.NewWriterSize(file, WriteBufferSize)
-	zfile, err := bzip2.NewWriter(bfile, &bzip2.WriterConfig{Level: 9})
-	if err != nil {
-		log.Fatalf("Cannot open bzip2 stream. Error: %v", err)
-	}
-
-	// read operations from channel, and write them
-	for op := range ch {
-		operation.Write(zfile, op)
-	}
-
-	// closing compressed stream, flushing buffer, and closing trace file
-	if err := zfile.Close(); err != nil {
-		log.Fatalf("Cannot close bzip2 writer. Error: %v", err)
-	}
-	if err := bfile.Flush(); err != nil {
-		log.Fatalf("Cannot flush buffer. Error: %v", err)
-	}
-	if err := file.Close(); err != nil {
-		log.Fatalf("Cannot close trace file. Error: %v", err)
-	}
-}
-
-// sendOperation sends an operation onto the channel.
-func sendOperation(dCtx *dictionary.Context, ch chan operation.Operation, op operation.Operation) {
-	ch <- op
+// writeOperation writes operation to file.
+func writeOperation(dCtx *dictionary.Context, zFile io.Writer, op operation.Operation) {
+	operation.Write(zFile, op)
 	if utils.TraceDebug {
 		operation.Debug(dCtx, op)
 	}
@@ -107,10 +76,6 @@ func traceRecordAction(ctx *cli.Context) error {
 	// create dictionary and index contexts
 	dCtx := dictionary.NewContext()
 
-	// spawn writer
-	opChannel := make(chan operation.Operation, WriteChannelSize)
-	go OperationWriter(opChannel)
-
 	// process arguments
 	tracer.TraceDir = ctx.String(utils.TraceDirectoryFlag.Name) + "/"
 	dictionary.ContextDir = ctx.String(utils.TraceDirectoryFlag.Name) + "/"
@@ -124,7 +89,31 @@ func traceRecordAction(ctx *cli.Context) error {
 	// close substate
 	defer substate.CloseSubstateDB()
 
+	// open trace file, write buffer, and compressed stream
+	file, err := os.OpenFile(tracer.TraceDir+"trace.dat", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		log.Fatalf("Cannot open trace file. Error: %v", err)
+	}
+	bFile := bufio.NewWriterSize(file, WriteBufferSize)
+	zFile, err := bzip2.NewWriter(bFile, &bzip2.WriterConfig{Level: 9})
+	if err != nil {
+		log.Fatalf("Cannot open bzip2 stream. Error: %v", err)
+	}
+	defer func() {
+		// closing compressed stream, flushing buffer, and closing trace file
+		if err := zFile.Close(); err != nil {
+			log.Fatalf("Cannot close bzip2 writer. Error: %v", err)
+		}
+		if err := bFile.Flush(); err != nil {
+			log.Fatalf("Cannot flush buffer. Error: %v", err)
+		}
+		if err := file.Close(); err != nil {
+			log.Fatalf("Cannot close trace file. Error: %v", err)
+		}
+	}()
+
 	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
+
 	// release iterator
 	defer iter.Release()
 
@@ -141,7 +130,7 @@ func traceRecordAction(ctx *cli.Context) error {
 	}
 
 	curEpoch := cfg.First / cfg.EpochLength
-	sendOperation(dCtx, opChannel, operation.NewBeginEpoch(curEpoch))
+	writeOperation(dCtx, zFile, operation.NewBeginEpoch(curEpoch))
 
 	for iter.Next() {
 		tx := iter.Value()
@@ -151,28 +140,28 @@ func traceRecordAction(ctx *cli.Context) error {
 				break
 			}
 			if curBlock != math.MaxUint64 {
-				sendOperation(dCtx, opChannel, operation.NewEndBlock())
+				writeOperation(dCtx, zFile, operation.NewEndBlock())
 				// Record epoch changes.
 				newEpoch := tx.Block / cfg.EpochLength
 				for curEpoch < newEpoch {
-					sendOperation(dCtx, opChannel, operation.NewEndEpoch())
+					writeOperation(dCtx, zFile, operation.NewEndEpoch())
 					curEpoch++
-					sendOperation(dCtx, opChannel, operation.NewBeginEpoch(curEpoch))
+					writeOperation(dCtx, zFile, operation.NewBeginEpoch(curEpoch))
 				}
 			}
 			curBlock = tx.Block
 			// open new block with a begin-block operation and clear index cache
-			sendOperation(dCtx, opChannel, operation.NewBeginBlock(tx.Block))
+			writeOperation(dCtx, zFile, operation.NewBeginBlock(tx.Block))
 		}
-		sendOperation(dCtx, opChannel, operation.NewBeginTransaction(uint32(tx.Transaction)))
+		writeOperation(dCtx, zFile, operation.NewBeginTransaction(uint32(tx.Transaction)))
 		var statedb state.StateDB
 		statedb = state.MakeGethInMemoryStateDB(&tx.Substate.InputAlloc, tx.Block)
-		statedb = NewProxyRecorder(statedb, dCtx, opChannel, utils.TraceDebug)
+		statedb = NewProxyRecorder(statedb, dCtx, zFile, utils.TraceDebug)
 
 		if err := utils.ProcessTx(statedb, cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
 			return fmt.Errorf("Failed to process block %v tx %v. %v", tx.Block, tx.Transaction, err)
 		}
-		sendOperation(dCtx, opChannel, operation.NewEndTransaction())
+		writeOperation(dCtx, zFile, operation.NewEndTransaction())
 		if cfg.EnableProgress {
 			// report progress
 			sec = time.Since(start).Seconds()
@@ -186,17 +175,14 @@ func traceRecordAction(ctx *cli.Context) error {
 
 	// end last block
 	if curBlock != math.MaxUint64 {
-		sendOperation(dCtx, opChannel, operation.NewEndBlock())
+		writeOperation(dCtx, zFile, operation.NewEndBlock())
 	}
-	sendOperation(dCtx, opChannel, operation.NewEndEpoch())
+	writeOperation(dCtx, zFile, operation.NewEndEpoch())
 
 	if cfg.EnableProgress {
 		sec = time.Since(start).Seconds()
 		fmt.Printf("trace record: Total elapsed time: %.3f s, processed %v blocks\n", sec, cfg.Last-cfg.First+1)
 	}
-
-	// close channel
-	close(opChannel)
 
 	// write dictionaries and indexes
 	dCtx.Write()
