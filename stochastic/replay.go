@@ -276,13 +276,13 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		db.EndTransaction()
 		ss.txNum++
 		ss.commitBalanceLog()
+		ss.deleteAccounts()
 
 	case ExistID:
 		db.Exist(addr)
 
 	case FinaliseID:
 		db.Finalise(FinaliseFlag)
-		ss.deleteAccounts()
 
 	case GetBalanceID:
 		db.GetBalance(addr)
