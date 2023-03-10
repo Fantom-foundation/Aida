@@ -49,6 +49,7 @@ var TraceReplayCommand = cli.Command{
 		&utils.UpdateDBDirFlag,
 		&utils.ValidateFlag,
 		&utils.ValidateWorldStateFlag,
+		&utils.DBFlag,
 	},
 	Description: `
 The trace replay command requires two arguments:

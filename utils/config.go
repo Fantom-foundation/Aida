@@ -388,7 +388,8 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		cfg.EpochLength = 300
 	}
 
-	if _, err := os.Stat(cfg.DBDir); os.IsExist(err) {
+	if _, err := os.Stat(cfg.DBDir); !os.IsNotExist(err) {
+		log.Printf("Found merged DB: %s redirecting UpdateDB, DeletedAccountDB, SubstateDB paths to it\n", cfg.DBDir)
 		cfg.UpdateDBDir = cfg.DBDir
 		cfg.DeletedAccountDir = cfg.DBDir
 		cfg.SubstateDBDir = cfg.DBDir
