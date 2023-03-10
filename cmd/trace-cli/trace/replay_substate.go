@@ -38,6 +38,7 @@ var TraceReplaySubstateCommand = cli.Command{
 		&utils.TraceDebugFlag,
 		&utils.ValidateFlag,
 		&utils.ValidateWorldStateFlag,
+		&utils.DBFlag,
 	},
 	Description: `
 The trace replay-substate command requires two arguments:

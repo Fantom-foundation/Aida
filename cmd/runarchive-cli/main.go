@@ -30,6 +30,7 @@ var RunArchiveApp = cli.App{
 		&utils.StateDbVariantFlag,
 		&utils.ValidateTxStateFlag,
 		&utils.VmImplementation,
+		&utils.DBFlag,
 	},
 	Description: "Runs transactions on historic states derived from an archive DB",
 }

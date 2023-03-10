@@ -40,6 +40,7 @@ var TraceRecordCommand = cli.Command{
 		&utils.ChainIDFlag,
 		&utils.TraceDirectoryFlag,
 		&utils.TraceDebugFlag,
+		&utils.DBFlag,
 	},
 	Description: `
 The trace record command requires two arguments:
