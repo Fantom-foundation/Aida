@@ -23,6 +23,7 @@ var StochasticReplayCommand = cli.Command{
 	ArgsUsage: "<simulation-length> <simulation-file>",
 	Flags: []cli.Flag{
 		&utils.CarmenSchemaFlag,
+		&utils.CpuProfileFlag,
 		&utils.TraceDebugFlag,
 		&utils.DisableProgressFlag,
 		&utils.MemoryBreakdownFlag,
@@ -54,12 +55,6 @@ func stochasticReplayAction(ctx *cli.Context) error {
 		return fmt.Errorf("simulation length is not an integer. Error: %v", perr)
 	}
 
-	// read simulation file
-	simulation, serr := readSimulation(ctx.Args().Get(1))
-	if serr != nil {
-		return fmt.Errorf("failed reading simulation. Error: %v", serr)
-	}
-
 	// process configuration
 	cfg, err := utils.NewConfig(ctx, utils.LastBlockArg)
 	if err != nil {
@@ -67,6 +62,18 @@ func stochasticReplayAction(ctx *cli.Context) error {
 	}
 	if cfg.DbImpl == "memory" {
 		return fmt.Errorf("db-impl memory is not supported")
+	}
+
+	// start CPU profiling if requested.
+	if err := utils.StartCPUProfile(cfg); err != nil {
+		return err
+	}
+	defer utils.StopCPUProfile(cfg)
+
+	// read simulation file
+	simulation, serr := readSimulation(ctx.Args().Get(1))
+	if serr != nil {
+		return fmt.Errorf("failed reading simulation. Error: %v", serr)
 	}
 
 	// create a directory for the store to place all its files, and
