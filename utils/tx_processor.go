@@ -36,13 +36,12 @@ func ProcessTx(db state.StateDB, cfg *Config, block uint64, txIndex int, tx *sub
 
 	var (
 		gaspool   = new(evmcore.GasPool)
-		blockHash = common.Hash{0x01}
-		txHash    = common.Hash{0x02}
+		blockHash = common.HexToHash(fmt.Sprintf("0x%016d", block))
+		txHash    = common.HexToHash(fmt.Sprintf("0x%016d%016d", block, txIndex))
 		newErrors int
 		errMsg    strings.Builder
 	)
 	defer handleErrorOnExit(&txerr, &errMsg, &newErrors, cfg.ContinueOnFailure)
-
 	vmConfig := opera.DefaultVMConfig
 	vmConfig.NoBaseFee = true
 	vmConfig.InterpreterImpl = cfg.VmImpl
@@ -100,11 +99,11 @@ func ProcessTx(db state.StateDB, cfg *Config, block uint64, txIndex int, tx *sub
 	if cfg.ValidateTxState {
 		// validate result
 		logs := db.GetLogs(txHash, blockHash)
-		var contract common.Address
-		//TODO: check logs in "runvm"
-		if cfg.AppName == "runvm" || cfg.AppName == "runarchive" {
+		if cfg.DbImpl == "carmen" {
+			//ignore log comparison in carmen
 			logs = tx.Result.Logs
 		}
+		var contract common.Address
 		if to := msg.To(); to == nil {
 			contract = crypto.CreateAddress(evm.TxContext.Origin, msg.Nonce())
 		}
