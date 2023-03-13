@@ -120,7 +120,7 @@ func getStorageUpdateSizeAction(ctx *cli.Context) error {
 		return argErr
 	}
 
-	substate.SetSubstateFlags(ctx.String(substate.SubstateDirFlag.Name))
+	substate.SetSubstateDirectory(ctx.String(substate.SubstateDirFlag.Name))
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
