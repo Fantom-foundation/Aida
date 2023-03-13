@@ -162,6 +162,7 @@ func NewStochasticState(db state.StateDB, contracts *generator.IndirectAccess, k
 		snapshotLambda: snapshotLambda,
 		traceDebug:     traceDebug,
 		balanceLog:     make(map[int64][]int64),
+		suicided:       []int64{},
 	}
 }
 
