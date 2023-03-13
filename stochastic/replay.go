@@ -26,8 +26,7 @@ const (
 
 // stochasticAccount keeps necessary account information for the simulation in memory
 type stochasticAccount struct {
-	balance     int64 // current balance of account
-	hasSuicided bool  // flag whether suicide has been invoked
+	balance int64 // current balance of account
 }
 
 // stochasticState keeps the execution state for the stochastic simulation
@@ -43,6 +42,7 @@ type stochasticState struct {
 	snapshot       []int                        // stack of active snapshots
 	accounts       map[int64]*stochasticAccount // account information using address index as key
 	balanceLog     map[int64][]int64            // balance log keeping track of balances for snapshots
+	suicided       []int64                      // list of suicided accounts
 	traceDebug     bool                         // trace-debug flag
 }
 
@@ -148,8 +148,7 @@ func NewStochasticState(db state.StateDB, contracts *generator.IndirectAccess, k
 	accounts := make(map[int64]*stochasticAccount, n+1)
 	for i := int64(0); i <= n; i++ {
 		accounts[i] = &stochasticAccount{
-			balance:     rand.Int63n(AddBalanceRange),
-			hasSuicided: false,
+			balance: rand.Int63n(AddBalanceRange),
 		}
 	}
 
@@ -199,8 +198,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 			// but don't create an account in StateDB; this is done
 			// by CreateAccount.
 			ss.accounts[addrIdx] = &stochasticAccount{
-				balance:     0,
-				hasSuicided: false,
+				balance: 0,
 			}
 		}
 		addr = toAddress(addrIdx)
@@ -244,6 +242,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		}
 		db.BeginBlock(ss.blockNum)
 		ss.txNum = 0
+		ss.suicided = []int64{}
 
 	case BeginEpochID:
 		if ss.traceDebug {
@@ -257,6 +256,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		}
 		db.BeginTransaction(ss.txNum)
 		ss.snapshot = []int{}
+		ss.suicided = []int64{}
 
 	case CreateAccountID:
 		db.CreateAccount(addr)
@@ -366,7 +366,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 
 	case SuicideID:
 		db.Suicide(addr)
-		ss.accounts[addrIdx].hasSuicided = true
+		ss.suicided = append(ss.suicided, addrIdx)
 
 	default:
 		panic("invalid operation")
@@ -503,10 +503,9 @@ func (ss *stochasticState) rollbackBalanceLog(k int) {
 // delete account information when suicide was invoked
 func (ss *stochasticState) deleteAccounts() {
 	// remove account information when suicide was invoked in the block.
-	for addrIdx, detail := range ss.accounts {
-		if detail.hasSuicided {
-			delete(ss.accounts, addrIdx)
-			ss.contracts.DeleteIndex(addrIdx)
-		}
+	for _, addrIdx := range ss.suicided {
+		delete(ss.accounts, addrIdx)
+		ss.contracts.DeleteIndex(addrIdx)
 	}
+	ss.suicided = []int64{}
 }
