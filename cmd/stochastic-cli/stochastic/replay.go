@@ -93,7 +93,11 @@ func stochasticReplayAction(ctx *cli.Context) error {
 
 	// set random seed so that runs are deterministic
 	randomSeed := ctx.Int(utils.RandomSeedFlag.Name)
+	if randomSeed < 0 {
+		randomSeed = int(rand.Uint32())
+	}
 	rand.Seed(int64(randomSeed))
+	fmt.Printf("stochastic replay: using random seed %d\n", randomSeed)
 
 	stochastic.RunStochasticReplay(db, simulation, int(simLength), traceDebug, disableProgress)
 
