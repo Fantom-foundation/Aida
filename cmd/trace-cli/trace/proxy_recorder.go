@@ -82,9 +82,9 @@ func (r *ProxyRecorder) SetNonce(addr common.Address, nonce uint64) {
 
 // GetCodeHash returns the hash of the EVM bytecode.
 func (r *ProxyRecorder) GetCodeHash(addr common.Address) common.Hash {
-	prevCIdx := r.dctx.PrevContract()
+	previousContract := r.dctx.PrevContract()
 	contract := r.dctx.EncodeContract(addr)
-	if prevCIdx == contract {
+	if previousContract == contract {
 		r.write(operation.NewGetCodeHashLc())
 	} else {
 		r.write(operation.NewGetCodeHash(contract))
@@ -136,10 +136,10 @@ func (r *ProxyRecorder) GetRefund() uint64 {
 
 // GetCommittedState retrieves a value that is already committed.
 func (r *ProxyRecorder) GetCommittedState(addr common.Address, key common.Hash) common.Hash {
-	prevCIdx := r.dctx.PrevContract()
+	previousContract := r.dctx.PrevContract()
 	contract := r.dctx.EncodeContract(addr)
 	key, kPos := r.dctx.EncodeStorage(key)
-	if prevCIdx == contract && kPos == 0 {
+	if previousContract == contract && kPos == 0 {
 		r.write(operation.NewGetCommittedStateLcls())
 	} else {
 		r.write(operation.NewGetCommittedState(contract, key))
@@ -150,11 +150,11 @@ func (r *ProxyRecorder) GetCommittedState(addr common.Address, key common.Hash) 
 
 // GetState retrieves a value from the StateDB.
 func (r *ProxyRecorder) GetState(addr common.Address, key common.Hash) common.Hash {
-	prevCIdx := r.dctx.PrevContract()
+	previousContract := r.dctx.PrevContract()
 	contract := r.dctx.EncodeContract(addr)
 	key, kPos := r.dctx.EncodeStorage(key)
 	var op operation.Operation
-	if contract == prevCIdx {
+	if contract == previousContract {
 		if kPos == 0 {
 			op = operation.NewGetStateLcls()
 		} else if kPos != -1 {
@@ -172,10 +172,10 @@ func (r *ProxyRecorder) GetState(addr common.Address, key common.Hash) common.Ha
 
 // SetState sets a value in the StateDB.
 func (r *ProxyRecorder) SetState(addr common.Address, key common.Hash, value common.Hash) {
-	prevCIdx := r.dctx.PrevContract()
+	previousContract := r.dctx.PrevContract()
 	contract := r.dctx.EncodeContract(addr)
 	key, kPos := r.dctx.EncodeStorage(key)
-	if contract == prevCIdx && kPos == 0 {
+	if contract == previousContract && kPos == 0 {
 		r.write(operation.NewSetStateLcls(value))
 	} else {
 		r.write(operation.NewSetState(contract, key, value))
