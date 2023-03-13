@@ -212,18 +212,13 @@ var (
 	}
 	DeleteSourceDBsFlag = cli.BoolFlag{
 		Name:  "delete-source-dbs",
-		Usage: "delete source databases",
+		Usage: "delete source databases while merging into one database",
 		Value: false,
 	}
-	ProfileDBFlag = cli.StringFlag{
+	DBFlag = cli.StringFlag{
 		Name:  "db",
-		Usage: "set profiling database directory",
+		Usage: "set substate, updateset and deleted accounts directory",
 		Value: "./db",
-	}
-	VerboseFlag = cli.BoolFlag{
-		Name:  "verbose",
-		Usage: "enable verbose",
-		Value: false,
 	}
 )
 
