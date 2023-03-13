@@ -115,7 +115,7 @@ var (
 	RandomSeedFlag = cli.IntFlag{
 		Name:  "random-seed",
 		Usage: "Set random seed",
-		Value: 42,
+		Value: -1,
 	}
 	SkipPrimingFlag = cli.BoolFlag{
 		Name:  "skip-priming",
