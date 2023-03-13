@@ -39,7 +39,7 @@ func GenUpdateSet(ctx *cli.Context) error {
 	update := make(substate.SubstateAlloc)
 
 	// iterate through subsets in sequence
-	substate.SetSubstateFlags(ctx)
+	substate.SetSubstateDirectory(cfg.SubstateDBDir)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 

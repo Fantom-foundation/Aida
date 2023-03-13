@@ -38,6 +38,7 @@ var TraceReplaySubstateCommand = cli.Command{
 		&utils.TraceDebugFlag,
 		&utils.ValidateFlag,
 		&utils.ValidateWorldStateFlag,
+		&utils.DBFlag,
 	},
 	Description: `
 The trace replay-substate command requires two arguments:
@@ -177,7 +178,7 @@ func traceReplaySubstateAction(ctx *cli.Context) error {
 		return err
 	}
 	// run storage driver
-	substate.SetSubstateFlags(ctx)
+	substate.SetSubstateDirectory(cfg.SubstateDBDir)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 

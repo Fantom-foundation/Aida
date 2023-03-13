@@ -51,6 +51,7 @@ var RunVMApp = cli.App{
 		&utils.ValidateWorldStateFlag,
 		&utils.ValidateFlag,
 		&utils.VmImplementation,
+		&utils.DBFlag,
 	},
 	Description: `
 The run-vm command requires two arguments: <blockNumFirst> <blockNumLast>

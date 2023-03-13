@@ -49,6 +49,7 @@ var TraceReplayCommand = cli.Command{
 		&utils.UpdateDBDirFlag,
 		&utils.ValidateFlag,
 		&utils.ValidateWorldStateFlag,
+		&utils.DBFlag,
 	},
 	Description: `
 The trace replay command requires two arguments:
@@ -263,7 +264,7 @@ func traceReplayAction(ctx *cli.Context) error {
 	defer utils.StopCPUProfile(cfg)
 
 	// run storage driver
-	substate.SetSubstateFlags(ctx)
+	substate.SetSubstateDirectory(cfg.SubstateDBDir)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 	err = traceReplayTask(cfg)

@@ -29,6 +29,7 @@ var StochasticRecordCommand = cli.Command{
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
 		&utils.ChainIDFlag,
+		&utils.DBFlag,
 	},
 	Description: `
 The stochastic record command requires two arguments:
@@ -61,7 +62,7 @@ func stochasticRecordAction(ctx *cli.Context) error {
 	}
 
 	// iterate through subsets in sequence
-	substate.SetSubstateFlags(ctx)
+	substate.SetSubstateDirectory(cfg.SubstateDBDir)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 	iter := substate.NewSubstateIterator(cfg.First, ctx.Int(substate.WorkersFlag.Name))

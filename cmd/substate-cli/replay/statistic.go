@@ -114,7 +114,7 @@ func getReferenceStatsActionWithConsumer[T comparable](ctx *cli.Context, cli_com
 		return argErr
 	}
 
-	substate.SetSubstateFlags(ctx)
+	substate.SetSubstateDirectory(ctx.String(substate.SubstateDirFlag.Name))
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 

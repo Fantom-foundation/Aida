@@ -25,6 +25,7 @@ var TraceCompareLogCommand = cli.Command{
 		&substate.WorkersFlag,
 		&utils.TraceDebugFlag,
 		&utils.TraceDirectoryFlag,
+		&utils.DBFlag,
 	},
 	Description: `
 The trace compare-log command requires two arguments:

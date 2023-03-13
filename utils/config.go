@@ -210,6 +210,16 @@ var (
 		Usage:       "enable visualization on `PORT`",
 		DefaultText: "8080",
 	}
+	DeleteSourceDBsFlag = cli.BoolFlag{
+		Name:  "delete-source-dbs",
+		Usage: "delete source databases while merging into one database",
+		Value: false,
+	}
+	DBFlag = cli.StringFlag{
+		Name:  "db",
+		Usage: "set substate, updateset and deleted accounts directory",
+		Value: "./db",
+	}
 )
 
 // execution configuration for replay command.
@@ -246,9 +256,11 @@ type Config struct {
 	ShadowImpl          string         // implementation of the shadow DB to use, empty if disabled
 	ShadowVariant       string         // database variant of the shadow DB to be used
 	StateDbSrcDir       string         // directory to load an existing State DB data
+	DBDir               string         // directory to profiling database containing substate, update, delete accounts data
 	StateDbTempDir      string         // directory to store a working copy of State DB data
 	StateValidationMode ValidationMode // state validation mode
 	UpdateDBDir         string         // update-set directory
+	SubstateDBDir       string         // substate directory
 	ValidateTxState     bool           // validate stateDB before and after transaction
 	ValidateWorldState  bool           // validate stateDB before and after replay block range
 	VmImpl              string         // vm implementation (geth/lfvm)
@@ -353,9 +365,11 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		ShadowImpl:          ctx.String(ShadowDbImplementationFlag.Name),
 		ShadowVariant:       ctx.String(ShadowDbVariantFlag.Name),
 		StateDbSrcDir:       ctx.String(StateDbSrcDirFlag.Name),
+		DBDir:               ctx.String(DBFlag.Name),
 		StateDbTempDir:      ctx.String(StateDbTempDirFlag.Name),
 		StateValidationMode: EqualityCheck,
 		UpdateDBDir:         ctx.String(UpdateDBDirFlag.Name),
+		SubstateDBDir:       ctx.String(substate.SubstateDirFlag.Name),
 		ValidateTxState:     validateTxState,
 		ValidateWorldState:  validateWorldState,
 		VmImpl:              ctx.String(VmImplementation.Name),
@@ -367,6 +381,13 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	setFirstBlockFromChainID(cfg.ChainID)
 	if cfg.EpochLength <= 0 {
 		cfg.EpochLength = 300
+	}
+
+	if _, err := os.Stat(cfg.DBDir); !os.IsNotExist(err) {
+		log.Printf("Found merged DB: %s redirecting UpdateDB, DeletedAccountDB, SubstateDB paths to it\n", cfg.DBDir)
+		cfg.UpdateDBDir = cfg.DBDir
+		cfg.DeletedAccountDir = cfg.DBDir
+		cfg.SubstateDBDir = cfg.DBDir
 	}
 
 	if cfg.EnableProgress {

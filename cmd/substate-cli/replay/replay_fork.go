@@ -370,7 +370,7 @@ func replayForkAction(ctx *cli.Context) error {
 		*ReplayForkChainConfig = *tests.Forks["London"]
 	}
 
-	substate.SetSubstateFlags(ctx)
+	substate.SetSubstateDirectory(ctx.String(substate.SubstateDirFlag.Name))
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 

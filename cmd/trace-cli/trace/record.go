@@ -40,6 +40,7 @@ var TraceRecordCommand = cli.Command{
 		&utils.ChainIDFlag,
 		&utils.TraceDirectoryFlag,
 		&utils.TraceDebugFlag,
+		&utils.DBFlag,
 	},
 	Description: `
 The trace record command requires two arguments:
@@ -84,7 +85,7 @@ func traceRecordAction(ctx *cli.Context) error {
 	}
 
 	// iterate through subsets in sequence
-	substate.SetSubstateFlags(ctx)
+	substate.SetSubstateDirectory(cfg.SubstateDBDir)
 	substate.OpenSubstateDBReadOnly()
 	// close substate
 	defer substate.CloseSubstateDB()
