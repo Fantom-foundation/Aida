@@ -10,6 +10,24 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
+func makeTestShadowDB(t *testing.T, ctc carmenStateTestCase, ftc flatStateTestCase) StateDB {
+	csDB, err := MakeCarmenStateDB(t.TempDir(), ctc.variant, ctc.archive, 1)
+
+	if err != nil {
+		t.Fatalf("failed to create carmen state DB: %v", err)
+	}
+
+	fsDB, err := MakeFlatStateDB(t.TempDir(), ftc.variant, common.Hash{})
+
+	if err != nil {
+		t.Fatalf("failed to create flat state DB: %v", err)
+	}
+
+	shadowDB := MakeShadowStateDB(csDB, fsDB)
+
+	return shadowDB
+}
+
 // TestShadowState_InitCloseShadowDB test closing db immediately after initialization
 func TestShadowState_InitCloseShadowDB(t *testing.T) {
 	for _, ctc := range getCarmenStateTestCases() {
@@ -17,21 +35,9 @@ func TestShadowState_InitCloseShadowDB(t *testing.T) {
 			testCaseTitle := fmt.Sprintf("carmenDB variant: %s, archive type: %s, flatDB variant: %s, ", ctc.variant, ctc.archive, ftc.variant)
 
 			t.Run(testCaseTitle, func(t *testing.T) {
-				csDB, err := MakeCarmenStateDB(t.TempDir(), ctc.variant, ctc.archive, 1)
+				shadowDB := makeTestShadowDB(t, ctc, ftc)
 
-				if err != nil {
-					t.Fatalf("failed to create carmen state DB: %v", err)
-				}
-
-				fsDB, err := MakeFlatStateDB(t.TempDir(), ftc.variant, common.Hash{})
-
-				if err != nil {
-					t.Fatalf("failed to create flat state DB: %v", err)
-				}
-
-				shadowDB := MakeShadowStateDB(csDB, fsDB)
-
-				err = shadowDB.Close()
+				err := shadowDB.Close()
 				if err != nil {
 					t.Fatalf("failed to close shadow state DB: %v", err)
 				}
@@ -47,29 +53,17 @@ func TestShadowState_BeginBlockApply(t *testing.T) {
 			testCaseTitle := fmt.Sprintf("carmenDB variant: %s, archive type: %s, flatDB variant: %s, ", ctc.variant, ctc.archive, ftc.variant)
 
 			t.Run(testCaseTitle, func(t *testing.T) {
-				csDB, err := MakeCarmenStateDB(t.TempDir(), ctc.variant, ctc.archive, 1)
-
-				if err != nil {
-					t.Fatalf("failed to create carmen state DB: %v", err)
-				}
-
-				fsDB, err := MakeFlatStateDB(t.TempDir(), ftc.variant, common.Hash{})
-
-				if err != nil {
-					t.Fatalf("failed to create flat state DB: %v", err)
-				}
-
-				shadowDB := MakeShadowStateDB(csDB, fsDB)
+				shadowDB := makeTestShadowDB(t, ctc, ftc)
 
 				// Close DB after test ends
 				defer func(shadowDB StateDB) {
-					err = shadowDB.Close()
+					err := shadowDB.Close()
 					if err != nil {
 						t.Fatalf("failed to close shadow state DB: %v", err)
 					}
 				}(shadowDB)
 
-				err = shadowDB.BeginBlockApply()
+				err := shadowDB.BeginBlockApply()
 				if err != nil {
 					t.Fatalf("failed to begin block apply: %v", err)
 				}
@@ -85,23 +79,11 @@ func TestShadowState_AccountLifecycle(t *testing.T) {
 			testCaseTitle := fmt.Sprintf("carmenDB variant: %s, archive type: %s, flatDB variant: %s, ", ctc.variant, ctc.archive, ftc.variant)
 
 			t.Run(testCaseTitle, func(t *testing.T) {
-				csDB, err := MakeCarmenStateDB(t.TempDir(), ctc.variant, ctc.archive, 1)
-
-				if err != nil {
-					t.Fatalf("failed to create carmen state DB: %v", err)
-				}
-
-				fsDB, err := MakeFlatStateDB(t.TempDir(), ftc.variant, common.Hash{})
-
-				if err != nil {
-					t.Fatalf("failed to create flat state DB: %v", err)
-				}
-
-				shadowDB := MakeShadowStateDB(csDB, fsDB)
+				shadowDB := makeTestShadowDB(t, ctc, ftc)
 
 				// Close DB after test ends
 				defer func(shadowDB StateDB) {
-					err = shadowDB.Close()
+					err := shadowDB.Close()
 					if err != nil {
 						t.Fatalf("failed to close shadow state DB: %v", err)
 					}
@@ -138,23 +120,11 @@ func TestShadowState_AccountBalanceOperations(t *testing.T) {
 			testCaseTitle := fmt.Sprintf("carmenDB variant: %s, archive type: %s, flatDB variant: %s, ", ctc.variant, ctc.archive, ftc.variant)
 
 			t.Run(testCaseTitle, func(t *testing.T) {
-				csDB, err := MakeCarmenStateDB(t.TempDir(), ctc.variant, ctc.archive, 1)
-
-				if err != nil {
-					t.Fatalf("failed to create carmen state DB: %v", err)
-				}
-
-				fsDB, err := MakeFlatStateDB(t.TempDir(), ftc.variant, common.Hash{})
-
-				if err != nil {
-					t.Fatalf("failed to create flat state DB: %v", err)
-				}
-
-				shadowDB := MakeShadowStateDB(csDB, fsDB)
+				shadowDB := makeTestShadowDB(t, ctc, ftc)
 
 				// Close DB after test ends
 				defer func(shadowDB StateDB) {
-					err = shadowDB.Close()
+					err := shadowDB.Close()
 					if err != nil {
 						t.Fatalf("failed to close shadow state DB: %v", err)
 					}
@@ -194,23 +164,11 @@ func TestShadowState_NonceOperations(t *testing.T) {
 			testCaseTitle := fmt.Sprintf("carmenDB variant: %s, archive type: %s, flatDB variant: %s, ", ctc.variant, ctc.archive, ftc.variant)
 
 			t.Run(testCaseTitle, func(t *testing.T) {
-				csDB, err := MakeCarmenStateDB(t.TempDir(), ctc.variant, ctc.archive, 1)
-
-				if err != nil {
-					t.Fatalf("failed to create carmen state DB: %v", err)
-				}
-
-				fsDB, err := MakeFlatStateDB(t.TempDir(), ftc.variant, common.Hash{})
-
-				if err != nil {
-					t.Fatalf("failed to create flat state DB: %v", err)
-				}
-
-				shadowDB := MakeShadowStateDB(csDB, fsDB)
+				shadowDB := makeTestShadowDB(t, ctc, ftc)
 
 				// Close DB after test ends
 				defer func(shadowDB StateDB) {
-					err = shadowDB.Close()
+					err := shadowDB.Close()
 					if err != nil {
 						t.Fatalf("failed to close shadow state DB: %v", err)
 					}
@@ -240,23 +198,11 @@ func TestShadowState_CodeOperations(t *testing.T) {
 			testCaseTitle := fmt.Sprintf("carmenDB variant: %s, archive type: %s, flatDB variant: %s, ", ctc.variant, ctc.archive, ftc.variant)
 
 			t.Run(testCaseTitle, func(t *testing.T) {
-				csDB, err := MakeCarmenStateDB(t.TempDir(), ctc.variant, ctc.archive, 1)
-
-				if err != nil {
-					t.Fatalf("failed to create carmen state DB: %v", err)
-				}
-
-				fsDB, err := MakeFlatStateDB(t.TempDir(), ftc.variant, common.Hash{})
-
-				if err != nil {
-					t.Fatalf("failed to create flat state DB: %v", err)
-				}
-
-				shadowDB := MakeShadowStateDB(csDB, fsDB)
+				shadowDB := makeTestShadowDB(t, ctc, ftc)
 
 				// Close DB after test ends
 				defer func(shadowDB StateDB) {
-					err = shadowDB.Close()
+					err := shadowDB.Close()
 					if err != nil {
 						t.Fatalf("failed to close shadow state DB: %v", err)
 					}
@@ -294,23 +240,11 @@ func TestShadowState_StateOperations(t *testing.T) {
 			testCaseTitle := fmt.Sprintf("carmenDB variant: %s, archive type: %s, flatDB variant: %s, ", ctc.variant, ctc.archive, ftc.variant)
 
 			t.Run(testCaseTitle, func(t *testing.T) {
-				csDB, err := MakeCarmenStateDB(t.TempDir(), ctc.variant, ctc.archive, 1)
-
-				if err != nil {
-					t.Fatalf("failed to create carmen state DB: %v", err)
-				}
-
-				fsDB, err := MakeFlatStateDB(t.TempDir(), ftc.variant, common.Hash{})
-
-				if err != nil {
-					t.Fatalf("failed to create flat state DB: %v", err)
-				}
-
-				shadowDB := MakeShadowStateDB(csDB, fsDB)
+				shadowDB := makeTestShadowDB(t, ctc, ftc)
 
 				// Close DB after test ends
 				defer func(shadowDB StateDB) {
-					err = shadowDB.Close()
+					err := shadowDB.Close()
 					if err != nil {
 						t.Fatalf("failed to close shadow state DB: %v", err)
 					}
@@ -341,23 +275,11 @@ func TestShadowState_TrxBlockEpochOperations(t *testing.T) {
 			testCaseTitle := fmt.Sprintf("carmenDB variant: %s, archive type: %s, flatDB variant: %s, ", ctc.variant, ctc.archive, ftc.variant)
 
 			t.Run(testCaseTitle, func(t *testing.T) {
-				csDB, err := MakeCarmenStateDB(t.TempDir(), ctc.variant, ctc.archive, 1)
-
-				if err != nil {
-					t.Fatalf("failed to create carmen state DB: %v", err)
-				}
-
-				fsDB, err := MakeFlatStateDB(t.TempDir(), ftc.variant, common.Hash{})
-
-				if err != nil {
-					t.Fatalf("failed to create flat state DB: %v", err)
-				}
-
-				shadowDB := MakeShadowStateDB(csDB, fsDB)
+				shadowDB := makeTestShadowDB(t, ctc, ftc)
 
 				// Close DB after test ends
 				defer func(shadowDB StateDB) {
-					err = shadowDB.Close()
+					err := shadowDB.Close()
 					if err != nil {
 						t.Fatalf("failed to close shadow state DB: %v", err)
 					}
@@ -395,23 +317,11 @@ func TestShadowState_RefundOperations(t *testing.T) {
 			testCaseTitle := fmt.Sprintf("carmenDB variant: %s, archive type: %s, flatDB variant: %s, ", ctc.variant, ctc.archive, ftc.variant)
 
 			t.Run(testCaseTitle, func(t *testing.T) {
-				csDB, err := MakeCarmenStateDB(t.TempDir(), ctc.variant, ctc.archive, 1)
-
-				if err != nil {
-					t.Fatalf("failed to create carmen state DB: %v", err)
-				}
-
-				fsDB, err := MakeFlatStateDB(t.TempDir(), ftc.variant, common.Hash{})
-
-				if err != nil {
-					t.Fatalf("failed to create flat state DB: %v", err)
-				}
-
-				shadowDB := MakeShadowStateDB(csDB, fsDB)
+				shadowDB := makeTestShadowDB(t, ctc, ftc)
 
 				// Close DB after test ends
 				defer func(shadowDB StateDB) {
-					err = shadowDB.Close()
+					err := shadowDB.Close()
 					if err != nil {
 						t.Fatalf("failed to close shadow state DB: %v", err)
 					}
@@ -443,23 +353,11 @@ func TestShadowState_AccessListOperations(t *testing.T) {
 			testCaseTitle := fmt.Sprintf("carmenDB variant: %s, archive type: %s, flatDB variant: %s, ", ctc.variant, ctc.archive, ftc.variant)
 
 			t.Run(testCaseTitle, func(t *testing.T) {
-				csDB, err := MakeCarmenStateDB(t.TempDir(), ctc.variant, ctc.archive, 1)
-
-				if err != nil {
-					t.Fatalf("failed to create carmen state DB: %v", err)
-				}
-
-				fsDB, err := MakeFlatStateDB(t.TempDir(), ftc.variant, common.Hash{})
-
-				if err != nil {
-					t.Fatalf("failed to create flat state DB: %v", err)
-				}
-
-				shadowDB := MakeShadowStateDB(csDB, fsDB)
+				shadowDB := makeTestShadowDB(t, ctc, ftc)
 
 				// Close DB after test ends
 				defer func(shadowDB StateDB) {
-					err = shadowDB.Close()
+					err := shadowDB.Close()
 					if err != nil {
 						t.Fatalf("failed to close shadow state DB: %v", err)
 					}
@@ -549,23 +447,11 @@ func TestShadowState_SetBalanceUsingBulkInsertion(t *testing.T) {
 			testCaseTitle := fmt.Sprintf("carmenDB variant: %s, archive type: %s, flatDB variant: %s, ", ctc.variant, ctc.archive, ftc.variant)
 
 			t.Run(testCaseTitle, func(t *testing.T) {
-				csDB, err := MakeCarmenStateDB(t.TempDir(), ctc.variant, ctc.archive, 1)
-
-				if err != nil {
-					t.Fatalf("failed to create carmen state DB: %v", err)
-				}
-
-				fsDB, err := MakeFlatStateDB(t.TempDir(), ftc.variant, common.Hash{})
-
-				if err != nil {
-					t.Fatalf("failed to create flat state DB: %v", err)
-				}
-
-				shadowDB := MakeShadowStateDB(csDB, fsDB)
+				shadowDB := makeTestShadowDB(t, ctc, ftc)
 
 				// Close DB after test ends
 				defer func(shadowDB StateDB) {
-					err = shadowDB.Close()
+					err := shadowDB.Close()
 					if err != nil {
 						t.Fatalf("failed to close shadow state DB: %v", err)
 					}
@@ -580,7 +466,7 @@ func TestShadowState_SetBalanceUsingBulkInsertion(t *testing.T) {
 				newBalance := big.NewInt(int64(getRandom(1, 1000*5000)))
 				cbl.SetBalance(addr, newBalance)
 
-				err = cbl.Close()
+				err := cbl.Close()
 				if err != nil {
 					t.Fatalf("failed to close bulk load: %v", err)
 				}
@@ -600,23 +486,11 @@ func TestShadowState_SetNonceUsingBulkInsertion(t *testing.T) {
 			testCaseTitle := fmt.Sprintf("carmenDB variant: %s, archive type: %s, flatDB variant: %s, ", ctc.variant, ctc.archive, ftc.variant)
 
 			t.Run(testCaseTitle, func(t *testing.T) {
-				csDB, err := MakeCarmenStateDB(t.TempDir(), ctc.variant, ctc.archive, 1)
-
-				if err != nil {
-					t.Fatalf("failed to create carmen state DB: %v", err)
-				}
-
-				fsDB, err := MakeFlatStateDB(t.TempDir(), ftc.variant, common.Hash{})
-
-				if err != nil {
-					t.Fatalf("failed to create flat state DB: %v", err)
-				}
-
-				shadowDB := MakeShadowStateDB(csDB, fsDB)
+				shadowDB := makeTestShadowDB(t, ctc, ftc)
 
 				// Close DB after test ends
 				defer func(shadowDB StateDB) {
-					err = shadowDB.Close()
+					err := shadowDB.Close()
 					if err != nil {
 						t.Fatalf("failed to close shadow state DB: %v", err)
 					}
@@ -632,7 +506,7 @@ func TestShadowState_SetNonceUsingBulkInsertion(t *testing.T) {
 
 				cbl.SetNonce(addr, newNonce)
 
-				err = cbl.Close()
+				err := cbl.Close()
 				if err != nil {
 					t.Fatalf("failed to close bulk load: %v", err)
 				}
@@ -652,23 +526,11 @@ func TestShadowState_SetStateUsingBulkInsertion(t *testing.T) {
 			testCaseTitle := fmt.Sprintf("carmenDB variant: %s, archive type: %s, flatDB variant: %s, ", ctc.variant, ctc.archive, ftc.variant)
 
 			t.Run(testCaseTitle, func(t *testing.T) {
-				csDB, err := MakeCarmenStateDB(t.TempDir(), ctc.variant, ctc.archive, 1)
-
-				if err != nil {
-					t.Fatalf("failed to create carmen state DB: %v", err)
-				}
-
-				fsDB, err := MakeFlatStateDB(t.TempDir(), ftc.variant, common.Hash{})
-
-				if err != nil {
-					t.Fatalf("failed to create flat state DB: %v", err)
-				}
-
-				shadowDB := MakeShadowStateDB(csDB, fsDB)
+				shadowDB := makeTestShadowDB(t, ctc, ftc)
 
 				// Close DB after test ends
 				defer func(shadowDB StateDB) {
-					err = shadowDB.Close()
+					err := shadowDB.Close()
 					if err != nil {
 						t.Fatalf("failed to close shadow state DB: %v", err)
 					}
@@ -686,7 +548,7 @@ func TestShadowState_SetStateUsingBulkInsertion(t *testing.T) {
 
 				cbl.SetState(addr, key, value)
 
-				err = cbl.Close()
+				err := cbl.Close()
 				if err != nil {
 					t.Fatalf("failed to close bulk load: %v", err)
 				}
@@ -706,23 +568,11 @@ func TestShadowState_SetCodeUsingBulkInsertion(t *testing.T) {
 			testCaseTitle := fmt.Sprintf("carmenDB variant: %s, archive type: %s, flatDB variant: %s, ", ctc.variant, ctc.archive, ftc.variant)
 
 			t.Run(testCaseTitle, func(t *testing.T) {
-				csDB, err := MakeCarmenStateDB(t.TempDir(), ctc.variant, ctc.archive, 1)
-
-				if err != nil {
-					t.Fatalf("failed to create carmen state DB: %v", err)
-				}
-
-				fsDB, err := MakeFlatStateDB(t.TempDir(), ftc.variant, common.Hash{})
-
-				if err != nil {
-					t.Fatalf("failed to create flat state DB: %v", err)
-				}
-
-				shadowDB := MakeShadowStateDB(csDB, fsDB)
+				shadowDB := makeTestShadowDB(t, ctc, ftc)
 
 				// Close DB after test ends
 				defer func(shadowDB StateDB) {
-					err = shadowDB.Close()
+					err := shadowDB.Close()
 					if err != nil {
 						t.Fatalf("failed to close shadow state DB: %v", err)
 					}
@@ -739,7 +589,7 @@ func TestShadowState_SetCodeUsingBulkInsertion(t *testing.T) {
 
 				cbl.SetCode(addr, code)
 
-				err = cbl.Close()
+				err := cbl.Close()
 				if err != nil {
 					t.Fatalf("failed to close bulk load: %v", err)
 				}
@@ -759,23 +609,11 @@ func TestShadowState_BulkloadOperations(t *testing.T) {
 			testCaseTitle := fmt.Sprintf("carmenDB variant: %s, archive type: %s, flatDB variant: %s, ", ctc.variant, ctc.archive, ftc.variant)
 
 			t.Run(testCaseTitle, func(t *testing.T) {
-				csDB, err := MakeCarmenStateDB(t.TempDir(), ctc.variant, ctc.archive, 1)
-
-				if err != nil {
-					t.Fatalf("failed to create carmen state DB: %v", err)
-				}
-
-				fsDB, err := MakeFlatStateDB(t.TempDir(), ftc.variant, common.Hash{})
-
-				if err != nil {
-					t.Fatalf("failed to create flat state DB: %v", err)
-				}
-
-				shadowDB := MakeShadowStateDB(csDB, fsDB)
+				shadowDB := makeTestShadowDB(t, ctc, ftc)
 
 				// Close DB after test ends
 				defer func(shadowDB StateDB) {
-					err = shadowDB.Close()
+					err := shadowDB.Close()
 					if err != nil {
 						t.Fatalf("failed to close shadow state DB: %v", err)
 					}
@@ -825,7 +663,7 @@ func TestShadowState_BulkloadOperations(t *testing.T) {
 					}
 				}
 
-				err = cbl.Close()
+				err := cbl.Close()
 				if err != nil {
 					t.Fatalf("failed to close bulk load: %v", err)
 				}
