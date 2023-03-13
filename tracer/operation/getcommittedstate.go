@@ -7,14 +7,15 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 )
 
 // GetCommittedState data structure
 type GetCommittedState struct {
-	ContractIndex uint32 // encoded contract address
-	StorageIndex  uint32 // encoded storage address
+	Contract common.Address
+	Key      common.Hash
 }
 
 // GetId returns the get-commited-state-operation identifier.
@@ -23,8 +24,8 @@ func (op *GetCommittedState) GetId() byte {
 }
 
 // NewGetCommittedState creates a new get-commited-state operation.
-func NewGetCommittedState(cIdx uint32, sIdx uint32) *GetCommittedState {
-	return &GetCommittedState{ContractIndex: cIdx, StorageIndex: sIdx}
+func NewGetCommittedState(contract common.Address, key common.Hash) *GetCommittedState {
+	return &GetCommittedState{Contract: contract, Key: key}
 }
 
 // ReadGetCommittedState reads a get-commited-state operation from file.
@@ -42,8 +43,8 @@ func (op *GetCommittedState) Write(f io.Writer) error {
 
 // Execute the get-committed-state operation.
 func (op *GetCommittedState) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
-	contract := ctx.DecodeContract(op.ContractIndex)
-	storage := ctx.DecodeStorage(op.StorageIndex)
+	contract := ctx.DecodeContract(op.Contract)
+	storage := ctx.DecodeStorage(op.Key)
 	start := time.Now()
 	db.GetCommittedState(contract, storage)
 	return time.Since(start)
@@ -51,5 +52,5 @@ func (op *GetCommittedState) Execute(db state.StateDB, ctx *dictionary.Context) 
 
 // Debug prints debug message for the get-committed-state operation.
 func (op *GetCommittedState) Debug(ctx *dictionary.Context) {
-	fmt.Print(ctx.DecodeContract(op.ContractIndex), ctx.DecodeStorage(op.StorageIndex))
+	fmt.Print(op.Contract, op.Key)
 }

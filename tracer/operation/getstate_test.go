@@ -14,11 +14,11 @@ func initGetState(t *testing.T) (*dictionary.Context, *GetState, common.Address,
 
 	// create dictionary context
 	dict := dictionary.NewContext()
-	cIdx := dict.EncodeContract(addr)
+	contract := dict.EncodeContract(addr)
 	sIdx, _ := dict.EncodeStorage(storage)
 
 	// create new operation
-	op := NewGetState(cIdx, sIdx)
+	op := NewGetState(contract, sIdx)
 	if op == nil {
 		t.Fatalf("failed to create operation")
 	}

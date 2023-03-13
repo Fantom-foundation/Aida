@@ -7,13 +7,14 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 )
 
 // CreateAccount data structure
 type CreateAccount struct {
-	ContractIndex uint32 // encoded contract address
+	Contract common.Address
 }
 
 // GetId returns the create-account operation identifier.
@@ -22,8 +23,8 @@ func (op *CreateAccount) GetId() byte {
 }
 
 // NewCreateAcccount creates a new create-account operation.
-func NewCreateAccount(cIdx uint32) *CreateAccount {
-	return &CreateAccount{ContractIndex: cIdx}
+func NewCreateAccount(contract common.Address) *CreateAccount {
+	return &CreateAccount{Contract: contract}
 }
 
 // ReadCreateAccount reads a create-account operation from a file.
@@ -41,7 +42,7 @@ func (op *CreateAccount) Write(f io.Writer) error {
 
 // Execute the create-account operation.
 func (op *CreateAccount) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
-	contract := ctx.DecodeContract(op.ContractIndex)
+	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
 	db.CreateAccount(contract)
 	return time.Since(start)
@@ -49,5 +50,5 @@ func (op *CreateAccount) Execute(db state.StateDB, ctx *dictionary.Context) time
 
 // Debug prints a debug message for the create-account operation.
 func (op *CreateAccount) Debug(ctx *dictionary.Context) {
-	fmt.Print(ctx.DecodeContract(op.ContractIndex))
+	fmt.Print(op.Contract)
 }

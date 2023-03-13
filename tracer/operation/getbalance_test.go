@@ -12,10 +12,10 @@ func initGetBalance(t *testing.T) (*dictionary.Context, *GetBalance, common.Addr
 	addr := getRandomAddress(t)
 	// create dictionary context
 	dict := dictionary.NewContext()
-	cIdx := dict.EncodeContract(addr)
+	contract := dict.EncodeContract(addr)
 
 	// create new operation
-	op := NewGetBalance(cIdx)
+	op := NewGetBalance(contract)
 	if op == nil {
 		t.Fatalf("failed to create operation")
 	}

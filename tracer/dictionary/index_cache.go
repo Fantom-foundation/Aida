@@ -2,7 +2,8 @@ package dictionary
 
 import (
 	"fmt"
-	"math"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 // IndexCacheLength sets the length of index cache (i.e. 2^8)
@@ -10,8 +11,8 @@ const IndexCacheLength = 256
 
 // IndexCache data structure for implementing an LRU cache policy.
 type IndexCache struct {
-	top  int                      // last accessed index
-	data [IndexCacheLength]uint32 // indexes of cache
+	top  int                           // last accessed index
+	data [IndexCacheLength]common.Hash // indexes of cache
 }
 
 // Clear the index cache by setting all indexes to MaxUint32
@@ -19,7 +20,7 @@ type IndexCache struct {
 func (q *IndexCache) Clear() {
 	q.top = 0
 	for i := 0; i < IndexCacheLength; i++ {
-		q.data[i] = math.MaxUint32
+		q.data[i] = common.Hash{}
 	}
 }
 
@@ -31,7 +32,7 @@ func NewIndexCache() *IndexCache {
 }
 
 // Place puts a new index into the index cache.
-func (q *IndexCache) Place(item uint32) int {
+func (q *IndexCache) Place(item common.Hash) int {
 	// find the index in cache
 	for i := 0; i < IndexCacheLength; i++ {
 		if q.data[i] == item {
@@ -61,18 +62,14 @@ func (q *IndexCache) Place(item uint32) int {
 }
 
 // Get an index for a cache position.
-func (q *IndexCache) Get(pos int) (uint32, error) {
+func (q *IndexCache) Get(pos int) (common.Hash, error) {
 	if pos < 0 || pos >= IndexCacheLength {
-		return 0, fmt.Errorf("Position %v out of bound", pos)
+		return common.Hash{}, fmt.Errorf("Position %v out of bound", pos)
 	}
 	// calculate position in index cache
 	j := (q.top - pos) % IndexCacheLength
 	if j < 0 {
 		j += IndexCacheLength
-	}
-	// check index
-	if q.data[j] == math.MaxUint32 {
-		return 0, fmt.Errorf("Position %v is an undefined index", pos)
 	}
 	// return index
 	return q.data[j], nil

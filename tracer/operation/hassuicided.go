@@ -8,11 +8,12 @@ import (
 
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 // HasSuicided data structure
 type HasSuicided struct {
-	ContractIndex uint32 // encoded contract address
+	Contract common.Address
 }
 
 // GetId returns the HasSuicided operation identifier.
@@ -21,8 +22,8 @@ func (op *HasSuicided) GetId() byte {
 }
 
 // NewHasSuicided creates a new HasSuicided operation.
-func NewHasSuicided(cIdx uint32) *HasSuicided {
-	return &HasSuicided{ContractIndex: cIdx}
+func NewHasSuicided(contract common.Address) *HasSuicided {
+	return &HasSuicided{Contract: contract}
 }
 
 // ReadHasSuicided reads a HasSuicided operation from a file.
@@ -40,7 +41,7 @@ func (op *HasSuicided) Write(f io.Writer) error {
 
 // Execute the HasSuicided operation.
 func (op *HasSuicided) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
-	contract := ctx.DecodeContract(op.ContractIndex)
+	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
 	db.HasSuicided(contract)
 	return time.Since(start)
@@ -48,5 +49,5 @@ func (op *HasSuicided) Execute(db state.StateDB, ctx *dictionary.Context) time.D
 
 // Debug prints a debug message for the HasSuicided operation.
 func (op *HasSuicided) Debug(ctx *dictionary.Context) {
-	fmt.Print(ctx.DecodeContract(op.ContractIndex))
+	fmt.Print(op.Contract)
 }

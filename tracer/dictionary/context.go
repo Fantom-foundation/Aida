@@ -12,23 +12,19 @@ const InvalidContractIndex = math.MaxUint32
 
 // Context is a facade for encoding/decoding contract/storage addressses, byte-code, and snapshots.
 type Context struct {
-	contract        *Dictionary[common.Address] // contract address dictionary
-	prevContractIdx uint32                      // previously used contract index
-	storage         *Dictionary[common.Hash]    // storage key dictionary
-	storageCache    *IndexCache                 // storage address cache
-	code            *Dictionary[string]         // bytecode dictionary
-	snapshot        *SnapshotIndex              // snapshot translation table for replay
+	prevContract common.Address      // previously used contract
+	storageCache *IndexCache         // storage address cache
+	code         *Dictionary[string] // bytecode dictionary
+	snapshot     *SnapshotIndex      // snapshot translation table for replay
 }
 
 // NewContext creates a new dictionary context.
 func NewContext() *Context {
 	return &Context{
-		contract:        NewDictionary[common.Address](),
-		prevContractIdx: InvalidContractIndex,
-		storage:         NewDictionary[common.Hash](),
-		storageCache:    NewIndexCache(),
-		code:            NewDictionary[string](),
-		snapshot:        NewSnapshotIndex(),
+		prevContract: common.Address{},
+		storageCache: NewIndexCache(),
+		code:         NewDictionary[string](),
+		snapshot:     NewSnapshotIndex(),
 	}
 }
 
@@ -42,25 +38,13 @@ var ContextDir string = "./"
 // Magic constants as file identifiers for contract address, storage key
 // and byte-code index files.
 const (
-	ContractMagic = 4711
-	StorageMagic  = 4712
-	CodeMagic     = 4714
+	CodeMagic = 4714
 )
 
 // ReadContext reads dictionaries from files and creates a new dictionary context.
 func ReadContext() *Context {
 	ctx := NewContext()
-	err := ctx.contract.Read(ContextDir+"contract-dictionary.dat", ContractMagic)
-	if err != nil {
-		log.Fatalf("Cannot read contract dictionary. Error: %v", err)
-	}
-	log.Printf("Read %v dictionary contract addresses from file.", ctx.contract.Size())
-	err = ctx.storage.Read(ContextDir+"storage-dictionary.dat", StorageMagic)
-	if err != nil {
-		log.Fatalf("Cannot read storage dictionary. Error: %v", err)
-	}
-	log.Printf("Read %v dictionary storage keys from file.", ctx.storage.Size())
-	err = ctx.code.ReadString(ContextDir+"code-dictionary.dat", CodeMagic)
+	err := ctx.code.ReadString(ContextDir+"code-dictionary.dat", CodeMagic)
 	if err != nil {
 		log.Fatalf("Cannot read code dictionary. Error: %v", err)
 	}
@@ -70,15 +54,7 @@ func ReadContext() *Context {
 
 // Write dictionary context to files.
 func (ctx *Context) Write() {
-	err := ctx.contract.Write(ContextDir+"contract-dictionary.dat", ContractMagic)
-	if err != nil {
-		log.Fatalf("Cannot write contract dictionary. Error: %v", err)
-	}
-	err = ctx.storage.Write(ContextDir+"storage-dictionary.dat", StorageMagic)
-	if err != nil {
-		log.Fatalf("Cannot write storage dictionary. Error: %v", err)
-	}
-	err = ctx.code.WriteString(ContextDir+"code-dictionary.dat", CodeMagic)
+	err := ctx.code.WriteString(ContextDir+"code-dictionary.dat", CodeMagic)
 	if err != nil {
 		log.Fatalf("Cannot write code dictionary. Error: %v", err)
 	}
@@ -89,45 +65,20 @@ func (ctx *Context) Write() {
 ////////////////////////////////////////////////////////////////
 
 // EncodeContract encodes a given contract address and returns a contract index.
-func (ctx *Context) EncodeContract(contract common.Address) uint32 {
-	cIdx, err := ctx.contract.Encode(contract)
-	if err != nil {
-		log.Fatalf("Contract address could not be encoded. Error: %v", err)
-	}
-	if cIdx < 0 || cIdx > math.MaxUint32 {
-		log.Fatalf("Contract index space depleted.")
-	}
-	ctx.prevContractIdx = uint32(cIdx)
-	return uint32(cIdx)
+func (ctx *Context) EncodeContract(contract common.Address) common.Address {
+	ctx.prevContract = contract
+	return contract
 }
 
 // DecodeContract decodes the contract address.
-func (ctx *Context) DecodeContract(cIdx uint32) common.Address {
-	contract, err := ctx.contract.Decode(cIdx)
-	if err != nil {
-		log.Fatalf("Contract index could not be decoded. Error: %v", err)
-	}
-	ctx.prevContractIdx = cIdx
+func (ctx *Context) DecodeContract(contract common.Address) common.Address {
+	ctx.prevContract = contract
 	return contract
 }
 
 // PrevContract returns the previously used contract address.
 func (ctx *Context) PrevContract() common.Address {
-	if ctx.prevContractIdx == InvalidContractIndex {
-		log.Fatalf("Last contract address undefined")
-	}
-	return ctx.DecodeContract(ctx.prevContractIdx)
-}
-
-// PrevContract returns the dictionary index of the previously used contract address.
-func (ctx *Context) PrevContractIdx() uint32 {
-	return uint32(ctx.prevContractIdx)
-}
-
-// HasEncodedContract checks whether a given contract address has already been inserted into dictionary
-func (ctx *Context) HasEncodedContract(addr common.Address) bool {
-	_, f := ctx.contract.valueToIdx[addr]
-	return f
+	return ctx.prevContract
 }
 
 ////////////////////////////////////////////////////////////////
@@ -135,54 +86,33 @@ func (ctx *Context) HasEncodedContract(addr common.Address) bool {
 ////////////////////////////////////////////////////////////////
 
 // EndcodeStorage encodes a storage key and returns an index.
-func (ctx *Context) EncodeStorage(storage common.Hash) (uint32, int) {
-	sIdx, err := ctx.storage.Encode(storage)
-	if err != nil {
-		log.Fatalf("Storage address could not be encoded. Error: %v", err)
-	}
-	if sIdx < 0 || sIdx > math.MaxUint32 {
-		log.Fatalf("Storage index space depleted.")
-	}
-	pos := ctx.storageCache.Place(uint32(sIdx))
-	return uint32(sIdx), pos
+func (ctx *Context) EncodeStorage(key common.Hash) (common.Hash, int) {
+	pos := ctx.storageCache.Place(key)
+	return key, pos
 }
 
 // DecodeStorage decodes a storage address.
-func (ctx *Context) DecodeStorage(sIdx uint32) common.Hash {
-	storage, err := ctx.storage.Decode(sIdx)
-	if err != nil {
-		log.Fatalf("Storage index could not be decoded. Error: %v", err)
-	}
-	ctx.storageCache.Place(sIdx)
-	return storage
-}
-
-// HasEncodedStorage checks whether a given storage key has already been inserted into dictionary
-func (ctx *Context) HasEncodedStorage(key common.Hash) bool {
-	_, f := ctx.storage.valueToIdx[key]
-	return f
+func (ctx *Context) DecodeStorage(key common.Hash) common.Hash {
+	ctx.storageCache.Place(key)
+	return key
 }
 
 // DecodeStorageCache reads from cache with updating index cache.
 func (ctx *Context) DecodeStorageCache(sPos int) common.Hash {
-	sIdx, err := ctx.storageCache.Get(sPos)
+	key, err := ctx.storageCache.Get(sPos)
 	if err != nil {
 		log.Fatalf("Storage position could not be looked up. Error: %v", err)
 	}
-	return ctx.DecodeStorage(sIdx)
+	return ctx.DecodeStorage(key)
 }
 
 // ReadStorageCache reads from cache without updating index cache.
 func (ctx *Context) ReadStorageCache(sPos int) common.Hash {
-	sIdx, err := ctx.storageCache.Get(sPos)
+	key, err := ctx.storageCache.Get(sPos)
 	if err != nil {
 		log.Fatalf("Storage position could not be found. Error: %v", err)
 	}
-	storage, err := ctx.storage.Decode(sIdx)
-	if err != nil {
-		log.Fatalf("Storage index could not be decoded. Error: %v", err)
-	}
-	return storage
+	return key
 }
 
 ////////////////////////////////////////////////////////////////

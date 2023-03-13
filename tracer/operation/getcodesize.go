@@ -7,13 +7,14 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 )
 
 // GetCodeSize data structure
 type GetCodeSize struct {
-	ContractIndex uint32 // encoded contract address
+	Contract common.Address
 }
 
 // GetCodeSize returns the get-code-size operation identifier.
@@ -22,8 +23,8 @@ func (op *GetCodeSize) GetId() byte {
 }
 
 // NewGetCodeSize creates a new get-code-size operation.
-func NewGetCodeSize(cIdx uint32) *GetCodeSize {
-	return &GetCodeSize{ContractIndex: cIdx}
+func NewGetCodeSize(contract common.Address) *GetCodeSize {
+	return &GetCodeSize{Contract: contract}
 }
 
 // ReadGetCodeSize reads a get-code-size operation from a file.
@@ -41,7 +42,7 @@ func (op *GetCodeSize) Write(f io.Writer) error {
 
 // Execute the get-code-size operation.
 func (op *GetCodeSize) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
-	contract := ctx.DecodeContract(op.ContractIndex)
+	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
 	db.GetCodeSize(contract)
 	return time.Since(start)
@@ -49,5 +50,5 @@ func (op *GetCodeSize) Execute(db state.StateDB, ctx *dictionary.Context) time.D
 
 // Debug prints a debug message for get-code-size.
 func (op *GetCodeSize) Debug(ctx *dictionary.Context) {
-	fmt.Print(ctx.DecodeContract(op.ContractIndex))
+	fmt.Print(ctx.DecodeContract(op.Contract))
 }

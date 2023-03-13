@@ -12,10 +12,10 @@ func initEmpty(t *testing.T) (*dictionary.Context, *Empty, common.Address) {
 	addr := getRandomAddress(t)
 	// create dictionary context
 	dict := dictionary.NewContext()
-	cIdx := dict.EncodeContract(addr)
+	contract := dict.EncodeContract(addr)
 
 	// create new operation
-	op := NewEmpty(cIdx)
+	op := NewEmpty(contract)
 	if op == nil {
 		t.Fatalf("failed to create operation")
 	}

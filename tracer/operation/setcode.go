@@ -7,14 +7,15 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 )
 
 // SetCode data structure
 type SetCode struct {
-	ContractIndex uint32 // encoded contract address
-	CodeIndex     uint32 // encoded bytecode
+	Contract  common.Address
+	CodeIndex uint32 // encoded bytecode
 }
 
 // GetId returns the set-code operation identifier.
@@ -23,8 +24,8 @@ func (op *SetCode) GetId() byte {
 }
 
 // NewSetCode creates a new set-code operation.
-func NewSetCode(cIdx uint32, bcIdx uint32) *SetCode {
-	return &SetCode{ContractIndex: cIdx, CodeIndex: bcIdx}
+func NewSetCode(contract common.Address, bcontract uint32) *SetCode {
+	return &SetCode{Contract: contract, CodeIndex: bcontract}
 }
 
 // ReadSetCode reads a set-code operation from a file.
@@ -42,7 +43,7 @@ func (op *SetCode) Write(f io.Writer) error {
 
 // Execute the set-code operation.
 func (op *SetCode) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
-	contract := ctx.DecodeContract(op.ContractIndex)
+	contract := ctx.DecodeContract(op.Contract)
 	code := ctx.DecodeCode(op.CodeIndex)
 	start := time.Now()
 	db.SetCode(contract, code)
@@ -51,5 +52,5 @@ func (op *SetCode) Execute(db state.StateDB, ctx *dictionary.Context) time.Durat
 
 // Debug prints a debug message for the set-code operation.
 func (op *SetCode) Debug(ctx *dictionary.Context) {
-	fmt.Print(ctx.DecodeContract(op.ContractIndex), ctx.DecodeCode(op.CodeIndex))
+	fmt.Print(op.Contract, ctx.DecodeCode(op.CodeIndex))
 }
