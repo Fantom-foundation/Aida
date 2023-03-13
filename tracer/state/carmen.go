@@ -1,5 +1,6 @@
 package state
 
+/*
 import (
 	"fmt"
 	"math/big"
@@ -292,3 +293,4 @@ func (l *carmenBulkLoad) SetCode(addr common.Address, code []byte) {
 func (l *carmenBulkLoad) Close() error {
 	return l.load.Close()
 }
+*/

@@ -28,7 +28,6 @@ gen-world-state:
 		-o $(GO_BIN)/gen-world-state \
 		-v \
 		./cmd/gen-world-state
-
 trace:
 	go build -ldflags "-s -w" \
        	-o $(GO_BIN)/trace \
@@ -38,9 +37,6 @@ test:
 	@go test ./...
 
 clean:
-	cd carmen/go ; \
-	rm -f lib/libstate.so ; \
-	cd ../cpp ; \
 	bazel clean ; \
 	cd ../.. ; \
 	rm -fr ./build/*

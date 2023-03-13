@@ -56,10 +56,12 @@ func makeStateDBVariant(directory, impl, variant string, cfg *TraceConfig) (stat
 	switch impl {
 	case "memory":
 		return state.MakeGethInMemoryStateDB(variant)
-	case "geth":
-		return state.MakeGethStateDB(directory, variant, cfg.ArchiveMode)
+	/*
 	case "carmen":
 		return state.MakeCarmenStateDB(directory, variant)
+	*/
+	case "geth":
+		return state.MakeGethStateDB(directory, variant, cfg.ArchiveMode)
 	case "flat":
 		return state.MakeFlatStateDB(directory, variant)
 	case "erigon":

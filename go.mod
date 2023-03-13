@@ -3,7 +3,6 @@ module github.com/Fantom-foundation/Aida
 go 1.19
 
 require (
-	github.com/Fantom-foundation/Carmen/go v0.0.0-00010101000000-000000000000
 	github.com/Fantom-foundation/go-opera v1.1.1-rc.2
 	github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230112084156-680f281ea1cb
 	github.com/Fantom-foundation/go-opera-fvm-erigon v0.0.0-00010101000000-000000000000
@@ -57,7 +56,6 @@ require (
 	github.com/go-stack/stack v1.8.1 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang-jwt/jwt/v4 v4.4.1 // indirect
-	github.com/golang/mock v1.6.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/btree v1.1.2 // indirect
@@ -140,7 +138,3 @@ replace github.com/ledgerwatch/erigon => github.com/ledgerwatch/erigon v1.9.7-0.
 replace github.com/ugorji/go/codec => github.com/ugorji/go/codec v1.1.13
 
 replace github.com/ugorji/go/codec/codecgen => github.com/ugorji/go/codec/codecgen v1.1.13
-
-// The Carmen project is integrated as a git-submodule since we need to run extra
-// build steps when importing the project. This is handled in the Makefile.
-replace github.com/Fantom-foundation/Carmen/go => ./carmen/go
