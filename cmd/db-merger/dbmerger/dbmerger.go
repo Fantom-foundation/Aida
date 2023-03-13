@@ -27,6 +27,7 @@ func DbMerger(ctx *cli.Context) error {
 
 	// if deletion of source data is enabled than substate data was already moved to target from source database path by renaming
 	if !skipSubstate {
+		// copy the substates to the target database
 		err = copyData(substateDB, targetDB)
 		if err != nil {
 			return err
@@ -34,13 +35,14 @@ func DbMerger(ctx *cli.Context) error {
 		log.Printf("substate move finished\n")
 	}
 
-	// previous updatesetDB used 1c prefix instead of 2c to avoid collision with substate prefix has to be replaced
+	// copy the updateset to the target database
 	err = copyData(updatesetDB, targetDB)
 	if err != nil {
 		return err
 	}
 	log.Printf("updateset move finished\n")
 
+	// copy the deleted accounts to the target database
 	err = copyData(deletedAccountsDB, targetDB)
 	if err != nil {
 		return err
@@ -139,7 +141,7 @@ func copyData(sourceDB ethdb.Database, targetDB ethdb.Database) error {
 	for {
 		// do we have another available item?
 		if !iter.Next() {
-			// iteration completed - finish write of pending data
+			// iteration completed - finish write rest of the pending data
 			if dbBatchWriter.ValueSize() > 0 {
 				err := dbBatchWriter.Write()
 				if err != nil {
@@ -155,6 +157,7 @@ func copyData(sourceDB ethdb.Database, targetDB ethdb.Database) error {
 			return err
 		}
 
+		// writing data in batches
 		if dbBatchWriter.ValueSize() > kvdb.IdealBatchSize {
 			err = dbBatchWriter.Write()
 			if err != nil {
