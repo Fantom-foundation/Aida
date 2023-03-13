@@ -45,7 +45,7 @@ func RunArchive(ctx *cli.Context) error {
 	defer db.Close()
 
 	// open substate DB
-	substate.SetSubstateFlags(cfg.SubstateDBDir)
+	substate.SetSubstateDirectory(cfg.SubstateDBDir)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
