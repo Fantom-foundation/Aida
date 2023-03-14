@@ -163,12 +163,18 @@ func NewStochasticState(db state.StateDB, contracts *generator.IndirectAccess, k
 		traceDebug:     traceDebug,
 		balanceLog:     make(map[int64][]int64),
 		suicided:       []int64{},
+		blockNum:       1,
+		epochNum:       1,
 	}
 }
 
 // prime StateDB accounts using account information
 func (ss *stochasticState) prime() {
+	log.Printf("Start priming...\n")
 	db := ss.db
+	db.BeginEpoch(0)
+	db.BeginBlock(0)
+	db.BeginTransaction(0)
 	for addrIdx, detail := range ss.accounts {
 		addr := toAddress(addrIdx)
 		db.CreateAccount(addr)
@@ -176,6 +182,11 @@ func (ss *stochasticState) prime() {
 			db.AddBalance(addr, big.NewInt(detail.balance))
 		}
 	}
+	db.Finalise(FinaliseFlag)
+	db.EndTransaction()
+	db.EndBlock()
+	db.EndEpoch()
+	log.Printf("End priming...\n")
 }
 
 // execute StateDB operations on a stochastic state.
@@ -367,6 +378,8 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 
 	case SuicideID:
 		db.Suicide(addr)
+		value := ss.getBalanceLog(addrIdx)
+		ss.updateBalanceLog(addrIdx, -value)
 		ss.suicided = append(ss.suicided, addrIdx)
 
 	default:
