@@ -315,6 +315,10 @@ func (p *EventProxy) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 	return p.db.Commit(deleteEmptyObjects)
 }
 
+func (p *EventProxy) Error() error {
+	return p.db.Error()
+}
+
 // GetSubstatePostAlloc gets substate post allocation.
 func (p *EventProxy) GetSubstatePostAlloc() substate.SubstateAlloc {
 	// call real StateDB

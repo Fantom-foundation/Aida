@@ -136,6 +136,11 @@ func (s *gethStateDB) RevertToSnapshot(id int) {
 	s.db.RevertToSnapshot(id)
 }
 
+func (s *gethStateDB) Error() error {
+	// TODO return geth's dberror
+	return nil
+}
+
 func (s *gethStateDB) BeginTransaction(number uint32) {
 	// ignored
 }

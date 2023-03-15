@@ -252,6 +252,10 @@ func (s *MockStateDB) Close() error {
 	return nil
 }
 
+func (s *MockStateDB) Error() error {
+	return nil
+}
+
 func (s *MockStateDB) compareRecordings(expected []Record, t *testing.T) {
 	recording := s.GetRecording()
 

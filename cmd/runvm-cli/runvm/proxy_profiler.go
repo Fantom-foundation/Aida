@@ -272,6 +272,10 @@ func (p *ProxyProfiler) RevertToSnapshot(snapshot int) {
 	p.ps.Profile(operation.RevertToSnapshotID, elapsed)
 }
 
+func (p *ProxyProfiler) Error() error {
+	return p.db.Error()
+}
+
 func (p *ProxyProfiler) do(opId byte, op func()) {
 	start := time.Now()
 	op()
