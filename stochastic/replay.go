@@ -519,7 +519,9 @@ func (ss *stochasticState) deleteAccounts() {
 	// remove account information when suicide was invoked in the block.
 	for _, addrIdx := range ss.suicided {
 		delete(ss.accounts, addrIdx)
-		ss.contracts.DeleteIndex(addrIdx)
+		if err := ss.contracts.DeleteIndex(addrIdx); err != nil {
+			panic("Failed deleting index")
+		}
 	}
 	ss.suicided = []int64{}
 }
