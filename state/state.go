@@ -72,6 +72,8 @@ type BasicStateDB interface {
 
 	BeginEpoch(uint64)
 	EndEpoch()
+
+	Error() error
 }
 
 type StateDB interface {

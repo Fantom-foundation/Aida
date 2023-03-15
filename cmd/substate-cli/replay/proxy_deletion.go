@@ -236,6 +236,10 @@ func (r *ProxyDeletion) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 	return r.db.Commit(deleteEmptyObjects)
 }
 
+func (r *ProxyDeletion) Error() error {
+	return r.db.Error()
+}
+
 // GetSubstatePostAlloc gets substate post allocation.
 func (r *ProxyDeletion) GetSubstatePostAlloc() substate.SubstateAlloc {
 	return r.db.GetSubstatePostAlloc()

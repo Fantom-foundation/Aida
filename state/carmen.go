@@ -276,6 +276,11 @@ func (s *carmenStateDB) ForEachStorage(common.Address, func(common.Hash, common.
 	panic("ForEachStorage not implemented")
 }
 
+func (s *carmenStateDB) Error() error {
+	// ignored
+	return nil
+}
+
 func (s *carmenStateDB) StartBulkLoad() BulkLoad {
 	return &carmenBulkLoad{s.db.StartBulkLoad()}
 }

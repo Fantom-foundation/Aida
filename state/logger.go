@@ -131,6 +131,11 @@ func (s *loggingStateDB) RevertToSnapshot(id int) {
 	log.Printf("RevertToSnapshot, %v\n", id)
 }
 
+func (s *loggingStateDB) Error() error {
+	log.Printf("Error\n")
+	return s.db.Error()
+}
+
 func (s *loggingStateDB) BeginTransaction(tx uint32) {
 	log.Printf("BeginTransaction, %v\n", tx)
 	s.db.BeginTransaction(tx)

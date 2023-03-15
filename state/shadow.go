@@ -20,6 +20,7 @@ func MakeShadowStateDB(prime, shadow StateDB) StateDB {
 		prime:     prime,
 		shadow:    shadow,
 		snapshots: []snapshotPair{},
+		err:       nil,
 	}
 }
 
@@ -27,6 +28,7 @@ type shadowStateDB struct {
 	prime     StateDB
 	shadow    StateDB
 	snapshots []snapshotPair
+	err       error
 }
 
 type snapshotPair struct {
@@ -212,6 +214,16 @@ func (s *shadowStateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 	return s.prime.Commit(deleteEmptyObjects)
 }
 
+// GetError returns an error occur during operation processing.
+func (s *shadowStateDB) Error() error {
+	// check prime and shadow state
+	if s.err != nil {
+		return s.err
+	}
+	dberr := s.getError("Error", func(s StateDB) error { return s.Error() })
+	return dberr
+}
+
 func (s *shadowStateDB) Prepare(thash common.Hash, ti int) {
 	s.run("Prepare", func(s StateDB) { s.Prepare(thash, ti) })
 }
@@ -337,6 +349,7 @@ func (s *shadowStateDB) getBool(opName string, op func(s StateDB) bool, args ...
 	resS := op(s.shadow)
 	if resP != resS {
 		logIssue(opName, resP, resS, args)
+		s.err = fmt.Errorf("StateDB diverged from shadow DB.")
 	}
 	return resP
 }
@@ -346,6 +359,7 @@ func (s *shadowStateDB) getBoolBool(opName string, op func(s StateDB) (bool, boo
 	resS1, resS2 := op(s.shadow)
 	if resP1 != resS1 || resP2 != resS2 {
 		logIssue(opName, fmt.Sprintf("(%v,%v)", resP1, resP2), fmt.Sprintf("(%v,%v)", resS1, resS2), args)
+		s.err = fmt.Errorf("StateDB diverged from shadow DB.")
 	}
 	return resP1, resP2
 }
@@ -355,6 +369,7 @@ func (s *shadowStateDB) getInt(opName string, op func(s StateDB) int, args ...an
 	resS := op(s.shadow)
 	if resP != resS {
 		logIssue(opName, resP, resS, args)
+		s.err = fmt.Errorf("StateDB diverged from shadow DB.")
 	}
 	return resP
 }
@@ -364,6 +379,7 @@ func (s *shadowStateDB) getUint64(opName string, op func(s StateDB) uint64, args
 	resS := op(s.shadow)
 	if resP != resS {
 		logIssue(opName, resP, resS, args)
+		s.err = fmt.Errorf("StateDB diverged from shadow DB.")
 	}
 	return resP
 }
@@ -373,6 +389,7 @@ func (s *shadowStateDB) getHash(opName string, op func(s StateDB) common.Hash, a
 	resS := op(s.shadow)
 	if resP != resS {
 		logIssue(opName, resP, resS, args)
+		s.err = fmt.Errorf("StateDB diverged from shadow DB.")
 	}
 	return resP
 }
@@ -382,6 +399,7 @@ func (s *shadowStateDB) getBigInt(opName string, op func(s StateDB) *big.Int, ar
 	resS := op(s.shadow)
 	if resP.Cmp(resS) != 0 {
 		logIssue(opName, resP, resS, args)
+		s.err = fmt.Errorf("StateDB diverged from shadow DB.")
 	}
 	return resP
 }
@@ -391,6 +409,7 @@ func (s *shadowStateDB) getBytes(opName string, op func(s StateDB) []byte, args 
 	resS := op(s.shadow)
 	if bytes.Compare(resP, resS) != 0 {
 		logIssue(opName, resP, resS, args)
+		s.err = fmt.Errorf("StateDB diverged from shadow DB.")
 	}
 	return resP
 }
@@ -400,6 +419,7 @@ func (s *shadowStateDB) getError(opName string, op func(s StateDB) error, args .
 	resS := op(s.shadow)
 	if resP != resS {
 		logIssue(opName, resP, resS, args)
+		s.err = fmt.Errorf("StateDB diverged from shadow DB.")
 	}
 	return resP
 }

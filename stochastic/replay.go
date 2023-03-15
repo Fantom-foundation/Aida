@@ -12,6 +12,7 @@ import (
 	"github.com/Fantom-foundation/Aida/stochastic/exponential"
 	"github.com/Fantom-foundation/Aida/stochastic/generator"
 	"github.com/Fantom-foundation/Aida/stochastic/statistics"
+	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -50,7 +51,7 @@ type stochasticState struct {
 // It requires the simulation model and simulation length. The trace-debug flag
 // enables/disables the printing of StateDB operations and their arguments on
 // the screen.
-func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, simLength int, traceDebug bool, disableProgress bool) {
+func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, simLength int, cfg *utils.Config) error {
 
 	// retrieve operations and stochastic matrix from simulation object
 	operations := e.Operations
@@ -77,7 +78,7 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, simLength int
 	)
 
 	// setup state
-	ss := NewStochasticState(db, contracts, keys, values, e.SnapshotLambda, traceDebug)
+	ss := NewStochasticState(db, contracts, keys, values, e.SnapshotLambda, cfg.Debug)
 
 	// create accounts in StateDB
 	ss.prime()
@@ -85,17 +86,19 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, simLength int
 	// set initial state to BeginEpoch
 	state := initialState(operations, "BE")
 	if state == -1 {
-		panic("BeginEpoch cannot be observed in stochastic matrix/recording failed.")
+		return fmt.Errorf("BeginEpoch cannot be observed in stochastic matrix/recording failed.")
 	}
 
 	// progress message setup
 	var (
-		start   time.Time
-		sec     float64
-		lastSec float64
+		start    time.Time
+		sec      float64
+		lastSec  float64
+		runErr   error
+		errCount int
 	)
 
-	if !disableProgress {
+	if cfg.EnableProgress {
 		start = time.Now()
 		sec = time.Since(start).Seconds()
 		lastSec = time.Since(start).Seconds()
@@ -118,8 +121,7 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, simLength int
 			}
 		}
 
-		//
-		if !disableProgress {
+		if cfg.EnableProgress {
 			// report progress
 			sec = time.Since(start).Seconds()
 			if sec-lastSec >= 15 {
@@ -128,14 +130,30 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, simLength int
 			}
 		}
 
+		// check for errors
+		if err := ss.db.Error(); err != nil {
+			errCount++
+			// report the first error
+			if runErr == nil {
+				runErr = fmt.Errorf("Error: stochastic replay failed.\n\tBlock %v: %v", ss.blockNum, err)
+			}
+			if !cfg.ContinueOnFailure {
+				break
+			}
+		}
+
 		// transit to next state in Markovian process
 		state = nextState(A, state)
 	}
 
 	// print progress summary
-	if !disableProgress {
+	if cfg.EnableProgress {
 		log.Printf("Total elapsed time: %.3f s, processed %v blocks\n", sec, block)
 	}
+	if errCount > 0 {
+		log.Printf("%v errors were found.\n", errCount)
+	}
+	return runErr
 }
 
 // NewStochasticState creates a new state for execution StateDB operations

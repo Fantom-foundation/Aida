@@ -356,6 +356,11 @@ func (db *inMemoryStateDB) GetLogs(txHash common.Hash, blockHash common.Hash) []
 	return collectLogs(db.state)
 }
 
+func (s *inMemoryStateDB) Error() error {
+	// ignored
+	return nil
+}
+
 func (db *inMemoryStateDB) GetEffects() substate.SubstateAlloc {
 	// collect all modified accounts
 	touched := map[common.Address]int{}
