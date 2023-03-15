@@ -109,10 +109,9 @@ func (a *RandomAccess) NextIndex(class int) int64 {
 
 // DeleteIndex deletes an access index.
 func (a *RandomAccess) DeleteIndex(v int64) error {
-	// check index;
-	if v <= 0 || v > a.numElem {
-		// NB: cannot delete zero index!
-		return fmt.Errorf("DeleteIndex: wrong index range")
+	// check index range
+	if v < 0 || v >= a.numElem {
+		return fmt.Errorf("DeleteIndex: index (%v) out of index range", v)
 	}
 
 	// reduce cardinality by one
@@ -123,11 +122,14 @@ func (a *RandomAccess) DeleteIndex(v int64) error {
 
 	// replace deleted index by a random index
 	// (necessary only in case if the deleted element
-	// is the last element of the set)
-	j := exponential.DiscreteSample(a.lambda, a.numElem)
-	for i := 0; i < statistics.QueueLen; i++ {
-		if a.queue[i]+1 == v {
-			a.queue[i] = j
+	// is the last element of the set); otherwise
+	// the next one to the right is chosen.
+	if v == a.numElem {
+		j := exponential.DiscreteSample(a.lambda, a.numElem)
+		for i := 0; i < statistics.QueueLen; i++ {
+			if a.queue[i] == v {
+				a.queue[i] = j
+			}
 		}
 	}
 
