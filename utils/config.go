@@ -70,6 +70,11 @@ var (
 		Name:  "cpuprofile",
 		Usage: "enables CPU profiling",
 	}
+	DebugFromFlag = cli.Uint64Flag{
+		Name:  "debug-from",
+		Usage: "sets the first block to print trace debug",
+		Value: 0,
+	}
 	DeletedAccountDirFlag = cli.StringFlag{
 		Name:  "deleted-account-dir",
 		Usage: "sets the directory containing deleted accounts database",
@@ -241,6 +246,7 @@ type Config struct {
 	DbVariant           string         // database variant
 	DbLogging           bool           // set to true if all DB operations should be logged
 	Debug               bool           // enable trace debug flag
+	DebugFrom           uint64         // the first block to print trace debug
 	DeletedAccountDir   string         // directory of deleted account database
 	EnableProgress      bool           // enable progress report flag
 	EpochLength         uint64         // length of an epoch in number of blocks
@@ -346,6 +352,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		ContinueOnFailure:   ctx.Bool(ContinueOnFailureFlag.Name),
 		CPUProfile:          ctx.String(CpuProfileFlag.Name),
 		Debug:               ctx.Bool(TraceDebugFlag.Name),
+		DebugFrom:           ctx.Uint64(DebugFromFlag.Name),
 		EnableProgress:      !ctx.Bool(DisableProgressFlag.Name),
 		EpochLength:         ctx.Uint64(EpochLengthFlag.Name),
 		First:               first,

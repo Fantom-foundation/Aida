@@ -57,10 +57,6 @@ func stochasticRecordAction(ctx *cli.Context) error {
 	}
 	defer utils.StopCPUProfile(cfg)
 
-	if ctx.Bool(utils.TraceDebugFlag.Name) {
-		utils.TraceDebug = true
-	}
-
 	// iterate through subsets in sequence
 	substate.SetSubstateDirectory(cfg.SubstateDBDir)
 	substate.OpenSubstateDBReadOnly()

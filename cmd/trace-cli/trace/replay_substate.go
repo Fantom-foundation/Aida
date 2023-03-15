@@ -36,6 +36,7 @@ var TraceReplaySubstateCommand = cli.Command{
 		&substate.WorkersFlag,
 		&utils.TraceDirectoryFlag,
 		&utils.TraceDebugFlag,
+		&utils.DebugFromFlag,
 		&utils.ValidateFlag,
 		&utils.ValidateWorldStateFlag,
 		&utils.DBFlag,
@@ -69,12 +70,13 @@ func traceReplaySubstateTask(cfg *utils.Config) error {
 	defer os.RemoveAll(stateDirectory)
 
 	var (
-		start       time.Time
-		sec         float64
-		lastSec     float64
-		lastTxCount uint64
-		txCount     uint64
-		firstBlock  = true
+		start        time.Time
+		sec          float64
+		lastSec      float64
+		lastTxCount  uint64
+		txCount      uint64
+		isFirstBlock = true
+		debug        bool // if set enable trace debug
 	)
 	if cfg.EnableProgress {
 		start = time.Now()
@@ -85,19 +87,19 @@ func traceReplaySubstateTask(cfg *utils.Config) error {
 	// A utility to run operations on the local context.
 	run := func(op operation.Operation) {
 		operation.Execute(op, db, dCtx)
-		if cfg.Debug {
+		if debug {
 			operation.Debug(dCtx, op)
 		}
 	}
 
 	for stateIter.Next() {
 		tx := stateIter.Value()
-
+		debug = cfg.Debug && tx.Block >= cfg.DebugFrom
 		// The first Epoch begin and the final EpochEnd need to be artificially
 		// added since the range running on may not match epoch boundaries.
-		if firstBlock {
+		if isFirstBlock {
 			run(operation.NewBeginEpoch(cfg.First / cfg.EpochLength))
-			firstBlock = false
+			isFirstBlock = false
 		}
 
 		if tx.Block > cfg.Last {

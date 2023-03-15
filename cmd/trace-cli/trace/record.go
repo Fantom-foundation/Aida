@@ -40,6 +40,7 @@ var TraceRecordCommand = cli.Command{
 		&utils.ChainIDFlag,
 		&utils.TraceDirectoryFlag,
 		&utils.TraceDebugFlag,
+		&utils.DebugFromFlag,
 		&utils.DBFlag,
 	},
 	Description: `
@@ -80,9 +81,6 @@ func traceRecordAction(ctx *cli.Context) error {
 	// process arguments
 	tracer.TraceDir = ctx.String(utils.TraceDirectoryFlag.Name) + "/"
 	dictionary.ContextDir = ctx.String(utils.TraceDirectoryFlag.Name) + "/"
-	if ctx.Bool(utils.TraceDebugFlag.Name) {
-		utils.TraceDebug = true
-	}
 
 	// iterate through subsets in sequence
 	substate.SetSubstateDirectory(cfg.SubstateDBDir)
@@ -131,10 +129,14 @@ func traceRecordAction(ctx *cli.Context) error {
 	}
 
 	curEpoch := cfg.First / cfg.EpochLength
+	utils.TraceDebug = cfg.Debug && (cfg.First >= cfg.DebugFrom)
 	writeOperation(dCtx, zFile, operation.NewBeginEpoch(curEpoch))
 
 	for iter.Next() {
 		tx := iter.Value()
+		if !utils.TraceDebug {
+			utils.TraceDebug = cfg.Debug && (tx.Block >= cfg.DebugFrom)
+		}
 		// close off old block with an end-block operation
 		if curBlock != tx.Block {
 			if tx.Block > cfg.Last {
@@ -157,7 +159,7 @@ func traceRecordAction(ctx *cli.Context) error {
 		writeOperation(dCtx, zFile, operation.NewBeginTransaction(uint32(tx.Transaction)))
 		var statedb state.StateDB
 		statedb = state.MakeGethInMemoryStateDB(&tx.Substate.InputAlloc, tx.Block)
-		statedb = NewProxyRecorder(statedb, dCtx, zFile, utils.TraceDebug)
+		statedb = NewProxyRecorder(statedb, dCtx, zFile)
 
 		if err := utils.ProcessTx(statedb, cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
 			return fmt.Errorf("Failed to process block %v tx %v. %v", tx.Block, tx.Transaction, err)
