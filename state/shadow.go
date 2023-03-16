@@ -214,14 +214,12 @@ func (s *shadowStateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 	return s.prime.Commit(deleteEmptyObjects)
 }
 
-// GetError returns an error occur during operation processing.
+// GetError returns an error then reset it.
 func (s *shadowStateDB) Error() error {
-	// check prime and shadow state
-	if s.err != nil {
-		return s.err
-	}
-	dberr := s.getError("Error", func(s StateDB) error { return s.Error() })
-	return dberr
+	err := s.err
+	// reset error message
+	s.err = nil
+	return err
 }
 
 func (s *shadowStateDB) Prepare(thash common.Hash, ti int) {
@@ -349,7 +347,7 @@ func (s *shadowStateDB) getBool(opName string, op func(s StateDB) bool, args ...
 	resS := op(s.shadow)
 	if resP != resS {
 		logIssue(opName, resP, resS, args)
-		s.err = fmt.Errorf("StateDB diverged from shadow DB.")
+		s.err = fmt.Errorf("%v diverged from shadow DB.", getOpcodeString(opName, args))
 	}
 	return resP
 }
@@ -359,7 +357,7 @@ func (s *shadowStateDB) getBoolBool(opName string, op func(s StateDB) (bool, boo
 	resS1, resS2 := op(s.shadow)
 	if resP1 != resS1 || resP2 != resS2 {
 		logIssue(opName, fmt.Sprintf("(%v,%v)", resP1, resP2), fmt.Sprintf("(%v,%v)", resS1, resS2), args)
-		s.err = fmt.Errorf("StateDB diverged from shadow DB.")
+		s.err = fmt.Errorf("%v diverged from shadow DB.", getOpcodeString(opName, args))
 	}
 	return resP1, resP2
 }
@@ -369,7 +367,7 @@ func (s *shadowStateDB) getInt(opName string, op func(s StateDB) int, args ...an
 	resS := op(s.shadow)
 	if resP != resS {
 		logIssue(opName, resP, resS, args)
-		s.err = fmt.Errorf("StateDB diverged from shadow DB.")
+		s.err = fmt.Errorf("%v diverged from shadow DB.", getOpcodeString(opName, args))
 	}
 	return resP
 }
@@ -379,7 +377,7 @@ func (s *shadowStateDB) getUint64(opName string, op func(s StateDB) uint64, args
 	resS := op(s.shadow)
 	if resP != resS {
 		logIssue(opName, resP, resS, args)
-		s.err = fmt.Errorf("StateDB diverged from shadow DB.")
+		s.err = fmt.Errorf("%v diverged from shadow DB.", getOpcodeString(opName, args))
 	}
 	return resP
 }
@@ -389,7 +387,7 @@ func (s *shadowStateDB) getHash(opName string, op func(s StateDB) common.Hash, a
 	resS := op(s.shadow)
 	if resP != resS {
 		logIssue(opName, resP, resS, args)
-		s.err = fmt.Errorf("StateDB diverged from shadow DB.")
+		s.err = fmt.Errorf("%v diverged from shadow DB.", getOpcodeString(opName, args))
 	}
 	return resP
 }
@@ -399,7 +397,7 @@ func (s *shadowStateDB) getBigInt(opName string, op func(s StateDB) *big.Int, ar
 	resS := op(s.shadow)
 	if resP.Cmp(resS) != 0 {
 		logIssue(opName, resP, resS, args)
-		s.err = fmt.Errorf("StateDB diverged from shadow DB.")
+		s.err = fmt.Errorf("%v diverged from shadow DB.", getOpcodeString(opName, args))
 	}
 	return resP
 }
@@ -409,7 +407,7 @@ func (s *shadowStateDB) getBytes(opName string, op func(s StateDB) []byte, args 
 	resS := op(s.shadow)
 	if bytes.Compare(resP, resS) != 0 {
 		logIssue(opName, resP, resS, args)
-		s.err = fmt.Errorf("StateDB diverged from shadow DB.")
+		s.err = fmt.Errorf("%v diverged from shadow DB.", getOpcodeString(opName, args))
 	}
 	return resP
 }
@@ -419,17 +417,23 @@ func (s *shadowStateDB) getError(opName string, op func(s StateDB) error, args .
 	resS := op(s.shadow)
 	if resP != resS {
 		logIssue(opName, resP, resS, args)
-		s.err = fmt.Errorf("StateDB diverged from shadow DB.")
+		s.err = fmt.Errorf("%v diverged from shadow DB.", getOpcodeString(opName, args))
 	}
 	return resP
 }
 
-func logIssue(opName string, prime, shadow any, args ...any) {
-	log.Printf("Diff for %v(", opName)
+func getOpcodeString(opName string, args ...any) string {
+	var opcode strings.Builder
+	opcode.WriteString(fmt.Sprintf("%v(", opName))
 	for _, arg := range args {
-		log.Printf("\t%v", arg)
+		opcode.WriteString(fmt.Sprintf("%v ", arg))
 	}
-	log.Printf(")\n")
+	opcode.WriteString(")")
+	return opcode.String()
+}
+
+func logIssue(opName string, prime, shadow any, args ...any) {
+	log.Printf("Diff for %v\n", getOpcodeString(opName, args))
 	log.Printf("\tPrimary: %v\n", prime)
 	log.Printf("\tShadow:  %v\n", shadow)
 }
