@@ -120,16 +120,15 @@ func (a *RandomAccess) DeleteIndex(v int64) error {
 		return fmt.Errorf("DeleteIndex: cardinality of set too low")
 	}
 
-	// replace deleted index by a random index
-	// (necessary only in case if the deleted element
-	// is the last element of the set); otherwise
-	// the next one to the right is chosen.
-	if v == a.numElem {
-		j := exponential.DiscreteSample(a.lambda, a.numElem)
-		for i := 0; i < statistics.QueueLen; i++ {
-			if a.queue[i] == v {
-				a.queue[i] = j
-			}
+	// replace deleted last element by new element
+	// note that the actual deleted element may be
+	// in range, but there might elements in the queue
+	// that exceed the new range limit. They need to
+	// be replaced.
+	j := exponential.DiscreteSample(a.lambda, a.numElem)
+	for i := 0; i < statistics.QueueLen; i++ {
+		if a.queue[i] >= a.numElem {
+			a.queue[i] = j
 		}
 	}
 
