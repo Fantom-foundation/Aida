@@ -41,8 +41,8 @@ func Quantile(lambda float64, p float64) float64 {
 }
 
 // DiscreteSample sample the distribution and discretizes the result for numbers between 0 and n-1.
-func DiscreteSample(lambda float64, n int64) int64 {
-	return int64(float64(n) * Quantile(lambda, rand.Float64()))
+func DiscreteSample(rg *rand.Rand, lambda float64, n int64) int64 {
+	return int64(float64(n) * Quantile(lambda, rg.Float64()))
 }
 
 // lse is the least square error function for deducing lambda.

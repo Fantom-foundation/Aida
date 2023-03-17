@@ -29,10 +29,13 @@ type RandomAccess struct {
 
 	// probability distribution of queue for selecting recent values.
 	qpdf []float64
+
+	// random generator
+	rg *rand.Rand
 }
 
 // NewAccess creates a new access index.
-func NewRandomAccess(numElem int64, lambda float64, qpdf []float64) *RandomAccess {
+func NewRandomAccess(rg *rand.Rand, numElem int64, lambda float64, qpdf []float64) *RandomAccess {
 	if numElem < minRandomAccessSize {
 		return nil
 	}
@@ -52,6 +55,7 @@ func NewRandomAccess(numElem int64, lambda float64, qpdf []float64) *RandomAcces
 		lambda:  lambda,
 		queue:   queue,
 		qpdf:    copyQpdf,
+		rg:      rg,
 	}
 }
 
@@ -81,7 +85,7 @@ func (a *RandomAccess) NextIndex(class int) int64 {
 	case statistics.RandomValueID:
 		// use randomised value that is not contained in the queue
 		for {
-			v := exponential.DiscreteSample(a.lambda, a.numElem)
+			v := exponential.DiscreteSample(a.rg, a.lambda, a.numElem)
 			if !a.findQElem(v) {
 				a.placeQ(v)
 				return v + 1
@@ -125,7 +129,7 @@ func (a *RandomAccess) DeleteIndex(v int64) error {
 	// in range, but there might elements in the queue
 	// that exceed the new range limit. They need to
 	// be replaced.
-	j := exponential.DiscreteSample(a.lambda, a.numElem)
+	j := exponential.DiscreteSample(a.rg, a.lambda, a.numElem)
 	for i := 0; i < statistics.QueueLen; i++ {
 		if a.queue[i] >= a.numElem {
 			a.queue[i] = j
@@ -151,7 +155,7 @@ func (a *RandomAccess) findQElem(elem int64) bool {
 // produced much faster.
 func (a *RandomAccess) getRandQPos() int {
 	// obtain random number in [0, 1.0)
-	r := rand.Float64()
+	r := a.rg.Float64()
 
 	// compute inverse CDF and select the index
 	sum := float64(0)

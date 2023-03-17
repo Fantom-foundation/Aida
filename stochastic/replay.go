@@ -45,6 +45,7 @@ type stochasticState struct {
 	balanceLog     map[int64][]int64            // balance log keeping track of balances for snapshots
 	suicided       []int64                      // list of suicided accounts
 	traceDebug     bool                         // trace-debug flag
+	rg             *rand.Rand                   // random generator for sampling
 }
 
 // RunStochasticReplay runs the stochastic simulation for StateDB operations.
@@ -52,6 +53,9 @@ type stochasticState struct {
 // enables/disables the printing of StateDB operations and their arguments on
 // the screen.
 func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, simLength int, cfg *utils.Config) error {
+	// random generator
+	rg := rand.New(rand.NewSource(cfg.RandomSeed))
+	log.Printf("using random seed %d", cfg.RandomSeed)
 
 	// retrieve operations and stochastic matrix from simulation object
 	operations := e.Operations
@@ -62,23 +66,26 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, simLength int
 	// (NB: Contracts need an indirect access wrapper because
 	// contract addresses can be deleted by suicide.)
 	contracts := generator.NewIndirectAccess(generator.NewRandomAccess(
+		rg,
 		e.Contracts.NumKeys,
 		e.Contracts.Lambda,
 		e.Contracts.QueueDistribution,
 	))
 	keys := generator.NewRandomAccess(
+		rg,
 		e.Keys.NumKeys,
 		e.Keys.Lambda,
 		e.Keys.QueueDistribution,
 	)
 	values := generator.NewRandomAccess(
+		rg,
 		e.Values.NumKeys,
 		e.Values.Lambda,
 		e.Values.QueueDistribution,
 	)
 
 	// setup state
-	ss := NewStochasticState(db, contracts, keys, values, e.SnapshotLambda, cfg.Debug)
+	ss := NewStochasticState(rg, db, contracts, keys, values, e.SnapshotLambda, cfg.Debug)
 
 	// create accounts in StateDB
 	ss.prime()
@@ -144,7 +151,7 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, simLength int
 		}
 
 		// transit to next state in Markovian process
-		state = nextState(A, state)
+		state = nextState(rg, A, state)
 	}
 
 	// print progress summary
@@ -158,7 +165,7 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, simLength int
 }
 
 // NewStochasticState creates a new state for execution StateDB operations
-func NewStochasticState(db state.StateDB, contracts *generator.IndirectAccess, keys *generator.RandomAccess, values *generator.RandomAccess, snapshotLambda float64, traceDebug bool) stochasticState {
+func NewStochasticState(rg *rand.Rand, db state.StateDB, contracts *generator.IndirectAccess, keys *generator.RandomAccess, values *generator.RandomAccess, snapshotLambda float64, traceDebug bool) stochasticState {
 
 	// retrieve number of contracts
 	n := contracts.NumElem()
@@ -167,7 +174,7 @@ func NewStochasticState(db state.StateDB, contracts *generator.IndirectAccess, k
 	accounts := make(map[int64]*stochasticAccount, n+1)
 	for i := int64(0); i <= n; i++ {
 		accounts[i] = &stochasticAccount{
-			balance: rand.Int63n(AddBalanceRange),
+			balance: rg.Int63n(AddBalanceRange),
 		}
 	}
 
@@ -184,6 +191,7 @@ func NewStochasticState(db state.StateDB, contracts *generator.IndirectAccess, k
 		suicided:       []int64{},
 		blockNum:       1,
 		epochNum:       1,
+		rg:             rg,
 	}
 }
 
@@ -215,6 +223,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		key   common.Hash
 		value common.Hash
 		db    state.StateDB = ss.db
+		rg    *rand.Rand    = ss.rg
 	)
 
 	// fetch indexes from index access generators
@@ -260,7 +269,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 
 	switch op {
 	case AddBalanceID:
-		value := rand.Int63n(AddBalanceRange)
+		value := rg.Int63n(AddBalanceRange)
 		if ss.traceDebug {
 			fmt.Printf(" value: %v", value)
 		}
@@ -344,7 +353,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		if snapshotNum > 0 {
 			// TODO: consider a more realistic distribution
 			// rather than the uniform distribution.
-			snapshotIdx := snapshotNum - int(exponential.DiscreteSample(ss.snapshotLambda, int64(snapshotNum))) - 1
+			snapshotIdx := snapshotNum - int(exponential.DiscreteSample(rg, ss.snapshotLambda, int64(snapshotNum))) - 1
 			snapshot := ss.snapshot[snapshotIdx]
 			if ss.traceDebug {
 				fmt.Printf(" id: %v", snapshot)
@@ -357,19 +366,19 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		}
 
 	case SetCodeID:
-		sz := rand.Intn(MaxCodeSize-1) + 1
+		sz := rg.Intn(MaxCodeSize-1) + 1
 		if ss.traceDebug {
 			fmt.Printf(" code-size: %v", sz)
 		}
 		code := make([]byte, sz)
-		_, err := rand.Read(code)
+		_, err := rg.Read(code)
 		if err != nil {
 			log.Fatalf("error producing a random byte slice. Error: %v", err)
 		}
 		db.SetCode(addr, code)
 
 	case SetNonceID:
-		value := uint64(rand.Intn(SetNonceRange))
+		value := uint64(rg.Intn(SetNonceRange))
 		db.SetNonce(addr, value)
 
 	case SetStateID:
@@ -387,7 +396,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		if balance > 0 {
 			// get a delta that does not exceed current balance
 			// in the current snapshot
-			value := rand.Int63n(balance)
+			value := rg.Int63n(balance)
 			if ss.traceDebug {
 				fmt.Printf(" value: %v", value)
 			}
@@ -420,9 +429,9 @@ func initialState(operations []string, opcode string) int {
 }
 
 // nextState produces the next state in the Markovian process.
-func nextState(A [][]float64, i int) int {
+func nextState(rg *rand.Rand, A [][]float64, i int) int {
 	// Retrieve a random number in [0,1.0).
-	r := rand.Float64()
+	r := rg.Float64()
 
 	// Use Kahan's sum for summing values
 	// in case we have a combination of very small

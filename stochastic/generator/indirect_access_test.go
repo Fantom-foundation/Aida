@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"math/rand"
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/stochastic/statistics"
@@ -18,11 +19,13 @@ func containsIndirectQ(slice []int64, x int64) bool {
 
 // TestIndirectAccessSimple tests indirect access generator for indexes.
 func TestIndirectAccessSimple(t *testing.T) {
+	// create random generator with fixed seed value
+	rg := rand.New(rand.NewSource(999))
 
 	// create a random access index generator
 	// with a zero probability distribution.
 	qpdf := make([]float64, statistics.QueueLen)
-	ia := NewIndirectAccess(NewRandomAccess(1000, 5.0, qpdf))
+	ia := NewIndirectAccess(NewRandomAccess(rg, 1000, 5.0, qpdf))
 
 	// check no argument class (must be always -1)
 	if ia.NextIndex(statistics.NoArgID) != -1 {
@@ -66,7 +69,7 @@ func TestIndirectAccessSimple(t *testing.T) {
 		qpdf[i] = 1.0 / float64(statistics.QueueLen)
 	}
 
-	ia = NewIndirectAccess(NewRandomAccess(1000, 5.0, qpdf))
+	ia = NewIndirectAccess(NewRandomAccess(rg, 1000, 5.0, qpdf))
 	copy(queue, ia.randAcc.queue)
 	if idx := ia.NextIndex(statistics.RecentValueID); idx < 1 || idx > ia.NumElem() || !containsIndirectQ(queue, idx-1) {
 		t.Fatalf("index access not in queue")
@@ -81,11 +84,13 @@ func TestIndirectAccessSimple(t *testing.T) {
 
 // TestIndirectAccessRecentAccess tests previous accesses
 func TestIndirectAccessRecentAccess(t *testing.T) {
+	// create random generator with fixed seed value
+	rg := rand.New(rand.NewSource(999))
 
 	// create a random access index generator
 	// with a zero probability distribution.
 	qpdf := make([]float64, statistics.QueueLen)
-	ra := NewRandomAccess(1000, 5.0, qpdf)
+	ra := NewRandomAccess(rg, 1000, 5.0, qpdf)
 	ia := NewIndirectAccess(ra)
 
 	// check a new value (must be equal to the number of elements
@@ -115,10 +120,13 @@ func TestIndirectAccessRecentAccess(t *testing.T) {
 
 // TestIndirectAccessDeleteIndex tests deletion of an index
 func TestIndirectAcessDeleteIndex(t *testing.T) {
+	// create random generator with fixed seed value
+	rg := rand.New(rand.NewSource(999))
+
 	// create a random access index generator
 	// with a zero probability distribution.
 	qpdf := make([]float64, statistics.QueueLen)
-	ra := NewRandomAccess(1000, 5.0, qpdf)
+	ra := NewRandomAccess(rg, 1000, 5.0, qpdf)
 	ia := NewIndirectAccess(ra)
 	idx := int64(500) // choose an index in the middle of the range
 
