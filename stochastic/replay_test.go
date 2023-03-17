@@ -11,29 +11,35 @@ import (
 
 // TextDeterministicNextState checks transition of a deterministic Markovian process.
 func TestDeterministicNextState(t *testing.T) {
+	// create random generator with fixed seed value
+	rg := rand.New(rand.NewSource(999))
+
 	var A = [][]float64{{0.0, 1.0}, {1.0, 0.0}}
-	if nextState(A, 0) != 1 {
+	if nextState(rg, A, 0) != 1 {
 		t.Fatalf("Illegal state transition (row 0)")
 	}
-	if nextState(A, 1) != 0 {
+	if nextState(rg, A, 1) != 0 {
 		t.Fatalf("Illegal state transition (row 1)")
 	}
 }
 
 // TextDeterministicNextState2 checks transition of a deterministic Markovian process.
 func TestDeterministicNextState2(t *testing.T) {
+	// create random generator with fixed seed value
+	rg := rand.New(rand.NewSource(999))
+
 	var A = [][]float64{
 		{0.0, 1.0, 0.0},
 		{0.0, 0.0, 1.0},
 		{1.0, 0.0, 0.0},
 	}
-	if nextState(A, 0) != 1 {
+	if nextState(rg, A, 0) != 1 {
 		t.Fatalf("Illegal state transition (row 0)")
 	}
-	if nextState(A, 1) != 2 {
+	if nextState(rg, A, 1) != 2 {
 		t.Fatalf("Illegal state transition (row 1)")
 	}
-	if nextState(A, 2) != 0 {
+	if nextState(rg, A, 2) != 0 {
 		t.Fatalf("Illegal state transition (row 1)")
 	}
 }
@@ -41,11 +47,14 @@ func TestDeterministicNextState2(t *testing.T) {
 // TextNextStateFail checks whether nextState fails if
 // stochastic matrix is broken.
 func TestNextStateFail(t *testing.T) {
+	// create random generator with fixed seed value
+	rg := rand.New(rand.NewSource(999))
+
 	var A = [][]float64{{0.0, 0.0}, {math.NaN(), 0.0}}
-	if nextState(A, 0) != -1 {
+	if nextState(rg, A, 0) != -1 {
 		t.Fatalf("Could not capture faulty stochastic matrix")
 	}
-	if nextState(A, 1) != -1 {
+	if nextState(rg, A, 1) != -1 {
 		t.Fatalf("Could not capture faulty stochastic matrix")
 	}
 }
@@ -57,6 +66,8 @@ func TestNextStateFail(t *testing.T) {
 // distribution for an arbitrary matrix. Also the convergence
 // is too slow for an arbitrary matrix.
 func checkMarkovChain(A [][]float64, numSteps int) error {
+	// create random generator with fixed seed value
+	rg := rand.New(rand.NewSource(999))
 
 	n := len(A)
 
@@ -67,7 +78,7 @@ func checkMarkovChain(A [][]float64, numSteps int) error {
 	state := 0
 	for steps := 0; steps < numSteps; steps++ {
 		oldState := state
-		state = nextState(A, state)
+		state = nextState(rg, A, state)
 		if state != -1 {
 			counts[state]++
 		} else {
@@ -102,10 +113,6 @@ func checkMarkovChain(A [][]float64, numSteps int) error {
 // TestRandomNextState checks whether a uniform Markovian process produces a uniform
 // state distribution via a chi-squared test for various number of states.
 func TestRandomNextState(t *testing.T) {
-	// set random seed to make test deterministic
-	// (make sure that these tests are not performed in parallel)
-	rand.Seed(4711)
-
 	// test small Markov chain by setting up a uniform Markovian process with
 	// uniform distributions. The stationary distribution of the uniform
 	// Markovian process is (1/n, , ... , 1/n).

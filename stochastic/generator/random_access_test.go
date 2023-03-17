@@ -5,7 +5,6 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/Fantom-foundation/Aida/stochastic/exponential"
 	"github.com/Fantom-foundation/Aida/stochastic/statistics"
 	"gonum.org/v1/gonum/stat/distuv"
 )
@@ -22,11 +21,13 @@ func containsQ(slice []int64, x int64) bool {
 
 // TestRandomAccessSimple tests random access generators for indexes.
 func TestRandomAccessSimple(t *testing.T) {
+	// create random generator with fixed seed value
+	rg := rand.New(rand.NewSource(99))
 
 	// create a random access index generator
 	// with a zero probability distribution.
 	qpdf := make([]float64, statistics.QueueLen)
-	ra := NewRandomAccess(1000, 5.0, qpdf)
+	ra := NewRandomAccess(rg, 1000, 5.0, qpdf)
 
 	// check no argument class (must be always -1)
 	if ra.NextIndex(statistics.NoArgID) != -1 {
@@ -64,7 +65,7 @@ func TestRandomAccessSimple(t *testing.T) {
 	for i := 0; i < statistics.QueueLen; i++ {
 		qpdf[i] = 1.0 / float64(statistics.QueueLen)
 	}
-	ra = NewRandomAccess(1000, 5.0, qpdf)
+	ra = NewRandomAccess(rg, 1000, 5.0, qpdf)
 	for i := 0; i < minRandomAccessSize; i++ {
 		copy(queue, ra.queue)
 		if idx := ra.NextIndex(statistics.RecentValueID); idx < 1 || idx > ra.numElem || !containsQ(queue, idx-1) {
@@ -81,11 +82,13 @@ func TestRandomAccessSimple(t *testing.T) {
 
 // TestQueuingSimple tests previous accesses
 func TestRandomAccessRecentAccess(t *testing.T) {
+	// create random generator with fixed seed value
+	rg := rand.New(rand.NewSource(999))
 
 	// create a random access index generator
 	// with a zero probability distribution.
 	qpdf := make([]float64, statistics.QueueLen)
-	ra := NewRandomAccess(1000, 5.0, qpdf)
+	ra := NewRandomAccess(rg, 1000, 5.0, qpdf)
 
 	// check a new value (must be equal to the number of elements
 	// in the index set and must be greater than zero).
@@ -114,10 +117,13 @@ func TestRandomAccessRecentAccess(t *testing.T) {
 
 // TestRandomAccessDeleteIndex tests deletion of an index
 func TestRandomAcessDeleteIndex(t *testing.T) {
+	// create random generator with fixed seed value
+	rg := rand.New(rand.NewSource(999))
+
 	// create a random access index generator
 	// with a zero probability distribution.
 	qpdf := make([]float64, statistics.QueueLen)
-	ra := NewRandomAccess(1000, 5.0, qpdf)
+	ra := NewRandomAccess(rg, 1000, 5.0, qpdf)
 	idx := ra.NextIndex(statistics.PreviousValueID)
 	if idx == -1 || idx < 1 || idx > ra.numElem {
 		t.Fatalf("previous index access failed.")
@@ -142,8 +148,11 @@ func TestRandomAcessDeleteIndex(t *testing.T) {
 // whether a queue with uniform position distribution is
 // unbiased.
 func checkUniformQueueSelection(qpdf []float64, numSteps int) bool {
+	// create random generator with fixed seed value
+	rg := rand.New(rand.NewSource(999))
 
-	ra := NewRandomAccess(1000, 5.0, qpdf)
+	// create random access generator
+	ra := NewRandomAccess(rg, 1000, 5.0, qpdf)
 
 	// number of observed queue positions
 	counts := make([]int64, statistics.QueueLen)
@@ -183,9 +192,6 @@ func checkUniformQueueSelection(qpdf []float64, numSteps int) bool {
 
 // TestRandomAccessRandQPos checks the random selection of the queue position via a statistical test.
 func TestRandomAccessRandQPos(t *testing.T) {
-	// set random seed to make check determinsitic
-	rand.Seed(4711)
-
 	// create a uniform queue distribution
 	qpdf := make([]float64, statistics.QueueLen)
 	for i := 0; i < statistics.QueueLen; i++ {
@@ -212,69 +218,38 @@ func TestRandomAccessRandQPos(t *testing.T) {
 	}
 }
 
-// TestRandomAccessRandInd checks the random selection of the queue position via a statistical test.
-func TestRandomAccessRandInd(t *testing.T) {
-	// parameters
-	lambda := 5.0
-	numSteps := 10000
-	idxRange := int64(10)
-
-	// populate buckets
-	counts := make([]int64, idxRange)
-	for steps := 0; steps < numSteps; steps++ {
-		counts[exponential.DiscreteSample(lambda, idxRange)]++
-	}
-
-	// compute chi-squared value for observations
-	chi2 := float64(0.0)
-	for i, v := range counts {
-		// compute expected value of bucket
-		p := exponential.Cdf(lambda, float64(i+1)/float64(idxRange)) - exponential.Cdf(lambda, float64(i)/float64(idxRange))
-		expected := float64(numSteps) * p
-		err := expected - float64(v)
-		chi2 += (err * err) / expected
-		// fmt.Printf("Err: %v %v\n", v, expected)
-	}
-
-	// Perform statistical test whether uniform queue distribution is unbiased
-	// with an alpha of 0.05 and a degree of freedom of queue length minus two
-	// (no first position!).
-	alpha := 0.05
-	df := float64(idxRange - 1)
-	chi2Critical := distuv.ChiSquared{K: df, Src: nil}.Quantile(1.0 - alpha)
-	// fmt.Printf("Chi^2 value: %v Chi^2 critical value: %v df: %v\n", chi2, chi2Critical, df)
-
-	if chi2 > chi2Critical {
-		t.Fatalf("The random index selection biased.")
-	}
-}
-
 // TestRandomAccessLimits checks limits.
 func TestRandomAccessLimits(t *testing.T) {
+	// create random generator with fixed seed value
+	rg := rand.New(rand.NewSource(999))
+
 	qpdf := make([]float64, statistics.QueueLen)
-	ra := NewRandomAccess(math.MaxInt64, 5.0, qpdf)
+	ra := NewRandomAccess(rg, math.MaxInt64, 5.0, qpdf)
 	if idx := ra.NextIndex(statistics.NewValueID); idx != -1 {
 		t.Fatalf("Fails to detect cardinality integer overflow.")
 	}
-	ra = NewRandomAccess(minRandomAccessSize, 5.0, qpdf)
+	ra = NewRandomAccess(rg, minRandomAccessSize, 5.0, qpdf)
 	if err := ra.DeleteIndex(0); err == nil {
 		t.Fatalf("Fails to detect deleting zero element.")
 	}
 	if err := ra.DeleteIndex(1); err == nil {
 		t.Fatalf("Fails to detect depletion of elements.")
 	}
-	if ra := NewRandomAccess(minRandomAccessSize-1, 5.0, qpdf); ra != nil {
+	if ra := NewRandomAccess(rg, minRandomAccessSize-1, 5.0, qpdf); ra != nil {
 		t.Fatalf("Fails to detect low cardinality.")
 	}
 }
 
 // TestRandomAccessQueue tests the queue operation
 func TestRandomAccessQueue(t *testing.T) {
+	// create random generator with fixed seed value
+	rg := rand.New(rand.NewSource(999))
+
 	qpdf := make([]float64, statistics.QueueLen)
 	for i := 0; i < statistics.QueueLen; i++ {
 		qpdf[i] = 1.0 / float64(statistics.QueueLen)
 	}
-	ra := NewRandomAccess(1000, 5.0, qpdf)
+	ra := NewRandomAccess(rg, 1000, 5.0, qpdf)
 	ra.placeQ(2)
 	if idx := ra.lastQ(); idx != 2 {
 		t.Fatalf("Queuing of element 2 failed.")

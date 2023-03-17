@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+	"math/rand"
 	"os"
 	"strconv"
 	"strings"
@@ -252,6 +253,7 @@ type Config struct {
 	PrimeSeed           int64          // set random seed
 	PrimeThreshold      int            // set account threshold before commit
 	Profile             bool           // enable micro profiling
+	RandomSeed          int64          // set random seet for stochastic testing (TODO: Perhaps combine with PrimeSeed??)
 	SkipPriming         bool           // skip priming of the state DB
 	ShadowImpl          string         // implementation of the shadow DB to use, empty if disabled
 	ShadowVariant       string         // database variant of the shadow DB to be used
@@ -359,6 +361,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		MemoryProfile:       ctx.String(MemProfileFlag.Name),
 		PrimeRandom:         ctx.Bool(RandomizePrimingFlag.Name),
 		PrimeSeed:           ctx.Int64(PrimeSeedFlag.Name),
+		RandomSeed:          ctx.Int64(RandomSeedFlag.Name),
 		PrimeThreshold:      ctx.Int(PrimeThresholdFlag.Name),
 		Profile:             ctx.Bool(ProfileFlag.Name),
 		SkipPriming:         ctx.Bool(SkipPrimingFlag.Name),
@@ -463,6 +466,10 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	if cfg.SkipPriming && cfg.ValidateWorldState {
 		log.Printf("ERROR: skipPriming and validation of world state can not be enabled at the same time\n")
 		return cfg, fmt.Errorf("skipPriming and world-state validation can not be enabled at the same time")
+	}
+
+	if cfg.RandomSeed < 0 {
+		cfg.RandomSeed = int64(rand.Uint32())
 	}
 
 	return cfg, nil

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"math/rand"
 	"os"
 	"strconv"
 	"time"
@@ -89,14 +88,6 @@ func stochasticReplayAction(ctx *cli.Context) error {
 
 	// run simulation.
 	fmt.Printf("stochastic replay: run simulation ...\n")
-
-	// set random seed so that runs are deterministic
-	randomSeed := ctx.Int(utils.RandomSeedFlag.Name)
-	if randomSeed < 0 {
-		randomSeed = int(rand.Uint32())
-	}
-	rand.Seed(int64(randomSeed))
-	fmt.Printf("stochastic replay: using random seed %d\n", randomSeed)
 
 	runErr := stochastic.RunStochasticReplay(db, simulation, int(simLength), cfg)
 
