@@ -37,6 +37,7 @@ type stochasticState struct {
 	keys           *generator.RandomAccess      // index access generator for keys
 	values         *generator.RandomAccess      // index access generator for values
 	snapshotLambda float64                      // lambda parameter for snapshot delta distribution
+	totalTx        uint64                       // total number of transactions
 	txNum          uint32                       // current transaction number
 	blockNum       uint64                       // current block number
 	epochNum       uint64                       // current epoch number
@@ -52,7 +53,12 @@ type stochasticState struct {
 // It requires the simulation model and simulation length. The trace-debug flag
 // enables/disables the printing of StateDB operations and their arguments on
 // the screen.
-func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, simLength int, cfg *utils.Config) error {
+func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, cfg *utils.Config) error {
+	var (
+		opFrequency [NumOps]uint64 // operation frequency
+		numOps      uint64         // total number of operations
+	)
+
 	// random generator
 	rg := rand.New(rand.NewSource(cfg.RandomSeed))
 	log.Printf("using random seed %d", cfg.RandomSeed)
@@ -117,13 +123,17 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, simLength int
 		// decode opcode
 		op, addrCl, keyCl, valueCl := DecodeOpcode(operations[state])
 
+		// keep track of stats
+		numOps++
+		opFrequency[op]++
+
 		// execute operation with its argument classes
 		ss.execute(op, addrCl, keyCl, valueCl)
 
 		// check for end of simulation
 		if op == EndBlockID {
 			block++
-			if block >= simLength {
+			if block >= nBlocks {
 				break
 			}
 		}
@@ -160,6 +170,16 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, simLength int
 	}
 	if errCount > 0 {
 		log.Printf("%v errors were found.\n", errCount)
+	}
+
+	// print statistics
+	log.Printf("Epochs: %v", ss.epochNum)
+	log.Printf("Blocks: %v", ss.blockNum)
+	log.Printf("Transactions: %v", ss.totalTx)
+	log.Printf("Operations: %v", numOps)
+	log.Printf("Operation Frequencies:")
+	for op := 0; op < NumOps; op++ {
+		log.Printf("\t%v: %v", opText[op], opFrequency[op])
 	}
 	return runErr
 }
@@ -315,6 +335,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 	case EndTransactionID:
 		db.EndTransaction()
 		ss.txNum++
+		ss.totalTx++
 		ss.commitBalanceLog()
 		ss.deleteAccounts()
 
