@@ -158,6 +158,11 @@ var (
 		Name:  "trace-debug",
 		Usage: "enable debug output for tracing",
 	}
+	TraceDebugSuppressFlag = cli.IntFlag{
+		Name:  "trace-debug-suppress",
+		Usage: "suppress trace debug output for the first blocks",
+		Value: 0,
+	}
 	TraceDirectoryFlag = cli.StringFlag{
 		Name:  "tracedir",
 		Usage: "set storage trace's output directory",
@@ -241,6 +246,7 @@ type Config struct {
 	DbVariant           string         // database variant
 	DbLogging           bool           // set to true if all DB operations should be logged
 	Debug               bool           // enable trace debug flag
+	DebugSuppress       uint64         // enable trace debug flag
 	DeletedAccountDir   string         // directory of deleted account database
 	EnableProgress      bool           // enable progress report flag
 	EpochLength         uint64         // length of an epoch in number of blocks
@@ -346,6 +352,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		ContinueOnFailure:   ctx.Bool(ContinueOnFailureFlag.Name),
 		CPUProfile:          ctx.String(CpuProfileFlag.Name),
 		Debug:               ctx.Bool(TraceDebugFlag.Name),
+		DebugSuppress:       ctx.Uint64(TraceDebugSuppressFlag.Name),
 		EnableProgress:      !ctx.Bool(DisableProgressFlag.Name),
 		EpochLength:         ctx.Uint64(EpochLengthFlag.Name),
 		First:               first,

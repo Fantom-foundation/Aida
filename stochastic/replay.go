@@ -32,20 +32,21 @@ type stochasticAccount struct {
 
 // stochasticState keeps the execution state for the stochastic simulation
 type stochasticState struct {
-	db             state.StateDB                // StateDB database
-	contracts      *generator.IndirectAccess    // index access generator for contracts
-	keys           *generator.RandomAccess      // index access generator for keys
-	values         *generator.RandomAccess      // index access generator for values
-	snapshotLambda float64                      // lambda parameter for snapshot delta distribution
-	txNum          uint32                       // current transaction number
-	blockNum       uint64                       // current block number
-	epochNum       uint64                       // current epoch number
-	snapshot       []int                        // stack of active snapshots
-	accounts       map[int64]*stochasticAccount // account information using address index as key
-	balanceLog     map[int64][]int64            // balance log keeping track of balances for snapshots
-	suicided       []int64                      // list of suicided accounts
-	traceDebug     bool                         // trace-debug flag
-	rg             *rand.Rand                   // random generator for sampling
+	db                 state.StateDB                // StateDB database
+	contracts          *generator.IndirectAccess    // index access generator for contracts
+	keys               *generator.RandomAccess      // index access generator for keys
+	values             *generator.RandomAccess      // index access generator for values
+	snapshotLambda     float64                      // lambda parameter for snapshot delta distribution
+	txNum              uint32                       // current transaction number
+	blockNum           uint64                       // current block number
+	epochNum           uint64                       // current epoch number
+	snapshot           []int                        // stack of active snapshots
+	accounts           map[int64]*stochasticAccount // account information using address index as key
+	balanceLog         map[int64][]int64            // balance log keeping track of balances for snapshots
+	suicided           []int64                      // list of suicided accounts
+	traceDebug         bool                         // trace-debug flag
+	traceDebugSuppress uint64                       // trace-debug flag
+	rg                 *rand.Rand                   // random generator for sampling
 }
 
 // RunStochasticReplay runs the stochastic simulation for StateDB operations.
@@ -85,7 +86,7 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, simLength int
 	)
 
 	// setup state
-	ss := NewStochasticState(rg, db, contracts, keys, values, e.SnapshotLambda, cfg.Debug)
+	ss := NewStochasticState(rg, db, contracts, keys, values, e.SnapshotLambda, cfg.Debug, cfg.DebugSuppress)
 
 	// create accounts in StateDB
 	ss.prime()
@@ -165,7 +166,7 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, simLength int
 }
 
 // NewStochasticState creates a new state for execution StateDB operations
-func NewStochasticState(rg *rand.Rand, db state.StateDB, contracts *generator.IndirectAccess, keys *generator.RandomAccess, values *generator.RandomAccess, snapshotLambda float64, traceDebug bool) stochasticState {
+func NewStochasticState(rg *rand.Rand, db state.StateDB, contracts *generator.IndirectAccess, keys *generator.RandomAccess, values *generator.RandomAccess, snapshotLambda float64, traceDebug bool, traceDebugSuppress uint64) stochasticState {
 
 	// retrieve number of contracts
 	n := contracts.NumElem()
@@ -180,18 +181,19 @@ func NewStochasticState(rg *rand.Rand, db state.StateDB, contracts *generator.In
 
 	// return stochastic state
 	return stochasticState{
-		db:             db,
-		accounts:       accounts,
-		contracts:      contracts,
-		keys:           keys,
-		values:         values,
-		snapshotLambda: snapshotLambda,
-		traceDebug:     traceDebug,
-		balanceLog:     make(map[int64][]int64),
-		suicided:       []int64{},
-		blockNum:       1,
-		epochNum:       1,
-		rg:             rg,
+		db:                 db,
+		accounts:           accounts,
+		contracts:          contracts,
+		keys:               keys,
+		values:             values,
+		snapshotLambda:     snapshotLambda,
+		traceDebug:         traceDebug,
+		traceDebugSuppress: traceDebugSuppress,
+		balanceLog:         make(map[int64][]int64),
+		suicided:           []int64{},
+		blockNum:           1,
+		epochNum:           1,
+		rg:                 rg,
 	}
 }
 
@@ -251,7 +253,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 	}
 
 	// print opcode and its arguments
-	if ss.traceDebug {
+	if ss.traceDebug && ss.blockNum >= ss.traceDebugSuppress {
 		// print operation
 		fmt.Printf("opcode:%v (%v)", opText[op], EncodeOpcode(op, addrCl, keyCl, valueCl))
 
@@ -270,14 +272,14 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 	switch op {
 	case AddBalanceID:
 		value := rg.Int63n(AddBalanceRange)
-		if ss.traceDebug {
+		if ss.traceDebug && ss.blockNum >= ss.traceDebugSuppress {
 			fmt.Printf(" value: %v", value)
 		}
 		ss.updateBalanceLog(addrIdx, value)
 		db.AddBalance(addr, big.NewInt(value))
 
 	case BeginBlockID:
-		if ss.traceDebug {
+		if ss.traceDebug && ss.blockNum >= ss.traceDebugSuppress {
 			fmt.Printf(" id: %v", ss.blockNum)
 		}
 		db.BeginBlock(ss.blockNum)
@@ -285,13 +287,13 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		ss.suicided = []int64{}
 
 	case BeginEpochID:
-		if ss.traceDebug {
+		if ss.traceDebug && ss.blockNum >= ss.traceDebugSuppress {
 			fmt.Printf(" id: %v", ss.epochNum)
 		}
 		db.BeginEpoch(ss.epochNum)
 
 	case BeginTransactionID:
-		if ss.traceDebug {
+		if ss.traceDebug && ss.blockNum >= ss.traceDebugSuppress {
 			fmt.Printf(" id: %v", ss.txNum)
 		}
 		db.BeginTransaction(ss.txNum)
@@ -355,7 +357,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 			// rather than the uniform distribution.
 			snapshotIdx := snapshotNum - int(exponential.DiscreteSample(rg, ss.snapshotLambda, int64(snapshotNum))) - 1
 			snapshot := ss.snapshot[snapshotIdx]
-			if ss.traceDebug {
+			if ss.traceDebug && ss.blockNum >= ss.traceDebugSuppress {
 				fmt.Printf(" id: %v", snapshot)
 			}
 			db.RevertToSnapshot(snapshot)
@@ -367,7 +369,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 
 	case SetCodeID:
 		sz := rg.Intn(MaxCodeSize-1) + 1
-		if ss.traceDebug {
+		if ss.traceDebug && ss.blockNum >= ss.traceDebugSuppress {
 			fmt.Printf(" code-size: %v", sz)
 		}
 		code := make([]byte, sz)
@@ -386,7 +388,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 
 	case SnapshotID:
 		id := db.Snapshot()
-		if ss.traceDebug {
+		if ss.traceDebug && ss.blockNum >= ss.traceDebugSuppress {
 			fmt.Printf(" id: %v", id)
 		}
 		ss.snapshot = append(ss.snapshot, id)
@@ -397,7 +399,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 			// get a delta that does not exceed current balance
 			// in the current snapshot
 			value := rg.Int63n(balance)
-			if ss.traceDebug {
+			if ss.traceDebug && ss.blockNum >= ss.traceDebugSuppress {
 				fmt.Printf(" value: %v", value)
 			}
 			db.SubBalance(addr, big.NewInt(value))
@@ -413,7 +415,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 	default:
 		panic("invalid operation")
 	}
-	if ss.traceDebug {
+	if ss.traceDebug && ss.blockNum >= ss.traceDebugSuppress {
 		fmt.Println()
 	}
 }
