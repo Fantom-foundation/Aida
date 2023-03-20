@@ -218,6 +218,8 @@ func NewStochasticState(rg *rand.Rand, db state.StateDB, contracts *generator.In
 // prime StateDB accounts using account information
 func (ss *stochasticState) prime() {
 	log.Printf("Start priming...\n")
+	log.Printf("\tinitializing %v accounts\n", len(ss.accounts))
+	pt := utils.NewProgressTracker(len(ss.accounts))
 	db := ss.db
 	db.BeginEpoch(0)
 	db.BeginBlock(0)
@@ -228,7 +230,9 @@ func (ss *stochasticState) prime() {
 		if detail.balance > 0 {
 			db.AddBalance(addr, big.NewInt(detail.balance))
 		}
+		pt.PrintProgress()
 	}
+	log.Printf("Finalizing...\n")
 	db.Finalise(FinaliseFlag)
 	db.EndTransaction()
 	db.EndBlock()
