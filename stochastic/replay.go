@@ -91,7 +91,7 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, 
 	)
 
 	// setup state
-	ss := NewStochasticState(rg, db, contracts, keys, values, e.SnapshotLambda, cfg.Debug)
+	ss := NewStochasticState(rg, db, contracts, keys, values, e.SnapshotLambda)
 
 	// create accounts in StateDB
 	ss.prime()
@@ -116,8 +116,14 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, 
 		sec = time.Since(start).Seconds()
 		lastSec = time.Since(start).Seconds()
 	}
+	// if block after priming is greater or equal to debug block, enable debug.
+	if cfg.Debug && ss.blockNum >= cfg.DebugFrom {
+		ss.enableDebug()
+	}
 
 	block := 0
+	// inclusive range
+	log.Printf("Simulation block range: first %v, last %v\n", ss.blockNum, ss.blockNum+uint64(nBlocks-1))
 	for {
 
 		// decode opcode
@@ -135,6 +141,10 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, 
 			block++
 			if block >= nBlocks {
 				break
+			}
+			// if current block is greater or equal to debug block, enable debug.
+			if cfg.Debug && !ss.traceDebug && ss.blockNum >= cfg.DebugFrom {
+				ss.enableDebug()
 			}
 		}
 
@@ -185,7 +195,7 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, 
 }
 
 // NewStochasticState creates a new state for execution StateDB operations
-func NewStochasticState(rg *rand.Rand, db state.StateDB, contracts *generator.IndirectAccess, keys *generator.RandomAccess, values *generator.RandomAccess, snapshotLambda float64, traceDebug bool) stochasticState {
+func NewStochasticState(rg *rand.Rand, db state.StateDB, contracts *generator.IndirectAccess, keys *generator.RandomAccess, values *generator.RandomAccess, snapshotLambda float64) stochasticState {
 
 	// retrieve number of contracts
 	n := contracts.NumElem()
@@ -206,7 +216,7 @@ func NewStochasticState(rg *rand.Rand, db state.StateDB, contracts *generator.In
 		keys:           keys,
 		values:         values,
 		snapshotLambda: snapshotLambda,
-		traceDebug:     traceDebug,
+		traceDebug:     false,
 		balanceLog:     make(map[int64][]int64),
 		suicided:       []int64{},
 		blockNum:       1,
@@ -234,6 +244,11 @@ func (ss *stochasticState) prime() {
 	db.EndBlock()
 	db.EndEpoch()
 	log.Printf("End priming...\n")
+}
+
+// EnableDebug set traceDebug flag to true, and enable debug message when executing an operation
+func (ss *stochasticState) enableDebug() {
+	ss.traceDebug = true
 }
 
 // execute StateDB operations on a stochastic state.

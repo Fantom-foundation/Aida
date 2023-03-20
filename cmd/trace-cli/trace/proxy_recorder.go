@@ -18,16 +18,14 @@ type ProxyRecorder struct {
 	db     state.StateDB       // state db
 	dctx   *dictionary.Context // dictionary context for decoding information
 	output io.Writer           // write output
-	debug  bool
 }
 
 // NewProxyRecorder creates a new StateDB proxy.
-func NewProxyRecorder(db state.StateDB, dctx *dictionary.Context, output io.Writer, debug bool) *ProxyRecorder {
+func NewProxyRecorder(db state.StateDB, dctx *dictionary.Context, output io.Writer) *ProxyRecorder {
 	r := new(ProxyRecorder)
 	r.db = db
 	r.dctx = dctx
 	r.output = output
-	r.debug = debug
 	return r
 }
 

@@ -46,6 +46,7 @@ var TraceReplayCommand = cli.Command{
 		&substate.WorkersFlag,
 		&utils.TraceDirectoryFlag,
 		&utils.TraceDebugFlag,
+		&utils.DebugFromFlag,
 		&utils.UpdateDBDirFlag,
 		&utils.ValidateFlag,
 		&utils.ValidateWorldStateFlag,
@@ -133,6 +134,8 @@ func traceReplayTask(cfg *utils.Config) error {
 		sec        float64
 		lastSec    float64
 		firstBlock = true
+		lastBlock  uint64
+		debug      bool
 	)
 	if cfg.EnableProgress {
 		start = time.Now()
@@ -143,17 +146,17 @@ func traceReplayTask(cfg *utils.Config) error {
 	// A utility to run operations on the local context.
 	run := func(op operation.Operation) {
 		operation.Execute(op, db, dCtx)
-		if cfg.Debug {
+		if debug {
 			operation.Debug(dCtx, op)
 		}
 	}
 
-	var lastBlock uint64
 	// replay storage trace
 	for op := range opChannel {
+		var block uint64
 		if beginBlock, ok := op.(*operation.BeginBlock); ok {
-			block := beginBlock.BlockNumber
-
+			block = beginBlock.BlockNumber
+			debug = cfg.Debug && block >= cfg.DebugFrom
 			// The first Epoch begin and the final EpochEnd need to be artificially
 			// added since the range running on may not match epoch boundaries.
 			if firstBlock {
