@@ -10,9 +10,6 @@ import (
 	"github.com/Fantom-foundation/Aida/stochastic/statistics"
 )
 
-// numArgOps gives the number of operations with encoded argument classes
-const numArgOps = NumOps * statistics.NumClasses * statistics.NumClasses * statistics.NumClasses
-
 // EventRegistry counts events and counts transition for the Markov-Process.
 type EventRegistry struct {
 	// Frequency of argument-encoded operations
