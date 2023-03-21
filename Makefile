@@ -20,7 +20,17 @@ GOPROXY ?= "https://proxy.golang.org,direct"
 
 .PHONY: all clean help test
 
-all: aida-worldstate aida-updateset aida-dbmerger aida-trace aida-runarchive aida-runvm aida-stochastic aida-substate
+all: aida-api-replay aida-worldstate aida-updateset aida-dbmerger aida-trace aida-runarchive aida-runvm aida-stochastic aida-substate
+
+aida-api-replay:
+	@cd carmen/go/lib ; \
+	./build_libcarmen.sh ; \
+	cd ../../.. ; \
+	GOPROXY=$(GOPROXY) \
+	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/go-opera-fvm \
+	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
+	-o $(GO_BIN)/aida-apireplay \
+	./cmd/api-replay-cli
 
 aida-worldstate:
 	@go build \
@@ -48,6 +58,8 @@ aida-trace:
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-trace \
 	./cmd/trace-cli
+
+
 
 aida-runarchive:
 	@cd carmen/go/lib ; \
