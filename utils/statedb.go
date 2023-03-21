@@ -76,6 +76,42 @@ func makeStateDBVariant(directory, impl, variant, archiveVariant string, rootHas
 	return nil, fmt.Errorf("unknown DB implementation (--%v): %v", StateDbImplementationFlag.Name, impl)
 }
 
+type ProgressTracker struct {
+	step   int       // step counter
+	target int       // total number of steps
+	start  time.Time // start time
+	last   time.Time // last reported time
+	rate   float64   // priming rate
+}
+
+// NewProgressTracker creates a new progress tracer
+func NewProgressTracker(target int) *ProgressTracker {
+	now := time.Now()
+	return &ProgressTracker{
+		step:   0,
+		target: target,
+		start:  now,
+		last:   now,
+		rate:   0.0,
+	}
+}
+
+// PrintProgress reports priming progress
+func (pt *ProgressTracker) PrintProgress() {
+	const printFrequency = 100000 // report after x steps
+	pt.step++
+	if pt.step%printFrequency == 0 {
+		now := time.Now()
+		currentRate := printFrequency / now.Sub(pt.last).Seconds()
+		pt.rate = currentRate*0.1 + pt.rate*0.9
+		pt.last = now
+		progress := float32(pt.step) / float32(pt.target)
+		time := int(now.Sub(pt.start).Seconds())
+		eta := int(float64(pt.target-pt.step) / pt.rate)
+		log.Printf("\t\tLoading state ... %8.1f slots/s, %5.1f%%, time: %d:%02d, ETA: %d:%02d\n", currentRate, progress*100, time/60, time%60, eta/60, eta%60)
+	}
+}
+
 // PrimeStateDB primes database with accounts from the world state.
 func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config) {
 	load := db.StartBulkLoad()
@@ -86,34 +122,16 @@ func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config) {
 	}
 	log.Printf("\tLoading %d accounts with %d values ..\n", len(ws), numValues)
 
-	j := 0
-	start := time.Now()
-	last := start
-	rate := 0.0
-	progressTracker := func() {
-		const step = 100000
-		j++
-		if j%step == 0 {
-			now := time.Now()
-			currentRate := step / now.Sub(last).Seconds()
-			rate = currentRate*0.1 + rate*0.9
-			last = now
-			progress := float32(j) / float32(numValues)
-			time := int(now.Sub(start).Seconds())
-			eta := int(float64(numValues-j) / rate)
-			log.Printf("\t\tLoading state ... %8.1f slots/s, %5.1f%%, time: %d:%02d, ETA: %d:%02d\n", currentRate, progress*100, time/60, time%60, eta/60, eta%60)
-		}
-	}
-
+	pt := NewProgressTracker(numValues)
 	if cfg.PrimeRandom {
 		//if 0, commit once after priming all accounts
 		if cfg.PrimeThreshold == 0 {
 			cfg.PrimeThreshold = len(ws)
 		}
-		PrimeStateDBRandom(ws, load, cfg, progressTracker)
+		PrimeStateDBRandom(ws, load, cfg, pt)
 	} else {
 		for addr, account := range ws {
-			primeOneAccount(addr, account, load, progressTracker)
+			primeOneAccount(addr, account, load, pt)
 		}
 
 	}
@@ -124,21 +142,19 @@ func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config) {
 }
 
 // primeOneAccount initializes an account on stateDB with substate
-func primeOneAccount(addr common.Address, account *substate.SubstateAccount, db state.BulkLoad, afterLoad func()) {
+func primeOneAccount(addr common.Address, account *substate.SubstateAccount, db state.BulkLoad, pt *ProgressTracker) {
 	db.CreateAccount(addr)
 	db.SetBalance(addr, account.Balance)
 	db.SetNonce(addr, account.Nonce)
 	db.SetCode(addr, account.Code)
 	for key, value := range account.Storage {
 		db.SetState(addr, key, value)
-		if afterLoad != nil {
-			afterLoad()
-		}
+		pt.PrintProgress()
 	}
 }
 
 // PrimeStateDBRandom primes database with accounts from the world state in random order.
-func PrimeStateDBRandom(ws substate.SubstateAlloc, db state.BulkLoad, cfg *Config, afterLoad func()) {
+func PrimeStateDBRandom(ws substate.SubstateAlloc, db state.BulkLoad, cfg *Config, pt *ProgressTracker) {
 	contracts := make([]string, 0, len(ws))
 	for addr := range ws {
 		contracts = append(contracts, addr.Hex())
@@ -154,7 +170,7 @@ func PrimeStateDBRandom(ws substate.SubstateAlloc, db state.BulkLoad, cfg *Confi
 	for _, c := range contracts {
 		addr := common.HexToAddress(c)
 		account := ws[addr]
-		primeOneAccount(addr, account, db, afterLoad)
+		primeOneAccount(addr, account, db, pt)
 
 	}
 }
