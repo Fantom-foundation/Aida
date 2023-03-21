@@ -48,13 +48,13 @@ func GenerateUniformRegistry() *EventRegistry {
 			case EndTransactionID:
 				j1 := EncodeArgOp(BeginTransactionID, statistics.NoArgID, statistics.NoArgID, statistics.NoArgID)
 				j2 := EncodeArgOp(EndBlockID, statistics.NoArgID, statistics.NoArgID, statistics.NoArgID)
-				r.transitFreq[i][j1] = 1
-				r.transitFreq[i][j2] = TransactionsPerBlock - 1
+				r.transitFreq[i][j1] = TransactionsPerBlock - 1
+				r.transitFreq[i][j2] = 1
 			case EndBlockID:
 				j1 := EncodeArgOp(BeginBlockID, statistics.NoArgID, statistics.NoArgID, statistics.NoArgID)
 				j2 := EncodeArgOp(EndEpochID, statistics.NoArgID, statistics.NoArgID, statistics.NoArgID)
-				r.transitFreq[i][j1] = 1
-				r.transitFreq[i][j2] = BlocksPerEpoch - 1
+				r.transitFreq[i][j1] = BlocksPerEpoch - 1
+				r.transitFreq[i][j2] = 1
 			case EndEpochID:
 				j := EncodeArgOp(BeginEpochID, statistics.NoArgID, statistics.NoArgID, statistics.NoArgID)
 				r.transitFreq[i][j] = 1
