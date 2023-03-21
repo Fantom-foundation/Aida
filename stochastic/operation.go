@@ -39,6 +39,9 @@ const (
 	NumOps
 )
 
+// numArgOps gives the number of operations with encoded argument classes
+const numArgOps = NumOps * statistics.NumClasses * statistics.NumClasses * statistics.NumClasses
+
 // opText translates IDs to operation's text
 var opText = map[int]string{
 	AddBalanceID:        "AddBalance",
@@ -229,9 +232,6 @@ func decodeArgOp(argop int) (int, int, int, int) {
 
 	op := argop
 
-	if !checkArgOp(op, addr, key, value) {
-		log.Fatalf("DecodeArgOp: invalid operation/arguments")
-	}
 	return op, addr, key, value
 }
 
@@ -289,4 +289,32 @@ func DecodeOpcode(opc string) (int, int, int, int) {
 // OpMnemo retrieves the mnemonic code for an operation.
 func OpMnemo(op int) string {
 	return opMnemo[op]
+}
+
+// IsValidArgOp returns true if the encoding is valid.
+func IsValidArgOp(argop int) bool {
+	if argop < 0 || argop >= numArgOps {
+		return false
+	}
+	op, contract, key, value := decodeArgOp(argop)
+	switch opNumArgs[op] {
+	case 0:
+		return contract == statistics.NoArgID &&
+			key == statistics.NoArgID &&
+			value == statistics.NoArgID
+	case 1:
+		return contract != statistics.NoArgID &&
+			key == statistics.NoArgID &&
+			value == statistics.NoArgID
+	case 2:
+		return contract != statistics.NoArgID &&
+			key != statistics.NoArgID &&
+			value == statistics.NoArgID
+	case 3:
+		return contract != statistics.NoArgID &&
+			key != statistics.NoArgID &&
+			value != statistics.NoArgID
+	default:
+		return false
+	}
 }
