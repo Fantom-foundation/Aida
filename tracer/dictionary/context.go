@@ -7,9 +7,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-// InvalidContractIndex used to indicate that the previously used index is not valid.
-const InvalidContractIndex = math.MaxUint32
-
 // Context is a facade for encoding/decoding contract/storage addressses, byte-code, and snapshots.
 type Context struct {
 	prevContract common.Address      // previously used contract
@@ -64,7 +61,7 @@ func (ctx *Context) Write() {
 // Contract methods
 ////////////////////////////////////////////////////////////////
 
-// EncodeContract encodes a given contract address and returns a contract index.
+// EncodeContract encodes a given contract address and returns contract's address.
 func (ctx *Context) EncodeContract(contract common.Address) common.Address {
 	ctx.prevContract = contract
 	return contract
@@ -85,7 +82,7 @@ func (ctx *Context) PrevContract() common.Address {
 // Storage methods
 ////////////////////////////////////////////////////////////////
 
-// EndcodeStorage encodes a storage key and returns an index.
+// EncodeStorage encodes a storage key and returns an index and the key.
 func (ctx *Context) EncodeStorage(key common.Hash) (common.Hash, int) {
 	pos := ctx.storageCache.Place(key)
 	return key, pos

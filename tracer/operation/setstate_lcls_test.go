@@ -12,7 +12,7 @@ func initSetStateLcls(t *testing.T) (*dictionary.Context, *SetStateLcls, common.
 	value := getRandomAddress(t).Hash()
 
 	// create new operation
-	op := NewSetStateLcls(&value)
+	op := NewSetStateLcls(value)
 	if op == nil {
 		t.Fatalf("failed to create operation")
 	}
