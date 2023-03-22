@@ -4,18 +4,18 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initGetState(t *testing.T) (*dictionary.Context, *GetState, common.Address, common.Hash) {
+func initGetState(t *testing.T) (*context.Context, *GetState, common.Address, common.Hash) {
 	addr := getRandomAddress(t)
 	storage := getRandomAddress(t).Hash()
 
-	// create dictionary context
-	dict := dictionary.NewContext()
+	// create context context
+	dict := context.NewContext()
 	contract := dict.EncodeContract(addr)
-	sIdx, _ := dict.EncodeStorage(storage)
+	sIdx, _ := dict.EncodeKey(storage)
 
 	// create new operation
 	op := NewGetState(contract, sIdx)

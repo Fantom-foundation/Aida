@@ -9,7 +9,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
 // SetState data structure
@@ -43,9 +43,9 @@ func (op *SetState) Write(f io.Writer) error {
 }
 
 // Execute the set-state operation.
-func (op *SetState) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
+func (op *SetState) Execute(db state.StateDB, ctx *context.Context) time.Duration {
 	contract := ctx.DecodeContract(op.Contract)
-	storage := ctx.DecodeStorage(op.Key)
+	storage := ctx.DecodeKey(op.Key)
 	value := op.Value
 	start := time.Now()
 	db.SetState(contract, storage, value)
@@ -53,6 +53,6 @@ func (op *SetState) Execute(db state.StateDB, ctx *dictionary.Context) time.Dura
 }
 
 // Debug prints a debug message for the set-state operation.
-func (op *SetState) Debug(ctx *dictionary.Context) {
+func (op *SetState) Debug(ctx *context.Context) {
 	fmt.Print(op.Contract, op.Key, op.Value)
 }

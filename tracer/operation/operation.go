@@ -9,7 +9,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/state"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
 var stats *ProfileStats = new(ProfileStats)
@@ -147,8 +147,8 @@ func GetLabel(i byte) string {
 type Operation interface {
 	GetId() byte                                              // get operation identifier
 	Write(io.Writer) error                                    // write operation to a file
-	Execute(state.StateDB, *dictionary.Context) time.Duration // execute operation on a stateDB instance
-	Debug(*dictionary.Context)                                // print debug message for operation
+	Execute(state.StateDB, *context.Context) time.Duration // execute operation on a stateDB instance
+	Debug(*context.Context)                                // print debug message for operation
 }
 
 // Read an operation from file.
@@ -199,7 +199,7 @@ func Write(f io.Writer, op Operation) {
 }
 
 // Execute an operation and profile it.
-func Execute(op Operation, db state.StateDB, ctx *dictionary.Context) {
+func Execute(op Operation, db state.StateDB, ctx *context.Context) {
 	elapsed := op.Execute(db, ctx)
 	if EnableProfiling {
 		stats.Profile(op.GetId(), elapsed)
@@ -211,7 +211,7 @@ func PrintProfiling() {
 }
 
 // Debug prints debug information of an operation.
-func Debug(ctx *dictionary.Context, op Operation) {
+func Debug(ctx *context.Context, op Operation) {
 	fmt.Printf("\t%s: ", GetLabel(op.GetId()))
 	op.Debug(ctx)
 	fmt.Println()

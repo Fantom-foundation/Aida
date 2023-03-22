@@ -5,7 +5,7 @@ import (
 	"math/big"
 
 	"github.com/Fantom-foundation/Aida/state"
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
@@ -15,13 +15,13 @@ import (
 // ProxyRecorder data structure for capturing and recording
 // invoked StateDB operations.
 type ProxyRecorder struct {
-	db     state.StateDB       // state db
-	dctx   *dictionary.Context // dictionary context for decoding information
-	output io.Writer           // write output
+	db     state.StateDB    // state db
+	dctx   *context.Context // record/replay context for decoding information
+	output io.Writer        // write output
 }
 
 // NewProxyRecorder creates a new StateDB proxy.
-func NewProxyRecorder(db state.StateDB, dctx *dictionary.Context, output io.Writer) *ProxyRecorder {
+func NewProxyRecorder(db state.StateDB, dctx *context.Context, output io.Writer) *ProxyRecorder {
 	r := new(ProxyRecorder)
 	r.db = db
 	r.dctx = dctx
@@ -136,7 +136,7 @@ func (r *ProxyRecorder) GetRefund() uint64 {
 func (r *ProxyRecorder) GetCommittedState(addr common.Address, key common.Hash) common.Hash {
 	previousContract := r.dctx.PrevContract()
 	contract := r.dctx.EncodeContract(addr)
-	key, kPos := r.dctx.EncodeStorage(key)
+	key, kPos := r.dctx.EncodeKey(key)
 	if previousContract == contract && kPos == 0 {
 		r.write(operation.NewGetCommittedStateLcls())
 	} else {
@@ -150,7 +150,7 @@ func (r *ProxyRecorder) GetCommittedState(addr common.Address, key common.Hash) 
 func (r *ProxyRecorder) GetState(addr common.Address, key common.Hash) common.Hash {
 	previousContract := r.dctx.PrevContract()
 	contract := r.dctx.EncodeContract(addr)
-	key, kPos := r.dctx.EncodeStorage(key)
+	key, kPos := r.dctx.EncodeKey(key)
 	var op operation.Operation
 	if contract == previousContract {
 		if kPos == 0 {
@@ -172,7 +172,7 @@ func (r *ProxyRecorder) GetState(addr common.Address, key common.Hash) common.Ha
 func (r *ProxyRecorder) SetState(addr common.Address, key common.Hash, value common.Hash) {
 	previousContract := r.dctx.PrevContract()
 	contract := r.dctx.EncodeContract(addr)
-	key, kPos := r.dctx.EncodeStorage(key)
+	key, kPos := r.dctx.EncodeKey(key)
 	if contract == previousContract && kPos == 0 {
 		r.write(operation.NewSetStateLcls(value))
 	} else {

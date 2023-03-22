@@ -9,7 +9,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
 // Exist data structure
@@ -41,7 +41,7 @@ func (op *Exist) Write(f io.Writer) error {
 }
 
 // Execute the exist operation.
-func (op *Exist) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
+func (op *Exist) Execute(db state.StateDB, ctx *context.Context) time.Duration {
 	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
 	db.Exist(contract)
@@ -49,6 +49,6 @@ func (op *Exist) Execute(db state.StateDB, ctx *dictionary.Context) time.Duratio
 }
 
 // Debug prints a debug message for the exist operation.
-func (op *Exist) Debug(ctx *dictionary.Context) {
+func (op *Exist) Debug(ctx *context.Context) {
 	fmt.Print(ctx.DecodeContract(op.Contract))
 }

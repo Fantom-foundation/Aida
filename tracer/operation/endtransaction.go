@@ -7,7 +7,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/state"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
 // EndTransaction data structure
@@ -36,7 +36,7 @@ func (op *EndTransaction) Write(f io.Writer) error {
 }
 
 // Execute the end-transaction operation.
-func (op *EndTransaction) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
+func (op *EndTransaction) Execute(db state.StateDB, ctx *context.Context) time.Duration {
 	ctx.InitSnapshot()
 	start := time.Now()
 	db.EndTransaction()
@@ -44,5 +44,5 @@ func (op *EndTransaction) Execute(db state.StateDB, ctx *dictionary.Context) tim
 }
 
 // Debug prints a debug message for the end-transaction operation.
-func (op *EndTransaction) Debug(*dictionary.Context) {
+func (op *EndTransaction) Debug(*context.Context) {
 }

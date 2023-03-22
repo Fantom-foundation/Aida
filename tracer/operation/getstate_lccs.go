@@ -9,7 +9,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/state"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
 // The GetStateLccs operation is a GetState operation whose
@@ -50,17 +50,17 @@ func (op *GetStateLccs) Write(f io.Writer) error {
 }
 
 // Execute the get-state-lccs operation.
-func (op *GetStateLccs) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
+func (op *GetStateLccs) Execute(db state.StateDB, ctx *context.Context) time.Duration {
 	contract := ctx.PrevContract()
-	storage := ctx.DecodeStorageCache(int(op.StoragePosition))
+	storage := ctx.DecodeKeyCache(int(op.StoragePosition))
 	start := time.Now()
 	db.GetState(contract, storage)
 	return time.Since(start)
 }
 
 // Debug prints a debug message for the get-state-lccs operation.
-func (op *GetStateLccs) Debug(ctx *dictionary.Context) {
+func (op *GetStateLccs) Debug(ctx *context.Context) {
 	contract := ctx.PrevContract()
-	storage := ctx.ReadStorageCache(int(op.StoragePosition))
+	storage := ctx.ReadKeyCache(int(op.StoragePosition))
 	fmt.Print(contract, storage)
 }

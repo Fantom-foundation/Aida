@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
-func initSnapshot(t *testing.T) (*dictionary.Context, *Snapshot, int32) {
-	// create dictionary context
-	dict := dictionary.NewContext()
+func initSnapshot(t *testing.T) (*context.Context, *Snapshot, int32) {
+	// create context context
+	dict := context.NewContext()
 
 	var snapID int32 = 1
 	// create new operation

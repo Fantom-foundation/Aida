@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initGetStateLcls(t *testing.T) (*dictionary.Context, *GetStateLcls, common.Address, common.Hash) {
-	// create dictionary context
-	dict := dictionary.NewContext()
+func initGetStateLcls(t *testing.T) (*context.Context, *GetStateLcls, common.Address, common.Hash) {
+	// create context context
+	dict := context.NewContext()
 
 	// create new operation
 	op := NewGetStateLcls()
@@ -26,7 +26,7 @@ func initGetStateLcls(t *testing.T) (*dictionary.Context, *GetStateLcls, common.
 	dict.EncodeContract(addr)
 
 	storage := getRandomAddress(t).Hash()
-	dict.EncodeStorage(storage)
+	dict.EncodeKey(storage)
 
 	return dict, op, addr, storage
 }

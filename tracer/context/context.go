@@ -1,4 +1,4 @@
-package dictionary
+package context
 
 import (
 	"log"
@@ -10,16 +10,16 @@ import (
 // Context is a facade for encoding/decoding contract/storage addressses, byte-code, and snapshots.
 type Context struct {
 	prevContract common.Address      // previously used contract
-	storageCache *IndexCache         // storage address cache
-	code         *Dictionary[string] // bytecode dictionary
+	keyCache     *KeyCache           // key cache
+	code         *Dictionary[string] // bytecode context
 	snapshot     *SnapshotIndex      // snapshot translation table for replay
 }
 
-// NewContext creates a new dictionary context.
+// NewContext creates a new context context.
 func NewContext() *Context {
 	return &Context{
 		prevContract: common.Address{},
-		storageCache: NewIndexCache(),
+		keyCache:     NewKeyCache(),
 		code:         NewDictionary[string](),
 		snapshot:     NewSnapshotIndex(),
 	}
@@ -38,22 +38,22 @@ const (
 	CodeMagic = 4714
 )
 
-// ReadContext reads dictionaries from files and creates a new dictionary context.
+// ReadContext reads dictionaries from files and creates a new context context.
 func ReadContext() *Context {
 	ctx := NewContext()
-	err := ctx.code.ReadString(ContextDir+"code-dictionary.dat", CodeMagic)
+	err := ctx.code.ReadString(ContextDir+"code-context.dat", CodeMagic)
 	if err != nil {
-		log.Fatalf("Cannot read code dictionary. Error: %v", err)
+		log.Fatalf("Cannot read code context. Error: %v", err)
 	}
-	log.Printf("Read %v dictionary smart contracts from file.", ctx.code.Size())
+	log.Printf("Read %v context smart contracts from file.", ctx.code.Size())
 	return ctx
 }
 
-// Write dictionary context to files.
+// Write context context to files.
 func (ctx *Context) Write() {
-	err := ctx.code.WriteString(ContextDir+"code-dictionary.dat", CodeMagic)
+	err := ctx.code.WriteString(ContextDir+"code-context.dat", CodeMagic)
 	if err != nil {
-		log.Fatalf("Cannot write code dictionary. Error: %v", err)
+		log.Fatalf("Cannot write code context. Error: %v", err)
 	}
 }
 
@@ -82,30 +82,30 @@ func (ctx *Context) PrevContract() common.Address {
 // Storage methods
 ////////////////////////////////////////////////////////////////
 
-// EncodeStorage encodes a storage key and returns an index and the key.
-func (ctx *Context) EncodeStorage(key common.Hash) (common.Hash, int) {
-	pos := ctx.storageCache.Place(key)
+// EncodeKey encodes a storage key and returns an index and the key.
+func (ctx *Context) EncodeKey(key common.Hash) (common.Hash, int) {
+	pos := ctx.keyCache.Place(key)
 	return key, pos
 }
 
-// DecodeStorage decodes a storage address.
-func (ctx *Context) DecodeStorage(key common.Hash) common.Hash {
-	ctx.storageCache.Place(key)
+// DecodeKey decodes a storage address.
+func (ctx *Context) DecodeKey(key common.Hash) common.Hash {
+	ctx.keyCache.Place(key)
 	return key
 }
 
-// DecodeStorageCache reads from cache with updating index cache.
-func (ctx *Context) DecodeStorageCache(sPos int) common.Hash {
-	key, err := ctx.storageCache.Get(sPos)
+// DecodeKeyCache reads from cache with updating index cache.
+func (ctx *Context) DecodeKeyCache(sPos int) common.Hash {
+	key, err := ctx.keyCache.Get(sPos)
 	if err != nil {
 		log.Fatalf("Storage position could not be looked up. Error: %v", err)
 	}
-	return ctx.DecodeStorage(key)
+	return ctx.DecodeKey(key)
 }
 
-// ReadStorageCache reads from cache without updating index cache.
-func (ctx *Context) ReadStorageCache(sPos int) common.Hash {
-	key, err := ctx.storageCache.Get(sPos)
+// ReadKeyCache reads from cache without updating index cache.
+func (ctx *Context) ReadKeyCache(sPos int) common.Hash {
+	key, err := ctx.keyCache.Get(sPos)
 	if err != nil {
 		log.Fatalf("Storage position could not be found. Error: %v", err)
 	}

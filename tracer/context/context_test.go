@@ -1,4 +1,4 @@
-package dictionary
+package context
 
 import (
 	"os"
@@ -9,11 +9,11 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-// TestDictionaryContextWriteReadEmpty writes and reads an empty dictionary
+// TestDictionaryContextWriteReadEmpty writes and reads an empty context
 // context to a directory and validate file names.
 func TestDictionaryContextWriteReadEmpty(t *testing.T) {
-	ContextDir = "./test_dictionary_context/"
-	want := []string{"code-dictionary.dat"}
+	ContextDir = "./test_context_context/"
+	want := []string{"code-context.dat"}
 	have := []string{}
 
 	if err := os.Mkdir(ContextDir, 0700); err != nil {
@@ -39,7 +39,7 @@ func TestDictionaryContextWriteReadEmpty(t *testing.T) {
 	sort.Strings(want)
 	sort.Strings(have)
 	if !reflect.DeepEqual(want, have) {
-		t.Fatalf("Failed to write dictionary context files.\n\twant %v\n\thave %v", want, have)
+		t.Fatalf("Failed to write context context files.\n\twant %v\n\thave %v", want, have)
 	}
 	ctx2 := ReadContext()
 	if ctx2 == nil {
@@ -102,98 +102,98 @@ func TestDictionaryContextPrevContract(t *testing.T) {
 	}
 }
 
-// TestDictionaryContextEncodeStorage encodes a storage key and checks the returned index.
-func TestDictionaryContextEncodeStorage(t *testing.T) {
+// TestDictionaryContextEncodeKey encodes a storage key and checks the returned index.
+func TestDictionaryContextEncodeKey(t *testing.T) {
 	ctx := NewContext()
 	encodedKey := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
-	if _, idx := ctx.EncodeStorage(encodedKey); idx != -1 {
+	if _, idx := ctx.EncodeKey(encodedKey); idx != -1 {
 		t.Fatalf("Encoding storage key failed; position: %d", idx)
 	}
 }
 
-// TestDictionaryContextDecodeStorage encodes then decodes a storage key and compares
+// TestDictionaryContextDecodeKey encodes then decodes a storage key and compares
 // whether the storage keys are not matched.
-func TestDictionaryContextDecodeStorage(t *testing.T) {
+func TestDictionaryContextDecodeKey(t *testing.T) {
 	ctx := NewContext()
 	encodedKey := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
-	_, idx := ctx.EncodeStorage(encodedKey)
+	_, idx := ctx.EncodeKey(encodedKey)
 	if idx != -1 {
 		t.Fatalf("Encoding storage key failed; position: %d", idx)
 	}
-	decodedKey := ctx.DecodeStorage(encodedKey)
+	decodedKey := ctx.DecodeKey(encodedKey)
 	if encodedKey != decodedKey {
 		t.Fatalf("Decoding storage key failed")
 	}
 }
 
-// TestDictionaryContextReadStorageCache reads storage key from index-cache after
-// encoding/decoding new storage key. ReadStorageCache doesn't update top index.
-func TestDictionaryContextReadStorageCache(t *testing.T) {
+// TestDictionaryContextReadKeyCache reads storage key from index-cache after
+// encoding/decoding new storage key. ReadKeyCache doesn't update top index.
+func TestDictionaryContextReadKeyCache(t *testing.T) {
 	ctx := NewContext()
 	encodedKey1 := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
-	idx1, _ := ctx.EncodeStorage(encodedKey1)
+	idx1, _ := ctx.EncodeKey(encodedKey1)
 	encodedKey2 := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F274")
-	idx2, _ := ctx.EncodeStorage(encodedKey2)
+	idx2, _ := ctx.EncodeKey(encodedKey2)
 
-	cachedKey := ctx.ReadStorageCache(1)
+	cachedKey := ctx.ReadKeyCache(1)
 	if encodedKey1 != cachedKey {
 		t.Fatalf("Failed to read storage key (1) from index-cache")
 	}
 
-	cachedKey = ctx.ReadStorageCache(0)
+	cachedKey = ctx.ReadKeyCache(0)
 	if encodedKey2 != cachedKey {
 		t.Fatalf("Failed to read storage key (2) from index-cache")
 	}
 
-	decodedKey1 := ctx.DecodeStorage(idx1)
-	decodedKey2 := ctx.DecodeStorage(idx2)
+	decodedKey1 := ctx.DecodeKey(idx1)
+	decodedKey2 := ctx.DecodeKey(idx2)
 
-	cachedKey = ctx.ReadStorageCache(1)
+	cachedKey = ctx.ReadKeyCache(1)
 	if decodedKey1 != cachedKey {
 		t.Fatalf("Failed to read storage key (1) from index-cache")
 	}
 
-	cachedKey = ctx.ReadStorageCache(0)
+	cachedKey = ctx.ReadKeyCache(0)
 	if decodedKey2 != cachedKey {
 		t.Fatalf("Failed to read storage key (2) from index-cache")
 	}
 }
 
 // TestDictionaryContextLookup reads storage key from index-cache after
-// encoding/decoding new storage key. DecodeStorageCache updates top index.
-func TestDictionaryContextDecodeStorageCache(t *testing.T) {
+// encoding/decoding new storage key. DecodeKeyCache updates top index.
+func TestDictionaryContextDecodeKeyCache(t *testing.T) {
 	ctx := NewContext()
 	encodedKey1 := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
-	idx1, _ := ctx.EncodeStorage(encodedKey1)
+	idx1, _ := ctx.EncodeKey(encodedKey1)
 	encodedKey2 := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F274")
-	idx2, _ := ctx.EncodeStorage(encodedKey2)
+	idx2, _ := ctx.EncodeKey(encodedKey2)
 
-	cachedKey := ctx.DecodeStorageCache(1)
+	cachedKey := ctx.DecodeKeyCache(1)
 	if encodedKey1 != cachedKey {
 		t.Fatalf("Failed to lookup storage key (1) from index-cache")
 	}
 
-	cachedKey = ctx.DecodeStorageCache(1)
+	cachedKey = ctx.DecodeKeyCache(1)
 	if encodedKey2 != cachedKey {
 		t.Fatalf("Failed to lookup storage key (2) from index-cache")
 	}
 
-	decodedKey1 := ctx.DecodeStorage(idx1)
-	decodedKey2 := ctx.DecodeStorage(idx2)
+	decodedKey1 := ctx.DecodeKey(idx1)
+	decodedKey2 := ctx.DecodeKey(idx2)
 
-	cachedKey = ctx.DecodeStorageCache(1)
+	cachedKey = ctx.DecodeKeyCache(1)
 	if decodedKey1 != cachedKey {
 		t.Fatalf("Failed to lookup storage key (1) from index-cache")
 	}
 
-	cachedKey = ctx.DecodeStorageCache(1)
+	cachedKey = ctx.DecodeKeyCache(1)
 	if decodedKey2 != cachedKey {
 		t.Fatalf("Failed to lookup storage key (2) from index-cache")
 	}
 }
 
 // TestDictionaryContextSnapshot adds a new snapshot pair to the snapshot
-// dictionary, then gets the replayed snapshot id from the dictionary.
+// context, then gets the replayed snapshot id from the context.
 func TestDictionaryContextSnapshot(t *testing.T) {
 	ctx := NewContext()
 	recordedID := int32(39)
@@ -209,7 +209,7 @@ func TestDictionaryContextSnapshot(t *testing.T) {
 	}
 }
 
-// TestDictionaryContextEncodeCode encodes byte-code to code dictionary.
+// TestDictionaryContextEncodeCode encodes byte-code to code context.
 func TestDictionaryContextEncodeCode(t *testing.T) {
 	ctx := NewContext()
 	encodedCode := []byte{0x99, 0xe0, 0x5, 0xed, 0xce, 0xdf, 0xf5}

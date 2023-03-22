@@ -1,4 +1,4 @@
-package dictionary
+package context
 
 import (
 	"fmt"

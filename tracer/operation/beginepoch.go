@@ -8,7 +8,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/state"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
 // BeginEpoch data structure
@@ -39,13 +39,13 @@ func (op *BeginEpoch) Write(f io.Writer) error {
 }
 
 // Execute the begin-epoch operation.
-func (op *BeginEpoch) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
+func (op *BeginEpoch) Execute(db state.StateDB, ctx *context.Context) time.Duration {
 	start := time.Now()
 	db.BeginEpoch(op.EpochNumber)
 	return time.Since(start)
 }
 
 // Debug prints a debug message for the begin-epoch operation.
-func (op *BeginEpoch) Debug(ctx *dictionary.Context) {
+func (op *BeginEpoch) Debug(ctx *context.Context) {
 	fmt.Print(op.EpochNumber)
 }

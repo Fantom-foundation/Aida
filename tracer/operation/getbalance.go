@@ -9,7 +9,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
 // GetBalance data structure
@@ -41,7 +41,7 @@ func (op *GetBalance) Write(f io.Writer) error {
 }
 
 // Execute the get-balance operation.
-func (op *GetBalance) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
+func (op *GetBalance) Execute(db state.StateDB, ctx *context.Context) time.Duration {
 	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
 	db.GetBalance(contract)
@@ -49,6 +49,6 @@ func (op *GetBalance) Execute(db state.StateDB, ctx *dictionary.Context) time.Du
 }
 
 // Debug prints a debug message for the get-balance operation.
-func (op *GetBalance) Debug(ctx *dictionary.Context) {
+func (op *GetBalance) Debug(ctx *context.Context) {
 	fmt.Print(op.Contract)
 }

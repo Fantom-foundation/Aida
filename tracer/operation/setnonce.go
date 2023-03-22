@@ -9,7 +9,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
 // SetNonce data structure
@@ -42,7 +42,7 @@ func (op *SetNonce) Write(f io.Writer) error {
 }
 
 // Execute the set-nonce operation.
-func (op *SetNonce) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
+func (op *SetNonce) Execute(db state.StateDB, ctx *context.Context) time.Duration {
 	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
 	db.SetNonce(contract, op.Nonce)
@@ -50,6 +50,6 @@ func (op *SetNonce) Execute(db state.StateDB, ctx *dictionary.Context) time.Dura
 }
 
 // Debug prints a debug message for the set-nonce operation.
-func (op *SetNonce) Debug(ctx *dictionary.Context) {
+func (op *SetNonce) Debug(ctx *context.Context) {
 	fmt.Print(op.Contract, op.Nonce)
 }

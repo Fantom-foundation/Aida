@@ -8,7 +8,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/state"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
 // Finalise data structure
@@ -40,13 +40,13 @@ func (op *Finalise) Write(f io.Writer) error {
 }
 
 // Execute the finalise operation.
-func (op *Finalise) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
+func (op *Finalise) Execute(db state.StateDB, ctx *context.Context) time.Duration {
 	start := time.Now()
 	db.Finalise(op.DeleteEmptyObjects)
 	return time.Since(start)
 }
 
 // Debug prints a debug message for the finalise operation.
-func (op *Finalise) Debug(ctx *dictionary.Context) {
+func (op *Finalise) Debug(ctx *context.Context) {
 	fmt.Print(op.DeleteEmptyObjects)
 }

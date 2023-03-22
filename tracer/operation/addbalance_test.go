@@ -7,16 +7,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initAddBalance(t *testing.T) (*dictionary.Context, *AddBalance, common.Address, *big.Int) {
+func initAddBalance(t *testing.T) (*context.Context, *AddBalance, common.Address, *big.Int) {
 	rand.Seed(time.Now().UnixNano())
 	addr := getRandomAddress(t)
 	value := big.NewInt(rand.Int63n(100000))
-	// create dictionary context
-	dict := dictionary.NewContext()
+	// create context context
+	dict := context.NewContext()
 	contract := dict.EncodeContract(addr)
 
 	// create new operation

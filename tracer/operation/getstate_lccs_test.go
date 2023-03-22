@@ -6,16 +6,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initGetStateLccs(t *testing.T) (*dictionary.Context, *GetStateLccs, common.Address, common.Hash, common.Hash) {
+func initGetStateLccs(t *testing.T) (*context.Context, *GetStateLccs, common.Address, common.Hash, common.Hash) {
 	rand.Seed(time.Now().UnixNano())
 	pos := 0
 
-	// create dictionary context
-	dict := dictionary.NewContext()
+	// create context context
+	dict := context.NewContext()
 
 	// create new operation
 	op := NewGetStateLccs(pos)
@@ -31,7 +31,7 @@ func initGetStateLccs(t *testing.T) (*dictionary.Context, *GetStateLccs, common.
 	dict.EncodeContract(addr)
 
 	storage := getRandomAddress(t).Hash()
-	dict.EncodeStorage(storage)
+	dict.EncodeKey(storage)
 
 	storage2 := getRandomAddress(t).Hash()
 
@@ -59,7 +59,7 @@ func TestGetStateLccsExecute(t *testing.T) {
 	mock := NewMockStateDB()
 	op.Execute(mock, dict)
 
-	dict.EncodeStorage(storage2)
+	dict.EncodeKey(storage2)
 
 	op.Execute(mock, dict)
 

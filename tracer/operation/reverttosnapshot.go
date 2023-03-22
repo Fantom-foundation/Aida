@@ -8,7 +8,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/state"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
 // RevertToSnapshot data structure
@@ -40,7 +40,7 @@ func (op *RevertToSnapshot) Write(f io.Writer) error {
 }
 
 // Execute the revert-to-snapshot operation.
-func (op *RevertToSnapshot) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
+func (op *RevertToSnapshot) Execute(db state.StateDB, ctx *context.Context) time.Duration {
 	id := ctx.GetSnapshot(op.SnapshotID)
 	start := time.Now()
 	db.RevertToSnapshot(int(id))
@@ -48,6 +48,6 @@ func (op *RevertToSnapshot) Execute(db state.StateDB, ctx *dictionary.Context) t
 }
 
 // Debug prints a debug message for the revert-to-snapshot operation.
-func (op *RevertToSnapshot) Debug(ctx *dictionary.Context) {
+func (op *RevertToSnapshot) Debug(ctx *context.Context) {
 	fmt.Print(op.SnapshotID)
 }
