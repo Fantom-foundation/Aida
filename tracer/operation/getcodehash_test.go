@@ -12,10 +12,10 @@ func initGetCodeHash(t *testing.T) (*dictionary.Context, *GetCodeHash, common.Ad
 	addr := getRandomAddress(t)
 	// create dictionary context
 	dict := dictionary.NewContext()
-	cIdx := dict.EncodeContract(addr)
+	contract := dict.EncodeContract(addr)
 
 	// create new operation
-	op := NewGetCodeHash(cIdx)
+	op := NewGetCodeHash(contract)
 	if op == nil {
 		t.Fatalf("failed to create operation")
 	}

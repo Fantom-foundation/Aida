@@ -7,13 +7,14 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 )
 
 // GetCodeHash data structure
 type GetCodeHash struct {
-	ContractIndex uint32 // encoded contract address
+	Contract common.Address
 }
 
 // GetId returns the get-code-hash operation identifier.
@@ -22,8 +23,8 @@ func (op *GetCodeHash) GetId() byte {
 }
 
 // NewGetCodeHash creates a new get-code-hash operation.
-func NewGetCodeHash(cIdx uint32) *GetCodeHash {
-	return &GetCodeHash{ContractIndex: cIdx}
+func NewGetCodeHash(contract common.Address) *GetCodeHash {
+	return &GetCodeHash{Contract: contract}
 }
 
 // ReadGetHash reads a get-code-hash operation from a file.
@@ -41,7 +42,7 @@ func (op *GetCodeHash) Write(f io.Writer) error {
 
 // Execute the get-code-hash operation.
 func (op *GetCodeHash) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
-	contract := ctx.DecodeContract(op.ContractIndex)
+	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
 	db.GetCodeHash(contract)
 	return time.Since(start)
@@ -49,5 +50,5 @@ func (op *GetCodeHash) Execute(db state.StateDB, ctx *dictionary.Context) time.D
 
 // Debug prints a debug message for the get-code-hash operation.
 func (op *GetCodeHash) Debug(ctx *dictionary.Context) {
-	fmt.Print(ctx.DecodeContract(op.ContractIndex))
+	fmt.Print(op.Contract)
 }

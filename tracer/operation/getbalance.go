@@ -7,13 +7,14 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 )
 
 // GetBalance data structure
 type GetBalance struct {
-	ContractIndex uint32
+	Contract common.Address
 }
 
 // GetId returns the get-balance operation identifier.
@@ -22,8 +23,8 @@ func (op *GetBalance) GetId() byte {
 }
 
 // NewGetBalance creates a new get-balance operation.
-func NewGetBalance(cIdx uint32) *GetBalance {
-	return &GetBalance{ContractIndex: cIdx}
+func NewGetBalance(contract common.Address) *GetBalance {
+	return &GetBalance{Contract: contract}
 }
 
 // ReadGetBalance reads a get-balance operation from a file.
@@ -41,7 +42,7 @@ func (op *GetBalance) Write(f io.Writer) error {
 
 // Execute the get-balance operation.
 func (op *GetBalance) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
-	contract := ctx.DecodeContract(op.ContractIndex)
+	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
 	db.GetBalance(contract)
 	return time.Since(start)
@@ -49,5 +50,5 @@ func (op *GetBalance) Execute(db state.StateDB, ctx *dictionary.Context) time.Du
 
 // Debug prints a debug message for the get-balance operation.
 func (op *GetBalance) Debug(ctx *dictionary.Context) {
-	fmt.Print(ctx.DecodeContract(op.ContractIndex))
+	fmt.Print(op.Contract)
 }

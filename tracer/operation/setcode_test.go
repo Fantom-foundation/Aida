@@ -18,11 +18,11 @@ func initSetCode(t *testing.T) (*dictionary.Context, *SetCode, common.Address, [
 
 	// create dictionary context
 	dict := dictionary.NewContext()
-	cIdx := dict.EncodeContract(addr)
-	bcIdx := dict.EncodeCode(code)
+	contract := dict.EncodeContract(addr)
+	bcontract := dict.EncodeCode(code)
 
 	// create new operation
-	op := NewSetCode(cIdx, bcIdx)
+	op := NewSetCode(contract, bcontract)
 	if op == nil {
 		t.Fatalf("failed to create operation")
 	}

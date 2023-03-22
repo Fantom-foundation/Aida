@@ -14,11 +14,11 @@ func initGetCommittedState(t *testing.T) (*dictionary.Context, *GetCommittedStat
 
 	// create dictionary context
 	dict := dictionary.NewContext()
-	cIdx := dict.EncodeContract(addr)
+	contract := dict.EncodeContract(addr)
 	sIdx, _ := dict.EncodeStorage(storage)
 
 	// create new operation
-	op := NewGetCommittedState(cIdx, sIdx)
+	op := NewGetCommittedState(contract, sIdx)
 	if op == nil {
 		t.Fatalf("failed to create operation")
 	}

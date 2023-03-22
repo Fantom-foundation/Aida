@@ -27,8 +27,8 @@ func (op *SetStateLcls) GetId() byte {
 }
 
 // SetStateLcls creates a new set-state-lcls operation.
-func NewSetStateLcls(v *common.Hash) *SetStateLcls {
-	return &SetStateLcls{Value: *v}
+func NewSetStateLcls(value common.Hash) *SetStateLcls {
+	return &SetStateLcls{Value: value}
 }
 
 // ReadSetStateLcls reads a set-state-lcls operation from file.
@@ -57,6 +57,5 @@ func (op *SetStateLcls) Execute(db state.StateDB, ctx *dictionary.Context) time.
 func (op *SetStateLcls) Debug(ctx *dictionary.Context) {
 	contract := ctx.PrevContract()
 	storage := ctx.ReadStorageCache(0)
-	value := op.Value
-	fmt.Print(contract, storage, value)
+	fmt.Print(contract, storage, op.Value)
 }

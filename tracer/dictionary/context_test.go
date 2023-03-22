@@ -1,7 +1,6 @@
 package dictionary
 
 import (
-	"io/ioutil"
 	"os"
 	"reflect"
 	"sort"
@@ -14,17 +13,23 @@ import (
 // context to a directory and validate file names.
 func TestDictionaryContextWriteReadEmpty(t *testing.T) {
 	ContextDir = "./test_dictionary_context/"
-	want := []string{"code-dictionary.dat", "contract-dictionary.dat",
-		"storage-dictionary.dat"}
+	want := []string{"code-dictionary.dat"}
 	have := []string{}
 
 	if err := os.Mkdir(ContextDir, 0700); err != nil {
 		t.Fatalf("Failed to create test directory")
 	}
-	defer os.RemoveAll(ContextDir)
+
+	defer func(path string) {
+		err := os.RemoveAll(path)
+		if err != nil {
+			t.Fatalf("Failed to remove test directory: %v", err)
+		}
+	}(ContextDir)
+
 	ctx1 := NewContext()
 	ctx1.Write()
-	files, err := ioutil.ReadDir(ContextDir)
+	files, err := os.ReadDir(ContextDir)
 	if err != nil {
 		t.Fatalf("Dictionary context directory not found. %v", err)
 	}
@@ -46,7 +51,7 @@ func TestDictionaryContextWriteReadEmpty(t *testing.T) {
 func TestDictionaryContextEncodeContract(t *testing.T) {
 	ctx := NewContext()
 	encodedAddr := common.HexToAddress("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
-	if idx := ctx.EncodeContract(encodedAddr); idx != 0 {
+	if addr := ctx.EncodeContract(encodedAddr); addr != encodedAddr {
 		t.Fatalf("Encoding contract failed")
 	}
 }
@@ -56,11 +61,10 @@ func TestDictionaryContextEncodeContract(t *testing.T) {
 func TestDictionaryContextDecodeContract(t *testing.T) {
 	ctx := NewContext()
 	encodedAddr := common.HexToAddress("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
-	idx := ctx.EncodeContract(encodedAddr)
-	if idx != 0 {
+	if addr := ctx.EncodeContract(encodedAddr); addr != encodedAddr {
 		t.Fatalf("Encoding contract failed")
 	}
-	decodedAddr := ctx.DecodeContract(idx)
+	decodedAddr := ctx.DecodeContract(encodedAddr)
 	if encodedAddr != decodedAddr {
 		t.Fatalf("Decoding contract failed")
 	}
@@ -102,8 +106,8 @@ func TestDictionaryContextPrevContract(t *testing.T) {
 func TestDictionaryContextEncodeStorage(t *testing.T) {
 	ctx := NewContext()
 	encodedKey := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
-	if idx, _ := ctx.EncodeStorage(encodedKey); idx != 0 {
-		t.Fatalf("Encoding storage key failed")
+	if _, idx := ctx.EncodeStorage(encodedKey); idx != -1 {
+		t.Fatalf("Encoding storage key failed; position: %d", idx)
 	}
 }
 
@@ -112,11 +116,11 @@ func TestDictionaryContextEncodeStorage(t *testing.T) {
 func TestDictionaryContextDecodeStorage(t *testing.T) {
 	ctx := NewContext()
 	encodedKey := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
-	idx, _ := ctx.EncodeStorage(encodedKey)
-	if idx != 0 {
-		t.Fatalf("Encoding storage key failed")
+	_, idx := ctx.EncodeStorage(encodedKey)
+	if idx != -1 {
+		t.Fatalf("Encoding storage key failed; position: %d", idx)
 	}
-	decodedKey := ctx.DecodeStorage(idx)
+	decodedKey := ctx.DecodeStorage(encodedKey)
 	if encodedKey != decodedKey {
 		t.Fatalf("Decoding storage key failed")
 	}

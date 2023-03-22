@@ -14,9 +14,9 @@ import (
 
 // SetState data structure
 type SetState struct {
-	ContractIndex uint32      // encoded contract address
-	StorageIndex  uint32      // encoded storage address
-	Value         common.Hash // encoded storage value
+	Contract common.Address // encoded contract address
+	Key      common.Hash    // encoded storage address
+	Value    common.Hash    // encoded storage value
 }
 
 // GetId returns the set-state identifier.
@@ -25,8 +25,8 @@ func (op *SetState) GetId() byte {
 }
 
 // NewSetState creates a new set-state operation.
-func NewSetState(cIdx uint32, sIdx uint32, v *common.Hash) *SetState {
-	return &SetState{ContractIndex: cIdx, StorageIndex: sIdx, Value: *v}
+func NewSetState(contract common.Address, key common.Hash, value common.Hash) *SetState {
+	return &SetState{Contract: contract, Key: key, Value: value}
 }
 
 // ReadSetState reads a set-state operation from file.
@@ -44,8 +44,8 @@ func (op *SetState) Write(f io.Writer) error {
 
 // Execute the set-state operation.
 func (op *SetState) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
-	contract := ctx.DecodeContract(op.ContractIndex)
-	storage := ctx.DecodeStorage(op.StorageIndex)
+	contract := ctx.DecodeContract(op.Contract)
+	storage := ctx.DecodeStorage(op.Key)
 	value := op.Value
 	start := time.Now()
 	db.SetState(contract, storage, value)
@@ -54,5 +54,5 @@ func (op *SetState) Execute(db state.StateDB, ctx *dictionary.Context) time.Dura
 
 // Debug prints a debug message for the set-state operation.
 func (op *SetState) Debug(ctx *dictionary.Context) {
-	fmt.Print(ctx.DecodeContract(op.ContractIndex), ctx.DecodeStorage(op.StorageIndex), op.Value)
+	fmt.Print(op.Contract, op.Key, op.Value)
 }

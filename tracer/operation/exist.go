@@ -7,13 +7,14 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 )
 
 // Exist data structure
 type Exist struct {
-	ContractIndex uint32 // encoded contract address
+	Contract common.Address
 }
 
 // GetId returns the exist operation identifier.
@@ -22,8 +23,8 @@ func (op *Exist) GetId() byte {
 }
 
 // NewExist creates a new exist operation.
-func NewExist(cIdx uint32) *Exist {
-	return &Exist{ContractIndex: cIdx}
+func NewExist(contract common.Address) *Exist {
+	return &Exist{Contract: contract}
 }
 
 // ReadExist reads an exist operation from a file.
@@ -41,7 +42,7 @@ func (op *Exist) Write(f io.Writer) error {
 
 // Execute the exist operation.
 func (op *Exist) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
-	contract := ctx.DecodeContract(op.ContractIndex)
+	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
 	db.Exist(contract)
 	return time.Since(start)
@@ -49,5 +50,5 @@ func (op *Exist) Execute(db state.StateDB, ctx *dictionary.Context) time.Duratio
 
 // Debug prints a debug message for the exist operation.
 func (op *Exist) Debug(ctx *dictionary.Context) {
-	fmt.Print(ctx.DecodeContract(op.ContractIndex))
+	fmt.Print(ctx.DecodeContract(op.Contract))
 }

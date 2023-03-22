@@ -7,13 +7,14 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 )
 
 // GetCode data structure
 type GetCode struct {
-	ContractIndex uint32 // encoded contract address
+	Contract common.Address
 }
 
 // GetId returns the get-code operation identifier.
@@ -22,8 +23,8 @@ func (op *GetCode) GetId() byte {
 }
 
 // NewGetCode creates a new get-code operation.
-func NewGetCode(cIdx uint32) *GetCode {
-	return &GetCode{ContractIndex: cIdx}
+func NewGetCode(contract common.Address) *GetCode {
+	return &GetCode{Contract: contract}
 }
 
 // ReadGetCode reads a get-code operation from a file.
@@ -41,7 +42,7 @@ func (op *GetCode) Write(f io.Writer) error {
 
 // Execute the get-code operation.
 func (op *GetCode) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
-	contract := ctx.DecodeContract(op.ContractIndex)
+	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
 	db.GetCode(contract)
 	return time.Since(start)
@@ -49,5 +50,5 @@ func (op *GetCode) Execute(db state.StateDB, ctx *dictionary.Context) time.Durat
 
 // Debug prints a debug message for the get-code operation.
 func (op *GetCode) Debug(ctx *dictionary.Context) {
-	fmt.Print(ctx.DecodeContract(op.ContractIndex))
+	fmt.Print(op.Contract)
 }

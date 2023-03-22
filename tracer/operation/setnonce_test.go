@@ -17,10 +17,10 @@ func initSetNonce(t *testing.T) (*dictionary.Context, *SetNonce, common.Address,
 
 	// create dictionary context
 	dict := dictionary.NewContext()
-	cIdx := dict.EncodeContract(addr)
+	contract := dict.EncodeContract(addr)
 
 	// create new operation
-	op := NewSetNonce(cIdx, nonce)
+	op := NewSetNonce(contract, nonce)
 	if op == nil {
 		t.Fatalf("failed to create operation")
 	}

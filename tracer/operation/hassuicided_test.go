@@ -12,10 +12,10 @@ func initHasSuicided(t *testing.T) (*dictionary.Context, *HasSuicided, common.Ad
 	addr := getRandomAddress(t)
 	// create dictionary context
 	dict := dictionary.NewContext()
-	cIdx := dict.EncodeContract(addr)
+	contract := dict.EncodeContract(addr)
 
 	// create new operation
-	op := NewHasSuicided(cIdx)
+	op := NewHasSuicided(contract)
 	if op == nil {
 		t.Fatalf("failed to create operation")
 	}

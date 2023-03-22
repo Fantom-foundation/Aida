@@ -12,10 +12,10 @@ func initGetCodeSize(t *testing.T) (*dictionary.Context, *GetCodeSize, common.Ad
 	addr := getRandomAddress(t)
 	// create dictionary context
 	dict := dictionary.NewContext()
-	cIdx := dict.EncodeContract(addr)
+	contract := dict.EncodeContract(addr)
 
 	// create new operation
-	op := NewGetCodeSize(cIdx)
+	op := NewGetCodeSize(contract)
 	if op == nil {
 		t.Fatalf("failed to create operation")
 	}

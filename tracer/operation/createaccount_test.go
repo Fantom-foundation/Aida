@@ -12,10 +12,10 @@ func initCreateAccount(t *testing.T) (*dictionary.Context, *CreateAccount, commo
 	addr := getRandomAddress(t)
 	// create dictionary context
 	dict := dictionary.NewContext()
-	cIdx := dict.EncodeContract(addr)
+	contract := dict.EncodeContract(addr)
 
 	// create new operation
-	op := NewCreateAccount(cIdx)
+	op := NewCreateAccount(contract)
 	if op == nil {
 		t.Fatalf("failed to create operation")
 	}

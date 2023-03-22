@@ -12,10 +12,10 @@ func initGetNonce(t *testing.T) (*dictionary.Context, *GetNonce, common.Address)
 	addr := getRandomAddress(t)
 	// create dictionary context
 	dict := dictionary.NewContext()
-	cIdx := dict.EncodeContract(addr)
+	contract := dict.EncodeContract(addr)
 
 	// create new operation
-	op := NewGetNonce(cIdx)
+	op := NewGetNonce(contract)
 	if op == nil {
 		t.Fatalf("failed to create operation")
 	}

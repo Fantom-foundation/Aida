@@ -7,13 +7,14 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 )
 
 // Suicide data structure
 type Suicide struct {
-	ContractIndex uint32 // encoded contract address
+	Contract common.Address
 }
 
 // GetId returns the suicide operation identifier.
@@ -22,8 +23,8 @@ func (op *Suicide) GetId() byte {
 }
 
 // NewSuicide creates a new suicide operation.
-func NewSuicide(cIdx uint32) *Suicide {
-	return &Suicide{ContractIndex: cIdx}
+func NewSuicide(contract common.Address) *Suicide {
+	return &Suicide{Contract: contract}
 }
 
 // ReadSuicide reads a suicide operation from a file.
@@ -41,7 +42,7 @@ func (op *Suicide) Write(f io.Writer) error {
 
 // Execute the suicide operation.
 func (op *Suicide) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
-	contract := ctx.DecodeContract(op.ContractIndex)
+	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
 	db.Suicide(contract)
 	return time.Since(start)
@@ -49,5 +50,5 @@ func (op *Suicide) Execute(db state.StateDB, ctx *dictionary.Context) time.Durat
 
 // Debug prints a debug message for the suicide operation.
 func (op *Suicide) Debug(ctx *dictionary.Context) {
-	fmt.Print(ctx.DecodeContract(op.ContractIndex))
+	fmt.Print(ctx.DecodeContract(op.Contract))
 }

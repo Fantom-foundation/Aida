@@ -12,10 +12,10 @@ func initExist(t *testing.T) (*dictionary.Context, *Exist, common.Address) {
 	addr := getRandomAddress(t)
 	// create dictionary context
 	dict := dictionary.NewContext()
-	cIdx := dict.EncodeContract(addr)
+	contract := dict.EncodeContract(addr)
 
 	// create new operation
-	op := NewExist(cIdx)
+	op := NewExist(contract)
 	if op == nil {
 		t.Fatalf("failed to create operation")
 	}

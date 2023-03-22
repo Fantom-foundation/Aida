@@ -7,14 +7,15 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/Fantom-foundation/Aida/tracer/dictionary"
 )
 
 // GetState data structure
 type GetState struct {
-	ContractIndex uint32 // encoded contract address
-	StorageIndex  uint32 // encoded storage address
+	Contract common.Address
+	Key      common.Hash
 }
 
 // GetId returns the get-state operation identifier.
@@ -23,8 +24,8 @@ func (op *GetState) GetId() byte {
 }
 
 // NewGetState creates a new get-state operation.
-func NewGetState(cIdx uint32, sIdx uint32) *GetState {
-	return &GetState{ContractIndex: cIdx, StorageIndex: sIdx}
+func NewGetState(contract common.Address, key common.Hash) *GetState {
+	return &GetState{Contract: contract, Key: key}
 }
 
 // ReadGetState reads a get-state operation from a file.
@@ -42,8 +43,8 @@ func (op *GetState) Write(f io.Writer) error {
 
 // Execute the get-state operation.
 func (op *GetState) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
-	contract := ctx.DecodeContract(op.ContractIndex)
-	storage := ctx.DecodeStorage(op.StorageIndex)
+	contract := ctx.DecodeContract(op.Contract)
+	storage := ctx.DecodeStorage(op.Key)
 	start := time.Now()
 	db.GetState(contract, storage)
 	return time.Since(start)
@@ -51,5 +52,5 @@ func (op *GetState) Execute(db state.StateDB, ctx *dictionary.Context) time.Dura
 
 // Debug prints a debug message for the get-state operation.
 func (op *GetState) Debug(ctx *dictionary.Context) {
-	fmt.Print(ctx.DecodeContract(op.ContractIndex), ctx.DecodeStorage(op.StorageIndex))
+	fmt.Print(op.Contract, op.Key)
 }
