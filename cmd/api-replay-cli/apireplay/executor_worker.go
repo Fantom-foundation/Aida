@@ -3,13 +3,14 @@ package apireplay
 import (
 	"context"
 	"encoding/json"
+	"math/big"
+	"sync"
+
 	"github.com/Fantom-foundation/Aida/iterator"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/ethereum/go-ethereum/common"
-	"math/big"
-	"sync"
 )
 
 // workerInput represents data needed for executing request into StateDB

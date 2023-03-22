@@ -2,14 +2,15 @@ package apireplay
 
 import (
 	"encoding/json"
+	"math/big"
+	"strings"
+	"sync"
+
 	"github.com/Fantom-foundation/Aida/iterator"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/op/go-logging"
-	"math/big"
-	"strings"
-	"sync"
 )
 
 // RecordedData represents data recorded on API server. This is sent to Comparator and compared with StateDBData
@@ -75,10 +76,10 @@ func (e *ReplayExecutor) initWorkers(workers int) {
 func (e *ReplayExecutor) Stop() {
 	select {
 	case <-e.closed:
-		e.workersWg.Wait()
 		return
 	default:
 		close(e.closed)
+		e.workersWg.Wait()
 	}
 }
 
@@ -137,6 +138,9 @@ func (e *ReplayExecutor) createWorkerInput(req *iterator.RequestWithResponse) *w
 
 	// request
 	wInput.req = req.Query
+
+	// todo remove
+	recordedBlockID = 8999005
 
 	if !e.decodeBlockNumber(req.Query.Params, recordedBlockID, &wInput.blockID) {
 		e.log.Errorf("cannot decode block number\nParams: %v", req.Query.Params[1])
