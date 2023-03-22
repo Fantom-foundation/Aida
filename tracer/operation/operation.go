@@ -145,8 +145,8 @@ func GetLabel(i byte) string {
 
 // Operation interface.
 type Operation interface {
-	GetId() byte                                              // get operation identifier
-	Write(io.Writer) error                                    // write operation to a file
+	GetId() byte                                           // get operation identifier
+	Write(io.Writer) error                                 // write operation to a file
 	Execute(state.StateDB, *context.Context) time.Duration // execute operation on a stateDB instance
 	Debug(*context.Context)                                // print debug message for operation
 }
