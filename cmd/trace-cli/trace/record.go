@@ -187,9 +187,6 @@ func traceRecordAction(ctx *cli.Context) error {
 		fmt.Printf("trace record: Total elapsed time: %.3f s, processed %v blocks\n", sec, cfg.Last-cfg.First+1)
 	}
 
-	// write dictionaries and indexes
-	dCtx.Write()
-
 	// wait for writer thread
 	runtime.Gosched()
 

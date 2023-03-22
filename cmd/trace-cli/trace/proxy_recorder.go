@@ -103,8 +103,7 @@ func (r *ProxyRecorder) GetCode(addr common.Address) []byte {
 // Setcode sets the EVM bytecode of a contract.
 func (r *ProxyRecorder) SetCode(addr common.Address, code []byte) {
 	contract := r.dctx.EncodeContract(addr)
-	bcontract := r.dctx.EncodeCode(code)
-	r.write(operation.NewSetCode(contract, bcontract))
+	r.write(operation.NewSetCode(contract, code))
 	r.db.SetCode(addr, code)
 }
 

@@ -124,9 +124,8 @@ func traceReplayTask(cfg *utils.Config) error {
 
 	log.Printf("Replay storage operations on StateDB database")
 
-	// load dictionaries & indexes
-	log.Printf("Load dictionaries")
-	dCtx := context.ReadContext()
+	// load context
+	dCtx := context.NewContext()
 
 	// progress message setup
 	var (

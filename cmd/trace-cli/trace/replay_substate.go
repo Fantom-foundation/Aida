@@ -51,8 +51,8 @@ last block of the inclusive range of blocks to replay storage traces.`,
 
 // traceReplaySubstateTask simulates storage operations from storage traces on stateDB.
 func traceReplaySubstateTask(cfg *utils.Config) error {
-	// load dictionaries & indexes
-	dCtx := context.ReadContext()
+	// load context
+	dCtx := context.NewContext()
 
 	// iterate substate (for in-membory state)
 	stateIter := substate.NewSubstateIterator(cfg.First, cfg.Workers)

@@ -2,17 +2,15 @@ package context
 
 import (
 	"log"
-	"math"
 
 	"github.com/ethereum/go-ethereum/common"
 )
 
 // Context is a facade for encoding/decoding contract/storage addressses, byte-code, and snapshots.
 type Context struct {
-	prevContract common.Address      // previously used contract
-	keyCache     *KeyCache           // key cache
-	code         *Dictionary[string] // bytecode context
-	snapshot     *SnapshotIndex      // snapshot translation table for replay
+	prevContract common.Address // previously used contract
+	keyCache     *KeyCache      // key cache
+	snapshot     *SnapshotIndex // snapshot translation table for replay
 }
 
 // NewContext creates a new context context.
@@ -20,7 +18,6 @@ func NewContext() *Context {
 	return &Context{
 		prevContract: common.Address{},
 		keyCache:     NewKeyCache(),
-		code:         NewDictionary[string](),
 		snapshot:     NewSnapshotIndex(),
 	}
 }
@@ -37,25 +34,6 @@ var ContextDir string = "./"
 const (
 	CodeMagic = 4714
 )
-
-// ReadContext reads dictionaries from files and creates a new context context.
-func ReadContext() *Context {
-	ctx := NewContext()
-	err := ctx.code.ReadString(ContextDir+"code-context.dat", CodeMagic)
-	if err != nil {
-		log.Fatalf("Cannot read code context. Error: %v", err)
-	}
-	log.Printf("Read %v context smart contracts from file.", ctx.code.Size())
-	return ctx
-}
-
-// Write context context to files.
-func (ctx *Context) Write() {
-	err := ctx.code.WriteString(ContextDir+"code-context.dat", CodeMagic)
-	if err != nil {
-		log.Fatalf("Cannot write code context. Error: %v", err)
-	}
-}
 
 ////////////////////////////////////////////////////////////////
 // Contract methods
@@ -133,29 +111,4 @@ func (ctx *Context) GetSnapshot(recordedID int32) int32 {
 		log.Fatalf("Replayed Snapshot ID is missing. Error: %v", err)
 	}
 	return replayedID
-}
-
-////////////////////////////////////////////////////////////////
-// Code methods
-////////////////////////////////////////////////////////////////
-
-// EncodeCode encodes the given byte-code to an index and returns the index.
-func (ctx *Context) EncodeCode(code []byte) uint32 {
-	bcIdx, err := ctx.code.Encode(string(code))
-	if err != nil {
-		log.Fatalf("Byte-code could not be encoded. Error: %v", err)
-	}
-	if bcIdx < 0 || bcIdx > math.MaxUint32 {
-		log.Fatalf("Byte-code index space depleted.")
-	}
-	return uint32(bcIdx)
-}
-
-// DecodeCode returns the byte-code for a given byte-code index.
-func (ctx *Context) DecodeCode(bcIdx uint32) []byte {
-	code, err := ctx.code.Decode(bcIdx)
-	if err != nil {
-		log.Fatalf("Byte-code index could not be decoded. Error: %v", err)
-	}
-	return []byte(code)
 }
