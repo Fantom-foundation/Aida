@@ -5,24 +5,12 @@ import (
 	"github.com/Fantom-foundation/Aida/iterator"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/Fantom-foundation/go-opera/evmcore"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/op/go-logging"
 	"math/big"
 	"strings"
 	"sync"
 )
-
-// OutData are sent to comparator with data from StateDB and data Recorded on API server
-type OutData struct {
-	Method     string
-	MethodBase string
-	Recorded   *RecordedData
-	StateDB    *StateDBData
-	BlockID    uint64
-	Params     []interface{}
-}
 
 // RecordedData represents data recorded on API server. This is sent to Comparator and compared with StateDBData
 type RecordedData struct {
@@ -40,15 +28,16 @@ type StateDBData struct {
 // ReplayExecutor executes recorded requests into StateDB. Returned data is stored as StateDBData
 // Recorded data is stored as RecordedData and is sent to Comparator along with StateDB for comparison
 type ReplayExecutor struct {
-	cfg            *utils.Config
-	db             state.StateDB
-	archive        state.StateDB
-	currentBlockID uint64
-	reader         *iterator.FileReader
-	output         chan *OutData
-	closed         chan any
-	log            *logging.Logger
-	wg             *sync.WaitGroup
+	cfg         *utils.Config
+	db          state.StateDB
+	workers     []*ExecutorWorker
+	workerInput chan *workerInput
+	reader      *iterator.FileReader
+	output      chan *OutData
+	closed      chan any
+	log         *logging.Logger
+	appWg       *sync.WaitGroup
+	workersWg   *sync.WaitGroup
 }
 
 // move cli away
@@ -56,20 +45,32 @@ type ReplayExecutor struct {
 // newReplayExecutor returns new instance of ReplayExecutor
 func newReplayExecutor(db state.StateDB, reader *iterator.FileReader, cfg *utils.Config, log *logging.Logger, wg *sync.WaitGroup) *ReplayExecutor {
 	return &ReplayExecutor{
-		cfg:    cfg,
-		db:     db,
-		reader: reader,
-		log:    log,
-		output: make(chan *OutData),
-		closed: make(chan any),
-		wg:     wg,
+		cfg:         cfg,
+		db:          db,
+		reader:      reader,
+		log:         log,
+		workerInput: make(chan *workerInput),
+		output:      make(chan *OutData),
+		closed:      make(chan any),
+		appWg:       wg,
+		workersWg:   new(sync.WaitGroup),
 	}
 }
 
 // Start the ReplayExecutor
-func (e *ReplayExecutor) Start() {
-	e.wg.Add(1)
+func (e *ReplayExecutor) Start(workers int) {
+	e.appWg.Add(1)
+	e.initWorkers(workers)
 	go e.executeRequests()
+}
+
+// initWorkers creates and starts given number of ExecutorWorkers
+func (e *ReplayExecutor) initWorkers(workers int) {
+	e.workers = make([]*ExecutorWorker, workers)
+	for i := 0; i < workers; i++ {
+		e.workers[i] = newWorker(e.workerInput, e.output, e.workersWg, e.closed, e.cfg)
+		e.workers[i].Start()
+	}
 }
 
 // Stop the ReplayExecutor
@@ -86,43 +87,22 @@ func (e *ReplayExecutor) Stop() {
 // then sends the result along with recorded response to Comparator
 func (e *ReplayExecutor) executeRequests() {
 	var (
-		blockID uint64
+		req    *iterator.RequestWithResponse
+		wInput *workerInput
 	)
-
 	defer func() {
 		e.reader.Close()
 		close(e.output)
-		e.wg.Done()
+		e.appWg.Done()
 	}()
 
 	for e.reader.Next() {
 		// retrieve the data from iterator
-		req := e.reader.Value()
+		req = e.reader.Value()
 
-		blockID = 8999000
-
-		// set block id
-		if req.Error != nil {
-			//blockID = req.Error.BlockID
-			req.Error.BlockID = blockID
-		} else {
-			//blockID = req.Response.BlockID
-			req.Response.BlockID = blockID
-		}
-
-		// retrieve the archive from StateDB for given block id
-		if !e.getStateArchive(req.Query, blockID) {
-			// if error occurs skip current req
-			continue
-		}
-
-		// get result from archive
-		r := e.execute(req.Query, blockID)
-
-		// if method was recognized
-		if r != nil {
-			// execute the data to Comparator
-			e.output <- createOutData(req, r)
+		wInput = e.createWorkerInput(req)
+		if wInput != nil {
+			e.workerInput <- wInput
 		}
 
 		select {
@@ -139,65 +119,56 @@ func (e *ReplayExecutor) executeRequests() {
 
 }
 
-// createOutData as a vessel for data sent to Comparator
-func createOutData(req *iterator.RequestWithResponse, r *StateDBData) *OutData {
-	var out *OutData
+// createWorkerInput with data worker need to doExecute request into archive
+func (e *ReplayExecutor) createWorkerInput(req *iterator.RequestWithResponse) *workerInput {
+	var recordedBlockID uint64
+	var wInput = new(workerInput)
 
-	out = new(OutData)
-	out.StateDB = r
-
-	out.Recorded = new(RecordedData)
-
-	// set the method
-	out.Method = req.Query.Method
-	out.MethodBase = req.Query.MethodBase
-
-	// add recorded result to output data
-	if req.Response != nil {
-		out.Recorded.Result = req.Response.Result
-	}
-
-	// add recorded error to output data
+	// response
 	if req.Error != nil {
-		out.Recorded.Error = &req.Error.Error
+		recordedBlockID = req.Error.BlockID
+		wInput.error = &req.Error.Error
+	} else if req.Response != nil {
+		recordedBlockID = req.Response.BlockID
+		wInput.result = req.Response.Result
+	} else {
+		e.log.Error("both recorded response and recorded error are nil; skipping")
+		return nil
 	}
 
-	// add params
-	out.Params = req.Query.Params
+	// request
+	wInput.req = req.Query
 
-	return out
+	if !e.decodeBlockNumber(req.Query.Params, recordedBlockID, &wInput.blockID) {
+		e.log.Errorf("cannot decode block number\nParams: %v", req.Query.Params[1])
+		return nil
+	}
+
+	// archive
+	wInput.archive = e.getStateArchive(wInput.blockID)
+	if wInput.archive == nil {
+		return nil
+	}
+
+	return wInput
 }
 
 // getStateArchive for given block if not already loaded
-func (e *ReplayExecutor) getStateArchive(query *iterator.Body, blockID uint64) bool {
-	// first find wanted block number
-	var wantedBlockNumber uint64
-
-	if !e.decodeBlockNumber(query.Params, blockID, &wantedBlockNumber) {
-		e.log.Errorf("cannot decode block number\nParams: %v", query.Params[1])
-		return false
-	}
-
+func (e *ReplayExecutor) getStateArchive(wantedBlockNumber uint64) state.StateDB {
 	if !e.isBlockNumberWithinRange(wantedBlockNumber) {
 		e.log.Debugf("request out of StateDB block range\nSKIPPING\n")
-		return false
-	}
-
-	// if current archive is the same block number there is no need for reloading it
-	if e.currentBlockID == wantedBlockNumber {
-		return true
+		return nil
 	}
 
 	// load the archive itself
 	var err error
-	e.archive, err = e.db.GetArchiveState(wantedBlockNumber)
+	archive, err := e.db.GetArchiveState(wantedBlockNumber)
 	if err != nil {
 		e.log.Error("cannot retrieve archive for block id #%v\nerr: %v\n", wantedBlockNumber, err)
-		return false
+		return nil
 	}
 
-	e.currentBlockID = wantedBlockNumber
-	return true
+	return archive
 }
 
 // decodeBlockNumber finds what block number request wants
@@ -208,9 +179,11 @@ func (e *ReplayExecutor) decodeBlockNumber(params []interface{}, recordedBlockNu
 		return true
 	}
 
+	// request does not have blockID specification
 	str, ok := params[1].(string)
 	if !ok {
-		return false
+		*returnedBlockID = recordedBlockNumber
+		return true
 	}
 
 	switch str {
@@ -247,102 +220,4 @@ func (e *ReplayExecutor) decodeBlockNumber(params []interface{}, recordedBlockNu
 // isBlockNumberWithinRange returns whether given block number is in StateDB block range
 func (e *ReplayExecutor) isBlockNumberWithinRange(blockNumber uint64) bool {
 	return blockNumber >= e.cfg.First && blockNumber <= e.cfg.Last
-}
-
-// execute calls correct execute func according to method in body
-func (e *ReplayExecutor) execute(body *iterator.Body, blockID uint64) *StateDBData {
-	switch body.MethodBase {
-	// ftm/eth methods
-	case "getBalance":
-		return executeGetBalance(body.Params[0], e.archive)
-
-	case "getTransactionCount":
-		return executeGetTransactionCount(body.Params[0], e.archive)
-
-	case "call":
-
-		req := newEVMRequest(body.Params[0].(map[string]interface{}))
-		evm := newEVM(blockID, e.archive, e.cfg, utils.GetChainConfig(e.cfg.ChainID), req)
-		return executeCall(evm)
-
-	case "estimateGas":
-		req := newEVMRequest(body.Params[0].(map[string]interface{}))
-		evm := newEVM(blockID, e.archive, e.cfg, utils.GetChainConfig(e.cfg.ChainID), req)
-		return executeEstimateGas(evm)
-	default:
-		break
-	}
-
-	e.log.Debugf("skipping unsupported method %v", body.Method)
-	return nil
-}
-
-// executeGetBalance request into archive and return the result
-func executeGetBalance(param interface{}, archive state.StateDB) (out *StateDBData) {
-	var (
-		address common.Address
-	)
-
-	out = new(StateDBData)
-	out.Result = new(big.Int)
-
-	// decode requested address
-	address = common.HexToAddress(param.(string))
-
-	// retrieve compareBalance
-	out.Result = archive.GetBalance(address)
-
-	return
-}
-
-// executeGetTransactionCount request into archive and return the result
-func executeGetTransactionCount(param interface{}, archive state.StateDB) (out *StateDBData) {
-	var (
-		address common.Address
-	)
-
-	out = new(StateDBData)
-
-	// decode requested address
-	address = common.HexToAddress(param.(string))
-
-	// retrieve nonce
-	out.Result = archive.GetNonce(address)
-
-	return
-}
-
-// executeCall into EVM and return the result
-func executeCall(evm *EVM) (out *StateDBData) {
-	var (
-		result *evmcore.ExecutionResult
-		err    error
-	)
-
-	out = new(StateDBData)
-
-	// get the result from EVM
-	result, err = evm.sendCall()
-	if err != nil {
-		out.Error = err
-		return
-	}
-
-	// If the result contains a revert reason, try to unpack and return it.
-	if len(result.Revert()) > 0 {
-		out.Error = newRevertError(result)
-	} else {
-		out.Result = result.Return()
-		out.Error = result.Err
-	}
-
-	return
-}
-
-// executeEstimateGas into EVM which calculates gas needed for a transaction
-func executeEstimateGas(evm *EVM) (out *StateDBData) {
-	out = new(StateDBData)
-	out.Result, out.Error = evm.sendEstimateGas()
-
-	return
 }

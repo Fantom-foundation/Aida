@@ -4,6 +4,7 @@ import (
 	"github.com/Fantom-foundation/Aida/cmd/api-replay-cli/apireplay"
 	"github.com/Fantom-foundation/Aida/cmd/api-replay-cli/flags"
 	"github.com/Fantom-foundation/Aida/utils"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 	"log"
 	"os"
@@ -26,6 +27,7 @@ func main() {
 			&utils.StateDbLoggingFlag,
 			&utils.ArchiveModeFlag,
 			&utils.ArchiveVariantFlag,
+			&substate.WorkersFlag,
 		},
 	}
 

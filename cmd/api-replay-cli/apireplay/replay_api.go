@@ -5,6 +5,7 @@ import (
 	"github.com/Fantom-foundation/Aida/cmd/api-replay-cli/flags"
 	"github.com/Fantom-foundation/Aida/iterator"
 	"github.com/Fantom-foundation/Aida/utils"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 	"log"
 	"path/filepath"
@@ -34,7 +35,7 @@ func ReplayAPI(ctx *cli.Context) error {
 
 	// create sender and start it
 	sender := newReplayExecutor(db, reader, cfg, newLogger(ctx), wg)
-	sender.Start()
+	sender.Start(ctx.Int(substate.WorkersFlag.Name))
 
 	// create comparator and start it
 	comparator := newComparator(sender.output, newLogger(ctx), wg)
