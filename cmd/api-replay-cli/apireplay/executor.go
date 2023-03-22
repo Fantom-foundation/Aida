@@ -25,8 +25,8 @@ type StateDBData struct {
 	Error  error
 }
 
-// ReplayExecutor executes recorded requests into StateDB. Returned data is stored as StateDBData
-// Recorded data is stored as RecordedData and is sent to Comparator along with StateDB for comparison
+// ReplayExecutor reads data from iterator, creates logical structure and pass it, alongside wanted archive, to
+// ExecutorWorker which executes the request into StateDB
 type ReplayExecutor struct {
 	cfg         *utils.Config
 	db          state.StateDB
@@ -39,8 +39,6 @@ type ReplayExecutor struct {
 	appWg       *sync.WaitGroup
 	workersWg   *sync.WaitGroup
 }
-
-// move cli away
 
 // newReplayExecutor returns new instance of ReplayExecutor
 func newReplayExecutor(db state.StateDB, reader *iterator.FileReader, cfg *utils.Config, log *logging.Logger, wg *sync.WaitGroup) *ReplayExecutor {
@@ -77,14 +75,15 @@ func (e *ReplayExecutor) initWorkers(workers int) {
 func (e *ReplayExecutor) Stop() {
 	select {
 	case <-e.closed:
+		e.workersWg.Wait()
 		return
 	default:
 		close(e.closed)
 	}
 }
 
-// executeRequests retrieves req from reader (if not at the end) and executes it into archive,
-// then sends the result along with recorded response to Comparator
+// executeRequests retrieves req from reader (if not at the end) and pass the data alongside wanted archive
+// to ExecutorWorker which executes the request into StateDB
 func (e *ReplayExecutor) executeRequests() {
 	var (
 		req    *iterator.RequestWithResponse
@@ -153,7 +152,7 @@ func (e *ReplayExecutor) createWorkerInput(req *iterator.RequestWithResponse) *w
 	return wInput
 }
 
-// getStateArchive for given block if not already loaded
+// getStateArchive for given block
 func (e *ReplayExecutor) getStateArchive(wantedBlockNumber uint64) state.StateDB {
 	if !e.isBlockNumberWithinRange(wantedBlockNumber) {
 		e.log.Debugf("request out of StateDB block range\nSKIPPING\n")
