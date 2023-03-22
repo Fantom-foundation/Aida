@@ -19,10 +19,9 @@ func initSetCode(t *testing.T) (*context.Context, *SetCode, common.Address, []by
 	// create context context
 	dict := context.NewContext()
 	contract := dict.EncodeContract(addr)
-	bcontract := dict.EncodeCode(code)
 
 	// create new operation
-	op := NewSetCode(contract, bcontract)
+	op := NewSetCode(contract, code)
 	if op == nil {
 		t.Fatalf("failed to create operation")
 	}

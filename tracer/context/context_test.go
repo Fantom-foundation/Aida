@@ -1,51 +1,10 @@
 package context
 
 import (
-	"os"
-	"reflect"
-	"sort"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
 )
-
-// TestDictionaryContextWriteReadEmpty writes and reads an empty context
-// context to a directory and validate file names.
-func TestDictionaryContextWriteReadEmpty(t *testing.T) {
-	ContextDir = "./test_context_context/"
-	want := []string{"code-context.dat"}
-	have := []string{}
-
-	if err := os.Mkdir(ContextDir, 0700); err != nil {
-		t.Fatalf("Failed to create test directory")
-	}
-
-	defer func(path string) {
-		err := os.RemoveAll(path)
-		if err != nil {
-			t.Fatalf("Failed to remove test directory: %v", err)
-		}
-	}(ContextDir)
-
-	ctx1 := NewContext()
-	ctx1.Write()
-	files, err := os.ReadDir(ContextDir)
-	if err != nil {
-		t.Fatalf("Dictionary context directory not found. %v", err)
-	}
-	for _, f := range files {
-		have = append(have, f.Name())
-	}
-	sort.Strings(want)
-	sort.Strings(have)
-	if !reflect.DeepEqual(want, have) {
-		t.Fatalf("Failed to write context context files.\n\twant %v\n\thave %v", want, have)
-	}
-	ctx2 := ReadContext()
-	if ctx2 == nil {
-		t.Fatalf("Failed to read dictonary context files")
-	}
-}
 
 // TestDictionaryContextEncodeContract encodes an address and check the returned index.
 func TestDictionaryContextEncodeContract(t *testing.T) {
@@ -206,30 +165,5 @@ func TestDictionaryContextSnapshot(t *testing.T) {
 	ctx.AddSnapshot(recordedID, replayedID2)
 	if ctx.GetSnapshot(recordedID) != replayedID2 {
 		t.Fatalf("Failed to retrieve snapshot id")
-	}
-}
-
-// TestDictionaryContextEncodeCode encodes byte-code to code context.
-func TestDictionaryContextEncodeCode(t *testing.T) {
-	ctx := NewContext()
-	encodedCode := []byte{0x99, 0xe0, 0x5, 0xed, 0xce, 0xdf, 0xf5}
-	idx := ctx.EncodeCode(encodedCode)
-	if idx != 0 {
-		t.Fatalf("Encoding byte-code failed")
-	}
-}
-
-// TestDictionaryContextDecodeCode encodes then decodes byte-code, and compares
-// whether the byte-code arrays are matches.
-func TestDictionaryContextDecodeCode(t *testing.T) {
-	ctx := NewContext()
-	encodedCode := []byte{0x99, 0xe0, 0x5, 0xed, 0xce, 0xdf, 0xf5}
-	idx := ctx.EncodeCode(encodedCode)
-	if idx != 0 {
-		t.Fatalf("Encoding byte-code failed")
-	}
-	decodedCode := ctx.DecodeCode(idx)
-	if !reflect.DeepEqual(encodedCode, decodedCode) {
-		t.Fatalf("Decoding byte-code failed")
 	}
 }
