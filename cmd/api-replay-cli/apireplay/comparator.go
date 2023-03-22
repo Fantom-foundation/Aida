@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/op/go-logging"
-	"github.com/status-im/keycard-go/hexutils"
 	"math/big"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/op/go-logging"
+	"github.com/status-im/keycard-go/hexutils"
 )
 
 // nil answer from EVM is recorded as nilEVMResult, this is used this for the comparing and for more readable log

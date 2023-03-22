@@ -3,6 +3,10 @@ package apireplay
 import (
 	"errors"
 	"fmt"
+	"math"
+	"math/big"
+	"strings"
+
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/go-opera-fvm/opera"
@@ -14,9 +18,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/status-im/keycard-go/hexutils"
-	"math"
-	"math/big"
-	"strings"
 )
 
 // EVMRequest represents data structure of requests executed in EVM

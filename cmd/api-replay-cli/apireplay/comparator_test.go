@@ -3,11 +3,12 @@ package apireplay
 import (
 	"encoding/json"
 	"errors"
+	"math/big"
+	"testing"
+
 	"github.com/Fantom-foundation/Aida/iterator"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/status-im/keycard-go/hexutils"
-	"math/big"
-	"testing"
 )
 
 const (

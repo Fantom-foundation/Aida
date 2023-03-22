@@ -2,13 +2,14 @@ package apireplay
 
 import (
 	"context"
+	"log"
+	"path/filepath"
+	"sync"
+
 	"github.com/Fantom-foundation/Aida/cmd/api-replay-cli/flags"
 	"github.com/Fantom-foundation/Aida/iterator"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/urfave/cli/v2"
-	"log"
-	"path/filepath"
-	"sync"
 )
 
 func ReplayAPI(ctx *cli.Context) error {

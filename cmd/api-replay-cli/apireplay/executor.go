@@ -2,6 +2,10 @@ package apireplay
 
 import (
 	"encoding/json"
+	"math/big"
+	"strings"
+	"sync"
+
 	"github.com/Fantom-foundation/Aida/iterator"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -9,9 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/op/go-logging"
-	"math/big"
-	"strings"
-	"sync"
 )
 
 // OutData are sent to comparator with data from StateDB and data Recorded on API server
@@ -98,8 +99,6 @@ func (e *ReplayExecutor) executeRequests() {
 	for e.reader.Next() {
 		// retrieve the data from iterator
 		req := e.reader.Value()
-
-		blockID = 8999000
 
 		// set block id
 		if req.Error != nil {
