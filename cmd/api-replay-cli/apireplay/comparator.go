@@ -257,8 +257,10 @@ func compareCallStateDBResult(data *OutData) *comparatorError {
 	return nil
 }
 
+// isZeroAnswer looks at StateDB result for call and if all bytes are 0, it returns true since it is a zero answer,
+// if one byte that is not 0 is found, false is returned immediately
 func isZeroAnswer(result json.RawMessage) bool {
-	for b := range result {
+	for _, b := range result {
 		if b != 0 {
 			return false
 		}
