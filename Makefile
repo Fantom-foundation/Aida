@@ -96,7 +96,7 @@ test:
 
 clean:
 	cd carmen/go ; \
-	rm -f lib/libstate.so ; \
+	rm -f lib/libcarmen.so ; \
 	cd ../cpp ; \
 	bazel clean ; \
 	cd ../.. ; \
