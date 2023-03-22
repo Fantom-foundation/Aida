@@ -2,11 +2,12 @@ package iterator
 
 import (
 	"context"
-	"github.com/klauspost/compress/gzip"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/klauspost/compress/gzip"
 )
 
 // FileReader implements reader of the stored API recording
