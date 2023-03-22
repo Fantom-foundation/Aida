@@ -5,9 +5,9 @@ import "github.com/Fantom-foundation/Aida/stochastic/statistics"
 // TODO: Convert constants to command-line interface parameters
 const (
 	TransactionsPerBlock = 10
-	BlocksPerEpoch       = 100
-	OperationFrequency   = 4 // determines indirectly the length of a transaction
-	NumContracts         = 20000
+	BlocksPerEpoch       = 10
+	OperationFrequency   = 100 // determines indirectly the length of a transaction
+	NumContracts         = 1000
 	NumKeys              = 1000
 	NumValues            = 1000
 	SnapshotDepth        = 100
@@ -19,13 +19,25 @@ func GenerateUniformRegistry() *EventRegistry {
 
 	// generate a uniform distribution for contracts, storage keys/values, and snapshots
 	for i := int64(0); i < NumContracts; i++ {
-		r.contracts.Place(toAddress(i))
+		for j := i - statistics.QueueLen - 1; j <= i; j++ {
+			if j >= 0 {
+				r.contracts.Place(toAddress(j))
+			}
+		}
 	}
 	for i := int64(0); i < NumKeys; i++ {
-		r.keys.Place(toHash(i))
+		for j := i - statistics.QueueLen - 1; j <= i; j++ {
+			if j >= 0 {
+				r.keys.Place(toHash(j))
+			}
+		}
 	}
 	for i := int64(0); i < NumValues; i++ {
-		r.values.Place(toHash(i))
+		for j := i - statistics.QueueLen - 1; j <= i; j++ {
+			if j >= 0 {
+				r.values.Place(toHash(j))
+			}
+		}
 	}
 	for i := 0; i < SnapshotDepth; i++ {
 		r.snapshotFreq[i] = 1
