@@ -2,6 +2,7 @@ package apireplay
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"strings"
 	"sync"
@@ -35,6 +36,7 @@ type ReplayExecutor struct {
 	workerInput chan *workerInput
 	reader      *iterator.FileReader
 	output      chan *OutData
+	logging     chan logMsg
 	closed      chan any
 	log         *logging.Logger
 	appWg       *sync.WaitGroup
@@ -42,12 +44,13 @@ type ReplayExecutor struct {
 }
 
 // newReplayExecutor returns new instance of ReplayExecutor
-func newReplayExecutor(db state.StateDB, reader *iterator.FileReader, cfg *utils.Config, log *logging.Logger, wg *sync.WaitGroup) *ReplayExecutor {
+func newReplayExecutor(db state.StateDB, reader *iterator.FileReader, cfg *utils.Config, l *logging.Logger, wg *sync.WaitGroup) *ReplayExecutor {
 	return &ReplayExecutor{
 		cfg:         cfg,
 		db:          db,
 		reader:      reader,
-		log:         log,
+		log:         l,
+		logging:     make(chan logMsg),
 		workerInput: make(chan *workerInput),
 		output:      make(chan *OutData),
 		closed:      make(chan any),
@@ -59,15 +62,26 @@ func newReplayExecutor(db state.StateDB, reader *iterator.FileReader, cfg *utils
 // Start the ReplayExecutor
 func (e *ReplayExecutor) Start(workers int) {
 	e.appWg.Add(1)
+
+	// start executors loops
+	go e.doLog()
+	go e.readRequests()
+
+	// start its workers
 	e.initWorkers(workers)
-	go e.executeRequests()
 }
 
 // initWorkers creates and starts given number of ExecutorWorkers
 func (e *ReplayExecutor) initWorkers(workers int) {
+	// send info about workers
+	e.logging <- logMsg{
+		lvl: logging.INFO,
+		msg: fmt.Sprintf("starting %v ExecutorWorkers", workers),
+	}
+
 	e.workers = make([]*ExecutorWorker, workers)
 	for i := 0; i < workers; i++ {
-		e.workers[i] = newWorker(e.workerInput, e.output, e.workersWg, e.closed, e.cfg)
+		e.workers[i] = newWorker(e.workerInput, e.output, e.workersWg, e.closed, e.cfg, e.logging)
 		e.workers[i].Start()
 	}
 }
@@ -83,9 +97,9 @@ func (e *ReplayExecutor) Stop() {
 	}
 }
 
-// executeRequests retrieves req from reader (if not at the end) and pass the data alongside wanted archive
+// readRequests retrieves req from reader (if not at the end) and pass the data alongside wanted archive
 // to ExecutorWorker which executes the request into StateDB
-func (e *ReplayExecutor) executeRequests() {
+func (e *ReplayExecutor) readRequests() {
 	var (
 		req    *iterator.RequestWithResponse
 		wInput *workerInput
@@ -93,10 +107,26 @@ func (e *ReplayExecutor) executeRequests() {
 	defer func() {
 		e.reader.Close()
 		close(e.output)
+		close(e.workerInput)
 		e.appWg.Done()
 	}()
 
 	for e.reader.Next() {
+		select {
+		case <-e.closed:
+			return
+		default:
+		}
+
+		// did reader emit an error?
+		if e.reader.Error() != nil {
+			e.logging <- logMsg{
+				lvl: logging.CRITICAL,
+				msg: fmt.Sprintf("error loading recordings; %v", e.reader.Error().Error()),
+			}
+			e.Stop()
+		}
+
 		// retrieve the data from iterator
 		req = e.reader.Value()
 
@@ -105,16 +135,6 @@ func (e *ReplayExecutor) executeRequests() {
 			e.workerInput <- wInput
 		}
 
-		select {
-		case <-e.closed:
-			break
-		default:
-			continue
-		}
-	}
-
-	if e.reader.Error() != nil {
-		e.log.Fatalf("error loading recordings; %e", e.reader.Error().Error())
 	}
 
 }
@@ -132,18 +152,21 @@ func (e *ReplayExecutor) createWorkerInput(req *iterator.RequestWithResponse) *w
 		recordedBlockID = req.Response.BlockID
 		wInput.result = req.Response.Result
 	} else {
-		e.log.Error("both recorded response and recorded error are nil; skipping")
+		e.logging <- logMsg{
+			lvl: logging.ERROR,
+			msg: "both recorded response and recorded error are nil; skipping\"",
+		}
 		return nil
 	}
 
 	// request
 	wInput.req = req.Query
 
-	// todo remove
-	recordedBlockID = 8999005
-
 	if !e.decodeBlockNumber(req.Query.Params, recordedBlockID, &wInput.blockID) {
-		e.log.Errorf("cannot decode block number\nParams: %v", req.Query.Params[1])
+		e.logging <- logMsg{
+			lvl: logging.ERROR,
+			msg: fmt.Sprintf("cannot decode block number; skipping\nParams: %v", req.Query.Params[1]),
+		}
 		return nil
 	}
 
@@ -159,7 +182,10 @@ func (e *ReplayExecutor) createWorkerInput(req *iterator.RequestWithResponse) *w
 // getStateArchive for given block
 func (e *ReplayExecutor) getStateArchive(wantedBlockNumber uint64) state.StateDB {
 	if !e.isBlockNumberWithinRange(wantedBlockNumber) {
-		e.log.Debugf("request out of StateDB block range\nSKIPPING\n")
+		e.logging <- logMsg{
+			lvl: logging.DEBUG,
+			msg: "request out of StateDB block range\nSKIPPING\n",
+		}
 		return nil
 	}
 
@@ -167,7 +193,10 @@ func (e *ReplayExecutor) getStateArchive(wantedBlockNumber uint64) state.StateDB
 	var err error
 	archive, err := e.db.GetArchiveState(wantedBlockNumber)
 	if err != nil {
-		e.log.Error("cannot retrieve archive for block id #%v\nerr: %v\n", wantedBlockNumber, err)
+		e.logging <- logMsg{
+			lvl: logging.DEBUG,
+			msg: fmt.Sprintf("cannot retrieve archive for block id #%v; skipping; err: %v\n", wantedBlockNumber, err),
+		}
 		return nil
 	}
 
@@ -223,4 +252,34 @@ func (e *ReplayExecutor) decodeBlockNumber(params []interface{}, recordedBlockNu
 // isBlockNumberWithinRange returns whether given block number is in StateDB block range
 func (e *ReplayExecutor) isBlockNumberWithinRange(blockNumber uint64) bool {
 	return blockNumber >= e.cfg.First && blockNumber <= e.cfg.Last
+}
+
+// doLog is a thread for logging any messages from ReplayExecutor or ExecutorWorker
+func (e *ReplayExecutor) doLog() {
+	var l logMsg
+
+	for {
+		select {
+		case <-e.closed:
+			return
+		default:
+		}
+
+		l = <-e.logging
+		switch l.lvl {
+		case logging.CRITICAL:
+			e.log.Critical(l.msg)
+		case logging.ERROR:
+			e.log.Error(l.msg)
+		case logging.WARNING:
+			e.log.Warning(l.msg)
+		case logging.NOTICE:
+			e.log.Notice(l.msg)
+		case logging.INFO:
+			e.log.Info(l.msg)
+		case logging.DEBUG:
+			e.log.Debug(l.msg)
+		default:
+		}
+	}
 }

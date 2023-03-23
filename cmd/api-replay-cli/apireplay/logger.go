@@ -6,6 +6,12 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+// logMsg is a vessel for any logged information
+type logMsg struct {
+	lvl logging.Level
+	msg string
+}
+
 // defaultLogFormat defines the format used for log output.
 const defaultLogFormat = "%{color}%{level:-8s} %{shortpkg}/%{shortfunc}%{color:reset}: %{message}"
 

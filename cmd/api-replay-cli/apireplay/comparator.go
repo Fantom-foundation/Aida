@@ -14,7 +14,7 @@ import (
 	"github.com/status-im/keycard-go/hexutils"
 )
 
-// nil answer from EVM is recorded as nilEVMResult, this is used this for the comparing and for more readable log
+// nil answer from EVM is recorded as nilEVMResult, this is used this for the comparing and for more readable logMsg
 const nilEVMResult = "0x0000000000000000000000000000000000000000000000000000000000000000"
 
 // EVMErrors decode error code into string with which we compare recorded error message
