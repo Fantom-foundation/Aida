@@ -27,9 +27,9 @@ func NewHasSuicided(contract common.Address) *HasSuicided {
 }
 
 // ReadHasSuicided reads a HasSuicided operation from a file.
-func ReadHasSuicided(file io.Reader) (Operation, error) {
+func ReadHasSuicided(f io.Reader) (Operation, error) {
 	data := new(HasSuicided)
-	err := binary.Read(file, binary.LittleEndian, data)
+	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 

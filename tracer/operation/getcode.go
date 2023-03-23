@@ -28,9 +28,9 @@ func NewGetCode(contract common.Address) *GetCode {
 }
 
 // ReadGetCode reads a get-code operation from a file.
-func ReadGetCode(file io.Reader) (Operation, error) {
+func ReadGetCode(f io.Reader) (Operation, error) {
 	data := new(GetCode)
-	err := binary.Read(file, binary.LittleEndian, data)
+	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 

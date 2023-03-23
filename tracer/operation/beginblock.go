@@ -27,9 +27,9 @@ func NewBeginBlock(bbNum uint64) *BeginBlock {
 }
 
 // ReadBeginBlock reads a begin-block operation from file.
-func ReadBeginBlock(file io.Reader) (Operation, error) {
+func ReadBeginBlock(f io.Reader) (Operation, error) {
 	data := new(BeginBlock)
-	err := binary.Read(file, binary.LittleEndian, data)
+	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 

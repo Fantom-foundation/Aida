@@ -30,7 +30,7 @@ func NewGetCodeHashLc() *GetCodeHashLc {
 }
 
 // ReadGetCodeHashLc reads a get-code-hash-lc operation from a file.
-func ReadGetCodeHashLc(file io.Reader) (Operation, error) {
+func ReadGetCodeHashLc(f io.Reader) (Operation, error) {
 	return NewGetCodeHashLc(), nil
 }
 

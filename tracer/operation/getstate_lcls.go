@@ -30,7 +30,7 @@ func NewGetStateLcls() *GetStateLcls {
 }
 
 // ReadGetStateLcls reads a get-state-lcls operation from a file.
-func ReadGetStateLcls(file io.Reader) (Operation, error) {
+func ReadGetStateLcls(f io.Reader) (Operation, error) {
 	return NewGetStateLcls(), nil
 }
 

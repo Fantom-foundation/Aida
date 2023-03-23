@@ -13,7 +13,7 @@ type Context struct {
 	snapshot     *SnapshotIndex // snapshot translation table for replay
 }
 
-// NewContext creates a new context context.
+// NewContext creates a new context.
 func NewContext() *Context {
 	return &Context{
 		prevContract: common.Address{},
@@ -21,19 +21,6 @@ func NewContext() *Context {
 		snapshot:     NewSnapshotIndex(),
 	}
 }
-
-////////////////////////////////////////////////////////////////
-// I/O
-////////////////////////////////////////////////////////////////
-
-// ContextDir is the dictionaries' directory of the context.
-var ContextDir string = "./"
-
-// Magic constants as file identifiers for contract address, storage key
-// and byte-code index files.
-const (
-	CodeMagic = 4714
-)
 
 ////////////////////////////////////////////////////////////////
 // Contract methods

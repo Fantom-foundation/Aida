@@ -32,9 +32,9 @@ func NewSetStateLcls(value common.Hash) *SetStateLcls {
 }
 
 // ReadSetStateLcls reads a set-state-lcls operation from file.
-func ReadSetStateLcls(file io.Reader) (Operation, error) {
+func ReadSetStateLcls(f io.Reader) (Operation, error) {
 	data := new(SetStateLcls)
-	err := binary.Read(file, binary.LittleEndian, data)
+	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 

@@ -27,9 +27,9 @@ func NewFinalise(deleteEmptyObjects bool) *Finalise {
 }
 
 // ReadFinalise reads a finalise operation from a file.
-func ReadFinalise(file io.Reader) (Operation, error) {
+func ReadFinalise(f io.Reader) (Operation, error) {
 	data := new(Finalise)
-	err := binary.Read(file, binary.LittleEndian, data)
+	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 

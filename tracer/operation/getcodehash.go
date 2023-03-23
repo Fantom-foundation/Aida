@@ -28,9 +28,9 @@ func NewGetCodeHash(contract common.Address) *GetCodeHash {
 }
 
 // ReadGetHash reads a get-code-hash operation from a file.
-func ReadGetCodeHash(file io.Reader) (Operation, error) {
+func ReadGetCodeHash(f io.Reader) (Operation, error) {
 	data := new(GetCodeHash)
-	err := binary.Read(file, binary.LittleEndian, data)
+	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 

@@ -25,7 +25,7 @@ func NewEndBlock() *EndBlock {
 }
 
 // ReadEndBlock reads an end-block operation from file.
-func ReadEndBlock(file io.Reader) (Operation, error) {
+func ReadEndBlock(f io.Reader) (Operation, error) {
 	return new(EndBlock), nil
 }
 

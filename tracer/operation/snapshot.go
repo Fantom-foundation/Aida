@@ -29,9 +29,9 @@ func NewSnapshot(SnapshotID int32) *Snapshot {
 }
 
 // ReadSnapshot reads a snapshot operation from a file.
-func ReadSnapshot(file io.Reader) (Operation, error) {
+func ReadSnapshot(f io.Reader) (Operation, error) {
 	data := new(Snapshot)
-	err := binary.Read(file, binary.LittleEndian, data)
+	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 

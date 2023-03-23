@@ -28,9 +28,9 @@ func NewGetBalance(contract common.Address) *GetBalance {
 }
 
 // ReadGetBalance reads a get-balance operation from a file.
-func ReadGetBalance(file io.Reader) (Operation, error) {
+func ReadGetBalance(f io.Reader) (Operation, error) {
 	data := new(GetBalance)
-	err := binary.Read(file, binary.LittleEndian, data)
+	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 

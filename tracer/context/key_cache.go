@@ -9,7 +9,7 @@ import (
 // KeyCacheLength sets the length of key cache (i.e. 2^8)
 const KeyCacheLength = 256
 
-// KeyCache data structure for implementing an LRU cache policy.
+// KeyCache data structure for keeping a cache of most frequent accessed storage keys
 type KeyCache struct {
 	top  int                         // last accessed key
 	data [KeyCacheLength]common.Hash // keys in cache
@@ -25,9 +25,7 @@ func (q *KeyCache) Clear() {
 
 // NewKeyCache creates a new key cache.
 func NewKeyCache() *KeyCache {
-	q := new(KeyCache)
-	q.Clear()
-	return q
+	return &KeyCache{}
 }
 
 // Place puts a new key into the key cache.

@@ -29,17 +29,17 @@ func NewSetCode(contract common.Address, bytecode []byte) *SetCode {
 }
 
 // ReadSetCode reads a set-code operation from a file.
-func ReadSetCode(file io.Reader) (Operation, error) {
+func ReadSetCode(f io.Reader) (Operation, error) {
 	data := new(SetCode)
-	if err := binary.Read(file, binary.LittleEndian, &data.Contract); err != nil {
+	if err := binary.Read(f, binary.LittleEndian, &data.Contract); err != nil {
 		return nil, fmt.Errorf("Cannot read contract address. Error: %v", err)
 	}
 	var length uint32
-	if err := binary.Read(file, binary.LittleEndian, &length); err != nil {
+	if err := binary.Read(f, binary.LittleEndian, &length); err != nil {
 		return nil, fmt.Errorf("Cannot read byte-code length. Error: %v", err)
 	}
 	data.Bytecode = make([]byte, length)
-	if err := binary.Read(file, binary.LittleEndian, data.Bytecode); err != nil {
+	if err := binary.Read(f, binary.LittleEndian, data.Bytecode); err != nil {
 		return nil, fmt.Errorf("Cannot read byte-code. Error: %v", err)
 	}
 	return data, nil

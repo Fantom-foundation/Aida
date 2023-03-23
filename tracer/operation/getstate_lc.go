@@ -33,9 +33,9 @@ func NewGetStateLc(key common.Hash) *GetStateLc {
 }
 
 // ReadGetStateLc reads a get-state-lc operation from a file.
-func ReadGetStateLc(file io.Reader) (Operation, error) {
+func ReadGetStateLc(f io.Reader) (Operation, error) {
 	data := new(GetStateLc)
-	err := binary.Read(file, binary.LittleEndian, data)
+	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 

@@ -29,9 +29,9 @@ func NewSetNonce(contract common.Address, nonce uint64) *SetNonce {
 }
 
 // ReadSetNonce reads a set-nonce operation from a file.
-func ReadSetNonce(file io.Reader) (Operation, error) {
+func ReadSetNonce(f io.Reader) (Operation, error) {
 	data := new(SetNonce)
-	err := binary.Read(file, binary.LittleEndian, data)
+	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 

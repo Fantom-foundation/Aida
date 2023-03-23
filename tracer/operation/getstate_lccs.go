@@ -37,9 +37,9 @@ func NewGetStateLccs(sPos int) *GetStateLccs {
 }
 
 // ReadGetStateLccs reads a get-state-lccs operation from a file.
-func ReadGetStateLccs(file io.Reader) (Operation, error) {
+func ReadGetStateLccs(f io.Reader) (Operation, error) {
 	data := new(GetStateLccs)
-	err := binary.Read(file, binary.LittleEndian, data)
+	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 
