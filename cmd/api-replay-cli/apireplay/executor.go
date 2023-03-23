@@ -2,17 +2,17 @@ package apireplay
 
 import (
 	"encoding/json"
+	"fmt"
+	"math/big"
+	"strings"
+	"sync"
+
 	"github.com/Fantom-foundation/Aida/iterator"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/op/go-logging"
-	"fmt"
-	"math/big"
-	"strings"
-	"sync"
 )
-
 
 // RecordedData represents data recorded on API server. This is sent to Comparator and compared with StateDBData
 type RecordedData struct {
@@ -47,8 +47,6 @@ type ReplayExecutor struct {
 	workersWg   *sync.WaitGroup
 	dbRange     dbRange
 }
-
-// move cli away
 
 // newReplayExecutor returns new instance of ReplayExecutor
 func newReplayExecutor(first, last uint64, db state.StateDB, reader *iterator.FileReader, l *logging.Logger, wg *sync.WaitGroup) *ReplayExecutor {
@@ -104,6 +102,7 @@ func (e *ReplayExecutor) Stop() {
 		return
 	default:
 		close(e.closed)
+		e.workersWg.Wait()
 	}
 }
 
