@@ -2,7 +2,6 @@ package apireplay
 
 import (
 	"encoding/json"
-	"fmt"
 	"math/big"
 	"strings"
 	"sync"
@@ -40,7 +39,6 @@ type Reader struct {
 	executorInput chan *executorInput
 	reader        *iterator.FileReader
 	output        chan *OutData
-	logging       chan logMsg
 	closed        chan any
 	log           *logging.Logger
 	appWg         *sync.WaitGroup
@@ -58,7 +56,6 @@ func newReader(first, last uint64, db state.StateDB, reader *iterator.FileReader
 		db:            db,
 		reader:        reader,
 		log:           l,
-		logging:       make(chan logMsg),
 		executorInput: make(chan *executorInput),
 		output:        make(chan *OutData),
 		closed:        make(chan any),
@@ -70,27 +67,21 @@ func newReader(first, last uint64, db state.StateDB, reader *iterator.FileReader
 // Start the Reader
 func (e *Reader) Start(executors int, cfg *utils.Config) {
 	e.appWg.Add(1)
-
-	// start executors loops
-	go e.doLog()
-	go e.read()
-
 	// start its executors
 	e.initExecutors(executors, cfg)
+	// start readers loop
+	go e.read()
 }
 
 // initExecutors creates and starts given number of ReplayExecutor
 func (e *Reader) initExecutors(executors int, cfg *utils.Config) {
-	// send info about executors
-	e.logging <- logMsg{
-		lvl: logging.INFO,
-		msg: fmt.Sprintf("starting %v Executors", executors),
-	}
+
+	e.log.Infof("starting %v executors", executors)
 
 	e.executors = make([]*ReplayExecutor, executors)
 	for i := 0; i < executors; i++ {
 
-		e.executors[i] = newExecutor(utils.GetChainConfig(cfg.ChainID), e.executorInput, e.output, e.executorsWg, e.closed, cfg.VmImpl, e.logging)
+		e.executors[i] = newExecutor(utils.GetChainConfig(cfg.ChainID), e.executorInput, e.output, e.executorsWg, e.closed, cfg.VmImpl)
 		e.executors[i].Start()
 	}
 }
@@ -129,11 +120,8 @@ func (e *Reader) read() {
 
 		// did reader emit an error?
 		if e.reader.Error() != nil {
-			e.logging <- logMsg{
-				lvl: logging.CRITICAL,
-				msg: fmt.Sprintf("error loading recordings; %v", e.reader.Error().Error()),
-			}
-			e.Stop()
+			e.log.Errorf("error loading recordings; %v", e.reader.Error().Error())
+			continue
 		}
 
 		// retrieve the data from iterator
@@ -161,10 +149,7 @@ func (e *Reader) createExecutorInput(req *iterator.RequestWithResponse) *executo
 		recordedBlockID = req.Response.BlockID
 		wInput.result = req.Response.Result
 	} else {
-		e.logging <- logMsg{
-			lvl: logging.ERROR,
-			msg: "both recorded response and recorded error are nil; skipping\"",
-		}
+		e.log.Error("both recorded response and recorded error are nil; skipping")
 		return nil
 	}
 
@@ -172,10 +157,7 @@ func (e *Reader) createExecutorInput(req *iterator.RequestWithResponse) *executo
 	wInput.req = req.Query
 
 	if !e.decodeBlockNumber(req.Query.Params, recordedBlockID, &wInput.blockID) {
-		e.logging <- logMsg{
-			lvl: logging.ERROR,
-			msg: fmt.Sprintf("cannot decode block number; skipping\nParams: %v", req.Query.Params[1]),
-		}
+		e.log.Errorf("cannot decode block number; skipping\nParams: %v", req.Query.Params[1])
 		return nil
 	}
 
@@ -194,10 +176,7 @@ func (e *Reader) createExecutorInput(req *iterator.RequestWithResponse) *executo
 // getStateArchive for given block
 func (e *Reader) getStateArchive(wantedBlockNumber uint64) state.StateDB {
 	if !e.isBlockNumberWithinRange(wantedBlockNumber) {
-		e.logging <- logMsg{
-			lvl: logging.DEBUG,
-			msg: "request out of StateDB block range\nSKIPPING\n",
-		}
+		e.log.Debug("request out of StateDB block range\nSKIPPING\n")
 		return nil
 	}
 
@@ -205,10 +184,7 @@ func (e *Reader) getStateArchive(wantedBlockNumber uint64) state.StateDB {
 	var err error
 	archive, err := e.db.GetArchiveState(wantedBlockNumber)
 	if err != nil {
-		e.logging <- logMsg{
-			lvl: logging.DEBUG,
-			msg: fmt.Sprintf("cannot retrieve archive for block id #%v; skipping; err: %v\n", wantedBlockNumber, err),
-		}
+		e.log.Debugf("cannot retrieve archive for block id #%v; skipping; err: %v", wantedBlockNumber, err)
 		return nil
 	}
 
@@ -264,34 +240,4 @@ func (e *Reader) decodeBlockNumber(params []interface{}, recordedBlockNumber uin
 // isBlockNumberWithinRange returns whether given block number is in StateDB block range
 func (e *Reader) isBlockNumberWithinRange(blockNumber uint64) bool {
 	return blockNumber >= e.dbRange.first && blockNumber <= e.dbRange.last
-}
-
-// doLog is a thread for logging any messages from Reader or ReplayExecutor
-func (e *Reader) doLog() {
-	var l logMsg
-
-	for {
-		l = <-e.logging
-
-		switch l.lvl {
-		case logging.CRITICAL:
-			e.log.Critical(l.msg)
-		case logging.ERROR:
-			e.log.Error(l.msg)
-		case logging.WARNING:
-			e.log.Warning(l.msg)
-		case logging.NOTICE:
-			e.log.Notice(l.msg)
-		case logging.INFO:
-			e.log.Info(l.msg)
-		case logging.DEBUG:
-			e.log.Debug(l.msg)
-		default:
-		}
-		select {
-		case <-e.closed:
-			return
-		default:
-		}
-	}
 }

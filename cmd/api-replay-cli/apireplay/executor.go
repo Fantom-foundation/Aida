@@ -3,14 +3,12 @@ package apireplay
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"sync"
 
 	"github.com/Fantom-foundation/Aida/iterator"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/op/go-logging"
 )
 
 // executorInput represents data needed for executing request into StateDB
@@ -38,7 +36,6 @@ type ReplayExecutor struct {
 	ctx            context.Context
 	input          chan *executorInput
 	output         chan *OutData
-	logging        chan logMsg
 	wg             *sync.WaitGroup
 	closed         chan any
 	currentBlockID uint64
@@ -47,13 +44,12 @@ type ReplayExecutor struct {
 }
 
 // newExecutor returns new instance of ReplayExecutor
-func newExecutor(chainCfg *params.ChainConfig, input chan *executorInput, output chan *OutData, wg *sync.WaitGroup, closed chan any, vmImpl string, logging chan logMsg) *ReplayExecutor {
+func newExecutor(chainCfg *params.ChainConfig, input chan *executorInput, output chan *OutData, wg *sync.WaitGroup, closed chan any, vmImpl string) *ReplayExecutor {
 	return &ReplayExecutor{
 		chainCfg: chainCfg,
 		vmImpl:   vmImpl,
 		closed:   closed,
 		input:    input,
-		logging:  logging,
 		output:   output,
 		wg:       wg,
 	}
@@ -143,11 +139,6 @@ func (e *ReplayExecutor) doExecute(in *executorInput) *StateDBData {
 
 	default:
 		break
-	}
-
-	e.logging <- logMsg{
-		lvl: logging.DEBUG,
-		msg: fmt.Sprintf("skipping unsupported method %v", in.req.Method),
 	}
 	return nil
 }
