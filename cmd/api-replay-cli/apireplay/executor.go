@@ -1,297 +1,153 @@
 package apireplay
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"math/big"
-	"strings"
 	"sync"
 
 	"github.com/Fantom-foundation/Aida/iterator"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/op/go-logging"
 )
 
-// RecordedData represents data recorded on API server. This is sent to Comparator and compared with StateDBData
-type RecordedData struct {
-	Result json.RawMessage
-	Error  *iterator.ErrorMessage
+// executorInput represents data needed for executing request into StateDB
+type executorInput struct {
+	archive state.StateDB
+	req     *iterator.Body
+	result  json.RawMessage
+	error   *iterator.ErrorMessage
+	blockID uint64
 }
 
-// StateDBData represents data that StateDB returned for requests recorded on API server
-// This is sent to Comparator and compared with RecordedData
-type StateDBData struct {
-	Result any
-	Error  error
+// OutData are sent to comparator with result from StateDB and req/resp Recorded on API server
+type OutData struct {
+	Method     string
+	MethodBase string
+	Recorded   *RecordedData
+	StateDB    *StateDBData
+	BlockID    uint64
+	Params     []interface{}
 }
 
-// dbRange represents first and last block of StateDB
-type dbRange struct {
-	first, last uint64
-}
-
-// ReplayExecutor reads data from iterator, creates logical structure and pass it, alongside wanted archive, to
-// ExecutorWorker which executes the request into StateDB
+// ReplayExecutor represents a goroutine in which requests are executed into StateDB
 type ReplayExecutor struct {
-	db          state.StateDB
-	workers     []*ExecutorWorker
-	workerInput chan *workerInput
-	reader      *iterator.FileReader
-	output      chan *OutData
-	logging     chan logMsg
-	closed      chan any
-	log         *logging.Logger
-	appWg       *sync.WaitGroup
-	workersWg   *sync.WaitGroup
-	dbRange     dbRange
+	cfg            *utils.Config
+	ctx            context.Context
+	input          chan *executorInput
+	output         chan *OutData
+	logging        chan logMsg
+	wg             *sync.WaitGroup
+	closed         chan any
+	currentBlockID uint64
+	vmImpl         string
+	chainCfg       *params.ChainConfig
 }
 
-// newReplayExecutor returns new instance of ReplayExecutor
-func newReplayExecutor(first, last uint64, db state.StateDB, reader *iterator.FileReader, l *logging.Logger, wg *sync.WaitGroup) *ReplayExecutor {
+// newExecutor returns new instance of ReplayExecutor
+func newExecutor(chainCfg *params.ChainConfig, input chan *executorInput, output chan *OutData, wg *sync.WaitGroup, closed chan any, vmImpl string, logging chan logMsg) *ReplayExecutor {
 	return &ReplayExecutor{
-		dbRange: dbRange{
-			first: first,
-			last:  last,
-		},
-		db:          db,
-		reader:      reader,
-		log:         l,
-		logging:     make(chan logMsg),
-		workerInput: make(chan *workerInput),
-		output:      make(chan *OutData),
-		closed:      make(chan any),
-		appWg:       wg,
-		workersWg:   new(sync.WaitGroup),
+		chainCfg: chainCfg,
+		vmImpl:   vmImpl,
+		closed:   closed,
+		input:    input,
+		logging:  logging,
+		output:   output,
+		wg:       wg,
 	}
 }
 
 // Start the ReplayExecutor
-func (e *ReplayExecutor) Start(workers int, cfg *utils.Config) {
-	e.appWg.Add(1)
-
-	// start executors loops
-	go e.doLog()
-	go e.readRequests()
-
-	// start its workers
-	e.initWorkers(workers, cfg)
-}
-
-// initWorkers creates and starts given number of ExecutorWorkers
-func (e *ReplayExecutor) initWorkers(workers int, cfg *utils.Config) {
-	// send info about workers
-	e.logging <- logMsg{
-		lvl: logging.INFO,
-		msg: fmt.Sprintf("starting %v ExecutorWorkers", workers),
-	}
-
-	e.workers = make([]*ExecutorWorker, workers)
-	for i := 0; i < workers; i++ {
-
-		e.workers[i] = newWorker(utils.GetChainConfig(cfg.ChainID), e.workerInput, e.output, e.workersWg, e.closed, cfg.VmImpl, e.logging)
-		e.workers[i].Start()
-	}
+func (e *ReplayExecutor) Start() {
+	e.wg.Add(1)
+	go e.execute()
 }
 
 // Stop the ReplayExecutor
 func (e *ReplayExecutor) Stop() {
-	select {
-	case <-e.closed:
-		return
-	default:
-		close(e.closed)
-		e.workersWg.Wait()
-	}
+	e.wg.Done()
 }
 
-// readRequests retrieves req from reader (if not at the end) and pass the data alongside wanted archive
-// to ExecutorWorker which executes the request into StateDB
-func (e *ReplayExecutor) readRequests() {
+// execute reads request from Reader and executes it into given archive
+func (e *ReplayExecutor) execute() {
 	var (
-		req    *iterator.RequestWithResponse
-		wInput *workerInput
+		in  *executorInput
+		res *StateDBData
 	)
-	defer func() {
-		e.reader.Close()
-		close(e.output)
-		close(e.workerInput)
-		e.appWg.Done()
-	}()
-
-	for e.reader.Next() {
-		select {
-		case <-e.closed:
-			return
-		default:
-		}
-
-		// did reader emit an error?
-		if e.reader.Error() != nil {
-			e.logging <- logMsg{
-				lvl: logging.CRITICAL,
-				msg: fmt.Sprintf("error loading recordings; %v", e.reader.Error().Error()),
-			}
-			e.Stop()
-		}
-
-		// retrieve the data from iterator
-		req = e.reader.Value()
-
-		wInput = e.createWorkerInput(req)
-		if wInput != nil {
-			e.workerInput <- wInput
-		}
-
-	}
-
-}
-
-// createWorkerInput with data worker need to doExecute request into archive
-func (e *ReplayExecutor) createWorkerInput(req *iterator.RequestWithResponse) *workerInput {
-	var recordedBlockID uint64
-	var wInput = new(workerInput)
-
-	// response
-	if req.Error != nil {
-		recordedBlockID = req.Error.BlockID
-		wInput.error = &req.Error.Error
-	} else if req.Response != nil {
-		recordedBlockID = req.Response.BlockID
-		wInput.result = req.Response.Result
-	} else {
-		e.logging <- logMsg{
-			lvl: logging.ERROR,
-			msg: "both recorded response and recorded error are nil; skipping\"",
-		}
-		return nil
-	}
-
-	// request
-	wInput.req = req.Query
-
-	if !e.decodeBlockNumber(req.Query.Params, recordedBlockID, &wInput.blockID) {
-		e.logging <- logMsg{
-			lvl: logging.ERROR,
-			msg: fmt.Sprintf("cannot decode block number; skipping\nParams: %v", req.Query.Params[1]),
-		}
-		return nil
-	}
-
-	// todo remove
-	wInput.blockID = 8999005
-
-	// archive
-	wInput.archive = e.getStateArchive(wInput.blockID)
-	if wInput.archive == nil {
-		return nil
-	}
-
-	return wInput
-}
-
-// getStateArchive for given block
-func (e *ReplayExecutor) getStateArchive(wantedBlockNumber uint64) state.StateDB {
-	if !e.isBlockNumberWithinRange(wantedBlockNumber) {
-		e.logging <- logMsg{
-			lvl: logging.DEBUG,
-			msg: "request out of StateDB block range\nSKIPPING\n",
-		}
-		return nil
-	}
-
-	// load the archive itself
-	var err error
-	archive, err := e.db.GetArchiveState(wantedBlockNumber)
-	if err != nil {
-		e.logging <- logMsg{
-			lvl: logging.DEBUG,
-			msg: fmt.Sprintf("cannot retrieve archive for block id #%v; skipping; err: %v\n", wantedBlockNumber, err),
-		}
-		return nil
-	}
-
-	return archive
-}
-
-// decodeBlockNumber finds what block number request wants
-func (e *ReplayExecutor) decodeBlockNumber(params []interface{}, recordedBlockNumber uint64, returnedBlockID *uint64) bool {
-	// request does not demand specific currentBlockID, so we take the recorded one
-	if len(params) < 2 {
-		*returnedBlockID = recordedBlockNumber
-		return true
-	}
-
-	// request does not have blockID specification
-	str, ok := params[1].(string)
-	if !ok {
-		*returnedBlockID = recordedBlockNumber
-		return true
-	}
-
-	switch str {
-	case "latest":
-		// request required latest currentBlockID so we return the recorded one
-		*returnedBlockID = recordedBlockNumber
-		break
-	case "earliest":
-		*returnedBlockID = uint64(rpc.EarliestBlockNumber)
-		break
-	case "pending":
-		*returnedBlockID = recordedBlockNumber
-	default:
-		// request requires specific currentBlockID
-		var (
-			bigID *big.Int
-			ok    bool
-		)
-
-		bigID = new(big.Int)
-		str = strings.TrimPrefix(str, "0x")
-		_, ok = bigID.SetString(str, 16)
-
-		if !ok {
-			return false
-		}
-		*returnedBlockID = bigID.Uint64()
-		break
-	}
-
-	return true
-}
-
-// isBlockNumberWithinRange returns whether given block number is in StateDB block range
-func (e *ReplayExecutor) isBlockNumberWithinRange(blockNumber uint64) bool {
-	return blockNumber >= e.dbRange.first && blockNumber <= e.dbRange.last
-}
-
-// doLog is a thread for logging any messages from ReplayExecutor or ExecutorWorker
-func (e *ReplayExecutor) doLog() {
-	var l logMsg
 
 	for {
-		l = <-e.logging
-
-		switch l.lvl {
-		case logging.CRITICAL:
-			e.log.Critical(l.msg)
-		case logging.ERROR:
-			e.log.Error(l.msg)
-		case logging.WARNING:
-			e.log.Warning(l.msg)
-		case logging.NOTICE:
-			e.log.Notice(l.msg)
-		case logging.INFO:
-			e.log.Info(l.msg)
-		case logging.DEBUG:
-			e.log.Debug(l.msg)
-		default:
-		}
 		select {
 		case <-e.closed:
+			e.Stop()
 			return
 		default:
+
 		}
+		in = <-e.input
+
+		// doExecute into db
+		res = e.doExecute(in)
+
+		// send to compare
+		e.output <- createOutData(in, res)
+
 	}
+}
+
+// createOutData and send it to Comparator
+func createOutData(in *executorInput, r *StateDBData) *OutData {
+
+	out := new(OutData)
+	out.Recorded = new(RecordedData)
+
+	// StateDB result
+	out.StateDB = r
+
+	// set the method
+	out.Method = in.req.Method
+	out.MethodBase = in.req.MethodBase
+
+	// add recorded result to output data
+	out.Recorded.Result = in.result
+
+	// add recorded error to output data
+	out.Recorded.Error = in.error
+
+	// add params
+	out.Params = in.req.Params
+
+	return out
+}
+
+// doExecute calls correct executive func for given MethodBase
+func (e *ReplayExecutor) doExecute(in *executorInput) *StateDBData {
+	switch in.req.MethodBase {
+	// ftm/eth methods
+	case "getBalance":
+		return executeGetBalance(in.req.Params[0], in.archive)
+
+	case "getTransactionCount":
+		return executeGetTransactionCount(in.req.Params[0], in.archive)
+
+	case "call":
+		req := newEVMRequest(in.req.Params[0].(map[string]interface{}))
+		evm := newEVM(in.blockID, in.archive, e.vmImpl, e.chainCfg, req)
+		return executeCall(evm)
+
+	case "estimateGas":
+		req := newEVMRequest(in.req.Params[0].(map[string]interface{}))
+		evm := newEVM(in.blockID, in.archive, e.vmImpl, e.chainCfg, req)
+		return executeEstimateGas(evm)
+
+	default:
+		break
+	}
+
+	e.logging <- logMsg{
+		lvl: logging.DEBUG,
+		msg: fmt.Sprintf("skipping unsupported method %v", in.req.Method),
+	}
+	return nil
 }

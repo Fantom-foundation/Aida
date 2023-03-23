@@ -24,7 +24,7 @@ var EVMErrors = map[int]string{
 }
 
 // Comparator compares data from StateDB and expected data recorded on API server
-// This data is retrieved from ReplayExecutor
+// This data is retrieved from Reader
 type Comparator struct {
 	input  chan *OutData
 	log    *logging.Logger
@@ -58,7 +58,7 @@ func (c *Comparator) Stop() {
 	}
 }
 
-// compare reads data from ReplayExecutor and compares them. If doCompare func returns error,
+// compare reads data from Reader and compares them. If doCompare func returns error,
 // the error is logged since the results do not match
 func (c *Comparator) compare() {
 	var data *OutData
