@@ -93,6 +93,7 @@ func (e *Reader) Stop() {
 		return
 	default:
 		close(e.closed)
+		// wait until all executors stop
 		e.executorsWg.Wait()
 	}
 }
@@ -160,9 +161,6 @@ func (e *Reader) createExecutorInput(req *iterator.RequestWithResponse) *executo
 		e.log.Errorf("cannot decode block number; skipping\nParams: %v", req.Query.Params[1])
 		return nil
 	}
-
-	// todo remove
-	wInput.blockID = 8999005
 
 	// archive
 	wInput.archive = e.getStateArchive(wInput.blockID)
