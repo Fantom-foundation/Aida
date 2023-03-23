@@ -63,7 +63,7 @@ func traceReplaySubstateTask(cfg *utils.Config) error {
 	defer traceIter.Release()
 
 	// Create a directory for the store to place all its files.
-	db, stateDirectory, _, err := utils.PrepareStateDB(cfg)
+	db, stateDirectory, _, _, err := utils.PrepareStateDB(cfg)
 	if err != nil {
 		return err
 	}

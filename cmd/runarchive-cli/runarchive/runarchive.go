@@ -156,7 +156,8 @@ func openStateDB(cfg *utils.Config) (state.StateDB, error) {
 	}
 
 	cfg.ArchiveMode = true
-	return utils.MakeStateDB(cfg.StateDbSrcDir, cfg, dbinfo.RootHash, true)
+	// TODO fix tx argument
+	return utils.MakeStateDB(cfg.StateDbSrcDir, cfg, dbinfo.RootHash, true, nil)
 }
 
 func groupTransactions(iter substate.SubstateIterator, blocks chan<- []*substate.Transaction, abort <-chan bool, cfg *utils.Config) {

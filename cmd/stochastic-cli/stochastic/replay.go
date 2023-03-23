@@ -81,7 +81,7 @@ func stochasticReplayAction(ctx *cli.Context) error {
 	// create a directory for the store to place all its files, and
 	// instantiate the state DB under testing.
 	log.Printf("Create stateDB database")
-	db, stateDirectory, _, err := utils.PrepareStateDB(cfg)
+	db, stateDirectory, _, _, err := utils.PrepareStateDB(cfg)
 	if err != nil {
 		return err
 	}
