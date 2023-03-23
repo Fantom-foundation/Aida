@@ -9,7 +9,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
 // SetCode data structure
@@ -42,7 +42,7 @@ func (op *SetCode) Write(f io.Writer) error {
 }
 
 // Execute the set-code operation.
-func (op *SetCode) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
+func (op *SetCode) Execute(db state.StateDB, ctx *context.Context) time.Duration {
 	contract := ctx.DecodeContract(op.Contract)
 	code := ctx.DecodeCode(op.CodeIndex)
 	start := time.Now()
@@ -51,6 +51,6 @@ func (op *SetCode) Execute(db state.StateDB, ctx *dictionary.Context) time.Durat
 }
 
 // Debug prints a debug message for the set-code operation.
-func (op *SetCode) Debug(ctx *dictionary.Context) {
+func (op *SetCode) Debug(ctx *context.Context) {
 	fmt.Print(op.Contract, ctx.DecodeCode(op.CodeIndex))
 }

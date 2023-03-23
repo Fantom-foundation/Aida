@@ -9,7 +9,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
 // The GetStateLc operation is a GetState operation
@@ -46,17 +46,17 @@ func (op *GetStateLc) Write(f io.Writer) error {
 }
 
 // Execute the get-state-lc operation.
-func (op *GetStateLc) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
+func (op *GetStateLc) Execute(db state.StateDB, ctx *context.Context) time.Duration {
 	contract := ctx.PrevContract()
-	storage := ctx.DecodeStorage(op.Key)
+	storage := ctx.DecodeKey(op.Key)
 	start := time.Now()
 	db.GetState(contract, storage)
 	return time.Since(start)
 }
 
 // Debug prints a debug message for the get-state-lc operation.
-func (op *GetStateLc) Debug(ctx *dictionary.Context) {
+func (op *GetStateLc) Debug(ctx *context.Context) {
 	contract := ctx.PrevContract()
-	storage := ctx.DecodeStorage(op.Key)
+	storage := ctx.DecodeKey(op.Key)
 	fmt.Print(contract, storage)
 }

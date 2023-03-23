@@ -8,7 +8,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/state"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
 // Begin-block operation data structure
@@ -40,13 +40,13 @@ func (op *BeginBlock) Write(f io.Writer) error {
 }
 
 // Execute the begin-block operation.
-func (op *BeginBlock) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
+func (op *BeginBlock) Execute(db state.StateDB, ctx *context.Context) time.Duration {
 	start := time.Now()
 	db.BeginBlock(op.BlockNumber)
 	return time.Since(start)
 }
 
 // Debug prints a debug message for the begin-block operation.
-func (op *BeginBlock) Debug(ctx *dictionary.Context) {
+func (op *BeginBlock) Debug(ctx *context.Context) {
 	fmt.Print(op.BlockNumber)
 }

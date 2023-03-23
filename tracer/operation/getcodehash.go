@@ -9,7 +9,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
 // GetCodeHash data structure
@@ -41,7 +41,7 @@ func (op *GetCodeHash) Write(f io.Writer) error {
 }
 
 // Execute the get-code-hash operation.
-func (op *GetCodeHash) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
+func (op *GetCodeHash) Execute(db state.StateDB, ctx *context.Context) time.Duration {
 	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
 	db.GetCodeHash(contract)
@@ -49,6 +49,6 @@ func (op *GetCodeHash) Execute(db state.StateDB, ctx *dictionary.Context) time.D
 }
 
 // Debug prints a debug message for the get-code-hash operation.
-func (op *GetCodeHash) Debug(ctx *dictionary.Context) {
+func (op *GetCodeHash) Debug(ctx *context.Context) {
 	fmt.Print(op.Contract)
 }

@@ -4,14 +4,14 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initEmpty(t *testing.T) (*dictionary.Context, *Empty, common.Address) {
+func initEmpty(t *testing.T) (*context.Context, *Empty, common.Address) {
 	addr := getRandomAddress(t)
-	// create dictionary context
-	dict := dictionary.NewContext()
+	// create context context
+	dict := context.NewContext()
 	contract := dict.EncodeContract(addr)
 
 	// create new operation

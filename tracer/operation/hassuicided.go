@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -40,7 +40,7 @@ func (op *HasSuicided) Write(f io.Writer) error {
 }
 
 // Execute the HasSuicided operation.
-func (op *HasSuicided) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
+func (op *HasSuicided) Execute(db state.StateDB, ctx *context.Context) time.Duration {
 	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
 	db.HasSuicided(contract)
@@ -48,6 +48,6 @@ func (op *HasSuicided) Execute(db state.StateDB, ctx *dictionary.Context) time.D
 }
 
 // Debug prints a debug message for the HasSuicided operation.
-func (op *HasSuicided) Debug(ctx *dictionary.Context) {
+func (op *HasSuicided) Debug(ctx *context.Context) {
 	fmt.Print(op.Contract)
 }

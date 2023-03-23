@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer"
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -52,7 +52,7 @@ last block of the inclusive range of blocks to replay storage traces.`,
 // traceReplaySubstateTask simulates storage operations from storage traces on stateDB.
 func traceReplaySubstateTask(cfg *utils.Config) error {
 	// load dictionaries & indexes
-	dCtx := dictionary.ReadContext()
+	dCtx := context.ReadContext()
 
 	// iterate substate (for in-membory state)
 	stateIter := substate.NewSubstateIterator(cfg.First, cfg.Workers)

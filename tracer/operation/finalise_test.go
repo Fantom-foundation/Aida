@@ -6,14 +6,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
-func initFinalise(t *testing.T) (*dictionary.Context, *Finalise, bool) {
+func initFinalise(t *testing.T) (*context.Context, *Finalise, bool) {
 	rand.Seed(time.Now().UnixNano())
 	deleteEmpty := rand.Intn(2) == 1
-	// create dictionary context
-	dict := dictionary.NewContext()
+	// create context context
+	dict := context.NewContext()
 
 	// create new operation
 	op := NewFinalise(deleteEmpty)

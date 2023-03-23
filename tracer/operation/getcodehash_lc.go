@@ -7,7 +7,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/state"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
 // GetCodeHashLc is a GetCodeHash operations whose
@@ -40,7 +40,7 @@ func (op *GetCodeHashLc) Write(f io.Writer) error {
 }
 
 // Execute the get-code-hash-lc operation.
-func (op *GetCodeHashLc) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
+func (op *GetCodeHashLc) Execute(db state.StateDB, ctx *context.Context) time.Duration {
 	contract := ctx.PrevContract()
 	start := time.Now()
 	db.GetCodeHash(contract)
@@ -48,7 +48,7 @@ func (op *GetCodeHashLc) Execute(db state.StateDB, ctx *dictionary.Context) time
 }
 
 // Debug prints a debug message for the get-code-hash-lc operation.
-func (op *GetCodeHashLc) Debug(ctx *dictionary.Context) {
+func (op *GetCodeHashLc) Debug(ctx *context.Context) {
 	contract := ctx.PrevContract()
 	fmt.Print(contract)
 }

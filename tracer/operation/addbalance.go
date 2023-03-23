@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/Fantom-foundation/Aida/state"
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
 // AddBalance data structure
@@ -51,7 +51,7 @@ func (op *AddBalance) Write(f io.Writer) error {
 }
 
 // Execute executes the add-balance operation.
-func (op *AddBalance) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
+func (op *AddBalance) Execute(db state.StateDB, ctx *context.Context) time.Duration {
 	contract := ctx.DecodeContract(op.Contract)
 	// construct bit.Int from a byte array
 	amount := new(big.Int).SetBytes(op.Amount[:])
@@ -61,6 +61,6 @@ func (op *AddBalance) Execute(db state.StateDB, ctx *dictionary.Context) time.Du
 }
 
 // Debug prints a debug message for the add-balance operation.
-func (op *AddBalance) Debug(ctx *dictionary.Context) {
+func (op *AddBalance) Debug(ctx *context.Context) {
 	fmt.Print(op.Contract, new(big.Int).SetBytes(op.Amount[:]))
 }

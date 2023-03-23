@@ -9,7 +9,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
 // GetCodeSize data structure
@@ -41,7 +41,7 @@ func (op *GetCodeSize) Write(f io.Writer) error {
 }
 
 // Execute the get-code-size operation.
-func (op *GetCodeSize) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
+func (op *GetCodeSize) Execute(db state.StateDB, ctx *context.Context) time.Duration {
 	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
 	db.GetCodeSize(contract)
@@ -49,6 +49,6 @@ func (op *GetCodeSize) Execute(db state.StateDB, ctx *dictionary.Context) time.D
 }
 
 // Debug prints a debug message for get-code-size.
-func (op *GetCodeSize) Debug(ctx *dictionary.Context) {
+func (op *GetCodeSize) Debug(ctx *context.Context) {
 	fmt.Print(ctx.DecodeContract(op.Contract))
 }

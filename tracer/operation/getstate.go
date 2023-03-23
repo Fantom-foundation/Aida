@@ -9,7 +9,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
 // GetState data structure
@@ -42,15 +42,15 @@ func (op *GetState) Write(f io.Writer) error {
 }
 
 // Execute the get-state operation.
-func (op *GetState) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
+func (op *GetState) Execute(db state.StateDB, ctx *context.Context) time.Duration {
 	contract := ctx.DecodeContract(op.Contract)
-	storage := ctx.DecodeStorage(op.Key)
+	storage := ctx.DecodeKey(op.Key)
 	start := time.Now()
 	db.GetState(contract, storage)
 	return time.Since(start)
 }
 
 // Debug prints a debug message for the get-state operation.
-func (op *GetState) Debug(ctx *dictionary.Context) {
+func (op *GetState) Debug(ctx *context.Context) {
 	fmt.Print(op.Contract, op.Key)
 }

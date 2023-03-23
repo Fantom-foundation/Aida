@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
-func initRevertToSnapshot(t *testing.T) (*dictionary.Context, *Snapshot, *RevertToSnapshot, int32, int32) {
-	// create dictionary context
-	dict := dictionary.NewContext()
+func initRevertToSnapshot(t *testing.T) (*context.Context, *Snapshot, *RevertToSnapshot, int32, int32) {
+	// create context context
+	dict := context.NewContext()
 
 	var recordedID int32 = 1
 	var replayedID int32 = 2
