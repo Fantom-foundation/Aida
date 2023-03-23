@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/Fantom-foundation/Aida/state"
-	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/go-opera-fvm/opera"
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/ethereum/go-ethereum/common"
@@ -38,7 +37,7 @@ type EVM struct {
 const globalGasCap = 50000000 // used when request does not specify gas
 
 // newEVM creates EVM for comparing data recorded on API with StateDB
-func newEVM(blockID uint64, archive state.StateDB, cfg *utils.Config, chainCfg *params.ChainConfig, req *EVMRequest) *EVM {
+func newEVM(blockID uint64, archive state.StateDB, vmImpl string, chainCfg *params.ChainConfig, req *EVMRequest) *EVM {
 	var (
 		bigBlockId *big.Int
 		getHash    func(uint64) common.Hash
@@ -72,7 +71,7 @@ func newEVM(blockID uint64, archive state.StateDB, cfg *utils.Config, chainCfg *
 
 	vmConfig = opera.DefaultVMConfig
 	vmConfig.NoBaseFee = true
-	vmConfig.InterpreterImpl = cfg.VmImpl
+	vmConfig.InterpreterImpl = vmImpl
 
 	msg = eth.NewMessage(req.From, &req.To, archive.GetNonce(req.From), req.Value, req.Gas.Uint64(), req.GasPrice, new(big.Int), new(big.Int), req.Data, nil, true)
 	txCtx = evmcore.NewEVMTxContext(msg)

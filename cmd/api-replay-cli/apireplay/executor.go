@@ -27,10 +27,14 @@ type StateDBData struct {
 	Error  error
 }
 
+// dbRange represents first and last block of StateDB
+type dbRange struct {
+	first, last uint64
+}
+
 // ReplayExecutor reads data from iterator, creates logical structure and pass it, alongside wanted archive, to
 // ExecutorWorker which executes the request into StateDB
 type ReplayExecutor struct {
-	cfg         *utils.Config
 	db          state.StateDB
 	workers     []*ExecutorWorker
 	workerInput chan *workerInput
@@ -41,12 +45,16 @@ type ReplayExecutor struct {
 	log         *logging.Logger
 	appWg       *sync.WaitGroup
 	workersWg   *sync.WaitGroup
+	dbRange     dbRange
 }
 
 // newReplayExecutor returns new instance of ReplayExecutor
-func newReplayExecutor(db state.StateDB, reader *iterator.FileReader, cfg *utils.Config, l *logging.Logger, wg *sync.WaitGroup) *ReplayExecutor {
+func newReplayExecutor(first, last uint64, db state.StateDB, reader *iterator.FileReader, l *logging.Logger, wg *sync.WaitGroup) *ReplayExecutor {
 	return &ReplayExecutor{
-		cfg:         cfg,
+		dbRange: dbRange{
+			first: first,
+			last:  last,
+		},
 		db:          db,
 		reader:      reader,
 		log:         l,
@@ -60,7 +68,7 @@ func newReplayExecutor(db state.StateDB, reader *iterator.FileReader, cfg *utils
 }
 
 // Start the ReplayExecutor
-func (e *ReplayExecutor) Start(workers int) {
+func (e *ReplayExecutor) Start(workers int, cfg *utils.Config) {
 	e.appWg.Add(1)
 
 	// start executors loops
@@ -68,11 +76,11 @@ func (e *ReplayExecutor) Start(workers int) {
 	go e.readRequests()
 
 	// start its workers
-	e.initWorkers(workers)
+	e.initWorkers(workers, cfg)
 }
 
 // initWorkers creates and starts given number of ExecutorWorkers
-func (e *ReplayExecutor) initWorkers(workers int) {
+func (e *ReplayExecutor) initWorkers(workers int, cfg *utils.Config) {
 	// send info about workers
 	e.logging <- logMsg{
 		lvl: logging.INFO,
@@ -81,7 +89,8 @@ func (e *ReplayExecutor) initWorkers(workers int) {
 
 	e.workers = make([]*ExecutorWorker, workers)
 	for i := 0; i < workers; i++ {
-		e.workers[i] = newWorker(e.workerInput, e.output, e.workersWg, e.closed, e.cfg, e.logging)
+
+		e.workers[i] = newWorker(utils.GetChainConfig(cfg.ChainID), e.workerInput, e.output, e.workersWg, e.closed, cfg.VmImpl, e.logging)
 		e.workers[i].Start()
 	}
 }
@@ -170,6 +179,9 @@ func (e *ReplayExecutor) createWorkerInput(req *iterator.RequestWithResponse) *w
 		return nil
 	}
 
+	// todo remove
+	wInput.blockID = 8999005
+
 	// archive
 	wInput.archive = e.getStateArchive(wInput.blockID)
 	if wInput.archive == nil {
@@ -251,7 +263,7 @@ func (e *ReplayExecutor) decodeBlockNumber(params []interface{}, recordedBlockNu
 
 // isBlockNumberWithinRange returns whether given block number is in StateDB block range
 func (e *ReplayExecutor) isBlockNumberWithinRange(blockNumber uint64) bool {
-	return blockNumber >= e.cfg.First && blockNumber <= e.cfg.Last
+	return blockNumber >= e.dbRange.first && blockNumber <= e.dbRange.last
 }
 
 // doLog is a thread for logging any messages from ReplayExecutor or ExecutorWorker
@@ -259,13 +271,8 @@ func (e *ReplayExecutor) doLog() {
 	var l logMsg
 
 	for {
-		select {
-		case <-e.closed:
-			return
-		default:
-		}
-
 		l = <-e.logging
+
 		switch l.lvl {
 		case logging.CRITICAL:
 			e.log.Critical(l.msg)
@@ -279,6 +286,11 @@ func (e *ReplayExecutor) doLog() {
 			e.log.Info(l.msg)
 		case logging.DEBUG:
 			e.log.Debug(l.msg)
+		default:
+		}
+		select {
+		case <-e.closed:
+			return
 		default:
 		}
 	}

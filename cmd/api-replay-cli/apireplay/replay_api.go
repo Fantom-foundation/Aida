@@ -37,12 +37,12 @@ func ReplayAPI(ctx *cli.Context) error {
 
 	wg := new(sync.WaitGroup)
 
-	// create sender and start it
-	sender := newReplayExecutor(db, reader, cfg, newLogger(ctx), wg)
-	sender.Start(ctx.Int(substate.WorkersFlag.Name))
-
-	// create comparator and start it
+	// create executor and comparator and start it
+	sender := newReplayExecutor(cfg.First, cfg.Last, db, reader, newLogger(ctx), wg)
 	comparator := newComparator(sender.output, newLogger(ctx), wg)
+
+	// start
+	sender.Start(ctx.Int(substate.WorkersFlag.Name), cfg)
 	comparator.Start()
 
 	wg.Wait()

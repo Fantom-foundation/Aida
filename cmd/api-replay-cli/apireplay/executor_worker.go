@@ -9,6 +9,7 @@ import (
 	"github.com/Fantom-foundation/Aida/iterator"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/op/go-logging"
 )
 
@@ -41,17 +42,20 @@ type ExecutorWorker struct {
 	wg             *sync.WaitGroup
 	closed         chan any
 	currentBlockID uint64
+	vmImpl         string
+	chainCfg       *params.ChainConfig
 }
 
 // newWorker returns new instance of ExecutorWorker
-func newWorker(input chan *workerInput, output chan *OutData, wg *sync.WaitGroup, closed chan any, cfg *utils.Config, logging chan logMsg) *ExecutorWorker {
+func newWorker(chainCfg *params.ChainConfig, input chan *workerInput, output chan *OutData, wg *sync.WaitGroup, closed chan any, vmImpl string, logging chan logMsg) *ExecutorWorker {
 	return &ExecutorWorker{
-		cfg:     cfg,
-		closed:  closed,
-		input:   input,
-		logging: logging,
-		output:  output,
-		wg:      wg,
+		chainCfg: chainCfg,
+		vmImpl:   vmImpl,
+		closed:   closed,
+		input:    input,
+		logging:  logging,
+		output:   output,
+		wg:       wg,
 	}
 }
 
@@ -78,15 +82,16 @@ func (w *ExecutorWorker) execute() {
 		case <-w.closed:
 			w.Stop()
 			return
+		default:
 
-		case in = <-w.input:
-
-			// doExecute into db
-			res = w.doExecute(in)
-
-			// send to compare
-			w.output <- createOutData(in, res)
 		}
+		in = <-w.input
+
+		// doExecute into db
+		res = w.doExecute(in)
+
+		// send to compare
+		w.output <- createOutData(in, res)
 
 	}
 }
@@ -128,12 +133,12 @@ func (w *ExecutorWorker) doExecute(in *workerInput) *StateDBData {
 
 	case "call":
 		req := newEVMRequest(in.req.Params[0].(map[string]interface{}))
-		evm := newEVM(in.blockID, in.archive, w.cfg, utils.GetChainConfig(w.cfg.ChainID), req)
+		evm := newEVM(in.blockID, in.archive, w.vmImpl, w.chainCfg, req)
 		return executeCall(evm)
 
 	case "estimateGas":
 		req := newEVMRequest(in.req.Params[0].(map[string]interface{}))
-		evm := newEVM(in.blockID, in.archive, w.cfg, utils.GetChainConfig(w.cfg.ChainID), req)
+		evm := newEVM(in.blockID, in.archive, w.vmImpl, w.chainCfg, req)
 		return executeEstimateGas(evm)
 
 	default:
