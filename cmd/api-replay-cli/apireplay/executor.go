@@ -102,11 +102,9 @@ func (e *ReplayExecutor) executeRequests() {
 
 		// set block id
 		if req.Error != nil {
-			//blockID = req.Error.BlockID
-			req.Error.BlockID = blockID
+			blockID = req.Error.BlockID
 		} else {
-			//blockID = req.Response.BlockID
-			req.Response.BlockID = blockID
+			blockID = req.Response.BlockID
 		}
 
 		// retrieve the archive from StateDB for given block id
