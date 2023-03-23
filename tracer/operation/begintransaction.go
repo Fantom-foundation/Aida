@@ -27,9 +27,9 @@ func NewBeginTransaction(tx uint32) *BeginTransaction {
 }
 
 // ReadBeginTransaction reads a new begin-transaction operation from file.
-func ReadBeginTransaction(file io.Reader) (Operation, error) {
+func ReadBeginTransaction(f io.Reader) (Operation, error) {
 	data := new(BeginTransaction)
-	err := binary.Read(file, binary.LittleEndian, data)
+	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 

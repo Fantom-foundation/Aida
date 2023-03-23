@@ -28,9 +28,9 @@ func NewGetNonce(contract common.Address) *GetNonce {
 }
 
 // ReadGetNonce reads a get-nonce operation from a file.
-func ReadGetNonce(file io.Reader) (Operation, error) {
+func ReadGetNonce(f io.Reader) (Operation, error) {
 	data := new(GetNonce)
-	err := binary.Read(file, binary.LittleEndian, data)
+	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 

@@ -80,7 +80,6 @@ func traceRecordAction(ctx *cli.Context) error {
 
 	// process arguments
 	tracer.TraceDir = ctx.String(utils.TraceDirectoryFlag.Name) + "/"
-	context.ContextDir = ctx.String(utils.TraceDirectoryFlag.Name) + "/"
 
 	// iterate through subsets in sequence
 	substate.SetSubstateDirectory(cfg.SubstateDBDir)

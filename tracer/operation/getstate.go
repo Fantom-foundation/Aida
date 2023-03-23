@@ -29,9 +29,9 @@ func NewGetState(contract common.Address, key common.Hash) *GetState {
 }
 
 // ReadGetState reads a get-state operation from a file.
-func ReadGetState(file io.Reader) (Operation, error) {
+func ReadGetState(f io.Reader) (Operation, error) {
 	data := new(GetState)
-	err := binary.Read(file, binary.LittleEndian, data)
+	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 

@@ -38,9 +38,9 @@ func NewSubBalance(contract common.Address, amount *big.Int) *SubBalance {
 }
 
 // ReadSubBalance reads a sub-balance operation from a file.
-func ReadSubBalance(file io.Reader) (Operation, error) {
+func ReadSubBalance(f io.Reader) (Operation, error) {
 	data := new(SubBalance)
-	err := binary.Read(file, binary.LittleEndian, data)
+	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 

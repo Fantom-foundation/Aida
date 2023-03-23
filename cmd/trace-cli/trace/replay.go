@@ -257,7 +257,6 @@ func traceReplayAction(ctx *cli.Context) error {
 	operation.EnableProfiling = cfg.Profile
 	// set trace directory
 	tracer.TraceDir = ctx.String(utils.TraceDirectoryFlag.Name) + "/"
-	context.ContextDir = ctx.String(utils.TraceDirectoryFlag.Name) + "/"
 
 	// start CPU profiling if requested.
 	if err := utils.StartCPUProfile(cfg); err != nil {

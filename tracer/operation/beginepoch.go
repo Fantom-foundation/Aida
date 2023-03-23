@@ -27,9 +27,9 @@ func NewBeginEpoch(number uint64) *BeginEpoch {
 }
 
 // ReadBeginEpoch reads a begin-epoch operation from file.
-func ReadBeginEpoch(file io.Reader) (Operation, error) {
+func ReadBeginEpoch(f io.Reader) (Operation, error) {
 	data := new(BeginEpoch)
-	err := binary.Read(file, binary.LittleEndian, data)
+	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 

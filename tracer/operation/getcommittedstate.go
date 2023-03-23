@@ -29,9 +29,9 @@ func NewGetCommittedState(contract common.Address, key common.Hash) *GetCommitte
 }
 
 // ReadGetCommittedState reads a get-commited-state operation from file.
-func ReadGetCommittedState(file io.Reader) (Operation, error) {
+func ReadGetCommittedState(f io.Reader) (Operation, error) {
 	data := new(GetCommittedState)
-	err := binary.Read(file, binary.LittleEndian, data)
+	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 

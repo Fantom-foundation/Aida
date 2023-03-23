@@ -180,7 +180,7 @@ func Read(f io.Reader) Operation {
 	return op
 }
 
-func ReadPanic(file io.Reader) (Operation, error) {
+func ReadPanic(f io.Reader) (Operation, error) {
 	panic("operation not implemented")
 }
 

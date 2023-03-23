@@ -28,9 +28,9 @@ func NewCreateAccount(contract common.Address) *CreateAccount {
 }
 
 // ReadCreateAccount reads a create-account operation from a file.
-func ReadCreateAccount(file io.Reader) (Operation, error) {
+func ReadCreateAccount(f io.Reader) (Operation, error) {
 	data := new(CreateAccount)
-	err := binary.Read(file, binary.LittleEndian, data)
+	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 

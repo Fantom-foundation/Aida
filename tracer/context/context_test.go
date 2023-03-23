@@ -6,8 +6,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-// TestDictionaryContextEncodeContract encodes an address and check the returned index.
-func TestDictionaryContextEncodeContract(t *testing.T) {
+// TestContextEncodeContract encodes an address and check the returned index.
+func TestContextEncodeContract(t *testing.T) {
 	ctx := NewContext()
 	encodedAddr := common.HexToAddress("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
 	if addr := ctx.EncodeContract(encodedAddr); addr != encodedAddr {
@@ -15,9 +15,9 @@ func TestDictionaryContextEncodeContract(t *testing.T) {
 	}
 }
 
-// TestDictionaryContextDecodeContract encodes then decodes an address and
+// TestContextDecodeContract encodes then decodes an address and
 // compares whether the addresses are not the same.
-func TestDictionaryContextDecodeContract(t *testing.T) {
+func TestContextDecodeContract(t *testing.T) {
 	ctx := NewContext()
 	encodedAddr := common.HexToAddress("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
 	if addr := ctx.EncodeContract(encodedAddr); addr != encodedAddr {
@@ -29,10 +29,10 @@ func TestDictionaryContextDecodeContract(t *testing.T) {
 	}
 }
 
-// TestDictionaryContextPrevContract fetches the last used addresses
+// TestContextPrevContract fetches the last used addresses
 // after encodeing and decoding, then compares whether they match the actual
 // last used contract addresses.
-func TestDictionaryContextPrevContract(t *testing.T) {
+func TestContextPrevContract(t *testing.T) {
 	ctx := NewContext()
 	encodedAddr1 := common.HexToAddress("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
 	idx1 := ctx.EncodeContract(encodedAddr1)
@@ -61,8 +61,8 @@ func TestDictionaryContextPrevContract(t *testing.T) {
 	}
 }
 
-// TestDictionaryContextEncodeKey encodes a storage key and checks the returned index.
-func TestDictionaryContextEncodeKey(t *testing.T) {
+// TestContextEncodeKey encodes a storage key and checks the returned index.
+func TestContextEncodeKey(t *testing.T) {
 	ctx := NewContext()
 	encodedKey := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
 	if _, idx := ctx.EncodeKey(encodedKey); idx != -1 {
@@ -70,9 +70,9 @@ func TestDictionaryContextEncodeKey(t *testing.T) {
 	}
 }
 
-// TestDictionaryContextDecodeKey encodes then decodes a storage key and compares
+// TestContextDecodeKey encodes then decodes a storage key and compares
 // whether the storage keys are not matched.
-func TestDictionaryContextDecodeKey(t *testing.T) {
+func TestContextDecodeKey(t *testing.T) {
 	ctx := NewContext()
 	encodedKey := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
 	_, idx := ctx.EncodeKey(encodedKey)
@@ -85,9 +85,9 @@ func TestDictionaryContextDecodeKey(t *testing.T) {
 	}
 }
 
-// TestDictionaryContextReadKeyCache reads storage key from index-cache after
+// TestContextReadKeyCache reads storage key from index-cache after
 // encoding/decoding new storage key. ReadKeyCache doesn't update top index.
-func TestDictionaryContextReadKeyCache(t *testing.T) {
+func TestContextReadKeyCache(t *testing.T) {
 	ctx := NewContext()
 	encodedKey1 := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
 	idx1, _ := ctx.EncodeKey(encodedKey1)
@@ -118,9 +118,9 @@ func TestDictionaryContextReadKeyCache(t *testing.T) {
 	}
 }
 
-// TestDictionaryContextLookup reads storage key from index-cache after
+// TestContextLookup reads storage key from index-cache after
 // encoding/decoding new storage key. DecodeKeyCache updates top index.
-func TestDictionaryContextDecodeKeyCache(t *testing.T) {
+func TestContextDecodeKeyCache(t *testing.T) {
 	ctx := NewContext()
 	encodedKey1 := common.HexToHash("0xdEcAf0562A19C9fFf21c9cEB476B2858E6f1F272")
 	idx1, _ := ctx.EncodeKey(encodedKey1)
@@ -151,9 +151,9 @@ func TestDictionaryContextDecodeKeyCache(t *testing.T) {
 	}
 }
 
-// TestDictionaryContextSnapshot adds a new snapshot pair to the snapshot
+// TestContextSnapshot adds a new snapshot pair to the snapshot
 // context, then gets the replayed snapshot id from the context.
-func TestDictionaryContextSnapshot(t *testing.T) {
+func TestContextSnapshot(t *testing.T) {
 	ctx := NewContext()
 	recordedID := int32(39)
 	replayedID1 := int32(50)

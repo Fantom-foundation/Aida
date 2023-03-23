@@ -28,9 +28,9 @@ func NewEmpty(contract common.Address) *Empty {
 }
 
 // ReadEmpty reads an Empty operation from a file.
-func ReadEmpty(file io.Reader) (Operation, error) {
+func ReadEmpty(f io.Reader) (Operation, error) {
 	data := new(Empty)
-	err := binary.Read(file, binary.LittleEndian, data)
+	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 

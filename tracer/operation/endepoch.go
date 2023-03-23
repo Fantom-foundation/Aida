@@ -25,7 +25,7 @@ func NewEndEpoch() *EndEpoch {
 }
 
 // ReadEndEpoch reads an end-epoch operation from file.
-func ReadEndEpoch(file io.Reader) (Operation, error) {
+func ReadEndEpoch(f io.Reader) (Operation, error) {
 	return new(EndEpoch), nil
 }
 

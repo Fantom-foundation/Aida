@@ -31,7 +31,7 @@ func NewGetCommittedStateLcls() *GetCommittedStateLcls {
 }
 
 // ReadGetCommittedStateLcls reads a get-committed-state-lcls operation from a file.
-func ReadGetCommittedStateLcls(file io.Reader) (Operation, error) {
+func ReadGetCommittedStateLcls(f io.Reader) (Operation, error) {
 	return NewGetCommittedStateLcls(), nil
 }
 

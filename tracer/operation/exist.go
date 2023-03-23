@@ -28,9 +28,9 @@ func NewExist(contract common.Address) *Exist {
 }
 
 // ReadExist reads an exist operation from a file.
-func ReadExist(file io.Reader) (Operation, error) {
+func ReadExist(f io.Reader) (Operation, error) {
 	data := new(Exist)
-	err := binary.Read(file, binary.LittleEndian, data)
+	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 

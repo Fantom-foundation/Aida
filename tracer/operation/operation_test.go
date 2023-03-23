@@ -307,7 +307,7 @@ func getRandomAddress(t *testing.T) common.Address {
 	return crypto.PubkeyToAddress(pk.PublicKey)
 }
 
-func testOperationReadWrite(t *testing.T, op1 Operation, opRead func(file io.Reader) (Operation, error)) {
+func testOperationReadWrite(t *testing.T, op1 Operation, opRead func(f io.Reader) (Operation, error)) {
 	opBuffer := bytes.NewBufferString("")
 	err := op1.Write(opBuffer)
 	if err != nil {

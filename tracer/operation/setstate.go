@@ -30,9 +30,9 @@ func NewSetState(contract common.Address, key common.Hash, value common.Hash) *S
 }
 
 // ReadSetState reads a set-state operation from file.
-func ReadSetState(file io.Reader) (Operation, error) {
+func ReadSetState(f io.Reader) (Operation, error) {
 	data := new(SetState)
-	err := binary.Read(file, binary.LittleEndian, data)
+	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 

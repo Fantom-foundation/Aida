@@ -28,9 +28,9 @@ func NewGetCodeSize(contract common.Address) *GetCodeSize {
 }
 
 // ReadGetCodeSize reads a get-code-size operation from a file.
-func ReadGetCodeSize(file io.Reader) (Operation, error) {
+func ReadGetCodeSize(f io.Reader) (Operation, error) {
 	data := new(GetCodeSize)
-	err := binary.Read(file, binary.LittleEndian, data)
+	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 
