@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/iterator"
@@ -19,7 +20,7 @@ const (
 	longHexOne = "0x0000000000000000000000000000000000000000000000000000000000000001"
 
 	// 32 bytes returned by EVM as a zero result
-	longZeroStr = "0000000000000000000000000000000000000000000000000000000000000000"
+	longHexZero = "0x0000000000000000000000000000000000000000000000000000000000000000"
 )
 
 // Test_compareBalanceOK tests compare func for getBalance method
@@ -58,8 +59,13 @@ func Test_compareBalanceErrorNoMatchingResult(t *testing.T) {
 	}
 
 	err := compareBalance(data)
-	if err != nil {
-		t.Errorf("error must be nil; err: %v", err)
+	if err == nil {
+		t.Errorf("error must not be nil; err: %v", err)
+		return
+	}
+
+	if err.typ != noMatchingResult {
+		t.Errorf("error must be type 'noMatchingResult'; err: %v", err)
 	}
 
 }
@@ -98,9 +104,15 @@ func Test_compareTransactionCountErrorNoMatchingResult(t *testing.T) {
 			Result: uint64(1),
 		},
 	}
+
 	err := compareTransactionCount(data)
-	if err != nil {
-		t.Errorf("error must be nil; err: %v", err)
+	if err == nil {
+		t.Errorf("error must not be nil; err: %v", err)
+		return
+	}
+
+	if err.typ != noMatchingResult {
+		t.Errorf("error must be type 'noMatchingResult'; err: %v", err)
 	}
 
 }
@@ -109,14 +121,14 @@ func Test_compareTransactionCountErrorNoMatchingResult(t *testing.T) {
 // It expects no error since results are same
 func Test_compareCallOK(t *testing.T) {
 
-	rec, _ := json.Marshal(longHexOne)
+	rec, _ := json.Marshal(strings.TrimPrefix(longHexOne, "0x"))
 	data := &OutData{
 		Method: "eth_call",
 		Recorded: &RecordedData{
 			Result: rec,
 		},
 		StateDB: &StateDBData{
-			Result: hexutils.HexToBytes(longHexOne),
+			Result: hexutils.HexToBytes(strings.TrimPrefix(longHexOne, "0x")),
 		},
 	}
 
@@ -124,7 +136,6 @@ func Test_compareCallOK(t *testing.T) {
 	if err != nil {
 		t.Errorf("error must be nil; err: %v", err)
 	}
-
 }
 
 // Test_compareCallErrorNoMatchingResult tests compare func for call method
@@ -137,13 +148,18 @@ func Test_compareCallErrorNoMatchingResult(t *testing.T) {
 			Result: rec,
 		},
 		StateDB: &StateDBData{
-			Result: hexutils.HexToBytes(longZeroStr),
+			Result: hexutils.HexToBytes(strings.TrimPrefix(longHexZero, "0x")),
 		},
 	}
 
 	err := compareCall(data)
-	if err != nil {
-		t.Errorf("error must be nil; err: %v", err)
+	if err == nil {
+		t.Errorf("error must not be nil; err: %v", err)
+		return
+	}
+
+	if err.typ != noMatchingResult {
+		t.Errorf("error must be type 'noMatchingResult'; err: %v", err)
 	}
 
 }
@@ -162,8 +178,13 @@ func Test_compareCallErrorExpectedResultGotErr(t *testing.T) {
 	}
 
 	err := compareCall(data)
-	if err != nil {
-		t.Errorf("error must be nil; err: %v", err)
+	if err == nil {
+		t.Errorf("error must not be nil; err: %v", err)
+		return
+	}
+
+	if err.typ != expectedResultGotError {
+		t.Errorf("error must be type 'expectedResultGotError'; err: %v", err)
 	}
 
 }
@@ -180,13 +201,18 @@ func Test_compareCallErrorExpectedErrGotResult(t *testing.T) {
 			},
 		},
 		StateDB: &StateDBData{
-			Result: hexutils.HexToBytes(longZeroStr),
+			Result: hexutils.HexToBytes(strings.TrimPrefix(longHexZero, "0x")),
 		},
 	}
 
 	err := compareCall(data)
 	if err == nil {
 		t.Errorf("error must not be null")
+		return
+	}
+
+	if err.typ != expectedErrorGotResult {
+		t.Errorf("error must be type 'expectedErrorGotResult'; err: %v", err)
 	}
 
 }
@@ -219,13 +245,18 @@ func Test_compareEstimateGasErrorNoMatchingResult(t *testing.T) {
 			Result: []byte(hexOne),
 		},
 		StateDB: &StateDBData{
-			Result: uint64(0),
+			Result: hexutil.Uint64(0),
 		},
 	}
 
 	err := compareEstimateGas(data)
 	if err == nil {
 		t.Errorf("error must not be null")
+		return
+	}
+
+	if err.typ != noMatchingResult {
+		t.Errorf("error must be type 'noMatchingResult'; err: %v", err)
 	}
 
 }
@@ -244,10 +275,14 @@ func Test_compareEstimateGasErrorExpectedResultGotErr(t *testing.T) {
 	}
 
 	err := compareEstimateGas(data)
-	if err != nil {
+	if err == nil {
 		t.Errorf("error must be nil; err: %v", err)
+		return
 	}
 
+	if err.typ != expectedResultGotError {
+		t.Errorf("error must be type 'expectedResultGotError'; err: %v", err)
+	}
 }
 
 // Test_compareEstimateGasErrorExpectedErrGotResult tests compare func for estimateGas method
@@ -262,13 +297,18 @@ func Test_compareEstimateGasErrorExpectedErrGotResult(t *testing.T) {
 			},
 		},
 		StateDB: &StateDBData{
-			Result: uint64(0),
+			Result: hexutil.Uint64(0),
 		},
 	}
 
 	err := compareEstimateGas(data)
 	if err == nil {
 		t.Errorf("error must not be null")
+		return
+	}
+
+	if err.typ != expectedErrorGotResult {
+		t.Errorf("error must be type 'expectedErrorGotResult'; err: %v", err)
 	}
 
 }

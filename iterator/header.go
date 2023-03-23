@@ -3,8 +3,9 @@ package iterator
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/sigurn/crc8"
 	"io"
+
+	"github.com/sigurn/crc8"
 )
 
 // Record Header Structure (min 10 bytes, max 13 bytes per record):
