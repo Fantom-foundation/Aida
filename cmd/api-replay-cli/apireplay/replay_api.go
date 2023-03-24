@@ -4,7 +4,6 @@ import (
 	"context"
 	"log"
 	"path/filepath"
-	"sync"
 
 	"github.com/Fantom-foundation/Aida/cmd/api-replay-cli/flags"
 	"github.com/Fantom-foundation/Aida/iterator"
@@ -13,9 +12,9 @@ import (
 )
 
 func ReplayAPI(ctx *cli.Context) error {
-	reader, err := iterator.NewFileReader(context.Background(), ctx.String(flags.APIRecordingSrcFileFlag.Name))
+	iter, err := iterator.NewFileReader(context.Background(), ctx.String(flags.APIRecordingSrcFileFlag.Name))
 	if err != nil {
-		log.Fatalf("cannot start reader; err: %v", err)
+		log.Fatalf("cannot start iter; err: %v", err)
 	}
 
 	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
@@ -34,17 +33,8 @@ func ReplayAPI(ctx *cli.Context) error {
 		log.Fatalf("cannot mate state db; err: %v", err)
 	}
 
-	wg := new(sync.WaitGroup)
+	r := newController(ctx, cfg, db, iter)
+	r.Start()
 
-	// create executor and comparator and start it
-	sender := newReader(cfg.First, cfg.Last, db, reader, newLogger(ctx), wg)
-	comparator := newComparator(sender.output, newLogger(ctx), wg)
-
-	// start
-	sender.Start(ctx.Int(flags.WorkersFlag.Name), cfg)
-	comparator.Start()
-
-	wg.Wait()
-
-	return nil
+	return r.control()
 }

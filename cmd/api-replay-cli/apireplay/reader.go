@@ -8,7 +8,6 @@ import (
 
 	"github.com/Fantom-foundation/Aida/iterator"
 	"github.com/Fantom-foundation/Aida/state"
-	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/op/go-logging"
 )
@@ -34,103 +33,79 @@ type dbRange struct {
 // Reader reads data from iterator, creates logical structure and pass it alongside wanted archive, to
 // ReplayExecutor which executes the request into StateDB
 type Reader struct {
-	db            state.StateDB
-	executors     []*ReplayExecutor
-	executorInput chan *executorInput
-	reader        *iterator.FileReader
-	output        chan *OutData
-	closed        chan any
-	log           *logging.Logger
-	appWg         *sync.WaitGroup
-	executorsWg   *sync.WaitGroup
-	dbRange       dbRange
+	db      state.StateDB
+	output  chan *executorInput
+	iter    *iterator.FileReader
+	closed  chan any
+	log     *logging.Logger
+	wg      *sync.WaitGroup
+	dbRange dbRange
 }
 
 // newReader returns new instance of Reader
-func newReader(first, last uint64, db state.StateDB, reader *iterator.FileReader, l *logging.Logger, wg *sync.WaitGroup) *Reader {
+func newReader(first, last uint64, db state.StateDB, iterator *iterator.FileReader, l *logging.Logger, closed chan any, wg *sync.WaitGroup) *Reader {
 	return &Reader{
 		dbRange: dbRange{
 			first: first,
 			last:  last,
 		},
-		db:            db,
-		reader:        reader,
-		log:           l,
-		executorInput: make(chan *executorInput),
-		output:        make(chan *OutData),
-		closed:        make(chan any),
-		appWg:         wg,
-		executorsWg:   new(sync.WaitGroup),
+		db:     db,
+		iter:   iterator,
+		output: make(chan *executorInput),
+		log:    l,
+		closed: closed,
+		wg:     wg,
 	}
 }
 
 // Start the Reader
-func (e *Reader) Start(executors int, cfg *utils.Config) {
-	e.appWg.Add(1)
-	// start its executors
-	e.initExecutors(executors, cfg)
+func (r *Reader) Start() {
 	// start readers loop
-	go e.read()
+	go r.read()
+	r.wg.Add(1)
 }
 
-// initExecutors creates and starts given number of ReplayExecutor
-func (e *Reader) initExecutors(executors int, cfg *utils.Config) {
-
-	e.log.Infof("starting %v executors", executors)
-
-	e.executors = make([]*ReplayExecutor, executors)
-	for i := 0; i < executors; i++ {
-
-		e.executors[i] = newExecutor(utils.GetChainConfig(cfg.ChainID), e.executorInput, e.output, e.executorsWg, e.closed, cfg.VmImpl)
-		e.executors[i].Start()
-	}
-}
-
-// Stop the Reader
-func (e *Reader) Stop() {
-	select {
-	case <-e.closed:
-		return
-	default:
-		close(e.closed)
-		// wait until all executors stop
-		e.executorsWg.Wait()
-	}
-}
-
-// read retrieves req from reader (if not at the end) and pass the data alongside wanted archive
+// read retrieves req from iter (if not at the end) and pass the data alongside wanted archive
 // to ReplayExecutor which executes the request into StateDB
-func (e *Reader) read() {
+func (r *Reader) read() {
 	var (
-		req    *iterator.RequestWithResponse
-		wInput *executorInput
+		iterErrors uint16 = 1
+		req        *iterator.RequestWithResponse
+		wInput     *executorInput
 	)
 	defer func() {
-		e.reader.Close()
-		close(e.output)
-		close(e.executorInput)
-		e.appWg.Done()
+		r.iter.Close()
+		close(r.output)
+		r.wg.Done()
 	}()
 
-	for e.reader.Next() {
+	for r.iter.Next() {
 		select {
-		case <-e.closed:
+		case <-r.closed:
 			return
 		default:
 		}
 
-		// did reader emit an error?
-		if e.reader.Error() != nil {
-			e.log.Errorf("error loading recordings; %v", e.reader.Error().Error())
+		// did iter emit an error?
+		if r.iter.Error() != nil {
+			// if iterator errors 5 times in a row, exit the program with an error
+			if iterErrors >= 5 {
+				r.log.Fatalf("iterator reached limit of number of consecutive errors; err: %v", r.iter.Error())
+			}
+			r.log.Errorf("error loading recordings; %v\nretry number %v\n", r.iter.Error().Error(), iterErrors)
+			iterErrors++
 			continue
 		}
 
-		// retrieve the data from iterator
-		req = e.reader.Value()
+		// reset the error counter
+		iterErrors = 1
 
-		wInput = e.createExecutorInput(req)
+		// retrieve the data from iterator
+		req = r.iter.Value()
+
+		wInput = r.createExecutorInput(req)
 		if wInput != nil {
-			e.executorInput <- wInput
+			r.output <- wInput
 		}
 
 	}
@@ -138,7 +113,7 @@ func (e *Reader) read() {
 }
 
 // createExecutorInput with data worker need to doExecute request into archive
-func (e *Reader) createExecutorInput(req *iterator.RequestWithResponse) *executorInput {
+func (r *Reader) createExecutorInput(req *iterator.RequestWithResponse) *executorInput {
 	var recordedBlockID uint64
 	var wInput = new(executorInput)
 
@@ -150,20 +125,20 @@ func (e *Reader) createExecutorInput(req *iterator.RequestWithResponse) *executo
 		recordedBlockID = req.Response.BlockID
 		wInput.result = req.Response.Result
 	} else {
-		e.log.Error("both recorded response and recorded error are nil; skipping")
+		r.log.Error("both recorded response and recorded error are nil; skipping")
 		return nil
 	}
 
 	// request
 	wInput.req = req.Query
 
-	if !e.decodeBlockNumber(req.Query.Params, recordedBlockID, &wInput.blockID) {
-		e.log.Errorf("cannot decode block number; skipping\nParams: %v", req.Query.Params[1])
+	if !r.decodeBlockNumber(req.Query.Params, recordedBlockID, &wInput.blockID) {
+		r.log.Errorf("cannot decode block number; skipping\nParams: %v", req.Query.Params[1])
 		return nil
 	}
 
 	// archive
-	wInput.archive = e.getStateArchive(wInput.blockID)
+	wInput.archive = r.getStateArchive(wInput.blockID)
 	if wInput.archive == nil {
 		return nil
 	}
@@ -172,17 +147,17 @@ func (e *Reader) createExecutorInput(req *iterator.RequestWithResponse) *executo
 }
 
 // getStateArchive for given block
-func (e *Reader) getStateArchive(wantedBlockNumber uint64) state.StateDB {
-	if !e.isBlockNumberWithinRange(wantedBlockNumber) {
-		e.log.Debug("request out of StateDB block range\nSKIPPING\n")
+func (r *Reader) getStateArchive(wantedBlockNumber uint64) state.StateDB {
+	if !r.isBlockNumberWithinRange(wantedBlockNumber) {
+		r.log.Debug("request out of StateDB block range\nSKIPPING\n")
 		return nil
 	}
 
 	// load the archive itself
 	var err error
-	archive, err := e.db.GetArchiveState(wantedBlockNumber)
+	archive, err := r.db.GetArchiveState(wantedBlockNumber)
 	if err != nil {
-		e.log.Debugf("cannot retrieve archive for block id #%v; skipping; err: %v", wantedBlockNumber, err)
+		r.log.Debugf("cannot retrieve archive for block id #%v; skipping; err: %v", wantedBlockNumber, err)
 		return nil
 	}
 
@@ -190,7 +165,8 @@ func (e *Reader) getStateArchive(wantedBlockNumber uint64) state.StateDB {
 }
 
 // decodeBlockNumber finds what block number request wants
-func (e *Reader) decodeBlockNumber(params []interface{}, recordedBlockNumber uint64, returnedBlockID *uint64) bool {
+func (r *Reader) decodeBlockNumber(params []interface{}, recordedBlockNumber uint64, returnedBlockID *uint64) bool {
+
 	// request does not demand specific currentBlockID, so we take the recorded one
 	if len(params) < 2 {
 		*returnedBlockID = recordedBlockNumber
@@ -236,6 +212,6 @@ func (e *Reader) decodeBlockNumber(params []interface{}, recordedBlockNumber uin
 }
 
 // isBlockNumberWithinRange returns whether given block number is in StateDB block range
-func (e *Reader) isBlockNumberWithinRange(blockNumber uint64) bool {
-	return blockNumber >= e.dbRange.first && blockNumber <= e.dbRange.last
+func (r *Reader) isBlockNumberWithinRange(blockNumber uint64) bool {
+	return blockNumber >= r.dbRange.first && blockNumber <= r.dbRange.last
 }

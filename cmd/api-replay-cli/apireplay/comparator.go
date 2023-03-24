@@ -17,7 +17,7 @@ import (
 // nil answer from EVM is recorded as nilEVMResult, this is used this for the comparing and for more readable logMsg
 const nilEVMResult = "0x0000000000000000000000000000000000000000000000000000000000000000"
 
-// EVMErrors decode error code into string with which we compare recorded error message
+// EVMErrors decode error code into string with which is compared with recorded error message
 var EVMErrors = map[int]string{
 	-32000: "execution reverted",
 	-32602: "invalid argument",
@@ -33,29 +33,19 @@ type Comparator struct {
 }
 
 // newComparator returns new instance of Comparator
-func newComparator(input chan *OutData, log *logging.Logger, wg *sync.WaitGroup) *Comparator {
+func newComparator(input chan *OutData, log *logging.Logger, closed chan any, wg *sync.WaitGroup) *Comparator {
 	return &Comparator{
 		input:  input,
 		log:    log,
-		closed: make(chan any),
+		closed: closed,
 		wg:     wg,
 	}
 }
 
 // Start the Comparator
 func (c *Comparator) Start() {
-	c.wg.Add(1)
 	go c.compare()
-}
-
-// Stop the Comparator
-func (c *Comparator) Stop() {
-	select {
-	case <-c.closed:
-		return
-	default:
-		close(c.closed)
-	}
+	c.wg.Add(1)
 }
 
 // compare reads data from Reader and compares them. If doCompare func returns error,
@@ -64,10 +54,13 @@ func (c *Comparator) compare() {
 	var data *OutData
 	var ok bool
 
+	defer func() {
+		c.wg.Done()
+	}()
+
 	for {
 		select {
 		case <-c.closed:
-			c.wg.Done()
 			return
 		default:
 		}
@@ -75,14 +68,12 @@ func (c *Comparator) compare() {
 
 		// stop Comparator if input is closed
 		if !ok {
-			c.Stop()
-			continue
+			return
 		}
 
 		if err := c.doCompare(data); err != nil {
 			c.log.Critical(err)
 		}
-
 	}
 }
 

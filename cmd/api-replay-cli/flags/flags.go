@@ -10,8 +10,11 @@ var (
 	}
 	// WorkersFlag defines number of threads for execution
 	WorkersFlag = cli.IntFlag{
-		Name:  "workers",
-		Usage: "defines how many number of threads in which request execution into StateDB is run on. Default: 4",
+		Name: "workers",
+		Usage: "defines the thread number for api-replay. " +
+			"The exact value is used for number of Executor threads, " +
+			"number of Comparator threads is the number divided by 2 since the Execution is much slower;" +
+			"default: 4",
 		Value: 4,
 	}
 )

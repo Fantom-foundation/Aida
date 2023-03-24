@@ -1,7 +1,6 @@
 package apireplay
 
 import (
-	"context"
 	"encoding/json"
 	"sync"
 
@@ -33,7 +32,6 @@ type OutData struct {
 // ReplayExecutor represents a goroutine in which requests are executed into StateDB
 type ReplayExecutor struct {
 	cfg            *utils.Config
-	ctx            context.Context
 	input          chan *executorInput
 	output         chan *OutData
 	wg             *sync.WaitGroup
@@ -44,7 +42,7 @@ type ReplayExecutor struct {
 }
 
 // newExecutor returns new instance of ReplayExecutor
-func newExecutor(chainCfg *params.ChainConfig, input chan *executorInput, output chan *OutData, wg *sync.WaitGroup, closed chan any, vmImpl string) *ReplayExecutor {
+func newExecutor(output chan *OutData, chainCfg *params.ChainConfig, input chan *executorInput, vmImpl string, wg *sync.WaitGroup, closed chan any) *ReplayExecutor {
 	return &ReplayExecutor{
 		chainCfg: chainCfg,
 		vmImpl:   vmImpl,
@@ -61,27 +59,31 @@ func (e *ReplayExecutor) Start() {
 	go e.execute()
 }
 
-// Stop the ReplayExecutor
-func (e *ReplayExecutor) Stop() {
-	e.wg.Done()
-}
-
 // execute reads request from Reader and executes it into given archive
 func (e *ReplayExecutor) execute() {
 	var (
+		ok  bool
 		in  *executorInput
 		res *StateDBData
 	)
 
+	defer func() {
+		e.wg.Done()
+	}()
+
 	for {
 		select {
 		case <-e.closed:
-			e.Stop()
 			return
 		default:
 
 		}
-		in = <-e.input
+		in, ok = <-e.input
+
+		// if input is closed, stop the Executor
+		if !ok {
+			return
+		}
 
 		// doExecute into db
 		res = e.doExecute(in)
