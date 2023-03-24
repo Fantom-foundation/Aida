@@ -133,12 +133,13 @@ func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config) {
 		if cfg.PrimeThreshold == 0 {
 			cfg.PrimeThreshold = len(ws)
 		}
+		log.Println("PrimeStateDBRandom")
 		PrimeStateDBRandom(ws, load, cfg, pt)
 	} else {
+		log.Println("primeOneAccount, for addr, account := range ws")
 		for addr, account := range ws {
 			primeOneAccount(addr, account, load, pt)
 		}
-
 	}
 	log.Printf("\t\tHashing and flushing ...\n")
 	if err := load.Close(); err != nil {

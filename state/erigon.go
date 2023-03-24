@@ -7,6 +7,7 @@ import (
 	//"path"
 	"errors"
 	"log"
+	"time"
 
 	//"github.com/Fantom-foundation/go-opera-fvm/cmd/opera/launcher"
 	"github.com/Fantom-foundation/go-opera-fvm/erigon"
@@ -93,6 +94,7 @@ func (s *erigonStateDB) ForEachStorage(common.Address, func(common.Hash, common.
 // TODO add caching
 func (s *erigonStateDB) EndBlock() {
 
+	
 	blockWriter := estate.NewPlainStateWriterNoHistory(s.rwTx)
 
 	// flush pending changes into erigon db
@@ -112,14 +114,12 @@ func (s *erigonStateDB) EndBlock() {
 		panic(err)
 	}
 	s.stateRoot = common.Hash(root)
+	log.Println("erigonStateDB.EndBlock", "\tErigon State root:  \t", s.stateRoot.Hex())
 
-	s.stateRoot = common.Hash{}
-
-	/*
-		if err := rwTx.Commit(); err != nil {
-			panic(err)
-		}
-	*/
+	log.Println("erigonStateDB.EndBlock, commmit erigon transaction")
+	if err := s.rwTx.Commit(); err != nil {
+		panic(err)
+	}
 }
 
 func (s *erigonStateDB) BeginEpoch(number uint64) {
@@ -174,14 +174,14 @@ func (l *erigonBulkLoad) CreateAccount(addr common.Address) {
 }
 
 func (l *erigonBulkLoad) SetBalance(addr common.Address, value *big.Int) {
-	old := l.db.StateDB.GetBalance(addr)
+	old := l.db.ErigonAdapter.GetBalance(addr)
 	value = value.Sub(value, old)
-	l.db.StateDB.AddBalance(addr, value)
+	l.db.ErigonAdapter.AddBalance(addr, value)
 	l.digest()
 }
 
 func (l *erigonBulkLoad) SetNonce(addr common.Address, nonce uint64) {
-	l.db.StateDB.SetNonce(addr, nonce)
+	l.db.ErigonAdapter.SetNonce(addr, nonce)
 	l.digest()
 }
 
@@ -191,12 +191,16 @@ func (l *erigonBulkLoad) SetState(addr common.Address, key common.Hash, value co
 }
 
 func (l *erigonBulkLoad) SetCode(addr common.Address, code []byte) {
-	l.db.StateDB.SetCode(addr, code)
+	l.db.ErigonAdapter.SetCode(addr, code)
 	l.digest()
 }
 
 func (l *erigonBulkLoad) Close() error {
-	l.db.Close()
+	log.Println("(l *erigonBulkLoad) Close()")
+	start := time.Now()
+	l.db.EndBlock()
+	sec := time.Since(start).Seconds()
+	log.Printf("\tElapsed time: %.2f s\n", sec)
 	return nil
 }
 
