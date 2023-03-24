@@ -10,7 +10,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/state"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
 // Snapshot data structure
@@ -29,9 +29,9 @@ func NewSnapshot(SnapshotID int32) *Snapshot {
 }
 
 // ReadSnapshot reads a snapshot operation from a file.
-func ReadSnapshot(file io.Reader) (Operation, error) {
+func ReadSnapshot(f io.Reader) (Operation, error) {
 	data := new(Snapshot)
-	err := binary.Read(file, binary.LittleEndian, data)
+	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 
@@ -42,7 +42,7 @@ func (op *Snapshot) Write(f io.Writer) error {
 }
 
 // Execute the snapshot operation.
-func (op *Snapshot) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
+func (op *Snapshot) Execute(db state.StateDB, ctx *context.Context) time.Duration {
 	start := time.Now()
 	ID := db.Snapshot()
 	elapsed := time.Since(start)
@@ -54,6 +54,6 @@ func (op *Snapshot) Execute(db state.StateDB, ctx *dictionary.Context) time.Dura
 }
 
 // Debug prints the details for the snapshot operation.
-func (op *Snapshot) Debug(*dictionary.Context) {
+func (op *Snapshot) Debug(*context.Context) {
 	fmt.Print(op.SnapshotID)
 }

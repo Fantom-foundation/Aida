@@ -7,14 +7,15 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
 // SetNonce data structure
 type SetNonce struct {
-	ContractIndex uint32 // encoded contract address
-	Nonce         uint64 // nonce
+	Contract common.Address
+	Nonce    uint64 // nonce
 }
 
 // GetId returns the set-nonce operation identifier.
@@ -23,14 +24,14 @@ func (op *SetNonce) GetId() byte {
 }
 
 // NewSetNonce creates a new set-nonce operation.
-func NewSetNonce(cIdx uint32, nonce uint64) *SetNonce {
-	return &SetNonce{ContractIndex: cIdx, Nonce: nonce}
+func NewSetNonce(contract common.Address, nonce uint64) *SetNonce {
+	return &SetNonce{Contract: contract, Nonce: nonce}
 }
 
 // ReadSetNonce reads a set-nonce operation from a file.
-func ReadSetNonce(file io.Reader) (Operation, error) {
+func ReadSetNonce(f io.Reader) (Operation, error) {
 	data := new(SetNonce)
-	err := binary.Read(file, binary.LittleEndian, data)
+	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 
@@ -41,14 +42,14 @@ func (op *SetNonce) Write(f io.Writer) error {
 }
 
 // Execute the set-nonce operation.
-func (op *SetNonce) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
-	contract := ctx.DecodeContract(op.ContractIndex)
+func (op *SetNonce) Execute(db state.StateDB, ctx *context.Context) time.Duration {
+	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
 	db.SetNonce(contract, op.Nonce)
 	return time.Since(start)
 }
 
 // Debug prints a debug message for the set-nonce operation.
-func (op *SetNonce) Debug(ctx *dictionary.Context) {
-	fmt.Print(ctx.DecodeContract(op.ContractIndex), op.Nonce)
+func (op *SetNonce) Debug(ctx *context.Context) {
+	fmt.Print(op.Contract, op.Nonce)
 }

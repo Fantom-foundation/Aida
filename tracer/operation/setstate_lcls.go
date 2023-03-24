@@ -9,7 +9,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
 // The SetStateLcls operation is a SetState operation whose
@@ -27,14 +27,14 @@ func (op *SetStateLcls) GetId() byte {
 }
 
 // SetStateLcls creates a new set-state-lcls operation.
-func NewSetStateLcls(v *common.Hash) *SetStateLcls {
-	return &SetStateLcls{Value: *v}
+func NewSetStateLcls(value common.Hash) *SetStateLcls {
+	return &SetStateLcls{Value: value}
 }
 
 // ReadSetStateLcls reads a set-state-lcls operation from file.
-func ReadSetStateLcls(file io.Reader) (Operation, error) {
+func ReadSetStateLcls(f io.Reader) (Operation, error) {
 	data := new(SetStateLcls)
-	err := binary.Read(file, binary.LittleEndian, data)
+	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 
@@ -45,18 +45,17 @@ func (op *SetStateLcls) Write(f io.Writer) error {
 }
 
 // Execute the set-state-lcls operation.
-func (op *SetStateLcls) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
+func (op *SetStateLcls) Execute(db state.StateDB, ctx *context.Context) time.Duration {
 	contract := ctx.PrevContract()
-	storage := ctx.DecodeStorageCache(0)
+	storage := ctx.DecodeKeyCache(0)
 	start := time.Now()
 	db.SetState(contract, storage, op.Value)
 	return time.Since(start)
 }
 
 // Debug prints a debug message for the set-state-lcls operation.
-func (op *SetStateLcls) Debug(ctx *dictionary.Context) {
+func (op *SetStateLcls) Debug(ctx *context.Context) {
 	contract := ctx.PrevContract()
-	storage := ctx.ReadStorageCache(0)
-	value := op.Value
-	fmt.Print(contract, storage, value)
+	storage := ctx.ReadKeyCache(0)
+	fmt.Print(contract, storage, op.Value)
 }

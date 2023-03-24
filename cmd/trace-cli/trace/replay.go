@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer"
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -124,9 +124,8 @@ func traceReplayTask(cfg *utils.Config) error {
 
 	log.Printf("Replay storage operations on StateDB database")
 
-	// load dictionaries & indexes
-	log.Printf("Load dictionaries")
-	dCtx := dictionary.ReadContext()
+	// load context
+	dCtx := context.NewContext()
 
 	// progress message setup
 	var (
@@ -258,7 +257,6 @@ func traceReplayAction(ctx *cli.Context) error {
 	operation.EnableProfiling = cfg.Profile
 	// set trace directory
 	tracer.TraceDir = ctx.String(utils.TraceDirectoryFlag.Name) + "/"
-	dictionary.ContextDir = ctx.String(utils.TraceDirectoryFlag.Name) + "/"
 
 	// start CPU profiling if requested.
 	if err := utils.StartCPUProfile(cfg); err != nil {

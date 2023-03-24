@@ -9,14 +9,15 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
 // SubBalance data structure
 type SubBalance struct {
-	ContractIndex uint32   // encoded contract address
-	Amount        [16]byte // truncated amount to 16 bytes
+	Contract common.Address
+	Amount   [16]byte // truncated amount to 16 bytes
 }
 
 // GetId returns the sub-balance operation identifier.
@@ -25,21 +26,21 @@ func (op *SubBalance) GetId() byte {
 }
 
 // NewSubBalance creates a new sub-balance operation.
-func NewSubBalance(cIdx uint32, amount *big.Int) *SubBalance {
+func NewSubBalance(contract common.Address, amount *big.Int) *SubBalance {
 	// check if amount requires more than 256 bits (16 bytes)
 	if amount.BitLen() > 256 {
 		log.Fatalf("Amount exceeds 256 bit")
 	}
-	ret := &SubBalance{ContractIndex: cIdx}
+	ret := &SubBalance{Contract: contract}
 	// copy amount to a 16-byte array with leading zeros
 	amount.FillBytes(ret.Amount[:])
 	return ret
 }
 
 // ReadSubBalance reads a sub-balance operation from a file.
-func ReadSubBalance(file io.Reader) (Operation, error) {
+func ReadSubBalance(f io.Reader) (Operation, error) {
 	data := new(SubBalance)
-	err := binary.Read(file, binary.LittleEndian, data)
+	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 
@@ -50,8 +51,8 @@ func (op *SubBalance) Write(f io.Writer) error {
 }
 
 // Execute the sub-balance operation.
-func (op *SubBalance) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
-	contract := ctx.DecodeContract(op.ContractIndex)
+func (op *SubBalance) Execute(db state.StateDB, ctx *context.Context) time.Duration {
+	contract := ctx.DecodeContract(op.Contract)
 	// construct bit.Int from a byte array
 	amount := new(big.Int).SetBytes(op.Amount[:])
 	start := time.Now()
@@ -60,6 +61,6 @@ func (op *SubBalance) Execute(db state.StateDB, ctx *dictionary.Context) time.Du
 }
 
 // Debug prints a debug message for the sub-balance operation.
-func (op *SubBalance) Debug(ctx *dictionary.Context) {
-	fmt.Print(ctx.DecodeContract(op.ContractIndex), new(big.Int).SetBytes(op.Amount[:]))
+func (op *SubBalance) Debug(ctx *context.Context) {
+	fmt.Print(op.Contract, new(big.Int).SetBytes(op.Amount[:]))
 }

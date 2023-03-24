@@ -7,14 +7,15 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
 // GetCommittedState data structure
 type GetCommittedState struct {
-	ContractIndex uint32 // encoded contract address
-	StorageIndex  uint32 // encoded storage address
+	Contract common.Address
+	Key      common.Hash
 }
 
 // GetId returns the get-commited-state-operation identifier.
@@ -23,14 +24,14 @@ func (op *GetCommittedState) GetId() byte {
 }
 
 // NewGetCommittedState creates a new get-commited-state operation.
-func NewGetCommittedState(cIdx uint32, sIdx uint32) *GetCommittedState {
-	return &GetCommittedState{ContractIndex: cIdx, StorageIndex: sIdx}
+func NewGetCommittedState(contract common.Address, key common.Hash) *GetCommittedState {
+	return &GetCommittedState{Contract: contract, Key: key}
 }
 
 // ReadGetCommittedState reads a get-commited-state operation from file.
-func ReadGetCommittedState(file io.Reader) (Operation, error) {
+func ReadGetCommittedState(f io.Reader) (Operation, error) {
 	data := new(GetCommittedState)
-	err := binary.Read(file, binary.LittleEndian, data)
+	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 
@@ -41,15 +42,15 @@ func (op *GetCommittedState) Write(f io.Writer) error {
 }
 
 // Execute the get-committed-state operation.
-func (op *GetCommittedState) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
-	contract := ctx.DecodeContract(op.ContractIndex)
-	storage := ctx.DecodeStorage(op.StorageIndex)
+func (op *GetCommittedState) Execute(db state.StateDB, ctx *context.Context) time.Duration {
+	contract := ctx.DecodeContract(op.Contract)
+	storage := ctx.DecodeKey(op.Key)
 	start := time.Now()
 	db.GetCommittedState(contract, storage)
 	return time.Since(start)
 }
 
 // Debug prints debug message for the get-committed-state operation.
-func (op *GetCommittedState) Debug(ctx *dictionary.Context) {
-	fmt.Print(ctx.DecodeContract(op.ContractIndex), ctx.DecodeStorage(op.StorageIndex))
+func (op *GetCommittedState) Debug(ctx *context.Context) {
+	fmt.Print(op.Contract, op.Key)
 }

@@ -7,7 +7,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/state"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
 // Endblock data structure
@@ -25,7 +25,7 @@ func NewEndBlock() *EndBlock {
 }
 
 // ReadEndBlock reads an end-block operation from file.
-func ReadEndBlock(file io.Reader) (Operation, error) {
+func ReadEndBlock(f io.Reader) (Operation, error) {
 	return new(EndBlock), nil
 }
 
@@ -35,12 +35,12 @@ func (op *EndBlock) Write(f io.Writer) error {
 }
 
 // Execute the end-block operation.
-func (op *EndBlock) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
+func (op *EndBlock) Execute(db state.StateDB, ctx *context.Context) time.Duration {
 	start := time.Now()
 	db.EndBlock()
 	return time.Since(start)
 }
 
 // Debug prints a debug message for the end-block operation.
-func (op *EndBlock) Debug(ctx *dictionary.Context) {
+func (op *EndBlock) Debug(ctx *context.Context) {
 }

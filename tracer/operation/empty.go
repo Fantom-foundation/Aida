@@ -7,13 +7,14 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
 // Empty data structure
 type Empty struct {
-	ContractIndex uint32 // encoded contract address
+	Contract common.Address
 }
 
 // GetId returns the Empty operation identifier.
@@ -22,14 +23,14 @@ func (op *Empty) GetId() byte {
 }
 
 // NewEmpty creates a new Empty operation.
-func NewEmpty(cIdx uint32) *Empty {
-	return &Empty{ContractIndex: cIdx}
+func NewEmpty(contract common.Address) *Empty {
+	return &Empty{Contract: contract}
 }
 
 // ReadEmpty reads an Empty operation from a file.
-func ReadEmpty(file io.Reader) (Operation, error) {
+func ReadEmpty(f io.Reader) (Operation, error) {
 	data := new(Empty)
-	err := binary.Read(file, binary.LittleEndian, data)
+	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 
@@ -40,14 +41,14 @@ func (op *Empty) Write(f io.Writer) error {
 }
 
 // Execute the Empty operation.
-func (op *Empty) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
-	contract := ctx.DecodeContract(op.ContractIndex)
+func (op *Empty) Execute(db state.StateDB, ctx *context.Context) time.Duration {
+	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
 	db.Empty(contract)
 	return time.Since(start)
 }
 
 // Debug prints a debug message for the Empty operation.
-func (op *Empty) Debug(ctx *dictionary.Context) {
-	fmt.Print(ctx.DecodeContract(op.ContractIndex))
+func (op *Empty) Debug(ctx *context.Context) {
+	fmt.Print(op.Contract)
 }

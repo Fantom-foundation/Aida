@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initGetCodeHashLc(t *testing.T) (*dictionary.Context, *GetCodeHashLc, common.Address) {
-	// create dictionary context
-	dict := dictionary.NewContext()
+func initGetCodeHashLc(t *testing.T) (*context.Context, *GetCodeHashLc, common.Address) {
+	// create context context
+	dict := context.NewContext()
 
 	addr := getRandomAddress(t)
 	dict.EncodeContract(addr)

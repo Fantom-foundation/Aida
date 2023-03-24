@@ -7,7 +7,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/state"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
 // GetCommittedStateLcls is a GetCommittedState operation
@@ -31,7 +31,7 @@ func NewGetCommittedStateLcls() *GetCommittedStateLcls {
 }
 
 // ReadGetCommittedStateLcls reads a get-committed-state-lcls operation from a file.
-func ReadGetCommittedStateLcls(file io.Reader) (Operation, error) {
+func ReadGetCommittedStateLcls(f io.Reader) (Operation, error) {
 	return NewGetCommittedStateLcls(), nil
 }
 
@@ -41,17 +41,17 @@ func (op *GetCommittedStateLcls) Write(f io.Writer) error {
 }
 
 // Execute the get-committed-state-lcls operation.
-func (op *GetCommittedStateLcls) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
+func (op *GetCommittedStateLcls) Execute(db state.StateDB, ctx *context.Context) time.Duration {
 	contract := ctx.PrevContract()
-	storage := ctx.DecodeStorageCache(0)
+	storage := ctx.DecodeKeyCache(0)
 	start := time.Now()
 	db.GetCommittedState(contract, storage)
 	return time.Since(start)
 }
 
 // Debug prints a debug message for the get-committed-state-lcls operation.
-func (op *GetCommittedStateLcls) Debug(ctx *dictionary.Context) {
+func (op *GetCommittedStateLcls) Debug(ctx *context.Context) {
 	contract := ctx.PrevContract()
-	storage := ctx.ReadStorageCache(0)
+	storage := ctx.ReadKeyCache(0)
 	fmt.Print(contract, storage)
 }

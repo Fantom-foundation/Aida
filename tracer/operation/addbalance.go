@@ -8,14 +8,16 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/Fantom-foundation/Aida/state"
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
 // AddBalance data structure
 type AddBalance struct {
-	ContractIndex uint32   // encoded contract address
-	Amount        [16]byte // truncated amount to 16 bytes
+	Contract common.Address
+	Amount   [16]byte // truncated amount to 16 bytes
 }
 
 // GetId returns the add-balance operation identifier.
@@ -24,21 +26,21 @@ func (op *AddBalance) GetId() byte {
 }
 
 // NewAddBalance creates a new add-balance operation.
-func NewAddBalance(cIdx uint32, amount *big.Int) *AddBalance {
+func NewAddBalance(contract common.Address, amount *big.Int) *AddBalance {
 	// check if amount requires more than 256 bits (16 bytes)
 	if amount.BitLen() > 256 {
 		log.Fatalf("Amount exceeds 256 bit")
 	}
-	ret := &AddBalance{ContractIndex: cIdx}
+	ret := &AddBalance{Contract: contract}
 	// copy amount to a 16-byte array with leading zeros
 	amount.FillBytes(ret.Amount[:])
 	return ret
 }
 
 // ReadAddBalance reads a add-balance operation from a file.
-func ReadAddBalance(file io.Reader) (Operation, error) {
+func ReadAddBalance(f io.Reader) (Operation, error) {
 	data := new(AddBalance)
-	err := binary.Read(file, binary.LittleEndian, data)
+	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 
@@ -49,8 +51,8 @@ func (op *AddBalance) Write(f io.Writer) error {
 }
 
 // Execute executes the add-balance operation.
-func (op *AddBalance) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
-	contract := ctx.DecodeContract(op.ContractIndex)
+func (op *AddBalance) Execute(db state.StateDB, ctx *context.Context) time.Duration {
+	contract := ctx.DecodeContract(op.Contract)
 	// construct bit.Int from a byte array
 	amount := new(big.Int).SetBytes(op.Amount[:])
 	start := time.Now()
@@ -59,6 +61,6 @@ func (op *AddBalance) Execute(db state.StateDB, ctx *dictionary.Context) time.Du
 }
 
 // Debug prints a debug message for the add-balance operation.
-func (op *AddBalance) Debug(ctx *dictionary.Context) {
-	fmt.Print(ctx.DecodeContract(op.ContractIndex), new(big.Int).SetBytes(op.Amount[:]))
+func (op *AddBalance) Debug(ctx *context.Context) {
+	fmt.Print(op.Contract, new(big.Int).SetBytes(op.Amount[:]))
 }

@@ -6,15 +6,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
-func initBeginTransaction(t *testing.T) (*dictionary.Context, *BeginTransaction) {
+func initBeginTransaction(t *testing.T) (*context.Context, *BeginTransaction) {
 	rand.Seed(time.Now().UnixNano())
 	num := rand.Uint32()
 
-	// create dictionary context
-	dict := dictionary.NewContext()
+	// create context context
+	dict := context.NewContext()
 
 	// create new operation
 	op := NewBeginTransaction(num)

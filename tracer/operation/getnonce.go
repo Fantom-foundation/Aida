@@ -7,13 +7,14 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
 // GetNonce data structure
 type GetNonce struct {
-	ContractIndex uint32 // encoded contract address
+	Contract common.Address
 }
 
 // GetId returns the get-nonce operation identifier.
@@ -22,14 +23,14 @@ func (op *GetNonce) GetId() byte {
 }
 
 // NewGetNonce creates a new get-nonce operation.
-func NewGetNonce(cIdx uint32) *GetNonce {
-	return &GetNonce{ContractIndex: cIdx}
+func NewGetNonce(contract common.Address) *GetNonce {
+	return &GetNonce{Contract: contract}
 }
 
 // ReadGetNonce reads a get-nonce operation from a file.
-func ReadGetNonce(file io.Reader) (Operation, error) {
+func ReadGetNonce(f io.Reader) (Operation, error) {
 	data := new(GetNonce)
-	err := binary.Read(file, binary.LittleEndian, data)
+	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 
@@ -40,14 +41,14 @@ func (op *GetNonce) Write(f io.Writer) error {
 }
 
 // Execute the get-nonce operation.
-func (op *GetNonce) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
-	contract := ctx.DecodeContract(op.ContractIndex)
+func (op *GetNonce) Execute(db state.StateDB, ctx *context.Context) time.Duration {
+	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
 	db.GetNonce(contract)
 	return time.Since(start)
 }
 
 // Debug prints a debug message for the get-nonce operation.
-func (op *GetNonce) Debug(ctx *dictionary.Context) {
-	fmt.Print(ctx.DecodeContract(op.ContractIndex))
+func (op *GetNonce) Debug(ctx *context.Context) {
+	fmt.Print(op.Contract)
 }

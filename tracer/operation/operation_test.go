@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/state"
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -307,7 +307,7 @@ func getRandomAddress(t *testing.T) common.Address {
 	return crypto.PubkeyToAddress(pk.PublicKey)
 }
 
-func testOperationReadWrite(t *testing.T, op1 Operation, opRead func(file io.Reader) (Operation, error)) {
+func testOperationReadWrite(t *testing.T, op1 Operation, opRead func(f io.Reader) (Operation, error)) {
 	opBuffer := bytes.NewBufferString("")
 	err := op1.Write(opBuffer)
 	if err != nil {
@@ -328,7 +328,7 @@ func testOperationReadWrite(t *testing.T, op1 Operation, opRead func(file io.Rea
 	}
 }
 
-func testOperationDebug(t *testing.T, dict *dictionary.Context, op Operation, args string) {
+func testOperationDebug(t *testing.T, dict *context.Context, op Operation, args string) {
 	// divert stdout to a buffer
 	old := os.Stdout
 	r, w, _ := os.Pipe()

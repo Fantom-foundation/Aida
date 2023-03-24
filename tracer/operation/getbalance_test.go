@@ -4,18 +4,18 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initGetBalance(t *testing.T) (*dictionary.Context, *GetBalance, common.Address) {
+func initGetBalance(t *testing.T) (*context.Context, *GetBalance, common.Address) {
 	addr := getRandomAddress(t)
-	// create dictionary context
-	dict := dictionary.NewContext()
-	cIdx := dict.EncodeContract(addr)
+	// create context context
+	dict := context.NewContext()
+	contract := dict.EncodeContract(addr)
 
 	// create new operation
-	op := NewGetBalance(cIdx)
+	op := NewGetBalance(contract)
 	if op == nil {
 		t.Fatalf("failed to create operation")
 	}

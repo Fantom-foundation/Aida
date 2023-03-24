@@ -6,8 +6,7 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
-
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
 // The GetStateLcls operation is a GetState operation
@@ -31,7 +30,7 @@ func NewGetStateLcls() *GetStateLcls {
 }
 
 // ReadGetStateLcls reads a get-state-lcls operation from a file.
-func ReadGetStateLcls(file io.Reader) (Operation, error) {
+func ReadGetStateLcls(f io.Reader) (Operation, error) {
 	return NewGetStateLcls(), nil
 }
 
@@ -41,17 +40,17 @@ func (op *GetStateLcls) Write(f io.Writer) error {
 }
 
 // Execute the get-state-lcls operation.
-func (op *GetStateLcls) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
+func (op *GetStateLcls) Execute(db state.StateDB, ctx *context.Context) time.Duration {
 	contract := ctx.PrevContract()
-	storage := ctx.DecodeStorageCache(0)
+	storage := ctx.DecodeKeyCache(0)
 	start := time.Now()
 	db.GetState(contract, storage)
 	return time.Since(start)
 }
 
 // Debug prints a debug message for the get-state-lcls operation.
-func (op *GetStateLcls) Debug(ctx *dictionary.Context) {
+func (op *GetStateLcls) Debug(ctx *context.Context) {
 	contract := ctx.PrevContract()
-	storage := ctx.ReadStorageCache(0)
+	storage := ctx.ReadKeyCache(0)
 	fmt.Print(contract, storage)
 }

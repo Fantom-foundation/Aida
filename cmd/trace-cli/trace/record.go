@@ -12,7 +12,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/tracer"
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -51,7 +51,7 @@ last block of the inclusive range of blocks to trace transactions.`,
 }
 
 // writeOperation writes operation to file.
-func writeOperation(dCtx *dictionary.Context, zFile io.Writer, op operation.Operation) {
+func writeOperation(dCtx *context.Context, zFile io.Writer, op operation.Operation) {
 	operation.Write(zFile, op)
 	if utils.TraceDebug {
 		operation.Debug(dCtx, op)
@@ -75,12 +75,11 @@ func traceRecordAction(ctx *cli.Context) error {
 	}
 	defer utils.StopCPUProfile(cfg)
 
-	// create dictionary and index contexts
-	dCtx := dictionary.NewContext()
+	// create record/replay context
+	dCtx := context.NewContext()
 
 	// process arguments
 	tracer.TraceDir = ctx.String(utils.TraceDirectoryFlag.Name) + "/"
-	dictionary.ContextDir = ctx.String(utils.TraceDirectoryFlag.Name) + "/"
 
 	// iterate through subsets in sequence
 	substate.SetSubstateDirectory(cfg.SubstateDBDir)
@@ -186,9 +185,6 @@ func traceRecordAction(ctx *cli.Context) error {
 		sec = time.Since(start).Seconds()
 		fmt.Printf("trace record: Total elapsed time: %.3f s, processed %v blocks\n", sec, cfg.Last-cfg.First+1)
 	}
-
-	// write dictionaries and indexes
-	dCtx.Write()
 
 	// wait for writer thread
 	runtime.Gosched()

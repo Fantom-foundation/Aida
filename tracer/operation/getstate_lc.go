@@ -7,8 +7,9 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/Fantom-foundation/Aida/tracer/dictionary"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
 // The GetStateLc operation is a GetState operation
@@ -18,7 +19,7 @@ import (
 
 // GetStateLc data structure
 type GetStateLc struct {
-	StorageIndex uint32 // encoded storage address
+	Key common.Hash
 }
 
 // GetId returns the get-state-lc operation identifier.
@@ -27,14 +28,14 @@ func (op *GetStateLc) GetId() byte {
 }
 
 // GetStateLc creates a new get-state-lc operation.
-func NewGetStateLc(sIdx uint32) *GetStateLc {
-	return &GetStateLc{StorageIndex: sIdx}
+func NewGetStateLc(key common.Hash) *GetStateLc {
+	return &GetStateLc{Key: key}
 }
 
 // ReadGetStateLc reads a get-state-lc operation from a file.
-func ReadGetStateLc(file io.Reader) (Operation, error) {
+func ReadGetStateLc(f io.Reader) (Operation, error) {
 	data := new(GetStateLc)
-	err := binary.Read(file, binary.LittleEndian, data)
+	err := binary.Read(f, binary.LittleEndian, data)
 	return data, err
 }
 
@@ -45,17 +46,17 @@ func (op *GetStateLc) Write(f io.Writer) error {
 }
 
 // Execute the get-state-lc operation.
-func (op *GetStateLc) Execute(db state.StateDB, ctx *dictionary.Context) time.Duration {
+func (op *GetStateLc) Execute(db state.StateDB, ctx *context.Context) time.Duration {
 	contract := ctx.PrevContract()
-	storage := ctx.DecodeStorage(op.StorageIndex)
+	storage := ctx.DecodeKey(op.Key)
 	start := time.Now()
 	db.GetState(contract, storage)
 	return time.Since(start)
 }
 
 // Debug prints a debug message for the get-state-lc operation.
-func (op *GetStateLc) Debug(ctx *dictionary.Context) {
+func (op *GetStateLc) Debug(ctx *context.Context) {
 	contract := ctx.PrevContract()
-	storage := ctx.DecodeStorage(op.StorageIndex)
+	storage := ctx.DecodeKey(op.Key)
 	fmt.Print(contract, storage)
 }
