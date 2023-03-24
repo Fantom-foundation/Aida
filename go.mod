@@ -151,3 +151,5 @@ replace github.com/ugorji/go/codec => github.com/ugorji/go/codec v1.1.13
 replace github.com/ugorji/go/codec/codecgen => github.com/ugorji/go/codec/codecgen v1.1.13
 
 replace github.com/torquem-ch/mdbx-go => github.com/torquem-ch/mdbx-go v0.26.3
+
+replace github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
