@@ -1,8 +1,6 @@
 package generator
 
 import (
-	"fmt"
-
 	"github.com/Fantom-foundation/Aida/stochastic/statistics"
 )
 
@@ -60,7 +58,6 @@ func (a *IndirectAccess) DeleteIndex(k int64) error {
 	// find index in translation table
 	i := a.findIndex(k)
 	if i < 0 {
-		fmt.Printf("Index: %v\n", k)
 		panic("index not found")
 	}
 
