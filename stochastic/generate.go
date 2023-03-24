@@ -6,7 +6,7 @@ import "github.com/Fantom-foundation/Aida/stochastic/statistics"
 const (
 	TransactionsPerBlock = 10
 	BlocksPerEpoch       = 10
-	OperationFrequency   = 100 // determines indirectly the length of a transaction
+	OperationFrequency   = 10 // determines indirectly the length of a transaction
 	NumContracts         = 1000
 	NumKeys              = 1000
 	NumValues            = 1000

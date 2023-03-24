@@ -49,6 +49,16 @@ type stochasticState struct {
 	rg             *rand.Rand                   // random generator for sampling
 }
 
+// find is a helper function to find an element in a slice
+func find[T comparable](a []T, x T) bool {
+	for _, y := range a {
+		if x == y {
+			return true
+		}
+	}
+	return false
+}
+
 // RunStochasticReplay runs the stochastic simulation for StateDB operations.
 // It requires the simulation model and simulation length. The trace-debug flag
 // enables/disables the printing of StateDB operations and their arguments on
@@ -448,7 +458,10 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		db.Suicide(addr)
 		value := ss.getBalanceLog(addrIdx)
 		ss.updateBalanceLog(addrIdx, -value)
-		ss.suicided = append(ss.suicided, addrIdx)
+		if addrIdx != 0 && !find[int64](ss.suicided, addrIdx) {
+			// exclude zero addresses and already deleted accounts
+			ss.suicided = append(ss.suicided, addrIdx)
+		}
 
 	default:
 		panic("invalid operation")
