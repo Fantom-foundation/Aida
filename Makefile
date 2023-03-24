@@ -32,6 +32,11 @@ aida-api-replay:
 	-o $(GO_BIN)/aida-apireplay \
 	./cmd/api-replay-cli
 
+carmen/go/lib/libcarmen.so:
+	@cd carmen/go/lib ; \
+	./build_libcarmen.sh ;
+
+
 aida-worldstate:
 	@go build \
 		-ldflags="-X 'github.com/Fantom-foundation/Aida/cmd/worldstate-cli/version.Version=$(APP_VERSION)' -X 'github.com/Fantom-foundation/Aida/cmd/worldstate-cli/version.Time=$(BUILD_DATE)' -X 'github.com/Fantom-foundation/Aida/cmd/worldstate-cli/version.Compiler=$(BUILD_COMPILER)' -X 'github.com/Fantom-foundation/Aida/cmd/worldstate-cli/version.Commit=$(BUILD_COMMIT)' -X 'github.com/Fantom-foundation/Aida/cmd/worldstate-cli/version.CommitTime=$(BUILD_COMMIT_TIME)'" \
@@ -39,71 +44,48 @@ aida-worldstate:
 		-v \
 		./cmd/worldstate-cli
 
-aida-stochastic:
-	@cd carmen/go/lib ; \
-	./build_libcarmen.sh ; \
-	cd ../../.. ; \
+aida-stochastic: carmen/go/lib/libcarmen.so
 	GOPROXY=$(GOPROXY) \
 	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/go-opera-fvm \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
-       	-o $(GO_BIN)/aida-stochastic \
+	-o $(GO_BIN)/aida-stochastic \
 	./cmd/stochastic-cli
 
-aida-trace:
-	@cd carmen/go/lib ; \
-	./build_libcarmen.sh ; \
-	cd ../../.. ; \
+aida-trace: carmen/go/lib/libcarmen.so
 	GOPROXY=$(GOPROXY) \
 	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/go-opera-fvm \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-trace \
 	./cmd/trace-cli
 
-
-
-aida-runarchive:
-	@cd carmen/go/lib ; \
-	./build_libcarmen.sh ; \
-	cd ../../.. ; \
+aida-runarchive: carmen/go/lib/libcarmen.so
 	GOPROXY=$(GOPROXY) \
 	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/go-opera-fvm \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-runarchive \
 	./cmd/runarchive-cli
 
-aida-runvm:
-	@cd carmen/go/lib ; \
-	./build_libcarmen.sh ; \
-	cd ../../.. ; \
+aida-runvm: carmen/go/lib/libcarmen.so
 	GOPROXY=$(GOPROXY) \
 	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/go-opera-fvm \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-runvm \
 	./cmd/runvm-cli
 
-aida-substate:
-	@cd carmen/go/lib ; \
-	./build_libcarmen.sh ; \
-	cd ../../.. ; \
+aida-substate: carmen/go/lib/libcarmen.so
 	GOPROXY=$(GOPROXY) \
 	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/go-opera-fvm \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
-       	-o $(GO_BIN)/aida-substate \
+	-o $(GO_BIN)/aida-substate \
 	./cmd/substate-cli
 
-aida-updateset:
-	@cd carmen/go/lib ; \
-	./build_libcarmen.sh ; \
-	cd ../../.. ; \
+aida-updateset: carmen/go/lib/libcarmen.so
 	GOPROXY=$(GOPROXY) \
 	go build -ldflags "-s -w" \
 	-o $(GO_BIN)/aida-updateset \
 	./cmd/updateset-cli
 
-aida-dbmerger:
-	@cd carmen/go/lib ; \
-	./build_libcarmen.sh ; \
-	cd ../../.. ; \
+aida-dbmerger: carmen/go/lib/libcarmen.so
 	GOPROXY=$(GOPROXY) \
 	go build -ldflags "-s -w" \
 	-o $(GO_BIN)/aida-dbmerger \
@@ -114,7 +96,7 @@ test:
 
 clean:
 	cd carmen/go ; \
-	rm -f lib/libstate.so ; \
+	rm -f lib/libcarmen.so ; \
 	cd ../cpp ; \
 	bazel clean ; \
 	cd ../.. ; \
