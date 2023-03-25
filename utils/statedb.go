@@ -120,6 +120,9 @@ func (pt *ProgressTracker) PrintProgress() {
 func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config) {
 
 	tx := db.BeginErigonExecution()
+	if tx == nil {
+		panic("tx == nil")
+	}
 	defer tx.Rollback()
 
 	load := db.StartBulkLoad()
