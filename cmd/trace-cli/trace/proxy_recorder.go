@@ -10,6 +10,8 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+
+	"github.com/ledgerwatch/erigon-lib/kv"
 )
 
 // ProxyRecorder data structure for capturing and recording
@@ -28,6 +30,8 @@ func NewProxyRecorder(db state.StateDB, dctx *context.Context, output io.Writer)
 	r.output = output
 	return r
 }
+
+func (r ProxyRecorder) BeginErigonExecution() kv.RwTx { return nil }
 
 // write new operation to file.
 func (r *ProxyRecorder) write(op operation.Operation) {

@@ -89,6 +89,8 @@ func ProcessTx(db state.StateDB, cfg *Config, block uint64, txIndex int, tx *sub
 			return
 		}
 	}
+
+	// TODO replace this piece of code with CommitBlock
 	if chainConfig.IsByzantium(blockCtx.BlockNumber) {
 		db.Finalise(true)
 	} else {

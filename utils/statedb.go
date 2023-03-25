@@ -2,7 +2,6 @@ package utils
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -24,8 +23,8 @@ import (
 )
 
 // MakeStateDB creates a new DB instance based on cli argument.
-func MakeStateDB(directory string, cfg *Config, rootHash common.Hash, isExistingDB bool, tx kv.RwTx) (state.StateDB, error) {
-	db, err := makeStateDBInternal(directory, cfg, rootHash, isExistingDB, tx)
+func MakeStateDB(directory string, cfg *Config, rootHash common.Hash, isExistingDB bool, chainKV kv.RwDB) (state.StateDB, error) {
+	db, err := makeStateDBInternal(directory, cfg, rootHash, isExistingDB, chainKV)
 	if err != nil {
 		return nil, err
 	}
@@ -36,9 +35,9 @@ func MakeStateDB(directory string, cfg *Config, rootHash common.Hash, isExisting
 }
 
 // makeStateDB creates a DB instance with a potential shadow instance.
-func makeStateDBInternal(directory string, cfg *Config, rootHash common.Hash, isExistingDB bool, tx kv.RwTx) (state.StateDB, error) {
+func makeStateDBInternal(directory string, cfg *Config, rootHash common.Hash, isExistingDB bool, chainKV kv.RwDB) (state.StateDB, error) {
 	if cfg.ShadowImpl == "" {
-		return makeStateDBVariant(directory, cfg.DbImpl, cfg.DbVariant, cfg.ArchiveVariant, rootHash, cfg, tx)
+		return makeStateDBVariant(directory, cfg.DbImpl, cfg.DbVariant, cfg.ArchiveVariant, rootHash, cfg, chainKV)
 	}
 	if isExistingDB {
 		return nil, fmt.Errorf("Using an existing stateDB with a shadow DB is not supported.")
@@ -51,11 +50,11 @@ func makeStateDBInternal(directory string, cfg *Config, rootHash common.Hash, is
 	if err := os.MkdirAll(shadowDir, 0700); err != nil {
 		return nil, err
 	}
-	prime, err := makeStateDBVariant(primeDir, cfg.DbImpl, cfg.DbVariant, cfg.ArchiveVariant, rootHash, cfg, tx)
+	prime, err := makeStateDBVariant(primeDir, cfg.DbImpl, cfg.DbVariant, cfg.ArchiveVariant, rootHash, cfg, chainKV)
 	if err != nil {
 		return nil, err
 	}
-	shadow, err := makeStateDBVariant(shadowDir, cfg.ShadowImpl, cfg.ShadowVariant, cfg.ArchiveVariant, rootHash, cfg, tx)
+	shadow, err := makeStateDBVariant(shadowDir, cfg.ShadowImpl, cfg.ShadowVariant, cfg.ArchiveVariant, rootHash, cfg, chainKV)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +62,7 @@ func makeStateDBInternal(directory string, cfg *Config, rootHash common.Hash, is
 }
 
 // makeStateDBVariant creates a DB instance of the requested kind.
-func makeStateDBVariant(directory, impl, variant, archiveVariant string, rootHash common.Hash, cfg *Config, tx kv.RwTx) (state.StateDB, error) {
+func makeStateDBVariant(directory, impl, variant, archiveVariant string, rootHash common.Hash, cfg *Config, chainKV kv.RwDB) (state.StateDB, error) {
 	switch impl {
 	case "memory":
 		return state.MakeEmptyGethInMemoryStateDB(variant)
@@ -76,7 +75,7 @@ func makeStateDBVariant(directory, impl, variant, archiveVariant string, rootHas
 		}
 		return state.MakeCarmenStateDB(directory, variant, archiveVariant, cfg.CarmenSchema)
 	case "erigon":
-		return state.MakeErigonStateDB(directory, variant, rootHash, tx)
+		return state.MakeErigonStateDB(directory, variant, rootHash, chainKV)
 	}
 	return nil, fmt.Errorf("unknown DB implementation (--%v): %v", StateDbImplementationFlag.Name, impl)
 }
@@ -119,6 +118,10 @@ func (pt *ProgressTracker) PrintProgress() {
 
 // PrimeStateDB primes database with accounts from the world state.
 func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config) {
+
+	tx := db.BeginErigonExecution()
+	defer tx.Rollback()
+
 	load := db.StartBulkLoad()
 
 	numValues := 0
@@ -205,6 +208,10 @@ func DeleteDestroyedAccountsFromWorldState(ws substate.SubstateAlloc, cfg *Confi
 // DeleteDestroyedAccountsFromStateDB performs suicide operations on previously
 // self-destructed accounts.
 func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *Config, target uint64) error {
+
+	tx := db.BeginErigonExecution()
+	defer tx.Rollback()
+
 	if !cfg.HasDeletedAccounts {
 		log.Printf("Database not provided. Ignore deleted accounts.\n")
 		return nil
@@ -245,7 +252,7 @@ func GetDirectorySize(directory string) int64 {
 }
 
 // PrepareStateDB creates stateDB or load existing stateDB
-func PrepareStateDB(cfg *Config) (db state.StateDB, workingDirectory string, loadedExistingDB bool, close func(), err error) {
+func PrepareStateDB(cfg *Config) (db state.StateDB, workingDirectory string, loadedExistingDB bool, chainKV kv.RwDB, err error) {
 	var exists bool
 	roothash := common.Hash{}
 	loadedExistingDB = false
@@ -303,18 +310,9 @@ func PrepareStateDB(cfg *Config) (db state.StateDB, workingDirectory string, loa
 
 	log.Printf("\tTemporary state DB directory: %v\n", workingDirectory)
 
-	chainKV := launcher.InitChainKV(path.Join(workingDirectory, "erigon"))
-	tx, err := chainKV.BeginRw(context.Background())
-	if err != nil {
-		return
-	}
+	chainKV = launcher.InitChainKV(path.Join(workingDirectory, "erigon"))
 
-	close = func() {
-		tx.Rollback()
-		chainKV.Close()
-	}
-
-	db, err = MakeStateDB(workingDirectory, cfg, roothash, loadedExistingDB, tx)
+	db, err = MakeStateDB(workingDirectory, cfg, roothash, loadedExistingDB, chainKV)
 
 	return
 }
@@ -323,6 +321,11 @@ func PrepareStateDB(cfg *Config) (db state.StateDB, workingDirectory string, loa
 // NB: We can only check what must be in the db (but cannot check whether db stores more).
 func ValidateStateDB(ws substate.SubstateAlloc, db state.StateDB, updateOnFail bool) error {
 	var err string
+
+	tx := db.BeginErigonExecution()
+	defer tx.Rollback()
+
+	// TODO add erigon txc
 	for addr, account := range ws {
 		if !db.Exist(addr) {
 			err += fmt.Sprintf("  Account %v does not exist\n", addr.Hex())
@@ -373,5 +376,6 @@ func ValidateStateDB(ws substate.SubstateAlloc, db state.StateDB, updateOnFail b
 	if len(err) > 0 {
 		return fmt.Errorf(err)
 	}
+
 	return nil
 }

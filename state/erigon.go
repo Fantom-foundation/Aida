@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-	//"path"
-	"errors"
+
+	//"errors"
 	"log"
 	"time"
 
@@ -22,15 +22,11 @@ import (
 	estate "github.com/ledgerwatch/erigon/core/state"
 )
 
-func MakeErigonStateDB(directory, variant string, rootHash common.Hash, tx kv.RwTx) (s StateDB, err error) {
+func MakeErigonStateDB(directory, variant string, rootHash common.Hash, chainKV kv.RwDB) (s StateDB, err error) {
 	log.Println("MakeErigonStateDB", "directory", directory, "variant", variant)
 	switch variant {
 	case "go-memory":
-		db := memdb.New()
-		tx, err = db.BeginRw(context.Background())
-		if err != nil {
-			return nil, err
-		}
+		chainKV = memdb.New()
 	case "go-erigon":
 	default:
 		err = fmt.Errorf("unkown variant: %v", variant)
@@ -38,27 +34,41 @@ func MakeErigonStateDB(directory, variant string, rootHash common.Hash, tx kv.Rw
 	}
 
 	es := &erigonStateDB{
-		rwTx:      tx,
+		chainKV:   chainKV,
 		stateRoot: rootHash,
 	}
 
 	// initialize stateDB
 	// or use NewPlainState
-	es.ErigonAdapter = evmcore.NewErigonAdapter(erigonstate.NewWithStateReader(estate.NewPlainStateReader(tx)))
+	es.BeginBlockApply()
 	s = es
 	return
 }
 
 type erigonStateDB struct {
+	chainKV   kv.RwDB
 	rwTx      kv.RwTx
 	stateRoot common.Hash
 	*evmcore.ErigonAdapter
 	block uint64
 }
 
+func (s *erigonStateDB) BeginErigonExecution() kv.RwTx {
+	rwTx, err := s.chainKV.BeginRw(context.Background())
+	if err != nil {
+		panic(err)
+	}
+	s.SetStateReader(estate.NewPlainStateReader(rwTx))
+	s.rwTx = rwTx
+
+	return rwTx
+}
+
 // BeginBlockApply creates a new statedb from an existing geth database
 func (s *erigonStateDB) BeginBlockApply() error {
-	return errors.New("ignored")
+	var err error
+	s.ErigonAdapter = evmcore.NewErigonAdapter(erigonstate.New())
+	return err
 }
 
 func (s *erigonStateDB) BeginTransaction(number uint32) {
@@ -87,6 +97,10 @@ func (s *erigonStateDB) ForEachStorage(common.Address, func(common.Hash, common.
 	panic("ForEachStorage not implemented")
 }
 
+func (s *erigonStateDB) SetRwTx(tx kv.RwTx) {
+	s.rwTx = tx
+}
+
 // TODO in erigon state root  is computed every epoch not every block
 // decide whether to compute it every block or not
 // TODO add a flag to enable erigon history writing, skip it for now, use NewPlainStateWriterNoHistory
@@ -94,7 +108,6 @@ func (s *erigonStateDB) ForEachStorage(common.Address, func(common.Hash, common.
 // TODO add caching
 func (s *erigonStateDB) EndBlock() {
 
-	
 	blockWriter := estate.NewPlainStateWriterNoHistory(s.rwTx)
 
 	// flush pending changes into erigon db
@@ -158,49 +171,49 @@ func (s *erigonStateDB) GetMemoryUsage() *MemoryUsage {
 	return nil
 }
 
-func (s *erigonStateDB) StartBulkLoad() BulkLoad {
-	return &erigonBulkLoad{db: s}
-}
-
 // For priming initial state of stateDB
 type erigonBulkLoad struct {
 	db      *erigonStateDB
 	num_ops int64
 }
 
+func (s *erigonStateDB) StartBulkLoad() BulkLoad {
+	return &erigonBulkLoad{db: s}
+}
+
 func (l *erigonBulkLoad) CreateAccount(addr common.Address) {
-	l.db.StateDB.CreateAccount(addr)
+	l.db.CreateAccount(addr)
 	l.digest()
 }
 
 func (l *erigonBulkLoad) SetBalance(addr common.Address, value *big.Int) {
-	old := l.db.ErigonAdapter.GetBalance(addr)
+	old := l.db.GetBalance(addr)
 	value = value.Sub(value, old)
-	l.db.ErigonAdapter.AddBalance(addr, value)
+	l.db.AddBalance(addr, value)
 	l.digest()
 }
 
 func (l *erigonBulkLoad) SetNonce(addr common.Address, nonce uint64) {
-	l.db.ErigonAdapter.SetNonce(addr, nonce)
+	l.db.SetNonce(addr, nonce)
 	l.digest()
 }
 
 func (l *erigonBulkLoad) SetState(addr common.Address, key common.Hash, value common.Hash) {
-	l.db.ErigonAdapter.SetState(addr, key, value)
+	l.db.SetState(addr, key, value)
 	l.digest()
 }
 
 func (l *erigonBulkLoad) SetCode(addr common.Address, code []byte) {
-	l.db.ErigonAdapter.SetCode(addr, code)
+	l.db.SetCode(addr, code)
 	l.digest()
 }
 
 func (l *erigonBulkLoad) Close() error {
-	log.Println("(l *erigonBulkLoad) Close()")
+	log.Println("\t erigonBulkLoad.Close()")
 	start := time.Now()
 	l.db.EndBlock()
 	sec := time.Since(start).Seconds()
-	log.Printf("\tElapsed time: %.2f s\n", sec)
+	log.Printf("\t erigonBulkLoad.Close(), Elapsed time: %.2f s\n", sec)
 	return nil
 }
 

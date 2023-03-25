@@ -7,6 +7,8 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+
+	"github.com/ledgerwatch/erigon-lib/kv"
 )
 
 func MakeEmptyGethInMemoryStateDB(variant string) (StateDB, error) {
@@ -485,6 +487,8 @@ func (db *inMemoryStateDB) PrepareSubstate(alloc *substate.SubstateAlloc, block 
 func (s *inMemoryStateDB) StartBulkLoad() BulkLoad {
 	return &gethInMemoryBulkLoad{}
 }
+
+func (s *inMemoryStateDB) BeginErigonExecution() kv.RwTx { return nil }
 
 type gethInMemoryBulkLoad struct{}
 

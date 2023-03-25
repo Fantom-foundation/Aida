@@ -49,11 +49,13 @@ func RunVM(ctx *cli.Context) error {
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
-	db, stateDirectory, loadedExistingDB, close, err := utils.PrepareStateDB(cfg)
+	db, stateDirectory, loadedExistingDB, chainKV, err := utils.PrepareStateDB(cfg)
 	if err != nil {
 		return err
 	}
-	defer close()
+
+	defer chainKV.Close()
+
 	if !cfg.KeepStateDB {
 		log.Printf("WARNING: directory %v will be removed at the end of this run.\n", stateDirectory)
 		defer os.RemoveAll(stateDirectory)
@@ -76,6 +78,7 @@ func RunVM(ctx *cli.Context) error {
 		// prime stateDB
 		log.Printf("Prime stateDB \n")
 		start = time.Now()
+
 		utils.PrimeStateDB(ws, db, cfg)
 		sec = time.Since(start).Seconds()
 		log.Printf("\tElapsed time: %.2f s\n", sec)
@@ -84,6 +87,7 @@ func RunVM(ctx *cli.Context) error {
 		log.Printf("Delete destroyed accounts \n")
 		start = time.Now()
 		// remove destroyed accounts until one block before the first block
+
 		err = utils.DeleteDestroyedAccountsFromStateDB(db, cfg, cfg.First-1)
 		sec = time.Since(start).Seconds()
 		log.Printf("\tElapsed time: %.2f s\n", sec)
@@ -117,6 +121,7 @@ func RunVM(ctx *cli.Context) error {
 		if err := utils.DeleteDestroyedAccountsFromWorldState(ws, cfg, cfg.First-1); err != nil {
 			return fmt.Errorf("Failed to remove deleted accoount from the world state. %v", err)
 		}
+
 		if err := utils.ValidateStateDB(ws, db, false); err != nil {
 			return fmt.Errorf("Pre: World state is not contained in the stateDB. %v", err)
 		}
@@ -129,7 +134,7 @@ func RunVM(ctx *cli.Context) error {
 		start = time.Now()
 		lastSec = time.Since(start).Seconds()
 	}
-
+    panic("breakpoint")
 	log.Printf("Run VM\n")
 	var curBlock uint64 = 0
 	var curEpoch uint64
@@ -147,7 +152,7 @@ func RunVM(ctx *cli.Context) error {
 			curEpoch = tx.Block / cfg.EpochLength
 			curBlock = tx.Block
 			db.BeginEpoch(curEpoch)
-			db.BeginBlock(curBlock)
+			db.BeginBlock(curBlock) // open mdbx tx and put it on erigonstatedb
 			lastBlockProgressReportBlock = tx.Block
 			lastBlockProgressReportBlock -= lastBlockProgressReportBlock % progressReportBlockInterval
 			lastBlockProgressReportTime = time.Now()
@@ -159,7 +164,7 @@ func RunVM(ctx *cli.Context) error {
 			}
 
 			// Mark the end of the old block.
-			db.EndBlock()
+			db.EndBlock() // commit transaction
 
 			// Move on epochs if needed.
 			newEpoch := tx.Block / cfg.EpochLength
@@ -171,7 +176,7 @@ func RunVM(ctx *cli.Context) error {
 			// Mark the beginning of a new block
 			curBlock = tx.Block
 			db.BeginBlock(curBlock)
-			db.BeginBlockApply()
+			db.BeginBlockApply() //erigonstate.New and put into erigonstatedb
 		}
 		if cfg.MaxNumTransactions >= 0 && txCount >= cfg.MaxNumTransactions {
 			break

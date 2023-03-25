@@ -7,6 +7,8 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+
+	"github.com/ledgerwatch/erigon-lib/kv"
 )
 
 type BasicStateDB interface {
@@ -122,6 +124,8 @@ type StateDB interface {
 	// Used to initiate the state DB for the next transaction.
 	// This is mainly for development purposes to support in-memory DB implementations.
 	PrepareSubstate(*substate.SubstateAlloc, uint64)
+
+	BeginErigonExecution() kv.RwTx
 }
 
 // BulkWrite is a faster interface to StateDB instances for writing data without
