@@ -12,8 +12,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	vm "github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/ethdb"
-
-	"github.com/ledgerwatch/erigon-lib/kv"
 )
 
 const (
@@ -297,7 +295,7 @@ func (s *gethStateDB) GetMemoryUsage() *MemoryUsage {
 	return nil
 }
 
-func (s *gethStateDB) BeginErigonExecution() kv.RwTx { return nil }
+func (s *gethStateDB) BeginErigonExecution() func() { return nil }
 
 type gethBulkLoad struct {
 	db      *gethStateDB

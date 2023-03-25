@@ -53,7 +53,7 @@ type erigonStateDB struct {
 	block uint64
 }
 
-func (s *erigonStateDB) BeginErigonExecution() kv.RwTx {
+func (s *erigonStateDB) BeginErigonExecution() func() {
 	rwTx, err := s.chainKV.BeginRw(context.Background())
 	if err != nil {
 		panic(err)
@@ -61,13 +61,15 @@ func (s *erigonStateDB) BeginErigonExecution() kv.RwTx {
 	s.SetStateReader(estate.NewPlainStateReader(rwTx))
 	s.rwTx = rwTx
 
-	return rwTx
+	return func() {
+		rwTx.Rollback()
+	}
 }
 
 // BeginBlockApply creates a new statedb from an existing geth database
 func (s *erigonStateDB) BeginBlockApply() error {
 	var err error
-	s.ErigonAdapter = evmcore.NewErigonAdapter(erigonstate.New())
+	s.ErigonAdapter = evmcore.NewErigonAdapter(erigonstate.NewWithChainKV(s.chainKV))
 	return err
 }
 
@@ -108,29 +110,43 @@ func (s *erigonStateDB) SetRwTx(tx kv.RwTx) {
 // TODO add caching
 func (s *erigonStateDB) EndBlock() {
 
-	blockWriter := estate.NewPlainStateWriterNoHistory(s.rwTx)
+	tx, err := s.chainKV.BeginRw(context.Background())
+	if err != nil {
+		panic(err)
+	}
 
-	// flush pending changes into erigon db
+	defer tx.Rollback()
+
+	//blockWriter := estate.NewPlainStateWriter(tx, tx, s.block)
+	blockWriter := estate.NewPlainStateWriterNoHistory(tx)
+
+	// flush pending changes into erigon plain state
 	if err := s.ErigonAdapter.CommitBlock(blockWriter); err != nil {
 		panic(err)
 	}
 
-	// convert kv.Plainstate into Hashedstate. Required for later stateroot computation
-
-	if err := erigon.PromoteHashedStateIncrementally("HashedState", s.block-1, s.block, s.rwTx, nil); err != nil {
+	/*
+	if err := blockWriter.WriteChangeSets(); err != nil {
 		panic(err)
 	}
+	*/
 
-	// setting sealing argument to true enables state root computation
-	root, err := erigon.IncrementIntermediateHashes("IH", s.rwTx, s.block-1, s.block, true, nil)
+	if err = erigon.GenerateHashedStateLoad(tx); err != nil {
+		return
+	}
+
+	// TODO add erigon.PromoteHashedStateIncrementally and erigon.IncrementIntermediateHashes
+	// convert kv.Plainstate into Hashedstate. Required for later stateroot computation
+	root, err := erigon.RegenerateIntermediateHashes("IH", tx)
 	if err != nil {
 		panic(err)
 	}
+
 	s.stateRoot = common.Hash(root)
 	log.Println("erigonStateDB.EndBlock", "\tErigon State root:  \t", s.stateRoot.Hex())
 
 	log.Println("erigonStateDB.EndBlock, commmit erigon transaction")
-	if err := s.rwTx.Commit(); err != nil {
+	if err := tx.Commit(); err != nil {
 		panic(err)
 	}
 }

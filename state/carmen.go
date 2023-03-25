@@ -10,8 +10,6 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-
-	"github.com/ledgerwatch/erigon-lib/kv"
 )
 
 func MakeCarmenStateDB(directory, variant, archive string, schema int) (StateDB, error) {
@@ -283,7 +281,7 @@ func (s *carmenStateDB) Error() error {
 	return nil
 }
 
-func (s *carmenStateDB) BeginErigonExecution() kv.RwTx { return nil }
+func (s *carmenStateDB) BeginErigonExecution() func() { return nil }
 
 func (s *carmenStateDB) StartBulkLoad() BulkLoad {
 	return &carmenBulkLoad{s.db.StartBulkLoad()}

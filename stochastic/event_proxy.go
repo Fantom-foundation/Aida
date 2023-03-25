@@ -9,8 +9,6 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-
-	"github.com/ledgerwatch/erigon-lib/kv"
 )
 
 // EventProxy data structure for capturing StateDB events
@@ -38,7 +36,7 @@ func (p *EventProxy) CreateAccount(address common.Address) {
 	p.db.CreateAccount(address)
 }
 
-func (p *EventProxy) BeginErigonExecution() kv.RwTx { return nil }
+func (p *EventProxy) BeginErigonExecution() func() { return nil }
 
 // SubBalance subtracts amount from a contract address.
 func (p *EventProxy) SubBalance(address common.Address, amount *big.Int) {

@@ -14,8 +14,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-
-	"github.com/ledgerwatch/erigon-lib/kv"
 )
 
 // MockStateDB data structure
@@ -43,7 +41,7 @@ type Record struct {
 	arguments []any //arguments
 }
 
-func (s *MockStateDB) BeginErigonExecution() kv.RwTx { return nil }
+func (s *MockStateDB) BeginErigonExecution() func() { return nil }
 
 func (s *MockStateDB) CreateAccount(addr common.Address) {
 	s.recording = append(s.recording, Record{CreateAccountID, []any{addr}})
