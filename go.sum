@@ -78,6 +78,8 @@ github.com/Fantom-foundation/Substate v0.0.0-20230313095132-69cdb7b639cd h1:4DYv
 github.com/Fantom-foundation/Substate v0.0.0-20230313095132-69cdb7b639cd/go.mod h1:KoObQO1Wmf3ACjxcXDREHf+mtDF4MAXfHwtxMIdyhx8=
 github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230327051427-6253e899ea59 h1:HOeyONEXFuSUL8TSARzO6YLZG/m0jUXPiv5jiOGo98A=
 github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230327051427-6253e899ea59/go.mod h1:Sb2rp4JwACuhO6BlnibrhYJsd2f7a+zjESLH/Qlc1OU=
+github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230327053008-831efc2745f2 h1:DZmRg7IUogKuPcebGNsfGezQb8EwmYmHFa3c7WCnIsg=
+github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230327053008-831efc2745f2/go.mod h1:Sb2rp4JwACuhO6BlnibrhYJsd2f7a+zjESLH/Qlc1OU=
 github.com/Fantom-foundation/go-opera-substate v1.0.1-0.20230301090555-fe74c5a947fa h1:xi4eLM2mqb5b1ZHTBHnu7eGXHkqI4+yXN9xsb2xC87w=
 github.com/Fantom-foundation/go-opera-substate v1.0.1-0.20230301090555-fe74c5a947fa/go.mod h1:F6LJU2cQr/dBUZ2md0xvwMnrhkfw0IIIGZ30V0ir4iY=
 github.com/Fantom-foundation/lachesis-base v0.0.0-20221208123620-82a6d15f995c h1:hgy6GWSddbPyLxRLMykSEImCqv+XuXgLYbqOgI1CBvk=
