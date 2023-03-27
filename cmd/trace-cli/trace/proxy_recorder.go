@@ -29,8 +29,6 @@ func NewProxyRecorder(db state.StateDB, dctx *context.Context, output io.Writer)
 	return r
 }
 
-func (r ProxyRecorder) BeginErigonExecution() func() { return nil }
-
 // write new operation to file.
 func (r *ProxyRecorder) write(op operation.Operation) {
 	writeOperation(r.dctx, r.output, op)

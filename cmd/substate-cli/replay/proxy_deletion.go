@@ -29,8 +29,6 @@ func NewProxyDeletion(db state.StateDB, ch chan ContractLiveness) *ProxyDeletion
 	return r
 }
 
-func (r *ProxyDeletion) BeginErigonExecution() func() { return nil }
-
 // CreateAccounts creates a new account.
 func (r *ProxyDeletion) CreateAccount(addr common.Address) {
 	r.db.CreateAccount(addr)

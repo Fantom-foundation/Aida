@@ -36,8 +36,6 @@ func (p *EventProxy) CreateAccount(address common.Address) {
 	p.db.CreateAccount(address)
 }
 
-func (p *EventProxy) BeginErigonExecution() func() { return nil }
-
 // SubBalance subtracts amount from a contract address.
 func (p *EventProxy) SubBalance(address common.Address, amount *big.Int) {
 	// register event

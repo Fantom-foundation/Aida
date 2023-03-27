@@ -119,10 +119,6 @@ func (pt *ProgressTracker) PrintProgress() {
 // PrimeStateDB primes database with accounts from the world state.
 func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config) {
 
-	//rollback := db.BeginErigonExecution()
-
-	//defer rollback()
-
 	load := db.StartBulkLoad()
 
 	numValues := 0
@@ -209,10 +205,6 @@ func DeleteDestroyedAccountsFromWorldState(ws substate.SubstateAlloc, cfg *Confi
 // DeleteDestroyedAccountsFromStateDB performs suicide operations on previously
 // self-destructed accounts.
 func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *Config, target uint64) error {
-
-	//rollback := db.BeginErigonExecution()
-	//defer rollback()
-
 	if !cfg.HasDeletedAccounts {
 		log.Printf("Database not provided. Ignore deleted accounts.\n")
 		return nil
@@ -318,13 +310,11 @@ func PrepareStateDB(cfg *Config) (db state.StateDB, workingDirectory string, loa
 	return
 }
 
+// TODO test it on updateOnFail == true
 // ValidateStateDB validates whether the world-state is contained in the db object.
 // NB: We can only check what must be in the db (but cannot check whether db stores more).
 func ValidateStateDB(ws substate.SubstateAlloc, db state.StateDB, updateOnFail bool) error {
 	var err string
-
-	rollback := db.BeginErigonExecution()
-	defer rollback()
 
 	// TODO add erigon txc
 	for addr, account := range ws {

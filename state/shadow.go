@@ -35,8 +35,6 @@ type snapshotPair struct {
 	prime, shadow int
 }
 
-func (s *shadowStateDB) BeginErigonExecution() func() { return nil }
-
 func (s *shadowStateDB) BeginBlockApply() error {
 	return s.getError("BeginBlockApply", func(s StateDB) error { return s.BeginBlockApply() })
 }

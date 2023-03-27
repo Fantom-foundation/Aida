@@ -486,8 +486,6 @@ func (s *inMemoryStateDB) StartBulkLoad() BulkLoad {
 	return &gethInMemoryBulkLoad{}
 }
 
-func (s *inMemoryStateDB) BeginErigonExecution() func() { return nil }
-
 type gethInMemoryBulkLoad struct{}
 
 func (l *gethInMemoryBulkLoad) CreateAccount(addr common.Address) {

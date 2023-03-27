@@ -295,8 +295,6 @@ func (s *gethStateDB) GetMemoryUsage() *MemoryUsage {
 	return nil
 }
 
-func (s *gethStateDB) BeginErigonExecution() func() { return nil }
-
 type gethBulkLoad struct {
 	db      *gethStateDB
 	num_ops int64

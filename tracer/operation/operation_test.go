@@ -41,8 +41,6 @@ type Record struct {
 	arguments []any //arguments
 }
 
-func (s *MockStateDB) BeginErigonExecution() func() { return nil }
-
 func (s *MockStateDB) CreateAccount(addr common.Address) {
 	s.recording = append(s.recording, Record{CreateAccountID, []any{addr}})
 }

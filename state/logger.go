@@ -19,8 +19,6 @@ type loggingStateDB struct {
 	db StateDB
 }
 
-func (s *loggingStateDB) BeginErigonExecution() func() { return nil }
-
 func (s *loggingStateDB) BeginBlockApply() error {
 	log.Printf("BeginBlockApply\n")
 	return s.db.BeginBlockApply()

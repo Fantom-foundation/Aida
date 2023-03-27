@@ -281,8 +281,6 @@ func (s *carmenStateDB) Error() error {
 	return nil
 }
 
-func (s *carmenStateDB) BeginErigonExecution() func() { return nil }
-
 func (s *carmenStateDB) StartBulkLoad() BulkLoad {
 	return &carmenBulkLoad{s.db.StartBulkLoad()}
 }

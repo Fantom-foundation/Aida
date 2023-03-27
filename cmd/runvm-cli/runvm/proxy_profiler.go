@@ -27,8 +27,6 @@ func NewProxyProfiler(db state.StateDB) (*ProxyProfiler, *operation.ProfileStats
 	return p, p.ps
 }
 
-func (p *ProxyProfiler) BeginErigonExecution() func() { return nil }
-
 // BeginBlockApply creates a new object copying state from
 // the old stateDB or clears execution state of stateDB
 func (p *ProxyProfiler) BeginBlockApply() error {

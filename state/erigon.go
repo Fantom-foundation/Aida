@@ -53,19 +53,6 @@ type erigonStateDB struct {
 	block uint64
 }
 
-func (s *erigonStateDB) BeginErigonExecution() func() {
-	rwTx, err := s.chainKV.BeginRw(context.Background())
-	if err != nil {
-		panic(err)
-	}
-	s.SetStateReader(estate.NewPlainStateReader(rwTx))
-	s.rwTx = rwTx
-
-	return func() {
-		rwTx.Rollback()
-	}
-}
-
 // BeginBlockApply creates a new statedb from an existing geth database
 func (s *erigonStateDB) BeginBlockApply() error {
 	var err error
