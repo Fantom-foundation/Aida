@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/Fantom-foundation/Aida/stochastic"
+	"github.com/Fantom-foundation/Aida/stochastic/visualizer"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/urfave/cli/v2"
 )
@@ -57,7 +58,7 @@ func stochasticVisualizeAction(ctx *cli.Context) error {
 	// fire-up web-server
 	fmt.Println("Open web browser with http://localhost:" + addr)
 	fmt.Println("Cancel visualize with ^C")
-	visualize.FireUpWeb(&eventRegistry, addr)
+	visualizer.FireUpWeb(&eventRegistry, addr)
 
 	return nil
 }
