@@ -21,6 +21,7 @@ func main() {
 			&flags.APIRecordingSrcFileFlag,
 			&flags.WorkersFlag,
 			&flags.LogLevel,
+			&flags.Verbose,
 			&utils.ChainIDFlag,
 			&utils.StateDbImplementationFlag,
 			&utils.StateDbVariantFlag,

@@ -175,7 +175,7 @@ func createExecutors(ctx *cli.Context, chainCfg *params.ChainConfig, input chan 
 
 	e := make([]*ReplayExecutor, executors)
 	for i := 0; i < executors; i++ {
-		e[i] = newExecutor(output, chainCfg, input, vmImpl, wg, closed)
+		e[i] = newExecutor(output, chainCfg, input, vmImpl, wg, closed, ctx.Bool(flags.Verbose.Name))
 	}
 
 	return e, output

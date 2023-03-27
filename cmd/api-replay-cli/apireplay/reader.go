@@ -133,15 +133,12 @@ func (r *Reader) createExecutorInput(req *iterator.RequestWithResponse) *executo
 	}
 
 	// request
-	wInput.req = req.Query
+	wInput.req = req
 
 	if !r.decodeBlockNumber(req.Query.Params, recordedBlockID, &wInput.blockID) {
 		r.log.Errorf("cannot decode block number; skipping\nParams: %v", req.Query.Params[1])
 		return nil
 	}
-
-	// todo remove - testing
-	wInput.blockID = 8999005
 
 	// archive
 	wInput.archive = r.getStateArchive(wInput.blockID)

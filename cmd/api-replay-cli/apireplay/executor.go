@@ -2,6 +2,7 @@ package apireplay
 
 import (
 	"encoding/json"
+	"log"
 	"sync"
 
 	"github.com/Fantom-foundation/Aida/iterator"
@@ -13,7 +14,7 @@ import (
 // executorInput represents data needed for executing request into StateDB
 type executorInput struct {
 	archive state.StateDB
-	req     *iterator.Body
+	req     *iterator.RequestWithResponse
 	result  json.RawMessage
 	error   *iterator.ErrorMessage
 	blockID uint64
@@ -27,6 +28,7 @@ type OutData struct {
 	StateDB    *StateDBData
 	BlockID    uint64
 	Params     []interface{}
+	ParamsRaw  []byte
 }
 
 // ReplayExecutor represents a goroutine in which requests are executed into StateDB
@@ -39,10 +41,11 @@ type ReplayExecutor struct {
 	currentBlockID uint64
 	vmImpl         string
 	chainCfg       *params.ChainConfig
+	verbose        bool
 }
 
 // newExecutor returns new instance of ReplayExecutor
-func newExecutor(output chan *OutData, chainCfg *params.ChainConfig, input chan *executorInput, vmImpl string, wg *sync.WaitGroup, closed chan any) *ReplayExecutor {
+func newExecutor(output chan *OutData, chainCfg *params.ChainConfig, input chan *executorInput, vmImpl string, wg *sync.WaitGroup, closed chan any, verbose bool) *ReplayExecutor {
 	return &ReplayExecutor{
 		chainCfg: chainCfg,
 		vmImpl:   vmImpl,
@@ -50,6 +53,7 @@ func newExecutor(output chan *OutData, chainCfg *params.ChainConfig, input chan 
 		input:    input,
 		output:   output,
 		wg:       wg,
+		verbose:  verbose,
 	}
 }
 
@@ -85,6 +89,11 @@ func (e *ReplayExecutor) execute() {
 			return
 		}
 
+		// are we at debugging state?
+		if e.verbose {
+			e.logReq(in)
+		}
+
 		// doExecute into db
 		res = e.doExecute(in)
 
@@ -107,8 +116,8 @@ func createOutData(in *executorInput, r *StateDBData) *OutData {
 	out.BlockID = in.blockID
 
 	// set the method
-	out.Method = in.req.Method
-	out.MethodBase = in.req.MethodBase
+	out.Method = in.req.Query.Method
+	out.MethodBase = in.req.Query.MethodBase
 
 	// add recorded result to output data
 	out.Recorded.Result = in.result
@@ -117,28 +126,31 @@ func createOutData(in *executorInput, r *StateDBData) *OutData {
 	out.Recorded.Error = in.error
 
 	// add params
-	out.Params = in.req.Params
+	out.Params = in.req.Query.Params
+
+	// add raw params for clear logging
+	out.ParamsRaw = in.req.ParamsRaw
 
 	return out
 }
 
 // doExecute calls correct executive func for given MethodBase
 func (e *ReplayExecutor) doExecute(in *executorInput) *StateDBData {
-	switch in.req.MethodBase {
+	switch in.req.Query.MethodBase {
 	// ftm/eth methods
 	case "getBalance":
-		return executeGetBalance(in.req.Params[0], in.archive)
+		return executeGetBalance(in.req.Query.Params[0], in.archive)
 
 	case "getTransactionCount":
-		return executeGetTransactionCount(in.req.Params[0], in.archive)
+		return executeGetTransactionCount(in.req.Query.Params[0], in.archive)
 
 	case "call":
-		req := newEVMRequest(in.req.Params[0].(map[string]interface{}))
+		req := newEVMRequest(in.req.Query.Params[0].(map[string]interface{}))
 		evm := newEVM(in.blockID, in.archive, e.vmImpl, e.chainCfg, req)
 		return executeCall(evm)
 
 	case "estimateGas":
-		req := newEVMRequest(in.req.Params[0].(map[string]interface{}))
+		req := newEVMRequest(in.req.Query.Params[0].(map[string]interface{}))
 		evm := newEVM(in.blockID, in.archive, e.vmImpl, e.chainCfg, req)
 		return executeEstimateGas(evm)
 
@@ -146,4 +158,8 @@ func (e *ReplayExecutor) doExecute(in *executorInput) *StateDBData {
 		break
 	}
 	return nil
+}
+
+func (e *ReplayExecutor) logReq(in *executorInput) {
+	log.Printf("executing %v with these params: \n\t%v", in.req.Query.Method, string(in.req.ParamsRaw))
 }

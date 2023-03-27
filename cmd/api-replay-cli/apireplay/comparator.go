@@ -69,8 +69,7 @@ func (c *Comparator) compare() {
 			}
 
 			if err := c.doCompare(data); err != nil {
-				// todo fatal
-				c.log.Critical(err)
+				c.log.Fatal(err)
 			}
 		case <-c.closed:
 			return

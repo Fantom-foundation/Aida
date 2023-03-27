@@ -79,7 +79,7 @@ func newCannotUnmarshalResult(data *OutData) *comparatorError {
 			"\n\tStateDB err: %v"+
 			"\n\tExpected result: %v"+
 			"\n\tExpected err: %v"+
-			"\n\tParams: %v", data.Method, data.BlockID, data.StateDB.Result, data.StateDB.Error, data.Recorded.Result, data.Recorded.Error, data.Params),
+			"\n\tParams: %v", data.Method, data.BlockID, data.StateDB.Result, data.StateDB.Error, data.Recorded.Result, data.Recorded.Error, string(data.ParamsRaw)),
 		typ: cannotUnmarshalResult,
 	}
 }
@@ -93,7 +93,7 @@ func newNoMatchingResultErr(stateDBData, expectedData any, data *OutData) *compa
 			"\nBlockID: %v"+
 			"\n\tStateDB: %v"+
 			"\n\tExpected: %v"+
-			"\n\tParams: %v", data.Method, data.BlockID, stateDBData, expectedData, data.Params),
+			"\n\tParams: %v", data.Method, data.BlockID, stateDBData, expectedData, string(data.ParamsRaw)),
 		typ: noMatchingResult,
 	}
 }
@@ -107,7 +107,7 @@ func newNoMatchingErrorsErr(stateDBError, expectedError any, data *OutData) *com
 			"\nBlockID: %v"+
 			"\n\tStateDB: %v"+
 			"\n\tExpected: %v"+
-			"\n\tParams: %v", data.Method, data.BlockID, stateDBError, expectedError, data.Params),
+			"\n\tParams: %v", data.Method, data.BlockID, stateDBError, expectedError, string(data.ParamsRaw)),
 		typ: noMatchingErrors,
 	}
 }
@@ -121,7 +121,7 @@ func newExpectedResultGotErrorErr(stateDBError, expectedResult any, data *OutDat
 			"\nBlockID: %v"+
 			"\n\tStateDB: %v"+
 			"\n\tExpected: %v"+
-			"\n\tParams: %v", data.Method, data.BlockID, stateDBError, expectedResult, data.Params),
+			"\n\tParams: %v", data.Method, data.BlockID, stateDBError, expectedResult, string(data.ParamsRaw)),
 		typ: expectedResultGotError,
 	}
 }
@@ -135,7 +135,7 @@ func newExpectedErrorGotResultErr(stateDBResult, expectedError any, data *OutDat
 			"\nBlockID: %v"+
 			"\n\tStateDB: %v"+
 			"\n\tExpected: %v"+
-			"\n\tParams: %v", data.Method, data.BlockID, stateDBResult, expectedError, data.Params),
+			"\n\tParams: %v", data.Method, data.BlockID, stateDBResult, expectedError, string(data.ParamsRaw)),
 		typ: expectedErrorGotResult,
 	}
 }

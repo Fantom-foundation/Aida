@@ -24,4 +24,8 @@ var (
 		Usage:   "Level of the logging of the app action (\"critical\", \"error\", \"warning\", \"notice\", \"info\", \"debug\"; default: INFO)",
 		Value:   "info",
 	}
+	Verbose = cli.BoolFlag{
+		Name:  "verbose",
+		Usage: "defines that we want to log steps in replay",
+	}
 )
