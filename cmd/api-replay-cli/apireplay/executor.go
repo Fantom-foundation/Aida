@@ -103,6 +103,9 @@ func createOutData(in *executorInput, r *StateDBData) *OutData {
 	// StateDB result
 	out.StateDB = r
 
+	// set blockID
+	out.BlockID = in.blockID
+
 	// set the method
 	out.Method = in.req.Method
 	out.MethodBase = in.req.MethodBase
