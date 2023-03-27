@@ -17,4 +17,11 @@ var (
 			"default: 4",
 		Value: 4,
 	}
+	// LogLevel defines the level of logging of the app
+	LogLevel = cli.StringFlag{
+		Name:    "log",
+		Aliases: []string{"l"},
+		Usage:   "Level of the logging of the app action (\"critical\", \"error\", \"warning\", \"notice\", \"info\", \"debug\"; default: INFO)",
+		Value:   "info",
+	}
 )

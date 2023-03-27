@@ -20,6 +20,7 @@ func main() {
 		Flags: []cli.Flag{
 			&flags.APIRecordingSrcFileFlag,
 			&flags.WorkersFlag,
+			&flags.LogLevel,
 			&utils.ChainIDFlag,
 			&utils.StateDbImplementationFlag,
 			&utils.StateDbVariantFlag,
