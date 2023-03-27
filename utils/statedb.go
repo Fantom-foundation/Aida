@@ -210,8 +210,8 @@ func DeleteDestroyedAccountsFromWorldState(ws substate.SubstateAlloc, cfg *Confi
 // self-destructed accounts.
 func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *Config, target uint64) error {
 
-	rollback := db.BeginErigonExecution()
-	defer rollback()
+	//rollback := db.BeginErigonExecution()
+	//defer rollback()
 
 	if !cfg.HasDeletedAccounts {
 		log.Printf("Database not provided. Ignore deleted accounts.\n")

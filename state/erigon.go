@@ -126,9 +126,9 @@ func (s *erigonStateDB) EndBlock() {
 	}
 
 	/*
-	if err := blockWriter.WriteChangeSets(); err != nil {
-		panic(err)
-	}
+		if err := blockWriter.WriteChangeSets(); err != nil {
+			panic(err)
+		}
 	*/
 
 	if err = erigon.GenerateHashedStateLoad(tx); err != nil {

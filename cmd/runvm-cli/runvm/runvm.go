@@ -134,7 +134,7 @@ func RunVM(ctx *cli.Context) error {
 		start = time.Now()
 		lastSec = time.Since(start).Seconds()
 	}
-	panic("breakpoint")
+	//panic("breakpoint")
 	log.Printf("Run VM\n")
 	var curBlock uint64 = 0
 	var curEpoch uint64
