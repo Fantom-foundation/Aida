@@ -36,5 +36,6 @@ func ReplayAPI(ctx *cli.Context) error {
 	r := newController(ctx, cfg, db, iter)
 	r.Start()
 
-	return r.control()
+	r.Wait()
+	return nil
 }

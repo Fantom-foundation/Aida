@@ -77,6 +77,8 @@ func (r *Controller) Start() {
 
 	r.log.Info("starting comparators")
 	r.startComparators()
+
+	go r.control()
 }
 
 // Stop all the services
@@ -145,20 +147,25 @@ func (r *Controller) stopComparators() {
 
 // Wait until all wgs are done
 func (r *Controller) Wait() {
-	r.comparatorsWg.Wait()
-	r.executorsWg.Wait()
 	r.readerWg.Wait()
+	r.log.Notice("reader done")
+
+	r.executorsWg.Wait()
+	r.log.Notice("executors done")
+
+	r.comparatorsWg.Wait()
+	r.log.Notice("comparators done")
+
 }
 
 // control looks for ctx.Done, if it triggers, Controller stops all the services
-func (r *Controller) control() error {
+func (r *Controller) control() {
 	for {
 		select {
 		case <-r.ctx.Done():
 			r.Stop()
-			r.Wait()
-			return r.ctx.Err()
-
+			r.log.Errorf("ctx err: %v", r.ctx.Err())
+			return
 		}
 	}
 }
@@ -187,8 +194,6 @@ func createComparators(ctx *cli.Context, input chan *OutData, closed chan any, w
 	for i := 0; i < comparators; i++ {
 		c[i] = newComparator(input, newLogger(ctx), closed, wg)
 	}
-
-	wg.Add(comparators)
 
 	return c
 }
