@@ -7,14 +7,13 @@ import (
 	"os"
 
 	"github.com/Fantom-foundation/Aida/stochastic"
-	"github.com/Fantom-foundation/Aida/stochastic/visualizer"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/urfave/cli/v2"
 )
 
-// StochasticVisualizerCommand data structure for the visualizer app
-var StochasticVisualizerCommand = cli.Command{
-	Action:    stochasticVisualizerAction,
+// StochasticVisualizeCommand data structure for the visualize app
+var StochasticVisualizeCommand = cli.Command{
+	Action:    stochasticVisualizeAction,
 	Name:      "visualize",
 	Usage:     "produces a graphical view of the estimated parameters for various distributions",
 	ArgsUsage: "<event-file>",
@@ -22,14 +21,14 @@ var StochasticVisualizerCommand = cli.Command{
 		&utils.PortFlag,
 	},
 	Description: `
-The stochastic visualizer command requires one argument:
+The stochastic visualize command requires one argument:
 <events.json>
 
 <events.json> is the event file produced by the stochastic recorder.`,
 }
 
-// stochasticVisualizerAction implements visualizer command for computing statistical parameters.
-func stochasticVisualizerAction(ctx *cli.Context) error {
+// stochasticVisualizeAction implements the visualize command for computing statistical parameters.
+func stochasticVisualizeAction(ctx *cli.Context) error {
 	if ctx.Args().Len() != 1 {
 		return fmt.Errorf("missing event file")
 	}
@@ -50,7 +49,6 @@ func stochasticVisualizerAction(ctx *cli.Context) error {
 	var eventRegistry stochastic.EventRegistryJSON
 	json.Unmarshal(contents, &eventRegistry)
 
-	// visualize visualizer results
 	addr := ctx.String(utils.PortFlag.Name)
 	if addr == "" {
 		addr = "8080"
@@ -58,8 +56,8 @@ func stochasticVisualizerAction(ctx *cli.Context) error {
 
 	// fire-up web-server
 	fmt.Println("Open web browser with http://localhost:" + addr)
-	fmt.Println("Cancel visualizer with ^C")
-	visualizer.FireUpWeb(&eventRegistry, addr)
+	fmt.Println("Cancel visualize with ^C")
+	visualize.FireUpWeb(&eventRegistry, addr)
 
 	return nil
 }
