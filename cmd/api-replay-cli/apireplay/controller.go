@@ -69,13 +69,10 @@ func newController(ctx *cli.Context, cfg *utils.Config, db state.StateDB, iter *
 
 // Start all the services
 func (r *Controller) Start() {
-	r.log.Info("starting reader")
 	r.Reader.Start()
 
-	r.log.Info("starting executors")
 	r.startExecutors()
 
-	r.log.Info("starting comparators")
 	r.startComparators()
 
 	go r.control()
@@ -83,28 +80,31 @@ func (r *Controller) Start() {
 
 // Stop all the services
 func (r *Controller) Stop() {
-	r.log.Notice("stopping comparators")
-	r.stopComparators()
+	r.log.Notice("stopping reader")
+	r.stopReader()
 
 	r.log.Notice("stopping executors")
 	r.stopExecutors()
 
-	r.log.Notice("stopping reader")
-	r.stopReader()
+	r.log.Notice("stopping comparators")
+	r.stopComparators()
 
 	r.log.Notice("all services has been stopped")
 }
 
 // startExecutors and their loops
 func (r *Controller) startExecutors() {
-	for _, e := range r.Executors {
+	for i, e := range r.Executors {
+		r.log.Infof("starting executor #%v", i+1)
 		e.Start()
+
 	}
 }
 
 // startComparators and their loops
 func (r *Controller) startComparators() {
-	for _, c := range r.Comparators {
+	for i, c := range r.Comparators {
+		r.log.Infof("starting comparator #%v", i+1)
 		c.Start()
 	}
 }
@@ -135,12 +135,8 @@ func (r *Controller) stopExecutors() {
 
 // stopComparators closes the Comparators close signal and waits until all the Comparators are done
 func (r *Controller) stopComparators() {
-	select {
-	case <-r.comparatorsClosed:
-		return
-	default:
-		close(r.comparatorsClosed)
-	}
+	// stop comparators input, so it still reads the rest of data in the chanel and exits once its empty
+	close(r.Comparators[0].input)
 
 	r.comparatorsWg.Wait()
 }
@@ -153,7 +149,7 @@ func (r *Controller) Wait() {
 	r.executorsWg.Wait()
 	r.log.Notice("executors done")
 
-	r.comparatorsWg.Wait()
+	r.stopComparators()
 	r.log.Notice("comparators done")
 
 }

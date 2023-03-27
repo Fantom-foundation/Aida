@@ -44,8 +44,8 @@ func newComparator(input chan *OutData, log *logging.Logger, closed chan any, wg
 
 // Start the Comparator
 func (c *Comparator) Start() {
-	go c.compare()
 	c.wg.Add(1)
+	go c.compare()
 }
 
 // compare reads data from Reader and compares them. If doCompare func returns error,
@@ -59,22 +59,26 @@ func (c *Comparator) compare() {
 	}()
 
 	for {
+
 		select {
+		case data, ok = <-c.input:
+
+			// stop Comparator if input is closed
+			if !ok {
+				return
+			}
+
+			if err := c.doCompare(data); err != nil {
+				// todo fatal
+				c.log.Critical(err)
+			}
 		case <-c.closed:
 			return
 		default:
-		}
-		data, ok = <-c.input
-
-		// stop Comparator if input is closed
-		if !ok {
-			return
-		}
-
-		if err := c.doCompare(data); err != nil {
-			c.log.Critical(err)
+			continue
 		}
 	}
+
 }
 
 // doCompare calls adequate comparing function for given method

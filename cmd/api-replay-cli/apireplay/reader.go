@@ -12,6 +12,8 @@ import (
 	"github.com/op/go-logging"
 )
 
+const maxIterErrors = 5 // maximum consecutive errors emitted by comparator before program panics
+
 // RecordedData represents data recorded on API server. This is sent to Comparator and compared with StateDBData
 type RecordedData struct {
 	Result json.RawMessage
@@ -60,6 +62,7 @@ func newReader(first, last uint64, db state.StateDB, iterator *iterator.FileRead
 
 // Start the Reader
 func (r *Reader) Start() {
+	r.log.Info("starting reader")
 	// start readers loop
 	go r.read()
 	r.wg.Add(1)
@@ -89,7 +92,7 @@ func (r *Reader) read() {
 		// did iter emit an error?
 		if r.iter.Error() != nil {
 			// if iterator errors 5 times in a row, exit the program with an error
-			if iterErrors >= 5 {
+			if iterErrors >= maxIterErrors {
 				r.log.Fatalf("iterator reached limit of number of consecutive errors; err: %v", r.iter.Error())
 			}
 			r.log.Errorf("error loading recordings; %v\nretry number %v\n", r.iter.Error().Error(), iterErrors)
@@ -136,6 +139,9 @@ func (r *Reader) createExecutorInput(req *iterator.RequestWithResponse) *executo
 		r.log.Errorf("cannot decode block number; skipping\nParams: %v", req.Query.Params[1])
 		return nil
 	}
+
+	// todo remove - testing
+	wInput.blockID = 8999005
 
 	// archive
 	wInput.archive = r.getStateArchive(wInput.blockID)
