@@ -170,7 +170,6 @@ func RunVM(ctx *cli.Context) error {
 			// Mark the beginning of a new block
 			curBlock = tx.Block
 			db.BeginBlock(curBlock)
-			db.BeginBlockApply()
 		}
 		if cfg.MaxNumTransactions >= 0 && txCount >= cfg.MaxNumTransactions {
 			break

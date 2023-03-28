@@ -37,7 +37,7 @@ type EVM struct {
 const globalGasCap = 50000000 // used when request does not specify gas
 
 // newEVM creates EVM for comparing data recorded on API with StateDB
-func newEVM(blockID uint64, archive state.StateDB, vmImpl string, chainCfg *params.ChainConfig, req *EVMRequest) *EVM {
+func newEVM(blockID uint64, archive state.StateDB, vmImpl string, chainCfg *params.ChainConfig, req *EVMRequest, timestamp uint64) *EVM {
 	var (
 		bigBlockId *big.Int
 		getHash    func(uint64) common.Hash
@@ -67,6 +67,7 @@ func newEVM(blockID uint64, archive state.StateDB, vmImpl string, chainCfg *para
 		GasLimit:    math.MaxUint64, // evmcore/dummy_block.go
 		GetHash:     getHash,
 		BaseFee:     rules.MinGasPrice, // big.NewInt(1e9)
+		Time:        new(big.Int).SetUint64(timestamp),
 	}
 
 	vmConfig = opera.DefaultVMConfig

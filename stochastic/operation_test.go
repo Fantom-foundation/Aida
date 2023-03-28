@@ -24,7 +24,7 @@ func TestOperationDecoding(t *testing.T) {
 						argop := EncodeArgOp(op, addr, key, value)
 
 						// decode argument-encoded operation
-						dop, daddr, dkey, dvalue := decodeArgOp(argop)
+						dop, daddr, dkey, dvalue := DecodeArgOp(argop)
 
 						if op != dop || addr != daddr || key != dkey || value != dvalue {
 							t.Fatalf("Encoding/decoding failed")

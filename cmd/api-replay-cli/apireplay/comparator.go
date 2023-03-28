@@ -15,7 +15,9 @@ import (
 )
 
 // nil answer from EVM is recorded as nilEVMResult, this is used this for the comparing and for more readable logMsg
-const nilEVMResult = "0x0000000000000000000000000000000000000000000000000000000000000000"
+const (
+	nilEVMResult = "0x0000000000000000000000000000000000000000000000000000000000000000"
+)
 
 // EVMErrors decode error code into string with which is compared with recorded error message
 var EVMErrors = map[int]string{
@@ -26,19 +28,23 @@ var EVMErrors = map[int]string{
 // Comparator compares data from StateDB and expected data recorded on API server
 // This data is retrieved from Reader
 type Comparator struct {
-	input  chan *OutData
-	log    *logging.Logger
-	closed chan any
-	wg     *sync.WaitGroup
+	input             chan *OutData
+	log               *logging.Logger
+	closed            chan any
+	wg                *sync.WaitGroup
+	continueOnFailure bool
+	failure           chan any
 }
 
 // newComparator returns new instance of Comparator
-func newComparator(input chan *OutData, log *logging.Logger, closed chan any, wg *sync.WaitGroup) *Comparator {
+func newComparator(input chan *OutData, log *logging.Logger, closed chan any, wg *sync.WaitGroup, continueOnFailure bool, failure chan any) *Comparator {
 	return &Comparator{
-		input:  input,
-		log:    log,
-		closed: closed,
-		wg:     wg,
+		failure:           failure,
+		input:             input,
+		log:               log,
+		closed:            closed,
+		wg:                wg,
+		continueOnFailure: continueOnFailure,
 	}
 }
 
@@ -51,8 +57,10 @@ func (c *Comparator) Start() {
 // compare reads data from Reader and compares them. If doCompare func returns error,
 // the error is logged since the results do not match
 func (c *Comparator) compare() {
-	var data *OutData
-	var ok bool
+	var (
+		data *OutData
+		ok   bool
+	)
 
 	defer func() {
 		c.wg.Done()
@@ -61,6 +69,8 @@ func (c *Comparator) compare() {
 	for {
 
 		select {
+		case <-c.closed:
+			return
 		case data, ok = <-c.input:
 
 			// stop Comparator if input is closed
@@ -69,12 +79,15 @@ func (c *Comparator) compare() {
 			}
 
 			if err := c.doCompare(data); err != nil {
-				c.log.Fatal(err)
+				// log the mismatched data
+				c.log.Critical(err)
+
+				// do we want to exit?
+				if !c.continueOnFailure {
+					c.fail()
+				}
 			}
-		case <-c.closed:
-			return
-		default:
-			continue
+
 		}
 	}
 
@@ -96,6 +109,16 @@ func (c *Comparator) doCompare(data *OutData) (err *comparatorError) {
 	}
 
 	return
+}
+
+// fail sends signal to controller that mismatched results occurred
+func (c *Comparator) fail() {
+	select {
+	case <-c.failure:
+		return
+	default:
+		close(c.failure)
+	}
 }
 
 // compareBalance compares getBalance data recorded on API server with data returned by StateDB

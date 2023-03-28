@@ -6,7 +6,7 @@ import "github.com/Fantom-foundation/Aida/stochastic/statistics"
 const (
 	TransactionsPerBlock = 10
 	BlocksPerEpoch       = 10
-	OperationFrequency   = 100 // determines indirectly the length of a transaction
+	OperationFrequency   = 10 // determines indirectly the length of a transaction
 	NumContracts         = 1000
 	NumKeys              = 1000
 	NumValues            = 1000
@@ -46,7 +46,7 @@ func GenerateUniformRegistry() *EventRegistry {
 	for i := 0; i < numArgOps; i++ {
 		if IsValidArgOp(i) {
 			r.argOpFreq[i] = 1 // set frequency to greater than zero to emit operation
-			opI, _, _, _ := decodeArgOp(i)
+			opI, _, _, _ := DecodeArgOp(i)
 			switch opI {
 			case BeginEpochID:
 				j := EncodeArgOp(BeginBlockID, statistics.NoArgID, statistics.NoArgID, statistics.NoArgID)
@@ -73,7 +73,7 @@ func GenerateUniformRegistry() *EventRegistry {
 			default:
 				for j := 0; j < numArgOps; j++ {
 					if IsValidArgOp(j) {
-						opJ, _, _, _ := decodeArgOp(j)
+						opJ, _, _, _ := DecodeArgOp(j)
 						if opJ != BeginEpochID &&
 							opJ != BeginBlockID &&
 							opJ != BeginTransactionID &&

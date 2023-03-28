@@ -27,13 +27,6 @@ func NewProxyProfiler(db state.StateDB) (*ProxyProfiler, *operation.ProfileStats
 	return p, p.ps
 }
 
-// BeginBlockApply creates a new object copying state from
-// the old stateDB or clears execution state of stateDB
-func (p *ProxyProfiler) BeginBlockApply() error {
-	err := p.db.BeginBlockApply()
-	return err
-}
-
 // CreateAccounts creates a new account.
 func (p *ProxyProfiler) CreateAccount(addr common.Address) {
 	start := time.Now()
