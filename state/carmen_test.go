@@ -58,7 +58,7 @@ func TestCarmenState_MakeCarmenStateDBInvalid(t *testing.T) {
 	}
 }
 
-// TestCarmenState_CloseCarmenDB test closing db immediately after initialization
+// TestCarmenState_InitCloseCarmenDB test closing db immediately after initialization
 func TestCarmenState_InitCloseCarmenDB(t *testing.T) {
 	for _, tc := range getCarmenStateTestCases() {
 		t.Run(fmt.Sprintf("DB variant: %s, archive type: %v", tc.variant, tc.archive), func(t *testing.T) {
