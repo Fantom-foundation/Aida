@@ -14,17 +14,17 @@ import (
 	"github.com/status-im/keycard-go/hexutils"
 )
 
-// nil answer from EVM is recorded as nilEVMResult, this is used this for the comparing and for more readable log
+// nil answer from EVM is recorded as nilEVMResult, this is used this for the comparing and for more readable logMsg
 const nilEVMResult = "0x0000000000000000000000000000000000000000000000000000000000000000"
 
-// EVMErrors decode error code into string with which we compare recorded error message
+// EVMErrors decode error code into string with which is compared with recorded error message
 var EVMErrors = map[int]string{
 	-32000: "execution reverted",
 	-32602: "invalid argument",
 }
 
 // Comparator compares data from StateDB and expected data recorded on API server
-// This data is retrieved from ReplayExecutor
+// This data is retrieved from Reader
 type Comparator struct {
 	input  chan *OutData
 	log    *logging.Logger
@@ -33,11 +33,11 @@ type Comparator struct {
 }
 
 // newComparator returns new instance of Comparator
-func newComparator(input chan *OutData, log *logging.Logger, wg *sync.WaitGroup) *Comparator {
+func newComparator(input chan *OutData, log *logging.Logger, closed chan any, wg *sync.WaitGroup) *Comparator {
 	return &Comparator{
 		input:  input,
 		log:    log,
-		closed: make(chan any),
+		closed: closed,
 		wg:     wg,
 	}
 }
@@ -48,42 +48,36 @@ func (c *Comparator) Start() {
 	go c.compare()
 }
 
-// Stop the Comparator
-func (c *Comparator) Stop() {
-	select {
-	case <-c.closed:
-		return
-	default:
-		close(c.closed)
-	}
-}
-
-// compare reads data from ReplayExecutor and compares them. If doCompare func returns error,
+// compare reads data from Reader and compares them. If doCompare func returns error,
 // the error is logged since the results do not match
 func (c *Comparator) compare() {
 	var data *OutData
 	var ok bool
 
+	defer func() {
+		c.wg.Done()
+	}()
+
 	for {
+
 		select {
+		case data, ok = <-c.input:
+
+			// stop Comparator if input is closed
+			if !ok {
+				return
+			}
+
+			if err := c.doCompare(data); err != nil {
+				c.log.Fatal(err)
+			}
 		case <-c.closed:
-			c.wg.Done()
 			return
 		default:
-		}
-		data, ok = <-c.input
-
-		// stop Comparator if input is closed
-		if !ok {
-			c.Stop()
 			continue
 		}
-
-		if err := c.doCompare(data); err != nil {
-			c.log.Critical(err)
-		}
-
 	}
+
 }
 
 // doCompare calls adequate comparing function for given method

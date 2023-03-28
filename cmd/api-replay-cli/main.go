@@ -19,6 +19,9 @@ func main() {
 		Copyright: "(c) 2023 Fantom Foundation",
 		Flags: []cli.Flag{
 			&flags.APIRecordingSrcFileFlag,
+			&flags.WorkersFlag,
+			&flags.LogLevel,
+			&flags.Verbose,
 			&utils.ChainIDFlag,
 			&utils.StateDbImplementationFlag,
 			&utils.StateDbVariantFlag,
