@@ -183,7 +183,9 @@ func createExecutors(ctx *cli.Context, chainCfg *params.ChainConfig, input chan 
 
 // createComparators creates number of Comparators defined by the flag WorkersFlag divided by two
 func createComparators(ctx *cli.Context, input chan *OutData, closed chan any, wg *sync.WaitGroup) []*Comparator {
-	var comparators int
+	var (
+		comparators int
+	)
 
 	// do we want a single-thread replay
 	if ctx.Int(flags.WorkersFlag.Name) == 1 {

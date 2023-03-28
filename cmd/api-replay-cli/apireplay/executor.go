@@ -2,14 +2,18 @@ package apireplay
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"sync"
 
 	"github.com/Fantom-foundation/Aida/iterator"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/params"
 )
+
+const substateIterWorkers = 1
 
 // executorInput represents data needed for executing request into StateDB
 type executorInput struct {
@@ -33,6 +37,8 @@ type OutData struct {
 
 // ReplayExecutor represents a goroutine in which requests are executed into StateDB
 type ReplayExecutor struct {
+	iterBlock      uint64
+	iter           substate.SubstateIterator
 	cfg            *utils.Config
 	input          chan *executorInput
 	output         chan *OutData
@@ -103,6 +109,23 @@ func (e *ReplayExecutor) execute() {
 	}
 }
 
+// getEVMTimestamp retrieves timestamp for current block from substate
+func (e *ReplayExecutor) getEVMTimestamp(wantedBlockID uint64) (uint64, error) {
+	// same block?
+	if wantedBlockID != e.iterBlock {
+		e.iter = substate.NewSubstateIterator(wantedBlockID, 1)
+	}
+
+	if e.iter.Next() {
+		if e.iter.Value() != nil {
+			return e.iter.Value().Substate.Env.Timestamp, nil
+		}
+	}
+
+	return 0, errors.New("substate for this block does not exist")
+
+}
+
 // createOutData and send it to Comparator
 func createOutData(in *executorInput, r *StateDBData) *OutData {
 
@@ -146,12 +169,22 @@ func (e *ReplayExecutor) doExecute(in *executorInput) *StateDBData {
 
 	case "call":
 		req := newEVMRequest(in.req.Query.Params[0].(map[string]interface{}))
-		evm := newEVM(in.blockID, in.archive, e.vmImpl, e.chainCfg, req)
+		timestamp, err := e.getEVMTimestamp(in.blockID)
+		if err != nil {
+			log.Printf("substate for block #%v does not seem to exist; skipping request", in.blockID)
+			return nil
+		}
+		evm := newEVM(in.blockID, in.archive, e.vmImpl, e.chainCfg, req, timestamp)
 		return executeCall(evm)
 
 	case "estimateGas":
 		req := newEVMRequest(in.req.Query.Params[0].(map[string]interface{}))
-		evm := newEVM(in.blockID, in.archive, e.vmImpl, e.chainCfg, req)
+		timestamp, err := e.getEVMTimestamp(in.blockID)
+		if err != nil {
+			log.Printf("substate for block #%v does not seem to exist; skipping request", in.blockID)
+			return nil
+		}
+		evm := newEVM(in.blockID, in.archive, e.vmImpl, e.chainCfg, req, timestamp)
 		return executeEstimateGas(evm)
 
 	default:

@@ -12,7 +12,9 @@ import (
 	"github.com/op/go-logging"
 )
 
-const maxIterErrors = 5 // maximum consecutive errors emitted by comparator before program panics
+const (
+	maxIterErrors = 5 // maximum consecutive errors emitted by comparator before program panics
+)
 
 // RecordedData represents data recorded on API server. This is sent to Comparator and compared with StateDBData
 type RecordedData struct {

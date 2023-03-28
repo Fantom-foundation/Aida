@@ -15,7 +15,9 @@ import (
 )
 
 // nil answer from EVM is recorded as nilEVMResult, this is used this for the comparing and for more readable logMsg
-const nilEVMResult = "0x0000000000000000000000000000000000000000000000000000000000000000"
+const (
+	nilEVMResult = "0x0000000000000000000000000000000000000000000000000000000000000000"
+)
 
 // EVMErrors decode error code into string with which is compared with recorded error message
 var EVMErrors = map[int]string{
@@ -51,8 +53,10 @@ func (c *Comparator) Start() {
 // compare reads data from Reader and compares them. If doCompare func returns error,
 // the error is logged since the results do not match
 func (c *Comparator) compare() {
-	var data *OutData
-	var ok bool
+	var (
+		data *OutData
+		ok   bool
+	)
 
 	defer func() {
 		c.wg.Done()
@@ -69,7 +73,7 @@ func (c *Comparator) compare() {
 			}
 
 			if err := c.doCompare(data); err != nil {
-				c.log.Fatal(err)
+				c.log.Critical(err)
 			}
 		case <-c.closed:
 			return
