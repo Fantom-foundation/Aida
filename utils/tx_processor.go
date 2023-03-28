@@ -90,12 +90,17 @@ func ProcessTx(db state.StateDB, cfg *Config, block uint64, txIndex int, tx *sub
 		}
 	}
 
-	// TODO replace this piece of code with CommitBlock
-	if chainConfig.IsByzantium(blockCtx.BlockNumber) {
-		db.Finalise(true)
-	} else {
-		db.IntermediateRoot(chainConfig.IsEIP158(blockCtx.BlockNumber))
+	if _, err := db.Commit(false); err != nil {
+		txerr = err
+		return
 	}
+	/*
+		if chainConfig.IsByzantium(blockCtx.BlockNumber) {
+			db.Finalise(true)
+		} else {
+			db.IntermediateRoot(chainConfig.IsEIP158(blockCtx.BlockNumber))
+		}
+	*/
 
 	// check whether the outputAlloc substate is contained in the world-state db.
 	if cfg.ValidateTxState {

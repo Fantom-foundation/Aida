@@ -35,6 +35,8 @@ func (s *MockStateDB) GetRecording() []Record {
 	return s.recording
 }
 
+func (s *MockStateDB) SetTxBlock(uint64) {}
+
 // Record structure
 type Record struct {
 	function  byte  //signatures of called function

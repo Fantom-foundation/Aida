@@ -34,6 +34,8 @@ func (p *ProxyProfiler) BeginBlockApply() error {
 	return err
 }
 
+func (p *ProxyProfiler) SetTxBlock(uint64) {}
+
 // CreateAccounts creates a new account.
 func (p *ProxyProfiler) CreateAccount(addr common.Address) {
 	start := time.Now()

@@ -34,6 +34,8 @@ func (r *ProxyRecorder) write(op operation.Operation) {
 	writeOperation(r.dctx, r.output, op)
 }
 
+func (r *ProxyRecorder) SetTxBlock(uint64) {}
+
 // CreateAccounts creates a new account.
 func (r *ProxyRecorder) CreateAccount(addr common.Address) {
 	contract := r.dctx.EncodeContract(addr)

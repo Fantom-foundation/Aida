@@ -60,6 +60,8 @@ type gethStateDB struct {
 	block         uint64
 }
 
+func (s *gethStateDB) SetTxBlock(uint64) {}
+
 func (s *gethStateDB) CreateAccount(addr common.Address) {
 	s.db.CreateAccount(addr)
 }

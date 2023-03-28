@@ -24,6 +24,8 @@ func (s *loggingStateDB) BeginBlockApply() error {
 	return s.db.BeginBlockApply()
 }
 
+func (s *loggingStateDB) SetTxBlock(uint64) {}
+
 func (s *loggingStateDB) CreateAccount(addr common.Address) {
 	log.Printf("CreateAccount, %v\n", addr)
 	s.db.CreateAccount(addr)

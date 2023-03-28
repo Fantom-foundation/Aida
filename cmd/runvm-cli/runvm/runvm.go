@@ -149,22 +149,28 @@ func RunVM(ctx *cli.Context) error {
 			if tx.Block > cfg.Last {
 				break
 			}
+
 			curEpoch = tx.Block / cfg.EpochLength
 			curBlock = tx.Block
+			log.Println("runVM, if isFirstBlock, curBlock: ", curBlock, "tx.Block: ", tx.Block) // 4564026
 			db.BeginEpoch(curEpoch)
-			db.BeginBlock(curBlock) // open mdbx tx and put it on erigonstatedb
+			db.BeginBlock(curBlock)
 			lastBlockProgressReportBlock = tx.Block
 			lastBlockProgressReportBlock -= lastBlockProgressReportBlock % progressReportBlockInterval
 			lastBlockProgressReportTime = time.Now()
 			isFirstBlock = false
 			// close off old block and possibly epochs
-		} else if curBlock != tx.Block {
+		} else if curBlock != tx.Block { //curBlock 4564026, txc.Block 4564026 +1
 			if tx.Block > cfg.Last {
 				break
 			}
 
+			//curBlock = from, tx.Block = to
+
 			// Mark the end of the old block.
-			db.EndBlock() // commit transaction
+			log.Println("runVM, else if curBlock != tx.Block, curBlock: ", curBlock, "tx.Block", tx.Block) // from = 4564026, curblock 4564027
+			db.SetTxBlock(tx.Block)
+			db.EndBlock()
 
 			// Move on epochs if needed.
 			newEpoch := tx.Block / cfg.EpochLength
@@ -176,7 +182,7 @@ func RunVM(ctx *cli.Context) error {
 			// Mark the beginning of a new block
 			curBlock = tx.Block
 			db.BeginBlock(curBlock)
-			db.BeginBlockApply() //erigonstate.New and put into erigonstatedb
+			db.BeginBlockApply()
 		}
 		if cfg.MaxNumTransactions >= 0 && txCount >= cfg.MaxNumTransactions {
 			break
@@ -233,7 +239,9 @@ func RunVM(ctx *cli.Context) error {
 		}
 	}
 
+	// end of execution
 	if !isFirstBlock && err == nil {
+		db.SetTxBlock(curBlock)
 		db.EndBlock()
 		db.EndEpoch()
 	}

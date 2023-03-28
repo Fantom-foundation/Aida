@@ -133,10 +133,8 @@ func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config) {
 		if cfg.PrimeThreshold == 0 {
 			cfg.PrimeThreshold = len(ws)
 		}
-		log.Println("PrimeStateDBRandom")
 		PrimeStateDBRandom(ws, load, cfg, pt)
 	} else {
-		log.Println("primeOneAccount, for addr, account := range ws")
 		for addr, account := range ws {
 			primeOneAccount(addr, account, load, pt)
 		}
@@ -303,9 +301,10 @@ func PrepareStateDB(cfg *Config) (db state.StateDB, workingDirectory string, loa
 
 	log.Printf("\tTemporary state DB directory: %v\n", workingDirectory)
 
-	chainKV = launcher.InitChainKV(path.Join(workingDirectory, "erigon"))
+	erigonDirectory := path.Join(workingDirectory, "erigon")
+	chainKV = launcher.InitChainKV(erigonDirectory)
 
-	db, err = MakeStateDB(workingDirectory, cfg, roothash, loadedExistingDB, chainKV)
+	db, err = MakeStateDB(erigonDirectory, cfg, roothash, loadedExistingDB, chainKV)
 
 	return
 }

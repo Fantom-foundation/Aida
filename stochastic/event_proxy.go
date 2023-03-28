@@ -27,6 +27,8 @@ func NewEventProxy(db state.StateDB, registry *EventRegistry) *EventProxy {
 	}
 }
 
+func (p *EventProxy) SetTxBlock(uint64) {}
+
 // CreateAccount creates a new account.
 func (p *EventProxy) CreateAccount(address common.Address) {
 	// register event

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"path/filepath"
 
 	//"errors"
 	"log"
@@ -23,7 +24,6 @@ import (
 )
 
 func MakeErigonStateDB(directory, variant string, rootHash common.Hash, chainKV kv.RwDB) (s StateDB, err error) {
-	log.Println("MakeErigonStateDB", "directory", directory, "variant", variant)
 	switch variant {
 	case "go-memory":
 		chainKV = memdb.New()
@@ -36,6 +36,7 @@ func MakeErigonStateDB(directory, variant string, rootHash common.Hash, chainKV 
 	es := &erigonStateDB{
 		chainKV:   chainKV,
 		stateRoot: rootHash,
+		directory: directory,
 	}
 
 	// initialize stateDB
@@ -47,10 +48,11 @@ func MakeErigonStateDB(directory, variant string, rootHash common.Hash, chainKV 
 
 type erigonStateDB struct {
 	chainKV   kv.RwDB
-	rwTx      kv.RwTx
 	stateRoot common.Hash
 	*evmcore.ErigonAdapter
-	block uint64
+	runVMStarted bool
+	directory    string
+	from, to     uint64
 }
 
 // BeginBlockApply creates a new statedb from an existing geth database
@@ -69,7 +71,11 @@ func (s *erigonStateDB) EndTransaction() {
 }
 
 func (s *erigonStateDB) BeginBlock(number uint64) {
-	// ignored
+	s.from = number
+}
+
+func (s *erigonStateDB) SetTxBlock(number uint64) {
+	s.to = number
 }
 
 func (s *erigonStateDB) GetArchiveState(block uint64) (StateDB, error) {
@@ -86,10 +92,6 @@ func (s *erigonStateDB) ForEachStorage(common.Address, func(common.Hash, common.
 	panic("ForEachStorage not implemented")
 }
 
-func (s *erigonStateDB) SetRwTx(tx kv.RwTx) {
-	s.rwTx = tx
-}
-
 // TODO in erigon state root  is computed every epoch not every block
 // decide whether to compute it every block or not
 // TODO add a flag to enable erigon history writing, skip it for now, use NewPlainStateWriterNoHistory
@@ -104,38 +106,73 @@ func (s *erigonStateDB) EndBlock() {
 
 	defer tx.Rollback()
 
-	//blockWriter := estate.NewPlainStateWriter(tx, tx, s.block)
-	blockWriter := estate.NewPlainStateWriterNoHistory(tx)
+	if err := s.processEndBlock(tx); err != nil {
+		panic(err)
+	}
+}
+
+func (s *erigonStateDB) processEndBlock(tx kv.RwTx) error {
+	blockWriter := estate.NewPlainStateWriter(tx, tx, s.from)
+	//blockWriter := estate.NewPlainStateWriterNoHistory(tx)
 
 	// flush pending changes into erigon plain state
 	if err := s.ErigonAdapter.CommitBlock(blockWriter); err != nil {
-		panic(err)
+		return err
 	}
 
-	/*
-		if err := blockWriter.WriteChangeSets(); err != nil {
-			panic(err)
+	if err := blockWriter.WriteChangeSets(); err != nil {
+		return err
+	}
+
+	switch {
+	case s.to == 0:
+		log.Println("EndBlock cleanly", "from", s.from, "to", s.to)
+		// cleanly
+		if err := erigon.PromoteHashedStateCleanly(tx, filepath.Join(s.directory, "hashedstate")); err != nil {
+			return err
 		}
-	*/
 
-	if err = erigon.GenerateHashedStateLoad(tx); err != nil {
-		return
+		if _, err := erigon.RegenerateIntermediateHashes("IH", tx, filepath.Join(s.directory, "IH"), false); err != nil {
+			return err
+		}
+	case s.to > 0 && s.to > s.from:
+		// incrementally
+		log.Println("EndBlock incrementally", "from", s.from, "to", s.to)
+		if err := erigon.PromoteHashedStateIncrementally("hashedstate", s.from, s.to, filepath.Join(s.directory, "hashedstate"), tx, nil); err != nil {
+			return err
+		}
+
+		if _, err := erigon.IncrementIntermediateHashes("IH", tx, s.from, s.to, filepath.Join(s.directory, "IH"), false, nil); err != nil {
+			return err
+		}
 	}
 
-	// TODO add erigon.PromoteHashedStateIncrementally and erigon.IncrementIntermediateHashes
-	// convert kv.Plainstate into Hashedstate. Required for later stateroot computation
-	root, err := erigon.RegenerateIntermediateHashes("IH", tx)
+	//log.Println("erigonStateDB.EndBlock, commmit erigon transaction")
+	return tx.Commit()
+}
+
+// TODO think about hashedstate and intermediatehashes
+func (s *erigonStateDB) Commit(_ bool) (common.Hash, error) {
+	tx, err := s.chainKV.BeginRw(context.Background())
 	if err != nil {
-		panic(err)
+		return common.Hash{}, err
 	}
 
-	s.stateRoot = common.Hash(root)
-	log.Println("erigonStateDB.EndBlock", "\tErigon State root:  \t", s.stateRoot.Hex())
+	defer tx.Rollback()
 
-	log.Println("erigonStateDB.EndBlock, commmit erigon transaction")
+	blockWriter := estate.NewPlainStateWriter(tx, tx, s.from)
+	//blockWriter := estate.NewPlainStateWriterNoHistory(tx)
+
+	// flush pending changes into erigon plain state
+	if err := s.ErigonAdapter.CommitBlock(blockWriter); err != nil {
+		return common.Hash{}, err
+	}
+
 	if err := tx.Commit(); err != nil {
-		panic(err)
+		return common.Hash{}, err
 	}
+
+	return common.Hash{}, nil
 }
 
 func (s *erigonStateDB) BeginEpoch(number uint64) {
@@ -143,7 +180,19 @@ func (s *erigonStateDB) BeginEpoch(number uint64) {
 }
 
 func (s *erigonStateDB) EndEpoch() {
-	// ignored
+	tx, err := s.chainKV.BeginRw(context.Background())
+	if err != nil {
+		panic(err)
+	}
+
+	defer tx.Rollback()
+
+	root, err := erigon.CalcRoot("", tx)
+	if err != nil {
+		panic(err)
+	}
+	s.stateRoot = common.Hash(root)
+	log.Println("EndEpoch erigon stateRoot: ", s.stateRoot.Hex())
 }
 
 // PrepareSubstate initiates the state DB for the next transaction.
@@ -157,16 +206,16 @@ func (s *erigonStateDB) GetSubstatePostAlloc() substate.SubstateAlloc {
 	return substate.SubstateAlloc{}
 }
 
+// TODO include s.EndBlock or not
 // Close requests the StateDB to flush all its content to secondary storage and shut down.
 // After this call no more operations will be allowed on the state.
 func (s *erigonStateDB) Close() error {
 	// flush changes to erigon db
 	//s.EndBlock()
-	// opem rwTx transaction
-	blockWriter := estate.NewPlainStateWriterNoHistory(s.rwTx)
 
-	// flush pending changes into erigon db
-	return s.StateDB.CommitBlock(blockWriter)
+	// close underlying MDBX
+	s.chainKV.Close()
+	return nil
 }
 
 func (s *erigonStateDB) GetMemoryUsage() *MemoryUsage {
