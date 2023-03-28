@@ -3,14 +3,10 @@ package state
 import (
 	"context"
 	"fmt"
+	"log"
 	"math/big"
 	"path/filepath"
 
-	//"errors"
-	"log"
-	"time"
-
-	//"github.com/Fantom-foundation/go-opera-fvm/cmd/opera/launcher"
 	"github.com/Fantom-foundation/go-opera-fvm/erigon"
 	"github.com/Fantom-foundation/go-opera-fvm/evmcore"
 	"github.com/Fantom-foundation/go-opera-fvm/gossip/evmstore/erigonstate"
@@ -113,7 +109,6 @@ func (s *erigonStateDB) EndBlock() {
 
 func (s *erigonStateDB) processEndBlock(tx kv.RwTx) error {
 	blockWriter := estate.NewPlainStateWriter(tx, tx, s.from)
-	//blockWriter := estate.NewPlainStateWriterNoHistory(tx)
 
 	// flush pending changes into erigon plain state
 	if err := s.ErigonAdapter.CommitBlock(blockWriter); err != nil {
@@ -126,7 +121,7 @@ func (s *erigonStateDB) processEndBlock(tx kv.RwTx) error {
 
 	switch {
 	case s.to == 0:
-		log.Println("EndBlock cleanly", "from", s.from, "to", s.to)
+		//log.Println("EndBlock cleanly", "from", s.from, "to", s.to)
 		// cleanly
 		if err := erigon.PromoteHashedStateCleanly(tx, filepath.Join(s.directory, "hashedstate")); err != nil {
 			return err
@@ -137,7 +132,7 @@ func (s *erigonStateDB) processEndBlock(tx kv.RwTx) error {
 		}
 	case s.to > 0 && s.to > s.from:
 		// incrementally
-		log.Println("EndBlock incrementally", "from", s.from, "to", s.to)
+		//log.Println("EndBlock incrementally", "from", s.from, "to", s.to)
 		if err := erigon.PromoteHashedStateIncrementally("hashedstate", s.from, s.to, filepath.Join(s.directory, "hashedstate"), tx, nil); err != nil {
 			return err
 		}
@@ -147,7 +142,6 @@ func (s *erigonStateDB) processEndBlock(tx kv.RwTx) error {
 		}
 	}
 
-	//log.Println("erigonStateDB.EndBlock, commmit erigon transaction")
 	return tx.Commit()
 }
 
@@ -261,11 +255,7 @@ func (l *erigonBulkLoad) SetCode(addr common.Address, code []byte) {
 }
 
 func (l *erigonBulkLoad) Close() error {
-	log.Println("\t erigonBulkLoad.Close()")
-	start := time.Now()
 	l.db.EndBlock()
-	sec := time.Since(start).Seconds()
-	log.Printf("\t erigonBulkLoad.Close(), Elapsed time: %.2f s\n", sec)
 	return nil
 }
 

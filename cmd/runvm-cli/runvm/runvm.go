@@ -152,7 +152,6 @@ func RunVM(ctx *cli.Context) error {
 
 			curEpoch = tx.Block / cfg.EpochLength
 			curBlock = tx.Block
-			log.Println("runVM, if isFirstBlock, curBlock: ", curBlock, "tx.Block: ", tx.Block) // 4564026
 			db.BeginEpoch(curEpoch)
 			db.BeginBlock(curBlock)
 			lastBlockProgressReportBlock = tx.Block
@@ -168,7 +167,6 @@ func RunVM(ctx *cli.Context) error {
 			//curBlock = from, tx.Block = to
 
 			// Mark the end of the old block.
-			log.Println("runVM, else if curBlock != tx.Block, curBlock: ", curBlock, "tx.Block", tx.Block) // from = 4564026, curblock 4564027
 			db.SetTxBlock(tx.Block)
 			db.EndBlock()
 
