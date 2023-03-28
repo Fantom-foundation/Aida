@@ -3,7 +3,6 @@ package state
 import (
 	"context"
 	"fmt"
-	"log"
 	"math/big"
 	"path/filepath"
 
@@ -108,21 +107,30 @@ func (s *erigonStateDB) EndBlock() {
 }
 
 func (s *erigonStateDB) processEndBlock(tx kv.RwTx) error {
-	blockWriter := estate.NewPlainStateWriter(tx, tx, s.from)
+	/*
+		blockWriter := estate.NewPlainStateWriter(tx, tx, s.from)
 
-	// flush pending changes into erigon plain state
-	if err := s.ErigonAdapter.CommitBlock(blockWriter); err != nil {
-		return err
-	}
+		// flush pending changes into erigon plain state
+		if err := s.ErigonAdapter.CommitBlock(blockWriter); err != nil {
+			return err
+		}
 
-	if err := blockWriter.WriteChangeSets(); err != nil {
-		return err
-	}
+		if err := blockWriter.WriteChangeSets(); err != nil {
+			return err
+		}
+	*/
 
 	switch {
 	case s.to == 0:
+		blockWriter := estate.NewPlainStateWriterNoHistory(tx)
+
+		if err := s.ErigonAdapter.CommitBlock(blockWriter); err != nil {
+			return err
+		}
+
 		//log.Println("EndBlock cleanly", "from", s.from, "to", s.to)
 		// cleanly
+
 		if err := erigon.PromoteHashedStateCleanly(tx, filepath.Join(s.directory, "hashedstate")); err != nil {
 			return err
 		}
@@ -131,6 +139,12 @@ func (s *erigonStateDB) processEndBlock(tx kv.RwTx) error {
 			return err
 		}
 	case s.to > 0 && s.to > s.from:
+		blockWriter := estate.NewPlainStateWriter(tx, tx, s.from)
+
+		if err := blockWriter.WriteChangeSets(); err != nil {
+			return err
+		}
+
 		// incrementally
 		//log.Println("EndBlock incrementally", "from", s.from, "to", s.to)
 		if err := erigon.PromoteHashedStateIncrementally("hashedstate", s.from, s.to, filepath.Join(s.directory, "hashedstate"), tx, nil); err != nil {
@@ -186,7 +200,6 @@ func (s *erigonStateDB) EndEpoch() {
 		panic(err)
 	}
 	s.stateRoot = common.Hash(root)
-	log.Println("EndEpoch erigon stateRoot: ", s.stateRoot.Hex())
 }
 
 // PrepareSubstate initiates the state DB for the next transaction.
