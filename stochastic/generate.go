@@ -46,7 +46,7 @@ func GenerateUniformRegistry() *EventRegistry {
 	for i := 0; i < numArgOps; i++ {
 		if IsValidArgOp(i) {
 			r.argOpFreq[i] = 1 // set frequency to greater than zero to emit operation
-			opI, _, _, _ := decodeArgOp(i)
+			opI, _, _, _ := DecodeArgOp(i)
 			switch opI {
 			case BeginEpochID:
 				j := EncodeArgOp(BeginBlockID, statistics.NoArgID, statistics.NoArgID, statistics.NoArgID)
@@ -73,7 +73,7 @@ func GenerateUniformRegistry() *EventRegistry {
 			default:
 				for j := 0; j < numArgOps; j++ {
 					if IsValidArgOp(j) {
-						opJ, _, _, _ := decodeArgOp(j)
+						opJ, _, _, _ := DecodeArgOp(j)
 						if opJ != BeginEpochID &&
 							opJ != BeginBlockID &&
 							opJ != BeginTransactionID &&
