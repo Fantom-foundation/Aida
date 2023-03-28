@@ -2,8 +2,8 @@ package db
 
 import (
 	"fmt"
-	"strconv"
 
+	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/urfave/cli/v2"
@@ -12,7 +12,7 @@ import (
 var CloneCommand = cli.Command{
 	Action:    clone,
 	Name:      "clone",
-	Usage:     "Create a clone DB of a given range of blocks",
+	Usage:     "Clone a given block range from src db to dst db.",
 	ArgsUsage: "<srcPath> <dstPath> <blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		&substate.WorkersFlag,
@@ -21,9 +21,12 @@ var CloneCommand = cli.Command{
 The substate-cli db clone command requires four arguments:
     <srcPath> <dstPath> <blockNumFirst> <blockNumLast>
 <srcPath> is the original substate database to read the information.
-<dstPath> is the target substate database to write the information
+<dstPath> is the target substate database to write the information.
 <blockNumFirst> and <blockNumLast> are the first and
-last block of the inclusive range of blocks to clone.`,
+last block of the inclusive range of blocks to clone.
+
+If dstPath doesn't exist, a new substate database is created.
+If dstPath exits, substates from src db are merged into dst db. Any overlapping blocks are overwrittenby the new value from src db.`,
 }
 
 func clone(ctx *cli.Context) error {
@@ -35,18 +38,12 @@ func clone(ctx *cli.Context) error {
 
 	srcPath := ctx.Args().Get(0)
 	dstPath := ctx.Args().Get(1)
-	first, ferr := strconv.ParseInt(ctx.Args().Get(2), 10, 64)
-	last, lerr := strconv.ParseInt(ctx.Args().Get(3), 10, 64)
-	if ferr != nil || lerr != nil {
-		return fmt.Errorf("substate-cli db clone: error in parsing parameters: block number not an integer")
-	}
-	if first < 0 || last < 0 {
-		return fmt.Errorf("substate-cli db clone: error: block number must be greater than 0")
-	}
-	if first > last {
-		return fmt.Errorf("substate-cli db clone: error: first block has larger number than last block")
+	first, last, rerr := utils.SetBlockRange(ctx.Args().Get(2), ctx.Args().Get(3))
+	if rerr != nil {
+		return rerr
 	}
 
+	// open src db as readonly
 	srcBackend, err := rawdb.NewLevelDBDatabase(srcPath, 1024, 100, "srcDB", true)
 	if err != nil {
 		return fmt.Errorf("substate-cli db clone: error opening %s: %v", srcPath, err)
@@ -54,10 +51,10 @@ func clone(ctx *cli.Context) error {
 	srcDB := substate.NewSubstateDB(srcBackend)
 	defer srcDB.Close()
 
-	// Create dst DB
-	dstBackend, err := rawdb.NewLevelDBDatabase(dstPath, 1024, 100, "srcDB", false)
+	// Create dst db as non-readonly
+	dstBackend, err := rawdb.NewLevelDBDatabase(dstPath, 1024, 100, "dstDB", false)
 	if err != nil {
-		return fmt.Errorf("substate-cli db clone: error creating %s: %v", dstPath, err)
+		return fmt.Errorf("substate-cli db clone: error opening %s: %v", dstPath, err)
 	}
 	dstDB := substate.NewSubstateDB(dstBackend)
 	defer dstDB.Close()
