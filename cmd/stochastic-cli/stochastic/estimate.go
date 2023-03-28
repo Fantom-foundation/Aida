@@ -12,9 +12,9 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// StochasticEstimatorCommand data structure for the estimator app
-var StochasticEstimatorCommand = cli.Command{
-	Action:    stochasticEstimatorAction,
+// StochasticEstimateCommand data structure for the estimator app
+var StochasticEstimateCommand = cli.Command{
+	Action:    stochasticEstimateAction,
 	Name:      "estimate",
 	Usage:     "estimates parameters of access distributions and produces a simulation file",
 	ArgsUsage: "<event-file>",
@@ -25,8 +25,8 @@ The stochastic estimator command requires one argument:
 <events.json> is the event file produced by the stochastic recorder.`,
 }
 
-// stochasticEstimatorAction implements estimator command for computing statistical parameters.
-func stochasticEstimatorAction(ctx *cli.Context) error {
+// stochasticEstimateAction implements estimator command for computing statistical parameters.
+func stochasticEstimateAction(ctx *cli.Context) error {
 	if ctx.Args().Len() != 1 {
 		return fmt.Errorf("missing event file")
 	}
@@ -48,7 +48,7 @@ func stochasticEstimatorAction(ctx *cli.Context) error {
 	json.Unmarshal(contents, &eventRegistry)
 
 	// writing event registry
-	fmt.Printf("stochastic estimator: write simulation file ...\n")
+	fmt.Printf("stochastic estimate: write simulation file ...\n")
 	estimationModel := stochastic.NewEstimationModelJSON(&eventRegistry)
 	outputFileName := ctx.String(utils.OutputFlag.Name)
 	if outputFileName == "" {
