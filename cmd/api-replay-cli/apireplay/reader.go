@@ -51,6 +51,7 @@ type Reader struct {
 
 // newReader returns new instance of Reader
 func newReader(first, last uint64, db state.StateDB, iterator *iterator.FileReader, l *logging.Logger, closed chan any, wg *sync.WaitGroup) *Reader {
+	l.Info("creating reader")
 	return &Reader{
 		dbRange: dbRange{
 			first: first,
@@ -154,8 +155,6 @@ func (r *Reader) createExecutorInput(req *iterator.RequestWithResponse) *executo
 		r.log.Errorf("cannot decode block number; skipping\nParams: %v", req.Query.Params[1])
 		return nil
 	}
-
-	wInput.blockID = 8999005
 
 	// archive
 	wInput.archive = r.getStateArchive(wInput.blockID)

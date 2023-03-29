@@ -8,6 +8,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/google/martian/log"
 	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
@@ -41,21 +42,16 @@ func newController(ctx *cli.Context, cfg *utils.Config, db state.StateDB, iter *
 	executorsWg := new(sync.WaitGroup)
 	comparatorsWg := new(sync.WaitGroup)
 
-	log := newLogger(ctx)
-
 	// create instances
-	log.Info("creating reader")
 	reader := newReader(cfg.First, cfg.Last, db, iter, newLogger(ctx), readerClosed, readerWg)
 
-	log.Infof("creating %v executors", ctx.Int(flags.WorkersFlag.Name))
 	executors, output := createExecutors(ctx, utils.GetChainConfig(cfg.ChainID), reader.output, cfg.VmImpl, executorsClosed, executorsWg)
 
-	log.Infof("creating %v comparators", ctx.Int(flags.WorkersFlag.Name)/2)
 	comparators, failure := createComparators(ctx, output, comparatorsClosed, comparatorsWg)
 
 	return &Controller{
 		failure:           failure,
-		log:               log,
+		log:               newLogger(ctx),
 		ctx:               ctx,
 		Reader:            reader,
 		Executors:         executors,
@@ -173,6 +169,7 @@ func (r *Controller) control() {
 
 // createExecutors creates number of Executors defined by the flag WorkersFlag
 func createExecutors(ctx *cli.Context, chainCfg *params.ChainConfig, input chan *executorInput, vmImpl string, closed chan any, wg *sync.WaitGroup) ([]*ReplayExecutor, chan *OutData) {
+	log.Infof("creating %v executors", ctx.Int(flags.WorkersFlag.Name))
 
 	output := make(chan *OutData)
 
@@ -198,6 +195,8 @@ func createComparators(ctx *cli.Context, input chan *OutData, closed chan any, w
 	} else {
 		comparators = ctx.Int(flags.WorkersFlag.Name) / 2
 	}
+
+	log.Infof("creating %v comparators", comparators)
 
 	c := make([]*Comparator, comparators)
 	failure := make(chan any)
