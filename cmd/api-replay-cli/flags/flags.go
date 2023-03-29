@@ -31,4 +31,9 @@ var (
 		Usage:   "defines that we want to log steps in replay",
 		Aliases: []string{"v"},
 	}
+	ContinueOnFailure = cli.BoolFlag{
+		Name:    "continue-on-failure",
+		Usage:   "if used, any mismatched data will not exit the program",
+		Aliases: []string{"cof"},
+	}
 )

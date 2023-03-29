@@ -155,6 +155,8 @@ func (r *Reader) createExecutorInput(req *iterator.RequestWithResponse) *executo
 		return nil
 	}
 
+	wInput.blockID = 8999005
+
 	// archive
 	wInput.archive = r.getStateArchive(wInput.blockID)
 	if wInput.archive == nil {

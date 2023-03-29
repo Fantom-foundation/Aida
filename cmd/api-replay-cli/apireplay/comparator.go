@@ -28,19 +28,23 @@ var EVMErrors = map[int]string{
 // Comparator compares data from StateDB and expected data recorded on API server
 // This data is retrieved from Reader
 type Comparator struct {
-	input  chan *OutData
-	log    *logging.Logger
-	closed chan any
-	wg     *sync.WaitGroup
+	input             chan *OutData
+	log               *logging.Logger
+	closed            chan any
+	wg                *sync.WaitGroup
+	continueOnFailure bool
+	failure           chan any
 }
 
 // newComparator returns new instance of Comparator
-func newComparator(input chan *OutData, log *logging.Logger, closed chan any, wg *sync.WaitGroup) *Comparator {
+func newComparator(input chan *OutData, log *logging.Logger, closed chan any, wg *sync.WaitGroup, continueOnFailure bool, failure chan any) *Comparator {
 	return &Comparator{
-		input:  input,
-		log:    log,
-		closed: closed,
-		wg:     wg,
+		failure:           failure,
+		input:             input,
+		log:               log,
+		closed:            closed,
+		wg:                wg,
+		continueOnFailure: continueOnFailure,
 	}
 }
 
@@ -73,7 +77,13 @@ func (c *Comparator) compare() {
 			}
 
 			if err := c.doCompare(data); err != nil {
+				// log the mismatched data
 				c.log.Critical(err)
+
+				// do we want to exit?
+				if !c.continueOnFailure {
+					c.fail()
+				}
 			}
 		case <-c.closed:
 			return
@@ -100,6 +110,17 @@ func (c *Comparator) doCompare(data *OutData) (err *comparatorError) {
 	}
 
 	return
+}
+
+// fail sends signal to controller that mismatched results occurred
+func (c *Comparator) fail() {
+	select {
+	case <-c.failure:
+		return
+	default:
+		c.log.Critical("sending failure signal")
+		close(c.failure)
+	}
 }
 
 // compareBalance compares getBalance data recorded on API server with data returned by StateDB

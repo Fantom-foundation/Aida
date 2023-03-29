@@ -25,6 +25,7 @@ type Controller struct {
 	readerClosed, executorsClosed, comparatorsClosed chan any
 	readerWg, executorsWg, comparatorsWg             *sync.WaitGroup
 	log                                              *logging.Logger
+	failure                                          chan any
 }
 
 // newController creates new instances of Controller, ReplayExecutors and Comparators
@@ -50,9 +51,10 @@ func newController(ctx *cli.Context, cfg *utils.Config, db state.StateDB, iter *
 	executors, output := createExecutors(ctx, utils.GetChainConfig(cfg.ChainID), reader.output, cfg.VmImpl, executorsClosed, executorsWg)
 
 	log.Infof("creating %v comparators", ctx.Int(flags.WorkersFlag.Name)/2)
-	comparators := createComparators(ctx, output, comparatorsClosed, comparatorsWg)
+	comparators, failure := createComparators(ctx, output, comparatorsClosed, comparatorsWg)
 
 	return &Controller{
+		failure:           failure,
 		log:               log,
 		ctx:               ctx,
 		Reader:            reader,
@@ -162,6 +164,9 @@ func (r *Controller) control() {
 			r.Stop()
 			r.log.Errorf("ctx err: %v", r.ctx.Err())
 			return
+		case <-r.failure:
+			r.Stop()
+
 		}
 	}
 }
@@ -182,7 +187,7 @@ func createExecutors(ctx *cli.Context, chainCfg *params.ChainConfig, input chan 
 }
 
 // createComparators creates number of Comparators defined by the flag WorkersFlag divided by two
-func createComparators(ctx *cli.Context, input chan *OutData, closed chan any, wg *sync.WaitGroup) []*Comparator {
+func createComparators(ctx *cli.Context, input chan *OutData, closed chan any, wg *sync.WaitGroup) ([]*Comparator, chan any) {
 	var (
 		comparators int
 	)
@@ -195,9 +200,10 @@ func createComparators(ctx *cli.Context, input chan *OutData, closed chan any, w
 	}
 
 	c := make([]*Comparator, comparators)
+	failure := make(chan any)
 	for i := 0; i < comparators; i++ {
-		c[i] = newComparator(input, newLogger(ctx), closed, wg)
+		c[i] = newComparator(input, newLogger(ctx), closed, wg, ctx.Bool(flags.ContinueOnFailure.Name), failure)
 	}
 
-	return c
+	return c, failure
 }
