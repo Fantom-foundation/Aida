@@ -162,7 +162,7 @@ func (r *Reader) getStateArchive(wantedBlockNumber uint64) state.StateDB {
 	var err error
 	archive, err := r.db.GetArchiveState(wantedBlockNumber)
 	if err != nil {
-		r.log.Debugf("cannot retrieve archive for block id #%v; skipping; err: %v", wantedBlockNumber, err)
+		r.log.Errorf("cannot retrieve archive for block id #%v; skipping; err: %v", wantedBlockNumber, err)
 		return nil
 	}
 

@@ -13,8 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 )
 
-const substateIterWorkers = 1
-
 // executorInput represents data needed for executing request into StateDB
 type executorInput struct {
 	archive state.StateDB
@@ -171,7 +169,9 @@ func (e *ReplayExecutor) doExecute(in *executorInput) *StateDBData {
 		req := newEVMRequest(in.req.Query.Params[0].(map[string]interface{}))
 		timestamp, err := e.getEVMTimestamp(in.blockID)
 		if err != nil {
-			log.Printf("substate for block #%v does not seem to exist; skipping request", in.blockID)
+			if e.verbose {
+				log.Printf("substate for block #%v does not seem to exist; skipping request", in.blockID)
+			}
 			return nil
 		}
 		evm := newEVM(in.blockID, in.archive, e.vmImpl, e.chainCfg, req, timestamp)
