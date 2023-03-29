@@ -154,7 +154,7 @@ func (r *Reader) createExecutorInput(req *iterator.RequestWithResponse) *executo
 // getStateArchive for given block
 func (r *Reader) getStateArchive(wantedBlockNumber uint64) state.StateDB {
 	if !r.isBlockNumberWithinRange(wantedBlockNumber) {
-		r.log.Debug("request out of StateDB block range\nSKIPPING\n")
+		r.log.Debugf("request with blockID #%v out of StateDB block range; SKIPPING", wantedBlockNumber)
 		return nil
 	}
 
