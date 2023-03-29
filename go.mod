@@ -6,7 +6,7 @@ require (
 	github.com/Fantom-foundation/Carmen/go v0.0.0-00010101000000-000000000000
 	github.com/Fantom-foundation/Substate v0.0.0-20230313095132-69cdb7b639cd
 	github.com/Fantom-foundation/go-opera v1.1.1-rc.2
-	github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230112084156-680f281ea1cb
+	github.com/Fantom-foundation/go-opera-flat v0.0.0
 	github.com/Fantom-foundation/lachesis-base v0.0.0-20221208123620-82a6d15f995c
 	github.com/dsnet/compress v0.0.1
 	github.com/ethereum/go-ethereum v1.10.25
@@ -86,6 +86,8 @@ require (
 replace github.com/ethereum/go-ethereum => github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20230301033351-d20d976d1f4c
 
 replace github.com/Fantom-foundation/go-opera => github.com/Fantom-foundation/go-opera-substate v1.0.1-0.20230301090555-fe74c5a947fa
+
+replace github.com/Fantom-foundation/go-opera-flat => github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230329105747-dd1f4d815c71
 
 // The Carmen project is integrated as a git-submodule since we need to run extra
 // build steps when importing the project. This is handled in the Makefile.

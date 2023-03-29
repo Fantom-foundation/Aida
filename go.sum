@@ -66,8 +66,8 @@ github.com/Fantom-foundation/Substate v0.0.0-20230313095132-69cdb7b639cd h1:4DYv
 github.com/Fantom-foundation/Substate v0.0.0-20230313095132-69cdb7b639cd/go.mod h1:KoObQO1Wmf3ACjxcXDREHf+mtDF4MAXfHwtxMIdyhx8=
 github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20230301033351-d20d976d1f4c h1:vA5wxnBTXJBuNtlvLe//aNIBEAHrgOKuB3BuA5bx+qE=
 github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20230301033351-d20d976d1f4c/go.mod h1:Hu8U9SrXP6ABqtSNfJHw8lRGnr6tyma9PNZvwTweDjQ=
-github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230112084156-680f281ea1cb h1:4GajUnaY0S4KUe9KO0L4S8wq8R7CtGJna/s6IobED70=
-github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230112084156-680f281ea1cb/go.mod h1:WET74tpRJLCU44+/gINDchjqmM7kSSbIJgckUDl1a8s=
+github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230329105747-dd1f4d815c71 h1:m9dWKOC9URqmDUsbGH6s5Sh1kCY1AvphOeo7l72Pry8=
+github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230329105747-dd1f4d815c71/go.mod h1:1X9FOOsbqDhaNXZm0ZPhMsyOLMWaVd2iOD8PQ2iP3Ro=
 github.com/Fantom-foundation/go-opera-substate v1.0.1-0.20230301090555-fe74c5a947fa h1:xi4eLM2mqb5b1ZHTBHnu7eGXHkqI4+yXN9xsb2xC87w=
 github.com/Fantom-foundation/go-opera-substate v1.0.1-0.20230301090555-fe74c5a947fa/go.mod h1:F6LJU2cQr/dBUZ2md0xvwMnrhkfw0IIIGZ30V0ir4iY=
 github.com/Fantom-foundation/lachesis-base v0.0.0-20220811115347-2434192efadb/go.mod h1:CFMonaK1v/QHwpjLszuycFDgLXNazZqZxciwhKwXDVQ=
@@ -357,7 +357,6 @@ github.com/gorilla/websocket v1.4.1/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/ad
 github.com/gorilla/websocket v1.4.2 h1:+/TMaTYc4QFitKJxsQ7Yye35DkWvkdLcvGKqM+x0Ufc=
 github.com/gorilla/websocket v1.4.2/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
 github.com/graph-gophers/graphql-go v1.3.0/go.mod h1:9CQHMSxwO4MprSdzoIEobiHpoLtHm77vfxsvsIN5Vuc=
-github.com/guzenok/go-fuzz v0.0.0-20210103140116-f9104dfb626f/go.mod h1:Q5On640X2Z0YzKOijx9GVhUu/kvHnk9aKoWGMlRDMtc=
 github.com/hashicorp/go-version v1.2.0/go.mod h1:fltr4n8CU8Ke44wwGCBoEymUuxUHl09ZGVZPK5anwXA=
 github.com/hashicorp/golang-lru v0.5.0/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ4Ao+sR/qLZy8=
 github.com/hashicorp/golang-lru v0.5.1/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ4Ao+sR/qLZy8=
