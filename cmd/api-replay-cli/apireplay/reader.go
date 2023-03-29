@@ -2,9 +2,11 @@ package apireplay
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/iterator"
 	"github.com/Fantom-foundation/Aida/state"
@@ -13,7 +15,8 @@ import (
 )
 
 const (
-	maxIterErrors = 5 // maximum consecutive errors emitted by comparator before program panics
+	maxIterErrors          = 5 // maximum consecutive errors emitted by comparator before program panics
+	statisticsLogFrequency = 1 * time.Minute
 )
 
 // RecordedData represents data recorded on API server. This is sent to Comparator and compared with StateDBData
@@ -74,9 +77,12 @@ func (r *Reader) Start() {
 // to ReplayExecutor which executes the request into StateDB
 func (r *Reader) read() {
 	var (
-		iterErrors uint16 = 1
-		req        *iterator.RequestWithResponse
-		wInput     *executorInput
+		iterErrors      uint16 = 1
+		req             *iterator.RequestWithResponse
+		wInput          *executorInput
+		start           time.Time
+		ticker          *time.Ticker
+		total, executed uint64
 	)
 	defer func() {
 		r.iter.Close()
@@ -84,10 +90,16 @@ func (r *Reader) read() {
 		r.wg.Done()
 	}()
 
+	start = time.Now()
+	ticker = time.NewTicker(statisticsLogFrequency)
+
 	for r.iter.Next() {
 		select {
 		case <-r.closed:
 			return
+		case <-ticker.C:
+			r.logStatistics(start, total, executed)
+
 		default:
 		}
 
@@ -111,8 +123,9 @@ func (r *Reader) read() {
 		wInput = r.createExecutorInput(req)
 		if wInput != nil {
 			r.output <- wInput
+			executed++
 		}
-
+		total++
 	}
 
 }
@@ -219,4 +232,15 @@ func (r *Reader) decodeBlockNumber(params []interface{}, recordedBlockNumber uin
 // isBlockNumberWithinRange returns whether given block number is in StateDB block range
 func (r *Reader) isBlockNumberWithinRange(blockNumber uint64) bool {
 	return blockNumber >= r.dbRange.first && blockNumber <= r.dbRange.last
+}
+
+// logStatistics about time, executed and total read requests. Frequency of logging depends on statisticsLogFrequency
+func (r *Reader) logStatistics(start time.Time, total uint64, executed uint64) {
+	b := new(big.Int)
+	fmt.Println(b.Binomial(1000, 10))
+
+	elapsed := time.Since(start)
+	r.log.Noticef("Elapsed time: %v"+
+		"Read requests:%v\n"+
+		"Out of which were executed: %v", elapsed, total, executed)
 }
