@@ -5,8 +5,9 @@ import "github.com/urfave/cli/v2"
 var (
 	// APIRecordingSrcFileFlag defines path to data recorded on API
 	APIRecordingSrcFileFlag = cli.PathFlag{
-		Name:  "api-recording",
-		Usage: "Path to source file with recorded API data",
+		Name:    "api-recording",
+		Usage:   "Path to source file with recorded API data",
+		Aliases: []string{"r"},
 	}
 	// WorkersFlag defines number of threads for execution
 	WorkersFlag = cli.IntFlag{
@@ -15,7 +16,8 @@ var (
 			"The exact value is used for number of Executor threads, " +
 			"number of Comparator threads is the number divided by 2 since the Execution is much slower;" +
 			"default: 4",
-		Value: 4,
+		Value:   4,
+		Aliases: []string{"w"},
 	}
 	// LogLevel defines the level of logging of the app
 	LogLevel = cli.StringFlag{
@@ -25,7 +27,8 @@ var (
 		Value:   "info",
 	}
 	Verbose = cli.BoolFlag{
-		Name:  "verbose",
-		Usage: "defines that we want to log steps in replay",
+		Name:    "verbose",
+		Usage:   "defines that we want to log steps in replay",
+		Aliases: []string{"v"},
 	}
 )
