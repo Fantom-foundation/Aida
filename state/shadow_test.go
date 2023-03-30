@@ -44,30 +44,6 @@ func TestShadowState_InitCloseShadowDB(t *testing.T) {
 	}
 }
 
-// TestShadowState_BeginBlockApply tests block apply start
-func TestShadowState_BeginBlockApply(t *testing.T) {
-	for _, ctc := range getCarmenStateTestCases() {
-		testCaseTitle := fmt.Sprintf("carmenDB variant: %s, archive type: %s", ctc.variant, ctc.archive)
-
-		t.Run(testCaseTitle, func(t *testing.T) {
-			shadowDB := makeTestShadowDB(t, ctc)
-
-			// Close DB after test ends
-			defer func(shadowDB StateDB) {
-				err := shadowDB.Close()
-				if err != nil {
-					t.Fatalf("failed to close shadow state DB: %v", err)
-				}
-			}(shadowDB)
-
-			err := shadowDB.BeginBlockApply()
-			if err != nil {
-				t.Fatalf("failed to begin block apply: %v", err)
-			}
-		})
-	}
-}
-
 // TestShadowState_AccountLifecycle tests account operations - create, check if it exists, if it's empty, suicide and suicide confirmation
 func TestShadowState_AccountLifecycle(t *testing.T) {
 	for _, ctc := range getCarmenStateTestCases() {

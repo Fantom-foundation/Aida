@@ -359,12 +359,6 @@ func (p *EventProxy) EndEpoch() {
 	p.db.EndEpoch()
 }
 
-// BeginBlockApply creates a new object copying state from
-// the old stateDB or clears execution state of stateDB
-func (p *EventProxy) BeginBlockApply() error {
-	return p.db.BeginBlockApply()
-}
-
 func (p *EventProxy) Close() error {
 	return p.db.Close()
 }

@@ -37,7 +37,7 @@ func MakeFlatStateDB(directory, variant string, rootHash common.Hash) (s StateDB
 	}
 
 	// initialize stateDB
-	fs.BeginBlockApply()
+	fs.openStateDB()
 	s = fs
 	return
 }
@@ -48,8 +48,8 @@ type flatStateDB struct {
 	*state.StateDB
 }
 
-// BeginBlockApply creates a new statedb from an existing geth database
-func (s *flatStateDB) BeginBlockApply() error {
+// openStateDB creates a new statedb from an existing geth database
+func (s *flatStateDB) openStateDB() error {
 	var err error
 	s.StateDB, err = state.New(s.stateRoot, s.db)
 	return err
@@ -64,7 +64,7 @@ func (s *flatStateDB) EndTransaction() {
 }
 
 func (s *flatStateDB) BeginBlock(number uint64) {
-	// ignored
+	s.openStateDB()
 }
 
 func (s *flatStateDB) EndBlock() {

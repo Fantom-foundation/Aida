@@ -75,10 +75,6 @@ type carmenStateDB struct {
 	blockNumber uint64
 }
 
-func (s *carmenStateDB) BeginBlockApply() error {
-	return nil
-}
-
 func (s *carmenStateDB) CreateAccount(addr common.Address) {
 	s.db.CreateAccount(cc.Address(addr))
 }
