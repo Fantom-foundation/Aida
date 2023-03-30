@@ -44,8 +44,8 @@ func MakeGethStateDB(directory, variant string, rootHash common.Hash, isArchiveM
 	}, nil
 }
 
-// BeginBlockApply creates a new statedb from an existing geth database
-func (s *gethStateDB) BeginBlockApply() error {
+// openStateDB creates a new statedb from an existing geth database
+func (s *gethStateDB) openStateDB() error {
 	var err error
 	s.db, err = geth.NewWithSnapLayers(s.stateRoot, s.evmState, nil, 0)
 	return err
@@ -150,6 +150,7 @@ func (s *gethStateDB) EndTransaction() {
 }
 
 func (s *gethStateDB) BeginBlock(number uint64) {
+	s.openStateDB()
 	s.block = number
 }
 

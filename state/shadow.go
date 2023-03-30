@@ -35,10 +35,6 @@ type snapshotPair struct {
 	prime, shadow int
 }
 
-func (s *shadowStateDB) BeginBlockApply() error {
-	return s.getError("BeginBlockApply", func(s StateDB) error { return s.BeginBlockApply() })
-}
-
 func (s *shadowStateDB) CreateAccount(addr common.Address) {
 	s.run("CreateAccount", func(s StateDB) { s.CreateAccount(addr) })
 }

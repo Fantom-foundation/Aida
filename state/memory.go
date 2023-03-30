@@ -79,11 +79,6 @@ func makeSnapshot(parent *snapshot, id int) *snapshot {
 	}
 }
 
-func (db *inMemoryStateDB) BeginBlockApply() error {
-	// ignored
-	return nil
-}
-
 func (db *inMemoryStateDB) CreateAccount(addr common.Address) {
 	// TODO not a nice solution, but as inMemoryStateDB
 	// doesn't include journal as statedb has, this works to replay
@@ -444,7 +439,6 @@ func (db *inMemoryStateDB) EndTransaction() {
 }
 
 func (db *inMemoryStateDB) BeginBlock(number uint64) {
-	// ignored
 	db.blockNum = number
 }
 

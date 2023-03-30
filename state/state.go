@@ -83,9 +83,6 @@ type StateDB interface {
 	// After this call no more operations will be allowed on the state.
 	Close() error
 
-	// stateDB handler
-	BeginBlockApply() error
-
 	// StartBulkLoad creates a interface supporting the efficient loading of large amount
 	// of data as it is, for instance, needed during priming. Only one bulk load operation
 	// may be active at any time and no other concurrent operations on the StateDB are

@@ -344,12 +344,6 @@ func (r *ProxyRecorder) GetArchiveState(block uint64) (state.StateDB, error) {
 	return r.db.GetArchiveState(block)
 }
 
-// BeginBlockApply creates a new object copying state from
-// the old stateDB or clears execution state of stateDB
-func (r *ProxyRecorder) BeginBlockApply() error {
-	return r.db.BeginBlockApply()
-}
-
 func (r *ProxyRecorder) Close() error {
 	return r.db.Close()
 }
