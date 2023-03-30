@@ -508,7 +508,7 @@ func TestStatedb_PrepareStateDB(t *testing.T) {
 				Schema:         0,
 				Block:          cfg.First - 1,
 				RootHash:       common.Hash{},
-				GitCommit:      "add7feb04cea97ec770af7b179cf3ba83f87fa70", // Valid randomly picked commit
+				GitCommit:      GitCommit,
 				CreateTime:     time.Now().UTC().Format(time.UnixDate),
 			}
 
@@ -594,7 +594,7 @@ func TestStatedb_PrepareStateDBInvalid(t *testing.T) {
 		t.Run(fmt.Sprintf("DB info: %v", dbInfo), func(t *testing.T) {
 			// Add missing data to state DB info file
 			dbInfo.RootHash = common.Hash{}
-			dbInfo.GitCommit = "add7feb04cea97ec770af7b179cf3ba83f87fa70"
+			dbInfo.GitCommit = GitCommit
 			dbInfo.CreateTime = time.Now().UTC().Format(time.UnixDate)
 
 			// Create json file for the existing state DB info
