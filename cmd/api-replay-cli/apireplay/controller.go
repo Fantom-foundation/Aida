@@ -13,6 +13,8 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const bufferSize = 100
+
 // Controller controls and looks after all threads within the api-replay package
 // Reader reads data from iterator - one thread is used for reader
 // Executors execute requests into StateDB - number of Executors is defined by the WorkersFlag
@@ -176,7 +178,7 @@ func (r *Controller) control() {
 func createExecutors(ctx *cli.Context, chainCfg *params.ChainConfig, input chan *executorInput, vmImpl string, closed chan any, wg *sync.WaitGroup) ([]*ReplayExecutor, chan *OutData) {
 	log.Infof("creating %v executors", ctx.Int(flags.WorkersFlag.Name))
 
-	output := make(chan *OutData, 100)
+	output := make(chan *OutData, bufferSize)
 
 	executors := ctx.Int(flags.WorkersFlag.Name)
 
