@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/big"
 	"math/rand"
+	"os"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
@@ -27,7 +28,9 @@ const (
 
 // stochasticState keeps the execution state for the stochastic simulation
 type stochasticState struct {
-	db             state.StateDB             // StateDB database
+	primary        state.StateDB             // the StateDB under test
+	secondary      state.StateDB             // a secondary DB used for inspections
+	db             state.StateDB             // StateDB database, wrapping the primary and secondary DB
 	contracts      *generator.IndirectAccess // index access generator for contracts
 	keys           *generator.RandomAccess   // index access generator for keys
 	values         *generator.RandomAccess   // index access generator for values
@@ -56,7 +59,61 @@ func find[T comparable](a []T, x T) bool {
 // It requires the simulation model and simulation length. The trace-debug flag
 // enables/disables the printing of StateDB operations and their arguments on
 // the screen.
-func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, cfg *utils.Config) error {
+func RunStochasticReplay(e *EstimationModelJSON, nBlocks int, cfg *utils.Config) error {
+	// create a directory for the store to place all its files, and
+	// instantiate the state DB under testing.
+	log.Printf("Create stateDB database")
+
+	// Create the primary state DB, the system under test.
+	primary, primaryStateDirectory, _, err := utils.PrepareStateDB(cfg)
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(primaryStateDirectory)
+
+	// Create the secondary state DB, performing the same sequence of
+	// operations but used to run additional inspection operations
+	// assumed to be side-effect free (violations would be detected).
+	secondary, secondaryStateDirectory, _, err := utils.PrepareStateDB(cfg)
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(secondaryStateDirectory)
+
+	// Run the actual simulation.
+	err = runStochasticReplay(primary, secondary, e, nBlocks, cfg)
+
+	// print memory usage after simulation
+	if cfg.MemoryBreakdown {
+		if usage := primary.GetMemoryUsage(); usage != nil {
+			log.Printf("stochastic replay: state DB memory usage: %d byte\n%s\n", usage.UsedBytes, usage.Breakdown)
+		} else {
+			log.Printf("Utilized storage solution does not support memory breakdowns.\n")
+		}
+	}
+
+	// close the DBs and print disk usage
+	start := time.Now()
+	if err := primary.Close(); err != nil {
+		log.Printf("Failed to close database: %v", err)
+	}
+	log.Printf("stochastic replay: Closing primary DB took %v\n", time.Since(start))
+	start = time.Now()
+	if err := secondary.Close(); err != nil {
+		log.Printf("Failed to close database: %v", err)
+	}
+	log.Printf("stochastic replay: Closing secondary DB took %v\n", time.Since(start))
+	log.Printf("stochastic replay: Final primary disk usage: %v MiB\n", float32(utils.GetDirectorySize(primaryStateDirectory))/float32(1024*1024))
+	log.Printf("stochastic replay: Final secondary disk usage:  %v MiB\n", float32(utils.GetDirectorySize(secondaryStateDirectory))/float32(1024*1024))
+
+	return err
+}
+
+// runStochasticReplay runs the stochastic simulation for StateDB operations.
+// It requires the simulation model and simulation length. The trace-debug flag
+// enables/disables the printing of StateDB operations and their arguments on
+// the screen.
+func runStochasticReplay(primary, secondary state.StateDB, e *EstimationModelJSON, nBlocks int, cfg *utils.Config) error {
 	var (
 		opFrequency [NumOps]uint64 // operation frequency
 		numOps      uint64         // total number of operations
@@ -94,7 +151,7 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, 
 	)
 
 	// setup state
-	ss := NewStochasticState(rg, db, contracts, keys, values, e.SnapshotLambda)
+	ss := NewStochasticState(rg, primary, secondary, contracts, keys, values, e.SnapshotLambda)
 
 	// create accounts in StateDB
 	ss.prime()
@@ -198,11 +255,13 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, 
 }
 
 // NewStochasticState creates a new state for execution StateDB operations
-func NewStochasticState(rg *rand.Rand, db state.StateDB, contracts *generator.IndirectAccess, keys *generator.RandomAccess, values *generator.RandomAccess, snapshotLambda float64) stochasticState {
+func NewStochasticState(rg *rand.Rand, primary, secondary state.StateDB, contracts *generator.IndirectAccess, keys *generator.RandomAccess, values *generator.RandomAccess, snapshotLambda float64) stochasticState {
 
 	// return stochastic state
 	return stochasticState{
-		db:             db,
+		primary:        primary,
+		secondary:      secondary,
+		db:             state.MakeShadowStateDB(primary, secondary),
 		contracts:      contracts,
 		keys:           keys,
 		values:         values,
@@ -412,7 +471,9 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		ss.snapshot = append(ss.snapshot, id)
 
 	case SubBalanceID:
-		balance := db.GetBalance(addr).Int64()
+		// Request the current balance from the seoncary DB to avoid interfearing
+		// with the primary DB which is the system under test.
+		balance := ss.secondary.GetBalance(addr).Int64()
 		if balance > 0 {
 			// get a delta that does not exceed current balance
 			// in the current snapshot

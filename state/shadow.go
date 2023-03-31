@@ -212,6 +212,12 @@ func (s *shadowStateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 
 // GetError returns an error then reset it.
 func (s *shadowStateDB) Error() error {
+	if err := s.prime.Error(); err != nil {
+		return err
+	}
+	if err := s.shadow.Error(); err != nil {
+		return err
+	}
 	err := s.err
 	// reset error message
 	s.err = nil

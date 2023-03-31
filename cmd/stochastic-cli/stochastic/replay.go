@@ -4,10 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"strconv"
-	"time"
 
 	"github.com/Fantom-foundation/Aida/stochastic"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -78,36 +76,10 @@ func stochasticReplayAction(ctx *cli.Context) error {
 		return fmt.Errorf("failed reading simulation. Error: %v", serr)
 	}
 
-	// create a directory for the store to place all its files, and
-	// instantiate the state DB under testing.
-	log.Printf("Create stateDB database")
-	db, stateDirectory, _, err := utils.PrepareStateDB(cfg)
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(stateDirectory)
-
 	// run simulation.
 	fmt.Printf("stochastic replay: run simulation ...\n")
 
-	runErr := stochastic.RunStochasticReplay(db, simulation, int(simLength), cfg)
-
-	// print memory usage after simulation
-	if cfg.MemoryBreakdown {
-		if usage := db.GetMemoryUsage(); usage != nil {
-			log.Printf("stochastic replay: state DB memory usage: %d byte\n%s\n", usage.UsedBytes, usage.Breakdown)
-		} else {
-			log.Printf("Utilized storage solution does not support memory breakdowns.\n")
-		}
-	}
-
-	// close the DB and print disk usage
-	start := time.Now()
-	if err := db.Close(); err != nil {
-		log.Printf("Failed to close database: %v", err)
-	}
-	log.Printf("stochastic replay: Closing DB took %v\n", time.Since(start))
-	log.Printf("stochastic replay: Final disk usage: %v MiB\n", float32(utils.GetDirectorySize(stateDirectory))/float32(1024*1024))
+	runErr := stochastic.RunStochasticReplay(simulation, int(simLength), cfg)
 
 	return runErr
 }
