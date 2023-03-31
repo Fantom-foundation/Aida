@@ -59,7 +59,7 @@ func newReader(first, last uint64, db state.StateDB, iterator *iterator.FileRead
 		},
 		db:     db,
 		iter:   iterator,
-		output: make(chan *executorInput, 1000),
+		output: make(chan *executorInput, 100),
 		log:    l,
 		closed: closed,
 		wg:     wg,
