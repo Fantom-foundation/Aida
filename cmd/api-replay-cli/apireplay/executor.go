@@ -100,6 +100,12 @@ func (e *ReplayExecutor) execute() {
 
 			// send to compare
 			e.output <- createOutData(in, res)
+
+			// close the archive after sending data
+			err := in.archive.Close()
+			if err != nil {
+				log.Print(err)
+			}
 		}
 
 	}
