@@ -10,6 +10,8 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+
+	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 )
 
 // ProxyRecorder data structure for capturing and recording
@@ -35,6 +37,8 @@ func (r *ProxyRecorder) write(op operation.Operation) {
 }
 
 func (r *ProxyRecorder) SetTxBlock(uint64) {}
+
+func (r *ProxyRecorder) DB() erigonethdb.Database { return nil }
 
 // CreateAccounts creates a new account.
 func (r *ProxyRecorder) CreateAccount(addr common.Address) {

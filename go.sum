@@ -76,10 +76,6 @@ github.com/DataDog/zstd v1.5.2/go.mod h1:g4AWEaM3yOg3HYfnJ3YIawPnVdXJh9QME85blwS
 github.com/Fantom-foundation/Substate v0.0.0-20230224090651-4c8c024214f4/go.mod h1:/yIHWCDDJcdKMJYvOLdYOnHt5eUBF9XWnrvrNE+90ik=
 github.com/Fantom-foundation/Substate v0.0.0-20230313095132-69cdb7b639cd h1:4DYv6gIYNgABjm1EptGTjO02qIanQhXlKHHzVzzjSKI=
 github.com/Fantom-foundation/Substate v0.0.0-20230313095132-69cdb7b639cd/go.mod h1:KoObQO1Wmf3ACjxcXDREHf+mtDF4MAXfHwtxMIdyhx8=
-github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230327051427-6253e899ea59 h1:HOeyONEXFuSUL8TSARzO6YLZG/m0jUXPiv5jiOGo98A=
-github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230327051427-6253e899ea59/go.mod h1:Sb2rp4JwACuhO6BlnibrhYJsd2f7a+zjESLH/Qlc1OU=
-github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230327053008-831efc2745f2 h1:DZmRg7IUogKuPcebGNsfGezQb8EwmYmHFa3c7WCnIsg=
-github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230327053008-831efc2745f2/go.mod h1:Sb2rp4JwACuhO6BlnibrhYJsd2f7a+zjESLH/Qlc1OU=
 github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230328072939-af7836d40033 h1:pJflXSFUjyTEv79d3vhBjeaALb0Q9F/tYWvRylo5VaE=
 github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230328072939-af7836d40033/go.mod h1:Sb2rp4JwACuhO6BlnibrhYJsd2f7a+zjESLH/Qlc1OU=
 github.com/Fantom-foundation/go-opera-substate v1.0.1-0.20230301090555-fe74c5a947fa h1:xi4eLM2mqb5b1ZHTBHnu7eGXHkqI4+yXN9xsb2xC87w=

@@ -10,6 +10,8 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+
+	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 )
 
 // ProxyProfiler data structure for capturing and recording
@@ -35,6 +37,8 @@ func (p *ProxyProfiler) BeginBlockApply() error {
 }
 
 func (p *ProxyProfiler) SetTxBlock(uint64) {}
+
+func (p *ProxyProfiler) DB() erigonethdb.Database { return nil }
 
 // CreateAccounts creates a new account.
 func (p *ProxyProfiler) CreateAccount(addr common.Address) {

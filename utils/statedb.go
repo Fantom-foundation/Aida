@@ -9,7 +9,6 @@ import (
 	"log"
 	"math/rand"
 	"os"
-	"path"
 	"path/filepath"
 	"sort"
 	"time"
@@ -17,14 +16,11 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
-
-	"github.com/Fantom-foundation/go-opera-fvm/cmd/opera/launcher"
-	"github.com/ledgerwatch/erigon-lib/kv"
 )
 
 // MakeStateDB creates a new DB instance based on cli argument.
-func MakeStateDB(directory string, cfg *Config, rootHash common.Hash, isExistingDB bool, chainKV kv.RwDB) (state.StateDB, error) {
-	db, err := makeStateDBInternal(directory, cfg, rootHash, isExistingDB, chainKV)
+func MakeStateDB(directory string, cfg *Config, rootHash common.Hash, isExistingDB bool) (state.StateDB, error) {
+	db, err := makeStateDBInternal(directory, cfg, rootHash, isExistingDB)
 	if err != nil {
 		return nil, err
 	}
@@ -35,9 +31,9 @@ func MakeStateDB(directory string, cfg *Config, rootHash common.Hash, isExisting
 }
 
 // makeStateDB creates a DB instance with a potential shadow instance.
-func makeStateDBInternal(directory string, cfg *Config, rootHash common.Hash, isExistingDB bool, chainKV kv.RwDB) (state.StateDB, error) {
+func makeStateDBInternal(directory string, cfg *Config, rootHash common.Hash, isExistingDB bool) (state.StateDB, error) {
 	if cfg.ShadowImpl == "" {
-		return makeStateDBVariant(directory, cfg.DbImpl, cfg.DbVariant, cfg.ArchiveVariant, rootHash, cfg, chainKV)
+		return makeStateDBVariant(directory, cfg.DbImpl, cfg.DbVariant, cfg.ArchiveVariant, rootHash, cfg)
 	}
 	if isExistingDB {
 		return nil, fmt.Errorf("Using an existing stateDB with a shadow DB is not supported.")
@@ -50,11 +46,11 @@ func makeStateDBInternal(directory string, cfg *Config, rootHash common.Hash, is
 	if err := os.MkdirAll(shadowDir, 0700); err != nil {
 		return nil, err
 	}
-	prime, err := makeStateDBVariant(primeDir, cfg.DbImpl, cfg.DbVariant, cfg.ArchiveVariant, rootHash, cfg, chainKV)
+	prime, err := makeStateDBVariant(primeDir, cfg.DbImpl, cfg.DbVariant, cfg.ArchiveVariant, rootHash, cfg)
 	if err != nil {
 		return nil, err
 	}
-	shadow, err := makeStateDBVariant(shadowDir, cfg.ShadowImpl, cfg.ShadowVariant, cfg.ArchiveVariant, rootHash, cfg, chainKV)
+	shadow, err := makeStateDBVariant(shadowDir, cfg.ShadowImpl, cfg.ShadowVariant, cfg.ArchiveVariant, rootHash, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -62,7 +58,7 @@ func makeStateDBInternal(directory string, cfg *Config, rootHash common.Hash, is
 }
 
 // makeStateDBVariant creates a DB instance of the requested kind.
-func makeStateDBVariant(directory, impl, variant, archiveVariant string, rootHash common.Hash, cfg *Config, chainKV kv.RwDB) (state.StateDB, error) {
+func makeStateDBVariant(directory, impl, variant, archiveVariant string, rootHash common.Hash, cfg *Config) (state.StateDB, error) {
 	switch impl {
 	case "memory":
 		return state.MakeEmptyGethInMemoryStateDB(variant)
@@ -75,7 +71,7 @@ func makeStateDBVariant(directory, impl, variant, archiveVariant string, rootHas
 		}
 		return state.MakeCarmenStateDB(directory, variant, archiveVariant, cfg.CarmenSchema)
 	case "erigon":
-		return state.MakeErigonStateDB(directory, variant, rootHash, chainKV)
+		return state.MakeErigonStateDB(directory, variant, rootHash)
 	}
 	return nil, fmt.Errorf("unknown DB implementation (--%v): %v", StateDbImplementationFlag.Name, impl)
 }
@@ -243,7 +239,7 @@ func GetDirectorySize(directory string) int64 {
 }
 
 // PrepareStateDB creates stateDB or load existing stateDB
-func PrepareStateDB(cfg *Config) (db state.StateDB, workingDirectory string, loadedExistingDB bool, chainKV kv.RwDB, err error) {
+func PrepareStateDB(cfg *Config) (db state.StateDB, workingDirectory string, loadedExistingDB bool, err error) {
 	var exists bool
 	roothash := common.Hash{}
 	loadedExistingDB = false
@@ -301,10 +297,7 @@ func PrepareStateDB(cfg *Config) (db state.StateDB, workingDirectory string, loa
 
 	log.Printf("\tTemporary state DB directory: %v\n", workingDirectory)
 
-	erigonDirectory := path.Join(workingDirectory, "erigon")
-	chainKV = launcher.InitChainKV(erigonDirectory)
-
-	db, err = MakeStateDB(erigonDirectory, cfg, roothash, loadedExistingDB, chainKV)
+	db, err = MakeStateDB(workingDirectory, cfg, roothash, loadedExistingDB)
 
 	return
 }

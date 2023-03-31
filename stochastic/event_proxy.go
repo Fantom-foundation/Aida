@@ -9,6 +9,8 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+
+	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 )
 
 // EventProxy data structure for capturing StateDB events
@@ -28,6 +30,8 @@ func NewEventProxy(db state.StateDB, registry *EventRegistry) *EventProxy {
 }
 
 func (p *EventProxy) SetTxBlock(uint64) {}
+
+func (p *EventProxy) DB() erigonethdb.Database { return nil }
 
 // CreateAccount creates a new account.
 func (p *EventProxy) CreateAccount(address common.Address) {

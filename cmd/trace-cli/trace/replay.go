@@ -82,7 +82,7 @@ func traceReplayTask(cfg *utils.Config) error {
 	// create a directory for the store to place all its files, and
 	// instantiate the state DB under testing.
 	log.Printf("Create stateDB database")
-	db, stateDirectory, loadedExistingDB, _, err := utils.PrepareStateDB(cfg)
+	db, stateDirectory, loadedExistingDB, err := utils.PrepareStateDB(cfg)
 	if err != nil {
 		return err
 	}

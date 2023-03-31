@@ -7,6 +7,8 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+
+	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 )
 
 // MakeLoggingStateDB wrapps the given StateDB instance into a logging wrapper causing
@@ -25,6 +27,8 @@ func (s *loggingStateDB) BeginBlockApply() error {
 }
 
 func (s *loggingStateDB) SetTxBlock(uint64) {}
+
+func (s *loggingStateDB) DB() erigonethdb.Database { return nil }
 
 func (s *loggingStateDB) CreateAccount(addr common.Address) {
 	log.Printf("CreateAccount, %v\n", addr)

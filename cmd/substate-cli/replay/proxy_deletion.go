@@ -7,6 +7,8 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+
+	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 )
 
 type ContractLiveness struct {
@@ -30,6 +32,8 @@ func NewProxyDeletion(db state.StateDB, ch chan ContractLiveness) *ProxyDeletion
 }
 
 func (r *ProxyDeletion) SetTxBlock(uint64) {}
+
+func (r *ProxyDeletion) DB() erigonethdb.Database { return nil }
 
 // CreateAccounts creates a new account.
 func (r *ProxyDeletion) CreateAccount(addr common.Address) {

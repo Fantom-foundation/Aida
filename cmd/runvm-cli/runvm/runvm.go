@@ -49,12 +49,15 @@ func RunVM(ctx *cli.Context) error {
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
-	db, stateDirectory, loadedExistingDB, chainKV, err := utils.PrepareStateDB(cfg)
+	db, stateDirectory, loadedExistingDB, err := utils.PrepareStateDB(cfg)
 	if err != nil {
 		return err
 	}
 
-	defer chainKV.Close()
+	erigonDatabase := db.DB()
+	if erigonDatabase != nil {
+		defer erigonDatabase.Close()
+	}
 
 	if !cfg.KeepStateDB {
 		log.Printf("WARNING: directory %v will be removed at the end of this run.\n", stateDirectory)

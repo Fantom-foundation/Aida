@@ -14,6 +14,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+
+	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 )
 
 // MockStateDB data structure
@@ -36,6 +38,8 @@ func (s *MockStateDB) GetRecording() []Record {
 }
 
 func (s *MockStateDB) SetTxBlock(uint64) {}
+
+func (s *MockStateDB) DB() erigonethdb.Database { return nil }
 
 // Record structure
 type Record struct {

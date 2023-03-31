@@ -7,6 +7,8 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+
+	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 )
 
 type BasicStateDB interface {
@@ -123,6 +125,7 @@ type StateDB interface {
 	// This is mainly for development purposes to support in-memory DB implementations.
 	PrepareSubstate(*substate.SubstateAlloc, uint64)
 	SetTxBlock(uint64)
+	DB() erigonethdb.Database
 }
 
 // BulkWrite is a faster interface to StateDB instances for writing data without

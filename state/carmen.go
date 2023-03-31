@@ -10,6 +10,8 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+
+	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 )
 
 func MakeCarmenStateDB(directory, variant, archive string, schema int) (StateDB, error) {
@@ -80,6 +82,8 @@ func (s *carmenStateDB) BeginBlockApply() error {
 }
 
 func (s *carmenStateDB) SetTxBlock(uint64) {}
+
+func (s *carmenStateDB) DB() erigonethdb.Database { return nil }
 
 func (s *carmenStateDB) CreateAccount(addr common.Address) {
 	s.db.CreateAccount(cc.Address(addr))

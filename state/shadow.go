@@ -10,6 +10,8 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+
+	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 )
 
 // MakeShadowStateDB creates a StateDB instance bundeling two other instances and running each
@@ -36,6 +38,8 @@ type snapshotPair struct {
 }
 
 func (s *shadowStateDB) SetTxBlock(uint64) {}
+
+func (s *shadowStateDB) DB() erigonethdb.Database { return nil }
 
 func (s *shadowStateDB) BeginBlockApply() error {
 	return s.getError("BeginBlockApply", func(s StateDB) error { return s.BeginBlockApply() })

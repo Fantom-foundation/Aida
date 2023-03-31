@@ -6,32 +6,39 @@ import (
 	"math/big"
 	"path/filepath"
 
+	"github.com/Fantom-foundation/go-opera-fvm/cmd/opera/launcher"
 	"github.com/Fantom-foundation/go-opera-fvm/erigon"
 	"github.com/Fantom-foundation/go-opera-fvm/evmcore"
 	"github.com/Fantom-foundation/go-opera-fvm/gossip/evmstore/erigonstate"
+	"github.com/Fantom-foundation/go-opera-fvm/gossip/evmstore/ethdb"
 
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
+	//"github.com/ethereum/go-ethereum/ethdb"
 
 	"github.com/ledgerwatch/erigon-lib/kv"
 	"github.com/ledgerwatch/erigon-lib/kv/memdb"
 	estate "github.com/ledgerwatch/erigon/core/state"
+	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 )
 
-func MakeErigonStateDB(directory, variant string, rootHash common.Hash, chainKV kv.RwDB) (s StateDB, err error) {
+func MakeErigonStateDB(directory, variant string, rootHash common.Hash) (s StateDB, err error) {
+	var kv kv.RwDB
+	erigonDirectory := filepath.Join(directory, "erigon")
 	switch variant {
 	case "go-memory":
-		chainKV = memdb.New()
+		kv = memdb.New()
 	case "go-erigon":
+		kv = launcher.InitChainKV(erigonDirectory)
 	default:
 		err = fmt.Errorf("unkown variant: %v", variant)
 		return
 	}
 
 	es := &erigonStateDB{
-		chainKV:   chainKV,
+		db:        ethdb.NewObjectDatabase(kv),
 		stateRoot: rootHash,
-		directory: directory,
+		directory: erigonDirectory,
 	}
 
 	// initialize stateDB
@@ -42,18 +49,18 @@ func MakeErigonStateDB(directory, variant string, rootHash common.Hash, chainKV 
 }
 
 type erigonStateDB struct {
-	chainKV   kv.RwDB
+	db        erigonethdb.Database
 	stateRoot common.Hash
 	*evmcore.ErigonAdapter
-	runVMStarted bool
-	directory    string
-	from, to     uint64
+	directory string
+	from, to  uint64
 }
 
 // BeginBlockApply creates a new statedb from an existing geth database
 func (s *erigonStateDB) BeginBlockApply() error {
 	var err error
-	s.ErigonAdapter = evmcore.NewErigonAdapter(erigonstate.NewWithChainKV(s.chainKV))
+
+	s.ErigonAdapter = evmcore.NewErigonAdapter(erigonstate.NewWithChainKV(s.db.RwKV()))
 	return err
 }
 
@@ -94,7 +101,7 @@ func (s *erigonStateDB) ForEachStorage(common.Address, func(common.Hash, common.
 // TODO add caching
 func (s *erigonStateDB) EndBlock() {
 
-	tx, err := s.chainKV.BeginRw(context.Background())
+	tx, err := s.db.RwKV().BeginRw(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -161,7 +168,7 @@ func (s *erigonStateDB) processEndBlock(tx kv.RwTx) error {
 
 // TODO think about hashedstate and intermediatehashes
 func (s *erigonStateDB) Commit(_ bool) (common.Hash, error) {
-	tx, err := s.chainKV.BeginRw(context.Background())
+	tx, err := s.db.RwKV().BeginRw(context.Background())
 	if err != nil {
 		return common.Hash{}, err
 	}
@@ -188,7 +195,7 @@ func (s *erigonStateDB) BeginEpoch(number uint64) {
 }
 
 func (s *erigonStateDB) EndEpoch() {
-	tx, err := s.chainKV.BeginRw(context.Background())
+	tx, err := s.db.RwKV().BeginRw(context.Background())
 	if err != nil {
 		panic(err)
 	}
@@ -221,8 +228,12 @@ func (s *erigonStateDB) Close() error {
 	//s.EndBlock()
 
 	// close underlying MDBX
-	s.chainKV.Close()
+	s.db.RwKV().Close()
 	return nil
+}
+
+func (s *erigonStateDB) DB() erigonethdb.Database {
+	return s.db
 }
 
 func (s *erigonStateDB) GetMemoryUsage() *MemoryUsage {

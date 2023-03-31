@@ -12,6 +12,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	vm "github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/ethdb"
+
+	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 )
 
 const (
@@ -61,6 +63,8 @@ type gethStateDB struct {
 }
 
 func (s *gethStateDB) SetTxBlock(uint64) {}
+
+func (s *gethStateDB) DB() erigonethdb.Database { return nil }
 
 func (s *gethStateDB) CreateAccount(addr common.Address) {
 	s.db.CreateAccount(addr)

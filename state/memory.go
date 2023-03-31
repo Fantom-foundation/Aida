@@ -7,6 +7,8 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+
+	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 )
 
 func MakeEmptyGethInMemoryStateDB(variant string) (StateDB, error) {
@@ -483,6 +485,8 @@ func (db *inMemoryStateDB) PrepareSubstate(alloc *substate.SubstateAlloc, block 
 }
 
 func (db *inMemoryStateDB) SetTxBlock(uint64) {}
+
+func (db *inMemoryStateDB) DB() erigonethdb.Database { return nil }
 
 func (s *inMemoryStateDB) StartBulkLoad() BulkLoad {
 	return &gethInMemoryBulkLoad{}
