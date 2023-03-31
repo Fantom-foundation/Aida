@@ -2,7 +2,6 @@ package apireplay
 
 import (
 	"encoding/json"
-	"errors"
 	"log"
 	"sync"
 
@@ -110,21 +109,6 @@ func (e *ReplayExecutor) execute() {
 	}
 }
 
-// getEVMTimestamp retrieves timestamp for current block from substate
-func getEVMTimestamp(wantedBlockID uint64) (uint64, error) {
-	iter := substate.NewSubstateIterator(wantedBlockID, 1)
-	defer iter.Release()
-
-	if iter.Next() {
-		if iter.Value() != nil {
-			return iter.Value().Substate.Env.Timestamp, nil
-		}
-	}
-
-	return 0, errors.New("substate for this block does not exist")
-
-}
-
 // createOutData and send it to Comparator
 func createOutData(in *executorInput, r *StateDBData) *OutData {
 
@@ -168,23 +152,13 @@ func (e *ReplayExecutor) doExecute(in *executorInput) *StateDBData {
 
 	case "call":
 		req := newEVMRequest(in.req.Query.Params[0].(map[string]interface{}))
-		timestamp, err := getEVMTimestamp(in.blockID)
-		if err != nil {
-			if e.verbose {
-				log.Printf("substate for block #%v does not seem to exist; skipping request", in.blockID)
-			}
-			return nil
-		}
+		timestamp := substate.GetSubstate(in.blockID, 0).Env.Timestamp
 		evm := newEVM(in.blockID, in.archive, e.vmImpl, e.chainCfg, req, timestamp)
 		return executeCall(evm)
 
 	case "estimateGas":
 		req := newEVMRequest(in.req.Query.Params[0].(map[string]interface{}))
-		timestamp, err := getEVMTimestamp(in.blockID)
-		if err != nil {
-			log.Printf("substate for block #%v does not seem to exist; skipping request", in.blockID)
-			return nil
-		}
+		timestamp := substate.GetSubstate(in.blockID, 0).Env.Timestamp
 		evm := newEVM(in.blockID, in.archive, e.vmImpl, e.chainCfg, req, timestamp)
 		return executeEstimateGas(evm)
 
