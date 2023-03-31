@@ -101,31 +101,32 @@ func (r *Reader) read() {
 			r.logStatistics(start, total, executed)
 
 		default:
-		}
 
-		// did iter emit an error?
-		if r.iter.Error() != nil {
-			// if iterator errors 5 times in a row, exit the program with an error
-			if iterErrors >= maxIterErrors {
-				r.log.Fatalf("iterator reached limit of number of consecutive errors; err: %v", r.iter.Error())
+			// did iter emit an error?
+			if r.iter.Error() != nil {
+				// if iterator errors 5 times in a row, exit the program with an error
+				if iterErrors >= maxIterErrors {
+					r.log.Fatalf("iterator reached limit of number of consecutive errors; err: %v", r.iter.Error())
+				}
+				r.log.Errorf("error loading recordings; %v\nretry number %v\n", r.iter.Error().Error(), iterErrors)
+				iterErrors++
+				continue
 			}
-			r.log.Errorf("error loading recordings; %v\nretry number %v\n", r.iter.Error().Error(), iterErrors)
-			iterErrors++
-			continue
+
+			// reset the error counter
+			iterErrors = 1
+
+			// retrieve the data from iterator
+			req = r.iter.Value()
+
+			wInput = r.createExecutorInput(req)
+			if wInput != nil {
+				r.output <- wInput
+				executed++
+			}
+			total++
 		}
 
-		// reset the error counter
-		iterErrors = 1
-
-		// retrieve the data from iterator
-		req = r.iter.Value()
-
-		wInput = r.createExecutorInput(req)
-		if wInput != nil {
-			r.output <- wInput
-			executed++
-		}
-		total++
 	}
 
 }

@@ -36,7 +36,6 @@ type OutData struct {
 // ReplayExecutor represents a goroutine in which requests are executed into StateDB
 type ReplayExecutor struct {
 	iterBlock      uint64
-	iter           substate.SubstateIterator
 	cfg            *utils.Config
 	input          chan *executorInput
 	output         chan *OutData
@@ -112,15 +111,13 @@ func (e *ReplayExecutor) execute() {
 }
 
 // getEVMTimestamp retrieves timestamp for current block from substate
-func (e *ReplayExecutor) getEVMTimestamp(wantedBlockID uint64) (uint64, error) {
-	// same block?
-	if wantedBlockID != e.iterBlock {
-		e.iter = substate.NewSubstateIterator(wantedBlockID, 1)
-	}
+func getEVMTimestamp(wantedBlockID uint64) (uint64, error) {
+	iter := substate.NewSubstateIterator(wantedBlockID, 1)
+	defer iter.Release()
 
-	if e.iter.Next() {
-		if e.iter.Value() != nil {
-			return e.iter.Value().Substate.Env.Timestamp, nil
+	if iter.Next() {
+		if iter.Value() != nil {
+			return iter.Value().Substate.Env.Timestamp, nil
 		}
 	}
 
@@ -171,7 +168,7 @@ func (e *ReplayExecutor) doExecute(in *executorInput) *StateDBData {
 
 	case "call":
 		req := newEVMRequest(in.req.Query.Params[0].(map[string]interface{}))
-		timestamp, err := e.getEVMTimestamp(in.blockID)
+		timestamp, err := getEVMTimestamp(in.blockID)
 		if err != nil {
 			if e.verbose {
 				log.Printf("substate for block #%v does not seem to exist; skipping request", in.blockID)
@@ -183,7 +180,7 @@ func (e *ReplayExecutor) doExecute(in *executorInput) *StateDBData {
 
 	case "estimateGas":
 		req := newEVMRequest(in.req.Query.Params[0].(map[string]interface{}))
-		timestamp, err := e.getEVMTimestamp(in.blockID)
+		timestamp, err := getEVMTimestamp(in.blockID)
 		if err != nil {
 			log.Printf("substate for block #%v does not seem to exist; skipping request", in.blockID)
 			return nil
