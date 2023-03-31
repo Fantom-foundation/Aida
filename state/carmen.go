@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
+	estate "github.com/ledgerwatch/erigon/core/state"
 	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 )
 
@@ -84,6 +85,12 @@ func (s *carmenStateDB) BeginBlockApply() error {
 func (s *carmenStateDB) SetTxBlock(uint64) {}
 
 func (s *carmenStateDB) DB() erigonethdb.Database { return nil }
+
+func (s *carmenStateDB) CommitBlock(stateWriter estate.StateWriter) error { return nil }
+
+func (s *carmenStateDB) BeginBlockApplyWithStateReader(stateReader estate.StateReader) error {
+	return nil
+}
 
 func (s *carmenStateDB) CreateAccount(addr common.Address) {
 	s.db.CreateAccount(cc.Address(addr))

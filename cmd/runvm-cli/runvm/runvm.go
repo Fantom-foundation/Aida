@@ -1,16 +1,26 @@
 package runvm
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"math/big"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
+	lru "github.com/hashicorp/golang-lru"
 	"github.com/urfave/cli/v2"
+
+	"github.com/Fantom-foundation/go-opera-fvm/erigon"
+
+	"github.com/ledgerwatch/erigon-lib/kv"
+	estate "github.com/ledgerwatch/erigon/core/state"
+	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
+	"github.com/ledgerwatch/erigon/ethdb/olddb"
 )
 
 // RunVM implements trace command for executing VM on a chosen storage system.
@@ -54,10 +64,7 @@ func RunVM(ctx *cli.Context) error {
 		return err
 	}
 
-	erigonDatabase := db.DB()
-	if erigonDatabase != nil {
-		defer erigonDatabase.Close()
-	}
+	defer db.Close()
 
 	if !cfg.KeepStateDB {
 		log.Printf("WARNING: directory %v will be removed at the end of this run.\n", stateDirectory)
@@ -91,6 +98,18 @@ func RunVM(ctx *cli.Context) error {
 		start = time.Now()
 		// remove destroyed accounts until one block before the first block
 
+		/*
+			db.BeginEpoch(0)
+			db.BeginBlock(target) // block 0 is the priming, block (first-1) the deletion
+			db.BeginTransaction(0)
+			for _, cur := range list {
+				db.Suicide(cur)
+			}
+			db.Finalise(true)
+			db.EndTransaction()
+			db.EndBlock()
+			db.EndEpoch()
+		*/
 		err = utils.DeleteDestroyedAccountsFromStateDB(db, cfg, cfg.First-1)
 		sec = time.Since(start).Seconds()
 		log.Printf("\tElapsed time: %.2f s\n", sec)
@@ -125,6 +144,7 @@ func RunVM(ctx *cli.Context) error {
 			return fmt.Errorf("Failed to remove deleted accoount from the world state. %v", err)
 		}
 
+		// a lot of db.GetState
 		if err := utils.ValidateStateDB(ws, db, false); err != nil {
 			return fmt.Errorf("Pre: World state is not contained in the stateDB. %v", err)
 		}
@@ -137,17 +157,54 @@ func RunVM(ctx *cli.Context) error {
 		start = time.Now()
 		lastSec = time.Since(start).Seconds()
 	}
-	//panic("breakpoint")
+
 	log.Printf("Run VM\n")
 	var curBlock uint64 = 0
 	var curEpoch uint64
 	isFirstBlock := true
+
+	// start erigon block execution
+	var rwTx kv.RwTx
+	var batch erigonethdb.DbWithPendingMutations
+	const lruDefaultSize = 1_000_000 // 56 MB  // put it inside function
+	if cfg.DbImpl == "erigon" {
+		rwTx, err = db.DB().RwKV().BeginRw(context.Background())
+		if err != nil {
+			return err
+		}
+
+		defer rwTx.Rollback()
+
+		// Contract code is unlikely to change too much, so let's keep it cached
+		contractCodeCache, err := lru.New(lruDefaultSize)
+		if err != nil {
+			return err
+		}
+
+		// state is stored through ethdb batches
+		whitelistedTables := []string{kv.Code, kv.ContractCode}
+		batch = olddb.NewHashBatch(rwTx, nil, filepath.Join(stateDirectory, "erigon", "state"), whitelistedTables, contractCodeCache)
+		defer batch.Rollback()
+	}
+
 	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
 
 	defer iter.Release()
 	for iter.Next() {
 		tx := iter.Value()
 		// initiate first epoch and block.
+
+		// initiate stateReader and stateWriter
+		// wrap it into standalone function
+		var (
+			stateReader estate.StateReader
+			stateWriter estate.WriterWithChangeSets
+		)
+		if cfg.DbImpl == "erigon" {
+			stateReader = estate.NewPlainStateReader(batch)
+			stateWriter = estate.NewPlainStateWriter(batch, rwTx, tx.Block)
+		}
+
 		if isFirstBlock {
 			if tx.Block > cfg.Last {
 				break
@@ -170,20 +227,47 @@ func RunVM(ctx *cli.Context) error {
 			//curBlock = from, tx.Block = to
 
 			// Mark the end of the old block.
-			db.SetTxBlock(tx.Block)
-			db.EndBlock()
+			if cfg.DbImpl == "erigon" {
+				from, to := curBlock, tx.Block
+				if err := db.CommitBlock(stateWriter); err != nil {
+					return fmt.Errorf("writing changesets for block %d failed: %w", tx.Block, err)
+				}
+
+				if err := stateWriter.WriteChangeSets(); err != nil {
+					return fmt.Errorf("writing changesets for block %d failed: %w", tx.Block, err)
+				}
+
+				if err := erigon.PromoteHashedStateIncrementally("hashedstate", from, to, filepath.Join(stateDirectory, "erigon", "hashedstate"), rwTx, nil); err != nil {
+					return err
+				}
+
+				if _, err := erigon.IncrementIntermediateHashes("IH", rwTx, from, to, filepath.Join(stateDirectory, "erigon", "IH"), false, nil); err != nil {
+					return err
+				}
+
+			} else {
+				db.SetTxBlock(tx.Block) // TODO later remove it
+				db.EndBlock()
+			}
 
 			// Move on epochs if needed.
 			newEpoch := tx.Block / cfg.EpochLength
 			for curEpoch < newEpoch {
-				db.EndEpoch()
+				if cfg.DbImpl != "erigon" {
+					db.EndEpoch()
+				}
 				curEpoch++
 				db.BeginEpoch(curEpoch)
 			}
 			// Mark the beginning of a new block
 			curBlock = tx.Block
 			db.BeginBlock(curBlock)
-			db.BeginBlockApply()
+			if cfg.DbImpl != "erigon" {
+				db.BeginBlockApplyWithStateReader(stateReader)
+			} else {
+				db.BeginBlockApply()
+			}
+			// new erigonAdfapter is nitiated
 		}
 		if cfg.MaxNumTransactions >= 0 && txCount >= cfg.MaxNumTransactions {
 			break
@@ -197,8 +281,10 @@ func RunVM(ctx *cli.Context) error {
 			err = fmt.Errorf("Error: VM execution failed. %w", err)
 			break
 		}
+
 		db.EndTransaction()
 		txCount++
+		log.Println("txCount", txCount)
 		gasCount = new(big.Int).Add(gasCount, new(big.Int).SetUint64(tx.Substate.Result.GasUsed))
 
 		if cfg.EnableProgress {
@@ -240,11 +326,22 @@ func RunVM(ctx *cli.Context) error {
 		}
 	}
 
-	// end of execution
-	if !isFirstBlock && err == nil {
-		db.SetTxBlock(curBlock)
-		db.EndBlock()
-		db.EndEpoch()
+	if cfg.DbImpl == "erigon" {
+		// finalize erigon execution
+		if err = batch.Commit(); err != nil {
+			return fmt.Errorf("batch commit: %v", err)
+		}
+
+		if err = rwTx.Commit(); err != nil {
+			return err
+		}
+	} else {
+		// end of execution
+		if !isFirstBlock && err == nil {
+			db.SetTxBlock(curBlock)
+			db.EndBlock()
+			db.EndEpoch()
+		}
 	}
 
 	runTime := time.Since(start).Seconds()

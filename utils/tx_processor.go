@@ -16,6 +16,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
+
+	estate "github.com/ledgerwatch/erigon/core/state"
 )
 
 // Count total errors occured while processing transactions
@@ -52,6 +54,7 @@ func ProcessTx(db state.StateDB, cfg *Config, block uint64, txIndex int, tx *sub
 
 	// validate whether the input alloc is contained in the db
 	if cfg.ValidateTxState {
+		log.Println("ProcessTx, cfg.ValidateTxState, a lot of GetBalance and get state queries")
 		if err := ValidateStateDB(tx.InputAlloc, db, UpdateOnFailure); err != nil {
 			newErrors++
 			errMsg.WriteString("Input alloc is not contained in the stateDB.\n")
@@ -90,17 +93,9 @@ func ProcessTx(db state.StateDB, cfg *Config, block uint64, txIndex int, tx *sub
 		}
 	}
 
-	if _, err := db.Commit(false); err != nil {
-		txerr = err
+	if err := db.CommitBlock(estate.NewNoopWriter()); err != nil {
 		return
 	}
-	/*
-		if chainConfig.IsByzantium(blockCtx.BlockNumber) {
-			db.Finalise(true)
-		} else {
-			db.IntermediateRoot(chainConfig.IsEIP158(blockCtx.BlockNumber))
-		}
-	*/
 
 	// check whether the outputAlloc substate is contained in the world-state db.
 	if cfg.ValidateTxState {
@@ -200,6 +195,7 @@ func validateVMAlloc(db state.StateDB, expectedAlloc substate.SubstateAlloc, mod
 	var err error
 	switch mode {
 	case SubsetCheck:
+		log.Println("validateVMAlloc, case SubsetCheck")
 		err = ValidateStateDB(expectedAlloc, db, !UpdateOnFailure)
 	case EqualityCheck:
 		vmAlloc := db.GetSubstatePostAlloc()

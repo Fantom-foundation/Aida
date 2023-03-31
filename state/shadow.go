@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
+	estate "github.com/ledgerwatch/erigon/core/state"
 	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 )
 
@@ -40,6 +41,12 @@ type snapshotPair struct {
 func (s *shadowStateDB) SetTxBlock(uint64) {}
 
 func (s *shadowStateDB) DB() erigonethdb.Database { return nil }
+
+func (s *shadowStateDB) CommitBlock(stateWriter estate.StateWriter) error { return nil }
+
+func (s *shadowStateDB) BeginBlockApplyWithStateReader(stateReader estate.StateReader) error {
+	return nil
+}
 
 func (s *shadowStateDB) BeginBlockApply() error {
 	return s.getError("BeginBlockApply", func(s StateDB) error { return s.BeginBlockApply() })

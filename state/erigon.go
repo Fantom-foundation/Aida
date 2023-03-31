@@ -59,8 +59,14 @@ type erigonStateDB struct {
 // BeginBlockApply creates a new statedb from an existing geth database
 func (s *erigonStateDB) BeginBlockApply() error {
 	var err error
-
 	s.ErigonAdapter = evmcore.NewErigonAdapter(erigonstate.NewWithChainKV(s.db.RwKV()))
+	return err
+}
+
+func (s *erigonStateDB) BeginBlockApplyWithStateReader(stateReader estate.StateReader) error {
+	var err error
+
+	s.ErigonAdapter = evmcore.NewErigonAdapter(erigonstate.NewWithStateReader(stateReader))
 	return err
 }
 
@@ -166,8 +172,13 @@ func (s *erigonStateDB) processEndBlock(tx kv.RwTx) error {
 	return tx.Commit()
 }
 
+func (s *erigonStateDB) CommitBlock(stateWriter estate.StateWriter) error {
+	return s.ErigonAdapter.CommitBlock(stateWriter)
+}
+
 // TODO think about hashedstate and intermediatehashes
 func (s *erigonStateDB) Commit(_ bool) (common.Hash, error) {
+
 	tx, err := s.db.RwKV().BeginRw(context.Background())
 	if err != nil {
 		return common.Hash{}, err
@@ -175,8 +186,8 @@ func (s *erigonStateDB) Commit(_ bool) (common.Hash, error) {
 
 	defer tx.Rollback()
 
-	blockWriter := estate.NewPlainStateWriter(tx, tx, s.from)
-	//blockWriter := estate.NewPlainStateWriterNoHistory(tx)
+	//blockWriter := estate.NewPlainStateWriter(tx, tx, s.from)
+	blockWriter := estate.NewPlainStateWriterNoHistory(tx)
 
 	// flush pending changes into erigon plain state
 	if err := s.ErigonAdapter.CommitBlock(blockWriter); err != nil {
@@ -289,6 +300,6 @@ func (l *erigonBulkLoad) digest() {
 	if l.num_ops%(1000*1000) != 0 {
 		return
 	}
-	//l.db.EndBlock()
+	l.db.EndBlock()
 	//l.Close()
 }

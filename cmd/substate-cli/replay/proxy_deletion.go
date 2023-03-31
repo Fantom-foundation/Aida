@@ -8,6 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
+	estate "github.com/ledgerwatch/erigon/core/state"
 	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 )
 
@@ -34,6 +35,12 @@ func NewProxyDeletion(db state.StateDB, ch chan ContractLiveness) *ProxyDeletion
 func (r *ProxyDeletion) SetTxBlock(uint64) {}
 
 func (r *ProxyDeletion) DB() erigonethdb.Database { return nil }
+
+func (r *ProxyDeletion) CommitBlock(stateWriter estate.StateWriter) error { return nil }
+
+func (r *ProxyDeletion) BeginBlockApplyWithStateReader(stateReader estate.StateReader) error {
+	return nil
+}
 
 // CreateAccounts creates a new account.
 func (r *ProxyDeletion) CreateAccount(addr common.Address) {

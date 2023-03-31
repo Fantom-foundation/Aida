@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
+	estate "github.com/ledgerwatch/erigon/core/state"
 	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 )
 
@@ -39,6 +40,12 @@ func (r *ProxyRecorder) write(op operation.Operation) {
 func (r *ProxyRecorder) SetTxBlock(uint64) {}
 
 func (r *ProxyRecorder) DB() erigonethdb.Database { return nil }
+
+func (r *ProxyRecorder) CommitBlock(stateWriter estate.StateWriter) error { return nil }
+
+func (r *ProxyRecorder) BeginBlockApplyWithStateReader(stateReader estate.StateReader) error {
+	return nil
+}
 
 // CreateAccounts creates a new account.
 func (r *ProxyRecorder) CreateAccount(addr common.Address) {
