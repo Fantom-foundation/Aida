@@ -15,7 +15,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 	"github.com/urfave/cli/v2"
 
-	"github.com/Fantom-foundation/go-opera-fvm/erigon"
+	//"github.com/Fantom-foundation/go-opera-fvm/erigon"
 
 	"github.com/ledgerwatch/erigon-lib/kv"
 	estate "github.com/ledgerwatch/erigon/core/state"
@@ -166,6 +166,8 @@ func RunVM(ctx *cli.Context) error {
 	// start erigon block execution
 	var rwTx kv.RwTx
 	var batch erigonethdb.DbWithPendingMutations
+	var stateWriter estate.WriterWithChangeSets
+	var stateReader estate.StateReader
 	const lruDefaultSize = 1_000_000 // 56 MB  // put it inside function
 	if cfg.DbImpl == "erigon" {
 		rwTx, err = db.DB().RwKV().BeginRw(context.Background())
@@ -185,6 +187,9 @@ func RunVM(ctx *cli.Context) error {
 		whitelistedTables := []string{kv.Code, kv.ContractCode}
 		batch = olddb.NewHashBatch(rwTx, nil, filepath.Join(stateDirectory, "erigon", "state"), whitelistedTables, contractCodeCache)
 		defer batch.Rollback()
+		stateWriter = estate.NewPlainStateWriterNoHistory(batch)
+		stateReader = estate.NewPlainStateReader(batch)
+		db.BeginBlockApplyWithStateReader(stateReader)
 	}
 
 	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
@@ -192,23 +197,34 @@ func RunVM(ctx *cli.Context) error {
 	defer iter.Release()
 	for iter.Next() {
 		tx := iter.Value()
+		if batch.BatchSize() > 1000 {
+			log.Println("batch.Commit")
+			if err = batch.Commit(); err != nil {
+				return fmt.Errorf("batch commit: %v", err)
+			}
+		}
+		//log.Println("iter.Next()", "tx.Block", tx.Block)
 		// initiate first epoch and block.
 
 		// initiate stateReader and stateWriter
 		// wrap it into standalone function
 		var (
-			stateReader estate.StateReader
-			stateWriter estate.WriterWithChangeSets
+		//stateReader estate.StateReader
+		//stateWriter estate.WriterWithChangeSets
 		)
-		if cfg.DbImpl == "erigon" {
-			stateReader = estate.NewPlainStateReader(batch)
-			stateWriter = estate.NewPlainStateWriter(batch, rwTx, tx.Block)
-		}
+		/*
+			if cfg.DbImpl == "erigon" {
+				//stateReader = estate.NewPlainStateReader(batch)
+				stateWriter = estate.NewPlainStateWriterNoHistory(batch)
+			}
+		*/
 
 		if isFirstBlock {
 			if tx.Block > cfg.Last {
 				break
 			}
+
+			//log.Println("iter.Next()", "if isFirstBlock")
 
 			curEpoch = tx.Block / cfg.EpochLength
 			curBlock = tx.Block
@@ -223,29 +239,38 @@ func RunVM(ctx *cli.Context) error {
 			if tx.Block > cfg.Last {
 				break
 			}
+			//log.Println("iter.Next()", "else if curBlock != tx.Block")
 
 			//curBlock = from, tx.Block = to
 
 			// Mark the end of the old block.
+
 			if cfg.DbImpl == "erigon" {
-				from, to := curBlock, tx.Block
-				if err := db.CommitBlock(stateWriter); err != nil {
-					return fmt.Errorf("writing changesets for block %d failed: %w", tx.Block, err)
-				}
+				/*
+					//from, to := curBlock, tx.Block
+					log.Println("if curBlock != tx.Block, CommitBlock")
+					if err := db.CommitBlock(stateWriter); err != nil {
+						return fmt.Errorf("writing changesets for block %d failed: %w", tx.Block, err)
+					}
 
-				if err := stateWriter.WriteChangeSets(); err != nil {
-					return fmt.Errorf("writing changesets for block %d failed: %w", tx.Block, err)
-				}
+					log.Println("if curBlock != tx.Block, WriteChangeSets")
+					if err := stateWriter.WriteChangeSets(); err != nil {
+						return fmt.Errorf("writing changesets for block %d failed: %w", tx.Block, err)
+					}
+				*/
 
-				if err := erigon.PromoteHashedStateIncrementally("hashedstate", from, to, filepath.Join(stateDirectory, "erigon", "hashedstate"), rwTx, nil); err != nil {
-					return err
-				}
+				/*
+					if err := erigon.PromoteHashedStateIncrementally("hashedstate", from, to, filepath.Join(stateDirectory, "erigon", "hashedstate"), rwTx, nil); err != nil {
+						return err
+					}
 
-				if _, err := erigon.IncrementIntermediateHashes("IH", rwTx, from, to, filepath.Join(stateDirectory, "erigon", "IH"), false, nil); err != nil {
-					return err
-				}
+					if _, err := erigon.IncrementIntermediateHashes("IH", rwTx, from, to, filepath.Join(stateDirectory, "erigon", "IH"), false, nil); err != nil {
+						return err
+					}
+				*/
 
 			} else {
+				log.Println("db.SetTxBlock(tx.Block)")
 				db.SetTxBlock(tx.Block) // TODO later remove it
 				db.EndBlock()
 			}
@@ -262,11 +287,13 @@ func RunVM(ctx *cli.Context) error {
 			// Mark the beginning of a new block
 			curBlock = tx.Block
 			db.BeginBlock(curBlock)
-			if cfg.DbImpl != "erigon" {
-				db.BeginBlockApplyWithStateReader(stateReader)
-			} else {
-				db.BeginBlockApply()
-			}
+			//db.BeginBlockApply()
+			/*
+				if cfg.DbImpl != "erigon" {
+					db.BeginBlockApplyWithStateReader(stateReader)
+				} else {
+					db.BeginBlockApply()
+				}*/
 			// new erigonAdfapter is nitiated
 		}
 		if cfg.MaxNumTransactions >= 0 && txCount >= cfg.MaxNumTransactions {
@@ -275,7 +302,8 @@ func RunVM(ctx *cli.Context) error {
 		// run VM
 		db.PrepareSubstate(&tx.Substate.InputAlloc, tx.Substate.Env.Number)
 		db.BeginTransaction(uint32(tx.Transaction))
-		err = utils.ProcessTx(db, cfg, tx.Block, tx.Transaction, tx.Substate)
+		//log.Println("utils.ProcessTx")
+		err = utils.ProcessTx(db, cfg, tx.Block, tx.Transaction, tx.Substate, stateWriter)
 		if err != nil {
 			log.Printf("\tRun VM failed.\n")
 			err = fmt.Errorf("Error: VM execution failed. %w", err)
@@ -284,7 +312,7 @@ func RunVM(ctx *cli.Context) error {
 
 		db.EndTransaction()
 		txCount++
-		log.Println("txCount", txCount)
+		//log.Println("txCount", txCount, "tx.Block", tx.Block)
 		gasCount = new(big.Int).Add(gasCount, new(big.Int).SetUint64(tx.Substate.Result.GasUsed))
 
 		if cfg.EnableProgress {
@@ -328,6 +356,7 @@ func RunVM(ctx *cli.Context) error {
 
 	if cfg.DbImpl == "erigon" {
 		// finalize erigon execution
+		log.Println("batch.Commit()")
 		if err = batch.Commit(); err != nil {
 			return fmt.Errorf("batch commit: %v", err)
 		}

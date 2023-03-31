@@ -32,7 +32,7 @@ var (
 )
 
 // runVMTask executes VM on a chosen storage system.
-func ProcessTx(db state.StateDB, cfg *Config, block uint64, txIndex int, tx *substate.Substate) (txerr error) {
+func ProcessTx(db state.StateDB, cfg *Config, block uint64, txIndex int, tx *substate.Substate, stateWriter estate.StateWriter) (txerr error) {
 
 	inputEnv := tx.Env
 
@@ -93,7 +93,7 @@ func ProcessTx(db state.StateDB, cfg *Config, block uint64, txIndex int, tx *sub
 		}
 	}
 
-	if err := db.CommitBlock(estate.NewNoopWriter()); err != nil {
+	if err := db.CommitBlock(stateWriter); err != nil {
 		return
 	}
 
