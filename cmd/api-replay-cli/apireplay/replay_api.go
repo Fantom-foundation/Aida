@@ -36,7 +36,7 @@ func ReplayAPI(ctx *cli.Context) error {
 
 	substate.SetSubstateDirectory(cfg.SubstateDBDir)
 	substate.OpenSubstateDBReadOnly()
-	defer substate.CloseSubstateDB()
+	//defer substate.CloseSubstateDB()
 
 	r := newController(ctx, cfg, db, iter)
 	r.Start()

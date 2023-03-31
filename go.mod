@@ -13,6 +13,7 @@ require (
 	github.com/fatih/color v1.13.0
 	github.com/go-echarts/go-echarts/v2 v2.2.5
 	github.com/goccy/go-graphviz v0.1.0
+	github.com/google/martian v2.1.0+incompatible
 	github.com/klauspost/compress v1.15.11
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7

@@ -83,26 +83,24 @@ func (e *ReplayExecutor) execute() {
 		select {
 		case <-e.closed:
 			return
-		default:
+		case in, ok = <-e.input:
 
+			// if input is closed, stop the Executor
+			if !ok {
+				return
+			}
+
+			// are we at debugging state?
+			if e.verbose {
+				e.logReq(in)
+			}
+
+			// doExecute into db
+			res = e.doExecute(in)
+
+			// send to compare
+			e.output <- createOutData(in, res)
 		}
-		in, ok = <-e.input
-
-		// if input is closed, stop the Executor
-		if !ok {
-			return
-		}
-
-		// are we at debugging state?
-		if e.verbose {
-			e.logReq(in)
-		}
-
-		// doExecute into db
-		res = e.doExecute(in)
-
-		// send to compare
-		e.output <- createOutData(in, res)
 
 	}
 }

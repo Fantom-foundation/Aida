@@ -69,6 +69,8 @@ func (c *Comparator) compare() {
 	for {
 
 		select {
+		case <-c.closed:
+			return
 		case data, ok = <-c.input:
 
 			// stop Comparator if input is closed
@@ -85,10 +87,7 @@ func (c *Comparator) compare() {
 					c.fail()
 				}
 			}
-		case <-c.closed:
-			return
-		default:
-			continue
+
 		}
 	}
 
@@ -118,7 +117,6 @@ func (c *Comparator) fail() {
 	case <-c.failure:
 		return
 	default:
-		c.log.Critical("sending failure signal")
 		close(c.failure)
 	}
 }

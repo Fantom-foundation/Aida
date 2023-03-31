@@ -78,15 +78,15 @@ func (r *Controller) Start() {
 
 // Stop all the services
 func (r *Controller) Stop() {
-	r.log.Notice("stopping reader")
 	r.stopReader()
 
-	r.log.Notice("stopping executors")
+	r.readerWg.Wait()
 	r.stopExecutors()
 
-	r.log.Notice("stopping comparators")
+	r.executorsWg.Wait()
 	r.stopComparators()
 
+	r.comparatorsWg.Wait()
 	r.log.Notice("all services has been stopped")
 }
 
@@ -113,10 +113,10 @@ func (r *Controller) stopReader() {
 	case <-r.readerClosed:
 		return
 	default:
+		r.log.Notice("stopping reader")
 		close(r.readerClosed)
 	}
 
-	r.readerWg.Wait()
 }
 
 // stopExecutors closes the Executors close signal and waits until all the Executors are done
@@ -125,30 +125,35 @@ func (r *Controller) stopExecutors() {
 	case <-r.executorsClosed:
 		return
 	default:
+		r.log.Notice("stopping executors")
 		close(r.executorsClosed)
 	}
 
-	r.executorsWg.Wait()
 }
 
 // stopComparators closes the Comparators close signal and waits until all the Comparators are done
 func (r *Controller) stopComparators() {
 	// stop comparators input, so it still reads the rest of data in the chanel and exits once its empty
-	close(r.Comparators[0].input)
+	select {
+	case <-r.comparatorsClosed:
+		return
+	default:
+		r.log.Notice("stopping comparators")
+		close(r.comparatorsClosed)
+	}
 
-	r.comparatorsWg.Wait()
 }
 
 // Wait until all wgs are done
 func (r *Controller) Wait() {
 	r.readerWg.Wait()
-	r.log.Notice("reader done")
+	r.log.Debug("reader done")
 
 	r.executorsWg.Wait()
-	r.log.Notice("executors done")
+	r.log.Debug("executors done")
 
-	r.stopComparators()
-	r.log.Notice("comparators done")
+	r.comparatorsWg.Wait()
+	r.log.Debug("comparators done")
 
 }
 
@@ -162,7 +167,7 @@ func (r *Controller) control() {
 			return
 		case <-r.failure:
 			r.Stop()
-
+			return
 		}
 	}
 }
