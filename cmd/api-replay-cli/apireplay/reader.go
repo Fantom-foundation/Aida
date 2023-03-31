@@ -117,37 +117,8 @@ func (r *Reader) read() {
 		// reset the error counter
 		iterErrors = 1
 
-		params := make([]interface{}, 2)
-		params[0] = map[string]interface{}{
-			"to":   "0xFC00FACE00000000000000000000000000000000",
-			"data": "0x54fd4d50",
-		}
-		params[1] = "0x2AEA541"
-
-		result, err := json.Marshal("0x3330330000000000000000000000000000000000000000000000000000000000")
-		r.log.Error(err)
-
 		// retrieve the data from iterator
-		req = &iterator.RequestWithResponse{
-			Query: &iterator.Body{
-				Version:    "2.0",
-				ID:         nil,
-				Method:     "eth_call",
-				Params:     params,
-				Namespace:  "eth",
-				MethodBase: "call",
-			},
-			Response: &iterator.Response{
-				Version: "2.0",
-				ID:      nil,
-				BlockID: 45000001,
-				Result:  result,
-				Payload: nil,
-			},
-			Error:       nil,
-			ParamsRaw:   []byte("[{\"to\":\"0xFC00FACE00000000000000000000000000000000\",\"data\":\"0x54fd4d50\"},\"0x2AEA541\"]"),
-			ResponseRaw: []byte("[\"0x3330330000000000000000000000000000000000000000000000000000000000\"]"),
-		}
+		req = r.iter.Value()
 
 		wInput = r.createExecutorInput(req)
 		if wInput != nil {
