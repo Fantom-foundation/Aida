@@ -176,7 +176,7 @@ func (r *Controller) control() {
 func createExecutors(ctx *cli.Context, chainCfg *params.ChainConfig, input chan *executorInput, vmImpl string, closed chan any, wg *sync.WaitGroup) ([]*ReplayExecutor, chan *OutData) {
 	log.Infof("creating %v executors", ctx.Int(flags.WorkersFlag.Name))
 
-	output := make(chan *OutData)
+	output := make(chan *OutData, 1000)
 
 	executors := ctx.Int(flags.WorkersFlag.Name)
 
