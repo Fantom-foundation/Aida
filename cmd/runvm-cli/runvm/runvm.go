@@ -6,7 +6,9 @@ import (
 	"log"
 	"math/big"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"syscall"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/operation"
@@ -169,6 +171,28 @@ func RunVM(ctx *cli.Context) error {
 	var stateWriter estate.WriterWithChangeSets
 	var stateReader estate.StateReader
 	const lruDefaultSize = 1_000_000 // 56 MB  // put it inside function
+
+	contractCodeCache, err := lru.New(lruDefaultSize)
+	if err != nil {
+		return err
+	}
+
+	// state is stored through ethdb batches
+	whitelistedTables := []string{kv.Code, kv.ContractCode}
+	batchDirectory := filepath.Join(stateDirectory, "erigon", "batch")
+
+	// this functionality is required to fix panic upon committing a batch
+	sigs := make(chan os.Signal, 1)
+	quit := make(chan struct{}, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	doneFunc := func() {
+		<-sigs
+		quit <- struct{}{}
+	}
+
+	go doneFunc()
+
 	if cfg.DbImpl == "erigon" {
 		rwTx, err = db.DB().RwKV().BeginRw(context.Background())
 		if err != nil {
@@ -178,14 +202,8 @@ func RunVM(ctx *cli.Context) error {
 		defer rwTx.Rollback()
 
 		// Contract code is unlikely to change too much, so let's keep it cached
-		contractCodeCache, err := lru.New(lruDefaultSize)
-		if err != nil {
-			return err
-		}
 
-		// state is stored through ethdb batches
-		whitelistedTables := []string{kv.Code, kv.ContractCode}
-		batch = olddb.NewHashBatch(rwTx, nil, filepath.Join(stateDirectory, "erigon", "state"), whitelistedTables, contractCodeCache)
+		batch = olddb.NewHashBatch(rwTx, quit, batchDirectory, whitelistedTables, contractCodeCache)
 		defer batch.Rollback()
 		stateWriter = estate.NewPlainStateWriterNoHistory(batch)
 		stateReader = estate.NewPlainStateReader(batch)
@@ -198,12 +216,12 @@ func RunVM(ctx *cli.Context) error {
 	for iter.Next() {
 		tx := iter.Value()
 		/*
-		if batch.BatchSize() > 1000 {
-			log.Println("batch.Commit")
-			if err = batch.Commit(); err != nil {
-				return fmt.Errorf("batch commit: %v", err)
+			if batch.BatchSize() > 1000 {
+				log.Println("batch.Commit")
+				if err = batch.Commit(); err != nil {
+					return fmt.Errorf("batch commit: %v", err)
+				}
 			}
-		}
 		*/
 		//log.Println("iter.Next()", "tx.Block", tx.Block)
 		// initiate first epoch and block.
@@ -328,10 +346,35 @@ func RunVM(ctx *cli.Context) error {
 
 				txRate := float64(txCount-lastTxCount) / (sec - lastSec)
 
-				fmt.Printf("run-vm: Elapsed time: %.0f s, at block %v (~ %.1f Tx/s, ~ %.1f Gas/s)\n", sec, tx.Block, txRate, g)
+				fmt.Printf("run-vm: Elapsed time: %.0f s, at block %v (~ %.1f Tx/s, ~ %.1f Gas/s)\n,", sec, tx.Block, txRate, g)
 				lastSec = sec
 				lastTxCount = txCount
 				lastGasCount.Set(gasCount)
+
+				// commit batch and rwrx
+				if err = batch.Commit(); err != nil {
+					return err
+				}
+
+				if err = rwTx.Commit(); err != nil {
+					return err
+				}
+
+				// start new rwTx  amnd batch
+				rwTx, err = db.DB().RwKV().BeginRw(context.Background())
+				if err != nil {
+					return err
+				}
+
+				defer rwTx.Rollback()
+
+				batch = olddb.NewHashBatch(rwTx, quit, batchDirectory, whitelistedTables, contractCodeCache)
+				// TODO: This creates stacked up deferrals
+
+				defer batch.Rollback()
+				stateWriter = estate.NewPlainStateWriterNoHistory(batch)
+				stateReader = estate.NewPlainStateReader(batch)
+				db.BeginBlockApplyWithStateReader(stateReader)
 			}
 
 			// Report progress on a regular block interval (simulation time).
