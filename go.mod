@@ -6,13 +6,14 @@ require (
 	github.com/Fantom-foundation/Carmen/go v0.0.0-00010101000000-000000000000
 	github.com/Fantom-foundation/Substate v0.0.0-20230313095132-69cdb7b639cd
 	github.com/Fantom-foundation/go-opera v1.1.1-rc.2
-	github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230328072939-af7836d40033
+	github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230401131257-070093866a50
 	github.com/Fantom-foundation/lachesis-base v0.0.0-20221208123620-82a6d15f995c
 	github.com/dsnet/compress v0.0.1
 	github.com/ethereum/go-ethereum v1.10.25
 	github.com/fatih/color v1.13.0
 	github.com/go-echarts/go-echarts/v2 v2.2.5
 	github.com/goccy/go-graphviz v0.1.0
+	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d
 	github.com/ledgerwatch/erigon v0.0.0-00010101000000-000000000000
 	github.com/ledgerwatch/erigon-lib v0.0.0-20220620073929-46bebb3317d9
 	github.com/olekukonko/tablewriter v0.0.5
@@ -67,7 +68,6 @@ require (
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/graph-gophers/graphql-go v1.3.0 // indirect
-	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect
 	github.com/holiman/bloomfilter/v2 v2.0.3 // indirect
 	github.com/holiman/uint256 v1.2.0 // indirect
 	github.com/huin/goupnp v1.0.3 // indirect
