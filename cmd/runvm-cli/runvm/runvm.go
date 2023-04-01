@@ -197,12 +197,14 @@ func RunVM(ctx *cli.Context) error {
 	defer iter.Release()
 	for iter.Next() {
 		tx := iter.Value()
+		/*
 		if batch.BatchSize() > 1000 {
 			log.Println("batch.Commit")
 			if err = batch.Commit(); err != nil {
 				return fmt.Errorf("batch commit: %v", err)
 			}
 		}
+		*/
 		//log.Println("iter.Next()", "tx.Block", tx.Block)
 		// initiate first epoch and block.
 
