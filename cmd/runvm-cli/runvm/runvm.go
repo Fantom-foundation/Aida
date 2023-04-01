@@ -409,6 +409,15 @@ func RunVM(ctx *cli.Context) error {
 		if err = rwTx.Commit(); err != nil {
 			return err
 		}
+		rwTx, err = db.DB().RwKV().BeginRw(context.Background())
+		if err != nil {
+			return err
+		}
+
+		defer rwTx.Rollback()
+		stateReader = estate.NewPlainStateReader(rwTx)
+		db.BeginBlockApplyWithStateReader(stateReader)
+
 	} else {
 		// end of execution
 		if !isFirstBlock && err == nil {
@@ -457,6 +466,7 @@ func RunVM(ctx *cli.Context) error {
 	}
 
 	if cfg.KeepStateDB && !isFirstBlock {
+		log.Println("if cfg.KeepStateDB && !isFirstBlock {")
 		rootHash, _ := db.Commit(true)
 		if err := utils.WriteStateDbInfo(stateDirectory, cfg, curBlock, rootHash); err != nil {
 			log.Println(err)
