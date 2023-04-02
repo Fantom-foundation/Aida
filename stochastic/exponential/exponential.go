@@ -9,11 +9,9 @@ import (
 // Package for the one-sided truncated exponential distribution with a bound of one.
 
 const (
-	estimationEps   = 1e-9   // epsilon for bi-section,  and stationary distribution
-	approxMaxSteps  = 10000  // maximum number of iterations for finding minimal LSE
-	approxInfLambda = 1.0    // lower bound for searching minimal LSE
-	approxSupLambda = 1000.0 // upper bound for searching minimal LSE
-	dLseEps         = 1e-6   // epsilon for numerical differentiation of the LSE function
+	newtonError      = 1e-9  // epsilon for bi-section,  and stationary distribution
+	newtonMaxStep    = 10000 // maximum number of iterations for finding minimal LSE
+	newtonInitLambda = 1.0   // lower bound for searching minimal LSE
 )
 
 // Cdf is the cumulative distribution function for the truncated exponential distribution with a bound of 1.
@@ -33,56 +31,78 @@ func PiecewiseLinearCdf(lambda float64, n int) [][2]float64 {
 	return fn
 }
 
-// Quantile is the inverse cumulative distribution function for
-// producing random values following the exponential distribution
-// with parameter lambda (providing probability p).
+// Quantile is the inverse cumulative distribution function for the one-sided truncated exponential distribution.
 func Quantile(lambda float64, p float64) float64 {
 	return math.Log(p*math.Exp(-lambda)-p+1) / -lambda
 }
 
-// DiscreteSample sample the distribution and discretizes the result for numbers between 0 and n-1.
+// DiscreteSample samples the distribution and discretizes the result for numbers in the range between 0 and n-1.
 func DiscreteSample(rg *rand.Rand, lambda float64, n int64) int64 {
 	return int64(float64(n) * Quantile(lambda, rg.Float64()))
 }
 
-// lse is the least square error function for deducing lambda.
-func lse(lambda float64, points [][2]float64) float64 {
-	err := float64(0.0)
-	for i := 0; i < len(points); i++ {
-		x := points[i][0]
-		p := points[i][1]
-		err = err + math.Pow(Cdf(lambda, x)-p, 2)
+// mean calculates the mean of the empirical cumulative distribution function
+func mean(points [][2]float64) float64 {
+	m := float64(0.0)
+	for i := 1; i < len(points); i++ {
+		x1 := points[i-1][0]
+		y1 := points[i-1][1]
+		x2 := points[i][0]
+		y2 := points[i][1]
+		m = m + (x1+x2)*(y2-y1)/2.0
 	}
-	return err
+	return m
 }
 
-// dLSE computes the derivative of the least square error function.
-// TODO: replace with a symbolic differentiation
-func dLSE(lambda float64, points [][2]float64) float64 {
-	errL := lse(lambda-dLseEps, points)
-	errR := lse(lambda+dLseEps, points)
-	return (errR - errL) / dLseEps
-}
-
-// ApproximateLambda performs a bisection algorithm to find the best fitting lambda.
-func ApproximateLambda(points [][2]float64) (float64, error) {
-	// Assumption is that sign of the tangents is in opposite
-	// direction for the left and right values of lambda.
-	// When left/right values are sufficiently close, the bisection terminates.
-	left := approxInfLambda
-	right := approxSupLambda
-	for i := 0; i < approxMaxSteps; i++ {
-		mid := (right + left) / 2.0
-		dErr := dLSE(mid, points)
-		// check direction of LSE's tangent
-		if dErr > 0.0 {
-			right = mid
+// mle is the Maximum Likelihood Estimation function for the one-sided truncated exponential distribution.
+// The goal is to find a suitable lambda for a given mean, whose mle value becomes zero.
+func mle(lambda float64, mean float64) float64 {
+	if math.IsNaN(lambda) || math.IsNaN(mean) {
+		panic("Lambda or mean values are not a number")
+	}
+	t := 1 / (math.Exp(lambda) - 1)
+	// ensure that exponent calculation is stable
+	if math.IsNaN(t) {
+		// If numerical limits are reached, replace with symbolic limits.
+		if lambda >= 1.0 {
+			t = 0
 		} else {
-			left = mid
-		}
-		if math.Abs(right-left) < estimationEps {
-			return mid, nil
+			// assuming that for very small values of lambda, a NaN is produced.
+			t = 1.0
 		}
 	}
-	return 0.0, fmt.Errorf("ApproximateLambda: failed to converge after %v steps", approxMaxSteps)
+	return 1/lambda - t - mean
+}
+
+// dLSE computes the derivative of the Maximum Likelihood Estimation function.
+func dMle(lambda float64) float64 {
+	if math.IsNaN(lambda) {
+		panic("Lambda or mean values are not a number")
+	}
+	t := math.Exp(lambda) / math.Pow(math.Exp(lambda)-1, 2)
+	// ensure that exponent calculation is stable
+	if math.IsNaN(t) {
+		// If numerical limits are reached, replace by symbolic limits.
+		t = 1.0
+	}
+	return t - 1/(lambda*lambda)
+}
+
+// ApproximateLambda performs a classical Newtonian to determine
+// the lambda value since the MLE function is a transcendental
+// functions and no closed form can be found. The function returns either
+// lambda if it is in the epsilon environment (newtonError) or
+// an error if the maximal number of steps for the convergence criteria
+// is exceeded.
+func ApproximateLambda(points [][2]float64) (float64, error) {
+	m := mean(points)
+	l := newtonInitLambda
+	for step := 0; step < newtonMaxStep; step++ {
+		err := mle(l, m)
+		l = l - err/dMle(l)
+		if math.Abs(err) < newtonError {
+			return l, nil
+		}
+	}
+	return 0.0, fmt.Errorf("ApproximateLambda: failed to converge after %v steps", newtonMaxStep)
 }
