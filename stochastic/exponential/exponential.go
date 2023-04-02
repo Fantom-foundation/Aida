@@ -9,9 +9,9 @@ import (
 // Package for the one-sided truncated exponential distribution with a bound of one.
 
 const (
-	newtonError      = 1e-9  // epsilon for bi-section,  and stationary distribution
-	newtonMaxStep    = 10000 // maximum number of iterations for finding minimal LSE
-	newtonInitLambda = 1.0   // lower bound for searching minimal LSE
+	newtonError      = 1e-9  // epsilon for Newton's convergences criteria
+	newtonMaxStep    = 10000 // maximum number of iteration in the Newtonian
+	newtonInitLambda = 1.0   // initial parameter in Newtonion's search
 )
 
 // Cdf is the cumulative distribution function for the truncated exponential distribution with a bound of 1.
@@ -19,7 +19,7 @@ func Cdf(lambda float64, x float64) float64 {
 	return (math.Exp(-lambda*x) - 1.0) / (math.Exp(-lambda) - 1.0)
 }
 
-// PiecewiseLinearCdf is an approximation of the cumulative distribution function via sampling with n points.
+// PiecewiseLinearCdf is a piecewise linear representation of the cumulative distribution function.
 func PiecewiseLinearCdf(lambda float64, n int) [][2]float64 {
 	// The points are equi-distantly spread, i.e., 1/n.
 	fn := [][2]float64{}
@@ -31,7 +31,7 @@ func PiecewiseLinearCdf(lambda float64, n int) [][2]float64 {
 	return fn
 }
 
-// Quantile is the inverse cumulative distribution function for the one-sided truncated exponential distribution.
+// Quantile is the inverse cumulative distribution function.
 func Quantile(lambda float64, p float64) float64 {
 	return math.Log(p*math.Exp(-lambda)-p+1) / -lambda
 }
@@ -41,7 +41,7 @@ func DiscreteSample(rg *rand.Rand, lambda float64, n int64) int64 {
 	return int64(float64(n) * Quantile(lambda, rg.Float64()))
 }
 
-// mean calculates the mean of the empirical cumulative distribution function
+// mean calculates the mean of the empirical cumulative distribution function.
 func mean(points [][2]float64) float64 {
 	m := float64(0.0)
 	for i := 1; i < len(points); i++ {
@@ -54,8 +54,7 @@ func mean(points [][2]float64) float64 {
 	return m
 }
 
-// mle is the Maximum Likelihood Estimation function for the one-sided truncated exponential distribution.
-// The goal is to find a suitable lambda for a given mean, whose mle value becomes zero.
+// mle is the Maximum Likelihood Estimation function for finding a suitable lambda.
 func mle(lambda float64, mean float64) float64 {
 	if math.IsNaN(lambda) || math.IsNaN(mean) {
 		panic("Lambda or mean values are not a number")
@@ -74,7 +73,7 @@ func mle(lambda float64, mean float64) float64 {
 	return 1/lambda - t - mean
 }
 
-// dLSE computes the derivative of the Maximum Likelihood Estimation function.
+// dMle computes the derivative of the Maximum Likelihood Estimation function.
 func dMle(lambda float64) float64 {
 	if math.IsNaN(lambda) {
 		panic("Lambda or mean values are not a number")

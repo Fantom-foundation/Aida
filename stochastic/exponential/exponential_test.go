@@ -10,7 +10,7 @@ import (
 
 // TODO: pointwise tests of CDF/Quantile with a list of known points (see gonum package)
 
-// TestEstimation checks the correcntness of approximating a lambda for a discrete CDF.
+// TestEstimation checks the correctness of approximating a lambda for a discrete CDF.
 func TestEstimation(t *testing.T) {
 	for l := 2; l < 400; l += 5 {
 		checkEstimation(t, float64(l))
