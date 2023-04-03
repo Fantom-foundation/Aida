@@ -408,6 +408,13 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		cfg.SubstateDBDir = cfg.DBDir
 	}
 
+	if ctx.String(ErigonBatchSizeFlag.Name) != "" {
+		err := cfg.ErigonBatchSize.UnmarshalText([]byte(ctx.String(ErigonBatchSizeFlag.Name)))
+		if err != nil {
+			return cfg, fmt.Errorf("invalid batchSize provided: %v", err)
+		}
+	}
+
 	if cfg.EnableProgress {
 		log.Printf("Run config:\n")
 		log.Printf("\tBlock range: %v to %v\n", cfg.First, cfg.Last)
@@ -453,6 +460,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 			}
 		}
 		log.Printf("\tValidate world state: %v, validate tx state: %v\n", cfg.ValidateWorldState, cfg.ValidateTxState)
+		log.Printf("\tErigon batch size: %v", cfg.ErigonBatchSize.HumanReadable())
 	}
 
 	// TODO: enrich warning with colored text
@@ -485,13 +493,6 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 
 	if cfg.RandomSeed < 0 {
 		cfg.RandomSeed = int64(rand.Uint32())
-	}
-
-	if ctx.String(ErigonBatchSizeFlag.Name) != "" {
-		err := cfg.ErigonBatchSize.UnmarshalText([]byte(ctx.String(ErigonBatchSizeFlag.Name)))
-		if err != nil {
-			return cfg, fmt.Errorf("Invalid batchSize provided: %v", err)
-		}
 	}
 
 	return cfg, nil

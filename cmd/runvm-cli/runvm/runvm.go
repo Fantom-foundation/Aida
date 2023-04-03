@@ -167,10 +167,10 @@ func RunVM(ctx *cli.Context) error {
 	isFirstBlock := true
 
 	// start erigon block execution
-	var rwTx kv.RwTx
-	var batch erigonethdb.DbWithPendingMutations
-	//var stateWriter estate.WriterWithChangeSets
-	//var stateReader estate.StateReader
+	var (
+		batch erigonethdb.DbWithPendingMutations
+		rwTx  kv.RwTx
+	)
 
 	// this functionality is required to fix panic upon committing a batch
 	sigs := make(chan os.Signal, 1)
@@ -182,42 +182,29 @@ func RunVM(ctx *cli.Context) error {
 		quit <- struct{}{}
 	}()
 
-	startErigonBatch := func(statedb state.StateDB) error {
+	rwTx, err = db.DB().RwKV().BeginRw(context.Background())
+	if err != nil {
+		return err
+	}
+
+	defer rwTx.Rollback()
+
+	startErigonBatch := func(statedb state.StateDB, rwTx kv.RwTx, quit chan struct{}) (erigonethdb.DbWithPendingMutations, error) {
 		const lruDefaultSize = 1_000_000 // 56 MB
 
-		rwTx, err := statedb.DB().RwKV().BeginRw(context.Background())
-		if err != nil {
-			return err
-		}
-
-		defer rwTx.Rollback()
 		batchDirectory := filepath.Join(stateDirectory, "erigon", "batch")
 		whitelistedTables := []string{kv.Code, kv.ContractCode}
 
 		contractCodeCache, err := lru.New(lruDefaultSize)
 		if err != nil {
-			return err
+			return nil, err
 		}
 
 		// Contract code is unlikely to change too much, so let's keep it cached
-		batch = olddb.NewHashBatch(rwTx, quit, batchDirectory, whitelistedTables, contractCodeCache)
-		defer batch.Rollback()
-
+		batch := olddb.NewHashBatch(rwTx, quit, batchDirectory, whitelistedTables, contractCodeCache)
 		statedb.BeginBlockApplyBatch(batch)
 
-		return nil
-	}
-
-	rollback := func() {
-		rwTx.Rollback()
-		batch.Rollback()
-	}
-
-	if cfg.DbImpl == "erigon" {
-		if err := startErigonBatch(db); err != nil {
-			return fmt.Errorf("start erigon batch err: %v", err)
-		}
-		defer rollback()
+		return batch, nil
 	}
 
 	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
@@ -244,6 +231,14 @@ func RunVM(ctx *cli.Context) error {
 		if isFirstBlock {
 			if tx.Block > cfg.Last {
 				break
+			}
+
+			if cfg.DbImpl == "erigon" {
+				batch, err = startErigonBatch(db, rwTx, quit)
+				defer batch.Rollback()
+				if err != nil {
+					return fmt.Errorf("start erigon batch err: %v", err)
+				}
 			}
 
 			//log.Println("iter.Next()", "if isFirstBlock")
@@ -350,10 +345,18 @@ func RunVM(ctx *cli.Context) error {
 				return err
 			}
 
-			if err := startErigonBatch(db); err != nil {
+			rwTx, err = db.DB().RwKV().BeginRw(context.Background())
+			if err != nil {
+				return err
+			}
+
+			defer rwTx.Rollback()
+
+			batch, err = startErigonBatch(db, rwTx, quit)
+			defer batch.Rollback()
+			if err != nil {
 				return fmt.Errorf("start erigon batch err: %v", err)
 			}
-			defer rollback()
 		}
 
 		if cfg.EnableProgress {
