@@ -36,7 +36,9 @@ func (p *EventProxy) DB() erigonethdb.Database { return nil }
 
 func (p *EventProxy) CommitBlock(stateWriter estate.StateWriter) error { return nil }
 
-func (p *EventProxy) BeginBlockApplyWithStateReader(stateReader estate.StateReader) error { return nil }
+func (p *EventProxy) CommitBlockWithStateWriter() error { return nil }
+
+func (p *EventProxy) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations) error { return nil }
 
 // CreateAccount creates a new account.
 func (p *EventProxy) CreateAccount(address common.Address) {

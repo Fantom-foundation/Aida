@@ -160,7 +160,7 @@ func traceRecordAction(ctx *cli.Context) error {
 		statedb = state.MakeGethInMemoryStateDB(&tx.Substate.InputAlloc, tx.Block)
 		statedb = NewProxyRecorder(statedb, dCtx, zFile)
 
-		if err := utils.ProcessTx(statedb, cfg, tx.Block, tx.Transaction, tx.Substate, nil); err != nil {
+		if err := utils.ProcessTx(statedb, cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
 			return fmt.Errorf("Failed to process block %v tx %v. %v", tx.Block, tx.Transaction, err)
 		}
 		writeOperation(dCtx, zFile, operation.NewEndTransaction())

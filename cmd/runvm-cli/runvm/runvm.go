@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -20,7 +21,7 @@ import (
 	//"github.com/Fantom-foundation/go-opera-fvm/erigon"
 
 	"github.com/ledgerwatch/erigon-lib/kv"
-	estate "github.com/ledgerwatch/erigon/core/state"
+	//estate "github.com/ledgerwatch/erigon/core/state"
 	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 	"github.com/ledgerwatch/erigon/ethdb/olddb"
 )
@@ -168,46 +169,55 @@ func RunVM(ctx *cli.Context) error {
 	// start erigon block execution
 	var rwTx kv.RwTx
 	var batch erigonethdb.DbWithPendingMutations
-	var stateWriter estate.WriterWithChangeSets
-	var stateReader estate.StateReader
-	const lruDefaultSize = 1_000_000 // 56 MB  // put it inside function
-
-	contractCodeCache, err := lru.New(lruDefaultSize)
-	if err != nil {
-		return err
-	}
-
-	// state is stored through ethdb batches
-	whitelistedTables := []string{kv.Code, kv.ContractCode}
-	batchDirectory := filepath.Join(stateDirectory, "erigon", "batch")
+	//var stateWriter estate.WriterWithChangeSets
+	//var stateReader estate.StateReader
 
 	// this functionality is required to fix panic upon committing a batch
 	sigs := make(chan os.Signal, 1)
 	quit := make(chan struct{}, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
-	doneFunc := func() {
+	go func() {
 		<-sigs
 		quit <- struct{}{}
-	}
+	}()
 
-	go doneFunc()
+	startErigonBatch := func(statedb state.StateDB) error {
+		const lruDefaultSize = 1_000_000 // 56 MB
 
-	if cfg.DbImpl == "erigon" {
-		rwTx, err = db.DB().RwKV().BeginRw(context.Background())
+		rwTx, err := statedb.DB().RwKV().BeginRw(context.Background())
 		if err != nil {
 			return err
 		}
 
 		defer rwTx.Rollback()
+		batchDirectory := filepath.Join(stateDirectory, "erigon", "batch")
+		whitelistedTables := []string{kv.Code, kv.ContractCode}
+
+		contractCodeCache, err := lru.New(lruDefaultSize)
+		if err != nil {
+			return err
+		}
 
 		// Contract code is unlikely to change too much, so let's keep it cached
-
 		batch = olddb.NewHashBatch(rwTx, quit, batchDirectory, whitelistedTables, contractCodeCache)
 		defer batch.Rollback()
-		stateWriter = estate.NewPlainStateWriterNoHistory(batch)
-		stateReader = estate.NewPlainStateReader(batch)
-		db.BeginBlockApplyWithStateReader(stateReader)
+
+		statedb.BeginBlockApplyBatch(batch)
+
+		return nil
+	}
+
+	rollback := func() {
+		rwTx.Rollback()
+		batch.Rollback()
+	}
+
+	if cfg.DbImpl == "erigon" {
+		if err := startErigonBatch(db); err != nil {
+			return fmt.Errorf("start erigon batch err: %v", err)
+		}
+		defer rollback()
 	}
 
 	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
@@ -215,14 +225,6 @@ func RunVM(ctx *cli.Context) error {
 	defer iter.Release()
 	for iter.Next() {
 		tx := iter.Value()
-		/*
-			if batch.BatchSize() > 1000 {
-				log.Println("batch.Commit")
-				if err = batch.Commit(); err != nil {
-					return fmt.Errorf("batch commit: %v", err)
-				}
-			}
-		*/
 		//log.Println("iter.Next()", "tx.Block", tx.Block)
 		// initiate first epoch and block.
 
@@ -299,7 +301,7 @@ func RunVM(ctx *cli.Context) error {
 			newEpoch := tx.Block / cfg.EpochLength
 			for curEpoch < newEpoch {
 				if cfg.DbImpl != "erigon" {
-					db.EndEpoch()
+					db.EndEpoch() //TODO compute state root upon end of every epoch
 				}
 				curEpoch++
 				db.BeginEpoch(curEpoch)
@@ -323,7 +325,8 @@ func RunVM(ctx *cli.Context) error {
 		db.PrepareSubstate(&tx.Substate.InputAlloc, tx.Substate.Env.Number)
 		db.BeginTransaction(uint32(tx.Transaction))
 		//log.Println("utils.ProcessTx")
-		err = utils.ProcessTx(db, cfg, tx.Block, tx.Transaction, tx.Substate, stateWriter)
+
+		err = utils.ProcessTx(db, cfg, tx.Block, tx.Transaction, tx.Substate)
 		if err != nil {
 			log.Printf("\tRun VM failed.\n")
 			err = fmt.Errorf("Error: VM execution failed. %w", err)
@@ -337,7 +340,7 @@ func RunVM(ctx *cli.Context) error {
 
 		// cal batch.Commit() if batchsize is reached
 		if batch.BatchSize() >= int(cfg.ErigonBatchSize) {
-			log.Println("batch.Commit", "batch.BatchSize()", batch.BatchSize())
+			log.Printf("run-vm: batch.Commit, batch.BatchSize: %d bytes\n", batch.BatchSize())
 			// commit batch and rwrx
 			if err = batch.Commit(); err != nil {
 				return err
@@ -347,21 +350,10 @@ func RunVM(ctx *cli.Context) error {
 				return err
 			}
 
-			// start new rwTx  amnd batch
-			rwTx, err = db.DB().RwKV().BeginRw(context.Background())
-			if err != nil {
-				return err
+			if err := startErigonBatch(db); err != nil {
+				return fmt.Errorf("start erigon batch err: %v", err)
 			}
-
-			defer rwTx.Rollback()
-
-			batch = olddb.NewHashBatch(rwTx, quit, batchDirectory, whitelistedTables, contractCodeCache)
-			// TODO: This creates stacked up deferrals
-
-			defer batch.Rollback()
-			stateWriter = estate.NewPlainStateWriterNoHistory(batch)
-			stateReader = estate.NewPlainStateReader(batch)
-			db.BeginBlockApplyWithStateReader(stateReader)
+			defer rollback()
 		}
 
 		if cfg.EnableProgress {
@@ -375,7 +367,7 @@ func RunVM(ctx *cli.Context) error {
 
 				txRate := float64(txCount-lastTxCount) / (sec - lastSec)
 
-				fmt.Printf("run-vm: Elapsed time: %.0f s, at block %v (~ %.1f Tx/s, ~ %.1f Gas/s)\n,", sec, tx.Block, txRate, g)
+				fmt.Printf("run-vm: Elapsed time: %.0f s, at block %v (~ %.1f Tx/s, ~ %.1f Gas/s)\n", sec, tx.Block, txRate, g)
 				lastSec = sec
 				lastTxCount = txCount
 				lastGasCount.Set(gasCount)
@@ -403,32 +395,20 @@ func RunVM(ctx *cli.Context) error {
 		}
 	}
 
-	if cfg.DbImpl == "erigon" {
-		// finalize erigon execution
-		log.Println("batch.Commit()")
+	log.Printf("run-vm: substate iter exit\n")
+	switch {
+	case cfg.DbImpl == "erigon":
 		if err = batch.Commit(); err != nil {
-			return fmt.Errorf("batch commit: %v", err)
+			return err
 		}
 
 		if err = rwTx.Commit(); err != nil {
 			return err
 		}
-		rwTx, err = db.DB().RwKV().BeginRw(context.Background())
-		if err != nil {
-			return err
-		}
-
-		defer rwTx.Rollback()
-		stateReader = estate.NewPlainStateReader(rwTx)
-		db.BeginBlockApplyWithStateReader(stateReader)
-
-	} else {
-		// end of execution
-		if !isFirstBlock && err == nil {
-			db.SetTxBlock(curBlock)
-			db.EndBlock()
-			db.EndEpoch()
-		}
+	case !isFirstBlock && err == nil:
+		db.SetTxBlock(curBlock)
+		db.EndBlock()
+		db.EndEpoch()
 	}
 
 	runTime := time.Since(start).Seconds()

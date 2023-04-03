@@ -33,7 +33,9 @@ func (s *loggingStateDB) DB() erigonethdb.Database { return nil }
 
 func (s *loggingStateDB) CommitBlock(stateWriter estate.StateWriter) error { return nil }
 
-func (s *loggingStateDB) BeginBlockApplyWithStateReader(stateReader estate.StateReader) error {
+func (s *loggingStateDB) CommitBlockWithStateWriter() error { return nil }
+
+func (s *loggingStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations) error {
 	return nil
 }
 

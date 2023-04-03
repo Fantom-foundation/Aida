@@ -44,7 +44,9 @@ func (s *shadowStateDB) DB() erigonethdb.Database { return nil }
 
 func (s *shadowStateDB) CommitBlock(stateWriter estate.StateWriter) error { return nil }
 
-func (s *shadowStateDB) BeginBlockApplyWithStateReader(stateReader estate.StateReader) error {
+func (s *shadowStateDB) CommitBlockWithStateWriter() error { return nil }
+
+func (s *shadowStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations) error {
 	return nil
 }
 

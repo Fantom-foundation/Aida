@@ -43,7 +43,9 @@ func (r *ProxyRecorder) DB() erigonethdb.Database { return nil }
 
 func (r *ProxyRecorder) CommitBlock(stateWriter estate.StateWriter) error { return nil }
 
-func (r *ProxyRecorder) BeginBlockApplyWithStateReader(stateReader estate.StateReader) error {
+func (r *ProxyRecorder) CommitBlockWithStateWriter() error { return nil }
+
+func (r *ProxyRecorder) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations) error {
 	return nil
 }
 

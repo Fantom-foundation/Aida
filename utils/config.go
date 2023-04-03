@@ -231,7 +231,7 @@ var (
 	ErigonBatchSizeFlag = cli.StringFlag{
 		Name:  "erigonbatchsize",
 		Usage: "Batch size for the execution stage",
-		Value: "256M",
+		Value: "512M",
 	}
 )
 

@@ -69,7 +69,9 @@ func (s *gethStateDB) DB() erigonethdb.Database { return nil }
 
 func (s *gethStateDB) CommitBlock(stateWriter estate.StateWriter) error { return nil }
 
-func (s *gethStateDB) BeginBlockApplyWithStateReader(stateReader estate.StateReader) error {
+func (s *gethStateDB) CommitBlockWithStateWriter() error { return nil }
+
+func (s *gethStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations) error {
 	return nil
 }
 

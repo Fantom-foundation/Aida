@@ -491,7 +491,9 @@ func (db *inMemoryStateDB) DB() erigonethdb.Database { return nil }
 
 func (db *inMemoryStateDB) CommitBlock(stateWriter estate.StateWriter) error { return nil }
 
-func (db *inMemoryStateDB) BeginBlockApplyWithStateReader(stateReader estate.StateReader) error {
+func (db *inMemoryStateDB) CommitBlockWithStateWriter() error { return nil }
+
+func (db *inMemoryStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations) error {
 	return nil
 }
 

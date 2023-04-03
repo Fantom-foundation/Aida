@@ -38,7 +38,9 @@ func (r *ProxyDeletion) DB() erigonethdb.Database { return nil }
 
 func (r *ProxyDeletion) CommitBlock(stateWriter estate.StateWriter) error { return nil }
 
-func (r *ProxyDeletion) BeginBlockApplyWithStateReader(stateReader estate.StateReader) error {
+func (r *ProxyDeletion) CommitBlockWithStateWriter() error { return nil }
+
+func (r *ProxyDeletion) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations) error {
 	return nil
 }
 

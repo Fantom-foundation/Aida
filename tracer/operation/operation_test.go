@@ -44,7 +44,9 @@ func (s *MockStateDB) DB() erigonethdb.Database { return nil }
 
 func (s *MockStateDB) CommitBlock(stateWriter estate.StateWriter) error { return nil }
 
-func (s *MockStateDB) BeginBlockApplyWithStateReader(stateReader estate.StateReader) error {
+func (s *MockStateDB) CommitBlockWithStateWriter() error { return nil }
+
+func (s *MockStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations) error {
 	return nil
 }
 

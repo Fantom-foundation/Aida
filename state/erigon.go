@@ -2,6 +2,7 @@ package state
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"path/filepath"
@@ -14,6 +15,7 @@ import (
 
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
+
 	//"github.com/ethereum/go-ethereum/ethdb"
 
 	"github.com/ledgerwatch/erigon-lib/kv"
@@ -52,8 +54,9 @@ type erigonStateDB struct {
 	db        erigonethdb.Database
 	stateRoot common.Hash
 	*evmcore.ErigonAdapter
-	directory string
-	from, to  uint64
+	stateWriter estate.StateWriter
+	directory   string
+	from, to    uint64
 }
 
 // BeginBlockApply creates a new statedb from an existing geth database
@@ -63,10 +66,12 @@ func (s *erigonStateDB) BeginBlockApply() error {
 	return err
 }
 
-func (s *erigonStateDB) BeginBlockApplyWithStateReader(stateReader estate.StateReader) error {
+func (s *erigonStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations) error {
 	var err error
 
-	s.ErigonAdapter = evmcore.NewErigonAdapter(erigonstate.NewWithStateReader(stateReader))
+	s.stateWriter = estate.NewPlainStateWriterNoHistory(batch)
+	s.ErigonAdapter = evmcore.NewErigonAdapter(erigonstate.NewWithStateReader(estate.NewPlainStateReader(batch)))
+
 	return err
 }
 
@@ -174,6 +179,13 @@ func (s *erigonStateDB) processEndBlock(tx kv.RwTx) error {
 
 func (s *erigonStateDB) CommitBlock(stateWriter estate.StateWriter) error {
 	return s.ErigonAdapter.CommitBlock(stateWriter)
+}
+
+func (s *erigonStateDB) CommitBlockWithStateWriter() error {
+	if s.stateWriter == nil {
+		return errors.New("stateWriter is nil")
+	}
+	return s.CommitBlock(s.stateWriter)
 }
 
 // TODO think about hashedstate and intermediatehashes

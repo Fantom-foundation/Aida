@@ -88,7 +88,7 @@ type StateDB interface {
 
 	// stateDB handler
 	BeginBlockApply() error
-	BeginBlockApplyWithStateReader(estate.StateReader) error
+	BeginBlockApplyBatch(erigonethdb.DbWithPendingMutations) error
 
 	// StartBulkLoad creates a interface supporting the efficient loading of large amount
 	// of data as it is, for instance, needed during priming. Only one bulk load operation
@@ -117,6 +117,7 @@ type StateDB interface {
 	IntermediateRoot(bool) common.Hash
 	Commit(bool) (common.Hash, error)
 	CommitBlock(estate.StateWriter) error
+	CommitBlockWithStateWriter() error
 	ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error
 
 	// ---- Optional Development & Debugging Features ----

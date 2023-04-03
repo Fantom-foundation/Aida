@@ -88,7 +88,9 @@ func (s *carmenStateDB) DB() erigonethdb.Database { return nil }
 
 func (s *carmenStateDB) CommitBlock(stateWriter estate.StateWriter) error { return nil }
 
-func (s *carmenStateDB) BeginBlockApplyWithStateReader(stateReader estate.StateReader) error {
+func (s *carmenStateDB) CommitBlockWithStateWriter() error { return nil }
+
+func (s *carmenStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations) error {
 	return nil
 }
 
