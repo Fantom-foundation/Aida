@@ -86,6 +86,7 @@ func (r *Reader) read() {
 		total, executed uint64
 	)
 	defer func() {
+		r.logStatistics(start, total, executed)
 		close(r.output)
 		r.wg.Done()
 	}()
@@ -126,9 +127,7 @@ func (r *Reader) read() {
 			}
 			total++
 		}
-
 	}
-
 }
 
 // createExecutorInput with data worker need to doExecute request into archive
@@ -241,7 +240,7 @@ func (r *Reader) logStatistics(start time.Time, total uint64, executed uint64) {
 	fmt.Println(b.Binomial(1000, 10))
 
 	elapsed := time.Since(start)
-	r.log.Noticef("Elapsed time: %v"+
+	r.log.Noticef("Elapsed time: %v\n"+
 		"Read requests:%v\n"+
-		"Out of which were executed: %v", elapsed, total, executed)
+		"Out of which were sent to executors: %v", elapsed, total, executed)
 }
