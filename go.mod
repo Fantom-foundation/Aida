@@ -8,6 +8,7 @@ require (
 	github.com/Fantom-foundation/go-opera v1.1.1-rc.2
 	github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230401131257-070093866a50
 	github.com/Fantom-foundation/lachesis-base v0.0.0-20221208123620-82a6d15f995c
+	github.com/c2h5oh/datasize v0.0.0-20200825124411-48ed595a09d2
 	github.com/dsnet/compress v0.0.1
 	github.com/ethereum/go-ethereum v1.10.25
 	github.com/fatih/color v1.13.0
@@ -33,7 +34,6 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.2.0 // indirect
 	github.com/btcsuite/btcd v0.22.0-beta // indirect
-	github.com/c2h5oh/datasize v0.0.0-20200825124411-48ed595a09d2 // indirect
 	github.com/cakturk/go-netstat v0.0.0-20200220111822-e5b49efee7a5 // indirect
 	github.com/certifi/gocertifi v0.0.0-20210507211836-431795d63e8d // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect

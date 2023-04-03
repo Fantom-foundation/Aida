@@ -12,6 +12,7 @@ import (
 	"time"
 
 	substate "github.com/Fantom-foundation/Substate"
+	"github.com/c2h5oh/datasize"
 	_ "github.com/ethereum/go-ethereum/core/vm"
 	_ "github.com/ethereum/go-ethereum/core/vm/lfvm"
 	"github.com/ethereum/go-ethereum/params"
@@ -226,6 +227,12 @@ var (
 		Usage: "set substate, updateset and deleted accounts directory",
 		Value: "./db",
 	}
+
+	ErigonBatchSizeFlag = cli.StringFlag{
+		Name:  "erigonbatchsize",
+		Usage: "Batch size for the execution stage",
+		Value: "256M",
+	}
 )
 
 // execution configuration for replay command.
@@ -236,43 +243,44 @@ type Config struct {
 	First uint64 // first block
 	Last  uint64 // last block
 
-	ArchiveMode         bool           // enable archive mode
-	ArchiveVariant      string         // selects the implementation variant of the archive
-	CarmenSchema        int            // the current DB schema ID to use in Carmen
-	ChainID             int            // Blockchain ID (mainnet: 250/testnet: 4002)
-	ContinueOnFailure   bool           // continue validation when an error detected
-	CPUProfile          string         // pprof cpu profile output file name
-	DbImpl              string         // storage implementation
-	DbVariant           string         // database variant
-	DbLogging           bool           // set to true if all DB operations should be logged
-	Debug               bool           // enable trace debug flag
-	DebugFrom           uint64         // the first block to print trace debug
-	DeletedAccountDir   string         // directory of deleted account database
-	EnableProgress      bool           // enable progress report flag
-	EpochLength         uint64         // length of an epoch in number of blocks
-	HasDeletedAccounts  bool           // true if deletedAccountDir is not empty; otherwise false
-	KeepStateDB         bool           // set to true if stateDB is kept after run
-	MaxNumTransactions  int            // the maximum number of processed transactions
-	MemoryBreakdown     bool           // enable printing of memory breakdown
-	MemoryProfile       string         // capture the memory heap profile into the file
-	PrimeRandom         bool           // enable randomized priming
-	PrimeSeed           int64          // set random seed
-	PrimeThreshold      int            // set account threshold before commit
-	Profile             bool           // enable micro profiling
-	RandomSeed          int64          // set random seet for stochastic testing (TODO: Perhaps combine with PrimeSeed??)
-	SkipPriming         bool           // skip priming of the state DB
-	ShadowImpl          string         // implementation of the shadow DB to use, empty if disabled
-	ShadowVariant       string         // database variant of the shadow DB to be used
-	StateDbSrcDir       string         // directory to load an existing State DB data
-	DBDir               string         // directory to profiling database containing substate, update, delete accounts data
-	StateDbTempDir      string         // directory to store a working copy of State DB data
-	StateValidationMode ValidationMode // state validation mode
-	UpdateDBDir         string         // update-set directory
-	SubstateDBDir       string         // substate directory
-	ValidateTxState     bool           // validate stateDB before and after transaction
-	ValidateWorldState  bool           // validate stateDB before and after replay block range
-	VmImpl              string         // vm implementation (geth/lfvm)
-	Workers             int            // number of worker threads
+	ArchiveMode         bool              // enable archive mode
+	ArchiveVariant      string            // selects the implementation variant of the archive
+	CarmenSchema        int               // the current DB schema ID to use in Carmen
+	ChainID             int               // Blockchain ID (mainnet: 250/testnet: 4002)
+	ContinueOnFailure   bool              // continue validation when an error detected
+	CPUProfile          string            // pprof cpu profile output file name
+	DbImpl              string            // storage implementation
+	DbVariant           string            // database variant
+	DbLogging           bool              // set to true if all DB operations should be logged
+	Debug               bool              // enable trace debug flag
+	DebugFrom           uint64            // the first block to print trace debug
+	DeletedAccountDir   string            // directory of deleted account database
+	EnableProgress      bool              // enable progress report flag
+	EpochLength         uint64            // length of an epoch in number of blocks
+	HasDeletedAccounts  bool              // true if deletedAccountDir is not empty; otherwise false
+	KeepStateDB         bool              // set to true if stateDB is kept after run
+	MaxNumTransactions  int               // the maximum number of processed transactions
+	MemoryBreakdown     bool              // enable printing of memory breakdown
+	MemoryProfile       string            // capture the memory heap profile into the file
+	PrimeRandom         bool              // enable randomized priming
+	PrimeSeed           int64             // set random seed
+	PrimeThreshold      int               // set account threshold before commit
+	Profile             bool              // enable micro profiling
+	RandomSeed          int64             // set random seet for stochastic testing (TODO: Perhaps combine with PrimeSeed??)
+	SkipPriming         bool              // skip priming of the state DB
+	ShadowImpl          string            // implementation of the shadow DB to use, empty if disabled
+	ShadowVariant       string            // database variant of the shadow DB to be used
+	StateDbSrcDir       string            // directory to load an existing State DB data
+	DBDir               string            // directory to profiling database containing substate, update, delete accounts data
+	StateDbTempDir      string            // directory to store a working copy of State DB data
+	StateValidationMode ValidationMode    // state validation mode
+	UpdateDBDir         string            // update-set directory
+	SubstateDBDir       string            // substate directory
+	ValidateTxState     bool              // validate stateDB before and after transaction
+	ValidateWorldState  bool              // validate stateDB before and after replay block range
+	VmImpl              string            // vm implementation (geth/lfvm)
+	Workers             int               // number of worker threads
+	ErigonBatchSize     datasize.ByteSize // erigon batch size for runVM
 }
 
 // getChainConnfig returns chain configuration of either mainnet or testnets.
@@ -477,6 +485,13 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 
 	if cfg.RandomSeed < 0 {
 		cfg.RandomSeed = int64(rand.Uint32())
+	}
+
+	if ctx.String(ErigonBatchSizeFlag.Name) != "" {
+		err := cfg.ErigonBatchSize.UnmarshalText([]byte(ctx.String(ErigonBatchSizeFlag.Name)))
+		if err != nil {
+			return cfg, fmt.Errorf("Invalid batchSize provided: %v", err)
+		}
 	}
 
 	return cfg, nil

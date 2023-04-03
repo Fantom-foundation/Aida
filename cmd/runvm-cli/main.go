@@ -52,6 +52,7 @@ var RunVMApp = cli.App{
 		&utils.ValidateFlag,
 		&utils.VmImplementation,
 		&utils.DBFlag,
+		&utils.ErigonBatchSizeFlag,
 	},
 	Description: `
 The run-vm command requires two arguments: <blockNumFirst> <blockNumLast>

@@ -335,6 +335,35 @@ func RunVM(ctx *cli.Context) error {
 		//log.Println("txCount", txCount, "tx.Block", tx.Block)
 		gasCount = new(big.Int).Add(gasCount, new(big.Int).SetUint64(tx.Substate.Result.GasUsed))
 
+		// cal batch.Commit() if batchsize is reached
+		if batch.BatchSize() >= int(cfg.ErigonBatchSize) {
+			log.Println("batch.Commit", "batch.BatchSize()", batch.BatchSize())
+			// commit batch and rwrx
+			if err = batch.Commit(); err != nil {
+				return err
+			}
+
+			if err = rwTx.Commit(); err != nil {
+				return err
+			}
+
+			// start new rwTx  amnd batch
+			rwTx, err = db.DB().RwKV().BeginRw(context.Background())
+			if err != nil {
+				return err
+			}
+
+			defer rwTx.Rollback()
+
+			batch = olddb.NewHashBatch(rwTx, quit, batchDirectory, whitelistedTables, contractCodeCache)
+			// TODO: This creates stacked up deferrals
+
+			defer batch.Rollback()
+			stateWriter = estate.NewPlainStateWriterNoHistory(batch)
+			stateReader = estate.NewPlainStateReader(batch)
+			db.BeginBlockApplyWithStateReader(stateReader)
+		}
+
 		if cfg.EnableProgress {
 			// report progress
 			sec = time.Since(start).Seconds()
@@ -350,31 +379,6 @@ func RunVM(ctx *cli.Context) error {
 				lastSec = sec
 				lastTxCount = txCount
 				lastGasCount.Set(gasCount)
-
-				// commit batch and rwrx
-				if err = batch.Commit(); err != nil {
-					return err
-				}
-
-				if err = rwTx.Commit(); err != nil {
-					return err
-				}
-
-				// start new rwTx  amnd batch
-				rwTx, err = db.DB().RwKV().BeginRw(context.Background())
-				if err != nil {
-					return err
-				}
-
-				defer rwTx.Rollback()
-
-				batch = olddb.NewHashBatch(rwTx, quit, batchDirectory, whitelistedTables, contractCodeCache)
-				// TODO: This creates stacked up deferrals
-
-				defer batch.Rollback()
-				stateWriter = estate.NewPlainStateWriterNoHistory(batch)
-				stateReader = estate.NewPlainStateReader(batch)
-				db.BeginBlockApplyWithStateReader(stateReader)
 			}
 
 			// Report progress on a regular block interval (simulation time).
