@@ -80,9 +80,9 @@ func (r *Controller) Start() {
 
 // Stop all the services
 func (r *Controller) Stop() {
+	r.stopComparators()
 	r.stopReader()
 	r.stopExecutors()
-	r.stopComparators()
 
 	r.readerWg.Wait()
 	r.executorsWg.Wait()
