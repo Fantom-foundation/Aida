@@ -8,6 +8,7 @@ import (
 	"github.com/Fantom-foundation/Aida/cmd/api-replay-cli/flags"
 	"github.com/Fantom-foundation/Aida/iterator"
 	"github.com/Fantom-foundation/Aida/utils"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -32,6 +33,10 @@ func ReplayAPI(ctx *cli.Context) error {
 	if err != nil {
 		log.Fatalf("cannot mate state db; err: %v", err)
 	}
+
+	substate.SetSubstateDirectory(cfg.SubstateDBDir)
+	substate.OpenSubstateDBReadOnly()
+	//defer substate.CloseSubstateDB()
 
 	r := newController(ctx, cfg, db, iter)
 	r.Start()
