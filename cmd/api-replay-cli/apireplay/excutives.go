@@ -8,7 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-// executeGetBalance request into archive and return the result
+// executeGetBalance request into given archive and send result to comparator
 func executeGetBalance(param interface{}, archive state.StateDB) (out *StateDBData) {
 	var (
 		address common.Address
@@ -26,7 +26,7 @@ func executeGetBalance(param interface{}, archive state.StateDB) (out *StateDBDa
 	return
 }
 
-// executeGetTransactionCount request into archive and return the result
+// executeGetTransactionCount request into given archive and send result to comparator
 func executeGetTransactionCount(param interface{}, archive state.StateDB) (out *StateDBData) {
 	var (
 		address common.Address
