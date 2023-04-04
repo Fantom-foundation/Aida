@@ -36,4 +36,24 @@ var (
 		Usage:   "if used, any mismatched data will not exit the program",
 		Aliases: []string{"cof"},
 	}
+	// WorkersFlag defines number of threads for execution
+	WorkersFlag = cli.IntFlag{
+		Name: "workers",
+		Usage: "defines the thread number for api-replay. " +
+			"The exact value is used for number of Executor threads, " +
+			"number of Comparator threads is the number divided by 2 since the Execution is much slower;" +
+			"default: 4",
+		Value: 4,
+	}
+	// LogLevel defines the level of logging of the app
+	LogLevel = cli.StringFlag{
+		Name:    "log",
+		Aliases: []string{"l"},
+		Usage:   "Level of the logging of the app action (\"critical\", \"error\", \"warning\", \"notice\", \"info\", \"debug\"; default: INFO)",
+		Value:   "info",
+	}
+	Verbose = cli.BoolFlag{
+		Name:  "verbose",
+		Usage: "defines that we want to log steps in replay",
+	}
 )

@@ -19,11 +19,6 @@ type loggingStateDB struct {
 	db StateDB
 }
 
-func (s *loggingStateDB) BeginBlockApply() error {
-	log.Printf("BeginBlockApply\n")
-	return s.db.BeginBlockApply()
-}
-
 func (s *loggingStateDB) CreateAccount(addr common.Address) {
 	log.Printf("CreateAccount, %v\n", addr)
 	s.db.CreateAccount(addr)

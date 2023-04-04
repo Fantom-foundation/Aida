@@ -5,6 +5,7 @@ go 1.19
 require (
 	github.com/Fantom-foundation/Carmen/go v0.0.0-00010101000000-000000000000
 	github.com/Fantom-foundation/Substate v0.0.0-20230313095132-69cdb7b639cd
+	github.com/Fantom-foundation/Tosca v0.0.0-20230328180157-898d0ae722cb
 	github.com/Fantom-foundation/go-opera v1.1.1-rc.2
 	github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230112084156-680f281ea1cb
 	github.com/Fantom-foundation/lachesis-base v0.0.0-20221208123620-82a6d15f995c
@@ -84,7 +85,7 @@ require (
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 )
 
-replace github.com/ethereum/go-ethereum => github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20230301033351-d20d976d1f4c
+replace github.com/ethereum/go-ethereum => github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20230331085425-52296093a646
 
 replace github.com/Fantom-foundation/go-opera => github.com/Fantom-foundation/go-opera-substate v1.0.1-0.20230301090555-fe74c5a947fa
 

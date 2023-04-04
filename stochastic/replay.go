@@ -25,28 +25,31 @@ const (
 	FinaliseFlag    = true    // flag for Finalise() StateDB operation
 )
 
-// stochasticAccount keeps necessary account information for the simulation in memory
-type stochasticAccount struct {
-	balance int64 // current balance of account
-}
-
 // stochasticState keeps the execution state for the stochastic simulation
 type stochasticState struct {
-	db             state.StateDB                // StateDB database
-	contracts      *generator.IndirectAccess    // index access generator for contracts
-	keys           *generator.RandomAccess      // index access generator for keys
-	values         *generator.RandomAccess      // index access generator for values
-	snapshotLambda float64                      // lambda parameter for snapshot delta distribution
-	totalTx        uint64                       // total number of transactions
-	txNum          uint32                       // current transaction number
-	blockNum       uint64                       // current block number
-	epochNum       uint64                       // current epoch number
-	snapshot       []int                        // stack of active snapshots
-	accounts       map[int64]*stochasticAccount // account information using address index as key
-	balanceLog     map[int64][]int64            // balance log keeping track of balances for snapshots
-	suicided       []int64                      // list of suicided accounts
-	traceDebug     bool                         // trace-debug flag
-	rg             *rand.Rand                   // random generator for sampling
+	db             state.StateDB             // StateDB database
+	contracts      *generator.IndirectAccess // index access generator for contracts
+	keys           *generator.RandomAccess   // index access generator for keys
+	values         *generator.RandomAccess   // index access generator for values
+	snapshotLambda float64                   // lambda parameter for snapshot delta distribution
+	totalTx        uint64                    // total number of transactions
+	txNum          uint32                    // current transaction number
+	blockNum       uint64                    // current block number
+	epochNum       uint64                    // current epoch number
+	snapshot       []int                     // stack of active snapshots
+	suicided       []int64                   // list of suicided accounts
+	traceDebug     bool                      // trace-debug flag
+	rg             *rand.Rand                // random generator for sampling
+}
+
+// find is a helper function to find an element in a slice
+func find[T comparable](a []T, x T) bool {
+	for _, y := range a {
+		if x == y {
+			return true
+		}
+	}
+	return false
 }
 
 // RunStochasticReplay runs the stochastic simulation for StateDB operations.
@@ -197,27 +200,14 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, 
 // NewStochasticState creates a new state for execution StateDB operations
 func NewStochasticState(rg *rand.Rand, db state.StateDB, contracts *generator.IndirectAccess, keys *generator.RandomAccess, values *generator.RandomAccess, snapshotLambda float64) stochasticState {
 
-	// retrieve number of contracts
-	n := contracts.NumElem()
-
-	// initialise accounts in memory with balances greater than zero
-	accounts := make(map[int64]*stochasticAccount, n+1)
-	for i := int64(0); i <= n; i++ {
-		accounts[i] = &stochasticAccount{
-			balance: rg.Int63n(AddBalanceRange),
-		}
-	}
-
 	// return stochastic state
 	return stochasticState{
 		db:             db,
-		accounts:       accounts,
 		contracts:      contracts,
 		keys:           keys,
 		values:         values,
 		snapshotLambda: snapshotLambda,
 		traceDebug:     false,
-		balanceLog:     make(map[int64][]int64),
 		suicided:       []int64{},
 		blockNum:       1,
 		epochNum:       1,
@@ -227,19 +217,20 @@ func NewStochasticState(rg *rand.Rand, db state.StateDB, contracts *generator.In
 
 // prime StateDB accounts using account information
 func (ss *stochasticState) prime() {
+	numInitialAccounts := ss.contracts.NumElem() + 1
 	log.Printf("Start priming...\n")
-	log.Printf("\tinitializing %v accounts\n", len(ss.accounts))
-	pt := utils.NewProgressTracker(len(ss.accounts))
+	log.Printf("\tinitializing %v accounts\n", numInitialAccounts)
+	pt := utils.NewProgressTracker(int(numInitialAccounts))
 	db := ss.db
 	db.BeginEpoch(0)
 	db.BeginBlock(0)
 	db.BeginTransaction(0)
-	for addrIdx, detail := range ss.accounts {
-		addr := toAddress(addrIdx)
+
+	// initialise accounts in memory with balances greater than zero
+	for i := int64(0); i <= numInitialAccounts; i++ {
+		addr := toAddress(i)
 		db.CreateAccount(addr)
-		if detail.balance > 0 {
-			db.AddBalance(addr, big.NewInt(detail.balance))
-		}
+		db.AddBalance(addr, big.NewInt(ss.rg.Int63n(AddBalanceRange)))
 		pt.PrintProgress()
 	}
 	log.Printf("Finalizing...\n")
@@ -272,14 +263,6 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 
 	// convert index to address/hashes
 	if addrCl != statistics.NoArgID {
-		if addrCl == statistics.NewValueID {
-			// create a new internal representation of an account
-			// but don't create an account in StateDB; this is done
-			// by CreateAccount.
-			ss.accounts[addrIdx] = &stochasticAccount{
-				balance: 0,
-			}
-		}
 		addr = toAddress(addrIdx)
 	}
 	if keyCl != statistics.NoArgID {
@@ -312,7 +295,6 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		if ss.traceDebug {
 			fmt.Printf(" value: %v", value)
 		}
-		ss.updateBalanceLog(addrIdx, value)
 		db.AddBalance(addr, big.NewInt(value))
 
 	case BeginBlockID:
@@ -355,7 +337,6 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		db.EndTransaction()
 		ss.txNum++
 		ss.totalTx++
-		ss.commitBalanceLog()
 		ss.deleteAccounts()
 
 	case ExistID:
@@ -402,7 +383,6 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 
 			// update active snapshots and perform a rollback in balance log
 			ss.snapshot = ss.snapshot[0:snapshotIdx]
-			ss.rollbackBalanceLog(snapshotIdx)
 		}
 
 	case SetCodeID:
@@ -432,7 +412,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		ss.snapshot = append(ss.snapshot, id)
 
 	case SubBalanceID:
-		balance := ss.getBalanceLog(addrIdx)
+		balance := db.GetBalance(addr).Int64()
 		if balance > 0 {
 			// get a delta that does not exceed current balance
 			// in the current snapshot
@@ -441,14 +421,13 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 				fmt.Printf(" value: %v", value)
 			}
 			db.SubBalance(addr, big.NewInt(value))
-			ss.updateBalanceLog(addrIdx, -value)
 		}
 
 	case SuicideID:
 		db.Suicide(addr)
-		value := ss.getBalanceLog(addrIdx)
-		ss.updateBalanceLog(addrIdx, -value)
-		ss.suicided = append(ss.suicided, addrIdx)
+		if !find(ss.suicided, addrIdx) {
+			ss.suicided = append(ss.suicided, addrIdx)
+		}
 
 	default:
 		panic("invalid operation")
@@ -528,65 +507,10 @@ func toHash(idx int64) common.Hash {
 	return h
 }
 
-// getBalanceLog computes the actual balance for the current snapshot
-func (ss *stochasticState) getBalanceLog(addrIdx int64) int64 {
-	balance := ss.accounts[addrIdx].balance
-	for _, v := range ss.balanceLog[addrIdx] {
-		balance += v
-	}
-	return balance
-}
-
-// updateBalanceLog adds a delta balance for an contract for the current snapshot.
-func (ss *stochasticState) updateBalanceLog(addrIdx int64, delta int64) {
-	snapshotNum := len(ss.snapshot) // retrieve number of active snapshots
-	if snapshotNum > 0 {
-		logLen := len(ss.balanceLog[addrIdx]) // retrieve number of log entries for addrIdx
-		if logLen < snapshotNum {
-			// fill log entry if too short with zeros
-			ss.balanceLog[addrIdx] = append(ss.balanceLog[addrIdx], make([]int64, snapshotNum-logLen)...)
-		} else if logLen != snapshotNum {
-			panic("log wasn't rolled black")
-		}
-		// update delta of address for current snapshot
-		ss.balanceLog[addrIdx][snapshotNum-1] += delta
-	} else {
-		// if no snapshot exists, just add delta to balance directly
-		ss.accounts[addrIdx].balance += delta
-	}
-}
-
-// commitBalanceLog updates the balances in the account and
-// deletes the balance log.
-func (ss *stochasticState) commitBalanceLog() {
-	// update balances with balance log
-	for idx, log := range ss.balanceLog {
-		balance := ss.accounts[idx].balance
-		for _, value := range log {
-			balance += value
-		}
-		ss.accounts[idx].balance = balance
-	}
-
-	// destroy old log for next transaction
-	ss.balanceLog = make(map[int64][]int64)
-}
-
-// rollbackBalanceLog rollbacks balance log to the k-th snapshot
-func (ss *stochasticState) rollbackBalanceLog(k int) {
-	// delete deltas of prior snapshots in balance log
-	for idx, log := range ss.balanceLog {
-		if len(log) > k {
-			ss.balanceLog[idx] = ss.balanceLog[idx][0:k]
-		}
-	}
-}
-
 // delete account information when suicide was invoked
 func (ss *stochasticState) deleteAccounts() {
 	// remove account information when suicide was invoked in the block.
 	for _, addrIdx := range ss.suicided {
-		delete(ss.accounts, addrIdx)
 		if err := ss.contracts.DeleteIndex(addrIdx); err != nil {
 			panic("Failed deleting index")
 		}

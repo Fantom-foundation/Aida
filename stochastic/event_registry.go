@@ -169,7 +169,7 @@ func (r *EventRegistry) NewEventRegistryJSON() EventRegistryJSON {
 	for argop := 0; argop < numArgOps; argop++ {
 		if r.argOpFreq[argop] > 0 {
 			// decode argument-encoded operation
-			op, addr, key, value := decodeArgOp(argop)
+			op, addr, key, value := DecodeArgOp(argop)
 			label = append(label, EncodeOpcode(op, addr, key, value))
 		}
 	}

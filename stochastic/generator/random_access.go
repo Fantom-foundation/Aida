@@ -43,7 +43,7 @@ func NewRandomAccess(rg *rand.Rand, numElem int64, lambda float64, qpdf []float6
 	// fill queue with uniform random indexes.
 	queue := []int64{}
 	for i := 0; i < statistics.QueueLen; i++ {
-		queue = append(queue, rand.Int63n(numElem))
+		queue = append(queue, rg.Int63n(numElem))
 	}
 
 	// create a copy of the queue distribution.
