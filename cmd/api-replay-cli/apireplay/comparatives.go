@@ -16,6 +16,7 @@ import (
 // nil answer from EVM is recorded as nilEVMResult, this is used this for the comparing and for more readable logMsg
 const (
 	nilEVMResult = "0x0000000000000000000000000000000000000000000000000000000000000000"
+	nilCodeSize  = 4
 )
 
 // EVMErrors decode error code into string with which is compared with recorded error message
@@ -314,7 +315,7 @@ func compareCode(data *OutData) *comparatorError {
 	// nil and nil? (first two bytes in recorded result is "0x")
 	stateByte = data.StateDB.Result.([]byte)
 	if stateByte == nil {
-		if len(data.Recorded.Result) == 2 {
+		if len(data.Recorded.Result) == nilCodeSize {
 			return nil
 		} else {
 			return newComparatorError(nil, string(data.Recorded.Result), data, noMatchingResult)
