@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/status-im/keycard-go/hexutils"
 )
@@ -304,6 +305,38 @@ func compareEstimateGasStateDBResult(data *OutData) *comparatorError {
 	}
 
 	return nil
+}
+
+// compareCode compares getCode data recorded on API server with data returned by StateDB
+func compareCode(data *OutData) *comparatorError {
+	var stateByte []byte
+
+	// nil and nil? (first two bytes in recorded result is "0x")
+	stateByte = data.StateDB.Result.([]byte)
+	if stateByte == nil {
+		if len(data.Recorded.Result) == 2 {
+			return nil
+		} else {
+			return newComparatorError(nil, string(data.Recorded.Result), data, noMatchingResult)
+		}
+
+	}
+
+	var recordedString, stateString string
+	err := json.Unmarshal(data.Recorded.Result, &recordedString)
+	if err != nil {
+		return &comparatorError{
+			error: err,
+			typ:   defaultErrorType,
+		}
+	}
+
+	recordedString = strings.TrimPrefix(recordedString, "0x")
+	stateString = common.Bytes2Hex(stateByte)
+
+	if strings.Compare(recordedString, stateString) != 0 {
+		return newComparatorError(stateString, recordedString, data, noMatchingResult)
+	}
 }
 
 func compareStorageAt(data *OutData) *comparatorError {

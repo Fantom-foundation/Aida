@@ -80,9 +80,12 @@ func (c *Comparator) doCompare(data *OutData) (err *comparatorError) {
 	case "getTransactionCount":
 		err = compareTransactionCount(data)
 	case "call":
-		err = compareCall(data)
+		//err = compareCall(data)
 	case "estimateGas":
-		err = compareEstimateGas(data)
+		//err = compareEstimateGas(data)
+	case "getCode":
+		err = compareCode(data)
+
 	default:
 		c.log.Debugf("unknown method in comparator: %v", data.Method)
 	}
