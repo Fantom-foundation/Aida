@@ -43,13 +43,13 @@ type stochasticState struct {
 }
 
 // find is a helper function to find an element in a slice
-func find[T comparable](a []T, x T) bool {
-	for _, y := range a {
+func find[T comparable](a []T, x T) int {
+	for idx, y := range a {
 		if x == y {
-			return true
+			return idx
 		}
 	}
-	return false
+	return -1
 }
 
 // RunStochasticReplay runs the stochastic simulation for StateDB operations.
@@ -100,7 +100,7 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, 
 	ss.prime()
 
 	// set initial state to BeginEpoch
-	state := initialState(operations, "BE")
+	state := find(operations, "BE")
 	if state == -1 {
 		return fmt.Errorf("BeginEpoch cannot be observed in stochastic matrix/recording failed.")
 	}
@@ -425,7 +425,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 
 	case SuicideID:
 		db.Suicide(addr)
-		if !find(ss.suicided, addrIdx) {
+		if idx := find(ss.suicided, addrIdx); idx == -1 {
 			ss.suicided = append(ss.suicided, addrIdx)
 		}
 
@@ -435,16 +435,6 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 	if ss.traceDebug {
 		fmt.Println()
 	}
-}
-
-// initialState returns the row/column index of the first state in the stochastic matrix.
-func initialState(operations []string, opcode string) int {
-	for i, opc := range operations {
-		if opc == opcode {
-			return i
-		}
-	}
-	return -1
 }
 
 // nextState produces the next state in the Markovian process.
@@ -480,7 +470,6 @@ func nextState(rg *rand.Rand, A [][]float64, i int) int {
 }
 
 // toAddress converts an address index to a contract address.
-// TODO: Improve encoding so that index conversion becomes sparse.
 func toAddress(idx int64) common.Address {
 	var a common.Address
 	if idx < 0 {
