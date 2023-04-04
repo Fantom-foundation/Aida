@@ -337,6 +337,7 @@ func compareCode(data *OutData) *comparatorError {
 	if strings.Compare(recordedString, stateString) != 0 {
 		return newComparatorError(stateString, recordedString, data, noMatchingResult)
 	}
+	return nil
 }
 
 func compareStorageAt(data *OutData) *comparatorError {
