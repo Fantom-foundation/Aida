@@ -125,7 +125,7 @@ func newEVMRequest(params map[string]interface{}) *EVMRequest {
 	return req
 }
 
-// executeCall executes the call method in the EVM with given archive
+// sendCall executes the call method in the EVM with given archive
 func (evm *EVM) sendCall() (*evmcore.ExecutionResult, error) {
 	var (
 		gp     *evmcore.GasPool
@@ -148,7 +148,7 @@ func (evm *EVM) sendCall() (*evmcore.ExecutionResult, error) {
 
 }
 
-// executeEstimateGas executes estimateGas method in the EVM
+// sendEstimateGas executes estimateGas method in the EVM
 // It calculates how much gas would transaction need if it was executed
 func (evm *EVM) sendEstimateGas() (hexutil.Uint64, error) {
 	var (

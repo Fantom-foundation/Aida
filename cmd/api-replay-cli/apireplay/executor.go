@@ -8,6 +8,7 @@ import (
 	"github.com/Fantom-foundation/Aida/iterator"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/params"
 )
 
@@ -150,16 +151,16 @@ func (e *ReplayExecutor) doExecute(in *executorInput) *StateDBData {
 		return executeGetTransactionCount(in.req.Query.Params[0], in.archive)
 
 	case "call":
-		//req := newEVMRequest(in.req.Query.Params[0].(map[string]interface{}))
-		//timestamp := substate.GetSubstate(in.blockID, 0).Env.Timestamp
-		//evm := newEVM(in.blockID, in.archive, e.vmImpl, e.chainCfg, req, timestamp)
-		//return executeCall(evm)
+		req := newEVMRequest(in.req.Query.Params[0].(map[string]interface{}))
+		timestamp := substate.GetSubstate(in.blockID, 0).Env.Timestamp
+		evm := newEVM(in.blockID, in.archive, e.vmImpl, e.chainCfg, req, timestamp)
+		return executeCall(evm)
 
 	case "estimateGas":
-		//req := newEVMRequest(in.req.Query.Params[0].(map[string]interface{}))
-		//timestamp := substate.GetSubstate(in.blockID, 0).Env.Timestamp
-		//evm := newEVM(in.blockID, in.archive, e.vmImpl, e.chainCfg, req, timestamp)
-		//return executeEstimateGas(evm)
+		req := newEVMRequest(in.req.Query.Params[0].(map[string]interface{}))
+		timestamp := substate.GetSubstate(in.blockID, 0).Env.Timestamp
+		evm := newEVM(in.blockID, in.archive, e.vmImpl, e.chainCfg, req, timestamp)
+		return executeEstimateGas(evm)
 
 	case "getCode":
 		return executeGetCode(in.req.Query.Params[0], in.archive)
