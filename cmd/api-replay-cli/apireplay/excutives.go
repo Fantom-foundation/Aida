@@ -77,3 +77,24 @@ func executeEstimateGas(evm *EVM) (out *StateDBData) {
 
 	return
 }
+
+// executeGetStorageAt request into given archive and send result to comparator
+func executeGetStorageAt(params []interface{}, archive state.StateDB) (out *StateDBData) {
+	var (
+		address   common.Address
+		hash, res common.Hash
+	)
+
+	out = new(StateDBData)
+
+	// decode requested address and position in storage
+	address = common.HexToAddress(params[0].(string))
+	hash = common.HexToHash(params[1].(string))
+
+	// retrieve nonce
+	res = archive.GetState(address, hash)
+
+	out.Result = res[:]
+
+	return
+}
