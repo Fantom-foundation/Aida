@@ -22,6 +22,9 @@ import (
 	"github.com/ledgerwatch/erigon-lib/kv/memdb"
 	estate "github.com/ledgerwatch/erigon/core/state"
 	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
+	"github.com/ledgerwatch/erigon/ethdb/olddb"
+
+	lru "github.com/hashicorp/golang-lru"
 )
 
 func MakeErigonStateDB(directory, variant string, rootHash common.Hash) (s StateDB, err error) {
@@ -54,9 +57,10 @@ type erigonStateDB struct {
 	db        erigonethdb.Database
 	stateRoot common.Hash
 	*evmcore.ErigonAdapter
-	stateWriter estate.StateWriter
+	stateWriter estate.WriterWithChangeSets
 	directory   string
 	from, to    uint64
+	batchMode   bool
 }
 
 // BeginBlockApply creates a new statedb from an existing geth database
@@ -66,10 +70,15 @@ func (s *erigonStateDB) BeginBlockApply() error {
 	return err
 }
 
-func (s *erigonStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations) error {
+func (s *erigonStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, noHistory bool, rwTx kv.RwTx) error {
 	var err error
 
-	s.stateWriter = estate.NewPlainStateWriterNoHistory(batch)
+	if noHistory {
+		s.stateWriter = estate.NewPlainStateWriterNoHistory(batch)
+	} else {
+		s.stateWriter = estate.NewPlainStateWriter(batch, rwTx, s.from)
+	}
+	s.batchMode = true
 	s.ErigonAdapter = evmcore.NewErigonAdapter(erigonstate.NewWithStateReader(estate.NewPlainStateReader(batch)))
 
 	return err
@@ -105,12 +114,23 @@ func (s *erigonStateDB) ForEachStorage(common.Address, func(common.Hash, common.
 	panic("ForEachStorage not implemented")
 }
 
+func (s *erigonStateDB) EndBlock() {
+	if s.batchMode {
+		if err := s.CommitBlockWithStateWriter(); err != nil {
+			panic(err)
+		}
+	} else {
+		s.endBlock()
+	}
+}
+
 // TODO in erigon state root  is computed every epoch not every block
 // decide whether to compute it every block or not
 // TODO add a flag to enable erigon history writing, skip it for now, use NewPlainStateWriterNoHistory
 // TODO add an option to use DbStateWriter instead of estate.NewPlainStateWriterNoHistory(rwTx) to speed up an executution
 // TODO add caching
-func (s *erigonStateDB) EndBlock() {
+// no batching
+func (s *erigonStateDB) endBlock() {
 
 	tx, err := s.db.RwKV().BeginRw(context.Background())
 	if err != nil {
@@ -125,18 +145,16 @@ func (s *erigonStateDB) EndBlock() {
 }
 
 func (s *erigonStateDB) processEndBlock(tx kv.RwTx) error {
-	/*
-		blockWriter := estate.NewPlainStateWriter(tx, tx, s.from)
+	blockWriter := estate.NewPlainStateWriter(tx, tx, s.from)
 
-		// flush pending changes into erigon plain state
-		if err := s.ErigonAdapter.CommitBlock(blockWriter); err != nil {
-			return err
-		}
+	// flush pending changes into erigon plain state
+	if err := s.ErigonAdapter.CommitBlock(blockWriter); err != nil {
+		return err
+	}
 
-		if err := blockWriter.WriteChangeSets(); err != nil {
-			return err
-		}
-	*/
+	if err := blockWriter.WriteChangeSets(); err != nil {
+		return err
+	}
 
 	switch {
 	case s.to == 0:
@@ -186,6 +204,20 @@ func (s *erigonStateDB) CommitBlockWithStateWriter() error {
 		return errors.New("stateWriter is nil")
 	}
 	return s.CommitBlock(s.stateWriter)
+}
+
+func (s *erigonStateDB) NewBatch(rwTx kv.RwTx, quit chan struct{}) erigonethdb.DbWithPendingMutations {
+	const lruDefaultSize = 1_000_000 // 56 MB
+
+	whitelistedTables := []string{kv.Code, kv.ContractCode}
+
+	contractCodeCache, err := lru.New(lruDefaultSize)
+	if err != nil {
+		panic(err)
+	}
+
+	// Contract code is unlikely to change too much, so let's keep it cached
+	return olddb.NewHashBatch(rwTx, quit, s.directory, whitelistedTables, contractCodeCache)
 }
 
 // TODO think about hashedstate and intermediatehashes

@@ -15,6 +15,8 @@ import (
 
 	estate "github.com/ledgerwatch/erigon/core/state"
 	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
+
+	"github.com/ledgerwatch/erigon-lib/kv"
 )
 
 const (
@@ -71,7 +73,9 @@ func (s *gethStateDB) CommitBlock(stateWriter estate.StateWriter) error { return
 
 func (s *gethStateDB) CommitBlockWithStateWriter() error { return nil }
 
-func (s *gethStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations) error {
+func (s *gethStateDB) NewBatch(kv.RwTx, chan struct{}) erigonethdb.DbWithPendingMutations { return nil }
+
+func (s *gethStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, noHistory bool, rwTx kv.RwTx) error {
 	return nil
 }
 

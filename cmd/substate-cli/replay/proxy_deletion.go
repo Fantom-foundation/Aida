@@ -8,6 +8,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
+	"github.com/ledgerwatch/erigon-lib/kv"
+
 	estate "github.com/ledgerwatch/erigon/core/state"
 	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 )
@@ -40,7 +42,9 @@ func (r *ProxyDeletion) CommitBlock(stateWriter estate.StateWriter) error { retu
 
 func (r *ProxyDeletion) CommitBlockWithStateWriter() error { return nil }
 
-func (r *ProxyDeletion) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations) error {
+func (r *ProxyDeletion) NewBatch(kv.RwTx, chan struct{}) erigonethdb.DbWithPendingMutations
+
+func (r *ProxyDeletion) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, noHistory bool, rwTx kv.RwTx) error {
 	return nil
 }
 

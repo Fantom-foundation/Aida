@@ -10,6 +10,8 @@ import (
 
 	estate "github.com/ledgerwatch/erigon/core/state"
 	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
+
+	"github.com/ledgerwatch/erigon-lib/kv"
 )
 
 func MakeEmptyGethInMemoryStateDB(variant string) (StateDB, error) {
@@ -493,7 +495,11 @@ func (db *inMemoryStateDB) CommitBlock(stateWriter estate.StateWriter) error { r
 
 func (db *inMemoryStateDB) CommitBlockWithStateWriter() error { return nil }
 
-func (db *inMemoryStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations) error {
+func (db *inMemoryStateDB) NewBatch(kv.RwTx, chan struct{}) erigonethdb.DbWithPendingMutations {
+	return nil
+}
+
+func (db *inMemoryStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, noHistory bool, rwTx kv.RwTx) error {
 	return nil
 }
 

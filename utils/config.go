@@ -281,6 +281,7 @@ type Config struct {
 	VmImpl              string            // vm implementation (geth/lfvm)
 	Workers             int               // number of worker threads
 	ErigonBatchSize     datasize.ByteSize // erigon batch size for runVM
+	QuitCh              chan struct{}     // required for erigon batch
 }
 
 // getChainConnfig returns chain configuration of either mainnet or testnets.

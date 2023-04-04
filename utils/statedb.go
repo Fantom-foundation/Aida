@@ -2,6 +2,7 @@ package utils
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -16,6 +17,9 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
+
+	"github.com/ledgerwatch/erigon-lib/kv"
+	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 )
 
 // MakeStateDB creates a new DB instance based on cli argument.
@@ -115,7 +119,44 @@ func (pt *ProgressTracker) PrintProgress() {
 // PrimeStateDB primes database with accounts from the world state.
 func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config) {
 
-	load := db.StartBulkLoad()
+	var (
+		rwTx        kv.RwTx
+		batch       erigonethdb.DbWithPendingMutations
+		err         error
+		commitBatch func(erigonethdb.DbWithPendingMutations, kv.RwTx, state.StateDB) (erigonethdb.DbWithPendingMutations, error)
+	)
+	if cfg.DbImpl == "erigon" {
+		rwTx, err = db.DB().RwKV().BeginRw(context.Background())
+		if err != nil {
+			panic(err)
+		}
+		defer rwTx.Rollback()
+		batch = db.NewBatch(rwTx, cfg.QuitCh)
+		db.BeginBlockApplyBatch(batch, false, rwTx)
+		defer batch.Rollback()
+		commitBatch = func(batch erigonethdb.DbWithPendingMutations, rwTx kv.RwTx, db state.StateDB) (erigonethdb.DbWithPendingMutations, error) {
+			if err = batch.Commit(); err != nil {
+				return nil, err
+			}
+
+			if err = rwTx.Commit(); err != nil {
+				return nil, err
+			}
+
+			rwTx, err = db.DB().RwKV().BeginRw(context.Background())
+			if err != nil {
+				return nil, err
+			}
+
+			return db.NewBatch(rwTx, cfg.QuitCh), nil
+		}
+	}
+
+	// start tx
+	// init batch
+	// db.BeginBLockApplyBatch(batch)
+	var load state.BulkLoad
+	load = db.StartBulkLoad()
 
 	numValues := 0
 	for _, account := range ws {
@@ -129,9 +170,22 @@ func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config) {
 		if cfg.PrimeThreshold == 0 {
 			cfg.PrimeThreshold = len(ws)
 		}
+
 		PrimeStateDBRandom(ws, load, cfg, pt)
 	} else {
 		for addr, account := range ws {
+			if batch.BatchSize() >= int(cfg.ErigonBatchSize) && cfg.DbImpl == "erigon" {
+				batch, err = commitBatch(batch, rwTx, db)
+				if err != nil {
+					panic(fmt.Sprintf("commitBatch error: %v", err))
+				}
+				defer func() {
+					rwTx.Rollback()
+					batch.Rollback()
+				}()
+				db.BeginBlockApplyBatch(batch, false, rwTx)
+				load = db.StartBulkLoad()
+			}
 			primeOneAccount(addr, account, load, pt)
 		}
 	}
@@ -139,6 +193,16 @@ func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config) {
 	if err := load.Close(); err != nil {
 		panic(fmt.Errorf("failed to prime StateDB: %v", err))
 	}
+
+	if cfg.DbImpl == "erigon" {
+		if err := batch.Commit(); err != nil {
+			panic(err)
+		}
+		if err := rwTx.Commit(); err != nil {
+			panic(err)
+		}
+	}
+
 }
 
 // primeOneAccount initializes an account on stateDB with substate
@@ -198,6 +262,7 @@ func DeleteDestroyedAccountsFromWorldState(ws substate.SubstateAlloc, cfg *Confi
 
 // DeleteDestroyedAccountsFromStateDB performs suicide operations on previously
 // self-destructed accounts.
+// TODO fix it
 func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *Config, target uint64) error {
 	if !cfg.HasDeletedAccounts {
 		log.Printf("Database not provided. Ignore deleted accounts.\n")

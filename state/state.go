@@ -10,6 +10,8 @@ import (
 
 	estate "github.com/ledgerwatch/erigon/core/state"
 	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
+
+	"github.com/ledgerwatch/erigon-lib/kv"
 )
 
 type BasicStateDB interface {
@@ -88,7 +90,7 @@ type StateDB interface {
 
 	// stateDB handler
 	BeginBlockApply() error
-	BeginBlockApplyBatch(erigonethdb.DbWithPendingMutations) error
+	BeginBlockApplyBatch(erigonethdb.DbWithPendingMutations, bool, kv.RwTx) error
 
 	// StartBulkLoad creates a interface supporting the efficient loading of large amount
 	// of data as it is, for instance, needed during priming. Only one bulk load operation
@@ -118,6 +120,7 @@ type StateDB interface {
 	Commit(bool) (common.Hash, error)
 	CommitBlock(estate.StateWriter) error
 	CommitBlockWithStateWriter() error
+	NewBatch(kv.RwTx, chan struct{}) erigonethdb.DbWithPendingMutations
 	ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error
 
 	// ---- Optional Development & Debugging Features ----

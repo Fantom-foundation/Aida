@@ -13,6 +13,8 @@ import (
 
 	estate "github.com/ledgerwatch/erigon/core/state"
 	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
+
+	"github.com/ledgerwatch/erigon-lib/kv"
 )
 
 func MakeCarmenStateDB(directory, variant, archive string, schema int) (StateDB, error) {
@@ -90,7 +92,11 @@ func (s *carmenStateDB) CommitBlock(stateWriter estate.StateWriter) error { retu
 
 func (s *carmenStateDB) CommitBlockWithStateWriter() error { return nil }
 
-func (s *carmenStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations) error {
+func (s *carmenStateDB) NewBatch(kv.RwTx, chan struct{}) erigonethdb.DbWithPendingMutations {
+	return nil
+}
+
+func (s *carmenStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, noHistory bool, rwTx kv.RwTx) error {
 	return nil
 }
 

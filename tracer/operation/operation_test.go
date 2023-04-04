@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 
+	"github.com/ledgerwatch/erigon-lib/kv"
 	estate "github.com/ledgerwatch/erigon/core/state"
 	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 )
@@ -46,7 +47,9 @@ func (s *MockStateDB) CommitBlock(stateWriter estate.StateWriter) error { return
 
 func (s *MockStateDB) CommitBlockWithStateWriter() error { return nil }
 
-func (s *MockStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations) error {
+func (s *MockStateDB) NewBatch(kv.RwTx, chan struct{}) erigonethdb.DbWithPendingMutations
+
+func (s *MockStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, noHistory bool, rwTx kv.RwTx) error {
 	return nil
 }
 

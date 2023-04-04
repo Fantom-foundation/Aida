@@ -10,6 +10,8 @@ import (
 
 	estate "github.com/ledgerwatch/erigon/core/state"
 	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
+
+	"github.com/ledgerwatch/erigon-lib/kv"
 )
 
 // MakeLoggingStateDB wrapps the given StateDB instance into a logging wrapper causing
@@ -35,7 +37,11 @@ func (s *loggingStateDB) CommitBlock(stateWriter estate.StateWriter) error { ret
 
 func (s *loggingStateDB) CommitBlockWithStateWriter() error { return nil }
 
-func (s *loggingStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations) error {
+func (s *loggingStateDB) NewBatch(kv.RwTx, chan struct{}) erigonethdb.DbWithPendingMutations {
+	return nil
+}
+
+func (s *loggingStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, noHistory bool, rwTx kv.RwTx) error {
 	return nil
 }
 

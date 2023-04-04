@@ -10,6 +10,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
+	"github.com/ledgerwatch/erigon-lib/kv"
 	estate "github.com/ledgerwatch/erigon/core/state"
 	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 )
@@ -38,7 +39,11 @@ func (p *EventProxy) CommitBlock(stateWriter estate.StateWriter) error { return 
 
 func (p *EventProxy) CommitBlockWithStateWriter() error { return nil }
 
-func (p *EventProxy) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations) error { return nil }
+func (p *EventProxy) NewBatch(kv.RwTx, chan struct{}) erigonethdb.DbWithPendingMutations
+
+func (p *EventProxy) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, noHistory bool, rwTx kv.RwTx) error {
+	return nil
+}
 
 // CreateAccount creates a new account.
 func (p *EventProxy) CreateAccount(address common.Address) {

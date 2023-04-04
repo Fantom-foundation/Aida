@@ -7,15 +7,12 @@ import (
 	"math/big"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"syscall"
 	"time"
 
-	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
-	lru "github.com/hashicorp/golang-lru"
 	"github.com/urfave/cli/v2"
 
 	//"github.com/Fantom-foundation/go-opera-fvm/erigon"
@@ -23,7 +20,6 @@ import (
 	"github.com/ledgerwatch/erigon-lib/kv"
 	//estate "github.com/ledgerwatch/erigon/core/state"
 	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
-	"github.com/ledgerwatch/erigon/ethdb/olddb"
 )
 
 // RunVM implements trace command for executing VM on a chosen storage system.
@@ -44,6 +40,7 @@ func RunVM(ctx *cli.Context) error {
 		lastBlockProgressReportTxCount  int
 		lastBlockProgressReportGasCount = new(big.Int)
 	)
+
 	// process general arguments
 	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	cfg.StateValidationMode = utils.SubsetCheck
@@ -69,6 +66,21 @@ func RunVM(ctx *cli.Context) error {
 
 	defer db.Close()
 
+	// this functionality is required to fix panic upon committing an erigon batch
+	sigs := make(chan os.Signal, 1)
+	quit := make(chan struct{}, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	sigsFunc := func() {
+		<-sigs
+		quit <- struct{}{}
+	}
+
+	if cfg.DbImpl == "erigon" {
+		go sigsFunc()
+		cfg.QuitCh = quit
+	}
+
 	if !cfg.KeepStateDB {
 		log.Printf("WARNING: directory %v will be removed at the end of this run.\n", stateDirectory)
 		defer os.RemoveAll(stateDirectory)
@@ -91,7 +103,6 @@ func RunVM(ctx *cli.Context) error {
 		// prime stateDB
 		log.Printf("Prime stateDB \n")
 		start = time.Now()
-
 		utils.PrimeStateDB(ws, db, cfg)
 		sec = time.Since(start).Seconds()
 		log.Printf("\tElapsed time: %.2f s\n", sec)
@@ -113,6 +124,7 @@ func RunVM(ctx *cli.Context) error {
 			db.EndBlock()
 			db.EndEpoch()
 		*/
+		db.BeginBlockApply() // unset batchMode
 		err = utils.DeleteDestroyedAccountsFromStateDB(db, cfg, cfg.First-1)
 		sec = time.Since(start).Seconds()
 		log.Printf("\tElapsed time: %.2f s\n", sec)
@@ -166,21 +178,10 @@ func RunVM(ctx *cli.Context) error {
 	var curEpoch uint64
 	isFirstBlock := true
 
-	// start erigon block execution
 	var (
 		batch erigonethdb.DbWithPendingMutations
 		rwTx  kv.RwTx
 	)
-
-	// this functionality is required to fix panic upon committing a batch
-	sigs := make(chan os.Signal, 1)
-	quit := make(chan struct{}, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-
-	go func() {
-		<-sigs
-		quit <- struct{}{}
-	}()
 
 	rwTx, err = db.DB().RwKV().BeginRw(context.Background())
 	if err != nil {
@@ -189,23 +190,26 @@ func RunVM(ctx *cli.Context) error {
 
 	defer rwTx.Rollback()
 
-	startErigonBatch := func(statedb state.StateDB, rwTx kv.RwTx, quit chan struct{}) (erigonethdb.DbWithPendingMutations, error) {
-		const lruDefaultSize = 1_000_000 // 56 MB
+	// start erigon block execution
+	/*
+		startErigonBatch := func(statedb state.StateDB, rwTx kv.RwTx, quit chan struct{}) (erigonethdb.DbWithPendingMutations, error) {
+			const lruDefaultSize = 1_000_000 // 56 MB
 
-		batchDirectory := filepath.Join(stateDirectory, "erigon", "batch")
-		whitelistedTables := []string{kv.Code, kv.ContractCode}
+			batchDirectory := filepath.Join(stateDirectory, "erigon", "batch")
+			whitelistedTables := []string{kv.Code, kv.ContractCode}
 
-		contractCodeCache, err := lru.New(lruDefaultSize)
-		if err != nil {
-			return nil, err
+			contractCodeCache, err := lru.New(lruDefaultSize)
+			if err != nil {
+				return nil, err
+			}
+
+			// Contract code is unlikely to change too much, so let's keep it cached
+			batch := olddb.NewHashBatch(rwTx, quit, batchDirectory, whitelistedTables, contractCodeCache)
+			statedb.BeginBlockApplyBatch(batch, false, rwTx)
+
+			return batch, nil
 		}
-
-		// Contract code is unlikely to change too much, so let's keep it cached
-		batch := olddb.NewHashBatch(rwTx, quit, batchDirectory, whitelistedTables, contractCodeCache)
-		statedb.BeginBlockApplyBatch(batch)
-
-		return batch, nil
-	}
+	*/
 
 	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
 
@@ -234,11 +238,10 @@ func RunVM(ctx *cli.Context) error {
 			}
 
 			if cfg.DbImpl == "erigon" {
-				batch, err = startErigonBatch(db, rwTx, quit)
+				batch = db.NewBatch(rwTx, quit)
 				defer batch.Rollback()
-				if err != nil {
-					return fmt.Errorf("start erigon batch err: %v", err)
-				}
+				db.BeginBlockApplyBatch(batch, false, rwTx)
+
 			}
 
 			//log.Println("iter.Next()", "if isFirstBlock")
@@ -333,7 +336,7 @@ func RunVM(ctx *cli.Context) error {
 		//log.Println("txCount", txCount, "tx.Block", tx.Block)
 		gasCount = new(big.Int).Add(gasCount, new(big.Int).SetUint64(tx.Substate.Result.GasUsed))
 
-		// cal batch.Commit() if batchsize is reached
+		// call batch.Commit() if batchsize is reached
 		if batch.BatchSize() >= int(cfg.ErigonBatchSize) {
 			log.Printf("run-vm: batch.Commit, batch.BatchSize: %d bytes\n", batch.BatchSize())
 			// commit batch and rwrx
@@ -352,11 +355,9 @@ func RunVM(ctx *cli.Context) error {
 
 			defer rwTx.Rollback()
 
-			batch, err = startErigonBatch(db, rwTx, quit)
+			batch = db.NewBatch(rwTx, quit)
+			db.BeginBlockApplyBatch(batch, false, rwTx)
 			defer batch.Rollback()
-			if err != nil {
-				return fmt.Errorf("start erigon batch err: %v", err)
-			}
 		}
 
 		if cfg.EnableProgress {
