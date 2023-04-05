@@ -147,13 +147,13 @@ func (r *Controller) stopComparators() {
 // Wait until all wgs are done
 func (r *Controller) Wait() {
 	r.readerWg.Wait()
-	r.log.Debug("reader done")
+	r.log.Info("reader done")
 
 	r.executorsWg.Wait()
-	r.log.Debug("executors done")
+	r.log.Info("executors done")
 
 	r.comparatorsWg.Wait()
-	r.log.Debug("comparators done")
+	r.log.Info("comparators done")
 
 }
 

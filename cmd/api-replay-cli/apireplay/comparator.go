@@ -63,11 +63,13 @@ func (c *Comparator) compare() {
 			}
 
 			if err := c.doCompare(data); err != nil {
-				// internal error is RPC-API error - not unmatched results hence do not log it
+
+				// we do not want the program to exit when recording has internal error
 				if err.typ == internalError {
 					c.log.Debug(err)
 					continue
 				}
+
 				// log the mismatched data
 				c.log.Critical(err)
 
@@ -76,8 +78,10 @@ func (c *Comparator) compare() {
 					c.fail()
 				}
 			}
+
 		}
 	}
+
 }
 
 // doCompare calls adequate comparing function for given method

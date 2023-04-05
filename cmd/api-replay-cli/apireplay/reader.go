@@ -15,6 +15,7 @@ import (
 )
 
 const (
+	maxIterErrors          = 5 // maximum consecutive errors emitted by comparator before program panics
 	statisticsLogFrequency = 10 * time.Second
 )
 
@@ -103,13 +104,10 @@ func (r *Reader) read() {
 
 			// did iter emit an error?
 			if r.iter.Error() != nil {
-				// is iterator at its end?
 				if r.iter.Error() == io.EOF || r.iter.Error().Error() == "unexpected EOF" {
-					r.Stop()
 					return
-				} else {
-					r.log.Fatalf("unexpected iter err: %v", r.iter.Error())
 				}
+				r.log.Fatalf("unexpected iter err; %v", r.iter.Error())
 			}
 
 			// retrieve the data from iterator
@@ -122,16 +120,6 @@ func (r *Reader) read() {
 			}
 			total++
 		}
-	}
-}
-
-func (r *Reader) Stop() {
-	select {
-	case <-r.closed:
-		return
-	default:
-		r.log.Notice("Iterator at its end; Stopping the app.")
-		close(r.closed)
 	}
 }
 
@@ -243,6 +231,6 @@ func (r *Reader) isBlockNumberWithinRange(blockNumber uint64) bool {
 func (r *Reader) logStatistics(start time.Time, total uint64, executed uint64) {
 	elapsed := time.Since(start)
 	r.log.Noticef("Elapsed time: %v\n"+
-		"Read requests: %v\n"+
-		"Out of which were skipped due to not being in StateDB range: %v", elapsed, total, total-executed)
+		"Read requests:%v\n"+
+		"Out of which were skipped due to not being in StateDB block range: %v", elapsed, total, total-executed)
 }
