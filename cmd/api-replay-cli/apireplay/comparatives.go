@@ -341,6 +341,35 @@ func compareCode(data *OutData) *comparatorError {
 	return nil
 }
 
+// compareStorageAt compares getStorageAt data recorded on API server with data returned by StateDB
 func compareStorageAt(data *OutData) *comparatorError {
+	var (
+		recordedString          string
+		recordedByte, stateByte []byte
+		err                     error
+	)
+	err = json.Unmarshal(data.Recorded.Result, &recordedString)
+	if err != nil {
+		return &comparatorError{
+			error: err,
+			typ:   defaultErrorType,
+		}
+	}
+
+	recordedByte, err = hexutil.Decode(recordedString)
+	if err != nil {
+		return &comparatorError{
+			error: err,
+			typ:   defaultErrorType,
+		}
+	}
+
+	stateByte = data.StateDB.Result.([]byte)
+
+	if bytes.Compare(recordedByte, stateByte) != 0 {
+		stateString := hexutils.BytesToHex(stateByte)
+		return newComparatorError(stateString, recordedString, data, noMatchingResult)
+	}
+
 	return nil
 }

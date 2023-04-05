@@ -241,6 +241,6 @@ func (r *Reader) logStatistics(start time.Time, total uint64, executed uint64) {
 
 	elapsed := time.Since(start)
 	r.log.Noticef("Elapsed time: %v\n"+
-		"Read requests:%v\n"+
-		"Out of which were sent to executors: %v", elapsed, total, executed)
+		"Read requests: %v\n"+
+		"Out of which were sent to skipped due to not being in StateDB range: %v", elapsed, total, total-executed)
 }
