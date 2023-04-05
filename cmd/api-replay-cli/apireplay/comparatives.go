@@ -2,6 +2,7 @@ package apireplay
 
 import (
 	"encoding/json"
+	"fmt"
 	"math/big"
 	"strings"
 
@@ -9,19 +10,16 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
-// EVMErrors decode error code into string with which is compared with recorded error message
-var EVMErrors = map[int]string{
-	-32000: "execution reverted",
-	-32602: "invalid argument",
-	3:      "execution reverted",
-}
+// internalErrorCode is created when RPC-API could not execute request
+// - for purpose of replay, this error is not critical and is only logged into DEBUG level
+const internalErrorCode = -32603
 
-//todo
-//var EVMErrors = map[int][]string{
-//	-32000: {"execution reverted", "invalid opcode"},
-//	-32602: {"invalid argument"},
-//	3:      {"execution reverted"},
-//}
+// EVMErrors decode error code into string with which is compared with recorded error message
+var EVMErrors = map[int][]string{
+	-32000: {"execution reverted", "invalid opcode"},
+	-32602: {"invalid argument"},
+	3:      {"execution reverted"},
+}
 
 // compareBalance compares getBalance data recorded on API server with data returned by StateDB
 func compareBalance(data *OutData, builder *strings.Builder) *comparatorError {
@@ -37,6 +35,7 @@ func compareBalance(data *OutData, builder *strings.Builder) *comparatorError {
 		return newUnexpectedDataTypeErr(data)
 	}
 
+	// create hex string from db result
 	builder.WriteString("0x")
 	builder.WriteString(bigBalance.Text(16))
 
@@ -46,7 +45,11 @@ func compareBalance(data *OutData, builder *strings.Builder) *comparatorError {
 
 	// did we record an error?
 	if data.Recorded.Error != nil {
-		return newComparatorError(hexBalance, data.Recorded.Error.Message, data, expectedResultGotError)
+		// internal error?
+		if data.Recorded.Error.Code == internalErrorCode {
+			return newComparatorError(hexBalance, data.Recorded.Error.Message, data, internalError)
+		}
+		return newComparatorError(hexBalance, data.Recorded.Error.Message, data, internalError)
 	}
 
 	var (
@@ -56,12 +59,10 @@ func compareBalance(data *OutData, builder *strings.Builder) *comparatorError {
 
 	err = json.Unmarshal(data.Recorded.Result, &recordedString)
 	if err != nil {
-		return &comparatorError{
-			error: err,
-			typ:   defaultErrorType,
-		}
+		return newComparatorError(hexBalance, string(data.Recorded.Result), data, cannotUnmarshalResult)
 	}
 
+	// matching results?
 	if !strings.EqualFold(recordedString, hexBalance) {
 		return newComparatorError(hexBalance, recordedString, data, noMatchingResult)
 	}
@@ -85,29 +86,37 @@ func compareTransactionCount(data *OutData, builder *strings.Builder) *comparato
 
 	var (
 		bigNonce                 *big.Int
-		hexNonce, recordedString string
+		dbString, recordedString string
 		err                      error
 	)
 
+	// create hex string from db result
 	bigNonce = new(big.Int).SetUint64(stateNonce)
 
 	builder.WriteString("0x")
 	builder.WriteString(bigNonce.Text(16))
 
-	hexNonce = builder.String()
+	dbString = builder.String()
 
 	builder.Reset()
 
-	err = json.Unmarshal(data.Recorded.Result, &recordedString)
-	if err != nil {
-		return &comparatorError{
-			error: err,
-			typ:   defaultErrorType,
+	// did we record an error?
+	if data.Recorded.Error != nil {
+		// internal error?
+		if data.Recorded.Error.Code == internalErrorCode {
+			return newComparatorError(dbString, data.Recorded.Error.Message, data, internalError)
 		}
+		return newComparatorError(dbString, data.Recorded.Error.Message, data, internalError)
 	}
 
-	if !strings.EqualFold(recordedString, hexNonce) {
-		return newComparatorError(hexNonce, recordedString, data, noMatchingResult)
+	err = json.Unmarshal(data.Recorded.Result, &recordedString)
+	if err != nil {
+		return newComparatorError(dbString, string(data.Recorded.Result), data, cannotUnmarshalResult)
+	}
+
+	// matching results
+	if !strings.EqualFold(recordedString, dbString) {
+		return newComparatorError(dbString, recordedString, data, noMatchingResult)
 	}
 
 	return nil
@@ -130,41 +139,65 @@ func compareCall(data *OutData, builder *strings.Builder) *comparatorError {
 
 // compareCallStateDBResult compares valid call result recorded on API server with valid result returned by StateDB
 func compareCallStateDBResult(data *OutData, builder *strings.Builder) *comparatorError {
-	var recordedString, stateString string
+	var recordedString, dbString string
 
-	stateString = common.Bytes2Hex(data.StateDB.Result.([]byte))
+	// create hex string from db result
+	dbString = common.Bytes2Hex(data.StateDB.Result.([]byte))
 
 	builder.WriteString("0x")
-	builder.WriteString(stateString)
-	stateString = builder.String()
+	builder.WriteString(dbString)
+	dbString = builder.String()
 
 	builder.Reset()
 
-	if data.Recorded.Error != nil {
-		return newComparatorError(
-			stateString,
-			EVMErrors[data.Recorded.Error.Code],
-			data,
-			expectedErrorGotResult)
-	}
+	// do we have an error in recording?
+	if data.Recorded.Error == nil {
 
-	err := json.Unmarshal(data.Recorded.Result, &recordedString)
-	if err != nil {
-		return &comparatorError{
-			error: err,
-			typ:   defaultErrorType,
+		err := json.Unmarshal(data.Recorded.Result, &recordedString)
+		if err != nil {
+			return newComparatorError(dbString, string(data.Recorded.Result), data, cannotUnmarshalResult)
 		}
+
+		// results do not match
+		if !strings.EqualFold(recordedString, dbString) {
+			return newComparatorError(
+				dbString,
+				recordedString,
+				data,
+				noMatchingResult)
+		}
+
+		return nil
 	}
 
-	if !strings.EqualFold(recordedString, stateString) {
-		return newComparatorError(
-			stateString,
-			recordedString,
-			data,
-			noMatchingResult)
+	// internal error?
+	if data.Recorded.Error.Code == internalErrorCode {
+		return newComparatorError(dbString, data.Recorded.Error.Message, data, internalError)
 	}
 
-	return nil
+	var msg string
+
+	// do we recognize the error?
+	errs, ok := EVMErrors[data.Recorded.Error.Code]
+	if !ok {
+		msg = fmt.Sprintf("unknown error code: %v", data.Recorded.Error.Code)
+	} else {
+
+		// more error messages for one code?
+		for i, e := range errs {
+			builder.WriteString(e)
+			if len(errs) > i {
+				builder.WriteString(" or ")
+			}
+		}
+		msg = builder.String()
+	}
+
+	return newComparatorError(
+		dbString,
+		msg,
+		data,
+		expectedErrorGotResult)
 }
 
 // compareEVMStateDBError compares error returned from EVM with recorded data
@@ -184,15 +217,23 @@ func compareEVMStateDBError(data *OutData, builder *strings.Builder) *comparator
 			expectedResultGotError)
 	}
 
-	if !strings.Contains(data.StateDB.Error.Error(), EVMErrors[data.Recorded.Error.Code]) {
-		return newComparatorError(
-			data.StateDB.Error,
-			EVMErrors[data.Recorded.Error.Code],
-			data,
-			noMatchingErrors)
+	// we did record an error
+	for _, e := range EVMErrors[data.Recorded.Error.Code] {
+		if strings.Contains(data.StateDB.Error.Error(), e) {
+			return nil
+		}
 	}
 
-	return nil
+	// internal error?
+	if data.Recorded.Error.Code == internalErrorCode {
+		return newComparatorError(data.StateDB.Error, data.Recorded.Error.Message, data, internalError)
+	}
+
+	return newComparatorError(
+		data.StateDB.Error,
+		EVMErrors[data.Recorded.Error.Code],
+		data,
+		noMatchingErrors)
 }
 
 // compareEstimateGas compares recorded data for estimateGas method with result from StateDB
@@ -220,28 +261,35 @@ func compareEstimateGasStateDBResult(data *OutData, builder *strings.Builder) *c
 	}
 
 	var (
-		bigGas *big.Int
-		hexGas string
+		bigGas   *big.Int
+		dbString string
 	)
 
+	// create hex string from db result
 	bigGas = new(big.Int).SetUint64(uint64(stateDBGas))
 
 	builder.WriteString("0x")
 	builder.WriteString(bigGas.Text(16))
 
-	hexGas = builder.String()
+	dbString = builder.String()
 
 	builder.Reset()
 
-	// did we record a valid result?
+	// do we have an error in the recording?
 	if data.Recorded.Error != nil {
+		// internal error?
+		if data.Recorded.Error.Code == internalErrorCode {
+			return newComparatorError(dbString, data.Recorded.Error.Message, data, internalError)
+		}
+
 		return newComparatorError(
-			hexGas,
+			dbString,
 			EVMErrors[data.Recorded.Error.Code],
 			data,
 			expectedErrorGotResult)
 	}
 
+	// no error
 	var (
 		err            error
 		recordedString string
@@ -249,14 +297,11 @@ func compareEstimateGasStateDBResult(data *OutData, builder *strings.Builder) *c
 
 	err = json.Unmarshal(data.Recorded.Result, &recordedString)
 	if err != nil {
-		return &comparatorError{
-			error: err,
-			typ:   defaultErrorType,
-		}
+		return newComparatorError(dbString, string(data.Recorded.Result), data, cannotUnmarshalResult)
 	}
 
-	if !strings.EqualFold(recordedString, hexGas) {
-		return newComparatorError(hexGas, recordedString, data, noMatchingResult)
+	if !strings.EqualFold(recordedString, dbString) {
+		return newComparatorError(dbString, recordedString, data, noMatchingResult)
 	}
 
 	return nil
@@ -265,27 +310,35 @@ func compareEstimateGasStateDBResult(data *OutData, builder *strings.Builder) *c
 // compareCode compares getCode data recorded on API server with data returned by StateDB
 func compareCode(data *OutData, builder *strings.Builder) *comparatorError {
 	var (
-		recordedString, stateString string
+		recordedString, dbString string
 	)
 
-	err := json.Unmarshal(data.Recorded.Result, &recordedString)
-	if err != nil {
-		return &comparatorError{
-			error: err,
-			typ:   defaultErrorType,
-		}
-	}
-
-	stateString = common.Bytes2Hex(data.StateDB.Result.([]byte))
+	// create hex string from db result
+	dbString = common.Bytes2Hex(data.StateDB.Result.([]byte))
 
 	builder.WriteString("0x")
-	builder.WriteString(stateString)
-	stateString = builder.String()
+	builder.WriteString(dbString)
+	dbString = builder.String()
 
 	builder.Reset()
 
-	if !strings.EqualFold(recordedString, stateString) {
-		return newComparatorError(stateString, recordedString, data, noMatchingResult)
+	// do we have an error in the recording?
+	if data.Recorded.Error != nil {
+		// internal error?
+		if data.Recorded.Error.Code == internalErrorCode {
+			return newComparatorError(dbString, data.Recorded.Error.Message, data, internalError)
+		}
+		return newComparatorError(dbString, data.Recorded.Error.Message, data, internalError)
+	}
+
+	// no error
+	err := json.Unmarshal(data.Recorded.Result, &recordedString)
+	if err != nil {
+		return newComparatorError(dbString, string(data.Recorded.Result), data, cannotUnmarshalResult)
+	}
+
+	if !strings.EqualFold(recordedString, dbString) {
+		return newComparatorError(dbString, recordedString, data, noMatchingResult)
 	}
 
 	return nil
@@ -294,28 +347,37 @@ func compareCode(data *OutData, builder *strings.Builder) *comparatorError {
 // compareStorageAt compares getStorageAt data recorded on API server with data returned by StateDB
 func compareStorageAt(data *OutData, builder *strings.Builder) *comparatorError {
 	var (
-		recordedString, stateString string
-		err                         error
+		recordedString, dbString string
+		err                      error
 	)
 
-	err = json.Unmarshal(data.Recorded.Result, &recordedString)
-	if err != nil {
-		return &comparatorError{
-			error: err,
-			typ:   defaultErrorType,
-		}
-	}
-
-	stateString = common.Bytes2Hex(data.StateDB.Result.([]byte))
+	// create hex string from db result
+	dbString = common.Bytes2Hex(data.StateDB.Result.([]byte))
 
 	builder.WriteString("0x")
-	builder.WriteString(stateString)
-	stateString = builder.String()
+	builder.WriteString(dbString)
+	dbString = builder.String()
 
 	builder.Reset()
 
-	if !strings.EqualFold(recordedString, stateString) {
-		return newComparatorError(stateString, recordedString, data, noMatchingResult)
+	// do we have an error in the recording?
+	if data.Recorded.Error != nil {
+		// internal error?
+		if data.Recorded.Error.Code == internalErrorCode {
+			return newComparatorError(dbString, data.Recorded.Error.Message, data, internalError)
+		}
+		return newComparatorError(dbString, data.Recorded.Error.Message, data, internalError)
+	}
+
+	// no error
+	err = json.Unmarshal(data.Recorded.Result, &recordedString)
+	if err != nil {
+		return newComparatorError(dbString, string(data.Recorded.Result), data, cannotUnmarshalResult)
+	}
+
+	// no error
+	if !strings.EqualFold(recordedString, dbString) {
+		return newComparatorError(dbString, recordedString, data, noMatchingResult)
 	}
 
 	return nil

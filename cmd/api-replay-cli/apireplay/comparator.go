@@ -63,6 +63,11 @@ func (c *Comparator) compare() {
 			}
 
 			if err := c.doCompare(data); err != nil {
+				// internal error is RPC-API error - not unmatched results hence do not log it
+				if err.typ == internalError {
+					c.log.Debug(err)
+					continue
+				}
 				// log the mismatched data
 				c.log.Critical(err)
 
@@ -90,9 +95,6 @@ func (c *Comparator) doCompare(data *OutData) (err *comparatorError) {
 		err = compareCode(data, c.builder)
 	case "getStorageAt":
 		err = compareStorageAt(data, c.builder)
-
-	default:
-		c.log.Debugf("unknown method in comparator: %v", data.Method)
 	}
 
 	return

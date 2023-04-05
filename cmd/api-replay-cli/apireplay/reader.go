@@ -2,7 +2,7 @@ package apireplay
 
 import (
 	"encoding/json"
-	"fmt"
+	"io"
 	"math/big"
 	"strings"
 	"sync"
@@ -15,8 +15,7 @@ import (
 )
 
 const (
-	maxIterErrors          = 5 // maximum consecutive errors emitted by comparator before program panics
-	statisticsLogFrequency = 1 * time.Minute
+	statisticsLogFrequency = 10 * time.Second
 )
 
 // RecordedData represents data recorded on API server. This is sent to Comparator and compared with StateDBData
@@ -78,7 +77,6 @@ func (r *Reader) Start() {
 // to ReplayExecutor which executes the request into StateDB
 func (r *Reader) read() {
 	var (
-		iterErrors      uint16 = 1
 		req             *iterator.RequestWithResponse
 		wInput          *executorInput
 		start           time.Time
@@ -105,17 +103,14 @@ func (r *Reader) read() {
 
 			// did iter emit an error?
 			if r.iter.Error() != nil {
-				// if iterator errors 5 times in a row, exit the program with an error
-				if iterErrors >= maxIterErrors {
-					r.log.Fatalf("iterator reached limit of number of consecutive errors; err: %v", r.iter.Error())
+				// is iterator at its end?
+				if r.iter.Error() == io.EOF || r.iter.Error().Error() == "unexpected EOF" {
+					r.Stop()
+					return
+				} else {
+					r.log.Fatalf("unexpected iter err: %v", r.iter.Error())
 				}
-				r.log.Errorf("error loading recordings; %v\nretry number %v\n", r.iter.Error().Error(), iterErrors)
-				iterErrors++
-				continue
 			}
-
-			// reset the error counter
-			iterErrors = 1
 
 			// retrieve the data from iterator
 			req = r.iter.Value()
@@ -127,6 +122,16 @@ func (r *Reader) read() {
 			}
 			total++
 		}
+	}
+}
+
+func (r *Reader) Stop() {
+	select {
+	case <-r.closed:
+		return
+	default:
+		r.log.Notice("Iterator at its end; Stopping the app.")
+		close(r.closed)
 	}
 }
 
@@ -236,11 +241,8 @@ func (r *Reader) isBlockNumberWithinRange(blockNumber uint64) bool {
 
 // logStatistics about time, executed and total read requests. Frequency of logging depends on statisticsLogFrequency
 func (r *Reader) logStatistics(start time.Time, total uint64, executed uint64) {
-	b := new(big.Int)
-	fmt.Println(b.Binomial(1000, 10))
-
 	elapsed := time.Since(start)
 	r.log.Noticef("Elapsed time: %v\n"+
 		"Read requests: %v\n"+
-		"Out of which were sent to skipped due to not being in StateDB range: %v", elapsed, total, total-executed)
+		"Out of which were skipped due to not being in StateDB range: %v", elapsed, total, total-executed)
 }
