@@ -63,6 +63,10 @@ func (c *Comparator) compare() {
 			}
 
 			if err := c.doCompare(data); err != nil {
+				if err.typ == internalError {
+					c.log.Debug(err)
+					continue
+				}
 				// log the mismatched data
 				c.log.Critical(err)
 
