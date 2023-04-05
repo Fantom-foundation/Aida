@@ -1,6 +1,7 @@
 package apireplay
 
 import (
+	"strings"
 	"sync"
 
 	"github.com/op/go-logging"
@@ -15,6 +16,7 @@ type Comparator struct {
 	wg                *sync.WaitGroup
 	continueOnFailure bool
 	failure           chan any
+	builder           *strings.Builder
 }
 
 // newComparator returns new instance of Comparator
@@ -26,6 +28,7 @@ func newComparator(input chan *OutData, log *logging.Logger, closed chan any, wg
 		closed:            closed,
 		wg:                wg,
 		continueOnFailure: continueOnFailure,
+		builder:           new(strings.Builder),
 	}
 }
 
@@ -76,17 +79,17 @@ func (c *Comparator) compare() {
 func (c *Comparator) doCompare(data *OutData) (err *comparatorError) {
 	switch data.MethodBase {
 	case "getBalance":
-		err = compareBalance(data)
+		err = compareBalance(data, c.builder)
 	case "getTransactionCount":
-		err = compareTransactionCount(data)
+		err = compareTransactionCount(data, c.builder)
 	case "call":
-		err = compareCall(data)
+		err = compareCall(data, c.builder)
 	case "estimateGas":
-		err = compareEstimateGas(data)
+		err = compareEstimateGas(data, c.builder)
 	case "getCode":
-		err = compareCode(data)
+		err = compareCode(data, c.builder)
 	case "getStorageAt":
-		err = compareStorageAt(data)
+		err = compareStorageAt(data, c.builder)
 
 	default:
 		c.log.Debugf("unknown method in comparator: %v", data.Method)
