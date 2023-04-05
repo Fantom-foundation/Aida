@@ -2,7 +2,6 @@ package apireplay
 
 import (
 	"encoding/json"
-	"fmt"
 	"math/big"
 	"strings"
 
@@ -44,10 +43,6 @@ func compareBalance(data *OutData, builder *strings.Builder) *comparatorError {
 	hexBalance = builder.String()
 
 	builder.Reset()
-
-	if len(data.Recorded.Result) > 5 {
-		fmt.Println("a")
-	}
 
 	// did we record an error?
 	if data.Recorded.Error != nil {
