@@ -8,6 +8,7 @@ import (
 	"github.com/Fantom-foundation/Aida/iterator"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/params"
 )
 
@@ -33,6 +34,7 @@ type OutData struct {
 
 // ReplayExecutor represents a goroutine in which requests are executed into StateDB
 type ReplayExecutor struct {
+	iterBlock      uint64
 	cfg            *utils.Config
 	input          chan *executorInput
 	output         chan *OutData
@@ -79,26 +81,30 @@ func (e *ReplayExecutor) execute() {
 		select {
 		case <-e.closed:
 			return
-		default:
+		case in, ok = <-e.input:
 
+			// if input is closed, stop the Executor
+			if !ok {
+				return
+			}
+
+			// are we at debugging state?
+			if e.verbose {
+				e.logReq(in)
+			}
+
+			// doExecute into db
+			res = e.doExecute(in)
+
+			// send to compare
+			e.output <- createOutData(in, res)
+
+			// close the archive after sending data
+			err := in.archive.Close()
+			if err != nil {
+				log.Print(err)
+			}
 		}
-		in, ok = <-e.input
-
-		// if input is closed, stop the Executor
-		if !ok {
-			return
-		}
-
-		// are we at debugging state?
-		if e.verbose {
-			e.logReq(in)
-		}
-
-		// doExecute into db
-		res = e.doExecute(in)
-
-		// send to compare
-		e.output <- createOutData(in, res)
 
 	}
 }
@@ -146,12 +152,14 @@ func (e *ReplayExecutor) doExecute(in *executorInput) *StateDBData {
 
 	case "call":
 		req := newEVMRequest(in.req.Query.Params[0].(map[string]interface{}))
-		evm := newEVM(in.blockID, in.archive, e.vmImpl, e.chainCfg, req)
+		timestamp := substate.GetSubstate(in.blockID, 0).Env.Timestamp
+		evm := newEVM(in.blockID, in.archive, e.vmImpl, e.chainCfg, req, timestamp)
 		return executeCall(evm)
 
 	case "estimateGas":
 		req := newEVMRequest(in.req.Query.Params[0].(map[string]interface{}))
-		evm := newEVM(in.blockID, in.archive, e.vmImpl, e.chainCfg, req)
+		timestamp := substate.GetSubstate(in.blockID, 0).Env.Timestamp
+		evm := newEVM(in.blockID, in.archive, e.vmImpl, e.chainCfg, req, timestamp)
 		return executeEstimateGas(evm)
 
 	default:
