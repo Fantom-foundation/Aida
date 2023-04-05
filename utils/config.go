@@ -12,6 +12,7 @@ import (
 	"time"
 
 	substate "github.com/Fantom-foundation/Substate"
+	_ "github.com/Fantom-foundation/Tosca/core/vm/lfvm"
 	_ "github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/urfave/cli/v2"
