@@ -1,22 +1,13 @@
 package apireplay
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"strconv"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/status-im/keycard-go/hexutils"
-)
-
-// nil answer from EVM is recorded as nilEVMResult, this is used this for the comparing and for more readable logMsg
-const (
-	nilEVMResult = "0x0000000000000000000000000000000000000000000000000000000000000000"
-	nilCodeSize  = 4
 )
 
 // EVMErrors decode error code into string with which is compared with recorded error message
@@ -34,320 +25,40 @@ var EVMErrors = map[int]string{
 //}
 
 // compareBalance compares getBalance data recorded on API server with data returned by StateDB
-func compareBalance(data *OutData) *comparatorError {
+func compareBalance(data *OutData, builder *strings.Builder) *comparatorError {
 	var (
-		stateDBBalance, recordedBalance *big.Int
+		bigBalance *big.Int
+		hexBalance string
+		ok         bool
 	)
 
-	// did StateDB return a valid result?
-	if v, ok := data.StateDB.Result.(*big.Int); ok {
-		stateDBBalance = v
+	bigBalance, ok = data.StateDB.Result.(*big.Int)
 
-		// did we record an error?
-		if data.Recorded.Error != nil {
-			return newComparatorError(stateDBBalance, data.Recorded.Error.Message, data, expectedResultGotError)
-		}
-
-		recordedBalance = new(big.Int)
-
-		// did we record a valid result?
-		if data.Recorded.Result != nil {
-			var recordedString string
-			err := json.Unmarshal(data.Recorded.Result, &recordedString)
-			if err != nil {
-				return &comparatorError{
-					error: err,
-					typ:   defaultErrorType,
-				}
-			}
-
-			recordedString = strings.TrimPrefix(recordedString, "0x")
-			recordedBalance.SetString(recordedString, 16)
-		}
-
-		// matching results?
-		if recordedBalance.Cmp(stateDBBalance) != 0 {
-			return newComparatorError(stateDBBalance, recordedBalance, data, noMatchingResult)
-		}
-
-		return nil
-	}
-
-	return newUnexpectedDataTypeErr(data)
-
-}
-
-// compareTransactionCount compares getTransactionCount data recorded on API server with data returned by StateDB
-func compareTransactionCount(data *OutData) *comparatorError {
-	var (
-		stateDBNonce, recordedNonce uint64
-	)
-
-	// did StateDB return a valid result?
-	if v, ok := data.StateDB.Result.(uint64); ok {
-		stateDBNonce = v
-
-		// did we record an error?
-		if data.Recorded.Error != nil {
-			return newComparatorError(stateDBNonce, data.Recorded.Error.Message, data, expectedResultGotError)
-		}
-
-		// did we record a valid result?
-		if data.Recorded.Result != nil {
-			var (
-				unmarsh, trimmed string
-				b                *big.Int
-			)
-
-			trimmed = strings.TrimPrefix(string(data.Recorded.Result), "0x")
-			b = new(big.Int)
-
-			_, ok = b.SetString(trimmed, 16)
-			if !ok {
-				err := json.Unmarshal(data.Recorded.Result, &unmarsh)
-				if err != nil {
-
-					return &comparatorError{
-						error: err,
-						typ:   defaultErrorType,
-					}
-				}
-
-				b.SetString(strings.TrimPrefix(unmarsh, "0x"), 16)
-
-			}
-
-			recordedNonce = b.Uint64()
-		}
-
-		// matching result?
-		if stateDBNonce != recordedNonce {
-			return newComparatorError(stateDBNonce, recordedNonce, data, noMatchingResult)
-		}
-
-		return nil
-	}
-
-	return newUnexpectedDataTypeErr(data)
-}
-
-// compareCall compares call data recorded on API server with data returned by StateDB
-func compareCall(data *OutData) *comparatorError {
-
-	// do we have an error from StateDB?
-	if data.StateDB.Error != nil {
-		return compareEVMStateDBError(data)
-	}
-
-	// did StateDB return a valid result?
-	if data.StateDB.Result != nil {
-		return compareCallStateDBResult(data)
-	}
-
-	return newUnexpectedDataTypeErr(data)
-}
-
-// compareCallStateDBResult compares valid call result recorded on API server with valid result returned by StateDB
-func compareCallStateDBResult(data *OutData) *comparatorError {
-	var recordedStr, stateStr string
-
-	if isZeroAnswer(data.StateDB.Result.([]byte)) {
-		stateStr = nilEVMResult
-	} else {
-		stateStr = fmt.Sprintf("0x%v", hexutils.BytesToHex(data.StateDB.Result.([]byte)))
-	}
-
-	// did we record a valid result?
-	if data.Recorded.Result != nil {
-
-		err := json.Unmarshal(data.Recorded.Result, &recordedStr)
-		if err != nil {
-			return newComparatorError(data.Recorded.Result, data.StateDB.Result, data, cannotUnmarshalResult)
-		}
-
-		expectedResult := hexutils.HexToBytes(strings.TrimPrefix(recordedStr, "0x"))
-
-		if bytes.Compare(data.StateDB.Result.([]byte), expectedResult) != 0 {
-
-			return newComparatorError(
-				stateStr,
-				recordedStr,
-				data,
-				noMatchingResult)
-		}
-		return nil
-	}
-
-	// did we record an error?
-	if data.Recorded.Error != nil {
-		var returned string
-		if v, ok := EVMErrors[data.Recorded.Error.Code]; ok {
-			returned = v
-		} else {
-			returned = fmt.Sprintf("Error code: %v", data.Recorded.Error.Code)
-		}
-		return newComparatorError(
-			stateStr,
-			returned,
-			data,
-			expectedErrorGotResult)
-	}
-	return nil
-}
-
-// isZeroAnswer looks at StateDB result for call and if all bytes are 0, it returns true since it is a zero answer,
-// if one byte that is not 0 is found, false is returned immediately
-func isZeroAnswer(result json.RawMessage) bool {
-	for _, b := range result {
-		if b != 0 {
-			return false
-		}
-	}
-	return true
-}
-
-// compareEVMStateDBError compares error returned from EVM with recorded data
-func compareEVMStateDBError(data *OutData) *comparatorError {
-
-	// did we record an error?
-	if data.Recorded.Error != nil {
-
-		if !strings.Contains(data.StateDB.Error.Error(), EVMErrors[data.Recorded.Error.Code]) {
-			return newComparatorError(
-				data.StateDB.Error,
-				EVMErrors[data.Recorded.Error.Code],
-				data,
-				noMatchingErrors)
-		}
-		return nil
-	}
-
-	// did we record a valid result?
-	if data.Recorded.Result != nil {
-		return newComparatorError(
-			data.StateDB.Error,
-			string(data.Recorded.Result),
-			data,
-			expectedResultGotError)
-	}
-
-	return nil
-}
-
-// compareEstimateGas compares recorded data for estimateGas method with result from StateDB
-func compareEstimateGas(data *OutData) *comparatorError {
-
-	// StateDB returned an error
-	if data.StateDB.Error != nil {
-		return compareEVMStateDBError(data)
-	}
-
-	// StateDB returned a result
-	if data.StateDB.Result != nil {
-		return compareEstimateGasStateDBResult(data)
-	}
-
-	return nil
-}
-
-// compareEstimateGasStateDBResult compares estimateGas data recorded on API server with data returned by StateDB
-func compareEstimateGasStateDBResult(data *OutData) *comparatorError {
-
-	stateDBGas, ok := data.StateDB.Result.(hexutil.Uint64)
 	if !ok {
 		return newUnexpectedDataTypeErr(data)
 	}
 
-	uintGas := uint64(stateDBGas)
+	builder.WriteString("0x")
+	builder.WriteString(bigBalance.Text(16))
 
-	// did we record a valid result?
-	if data.Recorded.Result != nil {
-		var (
-			trimmed, unmarsh string
-			b                *big.Int
-		)
+	hexBalance = builder.String()
 
-		// first try to extract the number the easier way
-		trimmed = strings.TrimPrefix(string(data.Recorded.Result), "0x")
-		b = new(big.Int)
+	builder.Reset()
 
-		// if we fail, we must unmarshal
-		_, ok = b.SetString(trimmed, 16)
-		if !ok {
-			err := json.Unmarshal(data.Recorded.Result, &unmarsh)
-			if err != nil {
-
-				return &comparatorError{
-					error: err,
-					typ:   defaultErrorType,
-				}
-			}
-
-			b.SetString(strings.TrimPrefix(unmarsh, "0x"), 16)
-
-		}
-
-		if uintGas != b.Uint64() {
-			return newComparatorError(
-				fmt.Sprintf("0x%v", strconv.FormatUint(uintGas, 16)),
-				string(data.Recorded.Result),
-				data,
-				noMatchingResult)
-		}
+	if len(data.Recorded.Result) > 5 {
+		fmt.Println("a")
 	}
 
 	// did we record an error?
 	if data.Recorded.Error != nil {
-		return newComparatorError(
-			fmt.Sprintf("0x%v", strconv.FormatUint(uintGas, 16)),
-			EVMErrors[data.Recorded.Error.Code],
-			data,
-			expectedErrorGotResult)
+		return newComparatorError(hexBalance, data.Recorded.Error.Message, data, expectedResultGotError)
 	}
 
-	return nil
-}
-
-// compareCode compares getCode data recorded on API server with data returned by StateDB
-func compareCode(data *OutData) *comparatorError {
-	var stateByte []byte
-
-	// nil and nil? (first two bytes in recorded result is "0x")
-	stateByte = data.StateDB.Result.([]byte)
-	if stateByte == nil {
-		if len(data.Recorded.Result) == nilCodeSize {
-			return nil
-		} else {
-			return newComparatorError(nil, string(data.Recorded.Result), data, noMatchingResult)
-		}
-
-	}
-
-	var recordedString, stateString string
-	err := json.Unmarshal(data.Recorded.Result, &recordedString)
-	if err != nil {
-		return &comparatorError{
-			error: err,
-			typ:   defaultErrorType,
-		}
-	}
-
-	recordedString = strings.TrimPrefix(recordedString, "0x")
-	stateString = common.Bytes2Hex(stateByte)
-
-	if strings.Compare(recordedString, stateString) != 0 {
-		return newComparatorError(stateString, recordedString, data, noMatchingResult)
-	}
-	return nil
-}
-
-// compareStorageAt compares getStorageAt data recorded on API server with data returned by StateDB
-func compareStorageAt(data *OutData) *comparatorError {
 	var (
-		recordedString          string
-		recordedByte, stateByte []byte
-		err                     error
+		err            error
+		recordedString string
 	)
+
 	err = json.Unmarshal(data.Recorded.Result, &recordedString)
 	if err != nil {
 		return &comparatorError{
@@ -356,7 +67,43 @@ func compareStorageAt(data *OutData) *comparatorError {
 		}
 	}
 
-	recordedByte, err = hexutil.Decode(recordedString)
+	if !strings.EqualFold(recordedString, hexBalance) {
+		return newComparatorError(hexBalance, recordedString, data, noMatchingResult)
+	}
+
+	return nil
+
+}
+
+// compareTransactionCount compares getTransactionCount data recorded on API server with data returned by StateDB
+func compareTransactionCount(data *OutData, builder *strings.Builder) *comparatorError {
+	var (
+		stateNonce uint64
+		ok         bool
+	)
+
+	stateNonce, ok = data.StateDB.Result.(uint64)
+
+	if !ok {
+		return newUnexpectedDataTypeErr(data)
+	}
+
+	var (
+		bigNonce                 *big.Int
+		hexNonce, recordedString string
+		err                      error
+	)
+
+	bigNonce = new(big.Int).SetUint64(stateNonce)
+
+	builder.WriteString("0x")
+	builder.WriteString(bigNonce.Text(16))
+
+	hexNonce = builder.String()
+
+	builder.Reset()
+
+	err = json.Unmarshal(data.Recorded.Result, &recordedString)
 	if err != nil {
 		return &comparatorError{
 			error: err,
@@ -364,10 +111,215 @@ func compareStorageAt(data *OutData) *comparatorError {
 		}
 	}
 
-	stateByte = data.StateDB.Result.([]byte)
+	if !strings.EqualFold(recordedString, hexNonce) {
+		return newComparatorError(hexNonce, recordedString, data, noMatchingResult)
+	}
 
-	if bytes.Compare(recordedByte, stateByte) != 0 {
-		stateString := hexutils.BytesToHex(stateByte)
+	return nil
+}
+
+// compareCall compares call data recorded on API server with data returned by StateDB
+func compareCall(data *OutData, builder *strings.Builder) *comparatorError {
+	// do we have an error from StateDB?
+	if data.StateDB.Error != nil {
+		return compareEVMStateDBError(data, builder)
+	}
+
+	// did StateDB return a valid result?
+	if data.StateDB.Result != nil {
+		return compareCallStateDBResult(data, builder)
+	}
+
+	return newUnexpectedDataTypeErr(data)
+}
+
+// compareCallStateDBResult compares valid call result recorded on API server with valid result returned by StateDB
+func compareCallStateDBResult(data *OutData, builder *strings.Builder) *comparatorError {
+	var recordedString, stateString string
+
+	stateString = common.Bytes2Hex(data.StateDB.Result.([]byte))
+
+	builder.WriteString("0x")
+	builder.WriteString(stateString)
+	stateString = builder.String()
+
+	builder.Reset()
+
+	if data.Recorded.Error != nil {
+		return newComparatorError(
+			stateString,
+			EVMErrors[data.Recorded.Error.Code],
+			data,
+			expectedErrorGotResult)
+	}
+
+	err := json.Unmarshal(data.Recorded.Result, &recordedString)
+	if err != nil {
+		return &comparatorError{
+			error: err,
+			typ:   defaultErrorType,
+		}
+	}
+
+	if !strings.EqualFold(recordedString, stateString) {
+		return newComparatorError(
+			stateString,
+			recordedString,
+			data,
+			noMatchingResult)
+	}
+
+	return nil
+}
+
+// compareEVMStateDBError compares error returned from EVM with recorded data
+func compareEVMStateDBError(data *OutData, builder *strings.Builder) *comparatorError {
+
+	// did we record an error?
+	if data.Recorded.Error == nil {
+		builder.Write(data.Recorded.Result)
+		r := builder.String()
+
+		builder.Reset()
+
+		return newComparatorError(
+			data.StateDB.Error,
+			r,
+			data,
+			expectedResultGotError)
+	}
+
+	if !strings.Contains(data.StateDB.Error.Error(), EVMErrors[data.Recorded.Error.Code]) {
+		return newComparatorError(
+			data.StateDB.Error,
+			EVMErrors[data.Recorded.Error.Code],
+			data,
+			noMatchingErrors)
+	}
+
+	return nil
+}
+
+// compareEstimateGas compares recorded data for estimateGas method with result from StateDB
+func compareEstimateGas(data *OutData, builder *strings.Builder) *comparatorError {
+
+	// StateDB returned an error
+	if data.StateDB.Error != nil {
+		return compareEVMStateDBError(data, builder)
+	}
+
+	// StateDB returned a result
+	if data.StateDB.Result != nil {
+		return compareEstimateGasStateDBResult(data, builder)
+	}
+
+	return nil
+}
+
+// compareEstimateGasStateDBResult compares estimateGas data recorded on API server with data returned by StateDB
+func compareEstimateGasStateDBResult(data *OutData, builder *strings.Builder) *comparatorError {
+
+	stateDBGas, ok := data.StateDB.Result.(hexutil.Uint64)
+	if !ok {
+		return newUnexpectedDataTypeErr(data)
+	}
+
+	var (
+		bigGas *big.Int
+		hexGas string
+	)
+
+	bigGas = new(big.Int).SetUint64(uint64(stateDBGas))
+
+	builder.WriteString("0x")
+	builder.WriteString(bigGas.Text(16))
+
+	hexGas = builder.String()
+
+	builder.Reset()
+
+	// did we record a valid result?
+	if data.Recorded.Error != nil {
+		return newComparatorError(
+			hexGas,
+			EVMErrors[data.Recorded.Error.Code],
+			data,
+			expectedErrorGotResult)
+	}
+
+	var (
+		err            error
+		recordedString string
+	)
+
+	err = json.Unmarshal(data.Recorded.Result, &recordedString)
+	if err != nil {
+		return &comparatorError{
+			error: err,
+			typ:   defaultErrorType,
+		}
+	}
+
+	if !strings.EqualFold(recordedString, hexGas) {
+		return newComparatorError(hexGas, recordedString, data, noMatchingResult)
+	}
+
+	return nil
+}
+
+// compareCode compares getCode data recorded on API server with data returned by StateDB
+func compareCode(data *OutData, builder *strings.Builder) *comparatorError {
+	var (
+		recordedString, stateString string
+	)
+
+	err := json.Unmarshal(data.Recorded.Result, &recordedString)
+	if err != nil {
+		return &comparatorError{
+			error: err,
+			typ:   defaultErrorType,
+		}
+	}
+
+	stateString = common.Bytes2Hex(data.StateDB.Result.([]byte))
+
+	builder.WriteString("0x")
+	builder.WriteString(stateString)
+	stateString = builder.String()
+
+	builder.Reset()
+
+	if !strings.EqualFold(recordedString, stateString) {
+		return newComparatorError(stateString, recordedString, data, noMatchingResult)
+	}
+
+	return nil
+}
+
+// compareStorageAt compares getStorageAt data recorded on API server with data returned by StateDB
+func compareStorageAt(data *OutData, builder *strings.Builder) *comparatorError {
+	var (
+		recordedString, stateString string
+		err                         error
+	)
+
+	err = json.Unmarshal(data.Recorded.Result, &recordedString)
+	if err != nil {
+		return &comparatorError{
+			error: err,
+			typ:   defaultErrorType,
+		}
+	}
+
+	stateString = common.Bytes2Hex(data.StateDB.Result.([]byte))
+
+	builder.WriteString("0x")
+	builder.WriteString(stateString)
+	stateString = builder.String()
+
+	builder.Reset()
+
+	if !strings.EqualFold(recordedString, stateString) {
 		return newComparatorError(stateString, recordedString, data, noMatchingResult)
 	}
 
