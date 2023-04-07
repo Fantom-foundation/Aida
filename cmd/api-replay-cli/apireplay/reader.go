@@ -15,7 +15,6 @@ import (
 )
 
 const (
-	maxIterErrors          = 5 // maximum consecutive errors emitted by comparator before program panics
 	statisticsLogFrequency = 10 * time.Second
 )
 
@@ -46,11 +45,12 @@ type Reader struct {
 	closed  chan any
 	log     *logging.Logger
 	wg      *sync.WaitGroup
+	skipN   uint64
 	dbRange dbRange
 }
 
 // newReader returns new instance of Reader
-func newReader(first, last uint64, db state.StateDB, iterator *iterator.FileReader, l *logging.Logger, closed chan any, wg *sync.WaitGroup) *Reader {
+func newReader(first, last uint64, db state.StateDB, iterator *iterator.FileReader, l *logging.Logger, closed chan any, wg *sync.WaitGroup, skipN uint64) *Reader {
 	l.Info("creating reader")
 	return &Reader{
 		dbRange: dbRange{
@@ -62,6 +62,7 @@ func newReader(first, last uint64, db state.StateDB, iterator *iterator.FileRead
 		output: make(chan *executorInput, bufferSize),
 		log:    l,
 		closed: closed,
+		skipN:  skipN,
 		wg:     wg,
 	}
 }
@@ -90,6 +91,10 @@ func (r *Reader) read() {
 		r.wg.Done()
 	}()
 
+	if r.skipN > 0 {
+		r.log.Noticef("skipping first %v requests", r.skipN)
+	}
+
 	start = time.Now()
 	ticker = time.NewTicker(statisticsLogFrequency)
 
@@ -101,6 +106,16 @@ func (r *Reader) read() {
 			r.logStatistics(start, total, executed)
 
 		default:
+			total++
+
+			// do we want to skip first n requests?
+			if r.skipN > total {
+				continue
+			} else if r.skipN == total {
+				// reset counter
+				r.skipN = 0
+				total = 1
+			}
 
 			// did iter emit an error?
 			if r.iter.Error() != nil {
@@ -118,7 +133,7 @@ func (r *Reader) read() {
 				r.output <- wInput
 				executed++
 			}
-			total++
+
 		}
 	}
 }
