@@ -41,7 +41,7 @@ func (op *GetCode) Write(f io.Writer) error {
 }
 
 // Execute the get-code operation.
-func (op *GetCode) Execute(db state.StateDB, ctx *context.Context) time.Duration {
+func (op *GetCode) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
 	db.GetCode(contract)

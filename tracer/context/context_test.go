@@ -30,7 +30,7 @@ func TestContextDecodeContract(t *testing.T) {
 }
 
 // TestContextPrevContract fetches the last used addresses
-// after encodeing and decoding, then compares whether they match the actual
+// after encoding and decoding, then compares whether they match the actual
 // last used contract addresses.
 func TestContextPrevContract(t *testing.T) {
 	ctx := NewContext()

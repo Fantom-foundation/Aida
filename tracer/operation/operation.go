@@ -145,10 +145,10 @@ func GetLabel(i byte) string {
 
 // Operation interface.
 type Operation interface {
-	GetId() byte                                           // get operation identifier
-	Write(io.Writer) error                                 // write operation to a file
-	Execute(state.StateDB, *context.Context) time.Duration // execute operation on a stateDB instance
-	Debug(*context.Context)                                // print debug message for operation
+	GetId() byte                                          // get operation identifier
+	Write(io.Writer) error                                // write operation to a file
+	Execute(state.StateDB, *context.Replay) time.Duration // execute operation on a stateDB instance
+	Debug(*context.Context)                               // print debug message for operation
 }
 
 // Read an operation from file.
@@ -199,7 +199,7 @@ func Write(f io.Writer, op Operation) {
 }
 
 // Execute an operation and profile it.
-func Execute(op Operation, db state.StateDB, ctx *context.Context) {
+func Execute(op Operation, db state.StateDB, ctx *context.Replay) {
 	elapsed := op.Execute(db, ctx)
 	if EnableProfiling {
 		stats.Profile(op.GetId(), elapsed)
@@ -215,4 +215,12 @@ func Debug(ctx *context.Context, op Operation) {
 	fmt.Printf("\t%s: ", GetLabel(op.GetId()))
 	op.Debug(ctx)
 	fmt.Println()
+}
+
+// writeOperation writes operation to file.
+func WriteOp(ctx *context.Record, op Operation) {
+	Write(ctx.ZFile, op)
+	if ctx.Debug {
+		Debug(&ctx.Context, op)
+	}
 }

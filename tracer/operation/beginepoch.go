@@ -39,7 +39,7 @@ func (op *BeginEpoch) Write(f io.Writer) error {
 }
 
 // Execute the begin-epoch operation.
-func (op *BeginEpoch) Execute(db state.StateDB, ctx *context.Context) time.Duration {
+func (op *BeginEpoch) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	start := time.Now()
 	db.BeginEpoch(op.EpochNumber)
 	return time.Since(start)

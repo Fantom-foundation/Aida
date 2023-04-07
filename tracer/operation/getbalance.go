@@ -41,7 +41,7 @@ func (op *GetBalance) Write(f io.Writer) error {
 }
 
 // Execute the get-balance operation.
-func (op *GetBalance) Execute(db state.StateDB, ctx *context.Context) time.Duration {
+func (op *GetBalance) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
 	db.GetBalance(contract)

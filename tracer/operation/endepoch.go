@@ -36,7 +36,7 @@ func (op *EndEpoch) Write(f io.Writer) error {
 }
 
 // Execute the end-epoch operation.
-func (op *EndEpoch) Execute(db state.StateDB, ctx *context.Context) time.Duration {
+func (op *EndEpoch) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	start := time.Now()
 	db.EndEpoch()
 	return time.Since(start)

@@ -1,13 +1,8 @@
 package trace
 
 import (
-	"bufio"
 	"fmt"
-	"io"
-	"log"
 	"math"
-	"os"
-	"runtime"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
@@ -16,13 +11,7 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
-	"github.com/dsnet/compress/bzip2"
 	"github.com/urfave/cli/v2"
-)
-
-const (
-	WriteBufferSize  = 1048576 // Size of write buffer for writing trace file.
-	WriteChannelSize = 1000    // Max. channel size for serialising StateDB operations.
 )
 
 // TraceRecordCommand data structure for the record app
@@ -38,7 +27,7 @@ var TraceRecordCommand = cli.Command{
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
 		&utils.ChainIDFlag,
-		&utils.TraceDirectoryFlag,
+		&utils.TraceFileFlag,
 		&utils.TraceDebugFlag,
 		&utils.DebugFromFlag,
 		&utils.DBFlag,
@@ -50,14 +39,6 @@ The trace record command requires two arguments:
 last block of the inclusive range of blocks to trace transactions.`,
 }
 
-// writeOperation writes operation to file.
-func writeOperation(dCtx *context.Context, zFile io.Writer, op operation.Operation) {
-	operation.Write(zFile, op)
-	if utils.TraceDebug {
-		operation.Debug(dCtx, op)
-	}
-}
-
 // traceRecordAction implements trace command for recording.
 func traceRecordAction(ctx *cli.Context) error {
 	substate.RecordReplay = true
@@ -66,7 +47,7 @@ func traceRecordAction(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	// force enable tracsaction validation
+	// force enable transaction validation
 	cfg.ValidateTxState = true
 
 	// start CPU profiling if enabled.
@@ -75,44 +56,15 @@ func traceRecordAction(ctx *cli.Context) error {
 	}
 	defer utils.StopCPUProfile(cfg)
 
-	// create record/replay context
-	dCtx := context.NewContext()
+	// create record context
+	rCtx := context.NewRecord(cfg.TraceFile)
+	defer rCtx.Close()
 
-	// process arguments
-	tracer.TraceDir = ctx.String(utils.TraceDirectoryFlag.Name) + "/"
-
-	// iterate through subsets in sequence
+	// open SubstateDB and create an substate iterator
 	substate.SetSubstateDirectory(cfg.SubstateDBDir)
 	substate.OpenSubstateDBReadOnly()
-	// close substate
 	defer substate.CloseSubstateDB()
-
-	// open trace file, write buffer, and compressed stream
-	file, err := os.OpenFile(tracer.TraceDir+"trace.dat", os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-	if err != nil {
-		log.Fatalf("Cannot open trace file. Error: %v", err)
-	}
-	bFile := bufio.NewWriterSize(file, WriteBufferSize)
-	zFile, err := bzip2.NewWriter(bFile, &bzip2.WriterConfig{Level: 9})
-	if err != nil {
-		log.Fatalf("Cannot open bzip2 stream. Error: %v", err)
-	}
-	defer func() {
-		// closing compressed stream, flushing buffer, and closing trace file
-		if err := zFile.Close(); err != nil {
-			log.Fatalf("Cannot close bzip2 writer. Error: %v", err)
-		}
-		if err := bFile.Flush(); err != nil {
-			log.Fatalf("Cannot flush buffer. Error: %v", err)
-		}
-		if err := file.Close(); err != nil {
-			log.Fatalf("Cannot close trace file. Error: %v", err)
-		}
-	}()
-
 	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
-
-	// release iterator
 	defer iter.Release()
 
 	curBlock := uint64(math.MaxUint64) // set to an infeasible block
@@ -126,15 +78,13 @@ func traceRecordAction(ctx *cli.Context) error {
 		sec = time.Since(start).Seconds()
 		lastSec = time.Since(start).Seconds()
 	}
-
 	curEpoch := cfg.First / cfg.EpochLength
-	utils.TraceDebug = cfg.Debug && (cfg.First >= cfg.DebugFrom)
-	writeOperation(dCtx, zFile, operation.NewBeginEpoch(curEpoch))
-
+	rCtx.Debug = cfg.Debug && (cfg.First >= cfg.DebugFrom)
+	operation.WriteOp(rCtx, operation.NewBeginEpoch(curEpoch))
 	for iter.Next() {
 		tx := iter.Value()
-		if !utils.TraceDebug {
-			utils.TraceDebug = cfg.Debug && (tx.Block >= cfg.DebugFrom)
+		if !rCtx.Debug {
+			rCtx.Debug = cfg.Debug && (tx.Block >= cfg.DebugFrom)
 		}
 		// close off old block with an end-block operation
 		if curBlock != tx.Block {
@@ -142,28 +92,28 @@ func traceRecordAction(ctx *cli.Context) error {
 				break
 			}
 			if curBlock != math.MaxUint64 {
-				writeOperation(dCtx, zFile, operation.NewEndBlock())
+				operation.WriteOp(rCtx, operation.NewEndBlock())
 				// Record epoch changes.
 				newEpoch := tx.Block / cfg.EpochLength
 				for curEpoch < newEpoch {
-					writeOperation(dCtx, zFile, operation.NewEndEpoch())
+					operation.WriteOp(rCtx, operation.NewEndEpoch())
 					curEpoch++
-					writeOperation(dCtx, zFile, operation.NewBeginEpoch(curEpoch))
+					operation.WriteOp(rCtx, operation.NewBeginEpoch(curEpoch))
 				}
 			}
 			curBlock = tx.Block
 			// open new block with a begin-block operation and clear index cache
-			writeOperation(dCtx, zFile, operation.NewBeginBlock(tx.Block))
+			operation.WriteOp(rCtx, operation.NewBeginBlock(tx.Block))
 		}
-		writeOperation(dCtx, zFile, operation.NewBeginTransaction(uint32(tx.Transaction)))
+		operation.WriteOp(rCtx, operation.NewBeginTransaction(uint32(tx.Transaction)))
 		var statedb state.StateDB
 		statedb = state.MakeGethInMemoryStateDB(&tx.Substate.InputAlloc, tx.Block)
-		statedb = NewProxyRecorder(statedb, dCtx, zFile)
+		statedb = tracer.NewProxyRecorder(statedb, rCtx)
 
 		if err := utils.ProcessTx(statedb, cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
 			return fmt.Errorf("Failed to process block %v tx %v. %v", tx.Block, tx.Transaction, err)
 		}
-		writeOperation(dCtx, zFile, operation.NewEndTransaction())
+		operation.WriteOp(rCtx, operation.NewEndTransaction())
 		if cfg.EnableProgress {
 			// report progress
 			sec = time.Since(start).Seconds()
@@ -172,22 +122,18 @@ func traceRecordAction(ctx *cli.Context) error {
 				lastSec = sec
 			}
 		}
-
 	}
 
 	// end last block
 	if curBlock != math.MaxUint64 {
-		writeOperation(dCtx, zFile, operation.NewEndBlock())
+		operation.WriteOp(rCtx, operation.NewEndBlock())
 	}
-	writeOperation(dCtx, zFile, operation.NewEndEpoch())
+	operation.WriteOp(rCtx, operation.NewEndEpoch())
 
 	if cfg.EnableProgress {
 		sec = time.Since(start).Seconds()
 		fmt.Printf("trace record: Total elapsed time: %.3f s, processed %v blocks\n", sec, cfg.Last-cfg.First+1)
 	}
-
-	// wait for writer thread
-	runtime.Gosched()
 
 	return nil
 }

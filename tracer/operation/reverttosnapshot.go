@@ -40,7 +40,7 @@ func (op *RevertToSnapshot) Write(f io.Writer) error {
 }
 
 // Execute the revert-to-snapshot operation.
-func (op *RevertToSnapshot) Execute(db state.StateDB, ctx *context.Context) time.Duration {
+func (op *RevertToSnapshot) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	id := ctx.GetSnapshot(op.SnapshotID)
 	start := time.Now()
 	db.RevertToSnapshot(int(id))

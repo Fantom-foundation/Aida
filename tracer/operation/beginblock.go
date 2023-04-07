@@ -40,7 +40,7 @@ func (op *BeginBlock) Write(f io.Writer) error {
 }
 
 // Execute the begin-block operation.
-func (op *BeginBlock) Execute(db state.StateDB, ctx *context.Context) time.Duration {
+func (op *BeginBlock) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	start := time.Now()
 	db.BeginBlock(op.BlockNumber)
 	return time.Since(start)

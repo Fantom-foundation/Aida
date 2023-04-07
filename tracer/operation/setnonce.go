@@ -42,7 +42,7 @@ func (op *SetNonce) Write(f io.Writer) error {
 }
 
 // Execute the set-nonce operation.
-func (op *SetNonce) Execute(db state.StateDB, ctx *context.Context) time.Duration {
+func (op *SetNonce) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
 	db.SetNonce(contract, op.Nonce)

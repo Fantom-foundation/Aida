@@ -20,11 +20,8 @@ type TraceIterator struct {
 	currentOp    operation.Operation // current state operation
 }
 
-// TraceDir is the directory of the trace files.
-var TraceDir string = "./"
-
 // NewTraceIterator creates a new trace iterator.
-func NewTraceIterator(first uint64, last uint64) *TraceIterator {
+func NewTraceIterator(fname string, first uint64, last uint64) *TraceIterator {
 	// create new iterator object
 	ti := new(TraceIterator)
 	ti.firstBlock = first
@@ -33,7 +30,7 @@ func NewTraceIterator(first uint64, last uint64) *TraceIterator {
 
 	// open trace file,read buffer, and gzip stream
 	var err error
-	if ti.file, err = os.Open(TraceDir + "trace.dat"); err != nil {
+	if ti.file, err = os.Open(fname); err != nil {
 		log.Fatalf("Cannot open trace file. Error: %v", err)
 	}
 	ti.zreader, err = bzip2.NewReader(ti.file, &bzip2.ReaderConfig{})

@@ -39,7 +39,7 @@ func (op *BeginTransaction) Write(f io.Writer) error {
 }
 
 // Execute the begin-transaction operation.
-func (op *BeginTransaction) Execute(db state.StateDB, ctx *context.Context) time.Duration {
+func (op *BeginTransaction) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	start := time.Now()
 	db.BeginTransaction(op.TransactionNumber)
 	return time.Since(start)

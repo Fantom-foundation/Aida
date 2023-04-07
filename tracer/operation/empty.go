@@ -41,7 +41,7 @@ func (op *Empty) Write(f io.Writer) error {
 }
 
 // Execute the Empty operation.
-func (op *Empty) Execute(db state.StateDB, ctx *context.Context) time.Duration {
+func (op *Empty) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
 	db.Empty(contract)

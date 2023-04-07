@@ -41,7 +41,7 @@ func (op *Suicide) Write(f io.Writer) error {
 }
 
 // Execute the suicide operation.
-func (op *Suicide) Execute(db state.StateDB, ctx *context.Context) time.Duration {
+func (op *Suicide) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
 	db.Suicide(contract)
