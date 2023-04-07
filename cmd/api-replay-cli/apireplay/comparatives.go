@@ -16,7 +16,7 @@ const internalErrorCode = -32603
 
 // EVMErrors decode error code into string with which is compared with recorded error message
 var EVMErrors = map[int][]string{
-	-32000: {"execution reverted", "invalid opcode", "insufficient balance for transfer", "insufficient funds for transfer"},
+	-32000: {"execution reverted", "invalid opcode", "insufficient balance for transfer", "insufficient funds"},
 	-32602: {"invalid argument"},
 	3:      {"execution reverted"},
 }
@@ -230,9 +230,21 @@ func compareEVMStateDBError(data *OutData, builder *strings.Builder) *comparator
 		return newComparatorError(data.StateDB.Error, data.Recorded.Error.Message, data, internalError)
 	}
 
+	builder.WriteString("one of these error messages: ")
+
+	for i, e := range EVMErrors[data.Recorded.Error.Code] {
+		builder.WriteString(e)
+		if i < len(EVMErrors[data.Recorded.Error.Code]) {
+			builder.WriteString(" or ")
+		}
+	}
+
+	msg := builder.String()
+	builder.Reset()
+
 	return newComparatorError(
 		data.StateDB.Error,
-		EVMErrors[data.Recorded.Error.Code],
+		msg,
 		data,
 		noMatchingErrors)
 }
