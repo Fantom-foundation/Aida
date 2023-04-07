@@ -66,47 +66,32 @@ func RunVM(ctx *cli.Context) error {
 		return err
 	}
 	if !cfg.KeepStateDb {
-		log.Warningf("StateDB at %v will be removed at the end of this run.\n", stateDirectory)
+		log.Warningf("StateDB at %v will be removed at the end of this run.", stateDirectory)
 		defer os.RemoveAll(stateDirectory)
 	}
 
 	ws := substate.SubstateAlloc{}
 	if cfg.SkipPriming || loadedExistingDB {
-		log.Warning("Skipping DB priming.\n")
+		log.Warning("Skipping DB priming.")
 	} else {
-		// load the world state
-		log.Noticef("Load and advance world state to block %v\n", cfg.First-1)
+		log.Notice("Prime stateDB")
 		start = time.Now()
-		ws, err = utils.GenerateWorldStateFromUpdateDB(cfg, cfg.First-1)
-		if err != nil {
-			return err
+		if err := utils.LoadWorldStateAndPrime(db, cfg, cfg.First-1); err != nil {
+			return fmt.Errorf("priming failed. %v", err)
 		}
 
-		elapsed = time.Since(start)
-		hours, minutes, seconds = utils.ParseTime(elapsed)
-		log.Infof("\tElapsed time: %vh %vm %vs, accounts: %v\n", hours, minutes, seconds, len(ws))
-
-		// prime stateDB
-		log.Notice("Prime StateDB \n")
-		start = time.Now()
-		utils.PrimeStateDB(ws, db, cfg, log)
-
-		elapsed = time.Since(start)
-		hours, minutes, seconds = utils.ParseTime(elapsed)
-		log.Infof("\tPriming elapsed time: %vh %vm %vs\n", hours, minutes, seconds)
-
 		// delete destroyed accounts from stateDB
-		log.Notice("Delete destroyed accounts \n")
-		start = time.Now()
+		log.Notice("Delete destroyed accounts")
 		// remove destroyed accounts until one block before the first block
 		err = utils.DeleteDestroyedAccountsFromStateDB(db, cfg, cfg.First-1)
 
 		elapsed = time.Since(start)
 		hours, minutes, seconds = utils.ParseTime(elapsed)
-		log.Infof("\tDel-dest-acc elapsed time: %vh %vm %vs\n", hours, minutes, seconds)
+		log.Infof("\tPriming elapsed time: %vh %vm %vs\n", hours, minutes, seconds)
 		if err != nil {
 			return err
 		}
+		return nil
 	}
 
 	// print memory usage after priming
