@@ -91,21 +91,21 @@ func newEVM(blockID uint64, archive state.StateDB, vmImpl string, chainCfg *para
 func newEVMRequest(params map[string]interface{}) *EVMRequest {
 	req := new(EVMRequest)
 
-	if v, ok := params["from"]; ok {
+	if v, ok := params["from"]; ok && v != nil {
 		req.From = common.HexToAddress(v.(string))
 	}
 
-	if v, ok := params["to"]; ok {
+	if v, ok := params["to"]; ok && v != nil {
 		req.To = common.HexToAddress(v.(string))
 	}
 
 	req.Value = new(big.Int)
-	if v, ok := params["value"]; ok {
+	if v, ok := params["value"]; ok && v != nil {
 		req.Value, _ = req.Value.SetString(strings.TrimPrefix(v.(string), "0x"), 16)
 	}
 
 	req.Gas = new(big.Int)
-	if v, ok := params["gas"]; ok {
+	if v, ok := params["gas"]; ok && v != nil {
 		req.Gas.SetString(strings.TrimPrefix(v.(string), "0x"), 16)
 	} else {
 		// if gas cap is not specified, we use globalGasCap
@@ -113,11 +113,11 @@ func newEVMRequest(params map[string]interface{}) *EVMRequest {
 	}
 
 	req.GasPrice = new(big.Int)
-	if v, ok := params["gasPrice"]; ok {
+	if v, ok := params["gasPrice"]; ok && v != nil {
 		req.GasPrice, _ = new(big.Int).SetString(strings.TrimPrefix(v.(string), "0x"), 16)
 	}
 
-	if v, ok := params["data"]; ok {
+	if v, ok := params["data"]; ok && v != nil {
 		s := strings.TrimPrefix(v.(string), "0x")
 		req.Data = hexutils.HexToBytes(s)
 	}

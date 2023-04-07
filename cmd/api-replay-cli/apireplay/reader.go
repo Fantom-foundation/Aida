@@ -144,7 +144,7 @@ func (r *Reader) createExecutorInput(req *iterator.RequestWithResponse) *executo
 	wInput.req = req
 
 	if !r.decodeBlockNumber(req.Query.Params, recordedBlockID, &wInput.blockID) {
-		r.log.Errorf("cannot decode block number; skipping\nParams: %v", req.Query.Params[1])
+		r.log.Debugf("cannot decode block number; skipping\nParams: %v", req.Query.Params[1])
 		return nil
 	}
 
