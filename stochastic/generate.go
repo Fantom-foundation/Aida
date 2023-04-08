@@ -40,7 +40,7 @@ func GenerateUniformRegistry(cfg *utils.Config) *EventRegistry {
 			r.argOpFreq[i] = 1 // set frequency to greater than zero to emit operation
 			opI, _, _, _ := DecodeArgOp(i)
 			switch opI {
-			case BeginEpochID:
+			case BeginSyncPeriodID:
 				j := EncodeArgOp(BeginBlockID, statistics.NoArgID, statistics.NoArgID, statistics.NoArgID)
 				r.transitFreq[i][j] = 1
 			case BeginBlockID:
@@ -56,23 +56,23 @@ func GenerateUniformRegistry(cfg *utils.Config) *EventRegistry {
 				r.transitFreq[i][j2] = 1
 			case EndBlockID:
 				j1 := EncodeArgOp(BeginBlockID, statistics.NoArgID, statistics.NoArgID, statistics.NoArgID)
-				j2 := EncodeArgOp(EndEpochID, statistics.NoArgID, statistics.NoArgID, statistics.NoArgID)
-				r.transitFreq[i][j1] = cfg.EpochLength - 1
+				j2 := EncodeArgOp(EndSyncPeriodID, statistics.NoArgID, statistics.NoArgID, statistics.NoArgID)
+				r.transitFreq[i][j1] = cfg.SyncPeriodLength - 1
 				r.transitFreq[i][j2] = 1
-			case EndEpochID:
-				j := EncodeArgOp(BeginEpochID, statistics.NoArgID, statistics.NoArgID, statistics.NoArgID)
+			case EndSyncPeriodID:
+				j := EncodeArgOp(BeginSyncPeriodID, statistics.NoArgID, statistics.NoArgID, statistics.NoArgID)
 				r.transitFreq[i][j] = 1
 			default:
 				for j := 0; j < numArgOps; j++ {
 					if IsValidArgOp(j) {
 						opJ, _, _, _ := DecodeArgOp(j)
-						if opJ != BeginEpochID &&
+						if opJ != BeginSyncPeriodID &&
 							opJ != BeginBlockID &&
 							opJ != BeginTransactionID &&
 							opJ != FinaliseID &&
 							opJ != EndTransactionID &&
 							opJ != EndBlockID &&
-							opJ != EndEpochID {
+							opJ != EndSyncPeriodID {
 							r.transitFreq[i][j] = cfg.OperationFrequency
 						} else if opJ == FinaliseID {
 							r.transitFreq[i][j] = 1

@@ -11,12 +11,12 @@ import (
 const (
 	AddBalanceID = iota
 	BeginBlockID
-	BeginEpochID
+	BeginSyncPeriodID
 	BeginTransactionID
 	CreateAccountID
 	EmptyID
 	EndBlockID
-	EndEpochID
+	EndSyncPeriodID
 	EndTransactionID
 	ExistID
 	FinaliseID
@@ -46,12 +46,12 @@ const numArgOps = NumOps * statistics.NumClasses * statistics.NumClasses * stati
 var opText = map[int]string{
 	AddBalanceID:        "AddBalance",
 	BeginBlockID:        "BeginBlock",
-	BeginEpochID:        "BeginEpoch",
+	BeginSyncPeriodID:   "BeginSyncPeriod",
 	BeginTransactionID:  "BeginTransaction",
 	CreateAccountID:     "CreateAccount",
 	EmptyID:             "Empty",
 	EndBlockID:          "EndBlock",
-	EndEpochID:          "EndEpoch",
+	EndSyncPeriodID:     "EndSyncPeriod",
 	EndTransactionID:    "EndTransaction",
 	ExistID:             "Exist",
 	FinaliseID:          "Finalise",
@@ -76,12 +76,12 @@ var opText = map[int]string{
 var opMnemo = map[int]string{
 	AddBalanceID:        "AB",
 	BeginBlockID:        "BB",
-	BeginEpochID:        "BE",
+	BeginSyncPeriodID:   "BE",
 	BeginTransactionID:  "BT",
 	CreateAccountID:     "CA",
 	EmptyID:             "EM",
 	EndBlockID:          "EB",
-	EndEpochID:          "EE",
+	EndSyncPeriodID:     "EE",
 	EndTransactionID:    "ET",
 	ExistID:             "EX",
 	FinaliseID:          "FI",
@@ -106,12 +106,12 @@ var opMnemo = map[int]string{
 var opNumArgs = map[int]int{
 	AddBalanceID:        1,
 	BeginBlockID:        0,
-	BeginEpochID:        0,
+	BeginSyncPeriodID:   0,
 	BeginTransactionID:  0,
 	CreateAccountID:     1,
 	EmptyID:             1,
 	EndBlockID:          0,
-	EndEpochID:          0,
+	EndSyncPeriodID:     0,
 	EndTransactionID:    0,
 	ExistID:             1,
 	FinaliseID:          0,
@@ -136,12 +136,12 @@ var opNumArgs = map[int]int{
 var opId = map[string]int{
 	"AB": AddBalanceID,
 	"BB": BeginBlockID,
-	"BE": BeginEpochID,
+	"BE": BeginSyncPeriodID,
 	"BT": BeginTransactionID,
 	"CA": CreateAccountID,
 	"EM": EmptyID,
 	"EB": EndBlockID,
-	"EE": EndEpochID,
+	"EE": EndSyncPeriodID,
 	"ET": EndTransactionID,
 	"EX": ExistID,
 	"FI": FinaliseID,

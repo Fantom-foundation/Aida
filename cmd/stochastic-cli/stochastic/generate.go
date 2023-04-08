@@ -16,7 +16,7 @@ var StochasticGenerateCommand = cli.Command{
 	ArgsUsage: "",
 	Flags: []cli.Flag{
 		&utils.BlockLengthFlag,
-		&utils.EpochLengthFlag,
+		&utils.SyncPeriodLengthFlag,
 		&utils.OperationFrequency,
 		&utils.ContractNumberFlag,
 		&utils.KeysNumberFlag,

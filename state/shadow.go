@@ -137,12 +137,12 @@ func (s *shadowStateDB) EndBlock() {
 	s.run("EndBlock", func(s StateDB) { s.EndBlock() })
 }
 
-func (s *shadowStateDB) BeginEpoch(number uint64) {
-	s.run("BeginEpoch", func(s StateDB) { s.BeginEpoch(number) })
+func (s *shadowStateDB) BeginSyncPeriod(number uint64) {
+	s.run("BeginSyncPeriod", func(s StateDB) { s.BeginSyncPeriod(number) })
 }
 
-func (s *shadowStateDB) EndEpoch() {
-	s.run("EndEpoch", func(s StateDB) { s.EndEpoch() })
+func (s *shadowStateDB) EndSyncPeriod() {
+	s.run("EndSyncPeriod", func(s StateDB) { s.EndSyncPeriod() })
 }
 
 func (s *shadowStateDB) Close() error {

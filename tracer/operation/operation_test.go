@@ -145,12 +145,12 @@ func (s *MockStateDB) EndBlock() {
 	s.recording = append(s.recording, Record{EndBlockID, []any{}})
 }
 
-func (s *MockStateDB) BeginEpoch(id uint64) {
-	s.recording = append(s.recording, Record{BeginEpochID, []any{id}})
+func (s *MockStateDB) BeginSyncPeriod(id uint64) {
+	s.recording = append(s.recording, Record{BeginSyncPeriodID, []any{id}})
 }
 
-func (s *MockStateDB) EndEpoch() {
-	s.recording = append(s.recording, Record{EndEpochID, []any{}})
+func (s *MockStateDB) EndSyncPeriod() {
+	s.recording = append(s.recording, Record{EndSyncPeriodID, []any{}})
 }
 
 func (s *MockStateDB) StartBulkLoad() state.BulkLoad {
