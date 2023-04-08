@@ -6,9 +6,9 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
-func initEndSyncPeriod(t *testing.T) (*context.Context, *EndSyncPeriod) {
+func initEndSyncPeriod(t *testing.T) (*context.Replay, *EndSyncPeriod) {
 	// create context context
-	dict := context.NewContext()
+	ctx := context.NewReplay()
 
 	// create new operation
 	op := NewEndSyncPeriod()
@@ -20,7 +20,7 @@ func initEndSyncPeriod(t *testing.T) (*context.Context, *EndSyncPeriod) {
 		t.Fatalf("wrong ID returned")
 	}
 
-	return dict, op
+	return ctx, op
 }
 
 // TestEndSyncPeriodReadWrite writes a new EndSyncPeriod object into a buffer, reads from it,
@@ -32,17 +32,17 @@ func TestEndSyncPeriodReadWrite(t *testing.T) {
 
 // TestEndSyncPeriodDebug creates a new EndSyncPeriod object and checks its Debug message.
 func TestEndSyncPeriodDebug(t *testing.T) {
-	dict, op := initEndSyncPeriod(t)
-	testOperationDebug(t, dict, op, "")
+	ctx, op := initEndSyncPeriod(t)
+	testOperationDebug(t, ctx, op, "")
 }
 
 // TestEndSyncPeriodExecute
 func TestEndSyncPeriodExecute(t *testing.T) {
-	dict, op := initEndSyncPeriod(t)
+	ctx, op := initEndSyncPeriod(t)
 
 	// check execution
 	mock := NewMockStateDB()
-	op.Execute(mock, dict)
+	op.Execute(mock, ctx)
 
 	// check whether methods were correctly called
 	expected := []Record{{EndSyncPeriodID, []any{}}}
