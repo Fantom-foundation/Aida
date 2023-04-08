@@ -22,7 +22,7 @@ var TraceRecordCommand = cli.Command{
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		&utils.CpuProfileFlag,
-		&utils.EpochLengthFlag,
+		&utils.SyncPeriodLengthFlag,
 		&utils.DisableProgressFlag,
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
@@ -78,9 +78,9 @@ func traceRecordAction(ctx *cli.Context) error {
 		sec = time.Since(start).Seconds()
 		lastSec = time.Since(start).Seconds()
 	}
-	curEpoch := cfg.First / cfg.EpochLength
+	curSyncPeriod := cfg.First / cfg.SyncPeriodLength
 	rCtx.Debug = cfg.Debug && (cfg.First >= cfg.DebugFrom)
-	operation.WriteOp(rCtx, operation.NewBeginEpoch(curEpoch))
+	operation.WriteOp(rCtx, operation.NewBeginSyncPeriod(curSyncPeriod))
 	for iter.Next() {
 		tx := iter.Value()
 		if !rCtx.Debug {
@@ -94,11 +94,11 @@ func traceRecordAction(ctx *cli.Context) error {
 			if curBlock != math.MaxUint64 {
 				operation.WriteOp(rCtx, operation.NewEndBlock())
 				// Record epoch changes.
-				newEpoch := tx.Block / cfg.EpochLength
-				for curEpoch < newEpoch {
-					operation.WriteOp(rCtx, operation.NewEndEpoch())
-					curEpoch++
-					operation.WriteOp(rCtx, operation.NewBeginEpoch(curEpoch))
+				newSyncPeriod := tx.Block / cfg.SyncPeriodLength
+				for curSyncPeriod < newSyncPeriod {
+					operation.WriteOp(rCtx, operation.NewEndSyncPeriod())
+					curSyncPeriod++
+					operation.WriteOp(rCtx, operation.NewBeginSyncPeriod(curSyncPeriod))
 				}
 			}
 			curBlock = tx.Block
@@ -128,7 +128,7 @@ func traceRecordAction(ctx *cli.Context) error {
 	if curBlock != math.MaxUint64 {
 		operation.WriteOp(rCtx, operation.NewEndBlock())
 	}
-	operation.WriteOp(rCtx, operation.NewEndEpoch())
+	operation.WriteOp(rCtx, operation.NewEndSyncPeriod())
 
 	if cfg.EnableProgress {
 		sec = time.Since(start).Seconds()

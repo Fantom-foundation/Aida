@@ -168,12 +168,12 @@ func (s *gethStateDB) EndBlock() {
 	}
 }
 
-func (s *gethStateDB) BeginEpoch(number uint64) {
+func (s *gethStateDB) BeginSyncPeriod(number uint64) {
 	// ignored
 }
 
-func (s *gethStateDB) EndEpoch() {
-	// if not archival node, flush trie to disk after each epoch
+func (s *gethStateDB) EndSyncPeriod() {
+	// if not archival node, flush trie to disk after each sync-period
 	if s.evmState != nil && !s.isArchiveMode {
 		s.trieCleanCommit()
 		s.trieCap()
@@ -330,7 +330,7 @@ func (l *gethBulkLoad) SetCode(addr common.Address, code []byte) {
 
 func (l *gethBulkLoad) Close() error {
 	l.db.EndBlock()
-	l.db.EndEpoch()
+	l.db.EndSyncPeriod()
 	_, err := l.db.Commit(false)
 	return err
 }

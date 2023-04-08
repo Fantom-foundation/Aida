@@ -91,9 +91,9 @@ var (
 		Name:  "memprofile",
 		Usage: "enables memory allocation profiling",
 	}
-	EpochLengthFlag = cli.IntFlag{
-		Name:  "epochlength",
-		Usage: "defines the number of blocks per epoch",
+	SyncPeriodLengthFlag = cli.IntFlag{
+		Name:  "sync-period",
+		Usage: "defines the number of blocks per sync-period",
 		Value: 300, // ~ 300s = 5 minutes
 	}
 	MemoryBreakdownFlag = cli.BoolFlag{
@@ -284,7 +284,7 @@ type Config struct {
 	DebugFrom           uint64         // the first block to print trace debug
 	DeletedAccountDir   string         // directory of deleted account database
 	EnableProgress      bool           // enable progress report flag
-	EpochLength         uint64         // length of an epoch in number of blocks
+	SyncPeriodLength    uint64         // length of an sync-period in number of blocks
 	HasDeletedAccounts  bool           // true if deletedAccountDir is not empty; otherwise false
 	KeepStateDB         bool           // set to true if stateDB is kept after run
 	KeysNumber          int64          // number of keys to generate
@@ -397,7 +397,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		Debug:               ctx.Bool(TraceDebugFlag.Name),
 		DebugFrom:           ctx.Uint64(DebugFromFlag.Name),
 		EnableProgress:      !ctx.Bool(DisableProgressFlag.Name),
-		EpochLength:         ctx.Uint64(EpochLengthFlag.Name),
+		SyncPeriodLength:    ctx.Uint64(SyncPeriodLengthFlag.Name),
 		First:               first,
 		DbImpl:              ctx.String(StateDbImplementationFlag.Name),
 		DbVariant:           ctx.String(StateDbVariantFlag.Name),
@@ -438,8 +438,8 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		cfg.ChainID = ChainIDFlag.Value
 	}
 	setFirstBlockFromChainID(cfg.ChainID)
-	if cfg.EpochLength <= 0 {
-		cfg.EpochLength = 300
+	if cfg.SyncPeriodLength <= 0 {
+		cfg.SyncPeriodLength = 300
 	}
 
 	if _, err := os.Stat(cfg.DBDir); !os.IsNotExist(err) {
@@ -456,7 +456,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 			log.Printf("\tTransaction limit: %d\n", cfg.MaxNumTransactions)
 		}
 		log.Printf("\tChain id: %v (record & run-vm only)\n", cfg.ChainID)
-		log.Printf("\tEpoch length: %v\n", cfg.EpochLength)
+		log.Printf("\tSyncPeriod length: %v\n", cfg.SyncPeriodLength)
 
 		logDbMode := func(prefix, impl, variant string) {
 			if cfg.DbImpl == "carmen" {

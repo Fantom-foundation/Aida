@@ -131,27 +131,27 @@ func RunVM(ctx *cli.Context) error {
 
 	log.Printf("Run VM\n")
 	var curBlock uint64 = 0
-	var curEpoch uint64
+	var curSyncPeriod uint64
 	isFirstBlock := true
 	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
 
 	defer iter.Release()
 	for iter.Next() {
 		tx := iter.Value()
-		// initiate first epoch and block.
+		// initiate first sync-period and block.
 		if isFirstBlock {
 			if tx.Block > cfg.Last {
 				break
 			}
-			curEpoch = tx.Block / cfg.EpochLength
+			curSyncPeriod = tx.Block / cfg.SyncPeriodLength
 			curBlock = tx.Block
-			db.BeginEpoch(curEpoch)
+			db.BeginSyncPeriod(curSyncPeriod)
 			db.BeginBlock(curBlock)
 			lastBlockProgressReportBlock = tx.Block
 			lastBlockProgressReportBlock -= lastBlockProgressReportBlock % progressReportBlockInterval
 			lastBlockProgressReportTime = time.Now()
 			isFirstBlock = false
-			// close off old block and possibly epochs
+			// close off old block and possibly sync-periods
 		} else if curBlock != tx.Block {
 			if tx.Block > cfg.Last {
 				break
@@ -160,12 +160,12 @@ func RunVM(ctx *cli.Context) error {
 			// Mark the end of the old block.
 			db.EndBlock()
 
-			// Move on epochs if needed.
-			newEpoch := tx.Block / cfg.EpochLength
-			for curEpoch < newEpoch {
-				db.EndEpoch()
-				curEpoch++
-				db.BeginEpoch(curEpoch)
+			// Move on sync-periods if needed.
+			newSyncPeriod := tx.Block / cfg.SyncPeriodLength
+			for curSyncPeriod < newSyncPeriod {
+				db.EndSyncPeriod()
+				curSyncPeriod++
+				db.BeginSyncPeriod(curSyncPeriod)
 			}
 			// Mark the beginning of a new block
 			curBlock = tx.Block
@@ -228,7 +228,7 @@ func RunVM(ctx *cli.Context) error {
 
 	if !isFirstBlock && err == nil {
 		db.EndBlock()
-		db.EndEpoch()
+		db.EndSyncPeriod()
 	}
 
 	runTime := time.Since(start).Seconds()

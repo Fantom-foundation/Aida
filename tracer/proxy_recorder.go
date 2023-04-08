@@ -329,12 +329,12 @@ func (r *ProxyRecorder) EndBlock() {
 	r.db.EndBlock()
 }
 
-func (r *ProxyRecorder) BeginEpoch(number uint64) {
-	r.db.BeginEpoch(number)
+func (r *ProxyRecorder) BeginSyncPeriod(number uint64) {
+	r.db.BeginSyncPeriod(number)
 }
 
-func (r *ProxyRecorder) EndEpoch() {
-	r.db.EndEpoch()
+func (r *ProxyRecorder) EndSyncPeriod() {
+	r.db.EndSyncPeriod()
 }
 
 func (r *ProxyRecorder) GetArchiveState(block uint64) (state.StateDB, error) {

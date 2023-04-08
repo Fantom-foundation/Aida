@@ -230,8 +230,8 @@ func TestShadowState_StateOperations(t *testing.T) {
 	}
 }
 
-// TestShadowState_TrxBlockEpochOperations tests creation of randomized epochs with blocks and transactions
-func TestShadowState_TrxBlockEpochOperations(t *testing.T) {
+// TestShadowState_TrxBlockSyncPeriodOperations tests creation of randomized sync-periods with blocks and transactions
+func TestShadowState_TrxBlockSyncPeriodOperations(t *testing.T) {
 	for _, ctc := range getCarmenStateTestCases() {
 		testCaseTitle := fmt.Sprintf("carmenDB variant: %s, archive type: %s", ctc.variant, ctc.archive)
 
@@ -249,7 +249,7 @@ func TestShadowState_TrxBlockEpochOperations(t *testing.T) {
 			blockNumber := 1
 			trxNumber := 1
 			for i := 0; i < 10; i++ {
-				shadowDB.BeginEpoch(uint64(i))
+				shadowDB.BeginSyncPeriod(uint64(i))
 
 				for j := 0; j < 100; j++ {
 					shadowDB.BeginBlock(uint64(blockNumber))
@@ -264,7 +264,7 @@ func TestShadowState_TrxBlockEpochOperations(t *testing.T) {
 					shadowDB.EndBlock()
 				}
 
-				shadowDB.EndEpoch()
+				shadowDB.EndSyncPeriod()
 			}
 		})
 	}

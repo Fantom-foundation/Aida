@@ -35,7 +35,7 @@ type stochasticState struct {
 	totalTx        uint64                    // total number of transactions
 	txNum          uint32                    // current transaction number
 	blockNum       uint64                    // current block number
-	epochNum       uint64                    // current epoch number
+	syncPeriodNum  uint64                    // current sync-period number
 	snapshot       []int                     // stack of active snapshots
 	suicided       []int64                   // list of suicided accounts
 	traceDebug     bool                      // trace-debug flag
@@ -99,10 +99,10 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, 
 	// create accounts in StateDB
 	ss.prime()
 
-	// set initial state to BeginEpoch
+	// set initial state to BeginSyncPeriod
 	state := find(operations, "BE")
 	if state == -1 {
-		return fmt.Errorf("BeginEpoch cannot be observed in stochastic matrix/recording failed.")
+		return fmt.Errorf("BeginSyncPeriod cannot be observed in stochastic matrix/recording failed.")
 	}
 
 	// progress message setup
@@ -186,7 +186,7 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, 
 	}
 
 	// print statistics
-	log.Printf("Epochs: %v", ss.epochNum)
+	log.Printf("SyncPeriods: %v", ss.syncPeriodNum)
 	log.Printf("Blocks: %v", ss.blockNum)
 	log.Printf("Transactions: %v", ss.totalTx)
 	log.Printf("Operations: %v", numOps)
@@ -210,7 +210,7 @@ func NewStochasticState(rg *rand.Rand, db state.StateDB, contracts *generator.In
 		traceDebug:     false,
 		suicided:       []int64{},
 		blockNum:       1,
-		epochNum:       1,
+		syncPeriodNum:  1,
 		rg:             rg,
 	}
 }
@@ -222,7 +222,7 @@ func (ss *stochasticState) prime() {
 	log.Printf("\tinitializing %v accounts\n", numInitialAccounts)
 	pt := utils.NewProgressTracker(int(numInitialAccounts))
 	db := ss.db
-	db.BeginEpoch(0)
+	db.BeginSyncPeriod(0)
 	db.BeginBlock(0)
 	db.BeginTransaction(0)
 
@@ -237,7 +237,7 @@ func (ss *stochasticState) prime() {
 	db.Finalise(FinaliseFlag)
 	db.EndTransaction()
 	db.EndBlock()
-	db.EndEpoch()
+	db.EndSyncPeriod()
 	log.Printf("End priming...\n")
 }
 
@@ -305,11 +305,11 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		ss.txNum = 0
 		ss.suicided = []int64{}
 
-	case BeginEpochID:
+	case BeginSyncPeriodID:
 		if ss.traceDebug {
-			fmt.Printf(" id: %v", ss.epochNum)
+			fmt.Printf(" id: %v", ss.syncPeriodNum)
 		}
-		db.BeginEpoch(ss.epochNum)
+		db.BeginSyncPeriod(ss.syncPeriodNum)
 
 	case BeginTransactionID:
 		if ss.traceDebug {
@@ -329,9 +329,9 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		db.EndBlock()
 		ss.blockNum++
 
-	case EndEpochID:
-		db.EndEpoch()
-		ss.epochNum++
+	case EndSyncPeriodID:
+		db.EndSyncPeriod()
+		ss.syncPeriodNum++
 
 	case EndTransactionID:
 		db.EndTransaction()

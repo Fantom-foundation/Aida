@@ -95,10 +95,10 @@ func traceReplaySubstateTask(cfg *utils.Config) error {
 	for stateIter.Next() {
 		tx := stateIter.Value()
 		debug = cfg.Debug && tx.Block >= cfg.DebugFrom
-		// The first Epoch begin and the final EpochEnd need to be artificially
-		// added since the range running on may not match epoch boundaries.
+		// The first SyncPeriod begin and the final SyncPeriodEnd need to be artificially
+		// added since the range running on may not match sync-period boundaries.
 		if isFirstBlock {
-			run(operation.NewBeginEpoch(cfg.First / cfg.EpochLength))
+			run(operation.NewBeginSyncPeriod(cfg.First / cfg.SyncPeriodLength))
 			isFirstBlock = false
 		}
 
@@ -141,14 +141,14 @@ func traceReplaySubstateTask(cfg *utils.Config) error {
 		}
 	}
 
-	// replay the last EndBlock() and EndEpoch()
+	// replay the last EndBlock() and EndSyncPeriod()
 	hasNext := traceIter.Next()
 	op := traceIter.Value()
 	if !hasNext || op.GetId() != operation.EndBlockID {
 		return fmt.Errorf("Last operation isn't an EndBlock")
 	} else {
 		run(op) // EndBlock
-		run(operation.NewEndEpoch())
+		run(operation.NewEndSyncPeriod())
 	}
 	sec = time.Since(start).Seconds()
 
