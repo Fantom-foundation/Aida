@@ -40,8 +40,6 @@ type snapshotPair struct {
 	prime, shadow int
 }
 
-func (s *shadowStateDB) SetTxBlock(uint64) {}
-
 func (s *shadowStateDB) DB() erigonethdb.Database { return nil }
 
 func (s *shadowStateDB) CommitBlock(stateWriter estate.StateWriter) error { return nil }

@@ -15,10 +15,7 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 
-	//"github.com/Fantom-foundation/go-opera-fvm/erigon"
-
 	"github.com/ledgerwatch/erigon-lib/kv"
-	//estate "github.com/ledgerwatch/erigon/core/state"
 	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 )
 
@@ -64,21 +61,22 @@ func RunVM(ctx *cli.Context) error {
 		return err
 	}
 
-	defer db.Close()
-
 	// this functionality is required to fix panic upon committing an erigon batch
-	sigs := make(chan os.Signal, 1)
-	quit := make(chan struct{}, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-
-	sigsFunc := func() {
-		<-sigs
-		quit <- struct{}{}
-	}
+	var (
+		sigs chan os.Signal
+		quit chan struct{}
+	)
 
 	if cfg.DbImpl == "erigon" {
-		go sigsFunc()
+		sigs = make(chan os.Signal, 1)
+		quit = make(chan struct{}, 1)
+		signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+		go func() {
+			<-sigs
+			quit <- struct{}{}
+		}()
 		cfg.QuitCh = quit
+		defer db.Close()
 	}
 
 	if !cfg.KeepStateDB {
@@ -112,19 +110,7 @@ func RunVM(ctx *cli.Context) error {
 		start = time.Now()
 		// remove destroyed accounts until one block before the first block
 
-		/*
-			db.BeginEpoch(0)
-			db.BeginBlock(target) // block 0 is the priming, block (first-1) the deletion
-			db.BeginTransaction(0)
-			for _, cur := range list {
-				db.Suicide(cur)
-			}
-			db.Finalise(true)
-			db.EndTransaction()
-			db.EndBlock()
-			db.EndEpoch()
-		*/
-		db.BeginBlockApply() // unset batchMode
+		db.BeginBlockApply() // unset batchMode for DeleteDestroyedAccountsFromStateDB
 		err = utils.DeleteDestroyedAccountsFromStateDB(db, cfg, cfg.First-1)
 		sec = time.Since(start).Seconds()
 		log.Printf("\tElapsed time: %.2f s\n", sec)
@@ -159,7 +145,6 @@ func RunVM(ctx *cli.Context) error {
 			return fmt.Errorf("Failed to remove deleted accoount from the world state. %v", err)
 		}
 
-		// a lot of db.GetState
 		if err := utils.ValidateStateDB(ws, db, false); err != nil {
 			return fmt.Errorf("Pre: World state is not contained in the stateDB. %v", err)
 		}
@@ -179,72 +164,32 @@ func RunVM(ctx *cli.Context) error {
 	isFirstBlock := true
 
 	var (
-		batch erigonethdb.DbWithPendingMutations
 		rwTx  kv.RwTx
+		batch erigonethdb.DbWithPendingMutations
 	)
 
-	rwTx, err = db.DB().RwKV().BeginRw(context.Background())
-	if err != nil {
-		return err
-	}
-
-	defer rwTx.Rollback()
-
-	// start erigon block execution
-	/*
-		startErigonBatch := func(statedb state.StateDB, rwTx kv.RwTx, quit chan struct{}) (erigonethdb.DbWithPendingMutations, error) {
-			const lruDefaultSize = 1_000_000 // 56 MB
-
-			batchDirectory := filepath.Join(stateDirectory, "erigon", "batch")
-			whitelistedTables := []string{kv.Code, kv.ContractCode}
-
-			contractCodeCache, err := lru.New(lruDefaultSize)
-			if err != nil {
-				return nil, err
-			}
-
-			// Contract code is unlikely to change too much, so let's keep it cached
-			batch := olddb.NewHashBatch(rwTx, quit, batchDirectory, whitelistedTables, contractCodeCache)
-			statedb.BeginBlockApplyBatch(batch, false, rwTx)
-
-			return batch, nil
-		}
-	*/
-
 	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
-
 	defer iter.Release()
+
 	for iter.Next() {
 		tx := iter.Value()
-		//log.Println("iter.Next()", "tx.Block", tx.Block)
-		// initiate first epoch and block.
-
-		// initiate stateReader and stateWriter
-		// wrap it into standalone function
-		var (
-		//stateReader estate.StateReader
-		//stateWriter estate.WriterWithChangeSets
-		)
-		/*
-			if cfg.DbImpl == "erigon" {
-				//stateReader = estate.NewPlainStateReader(batch)
-				stateWriter = estate.NewPlainStateWriterNoHistory(batch)
-			}
-		*/
-
 		if isFirstBlock {
 			if tx.Block > cfg.Last {
 				break
 			}
 
 			if cfg.DbImpl == "erigon" {
-				batch = db.NewBatch(rwTx, quit)
+				// start erigon tx
+				rwTx, err = db.DB().RwKV().BeginRw(context.Background())
+				if err != nil {
+					return err
+				}
+
+				defer rwTx.Rollback()
+				// start erigon batch execution
+				batch = utils.StartBatchExecution(rwTx, db, cfg.QuitCh)
 				defer batch.Rollback()
-				db.BeginBlockApplyBatch(batch, false, rwTx)
-
 			}
-
-			//log.Println("iter.Next()", "if isFirstBlock")
 
 			curEpoch = tx.Block / cfg.EpochLength
 			curBlock = tx.Block
@@ -255,43 +200,12 @@ func RunVM(ctx *cli.Context) error {
 			lastBlockProgressReportTime = time.Now()
 			isFirstBlock = false
 			// close off old block and possibly epochs
-		} else if curBlock != tx.Block { //curBlock 4564026, txc.Block 4564026 +1
+		} else if curBlock != tx.Block {
 			if tx.Block > cfg.Last {
 				break
 			}
-			//log.Println("iter.Next()", "else if curBlock != tx.Block")
 
-			//curBlock = from, tx.Block = to
-
-			// Mark the end of the old block.
-
-			if cfg.DbImpl == "erigon" {
-				/*
-					//from, to := curBlock, tx.Block
-					log.Println("if curBlock != tx.Block, CommitBlock")
-					if err := db.CommitBlock(stateWriter); err != nil {
-						return fmt.Errorf("writing changesets for block %d failed: %w", tx.Block, err)
-					}
-
-					log.Println("if curBlock != tx.Block, WriteChangeSets")
-					if err := stateWriter.WriteChangeSets(); err != nil {
-						return fmt.Errorf("writing changesets for block %d failed: %w", tx.Block, err)
-					}
-				*/
-
-				/*
-					if err := erigon.PromoteHashedStateIncrementally("hashedstate", from, to, filepath.Join(stateDirectory, "erigon", "hashedstate"), rwTx, nil); err != nil {
-						return err
-					}
-
-					if _, err := erigon.IncrementIntermediateHashes("IH", rwTx, from, to, filepath.Join(stateDirectory, "erigon", "IH"), false, nil); err != nil {
-						return err
-					}
-				*/
-
-			} else {
-				log.Println("db.SetTxBlock(tx.Block)")
-				db.SetTxBlock(tx.Block) // TODO later remove it
+			if cfg.DbImpl != "erigon" {
 				db.EndBlock()
 			}
 
@@ -307,14 +221,9 @@ func RunVM(ctx *cli.Context) error {
 			// Mark the beginning of a new block
 			curBlock = tx.Block
 			db.BeginBlock(curBlock)
-			//db.BeginBlockApply()
-			/*
-				if cfg.DbImpl != "erigon" {
-					db.BeginBlockApplyWithStateReader(stateReader)
-				} else {
-					db.BeginBlockApply()
-				}*/
-			// new erigonAdfapter is nitiated
+			if cfg.DbImpl != "erigon" {
+				db.BeginBlockApply()
+			}
 		}
 		if cfg.MaxNumTransactions >= 0 && txCount >= cfg.MaxNumTransactions {
 			break
@@ -322,7 +231,6 @@ func RunVM(ctx *cli.Context) error {
 		// run VM
 		db.PrepareSubstate(&tx.Substate.InputAlloc, tx.Substate.Env.Number)
 		db.BeginTransaction(uint32(tx.Transaction))
-		//log.Println("utils.ProcessTx")
 
 		err = utils.ProcessTx(db, cfg, tx.Block, tx.Transaction, tx.Substate)
 		if err != nil {
@@ -333,18 +241,14 @@ func RunVM(ctx *cli.Context) error {
 
 		db.EndTransaction()
 		txCount++
-		//log.Println("txCount", txCount, "tx.Block", tx.Block)
 		gasCount = new(big.Int).Add(gasCount, new(big.Int).SetUint64(tx.Substate.Result.GasUsed))
 
 		// call batch.Commit() if batchsize is reached
-		if batch.BatchSize() >= int(cfg.ErigonBatchSize) {
+		if cfg.DbImpl == "erigon" && batch.BatchSize() >= int(cfg.ErigonBatchSize) {
 			log.Printf("run-vm: batch.Commit, batch.BatchSize: %d bytes\n", batch.BatchSize())
 			// commit batch and rwrx
-			if err = batch.Commit(); err != nil {
-				return err
-			}
-
-			if err = rwTx.Commit(); err != nil {
+			err = utils.CommitBatch(batch, rwTx)
+			if err != nil {
 				return err
 			}
 
@@ -355,8 +259,7 @@ func RunVM(ctx *cli.Context) error {
 
 			defer rwTx.Rollback()
 
-			batch = db.NewBatch(rwTx, quit)
-			db.BeginBlockApplyBatch(batch, false, rwTx)
+			batch = utils.StartBatchExecution(rwTx, db, cfg.QuitCh)
 			defer batch.Rollback()
 		}
 
@@ -402,15 +305,10 @@ func RunVM(ctx *cli.Context) error {
 	log.Printf("run-vm: substate iter exit\n")
 	switch {
 	case cfg.DbImpl == "erigon":
-		if err = batch.Commit(); err != nil {
-			return err
-		}
-
-		if err = rwTx.Commit(); err != nil {
+		if err := utils.CommitBatch(batch, rwTx); err != nil {
 			return err
 		}
 	case !isFirstBlock && err == nil:
-		db.SetTxBlock(curBlock)
 		db.EndBlock()
 		db.EndEpoch()
 	}
@@ -455,7 +353,7 @@ func RunVM(ctx *cli.Context) error {
 
 	if cfg.KeepStateDB && !isFirstBlock {
 		log.Println("if cfg.KeepStateDB && !isFirstBlock {")
-		rootHash, _ := db.Commit(true)
+		rootHash, _ := db.Commit(true) //TODO address it
 		if err := utils.WriteStateDbInfo(stateDirectory, cfg, curBlock, rootHash); err != nil {
 			log.Println(err)
 		}

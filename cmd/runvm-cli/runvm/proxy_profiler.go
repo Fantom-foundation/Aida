@@ -39,8 +39,6 @@ func (p *ProxyProfiler) BeginBlockApply() error {
 	return err
 }
 
-func (p *ProxyProfiler) SetTxBlock(uint64) {}
-
 func (p *ProxyProfiler) DB() erigonethdb.Database { return nil }
 
 func (p *ProxyProfiler) CommitBlock(stateWriter estate.StateWriter) error { return nil }

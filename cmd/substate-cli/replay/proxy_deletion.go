@@ -34,8 +34,6 @@ func NewProxyDeletion(db state.StateDB, ch chan ContractLiveness) *ProxyDeletion
 	return r
 }
 
-func (r *ProxyDeletion) SetTxBlock(uint64) {}
-
 func (r *ProxyDeletion) DB() erigonethdb.Database { return nil }
 
 func (r *ProxyDeletion) CommitBlock(stateWriter estate.StateWriter) error { return nil }

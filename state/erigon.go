@@ -96,10 +96,6 @@ func (s *erigonStateDB) BeginBlock(number uint64) {
 	s.from = number
 }
 
-func (s *erigonStateDB) SetTxBlock(number uint64) {
-	s.to = number
-}
-
 func (s *erigonStateDB) GetArchiveState(block uint64) (StateDB, error) {
 	return nil, fmt.Errorf("archive states are not (yet) supported by this DB implementation")
 }

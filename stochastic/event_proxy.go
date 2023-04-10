@@ -31,8 +31,6 @@ func NewEventProxy(db state.StateDB, registry *EventRegistry) *EventProxy {
 	}
 }
 
-func (p *EventProxy) SetTxBlock(uint64) {}
-
 func (p *EventProxy) DB() erigonethdb.Database { return nil }
 
 func (p *EventProxy) CommitBlock(stateWriter estate.StateWriter) error { return nil }

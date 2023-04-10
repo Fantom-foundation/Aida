@@ -131,7 +131,6 @@ type StateDB interface {
 	// Used to initiate the state DB for the next transaction.
 	// This is mainly for development purposes to support in-memory DB implementations.
 	PrepareSubstate(*substate.SubstateAlloc, uint64)
-	SetTxBlock(uint64)
 	DB() erigonethdb.Database
 }
 

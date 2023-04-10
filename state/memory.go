@@ -487,8 +487,6 @@ func (db *inMemoryStateDB) PrepareSubstate(alloc *substate.SubstateAlloc, block 
 	db.blockNum = block
 }
 
-func (db *inMemoryStateDB) SetTxBlock(uint64) {}
-
 func (db *inMemoryStateDB) DB() erigonethdb.Database { return nil }
 
 func (db *inMemoryStateDB) CommitBlock(stateWriter estate.StateWriter) error { return nil }

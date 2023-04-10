@@ -29,8 +29,6 @@ func (s *loggingStateDB) BeginBlockApply() error {
 	return s.db.BeginBlockApply()
 }
 
-func (s *loggingStateDB) SetTxBlock(uint64) {}
-
 func (s *loggingStateDB) DB() erigonethdb.Database { return nil }
 
 func (s *loggingStateDB) CommitBlock(stateWriter estate.StateWriter) error { return nil }

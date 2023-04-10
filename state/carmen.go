@@ -84,8 +84,6 @@ func (s *carmenStateDB) BeginBlockApply() error {
 	return nil
 }
 
-func (s *carmenStateDB) SetTxBlock(uint64) {}
-
 func (s *carmenStateDB) DB() erigonethdb.Database { return nil }
 
 func (s *carmenStateDB) CommitBlock(stateWriter estate.StateWriter) error { return nil }

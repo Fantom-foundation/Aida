@@ -39,8 +39,6 @@ func (s *MockStateDB) GetRecording() []Record {
 	return s.recording
 }
 
-func (s *MockStateDB) SetTxBlock(uint64) {}
-
 func (s *MockStateDB) DB() erigonethdb.Database { return nil }
 
 func (s *MockStateDB) CommitBlock(stateWriter estate.StateWriter) error { return nil }

@@ -116,14 +116,33 @@ func (pt *ProgressTracker) PrintProgress() {
 	}
 }
 
+func StartBatchExecution(rwTx kv.RwTx, db state.StateDB, quit chan struct{}) erigonethdb.DbWithPendingMutations {
+	batch := db.NewBatch(rwTx, quit)
+	db.BeginBlockApplyBatch(batch, false, rwTx)
+	return batch
+}
+
+func CommitBatch(batch erigonethdb.DbWithPendingMutations, rwTx kv.RwTx) (err error) {
+	err = batch.Commit()
+	if err != nil {
+		return
+	}
+
+	err = rwTx.Commit()
+	if err != nil {
+		return
+	}
+	return
+}
+
 // PrimeStateDB primes database with accounts from the world state.
 func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config) {
 
 	var (
-		rwTx        kv.RwTx
-		batch       erigonethdb.DbWithPendingMutations
-		err         error
-		commitBatch func(erigonethdb.DbWithPendingMutations, kv.RwTx, state.StateDB) (erigonethdb.DbWithPendingMutations, error)
+		rwTx  kv.RwTx
+		batch erigonethdb.DbWithPendingMutations
+		err   error
+		load  state.BulkLoad
 	)
 	if cfg.DbImpl == "erigon" {
 		rwTx, err = db.DB().RwKV().BeginRw(context.Background())
@@ -131,31 +150,10 @@ func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config) {
 			panic(err)
 		}
 		defer rwTx.Rollback()
-		batch = db.NewBatch(rwTx, cfg.QuitCh)
-		db.BeginBlockApplyBatch(batch, false, rwTx)
+		batch = StartBatchExecution(rwTx, db, cfg.QuitCh)
 		defer batch.Rollback()
-		commitBatch = func(batch erigonethdb.DbWithPendingMutations, rwTx kv.RwTx, db state.StateDB) (erigonethdb.DbWithPendingMutations, error) {
-			if err = batch.Commit(); err != nil {
-				return nil, err
-			}
-
-			if err = rwTx.Commit(); err != nil {
-				return nil, err
-			}
-
-			rwTx, err = db.DB().RwKV().BeginRw(context.Background())
-			if err != nil {
-				return nil, err
-			}
-
-			return db.NewBatch(rwTx, cfg.QuitCh), nil
-		}
 	}
 
-	// start tx
-	// init batch
-	// db.BeginBLockApplyBatch(batch)
-	var load state.BulkLoad
 	load = db.StartBulkLoad()
 
 	numValues := 0
@@ -174,16 +172,22 @@ func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config) {
 		PrimeStateDBRandom(ws, load, cfg, pt)
 	} else {
 		for addr, account := range ws {
-			if batch.BatchSize() >= int(cfg.ErigonBatchSize) && cfg.DbImpl == "erigon" {
-				batch, err = commitBatch(batch, rwTx, db)
+			if cfg.DbImpl == "erigon" && batch.BatchSize() >= int(cfg.ErigonBatchSize) {
+				err = CommitBatch(batch, rwTx)
 				if err != nil {
-					panic(fmt.Sprintf("commitBatch error: %v", err))
+					panic(err)
 				}
+
+				rwTx, err = db.DB().RwKV().BeginRw(context.Background())
+				if err != nil {
+					panic(err)
+				}
+
+				batch = StartBatchExecution(rwTx, db, cfg.QuitCh)
 				defer func() {
 					rwTx.Rollback()
 					batch.Rollback()
 				}()
-				db.BeginBlockApplyBatch(batch, false, rwTx)
 				load = db.StartBulkLoad()
 			}
 			primeOneAccount(addr, account, load, pt)
@@ -195,10 +199,8 @@ func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config) {
 	}
 
 	if cfg.DbImpl == "erigon" {
-		if err := batch.Commit(); err != nil {
-			panic(err)
-		}
-		if err := rwTx.Commit(); err != nil {
+		err = CommitBatch(batch, rwTx)
+		if err != nil {
 			panic(err)
 		}
 	}

@@ -65,8 +65,6 @@ type gethStateDB struct {
 	block         uint64
 }
 
-func (s *gethStateDB) SetTxBlock(uint64) {}
-
 func (s *gethStateDB) DB() erigonethdb.Database { return nil }
 
 func (s *gethStateDB) CommitBlock(stateWriter estate.StateWriter) error { return nil }
