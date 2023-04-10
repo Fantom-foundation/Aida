@@ -5,6 +5,7 @@ go 1.19
 require (
 	github.com/Fantom-foundation/Carmen/go v0.0.0-00010101000000-000000000000
 	github.com/Fantom-foundation/Substate v0.0.0-20230313095132-69cdb7b639cd
+	github.com/Fantom-foundation/Tosca v0.0.0-20230406154859-8e2180f5f5c9
 	github.com/Fantom-foundation/go-opera v1.1.1-rc.2
 	github.com/Fantom-foundation/go-opera-erigon v0.0.0-00010101000000-000000000000
 	github.com/Fantom-foundation/go-opera-flat v0.0.0-00010101000000-000000000000
@@ -15,15 +16,16 @@ require (
 	github.com/fatih/color v1.13.0
 	github.com/go-echarts/go-echarts/v2 v2.2.5
 	github.com/goccy/go-graphviz v0.1.0
-	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d
-	github.com/ledgerwatch/erigon v0.0.0-00010101000000-000000000000
-	github.com/ledgerwatch/erigon-lib v0.0.0-20220620073929-46bebb3317d9
+	github.com/google/martian v2.1.0+incompatible
+	github.com/klauspost/compress v1.15.11
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
 	github.com/paulmach/orb v0.9.0
-	github.com/syndtr/goleveldb v1.0.1-0.20220614013038-64ee5596c38a
+	github.com/sigurn/crc8 v0.0.0-20220107193325-2243fe600f9f
+	github.com/status-im/keycard-go v0.0.0-20190424133014-d95853db0f48
+	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 	github.com/urfave/cli/v2 v2.24.4
-	golang.org/x/text v0.4.0
+	golang.org/x/text v0.8.0
 	gonum.org/v1/gonum v0.6.0
 )
 

@@ -175,19 +175,19 @@ func (s *loggingStateDB) EndBlock() {
 	s.db.EndBlock()
 }
 
-func (s *loggingStateDB) BeginEpoch(number uint64) {
-	log.Printf("BeginEpoch, %v\n", number)
-	s.db.BeginEpoch(number)
+func (s *loggingStateDB) BeginSyncPeriod(number uint64) {
+	log.Printf("BeginSyncPeriod, %v\n", number)
+	s.db.BeginSyncPeriod(number)
 }
 
-func (s *loggingStateDB) EndEpoch() {
-	log.Printf("EndEpoch\n")
-	s.db.EndEpoch()
+func (s *loggingStateDB) EndSyncPeriod() {
+	log.Printf("EndSyncPeriod\n")
+	s.db.EndSyncPeriod()
 }
 
 func (s *loggingStateDB) Close() error {
 	res := s.db.Close()
-	log.Printf("EndEpoch, %v\n", res)
+	log.Printf("EndSyncPeriod, %v\n", res)
 	return res
 }
 

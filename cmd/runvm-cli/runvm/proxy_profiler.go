@@ -326,15 +326,15 @@ func (p *ProxyProfiler) EndBlock() {
 	})
 }
 
-func (p *ProxyProfiler) BeginEpoch(number uint64) {
-	p.do(operation.BeginEpochID, func() {
-		p.db.BeginEpoch(number)
+func (p *ProxyProfiler) BeginSyncPeriod(number uint64) {
+	p.do(operation.BeginSyncPeriodID, func() {
+		p.db.BeginSyncPeriod(number)
 	})
 }
 
-func (p *ProxyProfiler) EndEpoch() {
-	p.do(operation.EndEpochID, func() {
-		p.db.EndEpoch()
+func (p *ProxyProfiler) EndSyncPeriod() {
+	p.do(operation.EndSyncPeriodID, func() {
+		p.db.EndSyncPeriod()
 	})
 }
 

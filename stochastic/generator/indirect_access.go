@@ -51,6 +51,9 @@ func (a *IndirectAccess) NextIndex(class int) int64 {
 
 // DeleteIndex deletes an indirect index.
 func (a *IndirectAccess) DeleteIndex(k int64) error {
+	if k == 0 {
+		return nil
+	}
 
 	// find index in translation table
 	i := a.findIndex(k)

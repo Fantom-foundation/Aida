@@ -160,7 +160,7 @@ func RunVM(ctx *cli.Context) error {
 
 	log.Printf("Run VM\n")
 	var curBlock uint64 = 0
-	var curEpoch uint64
+	var curSyncPeriod uint64
 	isFirstBlock := true
 
 	var (
@@ -173,6 +173,7 @@ func RunVM(ctx *cli.Context) error {
 
 	for iter.Next() {
 		tx := iter.Value()
+		// initiate first sync-period and block.
 		if isFirstBlock {
 			if tx.Block > cfg.Last {
 				break
@@ -193,13 +194,13 @@ func RunVM(ctx *cli.Context) error {
 
 			curEpoch = tx.Block / cfg.EpochLength
 			curBlock = tx.Block
-			db.BeginEpoch(curEpoch)
+			db.BeginSyncPeriod(curSyncPeriod)
 			db.BeginBlock(curBlock)
 			lastBlockProgressReportBlock = tx.Block
 			lastBlockProgressReportBlock -= lastBlockProgressReportBlock % progressReportBlockInterval
 			lastBlockProgressReportTime = time.Now()
 			isFirstBlock = false
-			// close off old block and possibly epochs
+			// close off old block and possibly sync-periods
 		} else if curBlock != tx.Block {
 			if tx.Block > cfg.Last {
 				break
@@ -209,14 +210,14 @@ func RunVM(ctx *cli.Context) error {
 				db.EndBlock()
 			}
 
-			// Move on epochs if needed.
-			newEpoch := tx.Block / cfg.EpochLength
-			for curEpoch < newEpoch {
+			// Move on sync-periods if needed.
+			newSyncPeriod := tx.Block / cfg.SyncPeriodLength
+			for curSyncPeriod < newSyncPeriod {
 				if cfg.DbImpl != "erigon" {
-					db.EndEpoch() //TODO compute state root upon end of every epoch
+					db.EndSyncPeriod() //TODO compute state root upon end of every epoch
 				}
-				curEpoch++
-				db.BeginEpoch(curEpoch)
+				curSyncPeriod++
+				db.BeginSyncPeriod(curSyncPeriod)
 			}
 			// Mark the beginning of a new block
 			curBlock = tx.Block
@@ -310,7 +311,7 @@ func RunVM(ctx *cli.Context) error {
 		}
 	case !isFirstBlock && err == nil:
 		db.EndBlock()
-		db.EndEpoch()
+		db.EndSyncPeriod()
 	}
 
 	runTime := time.Since(start).Seconds()

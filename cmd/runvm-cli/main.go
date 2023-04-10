@@ -29,7 +29,7 @@ var RunVMApp = cli.App{
 		&utils.CpuProfileFlag,
 		&utils.DeletedAccountDirFlag,
 		&utils.DisableProgressFlag,
-		&utils.EpochLengthFlag,
+		&utils.SyncPeriodLengthFlag,
 		&utils.KeepStateDBFlag,
 		&utils.MaxNumTransactionsFlag,
 		&utils.MemoryBreakdownFlag,

@@ -58,7 +58,7 @@ func TestCarmenState_MakeCarmenStateDBInvalid(t *testing.T) {
 	}
 }
 
-// TestCarmenState_CloseCarmenDB test closing db immediately after initialization
+// TestCarmenState_InitCloseCarmenDB test closing db immediately after initialization
 func TestCarmenState_InitCloseCarmenDB(t *testing.T) {
 	for _, tc := range getCarmenStateTestCases() {
 		t.Run(fmt.Sprintf("DB variant: %s, archive type: %v", tc.variant, tc.archive), func(t *testing.T) {
@@ -71,32 +71,6 @@ func TestCarmenState_InitCloseCarmenDB(t *testing.T) {
 			err = csDB.Close()
 			if err != nil {
 				t.Fatalf("failed to close carmen state DB: %v", err)
-			}
-		})
-	}
-}
-
-// TestCarmenState_BeginBlockApply tests block apply start
-func TestCarmenState_BeginBlockApply(t *testing.T) {
-	for _, tc := range getCarmenStateTestCases() {
-		t.Run(fmt.Sprintf("DB variant: %s, archive type: %v", tc.variant, tc.archive), func(t *testing.T) {
-			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.variant, tc.archive, 1)
-
-			if err != nil {
-				t.Fatalf("failed to create carmen state DB: %v", err)
-			}
-
-			// Close DB after test ends
-			defer func(csDB StateDB) {
-				err = csDB.Close()
-				if err != nil {
-					t.Fatalf("failed to close carmen state DB: %v", err)
-				}
-			}(csDB)
-
-			err = csDB.BeginBlockApply()
-			if err != nil {
-				t.Fatalf("failed to begin block apply: %v", err)
 			}
 		})
 	}
@@ -298,8 +272,8 @@ func TestCarmenState_StateOperations(t *testing.T) {
 	}
 }
 
-// TestCarmenState_TrxBlockEpochOperations tests creation of randomized epochs with blocks and transactions
-func TestCarmenState_TrxBlockEpochOperations(t *testing.T) {
+// TestCarmenState_TrxBlockSyncPeriodOperations tests creation of randomized sync-periods with blocks and transactions
+func TestCarmenState_TrxBlockSyncPeriodOperations(t *testing.T) {
 	for _, tc := range getCarmenStateTestCases() {
 		t.Run(fmt.Sprintf("DB variant: %s, archive type: %v", tc.variant, tc.archive), func(t *testing.T) {
 			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.variant, tc.archive, 1)
@@ -319,7 +293,7 @@ func TestCarmenState_TrxBlockEpochOperations(t *testing.T) {
 			blockNumber := 1
 			trxNumber := 1
 			for i := 0; i < 10; i++ {
-				csDB.BeginEpoch(uint64(i))
+				csDB.BeginSyncPeriod(uint64(i))
 
 				for j := 0; j < 100; j++ {
 					csDB.BeginBlock(uint64(blockNumber))
@@ -334,7 +308,7 @@ func TestCarmenState_TrxBlockEpochOperations(t *testing.T) {
 					csDB.EndBlock()
 				}
 
-				csDB.EndEpoch()
+				csDB.EndSyncPeriod()
 			}
 		})
 	}

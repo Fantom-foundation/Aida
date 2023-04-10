@@ -42,7 +42,7 @@ func MakeFlatStateDB(directory, variant string, rootHash common.Hash) (s StateDB
 	}
 
 	// initialize stateDB
-	fs.BeginBlockApply()
+	fs.openStateDB()
 	s = fs
 	return
 }
@@ -81,7 +81,7 @@ func (s *flatStateDB) EndTransaction() {
 }
 
 func (s *flatStateDB) BeginBlock(number uint64) {
-	// ignored
+	s.openStateDB()
 }
 
 func (s *flatStateDB) EndBlock() {
@@ -93,11 +93,11 @@ func (s *flatStateDB) EndBlock() {
 	}
 }
 
-func (s *flatStateDB) BeginEpoch(number uint64) {
+func (s *flatStateDB) BeginSyncPeriod(number uint64) {
 	// ignored
 }
 
-func (s *flatStateDB) EndEpoch() {
+func (s *flatStateDB) EndSyncPeriod() {
 	// ignored
 }
 

@@ -351,22 +351,16 @@ func (r *ProxyRecorder) EndBlock() {
 	r.db.EndBlock()
 }
 
-func (r *ProxyRecorder) BeginEpoch(number uint64) {
-	r.db.BeginEpoch(number)
+func (r *ProxyRecorder) BeginSyncPeriod(number uint64) {
+	r.db.BeginSyncPeriod(number)
 }
 
-func (r *ProxyRecorder) EndEpoch() {
-	r.db.EndEpoch()
+func (r *ProxyRecorder) EndSyncPeriod() {
+	r.db.EndSyncPeriod()
 }
 
 func (r *ProxyRecorder) GetArchiveState(block uint64) (state.StateDB, error) {
 	return r.db.GetArchiveState(block)
-}
-
-// BeginBlockApply creates a new object copying state from
-// the old stateDB or clears execution state of stateDB
-func (r *ProxyRecorder) BeginBlockApply() error {
-	return r.db.BeginBlockApply()
 }
 
 func (r *ProxyRecorder) Close() error {

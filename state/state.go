@@ -64,7 +64,7 @@ type BasicStateDB interface {
 	//  - snapshots .. enclosing (sub-)contract calls, supporting reverts (=rollbacks)
 	//  - transactions .. processing a single block chain event, comprising a hierachy of contract calls
 	//  - blocks .. groups of transactions, at boundaries effects become visible (and final) to API servers
-	//  - epochs .. groups of blocks, at boundaries state becomes syncable between nodes
+	//  - sync-periods .. groups of blocks, at boundaries state becomes syncable between nodes
 
 	Snapshot() int
 	RevertToSnapshot(int)
@@ -75,8 +75,8 @@ type BasicStateDB interface {
 	BeginBlock(uint64)
 	EndBlock()
 
-	BeginEpoch(uint64)
-	EndEpoch()
+	BeginSyncPeriod(uint64)
+	EndSyncPeriod()
 
 	Error() error
 }

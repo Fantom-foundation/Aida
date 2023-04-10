@@ -75,13 +75,9 @@ func MakeCarmenStateDB(directory, variant, archive string, schema int) (StateDB,
 }
 
 type carmenStateDB struct {
-	db          carmen.StateDB
-	epochNumber uint64
-	blockNumber uint64
-}
-
-func (s *carmenStateDB) BeginBlockApply() error {
-	return nil
+	db               carmen.StateDB
+	syncPeriodNumber uint64
+	blockNumber      uint64
 }
 
 func (s *carmenStateDB) DB() erigonethdb.Database { return nil }
@@ -191,13 +187,13 @@ func (s *carmenStateDB) EndBlock() {
 	s.db.EndBlock(s.blockNumber)
 }
 
-func (s *carmenStateDB) BeginEpoch(number uint64) {
+func (s *carmenStateDB) BeginSyncPeriod(number uint64) {
 	s.db.BeginEpoch()
-	s.epochNumber = number
+	s.syncPeriodNumber = number
 }
 
-func (s *carmenStateDB) EndEpoch() {
-	s.db.EndEpoch(s.epochNumber)
+func (s *carmenStateDB) EndSyncPeriod() {
+	s.db.EndEpoch(s.syncPeriodNumber)
 }
 
 func (s *carmenStateDB) Close() error {

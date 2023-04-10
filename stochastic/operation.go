@@ -11,12 +11,12 @@ import (
 const (
 	AddBalanceID = iota
 	BeginBlockID
-	BeginEpochID
+	BeginSyncPeriodID
 	BeginTransactionID
 	CreateAccountID
 	EmptyID
 	EndBlockID
-	EndEpochID
+	EndSyncPeriodID
 	EndTransactionID
 	ExistID
 	FinaliseID
@@ -46,12 +46,12 @@ const numArgOps = NumOps * statistics.NumClasses * statistics.NumClasses * stati
 var opText = map[int]string{
 	AddBalanceID:        "AddBalance",
 	BeginBlockID:        "BeginBlock",
-	BeginEpochID:        "BeginEpoch",
+	BeginSyncPeriodID:   "BeginSyncPeriod",
 	BeginTransactionID:  "BeginTransaction",
 	CreateAccountID:     "CreateAccount",
 	EmptyID:             "Empty",
 	EndBlockID:          "EndBlock",
-	EndEpochID:          "EndEpoch",
+	EndSyncPeriodID:     "EndSyncPeriod",
 	EndTransactionID:    "EndTransaction",
 	ExistID:             "Exist",
 	FinaliseID:          "Finalise",
@@ -76,12 +76,12 @@ var opText = map[int]string{
 var opMnemo = map[int]string{
 	AddBalanceID:        "AB",
 	BeginBlockID:        "BB",
-	BeginEpochID:        "BE",
+	BeginSyncPeriodID:   "BS",
 	BeginTransactionID:  "BT",
 	CreateAccountID:     "CA",
 	EmptyID:             "EM",
 	EndBlockID:          "EB",
-	EndEpochID:          "EE",
+	EndSyncPeriodID:     "ES",
 	EndTransactionID:    "ET",
 	ExistID:             "EX",
 	FinaliseID:          "FI",
@@ -106,12 +106,12 @@ var opMnemo = map[int]string{
 var opNumArgs = map[int]int{
 	AddBalanceID:        1,
 	BeginBlockID:        0,
-	BeginEpochID:        0,
+	BeginSyncPeriodID:   0,
 	BeginTransactionID:  0,
 	CreateAccountID:     1,
 	EmptyID:             1,
 	EndBlockID:          0,
-	EndEpochID:          0,
+	EndSyncPeriodID:     0,
 	EndTransactionID:    0,
 	ExistID:             1,
 	FinaliseID:          0,
@@ -136,12 +136,12 @@ var opNumArgs = map[int]int{
 var opId = map[string]int{
 	"AB": AddBalanceID,
 	"BB": BeginBlockID,
-	"BE": BeginEpochID,
+	"BS": BeginSyncPeriodID,
 	"BT": BeginTransactionID,
 	"CA": CreateAccountID,
 	"EM": EmptyID,
 	"EB": EndBlockID,
-	"EE": EndEpochID,
+	"ES": EndSyncPeriodID,
 	"ET": EndTransactionID,
 	"EX": ExistID,
 	"FI": FinaliseID,
@@ -181,33 +181,60 @@ var argId = map[byte]int{
 	'r': statistics.RandomValueID,
 }
 
+// OpMnemo returns the mnemonic code for an operation.
+func OpMnemo(op int) string {
+	if op < 0 || op >= NumOps {
+		panic("opcode is out of range")
+	}
+	return opMnemo[op]
+}
+
 // checkArgOp checks whether op/argument combination is valid.
-func checkArgOp(op int, addr int, key int, value int) bool {
+func checkArgOp(op int, contract int, key int, value int) bool {
 	if op < 0 || op >= NumOps {
 		return false
 	}
-	if addr < 0 || addr >= statistics.NumClasses {
-		return false
-	}
-	if (opNumArgs[op] >= 1 && addr == statistics.NoArgID) || (opNumArgs[op] == 0 && addr != statistics.NoArgID) {
+	if contract < 0 || contract >= statistics.NumClasses {
 		return false
 	}
 	if key < 0 || key >= statistics.NumClasses {
 		return false
 	}
-	if (opNumArgs[op] >= 2 && key == statistics.NoArgID) || (opNumArgs[op] <= 1 && key != statistics.NoArgID) {
-		return false
-	}
 	if value < 0 || value >= statistics.NumClasses {
 		return false
 	}
-	if (opNumArgs[op] == 3 && value == statistics.NoArgID) || (opNumArgs[op] <= 2 && value != statistics.NoArgID) {
+	switch opNumArgs[op] {
+	case 0:
+		return contract == statistics.NoArgID &&
+			key == statistics.NoArgID &&
+			value == statistics.NoArgID
+	case 1:
+		return contract != statistics.NoArgID &&
+			key == statistics.NoArgID &&
+			value == statistics.NoArgID
+	case 2:
+		return contract != statistics.NoArgID &&
+			key != statistics.NoArgID &&
+			value == statistics.NoArgID
+	case 3:
+		return contract != statistics.NoArgID &&
+			key != statistics.NoArgID &&
+			value != statistics.NoArgID
+	default:
 		return false
 	}
-	return true
 }
 
-// EncodeOp encodes operation and argument classes via Horner's scheme to a single value.
+// IsValidArgOp returns true if the encoding is valid.
+func IsValidArgOp(argop int) bool {
+	if argop < 0 || argop >= numArgOps {
+		return false
+	}
+	op, contract, key, value := DecodeArgOp(argop)
+	return checkArgOp(op, contract, key, value)
+}
+
+// EncodeArgOp encodes operation and argument classes via Horner's scheme to a single value.
 func EncodeArgOp(op int, addr int, key int, value int) int {
 	if !checkArgOp(op, addr, key, value) {
 		log.Fatalf("EncodeArgOp: invalid operation/arguments")
@@ -215,8 +242,8 @@ func EncodeArgOp(op int, addr int, key int, value int) int {
 	return (((int(op)*statistics.NumClasses)+addr)*statistics.NumClasses+key)*statistics.NumClasses + value
 }
 
-// DecodeOp decodes operation with arguments.
-func decodeArgOp(argop int) (int, int, int, int) {
+// DecodeArgOp decodes operation with arguments using Honer's scheme
+func DecodeArgOp(argop int) (int, int, int, int) {
 	if argop < 0 || argop >= numArgOps {
 		log.Fatalf("DecodeArgOp: invalid op range")
 	}
@@ -284,37 +311,4 @@ func DecodeOpcode(opc string) (int, int, int, int) {
 		contract, key, value = argId[opc[2]], argId[opc[3]], argId[opc[4]]
 	}
 	return op, contract, key, value
-}
-
-// OpMnemo retrieves the mnemonic code for an operation.
-func OpMnemo(op int) string {
-	return opMnemo[op]
-}
-
-// IsValidArgOp returns true if the encoding is valid.
-func IsValidArgOp(argop int) bool {
-	if argop < 0 || argop >= numArgOps {
-		return false
-	}
-	op, contract, key, value := decodeArgOp(argop)
-	switch opNumArgs[op] {
-	case 0:
-		return contract == statistics.NoArgID &&
-			key == statistics.NoArgID &&
-			value == statistics.NoArgID
-	case 1:
-		return contract != statistics.NoArgID &&
-			key == statistics.NoArgID &&
-			value == statistics.NoArgID
-	case 2:
-		return contract != statistics.NoArgID &&
-			key != statistics.NoArgID &&
-			value == statistics.NoArgID
-	case 3:
-		return contract != statistics.NoArgID &&
-			key != statistics.NoArgID &&
-			value != statistics.NoArgID
-	default:
-		return false
-	}
 }

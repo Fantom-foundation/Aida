@@ -47,23 +47,6 @@ func TestFlatState_MakeFlatStateDBInvalid(t *testing.T) {
 	}
 }
 
-// TestFlatState_BeginBlockApply tests if starting block apply will run successfully
-func TestFlatState_BeginBlockApply(t *testing.T) {
-	for _, tc := range getFlatStateTestCases() {
-		t.Run(fmt.Sprintf("DB variant: %s", tc.variant), func(t *testing.T) {
-			fsDB, err := MakeFlatStateDB(t.TempDir(), tc.variant, common.Hash{})
-			if err != nil {
-				t.Fatalf("failed to create flat state DB: %v", err)
-			}
-
-			err = fsDB.BeginBlockApply()
-			if err != nil {
-				t.Fatalf("failed to begin block apply: %v", err)
-			}
-		})
-	}
-}
-
 // TestFlatState_StartBulkLoadAndClose tests starting and immediately closing bulk load without any operations
 func TestFlatState_StartBulkLoadAndClose(t *testing.T) {
 	for _, tc := range getFlatStateTestCases() {
