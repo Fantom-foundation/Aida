@@ -2,6 +2,7 @@ package apireplay
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"math/big"
 	"strings"
@@ -84,6 +85,7 @@ func (r *Reader) read() {
 		start           time.Time
 		ticker          *time.Ticker
 		total, executed uint64
+		methods         = make(map[string]uint32)
 	)
 	defer func() {
 		r.logStatistics(start, total, executed)
@@ -104,7 +106,7 @@ func (r *Reader) read() {
 			return
 		case <-ticker.C:
 			r.logStatistics(start, total, executed)
-
+			r.log.Notice(methods)
 		default:
 			total++
 
@@ -128,8 +130,26 @@ func (r *Reader) read() {
 			// retrieve the data from iterator
 			req = r.iter.Value()
 
+			methods[req.Query.Method]++
+
+			if !strings.Contains(req.Query.Method, "getBalance") {
+				continue
+			} else {
+				fmt.Println("a")
+			}
+
 			wInput = r.createExecutorInput(req)
+
 			if wInput != nil {
+
+				if strings.Contains(req.Query.Method, "getBalance") {
+					var err error
+					wInput.archive, err = r.db.GetArchiveState(40109000)
+					if err != nil {
+						r.log.Fatal(err)
+					}
+					wInput.req.Query.Params[0] = "0x8975967c70e21a9f054eDcAC82126B239a23b19E"
+				}
 				r.output <- wInput
 				executed++
 			}
