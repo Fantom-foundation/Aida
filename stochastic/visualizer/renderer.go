@@ -229,7 +229,7 @@ func renderOperationStats(w http.ResponseWriter, r *http.Request) {
 // renderTransactionalOperationStats renders the average number of operations per transaction.
 func renderTransactionalOperationStats(w http.ResponseWriter, r *http.Request) {
 	events := GetEventsData()
-	title := fmt.Sprintf("Average %.1f Tx/Bl; %.1f Bl/Ep", events.TxPerBlock, events.BlocksPerEpoch)
+	title := fmt.Sprintf("Average %.1f Tx/Bl; %.1f Bl/Ep", events.TxPerBlock, events.BlocksPerSyncPeriod)
 	bar := charts.NewBar()
 	bar.SetGlobalOptions(charts.WithInitializationOpts(opts.Initialization{
 		Theme:     types.ThemeChalk,

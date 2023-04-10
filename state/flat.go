@@ -76,11 +76,11 @@ func (s *flatStateDB) EndBlock() {
 	}
 }
 
-func (s *flatStateDB) BeginEpoch(number uint64) {
+func (s *flatStateDB) BeginSyncPeriod(number uint64) {
 	// ignored
 }
 
-func (s *flatStateDB) EndEpoch() {
+func (s *flatStateDB) EndSyncPeriod() {
 	// ignored
 }
 

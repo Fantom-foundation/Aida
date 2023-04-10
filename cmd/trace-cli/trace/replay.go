@@ -26,7 +26,7 @@ var TraceReplayCommand = cli.Command{
 		&utils.CpuProfileFlag,
 		&utils.DeletedAccountDirFlag,
 		&utils.DisableProgressFlag,
-		&utils.EpochLengthFlag,
+		&utils.SyncPeriodLengthFlag,
 		&utils.KeepStateDBFlag,
 		&utils.MemoryBreakdownFlag,
 		&utils.MemProfileFlag,
@@ -156,15 +156,15 @@ func traceReplayTask(cfg *utils.Config) error {
 		if beginBlock, ok := op.(*operation.BeginBlock); ok {
 			block = beginBlock.BlockNumber
 			debug = cfg.Debug && block >= cfg.DebugFrom
-			// The first Epoch begin and the final EpochEnd need to be artificially
-			// added since the range running on may not match epoch boundaries.
+			// The first SyncPeriod begin and the final SyncPeriodEnd need to be artificially
+			// added since the range running on may not match sync-period boundaries.
 			if firstBlock {
-				run(operation.NewBeginEpoch(cfg.First / cfg.EpochLength))
+				run(operation.NewBeginSyncPeriod(cfg.First / cfg.SyncPeriodLength))
 				firstBlock = false
 			}
 
 			if block > cfg.Last {
-				run(operation.NewEndEpoch())
+				run(operation.NewEndSyncPeriod())
 				break
 			}
 			lastBlock = block // track the last processed block

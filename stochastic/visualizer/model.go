@@ -17,13 +17,13 @@ type EventData struct {
 	Values    AccessData   // storage-value view model
 	Snapshot  SnapshotData // snapshot view model
 
-	Stationary       []OpData                                      // stationary distribution model
-	TxOperation      []OpData                                      // average number of operations per Tx
-	TxPerBlock       float64                                       // average number of transactions per block
-	BlocksPerEpoch   float64                                       // average number of blocks per epoch
-	OperationLabel   []string                                      // operation labels for stochastic matrix
-	StochasticMatrix [][]float64                                   // stochastic Matrix
-	SimplifiedMatrix [stochastic.NumOps][stochastic.NumOps]float64 // simplified stochastic matrix
+	Stationary          []OpData                                      // stationary distribution model
+	TxOperation         []OpData                                      // average number of operations per Tx
+	TxPerBlock          float64                                       // average number of transactions per block
+	BlocksPerSyncPeriod float64                                       // average number of blocks per sync-period
+	OperationLabel      []string                                      // operation labels for stochastic matrix
+	StochasticMatrix    [][]float64                                   // stochastic Matrix
+	SimplifiedMatrix    [stochastic.NumOps][stochastic.NumOps]float64 // simplified stochastic matrix
 }
 
 // AccessData contains the statistical data for access statistics that is used for visualization.
@@ -90,7 +90,7 @@ func (e *EventData) PopulateEventData(d *stochastic.EventRegistryJSON) {
 	// find the BeginTransaction probability in the stationary distribution
 	txProb := 0.0
 	blockProb := 0.0
-	epochProb := 0.0
+	syncPeriodProb := 0.0
 	for i := 0; i < n; i++ {
 		sop, _, _, _ := stochastic.DecodeOpcode(d.Operations[i])
 		if sop == stochastic.BeginTransactionID {
@@ -99,22 +99,22 @@ func (e *EventData) PopulateEventData(d *stochastic.EventRegistryJSON) {
 		if sop == stochastic.BeginBlockID {
 			blockProb = stationary[i]
 		}
-		if sop == stochastic.BeginEpochID {
-			epochProb = stationary[i]
+		if sop == stochastic.BeginSyncPeriodID {
+			syncPeriodProb = stationary[i]
 		}
 	}
 	if blockProb > 0.0 {
 		e.TxPerBlock = txProb / blockProb
 	}
-	if epochProb > 0.0 {
-		e.BlocksPerEpoch = blockProb / epochProb
+	if syncPeriodProb > 0.0 {
+		e.BlocksPerSyncPeriod = blockProb / syncPeriodProb
 	}
 
 	txData := []OpData{}
 	if txProb > 0.0 {
 		for op := 0; op < stochastic.NumOps; op++ {
 			// exclude scoping operations
-			if op != stochastic.BeginBlockID && op != stochastic.EndBlockID && op != stochastic.BeginEpochID && op != stochastic.EndEpochID && op != stochastic.BeginTransactionID && op != stochastic.EndTransactionID {
+			if op != stochastic.BeginBlockID && op != stochastic.EndBlockID && op != stochastic.BeginSyncPeriodID && op != stochastic.EndSyncPeriodID && op != stochastic.BeginTransactionID && op != stochastic.EndTransactionID {
 				// sum all versions of an operation and normalize the value with the transaction's probability
 				sum := 0.0
 				for i := 0; i < n; i++ {
