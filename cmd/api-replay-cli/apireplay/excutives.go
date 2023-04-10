@@ -1,7 +1,9 @@
 package apireplay
 
 import (
+	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/go-opera/evmcore"
@@ -74,6 +76,10 @@ func executeCall(evm *EVM) (out *StateDBData) {
 func executeEstimateGas(evm *EVM) (out *StateDBData) {
 	out = new(StateDBData)
 	out.Result, out.Error = evm.sendEstimateGas()
+
+	if out.Error != nil && strings.Contains(out.Error.Error(), "insufficient funds") {
+		fmt.Println("a")
+	}
 
 	return
 }

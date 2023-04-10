@@ -15,23 +15,28 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	eth "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/status-im/keycard-go/hexutils"
 )
 
 // EVMRequest represents data structure of requests executed in EVM
 type EVMRequest struct {
-	From, To             common.Address
+	From, To             *common.Address
 	Data                 hexutil.Bytes
 	Gas, GasPrice, Value *big.Int
 }
 
 // EVM represents requests executed over Ethereum Virtual Machine
 type EVM struct {
-	req     *EVMRequest
-	msg     eth.Message
-	evm     *vm.EVM
-	archive state.StateDB
+	req       *EVMRequest
+	msg       eth.Message
+	evm       *vm.EVM
+	archive   state.StateDB
+	timestamp uint64
+	chainCfg  *params.ChainConfig
+	vmImpl    string
+	blockID   uint64
 }
 
 const globalGasCap = 50000000 // used when request does not specify gas
@@ -74,16 +79,20 @@ func newEVM(blockID uint64, archive state.StateDB, vmImpl string, chainCfg *para
 	vmConfig.NoBaseFee = true
 	vmConfig.InterpreterImpl = vmImpl
 
-	msg = eth.NewMessage(req.From, &req.To, archive.GetNonce(req.From), req.Value, req.Gas.Uint64(), req.GasPrice, new(big.Int), new(big.Int), req.Data, nil, true)
+	msg = eth.NewMessage(*req.From, req.To, archive.GetNonce(*req.From), req.Value, req.Gas.Uint64(), req.GasPrice, new(big.Int), new(big.Int), req.Data, nil, true)
 	txCtx = evmcore.NewEVMTxContext(msg)
 
 	evm = vm.NewEVM(blockCtx, txCtx, archive, chainCfg, vmConfig)
 
 	return &EVM{
-		req:     req,
-		msg:     msg,
-		evm:     evm,
-		archive: archive,
+		req:       req,
+		msg:       msg,
+		evm:       evm,
+		archive:   archive,
+		vmImpl:    vmImpl,
+		chainCfg:  chainCfg,
+		timestamp: timestamp,
+		blockID:   blockID,
 	}
 }
 
@@ -91,12 +100,14 @@ func newEVM(blockID uint64, archive state.StateDB, vmImpl string, chainCfg *para
 func newEVMRequest(params map[string]interface{}) *EVMRequest {
 	req := new(EVMRequest)
 
+	req.From = new(common.Address)
 	if v, ok := params["from"]; ok && v != nil {
-		req.From = common.HexToAddress(v.(string))
+		*req.From = common.HexToAddress(v.(string))
 	}
 
+	req.To = new(common.Address)
 	if v, ok := params["to"]; ok && v != nil {
-		req.To = common.HexToAddress(v.(string))
+		*req.To = common.HexToAddress(v.(string))
 	}
 
 	req.Value = new(big.Int)
@@ -133,7 +144,7 @@ func (evm *EVM) sendCall() (*evmcore.ExecutionResult, error) {
 		err    error
 	)
 
-	gp = new(evmcore.GasPool).AddGas(math.MaxUint64) // based in opera
+	gp = new(evmcore.GasPool).AddGas(evm.msg.Gas()) // based in opera
 
 	result, err = evmcore.ApplyMessage(evm.evm, evm.msg, gp)
 
@@ -153,15 +164,24 @@ func (evm *EVM) sendCall() (*evmcore.ExecutionResult, error) {
 func (evm *EVM) sendEstimateGas() (hexutil.Uint64, error) {
 	var (
 		lo, hi, gasCap uint64
+		err            error
 	)
 
+	// todo try
+	//hi, lo = findHiLo(evm.req.Gas)
 	hi, lo = findHiLo(evm.req.Gas)
+	if err != nil {
+		return 0, err
+	}
 
 	gasCap = hi
+
+	var e *EVM
 
 	// Execute the binary search and hone in on an isExecutable gas limit
 	for lo+1 < hi {
 		mid := (hi + lo) / 2
+		e = newEVM(evm.blockID, evm.archive, evm.vmImpl, evm.chainCfg, evm.req, evm.timestamp)
 		failed, _, err := isExecutable(mid, evm)
 
 		// If the error is not nil(consensus error), it means the provided message
@@ -181,7 +201,7 @@ func (evm *EVM) sendEstimateGas() (hexutil.Uint64, error) {
 	}
 
 	// Reject the transaction as invalid if it still fails at the highest allowance
-	if err := compareHiAndCap(hi, gasCap, evm); err != nil {
+	if err := compareHiAndCap(hi, gasCap, e); err != nil {
 		return 0, err
 	}
 	return hexutil.Uint64(hi), nil
@@ -201,17 +221,86 @@ func findHiLo(gas *big.Int) (hi, lo uint64) {
 	return
 }
 
+func hilo(args *EVMRequest, archive state.StateDB) (uint64, uint64, error) {
+	// Binary search the gas requirement, as it may be higher than the amount used
+	var (
+		lo uint64 = params.TxGas - 1
+		hi uint64
+	)
+	// Use zero address if sender unspecified.
+	if args.From == nil {
+		args.From = new(common.Address)
+	}
+	// Determine the highest gas limit can be used during the estimation.
+	if args.Gas != nil && args.Gas.Uint64() >= params.TxGas {
+		hi = args.Gas.Uint64()
+	} else {
+		hi = maxGasLimit()
+	}
+	// todo necessary?
+	// Normalize the max fee per gas the call is willing to spend.
+	//var feeCap *big.Int
+	//if args.GasPrice != nil && (args.MaxFeePerGas != nil || args.MaxPriorityFeePerGas != nil) {
+	//	return 0, errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
+	//} else if args.GasPrice != nil {
+	//	feeCap = args.GasPrice.ToInt()
+	//} else if args.MaxFeePerGas != nil {
+	//	feeCap = args.MaxFeePerGas.ToInt()
+	//} else {
+	//	feeCap = common.Big0
+	//}
+
+	// todo remove if necessary
+	feeCap := args.GasPrice
+	// Recap the highest gas limit with account's available balance.
+	if feeCap.BitLen() != 0 {
+		balance := archive.GetBalance(*args.From) // from can't be nil
+		available := new(big.Int).Set(balance)
+		if args.Value != nil {
+			if args.Value.Cmp(available) >= 0 {
+				return 0, 0, errors.New("insufficient funds for transfer")
+			}
+			available.Sub(available, args.Value)
+		}
+		allowance := new(big.Int).Div(available, feeCap)
+
+		// If the allowance is larger than maximum uint64, skip checking
+		if allowance.IsUint64() && hi > allowance.Uint64() {
+			transfer := args.Value
+			if transfer == nil {
+				transfer = new(big.Int)
+			}
+			log.Warn("Gas estimation capped by limited funds", "original", hi, "balance", balance,
+				"sent", transfer, "maxFeePerGas", feeCap, "fundable", allowance)
+			hi = allowance.Uint64()
+		}
+	}
+
+	// todo I guess?
+	var gasCap uint64 = math.MaxUint64
+	// Recap the highest gas allowance with specified gascap.
+	if gasCap != 0 && hi > gasCap {
+		log.Warn("Caller gas above allowance, capping", "requested", hi, "cap", gasCap)
+		hi = gasCap
+	}
+	// todo whats up with cap???
+	//cap = hi
+
+	return hi, lo, nil
+}
+
 // isExecutable tries if transaction is executable with given gas
 func isExecutable(gas uint64, evm *EVM) (bool, *evmcore.ExecutionResult, error) {
 	evm.req.Gas.SetUint64(gas)
 
 	evmRes, err := evm.sendCall()
 	if err != nil {
-		if errors.Is(err, evmcore.ErrIntrinsicGas) {
+		if strings.Contains(err.Error(), "intrinsic gas too low") {
 			return true, nil, nil // Special case, raise gas limit
 		}
 		return true, nil, err // Bailout
 	}
+	//fmt.Println(evmRes.Failed())
 	return evmRes.Failed(), evmRes, nil
 }
 
