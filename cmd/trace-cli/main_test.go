@@ -34,7 +34,7 @@ func TestPositiveReplaySubstate(t *testing.T) {
 		t.Fatalf("%v\n", err)
 	}
 	// replay
-	dbTypes := []string{"memory", "geth", "carmen"}
+	dbTypes := []string{"memory", "geth", "carmen", "flat", "erigon"}
 	for _, db := range dbTypes {
 		os.Args = []string{
 			"trace", "replay-substate",
@@ -63,7 +63,7 @@ func TestPositiveReplaySubstateValidate(t *testing.T) {
 		t.Fatalf("%v\n", err)
 	}
 	// replay
-	dbTypes := []string{"memory"}
+	dbTypes := []string{"memory", "geth", "carmen", "flat", "erigon"}
 	for _, db := range dbTypes {
 		os.Args = []string{
 			"trace", "replay-substate",

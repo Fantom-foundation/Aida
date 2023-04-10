@@ -74,6 +74,8 @@ func makeStateDBVariant(directory, impl, variant, archiveVariant string, rootHas
 			archiveVariant = "none"
 		}
 		return state.MakeCarmenStateDB(directory, variant, archiveVariant, cfg.CarmenSchema)
+	case "flat":
+		return state.MakeFlatStateDB(directory, variant, rootHash)
 	case "erigon":
 		return state.MakeErigonStateDB(directory, variant, rootHash)
 	}

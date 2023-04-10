@@ -7,11 +7,11 @@ import (
 	"math/big"
 	"path/filepath"
 
-	"github.com/Fantom-foundation/go-opera-fvm/cmd/opera/launcher"
-	"github.com/Fantom-foundation/go-opera-fvm/erigon"
-	"github.com/Fantom-foundation/go-opera-fvm/evmcore"
-	"github.com/Fantom-foundation/go-opera-fvm/gossip/evmstore/erigonstate"
-	"github.com/Fantom-foundation/go-opera-fvm/gossip/evmstore/ethdb"
+	"github.com/Fantom-foundation/go-opera-erigon/cmd/opera/launcher"
+	"github.com/Fantom-foundation/go-opera-erigon/erigon"
+	"github.com/Fantom-foundation/go-opera-erigon/evmcore"
+	"github.com/Fantom-foundation/go-opera-erigon/gossip/evmstore/erigonstate"
+	"github.com/Fantom-foundation/go-opera-erigon/gossip/evmstore/ethdb"
 
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
