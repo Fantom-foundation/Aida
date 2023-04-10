@@ -78,7 +78,7 @@ func executeEstimateGas(evm *EVM) (out *StateDBData) {
 	out.Result, out.Error = evm.sendEstimateGas()
 
 	if out.Error != nil && strings.Contains(out.Error.Error(), "insufficient funds") {
-		fmt.Println("a")
+		fmt.Printf("address: %v; balance %v", evm.req.From.String(), evm.archive.GetBalance(*evm.req.From))
 	}
 
 	return
