@@ -37,6 +37,9 @@ jobs:
       - name: Check code formatting
         run: diff -u <(echo -n)  <(find . -path ./carmen -prune -o  -name '*.go' -exec gofmt -d -s {} \;)
 
+      - name: Update go packages and modulesy
+        run: go mod tidy
+
       - name: Build
         run: make
 
