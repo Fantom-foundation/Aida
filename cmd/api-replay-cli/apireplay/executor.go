@@ -158,6 +158,7 @@ func (e *ReplayExecutor) doExecute(in *executorInput) *StateDBData {
 
 	case "estimateGas":
 		req := newEVMRequest(in.req.Query.Params[0].(map[string]interface{}))
+		// todo save substate timestamp
 		timestamp := substate.GetSubstate(in.blockID, 0).Env.Timestamp
 		evm := newEVM(in.blockID, in.archive, e.vmImpl, e.chainCfg, req, timestamp)
 		return executeEstimateGas(evm)

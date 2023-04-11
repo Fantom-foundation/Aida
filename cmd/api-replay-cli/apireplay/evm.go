@@ -144,7 +144,7 @@ func (evm *EVM) sendCall() (*evmcore.ExecutionResult, error) {
 		err    error
 	)
 
-	gp = new(evmcore.GasPool).AddGas(evm.msg.Gas()) // based in opera
+	gp = new(evmcore.GasPool).AddGas(math.MaxUint64) // based in opera
 
 	result, err = evmcore.ApplyMessage(evm.evm, evm.msg, gp)
 
@@ -173,15 +173,14 @@ func (evm *EVM) sendEstimateGas() (hexutil.Uint64, error) {
 	if err != nil {
 		return 0, err
 	}
+	hi = math.MaxUint64
 
 	gasCap = hi
-
-	var e *EVM
 
 	// Execute the binary search and hone in on an isExecutable gas limit
 	for lo+1 < hi {
 		mid := (hi + lo) / 2
-		e = newEVM(evm.blockID, evm.archive, evm.vmImpl, evm.chainCfg, evm.req, evm.timestamp)
+
 		failed, _, err := isExecutable(mid, evm)
 
 		// If the error is not nil(consensus error), it means the provided message
@@ -201,7 +200,7 @@ func (evm *EVM) sendEstimateGas() (hexutil.Uint64, error) {
 	}
 
 	// Reject the transaction as invalid if it still fails at the highest allowance
-	if err := compareHiAndCap(hi, gasCap, e); err != nil {
+	if err := compareHiAndCap(hi, gasCap, evm); err != nil {
 		return 0, err
 	}
 	return hexutil.Uint64(hi), nil
@@ -293,14 +292,13 @@ func hilo(args *EVMRequest, archive state.StateDB) (uint64, uint64, error) {
 func isExecutable(gas uint64, evm *EVM) (bool, *evmcore.ExecutionResult, error) {
 	evm.req.Gas.SetUint64(gas)
 
-	evmRes, err := evm.sendCall()
+	evmRes, err := newEVM(evm.blockID, evm.archive, evm.vmImpl, evm.chainCfg, evm.req, evm.timestamp).sendCall()
 	if err != nil {
 		if strings.Contains(err.Error(), "intrinsic gas too low") {
 			return true, nil, nil // Special case, raise gas limit
 		}
 		return true, nil, err // Bailout
 	}
-	//fmt.Println(evmRes.Failed())
 	return evmRes.Failed(), evmRes, nil
 }
 

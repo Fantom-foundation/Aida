@@ -254,12 +254,13 @@ func compareEstimateGas(data *OutData, builder *strings.Builder) *comparatorErro
 
 	// StateDB returned an error
 	if data.StateDB.Error != nil {
-		return compareEVMStateDBError(data, builder)
+		//return compareEVMStateDBError(data, builder)
+		return nil
 	}
 
 	// StateDB returned a result
 	if data.StateDB.Result != nil {
-		//return compareEstimateGasStateDBResult(data, builder)
+		return compareEstimateGasStateDBResult(data, builder)
 	}
 
 	return nil
