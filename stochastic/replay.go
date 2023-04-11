@@ -100,7 +100,7 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, 
 	ss.prime()
 
 	// set initial state to BeginSyncPeriod
-	state := find(operations, "BE")
+	state := find(operations, OpMnemo(BeginSyncPeriodID))
 	if state == -1 {
 		return fmt.Errorf("BeginSyncPeriod cannot be observed in stochastic matrix/recording failed.")
 	}
