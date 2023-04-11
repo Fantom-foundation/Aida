@@ -34,7 +34,7 @@ var StochasticReplayCommand = cli.Command{
 		&utils.StateDbVariantFlag,
 		&utils.StateDbTempDirFlag,
 		&utils.StateDbLoggingFlag,
-		&utils.TraceFileFlag,
+		&utils.TraceDirectoryFlag,
 		&utils.TraceDebugFlag,
 		&utils.TraceFlag,
 		&utils.ShadowDbImplementationFlag,

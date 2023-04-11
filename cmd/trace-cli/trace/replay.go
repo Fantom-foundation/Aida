@@ -46,7 +46,7 @@ var TraceReplayCommand = cli.Command{
 		&utils.ShadowDbVariantFlag,
 		&substate.SubstateDirFlag,
 		&substate.WorkersFlag,
-		&utils.TraceFileFlag,
+		&utils.TraceDirectoryFlag,
 		&utils.TraceDebugFlag,
 		&utils.DebugFromFlag,
 		&utils.UpdateDBDirFlag,

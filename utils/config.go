@@ -171,10 +171,10 @@ var (
 		Name:  "trace-debug",
 		Usage: "enable debug output for tracing",
 	}
-	TraceFileFlag = cli.StringFlag{
-		Name:  "tracefile",
-		Usage: "set trace file",
-		Value: "./trace.dat",
+	TraceDirectoryFlag = cli.StringFlag{
+		Name:  "tracedir",
+		Usage: "set storage trace's output directory",
+		Value: "./",
 	}
 	UpdateDBDirFlag = cli.StringFlag{
 		Name:  "updatedir",
@@ -431,7 +431,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		ValidateWorldState:  validateWorldState,
 		VmImpl:              ctx.String(VmImplementation.Name),
 		Workers:             ctx.Int(substate.WorkersFlag.Name),
-		TraceFile:           ctx.String(TraceFileFlag.Name),
+		TraceFile:           ctx.String(TraceDirectoryFlag.Name) + "/trace.dat",
 		Trace:               ctx.Bool(TraceFlag.Name),
 	}
 	if cfg.ChainID == 0 {

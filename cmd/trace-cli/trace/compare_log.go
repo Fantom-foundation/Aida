@@ -24,7 +24,7 @@ var TraceCompareLogCommand = cli.Command{
 		&substate.SubstateDirFlag,
 		&substate.WorkersFlag,
 		&utils.TraceDebugFlag,
-		&utils.TraceFileFlag,
+		&utils.TraceDirectoryFlag,
 		&utils.DBFlag,
 	},
 	Description: `
