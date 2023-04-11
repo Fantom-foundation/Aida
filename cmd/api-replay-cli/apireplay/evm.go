@@ -118,10 +118,12 @@ func newEVMRequest(params map[string]interface{}) *EVMRequest {
 	req.Gas = new(big.Int)
 	if v, ok := params["gas"]; ok && v != nil {
 		req.Gas.SetString(strings.TrimPrefix(v.(string), "0x"), 16)
-	} else {
-		// if gas cap is not specified, we use globalGasCap
-		req.Gas.SetUint64(globalGasCap)
 	}
+	// todo try?
+	//else {
+	//	// if gas cap is not specified, we use globalGasCap
+	//	req.Gas.SetUint64(globalGasCap)
+	//}
 
 	req.GasPrice = new(big.Int)
 	if v, ok := params["gasPrice"]; ok && v != nil {
@@ -173,7 +175,7 @@ func (evm *EVM) sendEstimateGas() (hexutil.Uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	hi = math.MaxUint64
+	hi = 9980000
 
 	gasCap = hi
 
