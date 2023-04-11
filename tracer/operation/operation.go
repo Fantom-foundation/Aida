@@ -18,13 +18,13 @@ var stats *ProfileStats = new(ProfileStats)
 const (
 	AddBalanceID = iota
 	BeginBlockID
-	BeginEpochID
+	BeginSyncPeriodID
 	BeginTransactionID
 	CreateAccountID
 	CommitID
 	EmptyID
 	EndBlockID
-	EndEpochID
+	EndSyncPeriodID
 	EndTransactionID
 	ExistID
 	FinaliseID
@@ -84,13 +84,13 @@ type OperationDictionary struct {
 var opDict = map[byte]OperationDictionary{
 	AddBalanceID:            {label: "AddBalance", readfunc: ReadAddBalance},
 	BeginBlockID:            {label: "BeginBlock", readfunc: ReadBeginBlock},
-	BeginEpochID:            {label: "BeginEpoch", readfunc: ReadBeginEpoch},
+	BeginSyncPeriodID:       {label: "BeginSyncPeriod", readfunc: ReadBeginSyncPeriod},
 	BeginTransactionID:      {label: "BeginTransaction", readfunc: ReadBeginTransaction},
 	CommitID:                {label: "Commit", readfunc: ReadPanic},
 	CreateAccountID:         {label: "CreateAccount", readfunc: ReadCreateAccount},
 	EmptyID:                 {label: "Empty", readfunc: ReadEmpty},
 	EndBlockID:              {label: "EndBlock", readfunc: ReadEndBlock},
-	EndEpochID:              {label: "EndEpoch", readfunc: ReadEndEpoch},
+	EndSyncPeriodID:         {label: "EndSyncPeriod", readfunc: ReadEndSyncPeriod},
 	EndTransactionID:        {label: "EndTransaction", readfunc: ReadEndTransaction},
 	ExistID:                 {label: "Exist", readfunc: ReadExist},
 	FinaliseID:              {label: "Finalise", readfunc: ReadFinalise},

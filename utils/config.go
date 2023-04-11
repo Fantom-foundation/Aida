@@ -12,7 +12,7 @@ import (
 	"time"
 
 	substate "github.com/Fantom-foundation/Substate"
-	_ "github.com/Fantom-foundation/Tosca/core/vm/lfvm"
+	_ "github.com/Fantom-foundation/Tosca/go/vm/lfvm"
 	_ "github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/urfave/cli/v2"
@@ -52,6 +52,11 @@ var (
 		Name:  "archive-variant",
 		Usage: "set the archive implementation variant for the selected DB implementation, ignored if not running in archive mode",
 	}
+	BlockLengthFlag = cli.IntFlag{
+		Name:  "block-length",
+		Usage: "defines the number of transactions per block",
+		Value: 10,
+	}
 	CarmenSchemaFlag = cli.IntFlag{
 		Name:  "carmen-schema",
 		Usage: "select the DB schema used by Carmen's current state DB",
@@ -87,9 +92,9 @@ var (
 		Name:  "memprofile",
 		Usage: "enables memory allocation profiling",
 	}
-	EpochLengthFlag = cli.IntFlag{
-		Name:  "epochlength",
-		Usage: "defines the number of blocks per epoch",
+	SyncPeriodLengthFlag = cli.IntFlag{
+		Name:  "sync-period",
+		Usage: "defines the number of blocks per sync-period",
 		Value: 300, // ~ 300s = 5 minutes
 	}
 	MemoryBreakdownFlag = cli.BoolFlag{
@@ -226,6 +231,31 @@ var (
 		Usage: "set substate, updateset and deleted accounts directory",
 		Value: "./db",
 	}
+	ContractNumberFlag = cli.IntFlag{
+		Name:  "num-contracts",
+		Usage: "Number of contracts to create",
+		Value: 1_000,
+	}
+	KeysNumberFlag = cli.IntFlag{
+		Name:  "num-keys",
+		Usage: "Number of keys to generate",
+		Value: 1_000,
+	}
+	ValuesNumberFLag = cli.IntFlag{
+		Name:  "num-values",
+		Usage: "Number of values to generate",
+		Value: 1_000,
+	}
+	OperationFrequency = cli.IntFlag{
+		Name:  "operation-frequency",
+		Usage: "Determines indirectly the length of a transaction",
+		Value: 10,
+	}
+	SnapshotDepthFlag = cli.IntFlag{
+		Name:  "snapshot-depth",
+		Usage: "Depth of snapshot history",
+		Value: 100,
+	}
 )
 
 // execution configuration for replay command.
@@ -238,9 +268,11 @@ type Config struct {
 
 	ArchiveMode         bool           // enable archive mode
 	ArchiveVariant      string         // selects the implementation variant of the archive
+	BlockLength         uint64         // length of a block in number of transactions
 	CarmenSchema        int            // the current DB schema ID to use in Carmen
 	ChainID             int            // Blockchain ID (mainnet: 250/testnet: 4002)
 	ContinueOnFailure   bool           // continue validation when an error detected
+	ContractNumber      int64          // number of contracts to create
 	CPUProfile          string         // pprof cpu profile output file name
 	DbImpl              string         // storage implementation
 	DbVariant           string         // database variant
@@ -249,17 +281,19 @@ type Config struct {
 	DebugFrom           uint64         // the first block to print trace debug
 	DeletedAccountDir   string         // directory of deleted account database
 	EnableProgress      bool           // enable progress report flag
-	EpochLength         uint64         // length of an epoch in number of blocks
+	SyncPeriodLength    uint64         // length of an sync-period in number of blocks
 	HasDeletedAccounts  bool           // true if deletedAccountDir is not empty; otherwise false
 	KeepStateDB         bool           // set to true if stateDB is kept after run
+	KeysNumber          int64          // number of keys to generate
 	MaxNumTransactions  int            // the maximum number of processed transactions
 	MemoryBreakdown     bool           // enable printing of memory breakdown
 	MemoryProfile       string         // capture the memory heap profile into the file
+	OperationFrequency  uint64         // determines indirectly the length of a transaction
 	PrimeRandom         bool           // enable randomized priming
 	PrimeSeed           int64          // set random seed
 	PrimeThreshold      int            // set account threshold before commit
 	Profile             bool           // enable micro profiling
-	RandomSeed          int64          // set random seet for stochastic testing (TODO: Perhaps combine with PrimeSeed??)
+	RandomSeed          int64          // set random seed for stochastic testing (TODO: Perhaps combine with PrimeSeed??)
 	SkipPriming         bool           // skip priming of the state DB
 	ShadowImpl          string         // implementation of the shadow DB to use, empty if disabled
 	ShadowVariant       string         // database variant of the shadow DB to be used
@@ -268,9 +302,11 @@ type Config struct {
 	StateDbTempDir      string         // directory to store a working copy of State DB data
 	StateValidationMode ValidationMode // state validation mode
 	UpdateDBDir         string         // update-set directory
+	SnapshotDepth       int            // depth of snapshot history
 	SubstateDBDir       string         // substate directory
 	ValidateTxState     bool           // validate stateDB before and after transaction
 	ValidateWorldState  bool           // validate stateDB before and after replay block range
+	ValuesNumber        int64          // number of values to generate
 	VmImpl              string         // vm implementation (geth/lfvm)
 	Workers             int            // number of worker threads
 }
@@ -347,14 +383,16 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 
 		ArchiveMode:         ctx.Bool(ArchiveModeFlag.Name),
 		ArchiveVariant:      ctx.String(ArchiveVariantFlag.Name),
+		BlockLength:         ctx.Uint64(BlockLengthFlag.Name),
 		CarmenSchema:        ctx.Int(CarmenSchemaFlag.Name),
 		ChainID:             ctx.Int(ChainIDFlag.Name),
+		ContractNumber:      ctx.Int64(ContractNumberFlag.Name),
 		ContinueOnFailure:   ctx.Bool(ContinueOnFailureFlag.Name),
 		CPUProfile:          ctx.String(CpuProfileFlag.Name),
 		Debug:               ctx.Bool(TraceDebugFlag.Name),
 		DebugFrom:           ctx.Uint64(DebugFromFlag.Name),
 		EnableProgress:      !ctx.Bool(DisableProgressFlag.Name),
-		EpochLength:         ctx.Uint64(EpochLengthFlag.Name),
+		SyncPeriodLength:    ctx.Uint64(SyncPeriodLengthFlag.Name),
 		First:               first,
 		DbImpl:              ctx.String(StateDbImplementationFlag.Name),
 		DbVariant:           ctx.String(StateDbVariantFlag.Name),
@@ -362,10 +400,12 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		DeletedAccountDir:   ctx.String(DeletedAccountDirFlag.Name),
 		HasDeletedAccounts:  true,
 		KeepStateDB:         ctx.Bool(KeepStateDBFlag.Name),
+		KeysNumber:          ctx.Int64(KeysNumberFlag.Name),
 		Last:                last,
 		MaxNumTransactions:  ctx.Int(MaxNumTransactionsFlag.Name),
 		MemoryBreakdown:     ctx.Bool(MemoryBreakdownFlag.Name),
 		MemoryProfile:       ctx.String(MemProfileFlag.Name),
+		OperationFrequency:  ctx.Uint64(OperationFrequency.Name),
 		PrimeRandom:         ctx.Bool(RandomizePrimingFlag.Name),
 		PrimeSeed:           ctx.Int64(PrimeSeedFlag.Name),
 		RandomSeed:          ctx.Int64(RandomSeedFlag.Name),
@@ -374,12 +414,14 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		SkipPriming:         ctx.Bool(SkipPrimingFlag.Name),
 		ShadowImpl:          ctx.String(ShadowDbImplementationFlag.Name),
 		ShadowVariant:       ctx.String(ShadowDbVariantFlag.Name),
+		SnapshotDepth:       ctx.Int(SnapshotDepthFlag.Name),
 		StateDbSrcDir:       ctx.String(StateDbSrcDirFlag.Name),
 		DBDir:               ctx.String(DBFlag.Name),
 		StateDbTempDir:      ctx.String(StateDbTempDirFlag.Name),
 		StateValidationMode: EqualityCheck,
 		UpdateDBDir:         ctx.String(UpdateDBDirFlag.Name),
 		SubstateDBDir:       ctx.String(substate.SubstateDirFlag.Name),
+		ValuesNumber:        ctx.Int64(ValuesNumberFLag.Name),
 		ValidateTxState:     validateTxState,
 		ValidateWorldState:  validateWorldState,
 		VmImpl:              ctx.String(VmImplementation.Name),
@@ -389,8 +431,8 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		cfg.ChainID = ChainIDFlag.Value
 	}
 	setFirstBlockFromChainID(cfg.ChainID)
-	if cfg.EpochLength <= 0 {
-		cfg.EpochLength = 300
+	if cfg.SyncPeriodLength <= 0 {
+		cfg.SyncPeriodLength = 300
 	}
 
 	if _, err := os.Stat(cfg.DBDir); !os.IsNotExist(err) {
@@ -407,7 +449,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 			log.Printf("\tTransaction limit: %d\n", cfg.MaxNumTransactions)
 		}
 		log.Printf("\tChain id: %v (record & run-vm only)\n", cfg.ChainID)
-		log.Printf("\tEpoch length: %v\n", cfg.EpochLength)
+		log.Printf("\tSyncPeriod length: %v\n", cfg.SyncPeriodLength)
 
 		logDbMode := func(prefix, impl, variant string) {
 			if cfg.DbImpl == "carmen" {

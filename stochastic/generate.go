@@ -1,45 +1,37 @@
 package stochastic
 
-import "github.com/Fantom-foundation/Aida/stochastic/statistics"
-
-// TODO: Convert constants to command-line interface parameters
-const (
-	TransactionsPerBlock = 10
-	BlocksPerEpoch       = 10
-	OperationFrequency   = 10 // determines indirectly the length of a transaction
-	NumContracts         = 1000
-	NumKeys              = 1000
-	NumValues            = 1000
-	SnapshotDepth        = 100
+import (
+	"github.com/Fantom-foundation/Aida/stochastic/statistics"
+	"github.com/Fantom-foundation/Aida/utils"
 )
 
-// GenerateUniformRegistry produces the a uniformly distributed simulation file.
-func GenerateUniformRegistry() *EventRegistry {
+// GenerateUniformRegistry produces a uniformly distributed simulation file.
+func GenerateUniformRegistry(cfg *utils.Config) *EventRegistry {
 	r := NewEventRegistry()
 
 	// generate a uniform distribution for contracts, storage keys/values, and snapshots
-	for i := int64(0); i < NumContracts; i++ {
+	for i := int64(0); i < cfg.ContractNumber; i++ {
 		for j := i - statistics.QueueLen - 1; j <= i; j++ {
 			if j >= 0 {
 				r.contracts.Place(toAddress(j))
 			}
 		}
 	}
-	for i := int64(0); i < NumKeys; i++ {
+	for i := int64(0); i < cfg.KeysNumber; i++ {
 		for j := i - statistics.QueueLen - 1; j <= i; j++ {
 			if j >= 0 {
 				r.keys.Place(toHash(j))
 			}
 		}
 	}
-	for i := int64(0); i < NumValues; i++ {
+	for i := int64(0); i < cfg.ValuesNumber; i++ {
 		for j := i - statistics.QueueLen - 1; j <= i; j++ {
 			if j >= 0 {
 				r.values.Place(toHash(j))
 			}
 		}
 	}
-	for i := 0; i < SnapshotDepth; i++ {
+	for i := 0; i < cfg.SnapshotDepth; i++ {
 		r.snapshotFreq[i] = 1
 	}
 
@@ -48,7 +40,7 @@ func GenerateUniformRegistry() *EventRegistry {
 			r.argOpFreq[i] = 1 // set frequency to greater than zero to emit operation
 			opI, _, _, _ := DecodeArgOp(i)
 			switch opI {
-			case BeginEpochID:
+			case BeginSyncPeriodID:
 				j := EncodeArgOp(BeginBlockID, statistics.NoArgID, statistics.NoArgID, statistics.NoArgID)
 				r.transitFreq[i][j] = 1
 			case BeginBlockID:
@@ -60,28 +52,28 @@ func GenerateUniformRegistry() *EventRegistry {
 			case EndTransactionID:
 				j1 := EncodeArgOp(BeginTransactionID, statistics.NoArgID, statistics.NoArgID, statistics.NoArgID)
 				j2 := EncodeArgOp(EndBlockID, statistics.NoArgID, statistics.NoArgID, statistics.NoArgID)
-				r.transitFreq[i][j1] = TransactionsPerBlock - 1
+				r.transitFreq[i][j1] = cfg.BlockLength - 1
 				r.transitFreq[i][j2] = 1
 			case EndBlockID:
 				j1 := EncodeArgOp(BeginBlockID, statistics.NoArgID, statistics.NoArgID, statistics.NoArgID)
-				j2 := EncodeArgOp(EndEpochID, statistics.NoArgID, statistics.NoArgID, statistics.NoArgID)
-				r.transitFreq[i][j1] = BlocksPerEpoch - 1
+				j2 := EncodeArgOp(EndSyncPeriodID, statistics.NoArgID, statistics.NoArgID, statistics.NoArgID)
+				r.transitFreq[i][j1] = cfg.SyncPeriodLength - 1
 				r.transitFreq[i][j2] = 1
-			case EndEpochID:
-				j := EncodeArgOp(BeginEpochID, statistics.NoArgID, statistics.NoArgID, statistics.NoArgID)
+			case EndSyncPeriodID:
+				j := EncodeArgOp(BeginSyncPeriodID, statistics.NoArgID, statistics.NoArgID, statistics.NoArgID)
 				r.transitFreq[i][j] = 1
 			default:
 				for j := 0; j < numArgOps; j++ {
 					if IsValidArgOp(j) {
 						opJ, _, _, _ := DecodeArgOp(j)
-						if opJ != BeginEpochID &&
+						if opJ != BeginSyncPeriodID &&
 							opJ != BeginBlockID &&
 							opJ != BeginTransactionID &&
 							opJ != FinaliseID &&
 							opJ != EndTransactionID &&
 							opJ != EndBlockID &&
-							opJ != EndEpochID {
-							r.transitFreq[i][j] = OperationFrequency
+							opJ != EndSyncPeriodID {
+							r.transitFreq[i][j] = cfg.OperationFrequency
 						} else if opJ == FinaliseID {
 							r.transitFreq[i][j] = 1
 						}

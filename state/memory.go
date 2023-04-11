@@ -446,11 +446,11 @@ func (db *inMemoryStateDB) EndBlock() {
 	// ignored
 }
 
-func (db *inMemoryStateDB) BeginEpoch(number uint64) {
+func (db *inMemoryStateDB) BeginSyncPeriod(number uint64) {
 	// ignored
 }
 
-func (db *inMemoryStateDB) EndEpoch() {
+func (db *inMemoryStateDB) EndSyncPeriod() {
 	// ignored
 }
 

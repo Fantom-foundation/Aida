@@ -13,7 +13,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
-	"github.com/Fantom-foundation/Tosca/core/vm/lfvm"
+	"github.com/Fantom-foundation/Tosca/go/vm/lfvm"
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/Fantom-foundation/go-opera/opera"
 	"github.com/ethereum/go-ethereum/common"

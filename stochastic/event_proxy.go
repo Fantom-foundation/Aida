@@ -351,12 +351,12 @@ func (p *EventProxy) EndBlock() {
 	p.db.EndBlock()
 }
 
-func (p *EventProxy) BeginEpoch(number uint64) {
-	p.db.BeginEpoch(number)
+func (p *EventProxy) BeginSyncPeriod(number uint64) {
+	p.db.BeginSyncPeriod(number)
 }
 
-func (p *EventProxy) EndEpoch() {
-	p.db.EndEpoch()
+func (p *EventProxy) EndSyncPeriod() {
+	p.db.EndSyncPeriod()
 }
 
 func (p *EventProxy) Close() error {

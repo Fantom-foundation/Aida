@@ -64,8 +64,8 @@ github.com/DataDog/zstd v1.5.2/go.mod h1:g4AWEaM3yOg3HYfnJ3YIawPnVdXJh9QME85blwS
 github.com/Fantom-foundation/Substate v0.0.0-20230224090651-4c8c024214f4/go.mod h1:/yIHWCDDJcdKMJYvOLdYOnHt5eUBF9XWnrvrNE+90ik=
 github.com/Fantom-foundation/Substate v0.0.0-20230313095132-69cdb7b639cd h1:4DYv6gIYNgABjm1EptGTjO02qIanQhXlKHHzVzzjSKI=
 github.com/Fantom-foundation/Substate v0.0.0-20230313095132-69cdb7b639cd/go.mod h1:KoObQO1Wmf3ACjxcXDREHf+mtDF4MAXfHwtxMIdyhx8=
-github.com/Fantom-foundation/Tosca v0.0.0-20230328180157-898d0ae722cb h1:S0KsunUvcmh1wPa/KGAkddy53iqXTH+PP/8t3Gmv5vE=
-github.com/Fantom-foundation/Tosca v0.0.0-20230328180157-898d0ae722cb/go.mod h1:NpXaJ+jksyraNZf9iHVPRDPGVr2j5jU0Tv7/weZpUr4=
+github.com/Fantom-foundation/Tosca v0.0.0-20230406154859-8e2180f5f5c9 h1:AZgDIjQQqAlAekM8CLmkubWW64RQO9re5KFSq1Cferk=
+github.com/Fantom-foundation/Tosca v0.0.0-20230406154859-8e2180f5f5c9/go.mod h1:NpXaJ+jksyraNZf9iHVPRDPGVr2j5jU0Tv7/weZpUr4=
 github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20230331085425-52296093a646 h1:wlo+TbNH2ZekB7uFMR69Z13ie6LvVdIIERXXojEc0ws=
 github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20230331085425-52296093a646/go.mod h1:Hu8U9SrXP6ABqtSNfJHw8lRGnr6tyma9PNZvwTweDjQ=
 github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230112084156-680f281ea1cb h1:4GajUnaY0S4KUe9KO0L4S8wq8R7CtGJna/s6IobED70=

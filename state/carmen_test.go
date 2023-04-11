@@ -272,8 +272,8 @@ func TestCarmenState_StateOperations(t *testing.T) {
 	}
 }
 
-// TestCarmenState_TrxBlockEpochOperations tests creation of randomized epochs with blocks and transactions
-func TestCarmenState_TrxBlockEpochOperations(t *testing.T) {
+// TestCarmenState_TrxBlockSyncPeriodOperations tests creation of randomized sync-periods with blocks and transactions
+func TestCarmenState_TrxBlockSyncPeriodOperations(t *testing.T) {
 	for _, tc := range getCarmenStateTestCases() {
 		t.Run(fmt.Sprintf("DB variant: %s, archive type: %v", tc.variant, tc.archive), func(t *testing.T) {
 			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.variant, tc.archive, 1)
@@ -293,7 +293,7 @@ func TestCarmenState_TrxBlockEpochOperations(t *testing.T) {
 			blockNumber := 1
 			trxNumber := 1
 			for i := 0; i < 10; i++ {
-				csDB.BeginEpoch(uint64(i))
+				csDB.BeginSyncPeriod(uint64(i))
 
 				for j := 0; j < 100; j++ {
 					csDB.BeginBlock(uint64(blockNumber))
@@ -308,7 +308,7 @@ func TestCarmenState_TrxBlockEpochOperations(t *testing.T) {
 					csDB.EndBlock()
 				}
 
-				csDB.EndEpoch()
+				csDB.EndSyncPeriod()
 			}
 		})
 	}
