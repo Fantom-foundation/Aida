@@ -81,12 +81,8 @@ func newEVM(blockID uint64, archive state.StateDB, vmImpl string, chainCfg *para
 	vmConfig.NoBaseFee = true
 	vmConfig.InterpreterImpl = vmImpl
 
-	fmt.Println(req.Gas)
-
 	msg = eth.NewMessage(*req.From, req.To, archive.GetNonce(*req.From), req.Value, req.Gas.Uint64(), req.GasPrice, new(big.Int), new(big.Int), req.Data, nil, true)
 	txCtx = evmcore.NewEVMTxContext(msg)
-
-	fmt.Println(msg.Gas())
 
 	evm = vm.NewEVM(blockCtx, txCtx, archive, chainCfg, vmConfig)
 
@@ -420,19 +416,12 @@ func findHiLo(gas *big.Int) (hi, lo uint64) {
 func isExecutable(gas uint64, evm *EVM) (bool, *evmcore.ExecutionResult, error) {
 	evm.req.Gas.SetUint64(gas)
 
-	if gas == 59340 {
-		fmt.Println("")
-	}
-
 	evmRes, err := newEVM(evm.blockID, evm.archive, evm.vmImpl, evm.chainCfg, evm.req, evm.timestamp).sendCall()
 	if err != nil {
 		if strings.Contains(err.Error(), "intrinsic gas too low") {
 			return true, nil, nil // Special case, raise gas limit
 		}
 		return true, nil, err // Bailout
-	}
-	if !evmRes.Failed() {
-		fmt.Println(gas)
 	}
 	return evmRes.Failed(), evmRes, nil
 }
