@@ -120,12 +120,10 @@ func newEVMRequest(params map[string]interface{}) *EVMRequest {
 	req.Gas = new(big.Int)
 	if v, ok := params["gas"]; ok && v != nil {
 		req.Gas.SetString(strings.TrimPrefix(v.(string), "0x"), 16)
+	} else {
+		// if gas cap is not specified, we use maxGasLimit
+		req.Gas.SetUint64(maxGasLimit)
 	}
-	// todo try?
-	//else {
-	//	// if gas cap is not specified, we use maxGasLimit
-	//	req.Gas.SetUint64(maxGasLimit)
-	//}
 
 	req.GasPrice = new(big.Int)
 	if v, ok := params["gasPrice"]; ok && v != nil {
