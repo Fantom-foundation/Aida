@@ -4,8 +4,10 @@ import (
 	"math/big"
 
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/go-opera/ethapi"
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 // executeGetBalance request into given archive and send result to comparator
@@ -73,7 +75,18 @@ func executeCall(evm *EVM) (out *StateDBData) {
 // executeEstimateGas into EVM which calculates gas needed for a transaction
 func executeEstimateGas(evm *EVM) (out *StateDBData) {
 	out = new(StateDBData)
-	out.Result, out.Error = evm.sendEstimateGas()
+
+	gas := hexutil.Uint64(evm.req.Gas.Uint64())
+	args := &ethapi.TransactionArgs{
+		From:     evm.req.From,
+		To:       evm.req.To,
+		Gas:      &gas,
+		GasPrice: (*hexutil.Big)(evm.req.GasPrice),
+		Value:    (*hexutil.Big)(evm.req.Value),
+		Data:     &evm.req.Data,
+	}
+
+	out.Result, out.Error = evm.newEstimateGas(args)
 
 	return
 }
