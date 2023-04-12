@@ -81,8 +81,12 @@ func newEVM(blockID uint64, archive state.StateDB, vmImpl string, chainCfg *para
 	vmConfig.NoBaseFee = true
 	vmConfig.InterpreterImpl = vmImpl
 
+	fmt.Println(req.Gas)
+
 	msg = eth.NewMessage(*req.From, req.To, archive.GetNonce(*req.From), req.Value, req.Gas.Uint64(), req.GasPrice, new(big.Int), new(big.Int), req.Data, nil, true)
 	txCtx = evmcore.NewEVMTxContext(msg)
+
+	fmt.Println(msg.Gas())
 
 	evm = vm.NewEVM(blockCtx, txCtx, archive, chainCfg, vmConfig)
 
