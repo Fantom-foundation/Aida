@@ -39,7 +39,7 @@ func (op *BeginSyncPeriod) Write(f io.Writer) error {
 }
 
 // Execute the begin-sync-period operation.
-func (op *BeginSyncPeriod) Execute(db state.StateDB, ctx *context.Context) time.Duration {
+func (op *BeginSyncPeriod) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	start := time.Now()
 	db.BeginSyncPeriod(op.SyncPeriodNumber)
 	return time.Since(start)

@@ -8,11 +8,11 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initEmpty(t *testing.T) (*context.Context, *Empty, common.Address) {
+func initEmpty(t *testing.T) (*context.Replay, *Empty, common.Address) {
 	addr := getRandomAddress(t)
 	// create context context
-	dict := context.NewContext()
-	contract := dict.EncodeContract(addr)
+	ctx := context.NewReplay()
+	contract := ctx.EncodeContract(addr)
 
 	// create new operation
 	op := NewEmpty(contract)
@@ -24,7 +24,7 @@ func initEmpty(t *testing.T) (*context.Context, *Empty, common.Address) {
 		t.Fatalf("wrong ID returned")
 	}
 
-	return dict, op, addr
+	return ctx, op, addr
 }
 
 // TestEmptyReadWrite writes a new Empty object into a buffer, reads from it,
@@ -36,17 +36,17 @@ func TestEmptyReadWrite(t *testing.T) {
 
 // TestEmptyDebug creates a new Empty object and checks its Debug message.
 func TestEmptyDebug(t *testing.T) {
-	dict, op, addr := initEmpty(t)
-	testOperationDebug(t, dict, op, fmt.Sprint(addr))
+	ctx, op, addr := initEmpty(t)
+	testOperationDebug(t, ctx, op, fmt.Sprint(addr))
 }
 
 // TestEmptyExecute
 func TestEmptyExecute(t *testing.T) {
-	dict, op, addr := initEmpty(t)
+	ctx, op, addr := initEmpty(t)
 
 	// check execution
 	mock := NewMockStateDB()
-	op.Execute(mock, dict)
+	op.Execute(mock, ctx)
 
 	// check whether methods were correctly called
 	expected := []Record{{EmptyID, []any{addr}}}

@@ -8,14 +8,14 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initGetCommittedState(t *testing.T) (*context.Context, *GetCommittedState, common.Address, common.Hash) {
+func initGetCommittedState(t *testing.T) (*context.Replay, *GetCommittedState, common.Address, common.Hash) {
 	addr := getRandomAddress(t)
 	storage := getRandomAddress(t).Hash()
 
 	// create context context
-	dict := context.NewContext()
-	contract := dict.EncodeContract(addr)
-	sIdx, _ := dict.EncodeKey(storage)
+	ctx := context.NewReplay()
+	contract := ctx.EncodeContract(addr)
+	sIdx, _ := ctx.EncodeKey(storage)
 
 	// create new operation
 	op := NewGetCommittedState(contract, sIdx)
@@ -26,7 +26,7 @@ func initGetCommittedState(t *testing.T) (*context.Context, *GetCommittedState, 
 	if op.GetId() != GetCommittedStateID {
 		t.Fatalf("wrong ID returned")
 	}
-	return dict, op, addr, storage
+	return ctx, op, addr, storage
 }
 
 // TestGetCommittedStateReadWrite writes a new GetCommittedState object into a buffer, reads from it,
@@ -38,17 +38,17 @@ func TestGetCommittedStateReadWrite(t *testing.T) {
 
 // TestGetCommittedStateDebug creates a new GetCommittedState object and checks its Debug message.
 func TestGetCommittedStateDebug(t *testing.T) {
-	dict, op, addr, storage := initGetCommittedState(t)
-	testOperationDebug(t, dict, op, fmt.Sprint(addr, storage))
+	ctx, op, addr, storage := initGetCommittedState(t)
+	testOperationDebug(t, ctx, op, fmt.Sprint(addr, storage))
 }
 
 // TestGetCommittedStateExecute
 func TestGetCommittedStateExecute(t *testing.T) {
-	dict, op, addr, storage := initGetCommittedState(t)
+	ctx, op, addr, storage := initGetCommittedState(t)
 
 	// check execution
 	mock := NewMockStateDB()
-	op.Execute(mock, dict)
+	op.Execute(mock, ctx)
 
 	// check whether methods were correctly called
 	expected := []Record{{GetCommittedStateID, []any{addr, storage}}}

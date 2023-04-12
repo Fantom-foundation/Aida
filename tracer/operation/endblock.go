@@ -35,7 +35,7 @@ func (op *EndBlock) Write(f io.Writer) error {
 }
 
 // Execute the end-block operation.
-func (op *EndBlock) Execute(db state.StateDB, ctx *context.Context) time.Duration {
+func (op *EndBlock) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	start := time.Now()
 	db.EndBlock()
 	return time.Since(start)

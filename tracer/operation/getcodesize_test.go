@@ -8,11 +8,11 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initGetCodeSize(t *testing.T) (*context.Context, *GetCodeSize, common.Address) {
+func initGetCodeSize(t *testing.T) (*context.Replay, *GetCodeSize, common.Address) {
 	addr := getRandomAddress(t)
 	// create context context
-	dict := context.NewContext()
-	contract := dict.EncodeContract(addr)
+	ctx := context.NewReplay()
+	contract := ctx.EncodeContract(addr)
 
 	// create new operation
 	op := NewGetCodeSize(contract)
@@ -24,7 +24,7 @@ func initGetCodeSize(t *testing.T) (*context.Context, *GetCodeSize, common.Addre
 		t.Fatalf("wrong ID returned")
 	}
 
-	return dict, op, addr
+	return ctx, op, addr
 }
 
 // TestGetCodeSizeReadWrite writes a new GetCodeSize object into a buffer, reads from it,
@@ -36,17 +36,17 @@ func TestGetCodeSizeReadWrite(t *testing.T) {
 
 // TestGetCodeSizeDebug creates a new GetCodeSize object and checks its Debug message.
 func TestGetCodeSizeDebug(t *testing.T) {
-	dict, op, addr := initGetCodeSize(t)
-	testOperationDebug(t, dict, op, fmt.Sprint(addr))
+	ctx, op, addr := initGetCodeSize(t)
+	testOperationDebug(t, ctx, op, fmt.Sprint(addr))
 }
 
 // TestGetCodeSizeExecute creates a new GetCodeSize object and checks its execution signature.
 func TestGetCodeSizeExecute(t *testing.T) {
-	dict, op, addr := initGetCodeSize(t)
+	ctx, op, addr := initGetCodeSize(t)
 
 	// check execution
 	mock := NewMockStateDB()
-	op.Execute(mock, dict)
+	op.Execute(mock, ctx)
 
 	// check whether methods were correctly called
 	expected := []Record{{GetCodeSizeID, []any{addr}}}

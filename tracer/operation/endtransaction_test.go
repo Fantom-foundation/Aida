@@ -6,9 +6,9 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
-func initEndTransaction(t *testing.T) (*context.Context, *EndTransaction) {
+func initEndTransaction(t *testing.T) (*context.Replay, *EndTransaction) {
 	// create context context
-	dict := context.NewContext()
+	ctx := context.NewReplay()
 
 	// create new operation
 	op := NewEndTransaction()
@@ -20,7 +20,7 @@ func initEndTransaction(t *testing.T) (*context.Context, *EndTransaction) {
 		t.Fatalf("wrong ID returned")
 	}
 
-	return dict, op
+	return ctx, op
 }
 
 // TestEndTransactionReadWrite writes a new EndTransaction object into a buffer, reads from it,
@@ -32,17 +32,17 @@ func TestEndTransactionReadWrite(t *testing.T) {
 
 // TestEndTransactionDebug creates a new EndTransaction object and checks its Debug message.
 func TestEndTransactionDebug(t *testing.T) {
-	dict, op := initEndTransaction(t)
-	testOperationDebug(t, dict, op, "")
+	ctx, op := initEndTransaction(t)
+	testOperationDebug(t, ctx, op, "")
 }
 
 // TestEndTransactionExecute
 func TestEndTransactionExecute(t *testing.T) {
-	dict, op := initEndTransaction(t)
+	ctx, op := initEndTransaction(t)
 
 	// check execution
 	mock := NewMockStateDB()
-	op.Execute(mock, dict)
+	op.Execute(mock, ctx)
 
 	// check whether methods were correctly called
 	expected := []Record{{EndTransactionID, []any{}}}

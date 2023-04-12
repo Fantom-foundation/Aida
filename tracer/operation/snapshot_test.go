@@ -7,9 +7,9 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
-func initSnapshot(t *testing.T) (*context.Context, *Snapshot, int32) {
+func initSnapshot(t *testing.T) (*context.Replay, *Snapshot, int32) {
 	// create context context
-	dict := context.NewContext()
+	ctx := context.NewReplay()
 
 	var snapID int32 = 1
 	// create new operation
@@ -21,7 +21,7 @@ func initSnapshot(t *testing.T) (*context.Context, *Snapshot, int32) {
 	if op.GetId() != SnapshotID {
 		t.Fatalf("wrong ID returned")
 	}
-	return dict, op, snapID
+	return ctx, op, snapID
 }
 
 // TestSnapshotReadWrite writes a new Snapshot object into a buffer, reads from it,
@@ -33,17 +33,17 @@ func TestSnapshotReadWrite(t *testing.T) {
 
 // TestSnapshotDebug creates a new Snapshot object and checks its Debug message.
 func TestSnapshotDebug(t *testing.T) {
-	dict, op, snapID := initSnapshot(t)
-	testOperationDebug(t, dict, op, fmt.Sprint(snapID))
+	ctx, op, snapID := initSnapshot(t)
+	testOperationDebug(t, ctx, op, fmt.Sprint(snapID))
 }
 
 // TestSnapshotExecute
 func TestSnapshotExecute(t *testing.T) {
-	dict, op, _ := initSnapshot(t)
+	ctx, op, _ := initSnapshot(t)
 
 	// check execution
 	mock := NewMockStateDB()
-	op.Execute(mock, dict)
+	op.Execute(mock, ctx)
 
 	// check whether methods were correctly called
 	expected := []Record{{SnapshotID, nil}}

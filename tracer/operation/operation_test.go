@@ -328,14 +328,14 @@ func testOperationReadWrite(t *testing.T, op1 Operation, opRead func(f io.Reader
 	}
 }
 
-func testOperationDebug(t *testing.T, dict *context.Context, op Operation, args string) {
+func testOperationDebug(t *testing.T, ctx *context.Replay, op Operation, args string) {
 	// divert stdout to a buffer
 	old := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	// print debug message
-	Debug(dict, op)
+	Debug(&ctx.Context, op)
 
 	// restore stdout
 	w.Close()

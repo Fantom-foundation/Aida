@@ -9,12 +9,12 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
-func initBeginSyncPeriod(t *testing.T) (*context.Context, *BeginSyncPeriod) {
+func initBeginSyncPeriod(t *testing.T) (*context.Replay, *BeginSyncPeriod) {
 	rand.Seed(time.Now().UnixNano())
 	num := rand.Uint64()
 
 	// create context context
-	dict := context.NewContext()
+	ctx := context.NewReplay()
 
 	// create new operation
 	op := NewBeginSyncPeriod(num)
@@ -26,7 +26,7 @@ func initBeginSyncPeriod(t *testing.T) (*context.Context, *BeginSyncPeriod) {
 		t.Fatalf("wrong ID returned")
 	}
 
-	return dict, op
+	return ctx, op
 }
 
 // TestBeginSyncPeriodReadWrite writes a new BeginSyncPeriod object into a buffer, reads from it,
@@ -38,17 +38,17 @@ func TestBeginSyncPeriodReadWrite(t *testing.T) {
 
 // TestBeginSyncPeriodDebug creates a new BeginSyncPeriod object and checks its Debug message.
 func TestBeginSyncPeriodDebug(t *testing.T) {
-	dict, op := initBeginSyncPeriod(t)
-	testOperationDebug(t, dict, op, fmt.Sprintf("%v", op.SyncPeriodNumber))
+	ctx, op := initBeginSyncPeriod(t)
+	testOperationDebug(t, ctx, op, fmt.Sprintf("%v", op.SyncPeriodNumber))
 }
 
 // TestBeginSyncPeriodExecute
 func TestBeginSyncPeriodExecute(t *testing.T) {
-	dict, op := initBeginSyncPeriod(t)
+	ctx, op := initBeginSyncPeriod(t)
 
 	// check execution
 	mock := NewMockStateDB()
-	op.Execute(mock, dict)
+	op.Execute(mock, ctx)
 
 	// check whether methods were correctly called
 	expected := []Record{{BeginSyncPeriodID, []any{op.SyncPeriodNumber}}}

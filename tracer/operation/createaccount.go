@@ -41,7 +41,7 @@ func (op *CreateAccount) Write(f io.Writer) error {
 }
 
 // Execute the create-account operation.
-func (op *CreateAccount) Execute(db state.StateDB, ctx *context.Context) time.Duration {
+func (op *CreateAccount) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
 	db.CreateAccount(contract)

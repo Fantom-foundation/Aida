@@ -10,6 +10,8 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/stochastic"
+	"github.com/Fantom-foundation/Aida/tracer"
+	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/urfave/cli/v2"
 )
@@ -24,7 +26,6 @@ var StochasticReplayCommand = cli.Command{
 		&utils.CarmenSchemaFlag,
 		&utils.ContinueOnFailureFlag,
 		&utils.CpuProfileFlag,
-		&utils.TraceDebugFlag,
 		&utils.DebugFromFlag,
 		&utils.DisableProgressFlag,
 		&utils.MemoryBreakdownFlag,
@@ -33,6 +34,9 @@ var StochasticReplayCommand = cli.Command{
 		&utils.StateDbVariantFlag,
 		&utils.StateDbTempDirFlag,
 		&utils.StateDbLoggingFlag,
+		&utils.TraceDirectoryFlag,
+		&utils.TraceDebugFlag,
+		&utils.TraceFlag,
 		&utils.ShadowDbImplementationFlag,
 		&utils.ShadowDbVariantFlag,
 		&utils.DBFlag,
@@ -86,6 +90,13 @@ func stochasticReplayAction(ctx *cli.Context) error {
 		return err
 	}
 	defer os.RemoveAll(stateDirectory)
+
+	// Enable tracing if debug flag is set
+	if cfg.Trace {
+		rCtx := context.NewRecord(cfg.TraceFile)
+		defer rCtx.Close()
+		db = tracer.NewProxyRecorder(db, rCtx)
+	}
 
 	// run simulation.
 	fmt.Printf("stochastic replay: run simulation ...\n")

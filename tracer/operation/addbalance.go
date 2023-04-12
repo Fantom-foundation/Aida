@@ -51,7 +51,7 @@ func (op *AddBalance) Write(f io.Writer) error {
 }
 
 // Execute executes the add-balance operation.
-func (op *AddBalance) Execute(db state.StateDB, ctx *context.Context) time.Duration {
+func (op *AddBalance) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	contract := ctx.DecodeContract(op.Contract)
 	// construct bit.Int from a byte array
 	amount := new(big.Int).SetBytes(op.Amount[:])

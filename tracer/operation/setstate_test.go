@@ -8,15 +8,15 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initSetState(t *testing.T) (*context.Context, *SetState, common.Address, common.Hash, common.Hash) {
+func initSetState(t *testing.T) (*context.Replay, *SetState, common.Address, common.Hash, common.Hash) {
 	addr := getRandomAddress(t)
 	storage := getRandomAddress(t).Hash()
 	value := getRandomAddress(t).Hash()
 
 	// create context context
-	dict := context.NewContext()
-	contract := dict.EncodeContract(addr)
-	sIdx, _ := dict.EncodeKey(storage)
+	ctx := context.NewReplay()
+	contract := ctx.EncodeContract(addr)
+	sIdx, _ := ctx.EncodeKey(storage)
 
 	// create new operation
 	op := NewSetState(contract, sIdx, value)
@@ -28,7 +28,7 @@ func initSetState(t *testing.T) (*context.Context, *SetState, common.Address, co
 		t.Fatalf("wrong ID returned")
 	}
 
-	return dict, op, addr, storage, value
+	return ctx, op, addr, storage, value
 }
 
 // TestSetStateReadWrite writes a new SetState object into a buffer, reads from it,
@@ -40,17 +40,17 @@ func TestSetStateReadWrite(t *testing.T) {
 
 // TestSetStateDebug creates a new SetState object and checks its Debug message.
 func TestSetStateDebug(t *testing.T) {
-	dict, op, addr, storage, value := initSetState(t)
-	testOperationDebug(t, dict, op, fmt.Sprint(addr, storage, value))
+	ctx, op, addr, storage, value := initSetState(t)
+	testOperationDebug(t, ctx, op, fmt.Sprint(addr, storage, value))
 }
 
 // TestSetStateExecute
 func TestSetStateExecute(t *testing.T) {
-	dict, op, addr, storage, value := initSetState(t)
+	ctx, op, addr, storage, value := initSetState(t)
 
 	// check execution
 	mock := NewMockStateDB()
-	op.Execute(mock, dict)
+	op.Execute(mock, ctx)
 
 	// check whether methods were correctly called
 	expected := []Record{{SetStateID, []any{addr, storage, value}}}

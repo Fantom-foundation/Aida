@@ -27,8 +27,7 @@ const (
 )
 
 var (
-	FirstSubstateBlock uint64         // id of the first block in substate
-	TraceDebug         bool   = false // TraceDebug for enabling/disabling debugging.
+	FirstSubstateBlock uint64 // id of the first block in substate
 )
 
 // Type of validation performs on stateDB during Tx processing.
@@ -163,6 +162,10 @@ var (
 		Name:  "db-shadow-variant",
 		Usage: "select a state DB variant to shadow the prime DB implementation",
 		Value: "",
+	}
+	TraceFlag = cli.BoolFlag{
+		Name:  "trace",
+		Usage: "enable tracing",
 	}
 	TraceDebugFlag = cli.BoolFlag{
 		Name:  "trace-debug",
@@ -309,6 +312,8 @@ type Config struct {
 	ValuesNumber        int64          // number of values to generate
 	VmImpl              string         // vm implementation (geth/lfvm)
 	Workers             int            // number of worker threads
+	TraceFile           string         // name of trace file
+	Trace               bool           // trace flag
 }
 
 // getChainConnfig returns chain configuration of either mainnet or testnets.
@@ -426,6 +431,8 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		ValidateWorldState:  validateWorldState,
 		VmImpl:              ctx.String(VmImplementation.Name),
 		Workers:             ctx.Int(substate.WorkersFlag.Name),
+		TraceFile:           ctx.String(TraceDirectoryFlag.Name) + "/trace.dat",
+		Trace:               ctx.Bool(TraceFlag.Name),
 	}
 	if cfg.ChainID == 0 {
 		cfg.ChainID = ChainIDFlag.Value
