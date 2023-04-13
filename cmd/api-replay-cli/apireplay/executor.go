@@ -3,6 +3,8 @@ package apireplay
 import (
 	"encoding/json"
 	"log"
+	"math/big"
+	"strings"
 	"sync"
 
 	"github.com/Fantom-foundation/Aida/iterator"
@@ -10,6 +12,7 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/op/go-logging"
 )
 
@@ -35,9 +38,10 @@ type OutData struct {
 
 // ReplayExecutor represents a goroutine in which requests are executed into StateDB
 type ReplayExecutor struct {
+	dbRange        dbRange
 	iterBlock      uint64
 	cfg            *utils.Config
-	input          chan *executorInput
+	input          chan *iterator.RequestWithResponse
 	output         chan *OutData
 	wg             *sync.WaitGroup
 	closed         chan any
@@ -45,11 +49,17 @@ type ReplayExecutor struct {
 	vmImpl         string
 	chainCfg       *params.ChainConfig
 	log            *logging.Logger
+	db             state.StateDB
 }
 
 // newExecutor returns new instance of ReplayExecutor
-func newExecutor(output chan *OutData, chainCfg *params.ChainConfig, input chan *executorInput, vmImpl string, wg *sync.WaitGroup, closed chan any, log *logging.Logger) *ReplayExecutor {
+func newExecutor(first, last uint64, db state.StateDB, output chan *OutData, chainCfg *params.ChainConfig, input chan *iterator.RequestWithResponse, vmImpl string, wg *sync.WaitGroup, closed chan any, log *logging.Logger) *ReplayExecutor {
 	return &ReplayExecutor{
+		dbRange: dbRange{
+			first: first,
+			last:  last,
+		},
+		db:       db,
 		chainCfg: chainCfg,
 		vmImpl:   vmImpl,
 		closed:   closed,
@@ -70,6 +80,7 @@ func (e *ReplayExecutor) Start() {
 func (e *ReplayExecutor) execute() {
 	var (
 		ok  bool
+		req *iterator.RequestWithResponse
 		in  *executorInput
 		res *StateDBData
 	)
@@ -82,7 +93,7 @@ func (e *ReplayExecutor) execute() {
 		select {
 		case <-e.closed:
 			return
-		case in, ok = <-e.input:
+		case req, ok = <-e.input:
 
 			// if input is closed, stop the Executor
 			if !ok {
@@ -91,6 +102,11 @@ func (e *ReplayExecutor) execute() {
 
 			//todo
 			//e.log.Debugf("executing %v with these params: \n\t%v", in.req.Query.Method, string(in.req.ParamsRaw))
+
+			in = e.createInput(req)
+			if in == nil {
+				continue
+			}
 
 			// doExecute into db
 			res = e.doExecute(in)
@@ -141,6 +157,8 @@ func createOutData(in *executorInput, r *StateDBData) *OutData {
 
 // doExecute calls correct executive func for given MethodBase
 func (e *ReplayExecutor) doExecute(in *executorInput) *StateDBData {
+	e.log.Debugf("executing %v\n", in.req.Query.Method)
+
 	switch in.req.Query.MethodBase {
 	// ftm/eth methods
 	case "getBalance":
@@ -170,4 +188,106 @@ func (e *ReplayExecutor) doExecute(in *executorInput) *StateDBData {
 		break
 	}
 	return nil
+}
+
+// createInput with data worker need to doExecute request into archive
+func (e *ReplayExecutor) createInput(req *iterator.RequestWithResponse) *executorInput {
+	var recordedBlockID uint64
+	var wInput = new(executorInput)
+
+	// response
+	if req.Error != nil {
+		recordedBlockID = req.Error.BlockID
+		wInput.error = &req.Error.Error
+	} else if req.Response != nil {
+		recordedBlockID = req.Response.BlockID
+		wInput.result = req.Response.Result
+	} else {
+		e.log.Error("both recorded response and recorded error are nil; skipping")
+		return nil
+	}
+
+	// request
+	wInput.req = req
+
+	if !decodeBlockNumber(req.Query.Params, recordedBlockID, &wInput.blockID) {
+		return nil
+	}
+
+	// archive
+	wInput.archive = e.getStateArchive(wInput.blockID)
+	if wInput.archive == nil {
+		return nil
+	}
+
+	return wInput
+}
+
+// getStateArchive for given block
+func (e *ReplayExecutor) getStateArchive(wantedBlockNumber uint64) state.StateDB {
+	if !e.isBlockNumberWithinRange(wantedBlockNumber) {
+		return nil
+	}
+
+	// load the archive itself
+	var err error
+	archive, err := e.db.GetArchiveState(wantedBlockNumber)
+	if err != nil {
+		e.log.Errorf("cannot retrieve archive for block id #%v; err: %v", wantedBlockNumber, err)
+		return nil
+	}
+
+	return archive
+}
+
+// isBlockNumberWithinRange returns whether given block number is in StateDB block range
+func (e *ReplayExecutor) isBlockNumberWithinRange(blockNumber uint64) bool {
+	return blockNumber >= e.dbRange.first && blockNumber <= e.dbRange.last
+}
+
+// decodeBlockNumber finds what block number request wants
+func decodeBlockNumber(params []interface{}, recordedBlockNumber uint64, returnedBlockID *uint64) bool {
+
+	// request does not demand specific currentBlockID, so we take the recorded one
+	if len(params) < 2 {
+		*returnedBlockID = recordedBlockNumber
+		return true
+	}
+
+	// request does not have blockID specification
+	str, ok := params[1].(string)
+	if !ok {
+		*returnedBlockID = recordedBlockNumber
+		return true
+	}
+
+	switch str {
+	case "latest":
+		// request required latest currentBlockID so we return the recorded one
+		*returnedBlockID = recordedBlockNumber
+		break
+	case "earliest":
+		*returnedBlockID = uint64(rpc.EarliestBlockNumber)
+		break
+	case "pending":
+		*returnedBlockID = recordedBlockNumber
+	default:
+		// request requires specific currentBlockID
+		var (
+			bigID *big.Int
+			ok    bool
+		)
+
+		bigID = new(big.Int)
+		str = strings.TrimPrefix(str, "0x")
+		_, ok = bigID.SetString(str, 16)
+
+		if !ok {
+			return false
+		}
+		*returnedBlockID = bigID.Uint64()
+		break
+	}
+
+	return true
 }

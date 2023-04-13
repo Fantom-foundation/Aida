@@ -45,9 +45,9 @@ func newController(ctx *cli.Context, cfg *utils.Config, db state.StateDB, iter *
 	comparatorsWg := new(sync.WaitGroup)
 
 	// create instances
-	reader := newReader(cfg.First, cfg.Last, db, iter, newLogger(ctx), readerClosed, readerWg, ctx.Uint64(flags.SkipFlag.Name))
+	reader := newReader(iter, newLogger(ctx), readerClosed, readerWg, ctx.Uint64(flags.SkipFlag.Name))
 
-	executors, output := createExecutors(ctx, utils.GetChainConfig(cfg.ChainID), reader.output, cfg.VmImpl, executorsClosed, executorsWg)
+	executors, output := createExecutors(cfg.First, cfg.Last, db, ctx, utils.GetChainConfig(cfg.ChainID), reader.output, cfg.VmImpl, executorsClosed, executorsWg)
 
 	comparators, failure := createComparators(ctx, output, comparatorsClosed, comparatorsWg)
 
@@ -173,7 +173,7 @@ func (r *Controller) control() {
 }
 
 // createExecutors creates number of Executors defined by the flag WorkersFlag
-func createExecutors(ctx *cli.Context, chainCfg *params.ChainConfig, input chan *executorInput, vmImpl string, closed chan any, wg *sync.WaitGroup) ([]*ReplayExecutor, chan *OutData) {
+func createExecutors(first, last uint64, db state.StateDB, ctx *cli.Context, chainCfg *params.ChainConfig, input chan *iterator.RequestWithResponse, vmImpl string, closed chan any, wg *sync.WaitGroup) ([]*ReplayExecutor, chan *OutData) {
 	log.Infof("creating %v executors", ctx.Int(flags.WorkersFlag.Name))
 
 	output := make(chan *OutData, bufferSize)
@@ -182,7 +182,7 @@ func createExecutors(ctx *cli.Context, chainCfg *params.ChainConfig, input chan 
 
 	e := make([]*ReplayExecutor, executors)
 	for i := 0; i < executors; i++ {
-		e[i] = newExecutor(output, chainCfg, input, vmImpl, wg, closed, newLogger(ctx))
+		e[i] = newExecutor(first, last, db, output, chainCfg, input, vmImpl, wg, closed, newLogger(ctx))
 	}
 
 	return e, output
