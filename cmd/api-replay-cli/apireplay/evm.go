@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/Fantom-foundation/Aida/state"
-	"github.com/Fantom-foundation/go-opera-fvm/opera"
 	"github.com/Fantom-foundation/go-opera/evmcore"
+	"github.com/Fantom-foundation/go-opera/opera"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"

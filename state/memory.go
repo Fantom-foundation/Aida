@@ -491,6 +491,8 @@ func (db *inMemoryStateDB) NewBatch(kv.RwTx, chan struct{}) erigonethdb.DbWithPe
 	return nil
 }
 
+func (db *inMemoryStateDB) BeginBlockApply() error { return nil }
+
 func (db *inMemoryStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, noHistory bool, rwTx kv.RwTx) error {
 	return nil
 }

@@ -90,6 +90,8 @@ func (s *carmenStateDB) NewBatch(kv.RwTx, chan struct{}) erigonethdb.DbWithPendi
 	return nil
 }
 
+func (s *carmenStateDB) BeginBlockApply() error { return nil }
+
 func (s *carmenStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, noHistory bool, rwTx kv.RwTx) error {
 	return nil
 }

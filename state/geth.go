@@ -73,6 +73,8 @@ func (s *gethStateDB) CommitBlockWithStateWriter() error { return nil }
 
 func (s *gethStateDB) NewBatch(kv.RwTx, chan struct{}) erigonethdb.DbWithPendingMutations { return nil }
 
+func (s *gethStateDB) BeginBlockApply() error { return nil }
+
 func (s *gethStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, noHistory bool, rwTx kv.RwTx) error {
 	return nil
 }

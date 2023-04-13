@@ -192,7 +192,7 @@ func RunVM(ctx *cli.Context) error {
 				defer batch.Rollback()
 			}
 
-			curEpoch = tx.Block / cfg.EpochLength
+			curSyncPeriod = tx.Block / cfg.SyncPeriodLength
 			curBlock = tx.Block
 			db.BeginSyncPeriod(curSyncPeriod)
 			db.BeginBlock(curBlock)

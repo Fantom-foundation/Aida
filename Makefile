@@ -27,7 +27,7 @@ aida-api-replay:
 	./build_libcarmen.sh ; \
 	cd ../../.. ; \
 	GOPROXY=$(GOPROXY) \
-	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/go-opera-fvm \
+	GOPRIVATE=github.com/Fantom-foundation/Carmen \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-apireplay \
 	./cmd/api-replay-cli
@@ -46,35 +46,36 @@ aida-worldstate:
 
 aida-stochastic: carmen/go/lib/libcarmen.so
 	GOPROXY=$(GOPROXY) \
-	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/go-opera-fvm \
+	GOPRIVATE=github.com/Fantom-foundation/Carmen\
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-stochastic \
 	./cmd/stochastic-cli
 
 aida-trace: carmen/go/lib/libcarmen.so
 	GOPROXY=$(GOPROXY) \
-	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/go-opera-fvm \
+	GOPRIVATE=github.com/Fantom-foundation/Carmen \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-trace \
 	./cmd/trace-cli
 
 aida-runarchive: carmen/go/lib/libcarmen.so
 	GOPROXY=$(GOPROXY) \
-	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/go-opera-fvm \
+	GOPRIVATE=github.com/Fantom-foundation/Carmen \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-runarchive \
 	./cmd/runarchive-cli
 
 aida-runvm: carmen/go/lib/libcarmen.so
 	GOPROXY=$(GOPROXY) \
-	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/go-opera-fvm \
+	GOPRIVATE=github.com/Fantom-foundation/Carmen \
+	CGO_CFLAGS="-g -O2  -DMDBX_FORCE_ASSERTIONS=1 -Wno-error=strict-prototypes" \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-runvm \
 	./cmd/runvm-cli
 
 aida-substate: carmen/go/lib/libcarmen.so
 	GOPROXY=$(GOPROXY) \
-	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/go-opera-fvm \
+	GOPRIVATE=github.com/Fantom-foundation/Carmen\
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-substate \
 	./cmd/substate-cli

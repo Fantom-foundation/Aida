@@ -61,12 +61,14 @@ func (s *flatStateDB) CommitBlockWithStateWriter() error { return nil }
 
 func (s *flatStateDB) NewBatch(kv.RwTx, chan struct{}) erigonethdb.DbWithPendingMutations { return nil }
 
+func (s *flatStateDB) BeginBlockApply() error { return nil }
+
 func (s *flatStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, noHistory bool, rwTx kv.RwTx) error {
 	return nil
 }
 
 // BeginBlockApply creates a new statedb from an existing geth database
-func (s *flatStateDB) BeginBlockApply() error {
+func (s *flatStateDB) openStateDB() error {
 	var err error
 	s.StateDB, err = state.New(s.stateRoot, s.db)
 	return err

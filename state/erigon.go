@@ -241,11 +241,11 @@ func (s *erigonStateDB) Commit(_ bool) (common.Hash, error) {
 	return common.Hash{}, nil
 }
 
-func (s *erigonStateDB) BeginEpoch(number uint64) {
+func (s *erigonStateDB) BeginSyncPeriod(number uint64) {
 	// ignored
 }
 
-func (s *erigonStateDB) EndEpoch() {
+func (s *erigonStateDB) EndSyncPeriod() {
 	tx, err := s.db.RwKV().BeginRw(context.Background())
 	if err != nil {
 		panic(err)
