@@ -21,205 +21,209 @@ import (
 	"github.com/status-im/keycard-go/hexutils"
 )
 
-// EVMRequest represents data structure of requests executed in EVM
-type EVMRequest struct {
-	From, To             *common.Address
-	Data                 hexutil.Bytes
-	Gas, GasPrice, Value *big.Int
-}
+//// EVMRequest represents data structure of requests executed in EVMExecutor
+//type  struct {
+//	From, To             *common.Address
+//	Data                 hexutil.Bytes
+//	Gas, GasPrice, Value *big.Int
+//}
 
-// EVM represents requests executed over Ethereum Virtual Machine
-type EVM struct {
-	req       *EVMRequest
-	msg       eth.Message
-	evm       *vm.EVM
+// EVMExecutor represents requests executed over Ethereum Virtual Machine
+type EVMExecutor struct {
+	args      ethapi.TransactionArgs
 	archive   state.StateDB
 	timestamp uint64
 	chainCfg  *params.ChainConfig
 	vmImpl    string
-	blockID   uint64
+	blockID   *big.Int
+	rules     opera.EconomyRules
 }
 
 const maxGasLimit = 9995800 // used when request does not specify gas
 const globalGasCap = 50000000
 
-// newEVM creates EVM for comparing data recorded on API with StateDB
-func newEVM(blockID uint64, archive state.StateDB, vmImpl string, chainCfg *params.ChainConfig, req *EVMRequest, timestamp uint64) *EVM {
-	var (
-		bigBlockId *big.Int
-		getHash    func(uint64) common.Hash
-		rules      opera.EconomyRules
-		blockCtx   vm.BlockContext
-		vmConfig   vm.Config
-		msg        eth.Message
-		txCtx      vm.TxContext
-		evm        *vm.EVM
-	)
+// newEVMExecutor creates EVMExecutor for comparing data recorded on API with StateDB
+func newEVMExecutor(blockID uint64, archive state.StateDB, vmImpl string, chainCfg *params.ChainConfig, params map[string]interface{}, timestamp uint64) *EVMExecutor {
+	return &EVMExecutor{
+		args:      newTxArgs(params),
+		archive:   archive,
+		timestamp: timestamp,
+		chainCfg:  chainCfg,
+		vmImpl:    vmImpl,
+		blockID:   new(big.Int).SetUint64(blockID),
+		rules:     opera.DefaultEconomyRules(),
+	}
+}
 
-	bigBlockId = new(big.Int).SetUint64(blockID)
+// newTxArgs decodes recorded params into a structure
+func newTxArgs(params map[string]interface{}) ethapi.TransactionArgs {
+	var args ethapi.TransactionArgs
+
+	if v, ok := params["from"]; ok && v != nil {
+		args.From = new(common.Address)
+		*args.From = common.HexToAddress(v.(string))
+	}
+
+	if v, ok := params["to"]; ok && v != nil {
+		args.To = new(common.Address)
+		*args.To = common.HexToAddress(v.(string))
+	}
+
+	if v, ok := params["value"]; ok && v != nil {
+		value := new(big.Int)
+		value.SetString(strings.TrimPrefix(v.(string), "0x"), 16)
+		args.Value = (*hexutil.Big)(value)
+	}
+
+	args.Gas = new(hexutil.Uint64)
+	if v, ok := params["gas"]; ok && v != nil {
+		gas := new(big.Int)
+		gas.SetString(strings.TrimPrefix(v.(string), "0x"), 16)
+		*args.Gas = hexutil.Uint64(gas.Uint64())
+	} else {
+		// if gas cap is not specified, we use maxGasLimit
+		*args.Gas = hexutil.Uint64(maxGasLimit)
+	}
+
+	if v, ok := params["gasPrice"]; ok && v != nil {
+		gasPrice := new(big.Int)
+		gasPrice.SetString(strings.TrimPrefix(v.(string), "0x"), 16)
+		args.GasPrice = new(hexutil.Big)
+		args.GasPrice = (*hexutil.Big)(gasPrice)
+	}
+
+	if v, ok := params["data"]; ok && v != nil {
+		s := strings.TrimPrefix(v.(string), "0x")
+		data := hexutils.HexToBytes(s)
+		args.Data = new(hexutil.Bytes)
+		args.Data = (*hexutil.Bytes)(&data)
+	}
+
+	return args
+}
+
+// newEVM creates new instance of EVM with given parameters
+func (e *EVMExecutor) newEVM(msg eth.Message) *vm.EVM {
+	var (
+		getHash  func(uint64) common.Hash
+		blockCtx vm.BlockContext
+		vmConfig vm.Config
+		txCtx    vm.TxContext
+	)
 
 	// for purpose of comparing, we need not a hash func
 	getHash = func(_ uint64) common.Hash {
 		return common.Hash{}
 	}
 
-	rules = opera.DefaultEconomyRules()
-
 	blockCtx = vm.BlockContext{
 		CanTransfer: core.CanTransfer,
 		Transfer:    core.Transfer,
 		Coinbase:    common.Address{}, // opera based value
-		BlockNumber: bigBlockId,
+		BlockNumber: e.blockID,
 		Difficulty:  big.NewInt(1),  // evmcore/evm.go
 		GasLimit:    math.MaxUint64, // evmcore/dummy_block.go
 		GetHash:     getHash,
-		BaseFee:     rules.MinGasPrice, // big.NewInt(1e9)
-		Time:        new(big.Int).SetUint64(timestamp),
+		BaseFee:     e.rules.MinGasPrice, // big.NewInt(1e9)
+		Time:        new(big.Int).SetUint64(e.timestamp),
 	}
 
 	vmConfig = opera.DefaultVMConfig
 	vmConfig.NoBaseFee = true
-	vmConfig.InterpreterImpl = vmImpl
+	vmConfig.InterpreterImpl = e.vmImpl
 
-	msg = eth.NewMessage(*req.From, req.To, archive.GetNonce(*req.From), req.Value, req.Gas.Uint64(), req.GasPrice, new(big.Int), new(big.Int), req.Data, nil, true)
 	txCtx = evmcore.NewEVMTxContext(msg)
 
-	evm = vm.NewEVM(blockCtx, txCtx, archive, chainCfg, vmConfig)
-
-	return &EVM{
-		req:       req,
-		msg:       msg,
-		evm:       evm,
-		archive:   archive,
-		vmImpl:    vmImpl,
-		chainCfg:  chainCfg,
-		timestamp: timestamp,
-		blockID:   blockID,
-	}
+	return vm.NewEVM(blockCtx, txCtx, e.archive, e.chainCfg, vmConfig)
 }
 
-// newEVMRequest decodes recorded params into a structure
-func newEVMRequest(params map[string]interface{}) *EVMRequest {
-	req := new(EVMRequest)
-
-	req.From = new(common.Address)
-	if v, ok := params["from"]; ok && v != nil {
-		*req.From = common.HexToAddress(v.(string))
-	}
-
-	req.To = new(common.Address)
-	if v, ok := params["to"]; ok && v != nil {
-		*req.To = common.HexToAddress(v.(string))
-	}
-
-	req.Value = new(big.Int)
-	if v, ok := params["value"]; ok && v != nil {
-		req.Value, _ = req.Value.SetString(strings.TrimPrefix(v.(string), "0x"), 16)
-	}
-
-	req.Gas = new(big.Int)
-	if v, ok := params["gas"]; ok && v != nil {
-		req.Gas.SetString(strings.TrimPrefix(v.(string), "0x"), 16)
-	} else {
-		// if gas cap is not specified, we use maxGasLimit
-		req.Gas.SetUint64(maxGasLimit)
-	}
-
-	req.GasPrice = new(big.Int)
-	if v, ok := params["gasPrice"]; ok && v != nil {
-		req.GasPrice, _ = new(big.Int).SetString(strings.TrimPrefix(v.(string), "0x"), 16)
-	}
-
-	if v, ok := params["data"]; ok && v != nil {
-		s := strings.TrimPrefix(v.(string), "0x")
-		req.Data = hexutils.HexToBytes(s)
-	}
-
-	return req
-}
-
-// sendCall executes the call method in the EVM with given archive
-func (evm *EVM) sendCall() (*evmcore.ExecutionResult, error) {
+// sendCall executes the call method in the EVMExecutor with given archive
+func (e *EVMExecutor) sendCall() (*evmcore.ExecutionResult, error) {
 	var (
 		gp     *evmcore.GasPool
 		result *evmcore.ExecutionResult
 		err    error
+		msg    eth.Message
+		evm    *vm.EVM
 	)
 
 	gp = new(evmcore.GasPool).AddGas(math.MaxUint64) // based in opera
+	msg, err = e.args.ToMessage(globalGasCap, e.rules.MinGasPrice)
+	if err != nil {
+		// todo handle err
+		return nil, err
+	}
+	evm = e.newEVM(msg)
 
-	result, err = evmcore.ApplyMessage(evm.evm, evm.msg, gp)
+	result, err = evmcore.ApplyMessage(evm, msg, gp)
 
 	// If the timer caused an abort, return an appropriate error message
-	if evm.evm.Cancelled() {
+	if evm.Cancelled() {
 		return nil, fmt.Errorf("execution aborted: timeout")
 	}
 	if err != nil {
-		return result, fmt.Errorf("err: %v (supplied gas %v)", err, evm.msg.Gas())
+		return result, fmt.Errorf("err: %v (supplied gas %v)", err, e.args.Gas)
 	}
 	return result, nil
 
 }
 
-// sendEstimateGas executes estimateGas method in the EVM
+// sendEstimateGas executes estimateGas method in the EVMExecutor
 // It calculates how much gas would transaction need if it was executed
-func (evm *EVM) sendEstimateGas() (hexutil.Uint64, error) {
-	var (
-		lo, hi, gasCap uint64
-		err            error
-	)
+//func (e *EVMExecutor) sendEstimateGas() (hexutil.Uint64, error) {
+//	var (
+//		lo, hi, gasCap uint64
+//		err            error
+//	)
+//
+//	// todo try
+//	hi, lo = findHiLo(e.req.Gas)
+//	//hi, lo, err = hilo(evm.req, evm.archive)
+//	if err != nil {
+//		return 0, err
+//	}
+//
+//	gasCap = hi
+//
+//	fmt.Printf("lo: %v\n", lo)
+//	fmt.Printf("hi: %v\n", hi)
+//
+//	// Execute the binary search and hone in on an isExecutable gas limit
+//	for lo+1 < hi {
+//		mid := (hi + lo) / 2
+//
+//		failed, _, err := isExecutable(mid, e)
+//
+//		// If the error is not nil(consensus error), it means the provided message
+//		// compareCall or transaction will never be accepted no matter how much gas it is
+//		// assigned. Return the error directly, don't struggle anymore.
+//		if err != nil {
+//			return 0, err
+//		}
+//
+//		if failed {
+//			// the given gas was not enough - raise it
+//			lo = mid
+//		} else {
+//			// the given gas was enough - lower it
+//			hi = mid
+//		}
+//	}
+//
+//	// Reject the transaction as invalid if it still fails at the highest allowance
+//	if err := compareHiAndCap(hi, gasCap, e); err != nil {
+//		return 0, err
+//	}
+//	return hexutil.Uint64(hi), nil
+//}
 
-	// todo try
-	hi, lo = findHiLo(evm.req.Gas)
-	//hi, lo, err = hilo(evm.req, evm.archive)
-	if err != nil {
-		return 0, err
-	}
-
-	gasCap = hi
-
-	fmt.Printf("lo: %v\n", lo)
-	fmt.Printf("hi: %v\n", hi)
-
-	// Execute the binary search and hone in on an isExecutable gas limit
-	for lo+1 < hi {
-		mid := (hi + lo) / 2
-
-		failed, _, err := isExecutable(mid, evm)
-
-		// If the error is not nil(consensus error), it means the provided message
-		// compareCall or transaction will never be accepted no matter how much gas it is
-		// assigned. Return the error directly, don't struggle anymore.
-		if err != nil {
-			return 0, err
-		}
-
-		if failed {
-			// the given gas was not enough - raise it
-			lo = mid
-		} else {
-			// the given gas was enough - lower it
-			hi = mid
-		}
-	}
-
-	// Reject the transaction as invalid if it still fails at the highest allowance
-	if err := compareHiAndCap(hi, gasCap, evm); err != nil {
-		return 0, err
-	}
-	return hexutil.Uint64(hi), nil
-}
-
-func (evm *EVM) newEstimateGas(args *ethapi.TransactionArgs) (hexutil.Uint64, error) {
+func (e *EVMExecutor) newEstimateGas(args ethapi.TransactionArgs) (hexutil.Uint64, error) {
 	// Binary search the gas requirement, as it may be higher than the amount used
 	var (
 		lo  uint64 = params.TxGas - 1
 		hi  uint64
 		cap uint64
 	)
-	if args.GasPrice.ToInt().Uint64() == 0 {
-		args.GasPrice = nil
-	}
 
 	// Use zero address if sender unspecified.
 	if args.From == nil {
@@ -244,7 +248,7 @@ func (evm *EVM) newEstimateGas(args *ethapi.TransactionArgs) (hexutil.Uint64, er
 	}
 	// Recap the highest gas limit with account's available balance.
 	if feeCap.BitLen() != 0 {
-		balance := evm.archive.GetBalance(*args.From) // from can't be nil
+		balance := e.archive.GetBalance(*args.From) // from can't be nil
 		available := new(big.Int).Set(balance)
 		if args.Value != nil {
 			if args.Value.ToInt().Cmp(available) >= 0 {
@@ -277,11 +281,10 @@ func (evm *EVM) newEstimateGas(args *ethapi.TransactionArgs) (hexutil.Uint64, er
 	fmt.Printf("hi: %v\n", hi)
 
 	// Create a helper to check if a gas allowance results in an executable transaction
-	executable := func(gas uint64, evm *EVM) (bool, *evmcore.ExecutionResult, error) {
+	executable := func(gas uint64, evm *EVMExecutor) (bool, *evmcore.ExecutionResult, error) {
 		args.Gas = (*hexutil.Uint64)(&gas)
-		evm.req.Gas.SetUint64(gas)
 
-		result, err := newEVM(evm.blockID, evm.archive, evm.vmImpl, evm.chainCfg, evm.req, evm.timestamp).sendCall()
+		result, err := e.sendCall()
 
 		if err != nil {
 			if strings.Contains(err.Error(), "intrinsic gas too low") {
@@ -294,7 +297,7 @@ func (evm *EVM) newEstimateGas(args *ethapi.TransactionArgs) (hexutil.Uint64, er
 	// Execute the binary search and hone in on an executable gas limit
 	for lo+1 < hi {
 		mid := (hi + lo) / 2
-		failed, _, err := executable(mid, evm)
+		failed, _, err := executable(mid, e)
 
 		// If the error is not nil(consensus error), it means the provided message
 		// call or transaction will never be accepted no matter how much gas it is
@@ -312,7 +315,7 @@ func (evm *EVM) newEstimateGas(args *ethapi.TransactionArgs) (hexutil.Uint64, er
 	}
 	// Reject the transaction as invalid if it still fails at the highest allowance
 	if hi == cap {
-		failed, result, err := executable(hi, evm)
+		failed, result, err := executable(hi, e)
 		if err != nil {
 			return 0, err
 		}
@@ -344,7 +347,7 @@ func findHiLo(gas *big.Int) (hi, lo uint64) {
 	return
 }
 
-//func hilo(args *EVMRequest, archive state.StateDB) (uint64, uint64, error) {
+//func hilo(args *, archive state.StateDB) (uint64, uint64, error) {
 //	// Binary search the gas requirement, as it may be higher than the amount used
 //	var (
 //		lo uint64 = params.TxGas - 1
@@ -413,37 +416,37 @@ func findHiLo(gas *big.Int) (hi, lo uint64) {
 //}
 
 // isExecutable tries if transaction is executable with given gas
-func isExecutable(gas uint64, evm *EVM) (bool, *evmcore.ExecutionResult, error) {
-	evm.req.Gas.SetUint64(gas)
-
-	evmRes, err := newEVM(evm.blockID, evm.archive, evm.vmImpl, evm.chainCfg, evm.req, evm.timestamp).sendCall()
-	if err != nil {
-		if strings.Contains(err.Error(), "intrinsic gas too low") {
-			return true, nil, nil // Special case, raise gas limit
-		}
-		return true, nil, err // Bailout
-	}
-	return evmRes.Failed(), evmRes, nil
-}
+//func isExecutable(gas uint64, evm *EVMExecutor) (bool, *evmcore.ExecutionResult, error) {
+//	evm.req.Gas.SetUint64(gas)
+//
+//	evmRes, err := newEVMExecutor(evm.blockID, evm.archive, evm.vmImpl, evm.chainCfg, evm.req, evm.timestamp).sendCall()
+//	if err != nil {
+//		if strings.Contains(err.Error(), "intrinsic gas too low") {
+//			return true, nil, nil // Special case, raise gas limit
+//		}
+//		return true, nil, err // Bailout
+//	}
+//	return evmRes.Failed(), evmRes, nil
+//}
 
 // compareHiAndCap so we know whether transaction fails with the highest possible gas
-func compareHiAndCap(hi, cap uint64, evm *EVM) error {
-	if hi == cap {
-		failed, result, err := isExecutable(hi, evm)
-		if err != nil {
-			return err
-		}
-		if failed {
-			if result != nil && result.Err != vm.ErrOutOfGas {
-				if len(result.Revert()) > 0 {
-					return newRevertError(result)
-				}
-				return result.Err
-			}
-			// Otherwise, the specified gas cap is too low
-			return fmt.Errorf("gas required exceeds allowance (%d)", cap)
-		}
-	}
-
-	return nil
-}
+//func compareHiAndCap(hi, cap uint64, evm *EVMExecutor) error {
+//	if hi == cap {
+//		failed, result, err := isExecutable(hi, evm)
+//		if err != nil {
+//			return err
+//		}
+//		if failed {
+//			if result != nil && result.Err != vm.ErrOutOfGas {
+//				if len(result.Revert()) > 0 {
+//					return newRevertError(result)
+//				}
+//				return result.Err
+//			}
+//			// Otherwise, the specified gas cap is too low
+//			return fmt.Errorf("gas required exceeds allowance (%d)", cap)
+//		}
+//	}
+//
+//	return nil
+//}

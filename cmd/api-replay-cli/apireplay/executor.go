@@ -151,17 +151,15 @@ func (e *ReplayExecutor) doExecute(in *executorInput) *StateDBData {
 		return executeGetTransactionCount(in.req.Query.Params[0], in.archive)
 
 	case "call":
-		req := newEVMRequest(in.req.Query.Params[0].(map[string]interface{}))
 		timestamp := substate.GetSubstate(in.blockID, 0).Env.Timestamp
-		evm := newEVM(in.blockID, in.archive, e.vmImpl, e.chainCfg, req, timestamp)
+		evm := newEVMExecutor(in.blockID, in.archive, e.vmImpl, e.chainCfg, in.req.Query.Params[0].(map[string]interface{}), timestamp)
 		return executeCall(evm)
 
 	case "estimateGas":
-		req := newEVMRequest(in.req.Query.Params[0].(map[string]interface{}))
 		// todo save substate timestamp
 		timestamp := substate.GetSubstate(in.blockID, 0).Env.Timestamp
-		evm := newEVM(in.blockID, in.archive, e.vmImpl, e.chainCfg, req, timestamp)
-		return executeEstimateGas(evm)
+		ex := newEVMExecutor(in.blockID, in.archive, e.vmImpl, e.chainCfg, in.req.Query.Params[0].(map[string]interface{}), timestamp)
+		return executeEstimateGas(ex)
 
 	case "getCode":
 		return executeGetCode(in.req.Query.Params[0], in.archive)

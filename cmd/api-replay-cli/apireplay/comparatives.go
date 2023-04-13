@@ -201,7 +201,7 @@ func compareCallStateDBResult(data *OutData, builder *strings.Builder) *comparat
 		expectedErrorGotResult)
 }
 
-// compareEVMStateDBError compares error returned from EVM with recorded data
+// compareEVMStateDBError compares error returned from EVMExecutor with recorded data
 func compareEVMStateDBError(data *OutData, builder *strings.Builder) *comparatorError {
 
 	// did we record an error?
