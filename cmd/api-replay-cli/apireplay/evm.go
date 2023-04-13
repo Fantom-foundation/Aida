@@ -166,6 +166,70 @@ func (e *EVMExecutor) sendCall() (*evmcore.ExecutionResult, error) {
 // sendEstimateGas executes estimateGas method in the EVMExecutor
 // It calculates how much gas would transaction need if it was executed
 func (e *EVMExecutor) sendEstimateGas() (hexutil.Uint64, error) {
+	hi, lo, cap, err := e.findHiLoCap()
+	if err != nil {
+		return 0, err
+	}
+
+	e.log.Debugf("lo: %v\n", lo)
+	e.log.Debugf("hi: %v\n", hi)
+
+	// Execute the binary search and hone in on an executable gas limit
+	for lo+1 < hi {
+		mid := (hi + lo) / 2
+		failed, _, err := e.executable(mid)
+
+		// If the error is not nil(consensus error), it means the provided message
+		// call or transaction will never be accepted no matter how much gas it is
+		// assigned. Return the error directly, don't struggle anymore.
+		if err != nil {
+			return 0, err
+		}
+		if failed {
+			e.log.Debugf("fail; gas: %v\n", mid)
+			lo = mid
+		} else {
+			e.log.Debugf("no fail; gas: %v\n", mid)
+			hi = mid
+		}
+	}
+	// Reject the transaction as invalid if it still fails at the highest allowance
+	if hi == cap {
+		failed, result, err := e.executable(hi)
+		if err != nil {
+			return 0, err
+		}
+		if failed {
+			if result != nil && result.Err != vm.ErrOutOfGas {
+				if len(result.Revert()) > 0 {
+					return 0, newRevertError(result)
+				}
+				return 0, result.Err
+			}
+			// Otherwise, the specified gas cap is too low
+			return 0, fmt.Errorf("gas required exceeds allowance (%d)", cap)
+		}
+	}
+	return hexutil.Uint64(hi), nil
+}
+
+func (e *EVMExecutor) executable(gas uint64) (bool, *evmcore.ExecutionResult, error) {
+	e.args.Gas = (*hexutil.Uint64)(&gas)
+
+	e.log.Debugf("sent gas: %v\n", gas)
+
+	result, err := e.sendCall()
+
+	if err != nil {
+		if strings.Contains(err.Error(), "intrinsic gas too low") {
+			return true, nil, nil // Special case, raise gas limit
+		}
+		return true, nil, err // Bail out
+	}
+	return result.Failed(), result, nil
+}
+
+func (e *EVMExecutor) findHiLoCap() (uint64, uint64, uint64, error) {
 	// Binary search the gas requirement, as it may be higher than the amount used
 	var (
 		lo  = params.TxGas - 1
@@ -186,7 +250,7 @@ func (e *EVMExecutor) sendEstimateGas() (hexutil.Uint64, error) {
 	// Normalize the max fee per gas the call is willing to spend.
 	var feeCap *big.Int
 	if e.args.GasPrice != nil && (e.args.MaxFeePerGas != nil || e.args.MaxPriorityFeePerGas != nil) {
-		return 0, errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
+		return 0, 0, 0, errors.New("both gasPrice and (maxFeePerGas or maxPriorityFeePerGas) specified")
 	} else if e.args.GasPrice != nil {
 		feeCap = e.args.GasPrice.ToInt()
 	} else if e.args.MaxFeePerGas != nil {
@@ -200,7 +264,7 @@ func (e *EVMExecutor) sendEstimateGas() (hexutil.Uint64, error) {
 		available := new(big.Int).Set(balance)
 		if e.args.Value != nil {
 			if e.args.Value.ToInt().Cmp(available) >= 0 {
-				return 0, errors.New("insufficient funds for transfer")
+				return 0, 0, 0, errors.New("insufficient funds for transfer")
 			}
 			available.Sub(available, e.args.Value.ToInt())
 		}
@@ -222,60 +286,5 @@ func (e *EVMExecutor) sendEstimateGas() (hexutil.Uint64, error) {
 	}
 	cap = hi
 
-	e.log.Debugf("lo: %v\n", lo)
-	e.log.Debugf("hi: %v\n", hi)
-
-	// Create a helper to check if a gas allowance results in an executable transaction
-	executable := func(gas uint64) (bool, *evmcore.ExecutionResult, error) {
-		e.args.Gas = (*hexutil.Uint64)(&gas)
-
-		e.log.Debugf("sent gas: %v\n", gas)
-
-		result, err := e.sendCall()
-
-		if err != nil {
-			if strings.Contains(err.Error(), "intrinsic gas too low") {
-				return true, nil, nil // Special case, raise gas limit
-			}
-			return true, nil, err // Bail out
-		}
-		return result.Failed(), result, nil
-	}
-	// Execute the binary search and hone in on an executable gas limit
-	for lo+1 < hi {
-		mid := (hi + lo) / 2
-		failed, _, err := executable(mid)
-
-		// If the error is not nil(consensus error), it means the provided message
-		// call or transaction will never be accepted no matter how much gas it is
-		// assigned. Return the error directly, don't struggle anymore.
-		if err != nil {
-			return 0, err
-		}
-		if failed {
-			e.log.Debugf("fail; gas: %v\n", mid)
-			lo = mid
-		} else {
-			e.log.Debugf("no fail; gas: %v\n", mid)
-			hi = mid
-		}
-	}
-	// Reject the transaction as invalid if it still fails at the highest allowance
-	if hi == cap {
-		failed, result, err := executable(hi)
-		if err != nil {
-			return 0, err
-		}
-		if failed {
-			if result != nil && result.Err != vm.ErrOutOfGas {
-				if len(result.Revert()) > 0 {
-					return 0, newRevertError(result)
-				}
-				return 0, result.Err
-			}
-			// Otherwise, the specified gas cap is too low
-			return 0, fmt.Errorf("gas required exceeds allowance (%d)", cap)
-		}
-	}
-	return hexutil.Uint64(hi), nil
+	return hi, lo, cap, nil
 }
