@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -16,121 +15,69 @@ import (
 // DbMerger implements merging command for combining all source data databases into single database used for profiling.
 func DbMerger(ctx *cli.Context) error {
 	targetPath := ctx.Path(utils.DBFlag.Name)
-	substatePath := ctx.Path(substate.SubstateDirFlag.Name)
-	updatedbPath := ctx.Path(utils.UpdateDBDirFlag.Name)
-	deletedAccountsPath := ctx.Path(utils.DeletedAccountDirFlag.Name)
 
-	targetDB, substateDB, updatesetDB, deletedAccountsDB, skipSubstate, err := openDatabases(ctx, targetPath, substatePath, updatedbPath, deletedAccountsPath)
+	targetDB, sourceDBs, sourceDBPaths, err := openDatabases(targetPath, ctx.Args())
 	if err != nil {
 		return err
 	}
 
-	// if deletion of source data is enabled than substate data was already moved to target from source database path by renaming
-	if !skipSubstate {
-		// copy the substates to the target database
-		err = copyData(substateDB, targetDB)
+	for i, sourceDB := range sourceDBs {
+		// copy the sourceDB to the target database
+		err = copyData(sourceDB, targetDB)
 		if err != nil {
 			return err
 		}
-		log.Printf("substate move finished\n")
+		log.Printf("data from %s copying finished \n", sourceDBPaths[i])
+		MustCloseDB(sourceDB)
 	}
-
-	// copy the updateset to the target database
-	err = copyData(updatesetDB, targetDB)
-	if err != nil {
-		return err
-	}
-	log.Printf("updateset move finished\n")
-
-	// copy the deleted accounts to the target database
-	err = copyData(deletedAccountsDB, targetDB)
-	if err != nil {
-		return err
-	}
-	log.Printf("deleted accounts move finished\n")
 
 	// close databases
 	MustCloseDB(targetDB)
-	MustCloseDB(substateDB)
-	MustCloseDB(updatesetDB)
-	MustCloseDB(deletedAccountsDB)
 
-	// delete
+	// delete source databases
 	if ctx.Bool(utils.DeleteSourceDBsFlag.Name) {
-		err = os.RemoveAll(substatePath)
-		if err != nil {
-			return err
-		}
-		err = os.RemoveAll(updatedbPath)
-		if err != nil {
-			return err
-		}
-		err = os.RemoveAll(deletedAccountsPath)
-		if err != nil {
-			return err
+		for _, path := range sourceDBPaths {
+			err = os.RemoveAll(path)
+			if err != nil {
+				return err
+			}
+			log.Printf("deleted: %s\n", path)
 		}
 	}
+	log.Printf("merge finished successfully\n")
 
 	return err
 }
 
 // openDatabases opens all databases required for merge
-func openDatabases(ctx *cli.Context, targetPath string, substatePath string, updatedbPath string, deletedAccountsPath string) (ethdb.Database, ethdb.Database, ethdb.Database, ethdb.Database, bool, error) {
-	_, err := os.Stat(targetPath)
-	if !os.IsNotExist(err) {
-		return nil, nil, nil, nil, false, fmt.Errorf("target database %s is not empty\n", targetPath)
+func openDatabases(targetPath string, args cli.Args) (ethdb.Database, []ethdb.Database, []string, error) {
+	if args.Len() < 1 {
+		return nil, nil, nil, fmt.Errorf("no source database were specified\n")
 	}
 
-	// open substateDB
-	substateDB, err := rawdb.NewLevelDBDatabase(substatePath, 1024, 100, "substatedir", true)
-	if err != nil {
-		return nil, nil, nil, nil, false, fmt.Errorf("substateDB. Error: %v", err)
-	}
-
-	// open updatesetDB
-	updatesetDB, err := rawdb.NewLevelDBDatabase(updatedbPath, 1024, 100, "updatesetdir", true)
-	if err != nil {
-		return nil, nil, nil, nil, false, fmt.Errorf("updateSetDB. Error: %v", err)
-	}
-
-	// open deletedAccountsDB
-	deletedAccountsDB, err := rawdb.NewLevelDBDatabase(deletedAccountsPath, 1024, 100, "destroyed_accounts", true)
-	if err != nil {
-		return nil, nil, nil, nil, false, fmt.Errorf("deletedAccountsDB. Error: %v", err)
-	}
-
-	err = checkCompatibility(substateDB, updatesetDB, deletedAccountsDB)
-	if err != nil {
-		return nil, nil, nil, nil, false, fmt.Errorf("database source data are not compatible. Error: %v", err)
-	}
-
-	var skipSubstate = false
-
-	if ctx.Bool(utils.DeleteSourceDBsFlag.Name) {
-		// source db has to be deleted we can move the folder to target
-		MustCloseDB(substateDB)
-		err = os.Rename(substatePath, targetPath)
-		if err == nil {
-			log.Print("substate move finished\n")
-			skipSubstate = true
-		} else {
-			return nil, nil, nil, nil, false, err
+	var sourceDBs []ethdb.Database
+	var sourceDBPaths []string
+	for i := 0; i < args.Len(); i++ {
+		path := args.Get(i)
+		_, err := os.Stat(path)
+		if os.IsNotExist(err) {
+			return nil, nil, nil, fmt.Errorf("source database %s; doesn't exist\n", path)
 		}
+		db, err := rawdb.NewLevelDBDatabase(path, 1024, 100, "", true)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("source database %s; error: %v", path, err)
+		}
+		sourceDBPaths = append(sourceDBPaths, path)
+		sourceDBs = append(sourceDBs, db)
 	}
 
 	// open targetDB
 	targetDB, err := rawdb.NewLevelDBDatabase(targetPath, 1024, 100, "profiling", false)
 	if err != nil {
-		return nil, nil, nil, nil, false, fmt.Errorf("targetDB. Error: %v", err)
+		return nil, nil, nil, fmt.Errorf("targetDB. Error: %v", err)
 	}
 
-	return targetDB, substateDB, updatesetDB, deletedAccountsDB, skipSubstate, nil
-}
-
-// checkCompatibility confirms that the given databases are compatible
-func checkCompatibility(substateDB ethdb.Database, updatesetDB ethdb.Database, deletedAccountsDB ethdb.Database) error {
-	// TODO check block ranges of databases
-	return nil
+	return targetDB, sourceDBs, sourceDBPaths, nil
 }
 
 // copyData copies data from source to target database, substitute
