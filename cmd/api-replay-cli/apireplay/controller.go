@@ -198,7 +198,7 @@ func createComparators(ctx *cli.Context, input chan *OutData, closed chan any, w
 	if ctx.Int(flags.WorkersFlag.Name) == 1 {
 		comparators = 1
 	} else {
-		comparators = ctx.Int(flags.WorkersFlag.Name) / 2
+		comparators = ctx.Int(flags.WorkersFlag.Name)
 	}
 
 	log.Infof("creating %v comparators", comparators)
