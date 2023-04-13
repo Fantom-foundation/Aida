@@ -162,6 +162,12 @@ func (e *ReplayExecutor) doExecute(in *executorInput) *StateDBData {
 		evm := newEVM(in.blockID, in.archive, e.vmImpl, e.chainCfg, req, timestamp)
 		return executeEstimateGas(evm)
 
+	case "getCode":
+		return executeGetCode(in.req.Query.Params[0], in.archive)
+
+	case "getStorageAt":
+		return executeGetStorageAt(in.req.Query.Params, in.archive)
+
 	default:
 		break
 	}

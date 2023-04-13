@@ -19,6 +19,7 @@ const (
 	expectedResultGotError
 	unexpectedDataType
 	cannotUnmarshalResult
+	internalError
 )
 
 // comparatorError is returned when data returned by StateDB does not match recorded data
@@ -61,15 +62,35 @@ func newComparatorError(stateDB, expected any, data *OutData, typ comparatorErro
 		return newUnexpectedDataTypeErr(data)
 	case cannotUnmarshalResult:
 		return newCannotUnmarshalResult(data)
+	case internalError:
+		return newInternalError(data)
 	default:
-		break
-	}
-	return &comparatorError{
-		error: fmt.Errorf("default error:\n%v", data),
-		typ:   0,
+		return &comparatorError{
+			error: fmt.Errorf("default error:\n%v", data),
+			typ:   0,
+		}
 	}
 }
 
+// newNoMatchingResultErr returns new comparatorError
+// It is returned when recording has an internal error code - this error is logged to level DEBUG and
+// is not related to StateDB
+func newInternalError(data *OutData) *comparatorError {
+	return &comparatorError{
+		error: fmt.Errorf("recording with internal error for request:"+
+			"\nMethod: %v"+
+			"\nBlockID: %v"+
+			"\n\tStateDB result: %v"+
+			"\n\tStateDB err: %v"+
+			"\n\tExpected result: %v"+
+			"\n\tExpected err: %v"+
+			"\n\tParams: %v", data.Method, data.BlockID, data.StateDB.Result, data.StateDB.Error, data.Recorded.Result, data.Recorded.Error, string(data.ParamsRaw)),
+		typ: internalError,
+	}
+}
+
+// newCannotUnmarshalResult returns new comparatorError
+// It is returned when json.Unmarshal returned an error
 func newCannotUnmarshalResult(data *OutData) *comparatorError {
 	return &comparatorError{
 		error: fmt.Errorf("cannot unmarshal result, returning every possible data"+

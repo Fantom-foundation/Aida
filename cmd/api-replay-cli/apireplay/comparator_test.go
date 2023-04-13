@@ -27,17 +27,19 @@ const (
 // It expects no error since results are same
 func Test_compareBalanceOK(t *testing.T) {
 	bigRes, _ := new(big.Int).SetString("1", 16)
+	rec, _ := json.Marshal(hexOne)
+
 	data := &OutData{
 		Method: "eth_getBalance",
 		Recorded: &RecordedData{
-			Result: []byte(hexOne),
+			Result: rec,
 		},
 		StateDB: &StateDBData{
 			Result: bigRes,
 		},
 	}
 
-	err := compareBalance(data)
+	err := compareBalance(data, new(strings.Builder))
 	if err != nil {
 		t.Errorf("error must be nil; err: %v", err)
 	}
@@ -48,17 +50,19 @@ func Test_compareBalanceOK(t *testing.T) {
 // It expects an error of no matching results since results are different
 func Test_compareBalanceErrorNoMatchingResult(t *testing.T) {
 	bigRes, _ := new(big.Int).SetString("1", 16)
+	rec, _ := json.Marshal(hexZero)
+
 	data := &OutData{
 		Method: "eth_getBalance",
 		Recorded: &RecordedData{
-			Result: []byte(hexZero),
+			Result: rec,
 		},
 		StateDB: &StateDBData{
 			Result: bigRes,
 		},
 	}
 
-	err := compareBalance(data)
+	err := compareBalance(data, new(strings.Builder))
 	if err == nil {
 		t.Errorf("error must not be nil; err: %v", err)
 		return
@@ -73,18 +77,19 @@ func Test_compareBalanceErrorNoMatchingResult(t *testing.T) {
 // Test_compareTransactionCountOK tests compare func for getTransactionCount method
 // It expects no error since results are same
 func Test_compareTransactionCountOK(t *testing.T) {
+	rec, _ := json.Marshal(hexOne)
 
 	data := &OutData{
 		Method: "eth_getTransactionCount",
 		Recorded: &RecordedData{
-			Result: []byte(hexOne),
+			Result: rec,
 		},
 		StateDB: &StateDBData{
 			Result: uint64(1),
 		},
 	}
 
-	err := compareTransactionCount(data)
+	err := compareTransactionCount(data, new(strings.Builder))
 
 	if err != nil {
 		t.Errorf("error must be nil; err: %v", err)
@@ -95,17 +100,19 @@ func Test_compareTransactionCountOK(t *testing.T) {
 // Test_compareTransactionCountErrorNoMatchingResult tests compare func for getTransactionCount method
 // It expects an error of no matching results since results are different
 func Test_compareTransactionCountErrorNoMatchingResult(t *testing.T) {
+	rec, _ := json.Marshal(hexZero)
+
 	data := &OutData{
 		Method: "eth_getTransactionCount",
 		Recorded: &RecordedData{
-			Result: []byte(hexZero),
+			Result: rec,
 		},
 		StateDB: &StateDBData{
 			Result: uint64(1),
 		},
 	}
 
-	err := compareTransactionCount(data)
+	err := compareTransactionCount(data, new(strings.Builder))
 	if err == nil {
 		t.Errorf("error must not be nil; err: %v", err)
 		return
@@ -121,7 +128,7 @@ func Test_compareTransactionCountErrorNoMatchingResult(t *testing.T) {
 // It expects no error since results are same
 func Test_compareCallOK(t *testing.T) {
 
-	rec, _ := json.Marshal(strings.TrimPrefix(longHexOne, "0x"))
+	rec, _ := json.Marshal(longHexOne)
 	data := &OutData{
 		Method: "eth_call",
 		Recorded: &RecordedData{
@@ -132,7 +139,7 @@ func Test_compareCallOK(t *testing.T) {
 		},
 	}
 
-	err := compareCall(data)
+	err := compareCall(data, new(strings.Builder))
 	if err != nil {
 		t.Errorf("error must be nil; err: %v", err)
 	}
@@ -152,7 +159,7 @@ func Test_compareCallErrorNoMatchingResult(t *testing.T) {
 		},
 	}
 
-	err := compareCall(data)
+	err := compareCall(data, new(strings.Builder))
 	if err == nil {
 		t.Errorf("error must not be nil; err: %v", err)
 		return
@@ -177,7 +184,7 @@ func Test_compareCallErrorExpectedResultGotErr(t *testing.T) {
 		},
 	}
 
-	err := compareCall(data)
+	err := compareCall(data, new(strings.Builder))
 	if err == nil {
 		t.Errorf("error must not be nil; err: %v", err)
 		return
@@ -205,7 +212,7 @@ func Test_compareCallErrorExpectedErrGotResult(t *testing.T) {
 		},
 	}
 
-	err := compareCall(data)
+	err := compareCall(data, new(strings.Builder))
 	if err == nil {
 		t.Errorf("error must not be null")
 		return
@@ -220,17 +227,19 @@ func Test_compareCallErrorExpectedErrGotResult(t *testing.T) {
 // Test_compareEstimateGasOK tests compare func for estimateGas method
 // It expects no error since results are same
 func Test_compareEstimateGasOK(t *testing.T) {
+	rec, _ := json.Marshal(hexOne)
+
 	data := &OutData{
 		Method: "eth_getTransactionCount",
 		Recorded: &RecordedData{
-			Result: []byte(hexOne),
+			Result: rec,
 		},
 		StateDB: &StateDBData{
 			Result: hexutil.Uint64(1),
 		},
 	}
 
-	err := compareEstimateGas(data)
+	err := compareEstimateGas(data, new(strings.Builder))
 	if err != nil {
 		t.Errorf("error must be nil; err: %v", err)
 	}
@@ -239,17 +248,19 @@ func Test_compareEstimateGasOK(t *testing.T) {
 // Test_compareEstimateGasErrorNoMatchingResult tests compare func for estimateGas method
 // It expects an error of no matching results since results are different
 func Test_compareEstimateGasErrorNoMatchingResult(t *testing.T) {
+	rec, _ := json.Marshal(hexOne)
+
 	data := &OutData{
 		Method: "eth_estimateGas",
 		Recorded: &RecordedData{
-			Result: []byte(hexOne),
+			Result: rec,
 		},
 		StateDB: &StateDBData{
 			Result: hexutil.Uint64(0),
 		},
 	}
 
-	err := compareEstimateGas(data)
+	err := compareEstimateGas(data, new(strings.Builder))
 	if err == nil {
 		t.Errorf("error must not be null")
 		return
@@ -274,7 +285,7 @@ func Test_compareEstimateGasErrorExpectedResultGotErr(t *testing.T) {
 		},
 	}
 
-	err := compareEstimateGas(data)
+	err := compareEstimateGas(data, new(strings.Builder))
 	if err == nil {
 		t.Errorf("error must be nil; err: %v", err)
 		return
@@ -301,7 +312,7 @@ func Test_compareEstimateGasErrorExpectedErrGotResult(t *testing.T) {
 		},
 	}
 
-	err := compareEstimateGas(data)
+	err := compareEstimateGas(data, new(strings.Builder))
 	if err == nil {
 		t.Errorf("error must not be null")
 		return
@@ -309,6 +320,100 @@ func Test_compareEstimateGasErrorExpectedErrGotResult(t *testing.T) {
 
 	if err.typ != expectedErrorGotResult {
 		t.Errorf("error must be type 'expectedErrorGotResult'; err: %v", err)
+	}
+
+}
+
+// Test_compareCodeOK tests compare func for getCode method
+// It expects no error since results are same
+func Test_compareCodeOK(t *testing.T) {
+
+	rec, _ := json.Marshal(longHexOne)
+	data := &OutData{
+		Method: "eth_getCode",
+		Recorded: &RecordedData{
+			Result: rec,
+		},
+		StateDB: &StateDBData{
+			Result: hexutils.HexToBytes(strings.TrimPrefix(longHexOne, "0x")),
+		},
+	}
+
+	err := compareCode(data, new(strings.Builder))
+	if err != nil {
+		t.Errorf("error must be nil; err: %v", err)
+	}
+}
+
+// Test_compareCodeErrorNoMatchingResult tests compare func for getCode method
+// It expects an error of no matching results since results are different
+func Test_compareCodeErrorNoMatchingResult(t *testing.T) {
+	rec, _ := json.Marshal(longHexOne)
+	data := &OutData{
+		Method: "eth_getCode",
+		Recorded: &RecordedData{
+			Result: rec,
+		},
+		StateDB: &StateDBData{
+			Result: hexutils.HexToBytes(strings.TrimPrefix(longHexZero, "0x")),
+		},
+	}
+
+	err := compareCode(data, new(strings.Builder))
+	if err == nil {
+		t.Errorf("error must not be nil; err: %v", err)
+		return
+	}
+
+	if err.typ != noMatchingResult {
+		t.Errorf("error must be type 'noMatchingResult'; err: %v", err)
+	}
+
+}
+
+// Test_compareStorageAtOK tests compare func for getStorageAt method
+// It expects no error since results are same
+func Test_compareStorageAtOK(t *testing.T) {
+
+	rec, _ := json.Marshal(longHexOne)
+	data := &OutData{
+		Method: "eth_getStorageAt",
+		Recorded: &RecordedData{
+			Result: rec,
+		},
+		StateDB: &StateDBData{
+			Result: hexutils.HexToBytes(strings.TrimPrefix(longHexOne, "0x")),
+		},
+	}
+
+	err := compareStorageAt(data, new(strings.Builder))
+	if err != nil {
+		t.Errorf("error must be nil; err: %v", err)
+	}
+}
+
+// Test_compareStorageAtErrorNoMatchingResult tests compare func for getStorageAt method
+// It expects an error of no matching results since results are different
+func Test_compareStorageAtErrorNoMatchingResult(t *testing.T) {
+	rec, _ := json.Marshal(longHexOne)
+	data := &OutData{
+		Method: "eth_getStorageAt",
+		Recorded: &RecordedData{
+			Result: rec,
+		},
+		StateDB: &StateDBData{
+			Result: hexutils.HexToBytes(strings.TrimPrefix(longHexZero, "0x")),
+		},
+	}
+
+	err := compareStorageAt(data, new(strings.Builder))
+	if err == nil {
+		t.Errorf("error must not be nil; err: %v", err)
+		return
+	}
+
+	if err.typ != noMatchingResult {
+		t.Errorf("error must be type 'noMatchingResult'; err: %v", err)
 	}
 
 }
