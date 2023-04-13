@@ -24,6 +24,7 @@ type ArgumentMode int
 const (
 	BlockRangeArgs ArgumentMode = iota // requires 2 arguments: first block and last block
 	LastBlockArg                       // requires 1 argument: last block
+	NoArgs                             // requires no arguments
 )
 
 var (
@@ -370,6 +371,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 			if argErr != nil {
 				return nil, argErr
 			}
+		case NoArgs:
 		default:
 			return nil, fmt.Errorf("Unknown mode. Unable to process commandline arguments.")
 		}
@@ -440,6 +442,13 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	setFirstBlockFromChainID(cfg.ChainID)
 	if cfg.SyncPeriodLength <= 0 {
 		cfg.SyncPeriodLength = 300
+	}
+	if cfg.RandomSeed < 0 {
+		cfg.RandomSeed = int64(rand.Uint32())
+	}
+
+	if mode == NoArgs {
+		return cfg, nil
 	}
 
 	if _, err := os.Stat(cfg.DBDir); !os.IsNotExist(err) {
@@ -518,14 +527,9 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		log.Printf("WARNING: Unable to keep in-memory stateDB")
 		cfg.KeepStateDB = false
 	}
-
 	if cfg.SkipPriming && cfg.ValidateWorldState {
 		log.Printf("ERROR: skipPriming and validation of world state can not be enabled at the same time\n")
 		return cfg, fmt.Errorf("skipPriming and world-state validation can not be enabled at the same time")
-	}
-
-	if cfg.RandomSeed < 0 {
-		cfg.RandomSeed = int64(rand.Uint32())
 	}
 
 	return cfg, nil
