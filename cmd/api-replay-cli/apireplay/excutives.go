@@ -74,7 +74,7 @@ func executeCall(evm *EVMExecutor) (out *StateDBData) {
 func executeEstimateGas(evm *EVMExecutor) (out *StateDBData) {
 	out = new(StateDBData)
 
-	out.Result, out.Error = evm.newEstimateGas(evm.args)
+	out.Result, out.Error = evm.sendEstimateGas()
 
 	return
 }
