@@ -171,8 +171,8 @@ func (e *EVMExecutor) sendEstimateGas() (hexutil.Uint64, error) {
 		return 0, err
 	}
 
-	e.log.Debugf("lo: %v\n", lo)
-	e.log.Debugf("hi: %v\n", hi)
+	//e.log.Debugf("lo: %v\n", lo)
+	//e.log.Debugf("hi: %v\n", hi)
 
 	// Execute the binary search and hone in on an executable gas limit
 	for lo+1 < hi {
@@ -186,10 +186,10 @@ func (e *EVMExecutor) sendEstimateGas() (hexutil.Uint64, error) {
 			return 0, err
 		}
 		if failed {
-			e.log.Debugf("fail; gas: %v\n", mid)
+			//e.log.Debugf("fail; gas: %v\n", mid)
 			lo = mid
 		} else {
-			e.log.Debugf("no fail; gas: %v\n", mid)
+			//e.log.Debugf("no fail; gas: %v\n", mid)
 			hi = mid
 		}
 	}
@@ -216,7 +216,7 @@ func (e *EVMExecutor) sendEstimateGas() (hexutil.Uint64, error) {
 func (e *EVMExecutor) executable(gas uint64) (bool, *evmcore.ExecutionResult, error) {
 	e.args.Gas = (*hexutil.Uint64)(&gas)
 
-	e.log.Debugf("sent gas: %v\n", gas)
+	//e.log.Debugf("sent gas: %v\n", gas)
 
 	result, err := e.sendCall()
 
