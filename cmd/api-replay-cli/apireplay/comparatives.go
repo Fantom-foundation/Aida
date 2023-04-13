@@ -23,6 +23,7 @@ var EVMErrors = map[int][]string{
 		"insufficient funds",
 		"gas required exceeds allowance",
 	},
+	-32603: {"execution reverted"},
 	-32602: {"invalid argument"},
 	3:      {"execution reverted"},
 }
