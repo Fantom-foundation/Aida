@@ -29,13 +29,6 @@ var (
 		Value:   "info",
 	}
 
-	// Verbose logs additional information about requests - solely for debugging purpose
-	Verbose = cli.BoolFlag{
-		Name:    "verbose",
-		Usage:   "defines that we want to log steps in replay",
-		Aliases: []string{"v"},
-	}
-
 	// ContinueOnFailure does not stop the program when unmatched results are found
 	ContinueOnFailure = cli.BoolFlag{
 		Name:    "continue-on-failure",

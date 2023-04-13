@@ -10,6 +10,7 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/op/go-logging"
 )
 
 // executorInput represents data needed for executing request into StateDB
@@ -43,11 +44,11 @@ type ReplayExecutor struct {
 	currentBlockID uint64
 	vmImpl         string
 	chainCfg       *params.ChainConfig
-	verbose        bool
+	log            *logging.Logger
 }
 
 // newExecutor returns new instance of ReplayExecutor
-func newExecutor(output chan *OutData, chainCfg *params.ChainConfig, input chan *executorInput, vmImpl string, wg *sync.WaitGroup, closed chan any, verbose bool) *ReplayExecutor {
+func newExecutor(output chan *OutData, chainCfg *params.ChainConfig, input chan *executorInput, vmImpl string, wg *sync.WaitGroup, closed chan any, log *logging.Logger) *ReplayExecutor {
 	return &ReplayExecutor{
 		chainCfg: chainCfg,
 		vmImpl:   vmImpl,
@@ -55,7 +56,7 @@ func newExecutor(output chan *OutData, chainCfg *params.ChainConfig, input chan 
 		input:    input,
 		output:   output,
 		wg:       wg,
-		verbose:  verbose,
+		log:      log,
 	}
 }
 
@@ -88,10 +89,8 @@ func (e *ReplayExecutor) execute() {
 				return
 			}
 
-			// are we at debugging state?
-			if e.verbose {
-				e.logReq(in)
-			}
+			//todo
+			//e.log.Debugf("executing %v with these params: \n\t%v", in.req.Query.Method, string(in.req.ParamsRaw))
 
 			// doExecute into db
 			res = e.doExecute(in)
@@ -152,13 +151,13 @@ func (e *ReplayExecutor) doExecute(in *executorInput) *StateDBData {
 
 	case "call":
 		timestamp := substate.GetSubstate(in.blockID, 0).Env.Timestamp
-		evm := newEVMExecutor(in.blockID, in.archive, e.vmImpl, e.chainCfg, in.req.Query.Params[0].(map[string]interface{}), timestamp)
+		evm := newEVMExecutor(in.blockID, in.archive, e.vmImpl, e.chainCfg, in.req.Query.Params[0].(map[string]interface{}), timestamp, e.log)
 		return executeCall(evm)
 
 	case "estimateGas":
 		// todo save substate timestamp
 		timestamp := substate.GetSubstate(in.blockID, 0).Env.Timestamp
-		ex := newEVMExecutor(in.blockID, in.archive, e.vmImpl, e.chainCfg, in.req.Query.Params[0].(map[string]interface{}), timestamp)
+		ex := newEVMExecutor(in.blockID, in.archive, e.vmImpl, e.chainCfg, in.req.Query.Params[0].(map[string]interface{}), timestamp, e.log)
 		return executeEstimateGas(ex)
 
 	case "getCode":
@@ -171,8 +170,4 @@ func (e *ReplayExecutor) doExecute(in *executorInput) *StateDBData {
 		break
 	}
 	return nil
-}
-
-func (e *ReplayExecutor) logReq(in *executorInput) {
-	log.Printf("executing %v with these params: \n\t%v", in.req.Query.Method, string(in.req.ParamsRaw))
 }

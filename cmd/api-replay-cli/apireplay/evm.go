@@ -16,17 +16,10 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	eth "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/op/go-logging"
 	"github.com/status-im/keycard-go/hexutils"
 )
-
-//// EVMRequest represents data structure of requests executed in EVMExecutor
-//type  struct {
-//	From, To             *common.Address
-//	Data                 hexutil.Bytes
-//	Gas, GasPrice, Value *big.Int
-//}
 
 // EVMExecutor represents requests executed over Ethereum Virtual Machine
 type EVMExecutor struct {
@@ -37,13 +30,14 @@ type EVMExecutor struct {
 	vmImpl    string
 	blockID   *big.Int
 	rules     opera.EconomyRules
+	log       *logging.Logger
 }
 
 const maxGasLimit = 9995800 // used when request does not specify gas
 const globalGasCap = 50000000
 
 // newEVMExecutor creates EVMExecutor for comparing data recorded on API with StateDB
-func newEVMExecutor(blockID uint64, archive state.StateDB, vmImpl string, chainCfg *params.ChainConfig, params map[string]interface{}, timestamp uint64) *EVMExecutor {
+func newEVMExecutor(blockID uint64, archive state.StateDB, vmImpl string, chainCfg *params.ChainConfig, params map[string]interface{}, timestamp uint64, log *logging.Logger) *EVMExecutor {
 	return &EVMExecutor{
 		args:      newTxArgs(params),
 		archive:   archive,
@@ -52,6 +46,7 @@ func newEVMExecutor(blockID uint64, archive state.StateDB, vmImpl string, chainC
 		vmImpl:    vmImpl,
 		blockID:   new(big.Int).SetUint64(blockID),
 		rules:     opera.DefaultEconomyRules(),
+		log:       log,
 	}
 }
 
@@ -173,7 +168,7 @@ func (e *EVMExecutor) sendCall() (*evmcore.ExecutionResult, error) {
 func (e *EVMExecutor) sendEstimateGas() (hexutil.Uint64, error) {
 	// Binary search the gas requirement, as it may be higher than the amount used
 	var (
-		lo  uint64 = params.TxGas - 1
+		lo  = params.TxGas - 1
 		hi  uint64
 		cap uint64
 	)
@@ -217,25 +212,24 @@ func (e *EVMExecutor) sendEstimateGas() (hexutil.Uint64, error) {
 			if transfer == nil {
 				transfer = new(hexutil.Big)
 			}
-			log.Warn("Gas estimation capped by limited funds", "original", hi, "balance", balance,
-				"sent", transfer.ToInt(), "maxFeePerGas", feeCap, "fundable", allowance)
 			hi = allowance.Uint64()
 		}
 	}
 
 	// Recap the highest gas allowance with specified gascap.
 	if hi > globalGasCap {
-		log.Warn("Caller gas above allowance, capping", "requested", hi, "cap", globalGasCap)
 		hi = globalGasCap
 	}
 	cap = hi
 
-	fmt.Printf("lo: %v\n", lo)
-	fmt.Printf("hi: %v\n", hi)
+	e.log.Debugf("lo: %v\n", lo)
+	e.log.Debugf("hi: %v\n", hi)
 
 	// Create a helper to check if a gas allowance results in an executable transaction
-	executable := func(gas uint64, evm *EVMExecutor) (bool, *evmcore.ExecutionResult, error) {
+	executable := func(gas uint64) (bool, *evmcore.ExecutionResult, error) {
 		e.args.Gas = (*hexutil.Uint64)(&gas)
+
+		e.log.Debugf("sent gas: %v\n", gas)
 
 		result, err := e.sendCall()
 
@@ -250,7 +244,7 @@ func (e *EVMExecutor) sendEstimateGas() (hexutil.Uint64, error) {
 	// Execute the binary search and hone in on an executable gas limit
 	for lo+1 < hi {
 		mid := (hi + lo) / 2
-		failed, _, err := executable(mid, e)
+		failed, _, err := executable(mid)
 
 		// If the error is not nil(consensus error), it means the provided message
 		// call or transaction will never be accepted no matter how much gas it is
@@ -259,16 +253,16 @@ func (e *EVMExecutor) sendEstimateGas() (hexutil.Uint64, error) {
 			return 0, err
 		}
 		if failed {
-			fmt.Printf("fail; gas: %v\n", mid)
+			e.log.Debugf("fail; gas: %v\n", mid)
 			lo = mid
 		} else {
-			fmt.Printf("no fail; gas: %v\n", mid)
+			e.log.Debugf("no fail; gas: %v\n", mid)
 			hi = mid
 		}
 	}
 	// Reject the transaction as invalid if it still fails at the highest allowance
 	if hi == cap {
-		failed, result, err := executable(hi, e)
+		failed, result, err := executable(hi)
 		if err != nil {
 			return 0, err
 		}

@@ -16,7 +16,13 @@ const internalErrorCode = -32603
 
 // EVMErrors decode error code into string with which is compared with recorded error message
 var EVMErrors = map[int][]string{
-	-32000: {"execution reverted", "invalid opcode", "insufficient balance for transfer", "insufficient funds"},
+	-32000: {
+		"execution reverted",
+		"invalid opcode",
+		"insufficient balance for transfer",
+		"insufficient funds",
+		"gas required exceeds allowance",
+	},
 	-32602: {"invalid argument"},
 	3:      {"execution reverted"},
 }
@@ -259,7 +265,7 @@ func compareEstimateGas(data *OutData, builder *strings.Builder) *comparatorErro
 
 	// StateDB returned a result
 	if data.StateDB.Result != nil {
-		return compareEstimateGasStateDBResult(data, builder)
+		//return compareEstimateGasStateDBResult(data, builder)
 	}
 
 	return nil

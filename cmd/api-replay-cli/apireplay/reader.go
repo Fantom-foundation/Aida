@@ -159,7 +159,7 @@ func (r *Reader) createExecutorInput(req *iterator.RequestWithResponse) *executo
 	wInput.req = req
 
 	if !r.decodeBlockNumber(req.Query.Params, recordedBlockID, &wInput.blockID) {
-		r.log.Debugf("cannot decode block number; skipping\nParams: %v", req.Query.Params[1])
+		r.log.Warningf("cannot decode block number; skipping\nParams: %v", req.Query.Params[1])
 		return nil
 	}
 
@@ -175,7 +175,6 @@ func (r *Reader) createExecutorInput(req *iterator.RequestWithResponse) *executo
 // getStateArchive for given block
 func (r *Reader) getStateArchive(wantedBlockNumber uint64) state.StateDB {
 	if !r.isBlockNumberWithinRange(wantedBlockNumber) {
-		r.log.Debugf("request with blockID #%v out of StateDB block range; SKIPPING", wantedBlockNumber)
 		return nil
 	}
 

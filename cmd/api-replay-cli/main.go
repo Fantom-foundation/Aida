@@ -24,7 +24,6 @@ func main() {
 			&flags.ContinueOnFailure,
 			&flags.WorkersFlag,
 			&flags.LogLevel,
-			&flags.Verbose,
 			&substate.SubstateDirFlag,
 			&utils.ChainIDFlag,
 			&utils.StateDbImplementationFlag,
