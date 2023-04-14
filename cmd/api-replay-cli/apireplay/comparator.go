@@ -10,13 +10,16 @@ import (
 // Comparator compares data from StateDB and expected data recorded on API server
 // This data is retrieved from Reader
 type Comparator struct {
-	input             chan *OutData
-	log               *logging.Logger
-	closed            chan any
-	wg                *sync.WaitGroup
+	input  chan *OutData
+	log    *logging.Logger
+	closed chan any
+	wg     *sync.WaitGroup
+	// failure is closed when continueOnFailure is false, it is used to send signal to controller to shut down the program
 	continueOnFailure bool
 	failure           chan any
-	builder           *strings.Builder
+
+	// since comparing strings is faster than comparing []byte and we need strings for logging anyway, use builder for contacting
+	builder *strings.Builder
 }
 
 // newComparator returns new instance of Comparator

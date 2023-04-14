@@ -25,7 +25,7 @@ import (
 type EVMExecutor struct {
 	args      ethapi.TransactionArgs
 	archive   state.StateDB
-	timestamp uint64
+	timestamp uint64 // EVM requests require timestamp for correct execution
 	chainCfg  *params.ChainConfig
 	vmImpl    string
 	blockID   *big.Int

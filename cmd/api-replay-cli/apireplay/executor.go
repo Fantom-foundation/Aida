@@ -36,6 +36,11 @@ type OutData struct {
 	ParamsRaw  []byte
 }
 
+// dbRange represents first and last block of StateDB
+type dbRange struct {
+	first, last uint64
+}
+
 // ReplayExecutor represents a goroutine in which requests are executed into StateDB
 type ReplayExecutor struct {
 	currentEVMTimestamp uint64

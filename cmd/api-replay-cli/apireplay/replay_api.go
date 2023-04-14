@@ -31,7 +31,7 @@ func ReplayAPI(ctx *cli.Context) error {
 
 	db, err := utils.MakeStateDB(cfg.StateDbSrcDir, cfg, dbInfo.RootHash, true)
 	if err != nil {
-		log.Fatalf("cannot mate state db; err: %v", err)
+		log.Fatalf("cannot make state db; err: %v", err)
 	}
 
 	substate.SetSubstateDirectory(cfg.SubstateDBDir)

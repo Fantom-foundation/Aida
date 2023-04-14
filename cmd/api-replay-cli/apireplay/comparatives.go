@@ -16,6 +16,8 @@ const internalErrorCode = -32603
 
 // EVMErrors decode error code into string with which is compared with recorded error message
 var EVMErrors = map[int][]string{
+	-32603: {"execution reverted"},
+	3:      {"execution reverted"},
 	-32000: {
 		"execution reverted",
 		"invalid opcode",
@@ -23,9 +25,8 @@ var EVMErrors = map[int][]string{
 		"insufficient funds",
 		"gas required exceeds allowance",
 	},
-	-32603: {"execution reverted"},
+
 	-32602: {"invalid argument"},
-	3:      {"execution reverted"},
 }
 
 // compareBalance compares getBalance data recorded on API server with data returned by StateDB

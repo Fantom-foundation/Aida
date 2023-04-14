@@ -29,11 +29,6 @@ type StateDBData struct {
 	Error  error
 }
 
-// dbRange represents first and last block of StateDB
-type dbRange struct {
-	first, last uint64
-}
-
 // Reader reads data from iterator, creates logical structure and pass it alongside wanted archive, to
 // ReplayExecutor which executes the request into StateDB
 type Reader struct {
