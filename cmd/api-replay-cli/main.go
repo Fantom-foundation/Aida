@@ -20,16 +20,27 @@ func main() {
 		Copyright: "(c) 2023 Fantom Foundation",
 		Flags: []cli.Flag{
 			&flags.APIRecordingSrcFileFlag,
-			&flags.ContinueOnFailure,
 			&flags.WorkersFlag,
-			&flags.LogLevel,
+
+			// VM
+			&utils.VmImplementation,
+
+			// Substate
 			&substate.SubstateDirFlag,
+
+			// Config
+			&flags.LogLevel,
 			&utils.ChainIDFlag,
+			&flags.ContinueOnFailure,
+
+			// StateDB
 			&utils.StateDbImplementationFlag,
 			&utils.StateDbVariantFlag,
 			&utils.StateDbSrcDirFlag,
 			&utils.StateDbTempDirFlag,
 			&utils.StateDbLoggingFlag,
+
+			// ArchiveDB
 			&utils.ArchiveModeFlag,
 			&utils.ArchiveVariantFlag,
 		},
