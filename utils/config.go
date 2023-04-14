@@ -326,8 +326,8 @@ type Config struct {
 	Trace               bool                               // trace flag
 	ErigonBatchSize     datasize.ByteSize                  // erigon batch size for runVM
 	QuitCh              chan struct{}                      // required for erigon batch
-	RwTx                kv.RwTx                            // erigon tx
-	Batch               erigonethdb.DbWithPendingMutations //erigon batch
+	rwTx                kv.RwTx                            // erigon tx
+	batch               erigonethdb.DbWithPendingMutations //erigon batch
 }
 
 // getChainConnfig returns chain configuration of either mainnet or testnets.
@@ -567,4 +567,8 @@ func SetBlockRange(firstArg string, lastArg string) (uint64, uint64, error) {
 		err = fmt.Errorf("error: first block has larger number than last block")
 	}
 	return first, last, err
+}
+
+func (cfg *Config) Batch() erigonethdb.DbWithPendingMutations {
+	return cfg.batch
 }

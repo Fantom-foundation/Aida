@@ -2,7 +2,6 @@ package utils
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -17,8 +16,6 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
-
-	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 )
 
 // MakeStateDB creates a new DB instance based on cli argument.
@@ -117,36 +114,6 @@ func (pt *ProgressTracker) PrintProgress() {
 	}
 }
 
-func NewBatchExecution(db state.StateDB, cfg *Config) erigonethdb.DbWithPendingMutations {
-	batch := db.NewBatch(cfg.RwTx, cfg.QuitCh)
-	db.BeginBlockApplyBatch(batch, false, cfg.RwTx)
-	return batch
-}
-
-func BeginRwTxBatch(db state.StateDB, cfg *Config) (err error) {
-	cfg.RwTx, err = db.DB().RwKV().BeginRw(context.Background())
-	if err != nil {
-		return err
-	}
-
-	// start erigon batch execution
-	cfg.Batch = NewBatchExecution(db, cfg)
-	return
-}
-
-func CommitBatch(cfg *Config) (err error) {
-	err = cfg.Batch.Commit()
-	if err != nil {
-		return
-	}
-
-	err = cfg.RwTx.Commit()
-	if err != nil {
-		return
-	}
-	return
-}
-
 // PrimeStateDB primes database with accounts from the world state.
 func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config) {
 
@@ -160,10 +127,8 @@ func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config) {
 		if err != nil {
 			panic(err)
 		}
-		defer func() {
-			cfg.RwTx.Rollback()
-			cfg.Batch.Rollback()
-		}()
+
+		defer Rollback(cfg)
 	}
 
 	load = db.StartBulkLoad()
@@ -184,22 +149,15 @@ func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config) {
 		PrimeStateDBRandom(ws, load, cfg, pt)
 	} else {
 		for addr, account := range ws {
-			if cfg.DbImpl == "erigon" && cfg.Batch.BatchSize() >= int(cfg.ErigonBatchSize) {
-				err = CommitBatch(cfg)
+			if cfg.DbImpl == "erigon" && cfg.Batch().BatchSize() >= int(cfg.ErigonBatchSize) {
+				err = CommitAndBegin(db, cfg)
+				defer Rollback(cfg)
 				if err != nil {
 					panic(err)
 				}
-
-				err = BeginRwTxBatch(db, cfg)
-				if err != nil {
-					panic(err)
-				}
-				defer func() {
-					cfg.RwTx.Rollback()
-					cfg.Batch.Rollback()
-				}()
 				load = db.StartBulkLoad()
 			}
+
 			primeOneAccount(addr, account, load, pt)
 		}
 	}
@@ -209,7 +167,7 @@ func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config) {
 	}
 
 	if cfg.DbImpl == "erigon" {
-		err = CommitBatch(cfg)
+		err = CommitBatchRwTx(cfg)
 		if err != nil {
 			panic(err)
 		}
@@ -385,7 +343,6 @@ func PrepareStateDB(cfg *Config) (db state.StateDB, workingDirectory string, loa
 func ValidateStateDB(ws substate.SubstateAlloc, db state.StateDB, updateOnFail bool) error {
 	var err string
 
-	// TODO add erigon txc
 	for addr, account := range ws {
 		if !db.Exist(addr) {
 			err += fmt.Sprintf("  Account %v does not exist\n", addr.Hex())

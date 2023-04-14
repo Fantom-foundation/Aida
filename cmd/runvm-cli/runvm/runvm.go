@@ -176,10 +176,8 @@ func RunVM(ctx *cli.Context) error {
 				if err != nil {
 					panic(err)
 				}
-				defer func() {
-					cfg.RwTx.Rollback()
-					cfg.Batch.Rollback()
-				}()
+
+				defer utils.Rollback(cfg)
 			}
 			curSyncPeriod = tx.Block / cfg.SyncPeriodLength
 			curBlock = tx.Block
@@ -234,22 +232,14 @@ func RunVM(ctx *cli.Context) error {
 		gasCount = new(big.Int).Add(gasCount, new(big.Int).SetUint64(tx.Substate.Result.GasUsed))
 
 		// call batch.Commit() if batchsize is reached
-		if cfg.DbImpl == "erigon" && cfg.Batch.BatchSize() >= int(cfg.ErigonBatchSize) {
-			log.Printf("run-vm: batch.Commit, batch.BatchSize: %d bytes\n", cfg.Batch.BatchSize())
+		if cfg.DbImpl == "erigon" && cfg.Batch().BatchSize() >= int(cfg.ErigonBatchSize) {
+			log.Printf("run-vm: batch.Commit, batch.BatchSize: %d bytes\n", cfg.Batch().BatchSize())
 			// commit batch and rwrx
-			err = utils.CommitBatch(cfg)
+			err = utils.CommitAndBegin(db, cfg)
+			defer utils.Rollback(cfg)
 			if err != nil {
 				return err
 			}
-
-			err = utils.BeginRwTxBatch(db, cfg)
-			if err != nil {
-				return err
-			}
-			defer func() {
-				cfg.RwTx.Rollback()
-				cfg.Batch.Rollback()
-			}()
 		}
 
 		if cfg.EnableProgress {
@@ -294,7 +284,7 @@ func RunVM(ctx *cli.Context) error {
 	switch {
 	case cfg.DbImpl == "erigon":
 		log.Printf("run-vm: substate iter exit, utils.CommitBatch\n")
-		if err := utils.CommitBatch(cfg); err != nil {
+		if err := utils.CommitBatchRwTx(cfg); err != nil {
 			return err
 		}
 		db.BeginBlockApply() // unset batchMode for db
