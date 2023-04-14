@@ -101,9 +101,6 @@ func (e *ReplayExecutor) execute() {
 				return
 			}
 
-			//todo
-			//e.log.Debugf("executing %v with these params: \n\t%v", in.req.Query.Method, string(in.req.ParamsRaw))
-
 			in = e.createInput(req)
 			if in == nil {
 				continue
@@ -175,12 +172,6 @@ func (e *ReplayExecutor) doExecute(in *executorInput) *StateDBData {
 	case "estimateGas":
 		// estimateGas is currently not suitable for replay since the estimation  in geth is always calculated for current state
 		// that means recorded result and result returned by StateDB are not comparable
-	case "getCode":
-		return executeGetCode(in.req.Query.Params[0], in.archive)
-
-	case "getStorageAt":
-		return executeGetStorageAt(in.req.Query.Params, in.archive)
-
 	case "getCode":
 		return executeGetCode(in.req.Query.Params[0], in.archive)
 

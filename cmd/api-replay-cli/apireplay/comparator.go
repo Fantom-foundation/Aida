@@ -94,7 +94,8 @@ func (c *Comparator) doCompare(data *OutData) (err *comparatorError) {
 	case "call":
 		err = compareCall(data, c.builder)
 	case "estimateGas":
-		err = compareEstimateGas(data, c.builder)
+		// estimateGas is currently not suitable for replay since the estimation  in geth is always calculated for current state
+		// that means recorded result and result returned by StateDB are not comparable
 	case "getCode":
 		err = compareCode(data, c.builder)
 	case "getStorageAt":
