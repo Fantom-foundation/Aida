@@ -64,6 +64,7 @@ type erigonStateDB struct {
 func (s *erigonStateDB) BeginBlockApply() error {
 	var err error
 	s.ErigonAdapter = evmcore.NewErigonAdapter(erigonstate.NewWithChainKV(s.db.RwKV()))
+	s.batchMode = false
 	return err
 }
 
