@@ -33,10 +33,10 @@ type EVMExecutor struct {
 	log       *logging.Logger
 }
 
-const maxGasLimit = 9995800 // used when request does not specify gas
-const globalGasCap = 50000000
+const maxGasLimit = 9995800   // used when request does not specify gas
+const globalGasCap = 50000000 // highest gas allowance used for estimateGas
 
-// newEVMExecutor creates EVMExecutor for comparing data recorded on API with StateDB
+// newEVMExecutor creates EVMExecutor for executing requests into StateDB that demand usage of EVM
 func newEVMExecutor(blockID uint64, archive state.StateDB, vmImpl string, chainCfg *params.ChainConfig, params map[string]interface{}, timestamp uint64, log *logging.Logger) *EVMExecutor {
 	return &EVMExecutor{
 		args:      newTxArgs(params),
@@ -171,9 +171,6 @@ func (e *EVMExecutor) sendEstimateGas() (hexutil.Uint64, error) {
 		return 0, err
 	}
 
-	//e.log.Debugf("lo: %v\n", lo)
-	//e.log.Debugf("hi: %v\n", hi)
-
 	// Execute the binary search and hone in on an executable gas limit
 	for lo+1 < hi {
 		mid := (hi + lo) / 2
@@ -186,10 +183,8 @@ func (e *EVMExecutor) sendEstimateGas() (hexutil.Uint64, error) {
 			return 0, err
 		}
 		if failed {
-			//e.log.Debugf("fail; gas: %v\n", mid)
 			lo = mid
 		} else {
-			//e.log.Debugf("no fail; gas: %v\n", mid)
 			hi = mid
 		}
 	}
@@ -213,10 +208,9 @@ func (e *EVMExecutor) sendEstimateGas() (hexutil.Uint64, error) {
 	return hexutil.Uint64(hi), nil
 }
 
+// executable tries to execute call with given gas into EVM. This func is used for estimateGas calculation
 func (e *EVMExecutor) executable(gas uint64) (bool, *evmcore.ExecutionResult, error) {
 	e.args.Gas = (*hexutil.Uint64)(&gas)
-
-	//e.log.Debugf("sent gas: %v\n", gas)
 
 	result, err := e.sendCall()
 

@@ -19,7 +19,6 @@ func main() {
 			"result with result returned by DB.",
 		Copyright: "(c) 2023 Fantom Foundation",
 		Flags: []cli.Flag{
-			&flags.SkipFlag,
 			&flags.APIRecordingSrcFileFlag,
 			&flags.ContinueOnFailure,
 			&flags.WorkersFlag,
@@ -33,6 +32,7 @@ func main() {
 			&utils.StateDbLoggingFlag,
 			&utils.ArchiveModeFlag,
 			&utils.ArchiveVariantFlag,
+			&utils.VmImplementation,
 		},
 	}
 

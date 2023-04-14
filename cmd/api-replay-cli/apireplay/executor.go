@@ -173,10 +173,8 @@ func (e *ReplayExecutor) doExecute(in *executorInput) *StateDBData {
 		return executeCall(evm)
 
 	case "estimateGas":
-		timestamp := e.getTimestamp(in.blockID)
-		ex := newEVMExecutor(in.blockID, in.archive, e.vmImpl, e.chainCfg, in.req.Query.Params[0].(map[string]interface{}), timestamp, e.log)
-		return executeEstimateGas(ex)
-
+		// estimateGas is currently not suitable for replay since the estimation  in geth is always calculated for current state
+		// that means recorded result and result returned by StateDB are not comparable
 	case "getCode":
 		return executeGetCode(in.req.Query.Params[0], in.archive)
 
