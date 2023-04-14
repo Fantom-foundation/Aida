@@ -180,13 +180,16 @@ func RunVM(ctx *cli.Context) error {
 			}
 
 			if cfg.DbImpl == "erigon" {
-				if err := utils.BeginRwTxBatch(rwTx, batch, db, cfg.QuitCh); err != nil {
-					panic(err)
+				// start erigon tx
+				rwTx, err = db.DB().RwKV().BeginRw(context.Background())
+				if err != nil {
+					return err
 				}
-				defer func() {
-					rwTx.Rollback()
-					batch.Rollback()
-				}()
+
+				defer rwTx.Rollback()
+				// start erigon batch execution
+				batch = utils.NewBatchExecution(rwTx, db, cfg.QuitCh)
+				defer batch.Rollback()
 			}
 
 			curSyncPeriod = tx.Block / cfg.SyncPeriodLength

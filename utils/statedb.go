@@ -137,15 +137,6 @@ func CommitBatch(batch erigonethdb.DbWithPendingMutations, rwTx kv.RwTx) (err er
 	return
 }
 
-func BeginRwTxBatch(rwTx kv.RwTx, batch erigonethdb.DbWithPendingMutations, db state.StateDB, quit chan struct{}) (err error) {
-	rwTx, err = db.DB().RwKV().BeginRw(context.Background())
-	if err != nil {
-		return
-	}
-	batch = NewBatchExecution(rwTx, db, quit)
-	return nil
-}
-
 // PrimeStateDB primes database with accounts from the world state.
 func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config) {
 
@@ -156,13 +147,15 @@ func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config) {
 		load  state.BulkLoad
 	)
 	if cfg.DbImpl == "erigon" {
-		if err := BeginRwTxBatch(rwTx, batch, db, cfg.QuitCh); err != nil {
+		rwTx, err = db.DB().RwKV().BeginRw(context.Background())
+		if err != nil {
 			panic(err)
 		}
-		defer func() {
-			rwTx.Rollback()
-			batch.Rollback()
-		}()
+
+		defer rwTx.Rollback()
+		// start erigon batch execution
+		batch = NewBatchExecution(rwTx, db, cfg.QuitCh)
+		defer batch.Rollback()
 	}
 
 	load = db.StartBulkLoad()
