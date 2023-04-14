@@ -11,13 +11,13 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initSubBalance(t *testing.T) (*context.Context, *SubBalance, common.Address, *big.Int) {
+func initSubBalance(t *testing.T) (*context.Replay, *SubBalance, common.Address, *big.Int) {
 	rand.Seed(time.Now().UnixNano())
 	addr := getRandomAddress(t)
 	value := big.NewInt(rand.Int63n(100000))
 	// create context context
-	dict := context.NewContext()
-	contract := dict.EncodeContract(addr)
+	ctx := context.NewReplay()
+	contract := ctx.EncodeContract(addr)
 
 	// create new operation
 	op := NewSubBalance(contract, value)
@@ -28,7 +28,7 @@ func initSubBalance(t *testing.T) (*context.Context, *SubBalance, common.Address
 	if op.GetId() != SubBalanceID {
 		t.Fatalf("wrong ID returned")
 	}
-	return dict, op, addr, value
+	return ctx, op, addr, value
 }
 
 // TestSubBalanceReadWrite writes a new SubBalance object into a buffer, reads from it,
@@ -40,17 +40,17 @@ func TestSubBalanceReadWrite(t *testing.T) {
 
 // TestSubBalanceDebug creates a new SubBalance object and checks its Debug message.
 func TestSubBalanceDebug(t *testing.T) {
-	dict, op, addr, value := initSubBalance(t)
-	testOperationDebug(t, dict, op, fmt.Sprint(addr, value))
+	ctx, op, addr, value := initSubBalance(t)
+	testOperationDebug(t, ctx, op, fmt.Sprint(addr, value))
 }
 
 // TestSubBalanceExecute
 func TestSubBalanceExecute(t *testing.T) {
-	dict, op, addr, value := initSubBalance(t)
+	ctx, op, addr, value := initSubBalance(t)
 
 	// check execution
 	mock := NewMockStateDB()
-	op.Execute(mock, dict)
+	op.Execute(mock, ctx)
 
 	// check whether methods were correctly called
 	expected := []Record{{SubBalanceID, []any{addr, value}}}

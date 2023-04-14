@@ -265,12 +265,12 @@ func (r *ProxyDeletion) EndBlock() {
 	r.db.EndBlock()
 }
 
-func (r *ProxyDeletion) BeginEpoch(number uint64) {
-	r.db.BeginEpoch(number)
+func (r *ProxyDeletion) BeginSyncPeriod(number uint64) {
+	r.db.BeginSyncPeriod(number)
 }
 
-func (r *ProxyDeletion) EndEpoch() {
-	r.db.EndEpoch()
+func (r *ProxyDeletion) EndSyncPeriod() {
+	r.db.EndSyncPeriod()
 }
 
 func (r *ProxyDeletion) GetArchiveState(block uint64) (state.StateDB, error) {

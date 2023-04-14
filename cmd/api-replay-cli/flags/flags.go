@@ -35,4 +35,11 @@ var (
 		Usage:   "if used, any mismatched data will not exit the program",
 		Aliases: []string{"cof"},
 	}
+
+	// SkipFlag tells program to skip first 'n' requests
+	SkipFlag = cli.Uint64Flag{
+		Name:  "skip-n",
+		Usage: "tells program to skip first 'n' requests",
+		Value: 0,
+	}
 )

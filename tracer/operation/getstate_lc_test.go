@@ -8,12 +8,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initGetStateLc(t *testing.T) (*context.Context, *GetStateLc, common.Address, common.Hash) {
+func initGetStateLc(t *testing.T) (*context.Replay, *GetStateLc, common.Address, common.Hash) {
 	storage := getRandomAddress(t).Hash()
 
 	// create context context
-	dict := context.NewContext()
-	sIdx, _ := dict.EncodeKey(storage)
+	ctx := context.NewReplay()
+	sIdx, _ := ctx.EncodeKey(storage)
 
 	// create new operation
 	op := NewGetStateLc(sIdx)
@@ -26,9 +26,9 @@ func initGetStateLc(t *testing.T) (*context.Context, *GetStateLc, common.Address
 	}
 
 	addr := getRandomAddress(t)
-	dict.EncodeContract(addr)
+	ctx.EncodeContract(addr)
 
-	return dict, op, addr, storage
+	return ctx, op, addr, storage
 }
 
 // TestGetStateLcReadWrite writes a new GetStateLc object into a buffer, reads from it,
@@ -40,17 +40,17 @@ func TestGetStateLcReadWrite(t *testing.T) {
 
 // TestGetStateLcDebug creates a new GetStateLc object and checks its Debug message.
 func TestGetStateLcDebug(t *testing.T) {
-	dict, op, addr, storage := initGetStateLc(t)
-	testOperationDebug(t, dict, op, fmt.Sprint(addr, storage))
+	ctx, op, addr, storage := initGetStateLc(t)
+	testOperationDebug(t, ctx, op, fmt.Sprint(addr, storage))
 }
 
 // TestGetStateLcExecute
 func TestGetStateLcExecute(t *testing.T) {
-	dict, op, addr, storage := initGetStateLc(t)
+	ctx, op, addr, storage := initGetStateLc(t)
 
 	// check execution
 	mock := NewMockStateDB()
-	op.Execute(mock, dict)
+	op.Execute(mock, ctx)
 
 	// check whether methods were correctly called
 	expected := []Record{{GetStateID, []any{addr, storage}}}

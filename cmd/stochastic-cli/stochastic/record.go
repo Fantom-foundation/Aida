@@ -24,7 +24,7 @@ var StochasticRecordCommand = cli.Command{
 	Flags: []cli.Flag{
 		&utils.CpuProfileFlag,
 		&utils.DisableProgressFlag,
-		&utils.EpochLengthFlag,
+		&utils.SyncPeriodLengthFlag,
 		&utils.OutputFlag,
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
@@ -78,8 +78,8 @@ func stochasticRecordAction(ctx *cli.Context) error {
 	// create a new event registry
 	eventRegistry := stochastic.NewEventRegistry()
 
-	curEpoch := cfg.First / cfg.EpochLength
-	eventRegistry.RegisterOp(stochastic.BeginEpochID)
+	curSyncPeriod := cfg.First / cfg.SyncPeriodLength
+	eventRegistry.RegisterOp(stochastic.BeginSyncPeriodID)
 
 	// iterate over all substates in order
 	for iter.Next() {
@@ -91,11 +91,11 @@ func stochasticRecordAction(ctx *cli.Context) error {
 			}
 			if oldBlock != math.MaxUint64 {
 				eventRegistry.RegisterOp(stochastic.EndBlockID)
-				newEpoch := tx.Block / cfg.EpochLength
-				for curEpoch < newEpoch {
-					eventRegistry.RegisterOp(stochastic.EndEpochID)
-					curEpoch++
-					eventRegistry.RegisterOp(stochastic.BeginEpochID)
+				newSyncPeriod := tx.Block / cfg.SyncPeriodLength
+				for curSyncPeriod < newSyncPeriod {
+					eventRegistry.RegisterOp(stochastic.EndSyncPeriodID)
+					curSyncPeriod++
+					eventRegistry.RegisterOp(stochastic.BeginSyncPeriodID)
 				}
 			}
 			// open new block with a begin-block operation and clear index cache
@@ -125,7 +125,7 @@ func stochasticRecordAction(ctx *cli.Context) error {
 	if oldBlock != math.MaxUint64 {
 		eventRegistry.RegisterOp(stochastic.EndBlockID)
 	}
-	eventRegistry.RegisterOp(stochastic.EndEpochID)
+	eventRegistry.RegisterOp(stochastic.EndSyncPeriodID)
 
 	if cfg.EnableProgress {
 		sec = time.Since(start).Seconds()

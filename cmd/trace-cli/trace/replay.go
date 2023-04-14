@@ -14,6 +14,8 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const readBufferSize = 100000
+
 // TraceReplayCommand data structure for the replay app
 var TraceReplayCommand = cli.Command{
 	Action:    traceReplayAction,
@@ -26,7 +28,7 @@ var TraceReplayCommand = cli.Command{
 		&utils.CpuProfileFlag,
 		&utils.DeletedAccountDirFlag,
 		&utils.DisableProgressFlag,
-		&utils.EpochLengthFlag,
+		&utils.SyncPeriodLengthFlag,
 		&utils.KeepStateDBFlag,
 		&utils.MemoryBreakdownFlag,
 		&utils.MemProfileFlag,
@@ -62,7 +64,7 @@ last block of the inclusive range of blocks to replay storage traces.`,
 
 // readTrace reads operations from trace files and puts them into a channel.
 func readTrace(cfg *utils.Config, ch chan operation.Operation) {
-	traceIter := tracer.NewTraceIterator(cfg.First, cfg.Last)
+	traceIter := tracer.NewTraceIterator(cfg.TraceFile, cfg.First, cfg.Last)
 	defer traceIter.Release()
 	for traceIter.Next() {
 		op := traceIter.Value()
@@ -76,7 +78,7 @@ func traceReplayTask(cfg *utils.Config) error {
 
 	// starting reading in parallel
 	log.Printf("Start reading operations in parallel")
-	opChannel := make(chan operation.Operation, 100000)
+	opChannel := make(chan operation.Operation, readBufferSize)
 	go readTrace(cfg, opChannel)
 
 	// create a directory for the store to place all its files, and
@@ -125,7 +127,7 @@ func traceReplayTask(cfg *utils.Config) error {
 	log.Printf("Replay storage operations on StateDB database")
 
 	// load context
-	dCtx := context.NewContext()
+	dCtx := context.NewReplay()
 
 	// progress message setup
 	var (
@@ -146,7 +148,7 @@ func traceReplayTask(cfg *utils.Config) error {
 	run := func(op operation.Operation) {
 		operation.Execute(op, db, dCtx)
 		if debug {
-			operation.Debug(dCtx, op)
+			operation.Debug(&dCtx.Context, op)
 		}
 	}
 
@@ -156,15 +158,15 @@ func traceReplayTask(cfg *utils.Config) error {
 		if beginBlock, ok := op.(*operation.BeginBlock); ok {
 			block = beginBlock.BlockNumber
 			debug = cfg.Debug && block >= cfg.DebugFrom
-			// The first Epoch begin and the final EpochEnd need to be artificially
-			// added since the range running on may not match epoch boundaries.
+			// The first SyncPeriod begin and the final SyncPeriodEnd need to be artificially
+			// added since the range running on may not match sync-period boundaries.
 			if firstBlock {
-				run(operation.NewBeginEpoch(cfg.First / cfg.EpochLength))
+				run(operation.NewBeginSyncPeriod(cfg.First / cfg.SyncPeriodLength))
 				firstBlock = false
 			}
 
 			if block > cfg.Last {
-				run(operation.NewEndEpoch())
+				run(operation.NewEndSyncPeriod())
 				break
 			}
 			lastBlock = block // track the last processed block
@@ -255,8 +257,6 @@ func traceReplayAction(ctx *cli.Context) error {
 	}
 
 	operation.EnableProfiling = cfg.Profile
-	// set trace directory
-	tracer.TraceDir = ctx.String(utils.TraceDirectoryFlag.Name) + "/"
 
 	// start CPU profiling if requested.
 	if err := utils.StartCPUProfile(cfg); err != nil {

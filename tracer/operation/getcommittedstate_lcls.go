@@ -41,7 +41,7 @@ func (op *GetCommittedStateLcls) Write(f io.Writer) error {
 }
 
 // Execute the get-committed-state-lcls operation.
-func (op *GetCommittedStateLcls) Execute(db state.StateDB, ctx *context.Context) time.Duration {
+func (op *GetCommittedStateLcls) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	contract := ctx.PrevContract()
 	storage := ctx.DecodeKeyCache(0)
 	start := time.Now()

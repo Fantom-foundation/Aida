@@ -43,7 +43,7 @@ func (op *SetState) Write(f io.Writer) error {
 }
 
 // Execute the set-state operation.
-func (op *SetState) Execute(db state.StateDB, ctx *context.Context) time.Duration {
+func (op *SetState) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	contract := ctx.DecodeContract(op.Contract)
 	storage := ctx.DecodeKey(op.Key)
 	value := op.Value

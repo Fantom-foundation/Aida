@@ -8,11 +8,11 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initHasSuicided(t *testing.T) (*context.Context, *HasSuicided, common.Address) {
+func initHasSuicided(t *testing.T) (*context.Replay, *HasSuicided, common.Address) {
 	addr := getRandomAddress(t)
 	// create context context
-	dict := context.NewContext()
-	contract := dict.EncodeContract(addr)
+	ctx := context.NewReplay()
+	contract := ctx.EncodeContract(addr)
 
 	// create new operation
 	op := NewHasSuicided(contract)
@@ -24,7 +24,7 @@ func initHasSuicided(t *testing.T) (*context.Context, *HasSuicided, common.Addre
 		t.Fatalf("wrong ID returned")
 	}
 
-	return dict, op, addr
+	return ctx, op, addr
 }
 
 // TestHasSuicidedReadWrite writes a new HasSuicided object into a buffer, reads from it,
@@ -36,17 +36,17 @@ func TestHasSuicidedReadWrite(t *testing.T) {
 
 // TestHasSuicidedDebug creates a new HasSuicided object and checks its Debug message.
 func TestHasSuicidedDebug(t *testing.T) {
-	dict, op, addr := initHasSuicided(t)
-	testOperationDebug(t, dict, op, fmt.Sprint(addr))
+	ctx, op, addr := initHasSuicided(t)
+	testOperationDebug(t, ctx, op, fmt.Sprint(addr))
 }
 
 // TestHasSuicidedExecute
 func TestHasSuicidedExecute(t *testing.T) {
-	dict, op, addr := initHasSuicided(t)
+	ctx, op, addr := initHasSuicided(t)
 
 	// check execution
 	mock := NewMockStateDB()
-	op.Execute(mock, dict)
+	op.Execute(mock, ctx)
 
 	// check whether methods were correctly called
 	expected := []Record{{HasSuicidedID, []any{addr}}}

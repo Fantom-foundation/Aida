@@ -145,12 +145,12 @@ func (s *MockStateDB) EndBlock() {
 	s.recording = append(s.recording, Record{EndBlockID, []any{}})
 }
 
-func (s *MockStateDB) BeginEpoch(id uint64) {
-	s.recording = append(s.recording, Record{BeginEpochID, []any{id}})
+func (s *MockStateDB) BeginSyncPeriod(id uint64) {
+	s.recording = append(s.recording, Record{BeginSyncPeriodID, []any{id}})
 }
 
-func (s *MockStateDB) EndEpoch() {
-	s.recording = append(s.recording, Record{EndEpochID, []any{}})
+func (s *MockStateDB) EndSyncPeriod() {
+	s.recording = append(s.recording, Record{EndSyncPeriodID, []any{}})
 }
 
 func (s *MockStateDB) StartBulkLoad() state.BulkLoad {
@@ -328,14 +328,14 @@ func testOperationReadWrite(t *testing.T, op1 Operation, opRead func(f io.Reader
 	}
 }
 
-func testOperationDebug(t *testing.T, dict *context.Context, op Operation, args string) {
+func testOperationDebug(t *testing.T, ctx *context.Replay, op Operation, args string) {
 	// divert stdout to a buffer
 	old := os.Stdout
 	r, w, _ := os.Pipe()
 	os.Stdout = w
 
 	// print debug message
-	Debug(dict, op)
+	Debug(&ctx.Context, op)
 
 	// restore stdout
 	w.Close()

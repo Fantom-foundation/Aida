@@ -10,14 +10,14 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initSetNonce(t *testing.T) (*context.Context, *SetNonce, common.Address, uint64) {
+func initSetNonce(t *testing.T) (*context.Replay, *SetNonce, common.Address, uint64) {
 	rand.Seed(time.Now().UnixNano())
 	addr := getRandomAddress(t)
 	nonce := rand.Uint64()
 
 	// create context context
-	dict := context.NewContext()
-	contract := dict.EncodeContract(addr)
+	ctx := context.NewReplay()
+	contract := ctx.EncodeContract(addr)
 
 	// create new operation
 	op := NewSetNonce(contract, nonce)
@@ -29,7 +29,7 @@ func initSetNonce(t *testing.T) (*context.Context, *SetNonce, common.Address, ui
 		t.Fatalf("wrong ID returned")
 	}
 
-	return dict, op, addr, nonce
+	return ctx, op, addr, nonce
 }
 
 // TestSetNonceReadWrite writes a new SetNonce object into a buffer, reads from it,
@@ -41,17 +41,17 @@ func TestSetNonceReadWrite(t *testing.T) {
 
 // TestSetNonceDebug creates a new SetNonce object and checks its Debug message.
 func TestSetNonceDebug(t *testing.T) {
-	dict, op, addr, value := initSetNonce(t)
-	testOperationDebug(t, dict, op, fmt.Sprint(addr, value))
+	ctx, op, addr, value := initSetNonce(t)
+	testOperationDebug(t, ctx, op, fmt.Sprint(addr, value))
 }
 
 // TestSetNonceExecute
 func TestSetNonceExecute(t *testing.T) {
-	dict, op, addr, nonce := initSetNonce(t)
+	ctx, op, addr, nonce := initSetNonce(t)
 
 	// check execution
 	mock := NewMockStateDB()
-	op.Execute(mock, dict)
+	op.Execute(mock, ctx)
 
 	// check whether methods were correctly called
 	expected := []Record{{SetNonceID, []any{addr, nonce}}}

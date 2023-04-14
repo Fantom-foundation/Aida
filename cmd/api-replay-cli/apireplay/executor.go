@@ -181,6 +181,12 @@ func (e *ReplayExecutor) doExecute(in *executorInput) *StateDBData {
 	case "getStorageAt":
 		return executeGetStorageAt(in.req.Query.Params, in.archive)
 
+	case "getCode":
+		return executeGetCode(in.req.Query.Params[0], in.archive)
+
+	case "getStorageAt":
+		return executeGetStorageAt(in.req.Query.Params, in.archive)
+
 	default:
 		break
 	}

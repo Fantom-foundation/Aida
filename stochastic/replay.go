@@ -35,7 +35,7 @@ type stochasticState struct {
 	totalTx        uint64                    // total number of transactions
 	txNum          uint32                    // current transaction number
 	blockNum       uint64                    // current block number
-	epochNum       uint64                    // current epoch number
+	syncPeriodNum  uint64                    // current sync-period number
 	snapshot       []int                     // stack of active snapshots
 	suicided       []int64                   // list of suicided accounts
 	traceDebug     bool                      // trace-debug flag
@@ -43,13 +43,13 @@ type stochasticState struct {
 }
 
 // find is a helper function to find an element in a slice
-func find[T comparable](a []T, x T) bool {
-	for _, y := range a {
+func find[T comparable](a []T, x T) int {
+	for idx, y := range a {
 		if x == y {
-			return true
+			return idx
 		}
 	}
-	return false
+	return -1
 }
 
 // RunStochasticReplay runs the stochastic simulation for StateDB operations.
@@ -99,10 +99,10 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, 
 	// create accounts in StateDB
 	ss.prime()
 
-	// set initial state to BeginEpoch
-	state := initialState(operations, "BE")
+	// set initial state to BeginSyncPeriod
+	state := find(operations, OpMnemo(BeginSyncPeriodID))
 	if state == -1 {
-		return fmt.Errorf("BeginEpoch cannot be observed in stochastic matrix/recording failed.")
+		return fmt.Errorf("BeginSyncPeriod cannot be observed in stochastic matrix/recording failed.")
 	}
 
 	// progress message setup
@@ -186,7 +186,7 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, 
 	}
 
 	// print statistics
-	log.Printf("Epochs: %v", ss.epochNum)
+	log.Printf("SyncPeriods: %v", ss.syncPeriodNum)
 	log.Printf("Blocks: %v", ss.blockNum)
 	log.Printf("Transactions: %v", ss.totalTx)
 	log.Printf("Operations: %v", numOps)
@@ -210,7 +210,7 @@ func NewStochasticState(rg *rand.Rand, db state.StateDB, contracts *generator.In
 		traceDebug:     false,
 		suicided:       []int64{},
 		blockNum:       1,
-		epochNum:       1,
+		syncPeriodNum:  1,
 		rg:             rg,
 	}
 }
@@ -222,7 +222,7 @@ func (ss *stochasticState) prime() {
 	log.Printf("\tinitializing %v accounts\n", numInitialAccounts)
 	pt := utils.NewProgressTracker(int(numInitialAccounts))
 	db := ss.db
-	db.BeginEpoch(0)
+	db.BeginSyncPeriod(0)
 	db.BeginBlock(0)
 	db.BeginTransaction(0)
 
@@ -237,7 +237,7 @@ func (ss *stochasticState) prime() {
 	db.Finalise(FinaliseFlag)
 	db.EndTransaction()
 	db.EndBlock()
-	db.EndEpoch()
+	db.EndSyncPeriod()
 	log.Printf("End priming...\n")
 }
 
@@ -305,11 +305,11 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		ss.txNum = 0
 		ss.suicided = []int64{}
 
-	case BeginEpochID:
+	case BeginSyncPeriodID:
 		if ss.traceDebug {
-			fmt.Printf(" id: %v", ss.epochNum)
+			fmt.Printf(" id: %v", ss.syncPeriodNum)
 		}
-		db.BeginEpoch(ss.epochNum)
+		db.BeginSyncPeriod(ss.syncPeriodNum)
 
 	case BeginTransactionID:
 		if ss.traceDebug {
@@ -329,9 +329,9 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		db.EndBlock()
 		ss.blockNum++
 
-	case EndEpochID:
-		db.EndEpoch()
-		ss.epochNum++
+	case EndSyncPeriodID:
+		db.EndSyncPeriod()
+		ss.syncPeriodNum++
 
 	case EndTransactionID:
 		db.EndTransaction()
@@ -425,7 +425,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 
 	case SuicideID:
 		db.Suicide(addr)
-		if !find(ss.suicided, addrIdx) {
+		if idx := find(ss.suicided, addrIdx); idx == -1 {
 			ss.suicided = append(ss.suicided, addrIdx)
 		}
 
@@ -435,16 +435,6 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 	if ss.traceDebug {
 		fmt.Println()
 	}
-}
-
-// initialState returns the row/column index of the first state in the stochastic matrix.
-func initialState(operations []string, opcode string) int {
-	for i, opc := range operations {
-		if opc == opcode {
-			return i
-		}
-	}
-	return -1
 }
 
 // nextState produces the next state in the Markovian process.
@@ -480,7 +470,6 @@ func nextState(rg *rand.Rand, A [][]float64, i int) int {
 }
 
 // toAddress converts an address index to a contract address.
-// TODO: Improve encoding so that index conversion becomes sparse.
 func toAddress(idx int64) common.Address {
 	var a common.Address
 	if idx < 0 {

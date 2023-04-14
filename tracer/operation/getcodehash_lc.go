@@ -40,7 +40,7 @@ func (op *GetCodeHashLc) Write(f io.Writer) error {
 }
 
 // Execute the get-code-hash-lc operation.
-func (op *GetCodeHashLc) Execute(db state.StateDB, ctx *context.Context) time.Duration {
+func (op *GetCodeHashLc) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	contract := ctx.PrevContract()
 	start := time.Now()
 	db.GetCodeHash(contract)

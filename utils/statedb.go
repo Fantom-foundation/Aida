@@ -210,7 +210,7 @@ func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *Config, target ui
 		return err
 	}
 	log.Printf("Deleting %d accounts ..\n", len(list))
-	db.BeginEpoch(0)
+	db.BeginSyncPeriod(0)
 	db.BeginBlock(target) // block 0 is the priming, block (first-1) the deletion
 	db.BeginTransaction(0)
 	for _, cur := range list {
@@ -219,7 +219,7 @@ func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *Config, target ui
 	db.Finalise(true)
 	db.EndTransaction()
 	db.EndBlock()
-	db.EndEpoch()
+	db.EndSyncPeriod()
 	return nil
 }
 

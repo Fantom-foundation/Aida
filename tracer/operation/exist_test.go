@@ -8,11 +8,11 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initExist(t *testing.T) (*context.Context, *Exist, common.Address) {
+func initExist(t *testing.T) (*context.Replay, *Exist, common.Address) {
 	addr := getRandomAddress(t)
 	// create context context
-	dict := context.NewContext()
-	contract := dict.EncodeContract(addr)
+	ctx := context.NewReplay()
+	contract := ctx.EncodeContract(addr)
 
 	// create new operation
 	op := NewExist(contract)
@@ -24,7 +24,7 @@ func initExist(t *testing.T) (*context.Context, *Exist, common.Address) {
 		t.Fatalf("wrong ID returned")
 	}
 
-	return dict, op, addr
+	return ctx, op, addr
 }
 
 // TestExistReadWrite writes a new Exist object into a buffer, reads from it,
@@ -36,17 +36,17 @@ func TestExistReadWrite(t *testing.T) {
 
 // TestExistDebug creates a new Exist object and checks its Debug message.
 func TestExistDebug(t *testing.T) {
-	dict, op, addr := initExist(t)
-	testOperationDebug(t, dict, op, fmt.Sprint(addr))
+	ctx, op, addr := initExist(t)
+	testOperationDebug(t, ctx, op, fmt.Sprint(addr))
 }
 
 // TestExistExecute
 func TestExistExecute(t *testing.T) {
-	dict, op, addr := initExist(t)
+	ctx, op, addr := initExist(t)
 
 	// check execution
 	mock := NewMockStateDB()
-	op.Execute(mock, dict)
+	op.Execute(mock, ctx)
 
 	// check whether methods were correctly called
 	expected := []Record{{ExistID, []any{addr}}}

@@ -36,7 +36,7 @@ func (op *EndTransaction) Write(f io.Writer) error {
 }
 
 // Execute the end-transaction operation.
-func (op *EndTransaction) Execute(db state.StateDB, ctx *context.Context) time.Duration {
+func (op *EndTransaction) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	ctx.InitSnapshot()
 	start := time.Now()
 	db.EndTransaction()

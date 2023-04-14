@@ -1,7 +1,6 @@
-package trace
+package tracer
 
 import (
-	"io"
 	"math/big"
 
 	"github.com/Fantom-foundation/Aida/state"
@@ -15,49 +14,47 @@ import (
 // ProxyRecorder data structure for capturing and recording
 // invoked StateDB operations.
 type ProxyRecorder struct {
-	db     state.StateDB    // state db
-	dctx   *context.Context // record/replay context for decoding information
-	output io.Writer        // write output
+	db  state.StateDB   // state db
+	ctx *context.Record // record context for recording StateDB operations in a tracefile
 }
 
 // NewProxyRecorder creates a new StateDB proxy.
-func NewProxyRecorder(db state.StateDB, dctx *context.Context, output io.Writer) *ProxyRecorder {
-	r := new(ProxyRecorder)
-	r.db = db
-	r.dctx = dctx
-	r.output = output
-	return r
+func NewProxyRecorder(db state.StateDB, ctx *context.Record) *ProxyRecorder {
+	return &ProxyRecorder{
+		db:  db,
+		ctx: ctx,
+	}
 }
 
 // write new operation to file.
 func (r *ProxyRecorder) write(op operation.Operation) {
-	writeOperation(r.dctx, r.output, op)
+	operation.WriteOp(r.ctx, op)
 }
 
 // CreateAccounts creates a new account.
 func (r *ProxyRecorder) CreateAccount(addr common.Address) {
-	contract := r.dctx.EncodeContract(addr)
+	contract := r.ctx.EncodeContract(addr)
 	r.write(operation.NewCreateAccount(contract))
 	r.db.CreateAccount(addr)
 }
 
 // SubtractBalance subtracts amount from a contract address.
 func (r *ProxyRecorder) SubBalance(addr common.Address, amount *big.Int) {
-	contract := r.dctx.EncodeContract(addr)
+	contract := r.ctx.EncodeContract(addr)
 	r.write(operation.NewSubBalance(contract, amount))
 	r.db.SubBalance(addr, amount)
 }
 
 // AddBalance adds amount to a contract address.
 func (r *ProxyRecorder) AddBalance(addr common.Address, amount *big.Int) {
-	contract := r.dctx.EncodeContract(addr)
+	contract := r.ctx.EncodeContract(addr)
 	r.write(operation.NewAddBalance(contract, amount))
 	r.db.AddBalance(addr, amount)
 }
 
 // GetBalance retrieves the amount of a contract address.
 func (r *ProxyRecorder) GetBalance(addr common.Address) *big.Int {
-	contract := r.dctx.EncodeContract(addr)
+	contract := r.ctx.EncodeContract(addr)
 	r.write(operation.NewGetBalance(contract))
 	balance := r.db.GetBalance(addr)
 	return balance
@@ -65,7 +62,7 @@ func (r *ProxyRecorder) GetBalance(addr common.Address) *big.Int {
 
 // GetNonce retrieves the nonce of a contract address.
 func (r *ProxyRecorder) GetNonce(addr common.Address) uint64 {
-	contract := r.dctx.EncodeContract(addr)
+	contract := r.ctx.EncodeContract(addr)
 	r.write(operation.NewGetNonce(contract))
 	nonce := r.db.GetNonce(addr)
 	return nonce
@@ -73,15 +70,15 @@ func (r *ProxyRecorder) GetNonce(addr common.Address) uint64 {
 
 // SetNonce sets the nonce of a contract address.
 func (r *ProxyRecorder) SetNonce(addr common.Address, nonce uint64) {
-	contract := r.dctx.EncodeContract(addr)
+	contract := r.ctx.EncodeContract(addr)
 	r.write(operation.NewSetNonce(contract, nonce))
 	r.db.SetNonce(addr, nonce)
 }
 
 // GetCodeHash returns the hash of the EVM bytecode.
 func (r *ProxyRecorder) GetCodeHash(addr common.Address) common.Hash {
-	previousContract := r.dctx.PrevContract()
-	contract := r.dctx.EncodeContract(addr)
+	previousContract := r.ctx.PrevContract()
+	contract := r.ctx.EncodeContract(addr)
 	if previousContract == contract {
 		r.write(operation.NewGetCodeHashLc())
 	} else {
@@ -94,7 +91,7 @@ func (r *ProxyRecorder) GetCodeHash(addr common.Address) common.Hash {
 
 // GetCode returns the EVM bytecode of a contract.
 func (r *ProxyRecorder) GetCode(addr common.Address) []byte {
-	contract := r.dctx.EncodeContract(addr)
+	contract := r.ctx.EncodeContract(addr)
 	r.write(operation.NewGetCode(contract))
 	code := r.db.GetCode(addr)
 	return code
@@ -102,14 +99,14 @@ func (r *ProxyRecorder) GetCode(addr common.Address) []byte {
 
 // Setcode sets the EVM bytecode of a contract.
 func (r *ProxyRecorder) SetCode(addr common.Address, code []byte) {
-	contract := r.dctx.EncodeContract(addr)
+	contract := r.ctx.EncodeContract(addr)
 	r.write(operation.NewSetCode(contract, code))
 	r.db.SetCode(addr, code)
 }
 
 // GetCodeSize returns the EVM bytecode's size.
 func (r *ProxyRecorder) GetCodeSize(addr common.Address) int {
-	contract := r.dctx.EncodeContract(addr)
+	contract := r.ctx.EncodeContract(addr)
 	r.write(operation.NewGetCodeSize(contract))
 	size := r.db.GetCodeSize(addr)
 	return size
@@ -133,9 +130,9 @@ func (r *ProxyRecorder) GetRefund() uint64 {
 
 // GetCommittedState retrieves a value that is already committed.
 func (r *ProxyRecorder) GetCommittedState(addr common.Address, key common.Hash) common.Hash {
-	previousContract := r.dctx.PrevContract()
-	contract := r.dctx.EncodeContract(addr)
-	key, kPos := r.dctx.EncodeKey(key)
+	previousContract := r.ctx.PrevContract()
+	contract := r.ctx.EncodeContract(addr)
+	key, kPos := r.ctx.EncodeKey(key)
 	if previousContract == contract && kPos == 0 {
 		r.write(operation.NewGetCommittedStateLcls())
 	} else {
@@ -147,9 +144,9 @@ func (r *ProxyRecorder) GetCommittedState(addr common.Address, key common.Hash) 
 
 // GetState retrieves a value from the StateDB.
 func (r *ProxyRecorder) GetState(addr common.Address, key common.Hash) common.Hash {
-	previousContract := r.dctx.PrevContract()
-	contract := r.dctx.EncodeContract(addr)
-	key, kPos := r.dctx.EncodeKey(key)
+	previousContract := r.ctx.PrevContract()
+	contract := r.ctx.EncodeContract(addr)
+	key, kPos := r.ctx.EncodeKey(key)
 	var op operation.Operation
 	if contract == previousContract {
 		if kPos == 0 {
@@ -169,9 +166,9 @@ func (r *ProxyRecorder) GetState(addr common.Address, key common.Hash) common.Ha
 
 // SetState sets a value in the StateDB.
 func (r *ProxyRecorder) SetState(addr common.Address, key common.Hash, value common.Hash) {
-	previousContract := r.dctx.PrevContract()
-	contract := r.dctx.EncodeContract(addr)
-	key, kPos := r.dctx.EncodeKey(key)
+	previousContract := r.ctx.PrevContract()
+	contract := r.ctx.EncodeContract(addr)
+	key, kPos := r.ctx.EncodeKey(key)
 	if contract == previousContract && kPos == 0 {
 		r.write(operation.NewSetStateLcls(value))
 	} else {
@@ -184,7 +181,7 @@ func (r *ProxyRecorder) SetState(addr common.Address, key common.Hash, value com
 // The account is still available until the state is committed;
 // return a non-nil account after Suicide.
 func (r *ProxyRecorder) Suicide(addr common.Address) bool {
-	contract := r.dctx.EncodeContract(addr)
+	contract := r.ctx.EncodeContract(addr)
 	r.write(operation.NewSuicide(contract))
 	ok := r.db.Suicide(addr)
 	return ok
@@ -199,7 +196,7 @@ func (r *ProxyRecorder) HasSuicided(addr common.Address) bool {
 // Exist checks whether the contract exists in the StateDB.
 // Notably this also returns true for suicided accounts.
 func (r *ProxyRecorder) Exist(addr common.Address) bool {
-	contract := r.dctx.EncodeContract(addr)
+	contract := r.ctx.EncodeContract(addr)
 	r.write(operation.NewExist(contract))
 	return r.db.Exist(addr)
 }
@@ -332,12 +329,12 @@ func (r *ProxyRecorder) EndBlock() {
 	r.db.EndBlock()
 }
 
-func (r *ProxyRecorder) BeginEpoch(number uint64) {
-	r.db.BeginEpoch(number)
+func (r *ProxyRecorder) BeginSyncPeriod(number uint64) {
+	r.db.BeginSyncPeriod(number)
 }
 
-func (r *ProxyRecorder) EndEpoch() {
-	r.db.EndEpoch()
+func (r *ProxyRecorder) EndSyncPeriod() {
+	r.db.EndSyncPeriod()
 }
 
 func (r *ProxyRecorder) GetArchiveState(block uint64) (state.StateDB, error) {

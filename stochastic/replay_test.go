@@ -162,29 +162,29 @@ func TestRandomNextState(t *testing.T) {
 	}
 }
 
-// TestInitialState checks function initialState
+// TestInitialState checks function find
 // for returning the correct intial state.
 func TestInitialState(t *testing.T) {
 	opcode := []string{"A", "B", "C"}
-	if initialState(opcode, "A") != 0 {
+	if find(opcode, "A") != 0 {
 		t.Fatalf("Cannot find first state A")
 	}
-	if initialState(opcode, "B") != 1 {
+	if find(opcode, "B") != 1 {
 		t.Fatalf("Cannot find first state B")
 	}
-	if initialState(opcode, "C") != 2 {
+	if find(opcode, "C") != 2 {
 		t.Fatalf("Cannot find first state C")
 	}
-	if initialState(opcode, "D") != -1 {
+	if find(opcode, "D") != -1 {
 		t.Fatalf("Should not find first state D")
 	}
-	if initialState(opcode, "") != -1 {
+	if find(opcode, "") != -1 {
 		t.Fatalf("Should not find first state")
 	}
-	if initialState([]string{}, "A") != -1 {
+	if find([]string{}, "A") != -1 {
 		t.Fatalf("Should not find first state A")
 	}
-	if initialState([]string{}, "") != -1 {
+	if find([]string{}, "") != -1 {
 		t.Fatalf("Should not find first state")
 	}
 }

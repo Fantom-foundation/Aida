@@ -1,24 +1,80 @@
 package context
 
 import (
+	"bufio"
 	"log"
+	"os"
 
+	"github.com/dsnet/compress/bzip2"
 	"github.com/ethereum/go-ethereum/common"
 )
 
-// Context is a facade for encoding/decoding contract/storage addressses, byte-code, and snapshots.
+const (
+	WriteBufferSize = 1048576 // Size of write buffer for writing trace file.
+)
+
+// Context is an environment/facade for recording and replaying trace files
 type Context struct {
 	prevContract common.Address // previously used contract
 	keyCache     *KeyCache      // key cache
-	snapshot     *SnapshotIndex // snapshot translation table for replay
 }
 
-// NewContext creates a new context.
-func NewContext() *Context {
-	return &Context{
-		prevContract: common.Address{},
-		keyCache:     NewKeyCache(),
-		snapshot:     NewSnapshotIndex(),
+// Record is the recording environment/facade
+type Record struct {
+	Context
+	Debug bool          // debug flag
+	file  *os.File      // trace file
+	bFile *bufio.Writer // buffer for trace file
+	ZFile *bzip2.Writer // compressed file
+}
+
+// Replay is the replaying environment/facade
+type Replay struct {
+	Context
+	snapshot *SnapshotIndex // snapshot translation table for replay
+}
+
+// NewContext creates a new replay context.
+func NewReplay() *Replay {
+	return &Replay{
+		Context: Context{prevContract: common.Address{},
+			keyCache: NewKeyCache()},
+		snapshot: NewSnapshotIndex(),
+	}
+}
+
+// NewContext creates a new record context.
+func NewRecord(filename string) *Record {
+	// open trace file, write buffer, and compressed stream
+	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		log.Fatalf("Cannot open trace file. Error: %v", err)
+	}
+	bFile := bufio.NewWriterSize(file, WriteBufferSize)
+	ZFile, err := bzip2.NewWriter(bFile, &bzip2.WriterConfig{Level: 9})
+	if err != nil {
+		log.Fatalf("Cannot open bzip2 stream. Error: %v", err)
+	}
+	return &Record{
+		Context: Context{prevContract: common.Address{},
+			keyCache: NewKeyCache()},
+		file:  file,
+		bFile: bFile,
+		ZFile: ZFile,
+	}
+}
+
+// Close the trace file in the record context.
+func (ctx *Record) Close() {
+	// closing compressed stream, flushing buffer, and closing trace file
+	if err := ctx.ZFile.Close(); err != nil {
+		log.Fatalf("Cannot close bzip2 writer. Error: %v", err)
+	}
+	if err := ctx.bFile.Flush(); err != nil {
+		log.Fatalf("Cannot flush buffer. Error: %v", err)
+	}
+	if err := ctx.file.Close(); err != nil {
+		log.Fatalf("Cannot close trace file. Error: %v", err)
 	}
 }
 
@@ -81,18 +137,18 @@ func (ctx *Context) ReadKeyCache(sPos int) common.Hash {
 // Snapshot methods
 ////////////////////////////////////////////////////////////////
 
-// InitSnapshot initializes snaphot map.
-func (ctx *Context) InitSnapshot() {
+// InitSnapshot initializes snapshot map.
+func (ctx *Replay) InitSnapshot() {
 	ctx.snapshot.Init()
 }
 
 // AddSnapshot adds map between recorded/replayed snapshot-id.
-func (ctx *Context) AddSnapshot(recordedID int32, replayedID int32) {
+func (ctx *Replay) AddSnapshot(recordedID int32, replayedID int32) {
 	ctx.snapshot.Add(recordedID, replayedID)
 }
 
-// GetSnapshot gets snaphot-id.
-func (ctx *Context) GetSnapshot(recordedID int32) int32 {
+// GetSnapshot gets snapshot-id.
+func (ctx *Replay) GetSnapshot(recordedID int32) int32 {
 	replayedID, err := ctx.snapshot.Get(recordedID)
 	if err != nil {
 		log.Fatalf("Replayed Snapshot ID is missing. Error: %v", err)

@@ -8,11 +8,11 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initGetNonce(t *testing.T) (*context.Context, *GetNonce, common.Address) {
+func initGetNonce(t *testing.T) (*context.Replay, *GetNonce, common.Address) {
 	addr := getRandomAddress(t)
 	// create context context
-	dict := context.NewContext()
-	contract := dict.EncodeContract(addr)
+	ctx := context.NewReplay()
+	contract := ctx.EncodeContract(addr)
 
 	// create new operation
 	op := NewGetNonce(contract)
@@ -24,7 +24,7 @@ func initGetNonce(t *testing.T) (*context.Context, *GetNonce, common.Address) {
 		t.Fatalf("wrong ID returned")
 	}
 
-	return dict, op, addr
+	return ctx, op, addr
 }
 
 // TestGetNonceReadWrite writes a new GetNonce object into a buffer, reads from it,
@@ -36,17 +36,17 @@ func TestGetNonceReadWrite(t *testing.T) {
 
 // TestGetNonceDebug creates a new GetNonce object and checks its Debug message.
 func TestGetNonceDebug(t *testing.T) {
-	dict, op, addr := initGetNonce(t)
-	testOperationDebug(t, dict, op, fmt.Sprint(addr))
+	ctx, op, addr := initGetNonce(t)
+	testOperationDebug(t, ctx, op, fmt.Sprint(addr))
 }
 
 // TestGetNonceExecute
 func TestGetNonceExecute(t *testing.T) {
-	dict, op, addr := initGetNonce(t)
+	ctx, op, addr := initGetNonce(t)
 
 	// check execution
 	mock := NewMockStateDB()
-	op.Execute(mock, dict)
+	op.Execute(mock, ctx)
 
 	// check whether methods were correctly called
 	expected := []Record{{GetNonceID, []any{addr}}}

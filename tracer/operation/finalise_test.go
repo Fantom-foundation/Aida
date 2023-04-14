@@ -9,11 +9,11 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
-func initFinalise(t *testing.T) (*context.Context, *Finalise, bool) {
+func initFinalise(t *testing.T) (*context.Replay, *Finalise, bool) {
 	rand.Seed(time.Now().UnixNano())
 	deleteEmpty := rand.Intn(2) == 1
 	// create context context
-	dict := context.NewContext()
+	ctx := context.NewReplay()
 
 	// create new operation
 	op := NewFinalise(deleteEmpty)
@@ -25,7 +25,7 @@ func initFinalise(t *testing.T) (*context.Context, *Finalise, bool) {
 		t.Fatalf("wrong ID returned")
 	}
 
-	return dict, op, deleteEmpty
+	return ctx, op, deleteEmpty
 }
 
 // TestFinaliseReadWrite writes a new Finalise object into a buffer, reads from it,
@@ -37,17 +37,17 @@ func TestFinaliseReadWrite(t *testing.T) {
 
 // TestFinaliseDebug creates a new Finalise object and checks its Debug message.
 func TestFinaliseDebug(t *testing.T) {
-	dict, op, deleteEmpty := initFinalise(t)
-	testOperationDebug(t, dict, op, fmt.Sprint(deleteEmpty))
+	ctx, op, deleteEmpty := initFinalise(t)
+	testOperationDebug(t, ctx, op, fmt.Sprint(deleteEmpty))
 }
 
 // TestFinaliseExecute
 func TestFinaliseExecute(t *testing.T) {
-	dict, op, deleteEmpty := initFinalise(t)
+	ctx, op, deleteEmpty := initFinalise(t)
 
 	// check execution
 	mock := NewMockStateDB()
-	op.Execute(mock, dict)
+	op.Execute(mock, ctx)
 
 	// check whether methods were correctly called
 	expected := []Record{{FinaliseID, []any{deleteEmpty}}}

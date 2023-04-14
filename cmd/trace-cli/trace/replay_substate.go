@@ -52,14 +52,14 @@ last block of the inclusive range of blocks to replay storage traces.`,
 // traceReplaySubstateTask simulates storage operations from storage traces on stateDB.
 func traceReplaySubstateTask(cfg *utils.Config) error {
 	// load context
-	dCtx := context.NewContext()
+	rCtx := context.NewReplay()
 
 	// iterate substate (for in-membory state)
 	stateIter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
 	defer stateIter.Release()
 
 	// replay storage trace
-	traceIter := tracer.NewTraceIterator(cfg.First, cfg.Last)
+	traceIter := tracer.NewTraceIterator(cfg.TraceFile, cfg.First, cfg.Last)
 	defer traceIter.Release()
 
 	// Create a directory for the store to place all its files.
@@ -86,19 +86,19 @@ func traceReplaySubstateTask(cfg *utils.Config) error {
 
 	// A utility to run operations on the local context.
 	run := func(op operation.Operation) {
-		operation.Execute(op, db, dCtx)
+		operation.Execute(op, db, rCtx)
 		if debug {
-			operation.Debug(dCtx, op)
+			operation.Debug(&rCtx.Context, op)
 		}
 	}
 
 	for stateIter.Next() {
 		tx := stateIter.Value()
 		debug = cfg.Debug && tx.Block >= cfg.DebugFrom
-		// The first Epoch begin and the final EpochEnd need to be artificially
-		// added since the range running on may not match epoch boundaries.
+		// The first SyncPeriod begin and the final SyncPeriodEnd need to be artificially
+		// added since the range running on may not match sync-period boundaries.
 		if isFirstBlock {
-			run(operation.NewBeginEpoch(cfg.First / cfg.EpochLength))
+			run(operation.NewBeginSyncPeriod(cfg.First / cfg.SyncPeriodLength))
 			isFirstBlock = false
 		}
 
@@ -141,14 +141,14 @@ func traceReplaySubstateTask(cfg *utils.Config) error {
 		}
 	}
 
-	// replay the last EndBlock() and EndEpoch()
+	// replay the last EndBlock() and EndSyncPeriod()
 	hasNext := traceIter.Next()
 	op := traceIter.Value()
 	if !hasNext || op.GetId() != operation.EndBlockID {
 		return fmt.Errorf("Last operation isn't an EndBlock")
 	} else {
 		run(op) // EndBlock
-		run(operation.NewEndEpoch())
+		run(operation.NewEndSyncPeriod())
 	}
 	sec = time.Since(start).Seconds()
 

@@ -9,12 +9,12 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
-func initBeginTransaction(t *testing.T) (*context.Context, *BeginTransaction) {
+func initBeginTransaction(t *testing.T) (*context.Replay, *BeginTransaction) {
 	rand.Seed(time.Now().UnixNano())
 	num := rand.Uint32()
 
 	// create context context
-	dict := context.NewContext()
+	ctx := context.NewReplay()
 
 	// create new operation
 	op := NewBeginTransaction(num)
@@ -26,7 +26,7 @@ func initBeginTransaction(t *testing.T) (*context.Context, *BeginTransaction) {
 		t.Fatalf("wrong ID returned")
 	}
 
-	return dict, op
+	return ctx, op
 }
 
 // TestBeginTransactionReadWrite writes a new BeginTransaction object into a buffer, reads from it,
@@ -38,17 +38,17 @@ func TestBeginTransactionReadWrite(t *testing.T) {
 
 // TestBeginTransactionDebug creates a new BeginTransaction object and checks its Debug message.
 func TestBeginTransactionDebug(t *testing.T) {
-	dict, op := initBeginTransaction(t)
-	testOperationDebug(t, dict, op, fmt.Sprintf("%v", op.TransactionNumber))
+	ctx, op := initBeginTransaction(t)
+	testOperationDebug(t, ctx, op, fmt.Sprintf("%v", op.TransactionNumber))
 }
 
 // TestBeginTransactionExecute
 func TestBeginTransactionExecute(t *testing.T) {
-	dict, op := initBeginTransaction(t)
+	ctx, op := initBeginTransaction(t)
 
 	// check execution
 	mock := NewMockStateDB()
-	op.Execute(mock, dict)
+	op.Execute(mock, ctx)
 
 	// check whether methods were correctly called
 	expected := []Record{{BeginTransactionID, []any{op.TransactionNumber}}}

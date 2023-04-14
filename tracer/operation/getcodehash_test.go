@@ -8,11 +8,11 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initGetCodeHash(t *testing.T) (*context.Context, *GetCodeHash, common.Address) {
+func initGetCodeHash(t *testing.T) (*context.Replay, *GetCodeHash, common.Address) {
 	addr := getRandomAddress(t)
 	// create context context
-	dict := context.NewContext()
-	contract := dict.EncodeContract(addr)
+	ctx := context.NewReplay()
+	contract := ctx.EncodeContract(addr)
 
 	// create new operation
 	op := NewGetCodeHash(contract)
@@ -24,7 +24,7 @@ func initGetCodeHash(t *testing.T) (*context.Context, *GetCodeHash, common.Addre
 		t.Fatalf("wrong ID returned")
 	}
 
-	return dict, op, addr
+	return ctx, op, addr
 }
 
 // TestGetCodeHashReadWrite writes a new GetCodeHash object into a buffer, reads from it,
@@ -36,17 +36,17 @@ func TestGetCodeHashReadWrite(t *testing.T) {
 
 // TestGetCodeHashDebug creates a new GetCodeHash object and checks its Debug message.
 func TestGetCodeHashDebug(t *testing.T) {
-	dict, op, addr := initGetCodeHash(t)
-	testOperationDebug(t, dict, op, fmt.Sprint(addr))
+	ctx, op, addr := initGetCodeHash(t)
+	testOperationDebug(t, ctx, op, fmt.Sprint(addr))
 }
 
 // TestGetCodeHashExecute
 func TestGetCodeHashExecute(t *testing.T) {
-	dict, op, addr := initGetCodeHash(t)
+	ctx, op, addr := initGetCodeHash(t)
 
 	// check execution
 	mock := NewMockStateDB()
-	op.Execute(mock, dict)
+	op.Execute(mock, ctx)
 
 	// check whether methods were correctly called
 	expected := []Record{{GetCodeHashID, []any{addr}}}

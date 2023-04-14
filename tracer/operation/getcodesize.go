@@ -41,7 +41,7 @@ func (op *GetCodeSize) Write(f io.Writer) error {
 }
 
 // Execute the get-code-size operation.
-func (op *GetCodeSize) Execute(db state.StateDB, ctx *context.Context) time.Duration {
+func (op *GetCodeSize) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
 	db.GetCodeSize(contract)

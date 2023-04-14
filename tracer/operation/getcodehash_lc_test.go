@@ -8,12 +8,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initGetCodeHashLc(t *testing.T) (*context.Context, *GetCodeHashLc, common.Address) {
+func initGetCodeHashLc(t *testing.T) (*context.Replay, *GetCodeHashLc, common.Address) {
 	// create context context
-	dict := context.NewContext()
+	ctx := context.NewReplay()
 
 	addr := getRandomAddress(t)
-	dict.EncodeContract(addr)
+	ctx.EncodeContract(addr)
 
 	// create new operation
 	op := NewGetCodeHashLc()
@@ -25,7 +25,7 @@ func initGetCodeHashLc(t *testing.T) (*context.Context, *GetCodeHashLc, common.A
 		t.Fatalf("wrong ID returned")
 	}
 
-	return dict, op, addr
+	return ctx, op, addr
 }
 
 // TestGetCodeHashLcReadWrite writes a new GetCodeHashLc object into a buffer, reads from it,
@@ -37,17 +37,17 @@ func TestGetCodeHashLcReadWrite(t *testing.T) {
 
 // TestGetCodeHashLcDebug creates a new GetCodeHashLc object and checks its Debug message.
 func TestGetCodeHashLcDebug(t *testing.T) {
-	dict, op, addr := initGetCodeHashLc(t)
-	testOperationDebug(t, dict, op, fmt.Sprint(addr))
+	ctx, op, addr := initGetCodeHashLc(t)
+	testOperationDebug(t, ctx, op, fmt.Sprint(addr))
 }
 
 // TestGetCodeHashLcExecute
 func TestGetCodeHashLcExecute(t *testing.T) {
-	dict, op, addr := initGetCodeHashLc(t)
+	ctx, op, addr := initGetCodeHashLc(t)
 
 	// check execution
 	mock := NewMockStateDB()
-	op.Execute(mock, dict)
+	op.Execute(mock, ctx)
 
 	// check whether methods were correctly called
 	expected := []Record{{GetCodeHashID, []any{addr}}}

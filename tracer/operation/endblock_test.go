@@ -6,9 +6,9 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
-func initEndBlock(t *testing.T) (*context.Context, *EndBlock) {
+func initEndBlock(t *testing.T) (*context.Replay, *EndBlock) {
 	// create context context
-	dict := context.NewContext()
+	ctx := context.NewReplay()
 
 	// create new operation
 	op := NewEndBlock()
@@ -20,7 +20,7 @@ func initEndBlock(t *testing.T) (*context.Context, *EndBlock) {
 		t.Fatalf("wrong ID returned")
 	}
 
-	return dict, op
+	return ctx, op
 }
 
 // TestEndBlockReadWrite writes a new EndBlock object into a buffer, reads from it,
@@ -32,17 +32,17 @@ func TestEndBlockReadWrite(t *testing.T) {
 
 // TestEndBlockDebug creates a new EndBlock object and checks its Debug message.
 func TestEndBlockDebug(t *testing.T) {
-	dict, op := initEndBlock(t)
-	testOperationDebug(t, dict, op, "")
+	ctx, op := initEndBlock(t)
+	testOperationDebug(t, ctx, op, "")
 }
 
 // TestEndBlockExecute
 func TestEndBlockExecute(t *testing.T) {
-	dict, op := initEndBlock(t)
+	ctx, op := initEndBlock(t)
 
 	// check execution
 	mock := NewMockStateDB()
-	op.Execute(mock, dict)
+	op.Execute(mock, ctx)
 
 	// check whether methods were correctly called
 	expected := []Record{{EndBlockID, []any{}}}
