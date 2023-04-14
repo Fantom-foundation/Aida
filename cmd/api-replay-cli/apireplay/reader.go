@@ -2,7 +2,9 @@ package apireplay
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
+	"strings"
 	"sync"
 	"time"
 
@@ -35,24 +37,24 @@ type dbRange struct {
 // Reader reads data from iterator, creates logical structure and pass it alongside wanted archive, to
 // ReplayExecutor which executes the request into StateDB
 type Reader struct {
-	output chan *iterator.RequestWithResponse
-	iter   *iterator.FileReader
-	closed chan any
-	log    *logging.Logger
-	wg     *sync.WaitGroup
-	skipN  uint64
+	output  chan *iterator.RequestWithResponse
+	iter    *iterator.FileReader
+	closed  chan any
+	log     *logging.Logger
+	wg      *sync.WaitGroup
+	builder *strings.Builder // use builder for faster execution when logging and cleaner code
 }
 
 // newReader returns new instance of Reader
-func newReader(iter *iterator.FileReader, l *logging.Logger, closed chan any, wg *sync.WaitGroup, skipN uint64) *Reader {
+func newReader(iter *iterator.FileReader, l *logging.Logger, closed chan any, wg *sync.WaitGroup) *Reader {
 	l.Info("creating reader")
 	return &Reader{
-		iter:   iter,
-		output: make(chan *iterator.RequestWithResponse, bufferSize),
-		log:    l,
-		closed: closed,
-		skipN:  skipN,
-		wg:     wg,
+		iter:    iter,
+		output:  make(chan *iterator.RequestWithResponse, bufferSize),
+		log:     l,
+		closed:  closed,
+		wg:      wg,
+		builder: new(strings.Builder),
 	}
 }
 
@@ -71,16 +73,13 @@ func (r *Reader) read() {
 		start  time.Time
 		ticker *time.Ticker
 		total  uint64
+		stat   = make(map[string]uint64)
 	)
 	defer func() {
-		r.logStatistics(start, total)
+		r.logStatistics(start, total, stat)
 		close(r.output)
 		r.wg.Done()
 	}()
-
-	if r.skipN > 0 {
-		r.log.Noticef("skipping first %v requests", r.skipN)
-	}
 
 	start = time.Now()
 	ticker = time.NewTicker(statisticsLogFrequency)
@@ -90,19 +89,10 @@ func (r *Reader) read() {
 		case <-r.closed:
 			return
 		case <-ticker.C:
-			r.logStatistics(start, total)
+			r.logStatistics(start, total, stat)
 
 		default:
 			total++
-
-			// do we want to skip first n requests?
-			if r.skipN > total {
-				continue
-			} else if r.skipN == total {
-				// reset counter
-				r.skipN = 0
-				total = 1
-			}
 
 			// did iter emit an error?
 			if r.iter.Error() != nil {
@@ -116,13 +106,24 @@ func (r *Reader) read() {
 
 			// retrieve the data from iterator and send them to executors
 			r.output <- val
+
+			// add req to statistics
+			stat[val.Query.Method]++
 		}
 	}
 }
 
 // logStatistics about time, executed and total read requests. Frequency of logging depends on statisticsLogFrequency
-func (r *Reader) logStatistics(start time.Time, req uint64) {
+func (r *Reader) logStatistics(start time.Time, req uint64, stat map[string]uint64) {
 	elapsed := time.Since(start)
-	r.log.Noticef("Elapsed time: %v\n"+
-		"Read requests:%v\n", elapsed, req)
+	r.builder.WriteString(fmt.Sprintf("Elapsed time: %v\n\n", elapsed))
+
+	r.builder.WriteString(fmt.Sprintf("\tTotal requests:%v\n\n", req))
+
+	for m, c := range stat {
+		r.builder.WriteString(fmt.Sprintf("\t%v: %v\n", m, c))
+	}
+
+	r.log.Notice(r.builder.String())
+	r.builder.Reset()
 }

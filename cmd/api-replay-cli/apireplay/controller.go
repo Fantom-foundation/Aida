@@ -45,7 +45,7 @@ func newController(ctx *cli.Context, cfg *utils.Config, db state.StateDB, iter *
 	comparatorsWg := new(sync.WaitGroup)
 
 	// create instances
-	reader := newReader(iter, newLogger(ctx), readerClosed, readerWg, ctx.Uint64(flags.SkipFlag.Name))
+	reader := newReader(iter, newLogger(ctx), readerClosed, readerWg)
 
 	executors, output := createExecutors(cfg.First, cfg.Last, db, ctx, utils.GetChainConfig(cfg.ChainID), reader.output, cfg.VmImpl, executorsClosed, executorsWg)
 
