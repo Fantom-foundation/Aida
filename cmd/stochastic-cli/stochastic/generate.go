@@ -30,7 +30,7 @@ var StochasticGenerateCommand = cli.Command{
 func stochasticGenerateAction(ctx *cli.Context) error {
 	var err error
 
-	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
+	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
 	if err != nil {
 		return err
 	}

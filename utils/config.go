@@ -25,11 +25,11 @@ type ArgumentMode int
 const (
 	BlockRangeArgs ArgumentMode = iota // requires 2 arguments: first block and last block
 	LastBlockArg                       // requires 1 argument: last block
+	NoArgs                             // requires no arguments
 )
 
 var (
-	FirstSubstateBlock uint64         // id of the first block in substate
-	TraceDebug         bool   = false // TraceDebug for enabling/disabling debugging.
+	FirstSubstateBlock uint64 // id of the first block in substate
 )
 
 // Type of validation performs on stateDB during Tx processing.
@@ -164,6 +164,10 @@ var (
 		Name:  "db-shadow-variant",
 		Usage: "select a state DB variant to shadow the prime DB implementation",
 		Value: "",
+	}
+	TraceFlag = cli.BoolFlag{
+		Name:  "trace",
+		Usage: "enable tracing",
 	}
 	TraceDebugFlag = cli.BoolFlag{
 		Name:  "trace-debug",
@@ -315,6 +319,8 @@ type Config struct {
 	ValuesNumber        int64             // number of values to generate
 	VmImpl              string            // vm implementation (geth/lfvm)
 	Workers             int               // number of worker threads
+	TraceFile           string            // name of trace file
+	Trace               bool              // trace flag
 	ErigonBatchSize     datasize.ByteSize // erigon batch size for runVM
 	QuitCh              chan struct{}     // required for erigon batch
 }
@@ -373,6 +379,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 			if argErr != nil {
 				return nil, argErr
 			}
+		case NoArgs:
 		default:
 			return nil, fmt.Errorf("Unknown mode. Unable to process commandline arguments.")
 		}
@@ -434,6 +441,8 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		ValidateWorldState:  validateWorldState,
 		VmImpl:              ctx.String(VmImplementation.Name),
 		Workers:             ctx.Int(substate.WorkersFlag.Name),
+		TraceFile:           ctx.String(TraceDirectoryFlag.Name) + "/trace.dat",
+		Trace:               ctx.Bool(TraceFlag.Name),
 	}
 	if cfg.ChainID == 0 {
 		cfg.ChainID = ChainIDFlag.Value
@@ -441,6 +450,13 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	setFirstBlockFromChainID(cfg.ChainID)
 	if cfg.SyncPeriodLength <= 0 {
 		cfg.SyncPeriodLength = 300
+	}
+	if cfg.RandomSeed < 0 {
+		cfg.RandomSeed = int64(rand.Uint32())
+	}
+
+	if mode == NoArgs {
+		return cfg, nil
 	}
 
 	if _, err := os.Stat(cfg.DBDir); !os.IsNotExist(err) {
@@ -527,14 +543,9 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		log.Printf("WARNING: Unable to keep in-memory stateDB")
 		cfg.KeepStateDB = false
 	}
-
 	if cfg.SkipPriming && cfg.ValidateWorldState {
 		log.Printf("ERROR: skipPriming and validation of world state can not be enabled at the same time\n")
 		return cfg, fmt.Errorf("skipPriming and world-state validation can not be enabled at the same time")
-	}
-
-	if cfg.RandomSeed < 0 {
-		cfg.RandomSeed = int64(rand.Uint32())
 	}
 
 	return cfg, nil

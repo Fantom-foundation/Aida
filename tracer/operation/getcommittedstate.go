@@ -42,7 +42,7 @@ func (op *GetCommittedState) Write(f io.Writer) error {
 }
 
 // Execute the get-committed-state operation.
-func (op *GetCommittedState) Execute(db state.StateDB, ctx *context.Context) time.Duration {
+func (op *GetCommittedState) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	contract := ctx.DecodeContract(op.Contract)
 	storage := ctx.DecodeKey(op.Key)
 	start := time.Now()

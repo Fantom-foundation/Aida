@@ -10,15 +10,15 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initSetCode(t *testing.T) (*context.Context, *SetCode, common.Address, []byte) {
+func initSetCode(t *testing.T) (*context.Replay, *SetCode, common.Address, []byte) {
 	rand.Seed(time.Now().UnixNano())
 	addr := getRandomAddress(t)
 	code := make([]byte, 100)
 	rand.Read(code)
 
 	// create context context
-	dict := context.NewContext()
-	contract := dict.EncodeContract(addr)
+	ctx := context.NewReplay()
+	contract := ctx.EncodeContract(addr)
 
 	// create new operation
 	op := NewSetCode(contract, code)
@@ -30,7 +30,7 @@ func initSetCode(t *testing.T) (*context.Context, *SetCode, common.Address, []by
 		t.Fatalf("wrong ID returned")
 	}
 
-	return dict, op, addr, code
+	return ctx, op, addr, code
 }
 
 // TestSetCodeReadWrite writes a new SetCode object into a buffer, reads from it,
@@ -42,17 +42,17 @@ func TestSetCodeReadWrite(t *testing.T) {
 
 // TestSetCodeDebug creates a new SetCode object and checks its Debug message.
 func TestSetCodeDebug(t *testing.T) {
-	dict, op, addr, value := initSetCode(t)
-	testOperationDebug(t, dict, op, fmt.Sprint(addr, value))
+	ctx, op, addr, value := initSetCode(t)
+	testOperationDebug(t, ctx, op, fmt.Sprint(addr, value))
 }
 
 // TestSetCodeExecute
 func TestSetCodeExecute(t *testing.T) {
-	dict, op, addr, code := initSetCode(t)
+	ctx, op, addr, code := initSetCode(t)
 
 	// check execution
 	mock := NewMockStateDB()
-	op.Execute(mock, dict)
+	op.Execute(mock, ctx)
 
 	// check whether methods were correctly called
 	expected := []Record{{SetCodeID, []any{addr, code}}}

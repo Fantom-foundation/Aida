@@ -8,11 +8,11 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initGetBalance(t *testing.T) (*context.Context, *GetBalance, common.Address) {
+func initGetBalance(t *testing.T) (*context.Replay, *GetBalance, common.Address) {
 	addr := getRandomAddress(t)
 	// create context context
-	dict := context.NewContext()
-	contract := dict.EncodeContract(addr)
+	ctx := context.NewReplay()
+	contract := ctx.EncodeContract(addr)
 
 	// create new operation
 	op := NewGetBalance(contract)
@@ -24,7 +24,7 @@ func initGetBalance(t *testing.T) (*context.Context, *GetBalance, common.Address
 		t.Fatalf("wrong ID returned")
 	}
 
-	return dict, op, addr
+	return ctx, op, addr
 }
 
 // TestGetBalanceReadWrite writes a new GetBalance object into a buffer, reads from it,
@@ -36,17 +36,17 @@ func TestGetBalanceReadWrite(t *testing.T) {
 
 // TestGetBalanceDebug creates a new GetBalance object and checks its Debug message.
 func TestGetBalanceDebug(t *testing.T) {
-	dict, op, addr := initGetBalance(t)
-	testOperationDebug(t, dict, op, fmt.Sprint(addr))
+	ctx, op, addr := initGetBalance(t)
+	testOperationDebug(t, ctx, op, fmt.Sprint(addr))
 }
 
 // TestGetBalanceExecute
 func TestGetBalanceExecute(t *testing.T) {
-	dict, op, addr := initGetBalance(t)
+	ctx, op, addr := initGetBalance(t)
 
 	// check execution
 	mock := NewMockStateDB()
-	op.Execute(mock, dict)
+	op.Execute(mock, ctx)
 
 	// check whether methods were correctly called
 	expected := []Record{{GetBalanceID, []any{addr}}}

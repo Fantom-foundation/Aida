@@ -8,11 +8,11 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initCreateAccount(t *testing.T) (*context.Context, *CreateAccount, common.Address) {
+func initCreateAccount(t *testing.T) (*context.Replay, *CreateAccount, common.Address) {
 	addr := getRandomAddress(t)
 	// create context context
-	dict := context.NewContext()
-	contract := dict.EncodeContract(addr)
+	ctx := context.NewReplay()
+	contract := ctx.EncodeContract(addr)
 
 	// create new operation
 	op := NewCreateAccount(contract)
@@ -24,7 +24,7 @@ func initCreateAccount(t *testing.T) (*context.Context, *CreateAccount, common.A
 		t.Fatalf("wrong ID returned")
 	}
 
-	return dict, op, addr
+	return ctx, op, addr
 }
 
 // TestCreateAccountReadWrite writes a new CreateAccount object into a buffer, reads from it,
@@ -36,18 +36,18 @@ func TestCreateAccountReadWrite(t *testing.T) {
 
 // TestCreateAccountDebug creates a new CreateAccount object and checks its Debug message.
 func TestCreateAccountDebug(t *testing.T) {
-	dict, op, addr := initCreateAccount(t)
-	testOperationDebug(t, dict, op, fmt.Sprint(addr))
+	ctx, op, addr := initCreateAccount(t)
+	testOperationDebug(t, ctx, op, fmt.Sprint(addr))
 
 }
 
 // TestCreateAccountExecute
 func TestCreateAccountExecute(t *testing.T) {
-	dict, op, addr := initCreateAccount(t)
+	ctx, op, addr := initCreateAccount(t)
 
 	// check execution
 	mock := NewMockStateDB()
-	op.Execute(mock, dict)
+	op.Execute(mock, ctx)
 
 	// check whether methods were correctly called
 	expected := []Record{{CreateAccountID, []any{addr}}}

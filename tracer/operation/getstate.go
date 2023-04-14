@@ -42,7 +42,7 @@ func (op *GetState) Write(f io.Writer) error {
 }
 
 // Execute the get-state operation.
-func (op *GetState) Execute(db state.StateDB, ctx *context.Context) time.Duration {
+func (op *GetState) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	contract := ctx.DecodeContract(op.Contract)
 	storage := ctx.DecodeKey(op.Key)
 	start := time.Now()

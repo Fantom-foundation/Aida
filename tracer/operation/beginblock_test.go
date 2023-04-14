@@ -9,12 +9,12 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
-func initBeginBlock(t *testing.T) (*context.Context, *BeginBlock, uint64) {
+func initBeginBlock(t *testing.T) (*context.Replay, *BeginBlock, uint64) {
 	rand.Seed(time.Now().UnixNano())
 	blId := rand.Uint64()
 
 	// create context context
-	dict := context.NewContext()
+	ctx := context.NewReplay()
 
 	// create new operation
 	op := NewBeginBlock(blId)
@@ -26,7 +26,7 @@ func initBeginBlock(t *testing.T) (*context.Context, *BeginBlock, uint64) {
 		t.Fatalf("wrong ID returned")
 	}
 
-	return dict, op, blId
+	return ctx, op, blId
 }
 
 // TestBeginBlockReadWrite writes a new BeginBlock object into a buffer, reads from it,
@@ -38,17 +38,17 @@ func TestBeginBlockReadWrite(t *testing.T) {
 
 // TestBeginBlockDebug creates a new BeginBlock object and checks its Debug message.
 func TestBeginBlockDebug(t *testing.T) {
-	dict, op, value := initBeginBlock(t)
-	testOperationDebug(t, dict, op, fmt.Sprint(value))
+	ctx, op, value := initBeginBlock(t)
+	testOperationDebug(t, ctx, op, fmt.Sprint(value))
 }
 
 // TestBeginBlockExecute
 func TestBeginBlockExecute(t *testing.T) {
-	dict, op, _ := initBeginBlock(t)
+	ctx, op, _ := initBeginBlock(t)
 
 	// check execution
 	mock := NewMockStateDB()
-	op.Execute(mock, dict)
+	op.Execute(mock, ctx)
 
 	// check whether methods were correctly called
 	expected := []Record{{BeginBlockID, []any{op.BlockNumber}}}

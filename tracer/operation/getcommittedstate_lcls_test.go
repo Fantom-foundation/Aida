@@ -8,9 +8,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func initGetCommittedStateLcls(t *testing.T) (*context.Context, *GetCommittedStateLcls, common.Address, common.Hash) {
+func initGetCommittedStateLcls(t *testing.T) (*context.Replay, *GetCommittedStateLcls, common.Address, common.Hash) {
 	// create context context
-	dict := context.NewContext()
+	ctx := context.NewReplay()
 
 	// create new operation
 	op := NewGetCommittedStateLcls()
@@ -23,12 +23,12 @@ func initGetCommittedStateLcls(t *testing.T) (*context.Context, *GetCommittedSta
 	}
 
 	addr := getRandomAddress(t)
-	dict.EncodeContract(addr)
+	ctx.EncodeContract(addr)
 
 	storage := getRandomAddress(t).Hash()
-	dict.EncodeKey(storage)
+	ctx.EncodeKey(storage)
 
-	return dict, op, addr, storage
+	return ctx, op, addr, storage
 }
 
 // TestGetCommittedStateLclsReadWrite writes a new GetCommittedStateLcls object into a buffer, reads from it,
@@ -40,17 +40,17 @@ func TestGetCommittedStateLclsReadWrite(t *testing.T) {
 
 // TestGetCommittedStateLclsDebug creates a new GetCommittedStateLcls object and checks its Debug message.
 func TestGetCommittedStateLclsDebug(t *testing.T) {
-	dict, op, addr, storage := initGetCommittedStateLcls(t)
-	testOperationDebug(t, dict, op, fmt.Sprint(addr, storage))
+	ctx, op, addr, storage := initGetCommittedStateLcls(t)
+	testOperationDebug(t, ctx, op, fmt.Sprint(addr, storage))
 }
 
 // TestGetCommittedStateLclsExecute
 func TestGetCommittedStateLclsExecute(t *testing.T) {
-	dict, op, addr, storage := initGetCommittedStateLcls(t)
+	ctx, op, addr, storage := initGetCommittedStateLcls(t)
 
 	// check execution
 	mock := NewMockStateDB()
-	op.Execute(mock, dict)
+	op.Execute(mock, ctx)
 
 	// check whether methods were correctly called
 	expected := []Record{{GetCommittedStateID, []any{addr, storage}}}

@@ -52,14 +52,14 @@ last block of the inclusive range of blocks to replay storage traces.`,
 // traceReplaySubstateTask simulates storage operations from storage traces on stateDB.
 func traceReplaySubstateTask(cfg *utils.Config) error {
 	// load context
-	dCtx := context.NewContext()
+	rCtx := context.NewReplay()
 
 	// iterate substate (for in-membory state)
 	stateIter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
 	defer stateIter.Release()
 
 	// replay storage trace
-	traceIter := tracer.NewTraceIterator(cfg.First, cfg.Last)
+	traceIter := tracer.NewTraceIterator(cfg.TraceFile, cfg.First, cfg.Last)
 	defer traceIter.Release()
 
 	// Create a directory for the store to place all its files.
@@ -86,9 +86,9 @@ func traceReplaySubstateTask(cfg *utils.Config) error {
 
 	// A utility to run operations on the local context.
 	run := func(op operation.Operation) {
-		operation.Execute(op, db, dCtx)
+		operation.Execute(op, db, rCtx)
 		if debug {
-			operation.Debug(dCtx, op)
+			operation.Debug(&rCtx.Context, op)
 		}
 	}
 

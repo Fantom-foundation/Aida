@@ -45,7 +45,7 @@ func newController(ctx *cli.Context, cfg *utils.Config, db state.StateDB, iter *
 	comparatorsWg := new(sync.WaitGroup)
 
 	// create instances
-	reader := newReader(cfg.First, cfg.Last, db, iter, newLogger(ctx), readerClosed, readerWg)
+	reader := newReader(cfg.First, cfg.Last, db, iter, newLogger(ctx), readerClosed, readerWg, ctx.Uint64(flags.SkipFlag.Name))
 
 	executors, output := createExecutors(ctx, utils.GetChainConfig(cfg.ChainID), reader.output, cfg.VmImpl, executorsClosed, executorsWg)
 
@@ -147,13 +147,13 @@ func (r *Controller) stopComparators() {
 // Wait until all wgs are done
 func (r *Controller) Wait() {
 	r.readerWg.Wait()
-	r.log.Debug("reader done")
+	r.log.Info("reader done")
 
 	r.executorsWg.Wait()
-	r.log.Debug("executors done")
+	r.log.Info("executors done")
 
 	r.comparatorsWg.Wait()
-	r.log.Debug("comparators done")
+	r.log.Info("comparators done")
 
 }
 

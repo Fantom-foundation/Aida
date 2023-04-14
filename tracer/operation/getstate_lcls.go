@@ -40,7 +40,7 @@ func (op *GetStateLcls) Write(f io.Writer) error {
 }
 
 // Execute the get-state-lcls operation.
-func (op *GetStateLcls) Execute(db state.StateDB, ctx *context.Context) time.Duration {
+func (op *GetStateLcls) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	contract := ctx.PrevContract()
 	storage := ctx.DecodeKeyCache(0)
 	start := time.Now()

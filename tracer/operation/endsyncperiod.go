@@ -36,7 +36,7 @@ func (op *EndSyncPeriod) Write(f io.Writer) error {
 }
 
 // Execute the end-sync-period operation.
-func (op *EndSyncPeriod) Execute(db state.StateDB, ctx *context.Context) time.Duration {
+func (op *EndSyncPeriod) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	start := time.Now()
 	db.EndSyncPeriod()
 	return time.Since(start)

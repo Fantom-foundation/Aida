@@ -303,7 +303,6 @@ func RunVM(ctx *cli.Context) error {
 		}
 	}
 
-	
 	switch {
 	case cfg.DbImpl == "erigon":
 		log.Printf("run-vm: substate iter exit, utils.CommitBatch\n")

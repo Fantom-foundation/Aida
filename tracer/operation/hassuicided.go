@@ -40,7 +40,7 @@ func (op *HasSuicided) Write(f io.Writer) error {
 }
 
 // Execute the HasSuicided operation.
-func (op *HasSuicided) Execute(db state.StateDB, ctx *context.Context) time.Duration {
+func (op *HasSuicided) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	contract := ctx.DecodeContract(op.Contract)
 	start := time.Now()
 	db.HasSuicided(contract)

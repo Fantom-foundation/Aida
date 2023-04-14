@@ -2,7 +2,7 @@ package apireplay
 
 import (
 	"encoding/json"
-	"fmt"
+	"io"
 	"math/big"
 	"strings"
 	"sync"
@@ -15,8 +15,7 @@ import (
 )
 
 const (
-	maxIterErrors          = 5 // maximum consecutive errors emitted by comparator before program panics
-	statisticsLogFrequency = 1 * time.Minute
+	statisticsLogFrequency = 10 * time.Second
 )
 
 // RecordedData represents data recorded on API server. This is sent to Comparator and compared with StateDBData
@@ -46,11 +45,12 @@ type Reader struct {
 	closed  chan any
 	log     *logging.Logger
 	wg      *sync.WaitGroup
+	skipN   uint64
 	dbRange dbRange
 }
 
 // newReader returns new instance of Reader
-func newReader(first, last uint64, db state.StateDB, iterator *iterator.FileReader, l *logging.Logger, closed chan any, wg *sync.WaitGroup) *Reader {
+func newReader(first, last uint64, db state.StateDB, iterator *iterator.FileReader, l *logging.Logger, closed chan any, wg *sync.WaitGroup, skipN uint64) *Reader {
 	l.Info("creating reader")
 	return &Reader{
 		dbRange: dbRange{
@@ -62,6 +62,7 @@ func newReader(first, last uint64, db state.StateDB, iterator *iterator.FileRead
 		output: make(chan *executorInput, bufferSize),
 		log:    l,
 		closed: closed,
+		skipN:  skipN,
 		wg:     wg,
 	}
 }
@@ -78,7 +79,6 @@ func (r *Reader) Start() {
 // to ReplayExecutor which executes the request into StateDB
 func (r *Reader) read() {
 	var (
-		iterErrors      uint16 = 1
 		req             *iterator.RequestWithResponse
 		wInput          *executorInput
 		start           time.Time
@@ -91,6 +91,10 @@ func (r *Reader) read() {
 		r.wg.Done()
 	}()
 
+	if r.skipN > 0 {
+		r.log.Noticef("skipping first %v requests", r.skipN)
+	}
+
 	start = time.Now()
 	ticker = time.NewTicker(statisticsLogFrequency)
 
@@ -102,20 +106,24 @@ func (r *Reader) read() {
 			r.logStatistics(start, total, executed)
 
 		default:
+			total++
+
+			// do we want to skip first n requests?
+			if r.skipN > total {
+				continue
+			} else if r.skipN == total {
+				// reset counter
+				r.skipN = 0
+				total = 1
+			}
 
 			// did iter emit an error?
 			if r.iter.Error() != nil {
-				// if iterator errors 5 times in a row, exit the program with an error
-				if iterErrors >= maxIterErrors {
-					r.log.Fatalf("iterator reached limit of number of consecutive errors; err: %v", r.iter.Error())
+				if r.iter.Error() == io.EOF || r.iter.Error().Error() == "unexpected EOF" {
+					return
 				}
-				r.log.Errorf("error loading recordings; %v\nretry number %v\n", r.iter.Error().Error(), iterErrors)
-				iterErrors++
-				continue
+				r.log.Fatalf("unexpected iter err; %v", r.iter.Error())
 			}
-
-			// reset the error counter
-			iterErrors = 1
 
 			// retrieve the data from iterator
 			req = r.iter.Value()
@@ -125,7 +133,7 @@ func (r *Reader) read() {
 				r.output <- wInput
 				executed++
 			}
-			total++
+
 		}
 	}
 }
@@ -151,7 +159,7 @@ func (r *Reader) createExecutorInput(req *iterator.RequestWithResponse) *executo
 	wInput.req = req
 
 	if !r.decodeBlockNumber(req.Query.Params, recordedBlockID, &wInput.blockID) {
-		r.log.Errorf("cannot decode block number; skipping\nParams: %v", req.Query.Params[1])
+		r.log.Debugf("cannot decode block number; skipping\nParams: %v", req.Query.Params[1])
 		return nil
 	}
 
@@ -236,11 +244,8 @@ func (r *Reader) isBlockNumberWithinRange(blockNumber uint64) bool {
 
 // logStatistics about time, executed and total read requests. Frequency of logging depends on statisticsLogFrequency
 func (r *Reader) logStatistics(start time.Time, total uint64, executed uint64) {
-	b := new(big.Int)
-	fmt.Println(b.Binomial(1000, 10))
-
 	elapsed := time.Since(start)
 	r.log.Noticef("Elapsed time: %v\n"+
 		"Read requests:%v\n"+
-		"Out of which were sent to executors: %v", elapsed, total, executed)
+		"Out of which were skipped due to not being in StateDB block range: %v", elapsed, total, total-executed)
 }
