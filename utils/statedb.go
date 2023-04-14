@@ -18,7 +18,6 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/ledgerwatch/erigon-lib/kv"
 	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 )
 
@@ -118,19 +117,30 @@ func (pt *ProgressTracker) PrintProgress() {
 	}
 }
 
-func NewBatchExecution(rwTx kv.RwTx, db state.StateDB, quit chan struct{}) erigonethdb.DbWithPendingMutations {
-	batch := db.NewBatch(rwTx, quit)
-	db.BeginBlockApplyBatch(batch, false, rwTx)
+func NewBatchExecution(db state.StateDB, cfg *Config) erigonethdb.DbWithPendingMutations {
+	batch := db.NewBatch(cfg.RwTx, cfg.QuitCh)
+	db.BeginBlockApplyBatch(batch, false, cfg.RwTx)
 	return batch
 }
 
-func CommitBatch(batch erigonethdb.DbWithPendingMutations, rwTx kv.RwTx) (err error) {
-	err = batch.Commit()
+func BeginRwTxBatch(db state.StateDB, cfg *Config) (err error) {
+	cfg.RwTx, err = db.DB().RwKV().BeginRw(context.Background())
+	if err != nil {
+		return err
+	}
+
+	// start erigon batch execution
+	cfg.Batch = NewBatchExecution(db, cfg)
+	return
+}
+
+func CommitBatch(cfg *Config) (err error) {
+	err = cfg.Batch.Commit()
 	if err != nil {
 		return
 	}
 
-	err = rwTx.Commit()
+	err = cfg.RwTx.Commit()
 	if err != nil {
 		return
 	}
@@ -141,21 +151,19 @@ func CommitBatch(batch erigonethdb.DbWithPendingMutations, rwTx kv.RwTx) (err er
 func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config) {
 
 	var (
-		rwTx  kv.RwTx
-		batch erigonethdb.DbWithPendingMutations
-		err   error
-		load  state.BulkLoad
+		err  error
+		load state.BulkLoad
 	)
 	if cfg.DbImpl == "erigon" {
-		rwTx, err = db.DB().RwKV().BeginRw(context.Background())
+		// start erigon tx
+		err = BeginRwTxBatch(db, cfg)
 		if err != nil {
 			panic(err)
 		}
-
-		defer rwTx.Rollback()
-		// start erigon batch execution
-		batch = NewBatchExecution(rwTx, db, cfg.QuitCh)
-		defer batch.Rollback()
+		defer func() {
+			cfg.RwTx.Rollback()
+			cfg.Batch.Rollback()
+		}()
 	}
 
 	load = db.StartBulkLoad()
@@ -176,21 +184,19 @@ func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config) {
 		PrimeStateDBRandom(ws, load, cfg, pt)
 	} else {
 		for addr, account := range ws {
-			if cfg.DbImpl == "erigon" && batch.BatchSize() >= int(cfg.ErigonBatchSize) {
-				err = CommitBatch(batch, rwTx)
+			if cfg.DbImpl == "erigon" && cfg.Batch.BatchSize() >= int(cfg.ErigonBatchSize) {
+				err = CommitBatch(cfg)
 				if err != nil {
 					panic(err)
 				}
 
-				rwTx, err = db.DB().RwKV().BeginRw(context.Background())
+				err = BeginRwTxBatch(db, cfg)
 				if err != nil {
 					panic(err)
 				}
-
-				batch = NewBatchExecution(rwTx, db, cfg.QuitCh)
 				defer func() {
-					rwTx.Rollback()
-					batch.Rollback()
+					cfg.RwTx.Rollback()
+					cfg.Batch.Rollback()
 				}()
 				load = db.StartBulkLoad()
 			}
@@ -203,7 +209,7 @@ func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config) {
 	}
 
 	if cfg.DbImpl == "erigon" {
-		err = CommitBatch(batch, rwTx)
+		err = CommitBatch(cfg)
 		if err != nil {
 			panic(err)
 		}

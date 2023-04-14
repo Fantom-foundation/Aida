@@ -1,7 +1,6 @@
 package runvm
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"math/big"
@@ -14,9 +13,6 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
-
-	"github.com/ledgerwatch/erigon-lib/kv"
-	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 )
 
 // RunVM implements trace command for executing VM on a chosen storage system.
@@ -163,11 +159,6 @@ func RunVM(ctx *cli.Context) error {
 	var curSyncPeriod uint64
 	isFirstBlock := true
 
-	var (
-		rwTx  kv.RwTx
-		batch erigonethdb.DbWithPendingMutations
-	)
-
 	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
 	defer iter.Release()
 
@@ -181,17 +172,15 @@ func RunVM(ctx *cli.Context) error {
 
 			if cfg.DbImpl == "erigon" {
 				// start erigon tx
-				rwTx, err = db.DB().RwKV().BeginRw(context.Background())
+				err = utils.BeginRwTxBatch(db, cfg)
 				if err != nil {
-					return err
+					panic(err)
 				}
-
-				defer rwTx.Rollback()
-				// start erigon batch execution
-				batch = utils.NewBatchExecution(rwTx, db, cfg.QuitCh)
-				defer batch.Rollback()
+				defer func() {
+					cfg.RwTx.Rollback()
+					cfg.Batch.Rollback()
+				}()
 			}
-
 			curSyncPeriod = tx.Block / cfg.SyncPeriodLength
 			curBlock = tx.Block
 			db.BeginSyncPeriod(curSyncPeriod)
@@ -245,23 +234,22 @@ func RunVM(ctx *cli.Context) error {
 		gasCount = new(big.Int).Add(gasCount, new(big.Int).SetUint64(tx.Substate.Result.GasUsed))
 
 		// call batch.Commit() if batchsize is reached
-		if cfg.DbImpl == "erigon" && batch.BatchSize() >= int(cfg.ErigonBatchSize) {
-			log.Printf("run-vm: batch.Commit, batch.BatchSize: %d bytes\n", batch.BatchSize())
+		if cfg.DbImpl == "erigon" && cfg.Batch.BatchSize() >= int(cfg.ErigonBatchSize) {
+			log.Printf("run-vm: batch.Commit, batch.BatchSize: %d bytes\n", cfg.Batch.BatchSize())
 			// commit batch and rwrx
-			err = utils.CommitBatch(batch, rwTx)
+			err = utils.CommitBatch(cfg)
 			if err != nil {
 				return err
 			}
 
-			rwTx, err = db.DB().RwKV().BeginRw(context.Background())
+			err = utils.BeginRwTxBatch(db, cfg)
 			if err != nil {
 				return err
 			}
-
-			defer rwTx.Rollback()
-
-			batch = utils.NewBatchExecution(rwTx, db, cfg.QuitCh)
-			defer batch.Rollback()
+			defer func() {
+				cfg.RwTx.Rollback()
+				cfg.Batch.Rollback()
+			}()
 		}
 
 		if cfg.EnableProgress {
@@ -306,7 +294,7 @@ func RunVM(ctx *cli.Context) error {
 	switch {
 	case cfg.DbImpl == "erigon":
 		log.Printf("run-vm: substate iter exit, utils.CommitBatch\n")
-		if err := utils.CommitBatch(batch, rwTx); err != nil {
+		if err := utils.CommitBatch(cfg); err != nil {
 			return err
 		}
 		db.BeginBlockApply() // unset batchMode for db
