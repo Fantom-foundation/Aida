@@ -38,18 +38,19 @@ type OutData struct {
 
 // ReplayExecutor represents a goroutine in which requests are executed into StateDB
 type ReplayExecutor struct {
-	dbRange        dbRange
-	iterBlock      uint64
-	cfg            *utils.Config
-	input          chan *iterator.RequestWithResponse
-	output         chan *OutData
-	wg             *sync.WaitGroup
-	closed         chan any
-	currentBlockID uint64
-	vmImpl         string
-	chainCfg       *params.ChainConfig
-	log            *logging.Logger
-	db             state.StateDB
+	currentEVMTimestamp uint64
+	dbRange             dbRange
+	iterBlock           uint64
+	cfg                 *utils.Config
+	input               chan *iterator.RequestWithResponse
+	output              chan *OutData
+	wg                  *sync.WaitGroup
+	closed              chan any
+	currentBlockID      uint64
+	vmImpl              string
+	chainCfg            *params.ChainConfig
+	log                 *logging.Logger
+	db                  state.StateDB
 }
 
 // newExecutor returns new instance of ReplayExecutor
@@ -161,31 +162,25 @@ func (e *ReplayExecutor) doExecute(in *executorInput) *StateDBData {
 	switch in.req.Query.MethodBase {
 	// ftm/eth methods
 	case "getBalance":
-		e.log.Debugf("executing %v\n", in.req.Query.Method)
 		return executeGetBalance(in.req.Query.Params[0], in.archive)
 
 	case "getTransactionCount":
-		e.log.Debugf("executing %v\n", in.req.Query.Method)
 		return executeGetTransactionCount(in.req.Query.Params[0], in.archive)
 
 	case "call":
-		e.log.Debugf("executing %v\n", in.req.Query.Method)
-		timestamp := substate.GetSubstate(in.blockID, 0).Env.Timestamp
+		timestamp := e.getTimestamp(in.blockID)
 		evm := newEVMExecutor(in.blockID, in.archive, e.vmImpl, e.chainCfg, in.req.Query.Params[0].(map[string]interface{}), timestamp, e.log)
 		return executeCall(evm)
 
 	case "estimateGas":
-		// todo save substate timestamp
-		timestamp := substate.GetSubstate(in.blockID, 0).Env.Timestamp
+		timestamp := e.getTimestamp(in.blockID)
 		ex := newEVMExecutor(in.blockID, in.archive, e.vmImpl, e.chainCfg, in.req.Query.Params[0].(map[string]interface{}), timestamp, e.log)
 		return executeEstimateGas(ex)
 
 	case "getCode":
-		e.log.Debugf("executing %v\n", in.req.Query.Method)
 		return executeGetCode(in.req.Query.Params[0], in.archive)
 
 	case "getStorageAt":
-		e.log.Debugf("executing %v\n", in.req.Query.Method)
 		return executeGetStorageAt(in.req.Query.Params, in.archive)
 
 	default:
@@ -247,6 +242,15 @@ func (e *ReplayExecutor) getStateArchive(wantedBlockNumber uint64) state.StateDB
 // isBlockNumberWithinRange returns whether given block number is in StateDB block range
 func (e *ReplayExecutor) isBlockNumberWithinRange(blockNumber uint64) bool {
 	return blockNumber >= e.dbRange.first && blockNumber <= e.dbRange.last
+}
+
+// getTimestamp looks whether current block is the same as wanted. If not, retrieves new timestamp from substate
+func (e *ReplayExecutor) getTimestamp(blockID uint64) uint64 {
+	if !(blockID == e.currentBlockID) {
+		e.currentEVMTimestamp = substate.GetSubstate(blockID, 0).Env.Timestamp
+	}
+	return e.currentEVMTimestamp
+
 }
 
 // decodeBlockNumber finds what block number request wants
