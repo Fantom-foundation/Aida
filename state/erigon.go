@@ -139,53 +139,23 @@ func (s *erigonStateDB) endBlock() {
 }
 
 func (s *erigonStateDB) processEndBlock(tx kv.RwTx) error {
-	blockWriter := estate.NewPlainStateWriter(tx, tx, s.from)
+	blockWriter := estate.NewPlainStateWriterNoHistory(tx)
 
 	// flush pending changes into erigon plain state
 	if err := s.ErigonAdapter.CommitBlock(blockWriter); err != nil {
 		return err
 	}
 
-	if err := blockWriter.WriteChangeSets(); err != nil {
+	if err := s.ErigonAdapter.CommitBlock(blockWriter); err != nil {
 		return err
 	}
 
-	switch {
-	case s.to == 0:
-		fmt.Println("processEndBlock, s.to == 0")
-		blockWriter := estate.NewPlainStateWriterNoHistory(tx)
+	if err := erigon.PromoteHashedStateCleanly(tx, filepath.Join(s.directory, "hashedstate")); err != nil {
+		return err
+	}
 
-		if err := s.ErigonAdapter.CommitBlock(blockWriter); err != nil {
-			return err
-		}
-
-		//log.Println("EndBlock cleanly", "from", s.from, "to", s.to)
-		// cleanly
-
-		if err := erigon.PromoteHashedStateCleanly(tx, filepath.Join(s.directory, "hashedstate")); err != nil {
-			return err
-		}
-
-		if _, err := erigon.RegenerateIntermediateHashes("IH", tx, filepath.Join(s.directory, "IH"), false); err != nil {
-			return err
-		}
-	case s.to > 0 && s.to > s.from:
-		fmt.Println("processEndBlock, s.to > 0")
-		blockWriter := estate.NewPlainStateWriter(tx, tx, s.from)
-
-		if err := blockWriter.WriteChangeSets(); err != nil {
-			return err
-		}
-
-		// incrementally
-		//log.Println("EndBlock incrementally", "from", s.from, "to", s.to)
-		if err := erigon.PromoteHashedStateIncrementally("hashedstate", s.from, s.to, filepath.Join(s.directory, "hashedstate"), tx, nil); err != nil {
-			return err
-		}
-
-		if _, err := erigon.IncrementIntermediateHashes("IH", tx, s.from, s.to, filepath.Join(s.directory, "IH"), false, nil); err != nil {
-			return err
-		}
+	if _, err := erigon.RegenerateIntermediateHashes("IH", tx, filepath.Join(s.directory, "IH"), false); err != nil {
+		return err
 	}
 
 	return tx.Commit()
