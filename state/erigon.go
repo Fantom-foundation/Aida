@@ -151,6 +151,7 @@ func (s *erigonStateDB) processEndBlock(tx kv.RwTx) error {
 
 	switch {
 	case s.to == 0:
+		fmt.Println("processEndBlock, s.to == 0")
 		blockWriter := estate.NewPlainStateWriterNoHistory(tx)
 
 		if err := s.ErigonAdapter.CommitBlock(blockWriter); err != nil {
@@ -168,6 +169,7 @@ func (s *erigonStateDB) processEndBlock(tx kv.RwTx) error {
 			return err
 		}
 	case s.to > 0 && s.to > s.from:
+		fmt.Println("processEndBlock, s.to > 0")
 		blockWriter := estate.NewPlainStateWriter(tx, tx, s.from)
 
 		if err := blockWriter.WriteChangeSets(); err != nil {
