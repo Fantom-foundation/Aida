@@ -37,8 +37,6 @@ func (p *EventProxy) CommitBlock(stateWriter estate.StateWriter) error { return 
 
 func (p *EventProxy) CommitBlockWithStateWriter() error { return nil }
 
-func (p *EventProxy) NewBatch(kv.RwTx, chan struct{}) erigonethdb.DbWithPendingMutations
-
 func (p *EventProxy) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, noHistory bool, rwTx kv.RwTx) error {
 	return nil
 }

@@ -487,10 +487,6 @@ func (db *inMemoryStateDB) CommitBlock(stateWriter estate.StateWriter) error { r
 
 func (db *inMemoryStateDB) CommitBlockWithStateWriter() error { return nil }
 
-func (db *inMemoryStateDB) NewBatch(kv.RwTx, chan struct{}) erigonethdb.DbWithPendingMutations {
-	return nil
-}
-
 func (db *inMemoryStateDB) BeginBlockApply() error { return nil }
 
 func (db *inMemoryStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, noHistory bool, rwTx kv.RwTx) error {

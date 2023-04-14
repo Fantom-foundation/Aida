@@ -44,8 +44,6 @@ func (r *ProxyRecorder) CommitBlock(stateWriter estate.StateWriter) error { retu
 
 func (r *ProxyRecorder) CommitBlockWithStateWriter() error { return nil }
 
-func (r *ProxyRecorder) NewBatch(kv.RwTx, chan struct{}) erigonethdb.DbWithPendingMutations
-
 func (r *ProxyRecorder) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, noHistory bool, rwTx kv.RwTx) error {
 	return nil
 }

@@ -45,10 +45,6 @@ func (p *ProxyProfiler) CommitBlock(stateWriter estate.StateWriter) error { retu
 
 func (p *ProxyProfiler) CommitBlockWithStateWriter() error { return nil }
 
-func (p *ProxyProfiler) NewBatch(kv.RwTx, chan struct{}) erigonethdb.DbWithPendingMutations {
-	return nil
-}
-
 func (p *ProxyProfiler) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, noHistory bool, rwTx kv.RwTx) error {
 	return nil
 }

@@ -45,8 +45,6 @@ func (s *MockStateDB) CommitBlock(stateWriter estate.StateWriter) error { return
 
 func (s *MockStateDB) CommitBlockWithStateWriter() error { return nil }
 
-func (s *MockStateDB) NewBatch(kv.RwTx, chan struct{}) erigonethdb.DbWithPendingMutations
-
 func (s *MockStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, noHistory bool, rwTx kv.RwTx) error {
 	return nil
 }

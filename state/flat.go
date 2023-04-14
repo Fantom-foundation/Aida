@@ -59,8 +59,6 @@ func (s *flatStateDB) CommitBlock(stateWriter estate.StateWriter) error { return
 
 func (s *flatStateDB) CommitBlockWithStateWriter() error { return nil }
 
-func (s *flatStateDB) NewBatch(kv.RwTx, chan struct{}) erigonethdb.DbWithPendingMutations { return nil }
-
 func (s *flatStateDB) BeginBlockApply() error {
 	return s.openStateDB()
 }

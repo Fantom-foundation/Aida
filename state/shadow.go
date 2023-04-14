@@ -46,10 +46,6 @@ func (s *shadowStateDB) CommitBlock(stateWriter estate.StateWriter) error { retu
 
 func (s *shadowStateDB) CommitBlockWithStateWriter() error { return nil }
 
-func (s *shadowStateDB) NewBatch(kv.RwTx, chan struct{}) erigonethdb.DbWithPendingMutations {
-	return nil
-}
-
 func (s *shadowStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, noHistory bool, rwTx kv.RwTx) error {
 	return nil
 }

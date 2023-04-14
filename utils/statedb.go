@@ -285,6 +285,9 @@ func PrepareStateDB(cfg *Config) (db state.StateDB, workingDirectory string, loa
 		err = fmt.Errorf("Failed to create a temporary directory. %v", err)
 		return
 	}
+	if cfg.DbImpl == "erigon" {
+		cfg.workingDirectory = filepath.Join(cfg.workingDirectory, "erigon")
+	}
 
 	// check if statedb_info.json files exist
 	dbInfoFile := filepath.Join(cfg.StateDbSrcDir, DbInfoName)
@@ -331,7 +334,6 @@ func PrepareStateDB(cfg *Config) (db state.StateDB, workingDirectory string, loa
 	}
 
 	log.Printf("\tTemporary state DB directory: %v\n", workingDirectory)
-
 	db, err = MakeStateDB(workingDirectory, cfg, roothash, loadedExistingDB)
 
 	return

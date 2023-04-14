@@ -4,11 +4,31 @@ import (
 	"context"
 
 	"github.com/Fantom-foundation/Aida/state"
+
+	"github.com/ledgerwatch/erigon-lib/kv"
+
 	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
+	"github.com/ledgerwatch/erigon/ethdb/olddb"
+
+	lru "github.com/hashicorp/golang-lru"
 )
 
+func newBatch(cfg *Config) erigonethdb.DbWithPendingMutations {
+	const lruDefaultSize = 1_000_000 // 56 MB
+
+	whitelistedTables := []string{kv.Code, kv.ContractCode}
+
+	contractCodeCache, err := lru.New(lruDefaultSize)
+	if err != nil {
+		panic(err)
+	}
+
+	// Contract code is unlikely to change too much, so let's keep it cached
+	return olddb.NewHashBatch(cfg.rwTx, cfg.QuitCh, cfg.workingDirectory, whitelistedTables, contractCodeCache)
+}
+
 func newBatchExecution(db state.StateDB, cfg *Config) erigonethdb.DbWithPendingMutations {
-	batch := db.NewBatch(cfg.rwTx, cfg.QuitCh)
+	batch := newBatch(cfg)
 	db.BeginBlockApplyBatch(batch, false, cfg.rwTx)
 	return batch
 }

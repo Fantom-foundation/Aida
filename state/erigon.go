@@ -22,9 +22,6 @@ import (
 	"github.com/ledgerwatch/erigon-lib/kv/memdb"
 	estate "github.com/ledgerwatch/erigon/core/state"
 	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
-	"github.com/ledgerwatch/erigon/ethdb/olddb"
-
-	lru "github.com/hashicorp/golang-lru"
 )
 
 func MakeErigonStateDB(directory, variant string, rootHash common.Hash) (s StateDB, err error) {
@@ -200,20 +197,6 @@ func (s *erigonStateDB) CommitBlockWithStateWriter() error {
 		return errors.New("stateWriter is nil")
 	}
 	return s.CommitBlock(s.stateWriter)
-}
-
-func (s *erigonStateDB) NewBatch(rwTx kv.RwTx, quit chan struct{}) erigonethdb.DbWithPendingMutations {
-	const lruDefaultSize = 1_000_000 // 56 MB
-
-	whitelistedTables := []string{kv.Code, kv.ContractCode}
-
-	contractCodeCache, err := lru.New(lruDefaultSize)
-	if err != nil {
-		panic(err)
-	}
-
-	// Contract code is unlikely to change too much, so let's keep it cached
-	return olddb.NewHashBatch(rwTx, quit, s.directory, whitelistedTables, contractCodeCache)
 }
 
 // TODO think about hashedstate and intermediatehashes

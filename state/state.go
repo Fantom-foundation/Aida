@@ -120,7 +120,6 @@ type StateDB interface {
 	Commit(bool) (common.Hash, error)
 	CommitBlock(estate.StateWriter) error
 	CommitBlockWithStateWriter() error
-	NewBatch(kv.RwTx, chan struct{}) erigonethdb.DbWithPendingMutations
 	ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error
 
 	// ---- Optional Development & Debugging Features ----

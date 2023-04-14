@@ -328,6 +328,7 @@ type Config struct {
 	QuitCh              chan struct{}                      // required for erigon batch
 	rwTx                kv.RwTx                            // erigon tx
 	batch               erigonethdb.DbWithPendingMutations //erigon batch
+	workingDirectory    string                             // used for erigon batch
 }
 
 // getChainConnfig returns chain configuration of either mainnet or testnets.

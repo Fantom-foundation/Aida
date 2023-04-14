@@ -86,10 +86,6 @@ func (s *carmenStateDB) CommitBlock(stateWriter estate.StateWriter) error { retu
 
 func (s *carmenStateDB) CommitBlockWithStateWriter() error { return nil }
 
-func (s *carmenStateDB) NewBatch(kv.RwTx, chan struct{}) erigonethdb.DbWithPendingMutations {
-	return nil
-}
-
 func (s *carmenStateDB) BeginBlockApply() error { return nil }
 
 func (s *carmenStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, noHistory bool, rwTx kv.RwTx) error {

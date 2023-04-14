@@ -40,8 +40,6 @@ func (r *ProxyDeletion) CommitBlock(stateWriter estate.StateWriter) error { retu
 
 func (r *ProxyDeletion) CommitBlockWithStateWriter() error { return nil }
 
-func (r *ProxyDeletion) NewBatch(kv.RwTx, chan struct{}) erigonethdb.DbWithPendingMutations
-
 func (r *ProxyDeletion) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, noHistory bool, rwTx kv.RwTx) error {
 	return nil
 }
