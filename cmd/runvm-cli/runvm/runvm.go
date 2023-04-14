@@ -303,12 +303,14 @@ func RunVM(ctx *cli.Context) error {
 		}
 	}
 
-	log.Printf("run-vm: substate iter exit\n")
+	
 	switch {
 	case cfg.DbImpl == "erigon":
+		log.Printf("run-vm: substate iter exit, utils.CommitBatch\n")
 		if err := utils.CommitBatch(batch, rwTx); err != nil {
 			return err
 		}
+		db.BeginBlockApply() // unset batchMode for db
 	case !isFirstBlock && err == nil:
 		db.EndBlock()
 		db.EndSyncPeriod()
