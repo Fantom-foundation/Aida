@@ -61,7 +61,9 @@ func (s *flatStateDB) CommitBlockWithStateWriter() error { return nil }
 
 func (s *flatStateDB) NewBatch(kv.RwTx, chan struct{}) erigonethdb.DbWithPendingMutations { return nil }
 
-func (s *flatStateDB) BeginBlockApply() error { return nil }
+func (s *flatStateDB) BeginBlockApply() error {
+	return s.openStateDB()
+}
 
 func (s *flatStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, noHistory bool, rwTx kv.RwTx) error {
 	return nil

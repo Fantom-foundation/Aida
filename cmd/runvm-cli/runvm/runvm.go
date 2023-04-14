@@ -180,16 +180,13 @@ func RunVM(ctx *cli.Context) error {
 			}
 
 			if cfg.DbImpl == "erigon" {
-				// start erigon tx
-				rwTx, err = db.DB().RwKV().BeginRw(context.Background())
-				if err != nil {
-					return err
+				if err := utils.BeginRwTxBatch(rwTx, batch, db, cfg.QuitCh); err != nil {
+					panic(err)
 				}
-
-				defer rwTx.Rollback()
-				// start erigon batch execution
-				batch = utils.StartBatchExecution(rwTx, db, cfg.QuitCh)
-				defer batch.Rollback()
+				defer func() {
+					rwTx.Rollback()
+					batch.Rollback()
+				}()
 			}
 
 			curSyncPeriod = tx.Block / cfg.SyncPeriodLength
@@ -260,7 +257,7 @@ func RunVM(ctx *cli.Context) error {
 
 			defer rwTx.Rollback()
 
-			batch = utils.StartBatchExecution(rwTx, db, cfg.QuitCh)
+			batch = utils.NewBatchExecution(rwTx, db, cfg.QuitCh)
 			defer batch.Rollback()
 		}
 
