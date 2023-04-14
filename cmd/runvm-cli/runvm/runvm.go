@@ -107,6 +107,7 @@ func RunVM(ctx *cli.Context) error {
 		// remove destroyed accounts until one block before the first block
 
 		db.BeginBlockApply() // unset batchMode for DeleteDestroyedAccountsFromStateDB
+		//EndBlock
 		err = utils.DeleteDestroyedAccountsFromStateDB(db, cfg, cfg.First-1)
 		sec = time.Since(start).Seconds()
 		log.Printf("\tElapsed time: %.2f s\n", sec)
@@ -234,7 +235,6 @@ func RunVM(ctx *cli.Context) error {
 		// call batch.Commit() if batchsize is reached
 		if cfg.DbImpl == "erigon" && cfg.Batch().BatchSize() >= int(cfg.ErigonBatchSize) {
 			log.Printf("run-vm: batch.Commit, batch.BatchSize: %d bytes\n", cfg.Batch().BatchSize())
-			// commit batch and rwrx
 			err = utils.CommitAndBegin(db, cfg)
 			defer utils.Rollback(cfg)
 			if err != nil {

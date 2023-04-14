@@ -234,6 +234,7 @@ func DeleteDestroyedAccountsFromWorldState(ws substate.SubstateAlloc, cfg *Confi
 // self-destructed accounts.
 // TODO fix it
 func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *Config, target uint64) error {
+	fmt.Println("DeleteDestroyedAccountsFromStateDB, target", target)
 	if !cfg.HasDeletedAccounts {
 		log.Printf("Database not provided. Ignore deleted accounts.\n")
 		return nil
