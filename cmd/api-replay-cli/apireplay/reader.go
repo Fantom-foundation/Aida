@@ -2,18 +2,12 @@ package apireplay
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/Fantom-foundation/Aida/iterator"
 	"github.com/op/go-logging"
-)
-
-const (
-	statisticsLogFrequency = 10 * time.Second
 )
 
 // RecordedData represents data recorded on API server. This is sent to Comparator and compared with StateDBData
@@ -64,31 +58,17 @@ func (r *Reader) Start() {
 // read retrieves req from iter (if not at the end) and pass the data alongside wanted archive
 // to ReplayExecutor which executes the request into StateDB
 func (r *Reader) read() {
-	var (
-		start  time.Time
-		ticker *time.Ticker
-		total  uint64
-		stat   = make(map[string]uint64)
-	)
 	defer func() {
-		r.logStatistics(start, total, stat)
 		close(r.output)
 		r.wg.Done()
 	}()
-
-	start = time.Now()
-	ticker = time.NewTicker(statisticsLogFrequency)
 
 	for r.iter.Next() {
 		select {
 		case <-r.closed:
 			return
-		case <-ticker.C:
-			r.logStatistics(start, total, stat)
 
 		default:
-			total++
-
 			// did iter emit an error?
 			if r.iter.Error() != nil {
 				if r.iter.Error() == io.EOF || r.iter.Error().Error() == "unexpected EOF" {
@@ -102,23 +82,6 @@ func (r *Reader) read() {
 			// retrieve the data from iterator and send them to executors
 			r.output <- val
 
-			// add req to statistics
-			stat[val.Query.Method]++
 		}
 	}
-}
-
-// logStatistics about time, executed and total read requests. Frequency of logging depends on statisticsLogFrequency
-func (r *Reader) logStatistics(start time.Time, req uint64, stat map[string]uint64) {
-	elapsed := time.Since(start)
-	r.builder.WriteString(fmt.Sprintf("Elapsed time: %v\n\n", elapsed))
-
-	r.builder.WriteString(fmt.Sprintf("\tTotal requests:%v\n\n", req))
-
-	for m, c := range stat {
-		r.builder.WriteString(fmt.Sprintf("\t%v: %v\n", m, c))
-	}
-
-	r.log.Notice(r.builder.String())
-	r.builder.Reset()
 }

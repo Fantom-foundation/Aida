@@ -2,7 +2,6 @@ package apireplay
 
 import (
 	"encoding/json"
-	"log"
 	"math/big"
 	"strings"
 	"sync"
@@ -56,23 +55,25 @@ type ReplayExecutor struct {
 	chainCfg            *params.ChainConfig
 	log                 *logging.Logger
 	db                  state.StateDB
+	counterInput        chan requestLog
 }
 
 // newExecutor returns new instance of ReplayExecutor
-func newExecutor(first, last uint64, db state.StateDB, output chan *OutData, chainCfg *params.ChainConfig, input chan *iterator.RequestWithResponse, vmImpl string, wg *sync.WaitGroup, closed chan any, log *logging.Logger) *ReplayExecutor {
+func newExecutor(first, last uint64, db state.StateDB, output chan *OutData, chainCfg *params.ChainConfig, input chan *iterator.RequestWithResponse, vmImpl string, wg *sync.WaitGroup, closed chan any, log *logging.Logger, counterInput chan requestLog) *ReplayExecutor {
 	return &ReplayExecutor{
 		dbRange: dbRange{
 			first: first,
 			last:  last,
 		},
-		db:       db,
-		chainCfg: chainCfg,
-		vmImpl:   vmImpl,
-		closed:   closed,
-		input:    input,
-		output:   output,
-		wg:       wg,
-		log:      log,
+		db:           db,
+		chainCfg:     chainCfg,
+		vmImpl:       vmImpl,
+		closed:       closed,
+		input:        input,
+		output:       output,
+		wg:           wg,
+		log:          log,
+		counterInput: counterInput,
 	}
 }
 
@@ -85,10 +86,11 @@ func (e *ReplayExecutor) Start() {
 // execute reads request from Reader and executes it into given archive
 func (e *ReplayExecutor) execute() {
 	var (
-		ok  bool
-		req *iterator.RequestWithResponse
-		in  *executorInput
-		res *StateDBData
+		ok       bool
+		req      *iterator.RequestWithResponse
+		in       *executorInput
+		res      *StateDBData
+		executed bool
 	)
 
 	defer func() {
@@ -100,6 +102,7 @@ func (e *ReplayExecutor) execute() {
 		case <-e.closed:
 			return
 		case req, ok = <-e.input:
+			executed = false
 
 			// if input is closed, stop the Executor
 			if !ok {
@@ -107,21 +110,21 @@ func (e *ReplayExecutor) execute() {
 			}
 
 			in = e.createInput(req)
-			if in == nil {
-				continue
+			if in != nil {
+				executed = true
+				// doExecute into db
+				res = e.doExecute(in)
+
+				// send to compare
+				e.output <- createOutData(in, res)
 			}
 
-			// doExecute into db
-			res = e.doExecute(in)
-
-			// send to compare
-			e.output <- createOutData(in, res)
-
-			// close the archive after sending data
-			err := in.archive.Close()
-			if err != nil {
-				log.Print(err)
+			// send statistics
+			e.counterInput <- requestLog{
+				method:   req.Query.Method,
+				executed: executed,
 			}
+
 		}
 
 	}

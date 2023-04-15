@@ -2,6 +2,7 @@ package apireplay
 
 import (
 	"sync"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/cmd/api-replay-cli/flags"
 	"github.com/Fantom-foundation/Aida/iterator"
@@ -13,7 +14,10 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-const bufferSize = 100
+const (
+	statisticsLogFrequency = 10 * time.Second
+	bufferSize             = 100
+)
 
 // Controller controls and looks after all threads within the api-replay package
 // Reader reads data from iterator - one thread is used for reader
@@ -29,6 +33,9 @@ type Controller struct {
 	readerWg, executorsWg, comparatorsWg             *sync.WaitGroup
 	log                                              *logging.Logger
 	failure                                          chan any
+	counter                                          *requestCounter
+	counterWg                                        *sync.WaitGroup
+	counterClosed                                    chan any
 }
 
 // newController creates new instances of Controller, ReplayExecutors and Comparators
@@ -36,6 +43,7 @@ func newController(ctx *cli.Context, cfg *utils.Config, db state.StateDB, iter *
 
 	// create close signals
 	readerClosed := make(chan any)
+	counterClosed := make(chan any)
 	executorsClosed := make(chan any)
 	comparatorsClosed := make(chan any)
 
@@ -43,11 +51,14 @@ func newController(ctx *cli.Context, cfg *utils.Config, db state.StateDB, iter *
 	readerWg := new(sync.WaitGroup)
 	executorsWg := new(sync.WaitGroup)
 	comparatorsWg := new(sync.WaitGroup)
+	counterWg := new(sync.WaitGroup)
 
 	// create instances
 	reader := newReader(iter, newLogger(ctx), readerClosed, readerWg)
 
-	executors, output := createExecutors(cfg.First, cfg.Last, db, ctx, utils.GetChainConfig(cfg.ChainID), reader.output, cfg.VmImpl, executorsClosed, executorsWg)
+	executors, output, counterInput := createExecutors(cfg.First, cfg.Last, db, ctx, utils.GetChainConfig(cfg.ChainID), reader.output, cfg.VmImpl, executorsClosed, executorsWg)
+
+	counter := newCounter(counterClosed, statisticsLogFrequency, counterInput, newLogger(ctx), counterWg)
 
 	comparators, failure := createComparators(ctx, output, comparatorsClosed, comparatorsWg)
 
@@ -58,12 +69,15 @@ func newController(ctx *cli.Context, cfg *utils.Config, db state.StateDB, iter *
 		Reader:            reader,
 		Executors:         executors,
 		Comparators:       comparators,
+		counter:           counter,
 		readerClosed:      readerClosed,
 		comparatorsClosed: comparatorsClosed,
 		executorsClosed:   executorsClosed,
+		counterClosed:     counterClosed,
 		readerWg:          readerWg,
 		executorsWg:       executorsWg,
 		comparatorsWg:     comparatorsWg,
+		counterWg:         counterWg,
 	}
 }
 
@@ -74,6 +88,8 @@ func (r *Controller) Start() {
 	r.startExecutors()
 
 	r.startComparators()
+
+	r.counter.Start()
 
 	go r.control()
 }
@@ -107,7 +123,19 @@ func (r *Controller) startComparators() {
 	}
 }
 
-// stopReader closes the Readers close signal and waits until its wg is done
+// stopCounter closes the counters close signal
+func (r *Controller) stopCounter() {
+	select {
+	case <-r.counterClosed:
+		return
+	default:
+		r.log.Notice("stopping counter")
+		close(r.counterClosed)
+	}
+
+}
+
+// stopReader closes the Readers close signal
 func (r *Controller) stopReader() {
 	select {
 	case <-r.readerClosed:
@@ -119,7 +147,7 @@ func (r *Controller) stopReader() {
 
 }
 
-// stopExecutors closes the Executors close signal and waits until all the Executors are done
+// stopExecutors closes the Executors close signal
 func (r *Controller) stopExecutors() {
 	select {
 	case <-r.executorsClosed:
@@ -131,7 +159,7 @@ func (r *Controller) stopExecutors() {
 
 }
 
-// stopComparators closes the Comparators close signal and waits until all the Comparators are done
+// stopComparators closes the Comparators close signal
 func (r *Controller) stopComparators() {
 	// stop comparators input, so it still reads the rest of data in the chanel and exits once its empty
 	select {
@@ -155,6 +183,8 @@ func (r *Controller) Wait() {
 	r.comparatorsWg.Wait()
 	r.log.Info("comparators done")
 
+	r.counterWg.Wait()
+	r.log.Info("counter done")
 }
 
 // control looks for ctx.Done, if it triggers, Controller stops all the services
@@ -173,7 +203,7 @@ func (r *Controller) control() {
 }
 
 // createExecutors creates number of Executors defined by the flag WorkersFlag
-func createExecutors(first, last uint64, db state.StateDB, ctx *cli.Context, chainCfg *params.ChainConfig, input chan *iterator.RequestWithResponse, vmImpl string, closed chan any, wg *sync.WaitGroup) ([]*ReplayExecutor, chan *OutData) {
+func createExecutors(first, last uint64, db state.StateDB, ctx *cli.Context, chainCfg *params.ChainConfig, input chan *iterator.RequestWithResponse, vmImpl string, closed chan any, wg *sync.WaitGroup) ([]*ReplayExecutor, chan *OutData, chan requestLog) {
 	log.Infof("creating %v executors", ctx.Int(flags.WorkersFlag.Name))
 
 	output := make(chan *OutData, bufferSize)
@@ -181,11 +211,12 @@ func createExecutors(first, last uint64, db state.StateDB, ctx *cli.Context, cha
 	executors := ctx.Int(flags.WorkersFlag.Name)
 
 	e := make([]*ReplayExecutor, executors)
+	counterInput := make(chan requestLog)
 	for i := 0; i < executors; i++ {
-		e[i] = newExecutor(first, last, db, output, chainCfg, input, vmImpl, wg, closed, newLogger(ctx))
+		e[i] = newExecutor(first, last, db, output, chainCfg, input, vmImpl, wg, closed, newLogger(ctx), counterInput)
 	}
 
-	return e, output
+	return e, output, counterInput
 }
 
 // createComparators creates number of Comparators defined by the flag WorkersFlag divided by two
