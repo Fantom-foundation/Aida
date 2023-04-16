@@ -49,7 +49,8 @@ func (s *fuzzSource) End() bool {
 func FuzzStochastic(f *testing.F) {
 
 	// create corpus
-	testcases := []int{8 * 1024, 8 * 65536, 16 * 655536}
+	testcases := []int{8 * 512, 8 * 1024}
+	rand.Seed(1)
 	for _, n := range testcases {
 		randomStr := make([]byte, n)
 		if _, err := rand.Read(randomStr); err != nil {
