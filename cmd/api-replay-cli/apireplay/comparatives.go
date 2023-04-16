@@ -24,6 +24,7 @@ var EVMErrors = map[int][]string{
 		"insufficient balance for transfer",
 		"insufficient funds",
 		"gas required exceeds allowance",
+		"out of gas",
 	},
 
 	-32602: {"invalid argument"},
