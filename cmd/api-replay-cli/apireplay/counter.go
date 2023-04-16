@@ -85,8 +85,9 @@ func (c *requestCounter) count() {
 			}
 			// todo
 			//c.addStat(req)
-
-			c.total++
+			if req.logType == executed {
+				c.total++
+			}
 
 		}
 	}
