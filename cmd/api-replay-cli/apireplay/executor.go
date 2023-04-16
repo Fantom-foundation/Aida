@@ -90,11 +90,11 @@ func (e *ReplayExecutor) Start() {
 // execute reads request from Reader and executes it into given archive
 func (e *ReplayExecutor) execute() {
 	var (
-		ok       bool
-		req      *iterator.RequestWithResponse
-		in       *executorInput
-		res      *StateDBData
-		executed bool
+		ok      bool
+		req     *iterator.RequestWithResponse
+		in      *executorInput
+		res     *StateDBData
+		logType reqLogType
 	)
 
 	defer func() {
@@ -106,7 +106,6 @@ func (e *ReplayExecutor) execute() {
 		case <-e.closed:
 			return
 		case req, ok = <-e.input:
-			executed = false
 
 			// if input is closed, stop the Executor
 			if !ok {
@@ -114,21 +113,34 @@ func (e *ReplayExecutor) execute() {
 			}
 
 			in = e.createInput(req)
-			if in != nil {
-				// doExecute into db
-				res = e.doExecute(in)
 
-				// send to compare
-				if res != nil {
-					executed = true
-					e.output <- createOutData(in, res)
+			// are we in block range?
+			if in == nil {
+				// send statistics
+				e.counterInput <- requestLog{
+					method:  req.Query.Method,
+					logType: outOfStateDBRange,
 				}
+
+				// no need to executed rest of the loop
+				continue
+			}
+
+			// doExecute into db
+			res = e.doExecute(in)
+
+			// was execution successful?
+			if res != nil {
+				logType = executed
+				e.output <- createOutData(in, res)
+			} else {
+				logType = noSubstateForGivenBlock
 			}
 
 			// send statistics
 			e.counterInput <- requestLog{
-				method:   req.Query.Method,
-				executed: executed,
+				method:  req.Query.Method,
+				logType: logType,
 			}
 
 		}
