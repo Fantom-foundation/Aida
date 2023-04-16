@@ -99,10 +99,12 @@ func (r *Controller) Stop() {
 	r.stopComparators()
 	r.stopReader()
 	r.stopExecutors()
+	r.stopCounter()
 
 	r.readerWg.Wait()
 	r.executorsWg.Wait()
 	r.comparatorsWg.Wait()
+	r.counterWg.Wait()
 	r.log.Notice("all services has been stopped")
 }
 
