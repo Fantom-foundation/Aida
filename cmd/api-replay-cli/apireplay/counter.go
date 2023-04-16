@@ -24,6 +24,7 @@ type requestCounter struct {
 	wg      *sync.WaitGroup
 }
 
+// todo why not executed - statedb out of range; no substate..
 // requestLog transfers information from ReplayExecutor whether request was or was not executed for statistics purpose
 type requestLog struct {
 	method   string

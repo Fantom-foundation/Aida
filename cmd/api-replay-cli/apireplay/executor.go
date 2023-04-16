@@ -15,6 +15,10 @@ import (
 	"github.com/op/go-logging"
 )
 
+const (
+	numberOfTimestampExtractionTries = 5
+)
+
 // executorInput represents data needed for executing request into StateDB
 type executorInput struct {
 	archive state.StateDB
@@ -111,12 +115,14 @@ func (e *ReplayExecutor) execute() {
 
 			in = e.createInput(req)
 			if in != nil {
-				executed = true
 				// doExecute into db
 				res = e.doExecute(in)
 
 				// send to compare
-				e.output <- createOutData(in, res)
+				if res != nil {
+					executed = true
+					e.output <- createOutData(in, res)
+				}
 			}
 
 			// send statistics
@@ -174,6 +180,10 @@ func (e *ReplayExecutor) doExecute(in *executorInput) *StateDBData {
 
 	case "call":
 		timestamp := e.getTimestamp(in.blockID)
+		if timestamp == 0 {
+			e.log.Warningf("cannot extract substate for block %v\n", in.blockID)
+			return nil
+		}
 		evm := newEVMExecutor(in.blockID, in.archive, e.vmImpl, e.chainCfg, in.req.Query.Params[0].(map[string]interface{}), timestamp, e.log)
 		return executeCall(evm)
 
@@ -249,11 +259,22 @@ func (e *ReplayExecutor) isBlockNumberWithinRange(blockNumber uint64) bool {
 
 // getTimestamp looks whether current block is the same as wanted. If not, retrieves new timestamp from substate
 func (e *ReplayExecutor) getTimestamp(blockID uint64) uint64 {
-	if !(blockID == e.currentBlockID) {
-		e.currentEVMTimestamp = substate.GetSubstate(blockID, 0).Env.Timestamp
-	}
-	return e.currentEVMTimestamp
+	var ok bool
 
+	if !(blockID == e.currentBlockID) {
+		for i := 0; i < numberOfTimestampExtractionTries; i++ {
+			if substate.HasSubstate(blockID, i) {
+				e.currentEVMTimestamp = substate.GetSubstate(blockID, 0).Env.Timestamp
+				ok = true
+			}
+		}
+	}
+
+	if !ok {
+		return 0
+	}
+
+	return e.currentEVMTimestamp
 }
 
 // decodeBlockNumber finds what block number request wants
