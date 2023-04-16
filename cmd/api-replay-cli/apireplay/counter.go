@@ -62,8 +62,8 @@ func (c *requestCounter) Start() {
 // count is counters thread in which he reads requests from executor
 func (c *requestCounter) count() {
 	var (
-		req requestLog
-		ok  bool
+		//req requestLog
+		ok bool
 	)
 
 	defer func() {
@@ -79,7 +79,7 @@ func (c *requestCounter) count() {
 			return
 		case <-c.ticker.C:
 			c.logStats()
-		case req, ok = <-c.input:
+		case _, ok = <-c.input:
 			if !ok {
 				return
 			}
