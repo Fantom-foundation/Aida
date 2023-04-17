@@ -17,9 +17,6 @@ import (
 	_ "github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/urfave/cli/v2"
-
-	"github.com/ledgerwatch/erigon-lib/kv"
-	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 )
 
 type ArgumentMode int
@@ -279,56 +276,53 @@ type Config struct {
 	First uint64 // first block
 	Last  uint64 // last block
 
-	ArchiveMode         bool                               // enable archive mode
-	ArchiveVariant      string                             // selects the implementation variant of the archive
-	BlockLength         uint64                             // length of a block in number of transactions
-	CarmenSchema        int                                // the current DB schema ID to use in Carmen
-	ChainID             int                                // Blockchain ID (mainnet: 250/testnet: 4002)
-	ContinueOnFailure   bool                               // continue validation when an error detected
-	ContractNumber      int64                              // number of contracts to create
-	CPUProfile          string                             // pprof cpu profile output file name
-	DbImpl              string                             // storage implementation
-	DbVariant           string                             // database variant
-	DbLogging           bool                               // set to true if all DB operations should be logged
-	Debug               bool                               // enable trace debug flag
-	DebugFrom           uint64                             // the first block to print trace debug
-	DeletedAccountDir   string                             // directory of deleted account database
-	EnableProgress      bool                               // enable progress report flag
-	SyncPeriodLength    uint64                             // length of an sync-period in number of blocks
-	HasDeletedAccounts  bool                               // true if deletedAccountDir is not empty; otherwise false
-	KeepStateDB         bool                               // set to true if stateDB is kept after run
-	KeysNumber          int64                              // number of keys to generate
-	MaxNumTransactions  int                                // the maximum number of processed transactions
-	MemoryBreakdown     bool                               // enable printing of memory breakdown
-	MemoryProfile       string                             // capture the memory heap profile into the file
-	OperationFrequency  uint64                             // determines indirectly the length of a transaction
-	PrimeRandom         bool                               // enable randomized priming
-	PrimeSeed           int64                              // set random seed
-	PrimeThreshold      int                                // set account threshold before commit
-	Profile             bool                               // enable micro profiling
-	RandomSeed          int64                              // set random seed for stochastic testing (TODO: Perhaps combine with PrimeSeed??)
-	SkipPriming         bool                               // skip priming of the state DB
-	ShadowImpl          string                             // implementation of the shadow DB to use, empty if disabled
-	ShadowVariant       string                             // database variant of the shadow DB to be used
-	StateDbSrcDir       string                             // directory to load an existing State DB data
-	DBDir               string                             // directory to profiling database containing substate, update, delete accounts data
-	StateDbTempDir      string                             // directory to store a working copy of State DB data
-	StateValidationMode ValidationMode                     // state validation mode
-	UpdateDBDir         string                             // update-set directory
-	SnapshotDepth       int                                // depth of snapshot history
-	SubstateDBDir       string                             // substate directory
-	ValidateTxState     bool                               // validate stateDB before and after transaction
-	ValidateWorldState  bool                               // validate stateDB before and after replay block range
-	ValuesNumber        int64                              // number of values to generate
-	VmImpl              string                             // vm implementation (geth/lfvm)
-	Workers             int                                // number of worker threads
-	TraceFile           string                             // name of trace file
-	Trace               bool                               // trace flag
-	ErigonBatchSize     datasize.ByteSize                  // erigon batch size for runVM
-	QuitCh              chan struct{}                      // required for erigon batch
-	rwTx                kv.RwTx                            // erigon tx
-	batch               erigonethdb.DbWithPendingMutations //erigon batch
-	workingDirectory    string                             // used for erigon batch
+	ArchiveMode         bool              // enable archive mode
+	ArchiveVariant      string            // selects the implementation variant of the archive
+	BlockLength         uint64            // length of a block in number of transactions
+	CarmenSchema        int               // the current DB schema ID to use in Carmen
+	ChainID             int               // Blockchain ID (mainnet: 250/testnet: 4002)
+	ContinueOnFailure   bool              // continue validation when an error detected
+	ContractNumber      int64             // number of contracts to create
+	CPUProfile          string            // pprof cpu profile output file name
+	DbImpl              string            // storage implementation
+	DbVariant           string            // database variant
+	DbLogging           bool              // set to true if all DB operations should be logged
+	Debug               bool              // enable trace debug flag
+	DebugFrom           uint64            // the first block to print trace debug
+	DeletedAccountDir   string            // directory of deleted account database
+	EnableProgress      bool              // enable progress report flag
+	SyncPeriodLength    uint64            // length of an sync-period in number of blocks
+	HasDeletedAccounts  bool              // true if deletedAccountDir is not empty; otherwise false
+	KeepStateDB         bool              // set to true if stateDB is kept after run
+	KeysNumber          int64             // number of keys to generate
+	MaxNumTransactions  int               // the maximum number of processed transactions
+	MemoryBreakdown     bool              // enable printing of memory breakdown
+	MemoryProfile       string            // capture the memory heap profile into the file
+	OperationFrequency  uint64            // determines indirectly the length of a transaction
+	PrimeRandom         bool              // enable randomized priming
+	PrimeSeed           int64             // set random seed
+	PrimeThreshold      int               // set account threshold before commit
+	Profile             bool              // enable micro profiling
+	RandomSeed          int64             // set random seed for stochastic testing (TODO: Perhaps combine with PrimeSeed??)
+	SkipPriming         bool              // skip priming of the state DB
+	ShadowImpl          string            // implementation of the shadow DB to use, empty if disabled
+	ShadowVariant       string            // database variant of the shadow DB to be used
+	StateDbSrcDir       string            // directory to load an existing State DB data
+	DBDir               string            // directory to profiling database containing substate, update, delete accounts data
+	StateDbTempDir      string            // directory to store a working copy of State DB data
+	StateValidationMode ValidationMode    // state validation mode
+	UpdateDBDir         string            // update-set directory
+	SnapshotDepth       int               // depth of snapshot history
+	SubstateDBDir       string            // substate directory
+	ValidateTxState     bool              // validate stateDB before and after transaction
+	ValidateWorldState  bool              // validate stateDB before and after replay block range
+	ValuesNumber        int64             // number of values to generate
+	VmImpl              string            // vm implementation (geth/lfvm)
+	Workers             int               // number of worker threads
+	TraceFile           string            // name of trace file
+	Trace               bool              // trace flag
+	ErigonBatchSize     datasize.ByteSize // erigon batch size for runVM
+	workingDirectory    string            // used for erigon batch
 }
 
 // getChainConnfig returns chain configuration of either mainnet or testnets.
@@ -568,8 +562,4 @@ func SetBlockRange(firstArg string, lastArg string) (uint64, uint64, error) {
 		err = fmt.Errorf("error: first block has larger number than last block")
 	}
 	return first, last, err
-}
-
-func (cfg *Config) Batch() erigonethdb.DbWithPendingMutations {
-	return cfg.batch
 }

@@ -14,18 +14,11 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-
-	"github.com/ledgerwatch/erigon-lib/kv"
-	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 )
 
 // MockStateDB data structure
 type MockStateDB struct {
 	recording []Record //signatures of called functions
-}
-
-func (s *MockStateDB) BeginBlockApply() error {
-	return nil
 }
 
 // NewMockStateDB creates a new mock StateDB object for testing execute
@@ -36,14 +29,6 @@ func NewMockStateDB() *MockStateDB {
 // GetRecording retrieves the call signature of the last call
 func (s *MockStateDB) GetRecording() []Record {
 	return s.recording
-}
-
-func (s *MockStateDB) DB() erigonethdb.Database { return nil }
-
-func (s *MockStateDB) CommitBlockWithStateWriter() error { return nil }
-
-func (s *MockStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, rwTx kv.RwTx) error {
-	return nil
 }
 
 // Record structure

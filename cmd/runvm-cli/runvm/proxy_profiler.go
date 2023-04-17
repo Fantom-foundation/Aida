@@ -10,10 +10,6 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-
-	"github.com/ledgerwatch/erigon-lib/kv"
-
-	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 )
 
 // ProxyProfiler data structure for capturing and recording
@@ -29,21 +25,6 @@ func NewProxyProfiler(db state.StateDB) (*ProxyProfiler, *operation.ProfileStats
 	p.db = db
 	p.ps = new(operation.ProfileStats)
 	return p, p.ps
-}
-
-// BeginBlockApply creates a new object copying state from
-// the old stateDB or clears execution state of stateDB
-func (p *ProxyProfiler) BeginBlockApply() error {
-	err := p.db.BeginBlockApply()
-	return err
-}
-
-func (p *ProxyProfiler) DB() erigonethdb.Database { return nil }
-
-func (p *ProxyProfiler) CommitBlockWithStateWriter() error { return nil }
-
-func (p *ProxyProfiler) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, rwTx kv.RwTx) error {
-	return nil
 }
 
 // CreateAccounts creates a new account.

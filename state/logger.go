@@ -7,10 +7,6 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-
-	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
-
-	"github.com/ledgerwatch/erigon-lib/kv"
 )
 
 // MakeLoggingStateDB wrapps the given StateDB instance into a logging wrapper causing
@@ -21,19 +17,6 @@ func MakeLoggingStateDB(db StateDB) StateDB {
 
 type loggingStateDB struct {
 	db StateDB
-}
-
-func (s *loggingStateDB) BeginBlockApply() error {
-	log.Printf("BeginBlockApply\n")
-	return s.db.BeginBlockApply()
-}
-
-func (s *loggingStateDB) DB() erigonethdb.Database { return nil }
-
-func (s *loggingStateDB) CommitBlockWithStateWriter() error { return nil }
-
-func (s *loggingStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, rwTx kv.RwTx) error {
-	return nil
 }
 
 func (s *loggingStateDB) CreateAccount(addr common.Address) {

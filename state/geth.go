@@ -12,10 +12,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	vm "github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/ethdb"
-
-	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
-
-	"github.com/ledgerwatch/erigon-lib/kv"
 )
 
 const (
@@ -62,16 +58,6 @@ type gethStateDB struct {
 	triegc        *prque.Prque
 	isArchiveMode bool
 	block         uint64
-}
-
-func (s *gethStateDB) DB() erigonethdb.Database { return nil }
-
-func (s *gethStateDB) CommitBlockWithStateWriter() error { return nil }
-
-func (s *gethStateDB) BeginBlockApply() error { return s.openStateDB() }
-
-func (s *gethStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, rwTx kv.RwTx) error {
-	return nil
 }
 
 func (s *gethStateDB) CreateAccount(addr common.Address) {

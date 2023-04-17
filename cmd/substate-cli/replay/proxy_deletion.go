@@ -7,10 +7,6 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-
-	"github.com/ledgerwatch/erigon-lib/kv"
-
-	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 )
 
 type ContractLiveness struct {
@@ -31,12 +27,6 @@ func NewProxyDeletion(db state.StateDB, ch chan ContractLiveness) *ProxyDeletion
 	r.db = db
 	r.ch = ch
 	return r
-}
-
-func (r *ProxyDeletion) DB() erigonethdb.Database { return nil }
-
-func (r *ProxyDeletion) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, rwTx kv.RwTx) error {
-	return nil
 }
 
 // CreateAccounts creates a new account.

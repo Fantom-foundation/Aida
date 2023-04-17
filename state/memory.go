@@ -7,10 +7,6 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-
-	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
-
-	"github.com/ledgerwatch/erigon-lib/kv"
 )
 
 func MakeEmptyGethInMemoryStateDB(variant string) (StateDB, error) {
@@ -478,16 +474,6 @@ func (db *inMemoryStateDB) PrepareSubstate(alloc *substate.SubstateAlloc, block 
 	db.touchedSlots = map[slot]int{}
 	db.createdAccount = map[common.Address]int{}
 	db.blockNum = block
-}
-
-func (db *inMemoryStateDB) DB() erigonethdb.Database { return nil }
-
-func (db *inMemoryStateDB) CommitBlockWithStateWriter() error { return nil }
-
-func (db *inMemoryStateDB) BeginBlockApply() error { return nil }
-
-func (db *inMemoryStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, rwTx kv.RwTx) error {
-	return nil
 }
 
 func (s *inMemoryStateDB) StartBulkLoad() BulkLoad {

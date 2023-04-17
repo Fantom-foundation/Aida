@@ -31,10 +31,6 @@ func NewEventProxy(db state.StateDB, registry *EventRegistry) *EventProxy {
 	}
 }
 
-func (p *EventProxy) DB() erigonethdb.Database { return nil }
-
-func (p *EventProxy) CommitBlockWithStateWriter() error { return nil }
-
 func (p *EventProxy) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, noHistory bool, rwTx kv.RwTx) error {
 	return nil
 }

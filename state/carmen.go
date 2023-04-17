@@ -10,10 +10,6 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-
-	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
-
-	"github.com/ledgerwatch/erigon-lib/kv"
 )
 
 func MakeCarmenStateDB(directory, variant, archive string, schema int) (StateDB, error) {
@@ -77,16 +73,6 @@ type carmenStateDB struct {
 	db               carmen.StateDB
 	syncPeriodNumber uint64
 	blockNumber      uint64
-}
-
-func (s *carmenStateDB) DB() erigonethdb.Database { return nil }
-
-func (s *carmenStateDB) CommitBlockWithStateWriter() error { return nil }
-
-func (s *carmenStateDB) BeginBlockApply() error { return nil }
-
-func (s *carmenStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, rwTx kv.RwTx) error {
-	return nil
 }
 
 func (s *carmenStateDB) CreateAccount(addr common.Address) {

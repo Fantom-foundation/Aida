@@ -9,10 +9,6 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-
-	"github.com/ledgerwatch/erigon-lib/kv"
-
-	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 )
 
 // ProxyRecorder data structure for capturing and recording
@@ -33,16 +29,6 @@ func NewProxyRecorder(db state.StateDB, ctx *context.Record) *ProxyRecorder {
 // write new operation to file.
 func (r *ProxyRecorder) write(op operation.Operation) {
 	operation.WriteOp(r.ctx, op)
-}
-
-func (r *ProxyRecorder) SetTxBlock(uint64) {}
-
-func (r *ProxyRecorder) DB() erigonethdb.Database { return nil }
-
-func (r *ProxyRecorder) CommitBlockWithStateWriter() error { return nil }
-
-func (r *ProxyRecorder) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, rwTx kv.RwTx) error {
-	return nil
 }
 
 // CreateAccounts creates a new account.

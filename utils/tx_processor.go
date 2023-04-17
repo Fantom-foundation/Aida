@@ -16,7 +16,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
-	//estate "github.com/ledgerwatch/erigon/core/state"
 )
 
 // Count total errors occured while processing transactions
@@ -91,17 +90,10 @@ func ProcessTx(db state.StateDB, cfg *Config, block uint64, txIndex int, tx *sub
 		}
 	}
 
-	switch {
-	case cfg.DbImpl == "erigon":
-		if err := db.CommitBlockWithStateWriter(); err != nil {
-			return err
-		}
-	default:
-		if chainConfig.IsByzantium(blockCtx.BlockNumber) {
-			db.Finalise(true)
-		} else {
-			db.IntermediateRoot(chainConfig.IsEIP158(blockCtx.BlockNumber))
-		}
+	if chainConfig.IsByzantium(blockCtx.BlockNumber) {
+		db.Finalise(true)
+	} else {
+		db.IntermediateRoot(chainConfig.IsEIP158(blockCtx.BlockNumber))
 	}
 
 	// check whether the outputAlloc substate is contained in the world-state db.

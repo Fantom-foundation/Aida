@@ -10,10 +10,6 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-
-	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
-
-	"github.com/ledgerwatch/erigon-lib/kv"
 )
 
 // MakeShadowStateDB creates a StateDB instance bundeling two other instances and running each
@@ -37,18 +33,6 @@ type shadowStateDB struct {
 
 type snapshotPair struct {
 	prime, shadow int
-}
-
-func (s *shadowStateDB) DB() erigonethdb.Database { return nil }
-
-func (s *shadowStateDB) CommitBlockWithStateWriter() error { return nil }
-
-func (s *shadowStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, rwTx kv.RwTx) error {
-	return nil
-}
-
-func (s *shadowStateDB) BeginBlockApply() error {
-	return s.getError("BeginBlockApply", func(s StateDB) error { return s.BeginBlockApply() })
 }
 
 func (s *shadowStateDB) CreateAccount(addr common.Address) {

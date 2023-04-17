@@ -73,7 +73,7 @@ func makeStateDBVariant(directory, impl, variant, archiveVariant string, rootHas
 	case "flat":
 		return state.MakeFlatStateDB(directory, variant, rootHash)
 	case "erigon":
-		return state.MakeErigonStateDB(directory, variant, rootHash)
+		return state.MakeErigonStateDB(directory, variant, rootHash, cfg.ErigonBatchSize, cfg.First, cfg.Last)
 	}
 	return nil, fmt.Errorf("unknown DB implementation (--%v): %v", StateDbImplementationFlag.Name, impl)
 }
@@ -116,22 +116,7 @@ func (pt *ProgressTracker) PrintProgress() {
 
 // PrimeStateDB primes database with accounts from the world state.
 func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config) {
-
-	var (
-		err  error
-		load state.BulkLoad
-	)
-	if cfg.DbImpl == "erigon" {
-		// start erigon tx
-		err = BeginRwTxBatch(db, cfg)
-		if err != nil {
-			panic(err)
-		}
-
-		defer Rollback(cfg)
-	}
-
-	load = db.StartBulkLoad()
+	load := db.StartBulkLoad()
 
 	numValues := 0
 	for _, account := range ws {
@@ -149,15 +134,6 @@ func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config) {
 		PrimeStateDBRandom(ws, load, cfg, pt)
 	} else {
 		for addr, account := range ws {
-			if cfg.DbImpl == "erigon" && cfg.Batch().BatchSize() >= int(cfg.ErigonBatchSize) {
-				err = CommitAndBegin(db, cfg)
-				defer Rollback(cfg)
-				if err != nil {
-					panic(err)
-				}
-				load = db.StartBulkLoad()
-			}
-
 			primeOneAccount(addr, account, load, pt)
 		}
 	}
@@ -166,13 +142,8 @@ func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config) {
 		panic(fmt.Errorf("failed to prime StateDB: %v", err))
 	}
 
-	if cfg.DbImpl == "erigon" {
-		err = CommitBatchRwTx(cfg)
-		if err != nil {
-			panic(err)
-		}
-	}
-
+	// switch db from batch mode to normal mode
+	db.BeginTransaction(0)
 }
 
 // primeOneAccount initializes an account on stateDB with substate
@@ -185,6 +156,7 @@ func primeOneAccount(addr common.Address, account *substate.SubstateAccount, db 
 		db.SetState(addr, key, value)
 		pt.PrintProgress()
 	}
+
 }
 
 // PrimeStateDBRandom primes database with accounts from the world state in random order.
@@ -234,7 +206,6 @@ func DeleteDestroyedAccountsFromWorldState(ws substate.SubstateAlloc, cfg *Confi
 // self-destructed accounts.
 // TODO fix it
 func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *Config, target uint64) error {
-	fmt.Println("DeleteDestroyedAccountsFromStateDB, target", target)
 	if !cfg.HasDeletedAccounts {
 		log.Printf("Database not provided. Ignore deleted accounts.\n")
 		return nil

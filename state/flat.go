@@ -10,10 +10,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
-
-	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
-
-	"github.com/ledgerwatch/erigon-lib/kv"
 )
 
 func MakeFlatStateDB(directory, variant string, rootHash common.Hash) (s StateDB, err error) {
@@ -50,18 +46,6 @@ type flatStateDB struct {
 	db        state.Database
 	stateRoot common.Hash
 	*state.StateDB
-}
-
-func (s *flatStateDB) DB() erigonethdb.Database { return nil }
-
-func (s *flatStateDB) CommitBlockWithStateWriter() error { return nil }
-
-func (s *flatStateDB) BeginBlockApply() error {
-	return s.openStateDB()
-}
-
-func (s *flatStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, rwTx kv.RwTx) error {
-	return nil
 }
 
 // BeginBlockApply creates a new statedb from an existing geth database

@@ -5,8 +5,6 @@ import (
 	"log"
 	"math/big"
 	"os"
-	"os/signal"
-	"syscall"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/tracer/operation"
@@ -57,24 +55,6 @@ func RunVM(ctx *cli.Context) error {
 		return err
 	}
 
-	// this functionality is required to fix panic upon committing an erigon batch
-	var (
-		sigs chan os.Signal
-		quit chan struct{}
-	)
-
-	if cfg.DbImpl == "erigon" {
-		sigs = make(chan os.Signal, 1)
-		quit = make(chan struct{}, 1)
-		signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-		go func() {
-			<-sigs
-			quit <- struct{}{}
-		}()
-		cfg.QuitCh = quit
-		defer db.Close()
-	}
-
 	if !cfg.KeepStateDB {
 		log.Printf("WARNING: directory %v will be removed at the end of this run.\n", stateDirectory)
 		defer os.RemoveAll(stateDirectory)
@@ -106,8 +86,6 @@ func RunVM(ctx *cli.Context) error {
 		start = time.Now()
 		// remove destroyed accounts until one block before the first block
 
-		db.BeginBlockApply() // unset batchMode for DeleteDestroyedAccountsFromStateDB
-		//EndBlock
 		err = utils.DeleteDestroyedAccountsFromStateDB(db, cfg, cfg.First-1)
 		sec = time.Since(start).Seconds()
 		log.Printf("\tElapsed time: %.2f s\n", sec)
@@ -170,15 +148,6 @@ func RunVM(ctx *cli.Context) error {
 				break
 			}
 
-			if cfg.DbImpl == "erigon" {
-				// start erigon tx
-				err = utils.BeginRwTxBatch(db, cfg)
-				if err != nil {
-					panic(err)
-				}
-
-				defer utils.Rollback(cfg)
-			}
 			curSyncPeriod = tx.Block / cfg.SyncPeriodLength
 			curBlock = tx.Block
 			db.BeginSyncPeriod(curSyncPeriod)
@@ -201,7 +170,7 @@ func RunVM(ctx *cli.Context) error {
 			newSyncPeriod := tx.Block / cfg.SyncPeriodLength
 			for curSyncPeriod < newSyncPeriod {
 				if cfg.DbImpl != "erigon" {
-					db.EndSyncPeriod() //TODO compute state root upon end of every epoch
+					db.EndSyncPeriod()
 				}
 				curSyncPeriod++
 				db.BeginSyncPeriod(curSyncPeriod)
@@ -209,9 +178,6 @@ func RunVM(ctx *cli.Context) error {
 			// Mark the beginning of a new block
 			curBlock = tx.Block
 			db.BeginBlock(curBlock)
-			if cfg.DbImpl != "erigon" {
-				db.BeginBlockApply()
-			}
 		}
 		if cfg.MaxNumTransactions >= 0 && txCount >= cfg.MaxNumTransactions {
 			break
@@ -228,16 +194,6 @@ func RunVM(ctx *cli.Context) error {
 		db.EndTransaction()
 		txCount++
 		gasCount = new(big.Int).Add(gasCount, new(big.Int).SetUint64(tx.Substate.Result.GasUsed))
-
-		// call batch.Commit() if batchsize is reached
-		if cfg.DbImpl == "erigon" && cfg.Batch().BatchSize() >= int(cfg.ErigonBatchSize) {
-			log.Printf("run-vm: batch.Commit, batch.BatchSize: %d bytes\n", cfg.Batch().BatchSize())
-			err = utils.CommitAndBegin(db, cfg)
-			defer utils.Rollback(cfg)
-			if err != nil {
-				return err
-			}
-		}
 
 		if cfg.EnableProgress {
 			// report progress
@@ -278,14 +234,7 @@ func RunVM(ctx *cli.Context) error {
 		}
 	}
 
-	switch {
-	case cfg.DbImpl == "erigon":
-		if err := utils.CommitBatchRwTx(cfg); err != nil {
-			return err
-		}
-		// unset batchMode for db
-		db.BeginBlockApply()
-	case !isFirstBlock && err == nil:
+	if !isFirstBlock && err == nil {
 		db.EndBlock()
 		db.EndSyncPeriod()
 	}
@@ -328,8 +277,7 @@ func RunVM(ctx *cli.Context) error {
 		fmt.Printf("============================================\n")
 	}
 
-	// TODO remove condition cfg.DbImpl != "erigon" after state root computation logic is implemented for erigon
-	if cfg.KeepStateDB && !isFirstBlock && cfg.DbImpl != "erigon" {
+	if cfg.KeepStateDB && !isFirstBlock {
 		log.Println("if cfg.KeepStateDB && !isFirstBlock {")
 		rootHash, _ := db.Commit(true)
 		if err := utils.WriteStateDbInfo(stateDirectory, cfg, curBlock, rootHash); err != nil {

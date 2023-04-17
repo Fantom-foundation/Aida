@@ -10,7 +10,7 @@ require (
 	github.com/Fantom-foundation/go-opera-erigon v0.0.0-00010101000000-000000000000
 	github.com/Fantom-foundation/go-opera-flat v0.0.0-00010101000000-000000000000
 	github.com/Fantom-foundation/lachesis-base v0.0.0-20221208123620-82a6d15f995c
-	github.com/c2h5oh/datasize v0.0.0-20200825124411-48ed595a09d2
+	github.com/c2h5oh/datasize v0.0.0-20220606134207-859f65c6625b
 	github.com/dsnet/compress v0.0.1
 	github.com/ethereum/go-ethereum v1.10.25
 	github.com/fatih/color v1.13.0
@@ -29,6 +29,7 @@ require (
 	github.com/syndtr/goleveldb v1.0.1-0.20220614013038-64ee5596c38a
 	github.com/urfave/cli/v2 v2.24.4
 	golang.org/x/text v0.8.0
+	golang.org/x/tools v0.6.0
 	gonum.org/v1/gonum v0.6.0
 )
 
@@ -36,7 +37,7 @@ require (
 	github.com/DataDog/zstd v1.5.2 // indirect
 	github.com/RoaringBitmap/roaring v1.2.1 // indirect
 	github.com/VictoriaMetrics/fastcache v1.12.0 // indirect
-	github.com/VictoriaMetrics/metrics v1.18.1 // indirect
+	github.com/VictoriaMetrics/metrics v1.22.2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.2.0 // indirect
 	github.com/btcsuite/btcd v0.22.0-beta // indirect
@@ -70,12 +71,12 @@ require (
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/google/btree v1.0.1 // indirect
+	github.com/google/btree v1.1.2 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/graph-gophers/graphql-go v1.3.0 // indirect
 	github.com/holiman/bloomfilter/v2 v2.0.3 // indirect
-	github.com/holiman/uint256 v1.2.0 // indirect
+	github.com/holiman/uint256 v1.2.1 // indirect
 	github.com/huin/goupnp v1.0.3 // indirect
 	github.com/influxdata/influxdb v1.8.3 // indirect
 	github.com/influxdata/influxdb-client-go/v2 v2.4.0 // indirect
@@ -111,7 +112,7 @@ require (
 	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.11 // indirect
 	github.com/tklauser/numcpus v0.6.0 // indirect
-	github.com/torquem-ch/mdbx-go v0.24.3-0.20220614090901-342411560dde // indirect
+	github.com/torquem-ch/mdbx-go v0.26.0 // indirect
 	github.com/tyler-smith/go-bip39 v1.0.2 // indirect
 	github.com/uber/jaeger-client-go v2.20.1+incompatible // indirect
 	github.com/uber/jaeger-lib v2.2.0+incompatible // indirect
@@ -121,16 +122,16 @@ require (
 	github.com/valyala/histogram v1.2.0 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
-	go.uber.org/atomic v1.9.0 // indirect
+	go.uber.org/atomic v1.10.0 // indirect
 	golang.org/x/crypto v0.1.0 // indirect
-	golang.org/x/exp v0.0.0-20221205204356-47842c84f3db // indirect
+	golang.org/x/exp v0.0.0-20230321023759-10a507213a29 // indirect
 	golang.org/x/image v0.0.0-20200927104501-e162460cd6b5 // indirect
-	golang.org/x/net v0.1.0 // indirect
-	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
+	golang.org/x/net v0.6.0 // indirect
+	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/sys v0.5.0 // indirect
 	golang.org/x/time v0.0.0-20220922220347-f3bd1da661af // indirect
 	google.golang.org/genproto v0.0.0-20210624195500-8bfb893ecb84 // indirect
-	google.golang.org/grpc v1.46.2 // indirect
+	google.golang.org/grpc v1.48.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/olebedev/go-duktape.v3 v3.0.0-20200619000410-60c24ae608a6 // indirect
@@ -142,7 +143,7 @@ require (
 // build steps when importing the project. This is handled in the Makefile.
 replace github.com/Fantom-foundation/Carmen/go => ./carmen/go
 
-replace github.com/Fantom-foundation/go-opera-erigon => github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230410142406-712c1d177056
+replace github.com/Fantom-foundation/go-opera-erigon => github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230418094634-9d555752574a
 
 replace github.com/Fantom-foundation/go-opera-flat => github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230329105747-dd1f4d815c71
 

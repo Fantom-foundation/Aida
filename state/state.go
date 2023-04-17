@@ -7,10 +7,6 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-
-	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
-
-	"github.com/ledgerwatch/erigon-lib/kv"
 )
 
 type BasicStateDB interface {
@@ -87,10 +83,6 @@ type StateDB interface {
 	// After this call no more operations will be allowed on the state.
 	Close() error
 
-	// stateDB handler
-	BeginBlockApply() error
-	BeginBlockApplyBatch(erigonethdb.DbWithPendingMutations, kv.RwTx) error
-
 	// StartBulkLoad creates a interface supporting the efficient loading of large amount
 	// of data as it is, for instance, needed during priming. Only one bulk load operation
 	// may be active at any time and no other concurrent operations on the StateDB are
@@ -117,7 +109,6 @@ type StateDB interface {
 	Finalise(bool)
 	IntermediateRoot(bool) common.Hash
 	Commit(bool) (common.Hash, error)
-	CommitBlockWithStateWriter() error
 	ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error
 
 	// ---- Optional Development & Debugging Features ----
@@ -128,7 +119,6 @@ type StateDB interface {
 	// Used to initiate the state DB for the next transaction.
 	// This is mainly for development purposes to support in-memory DB implementations.
 	PrepareSubstate(*substate.SubstateAlloc, uint64)
-	DB() erigonethdb.Database
 }
 
 // BulkWrite is a faster interface to StateDB instances for writing data without
