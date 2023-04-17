@@ -8,7 +8,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
-	estate "github.com/ledgerwatch/erigon/core/state"
 	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 
 	"github.com/ledgerwatch/erigon-lib/kv"
@@ -30,8 +29,6 @@ func (s *loggingStateDB) BeginBlockApply() error {
 }
 
 func (s *loggingStateDB) DB() erigonethdb.Database { return nil }
-
-func (s *loggingStateDB) CommitBlock(stateWriter estate.StateWriter) error { return nil }
 
 func (s *loggingStateDB) CommitBlockWithStateWriter() error { return nil }
 

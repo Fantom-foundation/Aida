@@ -8,7 +8,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
-	estate "github.com/ledgerwatch/erigon/core/state"
 	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 
 	"github.com/ledgerwatch/erigon-lib/kv"
@@ -118,7 +117,6 @@ type StateDB interface {
 	Finalise(bool)
 	IntermediateRoot(bool) common.Hash
 	Commit(bool) (common.Hash, error)
-	CommitBlock(estate.StateWriter) error
 	CommitBlockWithStateWriter() error
 	ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error
 

@@ -8,7 +8,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
-	estate "github.com/ledgerwatch/erigon/core/state"
 	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 
 	"github.com/ledgerwatch/erigon-lib/kv"
@@ -482,8 +481,6 @@ func (db *inMemoryStateDB) PrepareSubstate(alloc *substate.SubstateAlloc, block 
 }
 
 func (db *inMemoryStateDB) DB() erigonethdb.Database { return nil }
-
-func (db *inMemoryStateDB) CommitBlock(stateWriter estate.StateWriter) error { return nil }
 
 func (db *inMemoryStateDB) CommitBlockWithStateWriter() error { return nil }
 

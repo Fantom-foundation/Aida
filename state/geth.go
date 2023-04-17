@@ -13,7 +13,6 @@ import (
 	vm "github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/ethdb"
 
-	estate "github.com/ledgerwatch/erigon/core/state"
 	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 
 	"github.com/ledgerwatch/erigon-lib/kv"
@@ -66,8 +65,6 @@ type gethStateDB struct {
 }
 
 func (s *gethStateDB) DB() erigonethdb.Database { return nil }
-
-func (s *gethStateDB) CommitBlock(stateWriter estate.StateWriter) error { return nil }
 
 func (s *gethStateDB) CommitBlockWithStateWriter() error { return nil }
 

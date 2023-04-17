@@ -146,10 +146,6 @@ func (s *erigonStateDB) processEndBlock(tx kv.RwTx) error {
 		return err
 	}
 
-	if err := s.ErigonAdapter.CommitBlock(blockWriter); err != nil {
-		return err
-	}
-
 	if err := erigon.PromoteHashedStateCleanly(tx, filepath.Join(s.directory, "hashedstate")); err != nil {
 		return err
 	}
@@ -161,15 +157,15 @@ func (s *erigonStateDB) processEndBlock(tx kv.RwTx) error {
 	return tx.Commit()
 }
 
-func (s *erigonStateDB) CommitBlock(stateWriter estate.StateWriter) error {
-	return s.ErigonAdapter.CommitBlock(stateWriter)
+func (s *erigonStateDB) commitBlock() error {
+	return s.ErigonAdapter.CommitBlock(s.stateWriter)
 }
 
 func (s *erigonStateDB) CommitBlockWithStateWriter() error {
 	if s.stateWriter == nil {
 		return errors.New("stateWriter is nil")
 	}
-	return s.CommitBlock(s.stateWriter)
+	return s.commitBlock()
 }
 
 // TODO think about hashedstate and intermediatehashes

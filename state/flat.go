@@ -11,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
 
-	estate "github.com/ledgerwatch/erigon/core/state"
 	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 
 	"github.com/ledgerwatch/erigon-lib/kv"
@@ -54,8 +53,6 @@ type flatStateDB struct {
 }
 
 func (s *flatStateDB) DB() erigonethdb.Database { return nil }
-
-func (s *flatStateDB) CommitBlock(stateWriter estate.StateWriter) error { return nil }
 
 func (s *flatStateDB) CommitBlockWithStateWriter() error { return nil }
 

@@ -11,7 +11,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 
-	estate "github.com/ledgerwatch/erigon/core/state"
 	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 
 	"github.com/ledgerwatch/erigon-lib/kv"
@@ -81,8 +80,6 @@ type carmenStateDB struct {
 }
 
 func (s *carmenStateDB) DB() erigonethdb.Database { return nil }
-
-func (s *carmenStateDB) CommitBlock(stateWriter estate.StateWriter) error { return nil }
 
 func (s *carmenStateDB) CommitBlockWithStateWriter() error { return nil }
 

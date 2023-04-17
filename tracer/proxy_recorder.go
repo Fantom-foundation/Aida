@@ -40,8 +40,6 @@ func (r *ProxyRecorder) SetTxBlock(uint64) {}
 
 func (r *ProxyRecorder) DB() erigonethdb.Database { return nil }
 
-func (r *ProxyRecorder) CommitBlock(stateWriter estate.StateWriter) error { return nil }
-
 func (r *ProxyRecorder) CommitBlockWithStateWriter() error { return nil }
 
 func (r *ProxyRecorder) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, noHistory bool, rwTx kv.RwTx) error {
