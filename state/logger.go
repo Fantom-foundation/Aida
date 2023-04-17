@@ -32,7 +32,7 @@ func (s *loggingStateDB) DB() erigonethdb.Database { return nil }
 
 func (s *loggingStateDB) CommitBlockWithStateWriter() error { return nil }
 
-func (s *loggingStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, noHistory bool, rwTx kv.RwTx) error {
+func (s *loggingStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, rwTx kv.RwTx) error {
 	return nil
 }
 

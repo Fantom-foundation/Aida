@@ -89,7 +89,7 @@ type StateDB interface {
 
 	// stateDB handler
 	BeginBlockApply() error
-	BeginBlockApplyBatch(erigonethdb.DbWithPendingMutations, bool, kv.RwTx) error
+	BeginBlockApplyBatch(erigonethdb.DbWithPendingMutations, kv.RwTx) error
 
 	// StartBulkLoad creates a interface supporting the efficient loading of large amount
 	// of data as it is, for instance, needed during priming. Only one bulk load operation

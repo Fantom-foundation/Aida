@@ -13,6 +13,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 )
 
+// newBatch begins new batch
 func newBatch(cfg *Config) erigonethdb.DbWithPendingMutations {
 	const lruDefaultSize = 1_000_000 // 56 MB
 
@@ -27,12 +28,14 @@ func newBatch(cfg *Config) erigonethdb.DbWithPendingMutations {
 	return olddb.NewHashBatch(cfg.rwTx, cfg.QuitCh, cfg.workingDirectory, whitelistedTables, contractCodeCache)
 }
 
+// newBatchExecution begins new batch and applies it to StateDB
 func newBatchExecution(db state.StateDB, cfg *Config) erigonethdb.DbWithPendingMutations {
 	batch := newBatch(cfg)
-	db.BeginBlockApplyBatch(batch, false, cfg.rwTx)
+	db.BeginBlockApplyBatch(batch, cfg.rwTx)
 	return batch
 }
 
+// BeginRwTxBatch begins erigon read/write transaction and batch
 func BeginRwTxBatch(db state.StateDB, cfg *Config) (err error) {
 	cfg.rwTx, err = db.DB().RwKV().BeginRw(context.Background())
 	if err != nil {
@@ -44,6 +47,7 @@ func BeginRwTxBatch(db state.StateDB, cfg *Config) (err error) {
 	return
 }
 
+// CommitBatchRwTx commits batch and erigon transaction
 func CommitBatchRwTx(cfg *Config) (err error) {
 	err = cfg.batch.Commit()
 	if err != nil {
@@ -53,6 +57,7 @@ func CommitBatchRwTx(cfg *Config) (err error) {
 	return cfg.rwTx.Commit()
 }
 
+// CommitAndBegin commits batch and erigon transaction. It also begins new erigon transaction and batch
 func CommitAndBegin(db state.StateDB, cfg *Config) error {
 	if err := CommitBatchRwTx(cfg); err != nil {
 		return err
@@ -61,6 +66,7 @@ func CommitAndBegin(db state.StateDB, cfg *Config) error {
 	return BeginRwTxBatch(db, cfg)
 }
 
+// Rollback rollbacks erigon transaction and batch
 func Rollback(cfg *Config) {
 	cfg.rwTx.Rollback()
 	cfg.batch.Rollback()

@@ -10,7 +10,6 @@ import (
 
 	"github.com/ledgerwatch/erigon-lib/kv"
 
-	estate "github.com/ledgerwatch/erigon/core/state"
 	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 )
 
@@ -36,7 +35,7 @@ func NewProxyDeletion(db state.StateDB, ch chan ContractLiveness) *ProxyDeletion
 
 func (r *ProxyDeletion) DB() erigonethdb.Database { return nil }
 
-func (r *ProxyDeletion) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, noHistory bool, rwTx kv.RwTx) error {
+func (r *ProxyDeletion) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, rwTx kv.RwTx) error {
 	return nil
 }
 

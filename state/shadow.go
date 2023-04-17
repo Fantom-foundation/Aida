@@ -43,7 +43,7 @@ func (s *shadowStateDB) DB() erigonethdb.Database { return nil }
 
 func (s *shadowStateDB) CommitBlockWithStateWriter() error { return nil }
 
-func (s *shadowStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, noHistory bool, rwTx kv.RwTx) error {
+func (s *shadowStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, rwTx kv.RwTx) error {
 	return nil
 }
 

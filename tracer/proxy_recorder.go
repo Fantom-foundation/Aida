@@ -12,7 +12,6 @@ import (
 
 	"github.com/ledgerwatch/erigon-lib/kv"
 
-	estate "github.com/ledgerwatch/erigon/core/state"
 	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 )
 
@@ -42,7 +41,7 @@ func (r *ProxyRecorder) DB() erigonethdb.Database { return nil }
 
 func (r *ProxyRecorder) CommitBlockWithStateWriter() error { return nil }
 
-func (r *ProxyRecorder) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, noHistory bool, rwTx kv.RwTx) error {
+func (r *ProxyRecorder) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, rwTx kv.RwTx) error {
 	return nil
 }
 

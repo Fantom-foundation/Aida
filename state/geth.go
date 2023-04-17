@@ -70,7 +70,7 @@ func (s *gethStateDB) CommitBlockWithStateWriter() error { return nil }
 
 func (s *gethStateDB) BeginBlockApply() error { return s.openStateDB() }
 
-func (s *gethStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, noHistory bool, rwTx kv.RwTx) error {
+func (s *gethStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, rwTx kv.RwTx) error {
 	return nil
 }
 

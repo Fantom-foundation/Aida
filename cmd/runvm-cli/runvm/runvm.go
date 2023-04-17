@@ -141,7 +141,6 @@ func RunVM(ctx *cli.Context) error {
 		if err := utils.DeleteDestroyedAccountsFromWorldState(ws, cfg, cfg.First-1); err != nil {
 			return fmt.Errorf("Failed to remove deleted accoount from the world state. %v", err)
 		}
-
 		if err := utils.ValidateStateDB(ws, db, false); err != nil {
 			return fmt.Errorf("Pre: World state is not contained in the stateDB. %v", err)
 		}
@@ -220,14 +219,12 @@ func RunVM(ctx *cli.Context) error {
 		// run VM
 		db.PrepareSubstate(&tx.Substate.InputAlloc, tx.Substate.Env.Number)
 		db.BeginTransaction(uint32(tx.Transaction))
-
 		err = utils.ProcessTx(db, cfg, tx.Block, tx.Transaction, tx.Substate)
 		if err != nil {
 			log.Printf("\tRun VM failed.\n")
 			err = fmt.Errorf("Error: VM execution failed. %w", err)
 			break
 		}
-
 		db.EndTransaction()
 		txCount++
 		gasCount = new(big.Int).Add(gasCount, new(big.Int).SetUint64(tx.Substate.Result.GasUsed))
@@ -283,11 +280,11 @@ func RunVM(ctx *cli.Context) error {
 
 	switch {
 	case cfg.DbImpl == "erigon":
-		log.Printf("run-vm: substate iter exit, utils.CommitBatch\n")
 		if err := utils.CommitBatchRwTx(cfg); err != nil {
 			return err
 		}
-		db.BeginBlockApply() // unset batchMode for db
+		// unset batchMode for db
+		db.BeginBlockApply()
 	case !isFirstBlock && err == nil:
 		db.EndBlock()
 		db.EndSyncPeriod()
@@ -331,9 +328,10 @@ func RunVM(ctx *cli.Context) error {
 		fmt.Printf("============================================\n")
 	}
 
-	if cfg.KeepStateDB && !isFirstBlock {
+	// TODO remove condition cfg.DbImpl != "erigon" after state root computation logic is implemented for erigon
+	if cfg.KeepStateDB && !isFirstBlock && cfg.DbImpl != "erigon" {
 		log.Println("if cfg.KeepStateDB && !isFirstBlock {")
-		rootHash, _ := db.Commit(true) //TODO address it
+		rootHash, _ := db.Commit(true)
 		if err := utils.WriteStateDbInfo(stateDirectory, cfg, curBlock, rootHash); err != nil {
 			log.Println(err)
 		}

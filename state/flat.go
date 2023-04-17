@@ -60,7 +60,7 @@ func (s *flatStateDB) BeginBlockApply() error {
 	return s.openStateDB()
 }
 
-func (s *flatStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, noHistory bool, rwTx kv.RwTx) error {
+func (s *flatStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, rwTx kv.RwTx) error {
 	return nil
 }
 

@@ -68,14 +68,10 @@ func (s *erigonStateDB) BeginBlockApply() error {
 	return err
 }
 
-func (s *erigonStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, noHistory bool, rwTx kv.RwTx) error {
+func (s *erigonStateDB) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, rwTx kv.RwTx) error {
 	var err error
 
-	if noHistory {
-		s.stateWriter = estate.NewPlainStateWriterNoHistory(batch)
-	} else {
-		s.stateWriter = estate.NewPlainStateWriter(batch, rwTx, s.from)
-	}
+	s.stateWriter = estate.NewPlainStateWriterNoHistory(batch)
 	s.batchMode = true
 	s.ErigonAdapter = evmcore.NewErigonAdapter(erigonstate.NewWithStateReader(estate.NewPlainStateReader(batch)))
 
@@ -197,19 +193,22 @@ func (s *erigonStateDB) BeginSyncPeriod(number uint64) {
 	// ignored
 }
 
+// TODO compute state root every epoch during ba
 func (s *erigonStateDB) EndSyncPeriod() {
-	tx, err := s.db.RwKV().BeginRw(context.Background())
-	if err != nil {
-		panic(err)
-	}
+	/*
+		tx, err := s.db.RwKV().BeginRw(context.Background())
+		if err != nil {
+			panic(err)
+		}
 
-	defer tx.Rollback()
+		defer tx.Rollback()
 
-	root, err := erigon.CalcRoot("", tx)
-	if err != nil {
-		panic(err)
-	}
-	s.stateRoot = common.Hash(root)
+		root, err := erigon.CalcRoot("", tx)
+		if err != nil {
+			panic(err)
+		}
+		s.stateRoot = common.Hash(root)
+	*/
 }
 
 // PrepareSubstate initiates the state DB for the next transaction.
