@@ -75,8 +75,8 @@ github.com/DataDog/zstd v1.4.5/go.mod h1:1jcaCB/ufaK+sKp1NBhlGmpz41jOoPQ35bpF36t
 github.com/DataDog/zstd v1.5.2 h1:vUG4lAyuPCXO0TLbXvPv7EB7cNK1QV/luu55UHLrrn8=
 github.com/DataDog/zstd v1.5.2/go.mod h1:g4AWEaM3yOg3HYfnJ3YIawPnVdXJh9QME85blwSAmyw=
 github.com/Fantom-foundation/Substate v0.0.0-20230224090651-4c8c024214f4/go.mod h1:/yIHWCDDJcdKMJYvOLdYOnHt5eUBF9XWnrvrNE+90ik=
-github.com/Fantom-foundation/Substate v0.0.0-20230313095132-69cdb7b639cd h1:4DYv6gIYNgABjm1EptGTjO02qIanQhXlKHHzVzzjSKI=
-github.com/Fantom-foundation/Substate v0.0.0-20230313095132-69cdb7b639cd/go.mod h1:KoObQO1Wmf3ACjxcXDREHf+mtDF4MAXfHwtxMIdyhx8=
+github.com/Fantom-foundation/Substate v0.0.0-20230417060221-dd103fdba4ce h1:GTFV72BX/WuhqMHlz8Hlv3ah23NyZLJ8dJWjTZYVIfc=
+github.com/Fantom-foundation/Substate v0.0.0-20230417060221-dd103fdba4ce/go.mod h1:KoObQO1Wmf3ACjxcXDREHf+mtDF4MAXfHwtxMIdyhx8=
 github.com/Fantom-foundation/Tosca v0.0.0-20230406154859-8e2180f5f5c9 h1:AZgDIjQQqAlAekM8CLmkubWW64RQO9re5KFSq1Cferk=
 github.com/Fantom-foundation/Tosca v0.0.0-20230406154859-8e2180f5f5c9/go.mod h1:NpXaJ+jksyraNZf9iHVPRDPGVr2j5jU0Tv7/weZpUr4=
 github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230329105747-dd1f4d815c71 h1:m9dWKOC9URqmDUsbGH6s5Sh1kCY1AvphOeo7l72Pry8=
