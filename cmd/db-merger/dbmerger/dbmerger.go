@@ -14,7 +14,7 @@ import (
 
 // DbMerger implements merging command for combining all source data databases into single database used for profiling.
 func DbMerger(ctx *cli.Context) error {
-	targetPath := ctx.Path(utils.DBFlag.Name)
+	targetPath := ctx.Path(utils.AidaDBFlag.Name)
 
 	targetDB, sourceDBs, sourceDBPaths, err := openDatabases(targetPath, ctx.Args())
 	if err != nil {

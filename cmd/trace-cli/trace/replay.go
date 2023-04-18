@@ -26,7 +26,7 @@ var TraceReplayCommand = cli.Command{
 		&utils.CarmenSchemaFlag,
 		&utils.ChainIDFlag,
 		&utils.CpuProfileFlag,
-		&utils.DeletedAccountDirFlag,
+		&utils.DeletionDirFlag,
 		&utils.DisableProgressFlag,
 		&utils.SyncPeriodLengthFlag,
 		&utils.KeepStateDBFlag,
@@ -52,7 +52,7 @@ var TraceReplayCommand = cli.Command{
 		&utils.UpdateDBDirFlag,
 		&utils.ValidateFlag,
 		&utils.ValidateWorldStateFlag,
-		&utils.DBFlag,
+		&utils.AidaDBFlag,
 	},
 	Description: `
 The trace replay command requires two arguments:

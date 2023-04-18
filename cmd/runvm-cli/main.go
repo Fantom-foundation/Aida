@@ -27,7 +27,7 @@ var RunVMApp = cli.App{
 		&utils.ChainIDFlag,
 		&utils.ContinueOnFailureFlag,
 		&utils.CpuProfileFlag,
-		&utils.DeletedAccountDirFlag,
+		&utils.DeletionDirFlag,
 		&utils.DisableProgressFlag,
 		&utils.SyncPeriodLengthFlag,
 		&utils.KeepStateDBFlag,
@@ -51,7 +51,7 @@ var RunVMApp = cli.App{
 		&utils.ValidateWorldStateFlag,
 		&utils.ValidateFlag,
 		&utils.VmImplementation,
-		&utils.DBFlag,
+		&utils.AidaDBFlag,
 	},
 	Description: `
 The run-vm command requires two arguments: <blockNumFirst> <blockNumLast>

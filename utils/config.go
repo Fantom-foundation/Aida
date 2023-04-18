@@ -80,8 +80,8 @@ var (
 		Usage: "sets the first block to print trace debug",
 		Value: 0,
 	}
-	DeletedAccountDirFlag = cli.StringFlag{
-		Name:  "deleted-account-dir",
+	DeletionDirFlag = cli.StringFlag{
+		Name:  "deletiondir",
 		Usage: "sets the directory containing deleted accounts database",
 	}
 	KeepStateDBFlag = cli.BoolFlag{
@@ -180,7 +180,6 @@ var (
 	UpdateDBDirFlag = cli.StringFlag{
 		Name:  "updatedir",
 		Usage: "set update-set database directory",
-		Value: "./updatedb",
 	}
 	ValidateFlag = cli.BoolFlag{
 		Name:  "validate",
@@ -230,10 +229,9 @@ var (
 		Usage: "delete source databases while merging into one database",
 		Value: false,
 	}
-	DBFlag = cli.StringFlag{
-		Name:  "db",
+	AidaDBFlag = cli.StringFlag{
+		Name:  "aida-db",
 		Usage: "set substate, updateset and deleted accounts directory",
-		Value: "./db",
 	}
 	ContractNumberFlag = cli.IntFlag{
 		Name:  "num-contracts",
@@ -404,7 +402,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		DbImpl:              ctx.String(StateDbImplementationFlag.Name),
 		DbVariant:           ctx.String(StateDbVariantFlag.Name),
 		DbLogging:           ctx.Bool(StateDbLoggingFlag.Name),
-		DeletedAccountDir:   ctx.String(DeletedAccountDirFlag.Name),
+		DeletedAccountDir:   ctx.String(DeletionDirFlag.Name),
 		HasDeletedAccounts:  true,
 		KeepStateDB:         ctx.Bool(KeepStateDBFlag.Name),
 		KeysNumber:          ctx.Int64(KeysNumberFlag.Name),
@@ -423,7 +421,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		ShadowVariant:       ctx.String(ShadowDbVariantFlag.Name),
 		SnapshotDepth:       ctx.Int(SnapshotDepthFlag.Name),
 		StateDbSrcDir:       ctx.String(StateDbSrcDirFlag.Name),
-		DBDir:               ctx.String(DBFlag.Name),
+		DBDir:               ctx.String(AidaDBFlag.Name),
 		StateDbTempDir:      ctx.String(StateDbTempDirFlag.Name),
 		StateValidationMode: EqualityCheck,
 		UpdateDBDir:         ctx.String(UpdateDBDirFlag.Name),
