@@ -28,7 +28,7 @@ var GenDeletedAccountsCommand = cli.Command{
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
 		&ChainIDFlag,
-		&utils.DeletedAccountDirFlag,
+		&utils.DeletionDirFlag,
 	},
 	Description: `
 The substate-cli replay command requires two arguments:
@@ -247,7 +247,7 @@ func genDeletedAccountsAction(ctx *cli.Context) error {
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
-	ddb := substate.OpenDestroyedAccountDB(ctx.String(utils.DeletedAccountDirFlag.Name))
+	ddb := substate.OpenDestroyedAccountDB(ctx.String(utils.DeletionDirFlag.Name))
 	defer ddb.Close()
 
 	start := time.Now()

@@ -30,7 +30,7 @@ var TraceRecordCommand = cli.Command{
 		&utils.TraceDirectoryFlag,
 		&utils.TraceDebugFlag,
 		&utils.DebugFromFlag,
-		&utils.DBFlag,
+		&utils.AidaDBFlag,
 	},
 	Description: `
 The trace record command requires two arguments:

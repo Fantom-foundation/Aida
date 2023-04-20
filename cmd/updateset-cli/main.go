@@ -20,7 +20,7 @@ var GenUpdateSetApp = cli.App{
 	ArgsUsage: "<blockNumLast> <interval>",
 	Flags: []cli.Flag{
 		&utils.ChainIDFlag,
-		&utils.DeletedAccountDirFlag,
+		&utils.DeletionDirFlag,
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
 		&utils.UpdateDBDirFlag,
