@@ -36,7 +36,6 @@ type Reader struct {
 
 // newReader returns new instance of Reader
 func newReader(iter *iterator.FileReader, l *logging.Logger, closed chan any, wg *sync.WaitGroup) *Reader {
-	l.Info("creating reader")
 	return &Reader{
 		iter:    iter,
 		output:  make(chan *iterator.RequestWithResponse, bufferSize),

@@ -24,15 +24,15 @@ type requestCounter struct {
 	stats   map[reqLogType]map[string]uint64
 }
 
+// reqLogType represents what happened to the request
 type reqLogType byte
 
 const (
-	executed reqLogType = iota
-	outOfStateDBRange
-	noSubstateForGivenBlock
+	executed                reqLogType = iota // the request got executed successfully
+	outOfStateDBRange                         // the request was not executed due to not being in StateDBs block range
+	noSubstateForGivenBlock                   // the request was not executed due to no having substate for given block
 )
 
-// todo why not executed - statedb out of range; no substate..
 // requestLog transfers information from ReplayExecutor whether request was or was not executed for statistics purpose
 type requestLog struct {
 	method  string
@@ -83,8 +83,8 @@ func (c *requestCounter) count() {
 			if !ok {
 				return
 			}
-			// todo
-			//c.addStat(req)
+
+			c.addStat(req)
 			if req.logType == executed {
 				c.total++
 			}
@@ -98,38 +98,38 @@ func (c *requestCounter) logStats() {
 	defer c.builder.Reset()
 
 	// how long has replayer been running
-	//elapsed := time.Since(c.start)
-	//c.builder.WriteString(fmt.Sprintf("Elapsed time: %v\n\n", elapsed))
-	//
-	//// total requests
-	//c.builder.WriteString(fmt.Sprintf("\tTotal read requests: %v\n\n", c.total))
-	//
-	//var exc uint64
-	//for m, count := range c.stats[executed] {
-	//	c.builder.WriteString(fmt.Sprintf("\t%v: %v\n", m, count))
-	//	// executed requests
-	//	exc += count
-	//}
-	//
-	//c.builder.WriteString(fmt.Sprintf("\n\tTotal executed requests: %v\n", exc))
-	//
-	//var outOfRange uint64
-	//for m, count := range c.stats[outOfStateDBRange] {
-	//	c.builder.WriteString(fmt.Sprintf("\t%v: %v\n", m, count))
-	//	// executed requests
-	//	outOfRange += count
-	//}
-	//
-	//c.builder.WriteString(fmt.Sprintf("\n\tTotal skipped due to not being in StateDB block range: %v\n", outOfRange))
-	//
-	//var noSubstate uint64
-	//for m, count := range c.stats[noSubstateForGivenBlock] {
-	//	c.builder.WriteString(fmt.Sprintf("\t%v: %v\n", m, count))
-	//	// executed requests
-	//	noSubstate += count
-	//}
-	//
-	//c.builder.WriteString(fmt.Sprintf("\n\tTotal skipped due to non-existing substate for given block: %v\n", noSubstate))
+	elapsed := time.Since(c.start)
+	c.builder.WriteString(fmt.Sprintf("Elapsed time: %v\n\n", elapsed))
+
+	// total requests
+	c.builder.WriteString(fmt.Sprintf("\tTotal read requests: %v\n\n", c.total))
+
+	var exc uint64
+	for m, count := range c.stats[executed] {
+		c.builder.WriteString(fmt.Sprintf("\t%v: %v\n", m, count))
+		// executed requests
+		exc += count
+	}
+
+	c.builder.WriteString(fmt.Sprintf("\n\tTotal executed requests: %v\n", exc))
+
+	var outOfRange uint64
+	for m, count := range c.stats[outOfStateDBRange] {
+		c.builder.WriteString(fmt.Sprintf("\t%v: %v\n", m, count))
+		// executed requests
+		outOfRange += count
+	}
+
+	c.builder.WriteString(fmt.Sprintf("\n\tTotal skipped due to not being in StateDB block range: %v\n", outOfRange))
+
+	var noSubstate uint64
+	for m, count := range c.stats[noSubstateForGivenBlock] {
+		c.builder.WriteString(fmt.Sprintf("\t%v: %v\n", m, count))
+		// executed requests
+		noSubstate += count
+	}
+
+	c.builder.WriteString(fmt.Sprintf("\n\tTotal skipped due to non-existing substate for given block: %v\n", noSubstate))
 
 	c.builder.WriteString(fmt.Sprintf("Requests sent: %v\n", c.total))
 
