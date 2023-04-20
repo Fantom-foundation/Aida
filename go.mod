@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/Fantom-foundation/Carmen/go v0.0.0-00010101000000-000000000000
-	github.com/Fantom-foundation/Substate v0.0.0-20230418161205-6eaa7b14323d
+	github.com/Fantom-foundation/Substate v0.0.0-20230420124649-be7a95e13a68
 	github.com/Fantom-foundation/Tosca v0.0.0-20230406154859-8e2180f5f5c9
 	github.com/Fantom-foundation/go-opera v1.1.1-rc.2
 	github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230112084156-680f281ea1cb
