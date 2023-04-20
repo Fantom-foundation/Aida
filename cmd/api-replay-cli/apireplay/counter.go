@@ -33,6 +33,7 @@ const (
 	noSubstateForGivenBlock                   // the request was not executed due to no having substate for given block
 )
 
+// todo why not executed - statedb out of range; no substate..
 // requestLog transfers information from ReplayExecutor whether request was or was not executed for statistics purpose
 type requestLog struct {
 	method  string
@@ -123,8 +124,8 @@ func (c *requestCounter) logStats() {
 	c.builder.WriteString(fmt.Sprintf("\n\tTotal skipped due to not being in StateDB block range: %v\n", outOfRange))
 
 	var noSubstate uint64
-	for m, count := range c.stats[noSubstateForGivenBlock] {
-		c.builder.WriteString(fmt.Sprintf("\t%v: %v\n", m, count))
+	for method, count := range c.stats[noSubstateForGivenBlock] {
+		c.builder.WriteString(fmt.Sprintf("\t%v: %v\n", method, count))
 		// executed requests
 		noSubstate += count
 	}
@@ -138,5 +139,8 @@ func (c *requestCounter) logStats() {
 
 // addStat to given method and reqLogType
 func (c *requestCounter) addStat(req requestLog) {
+	if _, ok := c.stats[req.logType]; !ok {
+		c.stats[req.logType] = make(map[string]uint64)
+	}
 	c.stats[req.logType][req.method]++
 }
