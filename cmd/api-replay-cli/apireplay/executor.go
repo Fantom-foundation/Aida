@@ -255,7 +255,6 @@ func (e *ReplayExecutor) getStateArchive(wantedBlockNumber uint64) state.StateDB
 
 	// load the archive itself
 	var err error
-	e.log.Info(wantedBlockNumber)
 	archive, err := e.db.GetArchiveState(wantedBlockNumber)
 	if err != nil {
 		e.log.Errorf("cannot retrieve archive for block id #%v; err: %v", wantedBlockNumber, err)
