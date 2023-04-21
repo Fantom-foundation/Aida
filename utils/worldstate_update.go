@@ -18,7 +18,7 @@ func generateUpdateSet(first uint64, last uint64, cfg *Config) substate.Substate
 	stateIter := substate.NewSubstateIterator(first, cfg.Workers)
 	defer stateIter.Release()
 	if cfg.HasDeletedAccounts {
-		deletedAccountDB = substate.OpenDestroyedAccountDBReadOnly(cfg.DeletedAccountDir)
+		deletedAccountDB = substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
 		defer deletedAccountDB.Close()
 	}
 
@@ -57,7 +57,7 @@ func GenerateWorldStateFromUpdateDB(cfg *Config, target uint64) (substate.Substa
 		return nil, fmt.Errorf("Error: the target block, %v, is earlier than the initial world state block, %v. The world state is not loaded.\n", target, blockPos)
 	}
 	// load pre-computed update-set from update-set db
-	db := substate.OpenUpdateDBReadOnly(cfg.UpdateDBDir)
+	db := substate.OpenUpdateDBReadOnly(cfg.UpdateDb)
 	defer db.Close()
 	updateIter := substate.NewUpdateSetIterator(db, blockPos, target, cfg.Workers)
 	for updateIter.Next() {

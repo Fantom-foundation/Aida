@@ -19,8 +19,8 @@ var DbMergerApp = cli.App{
 	Copyright: "(c) 2022 Fantom Foundation",
 	ArgsUsage: "",
 	Flags: []cli.Flag{
-		&utils.DeleteSourceDBsFlag,
-		&utils.AidaDBFlag,
+		&utils.DeleteSourceDbsFlag,
+		&utils.AidaDbFlag,
 	},
 	Description: `
 The dbmerger command merges databases with source data into one database which is used for profiling.

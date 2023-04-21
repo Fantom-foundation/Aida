@@ -73,7 +73,7 @@ func GenerateUniformRegistry(cfg *utils.Config) *EventRegistry {
 							opJ != EndTransactionID &&
 							opJ != EndBlockID &&
 							opJ != EndSyncPeriodID {
-							r.transitFreq[i][j] = cfg.OperationFrequency
+							r.transitFreq[i][j] = cfg.TransactionLength
 						} else if opJ == FinaliseID {
 							r.transitFreq[i][j] = 1
 						}

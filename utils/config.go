@@ -72,7 +72,7 @@ var (
 		Usage: "continue execute after validation failure detected",
 	}
 	CpuProfileFlag = cli.StringFlag{
-		Name:  "cpuprofile",
+		Name:  "cpu-profile",
 		Usage: "enables CPU profiling",
 	}
 	DebugFromFlag = cli.Uint64Flag{
@@ -80,16 +80,16 @@ var (
 		Usage: "sets the first block to print trace debug",
 		Value: 0,
 	}
-	DeletionDirFlag = cli.StringFlag{
-		Name:  "deletiondir",
+	DeletionDbFlag = cli.PathFlag{
+		Name:  "deletion-db",
 		Usage: "sets the directory containing deleted accounts database",
 	}
-	KeepStateDBFlag = cli.BoolFlag{
+	KeepStateDbFlag = cli.BoolFlag{
 		Name:  "keep-db",
 		Usage: "if set, statedb is not deleted after run",
 	}
-	MemProfileFlag = cli.StringFlag{
-		Name:  "memprofile",
+	MemoryProfileFlag = cli.StringFlag{
+		Name:  "memory-profile",
 		Usage: "enables memory allocation profiling",
 	}
 	SyncPeriodLengthFlag = cli.IntFlag{
@@ -105,8 +105,8 @@ var (
 		Name:  "profile",
 		Usage: "enables profiling",
 	}
-	DisableProgressFlag = cli.BoolFlag{
-		Name:  "disable-progress",
+	QuiteFlag = cli.BoolFlag{
+		Name:  "quite",
 		Usage: "disable progress report",
 	}
 	RandomizePrimingFlag = cli.BoolFlag{
@@ -142,12 +142,12 @@ var (
 		Usage: "select a state DB variant",
 		Value: "",
 	}
-	StateDbSrcDirFlag = cli.StringFlag{
-		Name:  "db-src-dir",
+	StateDbSrcFlag = cli.PathFlag{
+		Name:  "db-src",
 		Usage: "sets the directory contains source state DB data",
 	}
-	StateDbTempDirFlag = cli.StringFlag{
-		Name:  "db-tmp-dir",
+	StateDbTempFlag = cli.PathFlag{
+		Name:  "db-tmp",
 		Usage: "sets the temporary directory where to place state DB data; uses system default if empty",
 	}
 	StateDbLoggingFlag = cli.BoolFlag{
@@ -172,13 +172,13 @@ var (
 		Name:  "trace-debug",
 		Usage: "enable debug output for tracing",
 	}
-	TraceDirectoryFlag = cli.StringFlag{
-		Name:  "tracedir",
+	TraceFileFlag = cli.PathFlag{
+		Name:  "trace-file",
 		Usage: "set storage trace's output directory",
 		Value: "./",
 	}
-	UpdateDBDirFlag = cli.StringFlag{
-		Name:  "updatedir",
+	UpdateDbFlag = cli.PathFlag{
+		Name:  "update-db",
 		Usage: "set update-set database directory",
 	}
 	ValidateFlag = cli.BoolFlag{
@@ -198,8 +198,8 @@ var (
 		Usage: "select VM implementation",
 		Value: "geth",
 	}
-	WorldStateDirFlag = cli.PathFlag{
-		Name:  "worldstatedir",
+	WorldStateFlag = cli.PathFlag{
+		Name:  "world-state",
 		Usage: "world state snapshot database path",
 	}
 	NumberOfBlocksFlag = cli.IntFlag{
@@ -210,11 +210,11 @@ var (
 		Value:    0,
 	}
 	MaxNumTransactionsFlag = cli.IntFlag{
-		Name:  "max-transactions",
+		Name:  "max-tx",
 		Usage: "limit the maximum number of processed transactions, default: unlimited",
 		Value: -1,
 	}
-	OutputFlag = cli.StringFlag{
+	OutputFlag = cli.PathFlag{
 		Name:  "output",
 		Usage: "output filename",
 	}
@@ -224,12 +224,12 @@ var (
 		Usage:       "enable visualization on `PORT`",
 		DefaultText: "8080",
 	}
-	DeleteSourceDBsFlag = cli.BoolFlag{
+	DeleteSourceDbsFlag = cli.BoolFlag{
 		Name:  "delete-source-dbs",
 		Usage: "delete source databases while merging into one database",
 		Value: false,
 	}
-	AidaDBFlag = cli.StringFlag{
+	AidaDbFlag = cli.PathFlag{
 		Name:  "aida-db",
 		Usage: "set substate, updateset and deleted accounts directory",
 	}
@@ -243,13 +243,13 @@ var (
 		Usage: "Number of keys to generate",
 		Value: 1_000,
 	}
-	ValuesNumberFLag = cli.IntFlag{
+	ValuesNumberFlag = cli.IntFlag{
 		Name:  "num-values",
 		Usage: "Number of values to generate",
 		Value: 1_000,
 	}
-	OperationFrequency = cli.IntFlag{
-		Name:  "operation-frequency",
+	TransactionLengthFlag = cli.Uint64Flag{
+		Name:  "transaction-length",
 		Usage: "Determines indirectly the length of a transaction",
 		Value: 10,
 	}
@@ -281,16 +281,16 @@ type Config struct {
 	DbLogging           bool           // set to true if all DB operations should be logged
 	Debug               bool           // enable trace debug flag
 	DebugFrom           uint64         // the first block to print trace debug
-	DeletedAccountDir   string         // directory of deleted account database
-	EnableProgress      bool           // enable progress report flag
-	SyncPeriodLength    uint64         // length of an sync-period in number of blocks
-	HasDeletedAccounts  bool           // true if deletedAccountDir is not empty; otherwise false
-	KeepStateDB         bool           // set to true if stateDB is kept after run
+	DeletionDb          string         // directory of deleted account database
+	Quite               bool           // disable progress report flag
+	SyncPeriodLength    uint64         // length of a sync-period in number of blocks
+	HasDeletedAccounts  bool           // true if DeletionDb is not empty; otherwise false
+	KeepStateDb         bool           // set to true if stateDB is kept after run
 	KeysNumber          int64          // number of keys to generate
 	MaxNumTransactions  int            // the maximum number of processed transactions
 	MemoryBreakdown     bool           // enable printing of memory breakdown
 	MemoryProfile       string         // capture the memory heap profile into the file
-	OperationFrequency  uint64         // determines indirectly the length of a transaction
+	TransactionLength   uint64         // determines indirectly the length of a transaction
 	PrimeRandom         bool           // enable randomized priming
 	PrimeSeed           int64          // set random seed
 	PrimeThreshold      int            // set account threshold before commit
@@ -299,13 +299,13 @@ type Config struct {
 	SkipPriming         bool           // skip priming of the state DB
 	ShadowImpl          string         // implementation of the shadow DB to use, empty if disabled
 	ShadowVariant       string         // database variant of the shadow DB to be used
-	StateDbSrcDir       string         // directory to load an existing State DB data
-	DBDir               string         // directory to profiling database containing substate, update, delete accounts data
-	StateDbTempDir      string         // directory to store a working copy of State DB data
+	StateDbSrc          string         // directory to load an existing State DB data
+	AidaDb              string         // directory to profiling database containing substate, update, delete accounts data
+	StateDbTemp         string         // directory to store a working copy of State DB data
 	StateValidationMode ValidationMode // state validation mode
-	UpdateDBDir         string         // update-set directory
+	UpdateDb            string         // update-set directory
 	SnapshotDepth       int            // depth of snapshot history
-	SubstateDBDir       string         // substate directory
+	SubstateDb          string         // substate directory
 	ValidateTxState     bool           // validate stateDB before and after transaction
 	ValidateWorldState  bool           // validate stateDB before and after replay block range
 	ValuesNumber        int64          // number of values to generate
@@ -396,21 +396,21 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		CPUProfile:          ctx.String(CpuProfileFlag.Name),
 		Debug:               ctx.Bool(TraceDebugFlag.Name),
 		DebugFrom:           ctx.Uint64(DebugFromFlag.Name),
-		EnableProgress:      !ctx.Bool(DisableProgressFlag.Name),
+		Quite:               ctx.Bool(QuiteFlag.Name),
 		SyncPeriodLength:    ctx.Uint64(SyncPeriodLengthFlag.Name),
 		First:               first,
 		DbImpl:              ctx.String(StateDbImplementationFlag.Name),
 		DbVariant:           ctx.String(StateDbVariantFlag.Name),
 		DbLogging:           ctx.Bool(StateDbLoggingFlag.Name),
-		DeletedAccountDir:   ctx.String(DeletionDirFlag.Name),
+		DeletionDb:          ctx.String(DeletionDbFlag.Name),
 		HasDeletedAccounts:  true,
-		KeepStateDB:         ctx.Bool(KeepStateDBFlag.Name),
+		KeepStateDb:         ctx.Bool(KeepStateDbFlag.Name),
 		KeysNumber:          ctx.Int64(KeysNumberFlag.Name),
 		Last:                last,
 		MaxNumTransactions:  ctx.Int(MaxNumTransactionsFlag.Name),
 		MemoryBreakdown:     ctx.Bool(MemoryBreakdownFlag.Name),
-		MemoryProfile:       ctx.String(MemProfileFlag.Name),
-		OperationFrequency:  ctx.Uint64(OperationFrequency.Name),
+		MemoryProfile:       ctx.String(MemoryProfileFlag.Name),
+		TransactionLength:   ctx.Uint64(TransactionLengthFlag.Name),
 		PrimeRandom:         ctx.Bool(RandomizePrimingFlag.Name),
 		PrimeSeed:           ctx.Int64(PrimeSeedFlag.Name),
 		RandomSeed:          ctx.Int64(RandomSeedFlag.Name),
@@ -420,18 +420,18 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		ShadowImpl:          ctx.String(ShadowDbImplementationFlag.Name),
 		ShadowVariant:       ctx.String(ShadowDbVariantFlag.Name),
 		SnapshotDepth:       ctx.Int(SnapshotDepthFlag.Name),
-		StateDbSrcDir:       ctx.String(StateDbSrcDirFlag.Name),
-		DBDir:               ctx.String(AidaDBFlag.Name),
-		StateDbTempDir:      ctx.String(StateDbTempDirFlag.Name),
+		StateDbSrc:          ctx.String(StateDbSrcFlag.Name),
+		AidaDb:              ctx.String(AidaDbFlag.Name),
+		StateDbTemp:         ctx.String(StateDbTempFlag.Name),
 		StateValidationMode: EqualityCheck,
-		UpdateDBDir:         ctx.String(UpdateDBDirFlag.Name),
-		SubstateDBDir:       ctx.String(substate.SubstateDirFlag.Name),
-		ValuesNumber:        ctx.Int64(ValuesNumberFLag.Name),
+		UpdateDb:            ctx.String(UpdateDbFlag.Name),
+		SubstateDb:          ctx.String(substate.SubstateDirFlag.Name),
+		ValuesNumber:        ctx.Int64(ValuesNumberFlag.Name),
 		ValidateTxState:     validateTxState,
 		ValidateWorldState:  validateWorldState,
 		VmImpl:              ctx.String(VmImplementation.Name),
 		Workers:             ctx.Int(substate.WorkersFlag.Name),
-		TraceFile:           ctx.String(TraceDirectoryFlag.Name) + "/trace.dat",
+		TraceFile:           ctx.String(TraceFileFlag.Name),
 		Trace:               ctx.Bool(TraceFlag.Name),
 	}
 	if cfg.ChainID == 0 {
@@ -449,14 +449,14 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		return cfg, nil
 	}
 
-	if _, err := os.Stat(cfg.DBDir); !os.IsNotExist(err) {
-		log.Printf("Found merged DB: %s redirecting UpdateDB, DeletedAccountDB, SubstateDB paths to it\n", cfg.DBDir)
-		cfg.UpdateDBDir = cfg.DBDir
-		cfg.DeletedAccountDir = cfg.DBDir
-		cfg.SubstateDBDir = cfg.DBDir
+	if _, err := os.Stat(cfg.AidaDb); !os.IsNotExist(err) {
+		log.Printf("Found merged DB: %s redirecting UpdateDB, DeletedAccountDB, SubstateDB paths to it\n", cfg.AidaDb)
+		cfg.UpdateDb = cfg.AidaDb
+		cfg.DeletionDb = cfg.AidaDb
+		cfg.SubstateDb = cfg.AidaDb
 	}
 
-	if cfg.EnableProgress {
+	if !cfg.Quite {
 		log.Printf("Run config:\n")
 		log.Printf("\tBlock range: %v to %v\n", cfg.First, cfg.Last)
 		if cfg.MaxNumTransactions >= 0 {
@@ -478,8 +478,8 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 			logDbMode("Prime storage system", cfg.DbImpl, cfg.DbVariant)
 			logDbMode("Shadow storage system", cfg.ShadowImpl, cfg.ShadowVariant)
 		}
-		log.Printf("\tSource storage directory (empty if new): %v\n", cfg.StateDbSrcDir)
-		log.Printf("\tWorking storage directory: %v\n", cfg.StateDbTempDir)
+		log.Printf("\tSource storage directory (empty if new): %v\n", cfg.StateDbSrc)
+		log.Printf("\tWorking storage directory: %v\n", cfg.StateDbTemp)
 		if cfg.ArchiveMode {
 			log.Printf("\tArchive mode: enabled\n")
 			if cfg.ArchiveVariant == "" {
@@ -491,7 +491,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 			log.Printf("\tArchive mode: disabled\n")
 		}
 		log.Printf("\tUsed VM implementation: %v\n", cfg.VmImpl)
-		log.Printf("\tUpdate DB directory: %v\n", cfg.UpdateDBDir)
+		log.Printf("\tUpdate DB directory: %v\n", cfg.UpdateDb)
 		if cfg.SkipPriming {
 			log.Printf("\tPriming: Skipped\n")
 		} else {
@@ -513,17 +513,17 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	if cfg.DbLogging {
 		log.Printf("WARNING: DB logging enabled, reducing Tx throughput\n")
 	}
-	if _, err := os.Stat(cfg.DeletedAccountDir); os.IsNotExist(err) {
+	if _, err := os.Stat(cfg.DeletionDb); os.IsNotExist(err) {
 		log.Printf("WARNING: deleted-account-dir is not provided or does not exist")
 		cfg.HasDeletedAccounts = false
 	}
-	if cfg.KeepStateDB && cfg.ShadowImpl != "" {
+	if cfg.KeepStateDb && cfg.ShadowImpl != "" {
 		log.Printf("WARNING: keeping persistent stateDB with a shadow db is not supported yet")
-		cfg.KeepStateDB = false
+		cfg.KeepStateDb = false
 	}
-	if cfg.KeepStateDB && strings.Contains(cfg.DbVariant, "memory") {
+	if cfg.KeepStateDb && strings.Contains(cfg.DbVariant, "memory") {
 		log.Printf("WARNING: Unable to keep in-memory stateDB")
-		cfg.KeepStateDB = false
+		cfg.KeepStateDb = false
 	}
 	if cfg.SkipPriming && cfg.ValidateWorldState {
 		log.Printf("ERROR: skipPriming and validation of world state can not be enabled at the same time\n")
