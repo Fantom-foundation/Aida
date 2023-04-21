@@ -60,6 +60,7 @@ func (c *Comparator) compare() {
 		select {
 		case <-ticker.C:
 			c.fail()
+			return
 		case <-c.closed:
 			return
 		case data, ok = <-c.input:
@@ -83,6 +84,7 @@ func (c *Comparator) compare() {
 				// do we want to exit?
 				if !c.continueOnFailure {
 					c.fail()
+					return
 				}
 			}
 

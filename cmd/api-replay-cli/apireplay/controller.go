@@ -131,7 +131,7 @@ func (r *Controller) stopCounter() {
 	case <-r.counterClosed:
 		return
 	default:
-		r.log.Notice("stopping counter")
+		r.log.Info("stopping counter")
 		close(r.counterClosed)
 	}
 
@@ -143,7 +143,7 @@ func (r *Controller) stopReader() {
 	case <-r.readerClosed:
 		return
 	default:
-		r.log.Notice("stopping reader")
+		r.log.Info("stopping reader")
 		close(r.readerClosed)
 	}
 
@@ -155,7 +155,7 @@ func (r *Controller) stopExecutors() {
 	case <-r.executorsClosed:
 		return
 	default:
-		r.log.Notice("stopping executors")
+		r.log.Info("stopping executors")
 		close(r.executorsClosed)
 	}
 
@@ -168,7 +168,7 @@ func (r *Controller) stopComparators() {
 	case <-r.comparatorsClosed:
 		return
 	default:
-		r.log.Notice("stopping comparators")
+		r.log.Info("stopping comparators")
 		close(r.comparatorsClosed)
 	}
 
