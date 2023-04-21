@@ -16,17 +16,17 @@ func TestStatedbInfo_WriteReadStateDbInfo(t *testing.T) {
 		t.Run(fmt.Sprintf("DB variant: %s; shadowImpl: %s; archive variant: %s", tc.variant, tc.shadowImpl, tc.archiveVariant), func(t *testing.T) {
 			cfg := makeTestConfig(tc)
 			// Update config for state DB preparation by providing additional information
-			cfg.StateDbTempDir = t.TempDir()
-			cfg.StateDbSrcDir = t.TempDir()
+			cfg.StateDbTemp = t.TempDir()
+			cfg.StateDbSrc = t.TempDir()
 
 			// Call for json creation and writing into it
-			err := WriteStateDbInfo(cfg.StateDbSrcDir, cfg, 2, common.Hash{})
+			err := WriteStateDbInfo(cfg.StateDbSrc, cfg, 2, common.Hash{})
 			if err != nil {
 				t.Fatalf("failed to write into DB info json file: %v", err)
 			}
 
 			// Getting the DB info file path and call for reading from it
-			dbInfoFile := filepath.Join(cfg.StateDbSrcDir, DbInfoName)
+			dbInfoFile := filepath.Join(cfg.StateDbSrc, DbInfoName)
 			dbInfo, err := ReadStateDbInfo(dbInfoFile)
 			if err != nil {
 				t.Fatalf("failed to read from DB info json file: %v", err)
@@ -67,11 +67,11 @@ func TestStatedbInfo_RenameTempStateDBDirectory(t *testing.T) {
 		t.Run(fmt.Sprintf("DB variant: %s; shadowImpl: %s; archive variant: %s", tc.variant, tc.shadowImpl, tc.archiveVariant), func(t *testing.T) {
 			cfg := makeTestConfig(tc)
 			// Update config for state DB preparation by providing additional information
-			cfg.StateDbTempDir = t.TempDir()
-			cfg.StateDbSrcDir = t.TempDir()
+			cfg.StateDbTemp = t.TempDir()
+			cfg.StateDbSrc = t.TempDir()
 
 			// Call for renaming temporary state DB directory
-			RenameTempStateDBDirectory(cfg, cfg.StateDbSrcDir, 2)
+			RenameTempStateDBDirectory(cfg, cfg.StateDbSrc, 2)
 
 			// Generating directory name in the same format
 			var newName string
@@ -82,7 +82,7 @@ func TestStatedbInfo_RenameTempStateDBDirectory(t *testing.T) {
 			}
 
 			// trying to find renamed directory
-			newName = filepath.Join(cfg.StateDbTempDir, newName)
+			newName = filepath.Join(cfg.StateDbTemp, newName)
 			if _, err := os.Stat(newName); os.IsNotExist(err) {
 				t.Fatalf("failed to rename temporary state DB directory")
 			}

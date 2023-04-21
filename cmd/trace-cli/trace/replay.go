@@ -26,12 +26,12 @@ var TraceReplayCommand = cli.Command{
 		&utils.CarmenSchemaFlag,
 		&utils.ChainIDFlag,
 		&utils.CpuProfileFlag,
-		&utils.DeletionDirFlag,
-		&utils.DisableProgressFlag,
+		&utils.DeletionDbFlag,
+		&utils.QuiteFlag,
 		&utils.SyncPeriodLengthFlag,
-		&utils.KeepStateDBFlag,
+		&utils.KeepStateDbFlag,
 		&utils.MemoryBreakdownFlag,
-		&utils.MemProfileFlag,
+		&utils.MemoryProfileFlag,
 		&utils.PrimeSeedFlag,
 		&utils.PrimeThresholdFlag,
 		&utils.ProfileFlag,
@@ -39,20 +39,20 @@ var TraceReplayCommand = cli.Command{
 		&utils.SkipPrimingFlag,
 		&utils.StateDbImplementationFlag,
 		&utils.StateDbVariantFlag,
-		&utils.StateDbSrcDirFlag,
-		&utils.StateDbTempDirFlag,
+		&utils.StateDbSrcFlag,
+		&utils.StateDbTempFlag,
 		&utils.StateDbLoggingFlag,
 		&utils.ShadowDbImplementationFlag,
 		&utils.ShadowDbVariantFlag,
 		&substate.SubstateDirFlag,
 		&substate.WorkersFlag,
-		&utils.TraceDirectoryFlag,
+		&utils.TraceFileFlag,
 		&utils.TraceDebugFlag,
 		&utils.DebugFromFlag,
-		&utils.UpdateDBDirFlag,
+		&utils.UpdateDbFlag,
 		&utils.ValidateFlag,
 		&utils.ValidateWorldStateFlag,
-		&utils.AidaDBFlag,
+		&utils.AidaDbFlag,
 	},
 	Description: `
 The trace replay command requires two arguments:
@@ -88,7 +88,7 @@ func traceReplayTask(cfg *utils.Config) error {
 	if err != nil {
 		return err
 	}
-	if !cfg.KeepStateDB {
+	if !cfg.KeepStateDb {
 		log.Printf("WARNING: directory %v will be removed at the end of this run.\n", stateDirectory)
 		defer os.RemoveAll(stateDirectory)
 	}
@@ -138,7 +138,7 @@ func traceReplayTask(cfg *utils.Config) error {
 		lastBlock  uint64
 		debug      bool
 	)
-	if cfg.EnableProgress {
+	if !cfg.Quite {
 		start = time.Now()
 		sec = time.Since(start).Seconds()
 		lastSec = time.Since(start).Seconds()
@@ -170,7 +170,7 @@ func traceReplayTask(cfg *utils.Config) error {
 				break
 			}
 			lastBlock = block // track the last processed block
-			if cfg.EnableProgress {
+			if !cfg.Quite {
 				// report progress
 				sec = time.Since(start).Seconds()
 				if sec-lastSec >= 15 {
@@ -219,7 +219,7 @@ func traceReplayTask(cfg *utils.Config) error {
 		operation.PrintProfiling()
 	}
 
-	if cfg.KeepStateDB {
+	if cfg.KeepStateDb {
 		rootHash, _ := db.Commit(true)
 		if err := utils.WriteStateDbInfo(stateDirectory, cfg, lastBlock, rootHash); err != nil {
 			log.Println(err)
@@ -236,7 +236,7 @@ func traceReplayTask(cfg *utils.Config) error {
 	}
 
 	// print progress summary
-	if cfg.EnableProgress {
+	if !cfg.Quite {
 		log.Printf("trace replay: Total elapsed time: %.3f s, processed %v blocks\n", sec, cfg.Last-cfg.First+1)
 		log.Printf("trace replay: Closing DB took %v\n", time.Since(start))
 		log.Printf("trace replay: Final disk usage: %v MiB\n", float32(utils.GetDirectorySize(stateDirectory))/float32(1024*1024))
@@ -265,7 +265,7 @@ func traceReplayAction(ctx *cli.Context) error {
 	defer utils.StopCPUProfile(cfg)
 
 	// run storage driver
-	substate.SetSubstateDirectory(cfg.SubstateDBDir)
+	substate.SetSubstateDirectory(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 	err = traceReplayTask(cfg)

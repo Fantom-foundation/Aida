@@ -17,10 +17,10 @@ var StochasticGenerateCommand = cli.Command{
 	Flags: []cli.Flag{
 		&utils.BlockLengthFlag,
 		&utils.SyncPeriodLengthFlag,
-		&utils.OperationFrequency,
+		&utils.TransactionLengthFlag,
 		&utils.ContractNumberFlag,
 		&utils.KeysNumberFlag,
-		&utils.ValuesNumberFLag,
+		&utils.ValuesNumberFlag,
 		&utils.SnapshotDepthFlag,
 	},
 	Description: "The stochastic produces an events.json file with uniform parameters",

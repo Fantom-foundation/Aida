@@ -45,7 +45,7 @@ func RunVM(ctx *cli.Context) error {
 	defer utils.StopCPUProfile(cfg)
 
 	// iterate through subsets in sequence
-	substate.SetSubstateDirectory(cfg.SubstateDBDir)
+	substate.SetSubstateDirectory(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
@@ -53,7 +53,7 @@ func RunVM(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	if !cfg.KeepStateDB {
+	if !cfg.KeepStateDb {
 		log.Printf("WARNING: directory %v will be removed at the end of this run.\n", stateDirectory)
 		defer os.RemoveAll(stateDirectory)
 	}
@@ -124,7 +124,7 @@ func RunVM(ctx *cli.Context) error {
 	// Release world state to free memory.
 	ws = substate.SubstateAlloc{}
 
-	if cfg.EnableProgress {
+	if !cfg.Quite {
 		start = time.Now()
 		lastSec = time.Since(start).Seconds()
 	}
@@ -187,7 +187,7 @@ func RunVM(ctx *cli.Context) error {
 		txCount++
 		gasCount = new(big.Int).Add(gasCount, new(big.Int).SetUint64(tx.Substate.Result.GasUsed))
 
-		if cfg.EnableProgress {
+		if !cfg.Quite {
 			// report progress
 			sec = time.Since(start).Seconds()
 
@@ -269,14 +269,14 @@ func RunVM(ctx *cli.Context) error {
 		fmt.Printf("============================================\n")
 	}
 
-	if cfg.KeepStateDB && !isFirstBlock {
+	if cfg.KeepStateDb && !isFirstBlock {
 		rootHash, _ := db.Commit(true)
 		if err := utils.WriteStateDbInfo(stateDirectory, cfg, curBlock, rootHash); err != nil {
 			log.Println(err)
 		}
 		//rename directory after closing db.
 		defer utils.RenameTempStateDBDirectory(cfg, stateDirectory, curBlock)
-	} else if cfg.KeepStateDB && isFirstBlock {
+	} else if cfg.KeepStateDb && isFirstBlock {
 		// no blocks were processed.
 		log.Printf("No blocks were processed. StateDB is not saved.\n")
 		defer os.RemoveAll(stateDirectory)
@@ -290,7 +290,7 @@ func RunVM(ctx *cli.Context) error {
 	}
 
 	// print progress summary
-	if cfg.EnableProgress {
+	if !cfg.Quite {
 		g := new(big.Float).Quo(new(big.Float).SetInt(gasCount), new(big.Float).SetFloat64(runTime))
 
 		log.Printf("run-vm: Total elapsed time: %.3f s, processed %v blocks, %v transactions (~ %.1f Tx/s) (~ %.1f Gas/s)\n", runTime, cfg.Last-cfg.First+1, txCount, float64(txCount)/(runTime), g)
