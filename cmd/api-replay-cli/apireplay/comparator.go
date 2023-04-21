@@ -83,6 +83,7 @@ func (c *Comparator) compare() {
 				// do we want to exit?
 				if !c.continueOnFailure {
 					c.fail()
+					return
 				}
 			}
 
