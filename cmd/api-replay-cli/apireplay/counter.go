@@ -132,8 +132,6 @@ func (c *requestCounter) logStats() {
 
 	c.builder.WriteString(fmt.Sprintf("\n\tTotal skipped due to non-existing substate for given block: %v\n", noSubstate))
 
-	c.builder.WriteString(fmt.Sprintf("Requests sent: %v\n", c.total))
-
 	c.log.Notice(c.builder.String())
 }
 
