@@ -36,6 +36,10 @@ func main() {
 			&utils.ChainIDFlag,
 			&flags.ContinueOnFailure,
 
+			// ShadowDB
+			&utils.ShadowDbImplementationFlag,
+			&utils.ShadowDbVariantFlag,
+
 			// StateDB
 			&utils.StateDbImplementationFlag,
 			&utils.StateDbVariantFlag,
