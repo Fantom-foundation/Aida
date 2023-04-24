@@ -7,7 +7,6 @@ import (
 	"github.com/Fantom-foundation/Aida/cmd/db-merger/dbmerger"
 
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -20,11 +19,8 @@ var DbMergerApp = cli.App{
 	Copyright: "(c) 2022 Fantom Foundation",
 	ArgsUsage: "",
 	Flags: []cli.Flag{
-		&substate.SubstateDirFlag,
-		&utils.DeletedAccountDirFlag,
-		&utils.UpdateDBDirFlag,
 		&utils.DeleteSourceDBsFlag,
-		&utils.DBFlag,
+		&utils.AidaDBFlag,
 	},
 	Description: `
 The dbmerger command merges databases with source data into one database which is used for profiling.

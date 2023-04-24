@@ -29,7 +29,7 @@ var StochasticRecordCommand = cli.Command{
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
 		&utils.ChainIDFlag,
-		&utils.DBFlag,
+		&utils.AidaDBFlag,
 	},
 	Description: `
 The stochastic record command requires two arguments:
