@@ -28,7 +28,7 @@ type comparatorError struct {
 	typ comparatorErrorType
 }
 
-// revertError is returned by when transaction execution needs to be reverted by the EVM
+// revertError is returned by when transaction execution needs to be reverted by the EVMExecutor
 type revertError struct {
 	error
 	reason string // revert reason hex encoded
