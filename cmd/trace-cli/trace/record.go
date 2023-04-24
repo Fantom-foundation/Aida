@@ -108,7 +108,6 @@ func traceRecordAction(ctx *cli.Context) error {
 			// open new block with a begin-block operation and clear index cache
 			operation.WriteOp(rCtx, operation.NewBeginBlock(tx.Block))
 		}
-		operation.WriteOp(rCtx, operation.NewBeginTransaction(uint32(tx.Transaction)))
 		var statedb state.StateDB
 		statedb = state.MakeGethInMemoryStateDB(&tx.Substate.InputAlloc, tx.Block)
 		statedb = tracer.NewProxyRecorder(statedb, rCtx)
@@ -116,7 +115,6 @@ func traceRecordAction(ctx *cli.Context) error {
 		if err := utils.ProcessTx(statedb, cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
 			return fmt.Errorf("Failed to process block %v tx %v. %v", tx.Block, tx.Transaction, err)
 		}
-		operation.WriteOp(rCtx, operation.NewEndTransaction())
 		if !cfg.Quiet {
 			// report progress
 			sec = time.Since(start).Seconds()

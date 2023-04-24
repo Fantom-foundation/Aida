@@ -194,14 +194,12 @@ func RunVM(ctx *cli.Context) error {
 		}
 		// run VM
 		db.PrepareSubstate(&tx.Substate.InputAlloc, tx.Substate.Env.Number)
-		db.BeginTransaction(uint32(tx.Transaction))
 		err = utils.ProcessTx(db, cfg, tx.Block, tx.Transaction, tx.Substate)
 		if err != nil {
 			log.Critical("\tFAILED\n")
 			err = fmt.Errorf("VM execution failed; %v", err)
 			break
 		}
-		db.EndTransaction()
 		txCount++
 		totalGas.Add(totalGas, currentGas.SetUint64(tx.Substate.Result.GasUsed))
 
