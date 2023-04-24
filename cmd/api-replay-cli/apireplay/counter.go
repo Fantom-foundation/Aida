@@ -28,9 +28,10 @@ type requestCounter struct {
 type reqLogType byte
 
 const (
-	executed                reqLogType = iota // the request got executed successfully
-	outOfStateDBRange                         // the request was not executed due to not being in StateDBs block range
-	noSubstateForGivenBlock                   // the request was not executed due to no having substate for given block
+	executed                reqLogType         = iota // the request got executed successfully
+	outOfStateDBRange                                 // the request was not executed due to not being in StateDBs block range
+	noSubstateForGivenBlock                           // the request was not executed due to no having substate for given block
+	statisticsLogFrequency  = 10 * time.Second        // how often will the app log statistics info
 )
 
 // todo why not executed - statedb out of range; no substate..
@@ -41,12 +42,12 @@ type requestLog struct {
 }
 
 // newCounter returns a new instance of requestCounter
-func newCounter(closed chan any, logFrequency time.Duration, input chan requestLog, log *logging.Logger, wg *sync.WaitGroup) *requestCounter {
+func newCounter(closed chan any, input chan requestLog, log *logging.Logger, wg *sync.WaitGroup) *requestCounter {
 	m := map[reqLogType]map[string]uint64{}
 	return &requestCounter{
 		stats:   m,
 		closed:  closed,
-		ticker:  time.NewTicker(logFrequency),
+		ticker:  time.NewTicker(statisticsLogFrequency),
 		input:   input,
 		builder: new(strings.Builder),
 		log:     log,

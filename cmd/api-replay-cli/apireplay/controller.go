@@ -2,7 +2,6 @@ package apireplay
 
 import (
 	"sync"
-	"time"
 
 	"github.com/Fantom-foundation/Aida/cmd/api-replay-cli/flags"
 	"github.com/Fantom-foundation/Aida/iterator"
@@ -15,8 +14,7 @@ import (
 )
 
 const (
-	statisticsLogFrequency = 10 * time.Second
-	bufferSize             = 100
+	bufferSize = 100
 )
 
 // Controller controls and looks after all threads within the api-replay package
@@ -58,7 +56,7 @@ func newController(ctx *cli.Context, cfg *utils.Config, db state.StateDB, iter *
 
 	executors, output, counterInput := createExecutors(cfg.First, cfg.Last, db, ctx, utils.GetChainConfig(cfg.ChainID), reader.output, cfg.VmImpl, executorsClosed, executorsWg)
 
-	counter := newCounter(counterClosed, statisticsLogFrequency, counterInput, newLogger(ctx), counterWg)
+	counter := newCounter(counterClosed, counterInput, newLogger(ctx), counterWg)
 
 	comparators, failure := createComparators(ctx, output, comparatorsClosed, comparatorsWg)
 
