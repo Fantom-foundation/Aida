@@ -3,7 +3,6 @@ package apireplay
 import (
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/op/go-logging"
 )
@@ -46,9 +45,8 @@ func (c *Comparator) Start() {
 // the error is logged since the results do not match
 func (c *Comparator) compare() {
 	var (
-		data   *OutData
-		ok     bool
-		ticker = time.NewTicker(12 * time.Second)
+		data *OutData
+		ok   bool
 	)
 
 	defer func() {
@@ -58,8 +56,6 @@ func (c *Comparator) compare() {
 	for {
 
 		select {
-		case <-ticker.C:
-			c.fail()
 		case <-c.closed:
 			return
 		case data, ok = <-c.input:
@@ -115,9 +111,12 @@ func (c *Comparator) doCompare(data *OutData) (err *comparatorError) {
 // fail sends signal to controller that mismatched results occurred
 func (c *Comparator) fail() {
 	select {
-	case <-c.failure:
-		return
+	case _, ok := <-c.failure:
+		if !ok {
+			return
+		}
 	default:
-		close(c.failure)
+		break
 	}
+	close(c.failure)
 }
