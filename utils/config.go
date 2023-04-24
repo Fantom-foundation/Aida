@@ -514,7 +514,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		log.Printf("WARNING: DB logging enabled, reducing Tx throughput\n")
 	}
 	if _, err := os.Stat(cfg.DeletionDb); os.IsNotExist(err) {
-		log.Printf("WARNING: deleted-account-dir is not provided or does not exist")
+		log.Printf("WARNING: deletionDB is not provided or does not exist")
 		cfg.HasDeletedAccounts = false
 	}
 	if cfg.KeepStateDb && cfg.ShadowImpl != "" {
