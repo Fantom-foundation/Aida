@@ -52,24 +52,8 @@ func find[T comparable](a []T, x T) int {
 	return -1
 }
 
-// RunStochasticReplay runs the stochastic simulation for StateDB operations.
-// It requires the simulation model and simulation length. The trace-debug flag
-// enables/disables the printing of StateDB operations and their arguments on
-// the screen.
-func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, cfg *utils.Config) error {
-	var (
-		opFrequency [NumOps]uint64 // operation frequency
-		numOps      uint64         // total number of operations
-	)
-
-	// random generator
-	rg := rand.New(rand.NewSource(cfg.RandomSeed))
-	log.Printf("using random seed %d", cfg.RandomSeed)
-
-	// retrieve operations and stochastic matrix from simulation object
-	operations := e.Operations
-	A := e.StochasticMatrix
-
+// createState creates a stochastic state and primes the StateDB
+func createState(cfg *utils.Config, e *EstimationModelJSON, db state.StateDB, rg *rand.Rand) *stochasticState {
 	// produce random access generators for contract addresses,
 	// storage-keys, and storage addresses.
 	// (NB: Contracts need an indirect access wrapper because
@@ -99,11 +83,42 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, 
 	// create accounts in StateDB
 	ss.prime()
 
-	// set initial state to BeginSyncPeriod
+	return &ss
+}
+
+// getStochasticMatrix returns the stochastic matrix with its operations and the initial state
+func getStochasticMatrix(e *EstimationModelJSON) ([]string, [][]float64, int) {
+	operations := e.Operations
+	A := e.StochasticMatrix
+	// and set initial state to BeginSyncPeriod
 	state := find(operations, OpMnemo(BeginSyncPeriodID))
 	if state == -1 {
-		return fmt.Errorf("BeginSyncPeriod cannot be observed in stochastic matrix/recording failed.")
+		panic("BeginSyncPeriod cannot be observed in stochastic matrix/recording failed.")
 	}
+	return operations, A, state
+}
+
+// retrieve operations and stochastic matrix from simulation object
+
+// RunStochasticReplay runs the stochastic simulation for StateDB operations.
+// It requires the simulation model and simulation length. The trace-debug flag
+// enables/disables the printing of StateDB operations and their arguments on
+// the screen.
+func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, cfg *utils.Config) error {
+	var (
+		opFrequency [NumOps]uint64 // operation frequency
+		numOps      uint64         // total number of operations
+	)
+
+	// random generator
+	rg := rand.New(rand.NewSource(cfg.RandomSeed))
+	log.Printf("using random seed %d", cfg.RandomSeed)
+
+	// create a stochastic state
+	ss := createState(cfg, e, db, rg)
+
+	// get stochastic matrix
+	operations, A, state := getStochasticMatrix(e)
 
 	// progress message setup
 	var (
