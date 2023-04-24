@@ -3,6 +3,7 @@ package apireplay
 import (
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/op/go-logging"
 )
@@ -79,6 +80,7 @@ func (c *Comparator) compare() {
 				// do we want to exit?
 				if !c.continueOnFailure {
 					c.fail()
+					return
 				}
 			}
 
