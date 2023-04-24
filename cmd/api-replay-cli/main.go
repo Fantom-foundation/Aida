@@ -22,6 +22,9 @@ func main() {
 			&flags.APIRecordingSrcFileFlag,
 			&flags.WorkersFlag,
 
+			// AidaDB
+			&utils.AidaDBFlag,
+
 			// VM
 			&utils.VmImplementation,
 

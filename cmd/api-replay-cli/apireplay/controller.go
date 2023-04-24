@@ -36,7 +36,6 @@ type Controller struct {
 	counter                                          *requestCounter
 	counterWg                                        *sync.WaitGroup
 	counterClosed                                    chan any
-	db                                               state.StateDB
 }
 
 // newController creates new instances of Controller, ReplayExecutors and Comparators
@@ -64,7 +63,6 @@ func newController(ctx *cli.Context, cfg *utils.Config, db state.StateDB, iter *
 	comparators, failure := createComparators(ctx, output, comparatorsClosed, comparatorsWg)
 
 	return &Controller{
-		db:                db,
 		failure:           failure,
 		log:               newLogger(ctx),
 		ctx:               ctx,
@@ -201,7 +199,6 @@ func (r *Controller) control() {
 			return
 		case <-r.failure:
 			r.Stop()
-			r.db.Close()
 			return
 		}
 	}
