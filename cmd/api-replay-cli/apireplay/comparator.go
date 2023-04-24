@@ -3,7 +3,6 @@ package apireplay
 import (
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/op/go-logging"
 )
