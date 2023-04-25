@@ -16,6 +16,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/op/go-logging"
 )
 
 // MakeStateDB creates a new DB instance based on cli argument.
@@ -82,6 +83,7 @@ type ProgressTracker struct {
 	start  time.Time // start time
 	last   time.Time // last reported time
 	rate   float64   // priming rate
+	log    *logging.Logger
 }
 
 // NewProgressTracker creates a new progress tracer
@@ -113,14 +115,14 @@ func (pt *ProgressTracker) PrintProgress() {
 }
 
 // PrimeStateDB primes database with accounts from the world state.
-func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config) {
+func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config, log *logging.Logger) {
 	load := db.StartBulkLoad()
 
 	numValues := 0
 	for _, account := range ws {
 		numValues += len(account.Storage)
 	}
-	log.Printf("\tLoading %d accounts with %d values ..\n", len(ws), numValues)
+	log.Infof("Loading %d accounts with %d values ...", len(ws), numValues)
 
 	pt := NewProgressTracker(numValues)
 	if cfg.PrimeRandom {
@@ -135,7 +137,7 @@ func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config) {
 		}
 
 	}
-	log.Printf("\t\tHashing and flushing ...\n")
+	log.Noticef("Hashing and flushing ...\n")
 	if err := load.Close(); err != nil {
 		panic(fmt.Errorf("failed to prime StateDB: %v", err))
 	}

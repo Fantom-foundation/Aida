@@ -89,7 +89,7 @@ func RunVM(ctx *cli.Context) error {
 		// prime stateDB
 		log.Notice("Prime StateDB \n")
 		start = time.Now()
-		utils.PrimeStateDB(ws, db, cfg)
+		utils.PrimeStateDB(ws, db, cfg, log)
 
 		elapsed = time.Since(start).Round(1 * time.Second)
 		hours, minutes, seconds = parseTime(elapsed)

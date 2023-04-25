@@ -16,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
@@ -84,7 +85,7 @@ func readAccounts(ch chan ContractLiveness) ([]common.Address, []common.Address)
 
 // genDeletedAccountsTask process a transaction substate then records self-destructed accounts
 // and resurrected accounts to a database.
-func genDeletedAccountsTask(block uint64, tx int, recording *substate.Substate, ddb *substate.DestroyedAccountDB) error {
+func genDeletedAccountsTask(block uint64, tx int, recording *substate.Substate, ddb *substate.DestroyedAccountDB, log *logging.Logger) error {
 
 	inputAlloc := recording.InputAlloc
 	inputEnv := recording.Env
@@ -202,11 +203,11 @@ func genDeletedAccountsTask(block uint64, tx int, recording *substate.Substate, 
 	a := outputAlloc.Equal(evmAlloc)
 	if !(r && a) {
 		if !r {
-			fmt.Printf("inconsistent output: result\n")
+			log.Criticalf("inconsistent output: result\n")
 			utils.PrintResultDiffSummary(outputResult, evmResult)
 		}
 		if !a {
-			fmt.Printf("inconsistent output: alloc\n")
+			log.Criticalf("inconsistent output: alloc\n")
 			utils.PrintAllocationDiffSummary(&outputAlloc, &evmAlloc)
 		}
 		return fmt.Errorf("inconsistent output")
@@ -229,14 +230,16 @@ func genDeletedAccountsTask(block uint64, tx int, recording *substate.Substate, 
 func genDeletedAccountsAction(ctx *cli.Context) error {
 	var err error
 
+	log := utils.NewLogger(ctx, "Substate Replay")
+
 	if ctx.Args().Len() != 2 {
 		return fmt.Errorf("substate-cli gen-deleted-accounts command requires exactly 2 arguments")
 	}
 
 	chainID = ctx.Int(ChainIDFlag.Name)
-	fmt.Printf("chain-id: %v\n", chainID)
-	fmt.Printf("git-date: %v\n", gitDate)
-	fmt.Printf("git-commit: %v\n", gitCommit)
+	log.Infof("chain-id: %v", chainID)
+	log.Infof("git-date: %v", gitDate)
+	log.Infof("git-commit: %v", gitCommit)
 
 	first, last, argErr := utils.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
 	if argErr != nil {
@@ -267,7 +270,7 @@ func genDeletedAccountsAction(ctx *cli.Context) error {
 			break
 		}
 
-		err := genDeletedAccountsTask(tx.Block, tx.Transaction, tx.Substate, ddb)
+		err := genDeletedAccountsTask(tx.Block, tx.Transaction, tx.Substate, ddb, log)
 		if err != nil {
 			return err
 		}
@@ -277,7 +280,7 @@ func genDeletedAccountsAction(ctx *cli.Context) error {
 		if diff >= 30 {
 			numTx := txCount - lastTxCount
 			lastTxCount = txCount
-			fmt.Printf("substate-cli: Elapsed time: %.0f s, at block %v (~%.1f Tx/s)\n", sec, tx.Block, float64(numTx)/diff)
+			log.Infof("substate-cli: gen-del-acc: Elapsed time: %.0f s, at block %v (~%.1f Tx/s)\n", sec, tx.Block, float64(numTx)/diff)
 			lastSec = sec
 		}
 	}
