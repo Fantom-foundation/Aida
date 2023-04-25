@@ -20,22 +20,21 @@ const (
 // RunVM implements trace command for executing VM on a chosen storage system.
 func RunVM(ctx *cli.Context) error {
 	var (
-		elapsed, wsEndTime      time.Duration
-		hours, minutes, seconds uint32
-		err                     error
-		start                   time.Time
-		beggining               time.Time
-		txCount                 int
-		lastTxCount             int
-		gasCount                = new(big.Int)
-		lastGasCount            = new(big.Int)
+		elapsed, wsEndTime, lastLog time.Duration
+		hours, minutes, seconds     uint32
+		err                         error
+		start, beginning            time.Time
+		txCount                     int
+		lastTxCount                 int
+		gasCount                    = new(big.Int)
+		lastGasCount                = new(big.Int)
 		// Progress reporting (block based)
 		lastBlockProgressReportBlock    uint64
 		lastBlockProgressReportTime     time.Time
 		lastBlockProgressReportTxCount  int
 		lastBlockProgressReportGasCount = new(big.Int)
 	)
-	beggining = time.Now()
+	beginning = time.Now()
 
 	// process general arguments
 	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
@@ -202,15 +201,12 @@ func RunVM(ctx *cli.Context) error {
 		txCount++
 		gasCount = new(big.Int).Add(gasCount, new(big.Int).SetUint64(tx.Substate.Result.GasUsed))
 
-		ticker := time.NewTicker(logFrequency)
-
 		if cfg.EnableProgress {
 			// report progress
 			elapsed = time.Since(start)
 
 			// Report progress on a regular time interval (wall time).
-			select {
-			case <-ticker.C:
+			if start.Second()-int(lastLog.Seconds()) >= 15 {
 				d := new(big.Int).Sub(gasCount, lastGasCount)
 				g := new(big.Float).Quo(new(big.Float).SetInt(d), new(big.Float).SetFloat64(float64(elapsed-wsEndTime)))
 
@@ -218,11 +214,9 @@ func RunVM(ctx *cli.Context) error {
 				elapsed = time.Since(start).Round(1 * time.Second)
 				hours, minutes, seconds = parseTime(elapsed)
 				log.Infof("Elapsed time: %vh %vm %vs, at block %v (~ %v Tx/s, ~ %v Gas/s)\n", hours, minutes, seconds, tx.Block, txRate, g)
-				wsEndTime = elapsed
+				lastLog = elapsed
 				lastTxCount = txCount
 				lastGasCount.Set(gasCount)
-			default:
-				break
 			}
 
 			// Report progress on a regular block interval (simulation time).
@@ -314,7 +308,7 @@ func RunVM(ctx *cli.Context) error {
 	if cfg.EnableProgress {
 		g := new(big.Float).Quo(new(big.Float).SetInt(gasCount), new(big.Float).SetFloat64(runTime))
 
-		hours, minutes, seconds = parseTime(time.Since(beggining).Round(1 * time.Second))
+		hours, minutes, seconds = parseTime(time.Since(beginning).Round(1 * time.Second))
 
 		log.Infof("Total elapsed time: %vh %vm %vs, processed %v blocks, %v transactions (~ %.1f Tx/s) (~ %.1f Gas/s)\n", hours, minutes, seconds, cfg.Last-cfg.First+1, txCount, float64(txCount)/(runTime), g)
 		log.Infof("Closing DB took %v\n", time.Since(start))
