@@ -213,6 +213,7 @@ func RunVM(ctx *cli.Context) error {
 				log.Warning(lastTxCount)
 				log.Warning(elapsed)
 				log.Warning(lastLog)
+				log.Warning(float64(elapsed - lastLog))
 
 				txRate := float64(txCount-lastTxCount) / float64(elapsed-lastLog)
 				hours, minutes, seconds = parseTime(elapsed)
