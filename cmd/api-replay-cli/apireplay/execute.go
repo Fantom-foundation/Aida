@@ -43,8 +43,8 @@ func executeGetTransactionCount(param interface{}, archive state.StateDB) (out *
 	return
 }
 
-// executeCall into EVM and return the result
-func executeCall(evm *EVM) (out *StateDBData) {
+// executeCall into EVMExecutor and return the result
+func executeCall(evm *EVMExecutor) (out *StateDBData) {
 	var (
 		result *evmcore.ExecutionResult
 		err    error
@@ -52,7 +52,7 @@ func executeCall(evm *EVM) (out *StateDBData) {
 
 	out = new(StateDBData)
 
-	// get the result from EVM
+	// get the result from EVMExecutor
 	result, err = evm.sendCall()
 	if err != nil {
 		out.Error = err
@@ -70,9 +70,10 @@ func executeCall(evm *EVM) (out *StateDBData) {
 	return
 }
 
-// executeEstimateGas into EVM which calculates gas needed for a transaction
-func executeEstimateGas(evm *EVM) (out *StateDBData) {
+// executeEstimateGas into EVMExecutor which calculates gas needed for a transaction
+func executeEstimateGas(evm *EVMExecutor) (out *StateDBData) {
 	out = new(StateDBData)
+
 	out.Result, out.Error = evm.sendEstimateGas()
 
 	return

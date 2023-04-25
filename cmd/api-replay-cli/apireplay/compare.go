@@ -16,9 +16,18 @@ const internalErrorCode = -32603
 
 // EVMErrors decode error code into string with which is compared with recorded error message
 var EVMErrors = map[int][]string{
-	-32000: {"execution reverted", "invalid opcode", "insufficient balance for transfer", "insufficient funds"},
-	-32602: {"invalid argument"},
+	-32603: {"execution reverted"},
 	3:      {"execution reverted"},
+	-32000: {
+		"execution reverted",
+		"invalid opcode",
+		"insufficient balance for transfer",
+		"insufficient funds",
+		"gas required exceeds allowance",
+		"out of gas",
+	},
+
+	-32602: {"invalid argument"},
 }
 
 // compareBalance compares getBalance data recorded on API server with data returned by StateDB
@@ -201,7 +210,7 @@ func compareCallStateDBResult(data *OutData, builder *strings.Builder) *comparat
 		expectedErrorGotResult)
 }
 
-// compareEVMStateDBError compares error returned from EVM with recorded data
+// compareEVMStateDBError compares error returned from EVMExecutor with recorded data
 func compareEVMStateDBError(data *OutData, builder *strings.Builder) *comparatorError {
 
 	// did we record an error?

@@ -14,7 +14,6 @@ type Comparator struct {
 	log    *logging.Logger
 	closed chan any
 	wg     *sync.WaitGroup
-
 	// failure is closed when continueOnFailure is false, it is used to send signal to controller to shut down the program
 	continueOnFailure bool
 	failure           chan any
@@ -80,6 +79,7 @@ func (c *Comparator) compare() {
 				// do we want to exit?
 				if !c.continueOnFailure {
 					c.fail()
+					return
 				}
 			}
 
@@ -98,7 +98,8 @@ func (c *Comparator) doCompare(data *OutData) (err *comparatorError) {
 	case "call":
 		err = compareCall(data, c.builder)
 	case "estimateGas":
-		err = compareEstimateGas(data, c.builder)
+		// estimateGas is currently not suitable for replay since the estimation  in geth is always calculated for current state
+		// that means recorded result and result returned by StateDB are not comparable
 	case "getCode":
 		err = compareCode(data, c.builder)
 	case "getStorageAt":
@@ -111,9 +112,12 @@ func (c *Comparator) doCompare(data *OutData) (err *comparatorError) {
 // fail sends signal to controller that mismatched results occurred
 func (c *Comparator) fail() {
 	select {
-	case <-c.failure:
-		return
+	case _, ok := <-c.failure:
+		if !ok {
+			return
+		}
 	default:
-		close(c.failure)
+		break
 	}
+	close(c.failure)
 }
