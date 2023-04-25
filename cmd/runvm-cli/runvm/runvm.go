@@ -10,7 +10,6 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
-	"gonum.org/v1/gonum/floats"
 )
 
 const (
@@ -27,11 +26,13 @@ func RunVM(ctx *cli.Context) error {
 		start, beginning        time.Time
 		txCount                 int
 		lastTxCount             int
-		gasCount                = new(big.Int)
+		totalGas                = new(big.Int)
+		currentGas              = new(big.Int)
 		lastGasCount            = new(big.Int)
-		bigGas                  = new(big.Float)
-		bigElapsed              = new(big.Float)
-		gasPerSecond            = new(big.Float)
+		d                       = new(big.Int)
+		g                       = new(big.Float)
+		calcTime                = new(big.Float)
+		currentGasCountFloat    = new(big.Float)
 		// Progress reporting (block based)
 		lastBlockProgressReportBlock    uint64
 		lastBlockProgressReportTime     time.Time
@@ -202,7 +203,7 @@ func RunVM(ctx *cli.Context) error {
 		}
 		db.EndTransaction()
 		txCount++
-		gasCount.Add(gasCount, new(big.Int).SetUint64(tx.Substate.Result.GasUsed))
+		totalGas.Add(totalGas, currentGas.SetUint64(tx.Substate.Result.GasUsed))
 
 		if cfg.EnableProgress {
 			// report progress
@@ -210,17 +211,24 @@ func RunVM(ctx *cli.Context) error {
 
 			// Report progress on a regular time interval (wall time).
 			if elapsed-lastLog >= logFrequency {
-				gasPerSecond.Quo(bigGas.SetUint64(tx.Substate.Result.GasUsed), bigElapsed.SetFloat64(elapsed.Seconds()-lastLog.Seconds()))
+				d.Sub(totalGas, lastGasCount)
+				currentGasCountFloat.SetUint64(d.Uint64())
+				calcTime.SetFloat64(elapsed.Seconds() - lastLog.Seconds())
 
-				g, _ := gasPerSecond.Float64()
-				g = floats.Round(g, 6)
+				g.Quo(currentGasCountFloat, calcTime)
+
+				log.Warning(txCount)
+				log.Warning(lastTxCount)
+				log.Warning(elapsed)
+				log.Warning(lastLog)
+				log.Warning(float64(elapsed - lastLog))
 
 				txRate := float64(txCount-lastTxCount) / (elapsed.Seconds() - lastLog.Seconds())
 				hours, minutes, seconds = parseTime(elapsed)
 				log.Infof("Elapsed time: %vh %vm %vs, at block %v (~ %v Tx/s, ~ %v Gas/s)\n", hours, minutes, seconds, tx.Block, txRate, g)
 				lastLog = elapsed
 				lastTxCount = txCount
-				lastGasCount.Set(gasCount)
+				lastGasCount.Set(totalGas)
 			}
 
 			// Report progress on a regular block interval (simulation time).
@@ -228,8 +236,8 @@ func RunVM(ctx *cli.Context) error {
 				numTransactions := txCount - lastBlockProgressReportTxCount
 				lastBlockProgressReportTxCount = txCount
 
-				gasUsed := new(big.Int).Sub(gasCount, lastBlockProgressReportGasCount)
-				lastBlockProgressReportGasCount.Set(gasCount)
+				gasUsed := new(big.Int).Sub(totalGas, lastBlockProgressReportGasCount)
+				lastBlockProgressReportGasCount.Set(totalGas)
 
 				now := time.Now()
 				intervalTime := now.Sub(lastBlockProgressReportTime)
@@ -310,7 +318,7 @@ func RunVM(ctx *cli.Context) error {
 
 	// print progress summary
 	if cfg.EnableProgress {
-		g := new(big.Float).Quo(new(big.Float).SetInt(gasCount), new(big.Float).SetFloat64(runTime))
+		g := new(big.Float).Quo(new(big.Float).SetInt(totalGas), new(big.Float).SetFloat64(runTime))
 
 		hours, minutes, seconds = parseTime(time.Since(beginning).Round(1 * time.Second))
 
