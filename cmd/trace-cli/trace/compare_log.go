@@ -19,7 +19,7 @@ var TraceCompareLogCommand = cli.Command{
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		&utils.ChainIDFlag,
-		&utils.QuiteFlag,
+		&utils.QuietFlag,
 		&utils.StateDbImplementationFlag,
 		&substate.SubstateDirFlag,
 		&substate.WorkersFlag,
@@ -93,8 +93,8 @@ func traceCompareLogAction(ctx *cli.Context) error {
 		}
 	}
 	// disable progress log
-	if !ctx.IsSet(utils.QuiteFlag.Name) {
-		ctxErr := ctx.Set(utils.QuiteFlag.Name, "true")
+	if !ctx.IsSet(utils.QuietFlag.Name) {
+		ctxErr := ctx.Set(utils.QuietFlag.Name, "true")
 		if ctxErr != nil {
 			return ctxErr
 		}
