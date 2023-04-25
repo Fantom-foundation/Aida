@@ -12,18 +12,21 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const (
+	progressReportBlockInterval uint64 = 100_000
+	logFrequency                       = 15 * time.Second
+)
+
 // RunVM implements trace command for executing VM on a chosen storage system.
 func RunVM(ctx *cli.Context) error {
-	const progressReportBlockInterval uint64 = 100_000
 	var (
-		err          error
-		start        time.Time
-		sec          float64
-		lastSec      float64
-		txCount      int
-		lastTxCount  int
-		gasCount     = new(big.Int)
-		lastGasCount = new(big.Int)
+		elapsed, wsEndTime time.Duration
+		err                error
+		start              time.Time
+		txCount            int
+		lastTxCount        int
+		gasCount           = new(big.Int)
+		lastGasCount       = new(big.Int)
 		// Progress reporting (block based)
 		lastBlockProgressReportBlock    uint64
 		lastBlockProgressReportTime     time.Time
@@ -64,29 +67,32 @@ func RunVM(ctx *cli.Context) error {
 		log.Warning("Skipping DB priming.\n")
 	} else {
 		// load the world state
-		log.Notice("Load and advance world state to block %v\n", cfg.First-1)
+		log.Notice("\nLoad and advance world state to block %v\n", cfg.First-1)
 		start = time.Now()
 		ws, err = utils.GenerateWorldStateFromUpdateDB(cfg, cfg.First-1)
 		if err != nil {
 			return err
 		}
-		sec = time.Since(start).Seconds()
-		log.Infof("\tElapsed time: %.2f s, accounts: %v\n", sec, len(ws))
+
+		elapsed = time.Since(start).Round(1 * time.Second)
+		log.Infof("\tElapsed time: %vh %vm %vs, accounts: %v\n", elapsed.Hours(), elapsed.Minutes(), elapsed.Seconds(), len(ws))
 
 		// prime stateDB
 		log.Notice("Prime StateDB \n")
 		start = time.Now()
 		utils.PrimeStateDB(ws, db, cfg)
-		sec = time.Since(start).Seconds()
-		log.Infof("\tElapsed time: %.2f s\n", sec)
+
+		elapsed = time.Since(start).Round(1 * time.Second)
+		log.Infof("\tElapsed time: %vh %vm %vs\n", elapsed.Hours(), elapsed.Minutes(), elapsed.Seconds())
 
 		// delete destroyed accounts from stateDB
 		log.Notice("Delete destroyed accounts \n")
 		start = time.Now()
 		// remove destroyed accounts until one block before the first block
 		err = utils.DeleteDestroyedAccountsFromStateDB(db, cfg, cfg.First-1)
-		sec = time.Since(start).Seconds()
-		log.Infof("\tElapsed time: %.2f s\n", sec)
+
+		elapsed = time.Since(start).Round(1 * time.Second)
+		log.Infof("\tElapsed time: %vh %vm %vs\n", elapsed.Hours(), elapsed.Minutes(), elapsed.Seconds())
 		if err != nil {
 			return err
 		}
@@ -127,7 +133,7 @@ func RunVM(ctx *cli.Context) error {
 
 	if cfg.EnableProgress {
 		start = time.Now()
-		lastSec = time.Since(start).Seconds()
+		wsEndTime = time.Since(start)
 	}
 
 	log.Notice("Run VM\n")
@@ -137,6 +143,7 @@ func RunVM(ctx *cli.Context) error {
 	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
 
 	defer iter.Release()
+
 	for iter.Next() {
 		tx := iter.Value()
 		// initiate first sync-period and block.
@@ -190,17 +197,17 @@ func RunVM(ctx *cli.Context) error {
 
 		if cfg.EnableProgress {
 			// report progress
-			sec = time.Since(start).Seconds()
+			elapsed = time.Since(start)
 
 			// Report progress on a regular time interval (wall time).
-			if sec-lastSec >= 15 {
+			if elapsed >= logFrequency {
 				d := new(big.Int).Sub(gasCount, lastGasCount)
-				g := new(big.Float).Quo(new(big.Float).SetInt(d), new(big.Float).SetFloat64(sec-lastSec))
+				g := new(big.Float).Quo(new(big.Float).SetInt(d), new(big.Float).SetFloat64(float64(elapsed-wsEndTime)))
 
-				txRate := float64(txCount-lastTxCount) / (sec - lastSec)
+				txRate := float64(txCount-lastTxCount) / float64(elapsed-wsEndTime)
 
-				log.Infof("run-vm: Elapsed time: %.0f s, at block %v (~ %.1f Tx/s, ~ %.1f Gas/s)\n", sec, tx.Block, txRate, g)
-				lastSec = sec
+				log.Infof("Elapsed time: %v s, at block %v (~ %v Tx/s, ~ %v Gas/s)\n", time.Since(start), tx.Block, txRate, g)
+				wsEndTime = elapsed
 				lastTxCount = txCount
 				lastGasCount.Set(gasCount)
 			}
