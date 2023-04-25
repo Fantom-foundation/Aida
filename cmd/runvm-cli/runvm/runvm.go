@@ -14,7 +14,7 @@ import (
 
 const (
 	progressReportBlockInterval uint64 = 100_000
-	logFrequency                       = 15
+	logFrequency                       = 15 * time.Second
 )
 
 // RunVM implements trace command for executing VM on a chosen storage system.
@@ -202,15 +202,17 @@ func RunVM(ctx *cli.Context) error {
 		txCount++
 		gasCount = new(big.Int).Add(gasCount, new(big.Int).SetUint64(tx.Substate.Result.GasUsed))
 
+		ticker := time.NewTicker(logFrequency)
+
 		if cfg.EnableProgress {
 			// report progress
 			elapsed = time.Since(start)
 
 			log.Warning(elapsed.Seconds())
-			os.Exit(0)
 
 			// Report progress on a regular time interval (wall time).
-			if elapsed.Seconds() >= logFrequency {
+			select {
+			case <-ticker.C:
 				d := new(big.Int).Sub(gasCount, lastGasCount)
 				g := new(big.Float).Quo(new(big.Float).SetInt(d), new(big.Float).SetFloat64(float64(elapsed-wsEndTime)))
 
@@ -221,6 +223,8 @@ func RunVM(ctx *cli.Context) error {
 				wsEndTime = elapsed
 				lastTxCount = txCount
 				lastGasCount.Set(gasCount)
+			default:
+				break
 			}
 
 			// Report progress on a regular block interval (simulation time).
