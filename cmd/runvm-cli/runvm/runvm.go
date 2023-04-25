@@ -82,8 +82,8 @@ func RunVM(ctx *cli.Context) error {
 			return err
 		}
 
-		elapsed = time.Since(start).Round(1 * time.Second)
-		hours, minutes, seconds = parseTime(elapsed)
+		elapsed = time.Since(start)
+		hours, minutes, seconds = utils.ParseTime(elapsed)
 		log.Infof("\tElapsed time: %vh %vm %vs, accounts: %v\n", hours, minutes, seconds, len(ws))
 
 		// prime stateDB
@@ -91,8 +91,8 @@ func RunVM(ctx *cli.Context) error {
 		start = time.Now()
 		utils.PrimeStateDB(ws, db, cfg, log)
 
-		elapsed = time.Since(start).Round(1 * time.Second)
-		hours, minutes, seconds = parseTime(elapsed)
+		elapsed = time.Since(start)
+		hours, minutes, seconds = utils.ParseTime(elapsed)
 		log.Infof("\tPriming elapsed time: %vh %vm %vs\n", hours, minutes, seconds)
 
 		// delete destroyed accounts from stateDB
@@ -101,8 +101,8 @@ func RunVM(ctx *cli.Context) error {
 		// remove destroyed accounts until one block before the first block
 		err = utils.DeleteDestroyedAccountsFromStateDB(db, cfg, cfg.First-1)
 
-		elapsed = time.Since(start).Round(1 * time.Second)
-		hours, minutes, seconds = parseTime(elapsed)
+		elapsed = time.Since(start)
+		hours, minutes, seconds = utils.ParseTime(elapsed)
 		log.Infof("\tDel-dest-acc elapsed time: %vh %vm %vs\n", hours, minutes, seconds)
 		if err != nil {
 			return err
@@ -220,7 +220,7 @@ func RunVM(ctx *cli.Context) error {
 				f, _ := g.Float64()
 
 				txRate := float64(txCount-lastTxCount) / (elapsed.Seconds() - lastLog.Seconds())
-				hours, minutes, seconds = parseTime(elapsed)
+				hours, minutes, seconds = utils.ParseTime(elapsed)
 				log.Infof("Elapsed time: %vh %vm %vs, at block %v (~ %.0f Tx/s, ~ %.0f Gas/s)\n", hours, minutes, seconds, tx.Block, txRate, f)
 				lastLog = elapsed
 				lastTxCount = txCount
@@ -316,7 +316,7 @@ func RunVM(ctx *cli.Context) error {
 	if cfg.EnableProgress {
 		g := new(big.Float).Quo(new(big.Float).SetInt(totalGas), new(big.Float).SetFloat64(runTime))
 
-		hours, minutes, seconds = parseTime(time.Since(beginning).Round(1 * time.Second))
+		hours, minutes, seconds = utils.ParseTime(time.Since(beginning))
 
 		log.Infof("Total elapsed time: %vh %vm %vs, processed %v blocks, %v transactions (~ %.1f Tx/s) (~ %.1f Gas/s)\n", hours, minutes, seconds, cfg.Last-cfg.First+1, txCount, float64(txCount)/(runTime), g)
 		log.Infof("Closing DB took %v\n", time.Since(start))
@@ -324,24 +324,4 @@ func RunVM(ctx *cli.Context) error {
 	}
 
 	return err
-}
-
-func parseTime(elapsed time.Duration) (uint32, uint32, uint32) {
-	var (
-		hours, minutes, seconds uint32
-	)
-
-	seconds = uint32(elapsed.Seconds())
-
-	if seconds > 60 {
-		minutes = seconds / 60
-		seconds -= minutes * 60
-	}
-
-	if minutes > 60 {
-		hours = minutes / 60
-		minutes -= hours * 60
-	}
-
-	return hours, minutes, seconds
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
+	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
@@ -50,7 +51,7 @@ last block of the inclusive range of blocks to replay storage traces.`,
 }
 
 // traceReplaySubstateTask simulates storage operations from storage traces on stateDB.
-func traceReplaySubstateTask(cfg *utils.Config) error {
+func traceReplaySubstateTask(cfg *utils.Config, log *logging.Logger) error {
 	// load context
 	rCtx := context.NewReplay()
 
@@ -109,7 +110,7 @@ func traceReplaySubstateTask(cfg *utils.Config) error {
 		if cfg.DbImpl == "memory" {
 			db.PrepareSubstate(&tx.Substate.InputAlloc, tx.Block)
 		} else {
-			utils.PrimeStateDB(tx.Substate.InputAlloc, db, cfg)
+			utils.PrimeStateDB(tx.Substate.InputAlloc, db, cfg, log)
 		}
 		for traceIter.Next() {
 			op := traceIter.Value()
@@ -135,7 +136,8 @@ func traceReplaySubstateTask(cfg *utils.Config) error {
 			if diff >= 15 {
 				numTx := txCount - lastTxCount
 				lastTxCount = txCount
-				fmt.Printf("trace replay-substate: Elapsed time: %.0f s, at block %v (~%.1f Tx/s)\n", sec, tx.Block, float64(numTx)/diff)
+				hours, minutes, seconds := utils.ParseTime(time.Since(start))
+				log.Infof("Elapsed time: %vh, %vm %vs, at block %v (~%.0f Tx/s)\n", hours, minutes, seconds, tx.Block, float64(numTx)/diff)
 				lastSec = sec
 			}
 		}
@@ -160,13 +162,13 @@ func traceReplaySubstateTask(cfg *utils.Config) error {
 	// close the DB and print disk usage
 	start = time.Now()
 	if err := db.Close(); err != nil {
-		fmt.Printf("Failed to close database: %v", err)
+		log.Errorf("Failed to close database; %v", err)
 	}
 
 	if cfg.EnableProgress {
-		fmt.Printf("trace replay-substate: Closing DB took %v\n", time.Since(start))
-		fmt.Printf("trace replay-substate: Final disk usage: %v MiB\n", float32(utils.GetDirectorySize(stateDirectory))/float32(1024*1024))
-		fmt.Printf("trace replay-substate: Total elapsed time: %.3f s, processed %v blocks (~%.1f Tx/s)\n", sec, cfg.Last-cfg.First+1, float64(txCount)/sec)
+		log.Info("Closing DB took %v", time.Since(start))
+		log.Info("Final disk usage: %v MiB", float32(utils.GetDirectorySize(stateDirectory))/float32(1024*1024))
+		log.Info("Total elapsed time: %.3f s, processed %v blocks (~%.1f Tx/s)", sec, cfg.Last-cfg.First+1, float64(txCount)/sec)
 	}
 
 	return nil
@@ -192,7 +194,8 @@ func traceReplaySubstateAction(ctx *cli.Context) error {
 	}
 	defer utils.StopCPUProfile(cfg)
 
-	err = traceReplaySubstateTask(cfg)
+	log := utils.NewLogger(ctx, "Trace Replay Substate Action")
+	err = traceReplaySubstateTask(cfg, log)
 
 	return err
 }

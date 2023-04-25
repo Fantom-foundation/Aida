@@ -41,6 +41,8 @@ last block of the inclusive range of blocks to trace transactions.`,
 
 // traceRecordAction implements trace command for recording.
 func traceRecordAction(ctx *cli.Context) error {
+	log := utils.NewLogger(ctx, "Trace Record")
+
 	substate.RecordReplay = true
 
 	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
@@ -118,7 +120,7 @@ func traceRecordAction(ctx *cli.Context) error {
 			// report progress
 			sec = time.Since(start).Seconds()
 			if sec-lastSec >= 15 {
-				fmt.Printf("trace record: Elapsed time: %.0f s, at block %v\n", sec, curBlock)
+				log.Infof("Elapsed time: %.0f s, at block %v\n", sec, curBlock)
 				lastSec = sec
 			}
 		}
@@ -131,8 +133,8 @@ func traceRecordAction(ctx *cli.Context) error {
 	operation.WriteOp(rCtx, operation.NewEndSyncPeriod())
 
 	if cfg.EnableProgress {
-		sec = time.Since(start).Seconds()
-		fmt.Printf("trace record: Total elapsed time: %.3f s, processed %v blocks\n", sec, cfg.Last-cfg.First+1)
+		hours, minutes, seconds := utils.ParseTime(time.Since(start))
+		log.Noticef("Total elapsed time: %vh %vm %vs, processed %v blocks\n", hours, minutes, seconds, cfg.Last-cfg.First+1)
 	}
 
 	return nil
