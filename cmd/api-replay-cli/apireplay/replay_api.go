@@ -32,17 +32,17 @@ func ReplayAPI(ctx *cli.Context) error {
 	}
 
 	// create StateDB
-	dbInfo, err = utils.ReadStateDbInfo(filepath.Join(cfg.StateDbSrcDir, utils.DbInfoName))
+	dbInfo, err = utils.ReadStateDbInfo(filepath.Join(cfg.StateDbSrc, utils.DbInfoName))
 	if err != nil {
 		return err
 	}
 
-	db, err = utils.MakeStateDB(cfg.StateDbSrcDir, cfg, dbInfo.RootHash, true)
+	db, err = utils.MakeStateDB(cfg.StateDbSrc, cfg, dbInfo.RootHash, true)
 	if err != nil {
 		return err
 	}
 
-	substate.SetSubstateDirectory(cfg.SubstateDBDir)
+	substate.SetSubstateDirectory(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 
 	// closing gracefully both Substate and StateDB is necessary

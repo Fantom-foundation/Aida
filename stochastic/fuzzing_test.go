@@ -63,18 +63,18 @@ func FuzzStochastic(f *testing.F) {
 
 		// generate configuration
 		cfg := utils.Config{
-			ContractNumber:     1000,
-			KeysNumber:         1000,
-			ValuesNumber:       1000,
-			SnapshotDepth:      100,
-			BlockLength:        3,
-			SyncPeriodLength:   10,
-			OperationFrequency: 2,
+			ContractNumber:    1000,
+			KeysNumber:        1000,
+			ValuesNumber:      1000,
+			SnapshotDepth:     100,
+			BlockLength:       3,
+			SyncPeriodLength:  10,
+			TransactionLength: 2,
 
-			ShadowImpl:     "geth",
-			StateDbTempDir: "/tmp/",
-			DbImpl:         "carmen",
-			DbVariant:      "go-file",
+			ShadowImpl:  "geth",
+			StateDbTemp: "/tmp/",
+			DbImpl:      "carmen",
+			DbVariant:   "go-file",
 		}
 
 		// create a directory for the store to place all its files, and
