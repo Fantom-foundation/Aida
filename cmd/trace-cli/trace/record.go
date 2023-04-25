@@ -23,7 +23,7 @@ var TraceRecordCommand = cli.Command{
 	Flags: []cli.Flag{
 		&utils.CpuProfileFlag,
 		&utils.SyncPeriodLengthFlag,
-		&utils.QuiteFlag,
+		&utils.QuietFlag,
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
 		&utils.ChainIDFlag,
@@ -73,7 +73,7 @@ func traceRecordAction(ctx *cli.Context) error {
 		sec     float64
 		lastSec float64
 	)
-	if !cfg.Quite {
+	if !cfg.Quiet {
 		start = time.Now()
 		sec = time.Since(start).Seconds()
 		lastSec = time.Since(start).Seconds()
@@ -114,7 +114,7 @@ func traceRecordAction(ctx *cli.Context) error {
 			return fmt.Errorf("Failed to process block %v tx %v. %v", tx.Block, tx.Transaction, err)
 		}
 		operation.WriteOp(rCtx, operation.NewEndTransaction())
-		if !cfg.Quite {
+		if !cfg.Quiet {
 			// report progress
 			sec = time.Since(start).Seconds()
 			if sec-lastSec >= 15 {
@@ -130,7 +130,7 @@ func traceRecordAction(ctx *cli.Context) error {
 	}
 	operation.WriteOp(rCtx, operation.NewEndSyncPeriod())
 
-	if !cfg.Quite {
+	if !cfg.Quiet {
 		sec = time.Since(start).Seconds()
 		fmt.Printf("trace record: Total elapsed time: %.3f s, processed %v blocks\n", sec, cfg.Last-cfg.First+1)
 	}

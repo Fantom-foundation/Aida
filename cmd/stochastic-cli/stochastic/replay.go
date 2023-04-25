@@ -27,7 +27,7 @@ var StochasticReplayCommand = cli.Command{
 		&utils.ContinueOnFailureFlag,
 		&utils.CpuProfileFlag,
 		&utils.DebugFromFlag,
-		&utils.QuiteFlag,
+		&utils.QuietFlag,
 		&utils.MemoryBreakdownFlag,
 		&utils.RandomSeedFlag,
 		&utils.StateDbImplementationFlag,

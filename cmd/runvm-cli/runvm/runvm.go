@@ -124,7 +124,7 @@ func RunVM(ctx *cli.Context) error {
 	// Release world state to free memory.
 	ws = substate.SubstateAlloc{}
 
-	if !cfg.Quite {
+	if !cfg.Quiet {
 		start = time.Now()
 		lastSec = time.Since(start).Seconds()
 	}
@@ -187,7 +187,7 @@ func RunVM(ctx *cli.Context) error {
 		txCount++
 		gasCount = new(big.Int).Add(gasCount, new(big.Int).SetUint64(tx.Substate.Result.GasUsed))
 
-		if !cfg.Quite {
+		if !cfg.Quiet {
 			// report progress
 			sec = time.Since(start).Seconds()
 
@@ -290,7 +290,7 @@ func RunVM(ctx *cli.Context) error {
 	}
 
 	// print progress summary
-	if !cfg.Quite {
+	if !cfg.Quiet {
 		g := new(big.Float).Quo(new(big.Float).SetInt(gasCount), new(big.Float).SetFloat64(runTime))
 
 		log.Printf("run-vm: Total elapsed time: %.3f s, processed %v blocks, %v transactions (~ %.1f Tx/s) (~ %.1f Gas/s)\n", runTime, cfg.Last-cfg.First+1, txCount, float64(txCount)/(runTime), g)

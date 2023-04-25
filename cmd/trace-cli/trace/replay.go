@@ -27,7 +27,7 @@ var TraceReplayCommand = cli.Command{
 		&utils.ChainIDFlag,
 		&utils.CpuProfileFlag,
 		&utils.DeletionDbFlag,
-		&utils.QuiteFlag,
+		&utils.QuietFlag,
 		&utils.SyncPeriodLengthFlag,
 		&utils.KeepStateDbFlag,
 		&utils.MemoryBreakdownFlag,
@@ -138,7 +138,7 @@ func traceReplayTask(cfg *utils.Config) error {
 		lastBlock  uint64
 		debug      bool
 	)
-	if !cfg.Quite {
+	if !cfg.Quiet {
 		start = time.Now()
 		sec = time.Since(start).Seconds()
 		lastSec = time.Since(start).Seconds()
@@ -170,7 +170,7 @@ func traceReplayTask(cfg *utils.Config) error {
 				break
 			}
 			lastBlock = block // track the last processed block
-			if !cfg.Quite {
+			if !cfg.Quiet {
 				// report progress
 				sec = time.Since(start).Seconds()
 				if sec-lastSec >= 15 {
@@ -236,7 +236,7 @@ func traceReplayTask(cfg *utils.Config) error {
 	}
 
 	// print progress summary
-	if !cfg.Quite {
+	if !cfg.Quiet {
 		log.Printf("trace replay: Total elapsed time: %.3f s, processed %v blocks\n", sec, cfg.Last-cfg.First+1)
 		log.Printf("trace replay: Closing DB took %v\n", time.Since(start))
 		log.Printf("trace replay: Final disk usage: %v MiB\n", float32(utils.GetDirectorySize(stateDirectory))/float32(1024*1024))

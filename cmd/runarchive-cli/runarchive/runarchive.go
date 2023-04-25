@@ -53,7 +53,7 @@ func RunArchive(ctx *cli.Context) error {
 	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
 	defer iter.Release()
 
-	if !cfg.Quite {
+	if !cfg.Quiet {
 		start = time.Now()
 		lastSec = time.Since(start).Seconds()
 	}
@@ -88,12 +88,12 @@ func RunArchive(ctx *cli.Context) error {
 				abort = nil
 			}
 		case <-finishedTransaction:
-			if cfg.Quite {
+			if cfg.Quiet {
 				continue
 			}
 			txCount++
 		case block := <-finishedBlock:
-			if cfg.Quite {
+			if cfg.Quiet {
 				continue
 			}
 			if block > lastBlock {
@@ -113,7 +113,7 @@ func RunArchive(ctx *cli.Context) error {
 	}
 
 	// print progress summary
-	if !cfg.Quite {
+	if !cfg.Quiet {
 		runTime := time.Since(start).Seconds()
 		log.Printf("Total elapsed time: %.3f s, processed %v blocks, %v transactions (~ %.1f Tx/s)\n", runTime, cfg.Last-cfg.First+1, txCount, float64(txCount)/(runTime))
 	}

@@ -28,7 +28,7 @@ var RunVMApp = cli.App{
 		&utils.ContinueOnFailureFlag,
 		&utils.CpuProfileFlag,
 		&utils.DeletionDbFlag,
-		&utils.QuiteFlag,
+		&utils.QuietFlag,
 		&utils.SyncPeriodLengthFlag,
 		&utils.KeepStateDbFlag,
 		&utils.MaxNumTransactionsFlag,

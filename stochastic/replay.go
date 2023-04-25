@@ -129,7 +129,7 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, 
 		errCount int
 	)
 
-	if !cfg.Quite {
+	if !cfg.Quiet {
 		start = time.Now()
 		sec = time.Since(start).Seconds()
 		lastSec = time.Since(start).Seconds()
@@ -166,7 +166,7 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, 
 			}
 		}
 
-		if !cfg.Quite {
+		if !cfg.Quiet {
 			// report progress
 			sec = time.Since(start).Seconds()
 			if sec-lastSec >= 15 {
@@ -193,7 +193,7 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, 
 	}
 
 	// print progress summary
-	if !cfg.Quite {
+	if !cfg.Quiet {
 		log.Printf("Total elapsed time: %.3f s, processed %v blocks\n", sec, block)
 	}
 	if errCount > 0 {

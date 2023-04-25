@@ -105,7 +105,7 @@ var (
 		Name:  "profile",
 		Usage: "enables profiling",
 	}
-	QuiteFlag = cli.BoolFlag{
+	QuietFlag = cli.BoolFlag{
 		Name:  "quite",
 		Usage: "disable progress report",
 	}
@@ -282,7 +282,7 @@ type Config struct {
 	Debug               bool           // enable trace debug flag
 	DebugFrom           uint64         // the first block to print trace debug
 	DeletionDb          string         // directory of deleted account database
-	Quite               bool           // disable progress report flag
+	Quiet               bool           // disable progress report flag
 	SyncPeriodLength    uint64         // length of a sync-period in number of blocks
 	HasDeletedAccounts  bool           // true if DeletionDb is not empty; otherwise false
 	KeepStateDb         bool           // set to true if stateDB is kept after run
@@ -396,7 +396,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		CPUProfile:          ctx.String(CpuProfileFlag.Name),
 		Debug:               ctx.Bool(TraceDebugFlag.Name),
 		DebugFrom:           ctx.Uint64(DebugFromFlag.Name),
-		Quite:               ctx.Bool(QuiteFlag.Name),
+		Quiet:               ctx.Bool(QuietFlag.Name),
 		SyncPeriodLength:    ctx.Uint64(SyncPeriodLengthFlag.Name),
 		First:               first,
 		DbImpl:              ctx.String(StateDbImplementationFlag.Name),
@@ -456,7 +456,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		cfg.SubstateDb = cfg.AidaDb
 	}
 
-	if !cfg.Quite {
+	if !cfg.Quiet {
 		log.Printf("Run config:\n")
 		log.Printf("\tBlock range: %v to %v\n", cfg.First, cfg.Last)
 		if cfg.MaxNumTransactions >= 0 {
