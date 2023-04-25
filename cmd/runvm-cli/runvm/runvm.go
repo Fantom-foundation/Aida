@@ -208,8 +208,6 @@ func RunVM(ctx *cli.Context) error {
 			// report progress
 			elapsed = time.Since(start)
 
-			log.Warning(elapsed.Seconds())
-
 			// Report progress on a regular time interval (wall time).
 			select {
 			case <-ticker.C:
