@@ -209,8 +209,12 @@ func RunVM(ctx *cli.Context) error {
 				d := new(big.Int).Sub(gasCount, lastGasCount)
 				g := new(big.Float).Quo(new(big.Float).SetInt(d), new(big.Float).SetFloat64(float64(elapsed-lastLog)))
 
+				log.Warning(txCount)
+				log.Warning(lastTxCount)
+				log.Warning(elapsed)
+				log.Warning(lastLog)
+
 				txRate := float64(txCount-lastTxCount) / float64(elapsed-lastLog)
-				elapsed = time.Since(start).Round(1 * time.Second)
 				hours, minutes, seconds = parseTime(elapsed)
 				log.Infof("Elapsed time: %vh %vm %vs, at block %v (~ %v Tx/s, ~ %v Gas/s)\n", hours, minutes, seconds, tx.Block, txRate, g)
 				lastLog = elapsed
