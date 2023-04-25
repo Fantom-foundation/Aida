@@ -55,7 +55,7 @@ func RunVM(ctx *cli.Context) error {
 		return err
 	}
 	if !cfg.KeepStateDB {
-		log.Warningf("Directory %v will be removed at the end of this run.\n", stateDirectory)
+		log.Warningf("StateDB at %v will be removed at the end of this run.\n", stateDirectory)
 		defer os.RemoveAll(stateDirectory)
 	}
 
@@ -180,8 +180,8 @@ func RunVM(ctx *cli.Context) error {
 		db.BeginTransaction(uint32(tx.Transaction))
 		err = utils.ProcessTx(db, cfg, tx.Block, tx.Transaction, tx.Substate)
 		if err != nil {
-			log.Critical("\tFAILED.\n")
-			err = fmt.Errorf("error: VM execution failed. %w", err)
+			log.Critical("\tFAILED\n")
+			err = fmt.Errorf("VM execution failed; %v", err)
 			break
 		}
 		db.EndTransaction()
@@ -199,7 +199,7 @@ func RunVM(ctx *cli.Context) error {
 
 				txRate := float64(txCount-lastTxCount) / (sec - lastSec)
 
-				fmt.Printf("run-vm: Elapsed time: %.0f s, at block %v (~ %.1f Tx/s, ~ %.1f Gas/s)\n", sec, tx.Block, txRate, g)
+				log.Infof("run-vm: Elapsed time: %.0f s, at block %v (~ %.1f Tx/s, ~ %.1f Gas/s)\n", sec, tx.Block, txRate, g)
 				lastSec = sec
 				lastTxCount = txCount
 				lastGasCount.Set(gasCount)
@@ -221,7 +221,7 @@ func RunVM(ctx *cli.Context) error {
 				gasRate, _ := new(big.Float).SetInt(gasUsed).Float64()
 				gasRate = gasRate / intervalTime.Seconds()
 
-				fmt.Printf("run-vm: Reached block %d, last interval rate ~ %.1f Tx/s, ~ %.1f Gas/s\n", tx.Block, txRate, gasRate)
+				log.Infof("run-vm: Reached block %d, last interval rate ~ %.1f Tx/s, ~ %.1f Gas/s\n", tx.Block, txRate, gasRate)
 				lastBlockProgressReportBlock += progressReportBlockInterval
 			}
 		}
