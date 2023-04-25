@@ -206,6 +206,9 @@ func RunVM(ctx *cli.Context) error {
 			// report progress
 			elapsed = time.Since(start)
 
+			log.Warning(elapsed.Seconds())
+			os.Exit(0)
+
 			// Report progress on a regular time interval (wall time).
 			if elapsed.Seconds() >= logFrequency {
 				d := new(big.Int).Sub(gasCount, lastGasCount)
