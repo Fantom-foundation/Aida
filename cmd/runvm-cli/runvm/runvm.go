@@ -207,7 +207,7 @@ func RunVM(ctx *cli.Context) error {
 			// Report progress on a regular time interval (wall time).
 			if elapsed-lastLog >= logFrequency {
 				d := new(big.Int).Sub(gasCount, lastGasCount)
-				g := new(big.Float).Quo(new(big.Float).SetInt(d), new(big.Float).SetFloat64(float64(elapsed-lastLog)))
+				g := new(big.Float).Quo(new(big.Float).SetInt(d), new(big.Float).SetFloat64(elapsed.Seconds()-lastLog.Seconds()))
 
 				log.Warning(txCount)
 				log.Warning(lastTxCount)
@@ -215,7 +215,7 @@ func RunVM(ctx *cli.Context) error {
 				log.Warning(lastLog)
 				log.Warning(float64(elapsed - lastLog))
 
-				txRate := float64(txCount-lastTxCount) / float64(elapsed-lastLog)
+				txRate := float64(txCount-lastTxCount) / (elapsed.Seconds() - lastLog.Seconds())
 				hours, minutes, seconds = parseTime(elapsed)
 				log.Infof("Elapsed time: %vh %vm %vs, at block %v (~ %v Tx/s, ~ %v Gas/s)\n", hours, minutes, seconds, tx.Block, txRate, g)
 				lastLog = elapsed
