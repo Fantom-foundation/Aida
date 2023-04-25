@@ -52,6 +52,7 @@ var RunVMApp = cli.App{
 		&utils.ValidateFlag,
 		&utils.VmImplementation,
 		&utils.AidaDBFlag,
+		&utils.LogLevel,
 	},
 	Description: `
 The run-vm command requires two arguments: <blockNumFirst> <blockNumLast>

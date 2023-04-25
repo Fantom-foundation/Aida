@@ -207,7 +207,7 @@ func Execute(op Operation, db state.StateDB, ctx *context.Replay) {
 }
 
 func PrintProfiling() {
-	stats.PrintProfiling()
+	stats.PrintProfiling(nil)
 }
 
 // Debug prints debug information of an operation.
