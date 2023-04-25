@@ -334,6 +334,8 @@ func replayForkTask(block uint64, tx int, recording *substate.Substate, taskPool
 func replayForkAction(ctx *cli.Context) error {
 	var err error
 
+	log := utils.NewLogger(ctx, "Substate Replay Fork")
+
 	if ctx.Args().Len() != 2 {
 		return fmt.Errorf("substate-cli replay-fork command requires exactly 2 arguments")
 	}
@@ -347,7 +349,7 @@ func replayForkAction(ctx *cli.Context) error {
 	if hardForkName, exist := HardForkName[hardFork]; !exist {
 		return fmt.Errorf("substate-cli replay-fork: invalid hard-fork block number %v", hardFork)
 	} else {
-		fmt.Printf("substate-cli replay-fork: hard-fork: block %v (%s)\n", hardFork, hardForkName)
+		log.Noticef("Hard-fork: block %v (%s)\n", hardFork, hardForkName)
 	}
 	switch hardFork {
 	case 1:
@@ -407,7 +409,7 @@ func replayForkAction(ctx *cli.Context) error {
 	for _, errstr := range errstrSlice {
 		stat := ReplayForkStatMap[errstr]
 		count := stat.Count
-		fmt.Printf("substate-cli replay-fork: %12v %s\n", count, errstr)
+		log.Infof("%12v %s\n", count, errstr)
 	}
 
 	return err
