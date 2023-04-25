@@ -20,14 +20,14 @@ const (
 // RunVM implements trace command for executing VM on a chosen storage system.
 func RunVM(ctx *cli.Context) error {
 	var (
-		elapsed, wsEndTime, lastLog time.Duration
-		hours, minutes, seconds     uint32
-		err                         error
-		start, beginning            time.Time
-		txCount                     int
-		lastTxCount                 int
-		gasCount                    = new(big.Int)
-		lastGasCount                = new(big.Int)
+		elapsed, lastLog        time.Duration
+		hours, minutes, seconds uint32
+		err                     error
+		start, beginning        time.Time
+		txCount                 int
+		lastTxCount             int
+		gasCount                = new(big.Int)
+		lastGasCount            = new(big.Int)
 		// Progress reporting (block based)
 		lastBlockProgressReportBlock    uint64
 		lastBlockProgressReportTime     time.Time
@@ -139,7 +139,6 @@ func RunVM(ctx *cli.Context) error {
 
 	if cfg.EnableProgress {
 		start = time.Now()
-		wsEndTime = time.Since(start)
 	}
 
 	log.Notice("Run VM\n")
@@ -208,9 +207,9 @@ func RunVM(ctx *cli.Context) error {
 			// Report progress on a regular time interval (wall time).
 			if elapsed-lastLog >= logFrequency {
 				d := new(big.Int).Sub(gasCount, lastGasCount)
-				g := new(big.Float).Quo(new(big.Float).SetInt(d), new(big.Float).SetFloat64(float64(elapsed-wsEndTime)))
+				g := new(big.Float).Quo(new(big.Float).SetInt(d), new(big.Float).SetFloat64(float64(elapsed-lastLog)))
 
-				txRate := float64(txCount-lastTxCount) / float64(elapsed-wsEndTime)
+				txRate := float64(txCount-lastTxCount) / float64(elapsed-lastLog)
 				elapsed = time.Since(start).Round(1 * time.Second)
 				hours, minutes, seconds = parseTime(elapsed)
 				log.Infof("Elapsed time: %vh %vm %vs, at block %v (~ %v Tx/s, ~ %v Gas/s)\n", hours, minutes, seconds, tx.Block, txRate, g)
