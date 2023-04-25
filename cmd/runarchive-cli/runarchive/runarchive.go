@@ -2,7 +2,6 @@ package runarchive
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"time"
@@ -23,6 +22,8 @@ func RunArchive(ctx *cli.Context) error {
 		txCount     int
 		lastTxCount int
 	)
+
+	log := utils.NewLogger(ctx, "Run-Archive")
 
 	// process general arguments
 	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
@@ -49,7 +50,7 @@ func RunArchive(ctx *cli.Context) error {
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
-	log.Printf("Running transactions on archive using %d workers ...\n", cfg.Workers)
+	log.Infof("Running transactions on archive using %d workers ...\n", cfg.Workers)
 	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
 	defer iter.Release()
 
@@ -103,7 +104,7 @@ func RunArchive(ctx *cli.Context) error {
 			sec = time.Since(start).Seconds()
 			if sec-lastSec >= 15 {
 				txRate := float64(txCount-lastTxCount) / (sec - lastSec)
-				log.Printf("Elapsed time: %.0f s, at block %d (~ %.1f Tx/s)\n", sec, lastBlock, txRate)
+				log.Infof("Elapsed time: %.0f s, at block %d (~ %.1f Tx/s)\n", sec, lastBlock, txRate)
 				lastSec = sec
 				lastTxCount = txCount
 			}
@@ -115,7 +116,7 @@ func RunArchive(ctx *cli.Context) error {
 	// print progress summary
 	if cfg.EnableProgress {
 		runTime := time.Since(start).Seconds()
-		log.Printf("Total elapsed time: %.3f s, processed %v blocks, %v transactions (~ %.1f Tx/s)\n", runTime, cfg.Last-cfg.First+1, txCount, float64(txCount)/(runTime))
+		log.Noticef("Total elapsed time: %.3f s, processed %v blocks, %v transactions (~ %.1f Tx/s)\n", runTime, cfg.Last-cfg.First+1, txCount, float64(txCount)/(runTime))
 	}
 
 	return err
