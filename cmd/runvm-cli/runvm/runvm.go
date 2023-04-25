@@ -222,6 +222,7 @@ func RunVM(ctx *cli.Context) error {
 				lastTxCount = txCount
 				lastGasCount.Set(gasCount)
 			default:
+				break
 			}
 
 			// Report progress on a regular block interval (simulation time).
