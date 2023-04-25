@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/flags"
+	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Aida/world-state/db/opera"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	"github.com/Fantom-foundation/Aida/world-state/types"
@@ -61,7 +62,7 @@ func dumpState(ctx *cli.Context) error {
 	dumpCtx, cancel := context.WithCancel(ctx.Context)
 	defer cancel()
 
-	log := Logger(ctx, "dump")
+	log := utils.NewLogger(ctx, "dump")
 
 	// blockNumber number to be stored in output db
 	// root is root hash of storage at given block number

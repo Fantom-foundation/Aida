@@ -234,7 +234,7 @@ func (e *ReplayExecutor) createInput(req *iterator.RequestWithResponse) *executo
 	}
 
 	// archive
-	wInput.archive = e.getStateArchive(wInput.blockID)
+	wInput.archive = e.getStateArchive(4564100)
 	if wInput.archive == nil {
 		return nil
 	}

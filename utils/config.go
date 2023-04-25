@@ -258,9 +258,15 @@ var (
 		Usage: "Depth of snapshot history",
 		Value: 100,
 	}
+	LogLevel = cli.StringFlag{
+		Name:    "log",
+		Aliases: []string{"l"},
+		Usage:   "Level of the logging of the app action (\"critical\", \"error\", \"warning\", \"notice\", \"info\", \"debug\"; default: INFO)",
+		Value:   "info",
+	}
 )
 
-// execution configuration for replay command.
+// Config represents execution configuration for replay command.
 type Config struct {
 	AppName     string
 	CommandName string
@@ -283,7 +289,7 @@ type Config struct {
 	DebugFrom           uint64         // the first block to print trace debug
 	DeletedAccountDir   string         // directory of deleted account database
 	EnableProgress      bool           // enable progress report flag
-	SyncPeriodLength    uint64         // length of an sync-period in number of blocks
+	SyncPeriodLength    uint64         // length of a sync-period in number of blocks
 	HasDeletedAccounts  bool           // true if deletedAccountDir is not empty; otherwise false
 	KeepStateDB         bool           // set to true if stateDB is kept after run
 	KeysNumber          int64          // number of keys to generate

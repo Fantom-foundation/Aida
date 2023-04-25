@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-var testTraceDir string = "trace-test"
+var testTraceDir = "trace-test"
 
 // TestMain runs global setup, test cases then global teardown
 func TestMain(m *testing.M) {
