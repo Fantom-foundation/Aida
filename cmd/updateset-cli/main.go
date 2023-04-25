@@ -5,34 +5,21 @@ import (
 	"os"
 
 	"github.com/Fantom-foundation/Aida/cmd/updateset-cli/updateset"
-	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 
 // GenUpdateSetApp data structure
 var GenUpdateSetApp = cli.App{
-	Action:    updateset.GenUpdateSet,
 	Name:      "Aida Generate Update-set Manager",
-	HelpName:  "gen-update-set",
+	HelpName:  "aida-updateset",
 	Usage:     "generate update-set from substate",
 	Copyright: "(c) 2022 Fantom Foundation",
 	ArgsUsage: "<blockNumLast> <interval>",
-	Flags: []cli.Flag{
-		&utils.ChainIDFlag,
-		&utils.DeletionDbFlag,
-		&substate.WorkersFlag,
-		&substate.SubstateDirFlag,
-		&utils.UpdateDbFlag,
-		&utils.ValidateFlag,
-		&utils.WorldStateFlag,
+	Flags:     []cli.Flag{},
+	Commands: []*cli.Command{
+		&updateset.GenUpdateSetCommand,
+		&updateset.UpdateSetStatsCommand,
 	},
-	Description: `
-The gen-update-set command requires two arguments: <blockNumLast> <interval>
-
-<blockNumLast> is last block of the inclusive range of blocks to generate update set.
-
-<interval> is the block interval of writing update set to updateDB.`,
 }
 
 // main implements gen-update-set cli.
