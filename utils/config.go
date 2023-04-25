@@ -106,7 +106,7 @@ var (
 		Usage: "enables profiling",
 	}
 	QuietFlag = cli.BoolFlag{
-		Name:  "quite",
+		Name:  "quiet",
 		Usage: "disable progress report",
 	}
 	RandomizePrimingFlag = cli.BoolFlag{
