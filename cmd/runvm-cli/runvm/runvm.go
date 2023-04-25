@@ -206,7 +206,7 @@ func RunVM(ctx *cli.Context) error {
 			elapsed = time.Since(start)
 
 			// Report progress on a regular time interval (wall time).
-			if start.Second()-int(lastLog.Seconds()) >= 15 {
+			if time.Since(start)-lastLog >= 15 {
 				d := new(big.Int).Sub(gasCount, lastGasCount)
 				g := new(big.Float).Quo(new(big.Float).SetInt(d), new(big.Float).SetFloat64(float64(elapsed-wsEndTime)))
 
