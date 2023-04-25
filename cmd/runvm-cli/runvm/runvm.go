@@ -48,7 +48,7 @@ func RunVM(ctx *cli.Context) error {
 		return argErr
 	}
 
-	log := utils.NewLogger(ctx, "DB Merger")
+	log := utils.NewLogger(ctx, "Run-VM")
 
 	// start CPU profiling if requested.
 	if err := utils.StartCPUProfile(cfg); err != nil {
@@ -75,7 +75,7 @@ func RunVM(ctx *cli.Context) error {
 		log.Warning("Skipping DB priming.\n")
 	} else {
 		// load the world state
-		log.Noticef("\nLoad and advance world state to block %v\n", cfg.First-1)
+		log.Noticef("Load and advance world state to block %v\n", cfg.First-1)
 		start = time.Now()
 		ws, err = utils.GenerateWorldStateFromUpdateDB(cfg, cfg.First-1)
 		if err != nil {
@@ -217,17 +217,11 @@ func RunVM(ctx *cli.Context) error {
 
 				g.Quo(currentGasCountFloat, calcTime)
 
-				log.Warning(txCount)
-				log.Warning(lastTxCount)
-				log.Warning(elapsed)
-				log.Warning(lastLog)
-				log.Warning(float64(elapsed - lastLog))
-
 				f, _ := g.Float64()
 
 				txRate := float64(txCount-lastTxCount) / (elapsed.Seconds() - lastLog.Seconds())
 				hours, minutes, seconds = parseTime(elapsed)
-				log.Infof("Elapsed time: %vh %vm %vs, at block %v (~ %.0f Tx/s, ~ %.6f Gas/s)\n", hours, minutes, seconds, tx.Block, txRate, f)
+				log.Infof("Elapsed time: %vh %vm %vs, at block %v (~ %.0f Tx/s, ~ %.0f Gas/s)\n", hours, minutes, seconds, tx.Block, txRate, f)
 				lastLog = elapsed
 				lastTxCount = txCount
 				lastGasCount.Set(totalGas)
@@ -341,10 +335,12 @@ func parseTime(elapsed time.Duration) (uint32, uint32, uint32) {
 
 	if seconds > 60 {
 		minutes = seconds / 60
+		seconds -= minutes * 60
 	}
 
 	if minutes > 60 {
 		hours = minutes / 60
+		minutes -= hours * 60
 	}
 
 	return hours, minutes, seconds
