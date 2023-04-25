@@ -42,6 +42,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/deckarep/golang-set v1.8.0 // indirect
 	github.com/edsrzf/mmap-go v1.0.0 // indirect
+	github.com/ethereum/evmc/v10 v10.0.0 // indirect
 	github.com/fogleman/gg v1.3.0 // indirect
 	github.com/gballet/go-libpcsclite v0.0.0-20191108122812-4678299bea08 // indirect
 	github.com/getsentry/sentry-go v0.14.0 // indirect
@@ -99,3 +100,8 @@ replace github.com/Fantom-foundation/go-opera => github.com/Fantom-foundation/go
 // The Carmen project is integrated as a git-submodule since we need to run extra
 // build steps when importing the project. This is handled in the Makefile.
 replace github.com/Fantom-foundation/Carmen/go => ./carmen/go
+
+// The Tosca project is also integrated as a git-submodule for the same reasons as
+// Carmen. Furthermore, the EVMC library, which is part of Tosca, needs to be used.
+replace github.com/Fantom-foundation/Tosca => ./tosca
+replace github.com/ethereum/evmc/v10 => ./tosca/third_party/evmc

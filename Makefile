@@ -18,7 +18,7 @@ BUILD_COMMIT := $(shell git show --format="%H" --no-patch)
 BUILD_COMMIT_TIME := $(shell git show --format="%cD" --no-patch)
 GOPROXY ?= "https://proxy.golang.org,direct"
 
-.PHONY: all clean help test
+.PHONY: all clean help test tosca
 
 all: aida-api-replay aida-worldstate aida-updateset aida-db aida-trace aida-runarchive aida-runvm aida-stochastic aida-substate
 
@@ -36,6 +36,9 @@ carmen/go/lib/libcarmen.so:
 	@cd carmen/go/lib ; \
 	./build_libcarmen.sh ;
 
+tosca:
+	@cd ./tosca ; \
+	make
 
 aida-worldstate:
 	@go build \
@@ -44,48 +47,48 @@ aida-worldstate:
 		-v \
 		./cmd/worldstate-cli
 
-aida-stochastic: carmen/go/lib/libcarmen.so
+aida-stochastic: carmen/go/lib/libcarmen.so tosca
 	GOPROXY=$(GOPROXY) \
 	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/go-opera-fvm \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-stochastic \
 	./cmd/stochastic-cli
 
-aida-trace: carmen/go/lib/libcarmen.so
+aida-trace: carmen/go/lib/libcarmen.so tosca
 	GOPROXY=$(GOPROXY) \
 	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/go-opera-fvm \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-trace \
 	./cmd/trace-cli
 
-aida-runarchive: carmen/go/lib/libcarmen.so
+aida-runarchive: carmen/go/lib/libcarmen.so tosca
 	GOPROXY=$(GOPROXY) \
 	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/go-opera-fvm \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-runarchive \
 	./cmd/runarchive-cli
 
-aida-runvm: carmen/go/lib/libcarmen.so
+aida-runvm: carmen/go/lib/libcarmen.so tosca
 	GOPROXY=$(GOPROXY) \
 	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/go-opera-fvm \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-runvm \
 	./cmd/runvm-cli
 
-aida-substate: carmen/go/lib/libcarmen.so
+aida-substate: carmen/go/lib/libcarmen.so tosca
 	GOPROXY=$(GOPROXY) \
 	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/go-opera-fvm \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-substate \
 	./cmd/substate-cli
 
-aida-updateset: carmen/go/lib/libcarmen.so
+aida-updateset: carmen/go/lib/libcarmen.so tosca
 	GOPROXY=$(GOPROXY) \
 	go build -ldflags "-s -w" \
 	-o $(GO_BIN)/aida-updateset \
 	./cmd/updateset-cli
 
-aida-db: carmen/go/lib/libcarmen.so
+aida-db: carmen/go/lib/libcarmen.so tosca
 	GOPROXY=$(GOPROXY) \
 	go build -ldflags "-s -w" \
 	-o $(GO_BIN)/aida-db \
@@ -99,7 +102,9 @@ clean:
 	rm -f lib/libcarmen.so ; \
 	cd ../cpp ; \
 	bazel clean ; \
-	cd ../.. ; \
+	cd ../../tosca ; \
+	make clean ; \
+	cd .. ; \
 	rm -fr ./build/*
 
 help: Makefile
