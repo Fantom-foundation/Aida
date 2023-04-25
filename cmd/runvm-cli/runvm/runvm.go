@@ -137,6 +137,7 @@ func RunVM(ctx *cli.Context) error {
 	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
 
 	defer iter.Release()
+
 	for iter.Next() {
 		tx := iter.Value()
 		// initiate first sync-period and block.
@@ -199,7 +200,7 @@ func RunVM(ctx *cli.Context) error {
 
 				txRate := float64(txCount-lastTxCount) / (sec - lastSec)
 
-				log.Infof("run-vm: Elapsed time: %.0f s, at block %v (~ %.1f Tx/s, ~ %.1f Gas/s)\n", sec, tx.Block, txRate, g)
+				log.Infof("run-vm: Elapsed time: %v s, at block %v (~ %v Tx/s, ~ %v Gas/s)\n", time.Since(start), tx.Block, txRate, g)
 				lastSec = sec
 				lastTxCount = txCount
 				lastGasCount.Set(gasCount)
