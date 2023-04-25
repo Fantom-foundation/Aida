@@ -10,6 +10,7 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
+	"gonum.org/v1/gonum/floats"
 )
 
 const (
@@ -28,6 +29,9 @@ func RunVM(ctx *cli.Context) error {
 		lastTxCount             int
 		gasCount                = new(big.Int)
 		lastGasCount            = new(big.Int)
+		bigGas                  = new(big.Float)
+		bigElapsed              = new(big.Float)
+		gasPerSecond            = new(big.Float)
 		// Progress reporting (block based)
 		lastBlockProgressReportBlock    uint64
 		lastBlockProgressReportTime     time.Time
@@ -198,7 +202,7 @@ func RunVM(ctx *cli.Context) error {
 		}
 		db.EndTransaction()
 		txCount++
-		gasCount = new(big.Int).Add(gasCount, new(big.Int).SetUint64(tx.Substate.Result.GasUsed))
+		gasCount.Add(gasCount, new(big.Int).SetUint64(tx.Substate.Result.GasUsed))
 
 		if cfg.EnableProgress {
 			// report progress
@@ -206,14 +210,10 @@ func RunVM(ctx *cli.Context) error {
 
 			// Report progress on a regular time interval (wall time).
 			if elapsed-lastLog >= logFrequency {
-				d := new(big.Int).Sub(gasCount, lastGasCount)
-				g := new(big.Float).Quo(new(big.Float).SetInt(d), new(big.Float).SetFloat64(elapsed.Seconds()-lastLog.Seconds()))
+				gasPerSecond.Quo(bigGas.SetUint64(tx.Substate.Result.GasUsed), bigElapsed.SetFloat64(elapsed.Seconds()-lastLog.Seconds()))
 
-				log.Warning(txCount)
-				log.Warning(lastTxCount)
-				log.Warning(elapsed)
-				log.Warning(lastLog)
-				log.Warning(float64(elapsed - lastLog))
+				g, _ := gasPerSecond.Float64()
+				g = floats.Round(g, 6)
 
 				txRate := float64(txCount-lastTxCount) / (elapsed.Seconds() - lastLog.Seconds())
 				hours, minutes, seconds = parseTime(elapsed)
