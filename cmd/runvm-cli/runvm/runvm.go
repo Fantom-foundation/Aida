@@ -10,6 +10,7 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
+	"gonum.org/v1/gonum/floats"
 )
 
 const (
@@ -223,9 +224,11 @@ func RunVM(ctx *cli.Context) error {
 				log.Warning(lastLog)
 				log.Warning(float64(elapsed - lastLog))
 
+				f, _ := g.Float64()
+
 				txRate := float64(txCount-lastTxCount) / (elapsed.Seconds() - lastLog.Seconds())
 				hours, minutes, seconds = parseTime(elapsed)
-				log.Infof("Elapsed time: %vh %vm %vs, at block %v (~ %v Tx/s, ~ %v Gas/s)\n", hours, minutes, seconds, tx.Block, txRate, g)
+				log.Infof("Elapsed time: %vh %vm %vs, at block %v (~ %v Tx/s, ~ %v Gas/s)\n", hours, minutes, seconds, tx.Block, txRate, floats.Round(f, 6))
 				lastLog = elapsed
 				lastTxCount = txCount
 				lastGasCount.Set(totalGas)
