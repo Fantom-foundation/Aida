@@ -13,7 +13,7 @@ import (
 
 var (
 	testTraceFile = "trace-test/trace.dat"
-	testTraceDir = "trace-test"
+	testTraceDir  = "trace-test"
 )
 
 // TestMain runs global setup, test cases then global teardown
