@@ -11,6 +11,7 @@ import (
 	"time"
 )
 
+var testTraceFile string = "trace-test/trace.dat"
 var testTraceDir string = "trace-test"
 
 // TestMain runs global setup, test cases then global teardown

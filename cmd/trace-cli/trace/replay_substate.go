@@ -22,7 +22,7 @@ var TraceReplaySubstateCommand = cli.Command{
 	Flags: []cli.Flag{
 		&utils.ChainIDFlag,
 		&utils.CpuProfileFlag,
-		&utils.DisableProgressFlag,
+		&utils.QuietFlag,
 		&utils.RandomizePrimingFlag,
 		&utils.PrimeSeedFlag,
 		&utils.PrimeThresholdFlag,
@@ -34,12 +34,12 @@ var TraceReplaySubstateCommand = cli.Command{
 		&utils.ShadowDbVariantFlag,
 		&substate.SubstateDirFlag,
 		&substate.WorkersFlag,
-		&utils.TraceDirectoryFlag,
+		&utils.TraceFileFlag,
 		&utils.TraceDebugFlag,
 		&utils.DebugFromFlag,
 		&utils.ValidateFlag,
 		&utils.ValidateWorldStateFlag,
-		&utils.AidaDBFlag,
+		&utils.AidaDbFlag,
 	},
 	Description: `
 The trace replay-substate command requires two arguments:
@@ -78,7 +78,7 @@ func traceReplaySubstateTask(cfg *utils.Config) error {
 		isFirstBlock = true
 		debug        bool // if set enable trace debug
 	)
-	if cfg.EnableProgress {
+	if !cfg.Quiet {
 		start = time.Now()
 		sec = time.Since(start).Seconds()
 		lastSec = time.Since(start).Seconds()
@@ -128,7 +128,7 @@ func traceReplaySubstateTask(cfg *utils.Config) error {
 				return fmt.Errorf("Validation failed. Block %v Tx %v\n\t%v\n", tx.Block, tx.Transaction, err)
 			}
 		}
-		if cfg.EnableProgress {
+		if !cfg.Quiet {
 			// report progress
 			sec = time.Since(start).Seconds()
 			diff := sec - lastSec
@@ -163,7 +163,7 @@ func traceReplaySubstateTask(cfg *utils.Config) error {
 		fmt.Printf("Failed to close database: %v", err)
 	}
 
-	if cfg.EnableProgress {
+	if !cfg.Quiet {
 		fmt.Printf("trace replay-substate: Closing DB took %v\n", time.Since(start))
 		fmt.Printf("trace replay-substate: Final disk usage: %v MiB\n", float32(utils.GetDirectorySize(stateDirectory))/float32(1024*1024))
 		fmt.Printf("trace replay-substate: Total elapsed time: %.3f s, processed %v blocks (~%.1f Tx/s)\n", sec, cfg.Last-cfg.First+1, float64(txCount)/sec)
@@ -180,7 +180,7 @@ func traceReplaySubstateAction(ctx *cli.Context) error {
 		return err
 	}
 	// run storage driver
-	substate.SetSubstateDirectory(cfg.SubstateDBDir)
+	substate.SetSubstateDirectory(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 

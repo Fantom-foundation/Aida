@@ -269,7 +269,7 @@ func TestStatedb_DeleteDestroyedAccountsFromWorldState(t *testing.T) {
 			// Generating randomized world state
 			ws, addrList := makeWorldState(t)
 			// Init directory for destroyed accounts DB
-			deletedAccountsDir := t.TempDir()
+			deletionDb := t.TempDir()
 			// Pick two account which will represent destroyed ones
 			destroyedAccounts := []common.Address{
 				addrList[0],
@@ -278,12 +278,12 @@ func TestStatedb_DeleteDestroyedAccountsFromWorldState(t *testing.T) {
 
 			// Update config to enable removal of destroyed accounts
 			cfg.HasDeletedAccounts = true
-			cfg.DeletedAccountDir = deletedAccountsDir
+			cfg.DeletionDb = deletionDb
 
 			// Initializing backend DB for storing destroyed accounts
-			daBackend, err := rawdb.NewLevelDBDatabase(deletedAccountsDir, 1024, 100, "destroyed_accounts", false)
+			daBackend, err := rawdb.NewLevelDBDatabase(deletionDb, 1024, 100, "destroyed_accounts", false)
 			if err != nil {
-				t.Fatalf("failed to create backend DB: %s; %v", deletedAccountsDir, err)
+				t.Fatalf("failed to create backend DB: %s; %v", deletionDb, err)
 			}
 
 			// Creating new destroyed accounts DB
@@ -332,7 +332,7 @@ func TestStatedb_DeleteDestroyedAccountsFromStateDB(t *testing.T) {
 
 			// Update config to enable removal of destroyed accounts
 			cfg.HasDeletedAccounts = true
-			cfg.DeletedAccountDir = deletedAccountsDir
+			cfg.DeletionDb = deletedAccountsDir
 
 			// Initializing backend DB for storing destroyed accounts
 			daBackend, err := rawdb.NewLevelDBDatabase(deletedAccountsDir, 1024, 100, "destroyed_accounts", false)
@@ -495,8 +495,8 @@ func TestStatedb_PrepareStateDB(t *testing.T) {
 			cfg := makeTestConfig(tc)
 			// Update config for state DB preparation by providing additional information
 			cfg.ShadowImpl = ""
-			cfg.StateDbTempDir = t.TempDir()
-			cfg.StateDbSrcDir = t.TempDir()
+			cfg.StateDbTemp = t.TempDir()
+			cfg.StateDbSrc = t.TempDir()
 			cfg.First = 2
 
 			// Create state DB info of existing state DB
@@ -519,7 +519,7 @@ func TestStatedb_PrepareStateDB(t *testing.T) {
 			}
 
 			// Fill the json file with the info
-			err = os.WriteFile(filepath.Join(cfg.StateDbSrcDir, DbInfoName), dbInfoJson, 0644)
+			err = os.WriteFile(filepath.Join(cfg.StateDbSrc, DbInfoName), dbInfoJson, 0644)
 			if err != nil {
 				t.Fatalf("failed to write into DB info json file: %v", err)
 			}
@@ -530,7 +530,7 @@ func TestStatedb_PrepareStateDB(t *testing.T) {
 				if err != nil {
 
 				}
-			}(cfg.StateDbSrcDir)
+			}(cfg.StateDbSrc)
 
 			// Call for state DB preparation and subsequent check if it finished successfully
 			sDB, _, _, err := PrepareStateDB(cfg)
@@ -556,8 +556,8 @@ func TestStatedb_PrepareStateDBEmpty(t *testing.T) {
 	cfg := makeTestConfig(tc)
 	// Update config for state DB preparation by providing additional information
 	cfg.ShadowImpl = ""
-	cfg.StateDbTempDir = t.TempDir()
-	cfg.StateDbSrcDir = t.TempDir()
+	cfg.StateDbTemp = t.TempDir()
+	cfg.StateDbSrc = t.TempDir()
 	cfg.First = 2
 
 	// Call for state DB preparation and subsequent check if it finished successfully
@@ -583,8 +583,8 @@ func TestStatedb_PrepareStateDBInvalid(t *testing.T) {
 	cfg := makeTestConfig(tc)
 	// Update config for state DB preparation by providing additional information
 	cfg.ShadowImpl = ""
-	cfg.StateDbTempDir = t.TempDir()
-	cfg.StateDbSrcDir = t.TempDir()
+	cfg.StateDbTemp = t.TempDir()
+	cfg.StateDbSrc = t.TempDir()
 	cfg.First = 2
 
 	// Generate invalid state DB info file data
@@ -604,7 +604,7 @@ func TestStatedb_PrepareStateDBInvalid(t *testing.T) {
 			}
 
 			// Fill the json file with the info
-			err = os.WriteFile(filepath.Join(cfg.StateDbSrcDir, DbInfoName), dbInfoJson, 0644)
+			err = os.WriteFile(filepath.Join(cfg.StateDbSrc, DbInfoName), dbInfoJson, 0644)
 			if err != nil {
 				t.Fatalf("failed to write into DB info json file: %v", err)
 			}
@@ -618,7 +618,7 @@ func TestStatedb_PrepareStateDBInvalid(t *testing.T) {
 	}
 
 	// remove files after test ends
-	err := os.RemoveAll(cfg.StateDbSrcDir)
+	err := os.RemoveAll(cfg.StateDbSrc)
 	if err != nil {
 		t.Fatalf("failed to remove state DB innfo file: %v", err)
 	}
