@@ -86,7 +86,7 @@ type ProgressTracker struct {
 }
 
 // NewProgressTracker creates a new progress tracer
-func NewProgressTracker(target int) *ProgressTracker {
+func NewProgressTracker(target int, log *logging.Logger) *ProgressTracker {
 	now := time.Now()
 	return &ProgressTracker{
 		step:   0,
@@ -94,6 +94,7 @@ func NewProgressTracker(target int) *ProgressTracker {
 		start:  now,
 		last:   now,
 		rate:   0.0,
+		log:    log,
 	}
 }
 
@@ -123,7 +124,7 @@ func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config, log 
 	}
 	log.Infof("Loading %d accounts with %d values ...", len(ws), numValues)
 
-	pt := NewProgressTracker(numValues)
+	pt := NewProgressTracker(numValues, log)
 	if cfg.PrimeRandom {
 		//if 0, commit once after priming all accounts
 		if cfg.PrimeThreshold == 0 {

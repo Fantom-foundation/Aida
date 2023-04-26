@@ -237,7 +237,7 @@ func (ss *stochasticState) prime() {
 	numInitialAccounts := ss.contracts.NumElem() + 1
 	ss.log.Notice("Start priming...")
 	ss.log.Noticef("\tinitializing %v accounts\n", numInitialAccounts)
-	pt := utils.NewProgressTracker(int(numInitialAccounts))
+	pt := utils.NewProgressTracker(int(numInitialAccounts), ss.log)
 	db := ss.db
 	db.BeginSyncPeriod(0)
 	db.BeginBlock(0)

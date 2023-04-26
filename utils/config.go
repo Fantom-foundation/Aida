@@ -460,7 +460,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	}
 
 	if _, err := os.Stat(cfg.AidaDb); !os.IsNotExist(err) {
-		log.Noticef("Found merged DB: %s redirecting UpdateDB, DeletedAccountDB, SubstateDB paths to it", cfg.DBDir)
+		log.Noticef("Found merged Aida-DB: %s redirecting UpdateDB, DeletedAccountDB, SubstateDB paths to it", cfg.AidaDb)
 		cfg.UpdateDb = cfg.AidaDb
 		cfg.DeletionDb = cfg.AidaDb
 		cfg.SubstateDb = cfg.AidaDb
