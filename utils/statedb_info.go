@@ -16,7 +16,7 @@ import (
 
 const DbInfoName = "statedb_info.json"
 
-// StateDB meta information
+// StateDbInfo StateDB meta information
 type StateDbInfo struct {
 	Impl           string      `json:"dbImpl"`         // type of db engine
 	Variant        string      `json:"dbVariant"`      // type of db variant
@@ -134,7 +134,7 @@ func RenameTempStateDBDirectory(cfg *Config, oldDirectory string, block uint64) 
 	} else {
 		newDirectory = fmt.Sprintf("state_db_%v_%v", cfg.DbImpl, block)
 	}
-	newDirectory = filepath.Join(cfg.StateDbTempDir, newDirectory)
+	newDirectory = filepath.Join(cfg.StateDbTemp, newDirectory)
 	if err := os.Rename(oldDirectory, newDirectory); err != nil {
 		log.Printf("WARNING: failed to rename state directory. %v\n", err)
 		newDirectory = oldDirectory

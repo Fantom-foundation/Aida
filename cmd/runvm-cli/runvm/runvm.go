@@ -57,7 +57,7 @@ func RunVM(ctx *cli.Context) error {
 	defer utils.StopCPUProfile(cfg)
 
 	// iterate through subsets in sequence
-	substate.SetSubstateDirectory(cfg.SubstateDBDir)
+	substate.SetSubstateDirectory(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
@@ -65,7 +65,7 @@ func RunVM(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	if !cfg.KeepStateDB {
+	if !cfg.KeepStateDb {
 		log.Warningf("StateDB at %v will be removed at the end of this run.\n", stateDirectory)
 		defer os.RemoveAll(stateDirectory)
 	}
@@ -142,7 +142,7 @@ func RunVM(ctx *cli.Context) error {
 	// Release world state to free memory.
 	ws = substate.SubstateAlloc{}
 
-	if cfg.EnableProgress {
+	if !cfg.Quiet {
 		start = time.Now()
 	}
 
@@ -205,7 +205,7 @@ func RunVM(ctx *cli.Context) error {
 		txCount++
 		totalGas.Add(totalGas, currentGas.SetUint64(tx.Substate.Result.GasUsed))
 
-		if cfg.EnableProgress {
+		if !cfg.Quiet {
 			// report progress
 			elapsed = time.Since(start)
 
@@ -292,14 +292,14 @@ func RunVM(ctx *cli.Context) error {
 		fmt.Println("============================================")
 	}
 
-	if cfg.KeepStateDB && !isFirstBlock {
+	if cfg.KeepStateDb && !isFirstBlock {
 		rootHash, _ := db.Commit(true)
 		if err := utils.WriteStateDbInfo(stateDirectory, cfg, curBlock, rootHash); err != nil {
 			log.Error(err)
 		}
 		//rename directory after closing db.
 		defer utils.RenameTempStateDBDirectory(cfg, stateDirectory, curBlock)
-	} else if cfg.KeepStateDB && isFirstBlock {
+	} else if cfg.KeepStateDb && isFirstBlock {
 		// no blocks were processed.
 		log.Warning("No blocks were processed. StateDB is not saved.\n")
 		defer os.RemoveAll(stateDirectory)
@@ -313,7 +313,7 @@ func RunVM(ctx *cli.Context) error {
 	}
 
 	// print progress summary
-	if cfg.EnableProgress {
+	if !cfg.Quiet {
 		g := new(big.Float).Quo(new(big.Float).SetInt(totalGas), new(big.Float).SetFloat64(runTime))
 
 		hours, minutes, seconds = utils.ParseTime(time.Since(beginning))

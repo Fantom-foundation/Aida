@@ -23,14 +23,14 @@ var TraceRecordCommand = cli.Command{
 	Flags: []cli.Flag{
 		&utils.CpuProfileFlag,
 		&utils.SyncPeriodLengthFlag,
-		&utils.DisableProgressFlag,
+		&utils.QuietFlag,
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
 		&utils.ChainIDFlag,
-		&utils.TraceDirectoryFlag,
+		&utils.TraceFileFlag,
 		&utils.TraceDebugFlag,
 		&utils.DebugFromFlag,
-		&utils.AidaDBFlag,
+		&utils.AidaDbFlag,
 	},
 	Description: `
 The trace record command requires two arguments:
@@ -63,7 +63,7 @@ func traceRecordAction(ctx *cli.Context) error {
 	defer rCtx.Close()
 
 	// open SubstateDB and create an substate iterator
-	substate.SetSubstateDirectory(cfg.SubstateDBDir)
+	substate.SetSubstateDirectory(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
@@ -75,7 +75,7 @@ func traceRecordAction(ctx *cli.Context) error {
 		sec     float64
 		lastSec float64
 	)
-	if cfg.EnableProgress {
+	if !cfg.Quiet {
 		start = time.Now()
 		sec = time.Since(start).Seconds()
 		lastSec = time.Since(start).Seconds()
@@ -116,7 +116,7 @@ func traceRecordAction(ctx *cli.Context) error {
 			return fmt.Errorf("Failed to process block %v tx %v. %v", tx.Block, tx.Transaction, err)
 		}
 		operation.WriteOp(rCtx, operation.NewEndTransaction())
-		if cfg.EnableProgress {
+		if !cfg.Quiet {
 			// report progress
 			sec = time.Since(start).Seconds()
 			if sec-lastSec >= 15 {
@@ -132,7 +132,7 @@ func traceRecordAction(ctx *cli.Context) error {
 	}
 	operation.WriteOp(rCtx, operation.NewEndSyncPeriod())
 
-	if cfg.EnableProgress {
+	if cfg.Quiet {
 		hours, minutes, seconds := utils.ParseTime(time.Since(start))
 		log.Noticef("Total elapsed time: %vh %vm %vs, processed %v blocks\n", hours, minutes, seconds, cfg.Last-cfg.First+1)
 	}

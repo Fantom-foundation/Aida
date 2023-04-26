@@ -61,8 +61,8 @@ var (
 	}
 
 	// TargetBlock represents the ID of target block to be reached by state evolve process or in dump state
-	TargetBlock = cli.IntFlag{
-		Name:    "target",
+	TargetBlock = cli.Uint64Flag{
+		Name:    "block",
 		Aliases: []string{"block", "blk"},
 		Usage:   "target block ID",
 		Value:   0,

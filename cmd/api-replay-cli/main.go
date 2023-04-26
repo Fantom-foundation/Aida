@@ -23,7 +23,7 @@ func main() {
 			&flags.WorkersFlag,
 
 			// AidaDB
-			&utils.AidaDBFlag,
+			&utils.AidaDbFlag,
 
 			// VM
 			&utils.VmImplementation,
@@ -39,8 +39,8 @@ func main() {
 			// StateDB
 			&utils.StateDbImplementationFlag,
 			&utils.StateDbVariantFlag,
-			&utils.StateDbSrcDirFlag,
-			&utils.StateDbTempDirFlag,
+			&utils.StateDbSrcFlag,
+			&utils.StateDbTempFlag,
 			&utils.StateDbLoggingFlag,
 
 			// ArchiveDB

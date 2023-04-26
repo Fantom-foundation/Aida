@@ -185,7 +185,7 @@ func DeleteDestroyedAccountsFromWorldState(ws substate.SubstateAlloc, cfg *Confi
 		log.Warning("Database not provided. Ignore deleted accounts")
 		return nil
 	}
-	src := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletedAccountDir)
+	src := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
 	defer src.Close()
 	list, err := src.GetAccountsDestroyedInRange(0, target)
 	if err != nil {
@@ -208,7 +208,7 @@ func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *Config, target ui
 		log.Warning("Database not provided. Ignore deleted accounts.")
 		return nil
 	}
-	src := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletedAccountDir)
+	src := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
 	defer src.Close()
 	list, err := src.GetAccountsDestroyedInRange(0, target)
 	if err != nil {
@@ -253,19 +253,19 @@ func PrepareStateDB(cfg *Config) (db state.StateDB, workingDirectory string, loa
 	loadedExistingDB = false
 
 	//create a temporary working directory
-	workingDirectory, err = ioutil.TempDir(cfg.StateDbTempDir, "state_db_tmp_*")
+	workingDirectory, err = ioutil.TempDir(cfg.StateDbTemp, "state_db_tmp_*")
 	if err != nil {
 		err = fmt.Errorf("Failed to create a temporary directory. %v", err)
 		return
 	}
 
 	// check if statedb_info.json files exist
-	dbInfoFile := filepath.Join(cfg.StateDbSrcDir, DbInfoName)
+	dbInfoFile := filepath.Join(cfg.StateDbSrc, DbInfoName)
 	if _, err = os.Stat(dbInfoFile); err == nil {
 		exists = true
 	} else if errors.Is(err, os.ErrNotExist) {
 		exists = false
-		if cfg.StateDbSrcDir != "" {
+		if cfg.StateDbSrc != "" {
 			log.Warningf("File %v does not exist. Create an empty StateDB.", dbInfoFile)
 		}
 	} else {
@@ -296,7 +296,7 @@ func PrepareStateDB(cfg *Config) (db state.StateDB, workingDirectory string, loa
 		}
 
 		// make a copy of stateDB directory
-		copyDir(cfg.StateDbSrcDir, workingDirectory)
+		copyDir(cfg.StateDbSrc, workingDirectory)
 		loadedExistingDB = true
 
 		// if this is an existing statedb, open

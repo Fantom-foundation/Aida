@@ -46,7 +46,7 @@ func RunArchive(ctx *cli.Context) error {
 	defer db.Close()
 
 	// open substate DB
-	substate.SetSubstateDirectory(cfg.SubstateDBDir)
+	substate.SetSubstateDirectory(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
@@ -54,7 +54,7 @@ func RunArchive(ctx *cli.Context) error {
 	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
 	defer iter.Release()
 
-	if cfg.EnableProgress {
+	if !cfg.Quiet {
 		start = time.Now()
 		lastSec = time.Since(start).Seconds()
 	}
@@ -89,12 +89,12 @@ func RunArchive(ctx *cli.Context) error {
 				abort = nil
 			}
 		case <-finishedTransaction:
-			if !cfg.EnableProgress {
+			if cfg.Quiet {
 				continue
 			}
 			txCount++
 		case block := <-finishedBlock:
-			if !cfg.EnableProgress {
+			if cfg.Quiet {
 				continue
 			}
 			if block > lastBlock {
@@ -114,7 +114,7 @@ func RunArchive(ctx *cli.Context) error {
 	}
 
 	// print progress summary
-	if cfg.EnableProgress {
+	if !cfg.Quiet {
 		runTime := time.Since(start).Seconds()
 		log.Noticef("Total elapsed time: %.3f s, processed %v blocks, %v transactions (~ %.1f Tx/s)\n", runTime, cfg.Last-cfg.First+1, txCount, float64(txCount)/(runTime))
 	}
@@ -125,14 +125,14 @@ func RunArchive(ctx *cli.Context) error {
 func openStateDB(cfg *utils.Config) (state.StateDB, error) {
 	var err error
 
-	if cfg.StateDbSrcDir == "" {
+	if cfg.StateDbSrc == "" {
 		return nil, fmt.Errorf("missing --db-src-dir parameter")
 	}
 
 	// check if statedb_info.json files exist
-	dbInfoFile := filepath.Join(cfg.StateDbSrcDir, utils.DbInfoName)
+	dbInfoFile := filepath.Join(cfg.StateDbSrc, utils.DbInfoName)
 	if _, err = os.Stat(dbInfoFile); err != nil {
-		return nil, fmt.Errorf("%s does not appear to contain a state DB", cfg.StateDbSrcDir)
+		return nil, fmt.Errorf("%s does not appear to contain a state DB", cfg.StateDbSrc)
 	}
 
 	dbinfo, ferr := utils.ReadStateDbInfo(dbInfoFile)
@@ -157,7 +157,7 @@ func openStateDB(cfg *utils.Config) (state.StateDB, error) {
 	}
 
 	cfg.ArchiveMode = true
-	return utils.MakeStateDB(cfg.StateDbSrcDir, cfg, dbinfo.RootHash, true)
+	return utils.MakeStateDB(cfg.StateDbSrc, cfg, dbinfo.RootHash, true)
 }
 
 func groupTransactions(iter substate.SubstateIterator, blocks chan<- []*substate.Transaction, abort <-chan bool, cfg *utils.Config) {
