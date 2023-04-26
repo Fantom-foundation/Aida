@@ -194,7 +194,7 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, 
 	}
 
 	// print progress summary
-	if cfg.Quiet {
+	if !cfg.Quiet {
 		log.Noticef("Total elapsed time: %.3f s, processed %v blocks", sec, block)
 	}
 	if errCount > 0 {

@@ -110,7 +110,7 @@ func (pt *ProgressTracker) PrintProgress() {
 		progress := float32(pt.step) / float32(pt.target)
 		time := int(now.Sub(pt.start).Seconds())
 		eta := int(float64(pt.target-pt.step) / pt.rate)
-		pt.log.Noticef("Loading state ... %8.1f slots/s, %5.1f%%, time: %d:%02d, ETA: %d:%02d", currentRate, progress*100, time/60, time%60, eta/60, eta%60)
+		pt.log.Infof("Loading state ... %8.1f slots/s, %5.1f%%, time: %d:%02d, ETA: %d:%02d", currentRate, progress*100, time/60, time%60, eta/60, eta%60)
 	}
 }
 

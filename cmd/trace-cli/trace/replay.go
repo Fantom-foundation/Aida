@@ -236,7 +236,7 @@ func traceReplayTask(cfg *utils.Config, log *logging.Logger) error {
 	}
 
 	// print progress summary
-	if cfg.Quiet {
+	if !cfg.Quiet {
 		log.Noticef("Total elapsed time: %.3f s, processed %v blocks\n", sec, cfg.Last-cfg.First+1)
 		log.Noticef("Closing DB took %v\n", time.Since(start))
 		log.Noticef("Final disk usage: %v MiB\n", float32(utils.GetDirectorySize(stateDirectory))/float32(1024*1024))

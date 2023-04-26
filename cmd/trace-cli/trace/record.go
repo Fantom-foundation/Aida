@@ -132,7 +132,7 @@ func traceRecordAction(ctx *cli.Context) error {
 	}
 	operation.WriteOp(rCtx, operation.NewEndSyncPeriod())
 
-	if cfg.Quiet {
+	if !cfg.Quiet {
 		hours, minutes, seconds := utils.ParseTime(time.Since(start))
 		log.Noticef("Total elapsed time: %vh %vm %vs, processed %v blocks\n", hours, minutes, seconds, cfg.Last-cfg.First+1)
 	}
