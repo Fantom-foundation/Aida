@@ -31,15 +31,15 @@ func GenUpdateSet(ctx *cli.Context) error {
 	if ferr != nil {
 		return ferr
 	}
-	worldStateDir := ctx.String(utils.WorldStateDirFlag.Name)
+	worldStateDir := ctx.String(utils.WorldStateFlag.Name)
 
 	// initialize updateDB
-	db := substate.OpenUpdateDB(cfg.UpdateDBDir)
+	db := substate.OpenUpdateDB(cfg.UpdateDb)
 	defer db.Close()
 	update := make(substate.SubstateAlloc)
 
 	// iterate through subsets in sequence
-	substate.SetSubstateDirectory(cfg.SubstateDBDir)
+	substate.SetSubstateDirectory(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
@@ -56,7 +56,7 @@ func GenUpdateSet(ctx *cli.Context) error {
 
 	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
 	defer iter.Release()
-	deletedAccountDB := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletedAccountDir)
+	deletedAccountDB := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
 	defer deletedAccountDB.Close()
 
 	txCount := uint64(0)

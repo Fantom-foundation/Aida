@@ -19,13 +19,13 @@ var TraceCompareLogCommand = cli.Command{
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		&utils.ChainIDFlag,
-		&utils.DisableProgressFlag,
+		&utils.QuietFlag,
 		&utils.StateDbImplementationFlag,
 		&substate.SubstateDirFlag,
 		&substate.WorkersFlag,
 		&utils.TraceDebugFlag,
-		&utils.TraceDirectoryFlag,
-		&utils.AidaDBFlag,
+		&utils.TraceFileFlag,
+		&utils.AidaDbFlag,
 	},
 	Description: `
 The trace compare-log command requires two arguments:
@@ -93,8 +93,8 @@ func traceCompareLogAction(ctx *cli.Context) error {
 		}
 	}
 	// disable progress log
-	if !ctx.IsSet(utils.DisableProgressFlag.Name) {
-		ctxErr := ctx.Set(utils.DisableProgressFlag.Name, "true")
+	if !ctx.IsSet(utils.QuietFlag.Name) {
+		ctxErr := ctx.Set(utils.QuietFlag.Name, "true")
 		if ctxErr != nil {
 			return ctxErr
 		}

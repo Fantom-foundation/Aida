@@ -20,12 +20,12 @@ var GenUpdateSetApp = cli.App{
 	ArgsUsage: "<blockNumLast> <interval>",
 	Flags: []cli.Flag{
 		&utils.ChainIDFlag,
-		&utils.DeletionDirFlag,
+		&utils.DeletionDbFlag,
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
-		&utils.UpdateDBDirFlag,
+		&utils.UpdateDbFlag,
 		&utils.ValidateFlag,
-		&utils.WorldStateDirFlag,
+		&utils.WorldStateFlag,
 	},
 	Description: `
 The gen-update-set command requires two arguments: <blockNumLast> <interval>
