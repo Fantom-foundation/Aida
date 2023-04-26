@@ -53,17 +53,17 @@ func newController(ctx *cli.Context, cfg *utils.Config, db state.StateDB, iter *
 	counterWg := new(sync.WaitGroup)
 
 	// create instances
-	reader := newReader(iter, utils.NewLogger(ctx, "Reader"), readerClosed, readerWg)
+	reader := newReader(iter, utils.NewLogger(ctx.String(utils.LogLevel.Name), "Reader"), readerClosed, readerWg)
 
 	executors, output, counterInput := createExecutors(cfg.First, cfg.Last, db, ctx, utils.GetChainConfig(cfg.ChainID), reader.output, cfg.VmImpl, executorsClosed, executorsWg)
 
-	counter := newCounter(counterClosed, counterInput, utils.NewLogger(ctx, "Counter"), counterWg)
+	counter := newCounter(counterClosed, counterInput, utils.NewLogger(ctx.String(utils.LogLevel.Name), "Counter"), counterWg)
 
 	comparators, failure := createComparators(ctx, output, comparatorsClosed, comparatorsWg)
 
 	return &Controller{
 		failure:           failure,
-		log:               utils.NewLogger(ctx, "Controller"),
+		log:               utils.NewLogger(ctx.String(utils.LogLevel.Name), "Controller"),
 		ctx:               ctx,
 		Reader:            reader,
 		Executors:         executors,
@@ -214,7 +214,7 @@ func createExecutors(first, last uint64, db state.StateDB, ctx *cli.Context, cha
 	e := make([]*ReplayExecutor, executors)
 	counterInput := make(chan requestLog)
 	for i := 0; i < executors; i++ {
-		e[i] = newExecutor(first, last, db, output, chainCfg, input, vmImpl, wg, closed, utils.NewLogger(ctx, fmt.Sprintf("Executor #%v", i)), counterInput)
+		e[i] = newExecutor(first, last, db, output, chainCfg, input, vmImpl, wg, closed, utils.NewLogger(ctx.String(utils.LogLevel.Name), fmt.Sprintf("Executor #%v", i)), counterInput)
 	}
 
 	return e, output, counterInput
@@ -238,7 +238,7 @@ func createComparators(ctx *cli.Context, input chan *OutData, closed chan any, w
 	c := make([]*Comparator, comparators)
 	failure := make(chan any)
 	for i := 0; i < comparators; i++ {
-		c[i] = newComparator(input, utils.NewLogger(ctx, fmt.Sprintf("Comparator #%v", i)), closed, wg, ctx.Bool(flags.ContinueOnFailure.Name), failure)
+		c[i] = newComparator(input, utils.NewLogger(ctx.String(utils.LogLevel.Name), fmt.Sprintf("Comparator #%v", i)), closed, wg, ctx.Bool(flags.ContinueOnFailure.Name), failure)
 	}
 
 	return c, failure

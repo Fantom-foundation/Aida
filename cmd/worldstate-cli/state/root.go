@@ -35,7 +35,7 @@ func root(ctx *cli.Context) error {
 	defer opera.MustCloseStore(store)
 
 	// make logger
-	log := utils.NewLogger(ctx, "root")
+	log := utils.NewLogger(ctx.String(utils.LogLevel.Name), "root")
 
 	targetBlock := ctx.Uint64(flags.TargetBlock.Name)
 

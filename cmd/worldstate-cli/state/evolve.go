@@ -43,7 +43,7 @@ func evolveState(ctx *cli.Context) error {
 	defer substate.CloseSubstateDB()
 
 	// make logger
-	log := utils.NewLogger(ctx, "evolve")
+	log := utils.NewLogger(ctx.String(utils.LogLevel.Name), "evolve")
 
 	startBlock, targetBlock, err := getEvolutionBlockRange(ctx, stateDB, log)
 	if err != nil {

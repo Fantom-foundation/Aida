@@ -80,7 +80,7 @@ func isLogEqual(record string, replay string) bool {
 
 // traceCompareLogAction implements trace command for validating record and replay debug log.
 func traceCompareLogAction(ctx *cli.Context) error {
-	log := utils.NewLogger(ctx, "Trace Compare Log")
+	log := utils.NewLogger(ctx.String(utils.LogLevel.Name), "Trace Compare Log")
 
 	// process arguments
 	if ctx.Args().Len() != 2 {

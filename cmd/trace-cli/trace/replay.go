@@ -269,7 +269,7 @@ func traceReplayAction(ctx *cli.Context) error {
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
-	log := utils.NewLogger(ctx, "Trace Replay Action")
+	log := utils.NewLogger(ctx.String(utils.LogLevel.Name), "Trace Replay Action")
 	err = traceReplayTask(cfg, log)
 
 	return err

@@ -1,23 +1,23 @@
 package utils
 
 import (
+	"os"
 	"time"
 
 	"github.com/op/go-logging"
-	"github.com/urfave/cli/v2"
 )
 
 // defaultLogFormat defines the format used for log output.
 const defaultLogFormat = "%{color}%{level:-8s} %{shortpkg}/%{shortfunc}%{color:reset}: %{message}"
 
 // NewLogger provides a new instance of the Logger based on context flags.
-func NewLogger(ctx *cli.Context, module string) *logging.Logger {
-	backend := logging.NewLogBackend(ctx.App.Writer, "", 0)
+func NewLogger(level string, module string) *logging.Logger {
+	backend := logging.NewLogBackend(os.Stdout, "", 0)
 
 	fm := logging.MustStringFormatter(defaultLogFormat)
 	fmtBackend := logging.NewBackendFormatter(backend, fm)
 
-	lvl, err := logging.LogLevel(ctx.String(LogLevel.Name))
+	lvl, err := logging.LogLevel(level)
 	if err != nil {
 		lvl = logging.INFO
 	}

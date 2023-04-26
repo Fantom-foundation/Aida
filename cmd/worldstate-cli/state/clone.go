@@ -40,7 +40,7 @@ func cloneDB(ctx *cli.Context) error {
 	defer snapshot.MustCloseStateDB(outputDB)
 
 	// make logger
-	log := utils.NewLogger(ctx, "clone")
+	log := utils.NewLogger(ctx.String(utils.LogLevel.Name), "clone")
 	logTick := time.NewTicker(2 * time.Second)
 	defer logTick.Stop()
 

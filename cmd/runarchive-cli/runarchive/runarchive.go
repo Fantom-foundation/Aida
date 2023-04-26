@@ -23,7 +23,7 @@ func RunArchive(ctx *cli.Context) error {
 		lastTxCount int
 	)
 
-	log := utils.NewLogger(ctx, "Run-Archive")
+	log := utils.NewLogger(ctx.String(utils.LogLevel.Name), "Run-Archive")
 
 	// process general arguments
 	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)

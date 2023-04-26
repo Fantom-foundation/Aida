@@ -248,7 +248,7 @@ func NewBasicBlockProfilingCollectorContext() *BasicBlockProfilingCollectorConte
 func replayAction(ctx *cli.Context) error {
 	var err error
 
-	log := utils.NewLogger(ctx, "Substate Replay")
+	log := utils.NewLogger(ctx.String(utils.LogLevel.Name), "Substate Replay")
 
 	if ctx.Args().Len() != 2 {
 		return fmt.Errorf("substate-cli: replay command requires exactly 2 arguments")

@@ -41,7 +41,7 @@ last block of the inclusive range of blocks to trace transactions.`,
 
 // traceRecordAction implements trace command for recording.
 func traceRecordAction(ctx *cli.Context) error {
-	log := utils.NewLogger(ctx, "Trace Record")
+	log := utils.NewLogger(ctx.String(utils.LogLevel.Name), "Trace Record")
 
 	substate.RecordReplay = true
 

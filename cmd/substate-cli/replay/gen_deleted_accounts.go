@@ -230,7 +230,7 @@ func genDeletedAccountsTask(block uint64, tx int, recording *substate.Substate, 
 func genDeletedAccountsAction(ctx *cli.Context) error {
 	var err error
 
-	log := utils.NewLogger(ctx, "Substate Replay")
+	log := utils.NewLogger(ctx.String(utils.LogLevel.Name), "Substate Replay")
 
 	if ctx.Args().Len() != 2 {
 		return fmt.Errorf("substate-cli gen-deleted-accounts command requires exactly 2 arguments")

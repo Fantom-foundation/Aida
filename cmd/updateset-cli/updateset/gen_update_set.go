@@ -17,7 +17,7 @@ func GenUpdateSet(ctx *cli.Context) error {
 	var (
 		err               error
 		destroyedAccounts []common.Address
-		log               = utils.NewLogger(ctx, "Generate Update Set")
+		log               = utils.NewLogger(ctx.String(utils.LogLevel.Name), "Generate Update Set")
 	)
 
 	// process arguments and flags

@@ -28,7 +28,7 @@ func info(ctx *cli.Context) error {
 	defer snapshot.MustCloseStateDB(stateDB)
 
 	// make logger
-	log := utils.NewLogger(ctx, "info")
+	log := utils.NewLogger(ctx.String(utils.LogLevel.Name), "info")
 
 	blk, err := stateDB.GetBlockNumber()
 	if err != nil {
