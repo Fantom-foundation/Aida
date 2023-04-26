@@ -269,8 +269,8 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		addr  common.Address
 		key   common.Hash
 		value common.Hash
-		db    state.StateDB = ss.db
-		rg    *rand.Rand    = ss.rg
+		db    = ss.db
+		rg    = ss.rg
 	)
 
 	// fetch indexes from index access generators

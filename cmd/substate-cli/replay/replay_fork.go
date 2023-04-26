@@ -90,15 +90,15 @@ var HardForkFlag = cli.Int64Flag{
 	Value: hardForkFlagDefault(),
 }
 
-var ReplayForkChainConfig *params.ChainConfig = &params.ChainConfig{}
+var ReplayForkChainConfig = &params.ChainConfig{}
 
 type ReplayForkStat struct {
 	Count  int64
 	ErrStr string
 }
 
-var ReplayForkStatChan chan *ReplayForkStat = make(chan *ReplayForkStat, 1_000_000)
-var ReplayForkStatMap map[string]*ReplayForkStat = make(map[string]*ReplayForkStat)
+var ReplayForkStatChan = make(chan *ReplayForkStat, 1_000_000)
+var ReplayForkStatMap = make(map[string]*ReplayForkStat)
 
 var (
 	ErrReplayForkOutOfGas     = errors.New("out of gas in replay-fork")
@@ -174,7 +174,7 @@ func replayForkTask(block uint64, tx int, recording *substate.Substate, taskPool
 		return err
 	}
 	vmConfig.Tracer = tracer
-	vmConfig.Debug = (tracer != nil)
+	vmConfig.Debug = tracer != nil
 	statedb.Prepare(txHash, txIndex)
 
 	txCtx := vm.TxContext{

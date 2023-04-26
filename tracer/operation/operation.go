@@ -12,7 +12,7 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
-var stats *ProfileStats = new(ProfileStats)
+var stats = new(ProfileStats)
 
 // Operation IDs of the StateDB interface
 const (

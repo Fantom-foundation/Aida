@@ -69,7 +69,7 @@ func GenUpdateSet(ctx *cli.Context) error {
 	for iter.Next() {
 		tx := iter.Value()
 		if isFirst {
-			checkPoint = (((tx.Block/interval)+1)*interval - 1)
+			checkPoint = ((tx.Block/interval)+1)*interval - 1
 			isFirst = false
 		}
 		// new block
