@@ -204,11 +204,11 @@ func genDeletedAccountsTask(block uint64, tx int, recording *substate.Substate, 
 	a := outputAlloc.Equal(evmAlloc)
 	if !(r && a) {
 		if !r {
-			log.Criticalf("inconsistent output: result\n")
+			log.Criticalf("inconsistent output: result")
 			utils.PrintResultDiffSummary(outputResult, evmResult)
 		}
 		if !a {
-			log.Criticalf("inconsistent output: alloc\n")
+			log.Criticalf("inconsistent output: alloc")
 			utils.PrintAllocationDiffSummary(&outputAlloc, &evmAlloc)
 		}
 		return fmt.Errorf("inconsistent output")
@@ -241,7 +241,7 @@ func genDeletedAccountsAction(ctx *cli.Context) error {
 func GenDeletedAccountsAction(cfg *utils.Config) error {
 	var err error
 
-	log := utils.NewLogger(ctx.String(utils.LogLevelFlag.Name), "Substate Replay")
+	log := utils.NewLogger(cfg.LogLevel, "Substate Replay")
 
 	chainID = cfg.ChainID
 	log.Infof("chain-id: %v", chainID)
@@ -281,7 +281,7 @@ func GenDeletedAccountsAction(cfg *utils.Config) error {
 		if diff >= 30 {
 			numTx := txCount - lastTxCount
 			lastTxCount = txCount
-			log.Infof("substate-cli: gen-del-acc: Elapsed time: %.0f s, at block %v (~%.1f Tx/s)\n", sec, tx.Block, float64(numTx)/diff)
+			log.Infof("substate-cli: gen-del-acc: Elapsed time: %.0f s, at block %v (~%.1f Tx/s)", sec, tx.Block, float64(numTx)/diff)
 			lastSec = sec
 		}
 	}

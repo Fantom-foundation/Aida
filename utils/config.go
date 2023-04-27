@@ -424,6 +424,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		AppName:     ctx.App.HelpName,
 		CommandName: ctx.Command.Name,
 
+		APIRecordingSrcFile: ctx.Bool(APIRecordingSrcFileFlag.Name)
 		ArchiveMode:         ctx.Bool(ArchiveModeFlag.Name),
 		ArchiveVariant:      ctx.String(ArchiveVariantFlag.Name),
 		BlockLength:         ctx.Uint64(BlockLengthFlag.Name),
