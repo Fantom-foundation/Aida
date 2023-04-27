@@ -296,9 +296,6 @@ func (p *EventProxy) Prepare(thash common.Hash, ti int) {
 
 // Finalise the state in StateDB.
 func (p *EventProxy) Finalise(deleteEmptyObjects bool) {
-	// register event
-	p.registry.RegisterOp(FinaliseID)
-
 	// call real StateDB
 	p.db.Finalise(deleteEmptyObjects)
 }

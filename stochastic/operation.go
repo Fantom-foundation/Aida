@@ -19,7 +19,6 @@ const (
 	EndSyncPeriodID
 	EndTransactionID
 	ExistID
-	FinaliseID
 	GetBalanceID
 	GetCodeHashID
 	GetCodeID
@@ -54,7 +53,6 @@ var opText = map[int]string{
 	EndSyncPeriodID:     "EndSyncPeriod",
 	EndTransactionID:    "EndTransaction",
 	ExistID:             "Exist",
-	FinaliseID:          "Finalise",
 	GetBalanceID:        "GetBalance",
 	GetCodeHashID:       "GetCodeHash",
 	GetCodeID:           "GetCode",
@@ -84,7 +82,6 @@ var opMnemo = map[int]string{
 	EndSyncPeriodID:     "ES",
 	EndTransactionID:    "ET",
 	ExistID:             "EX",
-	FinaliseID:          "FI",
 	GetBalanceID:        "GB",
 	GetCodeHashID:       "GH",
 	GetCodeID:           "GC",
@@ -114,7 +111,6 @@ var opNumArgs = map[int]int{
 	EndSyncPeriodID:     0,
 	EndTransactionID:    0,
 	ExistID:             1,
-	FinaliseID:          0,
 	GetBalanceID:        1,
 	GetCodeHashID:       1,
 	GetCodeID:           1,
@@ -144,7 +140,6 @@ var opId = map[string]int{
 	"ES": EndSyncPeriodID,
 	"ET": EndTransactionID,
 	"EX": ExistID,
-	"FI": FinaliseID,
 	"GB": GetBalanceID,
 	"GH": GetCodeHashID,
 	"GC": GetCodeID,
