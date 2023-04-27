@@ -302,7 +302,7 @@ func replayAction(ctx *cli.Context) error {
 				stats.Merge(dcc[i].stats)
 			}
 			stats.Dump()
-			log.Noticef("substate-replay: recorded basic block profiling statistics in %v\n", vm.BasicBlockProfilingDB)
+			log.Noticef("recorded basic block profiling statistics in %v\n", vm.BasicBlockProfilingDB)
 		}()
 	}
 
