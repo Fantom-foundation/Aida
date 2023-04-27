@@ -71,10 +71,10 @@ func FuzzStochastic(f *testing.F) {
 			SyncPeriodLength:  10,
 			TransactionLength: 2,
 
-			ShadowImpl:  "geth",
-			StateDbTemp: "/tmp/",
-			DbImpl:      "carmen",
-			DbVariant:   "go-file",
+			ShadowImpl: "geth",
+			DbTmp:      "/tmp/",
+			DbImpl:     "carmen",
+			DbVariant:  "go-file",
 		}
 
 		// create a directory for the store to place all its files, and

@@ -13,12 +13,8 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// GenUpdateSet command generates a series of update sets from substate db.
-func GenUpdateSet(ctx *cli.Context) error {
-	var (
-		err               error
-		destroyedAccounts []common.Address
-	)
+// GenUpdateSetAction command prepapres config and arguments for GenUpdateSet
+func GenUpdateSetAction(ctx *cli.Context) error {
 	// process arguments and flags
 	if ctx.Args().Len() != 2 {
 		return fmt.Errorf("gen-update-set command requires exactly 2 arguments")
@@ -31,7 +27,16 @@ func GenUpdateSet(ctx *cli.Context) error {
 	if ferr != nil {
 		return ferr
 	}
-	worldStateDir := ctx.String(utils.WorldStateFlag.Name)
+
+	return GenUpdateSet(cfg, interval)
+}
+
+// GenUpdateSet generates a series of update sets from substate db
+func GenUpdateSet(cfg *utils.Config, interval uint64) error {
+	var (
+		err               error
+		destroyedAccounts []common.Address
+	)
 
 	// initialize updateDB
 	db := substate.OpenUpdateDB(cfg.UpdateDb)
@@ -46,7 +51,7 @@ func GenUpdateSet(ctx *cli.Context) error {
 	// store world state
 	cfg.First = utils.FirstSubstateBlock
 	log.Printf("Load initial worldstate and store its substateAlloc\n")
-	ws, err := utils.GenerateWorldState(worldStateDir, cfg.First-1, cfg)
+	ws, err := utils.GenerateWorldState(cfg.WorldStateDb, cfg.First-1, cfg)
 	if err != nil {
 		return err
 	}

@@ -245,7 +245,7 @@ func PrepareStateDB(cfg *Config) (db state.StateDB, workingDirectory string, loa
 	loadedExistingDB = false
 
 	//create a temporary working directory
-	workingDirectory, err = ioutil.TempDir(cfg.StateDbTemp, "state_db_tmp_*")
+	workingDirectory, err = ioutil.TempDir(cfg.DbTmp, "state_db_tmp_*")
 	if err != nil {
 		err = fmt.Errorf("Failed to create a temporary directory. %v", err)
 		return

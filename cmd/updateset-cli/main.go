@@ -12,7 +12,7 @@ import (
 
 // GenUpdateSetApp data structure
 var GenUpdateSetApp = cli.App{
-	Action:    updateset.GenUpdateSet,
+	Action:    updateset.GenUpdateSetAction,
 	Name:      "Aida Generate Update-set Manager",
 	HelpName:  "gen-update-set",
 	Usage:     "generate update-set from substate",

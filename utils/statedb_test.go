@@ -495,7 +495,7 @@ func TestStatedb_PrepareStateDB(t *testing.T) {
 			cfg := makeTestConfig(tc)
 			// Update config for state DB preparation by providing additional information
 			cfg.ShadowImpl = ""
-			cfg.StateDbTemp = t.TempDir()
+			cfg.DbTmp = t.TempDir()
 			cfg.StateDbSrc = t.TempDir()
 			cfg.First = 2
 
@@ -556,7 +556,7 @@ func TestStatedb_PrepareStateDBEmpty(t *testing.T) {
 	cfg := makeTestConfig(tc)
 	// Update config for state DB preparation by providing additional information
 	cfg.ShadowImpl = ""
-	cfg.StateDbTemp = t.TempDir()
+	cfg.DbTmp = t.TempDir()
 	cfg.StateDbSrc = t.TempDir()
 	cfg.First = 2
 
@@ -583,7 +583,7 @@ func TestStatedb_PrepareStateDBInvalid(t *testing.T) {
 	cfg := makeTestConfig(tc)
 	// Update config for state DB preparation by providing additional information
 	cfg.ShadowImpl = ""
-	cfg.StateDbTemp = t.TempDir()
+	cfg.DbTmp = t.TempDir()
 	cfg.StateDbSrc = t.TempDir()
 	cfg.First = 2
 
