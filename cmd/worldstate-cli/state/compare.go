@@ -41,7 +41,7 @@ func compareDb(ctx *cli.Context) error {
 	defer snapshot.MustCloseStateDB(stateRefDB)
 
 	// make logger
-	log := utils.NewLogger(ctx.String(utils.LogLevel.Name), "cmp")
+	log := utils.NewLogger(ctx.String(utils.LogLevelFlag.Name), "cmp")
 	log.Infof("comparing %s against %s", ctx.Path(flags.StateDBPath.Name), ctx.Path(flags.TargetDBPath.Name))
 
 	// call CompareTo against target database

@@ -35,7 +35,7 @@ var ReplayForkCommand = cli.Command{
 		&substate.SkipCreateTxsFlag,
 		&HardForkFlag,
 		&substate.SubstateDirFlag,
-		&utils.LogLevel,
+		&utils.LogLevelFlag,
 	},
 	Description: `
 The replay-fork command requires two arguments:
@@ -335,7 +335,7 @@ func replayForkTask(block uint64, tx int, recording *substate.Substate, taskPool
 func replayForkAction(ctx *cli.Context) error {
 	var err error
 
-	log := utils.NewLogger(ctx.String(utils.LogLevel.Name), "Substate Replay Fork")
+	log := utils.NewLogger(ctx.String(utils.LogLevelFlag.Name), "Substate Replay Fork")
 
 	if ctx.Args().Len() != 2 {
 		return fmt.Errorf("substate-cli replay-fork command requires exactly 2 arguments")

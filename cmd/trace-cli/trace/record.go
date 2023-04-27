@@ -31,7 +31,7 @@ var TraceRecordCommand = cli.Command{
 		&utils.TraceDebugFlag,
 		&utils.DebugFromFlag,
 		&utils.AidaDbFlag,
-		&utils.LogLevel,
+		&utils.LogLevelFlag,
 	},
 	Description: `
 The trace record command requires two arguments:
@@ -42,7 +42,7 @@ last block of the inclusive range of blocks to trace transactions.`,
 
 // traceRecordAction implements trace command for recording.
 func traceRecordAction(ctx *cli.Context) error {
-	log := utils.NewLogger(ctx.String(utils.LogLevel.Name), "Trace Record")
+	log := utils.NewLogger(ctx.String(utils.LogLevelFlag.Name), "Trace Record")
 
 	substate.RecordReplay = true
 

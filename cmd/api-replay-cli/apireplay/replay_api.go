@@ -4,7 +4,6 @@ import (
 	"context"
 	"path/filepath"
 
-	"github.com/Fantom-foundation/Aida/cmd/api-replay-cli/flags"
 	"github.com/Fantom-foundation/Aida/iterator"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -21,12 +20,12 @@ func ReplayAPI(ctx *cli.Context) error {
 		db     state.StateDB
 	)
 
-	fr, err = iterator.NewFileReader(context.Background(), ctx.String(flags.APIRecordingSrcFileFlag.Name))
+	cfg, err = utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if err != nil {
 		return err
 	}
 
-	cfg, err = utils.NewConfig(ctx, utils.BlockRangeArgs)
+	fr, err = iterator.NewFileReader(context.Background(), cfg.APIRecordingSrcFile)
 	if err != nil {
 		return err
 	}

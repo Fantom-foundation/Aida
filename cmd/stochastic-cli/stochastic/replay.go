@@ -39,7 +39,7 @@ var StochasticReplayCommand = cli.Command{
 		&utils.ShadowDbImplementationFlag,
 		&utils.ShadowDbVariantFlag,
 		&utils.AidaDbFlag,
-		&utils.LogLevel,
+		&utils.LogLevelFlag,
 	},
 	Description: `
 The stochastic replay command requires two argument:
@@ -52,7 +52,7 @@ The stochastic replay command requires two argument:
 // stochasticReplayAction implements the replay command. The user
 // provides simulation file and simulation as arguments.
 func stochasticReplayAction(ctx *cli.Context) error {
-	log := utils.NewLogger(ctx.String(utils.LogLevel.Name), "Stochastic Replay")
+	log := utils.NewLogger(ctx.String(utils.LogLevelFlag.Name), "Stochastic Replay")
 
 	// parse command-line arguments
 	if ctx.Args().Len() != 2 {
@@ -103,7 +103,7 @@ func stochasticReplayAction(ctx *cli.Context) error {
 	// run simulation.
 	fmt.Printf("stochastic replay: run simulation ...\n")
 
-	runErr := stochastic.RunStochasticReplay(db, simulation, int(simLength), cfg, utils.NewLogger(ctx.String(utils.LogLevel.Name), "Stochastic"))
+	runErr := stochastic.RunStochasticReplay(db, simulation, int(simLength), cfg, utils.NewLogger(ctx.String(utils.LogLevelFlag.Name), "Stochastic"))
 
 	// print memory usage after simulation
 	if cfg.MemoryBreakdown {

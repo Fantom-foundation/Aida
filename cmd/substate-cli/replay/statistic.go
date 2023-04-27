@@ -104,7 +104,7 @@ func getReferenceStatsAction[T comparable](ctx *cli.Context, cli_command string,
 func getReferenceStatsActionWithConsumer[T comparable](ctx *cli.Context, cli_command string, extract Extractor[T], consume AccessStatisticsConsumer[T]) error {
 	var err error
 
-	log := utils.NewLogger(ctx.String(utils.LogLevel.Name), "Replay Substate")
+	log := utils.NewLogger(ctx.String(utils.LogLevelFlag.Name), "Replay Substate")
 
 	if ctx.Args().Len() != 2 {
 		return fmt.Errorf("substate-cli %v command requires exactly 2 arguments", cli_command)
