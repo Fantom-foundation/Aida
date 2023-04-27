@@ -23,14 +23,14 @@ func RunArchive(ctx *cli.Context) error {
 		lastTxCount int
 	)
 
-	log := utils.NewLogger(ctx.String(utils.LogLevelFlag.Name), "Run-Archive")
-
 	// process general arguments
 	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	cfg.StateValidationMode = utils.SubsetCheck
 	if argErr != nil {
 		return argErr
 	}
+
+	log := utils.NewLogger(cfg.LogLevel, "Run-Archive")
 
 	// start CPU profiling if requested
 	if err := utils.StartCPUProfile(cfg); err != nil {

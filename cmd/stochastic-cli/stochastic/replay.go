@@ -31,7 +31,7 @@ var StochasticReplayCommand = cli.Command{
 		&utils.RandomSeedFlag,
 		&utils.StateDbImplementationFlag,
 		&utils.StateDbVariantFlag,
-		&utils.StateDbTempFlag,
+		&utils.DbTmpFlag,
 		&utils.StateDbLoggingFlag,
 		&utils.TraceFileFlag,
 		&utils.TraceDebugFlag,
@@ -52,8 +52,6 @@ The stochastic replay command requires two argument:
 // stochasticReplayAction implements the replay command. The user
 // provides simulation file and simulation as arguments.
 func stochasticReplayAction(ctx *cli.Context) error {
-	log := utils.NewLogger(ctx.String(utils.LogLevelFlag.Name), "Stochastic Replay")
-
 	// parse command-line arguments
 	if ctx.Args().Len() != 2 {
 		return fmt.Errorf("missing simulation file and simulation length as parameter")
@@ -71,6 +69,7 @@ func stochasticReplayAction(ctx *cli.Context) error {
 	if cfg.DbImpl == "memory" {
 		return fmt.Errorf("db-impl memory is not supported")
 	}
+	log := utils.NewLogger(cfg.LogLevel, "Stochastic Replay")
 
 	// start CPU profiling if requested.
 	if err := utils.StartCPUProfile(cfg); err != nil {

@@ -40,7 +40,7 @@ var TraceReplayCommand = cli.Command{
 		&utils.StateDbImplementationFlag,
 		&utils.StateDbVariantFlag,
 		&utils.StateDbSrcFlag,
-		&utils.StateDbTempFlag,
+		&utils.DbTmpFlag,
 		&utils.StateDbLoggingFlag,
 		&utils.ShadowDbImplementationFlag,
 		&utils.ShadowDbVariantFlag,
@@ -270,7 +270,7 @@ func traceReplayAction(ctx *cli.Context) error {
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
-	log := utils.NewLogger(ctx.String(utils.LogLevelFlag.Name), "Trace Replay Action")
+	log := utils.NewLogger(cfg.LogLevel, "Trace Replay Action")
 	err = traceReplayTask(cfg, log)
 
 	return err

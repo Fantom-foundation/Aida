@@ -42,7 +42,7 @@ var RunVMApp = cli.App{
 		&utils.StateDbImplementationFlag,
 		&utils.StateDbVariantFlag,
 		&utils.StateDbSrcFlag,
-		&utils.StateDbTempFlag,
+		&utils.DbTmpFlag,
 		&utils.StateDbLoggingFlag,
 		&utils.ShadowDbImplementationFlag,
 		&utils.ShadowDbVariantFlag,

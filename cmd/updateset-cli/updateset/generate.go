@@ -37,11 +37,6 @@ The gen-update-set command requires two arguments: <blockNumLast> <interval>
 
 // generateUpdateSet command generates a series of update sets from substate db.
 func generateUpdateSet(ctx *cli.Context) error {
-	var (
-		err               error
-		destroyedAccounts []common.Address
-		log               = utils.NewLogger(ctx.String(utils.LogLevelFlag.Name), "Generate Update Set")
-	)
 	// process arguments and flags
 	if ctx.Args().Len() != 2 {
 		return fmt.Errorf("gen-update-set command requires exactly 2 arguments")
@@ -54,6 +49,17 @@ func generateUpdateSet(ctx *cli.Context) error {
 	if ferr != nil {
 		return ferr
 	}
+
+	return GenUpdateSet(cfg, interval)
+}
+
+// GenUpdateSet generates a series of update sets from substate db
+func GenUpdateSet(cfg *utils.Config, interval uint64) error {
+	var (
+		err               error
+		destroyedAccounts []common.Address
+		log               = utils.NewLogger(cfg.LogLevel, "Generate Update Set")
+	)
 
 	// initialize updateDB
 	db := substate.OpenUpdateDB(cfg.UpdateDb)
@@ -70,7 +76,7 @@ func generateUpdateSet(ctx *cli.Context) error {
 
 	// store world state if applicable
 	skipWorldState := cfg.First > utils.FirstSubstateBlock
-	worldState := ctx.String(utils.WorldStateFlag.Name)
+	worldState := cfg.WorldStateDb
 	if _, err := os.Stat(worldState); os.IsNotExist(err) {
 		skipWorldState = true
 	}

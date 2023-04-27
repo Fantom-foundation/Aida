@@ -195,7 +195,7 @@ func traceReplaySubstateAction(ctx *cli.Context) error {
 	}
 	defer utils.StopCPUProfile(cfg)
 
-	log := utils.NewLogger(ctx.String(utils.LogLevelFlag.Name), "Trace Replay Substate Action")
+	log := utils.NewLogger(cfg.LogLevel, "Trace Replay Substate Action")
 	err = traceReplaySubstateTask(cfg, log)
 
 	return err
