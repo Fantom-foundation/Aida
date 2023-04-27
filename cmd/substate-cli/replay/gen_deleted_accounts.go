@@ -30,6 +30,7 @@ var GenDeletedAccountsCommand = cli.Command{
 		&substate.SubstateDirFlag,
 		&ChainIDFlag,
 		&utils.DeletionDbFlag,
+		&utils.LogLevel,
 	},
 	Description: `
 The substate-cli replay command requires two arguments:

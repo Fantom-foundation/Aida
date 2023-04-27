@@ -3,6 +3,7 @@ package replay
 import (
 	"fmt"
 
+	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/urfave/cli/v2"
@@ -18,6 +19,7 @@ var GetKeyStatsCommand = cli.Command{
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
 		&ChainIDFlag,
+		&utils.LogLevel,
 	},
 	Description: `
 The substate-cli key-stats command requires two arguments:

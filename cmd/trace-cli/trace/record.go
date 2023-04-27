@@ -31,6 +31,7 @@ var TraceRecordCommand = cli.Command{
 		&utils.TraceDebugFlag,
 		&utils.DebugFromFlag,
 		&utils.AidaDbFlag,
+		&utils.LogLevel,
 	},
 	Description: `
 The trace record command requires two arguments:

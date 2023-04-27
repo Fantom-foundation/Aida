@@ -17,7 +17,9 @@ var CompactCommand = cli.Command{
 	Name:      "compact",
 	Usage:     "Compat LevelDB - discarding deleted and overwritten versions",
 	ArgsUsage: "<dbPath>",
-	Flags:     []cli.Flag{},
+	Flags: []cli.Flag{
+		&utils.LogLevel,
+	},
 	Description: `
 The substate-cli db compact command requires one argument:
 	<dbPath>

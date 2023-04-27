@@ -19,6 +19,7 @@ var GetStorageUpdateSizeCommand = cli.Command{
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
 		&ChainIDFlag,
+		&utils.LogLevel,
 	},
 	Description: `
 The substate-cli storage-size command requires two arguments:

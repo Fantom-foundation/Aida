@@ -35,6 +35,7 @@ var ReplayForkCommand = cli.Command{
 		&substate.SkipCreateTxsFlag,
 		&HardForkFlag,
 		&substate.SubstateDirFlag,
+		&utils.LogLevel,
 	},
 	Description: `
 The replay-fork command requires two arguments:

@@ -48,6 +48,7 @@ var ReplayCommand = cli.Command{
 		&OnlySuccessfulFlag,
 		&CpuProfilingFlag,
 		&UseInMemoryStateDbFlag,
+		&utils.LogLevel,
 	},
 	Description: `
 The substate-cli replay command requires two arguments:

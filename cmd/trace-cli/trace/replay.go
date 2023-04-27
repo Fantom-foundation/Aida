@@ -53,6 +53,7 @@ var TraceReplayCommand = cli.Command{
 		&utils.ValidateFlag,
 		&utils.ValidateWorldStateFlag,
 		&utils.AidaDbFlag,
+		&utils.LogLevel,
 	},
 	Description: `
 The trace replay command requires two arguments:
