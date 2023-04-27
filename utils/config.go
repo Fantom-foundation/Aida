@@ -24,6 +24,7 @@ type ArgumentMode int
 const (
 	BlockRangeArgs ArgumentMode = iota // requires 2 arguments: first block and last block
 	LastBlockArg                       // requires 1 argument: last block
+	EventArg                           // requires 1 argument: events path
 	NoArgs                             // requires no arguments
 )
 
@@ -151,9 +152,9 @@ var (
 		Name:  "db-src",
 		Usage: "sets the directory contains source state DB data",
 	}
-	StateDbTempFlag = cli.PathFlag{
+	DbTmpFlag = cli.PathFlag{
 		Name:  "db-tmp",
-		Usage: "sets the temporary directory where to place state DB data; uses system default if empty",
+		Usage: "sets the temporary directory where to place DB data; uses system default if empty",
 	}
 	StateDbLoggingFlag = cli.BoolFlag{
 		Name:  "db-logging",
@@ -269,6 +270,14 @@ var (
 		Usage:   "Level of the logging of the app action (\"critical\", \"error\", \"warning\", \"notice\", \"info\", \"debug\"; default: INFO)",
 		Value:   "info",
 	}
+	DbFlag = cli.PathFlag{
+		Name:  "db",
+		Usage: "Path to the database",
+	}
+	GenesisFlag = cli.PathFlag{
+		Name:  "genesis",
+		Usage: "Path to genesis file",
+	}
 )
 
 // Config represents execution configuration for replay command.
@@ -288,10 +297,15 @@ type Config struct {
 	ContinueOnFailure   bool           // continue validation when an error detected
 	ContractNumber      int64          // number of contracts to create
 	CPUProfile          string         // pprof cpu profile output file name
+	Db                  string         // path to database
+	DbTmp               string         // path to temporary database
 	DbImpl              string         // storage implementation
+	Events              string         // events
+	Genesis             string         // genesis file
 	DbVariant           string         // database variant
 	DbLogging           bool           // set to true if all DB operations should be logged
 	Debug               bool           // enable trace debug flag
+	DeleteSourceDbs     bool           // delete source databases
 	DebugFrom           uint64         // the first block to print trace debug
 	DeletionDb          string         // directory of deleted account database
 	Quiet               bool           // disable progress report flag
@@ -313,7 +327,6 @@ type Config struct {
 	ShadowVariant       string         // database variant of the shadow DB to be used
 	StateDbSrc          string         // directory to load an existing State DB data
 	AidaDb              string         // directory to profiling database containing substate, update, delete accounts data
-	StateDbTemp         string         // directory to store a working copy of State DB data
 	StateValidationMode ValidationMode // state validation mode
 	UpdateDb            string         // update-set directory
 	SnapshotDepth       int            // depth of snapshot history
@@ -322,6 +335,7 @@ type Config struct {
 	ValidateWorldState  bool           // validate stateDB before and after replay block range
 	ValuesNumber        int64          // number of values to generate
 	VmImpl              string         // vm implementation (geth/lfvm)
+	WorldStateDb        string         // path to worldstate
 	Workers             int            // number of worker threads
 	TraceFile           string         // name of trace file
 	Trace               bool           // trace flag
@@ -364,6 +378,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	log := NewLogger(ctx.String(LogLevelFlag.Name), "Config")
 
 	var first, last uint64
+	var events string
 	if n != 0 {
 		first = 1
 		last = n
@@ -373,7 +388,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		case BlockRangeArgs:
 			// process arguments and flags
 			if ctx.Args().Len() != 2 {
-				return nil, fmt.Errorf("trace command requires exactly 2 arguments")
+				return nil, fmt.Errorf("command requires exactly 2 arguments")
 			}
 			first, last, argErr = SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
 			if argErr != nil {
@@ -381,6 +396,14 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 			}
 		case LastBlockArg:
 			last, argErr = strconv.ParseUint(ctx.Args().Get(0), 10, 64)
+			if argErr != nil {
+				return nil, argErr
+			}
+		case EventArg:
+			if ctx.Args().Len() != 1 {
+				return nil, fmt.Errorf("command requires events as argument")
+			}
+			events = ctx.Args().Get(0)
 			if argErr != nil {
 				return nil, argErr
 			}
@@ -409,15 +432,20 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		ContractNumber:      ctx.Int64(ContractNumberFlag.Name),
 		ContinueOnFailure:   ctx.Bool(ContinueOnFailureFlag.Name),
 		CPUProfile:          ctx.String(CpuProfileFlag.Name),
+		Db:                  ctx.String(DbFlag.Name),
+		DbTmp:               ctx.String(DbTmpFlag.Name),
 		Debug:               ctx.Bool(TraceDebugFlag.Name),
 		DebugFrom:           ctx.Uint64(DebugFromFlag.Name),
 		Quiet:               ctx.Bool(QuietFlag.Name),
 		SyncPeriodLength:    ctx.Uint64(SyncPeriodLengthFlag.Name),
+		Events:              events,
 		First:               first,
+		Genesis:             ctx.String(GenesisFlag.Name),
 		DbImpl:              ctx.String(StateDbImplementationFlag.Name),
 		DbVariant:           ctx.String(StateDbVariantFlag.Name),
 		DbLogging:           ctx.Bool(StateDbLoggingFlag.Name),
 		DeletionDb:          ctx.String(DeletionDbFlag.Name),
+		DeleteSourceDbs:     ctx.Bool(DeleteSourceDbsFlag.Name),
 		HasDeletedAccounts:  true,
 		KeepStateDb:         ctx.Bool(KeepStateDbFlag.Name),
 		KeysNumber:          ctx.Int64(KeysNumberFlag.Name),
@@ -437,7 +465,6 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		SnapshotDepth:       ctx.Int(SnapshotDepthFlag.Name),
 		StateDbSrc:          ctx.String(StateDbSrcFlag.Name),
 		AidaDb:              ctx.String(AidaDbFlag.Name),
-		StateDbTemp:         ctx.String(StateDbTempFlag.Name),
 		StateValidationMode: EqualityCheck,
 		UpdateDb:            ctx.String(UpdateDbFlag.Name),
 		SubstateDb:          ctx.String(substate.SubstateDirFlag.Name),
@@ -446,6 +473,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		ValidateWorldState:  validateWorldState,
 		VmImpl:              ctx.String(VmImplementation.Name),
 		Workers:             ctx.Int(substate.WorkersFlag.Name),
+		WorldStateDb:        ctx.Path(WorldStateFlag.Name),
 		TraceFile:           ctx.String(TraceFileFlag.Name),
 		Trace:               ctx.Bool(TraceFlag.Name),
 		LogLevel:            ctx.String(LogLevelFlag.Name),

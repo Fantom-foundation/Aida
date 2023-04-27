@@ -39,7 +39,7 @@ func main() {
 			&utils.StateDbImplementationFlag,
 			&utils.StateDbVariantFlag,
 			&utils.StateDbSrcFlag,
-			&utils.StateDbTempFlag,
+			&utils.DbTmpFlag,
 			&utils.StateDbLoggingFlag,
 
 			// ArchiveDB
