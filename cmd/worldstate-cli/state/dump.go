@@ -3,7 +3,11 @@ package state
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"time"
+
+	eth_state "github.com/ethereum/go-ethereum/core/state"
 
 	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/flags"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -23,7 +27,7 @@ import (
 //   - Code (hash + separate storage)
 //   - Contract Storage
 var CmdDumpState = cli.Command{
-	Action:  dumpState,
+	Action:  DumpState,
 	Name:    "dump",
 	Aliases: []string{"d"},
 	Usage:   "Extracts world state MPT trie at given root from input database into state snapshot output database.",
@@ -43,8 +47,8 @@ var CmdDumpState = cli.Command{
 	},
 }
 
-// dumpState dumps state from given EVM trie into an output account-state database
-func dumpState(ctx *cli.Context) error {
+// DumpState dumps state from given EVM trie into an output account-state database
+func DumpState(ctx *cli.Context) error {
 	// open the source trie DB
 	store, err := opera.Connect(ctx.String(flags.SourceDBType.Name), DefaultPath(ctx, &flags.SourceDBPath, ".opera/chaindata/leveldb-fsh"), ctx.String(flags.SourceTableName.Name))
 	if err != nil {
@@ -94,9 +98,55 @@ func dumpState(ctx *cli.Context) error {
 		return err
 	}
 
+	log.Noticef("importing addresses and storage keys")
+	err = importHashesFromOpera(ctx, outputDB, opera.OpenStateDB(store), root, log)
+	if err != nil {
+		return err
+	}
+
 	// wait for all the threads to be done
 	log.Noticef("block #%d done", blockNumber)
+
 	return nil
+}
+
+// importHashesFromOpera extract addresses and storage keys from MPT dump and inserts into the worldstate
+func importHashesFromOpera(ctx *cli.Context, db *snapshot.StateDB, store eth_state.Database, root common.Hash, log *logging.Logger) error {
+	statedb, err := eth_state.NewWithSnapLayers(root, store, nil, 0)
+	if err != nil {
+		return fmt.Errorf("error calling opening StateDB; %v", err)
+	}
+
+	log.Noticef("dumping for addresses and storage keys")
+	d := statedb.RawDump(nil)
+	log.Noticef("dump finished")
+	log.Noticef("loading keys into database")
+	re := dumpWriter(d)
+	return importCsv(ctx.App.Writer, re, db)
+}
+
+// dumpWriter iterates opera dump and inserts extracted hashes to the into the stream
+func dumpWriter(d eth_state.Dump) io.Reader {
+	pr, pw := io.Pipe()
+	go func() {
+		for address, account := range d.Accounts {
+			_, err := fmt.Fprint(pw, address.String()+"\n")
+			if err != nil {
+				panic(err)
+			}
+			for hash := range account.Storage {
+				_, err = fmt.Fprint(pw, hash.String()+"\n")
+				if err != nil {
+					panic(err)
+				}
+			}
+		}
+		err := pw.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
+	return pr
 }
 
 // endGracefully waits until all routines finish - preventing database to be closed prematurely

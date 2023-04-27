@@ -64,7 +64,7 @@ func OpenStateDB(store kvdb.Store) state.Database {
 	wrappedEvmDB := rawdb.NewDatabase(kvdb2ethdb.Wrap(nokeyiserr.Wrap(evmDB)))
 
 	return &StateDB{
-		Database: state.NewDatabaseWithConfig(wrappedEvmDB, &trie.Config{}),
+		Database: state.NewDatabaseWithConfig(wrappedEvmDB, &trie.Config{Preimages: true}),
 	}
 }
 
