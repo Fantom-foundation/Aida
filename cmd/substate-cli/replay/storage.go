@@ -19,6 +19,7 @@ var GetStorageUpdateSizeCommand = cli.Command{
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
 		&ChainIDFlag,
+		&utils.LogLevel,
 	},
 	Description: `
 The substate-cli storage-size command requires two arguments:
@@ -76,6 +77,7 @@ func computeStorageSizes(inUpdateSet map[common.Hash]common.Hash, outUpdateSet m
 
 // getStorageUpdateSizeTask replays storage access of accounts in each transaction
 func getStorageUpdateSizeTask(block uint64, tx int, st *substate.Substate, taskPool *substate.SubstateTaskPool) error {
+
 	timestamp := st.Env.Timestamp
 	for wallet, outputAccount := range st.OutputAlloc {
 		var (
@@ -106,14 +108,16 @@ func getStorageUpdateSizeTask(block uint64, tx int, st *substate.Substate, taskP
 func getStorageUpdateSizeAction(ctx *cli.Context) error {
 	var err error
 
+	log := utils.NewLogger(ctx.String(utils.LogLevel.Name), "Substate Replay")
+
 	if ctx.Args().Len() != 2 {
 		return fmt.Errorf("substate-cli storage command requires exactly 2 arguments")
 	}
 
 	chainID = ctx.Int(ChainIDFlag.Name)
-	fmt.Printf("chain-id: %v\n", chainID)
-	fmt.Printf("git-date: %v\n", gitDate)
-	fmt.Printf("git-commit: %v\n", gitCommit)
+	log.Infof("chain-id: %v\n", chainID)
+	log.Infof("git-date: %v\n", gitDate)
+	log.Infof("git-commit: %v\n", gitCommit)
 
 	first, last, argErr := utils.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
 	if argErr != nil {

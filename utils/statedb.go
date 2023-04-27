@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io/fs"
 	"io/ioutil"
-	"log"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -16,6 +15,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/op/go-logging"
 )
 
 // MakeStateDB creates a new DB instance based on cli argument.
@@ -82,10 +82,11 @@ type ProgressTracker struct {
 	start  time.Time // start time
 	last   time.Time // last reported time
 	rate   float64   // priming rate
+	log    *logging.Logger
 }
 
 // NewProgressTracker creates a new progress tracer
-func NewProgressTracker(target int) *ProgressTracker {
+func NewProgressTracker(target int, log *logging.Logger) *ProgressTracker {
 	now := time.Now()
 	return &ProgressTracker{
 		step:   0,
@@ -93,6 +94,7 @@ func NewProgressTracker(target int) *ProgressTracker {
 		start:  now,
 		last:   now,
 		rate:   0.0,
+		log:    log,
 	}
 }
 
@@ -108,21 +110,21 @@ func (pt *ProgressTracker) PrintProgress() {
 		progress := float32(pt.step) / float32(pt.target)
 		time := int(now.Sub(pt.start).Seconds())
 		eta := int(float64(pt.target-pt.step) / pt.rate)
-		log.Printf("\t\tLoading state ... %8.1f slots/s, %5.1f%%, time: %d:%02d, ETA: %d:%02d\n", currentRate, progress*100, time/60, time%60, eta/60, eta%60)
+		pt.log.Infof("Loading state ... %8.1f slots/s, %5.1f%%, time: %d:%02d, ETA: %d:%02d", currentRate, progress*100, time/60, time%60, eta/60, eta%60)
 	}
 }
 
 // PrimeStateDB primes database with accounts from the world state.
-func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config) {
+func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config, log *logging.Logger) {
 	load := db.StartBulkLoad()
 
 	numValues := 0
 	for _, account := range ws {
 		numValues += len(account.Storage)
 	}
-	log.Printf("\tLoading %d accounts with %d values ..\n", len(ws), numValues)
+	log.Infof("Loading %d accounts with %d values ...", len(ws), numValues)
 
-	pt := NewProgressTracker(numValues)
+	pt := NewProgressTracker(numValues, log)
 	if cfg.PrimeRandom {
 		//if 0, commit once after priming all accounts
 		if cfg.PrimeThreshold == 0 {
@@ -135,7 +137,7 @@ func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config) {
 		}
 
 	}
-	log.Printf("\t\tHashing and flushing ...\n")
+	log.Noticef("Hashing and flushing ...\n")
 	if err := load.Close(); err != nil {
 		panic(fmt.Errorf("failed to prime StateDB: %v", err))
 	}
@@ -178,8 +180,10 @@ func PrimeStateDBRandom(ws substate.SubstateAlloc, db state.BulkLoad, cfg *Confi
 // DeleteDestroyedAccountsFromWorldState removes previously suicided accounts from
 // the world state.
 func DeleteDestroyedAccountsFromWorldState(ws substate.SubstateAlloc, cfg *Config, target uint64) error {
+	log := NewLogger(cfg.LogLevel, "DelDestAcc")
+
 	if !cfg.HasDeletedAccounts {
-		log.Printf("Database not provided. Ignore deleted accounts.\n")
+		log.Warning("Database not provided. Ignore deleted accounts")
 		return nil
 	}
 	src := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
@@ -199,8 +203,10 @@ func DeleteDestroyedAccountsFromWorldState(ws substate.SubstateAlloc, cfg *Confi
 // DeleteDestroyedAccountsFromStateDB performs suicide operations on previously
 // self-destructed accounts.
 func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *Config, target uint64) error {
+	log := NewLogger(cfg.LogLevel, "DelDestAcc")
+
 	if !cfg.HasDeletedAccounts {
-		log.Printf("Database not provided. Ignore deleted accounts.\n")
+		log.Warning("Database not provided. Ignore deleted accounts.")
 		return nil
 	}
 	src := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
@@ -209,7 +215,7 @@ func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *Config, target ui
 	if err != nil {
 		return err
 	}
-	log.Printf("Deleting %d accounts ..\n", len(list))
+	log.Noticef("Deleting %d accounts ...", len(list))
 	db.BeginSyncPeriod(0)
 	db.BeginBlock(target) // block 0 is the priming, block (first-1) the deletion
 	db.BeginTransaction(0)
@@ -240,7 +246,10 @@ func GetDirectorySize(directory string) int64 {
 
 // PrepareStateDB creates stateDB or load existing stateDB
 func PrepareStateDB(cfg *Config) (db state.StateDB, workingDirectory string, loadedExistingDB bool, err error) {
-	var exists bool
+	var (
+		exists bool
+		log    = NewLogger(cfg.LogLevel, "StateDB Preparation")
+	)
 	roothash := common.Hash{}
 	loadedExistingDB = false
 
@@ -258,7 +267,7 @@ func PrepareStateDB(cfg *Config) (db state.StateDB, workingDirectory string, loa
 	} else if errors.Is(err, os.ErrNotExist) {
 		exists = false
 		if cfg.StateDbSrc != "" {
-			log.Printf("WARNING: File %v does not exist. Create an empty StateDB.\n", dbInfoFile)
+			log.Warningf("File %v does not exist. Create an empty StateDB.", dbInfoFile)
 		}
 	} else {
 		return
@@ -267,7 +276,7 @@ func PrepareStateDB(cfg *Config) (db state.StateDB, workingDirectory string, loa
 	if exists {
 		dbinfo, ferr := ReadStateDbInfo(dbInfoFile)
 		if ferr != nil {
-			err = fmt.Errorf("Failed to read %v. %v", dbInfoFile, ferr)
+			err = fmt.Errorf("failed to read %v. %v", dbInfoFile, ferr)
 			return
 		}
 		if dbinfo.Impl != cfg.DbImpl {
@@ -295,7 +304,7 @@ func PrepareStateDB(cfg *Config) (db state.StateDB, workingDirectory string, loa
 		roothash = dbinfo.RootHash
 	}
 
-	log.Printf("\tTemporary state DB directory: %v\n", workingDirectory)
+	log.Infof("Temporary state DB directory: %v", workingDirectory)
 	db, err = MakeStateDB(workingDirectory, cfg, roothash, loadedExistingDB)
 
 	return

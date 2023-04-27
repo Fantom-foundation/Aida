@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/flags"
+	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	"github.com/Fantom-foundation/Aida/world-state/types"
 	substate "github.com/Fantom-foundation/Substate"
@@ -151,10 +152,10 @@ func collectAccounts(ctx *cli.Context) error {
 	go snapshot.FilterUnique(ctx.Context, storage, uniqueStorage)
 
 	// write found addresses
-	errAcc := snapshot.WriteAccounts(ctx.Context, collectProgressFactory(ctx.Context, uniqueAccount, "account", Logger(ctx, "addr")), stateDB)
+	errAcc := snapshot.WriteAccounts(ctx.Context, collectProgressFactory(ctx.Context, uniqueAccount, "account", utils.NewLogger(ctx.String(utils.LogLevel.Name), "addr")), stateDB)
 
 	// write found storage hashes
-	errStorage := snapshot.WriteAccounts(ctx.Context, collectProgressFactory(ctx.Context, uniqueStorage, "storage", Logger(ctx, "storage")), stateDB)
+	errStorage := snapshot.WriteAccounts(ctx.Context, collectProgressFactory(ctx.Context, uniqueStorage, "storage", utils.NewLogger(ctx.String(utils.LogLevel.Name), "storage")), stateDB)
 
 	// check for any error in above execution threads;
 	// this will block until all threads above close their error channels

@@ -21,14 +21,6 @@ var (
 		Aliases: []string{"w"},
 	}
 
-	// LogLevel defines the level of logging of the app
-	LogLevel = cli.StringFlag{
-		Name:    "log",
-		Aliases: []string{"l"},
-		Usage:   "Level of the logging of the app action (\"critical\", \"error\", \"warning\", \"notice\", \"info\", \"debug\"; default: INFO)",
-		Value:   "info",
-	}
-
 	// ContinueOnFailure does not stop the program when unmatched results are found
 	ContinueOnFailure = cli.BoolFlag{
 		Name:    "continue-on-failure",

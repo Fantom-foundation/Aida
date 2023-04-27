@@ -35,6 +35,7 @@ var ReplayForkCommand = cli.Command{
 		&substate.SkipCreateTxsFlag,
 		&HardForkFlag,
 		&substate.SubstateDirFlag,
+		&utils.LogLevel,
 	},
 	Description: `
 The replay-fork command requires two arguments:
@@ -90,15 +91,15 @@ var HardForkFlag = cli.Int64Flag{
 	Value: hardForkFlagDefault(),
 }
 
-var ReplayForkChainConfig *params.ChainConfig = &params.ChainConfig{}
+var ReplayForkChainConfig = &params.ChainConfig{}
 
 type ReplayForkStat struct {
 	Count  int64
 	ErrStr string
 }
 
-var ReplayForkStatChan chan *ReplayForkStat = make(chan *ReplayForkStat, 1_000_000)
-var ReplayForkStatMap map[string]*ReplayForkStat = make(map[string]*ReplayForkStat)
+var ReplayForkStatChan = make(chan *ReplayForkStat, 1_000_000)
+var ReplayForkStatMap = make(map[string]*ReplayForkStat)
 
 var (
 	ErrReplayForkOutOfGas     = errors.New("out of gas in replay-fork")
@@ -174,7 +175,7 @@ func replayForkTask(block uint64, tx int, recording *substate.Substate, taskPool
 		return err
 	}
 	vmConfig.Tracer = tracer
-	vmConfig.Debug = (tracer != nil)
+	vmConfig.Debug = tracer != nil
 	statedb.Prepare(txHash, txIndex)
 
 	txCtx := vm.TxContext{
@@ -334,6 +335,8 @@ func replayForkTask(block uint64, tx int, recording *substate.Substate, taskPool
 func replayForkAction(ctx *cli.Context) error {
 	var err error
 
+	log := utils.NewLogger(ctx.String(utils.LogLevel.Name), "Substate Replay Fork")
+
 	if ctx.Args().Len() != 2 {
 		return fmt.Errorf("substate-cli replay-fork command requires exactly 2 arguments")
 	}
@@ -347,7 +350,7 @@ func replayForkAction(ctx *cli.Context) error {
 	if hardForkName, exist := HardForkName[hardFork]; !exist {
 		return fmt.Errorf("substate-cli replay-fork: invalid hard-fork block number %v", hardFork)
 	} else {
-		fmt.Printf("substate-cli replay-fork: hard-fork: block %v (%s)\n", hardFork, hardForkName)
+		log.Noticef("Hard-fork: block %v (%s)\n", hardFork, hardForkName)
 	}
 	switch hardFork {
 	case 1:
@@ -407,7 +410,7 @@ func replayForkAction(ctx *cli.Context) error {
 	for _, errstr := range errstrSlice {
 		stat := ReplayForkStatMap[errstr]
 		count := stat.Count
-		fmt.Printf("substate-cli replay-fork: %12v %s\n", count, errstr)
+		log.Infof("%12v %s\n", count, errstr)
 	}
 
 	return err

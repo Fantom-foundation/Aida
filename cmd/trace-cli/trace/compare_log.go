@@ -26,6 +26,7 @@ var TraceCompareLogCommand = cli.Command{
 		&utils.TraceDebugFlag,
 		&utils.TraceFileFlag,
 		&utils.AidaDbFlag,
+		&utils.LogLevel,
 	},
 	Description: `
 The trace compare-log command requires two arguments:
@@ -80,6 +81,8 @@ func isLogEqual(record string, replay string) bool {
 
 // traceCompareLogAction implements trace command for validating record and replay debug log.
 func traceCompareLogAction(ctx *cli.Context) error {
+	log := utils.NewLogger(ctx.String(utils.LogLevel.Name), "Trace Compare Log")
+
 	// process arguments
 	if ctx.Args().Len() != 2 {
 		return fmt.Errorf("trace compare-log command requires exactly 2 arguments")
@@ -100,22 +103,23 @@ func traceCompareLogAction(ctx *cli.Context) error {
 		}
 	}
 
-	fmt.Printf("trace compare-log: Capture record trace...\n")
+	log.Notice("Capture record trace...")
 	recordLog, recErr := captureDebugLog(traceRecordAction, ctx)
 	if recErr != nil {
 		return recErr
 	}
-	fmt.Printf("trace compare-log: Capture replay trace...\n")
+
+	log.Notice("Capture replay trace...")
 	replayLog, repErr := captureDebugLog(traceReplaySubstateAction, ctx)
 	if repErr != nil {
 		return recErr
 	}
 
-	fmt.Printf("trace compare-log: Compare traces...\n")
+	log.Notice("Compare traces...")
 	if !isLogEqual(recordLog, replayLog) {
 		return fmt.Errorf("trace compare-log: Replay trace doesn't match record trace")
 	} else {
-		fmt.Printf("trace compare-log: Replay trace matches record trace\n")
+		log.Notice("Replay trace matches record trace")
 	}
 
 	return nil

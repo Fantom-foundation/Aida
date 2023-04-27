@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/flags"
+	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Aida/world-state/db/opera"
 	"github.com/urfave/cli/v2"
 )
@@ -34,7 +35,7 @@ func root(ctx *cli.Context) error {
 	defer opera.MustCloseStore(store)
 
 	// make logger
-	log := Logger(ctx, "root")
+	log := utils.NewLogger(ctx.String(utils.LogLevel.Name), "root")
 
 	targetBlock := ctx.Uint64(flags.TargetBlock.Name)
 

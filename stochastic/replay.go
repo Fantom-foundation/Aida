@@ -3,7 +3,6 @@ package stochastic
 import (
 	"encoding/binary"
 	"fmt"
-	"log"
 	"math/big"
 	"math/rand"
 	"time"
@@ -14,6 +13,7 @@ import (
 	"github.com/Fantom-foundation/Aida/stochastic/statistics"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/op/go-logging"
 )
 
 // Simulation constants
@@ -40,6 +40,7 @@ type stochasticState struct {
 	suicided       []int64                   // list of suicided accounts
 	traceDebug     bool                      // trace-debug flag
 	rg             *rand.Rand                // random generator for sampling
+	log            *logging.Logger
 }
 
 // find is a helper function to find an element in a slice
@@ -53,7 +54,7 @@ func find[T comparable](a []T, x T) int {
 }
 
 // createState creates a stochastic state and primes the StateDB
-func createState(cfg *utils.Config, e *EstimationModelJSON, db state.StateDB, rg *rand.Rand) *stochasticState {
+func createState(cfg *utils.Config, e *EstimationModelJSON, db state.StateDB, rg *rand.Rand, log *logging.Logger) *stochasticState {
 	// produce random access generators for contract addresses,
 	// storage-keys, and storage addresses.
 	// (NB: Contracts need an indirect access wrapper because
@@ -78,7 +79,7 @@ func createState(cfg *utils.Config, e *EstimationModelJSON, db state.StateDB, rg
 	)
 
 	// setup state
-	ss := NewStochasticState(rg, db, contracts, keys, values, e.SnapshotLambda)
+	ss := NewStochasticState(rg, db, contracts, keys, values, e.SnapshotLambda, log)
 
 	// create accounts in StateDB
 	ss.prime()
@@ -104,7 +105,7 @@ func getStochasticMatrix(e *EstimationModelJSON) ([]string, [][]float64, int) {
 // It requires the simulation model and simulation length. The trace-debug flag
 // enables/disables the printing of StateDB operations and their arguments on
 // the screen.
-func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, cfg *utils.Config) error {
+func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, cfg *utils.Config, log *logging.Logger) error {
 	var (
 		opFrequency [NumOps]uint64 // operation frequency
 		numOps      uint64         // total number of operations
@@ -112,10 +113,10 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, 
 
 	// random generator
 	rg := rand.New(rand.NewSource(cfg.RandomSeed))
-	log.Printf("using random seed %d", cfg.RandomSeed)
+	log.Noticef("using random seed %d", cfg.RandomSeed)
 
 	// create a stochastic state
-	ss := createState(cfg, e, db, rg)
+	ss := createState(cfg, e, db, rg, log)
 
 	// get stochastic matrix
 	operations, A, state := getStochasticMatrix(e)
@@ -141,7 +142,7 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, 
 
 	block := 0
 	// inclusive range
-	log.Printf("Simulation block range: first %v, last %v\n", ss.blockNum, ss.blockNum+uint64(nBlocks-1))
+	log.Noticef("Simulation block range: first %v, last %v", ss.blockNum, ss.blockNum+uint64(nBlocks-1))
 	for {
 
 		// decode opcode
@@ -170,7 +171,7 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, 
 			// report progress
 			sec = time.Since(start).Seconds()
 			if sec-lastSec >= 15 {
-				log.Printf("Elapsed time: %.0f s, at block %v\n", sec, block)
+				log.Infof("Elapsed time: %.0f s, at block %v", sec, block)
 				lastSec = sec
 			}
 		}
@@ -179,7 +180,7 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, 
 		if err := ss.db.Error(); err != nil {
 			errCount++
 			if runErr == nil {
-				runErr = fmt.Errorf("Error: stochastic replay failed.")
+				runErr = fmt.Errorf("error: stochastic replay failed.")
 			}
 
 			runErr = fmt.Errorf("%v\n\tBlock %v Tx %v: %v", runErr, ss.blockNum, ss.txNum, err)
@@ -194,26 +195,26 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, 
 
 	// print progress summary
 	if !cfg.Quiet {
-		log.Printf("Total elapsed time: %.3f s, processed %v blocks\n", sec, block)
+		log.Noticef("Total elapsed time: %.3f s, processed %v blocks", sec, block)
 	}
 	if errCount > 0 {
-		log.Printf("%v errors were found.\n", errCount)
+		log.Warningf("%v errors were found", errCount)
 	}
 
 	// print statistics
-	log.Printf("SyncPeriods: %v", ss.syncPeriodNum)
-	log.Printf("Blocks: %v", ss.blockNum)
-	log.Printf("Transactions: %v", ss.totalTx)
-	log.Printf("Operations: %v", numOps)
-	log.Printf("Operation Frequencies:")
+	log.Noticef("SyncPeriods: %v", ss.syncPeriodNum)
+	log.Noticef("Blocks: %v", ss.blockNum)
+	log.Noticef("Transactions: %v", ss.totalTx)
+	log.Noticef("Operations: %v", numOps)
+	log.Noticef("Operation Frequencies:")
 	for op := 0; op < NumOps; op++ {
-		log.Printf("\t%v: %v", opText[op], opFrequency[op])
+		log.Noticef("\t%v: %v", opText[op], opFrequency[op])
 	}
 	return runErr
 }
 
 // NewStochasticState creates a new state for execution StateDB operations
-func NewStochasticState(rg *rand.Rand, db state.StateDB, contracts *generator.IndirectAccess, keys *generator.RandomAccess, values *generator.RandomAccess, snapshotLambda float64) stochasticState {
+func NewStochasticState(rg *rand.Rand, db state.StateDB, contracts *generator.IndirectAccess, keys *generator.RandomAccess, values *generator.RandomAccess, snapshotLambda float64, log *logging.Logger) stochasticState {
 
 	// return stochastic state
 	return stochasticState{
@@ -227,15 +228,16 @@ func NewStochasticState(rg *rand.Rand, db state.StateDB, contracts *generator.In
 		blockNum:       1,
 		syncPeriodNum:  1,
 		rg:             rg,
+		log:            log,
 	}
 }
 
 // prime StateDB accounts using account information
 func (ss *stochasticState) prime() {
 	numInitialAccounts := ss.contracts.NumElem() + 1
-	log.Printf("Start priming...\n")
-	log.Printf("\tinitializing %v accounts\n", numInitialAccounts)
-	pt := utils.NewProgressTracker(int(numInitialAccounts))
+	ss.log.Notice("Start priming...")
+	ss.log.Noticef("\tinitializing %v accounts\n", numInitialAccounts)
+	pt := utils.NewProgressTracker(int(numInitialAccounts), ss.log)
 	db := ss.db
 	db.BeginSyncPeriod(0)
 	db.BeginBlock(0)
@@ -248,12 +250,12 @@ func (ss *stochasticState) prime() {
 		db.AddBalance(addr, big.NewInt(ss.rg.Int63n(AddBalanceRange)))
 		pt.PrintProgress()
 	}
-	log.Printf("Finalizing...\n")
+	ss.log.Notice("Finalizing...")
 	db.Finalise(FinaliseFlag)
 	db.EndTransaction()
 	db.EndBlock()
 	db.EndSyncPeriod()
-	log.Printf("End priming...\n")
+	ss.log.Notice("End priming...")
 }
 
 // EnableDebug set traceDebug flag to true, and enable debug message when executing an operation
@@ -267,8 +269,8 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		addr  common.Address
 		key   common.Hash
 		value common.Hash
-		db    state.StateDB = ss.db
-		rg    *rand.Rand    = ss.rg
+		db    = ss.db
+		rg    = ss.rg
 	)
 
 	// fetch indexes from index access generators
@@ -290,17 +292,17 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 	// print opcode and its arguments
 	if ss.traceDebug {
 		// print operation
-		fmt.Printf("opcode:%v (%v)", opText[op], EncodeOpcode(op, addrCl, keyCl, valueCl))
+		ss.log.Infof("opcode:%v (%v)", opText[op], EncodeOpcode(op, addrCl, keyCl, valueCl))
 
 		// print indexes of contract address, storage key, and storage value.
 		if addrCl != statistics.NoArgID {
-			fmt.Printf(" addr-idx: %v", addrIdx)
+			ss.log.Infof(" addr-idx: %v", addrIdx)
 		}
 		if keyCl != statistics.NoArgID {
-			fmt.Printf(" key-idx: %v", keyIdx)
+			ss.log.Infof(" key-idx: %v", keyIdx)
 		}
 		if valueCl != statistics.NoArgID {
-			fmt.Printf(" value-idx: %v", valueIdx)
+			ss.log.Infof(" value-idx: %v", valueIdx)
 		}
 	}
 
@@ -308,13 +310,13 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 	case AddBalanceID:
 		value := rg.Int63n(AddBalanceRange)
 		if ss.traceDebug {
-			fmt.Printf(" value: %v", value)
+			ss.log.Infof("value: %v", value)
 		}
 		db.AddBalance(addr, big.NewInt(value))
 
 	case BeginBlockID:
 		if ss.traceDebug {
-			fmt.Printf(" id: %v", ss.blockNum)
+			ss.log.Infof(" id: %v", ss.blockNum)
 		}
 		db.BeginBlock(ss.blockNum)
 		ss.txNum = 0
@@ -322,13 +324,13 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 
 	case BeginSyncPeriodID:
 		if ss.traceDebug {
-			fmt.Printf(" id: %v", ss.syncPeriodNum)
+			ss.log.Infof(" id: %v", ss.syncPeriodNum)
 		}
 		db.BeginSyncPeriod(ss.syncPeriodNum)
 
 	case BeginTransactionID:
 		if ss.traceDebug {
-			fmt.Printf(" id: %v", ss.txNum)
+			ss.log.Infof(" id: %v", ss.txNum)
 		}
 		db.BeginTransaction(ss.txNum)
 		ss.snapshot = []int{}
@@ -392,7 +394,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 			snapshotIdx := snapshotNum - int(exponential.DiscreteSample(rg, ss.snapshotLambda, int64(snapshotNum))) - 1
 			snapshot := ss.snapshot[snapshotIdx]
 			if ss.traceDebug {
-				fmt.Printf(" id: %v", snapshot)
+				ss.log.Infof(" id: %v", snapshot)
 			}
 			db.RevertToSnapshot(snapshot)
 
@@ -403,12 +405,12 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 	case SetCodeID:
 		sz := rg.Intn(MaxCodeSize-1) + 1
 		if ss.traceDebug {
-			fmt.Printf(" code-size: %v", sz)
+			ss.log.Infof(" code-size: %v", sz)
 		}
 		code := make([]byte, sz)
 		_, err := rg.Read(code)
 		if err != nil {
-			log.Fatalf("error producing a random byte slice. Error: %v", err)
+			ss.log.Fatalf("error producing a random byte slice. Error: %v", err)
 		}
 		db.SetCode(addr, code)
 
@@ -422,7 +424,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 	case SnapshotID:
 		id := db.Snapshot()
 		if ss.traceDebug {
-			fmt.Printf(" id: %v", id)
+			ss.log.Infof(" id: %v", id)
 		}
 		ss.snapshot = append(ss.snapshot, id)
 
@@ -433,7 +435,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 			// in the current snapshot
 			value := rg.Int63n(balance)
 			if ss.traceDebug {
-				fmt.Printf(" value: %v", value)
+				ss.log.Infof(" value: %v", value)
 			}
 			db.SubBalance(addr, big.NewInt(value))
 		}
@@ -445,10 +447,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		}
 
 	default:
-		panic("invalid operation")
-	}
-	if ss.traceDebug {
-		fmt.Println()
+		ss.log.Panicf("invalid operation")
 	}
 }
 

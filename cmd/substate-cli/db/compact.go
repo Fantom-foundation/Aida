@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/syndtr/goleveldb/leveldb"
 	leveldb_opt "github.com/syndtr/goleveldb/leveldb/opt"
 	leveldb_util "github.com/syndtr/goleveldb/leveldb/util"
@@ -16,7 +17,9 @@ var CompactCommand = cli.Command{
 	Name:      "compact",
 	Usage:     "Compat LevelDB - discarding deleted and overwritten versions",
 	ArgsUsage: "<dbPath>",
-	Flags:     []cli.Flag{},
+	Flags: []cli.Flag{
+		&utils.LogLevel,
+	},
 	Description: `
 The substate-cli db compact command requires one argument:
 	<dbPath>
@@ -28,6 +31,8 @@ func compact(ctx *cli.Context) error {
 	if ctx.Args().Len() != 1 {
 		return fmt.Errorf("substate-cli db compact: command requires exactly one arguments")
 	}
+
+	log := utils.NewLogger(ctx.String(utils.LogLevel.Name), "Substate DB")
 
 	dbPath := ctx.Args().Get(0)
 	dbOpt := &leveldb_opt.Options{
@@ -43,7 +48,7 @@ func compact(ctx *cli.Context) error {
 	}
 
 	start := time.Now()
-	fmt.Printf("substate-cli db compact: compaction begin\n")
+	log.Notice("Compaction begin")
 	wg := &sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
@@ -55,8 +60,8 @@ func compact(ctx *cli.Context) error {
 	}()
 	wg.Wait()
 	duration := time.Since(start)
-	fmt.Printf("substate-cli db compact: compaction completed\n")
-	fmt.Printf("substate-cli db compact: elapsed time: %v\n", duration.Round(1*time.Millisecond))
+	log.Notice("Compaction completed")
+	log.Infof("Elapsed time: %v", duration.Round(1*time.Millisecond))
 
 	return nil
 }

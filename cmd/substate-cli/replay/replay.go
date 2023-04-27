@@ -22,6 +22,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
@@ -47,6 +48,7 @@ var ReplayCommand = cli.Command{
 		&OnlySuccessfulFlag,
 		&CpuProfilingFlag,
 		&UseInMemoryStateDbFlag,
+		&utils.LogLevel,
 	},
 	Description: `
 The substate-cli replay command requires two arguments:
@@ -93,7 +95,7 @@ func getVmDuration() time.Duration {
 }
 
 // replayTask replays a transaction substate
-func replayTask(config ReplayConfig, block uint64, tx int, recording *substate.Substate, taskPool *substate.SubstateTaskPool) error {
+func replayTask(config ReplayConfig, block uint64, tx int, recording *substate.Substate, taskPool *substate.SubstateTaskPool, log *logging.Logger) error {
 
 	// If requested, skip failed transactions.
 	if config.only_successful && recording.Result.Status != types.ReceiptStatusSuccessful {
@@ -210,13 +212,13 @@ func replayTask(config ReplayConfig, block uint64, tx int, recording *substate.S
 	r := outputResult.Equal(evmResult)
 	a := outputAlloc.Equal(evmAlloc)
 	if !(r && a) {
-		fmt.Printf("block: %v Transaction: %v\n", block, tx)
+		log.Infof("block: %v Transaction: %v", block, tx)
 		if !r {
-			fmt.Printf("inconsistent output: result\n")
+			log.Criticalf("inconsistent output: result")
 			utils.PrintResultDiffSummary(outputResult, evmResult)
 		}
 		if !a {
-			fmt.Printf("inconsistent output: alloc\n")
+			log.Criticalf("inconsistent output: alloc")
 			utils.PrintAllocationDiffSummary(&outputAlloc, &evmAlloc)
 		}
 		return fmt.Errorf("inconsistent output")
@@ -247,8 +249,10 @@ func NewBasicBlockProfilingCollectorContext() *BasicBlockProfilingCollectorConte
 func replayAction(ctx *cli.Context) error {
 	var err error
 
+	log := utils.NewLogger(ctx.String(utils.LogLevel.Name), "Substate Replay")
+
 	if ctx.Args().Len() != 2 {
-		return fmt.Errorf("substate-cli replay command requires exactly 2 arguments")
+		return fmt.Errorf("substate-cli: replay command requires exactly 2 arguments")
 	}
 
 	// spawn contexts for data collector workers
@@ -273,7 +277,7 @@ func replayAction(ctx *cli.Context) error {
 			}
 			version := fmt.Sprintf("git-date:%v, git-commit:%v, chaind-id:%v", gitDate, gitCommit, chainID)
 			stats.Dump(version)
-			fmt.Printf("substate-cli replay: recorded micro profiling statistics in %v\n", vm.MicroProfilingDB)
+			log.Noticef("substate-cli: replay-action: recorded micro profiling statistics in %v", vm.MicroProfilingDB)
 		}()
 
 	}
@@ -298,14 +302,14 @@ func replayAction(ctx *cli.Context) error {
 				stats.Merge(dcc[i].stats)
 			}
 			stats.Dump()
-			fmt.Printf("substate-cli replay: recorded basic block profiling statistics in %v\n", vm.BasicBlockProfilingDB)
+			log.Noticef("recorded basic block profiling statistics in %v\n", vm.BasicBlockProfilingDB)
 		}()
 	}
 
 	chainID = ctx.Int(ChainIDFlag.Name)
-	fmt.Printf("chain-id: %v\n", chainID)
-	fmt.Printf("git-date: %v\n", gitDate)
-	fmt.Printf("git-commit: %v\n", gitCommit)
+	log.Infof("chain-id: %v\n", chainID)
+	log.Infof("git-date: %v\n", gitDate)
+	log.Infof("git-commit: %v\n", gitCommit)
 
 	first, last, argErr := utils.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
 	if argErr != nil {
@@ -350,14 +354,14 @@ func replayAction(ctx *cli.Context) error {
 	}
 
 	task := func(block uint64, tx int, recording *substate.Substate, taskPool *substate.SubstateTaskPool) error {
-		return replayTask(config, block, tx, recording, taskPool)
+		return replayTask(config, block, tx, recording, taskPool, log)
 	}
 
 	resetVmDuration()
 	taskPool := substate.NewSubstateTaskPool("substate-cli replay", task, first, last, ctx)
 	err = taskPool.Execute()
 
-	fmt.Printf("substate-cli replay: net VM time: %v\n", getVmDuration())
+	log.Noticef("net VM time: %v\n", getVmDuration())
 	if strings.HasSuffix(ctx.String(InterpreterImplFlag.Name), "-stats") {
 		lfvm.PrintCollectedInstructionStatistics()
 	}

@@ -32,7 +32,7 @@ func main() {
 			&substate.SubstateDirFlag,
 
 			// Config
-			&flags.LogLevel,
+			&utils.LogLevel,
 			&utils.ChainIDFlag,
 			&flags.ContinueOnFailure,
 

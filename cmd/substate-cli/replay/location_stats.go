@@ -3,6 +3,7 @@ package replay
 import (
 	"sync"
 
+	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/urfave/cli/v2"
@@ -18,6 +19,7 @@ var GetLocationStatsCommand = cli.Command{
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
 		&ChainIDFlag,
+		&utils.LogLevel,
 	},
 	Description: `
 The substate-cli location-stats command requires two arguments:
