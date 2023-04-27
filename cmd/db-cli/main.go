@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/Fantom-foundation/Aida/cmd/aida-db-cli/db"
+	"github.com/Fantom-foundation/Aida/cmd/db-cli/db"
 
 	"github.com/urfave/cli/v2"
 )
