@@ -52,7 +52,7 @@ The stochastic replay command requires two argument:
 // stochasticReplayAction implements the replay command. The user
 // provides simulation file and simulation as arguments.
 func stochasticReplayAction(ctx *cli.Context) error {
-	log := utils.NewLogger(ctx.String(utils.LogLevel.Name), "Stochastic Replay Action")
+	log := utils.NewLogger(ctx.String(utils.LogLevel.Name), "Stochastic Replay")
 
 	// parse command-line arguments
 	if ctx.Args().Len() != 2 {

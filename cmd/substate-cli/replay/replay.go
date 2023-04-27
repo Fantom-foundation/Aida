@@ -302,7 +302,7 @@ func replayAction(ctx *cli.Context) error {
 				stats.Merge(dcc[i].stats)
 			}
 			stats.Dump()
-			log.Noticef("substate-replay: recorded basic block profiling statistics in %v\n", vm.BasicBlockProfilingDB)
+			log.Noticef("recorded basic block profiling statistics in %v\n", vm.BasicBlockProfilingDB)
 		}()
 	}
 
@@ -361,7 +361,7 @@ func replayAction(ctx *cli.Context) error {
 	taskPool := substate.NewSubstateTaskPool("substate-cli replay", task, first, last, ctx)
 	err = taskPool.Execute()
 
-	log.Noticef("substate-replay: net VM time: %v\n", getVmDuration())
+	log.Noticef("net VM time: %v\n", getVmDuration())
 	if strings.HasSuffix(ctx.String(InterpreterImplFlag.Name), "-stats") {
 		lfvm.PrintCollectedInstructionStatistics()
 	}
