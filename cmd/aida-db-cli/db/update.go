@@ -31,6 +31,7 @@ var UpdateCommand = cli.Command{
 		&utils.DeleteSourceDbsFlag,
 		&utils.DbTmpFlag,
 		&utils.ChainIDFlag,
+		&utils.LogLevel,
 	},
 	Description: `
 The db update command requires events as an argument:
@@ -41,12 +42,12 @@ The db update command requires events as an argument:
 
 // Update command is used to record/update aida-db
 func Update(ctx *cli.Context) error {
-	log := state.Logger(ctx, "update")
-
 	cfg, argErr := utils.NewConfig(ctx, utils.EventArg)
 	if argErr != nil {
 		return argErr
 	}
+
+	log := utils.NewLogger(cfg.LogLevel, "Update")
 
 	updateConfigFlags(cfg, log)
 

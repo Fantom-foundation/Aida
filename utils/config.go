@@ -523,7 +523,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 			logDbMode("Shadow storage system", cfg.ShadowImpl, cfg.ShadowVariant)
 		}
 		log.Infof("Source storage directory (empty if new): %v", cfg.StateDbSrc)
-		log.Infof("Working storage directory: %v", cfg.StateDbTemp)
+		log.Infof("Working storage directory: %v", cfg.DbTmp)
 		if cfg.ArchiveMode {
 			log.Noticef("Archive mode: enabled")
 			if cfg.ArchiveVariant == "" {
