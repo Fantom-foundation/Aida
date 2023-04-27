@@ -56,7 +56,7 @@ func Merge(cfg *utils.Config, sourceDbs []string) error {
 		if err != nil {
 			return err
 		}
-		log.Noticef("Transfer of %s finished \n", sourceDBPaths[i])
+		log.Noticef("Transfer of %s finished", sourceDBPaths[i])
 		MustCloseDB(sourceDB)
 	}
 
