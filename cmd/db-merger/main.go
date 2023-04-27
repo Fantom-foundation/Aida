@@ -21,7 +21,7 @@ var DbMergerApp = cli.App{
 	Flags: []cli.Flag{
 		&utils.DeleteSourceDbsFlag,
 		&utils.AidaDbFlag,
-		&utils.LogLevel,
+		&utils.LogLevelFlag,
 	},
 	Description: `
 The dbmerger command merges databases with source data into one database which is used for profiling.

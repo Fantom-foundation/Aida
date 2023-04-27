@@ -18,7 +18,7 @@ var CompactCommand = cli.Command{
 	Usage:     "Compat LevelDB - discarding deleted and overwritten versions",
 	ArgsUsage: "<dbPath>",
 	Flags: []cli.Flag{
-		&utils.LogLevel,
+		&utils.LogLevelFlag,
 	},
 	Description: `
 The substate-cli db compact command requires one argument:
@@ -32,7 +32,7 @@ func compact(ctx *cli.Context) error {
 		return fmt.Errorf("substate-cli db compact: command requires exactly one arguments")
 	}
 
-	log := utils.NewLogger(ctx.String(utils.LogLevel.Name), "Substate DB")
+	log := utils.NewLogger(ctx.String(utils.LogLevelFlag.Name), "Substate DB")
 
 	dbPath := ctx.Args().Get(0)
 	dbOpt := &leveldb_opt.Options{

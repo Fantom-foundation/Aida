@@ -48,7 +48,7 @@ var ReplayCommand = cli.Command{
 		&OnlySuccessfulFlag,
 		&CpuProfilingFlag,
 		&UseInMemoryStateDbFlag,
-		&utils.LogLevel,
+		&utils.LogLevelFlag,
 	},
 	Description: `
 The substate-cli replay command requires two arguments:
@@ -249,7 +249,7 @@ func NewBasicBlockProfilingCollectorContext() *BasicBlockProfilingCollectorConte
 func replayAction(ctx *cli.Context) error {
 	var err error
 
-	log := utils.NewLogger(ctx.String(utils.LogLevel.Name), "Substate Replay")
+	log := utils.NewLogger(ctx.String(utils.LogLevelFlag.Name), "Substate Replay")
 
 	if ctx.Args().Len() != 2 {
 		return fmt.Errorf("substate-cli: replay command requires exactly 2 arguments")

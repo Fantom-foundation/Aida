@@ -19,7 +19,7 @@ var GetLocationStatsCommand = cli.Command{
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
 		&ChainIDFlag,
-		&utils.LogLevel,
+		&utils.LogLevelFlag,
 	},
 	Description: `
 The substate-cli location-stats command requires two arguments:

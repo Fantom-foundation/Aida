@@ -25,7 +25,7 @@ var GenUpdateSetCommand = cli.Command{
 		&utils.UpdateDbFlag,
 		&utils.ValidateFlag,
 		&utils.WorldStateFlag,
-		&utils.LogLevel,
+		&utils.LogLevelFlag,
 	},
 	Description: `
 The gen-update-set command requires two arguments: <blockNumLast> <interval>
@@ -40,7 +40,7 @@ func generateUpdateSet(ctx *cli.Context) error {
 	var (
 		err               error
 		destroyedAccounts []common.Address
-		log               = utils.NewLogger(ctx.String(utils.LogLevel.Name), "Generate Update Set")
+		log               = utils.NewLogger(ctx.String(utils.LogLevelFlag.Name), "Generate Update Set")
 	)
 	// process arguments and flags
 	if ctx.Args().Len() != 2 {
