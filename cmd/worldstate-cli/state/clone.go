@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/flags"
+	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	"github.com/Fantom-foundation/Aida/world-state/types"
 	"github.com/urfave/cli/v2"
@@ -39,7 +40,7 @@ func cloneDB(ctx *cli.Context) error {
 	defer snapshot.MustCloseStateDB(outputDB)
 
 	// make logger
-	log := Logger(ctx, "clone")
+	log := utils.NewLogger(ctx.String(utils.LogLevel.Name), "clone")
 	logTick := time.NewTicker(2 * time.Second)
 	defer logTick.Stop()
 

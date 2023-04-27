@@ -2,7 +2,6 @@ package dbmerger
 
 import (
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/Fantom-foundation/Aida/utils"
@@ -15,6 +14,7 @@ import (
 // DbMerger implements merging command for combining all source data databases into single database used for profiling.
 func DbMerger(ctx *cli.Context) error {
 	targetPath := ctx.Path(utils.AidaDbFlag.Name)
+	log := utils.NewLogger(ctx.String(utils.LogLevel.Name), "DB Merger")
 
 	targetDB, sourceDBs, sourceDBPaths, err := openDatabases(targetPath, ctx.Args())
 	if err != nil {
@@ -27,7 +27,7 @@ func DbMerger(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
-		log.Printf("data from %s copying finished \n", sourceDBPaths[i])
+		log.Noticef("Data copying from %s finished\n", sourceDBPaths[i])
 		MustCloseDB(sourceDB)
 	}
 
@@ -41,10 +41,10 @@ func DbMerger(ctx *cli.Context) error {
 			if err != nil {
 				return err
 			}
-			log.Printf("deleted: %s\n", path)
+			log.Infof("Deleted: %s\n", path)
 		}
 	}
-	log.Printf("merge finished successfully\n")
+	log.Notice("Merge finished successfully\n")
 
 	return err
 }
@@ -121,7 +121,7 @@ func MustCloseDB(db ethdb.Database) {
 		err := db.Close()
 		if err != nil {
 			if err.Error() != "leveldb: closed" {
-				log.Printf("could not close database; %s\n", err.Error())
+				fmt.Printf("could not close database; %s\n", err.Error())
 			}
 		}
 	}

@@ -31,6 +31,7 @@ var RunArchiveApp = cli.App{
 		&utils.ValidateTxStateFlag,
 		&utils.VmImplementation,
 		&utils.AidaDbFlag,
+		&utils.LogLevel,
 	},
 	Description: "Runs transactions on historic states derived from an archive DB",
 }

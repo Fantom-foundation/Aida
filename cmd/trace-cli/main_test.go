@@ -86,6 +86,7 @@ func TestPositiveCompareLog(t *testing.T) {
 		"trace", "compare-log",
 		"--substatedir", "substate.test",
 		"--trace-file", testTraceFile,
+		"--log", "CRITICAL",
 		"5000000", "5000100",
 	}
 	if err := app.Run(os.Args); err != nil {

@@ -2,7 +2,6 @@ package trace
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -11,6 +10,7 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
+	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
@@ -53,6 +53,7 @@ var TraceReplayCommand = cli.Command{
 		&utils.ValidateFlag,
 		&utils.ValidateWorldStateFlag,
 		&utils.AidaDbFlag,
+		&utils.LogLevel,
 	},
 	Description: `
 The trace replay command requires two arguments:
@@ -74,57 +75,57 @@ func readTrace(cfg *utils.Config, ch chan operation.Operation) {
 }
 
 // traceReplayTask simulates storage operations from storage traces on stateDB.
-func traceReplayTask(cfg *utils.Config) error {
+func traceReplayTask(cfg *utils.Config, log *logging.Logger) error {
 
 	// starting reading in parallel
-	log.Printf("Start reading operations in parallel")
+	log.Notice("Start reading operations in parallel")
 	opChannel := make(chan operation.Operation, readBufferSize)
 	go readTrace(cfg, opChannel)
 
 	// create a directory for the store to place all its files, and
 	// instantiate the state DB under testing.
-	log.Printf("Create stateDB database")
+	log.Notice("Create stateDB database")
 	db, stateDirectory, loadedExistingDB, err := utils.PrepareStateDB(cfg)
 	if err != nil {
 		return err
 	}
 	if !cfg.KeepStateDb {
-		log.Printf("WARNING: directory %v will be removed at the end of this run.\n", stateDirectory)
+		log.Warningf("Directory %v with DB will be removed at the end of this run.", stateDirectory)
 		defer os.RemoveAll(stateDirectory)
 	}
 
 	if cfg.SkipPriming || loadedExistingDB {
-		log.Printf("Skipping DB priming.\n")
+		log.Warning("Skipping DB priming.")
 	} else {
 		// intialize the world state and advance it to the first block
-		log.Printf("Load and advance worldstate to block %v", cfg.First-1)
+		log.Noticef("Load and advance worldstate to block %v", cfg.First-1)
 		ws, err := utils.GenerateWorldStateFromUpdateDB(cfg, cfg.First-1)
 		if err != nil {
 			return err
 		}
 
 		// prime stateDB
-		log.Printf("Prime stateDB \n")
-		utils.PrimeStateDB(ws, db, cfg)
+		log.Notice("Prime StateDB")
+		utils.PrimeStateDB(ws, db, cfg, log)
 
 		// print memory usage after priming
 		if cfg.MemoryBreakdown {
 			if usage := db.GetMemoryUsage(); usage != nil {
-				log.Printf("State DB memory usage: %d byte\n%s\n", usage.UsedBytes, usage.Breakdown)
+				log.Noticef("State DB memory usage: %d byte\n%s", usage.UsedBytes, usage.Breakdown)
 			} else {
-				log.Printf("Utilized storage solution does not support memory breakdowns.\n")
+				log.Noticef("Utilized storage solution does not support memory breakdowns.")
 			}
 		}
 
 		// delete destroyed accounts from stateDB
-		log.Printf("Delete destroyed accounts \n")
+		log.Noticef("Delete destroyed accounts")
 		// remove destroyed accounts until one block before the first block
 		if err = utils.DeleteDestroyedAccountsFromStateDB(db, cfg, cfg.First-1); err != nil {
 			return err
 		}
 	}
 
-	log.Printf("Replay storage operations on StateDB database")
+	log.Noticef("Replay storage operations on StateDB database")
 
 	// load context
 	dCtx := context.NewReplay()
@@ -172,9 +173,9 @@ func traceReplayTask(cfg *utils.Config) error {
 			lastBlock = block // track the last processed block
 			if !cfg.Quiet {
 				// report progress
-				sec = time.Since(start).Seconds()
+				hours, minutes, seconds := utils.ParseTime(time.Since(start))
 				if sec-lastSec >= 15 {
-					log.Printf("Elapsed time: %.0f s, at block %v\n", sec, block)
+					log.Infof("Elapsed time: %vh %vm %vs, at block %v\n", hours, minutes, seconds, block)
 					lastSec = sec
 				}
 			}
@@ -184,14 +185,14 @@ func traceReplayTask(cfg *utils.Config) error {
 
 	sec = time.Since(start).Seconds()
 
-	log.Printf("Finished replaying storage operations on StateDB database")
+	log.Notice("Finished replaying storage operations on StateDB.")
 
 	// destroy context to make space
 	dCtx = nil
 
 	// validate stateDB
 	if cfg.ValidateWorldState {
-		log.Printf("Validate final state")
+		log.Notice("Validate final state")
 		ws, err := utils.GenerateWorldStateFromUpdateDB(cfg, cfg.Last)
 		if err = utils.DeleteDestroyedAccountsFromWorldState(ws, cfg, cfg.Last); err != nil {
 			return fmt.Errorf("Failed to remove detroyed accounts. %v\n", err)
@@ -203,9 +204,9 @@ func traceReplayTask(cfg *utils.Config) error {
 
 	if cfg.MemoryBreakdown {
 		if usage := db.GetMemoryUsage(); usage != nil {
-			log.Printf("State DB memory usage: %d byte\n%s\n", usage.UsedBytes, usage.Breakdown)
+			log.Notice("State DB memory usage: %d byte\n%s", usage.UsedBytes, usage.Breakdown)
 		} else {
-			log.Printf("Utilized storage solution does not support memory breakdowns.\n")
+			log.Notice("Utilized storage solution does not support memory breakdowns.")
 		}
 	}
 
@@ -222,24 +223,24 @@ func traceReplayTask(cfg *utils.Config) error {
 	if cfg.KeepStateDb {
 		rootHash, _ := db.Commit(true)
 		if err := utils.WriteStateDbInfo(stateDirectory, cfg, lastBlock, rootHash); err != nil {
-			log.Println(err)
+			log.Error(err)
 		}
 		//rename directory after closing db.
 		defer utils.RenameTempStateDBDirectory(cfg, stateDirectory, lastBlock)
 	}
 
 	// close the DB and print disk usage
-	log.Printf("Close StateDB database")
+	log.Notice("Close StateDB database")
 	start = time.Now()
 	if err := db.Close(); err != nil {
-		log.Printf("Failed to close database: %v", err)
+		log.Errorf("Failed to close database: %v", err)
 	}
 
 	// print progress summary
 	if !cfg.Quiet {
-		log.Printf("trace replay: Total elapsed time: %.3f s, processed %v blocks\n", sec, cfg.Last-cfg.First+1)
-		log.Printf("trace replay: Closing DB took %v\n", time.Since(start))
-		log.Printf("trace replay: Final disk usage: %v MiB\n", float32(utils.GetDirectorySize(stateDirectory))/float32(1024*1024))
+		log.Noticef("Total elapsed time: %.3f s, processed %v blocks\n", sec, cfg.Last-cfg.First+1)
+		log.Noticef("Closing DB took %v\n", time.Since(start))
+		log.Noticef("Final disk usage: %v MiB\n", float32(utils.GetDirectorySize(stateDirectory))/float32(1024*1024))
 	}
 
 	return nil
@@ -268,7 +269,9 @@ func traceReplayAction(ctx *cli.Context) error {
 	substate.SetSubstateDirectory(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
-	err = traceReplayTask(cfg)
+
+	log := utils.NewLogger(ctx.String(utils.LogLevel.Name), "Trace Replay Action")
+	err = traceReplayTask(cfg, log)
 
 	return err
 }

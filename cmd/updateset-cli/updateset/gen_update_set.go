@@ -3,7 +3,6 @@ package updateset
 import (
 	"errors"
 	"fmt"
-	"log"
 	"strconv"
 
 	"github.com/Fantom-foundation/Aida/utils"
@@ -18,7 +17,9 @@ func GenUpdateSet(ctx *cli.Context) error {
 	var (
 		err               error
 		destroyedAccounts []common.Address
+		log               = utils.NewLogger(ctx.String(utils.LogLevel.Name), "Generate Update Set")
 	)
+
 	// process arguments and flags
 	if ctx.Args().Len() != 2 {
 		return fmt.Errorf("gen-update-set command requires exactly 2 arguments")
@@ -45,14 +46,15 @@ func GenUpdateSet(ctx *cli.Context) error {
 
 	// store world state
 	cfg.First = utils.FirstSubstateBlock
-	log.Printf("Load initial worldstate and store its substateAlloc\n")
+	log.Notice("Load initial World-State and store its substateAlloc")
+
 	ws, err := utils.GenerateWorldState(worldStateDir, cfg.First-1, cfg)
 	if err != nil {
 		return err
 	}
-	log.Printf("write block %v to updateDB\n", cfg.First-1)
+	log.Noticef("write block %v to UpdateDB", cfg.First-1)
 	db.PutUpdateSet(cfg.First-1, &ws, destroyedAccounts)
-	log.Printf("\tAccounts: %v\n", len(ws))
+	log.Noticef("Accounts: %v", len(ws))
 
 	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
 	defer iter.Release()
@@ -67,16 +69,16 @@ func GenUpdateSet(ctx *cli.Context) error {
 	for iter.Next() {
 		tx := iter.Value()
 		if isFirst {
-			checkPoint = (((tx.Block/interval)+1)*interval - 1)
+			checkPoint = ((tx.Block/interval)+1)*interval - 1
 			isFirst = false
 		}
 		// new block
 		if curBlock != tx.Block {
 			// write an update-set until prev block to update-set db
 			if tx.Block > checkPoint {
-				log.Printf("write block %v to updateDB\n", curBlock)
+				log.Infof("Write block %v to UpdateDB", curBlock)
 				db.PutUpdateSet(curBlock, &update, destroyedAccounts)
-				log.Printf("\tTx: %v, Accounts: %v, Suicided: %v\n", txCount, len(update), len(destroyedAccounts))
+				log.Infof("Tx: %v, Accounts: %v, Suicided: %v", txCount, len(update), len(destroyedAccounts))
 				checkPoint += interval
 				destroyedAccounts = nil
 				if cfg.ValidateTxState {

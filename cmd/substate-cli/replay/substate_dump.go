@@ -3,6 +3,7 @@ package replay
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -50,7 +51,7 @@ func substateDumpTask(block uint64, tx int, recording *substate.Substate, taskPo
 	jbytes, _ = json.MarshalIndent(outputResult, "", " ")
 	out += fmt.Sprintf("Recorded output result:\n%s\n", jbytes)
 
-	fmt.Println(out)
+	log.Println(out)
 
 	return nil
 }

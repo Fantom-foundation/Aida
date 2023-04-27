@@ -50,7 +50,7 @@ func (op *SetCode) Write(f io.Writer) error {
 	if err := binary.Write(f, binary.LittleEndian, op.Contract); err != nil {
 		return fmt.Errorf("Cannot write contract address. Error: %v", err)
 	}
-	var length uint32 = uint32(len(op.Bytecode))
+	var length = uint32(len(op.Bytecode))
 	if err := binary.Write(f, binary.LittleEndian, &length); err != nil {
 		return fmt.Errorf("Cannot read byte-code length. Error: %v", err)
 	}
