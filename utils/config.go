@@ -44,6 +44,11 @@ var GitCommit = "0000000000000000000000000000000000000000"
 
 // Command line options for common flags in record and replay.
 var (
+	APIRecordingSrcFileFlag = cli.PathFlag{
+		Name:    "api-recording",
+		Usage:   "Path to source file with recorded API data",
+		Aliases: []string{"r"},
+	}
 	ArchiveModeFlag = cli.BoolFlag{
 		Name:  "archive",
 		Usage: "set node type to archival mode. If set, the node keep all the EVM state history; otherwise the state history will be pruned.",
@@ -258,6 +263,12 @@ var (
 		Usage: "Depth of snapshot history",
 		Value: 100,
 	}
+	LogLevelFlag = cli.StringFlag{
+		Name:    "log",
+		Aliases: []string{"l"},
+		Usage:   "Level of the logging of the app action (\"critical\", \"error\", \"warning\", \"notice\", \"info\", \"debug\"; default: INFO)",
+		Value:   "info",
+	}
 )
 
 // execution configuration for replay command.
@@ -268,6 +279,7 @@ type Config struct {
 	First uint64 // first block
 	Last  uint64 // last block
 
+	APIRecordingSrcFile string         // path to source file with recorded API data
 	ArchiveMode         bool           // enable archive mode
 	ArchiveVariant      string         // selects the implementation variant of the archive
 	BlockLength         uint64         // length of a block in number of transactions
@@ -287,6 +299,7 @@ type Config struct {
 	HasDeletedAccounts  bool           // true if DeletionDb is not empty; otherwise false
 	KeepStateDb         bool           // set to true if stateDB is kept after run
 	KeysNumber          int64          // number of keys to generate
+	LogLevel            string         // level of the logging of the app action
 	MaxNumTransactions  int            // the maximum number of processed transactions
 	MemoryBreakdown     bool           // enable printing of memory breakdown
 	MemoryProfile       string         // capture the memory heap profile into the file
@@ -386,6 +399,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		AppName:     ctx.App.HelpName,
 		CommandName: ctx.Command.Name,
 
+		APIRecordingSrcFile: ctx.String(APIRecordingSrcFileFlag.Name),
 		ArchiveMode:         ctx.Bool(ArchiveModeFlag.Name),
 		ArchiveVariant:      ctx.String(ArchiveVariantFlag.Name),
 		BlockLength:         ctx.Uint64(BlockLengthFlag.Name),
@@ -407,6 +421,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		KeepStateDb:         ctx.Bool(KeepStateDbFlag.Name),
 		KeysNumber:          ctx.Int64(KeysNumberFlag.Name),
 		Last:                last,
+		LogLevel:            ctx.String(LogLevelFlag.Name),
 		MaxNumTransactions:  ctx.Int(MaxNumTransactionsFlag.Name),
 		MemoryBreakdown:     ctx.Bool(MemoryBreakdownFlag.Name),
 		MemoryProfile:       ctx.String(MemoryProfileFlag.Name),

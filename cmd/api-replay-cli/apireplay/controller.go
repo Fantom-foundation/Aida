@@ -3,7 +3,6 @@ package apireplay
 import (
 	"sync"
 
-	"github.com/Fantom-foundation/Aida/cmd/api-replay-cli/flags"
 	"github.com/Fantom-foundation/Aida/iterator"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -52,17 +51,17 @@ func newController(ctx *cli.Context, cfg *utils.Config, db state.StateDB, iter *
 	counterWg := new(sync.WaitGroup)
 
 	// create instances
-	reader := newReader(iter, newLogger(ctx), readerClosed, readerWg)
+	reader := newReader(iter, newLogger(ctx, cfg), readerClosed, readerWg)
 
-	executors, output, counterInput := createExecutors(cfg.First, cfg.Last, db, ctx, utils.GetChainConfig(cfg.ChainID), reader.output, cfg.VmImpl, executorsClosed, executorsWg)
+	executors, output, counterInput := createExecutors(cfg, db, ctx, utils.GetChainConfig(cfg.ChainID), reader.output, executorsClosed, executorsWg)
 
-	counter := newCounter(counterClosed, counterInput, newLogger(ctx), counterWg)
+	counter := newCounter(counterClosed, counterInput, newLogger(ctx, cfg), counterWg)
 
-	comparators, failure := createComparators(ctx, output, comparatorsClosed, comparatorsWg)
+	comparators, failure := createComparators(ctx, cfg, output, comparatorsClosed, comparatorsWg)
 
 	return &Controller{
 		failure:           failure,
-		log:               newLogger(ctx),
+		log:               newLogger(ctx, cfg),
 		ctx:               ctx,
 		Reader:            reader,
 		Executors:         executors,
@@ -203,33 +202,33 @@ func (r *Controller) control() {
 }
 
 // createExecutors creates number of Executors defined by the flag WorkersFlag
-func createExecutors(first, last uint64, db state.StateDB, ctx *cli.Context, chainCfg *params.ChainConfig, input chan *iterator.RequestWithResponse, vmImpl string, closed chan any, wg *sync.WaitGroup) ([]*ReplayExecutor, chan *OutData, chan requestLog) {
-	log.Infof("creating %v executors", ctx.Int(flags.WorkersFlag.Name))
+func createExecutors(cfg *utils.Config, db state.StateDB, ctx *cli.Context, chainCfg *params.ChainConfig, input chan *iterator.RequestWithResponse, closed chan any, wg *sync.WaitGroup) ([]*ReplayExecutor, chan *OutData, chan requestLog) {
+	log.Infof("creating %v executors", cfg.Workers)
 
 	output := make(chan *OutData, bufferSize)
 
-	executors := ctx.Int(flags.WorkersFlag.Name)
+	executors := cfg.Workers
 
 	e := make([]*ReplayExecutor, executors)
 	counterInput := make(chan requestLog)
 	for i := 0; i < executors; i++ {
-		e[i] = newExecutor(first, last, db, output, chainCfg, input, vmImpl, wg, closed, newLogger(ctx), counterInput)
+		e[i] = newExecutor(cfg.First, cfg.Last, db, output, chainCfg, input, cfg.VmImpl, wg, closed, newLogger(ctx, cfg), counterInput)
 	}
 
 	return e, output, counterInput
 }
 
 // createComparators creates number of Comparators defined by the flag WorkersFlag divided by two
-func createComparators(ctx *cli.Context, input chan *OutData, closed chan any, wg *sync.WaitGroup) ([]*Comparator, chan any) {
+func createComparators(ctx *cli.Context, cfg *utils.Config, input chan *OutData, closed chan any, wg *sync.WaitGroup) ([]*Comparator, chan any) {
 	var (
 		comparators int
 	)
 
 	// do we want a single-thread replay
-	if ctx.Int(flags.WorkersFlag.Name) == 1 {
+	if cfg.Workers == 1 {
 		comparators = 1
 	} else {
-		comparators = ctx.Int(flags.WorkersFlag.Name) / 2
+		comparators = cfg.Workers / 2
 	}
 
 	log.Infof("creating %v comparators", comparators)
@@ -237,7 +236,7 @@ func createComparators(ctx *cli.Context, input chan *OutData, closed chan any, w
 	c := make([]*Comparator, comparators)
 	failure := make(chan any)
 	for i := 0; i < comparators; i++ {
-		c[i] = newComparator(input, newLogger(ctx), closed, wg, ctx.Bool(flags.ContinueOnFailure.Name), failure)
+		c[i] = newComparator(input, newLogger(ctx, cfg), closed, wg, cfg.ContinueOnFailure, failure)
 	}
 
 	return c, failure
