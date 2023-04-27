@@ -361,7 +361,7 @@ func replayAction(ctx *cli.Context) error {
 	taskPool := substate.NewSubstateTaskPool("substate-cli replay", task, first, last, ctx)
 	err = taskPool.Execute()
 
-	log.Noticef("substate-replay: net VM time: %v\n", getVmDuration())
+	log.Noticef("net VM time: %v\n", getVmDuration())
 	if strings.HasSuffix(ctx.String(InterpreterImplFlag.Name), "-stats") {
 		lfvm.PrintCollectedInstructionStatistics()
 	}
