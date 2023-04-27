@@ -19,8 +19,6 @@ var InitDb = cli.App{
 		&db.MergeCommand,
 		&db.UpdateCommand,
 	},
-	Description: `
-app for maintaining with aida-db`,
 }
 
 // main implements aida-db functions

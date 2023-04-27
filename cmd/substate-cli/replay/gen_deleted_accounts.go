@@ -241,7 +241,7 @@ func genDeletedAccountsAction(ctx *cli.Context) error {
 func GenDeletedAccountsAction(cfg *utils.Config) error {
 	var err error
 
-	log := utils.NewLogger(ctx.String(utils.LogLevel.Name), "Substate Replay")
+	log := utils.NewLogger(cfg.LogLevel, "Substate Replay")
 
 	chainID = cfg.ChainID
 	log.Infof("chain-id: %v", chainID)

@@ -19,6 +19,7 @@ var MergeCommand = cli.Command{
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 		&utils.DeleteSourceDbsFlag,
+		&utils.LogLevel,
 	},
 	Description: `
 Creates target aida-db by merging source databases from arguments:
@@ -42,8 +43,8 @@ func merge(ctx *cli.Context) error {
 
 // Merge implements merging command for combining all source data databases into single database used for profiling.
 func Merge(cfg *utils.Config, sourceDbs []string) error {
-	log := utils.NewLogger(ctx.String(utils.LogLevel.Name), "DB Merger")
-	
+	log := utils.NewLogger(cfg.LogLevel, "DB Merger")
+
 	targetDB, sourceDBs, sourceDBPaths, err := openDatabases(cfg.AidaDb, sourceDbs)
 	if err != nil {
 		return err
