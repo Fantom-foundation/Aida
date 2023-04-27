@@ -48,7 +48,7 @@ func RunVM(ctx *cli.Context) error {
 		return argErr
 	}
 
-	log := utils.NewLogger(ctx.String(utils.LogLevelFlag.Name), "Run-VM")
+	log := utils.NewLogger(cfg.LogLevel, "Run-VM")
 
 	// start CPU profiling if requested.
 	if err := utils.StartCPUProfile(cfg); err != nil {

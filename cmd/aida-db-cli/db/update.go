@@ -31,7 +31,7 @@ var UpdateCommand = cli.Command{
 		&utils.DeleteSourceDbsFlag,
 		&utils.DbTmpFlag,
 		&utils.ChainIDFlag,
-		&utils.LogLevel,
+		&utils.LogLevelFlag,
 	},
 	Description: `
 The db update command requires events as an argument:

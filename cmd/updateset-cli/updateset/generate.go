@@ -58,7 +58,7 @@ func GenUpdateSet(cfg *utils.Config, interval uint64) error {
 	var (
 		err               error
 		destroyedAccounts []common.Address
-		log               = utils.NewLogger(cfg.LogLevelFlag, "Generate Update Set")
+		log               = utils.NewLogger(cfg.LogLevel, "Generate Update Set")
 	)
 
 	// initialize updateDB
