@@ -24,7 +24,8 @@ var GenUpdateSetCommand = cli.Command{
 		&substate.SubstateDirFlag,
 		&utils.UpdateDbFlag,
 		&utils.ValidateFlag,
-		&utils.WorldStateFlag,
+                &utils.WorldStateFlag,
+                &utils.LogLevel,
 	},
 	Description: `
 The gen-update-set command requires two arguments: <blockNumLast> <interval>
