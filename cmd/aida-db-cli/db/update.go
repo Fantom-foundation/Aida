@@ -3,9 +3,10 @@ package db
 import (
 	"flag"
 	"fmt"
-	substate "github.com/Fantom-foundation/Substate"
 	"os"
 	"os/exec"
+
+	substate "github.com/Fantom-foundation/Substate"
 
 	"github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
 	"github.com/Fantom-foundation/Aida/cmd/updateset-cli/updateset"
