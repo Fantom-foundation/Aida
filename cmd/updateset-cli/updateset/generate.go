@@ -24,8 +24,8 @@ var GenUpdateSetCommand = cli.Command{
 		&substate.SubstateDirFlag,
 		&utils.UpdateDbFlag,
 		&utils.ValidateFlag,
-                &utils.WorldStateFlag,
-                &utils.LogLevel,
+		&utils.WorldStateFlag,
+		&utils.LogLevel,
 	},
 	Description: `
 The gen-update-set command requires two arguments: <blockNumLast> <interval>
@@ -96,7 +96,7 @@ func generateUpdateSet(ctx *cli.Context) error {
 		txCount       uint64              // transaction counter
 		curBlock      uint64              // current block
 		checkPoint    uint64              // block number of the next interval
-		isFirst       bool   = true       // first block
+		isFirst       = true              // first block
 		estimatedSize uint64              // estimated size of current update set
 		maxSize       uint64 = 1000000000 // 1GB
 	)
@@ -106,7 +106,7 @@ func generateUpdateSet(ctx *cli.Context) error {
 		tx := iter.Value()
 		// if first block, calculate next change point
 		if isFirst {
-			checkPoint = (((tx.Block/interval)+1)*interval - 1)
+			checkPoint = ((tx.Block/interval)+1)*interval - 1
 			isFirst = false
 		}
 		// new block
