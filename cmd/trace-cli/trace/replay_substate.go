@@ -166,9 +166,9 @@ func traceReplaySubstateTask(cfg *utils.Config, log *logging.Logger) error {
 	}
 
 	if !cfg.Quiet {
-		log.Info("Closing DB took %v", time.Since(start))
-		log.Info("Final disk usage: %v MiB", float32(utils.GetDirectorySize(stateDirectory))/float32(1024*1024))
-		log.Info("Total elapsed time: %.3f s, processed %v blocks (~%.1f Tx/s)", sec, cfg.Last-cfg.First+1, float64(txCount)/sec)
+		log.Infof("Closing DB took %v", time.Since(start))
+		log.Infof("Final disk usage: %v MiB", float32(utils.GetDirectorySize(stateDirectory))/float32(1024*1024))
+		log.Infof("Total elapsed time: %.3f s, processed %v blocks (~%.1f Tx/s)", sec, cfg.Last-cfg.First+1, float64(txCount)/sec)
 	}
 
 	return nil

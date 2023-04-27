@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"regexp"
+	"strings"
 
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -26,6 +27,7 @@ var TraceCompareLogCommand = cli.Command{
 		&utils.TraceDebugFlag,
 		&utils.TraceFileFlag,
 		&utils.AidaDbFlag,
+		&utils.LogLevel,
 	},
 	Description: `
 The trace compare-log command requires two arguments:
@@ -107,11 +109,14 @@ func traceCompareLogAction(ctx *cli.Context) error {
 	if recErr != nil {
 		return recErr
 	}
+	recordLog = recordLog[strings.IndexByte(recordLog, '\n')-1:]
+
 	log.Notice("Capture replay trace...")
 	replayLog, repErr := captureDebugLog(traceReplaySubstateAction, ctx)
 	if repErr != nil {
 		return recErr
 	}
+	replayLog = replayLog[strings.IndexByte(replayLog, '\n')-1:]
 
 	log.Notice("Compare traces...")
 	if !isLogEqual(recordLog, replayLog) {
