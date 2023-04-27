@@ -2,7 +2,7 @@ package apireplay
 
 import (
 	"context"
-	"path/filepath"
+	"fmt"
 
 	"github.com/Fantom-foundation/Aida/cmd/api-replay-cli/flags"
 	"github.com/Fantom-foundation/Aida/iterator"
@@ -17,7 +17,7 @@ func ReplayAPI(ctx *cli.Context) error {
 		err    error
 		fr     *iterator.FileReader
 		cfg    *utils.Config
-		dbInfo utils.StateDbInfo
+		exists bool
 		db     state.StateDB
 	)
 
@@ -31,13 +31,10 @@ func ReplayAPI(ctx *cli.Context) error {
 		return err
 	}
 
-	// create StateDB
-	dbInfo, err = utils.ReadStateDbInfo(filepath.Join(cfg.StateDbSrc, utils.DbInfoName))
-	if err != nil {
-		return err
+	db, _, exists, err = utils.PrepareStateDB(cfg)
+	if !exists {
+		return fmt.Errorf("API Replay needs an existing StateDB")
 	}
-
-	db, err = utils.MakeStateDB(cfg.StateDbSrc, cfg, dbInfo.RootHash, true)
 	if err != nil {
 		return err
 	}
