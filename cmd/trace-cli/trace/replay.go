@@ -222,7 +222,7 @@ func traceReplayTask(cfg *utils.Config, log *logging.Logger) error {
 
 	if cfg.KeepStateDb {
 		rootHash, _ := db.Commit(true)
-		if err := utils.WriteStateDbInfo(stateDbDir cfg, lastBlock, rootHash); err != nil {
+		if err := utils.WriteStateDbInfo(stateDbDir, cfg, lastBlock, rootHash); err != nil {
 			log.Error(err)
 		}
 		//rename directory after closing db.
