@@ -538,10 +538,10 @@ func TestStatedb_PrepareStateDB(t *testing.T) {
 				if err != nil {
 
 				}
-			}(cfg.StateDbSrcDir)
+			}(cfg.StateDbSrc)
 
 			// Call for state DB preparation and subsequent check if it finished successfully
-			sDB, _, _, err := PrepareStateDB(cfg)
+			sDB, _, err := PrepareStateDB(cfg)
 			if err != nil {
 				t.Fatalf("failed to create state DB: %v", err)
 			}
