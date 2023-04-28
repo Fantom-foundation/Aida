@@ -86,12 +86,12 @@ func stochasticReplayAction(ctx *cli.Context) error {
 
 	// create a directory for the store to place all its files, and
 	// instantiate the state DB under testing.
-	log.Notice("Create stateDB database")
+	log.Notice("Create StateDB")
 	db, stateDbDir, err := utils.PrepareStateDB(cfg)
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(cfg.StateDbSrc)
+	defer os.RemoveAll(stateDbDir)
 
 	// Enable tracing if debug flag is set
 	if cfg.Trace {
@@ -108,7 +108,7 @@ func stochasticReplayAction(ctx *cli.Context) error {
 	// print memory usage after simulation
 	if cfg.MemoryBreakdown {
 		if usage := db.GetMemoryUsage(); usage != nil {
-			log.Noticef("State DB memory usage: %d byte\n%s\n", usage.UsedBytes, usage.Breakdown)
+			log.Noticef("State DB memory usage: %d byte\n%s", usage.UsedBytes, usage.Breakdown)
 		} else {
 			log.Info("Utilized storage solution does not support memory breakdowns")
 		}

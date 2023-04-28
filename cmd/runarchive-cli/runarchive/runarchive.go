@@ -102,7 +102,7 @@ func RunArchive(ctx *cli.Context) error {
 			sec = time.Since(start).Seconds()
 			if sec-lastSec >= 15 {
 				txRate := float64(txCount-lastTxCount) / (sec - lastSec)
-				log.Infof("Elapsed time: %.0f s, at block %d (~ %.1f Tx/s)\n", sec, lastBlock, txRate)
+				log.Infof("Elapsed time: %.0f s, at block %d (~ %.1f Tx/s)", sec, lastBlock, txRate)
 				lastSec = sec
 				lastTxCount = txCount
 			}
@@ -114,7 +114,7 @@ func RunArchive(ctx *cli.Context) error {
 	// print progress summary
 	if !cfg.Quiet {
 		runTime := time.Since(start).Seconds()
-		log.Noticef("Total elapsed time: %.3f s, processed %v blocks, %v transactions (~ %.1f Tx/s)\n", runTime, cfg.Last-cfg.First+1, txCount, float64(txCount)/(runTime))
+		log.Noticef("Total elapsed time: %.3f s, processed %v blocks, %v transactions (~ %.1f Tx/s)", runTime, cfg.Last-cfg.First+1, txCount, float64(txCount)/(runTime))
 	}
 
 	return err

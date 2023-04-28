@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/fs"
+	"io/ioutil"
 	"math/rand"
 	"os"
 	"path/filepath"
@@ -23,6 +24,7 @@ const (
 )
 
 // PrepareStateDB creates stateDB or load existing stateDB
+// Use this function when both opening existing and creating new StateDB
 func PrepareStateDB(cfg *Config) (state.StateDB, string, error) {
 	// db source was specified
 	if cfg.StateDbSrc != "" {
@@ -215,7 +217,7 @@ func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config, log 
 		}
 
 	}
-	log.Noticef("Hashing and flushing ...\n")
+	log.Noticef("Hashing and flushing ...")
 	if err := load.Close(); err != nil {
 		panic(fmt.Errorf("failed to prime StateDB: %v", err))
 	}

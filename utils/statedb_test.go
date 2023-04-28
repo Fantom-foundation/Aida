@@ -538,10 +538,10 @@ func TestStatedb_PrepareStateDB(t *testing.T) {
 				if err != nil {
 
 				}
-			}(cfg.StateDbSrc)
+			}(cfg.StateDbSrcDir)
 
 			// Call for state DB preparation and subsequent check if it finished successfully
-			sDB, _, err := PrepareStateDB(cfg)
+			sDB, _, _, err := PrepareStateDB(cfg)
 			if err != nil {
 				t.Fatalf("failed to create state DB: %v", err)
 			}
@@ -558,7 +558,7 @@ func TestStatedb_PrepareStateDB(t *testing.T) {
 }
 
 // TestStatedb_PrepareStateDB tests preparation and initialization of existing state DB as empty
-// because of missing pathToDbInfo file
+// because of missing PathToDbInfo file
 func TestStatedb_PrepareStateDBEmpty(t *testing.T) {
 	tc := getStatedbTestCases()[0]
 	cfg := makeTestConfig(tc)
@@ -584,7 +584,7 @@ func TestStatedb_PrepareStateDBEmpty(t *testing.T) {
 }
 
 // TestStatedb_PrepareStateDBInvalid tests preparation and initialization of existing state DBs
-// with multiple invalid pathToDbInfo files
+// with multiple invalid PathToDbInfo files
 func TestStatedb_PrepareStateDBInvalid(t *testing.T) {
 	// Pick only one test case as other are not necessary
 	tc := getStatedbTestCases()[0]

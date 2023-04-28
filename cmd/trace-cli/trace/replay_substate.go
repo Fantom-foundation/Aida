@@ -69,7 +69,7 @@ func traceReplaySubstateTask(cfg *utils.Config, log *logging.Logger) error {
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(cfg.StateDbSrc)
+	defer os.RemoveAll(stateDbDir)
 
 	var (
 		start        time.Time
@@ -138,7 +138,7 @@ func traceReplaySubstateTask(cfg *utils.Config, log *logging.Logger) error {
 				numTx := txCount - lastTxCount
 				lastTxCount = txCount
 				hours, minutes, seconds := utils.ParseTime(time.Since(start))
-				log.Infof("Elapsed time: %vh, %vm %vs, at block %v (~%.0f Tx/s)\n", hours, minutes, seconds, tx.Block, float64(numTx)/diff)
+				log.Infof("Elapsed time: %vh, %vm %vs, at block %v (~%.0f Tx/s)", hours, minutes, seconds, tx.Block, float64(numTx)/diff)
 				lastSec = sec
 			}
 		}
