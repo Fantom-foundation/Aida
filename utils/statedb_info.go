@@ -14,7 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-const DbInfoName = "statedb_info.json"
+const PathToDbInfo = "statedb_info.json"
 
 // StateDbInfo StateDB meta information
 type StateDbInfo struct {
@@ -104,7 +104,7 @@ func WriteStateDbInfo(directory string, cfg *Config, block uint64, root common.H
 		GitCommit:      GitCommit,
 		CreateTime:     time.Now().UTC().Format(time.UnixDate),
 	}
-	filename := filepath.Join(directory, DbInfoName)
+	filename := filepath.Join(directory, PathToDbInfo)
 	jsonByte, err := json.MarshalIndent(dbinfo, "", "  ")
 	if err != nil {
 		return fmt.Errorf("Failed to encode stateDB info in JSON format")

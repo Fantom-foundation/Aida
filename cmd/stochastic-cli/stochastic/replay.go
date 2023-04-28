@@ -87,11 +87,11 @@ func stochasticReplayAction(ctx *cli.Context) error {
 	// create a directory for the store to place all its files, and
 	// instantiate the state DB under testing.
 	log.Notice("Create stateDB database")
-	db, stateDirectory, _, err := utils.PrepareStateDB(cfg)
+	db, stateDbDir, err := utils.PrepareStateDB(cfg)
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(stateDirectory)
+	defer os.RemoveAll(cfg.StateDbSrc)
 
 	// Enable tracing if debug flag is set
 	if cfg.Trace {
@@ -120,7 +120,7 @@ func stochasticReplayAction(ctx *cli.Context) error {
 		log.Criticalf("Failed to close database; %v", err)
 	}
 	log.Infof("Closing DB took %v", time.Since(start))
-	log.Noticef("Final disk usage: %v MiB", float32(utils.GetDirectorySize(stateDirectory))/float32(1024*1024))
+	log.Noticef("Final disk usage: %v MiB", float32(utils.GetDirectorySize(stateDbDir))/float32(1024*1024))
 
 	return runErr
 }

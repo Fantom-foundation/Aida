@@ -2,7 +2,6 @@ package apireplay
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/Fantom-foundation/Aida/cmd/api-replay-cli/flags"
 	"github.com/Fantom-foundation/Aida/iterator"
@@ -14,11 +13,10 @@ import (
 
 func ReplayAPI(ctx *cli.Context) error {
 	var (
-		err    error
-		fr     *iterator.FileReader
-		cfg    *utils.Config
-		exists bool
-		db     state.StateDB
+		err error
+		fr  *iterator.FileReader
+		cfg *utils.Config
+		db  state.StateDB
 	)
 
 	fr, err = iterator.NewFileReader(context.Background(), ctx.String(flags.APIRecordingSrcFileFlag.Name))
@@ -31,10 +29,7 @@ func ReplayAPI(ctx *cli.Context) error {
 		return err
 	}
 
-	db, _, exists, err = utils.PrepareStateDB(cfg)
-	if !exists {
-		return fmt.Errorf("API Replay needs an existing StateDB")
-	}
+	db, _, err = utils.PrepareStateDB(cfg)
 	if err != nil {
 		return err
 	}

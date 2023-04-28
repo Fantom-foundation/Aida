@@ -2,8 +2,6 @@ package runarchive
 
 import (
 	"fmt"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
@@ -39,7 +37,7 @@ func RunArchive(ctx *cli.Context) error {
 	defer utils.StopCPUProfile(cfg)
 
 	// open the archive
-	db, err := openStateDB(cfg)
+	db, _, err := utils.PrepareStateDB(cfg)
 	if err != nil {
 		return err
 	}
@@ -120,44 +118,6 @@ func RunArchive(ctx *cli.Context) error {
 	}
 
 	return err
-}
-
-func openStateDB(cfg *utils.Config) (state.StateDB, error) {
-	var err error
-
-	if cfg.StateDbSrc == "" {
-		return nil, fmt.Errorf("missing --db-src-dir parameter")
-	}
-
-	// check if statedb_info.json files exist
-	dbInfoFile := filepath.Join(cfg.StateDbSrc, utils.DbInfoName)
-	if _, err = os.Stat(dbInfoFile); err != nil {
-		return nil, fmt.Errorf("%s does not appear to contain a state DB", cfg.StateDbSrc)
-	}
-
-	dbinfo, ferr := utils.ReadStateDbInfo(dbInfoFile)
-	if ferr != nil {
-		return nil, fmt.Errorf("failed to read %v. %v", dbInfoFile, ferr)
-	}
-	if dbinfo.Impl != cfg.DbImpl {
-		err = fmt.Errorf("mismatch DB implementation.\n\thave %v\n\twant %v", dbinfo.Impl, cfg.DbImpl)
-	} else if dbinfo.Variant != cfg.DbVariant {
-		err = fmt.Errorf("mismatch DB variant.\n\thave %v\n\twant %v", dbinfo.Variant, cfg.DbVariant)
-	} else if dbinfo.Block < cfg.Last {
-		err = fmt.Errorf("the state DB does not cover the targeted block range.\n\thave %v\n\twant %v", dbinfo.Block, cfg.Last)
-	} else if !dbinfo.ArchiveMode {
-		err = fmt.Errorf("the targeted state DB does not include an archive")
-	} else if dbinfo.ArchiveVariant != cfg.ArchiveVariant {
-		err = fmt.Errorf("mismatch archive variant.\n\thave %v\n\twant %v", dbinfo.ArchiveVariant, cfg.ArchiveVariant)
-	} else if dbinfo.Schema != cfg.CarmenSchema {
-		err = fmt.Errorf("mismatch DB schema version.\n\thave %v\n\twant %v", dbinfo.Schema, cfg.CarmenSchema)
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	cfg.ArchiveMode = true
-	return utils.MakeStateDB(cfg.StateDbSrc, cfg, dbinfo.RootHash, true)
 }
 
 func groupTransactions(iter substate.SubstateIterator, blocks chan<- []*substate.Transaction, abort <-chan bool, cfg *utils.Config) {

@@ -195,7 +195,7 @@ func TestStatedb_InitCloseStateDB(t *testing.T) {
 			cfg := makeTestConfig(tc)
 
 			// Initialization of state DB
-			sDB, err := MakeStateDB(t.TempDir(), cfg, common.Hash{}, false)
+			sDB, _, err := PrepareStateDB(cfg)
 
 			if err != nil {
 				t.Fatalf("failed to create state DB: %v", err)
@@ -217,7 +217,7 @@ func TestStatedb_PrimeStateDB(t *testing.T) {
 			cfg := makeTestConfig(tc)
 
 			// Initialization of state DB
-			sDB, err := MakeStateDB(t.TempDir(), cfg, common.Hash{}, false)
+			sDB, _, err := PrepareStateDB(cfg)
 
 			if err != nil {
 				t.Fatalf("failed to create state DB: %v", err)
@@ -358,7 +358,7 @@ func TestStatedb_DeleteDestroyedAccountsFromStateDB(t *testing.T) {
 			}
 
 			// Initialization of state DB
-			sDB, err := MakeStateDB(t.TempDir(), cfg, common.Hash{}, false)
+			sDB, _, err := PrepareStateDB(cfg)
 			if err != nil {
 				t.Fatalf("failed to create state DB: %v", err)
 			}
@@ -399,7 +399,7 @@ func TestStatedb_ValidateStateDB(t *testing.T) {
 			cfg := makeTestConfig(tc)
 
 			// Initialization of state DB
-			sDB, err := MakeStateDB(t.TempDir(), cfg, common.Hash{}, false)
+			sDB, _, err := PrepareStateDB(cfg)
 			if err != nil {
 				t.Fatalf("failed to create state DB: %v", err)
 			}
@@ -437,7 +437,7 @@ func TestStatedb_ValidateStateDBWithUpdate(t *testing.T) {
 			cfg := makeTestConfig(tc)
 
 			// Initialization of state DB
-			sDB, err := MakeStateDB(t.TempDir(), cfg, common.Hash{}, false)
+			sDB, _, err := PrepareStateDB(cfg)
 			if err != nil {
 				t.Fatalf("failed to create state DB: %v", err)
 			}
@@ -527,7 +527,7 @@ func TestStatedb_PrepareStateDB(t *testing.T) {
 			}
 
 			// Fill the json file with the info
-			err = os.WriteFile(filepath.Join(cfg.StateDbSrc, DbInfoName), dbInfoJson, 0644)
+			err = os.WriteFile(filepath.Join(cfg.StateDbSrc, PathToDbInfo), dbInfoJson, 0644)
 			if err != nil {
 				t.Fatalf("failed to write into DB info json file: %v", err)
 			}
@@ -541,7 +541,7 @@ func TestStatedb_PrepareStateDB(t *testing.T) {
 			}(cfg.StateDbSrc)
 
 			// Call for state DB preparation and subsequent check if it finished successfully
-			sDB, _, _, err := PrepareStateDB(cfg)
+			sDB, _, err := PrepareStateDB(cfg)
 			if err != nil {
 				t.Fatalf("failed to create state DB: %v", err)
 			}
@@ -558,7 +558,7 @@ func TestStatedb_PrepareStateDB(t *testing.T) {
 }
 
 // TestStatedb_PrepareStateDB tests preparation and initialization of existing state DB as empty
-// because of missing DbInfoName file
+// because of missing pathToDbInfo file
 func TestStatedb_PrepareStateDBEmpty(t *testing.T) {
 	tc := getStatedbTestCases()[0]
 	cfg := makeTestConfig(tc)
@@ -569,7 +569,7 @@ func TestStatedb_PrepareStateDBEmpty(t *testing.T) {
 	cfg.First = 2
 
 	// Call for state DB preparation and subsequent check if it finished successfully
-	sDB, _, _, err := PrepareStateDB(cfg)
+	sDB, _, err := PrepareStateDB(cfg)
 	if err != nil {
 		t.Fatalf("failed to create state DB: %v", err)
 	}
@@ -584,7 +584,7 @@ func TestStatedb_PrepareStateDBEmpty(t *testing.T) {
 }
 
 // TestStatedb_PrepareStateDBInvalid tests preparation and initialization of existing state DBs
-// with multiple invalid DbInfoName files
+// with multiple invalid pathToDbInfo files
 func TestStatedb_PrepareStateDBInvalid(t *testing.T) {
 	// Pick only one test case as other are not necessary
 	tc := getStatedbTestCases()[0]
@@ -612,13 +612,13 @@ func TestStatedb_PrepareStateDBInvalid(t *testing.T) {
 			}
 
 			// Fill the json file with the info
-			err = os.WriteFile(filepath.Join(cfg.StateDbSrc, DbInfoName), dbInfoJson, 0644)
+			err = os.WriteFile(filepath.Join(cfg.StateDbSrc, PathToDbInfo), dbInfoJson, 0644)
 			if err != nil {
 				t.Fatalf("failed to write into DB info json file: %v", err)
 			}
 
 			// Call for state DB preparation and subsequent check if it finished successfully
-			_, _, _, err = PrepareStateDB(cfg)
+			_, _, err = PrepareStateDB(cfg)
 			if err == nil {
 				t.Fatal("failed to throw an error while creating state DB with invalid config")
 			}

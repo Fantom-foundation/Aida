@@ -38,6 +38,7 @@ func RunVM(ctx *cli.Context) error {
 		lastBlockProgressReportTime     time.Time
 		lastBlockProgressReportTxCount  int
 		lastBlockProgressReportGasCount = new(big.Int)
+		stateDbDir                      string
 	)
 	beginning = time.Now()
 
@@ -61,17 +62,17 @@ func RunVM(ctx *cli.Context) error {
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
-	db, stateDirectory, loadedExistingDB, err := utils.PrepareStateDB(cfg)
+	db, stateDbDir, err := utils.PrepareStateDB(cfg)
 	if err != nil {
 		return err
 	}
 	if !cfg.KeepStateDb {
-		log.Warningf("StateDB at %v will be removed at the end of this run.\n", stateDirectory)
-		defer os.RemoveAll(stateDirectory)
+		log.Warningf("StateDB at %v will be removed at the end of this run.\n", cfg.StateDbSrc)
+		defer os.RemoveAll(cfg.StateDbSrc)
 	}
 
 	ws := substate.SubstateAlloc{}
-	if cfg.SkipPriming || loadedExistingDB {
+	if cfg.SkipPriming || cfg.StateDbSrc != "" {
 		log.Warning("Skipping DB priming.\n")
 	} else {
 		// load the world state
@@ -294,15 +295,15 @@ func RunVM(ctx *cli.Context) error {
 
 	if cfg.KeepStateDb && !isFirstBlock {
 		rootHash, _ := db.Commit(true)
-		if err := utils.WriteStateDbInfo(stateDirectory, cfg, curBlock, rootHash); err != nil {
+		if err := utils.WriteStateDbInfo(stateDbDir, cfg, curBlock, rootHash); err != nil {
 			log.Error(err)
 		}
 		//rename directory after closing db.
-		defer utils.RenameTempStateDBDirectory(cfg, stateDirectory, curBlock)
+		defer utils.RenameTempStateDBDirectory(cfg, stateDbDir, curBlock)
 	} else if cfg.KeepStateDb && isFirstBlock {
 		// no blocks were processed.
 		log.Warning("No blocks were processed. StateDB is not saved.\n")
-		defer os.RemoveAll(stateDirectory)
+		defer os.RemoveAll(stateDbDir)
 	}
 
 	// close the DB and print disk usage
@@ -320,7 +321,7 @@ func RunVM(ctx *cli.Context) error {
 
 		log.Infof("Total elapsed time: %vh %vm %vs, processed %v blocks, %v transactions (~ %.1f Tx/s) (~ %.1f Gas/s)\n", hours, minutes, seconds, cfg.Last-cfg.First+1, txCount, float64(txCount)/(runTime), g)
 		log.Infof("Closing DB took %v\n", time.Since(start))
-		log.Infof("Final disk usage: %v MiB\n", float32(utils.GetDirectorySize(stateDirectory))/float32(1024*1024))
+		log.Infof("Final disk usage: %v MiB\n", float32(utils.GetDirectorySize(stateDbDir))/float32(1024*1024))
 	}
 
 	return err
