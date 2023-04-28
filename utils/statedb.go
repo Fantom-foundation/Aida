@@ -95,7 +95,7 @@ func makeNewStateDB(cfg *Config) (state.StateDB, string, error) {
 	)
 
 	// create a temporary working directory
-	tmpDir, err = os.MkdirTemp(cfg.StateDbTemp, "state_db_tmp_*")
+	tmpDir, err = os.MkdirTemp(cfg.DbTmp, "state_db_tmp_*")
 	if err != nil {
 		err = fmt.Errorf("failed to create a temporary directory. %v", err)
 		return nil, "", err
