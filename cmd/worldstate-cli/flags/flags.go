@@ -85,7 +85,7 @@ var (
 	Workers = cli.IntFlag{
 		Name:  "workers",
 		Usage: "number of worker threads to be used",
-		Value: 5,
+		Value: 20,
 	}
 
 	// IsStorageIncluded represents a flag for contract storage inclusion in an operation

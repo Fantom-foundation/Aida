@@ -134,7 +134,7 @@ func RenameTempStateDBDirectory(cfg *Config, oldDirectory string, block uint64) 
 	} else {
 		newDirectory = fmt.Sprintf("state_db_%v_%v", cfg.DbImpl, block)
 	}
-	newDirectory = filepath.Join(cfg.StateDbTemp, newDirectory)
+	newDirectory = filepath.Join(cfg.DbTmp, newDirectory)
 	if err := os.Rename(oldDirectory, newDirectory); err != nil {
 		log.Printf("WARNING: failed to rename state directory. %v\n", err)
 		newDirectory = oldDirectory

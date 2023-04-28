@@ -33,7 +33,7 @@ func main() {
 		},
 		Flags: []cli.Flag{
 			&flags.StateDBPath,
-			&utils.LogLevel,
+			&utils.LogLevelFlag,
 		},
 		Before:                 assertDBPath,
 		UseShortOptionHandling: true,

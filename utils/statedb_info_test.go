@@ -16,7 +16,7 @@ func TestStatedbInfo_WriteReadStateDbInfo(t *testing.T) {
 		t.Run(fmt.Sprintf("DB variant: %s; shadowImpl: %s; archive variant: %s", tc.variant, tc.shadowImpl, tc.archiveVariant), func(t *testing.T) {
 			cfg := makeTestConfig(tc)
 			// Update config for state DB preparation by providing additional information
-			cfg.StateDbTemp = t.TempDir()
+			cfg.DbTmp = t.TempDir()
 			cfg.StateDbSrc = t.TempDir()
 
 			// Call for json creation and writing into it
@@ -67,7 +67,7 @@ func TestStatedbInfo_RenameTempStateDBDirectory(t *testing.T) {
 		t.Run(fmt.Sprintf("DB variant: %s; shadowImpl: %s; archive variant: %s", tc.variant, tc.shadowImpl, tc.archiveVariant), func(t *testing.T) {
 			cfg := makeTestConfig(tc)
 			// Update config for state DB preparation by providing additional information
-			cfg.StateDbTemp = t.TempDir()
+			cfg.DbTmp = t.TempDir()
 			cfg.StateDbSrc = t.TempDir()
 
 			// Call for renaming temporary state DB directory
@@ -82,7 +82,7 @@ func TestStatedbInfo_RenameTempStateDBDirectory(t *testing.T) {
 			}
 
 			// trying to find renamed directory
-			newName = filepath.Join(cfg.StateDbTemp, newName)
+			newName = filepath.Join(cfg.DbTmp, newName)
 			if _, err := os.Stat(newName); os.IsNotExist(err) {
 				t.Fatalf("failed to rename temporary state DB directory")
 			}

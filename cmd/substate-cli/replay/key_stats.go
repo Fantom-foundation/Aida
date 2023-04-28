@@ -19,7 +19,7 @@ var GetKeyStatsCommand = cli.Command{
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
 		&ChainIDFlag,
-		&utils.LogLevel,
+		&utils.LogLevelFlag,
 	},
 	Description: `
 The substate-cli key-stats command requires two arguments:

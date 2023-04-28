@@ -19,7 +19,7 @@ var GetStorageUpdateSizeCommand = cli.Command{
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
 		&ChainIDFlag,
-		&utils.LogLevel,
+		&utils.LogLevelFlag,
 	},
 	Description: `
 The substate-cli storage-size command requires two arguments:
@@ -108,7 +108,7 @@ func getStorageUpdateSizeTask(block uint64, tx int, st *substate.Substate, taskP
 func getStorageUpdateSizeAction(ctx *cli.Context) error {
 	var err error
 
-	log := utils.NewLogger(ctx.String(utils.LogLevel.Name), "Substate Replay")
+	log := utils.NewLogger(ctx.String(utils.LogLevelFlag.Name), "Substate Replay")
 
 	if ctx.Args().Len() != 2 {
 		return fmt.Errorf("substate-cli storage command requires exactly 2 arguments")

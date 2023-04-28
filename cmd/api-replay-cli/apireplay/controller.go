@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/Fantom-foundation/Aida/cmd/api-replay-cli/flags"
 	"github.com/Fantom-foundation/Aida/iterator"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -53,17 +52,17 @@ func newController(ctx *cli.Context, cfg *utils.Config, db state.StateDB, iter *
 	counterWg := new(sync.WaitGroup)
 
 	// create instances
-	reader := newReader(iter, utils.NewLogger(ctx.String(utils.LogLevel.Name), "Reader"), readerClosed, readerWg)
+	reader := newReader(iter, utils.NewLogger(cfg.LogLevel, "Reader"), readerClosed, readerWg)
 
-	executors, output, counterInput := createExecutors(cfg.First, cfg.Last, db, ctx, utils.GetChainConfig(cfg.ChainID), reader.output, cfg.VmImpl, executorsClosed, executorsWg)
+	executors, output, counterInput := createExecutors(cfg, db, ctx, utils.GetChainConfig(cfg.ChainID), reader.output, executorsClosed, executorsWg)
 
-	counter := newCounter(counterClosed, counterInput, utils.NewLogger(ctx.String(utils.LogLevel.Name), "Counter"), counterWg)
+	counter := newCounter(counterClosed, counterInput, utils.NewLogger(cfg.LogLevel, "Counter"), counterWg)
 
-	comparators, failure := createComparators(ctx, output, comparatorsClosed, comparatorsWg)
+	comparators, failure := createComparators(cfg, output, comparatorsClosed, comparatorsWg)
 
 	return &Controller{
 		failure:           failure,
-		log:               utils.NewLogger(ctx.String(utils.LogLevel.Name), "Controller"),
+		log:               utils.NewLogger(ctx.String(utils.LogLevelFlag.Name), "Controller"),
 		ctx:               ctx,
 		Reader:            reader,
 		Executors:         executors,
@@ -204,33 +203,33 @@ func (r *Controller) control() {
 }
 
 // createExecutors creates number of Executors defined by the flag WorkersFlag
-func createExecutors(first, last uint64, db state.StateDB, ctx *cli.Context, chainCfg *params.ChainConfig, input chan *iterator.RequestWithResponse, vmImpl string, closed chan any, wg *sync.WaitGroup) ([]*ReplayExecutor, chan *OutData, chan requestLog) {
-	log.Infof("creating %v executors", ctx.Int(flags.WorkersFlag.Name))
+func createExecutors(cfg *utils.Config, db state.StateDB, ctx *cli.Context, chainCfg *params.ChainConfig, input chan *iterator.RequestWithResponse, closed chan any, wg *sync.WaitGroup) ([]*ReplayExecutor, chan *OutData, chan requestLog) {
+	log.Infof("creating %v executors", cfg.Workers)
 
 	output := make(chan *OutData, bufferSize)
 
-	executors := ctx.Int(flags.WorkersFlag.Name)
+	executors := cfg.Workers
 
 	e := make([]*ReplayExecutor, executors)
 	counterInput := make(chan requestLog)
 	for i := 0; i < executors; i++ {
-		e[i] = newExecutor(first, last, db, output, chainCfg, input, vmImpl, wg, closed, utils.NewLogger(ctx.String(utils.LogLevel.Name), fmt.Sprintf("Executor #%v", i)), counterInput)
+		e[i] = newExecutor(cfg.First, cfg.Last, db, output, chainCfg, input, cfg.VmImpl, wg, closed, utils.NewLogger(cfg.LogLevel, fmt.Sprintf("Executor #%v", i)), counterInput)
 	}
 
 	return e, output, counterInput
 }
 
 // createComparators creates number of Comparators defined by the flag WorkersFlag divided by two
-func createComparators(ctx *cli.Context, input chan *OutData, closed chan any, wg *sync.WaitGroup) ([]*Comparator, chan any) {
+func createComparators(cfg *utils.Config, input chan *OutData, closed chan any, wg *sync.WaitGroup) ([]*Comparator, chan any) {
 	var (
 		comparators int
 	)
 
 	// do we want a single-thread replay
-	if ctx.Int(flags.WorkersFlag.Name) == 1 {
+	if cfg.Workers == 1 {
 		comparators = 1
 	} else {
-		comparators = ctx.Int(flags.WorkersFlag.Name) / 2
+		comparators = cfg.Workers / 2
 	}
 
 	log.Infof("creating %v comparators", comparators)
@@ -238,7 +237,7 @@ func createComparators(ctx *cli.Context, input chan *OutData, closed chan any, w
 	c := make([]*Comparator, comparators)
 	failure := make(chan any)
 	for i := 0; i < comparators; i++ {
-		c[i] = newComparator(input, utils.NewLogger(ctx.String(utils.LogLevel.Name), fmt.Sprintf("Comparator #%v", i)), closed, wg, ctx.Bool(flags.ContinueOnFailure.Name), failure)
+		c[i] = newComparator(input, utils.NewLogger(cfg.LogLevel, fmt.Sprintf("Comparator #%v", i)), closed, wg, cfg.ContinueOnFailure, failure)
 	}
 
 	return c, failure

@@ -30,7 +30,7 @@ var GenDeletedAccountsCommand = cli.Command{
 		&substate.SubstateDirFlag,
 		&ChainIDFlag,
 		&utils.DeletionDbFlag,
-		&utils.LogLevel,
+		&utils.LogLevelFlag,
 	},
 	Description: `
 The substate-cli replay command requires two arguments:
@@ -204,11 +204,11 @@ func genDeletedAccountsTask(block uint64, tx int, recording *substate.Substate, 
 	a := outputAlloc.Equal(evmAlloc)
 	if !(r && a) {
 		if !r {
-			log.Criticalf("inconsistent output: result\n")
+			log.Criticalf("inconsistent output: result")
 			utils.PrintResultDiffSummary(outputResult, evmResult)
 		}
 		if !a {
-			log.Criticalf("inconsistent output: alloc\n")
+			log.Criticalf("inconsistent output: alloc")
 			utils.PrintAllocationDiffSummary(&outputAlloc, &evmAlloc)
 		}
 		return fmt.Errorf("inconsistent output")
@@ -227,31 +227,32 @@ func genDeletedAccountsTask(block uint64, tx int, recording *substate.Substate, 
 	return nil
 }
 
-// genDeletedAccountsAction replays transactions and record self-destructed accounts and resurrected accounts.
+// genDeletedAccountsAction prepares config and arguments before GenDeletedAccountsAction
 func genDeletedAccountsAction(ctx *cli.Context) error {
-	var err error
-
-	log := utils.NewLogger(ctx.String(utils.LogLevel.Name), "Substate Replay")
-
-	if ctx.Args().Len() != 2 {
-		return fmt.Errorf("substate-cli gen-deleted-accounts command requires exactly 2 arguments")
+	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
+	if err != nil {
+		return err
 	}
 
-	chainID = ctx.Int(ChainIDFlag.Name)
+	return GenDeletedAccountsAction(cfg)
+}
+
+// GenDeletedAccountsAction replays transactions and record self-destructed accounts and resurrected accounts.
+func GenDeletedAccountsAction(cfg *utils.Config) error {
+	var err error
+
+	log := utils.NewLogger(cfg.LogLevel, "Substate Replay")
+
+	chainID = cfg.ChainID
 	log.Infof("chain-id: %v", chainID)
 	log.Infof("git-date: %v", gitDate)
 	log.Infof("git-commit: %v", gitCommit)
 
-	first, last, argErr := utils.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
-	if argErr != nil {
-		return argErr
-	}
-
-	substate.SetSubstateDirectory(ctx.String(substate.SubstateDirFlag.Name))
+	substate.SetSubstateDirectory(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
-	ddb := substate.OpenDestroyedAccountDB(ctx.String(utils.DeletionDbFlag.Name))
+	ddb := substate.OpenDestroyedAccountDB(cfg.DeletionDb)
 	defer ddb.Close()
 
 	start := time.Now()
@@ -261,13 +262,12 @@ func genDeletedAccountsAction(ctx *cli.Context) error {
 	lastTxCount := uint64(0)
 	DeleteHistory = make(map[common.Address]bool)
 
-	workers := ctx.Int(substate.WorkersFlag.Name)
-	iter := substate.NewSubstateIterator(first, workers)
+	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
 	defer iter.Release()
 
 	for iter.Next() {
 		tx := iter.Value()
-		if tx.Block > last {
+		if tx.Block > cfg.Last {
 			break
 		}
 
@@ -281,7 +281,7 @@ func genDeletedAccountsAction(ctx *cli.Context) error {
 		if diff >= 30 {
 			numTx := txCount - lastTxCount
 			lastTxCount = txCount
-			log.Infof("substate-cli: gen-del-acc: Elapsed time: %.0f s, at block %v (~%.1f Tx/s)\n", sec, tx.Block, float64(numTx)/diff)
+			log.Infof("substate-cli: gen-del-acc: Elapsed time: %.0f s, at block %v (~%.1f Tx/s)", sec, tx.Block, float64(numTx)/diff)
 			lastSec = sec
 		}
 	}

@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/Fantom-foundation/Aida/cmd/api-replay-cli/apireplay"
-	"github.com/Fantom-foundation/Aida/cmd/api-replay-cli/flags"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
@@ -19,8 +18,8 @@ func main() {
 			"result with result returned by DB.",
 		Copyright: "(c) 2023 Fantom Foundation",
 		Flags: []cli.Flag{
-			&flags.APIRecordingSrcFileFlag,
-			&flags.WorkersFlag,
+			&utils.APIRecordingSrcFileFlag,
+			&substate.WorkersFlag,
 
 			// AidaDB
 			&utils.AidaDbFlag,
@@ -32,9 +31,9 @@ func main() {
 			&substate.SubstateDirFlag,
 
 			// Config
-			&utils.LogLevel,
+			&utils.LogLevelFlag,
 			&utils.ChainIDFlag,
-			&flags.ContinueOnFailure,
+			&utils.ContinueOnFailureFlag,
 
 			// ShadowDB
 			&utils.ShadowDbImplementationFlag,
@@ -44,7 +43,7 @@ func main() {
 			&utils.StateDbImplementationFlag,
 			&utils.StateDbVariantFlag,
 			&utils.StateDbSrcFlag,
-			&utils.StateDbTempFlag,
+			&utils.DbTmpFlag,
 			&utils.StateDbLoggingFlag,
 			&utils.CarmenSchemaFlag,
 

@@ -41,7 +41,7 @@ var TraceReplaySubstateCommand = cli.Command{
 		&utils.ValidateFlag,
 		&utils.ValidateWorldStateFlag,
 		&utils.AidaDbFlag,
-		&utils.LogLevel,
+		&utils.LogLevelFlag,
 	},
 	Description: `
 The trace replay-substate command requires two arguments:
@@ -195,7 +195,7 @@ func traceReplaySubstateAction(ctx *cli.Context) error {
 	}
 	defer utils.StopCPUProfile(cfg)
 
-	log := utils.NewLogger(ctx.String(utils.LogLevel.Name), "Trace Replay Substate Action")
+	log := utils.NewLogger(cfg.LogLevel, "Trace Replay Substate Action")
 	err = traceReplaySubstateTask(cfg, log)
 
 	return err

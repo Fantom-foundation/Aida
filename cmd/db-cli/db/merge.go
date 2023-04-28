@@ -1,4 +1,4 @@
-package dbmerger
+package db
 
 import (
 	"fmt"
@@ -11,12 +11,41 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// DbMerger implements merging command for combining all source data databases into single database used for profiling.
-func DbMerger(ctx *cli.Context) error {
-	targetPath := ctx.Path(utils.AidaDbFlag.Name)
-	log := utils.NewLogger(ctx.String(utils.LogLevel.Name), "DB Merger")
+// MergeCommand merges given databases into aida-db
+var MergeCommand = cli.Command{
+	Action: merge,
+	Name:   "merge",
+	Usage:  "merge source databases into aida-db",
+	Flags: []cli.Flag{
+		&utils.AidaDbFlag,
+		&utils.DeleteSourceDbsFlag,
+		&utils.LogLevelFlag,
+	},
+	Description: `
+Creates target aida-db by merging source databases from arguments:
+<db1> [<db2> <db3> ...]
+`,
+}
 
-	targetDB, sourceDBs, sourceDBPaths, err := openDatabases(targetPath, ctx.Args())
+// merge implements merging command for combining all source data databases into single database used for profiling.
+func merge(ctx *cli.Context) error {
+	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
+	if err != nil {
+		return err
+	}
+
+	sourceDbs := make([]string, ctx.Args().Len())
+	for i := 0; i < ctx.Args().Len(); i++ {
+		sourceDbs[i] = ctx.Args().Get(i)
+	}
+	return Merge(cfg, sourceDbs)
+}
+
+// Merge implements merging command for combining all source data databases into single database used for profiling.
+func Merge(cfg *utils.Config, sourceDbs []string) error {
+	log := utils.NewLogger(cfg.LogLevel, "DB Merger")
+
+	targetDB, sourceDBs, sourceDBPaths, err := openDatabases(cfg.AidaDb, sourceDbs)
 	if err != nil {
 		return err
 	}
@@ -27,7 +56,7 @@ func DbMerger(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
-		log.Noticef("Data copying from %s finished\n", sourceDBPaths[i])
+		log.Noticef("Transfer of %s finished", sourceDBPaths[i])
 		MustCloseDB(sourceDB)
 	}
 
@@ -35,7 +64,7 @@ func DbMerger(ctx *cli.Context) error {
 	MustCloseDB(targetDB)
 
 	// delete source databases
-	if ctx.Bool(utils.DeleteSourceDbsFlag.Name) {
+	if cfg.DeleteSourceDbs {
 		for _, path := range sourceDBPaths {
 			err = os.RemoveAll(path)
 			if err != nil {
@@ -44,21 +73,21 @@ func DbMerger(ctx *cli.Context) error {
 			log.Infof("Deleted: %s\n", path)
 		}
 	}
-	log.Notice("Merge finished successfully\n")
+	log.Notice("Merge finished successfully")
 
 	return err
 }
 
 // openDatabases opens all databases required for merge
-func openDatabases(targetPath string, args cli.Args) (ethdb.Database, []ethdb.Database, []string, error) {
-	if args.Len() < 1 {
+func openDatabases(targetPath string, sourceDbs []string) (ethdb.Database, []ethdb.Database, []string, error) {
+	if len(sourceDbs) < 1 {
 		return nil, nil, nil, fmt.Errorf("no source database were specified\n")
 	}
 
 	var sourceDBs []ethdb.Database
 	var sourceDBPaths []string
-	for i := 0; i < args.Len(); i++ {
-		path := args.Get(i)
+	for i := 0; i < len(sourceDbs); i++ {
+		path := sourceDbs[i]
 		_, err := os.Stat(path)
 		if os.IsNotExist(err) {
 			return nil, nil, nil, fmt.Errorf("source database %s; doesn't exist\n", path)
