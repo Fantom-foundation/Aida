@@ -22,6 +22,7 @@ var GenUpdateSetCommand = cli.Command{
 		&utils.ChainIDFlag,
 		&utils.DeletionDbFlag,
 		&substate.SubstateDirFlag,
+		&substate.WorkersFlag,
 		&utils.UpdateDbFlag,
 		&utils.ValidateFlag,
 		&utils.WorldStateFlag,
@@ -99,12 +100,12 @@ func GenUpdateSet(cfg *utils.Config, interval uint64) error {
 	defer deletedAccountDB.Close()
 
 	var (
-		txCount       uint64              // transaction counter
-		curBlock      uint64              // current block
-		checkPoint    uint64              // block number of the next interval
-		isFirst       = true              // first block
-		estimatedSize uint64              // estimated size of current update set
-		maxSize       uint64 = 1000000000 // 1GB
+		txCount       uint64               // transaction counter
+		curBlock      uint64               // current block
+		checkPoint    uint64               // block number of the next interval
+		isFirst       = true               // first block
+		estimatedSize uint64               // estimated size of current update set
+		maxSize       uint64 = 700_000_000 // 700MB
 	)
 
 	log.Noticef("Generate update sets from block %v to block %v.\n", cfg.First, cfg.Last)
@@ -130,11 +131,10 @@ func GenUpdateSet(cfg *utils.Config, interval uint64) error {
 				}
 
 				// reset update set & counters
-				if estimatedSize > maxSize {
-					estimatedSize = 0
-				} else {
+				if tx.Block > checkPoint {
 					checkPoint += interval
 				}
+				estimatedSize = 0
 				destroyedAccounts = nil
 				update = make(substate.SubstateAlloc)
 				txCount = 0
@@ -158,10 +158,11 @@ func GenUpdateSet(cfg *utils.Config, interval uint64) error {
 		destroyedAccounts = append(destroyedAccounts, destroyed...)
 		destroyedAccounts = append(destroyedAccounts, resurrected...)
 
+		// estimate update-set size after merge
+		substateSize := update.EstimateIncrementalSize(tx.Substate.OutputAlloc)
+		estimatedSize += substateSize
 		// perform substate merge
 		update.Merge(tx.Substate.OutputAlloc)
-		// estimate update-set size after merge
-		estimatedSize += update.EstimateIncrementalSize(tx.Substate.OutputAlloc)
 		txCount++
 	}
 	return err
