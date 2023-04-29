@@ -1,10 +1,13 @@
 package db
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
+	"strconv"
 
 	substate "github.com/Fantom-foundation/Substate"
 
@@ -18,41 +21,54 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-const updateSetInterval = 1000000
+// default updateSet interval
+const updateSetInterval = 1_000_000
 
-// UpdateCommand data structure for the replay app
-var UpdateCommand = cli.Command{
-	Action: Update,
-	Name:   "update",
+// GenerateCommand data structure for the replay app
+var GenerateCommand = cli.Command{
+	Action: Generate,
+	Name:   "generate",
 	Usage:  "generates aida-db from given events",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 		&utils.DbFlag,
 		&utils.GenesisFlag,
-		&utils.DeleteSourceDbsFlag,
+		&utils.KeepDbFlag,
 		&utils.DbTmpFlag,
 		&utils.ChainIDFlag,
+		&utils.CacheFlag,
 		&utils.LogLevelFlag,
 	},
 	Description: `
-The db update command requires events as an argument:
+The db generate command requires events as an argument:
 <events>
 
 <events> are fed into the opera database (either existing or genesis needs to be specified), processing them generates updated aida-db.`,
 }
 
-// Update command is used to record/update aida-db
-func Update(ctx *cli.Context) error {
+// Generate command is used to record/update aida-db
+func Generate(ctx *cli.Context) error {
 	cfg, argErr := utils.NewConfig(ctx, utils.EventArg)
 	if argErr != nil {
 		return argErr
 	}
 
-	log := utils.NewLogger(cfg.LogLevel, "Update")
+	log := utils.NewLogger(cfg.LogLevel, "Generate")
 
-	updateConfigFlags(cfg, log)
+	aidaDbTmp, err := prepare(cfg)
+	if err != nil {
+		return err
+	}
+	if !cfg.KeepDb {
+		defer func() {
+			err = os.RemoveAll(aidaDbTmp)
+			if err != nil {
+				panic(err)
+			}
+		}()
+	}
 
-	usedGenesis, err := prepareOpera(cfg, log)
+	err = prepareOpera(cfg, log)
 	if err != nil {
 		return err
 	}
@@ -67,66 +83,60 @@ func Update(ctx *cli.Context) error {
 		return err
 	}
 
-	err = genUpdateSet(cfg, usedGenesis, log)
+	err = genUpdateSet(cfg, log)
 	if err != nil {
 		return err
 	}
 
-	// merge generated databases into aida-db
-	err = Merge(cfg, []string{cfg.SubstateDb, cfg.UpdateDb, cfg.DeletionDb})
-	if err != nil {
-		return err
-	}
-
-	// delete source databases
-	if cfg.DeleteSourceDbs {
-		err = os.RemoveAll(cfg.WorldStateDb)
-		if err != nil {
-			return err
-		}
-		log.Infof("deleted: %s", cfg.WorldStateDb)
-	}
-
-	log.Infof("Aida-db updated successfully from block %v to block %v\n", cfg.First, cfg.Last)
+	log.Noticef("Aida-db updated successfully from block %v to block %v", cfg.First, cfg.Last)
 
 	return err
 }
 
 // prepareOpera confirms that the opera is initialized
-func prepareOpera(cfg *utils.Config, log *logging.Logger) (bool, error) {
-	usedGenesis := false
+func prepareOpera(cfg *utils.Config, log *logging.Logger) error {
 	_, err := os.Stat(cfg.Db)
 	if os.IsNotExist(err) {
 		log.Noticef("Initialising opera from genesis")
 		// previous opera database isn't used - generate new one from genesis
-		err := initOperaFromGenesis(cfg)
+		err = initOperaFromGenesis(cfg, log)
 		if err != nil {
-			return false, fmt.Errorf("aida-db; Error: %v", err)
+			return fmt.Errorf("aida-db; Error: %v", err)
 		}
-		usedGenesis = true
 	}
 	cfg.First, err = getOperaBlock(cfg)
 	if err != nil {
-		return false, fmt.Errorf("couldn't retrieve block from existing opera database %v ; Error: %v", cfg.Db, err)
+		return fmt.Errorf("couldn't retrieve block from existing opera database %v ; Error: %v", cfg.Db, err)
 	}
 
 	log.Noticef("Opera is starting at block: %v", cfg.First)
 
-	return usedGenesis, nil
+	return nil
 }
 
-// updateConfigFlags updates config for flags required in invoked generation commands
+// prepare updates config for flags required in invoked generation commands
 // these flags are not expected from user, so we need to specify them for the generation process
-func updateConfigFlags(cfg *utils.Config, log *logging.Logger) {
-	if cfg.DbTmp == "" {
-		log.Fatalf("--%v needs to be specified", utils.DbTmpFlag.Name)
+func prepare(cfg *utils.Config) (string, error) {
+	if cfg.DbTmp != "" {
+		// create a parents of temporary directory
+		err := os.MkdirAll(cfg.DbTmp, 0700)
+		if err != nil {
+			return "", fmt.Errorf("failed to create %s directory; %s", cfg.DbTmp, err)
+		}
+	}
+	//create a temporary working directory
+	aidaDbTmp, err := ioutil.TempDir(cfg.DbTmp, "aida_db_tmp_*")
+	if err != nil {
+		return "", fmt.Errorf("failed to create a temporary directory. %v", err)
 	}
 
-	cfg.DeletionDb = cfg.DbTmp + "/deletion"
-	cfg.SubstateDb = cfg.DbTmp + "/substate"
-	cfg.UpdateDb = cfg.DbTmp + "/update"
-	cfg.WorldStateDb = cfg.DbTmp + "/worldstate"
+	cfg.DeletionDb = aidaDbTmp + "/deletion"
+	cfg.SubstateDb = aidaDbTmp + "/substate"
+	cfg.UpdateDb = aidaDbTmp + "/update"
+	cfg.WorldStateDb = aidaDbTmp + "/worldstate"
 	cfg.Workers = substate.WorkersFlag.Value
+
+	return aidaDbTmp, nil
 }
 
 // getOperaBlock retrieves current block of opera head
@@ -149,9 +159,33 @@ func getOperaBlock(cfg *utils.Config) (uint64, error) {
 }
 
 // genUpdateSet invokes UpdateSet generation
-func genUpdateSet(cfg *utils.Config, usedGenesis bool, log *logging.Logger) error {
+func genUpdateSet(cfg *utils.Config, log *logging.Logger) error {
+	db := substate.OpenUpdateDB(cfg.AidaDb)
+	// set first block
+	nextUpdateSetStart := db.GetLastKey() + 1
+	err := db.Close()
+	if err != nil {
+		return err
+	}
+
+	if nextUpdateSetStart > 1 {
+		log.Infof("Previous UpdateSet found generating from %v", nextUpdateSetStart)
+	}
+
 	log.Noticef("UpdateSet generation")
-	return updateset.GenUpdateSet(cfg, updateSetInterval)
+	err = updateset.GenUpdateSet(cfg, nextUpdateSetStart, updateSetInterval)
+	if err != nil {
+		return err
+	}
+
+	// merge UpdateDb into AidaDb
+	err = Merge(cfg, []string{cfg.UpdateDb})
+	if err != nil {
+		return err
+	}
+	cfg.UpdateDb = cfg.AidaDb
+
+	return nil
 }
 
 // genDeletedAccounts invokes DeletedAccounts generation
@@ -161,6 +195,14 @@ func genDeletedAccounts(cfg *utils.Config, log *logging.Logger) error {
 	if err != nil {
 		return fmt.Errorf("DelAccounts; %v", err)
 	}
+
+	// merge DeletionDb into AidaDb
+	err = Merge(cfg, []string{cfg.DeletionDb})
+	if err != nil {
+		return err
+	}
+	cfg.DeletionDb = cfg.AidaDb
+
 	return nil
 }
 
@@ -171,11 +213,14 @@ func recordSubstate(cfg *utils.Config, log *logging.Logger) error {
 		return fmt.Errorf("supplied events file %s doesn't exist", cfg.Events)
 	}
 
-	cmd := exec.Command("opera", "--datadir", cfg.Db, "--gcmode=light", "--db.preset=legacy-ldb", "import", "events", "--recording", "--substatedir", cfg.SubstateDb, cfg.Events)
-	output, err := cmd.CombinedOutput()
+	log.Noticef("Starting Substate recording of %v", cfg.Events)
+
+	cmd := exec.Command("opera", "--datadir", cfg.Db, "--gcmode=light", "--db.preset=legacy-ldb", "--cache", strconv.Itoa(cfg.Cache), "import", "events", "--recording", "--substatedir", cfg.SubstateDb, cfg.Events)
+
+	err = runCommand(cfg, cmd, log)
 	if err != nil {
-		fmt.Println(string(output))
-		return fmt.Errorf("load opera genesis; %v", err.Error())
+		// remove empty substateDb
+		return fmt.Errorf("import events; %v", err.Error())
 	}
 
 	// retrieve block the opera was iterated into
@@ -189,15 +234,21 @@ func recordSubstate(cfg *utils.Config, log *logging.Logger) error {
 
 	log.Noticef("Substates generated for %v - %v", cfg.First, cfg.Last)
 
+	err = Merge(cfg, []string{cfg.SubstateDb})
+	if err != nil {
+		return err
+	}
+	cfg.SubstateDb = cfg.AidaDb
+
 	return nil
 }
 
 // initOperaFromGenesis prepares opera by loading genesis
-func initOperaFromGenesis(cfg *utils.Config) error {
-	cmd := exec.Command("opera", "--datadir", cfg.Db, "--genesis", cfg.Genesis, "--exitwhensynced.epoch=0", "--db.preset=legacy-ldb", "--maxpeers=0")
-	output, err := cmd.CombinedOutput()
+func initOperaFromGenesis(cfg *utils.Config, log *logging.Logger) error {
+	cmd := exec.Command("opera", "--datadir", cfg.Db, "--genesis", cfg.Genesis, "--exitwhensynced.epoch=0", "--cache", strconv.Itoa(cfg.Cache), "--db.preset=legacy-ldb", "--maxpeers=0")
+
+	err := runCommand(cfg, cmd, log)
 	if err != nil {
-		fmt.Println(string(output))
 		return fmt.Errorf("load opera genesis; %v", err.Error())
 	}
 
@@ -210,10 +261,45 @@ func initOperaFromGenesis(cfg *utils.Config) error {
 	if err != nil {
 		return fmt.Errorf("dumpState; %v", err)
 	}
+
 	return nil
 }
 
-// TODO rewrite after dump is using the config then pass cfg directly to the dump function
+// runCommand wraps cmd execution to distinguish whether to display its output
+func runCommand(cfg *utils.Config, cmd *exec.Cmd, log *logging.Logger) error {
+	lvl, _ := logging.LogLevel(cfg.LogLevel)
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return err
+	}
+	defer stderr.Close()
+	err = cmd.Start()
+	if err != nil {
+		return err
+	}
+	scanner := bufio.NewScanner(stderr)
+	if lvl == logging.DEBUG {
+		for scanner.Scan() {
+			m := scanner.Text()
+			log.Debug(m)
+		}
+	}
+	err = cmd.Wait()
+
+	// command failed
+	if err != nil {
+		if lvl != logging.DEBUG {
+			for scanner.Scan() {
+				m := scanner.Text()
+				log.Error(m)
+			}
+		}
+		return err
+	}
+	return nil
+}
+
+// TODO rewrite after dump is using the config then pass modified cfg directly to the dump function
 func prepareDumpCliContext(cfg *utils.Config) (*cli.Context, error) {
 	flagSet := flag.NewFlagSet("", 0)
 	flagSet.String(flags.StateDBPath.Name, cfg.WorldStateDb, "")
@@ -223,6 +309,7 @@ func prepareDumpCliContext(cfg *utils.Config) (*cli.Context, error) {
 	flagSet.String(flags.TrieRootHash.Name, flags.TrieRootHash.Value, "")
 	flagSet.Int(flags.Workers.Name, flags.Workers.Value, "")
 	flagSet.Uint64(flags.TargetBlock.Name, flags.TargetBlock.Value, "")
+	flagSet.String(utils.LogLevelFlag.Name, cfg.LogLevel, "")
 
 	ctx := cli.NewContext(cli.NewApp(), flagSet, nil)
 

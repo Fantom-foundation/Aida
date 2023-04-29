@@ -51,11 +51,17 @@ func generateUpdateSet(ctx *cli.Context) error {
 		return ferr
 	}
 
-	return GenUpdateSet(cfg, interval)
+	// retrieve last update set
+	db := substate.OpenUpdateDB(cfg.UpdateDb)
+	// set first block
+	cfg.First = db.GetLastKey() + 1
+	db.Close()
+
+	return GenUpdateSet(cfg, cfg.First, interval)
 }
 
 // GenUpdateSet generates a series of update sets from substate db
-func GenUpdateSet(cfg *utils.Config, interval uint64) error {
+func GenUpdateSet(cfg *utils.Config, first uint64, interval uint64) error {
 	var (
 		err               error
 		destroyedAccounts []common.Address
@@ -72,29 +78,26 @@ func GenUpdateSet(cfg *utils.Config, interval uint64) error {
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
-	// set first block
-	cfg.First = db.GetLastKey() + 1
-
 	// store world state if applicable
-	skipWorldState := cfg.First > utils.FirstSubstateBlock
+	skipWorldState := first > utils.FirstSubstateBlock
 	worldState := cfg.WorldStateDb
 	if _, err := os.Stat(worldState); os.IsNotExist(err) {
 		skipWorldState = true
 	}
 
 	if !skipWorldState {
-		cfg.First = utils.FirstSubstateBlock
+		first = utils.FirstSubstateBlock
 		log.Notice("Load initial worldstate and store its substateAlloc")
-		ws, err := utils.GenerateWorldState(worldState, cfg.First-1, cfg)
+		ws, err := utils.GenerateWorldState(worldState, first-1, cfg)
 		if err != nil {
 			return err
 		}
-		log.Infof("Write block %v to updateDB", cfg.First-1)
-		db.PutUpdateSet(cfg.First-1, &ws, destroyedAccounts)
+		log.Infof("Write block %v to updateDB", first-1)
+		db.PutUpdateSet(first-1, &ws, destroyedAccounts)
 		log.Infof("\tAccounts: %v", len(ws))
 	}
 
-	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
+	iter := substate.NewSubstateIterator(first, cfg.Workers)
 	defer iter.Release()
 	deletedAccountDB := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
 	defer deletedAccountDB.Close()
@@ -108,7 +111,7 @@ func GenUpdateSet(cfg *utils.Config, interval uint64) error {
 		maxSize       uint64 = 700_000_000 // 700MB
 	)
 
-	log.Noticef("Generate update sets from block %v to block %v.\n", cfg.First, cfg.Last)
+	log.Noticef("Generate update sets from block %v to block %v.\n", first, cfg.Last)
 	for iter.Next() {
 		tx := iter.Value()
 		// if first block, calculate next change point

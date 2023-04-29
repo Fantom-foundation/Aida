@@ -44,6 +44,7 @@ var CmdDumpState = cli.Command{
 		&flags.TrieRootHash,
 		&flags.Workers,
 		&flags.TargetBlock,
+		&utils.LogLevelFlag,
 	},
 }
 
@@ -66,7 +67,7 @@ func DumpState(ctx *cli.Context) error {
 	dumpCtx, cancel := context.WithCancel(ctx.Context)
 	defer cancel()
 
-	log := utils.NewLogger(ctx.String(utils.LogLevelFlag.Name), "dump")
+	log := utils.NewLogger(ctx.String(utils.LogLevelFlag.Name), "Dump")
 
 	// blockNumber number to be stored in output db
 	// root is root hash of storage at given block number
