@@ -11,6 +11,7 @@ import (
 
 // TestStatedb_PrimeStateDB tests priming fresh state DB with randomized world state data
 func TestStatedb_PrimeStateDB(t *testing.T) {
+	log := NewLogger("Warning", "TestPrimeStateDB")
 	for _, tc := range getStatedbTestCases() {
 		t.Run(fmt.Sprintf("DB variant: %s; shadowImpl: %s; archive variant: %s", tc.variant, tc.shadowImpl, tc.archiveVariant), func(t *testing.T) {
 			cfg := makeTestConfig(tc)
@@ -34,7 +35,7 @@ func TestStatedb_PrimeStateDB(t *testing.T) {
 			ws, _ := makeWorldState(t)
 
 			// Priming state DB
-			PrimeStateDB(ws, sDB, cfg)
+			PrimeStateDB(ws, sDB, cfg, log)
 
 			// Checks if state DB was primed correctly
 			for key, account := range ws {

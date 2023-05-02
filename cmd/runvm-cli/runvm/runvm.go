@@ -91,7 +91,6 @@ func RunVM(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
-		return nil
 	}
 
 	// print memory usage after priming

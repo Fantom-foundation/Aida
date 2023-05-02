@@ -47,6 +47,7 @@ var RunVMApp = cli.App{
 		&utils.ShadowDbImplementationFlag,
 		&utils.ShadowDbVariantFlag,
 		&utils.UpdateDbFlag,
+		&utils.UpdateCacheSizeFlag,
 		&utils.ValidateTxStateFlag,
 		&utils.ValidateWorldStateFlag,
 		&utils.ValidateFlag,

@@ -24,6 +24,7 @@ var GenUpdateSetCommand = cli.Command{
 		&substate.SubstateDirFlag,
 		&substate.WorkersFlag,
 		&utils.UpdateDbFlag,
+		&utils.UpdateCacheSizeFlag,
 		&utils.ValidateFlag,
 		&utils.WorldStateFlag,
 		&utils.LogLevelFlag,
@@ -65,7 +66,6 @@ func GenUpdateSet(cfg *utils.Config, interval uint64) error {
 	// initialize updateDB
 	db := substate.OpenUpdateDB(cfg.UpdateDb)
 	defer db.Close()
-	update := make(substate.SubstateAlloc)
 
 	// iterate through subsets in sequence
 	substate.SetSubstateDirectory(cfg.SubstateDb)
@@ -82,16 +82,18 @@ func GenUpdateSet(cfg *utils.Config, interval uint64) error {
 		skipWorldState = true
 	}
 
+	update := make(substate.SubstateAlloc)
 	if !skipWorldState {
 		cfg.First = utils.FirstSubstateBlock
 		log.Notice("Load initial worldstate and store its substateAlloc")
 		ws, err := utils.GenerateWorldState(worldState, cfg.First-1, cfg)
+		size := update.EstimateIncrementalSize(ws)
 		if err != nil {
 			return err
 		}
 		log.Infof("Write block %v to updateDB", cfg.First-1)
 		db.PutUpdateSet(cfg.First-1, &ws, destroyedAccounts)
-		log.Infof("\tAccounts: %v", len(ws))
+		log.Infof("\tAccounts: %v, Size: %v", len(ws), size)
 	}
 
 	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
@@ -100,12 +102,12 @@ func GenUpdateSet(cfg *utils.Config, interval uint64) error {
 	defer deletedAccountDB.Close()
 
 	var (
-		txCount       uint64               // transaction counter
-		curBlock      uint64               // current block
-		checkPoint    uint64               // block number of the next interval
-		isFirst       = true               // first block
-		estimatedSize uint64               // estimated size of current update set
-		maxSize       uint64 = 700_000_000 // 700MB
+		txCount       uint64                // transaction counter
+		curBlock      uint64                // current block
+		checkPoint    uint64                // block number of the next interval
+		isFirst       = true                // first block
+		estimatedSize uint64                // estimated size of current update set
+		maxSize       = cfg.UpdateCacheSize // recommand size 700 MB
 	)
 
 	log.Noticef("Generate update sets from block %v to block %v.\n", cfg.First, cfg.Last)
@@ -159,8 +161,7 @@ func GenUpdateSet(cfg *utils.Config, interval uint64) error {
 		destroyedAccounts = append(destroyedAccounts, resurrected...)
 
 		// estimate update-set size after merge
-		substateSize := update.EstimateIncrementalSize(tx.Substate.OutputAlloc)
-		estimatedSize += substateSize
+		estimatedSize += update.EstimateIncrementalSize(tx.Substate.OutputAlloc)
 		// perform substate merge
 		update.Merge(tx.Substate.OutputAlloc)
 		txCount++

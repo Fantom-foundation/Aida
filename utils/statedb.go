@@ -117,7 +117,6 @@ func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *Config, target ui
 	for _, cur := range list {
 		db.Suicide(cur)
 	}
-	db.Finalise(true)
 	db.EndTransaction()
 	db.EndBlock()
 	db.EndSyncPeriod()

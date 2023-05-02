@@ -347,6 +347,7 @@ func (l *gethBulkLoad) digest() {
 	l.db.BeginSyncPeriod(0) //epoch number is ignored in geth
 	l.db.block++
 	l.db.BeginBlock(l.db.block)
+	fmt.Printf("geth digest\n")
 }
 
 // tireCommit commits changes to disk if archive node; otherwise, performs garbage collection.

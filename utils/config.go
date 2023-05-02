@@ -4,6 +4,7 @@ package utils
 import (
 	"fmt"
 	"log"
+	"math"
 	"math/big"
 	"math/rand"
 	"os"
@@ -278,6 +279,11 @@ var (
 		Name:  "genesis",
 		Usage: "Path to genesis file",
 	}
+	UpdateCacheSizeFlag = cli.Uint64Flag{
+		Name:  "update-cache",
+		Usage: "cache size for update set in MiB",
+		Value: math.MaxUint64,
+	}
 )
 
 // Config represents execution configuration for replay command.
@@ -340,6 +346,7 @@ type Config struct {
 	TraceFile           string         // name of trace file
 	Trace               bool           // trace flag
 	LogLevel            string         // level of the logging of the app action
+	UpdateCacheSize     uint64         // update cache size in Bytes
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.
@@ -478,6 +485,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		TraceFile:           ctx.Path(TraceFileFlag.Name),
 		Trace:               ctx.Bool(TraceFlag.Name),
 		LogLevel:            ctx.String(LogLevelFlag.Name),
+		UpdateCacheSize:     ctx.Uint64(UpdateCacheSizeFlag.Name) << 20, // convert from MiB to B
 	}
 	if cfg.ChainID == 0 {
 		cfg.ChainID = ChainIDFlag.Value
