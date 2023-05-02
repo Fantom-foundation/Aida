@@ -3,10 +3,10 @@ package state
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"math/big"
 	"strings"
 
-	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -16,13 +16,12 @@ import (
 // MakeShadowStateDB creates a StateDB instance bundeling two other instances and running each
 // operation on both of them, cross checking results. If the results are not equal, an error
 // is logged and the result of the primary instance is returned.
-func MakeShadowStateDB(prime, shadow StateDB, logLevel string) StateDB {
+func MakeShadowStateDB(prime, shadow StateDB) StateDB {
 	return &shadowStateDB{
 		prime:     prime,
 		shadow:    shadow,
 		snapshots: []snapshotPair{},
 		err:       nil,
-		log:       utils.NewLogger(logLevel, "Shadow StateDB"),
 	}
 }
 
@@ -438,7 +437,7 @@ func getOpcodeString(opName string, args ...any) string {
 }
 
 func (s *shadowStateDB) logIssue(opName string, prime, shadow any, args ...any) {
-	s.log.Criticalf("Diff for %v\n"+
+	log.Printf("Diff for %v\n"+
 		"\tPrimary: %v \n"+
 		"\tShadow: %v", getOpcodeString(opName, args), prime, shadow)
 
