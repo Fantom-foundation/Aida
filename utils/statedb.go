@@ -82,7 +82,7 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 		return nil, "", err
 	}
 
-	return state.MakeShadowStateDB(primeDb, shadowDb), cfg.StateDbSrc, nil
+	return state.MakeShadowStateDB(primeDb, shadowDb, cfg.LogLevel), cfg.StateDbSrc, nil
 }
 
 // makeNewStateDB creates a DB instance with a potential shadow instance.
@@ -133,7 +133,7 @@ func makeNewStateDB(cfg *Config) (state.StateDB, string, error) {
 		return nil, "", err
 	}
 
-	return state.MakeShadowStateDB(primaryDb, shadowDb), tmpDir, nil
+	return state.MakeShadowStateDB(primaryDb, shadowDb, cfg.LogLevel), tmpDir, nil
 }
 
 // makeStateDBVariant creates a DB instance of the requested kind.
