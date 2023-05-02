@@ -41,6 +41,7 @@ func main() {
 			// StateDB
 			&utils.StateDbSrcFlag,
 			&utils.StateDbLoggingFlag,
+			&utils.CarmenSchemaFlag,
 
 			// ArchiveDB
 			&utils.ArchiveModeFlag,
