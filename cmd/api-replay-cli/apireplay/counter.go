@@ -58,6 +58,7 @@ func newCounter(closed chan any, input chan requestLog, log *logging.Logger, wg 
 
 // Start requestCounter
 func (c *requestCounter) Start() {
+	c.log.Info("starting counter")
 	c.wg.Add(1)
 	go c.count()
 }
@@ -70,8 +71,8 @@ func (c *requestCounter) count() {
 	)
 
 	defer func() {
-		c.logStats()
 		c.wg.Done()
+		c.logStats()
 	}()
 
 	c.start = time.Now()

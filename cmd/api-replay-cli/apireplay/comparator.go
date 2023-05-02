@@ -37,7 +37,6 @@ func newComparator(input chan *OutData, log *logging.Logger, closed chan any, wg
 
 // Start the Comparator
 func (c *Comparator) Start() {
-	c.wg.Add(1)
 	go c.compare()
 }
 

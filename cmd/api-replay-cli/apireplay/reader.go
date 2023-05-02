@@ -62,6 +62,8 @@ func (r *Reader) read() {
 		r.wg.Done()
 	}()
 
+	var val *iterator.RequestWithResponse
+
 	for r.iter.Next() {
 		select {
 		case <-r.closed:
@@ -76,10 +78,16 @@ func (r *Reader) read() {
 				r.log.Fatalf("unexpected iter err; %v", r.iter.Error())
 			}
 
-			val := r.iter.Value()
+			val = r.iter.Value()
 
-			// retrieve the data from iterator and send them to executors
-			r.output <- val
+		}
+
+		select {
+		case <-r.closed:
+			return
+
+		// retrieve the data from iterator and send them to executors
+		case r.output <- val:
 
 		}
 	}

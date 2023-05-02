@@ -79,7 +79,6 @@ func newExecutor(first, last uint64, db state.StateDB, output chan *OutData, cha
 
 // Start the ReplayExecutor
 func (e *ReplayExecutor) Start() {
-	e.wg.Add(1)
 	go e.execute()
 }
 
@@ -102,7 +101,6 @@ func (e *ReplayExecutor) execute() {
 		case <-e.closed:
 			return
 		case req, ok = <-e.input:
-
 			// if input is closed, stop the Executor
 			if !ok {
 				return
@@ -128,17 +126,25 @@ func (e *ReplayExecutor) execute() {
 			// was execution successful?
 			if res != nil {
 				logType = executed
-				e.output <- createOutData(in, res)
+
+				select {
+				case <-e.closed:
+					return
+				case e.output <- createOutData(in, res):
+				}
 			} else {
 				logType = noSubstateForGivenBlock
 			}
+		}
 
-			// send statistics
-			e.counterInput <- requestLog{
-				method:  req.Query.Method,
-				logType: logType,
-			}
-
+		select {
+		case <-e.closed:
+			return
+		// send statistics
+		case e.counterInput <- requestLog{
+			method:  req.Query.Method,
+			logType: logType,
+		}:
 		}
 
 	}

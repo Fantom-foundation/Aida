@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	bufferSize = 100
+	bufferSize = 500
 )
 
 // Controller controls and looks after all threads within the api-replay package
@@ -99,28 +99,38 @@ func (r *Controller) Stop() {
 	r.stopExecutors()
 	r.stopCounter()
 
-	r.readerWg.Wait()
 	r.comparatorsWg.Wait()
 	r.executorsWg.Wait()
 	r.counterWg.Wait()
+	r.readerWg.Wait()
 	r.log.Notice("all services has been stopped")
 }
 
 // startExecutors and their loops
 func (r *Controller) startExecutors() {
-	for i, e := range r.Executors {
+	var (
+		i int
+		e *ReplayExecutor
+	)
+	for i, e = range r.Executors {
 		r.log.Infof("starting executor #%v", i+1)
 		e.Start()
 
 	}
+	r.executorsWg.Add(i + 1)
 }
 
 // startComparators and their loops
 func (r *Controller) startComparators() {
-	for i, c := range r.Comparators {
+	var (
+		i int
+		c *Comparator
+	)
+	for i, c = range r.Comparators {
 		r.log.Infof("starting comparator #%v", i+1)
 		c.Start()
 	}
+	r.comparatorsWg.Add(i + 1)
 }
 
 // stopCounter closes the counters close signal
@@ -175,16 +185,12 @@ func (r *Controller) stopComparators() {
 // Wait until all wgs are done
 func (r *Controller) Wait() {
 	r.readerWg.Wait()
-	r.log.Info("reader done")
 
 	r.executorsWg.Wait()
-	r.log.Info("executors done")
 
 	r.comparatorsWg.Wait()
-	r.log.Info("comparators done")
 
 	r.counterWg.Wait()
-	r.log.Info("counter done")
 }
 
 // control looks for ctx.Done, if it triggers, Controller stops all the services
