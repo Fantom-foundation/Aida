@@ -282,10 +282,7 @@ func (e *ReplayExecutor) getTimestamp(blockID uint64) uint64 {
 
 	if substate.HasSubstate(blockID, 0) {
 		timestamp = substate.GetSubstate(blockID, 0).Env.Timestamp
-	} else {
-		e.log.Warningf("no substate for block %v - any EVM based methods with this blockID will be skipped\n", blockID)
 	}
-
 	e.timestamps[blockID] = timestamp
 
 	return timestamp
