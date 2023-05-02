@@ -99,7 +99,7 @@ func getReferenceStatsAction[T comparable](ctx *cli.Context, cli_command string,
 	return getReferenceStatsActionWithConsumer(ctx, cli_command, extract, func(*AccessStatistics[T]) {})
 }
 
-// getReferenceStatsActionWithConsumer extends the abilitities of the function above by
+// getReferenceStatsActionWithConsumer extends the abilities of the function above by
 // allowing some post-processing to be applied on the collected statistics.
 func getReferenceStatsActionWithConsumer[T comparable](ctx *cli.Context, cli_command string, extract Extractor[T], consume AccessStatisticsConsumer[T]) error {
 	var err error
