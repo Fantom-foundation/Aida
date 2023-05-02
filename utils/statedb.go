@@ -49,7 +49,8 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 		primeDbPath = cfg.StateDbSrc
 	}
 
-	primeDbInfo, err = ReadStateDbInfo(filepath.Join(primeDbPath, PathToDbInfo))
+	primeDbInfoFile := filepath.Join(primeDbPath, PathToDbInfo)
+	primeDbInfo, err = ReadStateDbInfo(primeDbInfoFile)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to read %v. %v", primeDbPath, err)
 	}
@@ -71,7 +72,8 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 	)
 
 	shadowDbPath = filepath.Join(cfg.StateDbSrc, pathToShadowDb)
-	shadowDbInfo, err = ReadStateDbInfo(filepath.Join(shadowDbPath, PathToDbInfo))
+	shadowDbInfoFile := filepath.Join(shadowDbPath, PathToDbInfo)
+	shadowDbInfo, err = ReadStateDbInfo(shadowDbInfoFile)
 	if err != nil {
 		return nil, "", fmt.Errorf("failed to read %v. %v", primeDbPath, err)
 	}

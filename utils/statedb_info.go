@@ -120,7 +120,7 @@ func ReadStateDbInfo(filename string) (StateDbInfo, error) {
 	var dbinfo StateDbInfo
 	file, err := os.ReadFile(filename)
 	if err != nil {
-		return dbinfo, fmt.Errorf("Failed to read %v. %v", filename, err)
+		return dbinfo, fmt.Errorf("failed to read %v; %v", filename, err)
 	}
 	err = json.Unmarshal(file, &dbinfo)
 	return dbinfo, err
