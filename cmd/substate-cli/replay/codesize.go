@@ -18,7 +18,7 @@ var GetCodeSizeCommand = cli.Command{
 	Flags: []cli.Flag{
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
-		&ChainIDFlag,
+		&utils.ChainIDFlag,
 	},
 	Description: `
 The substate-cli code-size command requires two arguments:
@@ -78,25 +78,21 @@ func getCodeSizeTask(block uint64, tx int, st *substate.Substate, taskPool *subs
 func getCodeSizeAction(ctx *cli.Context) error {
 	var err error
 
-	if ctx.Args().Len() != 2 {
-		return fmt.Errorf("substate-cli code-size command requires exactly 2 arguments")
+	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
+	if err != nil {
+		return err
 	}
 
-	chainID = ctx.Int(ChainIDFlag.Name)
+	chainID = cfg.ChainID
 	fmt.Printf("chain-id: %v\n", chainID)
 	fmt.Printf("git-date: %v\n", gitDate)
 	fmt.Printf("git-commit: %v\n", gitCommit)
 
-	first, last, argErr := utils.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
-	if argErr != nil {
-		return argErr
-	}
-
-	substate.SetSubstateDirectory(ctx.String(substate.SubstateDirFlag.Name))
+	substate.SetSubstateDirectory(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
-	taskPool := substate.NewSubstateTaskPool("substate-cli storage", getCodeSizeTask, first, last, ctx)
+	taskPool := substate.NewSubstateTaskPool("substate-cli storage", getCodeSizeTask, cfg.First, cfg.Last, ctx)
 	err = taskPool.Execute()
 	return err
 }

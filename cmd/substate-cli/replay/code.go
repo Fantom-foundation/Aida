@@ -21,8 +21,8 @@ var GetCodeCommand = cli.Command{
 	Flags: []cli.Flag{
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
-		&ContractDBFlag,
-		&ChainIDFlag,
+		&utils.DbFlag, // Database for contracts
+		&utils.ChainIDFlag,
 	},
 	Description: `
 The substate-cli code command requires two arguments:
@@ -35,7 +35,7 @@ The contracts of the block range are written into a levelDB database.
 `,
 }
 
-var ContractDB = ContractDBFlag.Value
+var ContractDB string
 
 // registry to keep track the bytecode of a smart contract
 var (
@@ -85,28 +85,25 @@ func getCodeTask(block uint64, tx int, st *substate.Substate, taskPool *substate
 func getCodeAction(ctx *cli.Context) error {
 	var err error
 
-	if ctx.Args().Len() != 2 {
-		return fmt.Errorf("substate-cli storage command requires exactly 2 arguments")
+	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
+	if err != nil {
+		return err
 	}
 
-	chainID = ctx.Int(ChainIDFlag.Name)
+	ContractDB = cfg.Db
+	chainID = cfg.ChainID
 	fmt.Printf("chain-id: %v\n", chainID)
 	fmt.Printf("git-date: %v\n", gitDate)
 	fmt.Printf("git-commit: %v\n", gitCommit)
 	fmt.Printf("contract-db: %v\n", ContractDB)
 
-	first, last, argErr := utils.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
-	if argErr != nil {
-		return argErr
-	}
-
-	substate.SetSubstateDirectory(ctx.String(substate.SubstateDirFlag.Name))
+	substate.SetSubstateDirectory(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
 	CodeRegistry = make(map[common.Address][]byte)
 
-	taskPool := substate.NewSubstateTaskPool("substate-cli code", getCodeTask, first, last, ctx)
+	taskPool := substate.NewSubstateTaskPool("substate-cli code", getCodeTask, cfg.First, cfg.Last, ctx)
 	err = taskPool.Execute()
 
 	writeContracts()

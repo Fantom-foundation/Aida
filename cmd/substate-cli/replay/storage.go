@@ -2,7 +2,6 @@ package replay
 
 import (
 	"fmt"
-
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
@@ -18,7 +17,7 @@ var GetStorageUpdateSizeCommand = cli.Command{
 	Flags: []cli.Flag{
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
-		&ChainIDFlag,
+		&utils.ChainIDFlag,
 		&utils.LogLevelFlag,
 	},
 	Description: `
@@ -108,27 +107,23 @@ func getStorageUpdateSizeTask(block uint64, tx int, st *substate.Substate, taskP
 func getStorageUpdateSizeAction(ctx *cli.Context) error {
 	var err error
 
-	log := utils.NewLogger(ctx.String(utils.LogLevelFlag.Name), "Substate Replay")
-
-	if ctx.Args().Len() != 2 {
-		return fmt.Errorf("substate-cli storage command requires exactly 2 arguments")
+	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
+	if err != nil {
+		return err
 	}
 
-	chainID = ctx.Int(ChainIDFlag.Name)
+	log := utils.NewLogger(cfg.LogLevel, "Substate Replay")
+
+	chainID = cfg.ChainID
 	log.Infof("chain-id: %v\n", chainID)
 	log.Infof("git-date: %v\n", gitDate)
 	log.Infof("git-commit: %v\n", gitCommit)
 
-	first, last, argErr := utils.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
-	if argErr != nil {
-		return argErr
-	}
-
-	substate.SetSubstateDirectory(ctx.String(substate.SubstateDirFlag.Name))
+	substate.SetSubstateDirectory(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
-	taskPool := substate.NewSubstateTaskPool("substate-cli storage", getStorageUpdateSizeTask, first, last, ctx)
+	taskPool := substate.NewSubstateTaskPool("substate-cli storage", getStorageUpdateSizeTask, cfg.First, cfg.Last, ctx)
 	err = taskPool.Execute()
 	return err
 }

@@ -28,7 +28,7 @@ var GenDeletedAccountsCommand = cli.Command{
 	Flags: []cli.Flag{
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
-		&ChainIDFlag,
+		&utils.ChainIDFlag,
 		&utils.DeletionDbFlag,
 		&utils.LogLevelFlag,
 	},

@@ -104,24 +104,21 @@ func getReferenceStatsAction[T comparable](ctx *cli.Context, cli_command string,
 func getReferenceStatsActionWithConsumer[T comparable](ctx *cli.Context, cli_command string, extract Extractor[T], consume AccessStatisticsConsumer[T]) error {
 	var err error
 
-	log := utils.NewLogger(ctx.String(utils.LogLevelFlag.Name), "Replay Substate")
-
-	if ctx.Args().Len() != 2 {
-		return fmt.Errorf("substate-cli %v command requires exactly 2 arguments", cli_command)
+	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
+	if err != nil {
+		return err
 	}
 
-	chainID = ctx.Int(ChainIDFlag.Name)
+	log := utils.NewLogger(cfg.LogLevel, "Replay Substate")
+
+	ContractDB = cfg.Db
+	chainID = cfg.ChainID
 	log.Infof("chain-id: %v\n", chainID)
 	log.Infof("git-date: %v\n", gitDate)
 	log.Infof("git-commit: %v\n", gitCommit)
 	log.Infof("contract-db: %v\n", ContractDB)
 
-	first, last, argErr := utils.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
-	if argErr != nil {
-		return argErr
-	}
-
-	substate.SetSubstateDirectory(ctx.String(substate.SubstateDirFlag.Name))
+	substate.SetSubstateDirectory(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
@@ -137,7 +134,7 @@ func getReferenceStatsActionWithConsumer[T comparable](ctx *cli.Context, cli_com
 	}
 
 	// Process all transactions in parallel, out-of-order.
-	taskPool := substate.NewSubstateTaskPool(fmt.Sprintf("substate-cli %v", cli_command), task, first, last, ctx)
+	taskPool := substate.NewSubstateTaskPool(fmt.Sprintf("substate-cli %v", cli_command), task, cfg.First, cfg.Last, ctx)
 	err = taskPool.Execute()
 	if err != nil {
 		return err
