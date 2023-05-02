@@ -28,10 +28,11 @@ type requestCounter struct {
 type reqLogType byte
 
 const (
-	executed                reqLogType         = iota // the request got executed successfully
-	outOfStateDBRange                                 // the request was not executed due to not being in StateDBs block range
-	noSubstateForGivenBlock                           // the request was not executed due to no having substate for given block
-	statisticsLogFrequency  = 10 * time.Second        // how often will the app log statistics info
+	executed                reqLogType = iota // the request got executed successfully
+	outOfStateDBRange                         // the request was not executed due to not being in StateDBs block range
+	noSubstateForGivenBlock                   // the request was not executed due to no having substate for given block
+	noMatchingData
+	statisticsLogFrequency = 10 * time.Second // how often will the app log statistics info
 )
 
 // todo why not executed - statedb out of range; no substate..
@@ -104,34 +105,13 @@ func (c *requestCounter) logStats() {
 	c.builder.WriteString(fmt.Sprintf("Elapsed time: %v\n\n", elapsed))
 
 	// total requests
-	c.builder.WriteString(fmt.Sprintf("\tTotal read requests: %v\n\n", c.total))
+	c.builder.WriteString(fmt.Sprintf("Total read requests: %v\n\n", c.total))
 
-	var exc uint64
-	for m, count := range c.stats[executed] {
-		c.builder.WriteString(fmt.Sprintf("\t%v: %v\n", m, count))
-		// executed requests
-		exc += count
-	}
+	c.addExecuted()
 
-	c.builder.WriteString(fmt.Sprintf("\n\tTotal executed requests: %v\n", exc))
+	c.addOutOfDbRange()
 
-	var outOfRange uint64
-	for m, count := range c.stats[outOfStateDBRange] {
-		c.builder.WriteString(fmt.Sprintf("\t%v: %v\n", m, count))
-		// executed requests
-		outOfRange += count
-	}
-
-	c.builder.WriteString(fmt.Sprintf("\n\tTotal skipped due to not being in StateDB block range: %v\n", outOfRange))
-
-	var noSubstate uint64
-	for method, count := range c.stats[noSubstateForGivenBlock] {
-		c.builder.WriteString(fmt.Sprintf("\t%v: %v\n", method, count))
-		// executed requests
-		noSubstate += count
-	}
-
-	c.builder.WriteString(fmt.Sprintf("\n\tTotal skipped due to non-existing substate for given block: %v\n", noSubstate))
+	c.addNoSubstate()
 
 	c.log.Notice(c.builder.String())
 }
@@ -142,4 +122,59 @@ func (c *requestCounter) addStat(req requestLog) {
 		c.stats[req.logType] = make(map[string]uint64)
 	}
 	c.stats[req.logType][req.method]++
+}
+
+// addUnmatchedResults requests to counters string builder
+func (c *requestCounter) addUnmatchedResults() {
+	c.builder.WriteString(fmt.Sprintf("\nUnmatched results:\n"))
+
+	var unmatchedResult uint64
+	for method, count := range c.stats[noMatchingData] {
+		c.builder.WriteString(fmt.Sprintf("\t%v: %v\n", method, count))
+		// executed requests
+		unmatchedResult += count
+	}
+
+	c.builder.WriteString(fmt.Sprintf("\n\tTotal: %v\n", unmatchedResult))
+}
+
+// addNoSubstate requests to counters string builder
+func (c *requestCounter) addNoSubstate() {
+	c.builder.WriteString(fmt.Sprintf("\nSkipped requests (non-existing substate):\n"))
+
+	var noSubstate uint64
+	for method, count := range c.stats[noSubstateForGivenBlock] {
+		c.builder.WriteString(fmt.Sprintf("\t%v: %v\n", method, count))
+		// executed requests
+		noSubstate += count
+	}
+
+	c.builder.WriteString(fmt.Sprintf("\n\tTotal: %v\n", noSubstate))
+}
+
+// addOutOfDbRange requests to counters string builder
+func (c *requestCounter) addOutOfDbRange() {
+	c.builder.WriteString(fmt.Sprintf("\nSkipped requests (out of given Db range):\n"))
+
+	var outOfRange uint64
+	for m, count := range c.stats[outOfStateDBRange] {
+		c.builder.WriteString(fmt.Sprintf("\t%v: %v\n", m, count))
+		// executed requests
+		outOfRange += count
+	}
+
+	c.builder.WriteString(fmt.Sprintf("\n\tTotal: %v\n", outOfRange))
+}
+
+// addExecuted requests to counters string builder
+func (c *requestCounter) addExecuted() {
+	c.builder.WriteString(fmt.Sprintf("\nExecuted requests:\n"))
+	var exc uint64
+	for m, count := range c.stats[executed] {
+		c.builder.WriteString(fmt.Sprintf("\t%v: %v\n", m, count))
+		// executed requests
+		exc += count
+	}
+
+	c.builder.WriteString(fmt.Sprintf("\n\tTotal: %v\n\n", exc))
 }
