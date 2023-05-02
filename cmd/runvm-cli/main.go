@@ -52,6 +52,7 @@ var RunVMApp = cli.App{
 		&utils.PrimeSeedFlag,
 		&utils.PrimeThresholdFlag,
 		&utils.ProfileFlag,
+		&utils.UpdateCacheSizeFlag,
 
 		// Priming
 		&utils.RandomizePrimingFlag,
