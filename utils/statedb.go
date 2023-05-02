@@ -25,12 +25,28 @@ const (
 // PrepareStateDB creates stateDB or load existing stateDB
 // Use this function when both opening existing and creating new StateDB
 func PrepareStateDB(cfg *Config) (state.StateDB, string, error) {
+	var (
+		db     state.StateDB
+		err    error
+		dbPath string
+	)
+
 	// db source was specified
 	if cfg.StateDbSrc != "" {
-		return useExistingStateDB(cfg)
+		db, dbPath, err = useExistingStateDB(cfg)
+	} else {
+		db, dbPath, err = makeNewStateDB(cfg)
 	}
 
-	return makeNewStateDB(cfg)
+	if err != nil {
+		return nil, "", err
+	}
+
+	if cfg.DbLogging {
+		db = state.MakeLoggingStateDB(db)
+	}
+
+	return db, dbPath, nil
 }
 
 // useExistingStateDB uses already existing DB to create a DB instance with a potential shadow instance.
@@ -43,7 +59,7 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 	)
 
 	// no shadow db
-	if cfg.ShadowImpl != "" {
+	if cfg.ShadowDb {
 		primeDbPath = filepath.Join(cfg.StateDbSrc, pathToPrimeDb)
 	} else {
 		primeDbPath = cfg.StateDbSrc
@@ -61,7 +77,7 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 		return nil, "", err
 	}
 
-	if cfg.ShadowImpl == "" {
+	if cfg.ShadowDb {
 		return primeDb, primeDbPath, nil
 	}
 
@@ -108,7 +124,7 @@ func makeNewStateDB(cfg *Config) (state.StateDB, string, error) {
 	primaryDbPath = tmpDir
 
 	// no shadow db
-	if cfg.ShadowImpl != "" {
+	if cfg.ShadowDb {
 		primaryDbPath = filepath.Join(primaryDbPath, pathToPrimeDb)
 	}
 
@@ -118,7 +134,7 @@ func makeNewStateDB(cfg *Config) (state.StateDB, string, error) {
 		return nil, "", err
 	}
 
-	if cfg.ShadowImpl == "" {
+	if !cfg.ShadowDb {
 		return primaryDb, primaryDbPath, nil
 	}
 

@@ -36,16 +36,11 @@ func main() {
 			&utils.ContinueOnFailureFlag,
 
 			// ShadowDB
-			&utils.ShadowDbImplementationFlag,
-			&utils.ShadowDbVariantFlag,
+			&utils.ShadowDb,
 
 			// StateDB
-			&utils.StateDbImplementationFlag,
-			&utils.StateDbVariantFlag,
 			&utils.StateDbSrcFlag,
-			&utils.DbTmpFlag,
 			&utils.StateDbLoggingFlag,
-			&utils.CarmenSchemaFlag,
 
 			// ArchiveDB
 			&utils.ArchiveModeFlag,
