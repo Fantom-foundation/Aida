@@ -21,6 +21,7 @@ var EVMErrors = map[int][]string{
 	-32000: {
 		"execution reverted",
 		"invalid opcode",
+		"invalid code",
 		"insufficient balance for transfer",
 		"insufficient funds",
 		"gas required exceeds allowance",
