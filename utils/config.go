@@ -73,6 +73,11 @@ var (
 		Usage: "ChainID for replayer",
 		Value: 250,
 	}
+	CacheFlag = cli.IntFlag{
+		Name:  "cache",
+		Usage: "Cache limit for StateDb or Priming",
+		Value: 8192,
+	}
 	ContinueOnFailureFlag = cli.BoolFlag{
 		Name:  "continue-on-failure",
 		Usage: "continue execute after validation failure detected",
@@ -90,7 +95,7 @@ var (
 		Name:  "deletion-db",
 		Usage: "sets the directory containing deleted accounts database",
 	}
-	KeepStateDbFlag = cli.BoolFlag{
+	KeepDbFlag = cli.BoolFlag{
 		Name:  "keep-db",
 		Usage: "if set, statedb is not deleted after run",
 	}
@@ -299,6 +304,7 @@ type Config struct {
 	BlockLength         uint64         // length of a block in number of transactions
 	CarmenSchema        int            // the current DB schema ID to use in Carmen
 	ChainID             int            // Blockchain ID (mainnet: 250/testnet: 4002)
+	Cache               int            // Cache for StateDb or Priming
 	ContinueOnFailure   bool           // continue validation when an error detected
 	ContractNumber      int64          // number of contracts to create
 	CPUProfile          string         // pprof cpu profile output file name
@@ -316,7 +322,7 @@ type Config struct {
 	Quiet               bool           // disable progress report flag
 	SyncPeriodLength    uint64         // length of a sync-period in number of blocks
 	HasDeletedAccounts  bool           // true if DeletionDb is not empty; otherwise false
-	KeepStateDb         bool           // set to true if stateDB is kept after run
+	KeepDb              bool           // set to true if db is kept after run
 	KeysNumber          int64          // number of keys to generate
 	MaxNumTransactions  int            // the maximum number of processed transactions
 	MemoryBreakdown     bool           // enable printing of memory breakdown
@@ -436,6 +442,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		BlockLength:         ctx.Uint64(BlockLengthFlag.Name),
 		CarmenSchema:        ctx.Int(CarmenSchemaFlag.Name),
 		ChainID:             ctx.Int(ChainIDFlag.Name),
+		Cache:               ctx.Int(CacheFlag.Name),
 		ContractNumber:      ctx.Int64(ContractNumberFlag.Name),
 		ContinueOnFailure:   ctx.Bool(ContinueOnFailureFlag.Name),
 		CPUProfile:          ctx.String(CpuProfileFlag.Name),
@@ -454,7 +461,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		DeletionDb:          ctx.Path(DeletionDbFlag.Name),
 		DeleteSourceDbs:     ctx.Bool(DeleteSourceDbsFlag.Name),
 		HasDeletedAccounts:  true,
-		KeepStateDb:         ctx.Bool(KeepStateDbFlag.Name),
+		KeepDb:              ctx.Bool(KeepDbFlag.Name),
 		KeysNumber:          ctx.Int64(KeysNumberFlag.Name),
 		Last:                last,
 		MaxNumTransactions:  ctx.Int(MaxNumTransactionsFlag.Name),
@@ -568,13 +575,13 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		log.Warning("Deleted-account-dir is not provided or does not exist")
 		cfg.HasDeletedAccounts = false
 	}
-	if cfg.KeepStateDb && cfg.ShadowDb {
+	if cfg.KeepDb && cfg.ShadowDb {
 		log.Warning("Keeping persistent stateDB with a shadow db is not supported yet")
-		cfg.KeepStateDb = false
+		cfg.KeepDb = false
 	}
-	if cfg.KeepStateDb && strings.Contains(cfg.DbVariant, "memory") {
+	if cfg.KeepDb && strings.Contains(cfg.DbVariant, "memory") {
 		log.Warning("Unable to keep in-memory stateDB")
-		cfg.KeepStateDb = false
+		cfg.KeepDb = false
 	}
 	if cfg.SkipPriming && cfg.ValidateWorldState {
 		return cfg, fmt.Errorf("skipPriming and world-state validation can not be enabled at the same time")

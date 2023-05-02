@@ -29,7 +29,7 @@ var TraceReplayCommand = cli.Command{
 		&utils.DeletionDbFlag,
 		&utils.QuietFlag,
 		&utils.SyncPeriodLengthFlag,
-		&utils.KeepStateDbFlag,
+		&utils.KeepDbFlag,
 		&utils.MemoryBreakdownFlag,
 		&utils.MemoryProfileFlag,
 		&utils.PrimeSeedFlag,
@@ -89,7 +89,7 @@ func traceReplayTask(cfg *utils.Config, log *logging.Logger) error {
 	if err != nil {
 		return err
 	}
-	if !cfg.KeepStateDb {
+	if !cfg.KeepDb {
 		log.Warningf("Directory %v with DB will be removed at the end of this run.", cfg.StateDbSrc)
 		defer os.RemoveAll(stateDbDir)
 	}
@@ -220,7 +220,7 @@ func traceReplayTask(cfg *utils.Config, log *logging.Logger) error {
 		operation.PrintProfiling()
 	}
 
-	if cfg.KeepStateDb {
+	if cfg.KeepDb {
 		rootHash, _ := db.Commit(true)
 		if err := utils.WriteStateDbInfo(stateDbDir, cfg, lastBlock, rootHash); err != nil {
 			log.Error(err)

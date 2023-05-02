@@ -66,8 +66,8 @@ func RunVM(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	if !cfg.KeepStateDb {
-		log.Warningf("StateDB at %v will be removed at the end of this run.\n", stateDbDir)
+	if !cfg.KeepDb {
+		log.Warningf("StateDB at %v will be removed at the end of this run.", stateDbDir)
 		defer os.RemoveAll(stateDbDir)
 	}
 
@@ -76,7 +76,7 @@ func RunVM(ctx *cli.Context) error {
 		log.Warning("Skipping DB priming.\n")
 	} else {
 		// load the world state
-		log.Noticef("Load and advance world state to block %v\n", cfg.First-1)
+		log.Noticef("Load and advance world state to block %v", cfg.First-1)
 		start = time.Now()
 		ws, err = utils.GenerateWorldStateFromUpdateDB(cfg, cfg.First-1)
 		if err != nil {
@@ -293,14 +293,14 @@ func RunVM(ctx *cli.Context) error {
 		fmt.Println("============================================")
 	}
 
-	if cfg.KeepStateDb && !isFirstBlock {
+	if cfg.KeepDb && !isFirstBlock {
 		rootHash, _ := db.Commit(true)
 		if err := utils.WriteStateDbInfo(stateDbDir, cfg, curBlock, rootHash); err != nil {
 			log.Error(err)
 		}
 		//rename directory after closing db.
 		defer utils.RenameTempStateDBDirectory(cfg, stateDbDir, curBlock)
-	} else if cfg.KeepStateDb && isFirstBlock {
+	} else if cfg.KeepDb && isFirstBlock {
 		// no blocks were processed.
 		log.Warning("No blocks were processed. StateDB is not saved.")
 		defer os.RemoveAll(stateDbDir)

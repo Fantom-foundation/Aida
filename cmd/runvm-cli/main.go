@@ -30,7 +30,7 @@ var RunVMApp = cli.App{
 		&utils.DeletionDbFlag,
 		&utils.QuietFlag,
 		&utils.SyncPeriodLengthFlag,
-		&utils.KeepStateDbFlag,
+		&utils.KeepDbFlag,
 		&utils.MaxNumTransactionsFlag,
 		&utils.MemoryBreakdownFlag,
 		&utils.MemoryProfileFlag,
