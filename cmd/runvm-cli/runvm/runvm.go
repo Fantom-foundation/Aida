@@ -65,8 +65,8 @@ func RunVM(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	if !cfg.KeepStateDb {
-		log.Warningf("StateDB at %v will be removed at the end of this run.\n", stateDirectory)
+	if !cfg.KeepDb {
+		log.Warningf("StateDB at %v will be removed at the end of this run", stateDirectory)
 		defer os.RemoveAll(stateDirectory)
 	}
 
@@ -75,7 +75,7 @@ func RunVM(ctx *cli.Context) error {
 		log.Warning("Skipping DB priming.\n")
 	} else {
 		// load the world state
-		log.Noticef("Load and advance world state to block %v\n", cfg.First-1)
+		log.Noticef("Load and advance world state to block %v", cfg.First-1)
 		start = time.Now()
 		ws, err = utils.GenerateWorldStateFromUpdateDB(cfg, cfg.First-1)
 		if err != nil {
@@ -84,7 +84,7 @@ func RunVM(ctx *cli.Context) error {
 
 		elapsed = time.Since(start)
 		hours, minutes, seconds = utils.ParseTime(elapsed)
-		log.Infof("\tElapsed time: %vh %vm %vs, accounts: %v\n", hours, minutes, seconds, len(ws))
+		log.Infof("\tElapsed time: %vh %vm %vs, accounts: %v", hours, minutes, seconds, len(ws))
 
 		// prime stateDB
 		log.Notice("Prime StateDB \n")
@@ -93,17 +93,17 @@ func RunVM(ctx *cli.Context) error {
 
 		elapsed = time.Since(start)
 		hours, minutes, seconds = utils.ParseTime(elapsed)
-		log.Infof("\tPriming elapsed time: %vh %vm %vs\n", hours, minutes, seconds)
+		log.Infof("\tPriming elapsed time: %vh %vm %vs", hours, minutes, seconds)
 
 		// delete destroyed accounts from stateDB
-		log.Notice("Delete destroyed accounts \n")
+		log.Notice("Delete destroyed accounts")
 		start = time.Now()
 		// remove destroyed accounts until one block before the first block
 		err = utils.DeleteDestroyedAccountsFromStateDB(db, cfg, cfg.First-1)
 
 		elapsed = time.Since(start)
 		hours, minutes, seconds = utils.ParseTime(elapsed)
-		log.Infof("\tDel-dest-acc elapsed time: %vh %vm %vs\n", hours, minutes, seconds)
+		log.Infof("\tDel-dest-acc elapsed time: %vh %vm %vs", hours, minutes, seconds)
 		if err != nil {
 			return err
 		}
@@ -114,7 +114,7 @@ func RunVM(ctx *cli.Context) error {
 		if usage := db.GetMemoryUsage(); usage != nil {
 			log.Noticef("State DB memory usage: %d byte\n%s\n", usage.UsedBytes, usage.Breakdown)
 		} else {
-			log.Info("Utilized storage solution does not support memory breakdowns.\n")
+			log.Info("Utilized storage solution does not support memory breakdowns")
 		}
 	}
 
@@ -292,14 +292,14 @@ func RunVM(ctx *cli.Context) error {
 		fmt.Println("============================================")
 	}
 
-	if cfg.KeepStateDb && !isFirstBlock {
+	if cfg.KeepDb && !isFirstBlock {
 		rootHash, _ := db.Commit(true)
 		if err := utils.WriteStateDbInfo(stateDirectory, cfg, curBlock, rootHash); err != nil {
 			log.Error(err)
 		}
 		//rename directory after closing db.
 		defer utils.RenameTempStateDBDirectory(cfg, stateDirectory, curBlock)
-	} else if cfg.KeepStateDb && isFirstBlock {
+	} else if cfg.KeepDb && isFirstBlock {
 		// no blocks were processed.
 		log.Warning("No blocks were processed. StateDB is not saved.\n")
 		defer os.RemoveAll(stateDirectory)
