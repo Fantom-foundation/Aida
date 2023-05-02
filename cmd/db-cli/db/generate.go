@@ -88,7 +88,7 @@ func Generate(ctx *cli.Context) error {
 		return err
 	}
 
-	log.Noticef("Aida-db updated successfully from block %v to block %v", cfg.First, cfg.Last)
+	log.Noticef("Aida-db updated from block %v to %v", cfg.First-1, cfg.Last)
 
 	return err
 }
@@ -104,13 +104,15 @@ func prepareOpera(cfg *utils.Config, log *logging.Logger) error {
 			return fmt.Errorf("aida-db; Error: %v", err)
 		}
 	}
-	cfg.First, err = getOperaBlock(cfg)
+	lastOperaBlock, err := getOperaBlock(cfg)
 	if err != nil {
 		return fmt.Errorf("couldn't retrieve block from existing opera database %v ; Error: %v", cfg.Db, err)
 	}
 
-	log.Noticef("Opera is starting at block: %v", cfg.First)
+	log.Noticef("Opera is starting at block: %v", lastOperaBlock)
 
+	//starting generation one block later
+	cfg.First = lastOperaBlock + 1
 	return nil
 }
 
@@ -217,7 +219,7 @@ func recordSubstate(cfg *utils.Config, log *logging.Logger) error {
 
 	cmd := exec.Command("opera", "--datadir", cfg.Db, "--gcmode=light", "--db.preset=legacy-ldb", "--cache", strconv.Itoa(cfg.Cache), "import", "events", "--recording", "--substatedir", cfg.SubstateDb, cfg.Events)
 
-	err = runCommand(cfg, cmd, log)
+	err = runCommand(cmd, log)
 	if err != nil {
 		// remove empty substateDb
 		return fmt.Errorf("import events; %v", err.Error())
@@ -228,7 +230,7 @@ func recordSubstate(cfg *utils.Config, log *logging.Logger) error {
 	if err != nil {
 		return fmt.Errorf("getOperaBlock last; %v", err)
 	}
-	if (cfg.Last - cfg.First) < 1 {
+	if cfg.First >= cfg.Last {
 		return fmt.Errorf("supplied events didn't produce any new blocks")
 	}
 
@@ -247,7 +249,7 @@ func recordSubstate(cfg *utils.Config, log *logging.Logger) error {
 func initOperaFromGenesis(cfg *utils.Config, log *logging.Logger) error {
 	cmd := exec.Command("opera", "--datadir", cfg.Db, "--genesis", cfg.Genesis, "--exitwhensynced.epoch=0", "--cache", strconv.Itoa(cfg.Cache), "--db.preset=legacy-ldb", "--maxpeers=0")
 
-	err := runCommand(cfg, cmd, log)
+	err := runCommand(cmd, log)
 	if err != nil {
 		return fmt.Errorf("load opera genesis; %v", err.Error())
 	}
@@ -266,8 +268,7 @@ func initOperaFromGenesis(cfg *utils.Config, log *logging.Logger) error {
 }
 
 // runCommand wraps cmd execution to distinguish whether to display its output
-func runCommand(cfg *utils.Config, cmd *exec.Cmd, log *logging.Logger) error {
-	lvl, _ := logging.LogLevel(cfg.LogLevel)
+func runCommand(cmd *exec.Cmd, log *logging.Logger) error {
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		return err
@@ -278,7 +279,7 @@ func runCommand(cfg *utils.Config, cmd *exec.Cmd, log *logging.Logger) error {
 		return err
 	}
 	scanner := bufio.NewScanner(stderr)
-	if lvl == logging.DEBUG {
+	if log.IsEnabledFor(logging.DEBUG) {
 		for scanner.Scan() {
 			m := scanner.Text()
 			log.Debug(m)
@@ -288,7 +289,7 @@ func runCommand(cfg *utils.Config, cmd *exec.Cmd, log *logging.Logger) error {
 
 	// command failed
 	if err != nil {
-		if lvl != logging.DEBUG {
+		if !log.IsEnabledFor(logging.DEBUG) {
 			for scanner.Scan() {
 				m := scanner.Text()
 				log.Error(m)

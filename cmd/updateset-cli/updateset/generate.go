@@ -111,7 +111,7 @@ func GenUpdateSet(cfg *utils.Config, first uint64, interval uint64) error {
 		maxSize       uint64 = 700_000_000 // 700MB
 	)
 
-	log.Noticef("Generate update sets from block %v to block %v.\n", first, cfg.Last)
+	log.Noticef("Generate update sets from block %v to block %v", first, cfg.Last)
 	for iter.Next() {
 		tx := iter.Value()
 		// if first block, calculate next change point
