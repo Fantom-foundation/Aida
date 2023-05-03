@@ -42,6 +42,11 @@ func main() {
 			&utils.DbTmpFlag,
 			&utils.StateDbLoggingFlag,
 
+			// Trace
+			&utils.TraceFlag,
+			&utils.TraceFileFlag,
+			&utils.TraceDebugFlag,
+
 			// ArchiveDB
 			&utils.ArchiveModeFlag,
 			&utils.ArchiveVariantFlag,
