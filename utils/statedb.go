@@ -72,7 +72,7 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 	}
 
 	// open primary db
-	primeDb, err = makeStateDBVariant(primeDbPath, primeDbInfo.Impl, primeDbInfo.Variant, primeDbInfo.ArchiveVariant, primeDbInfo.RootHash, cfg)
+	primeDb, err = makeStateDBVariant(primeDbPath, primeDbInfo.Impl, primeDbInfo.Variant, primeDbInfo.ArchiveVariant, primeDbInfo.Schema, primeDbInfo.RootHash, cfg)
 	if err != nil {
 		return nil, "", err
 	}
@@ -95,7 +95,7 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 	}
 
 	// open shadow db
-	shadowDb, err = makeStateDBVariant(shadowDbPath, shadowDbInfo.Impl, shadowDbInfo.Variant, shadowDbInfo.ArchiveVariant, shadowDbInfo.RootHash, cfg)
+	shadowDb, err = makeStateDBVariant(shadowDbPath, shadowDbInfo.Impl, shadowDbInfo.Variant, shadowDbInfo.ArchiveVariant, shadowDbInfo.Schema, shadowDbInfo.RootHash, cfg)
 	if err != nil {
 		return nil, "", err
 	}
@@ -129,7 +129,7 @@ func makeNewStateDB(cfg *Config) (state.StateDB, string, error) {
 	}
 
 	// create primary db
-	primaryDb, err = makeStateDBVariant(primaryDbPath, cfg.DbImpl, cfg.DbVariant, cfg.ArchiveVariant, common.Hash{}, cfg)
+	primaryDb, err = makeStateDBVariant(primaryDbPath, cfg.DbImpl, cfg.DbVariant, cfg.ArchiveVariant, cfg.CarmenSchema, common.Hash{}, cfg)
 	if err != nil {
 		return nil, "", err
 	}
@@ -146,7 +146,7 @@ func makeNewStateDB(cfg *Config) (state.StateDB, string, error) {
 	shadowDbPath = filepath.Join(cfg.StateDbSrc, pathToShadowDb)
 
 	// open shadow db
-	shadowDb, err = makeStateDBVariant(shadowDbPath, cfg.ShadowImpl, cfg.ShadowVariant, cfg.ArchiveVariant, common.Hash{}, cfg)
+	shadowDb, err = makeStateDBVariant(shadowDbPath, cfg.ShadowImpl, cfg.ShadowVariant, cfg.ArchiveVariant, cfg.CarmenSchema, common.Hash{}, cfg)
 	if err != nil {
 		return nil, "", err
 	}
@@ -155,7 +155,7 @@ func makeNewStateDB(cfg *Config) (state.StateDB, string, error) {
 }
 
 // makeStateDBVariant creates a DB instance of the requested kind.
-func makeStateDBVariant(directory, impl, variant, archiveVariant string, rootHash common.Hash, cfg *Config) (state.StateDB, error) {
+func makeStateDBVariant(directory, impl, variant, archiveVariant string, carmenSchema int, rootHash common.Hash, cfg *Config) (state.StateDB, error) {
 	switch impl {
 	case "memory":
 		return state.MakeEmptyGethInMemoryStateDB(variant)
@@ -166,7 +166,7 @@ func makeStateDBVariant(directory, impl, variant, archiveVariant string, rootHas
 		if !cfg.ArchiveMode {
 			archiveVariant = "none"
 		}
-		return state.MakeCarmenStateDB(directory, variant, archiveVariant, cfg.CarmenSchema)
+		return state.MakeCarmenStateDB(directory, variant, archiveVariant, carmenSchema)
 	case "flat":
 		return state.MakeFlatStateDB(directory, variant, rootHash)
 	}
