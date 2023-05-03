@@ -192,6 +192,10 @@ var (
 		Name:  "update-db",
 		Usage: "set update-set database directory",
 	}
+	OperaDatadirFlag = cli.PathFlag{
+		Name:  "datadir",
+		Usage: "opera datadir directory",
+	}
 	ValidateFlag = cli.BoolFlag{
 		Name:  "validate",
 		Usage: "enables validation",
@@ -335,8 +339,10 @@ type Config struct {
 	AidaDb              string         // directory to profiling database containing substate, update, delete accounts data
 	StateValidationMode ValidationMode // state validation mode
 	UpdateDb            string         // update-set directory
+	Output              string         // output directory
 	SnapshotDepth       int            // depth of snapshot history
 	SubstateDb          string         // substate directory
+	OperaDatadir        string         // source opera directory
 	ValidateTxState     bool           // validate stateDB before and after transaction
 	ValidateWorldState  bool           // validate stateDB before and after replay block range
 	ValuesNumber        int64          // number of values to generate
@@ -473,8 +479,10 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		SnapshotDepth:       ctx.Int(SnapshotDepthFlag.Name),
 		StateDbSrc:          ctx.Path(StateDbSrcFlag.Name),
 		AidaDb:              ctx.Path(AidaDbFlag.Name),
+		Output:              ctx.Path(OutputFlag.Name),
 		StateValidationMode: EqualityCheck,
 		UpdateDb:            ctx.Path(UpdateDbFlag.Name),
+		OperaDatadir:        ctx.Path(OperaDatadirFlag.Name),
 		SubstateDb:          ctx.Path(substate.SubstateDirFlag.Name),
 		ValuesNumber:        ctx.Int64(ValuesNumberFlag.Name),
 		ValidateTxState:     validateTxState,

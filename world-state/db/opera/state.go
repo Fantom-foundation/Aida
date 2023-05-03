@@ -37,17 +37,17 @@ func blockEpochState(s kvdb.Store) (*types.BlockEpochState, error) {
 }
 
 // LatestStateRoot provides the latest block state root hash.
-func LatestStateRoot(s kvdb.Store) (common.Hash, uint64, error) {
+func LatestStateRoot(s kvdb.Store) (common.Hash, uint64, uint64, error) {
 	bes, err := blockEpochState(s)
 	if err != nil {
-		return common.Hash{}, 0, err
+		return common.Hash{}, 0, 0, err
 	}
-	return bes.BlockState.FinalizedStateRoot, bes.BlockState.LastBlock.Idx, nil
+	return bes.BlockState.FinalizedStateRoot, bes.BlockState.LastBlock.Idx, uint64(bes.EpochState.Epoch), nil
 }
 
 // BlockNumberByRoot iterate the blocks to find block with given root hash
 func BlockNumberByRoot(ctx context.Context, s kvdb.Store, root common.Hash) (uint64, error) {
-	lastStateRoot, lastBlock, err := LatestStateRoot(s)
+	lastStateRoot, lastBlock, _, err := LatestStateRoot(s)
 	if err != nil {
 		return 0, fmt.Errorf("last state root of database not found;  %s", root)
 	}
