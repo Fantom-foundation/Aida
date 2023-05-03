@@ -363,9 +363,8 @@ func (p *EventProxy) Close() error {
 	return p.db.Close()
 }
 
-func (p *EventProxy) StartBulkLoad() state.BulkLoad {
+func (p *EventProxy) StartBulkLoad(uint64) state.BulkLoad {
 	panic("StartBulkLoad not supported by EventProxy")
-	return nil
 }
 
 func (p *EventProxy) GetMemoryUsage() *state.MemoryUsage {

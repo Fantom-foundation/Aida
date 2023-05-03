@@ -321,7 +321,7 @@ func TestStatedb_DeleteDestroyedAccountsFromStateDB(t *testing.T) {
 			log := NewLogger("INFO", "TestStateDb")
 
 			// Priming state DB with given world state
-			PrimeStateDB(ws, sDB, cfg, log)
+			PrimeStateDB(ws, sDB, 0, cfg, log)
 
 			// Call for removal of destroyed accounts from state DB
 			err = DeleteDestroyedAccountsFromStateDB(sDB, cfg, 5)
@@ -365,7 +365,7 @@ func TestStatedb_ValidateStateDB(t *testing.T) {
 			log := NewLogger("INFO", "TestStateDb")
 
 			// Priming state DB with given world state
-			PrimeStateDB(ws, sDB, cfg, log)
+			PrimeStateDB(ws, sDB, 0, cfg, log)
 
 			// Call for state DB validation and subsequent check for error
 			err = ValidateStateDB(ws, sDB, false)
@@ -403,7 +403,7 @@ func TestStatedb_ValidateStateDBWithUpdate(t *testing.T) {
 			log := NewLogger("INFO", "TestStateDb")
 
 			// Priming state DB with given world state
-			PrimeStateDB(ws, sDB, cfg, log)
+			PrimeStateDB(ws, sDB, 0, cfg, log)
 
 			// create new random address
 			addr := common.BytesToAddress(makeRandomByteSlice(t, 40))

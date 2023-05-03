@@ -241,8 +241,8 @@ func (s *shadowStateDB) ForEachStorage(common.Address, func(common.Hash, common.
 	panic("ForEachStorage not implemented")
 }
 
-func (s *shadowStateDB) StartBulkLoad() BulkLoad {
-	return &shadowBulkLoad{s.prime.StartBulkLoad(), s.shadow.StartBulkLoad()}
+func (s *shadowStateDB) StartBulkLoad(block uint64) BulkLoad {
+	return &shadowBulkLoad{s.prime.StartBulkLoad(block), s.shadow.StartBulkLoad(block)}
 }
 
 func (s *shadowStateDB) GetArchiveState(block uint64) (StateDB, error) {

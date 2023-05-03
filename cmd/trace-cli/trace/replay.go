@@ -106,7 +106,7 @@ func traceReplayTask(cfg *utils.Config, log *logging.Logger) error {
 
 		// prime stateDB
 		log.Notice("Prime StateDB")
-		utils.PrimeStateDB(ws, db, cfg, log)
+		utils.PrimeStateDB(ws, db, 0, cfg, log)
 
 		// print memory usage after priming
 		if cfg.MemoryBreakdown {

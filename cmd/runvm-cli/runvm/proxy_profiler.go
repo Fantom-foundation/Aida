@@ -394,9 +394,8 @@ func (p *ProxyProfiler) Close() error {
 	return err
 }
 
-func (p *ProxyProfiler) StartBulkLoad() state.BulkLoad {
+func (p *ProxyProfiler) StartBulkLoad(block uint64) state.BulkLoad {
 	panic("StartBulkLoad not supported by ProxyProfiler")
-	return nil
 }
 
 func (p *ProxyProfiler) GetArchiveState(block uint64) (state.StateDB, error) {
