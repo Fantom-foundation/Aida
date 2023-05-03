@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 
 	substate "github.com/Fantom-foundation/Substate"
@@ -26,7 +27,7 @@ const updateSetInterval = 1_000_000
 
 // GenerateCommand data structure for the replay app
 var GenerateCommand = cli.Command{
-	Action: Generate,
+	Action: generate,
 	Name:   "generate",
 	Usage:  "generates aida-db from given events",
 	Flags: []cli.Flag{
@@ -46,19 +47,20 @@ The db generate command requires events as an argument:
 <events> are fed into the opera database (either existing or genesis needs to be specified), processing them generates updated aida-db.`,
 }
 
-// Generate command is used to record/update aida-db
-func Generate(ctx *cli.Context) error {
+// generate prepares config for Generate
+func generate(ctx *cli.Context) error {
 	cfg, argErr := utils.NewConfig(ctx, utils.EventArg)
 	if argErr != nil {
 		return argErr
 	}
 
-	log := utils.NewLogger(cfg.LogLevel, "Generate")
+	log := utils.NewLogger(cfg.LogLevel, "generate")
 
 	aidaDbTmp, err := prepare(cfg)
 	if err != nil {
 		return err
 	}
+
 	if !cfg.KeepDb {
 		defer func() {
 			err = os.RemoveAll(aidaDbTmp)
@@ -68,7 +70,12 @@ func Generate(ctx *cli.Context) error {
 		}()
 	}
 
-	err = prepareOpera(cfg, log)
+	return Generate(cfg, log)
+}
+
+// Generate is used to record/update aida-db
+func Generate(cfg *utils.Config, log *logging.Logger) error {
+	err := prepareOpera(cfg, log)
 	if err != nil {
 		return err
 	}
@@ -104,7 +111,7 @@ func prepareOpera(cfg *utils.Config, log *logging.Logger) error {
 			return fmt.Errorf("aida-db; Error: %v", err)
 		}
 	}
-	lastOperaBlock, err := getOperaBlock(cfg)
+	lastOperaBlock, _, err := GetOperaBlock(cfg)
 	if err != nil {
 		return fmt.Errorf("couldn't retrieve block from existing opera database %v ; Error: %v", cfg.Db, err)
 	}
@@ -132,32 +139,39 @@ func prepare(cfg *utils.Config) (string, error) {
 		return "", fmt.Errorf("failed to create a temporary directory. %v", err)
 	}
 
-	cfg.DeletionDb = aidaDbTmp + "/deletion"
-	cfg.SubstateDb = aidaDbTmp + "/substate"
-	cfg.UpdateDb = aidaDbTmp + "/update"
-	cfg.WorldStateDb = aidaDbTmp + "/worldstate"
+	loadSourceDBPaths(cfg, aidaDbTmp)
+
 	cfg.Workers = substate.WorkersFlag.Value
 
 	return aidaDbTmp, nil
 }
 
-// getOperaBlock retrieves current block of opera head
-func getOperaBlock(cfg *utils.Config) (uint64, error) {
-	store, err := opera.Connect("ldb", cfg.Db+"/chaindata/leveldb-fsh/", "main")
+// loadSourceDBPaths initializes paths to source databases
+func loadSourceDBPaths(cfg *utils.Config, aidaDbTmp string) {
+	cfg.DeletionDb = filepath.Join(aidaDbTmp, "deletion")
+	cfg.SubstateDb = filepath.Join(aidaDbTmp, "substate")
+	cfg.UpdateDb = filepath.Join(aidaDbTmp, "update")
+	cfg.WorldStateDb = filepath.Join(aidaDbTmp, "worldstate")
+}
+
+// GetOperaBlock retrieves current block of opera head
+func GetOperaBlock(cfg *utils.Config) (uint64, uint64, error) {
+	operaPath := filepath.Join(cfg.Db, "/chaindata/leveldb-fsh/")
+	store, err := opera.Connect("ldb", operaPath, "main")
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 	defer opera.MustCloseStore(store)
 
-	_, blockNumber, err := opera.LatestStateRoot(store)
+	_, blockNumber, epochNumber, err := opera.LatestStateRoot(store)
 	if err != nil {
-		return 0, fmt.Errorf("state root not found; %v", err)
+		return 0, 0, fmt.Errorf("state root not found; %v", err)
 	}
 
 	if blockNumber < 1 {
-		return 0, fmt.Errorf("opera; block number not found; %v", err)
+		return 0, 0, fmt.Errorf("opera; block number not found; %v", err)
 	}
-	return blockNumber, nil
+	return blockNumber, epochNumber, nil
 }
 
 // genUpdateSet invokes UpdateSet generation
@@ -219,16 +233,16 @@ func recordSubstate(cfg *utils.Config, log *logging.Logger) error {
 
 	cmd := exec.Command("opera", "--datadir", cfg.Db, "--gcmode=light", "--db.preset=legacy-ldb", "--cache", strconv.Itoa(cfg.Cache), "import", "events", "--recording", "--substatedir", cfg.SubstateDb, cfg.Events)
 
-	err = runCommand(cmd, log)
+	err = runCommand(cmd, nil, log)
 	if err != nil {
 		// remove empty substateDb
 		return fmt.Errorf("import events; %v", err.Error())
 	}
 
 	// retrieve block the opera was iterated into
-	cfg.Last, err = getOperaBlock(cfg)
+	cfg.Last, _, err = GetOperaBlock(cfg)
 	if err != nil {
-		return fmt.Errorf("getOperaBlock last; %v", err)
+		return fmt.Errorf("GetOperaBlock last; %v", err)
 	}
 	if cfg.First >= cfg.Last {
 		return fmt.Errorf("supplied events didn't produce any new blocks")
@@ -249,7 +263,7 @@ func recordSubstate(cfg *utils.Config, log *logging.Logger) error {
 func initOperaFromGenesis(cfg *utils.Config, log *logging.Logger) error {
 	cmd := exec.Command("opera", "--datadir", cfg.Db, "--genesis", cfg.Genesis, "--exitwhensynced.epoch=0", "--cache", strconv.Itoa(cfg.Cache), "--db.preset=legacy-ldb", "--maxpeers=0")
 
-	err := runCommand(cmd, log)
+	err := runCommand(cmd, nil, log)
 	if err != nil {
 		return fmt.Errorf("load opera genesis; %v", err.Error())
 	}
@@ -268,7 +282,10 @@ func initOperaFromGenesis(cfg *utils.Config, log *logging.Logger) error {
 }
 
 // runCommand wraps cmd execution to distinguish whether to display its output
-func runCommand(cmd *exec.Cmd, log *logging.Logger) error {
+func runCommand(cmd *exec.Cmd, resultChan chan string, log *logging.Logger) error {
+	if resultChan != nil {
+		defer close(resultChan)
+	}
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		return err
@@ -282,6 +299,9 @@ func runCommand(cmd *exec.Cmd, log *logging.Logger) error {
 	if log.IsEnabledFor(logging.DEBUG) {
 		for scanner.Scan() {
 			m := scanner.Text()
+			if resultChan != nil {
+				resultChan <- m
+			}
 			log.Debug(m)
 		}
 	}
@@ -292,6 +312,9 @@ func runCommand(cmd *exec.Cmd, log *logging.Logger) error {
 		if !log.IsEnabledFor(logging.DEBUG) {
 			for scanner.Scan() {
 				m := scanner.Text()
+				if resultChan != nil {
+					resultChan <- m
+				}
 				log.Error(m)
 			}
 		}
