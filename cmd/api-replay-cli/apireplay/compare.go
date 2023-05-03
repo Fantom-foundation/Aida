@@ -14,6 +14,8 @@ import (
 // - for purpose of replay, this error is not critical and is only logged into DEBUG level
 const internalErrorCode = -32603
 
+const invalidArgumentErrCode = -32602
+
 // EVMErrors decode error code into string with which is compared with recorded error message
 var EVMErrors = map[int][]string{
 	-32603: {"execution reverted"},
@@ -28,7 +30,7 @@ var EVMErrors = map[int][]string{
 		"out of gas",
 	},
 
-	-32602: {"invalid argument"},
+	invalidArgumentErrCode: {"invalid argument"},
 }
 
 // compareBalance compares getBalance data recorded on API server with data returned by StateDB
@@ -202,6 +204,13 @@ func compareCallStateDBResult(data *OutData, builder *strings.Builder) *comparat
 			}
 		}
 		msg = builder.String()
+	}
+
+	// we could have potentially recorded a request with invalid arguments
+	// - this is not checked in execution, hence StateDB returns a valid result.
+	// For this we exclude any invalid requests when getting unmatched results
+	if data.Recorded.Error.Code == invalidArgumentErrCode {
+		return nil
 	}
 
 	return newComparatorError(
