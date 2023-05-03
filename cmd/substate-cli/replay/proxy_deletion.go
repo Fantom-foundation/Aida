@@ -281,9 +281,8 @@ func (r *ProxyDeletion) Close() error {
 	return r.db.Close()
 }
 
-func (r *ProxyDeletion) StartBulkLoad() state.BulkLoad {
+func (r *ProxyDeletion) StartBulkLoad(uint64) state.BulkLoad {
 	panic("StartBulkLoad not supported by ProxyDeletion")
-	return nil
 }
 
 func (r *ProxyDeletion) GetMemoryUsage() *state.MemoryUsage {

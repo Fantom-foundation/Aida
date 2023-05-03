@@ -51,8 +51,8 @@ func (pt *ProgressTracker) PrintProgress() {
 }
 
 // PrimeStateDB primes database with accounts from the world state.
-func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config, log *logging.Logger) {
-	load := db.StartBulkLoad()
+func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, block uint64, cfg *Config, log *logging.Logger) {
+	load := db.StartBulkLoad(block)
 
 	numValues := 0
 	for _, account := range ws {
@@ -129,8 +129,8 @@ func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error 
 		maxSize   uint64 = cfg.UpdateCacheSize
 	)
 	update := make(substate.SubstateAlloc)
-	setCount := 0
 
+	dbBlockNumber := uint64(0)
 	for updateIter.Next() {
 		newSet := updateIter.Value()
 		if newSet.Block > target {
@@ -142,7 +142,8 @@ func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error 
 		incrementalSize := update.EstimateIncrementalSize(*newSet.UpdateSet)
 		if totalSize+incrementalSize > maxSize {
 			log.Infof("\tPriming...")
-			PrimeStateDB(update, db, cfg, log)
+			PrimeStateDB(update, db, dbBlockNumber, cfg, log)
+			dbBlockNumber++
 			totalSize = 0
 			update = make(substate.SubstateAlloc)
 		}
@@ -153,31 +154,33 @@ func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error 
 		ClearAccountStorage(update, newSet.DeletedAccounts)
 		// if exists in DB, suicide
 		// TODO may aggregate list and delete only once before priming
-		SuicideAccounts(db, newSet.DeletedAccounts, setCount)
+		SuicideAccounts(db, newSet.DeletedAccounts, dbBlockNumber)
+		dbBlockNumber++
 
 		update.Merge(*newSet.UpdateSet)
 		totalSize += incrementalSize
 		log.Infof("\tMerge update set at block %v. New toal size %v MiB (+%v MiB)", newSet.Block, totalSize>>20, incrementalSize>>20)
-		setCount++
 	}
 	// prime the remaining from updateset
-	PrimeStateDB(update, db, cfg, log)
+	PrimeStateDB(update, db, dbBlockNumber, cfg, log)
+	dbBlockNumber++
 	updateIter.Release()
 
 	// advance from the latest precomputed state to the target block
 	if blockPos < target {
 		log.Infof("\tPriming from substate from block %v", blockPos)
 		update = generateUpdateSet(blockPos+1, target, cfg)
-		PrimeStateDB(update, db, cfg, log)
+		PrimeStateDB(update, db, dbBlockNumber, cfg, log)
+		dbBlockNumber++
 	}
 
 	return nil
 }
 
 // SuicideAccounts clears storage of all input accounts.
-func SuicideAccounts(db state.StateDB, accounts []common.Address, offset int) {
+func SuicideAccounts(db state.StateDB, accounts []common.Address, block uint64) {
 	db.BeginSyncPeriod(0)
-	db.BeginBlock(uint64(4000000 + offset)) //TODO change block
+	db.BeginBlock(block)
 	db.BeginTransaction(0)
 	for _, addr := range accounts {
 		if db.Exist(addr) {

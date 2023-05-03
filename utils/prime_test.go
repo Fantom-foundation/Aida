@@ -35,7 +35,7 @@ func TestStatedb_PrimeStateDB(t *testing.T) {
 			ws, _ := makeWorldState(t)
 
 			// Priming state DB
-			PrimeStateDB(ws, sDB, cfg, log)
+			PrimeStateDB(ws, sDB, 0, cfg, log)
 
 			// Checks if state DB was primed correctly
 			for key, account := range ws {

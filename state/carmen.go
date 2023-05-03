@@ -277,8 +277,8 @@ func (s *carmenStateDB) Error() error {
 	return nil
 }
 
-func (s *carmenStateDB) StartBulkLoad() BulkLoad {
-	return &carmenBulkLoad{s.db.StartBulkLoad()}
+func (s *carmenStateDB) StartBulkLoad(block uint64) BulkLoad {
+	return &carmenBulkLoad{s.db.StartBulkLoad(block)}
 }
 
 func (s *carmenStateDB) GetArchiveState(block uint64) (StateDB, error) {
