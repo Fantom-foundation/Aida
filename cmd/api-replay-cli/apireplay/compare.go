@@ -14,13 +14,19 @@ import (
 // - for purpose of replay, this error is not critical and is only logged into DEBUG level
 const internalErrorCode = -32603
 
-const invalidArgumentErrCode = -32602
+const (
+	invalidArgumentErrCode = -32602
+	// there are multiple types of execution reverted error codes
+	executionRevertedA = -32603
+	executionRevertedB = -32000
+	executionRevertedC = 3
+)
 
 // EVMErrors decode error code into string with which is compared with recorded error message
 var EVMErrors = map[int][]string{
-	-32603: {"execution reverted"},
-	3:      {"execution reverted"},
-	-32000: {
+	executionRevertedA: {"execution reverted"},
+
+	executionRevertedB: {
 		"execution reverted",
 		"invalid opcode",
 		"invalid code",
@@ -29,6 +35,7 @@ var EVMErrors = map[int][]string{
 		"gas required exceeds allowance",
 		"out of gas",
 	},
+	executionRevertedC: {"execution reverted"},
 
 	invalidArgumentErrCode: {"invalid argument"},
 }
