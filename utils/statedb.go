@@ -68,13 +68,19 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 	primeDbInfoFile := filepath.Join(primeDbPath, PathToDbInfo)
 	primeDbInfo, err = ReadStateDbInfo(primeDbInfoFile)
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to read %v. %v", primeDbInfoFile, err)
+		if cfg.ShadowDb {
+			return nil, "", fmt.Errorf("cannot read StateDB cfg file '%v'; %v", primeDbInfoFile, err)
+		}
+		return nil, "", fmt.Errorf("cannot read shadow prime cfg file '%v'; %v", primeDbInfoFile, err)
 	}
 
 	// open primary db
 	primeDb, err = makeStateDBVariant(primeDbPath, primeDbInfo.Impl, primeDbInfo.Variant, primeDbInfo.ArchiveVariant, primeDbInfo.Schema, primeDbInfo.RootHash, cfg)
 	if err != nil {
-		return nil, "", err
+		if cfg.ShadowDb {
+			return nil, "", fmt.Errorf("cannot create prime StateDB; %v", err)
+		}
+		return nil, "", fmt.Errorf("cannot create StateDB; %v", err)
 	}
 
 	if !cfg.ShadowDb {
@@ -91,13 +97,13 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 	shadowDbInfoFile := filepath.Join(shadowDbPath, PathToDbInfo)
 	shadowDbInfo, err = ReadStateDbInfo(shadowDbInfoFile)
 	if err != nil {
-		return nil, "", fmt.Errorf("failed to read %v. %v", shadowDbInfoFile, err)
+		return nil, "", fmt.Errorf("cannot read shadow StateDB cfg file '%v'; %v", shadowDbInfoFile, err)
 	}
 
 	// open shadow db
 	shadowDb, err = makeStateDBVariant(shadowDbPath, shadowDbInfo.Impl, shadowDbInfo.Variant, shadowDbInfo.ArchiveVariant, shadowDbInfo.Schema, shadowDbInfo.RootHash, cfg)
 	if err != nil {
-		return nil, "", err
+		return nil, "", fmt.Errorf("cannot create shadow StateDB; %v", err)
 	}
 
 	return state.MakeShadowStateDB(primeDb, shadowDb), cfg.StateDbSrc, nil
