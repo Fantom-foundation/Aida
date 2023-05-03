@@ -77,7 +77,7 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 		return nil, "", err
 	}
 
-	if cfg.ShadowDb {
+	if !cfg.ShadowDb {
 		return primeDb, primeDbPath, nil
 	}
 

@@ -502,7 +502,6 @@ func TestStatedb_PrepareStateDB(t *testing.T) {
 		t.Run(fmt.Sprintf("DB variant: %s; shadowImpl: %s; archive variant: %s", tc.variant, tc.shadowImpl, tc.archiveVariant), func(t *testing.T) {
 			cfg := makeTestConfig(tc)
 			// Update config for state DB preparation by providing additional information
-			cfg.ShadowImpl = ""
 			cfg.DbTmp = t.TempDir()
 			cfg.StateDbSrc = t.TempDir()
 			cfg.First = 2
@@ -565,7 +564,6 @@ func TestStatedb_PrepareStateDBEmpty(t *testing.T) {
 	// Update config for state DB preparation by providing additional information
 	cfg.ShadowImpl = ""
 	cfg.DbTmp = t.TempDir()
-	cfg.StateDbSrc = t.TempDir()
 	cfg.First = 2
 
 	// Call for state DB preparation and subsequent check if it finished successfully
