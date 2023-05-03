@@ -520,7 +520,7 @@ func TestCarmenState_SetBalanceUsingBulkInsertion(t *testing.T) {
 				}
 			}(csDB)
 
-			cbl := csDB.StartBulkLoad()
+			cbl := csDB.StartBulkLoad(0)
 
 			addr := common.BytesToAddress(makeRandomByteSlice(t, 40))
 
@@ -559,7 +559,7 @@ func TestCarmenState_SetNonceUsingBulkInsertion(t *testing.T) {
 				}
 			}(csDB)
 
-			cbl := csDB.StartBulkLoad()
+			cbl := csDB.StartBulkLoad(0)
 
 			addr := common.BytesToAddress(makeRandomByteSlice(t, 40))
 
@@ -599,7 +599,7 @@ func TestCarmenState_SetStateUsingBulkInsertion(t *testing.T) {
 				}
 			}(csDB)
 
-			cbl := csDB.StartBulkLoad()
+			cbl := csDB.StartBulkLoad(0)
 
 			addr := common.BytesToAddress(makeRandomByteSlice(t, 40))
 
@@ -641,7 +641,7 @@ func TestCarmenState_SetCodeUsingBulkInsertion(t *testing.T) {
 				}
 			}(csDB)
 
-			cbl := csDB.StartBulkLoad()
+			cbl := csDB.StartBulkLoad(0)
 
 			addr := common.BytesToAddress(makeRandomByteSlice(t, 40))
 
@@ -689,7 +689,7 @@ func TestCarmenState_BulkloadOperations(t *testing.T) {
 				csDB.CreateAccount(accounts[i])
 			}
 
-			cbl := csDB.StartBulkLoad()
+			cbl := csDB.StartBulkLoad(0)
 
 			for _, account := range accounts {
 				// randomized operation
