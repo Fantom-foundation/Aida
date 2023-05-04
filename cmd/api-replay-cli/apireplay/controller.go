@@ -210,11 +210,18 @@ func (r *Controller) control() {
 
 // createExecutors creates number of Executors defined by the flag WorkersFlag
 func createExecutors(cfg *utils.Config, db state.StateDB, ctx *cli.Context, chainCfg *params.ChainConfig, input chan *iterator.RequestWithResponse, closed chan any, wg *sync.WaitGroup) ([]*ReplayExecutor, chan *OutData, chan requestLog) {
+	var executors int
+
 	log.Infof("creating %v executors", cfg.Workers)
 
 	output := make(chan *OutData, bufferSize)
 
-	executors := cfg.Workers
+	// do we want a single-thread replay
+	if cfg.Workers == 1 {
+		executors = 1
+	} else {
+		executors = cfg.Workers / 2
+	}
 
 	e := make([]*ReplayExecutor, executors)
 	counterInput := make(chan requestLog)
