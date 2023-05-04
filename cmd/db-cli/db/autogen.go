@@ -14,11 +14,6 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-const (
-	startOperaCommand = "systemctl --user start opera"
-	stopOperaCommand  = "systemctl --user stop opera"
-)
-
 // AutoGenCommand generates aida-db patches and handles second opera for event generation
 var AutoGenCommand = cli.Command{
 	Action: autoGen,
@@ -205,7 +200,8 @@ func getLastOperaEpoch(cfg *utils.Config, log *logging.Logger) (uint64, error) {
 	if !ok {
 		return 0, fmt.Errorf("unable to parse epoch from %v; %v", responseJson, err.Error())
 	}
-	epoch, err := strconv.ParseUint(epochHex.(string), 16, 64)
+	var epoch uint64
+	epoch, err = strconv.ParseUint(epochHex.(string), 16, 64)
 	if err != nil {
 		return 0, err
 	}
@@ -214,7 +210,7 @@ func getLastOperaEpoch(cfg *utils.Config, log *logging.Logger) (uint64, error) {
 
 // startOpera start opera node
 func startOpera(log *logging.Logger) error {
-	cmd := exec.Command(startOperaCommand)
+	cmd := exec.Command("systemctl", "--user", "start", "opera")
 	err := runCommand(cmd, nil, log)
 	if err != nil {
 		return fmt.Errorf("unable start opera; %v", err.Error())
@@ -224,7 +220,7 @@ func startOpera(log *logging.Logger) error {
 
 // stopOpera stop opera node
 func stopOpera(log *logging.Logger) error {
-	cmd := exec.Command(stopOperaCommand)
+	cmd := exec.Command("systemctl", "--user", "stop", "opera")
 	err := runCommand(cmd, nil, log)
 	if err != nil {
 		return fmt.Errorf("unable stop opera; %v", err.Error())
