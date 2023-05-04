@@ -42,15 +42,12 @@ func main() {
 			&utils.StateDbSrcFlag,
 			&utils.StateDbLoggingFlag,
 			&utils.CarmenSchemaFlag,
+			&utils.ArchiveModeFlag,
 
 			// Trace
 			&utils.TraceFlag,
 			&utils.TraceFileFlag,
 			&utils.TraceDebugFlag,
-
-			// ArchiveDB
-			&utils.ArchiveModeFlag,
-			&utils.ArchiveVariantFlag,
 		},
 	}
 

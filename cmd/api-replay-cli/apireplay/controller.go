@@ -14,7 +14,8 @@ import (
 )
 
 const (
-	bufferSize = 500
+	bufferSize        = 3000
+	counterBufferSize = 2400
 )
 
 // Controller controls and looks after all threads within the api-replay package
@@ -210,14 +211,21 @@ func (r *Controller) control() {
 
 // createExecutors creates number of Executors defined by the flag WorkersFlag
 func createExecutors(cfg *utils.Config, db state.StateDB, ctx *cli.Context, chainCfg *params.ChainConfig, input chan *iterator.RequestWithResponse, closed chan any, wg *sync.WaitGroup) ([]*ReplayExecutor, chan *OutData, chan requestLog) {
+	var executors int
+
 	log.Infof("creating %v executors", cfg.Workers)
 
 	output := make(chan *OutData, bufferSize)
 
-	executors := cfg.Workers
+	// do we want a single-thread replay
+	if cfg.Workers == 1 {
+		executors = 1
+	} else {
+		executors = cfg.Workers / 2
+	}
 
 	e := make([]*ReplayExecutor, executors)
-	counterInput := make(chan requestLog)
+	counterInput := make(chan requestLog, counterBufferSize)
 	for i := 0; i < executors; i++ {
 		e[i] = newExecutor(cfg.First, cfg.Last, db, output, chainCfg, input, cfg.VmImpl, wg, closed, utils.NewLogger(cfg.LogLevel, fmt.Sprintf("Executor #%v", i)), counterInput)
 	}
