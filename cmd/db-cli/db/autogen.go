@@ -15,8 +15,8 @@ import (
 )
 
 const (
-	startOperaCommand = "systemctl start opera"
-	stopOperaCommand  = "systemctl stop opera"
+	startOperaCommand = "systemctl --user start opera"
+	stopOperaCommand  = "systemctl --user stop opera"
 )
 
 // AutoGenCommand generates aida-db patches and handles second opera for event generation
