@@ -32,10 +32,10 @@ jobs:
       - name: Install goimports
         run: go get golang.org/x/tools/cmd/goimports
       - name: Check import formatting
-        run: diff -u <(echo -n) <(find . -path ./carmen -prune -o  -name '*.go' -exec goimports -l {} \;)
+        run: diff -u <(echo -n) <(find . \( -path "./carmen" -o -path "./tosca" \) -prune -o  -name '*.go' -exec goimports -l {} \;)
 
       - name: Check code formatting
-        run: diff -u <(echo -n)  <(find . -path ./carmen -prune -o  -name '*.go' -exec gofmt -d -s {} \;)
+        run: diff -u <(echo -n)  <(find . \( -path "./carmen" -o -path "./tosca" \) -prune -o  -name '*.go' -exec gofmt -d -s {} \;)
 
       - name: Update go packages and modules
         run: go mod tidy
