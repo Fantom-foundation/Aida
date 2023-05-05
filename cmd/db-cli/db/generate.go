@@ -303,18 +303,18 @@ func runCommand(cmd *exec.Cmd, log *logging.Logger) error {
 // TODO rewrite after dump is using the config then pass modified cfg directly to the dump function
 func prepareDumpCliContext(cfg *utils.Config) (*cli.Context, error) {
 	flagSet := flag.NewFlagSet("", 0)
-	flagSet.String(flags.StateDBPath.Name, cfg.WorldStateDb, "")
-	flagSet.String(flags.SourceDBPath.Name, cfg.Db+"/chaindata/leveldb-fsh/", "")
-	flagSet.String(flags.SourceDBType.Name, flags.SourceDBType.Value, "")
-	flagSet.String(flags.SourceTableName.Name, flags.SourceTableName.Value, "")
-	flagSet.String(flags.TrieRootHash.Name, flags.TrieRootHash.Value, "")
-	flagSet.Int(flags.Workers.Name, flags.Workers.Value, "")
+	flagSet.String(utils.WorldStateFlag.Name, cfg.WorldStateDb, "")
+	flagSet.String(utils.DbFlag.Name, cfg.Db+"/chaindata/leveldb-fsh/", "")
+	flagSet.String(utils.StateDbVariantFlag.Name, utils.StateDbVariantFlag.Value, "")
+	flagSet.String(utils.SourceTableNameFlag.Name, utils.SourceTableNameFlag.Value, "")
+	flagSet.String(utils.TrieRootHashFlag.Name, utils.TrieRootHashFlag.Value, "")
+	flagSet.Int(substate.WorkersFlag.Name, substate.WorkersFlag.Value, "")
 	flagSet.Uint64(flags.TargetBlock.Name, flags.TargetBlock.Value, "")
 	flagSet.String(utils.LogLevelFlag.Name, cfg.LogLevel, "")
 
 	ctx := cli.NewContext(cli.NewApp(), flagSet, nil)
 
-	err := ctx.Set(flags.SourceDBPath.Name, cfg.Db+"/chaindata/leveldb-fsh/")
+	err := ctx.Set(utils.DbFlag.Name, cfg.Db+"/chaindata/leveldb-fsh/")
 	if err != nil {
 		return nil, err
 	}
