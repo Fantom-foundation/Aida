@@ -283,6 +283,32 @@ var (
 		Name:  "genesis",
 		Usage: "Path to genesis file",
 	}
+	ProfileEVMCallFlag = cli.BoolFlag{
+		Name:  "profiling-call",
+		Usage: "enable profiling for EVM call",
+	}
+	MicroProfilingFlag = cli.BoolFlag{
+		Name:  "micro-profiling",
+		Usage: "enable micro-profiling of EVM",
+	}
+	BasicBlockProfilingFlag = cli.BoolFlag{
+		Name:  "basic-block-profiling",
+		Usage: "enable profiling of basic block",
+	}
+	OnlySuccessfulFlag = cli.BoolFlag{
+		Name:  "only-successful",
+		Usage: "only runs transactions that have been successful",
+	}
+	ProfilingDbNameFlag = cli.StringFlag{
+		Name:  "profiling-db-name",
+		Usage: "set a database name for storing micro-profiling results",
+		Value: "./profiling.db",
+	}
+	ChannelBufferSizeFlag = cli.IntFlag{
+		Name:  "buffer-size",
+		Usage: "set a buffer size for profiling channel",
+		Value: 100000,
+	}
 )
 
 // Config represents execution configuration for replay command.
@@ -346,6 +372,12 @@ type Config struct {
 	TraceFile           string         // name of trace file
 	Trace               bool           // trace flag
 	LogLevel            string         // level of the logging of the app action
+	ProfileEVMCall      bool           // enable profiling for EVM call
+	MicroProfiling      bool           // enable micro-profiling of EVM
+	BasicBlockProfiling bool           // enable profiling of basic block
+	OnlySuccessful      bool           // only runs transactions that have been successful
+	ProfilingDbName     string         // set a database name for storing micro-profiling results
+	ChannelBufferSize   int            // set a buffer size for profiling channel
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.
@@ -485,6 +517,12 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		TraceFile:           ctx.Path(TraceFileFlag.Name),
 		Trace:               ctx.Bool(TraceFlag.Name),
 		LogLevel:            ctx.String(LogLevelFlag.Name),
+		ProfileEVMCall:      ctx.Bool(ProfileEVMCallFlag.Name),
+		MicroProfiling:      ctx.Bool(MicroProfilingFlag.Name),
+		BasicBlockProfiling: ctx.Bool(BasicBlockProfilingFlag.Name),
+		OnlySuccessful:      ctx.Bool(OnlySuccessfulFlag.Name),
+		ProfilingDbName:     ctx.String(ProfilingDbNameFlag.Name),
+		ChannelBufferSize:   ctx.Int(ChannelBufferSizeFlag.Name),
 	}
 	if cfg.ChainID == 0 {
 		cfg.ChainID = ChainIDFlag.Value

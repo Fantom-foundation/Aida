@@ -32,7 +32,12 @@ func compact(ctx *cli.Context) error {
 		return fmt.Errorf("substate-cli db compact: command requires exactly one arguments")
 	}
 
-	log := utils.NewLogger(ctx.String(utils.LogLevelFlag.Name), "Substate DB")
+	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
+	if err != nil {
+		return err
+	}
+
+	log := utils.NewLogger(cfg.LogLevel, "Substate DB")
 
 	dbPath := ctx.Args().Get(0)
 	dbOpt := &leveldb_opt.Options{

@@ -1,6 +1,7 @@
 package replay
 
 import (
+	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/urfave/cli/v2"
@@ -15,7 +16,7 @@ var GetAddressStatsCommand = cli.Command{
 	Flags: []cli.Flag{
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
-		&ChainIDFlag,
+		&utils.ChainIDFlag,
 	},
 	Description: `
 The substate-cli address-stats command requires two arguments:
