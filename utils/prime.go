@@ -80,7 +80,10 @@ func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, block uint64, cfg
 
 // primeOneAccount initializes an account on stateDB with substate
 func primeOneAccount(addr common.Address, account *substate.SubstateAccount, db state.StateDB, load state.BulkLoad, pt *ProgressTracker) {
-	load.CreateAccount(addr)
+	// if an account was previously primed, skip account creation.
+	if !db.Exist(addr) {
+		load.CreateAccount(addr)
+	}
 	load.SetBalance(addr, account.Balance)
 	load.SetNonce(addr, account.Nonce)
 	load.SetCode(addr, account.Code)
