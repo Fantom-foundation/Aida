@@ -38,16 +38,16 @@ var ReplayCommand = cli.Command{
 		&substate.SkipCallTxsFlag,
 		&substate.SkipCreateTxsFlag,
 		&substate.SubstateDirFlag,
-		&ChainIDFlag,
-		&ProfileEVMCallFlag,
-		&MicroProfilingFlag,
-		&BasicBlockProfilingFlag,
-		&DatabaseNameFlag,
-		&ChannelBufferSizeFlag,
-		&InterpreterImplFlag,
-		&OnlySuccessfulFlag,
-		&CpuProfilingFlag,
-		&UseInMemoryStateDbFlag,
+		&utils.ChainIDFlag,
+		&utils.ProfileEVMCallFlag,
+		&utils.MicroProfilingFlag,
+		&utils.BasicBlockProfilingFlag,
+		&utils.ProfilingDbNameFlag,
+		&utils.ChannelBufferSizeFlag,
+		&utils.VmImplementation,
+		&utils.OnlySuccessfulFlag,
+		&utils.CpuProfileFlag,
+		&utils.StateDbImplementationFlag,
 		&utils.LogLevelFlag,
 	},
 	Description: `
@@ -61,9 +61,9 @@ last block of the inclusive range of blocks to replay transactions.`,
 var vm_duration time.Duration
 
 type ReplayConfig struct {
-	vm_impl          string
-	only_successful  bool
-	use_in_memory_db bool
+	vm_impl         string
+	only_successful bool
+	state_db_impl   string
 }
 
 // data collection execution context
@@ -132,11 +132,15 @@ func replayTask(config ReplayConfig, block uint64, tx int, recording *substate.S
 		return h
 	}
 
+	// TODO: implement other state db types
 	var statedb state.StateDB
-	if config.use_in_memory_db {
-		statedb = state.MakeGethInMemoryStateDB(&inputAlloc, block)
-	} else {
+	switch config.state_db_impl {
+	case "geth":
 		statedb = state.MakeOffTheChainStateDB(inputAlloc)
+	case "geth-memory":
+		statedb = state.MakeGethInMemoryStateDB(&inputAlloc, block)
+	default:
+		return fmt.Errorf("unsupported db type: %s", config.state_db_impl)
 	}
 
 	// Apply Message
@@ -249,14 +253,15 @@ func NewBasicBlockProfilingCollectorContext() *BasicBlockProfilingCollectorConte
 func replayAction(ctx *cli.Context) error {
 	var err error
 
-	log := utils.NewLogger(ctx.String(utils.LogLevelFlag.Name), "Substate Replay")
-
-	if ctx.Args().Len() != 2 {
-		return fmt.Errorf("substate-cli: replay command requires exactly 2 arguments")
+	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
+	if err != nil {
+		return err
 	}
 
+	log := utils.NewLogger(cfg.LogLevel, "Substate Replay")
+
 	// spawn contexts for data collector workers
-	if ctx.Bool(MicroProfilingFlag.Name) {
+	if cfg.MicroProfiling {
 		var dcc [5]*MicroProfilingCollectorContext
 		for i := 0; i < 5; i++ {
 			dcc[i] = NewMicroProfilingCollectorContext()
@@ -275,14 +280,14 @@ func replayAction(ctx *cli.Context) error {
 			for i := 0; i < 5; i++ {
 				stats.Merge(dcc[i].stats)
 			}
-			version := fmt.Sprintf("git-date:%v, git-commit:%v, chaind-id:%v", gitDate, gitCommit, chainID)
+			version := fmt.Sprintf("chaind-id:%v", chainID)
 			stats.Dump(version)
 			log.Noticef("substate-cli: replay-action: recorded micro profiling statistics in %v", vm.MicroProfilingDB)
 		}()
 
 	}
 
-	if ctx.Bool(BasicBlockProfilingFlag.Name) {
+	if cfg.BasicBlockProfiling {
 		var dcc [5]*BasicBlockProfilingCollectorContext
 		for i := 0; i < 5; i++ {
 			dcc[i] = NewBasicBlockProfilingCollectorContext()
@@ -306,38 +311,31 @@ func replayAction(ctx *cli.Context) error {
 		}()
 	}
 
-	chainID = ctx.Int(ChainIDFlag.Name)
+	chainID = cfg.ChainID
 	log.Infof("chain-id: %v\n", chainID)
-	log.Infof("git-date: %v\n", gitDate)
-	log.Infof("git-commit: %v\n", gitCommit)
 
-	first, last, argErr := utils.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
-	if argErr != nil {
-		return argErr
-	}
-
-	if ctx.Bool(ProfileEVMCallFlag.Name) {
+	if cfg.ProfileEVMCall {
 		evmcore.ProfileEVMCall = true
 	}
 
-	if ctx.Bool(MicroProfilingFlag.Name) {
+	if cfg.MicroProfiling {
 		vm.MicroProfiling = true
-		vm.MicroProfilingBufferSize = ctx.Int(ChannelBufferSizeFlag.Name)
-		vm.MicroProfilingDB = ctx.String(DatabaseNameFlag.Name)
+		vm.MicroProfilingBufferSize = cfg.ChannelBufferSize
+		vm.MicroProfilingDB = cfg.ProfilingDbName
 	}
 
-	if ctx.Bool(BasicBlockProfilingFlag.Name) {
+	if cfg.BasicBlockProfiling {
 		vm.BasicBlockProfiling = true
-		vm.BasicBlockProfilingBufferSize = ctx.Int(ChannelBufferSizeFlag.Name)
-		vm.BasicBlockProfilingDB = ctx.String(DatabaseNameFlag.Name)
+		vm.BasicBlockProfilingBufferSize = cfg.ChannelBufferSize
+		vm.BasicBlockProfilingDB = cfg.ProfilingDbName
 	}
 
-	substate.SetSubstateDirectory(ctx.String(substate.SubstateDirFlag.Name))
+	substate.SetSubstateDirectory(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
 	// Start CPU profiling if requested.
-	profile_file_name := ctx.String(CpuProfilingFlag.Name)
+	profile_file_name := cfg.CPUProfile
 	if profile_file_name != "" {
 		f, err := os.Create(profile_file_name)
 		if err != nil {
@@ -348,9 +346,9 @@ func replayAction(ctx *cli.Context) error {
 	}
 
 	var config = ReplayConfig{
-		vm_impl:          ctx.String(InterpreterImplFlag.Name),
-		only_successful:  ctx.Bool(OnlySuccessfulFlag.Name),
-		use_in_memory_db: ctx.Bool(UseInMemoryStateDbFlag.Name),
+		vm_impl:         cfg.VmImpl,
+		only_successful: cfg.OnlySuccessful,
+		state_db_impl:   cfg.DbImpl,
 	}
 
 	task := func(block uint64, tx int, recording *substate.Substate, taskPool *substate.SubstateTaskPool) error {
@@ -358,11 +356,11 @@ func replayAction(ctx *cli.Context) error {
 	}
 
 	resetVmDuration()
-	taskPool := substate.NewSubstateTaskPool("substate-cli replay", task, first, last, ctx)
+	taskPool := substate.NewSubstateTaskPool("substate-cli replay", task, cfg.First, cfg.Last, ctx)
 	err = taskPool.Execute()
 
 	log.Noticef("net VM time: %v\n", getVmDuration())
-	if strings.HasSuffix(ctx.String(InterpreterImplFlag.Name), "-stats") {
+	if strings.HasSuffix(cfg.VmImpl, "-stats") {
 		lfvm.PrintCollectedInstructionStatistics()
 	}
 
