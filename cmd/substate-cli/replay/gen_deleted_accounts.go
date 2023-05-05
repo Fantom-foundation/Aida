@@ -245,8 +245,6 @@ func GenDeletedAccountsAction(cfg *utils.Config) error {
 
 	chainID = cfg.ChainID
 	log.Infof("chain-id: %v", chainID)
-	log.Infof("git-date: %v", gitDate)
-	log.Infof("git-commit: %v", gitCommit)
 
 	substate.SetSubstateDirectory(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()

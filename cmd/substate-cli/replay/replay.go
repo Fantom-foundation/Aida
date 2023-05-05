@@ -280,7 +280,7 @@ func replayAction(ctx *cli.Context) error {
 			for i := 0; i < 5; i++ {
 				stats.Merge(dcc[i].stats)
 			}
-			version := fmt.Sprintf("git-date:%v, git-commit:%v, chaind-id:%v", gitDate, gitCommit, chainID)
+			version := fmt.Sprintf("chaind-id:%v", chainID)
 			stats.Dump(version)
 			log.Noticef("substate-cli: replay-action: recorded micro profiling statistics in %v", vm.MicroProfilingDB)
 		}()
@@ -313,8 +313,6 @@ func replayAction(ctx *cli.Context) error {
 
 	chainID = cfg.ChainID
 	log.Infof("chain-id: %v\n", chainID)
-	log.Infof("git-date: %v\n", gitDate)
-	log.Infof("git-commit: %v\n", gitCommit)
 
 	if cfg.ProfileEVMCall {
 		evmcore.ProfileEVMCall = true

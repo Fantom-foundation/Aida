@@ -117,8 +117,6 @@ func getStorageUpdateSizeAction(ctx *cli.Context) error {
 
 	chainID = cfg.ChainID
 	log.Infof("chain-id: %v\n", chainID)
-	log.Infof("git-date: %v\n", gitDate)
-	log.Infof("git-commit: %v\n", gitCommit)
 
 	substate.SetSubstateDirectory(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()

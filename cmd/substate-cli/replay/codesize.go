@@ -85,8 +85,6 @@ func getCodeSizeAction(ctx *cli.Context) error {
 
 	chainID = cfg.ChainID
 	fmt.Printf("chain-id: %v\n", chainID)
-	fmt.Printf("git-date: %v\n", gitDate)
-	fmt.Printf("git-commit: %v\n", gitCommit)
 
 	substate.SetSubstateDirectory(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()

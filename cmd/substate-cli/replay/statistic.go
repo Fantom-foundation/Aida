@@ -114,8 +114,6 @@ func getReferenceStatsActionWithConsumer[T comparable](ctx *cli.Context, cli_com
 	ContractDB = cfg.Db
 	chainID = cfg.ChainID
 	log.Infof("chain-id: %v\n", chainID)
-	log.Infof("git-date: %v\n", gitDate)
-	log.Infof("git-commit: %v\n", gitCommit)
 	log.Infof("contract-db: %v\n", ContractDB)
 
 	substate.SetSubstateDirectory(cfg.SubstateDb)

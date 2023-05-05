@@ -93,8 +93,6 @@ func getCodeAction(ctx *cli.Context) error {
 	ContractDB = cfg.Db
 	chainID = cfg.ChainID
 	fmt.Printf("chain-id: %v\n", chainID)
-	fmt.Printf("git-date: %v\n", gitDate)
-	fmt.Printf("git-commit: %v\n", gitCommit)
 	fmt.Printf("contract-db: %v\n", ContractDB)
 
 	substate.SetSubstateDirectory(cfg.SubstateDb)
