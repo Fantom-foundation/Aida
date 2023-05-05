@@ -18,24 +18,30 @@ var CmdRoot = cli.Command{
 	Description: `Searches opera database for root hash for supplied block number.`,
 	ArgsUsage:   "<target>",
 	Flags: []cli.Flag{
-		&flags.SourceDBType,
-		&flags.SourceDBPath,
-		&flags.SourceTableName,
+		&utils.StateDbVariantFlag,
+		&utils.DbFlag,
+		&utils.SourceTableNameFlag,
 		&flags.TargetBlock,
 	},
 }
 
 // root retrieves root hash of given block number
 func root(ctx *cli.Context) error {
+	// make config
+	cfg, err := utils.NewConfig(ctx, utils.LastBlockArg)
+	if err != nil {
+		return err
+	}
+
 	// open the source trie DB
-	store, err := opera.Connect(ctx.String(flags.SourceDBType.Name), ctx.Path(flags.SourceDBPath.Name), ctx.Path(flags.SourceTableName.Name))
+	store, err := opera.Connect(cfg.DbVariant, cfg.Db, cfg.SourceTableName)
 	if err != nil {
 		return err
 	}
 	defer opera.MustCloseStore(store)
 
 	// make logger
-	log := utils.NewLogger(ctx.String(utils.LogLevelFlag.Name), "root")
+	log := utils.NewLogger(cfg.LogLevel, "root")
 
 	targetBlock := ctx.Uint64(flags.TargetBlock.Name)
 

@@ -22,28 +22,34 @@ var CmdEvolveState = cli.Command{
 	ArgsUsage:   "<block> <substatedir> <workers>",
 	Flags: []cli.Flag{
 		&flags.TargetBlock,
-		&flags.SubstateDBPath,
-		&flags.Validate,
-		&flags.Workers,
+		&substate.SubstateDirFlag,
+		&utils.ValidateFlag,
+		&substate.WorkersFlag,
 	},
 }
 
 // evolveState dumps state from given EVM trie into an output account-state database
 func evolveState(ctx *cli.Context) error {
+	// make config
+	cfg, err := utils.NewConfig(ctx, utils.LastBlockArg)
+	if err != nil {
+		return err
+	}
+
 	// try to open state DB
-	stateDB, err := snapshot.OpenStateDB(ctx.Path(flags.StateDBPath.Name))
+	stateDB, err := snapshot.OpenStateDB(cfg.WorldStateDb)
 	if err != nil {
 		return err
 	}
 	defer snapshot.MustCloseStateDB(stateDB)
 
 	// try to open sub state DB
-	substate.SetSubstateDirectory(ctx.Path(flags.SubstateDBPath.Name))
+	substate.SetSubstateDirectory(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
 	// make logger
-	log := utils.NewLogger(ctx.String(utils.LogLevelFlag.Name), "evolve")
+	log := utils.NewLogger(cfg.LogLevel, "evolve")
 
 	startBlock, targetBlock, err := getEvolutionBlockRange(ctx, stateDB, log)
 	if err != nil {
@@ -55,12 +61,12 @@ func evolveState(ctx *cli.Context) error {
 
 	// logging InputSubstate inconsistencies
 	var validateLog func(error)
-	if ctx.Bool(flags.Validate.Name) {
+	if cfg.ValidateWorldState {
 		validateLog = factoryValidatorLogger(log)
 	}
 
 	// call evolveState with prepared arguments
-	finalBlock, err := snapshot.EvolveState(stateDB, startBlock, targetBlock, ctx.Int(flags.Workers.Name), factoryMakeLogger(startBlock, targetBlock, log), validateLog)
+	finalBlock, err := snapshot.EvolveState(stateDB, startBlock, targetBlock, cfg.Workers, factoryMakeLogger(startBlock, targetBlock, log), validateLog)
 	if err != nil {
 		log.Errorf("unable to EvolveState; %s", err.Error())
 	}

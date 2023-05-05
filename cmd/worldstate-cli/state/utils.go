@@ -6,7 +6,8 @@ import (
 	"os"
 	"path"
 
-	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/flags"
+	"github.com/Fantom-foundation/Aida/utils"
+
 	"github.com/urfave/cli/v2"
 )
 
@@ -28,7 +29,7 @@ func DefaultPath(ctx *cli.Context, flag *cli.PathFlag, def string) string {
 	}
 
 	// apply default path to the context
-	err = ctx.Set(flags.StateDBPath.Name, path.Join(dir, def))
+	err = ctx.Set(utils.WorldStateFlag.Name, path.Join(dir, def))
 	if err != nil {
 		panic(fmt.Errorf("could not set default DB path; %s", err.Error()))
 	}

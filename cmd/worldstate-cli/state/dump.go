@@ -7,6 +7,8 @@ import (
 	"io"
 	"time"
 
+	substate "github.com/Fantom-foundation/Substate"
+
 	eth_state "github.com/ethereum/go-ethereum/core/state"
 
 	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/flags"
@@ -38,11 +40,11 @@ var CmdDumpState = cli.Command{
 		- Contract Storage`,
 	ArgsUsage: "<root> <input-db> <input-db-name> <input-db-type> <workers>",
 	Flags: []cli.Flag{
-		&flags.SourceDBPath,
-		&flags.SourceDBType,
-		&flags.SourceTableName,
-		&flags.TrieRootHash,
-		&flags.Workers,
+		&utils.DbFlag,
+		&utils.StateDbVariantFlag,
+		&utils.SourceTableNameFlag,
+		&utils.TrieRootHashFlag,
+		&substate.WorkersFlag,
 		&flags.TargetBlock,
 		&utils.LogLevelFlag,
 	},
@@ -50,15 +52,21 @@ var CmdDumpState = cli.Command{
 
 // DumpState dumps state from given EVM trie into an output account-state database
 func DumpState(ctx *cli.Context) error {
+	// make config
+	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
+	if err != nil {
+		return err
+	}
+
 	// open the source trie DB
-	store, err := opera.Connect(ctx.String(flags.SourceDBType.Name), DefaultPath(ctx, &flags.SourceDBPath, ".opera/chaindata/leveldb-fsh"), ctx.String(flags.SourceTableName.Name))
+	store, err := opera.Connect(cfg.DbVariant, DefaultPath(ctx, &utils.DbFlag, ".opera/chaindata/leveldb-fsh"), cfg.SourceTableName)
 	if err != nil {
 		return err
 	}
 	defer opera.MustCloseStore(store)
 
 	// try to open output DB
-	outputDB, err := snapshot.OpenStateDB(ctx.Path(flags.StateDBPath.Name))
+	outputDB, err := snapshot.OpenStateDB(cfg.WorldStateDb)
 	if err != nil {
 		return err
 	}
@@ -67,17 +75,18 @@ func DumpState(ctx *cli.Context) error {
 	dumpCtx, cancel := context.WithCancel(ctx.Context)
 	defer cancel()
 
-	log := utils.NewLogger(ctx.String(utils.LogLevelFlag.Name), "Dump")
+	// make logger
+	log := utils.NewLogger(cfg.LogLevel, "Dump")
 
 	// blockNumber number to be stored in output db
 	// root is root hash of storage at given block number
-	blockNumber, root, err := blockNumberAndRoot(store, ctx.Uint64(flags.TargetBlock.Name), common.HexToHash(ctx.String(flags.TrieRootHash.Name)), log)
+	blockNumber, root, err := blockNumberAndRoot(store, ctx.Uint64(flags.TargetBlock.Name), common.HexToHash(cfg.TrieRootHash), log)
 	if err != nil {
 		return err
 	}
 
 	// load assembled accounts for the given root and write them into the snapshot database
-	workers := ctx.Int(flags.Workers.Name)
+	workers := cfg.Workers
 	accounts, readFailed := opera.LoadAccounts(dumpCtx, opera.OpenStateDB(store), root, workers)
 	writeFailed := snapshot.NewQueueWriter(dumpCtx, outputDB, dumpProgressFactory(ctx.Context, accounts, workers, log))
 

@@ -283,6 +283,23 @@ var (
 		Name:  "genesis",
 		Usage: "Path to genesis file",
 	}
+	SourceTableNameFlag = cli.StringFlag{
+		Name:  "source-table",
+		Usage: "name of the database table to be used",
+		Value: "main",
+	}
+	TargetDbFlag = cli.PathFlag{
+		Name:  "target-db",
+		Usage: "target database path",
+	}
+	TrieRootHashFlag = cli.StringFlag{
+		Name:  "root",
+		Usage: "state trie root hash to be analysed",
+	}
+	IncludeStorageFlag = cli.BoolFlag{
+		Name:  "include-storage",
+		Usage: "display full storage content",
+	}
 )
 
 // Config represents execution configuration for replay command.
@@ -346,6 +363,10 @@ type Config struct {
 	TraceFile           string         // name of trace file
 	Trace               bool           // trace flag
 	LogLevel            string         // level of the logging of the app action
+	SourceTableName     string         // represents the name of a source DB table
+	TargetDb            string         // represents the path of a target DB
+	TrieRootHash        string         // represents a hash of a state trie root to be decoded
+	IncludeStorage      bool           // represents a flag for contract storage inclusion in an operation
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.
@@ -485,6 +506,10 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		TraceFile:           ctx.Path(TraceFileFlag.Name),
 		Trace:               ctx.Bool(TraceFlag.Name),
 		LogLevel:            ctx.String(LogLevelFlag.Name),
+		SourceTableName:     ctx.String(SourceTableNameFlag.Name),
+		TargetDb:            ctx.Path(TargetDbFlag.Name),
+		TrieRootHash:        ctx.String(TrieRootHashFlag.Name),
+		IncludeStorage:      ctx.Bool(IncludeStorageFlag.Name),
 	}
 	if cfg.ChainID == 0 {
 		cfg.ChainID = ChainIDFlag.Value
