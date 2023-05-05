@@ -2,12 +2,15 @@ package apireplay
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 
+	"github.com/Fantom-foundation/Aida/cmd/runvm-cli/runvm"
 	"github.com/Fantom-foundation/Aida/iterator"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/tracer"
 	traceCtx "github.com/Fantom-foundation/Aida/tracer/context"
+	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
@@ -20,6 +23,7 @@ func ReplayAPI(ctx *cli.Context) error {
 		cfg    *utils.Config
 		dbInfo utils.StateDbInfo
 		db     state.StateDB
+		stats  *operation.ProfileStats
 	)
 
 	cfg, err = utils.NewConfig(ctx, utils.BlockRangeArgs)
@@ -38,14 +42,27 @@ func ReplayAPI(ctx *cli.Context) error {
 		return err
 	}
 
-	// Enable tracing if debug flag is set
+	db, err = utils.MakeStateDB(cfg.StateDbSrc, cfg, dbInfo.RootHash, true)
+	if err != nil {
+		return err
+	}
+
 	if cfg.Trace {
 		rCtx := traceCtx.NewRecord(cfg.TraceFile)
 		defer rCtx.Close()
 		db = tracer.NewProxyRecorder(db, rCtx)
 	}
 
-	db, err = utils.MakeStateDB(cfg.StateDbSrc, cfg, dbInfo.RootHash, true)
+	if cfg.Profile {
+		db, stats = runvm.NewProxyProfiler(db)
+	}
+
+	err = utils.StartCPUProfile(cfg)
+	if err != nil {
+		return err
+	}
+
+	err = utils.StartMemoryProfile(cfg)
 	if err != nil {
 		return err
 	}
@@ -64,6 +81,12 @@ func ReplayAPI(ctx *cli.Context) error {
 	r.Start()
 
 	r.Wait()
+
+	if cfg.Profile {
+		fmt.Println("=================Statistics=================")
+		stats.PrintProfiling(utils.NewLogger(cfg.LogLevel, "Profile"))
+		fmt.Println("============================================")
+	}
 
 	return err
 }
