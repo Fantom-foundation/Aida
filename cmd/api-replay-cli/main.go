@@ -50,6 +50,11 @@ func main() {
 			// ArchiveDB
 			&utils.ArchiveModeFlag,
 			&utils.ArchiveVariantFlag,
+
+			// Performance
+			&utils.CpuProfileFlag,
+			&utils.MemoryProfileFlag,
+			&utils.ProfileFlag,
 		},
 	}
 
