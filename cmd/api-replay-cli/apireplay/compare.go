@@ -203,6 +203,13 @@ func compareCallStateDBResult(data *OutData, builder *strings.Builder) *comparat
 		msg = fmt.Sprintf("unknown error code: %v", data.Recorded.Error.Code)
 	} else {
 
+		// we could have potentially recorded a request with invalid arguments
+		// - this is not checked in execution, hence StateDB returns a valid result.
+		// For this we exclude any invalid requests when getting unmatched results
+		if data.Recorded.Error.Code == invalidArgumentErrCode {
+			return nil
+		}
+
 		// more error messages for one code?
 		for i, e := range errs {
 			builder.WriteString(e)
@@ -211,13 +218,6 @@ func compareCallStateDBResult(data *OutData, builder *strings.Builder) *comparat
 			}
 		}
 		msg = builder.String()
-	}
-
-	// we could have potentially recorded a request with invalid arguments
-	// - this is not checked in execution, hence StateDB returns a valid result.
-	// For this we exclude any invalid requests when getting unmatched results
-	if data.Recorded.Error.Code == invalidArgumentErrCode {
-		return nil
 	}
 
 	return newComparatorError(
