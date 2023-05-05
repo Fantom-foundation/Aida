@@ -18,7 +18,7 @@ var GetLocationStatsCommand = cli.Command{
 	Flags: []cli.Flag{
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
-		&ChainIDFlag,
+		&utils.ChainIDFlag,
 		&utils.LogLevelFlag,
 	},
 	Description: `

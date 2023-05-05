@@ -335,16 +335,12 @@ func replayForkTask(block uint64, tx int, recording *substate.Substate, taskPool
 func replayForkAction(ctx *cli.Context) error {
 	var err error
 
-	log := utils.NewLogger(ctx.String(utils.LogLevelFlag.Name), "Substate Replay Fork")
-
-	if ctx.Args().Len() != 2 {
-		return fmt.Errorf("substate-cli replay-fork command requires exactly 2 arguments")
+	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
+	if err != nil {
+		return err
 	}
 
-	first, last, argErr := utils.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
-	if argErr != nil {
-		return argErr
-	}
+	log := utils.NewLogger(cfg.LogLevel, "Substate Replay Fork")
 
 	hardFork := ctx.Int64(HardForkFlag.Name)
 	if hardForkName, exist := HardForkName[hardFork]; !exist {
@@ -373,7 +369,7 @@ func replayForkAction(ctx *cli.Context) error {
 		*ReplayForkChainConfig = *tests.Forks["London"]
 	}
 
-	substate.SetSubstateDirectory(ctx.String(substate.SubstateDirFlag.Name))
+	substate.SetSubstateDirectory(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
@@ -396,7 +392,7 @@ func replayForkAction(ctx *cli.Context) error {
 		statWg.Done()
 	}()
 
-	taskPool := substate.NewSubstateTaskPool("substate-cli replay-fork", replayForkTask, first, last, ctx)
+	taskPool := substate.NewSubstateTaskPool("substate-cli replay-fork", replayForkTask, cfg.First, cfg.Last, ctx)
 	err = taskPool.Execute()
 	if err == nil {
 		close(ReplayForkStatChan)
