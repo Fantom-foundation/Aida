@@ -71,7 +71,7 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 		if cfg.ShadowDb {
 			return nil, "", fmt.Errorf("cannot read StateDB cfg file '%v'; %v", primeDbInfoFile, err)
 		}
-		return nil, "", fmt.Errorf("cannot read shadow prime cfg file '%v'; %v", primeDbInfoFile, err)
+		return nil, "", fmt.Errorf("cannot read prime cfg file '%v'; %v", primeDbInfoFile, err)
 	}
 
 	// open primary db

@@ -14,7 +14,8 @@ import (
 )
 
 const (
-	bufferSize = 500
+	bufferSize        = 3000
+	counterBufferSize = 2400
 )
 
 // Controller controls and looks after all threads within the api-replay package
@@ -224,7 +225,7 @@ func createExecutors(cfg *utils.Config, db state.StateDB, ctx *cli.Context, chai
 	}
 
 	e := make([]*ReplayExecutor, executors)
-	counterInput := make(chan requestLog)
+	counterInput := make(chan requestLog, counterBufferSize)
 	for i := 0; i < executors; i++ {
 		e[i] = newExecutor(cfg.First, cfg.Last, db, output, chainCfg, input, cfg.VmImpl, wg, closed, utils.NewLogger(cfg.LogLevel, fmt.Sprintf("Executor #%v", i)), counterInput)
 	}
