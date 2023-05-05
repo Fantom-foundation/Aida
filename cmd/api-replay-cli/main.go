@@ -47,10 +47,6 @@ func main() {
 			&utils.TraceFlag,
 			&utils.TraceFileFlag,
 			&utils.TraceDebugFlag,
-
-			// ArchiveDB
-			&utils.ArchiveModeFlag,
-			&utils.ArchiveVariantFlag,
 		},
 	}
 
