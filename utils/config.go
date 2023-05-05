@@ -299,6 +299,7 @@ var (
 	IncludeStorageFlag = cli.BoolFlag{
 		Name:  "include-storage",
 		Usage: "display full storage content",
+	}
 	ProfileEVMCallFlag = cli.BoolFlag{
 		Name:  "profiling-call",
 		Usage: "enable profiling for EVM call",
