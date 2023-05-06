@@ -99,6 +99,7 @@ func traceReplaySubstateTask(cfg *utils.Config) error {
 		// added since the range running on may not match sync-period boundaries.
 		if isFirstBlock {
 			run(operation.NewBeginSyncPeriod(cfg.First / cfg.SyncPeriodLength))
+			run(operation.BeginBlock(tx.Block))
 			isFirstBlock = false
 		}
 

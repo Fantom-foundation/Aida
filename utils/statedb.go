@@ -141,9 +141,6 @@ func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config) {
 	if err := load.Close(); err != nil {
 		panic(fmt.Errorf("failed to prime StateDB: %v", err))
 	}
-
-	// switch db from batch mode to normal mode
-	db.BeginTransaction(0)
 }
 
 // primeOneAccount initializes an account on stateDB with substate

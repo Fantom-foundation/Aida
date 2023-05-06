@@ -61,7 +61,7 @@ func MakeCarmenStateDB(directory, variant, archive string, schema int) (StateDB,
 	case "cpp-ldb":
 		db, err = carmen.NewCppLevelDbBasedState(params)
 	default:
-		return nil, fmt.Errorf("unkown variant: %v", variant)
+		return nil, fmt.Errorf("unknown variant: %v", variant)
 	}
 	if err != nil {
 		return nil, err

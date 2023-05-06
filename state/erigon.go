@@ -30,10 +30,12 @@ func MakeErigonStateDB(directory, variant string, rootHash common.Hash, batchLim
 	erigonDirectory := filepath.Join(directory, "erigon")
 	// erigon go-memory variant is not compatible with erigon batch mode
 	switch variant {
+	case "": // = default option
+		kv = launcher.InitChainKV(erigonDirectory)
 	case "go-mdbx":
 		kv = launcher.InitChainKV(erigonDirectory)
 	default:
-		err = fmt.Errorf("unkown variant: %v", variant)
+		err = fmt.Errorf("unknown variant: %v", variant)
 		return
 	}
 

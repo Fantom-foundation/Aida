@@ -322,7 +322,6 @@ type Config struct {
 	TraceFile           string            // name of trace file
 	Trace               bool              // trace flag
 	ErigonBatchSize     datasize.ByteSize // erigon batch size for runVM
-	workingDirectory    string            // used for erigon batch
 }
 
 // getChainConnfig returns chain configuration of either mainnet or testnets.

@@ -22,7 +22,7 @@ const (
 
 func MakeGethStateDB(directory, variant string, rootHash common.Hash, isArchiveMode bool) (StateDB, error) {
 	if variant != "" {
-		return nil, fmt.Errorf("unkown variant: %v", variant)
+		return nil, fmt.Errorf("unknown variant: %v", variant)
 	}
 	const cacheSize = 512
 	const fileHandle = 128

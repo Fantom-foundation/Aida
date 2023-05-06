@@ -11,7 +11,7 @@ import (
 
 func MakeEmptyGethInMemoryStateDB(variant string) (StateDB, error) {
 	if variant != "" {
-		return nil, fmt.Errorf("unkown variant: %v", variant)
+		return nil, fmt.Errorf("unknown variant: %v", variant)
 	}
 	return MakeInMemoryStateDB(&substate.SubstateAlloc{}, 0), nil
 }

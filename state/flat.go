@@ -16,6 +16,8 @@ func MakeFlatStateDB(directory, variant string, rootHash common.Hash) (s StateDB
 	var db ethdb.Database
 
 	switch variant {
+	case "": // = default option
+		fallthrough
 	case "go-memory":
 		db = rawdb.NewMemoryDatabase()
 	case "go-ldb":
@@ -27,7 +29,7 @@ func MakeFlatStateDB(directory, variant string, rootHash common.Hash) (s StateDB
 			return
 		}
 	default:
-		err = fmt.Errorf("unkown variant: %v", variant)
+		err = fmt.Errorf("unknown variant: %v", variant)
 		return
 	}
 
@@ -48,7 +50,7 @@ type flatStateDB struct {
 	*state.StateDB
 }
 
-// BeginBlockApply creates a new statedb from an existing geth database
+// openStateDB creates a new statedb from an existing geth database
 func (s *flatStateDB) openStateDB() error {
 	var err error
 	s.StateDB, err = state.New(s.stateRoot, s.db)
