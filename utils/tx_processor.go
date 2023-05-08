@@ -32,8 +32,7 @@ var (
 
 // runVMTask executes VM on a chosen storage system.
 func ProcessTx(db state.StateDB, cfg *Config, block uint64, txIndex int, tx *substate.Substate) (txerr error) {
-
-	inputEnv := tx.Env
+	db.BeginTransaction(uint32(txIndex))
 
 	var (
 		gaspool   = new(evmcore.GasPool)
@@ -41,6 +40,7 @@ func ProcessTx(db state.StateDB, cfg *Config, block uint64, txIndex int, tx *sub
 		txHash    = common.HexToHash(fmt.Sprintf("0x%016d%016d", block, txIndex))
 		newErrors int
 		errMsg    strings.Builder
+		inputEnv  = tx.Env
 	)
 	defer handleErrorOnExit(&txerr, &errMsg, &newErrors, cfg.ContinueOnFailure)
 	vmConfig := opera.DefaultVMConfig
@@ -90,11 +90,8 @@ func ProcessTx(db state.StateDB, cfg *Config, block uint64, txIndex int, tx *sub
 			return
 		}
 	}
-	if chainConfig.IsByzantium(blockCtx.BlockNumber) {
-		db.Finalise(true)
-	} else {
-		db.IntermediateRoot(chainConfig.IsEIP158(blockCtx.BlockNumber))
-	}
+
+	db.EndTransaction()
 
 	// check whether the outputAlloc substate is contained in the world-state db.
 	if cfg.ValidateTxState {

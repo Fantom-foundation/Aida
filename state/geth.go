@@ -146,7 +146,7 @@ func (s *gethStateDB) BeginTransaction(number uint32) {
 }
 
 func (s *gethStateDB) EndTransaction() {
-	// ignored
+	s.Finalise(true)
 }
 
 func (s *gethStateDB) BeginBlock(number uint64) {
