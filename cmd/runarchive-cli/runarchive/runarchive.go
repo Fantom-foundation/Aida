@@ -36,6 +36,11 @@ func RunArchive(ctx *cli.Context) error {
 	}
 	defer utils.StopCPUProfile(cfg)
 
+	// did we provide existing StateDb
+	if cfg.StateDbSrc == "" {
+		return fmt.Errorf("existing StateDb is required for this command; use --db-src to specify path to an EXISTING StateDb")
+	}
+
 	// open the archive
 	db, _, err := utils.PrepareStateDB(cfg)
 	if err != nil {
