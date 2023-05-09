@@ -217,15 +217,7 @@ func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *Config, target ui
 		return err
 	}
 	log.Noticef("Deleting %d accounts ...", len(list))
-	db.BeginSyncPeriod(0)
-	db.BeginBlock(target) // block 0 is the priming, block (first-1) the deletion
-	db.BeginTransaction(0)
-	for _, cur := range list {
-		db.Suicide(cur)
-	}
-	db.EndTransaction()
-	db.EndBlock()
-	db.EndSyncPeriod()
+	SuicideAccounts(db, list, target)
 	return nil
 }
 

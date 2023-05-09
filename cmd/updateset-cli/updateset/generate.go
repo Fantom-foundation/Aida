@@ -110,7 +110,7 @@ func GenUpdateSet(cfg *utils.Config, first uint64, interval uint64) error {
 		checkPoint    uint64                // block number of the next interval
 		isFirst       = true                // first block
 		estimatedSize uint64                // estimated size of current update set
-		maxSize       = cfg.UpdateCacheSize // recommand size 700 MB
+		maxSize       = cfg.UpdateCacheSize // recommanded size 700 MB
 	)
 
 	log.Noticef("Generate update sets from block %v to block %v", first, cfg.Last)

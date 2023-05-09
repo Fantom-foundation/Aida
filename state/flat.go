@@ -133,7 +133,7 @@ func (s *flatStateDB) GetArchiveState(block uint64) (StateDB, error) {
 
 // For priming initial state of stateDB
 type flatBulkLoad struct {
-	db      *flatStateDB
+	db *flatStateDB
 }
 
 func (l *flatBulkLoad) CreateAccount(addr common.Address) {

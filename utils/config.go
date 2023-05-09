@@ -341,6 +341,7 @@ var (
 		Name:  "buffer-size",
 		Usage: "set a buffer size for profiling channel",
 		Value: 100000,
+	}
 	UpdateCacheSizeFlag = cli.Uint64Flag{
 		Name:  "update-cache",
 		Usage: "cache size for update set in MiB",
