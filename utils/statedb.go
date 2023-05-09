@@ -18,8 +18,8 @@ import (
 )
 
 const (
-	pathToPrimeDb  = "/prime"
-	pathToShadowDb = "/shadow"
+	pathToPrimaryStateDb = "/prime"
+	pathToShadowStateDb  = "/shadow"
 )
 
 // PrepareStateDB creates stateDB or load existing stateDB
@@ -53,38 +53,36 @@ func PrepareStateDB(cfg *Config) (state.StateDB, string, error) {
 func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 	var (
 		err         error
-		primeDb     state.StateDB
-		primeDbInfo StateDbInfo
-		primeDbPath string
+		stateDb     state.StateDB
+		stateDbInfo StateDbInfo
+		stateDbPath string
 	)
 
-	// no shadow db
+	// using ShadowDb?
 	if cfg.ShadowDb {
-		primeDbPath = filepath.Join(cfg.StateDbSrc, pathToPrimeDb)
+		stateDbPath = filepath.Join(cfg.StateDbSrc, pathToPrimaryStateDb)
 	} else {
-		primeDbPath = cfg.StateDbSrc
+		// when not using ShadowDb, StateDbSrc is path to the StateDb itself
+		stateDbPath = cfg.StateDbSrc
 	}
 
-	primeDbInfoFile := filepath.Join(primeDbPath, PathToDbInfo)
-	primeDbInfo, err = ReadStateDbInfo(primeDbInfoFile)
+	primeDbInfoFile := filepath.Join(stateDbPath, PathToDbInfo)
+	stateDbInfo, err = ReadStateDbInfo(primeDbInfoFile)
 	if err != nil {
 		if cfg.ShadowDb {
-			return nil, "", fmt.Errorf("cannot read StateDB cfg file '%v'; %v", primeDbInfoFile, err)
+			return nil, "", fmt.Errorf("cannot read StateDb cfg file '%v'; %v", primeDbInfoFile, err)
 		}
-		return nil, "", fmt.Errorf("cannot read prime cfg file '%v'; %v", primeDbInfoFile, err)
+		return nil, "", fmt.Errorf("cannot read StateDb cfg file '%v'; %v", primeDbInfoFile, err)
 	}
 
 	// open primary db
-	primeDb, err = makeStateDBVariant(primeDbPath, primeDbInfo.Impl, primeDbInfo.Variant, primeDbInfo.ArchiveVariant, primeDbInfo.Schema, primeDbInfo.RootHash, cfg)
+	stateDb, err = makeStateDBVariant(stateDbPath, stateDbInfo.Impl, stateDbInfo.Variant, stateDbInfo.ArchiveVariant, stateDbInfo.Schema, stateDbInfo.RootHash, cfg)
 	if err != nil {
-		if cfg.ShadowDb {
-			return nil, "", fmt.Errorf("cannot create prime StateDB; %v", err)
-		}
-		return nil, "", fmt.Errorf("cannot create StateDB; %v", err)
+		return nil, "", fmt.Errorf("cannot create StateDb; %v", err)
 	}
 
 	if !cfg.ShadowDb {
-		return primeDb, primeDbPath, nil
+		return stateDb, stateDbPath, nil
 	}
 
 	var (
@@ -93,55 +91,54 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 		shadowDbPath string
 	)
 
-	shadowDbPath = filepath.Join(cfg.StateDbSrc, pathToShadowDb)
+	shadowDbPath = filepath.Join(cfg.StateDbSrc, pathToShadowStateDb)
 	shadowDbInfoFile := filepath.Join(shadowDbPath, PathToDbInfo)
 	shadowDbInfo, err = ReadStateDbInfo(shadowDbInfoFile)
 	if err != nil {
-		return nil, "", fmt.Errorf("cannot read shadow StateDB cfg file '%v'; %v", shadowDbInfoFile, err)
+		return nil, "", fmt.Errorf("cannot read ShadowDb cfg file '%v'; %v", shadowDbInfoFile, err)
 	}
 
 	// open shadow db
 	shadowDb, err = makeStateDBVariant(shadowDbPath, shadowDbInfo.Impl, shadowDbInfo.Variant, shadowDbInfo.ArchiveVariant, shadowDbInfo.Schema, shadowDbInfo.RootHash, cfg)
 	if err != nil {
-		return nil, "", fmt.Errorf("cannot create shadow StateDB; %v", err)
+		return nil, "", fmt.Errorf("cannot create ShadowDb; %v", err)
 	}
 
-	return state.MakeShadowStateDB(primeDb, shadowDb), cfg.StateDbSrc, nil
+	return state.MakeShadowStateDB(stateDb, shadowDb), cfg.StateDbSrc, nil
 }
 
 // makeNewStateDB creates a DB instance with a potential shadow instance.
 func makeNewStateDB(cfg *Config) (state.StateDB, string, error) {
 	var (
-		err           error
-		primaryDb     state.StateDB
-		primaryDbPath string
-		tmpDir        string
+		err         error
+		stateDb     state.StateDB
+		stateDbPath string
+		tmpDir      string
 	)
 
 	// create a temporary working directory
 	tmpDir, err = os.MkdirTemp(cfg.DbTmp, "state_db_tmp_*")
 	if err != nil {
-		err = fmt.Errorf("failed to create a temporary directory. %v", err)
-		return nil, "", err
+		return nil, "", fmt.Errorf("failed to create a temporary directory; %v", err)
 	}
 
-	log.Infof("Temporary state DB directory: %v", tmpDir)
+	log.Infof("Temporary StateDb directory: %v", tmpDir)
 
-	primaryDbPath = tmpDir
+	stateDbPath = tmpDir
 
 	// no shadow db
 	if cfg.ShadowDb {
-		primaryDbPath = filepath.Join(primaryDbPath, pathToPrimeDb)
+		stateDbPath = filepath.Join(stateDbPath, pathToPrimaryStateDb)
 	}
 
 	// create primary db
-	primaryDb, err = makeStateDBVariant(primaryDbPath, cfg.DbImpl, cfg.DbVariant, cfg.ArchiveVariant, cfg.CarmenSchema, common.Hash{}, cfg)
+	stateDb, err = makeStateDBVariant(stateDbPath, cfg.DbImpl, cfg.DbVariant, cfg.ArchiveVariant, cfg.CarmenSchema, common.Hash{}, cfg)
 	if err != nil {
-		return nil, "", err
+		return nil, "", fmt.Errorf("cannnot make stateDb; %v", err)
 	}
 
 	if !cfg.ShadowDb {
-		return primaryDb, primaryDbPath, nil
+		return stateDb, stateDbPath, nil
 	}
 
 	var (
@@ -149,15 +146,15 @@ func makeNewStateDB(cfg *Config) (state.StateDB, string, error) {
 		shadowDbPath string
 	)
 
-	shadowDbPath = filepath.Join(cfg.StateDbSrc, pathToShadowDb)
+	shadowDbPath = filepath.Join(cfg.StateDbSrc, pathToShadowStateDb)
 
 	// open shadow db
 	shadowDb, err = makeStateDBVariant(shadowDbPath, cfg.ShadowImpl, cfg.ShadowVariant, cfg.ArchiveVariant, cfg.CarmenSchema, common.Hash{}, cfg)
 	if err != nil {
-		return nil, "", err
+		return nil, "", fmt.Errorf("cannnot make shadowDb; %v", err)
 	}
 
-	return state.MakeShadowStateDB(primaryDb, shadowDb), tmpDir, nil
+	return state.MakeShadowStateDB(stateDb, shadowDb), tmpDir, nil
 }
 
 // makeStateDBVariant creates a DB instance of the requested kind.
@@ -176,7 +173,7 @@ func makeStateDBVariant(directory, impl, variant, archiveVariant string, carmenS
 	case "flat":
 		return state.MakeFlatStateDB(directory, variant, rootHash)
 	}
-	return nil, fmt.Errorf("unknown DB implementation (--%v): %v", StateDbImplementationFlag.Name, impl)
+	return nil, fmt.Errorf("unknown Db implementation: %v", impl)
 }
 
 type ProgressTracker struct {
