@@ -72,6 +72,8 @@ func autoGen(ctx *cli.Context) error {
 		return nil
 	}
 	log.Infof("Found new epochs for generation %v - %v", firstEpoch, lastEpoch)
+
+	// stop opera to be able to export events
 	err = stopOpera(log)
 	if err != nil {
 		return err
@@ -82,13 +84,15 @@ func autoGen(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	// update target aida-db
-	err = Generate(cfg, log)
+
+	// start opera to load new blocks in parallel
+	err = startOpera(log)
 	if err != nil {
 		return err
 	}
 
-	err = startOpera(log)
+	// update target aida-db
+	err = Generate(cfg, log)
 	if err != nil {
 		return err
 	}
