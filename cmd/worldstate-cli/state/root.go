@@ -3,7 +3,6 @@ package state
 import (
 	"fmt"
 
-	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/flags"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Aida/world-state/db/opera"
 	"github.com/urfave/cli/v2"
@@ -21,7 +20,7 @@ var CmdRoot = cli.Command{
 		&utils.StateDbVariantFlag,
 		&utils.DbFlag,
 		&utils.SourceTableNameFlag,
-		&flags.TargetBlock,
+		&utils.TargetBlockFlag,
 	},
 }
 
@@ -43,7 +42,7 @@ func root(ctx *cli.Context) error {
 	// make logger
 	log := utils.NewLogger(cfg.LogLevel, "root")
 
-	targetBlock := ctx.Uint64(flags.TargetBlock.Name)
+	targetBlock := cfg.TargetBlock
 
 	if targetBlock == 0 {
 		err = fmt.Errorf("supplied target block can't be %d", targetBlock)

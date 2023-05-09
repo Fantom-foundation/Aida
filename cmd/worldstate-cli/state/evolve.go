@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/flags"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	substate "github.com/Fantom-foundation/Substate"
@@ -21,7 +20,7 @@ var CmdEvolveState = cli.Command{
 	Description: `The evolve evolves state of stored accounts in world state snapshot database.`,
 	ArgsUsage:   "<block> <substatedir> <workers>",
 	Flags: []cli.Flag{
-		&flags.TargetBlock,
+		&utils.TargetBlockFlag,
 		&substate.SubstateDirFlag,
 		&utils.ValidateFlag,
 		&substate.WorkersFlag,
@@ -51,7 +50,7 @@ func evolveState(ctx *cli.Context) error {
 	// make logger
 	log := utils.NewLogger(cfg.LogLevel, "evolve")
 
-	startBlock, targetBlock, err := getEvolutionBlockRange(ctx, stateDB, log)
+	startBlock, targetBlock, err := getEvolutionBlockRange(cfg, stateDB, log)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -89,9 +88,9 @@ func evolveState(ctx *cli.Context) error {
 }
 
 // getEvolutionBlockRange retrieves starting block for evolution
-func getEvolutionBlockRange(ctx *cli.Context, stateDB *snapshot.StateDB, log *logging.Logger) (uint64, uint64, error) {
+func getEvolutionBlockRange(cfg *utils.Config, stateDB *snapshot.StateDB, log *logging.Logger) (uint64, uint64, error) {
 	// evolution until given target block
-	targetBlock := ctx.Uint64(flags.TargetBlock.Name)
+	targetBlock := cfg.TargetBlock
 
 	if targetBlock == 0 {
 		return 0, 0, fmt.Errorf("supplied target block can't be %d", targetBlock)

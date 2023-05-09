@@ -326,6 +326,12 @@ var (
 		Usage: "set a buffer size for profiling channel",
 		Value: 100000,
 	}
+	TargetBlockFlag = cli.Uint64Flag{
+		Name:    "target-block",
+		Aliases: []string{"block", "blk"},
+		Usage:   "target block ID",
+		Value:   0,
+	}
 )
 
 // Config represents execution configuration for replay command.
@@ -399,6 +405,7 @@ type Config struct {
 	OnlySuccessful      bool           // only runs transactions that have been successful
 	ProfilingDbName     string         // set a database name for storing micro-profiling results
 	ChannelBufferSize   int            // set a buffer size for profiling channel
+	TargetBlock         uint64         // represents the ID of target block to be reached by state evolve process or in dump state
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.
@@ -548,6 +555,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		OnlySuccessful:      ctx.Bool(OnlySuccessfulFlag.Name),
 		ProfilingDbName:     ctx.String(ProfilingDbNameFlag.Name),
 		ChannelBufferSize:   ctx.Int(ChannelBufferSizeFlag.Name),
+		TargetBlock:         ctx.Uint64(TargetBlockFlag.Name),
 	}
 	if cfg.ChainID == 0 {
 		cfg.ChainID = ChainIDFlag.Value

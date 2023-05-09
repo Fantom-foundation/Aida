@@ -11,7 +11,6 @@ import (
 
 	eth_state "github.com/ethereum/go-ethereum/core/state"
 
-	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/flags"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Aida/world-state/db/opera"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
@@ -45,7 +44,7 @@ var CmdDumpState = cli.Command{
 		&utils.SourceTableNameFlag,
 		&utils.TrieRootHashFlag,
 		&substate.WorkersFlag,
-		&flags.TargetBlock,
+		&utils.TargetBlockFlag,
 		&utils.LogLevelFlag,
 	},
 }
@@ -80,7 +79,7 @@ func DumpState(ctx *cli.Context) error {
 
 	// blockNumber number to be stored in output db
 	// root is root hash of storage at given block number
-	blockNumber, root, err := blockNumberAndRoot(store, ctx.Uint64(flags.TargetBlock.Name), common.HexToHash(cfg.TrieRootHash), log)
+	blockNumber, root, err := blockNumberAndRoot(store, cfg.TargetBlock, common.HexToHash(cfg.TrieRootHash), log)
 	if err != nil {
 		return err
 	}
