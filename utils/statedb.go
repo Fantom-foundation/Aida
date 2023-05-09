@@ -146,7 +146,7 @@ func makeNewStateDB(cfg *Config) (state.StateDB, string, error) {
 		shadowDbPath string
 	)
 
-	shadowDbPath = filepath.Join(cfg.StateDbSrc, pathToShadowStateDb)
+	shadowDbPath = filepath.Join(tmpDir, pathToShadowStateDb)
 
 	// open shadow db
 	shadowDb, err = makeStateDBVariant(shadowDbPath, cfg.ShadowImpl, cfg.ShadowVariant, cfg.ArchiveVariant, cfg.CarmenSchema, common.Hash{}, cfg)
