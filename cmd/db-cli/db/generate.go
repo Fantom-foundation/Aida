@@ -13,7 +13,6 @@ import (
 
 	"github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
 	"github.com/Fantom-foundation/Aida/cmd/updateset-cli/updateset"
-	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/flags"
 	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Aida/world-state/db/opera"
@@ -309,7 +308,7 @@ func prepareDumpCliContext(cfg *utils.Config) (*cli.Context, error) {
 	flagSet.String(utils.SourceTableNameFlag.Name, utils.SourceTableNameFlag.Value, "")
 	flagSet.String(utils.TrieRootHashFlag.Name, utils.TrieRootHashFlag.Value, "")
 	flagSet.Int(substate.WorkersFlag.Name, substate.WorkersFlag.Value, "")
-	flagSet.Uint64(flags.TargetBlock.Name, flags.TargetBlock.Value, "")
+	flagSet.Uint64(utils.TargetBlockFlag.Name, utils.TargetBlockFlag.Value, "")
 	flagSet.String(utils.LogLevelFlag.Name, cfg.LogLevel, "")
 
 	ctx := cli.NewContext(cli.NewApp(), flagSet, nil)
