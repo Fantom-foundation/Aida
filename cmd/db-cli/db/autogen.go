@@ -46,6 +46,8 @@ func autoGen(ctx *cli.Context) error {
 
 	log := utils.NewLogger(cfg.LogLevel, "autogen")
 
+	log.Info("Starting Automatic generation")
+
 	// preparing config and directories
 	aidaDbTmp, err := prepare(cfg)
 	if err != nil {
@@ -69,10 +71,12 @@ func autoGen(ctx *cli.Context) error {
 		log.Infof("No new data for generation. Source epoch %v (%v), Last generation %v (%v)", firstEpoch, cfg.OperaDatadir, lastEpoch, cfg.Db)
 		return nil
 	}
+	log.Infof("Found new epochs for generation %v - %v", firstEpoch, lastEpoch)
 	err = stopOpera(log)
 	if err != nil {
 		return err
 	}
+	log.Info("Generating events")
 
 	cfg.Events, err = generateEvents(cfg, aidaDbTmp, firstEpoch, lastEpoch, log)
 	if err != nil {
@@ -91,21 +95,22 @@ func autoGen(ctx *cli.Context) error {
 
 	// if patch output dir is selected inserting just the patch into there
 	if cfg.Output != "" {
-		err = createPatch(cfg, aidaDbTmp, firstEpoch, lastEpoch)
+		patchPath, err := createPatch(cfg, aidaDbTmp, firstEpoch, lastEpoch)
 		if err != nil {
 			return err
 		}
+		log.Infof("Successfully generated patch at: %v", patchPath)
 	}
 
 	return nil
 }
 
 // createPatch create patch from newly generated data
-func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpoch string) error {
+func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpoch string) (string, error) {
 	// create a parents of output directory
 	err := os.MkdirAll(cfg.Output, 0700)
 	if err != nil {
-		return fmt.Errorf("failed to create %s directory; %s", cfg.DbTmp, err)
+		return "", fmt.Errorf("failed to create %s directory; %s", cfg.DbTmp, err)
 	}
 
 	// loadingSourceDBPaths because cfg values are already rewritten to aida-db
@@ -118,10 +123,10 @@ func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpo
 	// merge UpdateDb into AidaDb
 	err = Merge(cfg, []string{cfg.SubstateDb, cfg.UpdateDb, cfg.DeletionDb})
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	return nil
+	return cfg.AidaDb, nil
 }
 
 // generateEvents generates events between First and Last epoch numbers from config
