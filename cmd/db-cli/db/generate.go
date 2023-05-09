@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -230,7 +231,7 @@ func recordSubstate(cfg *utils.Config, log *logging.Logger) error {
 
 	log.Noticef("Starting Substate recording of %v", cfg.Events)
 
-	cmd := exec.Command("opera", "--datadir", cfg.Db, "--gcmode=light", "--db.preset=legacy-ldb", "--cache", strconv.Itoa(cfg.Cache), "import", "events", "--recording", "--substatedir", cfg.SubstateDb, cfg.Events)
+	cmd := exec.Command("opera", "--datadir", cfg.Db, "--gcmode=full", "--db.preset=legacy-ldb", "--cache", strconv.Itoa(cfg.Cache), "import", "events", "--recording", "--substatedir", cfg.SubstateDb, cfg.Events)
 
 	err = runCommand(cmd, nil, log)
 	if err != nil {
@@ -285,16 +286,24 @@ func runCommand(cmd *exec.Cmd, resultChan chan string, log *logging.Logger) erro
 	if resultChan != nil {
 		defer close(resultChan)
 	}
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return err
+	}
+	defer stdout.Close()
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
 		return err
 	}
 	defer stderr.Close()
+
 	err = cmd.Start()
 	if err != nil {
 		return err
 	}
-	scanner := bufio.NewScanner(stderr)
+
+	merged := io.MultiReader(stderr, stdout)
+	scanner := bufio.NewScanner(merged)
 	if log.IsEnabledFor(logging.DEBUG) {
 		for scanner.Scan() {
 			m := scanner.Text()

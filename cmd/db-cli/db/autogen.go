@@ -7,6 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/Fantom-foundation/Aida/utils"
@@ -59,15 +60,24 @@ func autoGen(ctx *cli.Context) error {
 
 	// loading epoch range for generation
 	var firstEpoch, lastEpoch string
-	firstEpoch, lastEpoch, err = loadGenerationRange(cfg, log)
-
+	var newDataReady bool
+	firstEpoch, lastEpoch, newDataReady, err = loadGenerationRange(cfg, log)
+	if err != nil {
+		return err
+	}
+	if !newDataReady {
+		log.Infof("No new data for generation. Source epoch %v (%v), Last generation %v (%v)", firstEpoch, cfg.OperaDatadir, lastEpoch, cfg.Db)
+		return nil
+	}
 	err = stopOpera(log)
 	if err != nil {
 		return err
 	}
 
 	cfg.Events, err = generateEvents(cfg, aidaDbTmp, firstEpoch, lastEpoch, log)
-
+	if err != nil {
+		return err
+	}
 	// update target aida-db
 	err = Generate(cfg, log)
 	if err != nil {
@@ -128,38 +138,36 @@ func generateEvents(cfg *utils.Config, aidaDbTmp string, firstEpoch string, last
 }
 
 // loadGenerationRange retrieves epoch of last generation and most recent available epoch
-func loadGenerationRange(cfg *utils.Config, log *logging.Logger) (string, string, error) {
+func loadGenerationRange(cfg *utils.Config, log *logging.Logger) (string, string, bool, error) {
 	var previousEpoch uint64 = 1
 	_, err := os.Stat(cfg.Db)
 	if !os.IsNotExist(err) {
 		// opera was already used for generation starting from the next epoch
 		_, previousEpoch, err = GetOperaBlock(cfg)
 		if err != nil {
-			return "", "", fmt.Errorf("unable to retrieve epoch of generation opera in path %v; %v", cfg.Db, err)
+			return "", "", false, fmt.Errorf("unable to retrieve epoch of generation opera in path %v; %v", cfg.Db, err)
 		}
-		log.Debugf("Previous generation ended with epoch: %v", previousEpoch)
-		previousEpoch += 1
 		log.Debugf("Generation will start from: %v", previousEpoch)
 	}
 
 	nextEpoch, err := getLastOperaEpoch(cfg, log)
 	if err != nil {
-		return "", "", fmt.Errorf("unable to retrieve epoch of source opera in path %v; %v", cfg.OperaDatadir, err)
+		return "", "", false, fmt.Errorf("unable to retrieve epoch of source opera in path %v; %v", cfg.OperaDatadir, err)
 	}
 	// ending generation one epoch sooner to make sure epoch is sealed
 	nextEpoch -= 1
 	log.Debugf("Last available sealed epoch is %v", nextEpoch)
-
-	if previousEpoch > nextEpoch {
-		return "", "", fmt.Errorf("source epoch %v (%v) can't be lower than epoch of last generation %v (%v)", nextEpoch, cfg.OperaDatadir, previousEpoch, cfg.Db)
-	}
 
 	// recording of events will start with the following epoch of last recording
 	firstEpoch := strconv.FormatUint(previousEpoch, 10)
 
 	// recording of events will stop with last sealed opera
 	lastEpoch := strconv.FormatUint(nextEpoch, 10)
-	return firstEpoch, lastEpoch, nil
+
+	if previousEpoch > nextEpoch {
+		return firstEpoch, lastEpoch, false, nil
+	}
+	return firstEpoch, lastEpoch, true, nil
 }
 
 // getLastOperaEpoch loads last epoch from opera
@@ -180,7 +188,7 @@ func getLastOperaEpoch(cfg *utils.Config, log *logging.Logger) (uint64, error) {
 			}
 		}
 	}()
-	cmd := exec.Command("echo '{\n    \"method\": \"eth_getBlockByNumber\",\n    \"params\": [\"latest\", false],\n    \"id\": 1,\n    \"jsonrpc\": \"2.0\"}' | nc -q 0 -U \"" + cfg.OperaDatadir + "/opera.ipc\"")
+	cmd := exec.Command("bash", "-c", "echo '{\"method\": \"eth_getBlockByNumber\", \"params\": [\"latest\", false], \"id\": 1, \"jsonrpc\": \"2.0\"}' | nc -q 0 -U \""+cfg.OperaDatadir+"/opera.ipc\"")
 	err := runCommand(cmd, resultChan, log)
 	if err != nil {
 		return 0, fmt.Errorf("retrieve last opera epoch trough ipc; %v", err.Error())
@@ -193,15 +201,20 @@ func getLastOperaEpoch(cfg *utils.Config, log *logging.Logger) (uint64, error) {
 	var responseJson = make(map[string]interface{})
 	err = json.Unmarshal([]byte(response), &responseJson)
 	if err != nil {
-		return 0, fmt.Errorf("unable to json from %v; %v", responseJson, err.Error())
+		return 0, fmt.Errorf("unable to json from %v; %v", response, err.Error())
+	}
+	result, ok := responseJson["result"]
+	if !ok {
+		return 0, fmt.Errorf("unable to parse result from %v; %v", responseJson, err.Error())
 	}
 
-	epochHex, ok := responseJson["epoch"]
+	epochHex, ok := result.(map[string]interface{})["epoch"]
 	if !ok {
 		return 0, fmt.Errorf("unable to parse epoch from %v; %v", responseJson, err.Error())
 	}
-	var epoch uint64
-	epoch, err = strconv.ParseUint(epochHex.(string), 16, 64)
+
+	epochHexCleaned := strings.Replace(epochHex.(string), "0x", "", -1)
+	epoch, err := strconv.ParseUint(epochHexCleaned, 16, 64)
 	if err != nil {
 		return 0, err
 	}
