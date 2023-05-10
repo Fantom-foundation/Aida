@@ -91,4 +91,5 @@ func (r *Reader) read() {
 
 		}
 	}
+	return
 }
