@@ -73,9 +73,17 @@ func (r *Reader) read() {
 			// did iter emit an error?
 			if r.iter.Error() != nil {
 				if r.iter.Error() == io.EOF || r.iter.Error().Error() == "unexpected EOF" {
+					close(r.closed)
 					return
 				}
 				r.log.Fatalf("unexpected iter err; %v", r.iter.Error())
+				close(r.closed)
+				return
+			}
+
+			if r.iter.Value() == nil {
+				close(r.closed)
+				return
 			}
 
 			val = r.iter.Value()

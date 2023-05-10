@@ -113,8 +113,9 @@ func (r *Controller) startExecutors() {
 		i int
 		e *ReplayExecutor
 	)
+
+	r.log.Infof("starting %v executor", len(r.Executors))
 	for i, e = range r.Executors {
-		r.log.Infof("starting executor #%v", i+1)
 		e.Start()
 
 	}
@@ -127,10 +128,12 @@ func (r *Controller) startComparators() {
 		i int
 		c *Comparator
 	)
+
+	r.log.Infof("starting %v comparators", len(r.Comparators))
 	for i, c = range r.Comparators {
-		r.log.Infof("starting comparator #%v", i+1)
 		c.Start()
 	}
+
 	r.comparatorsWg.Add(i + 1)
 }
 
@@ -203,6 +206,12 @@ func (r *Controller) control() {
 			r.log.Errorf("ctx err: %v", r.ctx.Err())
 			return
 		case <-r.failure:
+			r.Stop()
+			return
+		case <-r.readerClosed:
+			r.Stop()
+			return
+		case <-r.counterClosed:
 			r.Stop()
 			return
 		}

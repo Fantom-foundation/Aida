@@ -13,15 +13,16 @@ import (
 // Since each ReplayExecutor runs in own thread, need another thread for counting how many requests we executed,
 // so we do not slow down the execution process with mutex
 type requestCounter struct {
-	closed  chan any
-	ticker  *time.Ticker
-	input   chan requestLog
-	start   time.Time
-	builder *strings.Builder
-	total   uint64
-	log     *logging.Logger
-	wg      *sync.WaitGroup
-	stats   map[reqLogType]map[string]uint64
+	closed        chan any
+	ticker        *time.Ticker
+	input         chan requestLog
+	start         time.Time
+	builder       *strings.Builder
+	total         uint64
+	previousTotal uint64
+	log           *logging.Logger
+	wg            *sync.WaitGroup
+	stats         map[reqLogType]map[string]uint64
 }
 
 // reqLogType represents what happened to the request
@@ -82,7 +83,13 @@ func (c *requestCounter) count() {
 		case <-c.closed:
 			return
 		case <-c.ticker.C:
+			if c.previousTotal == c.total {
+				close(c.closed)
+				return
+			}
+
 			c.logStats()
+			c.previousTotal = c.total
 		case req, ok = <-c.input:
 			if !ok {
 				return
