@@ -244,6 +244,11 @@ var (
 		Usage: "delete source databases while merging into one database",
 		Value: false,
 	}
+	CompactDbFlag = cli.BoolFlag{
+		Name:  "compact",
+		Usage: "compact target database",
+		Value: false,
+	}
 	AidaDbFlag = cli.PathFlag{
 		Name:  "aida-db",
 		Usage: "set substate, updateset and deleted accounts directory",
@@ -306,6 +311,7 @@ type Config struct {
 	Cache               int            // Cache for StateDb or Priming
 	ContinueOnFailure   bool           // continue validation when an error detected
 	ContractNumber      int64          // number of contracts to create
+	CompactDb           bool           // compact database after merging
 	CPUProfile          string         // pprof cpu profile output file name
 	Db                  string         // path to database
 	DbTmp               string         // path to temporary database
@@ -460,6 +466,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		DbLogging:           ctx.Bool(StateDbLoggingFlag.Name),
 		DeletionDb:          ctx.Path(DeletionDbFlag.Name),
 		DeleteSourceDbs:     ctx.Bool(DeleteSourceDbsFlag.Name),
+		CompactDb:           ctx.Bool(CompactDbFlag.Name),
 		HasDeletedAccounts:  true,
 		KeepDb:              ctx.Bool(KeepDbFlag.Name),
 		KeysNumber:          ctx.Int64(KeysNumberFlag.Name),

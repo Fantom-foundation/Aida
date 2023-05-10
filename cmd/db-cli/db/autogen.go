@@ -23,6 +23,7 @@ var AutoGenCommand = cli.Command{
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 		&utils.DbFlag,
+		&utils.CompactDbFlag,
 		&utils.GenesisFlag,
 		&utils.DbTmpFlag,
 		&utils.ChainIDFlag,
