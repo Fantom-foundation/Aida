@@ -81,12 +81,6 @@ func RunVM(ctx *cli.Context) error {
 		if err := utils.LoadWorldStateAndPrime(db, cfg, cfg.First-1); err != nil {
 			return fmt.Errorf("priming failed. %v", err)
 		}
-
-		// delete destroyed accounts from stateDB
-		log.Notice("Delete destroyed accounts")
-		// remove destroyed accounts until one block before the first block
-		err = utils.DeleteDestroyedAccountsFromStateDB(db, cfg, cfg.First-1)
-
 		elapsed = time.Since(start)
 		hours, minutes, seconds = utils.ParseTime(elapsed)
 		log.Infof("\tPriming elapsed time: %vh %vm %vs\n", hours, minutes, seconds)

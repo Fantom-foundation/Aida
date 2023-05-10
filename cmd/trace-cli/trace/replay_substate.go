@@ -111,7 +111,9 @@ func traceReplaySubstateTask(cfg *utils.Config, log *logging.Logger) error {
 		if cfg.DbImpl == "memory" {
 			db.PrepareSubstate(&tx.Substate.InputAlloc, tx.Block)
 		} else {
-			utils.PrimeStateDB(tx.Substate.InputAlloc, db, 0, cfg, log)
+			if err := utils.PrimeStateDB(tx.Substate.InputAlloc, db, 0, cfg, log); err != nil {
+				return err
+			}
 		}
 		for traceIter.Next() {
 			op := traceIter.Value()
@@ -179,6 +181,7 @@ func traceReplaySubstateTask(cfg *utils.Config, log *logging.Logger) error {
 func traceReplaySubstateAction(ctx *cli.Context) error {
 	substate.RecordReplay = true
 	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
+	cfg.PrimeForce = true
 	if err != nil {
 		return err
 	}

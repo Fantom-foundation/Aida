@@ -353,6 +353,11 @@ var (
 		Usage:   "target block ID",
 		Value:   0,
 	}
+	PrimeForceFlag = cli.BoolFlag{
+		Name:  "prime-force",
+		Usage: "force create account when priming",
+		Value: false,
+	}
 )
 
 // Config represents execution configuration for replay command.
@@ -394,6 +399,7 @@ type Config struct {
 	MemoryBreakdown     bool           // enable printing of memory breakdown
 	MemoryProfile       string         // capture the memory heap profile into the file
 	TransactionLength   uint64         // determines indirectly the length of a transaction
+	PrimeForce          bool           // force account creation. Needed by trace replay-substate
 	PrimeRandom         bool           // enable randomized priming
 	PrimeSeed           int64          // set random seed
 	PrimeThreshold      int            // set account threshold before commit
@@ -549,6 +555,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		MemoryBreakdown:     ctx.Bool(MemoryBreakdownFlag.Name),
 		MemoryProfile:       ctx.String(MemoryProfileFlag.Name),
 		TransactionLength:   ctx.Uint64(TransactionLengthFlag.Name),
+		PrimeForce:          ctx.Bool(PrimeForceFlag.Name),
 		PrimeRandom:         ctx.Bool(RandomizePrimingFlag.Name),
 		PrimeSeed:           ctx.Int64(PrimeSeedFlag.Name),
 		RandomSeed:          ctx.Int64(RandomSeedFlag.Name),
