@@ -103,11 +103,11 @@ func (c *requestCounter) logStats() {
 
 	// how long has replayer been running
 	elapsed := time.Since(c.start)
-	c.builder.WriteString(fmt.Sprintf("Elapsed time: %v\n\n", elapsed))
+	c.builder.WriteString(fmt.Sprintf("Elapsed time: %v\n\n", elapsed.Round(1*time.Second)))
+
+	c.addAverageSpeed(elapsed)
 
 	// total requests
-	c.builder.WriteString(fmt.Sprintf("Total read requests: %v\n\n", c.total))
-
 	c.addExecuted()
 
 	c.addOutOfDbRange()
@@ -169,7 +169,7 @@ func (c *requestCounter) addOutOfDbRange() {
 
 // addExecuted requests to counters string builder
 func (c *requestCounter) addExecuted() {
-	c.builder.WriteString(fmt.Sprintf("\nExecuted requests:\n"))
+	c.builder.WriteString("\nExecuted requests:\n")
 	var exc uint64
 	for m, count := range c.stats[executed] {
 		c.builder.WriteString(fmt.Sprintf("\t%v: %v\n", m, count))
@@ -178,4 +178,11 @@ func (c *requestCounter) addExecuted() {
 	}
 
 	c.builder.WriteString(fmt.Sprintf("\n\tTotal: %v\n\n", exc))
+}
+
+// addAverageSpeed to the stat logger (req/s)
+func (c *requestCounter) addAverageSpeed(elapsed time.Duration) {
+	averageSpeed := float64(c.total) / elapsed.Seconds()
+
+	c.builder.WriteString(fmt.Sprintf("Average speed: ~%.1f Req/s\n", averageSpeed))
 }
