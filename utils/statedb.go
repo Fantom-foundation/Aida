@@ -217,7 +217,7 @@ func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *Config, target ui
 		return err
 	}
 	log.Noticef("Deleting %d accounts ...", len(list))
-	SuicideAccounts(db, list, target)
+	SuicideAccounts(db, list, target, log)
 	return nil
 }
 

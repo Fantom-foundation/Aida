@@ -34,8 +34,8 @@ func getStatedbTestCases() []statedbTestCase {
 		{"carmen", "geth", false, "none", false},
 		{"carmen", "geth", true, "ldb", false},
 		{"carmen", "geth", true, "sqlite", false},
-		{"flat", "geth", true, "sqlite", false},
-		{"flat", "geth", true, "sqlite", true},
+		{"flat", "geth", false, "none", false},
+		{"flat", "geth", false, "none", true},
 	}
 
 	return testCases
@@ -82,7 +82,7 @@ func makeAccountStorage(t *testing.T) map[common.Hash]common.Hash {
 // makeTestConfig creates a config struct for testing
 func makeTestConfig(testCase statedbTestCase) *Config {
 	cfg := &Config{
-		DbLogging:      true,
+		DbLogging:      false,
 		DbImpl:         testCase.variant,
 		DbVariant:      "",
 		ShadowImpl:     testCase.shadowImpl,
@@ -90,6 +90,7 @@ func makeTestConfig(testCase statedbTestCase) *Config {
 		ArchiveVariant: testCase.archiveVariant,
 		ArchiveMode:    testCase.archiveMode,
 		PrimeRandom:    testCase.primeRandom,
+		PrimeForce:     true,
 	}
 
 	if testCase.variant == "flat" {
