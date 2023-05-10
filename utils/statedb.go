@@ -66,14 +66,17 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 		stateDbPath = cfg.StateDbSrc
 	}
 
-	primeDbInfoFile := filepath.Join(stateDbPath, PathToDbInfo)
-	stateDbInfo, err = ReadStateDbInfo(primeDbInfoFile)
+	stateDbInfoFile := filepath.Join(stateDbPath, PathToDbInfo)
+	stateDbInfo, err = ReadStateDbInfo(stateDbInfoFile)
 	if err != nil {
 		if cfg.ShadowDb {
-			return nil, "", fmt.Errorf("cannot read StateDb cfg file '%v'; %v", primeDbInfoFile, err)
+			return nil, "", fmt.Errorf("cannot read StateDb cfg file '%v'; %v", stateDbInfoFile, err)
 		}
-		return nil, "", fmt.Errorf("cannot read StateDb cfg file '%v'; %v", primeDbInfoFile, err)
+		return nil, "", fmt.Errorf("cannot read StateDb cfg file '%v'; %v", stateDbInfoFile, err)
 	}
+
+	// do we have an archive inside loaded StateDb?
+	cfg.ArchiveMode = stateDbInfo.ArchiveMode
 
 	// open primary db
 	stateDb, err = makeStateDBVariant(stateDbPath, stateDbInfo.Impl, stateDbInfo.Variant, stateDbInfo.ArchiveVariant, stateDbInfo.Schema, stateDbInfo.RootHash, cfg)
