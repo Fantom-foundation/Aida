@@ -37,8 +37,8 @@ func RunArchive(ctx *cli.Context) error {
 	defer utils.StopCPUProfile(cfg)
 
 	// did we provide existing StateDb
-	if cfg.StateDbSrc == "" {
-		return fmt.Errorf("existing StateDb is required for this command; use --db-src to specify path to an EXISTING StateDb")
+	if cfg.StateDbSrc == "" && cfg.AidaDb == "" {
+		return fmt.Errorf("existing StateDb is required for this command; use --aida-db to specify path to AidaDb or use --db-src to specify path to an EXISTING StateDb")
 	}
 
 	// open the archive
