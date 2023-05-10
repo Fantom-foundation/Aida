@@ -27,6 +27,7 @@ func RunArchive(ctx *cli.Context) error {
 		return argErr
 	}
 	cfg.StateValidationMode = utils.SubsetCheck
+	cfg.ArchiveMode = true
 
 	log := utils.NewLogger(cfg.LogLevel, "Run-Archive")
 
