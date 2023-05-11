@@ -152,7 +152,7 @@ var (
 	StateDbVariantFlag = cli.StringFlag{
 		Name:  "db-variant",
 		Usage: "select a state DB variant",
-		Value: "",
+		Value: "ldb",
 	}
 	StateDbSrcFlag = cli.PathFlag{
 		Name:  "db-src",
