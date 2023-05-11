@@ -296,9 +296,6 @@ func (p *EventProxy) Prepare(thash common.Hash, ti int) {
 
 // Finalise the state in StateDB.
 func (p *EventProxy) Finalise(deleteEmptyObjects bool) {
-	// register event
-	p.registry.RegisterOp(FinaliseID)
-
 	// call real StateDB
 	p.db.Finalise(deleteEmptyObjects)
 }
@@ -330,6 +327,10 @@ func (p *EventProxy) PrepareSubstate(substate *substate.SubstateAlloc, block uin
 }
 
 func (p *EventProxy) BeginTransaction(number uint32) {
+	// register event
+	p.registry.RegisterOp(BeginTransactionID)
+
+	// call real StateDB
 	p.db.BeginTransaction(number)
 
 	// clear all snapshots
@@ -337,6 +338,10 @@ func (p *EventProxy) BeginTransaction(number uint32) {
 }
 
 func (p *EventProxy) EndTransaction() {
+	// register event
+	p.registry.RegisterOp(EndTransactionID)
+
+	// call real StateDB
 	p.db.EndTransaction()
 
 	// clear all snapshots
@@ -344,18 +349,34 @@ func (p *EventProxy) EndTransaction() {
 }
 
 func (p *EventProxy) BeginBlock(number uint64) {
+	// register event
+	p.registry.RegisterOp(BeginBlockID)
+
+	// call real StateDB
 	p.db.BeginBlock(number)
 }
 
 func (p *EventProxy) EndBlock() {
+	// register event
+	p.registry.RegisterOp(EndBlockID)
+
+	// call real StateDB
 	p.db.EndBlock()
 }
 
 func (p *EventProxy) BeginSyncPeriod(number uint64) {
+	// register event
+	p.registry.RegisterOp(BeginSyncPeriodID)
+
+	// call real StateDB
 	p.db.BeginSyncPeriod(number)
 }
 
 func (p *EventProxy) EndSyncPeriod() {
+	// register event
+	p.registry.RegisterOp(EndSyncPeriodID)
+
+	// call real StateDB
 	p.db.EndSyncPeriod()
 }
 

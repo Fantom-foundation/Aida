@@ -60,7 +60,7 @@ func (s *flatStateDB) BeginTransaction(number uint32) {
 }
 
 func (s *flatStateDB) EndTransaction() {
-	// ignored
+	s.Finalise(true)
 }
 
 func (s *flatStateDB) BeginBlock(number uint64) {

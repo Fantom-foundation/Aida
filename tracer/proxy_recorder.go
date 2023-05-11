@@ -314,26 +314,32 @@ func (r *ProxyRecorder) PrepareSubstate(substate *substate.SubstateAlloc, block 
 }
 
 func (r *ProxyRecorder) BeginTransaction(number uint32) {
+	r.write(operation.NewBeginTransaction(number))
 	r.db.BeginTransaction(number)
 }
 
 func (r *ProxyRecorder) EndTransaction() {
+	r.write(operation.NewEndTransaction())
 	r.db.EndTransaction()
 }
 
 func (r *ProxyRecorder) BeginBlock(number uint64) {
+	r.write(operation.NewBeginBlock(number))
 	r.db.BeginBlock(number)
 }
 
 func (r *ProxyRecorder) EndBlock() {
+	r.write(operation.NewEndBlock())
 	r.db.EndBlock()
 }
 
 func (r *ProxyRecorder) BeginSyncPeriod(number uint64) {
+	r.write(operation.NewBeginSyncPeriod(number))
 	r.db.BeginSyncPeriod(number)
 }
 
 func (r *ProxyRecorder) EndSyncPeriod() {
+	r.write(operation.NewEndSyncPeriod())
 	r.db.EndSyncPeriod()
 }
 

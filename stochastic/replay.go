@@ -251,7 +251,6 @@ func (ss *stochasticState) prime() {
 		pt.PrintProgress()
 	}
 	ss.log.Notice("Finalizing...")
-	db.Finalise(FinaliseFlag)
 	db.EndTransaction()
 	db.EndBlock()
 	db.EndSyncPeriod()
@@ -358,9 +357,6 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 
 	case ExistID:
 		db.Exist(addr)
-
-	case FinaliseID:
-		db.Finalise(FinaliseFlag)
 
 	case GetBalanceID:
 		db.GetBalance(addr)

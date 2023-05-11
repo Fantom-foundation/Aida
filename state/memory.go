@@ -435,7 +435,7 @@ func (db *inMemoryStateDB) BeginTransaction(number uint32) {
 }
 
 func (db *inMemoryStateDB) EndTransaction() {
-	// ignored
+	db.Finalise(true)
 }
 
 func (db *inMemoryStateDB) BeginBlock(number uint64) {

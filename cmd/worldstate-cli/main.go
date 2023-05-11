@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 
-	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/flags"
 	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/state"
 	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/version"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -32,7 +31,7 @@ func main() {
 			&version.CmdVersion,
 		},
 		Flags: []cli.Flag{
-			&flags.StateDBPath,
+			&utils.WorldStateFlag,
 			&utils.LogLevelFlag,
 		},
 		Before:                 assertDBPath,
@@ -47,6 +46,6 @@ func main() {
 
 // assertDBPath makes sure a default world state path is set in the calling flags.
 func assertDBPath(ctx *cli.Context) error {
-	state.DefaultPath(ctx, &flags.StateDBPath, ".aida/world-state")
+	state.DefaultPath(ctx, &utils.WorldStateFlag, ".aida/world-state")
 	return nil
 }
