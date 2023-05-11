@@ -25,7 +25,7 @@ func MakeStateDB(directory string, cfg *Config, rootHash common.Hash, isExisting
 		return nil, err
 	}
 	if cfg.DbLogging {
-		db = state.MakeLoggingStateDB(db)
+		db = state.MakeLoggingStateDB(db, cfg)
 	}
 	return db, nil
 }
