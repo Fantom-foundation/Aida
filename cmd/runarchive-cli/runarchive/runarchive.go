@@ -173,12 +173,10 @@ func runBlocks(
 
 		state.BeginBlock(block)
 		for _, tx := range transactions {
-			state.BeginTransaction(uint32(tx.Transaction))
 			if err = utils.ProcessTx(db, cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
 				issues <- fmt.Errorf("processing of transaction %d/%d failed: %v", block, tx.Transaction, err)
 				break
 			}
-			state.EndTransaction()
 			transactionDone <- tx.Transaction
 		}
 		if err = state.Close(); err != nil {

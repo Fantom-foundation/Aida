@@ -16,8 +16,9 @@ var InitDb = cli.App{
 	Usage:     "merge source data into profiling database",
 	Copyright: "(c) 2022 Fantom Foundation",
 	Commands: []*cli.Command{
-		&db.MergeCommand,
+		&db.AutoGenCommand,
 		&db.GenerateCommand,
+		&db.MergeCommand,
 	},
 }
 

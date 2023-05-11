@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"fmt"
 	"os"
 	"time"
 
@@ -10,15 +9,12 @@ import (
 
 // defaultLogFormat defines the format used for log output.
 const (
-	defaultLogFormat = "%{color}%{level:-8s} %{shortpkg}/%{shortfunc}%{color:reset}: %{message}"
-	timestampFormat  = "2006/01/02 15:04:05"
+	defaultLogFormat = "%{time:2006/01/02 15:04:05} %{color}%{level:-8s} %{shortpkg}/%{shortfunc}%{color:reset}: %{message}"
 )
 
 // NewLogger provides a new instance of the Logger based on context flags.
 func NewLogger(level string, module string) *logging.Logger {
-	prefix := fmt.Sprintf("%v\t", time.Now().Format(timestampFormat))
-
-	backend := logging.NewLogBackend(os.Stdout, prefix, 0)
+	backend := logging.NewLogBackend(os.Stdout, "", 0)
 
 	fm := logging.MustStringFormatter(defaultLogFormat)
 	fmtBackend := logging.NewBackendFormatter(backend, fm)

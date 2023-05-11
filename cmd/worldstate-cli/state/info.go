@@ -1,7 +1,6 @@
 package state
 
 import (
-	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/flags"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	"github.com/urfave/cli/v2"
@@ -20,15 +19,21 @@ var CmdInfo = cli.Command{
 
 // root retrieves root hash of given block number
 func info(ctx *cli.Context) error {
+	// make config
+	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
+	if err != nil {
+		return err
+	}
+
 	// try to open state DB
-	stateDB, err := snapshot.OpenStateDB(ctx.Path(flags.StateDBPath.Name))
+	stateDB, err := snapshot.OpenStateDB(cfg.WorldStateDb)
 	if err != nil {
 		return err
 	}
 	defer snapshot.MustCloseStateDB(stateDB)
 
 	// make logger
-	log := utils.NewLogger(ctx.String(utils.LogLevelFlag.Name), "info")
+	log := utils.NewLogger(cfg.LogLevel, "info")
 
 	blk, err := stateDB.GetBlockNumber()
 	if err != nil {

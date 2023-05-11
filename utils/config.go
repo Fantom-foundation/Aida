@@ -12,6 +12,7 @@ import (
 	"time"
 
 	substate "github.com/Fantom-foundation/Substate"
+	_ "github.com/Fantom-foundation/Tosca/go/vm/evmone"
 	_ "github.com/Fantom-foundation/Tosca/go/vm/lfvm"
 	_ "github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
@@ -197,6 +198,10 @@ var (
 		Name:  "update-db",
 		Usage: "set update-set database directory",
 	}
+	OperaDatadirFlag = cli.PathFlag{
+		Name:  "datadir",
+		Usage: "opera datadir directory",
+	}
 	ValidateFlag = cli.BoolFlag{
 		Name:  "validate",
 		Usage: "enables validation",
@@ -232,7 +237,7 @@ var (
 	}
 	OutputFlag = cli.PathFlag{
 		Name:  "output",
-		Usage: "output filename",
+		Usage: "output path",
 	}
 	PortFlag = cli.StringFlag{
 		Name:        "port",
@@ -243,6 +248,11 @@ var (
 	DeleteSourceDbsFlag = cli.BoolFlag{
 		Name:  "delete-source-dbs",
 		Usage: "delete source databases while merging into one database",
+		Value: false,
+	}
+	CompactDbFlag = cli.BoolFlag{
+		Name:  "compact",
+		Usage: "compact target database",
 		Value: false,
 	}
 	AidaDbFlag = cli.PathFlag{
@@ -288,6 +298,55 @@ var (
 		Name:  "genesis",
 		Usage: "Path to genesis file",
 	}
+	SourceTableNameFlag = cli.StringFlag{
+		Name:  "source-table",
+		Usage: "name of the database table to be used",
+		Value: "main",
+	}
+	TargetDbFlag = cli.PathFlag{
+		Name:  "target-db",
+		Usage: "target database path",
+	}
+	TrieRootHashFlag = cli.StringFlag{
+		Name:  "root",
+		Usage: "state trie root hash to be analysed",
+	}
+	IncludeStorageFlag = cli.BoolFlag{
+		Name:  "include-storage",
+		Usage: "display full storage content",
+	}
+	ProfileEVMCallFlag = cli.BoolFlag{
+		Name:  "profiling-call",
+		Usage: "enable profiling for EVM call",
+	}
+	MicroProfilingFlag = cli.BoolFlag{
+		Name:  "micro-profiling",
+		Usage: "enable micro-profiling of EVM",
+	}
+	BasicBlockProfilingFlag = cli.BoolFlag{
+		Name:  "basic-block-profiling",
+		Usage: "enable profiling of basic block",
+	}
+	OnlySuccessfulFlag = cli.BoolFlag{
+		Name:  "only-successful",
+		Usage: "only runs transactions that have been successful",
+	}
+	ProfilingDbNameFlag = cli.StringFlag{
+		Name:  "profiling-db-name",
+		Usage: "set a database name for storing micro-profiling results",
+		Value: "./profiling.db",
+	}
+	ChannelBufferSizeFlag = cli.IntFlag{
+		Name:  "buffer-size",
+		Usage: "set a buffer size for profiling channel",
+		Value: 100000,
+	}
+	TargetBlockFlag = cli.Uint64Flag{
+		Name:    "target-block",
+		Aliases: []string{"block", "blk"},
+		Usage:   "target block ID",
+		Value:   0,
+	}
 )
 
 // Config represents execution configuration for replay command.
@@ -307,6 +366,7 @@ type Config struct {
 	Cache               int            // Cache for StateDb or Priming
 	ContinueOnFailure   bool           // continue validation when an error detected
 	ContractNumber      int64          // number of contracts to create
+	CompactDb           bool           // compact database after merging
 	CPUProfile          string         // pprof cpu profile output file name
 	Db                  string         // path to database
 	DbTmp               string         // path to temporary database
@@ -341,8 +401,10 @@ type Config struct {
 	AidaDb              string         // directory to profiling database containing substate, update, delete accounts data
 	StateValidationMode ValidationMode // state validation mode
 	UpdateDb            string         // update-set directory
+	Output              string         // output directory for aida-db patches or path to events.json file in stochastic generation
 	SnapshotDepth       int            // depth of snapshot history
 	SubstateDb          string         // substate directory
+	OperaDatadir        string         // source opera directory
 	ValidateTxState     bool           // validate stateDB before and after transaction
 	ValidateWorldState  bool           // validate stateDB before and after replay block range
 	ValuesNumber        int64          // number of values to generate
@@ -352,6 +414,17 @@ type Config struct {
 	TraceFile           string         // name of trace file
 	Trace               bool           // trace flag
 	LogLevel            string         // level of the logging of the app action
+	SourceTableName     string         // represents the name of a source DB table
+	TargetDb            string         // represents the path of a target DB
+	TrieRootHash        string         // represents a hash of a state trie root to be decoded
+	IncludeStorage      bool           // represents a flag for contract storage inclusion in an operation
+	ProfileEVMCall      bool           // enable profiling for EVM call
+	MicroProfiling      bool           // enable micro-profiling of EVM
+	BasicBlockProfiling bool           // enable profiling of basic block
+	OnlySuccessful      bool           // only runs transactions that have been successful
+	ProfilingDbName     string         // set a database name for storing micro-profiling results
+	ChannelBufferSize   int            // set a buffer size for profiling channel
+	TargetBlock         uint64         // represents the ID of target block to be reached by state evolve process or in dump state
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.
@@ -460,6 +533,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		DbLogging:           ctx.Bool(StateDbLoggingFlag.Name),
 		DeletionDb:          ctx.Path(DeletionDbFlag.Name),
 		DeleteSourceDbs:     ctx.Bool(DeleteSourceDbsFlag.Name),
+		CompactDb:           ctx.Bool(CompactDbFlag.Name),
 		HasDeletedAccounts:  true,
 		KeepDb:              ctx.Bool(KeepDbFlag.Name),
 		KeysNumber:          ctx.Int64(KeysNumberFlag.Name),
@@ -480,8 +554,10 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		SnapshotDepth:       ctx.Int(SnapshotDepthFlag.Name),
 		StateDbSrc:          ctx.Path(StateDbSrcFlag.Name),
 		AidaDb:              ctx.Path(AidaDbFlag.Name),
+		Output:              ctx.Path(OutputFlag.Name),
 		StateValidationMode: EqualityCheck,
 		UpdateDb:            ctx.Path(UpdateDbFlag.Name),
+		OperaDatadir:        ctx.Path(OperaDatadirFlag.Name),
 		SubstateDb:          ctx.Path(substate.SubstateDirFlag.Name),
 		ValuesNumber:        ctx.Int64(ValuesNumberFlag.Name),
 		ValidateTxState:     validateTxState,
@@ -492,6 +568,17 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		TraceFile:           ctx.Path(TraceFileFlag.Name),
 		Trace:               ctx.Bool(TraceFlag.Name),
 		LogLevel:            ctx.String(LogLevelFlag.Name),
+		SourceTableName:     ctx.String(SourceTableNameFlag.Name),
+		TargetDb:            ctx.Path(TargetDbFlag.Name),
+		TrieRootHash:        ctx.String(TrieRootHashFlag.Name),
+		IncludeStorage:      ctx.Bool(IncludeStorageFlag.Name),
+		ProfileEVMCall:      ctx.Bool(ProfileEVMCallFlag.Name),
+		MicroProfiling:      ctx.Bool(MicroProfilingFlag.Name),
+		BasicBlockProfiling: ctx.Bool(BasicBlockProfilingFlag.Name),
+		OnlySuccessful:      ctx.Bool(OnlySuccessfulFlag.Name),
+		ProfilingDbName:     ctx.String(ProfilingDbNameFlag.Name),
+		ChannelBufferSize:   ctx.Int(ChannelBufferSizeFlag.Name),
+		TargetBlock:         ctx.Uint64(TargetBlockFlag.Name),
 	}
 	if cfg.ChainID == 0 {
 		cfg.ChainID = ChainIDFlag.Value

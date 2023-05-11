@@ -102,7 +102,6 @@ func stochasticRecordAction(ctx *cli.Context) error {
 			eventRegistry.RegisterOp(stochastic.BeginBlockID)
 			oldBlock = tx.Block
 		}
-		eventRegistry.RegisterOp(stochastic.BeginTransactionID)
 
 		var statedb state.StateDB
 		statedb = state.MakeGethInMemoryStateDB(&tx.Substate.InputAlloc, tx.Block)
@@ -111,7 +110,6 @@ func stochasticRecordAction(ctx *cli.Context) error {
 			return err
 		}
 
-		eventRegistry.RegisterOp(stochastic.EndTransactionID)
 		if !cfg.Quiet {
 			// report progress
 			sec = time.Since(start).Seconds()
@@ -134,11 +132,10 @@ func stochasticRecordAction(ctx *cli.Context) error {
 
 	// writing event registry
 	fmt.Printf("stochastic record: write events file ...\n")
-	outputFileName := ctx.String(utils.OutputFlag.Name)
-	if outputFileName == "" {
-		outputFileName = "./events.json"
+	if cfg.Output == "" {
+		cfg.Output = "./events.json"
 	}
-	WriteEvents(&eventRegistry, outputFileName)
+	WriteEvents(&eventRegistry, cfg.Output)
 
 	return err
 }
