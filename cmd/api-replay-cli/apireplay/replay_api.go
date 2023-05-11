@@ -41,11 +41,7 @@ func ReplayAPI(ctx *cli.Context) error {
 		return err
 	}
 
-	db, err = utils.MakeStateDB(cfg.StateDbSrc, cfg, dbInfo.RootHash, true)
-	if err != nil {
-		return err
-	}
-
+	// Enable tracing if debug flag is set
 	if cfg.Trace {
 		rCtx := traceCtx.NewRecord(cfg.TraceFile)
 		defer rCtx.Close()

@@ -15,7 +15,8 @@ import (
 )
 
 const (
-	bufferSize = 100
+	bufferSize        = 3000
+	counterBufferSize = 2400
 )
 
 // Controller controls and looks after all threads within the api-replay package
@@ -104,29 +105,30 @@ func (r *Controller) Stop() {
 	r.stopExecutors()
 	r.stopCounter()
 
-	r.readerWg.Wait()
 	r.comparatorsWg.Wait()
 	r.executorsWg.Wait()
 	r.counterWg.Wait()
-	r.log.Notice("all services has been stopped")
+	r.readerWg.Wait()
+	r.log.Notice("All services has been stopped")
 
 	r.logProfiling()
 }
 
 // startExecutors and their loops
 func (r *Controller) startExecutors() {
-	for i, e := range r.Executors {
-		r.log.Infof("starting executor #%v", i+1)
+	r.log.Infof("Starting %v executors", len(r.Executors))
+	for _, e := range r.Executors {
 		e.Start()
-
+		r.executorsWg.Add(1)
 	}
 }
 
 // startComparators and their loops
 func (r *Controller) startComparators() {
-	for i, c := range r.Comparators {
-		r.log.Infof("starting comparator #%v", i+1)
+	r.log.Infof("Starting %v comparators", len(r.Comparators))
+	for _, c := range r.Comparators {
 		c.Start()
+		r.comparatorsWg.Add(1)
 	}
 }
 
@@ -136,7 +138,7 @@ func (r *Controller) stopCounter() {
 	case <-r.counterClosed:
 		return
 	default:
-		r.log.Info("stopping counter")
+		r.log.Info("Stopping counter")
 		close(r.counterClosed)
 	}
 
@@ -148,7 +150,7 @@ func (r *Controller) stopReader() {
 	case <-r.readerClosed:
 		return
 	default:
-		r.log.Info("stopping reader")
+		r.log.Info("Stopping reader")
 		close(r.readerClosed)
 	}
 
@@ -160,7 +162,7 @@ func (r *Controller) stopExecutors() {
 	case <-r.executorsClosed:
 		return
 	default:
-		r.log.Info("stopping executors")
+		r.log.Info("Stopping executors")
 		close(r.executorsClosed)
 	}
 
@@ -173,7 +175,7 @@ func (r *Controller) stopComparators() {
 	case <-r.comparatorsClosed:
 		return
 	default:
-		r.log.Info("stopping comparators")
+		r.log.Info("Stopping comparators")
 		close(r.comparatorsClosed)
 	}
 
@@ -182,16 +184,12 @@ func (r *Controller) stopComparators() {
 // Wait until all wgs are done
 func (r *Controller) Wait() {
 	r.readerWg.Wait()
-	r.log.Info("reader done")
 
 	r.executorsWg.Wait()
-	r.log.Info("executors done")
 
 	r.comparatorsWg.Wait()
-	r.log.Info("comparators done")
 
 	r.counterWg.Wait()
-	r.log.Info("counter done")
 }
 
 // control looks for ctx.Done, if it triggers, Controller stops all the services
@@ -203,6 +201,12 @@ func (r *Controller) control() {
 			r.log.Errorf("ctx err: %v", r.ctx.Err())
 			return
 		case <-r.failure:
+			r.Stop()
+			return
+		case <-r.readerClosed:
+			r.Stop()
+			return
+		case <-r.counterClosed:
 			r.Stop()
 			return
 		}
@@ -225,14 +229,21 @@ func (r *Controller) logProfiling() {
 
 // createExecutors creates number of Executors defined by the flag WorkersFlag
 func createExecutors(cfg *utils.Config, db state.StateDB, ctx *cli.Context, chainCfg *params.ChainConfig, input chan *iterator.RequestWithResponse, closed chan any, wg *sync.WaitGroup) ([]*ReplayExecutor, chan *OutData, chan requestLog) {
+	var executors int
+
 	log.Infof("creating %v executors", cfg.Workers)
 
 	output := make(chan *OutData, bufferSize)
 
-	executors := cfg.Workers
+	// do we want a single-thread replay
+	if cfg.Workers == 1 {
+		executors = 1
+	} else {
+		executors = cfg.Workers / 2
+	}
 
 	e := make([]*ReplayExecutor, executors)
-	counterInput := make(chan requestLog)
+	counterInput := make(chan requestLog, counterBufferSize)
 	for i := 0; i < executors; i++ {
 		e[i] = newExecutor(cfg.First, cfg.Last, db, output, chainCfg, input, cfg.VmImpl, wg, closed, utils.NewLogger(cfg.LogLevel, fmt.Sprintf("Executor #%v", i)), counterInput)
 	}

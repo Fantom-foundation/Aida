@@ -10,6 +10,7 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/op/go-logging"
 )
 
 // MakeShadowStateDB creates a StateDB instance bundeling two other instances and running each
@@ -29,6 +30,7 @@ type shadowStateDB struct {
 	shadow    StateDB
 	snapshots []snapshotPair
 	err       error
+	log       *logging.Logger
 }
 
 type snapshotPair struct {
@@ -254,7 +256,13 @@ func (s *shadowStateDB) GetArchiveState(block uint64) (StateDB, error) {
 	if shadow, err = s.shadow.GetArchiveState(block); err != nil {
 		return nil, err
 	}
-	return MakeShadowStateDB(prime, shadow), err
+	return &shadowStateDB{
+		prime:     prime,
+		shadow:    shadow,
+		snapshots: []snapshotPair{},
+		err:       nil,
+		log:       s.log,
+	}, nil
 }
 
 type stringStringer struct {
@@ -342,7 +350,7 @@ func (s *shadowStateDB) getBool(opName string, op func(s StateDB) bool, args ...
 	resP := op(s.prime)
 	resS := op(s.shadow)
 	if resP != resS {
-		logIssue(opName, resP, resS, args)
+		s.logIssue(opName, resP, resS, args)
 		s.err = fmt.Errorf("%v diverged from shadow DB.", getOpcodeString(opName, args))
 	}
 	return resP
@@ -352,7 +360,7 @@ func (s *shadowStateDB) getBoolBool(opName string, op func(s StateDB) (bool, boo
 	resP1, resP2 := op(s.prime)
 	resS1, resS2 := op(s.shadow)
 	if resP1 != resS1 || resP2 != resS2 {
-		logIssue(opName, fmt.Sprintf("(%v,%v)", resP1, resP2), fmt.Sprintf("(%v,%v)", resS1, resS2), args)
+		s.logIssue(opName, fmt.Sprintf("(%v,%v)", resP1, resP2), fmt.Sprintf("(%v,%v)", resS1, resS2), args)
 		s.err = fmt.Errorf("%v diverged from shadow DB.", getOpcodeString(opName, args))
 	}
 	return resP1, resP2
@@ -362,7 +370,7 @@ func (s *shadowStateDB) getInt(opName string, op func(s StateDB) int, args ...an
 	resP := op(s.prime)
 	resS := op(s.shadow)
 	if resP != resS {
-		logIssue(opName, resP, resS, args)
+		s.logIssue(opName, resP, resS, args)
 		s.err = fmt.Errorf("%v diverged from shadow DB.", getOpcodeString(opName, args))
 	}
 	return resP
@@ -372,7 +380,7 @@ func (s *shadowStateDB) getUint64(opName string, op func(s StateDB) uint64, args
 	resP := op(s.prime)
 	resS := op(s.shadow)
 	if resP != resS {
-		logIssue(opName, resP, resS, args)
+		s.logIssue(opName, resP, resS, args)
 		s.err = fmt.Errorf("%v diverged from shadow DB.", getOpcodeString(opName, args))
 	}
 	return resP
@@ -382,7 +390,7 @@ func (s *shadowStateDB) getHash(opName string, op func(s StateDB) common.Hash, a
 	resP := op(s.prime)
 	resS := op(s.shadow)
 	if resP != resS {
-		logIssue(opName, resP, resS, args)
+		s.logIssue(opName, resP, resS, args)
 		s.err = fmt.Errorf("%v diverged from shadow DB.", getOpcodeString(opName, args))
 	}
 	return resP
@@ -392,7 +400,7 @@ func (s *shadowStateDB) getBigInt(opName string, op func(s StateDB) *big.Int, ar
 	resP := op(s.prime)
 	resS := op(s.shadow)
 	if resP.Cmp(resS) != 0 {
-		logIssue(opName, resP, resS, args)
+		s.logIssue(opName, resP, resS, args)
 		s.err = fmt.Errorf("%v diverged from shadow DB.", getOpcodeString(opName, args))
 	}
 	return resP
@@ -402,7 +410,7 @@ func (s *shadowStateDB) getBytes(opName string, op func(s StateDB) []byte, args 
 	resP := op(s.prime)
 	resS := op(s.shadow)
 	if bytes.Compare(resP, resS) != 0 {
-		logIssue(opName, resP, resS, args)
+		s.logIssue(opName, resP, resS, args)
 		s.err = fmt.Errorf("%v diverged from shadow DB.", getOpcodeString(opName, args))
 	}
 	return resP
@@ -412,7 +420,7 @@ func (s *shadowStateDB) getError(opName string, op func(s StateDB) error, args .
 	resP := op(s.prime)
 	resS := op(s.shadow)
 	if resP != resS {
-		logIssue(opName, resP, resS, args)
+		s.logIssue(opName, resP, resS, args)
 		s.err = fmt.Errorf("%v diverged from shadow DB.", getOpcodeString(opName, args))
 	}
 	return resP
@@ -428,8 +436,9 @@ func getOpcodeString(opName string, args ...any) string {
 	return opcode.String()
 }
 
-func logIssue(opName string, prime, shadow any, args ...any) {
-	log.Printf("Diff for %v\n", getOpcodeString(opName, args))
-	log.Printf("\tPrimary: %v\n", prime)
-	log.Printf("\tShadow:  %v\n", shadow)
+func (s *shadowStateDB) logIssue(opName string, prime, shadow any, args ...any) {
+	log.Printf("Diff for %v\n"+
+		"\tPrimary: %v \n"+
+		"\tShadow: %v", getOpcodeString(opName, args), prime, shadow)
+
 }
