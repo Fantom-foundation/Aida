@@ -4,8 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io/fs"
-	"math/rand"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -13,7 +11,6 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/google/martian/log"
-	"github.com/op/go-logging"
 )
 
 const (
