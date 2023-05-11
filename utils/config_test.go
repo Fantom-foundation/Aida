@@ -17,7 +17,7 @@ const testNetChainId int = 4002
 
 func prepareMockCliContext() *cli.Context {
 	flagSet := flag.NewFlagSet("utils_config_test", 0)
-	flagSet.Uint64(NumberOfBlocksFlag.Name, 1000, "Number of blocks")
+	flagSet.Uint64(SyncPeriodLengthFlag.Name, 1000, "Number of blocks")
 	flagSet.Bool(ValidateFlag.Name, true, "enables validation")
 	flagSet.Bool(ValidateTxStateFlag.Name, true, "enables transaction state validation")
 	flagSet.Bool(ContinueOnFailureFlag.Name, true, "continue execute after validation failure detected")

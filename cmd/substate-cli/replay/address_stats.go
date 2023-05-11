@@ -15,7 +15,7 @@ var GetAddressStatsCommand = cli.Command{
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		&substate.WorkersFlag,
-		&substate.SubstateDirFlag,
+		&substate.SubstateFlag,
 		&utils.ChainIDFlag,
 	},
 	Description: `
