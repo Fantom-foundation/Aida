@@ -3,10 +3,10 @@ package utils
 import (
 	"bytes"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/state"
-	"github.com/ethereum/go-ethereum/common"
 )
 
 // TestStatedb_PrimeStateDB tests priming fresh state DB with randomized world state data
@@ -17,7 +17,8 @@ func TestPrime_PrimeStateDB(t *testing.T) {
 			cfg := makeTestConfig(tc)
 
 			// Initialization of state DB
-			sDB, err := MakeStateDB(t.TempDir(), cfg, common.Hash{}, false)
+			sDB, sDbDir, err := PrepareStateDB(cfg)
+			defer os.RemoveAll(sDbDir)
 
 			if err != nil {
 				t.Fatalf("failed to create state DB: %v", err)
@@ -36,7 +37,7 @@ func TestPrime_PrimeStateDB(t *testing.T) {
 
 			pc := NewPrimeContext(cfg, log)
 			// Priming state DB
-			pc.PrimeStateDB(ws, sDB, 0)
+			pc.PrimeStateDB(ws, sDB)
 
 			// Checks if state DB was primed correctly
 			for key, account := range ws {

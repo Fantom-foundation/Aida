@@ -342,9 +342,9 @@ var (
 		Usage: "set a buffer size for profiling channel",
 		Value: 100000,
 	}
-	CacheSizeFlag = cli.Uint64Flag{
-		Name:  "cache",
-		Usage: "cache size for update set in MiB",
+	UpdateBufferSizeFlag = cli.Uint64Flag{
+		Name:  "update-buffer-size",
+		Usage: "buffer size for holding update set in MiB",
 		Value: math.MaxUint64,
 	}
 	TargetBlockFlag = cli.Uint64Flag{
@@ -431,7 +431,7 @@ type Config struct {
 	ProfilingDbName     string         // set a database name for storing micro-profiling results
 	ChannelBufferSize   int            // set a buffer size for profiling channel
 	TargetBlock         uint64         // represents the ID of target block to be reached by state evolve process or in dump state
-	CacheSize           uint64         // cache size in Bytes
+	UpdateBufferSize    uint64         // cache size in Bytes
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.
@@ -586,7 +586,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		ProfilingDbName:     ctx.String(ProfilingDbNameFlag.Name),
 		ChannelBufferSize:   ctx.Int(ChannelBufferSizeFlag.Name),
 		TargetBlock:         ctx.Uint64(TargetBlockFlag.Name),
-		CacheSize:           ctx.Uint64(CacheSizeFlag.Name) << 20, // convert from MiB to B
+		UpdateBufferSize:    ctx.Uint64(UpdateBufferSizeFlag.Name) << 20, // convert from MiB to B
 	}
 	if cfg.ChainID == 0 {
 		cfg.ChainID = ChainIDFlag.Value

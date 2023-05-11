@@ -52,23 +52,25 @@ func (pt *ProgressTracker) PrintProgress() {
 	}
 }
 
+// PrimeContext structure keeps context used over iterations of priming
 type PrimeContext struct {
 	cfg   *Config
 	log   *logging.Logger
+	block uint64
 	exist map[common.Address]bool // account exists in db
 }
 
 func NewPrimeContext(cfg *Config, log *logging.Logger) *PrimeContext {
-	return &PrimeContext{cfg: cfg, log: log, exist: make(map[common.Address]bool)}
+	return &PrimeContext{cfg: cfg, log: log, block: 0, exist: make(map[common.Address]bool)}
 }
 
 // PrimeStateDB primes database with accounts from the world state.
-func (pc *PrimeContext) PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, block uint64) error {
+func (pc *PrimeContext) PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB) error {
 	numValues := 0 // number of storage values
 	for _, account := range ws {
 		numValues += len(account.Storage)
 	}
-	pc.log.Infof("\tLoading %d accounts with %d values ..\n", len(ws), numValues)
+	pc.log.Infof("\tLoading %d accounts with %d values ..", len(ws), numValues)
 
 	pt := NewProgressTracker(numValues, pc.log)
 	if pc.cfg.PrimeRandom {
@@ -76,11 +78,11 @@ func (pc *PrimeContext) PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB
 		if pc.cfg.PrimeThreshold == 0 {
 			pc.cfg.PrimeThreshold = len(ws)
 		}
-		if err := pc.PrimeStateDBRandom(ws, db, block, pt); err != nil {
+		if err := pc.PrimeStateDBRandom(ws, db, pt); err != nil {
 			return fmt.Errorf("failed to prime StateDB: %v", err)
 		}
 	} else {
-		load := db.StartBulkLoad(block)
+		load := db.StartBulkLoad(pc.block)
 		step := 0
 		for addr, account := range ws {
 			pc.primeOneAccount(addr, account, load, pt)
@@ -90,16 +92,17 @@ func (pc *PrimeContext) PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB
 				if err := load.Close(); err != nil {
 					return fmt.Errorf("failed to prime StateDB: %v", err)
 				}
-				block++
+				pc.block++
 				step = 0
-				load = db.StartBulkLoad(block)
+				load = db.StartBulkLoad(pc.block)
 			}
 		}
 		if err := load.Close(); err != nil {
 			return fmt.Errorf("failed to prime StateDB: %v", err)
 		}
+		pc.block++
 	}
-	pc.log.Infof("\t\tPriming completed ...\n")
+	pc.log.Infof("\t\tPriming completed ...")
 	return nil
 }
 
@@ -120,7 +123,7 @@ func (pc *PrimeContext) primeOneAccount(addr common.Address, account *substate.S
 }
 
 // PrimeStateDBRandom primes database with accounts from the world state in random order.
-func (pc *PrimeContext) PrimeStateDBRandom(ws substate.SubstateAlloc, db state.StateDB, block uint64, pt *ProgressTracker) error {
+func (pc *PrimeContext) PrimeStateDBRandom(ws substate.SubstateAlloc, db state.StateDB, pt *ProgressTracker) error {
 	contracts := make([]string, 0, len(ws))
 	for addr := range ws {
 		contracts = append(contracts, addr.Hex())
@@ -133,7 +136,7 @@ func (pc *PrimeContext) PrimeStateDBRandom(ws substate.SubstateAlloc, db state.S
 		contracts[i], contracts[j] = contracts[j], contracts[i]
 	})
 
-	load := db.StartBulkLoad(block)
+	load := db.StartBulkLoad(pc.block)
 	step := 0
 	for _, c := range contracts {
 		addr := common.HexToAddress(c)
@@ -145,22 +148,23 @@ func (pc *PrimeContext) PrimeStateDBRandom(ws substate.SubstateAlloc, db state.S
 			if err := load.Close(); err != nil {
 				return err
 			}
-			block++
+			pc.block++
 			step = 0
-			load = db.StartBulkLoad(block)
+			load = db.StartBulkLoad(pc.block)
 		}
 
 	}
 	err := load.Close()
+	pc.block++
 	return err
 }
 
 // SuicideAccounts clears storage of all input accounts.
-func (pc *PrimeContext) SuicideAccounts(db state.StateDB, accounts []common.Address, block uint64) {
+func (pc *PrimeContext) SuicideAccounts(db state.StateDB, accounts []common.Address) {
 	pc.log.Info("Remove suicided accounts from stateDB.")
 	count := 0
 	db.BeginSyncPeriod(0)
-	db.BeginBlock(block)
+	db.BeginBlock(pc.block)
 	db.BeginTransaction(0)
 	for _, addr := range accounts {
 		if db.Exist(addr) {
@@ -172,6 +176,7 @@ func (pc *PrimeContext) SuicideAccounts(db state.StateDB, accounts []common.Addr
 	db.EndTransaction()
 	db.EndBlock()
 	db.EndSyncPeriod()
+	pc.block++
 	pc.log.Infof("\t %v accounts were removed.", count)
 }
 
@@ -181,14 +186,13 @@ func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error 
 	pc := NewPrimeContext(cfg, log)
 
 	var (
-		totalSize  uint64
-		maxSize    uint64 = cfg.CacheSize
-		blockPos   uint64 = FirstSubstateBlock - 1
-		primeBlock uint64
+		totalSize uint64
+		maxSize   uint64 = cfg.UpdateBufferSize
+		blockPos  uint64 = FirstSubstateBlock - 1
 	)
 
 	if target < blockPos {
-		return fmt.Errorf("the target block, %v, is earlier than the initial world state block, %v. The world state is not loaded.\n", target, blockPos)
+		return fmt.Errorf("the target block, %v, is earlier than the initial world state block, %v. The world state is not loaded.", target, blockPos)
 	}
 	// load pre-computed update-set from update-set db
 	udb := substate.OpenUpdateDBReadOnly(cfg.UpdateDb)
@@ -207,11 +211,10 @@ func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error 
 		incrementalSize := update.EstimateIncrementalSize(*newSet.UpdateSet)
 		if totalSize+incrementalSize > maxSize {
 			log.Infof("\tPriming...")
-			if err := pc.PrimeStateDB(update, db, primeBlock); err != nil {
+			if err := pc.PrimeStateDB(update, db); err != nil {
 				return fmt.Errorf("failed to prime StateDB: %v", err)
 			}
 			totalSize = 0
-			primeBlock = newSet.Block
 			update = make(substate.SubstateAlloc)
 		}
 
@@ -221,18 +224,16 @@ func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error 
 		ClearAccountStorage(update, newSet.DeletedAccounts)
 		// if exists in DB, suicide
 		// TODO may aggregate list and delete only once before priming
-		pc.SuicideAccounts(db, newSet.DeletedAccounts, primeBlock)
-		primeBlock++
+		pc.SuicideAccounts(db, newSet.DeletedAccounts)
 
 		update.Merge(*newSet.UpdateSet)
 		totalSize += incrementalSize
 		log.Infof("\tMerge update set at block %v. New toal size %v MiB (+%v MiB)", newSet.Block, totalSize>>20, incrementalSize>>20)
 	}
 	// prime the remaining from updateset
-	if err := pc.PrimeStateDB(update, db, primeBlock); err != nil {
+	if err := pc.PrimeStateDB(update, db); err != nil {
 		return fmt.Errorf("failed to prime StateDB: %v", err)
 	}
-	primeBlock = blockPos - 1 //need at least 2 blocks for priming from substate
 	updateIter.Release()
 	update = make(substate.SubstateAlloc)
 
@@ -240,9 +241,8 @@ func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error 
 	if blockPos < target {
 		log.Infof("\tPriming from substate from block %v", blockPos)
 		update, deletedAccounts := generateUpdateSet(blockPos+1, target, cfg)
-		pc.SuicideAccounts(db, deletedAccounts, primeBlock)
-		primeBlock++
-		if err := pc.PrimeStateDB(update, db, primeBlock); err != nil {
+		pc.SuicideAccounts(db, deletedAccounts)
+		if err := pc.PrimeStateDB(update, db); err != nil {
 			return fmt.Errorf("failed to prime StateDB: %v", err)
 		}
 	}
