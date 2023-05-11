@@ -2,7 +2,7 @@ package apireplay
 
 import (
 	"context"
-	"path/filepath"
+	"fmt"
 
 	"github.com/Fantom-foundation/Aida/cmd/runvm-cli/runvm"
 	"github.com/Fantom-foundation/Aida/iterator"
@@ -17,12 +17,11 @@ import (
 
 func ReplayAPI(ctx *cli.Context) error {
 	var (
-		err    error
-		fr     *iterator.FileReader
-		cfg    *utils.Config
-		dbInfo utils.StateDbInfo
-		db     state.StateDB
-		stats  *operation.ProfileStats
+		err   error
+		fr    *iterator.FileReader
+		cfg   *utils.Config
+		db    state.StateDB
+		stats *operation.ProfileStats
 	)
 
 	cfg, err = utils.NewConfig(ctx, utils.BlockRangeArgs)
@@ -36,9 +35,9 @@ func ReplayAPI(ctx *cli.Context) error {
 	}
 
 	// create StateDB
-	dbInfo, err = utils.ReadStateDbInfo(filepath.Join(cfg.StateDbSrc, utils.DbInfoName))
+	db, _, err = utils.PrepareStateDB(cfg)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot prepare StateDb; %v", err)
 	}
 
 	// Enable tracing if debug flag is set
