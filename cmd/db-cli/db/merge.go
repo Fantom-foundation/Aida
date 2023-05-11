@@ -19,6 +19,7 @@ var MergeCommand = cli.Command{
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 		&utils.DeleteSourceDbsFlag,
+		&utils.CompactDbFlag,
 		&utils.LogLevelFlag,
 	},
 	Description: `
@@ -57,10 +58,19 @@ func Merge(cfg *utils.Config, sourceDbs []string) error {
 			return err
 		}
 		log.Noticef("Merging of %s finished", sourceDBPaths[i])
+		// close finished sourceDB
 		MustCloseDB(sourceDB)
 	}
 
-	// close databases
+	if cfg.CompactDb {
+		log.Noticef("Starting compaction")
+		err = targetDB.Compact(nil, nil)
+		if err != nil {
+			return err
+		}
+	}
+
+	// close target database
 	MustCloseDB(targetDB)
 
 	// delete source databases
