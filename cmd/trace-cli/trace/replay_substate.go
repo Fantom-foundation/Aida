@@ -71,6 +71,9 @@ func traceReplaySubstateTask(cfg *utils.Config, log *logging.Logger) error {
 	}
 	defer os.RemoveAll(stateDbDir)
 
+	// create prime context
+	pc := utils.NewPrimeContext(cfg, log)
+
 	var (
 		start        time.Time
 		sec          float64
@@ -111,7 +114,7 @@ func traceReplaySubstateTask(cfg *utils.Config, log *logging.Logger) error {
 		if cfg.DbImpl == "memory" {
 			db.PrepareSubstate(&tx.Substate.InputAlloc, tx.Block)
 		} else {
-			if err := utils.PrimeStateDB(tx.Substate.InputAlloc, db, 0, cfg, log); err != nil {
+			if err := pc.PrimeStateDB(tx.Substate.InputAlloc, db, 0); err != nil {
 				return err
 			}
 		}
@@ -181,7 +184,6 @@ func traceReplaySubstateTask(cfg *utils.Config, log *logging.Logger) error {
 func traceReplaySubstateAction(ctx *cli.Context) error {
 	substate.RecordReplay = true
 	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
-	cfg.PrimeForce = true
 	if err != nil {
 		return err
 	}
