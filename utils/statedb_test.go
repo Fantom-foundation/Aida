@@ -155,7 +155,7 @@ func makeTestConfig(testCase statedbTestCase) *Config {
 
 	if testCase.primeRandom {
 		cfg.PrimeThreshold = 0
-		cfg.PrimeSeed = int64(getRandom(1_000_000, 100_000_000))
+		cfg.RandomSeed = int64(getRandom(1_000_000, 100_000_000))
 	}
 
 	return cfg

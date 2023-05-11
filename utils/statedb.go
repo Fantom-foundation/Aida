@@ -164,7 +164,7 @@ func PrimeStateDBRandom(ws substate.SubstateAlloc, db state.BulkLoad, cfg *Confi
 
 	sort.Strings(contracts)
 	// shuffle contract order
-	rand.NewSource(cfg.PrimeSeed)
+	rand.NewSource(cfg.RandomSeed)
 	rand.Shuffle(len(contracts), func(i, j int) {
 		contracts[i], contracts[j] = contracts[j], contracts[i]
 	})

@@ -25,7 +25,7 @@ var TraceRecordCommand = cli.Command{
 		&utils.SyncPeriodLengthFlag,
 		&utils.QuietFlag,
 		&substate.WorkersFlag,
-		&substate.SubstateDirFlag,
+		&substate.SubstateFlag,
 		&utils.ChainIDFlag,
 		&utils.TraceFileFlag,
 		&utils.TraceDebugFlag,

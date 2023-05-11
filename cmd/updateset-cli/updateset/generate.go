@@ -21,7 +21,7 @@ var GenUpdateSetCommand = cli.Command{
 	Flags: []cli.Flag{
 		&utils.ChainIDFlag,
 		&utils.DeletionDbFlag,
-		&substate.SubstateDirFlag,
+		&substate.SubstateFlag,
 		&substate.WorkersFlag,
 		&utils.UpdateDbFlag,
 		&utils.ValidateFlag,

@@ -20,7 +20,7 @@ var RunVMApp = cli.App{
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		&substate.WorkersFlag,
-		&substate.SubstateDirFlag,
+		&substate.SubstateFlag,
 		&utils.ArchiveModeFlag,
 		&utils.ArchiveVariantFlag,
 		&utils.CarmenSchemaFlag,
@@ -34,7 +34,7 @@ var RunVMApp = cli.App{
 		&utils.MaxNumTransactionsFlag,
 		&utils.MemoryBreakdownFlag,
 		&utils.MemoryProfileFlag,
-		&utils.PrimeSeedFlag,
+		&utils.RandomSeedFlag,
 		&utils.PrimeThresholdFlag,
 		&utils.ProfileFlag,
 		&utils.RandomizePrimingFlag,

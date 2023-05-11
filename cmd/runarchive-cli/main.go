@@ -20,7 +20,7 @@ var RunArchiveApp = cli.App{
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		&substate.WorkersFlag,
-		&substate.SubstateDirFlag,
+		&substate.SubstateFlag,
 		&utils.ArchiveVariantFlag,
 		&utils.CarmenSchemaFlag,
 		&utils.CpuProfileFlag,
