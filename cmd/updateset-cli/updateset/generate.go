@@ -24,7 +24,7 @@ var GenUpdateSetCommand = cli.Command{
 		&substate.SubstateDirFlag,
 		&substate.WorkersFlag,
 		&utils.UpdateDbFlag,
-		&utils.UpdateCacheSizeFlag,
+		&utils.CacheSizeFlag,
 		&utils.ValidateFlag,
 		&utils.WorldStateFlag,
 		&utils.LogLevelFlag,
@@ -105,12 +105,12 @@ func GenUpdateSet(cfg *utils.Config, first uint64, interval uint64) error {
 	defer deletedAccountDB.Close()
 
 	var (
-		txCount       uint64                // transaction counter
-		curBlock      uint64                // current block
-		checkPoint    uint64                // block number of the next interval
-		isFirst       = true                // first block
-		estimatedSize uint64                // estimated size of current update set
-		maxSize       = cfg.UpdateCacheSize // recommanded size 700 MB
+		txCount       uint64          // transaction counter
+		curBlock      uint64          // current block
+		checkPoint    uint64          // block number of the next interval
+		isFirst       = true          // first block
+		estimatedSize uint64          // estimated size of current update set
+		maxSize       = cfg.CacheSize // recommanded size 700 MB
 	)
 
 	log.Noticef("Generate update sets from block %v to block %v", first, cfg.Last)

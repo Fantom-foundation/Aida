@@ -90,7 +90,6 @@ func makeTestConfig(testCase statedbTestCase) *Config {
 		ArchiveVariant: testCase.archiveVariant,
 		ArchiveMode:    testCase.archiveMode,
 		PrimeRandom:    testCase.primeRandom,
-		PrimeForce:     true,
 	}
 
 	if testCase.variant == "flat" {
@@ -264,8 +263,10 @@ func TestStatedb_DeleteDestroyedAccountsFromStateDB(t *testing.T) {
 
 			log := NewLogger("INFO", "TestStateDb")
 
+			// Create new prime context
+			pc := NewPrimeContext(cfg, log)
 			// Priming state DB with given world state
-			PrimeStateDB(ws, sDB, 0, cfg, log)
+			pc.PrimeStateDB(ws, sDB, 0)
 
 			// Call for removal of destroyed accounts from state DB
 			err = DeleteDestroyedAccountsFromStateDB(sDB, cfg, 5)
@@ -308,8 +309,10 @@ func TestStatedb_ValidateStateDB(t *testing.T) {
 
 			log := NewLogger("INFO", "TestStateDb")
 
+			// Create new prime context
+			pc := NewPrimeContext(cfg, log)
 			// Priming state DB with given world state
-			PrimeStateDB(ws, sDB, 0, cfg, log)
+			pc.PrimeStateDB(ws, sDB, 0)
 
 			// Call for state DB validation and subsequent check for error
 			err = ValidateStateDB(ws, sDB, false)
@@ -346,8 +349,10 @@ func TestStatedb_ValidateStateDBWithUpdate(t *testing.T) {
 
 			log := NewLogger("INFO", "TestStateDb")
 
+			// Create new prime context
+			pc := NewPrimeContext(cfg, log)
 			// Priming state DB with given world state
-			PrimeStateDB(ws, sDB, 0, cfg, log)
+			pc.PrimeStateDB(ws, sDB, 0)
 
 			// create new random address
 			addr := common.BytesToAddress(makeRandomByteSlice(t, 40))

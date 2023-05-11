@@ -331,7 +331,7 @@ func (l *gethBulkLoad) Close() error {
 	return err
 }
 
-// tireCommit commits changes to disk if archive node; otherwise, performs garbage collection.
+// trieCommit commits changes to disk if archive node; otherwise, performs garbage collection.
 func (s *gethStateDB) trieCommit() error {
 	triedb := s.evmState.TrieDB()
 	// If we're applying genesis or running an archive node, always flush

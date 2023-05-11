@@ -212,12 +212,20 @@ func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *Config, target ui
 	}
 	src := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
 	defer src.Close()
-	list, err := src.GetAccountsDestroyedInRange(0, target)
+	accounts, err := src.GetAccountsDestroyedInRange(0, target)
 	if err != nil {
 		return err
 	}
-	log.Noticef("Deleting %d accounts ...", len(list))
-	SuicideAccounts(db, list, target, log)
+	log.Noticef("Deleting %d accounts ...", len(accounts))
+	db.BeginSyncPeriod(0)
+	db.BeginBlock(target)
+	db.BeginTransaction(0)
+	for _, addr := range accounts {
+		db.Suicide(addr)
+	}
+	db.EndTransaction()
+	db.EndBlock()
+	db.EndSyncPeriod()
 	return nil
 }
 

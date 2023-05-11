@@ -34,8 +34,9 @@ func TestPrime_PrimeStateDB(t *testing.T) {
 			// Generating randomized world state
 			ws, _ := makeWorldState(t)
 
+			pc := NewPrimeContext(cfg, log)
 			// Priming state DB
-			PrimeStateDB(ws, sDB, 0, cfg, log)
+			pc.PrimeStateDB(ws, sDB, 0)
 
 			// Checks if state DB was primed correctly
 			for key, account := range ws {

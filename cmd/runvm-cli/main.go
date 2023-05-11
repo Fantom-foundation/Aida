@@ -57,6 +57,7 @@ var RunVMApp = cli.App{
 		// Priming
 		&utils.RandomizePrimingFlag,
 		&utils.SkipPrimingFlag,
+		&utils.CacheSizeFlag,
 
 		// Utils
 		&substate.WorkersFlag,

@@ -342,8 +342,8 @@ var (
 		Usage: "set a buffer size for profiling channel",
 		Value: 100000,
 	}
-	UpdateCacheSizeFlag = cli.Uint64Flag{
-		Name:  "update-cache",
+	CacheSizeFlag = cli.Uint64Flag{
+		Name:  "cache",
 		Usage: "cache size for update set in MiB",
 		Value: math.MaxUint64,
 	}
@@ -352,11 +352,6 @@ var (
 		Aliases: []string{"block", "blk"},
 		Usage:   "target block ID",
 		Value:   0,
-	}
-	PrimeForceFlag = cli.BoolFlag{
-		Name:  "prime-force",
-		Usage: "force create account when priming",
-		Value: false,
 	}
 )
 
@@ -399,7 +394,6 @@ type Config struct {
 	MemoryBreakdown     bool           // enable printing of memory breakdown
 	MemoryProfile       string         // capture the memory heap profile into the file
 	TransactionLength   uint64         // determines indirectly the length of a transaction
-	PrimeForce          bool           // force account creation. Needed by trace replay-substate
 	PrimeRandom         bool           // enable randomized priming
 	PrimeSeed           int64          // set random seed
 	PrimeThreshold      int            // set account threshold before commit
@@ -437,7 +431,7 @@ type Config struct {
 	ProfilingDbName     string         // set a database name for storing micro-profiling results
 	ChannelBufferSize   int            // set a buffer size for profiling channel
 	TargetBlock         uint64         // represents the ID of target block to be reached by state evolve process or in dump state
-	UpdateCacheSize     uint64         // update cache size in Bytes
+	CacheSize           uint64         // cache size in Bytes
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.
@@ -555,7 +549,6 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		MemoryBreakdown:     ctx.Bool(MemoryBreakdownFlag.Name),
 		MemoryProfile:       ctx.String(MemoryProfileFlag.Name),
 		TransactionLength:   ctx.Uint64(TransactionLengthFlag.Name),
-		PrimeForce:          ctx.Bool(PrimeForceFlag.Name),
 		PrimeRandom:         ctx.Bool(RandomizePrimingFlag.Name),
 		PrimeSeed:           ctx.Int64(PrimeSeedFlag.Name),
 		RandomSeed:          ctx.Int64(RandomSeedFlag.Name),
@@ -593,7 +586,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		ProfilingDbName:     ctx.String(ProfilingDbNameFlag.Name),
 		ChannelBufferSize:   ctx.Int(ChannelBufferSizeFlag.Name),
 		TargetBlock:         ctx.Uint64(TargetBlockFlag.Name),
-		UpdateCacheSize:     ctx.Uint64(UpdateCacheSizeFlag.Name) << 20, // convert from MiB to B
+		CacheSize:           ctx.Uint64(CacheSizeFlag.Name) << 20, // convert from MiB to B
 	}
 	if cfg.ChainID == 0 {
 		cfg.ChainID = ChainIDFlag.Value
