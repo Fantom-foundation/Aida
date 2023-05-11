@@ -104,4 +104,5 @@ replace github.com/Fantom-foundation/Carmen/go => ./carmen/go
 // The Tosca project is also integrated as a git-submodule for the same reasons as
 // Carmen. Furthermore, the EVMC library, which is part of Tosca, needs to be used.
 replace github.com/Fantom-foundation/Tosca => ./tosca
+
 replace github.com/ethereum/evmc/v10 => ./tosca/third_party/evmc

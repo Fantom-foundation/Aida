@@ -166,6 +166,11 @@ var (
 		Name:  "db-logging",
 		Usage: "enable logging of all DB operations",
 	}
+	ShadowDb = cli.BoolFlag{
+		Name:  "shadow-db",
+		Usage: "use this flag when using an existing ShadowDb",
+		Value: false,
+	}
 	ShadowDbImplementationFlag = cli.StringFlag{
 		Name:  "db-shadow-impl",
 		Usage: "select state DB implementation to shadow the prime DB implementation",
@@ -389,6 +394,7 @@ type Config struct {
 	Profile             bool           // enable micro profiling
 	RandomSeed          int64          // set random seed for stochastic testing (TODO: Perhaps combine with PrimeSeed??)
 	SkipPriming         bool           // skip priming of the state DB
+	ShadowDb            bool           // defines we want to open an existing db as shadow
 	ShadowImpl          string         // implementation of the shadow DB to use, empty if disabled
 	ShadowVariant       string         // database variant of the shadow DB to be used
 	StateDbSrc          string         // directory to load an existing State DB data
@@ -542,6 +548,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		PrimeThreshold:      ctx.Int(PrimeThresholdFlag.Name),
 		Profile:             ctx.Bool(ProfileFlag.Name),
 		SkipPriming:         ctx.Bool(SkipPrimingFlag.Name),
+		ShadowDb:            ctx.Bool(ShadowDb.Name),
 		ShadowImpl:          ctx.String(ShadowDbImplementationFlag.Name),
 		ShadowVariant:       ctx.String(ShadowDbVariantFlag.Name),
 		SnapshotDepth:       ctx.Int(SnapshotDepthFlag.Name),
@@ -611,7 +618,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 				log.Infof("%s: %v, DB variant: %v", prefix, impl, variant)
 			}
 		}
-		if cfg.ShadowImpl == "" {
+		if !cfg.ShadowDb {
 			logDbMode("Storage system", cfg.DbImpl, cfg.DbVariant)
 		} else {
 			logDbMode("Prime storage system", cfg.DbImpl, cfg.DbVariant)
@@ -645,7 +652,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	if cfg.ValidateTxState {
 		log.Warning("Validation enabled, reducing Tx throughput")
 	}
-	if cfg.ShadowImpl != "" {
+	if cfg.ShadowDb {
 		log.Warning("DB shadowing enabled, reducing Tx throughput and increasing memory and storage usage")
 	}
 	if cfg.DbLogging {
@@ -655,10 +662,10 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		log.Warning("Deleted-account-dir is not provided or does not exist")
 		cfg.HasDeletedAccounts = false
 	}
-	if cfg.KeepDb && cfg.ShadowImpl != "" {
-		log.Warning("Keeping persistent stateDB with a shadow db is not supported yet")
-		cfg.KeepDb = false
-	}
+	//if cfg.KeepDb && cfg.ShadowDb {
+	//	log.Warning("Keeping persistent stateDB with a shadow db is not supported yet")
+	//	cfg.KeepDb = false
+	//}
 	if cfg.KeepDb && strings.Contains(cfg.DbVariant, "memory") {
 		log.Warning("Unable to keep in-memory stateDB")
 		cfg.KeepDb = false

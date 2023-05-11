@@ -13,25 +13,27 @@ import (
 // Since each ReplayExecutor runs in own thread, need another thread for counting how many requests we executed,
 // so we do not slow down the execution process with mutex
 type requestCounter struct {
-	closed  chan any
-	ticker  *time.Ticker
-	input   chan requestLog
-	start   time.Time
-	builder *strings.Builder
-	total   uint64
-	log     *logging.Logger
-	wg      *sync.WaitGroup
-	stats   map[reqLogType]map[string]uint64
+	closed        chan any
+	ticker        *time.Ticker
+	input         chan requestLog
+	start         time.Time
+	builder       *strings.Builder
+	total         uint64
+	previousTotal uint64
+	log           *logging.Logger
+	wg            *sync.WaitGroup
+	stats         map[reqLogType]map[string]uint64
 }
 
 // reqLogType represents what happened to the request
 type reqLogType byte
 
 const (
-	executed                reqLogType         = iota // the request got executed successfully
-	outOfStateDBRange                                 // the request was not executed due to not being in StateDBs block range
-	noSubstateForGivenBlock                           // the request was not executed due to no having substate for given block
-	statisticsLogFrequency  = 10 * time.Second        // how often will the app log statistics info
+	executed                reqLogType = iota // the request got executed successfully
+	outOfStateDBRange                         // the request was not executed due to not being in StateDBs block range
+	noSubstateForGivenBlock                   // the request was not executed due to no having substate for given block
+	noMatchingData
+	statisticsLogFrequency = 10 * time.Second // how often will the app log statistics info
 )
 
 // todo why not executed - statedb out of range; no substate..
@@ -57,6 +59,7 @@ func newCounter(closed chan any, input chan requestLog, log *logging.Logger, wg 
 
 // Start requestCounter
 func (c *requestCounter) Start() {
+	c.log.Info("starting counter")
 	c.wg.Add(1)
 	go c.count()
 }
@@ -69,8 +72,8 @@ func (c *requestCounter) count() {
 	)
 
 	defer func() {
-		c.logStats()
 		c.wg.Done()
+		c.logStats()
 	}()
 
 	c.start = time.Now()
@@ -80,7 +83,13 @@ func (c *requestCounter) count() {
 		case <-c.closed:
 			return
 		case <-c.ticker.C:
+			if c.previousTotal == c.total {
+				close(c.closed)
+				return
+			}
+
 			c.logStats()
+			c.previousTotal = c.total
 		case req, ok = <-c.input:
 			if !ok {
 				return
@@ -101,37 +110,16 @@ func (c *requestCounter) logStats() {
 
 	// how long has replayer been running
 	elapsed := time.Since(c.start)
-	c.builder.WriteString(fmt.Sprintf("Elapsed time: %v\n\n", elapsed))
+	c.builder.WriteString(fmt.Sprintf("Elapsed time: %v\n\n", elapsed.Round(1*time.Second)))
+
+	c.addAverageSpeed(elapsed)
 
 	// total requests
-	c.builder.WriteString(fmt.Sprintf("\tTotal read requests: %v\n\n", c.total))
+	c.addExecuted()
 
-	var exc uint64
-	for m, count := range c.stats[executed] {
-		c.builder.WriteString(fmt.Sprintf("\t%v: %v\n", m, count))
-		// executed requests
-		exc += count
-	}
+	c.addOutOfDbRange()
 
-	c.builder.WriteString(fmt.Sprintf("\n\tTotal executed requests: %v\n", exc))
-
-	var outOfRange uint64
-	for m, count := range c.stats[outOfStateDBRange] {
-		c.builder.WriteString(fmt.Sprintf("\t%v: %v\n", m, count))
-		// executed requests
-		outOfRange += count
-	}
-
-	c.builder.WriteString(fmt.Sprintf("\n\tTotal skipped due to not being in StateDB block range: %v\n", outOfRange))
-
-	var noSubstate uint64
-	for method, count := range c.stats[noSubstateForGivenBlock] {
-		c.builder.WriteString(fmt.Sprintf("\t%v: %v\n", method, count))
-		// executed requests
-		noSubstate += count
-	}
-
-	c.builder.WriteString(fmt.Sprintf("\n\tTotal skipped due to non-existing substate for given block: %v\n", noSubstate))
+	c.addNoSubstate()
 
 	c.log.Notice(c.builder.String())
 }
@@ -142,4 +130,66 @@ func (c *requestCounter) addStat(req requestLog) {
 		c.stats[req.logType] = make(map[string]uint64)
 	}
 	c.stats[req.logType][req.method]++
+}
+
+// addUnmatchedResults requests to counters string builder
+func (c *requestCounter) addUnmatchedResults() {
+	c.builder.WriteString(fmt.Sprintf("\nUnmatched results:\n"))
+
+	var unmatchedResult uint64
+	for method, count := range c.stats[noMatchingData] {
+		c.builder.WriteString(fmt.Sprintf("\t%v: %v\n", method, count))
+		// executed requests
+		unmatchedResult += count
+	}
+
+	c.builder.WriteString(fmt.Sprintf("\n\tTotal: %v\n", unmatchedResult))
+}
+
+// addNoSubstate requests to counters string builder
+func (c *requestCounter) addNoSubstate() {
+	c.builder.WriteString(fmt.Sprintf("\nSkipped requests (non-existing substate):\n"))
+
+	var noSubstate uint64
+	for method, count := range c.stats[noSubstateForGivenBlock] {
+		c.builder.WriteString(fmt.Sprintf("\t%v: %v\n", method, count))
+		// executed requests
+		noSubstate += count
+	}
+
+	c.builder.WriteString(fmt.Sprintf("\n\tTotal: %v\n", noSubstate))
+}
+
+// addOutOfDbRange requests to counters string builder
+func (c *requestCounter) addOutOfDbRange() {
+	c.builder.WriteString(fmt.Sprintf("\nSkipped requests (out of given Db range):\n"))
+
+	var outOfRange uint64
+	for m, count := range c.stats[outOfStateDBRange] {
+		c.builder.WriteString(fmt.Sprintf("\t%v: %v\n", m, count))
+		// executed requests
+		outOfRange += count
+	}
+
+	c.builder.WriteString(fmt.Sprintf("\n\tTotal: %v\n", outOfRange))
+}
+
+// addExecuted requests to counters string builder
+func (c *requestCounter) addExecuted() {
+	c.builder.WriteString("\nExecuted requests:\n")
+	var exc uint64
+	for m, count := range c.stats[executed] {
+		c.builder.WriteString(fmt.Sprintf("\t%v: %v\n", m, count))
+		// executed requests
+		exc += count
+	}
+
+	c.builder.WriteString(fmt.Sprintf("\n\tTotal: %v\n\n", exc))
+}
+
+// addAverageSpeed to the stat logger (req/s)
+func (c *requestCounter) addAverageSpeed(elapsed time.Duration) {
+	averageSpeed := float64(c.total) / elapsed.Seconds()
+
+	c.builder.WriteString(fmt.Sprintf("Average speed: ~%.1f Req/s\n", averageSpeed))
 }

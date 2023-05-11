@@ -35,21 +35,19 @@ func main() {
 			&utils.ChainIDFlag,
 			&utils.ContinueOnFailureFlag,
 
+			// ShadowDB
+			&utils.ShadowDb,
+
 			// StateDB
-			&utils.StateDbImplementationFlag,
-			&utils.StateDbVariantFlag,
 			&utils.StateDbSrcFlag,
-			&utils.DbTmpFlag,
 			&utils.StateDbLoggingFlag,
+			&utils.CarmenSchemaFlag,
+			&utils.ArchiveModeFlag,
 
 			// Trace
 			&utils.TraceFlag,
 			&utils.TraceFileFlag,
 			&utils.TraceDebugFlag,
-
-			// ArchiveDB
-			&utils.ArchiveModeFlag,
-			&utils.ArchiveVariantFlag,
 		},
 	}
 

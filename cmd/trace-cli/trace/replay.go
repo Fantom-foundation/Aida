@@ -84,17 +84,17 @@ func traceReplayTask(cfg *utils.Config, log *logging.Logger) error {
 
 	// create a directory for the store to place all its files, and
 	// instantiate the state DB under testing.
-	log.Notice("Create stateDB database")
-	db, stateDirectory, loadedExistingDB, err := utils.PrepareStateDB(cfg)
+	log.Notice("Create StateDB")
+	db, stateDbDir, err := utils.PrepareStateDB(cfg)
 	if err != nil {
 		return err
 	}
 	if !cfg.KeepDb {
-		log.Warningf("Directory %v with DB will be removed at the end of this run.", stateDirectory)
-		defer os.RemoveAll(stateDirectory)
+		log.Warningf("Directory %v with DB will be removed at the end of this run.", cfg.StateDbSrc)
+		defer os.RemoveAll(stateDbDir)
 	}
 
-	if cfg.SkipPriming || loadedExistingDB {
+	if cfg.SkipPriming || cfg.StateDbSrc != "" {
 		log.Warning("Skipping DB priming.")
 	} else {
 		// intialize the world state and advance it to the first block
@@ -125,7 +125,7 @@ func traceReplayTask(cfg *utils.Config, log *logging.Logger) error {
 		}
 	}
 
-	log.Noticef("Replay storage operations on StateDB database")
+	log.Noticef("Replay storage operations on StateDB")
 
 	// load context
 	dCtx := context.NewReplay()
@@ -175,7 +175,7 @@ func traceReplayTask(cfg *utils.Config, log *logging.Logger) error {
 				// report progress
 				hours, minutes, seconds := utils.ParseTime(time.Since(start))
 				if sec-lastSec >= 15 {
-					log.Infof("Elapsed time: %vh %vm %vs, at block %v\n", hours, minutes, seconds, block)
+					log.Infof("Elapsed time: %vh %vm %vs, at block %v", hours, minutes, seconds, block)
 					lastSec = sec
 				}
 			}
@@ -222,25 +222,25 @@ func traceReplayTask(cfg *utils.Config, log *logging.Logger) error {
 
 	if cfg.KeepDb {
 		rootHash, _ := db.Commit(true)
-		if err := utils.WriteStateDbInfo(stateDirectory, cfg, lastBlock, rootHash); err != nil {
+		if err := utils.WriteStateDbInfo(stateDbDir, cfg, lastBlock, rootHash); err != nil {
 			log.Error(err)
 		}
 		//rename directory after closing db.
-		defer utils.RenameTempStateDBDirectory(cfg, stateDirectory, lastBlock)
+		defer utils.RenameTempStateDBDirectory(cfg, stateDbDir, lastBlock)
 	}
 
 	// close the DB and print disk usage
-	log.Notice("Close StateDB database")
+	log.Notice("Close StateDB")
 	start = time.Now()
 	if err := db.Close(); err != nil {
-		log.Errorf("Failed to close database: %v", err)
+		log.Errorf("Failed to close: %v", err)
 	}
 
 	// print progress summary
 	if !cfg.Quiet {
-		log.Noticef("Total elapsed time: %.3f s, processed %v blocks\n", sec, cfg.Last-cfg.First+1)
-		log.Noticef("Closing DB took %v\n", time.Since(start))
-		log.Noticef("Final disk usage: %v MiB\n", float32(utils.GetDirectorySize(stateDirectory))/float32(1024*1024))
+		log.Noticef("Total elapsed time: %.3f s, processed %v blocks", sec, cfg.Last-cfg.First+1)
+		log.Noticef("Closing DB took %v", time.Since(start))
+		log.Noticef("Final disk usage: %v MiB", float32(utils.GetDirectorySize(stateDbDir))/float32(1024*1024))
 	}
 
 	return nil
