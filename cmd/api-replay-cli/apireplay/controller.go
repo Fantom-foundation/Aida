@@ -6,6 +6,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/iterator"
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/google/martian/log"
@@ -34,10 +35,12 @@ type Controller struct {
 	counter                                          *requestCounter
 	counterWg                                        *sync.WaitGroup
 	counterClosed                                    chan any
+	stats                                            *operation.ProfileStats
+	cfg                                              *utils.Config
 }
 
 // newController creates new instances of Controller, ReplayExecutors and Comparators
-func newController(ctx *cli.Context, cfg *utils.Config, db state.StateDB, iter *iterator.FileReader) *Controller {
+func newController(ctx *cli.Context, cfg *utils.Config, db state.StateDB, iter *iterator.FileReader, stats *operation.ProfileStats) *Controller {
 
 	// create close signals
 	readerClosed := make(chan any)
@@ -76,6 +79,8 @@ func newController(ctx *cli.Context, cfg *utils.Config, db state.StateDB, iter *
 		executorsWg:       executorsWg,
 		comparatorsWg:     comparatorsWg,
 		counterWg:         counterWg,
+		stats:             stats,
+		cfg:               cfg,
 	}
 }
 
@@ -104,6 +109,8 @@ func (r *Controller) Stop() {
 	r.executorsWg.Wait()
 	r.counterWg.Wait()
 	r.log.Notice("all services has been stopped")
+
+	r.logProfiling()
 }
 
 // startExecutors and their loops
@@ -200,6 +207,20 @@ func (r *Controller) control() {
 			return
 		}
 	}
+}
+
+// logProfiling when closing API-Replay
+func (r *Controller) logProfiling() {
+	if err := utils.StartMemoryProfile(r.cfg); err != nil {
+		r.log.Warningf("cannot profile memory; %v", err)
+	}
+
+	if r.cfg.Profile {
+		fmt.Println("=================Statistics=================")
+		r.stats.PrintProfiling(r.log)
+		fmt.Println("============================================")
+	}
+
 }
 
 // createExecutors creates number of Executors defined by the flag WorkersFlag

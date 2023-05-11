@@ -2,7 +2,6 @@ package apireplay
 
 import (
 	"context"
-	"fmt"
 	"path/filepath"
 
 	"github.com/Fantom-foundation/Aida/cmd/runvm-cli/runvm"
@@ -77,16 +76,10 @@ func ReplayAPI(ctx *cli.Context) error {
 	}()
 
 	// start the replay
-	r := newController(ctx, cfg, db, fr)
+	r := newController(ctx, cfg, db, fr, stats)
 	r.Start()
 
 	r.Wait()
-
-	if cfg.Profile {
-		fmt.Println("=================Statistics=================")
-		stats.PrintProfiling(utils.NewLogger(cfg.LogLevel, "Profile"))
-		fmt.Println("============================================")
-	}
 
 	return err
 }
