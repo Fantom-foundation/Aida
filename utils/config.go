@@ -575,10 +575,10 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		log.Warning("Deleted-account-dir is not provided or does not exist")
 		cfg.HasDeletedAccounts = false
 	}
-	if cfg.KeepDb && cfg.ShadowDb {
-		log.Warning("Keeping persistent stateDB with a shadow db is not supported yet")
-		cfg.KeepDb = false
-	}
+	//if cfg.KeepDb && cfg.ShadowDb {
+	//	log.Warning("Keeping persistent stateDB with a shadow db is not supported yet")
+	//	cfg.KeepDb = false
+	//}
 	if cfg.KeepDb && strings.Contains(cfg.DbVariant, "memory") {
 		log.Warning("Unable to keep in-memory stateDB")
 		cfg.KeepDb = false
