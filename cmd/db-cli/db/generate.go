@@ -35,6 +35,7 @@ var GenerateCommand = cli.Command{
 		&utils.DbFlag,
 		&utils.GenesisFlag,
 		&utils.KeepDbFlag,
+		&utils.CompactDbFlag,
 		&utils.DbTmpFlag,
 		&utils.ChainIDFlag,
 		&utils.CacheFlag,
