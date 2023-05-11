@@ -337,7 +337,7 @@ func prepareDumpCliContext(cfg *utils.Config) (*cli.Context, error) {
 	flagSet := flag.NewFlagSet("", 0)
 	flagSet.String(utils.WorldStateFlag.Name, cfg.WorldStateDb, "")
 	flagSet.String(utils.DbFlag.Name, cfg.Db+"/chaindata/leveldb-fsh/", "")
-	flagSet.String(utils.StateDbVariantFlag.Name, utils.StateDbVariantFlag.Value, "")
+	flagSet.String(utils.StateDbVariantFlag.Name, "ldb", "")
 	flagSet.String(utils.SourceTableNameFlag.Name, utils.SourceTableNameFlag.Value, "")
 	flagSet.String(utils.TrieRootHashFlag.Name, utils.TrieRootHashFlag.Value, "")
 	flagSet.Int(substate.WorkersFlag.Name, substate.WorkersFlag.Value, "")
