@@ -3,18 +3,19 @@ package utils
 
 import (
 	"fmt"
-	substate "github.com/Fantom-foundation/Substate"
-	_ "github.com/Fantom-foundation/Tosca/go/vm/evmone"
-	_ "github.com/Fantom-foundation/Tosca/go/vm/lfvm"
-	_ "github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/params"
-	"github.com/urfave/cli/v2"
 	"log"
 	"math/big"
 	"math/rand"
 	"os"
 	"strconv"
 	"strings"
+
+	substate "github.com/Fantom-foundation/Substate"
+	_ "github.com/Fantom-foundation/Tosca/go/vm/evmone"
+	_ "github.com/Fantom-foundation/Tosca/go/vm/lfvm"
+	_ "github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/params"
+	"github.com/urfave/cli/v2"
 )
 
 type ArgumentMode int
