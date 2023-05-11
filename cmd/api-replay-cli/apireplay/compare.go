@@ -10,11 +10,11 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
-// internalErrorCode is created when RPC-API could not execute request
-// - for purpose of replay, this error is not critical and is only logged into DEBUG level
-const internalErrorCode = -32603
-
 const (
+	// internalErrorCode is created when RPC-API could not execute request
+	// - for purpose of replay, this error is not critical and is only logged into DEBUG level
+	internalErrorCode = -32603
+
 	invalidArgumentErrCode = -32602
 	// there are multiple types of execution reverted error codes
 	executionRevertedA = -32603

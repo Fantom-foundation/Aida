@@ -104,37 +104,26 @@ func (r *Controller) Stop() {
 	r.executorsWg.Wait()
 	r.counterWg.Wait()
 	r.readerWg.Wait()
-	r.log.Notice("all services has been stopped")
+	r.log.Notice("All services has been stopped")
 }
 
 // startExecutors and their loops
 func (r *Controller) startExecutors() {
-	var (
-		i int
-		e *ReplayExecutor
-	)
-
-	r.log.Infof("starting %v executor", len(r.Executors))
-	for i, e = range r.Executors {
+	r.log.Infof("Starting %v executor", len(r.Executors))
+	for _, e := range r.Executors {
 		e.Start()
-
+		r.executorsWg.Add(1)
 	}
-	r.executorsWg.Add(i + 1)
 }
 
 // startComparators and their loops
 func (r *Controller) startComparators() {
-	var (
-		i int
-		c *Comparator
-	)
-
-	r.log.Infof("starting %v comparators", len(r.Comparators))
-	for i, c = range r.Comparators {
+	r.log.Infof("Starting %v comparators", len(r.Comparators))
+	for _, c := range r.Comparators {
 		c.Start()
+		r.comparatorsWg.Add(1)
 	}
 
-	r.comparatorsWg.Add(i + 1)
 }
 
 // stopCounter closes the counters close signal
@@ -143,7 +132,7 @@ func (r *Controller) stopCounter() {
 	case <-r.counterClosed:
 		return
 	default:
-		r.log.Info("stopping counter")
+		r.log.Info("Stopping counter")
 		close(r.counterClosed)
 	}
 
@@ -155,7 +144,7 @@ func (r *Controller) stopReader() {
 	case <-r.readerClosed:
 		return
 	default:
-		r.log.Info("stopping reader")
+		r.log.Info("Stopping reader")
 		close(r.readerClosed)
 	}
 
@@ -167,7 +156,7 @@ func (r *Controller) stopExecutors() {
 	case <-r.executorsClosed:
 		return
 	default:
-		r.log.Info("stopping executors")
+		r.log.Info("Stopping executors")
 		close(r.executorsClosed)
 	}
 
@@ -180,7 +169,7 @@ func (r *Controller) stopComparators() {
 	case <-r.comparatorsClosed:
 		return
 	default:
-		r.log.Info("stopping comparators")
+		r.log.Info("Stopping comparators")
 		close(r.comparatorsClosed)
 	}
 
