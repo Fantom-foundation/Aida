@@ -21,6 +21,7 @@ var TraceCompareLogCommand = cli.Command{
 		&utils.ChainIDFlag,
 		&utils.QuietFlag,
 		&utils.StateDbImplementationFlag,
+		&utils.SyncPeriodLengthFlag,
 		&substate.SubstateDbFlag,
 		&substate.WorkersFlag,
 		&utils.TraceDebugFlag,

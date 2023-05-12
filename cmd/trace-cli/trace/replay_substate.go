@@ -34,6 +34,7 @@ var TraceReplaySubstateCommand = cli.Command{
 		&utils.ShadowDbImplementationFlag,
 		&utils.ShadowDbVariantFlag,
 		&substate.SubstateDbFlag,
+		&utils.SyncPeriodLengthFlag,
 		&substate.WorkersFlag,
 		&utils.TraceFileFlag,
 		&utils.TraceDebugFlag,

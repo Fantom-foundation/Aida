@@ -63,7 +63,7 @@ func TestUtilsConfig_GetChainConfig(t *testing.T) {
 func TestUtilsConfig_NewConfig(t *testing.T) {
 	ctx := prepareMockCliContext()
 
-	_, err := NewConfig(ctx, 0)
+	_, err := NewConfig(ctx, NoArgs)
 	if err != nil {
 		t.Fatalf("Failed to create new config: %v", err)
 	}

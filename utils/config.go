@@ -574,15 +574,15 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		cfg.RandomSeed = int64(rand.Uint32())
 	}
 
-	if mode == NoArgs {
-		return cfg, nil
-	}
-
 	if _, err := os.Stat(cfg.AidaDb); !os.IsNotExist(err) {
 		log.Noticef("Found merged Aida-DB: %s redirecting UpdateDB, DeletedAccountDB, SubstateDB paths to it", cfg.AidaDb)
 		cfg.UpdateDb = cfg.AidaDb
 		cfg.DeletionDb = cfg.AidaDb
 		cfg.SubstateDb = cfg.AidaDb
+	}
+
+	if mode == NoArgs {
+		return cfg, nil
 	}
 
 	if !cfg.Quiet {
