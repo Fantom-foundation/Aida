@@ -21,7 +21,7 @@ var RunVMApp = cli.App{
 	Flags: []cli.Flag{
 		// AidaDb
 		&utils.AidaDbFlag,
-		&substate.SubstateFlag,
+		&substate.SubstateDbFlag,
 		&utils.DeletionDbFlag,
 		&utils.UpdateDbFlag,
 

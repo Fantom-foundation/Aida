@@ -27,7 +27,7 @@ var GenDeletedAccountsCommand = cli.Command{
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		&substate.WorkersFlag,
-		&substate.SubstateFlag,
+		&substate.SubstateDbFlag,
 		&utils.ChainIDFlag,
 		&utils.DeletionDbFlag,
 		&utils.LogLevelFlag,

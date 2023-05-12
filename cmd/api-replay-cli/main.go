@@ -28,7 +28,7 @@ func main() {
 			&utils.VmImplementation,
 
 			// Substate
-			&substate.SubstateFlag,
+			&substate.SubstateDbFlag,
 
 			// Config
 			&utils.LogLevelFlag,

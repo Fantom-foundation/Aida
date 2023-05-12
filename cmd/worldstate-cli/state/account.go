@@ -62,7 +62,7 @@ var cmdAccountCollect = cli.Command{
 	ArgsUsage:   "<blockNumFirst> <blockNumLast>",
 	Aliases:     []string{"c"},
 	Flags: []cli.Flag{
-		&substate.SubstateFlag,
+		&substate.SubstateDbFlag,
 		&substate.WorkersFlag,
 	},
 }

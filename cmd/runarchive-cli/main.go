@@ -21,7 +21,7 @@ var RunArchiveApp = cli.App{
 	Flags: []cli.Flag{
 		// substate
 		&substate.WorkersFlag,
-		&substate.SubstateFlag,
+		&substate.SubstateDbFlag,
 
 		// utils
 		&utils.CpuProfileFlag,

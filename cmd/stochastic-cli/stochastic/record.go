@@ -27,7 +27,7 @@ var StochasticRecordCommand = cli.Command{
 		&utils.SyncPeriodLengthFlag,
 		&utils.OutputFlag,
 		&substate.WorkersFlag,
-		&substate.SubstateFlag,
+		&substate.SubstateDbFlag,
 		&utils.ChainIDFlag,
 		&utils.AidaDbFlag,
 	},
