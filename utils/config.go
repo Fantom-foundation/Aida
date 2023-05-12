@@ -550,7 +550,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		Output:              ctx.Path(OutputFlag.Name),
 		StateValidationMode: EqualityCheck,
 		UpdateDb:            ctx.Path(UpdateDbFlag.Name),
-		SubstateDb:          ctx.Path(substate.SubstateFlag.Name),
+		SubstateDb:          ctx.Path(substate.SubstateDbFlag.Name),
 		OperaDatadir:        ctx.Path(OperaDatadirFlag.Name),
 		ValuesNumber:        ctx.Int64(ValuesNumberFlag.Name),
 		ValidateTxState:     validateTxState,

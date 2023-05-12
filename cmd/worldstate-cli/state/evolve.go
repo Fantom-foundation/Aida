@@ -21,7 +21,7 @@ var CmdEvolveState = cli.Command{
 	ArgsUsage:   "<block> <substatedir> <workers>",
 	Flags: []cli.Flag{
 		&utils.TargetBlockFlag,
-		&substate.SubstateFlag,
+		&substate.SubstateDbFlag,
 		&utils.ValidateFlag,
 		&substate.WorkersFlag,
 	},

@@ -20,7 +20,7 @@ var GetCodeCommand = cli.Command{
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		&substate.WorkersFlag,
-		&substate.SubstateFlag,
+		&substate.SubstateDbFlag,
 		&utils.DbFlag, // Database for contracts
 		&utils.ChainIDFlag,
 	},
