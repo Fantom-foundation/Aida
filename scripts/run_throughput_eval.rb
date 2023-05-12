@@ -86,7 +86,7 @@ PROFILE_FILE_PREFIX="/tmp/aida_profile_#{DateTime.now.strftime("%Y-%m-%d_%H%M%S"
 
 # The directories containing input data for Aida.
 DATA_DIR = "/var/data/aida"
-SubstateDir = DATA_DIR + "/substate.50M"
+SubstateDb = DATA_DIR + "/substate.50M"
 UpdateDir = DATA_DIR + "/updateset"
 DeletedAccountDir = DATA_DIR + "/deleted_accounts"
 
@@ -123,7 +123,7 @@ def runAida (mode, evm, db, variant, schema, iteration)
     end
 
     puts "Running #{mode} with #{evm} and #{db}/#{variant}/s#{schema} .."
-    cmd = "timeout #{MaxDuration} ./build/aida-runvm --substatedir #{SubstateDir} --updatedir #{UpdateDir} --deleted-account-dir #{DeletedAccountDir} --db-impl #{db} --db-variant \"#{variant}\" --carmen-schema \"#{schema}\" --vm-impl #{evm} --cpuprofile=#{PROFILE_FILE_PREFIX}_profile_#{mode}_#{evm}_#{db}_#{variant}_#{StartBlock}_#{EndBlock}_#{iteration}.dat #{extraFlags} #{StartBlock} #{EndBlock}"
+    cmd = "timeout #{MaxDuration} ./build/aida-runvm --substate-db #{SubstateDb} --updatedir #{UpdateDir} --deleted-account-dir #{DeletedAccountDir} --db-impl #{db} --db-variant \"#{variant}\" --carmen-schema \"#{schema}\" --vm-impl #{evm} --cpuprofile=#{PROFILE_FILE_PREFIX}_profile_#{mode}_#{evm}_#{db}_#{variant}_#{StartBlock}_#{EndBlock}_#{iteration}.dat #{extraFlags} #{StartBlock} #{EndBlock}"
 
     puts "Running #{cmd}\n"
     

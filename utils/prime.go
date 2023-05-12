@@ -131,7 +131,7 @@ func (pc *PrimeContext) PrimeStateDBRandom(ws substate.SubstateAlloc, db state.S
 
 	sort.Strings(contracts)
 	// shuffle contract order
-	rand.NewSource(pc.cfg.PrimeSeed)
+	rand.NewSource(pc.cfg.RandomSeed)
 	rand.Shuffle(len(contracts), func(i, j int) {
 		contracts[i], contracts[j] = contracts[j], contracts[i]
 	})
