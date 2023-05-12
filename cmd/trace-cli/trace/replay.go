@@ -105,7 +105,7 @@ func traceReplayTask(cfg *utils.Config, log *logging.Logger) error {
 		}
 
 		elapsed := time.Since(start)
-		hours, minutes, seconds := utils.ParseTime(elapsed)
+		hours, minutes, seconds := logger.ParseTime(elapsed)
 		log.Infof("\tPriming elapsed time: %vh %vm %vs\n", hours, minutes, seconds)
 	}
 

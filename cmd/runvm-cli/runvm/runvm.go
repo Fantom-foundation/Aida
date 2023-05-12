@@ -83,7 +83,7 @@ func RunVM(ctx *cli.Context) error {
 			return fmt.Errorf("priming failed. %v", err)
 		}
 		elapsed = time.Since(start)
-		hours, minutes, seconds = utils.ParseTime(elapsed)
+		hours, minutes, seconds = logger.ParseTime(elapsed)
 		log.Infof("\tPriming elapsed time: %vh %vm %vs\n", hours, minutes, seconds)
 		if err != nil {
 			return err
