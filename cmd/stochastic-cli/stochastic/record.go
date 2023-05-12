@@ -132,11 +132,10 @@ func stochasticRecordAction(ctx *cli.Context) error {
 
 	// writing event registry
 	fmt.Printf("stochastic record: write events file ...\n")
-	outputFileName := ctx.String(utils.OutputFlag.Name)
-	if outputFileName == "" {
-		outputFileName = "./events.json"
+	if cfg.Output == "" {
+		cfg.Output = "./events.json"
 	}
-	WriteEvents(&eventRegistry, outputFileName)
+	WriteEvents(&eventRegistry, cfg.Output)
 
 	return err
 }

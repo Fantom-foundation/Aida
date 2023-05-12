@@ -65,11 +65,14 @@ func traceReplaySubstateTask(cfg *utils.Config, log *logging.Logger) error {
 	defer traceIter.Release()
 
 	// Create a directory for the store to place all its files.
-	db, stateDirectory, _, err := utils.PrepareStateDB(cfg)
+	db, stateDbDir, err := utils.PrepareStateDB(cfg)
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(stateDirectory)
+	defer os.RemoveAll(stateDbDir)
+
+	// create prime context
+	pc := utils.NewPrimeContext(cfg, log)
 
 	var (
 		start        time.Time
@@ -111,7 +114,9 @@ func traceReplaySubstateTask(cfg *utils.Config, log *logging.Logger) error {
 		if cfg.DbImpl == "memory" {
 			db.PrepareSubstate(&tx.Substate.InputAlloc, tx.Block)
 		} else {
-			utils.PrimeStateDB(tx.Substate.InputAlloc, db, cfg, log)
+			if err := pc.PrimeStateDB(tx.Substate.InputAlloc, db); err != nil {
+				return err
+			}
 		}
 		for traceIter.Next() {
 			op := traceIter.Value()
@@ -138,7 +143,7 @@ func traceReplaySubstateTask(cfg *utils.Config, log *logging.Logger) error {
 				numTx := txCount - lastTxCount
 				lastTxCount = txCount
 				hours, minutes, seconds := utils.ParseTime(time.Since(start))
-				log.Infof("Elapsed time: %vh, %vm %vs, at block %v (~%.0f Tx/s)\n", hours, minutes, seconds, tx.Block, float64(numTx)/diff)
+				log.Infof("Elapsed time: %vh, %vm %vs, at block %v (~%.0f Tx/s)", hours, minutes, seconds, tx.Block, float64(numTx)/diff)
 				lastSec = sec
 			}
 		}
@@ -168,7 +173,7 @@ func traceReplaySubstateTask(cfg *utils.Config, log *logging.Logger) error {
 
 	if !cfg.Quiet {
 		log.Infof("Closing DB took %v", time.Since(start))
-		log.Infof("Final disk usage: %v MiB", float32(utils.GetDirectorySize(stateDirectory))/float32(1024*1024))
+		log.Infof("Final disk usage: %v MiB", float32(utils.GetDirectorySize(stateDbDir))/float32(1024*1024))
 		log.Infof("Total elapsed time: %.3f s, processed %v blocks (~%.1f Tx/s)", sec, cfg.Last-cfg.First+1, float64(txCount)/sec)
 	}
 

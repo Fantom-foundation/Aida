@@ -26,7 +26,7 @@ func TestStatedbInfo_WriteReadStateDbInfo(t *testing.T) {
 			}
 
 			// Getting the DB info file path and call for reading from it
-			dbInfoFile := filepath.Join(cfg.StateDbSrc, DbInfoName)
+			dbInfoFile := filepath.Join(cfg.StateDbSrc, PathToDbInfo)
 			dbInfo, err := ReadStateDbInfo(dbInfoFile)
 			if err != nil {
 				t.Fatalf("failed to read from DB info json file: %v", err)

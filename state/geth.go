@@ -283,7 +283,9 @@ func (s *gethStateDB) GetLogs(hash common.Hash, blockHash common.Hash) []*types.
 	return []*types.Log{}
 }
 
-func (s *gethStateDB) StartBulkLoad() BulkLoad {
+func (s *gethStateDB) StartBulkLoad(block uint64) BulkLoad {
+	s.BeginBlock(block)
+	s.BeginTransaction(0)
 	return &gethBulkLoad{db: s}
 }
 
@@ -297,54 +299,39 @@ func (s *gethStateDB) GetMemoryUsage() *MemoryUsage {
 }
 
 type gethBulkLoad struct {
-	db      *gethStateDB
-	num_ops int64
+	db *gethStateDB
 }
 
 func (l *gethBulkLoad) CreateAccount(addr common.Address) {
 	l.db.CreateAccount(addr)
-	l.digest()
 }
 
 func (l *gethBulkLoad) SetBalance(addr common.Address, value *big.Int) {
 	old := l.db.GetBalance(addr)
 	value = value.Sub(value, old)
 	l.db.AddBalance(addr, value)
-	l.digest()
 }
 
 func (l *gethBulkLoad) SetNonce(addr common.Address, nonce uint64) {
 	l.db.SetNonce(addr, nonce)
-	l.digest()
 }
 
 func (l *gethBulkLoad) SetState(addr common.Address, key common.Hash, value common.Hash) {
 	l.db.SetState(addr, key, value)
-	l.digest()
 }
 
 func (l *gethBulkLoad) SetCode(addr common.Address, code []byte) {
 	l.db.SetCode(addr, code)
-	l.digest()
 }
 
 func (l *gethBulkLoad) Close() error {
+	l.db.EndTransaction()
 	l.db.EndBlock()
-	l.db.EndSyncPeriod()
 	_, err := l.db.Commit(false)
 	return err
 }
 
-func (l *gethBulkLoad) digest() {
-	// Call EndBlock every 1M insert operation.
-	l.num_ops++
-	if l.num_ops%(1000*1000) != 0 {
-		return
-	}
-	l.db.EndBlock()
-}
-
-// tireCommit commits changes to disk if archive node; otherwise, performs garbage collection.
+// trieCommit commits changes to disk if archive node; otherwise, performs garbage collection.
 func (s *gethStateDB) trieCommit() error {
 	triedb := s.evmState.TrieDB()
 	// If we're applying genesis or running an archive node, always flush

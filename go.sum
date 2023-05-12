@@ -64,8 +64,6 @@ github.com/DataDog/zstd v1.5.2/go.mod h1:g4AWEaM3yOg3HYfnJ3YIawPnVdXJh9QME85blwS
 github.com/Fantom-foundation/Substate v0.0.0-20230224090651-4c8c024214f4/go.mod h1:/yIHWCDDJcdKMJYvOLdYOnHt5eUBF9XWnrvrNE+90ik=
 github.com/Fantom-foundation/Substate v0.0.0-20230428142458-0cc8c0c74ab5 h1:Dd5oONZL/IXg06ipStcdII9wfKShkYkxSlPnoib20c8=
 github.com/Fantom-foundation/Substate v0.0.0-20230428142458-0cc8c0c74ab5/go.mod h1:KoObQO1Wmf3ACjxcXDREHf+mtDF4MAXfHwtxMIdyhx8=
-github.com/Fantom-foundation/Tosca v0.0.0-20230406154859-8e2180f5f5c9 h1:AZgDIjQQqAlAekM8CLmkubWW64RQO9re5KFSq1Cferk=
-github.com/Fantom-foundation/Tosca v0.0.0-20230406154859-8e2180f5f5c9/go.mod h1:NpXaJ+jksyraNZf9iHVPRDPGVr2j5jU0Tv7/weZpUr4=
 github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20230331085425-52296093a646 h1:wlo+TbNH2ZekB7uFMR69Z13ie6LvVdIIERXXojEc0ws=
 github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20230331085425-52296093a646/go.mod h1:Hu8U9SrXP6ABqtSNfJHw8lRGnr6tyma9PNZvwTweDjQ=
 github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230112084156-680f281ea1cb h1:4GajUnaY0S4KUe9KO0L4S8wq8R7CtGJna/s6IobED70=
@@ -211,8 +209,6 @@ github.com/envoyproxy/go-control-plane v0.9.4/go.mod h1:6rpuAdCZL397s3pYoYcLgu1m
 github.com/envoyproxy/go-control-plane v0.9.9-0.20210217033140-668b12f5399d/go.mod h1:cXg6YxExXjJnVBQHBLXeUAgxn2UodCpnH306RInaBQk=
 github.com/envoyproxy/protoc-gen-validate v0.1.0/go.mod h1:iSmxcyjqTsJpI2R4NaDN7+kN2VEUnK/pcBlmesArF7c=
 github.com/etcd-io/bbolt v1.3.3/go.mod h1:ZF2nL25h33cCyBtcyWeZ2/I3HQOfTP+0PIEvHjkjCrw=
-github.com/ethereum/evmc/v10 v10.0.0 h1:zuhGmMJIf4hXWph8NPzt5Wlu3Ujsf84KYFordc6mTTk=
-github.com/ethereum/evmc/v10 v10.0.0/go.mod h1:A5SnakP7hgfMwjG0cNgpR3st5hQJzXDz2++bvOQqt5c=
 github.com/evalphobia/logrus_sentry v0.8.2/go.mod h1:pKcp+vriitUqu9KiWj/VRFbRfFNUwz95/UkgG8a6MNc=
 github.com/fasthttp-contrib/websocket v0.0.0-20160511215533-1f3b11f56072/go.mod h1:duJ4Jxv5lDcvg4QuQr0oowTf7dz4/CR8NtyCooz9HL8=
 github.com/fatih/color v1.7.0/go.mod h1:Zm6kSWBoL9eyXnKyktHP6abPY2pDugNf5KwzbycvMj4=

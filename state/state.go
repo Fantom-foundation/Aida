@@ -86,8 +86,9 @@ type StateDB interface {
 	// StartBulkLoad creates a interface supporting the efficient loading of large amount
 	// of data as it is, for instance, needed during priming. Only one bulk load operation
 	// may be active at any time and no other concurrent operations on the StateDB are
-	// while it is alive.
-	StartBulkLoad() BulkLoad
+	// while it is alive. Data inserted during a bulk-load will appear as if it was inserted
+	// in a single block.
+	StartBulkLoad(block uint64) BulkLoad
 
 	// GetArchiveState creates a state instance linked to a historic block state in an
 	// optionally present archive. The operation fails if there is no archive or the

@@ -2,7 +2,6 @@ package apireplay
 
 import (
 	"context"
-	"path/filepath"
 
 	"github.com/Fantom-foundation/Aida/iterator"
 	"github.com/Fantom-foundation/Aida/state"
@@ -15,11 +14,10 @@ import (
 
 func ReplayAPI(ctx *cli.Context) error {
 	var (
-		err    error
-		fr     *iterator.FileReader
-		cfg    *utils.Config
-		dbInfo utils.StateDbInfo
-		db     state.StateDB
+		err error
+		fr  *iterator.FileReader
+		cfg *utils.Config
+		db  state.StateDB
 	)
 
 	cfg, err = utils.NewConfig(ctx, utils.BlockRangeArgs)
@@ -32,8 +30,7 @@ func ReplayAPI(ctx *cli.Context) error {
 		return err
 	}
 
-	// create StateDB
-	dbInfo, err = utils.ReadStateDbInfo(filepath.Join(cfg.StateDbSrc, utils.DbInfoName))
+	db, _, err = utils.PrepareStateDB(cfg)
 	if err != nil {
 		return err
 	}
@@ -43,11 +40,6 @@ func ReplayAPI(ctx *cli.Context) error {
 		rCtx := traceCtx.NewRecord(cfg.TraceFile)
 		defer rCtx.Close()
 		db = tracer.NewProxyRecorder(db, rCtx)
-	}
-
-	db, err = utils.MakeStateDB(cfg.StateDbSrc, cfg, dbInfo.RootHash, true)
-	if err != nil {
-		return err
 	}
 
 	substate.SetSubstateDirectory(cfg.SubstateDb)
