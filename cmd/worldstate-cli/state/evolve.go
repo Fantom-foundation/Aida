@@ -43,7 +43,7 @@ func evolveState(ctx *cli.Context) error {
 	defer snapshot.MustCloseStateDB(stateDB)
 
 	// try to open sub state DB
-	substate.SetSubstateDirectory(cfg.SubstateDb)
+	substate.SetSubstateDb(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 

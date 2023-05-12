@@ -74,7 +74,7 @@ func GenUpdateSet(cfg *utils.Config, first uint64, interval uint64) error {
 	defer db.Close()
 
 	// iterate through subsets in sequence
-	substate.SetSubstateDirectory(cfg.SubstateDb)
+	substate.SetSubstateDb(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 

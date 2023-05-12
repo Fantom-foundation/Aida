@@ -246,7 +246,7 @@ func GenDeletedAccountsAction(cfg *utils.Config) error {
 	chainID = cfg.ChainID
 	log.Infof("chain-id: %v", chainID)
 
-	substate.SetSubstateDirectory(cfg.SubstateDb)
+	substate.SetSubstateDb(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 

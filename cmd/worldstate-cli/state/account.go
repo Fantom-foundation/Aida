@@ -136,7 +136,7 @@ func collectAccounts(ctx *cli.Context) error {
 	defer snapshot.MustCloseStateDB(stateDB)
 
 	// try to open substate DB
-	substate.SetSubstateDirectory(cfg.SubstateDb)
+	substate.SetSubstateDb(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
