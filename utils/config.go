@@ -107,7 +107,7 @@ var (
 	SyncPeriodLengthFlag = cli.IntFlag{
 		Name:  "sync-period",
 		Usage: "defines the number of blocks per sync-period",
-		Value: 300, // ~ 300s = 5 minutes
+		Value: 0,
 	}
 	MemoryBreakdownFlag = cli.BoolFlag{
 		Name:  "memory-breakdown",
