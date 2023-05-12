@@ -85,7 +85,7 @@ func (pc *PrimeContext) PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB
 		load := db.StartBulkLoad(pc.block)
 		step := 0
 		for addr, account := range ws {
-			pc.primeOneAccount(addr, account, load, pt)
+			pc.primeOneAccount(addr, account, db, load, pt)
 			step++
 			// commit to stateDB after process n accounts
 			if step%bulkLoadCap == 0 {
@@ -107,9 +107,10 @@ func (pc *PrimeContext) PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB
 }
 
 // primeOneAccount initializes an account on stateDB with substate
-func (pc *PrimeContext) primeOneAccount(addr common.Address, account *substate.SubstateAccount, load state.BulkLoad, pt *ProgressTracker) {
+func (pc *PrimeContext) primeOneAccount(addr common.Address, account *substate.SubstateAccount, db state.StateDB, load state.BulkLoad, pt *ProgressTracker) {
 	// if an account was previously primed, skip account creation.
-	if exist, found := pc.exist[addr]; !found || !exist {
+	//if exist, found := pc.exist[addr]; !found || !exist {
+	if db.Exist(addr) {
 		load.CreateAccount(addr)
 		pc.exist[addr] = true
 	}
@@ -141,7 +142,7 @@ func (pc *PrimeContext) PrimeStateDBRandom(ws substate.SubstateAlloc, db state.S
 	for _, c := range contracts {
 		addr := common.HexToAddress(c)
 		account := ws[addr]
-		pc.primeOneAccount(addr, account, load, pt)
+		pc.primeOneAccount(addr, account, db, load, pt)
 		step++
 		// commit to stateDB after process n accounts and start a new buck load
 		if step%bulkLoadCap == 0 {
