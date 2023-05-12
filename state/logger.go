@@ -132,7 +132,7 @@ func (s *loggingStateDB) RevertToSnapshot(id int) {
 }
 
 func (s *loggingStateDB) Error() error {
-	s.log.Errorf("Error")
+	s.log.Error("Error")
 	return s.db.Error()
 }
 
@@ -142,7 +142,7 @@ func (s *loggingStateDB) BeginTransaction(tx uint32) {
 }
 
 func (s *loggingStateDB) EndTransaction() {
-	s.log.Infof("EndTransaction")
+	s.log.Info("EndTransaction")
 	s.db.EndTransaction()
 }
 
@@ -152,7 +152,7 @@ func (s *loggingStateDB) BeginBlock(blk uint64) {
 }
 
 func (s *loggingStateDB) EndBlock() {
-	s.log.Infof("EndBlock")
+	s.log.Info("EndBlock")
 	s.db.EndBlock()
 }
 
@@ -162,7 +162,7 @@ func (s *loggingStateDB) BeginSyncPeriod(number uint64) {
 }
 
 func (s *loggingStateDB) EndSyncPeriod() {
-	s.log.Infof("EndSyncPeriod")
+	s.log.Info("EndSyncPeriod")
 	s.db.EndSyncPeriod()
 }
 
