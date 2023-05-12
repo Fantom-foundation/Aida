@@ -19,6 +19,8 @@ type rawEntry struct {
 	Value []byte
 }
 
+var dbItemChanSize = 100_000
+
 // CloneCommand enables creation of aida-db copy or subset
 var CloneCommand = cli.Command{
 	Action: clone,
@@ -58,51 +60,40 @@ func clone(ctx *cli.Context) error {
 		return err
 	}
 
-	// open writing channel
-	writerChan, errChan := writeDataAsync(targetDb)
-
-	// write all contract codes
-	err = write(writerChan, errChan, aidaDb, []byte(substate.Stage1CodePrefix), 0, nil, log)
-	if err != nil {
-		return err
-	}
-
-	// write all destroyed accounts
-	err = write(writerChan, errChan, aidaDb, []byte(substate.DestroyedAccountPrefix), 0, nil, log)
-	if err != nil {
-		return err
-	}
-
-	// write update sets until cfg.Last
-	var lastUpdateBeforeRange uint64
-	lastUpdateBeforeRange, err = writeUpdateSet(cfg, writerChan, errChan, aidaDb, log)
-	if err != nil {
-		return err
-	}
-
-	// write substates from last updateset before cfg.First until cfg.Last
-	err = writeSubstates(cfg, writerChan, errChan, aidaDb, lastUpdateBeforeRange, log)
-	if err != nil {
-		return err
-	}
-
-	// all writting finished
-	close(writerChan)
-
-	log.Debug("Waiting until db write finishes")
-	// read result of writer
-	err, ok := <-errChan
-	if ok {
-		return err
-	}
-
-	//  compact written data
 	if cfg.CompactDb {
 		log.Noticef("Starting compaction")
 		err = targetDb.Compact(nil, nil)
 		if err != nil {
 			return err
 		}
+	}
+
+	// open writing channel
+	writerChan, errChan := writeDataAsync(targetDb)
+
+	// write all contract codes
+	err = write(writerChan, errChan, aidaDb.NewIterator([]byte(substate.Stage1CodePrefix), nil), nil)
+	if err != nil {
+		return err
+	}
+
+	// write all destroyed accounts
+	err = write(writerChan, errChan, aidaDb.NewIterator([]byte(substate.DestroyedAccountPrefix), nil), nil)
+	if err != nil {
+		return err
+	}
+
+	// write update sets until cfg.Last
+	var lastUpdateBeforeRange uint64
+	lastUpdateBeforeRange, err = writeUpdateSet(cfg, writerChan, errChan, aidaDb)
+	if err != nil {
+		return err
+	}
+
+	// write substates from last updateset before cfg.First until cfg.Last
+	err = writeSubstates(cfg, writerChan, errChan, aidaDb, lastUpdateBeforeRange)
+	if err != nil {
+		return err
 	}
 
 	// close aida database
@@ -115,7 +106,7 @@ func clone(ctx *cli.Context) error {
 }
 
 // writeSubstates write substates from last updateset before cfg.First until cfg.Last
-func writeSubstates(cfg *utils.Config, writerChan chan rawEntry, errChan chan error, aidaDb ethdb.Database, lastUpdateBeforeRange uint64, log *logging.Logger) error {
+func writeSubstates(cfg *utils.Config, writerChan chan rawEntry, errChan chan error, aidaDb ethdb.Database, lastUpdateBeforeRange uint64) error {
 	endCond := func(key []byte) (bool, error) {
 		block, _, err := substate.DecodeStage1SubstateKey(key)
 		if err != nil {
@@ -127,11 +118,11 @@ func writeSubstates(cfg *utils.Config, writerChan chan rawEntry, errChan chan er
 		return false, nil
 	}
 	// generating substates right after previous updateset before our interval
-	return write(writerChan, errChan, aidaDb, []byte(substate.Stage1SubstatePrefix), lastUpdateBeforeRange+1, endCond, log)
+	return write(writerChan, errChan, aidaDb.NewIterator([]byte(substate.Stage1SubstatePrefix), substate.BlockToBytes(lastUpdateBeforeRange+1)), endCond)
 }
 
 // writeUpdateSet write update sets until cfg.Last
-func writeUpdateSet(cfg *utils.Config, writerChan chan rawEntry, errChan chan error, aidaDb ethdb.Database, log *logging.Logger) (uint64, error) {
+func writeUpdateSet(cfg *utils.Config, writerChan chan rawEntry, errChan chan error, aidaDb ethdb.Database) (uint64, error) {
 	// labeling last updateset before interval - need to export substates for that range as well
 	var lastUpdateBeforeRange uint64
 	endCond := func(key []byte) (bool, error) {
@@ -147,30 +138,17 @@ func writeUpdateSet(cfg *utils.Config, writerChan chan rawEntry, errChan chan er
 		}
 		return false, nil
 	}
-
-	err := write(writerChan, errChan, aidaDb, []byte(substate.SubstateAllocPrefix), 0, endCond, log)
-	if err != nil {
-		return 0, err
-	}
-
 	// check if updateset contained at least one set (first set with worldstate), then aida-db must be corrupted
 	if lastUpdateBeforeRange == 0 {
 		return 0, fmt.Errorf("updateset didn't contain any records; unable to create aida-db without initial world-state")
 	}
 
-	log.Debugf("Last updateset preceding block range found at %v\n", lastUpdateBeforeRange)
-
-	return lastUpdateBeforeRange, nil
+	return lastUpdateBeforeRange, write(writerChan, errChan, aidaDb.NewIterator([]byte(substate.SubstateAllocPrefix), nil), endCond)
 }
 
 // write all records into the database under given prefix
-func write(writerChan chan rawEntry, errChan chan error, aidaDb ethdb.Database, prefix []byte, start uint64, condition func(key []byte) (bool, error), log *logging.Logger) error {
-	log.Debugf("Prefix: %s ; Starting at: %d", prefix, start)
-
-	iter := aidaDb.NewIterator(prefix, substate.BlockToBytes(start))
+func write(writerChan chan rawEntry, errChan chan error, iter ethdb.Iterator, condition func(key []byte) (bool, error)) error {
 	defer iter.Release()
-
-	var counter uint64
 
 	for iter.Next() {
 		if condition != nil {
@@ -179,17 +157,9 @@ func write(writerChan chan rawEntry, errChan chan error, aidaDb ethdb.Database, 
 				return err
 			}
 			if finished {
-				break
+				return nil
 			}
 		}
-
-		counter++
-
-		// make deep copy key and value
-		key := make([]byte, len(iter.Key()))
-		copy(key, iter.Key())
-		value := make([]byte, len(iter.Value()))
-		copy(value, iter.Value())
 
 		select {
 		case err, ok := <-errChan:
@@ -198,19 +168,16 @@ func write(writerChan chan rawEntry, errChan chan error, aidaDb ethdb.Database, 
 					return err
 				}
 			}
-		case writerChan <- rawEntry{Key: key, Value: value}:
+		case writerChan <- rawEntry{Key: iter.Key(), Value: iter.Value()}:
 
 		}
 	}
-
-	log.Debugf("Prefix: %s ; Written: %v\n", prefix, counter)
-
 	return nil
 }
 
 // writeDataAsync copies data from channel into targetDb
 func writeDataAsync(targetDb ethdb.Database) (chan rawEntry, chan error) {
-	writeChan := make(chan rawEntry)
+	writeChan := make(chan rawEntry, dbItemChanSize)
 	errChan := make(chan error, 1)
 	go func() {
 		defer close(errChan)
@@ -220,18 +187,20 @@ func writeDataAsync(targetDb ethdb.Database) (chan rawEntry, chan error) {
 			// do we have another available item?
 			item, ok := <-writeChan
 			if !ok {
-				// iteration completed - finish write rest of the pending data
-				if dbBatchWriter.ValueSize() > 0 {
-					err := dbBatchWriter.Write()
-					if err != nil {
-						errChan <- err
-						return
-					}
-				}
 				return
 			}
+			// iteration completed - finish write rest of the pending data
+			if dbBatchWriter.ValueSize() > 0 {
+				err := dbBatchWriter.Write()
+				if err != nil {
+					errChan <- err
+					return
+				}
+			}
 
-			err := dbBatchWriter.Put(item.Key, item.Value)
+			key := item.Key
+
+			err := dbBatchWriter.Put(key, item.Value)
 			if err != nil {
 				errChan <- err
 				return
