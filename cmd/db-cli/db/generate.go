@@ -342,6 +342,7 @@ func prepareDumpCliContext(cfg *utils.Config) (*cli.Context, error) {
 	flagSet.String(utils.TrieRootHashFlag.Name, utils.TrieRootHashFlag.Value, "")
 	flagSet.Int(substate.WorkersFlag.Name, substate.WorkersFlag.Value, "")
 	flagSet.Uint64(utils.TargetBlockFlag.Name, utils.TargetBlockFlag.Value, "")
+	flagSet.Int(utils.ChainIDFlag.Name, cfg.ChainID, "")
 	flagSet.String(utils.LogLevelFlag.Name, cfg.LogLevel, "")
 
 	ctx := cli.NewContext(cli.NewApp(), flagSet, nil)
