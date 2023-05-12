@@ -56,7 +56,7 @@ func TestFlatState_StartBulkLoadAndClose(t *testing.T) {
 				t.Fatalf("failed to create flat state DB: %v", err)
 			}
 
-			fbl := fsDB.StartBulkLoad()
+			fbl := fsDB.StartBulkLoad(0)
 
 			err = fbl.Close()
 			if err != nil {
@@ -75,7 +75,7 @@ func TestFlatState_SetBalance(t *testing.T) {
 				t.Fatalf("failed to create flat state DB: %v", err)
 			}
 
-			fbl := fsDB.StartBulkLoad()
+			fbl := fsDB.StartBulkLoad(0)
 
 			addr := common.BytesToAddress(makeRandomByteSlice(t, 40))
 
@@ -101,7 +101,7 @@ func TestFlatState_SetNonce(t *testing.T) {
 				t.Fatalf("failed to create flat state DB: %v", err)
 			}
 
-			fbl := fsDB.StartBulkLoad()
+			fbl := fsDB.StartBulkLoad(0)
 
 			addr := common.BytesToAddress(makeRandomByteSlice(t, 40))
 
@@ -127,7 +127,7 @@ func TestFlatState_SetState(t *testing.T) {
 				t.Fatalf("failed to create flat state DB: %v", err)
 			}
 
-			fbl := fsDB.StartBulkLoad()
+			fbl := fsDB.StartBulkLoad(0)
 
 			addr := common.BytesToAddress(makeRandomByteSlice(t, 40))
 
@@ -155,7 +155,7 @@ func TestFlatState_SetCode(t *testing.T) {
 				t.Fatalf("failed to create flat state DB: %v", err)
 			}
 
-			fbl := fsDB.StartBulkLoad()
+			fbl := fsDB.StartBulkLoad(0)
 
 			addr := common.BytesToAddress(makeRandomByteSlice(t, 40))
 
@@ -183,7 +183,7 @@ func TestFlatState_AutomaticBlockEnd(t *testing.T) {
 				t.Fatalf("failed to create flat state DB: %v", err)
 			}
 
-			fbl := fsDB.StartBulkLoad()
+			fbl := fsDB.StartBulkLoad(0)
 
 			// generate 100 randomized accounts
 			accounts := [100]common.Address{}

@@ -476,7 +476,7 @@ func (db *inMemoryStateDB) PrepareSubstate(alloc *substate.SubstateAlloc, block 
 	db.blockNum = block
 }
 
-func (s *inMemoryStateDB) StartBulkLoad() BulkLoad {
+func (s *inMemoryStateDB) StartBulkLoad(block uint64) BulkLoad {
 	return &gethInMemoryBulkLoad{}
 }
 

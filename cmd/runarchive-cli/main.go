@@ -20,19 +20,25 @@ var RunArchiveApp = cli.App{
 	Copyright: "(c) 2023 Fantom Foundation",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
+		// substate
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
-		&utils.ArchiveVariantFlag,
-		&utils.CarmenSchemaFlag,
+		&logger.LogLevelFlag,
+
+		// utils
 		&utils.CpuProfileFlag,
 		&utils.ChainIDFlag,
-		&utils.StateDbSrcFlag,
-		&utils.StateDbImplementationFlag,
-		&utils.StateDbVariantFlag,
-		&utils.ValidateTxStateFlag,
-		&utils.VmImplementation,
+
+		// StateDb
 		&utils.AidaDbFlag,
-		&logger.LogLevelFlag,
+		&utils.StateDbSrcFlag,
+		&utils.ValidateTxStateFlag,
+
+		// ShadowDb
+		&utils.ShadowDb,
+
+		// VM
+		&utils.VmImplementation,
 	},
 	Description: "Runs transactions on historic states derived from an archive DB",
 }

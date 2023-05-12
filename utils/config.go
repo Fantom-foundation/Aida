@@ -4,6 +4,7 @@ package utils
 import (
 	"fmt"
 	"log"
+	"math"
 	"math/big"
 	"math/rand"
 	"os"
@@ -167,6 +168,11 @@ var (
 		Name:  "db-logging",
 		Usage: "enable logging of all DB operations",
 	}
+	ShadowDb = cli.BoolFlag{
+		Name:  "shadow-db",
+		Usage: "use this flag when using an existing ShadowDb",
+		Value: false,
+	}
 	ShadowDbImplementationFlag = cli.StringFlag{
 		Name:  "db-shadow-impl",
 		Usage: "select state DB implementation to shadow the prime DB implementation",
@@ -193,6 +199,10 @@ var (
 	UpdateDbFlag = cli.PathFlag{
 		Name:  "update-db",
 		Usage: "set update-set database directory",
+	}
+	OperaDatadirFlag = cli.PathFlag{
+		Name:  "datadir",
+		Usage: "opera datadir directory",
 	}
 	ValidateFlag = cli.BoolFlag{
 		Name:  "validate",
@@ -229,7 +239,7 @@ var (
 	}
 	OutputFlag = cli.PathFlag{
 		Name:  "output",
-		Usage: "output filename",
+		Usage: "output path",
 	}
 	PortFlag = cli.StringFlag{
 		Name:        "port",
@@ -240,6 +250,11 @@ var (
 	DeleteSourceDbsFlag = cli.BoolFlag{
 		Name:  "delete-source-dbs",
 		Usage: "delete source databases while merging into one database",
+		Value: false,
+	}
+	CompactDbFlag = cli.BoolFlag{
+		Name:  "compact",
+		Usage: "compact target database",
 		Value: false,
 	}
 	AidaDbFlag = cli.PathFlag{
@@ -322,6 +337,11 @@ var (
 		Usage: "set a buffer size for profiling channel",
 		Value: 100000,
 	}
+	UpdateBufferSizeFlag = cli.Uint64Flag{
+		Name:  "update-buffer-size",
+		Usage: "buffer size for holding update set in MiB",
+		Value: math.MaxUint64,
+	}
 	TargetBlockFlag = cli.Uint64Flag{
 		Name:    "target-block",
 		Aliases: []string{"block", "blk"},
@@ -347,6 +367,7 @@ type Config struct {
 	Cache               int            // Cache for StateDb or Priming
 	ContinueOnFailure   bool           // continue validation when an error detected
 	ContractNumber      int64          // number of contracts to create
+	CompactDb           bool           // compact database after merging
 	CPUProfile          string         // pprof cpu profile output file name
 	Db                  string         // path to database
 	DbTmp               string         // path to temporary database
@@ -374,14 +395,17 @@ type Config struct {
 	Profile             bool           // enable micro profiling
 	RandomSeed          int64          // set random seed for stochastic testing (TODO: Perhaps combine with PrimeSeed??)
 	SkipPriming         bool           // skip priming of the state DB
+	ShadowDb            bool           // defines we want to open an existing db as shadow
 	ShadowImpl          string         // implementation of the shadow DB to use, empty if disabled
 	ShadowVariant       string         // database variant of the shadow DB to be used
 	StateDbSrc          string         // directory to load an existing State DB data
 	AidaDb              string         // directory to profiling database containing substate, update, delete accounts data
 	StateValidationMode ValidationMode // state validation mode
 	UpdateDb            string         // update-set directory
+	Output              string         // output directory for aida-db patches or path to events.json file in stochastic generation
 	SnapshotDepth       int            // depth of snapshot history
 	SubstateDb          string         // substate directory
+	OperaDatadir        string         // source opera directory
 	ValidateTxState     bool           // validate stateDB before and after transaction
 	ValidateWorldState  bool           // validate stateDB before and after replay block range
 	ValuesNumber        int64          // number of values to generate
@@ -402,6 +426,7 @@ type Config struct {
 	ProfilingDbName     string         // set a database name for storing micro-profiling results
 	ChannelBufferSize   int            // set a buffer size for profiling channel
 	TargetBlock         uint64         // represents the ID of target block to be reached by state evolve process or in dump state
+	UpdateBufferSize    uint64         // cache size in Bytes
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.
@@ -510,6 +535,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		DbLogging:           ctx.Bool(StateDbLoggingFlag.Name),
 		DeletionDb:          ctx.Path(DeletionDbFlag.Name),
 		DeleteSourceDbs:     ctx.Bool(DeleteSourceDbsFlag.Name),
+		CompactDb:           ctx.Bool(CompactDbFlag.Name),
 		HasDeletedAccounts:  true,
 		KeepDb:              ctx.Bool(KeepDbFlag.Name),
 		KeysNumber:          ctx.Int64(KeysNumberFlag.Name),
@@ -524,13 +550,16 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		PrimeThreshold:      ctx.Int(PrimeThresholdFlag.Name),
 		Profile:             ctx.Bool(ProfileFlag.Name),
 		SkipPriming:         ctx.Bool(SkipPrimingFlag.Name),
+		ShadowDb:            ctx.Bool(ShadowDb.Name),
 		ShadowImpl:          ctx.String(ShadowDbImplementationFlag.Name),
 		ShadowVariant:       ctx.String(ShadowDbVariantFlag.Name),
 		SnapshotDepth:       ctx.Int(SnapshotDepthFlag.Name),
 		StateDbSrc:          ctx.Path(StateDbSrcFlag.Name),
 		AidaDb:              ctx.Path(AidaDbFlag.Name),
+		Output:              ctx.Path(OutputFlag.Name),
 		StateValidationMode: EqualityCheck,
 		UpdateDb:            ctx.Path(UpdateDbFlag.Name),
+		OperaDatadir:        ctx.Path(OperaDatadirFlag.Name),
 		SubstateDb:          ctx.Path(substate.SubstateDirFlag.Name),
 		ValuesNumber:        ctx.Int64(ValuesNumberFlag.Name),
 		ValidateTxState:     validateTxState,
@@ -552,6 +581,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		ProfilingDbName:     ctx.String(ProfilingDbNameFlag.Name),
 		ChannelBufferSize:   ctx.Int(ChannelBufferSizeFlag.Name),
 		TargetBlock:         ctx.Uint64(TargetBlockFlag.Name),
+		UpdateBufferSize:    ctx.Uint64(UpdateBufferSizeFlag.Name) << 20, // convert from MiB to B
 	}
 	if cfg.ChainID == 0 {
 		cfg.ChainID = ChainIDFlag.Value
@@ -591,7 +621,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 				log.Infof("%s: %v, DB variant: %v", prefix, impl, variant)
 			}
 		}
-		if cfg.ShadowImpl == "" {
+		if !cfg.ShadowDb {
 			logDbMode("Storage system", cfg.DbImpl, cfg.DbVariant)
 		} else {
 			logDbMode("Prime storage system", cfg.DbImpl, cfg.DbVariant)
@@ -625,7 +655,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	if cfg.ValidateTxState {
 		log.Warning("Validation enabled, reducing Tx throughput")
 	}
-	if cfg.ShadowImpl != "" {
+	if cfg.ShadowDb {
 		log.Warning("DB shadowing enabled, reducing Tx throughput and increasing memory and storage usage")
 	}
 	if cfg.DbLogging {
@@ -635,10 +665,10 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		log.Warning("Deleted-account-dir is not provided or does not exist")
 		cfg.HasDeletedAccounts = false
 	}
-	if cfg.KeepDb && cfg.ShadowImpl != "" {
-		log.Warning("Keeping persistent stateDB with a shadow db is not supported yet")
-		cfg.KeepDb = false
-	}
+	//if cfg.KeepDb && cfg.ShadowDb {
+	//	log.Warning("Keeping persistent stateDB with a shadow db is not supported yet")
+	//	cfg.KeepDb = false
+	//}
 	if cfg.KeepDb && strings.Contains(cfg.DbVariant, "memory") {
 		log.Warning("Unable to keep in-memory stateDB")
 		cfg.KeepDb = false

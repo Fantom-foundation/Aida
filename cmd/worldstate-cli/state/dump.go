@@ -180,7 +180,7 @@ func blockNumberAndRoot(store kvdb.Store, blockNumber uint64, root common.Hash, 
 	// neither blockNumber nor root hash were provided, try to use lastStateRoot containing latest block and root
 	if root == snapshot.ZeroHash && blockNumber == 0 {
 		// if the root has not been provided, try to use the latest
-		root, blockNumber, err = opera.LatestStateRoot(store)
+		root, blockNumber, _, err = opera.LatestStateRoot(store)
 		if err != nil {
 			log.Errorf("state root not found; %s", err.Error())
 			return 0, snapshot.ZeroHash, err

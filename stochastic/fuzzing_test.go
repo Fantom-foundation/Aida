@@ -80,11 +80,11 @@ func FuzzStochastic(f *testing.F) {
 
 		// create a directory for the store to place all its files, and
 		// instantiate the state DB under testing.
-		db, stateDirectory, _, err := utils.PrepareStateDB(&cfg)
+		db, _, err := utils.PrepareStateDB(&cfg)
 		if err != nil {
 			f.Errorf("failed opening StateDB. Error: %v", err)
 		}
-		defer os.RemoveAll(stateDirectory)
+		defer os.RemoveAll(cfg.StateDbSrc)
 
 		// generate uniform events
 		events := GenerateUniformRegistry(&cfg).NewEventRegistryJSON()
