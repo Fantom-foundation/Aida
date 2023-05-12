@@ -10,7 +10,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"time"
 
 	substate "github.com/Fantom-foundation/Substate"
 	_ "github.com/Fantom-foundation/Tosca/go/vm/evmone"
