@@ -62,8 +62,8 @@ github.com/DataDog/zstd v1.4.5/go.mod h1:1jcaCB/ufaK+sKp1NBhlGmpz41jOoPQ35bpF36t
 github.com/DataDog/zstd v1.5.2 h1:vUG4lAyuPCXO0TLbXvPv7EB7cNK1QV/luu55UHLrrn8=
 github.com/DataDog/zstd v1.5.2/go.mod h1:g4AWEaM3yOg3HYfnJ3YIawPnVdXJh9QME85blwSAmyw=
 github.com/Fantom-foundation/Substate v0.0.0-20230224090651-4c8c024214f4/go.mod h1:/yIHWCDDJcdKMJYvOLdYOnHt5eUBF9XWnrvrNE+90ik=
-github.com/Fantom-foundation/Substate v0.0.0-20230428142458-0cc8c0c74ab5 h1:Dd5oONZL/IXg06ipStcdII9wfKShkYkxSlPnoib20c8=
-github.com/Fantom-foundation/Substate v0.0.0-20230428142458-0cc8c0c74ab5/go.mod h1:KoObQO1Wmf3ACjxcXDREHf+mtDF4MAXfHwtxMIdyhx8=
+github.com/Fantom-foundation/Substate v0.0.0-20230512144303-da8b08478826 h1:jCM7Fl5ivFRrk5LtutprwKvn4MTpcWuTLWYaFv5J+oE=
+github.com/Fantom-foundation/Substate v0.0.0-20230512144303-da8b08478826/go.mod h1:KoObQO1Wmf3ACjxcXDREHf+mtDF4MAXfHwtxMIdyhx8=
 github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20230331085425-52296093a646 h1:wlo+TbNH2ZekB7uFMR69Z13ie6LvVdIIERXXojEc0ws=
 github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20230331085425-52296093a646/go.mod h1:Hu8U9SrXP6ABqtSNfJHw8lRGnr6tyma9PNZvwTweDjQ=
 github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230112084156-680f281ea1cb h1:4GajUnaY0S4KUe9KO0L4S8wq8R7CtGJna/s6IobED70=

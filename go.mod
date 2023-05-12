@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/Fantom-foundation/Carmen/go v0.0.0-00010101000000-000000000000
-	github.com/Fantom-foundation/Substate v0.0.0-20230428142458-0cc8c0c74ab5
+	github.com/Fantom-foundation/Substate v0.0.0-20230512144303-da8b08478826
 	github.com/Fantom-foundation/Tosca v0.0.0-20230406154859-8e2180f5f5c9
 	github.com/Fantom-foundation/go-opera v1.1.1-rc.2
 	github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230112084156-680f281ea1cb
@@ -104,7 +104,5 @@ replace github.com/Fantom-foundation/Carmen/go => ./carmen/go
 // The Tosca project is also integrated as a git-submodule for the same reasons as
 // Carmen. Furthermore, the EVMC library, which is part of Tosca, needs to be used.
 replace github.com/Fantom-foundation/Tosca => ./tosca
-
-replace github.com/Fantom-foundation/Substate => ../Substate
 
 replace github.com/ethereum/evmc/v10 => ./tosca/third_party/evmc
