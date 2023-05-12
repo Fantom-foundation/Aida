@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"github.com/ethereum/go-ethereum/core/rawdb"
@@ -19,7 +20,7 @@ var MergeCommand = cli.Command{
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 		&utils.DeleteSourceDbsFlag,
-		&utils.LogLevelFlag,
+		&logger.LogLevelFlag,
 	},
 	Description: `
 Creates target aida-db by merging source databases from arguments:
@@ -43,7 +44,7 @@ func merge(ctx *cli.Context) error {
 
 // Merge implements merging command for combining all source data databases into single database used for profiling.
 func Merge(cfg *utils.Config, sourceDbs []string) error {
-	log := utils.NewLogger(cfg.LogLevel, "DB Merger")
+	log := logger.NewLogger(cfg.LogLevel, "DB Merger")
 
 	targetDB, sourceDBs, sourceDBPaths, err := openDatabases(cfg.AidaDb, sourceDbs)
 	if err != nil {

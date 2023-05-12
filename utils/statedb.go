@@ -12,6 +12,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
@@ -25,7 +26,7 @@ func MakeStateDB(directory string, cfg *Config, rootHash common.Hash, isExisting
 		return nil, err
 	}
 	if cfg.DbLogging {
-		db = state.MakeLoggingStateDB(db, cfg)
+		db = state.MakeLoggingStateDB(db, cfg.LogLevel)
 	}
 	return db, nil
 }
@@ -180,7 +181,7 @@ func PrimeStateDBRandom(ws substate.SubstateAlloc, db state.BulkLoad, cfg *Confi
 // DeleteDestroyedAccountsFromWorldState removes previously suicided accounts from
 // the world state.
 func DeleteDestroyedAccountsFromWorldState(ws substate.SubstateAlloc, cfg *Config, target uint64) error {
-	log := NewLogger(cfg.LogLevel, "DelDestAcc")
+	log := logger.NewLogger(cfg.LogLevel, "DelDestAcc")
 
 	if !cfg.HasDeletedAccounts {
 		log.Warning("Database not provided. Ignore deleted accounts")
@@ -203,7 +204,7 @@ func DeleteDestroyedAccountsFromWorldState(ws substate.SubstateAlloc, cfg *Confi
 // DeleteDestroyedAccountsFromStateDB performs suicide operations on previously
 // self-destructed accounts.
 func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *Config, target uint64) error {
-	log := NewLogger(cfg.LogLevel, "DelDestAcc")
+	log := logger.NewLogger(cfg.LogLevel, "DelDestAcc")
 
 	if !cfg.HasDeletedAccounts {
 		log.Warning("Database not provided. Ignore deleted accounts.")
@@ -248,7 +249,7 @@ func GetDirectorySize(directory string) int64 {
 func PrepareStateDB(cfg *Config) (db state.StateDB, workingDirectory string, loadedExistingDB bool, err error) {
 	var (
 		exists bool
-		log    = NewLogger(cfg.LogLevel, "StateDB Preparation")
+		log    = logger.NewLogger(cfg.LogLevel, "StateDB Preparation")
 	)
 	roothash := common.Hash{}
 	loadedExistingDB = false

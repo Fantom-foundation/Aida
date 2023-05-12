@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
@@ -234,7 +235,7 @@ func TestStatedb_PrimeStateDB(t *testing.T) {
 			// Generating randomized world state
 			ws, _ := makeWorldState(t)
 
-			log := NewLogger("INFO", "TestStateDb")
+			log := logger.NewLogger("INFO", "TestStateDb")
 
 			// Priming state DB
 			PrimeStateDB(ws, sDB, cfg, log)
@@ -371,7 +372,7 @@ func TestStatedb_DeleteDestroyedAccountsFromStateDB(t *testing.T) {
 				}
 			}(sDB)
 
-			log := NewLogger("INFO", "TestStateDb")
+			log := logger.NewLogger("INFO", "TestStateDb")
 
 			// Priming state DB with given world state
 			PrimeStateDB(ws, sDB, cfg, log)
@@ -415,7 +416,7 @@ func TestStatedb_ValidateStateDB(t *testing.T) {
 			// Generating randomized world state
 			ws, _ := makeWorldState(t)
 
-			log := NewLogger("INFO", "TestStateDb")
+			log := logger.NewLogger("INFO", "TestStateDb")
 
 			// Priming state DB with given world state
 			PrimeStateDB(ws, sDB, cfg, log)
@@ -453,7 +454,7 @@ func TestStatedb_ValidateStateDBWithUpdate(t *testing.T) {
 			// Generating randomized world state
 			ws, _ := makeWorldState(t)
 
-			log := NewLogger("INFO", "TestStateDb")
+			log := logger.NewLogger("INFO", "TestStateDb")
 
 			// Priming state DB with given world state
 			PrimeStateDB(ws, sDB, cfg, log)

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -30,7 +31,7 @@ func RunArchive(ctx *cli.Context) error {
 		return argErr
 	}
 
-	log := utils.NewLogger(cfg.LogLevel, "Run-Archive")
+	log := logger.NewLogger(cfg.LogLevel, "Run-Archive")
 
 	// start CPU profiling if requested
 	if err := utils.StartCPUProfile(cfg); err != nil {

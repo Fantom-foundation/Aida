@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/op/go-logging"
@@ -109,7 +110,7 @@ func getReferenceStatsActionWithConsumer[T comparable](ctx *cli.Context, cli_com
 		return err
 	}
 
-	log := utils.NewLogger(cfg.LogLevel, "Replay Substate")
+	log := logger.NewLogger(cfg.LogLevel, "Replay Substate")
 
 	ContractDB = cfg.Db
 	chainID = cfg.ChainID

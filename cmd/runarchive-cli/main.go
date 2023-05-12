@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/Fantom-foundation/Aida/cmd/runarchive-cli/runarchive"
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
@@ -31,7 +32,7 @@ var RunArchiveApp = cli.App{
 		&utils.ValidateTxStateFlag,
 		&utils.VmImplementation,
 		&utils.AidaDbFlag,
-		&utils.LogLevelFlag,
+		&logger.LogLevelFlag,
 	},
 	Description: "Runs transactions on historic states derived from an archive DB",
 }

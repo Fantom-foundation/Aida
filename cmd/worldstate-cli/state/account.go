@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	"github.com/Fantom-foundation/Aida/world-state/types"
@@ -156,10 +157,10 @@ func collectAccounts(ctx *cli.Context) error {
 	go snapshot.FilterUnique(ctx.Context, storage, uniqueStorage)
 
 	// write found addresses
-	errAcc := snapshot.WriteAccounts(ctx.Context, collectProgressFactory(ctx.Context, uniqueAccount, "account", utils.NewLogger(cfg.LogLevel, "addr")), stateDB)
+	errAcc := snapshot.WriteAccounts(ctx.Context, collectProgressFactory(ctx.Context, uniqueAccount, "account", logger.NewLogger(cfg.LogLevel, "addr")), stateDB)
 
 	// write found storage hashes
-	errStorage := snapshot.WriteAccounts(ctx.Context, collectProgressFactory(ctx.Context, uniqueStorage, "storage", utils.NewLogger(cfg.LogLevel, "storage")), stateDB)
+	errStorage := snapshot.WriteAccounts(ctx.Context, collectProgressFactory(ctx.Context, uniqueStorage, "storage", logger.NewLogger(cfg.LogLevel, "storage")), stateDB)
 
 	// check for any error in above execution threads;
 	// this will block until all threads above close their error channels

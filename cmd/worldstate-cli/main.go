@@ -7,6 +7,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/state"
 	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/version"
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/urfave/cli/v2"
 )
@@ -32,7 +33,7 @@ func main() {
 		},
 		Flags: []cli.Flag{
 			&utils.WorldStateFlag,
-			&utils.LogLevelFlag,
+			&logger.LogLevelFlag,
 		},
 		Before:                 assertDBPath,
 		UseShortOptionHandling: true,

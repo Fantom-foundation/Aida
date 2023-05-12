@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -49,7 +50,7 @@ var ReplayCommand = cli.Command{
 		&utils.OnlySuccessfulFlag,
 		&utils.CpuProfileFlag,
 		&utils.StateDbImplementationFlag,
-		&utils.LogLevelFlag,
+		&logger.LogLevelFlag,
 	},
 	Description: `
 The substate-cli replay command requires two arguments:
@@ -264,7 +265,7 @@ func replayAction(ctx *cli.Context) error {
 		return err
 	}
 
-	log := utils.NewLogger(cfg.LogLevel, "Substate Replay")
+	log := logger.NewLogger(cfg.LogLevel, "Substate Replay")
 
 	// spawn contexts for data collector workers
 	if cfg.MicroProfiling {

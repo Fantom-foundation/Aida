@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/Fantom-foundation/Aida/cmd/runvm-cli/runvm"
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
@@ -52,7 +53,7 @@ var RunVMApp = cli.App{
 		&utils.ValidateFlag,
 		&utils.VmImplementation,
 		&utils.AidaDbFlag,
-		&utils.LogLevelFlag,
+		&logger.LogLevelFlag,
 	},
 	Description: `
 The run-vm command requires two arguments: <blockNumFirst> <blockNumLast>

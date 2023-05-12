@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -30,7 +31,7 @@ var GenDeletedAccountsCommand = cli.Command{
 		&substate.SubstateDirFlag,
 		&utils.ChainIDFlag,
 		&utils.DeletionDbFlag,
-		&utils.LogLevelFlag,
+		&logger.LogLevelFlag,
 	},
 	Description: `
 The substate-cli replay command requires two arguments:
@@ -241,7 +242,7 @@ func genDeletedAccountsAction(ctx *cli.Context) error {
 func GenDeletedAccountsAction(cfg *utils.Config) error {
 	var err error
 
-	log := utils.NewLogger(cfg.LogLevel, "Substate Replay")
+	log := logger.NewLogger(cfg.LogLevel, "Substate Replay")
 
 	chainID = cfg.ChainID
 	log.Infof("chain-id: %v", chainID)

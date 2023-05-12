@@ -6,6 +6,7 @@ import (
 	"os"
 	"regexp"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
@@ -26,7 +27,7 @@ var TraceCompareLogCommand = cli.Command{
 		&utils.TraceDebugFlag,
 		&utils.TraceFileFlag,
 		&utils.AidaDbFlag,
-		&utils.LogLevelFlag,
+		&logger.LogLevelFlag,
 	},
 	Description: `
 The trace compare-log command requires two arguments:
@@ -81,7 +82,7 @@ func isLogEqual(record string, replay string) bool {
 
 // traceCompareLogAction implements trace command for validating record and replay debug log.
 func traceCompareLogAction(ctx *cli.Context) error {
-	log := utils.NewLogger(ctx.String(utils.LogLevelFlag.Name), "Trace Compare Log")
+	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "Trace Compare Log")
 
 	// process arguments
 	if ctx.Args().Len() != 2 {

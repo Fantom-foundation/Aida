@@ -7,6 +7,7 @@ import (
 	"io"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	substate "github.com/Fantom-foundation/Substate"
 
 	eth_state "github.com/ethereum/go-ethereum/core/state"
@@ -45,7 +46,7 @@ var CmdDumpState = cli.Command{
 		&utils.TrieRootHashFlag,
 		&substate.WorkersFlag,
 		&utils.TargetBlockFlag,
-		&utils.LogLevelFlag,
+		&logger.LogLevelFlag,
 	},
 }
 
@@ -75,7 +76,7 @@ func DumpState(ctx *cli.Context) error {
 	defer cancel()
 
 	// make logger
-	log := utils.NewLogger(cfg.LogLevel, "Dump")
+	log := logger.NewLogger(cfg.LogLevel, "Dump")
 
 	// blockNumber number to be stored in output db
 	// root is root hash of storage at given block number
