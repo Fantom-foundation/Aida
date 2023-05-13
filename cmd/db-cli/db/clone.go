@@ -9,6 +9,7 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
@@ -59,40 +60,51 @@ func clone(ctx *cli.Context) error {
 		return err
 	}
 
-	if cfg.CompactDb {
-		log.Noticef("Starting compaction")
-		err = targetDb.Compact(nil, nil)
-		if err != nil {
-			return err
-		}
-	}
-
 	// open writing channel
 	writerChan, errChan := writeDataAsync(targetDb)
 
 	// write all contract codes
-	err = write(writerChan, errChan, aidaDb.NewIterator([]byte(substate.Stage1CodePrefix), nil), nil)
+	err = write(writerChan, errChan, aidaDb, []byte(substate.Stage1CodePrefix), 0, nil, log)
 	if err != nil {
 		return err
 	}
 
 	// write all destroyed accounts
-	err = write(writerChan, errChan, aidaDb.NewIterator([]byte(substate.DestroyedAccountPrefix), nil), nil)
+	err = write(writerChan, errChan, aidaDb, []byte(substate.DestroyedAccountPrefix), 0, nil, log)
 	if err != nil {
 		return err
 	}
 
 	// write update sets until cfg.Last
 	var lastUpdateBeforeRange uint64
-	lastUpdateBeforeRange, err = writeUpdateSet(cfg, writerChan, errChan, aidaDb)
+	lastUpdateBeforeRange, err = writeUpdateSet(cfg, writerChan, errChan, aidaDb, log)
 	if err != nil {
 		return err
 	}
 
 	// write substates from last updateset before cfg.First until cfg.Last
-	err = writeSubstates(cfg, writerChan, errChan, aidaDb, lastUpdateBeforeRange)
+	err = writeSubstates(cfg, writerChan, errChan, aidaDb, lastUpdateBeforeRange, log)
 	if err != nil {
 		return err
+	}
+
+	// all writting finished
+	close(writerChan)
+
+	log.Debug("Waiting until db write finishes")
+	// read result of writer
+	err, ok := <-errChan
+	if ok {
+		return err
+	}
+
+	//  compact written data
+	if cfg.CompactDb {
+		log.Noticef("Starting compaction")
+		err = targetDb.Compact(nil, nil)
+		if err != nil {
+			return err
+		}
 	}
 
 	// close aida database
@@ -105,7 +117,7 @@ func clone(ctx *cli.Context) error {
 }
 
 // writeSubstates write substates from last updateset before cfg.First until cfg.Last
-func writeSubstates(cfg *utils.Config, writerChan chan rawEntry, errChan chan error, aidaDb ethdb.Database, lastUpdateBeforeRange uint64) error {
+func writeSubstates(cfg *utils.Config, writerChan chan rawEntry, errChan chan error, aidaDb ethdb.Database, lastUpdateBeforeRange uint64, log *logging.Logger) error {
 	endCond := func(key []byte) (bool, error) {
 		block, _, err := substate.DecodeStage1SubstateKey(key)
 		if err != nil {
@@ -117,11 +129,11 @@ func writeSubstates(cfg *utils.Config, writerChan chan rawEntry, errChan chan er
 		return false, nil
 	}
 	// generating substates right after previous updateset before our interval
-	return write(writerChan, errChan, aidaDb.NewIterator([]byte(substate.Stage1SubstatePrefix), substate.BlockToBytes(lastUpdateBeforeRange+1)), endCond)
+	return write(writerChan, errChan, aidaDb, []byte(substate.Stage1SubstatePrefix), lastUpdateBeforeRange+1, endCond, log)
 }
 
 // writeUpdateSet write update sets until cfg.Last
-func writeUpdateSet(cfg *utils.Config, writerChan chan rawEntry, errChan chan error, aidaDb ethdb.Database) (uint64, error) {
+func writeUpdateSet(cfg *utils.Config, writerChan chan rawEntry, errChan chan error, aidaDb ethdb.Database, log *logging.Logger) (uint64, error) {
 	// labeling last updateset before interval - need to export substates for that range as well
 	var lastUpdateBeforeRange uint64
 	endCond := func(key []byte) (bool, error) {
@@ -137,17 +149,30 @@ func writeUpdateSet(cfg *utils.Config, writerChan chan rawEntry, errChan chan er
 		}
 		return false, nil
 	}
+
+	err := write(writerChan, errChan, aidaDb, []byte(substate.SubstateAllocPrefix), 0, endCond, log)
+	if err != nil {
+		return 0, err
+	}
+
 	// check if updateset contained at least one set (first set with worldstate), then aida-db must be corrupted
 	if lastUpdateBeforeRange == 0 {
 		return 0, fmt.Errorf("updateset didn't contain any records; unable to create aida-db without initial world-state")
 	}
 
-	return lastUpdateBeforeRange, write(writerChan, errChan, aidaDb.NewIterator([]byte(substate.SubstateAllocPrefix), nil), endCond)
+	log.Debugf("Last updateset preceding block range found at %v\n", lastUpdateBeforeRange)
+
+	return lastUpdateBeforeRange, nil
 }
 
 // write all records into the database under given prefix
-func write(writerChan chan rawEntry, errChan chan error, iter ethdb.Iterator, condition func(key []byte) (bool, error)) error {
+func write(writerChan chan rawEntry, errChan chan error, aidaDb ethdb.Database, prefix []byte, start uint64, condition func(key []byte) (bool, error), log *logging.Logger) error {
+	log.Debugf("Prefix: %s ; Starting at: %d", prefix, start)
+
+	iter := aidaDb.NewIterator(prefix, substate.BlockToBytes(start))
 	defer iter.Release()
+
+	var counter uint64
 
 	for iter.Next() {
 		if condition != nil {
@@ -156,9 +181,11 @@ func write(writerChan chan rawEntry, errChan chan error, iter ethdb.Iterator, co
 				return err
 			}
 			if finished {
-				return nil
+				break
 			}
 		}
+
+		counter++
 
 		select {
 		case err, ok := <-errChan:
@@ -171,6 +198,9 @@ func write(writerChan chan rawEntry, errChan chan error, iter ethdb.Iterator, co
 
 		}
 	}
+
+	log.Debugf("Prefix: %s ; Written: %v\n", prefix, counter)
+
 	return nil
 }
 
