@@ -216,20 +216,18 @@ func writeDataAsync(targetDb ethdb.Database) (chan rawEntry, chan error) {
 			// do we have another available item?
 			item, ok := <-writeChan
 			if !ok {
+				// iteration completed - finish write rest of the pending data
+				if dbBatchWriter.ValueSize() > 0 {
+					err := dbBatchWriter.Write()
+					if err != nil {
+						errChan <- err
+						return
+					}
+				}
 				return
 			}
-			// iteration completed - finish write rest of the pending data
-			if dbBatchWriter.ValueSize() > 0 {
-				err := dbBatchWriter.Write()
-				if err != nil {
-					errChan <- err
-					return
-				}
-			}
 
-			key := item.Key
-
-			err := dbBatchWriter.Put(key, item.Value)
+			err := dbBatchWriter.Put(item.Key, item.Value)
 			if err != nil {
 				errChan <- err
 				return
