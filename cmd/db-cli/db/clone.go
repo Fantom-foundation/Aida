@@ -19,7 +19,7 @@ type rawEntry struct {
 	Value []byte
 }
 
-var dbItemChanSize = 100_000
+var dbItemChanSize = 100
 
 // CloneCommand enables creation of aida-db copy or subset
 var CloneCommand = cli.Command{
