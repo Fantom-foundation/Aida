@@ -187,6 +187,12 @@ func write(writerChan chan rawEntry, errChan chan error, aidaDb ethdb.Database, 
 
 		counter++
 
+		// make deep copy key and value
+		key := make([]byte, len(iter.Key()))
+		copy(key, iter.Key())
+		value := make([]byte, len(iter.Value()))
+		copy(value, iter.Value())
+
 		select {
 		case err, ok := <-errChan:
 			{
@@ -194,7 +200,7 @@ func write(writerChan chan rawEntry, errChan chan error, aidaDb ethdb.Database, 
 					return err
 				}
 			}
-		case writerChan <- rawEntry{Key: iter.Key(), Value: iter.Value()}:
+		case writerChan <- rawEntry{Key: key, Value: value}:
 
 		}
 	}
