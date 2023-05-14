@@ -19,8 +19,6 @@ type rawEntry struct {
 	Value []byte
 }
 
-var dbItemChanSize = 100
-
 // CloneCommand enables creation of aida-db copy or subset
 var CloneCommand = cli.Command{
 	Action: clone,
@@ -212,7 +210,7 @@ func write(writerChan chan rawEntry, errChan chan error, aidaDb ethdb.Database, 
 
 // writeDataAsync copies data from channel into targetDb
 func writeDataAsync(targetDb ethdb.Database) (chan rawEntry, chan error) {
-	writeChan := make(chan rawEntry, dbItemChanSize)
+	writeChan := make(chan rawEntry)
 	errChan := make(chan error, 1)
 	go func() {
 		defer close(errChan)
