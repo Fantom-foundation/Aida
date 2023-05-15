@@ -16,8 +16,6 @@ func MakeFlatStateDB(directory, variant string, rootHash common.Hash) (s StateDB
 	var db ethdb.Database
 
 	switch variant {
-	case "": // = default option
-		fallthrough
 	case "go-memory":
 		db = rawdb.NewMemoryDatabase()
 	case "go-ldb":
