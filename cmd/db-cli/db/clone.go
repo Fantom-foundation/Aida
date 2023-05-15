@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
@@ -51,7 +52,7 @@ func clone(ctx *cli.Context) error {
 		return err
 	}
 
-	log := utils.NewLogger(cfg.LogLevel, "DB Clone")
+	log := logger.NewLogger(cfg.LogLevel, "DB Clone")
 
 	aidaDb, targetDb, err := openCloneDatabases(cfg)
 	if err != nil {
