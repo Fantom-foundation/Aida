@@ -13,7 +13,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// rawEntry representation of item in database
+// rawEntry representation of database entry
 type rawEntry struct {
 	Key   []byte
 	Value []byte
@@ -36,16 +36,16 @@ Creates clone of aida-db for desired block range
 }
 
 // clone creates aida-db copy or subset
+//
+//	N, first block
+//	M, last block
+//	cn, last updateset block before N
+//	cm, last updateset block before M
+//
+//	deletion db: 1 to M (whole database is transferred instead since it is small)
+//	update db: 1 to cm
+//	substate : cn to M
 func clone(ctx *cli.Context) error {
-	//	N, first block
-	//	M, last block
-	//	cn, last updateset block before N
-	//	cm, last updateset block before M
-	//
-	//	deletion db: 1 to M (whole database is transferred instead since it is small)
-	//	update db: 1 to cm
-	//	substate : cn to M
-
 	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if err != nil {
 		return err
@@ -266,13 +266,13 @@ func openCloneDatabases(cfg *utils.Config) (ethdb.Database, ethdb.Database, erro
 	// open aidaDb
 	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", true)
 	if err != nil {
-		return nil, nil, fmt.Errorf("targetDB. Error: %v", err)
+		return nil, nil, fmt.Errorf("targetDB; %v", err)
 	}
 
 	// open targetDB
 	targetDb, err := rawdb.NewLevelDBDatabase(cfg.TargetDb, 1024, 100, "profiling", false)
 	if err != nil {
-		return nil, nil, fmt.Errorf("targetDB. Error: %v", err)
+		return nil, nil, fmt.Errorf("targetDB; %v", err)
 	}
 
 	return aidaDb, targetDb, nil
