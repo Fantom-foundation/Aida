@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/flags"
+	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	"github.com/urfave/cli/v2"
 )
@@ -19,29 +19,35 @@ var CmdCompareState = cli.Command{
 	Description: `Compares given snapshot database against target snapshot database.`,
 	ArgsUsage:   "<to>",
 	Flags: []cli.Flag{
-		&flags.TargetDBPath,
+		&utils.TargetDbFlag,
 	},
 }
 
 // compareDb compares world state stored inside source and destination databases.
 func compareDb(ctx *cli.Context) error {
+	// make config
+	cfg, err := utils.NewConfig(ctx, utils.LastBlockArg)
+	if err != nil {
+		return err
+	}
+
 	// try to open state DB
-	stateDB, err := snapshot.OpenStateDB(ctx.Path(flags.StateDBPath.Name))
+	stateDB, err := snapshot.OpenStateDB(cfg.WorldStateDb)
 	if err != nil {
 		return err
 	}
 	defer snapshot.MustCloseStateDB(stateDB)
 
 	// try to open target state DB
-	stateRefDB, err := snapshot.OpenStateDB(DefaultPath(ctx, &flags.TargetDBPath, "clone"))
+	stateRefDB, err := snapshot.OpenStateDB(DefaultPath(ctx, &utils.TargetDbFlag, "clone"))
 	if err != nil {
 		return err
 	}
 	defer snapshot.MustCloseStateDB(stateRefDB)
 
 	// make logger
-	log := Logger(ctx, "cmp")
-	log.Infof("comparing %s against %s", ctx.Path(flags.StateDBPath.Name), ctx.Path(flags.TargetDBPath.Name))
+	log := utils.NewLogger(cfg.LogLevel, "cmp")
+	log.Infof("comparing %s against %s", cfg.WorldStateDb, cfg.TargetDb)
 
 	// call CompareTo against target database
 	err = stateDB.CompareTo(context.Background(), stateRefDB)

@@ -21,16 +21,18 @@ var TraceRecordCommand = cli.Command{
 	Usage:     "captures and records StateDB operations while processing blocks",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
+		&utils.UpdateBufferSizeFlag,
 		&utils.CpuProfileFlag,
 		&utils.SyncPeriodLengthFlag,
-		&utils.DisableProgressFlag,
+		&utils.QuietFlag,
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
 		&utils.ChainIDFlag,
-		&utils.TraceDirectoryFlag,
+		&utils.TraceFileFlag,
 		&utils.TraceDebugFlag,
 		&utils.DebugFromFlag,
-		&utils.DBFlag,
+		&utils.AidaDbFlag,
+		&utils.LogLevelFlag,
 	},
 	Description: `
 The trace record command requires two arguments:
@@ -50,6 +52,8 @@ func traceRecordAction(ctx *cli.Context) error {
 	// force enable transaction validation
 	cfg.ValidateTxState = true
 
+	log := utils.NewLogger(cfg.LogLevel, "Trace Record")
+
 	// start CPU profiling if enabled.
 	if err := utils.StartCPUProfile(cfg); err != nil {
 		return err
@@ -61,7 +65,7 @@ func traceRecordAction(ctx *cli.Context) error {
 	defer rCtx.Close()
 
 	// open SubstateDB and create an substate iterator
-	substate.SetSubstateDirectory(cfg.SubstateDBDir)
+	substate.SetSubstateDirectory(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
@@ -73,7 +77,7 @@ func traceRecordAction(ctx *cli.Context) error {
 		sec     float64
 		lastSec float64
 	)
-	if cfg.EnableProgress {
+	if !cfg.Quiet {
 		start = time.Now()
 		sec = time.Since(start).Seconds()
 		lastSec = time.Since(start).Seconds()
@@ -105,7 +109,6 @@ func traceRecordAction(ctx *cli.Context) error {
 			// open new block with a begin-block operation and clear index cache
 			operation.WriteOp(rCtx, operation.NewBeginBlock(tx.Block))
 		}
-		operation.WriteOp(rCtx, operation.NewBeginTransaction(uint32(tx.Transaction)))
 		var statedb state.StateDB
 		statedb = state.MakeGethInMemoryStateDB(&tx.Substate.InputAlloc, tx.Block)
 		statedb = tracer.NewProxyRecorder(statedb, rCtx)
@@ -113,12 +116,11 @@ func traceRecordAction(ctx *cli.Context) error {
 		if err := utils.ProcessTx(statedb, cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
 			return fmt.Errorf("Failed to process block %v tx %v. %v", tx.Block, tx.Transaction, err)
 		}
-		operation.WriteOp(rCtx, operation.NewEndTransaction())
-		if cfg.EnableProgress {
+		if !cfg.Quiet {
 			// report progress
 			sec = time.Since(start).Seconds()
 			if sec-lastSec >= 15 {
-				fmt.Printf("trace record: Elapsed time: %.0f s, at block %v\n", sec, curBlock)
+				log.Infof("Elapsed time: %.0f s, at block %v\n", sec, curBlock)
 				lastSec = sec
 			}
 		}
@@ -130,9 +132,9 @@ func traceRecordAction(ctx *cli.Context) error {
 	}
 	operation.WriteOp(rCtx, operation.NewEndSyncPeriod())
 
-	if cfg.EnableProgress {
-		sec = time.Since(start).Seconds()
-		fmt.Printf("trace record: Total elapsed time: %.3f s, processed %v blocks\n", sec, cfg.Last-cfg.First+1)
+	if !cfg.Quiet {
+		hours, minutes, seconds := utils.ParseTime(time.Since(start))
+		log.Noticef("Total elapsed time: %vh %vm %vs, processed %v blocks\n", hours, minutes, seconds, cfg.Last-cfg.First+1)
 	}
 
 	return nil

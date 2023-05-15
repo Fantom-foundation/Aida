@@ -63,27 +63,27 @@ func FuzzStochastic(f *testing.F) {
 
 		// generate configuration
 		cfg := utils.Config{
-			ContractNumber:     1000,
-			KeysNumber:         1000,
-			ValuesNumber:       1000,
-			SnapshotDepth:      100,
-			BlockLength:        3,
-			SyncPeriodLength:   10,
-			OperationFrequency: 2,
+			ContractNumber:    1000,
+			KeysNumber:        1000,
+			ValuesNumber:      1000,
+			SnapshotDepth:     100,
+			BlockLength:       3,
+			SyncPeriodLength:  10,
+			TransactionLength: 2,
 
-			ShadowImpl:     "geth",
-			StateDbTempDir: "/tmp/",
-			DbImpl:         "carmen",
-			DbVariant:      "go-file",
+			ShadowImpl: "geth",
+			DbTmp:      "/tmp/",
+			DbImpl:     "carmen",
+			DbVariant:  "go-file",
 		}
 
 		// create a directory for the store to place all its files, and
 		// instantiate the state DB under testing.
-		db, stateDirectory, _, err := utils.PrepareStateDB(&cfg)
+		db, _, err := utils.PrepareStateDB(&cfg)
 		if err != nil {
 			f.Errorf("failed opening StateDB. Error: %v", err)
 		}
-		defer os.RemoveAll(stateDirectory)
+		defer os.RemoveAll(cfg.StateDbSrc)
 
 		// generate uniform events
 		events := GenerateUniformRegistry(&cfg).NewEventRegistryJSON()
@@ -96,7 +96,7 @@ func FuzzStochastic(f *testing.F) {
 		rg := rand.New(fSrc)
 
 		// create a stochastic state
-		ss := createState(&cfg, &e, db, rg)
+		ss := createState(&cfg, &e, db, rg, utils.NewLogger("INFO", "Fuzzing Stochastic"))
 
 		// get stochastic matrix
 		operations, A, state := getStochasticMatrix(&e)

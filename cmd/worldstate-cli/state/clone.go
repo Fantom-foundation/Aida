@@ -5,7 +5,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/flags"
+	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	"github.com/Fantom-foundation/Aida/world-state/types"
 	"github.com/urfave/cli/v2"
@@ -18,28 +18,34 @@ var CmdClone = cli.Command{
 	Aliases: []string{"c"},
 	Usage:   `Creates a clone of the world state dump database.`,
 	Flags: []cli.Flag{
-		&flags.TargetDBPath,
+		&utils.TargetDbFlag,
 	},
 }
 
 // cloneDB performs the DB cloning.
 func cloneDB(ctx *cli.Context) error {
+	// make config
+	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
+	if err != nil {
+		return err
+	}
+
 	// try to open source DB
-	inputDB, err := snapshot.OpenStateDB(ctx.Path(flags.StateDBPath.Name))
+	inputDB, err := snapshot.OpenStateDB(cfg.WorldStateDb)
 	if err != nil {
 		return err
 	}
 	defer snapshot.MustCloseStateDB(inputDB)
 
 	// try to open source DB
-	outputDB, err := snapshot.OpenStateDB(DefaultPath(ctx, &flags.TargetDBPath, ".aida/clone"))
+	outputDB, err := snapshot.OpenStateDB(DefaultPath(ctx, &utils.TargetDbFlag, ".aida/clone"))
 	if err != nil {
 		return err
 	}
 	defer snapshot.MustCloseStateDB(outputDB)
 
 	// make logger
-	log := Logger(ctx, "clone")
+	log := utils.NewLogger(cfg.LogLevel, "clone")
 	logTick := time.NewTicker(2 * time.Second)
 	defer logTick.Stop()
 

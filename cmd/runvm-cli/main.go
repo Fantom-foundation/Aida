@@ -19,39 +19,59 @@ var RunVMApp = cli.App{
 	Copyright: "(c) 2022 Fantom Foundation",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
-		&substate.WorkersFlag,
+		// AidaDb
+		&utils.AidaDbFlag,
 		&substate.SubstateDirFlag,
+		&utils.DeletionDbFlag,
+		&utils.UpdateDbFlag,
+
+		// StateDb
+		&utils.CarmenSchemaFlag,
+		&utils.StateDbImplementationFlag,
+		&utils.StateDbVariantFlag,
+		&utils.StateDbSrcFlag,
+		&utils.DbTmpFlag,
+		&utils.StateDbLoggingFlag,
+
+		// ArchiveDb
 		&utils.ArchiveModeFlag,
 		&utils.ArchiveVariantFlag,
-		&utils.CarmenSchemaFlag,
-		&utils.ChainIDFlag,
-		&utils.ContinueOnFailureFlag,
+
+		// ShadowDb
+		&utils.ShadowDb,
+		&utils.ShadowDbImplementationFlag,
+		&utils.ShadowDbVariantFlag,
+
+		// VM
+		&utils.VmImplementation,
+
+		// Profiling
 		&utils.CpuProfileFlag,
-		&utils.DeletedAccountDirFlag,
-		&utils.DisableProgressFlag,
-		&utils.SyncPeriodLengthFlag,
-		&utils.KeepStateDBFlag,
-		&utils.MaxNumTransactionsFlag,
 		&utils.MemoryBreakdownFlag,
-		&utils.MemProfileFlag,
+		&utils.MemoryProfileFlag,
 		&utils.PrimeSeedFlag,
 		&utils.PrimeThresholdFlag,
 		&utils.ProfileFlag,
+
+		// Priming
 		&utils.RandomizePrimingFlag,
 		&utils.SkipPrimingFlag,
-		&utils.StateDbImplementationFlag,
-		&utils.StateDbVariantFlag,
-		&utils.StateDbSrcDirFlag,
-		&utils.StateDbTempDirFlag,
-		&utils.StateDbLoggingFlag,
-		&utils.ShadowDbImplementationFlag,
-		&utils.ShadowDbVariantFlag,
-		&utils.UpdateDBDirFlag,
+		&utils.UpdateBufferSizeFlag,
+
+		// Utils
+		&substate.WorkersFlag,
+		&utils.ChainIDFlag,
+		&utils.ContinueOnFailureFlag,
+		&utils.QuietFlag,
+		&utils.SyncPeriodLengthFlag,
+		&utils.KeepDbFlag,
+		&utils.MaxNumTransactionsFlag,
 		&utils.ValidateTxStateFlag,
 		&utils.ValidateWorldStateFlag,
 		&utils.ValidateFlag,
-		&utils.VmImplementation,
-		&utils.DBFlag,
+		&utils.LogLevelFlag,
+
+		// erigon
 		&utils.ErigonBatchSizeFlag,
 	},
 	Description: `

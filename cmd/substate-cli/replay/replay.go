@@ -3,6 +3,7 @@ package replay
 import (
 	"context"
 	"fmt"
+	"math"
 	"math/big"
 	"os"
 	"runtime/pprof"
@@ -22,6 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
@@ -37,16 +39,17 @@ var ReplayCommand = cli.Command{
 		&substate.SkipCallTxsFlag,
 		&substate.SkipCreateTxsFlag,
 		&substate.SubstateDirFlag,
-		&ChainIDFlag,
-		&ProfileEVMCallFlag,
-		&MicroProfilingFlag,
-		&BasicBlockProfilingFlag,
-		&DatabaseNameFlag,
-		&ChannelBufferSizeFlag,
-		&InterpreterImplFlag,
-		&OnlySuccessfulFlag,
-		&CpuProfilingFlag,
-		&UseInMemoryStateDbFlag,
+		&utils.ChainIDFlag,
+		&utils.ProfileEVMCallFlag,
+		&utils.MicroProfilingFlag,
+		&utils.BasicBlockProfilingFlag,
+		&utils.ProfilingDbNameFlag,
+		&utils.ChannelBufferSizeFlag,
+		&utils.VmImplementation,
+		&utils.OnlySuccessfulFlag,
+		&utils.CpuProfileFlag,
+		&utils.StateDbImplementationFlag,
+		&utils.LogLevelFlag,
 	},
 	Description: `
 The substate-cli replay command requires two arguments:
@@ -59,9 +62,9 @@ last block of the inclusive range of blocks to replay transactions.`,
 var vm_duration time.Duration
 
 type ReplayConfig struct {
-	vm_impl          string
-	only_successful  bool
-	use_in_memory_db bool
+	vm_impl         string
+	only_successful bool
+	state_db_impl   string
 }
 
 // data collection execution context
@@ -93,7 +96,7 @@ func getVmDuration() time.Duration {
 }
 
 // replayTask replays a transaction substate
-func replayTask(config ReplayConfig, block uint64, tx int, recording *substate.Substate, taskPool *substate.SubstateTaskPool) error {
+func replayTask(config ReplayConfig, block uint64, tx int, recording *substate.Substate, taskPool *substate.SubstateTaskPool, log *logging.Logger) error {
 
 	// If requested, skip failed transactions.
 	if config.only_successful && recording.Result.Status != types.ReceiptStatusSuccessful {
@@ -130,11 +133,15 @@ func replayTask(config ReplayConfig, block uint64, tx int, recording *substate.S
 		return h
 	}
 
+	// TODO: implement other state db types
 	var statedb state.StateDB
-	if config.use_in_memory_db {
-		statedb = state.MakeGethInMemoryStateDB(&inputAlloc, block)
-	} else {
+	switch config.state_db_impl {
+	case "geth":
 		statedb = state.MakeOffTheChainStateDB(inputAlloc)
+	case "geth-memory":
+		statedb = state.MakeGethInMemoryStateDB(&inputAlloc, block)
+	default:
+		return fmt.Errorf("unsupported db type: %s", config.state_db_impl)
 	}
 
 	// Apply Message
@@ -159,6 +166,11 @@ func replayTask(config ReplayConfig, block uint64, tx int, recording *substate.S
 	// If currentBaseFee is defined, add it to the vmContext.
 	if inputEnv.BaseFee != nil {
 		blockCtx.BaseFee = new(big.Int).Set(inputEnv.BaseFee)
+	}
+	// Limit the GasLimit to MaxInt64 since some VM implementations use
+	// int64 instead of uint64 to represent gas quantities.
+	if blockCtx.GasLimit > uint64(math.MaxInt64) {
+		blockCtx.GasLimit = uint64(math.MaxInt64)
 	}
 
 	msg := inputMessage.AsMessage()
@@ -210,13 +222,13 @@ func replayTask(config ReplayConfig, block uint64, tx int, recording *substate.S
 	r := outputResult.Equal(evmResult)
 	a := outputAlloc.Equal(evmAlloc)
 	if !(r && a) {
-		fmt.Printf("block: %v Transaction: %v\n", block, tx)
+		log.Infof("block: %v Transaction: %v", block, tx)
 		if !r {
-			fmt.Printf("inconsistent output: result\n")
+			log.Criticalf("inconsistent output: result")
 			utils.PrintResultDiffSummary(outputResult, evmResult)
 		}
 		if !a {
-			fmt.Printf("inconsistent output: alloc\n")
+			log.Criticalf("inconsistent output: alloc")
 			utils.PrintAllocationDiffSummary(&outputAlloc, &evmAlloc)
 		}
 		return fmt.Errorf("inconsistent output")
@@ -247,12 +259,15 @@ func NewBasicBlockProfilingCollectorContext() *BasicBlockProfilingCollectorConte
 func replayAction(ctx *cli.Context) error {
 	var err error
 
-	if ctx.Args().Len() != 2 {
-		return fmt.Errorf("substate-cli replay command requires exactly 2 arguments")
+	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
+	if err != nil {
+		return err
 	}
 
+	log := utils.NewLogger(cfg.LogLevel, "Substate Replay")
+
 	// spawn contexts for data collector workers
-	if ctx.Bool(MicroProfilingFlag.Name) {
+	if cfg.MicroProfiling {
 		var dcc [5]*MicroProfilingCollectorContext
 		for i := 0; i < 5; i++ {
 			dcc[i] = NewMicroProfilingCollectorContext()
@@ -271,14 +286,14 @@ func replayAction(ctx *cli.Context) error {
 			for i := 0; i < 5; i++ {
 				stats.Merge(dcc[i].stats)
 			}
-			version := fmt.Sprintf("git-date:%v, git-commit:%v, chaind-id:%v", gitDate, gitCommit, chainID)
+			version := fmt.Sprintf("chaind-id:%v", chainID)
 			stats.Dump(version)
-			fmt.Printf("substate-cli replay: recorded micro profiling statistics in %v\n", vm.MicroProfilingDB)
+			log.Noticef("substate-cli: replay-action: recorded micro profiling statistics in %v", vm.MicroProfilingDB)
 		}()
 
 	}
 
-	if ctx.Bool(BasicBlockProfilingFlag.Name) {
+	if cfg.BasicBlockProfiling {
 		var dcc [5]*BasicBlockProfilingCollectorContext
 		for i := 0; i < 5; i++ {
 			dcc[i] = NewBasicBlockProfilingCollectorContext()
@@ -298,42 +313,35 @@ func replayAction(ctx *cli.Context) error {
 				stats.Merge(dcc[i].stats)
 			}
 			stats.Dump()
-			fmt.Printf("substate-cli replay: recorded basic block profiling statistics in %v\n", vm.BasicBlockProfilingDB)
+			log.Noticef("recorded basic block profiling statistics in %v\n", vm.BasicBlockProfilingDB)
 		}()
 	}
 
-	chainID = ctx.Int(ChainIDFlag.Name)
-	fmt.Printf("chain-id: %v\n", chainID)
-	fmt.Printf("git-date: %v\n", gitDate)
-	fmt.Printf("git-commit: %v\n", gitCommit)
+	chainID = cfg.ChainID
+	log.Infof("chain-id: %v\n", chainID)
 
-	first, last, argErr := utils.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
-	if argErr != nil {
-		return argErr
-	}
-
-	if ctx.Bool(ProfileEVMCallFlag.Name) {
+	if cfg.ProfileEVMCall {
 		evmcore.ProfileEVMCall = true
 	}
 
-	if ctx.Bool(MicroProfilingFlag.Name) {
+	if cfg.MicroProfiling {
 		vm.MicroProfiling = true
-		vm.MicroProfilingBufferSize = ctx.Int(ChannelBufferSizeFlag.Name)
-		vm.MicroProfilingDB = ctx.String(DatabaseNameFlag.Name)
+		vm.MicroProfilingBufferSize = cfg.ChannelBufferSize
+		vm.MicroProfilingDB = cfg.ProfilingDbName
 	}
 
-	if ctx.Bool(BasicBlockProfilingFlag.Name) {
+	if cfg.BasicBlockProfiling {
 		vm.BasicBlockProfiling = true
-		vm.BasicBlockProfilingBufferSize = ctx.Int(ChannelBufferSizeFlag.Name)
-		vm.BasicBlockProfilingDB = ctx.String(DatabaseNameFlag.Name)
+		vm.BasicBlockProfilingBufferSize = cfg.ChannelBufferSize
+		vm.BasicBlockProfilingDB = cfg.ProfilingDbName
 	}
 
-	substate.SetSubstateDirectory(ctx.String(substate.SubstateDirFlag.Name))
+	substate.SetSubstateDirectory(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
 	// Start CPU profiling if requested.
-	profile_file_name := ctx.String(CpuProfilingFlag.Name)
+	profile_file_name := cfg.CPUProfile
 	if profile_file_name != "" {
 		f, err := os.Create(profile_file_name)
 		if err != nil {
@@ -344,21 +352,21 @@ func replayAction(ctx *cli.Context) error {
 	}
 
 	var config = ReplayConfig{
-		vm_impl:          ctx.String(InterpreterImplFlag.Name),
-		only_successful:  ctx.Bool(OnlySuccessfulFlag.Name),
-		use_in_memory_db: ctx.Bool(UseInMemoryStateDbFlag.Name),
+		vm_impl:         cfg.VmImpl,
+		only_successful: cfg.OnlySuccessful,
+		state_db_impl:   cfg.DbImpl,
 	}
 
 	task := func(block uint64, tx int, recording *substate.Substate, taskPool *substate.SubstateTaskPool) error {
-		return replayTask(config, block, tx, recording, taskPool)
+		return replayTask(config, block, tx, recording, taskPool, log)
 	}
 
 	resetVmDuration()
-	taskPool := substate.NewSubstateTaskPool("substate-cli replay", task, first, last, ctx)
+	taskPool := substate.NewSubstateTaskPool("substate-cli replay", task, cfg.First, cfg.Last, ctx)
 	err = taskPool.Execute()
 
-	fmt.Printf("substate-cli replay: net VM time: %v\n", getVmDuration())
-	if strings.HasSuffix(ctx.String(InterpreterImplFlag.Name), "-stats") {
+	log.Noticef("net VM time: %v\n", getVmDuration())
+	if strings.HasSuffix(cfg.VmImpl, "-stats") {
 		lfvm.PrintCollectedInstructionStatistics()
 	}
 

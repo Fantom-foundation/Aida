@@ -1,9 +1,10 @@
 package operation
 
 import (
-	"fmt"
 	"math"
 	"time"
+
+	"github.com/op/go-logging"
 )
 
 var EnableProfiling = false
@@ -57,10 +58,10 @@ func (ps *ProfileStats) Profile(id byte, elapsed time.Duration) {
 }
 
 // PrintProfiling prints profiling information for executed operation.
-func (ps *ProfileStats) PrintProfiling() {
+func (ps *ProfileStats) PrintProfiling(log *logging.Logger) {
 	timeUnit := float64(time.Microsecond)
 	tuStr := "us"
-	fmt.Printf("id, n, mean(%v), std(%v), min(%v), max(%v)\n", tuStr, tuStr, tuStr, tuStr)
+	log.Noticef("id, n, mean(%v), std(%v), min(%v), max(%v)\n", tuStr, tuStr, tuStr, tuStr)
 	total := float64(0)
 	for id := byte(0); id < NumOperations; id++ {
 		n := ps.opFrequency[id]
@@ -68,11 +69,11 @@ func (ps *ProfileStats) PrintProfiling() {
 		std := math.Sqrt(ps.opVariance[id]) / timeUnit
 		min := float64(ps.opMinDuration[id]) / timeUnit
 		max := float64(ps.opMaxDuration[id]) / timeUnit
-		fmt.Printf("%v, %v, %v, %v, %v, %v\n", GetLabel(id), n, mean, std, min, max)
+		log.Noticef("%v, %v, %v, %v, %v, %v\n", GetLabel(id), n, mean, std, min, max)
 
 		total += float64(ps.opDuration[id])
 	}
 	sec := total / float64(time.Second)
 	tps := float64(ps.opFrequency[FinaliseID]) / sec
-	fmt.Printf("Total StateDB net execution time=%v (s) / ~%.1f Tx/s\n", sec, tps)
+	log.Noticef("Total StateDB net execution time=%v (s) / ~%.1f Tx/s\n", sec, tps)
 }

@@ -11,7 +11,7 @@ func TestPositiveRecord(t *testing.T) {
 	app := initTraceApp()
 	os.Args = []string{
 		"trace", "record",
-		"--tracedir", testTraceDir,
+		"--trace-file", testTraceFile,
 		"--substatedir", "substate.test",
 		"5000000", "5000100",
 	}
@@ -26,7 +26,7 @@ func TestPositiveReplaySubstate(t *testing.T) {
 	// record
 	os.Args = []string{
 		"trace", "record",
-		"--tracedir", testTraceDir,
+		"--trace-file", testTraceFile,
 		"--substatedir", "substate.test",
 		"5000000", "5000100",
 	}
@@ -38,7 +38,7 @@ func TestPositiveReplaySubstate(t *testing.T) {
 	for _, db := range dbTypes {
 		os.Args = []string{
 			"trace", "replay-substate",
-			"--tracedir", testTraceDir,
+			"--trace-file", testTraceFile,
 			"--db-impl", db,
 			"--substatedir", "substate.test",
 			"5000000", "5000100",
@@ -55,7 +55,7 @@ func TestPositiveReplaySubstateValidate(t *testing.T) {
 	// record
 	os.Args = []string{
 		"trace", "record",
-		"--tracedir", testTraceDir,
+		"--trace-file", testTraceFile,
 		"--substatedir", "substate.test",
 		"5000000", "5000100",
 	}
@@ -67,7 +67,7 @@ func TestPositiveReplaySubstateValidate(t *testing.T) {
 	for _, db := range dbTypes {
 		os.Args = []string{
 			"trace", "replay-substate",
-			"--tracedir", testTraceDir,
+			"--trace-file", testTraceFile,
 			"--db-impl", db,
 			"--substatedir", "substate.test",
 			"--validate",
@@ -85,7 +85,8 @@ func TestPositiveCompareLog(t *testing.T) {
 	os.Args = []string{
 		"trace", "compare-log",
 		"--substatedir", "substate.test",
-		"--tracedir", testTraceDir,
+		"--trace-file", testTraceFile,
+		"--log", "CRITICAL",
 		"5000000", "5000100",
 	}
 	if err := app.Run(os.Args); err != nil {

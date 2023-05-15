@@ -2,7 +2,6 @@ package trace
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"time"
 
@@ -11,6 +10,7 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
+	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
@@ -26,12 +26,12 @@ var TraceReplayCommand = cli.Command{
 		&utils.CarmenSchemaFlag,
 		&utils.ChainIDFlag,
 		&utils.CpuProfileFlag,
-		&utils.DeletedAccountDirFlag,
-		&utils.DisableProgressFlag,
+		&utils.DeletionDbFlag,
+		&utils.QuietFlag,
 		&utils.SyncPeriodLengthFlag,
-		&utils.KeepStateDBFlag,
+		&utils.KeepDbFlag,
 		&utils.MemoryBreakdownFlag,
-		&utils.MemProfileFlag,
+		&utils.MemoryProfileFlag,
 		&utils.PrimeSeedFlag,
 		&utils.PrimeThresholdFlag,
 		&utils.ProfileFlag,
@@ -39,20 +39,21 @@ var TraceReplayCommand = cli.Command{
 		&utils.SkipPrimingFlag,
 		&utils.StateDbImplementationFlag,
 		&utils.StateDbVariantFlag,
-		&utils.StateDbSrcDirFlag,
-		&utils.StateDbTempDirFlag,
+		&utils.StateDbSrcFlag,
+		&utils.DbTmpFlag,
 		&utils.StateDbLoggingFlag,
 		&utils.ShadowDbImplementationFlag,
 		&utils.ShadowDbVariantFlag,
 		&substate.SubstateDirFlag,
 		&substate.WorkersFlag,
-		&utils.TraceDirectoryFlag,
+		&utils.TraceFileFlag,
 		&utils.TraceDebugFlag,
 		&utils.DebugFromFlag,
-		&utils.UpdateDBDirFlag,
+		&utils.UpdateDbFlag,
 		&utils.ValidateFlag,
 		&utils.ValidateWorldStateFlag,
-		&utils.DBFlag,
+		&utils.AidaDbFlag,
+		&utils.LogLevelFlag,
 	},
 	Description: `
 The trace replay command requires two arguments:
@@ -74,57 +75,40 @@ func readTrace(cfg *utils.Config, ch chan operation.Operation) {
 }
 
 // traceReplayTask simulates storage operations from storage traces on stateDB.
-func traceReplayTask(cfg *utils.Config) error {
+func traceReplayTask(cfg *utils.Config, log *logging.Logger) error {
 
 	// starting reading in parallel
-	log.Printf("Start reading operations in parallel")
+	log.Notice("Start reading operations in parallel")
 	opChannel := make(chan operation.Operation, readBufferSize)
 	go readTrace(cfg, opChannel)
 
 	// create a directory for the store to place all its files, and
 	// instantiate the state DB under testing.
-	log.Printf("Create stateDB database")
-	db, stateDirectory, loadedExistingDB, err := utils.PrepareStateDB(cfg)
+	log.Notice("Create StateDB")
+	db, stateDbDir, err := utils.PrepareStateDB(cfg)
 	if err != nil {
 		return err
 	}
-	if !cfg.KeepStateDB {
-		log.Printf("WARNING: directory %v will be removed at the end of this run.\n", stateDirectory)
-		defer os.RemoveAll(stateDirectory)
+	if !cfg.KeepDb {
+		log.Warningf("Directory %v with DB will be removed at the end of this run.", cfg.StateDbSrc)
+		defer os.RemoveAll(stateDbDir)
 	}
 
-	if cfg.SkipPriming || loadedExistingDB {
-		log.Printf("Skipping DB priming.\n")
+	if cfg.SkipPriming || cfg.StateDbSrc != "" {
+		log.Warning("Skipping DB priming.")
 	} else {
-		// intialize the world state and advance it to the first block
-		log.Printf("Load and advance worldstate to block %v", cfg.First-1)
-		ws, err := utils.GenerateWorldStateFromUpdateDB(cfg, cfg.First-1)
-		if err != nil {
-			return err
+		log.Notice("Prime stateDB")
+		start := time.Now()
+		if err := utils.LoadWorldStateAndPrime(db, cfg, cfg.First-1); err != nil {
+			return fmt.Errorf("priming failed. %v", err)
 		}
 
-		// prime stateDB
-		log.Printf("Prime stateDB \n")
-		utils.PrimeStateDB(ws, db, cfg)
-
-		// print memory usage after priming
-		if cfg.MemoryBreakdown {
-			if usage := db.GetMemoryUsage(); usage != nil {
-				log.Printf("State DB memory usage: %d byte\n%s\n", usage.UsedBytes, usage.Breakdown)
-			} else {
-				log.Printf("Utilized storage solution does not support memory breakdowns.\n")
-			}
-		}
-
-		// delete destroyed accounts from stateDB
-		log.Printf("Delete destroyed accounts \n")
-		// remove destroyed accounts until one block before the first block
-		if err = utils.DeleteDestroyedAccountsFromStateDB(db, cfg, cfg.First-1); err != nil {
-			return err
-		}
+		elapsed := time.Since(start)
+		hours, minutes, seconds := utils.ParseTime(elapsed)
+		log.Infof("\tPriming elapsed time: %vh %vm %vs\n", hours, minutes, seconds)
 	}
 
-	log.Printf("Replay storage operations on StateDB database")
+	log.Noticef("Replay storage operations on StateDB")
 
 	// load context
 	dCtx := context.NewReplay()
@@ -138,7 +122,7 @@ func traceReplayTask(cfg *utils.Config) error {
 		lastBlock  uint64
 		debug      bool
 	)
-	if cfg.EnableProgress {
+	if !cfg.Quiet {
 		start = time.Now()
 		sec = time.Since(start).Seconds()
 		lastSec = time.Since(start).Seconds()
@@ -170,11 +154,11 @@ func traceReplayTask(cfg *utils.Config) error {
 				break
 			}
 			lastBlock = block // track the last processed block
-			if cfg.EnableProgress {
+			if !cfg.Quiet {
 				// report progress
-				sec = time.Since(start).Seconds()
+				hours, minutes, seconds := utils.ParseTime(time.Since(start))
 				if sec-lastSec >= 15 {
-					log.Printf("Elapsed time: %.0f s, at block %v\n", sec, block)
+					log.Infof("Elapsed time: %vh %vm %vs, at block %v", hours, minutes, seconds, block)
 					lastSec = sec
 				}
 			}
@@ -184,14 +168,14 @@ func traceReplayTask(cfg *utils.Config) error {
 
 	sec = time.Since(start).Seconds()
 
-	log.Printf("Finished replaying storage operations on StateDB database")
+	log.Notice("Finished replaying storage operations on StateDB.")
 
 	// destroy context to make space
 	dCtx = nil
 
 	// validate stateDB
 	if cfg.ValidateWorldState {
-		log.Printf("Validate final state")
+		log.Notice("Validate final state")
 		ws, err := utils.GenerateWorldStateFromUpdateDB(cfg, cfg.Last)
 		if err = utils.DeleteDestroyedAccountsFromWorldState(ws, cfg, cfg.Last); err != nil {
 			return fmt.Errorf("Failed to remove detroyed accounts. %v\n", err)
@@ -203,9 +187,9 @@ func traceReplayTask(cfg *utils.Config) error {
 
 	if cfg.MemoryBreakdown {
 		if usage := db.GetMemoryUsage(); usage != nil {
-			log.Printf("State DB memory usage: %d byte\n%s\n", usage.UsedBytes, usage.Breakdown)
+			log.Notice("State DB memory usage: %d byte\n%s", usage.UsedBytes, usage.Breakdown)
 		} else {
-			log.Printf("Utilized storage solution does not support memory breakdowns.\n")
+			log.Notice("Utilized storage solution does not support memory breakdowns.")
 		}
 	}
 
@@ -219,27 +203,27 @@ func traceReplayTask(cfg *utils.Config) error {
 		operation.PrintProfiling()
 	}
 
-	if cfg.KeepStateDB {
+	if cfg.KeepDb {
 		rootHash, _ := db.Commit(true)
-		if err := utils.WriteStateDbInfo(stateDirectory, cfg, lastBlock, rootHash); err != nil {
-			log.Println(err)
+		if err := utils.WriteStateDbInfo(stateDbDir, cfg, lastBlock, rootHash); err != nil {
+			log.Error(err)
 		}
 		//rename directory after closing db.
-		defer utils.RenameTempStateDBDirectory(cfg, stateDirectory, lastBlock)
+		defer utils.RenameTempStateDBDirectory(cfg, stateDbDir, lastBlock)
 	}
 
 	// close the DB and print disk usage
-	log.Printf("Close StateDB database")
+	log.Notice("Close StateDB")
 	start = time.Now()
 	if err := db.Close(); err != nil {
-		log.Printf("Failed to close database: %v", err)
+		log.Errorf("Failed to close: %v", err)
 	}
 
 	// print progress summary
-	if cfg.EnableProgress {
-		log.Printf("trace replay: Total elapsed time: %.3f s, processed %v blocks\n", sec, cfg.Last-cfg.First+1)
-		log.Printf("trace replay: Closing DB took %v\n", time.Since(start))
-		log.Printf("trace replay: Final disk usage: %v MiB\n", float32(utils.GetDirectorySize(stateDirectory))/float32(1024*1024))
+	if !cfg.Quiet {
+		log.Noticef("Total elapsed time: %.3f s, processed %v blocks", sec, cfg.Last-cfg.First+1)
+		log.Noticef("Closing DB took %v", time.Since(start))
+		log.Noticef("Final disk usage: %v MiB", float32(utils.GetDirectorySize(stateDbDir))/float32(1024*1024))
 	}
 
 	return nil
@@ -265,10 +249,12 @@ func traceReplayAction(ctx *cli.Context) error {
 	defer utils.StopCPUProfile(cfg)
 
 	// run storage driver
-	substate.SetSubstateDirectory(cfg.SubstateDBDir)
+	substate.SetSubstateDirectory(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
-	err = traceReplayTask(cfg)
+
+	log := utils.NewLogger(cfg.LogLevel, "Trace Replay Action")
+	err = traceReplayTask(cfg, log)
 
 	return err
 }

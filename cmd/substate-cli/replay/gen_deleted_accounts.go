@@ -16,6 +16,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
@@ -27,8 +28,9 @@ var GenDeletedAccountsCommand = cli.Command{
 	Flags: []cli.Flag{
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
-		&ChainIDFlag,
-		&utils.DeletedAccountDirFlag,
+		&utils.ChainIDFlag,
+		&utils.DeletionDbFlag,
+		&utils.LogLevelFlag,
 	},
 	Description: `
 The substate-cli replay command requires two arguments:
@@ -84,7 +86,7 @@ func readAccounts(ch chan ContractLiveness) ([]common.Address, []common.Address)
 
 // genDeletedAccountsTask process a transaction substate then records self-destructed accounts
 // and resurrected accounts to a database.
-func genDeletedAccountsTask(block uint64, tx int, recording *substate.Substate, ddb *substate.DestroyedAccountDB) error {
+func genDeletedAccountsTask(block uint64, tx int, recording *substate.Substate, ddb *substate.DestroyedAccountDB, log *logging.Logger) error {
 
 	inputAlloc := recording.InputAlloc
 	inputEnv := recording.Env
@@ -202,11 +204,11 @@ func genDeletedAccountsTask(block uint64, tx int, recording *substate.Substate, 
 	a := outputAlloc.Equal(evmAlloc)
 	if !(r && a) {
 		if !r {
-			fmt.Printf("inconsistent output: result\n")
+			log.Criticalf("inconsistent output: result")
 			utils.PrintResultDiffSummary(outputResult, evmResult)
 		}
 		if !a {
-			fmt.Printf("inconsistent output: alloc\n")
+			log.Criticalf("inconsistent output: alloc")
 			utils.PrintAllocationDiffSummary(&outputAlloc, &evmAlloc)
 		}
 		return fmt.Errorf("inconsistent output")
@@ -225,29 +227,30 @@ func genDeletedAccountsTask(block uint64, tx int, recording *substate.Substate, 
 	return nil
 }
 
-// genDeletedAccountsAction replays transactions and record self-destructed accounts and resurrected accounts.
+// genDeletedAccountsAction prepares config and arguments before GenDeletedAccountsAction
 func genDeletedAccountsAction(ctx *cli.Context) error {
+	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
+	if err != nil {
+		return err
+	}
+
+	return GenDeletedAccountsAction(cfg)
+}
+
+// GenDeletedAccountsAction replays transactions and record self-destructed accounts and resurrected accounts.
+func GenDeletedAccountsAction(cfg *utils.Config) error {
 	var err error
 
-	if ctx.Args().Len() != 2 {
-		return fmt.Errorf("substate-cli gen-deleted-accounts command requires exactly 2 arguments")
-	}
+	log := utils.NewLogger(cfg.LogLevel, "Substate Replay")
 
-	chainID = ctx.Int(ChainIDFlag.Name)
-	fmt.Printf("chain-id: %v\n", chainID)
-	fmt.Printf("git-date: %v\n", gitDate)
-	fmt.Printf("git-commit: %v\n", gitCommit)
+	chainID = cfg.ChainID
+	log.Infof("chain-id: %v", chainID)
 
-	first, last, argErr := utils.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
-	if argErr != nil {
-		return argErr
-	}
-
-	substate.SetSubstateDirectory(ctx.String(substate.SubstateDirFlag.Name))
+	substate.SetSubstateDirectory(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
-	ddb := substate.OpenDestroyedAccountDB(ctx.String(utils.DeletedAccountDirFlag.Name))
+	ddb := substate.OpenDestroyedAccountDB(cfg.DeletionDb)
 	defer ddb.Close()
 
 	start := time.Now()
@@ -257,17 +260,16 @@ func genDeletedAccountsAction(ctx *cli.Context) error {
 	lastTxCount := uint64(0)
 	DeleteHistory = make(map[common.Address]bool)
 
-	workers := ctx.Int(substate.WorkersFlag.Name)
-	iter := substate.NewSubstateIterator(first, workers)
+	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
 	defer iter.Release()
 
 	for iter.Next() {
 		tx := iter.Value()
-		if tx.Block > last {
+		if tx.Block > cfg.Last {
 			break
 		}
 
-		err := genDeletedAccountsTask(tx.Block, tx.Transaction, tx.Substate, ddb)
+		err := genDeletedAccountsTask(tx.Block, tx.Transaction, tx.Substate, ddb, log)
 		if err != nil {
 			return err
 		}
@@ -277,7 +279,7 @@ func genDeletedAccountsAction(ctx *cli.Context) error {
 		if diff >= 30 {
 			numTx := txCount - lastTxCount
 			lastTxCount = txCount
-			fmt.Printf("substate-cli: Elapsed time: %.0f s, at block %v (~%.1f Tx/s)\n", sec, tx.Block, float64(numTx)/diff)
+			log.Infof("substate-cli: gen-del-acc: Elapsed time: %.0f s, at block %v (~%.1f Tx/s)", sec, tx.Block, float64(numTx)/diff)
 			lastSec = sec
 		}
 	}

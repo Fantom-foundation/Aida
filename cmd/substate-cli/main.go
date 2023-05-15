@@ -7,7 +7,6 @@ import (
 	"github.com/Fantom-foundation/Aida/cmd/substate-cli/db"
 	"github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
 	substate "github.com/Fantom-foundation/Substate"
-	"github.com/ethereum/go-ethereum/params"
 	"github.com/urfave/cli/v2"
 )
 
@@ -23,16 +22,10 @@ var (
 	}
 )
 
-var (
-	gitCommit = "" // Git SHA1 commit hash of the release (set via linker flags)
-	gitDate   = ""
-)
-
 func main() {
 	app := &cli.App{
 		Name:      "Substate CLI Manger",
 		HelpName:  "substate-cli",
-		Version:   params.VersionWithCommit(gitCommit, gitDate),
 		Copyright: "(c) 2022 Fantom Foundation",
 		Flags:     []cli.Flag{},
 		Commands: []*cli.Command{

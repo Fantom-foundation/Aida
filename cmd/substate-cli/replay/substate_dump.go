@@ -3,6 +3,7 @@ package replay
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -50,7 +51,7 @@ func substateDumpTask(block uint64, tx int, recording *substate.Substate, taskPo
 	jbytes, _ = json.MarshalIndent(outputResult, "", " ")
 	out += fmt.Sprintf("Recorded output result:\n%s\n", jbytes)
 
-	fmt.Println(out)
+	log.Println(out)
 
 	return nil
 }
@@ -59,20 +60,16 @@ func substateDumpTask(block uint64, tx int, recording *substate.Substate, taskPo
 func substateDumpAction(ctx *cli.Context) error {
 	var err error
 
-	if ctx.Args().Len() != 2 {
-		return fmt.Errorf("substate-cli dump command requires exactly 2 arguments")
-	}
-
-	first, last, argErr := utils.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
-	if argErr != nil {
-		return argErr
+	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
+	if err != nil {
+		return err
 	}
 
 	substate.SetSubstateDirectory(ctx.String(substate.SubstateDirFlag.Name))
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
-	taskPool := substate.NewSubstateTaskPool("substate-cli dump", substateDumpTask, first, last, ctx)
+	taskPool := substate.NewSubstateTaskPool("substate-cli dump", substateDumpTask, cfg.First, cfg.Last, ctx)
 	err = taskPool.Execute()
 	return err
 }

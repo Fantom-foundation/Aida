@@ -10,15 +10,34 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
-// internalErrorCode is created when RPC-API could not execute request
-// - for purpose of replay, this error is not critical and is only logged into DEBUG level
-const internalErrorCode = -32603
+const (
+	// internalErrorCode is created when RPC-API could not execute request
+	// - for purpose of replay, this error is not critical and is only logged into DEBUG level
+	internalErrorCode = -32603
+
+	invalidArgumentErrCode = -32602
+	// there are multiple types of execution reverted error codes
+	executionRevertedA = -32603
+	executionRevertedB = -32000
+	executionRevertedC = 3
+)
 
 // EVMErrors decode error code into string with which is compared with recorded error message
 var EVMErrors = map[int][]string{
-	-32000: {"execution reverted", "invalid opcode", "insufficient balance for transfer", "insufficient funds"},
-	-32602: {"invalid argument"},
-	3:      {"execution reverted"},
+	executionRevertedA: {"execution reverted"},
+
+	executionRevertedB: {
+		"execution reverted",
+		"invalid opcode",
+		"invalid code",
+		"insufficient balance for transfer",
+		"insufficient funds",
+		"gas required exceeds allowance",
+		"out of gas",
+	},
+	executionRevertedC: {"execution reverted"},
+
+	invalidArgumentErrCode: {"invalid argument"},
 }
 
 // compareBalance compares getBalance data recorded on API server with data returned by StateDB
@@ -184,6 +203,13 @@ func compareCallStateDBResult(data *OutData, builder *strings.Builder) *comparat
 		msg = fmt.Sprintf("unknown error code: %v", data.Recorded.Error.Code)
 	} else {
 
+		// we could have potentially recorded a request with invalid arguments
+		// - this is not checked in execution, hence StateDB returns a valid result.
+		// For this we exclude any invalid requests when getting unmatched results
+		if data.Recorded.Error.Code == invalidArgumentErrCode {
+			return nil
+		}
+
 		// more error messages for one code?
 		for i, e := range errs {
 			builder.WriteString(e)
@@ -201,7 +227,7 @@ func compareCallStateDBResult(data *OutData, builder *strings.Builder) *comparat
 		expectedErrorGotResult)
 }
 
-// compareEVMStateDBError compares error returned from EVM with recorded data
+// compareEVMStateDBError compares error returned from EVMExecutor with recorded data
 func compareEVMStateDBError(data *OutData, builder *strings.Builder) *comparatorError {
 
 	// did we record an error?

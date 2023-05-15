@@ -2,9 +2,6 @@ package runarchive
 
 import (
 	"fmt"
-	"log"
-	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
@@ -26,10 +23,12 @@ func RunArchive(ctx *cli.Context) error {
 
 	// process general arguments
 	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
-	cfg.StateValidationMode = utils.SubsetCheck
 	if argErr != nil {
 		return argErr
 	}
+	cfg.StateValidationMode = utils.SubsetCheck
+
+	log := utils.NewLogger(cfg.LogLevel, "Run-Archive")
 
 	// start CPU profiling if requested
 	if err := utils.StartCPUProfile(cfg); err != nil {
@@ -37,23 +36,28 @@ func RunArchive(ctx *cli.Context) error {
 	}
 	defer utils.StopCPUProfile(cfg)
 
+	// did we provide existing StateDb
+	if cfg.StateDbSrc == "" && cfg.AidaDb == "" {
+		return fmt.Errorf("existing StateDb is required for this command; use --aida-db to specify path to AidaDb or use --db-src to specify path to an EXISTING StateDb")
+	}
+
 	// open the archive
-	db, err := openStateDB(cfg)
+	db, _, err := utils.PrepareStateDB(cfg)
 	if err != nil {
 		return err
 	}
 	defer db.Close()
 
 	// open substate DB
-	substate.SetSubstateDirectory(cfg.SubstateDBDir)
+	substate.SetSubstateDirectory(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
-	log.Printf("Running transactions on archive using %d workers ...\n", cfg.Workers)
+	log.Infof("Running transactions on archive using %d workers ...\n", cfg.Workers)
 	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
 	defer iter.Release()
 
-	if cfg.EnableProgress {
+	if !cfg.Quiet {
 		start = time.Now()
 		lastSec = time.Since(start).Seconds()
 	}
@@ -88,12 +92,12 @@ func RunArchive(ctx *cli.Context) error {
 				abort = nil
 			}
 		case <-finishedTransaction:
-			if !cfg.EnableProgress {
+			if cfg.Quiet {
 				continue
 			}
 			txCount++
 		case block := <-finishedBlock:
-			if !cfg.EnableProgress {
+			if cfg.Quiet {
 				continue
 			}
 			if block > lastBlock {
@@ -103,7 +107,7 @@ func RunArchive(ctx *cli.Context) error {
 			sec = time.Since(start).Seconds()
 			if sec-lastSec >= 15 {
 				txRate := float64(txCount-lastTxCount) / (sec - lastSec)
-				log.Printf("Elapsed time: %.0f s, at block %d (~ %.1f Tx/s)\n", sec, lastBlock, txRate)
+				log.Infof("Elapsed time: %.0f s, at block %d (~ %.1f Tx/s)", sec, lastBlock, txRate)
 				lastSec = sec
 				lastTxCount = txCount
 			}
@@ -113,50 +117,12 @@ func RunArchive(ctx *cli.Context) error {
 	}
 
 	// print progress summary
-	if cfg.EnableProgress {
+	if !cfg.Quiet {
 		runTime := time.Since(start).Seconds()
-		log.Printf("Total elapsed time: %.3f s, processed %v blocks, %v transactions (~ %.1f Tx/s)\n", runTime, cfg.Last-cfg.First+1, txCount, float64(txCount)/(runTime))
+		log.Noticef("Total elapsed time: %.3f s, processed %v blocks, %v transactions (~ %.1f Tx/s)", runTime, cfg.Last-cfg.First+1, txCount, float64(txCount)/(runTime))
 	}
 
 	return err
-}
-
-func openStateDB(cfg *utils.Config) (state.StateDB, error) {
-	var err error
-
-	if cfg.StateDbSrcDir == "" {
-		return nil, fmt.Errorf("missing --db-src-dir parameter")
-	}
-
-	// check if statedb_info.json files exist
-	dbInfoFile := filepath.Join(cfg.StateDbSrcDir, utils.DbInfoName)
-	if _, err = os.Stat(dbInfoFile); err != nil {
-		return nil, fmt.Errorf("%s does not appear to contain a state DB", cfg.StateDbSrcDir)
-	}
-
-	dbinfo, ferr := utils.ReadStateDbInfo(dbInfoFile)
-	if ferr != nil {
-		return nil, fmt.Errorf("failed to read %v. %v", dbInfoFile, ferr)
-	}
-	if dbinfo.Impl != cfg.DbImpl {
-		err = fmt.Errorf("mismatch DB implementation.\n\thave %v\n\twant %v", dbinfo.Impl, cfg.DbImpl)
-	} else if dbinfo.Variant != cfg.DbVariant {
-		err = fmt.Errorf("mismatch DB variant.\n\thave %v\n\twant %v", dbinfo.Variant, cfg.DbVariant)
-	} else if dbinfo.Block < cfg.Last {
-		err = fmt.Errorf("the state DB does not cover the targeted block range.\n\thave %v\n\twant %v", dbinfo.Block, cfg.Last)
-	} else if !dbinfo.ArchiveMode {
-		err = fmt.Errorf("the targeted state DB does not include an archive")
-	} else if dbinfo.ArchiveVariant != cfg.ArchiveVariant {
-		err = fmt.Errorf("mismatch archive variant.\n\thave %v\n\twant %v", dbinfo.ArchiveVariant, cfg.ArchiveVariant)
-	} else if dbinfo.Schema != cfg.CarmenSchema {
-		err = fmt.Errorf("mismatch DB schema version.\n\thave %v\n\twant %v", dbinfo.Schema, cfg.CarmenSchema)
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	cfg.ArchiveMode = true
-	return utils.MakeStateDB(cfg.StateDbSrcDir, cfg, dbinfo.RootHash, true)
 }
 
 func groupTransactions(iter substate.SubstateIterator, blocks chan<- []*substate.Transaction, abort <-chan bool, cfg *utils.Config) {
@@ -207,12 +173,10 @@ func runBlocks(
 
 		state.BeginBlock(block)
 		for _, tx := range transactions {
-			state.BeginTransaction(uint32(tx.Transaction))
 			if err = utils.ProcessTx(db, cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
 				issues <- fmt.Errorf("processing of transaction %d/%d failed: %v", block, tx.Transaction, err)
 				break
 			}
-			state.EndTransaction()
 			transactionDone <- tx.Transaction
 		}
 		if err = state.Close(); err != nil {

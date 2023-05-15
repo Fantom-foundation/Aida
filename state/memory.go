@@ -435,7 +435,7 @@ func (db *inMemoryStateDB) BeginTransaction(number uint32) {
 }
 
 func (db *inMemoryStateDB) EndTransaction() {
-	// ignored
+	db.Finalise(true)
 }
 
 func (db *inMemoryStateDB) BeginBlock(number uint64) {
@@ -476,7 +476,7 @@ func (db *inMemoryStateDB) PrepareSubstate(alloc *substate.SubstateAlloc, block 
 	db.blockNum = block
 }
 
-func (s *inMemoryStateDB) StartBulkLoad() BulkLoad {
+func (s *inMemoryStateDB) StartBulkLoad(block uint64) BulkLoad {
 	return &gethInMemoryBulkLoad{}
 }
 

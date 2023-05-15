@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"strconv"
 	"time"
@@ -27,19 +26,20 @@ var StochasticReplayCommand = cli.Command{
 		&utils.ContinueOnFailureFlag,
 		&utils.CpuProfileFlag,
 		&utils.DebugFromFlag,
-		&utils.DisableProgressFlag,
+		&utils.QuietFlag,
 		&utils.MemoryBreakdownFlag,
 		&utils.RandomSeedFlag,
 		&utils.StateDbImplementationFlag,
 		&utils.StateDbVariantFlag,
-		&utils.StateDbTempDirFlag,
+		&utils.DbTmpFlag,
 		&utils.StateDbLoggingFlag,
-		&utils.TraceDirectoryFlag,
+		&utils.TraceFileFlag,
 		&utils.TraceDebugFlag,
 		&utils.TraceFlag,
 		&utils.ShadowDbImplementationFlag,
 		&utils.ShadowDbVariantFlag,
-		&utils.DBFlag,
+		&utils.AidaDbFlag,
+		&utils.LogLevelFlag,
 	},
 	Description: `
 The stochastic replay command requires two argument:
@@ -69,6 +69,7 @@ func stochasticReplayAction(ctx *cli.Context) error {
 	if cfg.DbImpl == "memory" {
 		return fmt.Errorf("db-impl memory is not supported")
 	}
+	log := utils.NewLogger(cfg.LogLevel, "Stochastic Replay")
 
 	// start CPU profiling if requested.
 	if err := utils.StartCPUProfile(cfg); err != nil {
@@ -84,12 +85,12 @@ func stochasticReplayAction(ctx *cli.Context) error {
 
 	// create a directory for the store to place all its files, and
 	// instantiate the state DB under testing.
-	log.Printf("Create stateDB database")
-	db, stateDirectory, _, err := utils.PrepareStateDB(cfg)
+	log.Notice("Create StateDB")
+	db, stateDbDir, err := utils.PrepareStateDB(cfg)
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(stateDirectory)
+	defer os.RemoveAll(stateDbDir)
 
 	// Enable tracing if debug flag is set
 	if cfg.Trace {
@@ -101,24 +102,24 @@ func stochasticReplayAction(ctx *cli.Context) error {
 	// run simulation.
 	fmt.Printf("stochastic replay: run simulation ...\n")
 
-	runErr := stochastic.RunStochasticReplay(db, simulation, int(simLength), cfg)
+	runErr := stochastic.RunStochasticReplay(db, simulation, int(simLength), cfg, utils.NewLogger(ctx.String(utils.LogLevelFlag.Name), "Stochastic"))
 
 	// print memory usage after simulation
 	if cfg.MemoryBreakdown {
 		if usage := db.GetMemoryUsage(); usage != nil {
-			log.Printf("stochastic replay: state DB memory usage: %d byte\n%s\n", usage.UsedBytes, usage.Breakdown)
+			log.Noticef("State DB memory usage: %d byte\n%s", usage.UsedBytes, usage.Breakdown)
 		} else {
-			log.Printf("Utilized storage solution does not support memory breakdowns.\n")
+			log.Info("Utilized storage solution does not support memory breakdowns")
 		}
 	}
 
 	// close the DB and print disk usage
 	start := time.Now()
 	if err := db.Close(); err != nil {
-		log.Printf("Failed to close database: %v", err)
+		log.Criticalf("Failed to close database; %v", err)
 	}
-	log.Printf("stochastic replay: Closing DB took %v\n", time.Since(start))
-	log.Printf("stochastic replay: Final disk usage: %v MiB\n", float32(utils.GetDirectorySize(stateDirectory))/float32(1024*1024))
+	log.Infof("Closing DB took %v", time.Since(start))
+	log.Noticef("Final disk usage: %v MiB", float32(utils.GetDirectorySize(stateDbDir))/float32(1024*1024))
 
 	return runErr
 }

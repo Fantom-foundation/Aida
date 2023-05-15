@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/Fantom-foundation/Carmen/go v0.0.0-00010101000000-000000000000
-	github.com/Fantom-foundation/Substate v0.0.0-20230417060221-dd103fdba4ce
+	github.com/Fantom-foundation/Substate v0.0.0-20230428142458-0cc8c0c74ab5
 	github.com/Fantom-foundation/Tosca v0.0.0-20230406154859-8e2180f5f5c9
 	github.com/Fantom-foundation/go-opera v1.1.1-rc.2
 	github.com/Fantom-foundation/go-opera-erigon v0.0.0-00010101000000-000000000000
@@ -29,7 +29,6 @@ require (
 	github.com/syndtr/goleveldb v1.0.1-0.20220614013038-64ee5596c38a
 	github.com/urfave/cli/v2 v2.24.4
 	golang.org/x/text v0.8.0
-	golang.org/x/tools v0.6.0
 	gonum.org/v1/gonum v0.6.0
 )
 
@@ -57,6 +56,7 @@ require (
 	github.com/dvyukov/go-fuzz v0.0.0-20201127111758-49e582c6c23d // indirect
 	github.com/edsrzf/mmap-go v1.0.0 // indirect
 	github.com/emirpasic/gods v1.12.0 // indirect
+	github.com/ethereum/evmc/v10 v10.0.0 // indirect
 	github.com/evalphobia/logrus_sentry v0.8.2 // indirect
 	github.com/fjl/memsize v0.0.0-20190710130421-bcb5799ab5e5 // indirect
 	github.com/fogleman/gg v1.3.0 // indirect
@@ -162,3 +162,9 @@ replace github.com/ugorji/go/codec/codecgen => github.com/ugorji/go/codec/codecg
 replace github.com/torquem-ch/mdbx-go => github.com/torquem-ch/mdbx-go v0.26.3
 
 replace github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
+
+// The Tosca project is also integrated as a git-submodule for the same reasons as
+// Carmen. Furthermore, the EVMC library, which is part of Tosca, needs to be used.
+replace github.com/Fantom-foundation/Tosca => ./tosca
+
+replace github.com/ethereum/evmc/v10 => ./tosca/third_party/evmc

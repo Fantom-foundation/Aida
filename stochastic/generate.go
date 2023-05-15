@@ -46,9 +46,6 @@ func GenerateUniformRegistry(cfg *utils.Config) *EventRegistry {
 			case BeginBlockID:
 				j := EncodeArgOp(BeginTransactionID, statistics.NoArgID, statistics.NoArgID, statistics.NoArgID)
 				r.transitFreq[i][j] = 1
-			case FinaliseID:
-				j := EncodeArgOp(EndTransactionID, statistics.NoArgID, statistics.NoArgID, statistics.NoArgID)
-				r.transitFreq[i][j] = 1
 			case EndTransactionID:
 				j1 := EncodeArgOp(BeginTransactionID, statistics.NoArgID, statistics.NoArgID, statistics.NoArgID)
 				j2 := EncodeArgOp(EndBlockID, statistics.NoArgID, statistics.NoArgID, statistics.NoArgID)
@@ -69,12 +66,11 @@ func GenerateUniformRegistry(cfg *utils.Config) *EventRegistry {
 						if opJ != BeginSyncPeriodID &&
 							opJ != BeginBlockID &&
 							opJ != BeginTransactionID &&
-							opJ != FinaliseID &&
 							opJ != EndTransactionID &&
 							opJ != EndBlockID &&
 							opJ != EndSyncPeriodID {
-							r.transitFreq[i][j] = cfg.OperationFrequency
-						} else if opJ == FinaliseID {
+							r.transitFreq[i][j] = cfg.TransactionLength
+						} else if opJ == EndTransactionID {
 							r.transitFreq[i][j] = 1
 						}
 					}

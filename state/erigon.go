@@ -298,7 +298,7 @@ type erigonBulkLoad struct {
 	num_ops int64
 }
 
-func (s *erigonStateDB) StartBulkLoad() BulkLoad {
+func (s *erigonStateDB) StartBulkLoad(_ uint64) BulkLoad {
 	esDB := &erigonStateDB{
 		db:         s.db,
 		stateRoot:  s.stateRoot,

@@ -17,10 +17,10 @@ var StochasticGenerateCommand = cli.Command{
 	Flags: []cli.Flag{
 		&utils.BlockLengthFlag,
 		&utils.SyncPeriodLengthFlag,
-		&utils.OperationFrequency,
+		&utils.TransactionLengthFlag,
 		&utils.ContractNumberFlag,
 		&utils.KeysNumberFlag,
-		&utils.ValuesNumberFLag,
+		&utils.ValuesNumberFlag,
 		&utils.SnapshotDepthFlag,
 	},
 	Description: "The stochastic produces an events.json file with uniform parameters",
@@ -40,11 +40,11 @@ func stochasticGenerateAction(ctx *cli.Context) error {
 
 	// writing event registry
 	log.Printf("write events file ...\n")
-	outputFileName := ctx.String(utils.OutputFlag.Name)
-	if outputFileName == "" {
-		outputFileName = "./events.json"
+
+	if cfg.Output == "" {
+		cfg.Output = "./events.json"
 	}
-	WriteEvents(eventRegistry, outputFileName)
+	WriteEvents(eventRegistry, cfg.Output)
 
 	return nil
 }

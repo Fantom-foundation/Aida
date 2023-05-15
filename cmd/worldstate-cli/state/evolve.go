@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/flags"
+	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/op/go-logging"
@@ -20,31 +20,37 @@ var CmdEvolveState = cli.Command{
 	Description: `The evolve evolves state of stored accounts in world state snapshot database.`,
 	ArgsUsage:   "<block> <substatedir> <workers>",
 	Flags: []cli.Flag{
-		&flags.TargetBlock,
-		&flags.SubstateDBPath,
-		&flags.Validate,
-		&flags.Workers,
+		&utils.TargetBlockFlag,
+		&substate.SubstateDirFlag,
+		&utils.ValidateFlag,
+		&substate.WorkersFlag,
 	},
 }
 
 // evolveState dumps state from given EVM trie into an output account-state database
 func evolveState(ctx *cli.Context) error {
+	// make config
+	cfg, err := utils.NewConfig(ctx, utils.LastBlockArg)
+	if err != nil {
+		return err
+	}
+
 	// try to open state DB
-	stateDB, err := snapshot.OpenStateDB(ctx.Path(flags.StateDBPath.Name))
+	stateDB, err := snapshot.OpenStateDB(cfg.WorldStateDb)
 	if err != nil {
 		return err
 	}
 	defer snapshot.MustCloseStateDB(stateDB)
 
 	// try to open sub state DB
-	substate.SetSubstateDirectory(ctx.Path(flags.SubstateDBPath.Name))
+	substate.SetSubstateDirectory(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
 	// make logger
-	log := Logger(ctx, "evolve")
+	log := utils.NewLogger(cfg.LogLevel, "evolve")
 
-	startBlock, targetBlock, err := getEvolutionBlockRange(ctx, stateDB, log)
+	startBlock, targetBlock, err := getEvolutionBlockRange(cfg, stateDB, log)
 	if err != nil {
 		log.Error(err)
 		return err
@@ -54,12 +60,12 @@ func evolveState(ctx *cli.Context) error {
 
 	// logging InputSubstate inconsistencies
 	var validateLog func(error)
-	if ctx.Bool(flags.Validate.Name) {
+	if cfg.ValidateWorldState {
 		validateLog = factoryValidatorLogger(log)
 	}
 
 	// call evolveState with prepared arguments
-	finalBlock, err := snapshot.EvolveState(stateDB, startBlock, targetBlock, ctx.Int(flags.Workers.Name), factoryMakeLogger(startBlock, targetBlock, log), validateLog)
+	finalBlock, err := snapshot.EvolveState(stateDB, startBlock, targetBlock, cfg.Workers, factoryMakeLogger(startBlock, targetBlock, log), validateLog)
 	if err != nil {
 		log.Errorf("unable to EvolveState; %s", err.Error())
 	}
@@ -82,9 +88,9 @@ func evolveState(ctx *cli.Context) error {
 }
 
 // getEvolutionBlockRange retrieves starting block for evolution
-func getEvolutionBlockRange(ctx *cli.Context, stateDB *snapshot.StateDB, log *logging.Logger) (uint64, uint64, error) {
+func getEvolutionBlockRange(cfg *utils.Config, stateDB *snapshot.StateDB, log *logging.Logger) (uint64, uint64, error) {
 	// evolution until given target block
-	targetBlock := ctx.Uint64(flags.TargetBlock.Name)
+	targetBlock := cfg.TargetBlock
 
 	if targetBlock == 0 {
 		return 0, 0, fmt.Errorf("supplied target block can't be %d", targetBlock)

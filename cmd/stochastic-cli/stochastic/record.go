@@ -23,13 +23,13 @@ var StochasticRecordCommand = cli.Command{
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		&utils.CpuProfileFlag,
-		&utils.DisableProgressFlag,
+		&utils.QuietFlag,
 		&utils.SyncPeriodLengthFlag,
 		&utils.OutputFlag,
 		&substate.WorkersFlag,
 		&substate.SubstateDirFlag,
 		&utils.ChainIDFlag,
-		&utils.DBFlag,
+		&utils.AidaDbFlag,
 	},
 	Description: `
 The stochastic record command requires two arguments:
@@ -48,7 +48,7 @@ func stochasticRecordAction(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	// force enable tracsaction validation
+	// force enable transaction validation
 	cfg.ValidateTxState = true
 
 	// start CPU profiling if enabled.
@@ -58,7 +58,7 @@ func stochasticRecordAction(ctx *cli.Context) error {
 	defer utils.StopCPUProfile(cfg)
 
 	// iterate through subsets in sequence
-	substate.SetSubstateDirectory(cfg.SubstateDBDir)
+	substate.SetSubstateDirectory(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 	iter := substate.NewSubstateIterator(cfg.First, ctx.Int(substate.WorkersFlag.Name))
@@ -69,7 +69,7 @@ func stochasticRecordAction(ctx *cli.Context) error {
 		sec     float64
 		lastSec float64
 	)
-	if cfg.EnableProgress {
+	if !cfg.Quiet {
 		start = time.Now()
 		sec = time.Since(start).Seconds()
 		lastSec = time.Since(start).Seconds()
@@ -102,7 +102,6 @@ func stochasticRecordAction(ctx *cli.Context) error {
 			eventRegistry.RegisterOp(stochastic.BeginBlockID)
 			oldBlock = tx.Block
 		}
-		eventRegistry.RegisterOp(stochastic.BeginTransactionID)
 
 		var statedb state.StateDB
 		statedb = state.MakeGethInMemoryStateDB(&tx.Substate.InputAlloc, tx.Block)
@@ -111,8 +110,7 @@ func stochasticRecordAction(ctx *cli.Context) error {
 			return err
 		}
 
-		eventRegistry.RegisterOp(stochastic.EndTransactionID)
-		if cfg.EnableProgress {
+		if !cfg.Quiet {
 			// report progress
 			sec = time.Since(start).Seconds()
 			if sec-lastSec >= 15 {
@@ -127,23 +125,22 @@ func stochasticRecordAction(ctx *cli.Context) error {
 	}
 	eventRegistry.RegisterOp(stochastic.EndSyncPeriodID)
 
-	if cfg.EnableProgress {
+	if !cfg.Quiet {
 		sec = time.Since(start).Seconds()
 		fmt.Printf("stochastic record: Total elapsed time: %.3f s, processed %v blocks\n", sec, cfg.Last-cfg.First+1)
 	}
 
 	// writing event registry
 	fmt.Printf("stochastic record: write events file ...\n")
-	outputFileName := ctx.String(utils.OutputFlag.Name)
-	if outputFileName == "" {
-		outputFileName = "./events.json"
+	if cfg.Output == "" {
+		cfg.Output = "./events.json"
 	}
-	WriteEvents(&eventRegistry, outputFileName)
+	WriteEvents(&eventRegistry, cfg.Output)
 
 	return err
 }
 
-// WriteEvent writes event file in JSON format.
+// WriteEvents writes event file in JSON format.
 func WriteEvents(r *stochastic.EventRegistry, filename string) {
 	f, fErr := os.Create(filename)
 	if fErr != nil {

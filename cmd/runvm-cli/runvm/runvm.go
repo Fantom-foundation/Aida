@@ -2,7 +2,6 @@ package runvm
 
 import (
 	"fmt"
-	"log"
 	"math/big"
 	"os"
 	"time"
@@ -13,31 +12,45 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const (
+	progressReportBlockInterval uint64 = 100_000
+	logFrequency                       = 15 * time.Second
+)
+
 // RunVM implements trace command for executing VM on a chosen storage system.
 func RunVM(ctx *cli.Context) error {
-	const progressReportBlockInterval uint64 = 100_000
 	var (
-		err          error
-		start        time.Time
-		sec          float64
-		lastSec      float64
-		txCount      int
-		lastTxCount  int
-		gasCount     = new(big.Int)
-		lastGasCount = new(big.Int)
+		elapsed, lastLog        time.Duration
+		hours, minutes, seconds uint32
+		err                     error
+		start, beginning        time.Time
+		txCount                 int
+		lastTxCount             int
+		totalGas                = new(big.Int)
+		currentGas              = new(big.Int)
+		lastGasCount            = new(big.Int)
+		d                       = new(big.Int)
+		g                       = new(big.Float)
+		calcTime                = new(big.Float)
+		currentGasCountFloat    = new(big.Float)
 		// Progress reporting (block based)
 		lastBlockProgressReportBlock    uint64
 		lastBlockProgressReportTime     time.Time
 		lastBlockProgressReportTxCount  int
 		lastBlockProgressReportGasCount = new(big.Int)
+		stateDbDir                      string
 	)
+	beginning = time.Now()
 
 	// process general arguments
 	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
-	cfg.StateValidationMode = utils.SubsetCheck
 	if argErr != nil {
 		return argErr
 	}
+
+	cfg.StateValidationMode = utils.SubsetCheck
+
+	log := utils.NewLogger(cfg.LogLevel, "Run-VM")
 
 	// start CPU profiling if requested.
 	if err := utils.StartCPUProfile(cfg); err != nil {
@@ -46,49 +59,31 @@ func RunVM(ctx *cli.Context) error {
 	defer utils.StopCPUProfile(cfg)
 
 	// iterate through subsets in sequence
-	substate.SetSubstateDirectory(cfg.SubstateDBDir)
+	substate.SetSubstateDirectory(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
-	db, stateDirectory, loadedExistingDB, err := utils.PrepareStateDB(cfg)
+	db, stateDbDir, err := utils.PrepareStateDB(cfg)
 	if err != nil {
 		return err
 	}
-
-	if !cfg.KeepStateDB {
-		log.Printf("WARNING: directory %v will be removed at the end of this run.\n", stateDirectory)
-		defer os.RemoveAll(stateDirectory)
+	if !cfg.KeepDb {
+		log.Warningf("StateDB at %v will be removed at the end of this run.", stateDbDir)
+		defer os.RemoveAll(stateDbDir)
 	}
 
 	ws := substate.SubstateAlloc{}
-	if cfg.SkipPriming || loadedExistingDB {
-		log.Printf("Skipping DB priming.\n")
+	if cfg.SkipPriming || cfg.StateDbSrc != "" {
+		log.Warning("Skipping DB priming.\n")
 	} else {
-		// load the world state
-		log.Printf("Load and advance world state to block %v\n", cfg.First-1)
+		log.Notice("Prime stateDB")
 		start = time.Now()
-		ws, err = utils.GenerateWorldStateFromUpdateDB(cfg, cfg.First-1)
-		if err != nil {
-			return err
+		if err := utils.LoadWorldStateAndPrime(db, cfg, cfg.First-1); err != nil {
+			return fmt.Errorf("priming failed. %v", err)
 		}
-		sec = time.Since(start).Seconds()
-		log.Printf("\tElapsed time: %.2f s, accounts: %v\n", sec, len(ws))
-
-		// prime stateDB
-		log.Printf("Prime stateDB \n")
-		start = time.Now()
-		utils.PrimeStateDB(ws, db, cfg)
-		sec = time.Since(start).Seconds()
-		log.Printf("\tElapsed time: %.2f s\n", sec)
-
-		// delete destroyed accounts from stateDB
-		log.Printf("Delete destroyed accounts \n")
-		start = time.Now()
-		// remove destroyed accounts until one block before the first block
-
-		err = utils.DeleteDestroyedAccountsFromStateDB(db, cfg, cfg.First-1)
-		sec = time.Since(start).Seconds()
-		log.Printf("\tElapsed time: %.2f s\n", sec)
+		elapsed = time.Since(start)
+		hours, minutes, seconds = utils.ParseTime(elapsed)
+		log.Infof("\tPriming elapsed time: %vh %vm %vs\n", hours, minutes, seconds)
 		if err != nil {
 			return err
 		}
@@ -97,9 +92,9 @@ func RunVM(ctx *cli.Context) error {
 	// print memory usage after priming
 	if cfg.MemoryBreakdown {
 		if usage := db.GetMemoryUsage(); usage != nil {
-			log.Printf("State DB memory usage: %d byte\n%s\n", usage.UsedBytes, usage.Breakdown)
+			log.Noticef("State DB memory usage: %d byte\n%s", usage.UsedBytes, usage.Breakdown)
 		} else {
-			log.Printf("Utilized storage solution does not support memory breakdowns.\n")
+			log.Info("Utilized storage solution does not support memory breakdowns.")
 		}
 	}
 
@@ -117,22 +112,21 @@ func RunVM(ctx *cli.Context) error {
 			}
 		}
 		if err := utils.DeleteDestroyedAccountsFromWorldState(ws, cfg, cfg.First-1); err != nil {
-			return fmt.Errorf("Failed to remove deleted accoount from the world state. %v", err)
+			return fmt.Errorf("failed to remove deleted accoount from the world state. %v", err)
 		}
 		if err := utils.ValidateStateDB(ws, db, false); err != nil {
-			return fmt.Errorf("Pre: World state is not contained in the stateDB. %v", err)
+			return fmt.Errorf("pre: World state is not contained in the stateDB. %v", err)
 		}
 	}
 
 	// Release world state to free memory.
 	ws = substate.SubstateAlloc{}
 
-	if cfg.EnableProgress {
+	if !cfg.Quiet {
 		start = time.Now()
-		lastSec = time.Since(start).Seconds()
 	}
 
-	log.Printf("Run VM\n")
+	log.Notice("Run VM")
 	var curBlock uint64 = 0
 	var curSyncPeriod uint64
 	isFirstBlock := true
@@ -184,32 +178,35 @@ func RunVM(ctx *cli.Context) error {
 		}
 		// run VM
 		db.PrepareSubstate(&tx.Substate.InputAlloc, tx.Substate.Env.Number)
-		db.BeginTransaction(uint32(tx.Transaction))
 		err = utils.ProcessTx(db, cfg, tx.Block, tx.Transaction, tx.Substate)
 		if err != nil {
-			log.Printf("\tRun VM failed.\n")
-			err = fmt.Errorf("Error: VM execution failed. %w", err)
+			log.Critical("\tFAILED")
+			err = fmt.Errorf("VM execution failed; %v", err)
 			break
 		}
-		db.EndTransaction()
 		txCount++
-		gasCount = new(big.Int).Add(gasCount, new(big.Int).SetUint64(tx.Substate.Result.GasUsed))
+		totalGas.Add(totalGas, currentGas.SetUint64(tx.Substate.Result.GasUsed))
 
-		if cfg.EnableProgress {
+		if !cfg.Quiet {
 			// report progress
-			sec = time.Since(start).Seconds()
+			elapsed = time.Since(start)
 
 			// Report progress on a regular time interval (wall time).
-			if sec-lastSec >= 15 {
-				d := new(big.Int).Sub(gasCount, lastGasCount)
-				g := new(big.Float).Quo(new(big.Float).SetInt(d), new(big.Float).SetFloat64(sec-lastSec))
+			if elapsed-lastLog >= logFrequency {
+				d.Sub(totalGas, lastGasCount)
+				currentGasCountFloat.SetUint64(d.Uint64())
+				calcTime.SetFloat64(elapsed.Seconds() - lastLog.Seconds())
 
-				txRate := float64(txCount-lastTxCount) / (sec - lastSec)
+				g.Quo(currentGasCountFloat, calcTime)
 
-				fmt.Printf("run-vm: Elapsed time: %.0f s, at block %v (~ %.1f Tx/s, ~ %.1f Gas/s)\n", sec, tx.Block, txRate, g)
-				lastSec = sec
+				f, _ := g.Float64()
+
+				txRate := float64(txCount-lastTxCount) / (elapsed.Seconds() - lastLog.Seconds())
+				hours, minutes, seconds = utils.ParseTime(elapsed)
+				log.Infof("Elapsed time: %vh %vm %vs, at block %v (~ %.0f Tx/s, ~ %.0f Gas/s)", hours, minutes, seconds, tx.Block, txRate, f)
+				lastLog = elapsed
 				lastTxCount = txCount
-				lastGasCount.Set(gasCount)
+				lastGasCount.Set(totalGas)
 			}
 
 			// Report progress on a regular block interval (simulation time).
@@ -217,8 +214,8 @@ func RunVM(ctx *cli.Context) error {
 				numTransactions := txCount - lastBlockProgressReportTxCount
 				lastBlockProgressReportTxCount = txCount
 
-				gasUsed := new(big.Int).Sub(gasCount, lastBlockProgressReportGasCount)
-				lastBlockProgressReportGasCount.Set(gasCount)
+				gasUsed := new(big.Int).Sub(totalGas, lastBlockProgressReportGasCount)
+				lastBlockProgressReportGasCount.Set(totalGas)
 
 				now := time.Now()
 				intervalTime := now.Sub(lastBlockProgressReportTime)
@@ -228,7 +225,7 @@ func RunVM(ctx *cli.Context) error {
 				gasRate, _ := new(big.Float).SetInt(gasUsed).Float64()
 				gasRate = gasRate / intervalTime.Seconds()
 
-				fmt.Printf("run-vm: Reached block %d, last interval rate ~ %.1f Tx/s, ~ %.1f Gas/s\n", tx.Block, txRate, gasRate)
+				log.Noticef("Reached block %d, last interval rate ~ %.0f Tx/s, ~ %.0f Gas/s", tx.Block, txRate, gasRate)
 				lastBlockProgressReportBlock += progressReportBlockInterval
 			}
 		}
@@ -242,11 +239,11 @@ func RunVM(ctx *cli.Context) error {
 	runTime := time.Since(start).Seconds()
 
 	if cfg.ContinueOnFailure {
-		log.Printf("run-vm: %v errors found\n", utils.NumErrors)
+		log.Warningf("%v errors found", utils.NumErrors)
 	}
 
 	if cfg.ValidateWorldState && err == nil {
-		log.Printf("Validate final state\n")
+		log.Notice("Validate final state\n")
 		if ws, err = utils.GenerateWorldStateFromUpdateDB(cfg, cfg.Last); err != nil {
 			return err
 		}
@@ -260,9 +257,9 @@ func RunVM(ctx *cli.Context) error {
 
 	if cfg.MemoryBreakdown {
 		if usage := db.GetMemoryUsage(); usage != nil {
-			log.Printf("State DB memory usage: %d byte\n%s\n", usage.UsedBytes, usage.Breakdown)
+			log.Notice("State DB memory usage: %d byte\n%s", usage.UsedBytes, usage.Breakdown)
 		} else {
-			log.Printf("Utilized storage solution does not support memory breakdowns.\n")
+			log.Info("Utilized storage solution does not support memory breakdowns.")
 		}
 	}
 
@@ -272,39 +269,40 @@ func RunVM(ctx *cli.Context) error {
 	}
 
 	if cfg.Profile {
-		fmt.Printf("=================Statistics=================\n")
-		stats.PrintProfiling()
-		fmt.Printf("============================================\n")
+		fmt.Println("=================Statistics=================")
+		stats.PrintProfiling(log)
+		fmt.Println("============================================")
 	}
 
-	if cfg.KeepStateDB && !isFirstBlock {
-		log.Println("if cfg.KeepStateDB && !isFirstBlock {")
+	if cfg.KeepDb && !isFirstBlock {
 		rootHash, _ := db.Commit(true)
-		if err := utils.WriteStateDbInfo(stateDirectory, cfg, curBlock, rootHash); err != nil {
-			log.Println(err)
+		if err := utils.WriteStateDbInfo(stateDbDir, cfg, curBlock, rootHash); err != nil {
+			log.Error(err)
 		}
 		//rename directory after closing db.
-		defer utils.RenameTempStateDBDirectory(cfg, stateDirectory, curBlock)
-	} else if cfg.KeepStateDB && isFirstBlock {
+		defer utils.RenameTempStateDBDirectory(cfg, stateDbDir, curBlock)
+	} else if cfg.KeepDb && isFirstBlock {
 		// no blocks were processed.
-		log.Printf("No blocks were processed. StateDB is not saved.\n")
-		defer os.RemoveAll(stateDirectory)
+		log.Warning("No blocks were processed. StateDB is not saved.")
+		defer os.RemoveAll(stateDbDir)
 	}
 
 	// close the DB and print disk usage
-	log.Printf("Close StateDB database")
+	log.Info("Close StateDB")
 	start = time.Now()
 	if err := db.Close(); err != nil {
-		log.Printf("Failed to close database: %v", err)
+		log.Errorf("Failed to close database: %v", err)
 	}
 
 	// print progress summary
-	if cfg.EnableProgress {
-		g := new(big.Float).Quo(new(big.Float).SetInt(gasCount), new(big.Float).SetFloat64(runTime))
+	if !cfg.Quiet {
+		g := new(big.Float).Quo(new(big.Float).SetInt(totalGas), new(big.Float).SetFloat64(runTime))
 
-		log.Printf("run-vm: Total elapsed time: %.3f s, processed %v blocks, %v transactions (~ %.1f Tx/s) (~ %.1f Gas/s)\n", runTime, cfg.Last-cfg.First+1, txCount, float64(txCount)/(runTime), g)
-		log.Printf("run-vm: Closing DB took %v\n", time.Since(start))
-		log.Printf("run-vm: Final disk usage: %v MiB\n", float32(utils.GetDirectorySize(stateDirectory))/float32(1024*1024))
+		hours, minutes, seconds = utils.ParseTime(time.Since(beginning))
+
+		log.Infof("Total elapsed time: %vh %vm %vs, processed %v blocks, %v transactions (~ %.1f Tx/s) (~ %.1f Gas/s)\n", hours, minutes, seconds, cfg.Last-cfg.First+1, txCount, float64(txCount)/(runTime), g)
+		log.Infof("Closing DB took %v\n", time.Since(start))
+		log.Infof("Final disk usage: %v MiB\n", float32(utils.GetDirectorySize(stateDbDir))/float32(1024*1024))
 	}
 
 	return err

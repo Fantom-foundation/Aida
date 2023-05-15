@@ -12,7 +12,7 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/context"
 )
 
-var stats *ProfileStats = new(ProfileStats)
+var stats = new(ProfileStats)
 
 // Operation IDs of the StateDB interface
 const (
@@ -207,7 +207,7 @@ func Execute(op Operation, db state.StateDB, ctx *context.Replay) {
 }
 
 func PrintProfiling() {
-	stats.PrintProfiling()
+	stats.PrintProfiling(nil)
 }
 
 // Debug prints debug information of an operation.

@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/Fantom-foundation/Aida/cmd/api-replay-cli/apireplay"
-	"github.com/Fantom-foundation/Aida/cmd/api-replay-cli/flags"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
@@ -19,21 +18,36 @@ func main() {
 			"result with result returned by DB.",
 		Copyright: "(c) 2023 Fantom Foundation",
 		Flags: []cli.Flag{
-			&flags.SkipFlag,
-			&flags.APIRecordingSrcFileFlag,
-			&flags.ContinueOnFailure,
-			&flags.WorkersFlag,
-			&flags.LogLevel,
-			&flags.Verbose,
+			&utils.APIRecordingSrcFileFlag,
+			&substate.WorkersFlag,
+
+			// AidaDB
+			&utils.AidaDbFlag,
+
+			// VM
+			&utils.VmImplementation,
+
+			// Substate
 			&substate.SubstateDirFlag,
+
+			// Config
+			&utils.LogLevelFlag,
 			&utils.ChainIDFlag,
-			&utils.StateDbImplementationFlag,
-			&utils.StateDbVariantFlag,
-			&utils.StateDbSrcDirFlag,
-			&utils.StateDbTempDirFlag,
+			&utils.ContinueOnFailureFlag,
+
+			// ShadowDB
+			&utils.ShadowDb,
+
+			// StateDB
+			&utils.StateDbSrcFlag,
 			&utils.StateDbLoggingFlag,
+			&utils.CarmenSchemaFlag,
 			&utils.ArchiveModeFlag,
-			&utils.ArchiveVariantFlag,
+
+			// Trace
+			&utils.TraceFlag,
+			&utils.TraceFileFlag,
+			&utils.TraceDebugFlag,
 		},
 	}
 

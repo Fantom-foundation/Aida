@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/flags"
+	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	"github.com/Fantom-foundation/Aida/world-state/types"
 	substate "github.com/Fantom-foundation/Substate"
@@ -49,7 +49,7 @@ var cmdAccountInfo = cli.Command{
 	Description: "Command provides detailed information about the account specified as an argument.",
 	ArgsUsage:   "<address|hash>",
 	Flags: []cli.Flag{
-		&flags.IsStorageIncluded,
+		&utils.IncludeStorageFlag,
 	},
 }
 
@@ -59,12 +59,11 @@ var cmdAccountCollect = cli.Command{
 	Name:        "collect",
 	Usage:       "Collects known account addresses from substate database.",
 	Description: "Command updates internal map of account hashes for the known accounts in substate database.",
+	ArgsUsage:   "<blockNumFirst> <blockNumLast>",
 	Aliases:     []string{"c"},
 	Flags: []cli.Flag{
-		&flags.SubstateDBPath,
-		&flags.StartingBlock,
-		&flags.EndingBlock,
-		&flags.Workers,
+		&substate.SubstateDirFlag,
+		&substate.WorkersFlag,
 	},
 }
 
@@ -88,7 +87,7 @@ var cmdUnknownStorage = cli.Command{
 	Usage:       "Lists unknown account storages from the world state database.",
 	Description: "Command scans for storage keys in the world state database and shows those not available in the address map.",
 	Flags: []cli.Flag{
-		&flags.IsVerbose,
+		&utils.QuietFlag,
 	},
 }
 
@@ -100,7 +99,7 @@ var cmdUnknownAddress = cli.Command{
 	Usage:       "Lists unknown account addresses from the world state database.",
 	Description: "Command scans for addresses in the world state database and shows those not available in the address map.",
 	Flags: []cli.Flag{
-		&flags.IsVerbose,
+		&utils.QuietFlag,
 	},
 }
 
@@ -114,7 +113,7 @@ var cmdAccountImport = cli.Command{
 	Description: "Command imports account hash to account address mapping from a CSV file.",
 	ArgsUsage:   "<csv file path|- for stdin>",
 	Flags: []cli.Flag{
-		&flags.IsVerbose,
+		&utils.QuietFlag,
 	},
 }
 
@@ -123,24 +122,30 @@ var balanceDecimals = big.NewInt(1_000_000_000_000)
 
 // collectAccounts collects known accounts from the substate database.
 func collectAccounts(ctx *cli.Context) error {
+	// make config
+	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
+	if err != nil {
+		return err
+	}
+
 	// try to open state DB
-	stateDB, err := snapshot.OpenStateDB(ctx.Path(flags.StateDBPath.Name))
+	stateDB, err := snapshot.OpenStateDB(cfg.WorldStateDb)
 	if err != nil {
 		return err
 	}
 	defer snapshot.MustCloseStateDB(stateDB)
 
 	// try to open substate DB
-	substate.SetSubstateDirectory(ctx.Path(flags.SubstateDBPath.Name))
+	substate.SetSubstateDirectory(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
-	workers := ctx.Int(flags.Workers.Name)
-	iter := substate.NewSubstateIterator(ctx.Uint64(flags.StartingBlock.Name), workers)
+	workers := cfg.Workers
+	iter := substate.NewSubstateIterator(cfg.First, workers)
 	defer iter.Release()
 
 	// load raw accounts
-	accounts, storage := snapshot.CollectAccounts(ctx.Context, &iter, ctx.Uint64(flags.EndingBlock.Name), workers)
+	accounts, storage := snapshot.CollectAccounts(ctx.Context, &iter, cfg.Last, workers)
 
 	// filter uniqueAccount addresses before writing
 	uniqueAccount := make(chan any, cap(accounts))
@@ -151,10 +156,10 @@ func collectAccounts(ctx *cli.Context) error {
 	go snapshot.FilterUnique(ctx.Context, storage, uniqueStorage)
 
 	// write found addresses
-	errAcc := snapshot.WriteAccounts(ctx.Context, collectProgressFactory(ctx.Context, uniqueAccount, "account", Logger(ctx, "addr")), stateDB)
+	errAcc := snapshot.WriteAccounts(ctx.Context, collectProgressFactory(ctx.Context, uniqueAccount, "account", utils.NewLogger(cfg.LogLevel, "addr")), stateDB)
 
 	// write found storage hashes
-	errStorage := snapshot.WriteAccounts(ctx.Context, collectProgressFactory(ctx.Context, uniqueStorage, "storage", Logger(ctx, "storage")), stateDB)
+	errStorage := snapshot.WriteAccounts(ctx.Context, collectProgressFactory(ctx.Context, uniqueStorage, "storage", utils.NewLogger(cfg.LogLevel, "storage")), stateDB)
 
 	// check for any error in above execution threads;
 	// this will block until all threads above close their error channels
@@ -222,8 +227,14 @@ func accountInfo(ctx *cli.Context) error {
 		return fmt.Errorf("please provide account address, or account key hash")
 	}
 
+	// make config
+	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
+	if err != nil {
+		return err
+	}
+
 	// try to open output DB
-	snapDB, err := snapshot.OpenStateDB(ctx.Path(flags.StateDBPath.Name))
+	snapDB, err := snapshot.OpenStateDB(cfg.WorldStateDb)
 	if err != nil {
 		return err
 	}
@@ -249,7 +260,7 @@ func accountInfo(ctx *cli.Context) error {
 	baseInfo(ctx.App.Writer, addr, acc)
 
 	// display the storage content if requested
-	if ctx.Bool(flags.IsStorageIncluded.Name) {
+	if cfg.IncludeStorage {
 		accStorage(ctx.App.Writer, acc)
 	}
 	return nil
@@ -299,8 +310,14 @@ func output(w io.Writer, format string, a ...any) {
 
 // listUnknownAddress implements unknown accounts scan.
 func listUnknownAddress(ctx *cli.Context) error {
+	// make config
+	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
+	if err != nil {
+		return err
+	}
+
 	// try to open output DB
-	db, err := snapshot.OpenStateDB(ctx.Path(flags.StateDBPath.Name))
+	db, err := snapshot.OpenStateDB(cfg.WorldStateDb)
 	if err != nil {
 		return err
 	}
@@ -320,7 +337,6 @@ func listUnknownAddress(ctx *cli.Context) error {
 	var ah common.Hash
 	var all, missing int
 
-	verbose := ctx.Bool(flags.IsVerbose.Name)
 	tick := time.NewTicker(500 * time.Millisecond)
 	defer tick.Stop()
 
@@ -334,7 +350,7 @@ func listUnknownAddress(ctx *cli.Context) error {
 			missing++
 
 			// display unknown account hash
-			if verbose {
+			if !cfg.Quiet {
 				_, err = fmt.Fprintln(ctx.App.Writer, ah.String())
 			}
 		}
@@ -342,7 +358,7 @@ func listUnknownAddress(ctx *cli.Context) error {
 		// display progress in non-verbose mode
 		select {
 		case <-tick.C:
-			if !verbose {
+			if cfg.Quiet {
 				_, err = fmt.Fprintf(ctx.App.Writer, "\rChecked: %10d  Missing: %10d", all, missing)
 			}
 		default:
@@ -365,8 +381,14 @@ func listUnknownAddress(ctx *cli.Context) error {
 
 // listUnknownStorages implements unknown storages scan.
 func listUnknownStorages(ctx *cli.Context) error {
+	// make config
+	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
+	if err != nil {
+		return err
+	}
+
 	// try to open output DB
-	db, err := snapshot.OpenStateDB(ctx.Path(flags.StateDBPath.Name))
+	db, err := snapshot.OpenStateDB(cfg.WorldStateDb)
 	if err != nil {
 		return err
 	}
@@ -385,7 +407,6 @@ func listUnknownStorages(ctx *cli.Context) error {
 	// iterate all known addresses
 	var all, storagesCount, missing uint64
 
-	verbose := ctx.Bool(flags.IsVerbose.Name)
 	tick := time.NewTicker(500 * time.Millisecond)
 	defer tick.Stop()
 
@@ -401,7 +422,7 @@ func listUnknownStorages(ctx *cli.Context) error {
 				missing++
 
 				// display unknown storage hash
-				if verbose {
+				if !cfg.Quiet {
 					_, err = fmt.Fprintln(ctx.App.Writer, h.String())
 				}
 			}
@@ -410,7 +431,7 @@ func listUnknownStorages(ctx *cli.Context) error {
 		// display progress in non-verbose mode
 		select {
 		case <-tick.C:
-			if !verbose {
+			if cfg.Quiet {
 				_, err = fmt.Fprintf(ctx.App.Writer, "\rChecked: %10d  Missing: %10d", storagesCount, missing)
 			}
 		default:
@@ -443,6 +464,12 @@ func accountImport(ctx *cli.Context) error {
 	var re io.Reader
 	var err error
 
+	// make config
+	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
+	if err != nil {
+		return err
+	}
+
 	// where do we the address data?
 	switch ctx.Args().Get(0) {
 	case "-":
@@ -459,7 +486,7 @@ func accountImport(ctx *cli.Context) error {
 	}
 
 	// try to open output DB
-	db, err := snapshot.OpenStateDB(ctx.Path(flags.StateDBPath.Name))
+	db, err := snapshot.OpenStateDB(cfg.WorldStateDb)
 	if err != nil {
 		return err
 	}

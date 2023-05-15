@@ -62,7 +62,7 @@ func (s *flatStateDB) BeginTransaction(number uint32) {
 }
 
 func (s *flatStateDB) EndTransaction() {
-	// ignored
+	s.Finalise(true)
 }
 
 func (s *flatStateDB) BeginBlock(number uint64) {
@@ -124,7 +124,8 @@ func (s *flatStateDB) GetMemoryUsage() *MemoryUsage {
 	return nil
 }
 
-func (s *flatStateDB) StartBulkLoad() BulkLoad {
+func (s *flatStateDB) StartBulkLoad(block uint64) BulkLoad {
+	s.BeginBlock(block)
 	return &flatBulkLoad{db: s}
 }
 
@@ -134,48 +135,33 @@ func (s *flatStateDB) GetArchiveState(block uint64) (StateDB, error) {
 
 // For priming initial state of stateDB
 type flatBulkLoad struct {
-	db      *flatStateDB
-	num_ops int64
+	db *flatStateDB
 }
 
 func (l *flatBulkLoad) CreateAccount(addr common.Address) {
 	l.db.CreateAccount(addr)
-	l.digest()
 }
 
 func (l *flatBulkLoad) SetBalance(addr common.Address, value *big.Int) {
 	old := l.db.GetBalance(addr)
 	value = value.Sub(value, old)
 	l.db.AddBalance(addr, value)
-	l.digest()
 }
 
 func (l *flatBulkLoad) SetNonce(addr common.Address, nonce uint64) {
 	l.db.SetNonce(addr, nonce)
-	l.digest()
 }
 
 func (l *flatBulkLoad) SetState(addr common.Address, key common.Hash, value common.Hash) {
 	l.db.SetState(addr, key, value)
-	l.digest()
 }
 
 func (l *flatBulkLoad) SetCode(addr common.Address, code []byte) {
 	l.db.SetCode(addr, code)
-	l.digest()
 }
 
 func (l *flatBulkLoad) Close() error {
 	l.db.EndBlock()
 	_, err := l.db.Commit(false)
 	return err
-}
-
-func (l *flatBulkLoad) digest() {
-	// Call EndBlock every 1M insert operation.
-	l.num_ops++
-	if l.num_ops%(1000*1000) != 0 {
-		return
-	}
-	l.db.EndBlock()
 }

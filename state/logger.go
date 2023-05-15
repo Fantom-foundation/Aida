@@ -264,9 +264,9 @@ func (s *loggingStateDB) ForEachStorage(addr common.Address, op func(common.Hash
 	return s.db.ForEachStorage(addr, op)
 }
 
-func (s *loggingStateDB) StartBulkLoad() BulkLoad {
+func (s *loggingStateDB) StartBulkLoad(block uint64) BulkLoad {
 	// no loggin in this case
-	return s.db.StartBulkLoad()
+	return s.db.StartBulkLoad(block)
 }
 
 func (s *loggingStateDB) GetArchiveState(block uint64) (StateDB, error) {

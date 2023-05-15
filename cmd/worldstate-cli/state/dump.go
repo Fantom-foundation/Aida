@@ -3,9 +3,15 @@ package state
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"time"
 
-	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/flags"
+	substate "github.com/Fantom-foundation/Substate"
+
+	eth_state "github.com/ethereum/go-ethereum/core/state"
+
+	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Aida/world-state/db/opera"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	"github.com/Fantom-foundation/Aida/world-state/types"
@@ -22,7 +28,7 @@ import (
 //   - Code (hash + separate storage)
 //   - Contract Storage
 var CmdDumpState = cli.Command{
-	Action:  dumpState,
+	Action:  DumpState,
 	Name:    "dump",
 	Aliases: []string{"d"},
 	Usage:   "Extracts world state MPT trie at given root from input database into state snapshot output database.",
@@ -33,26 +39,33 @@ var CmdDumpState = cli.Command{
 		- Contract Storage`,
 	ArgsUsage: "<root> <input-db> <input-db-name> <input-db-type> <workers>",
 	Flags: []cli.Flag{
-		&flags.SourceDBPath,
-		&flags.SourceDBType,
-		&flags.SourceTableName,
-		&flags.TrieRootHash,
-		&flags.Workers,
-		&flags.TargetBlock,
+		&utils.DbFlag,
+		&utils.StateDbVariantFlag,
+		&utils.SourceTableNameFlag,
+		&utils.TrieRootHashFlag,
+		&substate.WorkersFlag,
+		&utils.TargetBlockFlag,
+		&utils.LogLevelFlag,
 	},
 }
 
-// dumpState dumps state from given EVM trie into an output account-state database
-func dumpState(ctx *cli.Context) error {
+// DumpState dumps state from given EVM trie into an output account-state database
+func DumpState(ctx *cli.Context) error {
+	// make config
+	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
+	if err != nil {
+		return err
+	}
+
 	// open the source trie DB
-	store, err := opera.Connect(ctx.String(flags.SourceDBType.Name), DefaultPath(ctx, &flags.SourceDBPath, ".opera/chaindata/leveldb-fsh"), ctx.String(flags.SourceTableName.Name))
+	store, err := opera.Connect(cfg.DbVariant, DefaultPath(ctx, &utils.DbFlag, ".opera/chaindata/leveldb-fsh"), cfg.SourceTableName)
 	if err != nil {
 		return err
 	}
 	defer opera.MustCloseStore(store)
 
 	// try to open output DB
-	outputDB, err := snapshot.OpenStateDB(ctx.Path(flags.StateDBPath.Name))
+	outputDB, err := snapshot.OpenStateDB(cfg.WorldStateDb)
 	if err != nil {
 		return err
 	}
@@ -61,17 +74,18 @@ func dumpState(ctx *cli.Context) error {
 	dumpCtx, cancel := context.WithCancel(ctx.Context)
 	defer cancel()
 
-	log := Logger(ctx, "dump")
+	// make logger
+	log := utils.NewLogger(cfg.LogLevel, "Dump")
 
 	// blockNumber number to be stored in output db
 	// root is root hash of storage at given block number
-	blockNumber, root, err := blockNumberAndRoot(store, ctx.Uint64(flags.TargetBlock.Name), common.HexToHash(ctx.String(flags.TrieRootHash.Name)), log)
+	blockNumber, root, err := blockNumberAndRoot(store, cfg.TargetBlock, common.HexToHash(cfg.TrieRootHash), log)
 	if err != nil {
 		return err
 	}
 
 	// load assembled accounts for the given root and write them into the snapshot database
-	workers := ctx.Int(flags.Workers.Name)
+	workers := cfg.Workers
 	accounts, readFailed := opera.LoadAccounts(dumpCtx, opera.OpenStateDB(store), root, workers)
 	writeFailed := snapshot.NewQueueWriter(dumpCtx, outputDB, dumpProgressFactory(ctx.Context, accounts, workers, log))
 
@@ -93,9 +107,55 @@ func dumpState(ctx *cli.Context) error {
 		return err
 	}
 
+	log.Noticef("importing addresses and storage keys")
+	err = importHashesFromOpera(ctx, outputDB, opera.OpenStateDB(store), root, log)
+	if err != nil {
+		return err
+	}
+
 	// wait for all the threads to be done
 	log.Noticef("block #%d done", blockNumber)
+
 	return nil
+}
+
+// importHashesFromOpera extract addresses and storage keys from MPT dump and inserts into the worldstate
+func importHashesFromOpera(ctx *cli.Context, db *snapshot.StateDB, store eth_state.Database, root common.Hash, log *logging.Logger) error {
+	statedb, err := eth_state.NewWithSnapLayers(root, store, nil, 0)
+	if err != nil {
+		return fmt.Errorf("error calling opening StateDB; %v", err)
+	}
+
+	log.Noticef("dumping for addresses and storage keys")
+	d := statedb.RawDump(nil)
+	log.Noticef("dump finished")
+	log.Noticef("loading keys into database")
+	re := dumpWriter(d)
+	return importCsv(ctx.App.Writer, re, db)
+}
+
+// dumpWriter iterates opera dump and inserts extracted hashes to the into the stream
+func dumpWriter(d eth_state.Dump) io.Reader {
+	pr, pw := io.Pipe()
+	go func() {
+		for address, account := range d.Accounts {
+			_, err := fmt.Fprint(pw, address.String()+"\n")
+			if err != nil {
+				panic(err)
+			}
+			for hash := range account.Storage {
+				_, err = fmt.Fprint(pw, hash.String()+"\n")
+				if err != nil {
+					panic(err)
+				}
+			}
+		}
+		err := pw.Close()
+		if err != nil {
+			panic(err)
+		}
+	}()
+	return pr
 }
 
 // endGracefully waits until all routines finish - preventing database to be closed prematurely
@@ -119,7 +179,7 @@ func blockNumberAndRoot(store kvdb.Store, blockNumber uint64, root common.Hash, 
 	// neither blockNumber nor root hash were provided, try to use lastStateRoot containing latest block and root
 	if root == snapshot.ZeroHash && blockNumber == 0 {
 		// if the root has not been provided, try to use the latest
-		root, blockNumber, err = opera.LatestStateRoot(store)
+		root, blockNumber, _, err = opera.LatestStateRoot(store)
 		if err != nil {
 			log.Errorf("state root not found; %s", err.Error())
 			return 0, snapshot.ZeroHash, err

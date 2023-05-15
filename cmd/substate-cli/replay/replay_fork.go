@@ -35,6 +35,7 @@ var ReplayForkCommand = cli.Command{
 		&substate.SkipCreateTxsFlag,
 		&HardForkFlag,
 		&substate.SubstateDirFlag,
+		&utils.LogLevelFlag,
 	},
 	Description: `
 The replay-fork command requires two arguments:
@@ -90,15 +91,15 @@ var HardForkFlag = cli.Int64Flag{
 	Value: hardForkFlagDefault(),
 }
 
-var ReplayForkChainConfig *params.ChainConfig = &params.ChainConfig{}
+var ReplayForkChainConfig = &params.ChainConfig{}
 
 type ReplayForkStat struct {
 	Count  int64
 	ErrStr string
 }
 
-var ReplayForkStatChan chan *ReplayForkStat = make(chan *ReplayForkStat, 1_000_000)
-var ReplayForkStatMap map[string]*ReplayForkStat = make(map[string]*ReplayForkStat)
+var ReplayForkStatChan = make(chan *ReplayForkStat, 1_000_000)
+var ReplayForkStatMap = make(map[string]*ReplayForkStat)
 
 var (
 	ErrReplayForkOutOfGas     = errors.New("out of gas in replay-fork")
@@ -174,7 +175,7 @@ func replayForkTask(block uint64, tx int, recording *substate.Substate, taskPool
 		return err
 	}
 	vmConfig.Tracer = tracer
-	vmConfig.Debug = (tracer != nil)
+	vmConfig.Debug = tracer != nil
 	statedb.Prepare(txHash, txIndex)
 
 	txCtx := vm.TxContext{
@@ -334,20 +335,18 @@ func replayForkTask(block uint64, tx int, recording *substate.Substate, taskPool
 func replayForkAction(ctx *cli.Context) error {
 	var err error
 
-	if ctx.Args().Len() != 2 {
-		return fmt.Errorf("substate-cli replay-fork command requires exactly 2 arguments")
+	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
+	if err != nil {
+		return err
 	}
 
-	first, last, argErr := utils.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
-	if argErr != nil {
-		return argErr
-	}
+	log := utils.NewLogger(cfg.LogLevel, "Substate Replay Fork")
 
 	hardFork := ctx.Int64(HardForkFlag.Name)
 	if hardForkName, exist := HardForkName[hardFork]; !exist {
 		return fmt.Errorf("substate-cli replay-fork: invalid hard-fork block number %v", hardFork)
 	} else {
-		fmt.Printf("substate-cli replay-fork: hard-fork: block %v (%s)\n", hardFork, hardForkName)
+		log.Noticef("Hard-fork: block %v (%s)\n", hardFork, hardForkName)
 	}
 	switch hardFork {
 	case 1:
@@ -370,7 +369,7 @@ func replayForkAction(ctx *cli.Context) error {
 		*ReplayForkChainConfig = *tests.Forks["London"]
 	}
 
-	substate.SetSubstateDirectory(ctx.String(substate.SubstateDirFlag.Name))
+	substate.SetSubstateDirectory(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
@@ -393,7 +392,7 @@ func replayForkAction(ctx *cli.Context) error {
 		statWg.Done()
 	}()
 
-	taskPool := substate.NewSubstateTaskPool("substate-cli replay-fork", replayForkTask, first, last, ctx)
+	taskPool := substate.NewSubstateTaskPool("substate-cli replay-fork", replayForkTask, cfg.First, cfg.Last, ctx)
 	err = taskPool.Execute()
 	if err == nil {
 		close(ReplayForkStatChan)
@@ -407,7 +406,7 @@ func replayForkAction(ctx *cli.Context) error {
 	for _, errstr := range errstrSlice {
 		stat := ReplayForkStatMap[errstr]
 		count := stat.Count
-		fmt.Printf("substate-cli replay-fork: %12v %s\n", count, errstr)
+		log.Infof("%12v %s\n", count, errstr)
 	}
 
 	return err

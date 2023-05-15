@@ -6,6 +6,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
+	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
@@ -13,10 +14,14 @@ import (
 
 type AccessStatistics[T comparable] struct {
 	accesses map[T]int
+	log      *logging.Logger
 }
 
-func newStatistics[T comparable]() AccessStatistics[T] {
-	return AccessStatistics[T]{accesses: map[T]int{}}
+func newStatistics[T comparable](log *logging.Logger) AccessStatistics[T] {
+	return AccessStatistics[T]{
+		accesses: map[T]int{},
+		log:      log,
+	}
 }
 
 func (a *AccessStatistics[T]) RegisterAccess(reference *T) {
@@ -39,14 +44,14 @@ func (a *AccessStatistics[T]) PrintSummary() {
 		prefix_sum = list[i]
 	}
 
-	fmt.Printf("Reference frequency distribution:\n")
+	a.log.Notice("Reference frequency distribution:")
 	for i := 0; i < 100; i++ {
-		fmt.Printf("%d, %d\n", i, list[i*len(list)/100])
+		a.log.Infof("%d, %d", i, list[i*len(list)/100])
 	}
-	fmt.Printf("100, %d\n", list[len(list)-1])
-	fmt.Printf("Number of targets:          %15d\n", count)
-	fmt.Printf("Number of references:       %15d\n", sum)
-	fmt.Printf("Average references/target:  %15.2f\n", float32(sum)/float32(count))
+	a.log.Infof("100, %d\n", list[len(list)-1])
+	a.log.Infof("Number of targets:          %15d\n", count)
+	a.log.Infof("Number of references:       %15d\n", sum)
+	a.log.Infof("Average references/target:  %15.2f\n", float32(sum)/float32(count))
 }
 
 type AccessStatisticsConsumer[T comparable] func(*AccessStatistics[T])
@@ -94,32 +99,29 @@ func getReferenceStatsAction[T comparable](ctx *cli.Context, cli_command string,
 	return getReferenceStatsActionWithConsumer(ctx, cli_command, extract, func(*AccessStatistics[T]) {})
 }
 
-// getReferenceStatsActionWithConsumer extends the abilitities of the function above by
+// getReferenceStatsActionWithConsumer extends the abilities of the function above by
 // allowing some post-processing to be applied on the collected statistics.
 func getReferenceStatsActionWithConsumer[T comparable](ctx *cli.Context, cli_command string, extract Extractor[T], consume AccessStatisticsConsumer[T]) error {
 	var err error
 
-	if ctx.Args().Len() != 2 {
-		return fmt.Errorf("substate-cli %v command requires exactly 2 arguments", cli_command)
+	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
+	if err != nil {
+		return err
 	}
 
-	chainID = ctx.Int(ChainIDFlag.Name)
-	fmt.Printf("chain-id: %v\n", chainID)
-	fmt.Printf("git-date: %v\n", gitDate)
-	fmt.Printf("git-commit: %v\n", gitCommit)
-	fmt.Printf("contract-db: %v\n", ContractDB)
+	log := utils.NewLogger(cfg.LogLevel, "Replay Substate")
 
-	first, last, argErr := utils.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
-	if argErr != nil {
-		return argErr
-	}
+	ContractDB = cfg.Db
+	chainID = cfg.ChainID
+	log.Infof("chain-id: %v\n", chainID)
+	log.Infof("contract-db: %v\n", ContractDB)
 
-	substate.SetSubstateDirectory(ctx.String(substate.SubstateDirFlag.Name))
+	substate.SetSubstateDirectory(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
 	// Start Collector.
-	stats := newStatistics[T]()
+	stats := newStatistics[T](log)
 	done := make(chan int)
 	refs := make(chan T, 100)
 	go runStatCollector(&stats, refs, done)
@@ -130,7 +132,7 @@ func getReferenceStatsActionWithConsumer[T comparable](ctx *cli.Context, cli_com
 	}
 
 	// Process all transactions in parallel, out-of-order.
-	taskPool := substate.NewSubstateTaskPool(fmt.Sprintf("substate-cli %v", cli_command), task, first, last, ctx)
+	taskPool := substate.NewSubstateTaskPool(fmt.Sprintf("substate-cli %v", cli_command), task, cfg.First, cfg.Last, ctx)
 	err = taskPool.Execute()
 	if err != nil {
 		return err
@@ -147,9 +149,9 @@ func getReferenceStatsActionWithConsumer[T comparable](ctx *cli.Context, cli_com
 	}
 
 	// Print the statistics.
-	fmt.Printf("\n\n----- Summary: -------\n")
+	fmt.Printf("\n\n-------- Summary: ----------\n")
 	stats.PrintSummary()
-	fmt.Printf("----------------------\n")
+	fmt.Printf("----------------------------\n")
 	consume(&stats)
 	return nil
 }

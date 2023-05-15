@@ -412,7 +412,7 @@ func TestShadowState_SetBalanceUsingBulkInsertion(t *testing.T) {
 				}
 			}(shadowDB)
 
-			cbl := shadowDB.StartBulkLoad()
+			cbl := shadowDB.StartBulkLoad(0)
 
 			addr := common.BytesToAddress(makeRandomByteSlice(t, 40))
 
@@ -449,7 +449,7 @@ func TestShadowState_SetNonceUsingBulkInsertion(t *testing.T) {
 				}
 			}(shadowDB)
 
-			cbl := shadowDB.StartBulkLoad()
+			cbl := shadowDB.StartBulkLoad(0)
 
 			addr := common.BytesToAddress(makeRandomByteSlice(t, 40))
 
@@ -487,7 +487,7 @@ func TestShadowState_SetStateUsingBulkInsertion(t *testing.T) {
 				}
 			}(shadowDB)
 
-			cbl := shadowDB.StartBulkLoad()
+			cbl := shadowDB.StartBulkLoad(0)
 
 			addr := common.BytesToAddress(makeRandomByteSlice(t, 40))
 
@@ -527,7 +527,7 @@ func TestShadowState_SetCodeUsingBulkInsertion(t *testing.T) {
 				}
 			}(shadowDB)
 
-			cbl := shadowDB.StartBulkLoad()
+			cbl := shadowDB.StartBulkLoad(0)
 
 			addr := common.BytesToAddress(makeRandomByteSlice(t, 40))
 
@@ -574,7 +574,7 @@ func TestShadowState_BulkloadOperations(t *testing.T) {
 				shadowDB.CreateAccount(accounts[i])
 			}
 
-			cbl := shadowDB.StartBulkLoad()
+			cbl := shadowDB.StartBulkLoad(0)
 
 			for _, account := range accounts {
 				// randomized operation

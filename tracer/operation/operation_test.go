@@ -149,9 +149,8 @@ func (s *MockStateDB) EndSyncPeriod() {
 	s.recording = append(s.recording, Record{EndSyncPeriodID, []any{}})
 }
 
-func (s *MockStateDB) StartBulkLoad() state.BulkLoad {
+func (s *MockStateDB) StartBulkLoad(uint64) state.BulkLoad {
 	panic("Bulk load not supported in mock")
-	return nil
 }
 
 func (s *MockStateDB) GetArchiveState(block uint64) (state.StateDB, error) {
@@ -160,7 +159,6 @@ func (s *MockStateDB) GetArchiveState(block uint64) (state.StateDB, error) {
 
 func (s *MockStateDB) GetMemoryUsage() *state.MemoryUsage {
 	panic("GetMemoryUsage not supported in mock")
-	return nil
 }
 
 func (s *MockStateDB) Finalise(deleteEmptyObjects bool) {
