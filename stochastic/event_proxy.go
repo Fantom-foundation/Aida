@@ -9,9 +9,6 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-
-	"github.com/ledgerwatch/erigon-lib/kv"
-	erigonethdb "github.com/ledgerwatch/erigon/ethdb"
 )
 
 // EventProxy data structure for capturing StateDB events
@@ -28,10 +25,6 @@ func NewEventProxy(db state.StateDB, registry *EventRegistry) *EventProxy {
 		snapshots: []int{},
 		registry:  registry,
 	}
-}
-
-func (p *EventProxy) BeginBlockApplyBatch(batch erigonethdb.DbWithPendingMutations, noHistory bool, rwTx kv.RwTx) error {
-	return nil
 }
 
 // CreateAccount creates a new account.

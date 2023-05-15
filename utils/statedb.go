@@ -203,7 +203,6 @@ func DeleteDestroyedAccountsFromWorldState(ws substate.SubstateAlloc, cfg *Confi
 
 // DeleteDestroyedAccountsFromStateDB performs suicide operations on previously
 // self-destructed accounts.
-// TODO fix it
 func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *Config, target uint64) error {
 	log := logger.NewLogger(cfg.LogLevel, "DelDestAcc")
 
@@ -249,7 +248,6 @@ func GetDirectorySize(directory string) int64 {
 // NB: We can only check what must be in the db (but cannot check whether db stores more).
 func ValidateStateDB(ws substate.SubstateAlloc, db state.StateDB, updateOnFail bool) error {
 	var err string
-
 	for addr, account := range ws {
 		if !db.Exist(addr) {
 			err += fmt.Sprintf("  Account %v does not exist\n", addr.Hex())
@@ -300,6 +298,5 @@ func ValidateStateDB(ws substate.SubstateAlloc, db state.StateDB, updateOnFail b
 	if len(err) > 0 {
 		return fmt.Errorf(err)
 	}
-
 	return nil
 }
