@@ -41,7 +41,7 @@ func TestFlatState_MakeFlatStateDBMemory(t *testing.T) {
 
 // TestFlatState_MakeFlatStateDBInvalid tests creation of flat state DB without specifying a variant
 func TestFlatState_MakeFlatStateDBInvalid(t *testing.T) {
-	_, err := MakeFlatStateDB("", "", common.Hash{})
+	_, err := MakeFlatStateDB("", "xxx", common.Hash{})
 	if err == nil {
 		t.Fatalf("failed to throw error while creating flat DB")
 	}
