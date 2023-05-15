@@ -49,7 +49,7 @@ aida-worldstate:
 
 aida-stochastic: carmen/go/lib/libcarmen.so tosca
 	GOPROXY=$(GOPROXY) \
-	GOPRIVATE=github.com/Fantom-foundation/Carmen\
+	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/go-opera-fvm \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-stochastic \
 	./cmd/stochastic-cli
@@ -78,7 +78,7 @@ aida-runvm: carmen/go/lib/libcarmen.so tosca
 
 aida-substate: carmen/go/lib/libcarmen.so tosca
 	GOPROXY=$(GOPROXY) \
-	GOPRIVATE=github.com/Fantom-foundation/Carmen\
+	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/go-opera-fvm \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-substate \
 	./cmd/substate-cli
