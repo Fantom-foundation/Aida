@@ -21,7 +21,7 @@ var RunVMApp = cli.App{
 	Flags: []cli.Flag{
 		// AidaDb
 		&utils.AidaDbFlag,
-		&substate.SubstateDirFlag,
+		&substate.SubstateDbFlag,
 		&utils.DeletionDbFlag,
 		&utils.UpdateDbFlag,
 
@@ -49,7 +49,7 @@ var RunVMApp = cli.App{
 		&utils.CpuProfileFlag,
 		&utils.MemoryBreakdownFlag,
 		&utils.MemoryProfileFlag,
-		&utils.PrimeSeedFlag,
+		&utils.RandomSeedFlag,
 		&utils.PrimeThresholdFlag,
 		&utils.ProfileFlag,
 

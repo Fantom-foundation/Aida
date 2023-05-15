@@ -27,7 +27,7 @@ var GenDeletedAccountsCommand = cli.Command{
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		&substate.WorkersFlag,
-		&substate.SubstateDirFlag,
+		&substate.SubstateDbFlag,
 		&utils.ChainIDFlag,
 		&utils.DeletionDbFlag,
 		&utils.LogLevelFlag,
@@ -246,7 +246,7 @@ func GenDeletedAccountsAction(cfg *utils.Config) error {
 	chainID = cfg.ChainID
 	log.Infof("chain-id: %v", chainID)
 
-	substate.SetSubstateDirectory(cfg.SubstateDb)
+	substate.SetSubstateDb(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 

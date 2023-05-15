@@ -27,7 +27,7 @@ var StochasticRecordCommand = cli.Command{
 		&utils.SyncPeriodLengthFlag,
 		&utils.OutputFlag,
 		&substate.WorkersFlag,
-		&substate.SubstateDirFlag,
+		&substate.SubstateDbFlag,
 		&utils.ChainIDFlag,
 		&utils.AidaDbFlag,
 	},
@@ -58,7 +58,7 @@ func stochasticRecordAction(ctx *cli.Context) error {
 	defer utils.StopCPUProfile(cfg)
 
 	// iterate through subsets in sequence
-	substate.SetSubstateDirectory(cfg.SubstateDb)
+	substate.SetSubstateDb(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 	iter := substate.NewSubstateIterator(cfg.First, ctx.Int(substate.WorkersFlag.Name))

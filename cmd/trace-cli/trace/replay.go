@@ -32,7 +32,7 @@ var TraceReplayCommand = cli.Command{
 		&utils.KeepDbFlag,
 		&utils.MemoryBreakdownFlag,
 		&utils.MemoryProfileFlag,
-		&utils.PrimeSeedFlag,
+		&utils.RandomSeedFlag,
 		&utils.PrimeThresholdFlag,
 		&utils.ProfileFlag,
 		&utils.RandomizePrimingFlag,
@@ -44,7 +44,7 @@ var TraceReplayCommand = cli.Command{
 		&utils.StateDbLoggingFlag,
 		&utils.ShadowDbImplementationFlag,
 		&utils.ShadowDbVariantFlag,
-		&substate.SubstateDirFlag,
+		&substate.SubstateDbFlag,
 		&substate.WorkersFlag,
 		&utils.TraceFileFlag,
 		&utils.TraceDebugFlag,
@@ -249,7 +249,7 @@ func traceReplayAction(ctx *cli.Context) error {
 	defer utils.StopCPUProfile(cfg)
 
 	// run storage driver
-	substate.SetSubstateDirectory(cfg.SubstateDb)
+	substate.SetSubstateDb(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
