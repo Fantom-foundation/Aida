@@ -131,8 +131,8 @@ func RunVM(ctx *cli.Context) error {
 	var curBlock uint64 = 0
 	var curSyncPeriod uint64
 	isFirstBlock := true
-	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
 
+	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
 	defer iter.Release()
 
 	for iter.Next() {
@@ -142,6 +142,7 @@ func RunVM(ctx *cli.Context) error {
 			if tx.Block > cfg.Last {
 				break
 			}
+
 			curSyncPeriod = tx.Block / cfg.SyncPeriodLength
 			curBlock = tx.Block
 			db.BeginSyncPeriod(curSyncPeriod)
@@ -156,13 +157,16 @@ func RunVM(ctx *cli.Context) error {
 				break
 			}
 
-			// Mark the end of the old block.
-			db.EndBlock()
+			if cfg.DbImpl != "erigon" {
+				db.EndBlock()
+			}
 
 			// Move on sync-periods if needed.
 			newSyncPeriod := tx.Block / cfg.SyncPeriodLength
 			for curSyncPeriod < newSyncPeriod {
-				db.EndSyncPeriod()
+				if cfg.DbImpl != "erigon" {
+					db.EndSyncPeriod()
+				}
 				curSyncPeriod++
 				db.BeginSyncPeriod(curSyncPeriod)
 			}

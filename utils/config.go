@@ -15,6 +15,7 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	_ "github.com/Fantom-foundation/Tosca/go/vm/evmone"
 	_ "github.com/Fantom-foundation/Tosca/go/vm/lfvm"
+	"github.com/c2h5oh/datasize"
 	_ "github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/urfave/cli/v2"
@@ -248,6 +249,11 @@ var (
 		Name:  "aida-db",
 		Usage: "set substate, updateset and deleted accounts directory",
 	}
+	ErigonBatchSizeFlag = cli.StringFlag{
+		Name:  "erigonbatchsize",
+		Usage: "Batch size for the execution stage",
+		Value: "512M",
+	}
 	ContractNumberFlag = cli.IntFlag{
 		Name:  "num-contracts",
 		Usage: "Number of contracts to create",
@@ -345,74 +351,75 @@ type Config struct {
 	First uint64 // first block
 	Last  uint64 // last block
 
-	APIRecordingSrcFile string         // path to source file with recorded API data
-	ArchiveMode         bool           // enable archive mode
-	ArchiveVariant      string         // selects the implementation variant of the archive
-	BlockLength         uint64         // length of a block in number of transactions
-	CarmenSchema        int            // the current DB schema ID to use in Carmen
-	ChainID             int            // Blockchain ID (mainnet: 250/testnet: 4002)
-	Cache               int            // Cache for StateDb or Priming
-	ContinueOnFailure   bool           // continue validation when an error detected
-	ContractNumber      int64          // number of contracts to create
-	CompactDb           bool           // compact database after merging
-	CPUProfile          string         // pprof cpu profile output file name
-	Db                  string         // path to database
-	DbTmp               string         // path to temporary database
-	DbImpl              string         // storage implementation
-	Events              string         // events
-	Genesis             string         // genesis file
-	DbVariant           string         // database variant
-	DbLogging           bool           // set to true if all DB operations should be logged
-	Debug               bool           // enable trace debug flag
-	DeleteSourceDbs     bool           // delete source databases
-	DebugFrom           uint64         // the first block to print trace debug
-	DeletionDb          string         // directory of deleted account database
-	Quiet               bool           // disable progress report flag
-	SyncPeriodLength    uint64         // length of a sync-period in number of blocks
-	HasDeletedAccounts  bool           // true if DeletionDb is not empty; otherwise false
-	KeepDb              bool           // set to true if db is kept after run
-	KeysNumber          int64          // number of keys to generate
-	MaxNumTransactions  int            // the maximum number of processed transactions
-	MemoryBreakdown     bool           // enable printing of memory breakdown
-	MemoryProfile       string         // capture the memory heap profile into the file
-	TransactionLength   uint64         // determines indirectly the length of a transaction
-	PrimeRandom         bool           // enable randomized priming
-	PrimeThreshold      int            // set account threshold before commit
-	Profile             bool           // enable micro profiling
-	RandomSeed          int64          // set random seed for stochastic testing
-	SkipPriming         bool           // skip priming of the state DB
-	ShadowDb            bool           // defines we want to open an existing db as shadow
-	ShadowImpl          string         // implementation of the shadow DB to use, empty if disabled
-	ShadowVariant       string         // database variant of the shadow DB to be used
-	StateDbSrc          string         // directory to load an existing State DB data
-	AidaDb              string         // directory to profiling database containing substate, update, delete accounts data
-	StateValidationMode ValidationMode // state validation mode
-	UpdateDb            string         // update-set directory
-	Output              string         // output directory for aida-db patches or path to events.json file in stochastic generation
-	SnapshotDepth       int            // depth of snapshot history
-	SubstateDb          string         // substate directory
-	OperaDatadir        string         // source opera directory
-	ValidateTxState     bool           // validate stateDB before and after transaction
-	ValidateWorldState  bool           // validate stateDB before and after replay block range
-	ValuesNumber        int64          // number of values to generate
-	VmImpl              string         // vm implementation (geth/lfvm)
-	WorldStateDb        string         // path to worldstate
-	Workers             int            // number of worker threads
-	TraceFile           string         // name of trace file
-	Trace               bool           // trace flag
-	LogLevel            string         // level of the logging of the app action
-	SourceTableName     string         // represents the name of a source DB table
-	TargetDb            string         // represents the path of a target DB
-	TrieRootHash        string         // represents a hash of a state trie root to be decoded
-	IncludeStorage      bool           // represents a flag for contract storage inclusion in an operation
-	ProfileEVMCall      bool           // enable profiling for EVM call
-	MicroProfiling      bool           // enable micro-profiling of EVM
-	BasicBlockProfiling bool           // enable profiling of basic block
-	OnlySuccessful      bool           // only runs transactions that have been successful
-	ProfilingDbName     string         // set a database name for storing micro-profiling results
-	ChannelBufferSize   int            // set a buffer size for profiling channel
-	TargetBlock         uint64         // represents the ID of target block to be reached by state evolve process or in dump state
-	UpdateBufferSize    uint64         // cache size in Bytes
+	APIRecordingSrcFile string            // path to source file with recorded API data
+	ArchiveMode         bool              // enable archive mode
+	ArchiveVariant      string            // selects the implementation variant of the archive
+	BlockLength         uint64            // length of a block in number of transactions
+	CarmenSchema        int               // the current DB schema ID to use in Carmen
+	ChainID             int               // Blockchain ID (mainnet: 250/testnet: 4002)
+	Cache               int               // Cache for StateDb or Priming
+	ContinueOnFailure   bool              // continue validation when an error detected
+	ContractNumber      int64             // number of contracts to create
+	CompactDb           bool              // compact database after merging
+	CPUProfile          string            // pprof cpu profile output file name
+	Db                  string            // path to database
+	DbTmp               string            // path to temporary database
+	DbImpl              string            // storage implementation
+	Events              string            // events
+	Genesis             string            // genesis file
+	DbVariant           string            // database variant
+	DbLogging           bool              // set to true if all DB operations should be logged
+	Debug               bool              // enable trace debug flag
+	DeleteSourceDbs     bool              // delete source databases
+	DebugFrom           uint64            // the first block to print trace debug
+	DeletionDb          string            // directory of deleted account database
+	Quiet               bool              // disable progress report flag
+	SyncPeriodLength    uint64            // length of a sync-period in number of blocks
+	HasDeletedAccounts  bool              // true if DeletionDb is not empty; otherwise false
+	KeepDb              bool              // set to true if db is kept after run
+	KeysNumber          int64             // number of keys to generate
+	MaxNumTransactions  int               // the maximum number of processed transactions
+	MemoryBreakdown     bool              // enable printing of memory breakdown
+	MemoryProfile       string            // capture the memory heap profile into the file
+	TransactionLength   uint64            // determines indirectly the length of a transaction
+	PrimeRandom         bool              // enable randomized priming
+	PrimeThreshold      int               // set account threshold before commit
+	Profile             bool              // enable micro profiling
+	RandomSeed          int64             // set random seed for stochastic testing
+	SkipPriming         bool              // skip priming of the state DB
+	ShadowDb            bool              // defines we want to open an existing db as shadow
+	ShadowImpl          string            // implementation of the shadow DB to use, empty if disabled
+	ShadowVariant       string            // database variant of the shadow DB to be used
+	StateDbSrc          string            // directory to load an existing State DB data
+	AidaDb              string            // directory to profiling database containing substate, update, delete accounts data
+	StateValidationMode ValidationMode    // state validation mode
+	UpdateDb            string            // update-set directory
+	Output              string            // output directory for aida-db patches or path to events.json file in stochastic generation
+	SnapshotDepth       int               // depth of snapshot history
+	SubstateDb          string            // substate directory
+	OperaDatadir        string            // source opera directory
+	ValidateTxState     bool              // validate stateDB before and after transaction
+	ValidateWorldState  bool              // validate stateDB before and after replay block range
+	ValuesNumber        int64             // number of values to generate
+	VmImpl              string            // vm implementation (geth/lfvm)
+	WorldStateDb        string            // path to worldstate
+	Workers             int               // number of worker threads
+	TraceFile           string            // name of trace file
+	Trace               bool              // trace flag
+	LogLevel            string            // level of the logging of the app action
+	SourceTableName     string            // represents the name of a source DB table
+	TargetDb            string            // represents the path of a target DB
+	TrieRootHash        string            // represents a hash of a state trie root to be decoded
+	IncludeStorage      bool              // represents a flag for contract storage inclusion in an operation
+	ProfileEVMCall      bool              // enable profiling for EVM call
+	MicroProfiling      bool              // enable micro-profiling of EVM
+	BasicBlockProfiling bool              // enable profiling of basic block
+	OnlySuccessful      bool              // only runs transactions that have been successful
+	ProfilingDbName     string            // set a database name for storing micro-profiling results
+	ChannelBufferSize   int               // set a buffer size for profiling channel
+	TargetBlock         uint64            // represents the ID of target block to be reached by state evolve process or in dump state
+	UpdateBufferSize    uint64            // cache size in Bytes
+	ErigonBatchSize     datasize.ByteSize // erigon batch size for runVM
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.
@@ -576,6 +583,12 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		cfg.SubstateDb = cfg.AidaDb
 	}
 
+	if ctx.String(ErigonBatchSizeFlag.Name) != "" {
+		err := cfg.ErigonBatchSize.UnmarshalText([]byte(ctx.String(ErigonBatchSizeFlag.Name)))
+		if err != nil {
+			return cfg, fmt.Errorf("invalid batchSize provided: %v", err)
+		}
+	}
 	if mode == NoArgs {
 		return cfg, nil
 	}
@@ -624,7 +637,8 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 				log.Infof("Seed: %v, threshold: %v", cfg.RandomSeed, cfg.PrimeThreshold)
 			}
 		}
-		log.Infof("Validate world state: %v, validate tx state: %v", cfg.ValidateWorldState, cfg.ValidateTxState)
+		log.Infof("\tValidate world state: %v, validate tx state: %v\n", cfg.ValidateWorldState, cfg.ValidateTxState)
+		log.Infof("\tErigon batch size: %v", cfg.ErigonBatchSize.HumanReadable())
 	}
 
 	if cfg.ValidateTxState {

@@ -61,7 +61,7 @@ func MakeCarmenStateDB(directory, variant, archive string, schema int) (StateDB,
 	case "cpp-ldb":
 		db, err = carmen.NewCppLevelDbBasedState(params)
 	default:
-		return nil, fmt.Errorf("unkown variant: %v", variant)
+		return nil, fmt.Errorf("unknown variant: %v", variant)
 	}
 	if err != nil {
 		return nil, err
@@ -278,7 +278,7 @@ func (s *carmenStateDB) Error() error {
 }
 
 func (s *carmenStateDB) StartBulkLoad(block uint64) BulkLoad {
-	return &carmenBulkLoad{s.db.StartBulkLoad(block)}
+	return &carmenBulkLoad{s.db.StartBulkLoad()}
 }
 
 func (s *carmenStateDB) GetArchiveState(block uint64) (StateDB, error) {
