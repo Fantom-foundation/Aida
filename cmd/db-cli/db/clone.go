@@ -29,7 +29,7 @@ var CloneCommand = cli.Command{
 		&utils.AidaDbFlag,
 		&utils.TargetDbFlag,
 		&utils.CompactDbFlag,
-		&utils.LogLevelFlag,
+		&logger.LogLevelFlag,
 	},
 	Description: `
 Creates clone of aida-db for desired block range
