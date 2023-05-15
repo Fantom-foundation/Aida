@@ -20,7 +20,7 @@ var GetCodeCommand = cli.Command{
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		&substate.WorkersFlag,
-		&substate.SubstateDirFlag,
+		&substate.SubstateDbFlag,
 		&utils.DbFlag, // Database for contracts
 		&utils.ChainIDFlag,
 	},
@@ -95,7 +95,7 @@ func getCodeAction(ctx *cli.Context) error {
 	fmt.Printf("chain-id: %v\n", chainID)
 	fmt.Printf("contract-db: %v\n", ContractDB)
 
-	substate.SetSubstateDirectory(cfg.SubstateDb)
+	substate.SetSubstateDb(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 

@@ -42,7 +42,7 @@ func ReplayAPI(ctx *cli.Context) error {
 		db = tracer.NewProxyRecorder(db, rCtx)
 	}
 
-	substate.SetSubstateDirectory(cfg.SubstateDb)
+	substate.SetSubstateDb(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 
 	// closing gracefully both Substate and StateDB is necessary

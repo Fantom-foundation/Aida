@@ -19,10 +19,10 @@ var CmdEvolveState = cli.Command{
 	Aliases:     []string{"e"},
 	Usage:       "Evolves world state snapshot database into selected target block.",
 	Description: `The evolve evolves state of stored accounts in world state snapshot database.`,
-	ArgsUsage:   "<block> <substatedir> <workers>",
+	ArgsUsage:   "<block> <substate-db> <workers>",
 	Flags: []cli.Flag{
 		&utils.TargetBlockFlag,
-		&substate.SubstateDirFlag,
+		&substate.SubstateDbFlag,
 		&utils.ValidateFlag,
 		&substate.WorkersFlag,
 	},
@@ -44,7 +44,7 @@ func evolveState(ctx *cli.Context) error {
 	defer snapshot.MustCloseStateDB(stateDB)
 
 	// try to open sub state DB
-	substate.SetSubstateDirectory(cfg.SubstateDb)
+	substate.SetSubstateDb(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 

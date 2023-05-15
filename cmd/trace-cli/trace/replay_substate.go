@@ -26,7 +26,7 @@ var TraceReplaySubstateCommand = cli.Command{
 		&utils.CpuProfileFlag,
 		&utils.QuietFlag,
 		&utils.RandomizePrimingFlag,
-		&utils.PrimeSeedFlag,
+		&utils.RandomSeedFlag,
 		&utils.PrimeThresholdFlag,
 		&utils.ProfileFlag,
 		&utils.StateDbImplementationFlag,
@@ -34,7 +34,8 @@ var TraceReplaySubstateCommand = cli.Command{
 		&utils.StateDbLoggingFlag,
 		&utils.ShadowDbImplementationFlag,
 		&utils.ShadowDbVariantFlag,
-		&substate.SubstateDirFlag,
+		&substate.SubstateDbFlag,
+		&utils.SyncPeriodLengthFlag,
 		&substate.WorkersFlag,
 		&utils.TraceFileFlag,
 		&utils.TraceDebugFlag,
@@ -189,7 +190,7 @@ func traceReplaySubstateAction(ctx *cli.Context) error {
 		return err
 	}
 	// run storage driver
-	substate.SetSubstateDirectory(cfg.SubstateDb)
+	substate.SetSubstateDb(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 

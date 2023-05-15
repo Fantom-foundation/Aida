@@ -18,7 +18,7 @@ var GetStorageUpdateSizeCommand = cli.Command{
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		&substate.WorkersFlag,
-		&substate.SubstateDirFlag,
+		&substate.SubstateDbFlag,
 		&utils.ChainIDFlag,
 		&logger.LogLevelFlag,
 	},
@@ -119,7 +119,7 @@ func getStorageUpdateSizeAction(ctx *cli.Context) error {
 	chainID = cfg.ChainID
 	log.Infof("chain-id: %v\n", chainID)
 
-	substate.SetSubstateDirectory(cfg.SubstateDb)
+	substate.SetSubstateDb(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 

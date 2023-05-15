@@ -22,7 +22,7 @@ var GenUpdateSetCommand = cli.Command{
 	Flags: []cli.Flag{
 		&utils.ChainIDFlag,
 		&utils.DeletionDbFlag,
-		&substate.SubstateDirFlag,
+		&substate.SubstateDbFlag,
 		&substate.WorkersFlag,
 		&utils.UpdateDbFlag,
 		&utils.UpdateBufferSizeFlag,
@@ -75,7 +75,7 @@ func GenUpdateSet(cfg *utils.Config, first uint64, interval uint64) error {
 	defer db.Close()
 
 	// iterate through subsets in sequence
-	substate.SetSubstateDirectory(cfg.SubstateDb)
+	substate.SetSubstateDb(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 

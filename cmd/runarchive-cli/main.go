@@ -22,12 +22,12 @@ var RunArchiveApp = cli.App{
 	Flags: []cli.Flag{
 		// substate
 		&substate.WorkersFlag,
-		&substate.SubstateDirFlag,
-		&logger.LogLevelFlag,
+		&substate.SubstateDbFlag,
 
 		// utils
 		&utils.CpuProfileFlag,
 		&utils.ChainIDFlag,
+		&logger.LogLevelFlag,
 
 		// StateDb
 		&utils.AidaDbFlag,

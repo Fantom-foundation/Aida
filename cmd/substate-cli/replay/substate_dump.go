@@ -18,7 +18,7 @@ var SubstateDumpCommand = cli.Command{
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		&substate.WorkersFlag,
-		&substate.SubstateDirFlag,
+		&substate.SubstateDbFlag,
 	},
 	Description: `
 The substate-cli dump command requires two arguments:
@@ -65,7 +65,7 @@ func substateDumpAction(ctx *cli.Context) error {
 		return err
 	}
 
-	substate.SetSubstateDirectory(ctx.String(substate.SubstateDirFlag.Name))
+	substate.SetSubstateDb(ctx.String(substate.SubstateDbFlag.Name))
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 

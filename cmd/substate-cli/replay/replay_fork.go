@@ -34,8 +34,8 @@ var ReplayForkCommand = cli.Command{
 		&substate.SkipTransferTxsFlag,
 		&substate.SkipCallTxsFlag,
 		&substate.SkipCreateTxsFlag,
+		&substate.SubstateDbFlag,
 		&HardForkFlag,
-		&substate.SubstateDirFlag,
 		&logger.LogLevelFlag,
 	},
 	Description: `
@@ -370,7 +370,7 @@ func replayForkAction(ctx *cli.Context) error {
 		*ReplayForkChainConfig = *tests.Forks["London"]
 	}
 
-	substate.SetSubstateDirectory(cfg.SubstateDb)
+	substate.SetSubstateDb(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 

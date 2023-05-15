@@ -29,7 +29,7 @@ func main() {
 			&utils.VmImplementation,
 
 			// Substate
-			&substate.SubstateDirFlag,
+			&substate.SubstateDbFlag,
 
 			// Config
 			&logger.LogLevelFlag,
