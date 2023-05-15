@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	"github.com/urfave/cli/v2"
@@ -46,7 +47,7 @@ func compareDb(ctx *cli.Context) error {
 	defer snapshot.MustCloseStateDB(stateRefDB)
 
 	// make logger
-	log := utils.NewLogger(cfg.LogLevel, "cmp")
+	log := logger.NewLogger(cfg.LogLevel, "cmp")
 	log.Infof("comparing %s against %s", cfg.WorldStateDb, cfg.TargetDb)
 
 	// call CompareTo against target database

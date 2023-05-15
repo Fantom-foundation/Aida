@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	substate "github.com/Fantom-foundation/Substate"
 	_ "github.com/Fantom-foundation/Tosca/go/vm/evmone"
 	_ "github.com/Fantom-foundation/Tosca/go/vm/lfvm"
@@ -272,12 +273,6 @@ var (
 		Usage: "Depth of snapshot history",
 		Value: 100,
 	}
-	LogLevelFlag = cli.StringFlag{
-		Name:    "log",
-		Aliases: []string{"l"},
-		Usage:   "Level of the logging of the app action (\"critical\", \"error\", \"warning\", \"notice\", \"info\", \"debug\"; default: INFO)",
-		Value:   "info",
-	}
 	DbFlag = cli.PathFlag{
 		Name:  "db",
 		Usage: "Path to the database",
@@ -450,7 +445,7 @@ func setFirstBlockFromChainID(chainID int) {
 
 // NewConfig creates and initializes Config with commandline arguments.
 func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
-	log := NewLogger(ctx.String(LogLevelFlag.Name), "Config")
+	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "Config")
 
 	var first, last uint64
 	var events string
@@ -552,7 +547,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		WorldStateDb:        ctx.Path(WorldStateFlag.Name),
 		TraceFile:           ctx.Path(TraceFileFlag.Name),
 		Trace:               ctx.Bool(TraceFlag.Name),
-		LogLevel:            ctx.String(LogLevelFlag.Name),
+		LogLevel:            ctx.String(logger.LogLevelFlag.Name),
 		SourceTableName:     ctx.String(SourceTableNameFlag.Name),
 		TargetDb:            ctx.Path(TargetDbFlag.Name),
 		TrieRootHash:        ctx.String(TrieRootHashFlag.Name),

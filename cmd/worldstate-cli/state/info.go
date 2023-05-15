@@ -1,6 +1,7 @@
 package state
 
 import (
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	"github.com/urfave/cli/v2"
@@ -33,7 +34,7 @@ func info(ctx *cli.Context) error {
 	defer snapshot.MustCloseStateDB(stateDB)
 
 	// make logger
-	log := utils.NewLogger(cfg.LogLevel, "info")
+	log := logger.NewLogger(cfg.LogLevel, "info")
 
 	blk, err := stateDB.GetBlockNumber()
 	if err != nil {
