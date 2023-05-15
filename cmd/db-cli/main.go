@@ -17,6 +17,7 @@ var InitDb = cli.App{
 	Copyright: "(c) 2022 Fantom Foundation",
 	Commands: []*cli.Command{
 		&db.AutoGenCommand,
+		&db.CloneCommand,
 		&db.GenerateCommand,
 		&db.MergeCommand,
 	},
