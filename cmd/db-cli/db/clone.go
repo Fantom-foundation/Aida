@@ -186,6 +186,8 @@ func write(writerChan chan rawEntry, errChan chan error, aidaDb ethdb.Database, 
 		counter++
 
 		// make deep copy key and value
+		// need to pass deep copy of values into the channel
+		// golang channels were using pointers and values read from channel were incorrect
 		key := make([]byte, len(iter.Key()))
 		copy(key, iter.Key())
 		value := make([]byte, len(iter.Value()))
@@ -266,13 +268,13 @@ func openCloneDatabases(cfg *utils.Config) (ethdb.Database, ethdb.Database, erro
 	// open aidaDb
 	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", true)
 	if err != nil {
-		return nil, nil, fmt.Errorf("targetDB; %v", err)
+		return nil, nil, fmt.Errorf("targetDb; %v", err)
 	}
 
 	// open targetDB
 	targetDb, err := rawdb.NewLevelDBDatabase(cfg.TargetDb, 1024, 100, "profiling", false)
 	if err != nil {
-		return nil, nil, fmt.Errorf("targetDB; %v", err)
+		return nil, nil, fmt.Errorf("targetDb; %v", err)
 	}
 
 	return aidaDb, targetDb, nil
