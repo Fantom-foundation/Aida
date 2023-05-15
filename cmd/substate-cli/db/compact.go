@@ -5,6 +5,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/syndtr/goleveldb/leveldb"
 	leveldb_opt "github.com/syndtr/goleveldb/leveldb/opt"
@@ -18,7 +19,7 @@ var CompactCommand = cli.Command{
 	Usage:     "Compat LevelDB - discarding deleted and overwritten versions",
 	ArgsUsage: "<dbPath>",
 	Flags: []cli.Flag{
-		&utils.LogLevelFlag,
+		&logger.LogLevelFlag,
 	},
 	Description: `
 The substate-cli db compact command requires one argument:
@@ -37,7 +38,7 @@ func compact(ctx *cli.Context) error {
 		return err
 	}
 
-	log := utils.NewLogger(cfg.LogLevel, "Substate DB")
+	log := logger.NewLogger(cfg.LogLevel, "Substate DB")
 
 	dbPath := ctx.Args().Get(0)
 	dbOpt := &leveldb_opt.Options{

@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/Fantom-foundation/Aida/cmd/runarchive-cli/runarchive"
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
@@ -26,7 +27,7 @@ var RunArchiveApp = cli.App{
 		// utils
 		&utils.CpuProfileFlag,
 		&utils.ChainIDFlag,
-		&utils.LogLevelFlag,
+		&logger.LogLevelFlag,
 
 		// StateDb
 		&utils.AidaDbFlag,

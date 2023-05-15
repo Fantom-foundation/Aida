@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/Fantom-foundation/Aida/iterator"
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/params"
@@ -53,17 +54,17 @@ func newController(ctx *cli.Context, cfg *utils.Config, db state.StateDB, iter *
 	counterWg := new(sync.WaitGroup)
 
 	// create instances
-	reader := newReader(iter, utils.NewLogger(cfg.LogLevel, "Reader"), readerClosed, readerWg)
+	reader := newReader(iter, logger.NewLogger(cfg.LogLevel, "Reader"), readerClosed, readerWg)
 
 	executors, output, counterInput := createExecutors(cfg, db, ctx, utils.GetChainConfig(cfg.ChainID), reader.output, executorsClosed, executorsWg)
 
-	counter := newCounter(counterClosed, counterInput, utils.NewLogger(cfg.LogLevel, "Counter"), counterWg)
+	counter := newCounter(counterClosed, counterInput, logger.NewLogger(cfg.LogLevel, "Counter"), counterWg)
 
 	comparators, failure := createComparators(cfg, output, comparatorsClosed, comparatorsWg)
 
 	return &Controller{
 		failure:           failure,
-		log:               utils.NewLogger(ctx.String(utils.LogLevelFlag.Name), "Controller"),
+		log:               logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "Controller"),
 		ctx:               ctx,
 		Reader:            reader,
 		Executors:         executors,
@@ -225,7 +226,7 @@ func createExecutors(cfg *utils.Config, db state.StateDB, ctx *cli.Context, chai
 	e := make([]*ReplayExecutor, executors)
 	counterInput := make(chan requestLog, counterBufferSize)
 	for i := 0; i < executors; i++ {
-		e[i] = newExecutor(cfg.First, cfg.Last, db, output, chainCfg, input, cfg.VmImpl, wg, closed, utils.NewLogger(cfg.LogLevel, fmt.Sprintf("Executor #%v", i)), counterInput)
+		e[i] = newExecutor(cfg.First, cfg.Last, db, output, chainCfg, input, cfg.VmImpl, wg, closed, logger.NewLogger(cfg.LogLevel, fmt.Sprintf("Executor #%v", i)), counterInput)
 	}
 
 	return e, output, counterInput
@@ -249,7 +250,7 @@ func createComparators(cfg *utils.Config, input chan *OutData, closed chan any, 
 	c := make([]*Comparator, comparators)
 	failure := make(chan any)
 	for i := 0; i < comparators; i++ {
-		c[i] = newComparator(input, utils.NewLogger(cfg.LogLevel, fmt.Sprintf("Comparator #%v", i)), closed, wg, cfg.ContinueOnFailure, failure)
+		c[i] = newComparator(input, logger.NewLogger(cfg.LogLevel, fmt.Sprintf("Comparator #%v", i)), closed, wg, cfg.ContinueOnFailure, failure)
 	}
 
 	return c, failure

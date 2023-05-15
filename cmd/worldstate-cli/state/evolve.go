@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	substate "github.com/Fantom-foundation/Substate"
@@ -48,7 +49,7 @@ func evolveState(ctx *cli.Context) error {
 	defer substate.CloseSubstateDB()
 
 	// make logger
-	log := utils.NewLogger(cfg.LogLevel, "evolve")
+	log := logger.NewLogger(cfg.LogLevel, "evolve")
 
 	startBlock, targetBlock, err := getEvolutionBlockRange(cfg, stateDB, log)
 	if err != nil {

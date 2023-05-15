@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/tracer"
 	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
@@ -42,7 +43,7 @@ var TraceReplaySubstateCommand = cli.Command{
 		&utils.ValidateFlag,
 		&utils.ValidateWorldStateFlag,
 		&utils.AidaDbFlag,
-		&utils.LogLevelFlag,
+		&logger.LogLevelFlag,
 	},
 	Description: `
 The trace replay-substate command requires two arguments:
@@ -143,7 +144,7 @@ func traceReplaySubstateTask(cfg *utils.Config, log *logging.Logger) error {
 			if diff >= 15 {
 				numTx := txCount - lastTxCount
 				lastTxCount = txCount
-				hours, minutes, seconds := utils.ParseTime(time.Since(start))
+				hours, minutes, seconds := logger.ParseTime(time.Since(start))
 				log.Infof("Elapsed time: %vh, %vm %vs, at block %v (~%.0f Tx/s)", hours, minutes, seconds, tx.Block, float64(numTx)/diff)
 				lastSec = sec
 			}
@@ -201,7 +202,7 @@ func traceReplaySubstateAction(ctx *cli.Context) error {
 	}
 	defer utils.StopCPUProfile(cfg)
 
-	log := utils.NewLogger(cfg.LogLevel, "Trace Replay Substate Action")
+	log := logger.NewLogger(cfg.LogLevel, "Trace Replay Substate Action")
 	err = traceReplaySubstateTask(cfg, log)
 
 	return err

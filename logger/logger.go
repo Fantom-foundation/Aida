@@ -1,11 +1,19 @@
-package utils
+package logger
 
 import (
 	"os"
 	"time"
 
 	"github.com/op/go-logging"
+	"github.com/urfave/cli/v2"
 )
+
+var LogLevelFlag = cli.StringFlag{
+	Name:    "log",
+	Aliases: []string{"l"},
+	Usage:   "Level of the logging of the app action (\"critical\", \"error\", \"warning\", \"notice\", \"info\", \"debug\"; default: INFO)",
+	Value:   "info",
+}
 
 // defaultLogFormat defines the format used for log output.
 const (

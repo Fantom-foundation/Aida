@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
@@ -27,7 +28,7 @@ var GenUpdateSetCommand = cli.Command{
 		&utils.UpdateBufferSizeFlag,
 		&utils.ValidateFlag,
 		&utils.WorldStateFlag,
-		&utils.LogLevelFlag,
+		&logger.LogLevelFlag,
 	},
 	Description: `
 The gen-update-set command requires two arguments: <blockNumLast> <interval>
@@ -66,7 +67,7 @@ func GenUpdateSet(cfg *utils.Config, first uint64, interval uint64) error {
 	var (
 		err               error
 		destroyedAccounts []common.Address
-		log               = utils.NewLogger(cfg.LogLevel, "Generate Update Set")
+		log               = logger.NewLogger(cfg.LogLevel, "Generate Update Set")
 	)
 
 	// initialize updateDB

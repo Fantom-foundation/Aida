@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/tracer"
 	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
@@ -53,7 +54,7 @@ var TraceReplayCommand = cli.Command{
 		&utils.ValidateFlag,
 		&utils.ValidateWorldStateFlag,
 		&utils.AidaDbFlag,
-		&utils.LogLevelFlag,
+		&logger.LogLevelFlag,
 	},
 	Description: `
 The trace replay command requires two arguments:
@@ -104,7 +105,7 @@ func traceReplayTask(cfg *utils.Config, log *logging.Logger) error {
 		}
 
 		elapsed := time.Since(start)
-		hours, minutes, seconds := utils.ParseTime(elapsed)
+		hours, minutes, seconds := logger.ParseTime(elapsed)
 		log.Infof("\tPriming elapsed time: %vh %vm %vs\n", hours, minutes, seconds)
 	}
 
@@ -156,7 +157,7 @@ func traceReplayTask(cfg *utils.Config, log *logging.Logger) error {
 			lastBlock = block // track the last processed block
 			if !cfg.Quiet {
 				// report progress
-				hours, minutes, seconds := utils.ParseTime(time.Since(start))
+				hours, minutes, seconds := logger.ParseTime(time.Since(start))
 				if sec-lastSec >= 15 {
 					log.Infof("Elapsed time: %vh %vm %vs, at block %v", hours, minutes, seconds, block)
 					lastSec = sec
@@ -253,7 +254,7 @@ func traceReplayAction(ctx *cli.Context) error {
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
-	log := utils.NewLogger(cfg.LogLevel, "Trace Replay Action")
+	log := logger.NewLogger(cfg.LogLevel, "Trace Replay Action")
 	err = traceReplayTask(cfg, log)
 
 	return err

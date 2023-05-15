@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -33,9 +34,9 @@ var ReplayForkCommand = cli.Command{
 		&substate.SkipTransferTxsFlag,
 		&substate.SkipCallTxsFlag,
 		&substate.SkipCreateTxsFlag,
-		&HardForkFlag,
 		&substate.SubstateDbFlag,
-		&utils.LogLevelFlag,
+		&HardForkFlag,
+		&logger.LogLevelFlag,
 	},
 	Description: `
 The replay-fork command requires two arguments:
@@ -340,7 +341,7 @@ func replayForkAction(ctx *cli.Context) error {
 		return err
 	}
 
-	log := utils.NewLogger(cfg.LogLevel, "Substate Replay Fork")
+	log := logger.NewLogger(cfg.LogLevel, "Substate Replay Fork")
 
 	hardFork := ctx.Int64(HardForkFlag.Name)
 	if hardForkName, exist := HardForkName[hardFork]; !exist {

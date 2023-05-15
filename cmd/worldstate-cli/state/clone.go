@@ -5,6 +5,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	"github.com/Fantom-foundation/Aida/world-state/types"
@@ -45,7 +46,7 @@ func cloneDB(ctx *cli.Context) error {
 	defer snapshot.MustCloseStateDB(outputDB)
 
 	// make logger
-	log := utils.NewLogger(cfg.LogLevel, "clone")
+	log := logger.NewLogger(cfg.LogLevel, "clone")
 	logTick := time.NewTicker(2 * time.Second)
 	defer logTick.Stop()
 
