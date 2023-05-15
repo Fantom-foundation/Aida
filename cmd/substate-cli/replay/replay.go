@@ -38,7 +38,7 @@ var ReplayCommand = cli.Command{
 		&substate.SkipTransferTxsFlag,
 		&substate.SkipCallTxsFlag,
 		&substate.SkipCreateTxsFlag,
-		&substate.SubstateDirFlag,
+		&substate.SubstateDbFlag,
 		&utils.ChainIDFlag,
 		&utils.ProfileEVMCallFlag,
 		&utils.MicroProfilingFlag,
@@ -336,7 +336,7 @@ func replayAction(ctx *cli.Context) error {
 		vm.BasicBlockProfilingDB = cfg.ProfilingDbName
 	}
 
-	substate.SetSubstateDirectory(cfg.SubstateDb)
+	substate.SetSubstateDb(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 

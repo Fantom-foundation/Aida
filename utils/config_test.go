@@ -17,7 +17,7 @@ const testNetChainId int = 4002
 
 func prepareMockCliContext() *cli.Context {
 	flagSet := flag.NewFlagSet("utils_config_test", 0)
-	flagSet.Uint64(NumberOfBlocksFlag.Name, 1000, "Number of blocks")
+	flagSet.Uint64(SyncPeriodLengthFlag.Name, 1000, "Number of blocks")
 	flagSet.Bool(ValidateFlag.Name, true, "enables validation")
 	flagSet.Bool(ValidateTxStateFlag.Name, true, "enables transaction state validation")
 	flagSet.Bool(ContinueOnFailureFlag.Name, true, "continue execute after validation failure detected")
@@ -63,7 +63,7 @@ func TestUtilsConfig_GetChainConfig(t *testing.T) {
 func TestUtilsConfig_NewConfig(t *testing.T) {
 	ctx := prepareMockCliContext()
 
-	_, err := NewConfig(ctx, 0)
+	_, err := NewConfig(ctx, NoArgs)
 	if err != nil {
 		t.Fatalf("Failed to create new config: %v", err)
 	}
