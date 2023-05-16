@@ -398,7 +398,7 @@ type Config struct {
 	SnapshotDepth       int               // depth of snapshot history
 	SubstateDb          string            // substate directory
 	OperaDatadir        string            // source opera directory
-	Validate            bool           // validate validate aida-db
+	Validate            bool              // validate validate aida-db
 	ValidateTxState     bool              // validate stateDB before and after transaction
 	ValidateWorldState  bool              // validate stateDB before and after replay block range
 	ValuesNumber        int64             // number of values to generate
