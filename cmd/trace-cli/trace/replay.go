@@ -97,32 +97,15 @@ func traceReplayTask(cfg *utils.Config, log *logging.Logger) error {
 	if cfg.SkipPriming || cfg.StateDbSrc != "" {
 		log.Warning("Skipping DB priming.")
 	} else {
-		// intialize the world state and advance it to the first block
-		log.Noticef("Load and advance worldstate to block %v", cfg.First-1)
-		ws, err := utils.GenerateWorldStateFromUpdateDB(cfg, cfg.First-1)
-		if err != nil {
-			return err
+		log.Notice("Prime stateDB")
+		start := time.Now()
+		if err := utils.LoadWorldStateAndPrime(db, cfg, cfg.First-1); err != nil {
+			return fmt.Errorf("priming failed. %v", err)
 		}
 
-		// prime stateDB
-		log.Notice("Prime StateDB")
-		utils.PrimeStateDB(ws, db, cfg, log)
-
-		// print memory usage after priming
-		if cfg.MemoryBreakdown {
-			if usage := db.GetMemoryUsage(); usage != nil {
-				log.Noticef("State DB memory usage: %d byte\n%s", usage.UsedBytes, usage.Breakdown)
-			} else {
-				log.Noticef("Utilized storage solution does not support memory breakdowns.")
-			}
-		}
-
-		// delete destroyed accounts from stateDB
-		log.Noticef("Delete destroyed accounts")
-		// remove destroyed accounts until one block before the first block
-		if err = utils.DeleteDestroyedAccountsFromStateDB(db, cfg, cfg.First-1); err != nil {
-			return err
-		}
+		elapsed := time.Since(start)
+		hours, minutes, seconds := utils.ParseTime(elapsed)
+		log.Infof("\tPriming elapsed time: %vh %vm %vs\n", hours, minutes, seconds)
 	}
 
 	log.Noticef("Replay storage operations on StateDB")

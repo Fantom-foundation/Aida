@@ -4,17 +4,13 @@ import (
 	"bytes"
 	"fmt"
 	"io/fs"
-	"math/rand"
 	"os"
 	"path/filepath"
-	"sort"
-	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/google/martian/log"
-	"github.com/op/go-logging"
 )
 
 const (
@@ -179,107 +175,6 @@ func makeStateDBVariant(directory, impl, variant, archiveVariant string, carmenS
 	return nil, fmt.Errorf("unknown Db implementation: %v", impl)
 }
 
-type ProgressTracker struct {
-	step   int       // step counter
-	target int       // total number of steps
-	start  time.Time // start time
-	last   time.Time // last reported time
-	rate   float64   // priming rate
-	log    *logging.Logger
-}
-
-// NewProgressTracker creates a new progress tracer
-func NewProgressTracker(target int, log *logging.Logger) *ProgressTracker {
-	now := time.Now()
-	return &ProgressTracker{
-		step:   0,
-		target: target,
-		start:  now,
-		last:   now,
-		rate:   0.0,
-		log:    log,
-	}
-}
-
-// PrintProgress reports priming progress
-func (pt *ProgressTracker) PrintProgress() {
-	const printFrequency = 100000 // report after x steps
-	pt.step++
-	if pt.step%printFrequency == 0 {
-		now := time.Now()
-		currentRate := printFrequency / now.Sub(pt.last).Seconds()
-		pt.rate = currentRate*0.1 + pt.rate*0.9
-		pt.last = now
-		progress := float32(pt.step) / float32(pt.target)
-		time := int(now.Sub(pt.start).Seconds())
-		eta := int(float64(pt.target-pt.step) / pt.rate)
-		pt.log.Infof("Loading state ... %8.1f slots/s, %5.1f%%, time: %d:%02d, ETA: %d:%02d", currentRate, progress*100, time/60, time%60, eta/60, eta%60)
-	}
-}
-
-// PrimeStateDB primes database with accounts from the world state.
-func PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB, cfg *Config, log *logging.Logger) {
-	load := db.StartBulkLoad()
-
-	numValues := 0
-	for _, account := range ws {
-		numValues += len(account.Storage)
-	}
-	log.Infof("Loading %d accounts with %d values ...", len(ws), numValues)
-
-	pt := NewProgressTracker(numValues, log)
-	if cfg.PrimeRandom {
-		//if 0, commit once after priming all accounts
-		if cfg.PrimeThreshold == 0 {
-			cfg.PrimeThreshold = len(ws)
-		}
-		PrimeStateDBRandom(ws, load, cfg, pt)
-	} else {
-		for addr, account := range ws {
-			primeOneAccount(addr, account, load, pt)
-		}
-
-	}
-	log.Noticef("Hashing and flushing ...")
-	if err := load.Close(); err != nil {
-		panic(fmt.Errorf("failed to prime StateDB: %v", err))
-	}
-}
-
-// primeOneAccount initializes an account on stateDB with substate
-func primeOneAccount(addr common.Address, account *substate.SubstateAccount, db state.BulkLoad, pt *ProgressTracker) {
-	db.CreateAccount(addr)
-	db.SetBalance(addr, account.Balance)
-	db.SetNonce(addr, account.Nonce)
-	db.SetCode(addr, account.Code)
-	for key, value := range account.Storage {
-		db.SetState(addr, key, value)
-		pt.PrintProgress()
-	}
-}
-
-// PrimeStateDBRandom primes database with accounts from the world state in random order.
-func PrimeStateDBRandom(ws substate.SubstateAlloc, db state.BulkLoad, cfg *Config, pt *ProgressTracker) {
-	contracts := make([]string, 0, len(ws))
-	for addr := range ws {
-		contracts = append(contracts, addr.Hex())
-	}
-
-	sort.Strings(contracts)
-	// shuffle contract order
-	rand.NewSource(cfg.PrimeSeed)
-	rand.Shuffle(len(contracts), func(i, j int) {
-		contracts[i], contracts[j] = contracts[j], contracts[i]
-	})
-
-	for _, c := range contracts {
-		addr := common.HexToAddress(c)
-		account := ws[addr]
-		primeOneAccount(addr, account, db, pt)
-
-	}
-}
-
 // DeleteDestroyedAccountsFromWorldState removes previously suicided accounts from
 // the world state.
 func DeleteDestroyedAccountsFromWorldState(ws substate.SubstateAlloc, cfg *Config, target uint64) error {
@@ -314,18 +209,17 @@ func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *Config, target ui
 	}
 	src := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
 	defer src.Close()
-	list, err := src.GetAccountsDestroyedInRange(0, target)
+	accounts, err := src.GetAccountsDestroyedInRange(0, target)
 	if err != nil {
 		return err
 	}
-	log.Noticef("Deleting %d accounts ...", len(list))
+	log.Noticef("Deleting %d accounts ...", len(accounts))
 	db.BeginSyncPeriod(0)
-	db.BeginBlock(target) // block 0 is the priming, block (first-1) the deletion
+	db.BeginBlock(target)
 	db.BeginTransaction(0)
-	for _, cur := range list {
-		db.Suicide(cur)
+	for _, addr := range accounts {
+		db.Suicide(addr)
 	}
-	db.Finalise(true)
 	db.EndTransaction()
 	db.EndBlock()
 	db.EndSyncPeriod()

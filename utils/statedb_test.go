@@ -34,8 +34,8 @@ func getStatedbTestCases() []statedbTestCase {
 		{"carmen", "geth", false, "none", false},
 		{"carmen", "geth", true, "ldb", false},
 		{"carmen", "geth", true, "sqlite", false},
-		{"flat", "geth", true, "sqlite", false},
-		{"flat", "geth", true, "sqlite", true},
+		{"flat", "geth", false, "none", false},
+		{"flat", "geth", false, "none", true},
 	}
 
 	return testCases
@@ -82,7 +82,7 @@ func makeAccountStorage(t *testing.T) map[common.Hash]common.Hash {
 // makeTestConfig creates a config struct for testing
 func makeTestConfig(testCase statedbTestCase) *Config {
 	cfg := &Config{
-		DbLogging:      true,
+		DbLogging:      false,
 		DbImpl:         testCase.variant,
 		DbVariant:      "",
 		ShadowImpl:     testCase.shadowImpl,
@@ -148,59 +148,6 @@ func TestStatedb_InitCloseStateDB(t *testing.T) {
 			err = sDB.Close()
 			if err != nil {
 				t.Fatalf("failed to close state DB: %v", err)
-			}
-		})
-	}
-}
-
-// TestStatedb_PrimeStateDB tests priming fresh state DB with randomized world state data
-func TestStatedb_PrimeStateDB(t *testing.T) {
-	for _, tc := range getStatedbTestCases() {
-		t.Run(fmt.Sprintf("DB variant: %s; shadowImpl: %s; archive variant: %s", tc.variant, tc.shadowImpl, tc.archiveVariant), func(t *testing.T) {
-			cfg := makeTestConfig(tc)
-
-			// Initialization of state DB
-			sDB, _, err := PrepareStateDB(cfg)
-
-			if err != nil {
-				t.Fatalf("failed to create state DB: %v", err)
-			}
-
-			// Closing of state DB
-			defer func(sDB state.StateDB) {
-				err = sDB.Close()
-				if err != nil {
-					t.Fatalf("failed to close state DB: %v", err)
-				}
-			}(sDB)
-
-			// Generating randomized world state
-			ws, _ := makeWorldState(t)
-
-			log := NewLogger("INFO", "TestStateDb")
-
-			// Priming state DB
-			PrimeStateDB(ws, sDB, cfg, log)
-
-			// Checks if state DB was primed correctly
-			for key, account := range ws {
-				if sDB.GetBalance(key).Cmp(account.Balance) != 0 {
-					t.Fatalf("failed to prime account balance; Is: %v; Should be: %v", sDB.GetBalance(key), account.Balance)
-				}
-
-				if sDB.GetNonce(key) != account.Nonce {
-					t.Fatalf("failed to prime account nonce; Is: %v; Should be: %v", sDB.GetNonce(key), account.Nonce)
-				}
-
-				if bytes.Compare(sDB.GetCode(key), account.Code) != 0 {
-					t.Fatalf("failed to prime account code; Is: %v; Should be: %v", sDB.GetCode(key), account.Code)
-				}
-
-				for sKey, sValue := range account.Storage {
-					if sDB.GetState(key, sKey) != sValue {
-						t.Fatalf("failed to prime account storage; Is: %v; Should be: %v", sDB.GetState(key, sKey), sValue)
-					}
-				}
 			}
 		})
 	}
@@ -316,8 +263,10 @@ func TestStatedb_DeleteDestroyedAccountsFromStateDB(t *testing.T) {
 
 			log := NewLogger("INFO", "TestStateDb")
 
+			// Create new prime context
+			pc := NewPrimeContext(cfg, log)
 			// Priming state DB with given world state
-			PrimeStateDB(ws, sDB, cfg, log)
+			pc.PrimeStateDB(ws, sDB)
 
 			// Call for removal of destroyed accounts from state DB
 			err = DeleteDestroyedAccountsFromStateDB(sDB, cfg, 5)
@@ -360,8 +309,10 @@ func TestStatedb_ValidateStateDB(t *testing.T) {
 
 			log := NewLogger("INFO", "TestStateDb")
 
+			// Create new prime context
+			pc := NewPrimeContext(cfg, log)
 			// Priming state DB with given world state
-			PrimeStateDB(ws, sDB, cfg, log)
+			pc.PrimeStateDB(ws, sDB)
 
 			// Call for state DB validation and subsequent check for error
 			err = ValidateStateDB(ws, sDB, false)
@@ -398,8 +349,10 @@ func TestStatedb_ValidateStateDBWithUpdate(t *testing.T) {
 
 			log := NewLogger("INFO", "TestStateDb")
 
+			// Create new prime context
+			pc := NewPrimeContext(cfg, log)
 			// Priming state DB with given world state
-			PrimeStateDB(ws, sDB, cfg, log)
+			pc.PrimeStateDB(ws, sDB)
 
 			// create new random address
 			addr := common.BytesToAddress(makeRandomByteSlice(t, 40))

@@ -56,6 +56,7 @@ var RunVMApp = cli.App{
 		// Priming
 		&utils.RandomizePrimingFlag,
 		&utils.SkipPrimingFlag,
+		&utils.UpdateBufferSizeFlag,
 
 		// Utils
 		&substate.WorkersFlag,
