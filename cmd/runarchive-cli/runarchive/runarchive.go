@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -28,7 +29,7 @@ func RunArchive(ctx *cli.Context) error {
 	}
 	cfg.StateValidationMode = utils.SubsetCheck
 
-	log := utils.NewLogger(cfg.LogLevel, "Run-Archive")
+	log := logger.NewLogger(cfg.LogLevel, "Run-Archive")
 
 	// start CPU profiling if requested
 	if err := utils.StartCPUProfile(cfg); err != nil {
@@ -49,7 +50,7 @@ func RunArchive(ctx *cli.Context) error {
 	defer db.Close()
 
 	// open substate DB
-	substate.SetSubstateDirectory(cfg.SubstateDb)
+	substate.SetSubstateDb(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 

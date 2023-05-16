@@ -21,10 +21,6 @@ type MockStateDB struct {
 	recording []Record //signatures of called functions
 }
 
-func (s *MockStateDB) BeginBlockApply() error {
-	return nil
-}
-
 // NewMockStateDB creates a new mock StateDB object for testing execute
 func NewMockStateDB() *MockStateDB {
 	return &MockStateDB{}

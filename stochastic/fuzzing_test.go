@@ -8,6 +8,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
@@ -96,7 +97,7 @@ func FuzzStochastic(f *testing.F) {
 		rg := rand.New(fSrc)
 
 		// create a stochastic state
-		ss := createState(&cfg, &e, db, rg, utils.NewLogger("INFO", "Fuzzing Stochastic"))
+		ss := createState(&cfg, &e, db, rg, logger.NewLogger("INFO", "Fuzzing Stochastic"))
 
 		// get stochastic matrix
 		operations, A, state := getStochasticMatrix(&e)

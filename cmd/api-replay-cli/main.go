@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/Fantom-foundation/Aida/cmd/api-replay-cli/apireplay"
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
@@ -28,10 +29,10 @@ func main() {
 			&utils.VmImplementation,
 
 			// Substate
-			&substate.SubstateDirFlag,
+			&substate.SubstateDbFlag,
 
 			// Config
-			&utils.LogLevelFlag,
+			&logger.LogLevelFlag,
 			&utils.ChainIDFlag,
 			&utils.ContinueOnFailureFlag,
 

@@ -5,6 +5,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/tracer"
 	"github.com/Fantom-foundation/Aida/tracer/context"
@@ -26,13 +27,13 @@ var TraceRecordCommand = cli.Command{
 		&utils.SyncPeriodLengthFlag,
 		&utils.QuietFlag,
 		&substate.WorkersFlag,
-		&substate.SubstateDirFlag,
+		&substate.SubstateDbFlag,
 		&utils.ChainIDFlag,
 		&utils.TraceFileFlag,
 		&utils.TraceDebugFlag,
 		&utils.DebugFromFlag,
 		&utils.AidaDbFlag,
-		&utils.LogLevelFlag,
+		&logger.LogLevelFlag,
 	},
 	Description: `
 The trace record command requires two arguments:
@@ -52,7 +53,7 @@ func traceRecordAction(ctx *cli.Context) error {
 	// force enable transaction validation
 	cfg.ValidateTxState = true
 
-	log := utils.NewLogger(cfg.LogLevel, "Trace Record")
+	log := logger.NewLogger(cfg.LogLevel, "Trace Record")
 
 	// start CPU profiling if enabled.
 	if err := utils.StartCPUProfile(cfg); err != nil {
@@ -65,7 +66,7 @@ func traceRecordAction(ctx *cli.Context) error {
 	defer rCtx.Close()
 
 	// open SubstateDB and create an substate iterator
-	substate.SetSubstateDirectory(cfg.SubstateDb)
+	substate.SetSubstateDb(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
@@ -133,7 +134,7 @@ func traceRecordAction(ctx *cli.Context) error {
 	operation.WriteOp(rCtx, operation.NewEndSyncPeriod())
 
 	if !cfg.Quiet {
-		hours, minutes, seconds := utils.ParseTime(time.Since(start))
+		hours, minutes, seconds := logger.ParseTime(time.Since(start))
 		log.Noticef("Total elapsed time: %vh %vm %vs, processed %v blocks\n", hours, minutes, seconds, cfg.Last-cfg.First+1)
 	}
 

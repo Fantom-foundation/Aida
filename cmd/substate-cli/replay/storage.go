@@ -3,6 +3,7 @@ package replay
 import (
 	"fmt"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
@@ -17,9 +18,9 @@ var GetStorageUpdateSizeCommand = cli.Command{
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		&substate.WorkersFlag,
-		&substate.SubstateDirFlag,
+		&substate.SubstateDbFlag,
 		&utils.ChainIDFlag,
-		&utils.LogLevelFlag,
+		&logger.LogLevelFlag,
 	},
 	Description: `
 The substate-cli storage-size command requires two arguments:
@@ -113,12 +114,12 @@ func getStorageUpdateSizeAction(ctx *cli.Context) error {
 		return err
 	}
 
-	log := utils.NewLogger(cfg.LogLevel, "Substate Replay")
+	log := logger.NewLogger(cfg.LogLevel, "Substate Replay")
 
 	chainID = cfg.ChainID
 	log.Infof("chain-id: %v\n", chainID)
 
-	substate.SetSubstateDirectory(cfg.SubstateDb)
+	substate.SetSubstateDb(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 

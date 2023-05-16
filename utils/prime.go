@@ -6,6 +6,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
@@ -131,7 +132,7 @@ func (pc *PrimeContext) PrimeStateDBRandom(ws substate.SubstateAlloc, db state.S
 
 	sort.Strings(contracts)
 	// shuffle contract order
-	rand.NewSource(pc.cfg.PrimeSeed)
+	rand.NewSource(pc.cfg.RandomSeed)
 	rand.Shuffle(len(contracts), func(i, j int) {
 		contracts[i], contracts[j] = contracts[j], contracts[i]
 	})
@@ -182,7 +183,7 @@ func (pc *PrimeContext) SuicideAccounts(db state.StateDB, accounts []common.Addr
 
 // GenerateWorldStateAndPrime
 func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error {
-	log := NewLogger(cfg.LogLevel, "Priming")
+	log := logger.NewLogger(cfg.LogLevel, "Priming")
 	pc := NewPrimeContext(cfg, log)
 
 	var (

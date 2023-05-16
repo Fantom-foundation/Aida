@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	substate "github.com/Fantom-foundation/Substate"
 
 	"github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
@@ -39,7 +40,7 @@ var GenerateCommand = cli.Command{
 		&utils.DbTmpFlag,
 		&utils.ChainIDFlag,
 		&utils.CacheFlag,
-		&utils.LogLevelFlag,
+		&logger.LogLevelFlag,
 	},
 	Description: `
 The db generate command requires events as an argument:
@@ -55,7 +56,7 @@ func generate(ctx *cli.Context) error {
 		return argErr
 	}
 
-	log := utils.NewLogger(cfg.LogLevel, "generate")
+	log := logger.NewLogger(cfg.LogLevel, "Generate")
 
 	aidaDbTmp, err := prepare(cfg)
 	if err != nil {
@@ -232,7 +233,7 @@ func recordSubstate(cfg *utils.Config, log *logging.Logger) error {
 
 	log.Noticef("Starting Substate recording of %v", cfg.Events)
 
-	cmd := exec.Command("opera", "--datadir", cfg.Db, "--gcmode=full", "--db.preset=legacy-ldb", "--cache", strconv.Itoa(cfg.Cache), "import", "events", "--recording", "--substatedir", cfg.SubstateDb, cfg.Events)
+	cmd := exec.Command("opera", "--datadir", cfg.Db, "--gcmode=full", "--db.preset=legacy-ldb", "--cache", strconv.Itoa(cfg.Cache), "import", "events", "--recording", "--substate-db", cfg.SubstateDb, cfg.Events)
 
 	err = runCommand(cmd, nil, log)
 	if err != nil {
@@ -342,7 +343,8 @@ func prepareDumpCliContext(cfg *utils.Config) (*cli.Context, error) {
 	flagSet.String(utils.TrieRootHashFlag.Name, utils.TrieRootHashFlag.Value, "")
 	flagSet.Int(substate.WorkersFlag.Name, substate.WorkersFlag.Value, "")
 	flagSet.Uint64(utils.TargetBlockFlag.Name, utils.TargetBlockFlag.Value, "")
-	flagSet.String(utils.LogLevelFlag.Name, cfg.LogLevel, "")
+	flagSet.Int(utils.ChainIDFlag.Name, cfg.ChainID, "")
+	flagSet.String(logger.LogLevelFlag.Name, cfg.LogLevel, "")
 
 	ctx := cli.NewContext(cli.NewApp(), flagSet, nil)
 

@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
@@ -39,7 +40,7 @@ func PrepareStateDB(cfg *Config) (state.StateDB, string, error) {
 	}
 
 	if cfg.DbLogging {
-		db = state.MakeLoggingStateDB(db)
+		db = state.MakeLoggingStateDB(db, cfg.LogLevel)
 	}
 
 	return db, dbPath, nil
@@ -171,6 +172,8 @@ func makeStateDBVariant(directory, impl, variant, archiveVariant string, carmenS
 		return state.MakeCarmenStateDB(directory, variant, archiveVariant, carmenSchema)
 	case "flat":
 		return state.MakeFlatStateDB(directory, variant, rootHash)
+	case "erigon":
+		return state.MakeErigonStateDB(directory, variant, rootHash, cfg.ErigonBatchSize, cfg.First, cfg.Last)
 	}
 	return nil, fmt.Errorf("unknown Db implementation: %v", impl)
 }
@@ -178,7 +181,7 @@ func makeStateDBVariant(directory, impl, variant, archiveVariant string, carmenS
 // DeleteDestroyedAccountsFromWorldState removes previously suicided accounts from
 // the world state.
 func DeleteDestroyedAccountsFromWorldState(ws substate.SubstateAlloc, cfg *Config, target uint64) error {
-	log := NewLogger(cfg.LogLevel, "DelDestAcc")
+	log := logger.NewLogger(cfg.LogLevel, "DelDestAcc")
 
 	if !cfg.HasDeletedAccounts {
 		log.Warning("Database not provided. Ignore deleted accounts")
@@ -201,7 +204,7 @@ func DeleteDestroyedAccountsFromWorldState(ws substate.SubstateAlloc, cfg *Confi
 // DeleteDestroyedAccountsFromStateDB performs suicide operations on previously
 // self-destructed accounts.
 func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *Config, target uint64) error {
-	log := NewLogger(cfg.LogLevel, "DelDestAcc")
+	log := logger.NewLogger(cfg.LogLevel, "DelDestAcc")
 
 	if !cfg.HasDeletedAccounts {
 		log.Warning("Database not provided. Ignore deleted accounts.")

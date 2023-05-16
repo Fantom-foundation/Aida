@@ -5,8 +5,8 @@ import (
 	"math/big"
 
 	substate "github.com/Fantom-foundation/Substate"
-	"github.com/Fantom-foundation/go-opera-fvm/flat"
-	"github.com/Fantom-foundation/go-opera-fvm/gossip/evmstore/state"
+	"github.com/Fantom-foundation/go-opera-flat/flat"
+	"github.com/Fantom-foundation/go-opera-flat/gossip/evmstore/state"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -16,6 +16,8 @@ func MakeFlatStateDB(directory, variant string, rootHash common.Hash) (s StateDB
 	var db ethdb.Database
 
 	switch variant {
+	case "": // = default option
+		fallthrough
 	case "go-memory":
 		db = rawdb.NewMemoryDatabase()
 	case "go-ldb":
@@ -27,7 +29,7 @@ func MakeFlatStateDB(directory, variant string, rootHash common.Hash) (s StateDB
 			return
 		}
 	default:
-		err = fmt.Errorf("unkown variant: %v", variant)
+		err = fmt.Errorf("unknown variant: %v", variant)
 		return
 	}
 

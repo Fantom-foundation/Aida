@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
@@ -30,7 +31,7 @@ var AutoGenCommand = cli.Command{
 		&utils.CacheFlag,
 		&utils.OperaDatadirFlag,
 		&utils.OutputFlag,
-		&utils.LogLevelFlag,
+		&logger.LogLevelFlag,
 	},
 	Description: `
 Autogen generates aida-db patches and handles second opera for event generation. Generates event file, which is supplied into generate to create aida-db patch.
@@ -45,7 +46,7 @@ func autoGen(ctx *cli.Context) error {
 		return argErr
 	}
 
-	log := utils.NewLogger(cfg.LogLevel, "autogen")
+	log := logger.NewLogger(cfg.LogLevel, "autogen")
 
 	log.Info("Starting Automatic generation")
 

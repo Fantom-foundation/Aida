@@ -6,12 +6,13 @@ import (
 	"os"
 	"testing"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 )
 
 // TestStatedb_PrimeStateDB tests priming fresh state DB with randomized world state data
 func TestPrime_PrimeStateDB(t *testing.T) {
-	log := NewLogger("Warning", "TestPrimeStateDB")
+	log := logger.NewLogger("Warning", "TestPrimeStateDB")
 	for _, tc := range getStatedbTestCases() {
 		t.Run(fmt.Sprintf("DB variant: %s; shadowImpl: %s; archive variant: %s", tc.variant, tc.shadowImpl, tc.archiveVariant), func(t *testing.T) {
 			cfg := makeTestConfig(tc)

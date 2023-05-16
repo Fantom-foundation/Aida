@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	substate "github.com/Fantom-foundation/Substate"
@@ -18,10 +19,10 @@ var CmdEvolveState = cli.Command{
 	Aliases:     []string{"e"},
 	Usage:       "Evolves world state snapshot database into selected target block.",
 	Description: `The evolve evolves state of stored accounts in world state snapshot database.`,
-	ArgsUsage:   "<block> <substatedir> <workers>",
+	ArgsUsage:   "<block> <substate-db> <workers>",
 	Flags: []cli.Flag{
 		&utils.TargetBlockFlag,
-		&substate.SubstateDirFlag,
+		&substate.SubstateDbFlag,
 		&utils.ValidateFlag,
 		&substate.WorkersFlag,
 	},
@@ -43,12 +44,12 @@ func evolveState(ctx *cli.Context) error {
 	defer snapshot.MustCloseStateDB(stateDB)
 
 	// try to open sub state DB
-	substate.SetSubstateDirectory(cfg.SubstateDb)
+	substate.SetSubstateDb(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
 	// make logger
-	log := utils.NewLogger(cfg.LogLevel, "evolve")
+	log := logger.NewLogger(cfg.LogLevel, "evolve")
 
 	startBlock, targetBlock, err := getEvolutionBlockRange(cfg, stateDB, log)
 	if err != nil {

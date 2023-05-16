@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -50,7 +51,7 @@ func RunVM(ctx *cli.Context) error {
 
 	cfg.StateValidationMode = utils.SubsetCheck
 
-	log := utils.NewLogger(cfg.LogLevel, "Run-VM")
+	log := logger.NewLogger(cfg.LogLevel, "Run-VM")
 
 	// start CPU profiling if requested.
 	if err := utils.StartCPUProfile(cfg); err != nil {
@@ -59,7 +60,7 @@ func RunVM(ctx *cli.Context) error {
 	defer utils.StopCPUProfile(cfg)
 
 	// iterate through subsets in sequence
-	substate.SetSubstateDirectory(cfg.SubstateDb)
+	substate.SetSubstateDb(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
@@ -82,7 +83,7 @@ func RunVM(ctx *cli.Context) error {
 			return fmt.Errorf("priming failed. %v", err)
 		}
 		elapsed = time.Since(start)
-		hours, minutes, seconds = utils.ParseTime(elapsed)
+		hours, minutes, seconds = logger.ParseTime(elapsed)
 		log.Infof("\tPriming elapsed time: %vh %vm %vs\n", hours, minutes, seconds)
 		if err != nil {
 			return err
@@ -130,8 +131,8 @@ func RunVM(ctx *cli.Context) error {
 	var curBlock uint64 = 0
 	var curSyncPeriod uint64
 	isFirstBlock := true
-	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
 
+	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
 	defer iter.Release()
 
 	for iter.Next() {
@@ -141,6 +142,7 @@ func RunVM(ctx *cli.Context) error {
 			if tx.Block > cfg.Last {
 				break
 			}
+
 			curSyncPeriod = tx.Block / cfg.SyncPeriodLength
 			curBlock = tx.Block
 			db.BeginSyncPeriod(curSyncPeriod)
@@ -155,13 +157,16 @@ func RunVM(ctx *cli.Context) error {
 				break
 			}
 
-			// Mark the end of the old block.
-			db.EndBlock()
+			if cfg.DbImpl != "erigon" {
+				db.EndBlock()
+			}
 
 			// Move on sync-periods if needed.
 			newSyncPeriod := tx.Block / cfg.SyncPeriodLength
 			for curSyncPeriod < newSyncPeriod {
-				db.EndSyncPeriod()
+				if cfg.DbImpl != "erigon" {
+					db.EndSyncPeriod()
+				}
 				curSyncPeriod++
 				db.BeginSyncPeriod(curSyncPeriod)
 			}
@@ -198,7 +203,7 @@ func RunVM(ctx *cli.Context) error {
 				f, _ := g.Float64()
 
 				txRate := float64(txCount-lastTxCount) / (elapsed.Seconds() - lastLog.Seconds())
-				hours, minutes, seconds = utils.ParseTime(elapsed)
+				hours, minutes, seconds = logger.ParseTime(elapsed)
 				log.Infof("Elapsed time: %vh %vm %vs, at block %v (~ %.0f Tx/s, ~ %.0f Gas/s)", hours, minutes, seconds, tx.Block, txRate, f)
 				lastLog = elapsed
 				lastTxCount = txCount
@@ -294,7 +299,7 @@ func RunVM(ctx *cli.Context) error {
 	if !cfg.Quiet {
 		g := new(big.Float).Quo(new(big.Float).SetInt(totalGas), new(big.Float).SetFloat64(runTime))
 
-		hours, minutes, seconds = utils.ParseTime(time.Since(beginning))
+		hours, minutes, seconds = logger.ParseTime(time.Since(beginning))
 
 		log.Infof("Total elapsed time: %vh %vm %vs, processed %v blocks, %v transactions (~ %.1f Tx/s) (~ %.1f Gas/s)\n", hours, minutes, seconds, cfg.Last-cfg.First+1, txCount, float64(txCount)/(runTime), g)
 		log.Infof("Closing DB took %v\n", time.Since(start))

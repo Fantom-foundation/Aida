@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/stochastic"
 	"github.com/Fantom-foundation/Aida/tracer"
 	"github.com/Fantom-foundation/Aida/tracer/context"
@@ -39,7 +40,7 @@ var StochasticReplayCommand = cli.Command{
 		&utils.ShadowDbImplementationFlag,
 		&utils.ShadowDbVariantFlag,
 		&utils.AidaDbFlag,
-		&utils.LogLevelFlag,
+		&logger.LogLevelFlag,
 	},
 	Description: `
 The stochastic replay command requires two argument:
@@ -69,7 +70,7 @@ func stochasticReplayAction(ctx *cli.Context) error {
 	if cfg.DbImpl == "memory" {
 		return fmt.Errorf("db-impl memory is not supported")
 	}
-	log := utils.NewLogger(cfg.LogLevel, "Stochastic Replay")
+	log := logger.NewLogger(cfg.LogLevel, "Stochastic Replay")
 
 	// start CPU profiling if requested.
 	if err := utils.StartCPUProfile(cfg); err != nil {
@@ -102,7 +103,7 @@ func stochasticReplayAction(ctx *cli.Context) error {
 	// run simulation.
 	fmt.Printf("stochastic replay: run simulation ...\n")
 
-	runErr := stochastic.RunStochasticReplay(db, simulation, int(simLength), cfg, utils.NewLogger(ctx.String(utils.LogLevelFlag.Name), "Stochastic"))
+	runErr := stochastic.RunStochasticReplay(db, simulation, int(simLength), cfg, logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "Stochastic"))
 
 	// print memory usage after simulation
 	if cfg.MemoryBreakdown {
