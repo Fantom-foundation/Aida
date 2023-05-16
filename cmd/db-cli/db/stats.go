@@ -110,7 +110,7 @@ func getDelAcc(ctx *cli.Context) error {
 	}
 
 	for _, acc := range accounts {
-		if acc.Hash().String() == wantedAcc {
+		if acc.String() == wantedAcc {
 			log.Noticef("Found record in range %v - %v", cfg.First, cfg.Last)
 			return nil
 		}
