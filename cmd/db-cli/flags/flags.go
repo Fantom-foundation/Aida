@@ -8,4 +8,9 @@ var (
 		Usage:   "Wanted account",
 		Aliases: []string{"a"},
 	}
+	Detailed = cli.BoolFlag{
+		Name:    "detailed",
+		Usage:   "Prints detailed info with how many records is in each prefix",
+		Aliases: []string{"a"},
+	}
 )
