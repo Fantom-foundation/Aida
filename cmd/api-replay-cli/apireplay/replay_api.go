@@ -61,7 +61,7 @@ func ReplayAPI(ctx *cli.Context) error {
 		return err
 	}
 
-	substate.SetSubstateDirectory(cfg.SubstateDb)
+	substate.SetSubstateDb(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 
 	// closing gracefully both Substate and StateDB is necessary
