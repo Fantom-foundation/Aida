@@ -306,14 +306,3 @@ func validateDbSize(db ethdb.Database, expectedWritten uint64) error {
 	}
 	return nil
 }
-
-// getDbSize retrieves database size
-func getDbSize(db ethdb.Database) uint64 {
-	var count uint64
-	iter := db.NewIterator(nil, nil)
-	defer iter.Release()
-	for iter.Next() {
-		count++
-	}
-	return count
-}
