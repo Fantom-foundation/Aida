@@ -9,6 +9,7 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
@@ -54,7 +55,7 @@ func listAllRecords(ctx *cli.Context) error {
 
 	if ctx.Bool(flags.Detailed.Name) {
 		log.Notice("Counting each prefix...")
-		logDetailedSize()
+		logDetailedSize(aidaDb, log)
 	} else {
 		log.Notice("Counting overall size...")
 		log.Noticef("All AidaDb records: %v", getDbSize(aidaDb))
@@ -63,8 +64,19 @@ func listAllRecords(ctx *cli.Context) error {
 	return nil
 }
 
-func logDetailedSize() {
+func logDetailedSize(db ethdb.Database, log *logging.Logger) {
+	iter := db.NewIterator(nil, nil)
+	defer iter.Release()
 
+	countMap := make(map[string]uint64)
+
+	for iter.Next() {
+		countMap[string(iter.Key()[:2])]++
+	}
+
+	for key, count := range countMap {
+		log.Noticef("Prefix :%v; Count: %v", key, count)
+	}
 }
 
 var cmdDelAcc = cli.Command{
