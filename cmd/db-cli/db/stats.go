@@ -2,6 +2,7 @@ package db
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/Fantom-foundation/Aida/cmd/db-cli/flags"
 	"github.com/Fantom-foundation/Aida/logger"
@@ -95,8 +96,6 @@ var cmdDelAcc = cli.Command{
 func getDelAcc(ctx *cli.Context) error {
 	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-Stats")
 
-	wantedAcc := ctx.String(ctx.String(flags.Account.Name))
-
 	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if argErr != nil {
 		return argErr
@@ -109,8 +108,10 @@ func getDelAcc(ctx *cli.Context) error {
 		return fmt.Errorf("cannot get all destroyed accounts; %v", err)
 	}
 
+	wantedAcc := ctx.String(flags.Account.Name)
+
 	for _, acc := range accounts {
-		if acc.String() == wantedAcc {
+		if strings.Compare(acc.String(), wantedAcc) == 0 {
 			log.Noticef("Found record in range %v - %v", cfg.First, cfg.Last)
 			return nil
 		}
