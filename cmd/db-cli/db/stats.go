@@ -16,26 +16,24 @@ import (
 
 var Stats = cli.Command{
 	Name:  "stats",
-	Usage: "print number of items in aida-db",
+	Usage: "Prints statistics about AidaDb",
 	Subcommands: []*cli.Command{
 		&cmdAll,
 		&cmdDelAcc,
 	},
-	Flags: []cli.Flag{
-		&flags.Detailed,
-	},
+
 	Description: `
 The stats command requires one argument: <blockNunLast> -- the last block of aida-db.`,
 }
 
 var cmdAll = cli.Command{
-	Action:      listAllRecords,
-	Name:        "all",
-	Usage:       "Lists unknown account storages from the world state database.",
-	Description: "Command scans for storage keys in the world state database and shows those not available in the address map.",
+	Action: listAllRecords,
+	Name:   "all",
+	Usage:  "List of all records in AidaDb.",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 		&logger.LogLevelFlag,
+		&flags.Detailed,
 	},
 }
 
@@ -81,11 +79,10 @@ func logDetailedSize(db ethdb.Database, log *logging.Logger) {
 }
 
 var cmdDelAcc = cli.Command{
-	Action:      getDelAcc,
-	Name:        "del-acc",
-	Usage:       "Lists unknown account storages from the world state database.",
-	Description: "Command scans for storage keys in the world state database and shows those not available in the address map.",
-	ArgsUsage:   "<firstBlockNum>, <lastBlockNum>",
+	Action:    getDelAcc,
+	Name:      "del-acc",
+	Usage:     "Prints info about given deleted account in AidaDb.",
+	ArgsUsage: "<firstBlockNum>, <lastBlockNum>",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 		&logger.LogLevelFlag,
