@@ -19,6 +19,9 @@ var Stats = cli.Command{
 		&cmdAll,
 		&cmdDelAcc,
 	},
+	Flags: []cli.Flag{
+		&flags.Detailed,
+	},
 	Description: `
 The stats command requires one argument: <blockNunLast> -- the last block of aida-db.`,
 }
@@ -49,9 +52,19 @@ func listAllRecords(ctx *cli.Context) error {
 		return fmt.Errorf("cannot create aida-db; %v", err)
 	}
 
-	log.Notice("Counting...")
-	log.Noticef("All AidaDb records: %v", getDbSize(aidaDb))
+	if ctx.Bool(flags.Detailed.Name) {
+		log.Notice("Counting each prefix...")
+		logDetailedSize()
+	} else {
+		log.Notice("Counting overall size...")
+		log.Noticef("All AidaDb records: %v", getDbSize(aidaDb))
+	}
+
 	return nil
+}
+
+func logDetailedSize() {
+
 }
 
 var cmdDelAcc = cli.Command{
@@ -59,9 +72,11 @@ var cmdDelAcc = cli.Command{
 	Name:        "del-acc",
 	Usage:       "Lists unknown account storages from the world state database.",
 	Description: "Command scans for storage keys in the world state database and shows those not available in the address map.",
+	ArgsUsage:   "<firstBlockNum>, <lastBlockNum>",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 		&logger.LogLevelFlag,
+		&flags.Account,
 	},
 }
 
@@ -90,7 +105,7 @@ func getDelAcc(ctx *cli.Context) error {
 
 	}
 
-	log.Warning("Did not find record in range %v - %v", cfg.First, cfg.Last)
+	log.Warningf("Did not find record in range %v - %v", cfg.First, cfg.Last)
 
 	return nil
 
