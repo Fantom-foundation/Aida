@@ -392,8 +392,9 @@ type Config struct {
 	SnapshotDepth       int            // depth of snapshot history
 	SubstateDb          string         // substate directory
 	OperaDatadir        string         // source opera directory
-	ValidateTxState     bool           // validate stateDB before and after transaction
-	ValidateWorldState  bool           // validate stateDB before and after replay block range
+	Validate            bool           // validate validate aida-db
+	ValidateTxState     bool           // validate stateDb before and after transaction
+	ValidateWorldState  bool           // validate stateDb before and after replay block range
 	ValuesNumber        int64          // number of values to generate
 	VmImpl              string         // vm implementation (geth/lfvm)
 	WorldStateDb        string         // path to worldstate
@@ -540,6 +541,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		SubstateDb:          ctx.Path(substate.SubstateDbFlag.Name),
 		OperaDatadir:        ctx.Path(OperaDatadirFlag.Name),
 		ValuesNumber:        ctx.Int64(ValuesNumberFlag.Name),
+		Validate:            ctx.Bool(ValidateFlag.Name),
 		ValidateTxState:     validateTxState,
 		ValidateWorldState:  validateWorldState,
 		VmImpl:              ctx.String(VmImplementation.Name),
