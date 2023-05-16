@@ -22,7 +22,6 @@ var MergeCommand = cli.Command{
 		&utils.DeleteSourceDbsFlag,
 		&logger.LogLevelFlag,
 		&utils.CompactDbFlag,
-		&utils.ValidateFlag,
 	},
 	Description: `
 Creates target aida-db by merging source databases from arguments:
@@ -70,14 +69,6 @@ func Merge(cfg *utils.Config, sourceDbPaths []string) error {
 	if cfg.CompactDb {
 		log.Noticef("Starting compaction")
 		err = targetDb.Compact(nil, nil)
-		if err != nil {
-			return err
-		}
-	}
-
-	if cfg.Validate {
-		// validate whether sum of all total_written records and actual database size are same
-		err = validateDbSize(targetDb, totalWritten)
 		if err != nil {
 			return err
 		}
