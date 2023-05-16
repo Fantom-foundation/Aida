@@ -47,7 +47,6 @@ func ReplayAPI(ctx *cli.Context) error {
 		db = tracer.NewProxyRecorder(db, rCtx)
 	}
 
-	substate.SetSubstateDb(cfg.SubstateDb)
 	if cfg.Profile {
 		db, stats = runvm.NewProxyProfiler(db)
 	}
