@@ -10,10 +10,11 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var DbStats = cli.Command{
-	Action: reportAidaDbStats,
-	Name:   "db-stats",
-	Usage:  "print number of items in aida-db",
+var Stats = cli.Command{
+	Action:      reportAidaDbStats,
+	Name:        "stats",
+	Usage:       "print number of items in aida-db",
+	Subcommands: []*cli.Command{},
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 		&logger.LogLevelFlag,
@@ -25,11 +26,8 @@ The stats command requires one argument: <blockNunLast> -- the last block of aid
 
 func reportAidaDbStats(ctx *cli.Context) error {
 	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-Stats")
-	// process arguments and flags
-	if ctx.Args().Len() != 1 {
-		return fmt.Errorf("stats command requires exactly 1 arguments")
-	}
-	cfg, argErr := utils.NewConfig(ctx, utils.LastBlockArg)
+
+	cfg, argErr := utils.NewConfig(ctx, utils.NoArgs)
 	if argErr != nil {
 		return argErr
 	}
