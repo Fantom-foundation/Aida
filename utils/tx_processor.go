@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"log"
-	"math"
 	"math/big"
 	"strings"
 
@@ -153,11 +152,6 @@ func prepareBlockCtx(inputEnv *substate.SubstateEnv) *vm.BlockContext {
 	// If currentBaseFee is defined, add it to the vmContext.
 	if inputEnv.BaseFee != nil {
 		blockCtx.BaseFee = new(big.Int).Set(inputEnv.BaseFee)
-	}
-	// Limit the GasLimit to MaxInt64 since some VM implementations use
-	// int64 instead of uint64 to represent gas quantities.
-	if blockCtx.GasLimit > uint64(math.MaxInt64) {
-		blockCtx.GasLimit = uint64(math.MaxInt64)
 	}
 	return blockCtx
 }
