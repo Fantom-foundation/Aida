@@ -29,6 +29,7 @@ var CloneCommand = cli.Command{
 		&utils.AidaDbFlag,
 		&utils.TargetDbFlag,
 		&utils.CompactDbFlag,
+		&utils.ValidateFlag,
 		&logger.LogLevelFlag,
 	},
 	Description: `
@@ -52,6 +53,13 @@ func clone(ctx *cli.Context) error {
 		return err
 	}
 
+	var (
+		countCodes     uint64
+		countDestroyed uint64
+		countUpdate    uint64
+		countSubstate  uint64
+	)
+
 	log := logger.NewLogger(cfg.LogLevel, "DB Clone")
 
 	aidaDb, targetDb, err := openCloneDatabases(cfg)
@@ -63,26 +71,26 @@ func clone(ctx *cli.Context) error {
 	writerChan, errChan := writeDataAsync(targetDb)
 
 	// write all contract codes
-	err = write(writerChan, errChan, aidaDb, []byte(substate.Stage1CodePrefix), 0, nil, log)
+	countCodes, err = write(writerChan, errChan, aidaDb, []byte(substate.Stage1CodePrefix), 0, nil, log)
 	if err != nil {
 		return err
 	}
 
 	// write all destroyed accounts
-	err = write(writerChan, errChan, aidaDb, []byte(substate.DestroyedAccountPrefix), 0, nil, log)
+	countDestroyed, err = write(writerChan, errChan, aidaDb, []byte(substate.DestroyedAccountPrefix), 0, nil, log)
 	if err != nil {
 		return err
 	}
 
 	// write update sets until cfg.Last
 	var lastUpdateBeforeRange uint64
-	lastUpdateBeforeRange, err = writeUpdateSet(cfg, writerChan, errChan, aidaDb, log)
+	lastUpdateBeforeRange, countUpdate, err = writeUpdateSet(cfg, writerChan, errChan, aidaDb, log)
 	if err != nil {
 		return err
 	}
 
 	// write substates from last updateset before cfg.First until cfg.Last
-	err = writeSubstates(cfg, writerChan, errChan, aidaDb, lastUpdateBeforeRange, log)
+	countSubstate, err = writeSubstates(cfg, writerChan, errChan, aidaDb, lastUpdateBeforeRange, log)
 	if err != nil {
 		return err
 	}
@@ -106,17 +114,26 @@ func clone(ctx *cli.Context) error {
 		}
 	}
 
+	if cfg.Validate {
+		// validate whether sum of all written records and actual database size are same
+		expectedWritten := countCodes + countSubstate + countUpdate + countDestroyed
+
+		err = validateDbSize(targetDb, expectedWritten)
+		if err != nil {
+			return err
+		}
+	}
+
 	// close aida database
 	MustCloseDB(aidaDb)
 	// close target database
 	MustCloseDB(targetDb)
 
 	return nil
-
 }
 
 // writeSubstates write substates from last updateset before cfg.First until cfg.Last
-func writeSubstates(cfg *utils.Config, writerChan chan rawEntry, errChan chan error, aidaDb ethdb.Database, lastUpdateBeforeRange uint64, log *logging.Logger) error {
+func writeSubstates(cfg *utils.Config, writerChan chan rawEntry, errChan chan error, aidaDb ethdb.Database, lastUpdateBeforeRange uint64, log *logging.Logger) (uint64, error) {
 	endCond := func(key []byte) (bool, error) {
 		block, _, err := substate.DecodeStage1SubstateKey(key)
 		if err != nil {
@@ -132,7 +149,7 @@ func writeSubstates(cfg *utils.Config, writerChan chan rawEntry, errChan chan er
 }
 
 // writeUpdateSet write update sets until cfg.Last
-func writeUpdateSet(cfg *utils.Config, writerChan chan rawEntry, errChan chan error, aidaDb ethdb.Database, log *logging.Logger) (uint64, error) {
+func writeUpdateSet(cfg *utils.Config, writerChan chan rawEntry, errChan chan error, aidaDb ethdb.Database, log *logging.Logger) (uint64, uint64, error) {
 	// labeling last updateset before interval - need to export substates for that range as well
 	var lastUpdateBeforeRange uint64
 	endCond := func(key []byte) (bool, error) {
@@ -149,23 +166,23 @@ func writeUpdateSet(cfg *utils.Config, writerChan chan rawEntry, errChan chan er
 		return false, nil
 	}
 
-	err := write(writerChan, errChan, aidaDb, []byte(substate.SubstateAllocPrefix), 0, endCond, log)
+	countUpdate, err := write(writerChan, errChan, aidaDb, []byte(substate.SubstateAllocPrefix), 0, endCond, log)
 	if err != nil {
-		return 0, err
+		return 0, 0, err
 	}
 
 	// check if updateset contained at least one set (first set with worldstate), then aida-db must be corrupted
 	if lastUpdateBeforeRange == 0 {
-		return 0, fmt.Errorf("updateset didn't contain any records; unable to create aida-db without initial world-state")
+		return 0, 0, fmt.Errorf("updateset didn't contain any records; unable to create aida-db without initial world-state")
 	}
 
 	log.Debugf("Last updateset preceding block range found at %v\n", lastUpdateBeforeRange)
 
-	return lastUpdateBeforeRange, nil
+	return lastUpdateBeforeRange, countUpdate, nil
 }
 
 // write all records into the database under given prefix
-func write(writerChan chan rawEntry, errChan chan error, aidaDb ethdb.Database, prefix []byte, start uint64, condition func(key []byte) (bool, error), log *logging.Logger) error {
+func write(writerChan chan rawEntry, errChan chan error, aidaDb ethdb.Database, prefix []byte, start uint64, condition func(key []byte) (bool, error), log *logging.Logger) (uint64, error) {
 	log.Debugf("Prefix: %s ; Starting at: %d", prefix, start)
 
 	iter := aidaDb.NewIterator(prefix, substate.BlockToBytes(start))
@@ -177,7 +194,7 @@ func write(writerChan chan rawEntry, errChan chan error, aidaDb ethdb.Database, 
 		if condition != nil {
 			finished, err := condition(iter.Key())
 			if err != nil {
-				return err
+				return 0, err
 			}
 			if finished {
 				break
@@ -198,7 +215,7 @@ func write(writerChan chan rawEntry, errChan chan error, aidaDb ethdb.Database, 
 		case err, ok := <-errChan:
 			{
 				if ok {
-					return err
+					return 0, err
 				}
 			}
 		case writerChan <- rawEntry{Key: key, Value: value}:
@@ -208,7 +225,7 @@ func write(writerChan chan rawEntry, errChan chan error, aidaDb ethdb.Database, 
 
 	log.Debugf("Prefix: %s ; Written: %v\n", prefix, counter)
 
-	return nil
+	return counter, nil
 }
 
 // writeDataAsync copies data from channel into targetDb
@@ -279,4 +296,13 @@ func openCloneDatabases(cfg *utils.Config) (ethdb.Database, ethdb.Database, erro
 	}
 
 	return aidaDb, targetDb, nil
+}
+
+// validateDbSize compares size of database and expectedWritten
+func validateDbSize(db ethdb.Database, expectedWritten uint64) error {
+	actualWritten := getDbSize(db)
+	if actualWritten != expectedWritten {
+		return fmt.Errorf("TargetDb has %v records; expected: %v", actualWritten, expectedWritten)
+	}
+	return nil
 }

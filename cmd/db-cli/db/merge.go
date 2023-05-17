@@ -47,17 +47,20 @@ func merge(ctx *cli.Context) error {
 func Merge(cfg *utils.Config, sourceDbPaths []string) error {
 	log := logger.NewLogger(cfg.LogLevel, "DB Merger")
 
-	targetDB, sourceDBs, err := openDatabases(cfg.AidaDb, sourceDbPaths)
+	targetDb, sourceDBs, err := openDatabases(cfg.AidaDb, sourceDbPaths)
 	if err != nil {
 		return err
 	}
 
+	var totalWritten uint64
 	for i, sourceDB := range sourceDBs {
 		// copy the sourceDB to the target database
-		err = copyData(sourceDB, targetDB)
+		var written uint64
+		written, err = copyData(sourceDB, targetDb)
 		if err != nil {
 			return err
 		}
+		totalWritten += written
 		log.Noticef("Merging of %s finished", sourceDbPaths[i])
 		// close finished sourceDB
 		MustCloseDB(sourceDB)
@@ -65,14 +68,14 @@ func Merge(cfg *utils.Config, sourceDbPaths []string) error {
 
 	if cfg.CompactDb {
 		log.Noticef("Starting compaction")
-		err = targetDB.Compact(nil, nil)
+		err = targetDb.Compact(nil, nil)
 		if err != nil {
 			return err
 		}
 	}
 
 	// close target database
-	MustCloseDB(targetDB)
+	MustCloseDB(targetDb)
 
 	// delete source databases
 	if cfg.DeleteSourceDbs {
@@ -119,9 +122,10 @@ func openDatabases(targetPath string, sourceDbPaths []string) (ethdb.Database, [
 }
 
 // copyData copies data from iterator into target database
-func copyData(sourceDb ethdb.Database, targetDb ethdb.Database) error {
+func copyData(sourceDb ethdb.Database, targetDb ethdb.Database) (uint64, error) {
 	dbBatchWriter := targetDb.NewBatch()
 
+	var written uint64
 	iter := sourceDb.NewIterator(nil, nil)
 	for {
 		// do we have another available item?
@@ -130,23 +134,24 @@ func copyData(sourceDb ethdb.Database, targetDb ethdb.Database) error {
 			if dbBatchWriter.ValueSize() > 0 {
 				err := dbBatchWriter.Write()
 				if err != nil {
-					return err
+					return 0, err
 				}
 			}
-			return nil
+			return written, nil
 		}
 		key := iter.Key()
 
 		err := dbBatchWriter.Put(key, iter.Value())
 		if err != nil {
-			return err
+			return 0, err
 		}
+		written++
 
 		// writing data in batches
 		if dbBatchWriter.ValueSize() > kvdb.IdealBatchSize {
 			err = dbBatchWriter.Write()
 			if err != nil {
-				return err
+				return 0, err
 			}
 			dbBatchWriter.Reset()
 		}
