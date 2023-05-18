@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/ethdb"
 )
 
@@ -23,14 +24,13 @@ func createMetadata(targetDb ethdb.Database, blockStart, blockEnd uint64) error 
 		return fmt.Errorf("cannot put timestamp into db metadata; %v", err)
 	}
 
-	firstBlock := make([]byte, 8)
+	firstBlock := substate.BlockToBytes(blockStart)
 	binary.BigEndian.PutUint64(firstBlock, blockStart)
 	if err := targetDb.Put([]byte(FirstBlockPrefix), firstBlock); err != nil {
 		return fmt.Errorf("cannot put first block number into db metadata; %v", err)
 	}
 
-	lastBlock := make([]byte, 8)
-	binary.BigEndian.PutUint64(lastBlock, blockEnd)
+	lastBlock := substate.BlockToBytes(blockEnd)
 	if err := targetDb.Put([]byte(LastBlockPrefix), lastBlock); err != nil {
 		return fmt.Errorf("cannot put last block number into db metadata; %v", err)
 	}
