@@ -98,7 +98,10 @@ func getDelAcc(ctx *cli.Context) error {
 		return argErr
 	}
 
-	db := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
+	db, err := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
+	if err != nil {
+		return err
+	}
 
 	accounts, err := db.GetAccountsDestroyedInRange(cfg.First, cfg.Last)
 	if err != nil {

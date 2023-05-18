@@ -35,7 +35,10 @@ func reportUpdateSetStats(ctx *cli.Context) error {
 		return argErr
 	}
 	// initialize updateDB
-	db := substate.OpenUpdateDBReadOnly(cfg.UpdateDb)
+	db, err := substate.OpenUpdateDBReadOnly(cfg.UpdateDb)
+	if err != nil {
+		return err
+	}
 	defer db.Close()
 
 	iter := substate.NewUpdateSetIterator(db, 0, cfg.Last)

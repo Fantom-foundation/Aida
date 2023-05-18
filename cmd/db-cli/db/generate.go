@@ -178,10 +178,13 @@ func GetOperaBlock(cfg *utils.Config) (uint64, uint64, error) {
 
 // genUpdateSet invokes UpdateSet generation
 func genUpdateSet(cfg *utils.Config, log *logging.Logger) error {
-	db := substate.OpenUpdateDB(cfg.AidaDb)
+	db, err := substate.OpenUpdateDB(cfg.AidaDb)
+	if err != nil {
+		return err
+	}
 	// set first block
 	nextUpdateSetStart := db.GetLastKey() + 1
-	err := db.Close()
+	err = db.Close()
 	if err != nil {
 		return err
 	}

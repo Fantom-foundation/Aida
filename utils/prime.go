@@ -196,7 +196,10 @@ func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error 
 		return fmt.Errorf("the target block, %v, is earlier than the initial world state block, %v. The world state is not loaded.", target, blockPos)
 	}
 	// load pre-computed update-set from update-set db
-	udb := substate.OpenUpdateDBReadOnly(cfg.UpdateDb)
+	udb, err := substate.OpenUpdateDBReadOnly(cfg.UpdateDb)
+	if err != nil {
+		return err
+	}
 	defer udb.Close()
 	updateIter := substate.NewUpdateSetIterator(udb, blockPos, target)
 	update := make(substate.SubstateAlloc)
@@ -241,7 +244,10 @@ func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error 
 	// advance from the latest precomputed state to the target block
 	if blockPos < target {
 		log.Infof("\tPriming from substate from block %v", blockPos)
-		update, deletedAccounts := generateUpdateSet(blockPos+1, target, cfg)
+		update, deletedAccounts, err := generateUpdateSet(blockPos+1, target, cfg)
+		if err != nil {
+			return err
+		}
 		pc.SuicideAccounts(db, deletedAccounts)
 		if err := pc.PrimeStateDB(update, db); err != nil {
 			return fmt.Errorf("failed to prime StateDB: %v", err)
@@ -251,7 +257,7 @@ func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error 
 	// delete destroyed accounts from stateDB
 	log.Notice("Delete destroyed accounts")
 	// remove destroyed accounts until one block before the first block
-	err := DeleteDestroyedAccountsFromStateDB(db, cfg, cfg.First-1)
+	err = DeleteDestroyedAccountsFromStateDB(db, cfg, cfg.First-1)
 
 	return err
 }

@@ -53,8 +53,24 @@ func generateUpdateSet(ctx *cli.Context) error {
 		return ferr
 	}
 
+	// we need all three db paths to execute this cmd
+	if cfg.UpdateDb == "" {
+		return fmt.Errorf("you need to specify where you want update-db to save (--update-db)")
+	}
+
+	if cfg.DeletionDb == "" {
+		return fmt.Errorf("you need to specify path to existing deletion-db (--deletion-db)")
+	}
+
+	if cfg.SubstateDb == "" {
+		return fmt.Errorf("you need to specify path to existing substate (--substate-db)")
+	}
+
 	// retrieve last update set
-	db := substate.OpenUpdateDB(cfg.UpdateDb)
+	db, err := substate.OpenUpdateDB(cfg.UpdateDb)
+	if err != nil {
+		return err
+	}
 	// set first block
 	cfg.First = db.GetLastKey() + 1
 	db.Close()
@@ -71,7 +87,10 @@ func GenUpdateSet(cfg *utils.Config, first uint64, interval uint64) error {
 	)
 
 	// initialize updateDB
-	db := substate.OpenUpdateDB(cfg.UpdateDb)
+	db, err := substate.OpenUpdateDB(cfg.UpdateDb)
+	if err != nil {
+		return err
+	}
 	defer db.Close()
 
 	// start with putting metadata into the db
@@ -107,7 +126,10 @@ func GenUpdateSet(cfg *utils.Config, first uint64, interval uint64) error {
 
 	iter := substate.NewSubstateIterator(first, cfg.Workers)
 	defer iter.Release()
-	deletedAccountDB := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
+	deletedAccountDB, err := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
+	if err != nil {
+		return err
+	}
 	defer deletedAccountDB.Close()
 
 	var (
