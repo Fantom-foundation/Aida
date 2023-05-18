@@ -40,11 +40,20 @@ func merge(ctx *cli.Context) error {
 	for i := 0; i < ctx.Args().Len(); i++ {
 		sourceDbs[i] = ctx.Args().Get(i)
 	}
-	return Merge(cfg, sourceDbs)
+
+	// open targetDb
+	targetDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
+	if err != nil {
+		return fmt.Errorf("cannot open targetDb. Error: %v", err)
+	}
+
+	defer MustCloseDB(targetDb)
+
+	return Merge(cfg, sourceDbs, targetDb)
 }
 
 // Merge implements merging command for combining all source data databases into single database used for profiling.
-func Merge(cfg *utils.Config, sourceDbPaths []string) error {
+func Merge(cfg *utils.Config, sourceDbPaths []string, targetDb ethdb.Database) error {
 	log := logger.NewLogger(cfg.LogLevel, "DB Merger")
 
 	// we need a destination where to save merged aida-db
@@ -52,7 +61,7 @@ func Merge(cfg *utils.Config, sourceDbPaths []string) error {
 		return fmt.Errorf("you need to specify where you want aida-db to save (--aida-db)")
 	}
 
-	targetDb, sourceDBs, err := openDatabases(cfg.AidaDb, sourceDbPaths)
+	sourceDBs, err := openSourceDatabases(sourceDbPaths)
 	if err != nil {
 		return err
 	}
@@ -97,10 +106,10 @@ func Merge(cfg *utils.Config, sourceDbPaths []string) error {
 	return err
 }
 
-// openDatabases opens all databases required for merge
-func openDatabases(targetPath string, sourceDbPaths []string) (ethdb.Database, []ethdb.Database, error) {
+// openSourceDatabases opens all databases required for merge
+func openSourceDatabases(sourceDbPaths []string) ([]ethdb.Database, error) {
 	if len(sourceDbPaths) < 1 {
-		return nil, nil, fmt.Errorf("no source database were specified\n")
+		return nil, fmt.Errorf("no source database were specified\n")
 	}
 
 	var sourceDbs []ethdb.Database
@@ -108,22 +117,16 @@ func openDatabases(targetPath string, sourceDbPaths []string) (ethdb.Database, [
 		path := sourceDbPaths[i]
 		_, err := os.Stat(path)
 		if os.IsNotExist(err) {
-			return nil, nil, fmt.Errorf("source database %s; doesn't exist\n", path)
+			return nil, fmt.Errorf("source database %s; doesn't exist\n", path)
 		}
 		db, err := rawdb.NewLevelDBDatabase(path, 1024, 100, "", true)
 		if err != nil {
-			return nil, nil, fmt.Errorf("source database %s; error: %v", path, err)
+			return nil, fmt.Errorf("source database %s; error: %v", path, err)
 		}
 		sourceDbs = append(sourceDbs, db)
 	}
 
-	// open targetDb
-	targetDb, err := rawdb.NewLevelDBDatabase(targetPath, 1024, 100, "profiling", false)
-	if err != nil {
-		return nil, nil, fmt.Errorf("targetDb. Error: %v", err)
-	}
-
-	return targetDb, sourceDbs, nil
+	return sourceDbs, nil
 }
 
 // copyData copies data from iterator into target database

@@ -1,39 +1,39 @@
 package db
 
 import (
-	"encoding/json"
+	"encoding/binary"
 	"fmt"
-	"os"
-	"path/filepath"
 	"time"
+
+	"github.com/ethereum/go-ethereum/ethdb"
 )
 
-const PathToAidaDbInfo = "aida-db_info.json"
+const (
+	MetadataPrefix   = "md"
+	TimestampPrefix  = MetadataPrefix + "ti"
+	FirstBlockPrefix = MetadataPrefix + "fi"
+	LastBlockPrefix  = MetadataPrefix + "la"
+)
 
-type metadata struct {
-	first, last uint64
-	createTime  string
-}
-
-func createMetaDataFile(directory string, blockStart, blockEnd uint64) error {
-	filename := filepath.Join(directory, PathToAidaDbInfo)
-
-	// remove file if exists
-	os.RemoveAll(filename)
-
-	dbInfo := &metadata{
-		first:      blockStart,
-		last:       blockEnd,
-		createTime: time.Now().UTC().Format(time.UnixDate),
+// createMetadata and put it into db
+func createMetadata(targetDb ethdb.Database, blockStart, blockEnd uint64) error {
+	createTime := make([]byte, 8)
+	binary.BigEndian.PutUint64(createTime, uint64(time.Now().UTC().Second()))
+	if err := targetDb.Put([]byte(TimestampPrefix), createTime); err != nil {
+		return fmt.Errorf("cannot put timestamp into db metadata; %v", err)
 	}
 
-	jsonByte, err := json.MarshalIndent(dbInfo, "", "  ")
-	if err != nil {
-		return fmt.Errorf("cannot marshal AidaDbInfo, cmd was successful but metadata file was not creater; %v", err)
+	firstBlock := make([]byte, 8)
+	binary.BigEndian.PutUint64(firstBlock, blockStart)
+	if err := targetDb.Put([]byte(FirstBlockPrefix), firstBlock); err != nil {
+		return fmt.Errorf("cannot put first block number into db metadata; %v", err)
 	}
 
-	if err = os.WriteFile(filename, jsonByte, 0666); err != nil {
-		return fmt.Errorf("cannot create file %v, cmd was successful but metadata file was not created; %v", filename, err)
+	lastBlock := make([]byte, 8)
+	binary.BigEndian.PutUint64(lastBlock, blockEnd)
+	if err := targetDb.Put([]byte(LastBlockPrefix), lastBlock); err != nil {
+		return fmt.Errorf("cannot put last block number into db metadata; %v", err)
 	}
+
 	return nil
 }

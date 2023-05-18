@@ -13,6 +13,8 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	substate "github.com/Fantom-foundation/Substate"
+	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/ethdb"
 
 	"github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
 	"github.com/Fantom-foundation/Aida/cmd/updateset-cli/updateset"
@@ -82,25 +84,31 @@ func Generate(cfg *utils.Config, log *logging.Logger) error {
 		return err
 	}
 
-	err = recordSubstate(cfg, log)
+	// open targetDb
+	targetDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
+	if err != nil {
+		return fmt.Errorf("cannot open targetDb. Error: %v", err)
+	}
+
+	err = recordSubstate(cfg, log, targetDb)
 	if err != nil {
 		return err
 	}
 
-	err = genDeletedAccounts(cfg, log)
+	err = genDeletedAccounts(cfg, log, targetDb)
 	if err != nil {
 		return err
 	}
 
-	err = genUpdateSet(cfg, log)
+	err = genUpdateSet(cfg, log, targetDb)
 	if err != nil {
 		return err
 	}
 
 	log.Noticef("Aida-db updated from block %v to %v", cfg.First-1, cfg.Last)
 
-	if err := createMetaDataFile(cfg.AidaDb, cfg.First-1, cfg.Last); err != nil {
-		log.Warning(err)
+	if err := createMetadata(targetDb, cfg.First-1, cfg.Last); err != nil {
+		log.Errorf("cannot create metadata. AidaDb was successfully created but metadata were not put inside db; %v", err)
 	}
 
 	return nil
@@ -181,7 +189,7 @@ func GetOperaBlock(cfg *utils.Config) (uint64, uint64, error) {
 }
 
 // genUpdateSet invokes UpdateSet generation
-func genUpdateSet(cfg *utils.Config, log *logging.Logger) error {
+func genUpdateSet(cfg *utils.Config, log *logging.Logger, targetDb ethdb.Database) error {
 	db, err := substate.OpenUpdateDB(cfg.AidaDb)
 	if err != nil {
 		return err
@@ -204,7 +212,7 @@ func genUpdateSet(cfg *utils.Config, log *logging.Logger) error {
 	}
 
 	// merge UpdateDb into AidaDb
-	err = Merge(cfg, []string{cfg.UpdateDb})
+	err = Merge(cfg, []string{cfg.UpdateDb}, targetDb)
 	if err != nil {
 		return err
 	}
@@ -214,7 +222,7 @@ func genUpdateSet(cfg *utils.Config, log *logging.Logger) error {
 }
 
 // genDeletedAccounts invokes DeletedAccounts generation
-func genDeletedAccounts(cfg *utils.Config, log *logging.Logger) error {
+func genDeletedAccounts(cfg *utils.Config, log *logging.Logger, targetDb ethdb.Database) error {
 	log.Noticef("Deleted generation")
 	err := replay.GenDeletedAccountsAction(cfg)
 	if err != nil {
@@ -222,7 +230,7 @@ func genDeletedAccounts(cfg *utils.Config, log *logging.Logger) error {
 	}
 
 	// merge DeletionDb into AidaDb
-	err = Merge(cfg, []string{cfg.DeletionDb})
+	err = Merge(cfg, []string{cfg.DeletionDb}, targetDb)
 	if err != nil {
 		return err
 	}
@@ -232,7 +240,7 @@ func genDeletedAccounts(cfg *utils.Config, log *logging.Logger) error {
 }
 
 // recordSubstate loads events into the opera, whilst recording substates
-func recordSubstate(cfg *utils.Config, log *logging.Logger) error {
+func recordSubstate(cfg *utils.Config, log *logging.Logger, targetDb ethdb.Database) error {
 	_, err := os.Stat(cfg.Events)
 	if os.IsNotExist(err) {
 		return fmt.Errorf("supplied events file %s doesn't exist", cfg.Events)
@@ -259,7 +267,7 @@ func recordSubstate(cfg *utils.Config, log *logging.Logger) error {
 
 	log.Noticef("Substates generated for %v - %v", cfg.First, cfg.Last)
 
-	err = Merge(cfg, []string{cfg.SubstateDb})
+	err = Merge(cfg, []string{cfg.SubstateDb}, targetDb)
 	if err != nil {
 		return err
 	}
