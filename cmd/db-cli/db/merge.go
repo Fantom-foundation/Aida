@@ -47,6 +47,11 @@ func merge(ctx *cli.Context) error {
 func Merge(cfg *utils.Config, sourceDbPaths []string) error {
 	log := logger.NewLogger(cfg.LogLevel, "DB Merger")
 
+	// we need a destination where to save merged aida-db
+	if cfg.AidaDb == "" {
+		return fmt.Errorf("you need to specify where you want aida-db to save (--aida-db)")
+	}
+
 	targetDb, sourceDBs, err := openDatabases(cfg.AidaDb, sourceDbPaths)
 	if err != nil {
 		return err
