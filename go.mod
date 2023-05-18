@@ -169,5 +169,3 @@ replace github.com/Fantom-foundation/Tosca => ./tosca
 
 replace github.com/ethereum/evmc/v10 => ./tosca/third_party/evmc
 
-// todo remove
-replace github.com/Fantom-foundation/Substate => ../Substate
