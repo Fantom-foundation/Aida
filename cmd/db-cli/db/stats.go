@@ -3,11 +3,13 @@ package db
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/cmd/db-cli/flags"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/lachesis-base/common/bigendian"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/op/go-logging"
@@ -18,12 +20,76 @@ var Stats = cli.Command{
 	Name:  "stats",
 	Usage: "Prints statistics about AidaDb",
 	Subcommands: []*cli.Command{
+		&cmdStats,
 		&cmdAll,
 		&cmdDelAcc,
 	},
 
 	Description: `
 The stats command requires one argument: <blockNunLast> -- the last block of aida-db.`,
+}
+
+var cmdStats = cli.Command{
+	Action: printStats,
+	Name:   "stats",
+	Usage:  "Prints metadata of AidaDb",
+	Flags: []cli.Flag{
+		&utils.AidaDbFlag,
+	},
+}
+
+func printStats(ctx *cli.Context) error {
+	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-Stats")
+
+	cfg, argErr := utils.NewConfig(ctx, utils.NoArgs)
+	if argErr != nil {
+		return argErr
+	}
+
+	log.Notice("Opening AidaDb")
+	// open aidaDb
+	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", true)
+	if err != nil {
+		return fmt.Errorf("cannot open aida-db; %v", err)
+	}
+
+	firstBlockBytes, err := aidaDb.Get([]byte(FirstBlockPrefix))
+	if err != nil {
+		return fmt.Errorf("cannot get first block from db; %v", err)
+	}
+
+	log.Notice("AIDA-DB INFO:")
+
+	log.Noticef("First Block :%v", bigendian.BytesToUint64(firstBlockBytes))
+
+	lastBlockBytes, err := aidaDb.Get([]byte(LastBlockPrefix))
+	if err != nil {
+		return fmt.Errorf("cannot get last block from db; %v", err)
+	}
+	log.Noticef("Last Block: %v", bigendian.BytesToUint64(lastBlockBytes))
+
+	timestampBytes, err := aidaDb.Get([]byte(TimestampPrefix))
+	if err != nil {
+		return fmt.Errorf("cannot get timestamp from db; %v", err)
+	}
+
+	log.Noticef("Created: %v", time.Unix(int64(bigendian.BytesToUint64(timestampBytes)), 0))
+
+	log.Notice("UPDATESET INFO:")
+
+	intervalBytes, err := aidaDb.Get([]byte(substate.UpdatesetIntervalKey))
+	if err != nil {
+		return fmt.Errorf("cannot get updateset interval from db; %v", err)
+	}
+	log.Noticef("Interval: %v", bigendian.BytesToUint64(intervalBytes))
+
+	sizeBytes, err := aidaDb.Get([]byte(substate.UpdatesetSizeKey))
+	if err != nil {
+		return fmt.Errorf("cannot get updateset size from db; %v", err)
+	}
+	log.Noticef("Interval: %v", bigendian.BytesToUint64(sizeBytes))
+
+	return nil
 }
 
 var cmdAll = cli.Command{
@@ -49,7 +115,7 @@ func listAllRecords(ctx *cli.Context) error {
 	// open aidaDb
 	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", true)
 	if err != nil {
-		return fmt.Errorf("cannot create aida-db; %v", err)
+		return fmt.Errorf("cannot open aida-db; %v", err)
 	}
 
 	if ctx.Bool(flags.Detailed.Name) {

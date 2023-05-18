@@ -10,10 +10,9 @@ import (
 )
 
 const (
-	MetadataPrefix   = "md"
-	TimestampPrefix  = MetadataPrefix + "ti"
-	FirstBlockPrefix = MetadataPrefix + "fi"
-	LastBlockPrefix  = MetadataPrefix + "la"
+	TimestampPrefix  = substate.MetadataPrefix + "ti"
+	FirstBlockPrefix = substate.MetadataPrefix + "fi"
+	LastBlockPrefix  = substate.MetadataPrefix + "la"
 )
 
 // createMetadata and put it into db
