@@ -2,50 +2,38 @@ package db
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
-
-	"github.com/op/go-logging"
 )
 
 const PathToAidaDbInfo = "aida-db_info.json"
 
 type metadata struct {
-	epochRange    epochRange
-	updatesetInfo updateset
-	createTime    string
-}
-
-type epochRange struct {
 	first, last uint64
+	createTime  string
 }
 
-type updateset struct {
-	interval, size uint64
-}
+func createMetaDataFile(directory string, blockStart, blockEnd uint64) error {
+	filename := filepath.Join(directory, PathToAidaDbInfo)
 
-func createMetaDataFile(log *logging.Logger, directory string, epochStart, epochEnd, updatesetInterval, updatesetSize uint64) error {
+	// remove file if exists
+	os.RemoveAll(filename)
+
 	dbInfo := &metadata{
-		epochRange: epochRange{
-			first: epochStart,
-			last:  epochEnd,
-		},
-		updatesetInfo: updateset{
-			interval: updatesetInterval,
-			size:     updatesetSize,
-		},
+		first:      blockStart,
+		last:       blockEnd,
 		createTime: time.Now().UTC().Format(time.UnixDate),
 	}
 
-	filename := filepath.Join(directory, PathToAidaDbInfo)
 	jsonByte, err := json.MarshalIndent(dbInfo, "", "  ")
 	if err != nil {
-		log.Errorf("cannot marshal AidaDbInfo, cmd was successful but metadata file was not creater; %v", err)
+		return fmt.Errorf("cannot marshal AidaDbInfo, cmd was successful but metadata file was not creater; %v", err)
 	}
 
 	if err = os.WriteFile(filename, jsonByte, 0666); err != nil {
-		log.Errorf("cannot create file %v, cmd was successful but metadata file was not created; %v", filename, err)
+		return fmt.Errorf("cannot create file %v, cmd was successful but metadata file was not created; %v", filename, err)
 	}
 	return nil
 }

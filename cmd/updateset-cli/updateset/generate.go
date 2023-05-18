@@ -93,8 +93,9 @@ func GenUpdateSet(cfg *utils.Config, first uint64, interval uint64) error {
 	}
 	defer db.Close()
 
+	// todo size
 	// start with putting metadata into the db
-	if err := db.PutMetadata(substate.UpdatesetInterval, interval); err != nil {
+	if err := db.PutMetadata(interval, 0); err != nil {
 		return err
 	}
 

@@ -99,7 +99,11 @@ func Generate(cfg *utils.Config, log *logging.Logger) error {
 
 	log.Noticef("Aida-db updated from block %v to %v", cfg.First-1, cfg.Last)
 
-	return err
+	if err := createMetaDataFile(cfg.AidaDb, cfg.First-1, cfg.Last); err != nil {
+		log.Warning(err)
+	}
+
+	return nil
 }
 
 // prepareOpera confirms that the opera is initialized

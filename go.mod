@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/Fantom-foundation/Carmen/go v0.0.0-00010101000000-000000000000
-	github.com/Fantom-foundation/Substate v0.0.0-20230512151613-f039b23bf3f7
+	github.com/Fantom-foundation/Substate v0.0.0-20230518090447-88e7aef55f8e
 	github.com/Fantom-foundation/Tosca v0.0.0-20230406154859-8e2180f5f5c9
 	github.com/Fantom-foundation/go-opera v1.1.1-rc.2
 	github.com/Fantom-foundation/go-opera-erigon v0.0.0-00010101000000-000000000000
@@ -168,4 +168,3 @@ replace github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.2021
 replace github.com/Fantom-foundation/Tosca => ./tosca
 
 replace github.com/ethereum/evmc/v10 => ./tosca/third_party/evmc
-
