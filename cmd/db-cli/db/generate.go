@@ -63,16 +63,19 @@ func generate(ctx *cli.Context) error {
 		return err
 	}
 
-	if !cfg.KeepDb {
-		defer func() {
-			err = os.RemoveAll(aidaDbTmp)
-			if err != nil {
-				panic(err)
-			}
-		}()
+	err = Generate(cfg, log)
+	if err != nil {
+		return err
 	}
 
-	return Generate(cfg, log)
+	if !cfg.KeepDb {
+		err = os.RemoveAll(aidaDbTmp)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Generate is used to record/update aida-db

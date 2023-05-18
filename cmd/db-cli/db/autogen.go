@@ -3,6 +3,7 @@ package db
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -132,7 +133,54 @@ func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpo
 		return "", err
 	}
 
+	err = updatePatchesJson(cfg.Output, patchName)
+	if err != nil {
+		return "", err
+	}
+
 	return cfg.AidaDb, nil
+}
+
+// updatePatchesJson updates available patches in json
+func updatePatchesJson(patchDir, patchName string) error {
+	// Check if the JSON file exists
+	jsonFilePath := filepath.Join(patchDir, "patches.json")
+	_, err := os.Stat(jsonFilePath)
+	var patchesArr []string
+
+	if os.IsNotExist(err) {
+		// File does not exist, create a new array
+		patchesArr = make([]string, 0)
+	} else {
+		// File exists, load the existing JSON array
+		file, err := ioutil.ReadFile(jsonFilePath)
+		if err != nil {
+			return err
+		}
+
+		err = json.Unmarshal(file, &patchesArr)
+		if err != nil {
+			return err
+		}
+	}
+
+	// Add the patchName to the JSON array
+	patchesArr = append(patchesArr, patchName)
+
+	patchesArr = removeDuplicates(patchesArr)
+
+	// Convert the JSON array back to bytes
+	jsonBytes, err := json.Marshal(patchesArr)
+	if err != nil {
+		return err
+	}
+
+	// Write the updated JSON array to the file
+	err = ioutil.WriteFile(jsonFilePath, jsonBytes, 0644)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // generateEvents generates events between First and Last epoch numbers from config
@@ -250,4 +298,19 @@ func stopOpera(log *logging.Logger) error {
 		return fmt.Errorf("unable stop opera; %v", err.Error())
 	}
 	return nil
+}
+
+// removeDuplicates removes duplicates from string slice
+func removeDuplicates(slice []string) []string {
+	encountered := map[string]bool{}
+	result := []string{}
+
+	for _, str := range slice {
+		if !encountered[str] {
+			encountered[str] = true
+			result = append(result, str)
+		}
+	}
+
+	return result
 }
