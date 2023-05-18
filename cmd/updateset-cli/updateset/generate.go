@@ -74,6 +74,11 @@ func GenUpdateSet(cfg *utils.Config, first uint64, interval uint64) error {
 	db := substate.OpenUpdateDB(cfg.UpdateDb)
 	defer db.Close()
 
+	// start with putting metadata into the db
+	if err := db.PutMetadata(substate.UpdatesetInterval, interval); err != nil {
+		return err
+	}
+
 	// iterate through subsets in sequence
 	substate.SetSubstateDb(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
@@ -170,5 +175,6 @@ func GenUpdateSet(cfg *utils.Config, first uint64, interval uint64) error {
 		update.Merge(tx.Substate.OutputAlloc)
 		txCount++
 	}
+
 	return err
 }
