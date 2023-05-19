@@ -24,7 +24,6 @@ func createMetadata(targetDb ethdb.Database, blockStart, blockEnd uint64) error 
 	}
 
 	firstBlock := substate.BlockToBytes(blockStart)
-	binary.BigEndian.PutUint64(firstBlock, blockStart)
 	if err := targetDb.Put([]byte(FirstBlockPrefix), firstBlock); err != nil {
 		return fmt.Errorf("cannot put first block number into db metadata; %v", err)
 	}
