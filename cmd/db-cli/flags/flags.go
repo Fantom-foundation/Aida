@@ -15,7 +15,7 @@ var (
 	}
 	EncodingType = cli.StringFlag{
 		Name:     "encoding-type",
-		Usage:    "Choose encoding for value when inserting into AidaDb (uint, byte, rlp)",
+		Usage:    "Choose encoding for value when inserting into AidaDb (uint, byte, rlp, block)",
 		Required: true,
 	}
 )
