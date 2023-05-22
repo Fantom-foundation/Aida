@@ -36,7 +36,7 @@ func TestPrime_PrimeStateDB(t *testing.T) {
 			// Generating randomized world state
 			ws, _ := makeWorldState(t)
 
-			pc := NewPrimeContext(cfg, log)
+			pc := NewPrimeContext(cfg, sDB, log)
 			// Priming state DB
 			pc.PrimeStateDB(ws, sDB)
 
