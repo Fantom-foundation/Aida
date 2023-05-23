@@ -146,14 +146,14 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, 
 	for {
 
 		// decode opcode
-		op, addrCl, keyCl, valueCl := DecodeOpcode(operations[state])
+		op, contractCl, keyCl, valueCl := DecodeOpcode(operations[state])
 
 		// keep track of stats
 		numOps++
 		opFrequency[op]++
 
 		// execute operation with its argument classes
-		ss.execute(op, addrCl, keyCl, valueCl)
+		ss.execute(op, contractCl, keyCl, valueCl)
 
 		// check for end of simulation
 		if op == EndBlockID {
@@ -245,9 +245,9 @@ func (ss *stochasticState) prime() {
 
 	// initialise accounts in memory with balances greater than zero
 	for i := int64(0); i <= numInitialAccounts; i++ {
-		addr := toAddress(i)
-		db.CreateAccount(addr)
-		db.AddBalance(addr, big.NewInt(ss.rg.Int63n(AddBalanceRange)))
+		contract := toAddress(i)
+		db.CreateAccount(contract)
+		db.AddBalance(contract, big.NewInt(ss.rg.Int63n(AddBalanceRange)))
 		pt.PrintProgress()
 	}
 	ss.log.Notice("Finalizing...")
@@ -263,23 +263,23 @@ func (ss *stochasticState) enableDebug() {
 }
 
 // execute StateDB operations on a stochastic state.
-func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
+func (ss *stochasticState) execute(op int, contractCl int, keyCl int, valueCl int) {
 	var (
-		addr  common.Address
-		key   common.Hash
-		value common.Hash
-		db    = ss.db
-		rg    = ss.rg
+		contract common.Address
+		key      common.Hash
+		value    common.Hash
+		db       = ss.db
+		rg       = ss.rg
 	)
 
 	// fetch indexes from index access generators
-	addrIdx := ss.contracts.NextIndex(addrCl)
+	contractIdx := ss.contracts.NextIndex(contractCl)
 	keyIdx := ss.keys.NextIndex(keyCl)
 	valueIdx := ss.values.NextIndex(valueCl)
 
 	// convert index to address/hashes
-	if addrCl != statistics.NoArgID {
-		addr = toAddress(addrIdx)
+	if contractCl != statistics.NoArgID {
+		contract = toAddress(contractIdx)
 	}
 	if keyCl != statistics.NoArgID {
 		key = toHash(keyIdx)
@@ -291,11 +291,11 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 	// print opcode and its arguments
 	if ss.traceDebug {
 		// print operation
-		ss.log.Infof("opcode:%v (%v)", opText[op], EncodeOpcode(op, addrCl, keyCl, valueCl))
+		ss.log.Infof("opcode:%v (%v)", opText[op], EncodeOpcode(op, contractCl, keyCl, valueCl))
 
 		// print indexes of contract address, storage key, and storage value.
-		if addrCl != statistics.NoArgID {
-			ss.log.Infof(" addr-idx: %v", addrIdx)
+		if contractCl != statistics.NoArgID {
+			ss.log.Infof(" contract-idx: %v", contractIdx)
 		}
 		if keyCl != statistics.NoArgID {
 			ss.log.Infof(" key-idx: %v", keyIdx)
@@ -311,7 +311,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		if ss.traceDebug {
 			ss.log.Infof("value: %v", value)
 		}
-		db.AddBalance(addr, big.NewInt(value))
+		db.AddBalance(contract, big.NewInt(value))
 
 	case BeginBlockID:
 		if ss.traceDebug {
@@ -336,10 +336,10 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		ss.suicided = []int64{}
 
 	case CreateAccountID:
-		db.CreateAccount(addr)
+		db.CreateAccount(contract)
 
 	case EmptyID:
-		db.Empty(addr)
+		db.Empty(contract)
 
 	case EndBlockID:
 		db.EndBlock()
@@ -356,31 +356,31 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		ss.deleteAccounts()
 
 	case ExistID:
-		db.Exist(addr)
+		db.Exist(contract)
 
 	case GetBalanceID:
-		db.GetBalance(addr)
+		db.GetBalance(contract)
 
 	case GetCodeHashID:
-		db.GetCodeHash(addr)
+		db.GetCodeHash(contract)
 
 	case GetCodeID:
-		db.GetCode(addr)
+		db.GetCode(contract)
 
 	case GetCodeSizeID:
-		db.GetCodeSize(addr)
+		db.GetCodeSize(contract)
 
 	case GetCommittedStateID:
-		db.GetCommittedState(addr, key)
+		db.GetCommittedState(contract, key)
 
 	case GetNonceID:
-		db.GetNonce(addr)
+		db.GetNonce(contract)
 
 	case GetStateID:
-		db.GetState(addr, key)
+		db.GetState(contract, key)
 
 	case HasSuicidedID:
-		db.HasSuicided(addr)
+		db.HasSuicided(contract)
 
 	case RevertToSnapshotID:
 		snapshotNum := len(ss.snapshot)
@@ -408,14 +408,14 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		if err != nil {
 			ss.log.Fatalf("error producing a random byte slice. Error: %v", err)
 		}
-		db.SetCode(addr, code)
+		db.SetCode(contract, code)
 
 	case SetNonceID:
 		value := uint64(rg.Intn(SetNonceRange))
-		db.SetNonce(addr, value)
+		db.SetNonce(contract, value)
 
 	case SetStateID:
-		db.SetState(addr, key, value)
+		db.SetState(contract, key, value)
 
 	case SnapshotID:
 		id := db.Snapshot()
@@ -425,7 +425,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		ss.snapshot = append(ss.snapshot, id)
 
 	case SubBalanceID:
-		balance := db.GetBalance(addr).Int64()
+		balance := db.GetBalance(contract).Int64()
 		if balance > 0 {
 			// get a delta that does not exceed current balance
 			// in the current snapshot
@@ -433,13 +433,13 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 			if ss.traceDebug {
 				ss.log.Infof(" value: %v", value)
 			}
-			db.SubBalance(addr, big.NewInt(value))
+			db.SubBalance(contract, big.NewInt(value))
 		}
 
 	case SuicideID:
-		db.Suicide(addr)
-		if idx := find(ss.suicided, addrIdx); idx == -1 {
-			ss.suicided = append(ss.suicided, addrIdx)
+		db.Suicide(contract)
+		if idx := find(ss.suicided, contractIdx); idx == -1 {
+			ss.suicided = append(ss.suicided, contractIdx)
 		}
 
 	default:
@@ -479,7 +479,7 @@ func nextState(rg *rand.Rand, A [][]float64, i int) int {
 	return k
 }
 
-// toAddress converts an address index to a contract address.
+// toAddress converts an index to a contract address.
 func toAddress(idx int64) common.Address {
 	var a common.Address
 	if idx < 0 {
@@ -509,8 +509,8 @@ func toHash(idx int64) common.Hash {
 // delete account information when suicide was invoked
 func (ss *stochasticState) deleteAccounts() {
 	// remove account information when suicide was invoked in the block.
-	for _, addrIdx := range ss.suicided {
-		if err := ss.contracts.DeleteIndex(addrIdx); err != nil {
+	for _, contractIdx := range ss.suicided {
+		if err := ss.contracts.DeleteIndex(contractIdx); err != nil {
 			panic("Failed deleting index")
 		}
 	}
