@@ -227,7 +227,7 @@ func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error 
 		if totalSize+incrementalSize > maxSize {
 			log.Infof("\tPriming...")
 			if err := pc.PrimeStateDB(update, db); err != nil {
-				return fmt.Errorf("failed to prime StateDB: %v", err)
+				return err
 			}
 			totalSize = 0
 			update = make(substate.SubstateAlloc)
@@ -247,7 +247,7 @@ func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error 
 	}
 	// prime the remaining from updateset
 	if err := pc.PrimeStateDB(update, db); err != nil {
-		return fmt.Errorf("failed to prime StateDB: %v", err)
+		return err
 	}
 	updateIter.Release()
 	update = make(substate.SubstateAlloc)
@@ -258,7 +258,7 @@ func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error 
 		update, deletedAccounts := generateUpdateSet(blockPos+1, target, cfg)
 		pc.SuicideAccounts(db, deletedAccounts)
 		if err := pc.PrimeStateDB(update, db); err != nil {
-			return fmt.Errorf("failed to prime StateDB: %v", err)
+			return err
 		}
 	}
 
