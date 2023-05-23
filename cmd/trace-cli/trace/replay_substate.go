@@ -74,7 +74,7 @@ func traceReplaySubstateTask(cfg *utils.Config, log *logging.Logger) error {
 	defer os.RemoveAll(stateDbDir)
 
 	// create prime context
-	pc := utils.NewPrimeContext(cfg, log)
+	pc := utils.NewPrimeContext(cfg, db, log)
 
 	var (
 		start        time.Time
