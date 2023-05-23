@@ -344,6 +344,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 	case EndBlockID:
 		db.EndBlock()
 		ss.blockNum++
+		ss.deleteAccounts()
 
 	case EndSyncPeriodID:
 		db.EndSyncPeriod()
@@ -353,7 +354,6 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		db.EndTransaction()
 		ss.txNum++
 		ss.totalTx++
-		ss.deleteAccounts()
 
 	case ExistID:
 		db.Exist(addr)
