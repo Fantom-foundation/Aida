@@ -35,15 +35,16 @@ func stochasticGenerateAction(ctx *cli.Context) error {
 		return err
 	}
 
+	log.Println("produce uniform stochastic event file")
+
 	// create a new uniformly distributed event registry
 	eventRegistry := stochastic.GenerateUniformRegistry(cfg)
 
 	// writing event registry
-	log.Printf("write events file ...\n")
-
 	if cfg.Output == "" {
 		cfg.Output = "./events.json"
 	}
+	log.Printf("write event file to %v\n", cfg.Output)
 	WriteEvents(eventRegistry, cfg.Output)
 
 	return nil
