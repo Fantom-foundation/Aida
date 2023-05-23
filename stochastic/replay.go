@@ -18,8 +18,8 @@ import (
 
 // Parameterisable simulation constants
 var (
-	BalanceRange int64 // balance range for generating randomized values
-	NonceRange   int   // nonce range for generating randomized nonces
+	BalanceRange int64 = 100000  // balance range for generating randomized values
+	NonceRange   int   = 1000000 // nonce range for generating randomized nonces
 )
 
 // Simulation constants
