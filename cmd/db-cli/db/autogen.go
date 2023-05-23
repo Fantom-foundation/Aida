@@ -1,9 +1,10 @@
 package db
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -16,6 +17,8 @@ import (
 	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
+
+const patchesJsonName = "patches.json"
 
 // AutoGenCommand generates aida-db patches and handles second opera for event generation
 var AutoGenCommand = cli.Command{
@@ -130,10 +133,10 @@ func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpo
 	// merge UpdateDb into AidaDb
 	err = Merge(cfg, []string{cfg.SubstateDb, cfg.UpdateDb, cfg.DeletionDb})
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("unable to merge into patch; %v", err)
 	}
 
-	err = updatePatchesJson(cfg.Output, patchName)
+	err = updatePatchesJson(cfg.Output, patchName, firstEpoch)
 	if err != nil {
 		return "", err
 	}
@@ -141,44 +144,61 @@ func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpo
 	return cfg.AidaDb, nil
 }
 
-// updatePatchesJson updates available patches in json
-func updatePatchesJson(patchDir, patchName string) error {
+// updatePatchesJson updates available patches in a JSON file
+func updatePatchesJson(patchDir, patchName, patchEpoch string) error {
 	// Check if the JSON file exists
-	jsonFilePath := filepath.Join(patchDir, "patches.json")
-	_, err := os.Stat(jsonFilePath)
-	var patchesArr []string
+	jsonFilePath := filepath.Join(patchDir, patchesJsonName)
+	var patchesJson map[string]string
 
-	if os.IsNotExist(err) {
-		// File does not exist, create a new array
-		patchesArr = make([]string, 0)
-	} else {
-		// File exists, load the existing JSON array
-		file, err := ioutil.ReadFile(jsonFilePath)
+	// Load previous JSON
+	file, err := os.Open(jsonFilePath)
+	if err == nil {
+		// Unmarshal the JSON
+		var fileContent []byte
+		fileContent, err = io.ReadAll(file)
 		if err != nil {
-			return err
+			return fmt.Errorf("unable to read file %s; %v", patchesJsonName, err)
 		}
-
-		err = json.Unmarshal(file, &patchesArr)
+		err = json.Unmarshal(fileContent, &patchesJson)
 		if err != nil {
-			return err
+			return fmt.Errorf("unable to unmarshal json from file %s; %v", patchesJsonName, err)
+		}
+		// close file
+		err = file.Close()
+		if err != nil {
+			return fmt.Errorf("unable to close %s; %v", patchesJsonName, err)
 		}
 	}
 
-	// Add the patchName to the JSON array
-	patchesArr = append(patchesArr, patchName)
-
-	patchesArr = removeDuplicates(patchesArr)
-
-	// Convert the JSON array back to bytes
-	jsonBytes, err := json.Marshal(patchesArr)
+	// open file for write and delete previous
+	file, err = os.OpenFile(jsonFilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to open %s; %v", patchesJsonName, err)
 	}
 
-	// Write the updated JSON array to the file
-	err = ioutil.WriteFile(jsonFilePath, jsonBytes, 0644)
+	// Initialize the map if it doesn't exist
+	if patchesJson == nil {
+		patchesJson = make(map[string]string)
+	}
+
+	// Add the patchName to the corresponding epoch's array
+	patchesJson[patchEpoch] = patchName
+
+	// Convert the map to JSON bytes
+	jsonBytes, err := json.Marshal(patchesJson)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to marshal %v; %v", patchesJson, err)
+	}
+
+	// Write result
+	w := bufio.NewWriter(file)
+	_, err = w.Write(jsonBytes)
+	if err != nil {
+		return fmt.Errorf("unable to write %v; %v", patchesJson, err)
+	}
+	err = w.Flush()
+	if err != nil {
+		return fmt.Errorf("unable to flush; %v", err)
 	}
 	return nil
 }
@@ -298,19 +318,4 @@ func stopOpera(log *logging.Logger) error {
 		return fmt.Errorf("unable stop opera; %v", err.Error())
 	}
 	return nil
-}
-
-// removeDuplicates removes duplicates from string slice
-func removeDuplicates(slice []string) []string {
-	encountered := map[string]bool{}
-	result := []string{}
-
-	for _, str := range slice {
-		if !encountered[str] {
-			encountered[str] = true
-			result = append(result, str)
-		}
-	}
-
-	return result
 }
