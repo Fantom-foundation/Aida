@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 
 	"github.com/Fantom-foundation/Aida/stochastic"
@@ -34,30 +35,30 @@ func stochasticVisualizeAction(ctx *cli.Context) error {
 		return fmt.Errorf("missing event file")
 	}
 
-	// open file
-	file, err := os.Open(ctx.Args().Get(0))
+	log.Println("visualize statistical events")
+
+	// open and parse event file
+	inputFileName := ctx.Args().Get(0)
+	log.Printf("read event file %v\n", inputFileName)
+	file, err := os.Open(inputFileName)
 	if err != nil {
-		return fmt.Errorf("failed opening event file")
+		return fmt.Errorf("failed opening event file %v", inputFileName)
 	}
 	defer file.Close()
-
-	// read file
 	contents, err := ioutil.ReadAll(file)
 	if err != nil {
-		return fmt.Errorf("failed reading event file")
+		return fmt.Errorf("failed reading event file %v", inputFileName)
 	}
-
 	var eventRegistry stochastic.EventRegistryJSON
 	json.Unmarshal(contents, &eventRegistry)
 
+	// fire-up web-server
 	addr := ctx.String(utils.PortFlag.Name)
 	if addr == "" {
 		addr = "8080"
 	}
-
-	// fire-up web-server
-	fmt.Println("Open web browser with http://localhost:" + addr)
-	fmt.Println("Cancel visualize with ^C")
+	log.Println("Open web browser with http://localhost:" + addr)
+	log.Println("Cancel visualize with ^C")
 	visualizer.FireUpWeb(&eventRegistry, addr)
 
 	return nil
