@@ -31,29 +31,33 @@ func stochasticEstimateAction(ctx *cli.Context) error {
 		return fmt.Errorf("missing event file")
 	}
 
-	// open file
-	file, err := os.Open(ctx.Args().Get(0))
+	log.Println("produce a simulation file from an event file")
+
+	// open and parse event file
+	inputFileName := ctx.Args().Get(0)
+	log.Printf("read event file %v\n", inputFileName)
+	file, err := os.Open(inputFileName)
 	if err != nil {
-		return fmt.Errorf("failed opening event file")
+		return fmt.Errorf("failed opening event file %v", inputFileName)
 	}
 	defer file.Close()
-
-	// read file
 	contents, err := ioutil.ReadAll(file)
 	if err != nil {
 		return fmt.Errorf("failed reading event file")
 	}
-
 	var eventRegistry stochastic.EventRegistryJSON
 	json.Unmarshal(contents, &eventRegistry)
 
-	// writing event registry
-	fmt.Printf("stochastic estimate: write simulation file ...\n")
+	// estimate parameters
+	log.Println("estimate parameters")
 	estimationModel := stochastic.NewEstimationModelJSON(&eventRegistry)
+
+	// write event file
 	outputFileName := ctx.String(utils.OutputFlag.Name)
 	if outputFileName == "" {
 		outputFileName = "./simulation.json"
 	}
+	log.Printf("write event filename %v", outputFileName)
 	WriteSimulation(&estimationModel, outputFileName)
 
 	return nil
