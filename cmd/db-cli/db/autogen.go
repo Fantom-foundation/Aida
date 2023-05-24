@@ -96,15 +96,25 @@ func autoGen(ctx *cli.Context) error {
 		return err
 	}
 
+	// todo matej is this correct?
+	mdi := metadataInfo{
+		dbType:     genType,
+		firstBlock: cfg.First,
+		lastBlock:  cfg.Last,
+		firstEpoch: firstEpoch,
+		lastEpoch:  lastEpoch,
+	}
+
 	// update target aida-db
-	err = Generate(cfg, log)
+	err = Generate(cfg, log, mdi)
 	if err != nil {
 		return err
 	}
 
 	// if patch output dir is selected inserting just the patch into there
 	if cfg.Output != "" {
-		patchPath, err := createPatch(cfg, aidaDbTmp, firstEpoch, lastEpoch)
+		mdi.dbType = patchType
+		patchPath, err := createPatch(cfg, aidaDbTmp, firstEpoch, lastEpoch, mdi)
 		if err != nil {
 			return err
 		}
@@ -115,7 +125,7 @@ func autoGen(ctx *cli.Context) error {
 }
 
 // createPatch create patch from newly generated data
-func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpoch string) (string, error) {
+func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpoch string, mdi metadataInfo) (string, error) {
 	// create a parents of output directory
 	err := os.MkdirAll(cfg.Output, 0700)
 	if err != nil {
@@ -134,8 +144,9 @@ func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpo
 	if err != nil {
 		return "", err
 	}
+
 	// merge UpdateDb into AidaDb
-	err = Merge(cfg, []string{cfg.SubstateDb, cfg.UpdateDb, cfg.DeletionDb}, targetDb)
+	err = Merge(cfg, []string{cfg.SubstateDb, cfg.UpdateDb, cfg.DeletionDb}, targetDb, mdi)
 	if err != nil {
 		return "", err
 	}

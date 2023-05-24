@@ -29,6 +29,15 @@ Creates target aida-db by merging source databases from arguments:
 `,
 }
 
+type aidaDbType byte
+
+const (
+	genType aidaDbType = iota
+	patchType
+	cloneType
+	mergeType
+)
+
 // merge implements merging command for combining all source data databases into single database used for profiling.
 func merge(ctx *cli.Context) error {
 	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
@@ -49,11 +58,12 @@ func merge(ctx *cli.Context) error {
 
 	defer MustCloseDB(targetDb)
 
-	return Merge(cfg, sourceDbs, targetDb)
+	// when merging, we must find metadataInfo in the dbs we are merging
+	return Merge(cfg, sourceDbs, targetDb, metadataInfo{dbType: mergeType})
 }
 
 // Merge implements merging command for combining all source data databases into single database used for profiling.
-func Merge(cfg *utils.Config, sourceDbPaths []string, targetDb ethdb.Database) error {
+func Merge(cfg *utils.Config, sourceDbPaths []string, targetDb ethdb.Database, mdi metadataInfo) error {
 	log := logger.NewLogger(cfg.LogLevel, "DB Merger")
 
 	// we need a destination where to save merged aida-db
@@ -64,6 +74,11 @@ func Merge(cfg *utils.Config, sourceDbPaths []string, targetDb ethdb.Database) e
 	sourceDBs, err := openSourceDatabases(sourceDbPaths)
 	if err != nil {
 		return err
+	}
+
+	// start with putting metadata into new targetDb
+	if err = processMetadata(sourceDBs, targetDb, mdi); err != nil {
+		return fmt.Errorf("cannot process metadata; %v", err)
 	}
 
 	var totalWritten uint64
