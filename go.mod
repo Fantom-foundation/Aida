@@ -151,7 +151,7 @@ replace github.com/dvyukov/go-fuzz => github.com/guzenok/go-fuzz v0.0.0-20210103
 
 replace github.com/ethereum/go-ethereum => github.com/cyberbono3/go-ethereum-substate v1.1.1-0.20230310040339-50aac04770b2
 
-replace github.com/Fantom-foundation/go-opera => github.com/Fantom-foundation/go-opera-substate v1.0.1-0.20230301090555-fe74c5a947fa
+replace github.com/Fantom-foundation/go-opera => github.com/Fantom-foundation/go-opera-substate v1.0.1-0.20230523093256-e592c59c5996
 
 replace github.com/ledgerwatch/erigon => github.com/ledgerwatch/erigon v1.9.7-0.20220421151921-057740ac2019
 

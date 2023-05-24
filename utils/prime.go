@@ -13,8 +13,6 @@ import (
 	"github.com/op/go-logging"
 )
 
-const bulkLoadCap = 100_000
-
 type ProgressTracker struct {
 	step   int             // step counter
 	target int             // total number of steps
@@ -39,7 +37,7 @@ func NewProgressTracker(target int, log *logging.Logger) *ProgressTracker {
 
 // PrintProgress reports priming progress
 func (pt *ProgressTracker) PrintProgress() {
-	const printFrequency = 500_000 // report after x steps
+	const printFrequency = 500_000 // report after priming x slots
 	pt.step++
 	if pt.step%printFrequency == 0 {
 		now := time.Now()
@@ -55,14 +53,33 @@ func (pt *ProgressTracker) PrintProgress() {
 
 // PrimeContext structure keeps context used over iterations of priming
 type PrimeContext struct {
-	cfg   *Config
-	log   *logging.Logger
-	block uint64
-	exist map[common.Address]bool // account exists in db
+	cfg        *Config
+	log        *logging.Logger
+	block      uint64
+	load       state.BulkLoad
+	db         state.StateDB
+	exist      map[common.Address]bool // account exists in db
+	operations int                     // number of operations processed without commit
 }
 
-func NewPrimeContext(cfg *Config, log *logging.Logger) *PrimeContext {
-	return &PrimeContext{cfg: cfg, log: log, block: 0, exist: make(map[common.Address]bool)}
+func NewPrimeContext(cfg *Config, db state.StateDB, log *logging.Logger) *PrimeContext {
+	return &PrimeContext{cfg: cfg, log: log, block: 0, db: db, exist: make(map[common.Address]bool)}
+}
+
+// mayApplyBulkLoad closes and reopen bulk load if it has over n operations.
+func (pc *PrimeContext) mayApplyBulkLoad() error {
+	const operationThreshold = 1_000_000
+
+	if pc.operations >= operationThreshold {
+		pc.log.Debugf("\t\tApply bulk load with %v operations...", pc.operations)
+		pc.operations = 0
+		if err := pc.load.Close(); err != nil {
+			return fmt.Errorf("failed to prime StateDB: %v", err)
+		}
+		pc.block++
+		pc.load = pc.db.StartBulkLoad(pc.block)
+	}
+	return nil
 }
 
 // PrimeStateDB primes database with accounts from the world state.
@@ -83,22 +100,17 @@ func (pc *PrimeContext) PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB
 			return fmt.Errorf("failed to prime StateDB: %v", err)
 		}
 	} else {
-		load := db.StartBulkLoad(pc.block)
-		step := 0
+		pc.load = db.StartBulkLoad(pc.block)
 		for addr, account := range ws {
-			pc.primeOneAccount(addr, account, load, pt)
-			step++
-			// commit to stateDB after process n accounts
-			if step%bulkLoadCap == 0 {
-				if err := load.Close(); err != nil {
-					return fmt.Errorf("failed to prime StateDB: %v", err)
-				}
-				pc.block++
-				step = 0
-				load = db.StartBulkLoad(pc.block)
+			if err := pc.primeOneAccount(addr, account, pt); err != nil {
+				return err
+			}
+			// commit to stateDB after process n operations
+			if err := pc.mayApplyBulkLoad(); err != nil {
+				return err
 			}
 		}
-		if err := load.Close(); err != nil {
+		if err := pc.load.Close(); err != nil {
 			return fmt.Errorf("failed to prime StateDB: %v", err)
 		}
 		pc.block++
@@ -108,19 +120,26 @@ func (pc *PrimeContext) PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB
 }
 
 // primeOneAccount initializes an account on stateDB with substate
-func (pc *PrimeContext) primeOneAccount(addr common.Address, account *substate.SubstateAccount, load state.BulkLoad, pt *ProgressTracker) {
+func (pc *PrimeContext) primeOneAccount(addr common.Address, account *substate.SubstateAccount, pt *ProgressTracker) error {
 	// if an account was previously primed, skip account creation.
 	if exist, found := pc.exist[addr]; !found || !exist {
-		load.CreateAccount(addr)
+		pc.load.CreateAccount(addr)
 		pc.exist[addr] = true
+		pc.operations++
 	}
-	load.SetBalance(addr, account.Balance)
-	load.SetNonce(addr, account.Nonce)
-	load.SetCode(addr, account.Code)
+	pc.load.SetBalance(addr, account.Balance)
+	pc.load.SetNonce(addr, account.Nonce)
+	pc.load.SetCode(addr, account.Code)
+	pc.operations = pc.operations + 3
 	for key, value := range account.Storage {
-		load.SetState(addr, key, value)
+		pc.load.SetState(addr, key, value)
 		pt.PrintProgress()
+		pc.operations++
+		if err := pc.mayApplyBulkLoad(); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 // PrimeStateDBRandom primes database with accounts from the world state in random order.
@@ -137,25 +156,20 @@ func (pc *PrimeContext) PrimeStateDBRandom(ws substate.SubstateAlloc, db state.S
 		contracts[i], contracts[j] = contracts[j], contracts[i]
 	})
 
-	load := db.StartBulkLoad(pc.block)
-	step := 0
+	pc.load = db.StartBulkLoad(pc.block)
 	for _, c := range contracts {
 		addr := common.HexToAddress(c)
 		account := ws[addr]
-		pc.primeOneAccount(addr, account, load, pt)
-		step++
+		if err := pc.primeOneAccount(addr, account, pt); err != nil {
+			return err
+		}
 		// commit to stateDB after process n accounts and start a new buck load
-		if step%bulkLoadCap == 0 {
-			if err := load.Close(); err != nil {
-				return err
-			}
-			pc.block++
-			step = 0
-			load = db.StartBulkLoad(pc.block)
+		if err := pc.mayApplyBulkLoad(); err != nil {
+			return err
 		}
 
 	}
-	err := load.Close()
+	err := pc.load.Close()
 	pc.block++
 	return err
 }
@@ -184,7 +198,7 @@ func (pc *PrimeContext) SuicideAccounts(db state.StateDB, accounts []common.Addr
 // GenerateWorldStateAndPrime
 func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error {
 	log := logger.NewLogger(cfg.LogLevel, "Priming")
-	pc := NewPrimeContext(cfg, log)
+	pc := NewPrimeContext(cfg, db, log)
 
 	var (
 		totalSize uint64

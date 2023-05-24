@@ -40,6 +40,8 @@ var GenerateCommand = cli.Command{
 		&utils.KeepDbFlag,
 		&utils.CompactDbFlag,
 		&utils.DbTmpFlag,
+		&utils.UpdateBufferSizeFlag,
+		&utils.ChannelBufferSizeFlag,
 		&utils.ChainIDFlag,
 		&utils.CacheFlag,
 		&logger.LogLevelFlag,
