@@ -96,17 +96,9 @@ func autoGen(ctx *cli.Context) error {
 		return err
 	}
 
-	// todo matej is this correct?
-	mdi := metadataInfo{
-		dbType:     genType,
-		firstBlock: cfg.First,
-		lastBlock:  cfg.Last,
-		firstEpoch: firstEpoch,
-		lastEpoch:  lastEpoch,
-	}
-
+	var mdi *MetadataInfo
 	// update target aida-db
-	err = Generate(cfg, log, mdi)
+	mdi, err = Generate(cfg, log)
 	if err != nil {
 		return err
 	}
@@ -125,7 +117,7 @@ func autoGen(ctx *cli.Context) error {
 }
 
 // createPatch create patch from newly generated data
-func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpoch string, mdi metadataInfo) (string, error) {
+func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpoch string, mdi *MetadataInfo) (string, error) {
 	// create a parents of output directory
 	err := os.MkdirAll(cfg.Output, 0700)
 	if err != nil {

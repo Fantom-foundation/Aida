@@ -59,11 +59,11 @@ func merge(ctx *cli.Context) error {
 	defer MustCloseDB(targetDb)
 
 	// when merging, we must find metadataInfo in the dbs we are merging
-	return Merge(cfg, sourceDbs, targetDb, metadataInfo{dbType: mergeType})
+	return Merge(cfg, sourceDbs, targetDb, &MetadataInfo{dbType: mergeType})
 }
 
 // Merge implements merging command for combining all source data databases into single database used for profiling.
-func Merge(cfg *utils.Config, sourceDbPaths []string, targetDb ethdb.Database, mdi metadataInfo) error {
+func Merge(cfg *utils.Config, sourceDbPaths []string, targetDb ethdb.Database, mdi *MetadataInfo) error {
 	log := logger.NewLogger(cfg.LogLevel, "DB Merger")
 
 	// we need a destination where to save merged aida-db

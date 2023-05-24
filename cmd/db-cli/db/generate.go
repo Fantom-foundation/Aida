@@ -76,53 +76,52 @@ func generate(ctx *cli.Context) error {
 		}()
 	}
 
-	// todo matej where do I get epoch numbers
-	mdi := metadataInfo{
-		dbType:     patchType,
-		firstBlock: cfg.First,
-		lastBlock:  cfg.Last,
-		firstEpoch: "",
-		lastEpoch:  "",
+	_, err = Generate(cfg, log)
+	if err != nil {
+		return err
 	}
 
-	return Generate(cfg, log, mdi)
+	return nil
 }
 
 // Generate is used to record/update aida-db
-func Generate(cfg *utils.Config, log *logging.Logger, mdi metadataInfo) error {
-	err := prepareOpera(cfg, log)
+func Generate(cfg *utils.Config, log *logging.Logger) (*MetadataInfo, error) {
+	mdi := new(MetadataInfo)
+	mdi.dbType = genType
+
+	err := prepareOpera(cfg, log, mdi)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// open targetDb
 	targetDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
 	if err != nil {
-		return fmt.Errorf("cannot open targetDb. Error: %v", err)
+		return nil, fmt.Errorf("cannot open targetDb. Error: %v", err)
 	}
 
 	err = recordSubstate(cfg, log, targetDb, mdi)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = genDeletedAccounts(cfg, log, targetDb, mdi)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = genUpdateSet(cfg, log, targetDb, mdi)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	log.Noticef("Aida-db updated from block %v to %v", cfg.First-1, cfg.Last)
 
-	return nil
+	return nil, nil
 }
 
 // prepareOpera confirms that the opera is initialized
-func prepareOpera(cfg *utils.Config, log *logging.Logger) error {
+func prepareOpera(cfg *utils.Config, log *logging.Logger, mdi *MetadataInfo) error {
 	_, err := os.Stat(cfg.Db)
 	if os.IsNotExist(err) {
 		log.Noticef("Initialising opera from genesis")
@@ -132,10 +131,12 @@ func prepareOpera(cfg *utils.Config, log *logging.Logger) error {
 			return fmt.Errorf("aida-db; Error: %v", err)
 		}
 	}
-	lastOperaBlock, _, err := GetOperaBlock(cfg)
+	lastOperaBlock, firstEpoch, err := GetOperaBlock(cfg)
 	if err != nil {
 		return fmt.Errorf("couldn't retrieve block from existing opera database %v ; Error: %v", cfg.Db, err)
 	}
+
+	mdi.firstEpoch = firstEpoch
 
 	log.Noticef("Opera is starting at block: %v", lastOperaBlock)
 
@@ -196,7 +197,7 @@ func GetOperaBlock(cfg *utils.Config) (uint64, uint64, error) {
 }
 
 // genUpdateSet invokes UpdateSet generation
-func genUpdateSet(cfg *utils.Config, log *logging.Logger, targetDb ethdb.Database, mdi metadataInfo) error {
+func genUpdateSet(cfg *utils.Config, log *logging.Logger, targetDb ethdb.Database, mdi *MetadataInfo) error {
 	db, err := substate.OpenUpdateDB(cfg.AidaDb)
 	if err != nil {
 		return err
@@ -229,7 +230,7 @@ func genUpdateSet(cfg *utils.Config, log *logging.Logger, targetDb ethdb.Databas
 }
 
 // genDeletedAccounts invokes DeletedAccounts generation
-func genDeletedAccounts(cfg *utils.Config, log *logging.Logger, targetDb ethdb.Database, mdi metadataInfo) error {
+func genDeletedAccounts(cfg *utils.Config, log *logging.Logger, targetDb ethdb.Database, mdi *MetadataInfo) error {
 	log.Noticef("Deleted generation")
 	err := replay.GenDeletedAccountsAction(cfg)
 	if err != nil {
@@ -247,7 +248,7 @@ func genDeletedAccounts(cfg *utils.Config, log *logging.Logger, targetDb ethdb.D
 }
 
 // recordSubstate loads events into the opera, whilst recording substates
-func recordSubstate(cfg *utils.Config, log *logging.Logger, targetDb ethdb.Database, mdi metadataInfo) error {
+func recordSubstate(cfg *utils.Config, log *logging.Logger, targetDb ethdb.Database, mdi *MetadataInfo) error {
 	_, err := os.Stat(cfg.Events)
 	if os.IsNotExist(err) {
 		return fmt.Errorf("supplied events file %s doesn't exist", cfg.Events)
@@ -264,7 +265,8 @@ func recordSubstate(cfg *utils.Config, log *logging.Logger, targetDb ethdb.Datab
 	}
 
 	// retrieve block the opera was iterated into
-	cfg.Last, _, err = GetOperaBlock(cfg)
+	cfg.Last, mdi.lastEpoch, err = GetOperaBlock(cfg)
+
 	if err != nil {
 		return fmt.Errorf("GetOperaBlock last; %v", err)
 	}
@@ -273,6 +275,9 @@ func recordSubstate(cfg *utils.Config, log *logging.Logger, targetDb ethdb.Datab
 	}
 
 	log.Noticef("Substates generated for %v - %v", cfg.First, cfg.Last)
+
+	mdi.firstBlock = cfg.First
+	mdi.lastBlock = cfg.Last
 
 	err = Merge(cfg, []string{cfg.SubstateDb}, targetDb, mdi)
 	if err != nil {

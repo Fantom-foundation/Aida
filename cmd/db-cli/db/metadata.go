@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -37,14 +36,14 @@ const (
 	// C + P = C
 )
 
-type metadataInfo struct {
+type MetadataInfo struct {
 	dbType                aidaDbType
 	firstBlock, lastBlock uint64
-	firstEpoch, lastEpoch string
+	firstEpoch, lastEpoch uint64
 }
 
 // processMetadata tries to find data inside give sourceDbs, if not found the ones from config are used
-func processMetadata(sourceDbs []ethdb.Database, targetDb ethdb.Database, mdi metadataInfo) error {
+func processMetadata(sourceDbs []ethdb.Database, targetDb ethdb.Database, mdi *MetadataInfo) error {
 	switch mdi.dbType {
 	case genType:
 		if err := putMetadata(targetDb, mdi); err != nil {
@@ -68,7 +67,7 @@ func processMetadata(sourceDbs []ethdb.Database, targetDb ethdb.Database, mdi me
 	return nil
 }
 
-func processMergeTypeMetadata(sourceDbs []ethdb.Database, targetDb ethdb.Database, mdi metadataInfo) error {
+func processMergeTypeMetadata(sourceDbs []ethdb.Database, targetDb ethdb.Database, mdi *MetadataInfo) error {
 	var err error
 
 	mdi.firstBlock, mdi.lastBlock, mdi.dbType, err = findMetadata(sourceDbs)
@@ -79,7 +78,7 @@ func processMergeTypeMetadata(sourceDbs []ethdb.Database, targetDb ethdb.Databas
 	return putMetadata(targetDb, mdi)
 }
 
-func putMetadata(targetDb ethdb.Database, mdi metadataInfo) error {
+func putMetadata(targetDb ethdb.Database, mdi *MetadataInfo) error {
 	log := logger.NewLogger("INFO", "metadata")
 
 	if err := putBlockMetadata(targetDb, mdi.lastBlock, mdi.firstBlock, log); err != nil {
@@ -188,31 +187,22 @@ func putBlockMetadata(targetDb ethdb.Database, firstBlock, lastBlock uint64, log
 	return nil
 }
 
-func putEpochMetadata(targetDb ethdb.Database, firstEpoch, lastEpoch string, log *logging.Logger) error {
-	first, err := strconv.ParseUint(firstEpoch, 10, 64)
-	if err != nil {
-		return fmt.Errorf("parse first epoch; %v", err)
-	}
+func putEpochMetadata(targetDb ethdb.Database, firstEpoch, lastEpoch uint64, log *logging.Logger) error {
 
-	if first == 0 {
+	if firstEpoch == 0 {
 		log.Warning("given first epoch is 0 - saving to metadata anyway")
 	}
 
-	firstEpochBytes := substate.BlockToBytes(first)
+	firstEpochBytes := substate.BlockToBytes(firstEpoch)
 	if err := targetDb.Put([]byte(FirstEpochPrefix), firstEpochBytes); err != nil {
 		return fmt.Errorf("cannot put first block number into db metadata; %v", err)
 	}
 
-	last, err := strconv.ParseUint(lastEpoch, 10, 64)
-	if err != nil {
-		return fmt.Errorf("parse first epoch; %v", err)
-	}
-
-	if last == 0 {
+	if lastEpoch == 0 {
 		log.Warning("given last epoch is 0 - saving to metadata anyway")
 	}
 
-	lastEpochBytes := substate.BlockToBytes(last)
+	lastEpochBytes := substate.BlockToBytes(lastEpoch)
 	if err := targetDb.Put([]byte(LastEpochPrefix), lastEpochBytes); err != nil {
 		return fmt.Errorf("cannot put first block number into db metadata; %v", err)
 	}
