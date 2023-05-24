@@ -29,6 +29,8 @@ var AutoGenCommand = cli.Command{
 		&utils.DbTmpFlag,
 		&utils.ChainIDFlag,
 		&utils.CacheFlag,
+		&utils.UpdateBufferSizeFlag,
+		&utils.ChannelBufferSizeFlag,
 		&utils.OperaDatadirFlag,
 		&utils.OutputFlag,
 		&logger.LogLevelFlag,
