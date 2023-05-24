@@ -40,7 +40,7 @@ var AutoGenCommand = cli.Command{
 		&logger.LogLevelFlag,
 	},
 	Description: `
-Autogen generates aida-db patches and handles second opera for event generation. Generates event file, which is supplied into generate to create aida-db patch.
+AutoGen generates aida-db patches and handles second opera for event generation. Generates event file, which is supplied into generate to create aida-db patch.
 `,
 }
 
@@ -52,7 +52,7 @@ func autoGen(ctx *cli.Context) error {
 		return argErr
 	}
 
-	log := logger.NewLogger(cfg.LogLevel, "autogen")
+	log := logger.NewLogger(cfg.LogLevel, "autoGen")
 
 	log.Info("Starting Automatic generation")
 
@@ -107,7 +107,7 @@ func autoGen(ctx *cli.Context) error {
 
 	// if patch output dir is selected inserting just the patch into there
 	if cfg.Output != "" {
-		patchPath, err := createPatch(cfg, aidaDbTmp, firstEpoch, lastEpoch)
+		patchPath, err := createPatch(cfg, aidaDbTmp, lastEpoch, cfg.First, cfg.Last, log)
 		if err != nil {
 			return err
 		}
@@ -118,9 +118,9 @@ func autoGen(ctx *cli.Context) error {
 }
 
 // createPatch create patch from newly generated data
-func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpoch string) (string, error) {
+func createPatch(cfg *utils.Config, aidaDbTmp string, lastEpoch string, firstBlock uint64, lastBlock uint64, log *logging.Logger) (string, error) {
 	// create a parents of output directory
-	err := os.MkdirAll(cfg.Output, 0700)
+	err := os.MkdirAll(cfg.Output, 0755)
 	if err != nil {
 		return "", fmt.Errorf("failed to create %s directory; %s", cfg.DbTmp, err)
 	}
@@ -129,16 +129,22 @@ func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpo
 	// these databases contain just the patch data
 	loadSourceDBPaths(cfg, aidaDbTmp)
 
-	// creating patch
-	patchName := "aida-db-" + firstEpoch + "-" + lastEpoch
+	// creating patch name
+	// add leading zeroes to filename to make it sortable
+	patchName := "aida-db-" + fmt.Sprintf("%09s", lastEpoch)
 	cfg.AidaDb = filepath.Join(cfg.Output, patchName)
-	// merge UpdateDb into AidaDb
+	// merge UpdateDb into AidaDb(patch)
 	err = Merge(cfg, []string{cfg.SubstateDb, cfg.UpdateDb, cfg.DeletionDb})
 	if err != nil {
 		return "", fmt.Errorf("unable to merge into patch; %v", err)
 	}
 
-	err = updatePatchesJson(cfg.Output, patchName, firstEpoch)
+	err = updatePatchesJson(cfg.Output, patchName, lastEpoch, firstBlock, lastBlock)
+	if err != nil {
+		return "", err
+	}
+
+	err = storeMd5sum(cfg.AidaDb, log)
 	if err != nil {
 		return "", err
 	}
@@ -146,13 +152,82 @@ func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpo
 	return cfg.AidaDb, nil
 }
 
-// updatePatchesJson updates available patches in a JSON file
-func updatePatchesJson(patchDir, patchName, patchEpoch string) error {
-	// Check if the JSON file exists
-	jsonFilePath := filepath.Join(patchDir, patchesJsonName)
-	var patchesJson map[string]string
+// storeMd5sum store md5sum of aida-db patch into a file
+func storeMd5sum(filePath string, log *logging.Logger) error {
+	md5sum, err := calculateMd5sum(filePath, log)
+	if err != nil {
+		return err
+	}
 
-	// Load previous JSON
+	md5FilePath := filePath + ".md5"
+
+	var file *os.File
+	file, err = os.OpenFile(md5FilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+	if err != nil {
+		return fmt.Errorf("unable to create %s; %v", md5FilePath, err)
+	}
+
+	// Write the result
+	w := bufio.NewWriter(file)
+	_, err = w.Write([]byte(md5sum))
+	if err != nil {
+		return fmt.Errorf("unable to write %s into %s; %v", md5sum, md5FilePath, err)
+	}
+	err = w.Flush()
+	if err != nil {
+		return fmt.Errorf("unable to flush %s; %v", md5FilePath, err)
+	}
+
+	err = file.Close()
+	if err != nil {
+		return fmt.Errorf("unable to close %s; %v", patchesJsonName, err)
+	}
+
+	return nil
+}
+
+// calculateMd5sum calculates md5sum of a file
+func calculateMd5sum(filePath string, log *logging.Logger) (string, error) {
+	var response = ""
+	var wg sync.WaitGroup
+	resultChan := make(chan string, 10)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case s, ok := <-resultChan:
+				if !ok {
+					return
+				}
+				response += s
+			}
+		}
+	}()
+
+	cmd := exec.Command("bash", "-c", "find somedir -type f -exec md5sum {} \\; | sort -k 2 | md5sum")
+	err := runCommand(cmd, resultChan, log)
+	if err != nil {
+		return "", fmt.Errorf("unable sum md5; %v", err.Error())
+	}
+
+	// wait until reading of result finishes
+	wg.Wait()
+
+	md5 := getFirstWord(response)
+	if md5 == "" {
+		return "", fmt.Errorf("unable to calculate md5sum")
+	}
+
+	return md5, nil
+}
+
+// updatePatchesJson update patches.json file
+func updatePatchesJson(patchDir, patchName, patchEpoch string, fromBlock uint64, toBlock uint64) error {
+	jsonFilePath := filepath.Join(patchDir, patchesJsonName)
+	var patchesJson []map[string]string
+
+	// Attempt to load previous JSON
 	file, err := os.Open(jsonFilePath)
 	if err == nil {
 		// Unmarshal the JSON
@@ -165,42 +240,50 @@ func updatePatchesJson(patchDir, patchName, patchEpoch string) error {
 		if err != nil {
 			return fmt.Errorf("unable to unmarshal json from file %s; %v", patchesJsonName, err)
 		}
-		// close file
+		// Close the file
 		err = file.Close()
 		if err != nil {
 			return fmt.Errorf("unable to close %s; %v", patchesJsonName, err)
 		}
 	}
 
-	// open file for write and delete previous
+	// Open file for write and delete previous contents
 	file, err = os.OpenFile(jsonFilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
 	if err != nil {
 		return fmt.Errorf("unable to open %s; %v", patchesJsonName, err)
 	}
 
-	// Initialize the map if it doesn't exist
+	// Initialize the array if it doesn't exist
 	if patchesJson == nil {
-		patchesJson = make(map[string]string)
+		patchesJson = make([]map[string]string, 0)
 	}
 
-	// Add the patchName to the corresponding epoch's array
-	patchesJson[patchEpoch] = patchName
+	// Create a new patch object
+	newPatch := map[string]string{
+		"fileName":  patchName,
+		"fromBlock": strconv.FormatUint(fromBlock, 10),
+		"toBlock":   strconv.FormatUint(toBlock, 10),
+		"toEpoch":   patchEpoch,
+	}
 
-	// Convert the map to JSON bytes
+	// Append the new patch to the array
+	patchesJson = append(patchesJson, newPatch)
+
+	// Convert the array to JSON bytes
 	jsonBytes, err := json.Marshal(patchesJson)
 	if err != nil {
 		return fmt.Errorf("unable to marshal %v; %v", patchesJson, err)
 	}
 
-	// Write result
+	// Write the result
 	w := bufio.NewWriter(file)
 	_, err = w.Write(jsonBytes)
 	if err != nil {
-		return fmt.Errorf("unable to write %v; %v", patchesJson, err)
+		return fmt.Errorf("unable to write %v into %s; %v", patchesJson, jsonFilePath, err)
 	}
 	err = w.Flush()
 	if err != nil {
-		return fmt.Errorf("unable to flush; %v", err)
+		return fmt.Errorf("unable to flush %v; %v", patchesJson, err)
 	}
 	return nil
 }
@@ -320,4 +403,13 @@ func stopOpera(log *logging.Logger) error {
 		return fmt.Errorf("unable stop opera; %v", err.Error())
 	}
 	return nil
+}
+
+// getFirstWord retrieves first word from string
+func getFirstWord(str string) string {
+	words := strings.Fields(str)
+	if len(words) > 0 {
+		return words[0]
+	}
+	return ""
 }
