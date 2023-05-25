@@ -195,11 +195,19 @@ func (e *ReplayExecutor) doExecute(in *executorInput) *StateDBData {
 	case "call":
 		var timestamp uint64
 
-		if in.req.Response.Timestamp != 0 {
-			timestamp = in.req.Response.Timestamp
-		} else if in.req.Error.Timestamp != 0 {
-			timestamp = in.req.Error.Timestamp
-		} else {
+		// first try to extract timestamp from response
+		if in.req.Response != nil {
+			if in.req.Response.Timestamp != 0 {
+				timestamp = in.req.Response.Timestamp
+			}
+		} else if in.req.Error != nil {
+			if in.req.Error.Timestamp != 0 {
+
+				timestamp = in.req.Error.Timestamp
+			}
+		}
+
+		if timestamp == 0 {
 			// if no timestamp is in response, we are dealing with an old record version, hence we use substate
 			timestamp = e.getTimestamp(in.blockID)
 			if timestamp == 0 {
