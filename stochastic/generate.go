@@ -1,19 +1,18 @@
 package stochastic
 
 import (
-	"log"
-
 	"github.com/Fantom-foundation/Aida/stochastic/statistics"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/op/go-logging"
 )
 
 // GenerateUniformRegistry produces a uniformly distributed simulation file.
-func GenerateUniformRegistry(cfg *utils.Config) *EventRegistry {
+func GenerateUniformRegistry(cfg *utils.Config, log *logging.Logger) *EventRegistry {
 	r := NewEventRegistry()
 
 	// generate a uniform distribution for contracts, storage keys/values, and snapshots
 
-	log.Printf("number of contract addresses for priming: %v\n", cfg.ContractNumber)
+	log.Infof("Number of contract addresses for priming: %v", cfg.ContractNumber)
 	for i := int64(0); i < cfg.ContractNumber; i++ {
 		for j := i - statistics.QueueLen - 1; j <= i; j++ {
 			if j >= 0 {
@@ -22,7 +21,7 @@ func GenerateUniformRegistry(cfg *utils.Config) *EventRegistry {
 		}
 	}
 
-	log.Printf("number of storage keys for priming: %v\n", cfg.KeysNumber)
+	log.Infof("Number of storage keys for priming: %v", cfg.KeysNumber)
 	for i := int64(0); i < cfg.KeysNumber; i++ {
 		for j := i - statistics.QueueLen - 1; j <= i; j++ {
 			if j >= 0 {
@@ -31,7 +30,7 @@ func GenerateUniformRegistry(cfg *utils.Config) *EventRegistry {
 		}
 	}
 
-	log.Printf("number of storage values for priming: %v\n", cfg.ValuesNumber)
+	log.Infof("Number of storage values for priming: %v", cfg.ValuesNumber)
 	for i := int64(0); i < cfg.ValuesNumber; i++ {
 		for j := i - statistics.QueueLen - 1; j <= i; j++ {
 			if j >= 0 {
@@ -40,7 +39,7 @@ func GenerateUniformRegistry(cfg *utils.Config) *EventRegistry {
 		}
 	}
 
-	log.Printf("snapshot depth: %v\n", cfg.KeysNumber)
+	log.Infof("Snapshot depth: %v", cfg.KeysNumber)
 	for i := 0; i < cfg.SnapshotDepth; i++ {
 		r.snapshotFreq[i] = 1
 	}
