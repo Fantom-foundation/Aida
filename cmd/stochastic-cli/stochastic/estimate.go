@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/stochastic"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/urfave/cli/v2"
@@ -27,29 +27,39 @@ The stochastic estimator command requires one argument:
 
 // stochasticEstimateAction implements estimator command for computing statistical parameters.
 func stochasticEstimateAction(ctx *cli.Context) error {
+	log := logger.NewLogger("INFO", "StochasticEstimate")
+
 	if ctx.Args().Len() != 1 {
 		return fmt.Errorf("missing event file")
 	}
 
-	log.Println("produce a simulation file from an event file")
+	log.Info("Produce a simulation file from an event file")
 
 	// open and parse event file
 	inputFileName := ctx.Args().Get(0)
-	log.Printf("read event file %v\n", inputFileName)
+
+	log.Infof("Read event file %v", inputFileName)
+
 	file, err := os.Open(inputFileName)
 	if err != nil {
-		return fmt.Errorf("failed opening event file %v", inputFileName)
+		return fmt.Errorf("failed opening event file %v; %v", inputFileName, err)
 	}
 	defer file.Close()
+
 	contents, err := ioutil.ReadAll(file)
 	if err != nil {
-		return fmt.Errorf("failed reading event file")
+		return fmt.Errorf("failed reading event file; %v", err)
 	}
+
 	var eventRegistry stochastic.EventRegistryJSON
-	json.Unmarshal(contents, &eventRegistry)
+
+	err = json.Unmarshal(contents, &eventRegistry)
+	if err != nil {
+		return fmt.Errorf("cannot unmarshal event registry; %v", err)
+	}
 
 	// estimate parameters
-	log.Println("estimate parameters")
+	log.Info("Estimate parameters")
 	estimationModel := stochastic.NewEstimationModelJSON(&eventRegistry)
 
 	// write event file
@@ -57,27 +67,34 @@ func stochasticEstimateAction(ctx *cli.Context) error {
 	if outputFileName == "" {
 		outputFileName = "./simulation.json"
 	}
-	log.Printf("write event filename %v", outputFileName)
-	WriteSimulation(&estimationModel, outputFileName)
+
+	log.Noticef("Write event filename %v", outputFileName)
+
+	err = WriteSimulation(&estimationModel, outputFileName)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
 
 // WriteSimulation writes event file in JSON format.
-func WriteSimulation(m *stochastic.EstimationModelJSON, filename string) {
+func WriteSimulation(m *stochastic.EstimationModelJSON, filename string) error {
 	f, fErr := os.Create(filename)
 	if fErr != nil {
-		log.Fatalf("cannot open JSON file. Error: %v", fErr)
+		return fmt.Errorf("cannot open JSON file; %v", fErr)
 	}
 	defer f.Close()
 
 	jOut, jErr := json.MarshalIndent(m, "", "    ")
 	if jErr != nil {
-		log.Fatalf("failed to convert JSON file. Error: %v", jErr)
+		return fmt.Errorf("failed to convert JSON file; %v", jErr)
 	}
 
 	_, pErr := fmt.Fprintln(f, string(jOut))
 	if pErr != nil {
-		log.Fatalf("failed to convert JSON file. Error: %v", pErr)
+		return fmt.Errorf("failed to convert JSON file; %v", pErr)
 	}
+
+	return nil
 }
