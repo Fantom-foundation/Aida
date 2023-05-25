@@ -193,10 +193,20 @@ func (e *ReplayExecutor) doExecute(in *executorInput) *StateDBData {
 		return executeGetTransactionCount(in.req.Query.Params[0], in.archive)
 
 	case "call":
-		timestamp := e.getTimestamp(in.blockID)
-		if timestamp == 0 {
-			return nil
+		var timestamp uint64
+
+		if in.req.Response.Timestamp != 0 {
+			timestamp = in.req.Response.Timestamp
+		} else if in.req.Error.Timestamp != 0 {
+			timestamp = in.req.Error.Timestamp
+		} else {
+			// if no timestamp is in response, we are dealing with an old record version, hence we use substate
+			timestamp = e.getTimestamp(in.blockID)
+			if timestamp == 0 {
+				return nil
+			}
 		}
+
 		evm := newEVMExecutor(in.blockID, in.archive, e.vmImpl, e.chainCfg, in.req.Query.Params[0].(map[string]interface{}), timestamp, e.log)
 		return executeCall(evm)
 

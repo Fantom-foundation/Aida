@@ -24,20 +24,22 @@ type Body struct {
 
 // Response represents decoded request response body.
 type Response struct {
-	Version string          `json:"jsonrpc,omitempty"`
-	ID      json.RawMessage `json:"id,omitempty"`
-	BlockID uint64          `json:"blockid,omitempty"`
-	Result  json.RawMessage `json:"result,omitempty"`
-	Payload []byte          `json:"-"`
+	Version   string          `json:"jsonrpc,omitempty"`
+	ID        json.RawMessage `json:"id,omitempty"`
+	BlockID   uint64          `json:"blockid,omitempty"`
+	Timestamp uint64          `json:"timestamp,omitempty"`
+	Result    json.RawMessage `json:"result,omitempty"`
+	Payload   []byte          `json:"-"`
 }
 
 // ErrorResponse represents a structure of error response from the remote server
 type ErrorResponse struct {
-	Version string          `json:"jsonrpc,omitempty"`
-	Id      json.RawMessage `json:"id,omitempty"`
-	BlockID uint64          `json:"blockid,omitempty"`
-	Error   ErrorMessage    `json:"error,omitempty"`
-	Payload []byte          `json:"-"`
+	Version   string          `json:"jsonrpc,omitempty"`
+	Id        json.RawMessage `json:"id,omitempty"`
+	BlockID   uint64          `json:"blockid,omitempty"`
+	Timestamp uint64          `json:"timestamp,omitempty"`
+	Error     ErrorMessage    `json:"error,omitempty"`
+	Payload   []byte          `json:"-"`
 }
 
 // ErrorMessage represents the detailed error information inside an error response.
