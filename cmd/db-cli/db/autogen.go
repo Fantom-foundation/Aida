@@ -107,7 +107,7 @@ func autoGen(ctx *cli.Context) error {
 
 	// if patch output dir is selected inserting just the patch into there
 	if cfg.Output != "" {
-		patchPath, err := createPatch(cfg, aidaDbTmp, lastEpoch, cfg.First, cfg.Last, log)
+		patchPath, err := createPatch(cfg, aidaDbTmp, firstEpoch, lastEpoch, cfg.First, cfg.Last, log)
 		if err != nil {
 			return err
 		}
@@ -118,7 +118,7 @@ func autoGen(ctx *cli.Context) error {
 }
 
 // createPatch create patch from newly generated data
-func createPatch(cfg *utils.Config, aidaDbTmp string, lastEpoch string, firstBlock uint64, lastBlock uint64, log *logging.Logger) (string, error) {
+func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpoch string, firstBlock uint64, lastBlock uint64, log *logging.Logger) (string, error) {
 	// create a parents of output directory
 	err := os.MkdirAll(cfg.Output, 0755)
 	if err != nil {
@@ -139,7 +139,7 @@ func createPatch(cfg *utils.Config, aidaDbTmp string, lastEpoch string, firstBlo
 		return "", fmt.Errorf("unable to merge into patch; %v", err)
 	}
 
-	err = updatePatchesJson(cfg.Output, patchName, lastEpoch, firstBlock, lastBlock)
+	err = updatePatchesJson(cfg.Output, patchName, firstEpoch, lastEpoch, firstBlock, lastBlock)
 	if err != nil {
 		return "", err
 	}
@@ -223,7 +223,7 @@ func calculateMd5sum(filePath string, log *logging.Logger) (string, error) {
 }
 
 // updatePatchesJson update patches.json file
-func updatePatchesJson(patchDir, patchName, patchEpoch string, fromBlock uint64, toBlock uint64) error {
+func updatePatchesJson(patchDir, patchName, fromEpoch string, toEpoch string, fromBlock uint64, toBlock uint64) error {
 	jsonFilePath := filepath.Join(patchDir, patchesJsonName)
 	var patchesJson []map[string]string
 
@@ -263,7 +263,8 @@ func updatePatchesJson(patchDir, patchName, patchEpoch string, fromBlock uint64,
 		"fileName":  patchName,
 		"fromBlock": strconv.FormatUint(fromBlock, 10),
 		"toBlock":   strconv.FormatUint(toBlock, 10),
-		"toEpoch":   patchEpoch,
+		"fromEpoch": fromEpoch,
+		"toEpoch":   toEpoch,
 	}
 
 	// Append the new patch to the array
@@ -307,14 +308,14 @@ func loadGenerationRange(cfg *utils.Config, log *logging.Logger) (string, string
 	_, err := os.Stat(cfg.Db)
 	if !os.IsNotExist(err) {
 		// opera was already used for generation starting from the next epoch
-		_, previousEpoch, err = GetOperaBlock(cfg)
+		_, previousEpoch, err = GetOperaBlockAndEpoch(cfg)
 		if err != nil {
 			return "", "", false, fmt.Errorf("unable to retrieve epoch of generation opera in path %v; %v", cfg.Db, err)
 		}
 		log.Debugf("Generation will start from: %v", previousEpoch)
 	}
 
-	nextEpoch, err := getLastOperaEpoch(cfg, log)
+	nextEpoch, err := getLastEpochFromRunningOpera(cfg, log)
 	if err != nil {
 		return "", "", false, fmt.Errorf("unable to retrieve epoch of source opera in path %v; %v", cfg.OperaDatadir, err)
 	}
@@ -334,8 +335,8 @@ func loadGenerationRange(cfg *utils.Config, log *logging.Logger) (string, string
 	return firstEpoch, lastEpoch, true, nil
 }
 
-// getLastOperaEpoch loads last epoch from opera
-func getLastOperaEpoch(cfg *utils.Config, log *logging.Logger) (uint64, error) {
+// getLastEpochFromRunningOpera loads last epoch from running opera
+func getLastEpochFromRunningOpera(cfg *utils.Config, log *logging.Logger) (uint64, error) {
 	var response = ""
 	var wg sync.WaitGroup
 	resultChan := make(chan string, 10)

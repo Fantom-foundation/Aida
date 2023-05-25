@@ -118,7 +118,7 @@ func prepareOpera(cfg *utils.Config, log *logging.Logger) error {
 			return fmt.Errorf("aida-db; Error: %v", err)
 		}
 	}
-	lastOperaBlock, _, err := GetOperaBlock(cfg)
+	lastOperaBlock, _, err := GetOperaBlockAndEpoch(cfg)
 	if err != nil {
 		return fmt.Errorf("couldn't retrieve block from existing opera database %v ; Error: %v", cfg.Db, err)
 	}
@@ -161,8 +161,8 @@ func loadSourceDBPaths(cfg *utils.Config, aidaDbTmp string) {
 	cfg.WorldStateDb = filepath.Join(aidaDbTmp, "worldstate")
 }
 
-// GetOperaBlock retrieves current block of opera head
-func GetOperaBlock(cfg *utils.Config) (uint64, uint64, error) {
+// GetOperaBlockAndEpoch retrieves current block of opera head
+func GetOperaBlockAndEpoch(cfg *utils.Config) (uint64, uint64, error) {
 	operaPath := filepath.Join(cfg.Db, "/chaindata/leveldb-fsh/")
 	store, err := opera.Connect("ldb", operaPath, "main")
 	if err != nil {
@@ -247,7 +247,7 @@ func recordSubstate(cfg *utils.Config, log *logging.Logger) error {
 	}
 
 	// retrieve block the opera was iterated into
-	cfg.Last, _, err = GetOperaBlock(cfg)
+	cfg.Last, _, err = GetOperaBlockAndEpoch(cfg)
 	if err != nil {
 		return fmt.Errorf("GetOperaBlock last; %v", err)
 	}
