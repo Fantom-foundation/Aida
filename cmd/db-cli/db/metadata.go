@@ -36,6 +36,7 @@ const (
 	// C + P = C
 )
 
+// MetadataInfo holds any information about AidaDb needed for putting it into the Db
 type MetadataInfo struct {
 	dbType                aidaDbType
 	firstBlock, lastBlock uint64
@@ -67,6 +68,7 @@ func processMetadata(sourceDbs []ethdb.Database, targetDb ethdb.Database, mdi *M
 	return nil
 }
 
+// processMergeTypeMetadata into form which can be put into AidaDb
 func processMergeTypeMetadata(sourceDbs []ethdb.Database, targetDb ethdb.Database, mdi *MetadataInfo) error {
 	var err error
 
@@ -78,6 +80,7 @@ func processMergeTypeMetadata(sourceDbs []ethdb.Database, targetDb ethdb.Databas
 	return putMetadata(targetDb, mdi)
 }
 
+// putMetadata decides which put func to call
 func putMetadata(targetDb ethdb.Database, mdi *MetadataInfo) error {
 	log := logger.NewLogger("INFO", "metadata")
 
@@ -100,6 +103,7 @@ func putMetadata(targetDb ethdb.Database, mdi *MetadataInfo) error {
 	return nil
 }
 
+// findMetadata in given sourceDbs - either when Merging or generating AidaDb from substateDb, updatesetDb and deletionDb
 func findMetadata(sourceDbs []ethdb.Database) (uint64, uint64, aidaDbType, error) {
 	var (
 		first, last, totalFirst, totalLast uint64
@@ -165,6 +169,7 @@ func findMetadata(sourceDbs []ethdb.Database) (uint64, uint64, aidaDbType, error
 	return totalFirst, totalLast, genType, nil
 }
 
+// putBlockMetadata into AidaDb
 func putBlockMetadata(targetDb ethdb.Database, firstBlock, lastBlock uint64, log *logging.Logger) error {
 	if firstBlock == 0 {
 		log.Warning("given first block is 0 - saving to metadata anyway")
@@ -187,6 +192,7 @@ func putBlockMetadata(targetDb ethdb.Database, firstBlock, lastBlock uint64, log
 	return nil
 }
 
+// putEpochMetadata into AidaDb
 func putEpochMetadata(targetDb ethdb.Database, firstEpoch, lastEpoch uint64, log *logging.Logger) error {
 
 	if firstEpoch == 0 {
@@ -210,6 +216,7 @@ func putEpochMetadata(targetDb ethdb.Database, firstEpoch, lastEpoch uint64, log
 	return nil
 }
 
+// putTimestampMetadata into AidaDb
 func putTimestampMetadata(targetDb ethdb.Database) error {
 	createTime := make([]byte, 8)
 
