@@ -139,7 +139,9 @@ func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpo
 		return "", fmt.Errorf("unable to merge into patch; %v", err)
 	}
 
-	err = updatePatchesJson(cfg.Output, patchName, firstEpoch, lastEpoch, firstBlock, lastBlock)
+	log.Noticef("Patch %s generated successfully: %d(%s) - %d(%s) ", patchName, firstBlock, firstEpoch, lastBlock, lastEpoch)
+
+	err = updatePatchesJson(cfg.Output, patchName, firstEpoch, lastEpoch, firstBlock, lastBlock, log)
 	if err != nil {
 		return "", err
 	}
@@ -205,7 +207,7 @@ func calculateMd5sum(filePath string, log *logging.Logger) (string, error) {
 		}
 	}()
 
-	cmd := exec.Command("bash", "-c", "find somedir -type f -exec md5sum {} \\; | sort -k 2 | md5sum")
+	cmd := exec.Command("bash", "-c", "find "+filePath+" -type f -exec md5sum {} \\; | sort -k 2 | md5sum")
 	err := runCommand(cmd, resultChan, log)
 	if err != nil {
 		return "", fmt.Errorf("unable sum md5; %v", err.Error())
@@ -219,11 +221,16 @@ func calculateMd5sum(filePath string, log *logging.Logger) (string, error) {
 		return "", fmt.Errorf("unable to calculate md5sum")
 	}
 
+	// md5 is always 32 characters long
+	if len(md5) != 32 {
+		return "", fmt.Errorf("unable to generate correct md5sum; Error: %v is not md5", md5)
+	}
+
 	return md5, nil
 }
 
 // updatePatchesJson update patches.json file
-func updatePatchesJson(patchDir, patchName, fromEpoch string, toEpoch string, fromBlock uint64, toBlock uint64) error {
+func updatePatchesJson(patchDir, patchName, fromEpoch string, toEpoch string, fromBlock uint64, toBlock uint64, log *logging.Logger) error {
 	jsonFilePath := filepath.Join(patchDir, patchesJsonName)
 	var patchesJson []map[string]string
 
@@ -286,6 +293,15 @@ func updatePatchesJson(patchDir, patchName, fromEpoch string, toEpoch string, fr
 	if err != nil {
 		return fmt.Errorf("unable to flush %v; %v", patchesJson, err)
 	}
+
+	// Close the file
+	err = file.Close()
+	if err != nil {
+		return fmt.Errorf("unable to close %s; %v", patchesJsonName, err)
+	}
+
+	log.Noticef("Updated %s in %s with new patch:\n%v\n", patchesJsonName, jsonFilePath, newPatch)
+
 	return nil
 }
 
