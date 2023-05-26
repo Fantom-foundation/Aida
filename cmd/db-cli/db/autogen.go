@@ -105,13 +105,13 @@ func autoGen(ctx *cli.Context) error {
 		return err
 	}
 
-	// if patch output dir is selected inserting just the patch into there
+	// if patch output dir is selected inserting patch.tar.gz, patch.tar.gz.md5 into there and updating patches.json
 	if cfg.Output != "" {
-		patchPath, err := createPatch(cfg, aidaDbTmp, firstEpoch, lastEpoch, cfg.First, cfg.Last, log)
+		patchTarPath, err := createPatch(cfg, aidaDbTmp, firstEpoch, lastEpoch, cfg.First, cfg.Last, log)
 		if err != nil {
 			return err
 		}
-		log.Infof("Successfully generated patch at: %v", patchPath)
+		log.Infof("Successfully generated patch at: %v", patchTarPath)
 	}
 
 	return nil
@@ -132,26 +132,37 @@ func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpo
 	// creating patch name
 	// add leading zeroes to filename to make it sortable
 	patchName := "aida-db-" + fmt.Sprintf("%09s", lastEpoch)
-	cfg.AidaDb = filepath.Join(cfg.Output, patchName)
-	// merge UpdateDb into AidaDb(patch)
+	patchPath := filepath.Join(cfg.Output, patchName)
+	// cfg.AidaDb is now pointing to patch this is needed for Merge function
+	cfg.AidaDb = patchPath
 	err = Merge(cfg, []string{cfg.SubstateDb, cfg.UpdateDb, cfg.DeletionDb})
 	if err != nil {
 		return "", fmt.Errorf("unable to merge into patch; %v", err)
 	}
 
-	log.Noticef("Patch %s generated successfully: %d(%s) - %d(%s) ", patchName, firstBlock, firstEpoch, lastBlock, lastEpoch)
+	patchTarName := patchName + ".tar.gz"
+	patchTarPath := filepath.Join(cfg.Output, patchTarName)
+	err = createPatchTarGz(patchPath, patchTarPath, log)
 
-	err = updatePatchesJson(cfg.Output, patchName, firstEpoch, lastEpoch, firstBlock, lastBlock, log)
+	log.Noticef("Patch %s generated successfully: %d(%s) - %d(%s) ", patchTarName, firstBlock, firstEpoch, lastBlock, lastEpoch)
+
+	err = updatePatchesJson(cfg.Output, patchTarName, firstEpoch, lastEpoch, firstBlock, lastBlock, log)
 	if err != nil {
 		return "", err
 	}
 
-	err = storeMd5sum(cfg.AidaDb, log)
+	err = storeMd5sum(patchTarPath, log)
 	if err != nil {
 		return "", err
 	}
 
-	return cfg.AidaDb, nil
+	// remove patchFiles
+	err = os.RemoveAll(patchPath)
+	if err != nil {
+		return "", err
+	}
+
+	return patchTarPath, nil
 }
 
 // storeMd5sum store md5sum of aida-db patch into a file
@@ -207,7 +218,7 @@ func calculateMd5sum(filePath string, log *logging.Logger) (string, error) {
 		}
 	}()
 
-	cmd := exec.Command("bash", "-c", "find "+filePath+" -type f -exec md5sum {} \\; | sort -k 2 | md5sum")
+	cmd := exec.Command("bash", "-c", "md5sum "+filePath)
 	err := runCommand(cmd, resultChan, log)
 	if err != nil {
 		return "", fmt.Errorf("unable sum md5; %v", err.Error())
@@ -227,6 +238,16 @@ func calculateMd5sum(filePath string, log *logging.Logger) (string, error) {
 	}
 
 	return md5, nil
+}
+
+// createPatchTarGz compresses patch file into tar.gz
+func createPatchTarGz(patchPath string, patchTarPath string, log *logging.Logger) error {
+	cmd := exec.Command("bash", "-c", "tar -zcvf "+patchTarPath+" "+patchPath)
+	err := runCommand(cmd, nil, log)
+	if err != nil {
+		return fmt.Errorf("unable tar patch %v into %v; %v", patchPath, patchTarPath, err.Error())
+	}
+	return nil
 }
 
 // updatePatchesJson update patches.json file
