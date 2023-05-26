@@ -66,7 +66,7 @@ func MakeCarmenStateDB(directory, variant, archive string, schema int) (StateDB,
 	if err != nil {
 		return nil, err
 	}
-	return &carmenStateDB{carmen.CreateStateDBUsing(db), 0, 0}, nil
+	return &carmenStateDB{db: carmen.CreateStateDBUsing(db)}, nil
 }
 
 type carmenStateDB struct {
@@ -226,13 +226,35 @@ func (s *carmenStateDB) AddSlotToAccessList(addr common.Address, slot common.Has
 	s.db.AddSlotToAccessList(cc.Address(addr), cc.Key(slot))
 }
 
-func (s *carmenStateDB) AddLog(*types.Log) {
-	// ignored
+func (s *carmenStateDB) AddLog(log *types.Log) {
+	topics := make([]cc.Hash, 0, len(log.Topics))
+	for _, topic := range log.Topics {
+		topics = append(topics, cc.Hash(topic))
+	}
+	s.db.AddLog(&cc.Log{
+		Address: cc.Address(log.Address),
+		Topics:  topics,
+		Data:    log.Data,
+	})
 }
 
-func (s *carmenStateDB) GetLogs(hash common.Hash, blockHash common.Hash) []*types.Log {
-	// ignored
-	return nil
+func (s *carmenStateDB) GetLogs(common.Hash, common.Hash) []*types.Log {
+	list := s.db.GetLogs()
+
+	res := make([]*types.Log, 0, len(list))
+	for _, log := range list {
+		topics := make([]common.Hash, 0, len(log.Topics))
+		for _, topic := range log.Topics {
+			topics = append(topics, common.Hash(topic))
+		}
+		res = append(res, &types.Log{
+			Address: common.Address(log.Address),
+			Topics:  topics,
+			Data:    log.Data,
+		})
+
+	}
+	return res
 }
 
 func (s *carmenStateDB) Finalise(deleteEmptyObjects bool) {
@@ -250,7 +272,7 @@ func (s *carmenStateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 }
 
 func (s *carmenStateDB) Prepare(thash common.Hash, ti int) {
-	//ignored
+	// ignored
 }
 
 func (s *carmenStateDB) PrepareSubstate(substate *substate.SubstateAlloc, block uint64) {
@@ -278,7 +300,7 @@ func (s *carmenStateDB) Error() error {
 }
 
 func (s *carmenStateDB) StartBulkLoad(block uint64) BulkLoad {
-	return &carmenBulkLoad{s.db.StartBulkLoad()}
+	return &carmenBulkLoad{s.db.StartBulkLoad(block)}
 }
 
 func (s *carmenStateDB) GetArchiveState(block uint64) (StateDB, error) {
@@ -286,7 +308,7 @@ func (s *carmenStateDB) GetArchiveState(block uint64) (StateDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &carmenStateDB{state, 0, 0}, nil
+	return &carmenStateDB{db: state}, nil
 }
 
 func (s *carmenStateDB) GetMemoryUsage() *MemoryUsage {

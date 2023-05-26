@@ -265,7 +265,7 @@ func TestStatedb_DeleteDestroyedAccountsFromStateDB(t *testing.T) {
 			log := logger.NewLogger("INFO", "TestStateDb")
 
 			// Create new prime context
-			pc := NewPrimeContext(cfg, log)
+			pc := NewPrimeContext(cfg, sDB, log)
 			// Priming state DB with given world state
 			pc.PrimeStateDB(ws, sDB)
 
@@ -311,7 +311,7 @@ func TestStatedb_ValidateStateDB(t *testing.T) {
 			log := logger.NewLogger("INFO", "TestStateDb")
 
 			// Create new prime context
-			pc := NewPrimeContext(cfg, log)
+			pc := NewPrimeContext(cfg, sDB, log)
 			// Priming state DB with given world state
 			pc.PrimeStateDB(ws, sDB)
 
@@ -351,7 +351,7 @@ func TestStatedb_ValidateStateDBWithUpdate(t *testing.T) {
 			log := logger.NewLogger("INFO", "TestStateDb")
 
 			// Create new prime context
-			pc := NewPrimeContext(cfg, log)
+			pc := NewPrimeContext(cfg, sDB, log)
 			// Priming state DB with given world state
 			pc.PrimeStateDB(ws, sDB)
 

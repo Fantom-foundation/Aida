@@ -77,14 +77,12 @@ github.com/DataDog/zstd v1.5.2/go.mod h1:g4AWEaM3yOg3HYfnJ3YIawPnVdXJh9QME85blwS
 github.com/Fantom-foundation/Substate v0.0.0-20230224090651-4c8c024214f4/go.mod h1:/yIHWCDDJcdKMJYvOLdYOnHt5eUBF9XWnrvrNE+90ik=
 github.com/Fantom-foundation/Substate v0.0.0-20230512151613-f039b23bf3f7 h1:qLKPsYxwOv7EudpOwPv+l89QqEzzxK0pSPC/+X/AuTw=
 github.com/Fantom-foundation/Substate v0.0.0-20230512151613-f039b23bf3f7/go.mod h1:KoObQO1Wmf3ACjxcXDREHf+mtDF4MAXfHwtxMIdyhx8=
-github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20230331085425-52296093a646 h1:wlo+TbNH2ZekB7uFMR69Z13ie6LvVdIIERXXojEc0ws=
-github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20230331085425-52296093a646/go.mod h1:Hu8U9SrXP6ABqtSNfJHw8lRGnr6tyma9PNZvwTweDjQ=
 github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230329105747-dd1f4d815c71 h1:m9dWKOC9URqmDUsbGH6s5Sh1kCY1AvphOeo7l72Pry8=
 github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230329105747-dd1f4d815c71/go.mod h1:1X9FOOsbqDhaNXZm0ZPhMsyOLMWaVd2iOD8PQ2iP3Ro=
 github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230418094634-9d555752574a h1:kQiTTnbDx/4jq6PgHp3c9+B/k1S4QmXZLH0BQVLhWLg=
 github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230418094634-9d555752574a/go.mod h1:MXjjA0QC16RiVY7EZTQgLRopiAG/kPjLE72pcw9WsnI=
-github.com/Fantom-foundation/go-opera-substate v1.0.1-0.20230301090555-fe74c5a947fa h1:xi4eLM2mqb5b1ZHTBHnu7eGXHkqI4+yXN9xsb2xC87w=
-github.com/Fantom-foundation/go-opera-substate v1.0.1-0.20230301090555-fe74c5a947fa/go.mod h1:F6LJU2cQr/dBUZ2md0xvwMnrhkfw0IIIGZ30V0ir4iY=
+github.com/Fantom-foundation/go-opera-substate v1.0.1-0.20230523093256-e592c59c5996 h1:YzgxEAK3dCLNvmY1pgLEgPuPOsGHFMxT6QLpZnXuxM8=
+github.com/Fantom-foundation/go-opera-substate v1.0.1-0.20230523093256-e592c59c5996/go.mod h1:qby4+H/H4DzhsQADpib01uxmECmlSJJyPozppP+Pbsk=
 github.com/Fantom-foundation/lachesis-base v0.0.0-20220811115347-2434192efadb/go.mod h1:CFMonaK1v/QHwpjLszuycFDgLXNazZqZxciwhKwXDVQ=
 github.com/Fantom-foundation/lachesis-base v0.0.0-20221208123620-82a6d15f995c h1:hgy6GWSddbPyLxRLMykSEImCqv+XuXgLYbqOgI1CBvk=
 github.com/Fantom-foundation/lachesis-base v0.0.0-20221208123620-82a6d15f995c/go.mod h1:YWx9D/y+WCiOkxjw+0FTMQAerfGfhfL/LMEMWp0f3Bw=
