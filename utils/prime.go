@@ -35,13 +35,15 @@ func NewProgressTracker(target int, log *logging.Logger) *ProgressTracker {
 	}
 }
 
-// PrintProgress reports priming progress
+// threshold for wrapping a bulk load and reporting a priming progress
+const operationThreshold = 1_000_000
+
+// PrintProgress reports a priming rates and estimated time after n operations has been executed.
 func (pt *ProgressTracker) PrintProgress() {
-	const printFrequency = 500_000 // report after priming x slots
 	pt.step++
-	if pt.step%printFrequency == 0 {
+	if pt.step%operationThreshold == 0 {
 		now := time.Now()
-		currentRate := printFrequency / now.Sub(pt.last).Seconds()
+		currentRate := operationThreshold / now.Sub(pt.last).Seconds()
 		pt.rate = currentRate*0.1 + pt.rate*0.9
 		pt.last = now
 		progress := float32(pt.step) / float32(pt.target)
@@ -68,7 +70,6 @@ func NewPrimeContext(cfg *Config, db state.StateDB, log *logging.Logger) *PrimeC
 
 // mayApplyBulkLoad closes and reopen bulk load if it has over n operations.
 func (pc *PrimeContext) mayApplyBulkLoad() error {
-	const operationThreshold = 1_000_000
 
 	if pc.operations >= operationThreshold {
 		pc.log.Debugf("\t\tApply bulk load with %v operations...", pc.operations)
@@ -227,7 +228,7 @@ func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error 
 		if totalSize+incrementalSize > maxSize {
 			log.Infof("\tPriming...")
 			if err := pc.PrimeStateDB(update, db); err != nil {
-				return fmt.Errorf("failed to prime StateDB: %v", err)
+				return err
 			}
 			totalSize = 0
 			update = make(substate.SubstateAlloc)
@@ -247,7 +248,7 @@ func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error 
 	}
 	// prime the remaining from updateset
 	if err := pc.PrimeStateDB(update, db); err != nil {
-		return fmt.Errorf("failed to prime StateDB: %v", err)
+		return err
 	}
 	updateIter.Release()
 	update = make(substate.SubstateAlloc)
@@ -258,7 +259,7 @@ func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error 
 		update, deletedAccounts := generateUpdateSet(blockPos+1, target, cfg)
 		pc.SuicideAccounts(db, deletedAccounts)
 		if err := pc.PrimeStateDB(update, db); err != nil {
-			return fmt.Errorf("failed to prime StateDB: %v", err)
+			return err
 		}
 	}
 
