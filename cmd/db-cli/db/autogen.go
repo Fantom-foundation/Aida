@@ -242,6 +242,7 @@ func calculateMd5sum(filePath string, log *logging.Logger) (string, error) {
 
 // createPatchTarGz compresses patch file into tar.gz
 func createPatchTarGz(patchPath string, patchTarPath string, log *logging.Logger) error {
+	log.Noticef("Generating compressed %v", patchTarPath)
 	cmd := exec.Command("bash", "-c", "tar -zcvf "+patchTarPath+" "+patchPath)
 	err := runCommand(cmd, nil, log)
 	if err != nil {
