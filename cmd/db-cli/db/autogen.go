@@ -345,6 +345,7 @@ func loadGenerationRange(cfg *utils.Config, log *logging.Logger) (string, string
 	_, err := os.Stat(cfg.Db)
 	if !os.IsNotExist(err) {
 		// opera was already used for generation starting from the next epoch
+		// !!! returning number one block greater than actual block
 		_, previousEpoch, err = GetOperaBlockAndEpoch(cfg)
 		if err != nil {
 			return "", "", false, fmt.Errorf("unable to retrieve epoch of generation opera in path %v; %v", cfg.Db, err)
@@ -360,15 +361,19 @@ func loadGenerationRange(cfg *utils.Config, log *logging.Logger) (string, string
 	nextEpoch -= 1
 	log.Debugf("Last available sealed epoch is %v", nextEpoch)
 
-	// recording of events will start with the following epoch of last recording
-	firstEpoch := strconv.FormatUint(previousEpoch, 10)
-
 	// recording of events will stop with last sealed opera
 	lastEpoch := strconv.FormatUint(nextEpoch, 10)
 
 	if previousEpoch > nextEpoch {
+		// since GetOperaBlockAndEpoch returns off by one epoch number label
+		// needs to be fixed in no need epochs are available
+		firstEpoch := strconv.FormatUint(previousEpoch-1, 10)
 		return firstEpoch, lastEpoch, false, nil
 	}
+
+	// recording of events will start with the following epoch of last recording
+	firstEpoch := strconv.FormatUint(previousEpoch, 10)
+
 	return firstEpoch, lastEpoch, true, nil
 }
 
