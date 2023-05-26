@@ -11,16 +11,13 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/Fantom-foundation/Aida/logger"
-	substate "github.com/Fantom-foundation/Substate"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/ethdb"
-
 	"github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
 	"github.com/Fantom-foundation/Aida/cmd/updateset-cli/updateset"
 	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/state"
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Aida/world-state/db/opera"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
@@ -94,23 +91,17 @@ func Generate(cfg *utils.Config, log *logging.Logger) (*MetadataInfo, error) {
 		return nil, err
 	}
 
-	// open targetDb
-	targetDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
-	if err != nil {
-		return nil, fmt.Errorf("cannot open targetDb. Error: %v", err)
-	}
-
-	err = recordSubstate(cfg, log, targetDb, mdi)
+	err = recordSubstate(cfg, log, mdi)
 	if err != nil {
 		return nil, err
 	}
 
-	err = genDeletedAccounts(cfg, log, targetDb, mdi)
+	err = genDeletedAccounts(cfg, log, mdi)
 	if err != nil {
 		return nil, err
 	}
 
-	err = genUpdateSet(cfg, log, targetDb, mdi)
+	err = genUpdateSet(cfg, log, mdi)
 	if err != nil {
 		return nil, err
 	}
@@ -197,7 +188,7 @@ func GetOperaBlock(cfg *utils.Config) (uint64, uint64, error) {
 }
 
 // genUpdateSet invokes UpdateSet generation
-func genUpdateSet(cfg *utils.Config, log *logging.Logger, targetDb ethdb.Database, mdi *MetadataInfo) error {
+func genUpdateSet(cfg *utils.Config, log *logging.Logger, mdi *MetadataInfo) error {
 	db, err := substate.OpenUpdateDB(cfg.AidaDb)
 	if err != nil {
 		return err
@@ -220,7 +211,7 @@ func genUpdateSet(cfg *utils.Config, log *logging.Logger, targetDb ethdb.Databas
 	}
 
 	// merge UpdateDb into AidaDb
-	err = Merge(cfg, []string{cfg.UpdateDb}, targetDb, mdi)
+	err = Merge(cfg, []string{cfg.UpdateDb}, mdi)
 	if err != nil {
 		return err
 	}
@@ -230,7 +221,7 @@ func genUpdateSet(cfg *utils.Config, log *logging.Logger, targetDb ethdb.Databas
 }
 
 // genDeletedAccounts invokes DeletedAccounts generation
-func genDeletedAccounts(cfg *utils.Config, log *logging.Logger, targetDb ethdb.Database, mdi *MetadataInfo) error {
+func genDeletedAccounts(cfg *utils.Config, log *logging.Logger, mdi *MetadataInfo) error {
 	log.Noticef("Deleted generation")
 	err := replay.GenDeletedAccountsAction(cfg)
 	if err != nil {
@@ -238,7 +229,7 @@ func genDeletedAccounts(cfg *utils.Config, log *logging.Logger, targetDb ethdb.D
 	}
 
 	// merge DeletionDb into AidaDb
-	err = Merge(cfg, []string{cfg.DeletionDb}, targetDb, mdi)
+	err = Merge(cfg, []string{cfg.DeletionDb}, mdi)
 	if err != nil {
 		return err
 	}
@@ -248,7 +239,7 @@ func genDeletedAccounts(cfg *utils.Config, log *logging.Logger, targetDb ethdb.D
 }
 
 // recordSubstate loads events into the opera, whilst recording substates
-func recordSubstate(cfg *utils.Config, log *logging.Logger, targetDb ethdb.Database, mdi *MetadataInfo) error {
+func recordSubstate(cfg *utils.Config, log *logging.Logger, mdi *MetadataInfo) error {
 	_, err := os.Stat(cfg.Events)
 	if os.IsNotExist(err) {
 		return fmt.Errorf("supplied events file %s doesn't exist", cfg.Events)
@@ -261,7 +252,7 @@ func recordSubstate(cfg *utils.Config, log *logging.Logger, targetDb ethdb.Datab
 	err = runCommand(cmd, nil, log)
 	if err != nil {
 		// remove empty substateDb
-		return fmt.Errorf("import events; %v", err.Error())
+		return fmt.Errorf("import events; %v", err)
 	}
 
 	// retrieve block the opera was iterated into
@@ -279,7 +270,7 @@ func recordSubstate(cfg *utils.Config, log *logging.Logger, targetDb ethdb.Datab
 	mdi.firstBlock = cfg.First
 	mdi.lastBlock = cfg.Last
 
-	err = Merge(cfg, []string{cfg.SubstateDb}, targetDb, mdi)
+	err = Merge(cfg, []string{cfg.SubstateDb}, mdi)
 	if err != nil {
 		return err
 	}

@@ -12,7 +12,6 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
@@ -132,13 +131,8 @@ func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpo
 	patchName := "aida-db-" + firstEpoch + "-" + lastEpoch
 	cfg.AidaDb = filepath.Join(cfg.Output, patchName)
 
-	targetDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
-	if err != nil {
-		return "", err
-	}
-
 	// merge UpdateDb into AidaDb
-	err = Merge(cfg, []string{cfg.SubstateDb, cfg.UpdateDb, cfg.DeletionDb}, targetDb, mdi)
+	err = Merge(cfg, []string{cfg.SubstateDb, cfg.UpdateDb, cfg.DeletionDb}, mdi)
 	if err != nil {
 		return "", err
 	}

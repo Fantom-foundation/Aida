@@ -32,7 +32,8 @@ Creates target aida-db by merging source databases from arguments:
 type aidaDbType byte
 
 const (
-	genType aidaDbType = iota
+	noType aidaDbType = iota
+	genType
 	patchType
 	cloneType
 	mergeType
@@ -50,21 +51,21 @@ func merge(ctx *cli.Context) error {
 		sourceDbs[i] = ctx.Args().Get(i)
 	}
 
-	// open targetDb
-	targetDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
-	if err != nil {
-		return fmt.Errorf("cannot open targetDb. Error: %v", err)
-	}
-
-	defer MustCloseDB(targetDb)
-
 	// when merging, we must find metadataInfo in the dbs we are merging
-	return Merge(cfg, sourceDbs, targetDb, &MetadataInfo{dbType: mergeType})
+	return Merge(cfg, sourceDbs, &MetadataInfo{dbType: mergeType})
 }
 
 // Merge implements merging command for combining all source data databases into single database used for profiling.
-func Merge(cfg *utils.Config, sourceDbPaths []string, targetDb ethdb.Database, mdi *MetadataInfo) error {
+func Merge(cfg *utils.Config, sourceDbPaths []string, mdi *MetadataInfo) error {
 	log := logger.NewLogger(cfg.LogLevel, "DB Merger")
+
+	// open targetDb
+	targetDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
+	if err != nil {
+		return fmt.Errorf("cannot open targetDb; %v", err)
+	}
+
+	defer MustCloseDB(targetDb)
 
 	// we need a destination where to save merged aida-db
 	if cfg.AidaDb == "" {
@@ -103,9 +104,6 @@ func Merge(cfg *utils.Config, sourceDbPaths []string, targetDb ethdb.Database, m
 		}
 	}
 
-	// close target database
-	MustCloseDB(targetDb)
-
 	// delete source databases
 	if cfg.DeleteSourceDbs {
 		for _, path := range sourceDbPaths {
@@ -117,6 +115,9 @@ func Merge(cfg *utils.Config, sourceDbPaths []string, targetDb ethdb.Database, m
 		}
 	}
 	log.Notice("Merge finished successfully")
+
+	// close target database
+	MustCloseDB(targetDb)
 
 	return err
 }

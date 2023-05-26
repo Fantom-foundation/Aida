@@ -38,6 +38,91 @@ var cmdStats = cli.Command{
 	},
 }
 
+func printBlocks(aidaDb ethdb.Database, log *logging.Logger) error {
+	firstBlockBytes, err := aidaDb.Get([]byte(FirstBlockPrefix))
+	if err != nil {
+		return fmt.Errorf("cannot get first block from db; %v", err)
+	}
+	log.Infof("First Block: %v", bigendian.BytesToUint64(firstBlockBytes))
+
+	lastBlockBytes, err := aidaDb.Get([]byte(LastBlockPrefix))
+	if err != nil {
+		return fmt.Errorf("cannot get last block from db; %v", err)
+	}
+	log.Infof("Last Block: %v", bigendian.BytesToUint64(lastBlockBytes))
+
+	return nil
+}
+
+func printEpochs(aidaDb ethdb.Database, log *logging.Logger) error {
+	firstEpochBytes, err := aidaDb.Get([]byte(FirstEpochPrefix))
+	if err != nil {
+		return fmt.Errorf("cannot get first epoch from db; %v", err)
+	}
+	log.Infof("First Epoch: %v", bigendian.BytesToUint64(firstEpochBytes))
+
+	lastEpochBytes, err := aidaDb.Get([]byte(LastEpochPrefix))
+	if err != nil {
+		return fmt.Errorf("cannot get last epoch from db; %v", err)
+	}
+	log.Infof("Last Epoch: %v", bigendian.BytesToUint64(lastEpochBytes))
+
+	return nil
+}
+
+func printCreateTime(aidaDb ethdb.Database, log *logging.Logger) error {
+	timestampBytes, err := aidaDb.Get([]byte(TimestampPrefix))
+	if err != nil {
+		return fmt.Errorf("cannot get timestamp from db; %v", err)
+	}
+	log.Infof("Created: %v", time.Unix(int64(bigendian.BytesToUint64(timestampBytes)), 0))
+
+	return nil
+}
+
+func printUpdateSetInfo(aidaDb ethdb.Database, log *logging.Logger) error {
+	log.Notice("UPDATESET INFO:")
+
+	intervalBytes, err := aidaDb.Get([]byte(substate.UpdatesetIntervalKey))
+	if err != nil {
+		return fmt.Errorf("cannot get updateset interval from db; %v", err)
+	}
+	log.Infof("Interval: %v blocks", bigendian.BytesToUint64(intervalBytes))
+
+	sizeBytes, err := aidaDb.Get([]byte(substate.UpdatesetSizeKey))
+	if err != nil {
+		return fmt.Errorf("cannot get updateset size from db; %v", err)
+	}
+	log.Infof("Size: %v bytes", bigendian.BytesToUint64(sizeBytes))
+
+	return nil
+}
+
+func printDbType(aidaDb ethdb.Database, log *logging.Logger) error {
+	typeBytes, err := aidaDb.Get([]byte(TypePrefix))
+	if err != nil {
+		return fmt.Errorf("cannot get db-type from db; %v", err)
+	}
+
+	typeStr := string(typeBytes)
+
+	var typePrint string
+	switch typeStr {
+	case GenDbType:
+		typePrint = "Generate"
+	case CloneDbType:
+		typePrint = "Clone"
+	case PatchDbType:
+		typePrint = "Patch"
+	default:
+		typePrint = "Could not decode Db type of key: " + typeStr
+	}
+
+	log.Noticef("DB-Type: %v", typePrint)
+
+	return nil
+}
+
 func printStats(ctx *cli.Context) error {
 	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-Stats")
 
@@ -46,48 +131,39 @@ func printStats(ctx *cli.Context) error {
 		return argErr
 	}
 
-	log.Notice("Opening AidaDb")
 	// open aidaDb
 	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", true)
 	if err != nil {
 		return fmt.Errorf("cannot open aida-db; %v", err)
 	}
 
-	firstBlockBytes, err := aidaDb.Get([]byte(FirstBlockPrefix))
-	if err != nil {
-		return fmt.Errorf("cannot get first block from db; %v", err)
-	}
+	defer MustCloseDB(aidaDb)
 
 	log.Notice("AIDA-DB INFO:")
 
-	log.Noticef("First Block :%v", bigendian.BytesToUint64(firstBlockBytes))
-
-	lastBlockBytes, err := aidaDb.Get([]byte(LastBlockPrefix))
-	if err != nil {
-		return fmt.Errorf("cannot get last block from db; %v", err)
-	}
-	log.Noticef("Last Block: %v", bigendian.BytesToUint64(lastBlockBytes))
-
-	timestampBytes, err := aidaDb.Get([]byte(TimestampPrefix))
-	if err != nil {
-		return fmt.Errorf("cannot get timestamp from db; %v", err)
+	if err = printDbType(aidaDb, log); err != nil {
+		return err
 	}
 
-	log.Noticef("Created: %v", time.Unix(int64(bigendian.BytesToUint64(timestampBytes)), 0))
-
-	log.Notice("UPDATESET INFO:")
-
-	intervalBytes, err := aidaDb.Get([]byte(substate.UpdatesetIntervalKey))
-	if err != nil {
-		return fmt.Errorf("cannot get updateset interval from db; %v", err)
+	// BLOCKS
+	if err = printBlocks(aidaDb, log); err != nil {
+		return err
 	}
-	log.Noticef("Interval: %v", bigendian.BytesToUint64(intervalBytes))
 
-	sizeBytes, err := aidaDb.Get([]byte(substate.UpdatesetSizeKey))
-	if err != nil {
-		return fmt.Errorf("cannot get updateset size from db; %v", err)
+	// EPOCHS
+	if err = printEpochs(aidaDb, log); err != nil {
+		return err
 	}
-	log.Noticef("Interval: %v", bigendian.BytesToUint64(sizeBytes))
+
+	// TIMESTAMP
+	if err = printCreateTime(aidaDb, log); err != nil {
+		return err
+	}
+
+	// UPDATESET
+	if err = printUpdateSetInfo(aidaDb, log); err != nil {
+		return err
+	}
 
 	return nil
 }
