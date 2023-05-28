@@ -61,12 +61,6 @@ func autoGen(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	defer func(log *logging.Logger) {
-		err = os.RemoveAll(aidaDbTmp)
-		if err != nil {
-			log.Criticalf("can't remove temporary folder: %v; %v", aidaDbTmp, err)
-		}
-	}(log)
 
 	// loading epoch range for generation
 	var firstEpoch, lastEpoch string
@@ -112,6 +106,12 @@ func autoGen(ctx *cli.Context) error {
 			return err
 		}
 		log.Infof("Successfully generated patch at: %v", patchTarPath)
+	}
+
+	// remove temporary folder only if generation completed successfully
+	err = os.RemoveAll(aidaDbTmp)
+	if err != nil {
+		log.Criticalf("can't remove temporary folder: %v; %v", aidaDbTmp, err)
 	}
 
 	return nil
