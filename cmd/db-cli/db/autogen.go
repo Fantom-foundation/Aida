@@ -120,7 +120,7 @@ func autoGen(ctx *cli.Context) error {
 // createPatch create patch from newly generated data
 func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpoch string, firstBlock uint64, lastBlock uint64, log *logging.Logger) (string, error) {
 	// create a parents of output directory
-	err := os.MkdirAll(cfg.Output, 0644)
+	err := os.MkdirAll(cfg.Output, 0744)
 	if err != nil {
 		return "", fmt.Errorf("failed to create %s directory; %s", cfg.DbTmp, err)
 	}
@@ -142,7 +142,10 @@ func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpo
 
 	patchTarName := patchName + ".tar.gz"
 	patchTarPath := filepath.Join(cfg.Output, patchTarName)
-	err = createPatchTarGz(patchPath, patchTarPath, log)
+	err = createPatchTarGz(patchName, cfg.Output, patchTarPath, log)
+	if err != nil {
+		return "", fmt.Errorf("unable to create patch tar.gz of %s; %v", patchPath, err)
+	}
 
 	log.Noticef("Patch %s generated successfully: %d(%s) - %d(%s) ", patchTarName, firstBlock, firstEpoch, lastBlock, lastEpoch)
 
@@ -175,7 +178,7 @@ func storeMd5sum(filePath string, log *logging.Logger) error {
 	md5FilePath := filePath + ".md5"
 
 	var file *os.File
-	file, err = os.OpenFile(md5FilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	file, err = os.OpenFile(md5FilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0744)
 	if err != nil {
 		return fmt.Errorf("unable to create %s; %v", md5FilePath, err)
 	}
@@ -241,12 +244,12 @@ func calculateMd5sum(filePath string, log *logging.Logger) (string, error) {
 }
 
 // createPatchTarGz compresses patch file into tar.gz
-func createPatchTarGz(patchPath string, patchTarPath string, log *logging.Logger) error {
+func createPatchTarGz(patchName string, patchParentPath string, patchTarPath string, log *logging.Logger) error {
 	log.Noticef("Generating compressed %v", patchTarPath)
-	cmd := exec.Command("bash", "-c", "tar -zcvf "+patchTarPath+" "+patchPath)
+	cmd := exec.Command("bash", "-c", "tar -zcvf "+patchTarPath+" -C "+patchParentPath+" "+patchName)
 	err := runCommand(cmd, nil, log)
 	if err != nil {
-		return fmt.Errorf("unable tar patch %v into %v; %v", patchPath, patchTarPath, err.Error())
+		return fmt.Errorf("unable tar patch %v into %v; %v", patchName, patchTarPath, err.Error())
 	}
 	return nil
 }
@@ -277,7 +280,7 @@ func updatePatchesJson(patchDir, patchName, fromEpoch string, toEpoch string, fr
 	}
 
 	// Open file for write and delete previous contents
-	file, err = os.OpenFile(jsonFilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	file, err = os.OpenFile(jsonFilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0744)
 	if err != nil {
 		return fmt.Errorf("unable to open %s; %v", patchesJsonName, err)
 	}
