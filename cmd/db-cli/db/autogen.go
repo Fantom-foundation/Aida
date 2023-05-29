@@ -120,7 +120,7 @@ func autoGen(ctx *cli.Context) error {
 // createPatch create patch from newly generated data
 func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpoch string, firstBlock uint64, lastBlock uint64, log *logging.Logger) (string, error) {
 	// create a parents of output directory
-	err := os.MkdirAll(cfg.Output, 0744)
+	err := os.MkdirAll(cfg.Output, 0755)
 	if err != nil {
 		return "", fmt.Errorf("failed to create %s directory; %s", cfg.DbTmp, err)
 	}
@@ -178,7 +178,7 @@ func storeMd5sum(filePath string, log *logging.Logger) error {
 	md5FilePath := filePath + ".md5"
 
 	var file *os.File
-	file, err = os.OpenFile(md5FilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0744)
+	file, err = os.OpenFile(md5FilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
 	if err != nil {
 		return fmt.Errorf("unable to create %s; %v", md5FilePath, err)
 	}
@@ -280,7 +280,7 @@ func updatePatchesJson(patchDir, patchName, fromEpoch string, toEpoch string, fr
 	}
 
 	// Open file for write and delete previous contents
-	file, err = os.OpenFile(jsonFilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0744)
+	file, err = os.OpenFile(jsonFilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
 	if err != nil {
 		return fmt.Errorf("unable to open %s; %v", patchesJsonName, err)
 	}

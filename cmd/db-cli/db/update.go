@@ -61,7 +61,7 @@ func Update(cfg *utils.Config) error {
 	}
 
 	// create a parents of temporary directory
-	err = os.MkdirAll(cfg.DbTmp, 0744)
+	err = os.MkdirAll(cfg.DbTmp, 0755)
 	if err != nil {
 		return fmt.Errorf("failed to create %s directory; %s", cfg.DbTmp, err)
 	}
@@ -172,7 +172,7 @@ func downloadPatchesJson(cfg *utils.Config) ([]interface{}, error) {
 // downloadFile downloads file - used for downloading individual patches.
 func downloadFile(filePath string, parentPath string, url string) error {
 	// Create parent directories if they don't exist
-	err := os.MkdirAll(parentPath, 0744)
+	err := os.MkdirAll(parentPath, 0755)
 	if err != nil {
 		return fmt.Errorf("error creating parent directories: %v", err)
 	}

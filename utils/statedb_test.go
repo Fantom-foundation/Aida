@@ -423,7 +423,7 @@ func TestStatedb_PrepareStateDB(t *testing.T) {
 			}
 
 			// Fill the json file with the info
-			err = os.WriteFile(filepath.Join(cfg.StateDbSrc, PathToDbInfo), dbInfoJson, 0744)
+			err = os.WriteFile(filepath.Join(cfg.StateDbSrc, PathToDbInfo), dbInfoJson, 0755)
 			if err != nil {
 				t.Fatalf("failed to write into DB info json file: %v", err)
 			}
