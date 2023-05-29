@@ -1,6 +1,0 @@
-[submodule "carmen"]
-	path = carmen
-	url = git@github.com:Fantom-foundation/Carmen.git
-[submodule "tosca"]
-	path = tosca
-	url = git@github.com:Fantom-foundation/Tosca.git
