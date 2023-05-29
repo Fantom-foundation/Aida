@@ -7,6 +7,7 @@ import (
 	"github.com/Fantom-foundation/Aida/cmd/db-cli/flags"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/Fantom-foundation/lachesis-base/common/bigendian"
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -65,6 +66,12 @@ func Merge(cfg *utils.Config, sourceDbPaths []string, mdi *MetadataInfo) error {
 	targetDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
 	if err != nil {
 		return fmt.Errorf("cannot open targetDb; %v", err)
+	}
+
+	chainIdBytes, _ := targetDb.Get([]byte(ChainIDPrefix))
+	if chainIdBytes != nil {
+		u := bigendian.BytesToUint16(chainIdBytes)
+		cfg.ChainID = int(u)
 	}
 
 	defer MustCloseDB(targetDb)

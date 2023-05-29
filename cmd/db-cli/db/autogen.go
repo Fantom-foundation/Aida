@@ -99,7 +99,7 @@ func autoGen(ctx *cli.Context) error {
 
 	var mdi *MetadataInfo
 	// update target aida-db
-	mdi, err = Generate(cfg, log)
+	mdi, err = Generate(ctx, cfg, log)
 	if err != nil {
 		return err
 	}
