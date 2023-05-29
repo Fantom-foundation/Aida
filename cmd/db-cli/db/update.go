@@ -1,18 +1,19 @@
 package db
 
 import (
+	"archive/tar"
 	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/klauspost/compress/gzip"
 	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
@@ -80,10 +81,10 @@ func Update(cfg *utils.Config) error {
 		log.Debugf("Downloaded %s", fileName)
 
 		log.Debugf("Decompressing %v", fileName)
-		cmd := exec.Command("bash", "-c", "tar -xzf "+compressedPatchPath+" -C "+cfg.DbTmp)
-		err = runCommand(cmd, nil, log)
+
+		err = extractTarGz(compressedPatchPath, cfg.DbTmp)
 		if err != nil {
-			return fmt.Errorf("unable extract tar patch %v; %v", compressedPatchPath, err)
+			return fmt.Errorf("unable to extract %s; %v", compressedPatchPath, err)
 		}
 
 		// extracted patch is folder without the .tar.gz extension
@@ -202,5 +203,69 @@ func downloadFile(filePath string, parentPath string, url string) error {
 		return err
 	}
 
+	return nil
+}
+
+// extractTarGz extracts tar file contents into location of output folder
+func extractTarGz(tarGzFile, outputFolder string) error {
+	// Open the tar.gz file
+	file, err := os.Open(tarGzFile)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	// Create the gzip readerÏ
+	gr, err := gzip.NewReader(file)
+	if err != nil {
+		return err
+	}
+	defer gr.Close()
+
+	// Create the tar reader
+	tr := tar.NewReader(gr)
+
+	// Extract the files from the tar reader
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			// Reached the end of the tar archive
+			break
+		}
+		if err != nil {
+			return err
+		}
+
+		// Determine the output file path
+		targetPath := filepath.Join(outputFolder, header.Name)
+
+		// Check if it's a directory
+		if header.FileInfo().IsDir() {
+			// Create the directory
+			err = os.MkdirAll(targetPath, 0755)
+			if err != nil {
+				return err
+			}
+		} else {
+			// Create the parent directory of the file
+			err = os.MkdirAll(filepath.Dir(targetPath), 0755)
+			if err != nil {
+				return err
+			}
+
+			// Create the output file
+			file, err := os.Create(targetPath)
+			if err != nil {
+				return err
+			}
+			defer file.Close()
+
+			// Copy the file content from the tar reader to the output file
+			_, err = io.Copy(file, tr)
+			if err != nil {
+				return err
+			}
+		}
+	}
 	return nil
 }

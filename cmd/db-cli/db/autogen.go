@@ -1,6 +1,7 @@
 package db
 
 import (
+	"archive/tar"
 	"bufio"
 	"encoding/json"
 	"fmt"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/klauspost/compress/gzip"
 	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
@@ -142,7 +144,7 @@ func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpo
 
 	patchTarName := patchName + ".tar.gz"
 	patchTarPath := filepath.Join(cfg.Output, patchTarName)
-	err = createPatchTarGz(patchName, cfg.Output, patchTarPath, log)
+	err = createPatchTarGz(patchPath, cfg.Output, patchTarName, log)
 	if err != nil {
 		return "", fmt.Errorf("unable to create patch tar.gz of %s; %v", patchPath, err)
 	}
@@ -244,12 +246,11 @@ func calculateMd5sum(filePath string, log *logging.Logger) (string, error) {
 }
 
 // createPatchTarGz compresses patch file into tar.gz
-func createPatchTarGz(patchName string, patchParentPath string, patchTarPath string, log *logging.Logger) error {
-	log.Noticef("Generating compressed %v", patchTarPath)
-	cmd := exec.Command("bash", "-c", "tar -zcvf "+patchTarPath+" -C "+patchParentPath+" "+patchName)
-	err := runCommand(cmd, nil, log)
+func createPatchTarGz(patchPath string, patchParentPath string, patchTarName string, log *logging.Logger) error {
+	log.Noticef("Generating compressed %v", patchTarName)
+	err := createTarGz(patchPath, patchParentPath, patchTarName)
 	if err != nil {
-		return fmt.Errorf("unable tar patch %v into %v; %v", patchName, patchTarPath, err.Error())
+		return fmt.Errorf("unable to compress %v; %v", patchTarName, err)
 	}
 	return nil
 }
@@ -459,4 +460,76 @@ func getFirstWord(str string) string {
 		return words[0]
 	}
 	return ""
+}
+
+// createTarGz create tar gz of given file/folder
+func createTarGz(dirPath, outputPath, outputName string) error {
+	// create a parents of temporary directory
+	err := os.MkdirAll(outputPath, 0755)
+	if err != nil {
+		return fmt.Errorf("failed to create %s directory; %s", outputPath, err)
+	}
+
+	// Create the output file
+	file, err := os.Create(filepath.Join(outputPath, outputName))
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	// Create the gzip writer
+	gw := gzip.NewWriter(file)
+	defer gw.Close()
+
+	// Create the tar writer
+	tw := tar.NewWriter(gw)
+	defer tw.Close()
+
+	// Get the base name of the directory
+	dirName := filepath.Base(dirPath)
+
+	// Walk through the directory recursively
+	err = filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Create a new tar header
+		header, err := tar.FileInfoHeader(info, info.Name())
+		if err != nil {
+			return err
+		}
+
+		// Update the header's name to include the directory
+		relPath, err := filepath.Rel(dirPath, path)
+		if err != nil {
+			return err
+		}
+		header.Name = filepath.Join(dirName, relPath)
+
+		// Write the header
+		err = tw.WriteHeader(header)
+		if err != nil {
+			return err
+		}
+
+		// If it's not a directory, write the file content
+		if !info.IsDir() {
+			file, err := os.Open(path)
+			if err != nil {
+				return err
+			}
+			defer file.Close()
+
+			// Copy the file content to the tar writer
+			_, err = io.Copy(tw, file)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+
+	return err
 }
