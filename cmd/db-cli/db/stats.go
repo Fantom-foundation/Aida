@@ -1,6 +1,7 @@
 package db
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -104,7 +105,7 @@ func printUpdateSetInfo(aidaDb ethdb.Database, log *logging.Logger) error {
 func printDbType(aidaDb ethdb.Database, log *logging.Logger) error {
 	typeBytes, err := aidaDb.Get([]byte(TypePrefix))
 	if err != nil {
-		return fmt.Errorf("cannot get db-type from db; %v", err)
+		return errors.New("this aida-b seems to have no metadata")
 	}
 
 	typeStr := string(typeBytes)
