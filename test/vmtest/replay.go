@@ -11,6 +11,7 @@ import (
 
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/Fantom-foundation/go-opera/evmcore"
+	"github.com/Fantom-foundation/go-opera/opera"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
@@ -86,10 +87,10 @@ func replayTask(block uint64, tx int, recording *substate.Substate, taskPool *su
 		chainConfig *params.ChainConfig
 	)
 
-	// vmConfig = lachesis.DefaultVMConfig
+	vmConfig = opera.DefaultVMConfig
+	vmConfig.NoBaseFee = true
 
-	chainConfig = params.AllEthashProtocolChanges
-	chainConfig.ChainID = big.NewInt(int64(chainID))
+	chainConfig = GetChainConfig(chainID)
 
 	var hashError error
 	getHash := func(num uint64) common.Hash {
@@ -154,11 +155,7 @@ func replayTask(block uint64, tx int, recording *substate.Substate, taskPool *su
 		return hashError
 	}
 
-	if chainConfig.IsByzantium(blockCtx.BlockNumber) {
-		statedb.Finalise(true)
-	} else {
-		statedb.IntermediateRoot(chainConfig.IsEIP158(blockCtx.BlockNumber))
-	}
+	statedb.Finalise(true)
 
 	evmResult := &substate.SubstateResult{}
 	if msgResult.Failed() {
@@ -340,4 +337,22 @@ func replayAction(ctx *cli.Context) error {
 	fmt.Printf("substate-cli replay: net VM time: %v\n", getVmDuration())
 
 	return err
+}
+
+// GetChainConfig returns chain configuration of either mainnet or testnets.
+func GetChainConfig(chainID int) *params.ChainConfig {
+	chainConfig := params.AllEthashProtocolChanges
+	chainConfig.ChainID = big.NewInt(int64(chainID))
+	if chainID == 250 {
+		// mainnet chainID 250
+		chainConfig.BerlinBlock = new(big.Int).SetUint64(37455223)
+		chainConfig.LondonBlock = new(big.Int).SetUint64(37534833)
+	} else if chainID == 4002 {
+		// testnet chainID 4002
+		chainConfig.BerlinBlock = new(big.Int).SetUint64(1559470)
+		chainConfig.LondonBlock = new(big.Int).SetUint64(7513335)
+	} else {
+		log.Fatalf("unknown chain id %v", chainID)
+	}
+	return chainConfig
 }

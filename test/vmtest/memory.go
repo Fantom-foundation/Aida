@@ -18,8 +18,6 @@ type StateDB interface {
 	// Also, some extra functionality must be provided to the replay tool.
 	Prepare(common.Hash, int)
 	Finalise(bool)
-	IntermediateRoot(deleteEmptyObjects bool) common.Hash
-	Commit(bool) (common.Hash, error)
 	GetLogs(common.Hash, common.Hash) []*types.Log
 	GetSubstatePostAlloc() substate.SubstateAlloc
 }
@@ -188,7 +186,6 @@ func (db *inMemoryStateDB) GetCommittedState(addr common.Address, key common.Has
 }
 
 func (db *inMemoryStateDB) GetState(addr common.Address, key common.Hash) common.Hash {
-	//fmt.Printf("SLOAD: %v %v\n", addr, key)
 	slot := slot{addr, key}
 	for state := db.state; state != nil; state = state.parent {
 		val, exists := state.storage[slot]
@@ -228,19 +225,14 @@ func (db *inMemoryStateDB) Exist(addr common.Address) bool {
 	for state := db.state; state != nil; state = state.parent {
 		_, exists := state.touched[addr]
 		if exists {
-			//fmt.Printf("Exists called for %v - it exists: true\n", addr)
 			return true
 		}
 	}
 	_, exists := (*db.alloc)[addr]
-	//fmt.Printf("Exists called for %v - it exists: %t\n", addr, exists)
 	return exists
 }
 
 func (db *inMemoryStateDB) Empty(addr common.Address) bool {
-	//res := db.GetNonce(addr) == 0 && db.GetBalance(addr).Sign() == 0
-	//fmt.Printf("Is empty called for %v - result: %t\n", addr, res)
-	//return res
 	return db.GetNonce(addr) == 0 && db.GetBalance(addr).Sign() == 0
 }
 
@@ -328,14 +320,6 @@ func (db *inMemoryStateDB) Prepare(common.Hash, int) {
 
 func (db *inMemoryStateDB) Finalise(bool) {
 	// nothing to do ...
-}
-func (db *inMemoryStateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
-	panic("not implemented")
-	return common.Hash{}
-}
-
-func (db *inMemoryStateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
-	return common.Hash{}, nil
 }
 
 func collectLogs(s *snapshot) []*types.Log {
