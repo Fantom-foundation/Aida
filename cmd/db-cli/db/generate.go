@@ -75,7 +75,7 @@ func generate(ctx *cli.Context) error {
 		}()
 	}
 
-	_, err = Generate(ctx, cfg, log)
+	_, err = Generate(cfg, log)
 	if err != nil {
 		return err
 	}
@@ -84,11 +84,11 @@ func generate(ctx *cli.Context) error {
 }
 
 // Generate is used to record/update aida-db
-func Generate(ctx *cli.Context, cfg *utils.Config, log *logging.Logger) (*MetadataInfo, error) {
+func Generate(cfg *utils.Config, log *logging.Logger) (*MetadataInfo, error) {
 	mdi := new(MetadataInfo)
 	mdi.dbType = genType
-	// todo extract chainid from opera
-	err := prepareOpera(ctx, cfg, log, mdi)
+
+	err := prepareOpera(cfg, log, mdi)
 	if err != nil {
 		return nil, err
 	}
@@ -116,13 +116,9 @@ func Generate(ctx *cli.Context, cfg *utils.Config, log *logging.Logger) (*Metada
 }
 
 // prepareOpera confirms that the opera is initialized
-func prepareOpera(ctx *cli.Context, cfg *utils.Config, log *logging.Logger, mdi *MetadataInfo) error {
+func prepareOpera(cfg *utils.Config, log *logging.Logger, mdi *MetadataInfo) error {
 	_, err := os.Stat(cfg.Db)
 	if os.IsNotExist(err) {
-		if ctx.String(utils.ChainIDFlag.Name) == "" {
-			return fmt.Errorf("you need to specify chain-id when creating new aida-db (--%v)", utils.ChainIDFlag.Name)
-		}
-
 		log.Noticef("Initialising opera from genesis")
 		// previous opera database isn't used - generate new one from genesis
 		err = initOperaFromGenesis(cfg, log)

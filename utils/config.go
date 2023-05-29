@@ -75,7 +75,6 @@ var (
 	ChainIDFlag = cli.IntFlag{
 		Name:  "chainid",
 		Usage: "ChainID for replayer",
-		Value: 250,
 	}
 	CacheFlag = cli.IntFlag{
 		Name:  "cache",
@@ -574,7 +573,8 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		UpdateBufferSize:    ctx.Uint64(UpdateBufferSizeFlag.Name) << 20, // convert from MiB to B
 	}
 	if cfg.ChainID == 0 {
-		cfg.ChainID = ChainIDFlag.Value
+		log.Warning("--chainid was not set; setting default value for mainnet (250)")
+		cfg.ChainID = 250
 	}
 	setFirstBlockFromChainID(cfg.ChainID)
 	if cfg.RandomSeed < 0 {

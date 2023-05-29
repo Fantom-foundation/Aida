@@ -118,7 +118,7 @@ func putChainIDMetadata(targetDb ethdb.Database, chainID int) error {
 	byteChainID := bigendian.Uint16ToBytes(uint16(chainID))
 
 	if err := targetDb.Put([]byte(ChainIDPrefix), byteChainID); err != nil {
-		return fmt.Errorf("cannot put chainID into db metadata; %v", err)
+		return fmt.Errorf("cannot put chain-id into db metadata; %v", err)
 	}
 
 	return nil
