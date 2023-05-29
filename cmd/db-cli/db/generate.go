@@ -95,7 +95,7 @@ func Generate(cfg *utils.Config, log *logging.Logger) (*MetadataInfo, error) {
 
 	err = recordSubstate(cfg, log, mdi)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	err = genDeletedAccounts(cfg, log, mdi)
