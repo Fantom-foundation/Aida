@@ -10,8 +10,8 @@ import (
 	"time"
 
 	substate "github.com/Fantom-foundation/Substate"
-	"github.com/Fantom-foundation/rc-testing/go-opera/evmcore"
-	"github.com/Fantom-foundation/rc-testing/go-opera/opera"
+	"github.com/Fantom-foundation/go-opera-base/evmcore"
+	"github.com/Fantom-foundation/go-opera/opera"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"

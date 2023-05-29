@@ -5,6 +5,7 @@ go 1.19
 require (
 	github.com/Fantom-foundation/Substate v0.0.0-20230512151613-f039b23bf3f7
 	github.com/Fantom-foundation/go-opera v1.1.2-rc.6
+	github.com/Fantom-foundation/go-opera-base v0.0.0-00010101000000-000000000000
 	github.com/ethereum/go-ethereum v1.10.25
 	github.com/urfave/cli/v2 v2.24.4
 )
@@ -31,7 +32,7 @@ require (
 	github.com/prometheus/tsdb v0.10.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/shirou/gopsutil v3.21.4-0.20210419000835-c7a38de76ee5+incompatible // indirect
-	github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7 // indirect
+	github.com/syndtr/goleveldb v1.0.1-0.20220614013038-64ee5596c38a // indirect
 	github.com/tklauser/go-sysconf v0.3.5 // indirect
 	github.com/tklauser/numcpus v0.2.2 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
@@ -43,5 +44,4 @@ require (
 
 replace github.com/ethereum/go-ethereum => github.com/Fantom-foundation/go-ethereum v1.10.8-ftm-rc11
 
-//replace github.com/Fantom-foundation/go-opera => ./go-opera
-
+replace github.com/Fantom-foundation/go-opera-base => ./go-opera
