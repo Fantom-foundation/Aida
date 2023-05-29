@@ -9,10 +9,13 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/klauspost/compress/gzip"
 	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
@@ -48,15 +51,31 @@ func update(ctx *cli.Context) error {
 func Update(cfg *utils.Config) error {
 	log := logger.NewLogger(cfg.LogLevel, "DB Update")
 
-	// TODO load stats of current aida-db to download just latest patches
-	if true {
-		// aida-db already exists appending only new patches
-	} else {
+	var startDownloadFromBlock uint64
+
+	// load stats of current aida-db to download just latest patches
+	_, err := os.Stat(cfg.AidaDb)
+	if os.IsNotExist(err) {
 		// aida-db does not exist, download all available patches
+		startDownloadFromBlock = 0
+	} else {
+		// aida-db already exists appending only new patches
+		// open targetDB
+		targetDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", true)
+		if err != nil {
+			return fmt.Errorf("targetDb; %v", err)
+		}
+
+		// TODO retrieve metadata
+		// and set correct startDownloadFromEpoch from metadata
+		startDownloadFromBlock = 0
+
+		// close target database
+		MustCloseDB(targetDb)
 	}
 
 	// retrieve available patches from aida-db generation server
-	patches, err := retrievePatchesToDownload(cfg, log)
+	patches, err := retrievePatchesToDownload(cfg, startDownloadFromBlock, log)
 	if err != nil {
 		return fmt.Errorf("unable to prepare list of aida-db patches for download; %v", err)
 	}
@@ -115,14 +134,14 @@ func Update(cfg *utils.Config) error {
 }
 
 // retrievePatchesToDownload retrieves all available patches from aida-db generation server.
-func retrievePatchesToDownload(cfg *utils.Config, log *logging.Logger) ([]string, error) {
+func retrievePatchesToDownload(cfg *utils.Config, startDownloadFromBlock uint64, log *logging.Logger) ([]string, error) {
 	// download list of available patches
 	patches, err := downloadPatchesJson(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("unable to download patches: %v", err)
 	}
 
-	// TODO change only few patches may be downloaded not all
+	// list of patches to be downloaded
 	var fileNames = make([]string, len(patches))
 
 	for i, patch := range patches {
@@ -131,14 +150,27 @@ func retrievePatchesToDownload(cfg *utils.Config, log *logging.Logger) ([]string
 			return nil, fmt.Errorf("invalid patch in json; %v", patch)
 		}
 
+		// retrieve fromBlock start of patch
+		patchFromBlockStr, ok := patchMap["fromBlock"].(string)
+		if !ok {
+			return nil, fmt.Errorf("invalid fromEpoch attributes in patch; %v", patchMap)
+		}
+		patchFromBlock, err := strconv.ParseUint(patchFromBlockStr, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("unable to parse uint64 fromEpoch attribute in patch %v; %v", patchMap, err)
+		}
+		if patchFromBlock <= startDownloadFromBlock {
+			continue
+		}
+
 		fileName, ok := patchMap["fileName"].(string)
 		if !ok {
-			return nil, fmt.Errorf("invalid attributes in patch; %v", patchMap)
+			return nil, fmt.Errorf("invalid fileName attributes in patch; %v", patchMap)
 		}
 		fileNames[i] = fileName
 	}
 
-	// TODO order patches by their sequence - patches.json doesn't have to be ordered
+	sort.Strings(fileNames)
 
 	return fileNames, nil
 }
