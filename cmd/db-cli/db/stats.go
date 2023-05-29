@@ -21,19 +21,96 @@ var Stats = cli.Command{
 	Name:  "stats",
 	Usage: "Prints statistics about AidaDb",
 	Subcommands: []*cli.Command{
-		&cmdStats,
+		&cmdPrint,
 		&cmdAll,
 		&cmdDelAcc,
+		&cmdCount,
 	},
-
-	Description: `
-The stats command requires one argument: <blockNunLast> -- the last block of aida-db.`,
 }
 
-var cmdStats = cli.Command{
-	Action: printStats,
-	Name:   "stats",
-	Usage:  "Prints metadata of AidaDb",
+var cmdCount = cli.Command{
+	Name:  "count",
+	Usage: "Prints count of records in AidaDb",
+	Subcommands: []*cli.Command{
+		&cmdCountDestroyed,
+		&cmdCountSubstate,
+	},
+}
+
+var cmdCountDestroyed = cli.Command{
+	Action:    printDestroyedCount,
+	Name:      "destroyed",
+	Usage:     "Prints how many destroyed accounts are in AidaDb between given block range",
+	ArgsUsage: "<firstBlockNum>, <lastBlockNum>",
+	Flags: []cli.Flag{
+		&utils.AidaDbFlag,
+	},
+}
+
+func printDestroyedCount(ctx *cli.Context) error {
+	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-Stats")
+
+	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
+	if argErr != nil {
+		return argErr
+	}
+
+	db, err := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
+	if err != nil {
+		return err
+	}
+
+	accounts, err := db.GetAccountsDestroyedInRange(cfg.First, cfg.Last)
+	if err != nil {
+		return fmt.Errorf("cannot get all destroyed accounts; %v", err)
+	}
+
+	log.Noticef("Found %v deleted accounts between blocks %v-%v", len(accounts), cfg.First, cfg.Last)
+
+	return nil
+}
+
+var cmdCountSubstate = cli.Command{
+	Action:    printSubstateCount,
+	Name:      "substate",
+	Usage:     "Prints how many substates are in AidaDb between given block range",
+	ArgsUsage: "<firstBlockNum>, <lastBlockNum>",
+	Flags: []cli.Flag{
+		&utils.AidaDbFlag,
+	},
+}
+
+func printSubstateCount(ctx *cli.Context) error {
+	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-Stats")
+
+	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
+	if argErr != nil {
+		return argErr
+	}
+
+	substate.SetSubstateDb(cfg.AidaDb)
+	substate.OpenSubstateDBReadOnly()
+
+	var count uint64
+
+	iter := substate.NewSubstateIterator(cfg.First, 10)
+	for iter.Next() {
+		if iter.Value().Block > cfg.Last {
+			break
+		}
+		count++
+	}
+
+	log.Noticef("Found %v substates between blocks %v-%v", count, cfg.First, cfg.Last)
+
+	return nil
+}
+
+var cmdPrint = cli.Command{
+	Action:    printStats,
+	Name:      "print",
+	Usage:     "Prints metadata of AidaDb",
+	ArgsUsage: "<lastBlockNum>",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 	},
@@ -179,7 +256,7 @@ func printStats(ctx *cli.Context) error {
 		return err
 	}
 
-	// UPDATESET
+	// UPDATE-SET
 	if err = printUpdateSetInfo(aidaDb, log); err != nil {
 		return err
 	}
