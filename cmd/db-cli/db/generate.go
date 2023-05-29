@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/Fantom-foundation/Aida/cmd/db-cli/flags"
 	"github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
 	"github.com/Fantom-foundation/Aida/cmd/updateset-cli/updateset"
 	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/state"
@@ -42,6 +43,7 @@ var GenerateCommand = cli.Command{
 		&utils.ChainIDFlag,
 		&utils.CacheFlag,
 		&logger.LogLevelFlag,
+		&flags.SkipMetadata,
 	},
 	Description: `
 The db generate command requires events as an argument:

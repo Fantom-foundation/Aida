@@ -10,6 +10,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/Fantom-foundation/Aida/cmd/db-cli/flags"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/op/go-logging"
@@ -34,6 +35,7 @@ var AutoGenCommand = cli.Command{
 		&utils.OperaDatadirFlag,
 		&utils.OutputFlag,
 		&logger.LogLevelFlag,
+		&flags.SkipMetadata,
 	},
 	Description: `
 Autogen generates aida-db patches and handles second opera for event generation. Generates event file, which is supplied into generate to create aida-db patch.

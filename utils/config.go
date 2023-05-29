@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Fantom-foundation/Aida/cmd/db-cli/flags"
 	"github.com/Fantom-foundation/Aida/logger"
 	substate "github.com/Fantom-foundation/Substate"
 	_ "github.com/Fantom-foundation/Tosca/go/vm/evmone"
@@ -387,6 +388,7 @@ type Config struct {
 	Profile             bool              // enable micro profiling
 	RandomSeed          int64             // set random seed for stochastic testing
 	SkipPriming         bool              // skip priming of the state DB
+	SkipMetadata        bool              // skip metadata insert/getting into AidaDb
 	ShadowDb            bool              // defines we want to open an existing db as shadow
 	ShadowImpl          string            // implementation of the shadow DB to use, empty if disabled
 	ShadowVariant       string            // database variant of the shadow DB to be used
@@ -536,6 +538,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		PrimeThreshold:      ctx.Int(PrimeThresholdFlag.Name),
 		Profile:             ctx.Bool(ProfileFlag.Name),
 		SkipPriming:         ctx.Bool(SkipPrimingFlag.Name),
+		SkipMetadata:        ctx.Bool(flags.SkipMetadata.Name),
 		ShadowDb:            ctx.Bool(ShadowDb.Name),
 		ShadowImpl:          ctx.String(ShadowDbImplementationFlag.Name),
 		ShadowVariant:       ctx.String(ShadowDbVariantFlag.Name),

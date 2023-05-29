@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/Fantom-foundation/Aida/cmd/db-cli/flags"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
@@ -22,6 +23,7 @@ var MergeCommand = cli.Command{
 		&utils.DeleteSourceDbsFlag,
 		&logger.LogLevelFlag,
 		&utils.CompactDbFlag,
+		&flags.SkipMetadata,
 	},
 	Description: `
 Creates target aida-db by merging source databases from arguments:
@@ -77,9 +79,11 @@ func Merge(cfg *utils.Config, sourceDbPaths []string, mdi *MetadataInfo) error {
 		return err
 	}
 
-	// start with putting metadata into new targetDb
-	if err = processMetadata(sourceDBs, targetDb, mdi); err != nil {
-		return fmt.Errorf("cannot process metadata; %v", err)
+	if !cfg.SkipMetadata {
+		// start with putting metadata into new targetDb
+		if err = processMetadata(sourceDBs, targetDb, mdi); err != nil {
+			return fmt.Errorf("cannot process metadata; %v", err)
+		}
 	}
 
 	var totalWritten uint64
