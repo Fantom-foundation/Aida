@@ -10,7 +10,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/Fantom-foundation/Aida/cmd/db-cli/flags"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/op/go-logging"
@@ -38,7 +37,7 @@ var AutoGenCommand = cli.Command{
 		&flags.SkipMetadata,
 	},
 	Description: `
-Autogen generates aida-db patches and handles second opera for event generation. Generates event file, which is supplied into generate to create aida-db patch.
+AutoGen generates aida-db patches and handles second opera for event generation. Generates event file, which is supplied into generate to create aida-db patch.
 `,
 }
 
@@ -50,7 +49,7 @@ func autoGen(ctx *cli.Context) error {
 		return argErr
 	}
 
-	log := logger.NewLogger(cfg.LogLevel, "autogen")
+	log := logger.NewLogger(cfg.LogLevel, "autoGen")
 
 	log.Info("Starting Automatic generation")
 
@@ -104,23 +103,24 @@ func autoGen(ctx *cli.Context) error {
 		return err
 	}
 
-	// if patch output dir is selected inserting just the patch into there
+	// if patch output dir is selected inserting patch.tar.gz, patch.tar.gz.md5 into there and updating patches.json
 	if cfg.Output != "" {
 		mdi.dbType = patchType
-		patchPath, err := createPatch(cfg, aidaDbTmp, firstEpoch, lastEpoch, mdi)
+		patchTarPath, err := createPatch(cfg, aidaDbTmp, firstEpoch, lastEpoch, cfg.First, cfg.Last, log, mdi)
+
 		if err != nil {
 			return err
 		}
-		log.Infof("Successfully generated patch at: %v", patchPath)
+		log.Infof("Successfully generated patch at: %v", patchTarPath)
 	}
 
 	return nil
 }
 
 // createPatch create patch from newly generated data
-func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpoch string, mdi *MetadataInfo) (string, error) {
+func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpoch string, firstBlock uint64, lastBlock uint64, log *logging.Logger, mdi *MetadataInfo) (string, error) {
 	// create a parents of output directory
-	err := os.MkdirAll(cfg.Output, 0700)
+	err := os.MkdirAll(cfg.Output, 0644)
 	if err != nil {
 		return "", fmt.Errorf("failed to create %s directory; %s", cfg.DbTmp, err)
 	}
@@ -129,17 +129,204 @@ func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpo
 	// these databases contain just the patch data
 	loadSourceDBPaths(cfg, aidaDbTmp)
 
-	// creating patch
-	patchName := "aida-db-" + firstEpoch + "-" + lastEpoch
-	cfg.AidaDb = filepath.Join(cfg.Output, patchName)
+	// creating patch name
+	// add leading zeroes to filename to make it sortable
+	patchName := "aida-db-" + fmt.Sprintf("%09s", lastEpoch)
+	patchPath := filepath.Join(cfg.Output, patchName)
+	// cfg.AidaDb is now pointing to patch this is needed for Merge function
+	cfg.AidaDb = patchPath
 
 	// merge UpdateDb into AidaDb
 	err = Merge(cfg, []string{cfg.SubstateDb, cfg.UpdateDb, cfg.DeletionDb}, mdi)
 	if err != nil {
+		return "", fmt.Errorf("unable to merge into patch; %v", err)
+	}
+
+	patchTarName := patchName + ".tar.gz"
+	patchTarPath := filepath.Join(cfg.Output, patchTarName)
+	err = createPatchTarGz(patchPath, patchTarPath, log)
+
+	log.Noticef("Patch %s generated successfully: %d(%s) - %d(%s) ", patchTarName, firstBlock, firstEpoch, lastBlock, lastEpoch)
+
+	err = updatePatchesJson(cfg.Output, patchTarName, firstEpoch, lastEpoch, firstBlock, lastBlock, log)
+	if err != nil {
 		return "", err
 	}
 
-	return cfg.AidaDb, nil
+	err = storeMd5sum(patchTarPath, log)
+	if err != nil {
+		return "", err
+	}
+
+	// remove patchFiles
+	err = os.RemoveAll(patchPath)
+	if err != nil {
+		return "", err
+	}
+
+	return patchTarPath, nil
+}
+
+// storeMd5sum store md5sum of aida-db patch into a file
+func storeMd5sum(filePath string, log *logging.Logger) error {
+	md5sum, err := calculateMd5sum(filePath, log)
+	if err != nil {
+		return err
+	}
+
+	md5FilePath := filePath + ".md5"
+
+	var file *os.File
+	file, err = os.OpenFile(md5FilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return fmt.Errorf("unable to create %s; %v", md5FilePath, err)
+	}
+
+	// Write the result
+	w := bufio.NewWriter(file)
+	_, err = w.Write([]byte(md5sum))
+	if err != nil {
+		return fmt.Errorf("unable to write %s into %s; %v", md5sum, md5FilePath, err)
+	}
+	err = w.Flush()
+	if err != nil {
+		return fmt.Errorf("unable to flush %s; %v", md5FilePath, err)
+	}
+
+	err = file.Close()
+	if err != nil {
+		return fmt.Errorf("unable to close %s; %v", patchesJsonName, err)
+	}
+
+	return nil
+}
+
+// calculateMd5sum calculates md5sum of a file
+func calculateMd5sum(filePath string, log *logging.Logger) (string, error) {
+	var response = ""
+	var wg sync.WaitGroup
+	resultChan := make(chan string, 10)
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for {
+			select {
+			case s, ok := <-resultChan:
+				if !ok {
+					return
+				}
+				response += s
+			}
+		}
+	}()
+
+	cmd := exec.Command("bash", "-c", "md5sum "+filePath)
+	err := runCommand(cmd, resultChan, log)
+	if err != nil {
+		return "", fmt.Errorf("unable sum md5; %v", err.Error())
+	}
+
+	// wait until reading of result finishes
+	wg.Wait()
+
+	md5 := getFirstWord(response)
+	if md5 == "" {
+		return "", fmt.Errorf("unable to calculate md5sum")
+	}
+
+	// md5 is always 32 characters long
+	if len(md5) != 32 {
+		return "", fmt.Errorf("unable to generate correct md5sum; Error: %v is not md5", md5)
+	}
+
+	return md5, nil
+}
+
+// createPatchTarGz compresses patch file into tar.gz
+func createPatchTarGz(patchPath string, patchTarPath string, log *logging.Logger) error {
+	log.Noticef("Generating compressed %v", patchTarPath)
+	cmd := exec.Command("bash", "-c", "tar -zcvf "+patchTarPath+" "+patchPath)
+	err := runCommand(cmd, nil, log)
+	if err != nil {
+		return fmt.Errorf("unable tar patch %v into %v; %v", patchPath, patchTarPath, err.Error())
+	}
+	return nil
+}
+
+// updatePatchesJson update patches.json file
+func updatePatchesJson(patchDir, patchName, fromEpoch string, toEpoch string, fromBlock uint64, toBlock uint64, log *logging.Logger) error {
+	jsonFilePath := filepath.Join(patchDir, patchesJsonName)
+	var patchesJson []map[string]string
+
+	// Attempt to load previous JSON
+	file, err := os.Open(jsonFilePath)
+	if err == nil {
+		// Unmarshal the JSON
+		var fileContent []byte
+		fileContent, err = io.ReadAll(file)
+		if err != nil {
+			return fmt.Errorf("unable to read file %s; %v", patchesJsonName, err)
+		}
+		err = json.Unmarshal(fileContent, &patchesJson)
+		if err != nil {
+			return fmt.Errorf("unable to unmarshal json from file %s; %v", patchesJsonName, err)
+		}
+		// Close the file
+		err = file.Close()
+		if err != nil {
+			return fmt.Errorf("unable to close %s; %v", patchesJsonName, err)
+		}
+	}
+
+	// Open file for write and delete previous contents
+	file, err = os.OpenFile(jsonFilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return fmt.Errorf("unable to open %s; %v", patchesJsonName, err)
+	}
+
+	// Initialize the array if it doesn't exist
+	if patchesJson == nil {
+		patchesJson = make([]map[string]string, 0)
+	}
+
+	// Create a new patch object
+	newPatch := map[string]string{
+		"fileName":  patchName,
+		"fromBlock": strconv.FormatUint(fromBlock, 10),
+		"toBlock":   strconv.FormatUint(toBlock, 10),
+		"fromEpoch": fromEpoch,
+		"toEpoch":   toEpoch,
+	}
+
+	// Append the new patch to the array
+	patchesJson = append(patchesJson, newPatch)
+
+	// Convert the array to JSON bytes
+	jsonBytes, err := json.Marshal(patchesJson)
+	if err != nil {
+		return fmt.Errorf("unable to marshal %v; %v", patchesJson, err)
+	}
+
+	// Write the result
+	w := bufio.NewWriter(file)
+	_, err = w.Write(jsonBytes)
+	if err != nil {
+		return fmt.Errorf("unable to write %v into %s; %v", patchesJson, jsonFilePath, err)
+	}
+	err = w.Flush()
+	if err != nil {
+		return fmt.Errorf("unable to flush %v; %v", patchesJson, err)
+	}
+
+	// Close the file
+	err = file.Close()
+	if err != nil {
+		return fmt.Errorf("unable to close %s; %v", patchesJsonName, err)
+	}
+
+	log.Noticef("Updated %s in %s with new patch:\n%v\n", patchesJsonName, jsonFilePath, newPatch)
+
+	return nil
 }
 
 // generateEvents generates events between First and Last epoch numbers from config
@@ -161,14 +348,15 @@ func loadGenerationRange(cfg *utils.Config, log *logging.Logger) (string, string
 	_, err := os.Stat(cfg.Db)
 	if !os.IsNotExist(err) {
 		// opera was already used for generation starting from the next epoch
-		_, previousEpoch, err = GetOperaBlock(cfg)
+		// !!! returning number one block greater than actual block
+		_, previousEpoch, err = GetOperaBlockAndEpoch(cfg)
 		if err != nil {
 			return "", "", false, fmt.Errorf("unable to retrieve epoch of generation opera in path %v; %v", cfg.Db, err)
 		}
 		log.Debugf("Generation will start from: %v", previousEpoch)
 	}
 
-	nextEpoch, err := getLastOperaEpoch(cfg, log)
+	nextEpoch, err := getLastEpochFromRunningOpera(cfg, log)
 	if err != nil {
 		return "", "", false, fmt.Errorf("unable to retrieve epoch of source opera in path %v; %v", cfg.OperaDatadir, err)
 	}
@@ -176,20 +364,24 @@ func loadGenerationRange(cfg *utils.Config, log *logging.Logger) (string, string
 	nextEpoch -= 1
 	log.Debugf("Last available sealed epoch is %v", nextEpoch)
 
-	// recording of events will start with the following epoch of last recording
-	firstEpoch := strconv.FormatUint(previousEpoch, 10)
-
 	// recording of events will stop with last sealed opera
 	lastEpoch := strconv.FormatUint(nextEpoch, 10)
 
 	if previousEpoch > nextEpoch {
+		// since GetOperaBlockAndEpoch returns off by one epoch number label
+		// needs to be fixed in no need epochs are available
+		firstEpoch := strconv.FormatUint(previousEpoch-1, 10)
 		return firstEpoch, lastEpoch, false, nil
 	}
+
+	// recording of events will start with the following epoch of last recording
+	firstEpoch := strconv.FormatUint(previousEpoch, 10)
+
 	return firstEpoch, lastEpoch, true, nil
 }
 
-// getLastOperaEpoch loads last epoch from opera
-func getLastOperaEpoch(cfg *utils.Config, log *logging.Logger) (uint64, error) {
+// getLastEpochFromRunningOpera loads last epoch from running opera
+func getLastEpochFromRunningOpera(cfg *utils.Config, log *logging.Logger) (uint64, error) {
 	var response = ""
 	var wg sync.WaitGroup
 	resultChan := make(chan string, 10)
@@ -257,4 +449,13 @@ func stopOpera(log *logging.Logger) error {
 		return fmt.Errorf("unable stop opera; %v", err.Error())
 	}
 	return nil
+}
+
+// getFirstWord retrieves first word from string
+func getFirstWord(str string) string {
+	words := strings.Fields(str)
+	if len(words) > 0 {
+		return words[0]
+	}
+	return ""
 }

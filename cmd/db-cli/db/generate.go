@@ -66,18 +66,16 @@ func generate(ctx *cli.Context) error {
 		return err
 	}
 
-	if !cfg.KeepDb {
-		defer func() {
-			err = os.RemoveAll(aidaDbTmp)
-			if err != nil {
-				panic(err)
-			}
-		}()
-	}
-
 	_, err = Generate(cfg, log)
 	if err != nil {
 		return err
+	}
+
+	if !cfg.KeepDb {
+		err = os.RemoveAll(aidaDbTmp)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -97,7 +95,7 @@ func Generate(cfg *utils.Config, log *logging.Logger) (*MetadataInfo, error) {
 
 	err = recordSubstate(cfg, log, mdi)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	err = genDeletedAccounts(cfg, log, mdi)
@@ -112,7 +110,7 @@ func Generate(cfg *utils.Config, log *logging.Logger) (*MetadataInfo, error) {
 
 	log.Noticef("Aida-db updated from block %v to %v", cfg.First-1, cfg.Last)
 
-	return nil, nil
+	return mdi, nil
 }
 
 // prepareOpera confirms that the opera is initialized
@@ -126,7 +124,7 @@ func prepareOpera(cfg *utils.Config, log *logging.Logger, mdi *MetadataInfo) err
 			return fmt.Errorf("aida-db; Error: %v", err)
 		}
 	}
-	lastOperaBlock, firstEpoch, err := GetOperaBlock(cfg)
+	lastOperaBlock, firstEpoch, err := GetOperaBlockAndEpoch(cfg)
 	if err != nil {
 		return fmt.Errorf("couldn't retrieve block from existing opera database %v ; Error: %v", cfg.Db, err)
 	}
@@ -145,7 +143,7 @@ func prepareOpera(cfg *utils.Config, log *logging.Logger, mdi *MetadataInfo) err
 func prepare(cfg *utils.Config) (string, error) {
 	if cfg.DbTmp != "" {
 		// create a parents of temporary directory
-		err := os.MkdirAll(cfg.DbTmp, 0700)
+		err := os.MkdirAll(cfg.DbTmp, 0644)
 		if err != nil {
 			return "", fmt.Errorf("failed to create %s directory; %s", cfg.DbTmp, err)
 		}
@@ -171,8 +169,8 @@ func loadSourceDBPaths(cfg *utils.Config, aidaDbTmp string) {
 	cfg.WorldStateDb = filepath.Join(aidaDbTmp, "worldstate")
 }
 
-// GetOperaBlock retrieves current block of opera head
-func GetOperaBlock(cfg *utils.Config) (uint64, uint64, error) {
+// GetOperaBlockAndEpoch retrieves current block of opera head
+func GetOperaBlockAndEpoch(cfg *utils.Config) (uint64, uint64, error) {
 	operaPath := filepath.Join(cfg.Db, "/chaindata/leveldb-fsh/")
 	store, err := opera.Connect("ldb", operaPath, "main")
 	if err != nil {
@@ -256,11 +254,11 @@ func recordSubstate(cfg *utils.Config, log *logging.Logger, mdi *MetadataInfo) e
 	err = runCommand(cmd, nil, log)
 	if err != nil {
 		// remove empty substateDb
-		return fmt.Errorf("import events; %v", err)
+		return fmt.Errorf("cannot import events; %v", err)
 	}
 
 	// retrieve block the opera was iterated into
-	cfg.Last, mdi.lastEpoch, err = GetOperaBlock(cfg)
+	cfg.Last, mdi.lastEpoch, err = GetOperaBlockAndEpoch(cfg)
 
 	if err != nil {
 		return fmt.Errorf("GetOperaBlock last; %v", err)

@@ -67,6 +67,11 @@ var (
 		Usage: "defines the number of transactions per block",
 		Value: 10,
 	}
+	BalanceRangeFlag = cli.Int64Flag{
+		Name:  "balance-range",
+		Usage: "sets the balance range of the stochastic simulation",
+		Value: 1000000,
+	}
 	CarmenSchemaFlag = cli.IntFlag{
 		Name:  "carmen-schema",
 		Usage: "select the DB schema used by Carmen's current state DB",
@@ -114,6 +119,11 @@ var (
 	MemoryBreakdownFlag = cli.BoolFlag{
 		Name:  "memory-breakdown",
 		Usage: "enables printing of memory usage breakdown",
+	}
+	NonceRangeFlag = cli.IntFlag{
+		Name:  "nonce-range",
+		Usage: "sets nonce range for stochastic simulation",
+		Value: 1000000,
 	}
 	ProfileFlag = cli.BoolFlag{
 		Name:  "profile",
@@ -355,6 +365,7 @@ type Config struct {
 	ArchiveMode         bool              // enable archive mode
 	ArchiveVariant      string            // selects the implementation variant of the archive
 	BlockLength         uint64            // length of a block in number of transactions
+	BalanceRange        int64             // balance range for stochastic simulation/replay
 	CarmenSchema        int               // the current DB schema ID to use in Carmen
 	ChainID             int               // Blockchain ID (mainnet: 250/testnet: 4002)
 	Cache               int               // Cache for StateDb or Priming
@@ -381,6 +392,7 @@ type Config struct {
 	MaxNumTransactions  int               // the maximum number of processed transactions
 	MemoryBreakdown     bool              // enable printing of memory breakdown
 	MemoryProfile       string            // capture the memory heap profile into the file
+	NonceRange          int               // nonce range for stochastic simulation/replay
 	TransactionLength   uint64            // determines indirectly the length of a transaction
 	PrimeRandom         bool              // enable randomized priming
 	PrimeThreshold      int               // set account threshold before commit
@@ -503,6 +515,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		ArchiveMode:         ctx.Bool(ArchiveModeFlag.Name),
 		ArchiveVariant:      ctx.String(ArchiveVariantFlag.Name),
 		BlockLength:         ctx.Uint64(BlockLengthFlag.Name),
+		BalanceRange:        ctx.Int64(BalanceRangeFlag.Name),
 		CarmenSchema:        ctx.Int(CarmenSchemaFlag.Name),
 		ChainID:             ctx.Int(ChainIDFlag.Name),
 		Cache:               ctx.Int(CacheFlag.Name),
@@ -531,6 +544,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		MaxNumTransactions:  ctx.Int(MaxNumTransactionsFlag.Name),
 		MemoryBreakdown:     ctx.Bool(MemoryBreakdownFlag.Name),
 		MemoryProfile:       ctx.String(MemoryProfileFlag.Name),
+		NonceRange:          ctx.Int(NonceRangeFlag.Name),
 		TransactionLength:   ctx.Uint64(TransactionLengthFlag.Name),
 		PrimeRandom:         ctx.Bool(RandomizePrimingFlag.Name),
 		RandomSeed:          ctx.Int64(RandomSeedFlag.Name),
