@@ -42,3 +42,6 @@ require (
 )
 
 replace github.com/ethereum/go-ethereum => github.com/Fantom-foundation/go-ethereum v1.10.8-ftm-rc11
+
+//replace github.com/Fantom-foundation/go-opera => ./go-opera
+

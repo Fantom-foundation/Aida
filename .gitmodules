@@ -1,0 +1,3 @@
+[submodule "go-opera"]
+	path = go-opera
+	url = git@github.com:Fantom-foundation/go-opera.git
