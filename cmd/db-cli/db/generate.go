@@ -85,11 +85,13 @@ func generate(ctx *cli.Context) error {
 func Generate(cfg *utils.Config, log *logging.Logger) (*MetadataInfo, error) {
 	mdi := new(MetadataInfo)
 	mdi.dbType = genType
-
+	// todo extract chainid from opera
 	err := prepareOpera(cfg, log, mdi)
 	if err != nil {
 		return nil, err
 	}
+
+	mdi.chainId = cfg.ChainID
 
 	err = recordSubstate(cfg, log, mdi)
 	if err != nil {

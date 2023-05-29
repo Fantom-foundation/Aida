@@ -22,6 +22,7 @@ const (
 	LastBlockPrefix  = substate.MetadataPrefix + "lb"
 	FirstEpochPrefix = substate.MetadataPrefix + "fe"
 	LastEpochPrefix  = substate.MetadataPrefix + "le"
+	ChainIDPrefix    = substate.MetadataPrefix + "ci"
 )
 
 const (
@@ -40,6 +41,7 @@ const (
 // MetadataInfo holds any information about AidaDb needed for putting it into the Db
 type MetadataInfo struct {
 	dbType                aidaDbType
+	chainId               int
 	firstBlock, lastBlock uint64
 	firstEpoch, lastEpoch uint64
 }
@@ -100,8 +102,23 @@ func putMetadata(targetDb ethdb.Database, mdi *MetadataInfo) error {
 		return err
 	}
 
+	if err := putChainIDMetadata(targetDb, mdi.chainId); err != nil {
+		return err
+	}
+
 	if err := targetDb.Put([]byte(TypePrefix), []byte(GenDbType)); err != nil {
 		return fmt.Errorf("cannot put first block number into db metadata; %v", err)
+	}
+
+	return nil
+}
+
+func putChainIDMetadata(targetDb ethdb.Database, chainID int) error {
+
+	byteChainID := bigendian.Uint16ToBytes(uint16(chainID))
+
+	if err := targetDb.Put([]byte(ChainIDPrefix), byteChainID); err != nil {
+		return fmt.Errorf("cannot put chainID into db metadata; %v", err)
 	}
 
 	return nil

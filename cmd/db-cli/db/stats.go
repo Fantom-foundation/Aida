@@ -81,7 +81,7 @@ func printCreateTime(aidaDb ethdb.Database, log *logging.Logger) error {
 }
 
 func printUpdateSetInfo(aidaDb ethdb.Database, log *logging.Logger) error {
-	log.Notice("UPDATESET INFO:")
+	log.Notice("UPDATE-SET INFO:")
 
 	intervalBytes, err := aidaDb.Get([]byte(substate.UpdatesetIntervalKey))
 	if err != nil {
@@ -93,7 +93,10 @@ func printUpdateSetInfo(aidaDb ethdb.Database, log *logging.Logger) error {
 	if err != nil {
 		return fmt.Errorf("cannot get updateset size from db; %v", err)
 	}
-	log.Infof("Size: %v bytes", bigendian.BytesToUint64(sizeBytes))
+	u := bigendian.BytesToUint64(sizeBytes)
+
+	// todo convert to mb
+	log.Infof("Size: %.1f MB", float64(u)/float64(1_000_000))
 
 	return nil
 }
@@ -123,6 +126,16 @@ func printDbType(aidaDb ethdb.Database, log *logging.Logger) error {
 	return nil
 }
 
+func printChainID(aidaDb ethdb.Database, log *logging.Logger) error {
+	chainIDBytes, err := aidaDb.Get([]byte(ChainIDPrefix))
+	if err != nil {
+		return fmt.Errorf("cannot get chain-id from db; %v", err)
+	}
+
+	log.Infof("Chain-ID: %v", bigendian.BytesToUint16(chainIDBytes))
+	return nil
+}
+
 func printStats(ctx *cli.Context) error {
 	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-Stats")
 
@@ -142,6 +155,11 @@ func printStats(ctx *cli.Context) error {
 	log.Notice("AIDA-DB INFO:")
 
 	if err = printDbType(aidaDb, log); err != nil {
+		return err
+	}
+
+	// CHAINID
+	if err = printChainID(aidaDb, log); err != nil {
 		return err
 	}
 
