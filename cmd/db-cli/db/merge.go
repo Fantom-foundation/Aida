@@ -40,6 +40,7 @@ const (
 	patchType
 	cloneType
 	mergeType
+	updateType
 )
 
 // merge implements merging command for combining all source data databases into single database used for profiling.

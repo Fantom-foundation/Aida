@@ -53,6 +53,9 @@ func Update(cfg *utils.Config) error {
 
 	var startDownloadFromBlock uint64
 
+	mdi := new(MetadataInfo)
+	mdi.dbType = updateType
+
 	// load stats of current aida-db to download just latest patches
 	_, err := os.Stat(cfg.AidaDb)
 	if os.IsNotExist(err) {
@@ -88,7 +91,6 @@ func Update(cfg *utils.Config) error {
 
 	log.Infof("Downloading Aida-db - %d new patches", len(patches))
 
-	// TODO parallelize
 	for _, fileName := range patches {
 		log.Debugf("Downloading %s...", fileName)
 		patchUrl := utils.AidaDbRepositoryUrl + "/" + fileName
@@ -110,7 +112,7 @@ func Update(cfg *utils.Config) error {
 		extractedPatchPath := strings.TrimSuffix(compressedPatchPath, ".tar.gz")
 
 		// merge newly extracted patch
-		err = Merge(cfg, []string{extractedPatchPath})
+		err = Merge(cfg, []string{extractedPatchPath}, mdi)
 		if err != nil {
 			return fmt.Errorf("unable to merge %v; %v", extractedPatchPath, err)
 		}

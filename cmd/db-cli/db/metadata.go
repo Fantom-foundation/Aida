@@ -57,6 +57,8 @@ func processMetadata(sourceDbs []ethdb.Database, targetDb ethdb.Database, mdi *M
 	var err error
 
 	switch mdi.dbType {
+	case updateType:
+		fallthrough
 	case genType:
 		err = findMetadata(append(sourceDbs, targetDb), mdi)
 		if err != nil {
@@ -66,7 +68,6 @@ func processMetadata(sourceDbs []ethdb.Database, targetDb ethdb.Database, mdi *M
 		if err = putMetadata(targetDb, mdi); err != nil {
 			return err
 		}
-
 	case mergeType:
 		err = findMetadata(sourceDbs, mdi)
 		if err != nil {
