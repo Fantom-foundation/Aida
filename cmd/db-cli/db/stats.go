@@ -94,11 +94,11 @@ func printBlocks(aidaDb ethdb.Database, log *logging.Logger) error {
 	}
 	log.Infof("First Block: %v", bigendian.BytesToUint64(firstBlockBytes))
 
-	lastBlockBytes, err := aidaDb.Get([]byte(LastBlockPrefix))
+	last, err := getLastBlock(aidaDb)
 	if err != nil {
-		return fmt.Errorf("cannot get last block from db; %v", err)
+		return err
 	}
-	log.Infof("Last Block: %v", bigendian.BytesToUint64(lastBlockBytes))
+	log.Infof("Last Block: %v", last)
 
 	return nil
 }

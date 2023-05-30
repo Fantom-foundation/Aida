@@ -300,3 +300,12 @@ func putTimestampMetadata(targetDb ethdb.Database) error {
 
 	return nil
 }
+
+// getLastBlock retrieve last block from aida-db metadata
+func getLastBlock(aidaDb ethdb.Database) (uint64, error) {
+	lastBlockBytes, err := aidaDb.Get([]byte(LastBlockPrefix))
+	if err != nil {
+		return 0, fmt.Errorf("cannot get last block from db; %v", err)
+	}
+	return bigendian.BytesToUint64(lastBlockBytes), nil
+}

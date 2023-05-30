@@ -17,7 +17,6 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/klauspost/compress/gzip"
-	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
@@ -53,9 +52,6 @@ func Update(cfg *utils.Config) error {
 
 	var startDownloadFromBlock uint64
 
-	mdi := new(MetadataInfo)
-	mdi.dbType = updateType
-
 	// load stats of current aida-db to download just latest patches
 	_, err := os.Stat(cfg.AidaDb)
 	if os.IsNotExist(err) {
@@ -64,21 +60,23 @@ func Update(cfg *utils.Config) error {
 	} else {
 		// aida-db already exists appending only new patches
 		// open targetDB
-		targetDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", true)
+		aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", true)
 		if err != nil {
 			return fmt.Errorf("targetDb; %v", err)
 		}
 
-		// TODO retrieve metadata
-		// and set correct startDownloadFromEpoch from metadata
-		startDownloadFromBlock = 0
+		// load last block from existing aida-db metadata
+		startDownloadFromBlock, err = getLastBlock(aidaDb)
+		if err != nil {
+			return fmt.Errorf("getLastBlock; %v", err)
+		}
 
 		// close target database
-		MustCloseDB(targetDb)
+		MustCloseDB(aidaDb)
 	}
 
 	// retrieve available patches from aida-db generation server
-	patches, err := retrievePatchesToDownload(cfg, startDownloadFromBlock, log)
+	patches, err := retrievePatchesToDownload(startDownloadFromBlock)
 	if err != nil {
 		return fmt.Errorf("unable to prepare list of aida-db patches for download; %v", err)
 	}
@@ -91,43 +89,9 @@ func Update(cfg *utils.Config) error {
 
 	log.Infof("Downloading Aida-db - %d new patches", len(patches))
 
-	for _, fileName := range patches {
-		log.Debugf("Downloading %s...", fileName)
-		patchUrl := utils.AidaDbRepositoryUrl + "/" + fileName
-		compressedPatchPath := filepath.Join(cfg.DbTmp, fileName)
-		err := downloadFile(compressedPatchPath, cfg.DbTmp, patchUrl)
-		if err != nil {
-			return fmt.Errorf("unable to download %s; %v", patchUrl, err)
-		}
-		log.Debugf("Downloaded %s", fileName)
-
-		log.Debugf("Decompressing %v", fileName)
-
-		err = extractTarGz(compressedPatchPath, cfg.DbTmp)
-		if err != nil {
-			return fmt.Errorf("unable to extract %s; %v", compressedPatchPath, err)
-		}
-
-		// extracted patch is folder without the .tar.gz extension
-		extractedPatchPath := strings.TrimSuffix(compressedPatchPath, ".tar.gz")
-
-		// merge newly extracted patch
-		err = Merge(cfg, []string{extractedPatchPath}, mdi)
-		if err != nil {
-			return fmt.Errorf("unable to merge %v; %v", extractedPatchPath, err)
-		}
-
-		// remove compressed patch
-		err = os.RemoveAll(compressedPatchPath)
-		if err != nil {
-			return err
-		}
-
-		// remove patch
-		err = os.RemoveAll(extractedPatchPath)
-		if err != nil {
-			return err
-		}
+	err = patchesDownloader(cfg, patches[1:])
+	if err != nil {
+		return err
 	}
 
 	log.Notice("Aida-db update finished successfully")
@@ -135,10 +99,157 @@ func Update(cfg *utils.Config) error {
 	return nil
 }
 
+// patchesDownloader processes patch names to download then download them in pipelined process
+func patchesDownloader(cfg *utils.Config, patches []string) error {
+	// create channel to push patch labels trough channel
+	patchesChan := pushStringsToChannel(patches)
+
+	// download patches
+	downloadedPatchChan, errChan := downloadPatch(cfg, patchesChan)
+
+	// decompress downloaded patches
+	decompressedPatchChan, errDecompressChan := decompressPatch(cfg, downloadedPatchChan, errChan)
+
+	// merge decompressed patches
+	err := mergePatch(cfg, decompressedPatchChan, errDecompressChan)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// mergePatch takes decompressed patches and merges them into aida-db
+func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan error) error {
+	mdi := new(MetadataInfo)
+	mdi.dbType = updateType
+
+	for {
+		select {
+		case err, ok := <-errChan:
+			{
+				if ok {
+					return err
+				}
+			}
+		case extractedPatchPath, ok := <-decompressChan:
+			{
+				if !ok {
+					return nil
+				}
+				// merge newly extracted patch
+				err := Merge(cfg, []string{extractedPatchPath}, mdi)
+				if err != nil {
+					return fmt.Errorf("unable to merge %v; %v", extractedPatchPath, err)
+				}
+
+				// remove patch
+				err = os.RemoveAll(extractedPatchPath)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+}
+
+// decompressPatch takes tar.gz archives and decompresses them, then sends them for further processing
+func decompressPatch(cfg *utils.Config, patchChan chan string, errChan chan error) (chan string, chan error) {
+	log := logger.NewLogger(cfg.LogLevel, "Decompress patch")
+	decompressedPatchChan := make(chan string, 1)
+	errDecompressChan := make(chan error, 1)
+
+	go func() {
+		defer close(decompressedPatchChan)
+		defer close(errDecompressChan)
+		for {
+			select {
+			case err, ok := <-errChan:
+				{
+					if ok {
+						errDecompressChan <- err
+						return
+					}
+				}
+			case fileName, ok := <-patchChan:
+				{
+					if !ok {
+						return
+					}
+					log.Debugf("Decompressing %v...", fileName)
+
+					compressedPatchPath := filepath.Join(cfg.DbTmp, fileName)
+					err := extractTarGz(compressedPatchPath, cfg.DbTmp)
+					if err != nil {
+						errDecompressChan <- err
+						return
+					}
+
+					// extracted patch is folder without the .tar.gz extension
+					extractedPatchPath := strings.TrimSuffix(compressedPatchPath, ".tar.gz")
+
+					decompressedPatchChan <- extractedPatchPath
+					// remove compressed patch
+					err = os.RemoveAll(compressedPatchPath)
+					if err != nil {
+						errDecompressChan <- err
+						return
+					}
+				}
+
+			}
+		}
+	}()
+
+	return decompressedPatchChan, errDecompressChan
+
+}
+
+// downloadPatch downloads patches from server and sends them towards decompressor
+func downloadPatch(cfg *utils.Config, patchesChan chan string) (chan string, chan error) {
+	log := logger.NewLogger(cfg.LogLevel, "Download patch")
+	downloadedPatchChan := make(chan string, 1)
+	errChan := make(chan error, 1)
+
+	go func() {
+		defer close(downloadedPatchChan)
+		defer close(errChan)
+		for {
+			fileName, ok := <-patchesChan
+			if !ok {
+				return
+			}
+			log.Debugf("Downloading %s...", fileName)
+			patchUrl := utils.AidaDbRepositoryUrl + "/" + fileName
+			compressedPatchPath := filepath.Join(cfg.DbTmp, fileName)
+			err := downloadFile(compressedPatchPath, cfg.DbTmp, patchUrl)
+			if err != nil {
+				errChan <- fmt.Errorf("unable to download %s; %v", patchUrl, err)
+			}
+			log.Debugf("Downloaded %s", fileName)
+
+			downloadedPatchChan <- fileName
+		}
+	}()
+	return downloadedPatchChan, errChan
+}
+
+// pushStringsToChannel used to pipe strings into channel
+func pushStringsToChannel(strings []string) chan string {
+	ch := make(chan string, 1)
+	go func() {
+		defer close(ch)
+		for _, str := range strings {
+			ch <- str
+		}
+	}()
+	return ch
+}
+
 // retrievePatchesToDownload retrieves all available patches from aida-db generation server.
-func retrievePatchesToDownload(cfg *utils.Config, startDownloadFromBlock uint64, log *logging.Logger) ([]string, error) {
+func retrievePatchesToDownload(startDownloadFromBlock uint64) ([]string, error) {
 	// download list of available patches
-	patches, err := downloadPatchesJson(cfg)
+	patches, err := downloadPatchesJson()
 	if err != nil {
 		return nil, fmt.Errorf("unable to download patches: %v", err)
 	}
@@ -162,6 +273,7 @@ func retrievePatchesToDownload(cfg *utils.Config, startDownloadFromBlock uint64,
 			return nil, fmt.Errorf("unable to parse uint64 fromEpoch attribute in patch %v; %v", patchMap, err)
 		}
 		if patchFromBlock <= startDownloadFromBlock {
+			// skip every patch which is sooner than previous last block
 			continue
 		}
 
@@ -178,7 +290,7 @@ func retrievePatchesToDownload(cfg *utils.Config, startDownloadFromBlock uint64,
 }
 
 // downloadPatchesJson downloads list of available patches from aida-db generation server.
-func downloadPatchesJson(cfg *utils.Config) ([]interface{}, error) {
+func downloadPatchesJson() ([]interface{}, error) {
 	// Make the HTTP GET request
 	patchesUrl := utils.AidaDbRepositoryUrl + "/patches.json"
 	response, err := http.Get(patchesUrl)
@@ -292,10 +404,14 @@ func extractTarGz(tarGzFile, outputFolder string) error {
 			if err != nil {
 				return err
 			}
-			defer file.Close()
 
 			// Copy the file content from the tar reader to the output file
 			_, err = io.Copy(file, tr)
+			if err != nil {
+				return err
+			}
+
+			err = file.Close()
 			if err != nil {
 				return err
 			}
