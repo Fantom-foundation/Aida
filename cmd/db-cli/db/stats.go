@@ -156,18 +156,16 @@ func printDbType(aidaDb ethdb.Database, log *logging.Logger) error {
 		return errors.New("this aida-b seems to have no metadata")
 	}
 
-	typeStr := string(typeBytes)
-
 	var typePrint string
-	switch typeStr {
-	case GenDbType:
+	switch aidaDbType(typeBytes[0]) {
+	case genType:
 		typePrint = "Generate"
-	case CloneDbType:
+	case cloneType:
 		typePrint = "Clone"
-	case PatchDbType:
+	case patchType:
 		typePrint = "Patch"
 	default:
-		typePrint = "Could not decode Db type of key: " + typeStr
+		typePrint = "Could not decode Db type of key: " + string(typeBytes)
 	}
 
 	log.Noticef("DB-Type: %v", typePrint)

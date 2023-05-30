@@ -83,15 +83,15 @@ func generate(ctx *cli.Context) error {
 
 // Generate is used to record/update aida-db
 func Generate(cfg *utils.Config, log *logging.Logger) (*MetadataInfo, error) {
-	mdi := new(MetadataInfo)
-	mdi.dbType = genType
+	mdi := &MetadataInfo{
+		dbType:  genType,
+		chainId: cfg.ChainID,
+	}
 
 	err := prepareOpera(cfg, log, mdi)
 	if err != nil {
 		return nil, err
 	}
-
-	mdi.chainId = cfg.ChainID
 
 	err = recordSubstate(cfg, log, mdi)
 	if err != nil {

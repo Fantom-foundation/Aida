@@ -69,6 +69,12 @@ func clone(ctx *cli.Context) error {
 		return err
 	}
 
+	// close aida database
+	defer func() {
+		MustCloseDB(aidaDb)
+		MustCloseDB(targetDb)
+	}()
+
 	// open writing channel
 	writerChan, errChan := writeDataAsync(targetDb)
 
@@ -126,10 +132,15 @@ func clone(ctx *cli.Context) error {
 		}
 	}
 
-	// close aida database
-	MustCloseDB(aidaDb)
-	// close target database
-	MustCloseDB(targetDb)
+	mdi := &MetadataInfo{
+		dbType:     cloneType,
+		firstBlock: cfg.First,
+		lastBlock:  cfg.Last,
+	}
+
+	if err = processMetadata([]ethdb.Database{aidaDb}, targetDb, mdi); err != nil {
+		return err
+	}
 
 	return nil
 }

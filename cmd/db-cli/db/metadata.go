@@ -58,7 +58,7 @@ func processMetadata(sourceDbs []ethdb.Database, targetDb ethdb.Database, mdi *M
 
 	switch mdi.dbType {
 	case genType:
-		err = findMetadata(append(sourceDbs, targetDb), mdi)
+		err = findMetadataGenAndMerge(append(sourceDbs, targetDb), mdi)
 		if err != nil {
 			return err
 		}
@@ -68,13 +68,21 @@ func processMetadata(sourceDbs []ethdb.Database, targetDb ethdb.Database, mdi *M
 		}
 
 	case mergeType:
-		err = findMetadata(sourceDbs, mdi)
+		err = findMetadataGenAndMerge(sourceDbs, mdi)
 		if err != nil {
 			return err
 		}
 		return putMetadata(targetDb, mdi)
 
 	case patchType:
+		if err = putMetadata(targetDb, mdi); err != nil {
+			return err
+		}
+	case cloneType:
+		if err = findMetadataClone(sourceDbs[0], mdi); err != nil {
+			return err
+		}
+
 		if err = putMetadata(targetDb, mdi); err != nil {
 			return err
 		}
@@ -94,7 +102,7 @@ func putMetadata(targetDb ethdb.Database, mdi *MetadataInfo) error {
 		return err
 	}
 
-	if err := putEpochMetadata(targetDb, mdi.firstEpoch, mdi.lastEpoch, log); err != nil {
+	if err := putEpochMetadata(targetDb, mdi.firstEpoch, mdi.lastEpoch, mdi.dbType, log); err != nil {
 		return err
 	}
 
@@ -106,7 +114,10 @@ func putMetadata(targetDb ethdb.Database, mdi *MetadataInfo) error {
 		return err
 	}
 
-	if err := targetDb.Put([]byte(TypePrefix), []byte(GenDbType)); err != nil {
+	var dbTypeBytes = make([]byte, 1)
+	dbTypeBytes[0] = byte(mdi.dbType)
+
+	if err := targetDb.Put([]byte(TypePrefix), dbTypeBytes); err != nil {
 		return fmt.Errorf("cannot put first block number into db metadata; %v", err)
 	}
 
@@ -124,8 +135,27 @@ func putChainIDMetadata(targetDb ethdb.Database, chainID int) error {
 	return nil
 }
 
-// findMetadata in given sourceDbs - either when Merging or generating AidaDb from substateDb, updatesetDb and deletionDb
-func findMetadata(sourceDbs []ethdb.Database, mdi *MetadataInfo) error {
+// findMetadataClone in given sourceDbs - either when Merging or generating AidaDb from substateDb, updatesetDb and deletionDb
+func findMetadataClone(sourceDb ethdb.Database, mdi *MetadataInfo) error {
+
+	f := &metadataFinder{
+		log: logger.NewLogger("INFO", "Metadata-Finder"),
+		mdi: mdi,
+	}
+
+	if err := f.findChainID(sourceDb); err != nil {
+		return err
+	}
+
+	// epochs in clone will not be whole most times, so setting them to 0 is the most logical
+	mdi.firstEpoch = 0
+	mdi.lastEpoch = 0
+
+	return nil
+}
+
+// findMetadataGenAndMerge in given sourceDbs - either when Merging or generating AidaDb from substateDb, updatesetDb and deletionDb
+func findMetadataGenAndMerge(sourceDbs []ethdb.Database, mdi *MetadataInfo) error {
 
 	f := &metadataFinder{
 		log: logger.NewLogger("INFO", "Metadata-Finder"),
@@ -136,6 +166,10 @@ func findMetadata(sourceDbs []ethdb.Database, mdi *MetadataInfo) error {
 	for _, db := range sourceDbs {
 		// find what type of db we are merging
 		if err := f.findDbType(db); err != nil {
+			return err
+		}
+
+		if err := f.findChainID(db); err != nil {
 			return err
 		}
 
@@ -241,6 +275,17 @@ func (f *metadataFinder) findEpochs(db ethdb.Database) error {
 	return nil
 }
 
+func (f *metadataFinder) findChainID(db ethdb.Database) error {
+	byteChainID, err := db.Get([]byte(ChainIDPrefix))
+	if err != nil {
+		return fmt.Errorf("cannot get chain-id from aida-db; %v", err)
+	}
+
+	f.mdi.chainId = int(bigendian.BytesToUint16(byteChainID))
+
+	return nil
+}
+
 // putBlockMetadata into AidaDb
 func putBlockMetadata(targetDb ethdb.Database, firstBlock, lastBlock uint64, log *logging.Logger) error {
 	if firstBlock == 0 {
@@ -265,7 +310,7 @@ func putBlockMetadata(targetDb ethdb.Database, firstBlock, lastBlock uint64, log
 }
 
 // putEpochMetadata into AidaDb
-func putEpochMetadata(targetDb ethdb.Database, firstEpoch, lastEpoch uint64, log *logging.Logger) error {
+func putEpochMetadata(targetDb ethdb.Database, firstEpoch, lastEpoch uint64, dbType aidaDbType, log *logging.Logger) error {
 
 	if firstEpoch == 0 {
 		log.Warning("given first epoch is 0 - saving to metadata anyway")
@@ -280,7 +325,12 @@ func putEpochMetadata(targetDb ethdb.Database, firstEpoch, lastEpoch uint64, log
 		log.Warning("given last epoch is 0 - saving to metadata anyway")
 	}
 
-	lastEpochBytes := substate.BlockToBytes(lastEpoch - 1)
+	// if db is type of clone, epochs are set to 0
+	if dbType != cloneType {
+		lastEpoch -= 1
+	}
+
+	lastEpochBytes := substate.BlockToBytes(lastEpoch)
 	if err := targetDb.Put([]byte(LastEpochPrefix), lastEpochBytes); err != nil {
 		return fmt.Errorf("cannot put first block number into db metadata; %v", err)
 	}
