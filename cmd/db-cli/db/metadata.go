@@ -57,6 +57,8 @@ func processMetadata(sourceDbs []ethdb.Database, targetDb ethdb.Database, mdi *M
 	var err error
 
 	switch mdi.dbType {
+	case updateType:
+		fallthrough
 	case genType:
 		err = findMetadataGenAndMerge(append(sourceDbs, targetDb), mdi)
 		if err != nil {
@@ -66,7 +68,6 @@ func processMetadata(sourceDbs []ethdb.Database, targetDb ethdb.Database, mdi *M
 		if err = putMetadata(targetDb, mdi); err != nil {
 			return err
 		}
-
 	case mergeType:
 		err = findMetadataGenAndMerge(sourceDbs, mdi)
 		if err != nil {
@@ -348,4 +349,13 @@ func putTimestampMetadata(targetDb ethdb.Database) error {
 	}
 
 	return nil
+}
+
+// getLastBlock retrieve last block from aida-db metadata
+func getLastBlock(aidaDb ethdb.Database) (uint64, error) {
+	lastBlockBytes, err := aidaDb.Get([]byte(LastBlockPrefix))
+	if err != nil {
+		return 0, fmt.Errorf("cannot get last block from db; %v", err)
+	}
+	return bigendian.BytesToUint64(lastBlockBytes), nil
 }

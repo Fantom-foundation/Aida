@@ -46,7 +46,7 @@ func NewReplay() *Replay {
 // NewContext creates a new record context.
 func NewRecord(filename string) *Record {
 	// open trace file, write buffer, and compressed stream
-	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
 	if err != nil {
 		log.Fatalf("Cannot open trace file. Error: %v", err)
 	}

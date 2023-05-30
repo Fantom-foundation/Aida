@@ -143,7 +143,7 @@ func prepareOpera(cfg *utils.Config, log *logging.Logger, mdi *MetadataInfo) err
 func prepare(cfg *utils.Config) (string, error) {
 	if cfg.DbTmp != "" {
 		// create a parents of temporary directory
-		err := os.MkdirAll(cfg.DbTmp, 0644)
+		err := os.MkdirAll(cfg.DbTmp, 0755)
 		if err != nil {
 			return "", fmt.Errorf("failed to create %s directory; %s", cfg.DbTmp, err)
 		}
@@ -249,7 +249,7 @@ func recordSubstate(cfg *utils.Config, log *logging.Logger, mdi *MetadataInfo) e
 
 	log.Noticef("Starting Substate recording of %v", cfg.Events)
 
-	cmd := exec.Command("opera", "--datadir", cfg.Db, "--gcmode=full", "--db.preset=legacy-ldb", "--cache", strconv.Itoa(cfg.Cache), "import", "events", "--recording", "--substate-db", cfg.SubstateDb, cfg.Events)
+	cmd := exec.Command("opera", "--datadir", cfg.Db, "--gcmode=full", "--cache", strconv.Itoa(cfg.Cache), "import", "events", "--recording", "--substate-db", cfg.SubstateDb, cfg.Events)
 
 	err = runCommand(cmd, nil, log)
 	if err != nil {

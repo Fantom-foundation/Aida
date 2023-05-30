@@ -32,8 +32,14 @@ const (
 	NoArgs                             // requires no arguments
 )
 
+const (
+	aidaDbRepositoryMainnetUrl = "https://aida.repository.fantom.network"
+	aidaDbRepositoryTestnetUrl = "https://aida.testnet.repository.fantom.network"
+)
+
 var (
-	FirstSubstateBlock uint64 // id of the first block in substate
+	FirstSubstateBlock  uint64 // id of the first block in substate
+	AidaDbRepositoryUrl string // url of the Aida DB repository
 )
 
 // Type of validation performs on stateDB during Tx processing.
@@ -594,6 +600,10 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	if cfg.RandomSeed < 0 {
 		cfg.RandomSeed = int64(rand.Uint32())
 	}
+	err := setAidaDbRepositoryUrl(cfg.ChainID)
+	if err != nil {
+		return cfg, fmt.Errorf("Unable to prepareUrl from ChainId %v; %v", cfg.ChainID, err)
+	}
 
 	if _, err := os.Stat(cfg.AidaDb); !os.IsNotExist(err) {
 		log.Noticef("Found merged Aida-DB: %s redirecting UpdateDB, DeletedAccountDB, SubstateDB paths to it", cfg.AidaDb)
@@ -686,6 +696,18 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+// setAidaDbRepositoryUrl based on chain id selects correct aida-db repository url
+func setAidaDbRepositoryUrl(chainId int) error {
+	if chainId == 250 {
+		AidaDbRepositoryUrl = aidaDbRepositoryMainnetUrl
+	} else if chainId == 4002 {
+		AidaDbRepositoryUrl = aidaDbRepositoryTestnetUrl
+	} else {
+		return fmt.Errorf("invalid chain id %d", chainId)
+	}
+	return nil
 }
 
 // SetBlockRange checks the validity of a block range and return the first and last block as numbers.
