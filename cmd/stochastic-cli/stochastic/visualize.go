@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/stochastic"
 	"github.com/Fantom-foundation/Aida/stochastic/visualizer"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -30,35 +31,47 @@ The stochastic visualize command requires one argument:
 
 // stochasticVisualizeAction implements the visualize command for computing statistical parameters.
 func stochasticVisualizeAction(ctx *cli.Context) error {
+	log := logger.NewLogger("INFO", "StochasticVisualize")
+
 	if ctx.Args().Len() != 1 {
 		return fmt.Errorf("missing event file")
 	}
 
-	// open file
-	file, err := os.Open(ctx.Args().Get(0))
+	log.Info("Visualize statistical events")
+
+	// open and parse event file
+	inputFileName := ctx.Args().Get(0)
+
+	log.Info("Read event file %v", inputFileName)
+
+	file, err := os.Open(inputFileName)
 	if err != nil {
-		return fmt.Errorf("failed opening event file")
+		return fmt.Errorf("failed opening event file %v; %v", inputFileName, err)
 	}
+
 	defer file.Close()
 
-	// read file
 	contents, err := ioutil.ReadAll(file)
 	if err != nil {
-		return fmt.Errorf("failed reading event file")
+		return fmt.Errorf("failed reading event file %v; %v", inputFileName, err)
 	}
 
 	var eventRegistry stochastic.EventRegistryJSON
-	json.Unmarshal(contents, &eventRegistry)
-
-	addr := ctx.String(utils.PortFlag.Name)
-	if addr == "" {
-		addr = "8080"
+	err = json.Unmarshal(contents, &eventRegistry)
+	if err != nil {
+		return fmt.Errorf("cannot unmarshal event registry; %v", err)
 	}
 
 	// fire-up web-server
-	fmt.Println("Open web browser with http://localhost:" + addr)
-	fmt.Println("Cancel visualize with ^C")
-	visualizer.FireUpWeb(&eventRegistry, addr)
+	port := ctx.String(utils.PortFlag.Name)
+	if port == "" {
+		port = "8080"
+	}
+
+	log.Noticef("Open web browser with http://localhost:" + port)
+	log.Notice("Cancel visualize with ^C")
+
+	visualizer.FireUpWeb(&eventRegistry, port)
 
 	return nil
 }

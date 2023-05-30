@@ -3,7 +3,6 @@ package stochastic
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"math"
 	"os"
 	"time"
@@ -135,26 +134,31 @@ func stochasticRecordAction(ctx *cli.Context) error {
 	if cfg.Output == "" {
 		cfg.Output = "./events.json"
 	}
-	WriteEvents(&eventRegistry, cfg.Output)
+	err = WriteEvents(&eventRegistry, cfg.Output)
+	if err != nil {
+		return err
+	}
 
-	return err
+	return nil
 }
 
 // WriteEvents writes event file in JSON format.
-func WriteEvents(r *stochastic.EventRegistry, filename string) {
+func WriteEvents(r *stochastic.EventRegistry, filename string) error {
 	f, fErr := os.Create(filename)
 	if fErr != nil {
-		log.Fatalf("cannot open JSON file. Error: %v", fErr)
+		return fmt.Errorf("cannot open JSON file; %v", fErr)
 	}
 	defer f.Close()
 
 	jOut, jErr := json.MarshalIndent(r.NewEventRegistryJSON(), "", "    ")
 	if jErr != nil {
-		log.Fatalf("failed to convert JSON file. Error: %v", jErr)
+		return fmt.Errorf("failed to convert JSON file; %v", jErr)
 	}
 
 	_, pErr := fmt.Fprintln(f, string(jOut))
 	if pErr != nil {
-		log.Fatalf("failed to convert JSON file. Error: %v", pErr)
+		return fmt.Errorf("failed to convert JSON file; %v", pErr)
 	}
+
+	return nil
 }
