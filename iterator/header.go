@@ -50,6 +50,8 @@ const maxShortQuery = 0xFFF
 // maxShortResponse represents the longest response payload still considered as short (16 bits uint).
 const maxShortResponse = 0xFFFF
 
+const headerSize = 21
+
 // Header represents a single record header on a virtual recording tape represented by a Reader/Writer.
 type Header struct {
 	version        byte
@@ -228,7 +230,7 @@ func (h *Header) ResponseLength() int32 {
 
 // WriteTo writes the current header into the given Writer target.
 func (h *Header) WriteTo(out io.Writer) (int64, error) {
-	hdr := make([]byte, 21)
+	hdr := make([]byte, headerSize)
 
 	offset := h.codeQuery(hdr)
 
