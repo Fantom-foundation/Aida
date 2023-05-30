@@ -13,14 +13,13 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/Fantom-foundation/Aida/cmd/db-cli/flags"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/klauspost/compress/gzip"
 	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
-
-const patchesJsonName = "patches.json"
 
 // AutoGenCommand generates aida-db patches and handles second opera for event generation
 var AutoGenCommand = cli.Command{
@@ -40,11 +39,14 @@ var AutoGenCommand = cli.Command{
 		&utils.OperaDatadirFlag,
 		&utils.OutputFlag,
 		&logger.LogLevelFlag,
+		&flags.SkipMetadata,
 	},
 	Description: `
 AutoGen generates aida-db patches and handles second opera for event generation. Generates event file, which is supplied into generate to create aida-db patch.
 `,
 }
+
+const patchesJsonName = "patches.json"
 
 // autoGen command is used to record/update aida-db periodically
 func autoGen(ctx *cli.Context) error {
@@ -95,15 +97,18 @@ func autoGen(ctx *cli.Context) error {
 		return err
 	}
 
+	var mdi *MetadataInfo
 	// update target aida-db
-	err = Generate(cfg, log)
+	mdi, err = Generate(cfg, log)
 	if err != nil {
 		return err
 	}
 
 	// if patch output dir is selected inserting patch.tar.gz, patch.tar.gz.md5 into there and updating patches.json
 	if cfg.Output != "" {
-		patchTarPath, err := createPatch(cfg, aidaDbTmp, firstEpoch, lastEpoch, cfg.First, cfg.Last, log)
+		mdi.dbType = patchType
+		patchTarPath, err := createPatch(cfg, aidaDbTmp, firstEpoch, lastEpoch, cfg.First, cfg.Last, log, mdi)
+
 		if err != nil {
 			return err
 		}
@@ -120,7 +125,7 @@ func autoGen(ctx *cli.Context) error {
 }
 
 // createPatch create patch from newly generated data
-func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpoch string, firstBlock uint64, lastBlock uint64, log *logging.Logger) (string, error) {
+func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpoch string, firstBlock uint64, lastBlock uint64, log *logging.Logger, mdi *MetadataInfo) (string, error) {
 	// create a parents of output directory
 	err := os.MkdirAll(cfg.Output, 0755)
 	if err != nil {
@@ -137,7 +142,9 @@ func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpo
 	patchPath := filepath.Join(cfg.Output, patchName)
 	// cfg.AidaDb is now pointing to patch this is needed for Merge function
 	cfg.AidaDb = patchPath
-	err = Merge(cfg, []string{cfg.SubstateDb, cfg.UpdateDb, cfg.DeletionDb})
+
+	// merge UpdateDb into AidaDb
+	err = Merge(cfg, []string{cfg.SubstateDb, cfg.UpdateDb, cfg.DeletionDb}, mdi)
 	if err != nil {
 		return "", fmt.Errorf("unable to merge into patch; %v", err)
 	}

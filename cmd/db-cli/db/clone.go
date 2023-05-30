@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/Fantom-foundation/Aida/cmd/db-cli/flags"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -31,6 +32,7 @@ var CloneCommand = cli.Command{
 		&utils.CompactDbFlag,
 		&utils.ValidateFlag,
 		&logger.LogLevelFlag,
+		&flags.SkipMetadata,
 	},
 	Description: `
 Creates clone of aida-db for desired block range

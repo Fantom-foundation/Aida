@@ -235,6 +235,14 @@ func genDeletedAccountsAction(ctx *cli.Context) error {
 		return err
 	}
 
+	if cfg.DeletionDb == "" {
+		return fmt.Errorf("you need to specify where you want deletion-db to save (--deletion-db)")
+	}
+
+	if cfg.SubstateDb == "" {
+		return fmt.Errorf("you need to specify path to existing substate (--substate-db)")
+	}
+
 	return GenDeletedAccountsAction(cfg)
 }
 
@@ -251,7 +259,11 @@ func GenDeletedAccountsAction(cfg *utils.Config) error {
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
-	ddb := substate.OpenDestroyedAccountDB(cfg.DeletionDb)
+	ddb, err := substate.OpenDestroyedAccountDB(cfg.DeletionDb)
+	if err != nil {
+		return err
+	}
+
 	defer ddb.Close()
 
 	start := time.Now()

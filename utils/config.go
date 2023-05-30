@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Fantom-foundation/Aida/cmd/db-cli/flags"
 	"github.com/Fantom-foundation/Aida/logger"
 	substate "github.com/Fantom-foundation/Substate"
 	_ "github.com/Fantom-foundation/Tosca/go/vm/evmone"
@@ -85,7 +86,6 @@ var (
 	ChainIDFlag = cli.IntFlag{
 		Name:  "chainid",
 		Usage: "ChainID for replayer",
-		Value: 250,
 	}
 	CacheFlag = cli.IntFlag{
 		Name:  "cache",
@@ -405,6 +405,7 @@ type Config struct {
 	Profile             bool              // enable micro profiling
 	RandomSeed          int64             // set random seed for stochastic testing
 	SkipPriming         bool              // skip priming of the state DB
+	SkipMetadata        bool              // skip metadata insert/getting into AidaDb
 	ShadowDb            bool              // defines we want to open an existing db as shadow
 	ShadowImpl          string            // implementation of the shadow DB to use, empty if disabled
 	ShadowVariant       string            // database variant of the shadow DB to be used
@@ -556,6 +557,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		PrimeThreshold:      ctx.Int(PrimeThresholdFlag.Name),
 		Profile:             ctx.Bool(ProfileFlag.Name),
 		SkipPriming:         ctx.Bool(SkipPrimingFlag.Name),
+		SkipMetadata:        ctx.Bool(flags.SkipMetadata.Name),
 		ShadowDb:            ctx.Bool(ShadowDb.Name),
 		ShadowImpl:          ctx.String(ShadowDbImplementationFlag.Name),
 		ShadowVariant:       ctx.String(ShadowDbVariantFlag.Name),
@@ -591,7 +593,8 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		UpdateBufferSize:    ctx.Uint64(UpdateBufferSizeFlag.Name) << 20, // convert from MiB to B
 	}
 	if cfg.ChainID == 0 {
-		cfg.ChainID = ChainIDFlag.Value
+		log.Warning("--chainid was not set; setting default value for mainnet (250)")
+		cfg.ChainID = 250
 	}
 	setFirstBlockFromChainID(cfg.ChainID)
 	if cfg.RandomSeed < 0 {
