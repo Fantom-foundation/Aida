@@ -57,15 +57,16 @@ func findMetadata(sourceDbs []ethdb.Database, targetDb ethdb.Database, mdi *Meta
 	case updateType:
 		fallthrough
 	case genType:
-		return findGenMetadata([]ethdb.Database{targetDb}, mdi)
+		return findGenMetadata(targetDb, mdi)
 	case mergeType:
 		return findMergeMetadata(append(sourceDbs, targetDb), mdi)
 	case patchType:
 		panic("patch not implemented yet")
 	case cloneType:
 		// clone type already has every metadata needed
-		fallthrough
+		return nil
 	default:
+
 		return errors.New("unknown db type")
 	}
 }
@@ -101,7 +102,7 @@ func findMergeMetadata(sourceDbs []ethdb.Database, mdi *MetadataInfo) error {
 
 }
 
-func findGenMetadata(sourceDbs []ethdb.Database, mdi *MetadataInfo) error {
+func findGenMetadata(db ethdb.Database, mdi *MetadataInfo) error {
 	var err error
 	f := &metadataFinder{
 		log: logger.NewLogger("INFO", "Metadata-Finder"),
@@ -109,14 +110,12 @@ func findGenMetadata(sourceDbs []ethdb.Database, mdi *MetadataInfo) error {
 	}
 
 	// iterate over all dbs to find the first and the last block
-	for _, db := range sourceDbs {
-		if err = f.findBlocks(db); err != nil {
-			return err
-		}
+	if err = f.findBlocks(db); err != nil {
+		return err
+	}
 
-		if err = f.findEpochs(db); err != nil {
-			return err
-		}
+	if err = f.findEpochs(db); err != nil {
+		return err
 	}
 
 	return nil
@@ -232,6 +231,25 @@ func findMetadataGenAndMerge(sourceDbs []ethdb.Database, mdi *MetadataInfo) erro
 		if err := f.findEpochs(db); err != nil {
 			return err
 		}
+	}
+
+	return nil
+}
+
+func processCloneMetadata(targetDb ethdb.Database, sourceDb ethdb.Database, mdi *MetadataInfo) error {
+	var err error
+
+	f := metadataFinder{
+		log: logger.NewLogger("process-metadata", "INFO"),
+		mdi: mdi,
+	}
+
+	if err = f.findChainID(sourceDb); err != nil {
+		return fmt.Errorf("cannot find metadata from aida-db")
+	}
+
+	if err = putMetadata(targetDb, mdi); err != nil {
+		return fmt.Errorf("cannot put metadata into new aida-db")
 	}
 
 	return nil

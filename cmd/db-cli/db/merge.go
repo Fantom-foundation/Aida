@@ -133,7 +133,6 @@ func Merge(cfg *utils.Config, sourceDbPaths []string, mdi *MetadataInfo) error {
 	log.Notice("Merge finished successfully")
 
 	if !cfg.SkipMetadata {
-
 		if err = putMetadata(targetDb, mdi); err != nil {
 			return fmt.Errorf("cannot put metadata into new aida-db")
 		}
