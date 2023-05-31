@@ -7,6 +7,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
+	"github.com/Fantom-foundation/Aida/tracer/profile"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -15,15 +16,16 @@ import (
 // ProxyProfiler data structure for capturing and recording
 // invoked StateDB operations.
 type ProxyProfiler struct {
-	db state.StateDB           // state db
-	ps *operation.ProfileStats // operation statistics
+	db state.StateDB         // state db
+	ps *profile.ProfileStats // operation statistics
 }
 
 // NewProxyProfiler creates a new StateDB proxy.
-func NewProxyProfiler(db state.StateDB) (*ProxyProfiler, *operation.ProfileStats) {
+func NewProxyProfiler(db state.StateDB, csv string) (*ProxyProfiler, *profile.ProfileStats) {
 	p := new(ProxyProfiler)
 	p.db = db
-	p.ps = new(operation.ProfileStats)
+	p.ps = profile.NewProfileStats(csv)
+	p.ps.FillLabels(operation.CreateIdLabelMap())
 	return p, p.ps
 }
 

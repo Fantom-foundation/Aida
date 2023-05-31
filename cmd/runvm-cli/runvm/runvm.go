@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/logger"
-	"github.com/Fantom-foundation/Aida/tracer/operation"
+	"github.com/Fantom-foundation/Aida/tracer/profile"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
@@ -39,6 +39,7 @@ func RunVM(ctx *cli.Context) error {
 		lastBlockProgressReportTime     time.Time
 		lastBlockProgressReportTxCount  int
 		lastBlockProgressReportGasCount = new(big.Int)
+		lastProfileBlock                uint64
 		stateDbDir                      string
 	)
 	beginning = time.Now()
@@ -100,9 +101,9 @@ func RunVM(ctx *cli.Context) error {
 	}
 
 	// wrap stateDB for profiling
-	var stats *operation.ProfileStats
+	var stats *profile.ProfileStats
 	if cfg.Profile {
-		db, stats = NewProxyProfiler(db)
+		db, stats = NewProxyProfiler(db, cfg.ProfileFile)
 	}
 
 	if cfg.ValidateWorldState {
@@ -150,6 +151,7 @@ func RunVM(ctx *cli.Context) error {
 			lastBlockProgressReportBlock = tx.Block
 			lastBlockProgressReportBlock -= lastBlockProgressReportBlock % progressReportBlockInterval
 			lastBlockProgressReportTime = time.Now()
+			lastProfileBlock = tx.Block - (tx.Block % cfg.ProfileInterval)
 			isFirstBlock = false
 			// close off old block and possibly sync-periods
 		} else if curBlock != tx.Block {
@@ -229,6 +231,17 @@ func RunVM(ctx *cli.Context) error {
 				log.Noticef("Reached block %d, last interval rate ~ %.0f Tx/s, ~ %.0f Gas/s", tx.Block, txRate, gasRate)
 				lastBlockProgressReportBlock += progressReportBlockInterval
 			}
+			if cfg.Profile {
+				if tx.Block >= lastProfileBlock+cfg.ProfileInterval {
+					// print stats
+					if err := stats.PrintProfiling(lastProfileBlock, tx.Block); err != nil {
+						return err
+					}
+					// reset
+					stats.Reset()
+					lastProfileBlock += cfg.ProfileInterval
+				}
+			}
 		}
 	}
 
@@ -269,10 +282,10 @@ func RunVM(ctx *cli.Context) error {
 		return err
 	}
 
-	if cfg.Profile {
-		fmt.Println("=================Statistics=================")
-		stats.PrintProfiling(log)
-		fmt.Println("============================================")
+	if cfg.Profile && curBlock != lastProfileBlock {
+		if err := stats.PrintProfiling(lastProfileBlock, curBlock); err != nil {
+			return err
+		}
 	}
 
 	if cfg.KeepDb && !isFirstBlock {
