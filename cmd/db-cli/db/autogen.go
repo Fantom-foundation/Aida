@@ -93,28 +93,59 @@ func autoGen(ctx *cli.Context) error {
 		return err
 	}
 
-	// start opera to load new blocks in parallel
-	err = startOpera(log)
-	if err != nil {
-		return err
-	}
-
 	// update target aida-db
 	err = Generate(cfg, log)
 	if err != nil {
 		return err
 	}
 
+	// prune opera to reduce disk space and speed for next runs
+	errChan := startOperaPruning(cfg, log)
+
+	var patchError error
 	// if patch output dir is selected inserting patch.tar.gz, patch.tar.gz.md5 into there and updating patches.json
 	if cfg.Output != "" {
-		patchTarPath, err := createPatch(cfg, aidaDbTmp, firstEpoch, lastEpoch, cfg.First, cfg.Last, log)
-		if err != nil {
-			return err
+		var patchTarPath string
+		patchTarPath, patchError = createPatch(cfg, aidaDbTmp, firstEpoch, lastEpoch, cfg.First, cfg.Last, log)
+		if patchError == nil {
+			log.Infof("Successfully generated patch at: %v", patchTarPath)
 		}
-		log.Infof("Successfully generated patch at: %v", patchTarPath)
+	}
+
+	// wait for operaPruning response
+	err, ok := <-errChan
+	if ok && err != nil {
+		return err
+	}
+	log.Infof("Successfully pruned opera: %v", cfg.Db)
+
+	// start opera to load new blocks
+	err = startOpera(log)
+	if err != nil {
+		return err
+	}
+
+	// check error while patch generation
+	if patchError != nil {
+		return patchError
 	}
 
 	return nil
+}
+
+// startOperaPruning prunes opera in parallel
+func startOperaPruning(cfg *utils.Config, log *logging.Logger) chan error {
+	errChan := make(chan error, 1)
+	log.Noticef("Starting opera pruning %v", cfg.Db)
+	go func() {
+		defer close(errChan)
+		cmd := exec.Command("opera", "--datadir", cfg.Db, "snapshot prune-state")
+		err := runCommand(cmd, nil, log)
+		if err != nil {
+			errChan <- fmt.Errorf("unable prune opera %v; %v", cfg.Db, err)
+		}
+	}()
+	return errChan
 }
 
 // createPatch create patch from newly generated data
