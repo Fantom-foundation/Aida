@@ -109,9 +109,6 @@ func RunVM(ctx *cli.Context) error {
 				return err
 			}
 		}
-		if err := utils.DeleteDestroyedAccountsFromWorldState(ws, cfg, cfg.First-1); err != nil {
-			return fmt.Errorf("failed to remove deleted accoount from the world state. %v", err)
-		}
 		if err := utils.ValidateStateDB(ws, db, false); err != nil {
 			return fmt.Errorf("pre: World state is not contained in the stateDB. %v", err)
 		}
@@ -177,14 +174,20 @@ func RunVM(ctx *cli.Context) error {
 		}
 		// run VM
 		db.PrepareSubstate(&tx.Substate.InputAlloc, tx.Substate.Env.Number)
-		err = utils.ProcessTx(db, cfg, tx.Block, tx.Transaction, tx.Substate)
-		if err != nil {
-			log.Critical("\tFAILED")
-			err = fmt.Errorf("VM execution failed; %v", err)
-			break
+		if tx.Transaction >= utils.LachesisSfc {
+			log.Debugf("Block %v Tx %v: sfc tx", tx.Block, tx.Transaction)
+			utils.ProcessLachesisSfc(tx.Substate.OutputAlloc, db)
+		} else {
+			log.Debugf("Block %v Tx %v: external tx", tx.Block, tx.Transaction)
+			err = utils.ProcessTx(db, cfg, tx.Block, tx.Transaction, tx.Substate)
+			if err != nil {
+				log.Critical("\tFAILED")
+				err = fmt.Errorf("VM execution failed; %v", err)
+				break
+			}
+			txCount++
+			totalGas.Add(totalGas, currentGas.SetUint64(tx.Substate.Result.GasUsed))
 		}
-		txCount++
-		totalGas.Add(totalGas, currentGas.SetUint64(tx.Substate.Result.GasUsed))
 
 		if !cfg.Quiet {
 			// report progress
@@ -260,9 +263,6 @@ func RunVM(ctx *cli.Context) error {
 		log.Notice("Validate final state\n")
 		if ws, err = utils.GenerateWorldStateFromUpdateDB(cfg, cfg.Last); err != nil {
 			return err
-		}
-		if err := utils.DeleteDestroyedAccountsFromWorldState(ws, cfg, cfg.Last); err != nil {
-			return fmt.Errorf("Failed to remove deleted accoount from the world state. %v", err)
 		}
 		if err := utils.ValidateStateDB(ws, db, false); err != nil {
 			return fmt.Errorf("World state is not contained in the stateDB. %v", err)
