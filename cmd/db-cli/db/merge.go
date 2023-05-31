@@ -69,6 +69,8 @@ func Merge(cfg *utils.Config, sourceDbPaths []string, mdi *MetadataInfo) error {
 		return fmt.Errorf("cannot open targetDb; %v", err)
 	}
 
+	defer MustCloseDB(targetDb)
+
 	chainIdBytes, _ := targetDb.Get([]byte(ChainIDPrefix))
 	if chainIdBytes != nil {
 		u := bigendian.BytesToUint16(chainIdBytes)
@@ -88,10 +90,11 @@ func Merge(cfg *utils.Config, sourceDbPaths []string, mdi *MetadataInfo) error {
 	}
 
 	if !cfg.SkipMetadata {
-		// start with putting metadata into new targetDb
-		if err = processMetadata(sourceDBs, targetDb, mdi); err != nil {
-			return fmt.Errorf("cannot process metadata; %v", err)
+
+		if err = findMetadata(sourceDBs, targetDb, mdi); err != nil {
+			return fmt.Errorf("cannot find metadata in source dbs; %v", err)
 		}
+
 	}
 
 	var totalWritten uint64
@@ -126,10 +129,15 @@ func Merge(cfg *utils.Config, sourceDbPaths []string, mdi *MetadataInfo) error {
 			log.Infof("Deleted: %s\n", path)
 		}
 	}
+
 	log.Notice("Merge finished successfully")
 
-	// close target database
-	MustCloseDB(targetDb)
+	if !cfg.SkipMetadata {
+
+		if err = putMetadata(targetDb, mdi); err != nil {
+			return fmt.Errorf("cannot put metadata into new aida-db")
+		}
+	}
 
 	return err
 }
