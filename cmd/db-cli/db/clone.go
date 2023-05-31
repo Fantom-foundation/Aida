@@ -64,14 +64,14 @@ func clone(ctx *cli.Context) error {
 
 	log := logger.NewLogger(cfg.LogLevel, "DB Clone")
 
-	aidaDb, targetDb, err := openCloneDatabases(cfg)
+	sourceDb, targetDb, err := openCloneDatabases(cfg)
 	if err != nil {
 		return err
 	}
 
 	// close aida database
 	defer func() {
-		MustCloseDB(aidaDb)
+		MustCloseDB(sourceDb)
 		MustCloseDB(targetDb)
 	}()
 
@@ -79,26 +79,26 @@ func clone(ctx *cli.Context) error {
 	writerChan, errChan := writeDataAsync(targetDb)
 
 	// write all contract codes
-	countCodes, err = write(writerChan, errChan, aidaDb, []byte(substate.Stage1CodePrefix), 0, nil, log)
+	countCodes, err = write(writerChan, errChan, sourceDb, []byte(substate.Stage1CodePrefix), 0, nil, log)
 	if err != nil {
 		return err
 	}
 
 	// write all destroyed accounts
-	countDestroyed, err = write(writerChan, errChan, aidaDb, []byte(substate.DestroyedAccountPrefix), 0, nil, log)
+	countDestroyed, err = write(writerChan, errChan, sourceDb, []byte(substate.DestroyedAccountPrefix), 0, nil, log)
 	if err != nil {
 		return err
 	}
 
 	// write update sets until cfg.Last
 	var lastUpdateBeforeRange uint64
-	lastUpdateBeforeRange, countUpdate, err = writeUpdateSet(cfg, writerChan, errChan, aidaDb, log)
+	lastUpdateBeforeRange, countUpdate, err = writeUpdateSet(cfg, writerChan, errChan, sourceDb, log)
 	if err != nil {
 		return err
 	}
 
 	// write substates from last updateset before cfg.First until cfg.Last
-	countSubstate, err = writeSubstates(cfg, writerChan, errChan, aidaDb, lastUpdateBeforeRange, log)
+	countSubstate, err = writeSubstates(cfg, writerChan, errChan, sourceDb, lastUpdateBeforeRange, log)
 	if err != nil {
 		return err
 	}
@@ -132,14 +132,16 @@ func clone(ctx *cli.Context) error {
 		}
 	}
 
-	mdi := &MetadataInfo{
+	mdi := &aidaMetadata{
 		dbType:     cloneType,
 		firstBlock: cfg.First,
 		lastBlock:  cfg.Last,
 	}
 
-	if err = processMetadata([]ethdb.Database{aidaDb}, targetDb, mdi); err != nil {
-		return err
+	if !cfg.SkipMetadata {
+		if err = processCloneMetadata(targetDb, sourceDb, mdi); err != nil {
+			return err
+		}
 	}
 
 	return nil
