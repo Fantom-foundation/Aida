@@ -132,7 +132,7 @@ func clone(ctx *cli.Context) error {
 		}
 	}
 
-	mdi := &Metadata{
+	mdi := &aidaMetadata{
 		dbType:     cloneType,
 		firstBlock: cfg.First,
 		lastBlock:  cfg.Last,

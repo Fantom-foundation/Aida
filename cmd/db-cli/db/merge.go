@@ -56,11 +56,11 @@ func merge(ctx *cli.Context) error {
 	}
 
 	// when merging, we must find metadataInfo in the dbs we are merging
-	return Merge(cfg, sourceDbs, &Metadata{dbType: mergeType})
+	return Merge(cfg, sourceDbs, &aidaMetadata{dbType: mergeType})
 }
 
 // Merge implements merging command for combining all source data databases into single database used for profiling.
-func Merge(cfg *utils.Config, sourceDbPaths []string, mdi *Metadata) error {
+func Merge(cfg *utils.Config, sourceDbPaths []string, mdi *aidaMetadata) error {
 	log := logger.NewLogger(cfg.LogLevel, "DB Merger")
 
 	// open targetDb
@@ -76,8 +76,6 @@ func Merge(cfg *utils.Config, sourceDbPaths []string, mdi *Metadata) error {
 		u := bigendian.BytesToUint16(chainIdBytes)
 		cfg.ChainID = int(u)
 	}
-
-	defer MustCloseDB(targetDb)
 
 	// we need a destination where to save merged aida-db
 	if cfg.AidaDb == "" {

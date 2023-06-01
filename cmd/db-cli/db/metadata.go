@@ -40,11 +40,11 @@ const (
 
 type metadataFinder struct {
 	log                                          *logging.Logger
-	mdi                                          *Metadata
+	mdi                                          *aidaMetadata
 	firstBlock, lastBlock, firstEpoch, lastEpoch uint64
 }
 
-func findMetadata(sourceDbs []ethdb.Database, targetDb ethdb.Database, mdi *Metadata) error {
+func findMetadata(sourceDbs []ethdb.Database, targetDb ethdb.Database, mdi *aidaMetadata) error {
 	switch mdi.dbType {
 	case updateType:
 		fallthrough
@@ -63,7 +63,7 @@ func findMetadata(sourceDbs []ethdb.Database, targetDb ethdb.Database, mdi *Meta
 	}
 }
 
-func findMergeMetadata(sourceDbs []ethdb.Database, mdi *Metadata) error {
+func findMergeMetadata(sourceDbs []ethdb.Database, mdi *aidaMetadata) error {
 	var err error
 	f := &metadataFinder{
 		log: logger.NewLogger("INFO", "metadata-Finder"),
@@ -94,7 +94,7 @@ func findMergeMetadata(sourceDbs []ethdb.Database, mdi *Metadata) error {
 
 }
 
-func findGenMetadata(db ethdb.Database, mdi *Metadata) error {
+func findGenMetadata(db ethdb.Database, mdi *aidaMetadata) error {
 	var err error
 	f := &metadataFinder{
 		log: logger.NewLogger("INFO", "metadata-Finder"),
@@ -114,7 +114,7 @@ func findGenMetadata(db ethdb.Database, mdi *Metadata) error {
 }
 
 // processMetadata tries to find data inside give sourceDbs, if not found the ones from config are used
-func processMetadata(sourceDbs []ethdb.Database, targetDb ethdb.Database, mdi *Metadata) error {
+func processMetadata(sourceDbs []ethdb.Database, targetDb ethdb.Database, mdi *aidaMetadata) error {
 	var err error
 
 	switch mdi.dbType {
@@ -157,7 +157,7 @@ func processMetadata(sourceDbs []ethdb.Database, targetDb ethdb.Database, mdi *M
 }
 
 // putMetadata decides which put func to call
-func putMetadata(targetDb ethdb.Database, mdi *Metadata) error {
+func putMetadata(targetDb ethdb.Database, mdi *aidaMetadata) error {
 	log := logger.NewLogger("INFO", "metadata")
 
 	if err := putBlockMetadata(targetDb, mdi.firstBlock, mdi.lastBlock, log); err != nil {
@@ -198,7 +198,7 @@ func putChainIDMetadata(targetDb ethdb.Database, chainID int) error {
 }
 
 // findMetadataGenAndMerge in given sourceDbs - either when Merging or generating AidaDb from substateDb, updatesetDb and deletionDb
-func findMetadataGenAndMerge(sourceDbs []ethdb.Database, mdi *Metadata) error {
+func findMetadataGenAndMerge(sourceDbs []ethdb.Database, mdi *aidaMetadata) error {
 
 	f := &metadataFinder{
 		log: logger.NewLogger("INFO", "metadata-Finder"),
@@ -228,7 +228,7 @@ func findMetadataGenAndMerge(sourceDbs []ethdb.Database, mdi *Metadata) error {
 	return nil
 }
 
-func processCloneMetadata(targetDb ethdb.Database, sourceDb ethdb.Database, mdi *Metadata) error {
+func processCloneMetadata(targetDb ethdb.Database, sourceDb ethdb.Database, mdi *aidaMetadata) error {
 	var err error
 
 	f := metadataFinder{

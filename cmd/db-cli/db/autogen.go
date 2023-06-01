@@ -97,7 +97,7 @@ func autoGen(ctx *cli.Context) error {
 		return err
 	}
 
-	var mdi *Metadata
+	var mdi *aidaMetadata
 	// update target aida-db
 	mdi, err = Generate(cfg, log)
 	if err != nil {
@@ -125,7 +125,7 @@ func autoGen(ctx *cli.Context) error {
 }
 
 // createPatch create patch from newly generated data
-func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpoch string, firstBlock uint64, lastBlock uint64, log *logging.Logger, mdi *Metadata) (string, error) {
+func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpoch string, firstBlock uint64, lastBlock uint64, log *logging.Logger, mdi *aidaMetadata) (string, error) {
 	// create a parents of output directory
 	err := os.MkdirAll(cfg.Output, 0755)
 	if err != nil {

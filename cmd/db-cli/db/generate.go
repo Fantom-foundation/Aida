@@ -80,8 +80,8 @@ func generate(ctx *cli.Context) error {
 }
 
 // Generate is used to record/update aida-db
-func Generate(cfg *utils.Config, log *logging.Logger) (*Metadata, error) {
-	mdi := &Metadata{
+func Generate(cfg *utils.Config, log *logging.Logger) (*aidaMetadata, error) {
+	mdi := &aidaMetadata{
 		dbType:  genType,
 		chainId: cfg.ChainID,
 	}
@@ -112,7 +112,7 @@ func Generate(cfg *utils.Config, log *logging.Logger) (*Metadata, error) {
 }
 
 // prepareOpera confirms that the opera is initialized
-func prepareOpera(cfg *utils.Config, log *logging.Logger, mdi *Metadata) error {
+func prepareOpera(cfg *utils.Config, log *logging.Logger, mdi *aidaMetadata) error {
 	_, err := os.Stat(cfg.Db)
 	if os.IsNotExist(err) {
 		log.Noticef("Initialising opera from genesis")
@@ -145,7 +145,7 @@ func loadSourceDBPaths(cfg *utils.Config, aidaDbTmp string) {
 }
 
 // genUpdateSet invokes UpdateSet generation
-func genUpdateSet(cfg *utils.Config, log *logging.Logger, mdi *Metadata) error {
+func genUpdateSet(cfg *utils.Config, log *logging.Logger, mdi *aidaMetadata) error {
 	db, err := substate.OpenUpdateDB(cfg.AidaDb)
 	if err != nil {
 		return err
@@ -178,7 +178,7 @@ func genUpdateSet(cfg *utils.Config, log *logging.Logger, mdi *Metadata) error {
 }
 
 // genDeletedAccounts invokes DeletedAccounts generation
-func genDeletedAccounts(cfg *utils.Config, log *logging.Logger, mdi *Metadata) error {
+func genDeletedAccounts(cfg *utils.Config, log *logging.Logger, mdi *aidaMetadata) error {
 	log.Noticef("Deleted generation")
 	err := replay.GenDeletedAccountsAction(cfg)
 	if err != nil {
@@ -196,7 +196,7 @@ func genDeletedAccounts(cfg *utils.Config, log *logging.Logger, mdi *Metadata) e
 }
 
 // recordSubstate loads events into the opera, whilst recording substates
-func recordSubstate(cfg *utils.Config, log *logging.Logger, mdi *Metadata) error {
+func recordSubstate(cfg *utils.Config, log *logging.Logger, mdi *aidaMetadata) error {
 	_, err := os.Stat(cfg.Events)
 	if os.IsNotExist(err) {
 		return fmt.Errorf("supplied events file %s doesn't exist", cfg.Events)
