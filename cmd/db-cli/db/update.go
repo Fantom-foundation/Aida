@@ -121,7 +121,7 @@ func patchesDownloader(cfg *utils.Config, patches []string) error {
 
 // mergePatch takes decompressed patches and merges them into aida-db
 func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan error) error {
-	mdi := new(MetadataInfo)
+	mdi := new(Metadata)
 	mdi.dbType = updateType
 
 	for {

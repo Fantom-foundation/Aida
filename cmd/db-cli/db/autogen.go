@@ -61,7 +61,7 @@ func autoGen(ctx *cli.Context) error {
 	log.Info("Starting Automatic generation")
 
 	// preparing config and directories
-	aidaDbTmp, err := prepare(cfg)
+	aidaDbTmp, err := prepareDbDirs(cfg)
 	if err != nil {
 		return err
 	}
@@ -97,7 +97,7 @@ func autoGen(ctx *cli.Context) error {
 		return err
 	}
 
-	var mdi *MetadataInfo
+	var mdi *Metadata
 	// update target aida-db
 	mdi, err = Generate(cfg, log)
 	if err != nil {
@@ -125,7 +125,7 @@ func autoGen(ctx *cli.Context) error {
 }
 
 // createPatch create patch from newly generated data
-func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpoch string, firstBlock uint64, lastBlock uint64, log *logging.Logger, mdi *MetadataInfo) (string, error) {
+func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpoch string, firstBlock uint64, lastBlock uint64, log *logging.Logger, mdi *Metadata) (string, error) {
 	// create a parents of output directory
 	err := os.MkdirAll(cfg.Output, 0755)
 	if err != nil {
@@ -377,7 +377,7 @@ func loadGenerationRange(cfg *utils.Config, log *logging.Logger) (string, string
 	lastEpoch := strconv.FormatUint(nextEpoch, 10)
 
 	if previousEpoch > nextEpoch {
-		// since GetOperaBlockAndEpoch returns off by one epoch number label
+		// since getBlockAndEpoch returns off by one epoch number label
 		// needs to be fixed in no need epochs are available
 		firstEpoch := strconv.FormatUint(previousEpoch-1, 10)
 		return firstEpoch, lastEpoch, false, nil

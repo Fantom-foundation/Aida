@@ -5,7 +5,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,7 +16,6 @@ import (
 	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/state"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/Fantom-foundation/Aida/world-state/db/opera"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
@@ -61,7 +59,7 @@ func generate(ctx *cli.Context) error {
 
 	log := logger.NewLogger(cfg.LogLevel, "Generate")
 
-	aidaDbTmp, err := prepare(cfg)
+	aidaDbTmp, err := prepareDbDirs(cfg)
 	if err != nil {
 		return err
 	}
@@ -82,8 +80,8 @@ func generate(ctx *cli.Context) error {
 }
 
 // Generate is used to record/update aida-db
-func Generate(cfg *utils.Config, log *logging.Logger) (*MetadataInfo, error) {
-	mdi := &MetadataInfo{
+func Generate(cfg *utils.Config, log *logging.Logger) (*Metadata, error) {
+	mdi := &Metadata{
 		dbType:  genType,
 		chainId: cfg.ChainID,
 	}
@@ -114,7 +112,7 @@ func Generate(cfg *utils.Config, log *logging.Logger) (*MetadataInfo, error) {
 }
 
 // prepareOpera confirms that the opera is initialized
-func prepareOpera(cfg *utils.Config, log *logging.Logger, mdi *MetadataInfo) error {
+func prepareOpera(cfg *utils.Config, log *logging.Logger, mdi *Metadata) error {
 	_, err := os.Stat(cfg.Db)
 	if os.IsNotExist(err) {
 		log.Noticef("Initialising opera from genesis")
@@ -138,29 +136,6 @@ func prepareOpera(cfg *utils.Config, log *logging.Logger, mdi *MetadataInfo) err
 	return nil
 }
 
-// prepare updates config for flags required in invoked generation commands
-// these flags are not expected from user, so we need to specify them for the generation process
-func prepare(cfg *utils.Config) (string, error) {
-	if cfg.DbTmp != "" {
-		// create a parents of temporary directory
-		err := os.MkdirAll(cfg.DbTmp, 0755)
-		if err != nil {
-			return "", fmt.Errorf("failed to create %s directory; %s", cfg.DbTmp, err)
-		}
-	}
-	//create a temporary working directory
-	aidaDbTmp, err := ioutil.TempDir(cfg.DbTmp, "aida_db_tmp_*")
-	if err != nil {
-		return "", fmt.Errorf("failed to create a temporary directory. %v", err)
-	}
-
-	loadSourceDBPaths(cfg, aidaDbTmp)
-
-	cfg.Workers = substate.WorkersFlag.Value
-
-	return aidaDbTmp, nil
-}
-
 // loadSourceDBPaths initializes paths to source databases
 func loadSourceDBPaths(cfg *utils.Config, aidaDbTmp string) {
 	cfg.DeletionDb = filepath.Join(aidaDbTmp, "deletion")
@@ -169,28 +144,8 @@ func loadSourceDBPaths(cfg *utils.Config, aidaDbTmp string) {
 	cfg.WorldStateDb = filepath.Join(aidaDbTmp, "worldstate")
 }
 
-// GetOperaBlockAndEpoch retrieves current block of opera head
-func GetOperaBlockAndEpoch(cfg *utils.Config) (uint64, uint64, error) {
-	operaPath := filepath.Join(cfg.Db, "/chaindata/leveldb-fsh/")
-	store, err := opera.Connect("ldb", operaPath, "main")
-	if err != nil {
-		return 0, 0, err
-	}
-	defer opera.MustCloseStore(store)
-
-	_, blockNumber, epochNumber, err := opera.LatestStateRoot(store)
-	if err != nil {
-		return 0, 0, fmt.Errorf("state root not found; %v", err)
-	}
-
-	if blockNumber < 1 {
-		return 0, 0, fmt.Errorf("opera; block number not found; %v", err)
-	}
-	return blockNumber, epochNumber, nil
-}
-
 // genUpdateSet invokes UpdateSet generation
-func genUpdateSet(cfg *utils.Config, log *logging.Logger, mdi *MetadataInfo) error {
+func genUpdateSet(cfg *utils.Config, log *logging.Logger, mdi *Metadata) error {
 	db, err := substate.OpenUpdateDB(cfg.AidaDb)
 	if err != nil {
 		return err
@@ -223,7 +178,7 @@ func genUpdateSet(cfg *utils.Config, log *logging.Logger, mdi *MetadataInfo) err
 }
 
 // genDeletedAccounts invokes DeletedAccounts generation
-func genDeletedAccounts(cfg *utils.Config, log *logging.Logger, mdi *MetadataInfo) error {
+func genDeletedAccounts(cfg *utils.Config, log *logging.Logger, mdi *Metadata) error {
 	log.Noticef("Deleted generation")
 	err := replay.GenDeletedAccountsAction(cfg)
 	if err != nil {
@@ -241,7 +196,7 @@ func genDeletedAccounts(cfg *utils.Config, log *logging.Logger, mdi *MetadataInf
 }
 
 // recordSubstate loads events into the opera, whilst recording substates
-func recordSubstate(cfg *utils.Config, log *logging.Logger, mdi *MetadataInfo) error {
+func recordSubstate(cfg *utils.Config, log *logging.Logger, mdi *Metadata) error {
 	_, err := os.Stat(cfg.Events)
 	if os.IsNotExist(err) {
 		return fmt.Errorf("supplied events file %s doesn't exist", cfg.Events)

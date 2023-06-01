@@ -38,21 +38,13 @@ const (
 	// P + P = P
 )
 
-// MetadataInfo holds any information about AidaDb needed for putting it into the Db
-type MetadataInfo struct {
-	dbType                aidaDbType
-	chainId               int
-	firstBlock, lastBlock uint64
-	firstEpoch, lastEpoch uint64
-}
-
 type metadataFinder struct {
 	log                                          *logging.Logger
-	mdi                                          *MetadataInfo
+	mdi                                          *Metadata
 	firstBlock, lastBlock, firstEpoch, lastEpoch uint64
 }
 
-func findMetadata(sourceDbs []ethdb.Database, targetDb ethdb.Database, mdi *MetadataInfo) error {
+func findMetadata(sourceDbs []ethdb.Database, targetDb ethdb.Database, mdi *Metadata) error {
 	switch mdi.dbType {
 	case updateType:
 		fallthrough
@@ -61,7 +53,7 @@ func findMetadata(sourceDbs []ethdb.Database, targetDb ethdb.Database, mdi *Meta
 	case mergeType:
 		return findMergeMetadata(append(sourceDbs, targetDb), mdi)
 	case patchType:
-		panic("patch not implemented yet")
+		return findGenMetadata(targetDb, mdi)
 	case cloneType:
 		// clone type already has every metadata needed
 		return nil
@@ -71,10 +63,10 @@ func findMetadata(sourceDbs []ethdb.Database, targetDb ethdb.Database, mdi *Meta
 	}
 }
 
-func findMergeMetadata(sourceDbs []ethdb.Database, mdi *MetadataInfo) error {
+func findMergeMetadata(sourceDbs []ethdb.Database, mdi *Metadata) error {
 	var err error
 	f := &metadataFinder{
-		log: logger.NewLogger("INFO", "Metadata-Finder"),
+		log: logger.NewLogger("INFO", "metadata-Finder"),
 		mdi: mdi,
 	}
 
@@ -102,10 +94,10 @@ func findMergeMetadata(sourceDbs []ethdb.Database, mdi *MetadataInfo) error {
 
 }
 
-func findGenMetadata(db ethdb.Database, mdi *MetadataInfo) error {
+func findGenMetadata(db ethdb.Database, mdi *Metadata) error {
 	var err error
 	f := &metadataFinder{
-		log: logger.NewLogger("INFO", "Metadata-Finder"),
+		log: logger.NewLogger("INFO", "metadata-Finder"),
 		mdi: mdi,
 	}
 
@@ -122,7 +114,7 @@ func findGenMetadata(db ethdb.Database, mdi *MetadataInfo) error {
 }
 
 // processMetadata tries to find data inside give sourceDbs, if not found the ones from config are used
-func processMetadata(sourceDbs []ethdb.Database, targetDb ethdb.Database, mdi *MetadataInfo) error {
+func processMetadata(sourceDbs []ethdb.Database, targetDb ethdb.Database, mdi *Metadata) error {
 	var err error
 
 	switch mdi.dbType {
@@ -149,7 +141,7 @@ func processMetadata(sourceDbs []ethdb.Database, targetDb ethdb.Database, mdi *M
 			return err
 		}
 	case cloneType:
-		//if err = findMetadataClone(sourceDbs[0], mdi); err != nil {
+		//if err = findMetadataClone(sourceDbs[0], md); err != nil {
 		//	return err
 		//}
 
@@ -165,7 +157,7 @@ func processMetadata(sourceDbs []ethdb.Database, targetDb ethdb.Database, mdi *M
 }
 
 // putMetadata decides which put func to call
-func putMetadata(targetDb ethdb.Database, mdi *MetadataInfo) error {
+func putMetadata(targetDb ethdb.Database, mdi *Metadata) error {
 	log := logger.NewLogger("INFO", "metadata")
 
 	if err := putBlockMetadata(targetDb, mdi.firstBlock, mdi.lastBlock, log); err != nil {
@@ -206,10 +198,10 @@ func putChainIDMetadata(targetDb ethdb.Database, chainID int) error {
 }
 
 // findMetadataGenAndMerge in given sourceDbs - either when Merging or generating AidaDb from substateDb, updatesetDb and deletionDb
-func findMetadataGenAndMerge(sourceDbs []ethdb.Database, mdi *MetadataInfo) error {
+func findMetadataGenAndMerge(sourceDbs []ethdb.Database, mdi *Metadata) error {
 
 	f := &metadataFinder{
-		log: logger.NewLogger("INFO", "Metadata-Finder"),
+		log: logger.NewLogger("INFO", "metadata-Finder"),
 		mdi: mdi,
 	}
 
@@ -236,7 +228,7 @@ func findMetadataGenAndMerge(sourceDbs []ethdb.Database, mdi *MetadataInfo) erro
 	return nil
 }
 
-func processCloneMetadata(targetDb ethdb.Database, sourceDb ethdb.Database, mdi *MetadataInfo) error {
+func processCloneMetadata(targetDb ethdb.Database, sourceDb ethdb.Database, mdi *Metadata) error {
 	var err error
 
 	f := metadataFinder{
@@ -418,13 +410,4 @@ func putTimestampMetadata(targetDb ethdb.Database) error {
 	}
 
 	return nil
-}
-
-// getLastBlock retrieve last block from aida-db metadata
-func getLastBlock(aidaDb ethdb.Database) (uint64, error) {
-	lastBlockBytes, err := aidaDb.Get([]byte(LastBlockPrefix))
-	if err != nil {
-		return 0, fmt.Errorf("cannot get last block from db; %v", err)
-	}
-	return bigendian.BytesToUint64(lastBlockBytes), nil
 }
