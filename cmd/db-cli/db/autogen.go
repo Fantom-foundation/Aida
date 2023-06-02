@@ -61,12 +61,6 @@ func autoGen(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	defer func(log *logging.Logger) {
-		err = os.RemoveAll(aidaDbTmp)
-		if err != nil {
-			log.Criticalf("can't remove temporary folder: %v; %v", aidaDbTmp, err)
-		}
-	}(log)
 
 	// loading epoch range for generation
 	var firstEpoch, lastEpoch string
@@ -93,34 +87,71 @@ func autoGen(ctx *cli.Context) error {
 		return err
 	}
 
-	// start opera to load new blocks in parallel
-	err = startOpera(log)
-	if err != nil {
-		return err
-	}
-
 	// update target aida-db
 	err = Generate(cfg, log)
 	if err != nil {
 		return err
 	}
 
+	// prune opera to reduce disk space and speed for next runs
+	errChan := startOperaPruning(cfg)
+
+	var patchError error
 	// if patch output dir is selected inserting patch.tar.gz, patch.tar.gz.md5 into there and updating patches.json
 	if cfg.Output != "" {
-		patchTarPath, err := createPatch(cfg, aidaDbTmp, firstEpoch, lastEpoch, cfg.First, cfg.Last, log)
-		if err != nil {
-			return err
+		var patchTarPath string
+		patchTarPath, patchError = createPatch(cfg, aidaDbTmp, firstEpoch, lastEpoch, cfg.First, cfg.Last, log)
+		if patchError == nil {
+			log.Infof("Successfully generated patch at: %v", patchTarPath)
 		}
-		log.Infof("Successfully generated patch at: %v", patchTarPath)
+	}
+
+	// wait for operaPruning response
+	err, ok := <-errChan
+	if ok && err != nil {
+		return err
+	}
+	log.Infof("Successfully pruned opera: %v", cfg.Db)
+
+	// start opera to load new blocks
+	err = startOpera(log)
+	if err != nil {
+		return err
+	}
+
+	// check error while patch generation
+	if patchError != nil {
+		return patchError
+	}
+
+	err = os.RemoveAll(aidaDbTmp)
+	if err != nil {
+		log.Criticalf("can't remove temporary folder: %v; %v", aidaDbTmp, err)
 	}
 
 	return nil
 }
 
+// startOperaPruning prunes opera in parallel
+func startOperaPruning(cfg *utils.Config) chan error {
+	errChan := make(chan error, 1)
+	log := logger.NewLogger(cfg.LogLevel, "autoGen-pruning")
+	log.Noticef("Starting opera pruning %v", cfg.Db)
+	go func() {
+		defer close(errChan)
+		cmd := exec.Command("opera", "--datadir", cfg.Db, "snapshot", "prune-state")
+		err := runCommand(cmd, nil, log)
+		if err != nil {
+			errChan <- fmt.Errorf("unable prune opera %v; %v", cfg.Db, err)
+		}
+	}()
+	return errChan
+}
+
 // createPatch create patch from newly generated data
 func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpoch string, firstBlock uint64, lastBlock uint64, log *logging.Logger) (string, error) {
 	// create a parents of output directory
-	err := os.MkdirAll(cfg.Output, 0644)
+	err := os.MkdirAll(cfg.Output, 0755)
 	if err != nil {
 		return "", fmt.Errorf("failed to create %s directory; %s", cfg.DbTmp, err)
 	}
@@ -175,7 +206,7 @@ func storeMd5sum(filePath string, log *logging.Logger) error {
 	md5FilePath := filePath + ".md5"
 
 	var file *os.File
-	file, err = os.OpenFile(md5FilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	file, err = os.OpenFile(md5FilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
 	if err != nil {
 		return fmt.Errorf("unable to create %s; %v", md5FilePath, err)
 	}
@@ -277,7 +308,7 @@ func updatePatchesJson(patchDir, patchName, fromEpoch string, toEpoch string, fr
 	}
 
 	// Open file for write and delete previous contents
-	file, err = os.OpenFile(jsonFilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	file, err = os.OpenFile(jsonFilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
 	if err != nil {
 		return fmt.Errorf("unable to open %s; %v", patchesJsonName, err)
 	}

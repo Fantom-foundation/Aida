@@ -23,8 +23,12 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// default updateSet interval
-const updateSetInterval = 1_000_000
+const (
+	// default updateSet interval
+	updateSetInterval = 1_000_000
+	// number of lines which are kept in memory in case command fails
+	commandOutputLimit = 50
+)
 
 // GenerateCommand data structure for the replay app
 var GenerateCommand = cli.Command{
@@ -135,7 +139,7 @@ func prepareOpera(cfg *utils.Config, log *logging.Logger) error {
 func prepare(cfg *utils.Config) (string, error) {
 	if cfg.DbTmp != "" {
 		// create a parents of temporary directory
-		err := os.MkdirAll(cfg.DbTmp, 0644)
+		err := os.MkdirAll(cfg.DbTmp, 0755)
 		if err != nil {
 			return "", fmt.Errorf("failed to create %s directory; %s", cfg.DbTmp, err)
 		}
@@ -238,7 +242,7 @@ func recordSubstate(cfg *utils.Config, log *logging.Logger) error {
 
 	log.Noticef("Starting Substate recording of %v", cfg.Events)
 
-	cmd := exec.Command("opera", "--datadir", cfg.Db, "--gcmode=full", "--db.preset=legacy-ldb", "--cache", strconv.Itoa(cfg.Cache), "import", "events", "--recording", "--substate-db", cfg.SubstateDb, cfg.Events)
+	cmd := exec.Command("opera", "--datadir", cfg.Db, "--db.preset=legacy-ldb", "--cache", strconv.Itoa(cfg.Cache), "import", "events", "--recording", "--substate-db", cfg.SubstateDb, cfg.Events)
 
 	err = runCommand(cmd, nil, log)
 	if err != nil {
@@ -295,45 +299,67 @@ func runCommand(cmd *exec.Cmd, resultChan chan string, log *logging.Logger) erro
 	}
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to create StdoutPipe; %v", err)
 	}
 	defer stdout.Close()
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to create StderrPipe; %v", err)
 	}
 	defer stderr.Close()
 
 	err = cmd.Start()
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to start Command %v; %v", cmd, err)
 	}
 
 	merged := io.MultiReader(stderr, stdout)
 	scanner := bufio.NewScanner(merged)
-	if log.IsEnabledFor(logging.DEBUG) {
+
+	lastOutputMessagesChan := make(chan string, commandOutputLimit)
+	defer close(lastOutputMessagesChan)
+	for scanner.Scan() {
+		m := scanner.Text()
+		if resultChan != nil {
+			resultChan <- m
+		}
+		if log.IsEnabledFor(logging.DEBUG) {
+			log.Debug(m)
+		} else {
+			// in case debugging is turned of and resultChan doesn't listen to ouput
+			// we need to keep most recent output lines in case of error
+			if resultChan == nil {
+				// throw out the oldest line in case we are at limit
+				if len(lastOutputMessagesChan) == commandOutputLimit {
+					<-lastOutputMessagesChan
+				}
+				lastOutputMessagesChan <- m
+			}
+		}
+	}
+
+	err = cmd.Wait()
+
+	// command failed
+	if err != nil {
+		// print out gathered output since generation failed
+		for {
+			m, ok := <-lastOutputMessagesChan
+			if !ok {
+				break
+			}
+			log.Error(m)
+		}
+
+		// read rest of the output - might not be needed
 		for scanner.Scan() {
 			m := scanner.Text()
 			if resultChan != nil {
 				resultChan <- m
 			}
-			log.Debug(m)
+			log.Error(m)
 		}
-	}
-	err = cmd.Wait()
-
-	// command failed
-	if err != nil {
-		if !log.IsEnabledFor(logging.DEBUG) {
-			for scanner.Scan() {
-				m := scanner.Text()
-				if resultChan != nil {
-					resultChan <- m
-				}
-				log.Error(m)
-			}
-		}
-		return err
+		return fmt.Errorf("error while executing Command %v; %v", cmd, err)
 	}
 	return nil
 }
