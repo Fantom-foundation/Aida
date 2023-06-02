@@ -13,10 +13,10 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// InsertCommand is a generic command for inserting any key/value pair into AidaDb
-var InsertCommand = cli.Command{
-	Action: insert,
-	Name:   "insert",
+// InsertKeyValueCommand is a generic command for inserting any key/value pair into AidaDb
+var InsertKeyValueCommand = cli.Command{
+	Action: insertKeyValue,
+	Name:   "insertKeyValue",
 	Usage:  "insert key/value pair into AidaDb",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
@@ -28,8 +28,8 @@ Inserts key/value pair into AidaDb according to arguments:
 `,
 }
 
-// insert given key/value pair into AidaDb
-func insert(ctx *cli.Context) error {
+// insertKeyValue given key/value pair into AidaDb
+func insertKeyValue(ctx *cli.Context) error {
 	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
 	if err != nil {
 		return err

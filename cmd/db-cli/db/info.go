@@ -17,27 +17,26 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var Stats = cli.Command{
-	Name:  "stats",
-	Usage: "Prints statistics about AidaDb",
+var InfoCommand = cli.Command{
+	Name:  "info",
+	Usage: "Prints information about AidaDb",
 	Subcommands: []*cli.Command{
-		&cmdPrint,
+		&cmdMetadata,
 		&cmdDelAcc,
 		&cmdCount,
 	},
 }
 
-var cmdPrint = cli.Command{
-	Action:    printStats,
-	Name:      "print",
-	Usage:     "Prints metadata of AidaDb",
-	ArgsUsage: "<lastBlockNum>",
+var cmdMetadata = cli.Command{
+	Action: printMetadata,
+	Name:   "metadata",
+	Usage:  "Prints metadata",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 	},
 }
 
-func printStats(ctx *cli.Context) error {
+func printMetadata(ctx *cli.Context) error {
 
 	cfg, argErr := utils.NewConfig(ctx, utils.NoArgs)
 	if argErr != nil {
@@ -125,7 +124,7 @@ func printDbType(m *aidaMetadata) error {
 
 var cmdCount = cli.Command{
 	Name:  "count",
-	Usage: "Prints count of records in AidaDb",
+	Usage: "Prints count of records",
 	Subcommands: []*cli.Command{
 		&cmdCountAll,
 		&cmdCountDestroyed,
@@ -165,7 +164,7 @@ var cmdCountSubstate = cli.Command{
 }
 
 func printAllCount(ctx *cli.Context) error {
-	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-Stats")
+	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-InfoCommand")
 
 	cfg, argErr := utils.NewConfig(ctx, utils.NoArgs)
 	if argErr != nil {
@@ -205,7 +204,7 @@ func logDetailedSize(db ethdb.Database, log *logging.Logger) {
 }
 
 func printDestroyedCount(ctx *cli.Context) error {
-	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-Stats")
+	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-InfoCommand")
 
 	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if argErr != nil {
@@ -228,7 +227,7 @@ func printDestroyedCount(ctx *cli.Context) error {
 }
 
 func printSubstateCount(ctx *cli.Context) error {
-	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-Stats")
+	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-InfoCommand")
 
 	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if argErr != nil {
@@ -266,7 +265,7 @@ var cmdDelAcc = cli.Command{
 }
 
 func getDelAcc(ctx *cli.Context) error {
-	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-Stats")
+	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-InfoCommand")
 
 	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if argErr != nil {
