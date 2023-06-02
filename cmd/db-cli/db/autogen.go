@@ -3,6 +3,8 @@ package db
 import (
 	"archive/tar"
 	"bufio"
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -194,7 +196,7 @@ func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpo
 		return "", err
 	}
 
-	err = storeMd5sum(patchTarPath, log)
+	err = storeMd5sum(patchTarPath)
 	if err != nil {
 		return "", err
 	}
@@ -209,8 +211,8 @@ func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpo
 }
 
 // storeMd5sum store md5sum of aida-db patch into a file
-func storeMd5sum(filePath string, log *logging.Logger) error {
-	md5sum, err := calculateMd5sum(filePath, log)
+func storeMd5sum(filePath string) error {
+	md5sum, err := calculateMD5Sum(filePath)
 	if err != nil {
 		return err
 	}
@@ -242,45 +244,31 @@ func storeMd5sum(filePath string, log *logging.Logger) error {
 	return nil
 }
 
-// calculateMd5sum calculates md5sum of a file
-func calculateMd5sum(filePath string, log *logging.Logger) (string, error) {
-	var response = ""
-	var wg sync.WaitGroup
-	resultChan := make(chan string, 10)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for {
-			select {
-			case s, ok := <-resultChan:
-				if !ok {
-					return
-				}
-				response += s
-			}
-		}
-	}()
-
-	cmd := exec.Command("bash", "-c", "md5sum "+filePath)
-	err := runCommand(cmd, resultChan, log)
+// calculateMD5Sum calculates MD5 hash of given file
+func calculateMD5Sum(filePath string) (string, error) {
+	// Open the file
+	file, err := os.Open(filePath)
 	if err != nil {
-		return "", fmt.Errorf("unable sum md5; %v", err.Error())
+		return "", fmt.Errorf("unable open file %s; %v", filePath, err.Error())
+	}
+	defer file.Close()
+
+	// Create a new MD5 hash instance
+	hash := md5.New()
+
+	// Copy the file content into the hash instance
+	_, err = io.Copy(hash, file)
+	if err != nil {
+		return "", fmt.Errorf("unable to calculate md5; %v", err)
 	}
 
-	// wait until reading of result finishes
-	wg.Wait()
+	// Calculate the MD5 checksum as a byte slice
+	checksum := hash.Sum(nil)
 
-	md5 := getFirstWord(response)
-	if md5 == "" {
-		return "", fmt.Errorf("unable to calculate md5sum")
-	}
+	// Convert the checksum to a hexadecimal string
+	md5sum := hex.EncodeToString(checksum)
 
-	// md5 is always 32 characters long
-	if len(md5) != 32 {
-		return "", fmt.Errorf("unable to generate correct md5sum; Error: %v is not md5", md5)
-	}
-
-	return md5, nil
+	return md5sum, nil
 }
 
 // createPatchTarGz compresses patch file into tar.gz
@@ -489,15 +477,6 @@ func stopOpera(log *logging.Logger) error {
 		return fmt.Errorf("unable stop opera; %v", err.Error())
 	}
 	return nil
-}
-
-// getFirstWord retrieves first word from string
-func getFirstWord(str string) string {
-	words := strings.Fields(str)
-	if len(words) > 0 {
-		return words[0]
-	}
-	return ""
 }
 
 // createTarGz create tar gz of given file/folder
