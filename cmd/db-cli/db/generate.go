@@ -295,18 +295,18 @@ func runCommand(cmd *exec.Cmd, resultChan chan string, log *logging.Logger) erro
 	}
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to create StdoutPipe; %v", err)
 	}
 	defer stdout.Close()
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to create StderrPipe; %v", err)
 	}
 	defer stderr.Close()
 
 	err = cmd.Start()
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to start Command %v; %v", cmd, err)
 	}
 
 	merged := io.MultiReader(stderr, stdout)
@@ -333,7 +333,7 @@ func runCommand(cmd *exec.Cmd, resultChan chan string, log *logging.Logger) erro
 				log.Error(m)
 			}
 		}
-		return err
+		return fmt.Errorf("error while executing Command %v; %v", cmd, err)
 	}
 	return nil
 }

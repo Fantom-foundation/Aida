@@ -61,12 +61,6 @@ func autoGen(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	defer func(log *logging.Logger) {
-		err = os.RemoveAll(aidaDbTmp)
-		if err != nil {
-			log.Criticalf("can't remove temporary folder: %v; %v", aidaDbTmp, err)
-		}
-	}(log)
 
 	// loading epoch range for generation
 	var firstEpoch, lastEpoch string
@@ -130,6 +124,11 @@ func autoGen(ctx *cli.Context) error {
 		return patchError
 	}
 
+	err = os.RemoveAll(aidaDbTmp)
+	if err != nil {
+		log.Criticalf("can't remove temporary folder: %v; %v", aidaDbTmp, err)
+	}
+
 	return nil
 }
 
@@ -139,7 +138,7 @@ func startOperaPruning(cfg *utils.Config, log *logging.Logger) chan error {
 	log.Noticef("Starting opera pruning %v", cfg.Db)
 	go func() {
 		defer close(errChan)
-		cmd := exec.Command("opera", "--datadir", cfg.Db, "snapshot prune-state")
+		cmd := exec.Command("opera", "--datadir", cfg.Db, "snapshot", "prune-state")
 		err := runCommand(cmd, nil, log)
 		if err != nil {
 			errChan <- fmt.Errorf("unable prune opera %v; %v", cfg.Db, err)
