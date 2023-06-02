@@ -84,13 +84,8 @@ MaxDuration = "72h"
 # The prefix to be used for CPU profile files collected.
 PROFILE_FILE_PREFIX="/tmp/aida_profile_#{DateTime.now.strftime("%Y-%m-%d_%H%M%S")}"
 
-# The directories containing input data for Aida.
-DATA_DIR = "/var/data/aida"
-SubstateDb = DATA_DIR + "/substate.50M"
-UpdateDir = DATA_DIR + "/updateset"
-DeletedAccountDir = DATA_DIR + "/deleted_accounts"
-
-
+# The directories containing the Aida DB.
+AidaDb = "/var/data/aida-db"
 
 # Optional extra flags to be passed to Aida.
 ExtraFlags = ""
@@ -123,7 +118,14 @@ def runAida (mode, evm, db, variant, schema, iteration)
     end
 
     puts "Running #{mode} with #{evm} and #{db}/#{variant}/s#{schema} .."
-    cmd = "timeout #{MaxDuration} ./build/aida-runvm --substate-db #{SubstateDb} --updatedir #{UpdateDir} --deleted-account-dir #{DeletedAccountDir} --db-impl #{db} --db-variant \"#{variant}\" --carmen-schema \"#{schema}\" --vm-impl #{evm} --cpuprofile=#{PROFILE_FILE_PREFIX}_profile_#{mode}_#{evm}_#{db}_#{variant}_#{StartBlock}_#{EndBlock}_#{iteration}.dat #{extraFlags} #{StartBlock} #{EndBlock}"
+    cmd = ""
+    cmd += "timeout #{MaxDuration} "
+    cmd += "./build/aida-runvm --aida-db #{AidaDb} "
+    cmd += "--db-impl #{db} --db-variant \"#{variant}\" --carmen-schema \"#{schema}\" "
+    cmd += "--vm-impl #{evm} "
+    cmd += "--cpu-profile=#{PROFILE_FILE_PREFIX}_profile_#{mode}_#{evm}_#{db}_#{variant}_#{StartBlock}_#{EndBlock}_#{iteration}.dat "
+    cmd += "#{extraFlags} "
+    cmd += "#{StartBlock} #{EndBlock}"
 
     puts "Running #{cmd}\n"
     
