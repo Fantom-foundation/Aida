@@ -60,6 +60,11 @@ var (
 		Usage:   "Path to source file with recorded API data",
 		Aliases: []string{"r"},
 	}
+	APIRecordingVersionFlag = cli.IntFlag{
+		Name:    "api-recording-version",
+		Usage:   "set version of api-recording; 0 (default) version without timestamp - substate-db is necessary for this version / 1 version with timestamp - substate-db is not needed",
+		Aliases: []string{"v"},
+	}
 	ArchiveModeFlag = cli.BoolFlag{
 		Name:  "archive",
 		Usage: "set node type to archival mode. If set, the node keep all the EVM state history; otherwise the state history will be pruned.",
@@ -367,7 +372,8 @@ type Config struct {
 	First uint64 // first block
 	Last  uint64 // last block
 
-	APIRecordingSrcFile string            // path to source file with recorded API data
+	APIRecordingSrcFile string // path to source file with recorded API data
+	APIRecordingVersion int
 	ArchiveMode         bool              // enable archive mode
 	ArchiveVariant      string            // selects the implementation variant of the archive
 	BlockLength         uint64            // length of a block in number of transactions
@@ -440,6 +446,7 @@ type Config struct {
 	TargetBlock         uint64            // represents the ID of target block to be reached by state evolve process or in dump state
 	UpdateBufferSize    uint64            // cache size in Bytes
 	ErigonBatchSize     datasize.ByteSize // erigon batch size for runVM
+
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.
@@ -518,6 +525,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		CommandName: ctx.Command.Name,
 
 		APIRecordingSrcFile: ctx.Path(APIRecordingSrcFileFlag.Name),
+		APIRecordingVersion: ctx.Int(APIRecordingVersionFlag.Name),
 		ArchiveMode:         ctx.Bool(ArchiveModeFlag.Name),
 		ArchiveVariant:      ctx.String(ArchiveVariantFlag.Name),
 		BlockLength:         ctx.Uint64(BlockLengthFlag.Name),
