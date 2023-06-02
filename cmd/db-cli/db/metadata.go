@@ -279,10 +279,13 @@ func (f *metadataFinder) findEpochs(db ethdb.Database) error {
 func (f *metadataFinder) findChainID(db ethdb.Database) error {
 	byteChainID, err := db.Get([]byte(ChainIDPrefix))
 	if err != nil {
-		return fmt.Errorf("cannot get chain-id from aida-db; %v", err)
+		if !strings.Contains(err.Error(), "not found") {
+			return fmt.Errorf("cannot get chain-id from aida-db; %v", err)
+		}
+		f.log.Warning("cannot find aida-db chain-db")
+	} else {
+		f.mdi.chainId = int(bigendian.BytesToUint16(byteChainID))
 	}
-
-	f.mdi.chainId = int(bigendian.BytesToUint16(byteChainID))
 
 	return nil
 }
