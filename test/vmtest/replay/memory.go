@@ -1,4 +1,4 @@
-package vmtest
+package replay
 
 import (
 	"fmt"

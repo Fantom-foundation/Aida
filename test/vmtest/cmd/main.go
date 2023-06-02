@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Fantom-foundation/rc-testing/test/vmtest"
+	"github.com/Fantom-foundation/rc-testing/test/vmtest/runvm"
+	"github.com/Fantom-foundation/rc-testing/test/vmtest/replay"
 	"github.com/urfave/cli/v2"
 )
 
@@ -21,7 +22,8 @@ func main() {
 		Copyright: "(c) 2022 Fantom Foundation",
 		Flags:     []cli.Flag{},
 		Commands: []*cli.Command{
-			&vmtest.ReplayCommand,
+			&replay.ReplayCommand,
+			&runvm.RunVMCommand,
 		},
 	}
 	if err := app.Run(os.Args); err != nil {
