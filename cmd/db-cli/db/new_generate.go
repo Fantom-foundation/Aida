@@ -127,10 +127,7 @@ func (g *generator) Generate() error {
 		return err
 	}
 
-	err = newProcessMetadata(g.aidaDb, g.log, g.cfg.ChainID, g.opera.firstBlock, g.opera.lastBlock, g.opera.firstEpoch, g.opera.lastEpoch)
-	if err != nil {
-		return err
-	}
+	processGenLikeMetadata(g.aidaDb, g.cfg.LogLevel, g.opera.firstBlock, g.opera.lastBlock, g.opera.firstEpoch, g.opera.lastEpoch, g.cfg.ChainID)
 
 	if !g.cfg.KeepDb {
 		err = os.RemoveAll(g.aidaDbTmp)

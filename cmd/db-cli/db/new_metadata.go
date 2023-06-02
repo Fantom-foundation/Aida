@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/Fantom-foundation/lachesis-base/common/bigendian"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -19,6 +20,7 @@ type Metadata interface {
 	getLastEpoch() uint64
 	getChainID() int
 	getTimestamp() uint64
+	getDbType() aidaDbType
 
 	setFirstBlock(uint64)
 	setLastBlock(uint64)
@@ -26,6 +28,7 @@ type Metadata interface {
 	setLastEpoch(uint64)
 	setChainID(int)
 	setTimestamp()
+	setDbType(aidaDbType)
 }
 
 // aidaMetadata holds any information about AidaDb needed for putting it into the Db
@@ -37,39 +40,24 @@ type aidaMetadata struct {
 	chainId                                      int
 }
 
-func newProcessMetadata(aidaDb ethdb.Database, log *logging.Logger, chainID int, firstBlock uint64, lastBlock uint64, firstEpoch uint64, lastEpoch uint64) {
-	m := aidaMetadata{
-		aidaDb: aidaDb,
-		dbType: genType,
-		log:    log,
+func newAidaMetadata(db ethdb.Database, dbType aidaDbType, logLevel string) *aidaMetadata {
+	return &aidaMetadata{
+		aidaDb: db,
+		dbType: dbType,
+		log:    logger.NewLogger(logLevel, "aida-metadata"),
 	}
-
-	m.log.Notice("Writing metadata...")
-
-	switch m.dbType {
-	case updateType:
-		fallthrough
-	case patchType:
-		fallthrough
-	case genType:
-		m.genMetadata(firstBlock, lastBlock, firstEpoch, lastEpoch, chainID)
-		m.log.Notice("Metadata written successfully")
-		return
-	case mergeType:
-		panic("not implemented yet")
-	case cloneType:
-		// clone type already has every metadata needed
-		return
-	default:
-		log.Warningf("Unknown data type: %v", m.dbType)
-	}
-
 }
 
-func (m *aidaMetadata) genMetadata(firstBlock uint64, lastBlock uint64, firstEpoch uint64, lastEpoch uint64, chainID int) {
-	m.doBlocks(firstBlock, lastBlock)
+func processGenLikeMetadata(aidaDb ethdb.Database, logLevel string, firstBlock uint64, lastBlock uint64, firstEpoch uint64, lastEpoch uint64, chainID int) {
+	m := newAidaMetadata(aidaDb, genType, logLevel)
 
-	m.doEpochs(firstEpoch, lastEpoch)
+	firstBlock, lastBlock = m.findBlocks(firstBlock, lastBlock)
+	m.setFirstBlock(firstBlock)
+	m.setLastBlock(lastBlock)
+
+	firstEpoch, lastEpoch = m.findEpochs(firstEpoch, lastEpoch)
+	m.setFirstEpoch(firstEpoch)
+	m.setLastEpoch(lastEpoch)
 
 	m.setChainID(chainID)
 
@@ -79,40 +67,94 @@ func (m *aidaMetadata) genMetadata(firstBlock uint64, lastBlock uint64, firstEpo
 
 }
 
-func (m *aidaMetadata) doBlocks(firstBlock uint64, lastBlock uint64) {
+func processMergeMetadata(aidaDb ethdb.Database, sourceDbs []ethdb.Database, logLevel string) {
 	var (
-		originalFirst, originalLast uint64
+		dbType                = patchType
+		t                     aidaDbType
+		firstBlock, lastBlock uint64
+		firstEpoch, lastEpoch uint64
+		chainID               int
 	)
 
-	originalFirst = m.getFirstBlock()
+	for _, db := range sourceDbs {
+		m := newAidaMetadata(db, noType, logLevel)
+		firstBlock, lastBlock = m.findBlocks(firstBlock, lastBlock)
+		firstEpoch, lastEpoch = m.findEpochs(firstEpoch, lastEpoch)
+		t = m.getDbType()
+		if t == cloneType {
+			dbType = t
+		} else if t == genType && dbType != cloneType {
+			dbType = t
+		}
 
-	if originalFirst > firstBlock {
-		m.setFirstBlock(firstBlock)
 	}
 
-	originalLast = m.getLastBlock()
+	aidaDbMetadata := newAidaMetadata(aidaDb, dbType, logLevel)
 
-	if originalLast != 0 && originalLast < lastBlock {
-		m.setLastBlock(lastBlock)
-	}
+	aidaDbMetadata.setFirstBlock(firstBlock)
+
+	aidaDbMetadata.setLastEpoch(lastBlock)
+
+	aidaDbMetadata.setFirstEpoch(firstEpoch)
+
+	aidaDbMetadata.setLastEpoch(lastEpoch)
+
+	aidaDbMetadata.setChainID(chainID)
+
+	aidaDbMetadata.setDbType(aidaDbMetadata.dbType)
+
+	aidaDbMetadata.setTimestamp()
+
 }
 
-func (m *aidaMetadata) doEpochs(firstEpoch uint64, lastEpoch uint64) {
+func (m *aidaMetadata) getMetadata() (firstBlock uint64, lastBlock uint64, firstEpoch uint64, lastEpoch uint64, dbType aidaDbType) {
+	firstBlock = m.getFirstBlock()
+	lastBlock = m.getLastBlock()
+	firstEpoch = m.getFirstEpoch()
+	lastEpoch = m.getLastEpoch()
+	dbType = m.getDbType()
+
+	return
+}
+
+func (m *aidaMetadata) findBlocks(firstBlock uint64, lastBlock uint64) (uint64, uint64) {
 	var (
-		originalFirst, originalLast uint64
+		dbFirst, dbLast uint64
 	)
 
-	originalFirst = m.getFirstEpoch()
+	dbFirst = m.getFirstBlock()
 
-	if originalFirst == 0 || originalFirst > firstEpoch {
-		m.setFirstEpoch(firstEpoch)
+	if (dbFirst != 0 && dbFirst < firstBlock) || firstBlock == 0 {
+		firstBlock = dbFirst
 	}
 
-	originalLast = m.getLastEpoch()
+	dbLast = m.getLastBlock()
 
-	if originalLast == 0 || originalLast < lastEpoch {
-		m.setLastEpoch(lastEpoch)
+	if dbLast > lastBlock || lastBlock == 0 {
+		lastBlock = dbLast
 	}
+
+	return firstBlock, lastBlock
+}
+
+func (m *aidaMetadata) findEpochs(firstEpoch uint64, lastEpoch uint64) (uint64, uint64) {
+	var (
+		dbFirst, dbLast uint64
+	)
+
+	dbFirst = m.getFirstEpoch()
+
+	if (dbFirst != 0 && dbFirst < firstEpoch) || firstEpoch == 0 {
+		firstEpoch = dbFirst
+	}
+
+	dbLast = m.getLastEpoch()
+
+	if dbLast > lastEpoch || lastEpoch == 0 {
+		lastEpoch = dbLast
+	}
+
+	return firstEpoch, lastEpoch
 }
 
 func (m *aidaMetadata) getFirstBlock() uint64 {
@@ -183,6 +225,16 @@ func (m *aidaMetadata) getTimestamp() uint64 {
 	return bigendian.BytesToUint64(byteChainID)
 }
 
+func (m *aidaMetadata) getDbType() aidaDbType {
+	byteDbType, err := m.aidaDb.Get([]byte(TypePrefix))
+	if err != nil {
+		m.log.Errorf("cannot get db-type; %v", err)
+		return noType
+	}
+
+	return aidaDbType(byteDbType[0])
+}
+
 func (m *aidaMetadata) setFirstBlock(firstBlock uint64) {
 	firstBlockBytes := substate.BlockToBytes(firstBlock)
 
@@ -239,6 +291,10 @@ func (m *aidaMetadata) setDbType(dbType aidaDbType) {
 	if err := m.aidaDb.Put([]byte(TypePrefix), dbTypeBytes); err != nil {
 		m.log.Errorf("cannot put db-type into aida-db; %v", err)
 	}
+}
+
+func (m *aidaMetadata) mergeMetadata(firstBlock uint64, lastBlock uint64, firstEpoch uint64, lastEpoch uint64, chainID int, sourceDbs []ethdb.Database) {
+
 }
 
 // getLastBlock retrieve last block from aida-db aidaMetadata

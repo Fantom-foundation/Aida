@@ -139,29 +139,6 @@ func Merge(cfg *utils.Config, sourceDbPaths []string, mdi *aidaMetadata) error {
 	return err
 }
 
-// openSourceDatabases opens all databases required for merge
-func openSourceDatabases(sourceDbPaths []string) ([]ethdb.Database, error) {
-	if len(sourceDbPaths) < 1 {
-		return nil, fmt.Errorf("no source database were specified\n")
-	}
-
-	var sourceDbs []ethdb.Database
-	for i := 0; i < len(sourceDbPaths); i++ {
-		path := sourceDbPaths[i]
-		_, err := os.Stat(path)
-		if os.IsNotExist(err) {
-			return nil, fmt.Errorf("source database %s; doesn't exist\n", path)
-		}
-		db, err := rawdb.NewLevelDBDatabase(path, 1024, 100, "", true)
-		if err != nil {
-			return nil, fmt.Errorf("source database %s; error: %v", path, err)
-		}
-		sourceDbs = append(sourceDbs, db)
-	}
-
-	return sourceDbs, nil
-}
-
 // copyData copies data from iterator into target database
 func copyData(sourceDb ethdb.Database, targetDb ethdb.Database) (uint64, error) {
 	dbBatchWriter := targetDb.NewBatch()
