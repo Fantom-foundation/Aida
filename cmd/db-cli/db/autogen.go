@@ -377,7 +377,7 @@ func loadGenerationRange(cfg *utils.Config, log *logging.Logger) (string, string
 	lastEpoch := strconv.FormatUint(nextEpoch, 10)
 
 	if previousEpoch > nextEpoch {
-		// since getBlockAndEpoch returns off by one epoch number label
+		// since getLatestBlockAndEpoch returns off by one epoch number label
 		// needs to be fixed in no need epochs are available
 		firstEpoch := strconv.FormatUint(previousEpoch-1, 10)
 		return firstEpoch, lastEpoch, false, nil

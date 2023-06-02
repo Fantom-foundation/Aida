@@ -18,6 +18,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+// aidaOpera represents running opera as a subprocess
 type aidaOpera struct {
 	firstBlock, lastBlock uint64
 	firstEpoch, lastEpoch uint64
@@ -26,6 +27,7 @@ type aidaOpera struct {
 	log                   *logging.Logger
 }
 
+// newAidaOpera returns new instance of Opera
 func newAidaOpera(ctx *cli.Context, cfg *utils.Config, log *logging.Logger) *aidaOpera {
 	return &aidaOpera{
 		ctx: ctx,
@@ -34,6 +36,7 @@ func newAidaOpera(ctx *cli.Context, cfg *utils.Config, log *logging.Logger) *aid
 	}
 }
 
+// init aidaOpera by executing command to start (and stop) opera and preparing dump context
 func (o *aidaOpera) init() error {
 	var err error
 
@@ -54,7 +57,9 @@ func (o *aidaOpera) init() error {
 	}
 
 	// get first block and epoch
-	if err = o.getBlockAndEpoch(); err != nil {
+	// running this command before starting opera results in getting first block and epoch on which opera starts
+	o.firstBlock, o.firstEpoch, err = o.getLatestBlockAndEpoch()
+	if err != nil {
 		return fmt.Errorf("cannot retrieve block from existing opera database %v; %v", o.cfg.Db, err)
 	}
 
@@ -65,6 +70,7 @@ func (o *aidaOpera) init() error {
 	return nil
 }
 
+// initFromGenesis file
 func (o *aidaOpera) initFromGenesis() error {
 	cmd := exec.Command("opera", "--datadir", o.cfg.Db, "--genesis", o.cfg.Genesis, "--exitwhensynced.epoch=0", "--cache", strconv.Itoa(o.cfg.Cache), "--db.preset=legacy-ldb", "--maxpeers=0")
 
@@ -76,27 +82,30 @@ func (o *aidaOpera) initFromGenesis() error {
 	return nil
 }
 
-func (o *aidaOpera) getBlockAndEpoch() error {
+// getLatestBlockAndEpoch from given opera db
+func (o *aidaOpera) getLatestBlockAndEpoch() (uint64, uint64, error) {
 	operaPath := filepath.Join(o.cfg.Db, "/chaindata/leveldb-fsh/")
 	store, err := opera.Connect("ldb", operaPath, "main")
 	if err != nil {
-		return err
+		return 0, 0, err
 	}
 	defer opera.MustCloseStore(store)
 
 	// save
-	_, o.firstBlock, o.firstEpoch, err = opera.LatestStateRoot(store)
+	var block, epoch uint64
+	_, block, epoch, err = opera.LatestStateRoot(store)
 	if err != nil {
-		return fmt.Errorf("cannot find latest state root; %v", err)
+		return 0, 0, fmt.Errorf("cannot find latest state root; %v", err)
 	}
 
 	if o.firstBlock < 1 {
-		return errors.New("opera returned block 0 - aborting generation")
+		return 0, 0, errors.New("opera returned block 0 - aborting generation")
 	}
 
-	return nil
+	return block, epoch, nil
 }
 
+// prepareDumpCliContext
 func (o *aidaOpera) prepareDumpCliContext() error {
 	flagSet := flag.NewFlagSet("", 0)
 	flagSet.String(utils.WorldStateFlag.Name, o.cfg.WorldStateDb, "")
@@ -119,24 +128,4 @@ func (o *aidaOpera) prepareDumpCliContext() error {
 	ctx.Command = command
 
 	return state.DumpState(ctx)
-}
-
-// GetOperaBlockAndEpoch retrieves current block of opera head
-func GetOperaBlockAndEpoch(cfg *utils.Config) (uint64, uint64, error) {
-	operaPath := filepath.Join(cfg.Db, "/chaindata/leveldb-fsh/")
-	store, err := opera.Connect("ldb", operaPath, "main")
-	if err != nil {
-		return 0, 0, err
-	}
-	defer opera.MustCloseStore(store)
-
-	_, blockNumber, epochNumber, err := opera.LatestStateRoot(store)
-	if err != nil {
-		return 0, 0, fmt.Errorf("state root not found; %v", err)
-	}
-
-	if blockNumber < 1 {
-		return 0, 0, fmt.Errorf("opera; block number not found; %v", err)
-	}
-	return blockNumber, epochNumber, nil
 }

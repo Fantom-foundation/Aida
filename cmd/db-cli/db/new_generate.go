@@ -161,7 +161,7 @@ func (g *generator) processSubstate() error {
 	}
 
 	// retrieve block the opera was iterated onto
-	g.opera.lastBlock, g.opera.lastEpoch, err = GetOperaBlockAndEpoch(g.cfg)
+	g.opera.lastBlock, g.opera.lastEpoch, err = g.opera.getLatestBlockAndEpoch()
 	if err != nil {
 		return fmt.Errorf("cannot get last opera block and epoch; %v", err)
 	}
