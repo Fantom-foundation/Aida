@@ -94,7 +94,7 @@ func autoGen(ctx *cli.Context) error {
 	}
 
 	// prune opera to reduce disk space and speed for next runs
-	errChan := startOperaPruning(cfg, log)
+	errChan := startOperaPruning(cfg)
 
 	var patchError error
 	// if patch output dir is selected inserting patch.tar.gz, patch.tar.gz.md5 into there and updating patches.json
@@ -133,8 +133,9 @@ func autoGen(ctx *cli.Context) error {
 }
 
 // startOperaPruning prunes opera in parallel
-func startOperaPruning(cfg *utils.Config, log *logging.Logger) chan error {
+func startOperaPruning(cfg *utils.Config) chan error {
 	errChan := make(chan error, 1)
+	log := logger.NewLogger(cfg.LogLevel, "autoGen-pruning")
 	log.Noticef("Starting opera pruning %v", cfg.Db)
 	go func() {
 		defer close(errChan)

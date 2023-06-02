@@ -23,8 +23,12 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// default updateSet interval
-const updateSetInterval = 1_000_000
+const (
+	// default updateSet interval
+	updateSetInterval = 1_000_000
+	// number of lines which are kept in memory in case command fails
+	commandOutputLimit = 50
+)
 
 // GenerateCommand data structure for the replay app
 var GenerateCommand = cli.Command{
@@ -311,27 +315,49 @@ func runCommand(cmd *exec.Cmd, resultChan chan string, log *logging.Logger) erro
 
 	merged := io.MultiReader(stderr, stdout)
 	scanner := bufio.NewScanner(merged)
-	if log.IsEnabledFor(logging.DEBUG) {
+
+	lastOutputMessagesChan := make(chan string, commandOutputLimit)
+	defer close(lastOutputMessagesChan)
+	for scanner.Scan() {
+		m := scanner.Text()
+		if resultChan != nil {
+			resultChan <- m
+		}
+		if log.IsEnabledFor(logging.DEBUG) {
+			log.Debug(m)
+		} else {
+			// in case debugging is turned of and resultChan doesn't listen to ouput
+			// we need to keep most recent output lines in case of error
+			if resultChan == nil {
+				// throw out the oldest line in case we are at limit
+				if len(lastOutputMessagesChan) == commandOutputLimit {
+					<-lastOutputMessagesChan
+				}
+				lastOutputMessagesChan <- m
+			}
+		}
+	}
+
+	err = cmd.Wait()
+
+	// command failed
+	if err != nil {
+		// print out gathered output since generation failed
+		for {
+			m, ok := <-lastOutputMessagesChan
+			if !ok {
+				break
+			}
+			log.Error(m)
+		}
+
+		// read rest of the output - might not be needed
 		for scanner.Scan() {
 			m := scanner.Text()
 			if resultChan != nil {
 				resultChan <- m
 			}
-			log.Debug(m)
-		}
-	}
-	err = cmd.Wait()
-
-	// command failed
-	if err != nil {
-		if !log.IsEnabledFor(logging.DEBUG) {
-			for scanner.Scan() {
-				m := scanner.Text()
-				if resultChan != nil {
-					resultChan <- m
-				}
-				log.Error(m)
-			}
+			log.Error(m)
 		}
 		return fmt.Errorf("error while executing Command %v; %v", cmd, err)
 	}
