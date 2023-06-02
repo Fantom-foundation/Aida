@@ -1,7 +1,6 @@
 package db
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -13,6 +12,7 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/common/bigendian"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/google/martian/log"
 	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
@@ -38,7 +38,6 @@ var cmdPrint = cli.Command{
 }
 
 func printStats(ctx *cli.Context) error {
-	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-Stats")
 
 	cfg, argErr := utils.NewConfig(ctx, utils.NoArgs)
 	if argErr != nil {
@@ -53,92 +52,46 @@ func printStats(ctx *cli.Context) error {
 
 	defer MustCloseDB(aidaDb)
 
-	log.Notice("AIDA-DB INFO:")
+	m := newAidaMetadata(aidaDb, noType, "INFO")
 
-	if err = printDbType(aidaDb, log); err != nil {
+	m.log.Notice("AIDA-DB INFO:")
+
+	if err = printDbType(m); err != nil {
 		return err
 	}
 
 	// CHAINID
-	if err = printChainID(aidaDb, log); err != nil {
-		return err
-	}
+	m.log.Infof("Chain-ID: %v", m.getChainID())
 
 	// BLOCKS
-	if err = printBlocks(aidaDb, log); err != nil {
-		return err
-	}
+	m.log.Infof("First Block: %v", m.getFirstBlock())
+	m.log.Infof("Last Block: %v", m.getLastBlock())
 
 	// EPOCHS
-	if err = printEpochs(aidaDb, log); err != nil {
-		return err
-	}
+	m.log.Infof("First Epoch: %v", m.firstEpoch)
+	m.log.Infof("Last Epoch: %v", m.lastEpoch)
 
 	// TIMESTAMP
-	if err = printCreateTime(aidaDb, log); err != nil {
-		return err
-	}
+	log.Infof("Created: %v", time.Unix(int64(m.getTimestamp()), 0))
 
 	// UPDATE-SET
-	if err = printUpdateSetInfo(aidaDb, log); err != nil {
+	if err = printUpdateSetInfo(m); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func printBlocks(aidaDb ethdb.Database, log *logging.Logger) error {
-	firstBlockBytes, err := aidaDb.Get([]byte(FirstBlockPrefix))
-	if err != nil {
-		return fmt.Errorf("cannot get first block from db; %v", err)
-	}
-	log.Infof("First Block: %v", bigendian.BytesToUint64(firstBlockBytes))
+func printUpdateSetInfo(m *aidaMetadata) error {
+	m.log.Notice("UPDATE-SET INFO:")
 
-	last, err := getLastBlock(aidaDb)
-	if err != nil {
-		return err
-	}
-	log.Infof("Last Block: %v", last)
-
-	return nil
-}
-
-func printEpochs(aidaDb ethdb.Database, log *logging.Logger) error {
-	firstEpochBytes, err := aidaDb.Get([]byte(FirstEpochPrefix))
-	if err != nil {
-		return fmt.Errorf("cannot get first epoch from db; %v", err)
-	}
-	log.Infof("First Epoch: %v", bigendian.BytesToUint64(firstEpochBytes))
-
-	lastEpochBytes, err := aidaDb.Get([]byte(LastEpochPrefix))
-	if err != nil {
-		return fmt.Errorf("cannot get last epoch from db; %v", err)
-	}
-	log.Infof("Last Epoch: %v", bigendian.BytesToUint64(lastEpochBytes))
-
-	return nil
-}
-
-func printCreateTime(aidaDb ethdb.Database, log *logging.Logger) error {
-	timestampBytes, err := aidaDb.Get([]byte(TimestampPrefix))
-	if err != nil {
-		return fmt.Errorf("cannot get timestamp from db; %v", err)
-	}
-	log.Infof("Created: %v", time.Unix(int64(bigendian.BytesToUint64(timestampBytes)), 0))
-
-	return nil
-}
-
-func printUpdateSetInfo(aidaDb ethdb.Database, log *logging.Logger) error {
-	log.Notice("UPDATE-SET INFO:")
-
-	intervalBytes, err := aidaDb.Get([]byte(substate.UpdatesetIntervalKey))
+	intervalBytes, err := m.aidaDb.Get([]byte(substate.UpdatesetIntervalKey))
 	if err != nil {
 		return fmt.Errorf("cannot get updateset interval from db; %v", err)
 	}
 	log.Infof("Interval: %v blocks", bigendian.BytesToUint64(intervalBytes))
 
-	sizeBytes, err := aidaDb.Get([]byte(substate.UpdatesetSizeKey))
+	sizeBytes, err := m.aidaDb.Get([]byte(substate.UpdatesetSizeKey))
 	if err != nil {
 		return fmt.Errorf("cannot get updateset size from db; %v", err)
 	}
@@ -150,14 +103,11 @@ func printUpdateSetInfo(aidaDb ethdb.Database, log *logging.Logger) error {
 	return nil
 }
 
-func printDbType(aidaDb ethdb.Database, log *logging.Logger) error {
-	typeBytes, err := aidaDb.Get([]byte(TypePrefix))
-	if err != nil {
-		return errors.New("this aida-b seems to have no metadata")
-	}
+func printDbType(m *aidaMetadata) error {
+	t := m.getDbType()
 
 	var typePrint string
-	switch aidaDbType(typeBytes[0]) {
+	switch t {
 	case genType:
 		typePrint = "Generate"
 	case cloneType:
@@ -165,21 +115,11 @@ func printDbType(aidaDb ethdb.Database, log *logging.Logger) error {
 	case patchType:
 		typePrint = "Patch"
 	default:
-		typePrint = "Could not decode Db type of key: " + string(typeBytes)
+		typePrint = "Unknown DbType: " + string(t)
 	}
 
-	log.Noticef("DB-Type: %v", typePrint)
+	m.log.Noticef("DB-Type: %v", typePrint)
 
-	return nil
-}
-
-func printChainID(aidaDb ethdb.Database, log *logging.Logger) error {
-	chainIDBytes, err := aidaDb.Get([]byte(ChainIDPrefix))
-	if err != nil {
-		return fmt.Errorf("cannot get chain-id from db; %v", err)
-	}
-
-	log.Infof("Chain-ID: %v", bigendian.BytesToUint16(chainIDBytes))
 	return nil
 }
 
