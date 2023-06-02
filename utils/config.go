@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Fantom-foundation/Aida/cmd/db-cli/flags"
 	"github.com/Fantom-foundation/Aida/logger"
 	substate "github.com/Fantom-foundation/Substate"
 	_ "github.com/Fantom-foundation/Tosca/go/vm/evmone"
@@ -31,8 +32,14 @@ const (
 	NoArgs                             // requires no arguments
 )
 
+const (
+	aidaDbRepositoryMainnetUrl = "https://aida.repository.fantom.network"
+	aidaDbRepositoryTestnetUrl = "https://aida.testnet.repository.fantom.network"
+)
+
 var (
-	FirstSubstateBlock uint64 // id of the first block in substate
+	FirstSubstateBlock  uint64 // id of the first block in substate
+	AidaDbRepositoryUrl string // url of the Aida DB repository
 )
 
 // Type of validation performs on stateDB during Tx processing.
@@ -84,7 +91,6 @@ var (
 	ChainIDFlag = cli.IntFlag{
 		Name:  "chainid",
 		Usage: "ChainID for replayer",
-		Value: 250,
 	}
 	CacheFlag = cli.IntFlag{
 		Name:  "cache",
@@ -405,6 +411,7 @@ type Config struct {
 	Profile             bool              // enable micro profiling
 	RandomSeed          int64             // set random seed for stochastic testing
 	SkipPriming         bool              // skip priming of the state DB
+	SkipMetadata        bool              // skip metadata insert/getting into AidaDb
 	ShadowDb            bool              // defines we want to open an existing db as shadow
 	ShadowImpl          string            // implementation of the shadow DB to use, empty if disabled
 	ShadowVariant       string            // database variant of the shadow DB to be used
@@ -558,6 +565,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		PrimeThreshold:      ctx.Int(PrimeThresholdFlag.Name),
 		Profile:             ctx.Bool(ProfileFlag.Name),
 		SkipPriming:         ctx.Bool(SkipPrimingFlag.Name),
+		SkipMetadata:        ctx.Bool(flags.SkipMetadata.Name),
 		ShadowDb:            ctx.Bool(ShadowDb.Name),
 		ShadowImpl:          ctx.String(ShadowDbImplementationFlag.Name),
 		ShadowVariant:       ctx.String(ShadowDbVariantFlag.Name),
@@ -593,11 +601,16 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		UpdateBufferSize:    ctx.Uint64(UpdateBufferSizeFlag.Name) << 20, // convert from MiB to B
 	}
 	if cfg.ChainID == 0 {
-		cfg.ChainID = ChainIDFlag.Value
+		log.Warning("--chainid was not set; setting default value for mainnet (250)")
+		cfg.ChainID = 250
 	}
 	setFirstBlockFromChainID(cfg.ChainID)
 	if cfg.RandomSeed < 0 {
 		cfg.RandomSeed = int64(rand.Uint32())
+	}
+	err := setAidaDbRepositoryUrl(cfg.ChainID)
+	if err != nil {
+		return cfg, fmt.Errorf("Unable to prepareUrl from ChainId %v; %v", cfg.ChainID, err)
 	}
 
 	if _, err := os.Stat(cfg.AidaDb); !os.IsNotExist(err) {
@@ -691,6 +704,18 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+// setAidaDbRepositoryUrl based on chain id selects correct aida-db repository url
+func setAidaDbRepositoryUrl(chainId int) error {
+	if chainId == 250 {
+		AidaDbRepositoryUrl = aidaDbRepositoryMainnetUrl
+	} else if chainId == 4002 {
+		AidaDbRepositoryUrl = aidaDbRepositoryTestnetUrl
+	} else {
+		return fmt.Errorf("invalid chain id %d", chainId)
+	}
+	return nil
 }
 
 // SetBlockRange checks the validity of a block range and return the first and last block as numbers.

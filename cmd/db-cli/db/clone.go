@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/Fantom-foundation/Aida/cmd/db-cli/flags"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -31,6 +32,7 @@ var CloneCommand = cli.Command{
 		&utils.CompactDbFlag,
 		&utils.ValidateFlag,
 		&logger.LogLevelFlag,
+		&flags.SkipMetadata,
 	},
 	Description: `
 Creates clone of aida-db for desired block range
@@ -66,6 +68,12 @@ func clone(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+
+	// close aida database
+	defer func() {
+		MustCloseDB(aidaDb)
+		MustCloseDB(targetDb)
+	}()
 
 	// open writing channel
 	writerChan, errChan := writeDataAsync(targetDb)
@@ -124,10 +132,15 @@ func clone(ctx *cli.Context) error {
 		}
 	}
 
-	// close aida database
-	MustCloseDB(aidaDb)
-	// close target database
-	MustCloseDB(targetDb)
+	mdi := &MetadataInfo{
+		dbType:     cloneType,
+		firstBlock: cfg.First,
+		lastBlock:  cfg.Last,
+	}
+
+	if err = processMetadata([]ethdb.Database{aidaDb}, targetDb, mdi); err != nil {
+		return err
+	}
 
 	return nil
 }
