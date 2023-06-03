@@ -261,11 +261,6 @@ var (
 		Name:  "aida-db",
 		Usage: "set substate, updateset and deleted accounts directory",
 	}
-	ErigonBatchSizeFlag = cli.StringFlag{
-		Name:  "erigonbatchsize",
-		Usage: "Batch size for the execution stage",
-		Value: "512M",
-	}
 	ContractNumberFlag = cli.IntFlag{
 		Name:  "num-contracts",
 		Usage: "Number of contracts to create",
@@ -604,12 +599,6 @@ func newConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		cfg.SubstateDb = cfg.AidaDb
 	}
 
-	if ctx.String(ErigonBatchSizeFlag.Name) != "" {
-		err := cfg.ErigonBatchSize.UnmarshalText([]byte(ctx.String(ErigonBatchSizeFlag.Name)))
-		if err != nil {
-			return cfg, fmt.Errorf("invalid batchSize provided: %v", err)
-		}
-	}
 	if mode == noArgs {
 		return cfg, nil
 	}
@@ -659,7 +648,6 @@ func newConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 			}
 		}
 		log.Infof("\tValidate world state: %v, validate tx state: %v\n", cfg.ValidateWorldState, cfg.ValidateTxState)
-		log.Infof("\tErigon batch size: %v", cfg.ErigonBatchSize.HumanReadable())
 	}
 
 	if cfg.ValidateTxState {
