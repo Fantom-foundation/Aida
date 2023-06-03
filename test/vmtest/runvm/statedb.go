@@ -7,9 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
-
-	"github.com/Fantom-foundation/rc-testing/test/vmtest/state"
 	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/rc-testing/test/vmtest/state"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/google/martian/log"
 )
@@ -159,11 +158,11 @@ func makeNewStateDB(cfg *Config) (state.StateDB, string, error) {
 
 // makeStateDBVariant creates a DB instance of the requested kind.
 func makeStateDBVariant(directory, impl, variant, archiveVariant string, carmenSchema int, rootHash common.Hash, cfg *Config) (state.StateDB, error) {
-	if impl ==  "geth" {
+	if impl == "geth" {
 		return state.MakeGethStateDB(directory, variant, rootHash, cfg.ArchiveMode)
 	}
 	return nil, fmt.Errorf("unknown Db implementation: %v", impl)
-	
+
 }
 
 // DeleteDestroyedAccountsFromWorldState removes previously suicided accounts from
@@ -205,7 +204,7 @@ func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *Config, target ui
 	if err != nil {
 		return err
 	}
-	
+
 	defer src.Close()
 	accounts, err := src.GetAccountsDestroyedInRange(0, target)
 	if err != nil {

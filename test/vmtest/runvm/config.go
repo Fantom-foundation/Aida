@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"strings"
 
-
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/c2h5oh/datasize"
 	_ "github.com/ethereum/go-ethereum/core/vm"

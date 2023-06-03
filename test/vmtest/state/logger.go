@@ -3,8 +3,8 @@ package state
 import (
 	"math/big"
 
-	"github.com/Fantom-foundation/rc-testing/test/vmtest/logger"
 	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/rc-testing/test/vmtest/logger"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/op/go-logging"

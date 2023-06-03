@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Fantom-foundation/rc-testing/test/vmtest/runvm"
 	"github.com/Fantom-foundation/rc-testing/test/vmtest/replay"
+	"github.com/Fantom-foundation/rc-testing/test/vmtest/runvm"
 	"github.com/urfave/cli/v2"
 )
 

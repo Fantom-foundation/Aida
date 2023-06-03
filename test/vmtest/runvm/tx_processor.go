@@ -7,10 +7,10 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/Fantom-foundation/rc-testing/test/vmtest/state"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/Fantom-foundation/go-opera/opera"
+	"github.com/Fantom-foundation/rc-testing/test/vmtest/state"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"

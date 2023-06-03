@@ -15,8 +15,75 @@ const (
 	logFrequency                       = 15 * time.Second
 )
 
+//TODO make flags private
+// runVM command
+var RunVMCommand = cli.Command{
+	Action:    runVM,
+	Name:      "runvm",
+	Usage:     "run VM on the world-state",
+	ArgsUsage: "<blockNumFirst> <blockNumLast>",
+	Flags: []cli.Flag{
+		// AidaDb
+		&AidaDbFlag,
+		&substate.SubstateDbFlag,
+		&DeletionDbFlag,
+		&UpdateDbFlag,
+
+		// StateDb
+		&CarmenSchemaFlag,
+		&StateDbImplementationFlag,
+		&StateDbVariantFlag,
+		&StateDbSrcFlag,
+		&DbTmpFlag,
+		&StateDbLoggingFlag,
+
+		// ArchiveDb
+		&ArchiveModeFlag,
+		&ArchiveVariantFlag,
+
+		// ShadowDb
+		&ShadowDb,
+		&ShadowDbImplementationFlag,
+		&ShadowDbVariantFlag,
+
+		// VM
+		&VmImplementation,
+
+		// Profiling
+		&CpuProfileFlag,
+		&MemoryBreakdownFlag,
+		&MemoryProfileFlag,
+		&RandomSeedFlag,
+		&PrimeThresholdFlag,
+		&ProfileFlag,
+
+		// Priming
+		&RandomizePrimingFlag,
+		&SkipPrimingFlag,
+		&UpdateBufferSizeFlag,
+
+		// Utils
+		&substate.WorkersFlag,
+		&ChainIDFlag,
+		&ContinueOnFailureFlag,
+		&QuietFlag,
+		&SyncPeriodLengthFlag,
+		&KeepDbFlag,
+		&MaxNumTransactionsFlag,
+		&ValidateTxStateFlag,
+		&ValidateWorldStateFlag,
+		&ValidateFlag,
+		&LogLevelFlag,
+	},
+	Description: `
+The run-vm command requires two arguments: <blockNumFirst> <blockNumLast>
+
+<blockNumFirst> and <blockNumLast> are the first and last block of
+the inclusive range of blocks.`,
+}
+
 // RunVM implements trace command for executing VM on a chosen storage system.
-func RunVM(ctx *cli.Context) error {
+func runVM(ctx *cli.Context) error {
 	var (
 		elapsed, lastLog        time.Duration
 		hours, minutes, seconds uint32
@@ -52,10 +119,10 @@ func RunVM(ctx *cli.Context) error {
 
 	// start CPU profiling if requested.
 	/*
-	if err := utils.StartCPUProfile(cfg); err != nil {
-		return err
-	}
-	defer utils.StopCPUProfile(cfg)
+		if err := utils.StartCPUProfile(cfg); err != nil {
+			return err
+		}
+		defer utils.StopCPUProfile(cfg)
 	*/
 
 	// iterate through subsets in sequence
@@ -100,10 +167,10 @@ func RunVM(ctx *cli.Context) error {
 
 	// wrap stateDB for profiling
 	/*
-	var stats *operation.ProfileStats
-	if cfg.Profile {
-		db, stats = NewProxyProfiler(db)
-	}
+		var stats *operation.ProfileStats
+		if cfg.Profile {
+			db, stats = NewProxyProfiler(db)
+		}
 	*/
 
 	if cfg.ValidateWorldState {
@@ -267,18 +334,17 @@ func RunVM(ctx *cli.Context) error {
 
 	// write memory profile if requested
 	/*
-	if err := StartMemoryProfile(cfg); err != nil {
-		return err
-	}
+		if err := StartMemoryProfile(cfg); err != nil {
+			return err
+		}
 	*/
 
-	
 	/*
-	if cfg.Profile {
-		fmt.Println("=================Statistics=================")
-		stats.PrintProfiling(log)
-		fmt.Println("============================================")
-	}
+		if cfg.Profile {
+			fmt.Println("=================Statistics=================")
+			stats.PrintProfiling(log)
+			fmt.Println("============================================")
+		}
 	*/
 
 	if cfg.KeepDb && !isFirstBlock {

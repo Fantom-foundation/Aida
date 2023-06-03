@@ -6,8 +6,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/Fantom-foundation/rc-testing/test/vmtest/state"
 	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/rc-testing/test/vmtest/state"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/op/go-logging"
 )
