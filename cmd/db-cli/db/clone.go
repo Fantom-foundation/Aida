@@ -15,12 +15,6 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// rawEntry representation of database entry
-type rawEntry struct {
-	Key   []byte
-	Value []byte
-}
-
 // CloneCommand enables creation of aida-db copy or subset
 var CloneCommand = cli.Command{
 	Action: clone,
