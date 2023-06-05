@@ -39,7 +39,6 @@ type merger struct {
 	targetDb  ethdb.Database
 	sourceDbs []ethdb.Database
 	dbPaths   []string
-	metadata  *aidaMetadata
 }
 
 func mer(ctx *cli.Context) error {
@@ -73,7 +72,6 @@ func mer(ctx *cli.Context) error {
 		log:       logger.NewLogger(cfg.LogLevel, "aida-db-merger"),
 		targetDb:  targetDb,
 		sourceDbs: dbs,
-		metadata:  newAidaMetadata(targetDb, mergeType, cfg.LogLevel),
 		dbPaths:   sourcePaths,
 	}
 
