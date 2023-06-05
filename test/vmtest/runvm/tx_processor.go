@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	substate "github.com/Fantom-foundation/Substate"
-	"github.com/Fantom-foundation/go-opera/evmcore"
+	"github.com/Fantom-foundation/go-opera-base/evmcore"
 	"github.com/Fantom-foundation/go-opera/opera"
 	"github.com/Fantom-foundation/rc-testing/test/vmtest/state"
 	"github.com/ethereum/go-ethereum/common"
