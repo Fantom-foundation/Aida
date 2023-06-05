@@ -67,8 +67,8 @@ func printMetadata(ctx *cli.Context) error {
 	m.log.Infof("Last Block: %v", m.getLastBlock())
 
 	// EPOCHS
-	m.log.Infof("First Epoch: %v", m.firstEpoch)
-	m.log.Infof("Last Epoch: %v", m.lastEpoch)
+	m.log.Infof("First Epoch: %v", m.getFirstEpoch())
+	m.log.Infof("Last Epoch: %v", m.getLastEpoch())
 
 	// TIMESTAMP
 	log.Infof("Created: %v", time.Unix(int64(m.getTimestamp()), 0))
