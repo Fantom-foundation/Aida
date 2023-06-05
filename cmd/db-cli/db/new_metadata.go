@@ -65,6 +65,8 @@ func processGenLikeMetadata(aidaDb ethdb.Database, logLevel string, firstBlock u
 
 	m.setTimestamp()
 
+	m.log.Notice("Metadata added successfully")
+
 }
 
 func processMergeMetadata(aidaDb ethdb.Database, sourceDbs []ethdb.Database, logLevel string) {

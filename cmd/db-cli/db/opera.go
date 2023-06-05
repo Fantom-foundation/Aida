@@ -72,7 +72,8 @@ func (o *aidaOpera) init() error {
 
 // initFromGenesis file
 func (o *aidaOpera) initFromGenesis() error {
-	cmd := exec.Command("opera", "--datadir", o.cfg.Db, "--genesis", o.cfg.Genesis, "--exitwhensynced.epoch=0", "--cache", strconv.Itoa(o.cfg.Cache), "--db.preset=legacy-ldb", "--maxpeers=0")
+	cmd := exec.Command("opera", "--datadir", o.cfg.Db, "--genesis", o.cfg.Genesis,
+		"--exitwhensynced.epoch=0", "--cache", strconv.Itoa(o.cfg.Cache), "--db.preset=legacy-ldb", "--maxpeers=0")
 
 	err := runCommand(cmd, nil, o.log)
 	if err != nil {
@@ -98,7 +99,7 @@ func (o *aidaOpera) getLatestBlockAndEpoch() (uint64, uint64, error) {
 		return 0, 0, fmt.Errorf("cannot find latest state root; %v", err)
 	}
 
-	if o.firstBlock < 1 {
+	if block < 1 {
 		return 0, 0, errors.New("opera returned block 0 - aborting generation")
 	}
 

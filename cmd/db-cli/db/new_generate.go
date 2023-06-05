@@ -20,7 +20,7 @@ import (
 )
 
 // GenerateCommand data structure for the replay app
-var genCmd = cli.Command{
+var GenCmd = cli.Command{
 	Action: gen,
 	Name:   "gen",
 	Usage:  "generates aida-db from given events",
@@ -127,6 +127,8 @@ func (g *generator) Generate() error {
 		return err
 	}
 
+	g.openAidaDb()
+
 	processGenLikeMetadata(g.aidaDb, g.cfg.LogLevel, g.opera.firstBlock, g.opera.lastBlock, g.opera.firstEpoch, g.opera.lastEpoch, g.cfg.ChainID)
 
 	if !g.cfg.KeepDb {
@@ -135,6 +137,8 @@ func (g *generator) Generate() error {
 			return err
 		}
 	}
+
+	g.log.Noticef("AidaDb %v generation done", g.cfg.AidaDb)
 
 	return nil
 }
@@ -152,7 +156,8 @@ func (g *generator) processSubstate() error {
 
 	g.log.Noticef("Starting Substate recording from %v", g.cfg.Events)
 
-	cmd = exec.Command("opera", "--datadir", g.cfg.Db, "--gcmode=full", "--cache", strconv.Itoa(g.cfg.Cache), "import", "events", "--recording", "--substate-db", g.cfg.SubstateDb, g.cfg.Events)
+	cmd = exec.Command("opera", "--datadir", g.cfg.Db, "--cache", strconv.Itoa(g.cfg.Cache),
+		"import", "events", "--recording", "--substate-db", g.cfg.SubstateDb, g.cfg.Events)
 
 	err = runCommand(cmd, nil, g.log)
 	if err != nil {
@@ -253,20 +258,21 @@ func (g *generator) merge(pathToDb, target string) error {
 		err                   error
 	)
 
-	g.log.Notice("Merging %v into AidaDb...", target)
-	defer g.log.Notice("Merging %v successful", target)
+	g.log.Noticef("Merging %v into AidaDb...", target)
 
 	targetDb, err := rawdb.NewLevelDBDatabase(pathToDb, 1024, 100, "profiling", false)
 	if err != nil {
 		return err
 	}
 
+	defer func() {
+		MustCloseDB(targetDb)
+		MustCloseDB(g.aidaDb)
+		g.log.Noticef("Merging %v successful", target)
+	}()
+
 	written, err = copyData(targetDb, g.aidaDb)
 	totalWritten += written
-
-	if err = targetDb.Close(); err != nil {
-		g.log.Warningf("cannot close %v (%v)", target, pathToDb)
-	}
 
 	// we need a destination where to save merged aida-db
 	// todo why
@@ -275,4 +281,9 @@ func (g *generator) merge(pathToDb, target string) error {
 	}
 
 	return nil
+}
+
+func (g *generator) openAidaDb() {
+	g.aidaDb, _ = rawdb.NewLevelDBDatabase(g.cfg.AidaDb, 1024, 100, "profiling", false)
+	return
 }

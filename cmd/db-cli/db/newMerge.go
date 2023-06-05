@@ -16,7 +16,7 @@ import (
 )
 
 // MergeCommand merges given databases into aida-db
-var merCmd = cli.Command{
+var MerCmd = cli.Command{
 	Action: mer,
 	Name:   "merge",
 	Usage:  "merge source databases into aida-db",
