@@ -148,26 +148,6 @@ func loadSourceDBPaths(cfg *utils.Config, aidaDbTmp string) {
 	cfg.WorldStateDb = filepath.Join(aidaDbTmp, "worldstate")
 }
 
-// GetOperaBlockAndEpoch retrieves current block of opera head
-func GetOperaBlockAndEpoch(cfg *utils.Config) (uint64, uint64, error) {
-	operaPath := filepath.Join(cfg.Db, "/chaindata/leveldb-fsh/")
-	store, err := opera.Connect("ldb", operaPath, "main")
-	if err != nil {
-		return 0, 0, err
-	}
-	defer opera.MustCloseStore(store)
-
-	_, blockNumber, epochNumber, err := opera.LatestStateRoot(store)
-	if err != nil {
-		return 0, 0, fmt.Errorf("state root not found; %v", err)
-	}
-
-	if blockNumber < 1 {
-		return 0, 0, fmt.Errorf("opera; block number not found; %v", err)
-	}
-	return blockNumber, epochNumber, nil
-}
-
 // genUpdateSet invokes UpdateSet generation
 func genUpdateSet(cfg *utils.Config, log *logging.Logger, mdi *aidaMetadata) error {
 	db, err := substate.OpenUpdateDB(cfg.AidaDb)
@@ -175,7 +155,7 @@ func genUpdateSet(cfg *utils.Config, log *logging.Logger, mdi *aidaMetadata) err
 		return err
 	}
 	nextUpdateSetStart := db.GetLastKey() + 1
-	err := db.Close()
+	err = db.Close()
 	if err != nil {
 		return err
 	}

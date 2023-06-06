@@ -3,6 +3,8 @@ package db
 import (
 	"archive/tar"
 	"bufio"
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -403,7 +405,7 @@ func (a *automator) createPatchTarGz(filePath string, fileName string) error {
 }
 
 func (a *automator) storeMd5sum(filePath string) error {
-	md5sum, err := a.calculateMd5sum(filePath)
+	md5sum, err := calculateMD5Sum(filePath)
 	if err != nil {
 		return err
 	}
@@ -433,48 +435,6 @@ func (a *automator) storeMd5sum(filePath string) error {
 	}
 
 	return nil
-}
-
-func (a *automator) calculateMd5sum(filePath string) (string, error) {
-	var response = ""
-	var wg sync.WaitGroup
-
-	resultCh := make(chan string, 10)
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for {
-			select {
-			case s, ok := <-resultCh:
-				if !ok {
-					return
-				}
-				response += s
-			}
-		}
-	}()
-
-	cmd := exec.Command("bash", "-c", "md5sum "+filePath)
-	err := runCommand(cmd, resultCh, a.log)
-	if err != nil {
-		return "", fmt.Errorf("unable sum md5; %v", err.Error())
-	}
-
-	// wait until reading of result finishes
-	wg.Wait()
-
-	md5 := getFirstWord(response)
-	if md5 == "" {
-		return "", fmt.Errorf("unable to calculate md5sum")
-	}
-
-	// md5 is always 32 characters long
-	if len(md5) != 32 {
-		return "", fmt.Errorf("unable to generate correct md5sum; Error: %v is not md5", md5)
-	}
-
-	return md5, nil
 }
 
 func (a *automator) createTarGz(filePath string, fileName string) interface{} {
@@ -548,4 +508,31 @@ func (a *automator) walkFilePath(tw *tar.Writer, filePath string) error {
 
 		return nil
 	})
+}
+
+// calculateMD5Sum calculates MD5 hash of given file
+func calculateMD5Sum(filePath string) (string, error) {
+	// Open the file
+	file, err := os.Open(filePath)
+	if err != nil {
+		return "", fmt.Errorf("unable open file %s; %v", filePath, err.Error())
+	}
+	defer file.Close()
+
+	// Create a new MD5 hash instance
+	hash := md5.New()
+
+	// Copy the file content into the hash instance
+	_, err = io.Copy(hash, file)
+	if err != nil {
+		return "", fmt.Errorf("unable to calculate md5; %v", err)
+	}
+
+	// Calculate the MD5 checksum as a byte slice
+	checksum := hash.Sum(nil)
+
+	// Convert the checksum to a hexadecimal string
+	md5sum := hex.EncodeToString(checksum)
+
+	return md5sum, nil
 }
