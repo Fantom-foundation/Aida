@@ -3,6 +3,7 @@ package db
 import (
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"strconv"
@@ -66,24 +67,28 @@ func gen(ctx *cli.Context) error {
 
 	cfg.Workers = substate.WorkersFlag.Value
 
-	log := logger.NewLogger("AidaDb-Generator", cfg.LogLevel)
+	g := newGenerator(ctx, cfg, aidaDbTmp)
 
+	defer MustCloseDB(g.aidaDb)
+
+	return g.Generate()
+}
+
+func newGenerator(ctx *cli.Context, cfg *utils.Config, aidaDbTmp string) *generator {
 	db, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
 	if err != nil {
-		return fmt.Errorf("cannot create new db; %v", err)
+		log.Fatalf("cannot create new db; %v", err)
 	}
 
-	g := &generator{
+	log := logger.NewLogger("AidaDb-Generator", cfg.LogLevel)
+
+	return &generator{
 		cfg:       cfg,
 		log:       log,
 		aidaDbTmp: aidaDbTmp,
 		opera:     newAidaOpera(ctx, cfg, log),
 		aidaDb:    db,
 	}
-
-	defer MustCloseDB(db)
-
-	return g.Generate()
 }
 
 // prepareDbDirs updates config for flags required in invoked generation commands
@@ -166,7 +171,7 @@ func (g *generator) processSubstate() error {
 	}
 
 	// retrieve block the opera was iterated onto
-	g.opera.lastBlock, g.opera.lastEpoch, err = g.opera.getLatestBlockAndEpoch()
+	g.opera.lastBlock, g.opera.lastEpoch, err = GetOperaBlockAndEpoch(g.cfg)
 	if err != nil {
 		return fmt.Errorf("cannot get last opera block and epoch; %v", err)
 	}

@@ -80,7 +80,7 @@ func autoGen(ctx *cli.Context) error {
 	log.Infof("Found new epochs for generation %v - %v", firstEpoch, lastEpoch)
 
 	// stop opera to be able to export events
-	err = stopOpera(log)
+	err = stopDaemonOpera(log)
 	if err != nil {
 		return err
 	}
@@ -92,7 +92,7 @@ func autoGen(ctx *cli.Context) error {
 	}
 
 	// start opera to load new blocks in parallel
-	err = startOpera(log)
+	err = startDaemonOpera(log)
 	if err != nil {
 		return err
 	}
@@ -438,26 +438,6 @@ func getLastEpochFromRunningOpera(cfg *utils.Config, log *logging.Logger) (uint6
 		return 0, err
 	}
 	return epoch, nil
-}
-
-// startOpera start opera node
-func startOpera(log *logging.Logger) error {
-	cmd := exec.Command("systemctl", "--user", "start", "opera")
-	err := runCommand(cmd, nil, log)
-	if err != nil {
-		return fmt.Errorf("unable start opera; %v", err.Error())
-	}
-	return nil
-}
-
-// stopOpera stop opera node
-func stopOpera(log *logging.Logger) error {
-	cmd := exec.Command("systemctl", "--user", "stop", "opera")
-	err := runCommand(cmd, nil, log)
-	if err != nil {
-		return fmt.Errorf("unable stop opera; %v", err.Error())
-	}
-	return nil
 }
 
 // getFirstWord retrieves first word from string

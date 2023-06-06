@@ -1,7 +1,6 @@
 package db
 
 import (
-	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -58,7 +57,7 @@ func (o *aidaOpera) init() error {
 
 	// get first block and epoch
 	// running this command before starting opera results in getting first block and epoch on which opera starts
-	o.firstBlock, o.firstEpoch, err = o.getLatestBlockAndEpoch()
+	o.firstBlock, o.firstEpoch, err = GetOperaBlockAndEpoch(o.cfg)
 	if err != nil {
 		return fmt.Errorf("cannot retrieve block from existing opera database %v; %v", o.cfg.Db, err)
 	}
@@ -81,29 +80,6 @@ func (o *aidaOpera) initFromGenesis() error {
 	}
 
 	return nil
-}
-
-// getLatestBlockAndEpoch from given opera db
-func (o *aidaOpera) getLatestBlockAndEpoch() (uint64, uint64, error) {
-	operaPath := filepath.Join(o.cfg.Db, "/chaindata/leveldb-fsh/")
-	store, err := opera.Connect("ldb", operaPath, "main")
-	if err != nil {
-		return 0, 0, err
-	}
-	defer opera.MustCloseStore(store)
-
-	// save
-	var block, epoch uint64
-	_, block, epoch, err = opera.LatestStateRoot(store)
-	if err != nil {
-		return 0, 0, fmt.Errorf("cannot find latest state root; %v", err)
-	}
-
-	if block < 1 {
-		return 0, 0, errors.New("opera returned block 0 - aborting generation")
-	}
-
-	return block, epoch, nil
 }
 
 // prepareDumpCliContext
@@ -129,4 +105,59 @@ func (o *aidaOpera) prepareDumpCliContext() error {
 	ctx.Command = command
 
 	return state.DumpState(ctx)
+}
+
+func (o *aidaOpera) generateEvents(firstEpoch, lastEpoch uint64, aidaDbTmp string) error {
+	eventsFile := fmt.Sprintf("events-%v-%v", firstEpoch, lastEpoch)
+	o.cfg.Events = filepath.Join(aidaDbTmp, eventsFile)
+
+	o.log.Debugf("Generating events from %v to %v into %v", firstEpoch, lastEpoch, o.cfg.Events)
+
+	cmd := exec.Command(fmt.Sprintf("opera --datadir %v export events %v %v %v", o.cfg.OperaDatadir, o.cfg.Events, firstEpoch, lastEpoch))
+	err := runCommand(cmd, nil, o.log)
+	if err != nil {
+		return fmt.Errorf("retrieve last opera epoch trough ipc; %v", err.Error())
+	}
+
+	return nil
+}
+
+// GetOperaBlockAndEpoch retrieves current block of opera head
+func GetOperaBlockAndEpoch(cfg *utils.Config) (uint64, uint64, error) {
+	operaPath := filepath.Join(cfg.Db, "/chaindata/leveldb-fsh/")
+	store, err := opera.Connect("ldb", operaPath, "main")
+	if err != nil {
+		return 0, 0, err
+	}
+	defer opera.MustCloseStore(store)
+
+	_, blockNumber, epochNumber, err := opera.LatestStateRoot(store)
+	if err != nil {
+		return 0, 0, fmt.Errorf("state root not found; %v", err)
+	}
+
+	if blockNumber < 1 {
+		return 0, 0, fmt.Errorf("opera; block number not found; %v", err)
+	}
+	return blockNumber, epochNumber, nil
+}
+
+// startDaemonOpera start opera node
+func startDaemonOpera(log *logging.Logger) error {
+	cmd := exec.Command("systemctl", "--user", "start", "opera")
+	err := runCommand(cmd, nil, log)
+	if err != nil {
+		return fmt.Errorf("unable start opera; %v", err.Error())
+	}
+	return nil
+}
+
+// stopDaemonOpera stop opera node
+func stopDaemonOpera(log *logging.Logger) error {
+	cmd := exec.Command("systemctl", "--user", "stop", "opera")
+	err := runCommand(cmd, nil, log)
+	if err != nil {
+		return fmt.Errorf("unable stop opera; %v", err.Error())
+	}
+	return nil
 }
