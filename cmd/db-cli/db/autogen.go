@@ -3,6 +3,8 @@ package db
 import (
 	"archive/tar"
 	"bufio"
+	"crypto/md5"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -99,20 +101,41 @@ func autoGen(ctx *cli.Context) error {
 
 	var mdi *aidaMetadata
 	// update target aida-db
-	mdi, err = Generate(cfg, log)
+	err = Generate(cfg, log)
 	if err != nil {
 		return err
 	}
 
+	// prune opera to reduce disk space and speed for next runs
+	errChan := startOperaPruning(cfg)
+
+	var patchError error
 	// if patch output dir is selected inserting patch.tar.gz, patch.tar.gz.md5 into there and updating patches.json
 	if cfg.Output != "" {
+		var patchTarPath string
 		mdi.dbType = patchType
-		patchTarPath, err := createPatch(cfg, aidaDbTmp, firstEpoch, lastEpoch, cfg.First, cfg.Last, log, mdi)
-
-		if err != nil {
-			return err
+		patchTarPath, patchError = createPatch(cfg, aidaDbTmp, firstEpoch, lastEpoch, cfg.First, cfg.Last, log, mdi)
+		if patchError == nil {
+			log.Infof("Successfully generated patch at: %v", patchTarPath)
 		}
-		log.Infof("Successfully generated patch at: %v", patchTarPath)
+	}
+
+	// wait for operaPruning response
+	err, ok := <-errChan
+	if ok && err != nil {
+		return err
+	}
+	log.Infof("Successfully pruned opera: %v", cfg.Db)
+
+	// start opera to load new blocks
+	err = startOpera(log)
+	if err != nil {
+		return err
+	}
+
+	// check error while patch generation
+	if patchError != nil {
+		return patchError
 	}
 
 	// remove temporary folder only if generation completed successfully
@@ -122,6 +145,22 @@ func autoGen(ctx *cli.Context) error {
 	}
 
 	return nil
+}
+
+// startOperaPruning prunes opera in parallel
+func startOperaPruning(cfg *utils.Config) chan error {
+	errChan := make(chan error, 1)
+	log := logger.NewLogger(cfg.LogLevel, "autoGen-pruning")
+	log.Noticef("Starting opera pruning %v", cfg.Db)
+	go func() {
+		defer close(errChan)
+		cmd := exec.Command("opera", "--datadir", cfg.Db, "snapshot", "prune-state")
+		err := runCommand(cmd, nil, log)
+		if err != nil {
+			errChan <- fmt.Errorf("unable prune opera %v; %v", cfg.Db, err)
+		}
+	}()
+	return errChan
 }
 
 // createPatch create patch from newly generated data
@@ -163,7 +202,7 @@ func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpo
 		return "", err
 	}
 
-	err = storeMd5sum(patchTarPath, log)
+	err = storeMd5sum(patchTarPath)
 	if err != nil {
 		return "", err
 	}
@@ -178,8 +217,8 @@ func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpo
 }
 
 // storeMd5sum store md5sum of aida-db patch into a file
-func storeMd5sum(filePath string, log *logging.Logger) error {
-	md5sum, err := calculateMd5sum(filePath, log)
+func storeMd5sum(filePath string) error {
+	md5sum, err := calculateMD5Sum(filePath)
 	if err != nil {
 		return err
 	}
@@ -211,45 +250,31 @@ func storeMd5sum(filePath string, log *logging.Logger) error {
 	return nil
 }
 
-// calculateMd5sum calculates md5sum of a file
-func calculateMd5sum(filePath string, log *logging.Logger) (string, error) {
-	var response = ""
-	var wg sync.WaitGroup
-	resultChan := make(chan string, 10)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for {
-			select {
-			case s, ok := <-resultChan:
-				if !ok {
-					return
-				}
-				response += s
-			}
-		}
-	}()
-
-	cmd := exec.Command("bash", "-c", "md5sum "+filePath)
-	err := runCommand(cmd, resultChan, log)
+// calculateMD5Sum calculates MD5 hash of given file
+func calculateMD5Sum(filePath string) (string, error) {
+	// Open the file
+	file, err := os.Open(filePath)
 	if err != nil {
-		return "", fmt.Errorf("unable sum md5; %v", err.Error())
+		return "", fmt.Errorf("unable open file %s; %v", filePath, err.Error())
+	}
+	defer file.Close()
+
+	// Create a new MD5 hash instance
+	hash := md5.New()
+
+	// Copy the file content into the hash instance
+	_, err = io.Copy(hash, file)
+	if err != nil {
+		return "", fmt.Errorf("unable to calculate md5; %v", err)
 	}
 
-	// wait until reading of result finishes
-	wg.Wait()
+	// Calculate the MD5 checksum as a byte slice
+	checksum := hash.Sum(nil)
 
-	md5 := getFirstWord(response)
-	if md5 == "" {
-		return "", fmt.Errorf("unable to calculate md5sum")
-	}
+	// Convert the checksum to a hexadecimal string
+	md5sum := hex.EncodeToString(checksum)
 
-	// md5 is always 32 characters long
-	if len(md5) != 32 {
-		return "", fmt.Errorf("unable to generate correct md5sum; Error: %v is not md5", md5)
-	}
-
-	return md5, nil
+	return md5sum, nil
 }
 
 // createPatchTarGz compresses patch file into tar.gz
@@ -257,7 +282,7 @@ func createPatchTarGz(patchPath string, patchParentPath string, patchTarName str
 	log.Noticef("Generating compressed %v", patchTarName)
 	err := createTarGz(patchPath, patchParentPath, patchTarName)
 	if err != nil {
-		return fmt.Errorf("unable to compress %v; %v", patchTarName, err)
+		return fmt.Errorf("unable tar patch %v into %v; %v", patchPath, patchTarPath, err.Error())
 	}
 	return nil
 }
@@ -440,13 +465,96 @@ func getLastEpochFromRunningOpera(cfg *utils.Config, log *logging.Logger) (uint6
 	return epoch, nil
 }
 
-// getFirstWord retrieves first word from string
-func getFirstWord(str string) string {
-	words := strings.Fields(str)
-	if len(words) > 0 {
-		return words[0]
+// startOpera start opera node
+func startOpera(log *logging.Logger) error {
+	cmd := exec.Command("systemctl", "--user", "start", "opera")
+	err := runCommand(cmd, nil, log)
+	if err != nil {
+		return fmt.Errorf("unable start opera; %v", err.Error())
 	}
-	return ""
+	return nil
+}
+
+// stopOpera stop opera node
+func stopOpera(log *logging.Logger) error {
+	cmd := exec.Command("systemctl", "--user", "stop", "opera")
+	err := runCommand(cmd, nil, log)
+	if err != nil {
+		return fmt.Errorf("unable stop opera; %v", err.Error())
+	}
+	return nil
+}
+
+// createTarGz create tar gz of given file/folder
+func createTarGz(dirPath, outputPath, outputName string) error {
+	// create a parents of temporary directory
+	err := os.MkdirAll(outputPath, 0755)
+	if err != nil {
+		return fmt.Errorf("failed to create %s directory; %s", outputPath, err)
+	}
+
+	// Create the output file
+	file, err := os.Create(filepath.Join(outputPath, outputName))
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	// Create the gzip writer
+	gw := gzip.NewWriter(file)
+	defer gw.Close()
+
+	// Create the tar writer
+	tw := tar.NewWriter(gw)
+	defer tw.Close()
+
+	// Get the base name of the directory
+	dirName := filepath.Base(dirPath)
+
+	// Walk through the directory recursively
+	err = filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Create a new tar header
+		header, err := tar.FileInfoHeader(info, info.Name())
+		if err != nil {
+			return err
+		}
+
+		// Update the header's name to include the directory
+		relPath, err := filepath.Rel(dirPath, path)
+		if err != nil {
+			return err
+		}
+		header.Name = filepath.Join(dirName, relPath)
+
+		// Write the header
+		err = tw.WriteHeader(header)
+		if err != nil {
+			return err
+		}
+
+		// If it's not a directory, write the file content
+		if !info.IsDir() {
+			file, err := os.Open(path)
+			if err != nil {
+				return err
+			}
+			defer file.Close()
+
+			// Copy the file content to the tar writer
+			_, err = io.Copy(tw, file)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+
+	return err
 }
 
 // createTarGz create tar gz of given file/folder
