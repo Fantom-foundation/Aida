@@ -138,7 +138,28 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 					return nil
 				}
 				// merge newly extracted patch
-				err := Merge(cfg, []string{extractedPatchPath}, mdi)
+				// open targetDb
+				targetDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
+				if err != nil {
+					return fmt.Errorf("cannot open targetDb; %v", err)
+				}
+
+				sourcePaths := []string{cfg.SubstateDb, cfg.UpdateDb, cfg.DeletionDb}
+
+				dbs, err := openSourceDatabases(sourcePaths)
+				if err != nil {
+					return err
+				}
+
+				m := &merger{
+					cfg:       cfg,
+					log:       logger.NewLogger(cfg.LogLevel, "aida-db-merger"),
+					targetDb:  targetDb,
+					sourceDbs: dbs,
+					dbPaths:   sourcePaths,
+				}
+
+				err = m.merge()
 				if err != nil {
 					return fmt.Errorf("unable to merge %v; %v", extractedPatchPath, err)
 				}
@@ -148,6 +169,8 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 				if err != nil {
 					return err
 				}
+
+				m.closeDbs()
 			}
 		}
 	}

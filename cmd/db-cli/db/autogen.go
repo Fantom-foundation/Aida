@@ -16,6 +16,7 @@ import (
 	"github.com/Fantom-foundation/Aida/cmd/db-cli/flags"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/klauspost/compress/gzip"
 	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
@@ -23,7 +24,7 @@ import (
 
 // AutoGenCommand generates aida-db patches and handles second opera for event generation
 var AutoGenCommand = cli.Command{
-	Action: aGen,
+	Action: autogen,
 	Name:   "autogen",
 	Usage:  "autogen generates aida-db periodically",
 	Flags: []cli.Flag{
@@ -48,17 +49,20 @@ AutoGen generates aida-db patches and handles second opera for event generation.
 
 const patchesJsonName = "patches.json"
 
-// autoGen command is used to record/update aida-db periodically
-func autoGen(ctx *cli.Context) error {
-	var err error
-	cfg, argErr := utils.NewConfig(ctx, utils.NoArgs)
-	if argErr != nil {
-		return argErr
+type automator struct {
+	cfg                   *utils.Config
+	log                   *logging.Logger
+	generator             *generator
+	firstEpoch, lastEpoch uint64
+}
+
+func autogen(ctx *cli.Context) error {
+	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
+	if err != nil {
+		return err
 	}
 
 	log := logger.NewLogger(cfg.LogLevel, "autoGen")
-
-	log.Info("Starting Automatic generation")
 
 	// preparing config and directories
 	aidaDbTmp, err := prepareDbDirs(cfg)
@@ -66,141 +70,209 @@ func autoGen(ctx *cli.Context) error {
 		return err
 	}
 
-	// loading epoch range for generation
-	var firstEpoch, lastEpoch string
-	var newDataReady bool
-	firstEpoch, lastEpoch, newDataReady, err = loadGenerationRange(cfg, log)
+	a := &automator{
+		cfg:       cfg,
+		log:       log,
+		generator: newGenerator(ctx, cfg, aidaDbTmp),
+	}
+
+	return a.generate()
+
+}
+
+func (a *automator) generate() error {
+	var (
+		newDataReady bool
+		err          error
+	)
+
+	newDataReady, err = a.loadGenerationRange()
 	if err != nil {
 		return err
 	}
+
 	if !newDataReady {
-		log.Infof("No new data for generation. Source epoch %v (%v), Last generation %v (%v)", firstEpoch, cfg.OperaDatadir, lastEpoch, cfg.Db)
+		a.log.Warningf("No new data for generation. Source epoch %v (%v), Last generation %v (%v)", a.firstEpoch, a.cfg.OperaDatadir, a.lastEpoch, a.cfg.Db)
 		return nil
 	}
-	log.Infof("Found new epochs for generation %v - %v", firstEpoch, lastEpoch)
+
+	a.log.Noticef("Found new epochs for generation %v - %v", a.firstEpoch, a.lastEpoch)
 
 	// stop opera to be able to export events
-	err = stopDaemonOpera(log)
+	err = stopDaemonOpera(a.log)
 	if err != nil {
 		return err
 	}
-	log.Info("Generating events")
+	a.log.Notice("Generating events")
 
-	cfg.Events, err = generateEvents(cfg, aidaDbTmp, firstEpoch, lastEpoch, log)
+	err = a.generator.opera.generateEvents(a.firstEpoch, a.lastEpoch, a.generator.aidaDbTmp)
 	if err != nil {
 		return err
 	}
 
 	// start opera to load new blocks in parallel
-	err = startDaemonOpera(log)
+	err = startDaemonOpera(a.log)
 	if err != nil {
 		return err
 	}
 
-	var mdi *aidaMetadata
-	// update target aida-db
-	_, err = Generate(cfg, log)
+	err = a.generator.Generate()
 	if err != nil {
 		return err
 	}
 
-	// prune opera to reduce disk space and speed for next runs
-	errChan := startOperaPruning(cfg)
-
-	var patchError error
 	// if patch output dir is selected inserting patch.tar.gz, patch.tar.gz.md5 into there and updating patches.json
-	if cfg.Output != "" {
-		var patchTarPath string
-		mdi.dbType = patchType
-		patchTarPath, patchError = createPatch(cfg, aidaDbTmp, firstEpoch, lastEpoch, cfg.First, cfg.Last, log, mdi)
-		if patchError == nil {
-			log.Infof("Successfully generated patch at: %v", patchTarPath)
+	if a.cfg.Output != "" {
+		// todo metadata
+		patchTarPath, err := a.createPatch()
+		if err != nil {
+			return err
 		}
-	}
 
-	// wait for operaPruning response
-	err, ok := <-errChan
-	if ok && err != nil {
-		return err
-	}
-	log.Infof("Successfully pruned opera: %v", cfg.Db)
-
-	// start opera to load new blocks
-	err = startOpera(log)
-	if err != nil {
-		return err
-	}
-
-	// check error while patch generation
-	if patchError != nil {
-		return patchError
+		a.log.Noticef("Successfully generated patch at: %v", patchTarPath)
 	}
 
 	// remove temporary folder only if generation completed successfully
-	err = os.RemoveAll(aidaDbTmp)
+	err = os.RemoveAll(a.generator.aidaDbTmp)
 	if err != nil {
-		log.Criticalf("can't remove temporary folder: %v; %v", aidaDbTmp, err)
+		a.log.Criticalf("can't remove temporary folder: %v; %v", a.generator.aidaDbTmp, err)
 	}
 
 	return nil
 }
 
-// startOperaPruning prunes opera in parallel
-func startOperaPruning(cfg *utils.Config) chan error {
-	errChan := make(chan error, 1)
-	log := logger.NewLogger(cfg.LogLevel, "autoGen-pruning")
-	log.Noticef("Starting opera pruning %v", cfg.Db)
-	go func() {
-		defer close(errChan)
-		cmd := exec.Command("opera", "--datadir", cfg.Db, "snapshot", "prune-state")
-		err := runCommand(cmd, nil, log)
+func (a *automator) loadGenerationRange() (bool, error) {
+	a.firstEpoch = 1
+	_, err := os.Stat(a.cfg.Db)
+	if !os.IsNotExist(err) {
+		// opera was already used for generation starting from the next epoch
+		// !!! returning number one block greater than actual block
+		_, a.firstEpoch, err = GetOperaBlockAndEpoch(a.cfg)
 		if err != nil {
-			errChan <- fmt.Errorf("unable prune opera %v; %v", cfg.Db, err)
+			return false, fmt.Errorf("unable to retrieve epoch of generation opera in path %v; %v", a.cfg.Db, err)
 		}
-	}()
-	return errChan
+		a.log.Debugf("Generation will start from: %v", a.firstEpoch)
+	}
+
+	a.lastEpoch, err = a.getLastEpochFromRunningOpera()
+	if err != nil {
+		return false, fmt.Errorf("unable to retrieve epoch of source opera in path %v; %v", a.cfg.OperaDatadir, err)
+	}
+	// ending generation one epoch sooner to make sure epoch is sealed
+	a.lastEpoch -= 1
+	a.log.Debugf("Last available sealed epoch is %v", a.lastEpoch)
+
+	if a.firstEpoch > a.lastEpoch {
+		// since getLatestBlockAndEpoch returns off by one epoch number label
+		// needs to be fixed in no need epochs are available
+		a.firstEpoch = a.firstEpoch - 1
+		return false, nil
+	}
+
+	return true, nil
 }
 
-// createPatch create patch from newly generated data
-func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpoch string, firstBlock uint64, lastBlock uint64, log *logging.Logger, mdi *aidaMetadata) (string, error) {
-	// create a parents of output directory
-	err := os.MkdirAll(cfg.Output, 0755)
+func (a *automator) getLastEpochFromRunningOpera() (uint64, error) {
+	var response string
+	var wg = new(sync.WaitGroup)
+	var resultChan = make(chan string, 10)
+
+	wg.Add(1)
+	go a.createResponse(wg, &response, resultChan)
+
+	cmd := exec.Command("bash", "-c", "echo '{\"method\": \"eth_getBlockByNumber\", \"params\": [\"latest\", false], \"id\": 1, \"jsonrpc\": \"2.0\"}' | nc -q 0 -U \""+a.cfg.OperaDatadir+"/opera.ipc\"")
+	err := runCommand(cmd, resultChan, a.log)
 	if err != nil {
-		return "", fmt.Errorf("failed to create %s directory; %s", cfg.DbTmp, err)
+		return 0, fmt.Errorf("retrieve last opera epoch trough ipc; %v", err.Error())
+	}
+
+	// wait until reading of result finishes
+	wg.Wait()
+
+	// parse result into json
+	return a.parseIntoJson(response)
+}
+
+func (a *automator) createResponse(wg *sync.WaitGroup, response *string, resultChan chan string) {
+	defer wg.Done()
+	for {
+		select {
+		case s, ok := <-resultChan:
+			if !ok {
+				return
+			}
+			*response += s
+		}
+	}
+}
+
+func (a *automator) parseIntoJson(response string) (uint64, error) {
+	var responseJson = make(map[string]interface{})
+
+	err := json.Unmarshal([]byte(response), &responseJson)
+	if err != nil {
+		return 0, fmt.Errorf("unable to json from %v; %v", response, err.Error())
+	}
+
+	result, ok := responseJson["result"]
+	if !ok {
+		return 0, fmt.Errorf("unable to parse result from %v", responseJson)
+	}
+
+	epochHex, ok := result.(map[string]interface{})["epoch"]
+	if !ok {
+		return 0, fmt.Errorf("unable to parse epoch from %v; %v", responseJson, err)
+	}
+
+	epochHexCleaned := strings.Replace(epochHex.(string), "0x", "", -1)
+	epoch, err := strconv.ParseUint(epochHexCleaned, 16, 64)
+	if err != nil {
+		return 0, err
+	}
+	return epoch, nil
+}
+
+func (a *automator) createPatch() (string, error) {
+	// create a parents of output directory
+	err := os.MkdirAll(a.cfg.Output, 0755)
+	if err != nil {
+		return "", fmt.Errorf("failed to create %s directory; %s", a.cfg.DbTmp, err)
 	}
 
 	// loadingSourceDBPaths because cfg values are already rewritten to aida-db
 	// these databases contain just the patch data
-	loadSourceDBPaths(cfg, aidaDbTmp)
+	loadSourceDBPaths(a.cfg, a.generator.aidaDbTmp)
 
 	// creating patch name
 	// add leading zeroes to filename to make it sortable
-	patchName := "aida-db-" + fmt.Sprintf("%09s", lastEpoch)
-	patchPath := filepath.Join(cfg.Output, patchName)
+	patchName := "aida-db-" + fmt.Sprintf("%09s", a.lastEpoch)
+	patchPath := filepath.Join(a.cfg.Output, patchName)
+
 	// cfg.AidaDb is now pointing to patch this is needed for Merge function
-	cfg.AidaDb = patchPath
+	a.cfg.AidaDb = patchPath
 
 	// merge UpdateDb into AidaDb
-	err = Merge(cfg, []string{cfg.SubstateDb, cfg.UpdateDb, cfg.DeletionDb}, mdi)
+	err = a.mergePatch()
 	if err != nil {
 		return "", fmt.Errorf("unable to merge into patch; %v", err)
 	}
 
 	patchTarName := patchName + ".tar.gz"
-	patchTarPath := filepath.Join(cfg.Output, patchTarName)
-	err = createPatchTarGz(patchPath, cfg.Output, patchTarName, log)
+	patchTarPath := filepath.Join(a.cfg.Output, patchTarName)
+
+	err = a.createPatchTarGz(patchPath, patchTarName)
 	if err != nil {
 		return "", fmt.Errorf("unable to create patch tar.gz of %s; %v", patchPath, err)
 	}
 
-	log.Noticef("Patch %s generated successfully: %d(%s) - %d(%s) ", patchTarName, firstBlock, firstEpoch, lastBlock, lastEpoch)
+	a.log.Noticef("Patch %s generated successfully: %d(%s) - %d(%s) ", patchTarName, a.cfg.First, a.firstEpoch, a.cfg.Last, a.lastEpoch)
 
-	err = updatePatchesJson(cfg.Output, patchTarName, firstEpoch, lastEpoch, firstBlock, lastBlock, log)
+	err = a.updatePatchesJson(patchTarName)
 	if err != nil {
 		return "", err
 	}
 
-	err = storeMd5sum(patchTarPath)
+	err = a.storeMd5sum(patchTarPath)
 	if err != nil {
 		return "", err
 	}
@@ -214,53 +286,35 @@ func createPatch(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpo
 	return patchTarPath, nil
 }
 
-// storeMd5sum store md5sum of aida-db patch into a file
-func storeMd5sum(filePath string) error {
-	md5sum, err := calculateMD5Sum(filePath)
+func (a *automator) mergePatch() error {
+	// open targetDb
+	targetDb, err := rawdb.NewLevelDBDatabase(a.cfg.AidaDb, 1024, 100, "profiling", false)
+	if err != nil {
+		return fmt.Errorf("cannot open targetDb; %v", err)
+	}
+
+	sourcePaths := []string{a.cfg.SubstateDb, a.cfg.UpdateDb, a.cfg.DeletionDb}
+
+	dbs, err := openSourceDatabases(sourcePaths)
 	if err != nil {
 		return err
 	}
 
-	md5FilePath := filePath + ".md5"
-
-	var file *os.File
-	file, err = os.OpenFile(md5FilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
-	if err != nil {
-		return fmt.Errorf("unable to create %s; %v", md5FilePath, err)
+	m := &merger{
+		cfg:       a.cfg,
+		log:       logger.NewLogger(a.cfg.LogLevel, "aida-db-merger"),
+		targetDb:  targetDb,
+		sourceDbs: dbs,
+		dbPaths:   sourcePaths,
 	}
 
-	// Write the result
-	w := bufio.NewWriter(file)
-	_, err = w.Write([]byte(md5sum))
-	if err != nil {
-		return fmt.Errorf("unable to write %s into %s; %v", md5sum, md5FilePath, err)
-	}
-	err = w.Flush()
-	if err != nil {
-		return fmt.Errorf("unable to flush %s; %v", md5FilePath, err)
-	}
+	defer m.closeDbs()
 
-	err = file.Close()
-	if err != nil {
-		return fmt.Errorf("unable to close %s; %v", patchesJsonName, err)
-	}
-
-	return nil
+	return m.merge()
 }
 
-// createPatchTarGz compresses patch file into tar.gz
-func createPatchTarGz(patchPath string, patchParentPath string, patchTarName string, log *logging.Logger) error {
-	log.Noticef("Generating compressed %v", patchTarName)
-	err := createTarGz(patchPath, patchParentPath, patchTarName)
-	if err != nil {
-		return fmt.Errorf("unable tar patch %v; %v", patchPath, err.Error())
-	}
-	return nil
-}
-
-// updatePatchesJson update patches.json file
-func updatePatchesJson(patchDir, patchName, fromEpoch string, toEpoch string, fromBlock uint64, toBlock uint64, log *logging.Logger) error {
-	jsonFilePath := filepath.Join(patchDir, patchesJsonName)
+func (a *automator) updatePatchesJson(fileName string) error {
+	jsonFilePath := filepath.Join(a.cfg.Output, patchesJsonName)
 	var patchesJson []map[string]string
 
 	// Attempt to load previous JSON
@@ -296,16 +350,25 @@ func updatePatchesJson(patchDir, patchName, fromEpoch string, toEpoch string, fr
 
 	// Create a new patch object
 	newPatch := map[string]string{
-		"fileName":  patchName,
-		"fromBlock": strconv.FormatUint(fromBlock, 10),
-		"toBlock":   strconv.FormatUint(toBlock, 10),
-		"fromEpoch": fromEpoch,
-		"toEpoch":   toEpoch,
+		"fileName":  fileName,
+		"fromBlock": strconv.FormatUint(a.cfg.First, 10),
+		"toBlock":   strconv.FormatUint(a.cfg.Last, 10),
+		"fromEpoch": strconv.FormatUint(a.firstEpoch, 10),
+		"toEpoch":   strconv.FormatUint(a.lastEpoch, 10),
 	}
 
 	// Append the new patch to the array
 	patchesJson = append(patchesJson, newPatch)
 
+	if err = a.doUpdatePatchesJson(patchesJson, file); err != nil {
+		return err
+	}
+
+	a.log.Noticef("Updated %s in %s with new patch:\n%v\n", patchesJsonName, jsonFilePath, newPatch)
+	return nil
+}
+
+func (a *automator) doUpdatePatchesJson(patchesJson []map[string]string, file *os.File) error {
 	// Convert the array to JSON bytes
 	jsonBytes, err := json.Marshal(patchesJson)
 	if err != nil {
@@ -316,7 +379,7 @@ func updatePatchesJson(patchDir, patchName, fromEpoch string, toEpoch string, fr
 	w := bufio.NewWriter(file)
 	_, err = w.Write(jsonBytes)
 	if err != nil {
-		return fmt.Errorf("unable to write %v into %s; %v", patchesJson, jsonFilePath, err)
+		return fmt.Errorf("unable to write %v; %v", patchesJson, err)
 	}
 	err = w.Flush()
 	if err != nil {
@@ -329,143 +392,60 @@ func updatePatchesJson(patchDir, patchName, fromEpoch string, toEpoch string, fr
 		return fmt.Errorf("unable to close %s; %v", patchesJsonName, err)
 	}
 
-	log.Noticef("Updated %s in %s with new patch:\n%v\n", patchesJsonName, jsonFilePath, newPatch)
-
 	return nil
 }
 
-// generateEvents generates events between First and Last epoch numbers from config
-func generateEvents(cfg *utils.Config, aidaDbTmp string, firstEpoch string, lastEpoch string, log *logging.Logger) (string, error) {
-	eventsFile := "events-" + firstEpoch + "-" + lastEpoch
-	eventsPath := filepath.Join(aidaDbTmp, eventsFile)
-	log.Debugf("Generating events from %v to %v into %v", firstEpoch, lastEpoch, eventsPath)
-	cmd := exec.Command("opera", "--datadir", cfg.OperaDatadir, "export", "events", eventsPath, firstEpoch, lastEpoch)
-	err := runCommand(cmd, nil, log)
+func (a *automator) createPatchTarGz(filePath string, fileName string) error {
+	a.log.Noticef("Generating compressed %v", fileName)
+	err := a.createTarGz(filePath, fileName)
 	if err != nil {
-		return "", fmt.Errorf("retrieve last opera epoch trough ipc; %v", err.Error())
-	}
-	return eventsPath, nil
-}
-
-// loadGenerationRange retrieves epoch of last generation and most recent available epoch
-func loadGenerationRange(cfg *utils.Config, log *logging.Logger) (string, string, bool, error) {
-	var previousEpoch uint64 = 1
-	_, err := os.Stat(cfg.Db)
-	if !os.IsNotExist(err) {
-		// opera was already used for generation starting from the next epoch
-		// !!! returning number one block greater than actual block
-		_, previousEpoch, err = GetOperaBlockAndEpoch(cfg)
-		if err != nil {
-			return "", "", false, fmt.Errorf("unable to retrieve epoch of generation opera in path %v; %v", cfg.Db, err)
-		}
-		log.Debugf("Generation will start from: %v", previousEpoch)
-	}
-
-	nextEpoch, err := getLastEpochFromRunningOpera(cfg, log)
-	if err != nil {
-		return "", "", false, fmt.Errorf("unable to retrieve epoch of source opera in path %v; %v", cfg.OperaDatadir, err)
-	}
-	// ending generation one epoch sooner to make sure epoch is sealed
-	nextEpoch -= 1
-	log.Debugf("Last available sealed epoch is %v", nextEpoch)
-
-	// recording of events will stop with last sealed opera
-	lastEpoch := strconv.FormatUint(nextEpoch, 10)
-
-	if previousEpoch > nextEpoch {
-		// since getLatestBlockAndEpoch returns off by one epoch number label
-		// needs to be fixed in no need epochs are available
-		firstEpoch := strconv.FormatUint(previousEpoch-1, 10)
-		return firstEpoch, lastEpoch, false, nil
-	}
-
-	// recording of events will start with the following epoch of last recording
-	firstEpoch := strconv.FormatUint(previousEpoch, 10)
-
-	return firstEpoch, lastEpoch, true, nil
-}
-
-// getLastEpochFromRunningOpera loads last epoch from running opera
-func getLastEpochFromRunningOpera(cfg *utils.Config, log *logging.Logger) (uint64, error) {
-	var response = ""
-	var wg sync.WaitGroup
-	resultChan := make(chan string, 10)
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for {
-			select {
-			case s, ok := <-resultChan:
-				if !ok {
-					return
-				}
-				response += s
-			}
-		}
-	}()
-	cmd := exec.Command("bash", "-c", "echo '{\"method\": \"eth_getBlockByNumber\", \"params\": [\"latest\", false], \"id\": 1, \"jsonrpc\": \"2.0\"}' | nc -q 0 -U \""+cfg.OperaDatadir+"/opera.ipc\"")
-	err := runCommand(cmd, resultChan, log)
-	if err != nil {
-		return 0, fmt.Errorf("retrieve last opera epoch trough ipc; %v", err.Error())
-	}
-
-	// wait until reading of result finishes
-	wg.Wait()
-
-	// parse result into json
-	var responseJson = make(map[string]interface{})
-	err = json.Unmarshal([]byte(response), &responseJson)
-	if err != nil {
-		return 0, fmt.Errorf("unable to json from %v; %v", response, err.Error())
-	}
-	result, ok := responseJson["result"]
-	if !ok {
-		return 0, fmt.Errorf("unable to parse result from %v; %v", responseJson, err.Error())
-	}
-
-	epochHex, ok := result.(map[string]interface{})["epoch"]
-	if !ok {
-		return 0, fmt.Errorf("unable to parse epoch from %v; %v", responseJson, err.Error())
-	}
-
-	epochHexCleaned := strings.Replace(epochHex.(string), "0x", "", -1)
-	epoch, err := strconv.ParseUint(epochHexCleaned, 16, 64)
-	if err != nil {
-		return 0, err
-	}
-	return epoch, nil
-}
-
-// startOpera start opera node
-func startOpera(log *logging.Logger) error {
-	cmd := exec.Command("systemctl", "--user", "start", "opera")
-	err := runCommand(cmd, nil, log)
-	if err != nil {
-		return fmt.Errorf("unable start opera; %v", err.Error())
+		return fmt.Errorf("unable to compress %v; %v", fileName, err)
 	}
 	return nil
 }
 
-// stopOpera stop opera node
-func stopOpera(log *logging.Logger) error {
-	cmd := exec.Command("systemctl", "--user", "stop", "opera")
-	err := runCommand(cmd, nil, log)
+func (a *automator) storeMd5sum(filePath string) error {
+	md5sum, err := calculateMD5Sum(filePath)
 	if err != nil {
-		return fmt.Errorf("unable stop opera; %v", err.Error())
+		return err
 	}
+
+	md5FilePath := filePath + ".md5"
+
+	var file *os.File
+	file, err = os.OpenFile(md5FilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+	if err != nil {
+		return fmt.Errorf("unable to create %s; %v", md5FilePath, err)
+	}
+
+	// Write the result
+	w := bufio.NewWriter(file)
+	_, err = w.Write([]byte(md5sum))
+	if err != nil {
+		return fmt.Errorf("unable to write %s into %s; %v", md5sum, md5FilePath, err)
+	}
+	err = w.Flush()
+	if err != nil {
+		return fmt.Errorf("unable to flush %s; %v", md5FilePath, err)
+	}
+
+	err = file.Close()
+	if err != nil {
+		return fmt.Errorf("unable to close %s; %v", patchesJsonName, err)
+	}
+
 	return nil
 }
 
-// createTarGz create tar gz of given file/folder
-func createTarGz(dirPath, outputPath, outputName string) error {
+func (a *automator) createTarGz(filePath string, fileName string) interface{} {
 	// create a parents of temporary directory
-	err := os.MkdirAll(outputPath, 0755)
+	err := os.MkdirAll(a.cfg.Output, 0755)
 	if err != nil {
-		return fmt.Errorf("failed to create %s directory; %s", outputPath, err)
+		return fmt.Errorf("failed to create %s directory; %s", a.cfg.Output, err)
 	}
 
 	// Create the output file
-	file, err := os.Create(filepath.Join(outputPath, outputName))
+	file, err := os.Create(filepath.Join(a.cfg.Output, fileName))
 	if err != nil {
 		return err
 	}
@@ -479,11 +459,15 @@ func createTarGz(dirPath, outputPath, outputName string) error {
 	tw := tar.NewWriter(gw)
 	defer tw.Close()
 
-	// Get the base name of the directory
-	dirName := filepath.Base(dirPath)
-
 	// Walk through the directory recursively
-	err = filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
+	return a.walkFilePath(tw, filePath)
+}
+
+func (a *automator) walkFilePath(tw *tar.Writer, filePath string) error {
+	// Get the base name of the directory
+	dirName := filepath.Base(filePath)
+
+	return filepath.Walk(filePath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -495,7 +479,7 @@ func createTarGz(dirPath, outputPath, outputName string) error {
 		}
 
 		// Update the header's name to include the directory
-		relPath, err := filepath.Rel(dirPath, path)
+		relPath, err := filepath.Rel(filePath, path)
 		if err != nil {
 			return err
 		}
@@ -524,6 +508,4 @@ func createTarGz(dirPath, outputPath, outputName string) error {
 
 		return nil
 	})
-
-	return err
 }

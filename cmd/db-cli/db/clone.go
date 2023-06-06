@@ -15,11 +15,11 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// CloneCommand enables creation of aida-db copy or subset
+// CloneCommand enables creation of aida-db read or subset
 var CloneCommand = cli.Command{
-	Action: clo,
-	Name:   "clone",
-	Usage:  "clone can create aida-db copy or subset",
+	Action: clone,
+	Name:   "clo",
+	Usage:  "clone can create aida-db read or subset",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 		&utils.TargetDbFlag,
@@ -33,107 +33,99 @@ Creates clone of aida-db for desired block range
 `,
 }
 
-// clone creates aida-db copy or subset
-//
-//	N, first block
-//	M, last block
-//	cn, last updateset block before N
-//	cm, last updateset block before M
-//
-//	deletion db: 1 to M (whole database is transferred instead since it is small)
-//	update db: 1 to cm
-//	substate : cn to M
+const cloneWriteChanSize = 1000
+
+type cloner struct {
+	cfg             *utils.Config
+	log             *logging.Logger
+	aidaDb, cloneDb ethdb.Database
+	count           uint64
+	writeCh         chan rawEntry
+	errCh           chan error
+	closeCh         chan any
+}
+
+// rawEntry representation of database entry
+type rawEntry struct {
+	Key   []byte
+	Value []byte
+}
+
 func clone(ctx *cli.Context) error {
 	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if err != nil {
 		return err
 	}
 
-	var (
-		countCodes     uint64
-		countDestroyed uint64
-		countUpdate    uint64
-		countSubstate  uint64
-	)
+	log := logger.NewLogger(cfg.LogLevel, "AidaDb Clone")
 
-	log := logger.NewLogger(cfg.LogLevel, "DB Clone")
+	c := cloner{
+		cfg:     cfg,
+		log:     log,
+		writeCh: make(chan rawEntry, cloneWriteChanSize),
+		errCh:   make(chan error, 1),
+		closeCh: make(chan any),
+	}
 
-	sourceDb, targetDb, err := openCloneDatabases(cfg)
+	if err = c.openDbs(); err != nil {
+		return err
+	}
+
+	return c.clone()
+}
+
+// openCloneDatabases prepares aida and target databases
+func (c *cloner) openDbs() error {
+	var err error
+
+	_, err = os.Stat(c.cfg.AidaDb)
+	if os.IsNotExist(err) {
+		return fmt.Errorf("specified aida-db %v is empty\n", c.cfg.AidaDb)
+	}
+
+	_, err = os.Stat(c.cfg.TargetDb)
+	if !os.IsNotExist(err) {
+		return fmt.Errorf("specified target-db %v already exists\n", c.cfg.TargetDb)
+	}
+
+	// open aidaDb
+	c.aidaDb, err = rawdb.NewLevelDBDatabase(c.cfg.AidaDb, 1024, 100, "profiling", true)
 	if err != nil {
-		return err
+		return fmt.Errorf("targetDb; %v", err)
 	}
 
-	// close aida database
-	defer func() {
-		MustCloseDB(sourceDb)
-		MustCloseDB(targetDb)
-	}()
-
-	// open writing channel
-	writerChan, errChan := writeDataAsync(targetDb)
-
-	// write all contract codes
-	countCodes, err = write(writerChan, errChan, sourceDb, []byte(substate.Stage1CodePrefix), 0, nil, log)
+	// open cloneDb
+	c.cloneDb, err = rawdb.NewLevelDBDatabase(c.cfg.TargetDb, 1024, 100, "profiling", false)
 	if err != nil {
-		return err
+		return fmt.Errorf("targetDb; %v", err)
 	}
 
-	// write all destroyed accounts
-	countDestroyed, err = write(writerChan, errChan, sourceDb, []byte(substate.DestroyedAccountPrefix), 0, nil, log)
-	if err != nil {
-		return err
-	}
+	return nil
+}
 
-	// write update sets until cfg.Last
-	var lastUpdateBeforeRange uint64
-	lastUpdateBeforeRange, countUpdate, err = writeUpdateSet(cfg, writerChan, errChan, sourceDb, log)
-	if err != nil {
-		return err
-	}
+func (c *cloner) clone() error {
+	go c.write()
+	go c.checkErrors()
 
-	// write substates from last updateset before cfg.First until cfg.Last
-	countSubstate, err = writeSubstates(cfg, writerChan, errChan, sourceDb, lastUpdateBeforeRange, log)
-	if err != nil {
-		return err
-	}
+	c.read([]byte(substate.Stage1CodePrefix), 0, nil)
+	c.read([]byte(substate.DestroyedAccountPrefix), 0, nil)
+	lastUpdateBeforeRange := c.readUpdateSet()
+	c.readSubstate(lastUpdateBeforeRange)
 
-	// all writting finished
-	close(writerChan)
-
-	log.Debug("Waiting until db write finishes")
-	// read result of writer
-	err, ok := <-errChan
-	if ok {
-		return err
-	}
+	close(c.writeCh)
 
 	//  compact written data
-	if cfg.CompactDb {
-		log.Noticef("Starting compaction")
-		err = targetDb.Compact(nil, nil)
+	if c.cfg.CompactDb {
+		c.log.Noticef("Starting compaction")
+		err := c.cloneDb.Compact(nil, nil)
 		if err != nil {
 			return err
 		}
 	}
 
-	if cfg.Validate {
-		// validate whether sum of all written records and actual database size are same
-		expectedWritten := countCodes + countSubstate + countUpdate + countDestroyed
-
-		err = validateDbSize(targetDb, expectedWritten)
+	if c.cfg.Validate {
+		err := c.validateDbSize()
 		if err != nil {
-			return err
-		}
-	}
-
-	mdi := &aidaMetadata{
-		dbType:     cloneType,
-		firstBlock: cfg.First,
-		lastBlock:  cfg.Last,
-	}
-
-	if !cfg.SkipMetadata {
-		if err = processCloneMetadata(targetDb, sourceDb, mdi); err != nil {
 			return err
 		}
 	}
@@ -141,79 +133,89 @@ func clone(ctx *cli.Context) error {
 	return nil
 }
 
-// writeSubstates write substates from last updateset before cfg.First until cfg.Last
-func writeSubstates(cfg *utils.Config, writerChan chan rawEntry, errChan chan error, aidaDb ethdb.Database, lastUpdateBeforeRange uint64, log *logging.Logger) (uint64, error) {
-	endCond := func(key []byte) (bool, error) {
-		block, _, err := substate.DecodeStage1SubstateKey(key)
-		if err != nil {
-			return false, err
+func (c *cloner) checkErrors() {
+	for {
+		select {
+		case <-c.closeCh:
+			return
+		case <-c.errCh:
+			c.stop()
+			return
 		}
-		if block > cfg.Last {
-			return true, nil
-		}
-		return false, nil
 	}
-	// generating substates right after previous updateset before our interval
-	return write(writerChan, errChan, aidaDb, []byte(substate.Stage1SubstatePrefix), lastUpdateBeforeRange+1, endCond, log)
 }
 
-// writeUpdateSet write update sets until cfg.Last
-func writeUpdateSet(cfg *utils.Config, writerChan chan rawEntry, errChan chan error, aidaDb ethdb.Database, log *logging.Logger) (uint64, uint64, error) {
-	// labeling last updateset before interval - need to export substates for that range as well
-	var lastUpdateBeforeRange uint64
-	endCond := func(key []byte) (bool, error) {
-		block, err := substate.DecodeUpdateSetKey(key)
-		if err != nil {
-			return false, err
+func (c *cloner) write() {
+	var (
+		err         error
+		data        rawEntry
+		ok          bool
+		batchWriter ethdb.Batch
+	)
+
+	batchWriter = c.cloneDb.NewBatch()
+
+	for {
+		select {
+		case data, ok = <-c.writeCh:
+			if !ok {
+				// iteration completed - read rest of the pending data
+				if batchWriter.ValueSize() > 0 {
+					err = batchWriter.Write()
+					if err != nil {
+						c.errCh <- fmt.Errorf("cannot read rest of the data into cloneDb; %v", err)
+						return
+					}
+				}
+				return
+			}
+
+			err = batchWriter.Put(data.Key, data.Value)
+			if err != nil {
+				c.errCh <- fmt.Errorf("cannot put data into cloneDb %v", err)
+				return
+			}
+
+			// writing data in batches
+			if batchWriter.ValueSize() > kvdb.IdealBatchSize {
+				err = batchWriter.Write()
+				if err != nil {
+					c.errCh <- err
+					return
+				}
+
+				// reset writer after writing batch
+				batchWriter.Reset()
+			}
+		case <-c.closeCh:
+			return
 		}
-		if block > cfg.Last {
-			return true, nil
-		}
-		if block < cfg.First {
-			lastUpdateBeforeRange = block
-		}
-		return false, nil
+
 	}
-
-	countUpdate, err := write(writerChan, errChan, aidaDb, []byte(substate.SubstateAllocPrefix), 0, endCond, log)
-	if err != nil {
-		return 0, 0, err
-	}
-
-	// check if updateset contained at least one set (first set with worldstate), then aida-db must be corrupted
-	if lastUpdateBeforeRange == 0 {
-		return 0, 0, fmt.Errorf("updateset didn't contain any records; unable to create aida-db without initial world-state")
-	}
-
-	log.Debugf("Last updateset preceding block range found at %v\n", lastUpdateBeforeRange)
-
-	return lastUpdateBeforeRange, countUpdate, nil
 }
 
-// write all records into the database under given prefix
-func write(writerChan chan rawEntry, errChan chan error, aidaDb ethdb.Database, prefix []byte, start uint64, condition func(key []byte) (bool, error), log *logging.Logger) (uint64, error) {
-	log.Debugf("Prefix: %s ; Starting at: %d", prefix, start)
+func (c *cloner) read(prefix []byte, start uint64, condition func(key []byte) (bool, error)) {
+	c.log.Noticef("Copying data with prefix %v", string(prefix))
 
-	iter := aidaDb.NewIterator(prefix, substate.BlockToBytes(start))
+	iter := c.aidaDb.NewIterator(prefix, substate.BlockToBytes(start))
 	defer iter.Release()
-
-	var counter uint64
 
 	for iter.Next() {
 		if condition != nil {
 			finished, err := condition(iter.Key())
 			if err != nil {
-				return 0, err
+				c.errCh <- err
+				return
 			}
 			if finished {
 				break
 			}
 		}
 
-		counter++
+		c.count++
 
-		// make deep copy key and value
-		// need to pass deep copy of values into the channel
+		// make deep read key and value
+		// need to pass deep read of values into the channel
 		// golang channels were using pointers and values read from channel were incorrect
 		key := make([]byte, len(iter.Key()))
 		copy(key, iter.Key())
@@ -221,97 +223,91 @@ func write(writerChan chan rawEntry, errChan chan error, aidaDb ethdb.Database, 
 		copy(value, iter.Value())
 
 		select {
-		case err, ok := <-errChan:
-			{
-				if ok {
-					return 0, err
-				}
-			}
-		case writerChan <- rawEntry{Key: key, Value: value}:
-
+		case <-c.closeCh:
+			return
+		case c.writeCh <- rawEntry{Key: key, Value: value}:
 		}
 	}
 
-	log.Debugf("Prefix: %s ; Written: %v\n", prefix, counter)
+	c.log.Noticef("Prefix %s done %v", prefix)
 
-	return counter, nil
+	return
 }
 
-// writeDataAsync copies data from channel into targetDb
-func writeDataAsync(targetDb ethdb.Database) (chan rawEntry, chan error) {
-	writeChan := make(chan rawEntry)
-	errChan := make(chan error, 1)
-	go func() {
-		defer close(errChan)
-		dbBatchWriter := targetDb.NewBatch()
-
-		for {
-			// do we have another available item?
-			item, ok := <-writeChan
-			if !ok {
-				// iteration completed - finish write rest of the pending data
-				if dbBatchWriter.ValueSize() > 0 {
-					err := dbBatchWriter.Write()
-					if err != nil {
-						errChan <- err
-						return
-					}
-				}
-				return
-			}
-
-			err := dbBatchWriter.Put(item.Key, item.Value)
-			if err != nil {
-				errChan <- err
-				return
-			}
-
-			// writing data in batches
-			if dbBatchWriter.ValueSize() > kvdb.IdealBatchSize {
-				err = dbBatchWriter.Write()
-				if err != nil {
-					errChan <- err
-					return
-				}
-				dbBatchWriter.Reset()
-			}
+func (c *cloner) readUpdateSet() uint64 {
+	// labeling last updateSet before interval - need to export substate for that range as well
+	var lastUpdateBeforeRange uint64
+	endCond := func(key []byte) (bool, error) {
+		block, err := substate.DecodeUpdateSetKey(key)
+		if err != nil {
+			return false, err
 		}
-	}()
-	return writeChan, errChan
+		if block > c.cfg.Last {
+			return true, nil
+		}
+		if block < c.cfg.First {
+			lastUpdateBeforeRange = block
+		}
+		return false, nil
+	}
+
+	c.read([]byte(substate.SubstateAllocPrefix), 0, endCond)
+
+	// check if updateset contained at least one set (first set with worldstate), then aida-db must be corrupted
+	if lastUpdateBeforeRange == 0 {
+
+		c.errCh <- fmt.Errorf("updateset didn't contain any records - unable to create aida-db without initial world-state")
+		return 0
+	}
+
+	return lastUpdateBeforeRange
 }
 
-// openCloneDatabases prepares aida and target databases
-func openCloneDatabases(cfg *utils.Config) (ethdb.Database, ethdb.Database, error) {
-	_, err := os.Stat(cfg.AidaDb)
-	if os.IsNotExist(err) {
-		return nil, nil, fmt.Errorf("specified aida-db %v is empty\n", cfg.AidaDb)
+// readSubstate from last updateSet before cfg.First until cfg.Last
+func (c *cloner) readSubstate(lastUpdateBeforeRange uint64) {
+	endCond := func(key []byte) (bool, error) {
+		block, _, err := substate.DecodeStage1SubstateKey(key)
+		if err != nil {
+			return false, err
+		}
+		if block > c.cfg.Last {
+			return true, nil
+		}
+		return false, nil
 	}
 
-	_, err = os.Stat(cfg.TargetDb)
-	if !os.IsNotExist(err) {
-		return nil, nil, fmt.Errorf("specified target-db %v already exists\n", cfg.TargetDb)
-	}
-
-	// open aidaDb
-	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", true)
-	if err != nil {
-		return nil, nil, fmt.Errorf("targetDb; %v", err)
-	}
-
-	// open targetDB
-	targetDb, err := rawdb.NewLevelDBDatabase(cfg.TargetDb, 1024, 100, "profiling", false)
-	if err != nil {
-		return nil, nil, fmt.Errorf("targetDb; %v", err)
-	}
-
-	return aidaDb, targetDb, nil
+	// generating substate right after previous updateSet before our interval
+	c.read([]byte(substate.Stage1SubstatePrefix), lastUpdateBeforeRange+1, endCond)
+	return
 }
 
 // validateDbSize compares size of database and expectedWritten
-func validateDbSize(db ethdb.Database, expectedWritten uint64) error {
-	actualWritten := getDbSize(db)
-	if actualWritten != expectedWritten {
-		return fmt.Errorf("TargetDb has %v records; expected: %v", actualWritten, expectedWritten)
+func (c *cloner) validateDbSize() error {
+	actualWritten := getDbSize(c.cloneDb)
+	if actualWritten != c.count {
+		return fmt.Errorf("TargetDb has %v records; expected: %v", actualWritten, c.count)
 	}
 	return nil
+}
+
+func (c *cloner) closeDbs() {
+	var err error
+
+	if err = c.aidaDb.Close(); err != nil {
+		c.log.Errorf("cannot close aida-db")
+	}
+
+	if err = c.cloneDb.Close(); err != nil {
+		c.log.Errorf("cannot close aida-db")
+	}
+}
+
+func (c *cloner) stop() {
+	select {
+	case <-c.closeCh:
+		return
+	default:
+		close(c.closeCh)
+		c.closeDbs()
+	}
 }

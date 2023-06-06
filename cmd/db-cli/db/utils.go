@@ -1,0 +1,247 @@
+package db
+
+import (
+	"bufio"
+	"crypto/md5"
+	"encoding/hex"
+	"fmt"
+	"io"
+	"os"
+	"os/exec"
+	"path/filepath"
+
+	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/Fantom-foundation/Aida/world-state/db/opera"
+	"github.com/Fantom-foundation/lachesis-base/common/bigendian"
+	"github.com/Fantom-foundation/lachesis-base/kvdb"
+	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/op/go-logging"
+)
+
+// openSourceDatabases opens all databases required for merge
+func openSourceDatabases(sourceDbPaths []string) ([]ethdb.Database, error) {
+	if len(sourceDbPaths) < 1 {
+		return nil, fmt.Errorf("no source database were specified\n")
+	}
+
+	var sourceDbs []ethdb.Database
+	for i := 0; i < len(sourceDbPaths); i++ {
+		path := sourceDbPaths[i]
+		_, err := os.Stat(path)
+		if os.IsNotExist(err) {
+			return nil, fmt.Errorf("source database %s; doesn't exist\n", path)
+		}
+		db, err := rawdb.NewLevelDBDatabase(path, 1024, 100, "", true)
+		if err != nil {
+			return nil, fmt.Errorf("source database %s; error: %v", path, err)
+		}
+		sourceDbs = append(sourceDbs, db)
+	}
+
+	return sourceDbs, nil
+}
+
+// copyData copies data from iterator into target database
+func copyData(sourceDb ethdb.Database, targetDb ethdb.Database) (uint64, error) {
+	dbBatchWriter := targetDb.NewBatch()
+
+	var written uint64
+	iter := sourceDb.NewIterator(nil, nil)
+	for {
+		// do we have another available item?
+		if !iter.Next() {
+			// iteration completed - finish write rest of the pending data
+			if dbBatchWriter.ValueSize() > 0 {
+				err := dbBatchWriter.Write()
+				if err != nil {
+					return 0, err
+				}
+			}
+			return written, nil
+		}
+		key := iter.Key()
+
+		err := dbBatchWriter.Put(key, iter.Value())
+		if err != nil {
+			return 0, err
+		}
+		written++
+
+		// writing data in batches
+		if dbBatchWriter.ValueSize() > kvdb.IdealBatchSize {
+			err = dbBatchWriter.Write()
+			if err != nil {
+				return 0, err
+			}
+			dbBatchWriter.Reset()
+		}
+	}
+}
+
+// MustCloseDB close database safely
+func MustCloseDB(db ethdb.Database) {
+	if db != nil {
+		err := db.Close()
+		if err != nil {
+			if err.Error() != "leveldb: closed" {
+				fmt.Printf("could not close database; %s\n", err.Error())
+			}
+		}
+	}
+}
+
+// loadSourceDBPaths initializes paths to source databases
+func loadSourceDBPaths(cfg *utils.Config, aidaDbTmp string) {
+	cfg.DeletionDb = filepath.Join(aidaDbTmp, "deletion")
+	cfg.SubstateDb = filepath.Join(aidaDbTmp, "substate")
+	cfg.UpdateDb = filepath.Join(aidaDbTmp, "update")
+	cfg.WorldStateDb = filepath.Join(aidaDbTmp, "worldstate")
+}
+
+// runCommand wraps cmd execution to distinguish whether to display its output
+func runCommand(cmd *exec.Cmd, resultChan chan string, log *logging.Logger) error {
+	if resultChan != nil {
+		defer close(resultChan)
+	}
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return fmt.Errorf("unable to create StdoutPipe; %v", err)
+	}
+	defer stdout.Close()
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return fmt.Errorf("unable to create StderrPipe; %v", err)
+	}
+	defer stderr.Close()
+
+	err = cmd.Start()
+	if err != nil {
+		return fmt.Errorf("unable to start Command %v; %v", cmd, err)
+	}
+
+	merged := io.MultiReader(stderr, stdout)
+	scanner := bufio.NewScanner(merged)
+
+	lastOutputMessagesChan := make(chan string, commandOutputLimit)
+	defer close(lastOutputMessagesChan)
+	for scanner.Scan() {
+		m := scanner.Text()
+		if resultChan != nil {
+			resultChan <- m
+		}
+		if log.IsEnabledFor(logging.DEBUG) {
+			log.Debug(m)
+		} else {
+			// in case debugging is turned off and resultChan doesn't listen to ouput
+			// we need to keep most recent output lines in case of error
+			if resultChan == nil {
+				// throw out the oldest line in case we are at limit
+				if len(lastOutputMessagesChan) == commandOutputLimit {
+					<-lastOutputMessagesChan
+				}
+				lastOutputMessagesChan <- m
+			}
+		}
+	}
+	err = cmd.Wait()
+
+	// command failed
+	if err != nil {
+		// print out gathered output since generation failed
+		for {
+			m, ok := <-lastOutputMessagesChan
+			if !ok {
+				break
+			}
+			log.Error(m)
+		}
+
+		// read rest of the output - might not be needed
+		for scanner.Scan() {
+			m := scanner.Text()
+			if resultChan != nil {
+				resultChan <- m
+			}
+			log.Error(m)
+		}
+		return fmt.Errorf("error while executing Command %v; %v", cmd, err)
+	}
+	return nil
+}
+
+// calculateMD5Sum calculates MD5 hash of given file
+func calculateMD5Sum(filePath string) (string, error) {
+	// Open the file
+	file, err := os.Open(filePath)
+	if err != nil {
+		return "", fmt.Errorf("unable open file %s; %v", filePath, err.Error())
+	}
+	defer file.Close()
+
+	// Create a new MD5 hash instance
+	hash := md5.New()
+
+	// Copy the file content into the hash instance
+	_, err = io.Copy(hash, file)
+	if err != nil {
+		return "", fmt.Errorf("unable to calculate md5; %v", err)
+	}
+
+	// Calculate the MD5 checksum as a byte slice
+	checksum := hash.Sum(nil)
+
+	// Convert the checksum to a hexadecimal string
+	md5sum := hex.EncodeToString(checksum)
+
+	return md5sum, nil
+}
+
+// GetOperaBlockAndEpoch retrieves current block of opera head
+func GetOperaBlockAndEpoch(cfg *utils.Config) (uint64, uint64, error) {
+	operaPath := filepath.Join(cfg.Db, "/chaindata/leveldb-fsh/")
+	store, err := opera.Connect("ldb", operaPath, "main")
+	if err != nil {
+		return 0, 0, err
+	}
+	defer opera.MustCloseStore(store)
+
+	_, blockNumber, epochNumber, err := opera.LatestStateRoot(store)
+	if err != nil {
+		return 0, 0, fmt.Errorf("state root not found; %v", err)
+	}
+
+	if blockNumber < 1 {
+		return 0, 0, fmt.Errorf("opera; block number not found; %v", err)
+	}
+	return blockNumber, epochNumber, nil
+}
+
+// startDaemonOpera start opera node
+func startDaemonOpera(log *logging.Logger) error {
+	cmd := exec.Command("systemctl", "--user", "start", "opera")
+	err := runCommand(cmd, nil, log)
+	if err != nil {
+		return fmt.Errorf("unable start opera; %v", err.Error())
+	}
+	return nil
+}
+
+// stopDaemonOpera stop opera node
+func stopDaemonOpera(log *logging.Logger) error {
+	cmd := exec.Command("systemctl", "--user", "stop", "opera")
+	err := runCommand(cmd, nil, log)
+	if err != nil {
+		return fmt.Errorf("unable stop opera; %v", err.Error())
+	}
+	return nil
+}
+
+// getLastBlock retrieve last block from aida-db aidaMetadata
+func getLastBlock(aidaDb ethdb.Database) (uint64, error) {
+	lastBlockBytes, err := aidaDb.Get([]byte(LastBlockPrefix))
+	if err != nil {
+		return 0, fmt.Errorf("cannot get last block from db; %v", err)
+	}
+	return bigendian.BytesToUint64(lastBlockBytes), nil
+}

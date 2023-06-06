@@ -2,8 +2,6 @@ package db
 
 import (
 	"encoding/binary"
-	"errors"
-	"fmt"
 	"strings"
 	"time"
 
@@ -11,8 +9,36 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/Fantom-foundation/lachesis-base/common/bigendian"
 	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/op/go-logging"
+)
+
+type Metadata interface {
+	getFirstBlock() uint64
+	getLastBlock() uint64
+	getFirstEpoch() uint64
+	getLastEpoch() uint64
+	getChainID() int
+	getTimestamp() uint64
+	getDbType() aidaDbType
+
+	setFirstBlock(uint64)
+	setLastBlock(uint64)
+	setFirstEpoch(uint64)
+	setLastEpoch(uint64)
+	setChainID(int)
+	setTimestamp()
+	setDbType(aidaDbType)
+}
+
+type aidaDbType byte
+
+const (
+	noType aidaDbType = iota
+	genType
+	patchType
+	cloneType
+	mergeType
+	updateType
 )
 
 const (
@@ -38,376 +64,270 @@ const (
 	// P + P = P
 )
 
-type metadataFinder struct {
+// aidaMetadata holds any information about AidaDb needed for putting it into the Db
+type aidaMetadata struct {
+	aidaDb                                       ethdb.Database
+	dbType                                       aidaDbType
 	log                                          *logging.Logger
-	mdi                                          *aidaMetadata
 	firstBlock, lastBlock, firstEpoch, lastEpoch uint64
+	chainId                                      int
 }
 
-func findMetadata(sourceDbs []ethdb.Database, targetDb ethdb.Database, mdi *aidaMetadata) error {
-	switch mdi.dbType {
-	case updateType:
-		fallthrough
-	case genType:
-		return findGenMetadata(targetDb, mdi)
-	case mergeType:
-		return findMergeMetadata(append(sourceDbs, targetDb), mdi)
-	case patchType:
-		return findGenMetadata(targetDb, mdi)
-	case cloneType:
-		// clone type already has every metadata needed
-		return nil
-	default:
-
-		return errors.New("unknown db type")
+func newAidaMetadata(db ethdb.Database, dbType aidaDbType, logLevel string) *aidaMetadata {
+	return &aidaMetadata{
+		aidaDb: db,
+		dbType: dbType,
+		log:    logger.NewLogger(logLevel, "aida-metadata"),
 	}
 }
 
-func findMergeMetadata(sourceDbs []ethdb.Database, mdi *aidaMetadata) error {
-	var err error
-	f := &metadataFinder{
-		log: logger.NewLogger("INFO", "metadata-Finder"),
-		mdi: mdi,
-	}
+func processGenLikeMetadata(aidaDb ethdb.Database, logLevel string, firstBlock uint64, lastBlock uint64, firstEpoch uint64, lastEpoch uint64, chainID int) {
+	m := newAidaMetadata(aidaDb, genType, logLevel)
 
-	// iterate over all dbs to find the first and the last block
+	firstBlock, lastBlock = m.findBlocks(firstBlock, lastBlock)
+	m.setFirstBlock(firstBlock)
+	m.setLastBlock(lastBlock)
+
+	firstEpoch, lastEpoch = m.findEpochs(firstEpoch, lastEpoch)
+	m.setFirstEpoch(firstEpoch)
+	m.setLastEpoch(lastEpoch)
+
+	m.setChainID(chainID)
+
+	m.setDbType(m.dbType)
+
+	m.setTimestamp()
+
+	m.log.Notice("Metadata added successfully")
+
+}
+
+func processMergeMetadata(aidaDb ethdb.Database, sourceDbs []ethdb.Database, logLevel string) {
+	var (
+		dbType                = patchType
+		t                     aidaDbType
+		firstBlock, lastBlock uint64
+		firstEpoch, lastEpoch uint64
+		chainID               int
+	)
+
 	for _, db := range sourceDbs {
-		// find what type of db we are merging
-		if err = f.findDbType(db); err != nil {
-			return err
+		m := newAidaMetadata(db, noType, logLevel)
+		firstBlock, lastBlock = m.findBlocks(firstBlock, lastBlock)
+		firstEpoch, lastEpoch = m.findEpochs(firstEpoch, lastEpoch)
+		t = m.getDbType()
+		if t == cloneType {
+			dbType = t
+		} else if t == genType && dbType != cloneType {
+			dbType = t
 		}
 
-		if err = f.findChainID(db); err != nil {
-			return err
-		}
-
-		if err = f.findBlocks(db); err != nil {
-			return err
-		}
-
-		if err = f.findEpochs(db); err != nil {
-			return err
-		}
 	}
 
-	return nil
+	aidaDbMetadata := newAidaMetadata(aidaDb, dbType, logLevel)
+
+	aidaDbMetadata.setFirstBlock(firstBlock)
+
+	aidaDbMetadata.setLastEpoch(lastBlock)
+
+	aidaDbMetadata.setFirstEpoch(firstEpoch)
+
+	aidaDbMetadata.setLastEpoch(lastEpoch)
+
+	aidaDbMetadata.setChainID(chainID)
+
+	aidaDbMetadata.setDbType(aidaDbMetadata.dbType)
+
+	aidaDbMetadata.setTimestamp()
 
 }
 
-func findGenMetadata(db ethdb.Database, mdi *aidaMetadata) error {
-	var err error
-	f := &metadataFinder{
-		log: logger.NewLogger("INFO", "metadata-Finder"),
-		mdi: mdi,
-	}
+func (m *aidaMetadata) getMetadata() (firstBlock uint64, lastBlock uint64, firstEpoch uint64, lastEpoch uint64, dbType aidaDbType) {
+	firstBlock = m.getFirstBlock()
+	lastBlock = m.getLastBlock()
+	firstEpoch = m.getFirstEpoch()
+	lastEpoch = m.getLastEpoch()
+	dbType = m.getDbType()
 
-	// iterate over all dbs to find the first and the last block
-	if err = f.findBlocks(db); err != nil {
-		return err
-	}
-
-	if err = f.findEpochs(db); err != nil {
-		return err
-	}
-
-	return nil
+	return
 }
 
-// processMetadata tries to find data inside give sourceDbs, if not found the ones from config are used
-func processMetadata(sourceDbs []ethdb.Database, targetDb ethdb.Database, mdi *aidaMetadata) error {
-	var err error
+func (m *aidaMetadata) findBlocks(firstBlock uint64, lastBlock uint64) (uint64, uint64) {
+	var (
+		dbFirst, dbLast uint64
+	)
 
-	switch mdi.dbType {
-	case updateType:
-		fallthrough
-	case genType:
-		err = findMetadataGenAndMerge(append(sourceDbs, targetDb), mdi)
-		if err != nil {
-			return err
-		}
+	dbFirst = m.getFirstBlock()
 
-		if err = putMetadata(targetDb, mdi); err != nil {
-			return err
-		}
-	case mergeType:
-		err = findMetadataGenAndMerge(sourceDbs, mdi)
-		if err != nil {
-			return err
-		}
-		return putMetadata(targetDb, mdi)
-
-	case patchType:
-		if err = putMetadata(targetDb, mdi); err != nil {
-			return err
-		}
-	case cloneType:
-		//if err = findMetadataClone(sourceDbs[0], md); err != nil {
-		//	return err
-		//}
-
-		if err = putMetadata(targetDb, mdi); err != nil {
-			return err
-		}
-
-	default:
-		return errors.New("unknown db type")
+	if (dbFirst != 0 && dbFirst < firstBlock) || firstBlock == 0 {
+		firstBlock = dbFirst
 	}
 
-	return nil
+	dbLast = m.getLastBlock()
+
+	if dbLast > lastBlock || lastBlock == 0 {
+		lastBlock = dbLast
+	}
+
+	return firstBlock, lastBlock
 }
 
-// putMetadata decides which put func to call
-func putMetadata(targetDb ethdb.Database, mdi *aidaMetadata) error {
-	log := logger.NewLogger("INFO", "metadata")
+func (m *aidaMetadata) findEpochs(firstEpoch uint64, lastEpoch uint64) (uint64, uint64) {
+	var (
+		dbFirst, dbLast uint64
+	)
 
-	if err := putBlockMetadata(targetDb, mdi.firstBlock, mdi.lastBlock, log); err != nil {
-		return err
+	dbFirst = m.getFirstEpoch()
+
+	if (dbFirst != 0 && dbFirst < firstEpoch) || firstEpoch == 0 {
+		firstEpoch = dbFirst
 	}
 
-	if err := putEpochMetadata(targetDb, mdi.firstEpoch, mdi.lastEpoch, mdi.dbType, log); err != nil {
-		return err
+	dbLast = m.getLastEpoch()
+
+	if dbLast > lastEpoch || lastEpoch == 0 {
+		lastEpoch = dbLast
 	}
 
-	if err := putTimestampMetadata(targetDb); err != nil {
-		return err
-	}
-
-	if err := putChainIDMetadata(targetDb, mdi.chainId); err != nil {
-		return err
-	}
-
-	var dbTypeBytes = make([]byte, 1)
-	dbTypeBytes[0] = byte(mdi.dbType)
-
-	if err := targetDb.Put([]byte(TypePrefix), dbTypeBytes); err != nil {
-		return fmt.Errorf("cannot put first block number into db metadata; %v", err)
-	}
-
-	return nil
+	return firstEpoch, lastEpoch
 }
 
-func putChainIDMetadata(targetDb ethdb.Database, chainID int) error {
-
-	byteChainID := bigendian.Uint16ToBytes(uint16(chainID))
-
-	if err := targetDb.Put([]byte(ChainIDPrefix), byteChainID); err != nil {
-		return fmt.Errorf("cannot put chain-id into db metadata; %v", err)
-	}
-
-	return nil
-}
-
-// findMetadataGenAndMerge in given sourceDbs - either when Merging or generating AidaDb from substateDb, updatesetDb and deletionDb
-func findMetadataGenAndMerge(sourceDbs []ethdb.Database, mdi *aidaMetadata) error {
-
-	f := &metadataFinder{
-		log: logger.NewLogger("INFO", "metadata-Finder"),
-		mdi: mdi,
-	}
-
-	// iterate over all dbs to find the first and the last block
-	for _, db := range sourceDbs {
-		// find what type of db we are merging
-		if err := f.findDbType(db); err != nil {
-			return err
-		}
-
-		if err := f.findChainID(db); err != nil {
-			return err
-		}
-
-		if err := f.findBlocks(db); err != nil {
-			return err
-		}
-
-		if err := f.findEpochs(db); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func processCloneMetadata(targetDb ethdb.Database, sourceDb ethdb.Database, mdi *aidaMetadata) error {
-	var err error
-
-	f := metadataFinder{
-		log: logger.NewLogger("process-metadata", "INFO"),
-		mdi: mdi,
-	}
-
-	if err = f.findChainID(sourceDb); err != nil {
-		return fmt.Errorf("cannot find metadata from aida-db")
-	}
-
-	if err = putMetadata(targetDb, mdi); err != nil {
-		return fmt.Errorf("cannot put metadata into new aida-db")
-	}
-
-	return nil
-}
-
-func (f *metadataFinder) findDbType(db ethdb.Database) error {
-	var typStr string
-
-	typByte, err := db.Get([]byte(TypePrefix))
+func (m *aidaMetadata) getFirstBlock() uint64 {
+	firstBlockBytes, err := m.aidaDb.Get([]byte(FirstBlockPrefix))
 	if err != nil {
 		if !strings.Contains(err.Error(), "not found") {
-			return fmt.Errorf("cannot get merge type; %v", err)
+			m.log.Errorf("cannot get first block; %v", err)
 		}
-		f.log.Warning("cannot find db type")
-	} else {
-		if err = rlp.DecodeBytes(typByte, &typStr); err != nil {
-			return fmt.Errorf("cannot decode merge type; %v", err)
-		}
+		return 0
 	}
 
-	if typStr == CloneDbType {
-		f.mdi.dbType = cloneType
-	}
-
-	return nil
+	return bigendian.BytesToUint64(firstBlockBytes)
 }
 
-func (f *metadataFinder) findBlocks(db ethdb.Database) error {
-	var first, last uint64
-
-	firstBlockBytes, err := db.Get([]byte(FirstBlockPrefix))
+func (m *aidaMetadata) getLastBlock() uint64 {
+	lastBlockBytes, err := m.aidaDb.Get([]byte(LastBlockPrefix))
 	if err != nil {
 		if !strings.Contains(err.Error(), "not found") {
-			return fmt.Errorf("cannot get first block ; %v", err)
+			m.log.Errorf("cannot get last block; %v", err)
 		}
-		return nil
+		return 0
 	}
 
-	first = bigendian.BytesToUint64(firstBlockBytes)
-
-	if first < f.mdi.firstBlock {
-		f.mdi.firstBlock = first
-	}
-
-	lastBlockBytes, err := db.Get([]byte(LastBlockPrefix))
-	if err != nil {
-		if !strings.Contains(err.Error(), "not found") {
-			return fmt.Errorf("cannot get last block; %v", err)
-		}
-		return nil
-	}
-
-	last = bigendian.BytesToUint64(lastBlockBytes)
-
-	if last > f.mdi.lastBlock {
-		f.mdi.lastBlock = last
-	}
-
-	return nil
+	return bigendian.BytesToUint64(lastBlockBytes)
 }
 
-func (f *metadataFinder) findEpochs(db ethdb.Database) error {
-	var first, last uint64
-
-	firstEpochBytes, err := db.Get([]byte(FirstEpochPrefix))
+func (m *aidaMetadata) getFirstEpoch() uint64 {
+	firstEpochBytes, err := m.aidaDb.Get([]byte(FirstEpochPrefix))
 	if err != nil {
 		if !strings.Contains(err.Error(), "not found") {
-			return fmt.Errorf("cannot get first epoch ; %v", err)
+			m.log.Errorf("cannot get first epoch; %v", err)
 		}
-		return nil
+		return 0
 	}
 
-	first = bigendian.BytesToUint64(firstEpochBytes)
+	return bigendian.BytesToUint64(firstEpochBytes)
+}
 
-	if first < f.mdi.firstEpoch {
-		f.mdi.firstEpoch = first
-	}
-
-	lastEpochBytes, err := db.Get([]byte(LastEpochPrefix))
+func (m *aidaMetadata) getLastEpoch() uint64 {
+	lastEpochBytes, err := m.aidaDb.Get([]byte(LastEpochPrefix))
 	if err != nil {
 		if !strings.Contains(err.Error(), "not found") {
-			return fmt.Errorf("cannot get last epoch; %v", err)
+			m.log.Errorf("cannot get last epoch; %v", err)
 		}
-		return nil
+		return 0
 	}
 
-	last = bigendian.BytesToUint64(lastEpochBytes)
-
-	if last > f.mdi.lastEpoch {
-		f.mdi.lastEpoch = last
-	}
-
-	return nil
+	return bigendian.BytesToUint64(lastEpochBytes)
 }
 
-func (f *metadataFinder) findChainID(db ethdb.Database) error {
-	byteChainID, err := db.Get([]byte(ChainIDPrefix))
+func (m *aidaMetadata) getChainID() int {
+	chainIDBytes, err := m.aidaDb.Get([]byte(ChainIDPrefix))
 	if err != nil {
-		return fmt.Errorf("cannot get chain-id from aida-db; %v", err)
+		m.log.Errorf("cannot get chain-id; %v", err)
+		return 0
 	}
 
-	f.mdi.chainId = int(bigendian.BytesToUint16(byteChainID))
-
-	return nil
+	return int(bigendian.BytesToUint16(chainIDBytes))
 }
 
-// putBlockMetadata into AidaDb
-func putBlockMetadata(targetDb ethdb.Database, firstBlock, lastBlock uint64, log *logging.Logger) error {
-	if firstBlock == 0 {
-		log.Warning("given first block is 0 - saving to metadata anyway")
+func (m *aidaMetadata) getTimestamp() uint64 {
+	byteChainID, err := m.aidaDb.Get([]byte(TimestampPrefix))
+	if err != nil {
+		m.log.Errorf("cannot get chain-id; %v", err)
+		return 0
 	}
 
+	return bigendian.BytesToUint64(byteChainID)
+}
+
+func (m *aidaMetadata) getDbType() aidaDbType {
+	byteDbType, err := m.aidaDb.Get([]byte(TypePrefix))
+	if err != nil {
+		m.log.Errorf("cannot get db-type; %v", err)
+		return noType
+	}
+
+	return aidaDbType(byteDbType[0])
+}
+
+func (m *aidaMetadata) setFirstBlock(firstBlock uint64) {
 	firstBlockBytes := substate.BlockToBytes(firstBlock)
-	if err := targetDb.Put([]byte(FirstBlockPrefix), firstBlockBytes); err != nil {
-		return fmt.Errorf("cannot put first block number into db metadata; %v", err)
-	}
 
-	if lastBlock == 0 {
-		log.Warning("given last block is 0 - saving to metadata anyway")
+	if err := m.aidaDb.Put([]byte(FirstBlockPrefix), firstBlockBytes); err != nil {
+		m.log.Errorf("cannot put first block; %v", err)
 	}
+}
 
+func (m *aidaMetadata) setLastBlock(lastBlock uint64) {
 	lastBlockBytes := substate.BlockToBytes(lastBlock)
-	if err := targetDb.Put([]byte(LastBlockPrefix), lastBlockBytes); err != nil {
-		return fmt.Errorf("cannot put last block number into db metadata; %v", err)
-	}
 
-	return nil
+	if err := m.aidaDb.Put([]byte(LastBlockPrefix), lastBlockBytes); err != nil {
+		m.log.Errorf("cannot put last block; %v", err)
+	}
 }
 
-// putEpochMetadata into AidaDb
-func putEpochMetadata(targetDb ethdb.Database, firstEpoch, lastEpoch uint64, dbType aidaDbType, log *logging.Logger) error {
-
-	if firstEpoch == 0 {
-		log.Warning("given first epoch is 0 - saving to metadata anyway")
-	}
-
+func (m *aidaMetadata) setFirstEpoch(firstEpoch uint64) {
 	firstEpochBytes := substate.BlockToBytes(firstEpoch)
-	if err := targetDb.Put([]byte(FirstEpochPrefix), firstEpochBytes); err != nil {
-		return fmt.Errorf("cannot put first block number into db metadata; %v", err)
-	}
 
-	if lastEpoch == 0 {
-		log.Warning("given last epoch is 0 - saving to metadata anyway")
+	if err := m.aidaDb.Put([]byte(FirstEpochPrefix), firstEpochBytes); err != nil {
+		m.log.Errorf("cannot put first epoch; %v", err)
 	}
-
-	// if db is type of clone, epochs are set to 0
-	if dbType != cloneType {
-		lastEpoch -= 1
-	}
-
-	lastEpochBytes := substate.BlockToBytes(lastEpoch)
-	if err := targetDb.Put([]byte(LastEpochPrefix), lastEpochBytes); err != nil {
-		return fmt.Errorf("cannot put first block number into db metadata; %v", err)
-	}
-
-	return nil
 }
 
-// putTimestampMetadata into AidaDb
-func putTimestampMetadata(targetDb ethdb.Database) error {
+func (m *aidaMetadata) setLastEpoch(lastEpoch uint64) {
+	lastEpochBytes := substate.BlockToBytes(lastEpoch)
+
+	if err := m.aidaDb.Put([]byte(LastEpochPrefix), lastEpochBytes); err != nil {
+		m.log.Errorf("cannot put last epoch; %v", err)
+	}
+}
+
+func (m *aidaMetadata) setChainID(chainID int) {
+	chainIDBytes := bigendian.Uint16ToBytes(uint16(chainID))
+
+	if err := m.aidaDb.Put([]byte(ChainIDPrefix), chainIDBytes); err != nil {
+		m.log.Errorf("cannot put chain-id; %v", err)
+	}
+}
+
+func (m *aidaMetadata) setTimestamp() {
 	createTime := make([]byte, 8)
 
 	binary.BigEndian.PutUint64(createTime, uint64(time.Now().Unix()))
-	if err := targetDb.Put([]byte(TimestampPrefix), createTime); err != nil {
-		return fmt.Errorf("cannot put timestamp into db metadata; %v", err)
+	if err := m.aidaDb.Put([]byte(TimestampPrefix), createTime); err != nil {
+		m.log.Errorf("cannot put timestamp into db metadata; %v", err)
 	}
+}
 
-	return nil
+func (m *aidaMetadata) setDbType(dbType aidaDbType) {
+	dbTypeBytes := make([]byte, 1)
+	dbTypeBytes[0] = byte(dbType)
+
+	if err := m.aidaDb.Put([]byte(TypePrefix), dbTypeBytes); err != nil {
+		m.log.Errorf("cannot put db-type into aida-db; %v", err)
+	}
+}
+
+func (m *aidaMetadata) mergeMetadata(firstBlock uint64, lastBlock uint64, firstEpoch uint64, lastEpoch uint64, chainID int, sourceDbs []ethdb.Database) {
+
 }
