@@ -23,7 +23,7 @@ import (
 
 // AutoGenCommand generates aida-db patches and handles second opera for event generation
 var AutoGenCommand = cli.Command{
-	Action: autoGen,
+	Action: aGen,
 	Name:   "autogen",
 	Usage:  "autogen generates aida-db periodically",
 	Flags: []cli.Flag{

@@ -17,7 +17,7 @@ import (
 
 // CloneCommand enables creation of aida-db copy or subset
 var CloneCommand = cli.Command{
-	Action: clone,
+	Action: clo,
 	Name:   "clone",
 	Usage:  "clone can create aida-db copy or subset",
 	Flags: []cli.Flag{

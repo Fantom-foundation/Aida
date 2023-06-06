@@ -30,7 +30,7 @@ const (
 
 // GenerateCommand data structure for the replay app
 var GenerateCommand = cli.Command{
-	Action: generate,
+	Action: gen,
 	Name:   "generate",
 	Usage:  "generates aida-db from given events",
 	Flags: []cli.Flag{
