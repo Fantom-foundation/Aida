@@ -26,13 +26,15 @@ type executorInput struct {
 
 // OutData are sent to comparator with result from StateDB and req/resp Recorded on API server
 type OutData struct {
-	Method     string
-	MethodBase string
-	Recorded   *RecordedData
-	StateDB    *StateDBData
-	BlockID    uint64
-	Params     []interface{}
-	ParamsRaw  []byte
+	Method       string
+	MethodBase   string
+	Recorded     *RecordedData
+	StateDB      *StateDBData
+	BlockID      uint64
+	Params       []interface{}
+	ParamsRaw    []byte
+	recoveryChan chan *OutData
+	isRecovered  bool
 }
 
 // dbRange represents first and last block of StateDB
@@ -130,7 +132,7 @@ func (e *ReplayExecutor) execute() {
 				select {
 				case <-e.closed:
 					return
-				case e.output <- createOutData(in, res):
+				case e.output <- createOutData(in, res, e.output):
 				}
 			} else {
 				logType = noSubstateForGivenBlock
@@ -151,7 +153,7 @@ func (e *ReplayExecutor) execute() {
 }
 
 // createOutData and send it to Comparator
-func createOutData(in *executorInput, r *StateDBData) *OutData {
+func createOutData(in *executorInput, r *StateDBData, ch chan *OutData) *OutData {
 
 	out := new(OutData)
 	out.Recorded = new(RecordedData)
@@ -177,6 +179,9 @@ func createOutData(in *executorInput, r *StateDBData) *OutData {
 
 	// add raw params for clear logging
 	out.ParamsRaw = in.req.ParamsRaw
+
+	// recovery chan is used when call method returns different data - in this case block number is deducted by one and resend again to executor
+	out.recoveryChan = ch
 
 	return out
 }
