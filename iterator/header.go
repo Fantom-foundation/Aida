@@ -8,9 +8,9 @@ import (
 	"github.com/sigurn/crc8"
 )
 
-// Record Header Structure (min 10 bytes, max 13 bytes per record):
+// Record Header Structure (min 18 bytes, max 21 bytes per record):
 // +-----+-----+-----+-----+-----+-----+-----+-----+
-// | ERR | HiQ | HiR |       Call Namespace        |
+// | ERR | HiQ | HiR |  Version  |    Namespace    |
 // +-----+-----+-----+-----+-----+-----+-----+-----+
 // |      Call Method      |     Query Size Hi     |
 // +-----+-----+-----+-----+-----+-----+-----+-----+
@@ -29,10 +29,19 @@ import (
 // |                  (32 bits)                    |
 // |                                               |
 // +-----+-----+-----+-----+-----+-----+-----+-----+
+// |                                               |
+// |                                               |
+// |                                               |
+// |           Response Block Timestamp            |
+// |                  (64 bits)                    |
+// |                                               |
+// |                                               |
+// |                                               |
+// +-----+-----+-----+-----+-----+-----+-----+-----+
 // |                 CRC8 Checksum                 |
 // +-----+-----+-----+-----+-----+-----+-----+-----+
 
-// maxQuerySizeAllowed represents the maximal size of recordable query; 4 bits (Hi) + 8 bits (HiQ = 1) + 8 bits (Lo)
+// maxQuerySizeAllowed represents the maximal size of a recordable query; 4 bits (Hi) + 8 bits (HiQ = 1) + 8 bits (Lo)
 const maxQuerySizeAllowed = 0xFFFFF
 
 // maxShortQuery represents the longest request query still considered as short (4 bits Hi + 8 bits Lo).
@@ -41,8 +50,11 @@ const maxShortQuery = 0xFFF
 // maxShortResponse represents the longest response payload still considered as short (16 bits uint).
 const maxShortResponse = 0xFFFF
 
-// Header represents single record header on a virtual recording tape represented by a Reader/Writer.
+const headerSize = 21
+
+// Header represents a single record header on a virtual recording tape represented by a Reader/Writer.
 type Header struct {
+	version        byte
 	namespace      byte
 	method         byte
 	isError        bool
@@ -51,6 +63,7 @@ type Header struct {
 	querySize      int32
 	resultCodeSize int32 // also used for error code; see ERR flag
 	blockID        uint64
+	blockTimestamp uint64
 }
 
 // namespaceDictionary represents a dictionary of call namespace for encoding.
@@ -63,6 +76,8 @@ var namespaceDictionary = map[string]byte{
 
 // methodDictionary represents a dictionary of methods by namespace for encoding.
 // Unlisted methods are not recorded.
+// Please note the header encodes the method into 4 bits,
+// e.g., the maximal method ID is limited to 15.
 var methodDictionary = map[byte]map[string]byte{
 	1 << 0: {
 		/* eth+ftm namespaces */
@@ -73,11 +88,24 @@ var methodDictionary = map[byte]map[string]byte{
 		"getStorageAt":        5,
 		"getTransactionCount": 6,
 		"getLogs":             7,
+		"getProof":            8,
 	},
 }
 
 // checksumTable is the table used to calculate the header checksum.
 var checksumTable = crc8.MakeTable(crc8.CRC8_CDMA2000)
+
+// CanRecord compares namespace and function name against Header functions table
+// to verify if the function can be encoded to a record header.
+func CanRecord(namespace, method string) bool {
+	ns, ok := namespaceDictionary[namespace]
+	if !ok {
+		return false
+	}
+
+	_, ok = methodDictionary[ns][method]
+	return ok
+}
 
 // SetMethod sets a call namespace and method into the header.
 func (h *Header) SetMethod(namespace string, method string) error {
@@ -136,6 +164,16 @@ func (h *Header) BlockID() uint64 {
 	return h.blockID
 }
 
+// SetBlockTimestamp configures the timestamp of a block context the query was executed under.
+func (h *Header) SetBlockTimestamp(ts uint64) {
+	h.blockTimestamp = ts
+}
+
+// BlockTimestamp returns the timestamp of block of the record.
+func (h *Header) BlockTimestamp() uint64 {
+	return h.blockTimestamp
+}
+
 // SetQueryLength configures the query length.
 func (h *Header) SetQueryLength(ql int) error {
 	// we have to skip queries too big to be stored
@@ -148,7 +186,7 @@ func (h *Header) SetQueryLength(ql int) error {
 	return nil
 }
 
-// QueryLength returns expected size of the query.
+// QueryLength returns the expected size of the query.
 func (h *Header) QueryLength() int32 {
 	return h.querySize
 }
@@ -181,7 +219,7 @@ func (h *Header) SetResponseLength(rl int) {
 	h.isLongResult = h.resultCodeSize > maxShortResponse
 }
 
-// ResponseLength returns expected size of the response.
+// ResponseLength returns the expected size of the response.
 // Returns zero value for error responses.
 func (h *Header) ResponseLength() int32 {
 	if h.isError {
@@ -192,7 +230,7 @@ func (h *Header) ResponseLength() int32 {
 
 // WriteTo writes the current header into the given Writer target.
 func (h *Header) WriteTo(out io.Writer) (int64, error) {
-	hdr := make([]byte, 13)
+	hdr := make([]byte, headerSize)
 
 	offset := h.codeQuery(hdr)
 
@@ -205,17 +243,20 @@ func (h *Header) WriteTo(out io.Writer) (int64, error) {
 	// append the block number
 	binary.BigEndian.PutUint32(hdr[offset:offset+4], uint32(h.blockID))
 
-	// add the CRC8/CDMA2000 checksum
-	hdr[offset+4] = crc8.Checksum(hdr[:offset+4], checksumTable)
+	// append the block timestamp
+	binary.BigEndian.PutUint64(hdr[offset+4:offset+12], h.blockTimestamp)
 
-	n, e := out.Write(hdr[:offset+5])
+	// add the CRC8/CDMA2000 checksum
+	hdr[offset+12] = crc8.Checksum(hdr[:offset+12], checksumTable)
+
+	n, e := out.Write(hdr[:offset+13])
 	return int64(n), e
 }
 
 // codeQuery encodes query part of the header into the given buffer returning the number of bytes used.
 func (h *Header) codeQuery(hdr []byte) int {
-	// namespace (5 bits)
-	hdr[0] = h.namespace & 0x1F
+	// namespace (3 bits) + current version = #1
+	hdr[0] = (h.namespace & 0x7) | 1<<3
 
 	// add query size; 12 bits (4kB) for short, or 20 bits (~1MB) for long signaled by HiQ flag
 	if !h.isLongQuery {
@@ -231,7 +272,7 @@ func (h *Header) codeQuery(hdr []byte) int {
 	return 4 // long query, the Size Hi byte is present
 }
 
-// codeError encodes error response part of the header into the given buffer returning number of bytes used.
+// codeError encodes error response part of the header into the given buffer returning the number of bytes used.
 // Note: Error response uses Response Size Lo field to store the error code.
 func (h *Header) codeError(hdr []byte, offset int) int {
 	hdr[0] |= 1 << 7
@@ -267,7 +308,7 @@ func (h *Header) ReadFrom(r io.Reader) (int64, error) {
 
 // readFrom reads the header from Reader and pre-decodes internal flags.
 func (h *Header) readFrom(r io.Reader) ([]byte, error) {
-	hdr := make([]byte, 13)
+	hdr := make([]byte, 21)
 	var err error
 
 	// read the first byte to get the idea of how long the header is
@@ -279,9 +320,17 @@ func (h *Header) readFrom(r io.Reader) ([]byte, error) {
 	h.isError = hdr[0]&(1<<7) > 0
 	h.isLongQuery = hdr[0]&(1<<6) > 0
 	h.isLongResult = hdr[0]&(1<<5) > 0
+	h.version = (hdr[0] >> 3) & 0x3
 
 	// calculate the total header size based on received flags
-	size := 10
+	var size int
+	switch h.version {
+	case 1:
+		size = 18
+	default:
+		size = 10
+	}
+
 	if h.isLongQuery {
 		size += 1
 	}
@@ -311,7 +360,7 @@ func (h *Header) readFrom(r io.Reader) ([]byte, error) {
 
 // decodeFields decodes data fields from the given loaded binary header.
 func (h *Header) decodeFields(hdr []byte) {
-	h.namespace = hdr[0] & 0x1F
+	h.namespace = hdr[0] & 0x7
 	h.method = hdr[1] >> 4
 
 	var offset int
@@ -337,4 +386,9 @@ func (h *Header) decodeFields(hdr []byte) {
 	}
 
 	h.blockID = uint64(binary.BigEndian.Uint32(hdr[offset : offset+4]))
+
+	switch h.version {
+	case 1:
+		h.blockTimestamp = binary.BigEndian.Uint64(hdr[offset+4 : offset+12])
+	}
 }
