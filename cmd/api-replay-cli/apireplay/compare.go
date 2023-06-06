@@ -179,6 +179,15 @@ func compareCallStateDBResult(data *OutData, builder *strings.Builder) *comparat
 
 		// results do not match
 		if !strings.EqualFold(recordedString, dbString) {
+			if !data.isRecovered {
+				data.isRecovered = true
+				data.BlockID--
+
+				data.originalRequest.Response.BlockID--
+
+				data.recoveryChan <- data.originalRequest
+				return nil
+			}
 			return newComparatorError(
 				dbString,
 				recordedString,
