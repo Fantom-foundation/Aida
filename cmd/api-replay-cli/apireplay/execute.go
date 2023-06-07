@@ -8,6 +8,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+// todo pending + 1 block
+
 // executeGetBalance request into given archive and send result to comparator
 func executeGetBalance(param interface{}, archive state.StateDB) (out *StateDBData) {
 	var (

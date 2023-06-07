@@ -180,6 +180,7 @@ func compareCallStateDBResult(data *OutData, builder *strings.Builder) *comparat
 		// results do not match
 		if !strings.EqualFold(recordedString, dbString) {
 			if !data.isRecovered {
+				// with how old recording is done, any call method needs to be retried again with -1 block
 				data.isRecovered = true
 				data.BlockID--
 

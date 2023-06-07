@@ -339,7 +339,7 @@ func decodeBlockNumber(params []interface{}, recordedBlockNumber uint64, returne
 		*returnedBlockID = uint64(rpc.EarliestBlockNumber)
 		break
 	case "pending":
-		*returnedBlockID = recordedBlockNumber
+		*returnedBlockID = recordedBlockNumber + 1 // todo remove before merging
 	default:
 		// request requires specific currentBlockID
 		var (
