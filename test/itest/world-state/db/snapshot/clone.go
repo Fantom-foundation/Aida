@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Fantom-foundation/rc-testing/test/vmtest/world-state/types"
+	"github.com/Fantom-foundation/rc-testing/test/itest/world-state/types"
 )
 
 // Copy creates a copy of the state snapshot database to the given output handle.

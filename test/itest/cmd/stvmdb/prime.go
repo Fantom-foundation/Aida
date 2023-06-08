@@ -1,4 +1,4 @@
-package runvm
+package stvmdb
 
 import (
 	"fmt"
@@ -7,7 +7,8 @@ import (
 	"time"
 
 	substate "github.com/Fantom-foundation/Substate"
-	"github.com/Fantom-foundation/rc-testing/test/vmtest/state"
+	"github.com/Fantom-foundation/rc-testing/test/itest/logger"
+	"github.com/Fantom-foundation/rc-testing/test/itest/state"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/op/go-logging"
 )
@@ -54,7 +55,7 @@ func (pt *ProgressTracker) PrintProgress() {
 
 // PrimeContext structure keeps context used over iterations of priming
 type PrimeContext struct {
-	cfg        *Config
+	cfg        *config
 	log        *logging.Logger
 	block      uint64
 	load       state.BulkLoad
@@ -63,7 +64,7 @@ type PrimeContext struct {
 	operations int                     // number of operations processed without commit
 }
 
-func NewPrimeContext(cfg *Config, db state.StateDB, log *logging.Logger) *PrimeContext {
+func NewPrimeContext(cfg *config, db state.StateDB, log *logging.Logger) *PrimeContext {
 	return &PrimeContext{cfg: cfg, log: log, block: 0, db: db, exist: make(map[common.Address]bool)}
 }
 
@@ -196,8 +197,8 @@ func (pc *PrimeContext) SuicideAccounts(db state.StateDB, accounts []common.Addr
 }
 
 // GenerateWorldStateAndPrime
-func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error {
-	log := newLogger(cfg.LogLevel, "Priming")
+func LoadWorldStateAndPrime(db state.StateDB, cfg *config, target uint64) error {
+	log := logger.NewLogger(cfg.LogLevel, "Priming")
 	pc := NewPrimeContext(cfg, db, log)
 
 	var (

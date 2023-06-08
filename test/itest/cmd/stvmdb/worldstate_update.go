@@ -1,4 +1,4 @@
-package runvm
+package stvmdb
 
 import (
 	"context"
@@ -7,13 +7,13 @@ import (
 	"log"
 
 	substate "github.com/Fantom-foundation/Substate"
-	"github.com/Fantom-foundation/rc-testing/test/vmtest/world-state/db/snapshot"
+	"github.com/Fantom-foundation/rc-testing/test/itest/world-state/db/snapshot"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
 // generateUpdateSet generates an update set for a block range.
-func generateUpdateSet(first uint64, last uint64, cfg *Config) (substate.SubstateAlloc, []common.Address) {
+func generateUpdateSet(first uint64, last uint64, cfg *config) (substate.SubstateAlloc, []common.Address) {
 	var (
 		deletedAccountDB *substate.DestroyedAccountDB
 		deletedAccounts  []common.Address
@@ -59,7 +59,7 @@ func generateUpdateSet(first uint64, last uint64, cfg *Config) (substate.Substat
 
 // GenerateWorldStateFromUpdateDB generates an initial world-state
 // from pre-computed update-set
-func GenerateWorldStateFromUpdateDB(cfg *Config, target uint64) (substate.SubstateAlloc, error) {
+func GenerateWorldStateFromUpdateDB(cfg *config, target uint64) (substate.SubstateAlloc, error) {
 	ws := make(substate.SubstateAlloc)
 	blockPos := uint64(FirstSubstateBlock - 1)
 	if target < blockPos {
@@ -103,7 +103,7 @@ func ClearAccountStorage(update substate.SubstateAlloc, accounts []common.Addres
 }
 
 // GenerateWorldState generates an initial world-state for a block.
-func GenerateWorldState(path string, block uint64, cfg *Config) (substate.SubstateAlloc, error) {
+func GenerateWorldState(path string, block uint64, cfg *config) (substate.SubstateAlloc, error) {
 	worldStateDB, err := snapshot.OpenStateDB(path)
 	if err != nil {
 		return nil, err

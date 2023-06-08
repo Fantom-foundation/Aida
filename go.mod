@@ -7,7 +7,6 @@ require (
 	github.com/Fantom-foundation/go-opera v1.1.1-rc.2
 	github.com/Fantom-foundation/go-opera-base v0.0.0-00010101000000-000000000000
 	github.com/Fantom-foundation/lachesis-base v0.0.0-20221208123620-82a6d15f995c
-	github.com/c2h5oh/datasize v0.0.0-20220606134207-859f65c6625b
 	github.com/ethereum/go-ethereum v1.10.25
 	github.com/google/martian v2.1.0+incompatible
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7

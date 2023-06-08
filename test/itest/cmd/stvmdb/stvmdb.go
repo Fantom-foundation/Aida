@@ -1,4 +1,4 @@
-package runvm
+package stvmdb
 
 import (
 	"fmt"
@@ -7,6 +7,7 @@ import (
 	"time"
 
 	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/rc-testing/test/itest/logger"
 	"github.com/urfave/cli/v2"
 )
 
@@ -15,12 +16,10 @@ const (
 	logFrequency                       = 15 * time.Second
 )
 
-//TODO make flags private
-// runVM command
-var RunVMCommand = cli.Command{
-	Action:    runVM,
-	Name:      "runvm",
-	Usage:     "run VM on the world-state",
+var StVmDbCommand = cli.Command{
+	Action:    stVmDb,
+	Name:      "stvmdb",
+	Usage:     "performs state transitions, VM execution on the world-state DB",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		// AidaDb
@@ -73,17 +72,17 @@ var RunVMCommand = cli.Command{
 		&ValidateTxStateFlag,
 		&ValidateWorldStateFlag,
 		&ValidateFlag,
-		&LogLevelFlag,
+		&logger.LogLevelFlag,
 	},
 	Description: `
-The run-vm command requires two arguments: <blockNumFirst> <blockNumLast>
+The stvmdb command requires two arguments: <blockNumFirst> <blockNumLast>
 
 <blockNumFirst> and <blockNumLast> are the first and last block of
 the inclusive range of blocks.`,
 }
 
-// RunVM implements trace command for executing VM on a chosen storage system.
-func runVM(ctx *cli.Context) error {
+// stVmDb implements trace command for executing VM on a chosen storage system.
+func stVmDb(ctx *cli.Context) error {
 	var (
 		elapsed, lastLog        time.Duration
 		hours, minutes, seconds uint32
@@ -108,14 +107,14 @@ func runVM(ctx *cli.Context) error {
 	beginning = time.Now()
 
 	// process general arguments
-	cfg, argErr := newConfig(ctx, blockRangeArgs)
+	cfg, argErr := newconfig(ctx, blockRangeArgs)
 	if argErr != nil {
 		return argErr
 	}
 
 	cfg.StateValidationMode = subsetCheck
 
-	log := newLogger(cfg.LogLevel, "Run-VM")
+	log := logger.NewLogger(cfg.LogLevel, "StVMDB")
 
 	// start CPU profiling if requested.
 	/*
@@ -149,7 +148,7 @@ func runVM(ctx *cli.Context) error {
 			return fmt.Errorf("priming failed. %v", err)
 		}
 		elapsed = time.Since(start)
-		hours, minutes, seconds = ParseTime(elapsed)
+		hours, minutes, seconds = logger.ParseTime(elapsed)
 		log.Infof("\tPriming elapsed time: %vh %vm %vs\n", hours, minutes, seconds)
 		if err != nil {
 			return err
@@ -266,7 +265,7 @@ func runVM(ctx *cli.Context) error {
 				f, _ := g.Float64()
 
 				txRate := float64(txCount-lastTxCount) / (elapsed.Seconds() - lastLog.Seconds())
-				hours, minutes, seconds = ParseTime(elapsed)
+				hours, minutes, seconds = logger.ParseTime(elapsed)
 				log.Infof("Elapsed time: %vh %vm %vs, at block %v (~ %.0f Tx/s, ~ %.0f Gas/s)", hours, minutes, seconds, tx.Block, txRate, f)
 				lastLog = elapsed
 				lastTxCount = txCount
@@ -366,7 +365,7 @@ func runVM(ctx *cli.Context) error {
 	if !cfg.Quiet {
 		g := new(big.Float).Quo(new(big.Float).SetInt(totalGas), new(big.Float).SetFloat64(runTime))
 
-		hours, minutes, seconds = ParseTime(time.Since(beginning))
+		hours, minutes, seconds = logger.ParseTime(time.Since(beginning))
 
 		log.Infof("Total elapsed time: %vh %vm %vs, processed %v blocks, %v transactions (~ %.1f Tx/s) (~ %.1f Gas/s)\n", hours, minutes, seconds, cfg.Last-cfg.First+1, txCount, float64(txCount)/(runTime), g)
 		log.Infof("Closing DB took %v\n", time.Since(start))

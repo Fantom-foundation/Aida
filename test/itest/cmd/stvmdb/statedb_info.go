@@ -1,4 +1,4 @@
-package runvm
+package stvmdb
 
 import (
 	"encoding/json"
@@ -92,7 +92,7 @@ func copyDir(src string, dst string) error {
 
 // WriteStateDbInfo writes stateDB implementation info and block height to a file
 // for a compatibility check when reloading
-func WriteStateDbInfo(directory string, cfg *Config, block uint64, root common.Hash) error {
+func WriteStateDbInfo(directory string, cfg *config, block uint64, root common.Hash) error {
 	dbinfo := &StateDbInfo{
 		Impl:           cfg.DbImpl,
 		Variant:        cfg.DbVariant,
@@ -127,7 +127,7 @@ func ReadStateDbInfo(filename string) (StateDbInfo, error) {
 }
 
 // RenameTempStateDBDirectory renames a temp directory to a meaningful name
-func RenameTempStateDBDirectory(cfg *Config, oldDirectory string, block uint64) {
+func RenameTempStateDBDirectory(cfg *config, oldDirectory string, block uint64) {
 	var newDirectory string
 	if cfg.DbImpl != "geth" {
 		newDirectory = fmt.Sprintf("state_db_%v_%v_%v", cfg.DbImpl, cfg.DbVariant, block)

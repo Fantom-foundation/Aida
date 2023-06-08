@@ -1,4 +1,4 @@
-package runvm
+package stvmdb
 
 import (
 	"bytes"
@@ -10,7 +10,7 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/Fantom-foundation/go-opera-base/evmcore"
 	"github.com/Fantom-foundation/go-opera/opera"
-	"github.com/Fantom-foundation/rc-testing/test/vmtest/state"
+	"github.com/Fantom-foundation/rc-testing/test/itest/state"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -30,7 +30,7 @@ var (
 )
 
 // runVMTask executes VM on a chosen storage system.
-func ProcessTx(db state.StateDB, cfg *Config, block uint64, txIndex int, tx *substate.Substate) (txerr error) {
+func ProcessTx(db state.StateDB, cfg *config, block uint64, txIndex int, tx *substate.Substate) (txerr error) {
 	db.BeginTransaction(uint32(txIndex))
 
 	var (
@@ -42,14 +42,14 @@ func ProcessTx(db state.StateDB, cfg *Config, block uint64, txIndex int, tx *sub
 		inputEnv  = tx.Env
 	)
 	defer handleErrorOnExit(&txerr, &errMsg, &newErrors, cfg.ContinueOnFailure)
-	vmConfig := opera.DefaultVMConfig
-	vmConfig.NoBaseFee = true
+	vmconfig := opera.DefaultVMConfig
+	vmconfig.NoBaseFee = true
 	// TODO address this
-	//vmConfig.InterpreterImpl = cfg.VmImpl
+	//vmconfig.InterpreterImpl = cfg.VmImpl
 	hashError = nil
 	errMsg.WriteString(fmt.Sprintf("Block: %v Transaction: %v\n", block, txIndex))
 	// get chain configuration
-	chainConfig := GetChainConfig(cfg.ChainID)
+	chainconfig := GetChainconfig(cfg.ChainID)
 
 	// validate whether the input alloc is contained in the db
 	if cfg.ValidateTxState {
@@ -69,7 +69,7 @@ func ProcessTx(db state.StateDB, cfg *Config, block uint64, txIndex int, tx *sub
 	db.Prepare(txHash, txIndex)
 	blockCtx := prepareBlockCtx(inputEnv)
 	txCtx := evmcore.NewEVMTxContext(msg)
-	evm := vm.NewEVM(*blockCtx, txCtx, db, chainConfig, vmConfig)
+	evm := vm.NewEVM(*blockCtx, txCtx, db, chainconfig, vmconfig)
 	snapshot := db.Snapshot()
 	// call ApplyMessage
 	msgResult, err := evmcore.ApplyMessage(evm, msg, gaspool)

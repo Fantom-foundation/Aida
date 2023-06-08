@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Fantom-foundation/rc-testing/test/vmtest/replay"
-	"github.com/Fantom-foundation/rc-testing/test/vmtest/runvm"
+	"github.com/Fantom-foundation/rc-testing/test/itest/cmd/stvm"
+	"github.com/Fantom-foundation/rc-testing/test/itest/cmd/stvmdb"
 	"github.com/urfave/cli/v2"
 )
 
@@ -16,14 +16,14 @@ var (
 
 func main() {
 	app := &cli.App{
-		Name:     "VM Tester",
-		HelpName: "vmtest",
+		Name:     "Integration Tester",
+		HelpName: "itest",
 		// Version:   params.VersionWithCommit(gitCommit, gitDate),
 		Copyright: "(c) 2022 Fantom Foundation",
 		Flags:     []cli.Flag{},
 		Commands: []*cli.Command{
-			&replay.ReplayCommand,
-			&runvm.RunVMCommand,
+			&stvm.StVmCommand,
+			&stvmdb.StVmDbCommand,
 		},
 	}
 	if err := app.Run(os.Args); err != nil {

@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	substate "github.com/Fantom-foundation/Substate"
-	"github.com/Fantom-foundation/rc-testing/test/vmtest/world-state/types"
+	"github.com/Fantom-foundation/rc-testing/test/itest/world-state/types"
 	"github.com/ethereum/go-ethereum/common"
 )
 

@@ -1,4 +1,4 @@
-package runvm
+package stvmdb
 
 import (
 	"bytes"
@@ -8,7 +8,8 @@ import (
 	"path/filepath"
 
 	substate "github.com/Fantom-foundation/Substate"
-	"github.com/Fantom-foundation/rc-testing/test/vmtest/state"
+	"github.com/Fantom-foundation/rc-testing/test/itest/logger"
+	"github.com/Fantom-foundation/rc-testing/test/itest/state"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/google/martian/log"
 )
@@ -20,7 +21,7 @@ const (
 
 // PrepareStateDB creates stateDB or load existing stateDB
 // Use this function when both opening existing and creating new StateDB
-func PrepareStateDB(cfg *Config) (state.StateDB, string, error) {
+func PrepareStateDB(cfg *config) (state.StateDB, string, error) {
 	var (
 		db     state.StateDB
 		err    error
@@ -46,7 +47,7 @@ func PrepareStateDB(cfg *Config) (state.StateDB, string, error) {
 }
 
 // useExistingStateDB uses already existing DB to create a DB instance with a potential shadow instance.
-func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
+func useExistingStateDB(cfg *config) (state.StateDB, string, error) {
 	var (
 		err         error
 		stateDb     state.StateDB
@@ -107,7 +108,7 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 }
 
 // makeNewStateDB creates a DB instance with a potential shadow instance.
-func makeNewStateDB(cfg *Config) (state.StateDB, string, error) {
+func makeNewStateDB(cfg *config) (state.StateDB, string, error) {
 	var (
 		err         error
 		stateDb     state.StateDB
@@ -157,7 +158,7 @@ func makeNewStateDB(cfg *Config) (state.StateDB, string, error) {
 }
 
 // makeStateDBVariant creates a DB instance of the requested kind.
-func makeStateDBVariant(directory, impl, variant, archiveVariant string, carmenSchema int, rootHash common.Hash, cfg *Config) (state.StateDB, error) {
+func makeStateDBVariant(directory, impl, variant, archiveVariant string, carmenSchema int, rootHash common.Hash, cfg *config) (state.StateDB, error) {
 	if impl == "geth" {
 		return state.MakeGethStateDB(directory, variant, rootHash, cfg.ArchiveMode)
 	}
@@ -167,8 +168,8 @@ func makeStateDBVariant(directory, impl, variant, archiveVariant string, carmenS
 
 // DeleteDestroyedAccountsFromWorldState removes previously suicided accounts from
 // the world state.
-func DeleteDestroyedAccountsFromWorldState(ws substate.SubstateAlloc, cfg *Config, target uint64) error {
-	log := newLogger(cfg.LogLevel, "DelDestAcc")
+func DeleteDestroyedAccountsFromWorldState(ws substate.SubstateAlloc, cfg *config, target uint64) error {
+	log := logger.NewLogger(cfg.LogLevel, "DelDestAcc")
 
 	if !cfg.HasDeletedAccounts {
 		log.Warning("Database not provided. Ignore deleted accounts")
@@ -193,8 +194,8 @@ func DeleteDestroyedAccountsFromWorldState(ws substate.SubstateAlloc, cfg *Confi
 
 // DeleteDestroyedAccountsFromStateDB performs suicide operations on previously
 // self-destructed accounts.
-func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *Config, target uint64) error {
-	log := newLogger(cfg.LogLevel, "DelDestAcc")
+func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *config, target uint64) error {
+	log := logger.NewLogger(cfg.LogLevel, "DelDestAcc")
 
 	if !cfg.HasDeletedAccounts {
 		log.Warning("Database not provided. Ignore deleted accounts.")

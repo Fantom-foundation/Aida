@@ -1,4 +1,4 @@
-package replay
+package stvm
 
 import (
 	"bytes"
@@ -40,10 +40,10 @@ var (
 )
 
 // record-replay: substate-cli replay command
-var ReplayCommand = cli.Command{
-	Action:    replayAction,
-	Name:      "replay",
-	Usage:     "executes full state transitions and check output consistency",
+var StVmCommand = cli.Command{
+	Action:    stVmAction,
+	Name:      "stvm",
+	Usage:     "executes full state transitions, perform VM executuon and check output consistency",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		&substate.WorkersFlag,
@@ -51,7 +51,7 @@ var ReplayCommand = cli.Command{
 		&ChainIDFlag,
 	},
 	Description: `
-The substate-cli replay command requires two arguments:
+The stvm command requires two arguments:
 <blockNumFirst> <blockNumLast>
 
 <blockNumFirst> and <blockNumLast> are the first and
@@ -72,8 +72,8 @@ func getVmDuration() time.Duration {
 	return time.Duration(atomic.LoadInt64((*int64)(&vm_duration)))
 }
 
-// replayTask replays a transaction substate
-func replayTask(block uint64, tx int, recording *substate.Substate, taskPool *substate.SubstateTaskPool) error {
+// stVmTask replays a transaction substate
+func stVmTask(block uint64, tx int, recording *substate.Substate, taskPool *substate.SubstateTaskPool) error {
 
 	inputAlloc := recording.InputAlloc
 	inputEnv := recording.Env
@@ -297,8 +297,7 @@ func printAccountDiffSummary(label string, want, have *substate.SubstateAccount)
 	}
 }
 
-// run the VM test
-func replayAction(ctx *cli.Context) error {
+func stVmAction(ctx *cli.Context) error {
 	var err error
 
 	// TODO: Permit no args for processing all transactions
@@ -327,7 +326,7 @@ func replayAction(ctx *cli.Context) error {
 	defer substate.CloseSubstateDB()
 
 	task := func(block uint64, tx int, recording *substate.Substate, taskPool *substate.SubstateTaskPool) error {
-		return replayTask(block, tx, recording, taskPool)
+		return stVmTask(block, tx, recording, taskPool)
 	}
 
 	resetVmDuration()

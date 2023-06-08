@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Fantom-foundation/rc-testing/test/vmtest/world-state/types"
+	"github.com/Fantom-foundation/rc-testing/test/itest/world-state/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"

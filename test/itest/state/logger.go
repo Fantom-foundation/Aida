@@ -4,7 +4,7 @@ import (
 	"math/big"
 
 	substate "github.com/Fantom-foundation/Substate"
-	"github.com/Fantom-foundation/rc-testing/test/vmtest/logger"
+	"github.com/Fantom-foundation/rc-testing/test/itest/logger"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/op/go-logging"
