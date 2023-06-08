@@ -81,9 +81,6 @@ func generate(ctx *cli.Context) error {
 		return fmt.Errorf("you need to specify where you want aida-db to save (--aida-db)")
 	}
 
-	// we dont want bother merge with metadata
-	cfg.SkipMetadata = true
-
 	return g.Generate()
 }
 

@@ -81,7 +81,47 @@ func merge(ctx *cli.Context) error {
 
 	defer m.closeDbs()
 
-	return m.merge()
+	if err = m.merge(); err != nil {
+		return fmt.Errorf("cannot merge dbs; %v", err)
+	}
+
+	return m.finishMerge()
+}
+
+func (m *merger) finishMerge() error {
+	if m.cfg.CompactDb {
+		targetDb, err := rawdb.NewLevelDBDatabase(m.cfg.AidaDb, 1024, 100, "profiling", false)
+		if err != nil {
+			return fmt.Errorf("cannot open aidaDb; %v", err)
+		}
+
+		m.log.Noticef("Starting compaction")
+		err = targetDb.Compact(nil, nil)
+		if err != nil {
+			return err
+		}
+
+		MustCloseDB(targetDb)
+	}
+
+	// delete source databases
+	if m.cfg.DeleteSourceDbs {
+		for _, path := range m.sourceDbPaths {
+			err := os.RemoveAll(path)
+			if err != nil {
+				return err
+			}
+			log.Infof("Deleted: %s\n", path)
+		}
+	}
+
+	m.log.Notice("Merge finished successfully")
+
+	if !m.cfg.SkipMetadata {
+		processMergeMetadata(m.targetDb, m.sourceDbs, m.cfg.LogLevel)
+	}
+
+	return nil
 }
 
 func (m *merger) merge() error {
@@ -106,38 +146,6 @@ func (m *merger) merge() error {
 		}
 
 		m.log.Noticef("Merging of %v", m.sourceDbPaths[i])
-	}
-
-	if m.cfg.CompactDb {
-		targetDb, err := rawdb.NewLevelDBDatabase(m.cfg.AidaDb, 1024, 100, "profiling", false)
-		if err != nil {
-			return fmt.Errorf("cannot open aidaDb; %v", err)
-		}
-
-		m.log.Noticef("Starting compaction")
-		err = targetDb.Compact(nil, nil)
-		if err != nil {
-			return err
-		}
-
-		MustCloseDB(targetDb)
-	}
-
-	// delete source databases
-	if m.cfg.DeleteSourceDbs {
-		for _, path := range m.sourceDbPaths {
-			err = os.RemoveAll(path)
-			if err != nil {
-				return err
-			}
-			log.Infof("Deleted: %s\n", path)
-		}
-	}
-
-	m.log.Notice("Merge finished successfully")
-
-	if !m.cfg.SkipMetadata {
-		processMergeMetadata(m.targetDb, m.sourceDbs, m.cfg.LogLevel)
 	}
 
 	return nil
