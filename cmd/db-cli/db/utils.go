@@ -13,7 +13,6 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Aida/world-state/db/opera"
 	"github.com/Fantom-foundation/lachesis-base/common/bigendian"
-	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/op/go-logging"
@@ -62,43 +61,6 @@ func openSourceDatabases(sourceDbPaths []string) ([]ethdb.Database, error) {
 	}
 
 	return sourceDbs, nil
-}
-
-// copyData copies data from iterator into target database
-func copyData(sourceDb ethdb.Database, targetDb ethdb.Database) (uint64, error) {
-	dbBatchWriter := targetDb.NewBatch()
-
-	var written uint64
-	iter := sourceDb.NewIterator(nil, nil)
-	for {
-		// do we have another available item?
-		if !iter.Next() {
-			// iteration completed - finish write rest of the pending data
-			if dbBatchWriter.ValueSize() > 0 {
-				err := dbBatchWriter.Write()
-				if err != nil {
-					return 0, err
-				}
-			}
-			return written, nil
-		}
-		key := iter.Key()
-
-		err := dbBatchWriter.Put(key, iter.Value())
-		if err != nil {
-			return 0, err
-		}
-		written++
-
-		// writing data in batches
-		if dbBatchWriter.ValueSize() > kvdb.IdealBatchSize {
-			err = dbBatchWriter.Write()
-			if err != nil {
-				return 0, err
-			}
-			dbBatchWriter.Reset()
-		}
-	}
 }
 
 // MustCloseDB close database safely

@@ -81,6 +81,22 @@ func newAidaMetadata(db ethdb.Database, dbType aidaDbType, logLevel string) *aid
 	}
 }
 
+func processCloneLikeMetadata(aidaDb ethdb.Database, logLevel string, firstBlock uint64, lastBlock uint64, chainID int) {
+	m := newAidaMetadata(aidaDb, cloneType, logLevel)
+
+	firstBlock, lastBlock = m.findBlocks(firstBlock, lastBlock)
+	m.setFirstBlock(firstBlock)
+	m.setLastBlock(lastBlock)
+
+	m.setChainID(chainID)
+
+	m.setDbType(m.dbType)
+
+	m.setTimestamp()
+
+	m.log.Notice("Metadata added successfully")
+}
+
 func processGenLikeMetadata(aidaDb ethdb.Database, logLevel string, firstBlock uint64, lastBlock uint64, firstEpoch uint64, lastEpoch uint64, chainID int) {
 	m := newAidaMetadata(aidaDb, genType, logLevel)
 

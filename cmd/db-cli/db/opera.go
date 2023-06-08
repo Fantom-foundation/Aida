@@ -113,10 +113,11 @@ func (o *aidaOpera) generateEvents(firstEpoch, lastEpoch uint64, aidaDbTmp strin
 
 	o.log.Debugf("Generating events from %v to %v into %v", firstEpoch, lastEpoch, o.cfg.Events)
 
-	cmd := exec.Command(fmt.Sprintf("opera --datadir %v export events %v %v %v", o.cfg.OperaDatadir, o.cfg.Events, firstEpoch, lastEpoch))
+	cmd := exec.Command("opera", "--datadir", o.cfg.OperaDatadir, "export", "events", o.cfg.Events,
+		strconv.FormatUint(firstEpoch, 10), strconv.FormatUint(lastEpoch, 10))
 	err := runCommand(cmd, nil, o.log)
 	if err != nil {
-		return fmt.Errorf("retrieve last opera epoch trough ipc; %v", err.Error())
+		return fmt.Errorf("opera cannot generate events; %v", err)
 	}
 
 	return nil

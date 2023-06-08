@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"strconv"
 
-	"github.com/Fantom-foundation/Aida/cmd/db-cli/flags"
 	"github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
 	"github.com/Fantom-foundation/Aida/cmd/updateset-cli/updateset"
 	"github.com/Fantom-foundation/Aida/logger"
@@ -37,7 +36,6 @@ var GenerateCommand = cli.Command{
 		&utils.ChainIDFlag,
 		&utils.CacheFlag,
 		&logger.LogLevelFlag,
-		&flags.SkipMetadata,
 	},
 	Description: `
 The db generate command requires events as an argument:
@@ -82,6 +80,9 @@ func gen(ctx *cli.Context) error {
 		return fmt.Errorf("you need to specify where you want aida-db to save (--aida-db)")
 	}
 
+	// we dont want bother merge with metadata
+	cfg.SkipMetadata = true
+
 	return g.Generate()
 }
 
@@ -91,7 +92,7 @@ func newGenerator(ctx *cli.Context, cfg *utils.Config, aidaDbTmp string) *genera
 		log.Fatalf("cannot create new db; %v", err)
 	}
 
-	log := logger.NewLogger("AidaDb-Generator", cfg.LogLevel)
+	log := logger.NewLogger(cfg.LogLevel, "AidaDb-Generator")
 
 	return &generator{
 		cfg:       cfg,
@@ -145,6 +146,8 @@ func (g *generator) processSubstate() error {
 		cmd *exec.Cmd
 	)
 
+	defer MustCloseDB(g.aidaDb)
+
 	_, err = os.Stat(g.cfg.Events)
 	if os.IsNotExist(err) {
 		return fmt.Errorf("supplied events file %s doesn't exist", g.cfg.Events)
@@ -152,9 +155,7 @@ func (g *generator) processSubstate() error {
 
 	g.log.Noticef("Starting Substate recording from %v", g.cfg.Events)
 
-	cmd = exec.Command("opera", "--datadir", g.cfg.Db, "--cache", strconv.Itoa(g.cfg.Cache),
-		"import", "events", "--recording", "--substate-db", g.cfg.SubstateDb, g.cfg.Events)
-
+	cmd = exec.Command("opera", "--datadir", g.cfg.Db, "--db.preset=legacy-ldb", "--cache", strconv.Itoa(g.cfg.Cache), "import", "events", "--recording", "--substate-db", g.cfg.SubstateDb, g.cfg.Events)
 	err = runCommand(cmd, nil, g.log)
 	if err != nil {
 		// remove empty substateDb
@@ -261,19 +262,15 @@ func (g *generator) processUpdateSet() error {
 
 // merge sole dbs created in generation into AidaDb
 func (g *generator) merge(pathToDb string) error {
-	// open targetDb
-	targetDb, err := rawdb.NewLevelDBDatabase(g.cfg.AidaDb, 1024, 100, "profiling", false)
-	if err != nil {
-		return fmt.Errorf("cannot open targetDb; %v", err)
-	}
-
 	// open sourceDb
-	sourceDb, err := rawdb.NewLevelDBDatabase(g.cfg.AidaDb, 1024, 100, "profiling", false)
+	sourceDb, err := rawdb.NewLevelDBDatabase(g.cfg.SubstateDb, 1024, 100, "profiling", false)
 	if err != nil {
 		return err
 	}
 
-	m := newMerger(g.cfg, targetDb, []ethdb.Database{sourceDb}, []string{pathToDb})
+	m := newMerger(g.cfg, g.aidaDb, []ethdb.Database{sourceDb}, []string{pathToDb})
+
+	MustCloseDB(sourceDb)
 
 	return m.merge()
 }

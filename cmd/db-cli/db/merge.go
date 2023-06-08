@@ -1,13 +1,13 @@
 package db
 
 import (
-	"errors"
 	"fmt"
 	"os"
 
 	"github.com/Fantom-foundation/Aida/cmd/db-cli/flags"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/google/martian/log"
@@ -79,6 +79,8 @@ func merge(ctx *cli.Context) error {
 
 	m := newMerger(cfg, targetDb, dbs, sourcePaths)
 
+	defer m.closeDbs()
+
 	return m.merge()
 }
 
@@ -89,20 +91,21 @@ func (m *merger) merge() error {
 		totalWritten uint64
 	)
 
-	defer m.closeDbs()
-
 	for i, sourceDb := range m.sourceDbs {
 
 		// copy the sourceDb to the target database
-		written, err = copyData(sourceDb, m.targetDb)
+		written, err = m.copyData(sourceDb)
 		if err != nil {
 			return err
 		}
 
 		totalWritten += written
 
-		m.log.Noticef("Merging of %v", m.sourceDbPaths[i], i+1, len(m.sourceDbs))
-		m.log.Noticef("%v / %v finished", i+1, len(m.sourceDbs))
+		if totalWritten == 0 {
+			m.log.Warning("merge did not copy any data")
+		}
+
+		m.log.Noticef("Merging of %v", m.sourceDbPaths[i])
 	}
 
 	if m.cfg.CompactDb {
@@ -130,7 +133,44 @@ func (m *merger) merge() error {
 		processMergeMetadata(m.targetDb, m.sourceDbs, m.cfg.LogLevel)
 	}
 
-	return errors.New("not implemented yet")
+	return nil
+}
+
+// copyData copies data from iterator into target database
+func (m *merger) copyData(sourceDb ethdb.Database) (uint64, error) {
+	dbBatchWriter := m.targetDb.NewBatch()
+
+	var written uint64
+	iter := sourceDb.NewIterator(nil, nil)
+
+	for iter.Next() {
+		// do we have another available item?
+		key := iter.Key()
+
+		err := dbBatchWriter.Put(key, iter.Value())
+		if err != nil {
+			return 0, err
+		}
+		written++
+
+		// writing data in batches
+		if dbBatchWriter.ValueSize() > kvdb.IdealBatchSize {
+			err = dbBatchWriter.Write()
+			if err != nil {
+				return 0, err
+			}
+			dbBatchWriter.Reset()
+		}
+	}
+
+	// iteration completed - finish write rest of the pending data
+	if dbBatchWriter.ValueSize() > 0 {
+		err := dbBatchWriter.Write()
+		if err != nil {
+			return 0, err
+		}
+	}
+	return written, nil
 }
 
 func (m *merger) closeDbs() {
@@ -141,6 +181,6 @@ func (m *merger) closeDbs() {
 	}
 
 	if err := m.targetDb.Close(); err != nil {
-		m.log.Warning("cannot close targetDb; %v", err)
+		m.log.Warningf("cannot close targetDb; %v", err)
 	}
 }

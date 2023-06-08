@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Fantom-foundation/Aida/cmd/db-cli/flags"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -18,7 +17,7 @@ import (
 // CloneCommand enables creation of aida-db read or subset
 var CloneCommand = cli.Command{
 	Action: clone,
-	Name:   "clo",
+	Name:   "clone",
 	Usage:  "clone can create aida-db read or subset",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
@@ -26,7 +25,6 @@ var CloneCommand = cli.Command{
 		&utils.CompactDbFlag,
 		&utils.ValidateFlag,
 		&logger.LogLevelFlag,
-		&flags.SkipMetadata,
 	},
 	Description: `
 Creates clone of aida-db for desired block range
@@ -116,6 +114,8 @@ func (c *cloner) clone() error {
 
 	close(c.writeCh)
 
+	processCloneLikeMetadata(c.cloneDb, c.cfg.LogLevel, c.cfg.First, c.cfg.Last, c.cfg.ChainID)
+
 	//  compact written data
 	if c.cfg.CompactDb {
 		c.log.Noticef("Starting compaction")
@@ -141,7 +141,8 @@ func (c *cloner) checkErrors() {
 		select {
 		case <-c.closeCh:
 			return
-		case <-c.errCh:
+		case err := <-c.errCh:
+			c.log.Fatal(err)
 			c.stop()
 			return
 		}
@@ -184,7 +185,7 @@ func (c *cloner) write() {
 			if batchWriter.ValueSize() > kvdb.IdealBatchSize {
 				err = batchWriter.Write()
 				if err != nil {
-					c.errCh <- err
+					c.errCh <- fmt.Errorf("cannot write batch; %v", err)
 					return
 				}
 
@@ -209,7 +210,7 @@ func (c *cloner) read(prefix []byte, start uint64, condition func(key []byte) (b
 		if condition != nil {
 			finished, err := condition(iter.Key())
 			if err != nil {
-				c.errCh <- err
+				c.errCh <- fmt.Errorf("condition emit error; %v", err)
 				return
 			}
 			if finished {
@@ -234,7 +235,7 @@ func (c *cloner) read(prefix []byte, start uint64, condition func(key []byte) (b
 		}
 	}
 
-	c.log.Noticef("Prefix %s done %v", prefix)
+	c.log.Noticef("Prefix %v done", string(prefix))
 
 	return
 }

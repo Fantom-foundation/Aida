@@ -13,14 +13,16 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/Fantom-foundation/Aida/cmd/db-cli/flags"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/klauspost/compress/gzip"
 	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
+
+const patchesJsonName = "patches.json"
 
 // AutoGenCommand generates aida-db patches and handles second opera for event generation
 var AutoGenCommand = cli.Command{
@@ -40,14 +42,11 @@ var AutoGenCommand = cli.Command{
 		&utils.OperaDatadirFlag,
 		&utils.OutputFlag,
 		&logger.LogLevelFlag,
-		&flags.SkipMetadata,
 	},
 	Description: `
 AutoGen generates aida-db patches and handles second opera for event generation. Generates event file, which is supplied into generate to create aida-db patch.
 `,
 }
-
-const patchesJsonName = "patches.json"
 
 type automator struct {
 	cfg                   *utils.Config
@@ -62,6 +61,8 @@ func autogen(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+
+	cfg.Workers = substate.WorkersFlag.Value
 
 	log := logger.NewLogger(cfg.LogLevel, "autoGen")
 
