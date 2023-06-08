@@ -125,7 +125,10 @@ func (g *generator) Generate() error {
 		return err
 	}
 
-	g.openAidaDb()
+	g.aidaDb, err = rawdb.NewLevelDBDatabase(g.cfg.AidaDb, 1024, 100, "profiling", false)
+	if err != nil {
+		return fmt.Errorf("cannot open AidaDb; %v", err)
+	}
 
 	processGenLikeMetadata(g.aidaDb, g.cfg.LogLevel, g.opera.firstBlock, g.opera.lastBlock, g.opera.firstEpoch, g.opera.lastEpoch, g.cfg.ChainID)
 
@@ -148,7 +151,7 @@ func (g *generator) processSubstate() error {
 		cmd *exec.Cmd
 	)
 
-	defer MustCloseDB(g.aidaDb)
+	//defer MustCloseDB(g.aidaDb)
 
 	_, err = os.Stat(g.cfg.Events)
 	if os.IsNotExist(err) {
@@ -157,7 +160,8 @@ func (g *generator) processSubstate() error {
 
 	g.log.Noticef("Starting Substate recording from %v", g.cfg.Events)
 
-	cmd = exec.Command("opera", "--datadir", g.cfg.Db, "--db.preset=legacy-ldb", "--cache", strconv.Itoa(g.cfg.Cache), "import", "events", "--recording", "--substate-db", g.cfg.SubstateDb, g.cfg.Events)
+	cmd = exec.Command("opera", "--datadir", g.cfg.Db, "--cache", strconv.Itoa(g.cfg.Cache),
+		"import", "events", "--recording", "--substate-db", g.cfg.SubstateDb, g.cfg.Events)
 	err = runCommand(cmd, nil, g.log)
 	if err != nil {
 		// remove empty substateDb
@@ -204,6 +208,11 @@ func (g *generator) processDeletedAccounts() error {
 
 	g.log.Notice("Merging DeletionDb into AidaDb...")
 
+	g.aidaDb, err = rawdb.NewLevelDBDatabase(g.cfg.AidaDb, 1024, 100, "profiling", false)
+	if err != nil {
+		return fmt.Errorf("cannot open AidaDb; %v", err)
+	}
+
 	if err = g.merge(g.cfg.DeletionDb); err != nil {
 		return err
 	}
@@ -249,6 +258,11 @@ func (g *generator) processUpdateSet() error {
 	g.log.Notice("UpdateDb generated successfully")
 	g.log.Notice("Merging UpdateDb into AidaDb...")
 
+	g.aidaDb, err = rawdb.NewLevelDBDatabase(g.cfg.AidaDb, 1024, 100, "profiling", false)
+	if err != nil {
+		return fmt.Errorf("cannot open AidaDb; %v", err)
+	}
+
 	if err = g.merge(g.cfg.UpdateDb); err != nil {
 		return err
 	}
@@ -265,19 +279,17 @@ func (g *generator) processUpdateSet() error {
 // merge sole dbs created in generation into AidaDb
 func (g *generator) merge(pathToDb string) error {
 	// open sourceDb
-	sourceDb, err := rawdb.NewLevelDBDatabase(g.cfg.SubstateDb, 1024, 100, "profiling", false)
+	sourceDb, err := rawdb.NewLevelDBDatabase(pathToDb, 1024, 100, "profiling", false)
 	if err != nil {
 		return err
 	}
 
 	m := newMerger(g.cfg, g.aidaDb, []ethdb.Database{sourceDb}, []string{pathToDb})
 
-	MustCloseDB(sourceDb)
+	defer func() {
+		MustCloseDB(g.aidaDb)
+		MustCloseDB(sourceDb)
+	}()
 
 	return m.merge()
-}
-
-func (g *generator) openAidaDb() {
-	g.aidaDb, _ = rawdb.NewLevelDBDatabase(g.cfg.AidaDb, 1024, 100, "profiling", false)
-	return
 }

@@ -157,10 +157,14 @@ func (m *merger) copyData(sourceDb ethdb.Database) (uint64, error) {
 		if dbBatchWriter.ValueSize() > kvdb.IdealBatchSize {
 			err = dbBatchWriter.Write()
 			if err != nil {
-				return 0, err
+				return 0, fmt.Errorf("batch-writter cannot write data; %v", err)
 			}
 			dbBatchWriter.Reset()
 		}
+	}
+
+	if iter.Error() != nil {
+		return 0, fmt.Errorf("iterator retuned error: %v", iter.Error())
 	}
 
 	// iteration completed - finish write rest of the pending data
