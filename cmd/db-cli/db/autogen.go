@@ -266,6 +266,9 @@ func (a *automator) createPatch() (string, error) {
 	}
 
 	patchTarName := patchName + ".tar.gz"
+	a.log.Warning(patchName)
+	a.log.Warning(patchTarName)
+	a.log.Warning(fmt.Sprintf("%v.tar.gz", patchName))
 	patchTarPath := filepath.Join(a.cfg.Output, patchTarName)
 
 	err = a.createPatchTarGz(patchPath, patchTarName)
