@@ -175,6 +175,8 @@ func (g *generator) processSubstate() error {
 		return fmt.Errorf("cannot get last opera block and epoch; %v", err)
 	}
 
+	g.cfg.Last = g.opera.lastBlock
+
 	if g.opera.firstBlock >= g.opera.lastBlock {
 		return fmt.Errorf("supplied events didn't produce any new blocks")
 	}

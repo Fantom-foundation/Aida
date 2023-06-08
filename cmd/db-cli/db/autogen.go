@@ -253,7 +253,7 @@ func (a *automator) createPatch() (string, error) {
 
 	// creating patch name
 	// add leading zeroes to filename to make it sortable
-	patchName := "aida-db-" + fmt.Sprintf("%09s", a.lastEpoch)
+	patchName := fmt.Sprintf("aida-db-%v", a.lastEpoch)
 	patchPath := filepath.Join(a.cfg.Output, patchName)
 
 	// cfg.AidaDb is now pointing to patch this is needed for Merge function
@@ -265,10 +265,7 @@ func (a *automator) createPatch() (string, error) {
 		return "", fmt.Errorf("unable to merge into patch; %v", err)
 	}
 
-	patchTarName := patchName + ".tar.gz"
-	a.log.Warning(patchName)
-	a.log.Warning(patchTarName)
-	a.log.Warning(fmt.Sprintf("%v.tar.gz", patchName))
+	patchTarName := fmt.Sprintf("%v.tar.gz", patchName)
 	patchTarPath := filepath.Join(a.cfg.Output, patchTarName)
 
 	err = a.createPatchTarGz(patchPath, patchTarName)
