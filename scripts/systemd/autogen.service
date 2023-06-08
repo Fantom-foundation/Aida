@@ -1,0 +1,23 @@
+[Unit]
+Description=Aida-db Automatic Generation
+After=network.target auditd.service
+
+[Service]
+Type=simple
+WorkingDirectory=/var/data/aida-autogen
+ExecStart=/usr/local/bin/aida-db autogen \
+    --aida-db aida-db/ \ # PATH TO AIDA-DB - needs to coincide with --db for correct patch generation
+    --db go-opera-mainnet/ \ # PATH TO OPERA FOR AIDA-DB GENERATION
+    --db-tmp /var/tmp/ \
+    --output /var/data/aida-patches/ \ # PATH FOR GENERATED PATCHES
+    --log debug \
+    --compact \
+    --datadir /var/opera/mainnet/ \ # PATH TO OPERA FOR EVENT EXPORTING
+    --cache 65536
+LimitNOFILE=934073
+OOMScoreAdjust=-900
+TimeoutSec=900
+;StandardError=null
+
+[Install]
+WantedBy=default.target
