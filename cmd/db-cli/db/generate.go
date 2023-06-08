@@ -21,8 +21,8 @@ import (
 
 // GenerateCommand data structure for the replay app
 var GenerateCommand = cli.Command{
-	Action: gen,
-	Name:   "gen",
+	Action: generate,
+	Name:   "generate",
 	Usage:  "generates aida-db from given events",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
@@ -59,7 +59,8 @@ type generator struct {
 	opera     *aidaOpera
 }
 
-func gen(ctx *cli.Context) error {
+// generate AidaDb
+func generate(ctx *cli.Context) error {
 	cfg, err := utils.NewConfig(ctx, utils.EventArg)
 	if err != nil {
 		return fmt.Errorf("cannot create config %v", err)
@@ -86,6 +87,7 @@ func gen(ctx *cli.Context) error {
 	return g.Generate()
 }
 
+// newGenerator returns new instance of generator
 func newGenerator(ctx *cli.Context, cfg *utils.Config, aidaDbTmp string) *generator {
 	db, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
 	if err != nil {
