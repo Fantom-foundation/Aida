@@ -47,11 +47,11 @@ func (o *aidaOpera) init() error {
 		if err != nil {
 			return fmt.Errorf("cannot init opera from gensis; %v", err)
 		}
-	}
 
-	// dumping the MPT into world state
-	if err = o.prepareDumpCliContext(); err != nil {
-		return fmt.Errorf("cannot prepare dump; %v", err)
+		// dumping the MPT into world state
+		if err = o.prepareDumpCliContext(); err != nil {
+			return fmt.Errorf("cannot prepare dump; %v", err)
+		}
 	}
 
 	// get first block and epoch

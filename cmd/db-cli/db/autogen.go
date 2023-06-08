@@ -273,7 +273,7 @@ func (a *automator) createPatch() (string, error) {
 		return "", fmt.Errorf("unable to create patch tar.gz of %s; %v", patchPath, err)
 	}
 
-	a.log.Noticef("Patch %s generated successfully: %d(%s) - %d(%s) ", patchTarName, a.cfg.First, a.firstEpoch, a.cfg.Last, a.lastEpoch)
+	a.log.Noticef("Patch %s generated successfully: %d(%d) - %d(%d) ", patchTarName, a.cfg.First, a.firstEpoch, a.cfg.Last, a.lastEpoch)
 
 	err = a.updatePatchesJson(patchTarName)
 	if err != nil {
@@ -366,7 +366,7 @@ func (a *automator) updatePatchesJson(fileName string) error {
 		return err
 	}
 
-	a.log.Noticef("Updated %s in %s with new patch:\n%v\n", patchesJsonName, jsonFilePath, newPatch)
+	a.log.Noticef("Updated %s in %s with new patch: %v", patchesJsonName, jsonFilePath, newPatch)
 	return nil
 }
 
