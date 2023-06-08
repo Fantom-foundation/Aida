@@ -88,7 +88,7 @@ func printUpdateSetInfo(m *aidaMetadata) error {
 	if err != nil {
 		return fmt.Errorf("cannot get updateset interval from db; %v", err)
 	}
-	log.Infof("Interval: %v blocks", bigendian.BytesToUint64(intervalBytes))
+	m.log.Infof("Interval: %v blocks", bigendian.BytesToUint64(intervalBytes))
 
 	sizeBytes, err := m.aidaDb.Get([]byte(substate.UpdatesetSizeKey))
 	if err != nil {
@@ -97,7 +97,7 @@ func printUpdateSetInfo(m *aidaMetadata) error {
 	u := bigendian.BytesToUint64(sizeBytes)
 
 	// todo convert to mb
-	log.Infof("Size: %.1f MB", float64(u)/float64(1_000_000))
+	m.log.Infof("Size: %.1f MB", float64(u)/float64(1_000_000))
 
 	return nil
 }

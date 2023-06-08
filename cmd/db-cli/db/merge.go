@@ -109,11 +109,18 @@ func (m *merger) merge() error {
 	}
 
 	if m.cfg.CompactDb {
+		targetDb, err := rawdb.NewLevelDBDatabase(m.cfg.AidaDb, 1024, 100, "profiling", false)
+		if err != nil {
+			return fmt.Errorf("cannot open aidaDb; %v", err)
+		}
+
 		m.log.Noticef("Starting compaction")
-		err = m.targetDb.Compact(nil, nil)
+		err = targetDb.Compact(nil, nil)
 		if err != nil {
 			return err
 		}
+
+		MustCloseDB(targetDb)
 	}
 
 	// delete source databases
