@@ -151,15 +151,9 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 					return err
 				}
 
-				m := &merger{
-					cfg:           cfg,
-					log:           logger.NewLogger(cfg.LogLevel, "aida-db-merger"),
-					targetDb:      targetDb,
-					sourceDbs:     dbs,
-					sourceDbPaths: sourcePaths,
-				}
+				m := newMerger(cfg, targetDb, dbs, sourcePaths)
 
-				err = m.merge(nil, nil)
+				err = m.merge()
 				if err != nil {
 					return fmt.Errorf("unable to merge %v; %v", extractedPatchPath, err)
 				}
