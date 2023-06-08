@@ -19,6 +19,28 @@ import (
 	"github.com/op/go-logging"
 )
 
+// prepareDbDirs updates config for flags required in invoked generation commands
+// these flags are not expected from user, so we need to specify them for the generation process
+func prepareDbDirs(cfg *utils.Config) (string, error) {
+	if cfg.DbTmp != "" {
+		// create a parents of temporary directory
+		err := os.MkdirAll(cfg.DbTmp, 0755)
+		if err != nil {
+			return "", fmt.Errorf("failed to create %s directory; %s", cfg.DbTmp, err)
+		}
+	}
+
+	// create a temporary working directory
+	aidaDbTmp, err := os.MkdirTemp(cfg.DbTmp, "aida_db_tmp_*")
+	if err != nil {
+		return "", fmt.Errorf("failed to create a temporary directory. %v", err)
+	}
+
+	loadSourceDBPaths(cfg, aidaDbTmp)
+
+	return aidaDbTmp, nil
+}
+
 // openSourceDatabases opens all databases required for merge
 func openSourceDatabases(sourceDbPaths []string) ([]ethdb.Database, error) {
 	if len(sourceDbPaths) < 1 {

@@ -106,6 +106,7 @@ func (o *aidaOpera) prepareDumpCliContext() error {
 	return state.DumpState(ctx)
 }
 
+// generateEvents from given event argument
 func (o *aidaOpera) generateEvents(firstEpoch, lastEpoch uint64, aidaDbTmp string) error {
 	eventsFile := fmt.Sprintf("events-%v-%v", firstEpoch, lastEpoch)
 	o.cfg.Events = filepath.Join(aidaDbTmp, eventsFile)

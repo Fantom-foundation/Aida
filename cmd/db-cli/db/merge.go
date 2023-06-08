@@ -34,11 +34,21 @@ Creates target aida-db by merging source databases from arguments:
 }
 
 type merger struct {
-	cfg       *utils.Config
-	log       *logging.Logger
-	targetDb  ethdb.Database
-	sourceDbs []ethdb.Database
-	dbPaths   []string
+	cfg           *utils.Config
+	log           *logging.Logger
+	targetDb      ethdb.Database
+	sourceDbs     []ethdb.Database
+	sourceDbPaths []string
+}
+
+func newMerger(cfg *utils.Config, targetDb ethdb.Database, sourceDbs []ethdb.Database, sourceDbPaths []string) *merger {
+	return &merger{
+		cfg:           cfg,
+		log:           logger.NewLogger(cfg.LogLevel, "aida-db-merger"),
+		targetDb:      targetDb,
+		sourceDbs:     sourceDbs,
+		sourceDbPaths: sourceDbPaths,
+	}
 }
 
 func merge(ctx *cli.Context) error {
@@ -67,15 +77,7 @@ func merge(ctx *cli.Context) error {
 		return fmt.Errorf("cannot open aidaDb; %v", err)
 	}
 
-	m := &merger{
-		cfg:       cfg,
-		log:       logger.NewLogger(cfg.LogLevel, "aida-db-merger"),
-		targetDb:  targetDb,
-		sourceDbs: dbs,
-		dbPaths:   sourcePaths,
-	}
-
-	defer m.closeDbs()
+	m := newMerger(cfg, targetDb, dbs, sourcePaths)
 
 	return m.merge()
 }
@@ -87,6 +89,8 @@ func (m *merger) merge() error {
 		totalWritten uint64
 	)
 
+	defer m.closeDbs()
+
 	for i, sourceDb := range m.sourceDbs {
 
 		// copy the sourceDb to the target database
@@ -97,7 +101,7 @@ func (m *merger) merge() error {
 
 		totalWritten += written
 
-		m.log.Noticef("Merging of %v", m.dbPaths[i], i+1, len(m.sourceDbs))
+		m.log.Noticef("Merging of %v", m.sourceDbPaths[i], i+1, len(m.sourceDbs))
 		m.log.Noticef("%v / %v finished", i+1, len(m.sourceDbs))
 	}
 
@@ -111,7 +115,7 @@ func (m *merger) merge() error {
 
 	// delete source databases
 	if m.cfg.DeleteSourceDbs {
-		for _, path := range m.dbPaths {
+		for _, path := range m.sourceDbPaths {
 			err = os.RemoveAll(path)
 			if err != nil {
 				return err
@@ -132,7 +136,7 @@ func (m *merger) merge() error {
 func (m *merger) closeDbs() {
 	for i, db := range m.sourceDbs {
 		if err := db.Close(); err != nil {
-			m.log.Warning("cannot close source db (%v); %v", m.dbPaths[i], err)
+			m.log.Warning("cannot close source db (%v); %v", m.sourceDbPaths[i], err)
 		}
 	}
 

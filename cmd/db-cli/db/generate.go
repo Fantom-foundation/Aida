@@ -78,6 +78,10 @@ func gen(ctx *cli.Context) error {
 
 	defer MustCloseDB(g.aidaDb)
 
+	if g.cfg.AidaDb == "" {
+		return fmt.Errorf("you need to specify where you want aida-db to save (--aida-db)")
+	}
+
 	return g.Generate()
 }
 
@@ -98,28 +102,7 @@ func newGenerator(ctx *cli.Context, cfg *utils.Config, aidaDbTmp string) *genera
 	}
 }
 
-// prepareDbDirs updates config for flags required in invoked generation commands
-// these flags are not expected from user, so we need to specify them for the generation process
-func prepareDbDirs(cfg *utils.Config) (string, error) {
-	if cfg.DbTmp != "" {
-		// create a parents of temporary directory
-		err := os.MkdirAll(cfg.DbTmp, 0755)
-		if err != nil {
-			return "", fmt.Errorf("failed to create %s directory; %s", cfg.DbTmp, err)
-		}
-	}
-
-	// create a temporary working directory
-	aidaDbTmp, err := os.MkdirTemp(cfg.DbTmp, "aida_db_tmp_*")
-	if err != nil {
-		return "", fmt.Errorf("failed to create a temporary directory. %v", err)
-	}
-
-	loadSourceDBPaths(cfg, aidaDbTmp)
-
-	return aidaDbTmp, nil
-}
-
+// Generate is used to record/update aida-db
 func (g *generator) Generate() error {
 	var err error
 
@@ -155,6 +138,7 @@ func (g *generator) Generate() error {
 	return nil
 }
 
+// processSubstate loads events into the opera, whilst recording substates and then merges it into AidaDb
 func (g *generator) processSubstate() error {
 	var (
 		err error
@@ -187,18 +171,22 @@ func (g *generator) processSubstate() error {
 		return fmt.Errorf("supplied events didn't produce any new blocks")
 	}
 
-	g.log.Noticef("Substates generated for %v - %v", g.opera.firstBlock, g.opera.lastBlock)
+	g.log.Infof("Substates generated for %v - %v", g.opera.firstBlock, g.opera.lastBlock)
 
-	if err = g.merge(g.cfg.SubstateDb, "SubstateDb"); err != nil {
+	g.log.Notice("Merging SubstateDb into AidaDb...")
+
+	if err = g.merge(g.cfg.SubstateDb); err != nil {
 		return err
 	}
 
 	// merge was successful - set new path to substateDb
+	g.log.Notice("SubstateDb merged successfully")
 	g.cfg.SubstateDb = g.cfg.AidaDb
 
 	return nil
 }
 
+// processDeletedAccounts invokes DeletedAccounts generation and then merges it into AidaDb
 func (g *generator) processDeletedAccounts() error {
 	var err error
 
@@ -211,16 +199,20 @@ func (g *generator) processDeletedAccounts() error {
 
 	g.log.Noticef("Deleted accounts generated successfully")
 
-	if err = g.merge(g.cfg.DeletionDb, "DeletionDb"); err != nil {
+	g.log.Notice("Merging DeletionDb into AidaDb...")
+
+	if err = g.merge(g.cfg.DeletionDb); err != nil {
 		return err
 	}
 
 	// merge was successful - set new path to deletionDb
+	g.log.Notice("DeletionDb merged successfully")
 	g.cfg.DeletionDb = g.cfg.AidaDb
 
 	return nil
 }
 
+// processUpdateSet invokes UpdateSet generation and then merges it into AidaDb
 func (g *generator) processUpdateSet() error {
 	var (
 		updateDb           *substate.UpdateDB
@@ -244,18 +236,21 @@ func (g *generator) processUpdateSet() error {
 		g.log.Infof("Previous UpdateSet found - generating from %v", nextUpdateSetStart)
 	}
 
-	g.log.Noticef("Generating UpdateDb...")
+	g.log.Notice("Generating UpdateDb...")
 
 	err = updateset.GenUpdateSet(g.cfg, nextUpdateSetStart, updateSetInterval)
 	if err != nil {
 		return fmt.Errorf("cannot generate update-db")
 	}
 
-	g.log.Noticef("UpdateDb generated successfully")
+	g.log.Notice("UpdateDb generated successfully")
+	g.log.Notice("Merging UpdateDb into AidaDb...")
 
-	if err = g.merge(g.cfg.UpdateDb, "DeletionDb"); err != nil {
+	if err = g.merge(g.cfg.UpdateDb); err != nil {
 		return err
 	}
+
+	g.log.Notice("UpdateDB merged successfully")
 
 	// merge was successful - set new path to updateDb
 	g.cfg.UpdateDb = g.cfg.AidaDb
@@ -264,35 +259,23 @@ func (g *generator) processUpdateSet() error {
 
 }
 
-func (g *generator) merge(pathToDb, target string) error {
-	var (
-		totalWritten, written uint64
-		err                   error
-	)
+// merge sole dbs created in generation into AidaDb
+func (g *generator) merge(pathToDb string) error {
+	// open targetDb
+	targetDb, err := rawdb.NewLevelDBDatabase(g.cfg.AidaDb, 1024, 100, "profiling", false)
+	if err != nil {
+		return fmt.Errorf("cannot open targetDb; %v", err)
+	}
 
-	g.log.Noticef("Merging %v into AidaDb...", target)
-
-	targetDb, err := rawdb.NewLevelDBDatabase(pathToDb, 1024, 100, "profiling", false)
+	// open sourceDb
+	sourceDb, err := rawdb.NewLevelDBDatabase(g.cfg.AidaDb, 1024, 100, "profiling", false)
 	if err != nil {
 		return err
 	}
 
-	defer func() {
-		MustCloseDB(targetDb)
-		MustCloseDB(g.aidaDb)
-		g.log.Noticef("Merging %v successful", target)
-	}()
+	m := newMerger(g.cfg, targetDb, []ethdb.Database{sourceDb}, []string{pathToDb})
 
-	written, err = copyData(targetDb, g.aidaDb)
-	totalWritten += written
-
-	// we need a destination where to save merged aida-db
-	// todo why
-	if g.cfg.AidaDb == "" {
-		return fmt.Errorf("you need to specify where you want aida-db to save (--aida-db)")
-	}
-
-	return nil
+	return m.merge()
 }
 
 func (g *generator) openAidaDb() {

@@ -56,6 +56,7 @@ type automator struct {
 	firstEpoch, lastEpoch uint64
 }
 
+// autogen command is used to record/update aida-db periodically
 func autogen(ctx *cli.Context) error {
 	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
 	if err != nil {
@@ -80,6 +81,7 @@ func autogen(ctx *cli.Context) error {
 
 }
 
+// generate AidaDb
 func (a *automator) generate() error {
 	var (
 		newDataReady bool
@@ -141,6 +143,7 @@ func (a *automator) generate() error {
 	return nil
 }
 
+// loadGenerationRange retrieves epoch of last generation and most recent available epoch
 func (a *automator) loadGenerationRange() (bool, error) {
 	a.firstEpoch = 1
 	_, err := os.Stat(a.cfg.Db)
@@ -172,6 +175,7 @@ func (a *automator) loadGenerationRange() (bool, error) {
 	return true, nil
 }
 
+// getLastEpochFromRunningOpera loads last epoch from running opera
 func (a *automator) getLastEpochFromRunningOpera() (uint64, error) {
 	var response string
 	var wg = new(sync.WaitGroup)
@@ -193,6 +197,7 @@ func (a *automator) getLastEpochFromRunningOpera() (uint64, error) {
 	return a.parseIntoJson(response)
 }
 
+// createResponse waits for response from getBlockByNumber cmd and then writes it into string
 func (a *automator) createResponse(wg *sync.WaitGroup, response *string, resultChan chan string) {
 	defer wg.Done()
 	for {
@@ -206,6 +211,7 @@ func (a *automator) createResponse(wg *sync.WaitGroup, response *string, resultC
 	}
 }
 
+// parseIntoJson creates json-like object (in this cas map[string]interface{}) which will be marshalled later
 func (a *automator) parseIntoJson(response string) (uint64, error) {
 	var responseJson = make(map[string]interface{})
 
@@ -232,6 +238,7 @@ func (a *automator) parseIntoJson(response string) (uint64, error) {
 	return epoch, nil
 }
 
+// createPatch for updating data in AidaDb
 func (a *automator) createPatch() (string, error) {
 	// create a parents of output directory
 	err := os.MkdirAll(a.cfg.Output, 0755)
@@ -286,6 +293,7 @@ func (a *automator) createPatch() (string, error) {
 	return patchTarPath, nil
 }
 
+// mergePatch into existing AidaDb
 func (a *automator) mergePatch() error {
 	// open targetDb
 	targetDb, err := rawdb.NewLevelDBDatabase(a.cfg.AidaDb, 1024, 100, "profiling", false)
@@ -293,26 +301,19 @@ func (a *automator) mergePatch() error {
 		return fmt.Errorf("cannot open targetDb; %v", err)
 	}
 
-	sourcePaths := []string{a.cfg.SubstateDb, a.cfg.UpdateDb, a.cfg.DeletionDb}
+	sourceDbPaths := []string{a.cfg.SubstateDb, a.cfg.UpdateDb, a.cfg.DeletionDb}
 
-	dbs, err := openSourceDatabases(sourcePaths)
+	dbs, err := openSourceDatabases(sourceDbPaths)
 	if err != nil {
 		return err
 	}
 
-	m := &merger{
-		cfg:       a.cfg,
-		log:       logger.NewLogger(a.cfg.LogLevel, "aida-db-merger"),
-		targetDb:  targetDb,
-		sourceDbs: dbs,
-		dbPaths:   sourcePaths,
-	}
-
-	defer m.closeDbs()
+	m := newMerger(a.cfg, targetDb, dbs, sourceDbPaths)
 
 	return m.merge()
 }
 
+// updatePatchesJson with newly acquired patch
 func (a *automator) updatePatchesJson(fileName string) error {
 	jsonFilePath := filepath.Join(a.cfg.Output, patchesJsonName)
 	var patchesJson []map[string]string
@@ -368,6 +369,7 @@ func (a *automator) updatePatchesJson(fileName string) error {
 	return nil
 }
 
+// doUpdatePatchesJson with newly acquired patch
 func (a *automator) doUpdatePatchesJson(patchesJson []map[string]string, file *os.File) error {
 	// Convert the array to JSON bytes
 	jsonBytes, err := json.Marshal(patchesJson)
@@ -395,6 +397,7 @@ func (a *automator) doUpdatePatchesJson(patchesJson []map[string]string, file *o
 	return nil
 }
 
+// createPatchTarGz compresses patch file into tar.gz
 func (a *automator) createPatchTarGz(filePath string, fileName string) error {
 	a.log.Noticef("Generating compressed %v", fileName)
 	err := a.createTarGz(filePath, fileName)
@@ -404,6 +407,7 @@ func (a *automator) createPatchTarGz(filePath string, fileName string) error {
 	return nil
 }
 
+// storeMd5sum of patch.tar.gz file
 func (a *automator) storeMd5sum(filePath string) error {
 	md5sum, err := calculateMD5Sum(filePath)
 	if err != nil {
@@ -437,6 +441,7 @@ func (a *automator) storeMd5sum(filePath string) error {
 	return nil
 }
 
+// createTarGz create tar gz of given file/folder
 func (a *automator) createTarGz(filePath string, fileName string) interface{} {
 	// create a parents of temporary directory
 	err := os.MkdirAll(a.cfg.Output, 0755)
@@ -463,6 +468,7 @@ func (a *automator) createTarGz(filePath string, fileName string) interface{} {
 	return a.walkFilePath(tw, filePath)
 }
 
+// walkFilePath through the directory of patch.tar.gz file recursively
 func (a *automator) walkFilePath(tw *tar.Writer, filePath string) error {
 	// Get the base name of the directory
 	dirName := filepath.Base(filePath)

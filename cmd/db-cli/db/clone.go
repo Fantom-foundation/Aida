@@ -51,6 +51,7 @@ type rawEntry struct {
 	Value []byte
 }
 
+// clone AidaDb
 func clone(ctx *cli.Context) error {
 	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if err != nil {
@@ -74,7 +75,7 @@ func clone(ctx *cli.Context) error {
 	return c.clone()
 }
 
-// openCloneDatabases prepares aida and target databases
+// openDbs prepares aida and target databases
 func (c *cloner) openDbs() error {
 	var err error
 
@@ -103,6 +104,7 @@ func (c *cloner) openDbs() error {
 	return nil
 }
 
+// clone AidaDb in given block range
 func (c *cloner) clone() error {
 	go c.write()
 	go c.checkErrors()
@@ -133,6 +135,7 @@ func (c *cloner) clone() error {
 	return nil
 }
 
+// checkErrors is a thread for error handling. When error occurs in any thread, this thread closes every other thread
 func (c *cloner) checkErrors() {
 	for {
 		select {
@@ -145,6 +148,7 @@ func (c *cloner) checkErrors() {
 	}
 }
 
+// write data read from func read() into new cloneDb
 func (c *cloner) write() {
 	var (
 		err         error
@@ -194,6 +198,7 @@ func (c *cloner) write() {
 	}
 }
 
+// read data with given prefix until given condition is fulfilled from source AidaDb
 func (c *cloner) read(prefix []byte, start uint64, condition func(key []byte) (bool, error)) {
 	c.log.Noticef("Copying data with prefix %v", string(prefix))
 
@@ -234,6 +239,7 @@ func (c *cloner) read(prefix []byte, start uint64, condition func(key []byte) (b
 	return
 }
 
+// readUpdateSet from UpdateDb
 func (c *cloner) readUpdateSet() uint64 {
 	// labeling last updateSet before interval - need to export substate for that range as well
 	var lastUpdateBeforeRange uint64
@@ -290,6 +296,7 @@ func (c *cloner) validateDbSize() error {
 	return nil
 }
 
+// closeDbs when cloning is done
 func (c *cloner) closeDbs() {
 	var err error
 
