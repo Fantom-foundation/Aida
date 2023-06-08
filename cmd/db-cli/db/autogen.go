@@ -253,7 +253,7 @@ func (a *automator) createPatch() (string, error) {
 
 	// creating patch name
 	// add leading zeroes to filename to make it sortable
-	patchName := fmt.Sprintf("aida-db-%v", a.lastEpoch)
+	patchName := fmt.Sprintf("aida-db-%v", strconv.FormatUint(a.lastEpoch, 10))
 	patchPath := filepath.Join(a.cfg.Output, patchName)
 
 	// cfg.AidaDb is now pointing to patch this is needed for Merge function
