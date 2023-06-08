@@ -81,7 +81,18 @@ func generate(ctx *cli.Context) error {
 		return fmt.Errorf("you need to specify where you want aida-db to save (--aida-db)")
 	}
 
-	return g.Generate()
+	if err = g.Generate(); err != nil {
+		return err
+	}
+
+	if !g.cfg.KeepDb {
+		err = os.RemoveAll(g.aidaDbTmp)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // newGenerator returns new instance of generator
@@ -128,13 +139,6 @@ func (g *generator) Generate() error {
 	}
 
 	processGenLikeMetadata(g.aidaDb, g.cfg.LogLevel, g.opera.firstBlock, g.opera.lastBlock, g.opera.firstEpoch, g.opera.lastEpoch, g.cfg.ChainID)
-
-	if !g.cfg.KeepDb {
-		err = os.RemoveAll(g.aidaDbTmp)
-		if err != nil {
-			return err
-		}
-	}
 
 	g.log.Noticef("AidaDb %v generation done", g.cfg.AidaDb)
 

@@ -82,7 +82,7 @@ func merge(ctx *cli.Context) error {
 	defer m.closeDbs()
 
 	if err = m.merge(); err != nil {
-		return fmt.Errorf("cannot merge dbs; %v", err)
+		return err
 	}
 
 	return m.finishMerge()
