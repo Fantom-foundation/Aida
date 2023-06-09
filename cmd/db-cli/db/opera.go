@@ -11,6 +11,7 @@ import (
 	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/state"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/Fantom-foundation/Aida/world-state/db/opera"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
@@ -23,6 +24,7 @@ type aidaOpera struct {
 	ctx                   *cli.Context
 	cfg                   *utils.Config
 	log                   *logging.Logger
+	isNew                 bool
 }
 
 // newAidaOpera returns new instance of Opera
@@ -40,6 +42,8 @@ func (o *aidaOpera) init() error {
 
 	_, err = os.Stat(o.cfg.Db)
 	if os.IsNotExist(err) {
+		o.isNew = true
+
 		o.log.Noticef("Initialising opera from genesis")
 
 		// previous opera database isn't used - generate new one from genesis
@@ -56,7 +60,7 @@ func (o *aidaOpera) init() error {
 
 	// get first block and epoch
 	// running this command before starting opera results in getting first block and epoch on which opera starts
-	o.firstBlock, o.firstEpoch, err = GetOperaBlockAndEpoch(o.cfg)
+	err = o.getOperaBlockAndEpoch(true)
 	if err != nil {
 		return fmt.Errorf("cannot retrieve block from existing opera database %v; %v", o.cfg.Db, err)
 	}
@@ -76,6 +80,35 @@ func (o *aidaOpera) initFromGenesis() error {
 	err := runCommand(cmd, nil, o.log)
 	if err != nil {
 		return fmt.Errorf("load opera genesis; %v", err.Error())
+	}
+
+	return nil
+}
+
+// getOperaBlockAndEpoch retrieves current block of opera head
+func (o *aidaOpera) getOperaBlockAndEpoch(isFirst bool) error {
+	operaPath := filepath.Join(o.cfg.Db, "/chaindata/leveldb-fsh/")
+	store, err := opera.Connect("ldb", operaPath, "main")
+	if err != nil {
+		return err
+	}
+	defer opera.MustCloseStore(store)
+
+	_, blockNumber, epochNumber, err := opera.LatestStateRoot(store)
+	if err != nil {
+		return fmt.Errorf("state root not found; %v", err)
+	}
+
+	if blockNumber < 1 {
+		return fmt.Errorf("opera; block number not found; %v", err)
+	}
+
+	if isFirst {
+		o.firstBlock = blockNumber
+		o.firstEpoch = epochNumber
+	} else {
+		o.lastBlock = blockNumber
+		o.lastEpoch = epochNumber
 	}
 
 	return nil
@@ -117,7 +150,7 @@ func (o *aidaOpera) generateEvents(firstEpoch, lastEpoch uint64, aidaDbTmp strin
 		strconv.FormatUint(firstEpoch, 10), strconv.FormatUint(lastEpoch, 10))
 	err := runCommand(cmd, nil, o.log)
 	if err != nil {
-		return fmt.Errorf("opera cannot generate events; %v", err)
+		return fmt.Errorf("opera cannot doGenerations events; %v", err)
 	}
 
 	return nil

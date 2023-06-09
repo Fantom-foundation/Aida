@@ -18,7 +18,6 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/klauspost/compress/gzip"
-	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
@@ -44,15 +43,12 @@ var AutoGenCommand = cli.Command{
 		&logger.LogLevelFlag,
 	},
 	Description: `
-AutoGen generates aida-db patches and handles second opera for event generation. Generates event file, which is supplied into generate to create aida-db patch.
+AutoGen generates aida-db patches and handles second opera for event generation. Generates event file, which is supplied into doGenerations to create aida-db patch.
 `,
 }
 
 type automator struct {
-	cfg                   *utils.Config
-	log                   *logging.Logger
-	generator             *generator
-	firstEpoch, lastEpoch uint64
+	*generator
 }
 
 // autogen command is used to record/update aida-db periodically
@@ -64,8 +60,6 @@ func autogen(ctx *cli.Context) error {
 
 	cfg.Workers = substate.WorkersFlag.Value
 
-	log := logger.NewLogger(cfg.LogLevel, "autoGen")
-
 	// preparing config and directories
 	aidaDbTmp, err := prepareDbDirs(cfg)
 	if err != nil {
@@ -73,17 +67,15 @@ func autogen(ctx *cli.Context) error {
 	}
 
 	a := &automator{
-		cfg:       cfg,
-		log:       log,
 		generator: newGenerator(ctx, cfg, aidaDbTmp),
 	}
 
-	return a.generate()
+	return a.doGenerations()
 
 }
 
 // generate AidaDb
-func (a *automator) generate() error {
+func (a *automator) doGenerations() error {
 	var (
 		newDataReady bool
 		err          error
@@ -95,11 +87,13 @@ func (a *automator) generate() error {
 	}
 
 	if !newDataReady {
-		a.log.Warningf("No new data for generation. Source epoch %v (%v), Last generation %v (%v)", a.firstEpoch, a.cfg.OperaDatadir, a.lastEpoch, a.cfg.Db)
+		// since getLatestBlockAndEpoch returns off by one epoch number label
+		// needs to be fixed in no need epochs are available
+		a.log.Warningf("No new data for generation. Source epoch %v (%v), Last generation %v (%v)", a.opera.firstEpoch, a.cfg.OperaDatadir, a.opera.lastEpoch, a.cfg.Db)
 		return nil
 	}
 
-	a.log.Noticef("Found new epochs for generation %v - %v", a.firstEpoch, a.lastEpoch)
+	a.log.Noticef("Found new epochs for generation %v - %v", a.opera.firstEpoch, a.opera.lastEpoch)
 
 	// stop opera to be able to export events
 	err = stopDaemonOpera(a.log)
@@ -108,7 +102,7 @@ func (a *automator) generate() error {
 	}
 	a.log.Notice("Generating events")
 
-	err = a.generator.opera.generateEvents(a.firstEpoch, a.lastEpoch, a.generator.aidaDbTmp)
+	err = a.generator.opera.generateEvents(a.opera.firstEpoch, a.opera.lastEpoch, a.generator.aidaDbTmp)
 	if err != nil {
 		return err
 	}
@@ -126,7 +120,7 @@ func (a *automator) generate() error {
 
 	// if patch output dir is selected inserting patch.tar.gz, patch.tar.gz.md5 into there and updating patches.json
 	if a.cfg.Output != "" {
-		// todo metadata
+		// todo metadata ---- ifNew type = gen
 		patchTarPath, err := a.createPatch()
 		if err != nil {
 			return err
@@ -146,32 +140,34 @@ func (a *automator) generate() error {
 
 // loadGenerationRange retrieves epoch of last generation and most recent available epoch
 func (a *automator) loadGenerationRange() (bool, error) {
-	a.firstEpoch = 1
-	_, err := os.Stat(a.cfg.Db)
+	var (
+		err error
+	)
+
+	_, err = os.Stat(a.cfg.Db)
 	if !os.IsNotExist(err) {
 		// opera was already used for generation starting from the next epoch
 		// !!! returning number one block greater than actual block
-		_, a.firstEpoch, err = GetOperaBlockAndEpoch(a.cfg)
+		err = a.opera.getOperaBlockAndEpoch(true)
 		if err != nil {
 			return false, fmt.Errorf("unable to retrieve epoch of generation opera in path %v; %v", a.cfg.Db, err)
 		}
-		a.log.Debugf("Generation will start from: %v", a.firstEpoch)
+		a.log.Debugf("Generation will start from: %v", a.opera.firstEpoch)
 	}
 
-	a.lastEpoch, err = a.getLastEpochFromRunningOpera()
+	a.opera.lastEpoch, err = a.getLastEpochFromRunningOpera()
 	if err != nil {
-		return false, fmt.Errorf("unable to retrieve epoch of source opera in path %v; %v", a.cfg.OperaDatadir, err)
+		return false, fmt.Errorf("unable to retrieve epoch of running opera in path %v; %v", a.cfg.OperaDatadir, err)
 	}
-	// ending generation one epoch sooner to make sure epoch is sealed
-	a.lastEpoch -= 1
-	a.log.Debugf("Last available sealed epoch is %v", a.lastEpoch)
 
-	if a.firstEpoch > a.lastEpoch {
-		// since getLatestBlockAndEpoch returns off by one epoch number label
-		// needs to be fixed in no need epochs are available
-		a.firstEpoch = a.firstEpoch - 1
+	// ending generation one epoch sooner to make sure epoch is sealed
+	a.opera.lastEpoch -= 1
+
+	if a.opera.firstEpoch > a.opera.lastEpoch {
 		return false, nil
 	}
+
+	a.log.Debugf("Last available sealed epoch is %v", a.opera.lastEpoch)
 
 	return true, nil
 }
@@ -253,7 +249,7 @@ func (a *automator) createPatch() (string, error) {
 
 	// creating patch name
 	// add leading zeroes to filename to make it sortable
-	patchName := fmt.Sprintf("aida-db-%09s", strconv.FormatUint(a.lastEpoch, 10))
+	patchName := fmt.Sprintf("aida-db-%09s", strconv.FormatUint(a.opera.lastEpoch, 10))
 	patchPath := filepath.Join(a.cfg.Output, patchName)
 
 	// cfg.AidaDb is now pointing to patch this is needed for Merge function
@@ -273,7 +269,7 @@ func (a *automator) createPatch() (string, error) {
 		return "", fmt.Errorf("unable to create patch tar.gz of %s; %v", patchPath, err)
 	}
 
-	a.log.Noticef("Patch %s generated successfully: %d(%d) - %d(%d) ", patchTarName, a.cfg.First, a.firstEpoch, a.cfg.Last, a.lastEpoch)
+	a.log.Noticef("Patch %s generated successfully: %d(%d) - %d(%d) ", patchTarName, a.cfg.First, a.opera.firstEpoch, a.cfg.Last, a.opera.lastEpoch)
 
 	err = a.updatePatchesJson(patchTarName)
 	if err != nil {
@@ -355,8 +351,8 @@ func (a *automator) updatePatchesJson(fileName string) error {
 		"fileName":  fileName,
 		"fromBlock": strconv.FormatUint(a.cfg.First, 10),
 		"toBlock":   strconv.FormatUint(a.cfg.Last, 10),
-		"fromEpoch": strconv.FormatUint(a.firstEpoch, 10),
-		"toEpoch":   strconv.FormatUint(a.lastEpoch, 10),
+		"fromEpoch": strconv.FormatUint(a.opera.firstEpoch, 10),
+		"toEpoch":   strconv.FormatUint(a.opera.lastEpoch, 10),
 	}
 
 	// Append the new patch to the array

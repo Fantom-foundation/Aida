@@ -170,8 +170,7 @@ func (g *generator) processSubstate() error {
 	}
 
 	// retrieve block the opera was iterated onto
-	g.opera.lastBlock, g.opera.lastEpoch, err = GetOperaBlockAndEpoch(g.cfg)
-	if err != nil {
+	if err = g.opera.getOperaBlockAndEpoch(false); err != nil {
 		return fmt.Errorf("cannot get last opera block and epoch; %v", err)
 	}
 
@@ -204,7 +203,7 @@ func (g *generator) processDeletedAccounts() error {
 
 	err = replay.GenDeletedAccountsAction(g.cfg)
 	if err != nil {
-		return fmt.Errorf("cannot generate deleted accounts; %v", err)
+		return fmt.Errorf("cannot doGenerations deleted accounts; %v", err)
 	}
 
 	g.log.Noticef("Deleted accounts generated successfully")
@@ -255,7 +254,7 @@ func (g *generator) processUpdateSet() error {
 
 	err = updateset.GenUpdateSet(g.cfg, nextUpdateSetStart, updateSetInterval)
 	if err != nil {
-		return fmt.Errorf("cannot generate update-db")
+		return fmt.Errorf("cannot doGenerations update-db")
 	}
 
 	g.log.Notice("UpdateDb generated successfully")

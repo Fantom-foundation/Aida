@@ -52,7 +52,7 @@ const (
 )
 
 const (
-	GenDbType   = "G" // generate
+	GenDbType   = "G" // doGenerations
 	CloneDbType = "C" // clone
 	PatchDbType = "P" // patch
 

@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/Fantom-foundation/Aida/world-state/db/opera"
 	"github.com/Fantom-foundation/lachesis-base/common/bigendian"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -179,26 +178,6 @@ func calculateMD5Sum(filePath string) (string, error) {
 	md5sum := hex.EncodeToString(checksum)
 
 	return md5sum, nil
-}
-
-// GetOperaBlockAndEpoch retrieves current block of opera head
-func GetOperaBlockAndEpoch(cfg *utils.Config) (uint64, uint64, error) {
-	operaPath := filepath.Join(cfg.Db, "/chaindata/leveldb-fsh/")
-	store, err := opera.Connect("ldb", operaPath, "main")
-	if err != nil {
-		return 0, 0, err
-	}
-	defer opera.MustCloseStore(store)
-
-	_, blockNumber, epochNumber, err := opera.LatestStateRoot(store)
-	if err != nil {
-		return 0, 0, fmt.Errorf("state root not found; %v", err)
-	}
-
-	if blockNumber < 1 {
-		return 0, 0, fmt.Errorf("opera; block number not found; %v", err)
-	}
-	return blockNumber, epochNumber, nil
 }
 
 // startDaemonOpera start opera node
