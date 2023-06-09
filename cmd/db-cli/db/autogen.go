@@ -17,6 +17,7 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/klauspost/compress/gzip"
 	"github.com/urfave/cli/v2"
 )
@@ -255,11 +256,21 @@ func (a *automator) createPatch() (string, error) {
 	// cfg.AidaDb is now pointing to patch this is needed for Merge function
 	a.cfg.AidaDb = patchPath
 
+	// open targetDb
+	targetDb, err := rawdb.NewLevelDBDatabase(a.cfg.AidaDb, 1024, 100, "profiling", false)
+	if err != nil {
+		return "", fmt.Errorf("cannot open targetDb; %v", err)
+	}
+
 	// merge UpdateDb into AidaDb
-	err = a.mergePatch()
+	err = a.mergePatch(targetDb)
 	if err != nil {
 		return "", fmt.Errorf("unable to merge into patch; %v", err)
 	}
+
+	// metadata
+	processPatchLikeMetadata(targetDb, a.cfg.LogLevel, a.cfg.First, a.cfg.Last, a.opera.firstEpoch, a.opera.lastEpoch,
+		a.cfg.ChainID, a.opera.isNew)
 
 	patchTarName := fmt.Sprintf("%v.tar.gz", patchName)
 	patchTarPath := filepath.Join(a.cfg.Output, patchTarName)
@@ -269,7 +280,8 @@ func (a *automator) createPatch() (string, error) {
 		return "", fmt.Errorf("unable to create patch tar.gz of %s; %v", patchPath, err)
 	}
 
-	a.log.Noticef("Patch %s generated successfully: %d(%d) - %d(%d) ", patchTarName, a.cfg.First, a.opera.firstEpoch, a.cfg.Last, a.opera.lastEpoch)
+	a.log.Noticef("Patch %s generated successfully: %d(%d) - %d(%d) ", patchTarName, a.cfg.First,
+		a.opera.firstEpoch, a.cfg.Last, a.opera.lastEpoch)
 
 	err = a.updatePatchesJson(patchTarName)
 	if err != nil {
@@ -291,12 +303,7 @@ func (a *automator) createPatch() (string, error) {
 }
 
 // mergePatch into existing AidaDb
-func (a *automator) mergePatch() error {
-	// open targetDb
-	targetDb, err := rawdb.NewLevelDBDatabase(a.cfg.AidaDb, 1024, 100, "profiling", false)
-	if err != nil {
-		return fmt.Errorf("cannot open targetDb; %v", err)
-	}
+func (a *automator) mergePatch(targetDb ethdb.Database) error {
 
 	sourceDbPaths := []string{a.cfg.SubstateDb, a.cfg.UpdateDb, a.cfg.DeletionDb}
 
@@ -306,6 +313,8 @@ func (a *automator) mergePatch() error {
 	}
 
 	m := newMerger(a.cfg, targetDb, dbs, sourceDbPaths)
+
+	m.closeDbs()
 
 	return m.merge()
 }

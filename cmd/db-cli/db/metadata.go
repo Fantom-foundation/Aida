@@ -81,7 +81,34 @@ func newAidaMetadata(db ethdb.Database, dbType aidaDbType, logLevel string) *aid
 	}
 }
 
-func processCloneLikeMetadata(aidaDb ethdb.Database, logLevel string, firstBlock uint64, lastBlock uint64, chainID int) {
+func processPatchLikeMetadata(aidaDb ethdb.Database, logLevel string, firstBlock, lastBlock, firstEpoch, lastEpoch uint64, chainID int, isNew bool) {
+	var dbType aidaDbType
+
+	// if this is brand-new patch, it should be treated as a gen type db
+	if isNew {
+		dbType = genType
+	} else {
+		dbType = patchType
+	}
+
+	m := newAidaMetadata(aidaDb, dbType, logLevel)
+
+	m.setFirstBlock(firstBlock)
+	m.setLastBlock(lastBlock)
+
+	m.setFirstEpoch(firstEpoch)
+	m.setLastEpoch(lastEpoch)
+
+	m.setChainID(chainID)
+
+	m.setDbType(m.dbType)
+
+	m.setTimestamp()
+
+	m.log.Notice("Metadata added successfully")
+}
+
+func processCloneLikeMetadata(aidaDb ethdb.Database, logLevel string, firstBlock, lastBlock uint64, chainID int) {
 	m := newAidaMetadata(aidaDb, cloneType, logLevel)
 
 	firstBlock, lastBlock = m.findBlocks(firstBlock, lastBlock)
