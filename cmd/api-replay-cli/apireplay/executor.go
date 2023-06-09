@@ -339,7 +339,8 @@ func decodeBlockNumber(params []interface{}, recordedBlockNumber uint64, returne
 		*returnedBlockID = uint64(rpc.EarliestBlockNumber)
 		break
 	case "pending":
-		*returnedBlockID = recordedBlockNumber
+		// pending blocks seems not to be working rn, skip them for now
+		return false
 	default:
 		// request requires specific currentBlockID
 		var (
