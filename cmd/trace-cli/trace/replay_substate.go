@@ -44,6 +44,8 @@ var TraceReplaySubstateCommand = cli.Command{
 		&utils.ValidateWorldStateFlag,
 		&utils.AidaDbFlag,
 		&logger.LogLevelFlag,
+		// erigon
+		&utils.ErigonBatchSizeFlag,
 	},
 	Description: `
 The trace replay-substate command requires two arguments:
@@ -120,6 +122,7 @@ func traceReplaySubstateTask(cfg *utils.Config, log *logging.Logger) error {
 				return err
 			}
 		}
+
 		for traceIter.Next() {
 			op := traceIter.Value()
 			run(op)
