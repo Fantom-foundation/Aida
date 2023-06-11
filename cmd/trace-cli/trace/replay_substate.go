@@ -122,7 +122,6 @@ func traceReplaySubstateTask(cfg *utils.Config, log *logging.Logger) error {
 				return err
 			}
 		}
-
 		for traceIter.Next() {
 			op := traceIter.Value()
 			run(op)

@@ -305,7 +305,6 @@ type erigonBulkLoad struct {
 }
 
 func (s *erigonStateDB) StartBulkLoad(_ uint64) BulkLoad {
-
 	esDB := &erigonStateDB{
 		db:         s.db,
 		stateRoot:  s.stateRoot,
@@ -353,7 +352,6 @@ func (l *erigonBulkLoad) SetCode(addr common.Address, code []byte) {
 
 // Close flushes pending changes into batch. It also commits erigon batch and database transaction
 func (l *erigonBulkLoad) Close() error {
-
 	l.db.EndBlock()
 	err := l.db.commitBatchRwTx()
 	if err != nil {
