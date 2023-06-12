@@ -270,8 +270,8 @@ func (a *automator) createPatch() (string, error) {
 
 	a.log.Notice("Patch metadata")
 	// metadata
-	processPatchLikeMetadata(targetDb, a.cfg.LogLevel, a.cfg.First, a.cfg.Last, a.opera.firstEpoch, a.opera.lastEpoch,
-		a.cfg.ChainID, a.opera.isNew)
+	processPatchLikeMetadata(targetDb, a.cfg.LogLevel, a.cfg.First, a.cfg.Last, a.opera.firstEpoch,
+		a.opera.lastEpoch, a.cfg.ChainID, a.opera.isNew)
 
 	patchTarName := fmt.Sprintf("%v.tar.gz", patchName)
 	patchTarPath := filepath.Join(a.cfg.Output, patchTarName)
@@ -300,6 +300,8 @@ func (a *automator) createPatch() (string, error) {
 		return "", err
 	}
 
+	MustCloseDB(targetDb)
+
 	return patchTarPath, nil
 }
 
@@ -314,8 +316,6 @@ func (a *automator) mergePatch(targetDb ethdb.Database) error {
 	}
 
 	m := newMerger(a.cfg, targetDb, dbs, sourceDbPaths)
-
-	defer m.closeDbs()
 
 	return m.merge()
 }
