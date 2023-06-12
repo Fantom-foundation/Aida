@@ -48,7 +48,7 @@ func insertKeyValue(ctx *cli.Context) error {
 
 	defer MustCloseDB(aidaDb)
 
-	m := newAidaMetadata(aidaDb, noType, "INFO")
+	m := newAidaMetadata(aidaDb, "INFO")
 
 	switch substate.MetadataPrefix + key {
 	case FirstBlockPrefix:

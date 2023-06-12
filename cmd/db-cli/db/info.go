@@ -50,7 +50,7 @@ func printMetadata(ctx *cli.Context) error {
 
 	defer MustCloseDB(aidaDb)
 
-	m := newAidaMetadata(aidaDb, noType, "INFO")
+	m := newAidaMetadata(aidaDb, "INFO")
 
 	m.log.Notice("AIDA-DB INFO:")
 

@@ -16,6 +16,7 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/klauspost/compress/gzip"
 	"github.com/urfave/cli/v2"
 )
@@ -141,26 +142,33 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 					return fmt.Errorf("cannot open targetDb; %v", err)
 				}
 
-				sourcePaths := []string{extractedPatchPath}
-
-				dbs, err := openSourceDatabases(sourcePaths)
+				patchDb, err := rawdb.NewLevelDBDatabase(extractedPatchPath, 1024, 100, "profiling", false)
 				if err != nil {
-					return err
+					return fmt.Errorf("cannot open targetDb; %v", err)
 				}
 
-				// TODO MOVE INTO CORRECT SPOT
-				//mdi := newAidaMetadata(targetDb, updateType, cfg.LogLevel)
-				//mdiPatch := newAidaMetadata(dbs[0], updateType, cfg.LogLevel)
-				//if mdi.lastBlock != mdiPatch.firstBlock -1 {
-				//	// TODO check metadata
-				//}
+				targetMD := newAidaMetadata(targetDb, cfg.LogLevel)
+				patchMD := newAidaMetadata(patchDb, cfg.LogLevel)
 
-				m := newMerger(cfg, targetDb, dbs, sourcePaths)
+				targetLB := targetMD.getLastBlock()
+				patchFB := patchMD.getFirstBlock()
+
+				if !(targetLB != patchFB-1) {
+					return fmt.Errorf("metadata block does not align; aida-db last block: %v, patch first block: %v", targetLB, patchFB)
+				}
+
+				patchLB := patchMD.getLastBlock()
+				patchLE := patchMD.getLastEpoch()
+
+				m := newMerger(cfg, targetDb, []ethdb.Database{patchDb}, []string{extractedPatchPath})
 
 				err = m.merge()
 				if err != nil {
 					return fmt.Errorf("unable to merge %v; %v", extractedPatchPath, err)
 				}
+
+				targetMD.setLastBlock(patchLB)
+				targetMD.setLastEpoch(patchLE)
 
 				m.closeDbs()
 
