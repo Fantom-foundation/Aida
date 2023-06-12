@@ -200,7 +200,7 @@ func (g *generator) processDeletedAccounts() error {
 
 	g.log.Noticef("Generating DeletionDb...")
 
-	err = replay.GenDeletedAccountsAction(g.cfg)
+	err = replay.GenDeletedAccountsAction(g.cfg, 0)
 	if err != nil {
 		return fmt.Errorf("cannot doGenerations deleted accounts; %v", err)
 	}
