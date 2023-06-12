@@ -12,7 +12,6 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/common/bigendian"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/google/martian/log"
 	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
@@ -71,7 +70,7 @@ func printMetadata(ctx *cli.Context) error {
 	m.log.Infof("Last Epoch: %v", m.getLastEpoch())
 
 	// TIMESTAMP
-	log.Infof("Created: %v", time.Unix(int64(m.getTimestamp()), 0))
+	m.log.Infof("Created: %v", time.Unix(int64(m.getTimestamp()), 0))
 
 	// UPDATE-SET
 	if err = printUpdateSetInfo(m); err != nil {
