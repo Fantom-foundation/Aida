@@ -268,6 +268,7 @@ func (a *automator) createPatch() (string, error) {
 		return "", fmt.Errorf("unable to merge into patch; %v", err)
 	}
 
+	a.log.Notice("Patch metadata")
 	// metadata
 	processPatchLikeMetadata(targetDb, a.cfg.LogLevel, a.cfg.First, a.cfg.Last, a.opera.firstEpoch, a.opera.lastEpoch,
 		a.cfg.ChainID, a.opera.isNew)

@@ -129,6 +129,7 @@ func (g *generator) Generate() error {
 		return err
 	}
 
+	g.log.Notice("Gen metadata")
 	if err = g.processUpdateSet(); err != nil {
 		return err
 	}

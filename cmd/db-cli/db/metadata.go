@@ -141,8 +141,6 @@ func processGenLikeMetadata(aidaDb ethdb.Database, logLevel string, firstBlock u
 
 	m.setTimestamp()
 
-	m.log.Notice("Metadata added successfully")
-
 }
 
 func processMergeMetadata(aidaDb ethdb.Database, sourceDbs []ethdb.Database, logLevel string) {
@@ -318,6 +316,8 @@ func (m *aidaMetadata) setFirstBlock(firstBlock uint64) {
 
 	if err := m.aidaDb.Put([]byte(FirstBlockPrefix), firstBlockBytes); err != nil {
 		m.log.Errorf("cannot put first block; %v", err)
+	} else {
+		m.log.Info("METADATA: First block saved successfully")
 	}
 }
 
@@ -326,6 +326,8 @@ func (m *aidaMetadata) setLastBlock(lastBlock uint64) {
 
 	if err := m.aidaDb.Put([]byte(LastBlockPrefix), lastBlockBytes); err != nil {
 		m.log.Errorf("cannot put last block; %v", err)
+	} else {
+		m.log.Info("METADATA: Last block saved successfully")
 	}
 }
 
@@ -334,6 +336,8 @@ func (m *aidaMetadata) setFirstEpoch(firstEpoch uint64) {
 
 	if err := m.aidaDb.Put([]byte(FirstEpochPrefix), firstEpochBytes); err != nil {
 		m.log.Errorf("cannot put first epoch; %v", err)
+	} else {
+		m.log.Info("METADATA: First epoch saved successfully")
 	}
 }
 
@@ -342,6 +346,8 @@ func (m *aidaMetadata) setLastEpoch(lastEpoch uint64) {
 
 	if err := m.aidaDb.Put([]byte(LastEpochPrefix), lastEpochBytes); err != nil {
 		m.log.Errorf("cannot put last epoch; %v", err)
+	} else {
+		m.log.Info("METADATA: Last epoch saved successfully")
 	}
 }
 
@@ -350,6 +356,8 @@ func (m *aidaMetadata) setChainID(chainID int) {
 
 	if err := m.aidaDb.Put([]byte(ChainIDPrefix), chainIDBytes); err != nil {
 		m.log.Errorf("cannot put chain-id; %v", err)
+	} else {
+		m.log.Info("METADATA: ChainID saved successfully")
 	}
 }
 
@@ -359,6 +367,8 @@ func (m *aidaMetadata) setTimestamp() {
 	binary.BigEndian.PutUint64(createTime, uint64(time.Now().Unix()))
 	if err := m.aidaDb.Put([]byte(TimestampPrefix), createTime); err != nil {
 		m.log.Errorf("cannot put timestamp into db metadata; %v", err)
+	} else {
+		m.log.Info("METADATA: Creation timestamp saved successfully")
 	}
 }
 
@@ -368,9 +378,7 @@ func (m *aidaMetadata) setDbType(dbType aidaDbType) {
 
 	if err := m.aidaDb.Put([]byte(TypePrefix), dbTypeBytes); err != nil {
 		m.log.Errorf("cannot put db-type into aida-db; %v", err)
+	} else {
+		m.log.Info("METADATA: DB Type saved successfully")
 	}
-}
-
-func (m *aidaMetadata) mergeMetadata(firstBlock uint64, lastBlock uint64, firstEpoch uint64, lastEpoch uint64, chainID int, sourceDbs []ethdb.Database) {
-
 }

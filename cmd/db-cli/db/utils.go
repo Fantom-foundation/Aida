@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
-	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -29,9 +28,9 @@ func prepareDbDirs(cfg *utils.Config) (string, error) {
 		}
 	}
 
-	fName := fmt.Sprintf("%v/%v-%v", cfg.DbTmp, "tmp_aida_db_*", rand.Int())
+	//fName := fmt.Sprintf("%v/%v-%v", cfg.DbTmp, "tmp_aida_db_*", rand.Int())
 	// create a temporary working directory
-	err := os.Mkdir(fName, 0755)
+	fName, err := os.MkdirTemp(cfg.DbTmp, "aida_db_tmp_*")
 	if err != nil {
 		return "", fmt.Errorf("failed to create a temporary directory. %v", err)
 	}
