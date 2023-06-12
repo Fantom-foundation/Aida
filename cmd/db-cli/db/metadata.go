@@ -42,13 +42,13 @@ const (
 )
 
 const (
-	TypePrefix       = substate.MetadataPrefix + "ty"
-	TimestampPrefix  = substate.MetadataPrefix + "ti"
 	FirstBlockPrefix = substate.MetadataPrefix + "fb"
 	LastBlockPrefix  = substate.MetadataPrefix + "lb"
 	FirstEpochPrefix = substate.MetadataPrefix + "fe"
 	LastEpochPrefix  = substate.MetadataPrefix + "le"
+	TypePrefix       = substate.MetadataPrefix + "ty"
 	ChainIDPrefix    = substate.MetadataPrefix + "ci"
+	TimestampPrefix  = substate.MetadataPrefix + "ti"
 )
 
 const (
