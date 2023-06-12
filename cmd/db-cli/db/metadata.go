@@ -98,7 +98,7 @@ func processPatchLikeMetadata(aidaDb ethdb.Database, logLevel string, firstBlock
 
 	m.setDbType(dbType)
 
-	m.setTimestamp(0)
+	m.setTimestamp()
 
 	m.log.Notice("Metadata added successfully")
 }
@@ -114,7 +114,7 @@ func processCloneLikeMetadata(aidaDb ethdb.Database, logLevel string, firstBlock
 
 	m.setDbType(cloneType)
 
-	m.setTimestamp(0)
+	m.setTimestamp()
 
 	m.log.Notice("Metadata added successfully")
 }
@@ -134,7 +134,7 @@ func processGenLikeMetadata(aidaDb ethdb.Database, logLevel string, firstBlock u
 
 	m.setDbType(genType)
 
-	m.setTimestamp(0)
+	m.setTimestamp()
 
 }
 
@@ -162,7 +162,7 @@ func processMergeMetadata(aidaDb ethdb.Database, sourceDbs []ethdb.Database, log
 
 	aidaDbMetadata := newAidaMetadata(aidaDb, logLevel)
 
-	aidaDbMetadata.setMetadata(firstBlock, lastBlock, firstEpoch, lastEpoch, chainID, dbType, 0)
+	aidaDbMetadata.setMetadata(firstBlock, lastBlock, firstEpoch, lastEpoch, chainID, dbType)
 
 }
 
@@ -362,14 +362,10 @@ func (m *aidaMetadata) setChainID(chainID int) {
 	}
 }
 
-func (m *aidaMetadata) setTimestamp(timestamp uint64) {
+func (m *aidaMetadata) setTimestamp() {
 	createTime := make([]byte, 8)
 
-	if timestamp == 0 {
-		timestamp = uint64(time.Now().Unix())
-	}
-
-	binary.BigEndian.PutUint64(createTime, timestamp)
+	binary.BigEndian.PutUint64(createTime, uint64(time.Now().Unix()))
 	if err := m.db.Put([]byte(TimestampPrefix), createTime); err != nil {
 		m.log.Errorf("cannot put timestamp into db metadata; %v", err)
 	} else {
@@ -388,7 +384,7 @@ func (m *aidaMetadata) setDbType(dbType aidaDbType) {
 	}
 }
 
-func (m *aidaMetadata) setMetadata(firstBlock uint64, lastBlock uint64, firstEpoch uint64, lastEpoch uint64, chainID int, dbType aidaDbType, timestamp uint64) {
+func (m *aidaMetadata) setMetadata(firstBlock uint64, lastBlock uint64, firstEpoch uint64, lastEpoch uint64, chainID int, dbType aidaDbType) {
 	m.setFirstBlock(firstBlock)
 
 	m.setLastEpoch(lastBlock)
@@ -401,5 +397,5 @@ func (m *aidaMetadata) setMetadata(firstBlock uint64, lastBlock uint64, firstEpo
 
 	m.setDbType(dbType)
 
-	m.setTimestamp(timestamp)
+	m.setTimestamp()
 }
