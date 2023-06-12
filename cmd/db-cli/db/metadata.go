@@ -284,7 +284,9 @@ func (m *aidaMetadata) getLastEpoch() uint64 {
 func (m *aidaMetadata) getChainID() int {
 	chainIDBytes, err := m.db.Get([]byte(ChainIDPrefix))
 	if err != nil {
-		m.log.Errorf("cannot get chain-id; %v", err)
+		if !strings.Contains(err.Error(), "not found") {
+			m.log.Errorf("cannot get chain-id; %v", err)
+		}
 		return 0
 	}
 
@@ -295,7 +297,9 @@ func (m *aidaMetadata) getChainID() int {
 func (m *aidaMetadata) getTimestamp() uint64 {
 	byteChainID, err := m.db.Get([]byte(TimestampPrefix))
 	if err != nil {
-		m.log.Errorf("cannot get timestamp; %v", err)
+		if !strings.Contains(err.Error(), "not found") {
+			m.log.Errorf("cannot get timestamp; %v", err)
+		}
 		return 0
 	}
 

@@ -161,8 +161,8 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 				if targetMD.lastBlock != 0 {
 					// the patch is usable only if its firstBlock is within targetDbs block range
 					// and if its last block is bigger than targetDBs last block
-					if targetMD.lastBlock <= patchMD.firstBlock-1 && patchMD.lastBlock > targetMD.lastBlock {
-						return fmt.Errorf("metadata blocks does not align; aida-db last block: %v, patch first block: %v", targetMD.lastBlock, patchMD.firstBlock)
+					if patchMD.firstBlock > targetMD.lastBlock+1 || patchMD.firstBlock < targetMD.firstBlock || patchMD.lastBlock <= targetMD.lastBlock {
+						return fmt.Errorf("metadata blocks does not align; aida-db %v-%v, patch %v-%v", targetMD.firstBlock, targetMD.lastBlock, patchMD.firstBlock, patchMD.lastBlock)
 					}
 
 					// if chainIDs doesn't match, we can't patch the DB
@@ -170,6 +170,7 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 						return fmt.Errorf("metadata chain-ids does not match; aida-db: %v, patch: %v", targetMD.chainId, patchMD.chainId)
 					}
 
+					// TODO rewrite dont write into patch. patch must be opened as read only
 					// set patch first block and epoch from target for easier saving into targetDB
 					patchMD.setFirstBlock(targetMD.firstBlock)
 					patchMD.setFirstEpoch(targetMD.firstEpoch)
