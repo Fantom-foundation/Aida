@@ -29,7 +29,7 @@ func prepareDbDirs(cfg *utils.Config) (string, error) {
 		}
 	}
 
-	fName := fmt.Sprintf("%v/%v-%v", cfg.DbTmp, "aida_db_tmp_*", rand.Int())
+	fName := fmt.Sprintf("%v/%v-%v", cfg.DbTmp, "tmp_aida_db_*", rand.Int())
 	// create a temporary working directory
 	err := os.Mkdir(fName, 0755)
 	if err != nil {
