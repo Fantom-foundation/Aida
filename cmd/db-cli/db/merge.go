@@ -74,7 +74,7 @@ func merge(ctx *cli.Context) error {
 
 	targetDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
 	if err != nil {
-		return fmt.Errorf("cannot open aidaDb; %v", err)
+		return fmt.Errorf("cannot open db; %v", err)
 	}
 
 	m := newMerger(cfg, targetDb, dbs, sourcePaths)
@@ -92,7 +92,7 @@ func (m *merger) finishMerge() error {
 	if m.cfg.CompactDb {
 		targetDb, err := rawdb.NewLevelDBDatabase(m.cfg.AidaDb, 1024, 100, "profiling", false)
 		if err != nil {
-			return fmt.Errorf("cannot open aidaDb; %v", err)
+			return fmt.Errorf("cannot open db; %v", err)
 		}
 
 		m.log.Noticef("Starting compaction")

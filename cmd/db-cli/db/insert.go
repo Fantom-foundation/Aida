@@ -40,7 +40,7 @@ func insertKeyValue(ctx *cli.Context) error {
 	key := ctx.Args().Get(0)
 	val := ctx.Args().Get(1)
 
-	// open aidaDb
+	// open db
 	aidaDb, err := rawdb.NewLevelDBDatabase(aidaDbPath, 1024, 100, "profiling", false)
 	if err != nil {
 		return fmt.Errorf("cannot open targetDb. Error: %v", err)

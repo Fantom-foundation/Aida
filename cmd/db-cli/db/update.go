@@ -150,15 +150,16 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 				targetMD := newAidaMetadata(targetDb, cfg.LogLevel)
 				patchMD := newAidaMetadata(patchDb, cfg.LogLevel)
 
-				targetLB := targetMD.getLastBlock()
-				patchFB := patchMD.getFirstBlock()
+				targetMD.getMetadata()
+				patchMD.getMetadata()
 
-				if !(targetLB != patchFB-1) {
-					return fmt.Errorf("metadata block does not align; aida-db last block: %v, patch first block: %v", targetLB, patchFB)
+				// check if metadata align
+				if targetMD.lastBlock != patchMD.firstBlock-1 {
+					return fmt.Errorf("metadata blocks does not align; aida-db last block: %v, patch first block: %v", targetMD.lastBlock, patchMD.firstBlock)
 				}
-
-				patchLB := patchMD.getLastBlock()
-				patchLE := patchMD.getLastEpoch()
+				if targetMD.chainId != patchMD.chainId {
+					return fmt.Errorf("metadata chain-ids does not match; aida-db: %v, patch: %v", targetMD.chainId, patchMD.chainId)
+				}
 
 				m := newMerger(cfg, targetDb, []ethdb.Database{patchDb}, []string{extractedPatchPath})
 
@@ -167,8 +168,7 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 					return fmt.Errorf("unable to merge %v; %v", extractedPatchPath, err)
 				}
 
-				targetMD.setLastBlock(patchLB)
-				targetMD.setLastEpoch(patchLE)
+				targetMD.setMetadata(targetMD.firstBlock, patchMD.lastBlock, targetMD.firstEpoch, patchMD.lastEpoch, targetMD.chainId, targetMD.dbType, targetMD.timestamp)
 
 				m.closeDbs()
 

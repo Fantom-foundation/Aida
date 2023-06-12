@@ -87,7 +87,7 @@ func (c *cloner) openDbs() error {
 		return fmt.Errorf("specified target-db %v already exists\n", c.cfg.TargetDb)
 	}
 
-	// open aidaDb
+	// open db
 	c.aidaDb, err = rawdb.NewLevelDBDatabase(c.cfg.AidaDb, 1024, 100, "profiling", true)
 	if err != nil {
 		return fmt.Errorf("targetDb; %v", err)

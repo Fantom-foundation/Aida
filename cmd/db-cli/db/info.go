@@ -42,7 +42,7 @@ func printMetadata(ctx *cli.Context) error {
 		return argErr
 	}
 
-	// open aidaDb
+	// open db
 	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", true)
 	if err != nil {
 		return fmt.Errorf("cannot open aida-db; %v", err)
@@ -83,13 +83,13 @@ func printMetadata(ctx *cli.Context) error {
 func printUpdateSetInfo(m *aidaMetadata) error {
 	m.log.Notice("UPDATE-SET INFO:")
 
-	intervalBytes, err := m.aidaDb.Get([]byte(substate.UpdatesetIntervalKey))
+	intervalBytes, err := m.db.Get([]byte(substate.UpdatesetIntervalKey))
 	if err != nil {
 		return fmt.Errorf("cannot get updateset interval from db; %v", err)
 	}
 	m.log.Infof("Interval: %v blocks", bigendian.BytesToUint64(intervalBytes))
 
-	sizeBytes, err := m.aidaDb.Get([]byte(substate.UpdatesetSizeKey))
+	sizeBytes, err := m.db.Get([]byte(substate.UpdatesetSizeKey))
 	if err != nil {
 		return fmt.Errorf("cannot get updateset size from db; %v", err)
 	}
@@ -170,7 +170,7 @@ func printAllCount(ctx *cli.Context) error {
 		return argErr
 	}
 
-	// open aidaDb
+	// open db
 	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", true)
 	if err != nil {
 		return fmt.Errorf("cannot open aida-db; %v", err)

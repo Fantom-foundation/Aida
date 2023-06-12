@@ -153,7 +153,7 @@ func (g *generator) processSubstate() error {
 		cmd *exec.Cmd
 	)
 
-	//defer MustCloseDB(g.aidaDb)
+	//defer MustCloseDB(g.db)
 
 	_, err = os.Stat(g.cfg.Events)
 	if os.IsNotExist(err) {
