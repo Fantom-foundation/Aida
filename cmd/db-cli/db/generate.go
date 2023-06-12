@@ -153,8 +153,6 @@ func (g *generator) processSubstate() error {
 		cmd *exec.Cmd
 	)
 
-	//defer MustCloseDB(g.db)
-
 	_, err = os.Stat(g.cfg.Events)
 	if os.IsNotExist(err) {
 		return fmt.Errorf("supplied events file %s doesn't exist", g.cfg.Events)

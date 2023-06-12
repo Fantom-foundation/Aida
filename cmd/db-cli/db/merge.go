@@ -41,6 +41,7 @@ type merger struct {
 	sourceDbPaths []string
 }
 
+// newMerger returns new instance of merger
 func newMerger(cfg *utils.Config, targetDb ethdb.Database, sourceDbs []ethdb.Database, sourceDbPaths []string) *merger {
 	return &merger{
 		cfg:           cfg,
@@ -51,6 +52,7 @@ func newMerger(cfg *utils.Config, targetDb ethdb.Database, sourceDbs []ethdb.Dat
 	}
 }
 
+// merge two or more Dbs together
 func merge(ctx *cli.Context) error {
 	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
 	if err != nil {
@@ -92,6 +94,7 @@ func merge(ctx *cli.Context) error {
 	return printMetadata(ctx)
 }
 
+// finishMerge compacts targetDb and deletes sourceDbs
 func (m *merger) finishMerge() error {
 	if m.cfg.CompactDb {
 		targetDb, err := rawdb.NewLevelDBDatabase(m.cfg.AidaDb, 1024, 100, "profiling", false)
@@ -128,6 +131,7 @@ func (m *merger) finishMerge() error {
 	return nil
 }
 
+// merge one or more sourceDbs into targetDb
 func (m *merger) merge() error {
 	var (
 		err          error
@@ -196,6 +200,7 @@ func (m *merger) copyData(sourceDb ethdb.Database) (uint64, error) {
 	return written, nil
 }
 
+// closeDbs (targetDb and sourceDbs) given to merger
 func (m *merger) closeDbs() {
 	for i, db := range m.sourceDbs {
 		if err := db.Close(); err != nil {

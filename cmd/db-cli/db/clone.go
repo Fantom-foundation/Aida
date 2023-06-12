@@ -314,6 +314,7 @@ func (c *cloner) closeDbs() {
 	}
 }
 
+// stop all cloner threads
 func (c *cloner) stop() {
 	select {
 	case <-c.closeCh:

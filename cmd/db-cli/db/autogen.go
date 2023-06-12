@@ -78,7 +78,7 @@ func autogen(ctx *cli.Context) error {
 	return printMetadata(ctx)
 }
 
-// generate AidaDb
+// doGenerations automatically generate AidaDb from daemon opera
 func (a *automator) doGenerations() error {
 	var (
 		newDataReady bool

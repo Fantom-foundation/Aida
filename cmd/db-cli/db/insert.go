@@ -10,22 +10,23 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// InsertKeyValueCommand is a generic command for inserting any key/value pair into AidaDb
-var InsertKeyValueCommand = cli.Command{
-	Action: insertKeyValue,
-	Name:   "insertKeyValue",
-	Usage:  "insert key/value pair into AidaDb",
+// InsertMetadataCommand is a generic command for inserting any key/value pair into AidaDb
+var InsertMetadataCommand = cli.Command{
+	Action: insertMetadata,
+	Name:   "insertMetadata",
+	Usage:  "inserts key/value metadata pair into AidaDb",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 	},
 	Description: `
 Inserts key/value pair into AidaDb according to arguments:
 <key> <value>
+If given key is not metadata-key, operation fails.
 `,
 }
 
-// insertKeyValue given key/value pair into AidaDb
-func insertKeyValue(ctx *cli.Context) error {
+// insertMetadata key/value pair into AidaDb
+func insertMetadata(ctx *cli.Context) error {
 	var (
 		err error
 		u   uint64

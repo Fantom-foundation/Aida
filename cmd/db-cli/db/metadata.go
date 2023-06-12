@@ -2,7 +2,6 @@ package db
 
 import (
 	"encoding/binary"
-	"fmt"
 	"strings"
 	"time"
 
@@ -69,6 +68,7 @@ type aidaMetadata struct {
 	timestamp             uint64
 }
 
+// newAidaMetadata creates new instance of aidaMetadata
 func newAidaMetadata(db ethdb.Database, logLevel string) *aidaMetadata {
 	return &aidaMetadata{
 		db:  db,
@@ -76,6 +76,8 @@ func newAidaMetadata(db ethdb.Database, logLevel string) *aidaMetadata {
 	}
 }
 
+// processPatchLikeMetadata decides whether patch is new or not. If so the dbType is set to genType, otherwise its patchType.
+// Then it inserts all given metadata
 func processPatchLikeMetadata(aidaDb ethdb.Database, logLevel string, firstBlock, lastBlock, firstEpoch, lastEpoch uint64, chainID int, isNew bool) {
 	var dbType aidaDbType
 
@@ -103,6 +105,8 @@ func processPatchLikeMetadata(aidaDb ethdb.Database, logLevel string, firstBlock
 	m.log.Notice("Metadata added successfully")
 }
 
+// processCloneLikeMetadata inserts every metadata from sourceDb, only epochs are excluded.
+// We can't be certain if given epoch is whole
 func processCloneLikeMetadata(aidaDb ethdb.Database, logLevel string, firstBlock, lastBlock uint64, chainID int) {
 	m := newAidaMetadata(aidaDb, logLevel)
 
@@ -119,6 +123,8 @@ func processCloneLikeMetadata(aidaDb ethdb.Database, logLevel string, firstBlock
 	m.log.Notice("Metadata added successfully")
 }
 
+// processGenLikeMetadata inserts metadata into newly generated AidaDb.
+// If generate is used onto an existing AidaDb it updates last block, last epoch and timestamp.
 func processGenLikeMetadata(aidaDb ethdb.Database, logLevel string, firstBlock uint64, lastBlock uint64, firstEpoch uint64, lastEpoch uint64, chainID int) {
 	m := newAidaMetadata(aidaDb, logLevel)
 
@@ -138,6 +144,7 @@ func processGenLikeMetadata(aidaDb ethdb.Database, logLevel string, firstBlock u
 
 }
 
+// processMergeMetadata decides the type according to the types of merged Dbs and inserts every metadata
 func processMergeMetadata(aidaDb ethdb.Database, sourceDbs []ethdb.Database, logLevel string) {
 	var (
 		dbType                = patchType
@@ -162,27 +169,11 @@ func processMergeMetadata(aidaDb ethdb.Database, sourceDbs []ethdb.Database, log
 
 	aidaDbMetadata := newAidaMetadata(aidaDb, logLevel)
 
-	aidaDbMetadata.setMetadata(firstBlock, lastBlock, firstEpoch, lastEpoch, chainID, dbType)
+	aidaDbMetadata.setAllMetadata(firstBlock, lastBlock, firstEpoch, lastEpoch, chainID, dbType)
 
 }
 
-func processUpdateLikeMetadata(targetDb ethdb.Database, patchDb ethdb.Database, logLevel string) error {
-	targetMD := newAidaMetadata(targetDb, logLevel)
-	patchMD := newAidaMetadata(patchDb, logLevel)
-
-	targetLB := targetMD.getLastBlock()
-	patchFB := patchMD.getFirstBlock()
-
-	if targetLB != patchFB-1 {
-		return fmt.Errorf("metadata block does not align; aida-db last block: %v, patch first block: %v", targetLB, patchFB)
-	}
-
-	targetMD.setLastBlock(patchMD.getLastBlock())
-	targetMD.setLastEpoch(patchMD.getLastEpoch())
-
-	return nil
-}
-
+// getMetadata from given db and save it
 func (m *aidaMetadata) getMetadata() {
 	m.firstBlock = m.getFirstBlock()
 	m.lastBlock = m.getLastBlock()
@@ -195,6 +186,7 @@ func (m *aidaMetadata) getMetadata() {
 	return
 }
 
+// findBlocks from given db and return them
 func (m *aidaMetadata) findBlocks(firstBlock uint64, lastBlock uint64) (uint64, uint64) {
 	var (
 		dbFirst, dbLast uint64
@@ -215,6 +207,7 @@ func (m *aidaMetadata) findBlocks(firstBlock uint64, lastBlock uint64) (uint64, 
 	return firstBlock, lastBlock
 }
 
+// findEpochs from given db and return them
 func (m *aidaMetadata) findEpochs(firstEpoch uint64, lastEpoch uint64) (uint64, uint64) {
 	var (
 		dbFirst, dbLast uint64
@@ -235,6 +228,7 @@ func (m *aidaMetadata) findEpochs(firstEpoch uint64, lastEpoch uint64) (uint64, 
 	return firstEpoch, lastEpoch
 }
 
+// getFirstBlock and return it
 func (m *aidaMetadata) getFirstBlock() uint64 {
 	firstBlockBytes, err := m.db.Get([]byte(FirstBlockPrefix))
 	if err != nil {
@@ -247,6 +241,7 @@ func (m *aidaMetadata) getFirstBlock() uint64 {
 	return bigendian.BytesToUint64(firstBlockBytes)
 }
 
+// getLastBlock and return it
 func (m *aidaMetadata) getLastBlock() uint64 {
 	lastBlockBytes, err := m.db.Get([]byte(LastBlockPrefix))
 	if err != nil {
@@ -259,6 +254,7 @@ func (m *aidaMetadata) getLastBlock() uint64 {
 	return bigendian.BytesToUint64(lastBlockBytes)
 }
 
+// getFirstEpoch and return it
 func (m *aidaMetadata) getFirstEpoch() uint64 {
 	firstEpochBytes, err := m.db.Get([]byte(FirstEpochPrefix))
 	if err != nil {
@@ -271,6 +267,7 @@ func (m *aidaMetadata) getFirstEpoch() uint64 {
 	return bigendian.BytesToUint64(firstEpochBytes)
 }
 
+// getLastEpoch and return it
 func (m *aidaMetadata) getLastEpoch() uint64 {
 	lastEpochBytes, err := m.db.Get([]byte(LastEpochPrefix))
 	if err != nil {
@@ -283,6 +280,7 @@ func (m *aidaMetadata) getLastEpoch() uint64 {
 	return bigendian.BytesToUint64(lastEpochBytes)
 }
 
+// getChainID and return it
 func (m *aidaMetadata) getChainID() int {
 	chainIDBytes, err := m.db.Get([]byte(ChainIDPrefix))
 	if err != nil {
@@ -293,6 +291,7 @@ func (m *aidaMetadata) getChainID() int {
 	return int(bigendian.BytesToUint16(chainIDBytes))
 }
 
+// getTimestamp and return it
 func (m *aidaMetadata) getTimestamp() uint64 {
 	byteChainID, err := m.db.Get([]byte(TimestampPrefix))
 	if err != nil {
@@ -303,6 +302,7 @@ func (m *aidaMetadata) getTimestamp() uint64 {
 	return bigendian.BytesToUint64(byteChainID)
 }
 
+// getDbType and return it
 func (m *aidaMetadata) getDbType() aidaDbType {
 	byteDbType, err := m.db.Get([]byte(TypePrefix))
 	if err != nil {
@@ -315,6 +315,7 @@ func (m *aidaMetadata) getDbType() aidaDbType {
 	return aidaDbType(byteDbType[0])
 }
 
+// setFirstBlock in given db
 func (m *aidaMetadata) setFirstBlock(firstBlock uint64) {
 	firstBlockBytes := substate.BlockToBytes(firstBlock)
 
@@ -325,6 +326,7 @@ func (m *aidaMetadata) setFirstBlock(firstBlock uint64) {
 	}
 }
 
+// setLastBlock in given db
 func (m *aidaMetadata) setLastBlock(lastBlock uint64) {
 	lastBlockBytes := substate.BlockToBytes(lastBlock)
 
@@ -335,6 +337,7 @@ func (m *aidaMetadata) setLastBlock(lastBlock uint64) {
 	}
 }
 
+// setFirstEpoch in given db
 func (m *aidaMetadata) setFirstEpoch(firstEpoch uint64) {
 	firstEpochBytes := substate.BlockToBytes(firstEpoch)
 
@@ -345,6 +348,7 @@ func (m *aidaMetadata) setFirstEpoch(firstEpoch uint64) {
 	}
 }
 
+// setLastEpoch in given db
 func (m *aidaMetadata) setLastEpoch(lastEpoch uint64) {
 	lastEpochBytes := substate.BlockToBytes(lastEpoch)
 
@@ -355,6 +359,7 @@ func (m *aidaMetadata) setLastEpoch(lastEpoch uint64) {
 	}
 }
 
+// setChainID in given db
 func (m *aidaMetadata) setChainID(chainID int) {
 	chainIDBytes := bigendian.Uint16ToBytes(uint16(chainID))
 
@@ -365,6 +370,7 @@ func (m *aidaMetadata) setChainID(chainID int) {
 	}
 }
 
+// setTimestamp in given db
 func (m *aidaMetadata) setTimestamp() {
 	createTime := make([]byte, 8)
 
@@ -376,6 +382,7 @@ func (m *aidaMetadata) setTimestamp() {
 	}
 }
 
+// setDbType in given db
 func (m *aidaMetadata) setDbType(dbType aidaDbType) {
 	dbTypeBytes := make([]byte, 1)
 	dbTypeBytes[0] = byte(dbType)
@@ -387,7 +394,8 @@ func (m *aidaMetadata) setDbType(dbType aidaDbType) {
 	}
 }
 
-func (m *aidaMetadata) setMetadata(firstBlock uint64, lastBlock uint64, firstEpoch uint64, lastEpoch uint64, chainID int, dbType aidaDbType) {
+// setAllMetadata in given db
+func (m *aidaMetadata) setAllMetadata(firstBlock uint64, lastBlock uint64, firstEpoch uint64, lastEpoch uint64, chainID int, dbType aidaDbType) {
 	m.setFirstBlock(firstBlock)
 
 	m.setLastEpoch(lastBlock)

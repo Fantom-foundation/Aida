@@ -186,7 +186,7 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 					return fmt.Errorf("unable to merge %v; %v", extractedPatchPath, err)
 				}
 
-				targetMD.setMetadata(patchMD.firstBlock, patchMD.lastBlock, patchMD.firstEpoch, patchMD.lastEpoch, patchMD.chainId, genType)
+				targetMD.setAllMetadata(patchMD.firstBlock, patchMD.lastBlock, patchMD.firstEpoch, patchMD.lastEpoch, patchMD.chainId, genType)
 
 				m.closeDbs()
 

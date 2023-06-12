@@ -35,6 +35,7 @@ var cmdMetadata = cli.Command{
 	},
 }
 
+// printMetadata from given AidaDb
 func printMetadata(ctx *cli.Context) error {
 
 	cfg, argErr := utils.NewConfig(ctx, utils.NoArgs)
@@ -80,6 +81,7 @@ func printMetadata(ctx *cli.Context) error {
 	return nil
 }
 
+// printUpdateSetInfo from given AidaDb
 func printUpdateSetInfo(m *aidaMetadata) error {
 	m.log.Notice("UPDATE-SET INFO:")
 
@@ -101,6 +103,7 @@ func printUpdateSetInfo(m *aidaMetadata) error {
 	return nil
 }
 
+// printDbType from given AidaDb
 func printDbType(m *aidaMetadata) error {
 	t := m.getDbType()
 
@@ -162,6 +165,8 @@ var cmdCountSubstate = cli.Command{
 	},
 }
 
+// printAllCount counts all prefixes prints number of occurrences.
+// If DetailedFlag is called, then it prints count of each prefix
 func printAllCount(ctx *cli.Context) error {
 	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-InfoCommand")
 
@@ -187,6 +192,7 @@ func printAllCount(ctx *cli.Context) error {
 	return nil
 }
 
+// logDetailedSize counts and prints all prefix occurrence
 func logDetailedSize(db ethdb.Database, log *logging.Logger) {
 	iter := db.NewIterator(nil, nil)
 	defer iter.Release()
@@ -202,6 +208,7 @@ func logDetailedSize(db ethdb.Database, log *logging.Logger) {
 	}
 }
 
+// printDestroyedCount in given AidaDb
 func printDestroyedCount(ctx *cli.Context) error {
 	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-InfoCommand")
 
@@ -225,6 +232,7 @@ func printDestroyedCount(ctx *cli.Context) error {
 	return nil
 }
 
+// printSubstateCount in given AidaDb
 func printSubstateCount(ctx *cli.Context) error {
 	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-InfoCommand")
 
@@ -252,7 +260,7 @@ func printSubstateCount(ctx *cli.Context) error {
 }
 
 var cmdDelAcc = cli.Command{
-	Action:    getDelAcc,
+	Action:    printDeletedAccountInfo,
 	Name:      "del-acc",
 	Usage:     "Prints info about given deleted account in AidaDb.",
 	ArgsUsage: "<firstBlockNum>, <lastBlockNum>",
@@ -263,7 +271,8 @@ var cmdDelAcc = cli.Command{
 	},
 }
 
-func getDelAcc(ctx *cli.Context) error {
+// printDeletedAccountInfo for given deleted account in AidaDb
+func printDeletedAccountInfo(ctx *cli.Context) error {
 	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-InfoCommand")
 
 	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
