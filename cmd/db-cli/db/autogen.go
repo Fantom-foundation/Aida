@@ -71,8 +71,11 @@ func autogen(ctx *cli.Context) error {
 		generator: newGenerator(ctx, cfg, aidaDbTmp),
 	}
 
-	return a.doGenerations()
+	if err = a.doGenerations(); err != nil {
+		return err
+	}
 
+	return printMetadata(ctx)
 }
 
 // generate AidaDb

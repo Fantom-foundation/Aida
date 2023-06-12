@@ -44,7 +44,11 @@ func update(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	return Update(cfg)
+	if err = Update(cfg); err != nil {
+		return err
+	}
+
+	return printMetadata(ctx)
 }
 
 // Update implements updating command to be called from various commands and automatically downloads aida-db patches.
@@ -169,9 +173,10 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 					// set patch first block and epoch from target for easier saving into targetDB
 					patchMD.setFirstBlock(targetMD.firstBlock)
 					patchMD.setFirstEpoch(targetMD.firstEpoch)
-				} else {
-					targetMD.firstBlock = patchMD.firstBlock
-					targetMD.firstEpoch = patchMD.firstEpoch
+				} else if targetMD.firstBlock != 0 {
+					// save targetDB first block and epoch to patch for easier saving, but only if targetDB exists
+					patchMD.firstBlock = targetMD.firstBlock
+					patchMD.firstEpoch = targetMD.firstEpoch
 				}
 
 				m := newMerger(cfg, targetDb, []ethdb.Database{patchDb}, []string{extractedPatchPath})

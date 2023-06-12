@@ -70,7 +70,11 @@ func clone(ctx *cli.Context) error {
 		return err
 	}
 
-	return c.clone()
+	if err = c.clone(); err != nil {
+		return err
+	}
+
+	return printMetadata(ctx)
 }
 
 // openDbs prepares aida and target databases

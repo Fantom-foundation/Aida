@@ -190,6 +190,7 @@ func (m *aidaMetadata) getMetadata() {
 	m.lastEpoch = m.getLastEpoch()
 	m.dbType = m.getDbType()
 	m.timestamp = m.getTimestamp()
+	m.chainId = m.getChainID()
 
 	return
 }
@@ -295,7 +296,7 @@ func (m *aidaMetadata) getChainID() int {
 func (m *aidaMetadata) getTimestamp() uint64 {
 	byteChainID, err := m.db.Get([]byte(TimestampPrefix))
 	if err != nil {
-		m.log.Errorf("cannot get chain-id; %v", err)
+		m.log.Errorf("cannot get timestamp; %v", err)
 		return 0
 	}
 
@@ -305,7 +306,9 @@ func (m *aidaMetadata) getTimestamp() uint64 {
 func (m *aidaMetadata) getDbType() aidaDbType {
 	byteDbType, err := m.db.Get([]byte(TypePrefix))
 	if err != nil {
-		m.log.Errorf("cannot get db-type; %v", err)
+		if !strings.Contains(err.Error(), "not found") {
+			m.log.Errorf("cannot get db-type; %v", err)
+		}
 		return noType
 	}
 

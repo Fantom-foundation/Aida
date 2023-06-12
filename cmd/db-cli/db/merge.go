@@ -85,7 +85,11 @@ func merge(ctx *cli.Context) error {
 		return err
 	}
 
-	return m.finishMerge()
+	if err = m.finishMerge(); err != nil {
+		return err
+	}
+
+	return printMetadata(ctx)
 }
 
 func (m *merger) finishMerge() error {
