@@ -37,7 +37,6 @@ const (
 	genType
 	patchType
 	cloneType
-	mergeType
 	updateType
 )
 

@@ -89,7 +89,7 @@ func Update(cfg *utils.Config) error {
 
 	log.Infof("Downloading Aida-db - %d new patches", len(patches))
 
-	err = patchesDownloader(cfg, patches[1:])
+	err = patchesDownloader(cfg, patches)
 	if err != nil {
 		return err
 	}
@@ -121,9 +121,6 @@ func patchesDownloader(cfg *utils.Config, patches []string) error {
 
 // mergePatch takes decompressed patches and merges them into aida-db
 func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan error) error {
-	mdi := new(aidaMetadata)
-	mdi.dbType = updateType
-
 	for {
 		select {
 		case err, ok := <-errChan:
@@ -144,12 +141,19 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 					return fmt.Errorf("cannot open targetDb; %v", err)
 				}
 
-				sourcePaths := []string{cfg.SubstateDb, cfg.UpdateDb, cfg.DeletionDb}
+				sourcePaths := []string{extractedPatchPath}
 
 				dbs, err := openSourceDatabases(sourcePaths)
 				if err != nil {
 					return err
 				}
+
+				// TODO MOVE INTO CORRECT SPOT
+				//mdi := newAidaMetadata(targetDb, updateType, cfg.LogLevel)
+				//mdiPatch := newAidaMetadata(dbs[0], updateType, cfg.LogLevel)
+				//if mdi.lastBlock != mdiPatch.firstBlock -1 {
+				//	// TODO check metadata
+				//}
 
 				m := newMerger(cfg, targetDb, dbs, sourcePaths)
 
@@ -158,13 +162,13 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 					return fmt.Errorf("unable to merge %v; %v", extractedPatchPath, err)
 				}
 
+				m.closeDbs()
+
 				// remove patch
 				err = os.RemoveAll(extractedPatchPath)
 				if err != nil {
 					return err
 				}
-
-				m.closeDbs()
 			}
 		}
 	}
