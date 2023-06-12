@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"math/rand"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -28,15 +29,16 @@ func prepareDbDirs(cfg *utils.Config) (string, error) {
 		}
 	}
 
+	fName := fmt.Sprintf("%v/%v-%v", cfg.DbTmp, "aida_db_tmp_*", rand.Int())
 	// create a temporary working directory
-	aidaDbTmp, err := os.MkdirTemp(cfg.DbTmp, "aida_db_tmp_*")
+	err := os.Mkdir(fName, 0755)
 	if err != nil {
 		return "", fmt.Errorf("failed to create a temporary directory. %v", err)
 	}
 
-	loadSourceDBPaths(cfg, aidaDbTmp)
+	loadSourceDBPaths(cfg, fName)
 
-	return aidaDbTmp, nil
+	return fName, nil
 }
 
 // openSourceDatabases opens all databases required for merge
