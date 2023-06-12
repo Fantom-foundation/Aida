@@ -22,6 +22,7 @@ var InitDb = cli.App{
 		&db.MergeCommand,
 		&db.UpdateCommand,
 		&db.InfoCommand,
+		&db.InsertKeyValueCommand,
 	},
 }
 
