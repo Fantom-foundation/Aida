@@ -314,7 +314,7 @@ func (a *automator) mergePatch(targetDb ethdb.Database) error {
 
 	m := newMerger(a.cfg, targetDb, dbs, sourceDbPaths)
 
-	m.closeDbs()
+	defer m.closeDbs()
 
 	return m.merge()
 }
