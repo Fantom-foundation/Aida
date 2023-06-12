@@ -75,8 +75,6 @@ func generate(ctx *cli.Context) error {
 
 	g := newGenerator(ctx, cfg, aidaDbTmp)
 
-	defer MustCloseDB(g.aidaDb)
-
 	if g.cfg.AidaDb == "" {
 		return fmt.Errorf("you need to specify where you want aida-db to save (--aida-db)")
 	}
@@ -84,6 +82,8 @@ func generate(ctx *cli.Context) error {
 	if err = g.Generate(); err != nil {
 		return err
 	}
+
+	MustCloseDB(g.aidaDb)
 
 	if !g.cfg.KeepDb {
 		err = os.RemoveAll(g.aidaDbTmp)

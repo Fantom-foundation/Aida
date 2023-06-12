@@ -122,9 +122,10 @@ func (a *automator) doGenerations() error {
 		return err
 	}
 
+	MustCloseDB(a.aidaDb)
+
 	// if patch output dir is selected inserting patch.tar.gz, patch.tar.gz.md5 into there and updating patches.json
 	if a.cfg.Output != "" {
-		// todo metadata ---- ifNew type = gen
 		patchTarPath, err := a.createPatch()
 		if err != nil {
 			return err

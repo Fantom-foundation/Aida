@@ -74,6 +74,13 @@ func clone(ctx *cli.Context) error {
 		return err
 	}
 
+	MustCloseDB(c.aidaDb)
+	MustCloseDB(c.cloneDb)
+
+	err = ctx.Set(utils.AidaDbFlag.Name, cfg.TargetDb)
+	if err != nil {
+		return err
+	}
 	return printMetadata(ctx)
 }
 
