@@ -32,8 +32,8 @@ const (
 )
 
 const (
-	aidaDbRepositoryMainnetUrl = "http://xapi241.fantom.network"
-	aidaDbRepositoryTestnetUrl = "http://xapi241.fantom.network"
+	aidaDbRepositoryMainnetUrl = "https://aida.repository.fantom.network"
+	aidaDbRepositoryTestnetUrl = "https://aida.testnet.repository.fantom.network"
 )
 
 var (
