@@ -129,10 +129,15 @@ func (a *automator) doGenerations() error {
 
 	// if patch output dir is selected inserting patch.tar.gz, patch.tar.gz.md5 into there and updating patches.json
 	if a.cfg.Output != "" {
+		// stash aidaDbPath - because merge will be switching it as target db
+		aidaDbPath := a.cfg.AidaDb
 		patchTarPath, err := a.createPatch()
 		if err != nil {
 			return err
 		}
+		// pop original aidaDbPath
+		// to be used in metadata print
+		a.cfg.AidaDb = aidaDbPath
 
 		a.log.Noticef("Successfully generated patch at: %v", patchTarPath)
 	}

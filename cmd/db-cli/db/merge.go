@@ -101,13 +101,11 @@ func (m *merger) finishMerge() error {
 		return fmt.Errorf("cannot open db; %v", err)
 	}
 
-	if m.cfg.CompactDb {
-		m.log.Noticef("Starting compaction")
-		err = targetDb.Compact(nil, nil)
-		if err != nil {
-			return err
-		}
+	if !m.cfg.SkipMetadata {
+		processMergeMetadata(m.targetDb, m.sourceDbs, m.cfg.LogLevel)
 	}
+
+	MustCloseDB(targetDb)
 
 	// delete source databases
 	if m.cfg.DeleteSourceDbs {
@@ -122,11 +120,6 @@ func (m *merger) finishMerge() error {
 
 	m.log.Notice("Merge finished successfully")
 
-	if !m.cfg.SkipMetadata {
-		processMergeMetadata(m.targetDb, m.sourceDbs, m.cfg.LogLevel)
-	}
-
-	MustCloseDB(targetDb)
 	return nil
 }
 
@@ -153,6 +146,15 @@ func (m *merger) merge() error {
 		}
 
 		m.log.Noticef("Merging of %v", m.sourceDbPaths[i])
+	}
+
+	// compact written data
+	if m.cfg.CompactDb {
+		m.log.Noticef("Starting compaction", m.targetDb)
+		err = m.targetDb.Compact(nil, nil)
+		if err != nil {
+			return fmt.Errorf("cannot compact targetDb; %v", err)
+		}
 	}
 
 	return nil
