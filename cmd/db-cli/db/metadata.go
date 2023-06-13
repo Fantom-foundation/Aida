@@ -586,13 +586,14 @@ func (m *aidaMetadata) setAllMetadata(firstBlock uint64, lastBlock uint64, first
 }
 
 // findMetadataInSubstate iterates over substate to find first and last block of AidaDb
-func (m *aidaMetadata) findMetadataInSubstate(aidaDbPath string, workers int) error {
+func (m *aidaMetadata) findMetadataInSubstate(aidaDbPath string) error {
 	m.log.Notice("Iterating through substate to find first and last block and epoch")
 
 	substate.SetSubstateDb(aidaDbPath)
 	substate.OpenSubstateDBReadOnly()
 
-	iter := substate.NewSubstateIterator(0, workers)
+	// todo how many workers?
+	iter := substate.NewSubstateIterator(0, substate.WorkersFlag.Value)
 
 	defer iter.Release()
 
@@ -697,7 +698,7 @@ func (m *aidaMetadata) checkUpdateMetadata(isNewDb bool, cfg *utils.Config, patc
 		if err = m.getMetadata(); err != nil {
 			// if metadata are not found, but we have an existingDb, we go through substate to find it
 			if strings.Contains(err.Error(), "leveldb: not found") {
-				if err = m.findMetadataInSubstate(cfg.AidaDb, cfg.Workers); err != nil {
+				if err = m.findMetadataInSubstate(cfg.AidaDb); err != nil {
 					return 0, 0, err
 				}
 			} else {
