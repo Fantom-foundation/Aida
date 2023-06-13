@@ -1,0 +1,21 @@
+[Unit]
+Description=Fantom Opera Node
+After=network.target auditd.service
+
+[Service]
+Type=simple
+WorkingDirectory=/var/opera
+ExecStart=/usr/local/bin/opera \
+    --datadir=/var/opera/mainnet \ # INSERT OPERA PATH HERE
+    --port=5051 \ # PORT MUST BE DIFFERENT THAN DEFAULT(5050) - in autogen 2 operas can run at same time
+    --cache=32768 \
+    --gcmode=full
+LimitNOFILE=934073
+OOMScoreAdjust=-900
+Restart=on-failure
+RestartSec=10s
+TimeoutSec=900
+;StandardError=null
+
+[Install]
+WantedBy=default.target
