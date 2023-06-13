@@ -67,7 +67,7 @@ func Update(cfg *utils.Config) error {
 		// open targetDB
 		aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", true)
 		if err != nil {
-			return fmt.Errorf("targetDb; %v", err)
+			return fmt.Errorf("can't open targetDb; %v", err)
 		}
 
 		// load last block from existing aida-db metadata
@@ -86,13 +86,18 @@ func Update(cfg *utils.Config) error {
 		return fmt.Errorf("unable to prepare list of aida-db patches for download; %v", err)
 	}
 
+	if len(patches) == 0 {
+		log.Notice("No new patches to download are available")
+		return nil
+	}
+
 	// create a parents of temporary directory
 	err = os.MkdirAll(cfg.DbTmp, 0755)
 	if err != nil {
 		return fmt.Errorf("failed to create %s directory; %s", cfg.DbTmp, err)
 	}
 
-	log.Infof("Downloading Aida-db - %d new patches", len(patches))
+	log.Noticef("Downloading Aida-db - %d new patches", len(patches))
 
 	// we need to know whether Db is new for metadata
 	err = patchesDownloader(cfg, patches, startDownloadFromBlock == 0)
@@ -286,9 +291,9 @@ func retrievePatchesToDownload(startDownloadFromBlock uint64) ([]string, error) 
 	}
 
 	// list of patches to be downloaded
-	var fileNames = make([]string, len(patches))
+	var fileNames = make([]string, 0)
 
-	for i, patch := range patches {
+	for _, patch := range patches {
 		patchMap, ok := patch.(map[string]interface{})
 		if !ok {
 			return nil, fmt.Errorf("invalid patch in json; %v", patch)
@@ -312,7 +317,7 @@ func retrievePatchesToDownload(startDownloadFromBlock uint64) ([]string, error) 
 		if !ok {
 			return nil, fmt.Errorf("invalid fileName attributes in patch; %v", patchMap)
 		}
-		fileNames[i] = fileName
+		fileNames = append(fileNames, fileName)
 	}
 
 	sort.Strings(fileNames)
