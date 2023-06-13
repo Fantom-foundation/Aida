@@ -91,7 +91,7 @@ func generate(ctx *cli.Context) error {
 		}
 	}
 
-	return printMetadata(ctx)
+	return printMetadata(g.cfg)
 }
 
 // newGenerator returns new instance of generator

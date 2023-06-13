@@ -91,7 +91,7 @@ func merge(ctx *cli.Context) error {
 		return err
 	}
 
-	return printMetadata(ctx)
+	return printMetadata(m.cfg)
 }
 
 // finishMerge compacts targetDb and deletes sourceDbs
