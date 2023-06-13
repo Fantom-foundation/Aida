@@ -60,18 +60,24 @@ func printMetadata(ctx *cli.Context) error {
 	}
 
 	// CHAINID
-	m.log.Infof("Chain-ID: %v", m.getChainID())
+	chainID, err := m.getChainID()
+	m.log.Infof("Chain-ID: %v", chainID)
 
 	// BLOCKS
-	m.log.Infof("First Block: %v", m.getFirstBlock())
-	m.log.Infof("Last Block: %v", m.getLastBlock())
+	firstBlock, err := m.getFirstBlock()
+	m.log.Infof("First Block: %v", firstBlock)
+	lastBlock, err := m.getLastBlock()
+	m.log.Infof("Last Block: %v", lastBlock)
 
 	// EPOCHS
-	m.log.Infof("First Epoch: %v", m.getFirstEpoch())
-	m.log.Infof("Last Epoch: %v", m.getLastEpoch())
+	firstEpoch, err := m.getFirstEpoch()
+	m.log.Infof("First Epoch: %v", firstEpoch)
+	lastEpoch, err := m.getLastEpoch()
+	m.log.Infof("Last Epoch: %v", lastEpoch)
 
 	// TIMESTAMP
-	m.log.Infof("Created: %v", time.Unix(int64(m.getTimestamp()), 0))
+	timestamp, err := m.getTimestamp()
+	m.log.Infof("Created: %v", time.Unix(int64(timestamp), 0))
 
 	// UPDATE-SET
 	if err = printUpdateSetInfo(m); err != nil {
@@ -105,7 +111,10 @@ func printUpdateSetInfo(m *aidaMetadata) error {
 
 // printDbType from given AidaDb
 func printDbType(m *aidaMetadata) error {
-	t := m.getDbType()
+	t, err := m.getDbType()
+	if err != nil {
+		return err
+	}
 
 	var typePrint string
 	switch t {
