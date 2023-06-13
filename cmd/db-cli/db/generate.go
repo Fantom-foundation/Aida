@@ -57,6 +57,7 @@ type generator struct {
 	aidaDb    ethdb.Database
 	aidaDbTmp string
 	opera     *aidaOpera
+	metadata  *aidaMetadata
 }
 
 // generate AidaDb
@@ -110,6 +111,7 @@ func newGenerator(ctx *cli.Context, cfg *utils.Config, aidaDbTmp string) *genera
 		aidaDbTmp: aidaDbTmp,
 		opera:     newAidaOpera(ctx, cfg, log),
 		aidaDb:    db,
+		metadata:  newAidaMetadata(db, cfg.LogLevel),
 	}
 }
 
@@ -134,12 +136,16 @@ func (g *generator) Generate() error {
 		return err
 	}
 
+	// we need to reopen db for metadata
 	g.aidaDb, err = rawdb.NewLevelDBDatabase(g.cfg.AidaDb, 1024, 100, "profiling", false)
 	if err != nil {
 		return fmt.Errorf("cannot open AidaDb; %v", err)
 	}
 
-	processGenLikeMetadata(g.aidaDb, g.cfg.LogLevel, g.opera.firstBlock, g.opera.lastBlock, g.opera.firstEpoch, g.opera.lastEpoch, g.cfg.ChainID)
+	err = g.metadata.processGenLikeMetadata(g.opera.firstBlock, g.opera.lastBlock, g.opera.firstEpoch, g.opera.lastEpoch, g.cfg.ChainID)
+	if err != nil {
+		return err
+	}
 
 	g.log.Noticef("AidaDb %v generation done", g.cfg.AidaDb)
 

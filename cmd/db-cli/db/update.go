@@ -94,7 +94,8 @@ func Update(cfg *utils.Config) error {
 
 	log.Infof("Downloading Aida-db - %d new patches", len(patches))
 
-	err = patchesDownloader(cfg, patches)
+	// we need to know whether Db is new for metadata
+	err = patchesDownloader(cfg, patches, startDownloadFromBlock == 0)
 	if err != nil {
 		return err
 	}
@@ -105,7 +106,7 @@ func Update(cfg *utils.Config) error {
 }
 
 // patchesDownloader processes patch names to download then download them in pipelined process
-func patchesDownloader(cfg *utils.Config, patches []string) error {
+func patchesDownloader(cfg *utils.Config, patches []string, isNewDb bool) error {
 	// create channel to push patch labels trough channel
 	patchesChan := pushStringsToChannel(patches)
 
@@ -116,7 +117,7 @@ func patchesDownloader(cfg *utils.Config, patches []string) error {
 	decompressedPatchChan, errDecompressChan := decompressPatch(cfg, downloadedPatchChan, errChan)
 
 	// merge decompressed patches
-	err := mergePatch(cfg, decompressedPatchChan, errDecompressChan)
+	err := mergePatch(cfg, decompressedPatchChan, errDecompressChan, isNewDb)
 	if err != nil {
 		return err
 	}
@@ -125,9 +126,7 @@ func patchesDownloader(cfg *utils.Config, patches []string) error {
 }
 
 // mergePatch takes decompressed patches and merges them into aida-db
-func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan error) error {
-	var firstBlock, firstEpoch uint64
-
+func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan error, isNewDb bool) error {
 	for {
 		select {
 		case err, ok := <-errChan:
@@ -156,29 +155,9 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 				targetMD := newAidaMetadata(targetDb, cfg.LogLevel)
 				patchMD := newAidaMetadata(patchDb, cfg.LogLevel)
 
-				targetMD.getMetadata()
-				patchMD.getMetadata()
-
-				// if targetDb is empty, we don't need to check metadata correctness
-				if targetMD.lastBlock != 0 {
-					// the patch is usable only if its firstBlock is within targetDbs block range
-					// and if its last block is bigger than targetDBs last block
-					if patchMD.firstBlock > targetMD.lastBlock+1 || patchMD.firstBlock < targetMD.firstBlock || patchMD.lastBlock <= targetMD.lastBlock {
-						return fmt.Errorf("metadata blocks does not align; aida-db %v-%v, patch %v-%v", targetMD.firstBlock, targetMD.lastBlock, patchMD.firstBlock, patchMD.lastBlock)
-					}
-
-					// if chainIDs doesn't match, we can't patch the DB
-					if targetMD.chainId != patchMD.chainId {
-						return fmt.Errorf("metadata chain-ids does not match; aida-db: %v, patch: %v", targetMD.chainId, patchMD.chainId)
-					}
-
-					// if targetDb is an existing Db we need to take first block and epoch from it
-					firstBlock = targetMD.firstBlock
-					firstEpoch = targetMD.firstEpoch
-				} else {
-					// if targetDb is empty, we take first block and epoch from patch
-					firstBlock = patchMD.firstBlock
-					firstEpoch = patchMD.firstEpoch
+				firstBlock, firstEpoch, err := targetMD.checkUpdateMetadata(isNewDb, cfg, patchMD)
+				if err != nil {
+					return err
 				}
 
 				m := newMerger(cfg, targetDb, []ethdb.Database{patchDb}, []string{extractedPatchPath})
@@ -188,7 +167,10 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 					return fmt.Errorf("unable to merge %v; %v", extractedPatchPath, err)
 				}
 
-				targetMD.setAllMetadata(firstBlock, patchMD.lastBlock, firstEpoch, patchMD.lastEpoch, patchMD.chainId, genType)
+				err = targetMD.setAllMetadata(firstBlock, patchMD.lastBlock, firstEpoch, patchMD.lastEpoch, patchMD.chainId, genType)
+				if err != nil {
+					return err
+				}
 
 				m.closeDbs()
 
