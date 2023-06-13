@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/logger"
@@ -15,9 +15,9 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/Fantom-foundation/lachesis-base/common/bigendian"
 	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/op/go-logging"
-	"github.com/syndtr/goleveldb/leveldb"
 )
 
 type Metadata interface {
@@ -145,6 +145,7 @@ func processCloneLikeMetadata(aidaDb ethdb.Database, logLevel string, firstBlock
 	if err != nil {
 		return err
 	}
+
 	if err = m.setFirstBlock(firstBlock); err != nil {
 		return err
 	}
@@ -168,9 +169,21 @@ func processCloneLikeMetadata(aidaDb ethdb.Database, logLevel string, firstBlock
 	return nil
 }
 
-// processGenLikeMetadata inserts metadata into newly generated AidaDb.
+func processGenLikeMetadata(pathToAidaDb string, firstBlock uint64, lastBlock uint64, firstEpoch uint64, lastEpoch uint64, chainID int, logLevel string) error {
+	aidaDb, err := rawdb.NewLevelDBDatabase(pathToAidaDb, 1024, 100, "profiling", false)
+	if err != nil {
+		return fmt.Errorf("metadata cannot open AidaDb; %v", err)
+	}
+
+	defer MustCloseDB(aidaDb)
+
+	m := newAidaMetadata(aidaDb, logLevel)
+	return m.genMetadata(firstBlock, lastBlock, firstEpoch, lastEpoch, chainID)
+}
+
+// genMetadata inserts metadata into newly generated AidaDb.
 // If generate is used onto an existing AidaDb it updates last block, last epoch and timestamp.
-func (m *aidaMetadata) processGenLikeMetadata(firstBlock uint64, lastBlock uint64, firstEpoch uint64, lastEpoch uint64, chainID int) error {
+func (m *aidaMetadata) genMetadata(firstBlock uint64, lastBlock uint64, firstEpoch uint64, lastEpoch uint64, chainID int) error {
 	var err error
 
 	firstBlock, lastBlock, err = m.compareBlocks(firstBlock, lastBlock)
@@ -308,7 +321,12 @@ func (m *aidaMetadata) compareBlocks(firstBlock uint64, lastBlock uint64) (uint6
 
 	dbFirst, err = m.getFirstBlock()
 	if err != nil {
-		return 0, 0, err
+		if strings.Contains(err.Error(), "leveldb: not found") {
+			// block was not found, set to 0
+			dbFirst = 0
+		} else {
+			return 0, 0, err
+		}
 	}
 
 	if (dbFirst != 0 && dbFirst < firstBlock) || firstBlock == 0 {
@@ -317,7 +335,12 @@ func (m *aidaMetadata) compareBlocks(firstBlock uint64, lastBlock uint64) (uint6
 
 	dbLast, err = m.getLastBlock()
 	if err != nil {
-		return 0, 0, err
+		if strings.Contains(err.Error(), "leveldb: not found") {
+			// block was not found, set to 0
+			dbLast = 0
+		} else {
+			return 0, 0, err
+		}
 	}
 
 	if dbLast > lastBlock || lastBlock == 0 {
@@ -336,7 +359,12 @@ func (m *aidaMetadata) compareEpochs(firstEpoch uint64, lastEpoch uint64) (uint6
 
 	dbFirst, err = m.getFirstEpoch()
 	if err != nil {
-		return 0, 0, err
+		if strings.Contains(err.Error(), "leveldb: not found") {
+			// block was not found, set to 0
+			dbFirst = 0
+		} else {
+			return 0, 0, err
+		}
 	}
 
 	if (dbFirst != 0 && dbFirst < firstEpoch) || firstEpoch == 0 {
@@ -345,7 +373,12 @@ func (m *aidaMetadata) compareEpochs(firstEpoch uint64, lastEpoch uint64) (uint6
 
 	dbLast, err = m.getLastEpoch()
 	if err != nil {
-		return 0, 0, err
+		if strings.Contains(err.Error(), "leveldb: not found") {
+			// block was not found, set to 0
+			dbLast = 0
+		} else {
+			return 0, 0, err
+		}
 	}
 
 	if dbLast > lastEpoch || lastEpoch == 0 {
@@ -663,7 +696,7 @@ func (m *aidaMetadata) checkUpdateMetadata(isNewDb bool, cfg *utils.Config, patc
 	if !isNewDb {
 		if err = m.getMetadata(); err != nil {
 			// if metadata are not found, but we have an existingDb, we go through substate to find it
-			if errors.Is(leveldb.ErrNotFound, err) {
+			if strings.Contains(err.Error(), "leveldb: not found") {
 				if err = m.findMetadataInSubstate(cfg.AidaDb, cfg.Workers); err != nil {
 					return 0, 0, err
 				}

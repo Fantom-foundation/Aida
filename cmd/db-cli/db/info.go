@@ -27,7 +27,7 @@ var InfoCommand = cli.Command{
 }
 
 var cmdMetadata = cli.Command{
-	Action: printMetadata,
+	Action: printMetadataCmd,
 	Name:   "metadata",
 	Usage:  "Prints metadata",
 	Flags: []cli.Flag{
@@ -35,14 +35,17 @@ var cmdMetadata = cli.Command{
 	},
 }
 
-// printMetadata from given AidaDb
-func printMetadata(ctx *cli.Context) error {
-
+func printMetadataCmd(ctx *cli.Context) error {
 	cfg, argErr := utils.NewConfig(ctx, utils.NoArgs)
 	if argErr != nil {
 		return argErr
 	}
 
+	return printMetadata(cfg)
+}
+
+// printMetadata from given AidaDb
+func printMetadata(cfg *utils.Config) error {
 	// open db
 	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", true)
 	if err != nil {

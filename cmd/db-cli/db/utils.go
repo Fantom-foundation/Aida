@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/lachesis-base/common/bigendian"
 	"github.com/ethereum/go-ethereum/core/rawdb"
@@ -208,4 +209,22 @@ func getLastBlock(aidaDb ethdb.Database) (uint64, error) {
 		return 0, fmt.Errorf("cannot get last block from db; %v", err)
 	}
 	return bigendian.BytesToUint64(lastBlockBytes), nil
+}
+
+// startOperaPruning prunes opera in parallel
+func startOperaPruning(cfg *utils.Config) chan error {
+	errChan := make(chan error, 1)
+
+	log := logger.NewLogger(cfg.LogLevel, "autoGen-pruning")
+	log.Noticef("Starting opera pruning %v", cfg.Db)
+
+	go func() {
+		defer close(errChan)
+		cmd := exec.Command("opera", "--datadir", cfg.Db, "snapshot", "prune-state")
+		err := runCommand(cmd, nil, log)
+		if err != nil {
+			errChan <- fmt.Errorf("unable prune opera %v; %v", cfg.Db, err)
+		}
+	}()
+	return errChan
 }

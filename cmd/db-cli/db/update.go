@@ -48,7 +48,7 @@ func update(ctx *cli.Context) error {
 		return err
 	}
 
-	return printMetadata(ctx)
+	return printMetadata(cfg)
 }
 
 // Update implements updating command to be called from various commands and automatically downloads aida-db patches.
