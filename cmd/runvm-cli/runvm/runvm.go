@@ -226,7 +226,11 @@ func RunVM(ctx *cli.Context) error {
 				gasRate, _ := new(big.Float).SetInt(gasUsed).Float64()
 				gasRate = gasRate / intervalTime.Seconds()
 
-				log.Noticef("Reached block %d, last interval rate ~ %.0f Tx/s, ~ %.0f Gas/s", tx.Block, txRate, gasRate)
+				memoryUsage := db.GetMemoryUsage()
+				diskUsage := utils.GetDirectorySize(stateDbDir)
+
+				log.Noticef("Reached block %d using ~ %d bytes of memory, ~ %d bytes of disk, last interval rate ~ %.0f Tx/s, ~ %.0f Gas/s",
+					tx.Block, memoryUsage.UsedBytes, diskUsage, txRate, gasRate)
 				lastBlockProgressReportBlock += progressReportBlockInterval
 			}
 		}
