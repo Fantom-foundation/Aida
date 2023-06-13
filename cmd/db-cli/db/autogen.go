@@ -277,6 +277,8 @@ func (a *automator) createPatch() (string, error) {
 	processPatchLikeMetadata(targetDb, a.cfg.LogLevel, a.cfg.First, a.cfg.Last, a.opera.firstEpoch,
 		a.opera.lastEpoch, a.cfg.ChainID, a.opera.isNew)
 
+	MustCloseDB(targetDb)
+
 	patchTarName := fmt.Sprintf("%v.tar.gz", patchName)
 	patchTarPath := filepath.Join(a.cfg.Output, patchTarName)
 
@@ -303,8 +305,6 @@ func (a *automator) createPatch() (string, error) {
 	if err != nil {
 		return "", err
 	}
-
-	MustCloseDB(targetDb)
 
 	return patchTarPath, nil
 }
