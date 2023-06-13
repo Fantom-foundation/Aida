@@ -157,6 +157,7 @@ func (a *automator) loadGenerationRange() (bool, error) {
 		if err != nil {
 			return false, fmt.Errorf("unable to retrieve epoch of generation opera in path %v; %v", a.cfg.Db, err)
 		}
+		a.opera.firstEpoch += 1
 		a.log.Debugf("Generation will start from: %v", a.opera.firstEpoch)
 	}
 
