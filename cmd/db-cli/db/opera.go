@@ -69,6 +69,7 @@ func (o *aidaOpera) init() error {
 
 	// starting generation one block later
 	o.cfg.First = o.firstBlock + 1
+	o.firstEpoch += 1
 	return nil
 }
 
@@ -102,6 +103,10 @@ func (o *aidaOpera) getOperaBlockAndEpoch(isFirst bool) error {
 	if blockNumber < 1 {
 		return fmt.Errorf("opera; block number not found; %v", err)
 	}
+
+	// we are assuming that we are at brink of epochs
+	// in this special case epochNumber is already one number higher
+	epochNumber -= 1
 
 	if isFirst {
 		o.firstBlock = blockNumber

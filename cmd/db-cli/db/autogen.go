@@ -157,6 +157,7 @@ func (a *automator) loadGenerationRange() (bool, error) {
 		if err != nil {
 			return false, fmt.Errorf("unable to retrieve epoch of generation opera in path %v; %v", a.cfg.Db, err)
 		}
+		a.opera.firstEpoch += 1
 		a.log.Debugf("Generation will start from: %v", a.opera.firstEpoch)
 	}
 
@@ -277,6 +278,8 @@ func (a *automator) createPatch() (string, error) {
 	processPatchLikeMetadata(targetDb, a.cfg.LogLevel, a.cfg.First, a.cfg.Last, a.opera.firstEpoch,
 		a.opera.lastEpoch, a.cfg.ChainID, a.opera.isNew)
 
+	MustCloseDB(targetDb)
+
 	patchTarName := fmt.Sprintf("%v.tar.gz", patchName)
 	patchTarPath := filepath.Join(a.cfg.Output, patchTarName)
 
@@ -303,8 +306,6 @@ func (a *automator) createPatch() (string, error) {
 	if err != nil {
 		return "", err
 	}
-
-	MustCloseDB(targetDb)
 
 	return patchTarPath, nil
 }
