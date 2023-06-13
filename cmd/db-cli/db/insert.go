@@ -77,7 +77,11 @@ func insertMetadata(ctx *cli.Context) error {
 		}
 		m.setLastEpoch(u)
 	case TypePrefix:
-		m.setDbType(aidaDbType([]byte(val)[0]))
+		num, err := strconv.Atoi(val)
+		if err != nil {
+			return err
+		}
+		m.setDbType(aidaDbType(num))
 	case ChainIDPrefix:
 		u, err = strconv.ParseUint(val, 10, 16)
 		if err != nil {
