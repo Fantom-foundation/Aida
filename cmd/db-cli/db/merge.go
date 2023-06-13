@@ -150,7 +150,7 @@ func (m *merger) merge() error {
 
 	// compact written data
 	if m.cfg.CompactDb {
-		m.log.Noticef("Starting compaction", m.targetDb)
+		m.log.Noticef("Starting compaction")
 		err = m.targetDb.Compact(nil, nil)
 		if err != nil {
 			return fmt.Errorf("cannot compact targetDb; %v", err)
