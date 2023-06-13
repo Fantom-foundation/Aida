@@ -68,6 +68,8 @@ type aidaMetadata struct {
 	timestamp             uint64
 }
 
+// todo we need to check block alignment and chainID match before any merging
+
 // newAidaMetadata creates new instance of aidaMetadata
 func newAidaMetadata(db ethdb.Database, logLevel string) *aidaMetadata {
 	return &aidaMetadata{
@@ -156,9 +158,29 @@ func processMergeMetadata(aidaDb ethdb.Database, sourceDbs []ethdb.Database, log
 
 	for _, db := range sourceDbs {
 		m := newAidaMetadata(db, logLevel)
-		firstBlock, lastBlock = m.findBlocks(firstBlock, lastBlock)
-		firstEpoch, lastEpoch = m.findEpochs(firstEpoch, lastEpoch)
-		t = m.getDbType()
+		m.getMetadata()
+
+		// todo do we need to check whether blocks align?
+
+		// get chainID of first merged db
+		if chainID == 0 {
+			chainID = m.chainId
+		}
+
+		// if chain ids doesn't match, we should not be merging
+		if m.chainId != chainID {
+			m.log.Critical("ChainIDs in Dbs metadata does not match!")
+		}
+
+		if m.firstBlock < firstBlock || firstBlock == 0 {
+			firstBlock = m.firstEpoch
+		}
+
+		if m.lastEpoch > lastBlock || lastBlock == 0 {
+			lastBlock = m.lastBlock
+		}
+
+		t = m.dbType
 		if t == cloneType {
 			dbType = t
 		} else if t == genType && dbType != cloneType {
