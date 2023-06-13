@@ -19,6 +19,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/klauspost/compress/gzip"
+	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
@@ -70,6 +71,13 @@ func autogen(ctx *cli.Context) error {
 		generator: newGenerator(ctx, cfg, aidaDbTmp),
 	}
 
+	defer func(log *logging.Logger) {
+		err = os.RemoveAll(aidaDbTmp)
+		if err != nil {
+			log.Criticalf("can't remove temporary folder: %v; %v", aidaDbTmp, err)
+		}
+	}(a.log)
+
 	if err = a.doGenerations(); err != nil {
 		return err
 	}
@@ -110,18 +118,14 @@ func (a *automator) doGenerations() error {
 		return err
 	}
 
-	// start opera to load new blocks in parallel
-	err = startDaemonOpera(a.log)
-	if err != nil {
-		return err
-	}
-
 	err = a.generator.Generate()
 	if err != nil {
 		return err
 	}
 
 	MustCloseDB(a.aidaDb)
+
+	errCh := startOperaPruning(a.cfg)
 
 	// if patch output dir is selected inserting patch.tar.gz, patch.tar.gz.md5 into there and updating patches.json
 	if a.cfg.Output != "" {
@@ -131,6 +135,19 @@ func (a *automator) doGenerations() error {
 		}
 
 		a.log.Noticef("Successfully generated patch at: %v", patchTarPath)
+	}
+
+	// wait for operaPruning response
+	err, ok := <-errCh
+	if ok && err != nil {
+		return err
+	}
+	a.log.Noticef("Successfully pruned opera: %v", a.cfg.Db)
+
+	// start opera to load new blocks in parallel
+	err = startDaemonOpera(a.log)
+	if err != nil {
+		return err
 	}
 
 	// remove temporary folder only if generation completed successfully
