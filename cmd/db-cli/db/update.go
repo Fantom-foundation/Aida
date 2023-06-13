@@ -89,7 +89,7 @@ func Update(cfg *utils.Config) error {
 	}
 
 	if len(patches) == 0 {
-		log.Notice("No new patches to download are available")
+		log.Warning("No new patches to download are available")
 		return nil
 	}
 
@@ -166,6 +166,9 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 				if err != nil {
 					return err
 				}
+
+				// after inserting first patch, db is no longer new
+				isNewDb = false
 
 				m := newMerger(cfg, targetDb, []ethdb.Database{patchDb}, []string{extractedPatchPath})
 
