@@ -126,6 +126,8 @@ func patchesDownloader(cfg *utils.Config, patches []string) error {
 
 // mergePatch takes decompressed patches and merges them into aida-db
 func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan error) error {
+	var firstBlock, firstEpoch uint64
+
 	for {
 		select {
 		case err, ok := <-errChan:
@@ -157,7 +159,7 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 				targetMD.getMetadata()
 				patchMD.getMetadata()
 
-				// if targetDB is empty, we don't need to check metadata correctness
+				// if targetDb is empty, we don't need to check metadata correctness
 				if targetMD.lastBlock != 0 {
 					// the patch is usable only if its firstBlock is within targetDbs block range
 					// and if its last block is bigger than targetDBs last block
@@ -170,14 +172,13 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 						return fmt.Errorf("metadata chain-ids does not match; aida-db: %v, patch: %v", targetMD.chainId, patchMD.chainId)
 					}
 
-					// TODO rewrite dont write into patch. patch must be opened as read only
-					// set patch first block and epoch from target for easier saving into targetDB
-					patchMD.setFirstBlock(targetMD.firstBlock)
-					patchMD.setFirstEpoch(targetMD.firstEpoch)
-				} else if targetMD.firstBlock != 0 {
-					// save targetDB first block and epoch to patch for easier saving, but only if targetDB exists
-					patchMD.firstBlock = targetMD.firstBlock
-					patchMD.firstEpoch = targetMD.firstEpoch
+					// if targetDb is an existing Db we need to take first block and epoch from it
+					firstBlock = targetMD.firstBlock
+					firstEpoch = targetMD.firstEpoch
+				} else {
+					// if targetDb is empty, we take first block and epoch from patch
+					firstBlock = patchMD.firstBlock
+					firstEpoch = patchMD.firstEpoch
 				}
 
 				m := newMerger(cfg, targetDb, []ethdb.Database{patchDb}, []string{extractedPatchPath})
@@ -187,7 +188,7 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 					return fmt.Errorf("unable to merge %v; %v", extractedPatchPath, err)
 				}
 
-				targetMD.setAllMetadata(patchMD.firstBlock, patchMD.lastBlock, patchMD.firstEpoch, patchMD.lastEpoch, patchMD.chainId, genType)
+				targetMD.setAllMetadata(firstBlock, patchMD.lastBlock, firstEpoch, patchMD.lastEpoch, patchMD.chainId, genType)
 
 				m.closeDbs()
 
