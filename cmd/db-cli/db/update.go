@@ -2,6 +2,8 @@ package db
 
 import (
 	"archive/tar"
+	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -264,10 +266,57 @@ func downloadPatch(cfg *utils.Config, patchesChan chan string) (chan string, cha
 			}
 			log.Debugf("Downloaded %s", fileName)
 
+			patchMd5Url := patchUrl + ".md5"
+
+			// WARNING don't rewrite the following md5 check into separate thread,
+			// because having two patches at same time might be too big for somebodies disk space
+			md5Expected, err := loadExpectedMd5(patchMd5Url)
+			if err != nil {
+				errChan <- err
+				return
+			}
+
+			log.Debugf("Calculating %s md5", fileName)
+			md5, err := calculateMD5Sum(compressedPatchPath)
+			if err != nil {
+				errChan <- fmt.Errorf("archive %v; unable to calculate md5sum; %v", fileName, err)
+				return
+			}
+
+			// Compare whether downloaded file matches expected md5
+			if strings.Compare(md5, md5Expected) != 0 {
+				errChan <- fmt.Errorf("archive %v doesn't have matching md5; archive %v, expected %v", fileName, md5, md5Expected)
+				return
+			}
+
 			downloadedPatchChan <- fileName
 		}
 	}()
 	return downloadedPatchChan, errChan
+}
+
+// loadExpectedMd5 loads md5 of file at given url
+func loadExpectedMd5(patchMd5Url string) (string, error) {
+	var buf bytes.Buffer
+
+	writer := bufio.NewWriter(&buf)
+
+	err := getFileContentsStreamFromUrl(patchMd5Url, writer)
+	if err != nil {
+		return "", fmt.Errorf("unable to download %s; %v", patchMd5Url, err)
+	}
+
+	// Flush the buffered writer to ensure all data is written to the buffer
+	err = writer.Flush()
+	if err != nil {
+		return "", fmt.Errorf("flushing writer; %v", err)
+	}
+
+	// Get the written content as a string
+	md5Expected := buf.String()
+
+	// trimming whitespaces
+	return strings.TrimSpace(md5Expected), nil
 }
 
 // pushStringsToChannel used to pipe strings into channel
@@ -367,6 +416,23 @@ func downloadFile(filePath string, parentPath string, url string) error {
 	}
 	defer out.Close()
 
+	writer := bufio.NewWriter(out)
+
+	err = getFileContentsStreamFromUrl(url, writer)
+	if err != nil {
+		return err
+	}
+
+	err = writer.Flush()
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// getFileContentsStreamFromUrl retrieves file contents stream from file at given url address
+func getFileContentsStreamFromUrl(url string, out *bufio.Writer) error {
 	// Get the data
 	resp, err := http.Get(url)
 	if err != nil {
