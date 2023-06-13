@@ -142,13 +142,13 @@ def runAida (mode, evm, db, variant, schema, iteration)
     }
 
     res = []
-    out.scan(/Reached block (.*), last interval rate ~ (.*) Tx\/s, ~ (.*) Gas\/s/) { |block,tx_rate,gas_rate| res.append([block,tx_rate,gas_rate]) }
+    out.scan(/Reached block (.*) using ~ (.*) bytes of memory, ~ (.*) bytes of disk, last interval rate ~ (.*) Tx\/s, ~ (.*) Gas\/s/) { |block,mem_usage,disk_usage,tx_rate,gas_rate| res.append([block,tx_rate,gas_rate,mem_usage,disk_usage]) }
     return res
 end
 
-$res = ["mode, vm, db, variant, schema, iteration, interval_end, tx_rate, gas_rate"]
+$res = ["mode, vm, db, variant, schema, iteration, interval_end, tx_rate, gas_rate, mem_usage, disk_usage"]
 def addResult (mode, vm, db, variant, schema, iteration, rates)
-    rates.each{|block,tx_rate,gas_rate| $res.append("#{mode}, #{vm}, #{db}, #{variant}, #{schema}, #{iteration}, #{block}, #{tx_rate}, #{gas_rate}") }
+    rates.each{|block,tx_rate,gas_rate,mem_usage,disk_usage| $res.append("#{mode}, #{vm}, #{db}, #{variant}, #{schema}, #{iteration}, #{block}, #{tx_rate}, #{gas_rate}, #{mem_usage}, #{disk_usage}") }
     $res.each{ |l| puts "#{l}\n" }
 end
 
