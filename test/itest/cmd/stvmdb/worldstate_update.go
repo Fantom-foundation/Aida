@@ -35,6 +35,7 @@ func generateUpdateSet(first uint64, last uint64, cfg *config) (substate.Substat
 
 		// if this transaction has suicided accounts, clear their states.
 		if cfg.HasDeletedAccounts {
+			log.Printf("generateUpdateSet, tx.Block: %d, tx.Transaction: %d\n", tx.Block, tx.Transaction)
 			destroyed, resurrected, err := deletedAccountDB.GetDestroyedAccounts(tx.Block, tx.Transaction)
 
 			if !(err == nil || errors.Is(err, leveldb.ErrNotFound)) {

@@ -3,7 +3,7 @@ module github.com/Fantom-foundation/rc-testing
 go 1.19
 
 require (
-	github.com/Fantom-foundation/Substate v0.0.0-00010101000000-000000000000
+	github.com/Fantom-foundation/Substate v0.0.0-20230224090651-4c8c024214f4
 	github.com/Fantom-foundation/go-opera v1.1.1-rc.2
 	github.com/Fantom-foundation/go-opera-base v0.0.0-00010101000000-000000000000
 	github.com/Fantom-foundation/lachesis-base v0.0.0-20221208123620-82a6d15f995c
@@ -23,12 +23,14 @@ require (
 	github.com/deckarep/golang-set v1.8.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-stack/stack v1.8.1 // indirect
+	github.com/golang/mock v1.6.0 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect
 	github.com/holiman/bloomfilter/v2 v2.0.3 // indirect
 	github.com/holiman/uint256 v1.2.1 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
+	github.com/mattn/go-sqlite3 v1.11.0 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/tsdb v0.10.0 // indirect
@@ -45,7 +47,8 @@ require (
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 )
 
-replace github.com/ethereum/go-ethereum => github.com/Fantom-foundation/go-ethereum v1.10.8-ftm-rc11
+//replace github.com/ethereum/go-ethereum => github.com/Fantom-foundation/go-ethereum v1.10.8-ftm-rc11
+replace github.com/ethereum/go-ethereum => github.com/cyberbono3/go-ethereum-substate v1.1.1-0.20230310040339-50aac04770b2
 
 replace github.com/Fantom-foundation/go-opera-base => ./go-opera
 
