@@ -211,10 +211,7 @@ func LoadWorldStateAndPrime(db state.StateDB, cfg *config, target uint64) error 
 		return fmt.Errorf("the target block, %v, is earlier than the initial world state block, %v. The world state is not loaded.", target, blockPos)
 	}
 	// load pre-computed update-set from update-set db
-	udb, err := substate.OpenUpdateDBReadOnly(cfg.UpdateDb)
-	if err != nil {
-		return err
-	}
+	udb := substate.OpenUpdateDBReadOnly(cfg.UpdateDb)
 	defer udb.Close()
 	updateIter := substate.NewUpdateSetIterator(udb, blockPos, target)
 	update := make(substate.SubstateAlloc)

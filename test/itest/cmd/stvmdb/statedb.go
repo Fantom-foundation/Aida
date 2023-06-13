@@ -175,11 +175,9 @@ func DeleteDestroyedAccountsFromWorldState(ws substate.SubstateAlloc, cfg *confi
 		log.Warning("Database not provided. Ignore deleted accounts")
 		return nil
 	}
-	src, err := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
-	if err != nil {
-		return err
-	}
+	src := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
 	defer src.Close()
+	
 	list, err := src.GetAccountsDestroyedInRange(0, target)
 	if err != nil {
 		return err
@@ -201,12 +199,9 @@ func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *config, target ui
 		log.Warning("Database not provided. Ignore deleted accounts.")
 		return nil
 	}
-	src, err := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
-	if err != nil {
-		return err
-	}
-
+	src := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
 	defer src.Close()
+
 	accounts, err := src.GetAccountsDestroyedInRange(0, target)
 	if err != nil {
 		return err
