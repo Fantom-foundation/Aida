@@ -101,7 +101,7 @@ func RunVM(ctx *cli.Context) error {
 	}
 
 	// wrap stateDB for profiling
-	var stats *profile.ProfileStats
+	var stats *profile.Stats
 	if cfg.Profile {
 		db, stats = NewProxyProfiler(db, cfg.ProfileFile)
 	}

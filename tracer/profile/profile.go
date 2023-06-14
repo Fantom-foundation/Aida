@@ -9,8 +9,8 @@ import (
 	"time"
 )
 
-// ProfileStats data structure contains statedb operation statistics.
-type ProfileStats struct {
+// Stats data structure contains statedb operation statistics.
+type Stats struct {
 	opFrequency   map[byte]uint64        // operation frequency stats
 	opDuration    map[byte]time.Duration // accumulated operation duration
 	opMinDuration map[byte]time.Duration // min runtime observerd
@@ -23,8 +23,8 @@ type ProfileStats struct {
 	hasHeader     bool                   // if write to a file, header prints once
 }
 
-func NewProfileStats(filename string) *ProfileStats {
-	ps := new(ProfileStats)
+func NewStats(filename string) *Stats {
+	ps := new(Stats)
 	ps.Reset()
 	ps.opOrder = make([]byte, 1)
 	ps.csv = filename
@@ -35,7 +35,7 @@ func NewProfileStats(filename string) *ProfileStats {
 }
 
 // Reset clears content in stats arrays
-func (ps *ProfileStats) Reset() {
+func (ps *Stats) Reset() {
 	ps.opFrequency = make(map[byte]uint64)
 	ps.opDuration = make(map[byte]time.Duration)
 	ps.opMinDuration = make(map[byte]time.Duration)
@@ -45,7 +45,7 @@ func (ps *ProfileStats) Reset() {
 
 // Profiling records runtime and calculates statistics after
 // executing a state operation.
-func (ps *ProfileStats) Profile(id byte, elapsed time.Duration) {
+func (ps *Stats) Profile(id byte, elapsed time.Duration) {
 	n := ps.opFrequency[id]
 	duration := ps.opDuration[id]
 	// update min/max values
@@ -82,7 +82,7 @@ func (ps *ProfileStats) Profile(id byte, elapsed time.Duration) {
 	ps.opDuration[id] = newDuration
 }
 
-func (ps *ProfileStats) FillLabels(labels map[byte]string) {
+func (ps *Stats) FillLabels(labels map[byte]string) {
 	ps.opLabel = labels
 	ps.opOrder = make([]byte, 0, len(ps.opLabel))
 	for k := range ps.opLabel {
@@ -92,7 +92,7 @@ func (ps *ProfileStats) FillLabels(labels map[byte]string) {
 }
 
 // PrintProfiling prints profiling information for executed operation.
-func (ps *ProfileStats) PrintProfiling(first uint64, last uint64) error {
+func (ps *Stats) PrintProfiling(first uint64, last uint64) error {
 	var (
 		builder strings.Builder
 	)
@@ -127,7 +127,7 @@ func (ps *ProfileStats) PrintProfiling(first uint64, last uint64) error {
 }
 
 // writeCsv writes stats to a file
-func (ps *ProfileStats) writeCsv(builder strings.Builder) error {
+func (ps *Stats) writeCsv(builder strings.Builder) error {
 	file, err := os.OpenFile(ps.csv, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return fmt.Errorf("unable to print profiling; %v", err)

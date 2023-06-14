@@ -16,15 +16,15 @@ import (
 // ProxyProfiler data structure for capturing and recording
 // invoked StateDB operations.
 type ProxyProfiler struct {
-	db state.StateDB         // state db
-	ps *profile.ProfileStats // operation statistics
+	db state.StateDB  // state db
+	ps *profile.Stats // operation statistics
 }
 
 // NewProxyProfiler creates a new StateDB proxy.
-func NewProxyProfiler(db state.StateDB, csv string) (*ProxyProfiler, *profile.ProfileStats) {
+func NewProxyProfiler(db state.StateDB, csv string) (*ProxyProfiler, *profile.Stats) {
 	p := new(ProxyProfiler)
 	p.db = db
-	p.ps = profile.NewProfileStats(csv)
+	p.ps = profile.NewStats(csv)
 	p.ps.FillLabels(operation.CreateIdLabelMap())
 	return p, p.ps
 }

@@ -34,7 +34,7 @@ type Replay struct {
 	Context
 	snapshot *SnapshotIndex // snapshot translation table for replay
 	Profile  bool           // collect stats
-	Stats    *profile.ProfileStats
+	Stats    *profile.Stats
 }
 
 // NewContext creates a new replay context.
@@ -48,7 +48,7 @@ func NewReplay() *Replay {
 
 func (ctx *Replay) EnableProfiling(csv string) {
 	ctx.Profile = true
-	ctx.Stats = profile.NewProfileStats(csv)
+	ctx.Stats = profile.NewStats(csv)
 }
 
 // NewContext creates a new record context.
