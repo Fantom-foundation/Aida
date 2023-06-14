@@ -688,21 +688,17 @@ func (m *aidaMetadata) checkUpdateMetadata(isNewDb bool, cfg *utils.Config, patc
 	}
 
 	if !isNewDb {
+		// if we are updating existing AidaDb and this Db does not have metadata, we go through substate to find
+		// blocks and epochs, chainID is set from user via chain-id flag and db type in this case will always be genType
 		if err = m.getMetadata(); err != nil {
 			// if metadata are not found, but we have an existingDb, we go through substate to find it
 			if strings.Contains(err.Error(), "leveldb: not found") {
 				MustCloseDB(m.db)
-				if cfg.ChainID == 0 {
-					return 0, 0, fmt.Errorf("since you have db without metadata you need to specify chain-id (--%v) of your aida-db", utils.ChainIDFlag.Name)
-				}
 
-				if err = m.setChainID(cfg.ChainID); err != nil {
+				if err = m.setFreshUpdateMetadata(cfg.AidaDb, cfg.ChainID); err != nil {
 					return 0, 0, err
 				}
 
-				if err = m.findMetadataInSubstate(cfg.AidaDb); err != nil {
-					return 0, 0, err
-				}
 			} else {
 				return 0, 0, err
 			}
@@ -729,6 +725,36 @@ func (m *aidaMetadata) checkUpdateMetadata(isNewDb bool, cfg *utils.Config, patc
 	}
 
 	return firstBlock, firstEpoch, nil
+}
+
+// setFreshUpdateMetadata for an existing AidaDb without metadata
+func (m *aidaMetadata) setFreshUpdateMetadata(pathToAidaDb string, chainID int) error {
+	var err error
+
+	if chainID == 0 {
+		return fmt.Errorf("since you have AidaDb without metadata you need to specify chain-id (--%v) of your aida-db", utils.ChainIDFlag.Name)
+	}
+
+	// ChainID is set by user in
+	if err = m.setChainID(chainID); err != nil {
+		return err
+	}
+
+	// go through substate to find block and epoch numbers
+	if err = m.findMetadataInSubstate(pathToAidaDb); err != nil {
+		return err
+	}
+
+	if err = m.setTimestamp(); err != nil {
+		return err
+	}
+
+	// updated AidaDb with patches will always be genType
+	if err = m.setDbType(genType); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // findEpochNumber via RPC request getBlockByNumber
