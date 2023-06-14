@@ -234,7 +234,7 @@ func RunVM(ctx *cli.Context) error {
 			if cfg.Profile {
 				if tx.Block >= lastProfileBlock+cfg.ProfileInterval {
 					// print stats
-					if err := stats.PrintProfiling(lastProfileBlock, tx.Block); err != nil {
+					if err := stats.PrintProfiling(lastProfileBlock, lastProfileBlock+cfg.ProfileInterval); err != nil {
 						return err
 					}
 					// reset
