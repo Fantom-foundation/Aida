@@ -45,7 +45,6 @@ const (
 	genType
 	patchType
 	cloneType
-	updateType
 )
 
 const (
@@ -57,6 +56,18 @@ const (
 	ChainIDPrefix    = substate.MetadataPrefix + "ci"
 	TimestampPrefix  = substate.MetadataPrefix + "ti"
 )
+
+const (
+	RPCMainnet = "https://rpcapi.fantom.network"
+	RPCTestnet = "https://rpc.testnet.fantom.network/"
+)
+
+type jsonRPCRequest struct {
+	Method  string        `json:"method"`
+	Params  []interface{} `json:"params"`
+	ID      uint64        `json:"id"`
+	JSONRPC string        `json:"jsonrpc"`
+}
 
 // merge is determined by what are we merging
 // genType + cloneType / cloneType + cloneType / = NOT POSSIBLE
@@ -518,6 +529,8 @@ func (m *aidaMetadata) setChainID(chainID int) error {
 		return fmt.Errorf("cannot put chain-id; %v", err)
 	}
 
+	m.chainId = chainID
+
 	m.log.Info("METADATA: ChainID saved successfully")
 
 	return nil
@@ -587,6 +600,7 @@ func (m *aidaMetadata) setAllMetadata(firstBlock uint64, lastBlock uint64, first
 
 // findMetadataInSubstate iterates over substate to find first and last block of AidaDb
 func (m *aidaMetadata) findMetadataInSubstate(aidaDbPath string) error {
+
 	m.log.Notice("Iterating through substate to find first and last block and epoch")
 
 	substate.SetSubstateDb(aidaDbPath)
@@ -598,19 +612,26 @@ func (m *aidaMetadata) findMetadataInSubstate(aidaDbPath string) error {
 	defer iter.Release()
 
 	// start with writing first block
-	iter.Next()
-	m.firstBlock = iter.Value().Block
+	if iter.Next() {
+		m.firstBlock = iter.Value().Block
+	} else {
+		m.log.Critical("")
+	}
 
+	m.log.Noticef("Found first block #%v", m.firstBlock)
+
+	var iterLastBlock uint64
 	for iter.Next() {
-		m.log.Debugf("Block #%v", iter.Value().Block)
+		iterLastBlock = iter.Value().Block
+
+		m.log.Debugf("Block #%v", iterLastBlock)
 		if iter.Value().Block%1_000_000 == 0 {
-			m.log.Info("Block #%v", iter.Value().Block)
+			m.log.Info("Block #%v", iterLastBlock)
 		}
 	}
 
-	m.lastBlock = iter.Value().Block
-
-	m.log.Noticef("Found last block #v%; patching now continues", m.lastBlock)
+	m.lastBlock = iterLastBlock
+	m.log.Noticef("Found last block #%v", m.lastBlock)
 
 	if err := m.findEpochs(); err != nil {
 		return err
@@ -621,63 +642,35 @@ func (m *aidaMetadata) findMetadataInSubstate(aidaDbPath string) error {
 
 // findEpochs for block range in metadata
 func (m *aidaMetadata) findEpochs() error {
-	var err error
+	var (
+		err error
+		url string
+	)
 
-	if err = m.findFirstEpoch(); err != nil {
-		return err
+	if m.chainId == 250 {
+		url = RPCMainnet
+
+	} else if m.chainId == 4002 {
+		url = RPCTestnet
 	}
 
-	if err = m.findLastEpoch(); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// findFirstEpoch from block number
-func (m *aidaMetadata) findFirstEpoch() error {
-	firstEpoch, err := findEpochNumber(m.firstBlock)
+	firstEpoch, err := findEpochNumber(m.firstBlock, url)
 	if err != nil {
 		return err
-	}
-
-	firstEpochMinus, err := findEpochNumber(m.firstEpoch - 1)
-	if err != nil {
-		return err
-	}
-
-	// epochs must be of by one, otherwise given block does not end the epoch
-	if firstEpoch-1 != firstEpochMinus {
-		return fmt.Errorf("expected first epoch %v does not align with epoch minus one %v", firstEpoch, firstEpochMinus)
 	}
 
 	m.firstEpoch = firstEpoch
 
-	m.log.Noticef("Found first epoch #v%; patching now continues", m.firstEpoch)
+	m.log.Noticef("Found first epoch #%v", m.firstEpoch)
 
-	return nil
-}
-
-// findLastEpoch from block number
-func (m *aidaMetadata) findLastEpoch() error {
-	lastEpoch, err := findEpochNumber(m.firstBlock)
+	lastEpoch, err := findEpochNumber(m.lastBlock, url)
 	if err != nil {
 		return err
-	}
-
-	lastEpochPlus, err := findEpochNumber(m.firstEpoch + 1)
-	if err != nil {
-		return err
-	}
-
-	// epochs must be of by one, otherwise given block does not end the epoch
-	if lastEpoch+1 != lastEpochPlus {
-		return fmt.Errorf("expected last epoch %v does not align with epoch plus one %v", lastEpoch, lastEpochPlus)
 	}
 
 	m.lastEpoch = lastEpoch
 
-	m.log.Noticef("Found last epoch #v%; patching now continues", m.lastEpoch)
+	m.log.Noticef("Found last epoch #%v; patching now continues", m.lastEpoch)
 
 	return nil
 }
@@ -698,6 +691,15 @@ func (m *aidaMetadata) checkUpdateMetadata(isNewDb bool, cfg *utils.Config, patc
 		if err = m.getMetadata(); err != nil {
 			// if metadata are not found, but we have an existingDb, we go through substate to find it
 			if strings.Contains(err.Error(), "leveldb: not found") {
+				MustCloseDB(m.db)
+				if cfg.ChainID == 0 {
+					return 0, 0, fmt.Errorf("since you have db without metadata you need to specify chain-id (--%v) of your aida-db", utils.ChainIDFlag.Name)
+				}
+
+				if err = m.setChainID(cfg.ChainID); err != nil {
+					return 0, 0, err
+				}
+
 				if err = m.findMetadataInSubstate(cfg.AidaDb); err != nil {
 					return 0, 0, err
 				}
@@ -729,38 +731,48 @@ func (m *aidaMetadata) checkUpdateMetadata(isNewDb bool, cfg *utils.Config, patc
 	return firstBlock, firstEpoch, nil
 }
 
-const getBlockByNumberReq = `{
-	"jsonrpc":"2.0",
-	"method":"ftm_getBlockByNumber",
-	"params":["%v", false],   "id":0
-}`
-
-const RPCGatewayURL = "https://rpcapi.fantom.network"
-
 // findEpochNumber via RPC request getBlockByNumber
-func findEpochNumber(blockNumber uint64) (uint64, error) {
+func findEpochNumber(blockNumber uint64, url string) (uint64, error) {
 	hex := strconv.FormatUint(blockNumber, 16)
-	req := fmt.Sprintf(getBlockByNumberReq, hex)
 
-	// first find firstEpoch
-	jsonReq, err := json.Marshal(req)
+	payload := jsonRPCRequest{
+		Method:  "ftm_getBlockByNumber",
+		Params:  []interface{}{"0x" + hex, false},
+		ID:      1,
+		JSONRPC: "2.0",
+	}
+
+	jsonReq, err := json.Marshal(payload)
 	if err != nil {
 		return 0, fmt.Errorf("cannot marshal req with first block; %v", err)
 	}
 
-	resp, err := http.Post(RPCGatewayURL, "application/json", bytes.NewBuffer(jsonReq))
+	//resp, err := http.Post(RPCMainnet, "application/json", bytes.NewBuffer(jsonReq))
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonReq))
 	if err != nil {
-		return 0, fmt.Errorf("cannot send req with first block; %v", err)
-	}
-	respMap := make(map[string]interface{})
-
-	if err = json.NewDecoder(resp.Body).Decode(&respMap); err != nil {
 		return 0, err
 	}
 
-	firstEpochHex, ok := respMap["epoch"].(string)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	m := make(map[string]interface{})
+
+	if err = json.NewDecoder(resp.Body).Decode(&m); err != nil {
+		return 0, err
+	}
+
+	resultMap, ok := m["result"].(map[string]interface{})
 	if !ok {
-		return 0, fmt.Errorf("cannot find first epoch in resp: %v", resp)
+		return 0, fmt.Errorf("unexpecetd answer: %v", req)
+	}
+
+	firstEpochHex, ok := resultMap["epoch"].(string)
+	if !ok {
+		return 0, fmt.Errorf("cannot find epoch in result: %v", resultMap)
 	}
 
 	epoch, ok := math.ParseUint64(firstEpochHex)
