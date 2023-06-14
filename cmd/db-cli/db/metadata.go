@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -601,6 +602,7 @@ func (m *aidaMetadata) setAllMetadata(firstBlock uint64, lastBlock uint64, first
 // findMetadataInSubstate iterates over substate to find first and last block of AidaDb
 func (m *aidaMetadata) findMetadataInSubstate(aidaDbPath string) error {
 
+	// todo remove after matejs changes
 	m.log.Notice("Iterating through substate to find first and last block and epoch")
 
 	substate.SetSubstateDb(aidaDbPath)
@@ -615,7 +617,7 @@ func (m *aidaMetadata) findMetadataInSubstate(aidaDbPath string) error {
 	if iter.Next() {
 		m.firstBlock = iter.Value().Block
 	} else {
-		m.log.Critical("")
+		return errors.New("no substate in aida-db")
 	}
 
 	m.log.Noticef("Found first block #%v", m.firstBlock)
@@ -632,10 +634,6 @@ func (m *aidaMetadata) findMetadataInSubstate(aidaDbPath string) error {
 
 	m.lastBlock = iterLastBlock
 	m.log.Noticef("Found last block #%v", m.lastBlock)
-
-	if err := m.findEpochs(); err != nil {
-		return err
-	}
 
 	return nil
 }
@@ -695,7 +693,7 @@ func (m *aidaMetadata) checkUpdateMetadata(isNewDb bool, cfg *utils.Config, patc
 			if strings.Contains(err.Error(), "leveldb: not found") {
 				MustCloseDB(m.db)
 
-				if err = m.setFreshUpdateMetadata(cfg.AidaDb, cfg.ChainID); err != nil {
+				if err = m.setFreshUpdateMetadata(cfg.ChainID); err != nil {
 					return 0, 0, err
 				}
 
@@ -728,7 +726,7 @@ func (m *aidaMetadata) checkUpdateMetadata(isNewDb bool, cfg *utils.Config, patc
 }
 
 // setFreshUpdateMetadata for an existing AidaDb without metadata
-func (m *aidaMetadata) setFreshUpdateMetadata(pathToAidaDb string, chainID int) error {
+func (m *aidaMetadata) setFreshUpdateMetadata(chainID int) error {
 	var err error
 
 	if chainID == 0 {
@@ -740,8 +738,7 @@ func (m *aidaMetadata) setFreshUpdateMetadata(pathToAidaDb string, chainID int) 
 		return err
 	}
 
-	// go through substate to find block and epoch numbers
-	if err = m.findMetadataInSubstate(pathToAidaDb); err != nil {
+	if err = m.findEpochs(); err != nil {
 		return err
 	}
 
@@ -807,4 +804,29 @@ func findEpochNumber(blockNumber uint64, url string) (uint64, error) {
 	}
 
 	return epoch, nil
+}
+
+// findBlockRangeInSubstate if AidaDb does not yet have metadata
+func (m *aidaMetadata) findBlockRangeInSubstate(pathToAidaDb string) error {
+	substate.SetSubstateDb(pathToAidaDb)
+	substate.OpenSubstateDBReadOnly()
+
+	// todo how many workers?
+	iter := substate.NewSubstateIterator(0, substate.WorkersFlag.Value)
+
+	defer iter.Release()
+
+	// start with writing first block
+	if iter.Next() {
+		m.firstBlock = iter.Value().Block
+	} else {
+		return errors.New("no substate in AidaDb")
+	}
+
+	for iter.Next() {
+		// todo algorithm
+		m.lastBlock = 0
+	}
+
+	return nil
 }

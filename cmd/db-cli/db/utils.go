@@ -12,7 +12,6 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/Fantom-foundation/lachesis-base/common/bigendian"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/op/go-logging"
@@ -200,15 +199,6 @@ func stopDaemonOpera(log *logging.Logger) error {
 		return fmt.Errorf("unable stop opera; %v", err.Error())
 	}
 	return nil
-}
-
-// getLastBlock retrieve last block from aida-db aidaMetadata
-func getLastBlock(aidaDb ethdb.Database) (uint64, error) {
-	lastBlockBytes, err := aidaDb.Get([]byte(LastBlockPrefix))
-	if err != nil {
-		return 0, fmt.Errorf("cannot get last block from db; %v", err)
-	}
-	return bigendian.BytesToUint64(lastBlockBytes), nil
 }
 
 // startOperaPruning prunes opera in parallel

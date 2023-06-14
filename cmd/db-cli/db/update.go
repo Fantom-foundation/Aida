@@ -59,27 +59,26 @@ func Update(cfg *utils.Config) error {
 
 	var startDownloadFromBlock uint64
 
+	// aida-db already exists appending only new patches
+	// open targetDB
+	targetDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
+	if err != nil {
+		return fmt.Errorf("can't open targetDb; %v", err)
+	}
+
+	targetMD := newAidaMetadata(targetDb, cfg.LogLevel)
+
 	// load stats of current aida-db to download just latest patches
-	_, err := os.Stat(cfg.AidaDb)
+	_, err = os.Stat(cfg.AidaDb)
 	if os.IsNotExist(err) {
 		// aida-db does not exist, download all available patches
 		startDownloadFromBlock = 0
 	} else {
-		// aida-db already exists appending only new patches
-		// open targetDB
-		aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", true)
-		if err != nil {
-			return fmt.Errorf("can't open targetDb; %v", err)
-		}
-
 		// load last block from existing aida-db metadata
-		startDownloadFromBlock, err = getLastBlock(aidaDb)
-		if err != nil {
-			return fmt.Errorf("getLastBlock; %v", err)
+		if err = targetMD.findBlockRangeInSubstate(cfg.AidaDb); err != nil {
+			return err
 		}
-
-		// close target database
-		MustCloseDB(aidaDb)
+		startDownloadFromBlock = targetMD.lastBlock
 	}
 
 	// retrieve available patches from aida-db generation server
@@ -102,7 +101,7 @@ func Update(cfg *utils.Config) error {
 	log.Noticef("Downloading Aida-db - %d new patches", len(patches))
 
 	// we need to know whether Db is new for metadata
-	err = patchesDownloader(cfg, patches, startDownloadFromBlock == 0)
+	err = patchesDownloader(cfg, patches, targetMD, startDownloadFromBlock == 0)
 	if err != nil {
 		return err
 	}
@@ -113,7 +112,7 @@ func Update(cfg *utils.Config) error {
 }
 
 // patchesDownloader processes patch names to download then download them in pipelined process
-func patchesDownloader(cfg *utils.Config, patches []string, isNewDb bool) error {
+func patchesDownloader(cfg *utils.Config, patches []string, targetMD *aidaMetadata, isNewDb bool) error {
 	// create channel to push patch labels trough channel
 	patchesChan := pushStringsToChannel(patches)
 
@@ -124,7 +123,7 @@ func patchesDownloader(cfg *utils.Config, patches []string, isNewDb bool) error 
 	decompressedPatchChan, errDecompressChan := decompressPatch(cfg, downloadedPatchChan, errChan)
 
 	// merge decompressed patches
-	err := mergePatch(cfg, decompressedPatchChan, errDecompressChan, isNewDb)
+	err := mergePatch(cfg, decompressedPatchChan, errDecompressChan, targetMD, isNewDb)
 	if err != nil {
 		return err
 	}
@@ -133,7 +132,7 @@ func patchesDownloader(cfg *utils.Config, patches []string, isNewDb bool) error 
 }
 
 // mergePatch takes decompressed patches and merges them into aida-db
-func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan error, isNewDb bool) error {
+func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan error, targetMD *aidaMetadata, isNewDb bool) error {
 	for {
 		select {
 		case err, ok := <-errChan:
@@ -148,18 +147,14 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 					return nil
 				}
 				// merge newly extracted patch
-				// open targetDb
-				targetDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
-				if err != nil {
-					return fmt.Errorf("cannot open targetDb; %v", err)
-				}
+
+				targetDb := targetMD.db
 
 				patchDb, err := rawdb.NewLevelDBDatabase(extractedPatchPath, 1024, 100, "profiling", false)
 				if err != nil {
 					return fmt.Errorf("cannot open targetDb; %v", err)
 				}
 
-				targetMD := newAidaMetadata(targetDb, cfg.LogLevel)
 				patchMD := newAidaMetadata(patchDb, cfg.LogLevel)
 
 				firstBlock, firstEpoch, err := targetMD.checkUpdateMetadata(isNewDb, cfg, patchMD)
