@@ -13,7 +13,7 @@ import (
 // InsertMetadataCommand is a generic command for inserting any key/value pair into AidaDb
 var InsertMetadataCommand = cli.Command{
 	Action: insertMetadata,
-	Name:   "insertMetadata",
+	Name:   "insert-metadata",
 	Usage:  "inserts key/value metadata pair into AidaDb",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
@@ -29,17 +29,17 @@ If given key is not metadata-key, operation fails.
 func insertMetadata(ctx *cli.Context) error {
 	var (
 		err error
-		u   uint64
+		val uint64
 	)
 
 	aidaDbPath := ctx.String(utils.AidaDbFlag.Name)
 
 	if ctx.Args().Len() != 2 {
-		return fmt.Errorf("this command requires two arguments - <key> <value>")
+		return fmt.Errorf("this command requires two arguments - <keyArg> <value>")
 	}
 
-	key := ctx.Args().Get(0)
-	val := ctx.Args().Get(1)
+	keyArg := ctx.Args().Get(0)
+	valArg := ctx.Args().Get(1)
 
 	// open db
 	aidaDb, err := rawdb.NewLevelDBDatabase(aidaDbPath, 1024, 100, "profiling", false)
@@ -49,47 +49,59 @@ func insertMetadata(ctx *cli.Context) error {
 
 	defer MustCloseDB(aidaDb)
 
-	m := newAidaMetadata(aidaDb, "INFO")
+	md := newAidaMetadata(aidaDb, "INFO")
 
-	switch substate.MetadataPrefix + key {
+	switch substate.MetadataPrefix + keyArg {
 	case FirstBlockPrefix:
-		u, err = strconv.ParseUint(val, 10, 64)
+		val, err = strconv.ParseUint(valArg, 10, 64)
 		if err != nil {
-			return fmt.Errorf("cannot parse uint %v; %v", val, err)
+			return fmt.Errorf("cannot parse uint %v; %v", valArg, err)
 		}
-		m.setFirstBlock(u)
+		if err = md.setFirstBlock(val); err != nil {
+			return err
+		}
 	case LastBlockPrefix:
-		u, err = strconv.ParseUint(val, 10, 64)
+		val, err = strconv.ParseUint(valArg, 10, 64)
 		if err != nil {
-			return fmt.Errorf("cannot parse uint %v; %v", val, err)
+			return fmt.Errorf("cannot parse uint %v; %v", valArg, err)
 		}
-		m.setLastBlock(u)
+		if err = md.setLastBlock(val); err != nil {
+			return err
+		}
 	case FirstEpochPrefix:
-		u, err = strconv.ParseUint(val, 10, 64)
+		val, err = strconv.ParseUint(valArg, 10, 64)
 		if err != nil {
-			return fmt.Errorf("cannot parse uint %v; %v", val, err)
+			return fmt.Errorf("cannot parse uint %v; %v", valArg, err)
 		}
-		m.setFirstEpoch(u)
+		if err = md.setFirstEpoch(val); err != nil {
+			return err
+		}
 	case LastEpochPrefix:
-		u, err = strconv.ParseUint(val, 10, 64)
+		val, err = strconv.ParseUint(valArg, 10, 64)
 		if err != nil {
-			return fmt.Errorf("cannot parse uint %v; %v", val, err)
+			return fmt.Errorf("cannot parse uint %v; %v", valArg, err)
 		}
-		m.setLastEpoch(u)
+		if err = md.setLastEpoch(val); err != nil {
+			return err
+		}
 	case TypePrefix:
-		num, err := strconv.Atoi(val)
+		num, err := strconv.Atoi(valArg)
 		if err != nil {
 			return err
 		}
-		m.setDbType(aidaDbType(num))
-	case ChainIDPrefix:
-		u, err = strconv.ParseUint(val, 10, 16)
-		if err != nil {
-			return fmt.Errorf("cannot parse uint %v; %v", val, err)
+		if err = md.setDbType(aidaDbType(num)); err != nil {
+			return err
 		}
-		m.setChainID(int(u))
+	case ChainIDPrefix:
+		val, err = strconv.ParseUint(valArg, 10, 16)
+		if err != nil {
+			return fmt.Errorf("cannot parse uint %v; %v", valArg, err)
+		}
+		if err = md.setChainID(int(val)); err != nil {
+			return err
+		}
 	default:
-		return fmt.Errorf("incorrect key: %v", key)
+		return fmt.Errorf("incorrect keyArg: %v", keyArg)
 	}
 
 	return nil

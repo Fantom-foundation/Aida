@@ -54,36 +54,40 @@ func printMetadata(cfg *utils.Config) error {
 
 	defer MustCloseDB(aidaDb)
 
-	m := newAidaMetadata(aidaDb, "INFO")
+	md := newAidaMetadata(aidaDb, "INFO")
 
-	m.log.Notice("AIDA-DB INFO:")
+	md.log.Notice("AIDA-DB INFO:")
 
-	if err = printDbType(m); err != nil {
+	if err = printDbType(md); err != nil {
 		return err
 	}
 
 	// CHAINID
-	chainID, err := m.getChainID()
-	m.log.Infof("Chain-ID: %v", chainID)
+	chainID, err := md.getChainID()
+	md.log.Infof("Chain-ID: %v", chainID)
 
 	// BLOCKS
-	firstBlock, err := m.getFirstBlock()
-	m.log.Infof("First Block: %v", firstBlock)
-	lastBlock, err := m.getLastBlock()
-	m.log.Infof("Last Block: %v", lastBlock)
+	firstBlock, err := md.getFirstBlock()
+	md.log.Infof("First Block: %v", firstBlock)
+	lastBlock, err := md.getLastBlock()
+	md.log.Infof("Last Block: %v", lastBlock)
 
 	// EPOCHS
-	firstEpoch, err := m.getFirstEpoch()
-	m.log.Infof("First Epoch: %v", firstEpoch)
-	lastEpoch, err := m.getLastEpoch()
-	m.log.Infof("Last Epoch: %v", lastEpoch)
+	firstEpoch, err := md.getFirstEpoch()
+	md.log.Infof("First Epoch: %v", firstEpoch)
+	lastEpoch, err := md.getLastEpoch()
+	md.log.Infof("Last Epoch: %v", lastEpoch)
 
 	// TIMESTAMP
-	timestamp, err := m.getTimestamp()
-	m.log.Infof("Created: %v", time.Unix(int64(timestamp), 0))
+	timestamp, err := md.getTimestamp()
+	if err != nil {
+		return err
+	}
+
+	md.log.Infof("Created: %v", time.Unix(int64(timestamp), 0))
 
 	// UPDATE-SET
-	if err = printUpdateSetInfo(m); err != nil {
+	if err = printUpdateSetInfo(md); err != nil {
 		return err
 	}
 
@@ -180,7 +184,7 @@ var cmdCountSubstate = cli.Command{
 // printAllCount counts all prefixes prints number of occurrences.
 // If DetailedFlag is called, then it prints count of each prefix
 func printAllCount(ctx *cli.Context) error {
-	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-InfoCommand")
+	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-Info")
 
 	cfg, argErr := utils.NewConfig(ctx, utils.NoArgs)
 	if argErr != nil {

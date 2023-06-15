@@ -113,35 +113,35 @@ func processPatchLikeMetadata(aidaDb ethdb.Database, logLevel string, firstBlock
 		dbType = patchType
 	}
 
-	m := newAidaMetadata(aidaDb, logLevel)
+	md := newAidaMetadata(aidaDb, logLevel)
 
-	if err = m.setFirstBlock(firstBlock); err != nil {
+	if err = md.setFirstBlock(firstBlock); err != nil {
 		return err
 	}
-	if err = m.setLastBlock(lastBlock); err != nil {
-		return err
-	}
-
-	if err = m.setFirstEpoch(firstEpoch); err != nil {
-		return err
-	}
-	if err = m.setLastEpoch(lastEpoch); err != nil {
+	if err = md.setLastBlock(lastBlock); err != nil {
 		return err
 	}
 
-	if err = m.setChainID(chainID); err != nil {
+	if err = md.setFirstEpoch(firstEpoch); err != nil {
+		return err
+	}
+	if err = md.setLastEpoch(lastEpoch); err != nil {
 		return err
 	}
 
-	if err = m.setDbType(dbType); err != nil {
+	if err = md.setChainID(chainID); err != nil {
 		return err
 	}
 
-	if err = m.setTimestamp(); err != nil {
+	if err = md.setDbType(dbType); err != nil {
 		return err
 	}
 
-	m.log.Notice("Metadata added successfully")
+	if err = md.setTimestamp(); err != nil {
+		return err
+	}
+
+	md.log.Notice("Metadata added successfully")
 
 	return nil
 }
@@ -151,33 +151,33 @@ func processPatchLikeMetadata(aidaDb ethdb.Database, logLevel string, firstBlock
 func processCloneLikeMetadata(aidaDb ethdb.Database, logLevel string, firstBlock, lastBlock uint64, chainID int) error {
 	var err error
 
-	m := newAidaMetadata(aidaDb, logLevel)
+	md := newAidaMetadata(aidaDb, logLevel)
 
-	firstBlock, lastBlock, err = m.compareBlocks(firstBlock, lastBlock)
+	firstBlock, lastBlock, err = md.compareBlocks(firstBlock, lastBlock)
 	if err != nil {
 		return err
 	}
 
-	if err = m.setFirstBlock(firstBlock); err != nil {
+	if err = md.setFirstBlock(firstBlock); err != nil {
 		return err
 	}
-	if err = m.setLastBlock(lastBlock); err != nil {
-		return err
-	}
-
-	if err = m.setChainID(chainID); err != nil {
+	if err = md.setLastBlock(lastBlock); err != nil {
 		return err
 	}
 
-	if err = m.setDbType(cloneType); err != nil {
+	if err = md.setChainID(chainID); err != nil {
 		return err
 	}
 
-	if err = m.setTimestamp(); err != nil {
+	if err = md.setDbType(cloneType); err != nil {
 		return err
 	}
 
-	m.log.Notice("Metadata added successfully")
+	if err = md.setTimestamp(); err != nil {
+		return err
+	}
+
+	md.log.Notice("Metadata added successfully")
 	return nil
 }
 
@@ -189,8 +189,8 @@ func processGenLikeMetadata(pathToAidaDb string, firstBlock uint64, lastBlock ui
 
 	defer MustCloseDB(aidaDb)
 
-	m := newAidaMetadata(aidaDb, logLevel)
-	return m.genMetadata(firstBlock, lastBlock, firstEpoch, lastEpoch, chainID)
+	md := newAidaMetadata(aidaDb, logLevel)
+	return md.genMetadata(firstBlock, lastBlock, firstEpoch, lastEpoch, chainID)
 }
 
 // genMetadata inserts metadata into newly generated AidaDb.
@@ -249,8 +249,8 @@ func processMergeMetadata(aidaDb ethdb.Database, sourceDbs []ethdb.Database, log
 	)
 
 	for _, db := range sourceDbs {
-		m := newAidaMetadata(db, logLevel)
-		if err = m.getMetadata(); err != nil {
+		md := newAidaMetadata(db, logLevel)
+		if err = md.getMetadata(); err != nil {
 			return err
 		}
 
@@ -258,23 +258,23 @@ func processMergeMetadata(aidaDb ethdb.Database, sourceDbs []ethdb.Database, log
 
 		// get chainID of first merged db
 		if chainID == 0 {
-			chainID = m.chainId
+			chainID = md.chainId
 		}
 
 		// if chain ids doesn't match, we should not be merging
-		if m.chainId != chainID {
-			m.log.Critical("ChainIDs in Dbs metadata does not match!")
+		if md.chainId != chainID {
+			md.log.Critical("ChainIDs in Dbs metadata does not match!")
 		}
 
-		if m.firstBlock < firstBlock || firstBlock == 0 {
-			firstBlock = m.firstEpoch
+		if md.firstBlock < firstBlock || firstBlock == 0 {
+			firstBlock = md.firstEpoch
 		}
 
-		if m.lastEpoch > lastBlock || lastBlock == 0 {
-			lastBlock = m.lastBlock
+		if md.lastEpoch > lastBlock || lastBlock == 0 {
+			lastBlock = md.lastBlock
 		}
 
-		t = m.dbType
+		t = md.dbType
 		if t == cloneType {
 			dbType = t
 		} else if t == genType && dbType != cloneType {
@@ -283,9 +283,9 @@ func processMergeMetadata(aidaDb ethdb.Database, sourceDbs []ethdb.Database, log
 
 	}
 
-	aidaDbMetadata := newAidaMetadata(aidaDb, logLevel)
+	md := newAidaMetadata(aidaDb, logLevel)
 
-	return aidaDbMetadata.setAllMetadata(firstBlock, lastBlock, firstEpoch, lastEpoch, chainID, dbType)
+	return md.setAllMetadata(firstBlock, lastBlock, firstEpoch, lastEpoch, chainID, dbType)
 }
 
 // getMetadata from given db and save it
