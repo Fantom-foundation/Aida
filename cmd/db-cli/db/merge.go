@@ -81,7 +81,12 @@ func merge(ctx *cli.Context) error {
 
 	m := newMerger(cfg, targetDb, dbs, sourcePaths)
 
-	defer m.closeDbs()
+	defer m.closeSourceDbs()
+	defer func() {
+		if err := m.targetDb.Close(); err != nil {
+			m.log.Warningf("cannot close targetDb; %v", err)
+		}
+	}()
 
 	if err = m.merge(); err != nil {
 		return err
@@ -203,15 +208,11 @@ func (m *merger) copyData(sourceDb ethdb.Database) (uint64, error) {
 	return written, nil
 }
 
-// closeDbs (targetDb and sourceDbs) given to merger
-func (m *merger) closeDbs() {
+// closeSourceDbs (sourceDbs) given to merger
+func (m *merger) closeSourceDbs() {
 	for i, db := range m.sourceDbs {
 		if err := db.Close(); err != nil {
 			m.log.Warning("cannot close source db (%v); %v", m.sourceDbPaths[i], err)
 		}
-	}
-
-	if err := m.targetDb.Close(); err != nil {
-		m.log.Warningf("cannot close targetDb; %v", err)
 	}
 }

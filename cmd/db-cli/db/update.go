@@ -57,49 +57,22 @@ func update(ctx *cli.Context) error {
 func Update(cfg *utils.Config) error {
 	log := logger.NewLogger(cfg.LogLevel, "DB Update")
 
-	var (
-		firstAidaDbBlock, lastAidaDbBlock uint64
-	)
-
-	// load stats of current aida-db to download just latest patches
-	_, err := os.Stat(cfg.AidaDb)
+	targetMD, err := getTargetDbBlockRange(cfg)
 	if err != nil {
-		if os.IsNotExist(err) {
-			// aida-db does not exist, download all available patches
-			lastAidaDbBlock = 0
-		} else {
-			return err
-		}
-	} else {
-		// load last block from existing aida-db metadata
-		firstAidaDbBlock, lastAidaDbBlock, err = findBlockRangeInSubstate(cfg.AidaDb)
-		if err != nil {
-			return err
-		}
+		return fmt.Errorf("unable retrieve aida-db metadata; %v", err)
 	}
 
-	log.Noticef("lastAidaDbBlock %v", lastAidaDbBlock)
-
-	// aida-db already exists appending only new patches
-	// open targetDB
-	targetDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
-	if err != nil {
-		return fmt.Errorf("can't open targetDb; %v", err)
-	}
-
-	targetMD := newAidaMetadata(targetDb, cfg.LogLevel)
-	targetMD.firstBlock = firstAidaDbBlock
-	targetMD.lastBlock = lastAidaDbBlock
+	log.Noticef("lastAidaDbBlock %v", targetMD.lastBlock)
 
 	// retrieve available patches from aida-db generation server
-	patches, err := retrievePatchesToDownload(lastAidaDbBlock)
+	patches, err := retrievePatchesToDownload(targetMD.lastBlock)
 	if err != nil {
 		return fmt.Errorf("unable to prepare list of aida-db patches for download; %v", err)
 	}
 
 	if len(patches) == 0 {
 		log.Warning("No new patches to download are available")
-		MustCloseDB(targetDb)
+		MustCloseDB(targetMD.db)
 		return nil
 	}
 
@@ -112,7 +85,7 @@ func Update(cfg *utils.Config) error {
 	log.Noticef("Downloading Aida-db - %d new patches", len(patches))
 
 	// we need to know whether Db is new for metadata
-	err = patchesDownloader(cfg, patches, targetMD, lastAidaDbBlock == 0)
+	err = patchesDownloader(cfg, patches, targetMD, targetMD.lastBlock == 0)
 	if err != nil {
 		return err
 	}
@@ -120,6 +93,43 @@ func Update(cfg *utils.Config) error {
 	log.Notice("Aida-db update finished successfully")
 
 	return nil
+}
+
+// getTargetDbBlockRange initialize aidaMetadata of targetDB
+func getTargetDbBlockRange(cfg *utils.Config) (*aidaMetadata, error) {
+	var (
+		firstAidaDbBlock, lastAidaDbBlock uint64
+	)
+
+	// load stats of current aida-db to download just latest patches
+	_, err := os.Stat(cfg.AidaDb)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// aida-db does not exist, download all available patches
+			lastAidaDbBlock = 0
+		} else {
+			return nil, err
+		}
+	} else {
+		// load last block from existing aida-db metadata
+		firstAidaDbBlock, lastAidaDbBlock, err = findBlockRangeInSubstate(cfg.AidaDb)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// aida-db already exists appending only new patches
+	// open targetDB
+	targetDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
+	if err != nil {
+		return nil, fmt.Errorf("can't open targetDb; %v", err)
+	}
+
+	targetMD := newAidaMetadata(targetDb, cfg.LogLevel)
+	targetMD.firstBlock = firstAidaDbBlock
+	targetMD.lastBlock = lastAidaDbBlock
+
+	return targetMD, nil
 }
 
 // patchesDownloader processes patch names to download then download them in pipelined process
@@ -137,6 +147,10 @@ func patchesDownloader(cfg *utils.Config, patches []string, targetMD *aidaMetada
 	err := mergePatch(cfg, decompressedPatchChan, errDecompressChan, targetMD, isNewDb)
 	if err != nil {
 		return err
+	}
+
+	if err = targetMD.db.Close(); err != nil {
+		targetMD.log.Warningf("patchesDownloader: cannot close targetDb; %v", err)
 	}
 
 	return nil
@@ -188,7 +202,7 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 					return err
 				}
 
-				m.closeDbs()
+				m.closeSourceDbs()
 
 				// remove patch
 				err = os.RemoveAll(extractedPatchPath)
@@ -357,16 +371,16 @@ func retrievePatchesToDownload(startDownloadFromBlock uint64) ([]string, error) 
 			return nil, fmt.Errorf("invalid patch in json; %v", patch)
 		}
 
-		// retrieve fromBlock start of patch
-		patchFromBlockStr, ok := patchMap["fromBlock"].(string)
+		// retrieve toBlock end of patch
+		patchToBlockStr, ok := patchMap["toBlock"].(string)
 		if !ok {
 			return nil, fmt.Errorf("invalid fromEpoch attributes in patch; %v", patchMap)
 		}
-		patchFromBlock, err := strconv.ParseUint(patchFromBlockStr, 10, 64)
+		patchToBlock, err := strconv.ParseUint(patchToBlockStr, 10, 64)
 		if err != nil {
 			return nil, fmt.Errorf("unable to parse uint64 fromEpoch attribute in patch %v; %v", patchMap, err)
 		}
-		if patchFromBlock <= startDownloadFromBlock {
+		if patchToBlock <= startDownloadFromBlock {
 			// skip every patch which is sooner than previous last block
 			continue
 		}

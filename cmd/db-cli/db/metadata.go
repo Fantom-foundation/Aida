@@ -651,8 +651,6 @@ func (m *aidaMetadata) checkUpdateMetadata(isNewDb bool, cfg *utils.Config, patc
 		if err = m.getMetadata(); err != nil {
 			// if metadata are not found, but we have an existingDb, we go through substate to find it
 			if strings.Contains(err.Error(), "leveldb: not found") {
-				MustCloseDB(m.db)
-
 				if err = m.setFreshUpdateMetadata(cfg.ChainID); err != nil {
 					return 0, 0, err
 				}
