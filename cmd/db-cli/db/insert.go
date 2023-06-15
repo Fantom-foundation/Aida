@@ -100,6 +100,10 @@ func insertMetadata(ctx *cli.Context) error {
 		if err = md.setChainID(int(val)); err != nil {
 			return err
 		}
+	case TimestampPrefix:
+		if err = md.setTimestamp(); err != nil {
+			return err
+		}
 	default:
 		return fmt.Errorf("incorrect keyArg: %v", keyArg)
 	}
