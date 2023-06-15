@@ -101,18 +101,13 @@ func merge(ctx *cli.Context) error {
 
 // finishMerge compacts targetDb and deletes sourceDbs
 func (m *merger) finishMerge() error {
-	targetDb, err := rawdb.NewLevelDBDatabase(m.cfg.AidaDb, 1024, 100, "profiling", false)
-	if err != nil {
-		return fmt.Errorf("cannot open db; %v", err)
-	}
-
 	if !m.cfg.SkipMetadata {
-		if err = processMergeMetadata(m.targetDb, m.sourceDbs, m.cfg.LogLevel); err != nil {
+		if err := processMergeMetadata(m.targetDb, m.sourceDbs, m.cfg.LogLevel); err != nil {
 			return err
 		}
 	}
 
-	MustCloseDB(targetDb)
+	MustCloseDB(m.targetDb)
 
 	// delete source databases
 	if m.cfg.DeleteSourceDbs {
