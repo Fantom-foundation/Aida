@@ -271,7 +271,7 @@ func (c *cloner) readUpdateSet() uint64 {
 
 	c.read([]byte(substate.SubstateAllocPrefix), 0, endCond)
 
-	// check if updateset contained at least one set (first set with worldstate), then aida-db must be corrupted
+	// check if update-set contained at least one set (first set with world-state), then aida-db must be corrupted
 	if lastUpdateBeforeRange == 0 {
 
 		c.errCh <- fmt.Errorf("updateset didn't contain any records - unable to create aida-db without initial world-state")

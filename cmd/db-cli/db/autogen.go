@@ -295,9 +295,13 @@ func (a *automator) createPatch() (string, error) {
 	}
 
 	a.log.Notice("Patch metadata")
+
 	// metadata
-	processPatchLikeMetadata(targetDb, a.cfg.LogLevel, a.cfg.First, a.cfg.Last, a.opera.firstEpoch,
+	err = processPatchLikeMetadata(targetDb, a.cfg.LogLevel, a.cfg.First, a.cfg.Last, a.opera.firstEpoch,
 		a.opera.lastEpoch, a.cfg.ChainID, a.opera.isNew)
+	if err != nil {
+		return "", err
+	}
 
 	MustCloseDB(targetDb)
 

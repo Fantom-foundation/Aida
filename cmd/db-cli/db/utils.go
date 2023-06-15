@@ -119,7 +119,7 @@ func runCommand(cmd *exec.Cmd, resultChan chan string, log *logging.Logger) erro
 		if log.IsEnabledFor(logging.DEBUG) {
 			log.Debug(m)
 		} else {
-			// in case debugging is turned off and resultChan doesn't listen to ouput
+			// in case debugging is turned off and resultChan doesn't listen to output
 			// we need to keep most recent output lines in case of error
 			if resultChan == nil {
 				// throw out the oldest line in case we are at limit

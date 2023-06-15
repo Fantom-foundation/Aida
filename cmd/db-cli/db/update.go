@@ -81,7 +81,6 @@ func Update(cfg *utils.Config) error {
 		return fmt.Errorf("can't open targetDb; %v", err)
 	}
 
-	// todo move metadata creating later - it is not needed this soon
 	targetMD := newAidaMetadata(targetDb, cfg.LogLevel)
 	targetMD.lastBlock = startDownloadFromBlock
 

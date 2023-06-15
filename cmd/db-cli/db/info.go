@@ -62,7 +62,7 @@ func printMetadata(pathToDb string) error {
 		return err
 	}
 
-	// CHAINID
+	// CHAIN-ID
 	chainID, err := md.getChainID()
 	md.log.Infof("Chain-ID: %v", chainID)
 

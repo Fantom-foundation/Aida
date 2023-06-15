@@ -102,7 +102,9 @@ func (m *merger) finishMerge() error {
 	}
 
 	if !m.cfg.SkipMetadata {
-		processMergeMetadata(m.targetDb, m.sourceDbs, m.cfg.LogLevel)
+		if err = processMergeMetadata(m.targetDb, m.sourceDbs, m.cfg.LogLevel); err != nil {
+			return err
+		}
 	}
 
 	MustCloseDB(targetDb)
