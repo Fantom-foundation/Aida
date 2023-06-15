@@ -397,7 +397,7 @@ func downloadPatchesJson() ([]interface{}, error) {
 	var data interface{}
 	err = json.Unmarshal(body, &data)
 	if err != nil {
-		return nil, fmt.Errorf("error parsing JSON response body %v: %v", body, err)
+		return nil, fmt.Errorf("error parsing JSON response body: %s ; %v", string(body), err)
 	}
 
 	// Access the JSON data
