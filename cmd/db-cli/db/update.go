@@ -59,6 +59,21 @@ func Update(cfg *utils.Config) error {
 
 	var startDownloadFromBlock uint64
 
+	// load stats of current aida-db to download just latest patches
+	_, err := os.Stat(cfg.AidaDb)
+	if os.IsNotExist(err) {
+		// aida-db does not exist, download all available patches
+		startDownloadFromBlock = 0
+	} else {
+		// load last block from existing aida-db metadata
+		_, startDownloadFromBlock, err = findBlockRangeInSubstate(cfg.AidaDb)
+		if err != nil {
+			return err
+		}
+	}
+
+	log.Noticef("startDownloadFromBlock %v", startDownloadFromBlock)
+
 	// aida-db already exists appending only new patches
 	// open targetDB
 	targetDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
@@ -66,20 +81,9 @@ func Update(cfg *utils.Config) error {
 		return fmt.Errorf("can't open targetDb; %v", err)
 	}
 
+	// todo move metadata creating later - it is not needed this soon
 	targetMD := newAidaMetadata(targetDb, cfg.LogLevel)
-
-	// load stats of current aida-db to download just latest patches
-	_, err = os.Stat(cfg.AidaDb)
-	if os.IsNotExist(err) {
-		// aida-db does not exist, download all available patches
-		startDownloadFromBlock = 0
-	} else {
-		// load last block from existing aida-db metadata
-		if err = targetMD.findBlockRangeInSubstate(cfg.AidaDb); err != nil {
-			return err
-		}
-		startDownloadFromBlock = targetMD.lastBlock
-	}
+	targetMD.lastBlock = startDownloadFromBlock
 
 	// retrieve available patches from aida-db generation server
 	patches, err := retrievePatchesToDownload(startDownloadFromBlock)
@@ -89,6 +93,7 @@ func Update(cfg *utils.Config) error {
 
 	if len(patches) == 0 {
 		log.Warning("No new patches to download are available")
+		MustCloseDB(targetDb)
 		return nil
 	}
 

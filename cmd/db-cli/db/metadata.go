@@ -682,7 +682,7 @@ func (m *aidaMetadata) checkUpdateMetadata(isNewDb bool, cfg *utils.Config, patc
 	)
 
 	if err = patchMD.getMetadata(); err != nil {
-		return 0, 0, err
+		return 0, 0, fmt.Errorf("checkUpdateMetadata patchMD ; %v", err)
 	}
 
 	if !isNewDb {
@@ -698,7 +698,7 @@ func (m *aidaMetadata) checkUpdateMetadata(isNewDb bool, cfg *utils.Config, patc
 				}
 
 			} else {
-				return 0, 0, err
+				return 0, 0, fmt.Errorf("checkUpdateMetadata aida-db ; %v", err)
 			}
 		}
 
@@ -804,29 +804,4 @@ func findEpochNumber(blockNumber uint64, url string) (uint64, error) {
 	}
 
 	return epoch, nil
-}
-
-// findBlockRangeInSubstate if AidaDb does not yet have metadata
-func (m *aidaMetadata) findBlockRangeInSubstate(pathToAidaDb string) error {
-	substate.SetSubstateDb(pathToAidaDb)
-	substate.OpenSubstateDBReadOnly()
-
-	// todo how many workers?
-	iter := substate.NewSubstateIterator(0, substate.WorkersFlag.Value)
-
-	defer iter.Release()
-
-	// start with writing first block
-	if iter.Next() {
-		m.firstBlock = iter.Value().Block
-	} else {
-		return errors.New("no substate in AidaDb")
-	}
-
-	for iter.Next() {
-		// todo algorithm
-		m.lastBlock = 0
-	}
-
-	return nil
 }

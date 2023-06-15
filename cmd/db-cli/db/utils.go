@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"crypto/md5"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/op/go-logging"
@@ -179,6 +181,30 @@ func calculateMD5Sum(filePath string) (string, error) {
 	md5sum := hex.EncodeToString(checksum)
 
 	return md5sum, nil
+}
+
+// findBlockRangeInSubstate if AidaDb does not yet have metadata
+func findBlockRangeInSubstate(pathToAidaDb string) (uint64, uint64, error) {
+	substate.SetSubstateDb(pathToAidaDb)
+	substate.OpenSubstateDBReadOnly()
+	defer substate.CloseSubstateDB()
+
+	firstSubstate := substate.GetFirstSubstate()
+	if firstSubstate == nil {
+		return 0, 0, errors.New("unable to get first substate from AidaDb")
+	}
+	firstBlock := firstSubstate.Env.Number
+
+	lastSubstate, err := substate.GetLastSubstate()
+	if err != nil {
+		return 0, 0, err
+	}
+	if lastSubstate == nil {
+		return 0, 0, errors.New("unable to get last substate from AidaDb")
+	}
+	lastBlock := lastSubstate.Env.Number
+
+	return firstBlock, lastBlock, nil
 }
 
 // startDaemonOpera start opera node
