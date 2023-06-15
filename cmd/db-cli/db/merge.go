@@ -102,13 +102,15 @@ func (m *merger) finishMerge() error {
 			return err
 		}
 
+		MustCloseDB(m.targetDb)
+
 		err := printMetadata(m.cfg.AidaDb)
 		if err != nil {
 			return err
 		}
+	} else {
+		MustCloseDB(m.targetDb)
 	}
-
-	MustCloseDB(m.targetDb)
 
 	// delete source databases
 	if m.cfg.DeleteSourceDbs {
