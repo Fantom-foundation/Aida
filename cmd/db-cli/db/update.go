@@ -126,8 +126,9 @@ func getTargetDbBlockRange(cfg *utils.Config) (*aidaMetadata, error) {
 	}
 
 	targetMD := newAidaMetadata(targetDb, cfg.LogLevel)
-	targetMD.firstBlock = firstAidaDbBlock
-	targetMD.lastBlock = lastAidaDbBlock
+	if err = targetMD.setBlockRange(firstAidaDbBlock, lastAidaDbBlock); err != nil {
+		return nil, err
+	}
 
 	return targetMD, nil
 }

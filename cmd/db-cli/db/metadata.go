@@ -477,6 +477,8 @@ func (m *aidaMetadata) setFirstBlock(firstBlock uint64) error {
 		return fmt.Errorf("cannot put first block; %v", err)
 	}
 
+	m.firstBlock = firstBlock
+
 	m.log.Info("METADATA: First block saved successfully")
 
 	return nil
@@ -489,6 +491,8 @@ func (m *aidaMetadata) setLastBlock(lastBlock uint64) error {
 	if err := m.db.Put([]byte(LastBlockPrefix), lastBlockBytes); err != nil {
 		return fmt.Errorf("cannot put last block; %v", err)
 	}
+
+	m.lastBlock = lastBlock
 
 	m.log.Info("METADATA: Last block saved successfully")
 
@@ -706,6 +710,19 @@ func (m *aidaMetadata) setFreshUpdateMetadata(chainID int) error {
 
 	// updated AidaDb with patches will always be genType
 	if err = m.setDbType(genType); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *aidaMetadata) setBlockRange(firstBlock uint64, lastBlock uint64) error {
+	var err error
+
+	if err = m.setFirstBlock(firstBlock); err != nil {
+		return err
+	}
+	if err = m.setLastBlock(lastBlock); err != nil {
 		return err
 	}
 
