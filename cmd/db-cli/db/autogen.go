@@ -101,6 +101,7 @@ func (a *automator) doGenerations() error {
 		// since getLatestBlockAndEpoch returns off by one epoch number label
 		// needs to be fixed in no need epochs are available
 		a.log.Warningf("No new data for generation. Source epoch %v (%v), Last generation %v (%v)", a.opera.firstEpoch, a.cfg.OperaDatadir, a.opera.lastEpoch, a.cfg.Db)
+		MustCloseDB(a.aidaDb)
 		return nil
 	}
 
