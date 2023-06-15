@@ -10,7 +10,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// InsertMetadataCommand is a generic command for inserting any key/value pair into AidaDb
+// InsertMetadataCommand is a generic command for inserting any metadata key/value pair into AidaDb
 var InsertMetadataCommand = cli.Command{
 	Action: insertMetadata,
 	Name:   "insert-metadata",
@@ -23,6 +23,48 @@ Inserts key/value pair into AidaDb according to arguments:
 <key> <value>
 If given key is not metadata-key, operation fails.
 `,
+}
+
+// RemoveMetadataCommand is a command used for creating testing environment without metadata
+var RemoveMetadataCommand = cli.Command{
+	Action: removeMetadata,
+	Name:   "remove-metadata",
+	Usage:  "remove metadata from aidaDb",
+	Flags: []cli.Flag{
+		&utils.AidaDbFlag,
+	},
+	Description: `
+Removes block and epoch range and ChainID from metadata for given AidaDb.
+`,
+}
+
+// removeMetadata command is used for testing scenario where AidaDb does not have metadata and a patch
+// is applied onto it
+func removeMetadata(ctx *cli.Context) error {
+	aidaDbPath := ctx.String(utils.AidaDbFlag.Name)
+
+	// open db
+	aidaDb, err := rawdb.NewLevelDBDatabase(aidaDbPath, 1024, 100, "profiling", false)
+	if err != nil {
+		return fmt.Errorf("cannot open targetDb. Error: %v", err)
+	}
+
+	if err = aidaDb.Delete([]byte(ChainIDPrefix)); err != nil {
+		return err
+	}
+	if err = aidaDb.Delete([]byte(FirstBlockPrefix)); err != nil {
+		return err
+	}
+	if err = aidaDb.Delete([]byte(LastBlockPrefix)); err != nil {
+		return err
+	}
+	if err = aidaDb.Delete([]byte(FirstEpochPrefix)); err != nil {
+		return err
+	}
+	if err = aidaDb.Delete([]byte(LastEpochPrefix)); err != nil {
+		return err
+	}
+	return nil
 }
 
 // insertMetadata key/value pair into AidaDb

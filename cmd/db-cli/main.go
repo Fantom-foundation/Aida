@@ -23,6 +23,7 @@ var InitDb = cli.App{
 		&db.UpdateCommand,
 		&db.InfoCommand,
 		&db.InsertMetadataCommand,
+		&db.RemoveMetadataCommand,
 	},
 }
 
