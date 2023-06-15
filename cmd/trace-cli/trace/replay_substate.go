@@ -163,8 +163,11 @@ func traceReplaySubstateTask(cfg *utils.Config, log *logging.Logger) error {
 	sec = time.Since(start).Seconds()
 
 	// print profile statistics (if enabled)
-	if operation.EnableProfiling {
-		operation.PrintProfiling()
+	if rCtx.Profile {
+		rCtx.Stats.FillLabels(operation.CreateIdLabelMap())
+		if err := rCtx.Stats.PrintProfiling(cfg.First, cfg.Last); err != nil {
+			return err
+		}
 	}
 
 	// close the DB and print disk usage
@@ -194,8 +197,6 @@ func traceReplaySubstateAction(ctx *cli.Context) error {
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
-	// Get profiling flag
-	operation.EnableProfiling = cfg.Profile
 	// Start CPU profiling if requested.
 	if err := utils.StartCPUProfile(cfg); err != nil {
 		return err

@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/Fantom-foundation/Aida/tracer/profile"
 	"github.com/dsnet/compress/bzip2"
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -32,6 +33,8 @@ type Record struct {
 type Replay struct {
 	Context
 	snapshot *SnapshotIndex // snapshot translation table for replay
+	Profile  bool           // collect stats
+	Stats    *profile.Stats
 }
 
 // NewContext creates a new replay context.
@@ -41,6 +44,11 @@ func NewReplay() *Replay {
 			keyCache: NewKeyCache()},
 		snapshot: NewSnapshotIndex(),
 	}
+}
+
+func (ctx *Replay) EnableProfiling(csv string) {
+	ctx.Profile = true
+	ctx.Stats = profile.NewStats(csv)
 }
 
 // NewContext creates a new record context.
