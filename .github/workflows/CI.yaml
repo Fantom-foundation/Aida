@@ -2,7 +2,7 @@ name: CI
 
 on:
   pull_request:
-    branches: [ "main" ]
+    branches: [ "main", "develop" ]
 
 jobs:
 
@@ -43,7 +43,7 @@ jobs:
         run: diff -u <(echo -n)  <(find . \( -path "./carmen" -o -path "./tosca" \) -prune -o  -name '*.go' -exec gofmt -d -s {} \;)
 
       - name: Update go packages and modules
-        run: go mod tidy
+        run: go get -d ./...
 
       - name: Build
         run: make

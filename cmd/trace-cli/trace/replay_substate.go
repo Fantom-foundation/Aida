@@ -44,6 +44,8 @@ var TraceReplaySubstateCommand = cli.Command{
 		&utils.ValidateWorldStateFlag,
 		&utils.AidaDbFlag,
 		&logger.LogLevelFlag,
+		// erigon
+		&utils.ErigonBatchSizeFlag,
 	},
 	Description: `
 The trace replay-substate command requires two arguments:
