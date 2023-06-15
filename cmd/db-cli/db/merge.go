@@ -81,16 +81,10 @@ func merge(ctx *cli.Context) error {
 
 	m := newMerger(cfg, targetDb, dbs, sourcePaths)
 
-	defer m.closeSourceDbs()
-	defer func() {
-		if err := m.targetDb.Close(); err != nil {
-			m.log.Warningf("cannot close targetDb; %v", err)
-		}
-	}()
-
 	if err = m.merge(); err != nil {
 		return err
 	}
+	m.closeSourceDbs()
 
 	return m.finishMerge()
 }
@@ -108,9 +102,8 @@ func (m *merger) finishMerge() error {
 		if err != nil {
 			return err
 		}
-	} else {
-		MustCloseDB(m.targetDb)
 	}
+	MustCloseDB(m.targetDb)
 
 	// delete source databases
 	if m.cfg.DeleteSourceDbs {
