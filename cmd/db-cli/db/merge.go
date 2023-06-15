@@ -91,7 +91,7 @@ func merge(ctx *cli.Context) error {
 		return err
 	}
 
-	return printMetadata(m.cfg)
+	return printMetadata(m.cfg.AidaDb)
 }
 
 // finishMerge compacts targetDb and deletes sourceDbs

@@ -41,13 +41,13 @@ func printMetadataCmd(ctx *cli.Context) error {
 		return argErr
 	}
 
-	return printMetadata(cfg)
+	return printMetadata(cfg.AidaDb)
 }
 
 // printMetadata from given AidaDb
-func printMetadata(cfg *utils.Config) error {
+func printMetadata(pathToDb string) error {
 	// open db
-	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", true)
+	aidaDb, err := rawdb.NewLevelDBDatabase(pathToDb, 1024, 100, "profiling", true)
 	if err != nil {
 		return fmt.Errorf("cannot open aida-db; %v", err)
 	}

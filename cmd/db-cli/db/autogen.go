@@ -82,7 +82,7 @@ func autogen(ctx *cli.Context) error {
 		return err
 	}
 
-	return printMetadata(a.cfg)
+	return printMetadata(a.cfg.AidaDb)
 }
 
 // doGenerations automatically generate AidaDb from daemon opera

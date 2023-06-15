@@ -91,7 +91,7 @@ func generate(ctx *cli.Context) error {
 		}
 	}
 
-	return printMetadata(g.cfg)
+	return printMetadata(g.cfg.AidaDb)
 }
 
 // newGenerator returns new instance of generator
