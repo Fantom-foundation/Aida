@@ -453,6 +453,9 @@ func (m *aidaMetadata) getChainID() (int, error) {
 func (m *aidaMetadata) getTimestamp() (uint64, error) {
 	byteChainID, err := m.db.Get([]byte(TimestampPrefix))
 	if err != nil {
+		if strings.Contains(err.Error(), "leveldb: not found") {
+			return 0, nil
+		}
 		return 0, fmt.Errorf("cannot get timestamp; %v", err)
 	}
 
