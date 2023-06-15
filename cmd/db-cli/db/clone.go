@@ -14,6 +14,8 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const cloneWriteChanSize = 1
+
 // CloneCommand enables creation of aida-db read or subset
 var CloneCommand = cli.Command{
 	Action: clone,
@@ -31,8 +33,6 @@ Creates clone of aida-db for desired block range
 `,
 }
 
-const cloneWriteChanSize = 1000
-
 type cloner struct {
 	cfg             *utils.Config
 	log             *logging.Logger
@@ -49,7 +49,7 @@ type rawEntry struct {
 	Value []byte
 }
 
-// clone AidaDb
+// clone creates aida-db copy or subset
 func clone(ctx *cli.Context) error {
 	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if err != nil {

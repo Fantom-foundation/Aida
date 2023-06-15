@@ -19,6 +19,13 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const (
+	// default updateSet interval
+	updateSetInterval = 1_000_000
+	// number of lines which are kept in memory in case command fails
+	commandOutputLimit = 50
+)
+
 // GenerateCommand data structure for the replay app
 var GenerateCommand = cli.Command{
 	Action: generate,
@@ -42,13 +49,6 @@ The db generate command requires events as an argument:
 
 <events> are fed into the opera database (either existing or genesis needs to be specified), processing them generates updated aida-db.`,
 }
-
-const (
-	// default updateSet interval
-	updateSetInterval = 1_000_000
-	// number of lines which are kept in memory in case command fails
-	commandOutputLimit = 50
-)
 
 type generator struct {
 	cfg       *utils.Config
