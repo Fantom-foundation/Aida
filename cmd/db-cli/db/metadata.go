@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -596,45 +595,6 @@ func (m *aidaMetadata) setAllMetadata(firstBlock uint64, lastBlock uint64, first
 	if err = m.setTimestamp(); err != nil {
 		return err
 	}
-	return nil
-}
-
-// findMetadataInSubstate iterates over substate to find first and last block of AidaDb
-func (m *aidaMetadata) findMetadataInSubstate(aidaDbPath string) error {
-
-	// todo remove after matejs changes
-	m.log.Notice("Iterating through substate to find first and last block and epoch")
-
-	substate.SetSubstateDb(aidaDbPath)
-	substate.OpenSubstateDBReadOnly()
-
-	// todo how many workers?
-	iter := substate.NewSubstateIterator(0, substate.WorkersFlag.Value)
-
-	defer iter.Release()
-
-	// start with writing first block
-	if iter.Next() {
-		m.firstBlock = iter.Value().Block
-	} else {
-		return errors.New("no substate in aida-db")
-	}
-
-	m.log.Noticef("Found first block #%v", m.firstBlock)
-
-	var iterLastBlock uint64
-	for iter.Next() {
-		iterLastBlock = iter.Value().Block
-
-		m.log.Debugf("Block #%v", iterLastBlock)
-		if iter.Value().Block%1_000_000 == 0 {
-			m.log.Info("Block #%v", iterLastBlock)
-		}
-	}
-
-	m.lastBlock = iterLastBlock
-	m.log.Noticef("Found last block #%v", m.lastBlock)
-
 	return nil
 }
 

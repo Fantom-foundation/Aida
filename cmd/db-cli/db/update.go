@@ -57,22 +57,28 @@ func update(ctx *cli.Context) error {
 func Update(cfg *utils.Config) error {
 	log := logger.NewLogger(cfg.LogLevel, "DB Update")
 
-	var startDownloadFromBlock uint64
+	var (
+		firstAidaDbBlock, lastAidaDbBlock uint64
+	)
 
 	// load stats of current aida-db to download just latest patches
 	_, err := os.Stat(cfg.AidaDb)
-	if os.IsNotExist(err) {
-		// aida-db does not exist, download all available patches
-		startDownloadFromBlock = 0
+	if err != nil {
+		if os.IsNotExist(err) {
+			// aida-db does not exist, download all available patches
+			lastAidaDbBlock = 0
+		} else {
+			return err
+		}
 	} else {
 		// load last block from existing aida-db metadata
-		_, startDownloadFromBlock, err = findBlockRangeInSubstate(cfg.AidaDb)
+		firstAidaDbBlock, lastAidaDbBlock, err = findBlockRangeInSubstate(cfg.AidaDb)
 		if err != nil {
 			return err
 		}
 	}
 
-	log.Noticef("startDownloadFromBlock %v", startDownloadFromBlock)
+	log.Noticef("lastAidaDbBlock %v", lastAidaDbBlock)
 
 	// aida-db already exists appending only new patches
 	// open targetDB
@@ -82,10 +88,11 @@ func Update(cfg *utils.Config) error {
 	}
 
 	targetMD := newAidaMetadata(targetDb, cfg.LogLevel)
-	targetMD.lastBlock = startDownloadFromBlock
+	targetMD.firstBlock = firstAidaDbBlock
+	targetMD.lastBlock = lastAidaDbBlock
 
 	// retrieve available patches from aida-db generation server
-	patches, err := retrievePatchesToDownload(startDownloadFromBlock)
+	patches, err := retrievePatchesToDownload(lastAidaDbBlock)
 	if err != nil {
 		return fmt.Errorf("unable to prepare list of aida-db patches for download; %v", err)
 	}
@@ -105,7 +112,7 @@ func Update(cfg *utils.Config) error {
 	log.Noticef("Downloading Aida-db - %d new patches", len(patches))
 
 	// we need to know whether Db is new for metadata
-	err = patchesDownloader(cfg, patches, targetMD, startDownloadFromBlock == 0)
+	err = patchesDownloader(cfg, patches, targetMD, lastAidaDbBlock == 0)
 	if err != nil {
 		return err
 	}
