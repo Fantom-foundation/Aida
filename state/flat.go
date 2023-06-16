@@ -121,7 +121,7 @@ func (s *flatStateDB) Close() error {
 
 func (s *flatStateDB) GetMemoryUsage() *MemoryUsage {
 	// not supported yet
-	return nil
+	return &MemoryUsage{uint64(0), nil}
 }
 
 func (s *flatStateDB) StartBulkLoad(block uint64) BulkLoad {
