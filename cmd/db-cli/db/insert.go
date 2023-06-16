@@ -48,28 +48,14 @@ func removeMetadata(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("cannot open targetDb. Error: %v", err)
 	}
+	aidaDb.Delete([]byte(ChainIDPrefix))
+	aidaDb.Delete([]byte(FirstBlockPrefix))
+	aidaDb.Delete([]byte(LastBlockPrefix))
+	aidaDb.Delete([]byte(FirstEpochPrefix))
+	aidaDb.Delete([]byte(LastEpochPrefix))
+	aidaDb.Delete([]byte(TypePrefix))
+	aidaDb.Delete([]byte(TimestampPrefix))
 
-	if err = aidaDb.Delete([]byte(ChainIDPrefix)); err != nil {
-		return err
-	}
-	if err = aidaDb.Delete([]byte(FirstBlockPrefix)); err != nil {
-		return err
-	}
-	if err = aidaDb.Delete([]byte(LastBlockPrefix)); err != nil {
-		return err
-	}
-	if err = aidaDb.Delete([]byte(FirstEpochPrefix)); err != nil {
-		return err
-	}
-	if err = aidaDb.Delete([]byte(LastEpochPrefix)); err != nil {
-		return err
-	}
-	if err = aidaDb.Delete([]byte(TypePrefix)); err != nil {
-		return err
-	}
-	if err = aidaDb.Delete([]byte(TimestampPrefix)); err != nil {
-		return err
-	}
 	return nil
 }
 

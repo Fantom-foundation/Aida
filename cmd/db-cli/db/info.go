@@ -58,69 +58,86 @@ func printMetadata(pathToDb string) error {
 
 	md.log.Notice("AIDA-DB INFO:")
 
-	if err = printDbType(md); err != nil {
-		return err
-	}
+	printDbType(md)
 
 	// CHAIN-ID
 	chainID, err := md.getChainID()
-	md.log.Infof("Chain-ID: %v", chainID)
+	if err != nil {
+		md.log.Warning("Value for chainID does not exist in given Dbs metadata")
+	} else {
+		md.log.Infof("Chain-ID: %v", chainID)
+	}
 
 	// BLOCKS
 	firstBlock, err := md.getFirstBlock()
-	md.log.Infof("First Block: %v", firstBlock)
+	if err != nil {
+		md.log.Warning("Value for first block does not exist in given Dbs metadata")
+	} else {
+		md.log.Infof("First Block: %v", firstBlock)
+	}
 	lastBlock, err := md.getLastBlock()
-	md.log.Infof("Last Block: %v", lastBlock)
+	if err != nil {
+		md.log.Warning("Value for last block does not exist in given Dbs metadata")
+	} else {
+		md.log.Infof("Last Block: %v", lastBlock)
+	}
 
 	// EPOCHS
 	firstEpoch, err := md.getFirstEpoch()
-	md.log.Infof("First Epoch: %v", firstEpoch)
+	if err != nil {
+		md.log.Warning("Value for first epoch does not exist in given Dbs metadata")
+	} else {
+		md.log.Infof("First Epoch: %v", firstEpoch)
+	}
 	lastEpoch, err := md.getLastEpoch()
-	md.log.Infof("Last Epoch: %v", lastEpoch)
+	if err != nil {
+		md.log.Warning("Value for last epoch does not exist in given Dbs metadata")
+	} else {
+		md.log.Infof("Last Epoch: %v", lastEpoch)
+	}
 
 	// TIMESTAMP
 	timestamp, err := md.getTimestamp()
 	if err != nil {
-		return err
+		md.log.Warning("Value for creation time does not exist in given Dbs metadata")
+	} else {
+		md.log.Infof("Created: %v", time.Unix(int64(timestamp), 0))
 	}
-
-	md.log.Infof("Created: %v", time.Unix(int64(timestamp), 0))
 
 	// UPDATE-SET
-	if err = printUpdateSetInfo(md); err != nil {
-		return err
-	}
+	printUpdateSetInfo(md)
 
 	return nil
 }
 
 // printUpdateSetInfo from given AidaDb
-func printUpdateSetInfo(m *aidaMetadata) error {
+func printUpdateSetInfo(m *aidaMetadata) {
 	m.log.Notice("UPDATE-SET INFO:")
 
 	intervalBytes, err := m.db.Get([]byte(substate.UpdatesetIntervalKey))
 	if err != nil {
-		return fmt.Errorf("cannot get updateset interval from db; %v", err)
+		m.log.Warning("Value for update-set interval does not exist in given Dbs metadata")
+	} else {
+		m.log.Infof("Interval: %v blocks", bigendian.BytesToUint64(intervalBytes))
 	}
-	m.log.Infof("Interval: %v blocks", bigendian.BytesToUint64(intervalBytes))
 
 	sizeBytes, err := m.db.Get([]byte(substate.UpdatesetSizeKey))
 	if err != nil {
-		return fmt.Errorf("cannot get updateset size from db; %v", err)
+		m.log.Warning("Value for update-set size does not exist in given Dbs metadata")
+	} else {
+		u := bigendian.BytesToUint64(sizeBytes)
+
+		// todo convert to mb
+		m.log.Infof("Size: %.1f MB", float64(u)/float64(1_000_000))
 	}
-	u := bigendian.BytesToUint64(sizeBytes)
-
-	// todo convert to mb
-	m.log.Infof("Size: %.1f MB", float64(u)/float64(1_000_000))
-
-	return nil
 }
 
 // printDbType from given AidaDb
-func printDbType(m *aidaMetadata) error {
+func printDbType(m *aidaMetadata) {
 	t, err := m.getDbType()
 	if err != nil {
-		return err
+		m.log.Warning("Value for db type does not exist in given Dbs metadata")
+		return
 	}
 
 	var typePrint string
@@ -136,8 +153,6 @@ func printDbType(m *aidaMetadata) error {
 	}
 
 	m.log.Noticef("DB-Type: %v", typePrint)
-
-	return nil
 }
 
 var cmdCount = cli.Command{
