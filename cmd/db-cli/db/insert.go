@@ -64,6 +64,12 @@ func removeMetadata(ctx *cli.Context) error {
 	if err = aidaDb.Delete([]byte(LastEpochPrefix)); err != nil {
 		return err
 	}
+	if err = aidaDb.Delete([]byte(TypePrefix)); err != nil {
+		return err
+	}
+	if err = aidaDb.Delete([]byte(TimestampPrefix)); err != nil {
+		return err
+	}
 	return nil
 }
 
