@@ -341,7 +341,7 @@ func (a *automator) mergePatch(targetDb ethdb.Database) error {
 
 	sourceDbPaths := []string{a.cfg.SubstateDb, a.cfg.UpdateDb, a.cfg.DeletionDb}
 
-	dbs, err := openSourceDatabases(sourceDbPaths, true)
+	dbs, err := openSourceDatabases(sourceDbPaths)
 	if err != nil {
 		return err
 	}
