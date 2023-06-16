@@ -341,12 +341,12 @@ func (a *automator) mergePatch(targetDb ethdb.Database) error {
 
 	sourceDbPaths := []string{a.cfg.SubstateDb, a.cfg.UpdateDb, a.cfg.DeletionDb}
 
-	dbs, err := openSourceDatabases(sourceDbPaths)
+	dbs, err := openSourceDatabases(sourceDbPaths, true)
 	if err != nil {
 		return err
 	}
 
-	m := newMerger(a.cfg, targetDb, dbs, sourceDbPaths)
+	m := newMerger(a.cfg, targetDb, dbs, sourceDbPaths, nil)
 
 	return m.merge()
 }

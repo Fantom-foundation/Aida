@@ -39,16 +39,18 @@ type merger struct {
 	targetDb      ethdb.Database
 	sourceDbs     []ethdb.Database
 	sourceDbPaths []string
+	md            *aidaMetadata
 }
 
 // newMerger returns new instance of merger
-func newMerger(cfg *utils.Config, targetDb ethdb.Database, sourceDbs []ethdb.Database, sourceDbPaths []string) *merger {
+func newMerger(cfg *utils.Config, targetDb ethdb.Database, sourceDbs []ethdb.Database, sourceDbPaths []string, md *aidaMetadata) *merger {
 	return &merger{
 		cfg:           cfg,
 		log:           logger.NewLogger(cfg.LogLevel, "aida-db-merger"),
 		targetDb:      targetDb,
 		sourceDbs:     sourceDbs,
 		sourceDbPaths: sourceDbPaths,
+		md:            md,
 	}
 }
 
@@ -69,21 +71,42 @@ func merge(ctx *cli.Context) error {
 		return fmt.Errorf("you need to specify where you want aida-db to save (--aida-db)")
 	}
 
-	dbs, err := openSourceDatabases(sourcePaths)
-	if err != nil {
-		return err
-	}
-
 	targetDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
 	if err != nil {
 		return fmt.Errorf("cannot open db; %v", err)
 	}
 
-	m := newMerger(cfg, targetDb, dbs, sourcePaths)
+	var (
+		dbs []ethdb.Database
+		md  *aidaMetadata
+	)
+
+	if !cfg.SkipMetadata {
+		dbs, err = openSourceDatabases(sourcePaths, false)
+		if err != nil {
+			return err
+		}
+		md, err = processMergeMetadata(targetDb, dbs, cfg.LogLevel)
+		if err != nil {
+			return err
+		}
+
+		for _, db := range dbs {
+			MustCloseDB(db)
+		}
+	}
+
+	dbs, err = openSourceDatabases(sourcePaths, true)
+	if err != nil {
+		return err
+	}
+
+	m := newMerger(cfg, targetDb, dbs, sourcePaths, md)
 
 	if err = m.merge(); err != nil {
 		return err
 	}
+
 	m.closeSourceDbs()
 
 	return m.finishMerge()
@@ -92,18 +115,19 @@ func merge(ctx *cli.Context) error {
 // finishMerge compacts targetDb and deletes sourceDbs
 func (m *merger) finishMerge() error {
 	if !m.cfg.SkipMetadata {
-		if err := processMergeMetadata(m.targetDb, m.sourceDbs, m.cfg.LogLevel); err != nil {
+		// merge type db does not have epoch calculations yet
+		m.md.db = m.targetDb
+		err := m.md.setAllMetadata(m.md.firstBlock, m.md.lastBlock, 0, 0, m.md.chainId, m.md.dbType)
+		if err != nil {
 			return err
 		}
-
 		MustCloseDB(m.targetDb)
 
-		err := printMetadata(m.cfg.AidaDb)
+		err = printMetadata(m.cfg.AidaDb)
 		if err != nil {
 			return err
 		}
 	}
-	MustCloseDB(m.targetDb)
 
 	// delete source databases
 	if m.cfg.DeleteSourceDbs {

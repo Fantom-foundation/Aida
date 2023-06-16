@@ -43,7 +43,7 @@ func prepareDbDirs(cfg *utils.Config) (string, error) {
 }
 
 // openSourceDatabases opens all databases required for merge
-func openSourceDatabases(sourceDbPaths []string) ([]ethdb.Database, error) {
+func openSourceDatabases(sourceDbPaths []string, isReadOnly bool) ([]ethdb.Database, error) {
 	if len(sourceDbPaths) < 1 {
 		return nil, fmt.Errorf("no source database were specified\n")
 	}
@@ -55,7 +55,7 @@ func openSourceDatabases(sourceDbPaths []string) ([]ethdb.Database, error) {
 		if os.IsNotExist(err) {
 			return nil, fmt.Errorf("source database %s; doesn't exist\n", path)
 		}
-		db, err := rawdb.NewLevelDBDatabase(path, 1024, 100, "", true)
+		db, err := rawdb.NewLevelDBDatabase(path, 1024, 100, "", isReadOnly)
 		if err != nil {
 			return nil, fmt.Errorf("source database %s; error: %v", path, err)
 		}

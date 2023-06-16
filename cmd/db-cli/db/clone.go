@@ -125,12 +125,20 @@ func (c *cloner) clone() error {
 
 	close(c.writeCh)
 
-	processCloneLikeMetadata(c.cloneDb, c.cfg.LogLevel, c.cfg.First, c.cfg.Last, c.cfg.ChainID)
+	sourceMD := newAidaMetadata(c.aidaDb, c.cfg.LogLevel)
+	chainID, err := sourceMD.getChainID()
+	if err != nil {
+		return err
+	}
+
+	if err = processCloneLikeMetadata(c.cloneDb, c.cfg.LogLevel, c.cfg.First, c.cfg.Last, chainID); err != nil {
+		return err
+	}
 
 	//  compact written data
 	if c.cfg.CompactDb {
 		c.log.Noticef("Starting compaction")
-		err := c.cloneDb.Compact(nil, nil)
+		err = c.cloneDb.Compact(nil, nil)
 		if err != nil {
 			return err
 		}

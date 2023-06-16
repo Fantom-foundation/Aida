@@ -191,7 +191,7 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 				// after inserting first patch, db is no longer new
 				isNewDb = false
 
-				m := newMerger(cfg, targetDb, []ethdb.Database{patchDb}, []string{extractedPatchPath})
+				m := newMerger(cfg, targetDb, []ethdb.Database{patchDb}, []string{extractedPatchPath}, nil)
 
 				err = m.merge()
 				if err != nil {

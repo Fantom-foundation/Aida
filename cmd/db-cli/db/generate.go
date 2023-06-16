@@ -282,7 +282,7 @@ func (g *generator) merge(pathToDb string) error {
 		return err
 	}
 
-	m := newMerger(g.cfg, g.aidaDb, []ethdb.Database{sourceDb}, []string{pathToDb})
+	m := newMerger(g.cfg, g.aidaDb, []ethdb.Database{sourceDb}, []string{pathToDb}, nil)
 
 	defer func() {
 		MustCloseDB(g.aidaDb)
