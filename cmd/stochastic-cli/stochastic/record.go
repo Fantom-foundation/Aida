@@ -1,12 +1,10 @@
 package stochastic
 
 import (
-	"encoding/json"
-	"fmt"
 	"math"
-	"os"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/stochastic"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -14,7 +12,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// StochasticRecordCommand data structure for the record app
+// StochasticRecordCommand data structure for the record app.
 var StochasticRecordCommand = cli.Command{
 	Action:    stochasticRecordAction,
 	Name:      "record",
@@ -38,17 +36,18 @@ The stochastic record command requires two arguments:
 last block for recording events.`,
 }
 
-// stochasticRecordAction implements recording of events.
+// stochasticRecordAction implements recording of events by running the EVM for a given blockrange.
 func stochasticRecordAction(ctx *cli.Context) error {
 	substate.RecordReplay = true
 	var err error
 
+	// process configuration
 	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if err != nil {
 		return err
 	}
-	// force enable transaction validation
-	cfg.ValidateTxState = true
+	cfg.ValidateTxState = true // force enable transaction validation
+	log := logger.NewLogger(cfg.LogLevel, "StochasticRecord")
 
 	// start CPU profiling if enabled.
 	if err := utils.StartCPUProfile(cfg); err != nil {
@@ -113,7 +112,7 @@ func stochasticRecordAction(ctx *cli.Context) error {
 			// report progress
 			sec = time.Since(start).Seconds()
 			if sec-lastSec >= 15 {
-				fmt.Printf("stochastic record: Elapsed time: %.0f s, at block %v\n", sec, oldBlock)
+				log.Infof("Elapsed time: %.0f s, at block %n", sec, oldBlock)
 				lastSec = sec
 			}
 		}
@@ -126,38 +125,17 @@ func stochasticRecordAction(ctx *cli.Context) error {
 
 	if !cfg.Quiet {
 		sec = time.Since(start).Seconds()
-		fmt.Printf("stochastic record: Total elapsed time: %.3f s, processed %v blocks\n", sec, cfg.Last-cfg.First+1)
+		log.Noticef("Total elapsed time: %.3f s, processed %v blocks", sec, cfg.Last-cfg.First+1)
 	}
 
-	// writing event registry
-	fmt.Printf("stochastic record: write events file ...\n")
+	// writing event registry in JSON format
 	if cfg.Output == "" {
 		cfg.Output = "./events.json"
 	}
-	err = WriteEvents(&eventRegistry, cfg.Output)
+	log.Noticef("Write events file %v", cfg.Output)
+	err = eventRegistry.WriteJSON(cfg.Output)
 	if err != nil {
 		return err
-	}
-
-	return nil
-}
-
-// WriteEvents writes event file in JSON format.
-func WriteEvents(r *stochastic.EventRegistry, filename string) error {
-	f, fErr := os.Create(filename)
-	if fErr != nil {
-		return fmt.Errorf("cannot open JSON file; %v", fErr)
-	}
-	defer f.Close()
-
-	jOut, jErr := json.MarshalIndent(r.NewEventRegistryJSON(), "", "    ")
-	if jErr != nil {
-		return fmt.Errorf("failed to convert JSON file; %v", jErr)
-	}
-
-	_, pErr := fmt.Fprintln(f, string(jOut))
-	if pErr != nil {
-		return fmt.Errorf("failed to convert JSON file; %v", pErr)
 	}
 
 	return nil
