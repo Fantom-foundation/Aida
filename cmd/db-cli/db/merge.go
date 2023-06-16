@@ -82,7 +82,7 @@ func merge(ctx *cli.Context) error {
 	)
 
 	if !cfg.SkipMetadata {
-		dbs, err = openSourceDatabases(sourcePaths, false)
+		dbs, err = openSourceDatabases(sourcePaths)
 		if err != nil {
 			return err
 		}
@@ -96,7 +96,7 @@ func merge(ctx *cli.Context) error {
 		}
 	}
 
-	dbs, err = openSourceDatabases(sourcePaths, true)
+	dbs, err = openSourceDatabases(sourcePaths)
 	if err != nil {
 		return err
 	}
