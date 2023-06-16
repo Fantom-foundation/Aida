@@ -451,15 +451,13 @@ func (m *aidaMetadata) getChainID() (int, error) {
 
 // getTimestamp and return it
 func (m *aidaMetadata) getTimestamp() (uint64, error) {
-	byteChainID, err := m.db.Get([]byte(TimestampPrefix))
+	byteTimestamp, err := m.db.Get([]byte(TimestampPrefix))
 	if err != nil {
-		if strings.Contains(err.Error(), "leveldb: not found") {
-			return 0, nil
-		}
-		return 0, fmt.Errorf("cannot get timestamp; %v", err)
+		m.log.Warning("Creation time not found in given Db")
+		return 0, nil
 	}
 
-	return bigendian.BytesToUint64(byteChainID), nil
+	return bigendian.BytesToUint64(byteTimestamp), nil
 }
 
 // getDbType and return it

@@ -75,6 +75,7 @@ func printMetadata(pathToDb string) error {
 	} else {
 		md.log.Infof("First Block: %v", firstBlock)
 	}
+
 	lastBlock, err := md.getLastBlock()
 	if err != nil {
 		md.log.Warning("Value for last block does not exist in given Dbs metadata")
@@ -89,6 +90,7 @@ func printMetadata(pathToDb string) error {
 	} else {
 		md.log.Infof("First Epoch: %v", firstEpoch)
 	}
+
 	lastEpoch, err := md.getLastEpoch()
 	if err != nil {
 		md.log.Warning("Value for last epoch does not exist in given Dbs metadata")
