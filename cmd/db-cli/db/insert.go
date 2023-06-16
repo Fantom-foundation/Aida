@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/core/rawdb"
@@ -43,6 +44,8 @@ Removes block and epoch range and ChainID from metadata for given AidaDb.
 func removeMetadata(ctx *cli.Context) error {
 	aidaDbPath := ctx.String(utils.AidaDbFlag.Name)
 
+	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "Remove-Metadata")
+
 	// open db
 	aidaDb, err := rawdb.NewLevelDBDatabase(aidaDbPath, 1024, 100, "profiling", false)
 	if err != nil {
@@ -50,26 +53,47 @@ func removeMetadata(ctx *cli.Context) error {
 	}
 
 	if err = aidaDb.Delete([]byte(ChainIDPrefix)); err != nil {
-		return err
+		log.Criticalf("cannot delete chain-id; ", err)
+	} else {
+		log.Info("ChainID deleted successfully")
 	}
+
 	if err = aidaDb.Delete([]byte(FirstBlockPrefix)); err != nil {
-		return err
+		log.Criticalf("cannot delete first block; ", err)
+	} else {
+		log.Info("First block deleted successfully")
 	}
+
 	if err = aidaDb.Delete([]byte(LastBlockPrefix)); err != nil {
-		return err
+		log.Criticalf("cannot delete last block; ", err)
+	} else {
+		log.Info("Last block deleted successfully")
 	}
+
 	if err = aidaDb.Delete([]byte(FirstEpochPrefix)); err != nil {
-		return err
+		log.Criticalf("cannot delete first epoch; ", err)
+	} else {
+		log.Info("First epoch deleted successfully")
 	}
+
 	if err = aidaDb.Delete([]byte(LastEpochPrefix)); err != nil {
-		return err
+		log.Criticalf("cannot delete last epoch; ", err)
+	} else {
+		log.Info("Last epoch deleted successfully")
 	}
+
 	if err = aidaDb.Delete([]byte(TypePrefix)); err != nil {
-		return err
+		log.Criticalf("cannot delete db type; ", err)
+	} else {
+		log.Info("Timestamp deleted successfully")
 	}
+
 	if err = aidaDb.Delete([]byte(TimestampPrefix)); err != nil {
-		return err
+		log.Criticalf("cannot delete creation timestamp; ", err)
+	} else {
+		log.Info("Timestamp deleted successfully")
 	}
+
 	return nil
 }
 
