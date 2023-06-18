@@ -38,7 +38,6 @@ var ReplayCommand = cli.Command{
 		&substate.SkipTransferTxsFlag,
 		&substate.SkipCallTxsFlag,
 		&substate.SkipCreateTxsFlag,
-		&substate.SubstateDbFlag,
 		&utils.ChainIDFlag,
 		&utils.ProfileEVMCallFlag,
 		&utils.MicroProfilingFlag,
@@ -48,7 +47,6 @@ var ReplayCommand = cli.Command{
 		&utils.VmImplementation,
 		&utils.OnlySuccessfulFlag,
 		&utils.CpuProfileFlag,
-		&utils.StateDbImplementationFlag,
 		&logger.LogLevelFlag,
 	},
 	Description: `
@@ -64,7 +62,6 @@ var vm_duration time.Duration
 type ReplayConfig struct {
 	vm_impl         string
 	only_successful bool
-	state_db_impl   string
 }
 
 // data collection execution context
@@ -133,16 +130,8 @@ func replayTask(config ReplayConfig, block uint64, tx int, recording *substate.S
 		return h
 	}
 
-	// TODO: implement other state db types
-	var statedb state.StateDB
-	switch config.state_db_impl {
-	case "geth":
-		statedb = state.MakeOffTheChainStateDB(inputAlloc)
-	case "geth-memory":
-		statedb = state.MakeGethInMemoryStateDB(&inputAlloc, block)
-	default:
-		return fmt.Errorf("unsupported db type: %s", config.state_db_impl)
-	}
+	// create an in-memory StateDB instance
+	statedb := state.MakeGethInMemoryStateDB(&inputAlloc, block)
 
 	// Apply Message
 	var (
@@ -349,7 +338,6 @@ func replayAction(ctx *cli.Context) error {
 	var config = ReplayConfig{
 		vm_impl:         cfg.VmImpl,
 		only_successful: cfg.OnlySuccessful,
-		state_db_impl:   cfg.DbImpl,
 	}
 
 	task := func(block uint64, tx int, recording *substate.Substate, taskPool *substate.SubstateTaskPool) error {
