@@ -1,82 +1,142 @@
 package db
 
 import (
-	"encoding/binary"
 	"fmt"
 	"strconv"
 
-	"github.com/Fantom-foundation/Aida/cmd/db-cli/flags"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/urfave/cli/v2"
 )
 
-// InsertCommand is a generic command for inserting any key/value pair into AidaDb
-var InsertCommand = cli.Command{
-	Action: insert,
-	Name:   "insert",
-	Usage:  "insert key/value pair into AidaDb",
+// InsertMetadataCommand is a generic command for inserting any metadata key/value pair into AidaDb
+var InsertMetadataCommand = cli.Command{
+	Action: insertMetadata,
+	Name:   "insert-metadata",
+	Usage:  "inserts key/value metadata pair into AidaDb",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
-		&flags.EncodingType,
 	},
 	Description: `
 Inserts key/value pair into AidaDb according to arguments:
 <key> <value>
+If given key is not metadata-key, operation fails.
 `,
 }
 
-// insert given key/value pair into AidaDb
-func insert(ctx *cli.Context) error {
-	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
+// RemoveMetadataCommand is a command used for creating testing environment without metadata
+var RemoveMetadataCommand = cli.Command{
+	Action: removeMetadata,
+	Name:   "remove-metadata",
+	Usage:  "remove metadata from aidaDb",
+	Flags: []cli.Flag{
+		&utils.AidaDbFlag,
+	},
+	Description: `
+Removes block and epoch range and ChainID from metadata for given AidaDb.
+`,
+}
+
+// removeMetadata command is used for testing scenario where AidaDb does not have metadata and a patch
+// is applied onto it
+func removeMetadata(ctx *cli.Context) error {
+	aidaDbPath := ctx.String(utils.AidaDbFlag.Name)
+
+	// open db
+	aidaDb, err := rawdb.NewLevelDBDatabase(aidaDbPath, 1024, 100, "profiling", false)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot open targetDb. Error: %v", err)
 	}
+
+	md := newAidaMetadata(aidaDb, "DEBUG")
+	md.deleteMetadata()
+
+	return nil
+}
+
+// insertMetadata key/value pair into AidaDb
+func insertMetadata(ctx *cli.Context) error {
+	var (
+		err error
+		val uint64
+	)
+
+	aidaDbPath := ctx.String(utils.AidaDbFlag.Name)
 
 	if ctx.Args().Len() != 2 {
-		return fmt.Errorf("this command requires two arguments - <key> <value>")
+		return fmt.Errorf("this command requires two arguments - <keyArg> <value>")
 	}
 
-	key := ctx.Args().Get(0)
-	val := ctx.Args().Get(1)
+	keyArg := ctx.Args().Get(0)
+	valArg := ctx.Args().Get(1)
 
-	var value []byte
-
-	switch ctx.String(flags.EncodingType.Name) {
-	case "":
-		return fmt.Errorf("choose encoding type (--encoding-type: byte/rlp/uint/block)")
-	case "byte":
-		value = []byte(val)
-	case "rlp":
-		value, err = rlp.EncodeToBytes(val)
-		if err != nil {
-			return fmt.Errorf("cannot encode given value %v; %v", val, err)
-		}
-	case "uint":
-		u, err := strconv.ParseUint(val, 10, 64)
-		if err != nil {
-			return fmt.Errorf("cannot parse uint %v; %v", val, err)
-		}
-		binary.BigEndian.PutUint64(value, u)
-	case "block":
-		u, err := strconv.ParseUint(val, 10, 64)
-		if err != nil {
-			return fmt.Errorf("cannot parse uint %v; %v", val, err)
-		}
-		value = substate.BlockToBytes(u)
-	default:
-		return fmt.Errorf("unknown encoding type (--encoding-type: byte/rlp/uint/block)")
-	}
-
-	// open aidaDb
-	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
+	// open db
+	aidaDb, err := rawdb.NewLevelDBDatabase(aidaDbPath, 1024, 100, "profiling", false)
 	if err != nil {
 		return fmt.Errorf("cannot open targetDb. Error: %v", err)
 	}
 
 	defer MustCloseDB(aidaDb)
 
-	return aidaDb.Put([]byte(key), value)
+	md := newAidaMetadata(aidaDb, "INFO")
+
+	switch substate.MetadataPrefix + keyArg {
+	case FirstBlockPrefix:
+		val, err = strconv.ParseUint(valArg, 10, 64)
+		if err != nil {
+			return fmt.Errorf("cannot parse uint %v; %v", valArg, err)
+		}
+		if err = md.setFirstBlock(val); err != nil {
+			return err
+		}
+	case LastBlockPrefix:
+		val, err = strconv.ParseUint(valArg, 10, 64)
+		if err != nil {
+			return fmt.Errorf("cannot parse uint %v; %v", valArg, err)
+		}
+		if err = md.setLastBlock(val); err != nil {
+			return err
+		}
+	case FirstEpochPrefix:
+		val, err = strconv.ParseUint(valArg, 10, 64)
+		if err != nil {
+			return fmt.Errorf("cannot parse uint %v; %v", valArg, err)
+		}
+		if err = md.setFirstEpoch(val); err != nil {
+			return err
+		}
+	case LastEpochPrefix:
+		val, err = strconv.ParseUint(valArg, 10, 64)
+		if err != nil {
+			return fmt.Errorf("cannot parse uint %v; %v", valArg, err)
+		}
+		if err = md.setLastEpoch(val); err != nil {
+			return err
+		}
+	case TypePrefix:
+		num, err := strconv.Atoi(valArg)
+		if err != nil {
+			return err
+		}
+		if err = md.setDbType(aidaDbType(num)); err != nil {
+			return err
+		}
+	case ChainIDPrefix:
+		val, err = strconv.ParseUint(valArg, 10, 16)
+		if err != nil {
+			return fmt.Errorf("cannot parse uint %v; %v", valArg, err)
+		}
+		if err = md.setChainID(int(val)); err != nil {
+			return err
+		}
+	case TimestampPrefix:
+		if err = md.setTimestamp(); err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("incorrect keyArg: %v", keyArg)
+	}
+
+	return nil
 }

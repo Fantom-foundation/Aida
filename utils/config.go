@@ -1,4 +1,3 @@
-// Package trace provides cli for recording and replaying storage traces.
 package utils
 
 import (

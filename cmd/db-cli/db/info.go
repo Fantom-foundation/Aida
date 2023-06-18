@@ -1,7 +1,6 @@
 package db
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -17,147 +16,134 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var Stats = cli.Command{
-	Name:  "stats",
-	Usage: "Prints statistics about AidaDb",
+var InfoCommand = cli.Command{
+	Name:  "info",
+	Usage: "Prints information about AidaDb",
 	Subcommands: []*cli.Command{
-		&cmdPrint,
+		&cmdMetadata,
 		&cmdDelAcc,
 		&cmdCount,
 	},
 }
 
-var cmdPrint = cli.Command{
-	Action:    printStats,
-	Name:      "print",
-	Usage:     "Prints metadata of AidaDb",
-	ArgsUsage: "<lastBlockNum>",
+var cmdMetadata = cli.Command{
+	Action: printMetadataCmd,
+	Name:   "metadata",
+	Usage:  "Prints metadata",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 	},
 }
 
-func printStats(ctx *cli.Context) error {
-	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-Stats")
-
+func printMetadataCmd(ctx *cli.Context) error {
 	cfg, argErr := utils.NewConfig(ctx, utils.NoArgs)
 	if argErr != nil {
 		return argErr
 	}
 
-	// open aidaDb
-	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", true)
+	return printMetadata(cfg.AidaDb)
+}
+
+// printMetadata from given AidaDb
+func printMetadata(pathToDb string) error {
+	// open db
+	aidaDb, err := rawdb.NewLevelDBDatabase(pathToDb, 1024, 100, "profiling", true)
 	if err != nil {
 		return fmt.Errorf("cannot open aida-db; %v", err)
 	}
 
 	defer MustCloseDB(aidaDb)
 
-	log.Notice("AIDA-DB INFO:")
+	md := newAidaMetadata(aidaDb, "INFO")
 
-	if err = printDbType(aidaDb, log); err != nil {
-		return err
-	}
+	md.log.Notice("AIDA-DB INFO:")
 
-	// CHAINID
-	if err = printChainID(aidaDb, log); err != nil {
-		return err
+	printDbType(md)
+
+	// CHAIN-ID
+	chainID, err := md.getChainID()
+	if err != nil {
+		md.log.Warning("Value for chainID does not exist in given Dbs metadata")
+	} else {
+		md.log.Infof("Chain-ID: %v", chainID)
 	}
 
 	// BLOCKS
-	if err = printBlocks(aidaDb, log); err != nil {
-		return err
+	firstBlock, err := md.getFirstBlock()
+	if err != nil {
+		md.log.Warning("Value for first block does not exist in given Dbs metadata")
+	} else {
+		md.log.Infof("First Block: %v", firstBlock)
+	}
+
+	lastBlock, err := md.getLastBlock()
+	if err != nil {
+		md.log.Warning("Value for last block does not exist in given Dbs metadata")
+	} else {
+		md.log.Infof("Last Block: %v", lastBlock)
 	}
 
 	// EPOCHS
-	if err = printEpochs(aidaDb, log); err != nil {
-		return err
+	firstEpoch, err := md.getFirstEpoch()
+	if err != nil {
+		md.log.Warning("Value for first epoch does not exist in given Dbs metadata")
+	} else {
+		md.log.Infof("First Epoch: %v", firstEpoch)
+	}
+
+	lastEpoch, err := md.getLastEpoch()
+	if err != nil {
+		md.log.Warning("Value for last epoch does not exist in given Dbs metadata")
+	} else {
+		md.log.Infof("Last Epoch: %v", lastEpoch)
 	}
 
 	// TIMESTAMP
-	if err = printCreateTime(aidaDb, log); err != nil {
-		return err
+	timestamp, err := md.getTimestamp()
+	if err != nil {
+		md.log.Warning("Value for creation time does not exist in given Dbs metadata")
+	} else {
+		md.log.Infof("Created: %v", time.Unix(int64(timestamp), 0))
 	}
 
 	// UPDATE-SET
-	if err = printUpdateSetInfo(aidaDb, log); err != nil {
-		return err
-	}
+	printUpdateSetInfo(md)
 
 	return nil
 }
 
-func printBlocks(aidaDb ethdb.Database, log *logging.Logger) error {
-	firstBlockBytes, err := aidaDb.Get([]byte(FirstBlockPrefix))
-	if err != nil {
-		return fmt.Errorf("cannot get first block from db; %v", err)
-	}
-	log.Infof("First Block: %v", bigendian.BytesToUint64(firstBlockBytes))
+// printUpdateSetInfo from given AidaDb
+func printUpdateSetInfo(m *aidaMetadata) {
+	m.log.Notice("UPDATE-SET INFO:")
 
-	last, err := getLastBlock(aidaDb)
+	intervalBytes, err := m.db.Get([]byte(substate.UpdatesetIntervalKey))
 	if err != nil {
-		return err
+		m.log.Warning("Value for update-set interval does not exist in given Dbs metadata")
+	} else {
+		m.log.Infof("Interval: %v blocks", bigendian.BytesToUint64(intervalBytes))
 	}
-	log.Infof("Last Block: %v", last)
 
-	return nil
+	sizeBytes, err := m.db.Get([]byte(substate.UpdatesetSizeKey))
+	if err != nil {
+		m.log.Warning("Value for update-set size does not exist in given Dbs metadata")
+	} else {
+		u := bigendian.BytesToUint64(sizeBytes)
+
+		// todo convert to mb
+		m.log.Infof("Size: %.1f MB", float64(u)/float64(1_000_000))
+	}
 }
 
-func printEpochs(aidaDb ethdb.Database, log *logging.Logger) error {
-	firstEpochBytes, err := aidaDb.Get([]byte(FirstEpochPrefix))
+// printDbType from given AidaDb
+func printDbType(m *aidaMetadata) {
+	t, err := m.getDbType()
 	if err != nil {
-		return fmt.Errorf("cannot get first epoch from db; %v", err)
-	}
-	log.Infof("First Epoch: %v", bigendian.BytesToUint64(firstEpochBytes))
-
-	lastEpochBytes, err := aidaDb.Get([]byte(LastEpochPrefix))
-	if err != nil {
-		return fmt.Errorf("cannot get last epoch from db; %v", err)
-	}
-	log.Infof("Last Epoch: %v", bigendian.BytesToUint64(lastEpochBytes))
-
-	return nil
-}
-
-func printCreateTime(aidaDb ethdb.Database, log *logging.Logger) error {
-	timestampBytes, err := aidaDb.Get([]byte(TimestampPrefix))
-	if err != nil {
-		return fmt.Errorf("cannot get timestamp from db; %v", err)
-	}
-	log.Infof("Created: %v", time.Unix(int64(bigendian.BytesToUint64(timestampBytes)), 0))
-
-	return nil
-}
-
-func printUpdateSetInfo(aidaDb ethdb.Database, log *logging.Logger) error {
-	log.Notice("UPDATE-SET INFO:")
-
-	intervalBytes, err := aidaDb.Get([]byte(substate.UpdatesetIntervalKey))
-	if err != nil {
-		return fmt.Errorf("cannot get updateset interval from db; %v", err)
-	}
-	log.Infof("Interval: %v blocks", bigendian.BytesToUint64(intervalBytes))
-
-	sizeBytes, err := aidaDb.Get([]byte(substate.UpdatesetSizeKey))
-	if err != nil {
-		return fmt.Errorf("cannot get updateset size from db; %v", err)
-	}
-	u := bigendian.BytesToUint64(sizeBytes)
-
-	// todo convert to mb
-	log.Infof("Size: %.1f MB", float64(u)/float64(1_000_000))
-
-	return nil
-}
-
-func printDbType(aidaDb ethdb.Database, log *logging.Logger) error {
-	typeBytes, err := aidaDb.Get([]byte(TypePrefix))
-	if err != nil {
-		return errors.New("this aida-b seems to have no metadata")
+		m.log.Warning("Value for db type does not exist in given Dbs metadata")
+		return
 	}
 
 	var typePrint string
-	switch aidaDbType(typeBytes[0]) {
+	switch t {
 	case genType:
 		typePrint = "Generate"
 	case cloneType:
@@ -165,27 +151,15 @@ func printDbType(aidaDb ethdb.Database, log *logging.Logger) error {
 	case patchType:
 		typePrint = "Patch"
 	default:
-		typePrint = "Could not decode Db type of key: " + string(typeBytes)
+		typePrint = "Unknown DbType: " + string(t)
 	}
 
-	log.Noticef("DB-Type: %v", typePrint)
-
-	return nil
-}
-
-func printChainID(aidaDb ethdb.Database, log *logging.Logger) error {
-	chainIDBytes, err := aidaDb.Get([]byte(ChainIDPrefix))
-	if err != nil {
-		return fmt.Errorf("cannot get chain-id from db; %v", err)
-	}
-
-	log.Infof("Chain-ID: %v", bigendian.BytesToUint16(chainIDBytes))
-	return nil
+	m.log.Noticef("DB-Type: %v", typePrint)
 }
 
 var cmdCount = cli.Command{
 	Name:  "count",
-	Usage: "Prints count of records in AidaDb",
+	Usage: "Prints count of records",
 	Subcommands: []*cli.Command{
 		&cmdCountAll,
 		&cmdCountDestroyed,
@@ -224,15 +198,17 @@ var cmdCountSubstate = cli.Command{
 	},
 }
 
+// printAllCount counts all prefixes prints number of occurrences.
+// If DetailedFlag is called, then it prints count of each prefix
 func printAllCount(ctx *cli.Context) error {
-	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-Stats")
+	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-Info")
 
 	cfg, argErr := utils.NewConfig(ctx, utils.NoArgs)
 	if argErr != nil {
 		return argErr
 	}
 
-	// open aidaDb
+	// open db
 	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", true)
 	if err != nil {
 		return fmt.Errorf("cannot open aida-db; %v", err)
@@ -249,6 +225,7 @@ func printAllCount(ctx *cli.Context) error {
 	return nil
 }
 
+// logDetailedSize counts and prints all prefix occurrence
 func logDetailedSize(db ethdb.Database, log *logging.Logger) {
 	iter := db.NewIterator(nil, nil)
 	defer iter.Release()
@@ -264,8 +241,9 @@ func logDetailedSize(db ethdb.Database, log *logging.Logger) {
 	}
 }
 
+// printDestroyedCount in given AidaDb
 func printDestroyedCount(ctx *cli.Context) error {
-	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-Stats")
+	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-InfoCommand")
 
 	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if argErr != nil {
@@ -287,8 +265,9 @@ func printDestroyedCount(ctx *cli.Context) error {
 	return nil
 }
 
+// printSubstateCount in given AidaDb
 func printSubstateCount(ctx *cli.Context) error {
-	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-Stats")
+	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-InfoCommand")
 
 	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if argErr != nil {
@@ -314,7 +293,7 @@ func printSubstateCount(ctx *cli.Context) error {
 }
 
 var cmdDelAcc = cli.Command{
-	Action:    getDelAcc,
+	Action:    printDeletedAccountInfo,
 	Name:      "del-acc",
 	Usage:     "Prints info about given deleted account in AidaDb.",
 	ArgsUsage: "<firstBlockNum>, <lastBlockNum>",
@@ -325,8 +304,9 @@ var cmdDelAcc = cli.Command{
 	},
 }
 
-func getDelAcc(ctx *cli.Context) error {
-	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-Stats")
+// printDeletedAccountInfo for given deleted account in AidaDb
+func printDeletedAccountInfo(ctx *cli.Context) error {
+	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-InfoCommand")
 
 	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if argErr != nil {
