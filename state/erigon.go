@@ -299,7 +299,7 @@ func (s *erigonStateDB) finalizeExecution() error {
 }
 
 func (s *erigonStateDB) GetShadowDB() StateDB {
-	return s
+	return nil
 }
 
 // For priming initial state of stateDB

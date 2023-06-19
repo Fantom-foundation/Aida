@@ -122,7 +122,8 @@ type StateDB interface {
 	PrepareSubstate(*substate.SubstateAlloc, uint64)
 
 	// Used to retrieve the shadow DB (if there is one) for testing purposes so that
-	// the shadow DB can be used to query state directly.
+	// the shadow DB can be used to query state directly. If there is no shadow DB,
+	// nil is returned.
 	GetShadowDB() StateDB
 }
 

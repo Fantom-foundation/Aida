@@ -752,7 +752,7 @@ func TestCarmenState_GetShadowDB(t *testing.T) {
 			}(csDB)
 
 			// check that shadowDB returns the DB object itself
-			if csDB.GetShadowDB() != csDB {
+			if csDB.GetShadowDB() != nil {
 				t.Fatal("failed to retrieve shadow DB")
 			}
 		})

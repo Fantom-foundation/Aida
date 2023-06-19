@@ -134,7 +134,7 @@ func (s *flatStateDB) GetArchiveState(block uint64) (StateDB, error) {
 }
 
 func (s *flatStateDB) GetShadowDB() StateDB {
-	return s
+	return nil
 }
 
 // For priming initial state of stateDB

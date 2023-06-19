@@ -481,7 +481,7 @@ func (s *inMemoryStateDB) StartBulkLoad(block uint64) BulkLoad {
 }
 
 func (s *inMemoryStateDB) GetShadowDB() StateDB {
-	return s
+	return nil
 }
 
 type gethInMemoryBulkLoad struct{}

@@ -399,5 +399,5 @@ func (s *gethStateDB) trieCap() {
 }
 
 func (s *gethStateDB) GetShadowDB() StateDB {
-	return s
+	return nil
 }

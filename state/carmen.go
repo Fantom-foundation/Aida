@@ -345,5 +345,5 @@ func (l *carmenBulkLoad) Close() error {
 }
 
 func (s *carmenStateDB) GetShadowDB() StateDB {
-	return s
+	return nil
 }
