@@ -283,3 +283,7 @@ func (s *loggingStateDB) GetMemoryUsage() *MemoryUsage {
 	// no loggin in this case
 	return s.db.GetMemoryUsage()
 }
+
+func (s *loggingStateDB) GetShadowDB() StateDB {
+	return s.db.GetShadowDB()
+}

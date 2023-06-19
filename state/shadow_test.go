@@ -617,3 +617,38 @@ func TestShadowState_BulkloadOperations(t *testing.T) {
 		})
 	}
 }
+
+func TestShadowState_GetShadowDB(t *testing.T) {
+	for _, ctc := range getCarmenStateTestCases() {
+		testCaseTitle := fmt.Sprintf("carmenDB variant: %s, archive type: %s", ctc.variant, ctc.archive)
+
+		t.Run(testCaseTitle, func(t *testing.T) {
+			csDB, err := MakeCarmenStateDB(t.TempDir(), ctc.variant, ctc.archive, 1)
+
+			if err != nil {
+				t.Fatalf("failed to create carmen state DB: %v", err)
+			}
+
+			gsDB, err := MakeGethStateDB(t.TempDir(), "", common.Hash{}, false)
+
+			if err != nil {
+				t.Fatalf("failed to create geth state DB: %v", err)
+			}
+
+			shadowDB := MakeShadowStateDB(csDB, gsDB)
+
+			// Close DB after test ends
+			defer func(shadowDB StateDB) {
+				err := shadowDB.Close()
+				if err != nil {
+					t.Fatalf("failed to close shadow state DB: %v", err)
+				}
+			}(shadowDB)
+
+			if shadowDB.GetShadowDB() != gsDB {
+				t.Fatal("Wrong return value of GetShadowDB")
+			}
+
+		})
+	}
+}

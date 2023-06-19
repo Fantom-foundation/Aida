@@ -114,6 +114,9 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, 
 		numOps      uint64         // total number of operations
 	)
 
+	if db.GetShadowDB() == nil {
+		log.Notice("No validation with a shadow DB.")
+	}
 	log.Noticef("balance range %d", cfg.BalanceRange)
 	BalanceRange = cfg.BalanceRange
 
@@ -434,7 +437,13 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		ss.snapshot = append(ss.snapshot, id)
 
 	case SubBalanceID:
-		balance := db.GetBalance(addr).Int64()
+		shadowDB := db.GetShadowDB()
+		var balance int64
+		if shadowDB == nil {
+			balance = db.GetBalance(addr).Int64()
+		} else {
+			balance = shadowDB.GetBalance(addr).Int64()
+		}
 		if balance > 0 {
 			// get a delta that does not exceed current balance
 			// in the current snapshot

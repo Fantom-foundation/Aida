@@ -407,3 +407,7 @@ func (p *ProxyProfiler) GetArchiveState(block uint64) (state.StateDB, error) {
 func (p *ProxyProfiler) GetMemoryUsage() *state.MemoryUsage {
 	return p.db.GetMemoryUsage()
 }
+
+func (p *ProxyProfiler) GetShadowDB() state.StateDB {
+	return p.db.GetShadowDB()
+}

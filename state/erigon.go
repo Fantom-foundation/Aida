@@ -298,6 +298,10 @@ func (s *erigonStateDB) finalizeExecution() error {
 	return nil
 }
 
+func (s *erigonStateDB) GetShadowDB() StateDB {
+	return nil
+}
+
 // For priming initial state of stateDB
 type erigonBulkLoad struct {
 	db      *erigonStateDB

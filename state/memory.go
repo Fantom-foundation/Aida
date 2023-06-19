@@ -480,6 +480,10 @@ func (s *inMemoryStateDB) StartBulkLoad(block uint64) BulkLoad {
 	return &gethInMemoryBulkLoad{}
 }
 
+func (s *inMemoryStateDB) GetShadowDB() StateDB {
+	return nil
+}
+
 type gethInMemoryBulkLoad struct{}
 
 func (l *gethInMemoryBulkLoad) CreateAccount(addr common.Address) {

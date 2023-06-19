@@ -301,6 +301,10 @@ func (s *shadowStateDB) GetMemoryUsage() *MemoryUsage {
 	}
 }
 
+func (s *shadowStateDB) GetShadowDB() StateDB {
+	return s.shadow
+}
+
 type shadowBulkLoad struct {
 	prime  BulkLoad
 	shadow BulkLoad
