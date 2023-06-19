@@ -3,6 +3,7 @@ package apireplay
 import (
 	"context"
 	"fmt"
+	"log"
 
 	"github.com/Fantom-foundation/Aida/iterator"
 	"github.com/Fantom-foundation/Aida/state"
@@ -49,12 +50,16 @@ func ReplayAPI(ctx *cli.Context) error {
 		}
 		substate.SetSubstateDb(cfg.SubstateDb)
 		substate.OpenSubstateDBReadOnly()
+
+		defer substate.CloseSubstateDB()
+
 	}
 
-	// closing gracefully both Substate and StateDB is necessary
 	defer func() {
 		err = db.Close()
-		substate.CloseSubstateDB()
+		if err != nil {
+			log.Fatalf("cannot close db; %v", err)
+		}
 	}()
 
 	// start the replay
