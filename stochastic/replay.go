@@ -434,7 +434,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		ss.snapshot = append(ss.snapshot, id)
 
 	case SubBalanceID:
-		balance := db.GetBalance(addr).Int64()
+		balance := db.GetShadowDB().GetBalance(addr).Int64()
 		if balance > 0 {
 			// get a delta that does not exceed current balance
 			// in the current snapshot

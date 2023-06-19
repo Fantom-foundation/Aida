@@ -397,3 +397,7 @@ func (s *gethStateDB) trieCap() {
 		triedb.Cap(memoryUpperLimit)
 	}
 }
+
+func (s *gethStateDB) GetShadowDB() StateDB {
+	return s
+}
