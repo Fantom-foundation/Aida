@@ -295,7 +295,7 @@ func (s *gethStateDB) GetArchiveState(block uint64) (StateDB, error) {
 
 func (s *gethStateDB) GetMemoryUsage() *MemoryUsage {
 	// not supported yet
-	return nil
+	return &MemoryUsage{uint64(0), nil}
 }
 
 type gethBulkLoad struct {

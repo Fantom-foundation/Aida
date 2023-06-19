@@ -92,13 +92,7 @@ func RunVM(ctx *cli.Context) error {
 	}
 
 	// print memory usage after priming
-	if cfg.MemoryBreakdown {
-		if usage := db.GetMemoryUsage(); usage != nil {
-			log.Noticef("State DB memory usage: %d byte\n%s", usage.UsedBytes, usage.Breakdown)
-		} else {
-			log.Info("Utilized storage solution does not support memory breakdowns.")
-		}
-	}
+	utils.MemoryBreakdown(db, cfg, log)
 
 	// wrap stateDB for profiling
 	var stats *profile.Stats
@@ -273,13 +267,7 @@ func RunVM(ctx *cli.Context) error {
 		}
 	}
 
-	if cfg.MemoryBreakdown {
-		if usage := db.GetMemoryUsage(); usage != nil {
-			log.Notice("State DB memory usage: %d byte\n%s", usage.UsedBytes, usage.Breakdown)
-		} else {
-			log.Info("Utilized storage solution does not support memory breakdowns.")
-		}
-	}
+	utils.MemoryBreakdown(db, cfg, log)
 
 	// write memory profile if requested
 	if err := utils.StartMemoryProfile(cfg); err != nil {

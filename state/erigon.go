@@ -216,7 +216,7 @@ func (s *erigonStateDB) Close() error {
 
 func (s *erigonStateDB) GetMemoryUsage() *MemoryUsage {
 	// not supported yet
-	return nil
+	return &MemoryUsage{uint64(0), nil}
 }
 
 // BeginRwTxBatch begins erigon read/write transaction and batch

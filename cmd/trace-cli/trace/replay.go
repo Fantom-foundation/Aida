@@ -196,13 +196,7 @@ func traceReplayTask(cfg *utils.Config, log *logging.Logger) error {
 		}
 	}
 
-	if cfg.MemoryBreakdown {
-		if usage := db.GetMemoryUsage(); usage != nil {
-			log.Notice("State DB memory usage: %d byte\n%s", usage.UsedBytes, usage.Breakdown)
-		} else {
-			log.Notice("Utilized storage solution does not support memory breakdowns.")
-		}
-	}
+	utils.MemoryBreakdown(db, cfg, log)
 
 	// write memory profile if requested
 	if err := utils.StartMemoryProfile(cfg); err != nil {

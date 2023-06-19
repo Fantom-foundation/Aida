@@ -461,7 +461,7 @@ func (db *inMemoryStateDB) Close() error {
 
 func (db *inMemoryStateDB) GetMemoryUsage() *MemoryUsage {
 	// not supported yet
-	return nil
+	return &MemoryUsage{uint64(0), nil}
 }
 
 func (db *inMemoryStateDB) GetArchiveState(block uint64) (StateDB, error) {
