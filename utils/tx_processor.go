@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"log"
-	"math"
 	"math/big"
 	"strings"
 
@@ -91,16 +90,15 @@ func ProcessTx(db state.StateDB, cfg *Config, block uint64, txIndex int, tx *sub
 		}
 	}
 
-	db.EndTransaction()
+	// Log messages are associated to a single transaction and may be reset
+	// at the end of the transaction. Thus, we have to collect them before
+	// ending the transaction.
+	defer db.EndTransaction()
 
 	// check whether the outputAlloc substate is contained in the world-state db.
 	if cfg.ValidateTxState {
 		// validate result
 		logs := db.GetLogs(txHash, blockHash)
-		if cfg.DbImpl == "carmen" {
-			//ignore log comparison in carmen
-			logs = tx.Result.Logs
-		}
 		var contract common.Address
 		if to := msg.To(); to == nil {
 			contract = crypto.CreateAddress(evm.TxContext.Origin, msg.Nonce())
@@ -153,11 +151,6 @@ func prepareBlockCtx(inputEnv *substate.SubstateEnv) *vm.BlockContext {
 	// If currentBaseFee is defined, add it to the vmContext.
 	if inputEnv.BaseFee != nil {
 		blockCtx.BaseFee = new(big.Int).Set(inputEnv.BaseFee)
-	}
-	// Limit the GasLimit to MaxInt64 since some VM implementations use
-	// int64 instead of uint64 to represent gas quantities.
-	if blockCtx.GasLimit > uint64(math.MaxInt64) {
-		blockCtx.GasLimit = uint64(math.MaxInt64)
 	}
 	return blockCtx
 }

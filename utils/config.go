@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Fantom-foundation/Aida/cmd/db-cli/flags"
 	"github.com/Fantom-foundation/Aida/logger"
 	substate "github.com/Fantom-foundation/Substate"
 	_ "github.com/Fantom-foundation/Tosca/go/vm/evmone"
@@ -31,8 +32,14 @@ const (
 	NoArgs                             // requires no arguments
 )
 
+const (
+	aidaDbRepositoryMainnetUrl = "https://aida.repository.fantom.network"
+	aidaDbRepositoryTestnetUrl = "https://aida.testnet.repository.fantom.network"
+)
+
 var (
-	FirstSubstateBlock uint64 // id of the first block in substate
+	FirstSubstateBlock  uint64 // id of the first block in substate
+	AidaDbRepositoryUrl string // url of the Aida DB repository
 )
 
 // Type of validation performs on stateDB during Tx processing.
@@ -53,6 +60,11 @@ var (
 		Usage:   "Path to source file with recorded API data",
 		Aliases: []string{"r"},
 	}
+	APIRecordingVersionFlag = cli.IntFlag{
+		Name:    "api-recording-version",
+		Usage:   "set version of api-recording; 0 (default) version without timestamp - substate-db is necessary for this version / 1 version with timestamp - substate-db is not needed",
+		Aliases: []string{"v"},
+	}
 	ArchiveModeFlag = cli.BoolFlag{
 		Name:  "archive",
 		Usage: "set node type to archival mode. If set, the node keep all the EVM state history; otherwise the state history will be pruned.",
@@ -66,6 +78,11 @@ var (
 		Usage: "defines the number of transactions per block",
 		Value: 10,
 	}
+	BalanceRangeFlag = cli.Int64Flag{
+		Name:  "balance-range",
+		Usage: "sets the balance range of the stochastic simulation",
+		Value: 1000000,
+	}
 	CarmenSchemaFlag = cli.IntFlag{
 		Name:  "carmen-schema",
 		Usage: "select the DB schema used by Carmen's current state DB",
@@ -74,7 +91,6 @@ var (
 	ChainIDFlag = cli.IntFlag{
 		Name:  "chainid",
 		Usage: "ChainID for replayer",
-		Value: 250,
 	}
 	CacheFlag = cli.IntFlag{
 		Name:  "cache",
@@ -115,9 +131,23 @@ var (
 		Name:  "memory-breakdown",
 		Usage: "enables printing of memory usage breakdown",
 	}
+	NonceRangeFlag = cli.IntFlag{
+		Name:  "nonce-range",
+		Usage: "sets nonce range for stochastic simulation",
+		Value: 1000000,
+	}
 	ProfileFlag = cli.BoolFlag{
 		Name:  "profile",
-		Usage: "enables profiling",
+		Usage: "enable profiling",
+	}
+	ProfileFileFlag = cli.StringFlag{
+		Name:  "profile-file",
+		Usage: "output file containing profiling data",
+	}
+	ProfileIntervalFlag = cli.Uint64Flag{
+		Name:  "profile-interval",
+		Usage: "Frequency of logging block statistics",
+		Value: 1_000_000_000,
 	}
 	QuietFlag = cli.BoolFlag{
 		Name:  "quiet",
@@ -351,10 +381,12 @@ type Config struct {
 	First uint64 // first block
 	Last  uint64 // last block
 
-	APIRecordingSrcFile string            // path to source file with recorded API data
+	APIRecordingSrcFile string // path to source file with recorded API data
+	APIRecordingVersion int
 	ArchiveMode         bool              // enable archive mode
 	ArchiveVariant      string            // selects the implementation variant of the archive
 	BlockLength         uint64            // length of a block in number of transactions
+	BalanceRange        int64             // balance range for stochastic simulation/replay
 	CarmenSchema        int               // the current DB schema ID to use in Carmen
 	ChainID             int               // Blockchain ID (mainnet: 250/testnet: 4002)
 	Cache               int               // Cache for StateDb or Priming
@@ -381,12 +413,16 @@ type Config struct {
 	MaxNumTransactions  int               // the maximum number of processed transactions
 	MemoryBreakdown     bool              // enable printing of memory breakdown
 	MemoryProfile       string            // capture the memory heap profile into the file
+	NonceRange          int               // nonce range for stochastic simulation/replay
 	TransactionLength   uint64            // determines indirectly the length of a transaction
 	PrimeRandom         bool              // enable randomized priming
 	PrimeThreshold      int               // set account threshold before commit
 	Profile             bool              // enable micro profiling
+	ProfileFile         string            // output file containing profiling result
+	ProfileInterval     uint64            // interval of printing profile result
 	RandomSeed          int64             // set random seed for stochastic testing
 	SkipPriming         bool              // skip priming of the state DB
+	SkipMetadata        bool              // skip metadata insert/getting into AidaDb
 	ShadowDb            bool              // defines we want to open an existing db as shadow
 	ShadowImpl          string            // implementation of the shadow DB to use, empty if disabled
 	ShadowVariant       string            // database variant of the shadow DB to be used
@@ -398,6 +434,7 @@ type Config struct {
 	SnapshotDepth       int               // depth of snapshot history
 	SubstateDb          string            // substate directory
 	OperaDatadir        string            // source opera directory
+	Validate            bool              // validate validate aida-db
 	ValidateTxState     bool              // validate stateDB before and after transaction
 	ValidateWorldState  bool              // validate stateDB before and after replay block range
 	ValuesNumber        int64             // number of values to generate
@@ -420,6 +457,7 @@ type Config struct {
 	TargetBlock         uint64            // represents the ID of target block to be reached by state evolve process or in dump state
 	UpdateBufferSize    uint64            // cache size in Bytes
 	ErigonBatchSize     datasize.ByteSize // erigon batch size for runVM
+
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.
@@ -498,9 +536,11 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		CommandName: ctx.Command.Name,
 
 		APIRecordingSrcFile: ctx.Path(APIRecordingSrcFileFlag.Name),
+		APIRecordingVersion: ctx.Int(APIRecordingVersionFlag.Name),
 		ArchiveMode:         ctx.Bool(ArchiveModeFlag.Name),
 		ArchiveVariant:      ctx.String(ArchiveVariantFlag.Name),
 		BlockLength:         ctx.Uint64(BlockLengthFlag.Name),
+		BalanceRange:        ctx.Int64(BalanceRangeFlag.Name),
 		CarmenSchema:        ctx.Int(CarmenSchemaFlag.Name),
 		ChainID:             ctx.Int(ChainIDFlag.Name),
 		Cache:               ctx.Int(CacheFlag.Name),
@@ -529,12 +569,16 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		MaxNumTransactions:  ctx.Int(MaxNumTransactionsFlag.Name),
 		MemoryBreakdown:     ctx.Bool(MemoryBreakdownFlag.Name),
 		MemoryProfile:       ctx.String(MemoryProfileFlag.Name),
+		NonceRange:          ctx.Int(NonceRangeFlag.Name),
 		TransactionLength:   ctx.Uint64(TransactionLengthFlag.Name),
 		PrimeRandom:         ctx.Bool(RandomizePrimingFlag.Name),
 		RandomSeed:          ctx.Int64(RandomSeedFlag.Name),
 		PrimeThreshold:      ctx.Int(PrimeThresholdFlag.Name),
 		Profile:             ctx.Bool(ProfileFlag.Name),
+		ProfileFile:         ctx.String(ProfileFileFlag.Name),
+		ProfileInterval:     ctx.Uint64(ProfileIntervalFlag.Name),
 		SkipPriming:         ctx.Bool(SkipPrimingFlag.Name),
+		SkipMetadata:        ctx.Bool(flags.SkipMetadata.Name),
 		ShadowDb:            ctx.Bool(ShadowDb.Name),
 		ShadowImpl:          ctx.String(ShadowDbImplementationFlag.Name),
 		ShadowVariant:       ctx.String(ShadowDbVariantFlag.Name),
@@ -547,6 +591,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		SubstateDb:          ctx.Path(substate.SubstateDbFlag.Name),
 		OperaDatadir:        ctx.Path(OperaDatadirFlag.Name),
 		ValuesNumber:        ctx.Int64(ValuesNumberFlag.Name),
+		Validate:            ctx.Bool(ValidateFlag.Name),
 		ValidateTxState:     validateTxState,
 		ValidateWorldState:  validateWorldState,
 		VmImpl:              ctx.String(VmImplementation.Name),
@@ -569,11 +614,16 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		UpdateBufferSize:    ctx.Uint64(UpdateBufferSizeFlag.Name) << 20, // convert from MiB to B
 	}
 	if cfg.ChainID == 0 {
-		cfg.ChainID = ChainIDFlag.Value
+		log.Warning("--chainid was not set; setting default value for mainnet (250)")
+		cfg.ChainID = 250
 	}
 	setFirstBlockFromChainID(cfg.ChainID)
 	if cfg.RandomSeed < 0 {
 		cfg.RandomSeed = int64(rand.Uint32())
+	}
+	err := setAidaDbRepositoryUrl(cfg.ChainID)
+	if err != nil {
+		return cfg, fmt.Errorf("Unable to prepareUrl from ChainId %v; %v", cfg.ChainID, err)
 	}
 
 	if _, err := os.Stat(cfg.AidaDb); !os.IsNotExist(err) {
@@ -667,6 +717,18 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+// setAidaDbRepositoryUrl based on chain id selects correct aida-db repository url
+func setAidaDbRepositoryUrl(chainId int) error {
+	if chainId == 250 {
+		AidaDbRepositoryUrl = aidaDbRepositoryMainnetUrl
+	} else if chainId == 4002 {
+		AidaDbRepositoryUrl = aidaDbRepositoryTestnetUrl
+	} else {
+		return fmt.Errorf("invalid chain id %d", chainId)
+	}
+	return nil
 }
 
 // SetBlockRange checks the validity of a block range and return the first and last block as numbers.

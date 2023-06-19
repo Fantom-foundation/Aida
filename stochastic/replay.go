@@ -16,13 +16,16 @@ import (
 	"github.com/op/go-logging"
 )
 
+// Parameterisable simulation constants
+var (
+	BalanceRange int64 = 100000  // balance range for generating randomized values
+	NonceRange   int   = 1000000 // nonce range for generating randomized nonces
+)
+
 // Simulation constants
-// TODO: convert constants to CLI parameters so that they can be changed without recompiling.
 const (
-	AddBalanceRange = 100000  // balance range for adding value to an account
-	SetNonceRange   = 1000000 // nonce range
-	MaxCodeSize     = 24576   // fixed upper limit by EIP-170
-	FinaliseFlag    = true    // flag for Finalise() StateDB operation
+	MaxCodeSize  = 24576 // fixed upper limit by EIP-170
+	FinaliseFlag = true  // flag for Finalise() StateDB operation
 )
 
 // stochasticState keeps the execution state for the stochastic simulation
@@ -110,6 +113,12 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, 
 		opFrequency [NumOps]uint64 // operation frequency
 		numOps      uint64         // total number of operations
 	)
+
+	log.Noticef("balance range %d", cfg.BalanceRange)
+	BalanceRange = cfg.BalanceRange
+
+	log.Noticef("nonce range %d", cfg.NonceRange)
+	NonceRange = cfg.NonceRange
 
 	// random generator
 	rg := rand.New(rand.NewSource(cfg.RandomSeed))
@@ -247,7 +256,7 @@ func (ss *stochasticState) prime() {
 	for i := int64(0); i <= numInitialAccounts; i++ {
 		addr := toAddress(i)
 		db.CreateAccount(addr)
-		db.AddBalance(addr, big.NewInt(ss.rg.Int63n(AddBalanceRange)))
+		db.AddBalance(addr, big.NewInt(ss.rg.Int63n(BalanceRange)))
 		pt.PrintProgress()
 	}
 	ss.log.Notice("Finalizing...")
@@ -307,7 +316,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 
 	switch op {
 	case AddBalanceID:
-		value := rg.Int63n(AddBalanceRange)
+		value := rg.Int63n(BalanceRange)
 		if ss.traceDebug {
 			ss.log.Infof("value: %v", value)
 		}
@@ -411,7 +420,7 @@ func (ss *stochasticState) execute(op int, addrCl int, keyCl int, valueCl int) {
 		db.SetCode(addr, code)
 
 	case SetNonceID:
-		value := uint64(rg.Intn(SetNonceRange))
+		value := uint64(rg.Intn(NonceRange))
 		db.SetNonce(addr, value)
 
 	case SetStateID:

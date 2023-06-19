@@ -44,6 +44,8 @@ var TraceReplaySubstateCommand = cli.Command{
 		&utils.ValidateWorldStateFlag,
 		&utils.AidaDbFlag,
 		&logger.LogLevelFlag,
+		// erigon
+		&utils.ErigonBatchSizeFlag,
 	},
 	Description: `
 The trace replay-substate command requires two arguments:
@@ -74,7 +76,7 @@ func traceReplaySubstateTask(cfg *utils.Config, log *logging.Logger) error {
 	defer os.RemoveAll(stateDbDir)
 
 	// create prime context
-	pc := utils.NewPrimeContext(cfg, log)
+	pc := utils.NewPrimeContext(cfg, db, log)
 
 	var (
 		start        time.Time
@@ -163,8 +165,11 @@ func traceReplaySubstateTask(cfg *utils.Config, log *logging.Logger) error {
 	sec = time.Since(start).Seconds()
 
 	// print profile statistics (if enabled)
-	if operation.EnableProfiling {
-		operation.PrintProfiling()
+	if rCtx.Profile {
+		rCtx.Stats.FillLabels(operation.CreateIdLabelMap())
+		if err := rCtx.Stats.PrintProfiling(cfg.First, cfg.Last); err != nil {
+			return err
+		}
 	}
 
 	// close the DB and print disk usage
@@ -194,8 +199,6 @@ func traceReplaySubstateAction(ctx *cli.Context) error {
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
-	// Get profiling flag
-	operation.EnableProfiling = cfg.Profile
 	// Start CPU profiling if requested.
 	if err := utils.StartCPUProfile(cfg); err != nil {
 		return err

@@ -265,7 +265,7 @@ func TestStatedb_DeleteDestroyedAccountsFromStateDB(t *testing.T) {
 			log := logger.NewLogger("INFO", "TestStateDb")
 
 			// Create new prime context
-			pc := NewPrimeContext(cfg, log)
+			pc := NewPrimeContext(cfg, sDB, log)
 			// Priming state DB with given world state
 			pc.PrimeStateDB(ws, sDB)
 
@@ -311,7 +311,7 @@ func TestStatedb_ValidateStateDB(t *testing.T) {
 			log := logger.NewLogger("INFO", "TestStateDb")
 
 			// Create new prime context
-			pc := NewPrimeContext(cfg, log)
+			pc := NewPrimeContext(cfg, sDB, log)
 			// Priming state DB with given world state
 			pc.PrimeStateDB(ws, sDB)
 
@@ -351,7 +351,7 @@ func TestStatedb_ValidateStateDBWithUpdate(t *testing.T) {
 			log := logger.NewLogger("INFO", "TestStateDb")
 
 			// Create new prime context
-			pc := NewPrimeContext(cfg, log)
+			pc := NewPrimeContext(cfg, sDB, log)
 			// Priming state DB with given world state
 			pc.PrimeStateDB(ws, sDB)
 
@@ -423,7 +423,7 @@ func TestStatedb_PrepareStateDB(t *testing.T) {
 			}
 
 			// Fill the json file with the info
-			err = os.WriteFile(filepath.Join(cfg.StateDbSrc, PathToDbInfo), dbInfoJson, 0644)
+			err = os.WriteFile(filepath.Join(cfg.StateDbSrc, PathToDbInfo), dbInfoJson, 0755)
 			if err != nil {
 				t.Fatalf("failed to write into DB info json file: %v", err)
 			}

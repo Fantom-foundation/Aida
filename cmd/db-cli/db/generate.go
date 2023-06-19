@@ -11,20 +11,24 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/Fantom-foundation/Aida/logger"
-	substate "github.com/Fantom-foundation/Substate"
-
+	"github.com/Fantom-foundation/Aida/cmd/db-cli/flags"
 	"github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
 	"github.com/Fantom-foundation/Aida/cmd/updateset-cli/updateset"
 	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/state"
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Aida/world-state/db/opera"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
-// default updateSet interval
-const updateSetInterval = 1_000_000
+const (
+	// default updateSet interval
+	updateSetInterval = 1_000_000
+	// number of lines which are kept in memory in case command fails
+	commandOutputLimit = 50
+)
 
 // GenerateCommand data structure for the replay app
 var GenerateCommand = cli.Command{
@@ -38,9 +42,12 @@ var GenerateCommand = cli.Command{
 		&utils.KeepDbFlag,
 		&utils.CompactDbFlag,
 		&utils.DbTmpFlag,
+		&utils.UpdateBufferSizeFlag,
+		&utils.ChannelBufferSizeFlag,
 		&utils.ChainIDFlag,
 		&utils.CacheFlag,
 		&logger.LogLevelFlag,
+		&flags.SkipMetadata,
 	},
 	Description: `
 The db generate command requires events as an argument:
@@ -63,47 +70,55 @@ func generate(ctx *cli.Context) error {
 		return err
 	}
 
-	if !cfg.KeepDb {
-		defer func() {
-			err = os.RemoveAll(aidaDbTmp)
-			if err != nil {
-				panic(err)
-			}
-		}()
+	_, err = Generate(cfg, log)
+	if err != nil {
+		return err
 	}
 
-	return Generate(cfg, log)
+	if !cfg.KeepDb {
+		err = os.RemoveAll(aidaDbTmp)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Generate is used to record/update aida-db
-func Generate(cfg *utils.Config, log *logging.Logger) error {
-	err := prepareOpera(cfg, log)
-	if err != nil {
-		return err
+func Generate(cfg *utils.Config, log *logging.Logger) (*MetadataInfo, error) {
+	mdi := &MetadataInfo{
+		dbType:  genType,
+		chainId: cfg.ChainID,
 	}
 
-	err = recordSubstate(cfg, log)
+	err := prepareOpera(cfg, log, mdi)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	err = genDeletedAccounts(cfg, log)
+	err = recordSubstate(cfg, log, mdi)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	err = genUpdateSet(cfg, log)
+	err = genDeletedAccounts(cfg, log, mdi)
 	if err != nil {
-		return err
+		return nil, err
+	}
+
+	err = genUpdateSet(cfg, log, mdi)
+	if err != nil {
+		return nil, err
 	}
 
 	log.Noticef("Aida-db updated from block %v to %v", cfg.First-1, cfg.Last)
 
-	return err
+	return mdi, nil
 }
 
 // prepareOpera confirms that the opera is initialized
-func prepareOpera(cfg *utils.Config, log *logging.Logger) error {
+func prepareOpera(cfg *utils.Config, log *logging.Logger, mdi *MetadataInfo) error {
 	_, err := os.Stat(cfg.Db)
 	if os.IsNotExist(err) {
 		log.Noticef("Initialising opera from genesis")
@@ -113,10 +128,12 @@ func prepareOpera(cfg *utils.Config, log *logging.Logger) error {
 			return fmt.Errorf("aida-db; Error: %v", err)
 		}
 	}
-	lastOperaBlock, _, err := GetOperaBlock(cfg)
+	lastOperaBlock, firstEpoch, err := GetOperaBlockAndEpoch(cfg)
 	if err != nil {
 		return fmt.Errorf("couldn't retrieve block from existing opera database %v ; Error: %v", cfg.Db, err)
 	}
+
+	mdi.firstEpoch = firstEpoch
 
 	log.Noticef("Opera is starting at block: %v", lastOperaBlock)
 
@@ -130,7 +147,7 @@ func prepareOpera(cfg *utils.Config, log *logging.Logger) error {
 func prepare(cfg *utils.Config) (string, error) {
 	if cfg.DbTmp != "" {
 		// create a parents of temporary directory
-		err := os.MkdirAll(cfg.DbTmp, 0700)
+		err := os.MkdirAll(cfg.DbTmp, 0755)
 		if err != nil {
 			return "", fmt.Errorf("failed to create %s directory; %s", cfg.DbTmp, err)
 		}
@@ -156,8 +173,8 @@ func loadSourceDBPaths(cfg *utils.Config, aidaDbTmp string) {
 	cfg.WorldStateDb = filepath.Join(aidaDbTmp, "worldstate")
 }
 
-// GetOperaBlock retrieves current block of opera head
-func GetOperaBlock(cfg *utils.Config) (uint64, uint64, error) {
+// GetOperaBlockAndEpoch retrieves current block of opera head
+func GetOperaBlockAndEpoch(cfg *utils.Config) (uint64, uint64, error) {
 	operaPath := filepath.Join(cfg.Db, "/chaindata/leveldb-fsh/")
 	store, err := opera.Connect("ldb", operaPath, "main")
 	if err != nil {
@@ -177,11 +194,14 @@ func GetOperaBlock(cfg *utils.Config) (uint64, uint64, error) {
 }
 
 // genUpdateSet invokes UpdateSet generation
-func genUpdateSet(cfg *utils.Config, log *logging.Logger) error {
-	db := substate.OpenUpdateDB(cfg.AidaDb)
+func genUpdateSet(cfg *utils.Config, log *logging.Logger, mdi *MetadataInfo) error {
+	db, err := substate.OpenUpdateDB(cfg.AidaDb)
+	if err != nil {
+		return err
+	}
 	// set first block
 	nextUpdateSetStart := db.GetLastKey() + 1
-	err := db.Close()
+	err = db.Close()
 	if err != nil {
 		return err
 	}
@@ -197,7 +217,7 @@ func genUpdateSet(cfg *utils.Config, log *logging.Logger) error {
 	}
 
 	// merge UpdateDb into AidaDb
-	err = Merge(cfg, []string{cfg.UpdateDb})
+	err = Merge(cfg, []string{cfg.UpdateDb}, mdi)
 	if err != nil {
 		return err
 	}
@@ -207,7 +227,7 @@ func genUpdateSet(cfg *utils.Config, log *logging.Logger) error {
 }
 
 // genDeletedAccounts invokes DeletedAccounts generation
-func genDeletedAccounts(cfg *utils.Config, log *logging.Logger) error {
+func genDeletedAccounts(cfg *utils.Config, log *logging.Logger, mdi *MetadataInfo) error {
 	log.Noticef("Deleted generation")
 	err := replay.GenDeletedAccountsAction(cfg)
 	if err != nil {
@@ -215,7 +235,7 @@ func genDeletedAccounts(cfg *utils.Config, log *logging.Logger) error {
 	}
 
 	// merge DeletionDb into AidaDb
-	err = Merge(cfg, []string{cfg.DeletionDb})
+	err = Merge(cfg, []string{cfg.DeletionDb}, mdi)
 	if err != nil {
 		return err
 	}
@@ -225,7 +245,7 @@ func genDeletedAccounts(cfg *utils.Config, log *logging.Logger) error {
 }
 
 // recordSubstate loads events into the opera, whilst recording substates
-func recordSubstate(cfg *utils.Config, log *logging.Logger) error {
+func recordSubstate(cfg *utils.Config, log *logging.Logger, mdi *MetadataInfo) error {
 	_, err := os.Stat(cfg.Events)
 	if os.IsNotExist(err) {
 		return fmt.Errorf("supplied events file %s doesn't exist", cfg.Events)
@@ -233,16 +253,17 @@ func recordSubstate(cfg *utils.Config, log *logging.Logger) error {
 
 	log.Noticef("Starting Substate recording of %v", cfg.Events)
 
-	cmd := exec.Command("opera", "--datadir", cfg.Db, "--gcmode=full", "--db.preset=legacy-ldb", "--cache", strconv.Itoa(cfg.Cache), "import", "events", "--recording", "--substate-db", cfg.SubstateDb, cfg.Events)
+	cmd := exec.Command("opera", "--datadir", cfg.Db, "--db.preset=legacy-ldb", "--cache", strconv.Itoa(cfg.Cache), "import", "events", "--recording", "--substate-db", cfg.SubstateDb, cfg.Events)
 
 	err = runCommand(cmd, nil, log)
 	if err != nil {
 		// remove empty substateDb
-		return fmt.Errorf("import events; %v", err.Error())
+		return fmt.Errorf("cannot import events; %v", err)
 	}
 
 	// retrieve block the opera was iterated into
-	cfg.Last, _, err = GetOperaBlock(cfg)
+	cfg.Last, mdi.lastEpoch, err = GetOperaBlockAndEpoch(cfg)
+
 	if err != nil {
 		return fmt.Errorf("GetOperaBlock last; %v", err)
 	}
@@ -252,7 +273,10 @@ func recordSubstate(cfg *utils.Config, log *logging.Logger) error {
 
 	log.Noticef("Substates generated for %v - %v", cfg.First, cfg.Last)
 
-	err = Merge(cfg, []string{cfg.SubstateDb})
+	mdi.firstBlock = cfg.First
+	mdi.lastBlock = cfg.Last
+
+	err = Merge(cfg, []string{cfg.SubstateDb}, mdi)
 	if err != nil {
 		return err
 	}
@@ -290,45 +314,66 @@ func runCommand(cmd *exec.Cmd, resultChan chan string, log *logging.Logger) erro
 	}
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to create StdoutPipe; %v", err)
 	}
 	defer stdout.Close()
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to create StderrPipe; %v", err)
 	}
 	defer stderr.Close()
 
 	err = cmd.Start()
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to start Command %v; %v", cmd, err)
 	}
 
 	merged := io.MultiReader(stderr, stdout)
 	scanner := bufio.NewScanner(merged)
-	if log.IsEnabledFor(logging.DEBUG) {
-		for scanner.Scan() {
-			m := scanner.Text()
-			if resultChan != nil {
-				resultChan <- m
-			}
+
+	lastOutputMessagesChan := make(chan string, commandOutputLimit)
+	defer close(lastOutputMessagesChan)
+	for scanner.Scan() {
+		m := scanner.Text()
+		if resultChan != nil {
+			resultChan <- m
+		}
+		if log.IsEnabledFor(logging.DEBUG) {
 			log.Debug(m)
+		} else {
+			// in case debugging is turned off and resultChan doesn't listen to ouput
+			// we need to keep most recent output lines in case of error
+			if resultChan == nil {
+				// throw out the oldest line in case we are at limit
+				if len(lastOutputMessagesChan) == commandOutputLimit {
+					<-lastOutputMessagesChan
+				}
+				lastOutputMessagesChan <- m
+			}
 		}
 	}
 	err = cmd.Wait()
 
 	// command failed
 	if err != nil {
-		if !log.IsEnabledFor(logging.DEBUG) {
-			for scanner.Scan() {
-				m := scanner.Text()
-				if resultChan != nil {
-					resultChan <- m
-				}
-				log.Error(m)
+		// print out gathered output since generation failed
+		for {
+			m, ok := <-lastOutputMessagesChan
+			if !ok {
+				break
 			}
+			log.Error(m)
 		}
-		return err
+
+		// read rest of the output - might not be needed
+		for scanner.Scan() {
+			m := scanner.Text()
+			if resultChan != nil {
+				resultChan <- m
+			}
+			log.Error(m)
+		}
+		return fmt.Errorf("error while executing Command %v; %v", cmd, err)
 	}
 	return nil
 }

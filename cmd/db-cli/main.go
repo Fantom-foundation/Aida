@@ -20,6 +20,8 @@ var InitDb = cli.App{
 		&db.CloneCommand,
 		&db.GenerateCommand,
 		&db.MergeCommand,
+		&db.UpdateCommand,
+		&db.Stats,
 	},
 }
 

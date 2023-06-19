@@ -20,6 +20,7 @@ func main() {
 		Copyright: "(c) 2023 Fantom Foundation",
 		Flags: []cli.Flag{
 			&utils.APIRecordingSrcFileFlag,
+			&utils.APIRecordingVersionFlag,
 			&substate.WorkersFlag,
 
 			// AidaDB

@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	triesInMemory    = 16
+	triesInMemory    = 1
 	memoryUpperLimit = 256 * 1024 * 1024
 	imgUpperLimit    = 4 * 1024 * 1024
 )

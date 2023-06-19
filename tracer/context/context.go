@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/Fantom-foundation/Aida/tracer/profile"
 	"github.com/dsnet/compress/bzip2"
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -32,6 +33,8 @@ type Record struct {
 type Replay struct {
 	Context
 	snapshot *SnapshotIndex // snapshot translation table for replay
+	Profile  bool           // collect stats
+	Stats    *profile.Stats
 }
 
 // NewContext creates a new replay context.
@@ -43,10 +46,15 @@ func NewReplay() *Replay {
 	}
 }
 
+func (ctx *Replay) EnableProfiling(csv string) {
+	ctx.Profile = true
+	ctx.Stats = profile.NewStats(csv)
+}
+
 // NewContext creates a new record context.
 func NewRecord(filename string) *Record {
 	// open trace file, write buffer, and compressed stream
-	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
 	if err != nil {
 		log.Fatalf("Cannot open trace file. Error: %v", err)
 	}

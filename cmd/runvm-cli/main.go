@@ -53,6 +53,8 @@ var RunVMApp = cli.App{
 		&utils.RandomSeedFlag,
 		&utils.PrimeThresholdFlag,
 		&utils.ProfileFlag,
+		&utils.ProfileFileFlag,
+		&utils.ProfileIntervalFlag,
 
 		// Priming
 		&utils.RandomizePrimingFlag,

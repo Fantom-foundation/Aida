@@ -162,15 +162,17 @@ func (i *Iterator) decode(hdr *Header, namespace, method string) (*RequestWithRe
 		}
 
 		req.Response = &Response{
-			BlockID: hdr.BlockID(),
-			Result:  req.ResponseRaw,
+			BlockID:   hdr.BlockID(),
+			Result:    req.ResponseRaw,
+			Timestamp: hdr.BlockTimestamp(),
 		}
 	}
 
 	// error?
 	if hdr.IsError() {
 		req.Error = &ErrorResponse{
-			BlockID: hdr.BlockID(),
+			BlockID:   hdr.BlockID(),
+			Timestamp: hdr.BlockTimestamp(),
 			Error: ErrorMessage{
 				Code: hdr.ErrorCode(),
 			},

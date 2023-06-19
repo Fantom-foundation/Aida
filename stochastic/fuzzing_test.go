@@ -87,7 +87,7 @@ func FuzzStochastic(f *testing.F) {
 		defer os.RemoveAll(cfg.StateDbSrc)
 
 		// generate uniform events
-		events := GenerateUniformRegistry(&cfg).NewEventRegistryJSON()
+		events := GenerateUniformRegistry(&cfg, logger.NewLogger(cfg.LogLevel, "FuzzingTest")).NewEventRegistryJSON()
 
 		// generate uniform matrix
 		e := NewEstimationModelJSON(&events)

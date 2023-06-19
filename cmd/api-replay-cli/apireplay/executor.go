@@ -26,13 +26,16 @@ type executorInput struct {
 
 // OutData are sent to comparator with result from StateDB and req/resp Recorded on API server
 type OutData struct {
-	Method     string
-	MethodBase string
-	Recorded   *RecordedData
-	StateDB    *StateDBData
-	BlockID    uint64
-	Params     []interface{}
-	ParamsRaw  []byte
+	Method          string
+	MethodBase      string
+	Recorded        *RecordedData
+	StateDB         *StateDBData
+	BlockID         uint64
+	Params          []interface{}
+	ParamsRaw       []byte
+	originalRequest *iterator.RequestWithResponse
+	recoveryChan    chan *iterator.RequestWithResponse
+	isRecovered     bool
 }
 
 // dbRange represents first and last block of StateDB
@@ -130,7 +133,7 @@ func (e *ReplayExecutor) execute() {
 				select {
 				case <-e.closed:
 					return
-				case e.output <- createOutData(in, res):
+				case e.output <- createOutData(in, res, e.input, req):
 				}
 			} else {
 				logType = noSubstateForGivenBlock
@@ -151,7 +154,7 @@ func (e *ReplayExecutor) execute() {
 }
 
 // createOutData and send it to Comparator
-func createOutData(in *executorInput, r *StateDBData) *OutData {
+func createOutData(in *executorInput, r *StateDBData, ch chan *iterator.RequestWithResponse, req *iterator.RequestWithResponse) *OutData {
 
 	out := new(OutData)
 	out.Recorded = new(RecordedData)
@@ -178,6 +181,11 @@ func createOutData(in *executorInput, r *StateDBData) *OutData {
 	// add raw params for clear logging
 	out.ParamsRaw = in.req.ParamsRaw
 
+	// recovery chan is used when call method returns different data - in this case block number is deducted by one and resend again to executor
+	out.recoveryChan = ch
+
+	out.originalRequest = req
+
 	return out
 }
 
@@ -193,10 +201,28 @@ func (e *ReplayExecutor) doExecute(in *executorInput) *StateDBData {
 		return executeGetTransactionCount(in.req.Query.Params[0], in.archive)
 
 	case "call":
-		timestamp := e.getTimestamp(in.blockID)
-		if timestamp == 0 {
-			return nil
+		var timestamp uint64
+
+		// first try to extract timestamp from response
+		if in.req.Response != nil {
+			if in.req.Response.Timestamp != 0 {
+				timestamp = in.req.Response.Timestamp
+			}
+		} else if in.req.Error != nil {
+			if in.req.Error.Timestamp != 0 {
+
+				timestamp = in.req.Error.Timestamp
+			}
 		}
+
+		if timestamp == 0 {
+			// if no timestamp is in response, we are dealing with an old record version, hence we use substate
+			timestamp = e.getTimestamp(in.blockID)
+			if timestamp == 0 {
+				return nil
+			}
+		}
+
 		evm := newEVMExecutor(in.blockID, in.archive, e.vmImpl, e.chainCfg, in.req.Query.Params[0].(map[string]interface{}), timestamp, e.log)
 		return executeCall(evm)
 
@@ -313,7 +339,8 @@ func decodeBlockNumber(params []interface{}, recordedBlockNumber uint64, returne
 		*returnedBlockID = uint64(rpc.EarliestBlockNumber)
 		break
 	case "pending":
-		*returnedBlockID = recordedBlockNumber
+		// pending blocks seems not to be working rn, skip them for now
+		return false
 	default:
 		// request requires specific currentBlockID
 		var (

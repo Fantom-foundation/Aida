@@ -84,13 +84,8 @@ MaxDuration = "72h"
 # The prefix to be used for CPU profile files collected.
 PROFILE_FILE_PREFIX="/tmp/aida_profile_#{DateTime.now.strftime("%Y-%m-%d_%H%M%S")}"
 
-# The directories containing input data for Aida.
-DATA_DIR = "/var/data/aida"
-SubstateDb = DATA_DIR + "/substate.50M"
-UpdateDir = DATA_DIR + "/updateset"
-DeletedAccountDir = DATA_DIR + "/deleted_accounts"
-
-
+# The directories containing the Aida DB.
+AidaDb = "/var/data/aida-db"
 
 # Optional extra flags to be passed to Aida.
 ExtraFlags = ""
@@ -123,7 +118,14 @@ def runAida (mode, evm, db, variant, schema, iteration)
     end
 
     puts "Running #{mode} with #{evm} and #{db}/#{variant}/s#{schema} .."
-    cmd = "timeout #{MaxDuration} ./build/aida-runvm --substate-db #{SubstateDb} --updatedir #{UpdateDir} --deleted-account-dir #{DeletedAccountDir} --db-impl #{db} --db-variant \"#{variant}\" --carmen-schema \"#{schema}\" --vm-impl #{evm} --cpuprofile=#{PROFILE_FILE_PREFIX}_profile_#{mode}_#{evm}_#{db}_#{variant}_#{StartBlock}_#{EndBlock}_#{iteration}.dat #{extraFlags} #{StartBlock} #{EndBlock}"
+    cmd = ""
+    cmd += "timeout #{MaxDuration} "
+    cmd += "./build/aida-runvm --aida-db #{AidaDb} "
+    cmd += "--db-impl #{db} --db-variant \"#{variant}\" --carmen-schema \"#{schema}\" "
+    cmd += "--vm-impl #{evm} "
+    cmd += "--cpu-profile=#{PROFILE_FILE_PREFIX}_profile_#{mode}_#{evm}_#{db}_#{variant}_#{StartBlock}_#{EndBlock}_#{iteration}.dat "
+    cmd += "#{extraFlags} "
+    cmd += "#{StartBlock} #{EndBlock}"
 
     puts "Running #{cmd}\n"
     
@@ -140,13 +142,13 @@ def runAida (mode, evm, db, variant, schema, iteration)
     }
 
     res = []
-    out.scan(/Reached block (.*), last interval rate ~ (.*) Tx\/s, ~ (.*) Gas\/s/) { |block,tx_rate,gas_rate| res.append([block,tx_rate,gas_rate]) }
+    out.scan(/Reached block (.*) using ~ (.*) bytes of memory, ~ (.*) bytes of disk, last interval rate ~ (.*) Tx\/s, ~ (.*) Gas\/s/) { |block,mem_usage,disk_usage,tx_rate,gas_rate| res.append([block,tx_rate,gas_rate,mem_usage,disk_usage]) }
     return res
 end
 
-$res = ["mode, vm, db, variant, schema, iteration, interval_end, tx_rate, gas_rate"]
+$res = ["mode, vm, db, variant, schema, iteration, interval_end, tx_rate, gas_rate, mem_usage, disk_usage"]
 def addResult (mode, vm, db, variant, schema, iteration, rates)
-    rates.each{|block,tx_rate,gas_rate| $res.append("#{mode}, #{vm}, #{db}, #{variant}, #{schema}, #{iteration}, #{block}, #{tx_rate}, #{gas_rate}") }
+    rates.each{|block,tx_rate,gas_rate,mem_usage,disk_usage| $res.append("#{mode}, #{vm}, #{db}, #{variant}, #{schema}, #{iteration}, #{block}, #{tx_rate}, #{gas_rate}, #{mem_usage}, #{disk_usage}") }
     $res.each{ |l| puts "#{l}\n" }
 end
 

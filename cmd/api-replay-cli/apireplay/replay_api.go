@@ -63,6 +63,13 @@ func ReplayAPI(ctx *cli.Context) error {
 
 	substate.SetSubstateDb(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
+	if cfg.APIRecordingVersion == 0 {
+		if cfg.SubstateDb == "" {
+			return fmt.Errorf("api recording version 0 needs substate, either define it (--substate-db) or use version 1")
+		}
+		substate.SetSubstateDb(cfg.SubstateDb)
+		substate.OpenSubstateDBReadOnly()
+	}
 
 	// closing gracefully both Substate and StateDB is necessary
 	defer func() {
