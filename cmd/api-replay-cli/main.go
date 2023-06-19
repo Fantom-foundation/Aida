@@ -57,6 +57,7 @@ func main() {
 			&utils.CpuProfileFlag,
 			&utils.MemoryProfileFlag,
 			&utils.ProfileFlag,
+			&utils.ProfileFileFlag,
 		},
 	}
 

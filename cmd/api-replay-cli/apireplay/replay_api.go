@@ -9,7 +9,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/tracer"
 	traceCtx "github.com/Fantom-foundation/Aida/tracer/context"
-	"github.com/Fantom-foundation/Aida/tracer/operation"
+	"github.com/Fantom-foundation/Aida/tracer/profile"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
@@ -21,7 +21,7 @@ func ReplayAPI(ctx *cli.Context) error {
 		fr    *iterator.FileReader
 		cfg   *utils.Config
 		db    state.StateDB
-		stats *operation.ProfileStats
+		stats *profile.Stats
 	)
 
 	cfg, err = utils.NewConfig(ctx, utils.BlockRangeArgs)
@@ -48,7 +48,7 @@ func ReplayAPI(ctx *cli.Context) error {
 	}
 
 	if cfg.Profile {
-		db, stats = runvm.NewProxyProfiler(db)
+		db, stats = runvm.NewProxyProfiler(db, cfg.ProfileFile)
 	}
 
 	err = utils.StartCPUProfile(cfg)
