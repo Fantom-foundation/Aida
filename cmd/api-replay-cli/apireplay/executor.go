@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/iterator"
 	"github.com/Fantom-foundation/Aida/state"
@@ -203,33 +204,30 @@ func (e *ReplayExecutor) doExecute(in *executorInput) *StateDBData {
 	case "call":
 		var timestamp uint64
 
-		// Timestamp in recording is not currently working. With ts from recording most calls return an err,
-		// with timestamp gotten from substate calls emit no error.
+		// first try to extract timestamp from response
+		if in.req.Response != nil {
+			if in.req.Response.Timestamp != 0 {
+				timestamp = in.req.Response.Timestamp
+			}
+		} else if in.req.Error != nil {
+			if in.req.Error.Timestamp != 0 {
 
-		// todo uncomment once timestamp in recording works
+				timestamp = in.req.Error.Timestamp
+			}
+		}
 
-		//// first try to extract timestamp from response
-		//if in.req.Response != nil {
-		//	if in.req.Response.Timestamp != 0 {
-		//		timestamp = in.req.Response.Timestamp
-		//	}
-		//} else if in.req.Error != nil {
-		//	if in.req.Error.Timestamp != 0 {
-		//
-		//		timestamp = in.req.Error.Timestamp
-		//	}
-		//}
-		//
-		//if timestamp == 0 {
-		//	// if no timestamp is in response, we are dealing with an old record version, hence we use substate
-		//	timestamp = e.getTimestamp(in.blockID)
-		//	if timestamp == 0 {
-		//		return nil
-		//	}
-		//}
+		if timestamp == 0 {
+			// if no timestamp is in response, we are dealing with an old record version, hence we use substate
+			timestamp = e.getTimestamp(in.blockID)
+			if timestamp == 0 {
+				return nil
+			}
+		} else {
+			t := time.Unix(0, int64(timestamp))
 
-		// todo remove line bellow when code upward works
-		timestamp = e.getTimestamp(in.blockID)
+			timestamp = uint64(t.Unix())
+		}
+
 		evm := newEVMExecutor(in.blockID, in.archive, e.vmImpl, e.chainCfg, in.req.Query.Params[0].(map[string]interface{}), timestamp, e.log)
 		return executeCall(evm)
 
