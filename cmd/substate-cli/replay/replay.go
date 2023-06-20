@@ -38,6 +38,7 @@ var ReplayCommand = cli.Command{
 		&substate.SkipTransferTxsFlag,
 		&substate.SkipCallTxsFlag,
 		&substate.SkipCreateTxsFlag,
+		&substate.SubstateDbFlag,
 		&utils.ChainIDFlag,
 		&utils.ProfileEVMCallFlag,
 		&utils.MicroProfilingFlag,
