@@ -1,11 +1,8 @@
 package db
 
 import (
-	"bytes"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
-	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -56,18 +53,6 @@ const (
 	ChainIDPrefix    = substate.MetadataPrefix + "ci"
 	TimestampPrefix  = substate.MetadataPrefix + "ti"
 )
-
-const (
-	RPCMainnet = "https://rpcapi.fantom.network"
-	RPCTestnet = "https://rpc.testnet.fantom.network/"
-)
-
-type jsonRPCRequest struct {
-	Method  string        `json:"method"`
-	Params  []interface{} `json:"params"`
-	ID      uint64        `json:"id"`
-	JSONRPC string        `json:"jsonrpc"`
-}
 
 // merge is determined by what are we merging
 // genType + cloneType / cloneType + cloneType / = NOT POSSIBLE
@@ -614,18 +599,15 @@ func (md *aidaMetadata) setAllMetadata(firstBlock uint64, lastBlock uint64, firs
 // findEpochs for block range in metadata
 func (md *aidaMetadata) findEpochs() error {
 	var (
-		err error
-		url string
+		err     error
+		testnet bool
 	)
 
-	if md.chainId == 250 {
-		url = RPCMainnet
-
-	} else if md.chainId == 4002 {
-		url = RPCTestnet
+	if md.chainId == 4002 {
+		testnet = false
 	}
 
-	firstEpoch, err := findEpochNumber(md.firstBlock, url)
+	firstEpoch, err := findEpochNumber(md.firstBlock, testnet)
 	if err != nil {
 		return err
 	}
@@ -634,7 +616,7 @@ func (md *aidaMetadata) findEpochs() error {
 
 	md.log.Noticef("Found first epoch #%v", md.firstEpoch)
 
-	lastEpoch, err := findEpochNumber(md.lastBlock, url)
+	lastEpoch, err := findEpochNumber(md.lastBlock, testnet)
 	if err != nil {
 		return err
 	}
@@ -785,42 +767,24 @@ func (md *aidaMetadata) deleteMetadata() {
 }
 
 // findEpochNumber via RPC request getBlockByNumber
-func findEpochNumber(blockNumber uint64, url string) (uint64, error) {
+func findEpochNumber(blockNumber uint64, testnet bool) (uint64, error) {
 	hex := strconv.FormatUint(blockNumber, 16)
 
-	payload := jsonRPCRequest{
+	payload := utils.JsonRPCRequest{
 		Method:  "ftm_getBlockByNumber",
 		Params:  []interface{}{"0x" + hex, false},
 		ID:      1,
 		JSONRPC: "2.0",
 	}
 
-	jsonReq, err := json.Marshal(payload)
+	m, err := utils.SendRPCRequest(payload, testnet)
 	if err != nil {
-		return 0, fmt.Errorf("cannot marshal req with first block; %v", err)
-	}
-
-	//resp, err := http.Post(RPCMainnet, "application/json", bytes.NewBuffer(jsonReq))
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonReq))
-	if err != nil {
-		return 0, err
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return 0, err
-	}
-	m := make(map[string]interface{})
-
-	if err = json.NewDecoder(resp.Body).Decode(&m); err != nil {
 		return 0, err
 	}
 
 	resultMap, ok := m["result"].(map[string]interface{})
 	if !ok {
-		return 0, fmt.Errorf("unexpecetd answer: %v", req)
+		return 0, fmt.Errorf("unexpecetd answer: %v", m)
 	}
 
 	firstEpochHex, ok := resultMap["epoch"].(string)

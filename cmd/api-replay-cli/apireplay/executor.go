@@ -35,7 +35,6 @@ type OutData struct {
 	Params          []interface{}
 	ParamsRaw       []byte
 	originalRequest *iterator.RequestWithResponse
-	recoveryChan    chan *iterator.RequestWithResponse
 	isRecovered     bool
 }
 
@@ -120,7 +119,7 @@ func (e *ReplayExecutor) execute() {
 					logType: skipped,
 				}
 
-				// no need to executed rest of the loop
+				// no need to execute rest of the loop
 				continue
 			}
 
@@ -133,7 +132,7 @@ func (e *ReplayExecutor) execute() {
 				select {
 				case <-e.closed:
 					return
-				case e.output <- createOutData(in, res, e.input, req):
+				case e.output <- createOutData(in, res, req):
 				}
 			} else {
 				logType = skipped
@@ -154,7 +153,7 @@ func (e *ReplayExecutor) execute() {
 }
 
 // createOutData and send it to Comparator
-func createOutData(in *executorInput, r *StateDBData, ch chan *iterator.RequestWithResponse, req *iterator.RequestWithResponse) *OutData {
+func createOutData(in *executorInput, r *StateDBData, req *iterator.RequestWithResponse) *OutData {
 
 	out := new(OutData)
 	out.Recorded = new(RecordedData)
@@ -180,9 +179,6 @@ func createOutData(in *executorInput, r *StateDBData, ch chan *iterator.RequestW
 
 	// add raw params for clear logging
 	out.ParamsRaw = in.req.ParamsRaw
-
-	// recovery chan is used when call method returns different data - in this case block number is deducted by one and resend again to executor
-	out.recoveryChan = ch
 
 	out.originalRequest = req
 
