@@ -170,7 +170,7 @@ func compareCallStateDBResult(data *OutData, builder *strings.Builder) *comparat
 	builder.Reset()
 
 	// did we record an error
-	if data.Recorded.Error == nil {
+	if data.Recorded.Result != nil {
 
 		err := json.Unmarshal(data.Recorded.Result, &recordedString)
 		if err != nil {
