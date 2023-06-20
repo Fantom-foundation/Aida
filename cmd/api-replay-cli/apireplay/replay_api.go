@@ -2,7 +2,6 @@ package apireplay
 
 import (
 	"context"
-	"fmt"
 	"log"
 
 	"github.com/Fantom-foundation/Aida/iterator"
@@ -10,7 +9,6 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer"
 	traceCtx "github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -42,17 +40,6 @@ func ReplayAPI(ctx *cli.Context) error {
 		rCtx := traceCtx.NewRecord(cfg.TraceFile)
 		defer rCtx.Close()
 		db = tracer.NewProxyRecorder(db, rCtx)
-	}
-
-	if cfg.APIRecordingVersion == 0 {
-		if cfg.SubstateDb == "" {
-			return fmt.Errorf("api recording version 0 needs substate, either define it (--substate-db) or use version 1")
-		}
-		substate.SetSubstateDb(cfg.SubstateDb)
-		substate.OpenSubstateDBReadOnly()
-
-		defer substate.CloseSubstateDB()
-
 	}
 
 	defer func() {

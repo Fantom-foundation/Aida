@@ -203,25 +203,17 @@ func (e *ReplayExecutor) doExecute(in *executorInput) *StateDBData {
 		// first try to extract timestamp from response
 		if in.req.Response != nil {
 			if in.req.Response.Timestamp != 0 {
-				timestamp = in.req.Response.Timestamp
+				timestamp = uint64(time.Unix(0, int64(in.req.Response.Timestamp)).Unix())
 			}
 		} else if in.req.Error != nil {
 			if in.req.Error.Timestamp != 0 {
 
-				timestamp = in.req.Error.Timestamp
+				timestamp = uint64(time.Unix(0, int64(in.req.Error.Timestamp)).Unix())
 			}
 		}
 
 		if timestamp == 0 {
-			// if no timestamp is in response, we are dealing with an old record version, hence we use substate
-			timestamp = e.getTimestamp(in.blockID)
-			if timestamp == 0 {
-				return nil
-			}
-		} else {
-			t := time.Unix(0, int64(timestamp))
-
-			timestamp = uint64(t.Unix())
+			return nil
 		}
 
 		evm := newEVMExecutor(in.blockID, in.archive, e.vmImpl, e.chainCfg, in.req.Query.Params[0].(map[string]interface{}), timestamp, e.log)
