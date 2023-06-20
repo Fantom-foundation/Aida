@@ -29,10 +29,9 @@ type requestCounter struct {
 type reqLogType byte
 
 const (
-	executed          reqLogType = iota // the request got executed successfully
-	outOfStateDBRange                   // the request was not executed due to not being in StateDBs block range
-	noMatchingData
-	statisticsLogFrequency = 10 * time.Second // how often will the app log statistics info
+	skipped                reqLogType         = iota // the request was skipped
+	executed                                         // the request got executed successfully
+	statisticsLogFrequency = 10 * time.Second        // how often will the app log statistics info
 )
 
 // todo why not executed - statedb out of range; no substate..
@@ -116,7 +115,7 @@ func (c *requestCounter) logStats() {
 	// total requests
 	c.addExecuted()
 
-	c.addOutOfDbRange()
+	c.addSkipped()
 
 	c.log.Notice(c.builder.String())
 }
@@ -129,26 +128,12 @@ func (c *requestCounter) addStat(req requestLog) {
 	c.stats[req.logType][req.method]++
 }
 
-// addUnmatchedResults requests to counters string builder
-func (c *requestCounter) addUnmatchedResults() {
-	c.builder.WriteString(fmt.Sprintf("\nUnmatched results:\n"))
-
-	var unmatchedResult uint64
-	for method, count := range c.stats[noMatchingData] {
-		c.builder.WriteString(fmt.Sprintf("\t%v: %v\n", method, count))
-		// executed requests
-		unmatchedResult += count
-	}
-
-	c.builder.WriteString(fmt.Sprintf("\n\tTotal: %v\n", unmatchedResult))
-}
-
-// addOutOfDbRange requests to counters string builder
-func (c *requestCounter) addOutOfDbRange() {
-	c.builder.WriteString(fmt.Sprintf("\nSkipped requests (out of given Db range):\n"))
+// addSkipped requests to counters string builder
+func (c *requestCounter) addSkipped() {
+	c.builder.WriteString(fmt.Sprintf("\nSkipped requests:\n"))
 
 	var outOfRange uint64
-	for m, count := range c.stats[outOfStateDBRange] {
+	for m, count := range c.stats[skipped] {
 		c.builder.WriteString(fmt.Sprintf("\t%v: %v\n", m, count))
 		// executed requests
 		outOfRange += count

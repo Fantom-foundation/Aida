@@ -117,7 +117,7 @@ func (e *ReplayExecutor) execute() {
 				// send statistics
 				e.counterInput <- requestLog{
 					method:  req.Query.Method,
-					logType: outOfStateDBRange,
+					logType: skipped,
 				}
 
 				// no need to executed rest of the loop
@@ -129,11 +129,14 @@ func (e *ReplayExecutor) execute() {
 
 			// was execution successful?
 			if res != nil {
+				logType = executed
 				select {
 				case <-e.closed:
 					return
 				case e.output <- createOutData(in, res, e.input, req):
 				}
+			} else {
+				logType = skipped
 			}
 		}
 
