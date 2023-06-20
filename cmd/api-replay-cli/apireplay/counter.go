@@ -29,9 +29,8 @@ type requestCounter struct {
 type reqLogType byte
 
 const (
-	executed                reqLogType = iota // the request got executed successfully
-	outOfStateDBRange                         // the request was not executed due to not being in StateDBs block range
-	noSubstateForGivenBlock                   // the request was not executed due to no having substate for given block
+	executed          reqLogType = iota // the request got executed successfully
+	outOfStateDBRange                   // the request was not executed due to not being in StateDBs block range
 	noMatchingData
 	statisticsLogFrequency = 10 * time.Second // how often will the app log statistics info
 )
@@ -83,10 +82,10 @@ func (c *requestCounter) count() {
 		case <-c.closed:
 			return
 		case <-c.ticker.C:
-			if c.previousTotal == c.total {
-				close(c.closed)
-				return
-			}
+			//if c.previousTotal == c.total {
+			//	close(c.closed)
+			//	return
+			//}
 
 			c.logStats()
 			c.previousTotal = c.total
@@ -119,8 +118,6 @@ func (c *requestCounter) logStats() {
 
 	c.addOutOfDbRange()
 
-	c.addNoSubstate()
-
 	c.log.Notice(c.builder.String())
 }
 
@@ -144,20 +141,6 @@ func (c *requestCounter) addUnmatchedResults() {
 	}
 
 	c.builder.WriteString(fmt.Sprintf("\n\tTotal: %v\n", unmatchedResult))
-}
-
-// addNoSubstate requests to counters string builder
-func (c *requestCounter) addNoSubstate() {
-	c.builder.WriteString(fmt.Sprintf("\nSkipped requests (non-existing substate):\n"))
-
-	var noSubstate uint64
-	for method, count := range c.stats[noSubstateForGivenBlock] {
-		c.builder.WriteString(fmt.Sprintf("\t%v: %v\n", method, count))
-		// executed requests
-		noSubstate += count
-	}
-
-	c.builder.WriteString(fmt.Sprintf("\n\tTotal: %v\n", noSubstate))
 }
 
 // addOutOfDbRange requests to counters string builder

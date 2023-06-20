@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/Fantom-foundation/Aida/cmd/api-replay-cli/flags"
 	"github.com/Fantom-foundation/Aida/iterator"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
@@ -54,7 +55,7 @@ func newController(ctx *cli.Context, cfg *utils.Config, db state.StateDB, iter *
 	counterWg := new(sync.WaitGroup)
 
 	// create instances
-	reader := newReader(iter, logger.NewLogger(cfg.LogLevel, "Reader"), readerClosed, readerWg)
+	reader := newReader(iter, logger.NewLogger(cfg.LogLevel, "Reader"), ctx.Uint64(flags.Skip.Name), readerClosed, readerWg)
 
 	executors, output, counterInput := createExecutors(cfg, db, ctx, utils.GetChainConfig(cfg.ChainID), reader.output, executorsClosed, executorsWg)
 

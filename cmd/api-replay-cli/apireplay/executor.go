@@ -129,15 +129,11 @@ func (e *ReplayExecutor) execute() {
 
 			// was execution successful?
 			if res != nil {
-				logType = executed
-
 				select {
 				case <-e.closed:
 					return
 				case e.output <- createOutData(in, res, e.input, req):
 				}
-			} else {
-				logType = noSubstateForGivenBlock
 			}
 		}
 

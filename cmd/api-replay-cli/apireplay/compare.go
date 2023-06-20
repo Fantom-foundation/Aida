@@ -148,6 +148,9 @@ func compareCall(data *OutData, builder *strings.Builder) *comparatorError {
 
 	// did StateDB return a valid result?
 	if data.StateDB.Result != nil {
+		if data.Recorded.Error != nil {
+			fmt.Println("asd")
+		}
 		return compareCallStateDBResult(data, builder)
 	}
 

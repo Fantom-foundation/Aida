@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/Fantom-foundation/Aida/cmd/api-replay-cli/apireplay"
+	"github.com/Fantom-foundation/Aida/cmd/api-replay-cli/flags"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -22,6 +23,7 @@ func main() {
 			&utils.APIRecordingSrcFileFlag,
 			&utils.APIRecordingVersionFlag,
 			&substate.WorkersFlag,
+			&flags.Skip,
 
 			// AidaDB
 			&utils.AidaDbFlag,
