@@ -36,7 +36,7 @@ var ClonePatch = cli.Command{
 	Action:    clonePatch,
 	Name:      "patch",
 	Usage:     "patch is used to create aida-db patch",
-	ArgsUsage: "<EpochNumFirst> <EpochNumLast>",
+	ArgsUsage: "<blockNumFirst> <blockNumLast> <EpochNumFirst> <EpochNumLast>",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 		&utils.TargetDbFlag,
@@ -72,7 +72,7 @@ type cloner struct {
 	log             *logging.Logger
 	aidaDb, cloneDb ethdb.Database
 	count           uint64
-	t               byte
+	typ             byte
 	writeCh         chan rawEntry
 	errCh           chan error
 	closeCh         chan any
@@ -162,7 +162,7 @@ func clone(cfg *utils.Config, cloneType byte) error {
 	c := cloner{
 		cfg:     cfg,
 		log:     log,
-		t:       cloneType,
+		typ:     cloneType,
 		writeCh: make(chan rawEntry, cloneWriteChanSize),
 		errCh:   make(chan error, 1),
 		closeCh: make(chan any),
@@ -219,7 +219,7 @@ func (c *cloner) clone() error {
 	c.read([]byte(substate.Stage1CodePrefix), 0, nil)
 	c.read([]byte(substate.DestroyedAccountPrefix), 0, nil)
 	lastUpdateBeforeRange := c.readUpdateSet()
-	if c.t == CloneDbType {
+	if c.typ == CloneDbType {
 		if lastUpdateBeforeRange < c.cfg.First {
 			c.log.Noticef("Last updateset found at block %v, changing first block to %v", lastUpdateBeforeRange, lastUpdateBeforeRange+1)
 			c.cfg.First = lastUpdateBeforeRange + 1
@@ -384,7 +384,7 @@ func (c *cloner) readUpdateSet() uint64 {
 		return false, nil
 	}
 
-	if c.t == CloneDbType {
+	if c.typ == CloneDbType {
 		c.read([]byte(substate.SubstateAllocPrefix), 0, endCond)
 
 		// check if update-set contained at least one set (first set with world-state), then aida-db must be corrupted
@@ -394,11 +394,11 @@ func (c *cloner) readUpdateSet() uint64 {
 		}
 
 		return lastUpdateBeforeRange
-	} else if c.t == ClonePatchType {
+	} else if c.typ == ClonePatchType {
 		c.read([]byte(substate.SubstateAllocPrefix), c.cfg.First, endCond)
 		return 0
 	} else {
-		c.errCh <- fmt.Errorf("incorrect clone type: %v", c.t)
+		c.errCh <- fmt.Errorf("incorrect clone type: %v", c.typ)
 		return 0
 	}
 }
