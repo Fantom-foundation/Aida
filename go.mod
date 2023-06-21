@@ -149,7 +149,7 @@ replace github.com/Fantom-foundation/go-opera-flat => github.com/Fantom-foundati
 
 replace github.com/dvyukov/go-fuzz => github.com/guzenok/go-fuzz v0.0.0-20210103140116-f9104dfb626f
 
-replace github.com/ethereum/go-ethereum => github.com/cyberbono3/go-ethereum-substate v1.1.1-0.20230310040339-50aac04770b2
+replace github.com/ethereum/go-ethereum => github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20230621093123-9c5132fd78c1
 
 replace github.com/Fantom-foundation/go-opera => github.com/Fantom-foundation/go-opera-substate v1.0.1-0.20230523093256-e592c59c5996
 
