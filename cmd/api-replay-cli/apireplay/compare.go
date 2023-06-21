@@ -142,7 +142,7 @@ func compareTransactionCount(data *OutData, builder *strings.Builder) *comparato
 }
 
 // compareCall compares call data recorded on API server with data returned by StateDB
-func compareCall(data *OutData, builder *strings.Builder, input chan *OutData) *comparatorError {
+func compareCall(data *OutData, builder *strings.Builder, input chan *OutData, counterInput chan requestLog) *comparatorError {
 	// do we have an error from StateDB?
 	if data.StateDB.Error != nil {
 		return compareEVMStateDBError(data, builder)
@@ -150,14 +150,14 @@ func compareCall(data *OutData, builder *strings.Builder, input chan *OutData) *
 
 	// did StateDB return a valid result?
 	if data.StateDB.Result != nil {
-		return compareCallStateDBResult(data, builder, input)
+		return compareCallStateDBResult(data, builder, input, counterInput)
 	}
 
 	return newUnexpectedDataTypeErr(data)
 }
 
 // compareCallStateDBResult compares valid call result recorded on API server with valid result returned by StateDB
-func compareCallStateDBResult(data *OutData, builder *strings.Builder, input chan *OutData) *comparatorError {
+func compareCallStateDBResult(data *OutData, builder *strings.Builder, input chan *OutData, counterInput chan requestLog) *comparatorError {
 	var recordedString, dbString string
 
 	defer builder.Reset()
@@ -226,6 +226,11 @@ func compareCallStateDBResult(data *OutData, builder *strings.Builder, input cha
 		// with how old recording is done, any call method needs to be retried again with -1 block
 		data.isRecovered = true
 
+		// record the error
+		counterInput <- requestLog{
+			method:  data.Method,
+			logType: retried,
+		}
 		// we have to make hard copy of the data since the pointer gets rewritten
 		return tryRecovery(*data, input)
 	}

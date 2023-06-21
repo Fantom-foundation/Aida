@@ -29,9 +29,10 @@ type requestCounter struct {
 type reqLogType byte
 
 const (
-	skipped                reqLogType         = iota // the request was skipped
-	executed                                         // the request got executed successfully
-	statisticsLogFrequency = 10 * time.Second        // how often will the app log statistics info
+	skipped reqLogType = iota // the request was skipped
+	executed
+	retried                                   // the request got executed successfully
+	statisticsLogFrequency = 10 * time.Second // how often will the app log statistics info
 )
 
 // todo why not executed - statedb out of range; no substate..
@@ -81,6 +82,7 @@ func (c *requestCounter) count() {
 		case <-c.closed:
 			return
 		case <-c.ticker.C:
+			// todo uncomment
 			//if c.previousTotal == c.total {
 			//	close(c.closed)
 			//	return
@@ -117,6 +119,8 @@ func (c *requestCounter) logStats() {
 
 	c.addSkipped()
 
+	c.addRetried()
+
 	c.log.Notice(c.builder.String())
 }
 
@@ -147,6 +151,18 @@ func (c *requestCounter) addExecuted() {
 	c.builder.WriteString("\nExecuted requests:\n")
 	var exc uint64
 	for m, count := range c.stats[executed] {
+		c.builder.WriteString(fmt.Sprintf("\t%v: %v\n", m, count))
+		// executed requests
+		exc += count
+	}
+
+	c.builder.WriteString(fmt.Sprintf("\n\tTotal: %v\n\n", exc))
+}
+
+func (c *requestCounter) addRetried() {
+	c.builder.WriteString("\nRetried requests:\n")
+	var exc uint64
+	for m, count := range c.stats[retried] {
 		c.builder.WriteString(fmt.Sprintf("\t%v: %v\n", m, count))
 		// executed requests
 		exc += count
