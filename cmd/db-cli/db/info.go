@@ -26,6 +26,59 @@ var InfoCommand = cli.Command{
 	},
 }
 
+var cmdCount = cli.Command{
+	Name:  "count",
+	Usage: "Prints count of records",
+	Subcommands: []*cli.Command{
+		&cmdCountAll,
+		&cmdCountDestroyed,
+		&cmdCountSubstate,
+	},
+}
+
+var cmdCountAll = cli.Command{
+	Action: printAllCount,
+	Name:   "all",
+	Usage:  "List of all records in AidaDb.",
+	Flags: []cli.Flag{
+		&utils.AidaDbFlag,
+		&logger.LogLevelFlag,
+		&flags.Detailed,
+	},
+}
+
+var cmdCountDestroyed = cli.Command{
+	Action:    printDestroyedCount,
+	Name:      "destroyed",
+	Usage:     "Prints how many destroyed accounts are in AidaDb between given block range",
+	ArgsUsage: "<firstBlockNum>, <lastBlockNum>",
+	Flags: []cli.Flag{
+		&utils.AidaDbFlag,
+	},
+}
+
+var cmdCountSubstate = cli.Command{
+	Action:    printSubstateCount,
+	Name:      "substate",
+	Usage:     "Prints how many substates are in AidaDb between given block range",
+	ArgsUsage: "<firstBlockNum>, <lastBlockNum>",
+	Flags: []cli.Flag{
+		&utils.AidaDbFlag,
+	},
+}
+
+var cmdDelAcc = cli.Command{
+	Action:    printDeletedAccountInfo,
+	Name:      "del-acc",
+	Usage:     "Prints info about given deleted account in AidaDb.",
+	ArgsUsage: "<firstBlockNum>, <lastBlockNum>",
+	Flags: []cli.Flag{
+		&utils.AidaDbFlag,
+		&logger.LogLevelFlag,
+		&flags.Account,
+	},
+}
+
 var cmdMetadata = cli.Command{
 	Action: printMetadataCmd,
 	Name:   "metadata",
@@ -58,12 +111,21 @@ func printMetadata(pathToDb string) error {
 
 	md.log.Notice("AIDA-DB INFO:")
 
-	printDbType(md)
+	if err = printDbType(md); err != nil {
+		md.log.Warning("Metadata are not yet in this DB; Looking for block range in substate...")
+
+		fb, lb, err := findBlockRangeInSubstate(pathToDb)
+		if err != nil {
+			return fmt.Errorf("cannot find block range in substate; %v", err)
+		}
+		md.log.Noticef("First Block: %v Last Block: %v", fb, lb)
+		return nil
+	}
 
 	// CHAIN-ID
 	chainID, err := md.getChainID()
 	if err != nil {
-		md.log.Warning("Value for chainID does not exist in given Dbs metadata")
+		md.log.Warning("Value for ChainID does not exist in given Dbs metadata")
 	} else {
 		md.log.Infof("Chain-ID: %v", chainID)
 	}
@@ -135,11 +197,10 @@ func printUpdateSetInfo(m *aidaMetadata) {
 }
 
 // printDbType from given AidaDb
-func printDbType(m *aidaMetadata) {
+func printDbType(m *aidaMetadata) error {
 	t, err := m.getDbType()
 	if err != nil {
-		m.log.Warning("Value for db type does not exist in given Dbs metadata")
-		return
+		return err
 	}
 
 	var typePrint string
@@ -155,47 +216,7 @@ func printDbType(m *aidaMetadata) {
 	}
 
 	m.log.Noticef("DB-Type: %v", typePrint)
-}
-
-var cmdCount = cli.Command{
-	Name:  "count",
-	Usage: "Prints count of records",
-	Subcommands: []*cli.Command{
-		&cmdCountAll,
-		&cmdCountDestroyed,
-		&cmdCountSubstate,
-	},
-}
-
-var cmdCountAll = cli.Command{
-	Action: printAllCount,
-	Name:   "all",
-	Usage:  "List of all records in AidaDb.",
-	Flags: []cli.Flag{
-		&utils.AidaDbFlag,
-		&logger.LogLevelFlag,
-		&flags.Detailed,
-	},
-}
-
-var cmdCountDestroyed = cli.Command{
-	Action:    printDestroyedCount,
-	Name:      "destroyed",
-	Usage:     "Prints how many destroyed accounts are in AidaDb between given block range",
-	ArgsUsage: "<firstBlockNum>, <lastBlockNum>",
-	Flags: []cli.Flag{
-		&utils.AidaDbFlag,
-	},
-}
-
-var cmdCountSubstate = cli.Command{
-	Action:    printSubstateCount,
-	Name:      "substate",
-	Usage:     "Prints how many substates are in AidaDb between given block range",
-	ArgsUsage: "<firstBlockNum>, <lastBlockNum>",
-	Flags: []cli.Flag{
-		&utils.AidaDbFlag,
-	},
+	return nil
 }
 
 // printAllCount counts all prefixes prints number of occurrences.
@@ -290,18 +311,6 @@ func printSubstateCount(ctx *cli.Context) error {
 	log.Noticef("Found %v substates between blocks %v-%v", count, cfg.First, cfg.Last)
 
 	return nil
-}
-
-var cmdDelAcc = cli.Command{
-	Action:    printDeletedAccountInfo,
-	Name:      "del-acc",
-	Usage:     "Prints info about given deleted account in AidaDb.",
-	ArgsUsage: "<firstBlockNum>, <lastBlockNum>",
-	Flags: []cli.Flag{
-		&utils.AidaDbFlag,
-		&logger.LogLevelFlag,
-		&flags.Account,
-	},
 }
 
 // printDeletedAccountInfo for given deleted account in AidaDb
