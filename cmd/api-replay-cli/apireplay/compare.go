@@ -3,7 +3,6 @@ package apireplay
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"math/big"
 	"strconv"
 	"strings"
@@ -228,8 +227,7 @@ func compareCallStateDBResult(data *OutData, builder *strings.Builder, input cha
 		data.isRecovered = true
 
 		// we have to make hard copy of the data since the pointer gets rewritten
-		tryRecovery(*data, input)
-		return nil
+		return tryRecovery(*data, input)
 	}
 
 	return newComparatorError(
@@ -239,7 +237,7 @@ func compareCallStateDBResult(data *OutData, builder *strings.Builder, input cha
 		expectedErrorGotResult)
 }
 
-func tryRecovery(data OutData, input chan *OutData) {
+func tryRecovery(data OutData, input chan *OutData) *comparatorError {
 	payload := utils.JsonRPCRequest{
 		Method:  data.Method,
 		Params:  data.Params,
@@ -252,23 +250,24 @@ func tryRecovery(data OutData, input chan *OutData) {
 
 	m, err := utils.SendRPCRequest(payload, false)
 	if err != nil {
-		log.Fatalf("cannot send rpc req; %v", err)
+		return newComparatorError(nil, nil, &data, cannotSendRPCRequest)
 	}
 
 	s, ok := m["result"].(string)
 	if !ok {
-		return
+		return newComparatorError(nil, nil, &data, cannotUnmarshalResult)
 	}
 
 	result, err := json.Marshal(s)
 	if err != nil {
-		return
+		return newComparatorError(nil, nil, &data, cannotUnmarshalResult)
 	}
 
 	data.Recorded.Result = result
 	data.Recorded.Error = nil
 
 	input <- &data
+	return nil
 }
 
 // compareEVMStateDBError compares error returned from EVMExecutor with recorded data

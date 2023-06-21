@@ -20,6 +20,7 @@ const (
 	expectedResultGotError
 	unexpectedDataType
 	cannotUnmarshalResult
+	cannotSendRPCRequest
 	internalError
 )
 
@@ -65,11 +66,27 @@ func newComparatorError(stateDB, expected any, data *OutData, typ comparatorErro
 		return newCannotUnmarshalResult(data)
 	case internalError:
 		return newInternalError(data)
+	case cannotSendRPCRequest:
+		return newCannotSendRPCRequestErr(data)
 	default:
 		return &comparatorError{
 			error: fmt.Errorf("default error:\n%v", data),
 			typ:   0,
 		}
+	}
+}
+
+func newCannotSendRPCRequestErr(data *OutData) *comparatorError {
+	return &comparatorError{
+		error: fmt.Errorf("could not resend request to rpc:"+
+			"\nMethod: %v"+
+			"\nBlockID: 0x%v"+
+			"\n\tStateDB result: %v"+
+			"\n\tStateDB err: %v"+
+			"\n\tExpected result: %v"+
+			"\n\tExpected err: %v"+
+			"\n\tParams: %v", data.Method, strconv.FormatUint(data.BlockID, 16), data.StateDB.Result, data.StateDB.Error, data.Recorded.Result, data.Recorded.Error, string(data.ParamsRaw)),
+		typ: cannotSendRPCRequest,
 	}
 }
 
