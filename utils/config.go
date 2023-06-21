@@ -361,7 +361,7 @@ var (
 	}
 	UpdateBufferSizeFlag = cli.Uint64Flag{
 		Name:  "update-buffer-size",
-		Usage: "buffer size for holding update set in MiB",
+		Usage: "buffer size for holding update set in MB",
 		Value: math.MaxUint64,
 	}
 	TargetBlockFlag = cli.Uint64Flag{
@@ -610,7 +610,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		ProfilingDbName:     ctx.String(ProfilingDbNameFlag.Name),
 		ChannelBufferSize:   ctx.Int(ChannelBufferSizeFlag.Name),
 		TargetBlock:         ctx.Uint64(TargetBlockFlag.Name),
-		UpdateBufferSize:    ctx.Uint64(UpdateBufferSizeFlag.Name) << 20, // convert from MiB to B
+		UpdateBufferSize:    ctx.Uint64(UpdateBufferSizeFlag.Name) * 1_000_000, // convert from MB to B
 	}
 	if cfg.ChainID == 0 {
 		log.Warning("--chainid was not set; setting default value for mainnet (250)")
