@@ -112,12 +112,12 @@ func clonePatch(ctx *cli.Context) error {
 		return err
 	}
 
-	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
+	targetDb, err := rawdb.NewLevelDBDatabase(cfg.TargetDb, 1024, 100, "profiling", false)
 	if err != nil {
 		return fmt.Errorf("cannot open aida-db; %v", err)
 	}
 
-	md := newAidaMetadata(aidaDb, cfg.LogLevel)
+	md := newAidaMetadata(targetDb, cfg.LogLevel)
 	err = md.setFirstEpoch(firstEpoch)
 	if err != nil {
 		return err
@@ -127,7 +127,7 @@ func clonePatch(ctx *cli.Context) error {
 		return err
 	}
 
-	MustCloseDB(aidaDb)
+	MustCloseDB(targetDb)
 
 	err = ctx.Set(utils.AidaDbFlag.Name, cfg.TargetDb)
 	if err != nil {
