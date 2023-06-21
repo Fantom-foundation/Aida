@@ -10,7 +10,6 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/google/martian/log"
 	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
@@ -86,7 +85,7 @@ func merge(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
-		md, err = processMergeMetadata(targetDb, dbs, cfg.LogLevel)
+		md, err = processMergeMetadata(cfg, targetDb, dbs, sourcePaths)
 		if err != nil {
 			return err
 		}
@@ -136,7 +135,7 @@ func (m *merger) finishMerge() error {
 			if err != nil {
 				return err
 			}
-			log.Infof("Deleted: %s\n", path)
+			m.log.Infof("Deleted: %s\n", path)
 		}
 	}
 

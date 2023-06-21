@@ -237,16 +237,15 @@ func (md *aidaMetadata) genMetadata(firstBlock uint64, lastBlock uint64, firstEp
 }
 
 // processMergeMetadata decides the type according to the types of merged Dbs and inserts every metadata
-func processMergeMetadata(aidaDb ethdb.Database, sourceDbs []ethdb.Database, logLevel string) (*aidaMetadata, error) {
+func processMergeMetadata(cfg *utils.Config, aidaDb ethdb.Database, sourceDbs []ethdb.Database, paths []string) (*aidaMetadata, error) {
 	var (
 		err error
 	)
 
-	targetMD := newAidaMetadata(aidaDb, logLevel)
-	targetMD.dbType = patchType
+	targetMD := newAidaMetadata(aidaDb, cfg.LogLevel)
 
-	for _, db := range sourceDbs {
-		md := newAidaMetadata(db, logLevel)
+	for i, db := range sourceDbs {
+		md := newAidaMetadata(db, cfg.LogLevel)
 		if err = md.getMetadata(); err != nil {
 			return nil, err
 		}
@@ -263,6 +262,23 @@ func processMergeMetadata(aidaDb ethdb.Database, sourceDbs []ethdb.Database, log
 			md.log.Critical("ChainIDs in Dbs metadata does not match!")
 		}
 
+		// if db had no metadata we will look for blocks in substate
+		if md.firstBlock == 0 {
+			// we need to close db before opening substate
+			MustCloseDB(md.db)
+
+			md.firstBlock, md.lastBlock, err = findBlockRangeInSubstate(paths[i])
+			if err != nil {
+				return nil, fmt.Errorf("cannot find blocks in substate; %v", err)
+			}
+
+			// reopen db
+			md.db, err = rawdb.NewLevelDBDatabase(paths[i], 1024, 100, "profiling", true)
+			if err != nil {
+				return nil, fmt.Errorf("cannot open aida-db; %v", err)
+			}
+		}
+
 		if md.firstBlock < targetMD.firstBlock || targetMD.firstBlock == 0 {
 			targetMD.firstBlock = md.firstBlock
 		}
@@ -271,12 +287,23 @@ func processMergeMetadata(aidaDb ethdb.Database, sourceDbs []ethdb.Database, log
 			targetMD.lastBlock = md.lastBlock
 		}
 
+		// if any of dbs is a cloneType, targetDb will always be cloneType
+		// if any of dbs is a genType and no db is cloneType, targetDb will always be genType
 		if md.dbType == cloneType {
-			targetMD.dbType = md.dbType
-		} else if md.dbType == genType && targetMD.dbType != cloneType {
-			targetMD.dbType = md.dbType
+			targetMD.dbType = cloneType
+		} else if targetMD.dbType != cloneType {
+			if md.dbType == genType {
+				targetMD.dbType = genType
+			} else if md.dbType != noType {
+				targetMD.dbType = patchType
+			}
 		}
 
+	}
+
+	if targetMD.chainId == 0 {
+		targetMD.log.Warningf("your dbs does not have chain-id, setting value from config (%v)", cfg.ChainID)
+		targetMD.chainId = cfg.ChainID
 	}
 
 	return targetMD, nil
@@ -450,8 +477,10 @@ func (md *aidaMetadata) getLastEpoch() (uint64, error) {
 func (md *aidaMetadata) getChainID() (int, error) {
 	chainIDBytes, err := md.db.Get([]byte(ChainIDPrefix))
 	if err != nil {
-		md.log.Warning("ChainID not found in given Db")
-		return 0, nil
+		if strings.Contains(err.Error(), "leveldb: not found") {
+			return 0, nil
+		}
+		return 0, fmt.Errorf("cannot get chain-id; %v", err)
 	}
 
 	return int(bigendian.BytesToUint16(chainIDBytes)), nil
@@ -461,8 +490,10 @@ func (md *aidaMetadata) getChainID() (int, error) {
 func (md *aidaMetadata) getTimestamp() (uint64, error) {
 	byteTimestamp, err := md.db.Get([]byte(TimestampPrefix))
 	if err != nil {
-		md.log.Warning("Creation time not found in given Db")
-		return 0, nil
+		if strings.Contains(err.Error(), "leveldb: not found") {
+			return 0, nil
+		}
+		return 0, fmt.Errorf("cannot get creation timestamp; %v", err)
 	}
 
 	return bigendian.BytesToUint64(byteTimestamp), nil
@@ -472,7 +503,10 @@ func (md *aidaMetadata) getTimestamp() (uint64, error) {
 func (md *aidaMetadata) getDbType() (aidaDbType, error) {
 	byteDbType, err := md.db.Get([]byte(TypePrefix))
 	if err != nil {
-		return noType, fmt.Errorf("cannot get db-type; %v", err)
+		if strings.Contains(err.Error(), "leveldb: not found") {
+			return noType, nil
+		}
+		return 0, fmt.Errorf("cannot get first epoch; %v", err)
 	}
 
 	return aidaDbType(byteDbType[0]), nil
