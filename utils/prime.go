@@ -177,7 +177,6 @@ func (pc *PrimeContext) PrimeStateDBRandom(ws substate.SubstateAlloc, db state.S
 
 // SuicideAccounts clears storage of all input accounts.
 func (pc *PrimeContext) SuicideAccounts(db state.StateDB, accounts []common.Address) {
-	pc.log.Info("Remove suicided accounts from stateDB.")
 	count := 0
 	db.BeginSyncPeriod(0)
 	db.BeginBlock(pc.block)
@@ -193,7 +192,7 @@ func (pc *PrimeContext) SuicideAccounts(db state.StateDB, accounts []common.Addr
 	db.EndBlock()
 	db.EndSyncPeriod()
 	pc.block++
-	pc.log.Infof("\t %v accounts were removed.", count)
+	pc.log.Infof("\t\t %v suicided accounts were removed from statedb (before priming).", count)
 }
 
 // GenerateWorldStateAndPrime
@@ -247,7 +246,7 @@ func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error 
 
 		update.Merge(*newSet.UpdateSet)
 		totalSize += incrementalSize
-		log.Infof("\tMerge update set at block %v. New toal size %v MiB (+%v MiB)", newSet.Block, totalSize>>20, incrementalSize>>20)
+		log.Infof("\tMerge update set at block %v. New toal size %v MB (+%v MB)", newSet.Block, totalSize/1_000_000, incrementalSize/1_000_000)
 	}
 	// prime the remaining from updateset
 	if err := pc.PrimeStateDB(update, db); err != nil {

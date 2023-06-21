@@ -3,7 +3,6 @@ package utils
 import (
 	"fmt"
 	"log"
-	"math"
 	"math/big"
 	"math/rand"
 	"os"
@@ -357,12 +356,12 @@ var (
 	ChannelBufferSizeFlag = cli.IntFlag{
 		Name:  "buffer-size",
 		Usage: "set a buffer size for profiling channel",
-		Value: 100000,
+		Value: 100_000,
 	}
 	UpdateBufferSizeFlag = cli.Uint64Flag{
 		Name:  "update-buffer-size",
-		Usage: "buffer size for holding update set in MiB",
-		Value: math.MaxUint64,
+		Usage: "buffer size for holding update set in MB",
+		Value: 1_000_000,
 	}
 	TargetBlockFlag = cli.Uint64Flag{
 		Name:    "target-block",
@@ -610,7 +609,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		ProfilingDbName:     ctx.String(ProfilingDbNameFlag.Name),
 		ChannelBufferSize:   ctx.Int(ChannelBufferSizeFlag.Name),
 		TargetBlock:         ctx.Uint64(TargetBlockFlag.Name),
-		UpdateBufferSize:    ctx.Uint64(UpdateBufferSizeFlag.Name) << 20, // convert from MiB to B
+		UpdateBufferSize:    ctx.Uint64(UpdateBufferSizeFlag.Name) * 1_000_000, // convert from MB to B
 	}
 	if cfg.ChainID == 0 {
 		log.Warning("--chainid was not set; setting default value for mainnet (250)")
@@ -685,6 +684,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 			if cfg.PrimeRandom {
 				log.Infof("Seed: %v, threshold: %v", cfg.RandomSeed, cfg.PrimeThreshold)
 			}
+			log.Infof("Update buffer size: %v bytes", cfg.UpdateBufferSize)
 		}
 		log.Infof("\tValidate world state: %v, validate tx state: %v\n", cfg.ValidateWorldState, cfg.ValidateTxState)
 		log.Infof("\tErigon batch size: %v", cfg.ErigonBatchSize.HumanReadable())
