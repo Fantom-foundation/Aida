@@ -16,11 +16,27 @@ import (
 
 const cloneWriteChanSize = 1
 
-// CloneCommand enables creation of aida-db read or subset
+const (
+	ClonePatchType byte = 0
+	CloneDbType         = 1
+)
+
+// CloneCommand clones aida-db as standalone or patch database
 var CloneCommand = cli.Command{
-	Action: clone,
-	Name:   "clone",
-	Usage:  "clone can create aida-db read or subset",
+	Name:  "clone",
+	Usage: `Used for creation of standalone subset of aida-db or patch`,
+	Subcommands: []*cli.Command{
+		&CloneDb,
+		&ClonePatch,
+	},
+}
+
+// ClonePatch enables creation of aida-db read or subset
+var ClonePatch = cli.Command{
+	Action:    clonePatch,
+	Name:      "patch",
+	Usage:     "patch is used to create aida-db patch",
+	ArgsUsage: "<EpochNumFirst> <EpochNumLast>",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 		&utils.TargetDbFlag,
@@ -29,7 +45,25 @@ var CloneCommand = cli.Command{
 		&logger.LogLevelFlag,
 	},
 	Description: `
-Creates clone of aida-db for desired block range
+Creates patch of aida-db for desired block range
+`,
+}
+
+// CloneDb enables creation of aida-db read or subset
+var CloneDb = cli.Command{
+	Action:    cloneDb,
+	Name:      "db",
+	Usage:     "clone db creates aida-db subset",
+	ArgsUsage: "<blockNumFirst> <blockNumLast>",
+	Flags: []cli.Flag{
+		&utils.AidaDbFlag,
+		&utils.TargetDbFlag,
+		&utils.CompactDbFlag,
+		&utils.ValidateFlag,
+		&logger.LogLevelFlag,
+	},
+	Description: `
+Creates clone db is used to create subset of aida-db to have more compact database, but still fully usable for desired block range.
 `,
 }
 
@@ -38,6 +72,7 @@ type cloner struct {
 	log             *logging.Logger
 	aidaDb, cloneDb ethdb.Database
 	count           uint64
+	t               byte
 	writeCh         chan rawEntry
 	errCh           chan error
 	closeCh         chan any
@@ -49,18 +84,85 @@ type rawEntry struct {
 	Value []byte
 }
 
-// clone creates aida-db copy or subset
-func clone(ctx *cli.Context) error {
+// clonePatch creates aida-db patch
+func clonePatch(ctx *cli.Context) error {
+	// TODO refactor
+	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
+	if err != nil {
+		return err
+	}
+
+	if ctx.Args().Len() != 4 {
+		return fmt.Errorf("clone patch command requires exactly 4 arguments")
+	}
+
+	cfg.First, cfg.Last, err = utils.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
+	if err != nil {
+		return err
+	}
+
+	var firstEpoch, lastEpoch uint64
+	firstEpoch, lastEpoch, err = utils.SetBlockRange(ctx.Args().Get(2), ctx.Args().Get(3))
+	if err != nil {
+		return err
+	}
+
+	err = clone(cfg, ClonePatchType)
+	if err != nil {
+		return err
+	}
+
+	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
+	if err != nil {
+		return fmt.Errorf("cannot open aida-db; %v", err)
+	}
+
+	md := newAidaMetadata(aidaDb, cfg.LogLevel)
+	err = md.setFirstEpoch(firstEpoch)
+	if err != nil {
+		return err
+	}
+	err = md.setLastEpoch(lastEpoch)
+	if err != nil {
+		return err
+	}
+
+	MustCloseDB(aidaDb)
+
+	err = ctx.Set(utils.AidaDbFlag.Name, cfg.TargetDb)
+	if err != nil {
+		return err
+	}
+	return printMetadata(cfg.TargetDb)
+}
+
+// cloneDb creates aida-db copy or subset
+func cloneDb(ctx *cli.Context) error {
 	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if err != nil {
 		return err
 	}
 
+	err = clone(cfg, CloneDbType)
+	if err != nil {
+		return err
+	}
+
+	err = ctx.Set(utils.AidaDbFlag.Name, cfg.TargetDb)
+	if err != nil {
+		return err
+	}
+	return printMetadata(cfg.TargetDb)
+}
+
+func clone(cfg *utils.Config, cloneType byte) error {
+	var err error
 	log := logger.NewLogger(cfg.LogLevel, "AidaDb Clone")
 
 	c := cloner{
 		cfg:     cfg,
 		log:     log,
+		t:       cloneType,
 		writeCh: make(chan rawEntry, cloneWriteChanSize),
 		errCh:   make(chan error, 1),
 		closeCh: make(chan any),
@@ -77,11 +179,7 @@ func clone(ctx *cli.Context) error {
 	MustCloseDB(c.aidaDb)
 	MustCloseDB(c.cloneDb)
 
-	err = ctx.Set(utils.AidaDbFlag.Name, cfg.TargetDb)
-	if err != nil {
-		return err
-	}
-	return printMetadata(c.cfg.TargetDb)
+	return nil
 }
 
 // openDbs prepares aida and target databases
@@ -113,7 +211,7 @@ func (c *cloner) openDbs() error {
 	return nil
 }
 
-// clone AidaDb in given block range
+// cloneDb AidaDb in given block range
 func (c *cloner) clone() error {
 	go c.write()
 	go c.checkErrors()
@@ -121,7 +219,16 @@ func (c *cloner) clone() error {
 	c.read([]byte(substate.Stage1CodePrefix), 0, nil)
 	c.read([]byte(substate.DestroyedAccountPrefix), 0, nil)
 	lastUpdateBeforeRange := c.readUpdateSet()
-	c.readSubstate(lastUpdateBeforeRange)
+	if c.t == CloneDbType {
+		if lastUpdateBeforeRange < c.cfg.First {
+			c.log.Noticef("Last updateset found at block %v, changing first block to %v", lastUpdateBeforeRange, lastUpdateBeforeRange+1)
+			c.cfg.First = lastUpdateBeforeRange + 1
+		}
+	}
+	err := c.readSubstate()
+	if err != nil {
+		return err
+	}
 
 	close(c.writeCh)
 
@@ -145,7 +252,7 @@ func (c *cloner) clone() error {
 	}
 
 	if c.cfg.Validate {
-		err := c.validateDbSize()
+		err = c.validateDbSize()
 		if err != nil {
 			return err
 		}
@@ -277,20 +384,27 @@ func (c *cloner) readUpdateSet() uint64 {
 		return false, nil
 	}
 
-	c.read([]byte(substate.SubstateAllocPrefix), 0, endCond)
+	if c.t == CloneDbType {
+		c.read([]byte(substate.SubstateAllocPrefix), 0, endCond)
 
-	// check if update-set contained at least one set (first set with world-state), then aida-db must be corrupted
-	if lastUpdateBeforeRange == 0 {
+		// check if update-set contained at least one set (first set with world-state), then aida-db must be corrupted
+		if lastUpdateBeforeRange == 0 {
+			c.errCh <- fmt.Errorf("updateset didn't contain any records - unable to create aida-db without initial world-state")
+			return 0
+		}
 
-		c.errCh <- fmt.Errorf("updateset didn't contain any records - unable to create aida-db without initial world-state")
+		return lastUpdateBeforeRange
+	} else if c.t == ClonePatchType {
+		c.read([]byte(substate.SubstateAllocPrefix), c.cfg.First, endCond)
+		return 0
+	} else {
+		c.errCh <- fmt.Errorf("incorrect clone type: %v", c.t)
 		return 0
 	}
-
-	return lastUpdateBeforeRange
 }
 
 // readSubstate from last updateSet before cfg.First until cfg.Last
-func (c *cloner) readSubstate(lastUpdateBeforeRange uint64) {
+func (c *cloner) readSubstate() error {
 	endCond := func(key []byte) (bool, error) {
 		block, _, err := substate.DecodeStage1SubstateKey(key)
 		if err != nil {
@@ -302,9 +416,9 @@ func (c *cloner) readSubstate(lastUpdateBeforeRange uint64) {
 		return false, nil
 	}
 
-	// generating substate right after previous updateSet before our interval
-	c.read([]byte(substate.Stage1SubstatePrefix), lastUpdateBeforeRange+1, endCond)
-	return
+	c.read([]byte(substate.Stage1SubstatePrefix), c.cfg.First, endCond)
+
+	return nil
 }
 
 // validateDbSize compares size of database and expectedWritten
