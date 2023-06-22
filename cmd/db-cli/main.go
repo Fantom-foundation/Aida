@@ -21,7 +21,9 @@ var InitDb = cli.App{
 		&db.GenerateCommand,
 		&db.MergeCommand,
 		&db.UpdateCommand,
-		&db.Stats,
+		&db.InfoCommand,
+		&db.InsertMetadataCommand,
+		&db.RemoveMetadataCommand,
 	},
 }
 

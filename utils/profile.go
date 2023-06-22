@@ -5,6 +5,9 @@ import (
 	"os"
 	"runtime"
 	"runtime/pprof"
+
+	"github.com/Fantom-foundation/Aida/state"
+	"github.com/op/go-logging"
 )
 
 func StartCPUProfile(cfg *Config) error {
@@ -39,4 +42,15 @@ func StartMemoryProfile(cfg *Config) error {
 		}
 	}
 	return nil
+}
+
+// MemoryBreakdown prints memory usage details of statedb if applicable
+func MemoryBreakdown(db state.StateDB, cfg *Config, log *logging.Logger) {
+	if cfg.MemoryBreakdown {
+		if usage := db.GetMemoryUsage(); usage.Breakdown != nil {
+			log.Noticef("State DB memory usage: %d byte\n%s", usage.UsedBytes, usage.Breakdown)
+		} else {
+			log.Notice("Utilized storage solution does not support memory breakdowns.")
+		}
+	}
 }

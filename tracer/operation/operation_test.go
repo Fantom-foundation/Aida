@@ -161,6 +161,10 @@ func (s *MockStateDB) GetMemoryUsage() *state.MemoryUsage {
 	panic("GetMemoryUsage not supported in mock")
 }
 
+func (s *MockStateDB) GetShadowDB() state.StateDB {
+	panic("GetShadowDB not supported in mock")
+}
+
 func (s *MockStateDB) Finalise(deleteEmptyObjects bool) {
 	s.recording = append(s.recording, Record{FinaliseID, []any{deleteEmptyObjects}})
 }

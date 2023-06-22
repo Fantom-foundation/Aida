@@ -17,11 +17,12 @@ func generateUpdateSet(first uint64, last uint64, cfg *Config) (substate.Substat
 	var (
 		deletedAccountDB *substate.DestroyedAccountDB
 		deletedAccounts  []common.Address
+		err              error
 	)
 	stateIter := substate.NewSubstateIterator(first, cfg.Workers)
 	defer stateIter.Release()
 	if cfg.HasDeletedAccounts {
-		deletedAccountDB, err := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
+		deletedAccountDB, err = substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -45,7 +46,7 @@ func generateUpdateSet(first uint64, last uint64, cfg *Config) (substate.Substat
 			}
 			// reset storage
 			deletedAccounts = append(deletedAccounts, destroyed...)
-			deletedAccounts = append(deletedAccounts, destroyed...)
+			deletedAccounts = append(deletedAccounts, resurrected...)
 
 			ClearAccountStorage(update, destroyed)
 			ClearAccountStorage(update, resurrected)

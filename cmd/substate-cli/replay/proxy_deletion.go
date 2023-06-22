@@ -288,3 +288,7 @@ func (r *ProxyDeletion) StartBulkLoad(uint64) state.BulkLoad {
 func (r *ProxyDeletion) GetMemoryUsage() *state.MemoryUsage {
 	return r.db.GetMemoryUsage()
 }
+
+func (r *ProxyDeletion) GetShadowDB() state.StateDB {
+	return r.db.GetShadowDB()
+}

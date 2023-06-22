@@ -343,3 +343,7 @@ func (l *carmenBulkLoad) SetCode(addr common.Address, code []byte) {
 func (l *carmenBulkLoad) Close() error {
 	return l.load.Close()
 }
+
+func (s *carmenStateDB) GetShadowDB() StateDB {
+	return nil
+}

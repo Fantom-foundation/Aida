@@ -13,7 +13,8 @@ ExecStart=/usr/local/bin/aida-db autogen \
     --log debug \
     --compact \
     --datadir /var/opera/mainnet/ \ # PATH TO OPERA FOR EVENT EXPORTING
-    --cache 65536
+    --cache 65536 \
+    --update-buffer-size 700
 LimitNOFILE=934073
 OOMScoreAdjust=-900
 TimeoutSec=900
