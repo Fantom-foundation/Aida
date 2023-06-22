@@ -12,8 +12,7 @@ import (
 	"github.com/Fantom-foundation/Aida/cmd/db-cli/flags"
 	"github.com/Fantom-foundation/Aida/logger"
 	substate "github.com/Fantom-foundation/Substate"
-	_ "github.com/Fantom-foundation/Tosca/go/vm/evmone"
-	_ "github.com/Fantom-foundation/Tosca/go/vm/lfvm"
+	_ "github.com/Fantom-foundation/Tosca/go/vm"
 	"github.com/c2h5oh/datasize"
 	_ "github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
@@ -57,11 +56,6 @@ var (
 		Name:    "api-recording",
 		Usage:   "Path to source file with recorded API data",
 		Aliases: []string{"r"},
-	}
-	APIRecordingVersionFlag = cli.IntFlag{
-		Name:    "api-recording-version",
-		Usage:   "set version of api-recording; 0 (default) version without timestamp - substate-db is necessary for this version / 1 version with timestamp - substate-db is not needed",
-		Aliases: []string{"v"},
 	}
 	ArchiveModeFlag = cli.BoolFlag{
 		Name:  "archive",
@@ -379,8 +373,7 @@ type Config struct {
 	First uint64 // first block
 	Last  uint64 // last block
 
-	APIRecordingSrcFile string // path to source file with recorded API data
-	APIRecordingVersion int
+	APIRecordingSrcFile string            // path to source file with recorded API data
 	ArchiveMode         bool              // enable archive mode
 	ArchiveVariant      string            // selects the implementation variant of the archive
 	BlockLength         uint64            // length of a block in number of transactions
@@ -534,7 +527,6 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		CommandName: ctx.Command.Name,
 
 		APIRecordingSrcFile: ctx.Path(APIRecordingSrcFileFlag.Name),
-		APIRecordingVersion: ctx.Int(APIRecordingVersionFlag.Name),
 		ArchiveMode:         ctx.Bool(ArchiveModeFlag.Name),
 		ArchiveVariant:      ctx.String(ArchiveVariantFlag.Name),
 		BlockLength:         ctx.Uint64(BlockLengthFlag.Name),
