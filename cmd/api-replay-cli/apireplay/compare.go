@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
+	"strconv"
 	"strings"
 
+	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
@@ -48,6 +50,8 @@ func compareBalance(data *OutData, builder *strings.Builder) *comparatorError {
 		ok         bool
 	)
 
+	defer builder.Reset()
+
 	bigBalance, ok = data.StateDB.Result.(*big.Int)
 
 	if !ok {
@@ -59,8 +63,6 @@ func compareBalance(data *OutData, builder *strings.Builder) *comparatorError {
 	builder.WriteString(bigBalance.Text(16))
 
 	hexBalance = builder.String()
-
-	builder.Reset()
 
 	// did we record an error?
 	if data.Recorded.Error != nil {
@@ -96,6 +98,8 @@ func compareTransactionCount(data *OutData, builder *strings.Builder) *comparato
 		ok         bool
 	)
 
+	defer builder.Reset()
+
 	stateNonce, ok = data.StateDB.Result.(uint64)
 
 	if !ok {
@@ -115,8 +119,6 @@ func compareTransactionCount(data *OutData, builder *strings.Builder) *comparato
 	builder.WriteString(bigNonce.Text(16))
 
 	dbString = builder.String()
-
-	builder.Reset()
 
 	// did we record an error?
 	if data.Recorded.Error != nil {
@@ -158,6 +160,8 @@ func compareCall(data *OutData, builder *strings.Builder) *comparatorError {
 func compareCallStateDBResult(data *OutData, builder *strings.Builder) *comparatorError {
 	var recordedString, dbString string
 
+	defer builder.Reset()
+
 	// create proper hex string from statedb result
 
 	dbString = common.Bytes2Hex(data.StateDB.Result.([]byte))
@@ -166,8 +170,6 @@ func compareCallStateDBResult(data *OutData, builder *strings.Builder) *comparat
 	builder.WriteString("0x")
 	builder.WriteString(dbString)
 	dbString = builder.String()
-
-	builder.Reset()
 
 	// did we record an error
 	if data.Recorded.Error == nil {
@@ -179,16 +181,6 @@ func compareCallStateDBResult(data *OutData, builder *strings.Builder) *comparat
 
 		// results do not match
 		if !strings.EqualFold(recordedString, dbString) {
-			if !data.isRecovered {
-				// with how old recording is done, any call method needs to be retried again with -1 block
-				data.isRecovered = true
-				data.BlockID--
-
-				data.originalRequest.Response.BlockID--
-
-				data.recoveryChan <- data.originalRequest
-				return nil
-			}
 			return newComparatorError(
 				dbString,
 				recordedString,
@@ -237,15 +229,46 @@ func compareCallStateDBResult(data *OutData, builder *strings.Builder) *comparat
 		expectedErrorGotResult)
 }
 
+func tryRecovery(data OutData, input chan *OutData) *comparatorError {
+	payload := utils.JsonRPCRequest{
+		Method:  data.Method,
+		Params:  data.Params,
+		ID:      0,
+		JSONRPC: "2.0",
+	}
+
+	// append correct block number
+	payload.Params[len(payload.Params)-1] = "0x" + strconv.FormatUint(data.BlockID, 16)
+
+	m, err := utils.SendRPCRequest(payload, false)
+	if err != nil {
+		return newComparatorError(nil, nil, &data, cannotSendRPCRequest)
+	}
+
+	s, ok := m["result"].(string)
+	if !ok {
+		return newComparatorError(nil, nil, &data, cannotUnmarshalResult)
+	}
+
+	result, err := json.Marshal(s)
+	if err != nil {
+		return newComparatorError(nil, nil, &data, cannotUnmarshalResult)
+	}
+
+	data.Recorded.Result = result
+	data.Recorded.Error = nil
+
+	input <- &data
+	return nil
+}
+
 // compareEVMStateDBError compares error returned from EVMExecutor with recorded data
 func compareEVMStateDBError(data *OutData, builder *strings.Builder) *comparatorError {
-
+	defer builder.Reset()
 	// did we record an error?
 	if data.Recorded.Error == nil {
 		builder.Write(data.Recorded.Result)
 		r := builder.String()
-
-		builder.Reset()
 
 		return newComparatorError(
 			data.StateDB.Error,
@@ -276,7 +299,6 @@ func compareEVMStateDBError(data *OutData, builder *strings.Builder) *comparator
 	}
 
 	msg := builder.String()
-	builder.Reset()
 
 	return newComparatorError(
 		data.StateDB.Error,
@@ -303,6 +325,7 @@ func compareEstimateGas(data *OutData, builder *strings.Builder) *comparatorErro
 
 // compareEstimateGasStateDBResult compares estimateGas data recorded on API server with data returned by StateDB
 func compareEstimateGasStateDBResult(data *OutData, builder *strings.Builder) *comparatorError {
+	defer builder.Reset()
 
 	stateDBGas, ok := data.StateDB.Result.(hexutil.Uint64)
 	if !ok {
@@ -321,8 +344,6 @@ func compareEstimateGasStateDBResult(data *OutData, builder *strings.Builder) *c
 	builder.WriteString(bigGas.Text(16))
 
 	dbString = builder.String()
-
-	builder.Reset()
 
 	// did we record an error
 	if data.Recorded.Error != nil {
@@ -362,14 +383,14 @@ func compareCode(data *OutData, builder *strings.Builder) *comparatorError {
 		recordedString, dbString string
 	)
 
+	defer builder.Reset()
+
 	dbString = common.Bytes2Hex(data.StateDB.Result.([]byte))
 
 	// create proper hex string from statedb result
 	builder.WriteString("0x")
 	builder.WriteString(dbString)
 	dbString = builder.String()
-
-	builder.Reset()
 
 	// did we record an error?
 	if data.Recorded.Error != nil {
@@ -400,14 +421,14 @@ func compareStorageAt(data *OutData, builder *strings.Builder) *comparatorError 
 		err                      error
 	)
 
+	defer builder.Reset()
+
 	dbString = common.Bytes2Hex(data.StateDB.Result.([]byte))
 
 	// create proper hex string from statedb result
 	builder.WriteString("0x")
 	builder.WriteString(dbString)
 	dbString = builder.String()
-
-	builder.Reset()
 
 	// did we record an error?
 	if data.Recorded.Error != nil {

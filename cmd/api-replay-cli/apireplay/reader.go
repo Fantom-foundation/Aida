@@ -26,20 +26,23 @@ type StateDBData struct {
 // Reader reads data from iterator, creates logical structure and pass it alongside wanted archive, to
 // ReplayExecutor which executes the request into StateDB
 type Reader struct {
-	output  chan *iterator.RequestWithResponse
-	iter    *iterator.FileReader
-	closed  chan any
-	log     *logging.Logger
-	wg      *sync.WaitGroup
-	builder *strings.Builder // use builder for faster execution when logging and cleaner code
+	output           chan *iterator.RequestWithResponse
+	iter             *iterator.FileReader
+	closed           chan any
+	log              *logging.Logger
+	wg               *sync.WaitGroup
+	builder          *strings.Builder // use builder for faster execution when logging and cleaner code
+	skip             uint64
+	numberOfRequests uint64
 }
 
 // newReader returns new instance of Reader
-func newReader(iter *iterator.FileReader, l *logging.Logger, closed chan any, wg *sync.WaitGroup) *Reader {
+func newReader(iter *iterator.FileReader, l *logging.Logger, skip uint64, closed chan any, wg *sync.WaitGroup) *Reader {
 	return &Reader{
 		iter:    iter,
 		output:  make(chan *iterator.RequestWithResponse, bufferSize),
 		log:     l,
+		skip:    skip,
 		closed:  closed,
 		wg:      wg,
 		builder: new(strings.Builder),
@@ -81,6 +84,11 @@ func (r *Reader) read() {
 				return
 			}
 
+			r.numberOfRequests++
+			if r.numberOfRequests < r.skip {
+				continue
+			}
+
 			if r.iter.Value() == nil {
 				close(r.closed)
 				return
@@ -96,7 +104,6 @@ func (r *Reader) read() {
 
 		// retrieve the data from iterator and send them to executors
 		case r.output <- val:
-
 		}
 	}
 	return

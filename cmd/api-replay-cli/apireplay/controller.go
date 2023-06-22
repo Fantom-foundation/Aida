@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/Fantom-foundation/Aida/cmd/api-replay-cli/flags"
 	"github.com/Fantom-foundation/Aida/iterator"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
@@ -57,13 +58,13 @@ func newController(ctx *cli.Context, cfg *utils.Config, db state.StateDB, iter *
 	counterWg := new(sync.WaitGroup)
 
 	// create instances
-	reader := newReader(iter, logger.NewLogger(cfg.LogLevel, "Reader"), readerClosed, readerWg)
+	reader := newReader(iter, logger.NewLogger(cfg.LogLevel, "Reader"), ctx.Uint64(flags.Skip.Name), readerClosed, readerWg)
 
 	executors, output, counterInput := createExecutors(cfg, db, ctx, utils.GetChainConfig(cfg.ChainID), reader.output, executorsClosed, executorsWg)
 
-	counter := newCounter(counterClosed, counterInput, logger.NewLogger(cfg.LogLevel, "Counter"), counterWg)
+	comparators, failure := createComparators(cfg, output, comparatorsClosed, counterInput, comparatorsWg)
 
-	comparators, failure := createComparators(cfg, output, comparatorsClosed, comparatorsWg)
+	counter := newCounter(counterClosed, counterInput, logger.NewLogger(cfg.LogLevel, "Counter"), counterWg)
 
 	return &Controller{
 		failure:           failure,
@@ -253,7 +254,7 @@ func createExecutors(cfg *utils.Config, db state.StateDB, ctx *cli.Context, chai
 }
 
 // createComparators creates number of Comparators defined by the flag WorkersFlag divided by two
-func createComparators(cfg *utils.Config, input chan *OutData, closed chan any, wg *sync.WaitGroup) ([]*Comparator, chan any) {
+func createComparators(cfg *utils.Config, input chan *OutData, closed chan any, counterInput chan requestLog, wg *sync.WaitGroup) ([]*Comparator, chan any) {
 	var (
 		comparators int
 	)
@@ -270,7 +271,7 @@ func createComparators(cfg *utils.Config, input chan *OutData, closed chan any, 
 	c := make([]*Comparator, comparators)
 	failure := make(chan any)
 	for i := 0; i < comparators; i++ {
-		c[i] = newComparator(input, logger.NewLogger(cfg.LogLevel, fmt.Sprintf("Comparator #%v", i)), closed, wg, cfg.ContinueOnFailure, failure)
+		c[i] = newComparator(input, logger.NewLogger(cfg.LogLevel, fmt.Sprintf("Comparator #%v", i)), closed, wg, cfg.ContinueOnFailure, failure, counterInput)
 	}
 
 	return c, failure
