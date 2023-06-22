@@ -97,7 +97,18 @@ func (c *Comparator) doCompare(data *OutData) (err *comparatorError) {
 	case "getTransactionCount":
 		err = compareTransactionCount(data, c.builder)
 	case "call":
-		err = compareCall(data, c.builder, c.input, c.counterInput)
+		err = compareCall(data, c.builder)
+		if err != nil && err.typ == expectedErrorGotResult && !data.isRecovered {
+			data.isRecovered = true
+
+			// record the error
+			c.counterInput <- requestLog{
+				method:  data.Method,
+				logType: retried,
+			}
+			// we have to make hard copy of the data since the pointer gets rewritten
+			return tryRecovery(*data, c.input)
+		}
 	case "estimateGas":
 		// estimateGas is currently not suitable for replay since the estimation  in geth is always calculated for current state
 		// that means recorded result and result returned by StateDB are not comparable

@@ -139,7 +139,7 @@ func Test_compareCallOK(t *testing.T) {
 		},
 	}
 
-	err := compareCall(data, new(strings.Builder), nil, nil)
+	err := compareCall(data, new(strings.Builder))
 	if err != nil {
 		t.Errorf("error must be nil; err: %v", err)
 	}
@@ -159,7 +159,7 @@ func Test_compareCallErrorNoMatchingResult(t *testing.T) {
 		},
 	}
 
-	err := compareCall(data, new(strings.Builder), nil, nil)
+	err := compareCall(data, new(strings.Builder))
 	if err == nil {
 		t.Errorf("error must not be nil; err: %v", err)
 		return
@@ -184,7 +184,7 @@ func Test_compareCallErrorExpectedResultGotErr(t *testing.T) {
 		},
 	}
 
-	err := compareCall(data, new(strings.Builder), nil, nil)
+	err := compareCall(data, new(strings.Builder))
 	if err == nil {
 		t.Errorf("error must not be nil; err: %v", err)
 		return
@@ -212,7 +212,7 @@ func Test_compareCallErrorExpectedErrGotResult(t *testing.T) {
 		},
 	}
 
-	err := compareCall(data, new(strings.Builder), nil, nil)
+	err := compareCall(data, new(strings.Builder))
 	if err == nil {
 		t.Errorf("error must not be null")
 		return
