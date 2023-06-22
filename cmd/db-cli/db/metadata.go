@@ -603,8 +603,12 @@ func (md *aidaMetadata) findEpochs() error {
 		testnet bool
 	)
 
-	if md.chainId == 4002 {
+	if md.chainId == 250 {
 		testnet = false
+	} else if md.chainId == 4002 {
+		testnet = true
+	} else {
+		return fmt.Errorf("unknown chain-id %v", md.chainId)
 	}
 
 	firstEpoch, err := findEpochNumber(md.firstBlock, testnet)
