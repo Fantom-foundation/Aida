@@ -85,16 +85,18 @@ func (r *Reader) read() {
 			}
 
 			r.numberOfRequests++
-			if r.numberOfRequests < r.skip {
-				continue
-			}
-
 			if r.iter.Value() == nil {
 				close(r.closed)
 				return
 			}
 
 			val = r.iter.Value()
+
+			r.log.Debugf("request #%v; method: %v", r.numberOfRequests, val.Query.Method)
+
+			if r.numberOfRequests < r.skip {
+				continue
+			}
 
 		}
 

@@ -37,6 +37,9 @@ type Controller struct {
 	counter                                          *requestCounter
 	counterWg                                        *sync.WaitGroup
 	counterClosed                                    chan any
+	writer                                           *logWriter
+	writerWg                                         *sync.WaitGroup
+	writerClosed                                     chan any
 }
 
 // newController creates new instances of Controller, ReplayExecutors and Comparators
@@ -47,19 +50,23 @@ func newController(ctx *cli.Context, cfg *utils.Config, db state.StateDB, iter *
 	counterClosed := make(chan any)
 	executorsClosed := make(chan any)
 	comparatorsClosed := make(chan any)
+	writerClosed := make(chan any)
 
 	// create wait groups
 	readerWg := new(sync.WaitGroup)
 	executorsWg := new(sync.WaitGroup)
 	comparatorsWg := new(sync.WaitGroup)
 	counterWg := new(sync.WaitGroup)
+	writerWg := new(sync.WaitGroup)
 
 	// create instances
 	reader := newReader(iter, logger.NewLogger(cfg.LogLevel, "Reader"), ctx.Uint64(flags.Skip.Name), readerClosed, readerWg)
 
-	executors, output, counterInput := createExecutors(cfg, db, ctx, utils.GetChainConfig(cfg.ChainID), reader.output, executorsClosed, executorsWg)
+	executors, output, counterInput := createExecutors(cfg, db, utils.GetChainConfig(cfg.ChainID), reader.output, executorsClosed, executorsWg)
 
-	comparators, failure := createComparators(cfg, output, comparatorsClosed, counterInput, comparatorsWg)
+	writer, writerInput := newWriter(cfg.LogLevel, writerClosed, writerWg)
+
+	comparators, failure := createComparators(cfg, output, comparatorsClosed, writerInput, counterInput, comparatorsWg)
 
 	counter := newCounter(counterClosed, counterInput, logger.NewLogger(cfg.LogLevel, "Counter"), counterWg)
 
@@ -71,14 +78,17 @@ func newController(ctx *cli.Context, cfg *utils.Config, db state.StateDB, iter *
 		Executors:         executors,
 		Comparators:       comparators,
 		counter:           counter,
+		writer:            writer,
 		readerClosed:      readerClosed,
 		comparatorsClosed: comparatorsClosed,
 		executorsClosed:   executorsClosed,
 		counterClosed:     counterClosed,
+		writerClosed:      writerClosed,
 		readerWg:          readerWg,
 		executorsWg:       executorsWg,
 		comparatorsWg:     comparatorsWg,
 		counterWg:         counterWg,
+		writerWg:          writerWg,
 	}
 }
 
@@ -91,6 +101,7 @@ func (r *Controller) Start() {
 	r.startComparators()
 
 	r.counter.Start()
+	r.writer.Start()
 
 	go r.control()
 }
@@ -101,6 +112,7 @@ func (r *Controller) Stop() {
 	r.stopReader()
 	r.stopExecutors()
 	r.stopCounter()
+	r.stopWriter()
 
 	r.comparatorsWg.Wait()
 	r.executorsWg.Wait()
@@ -177,6 +189,17 @@ func (r *Controller) stopComparators() {
 
 }
 
+func (r *Controller) stopWriter() {
+	select {
+	case <-r.writerClosed:
+		return
+	default:
+		r.log.Info("Stopping log writer")
+		close(r.writerClosed)
+	}
+
+}
+
 // Wait until all wgs are done
 func (r *Controller) Wait() {
 	r.readerWg.Wait()
@@ -186,6 +209,8 @@ func (r *Controller) Wait() {
 	r.comparatorsWg.Wait()
 
 	r.counterWg.Wait()
+
+	r.writerWg.Wait()
 }
 
 // control looks for ctx.Done, if it triggers, Controller stops all the services
@@ -210,7 +235,7 @@ func (r *Controller) control() {
 }
 
 // createExecutors creates number of Executors defined by the flag WorkersFlag
-func createExecutors(cfg *utils.Config, db state.StateDB, ctx *cli.Context, chainCfg *params.ChainConfig, input chan *iterator.RequestWithResponse, closed chan any, wg *sync.WaitGroup) ([]*ReplayExecutor, chan *OutData, chan requestLog) {
+func createExecutors(cfg *utils.Config, db state.StateDB, chainCfg *params.ChainConfig, input chan *iterator.RequestWithResponse, closed chan any, wg *sync.WaitGroup) ([]*ReplayExecutor, chan *OutData, chan requestLog) {
 	var executors int
 
 	log.Infof("creating %v executors", cfg.Workers)
@@ -234,7 +259,7 @@ func createExecutors(cfg *utils.Config, db state.StateDB, ctx *cli.Context, chai
 }
 
 // createComparators creates number of Comparators defined by the flag WorkersFlag divided by two
-func createComparators(cfg *utils.Config, input chan *OutData, closed chan any, counterInput chan requestLog, wg *sync.WaitGroup) ([]*Comparator, chan any) {
+func createComparators(cfg *utils.Config, input chan *OutData, closed chan any, writerInput chan *comparatorError, counterInput chan requestLog, wg *sync.WaitGroup) ([]*Comparator, chan any) {
 	var (
 		comparators int
 	)
@@ -251,7 +276,7 @@ func createComparators(cfg *utils.Config, input chan *OutData, closed chan any, 
 	c := make([]*Comparator, comparators)
 	failure := make(chan any)
 	for i := 0; i < comparators; i++ {
-		c[i] = newComparator(input, logger.NewLogger(cfg.LogLevel, fmt.Sprintf("Comparator #%v", i)), closed, wg, cfg.ContinueOnFailure, failure, counterInput)
+		c[i] = newComparator(input, logger.NewLogger(cfg.LogLevel, fmt.Sprintf("Comparator #%v", i)), closed, wg, cfg.ContinueOnFailure, writerInput, failure, counterInput)
 	}
 
 	return c, failure
