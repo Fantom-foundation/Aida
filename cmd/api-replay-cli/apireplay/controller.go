@@ -7,7 +7,7 @@ import (
 	"github.com/Fantom-foundation/Aida/iterator"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
-	"github.com/Fantom-foundation/Aida/tracer/operation"
+	"github.com/Fantom-foundation/Aida/tracer/profile"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/google/martian/log"
@@ -37,12 +37,12 @@ type Controller struct {
 	counter                                          *requestCounter
 	counterWg                                        *sync.WaitGroup
 	counterClosed                                    chan any
-	stats                                            *operation.ProfileStats
+	stats                                            *profile.Stats
 	cfg                                              *utils.Config
 }
 
 // newController creates new instances of Controller, ReplayExecutors and Comparators
-func newController(ctx *cli.Context, cfg *utils.Config, db state.StateDB, iter *iterator.FileReader, stats *operation.ProfileStats) *Controller {
+func newController(ctx *cli.Context, cfg *utils.Config, db state.StateDB, iter *iterator.FileReader, stats *profile.Stats) *Controller {
 
 	// create close signals
 	readerClosed := make(chan any)
@@ -221,9 +221,9 @@ func (r *Controller) logProfiling() {
 	}
 
 	if r.cfg.Profile {
-		fmt.Println("=================Statistics=================")
-		r.stats.PrintProfiling(r.log)
-		fmt.Println("============================================")
+		if err := r.stats.PrintProfiling(r.cfg.First, r.cfg.Last); err != nil {
+			r.log.Warningf("cannot print profiling stats; %v", err)
+		}
 	}
 
 }
