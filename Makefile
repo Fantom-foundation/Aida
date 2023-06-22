@@ -29,7 +29,7 @@ aida-api-replay:
 	GOPROXY=$(GOPROXY) \
 	GOPRIVATE=github.com/Fantom-foundation/Carmen \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
-	-o $(GO_BIN)/aida-apireplay \
+	-o $(GO_BIN)/aida-api-replay \
 	./cmd/api-replay-cli
 
 carmen/go/lib/libcarmen.so:
