@@ -85,7 +85,7 @@ func newCannotSendRPCRequestErr(data *OutData) *comparatorError {
 			"\n\tStateDB err: %v"+
 			"\n\tExpected result: %v"+
 			"\n\tExpected err: %v"+
-			"\n\tParams: %v", data.Method, strconv.FormatUint(data.BlockID, 16), data.StateDB.Result, data.StateDB.Error, data.Recorded.Result, data.Recorded.Error, string(data.ParamsRaw)),
+			"\n\nParams: %v", data.Method, strconv.FormatUint(data.BlockID, 16), data.StateDB.Result, data.StateDB.Error, data.Recorded.Result, data.Recorded.Error, string(data.ParamsRaw)),
 		typ: cannotSendRPCRequest,
 	}
 }
@@ -102,7 +102,7 @@ func newInternalError(data *OutData) *comparatorError {
 			"\n\tStateDB err: %v"+
 			"\n\tExpected result: %v"+
 			"\n\tExpected err: %v"+
-			"\n\tParams: %v", data.Method, strconv.FormatUint(data.BlockID, 16), data.StateDB.Result, data.StateDB.Error, data.Recorded.Result, data.Recorded.Error, string(data.ParamsRaw)),
+			"\n\nParams: %v", data.Method, strconv.FormatUint(data.BlockID, 16), data.StateDB.Result, data.StateDB.Error, data.Recorded.Result, data.Recorded.Error, string(data.ParamsRaw)),
 		typ: internalError,
 	}
 }
@@ -116,9 +116,9 @@ func newCannotUnmarshalResult(data *OutData) *comparatorError {
 			"\nBlockID: 0x%v"+
 			"\n\tStateDB result: %v"+
 			"\n\tStateDB err: %v"+
-			"\n\tExpected result: %v"+
-			"\n\tExpected err: %v"+
-			"\n\tParams: %v", data.Method, strconv.FormatUint(data.BlockID, 16), data.StateDB.Result, data.StateDB.Error, data.Recorded.Result, data.Recorded.Error, string(data.ParamsRaw)),
+			"\n\tRecorded result: %v"+
+			"\n\tRecorded err: %v"+
+			"\n\nParams: %v", data.Method, strconv.FormatUint(data.BlockID, 16), data.StateDB.Result, data.StateDB.Error, data.Recorded.Result, data.Recorded.Error, string(data.ParamsRaw)),
 		typ: cannotUnmarshalResult,
 	}
 }
@@ -130,9 +130,9 @@ func newNoMatchingResultErr(stateDBData, expectedData any, data *OutData) *compa
 		error: fmt.Errorf("result do not match"+
 			"\nMethod: %v"+
 			"\nBlockID: 0x%v"+
-			"\n\tStateDB: %v"+
-			"\n\tExpected: %v"+
-			"\n\tParams: %v", data.Method, strconv.FormatUint(data.BlockID, 16), stateDBData, expectedData, string(data.ParamsRaw)),
+			"\n\tCarmen: %v"+
+			"\n\tRecorded: %v"+
+			"\n\n\tParams: %v", data.Method, strconv.FormatUint(data.BlockID, 16), stateDBData, expectedData, string(data.ParamsRaw)),
 		typ: noMatchingResult,
 	}
 }
@@ -144,9 +144,9 @@ func newNoMatchingErrorsErr(stateDBError, expectedError any, data *OutData) *com
 		error: fmt.Errorf("errors do not match"+
 			"\nMethod: %v"+
 			"\nBlockID: 0x%v"+
-			"\n\tStateDB: %v"+
-			"\n\tExpected: %v"+
-			"\n\tParams: %v", data.Method, strconv.FormatUint(data.BlockID, 16), stateDBError, expectedError, string(data.ParamsRaw)),
+			"\n\tCarmen: %v"+
+			"\n\tRecorded: %v"+
+			"\n\nParams: %v", data.Method, strconv.FormatUint(data.BlockID, 16), stateDBError, expectedError, string(data.ParamsRaw)),
 		typ: noMatchingErrors,
 	}
 }
@@ -158,9 +158,9 @@ func newExpectedResultGotErrorErr(stateDBError, expectedResult any, data *OutDat
 		error: fmt.Errorf("expected valid result but StateDB returned err"+
 			"\nMethod: %v"+
 			"\nBlockID: 0x%v"+
-			"\n\tStateDB: %v"+
-			"\n\tExpected: %v"+
-			"\n\tParams: %v", data.Method, strconv.FormatUint(data.BlockID, 16), stateDBError, expectedResult, string(data.ParamsRaw)),
+			"\n\tCarmen: %v"+
+			"\n\tRecorded: %v"+
+			"\n\nParams: %v", data.Method, strconv.FormatUint(data.BlockID, 16), stateDBError, expectedResult, string(data.ParamsRaw)),
 		typ: expectedResultGotError,
 	}
 }
@@ -172,9 +172,9 @@ func newExpectedErrorGotResultErr(stateDBResult, expectedError any, data *OutDat
 		error: fmt.Errorf("expected error but StateDB returned valid result"+
 			"\nMethod: %v"+
 			"\nBlockID: 0x%v"+
-			"\n\tStateDB: %v"+
-			"\n\tExpected: %v"+
-			"\n\tParams: %v", data.Method, strconv.FormatUint(data.BlockID, 16), stateDBResult, expectedError, string(data.ParamsRaw)),
+			"\n\tCarmen: %v"+
+			"\n\tRecorded: %v"+
+			"\n\nParams: %v", data.Method, strconv.FormatUint(data.BlockID, 16), stateDBResult, expectedError, string(data.ParamsRaw)),
 		typ: expectedErrorGotResult,
 	}
 }
