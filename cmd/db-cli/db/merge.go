@@ -148,9 +148,8 @@ func (m *merger) finishMerge() error {
 // merge one or more sourceDbs into targetDb
 func (m *merger) merge() error {
 	var (
-		err          error
-		written      uint64
-		totalWritten uint64
+		err     error
+		written uint64
 	)
 
 	for i, sourceDb := range m.sourceDbs {
@@ -161,10 +160,8 @@ func (m *merger) merge() error {
 			return err
 		}
 
-		totalWritten += written
-
-		if totalWritten == 0 {
-			m.log.Warning("merge did not copy any data")
+		if written == 0 {
+			m.log.Warningf("merge did not copy any data")
 		}
 
 		m.log.Noticef("Merging of %v", m.sourceDbPaths[i])
