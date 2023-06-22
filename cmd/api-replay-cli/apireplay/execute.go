@@ -59,13 +59,8 @@ func executeCall(evm *EVMExecutor) (out *StateDBData) {
 		return
 	}
 
-	// If the result contains a revert reason, try to unpack and return it.
-	if len(result.Revert()) > 0 {
-		out.Error = newRevertError(result)
-	} else {
-		out.Result = result.Return()
-		out.Error = result.Err
-	}
+	out.Error = result.Err
+	out.Result = result.Return()
 
 	return
 }

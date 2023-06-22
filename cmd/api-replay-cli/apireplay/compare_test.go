@@ -145,7 +145,6 @@ func Test_compareCallOK(t *testing.T) {
 	}
 }
 
-/*
 // Test_compareCallErrorNoMatchingResult tests compare func for call method
 // It expects an error of no matching results since results are different
 func Test_compareCallErrorNoMatchingResult(t *testing.T) {
@@ -171,7 +170,6 @@ func Test_compareCallErrorNoMatchingResult(t *testing.T) {
 	}
 
 }
-*/
 
 // Test_compareCallErrorExpectedResultGotErr tests compare func for call method
 // It expects an error of "expected valid result, got error" since recorded data is a valid result but EVM returns error
