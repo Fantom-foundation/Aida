@@ -2,6 +2,7 @@ package apireplay
 
 import (
 	"context"
+	"fmt"
 	"log"
 
 	"github.com/Fantom-foundation/Aida/cmd/runvm-cli/runvm"
