@@ -139,13 +139,12 @@ func Test_compareCallOK(t *testing.T) {
 		},
 	}
 
-	err := compareCall(data, new(strings.Builder), nil)
+	err := compareCall(data, new(strings.Builder), nil, nil)
 	if err != nil {
 		t.Errorf("error must be nil; err: %v", err)
 	}
 }
 
-/*
 // Test_compareCallErrorNoMatchingResult tests compare func for call method
 // It expects an error of no matching results since results are different
 func Test_compareCallErrorNoMatchingResult(t *testing.T) {
@@ -160,7 +159,7 @@ func Test_compareCallErrorNoMatchingResult(t *testing.T) {
 		},
 	}
 
-	err := compareCall(data, new(strings.Builder))
+	err := compareCall(data, new(strings.Builder), nil, nil)
 	if err == nil {
 		t.Errorf("error must not be nil; err: %v", err)
 		return
@@ -171,7 +170,6 @@ func Test_compareCallErrorNoMatchingResult(t *testing.T) {
 	}
 
 }
-*/
 
 // Test_compareCallErrorExpectedResultGotErr tests compare func for call method
 // It expects an error of "expected valid result, got error" since recorded data is a valid result but EVM returns error
@@ -186,7 +184,7 @@ func Test_compareCallErrorExpectedResultGotErr(t *testing.T) {
 		},
 	}
 
-	err := compareCall(data, new(strings.Builder), nil)
+	err := compareCall(data, new(strings.Builder), nil, nil)
 	if err == nil {
 		t.Errorf("error must not be nil; err: %v", err)
 		return
@@ -214,7 +212,7 @@ func Test_compareCallErrorExpectedErrGotResult(t *testing.T) {
 		},
 	}
 
-	err := compareCall(data, new(strings.Builder), nil)
+	err := compareCall(data, new(strings.Builder), nil, nil)
 	if err == nil {
 		t.Errorf("error must not be null")
 		return
