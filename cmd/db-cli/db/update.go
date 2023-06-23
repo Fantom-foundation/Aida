@@ -497,7 +497,7 @@ func getFileContentsFromUrl(url string, startSize int64, out *bufio.Writer) erro
 		}
 
 		// wait until next attempt
-		time.Sleep(10 * time.Second)
+		time.Sleep(1 * time.Second)
 
 		startSize += written
 	}
