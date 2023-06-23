@@ -82,11 +82,10 @@ func (c *requestCounter) count() {
 		case <-c.closed:
 			return
 		case <-c.ticker.C:
-			// todo uncomment
-			//if c.previousTotal == c.total {
-			//	close(c.closed)
-			//	return
-			//}
+			if c.previousTotal == c.total {
+				close(c.closed)
+				return
+			}
 
 			c.logStats()
 			c.previousTotal = c.total
