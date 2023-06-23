@@ -34,14 +34,9 @@ var RunArchiveApp = cli.App{
 		&utils.AidaDbFlag,
 		&utils.StateDbSrcFlag,
 		&utils.ValidateTxStateFlag,
-		&utils.StateDbImplementationFlag,
-		&utils.ArchiveVariantFlag,
-		&utils.StateDbVariantFlag,
 
 		// ShadowDb
 		&utils.ShadowDb,
-		&utils.ShadowDbImplementationFlag,
-		&utils.ShadowDbVariantFlag,
 
 		// VM
 		&utils.VmImplementation,
