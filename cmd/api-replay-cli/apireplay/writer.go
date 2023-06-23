@@ -12,8 +12,6 @@ import (
 	"github.com/op/go-logging"
 )
 
-const pathToAidaLogs = "/var/opera/Aida/logs"
-
 // logWriter receives any data mismatch from comparators and writes them into file
 type logWriter struct {
 	file   *os.File
@@ -23,7 +21,7 @@ type logWriter struct {
 	wg     *sync.WaitGroup
 }
 
-func newWriter(logLevel string, closed chan any, wg *sync.WaitGroup) (*logWriter, chan *comparatorError) {
+func newWriter(logLevel string, closed chan any, path string, wg *sync.WaitGroup) (*logWriter, chan *comparatorError) {
 	now := time.Now()
 	y, m, d := now.Date()
 	var (
@@ -43,9 +41,9 @@ func newWriter(logLevel string, closed chan any, wg *sync.WaitGroup) (*logWriter
 		minute = fmt.Sprintf("%v", now.Minute())
 	}
 
-	fileName := fmt.Sprintf("/api-replay-log_%v-%v-%v_%v:%v", y, m.String(), d, hour, minute)
+	fileName := fmt.Sprintf("/api-replay-log_%v-%v-%v_%v-%v.log", y, m.String(), d, hour, minute)
 
-	filePath := filepath.Join(pathToAidaLogs, fileName)
+	filePath := filepath.Join(path, fileName)
 
 	file, err := os.Create(filePath)
 	if err != nil {
@@ -82,7 +80,7 @@ func (w *logWriter) write() {
 		case <-w.closed:
 			return
 		case compErr = <-w.input:
-			if _, err = w.file.WriteString(compErr.Error()); err != nil {
+			if _, err = w.file.WriteString(compErr.Error() + "\n\n\n\n"); err != nil {
 				w.log.Errorf("cannot write into file; %v", err)
 			}
 		}

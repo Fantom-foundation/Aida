@@ -16,10 +16,10 @@ type Comparator struct {
 	writerInput  chan *comparatorError
 	closed       chan any
 	wg           *sync.WaitGroup
+
 	// failure is closed when continueOnFailure is false, it is used to send signal to controller to shut down the program
 	continueOnFailure bool
-
-	failure chan any
+	failure           chan any
 	// since comparing strings is faster than comparing []byte and we need strings for logging anyway, use builder for contacting
 	builder *strings.Builder
 }
@@ -79,7 +79,9 @@ func (c *Comparator) compare() {
 				// log the mismatched data
 				c.log.Critical(err)
 
-				c.writerInput <- err
+				if c.writerInput != nil {
+					c.writerInput <- err
+				}
 
 				// do we want to exit?
 				if !c.continueOnFailure {

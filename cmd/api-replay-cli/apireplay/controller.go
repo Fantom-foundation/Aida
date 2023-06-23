@@ -50,21 +50,31 @@ func newController(ctx *cli.Context, cfg *utils.Config, db state.StateDB, iter *
 	counterClosed := make(chan any)
 	executorsClosed := make(chan any)
 	comparatorsClosed := make(chan any)
-	writerClosed := make(chan any)
 
 	// create wait groups
 	readerWg := new(sync.WaitGroup)
 	executorsWg := new(sync.WaitGroup)
 	comparatorsWg := new(sync.WaitGroup)
 	counterWg := new(sync.WaitGroup)
-	writerWg := new(sync.WaitGroup)
 
 	// create instances
 	reader := newReader(iter, logger.NewLogger(cfg.LogLevel, "Reader"), ctx.Uint64(flags.Skip.Name), readerClosed, readerWg)
 
 	executors, output, counterInput := createExecutors(cfg, db, utils.GetChainConfig(cfg.ChainID), reader.output, executorsClosed, executorsWg)
 
-	writer, writerInput := newWriter(cfg.LogLevel, writerClosed, writerWg)
+	var (
+		writerClosed chan any
+		writer       *logWriter
+		writerInput  chan *comparatorError
+		writerWg     *sync.WaitGroup
+	)
+
+	// only create writer if logging into file is enabled
+	if ctx.Bool(flags.LogToFile.Name) {
+		writerClosed = make(chan any)
+		writerWg = new(sync.WaitGroup)
+		writer, writerInput = newWriter(cfg.LogLevel, writerClosed, ctx.Path(flags.LogFileDir.Name), writerWg)
+	}
 
 	comparators, failure := createComparators(cfg, output, comparatorsClosed, writerInput, counterInput, comparatorsWg)
 
@@ -101,7 +111,9 @@ func (r *Controller) Start() {
 	r.startComparators()
 
 	r.counter.Start()
-	r.writer.Start()
+	if r.writer != nil {
+		r.writer.Start()
+	}
 
 	go r.control()
 }
@@ -112,12 +124,20 @@ func (r *Controller) Stop() {
 	r.stopReader()
 	r.stopExecutors()
 	r.stopCounter()
-	r.stopWriter()
+
+	if r.writer != nil {
+		r.stopWriter()
+	}
 
 	r.comparatorsWg.Wait()
 	r.executorsWg.Wait()
 	r.counterWg.Wait()
 	r.readerWg.Wait()
+
+	if r.writer != nil {
+		r.writerWg.Wait()
+	}
+
 	r.log.Notice("All services has been stopped")
 }
 
@@ -210,7 +230,9 @@ func (r *Controller) Wait() {
 
 	r.counterWg.Wait()
 
-	r.writerWg.Wait()
+	if r.writer != nil {
+		r.writerWg.Wait()
+	}
 }
 
 // control looks for ctx.Done, if it triggers, Controller stops all the services
