@@ -668,7 +668,7 @@ func (md *aidaMetadata) findEpochs() error {
 
 // checkUpdateMetadata goes through metadata of updated AidaDb and its patch,
 // looks if blocks and epoch align and if chainIDs are same for both Dbs
-func (md *aidaMetadata) checkUpdateMetadata(isNewDb bool, cfg *utils.Config, patchMD *aidaMetadata) (uint64, uint64, error) {
+func (md *aidaMetadata) checkUpdateMetadata(cfg *utils.Config, patchMD *aidaMetadata) (uint64, uint64, error) {
 	var (
 		err                    error
 		firstBlock, firstEpoch uint64
@@ -678,40 +678,34 @@ func (md *aidaMetadata) checkUpdateMetadata(isNewDb bool, cfg *utils.Config, pat
 		return 0, 0, fmt.Errorf("checkUpdateMetadata patchMD ; %v", err)
 	}
 
-	if !isNewDb {
-		// if we are updating existing AidaDb and this Db does not have metadata, we go through substate to find
-		// blocks and epochs, chainID is set from user via chain-id flag and db type in this case will always be genType
-		if err = md.getMetadata(); err != nil {
-			// if metadata are not found, but we have an existingDb, we go through substate to find it
-			if strings.Contains(err.Error(), "leveldb: not found") {
-				if err = md.setFreshUpdateMetadata(cfg.ChainID); err != nil {
-					return 0, 0, err
-				}
-
-			} else {
-				return 0, 0, fmt.Errorf("checkUpdateMetadata aida-db ; %v", err)
+	// if we are updating existing AidaDb and this Db does not have metadata, we go through substate to find
+	// blocks and epochs, chainID is set from user via chain-id flag and db type in this case will always be genType
+	if err = md.getMetadata(); err != nil {
+		// if metadata are not found, but we have an existingDb, we go through substate to find it
+		if strings.Contains(err.Error(), "leveldb: not found") {
+			if err = md.setFreshUpdateMetadata(cfg.ChainID); err != nil {
+				return 0, 0, err
 			}
-		}
 
-		// the patch is usable only if its firstBlock is within targetDbs block range
-		// and if its last block is bigger than targetDBs last block
-		if patchMD.firstBlock > md.lastBlock+1 || patchMD.firstBlock < md.firstBlock || patchMD.lastBlock <= md.lastBlock {
-			return 0, 0, fmt.Errorf("metadata blocks does not align; aida-db %v-%v, patch %v-%v", md.firstBlock, md.lastBlock, patchMD.firstBlock, patchMD.lastBlock)
+		} else {
+			return 0, 0, fmt.Errorf("checkUpdateMetadata aida-db ; %v", err)
 		}
-
-		// if chainIDs doesn't match, we can't patch the DB
-		if md.chainId != patchMD.chainId {
-			return 0, 0, fmt.Errorf("metadata chain-ids does not match; aida-db: %v, patch: %v", md.chainId, patchMD.chainId)
-		}
-
-		// we take first block and epoch from the existing db
-		firstBlock = md.firstBlock
-		firstEpoch = md.firstEpoch
-	} else {
-		// if targetDb is a new db, we take first block and epoch from the patch
-		firstBlock = patchMD.firstBlock
-		firstEpoch = patchMD.firstEpoch
 	}
+
+	// the patch is usable only if its firstBlock is within targetDbs block range
+	// and if its last block is bigger than targetDBs last block
+	if patchMD.firstBlock > md.lastBlock+1 || patchMD.firstBlock < md.firstBlock || patchMD.lastBlock <= md.lastBlock {
+		return 0, 0, fmt.Errorf("metadata blocks does not align; aida-db %v-%v, patch %v-%v", md.firstBlock, md.lastBlock, patchMD.firstBlock, patchMD.lastBlock)
+	}
+
+	// if chainIDs doesn't match, we can't patch the DB
+	if md.chainId != patchMD.chainId {
+		return 0, 0, fmt.Errorf("metadata chain-ids does not match; aida-db: %v, patch: %v", md.chainId, patchMD.chainId)
+	}
+
+	// we take first block and epoch from the existing db
+	firstBlock = md.firstBlock
+	firstEpoch = md.firstEpoch
 
 	return firstBlock, firstEpoch, nil
 }

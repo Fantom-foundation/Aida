@@ -200,13 +200,10 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 
 				patchMD := newAidaMetadata(patchDb, cfg.LogLevel)
 
-				firstBlock, firstEpoch, err := targetMD.checkUpdateMetadata(isNewDb, cfg, patchMD)
+				firstBlock, firstEpoch, err := targetMD.checkUpdateMetadata(cfg, patchMD)
 				if err != nil {
 					return err
 				}
-
-				// after inserting first patch, db is no longer new
-				isNewDb = false
 
 				m := newMerger(cfg, targetMD.db, []ethdb.Database{patchDb}, []string{extractedPatchPath}, nil)
 
