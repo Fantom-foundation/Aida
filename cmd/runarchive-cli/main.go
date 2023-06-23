@@ -28,14 +28,18 @@ var RunArchiveApp = cli.App{
 		&utils.CpuProfileFlag,
 		&utils.ChainIDFlag,
 		&logger.LogLevelFlag,
+		&utils.StateDbLoggingFlag,
 
 		// StateDb
 		&utils.AidaDbFlag,
 		&utils.StateDbSrcFlag,
 		&utils.ValidateTxStateFlag,
+		&utils.StateDbImplementationFlag,
 
 		// ShadowDb
 		&utils.ShadowDb,
+		&utils.ShadowDbImplementationFlag,
+		&utils.ShadowDbVariantFlag,
 
 		// VM
 		&utils.VmImplementation,
