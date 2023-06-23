@@ -60,22 +60,21 @@ func update(ctx *cli.Context) error {
 func Update(cfg *utils.Config) error {
 	log := logger.NewLogger(cfg.LogLevel, "DB Update")
 
-	targetMD, err := getTargetDbBlockRange(cfg)
+	previousBlock, err := getTargetDbBlockRange(cfg)
 	if err != nil {
 		return fmt.Errorf("unable retrieve aida-db metadata; %v", err)
 	}
 
-	log.Noticef("lastAidaDbBlock %v", targetMD.lastBlock)
+	log.Noticef("lastAidaDbBlock %v", previousBlock)
 
 	// retrieve available patches from aida-db generation server
-	patches, err := retrievePatchesToDownload(targetMD.lastBlock)
+	patches, err := retrievePatchesToDownload(previousBlock)
 	if err != nil {
 		return fmt.Errorf("unable to prepare list of aida-db patches for download; %v", err)
 	}
 
 	if len(patches) == 0 {
 		log.Warning("No new patches to download are available")
-		MustCloseDB(targetMD.db)
 		return nil
 	}
 
@@ -88,7 +87,7 @@ func Update(cfg *utils.Config) error {
 	log.Noticef("Downloading Aida-db - %d new patches", len(patches))
 
 	// we need to know whether Db is new for metadata
-	err = patchesDownloader(cfg, patches, targetMD, targetMD.lastBlock == 0)
+	err = patchesDownloader(cfg, patches, previousBlock == 0)
 	if err != nil {
 		return err
 	}
@@ -99,44 +98,28 @@ func Update(cfg *utils.Config) error {
 }
 
 // getTargetDbBlockRange initialize aidaMetadata of targetDB
-func getTargetDbBlockRange(cfg *utils.Config) (*aidaMetadata, error) {
-	var (
-		firstAidaDbBlock, lastAidaDbBlock uint64
-	)
-
+func getTargetDbBlockRange(cfg *utils.Config) (uint64, error) {
 	// load stats of current aida-db to download just latest patches
 	_, err := os.Stat(cfg.AidaDb)
 	if err != nil {
 		if os.IsNotExist(err) {
 			// aida-db does not exist, download all available patches
+			return 0, nil
 		} else {
-			return nil, err
+			return 0, err
 		}
 	} else {
 		// load last block from existing aida-db metadata
-		firstAidaDbBlock, lastAidaDbBlock, err = findBlockRangeInSubstate(cfg.AidaDb)
+		_, lastAidaDbBlock, err := findBlockRangeInSubstate(cfg.AidaDb)
 		if err != nil {
-			return nil, fmt.Errorf("using corrupted aida-db database; %v", err)
+			return 0, fmt.Errorf("using corrupted aida-db database; %v", err)
 		}
+		return lastAidaDbBlock, nil
 	}
-
-	// aida-db already exists appending only new patches
-	// open targetDB
-	targetDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
-	if err != nil {
-		return nil, fmt.Errorf("can't open aidaDb; %v", err)
-	}
-
-	targetMD := newAidaMetadata(targetDb, cfg.LogLevel)
-	if err = targetMD.setBlockRange(firstAidaDbBlock, lastAidaDbBlock); err != nil {
-		return nil, err
-	}
-
-	return targetMD, nil
 }
 
 // patchesDownloader processes patch names to download then download them in pipelined process
-func patchesDownloader(cfg *utils.Config, patches []string, targetMD *aidaMetadata, isNewDb bool) error {
+func patchesDownloader(cfg *utils.Config, patches []string, isNewDb bool) error {
 	// create channel to push patch labels trough channel
 	patchesChan := pushStringsToChannel(patches)
 
@@ -147,20 +130,20 @@ func patchesDownloader(cfg *utils.Config, patches []string, targetMD *aidaMetada
 	decompressedPatchChan, errDecompressChan := decompressPatch(cfg, downloadedPatchChan, errChan)
 
 	// merge decompressed patches
-	err := mergePatch(cfg, decompressedPatchChan, errDecompressChan, targetMD, isNewDb)
+	err := mergePatch(cfg, decompressedPatchChan, errDecompressChan, isNewDb)
 	if err != nil {
 		return err
-	}
-
-	if err = targetMD.db.Close(); err != nil {
-		targetMD.log.Warningf("patchesDownloader: cannot close targetDb; %v", err)
 	}
 
 	return nil
 }
 
 // mergePatch takes decompressed patches and merges them into aida-db
-func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan error, targetMD *aidaMetadata, isNewDb bool) error {
+func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan error, isNewDb bool) error {
+	firstRun := true
+
+	var targetMD *aidaMetadata
+
 	for {
 		select {
 		case err, ok := <-errChan:
@@ -174,10 +157,42 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 				if !ok {
 					return nil
 				}
+
+				// firstRun is triggered only when applying first patch
+				// distinction is necessary because if targetDb was empty we can move patch directly into targetPath
+				// before opening database for writing
+				if firstRun {
+					firstRun = false
+					// first patch to empty database is moved to target right away
+					// this way we can skip iteration and metadata inserts
+					if isNewDb {
+						log := logger.NewLogger(cfg.LogLevel, "aida-metadata")
+						log.Noticef("AIDA-DB was empty - directly saving first patch")
+						if err := os.Rename(extractedPatchPath, cfg.AidaDb); err != nil {
+							return fmt.Errorf("unable to move patch into aida-db target; %v", err)
+						}
+					}
+
+					// open targetDB only after there is already first patch or any existing previous data
+					targetDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
+					if err != nil {
+						return fmt.Errorf("can't open aidaDb; %v", err)
+					}
+					targetMD = newAidaMetadata(targetDb, cfg.LogLevel)
+
+					defer func() {
+						if err = targetMD.db.Close(); err != nil {
+							targetMD.log.Warningf("patchesDownloader: cannot close targetDb; %v", err)
+						}
+					}()
+
+					// patch was already applied before opening targetDb hence we don't need to merge it anymore
+					if isNewDb {
+						continue
+					}
+				}
+
 				// merge newly extracted patch
-
-				targetDb := targetMD.db
-
 				patchDb, err := rawdb.NewLevelDBDatabase(extractedPatchPath, 1024, 100, "profiling", false)
 				if err != nil {
 					return fmt.Errorf("cannot open targetDb; %v", err)
@@ -193,7 +208,7 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 				// after inserting first patch, db is no longer new
 				isNewDb = false
 
-				m := newMerger(cfg, targetDb, []ethdb.Database{patchDb}, []string{extractedPatchPath}, nil)
+				m := newMerger(cfg, targetMD.db, []ethdb.Database{patchDb}, []string{extractedPatchPath}, nil)
 
 				err = m.merge()
 				if err != nil {
@@ -482,7 +497,7 @@ func getFileContentsFromUrl(url string, startSize int64, out *bufio.Writer) erro
 		}
 
 		// wait until next attempt
-		time.Sleep(1 * time.Second)
+		time.Sleep(10 * time.Second)
 
 		startSize += written
 	}
