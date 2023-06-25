@@ -4,13 +4,14 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
+	"hash"
+	"time"
+
 	"github.com/Fantom-foundation/Aida/logger"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/op/go-logging"
-	"hash"
-	"time"
 )
 
 type validator struct {
@@ -64,7 +65,7 @@ func (v *validator) iterate() error {
 	}
 
 	elapsed = time.Since(time.Now())
-	v.log.Infof("Stage 1 Substate took %vh %vm", elapsed.Hours(), elapsed.Minutes())
+	v.log.Infof("Stage 1 Substate took %.0fh %.0fm", elapsed.Hours(), elapsed.Minutes())
 
 	v.log.Notice("Iterating over Substate Alloc...")
 	if err = v.doIterate(substate.SubstateAllocPrefix); err != nil {
@@ -72,7 +73,7 @@ func (v *validator) iterate() error {
 	}
 
 	elapsed = time.Since(time.Now())
-	v.log.Infof("Substate Alloc took %vh %vm", elapsed.Hours(), elapsed.Minutes())
+	v.log.Infof("Substate Alloc took %v.0f %.0fm", elapsed.Hours(), elapsed.Minutes())
 
 	v.log.Notice("Iterating over Destroyed Accounts...")
 	if err = v.doIterate(substate.DestroyedAccountPrefix); err != nil {
@@ -80,7 +81,7 @@ func (v *validator) iterate() error {
 	}
 
 	elapsed = time.Since(time.Now())
-	v.log.Infof("Destroyed Accounts took %vh %vm", elapsed.Hours(), elapsed.Minutes())
+	v.log.Infof("Destroyed Accounts took %.0fh %.0fm", elapsed.Hours(), elapsed.Minutes())
 
 	v.log.Notice("Iterating over Stage 1 Code...")
 	if err = v.doIterate(substate.Stage1CodePrefix); err != nil {
@@ -88,9 +89,9 @@ func (v *validator) iterate() error {
 	}
 
 	elapsed = time.Since(time.Now())
-	v.log.Infof("Stage 1 Code took %vh %vm", elapsed.Hours(), elapsed.Minutes())
+	v.log.Infof("Stage 1 Code took %.0fh %.0fm", elapsed.Hours(), elapsed.Minutes())
 
-	v.log.Noticef("Total time elapsed: %vh %vm", time.Since(v.start).Hours(), time.Since(v.start).Minutes())
+	v.log.Noticef("Total time elapsed: %.0fh %.0fm", time.Since(v.start).Hours(), time.Since(v.start).Minutes())
 
 	return nil
 
