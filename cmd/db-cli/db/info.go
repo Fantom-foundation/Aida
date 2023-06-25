@@ -24,6 +24,7 @@ var InfoCommand = cli.Command{
 		&cmdMetadata,
 		&cmdDelAcc,
 		&cmdCount,
+		&cmdPrintMD5,
 	},
 }
 
@@ -87,6 +88,23 @@ var cmdMetadata = cli.Command{
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 	},
+}
+
+var cmdPrintMD5 = cli.Command{
+	Action: printMD5Sum,
+	Name:   "print-md5",
+	Usage:  "Creates md5 sum of all data (both key and value) inside AidaDb and prints it",
+	Flags: []cli.Flag{
+		&utils.AidaDbFlag,
+	},
+}
+
+func printMD5Sum(ctx *cli.Context) error {
+	if _, err := validate(ctx.String(utils.AidaDbFlag.Name), "INFO"); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func printMetadataCmd(ctx *cli.Context) error {
