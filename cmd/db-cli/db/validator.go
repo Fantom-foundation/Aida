@@ -10,10 +10,12 @@ import (
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/op/go-logging"
 	"hash"
+	"time"
 )
 
 type validator struct {
 	db     ethdb.Database
+	start  time.Time
 	hasher hash.Hash
 	closed chan any
 	log    *logging.Logger
@@ -29,6 +31,7 @@ func newDbValidator(pathToDb, logLevel string) *validator {
 
 	return &validator{
 		db:     db,
+		start:  time.Now(),
 		hasher: md5.New(),
 		closed: make(chan any, 1),
 		log:    l,
@@ -50,27 +53,44 @@ func validate(pathToDb, logLevel string) ([]byte, error) {
 }
 
 func (v *validator) iterate() error {
-	var err error
+	var (
+		err     error
+		elapsed time.Duration
+	)
 
 	v.log.Notice("Iterating over Stage 1 Substate...")
 	if err = v.doIterate(substate.Stage1SubstatePrefix); err != nil {
 		return err
 	}
 
+	elapsed = time.Since(time.Now())
+	v.log.Infof("Stage 1 Substate took %vh %vm", elapsed.Hours(), elapsed.Minutes())
+
 	v.log.Notice("Iterating over Substate Alloc...")
 	if err = v.doIterate(substate.SubstateAllocPrefix); err != nil {
 		return err
 	}
+
+	elapsed = time.Since(time.Now())
+	v.log.Infof("Substate Alloc took %vh %vm", elapsed.Hours(), elapsed.Minutes())
 
 	v.log.Notice("Iterating over Destroyed Accounts...")
 	if err = v.doIterate(substate.DestroyedAccountPrefix); err != nil {
 		return err
 	}
 
+	elapsed = time.Since(time.Now())
+	v.log.Infof("Destroyed Accounts took %vh %vm", elapsed.Hours(), elapsed.Minutes())
+
 	v.log.Notice("Iterating over Stage 1 Code...")
 	if err = v.doIterate(substate.Stage1CodePrefix); err != nil {
 		return err
 	}
+
+	elapsed = time.Since(time.Now())
+	v.log.Infof("Stage 1 Code took %vh %vm", elapsed.Hours(), elapsed.Minutes())
+
+	v.log.Noticef("Total time elapsed: %vh %vm", time.Since(v.start).Hours(), time.Since(v.start).Minutes())
 
 	return nil
 
