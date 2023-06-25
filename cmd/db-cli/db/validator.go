@@ -73,7 +73,7 @@ func (v *validator) iterate() error {
 	}
 
 	elapsed = time.Since(time.Now())
-	v.log.Infof("Substate Alloc took %v.0f %.0fm", elapsed.Hours(), elapsed.Minutes())
+	v.log.Infof("Substate Alloc took %.0fh %.0fm", elapsed.Hours(), elapsed.Minutes())
 
 	v.log.Notice("Iterating over Destroyed Accounts...")
 	if err = v.doIterate(substate.DestroyedAccountPrefix); err != nil {
