@@ -139,7 +139,7 @@ func patchesDownloader(cfg *utils.Config, patches []string, firstBlock, lastBloc
 }
 
 // mergePatch takes decompressed patches and merges them into aida-db
-func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan error, firstBlock, lastBlock uint64) error {
+func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan error, firstAidaDbBlock, lastAidaDbBlock uint64) error {
 	var isNewDb bool
 	if lastBlock == 0 {
 		isNewDb = true
@@ -176,7 +176,7 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 						// move extracted patch to target location - first attempting with os.Rename because it is fastest
 						if err := os.Rename(extractedPatchPath, cfg.AidaDb); err != nil {
 							// attempting with deep copy - needed when moving across different disks
-							if err2 := utils.CopyDir(extractedPatchPath, cfg.AidaDb); err != nil {
+							if err2 := utils.CopyDir(extractedPatchPath, cfg.AidaDb); err2 != nil {
 								return fmt.Errorf("unable to move patch into aida-db target; %v (%v)", err2, err)
 							}
 						}
@@ -190,7 +190,7 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 					targetMD = newAidaMetadata(targetDb, cfg.LogLevel)
 
 					// explicitly insert block range into target database - deprecated distributed databases don't have metadata
-					err = targetMD.setBlockRange(firstBlock, lastBlock)
+					err = targetMD.setBlockRange(firstAidaDbBlock, lastAidaDbBlock)
 					if err != nil {
 						return err
 					}
