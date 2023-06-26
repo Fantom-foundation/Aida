@@ -60,15 +60,15 @@ func update(ctx *cli.Context) error {
 func Update(cfg *utils.Config) error {
 	log := logger.NewLogger(cfg.LogLevel, "DB Update")
 
-	previousBlock, err := getTargetDbBlockRange(cfg)
+	firstBlock, lastBlock, err := getTargetDbBlockRange(cfg)
 	if err != nil {
 		return fmt.Errorf("unable retrieve aida-db metadata; %v", err)
 	}
 
-	log.Noticef("lastAidaDbBlock %v", previousBlock)
+	log.Noticef("lastAidaDbBlock %v", lastBlock)
 
 	// retrieve available patches from aida-db generation server
-	patches, err := retrievePatchesToDownload(previousBlock)
+	patches, err := retrievePatchesToDownload(lastBlock)
 	if err != nil {
 		return fmt.Errorf("unable to prepare list of aida-db patches for download; %v", err)
 	}
@@ -87,7 +87,7 @@ func Update(cfg *utils.Config) error {
 	log.Noticef("Downloading Aida-db - %d new patches", len(patches))
 
 	// we need to know whether Db is new for metadata
-	err = patchesDownloader(cfg, patches, previousBlock == 0)
+	err = patchesDownloader(cfg, patches, firstBlock, lastBlock)
 	if err != nil {
 		return err
 	}
@@ -98,28 +98,28 @@ func Update(cfg *utils.Config) error {
 }
 
 // getTargetDbBlockRange initialize aidaMetadata of targetDB
-func getTargetDbBlockRange(cfg *utils.Config) (uint64, error) {
+func getTargetDbBlockRange(cfg *utils.Config) (uint64, uint64, error) {
 	// load stats of current aida-db to download just latest patches
 	_, err := os.Stat(cfg.AidaDb)
 	if err != nil {
 		if os.IsNotExist(err) {
 			// aida-db does not exist, download all available patches
-			return 0, nil
+			return 0, 0, nil
 		} else {
-			return 0, err
+			return 0, 0, err
 		}
 	} else {
 		// load last block from existing aida-db metadata
-		_, lastAidaDbBlock, err := findBlockRangeInSubstate(cfg.AidaDb)
+		firstAidaDbBlock, lastAidaDbBlock, err := findBlockRangeInSubstate(cfg.AidaDb)
 		if err != nil {
-			return 0, fmt.Errorf("using corrupted aida-db database; %v", err)
+			return 0, 0, fmt.Errorf("using corrupted aida-db database; %v", err)
 		}
-		return lastAidaDbBlock, nil
+		return firstAidaDbBlock, lastAidaDbBlock, nil
 	}
 }
 
 // patchesDownloader processes patch names to download then download them in pipelined process
-func patchesDownloader(cfg *utils.Config, patches []string, isNewDb bool) error {
+func patchesDownloader(cfg *utils.Config, patches []string, firstBlock, lastBlock uint64) error {
 	// create channel to push patch labels trough channel
 	patchesChan := pushStringsToChannel(patches)
 
@@ -130,7 +130,7 @@ func patchesDownloader(cfg *utils.Config, patches []string, isNewDb bool) error 
 	decompressedPatchChan, errDecompressChan := decompressPatch(cfg, downloadedPatchChan, errChan)
 
 	// merge decompressed patches
-	err := mergePatch(cfg, decompressedPatchChan, errDecompressChan, isNewDb)
+	err := mergePatch(cfg, decompressedPatchChan, errDecompressChan, firstBlock, lastBlock)
 	if err != nil {
 		return err
 	}
@@ -139,7 +139,12 @@ func patchesDownloader(cfg *utils.Config, patches []string, isNewDb bool) error 
 }
 
 // mergePatch takes decompressed patches and merges them into aida-db
-func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan error, isNewDb bool) error {
+func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan error, firstBlock, lastBlock uint64) error {
+	var isNewDb bool
+	if lastBlock == 0 {
+		isNewDb = true
+	}
+
 	firstRun := true
 
 	var targetMD *aidaMetadata
@@ -179,6 +184,12 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 						return fmt.Errorf("can't open aidaDb; %v", err)
 					}
 					targetMD = newAidaMetadata(targetDb, cfg.LogLevel)
+
+					// explicitly insert block range into target database - deprecated distributed databases don't have metadata
+					err = targetMD.setBlockRange(firstBlock, lastBlock)
+					if err != nil {
+						return err
+					}
 
 					defer func() {
 						if err = targetMD.db.Close(); err != nil {
