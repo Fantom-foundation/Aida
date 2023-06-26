@@ -8,6 +8,7 @@ import (
 	"github.com/Fantom-foundation/Aida/iterator"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/tracer/profile"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/google/martian/log"
@@ -37,13 +38,15 @@ type Controller struct {
 	counter                                          *requestCounter
 	counterWg                                        *sync.WaitGroup
 	counterClosed                                    chan any
+	stats                                            *profile.Stats
+	cfg                                              *utils.Config
 	writer                                           *logWriter
 	writerWg                                         *sync.WaitGroup
 	writerClosed                                     chan any
 }
 
 // newController creates new instances of Controller, ReplayExecutors and Comparators
-func newController(ctx *cli.Context, cfg *utils.Config, db state.StateDB, iter *iterator.FileReader) *Controller {
+func newController(ctx *cli.Context, cfg *utils.Config, db state.StateDB, iter *iterator.FileReader, stats *profile.Stats) *Controller {
 
 	// create close signals
 	readerClosed := make(chan any)
@@ -99,6 +102,8 @@ func newController(ctx *cli.Context, cfg *utils.Config, db state.StateDB, iter *
 		comparatorsWg:     comparatorsWg,
 		counterWg:         counterWg,
 		writerWg:          writerWg,
+		stats:             stats,
+		cfg:               cfg,
 	}
 }
 
@@ -139,11 +144,13 @@ func (r *Controller) Stop() {
 	}
 
 	r.log.Notice("All services has been stopped")
+
+	r.logProfiling()
 }
 
 // startExecutors and their loops
 func (r *Controller) startExecutors() {
-	r.log.Infof("Starting %v executor", len(r.Executors))
+	r.log.Infof("Starting %v executors", len(r.Executors))
 	for _, e := range r.Executors {
 		e.Start()
 		r.executorsWg.Add(1)
@@ -254,6 +261,20 @@ func (r *Controller) control() {
 			return
 		}
 	}
+}
+
+// logProfiling when closing API-Replay
+func (r *Controller) logProfiling() {
+	if err := utils.StartMemoryProfile(r.cfg); err != nil {
+		r.log.Warningf("cannot profile memory; %v", err)
+	}
+
+	if r.cfg.Profile {
+		if err := r.stats.PrintProfiling(r.cfg.First, r.cfg.Last); err != nil {
+			r.log.Warningf("cannot print profiling stats; %v", err)
+		}
+	}
+
 }
 
 // createExecutors creates number of Executors defined by the flag WorkersFlag

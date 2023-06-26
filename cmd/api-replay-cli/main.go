@@ -40,13 +40,21 @@ func main() {
 			// StateDB
 			&utils.StateDbSrcFlag,
 			&utils.StateDbLoggingFlag,
-			&utils.CarmenSchemaFlag,
-			&utils.ArchiveModeFlag,
 
 			// Trace
 			&utils.TraceFlag,
 			&utils.TraceFileFlag,
 			&utils.TraceDebugFlag,
+
+			// ArchiveDB
+			&utils.ArchiveModeFlag,
+			&utils.ArchiveVariantFlag,
+
+			// Performance
+			&utils.CpuProfileFlag,
+			&utils.MemoryProfileFlag,
+			&utils.ProfileFlag,
+			&utils.ProfileFileFlag,
 		},
 	}
 
