@@ -55,43 +55,47 @@ func validate(pathToDb, logLevel string) ([]byte, error) {
 
 func (v *validator) iterate() error {
 	var (
-		err     error
-		elapsed time.Duration
+		err error
+		now time.Time
 	)
+
+	now = time.Now()
 
 	v.log.Notice("Iterating over Stage 1 Substate...")
 	if err = v.doIterate(substate.Stage1SubstatePrefix); err != nil {
 		return err
 	}
 
-	elapsed = time.Since(time.Now())
-	v.log.Infof("Stage 1 Substate took %.0fh %.0fm", elapsed.Hours(), elapsed.Minutes())
+	v.log.Infof("Stage 1 Substate took %v.", time.Since(now).Round(1*time.Second))
+
+	now = time.Now()
 
 	v.log.Notice("Iterating over Substate Alloc...")
 	if err = v.doIterate(substate.SubstateAllocPrefix); err != nil {
 		return err
 	}
 
-	elapsed = time.Since(time.Now())
-	v.log.Infof("Substate Alloc took %.0fh %.0fm", elapsed.Hours(), elapsed.Minutes())
+	v.log.Infof("Substate Alloc took %v.", time.Since(now).Round(1*time.Second))
+
+	now = time.Now()
 
 	v.log.Notice("Iterating over Destroyed Accounts...")
 	if err = v.doIterate(substate.DestroyedAccountPrefix); err != nil {
 		return err
 	}
 
-	elapsed = time.Since(time.Now())
-	v.log.Infof("Destroyed Accounts took %.0fh %.0fm", elapsed.Hours(), elapsed.Minutes())
+	v.log.Infof("Destroyed Accounts took %v.", time.Since(now).Round(1*time.Second))
+
+	now = time.Now()
 
 	v.log.Notice("Iterating over Stage 1 Code...")
 	if err = v.doIterate(substate.Stage1CodePrefix); err != nil {
 		return err
 	}
 
-	elapsed = time.Since(time.Now())
-	v.log.Infof("Stage 1 Code took %.0fh %.0fm", elapsed.Hours(), elapsed.Minutes())
+	v.log.Infof("Stage 1 Code took %v.", time.Since(now).Round(1*time.Second))
 
-	v.log.Noticef("Total time elapsed: %.0fh %.0fm", time.Since(v.start).Hours(), time.Since(v.start).Minutes())
+	v.log.Noticef("Total time elapsed: %v", time.Since(v.start).Round(1*time.Second))
 
 	return nil
 
