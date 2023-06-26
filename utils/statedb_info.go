@@ -55,8 +55,8 @@ func copyFile(src, dst string) error {
 	return os.Chmod(dst, srcinfo.Mode())
 }
 
-// copyDir copies a whole directory recursively
-func copyDir(src string, dst string) error {
+// CopyDir copies a whole directory recursively
+func CopyDir(src string, dst string) error {
 	var err error
 	var fds []os.FileInfo
 	var srcinfo os.FileInfo
@@ -76,7 +76,7 @@ func copyDir(src string, dst string) error {
 		dstfp := path.Join(dst, fd.Name())
 
 		if fd.IsDir() {
-			if err = copyDir(srcfp, dstfp); err != nil {
+			if err = CopyDir(srcfp, dstfp); err != nil {
 				os.RemoveAll(dst)
 				return err
 			}

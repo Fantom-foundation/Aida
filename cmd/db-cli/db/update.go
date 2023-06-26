@@ -173,8 +173,12 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 					if isNewDb {
 						log := logger.NewLogger(cfg.LogLevel, "aida-metadata")
 						log.Noticef("AIDA-DB was empty - directly saving first patch")
+						// move extracted patch to target location - first attempting with os.Rename because it is fastest
 						if err := os.Rename(extractedPatchPath, cfg.AidaDb); err != nil {
-							return fmt.Errorf("unable to move patch into aida-db target; %v", err)
+							// attempting with deep copy - needed when moving across different disks
+							if err2 := utils.CopyDir(extractedPatchPath, cfg.AidaDb); err != nil {
+								return fmt.Errorf("unable to move patch into aida-db target; %v (%v)", err2, err)
+							}
 						}
 					}
 
