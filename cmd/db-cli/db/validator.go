@@ -18,7 +18,6 @@ type validator struct {
 	db     ethdb.Database
 	start  time.Time
 	hasher hash.Hash
-	closed chan any
 	log    *logging.Logger
 }
 
@@ -34,7 +33,6 @@ func newDbValidator(pathToDb, logLevel string) *validator {
 		db:     db,
 		start:  time.Now(),
 		hasher: md5.New(),
-		closed: make(chan any, 1),
 		log:    l,
 	}
 }
