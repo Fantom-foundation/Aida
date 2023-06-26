@@ -10,24 +10,28 @@ import (
 // Comparator compares data from StateDB and expected data recorded on API server
 // This data is retrieved from Reader
 type Comparator struct {
-	input  chan *OutData
-	log    *logging.Logger
-	closed chan any
-	wg     *sync.WaitGroup
+	input        chan *OutData
+	log          *logging.Logger
+	counterInput chan requestLog
+	writerInput  chan *comparatorError
+	closed       chan any
+	wg           *sync.WaitGroup
+
 	// failure is closed when continueOnFailure is false, it is used to send signal to controller to shut down the program
 	continueOnFailure bool
 	failure           chan any
-
 	// since comparing strings is faster than comparing []byte and we need strings for logging anyway, use builder for contacting
 	builder *strings.Builder
 }
 
 // newComparator returns new instance of Comparator
-func newComparator(input chan *OutData, log *logging.Logger, closed chan any, wg *sync.WaitGroup, continueOnFailure bool, failure chan any) *Comparator {
+func newComparator(input chan *OutData, log *logging.Logger, closed chan any, wg *sync.WaitGroup, continueOnFailure bool, writerInput chan *comparatorError, failure chan any, counterInput chan requestLog) *Comparator {
 	return &Comparator{
 		failure:           failure,
 		input:             input,
 		log:               log,
+		counterInput:      counterInput,
+		writerInput:       writerInput,
 		closed:            closed,
 		wg:                wg,
 		continueOnFailure: continueOnFailure,
@@ -75,6 +79,10 @@ func (c *Comparator) compare() {
 				// log the mismatched data
 				c.log.Critical(err)
 
+				if c.writerInput != nil {
+					c.writerInput <- err
+				}
+
 				// do we want to exit?
 				if !c.continueOnFailure {
 					c.fail()
@@ -96,6 +104,17 @@ func (c *Comparator) doCompare(data *OutData) (err *comparatorError) {
 		err = compareTransactionCount(data, c.builder)
 	case "call":
 		err = compareCall(data, c.builder)
+		if err != nil && err.typ == expectedErrorGotResult && !data.isRecovered {
+			data.isRecovered = true
+
+			// record the error
+			c.counterInput <- requestLog{
+				method:  data.Method,
+				logType: retried,
+			}
+			// we have to make hard copy of the data since the pointer gets rewritten
+			return tryRecovery(*data, c.input)
+		}
 	case "estimateGas":
 		// estimateGas is currently not suitable for replay since the estimation  in geth is always calculated for current state
 		// that means recorded result and result returned by StateDB are not comparable

@@ -275,11 +275,18 @@ func (s *loggingStateDB) StartBulkLoad(block uint64) BulkLoad {
 }
 
 func (s *loggingStateDB) GetArchiveState(block uint64) (StateDB, error) {
-	// no loggin in this case
-	return s.db.GetArchiveState(block)
+	archive, err := s.db.GetArchiveState(block)
+	if err != nil {
+		return nil, err
+	}
+	return MakeLoggingStateDB(archive, "DEBUG"), nil
 }
 
 func (s *loggingStateDB) GetMemoryUsage() *MemoryUsage {
 	// no loggin in this case
 	return s.db.GetMemoryUsage()
+}
+
+func (s *loggingStateDB) GetShadowDB() StateDB {
+	return s.db.GetShadowDB()
 }

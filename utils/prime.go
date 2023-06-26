@@ -177,7 +177,6 @@ func (pc *PrimeContext) PrimeStateDBRandom(ws substate.SubstateAlloc, db state.S
 
 // SuicideAccounts clears storage of all input accounts.
 func (pc *PrimeContext) SuicideAccounts(db state.StateDB, accounts []common.Address) {
-	pc.log.Info("Remove suicided accounts from stateDB.")
 	count := 0
 	db.BeginSyncPeriod(0)
 	db.BeginBlock(pc.block)
@@ -193,7 +192,7 @@ func (pc *PrimeContext) SuicideAccounts(db state.StateDB, accounts []common.Addr
 	db.EndBlock()
 	db.EndSyncPeriod()
 	pc.block++
-	pc.log.Infof("\t %v accounts were removed.", count)
+	pc.log.Infof("\t\t %v suicided accounts were removed from statedb (before priming).", count)
 }
 
 // GenerateWorldStateAndPrime
@@ -211,7 +210,10 @@ func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error 
 		return fmt.Errorf("the target block, %v, is earlier than the initial world state block, %v. The world state is not loaded.", target, blockPos)
 	}
 	// load pre-computed update-set from update-set db
-	udb := substate.OpenUpdateDBReadOnly(cfg.UpdateDb)
+	udb, err := substate.OpenUpdateDBReadOnly(cfg.UpdateDb)
+	if err != nil {
+		return err
+	}
 	defer udb.Close()
 	updateIter := substate.NewUpdateSetIterator(udb, blockPos, target)
 	update := make(substate.SubstateAlloc)
@@ -244,7 +246,7 @@ func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error 
 
 		update.Merge(*newSet.UpdateSet)
 		totalSize += incrementalSize
-		log.Infof("\tMerge update set at block %v. New toal size %v MiB (+%v MiB)", newSet.Block, totalSize>>20, incrementalSize>>20)
+		log.Infof("\tMerge update set at block %v. New toal size %v MB (+%v MB)", newSet.Block, totalSize/1_000_000, incrementalSize/1_000_000)
 	}
 	// prime the remaining from updateset
 	if err := pc.PrimeStateDB(update, db); err != nil {
@@ -256,7 +258,10 @@ func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error 
 	// advance from the latest precomputed state to the target block
 	if blockPos < target {
 		log.Infof("\tPriming from substate from block %v", blockPos)
-		update, deletedAccounts := generateUpdateSet(blockPos+1, target, cfg)
+		update, deletedAccounts, err := generateUpdateSet(blockPos+1, target, cfg)
+		if err != nil {
+			return err
+		}
 		pc.SuicideAccounts(db, deletedAccounts)
 		if err := pc.PrimeStateDB(update, db); err != nil {
 			return err
@@ -266,7 +271,7 @@ func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error 
 	// delete destroyed accounts from stateDB
 	log.Notice("Delete destroyed accounts")
 	// remove destroyed accounts until one block before the first block
-	err := DeleteDestroyedAccountsFromStateDB(db, cfg, cfg.First-1)
+	err = DeleteDestroyedAccountsFromStateDB(db, cfg, cfg.First-1)
 
 	return err
 }

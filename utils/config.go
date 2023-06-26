@@ -1,20 +1,18 @@
-// Package trace provides cli for recording and replaying storage traces.
 package utils
 
 import (
 	"fmt"
 	"log"
-	"math"
 	"math/big"
 	"math/rand"
 	"os"
 	"strconv"
 	"strings"
 
+	"github.com/Fantom-foundation/Aida/cmd/db-cli/flags"
 	"github.com/Fantom-foundation/Aida/logger"
 	substate "github.com/Fantom-foundation/Substate"
-	_ "github.com/Fantom-foundation/Tosca/go/vm/evmone"
-	_ "github.com/Fantom-foundation/Tosca/go/vm/lfvm"
+	_ "github.com/Fantom-foundation/Tosca/go/vm"
 	"github.com/c2h5oh/datasize"
 	_ "github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
@@ -31,8 +29,14 @@ const (
 	NoArgs                             // requires no arguments
 )
 
+const (
+	aidaDbRepositoryMainnetUrl = "https://aida.repository.fantom.network"
+	aidaDbRepositoryTestnetUrl = "https://aida.testnet.repository.fantom.network"
+)
+
 var (
-	FirstSubstateBlock uint64 // id of the first block in substate
+	FirstSubstateBlock  uint64 // id of the first block in substate
+	AidaDbRepositoryUrl string // url of the Aida DB repository
 )
 
 // Type of validation performs on stateDB during Tx processing.
@@ -52,11 +56,6 @@ var (
 		Name:    "api-recording",
 		Usage:   "Path to source file with recorded API data",
 		Aliases: []string{"r"},
-	}
-	APIRecordingVersionFlag = cli.IntFlag{
-		Name:    "api-recording-version",
-		Usage:   "set version of api-recording; 0 (default) version without timestamp - substate-db is necessary for this version / 1 version with timestamp - substate-db is not needed",
-		Aliases: []string{"v"},
 	}
 	ArchiveModeFlag = cli.BoolFlag{
 		Name:  "archive",
@@ -84,7 +83,6 @@ var (
 	ChainIDFlag = cli.IntFlag{
 		Name:  "chainid",
 		Usage: "ChainID for replayer",
-		Value: 250,
 	}
 	CacheFlag = cli.IntFlag{
 		Name:  "cache",
@@ -132,7 +130,16 @@ var (
 	}
 	ProfileFlag = cli.BoolFlag{
 		Name:  "profile",
-		Usage: "enables profiling",
+		Usage: "enable profiling",
+	}
+	ProfileFileFlag = cli.StringFlag{
+		Name:  "profile-file",
+		Usage: "output file containing profiling data",
+	}
+	ProfileIntervalFlag = cli.Uint64Flag{
+		Name:  "profile-interval",
+		Usage: "Frequency of logging block statistics",
+		Value: 1_000_000_000,
 	}
 	QuietFlag = cli.BoolFlag{
 		Name:  "quiet",
@@ -343,12 +350,12 @@ var (
 	ChannelBufferSizeFlag = cli.IntFlag{
 		Name:  "buffer-size",
 		Usage: "set a buffer size for profiling channel",
-		Value: 100000,
+		Value: 100_000,
 	}
 	UpdateBufferSizeFlag = cli.Uint64Flag{
 		Name:  "update-buffer-size",
-		Usage: "buffer size for holding update set in MiB",
-		Value: math.MaxUint64,
+		Usage: "buffer size for holding update set in MB",
+		Value: 1_000_000,
 	}
 	TargetBlockFlag = cli.Uint64Flag{
 		Name:    "target-block",
@@ -366,8 +373,7 @@ type Config struct {
 	First uint64 // first block
 	Last  uint64 // last block
 
-	APIRecordingSrcFile string // path to source file with recorded API data
-	APIRecordingVersion int
+	APIRecordingSrcFile string            // path to source file with recorded API data
 	ArchiveMode         bool              // enable archive mode
 	ArchiveVariant      string            // selects the implementation variant of the archive
 	BlockLength         uint64            // length of a block in number of transactions
@@ -403,8 +409,11 @@ type Config struct {
 	PrimeRandom         bool              // enable randomized priming
 	PrimeThreshold      int               // set account threshold before commit
 	Profile             bool              // enable micro profiling
+	ProfileFile         string            // output file containing profiling result
+	ProfileInterval     uint64            // interval of printing profile result
 	RandomSeed          int64             // set random seed for stochastic testing
 	SkipPriming         bool              // skip priming of the state DB
+	SkipMetadata        bool              // skip metadata insert/getting into AidaDb
 	ShadowDb            bool              // defines we want to open an existing db as shadow
 	ShadowImpl          string            // implementation of the shadow DB to use, empty if disabled
 	ShadowVariant       string            // database variant of the shadow DB to be used
@@ -518,7 +527,6 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		CommandName: ctx.Command.Name,
 
 		APIRecordingSrcFile: ctx.Path(APIRecordingSrcFileFlag.Name),
-		APIRecordingVersion: ctx.Int(APIRecordingVersionFlag.Name),
 		ArchiveMode:         ctx.Bool(ArchiveModeFlag.Name),
 		ArchiveVariant:      ctx.String(ArchiveVariantFlag.Name),
 		BlockLength:         ctx.Uint64(BlockLengthFlag.Name),
@@ -557,7 +565,10 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		RandomSeed:          ctx.Int64(RandomSeedFlag.Name),
 		PrimeThreshold:      ctx.Int(PrimeThresholdFlag.Name),
 		Profile:             ctx.Bool(ProfileFlag.Name),
+		ProfileFile:         ctx.String(ProfileFileFlag.Name),
+		ProfileInterval:     ctx.Uint64(ProfileIntervalFlag.Name),
 		SkipPriming:         ctx.Bool(SkipPrimingFlag.Name),
+		SkipMetadata:        ctx.Bool(flags.SkipMetadata.Name),
 		ShadowDb:            ctx.Bool(ShadowDb.Name),
 		ShadowImpl:          ctx.String(ShadowDbImplementationFlag.Name),
 		ShadowVariant:       ctx.String(ShadowDbVariantFlag.Name),
@@ -590,14 +601,19 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		ProfilingDbName:     ctx.String(ProfilingDbNameFlag.Name),
 		ChannelBufferSize:   ctx.Int(ChannelBufferSizeFlag.Name),
 		TargetBlock:         ctx.Uint64(TargetBlockFlag.Name),
-		UpdateBufferSize:    ctx.Uint64(UpdateBufferSizeFlag.Name) << 20, // convert from MiB to B
+		UpdateBufferSize:    ctx.Uint64(UpdateBufferSizeFlag.Name) * 1_000_000, // convert from MB to B
 	}
 	if cfg.ChainID == 0 {
-		cfg.ChainID = ChainIDFlag.Value
+		log.Warning("--chainid was not set; setting default value for mainnet (250)")
+		cfg.ChainID = 250
 	}
 	setFirstBlockFromChainID(cfg.ChainID)
 	if cfg.RandomSeed < 0 {
 		cfg.RandomSeed = int64(rand.Uint32())
+	}
+	err := setAidaDbRepositoryUrl(cfg.ChainID)
+	if err != nil {
+		return cfg, fmt.Errorf("Unable to prepareUrl from ChainId %v; %v", cfg.ChainID, err)
 	}
 
 	if _, err := os.Stat(cfg.AidaDb); !os.IsNotExist(err) {
@@ -660,6 +676,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 			if cfg.PrimeRandom {
 				log.Infof("Seed: %v, threshold: %v", cfg.RandomSeed, cfg.PrimeThreshold)
 			}
+			log.Infof("Update buffer size: %v bytes", cfg.UpdateBufferSize)
 		}
 		log.Infof("\tValidate world state: %v, validate tx state: %v\n", cfg.ValidateWorldState, cfg.ValidateTxState)
 		log.Infof("\tErigon batch size: %v", cfg.ErigonBatchSize.HumanReadable())
@@ -691,6 +708,18 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+// setAidaDbRepositoryUrl based on chain id selects correct aida-db repository url
+func setAidaDbRepositoryUrl(chainId int) error {
+	if chainId == 250 {
+		AidaDbRepositoryUrl = aidaDbRepositoryMainnetUrl
+	} else if chainId == 4002 {
+		AidaDbRepositoryUrl = aidaDbRepositoryTestnetUrl
+	} else {
+		return fmt.Errorf("invalid chain id %d", chainId)
+	}
+	return nil
 }
 
 // SetBlockRange checks the validity of a block range and return the first and last block as numbers.

@@ -8,11 +8,8 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
-
 	"github.com/Fantom-foundation/Aida/tracer/context"
 )
-
-var stats = new(ProfileStats)
 
 // Operation IDs of the StateDB interface
 const (
@@ -201,13 +198,9 @@ func Write(f io.Writer, op Operation) {
 // Execute an operation and profile it.
 func Execute(op Operation, db state.StateDB, ctx *context.Replay) {
 	elapsed := op.Execute(db, ctx)
-	if EnableProfiling {
-		stats.Profile(op.GetId(), elapsed)
+	if ctx.Profile {
+		ctx.Stats.Profile(op.GetId(), elapsed)
 	}
-}
-
-func PrintProfiling() {
-	stats.PrintProfiling(nil)
 }
 
 // Debug prints debug information of an operation.
@@ -223,4 +216,13 @@ func WriteOp(ctx *context.Record, op Operation) {
 	if ctx.Debug {
 		Debug(&ctx.Context, op)
 	}
+}
+
+// CreateIdLabelMap returns a map of opcode ID and opcode name
+func CreateIdLabelMap() map[byte]string {
+	ret := make(map[byte]string)
+	for id := byte(0); id < NumOperations; id++ {
+		ret[id] = GetLabel(id)
+	}
+	return ret
 }

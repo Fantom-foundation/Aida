@@ -36,6 +36,8 @@ var TraceReplayCommand = cli.Command{
 		&utils.RandomSeedFlag,
 		&utils.PrimeThresholdFlag,
 		&utils.ProfileFlag,
+		&utils.ProfileFileFlag,
+		&utils.ProfileIntervalFlag,
 		&utils.RandomizePrimingFlag,
 		&utils.SkipPrimingFlag,
 		&utils.StateDbImplementationFlag,
@@ -171,6 +173,14 @@ func traceReplayTask(cfg *utils.Config, log *logging.Logger) error {
 
 	log.Notice("Finished replaying storage operations on StateDB.")
 
+	// print profile statistics (if enabled)
+	if dCtx.Profile {
+		dCtx.Stats.FillLabels(operation.CreateIdLabelMap())
+		if err := dCtx.Stats.PrintProfiling(cfg.First, cfg.Last); err != nil {
+			return err
+		}
+	}
+
 	// destroy context to make space
 	dCtx = nil
 
@@ -186,22 +196,11 @@ func traceReplayTask(cfg *utils.Config, log *logging.Logger) error {
 		}
 	}
 
-	if cfg.MemoryBreakdown {
-		if usage := db.GetMemoryUsage(); usage != nil {
-			log.Notice("State DB memory usage: %d byte\n%s", usage.UsedBytes, usage.Breakdown)
-		} else {
-			log.Notice("Utilized storage solution does not support memory breakdowns.")
-		}
-	}
+	utils.MemoryBreakdown(db, cfg, log)
 
 	// write memory profile if requested
 	if err := utils.StartMemoryProfile(cfg); err != nil {
 		return err
-	}
-
-	// print profile statistics (if enabled)
-	if operation.EnableProfiling {
-		operation.PrintProfiling()
 	}
 
 	if cfg.KeepDb {
@@ -240,8 +239,6 @@ func traceReplayAction(ctx *cli.Context) error {
 	if cfg.DbImpl == "memory" {
 		return fmt.Errorf("db-impl memory is not supported")
 	}
-
-	operation.EnableProfiling = cfg.Profile
 
 	// start CPU profiling if requested.
 	if err := utils.StartCPUProfile(cfg); err != nil {

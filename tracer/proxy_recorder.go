@@ -358,3 +358,7 @@ func (r *ProxyRecorder) StartBulkLoad(uint64) state.BulkLoad {
 func (r *ProxyRecorder) GetMemoryUsage() *state.MemoryUsage {
 	return r.db.GetMemoryUsage()
 }
+
+func (r *ProxyRecorder) GetShadowDB() state.StateDB {
+	return r.db.GetShadowDB()
+}

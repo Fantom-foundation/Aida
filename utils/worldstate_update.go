@@ -13,15 +13,19 @@ import (
 )
 
 // generateUpdateSet generates an update set for a block range.
-func generateUpdateSet(first uint64, last uint64, cfg *Config) (substate.SubstateAlloc, []common.Address) {
+func generateUpdateSet(first uint64, last uint64, cfg *Config) (substate.SubstateAlloc, []common.Address, error) {
 	var (
 		deletedAccountDB *substate.DestroyedAccountDB
 		deletedAccounts  []common.Address
+		err              error
 	)
 	stateIter := substate.NewSubstateIterator(first, cfg.Workers)
 	defer stateIter.Release()
 	if cfg.HasDeletedAccounts {
-		deletedAccountDB = substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
+		deletedAccountDB, err = substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
+		if err != nil {
+			return nil, nil, err
+		}
 		defer deletedAccountDB.Close()
 	}
 
@@ -42,7 +46,7 @@ func generateUpdateSet(first uint64, last uint64, cfg *Config) (substate.Substat
 			}
 			// reset storage
 			deletedAccounts = append(deletedAccounts, destroyed...)
-			deletedAccounts = append(deletedAccounts, destroyed...)
+			deletedAccounts = append(deletedAccounts, resurrected...)
 
 			ClearAccountStorage(update, destroyed)
 			ClearAccountStorage(update, resurrected)
@@ -51,7 +55,7 @@ func generateUpdateSet(first uint64, last uint64, cfg *Config) (substate.Substat
 		// merge output substate to update
 		update.Merge(tx.Substate.OutputAlloc)
 	}
-	return update, deletedAccounts
+	return update, deletedAccounts, nil
 }
 
 // GenerateWorldStateFromUpdateDB generates an initial world-state
@@ -63,7 +67,10 @@ func GenerateWorldStateFromUpdateDB(cfg *Config, target uint64) (substate.Substa
 		return nil, fmt.Errorf("Error: the target block, %v, is earlier than the initial world state block, %v. The world state is not loaded.\n", target, blockPos)
 	}
 	// load pre-computed update-set from update-set db
-	db := substate.OpenUpdateDBReadOnly(cfg.UpdateDb)
+	db, err := substate.OpenUpdateDBReadOnly(cfg.UpdateDb)
+	if err != nil {
+		return nil, err
+	}
 	defer db.Close()
 	updateIter := substate.NewUpdateSetIterator(db, blockPos, target)
 	for updateIter.Next() {
@@ -81,9 +88,12 @@ func GenerateWorldStateFromUpdateDB(cfg *Config, target uint64) (substate.Substa
 	updateIter.Release()
 
 	// advance from the latest precomputed block to the target block
-	update, _ := generateUpdateSet(blockPos+1, target, cfg)
-	ws.Merge(update)
+	update, _, err := generateUpdateSet(blockPos+1, target, cfg)
+	if err != nil {
+		return nil, err
+	}
 
+	ws.Merge(update)
 	return ws, nil
 }
 
@@ -109,8 +119,11 @@ func GenerateWorldState(path string, block uint64, cfg *Config) (substate.Substa
 	}
 
 	// advance from the first block from substateDB to the target block
-	update, _ := generateUpdateSet(FirstSubstateBlock, block, cfg)
-	ws.Merge(update)
+	update, _, err := generateUpdateSet(FirstSubstateBlock, block, cfg)
+	if err != nil {
+		return nil, err
+	}
 
+	ws.Merge(update)
 	return ws, nil
 }

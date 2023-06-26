@@ -395,3 +395,7 @@ func (p *EventProxy) GetMemoryUsage() *state.MemoryUsage {
 func (p *EventProxy) GetArchiveState(block uint64) (state.StateDB, error) {
 	return p.db.GetArchiveState(block)
 }
+
+func (p *EventProxy) GetShadowDB() state.StateDB {
+	return p.db.GetShadowDB()
+}

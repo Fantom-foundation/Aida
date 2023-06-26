@@ -1,30 +1,30 @@
 package db
 
 import (
-	"bufio"
-	"flag"
+	"errors"
 	"fmt"
-	"io"
-	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
-
-	"github.com/Fantom-foundation/Aida/logger"
-	substate "github.com/Fantom-foundation/Substate"
 
 	"github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
 	"github.com/Fantom-foundation/Aida/cmd/updateset-cli/updateset"
-	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/state"
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/Fantom-foundation/Aida/world-state/db/opera"
+	substate "github.com/Fantom-foundation/Substate"
+	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
-// default updateSet interval
-const updateSetInterval = 1_000_000
+const (
+	// default updateSet interval
+	updateSetInterval = 1_000_000
+	// number of lines which are kept in memory in case command fails
+	commandOutputLimit = 50
+)
 
 // GenerateCommand data structure for the replay app
 var GenerateCommand = cli.Command{
@@ -39,7 +39,6 @@ var GenerateCommand = cli.Command{
 		&utils.CompactDbFlag,
 		&utils.DbTmpFlag,
 		&utils.UpdateBufferSizeFlag,
-		&utils.ChannelBufferSizeFlag,
 		&utils.ChainIDFlag,
 		&utils.CacheFlag,
 		&logger.LogLevelFlag,
@@ -51,314 +50,244 @@ The db generate command requires events as an argument:
 <events> are fed into the opera database (either existing or genesis needs to be specified), processing them generates updated aida-db.`,
 }
 
-// generate prepares config for Generate
+type generator struct {
+	cfg       *utils.Config
+	log       *logging.Logger
+	aidaDb    ethdb.Database
+	aidaDbTmp string
+	opera     *aidaOpera
+}
+
+// generate AidaDb
 func generate(ctx *cli.Context) error {
-	cfg, argErr := utils.NewConfig(ctx, utils.EventArg)
-	if argErr != nil {
-		return argErr
+	cfg, err := utils.NewConfig(ctx, utils.EventArg)
+	if err != nil {
+		return fmt.Errorf("cannot create config %v", err)
 	}
 
-	log := logger.NewLogger(cfg.LogLevel, "Generate")
-
-	aidaDbTmp, err := prepare(cfg)
+	aidaDbTmp, err := prepareDbDirs(cfg)
 	if err != nil {
+		return fmt.Errorf("cannot create config %v", err)
+	}
+
+	cfg.Workers = substate.WorkersFlag.Value
+
+	g := newGenerator(ctx, cfg, aidaDbTmp)
+
+	if g.cfg.AidaDb == "" {
+		return fmt.Errorf("you need to specify where you want aida-db to save (--aida-db)")
+	}
+
+	if err = g.Generate(); err != nil {
 		return err
 	}
 
-	err = Generate(cfg, log)
-	if err != nil {
-		return err
-	}
+	MustCloseDB(g.aidaDb)
 
-	if !cfg.KeepDb {
-		err = os.RemoveAll(aidaDbTmp)
+	if !g.cfg.KeepDb {
+		err = os.RemoveAll(g.aidaDbTmp)
 		if err != nil {
 			return err
 		}
 	}
 
-	return nil
+	return printMetadata(g.cfg.AidaDb)
+}
+
+// newGenerator returns new instance of generator
+func newGenerator(ctx *cli.Context, cfg *utils.Config, aidaDbTmp string) *generator {
+	db, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
+	if err != nil {
+		log.Fatalf("cannot create new db; %v", err)
+	}
+
+	log := logger.NewLogger(cfg.LogLevel, "AidaDb-Generator")
+
+	return &generator{
+		cfg:       cfg,
+		log:       log,
+		aidaDbTmp: aidaDbTmp,
+		opera:     newAidaOpera(ctx, cfg, log),
+		aidaDb:    db,
+	}
 }
 
 // Generate is used to record/update aida-db
-func Generate(cfg *utils.Config, log *logging.Logger) error {
-	err := prepareOpera(cfg, log)
-	if err != nil {
+func (g *generator) Generate() error {
+	var err error
+
+	if err = g.opera.init(); err != nil {
 		return err
 	}
 
-	err = recordSubstate(cfg, log)
-	if err != nil {
+	if err = g.processSubstate(); err != nil {
 		return err
 	}
 
-	err = genDeletedAccounts(cfg, log)
-	if err != nil {
+	if err = g.processDeletedAccounts(); err != nil {
 		return err
 	}
 
-	err = genUpdateSet(cfg, log)
-	if err != nil {
+	g.log.Notice("Gen metadata")
+	if err = g.processUpdateSet(); err != nil {
 		return err
 	}
 
-	log.Noticef("Aida-db updated from block %v to %v", cfg.First-1, cfg.Last)
+	err = processGenLikeMetadata(g.cfg.AidaDb, g.opera.firstBlock, g.opera.lastBlock, g.opera.firstEpoch, g.opera.lastEpoch, g.cfg.ChainID, g.cfg.LogLevel)
+	if err != nil {
+		return err
+	}
+	// todo open in process and then close
+	g.log.Noticef("AidaDb %v generation done", g.cfg.AidaDb)
 
-	return err
+	return nil
 }
 
-// prepareOpera confirms that the opera is initialized
-func prepareOpera(cfg *utils.Config, log *logging.Logger) error {
-	_, err := os.Stat(cfg.Db)
+// processSubstate loads events into the opera, whilst recording substates and then merges it into AidaDb
+func (g *generator) processSubstate() error {
+	var (
+		err error
+		cmd *exec.Cmd
+	)
+
+	_, err = os.Stat(g.cfg.Events)
 	if os.IsNotExist(err) {
-		log.Noticef("Initialising opera from genesis")
-		// previous opera database isn't used - generate new one from genesis
-		err = initOperaFromGenesis(cfg, log)
-		if err != nil {
-			return fmt.Errorf("aida-db; Error: %v", err)
-		}
-	}
-	lastOperaBlock, _, err := GetOperaBlockAndEpoch(cfg)
-	if err != nil {
-		return fmt.Errorf("couldn't retrieve block from existing opera database %v ; Error: %v", cfg.Db, err)
+		return fmt.Errorf("supplied events file %s doesn't exist", g.cfg.Events)
 	}
 
-	log.Noticef("Opera is starting at block: %v", lastOperaBlock)
+	g.log.Noticef("Starting Substate recording from %v", g.cfg.Events)
 
-	//starting generation one block later
-	cfg.First = lastOperaBlock + 1
-	return nil
-}
-
-// prepare updates config for flags required in invoked generation commands
-// these flags are not expected from user, so we need to specify them for the generation process
-func prepare(cfg *utils.Config) (string, error) {
-	if cfg.DbTmp != "" {
-		// create a parents of temporary directory
-		err := os.MkdirAll(cfg.DbTmp, 0644)
-		if err != nil {
-			return "", fmt.Errorf("failed to create %s directory; %s", cfg.DbTmp, err)
-		}
-	}
-	//create a temporary working directory
-	aidaDbTmp, err := ioutil.TempDir(cfg.DbTmp, "aida_db_tmp_*")
-	if err != nil {
-		return "", fmt.Errorf("failed to create a temporary directory. %v", err)
-	}
-
-	loadSourceDBPaths(cfg, aidaDbTmp)
-
-	cfg.Workers = substate.WorkersFlag.Value
-
-	return aidaDbTmp, nil
-}
-
-// loadSourceDBPaths initializes paths to source databases
-func loadSourceDBPaths(cfg *utils.Config, aidaDbTmp string) {
-	cfg.DeletionDb = filepath.Join(aidaDbTmp, "deletion")
-	cfg.SubstateDb = filepath.Join(aidaDbTmp, "substate")
-	cfg.UpdateDb = filepath.Join(aidaDbTmp, "update")
-	cfg.WorldStateDb = filepath.Join(aidaDbTmp, "worldstate")
-}
-
-// GetOperaBlockAndEpoch retrieves current block of opera head
-func GetOperaBlockAndEpoch(cfg *utils.Config) (uint64, uint64, error) {
-	operaPath := filepath.Join(cfg.Db, "/chaindata/leveldb-fsh/")
-	store, err := opera.Connect("ldb", operaPath, "main")
-	if err != nil {
-		return 0, 0, err
-	}
-	defer opera.MustCloseStore(store)
-
-	_, blockNumber, epochNumber, err := opera.LatestStateRoot(store)
-	if err != nil {
-		return 0, 0, fmt.Errorf("state root not found; %v", err)
-	}
-
-	if blockNumber < 1 {
-		return 0, 0, fmt.Errorf("opera; block number not found; %v", err)
-	}
-	return blockNumber, epochNumber, nil
-}
-
-// genUpdateSet invokes UpdateSet generation
-func genUpdateSet(cfg *utils.Config, log *logging.Logger) error {
-	db := substate.OpenUpdateDB(cfg.AidaDb)
-	// set first block
-	nextUpdateSetStart := db.GetLastKey() + 1
-	err := db.Close()
-	if err != nil {
-		return err
-	}
-
-	if nextUpdateSetStart > 1 {
-		log.Infof("Previous UpdateSet found generating from %v", nextUpdateSetStart)
-	}
-
-	log.Noticef("UpdateSet generation")
-	err = updateset.GenUpdateSet(cfg, nextUpdateSetStart, updateSetInterval)
-	if err != nil {
-		return err
-	}
-
-	// merge UpdateDb into AidaDb
-	err = Merge(cfg, []string{cfg.UpdateDb})
-	if err != nil {
-		return err
-	}
-	cfg.UpdateDb = cfg.AidaDb
-
-	return nil
-}
-
-// genDeletedAccounts invokes DeletedAccounts generation
-func genDeletedAccounts(cfg *utils.Config, log *logging.Logger) error {
-	log.Noticef("Deleted generation")
-	err := replay.GenDeletedAccountsAction(cfg)
-	if err != nil {
-		return fmt.Errorf("DelAccounts; %v", err)
-	}
-
-	// merge DeletionDb into AidaDb
-	err = Merge(cfg, []string{cfg.DeletionDb})
-	if err != nil {
-		return err
-	}
-	cfg.DeletionDb = cfg.AidaDb
-
-	return nil
-}
-
-// recordSubstate loads events into the opera, whilst recording substates
-func recordSubstate(cfg *utils.Config, log *logging.Logger) error {
-	_, err := os.Stat(cfg.Events)
-	if os.IsNotExist(err) {
-		return fmt.Errorf("supplied events file %s doesn't exist", cfg.Events)
-	}
-
-	log.Noticef("Starting Substate recording of %v", cfg.Events)
-
-	cmd := exec.Command("opera", "--datadir", cfg.Db, "--gcmode=full", "--db.preset=legacy-ldb", "--cache", strconv.Itoa(cfg.Cache), "import", "events", "--recording", "--substate-db", cfg.SubstateDb, cfg.Events)
-
-	err = runCommand(cmd, nil, log)
+	cmd = exec.Command("opera", "--datadir", g.cfg.Db, "--cache", strconv.Itoa(g.cfg.Cache),
+		"import", "events", "--recording", "--substate-db", g.cfg.SubstateDb, g.cfg.Events)
+	err = runCommand(cmd, nil, g.log)
 	if err != nil {
 		// remove empty substateDb
-		return fmt.Errorf("import events; %v", err.Error())
+		return fmt.Errorf("cannot import events; %v", err)
 	}
 
-	// retrieve block the opera was iterated into
-	cfg.Last, _, err = GetOperaBlockAndEpoch(cfg)
-	if err != nil {
-		return fmt.Errorf("GetOperaBlock last; %v", err)
+	// retrieve block the opera was iterated onto
+	if err = g.opera.getOperaBlockAndEpoch(false); err != nil {
+		return fmt.Errorf("cannot get last opera block and epoch; %v", err)
 	}
-	if cfg.First >= cfg.Last {
+
+	g.cfg.Last = g.opera.lastBlock
+
+	if g.opera.firstBlock >= g.opera.lastBlock {
 		return fmt.Errorf("supplied events didn't produce any new blocks")
 	}
 
-	log.Noticef("Substates generated for %v - %v", cfg.First, cfg.Last)
+	g.log.Infof("Substates generated for %v - %v", g.opera.firstBlock, g.opera.lastBlock)
 
-	err = Merge(cfg, []string{cfg.SubstateDb})
-	if err != nil {
+	g.log.Notice("Merging SubstateDb into AidaDb...")
+
+	if err = g.merge(g.cfg.SubstateDb); err != nil {
 		return err
 	}
-	cfg.SubstateDb = cfg.AidaDb
+
+	// merge was successful - set new path to substateDb
+	g.log.Notice("SubstateDb merged successfully")
+	g.cfg.SubstateDb = g.cfg.AidaDb
 
 	return nil
 }
 
-// initOperaFromGenesis prepares opera by loading genesis
-func initOperaFromGenesis(cfg *utils.Config, log *logging.Logger) error {
-	cmd := exec.Command("opera", "--datadir", cfg.Db, "--genesis", cfg.Genesis, "--exitwhensynced.epoch=0", "--cache", strconv.Itoa(cfg.Cache), "--db.preset=legacy-ldb", "--maxpeers=0")
+// processDeletedAccounts invokes DeletedAccounts generation and then merges it into AidaDb
+func (g *generator) processDeletedAccounts() error {
+	var err error
 
-	err := runCommand(cmd, nil, log)
+	g.log.Noticef("Generating DeletionDb...")
+
+	err = replay.GenDeletedAccountsAction(g.cfg, 0)
 	if err != nil {
-		return fmt.Errorf("load opera genesis; %v", err.Error())
+		return fmt.Errorf("cannot doGenerations deleted accounts; %v", err)
 	}
 
-	// dumping the MPT into world state
-	dumpCli, err := prepareDumpCliContext(cfg)
+	g.log.Noticef("Deleted accounts generated successfully")
+
+	g.log.Notice("Merging DeletionDb into AidaDb...")
+
+	g.aidaDb, err = rawdb.NewLevelDBDatabase(g.cfg.AidaDb, 1024, 100, "profiling", false)
 	if err != nil {
+		return fmt.Errorf("cannot open AidaDb; %v", err)
+	}
+
+	if err = g.merge(g.cfg.DeletionDb); err != nil {
 		return err
 	}
-	err = state.DumpState(dumpCli)
-	if err != nil {
-		return fmt.Errorf("dumpState; %v", err)
-	}
+
+	// merge was successful - set new path to deletionDb
+	g.log.Notice("DeletionDb merged successfully")
+	g.cfg.DeletionDb = g.cfg.AidaDb
 
 	return nil
 }
 
-// runCommand wraps cmd execution to distinguish whether to display its output
-func runCommand(cmd *exec.Cmd, resultChan chan string, log *logging.Logger) error {
-	if resultChan != nil {
-		defer close(resultChan)
-	}
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		return err
-	}
-	defer stdout.Close()
-	stderr, err := cmd.StderrPipe()
-	if err != nil {
-		return err
-	}
-	defer stderr.Close()
+// processUpdateSet invokes UpdateSet generation and then merges it into AidaDb
+func (g *generator) processUpdateSet() error {
+	var (
+		updateDb           *substate.UpdateDB
+		err                error
+		nextUpdateSetStart uint64
+	)
 
-	err = cmd.Start()
+	updateDb, err = substate.OpenUpdateDB(g.cfg.AidaDb)
 	if err != nil {
 		return err
 	}
 
-	merged := io.MultiReader(stderr, stdout)
-	scanner := bufio.NewScanner(merged)
-	if log.IsEnabledFor(logging.DEBUG) {
-		for scanner.Scan() {
-			m := scanner.Text()
-			if resultChan != nil {
-				resultChan <- m
-			}
-			log.Debug(m)
-		}
-	}
-	err = cmd.Wait()
-
-	// command failed
+	// set first block
+	nextUpdateSetStart = updateDb.GetLastKey() + 1
+	err = updateDb.Close()
 	if err != nil {
-		if !log.IsEnabledFor(logging.DEBUG) {
-			for scanner.Scan() {
-				m := scanner.Text()
-				if resultChan != nil {
-					resultChan <- m
-				}
-				log.Error(m)
-			}
-		}
+		return errors.New("cannot close updateDb")
+	}
+
+	if nextUpdateSetStart > 1 {
+		g.log.Infof("Previous UpdateSet found - generating from %v", nextUpdateSetStart)
+	}
+
+	g.log.Notice("Generating UpdateDb...")
+
+	err = updateset.GenUpdateSet(g.cfg, nextUpdateSetStart, updateSetInterval)
+	if err != nil {
+		return fmt.Errorf("cannot doGenerations update-db")
+	}
+
+	g.log.Notice("UpdateDb generated successfully")
+	g.log.Notice("Merging UpdateDb into AidaDb...")
+
+	g.aidaDb, err = rawdb.NewLevelDBDatabase(g.cfg.AidaDb, 1024, 100, "profiling", false)
+	if err != nil {
+		return fmt.Errorf("cannot open AidaDb; %v", err)
+	}
+
+	if err = g.merge(g.cfg.UpdateDb); err != nil {
 		return err
 	}
+
+	g.log.Notice("UpdateDB merged successfully")
+
+	// merge was successful - set new path to updateDb
+	g.cfg.UpdateDb = g.cfg.AidaDb
+
 	return nil
+
 }
 
-// TODO rewrite after dump is using the config then pass modified cfg directly to the dump function
-func prepareDumpCliContext(cfg *utils.Config) (*cli.Context, error) {
-	flagSet := flag.NewFlagSet("", 0)
-	flagSet.String(utils.WorldStateFlag.Name, cfg.WorldStateDb, "")
-	flagSet.String(utils.DbFlag.Name, cfg.Db+"/chaindata/leveldb-fsh/", "")
-	flagSet.String(utils.StateDbVariantFlag.Name, "ldb", "")
-	flagSet.String(utils.SourceTableNameFlag.Name, utils.SourceTableNameFlag.Value, "")
-	flagSet.String(utils.TrieRootHashFlag.Name, utils.TrieRootHashFlag.Value, "")
-	flagSet.Int(substate.WorkersFlag.Name, substate.WorkersFlag.Value, "")
-	flagSet.Uint64(utils.TargetBlockFlag.Name, utils.TargetBlockFlag.Value, "")
-	flagSet.Int(utils.ChainIDFlag.Name, cfg.ChainID, "")
-	flagSet.String(logger.LogLevelFlag.Name, cfg.LogLevel, "")
-
-	ctx := cli.NewContext(cli.NewApp(), flagSet, nil)
-
-	err := ctx.Set(utils.DbFlag.Name, cfg.Db+"/chaindata/leveldb-fsh/")
+// merge sole dbs created in generation into AidaDb
+func (g *generator) merge(pathToDb string) error {
+	// open sourceDb
+	sourceDb, err := rawdb.NewLevelDBDatabase(pathToDb, 1024, 100, "profiling", false)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	command := &cli.Command{Name: state.CmdDumpState.Name}
-	ctx.Command = command
 
-	return ctx, nil
+	m := newMerger(g.cfg, g.aidaDb, []ethdb.Database{sourceDb}, []string{pathToDb}, nil)
+
+	defer func() {
+		MustCloseDB(g.aidaDb)
+		MustCloseDB(sourceDb)
+	}()
+
+	return m.merge()
 }

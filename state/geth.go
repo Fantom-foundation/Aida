@@ -295,7 +295,7 @@ func (s *gethStateDB) GetArchiveState(block uint64) (StateDB, error) {
 
 func (s *gethStateDB) GetMemoryUsage() *MemoryUsage {
 	// not supported yet
-	return nil
+	return &MemoryUsage{uint64(0), nil}
 }
 
 type gethBulkLoad struct {
@@ -396,4 +396,8 @@ func (s *gethStateDB) trieCap() {
 		//If we exceeded our memory allowance, flush matured singleton nodes to disk
 		triedb.Cap(memoryUpperLimit)
 	}
+}
+
+func (s *gethStateDB) GetShadowDB() StateDB {
+	return nil
 }

@@ -11,6 +11,10 @@ var (
 	Detailed = cli.BoolFlag{
 		Name:    "detailed",
 		Usage:   "Prints detailed info with how many records is in each prefix",
-		Aliases: []string{"a"},
+		Aliases: []string{"d"},
+	}
+	SkipMetadata = cli.BoolFlag{
+		Name:  "skip-metadata",
+		Usage: "Skips metadata inserting and getting. Useful especially when working with old AidaDb that does not have Metadata yet",
 	}
 )

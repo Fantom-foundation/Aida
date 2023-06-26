@@ -235,11 +235,19 @@ func genDeletedAccountsAction(ctx *cli.Context) error {
 		return err
 	}
 
-	return GenDeletedAccountsAction(cfg)
+	if cfg.DeletionDb == "" {
+		return fmt.Errorf("you need to specify where you want deletion-db to save (--deletion-db)")
+	}
+
+	if cfg.SubstateDb == "" {
+		return fmt.Errorf("you need to specify path to existing substate (--substate-db)")
+	}
+
+	return GenDeletedAccountsAction(cfg, cfg.First)
 }
 
 // GenDeletedAccountsAction replays transactions and record self-destructed accounts and resurrected accounts.
-func GenDeletedAccountsAction(cfg *utils.Config) error {
+func GenDeletedAccountsAction(cfg *utils.Config, firstBlock uint64) error {
 	var err error
 
 	log := logger.NewLogger(cfg.LogLevel, "Substate Replay")
@@ -251,7 +259,11 @@ func GenDeletedAccountsAction(cfg *utils.Config) error {
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
-	ddb := substate.OpenDestroyedAccountDB(cfg.DeletionDb)
+	ddb, err := substate.OpenDestroyedAccountDB(cfg.DeletionDb)
+	if err != nil {
+		return err
+	}
+
 	defer ddb.Close()
 
 	start := time.Now()
@@ -261,7 +273,7 @@ func GenDeletedAccountsAction(cfg *utils.Config) error {
 	lastTxCount := uint64(0)
 	DeleteHistory = make(map[common.Address]bool)
 
-	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
+	iter := substate.NewSubstateIterator(firstBlock, cfg.Workers)
 	defer iter.Release()
 
 	for iter.Next() {

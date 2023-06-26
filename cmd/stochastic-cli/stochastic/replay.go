@@ -108,13 +108,7 @@ func stochasticReplayAction(ctx *cli.Context) error {
 	runErr := stochastic.RunStochasticReplay(db, simulation, int(simLength), cfg, logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "Stochastic"))
 
 	// print memory usage after simulation
-	if cfg.MemoryBreakdown {
-		if usage := db.GetMemoryUsage(); usage != nil {
-			log.Noticef("State DB memory usage: %d byte\n%s", usage.UsedBytes, usage.Breakdown)
-		} else {
-			log.Info("Utilized storage solution does not support memory breakdowns")
-		}
-	}
+	utils.MemoryBreakdown(db, cfg, log)
 
 	// close the DB and print disk usage
 	start := time.Now()

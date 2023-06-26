@@ -121,7 +121,7 @@ func (s *flatStateDB) Close() error {
 
 func (s *flatStateDB) GetMemoryUsage() *MemoryUsage {
 	// not supported yet
-	return nil
+	return &MemoryUsage{uint64(0), nil}
 }
 
 func (s *flatStateDB) StartBulkLoad(block uint64) BulkLoad {
@@ -131,6 +131,10 @@ func (s *flatStateDB) StartBulkLoad(block uint64) BulkLoad {
 
 func (s *flatStateDB) GetArchiveState(block uint64) (StateDB, error) {
 	return nil, fmt.Errorf("archive states are not (yet) supported by this DB implementation")
+}
+
+func (s *flatStateDB) GetShadowDB() StateDB {
+	return nil
 }
 
 // For priming initial state of stateDB

@@ -1,0 +1,21 @@
+name: Documentation
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - closed
+
+jobs:
+  docs_update:
+    if: ${{ github.event.pull_request.merged }}
+    runs-on: self-hosted
+    steps:
+      - name: Upload Documentation to Wiki
+        uses: SwiftDocOrg/github-wiki-publish-action@v1
+        with:
+          path: "docs"
+        env:
+          GH_PERSONAL_ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+

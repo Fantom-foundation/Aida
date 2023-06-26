@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/iterator"
 	"github.com/Fantom-foundation/Aida/state"
@@ -26,13 +27,15 @@ type executorInput struct {
 
 // OutData are sent to comparator with result from StateDB and req/resp Recorded on API server
 type OutData struct {
-	Method     string
-	MethodBase string
-	Recorded   *RecordedData
-	StateDB    *StateDBData
-	BlockID    uint64
-	Params     []interface{}
-	ParamsRaw  []byte
+	Method          string
+	MethodBase      string
+	Recorded        *RecordedData
+	StateDB         *StateDBData
+	BlockID         uint64
+	Params          []interface{}
+	ParamsRaw       []byte
+	originalRequest *iterator.RequestWithResponse
+	isRecovered     bool
 }
 
 // dbRange represents first and last block of StateDB
@@ -113,10 +116,10 @@ func (e *ReplayExecutor) execute() {
 				// send statistics
 				e.counterInput <- requestLog{
 					method:  req.Query.Method,
-					logType: outOfStateDBRange,
+					logType: skipped,
 				}
 
-				// no need to executed rest of the loop
+				// no need to execute rest of the loop
 				continue
 			}
 
@@ -126,14 +129,13 @@ func (e *ReplayExecutor) execute() {
 			// was execution successful?
 			if res != nil {
 				logType = executed
-
 				select {
 				case <-e.closed:
 					return
-				case e.output <- createOutData(in, res):
+				case e.output <- createOutData(in, res, req):
 				}
 			} else {
-				logType = noSubstateForGivenBlock
+				logType = skipped
 			}
 		}
 
@@ -151,7 +153,7 @@ func (e *ReplayExecutor) execute() {
 }
 
 // createOutData and send it to Comparator
-func createOutData(in *executorInput, r *StateDBData) *OutData {
+func createOutData(in *executorInput, r *StateDBData, req *iterator.RequestWithResponse) *OutData {
 
 	out := new(OutData)
 	out.Recorded = new(RecordedData)
@@ -178,6 +180,8 @@ func createOutData(in *executorInput, r *StateDBData) *OutData {
 	// add raw params for clear logging
 	out.ParamsRaw = in.req.ParamsRaw
 
+	out.originalRequest = req
+
 	return out
 }
 
@@ -198,21 +202,17 @@ func (e *ReplayExecutor) doExecute(in *executorInput) *StateDBData {
 		// first try to extract timestamp from response
 		if in.req.Response != nil {
 			if in.req.Response.Timestamp != 0 {
-				timestamp = in.req.Response.Timestamp
+				timestamp = uint64(time.Unix(0, int64(in.req.Response.Timestamp)).Unix())
 			}
 		} else if in.req.Error != nil {
 			if in.req.Error.Timestamp != 0 {
 
-				timestamp = in.req.Error.Timestamp
+				timestamp = uint64(time.Unix(0, int64(in.req.Error.Timestamp)).Unix())
 			}
 		}
 
 		if timestamp == 0 {
-			// if no timestamp is in response, we are dealing with an old record version, hence we use substate
-			timestamp = e.getTimestamp(in.blockID)
-			if timestamp == 0 {
-				return nil
-			}
+			return nil
 		}
 
 		evm := newEVMExecutor(in.blockID, in.archive, e.vmImpl, e.chainCfg, in.req.Query.Params[0].(map[string]interface{}), timestamp, e.log)
@@ -331,7 +331,8 @@ func decodeBlockNumber(params []interface{}, recordedBlockNumber uint64, returne
 		*returnedBlockID = uint64(rpc.EarliestBlockNumber)
 		break
 	case "pending":
-		*returnedBlockID = recordedBlockNumber
+		// pending blocks seems not to be working rn, skip them for now
+		return false
 	default:
 		// request requires specific currentBlockID
 		var (

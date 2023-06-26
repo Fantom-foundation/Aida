@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/Fantom-foundation/Aida/cmd/db-cli/flags"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
@@ -22,6 +24,7 @@ var MergeCommand = cli.Command{
 		&utils.DeleteSourceDbsFlag,
 		&logger.LogLevelFlag,
 		&utils.CompactDbFlag,
+		&flags.SkipMetadata,
 	},
 	Description: `
 Creates target aida-db by merging source databases from arguments:
@@ -29,116 +32,161 @@ Creates target aida-db by merging source databases from arguments:
 `,
 }
 
-// merge implements merging command for combining all source data databases into single database used for profiling.
+type merger struct {
+	cfg           *utils.Config
+	log           *logging.Logger
+	targetDb      ethdb.Database
+	sourceDbs     []ethdb.Database
+	sourceDbPaths []string
+	md            *aidaMetadata
+}
+
+// newMerger returns new instance of merger
+func newMerger(cfg *utils.Config, targetDb ethdb.Database, sourceDbs []ethdb.Database, sourceDbPaths []string, md *aidaMetadata) *merger {
+	return &merger{
+		cfg:           cfg,
+		log:           logger.NewLogger(cfg.LogLevel, "aida-db-merger"),
+		targetDb:      targetDb,
+		sourceDbs:     sourceDbs,
+		sourceDbPaths: sourceDbPaths,
+		md:            md,
+	}
+}
+
+// merge two or more Dbs together
 func merge(ctx *cli.Context) error {
 	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
 	if err != nil {
 		return err
 	}
 
-	sourceDbs := make([]string, ctx.Args().Len())
+	sourcePaths := make([]string, ctx.Args().Len())
 	for i := 0; i < ctx.Args().Len(); i++ {
-		sourceDbs[i] = ctx.Args().Get(i)
+		sourcePaths[i] = ctx.Args().Get(i)
 	}
-	return Merge(cfg, sourceDbs)
-}
 
-// Merge implements merging command for combining all source data databases into single database used for profiling.
-func Merge(cfg *utils.Config, sourceDbPaths []string) error {
-	log := logger.NewLogger(cfg.LogLevel, "DB Merger")
+	// we need a destination where to save merged aida-db
+	if cfg.AidaDb == "" {
+		return fmt.Errorf("you need to specify where you want aida-db to save (--aida-db)")
+	}
 
-	targetDb, sourceDBs, err := openDatabases(cfg.AidaDb, sourceDbPaths)
+	targetDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
+	if err != nil {
+		return fmt.Errorf("cannot open db; %v", err)
+	}
+
+	var (
+		dbs []ethdb.Database
+		md  *aidaMetadata
+	)
+
+	if !cfg.SkipMetadata {
+		dbs, err = openSourceDatabases(sourcePaths)
+		if err != nil {
+			return err
+		}
+		md, err = processMergeMetadata(cfg, targetDb, dbs, sourcePaths)
+		if err != nil {
+			return err
+		}
+
+		for _, db := range dbs {
+			MustCloseDB(db)
+		}
+	}
+
+	dbs, err = openSourceDatabases(sourcePaths)
 	if err != nil {
 		return err
 	}
 
-	var totalWritten uint64
-	for i, sourceDB := range sourceDBs {
-		// copy the sourceDB to the target database
-		var written uint64
-		written, err = copyData(sourceDB, targetDb)
+	m := newMerger(cfg, targetDb, dbs, sourcePaths, md)
+
+	if err = m.merge(); err != nil {
+		return err
+	}
+
+	m.closeSourceDbs()
+
+	return m.finishMerge()
+}
+
+// finishMerge compacts targetDb and deletes sourceDbs
+func (m *merger) finishMerge() error {
+	if !m.cfg.SkipMetadata {
+		// merge type db does not have epoch calculations yet
+		m.md.db = m.targetDb
+		err := m.md.setAllMetadata(m.md.firstBlock, m.md.lastBlock, 0, 0, m.md.chainId, m.md.dbType)
 		if err != nil {
 			return err
 		}
-		totalWritten += written
-		log.Noticef("Merging of %s finished", sourceDbPaths[i])
-		// close finished sourceDB
-		MustCloseDB(sourceDB)
-	}
+		MustCloseDB(m.targetDb)
 
-	if cfg.CompactDb {
-		log.Noticef("Starting compaction")
-		err = targetDb.Compact(nil, nil)
+		err = printMetadata(m.cfg.AidaDb)
 		if err != nil {
 			return err
 		}
 	}
-
-	// close target database
-	MustCloseDB(targetDb)
 
 	// delete source databases
-	if cfg.DeleteSourceDbs {
-		for _, path := range sourceDbPaths {
-			err = os.RemoveAll(path)
+	if m.cfg.DeleteSourceDbs {
+		for _, path := range m.sourceDbPaths {
+			err := os.RemoveAll(path)
 			if err != nil {
 				return err
 			}
-			log.Infof("Deleted: %s\n", path)
+			m.log.Infof("Deleted: %s\n", path)
 		}
 	}
-	log.Notice("Merge finished successfully")
 
-	return err
+	m.log.Notice("Merge finished successfully")
+
+	return nil
 }
 
-// openDatabases opens all databases required for merge
-func openDatabases(targetPath string, sourceDbPaths []string) (ethdb.Database, []ethdb.Database, error) {
-	if len(sourceDbPaths) < 1 {
-		return nil, nil, fmt.Errorf("no source database were specified\n")
-	}
+// merge one or more sourceDbs into targetDb
+func (m *merger) merge() error {
+	var (
+		err     error
+		written uint64
+	)
 
-	var sourceDbs []ethdb.Database
-	for i := 0; i < len(sourceDbPaths); i++ {
-		path := sourceDbPaths[i]
-		_, err := os.Stat(path)
-		if os.IsNotExist(err) {
-			return nil, nil, fmt.Errorf("source database %s; doesn't exist\n", path)
-		}
-		db, err := rawdb.NewLevelDBDatabase(path, 1024, 100, "", true)
+	for i, sourceDb := range m.sourceDbs {
+
+		// copy the sourceDb to the target database
+		written, err = m.copyData(sourceDb)
 		if err != nil {
-			return nil, nil, fmt.Errorf("source database %s; error: %v", path, err)
+			return err
 		}
-		sourceDbs = append(sourceDbs, db)
+
+		if written == 0 {
+			m.log.Warningf("merge did not copy any data")
+		}
+
+		m.log.Noticef("Merging of %v", m.sourceDbPaths[i])
 	}
 
-	// open targetDb
-	targetDb, err := rawdb.NewLevelDBDatabase(targetPath, 1024, 100, "profiling", false)
-	if err != nil {
-		return nil, nil, fmt.Errorf("targetDb. Error: %v", err)
+	// compact written data
+	if m.cfg.CompactDb {
+		m.log.Noticef("Starting compaction")
+		err = m.targetDb.Compact(nil, nil)
+		if err != nil {
+			return fmt.Errorf("cannot compact targetDb; %v", err)
+		}
 	}
 
-	return targetDb, sourceDbs, nil
+	return nil
 }
 
 // copyData copies data from iterator into target database
-func copyData(sourceDb ethdb.Database, targetDb ethdb.Database) (uint64, error) {
-	dbBatchWriter := targetDb.NewBatch()
+func (m *merger) copyData(sourceDb ethdb.Database) (uint64, error) {
+	dbBatchWriter := m.targetDb.NewBatch()
 
 	var written uint64
 	iter := sourceDb.NewIterator(nil, nil)
-	for {
+
+	for iter.Next() {
 		// do we have another available item?
-		if !iter.Next() {
-			// iteration completed - finish write rest of the pending data
-			if dbBatchWriter.ValueSize() > 0 {
-				err := dbBatchWriter.Write()
-				if err != nil {
-					return 0, err
-				}
-			}
-			return written, nil
-		}
 		key := iter.Key()
 
 		err := dbBatchWriter.Put(key, iter.Value())
@@ -151,21 +199,31 @@ func copyData(sourceDb ethdb.Database, targetDb ethdb.Database) (uint64, error) 
 		if dbBatchWriter.ValueSize() > kvdb.IdealBatchSize {
 			err = dbBatchWriter.Write()
 			if err != nil {
-				return 0, err
+				return 0, fmt.Errorf("batch-writter cannot write data; %v", err)
 			}
 			dbBatchWriter.Reset()
 		}
 	}
+
+	if iter.Error() != nil {
+		return 0, fmt.Errorf("iterator retuned error: %v", iter.Error())
+	}
+
+	// iteration completed - finish write rest of the pending data
+	if dbBatchWriter.ValueSize() > 0 {
+		err := dbBatchWriter.Write()
+		if err != nil {
+			return 0, err
+		}
+	}
+	return written, nil
 }
 
-// MustCloseDB close database safely
-func MustCloseDB(db ethdb.Database) {
-	if db != nil {
-		err := db.Close()
-		if err != nil {
-			if err.Error() != "leveldb: closed" {
-				fmt.Printf("could not close database; %s\n", err.Error())
-			}
+// closeSourceDbs (sourceDbs) given to merger
+func (m *merger) closeSourceDbs() {
+	for i, db := range m.sourceDbs {
+		if err := db.Close(); err != nil {
+			m.log.Warning("cannot close source db (%v); %v", m.sourceDbPaths[i], err)
 		}
 	}
 }

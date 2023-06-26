@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/logger"
-	"github.com/Fantom-foundation/Aida/tracer/operation"
+	"github.com/Fantom-foundation/Aida/tracer/profile"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
@@ -39,6 +39,7 @@ func RunVM(ctx *cli.Context) error {
 		lastBlockProgressReportTime     time.Time
 		lastBlockProgressReportTxCount  int
 		lastBlockProgressReportGasCount = new(big.Int)
+		lastProfileBlock                uint64
 		stateDbDir                      string
 	)
 	beginning = time.Now()
@@ -91,18 +92,12 @@ func RunVM(ctx *cli.Context) error {
 	}
 
 	// print memory usage after priming
-	if cfg.MemoryBreakdown {
-		if usage := db.GetMemoryUsage(); usage != nil {
-			log.Noticef("State DB memory usage: %d byte\n%s", usage.UsedBytes, usage.Breakdown)
-		} else {
-			log.Info("Utilized storage solution does not support memory breakdowns.")
-		}
-	}
+	utils.MemoryBreakdown(db, cfg, log)
 
 	// wrap stateDB for profiling
-	var stats *operation.ProfileStats
+	var stats *profile.Stats
 	if cfg.Profile {
-		db, stats = NewProxyProfiler(db)
+		db, stats = NewProxyProfiler(db, cfg.ProfileFile)
 	}
 
 	if cfg.ValidateWorldState {
@@ -150,6 +145,7 @@ func RunVM(ctx *cli.Context) error {
 			lastBlockProgressReportBlock = tx.Block
 			lastBlockProgressReportBlock -= lastBlockProgressReportBlock % progressReportBlockInterval
 			lastBlockProgressReportTime = time.Now()
+			lastProfileBlock = tx.Block - (tx.Block % cfg.ProfileInterval)
 			isFirstBlock = false
 			// close off old block and possibly sync-periods
 		} else if curBlock != tx.Block {
@@ -226,8 +222,23 @@ func RunVM(ctx *cli.Context) error {
 				gasRate, _ := new(big.Float).SetInt(gasUsed).Float64()
 				gasRate = gasRate / intervalTime.Seconds()
 
-				log.Noticef("Reached block %d, last interval rate ~ %.0f Tx/s, ~ %.0f Gas/s", tx.Block, txRate, gasRate)
+				memoryUsage := db.GetMemoryUsage()
+				diskUsage := utils.GetDirectorySize(stateDbDir)
+
+				log.Noticef("Reached block %d using ~ %d bytes of memory, ~ %d bytes of disk, last interval rate ~ %.0f Tx/s, ~ %.0f Gas/s",
+					tx.Block, memoryUsage.UsedBytes, diskUsage, txRate, gasRate)
 				lastBlockProgressReportBlock += progressReportBlockInterval
+			}
+			if cfg.Profile {
+				if tx.Block >= lastProfileBlock+cfg.ProfileInterval {
+					// print stats
+					if err := stats.PrintProfiling(lastProfileBlock, lastProfileBlock+cfg.ProfileInterval); err != nil {
+						return err
+					}
+					// reset
+					stats.Reset()
+					lastProfileBlock += cfg.ProfileInterval
+				}
 			}
 		}
 	}
@@ -256,23 +267,17 @@ func RunVM(ctx *cli.Context) error {
 		}
 	}
 
-	if cfg.MemoryBreakdown {
-		if usage := db.GetMemoryUsage(); usage != nil {
-			log.Notice("State DB memory usage: %d byte\n%s", usage.UsedBytes, usage.Breakdown)
-		} else {
-			log.Info("Utilized storage solution does not support memory breakdowns.")
-		}
-	}
+	utils.MemoryBreakdown(db, cfg, log)
 
 	// write memory profile if requested
 	if err := utils.StartMemoryProfile(cfg); err != nil {
 		return err
 	}
 
-	if cfg.Profile {
-		fmt.Println("=================Statistics=================")
-		stats.PrintProfiling(log)
-		fmt.Println("============================================")
+	if cfg.Profile && curBlock != lastProfileBlock {
+		if err := stats.PrintProfiling(lastProfileBlock, curBlock); err != nil {
+			return err
+		}
 	}
 
 	if cfg.KeepDb && !isFirstBlock {

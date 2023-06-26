@@ -461,7 +461,7 @@ func (db *inMemoryStateDB) Close() error {
 
 func (db *inMemoryStateDB) GetMemoryUsage() *MemoryUsage {
 	// not supported yet
-	return nil
+	return &MemoryUsage{uint64(0), nil}
 }
 
 func (db *inMemoryStateDB) GetArchiveState(block uint64) (StateDB, error) {
@@ -478,6 +478,10 @@ func (db *inMemoryStateDB) PrepareSubstate(alloc *substate.SubstateAlloc, block 
 
 func (s *inMemoryStateDB) StartBulkLoad(block uint64) BulkLoad {
 	return &gethInMemoryBulkLoad{}
+}
+
+func (s *inMemoryStateDB) GetShadowDB() StateDB {
+	return nil
 }
 
 type gethInMemoryBulkLoad struct{}

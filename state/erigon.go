@@ -25,7 +25,7 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 )
 
-func MakeErigonStateDB(directory, variant string, rootHash common.Hash, batchLimit datasize.ByteSize, firstBlock, lastBlock uint64) (s StateDB, err error) {
+func MakeErigonStateDB(directory, variant string, rootHash common.Hash, batchLimit datasize.ByteSize, firstBlock, lastBlock uint64, appName string) (s StateDB, err error) {
 	var kv kv.RwDB
 	erigonDirectory := filepath.Join(directory, "erigon")
 	// erigon go-memory variant is not compatible with erigon batch mode
@@ -46,6 +46,7 @@ func MakeErigonStateDB(directory, variant string, rootHash common.Hash, batchLim
 		batchLimit: batchLimit,
 		firstBlock: firstBlock,
 		lastBlock:  lastBlock,
+		appName:    appName,
 	}
 
 	// initialize stateDB
@@ -64,6 +65,7 @@ type erigonStateDB struct {
 	block       uint64
 	firstBlock  uint64
 	lastBlock   uint64
+	appName     string
 	batchMode   bool
 	batchLimit  datasize.ByteSize
 	tx          kv.RwTx
@@ -109,7 +111,7 @@ func (s *erigonStateDB) endTransaction() error {
 
 func (s *erigonStateDB) BeginBlock(number uint64) {
 	s.block = number
-	if s.block == s.firstBlock {
+	if s.appName != "trace" && s.block == s.firstBlock {
 		log.Printf("run-vm: begin batch execution at block %d\n", s.block)
 		err := s.beginRwTxBatch()
 		if err != nil {
@@ -148,7 +150,7 @@ func (s *erigonStateDB) endBlock() error {
 		return err
 	}
 
-	if s.block == s.lastBlock {
+	if s.appName != "trace" && s.block == s.lastBlock {
 		log.Printf("run-vm: finalize batch execution at block %d\n", s.block)
 		return s.finalizeExecution()
 	}
@@ -214,7 +216,7 @@ func (s *erigonStateDB) Close() error {
 
 func (s *erigonStateDB) GetMemoryUsage() *MemoryUsage {
 	// not supported yet
-	return nil
+	return &MemoryUsage{uint64(0), nil}
 }
 
 // BeginRwTxBatch begins erigon read/write transaction and batch
@@ -272,6 +274,10 @@ func (s *erigonStateDB) commitNeeded() bool {
 
 // commitIfNeeded commits batch and database transaction if batch size exceeds batch limit. It also begins new dabatase transaction and batch
 func (s *erigonStateDB) commitIfNeeded() error {
+	if s.appName == "trace" {
+		log.Printf("traceReplaySubstateTask: batch.Commit")
+		return s.commitBatchRwTx()
+	}
 	if s.commitNeeded() {
 		log.Printf("run-vm: batch.Commit")
 		err := s.commitAndBegin()
@@ -292,6 +298,10 @@ func (s *erigonStateDB) finalizeExecution() error {
 	return nil
 }
 
+func (s *erigonStateDB) GetShadowDB() StateDB {
+	return nil
+}
+
 // For priming initial state of stateDB
 type erigonBulkLoad struct {
 	db      *erigonStateDB
@@ -307,6 +317,7 @@ func (s *erigonStateDB) StartBulkLoad(_ uint64) BulkLoad {
 		block:      s.block,
 		firstBlock: s.firstBlock,
 		lastBlock:  s.lastBlock,
+		appName:    s.appName,
 	}
 
 	if err := esDB.beginRwTxBatch(); err != nil {

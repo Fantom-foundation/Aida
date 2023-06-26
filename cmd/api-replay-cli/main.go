@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/Fantom-foundation/Aida/cmd/api-replay-cli/apireplay"
+	"github.com/Fantom-foundation/Aida/cmd/api-replay-cli/flags"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -20,17 +21,13 @@ func main() {
 		Copyright: "(c) 2023 Fantom Foundation",
 		Flags: []cli.Flag{
 			&utils.APIRecordingSrcFileFlag,
-			&utils.APIRecordingVersionFlag,
 			&substate.WorkersFlag,
-
-			// AidaDB
-			&utils.AidaDbFlag,
+			&flags.Skip,
+			&flags.LogToFile,
+			&flags.LogFileDir,
 
 			// VM
 			&utils.VmImplementation,
-
-			// Substate
-			&substate.SubstateDbFlag,
 
 			// Config
 			&logger.LogLevelFlag,
@@ -43,13 +40,21 @@ func main() {
 			// StateDB
 			&utils.StateDbSrcFlag,
 			&utils.StateDbLoggingFlag,
-			&utils.CarmenSchemaFlag,
-			&utils.ArchiveModeFlag,
 
 			// Trace
 			&utils.TraceFlag,
 			&utils.TraceFileFlag,
 			&utils.TraceDebugFlag,
+
+			// ArchiveDB
+			&utils.ArchiveModeFlag,
+			&utils.ArchiveVariantFlag,
+
+			// Performance
+			&utils.CpuProfileFlag,
+			&utils.MemoryProfileFlag,
+			&utils.ProfileFlag,
+			&utils.ProfileFileFlag,
 		},
 	}
 
