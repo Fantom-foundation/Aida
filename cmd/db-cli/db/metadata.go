@@ -798,6 +798,47 @@ func (md *aidaMetadata) deleteMetadata() {
 	}
 }
 
+// updateMetadataInOldAidaDb sets metadata necessary for update in old aida-db, which doesn't have any metadata
+func (md *aidaMetadata) updateMetadataInOldAidaDb(chainId int, firstAidaDbBlock uint64, lastAidaDbBlock uint64) error {
+	// set chainid if it doesn't exist
+	inCID, err := md.getChainID()
+	if err != nil {
+		return err
+	}
+	if inCID == 0 {
+		err = md.setChainID(chainId)
+		if err != nil {
+			return err
+		}
+	}
+
+	// set first block if it doesn't exist
+	inFB, err := md.getFirstBlock()
+	if err != nil {
+		return err
+	}
+	if inFB == 0 {
+		err = md.setFirstBlock(firstAidaDbBlock)
+		if err != nil {
+			return err
+		}
+	}
+
+	// set last block if it doesn't exist
+	inLB, err := md.getLastBlock()
+	if err != nil {
+		return err
+	}
+	if inLB == 0 {
+		err = md.setLastBlock(lastAidaDbBlock)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // findEpochNumber via RPC request getBlockByNumber
 func findEpochNumber(blockNumber uint64, testnet bool) (uint64, error) {
 	hex := strconv.FormatUint(blockNumber, 16)

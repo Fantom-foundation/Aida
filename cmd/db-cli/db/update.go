@@ -141,7 +141,7 @@ func patchesDownloader(cfg *utils.Config, patches []string, firstBlock, lastBloc
 // mergePatch takes decompressed patches and merges them into aida-db
 func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan error, firstAidaDbBlock, lastAidaDbBlock uint64) error {
 	var isNewDb bool
-	if lastBlock == 0 {
+	if lastAidaDbBlock == 0 {
 		isNewDb = true
 	}
 
@@ -189,11 +189,7 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 					}
 					targetMD = newAidaMetadata(targetDb, cfg.LogLevel)
 
-					// explicitly insert block range into target database - deprecated distributed databases don't have metadata
-					err = targetMD.setBlockRange(firstAidaDbBlock, lastAidaDbBlock)
-					if err != nil {
-						return err
-					}
+					targetMD.updateMetadataInOldAidaDb(cfg.ChainID, firstAidaDbBlock, lastAidaDbBlock)
 
 					defer func() {
 						if err = targetMD.db.Close(); err != nil {
