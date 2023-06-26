@@ -23,6 +23,8 @@ func main() {
 			&utils.APIRecordingSrcFileFlag,
 			&substate.WorkersFlag,
 			&flags.Skip,
+			&flags.LogToFile,
+			&flags.LogFileDir,
 
 			// VM
 			&utils.VmImplementation,

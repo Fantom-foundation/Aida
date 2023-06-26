@@ -1,6 +1,7 @@
 package db
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -212,7 +213,7 @@ func printDbType(m *aidaMetadata) error {
 	case patchType:
 		typePrint = "Patch"
 	default:
-		typePrint = "Unknown DbType: " + string(t)
+		return errors.New("unknown db type")
 	}
 
 	m.log.Noticef("DB-Type: %v", typePrint)
