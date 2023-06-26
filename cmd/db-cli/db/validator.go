@@ -100,7 +100,7 @@ func (v *validator) iterate() error {
 }
 
 func (v *validator) doIterate(prefix string) error {
-	iter := v.db.NewIterator([]byte(prefix), substate.BlockToBytes(0))
+	iter := v.db.NewIterator([]byte(prefix), nil)
 
 	var (
 		n, written int
