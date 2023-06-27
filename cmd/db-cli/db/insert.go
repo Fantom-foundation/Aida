@@ -49,8 +49,8 @@ func removeMetadata(ctx *cli.Context) error {
 		return fmt.Errorf("cannot open targetDb. Error: %v", err)
 	}
 
-	md := newAidaMetadata(aidaDb, "DEBUG")
-	md.deleteMetadata()
+	md := utils.NewAidaMetadata(aidaDb, "DEBUG")
+	md.DeleteMetadata()
 
 	return nil
 }
@@ -79,59 +79,59 @@ func insertMetadata(ctx *cli.Context) error {
 
 	defer MustCloseDB(aidaDb)
 
-	md := newAidaMetadata(aidaDb, "INFO")
+	md := utils.NewAidaMetadata(aidaDb, "INFO")
 
 	switch substate.MetadataPrefix + keyArg {
-	case FirstBlockPrefix:
+	case utils.FirstBlockPrefix:
 		val, err = strconv.ParseUint(valArg, 10, 64)
 		if err != nil {
 			return fmt.Errorf("cannot parse uint %v; %v", valArg, err)
 		}
-		if err = md.setFirstBlock(val); err != nil {
+		if err = md.SetFirstBlock(val); err != nil {
 			return err
 		}
-	case LastBlockPrefix:
+	case utils.LastBlockPrefix:
 		val, err = strconv.ParseUint(valArg, 10, 64)
 		if err != nil {
 			return fmt.Errorf("cannot parse uint %v; %v", valArg, err)
 		}
-		if err = md.setLastBlock(val); err != nil {
+		if err = md.SetLastBlock(val); err != nil {
 			return err
 		}
-	case FirstEpochPrefix:
+	case utils.FirstEpochPrefix:
 		val, err = strconv.ParseUint(valArg, 10, 64)
 		if err != nil {
 			return fmt.Errorf("cannot parse uint %v; %v", valArg, err)
 		}
-		if err = md.setFirstEpoch(val); err != nil {
+		if err = md.SetFirstEpoch(val); err != nil {
 			return err
 		}
-	case LastEpochPrefix:
+	case utils.LastEpochPrefix:
 		val, err = strconv.ParseUint(valArg, 10, 64)
 		if err != nil {
 			return fmt.Errorf("cannot parse uint %v; %v", valArg, err)
 		}
-		if err = md.setLastEpoch(val); err != nil {
+		if err = md.SetLastEpoch(val); err != nil {
 			return err
 		}
-	case TypePrefix:
+	case utils.TypePrefix:
 		num, err := strconv.Atoi(valArg)
 		if err != nil {
 			return err
 		}
-		if err = md.setDbType(aidaDbType(num)); err != nil {
+		if err = md.SetDbType(utils.AidaDbType(num)); err != nil {
 			return err
 		}
-	case ChainIDPrefix:
+	case utils.ChainIDPrefix:
 		val, err = strconv.ParseUint(valArg, 10, 16)
 		if err != nil {
 			return fmt.Errorf("cannot parse uint %v; %v", valArg, err)
 		}
-		if err = md.setChainID(int(val)); err != nil {
+		if err = md.SetChainID(int(val)); err != nil {
 			return err
 		}
-	case TimestampPrefix:
-		if err = md.setTimestamp(); err != nil {
+	case utils.TimestampPrefix:
+		if err = md.SetTimestamp(); err != nil {
 			return err
 		}
 	default:

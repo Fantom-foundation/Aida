@@ -117,12 +117,12 @@ func clonePatch(ctx *cli.Context) error {
 		return fmt.Errorf("cannot open aida-db; %v", err)
 	}
 
-	md := newAidaMetadata(targetDb, cfg.LogLevel)
-	err = md.setFirstEpoch(firstEpoch)
+	md := utils.NewAidaMetadata(targetDb, cfg.LogLevel)
+	err = md.SetFirstEpoch(firstEpoch)
 	if err != nil {
 		return err
 	}
-	err = md.setLastEpoch(lastEpoch)
+	err = md.SetLastEpoch(lastEpoch)
 	if err != nil {
 		return err
 	}
@@ -232,13 +232,10 @@ func (c *cloner) clone() error {
 
 	close(c.writeCh)
 
-	sourceMD := newAidaMetadata(c.aidaDb, c.cfg.LogLevel)
-	chainID, err := sourceMD.getChainID()
-	if err != nil {
-		return err
-	}
+	sourceMD := utils.NewAidaMetadata(c.aidaDb, c.cfg.LogLevel)
+	chainID := sourceMD.GetChainID()
 
-	if err = processCloneLikeMetadata(c.cloneDb, c.cfg.LogLevel, c.cfg.First, c.cfg.Last, chainID); err != nil {
+	if err = utils.ProcessCloneLikeMetadata(c.cloneDb, c.cfg.LogLevel, c.cfg.First, c.cfg.Last, chainID); err != nil {
 		return err
 	}
 
@@ -423,7 +420,7 @@ func (c *cloner) readSubstate() error {
 
 // validateDbSize compares size of database and expectedWritten
 func (c *cloner) validateDbSize() error {
-	actualWritten := getDbSize(c.cloneDb)
+	actualWritten := GetDbSize(c.cloneDb)
 	if actualWritten != c.count {
 		return fmt.Errorf("TargetDb has %v records; expected: %v", actualWritten, c.count)
 	}
