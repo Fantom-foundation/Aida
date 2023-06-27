@@ -140,6 +140,8 @@ func patchesDownloader(cfg *utils.Config, patches []string, firstBlock, lastBloc
 
 // mergePatch takes decompressed patches and merges them into aida-db
 func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan error, firstAidaDbBlock, lastAidaDbBlock uint64) error {
+	log := logger.NewLogger(cfg.LogLevel, "aida-merge-patch")
+
 	var isNewDb bool
 	if lastAidaDbBlock == 0 {
 		isNewDb = true
@@ -171,7 +173,6 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 					// first patch to empty database is moved to target right away
 					// this way we can skip iteration and metadata inserts
 					if isNewDb {
-						log := logger.NewLogger(cfg.LogLevel, "aida-metadata")
 						log.Noticef("AIDA-DB was empty - directly saving first patch")
 						// move extracted patch to target location - first attempting with os.Rename because it is fastest
 						if err := os.Rename(extractedPatchPath, cfg.AidaDb); err != nil {
