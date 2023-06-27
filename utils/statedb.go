@@ -49,26 +49,37 @@ func PrepareStateDB(cfg *Config) (state.StateDB, string, error) {
 // useExistingStateDB uses already existing DB to create a DB instance with a potential shadow instance.
 func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 	var (
-		err         error
-		stateDb     state.StateDB
-		stateDbInfo StateDbInfo
-		stateDbPath string
+		err            error
+		stateDb        state.StateDB
+		stateDbInfo    StateDbInfo
+		stateDbPath    string
+		tmpStateDbPath string
 	)
 
-	// using ShadowDb?
-	if cfg.ShadowDb {
-		stateDbPath = filepath.Join(cfg.StateDbSrc, pathToPrimaryStateDb)
+	// make a copy of source statedb
+	if cfg.CopySrcDb {
+		tmpStateDbPath, err = os.MkdirTemp(cfg.DbTmp, "state_db_tmp_*")
+		if err != nil {
+			return nil, "", fmt.Errorf("failed to create a temporary directory; %v", err)
+		}
+		if err := CopyDir(cfg.StateDbSrc, tmpStateDbPath); err != nil {
+			return nil, "", fmt.Errorf("failed to copy source statedb to temporary directory; %v", err)
+		}
+		stateDbPath = tmpStateDbPath
+		fmt.Println(stateDbPath)
 	} else {
 		// when not using ShadowDb, StateDbSrc is path to the StateDb itself
 		stateDbPath = cfg.StateDbSrc
 	}
 
+	// using ShadowDb?
+	if cfg.ShadowDb {
+		stateDbPath = filepath.Join(stateDbPath, pathToPrimaryStateDb)
+	}
+
 	stateDbInfoFile := filepath.Join(stateDbPath, PathToDbInfo)
 	stateDbInfo, err = ReadStateDbInfo(stateDbInfoFile)
 	if err != nil {
-		if cfg.ShadowDb {
-			return nil, "", fmt.Errorf("cannot read StateDb cfg file '%v'; %v", stateDbInfoFile, err)
-		}
 		return nil, "", fmt.Errorf("cannot read StateDb cfg file '%v'; %v", stateDbInfoFile, err)
 	}
 

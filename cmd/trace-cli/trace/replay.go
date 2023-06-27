@@ -93,7 +93,7 @@ func traceReplayTask(cfg *utils.Config, log *logging.Logger) error {
 		return err
 	}
 	if !cfg.KeepDb {
-		log.Warningf("Directory %v with DB will be removed at the end of this run.", cfg.StateDbSrc)
+		log.Warningf("--keep-db is not used. Directory %v with DB will be removed at the end of this run.", stateDbDir)
 		defer os.RemoveAll(stateDbDir)
 	}
 
@@ -236,6 +236,7 @@ func traceReplayAction(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	cfg.CopySrcDb = true
 	if cfg.DbImpl == "memory" {
 		return fmt.Errorf("db-impl memory is not supported")
 	}
