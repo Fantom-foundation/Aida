@@ -1,6 +1,7 @@
 package state
 
 import (
+	"encoding/hex"
 	"math/big"
 
 	"github.com/Fantom-foundation/Aida/logger"
@@ -99,7 +100,7 @@ func (s *loggingStateDB) SetState(addr common.Address, key common.Hash, value co
 
 func (s *loggingStateDB) GetCode(addr common.Address) []byte {
 	res := s.db.GetCode(addr)
-	s.log.Infof("GetCode, %v, %v", addr, res)
+	s.log.Infof("GetCode, %v, %v", addr, hex.EncodeToString(res))
 	return res
 }
 
