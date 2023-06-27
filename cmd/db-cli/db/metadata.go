@@ -2,9 +2,9 @@ package db
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/logger"
@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/op/go-logging"
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
 type Metadata interface {
@@ -339,7 +340,7 @@ func (md *aidaMetadata) compareBlocks(firstBlock uint64, lastBlock uint64) (uint
 
 	dbFirst, err = md.getFirstBlock()
 	if err != nil {
-		if strings.Contains(err.Error(), "leveldb: not found") {
+		if errors.Is(err, leveldb.ErrNotFound) {
 			// block was not found, set to 0
 			dbFirst = 0
 		} else {
@@ -353,7 +354,7 @@ func (md *aidaMetadata) compareBlocks(firstBlock uint64, lastBlock uint64) (uint
 
 	dbLast, err = md.getLastBlock()
 	if err != nil {
-		if strings.Contains(err.Error(), "leveldb: not found") {
+		if errors.Is(err, leveldb.ErrNotFound) {
 			// block was not found, set to 0
 			dbLast = 0
 		} else {
@@ -377,7 +378,7 @@ func (md *aidaMetadata) compareEpochs(firstEpoch uint64, lastEpoch uint64) (uint
 
 	dbFirst, err = md.getFirstEpoch()
 	if err != nil {
-		if strings.Contains(err.Error(), "leveldb: not found") {
+		if errors.Is(err, leveldb.ErrNotFound) {
 			// block was not found, set to 0
 			dbFirst = 0
 		} else {
@@ -391,7 +392,7 @@ func (md *aidaMetadata) compareEpochs(firstEpoch uint64, lastEpoch uint64) (uint
 
 	dbLast, err = md.getLastEpoch()
 	if err != nil {
-		if strings.Contains(err.Error(), "leveldb: not found") {
+		if errors.Is(err, leveldb.ErrNotFound) {
 			// block was not found, set to 0
 			dbLast = 0
 		} else {
@@ -410,7 +411,7 @@ func (md *aidaMetadata) compareEpochs(firstEpoch uint64, lastEpoch uint64) (uint
 func (md *aidaMetadata) getFirstBlock() (uint64, error) {
 	firstBlockBytes, err := md.db.Get([]byte(FirstBlockPrefix))
 	if err != nil {
-		if strings.Contains(err.Error(), "leveldb: not found") {
+		if errors.Is(err, leveldb.ErrNotFound) {
 			return 0, nil
 		}
 		return 0, fmt.Errorf("cannot get first block; %v", err)
@@ -423,7 +424,7 @@ func (md *aidaMetadata) getFirstBlock() (uint64, error) {
 func (md *aidaMetadata) getLastBlock() (uint64, error) {
 	lastBlockBytes, err := md.db.Get([]byte(LastBlockPrefix))
 	if err != nil {
-		if strings.Contains(err.Error(), "leveldb: not found") {
+		if errors.Is(err, leveldb.ErrNotFound) {
 			return 0, nil
 		}
 		return 0, fmt.Errorf("cannot get last block; %v", err)
@@ -436,7 +437,7 @@ func (md *aidaMetadata) getLastBlock() (uint64, error) {
 func (md *aidaMetadata) getFirstEpoch() (uint64, error) {
 	firstEpochBytes, err := md.db.Get([]byte(FirstEpochPrefix))
 	if err != nil {
-		if strings.Contains(err.Error(), "leveldb: not found") {
+		if errors.Is(err, leveldb.ErrNotFound) {
 			return 0, nil
 		}
 		return 0, fmt.Errorf("cannot get first epoch; %v", err)
@@ -449,7 +450,7 @@ func (md *aidaMetadata) getFirstEpoch() (uint64, error) {
 func (md *aidaMetadata) getLastEpoch() (uint64, error) {
 	lastEpochBytes, err := md.db.Get([]byte(LastEpochPrefix))
 	if err != nil {
-		if strings.Contains(err.Error(), "leveldb: not found") {
+		if errors.Is(err, leveldb.ErrNotFound) {
 			return 0, nil
 		}
 		return 0, fmt.Errorf("cannot get last epoch; %v", err)
@@ -462,7 +463,7 @@ func (md *aidaMetadata) getLastEpoch() (uint64, error) {
 func (md *aidaMetadata) getChainID() (int, error) {
 	chainIDBytes, err := md.db.Get([]byte(ChainIDPrefix))
 	if err != nil {
-		if strings.Contains(err.Error(), "leveldb: not found") {
+		if errors.Is(err, leveldb.ErrNotFound) {
 			return 0, nil
 		}
 		return 0, fmt.Errorf("cannot get chain-id; %v", err)
@@ -475,7 +476,7 @@ func (md *aidaMetadata) getChainID() (int, error) {
 func (md *aidaMetadata) getTimestamp() (uint64, error) {
 	byteTimestamp, err := md.db.Get([]byte(TimestampPrefix))
 	if err != nil {
-		if strings.Contains(err.Error(), "leveldb: not found") {
+		if errors.Is(err, leveldb.ErrNotFound) {
 			return 0, nil
 		}
 		return 0, fmt.Errorf("cannot get creation timestamp; %v", err)
@@ -488,7 +489,7 @@ func (md *aidaMetadata) getTimestamp() (uint64, error) {
 func (md *aidaMetadata) getDbType() (aidaDbType, error) {
 	byteDbType, err := md.db.Get([]byte(TypePrefix))
 	if err != nil {
-		if strings.Contains(err.Error(), "leveldb: not found") {
+		if errors.Is(err, leveldb.ErrNotFound) {
 			return noType, nil
 		}
 		return 0, fmt.Errorf("cannot get first epoch; %v", err)
@@ -668,7 +669,7 @@ func (md *aidaMetadata) findEpochs() error {
 
 // checkUpdateMetadata goes through metadata of updated AidaDb and its patch,
 // looks if blocks and epoch align and if chainIDs are same for both Dbs
-func (md *aidaMetadata) checkUpdateMetadata(isNewDb bool, cfg *utils.Config, patchMD *aidaMetadata) (uint64, uint64, error) {
+func (md *aidaMetadata) checkUpdateMetadata(cfg *utils.Config, patchMD *aidaMetadata) (uint64, uint64, error) {
 	var (
 		err                    error
 		firstBlock, firstEpoch uint64
@@ -678,40 +679,34 @@ func (md *aidaMetadata) checkUpdateMetadata(isNewDb bool, cfg *utils.Config, pat
 		return 0, 0, fmt.Errorf("checkUpdateMetadata patchMD ; %v", err)
 	}
 
-	if !isNewDb {
-		// if we are updating existing AidaDb and this Db does not have metadata, we go through substate to find
-		// blocks and epochs, chainID is set from user via chain-id flag and db type in this case will always be genType
-		if err = md.getMetadata(); err != nil {
-			// if metadata are not found, but we have an existingDb, we go through substate to find it
-			if strings.Contains(err.Error(), "leveldb: not found") {
-				if err = md.setFreshUpdateMetadata(cfg.ChainID); err != nil {
-					return 0, 0, err
-				}
-
-			} else {
-				return 0, 0, fmt.Errorf("checkUpdateMetadata aida-db ; %v", err)
+	// if we are updating existing AidaDb and this Db does not have metadata, we go through substate to find
+	// blocks and epochs, chainID is set from user via chain-id flag and db type in this case will always be genType
+	if err = md.getMetadata(); err != nil {
+		// if metadata are not found, but we have an existingDb, we go through substate to find it
+		if errors.Is(err, leveldb.ErrNotFound) {
+			if err = md.setFreshUpdateMetadata(cfg.ChainID); err != nil {
+				return 0, 0, err
 			}
-		}
 
-		// the patch is usable only if its firstBlock is within targetDbs block range
-		// and if its last block is bigger than targetDBs last block
-		if patchMD.firstBlock > md.lastBlock+1 || patchMD.firstBlock < md.firstBlock || patchMD.lastBlock <= md.lastBlock {
-			return 0, 0, fmt.Errorf("metadata blocks does not align; aida-db %v-%v, patch %v-%v", md.firstBlock, md.lastBlock, patchMD.firstBlock, patchMD.lastBlock)
+		} else {
+			return 0, 0, fmt.Errorf("checkUpdateMetadata aida-db ; %v", err)
 		}
-
-		// if chainIDs doesn't match, we can't patch the DB
-		if md.chainId != patchMD.chainId {
-			return 0, 0, fmt.Errorf("metadata chain-ids does not match; aida-db: %v, patch: %v", md.chainId, patchMD.chainId)
-		}
-
-		// we take first block and epoch from the existing db
-		firstBlock = md.firstBlock
-		firstEpoch = md.firstEpoch
-	} else {
-		// if targetDb is a new db, we take first block and epoch from the patch
-		firstBlock = patchMD.firstBlock
-		firstEpoch = patchMD.firstEpoch
 	}
+
+	// the patch is usable only if its firstBlock is within targetDbs block range
+	// and if its last block is bigger than targetDBs last block
+	if patchMD.firstBlock > md.lastBlock+1 || patchMD.firstBlock < md.firstBlock || patchMD.lastBlock <= md.lastBlock {
+		return 0, 0, fmt.Errorf("metadata blocks does not align; aida-db %v-%v, patch %v-%v", md.firstBlock, md.lastBlock, patchMD.firstBlock, patchMD.lastBlock)
+	}
+
+	// if chainIDs doesn't match, we can't patch the DB
+	if md.chainId != patchMD.chainId {
+		return 0, 0, fmt.Errorf("metadata chain-ids does not match; aida-db: %v, patch: %v", md.chainId, patchMD.chainId)
+	}
+
+	// we take first block and epoch from the existing db
+	firstBlock = md.firstBlock
+	firstEpoch = md.firstEpoch
 
 	return firstBlock, firstEpoch, nil
 }
@@ -802,6 +797,47 @@ func (md *aidaMetadata) deleteMetadata() {
 	} else {
 		md.log.Debugf("Timestamp deleted successfully")
 	}
+}
+
+// updateMetadataInOldAidaDb sets metadata necessary for update in old aida-db, which doesn't have any metadata
+func (md *aidaMetadata) updateMetadataInOldAidaDb(chainId int, firstAidaDbBlock uint64, lastAidaDbBlock uint64) error {
+	// set chainid if it doesn't exist
+	inCID, err := md.getChainID()
+	if err != nil {
+		return err
+	}
+	if inCID == 0 {
+		err = md.setChainID(chainId)
+		if err != nil {
+			return err
+		}
+	}
+
+	// set first block if it doesn't exist
+	inFB, err := md.getFirstBlock()
+	if err != nil {
+		return err
+	}
+	if inFB == 0 {
+		err = md.setFirstBlock(firstAidaDbBlock)
+		if err != nil {
+			return err
+		}
+	}
+
+	// set last block if it doesn't exist
+	inLB, err := md.getLastBlock()
+	if err != nil {
+		return err
+	}
+	if inLB == 0 {
+		err = md.setLastBlock(lastAidaDbBlock)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // findEpochNumber via RPC request getBlockByNumber
