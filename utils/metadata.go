@@ -127,6 +127,18 @@ func ProcessCloneLikeMetadata(aidaDb ethdb.Database, logLevel string, firstBlock
 		return err
 	}
 
+	if err = md.findEpochs(); err != nil {
+		return err
+	}
+
+	if err = md.SetFirstEpoch(md.firstEpoch); err != nil {
+		return err
+	}
+
+	if err = md.SetLastEpoch(md.lastEpoch); err != nil {
+		return err
+	}
+
 	if err = md.SetChainID(chainID); err != nil {
 		return err
 	}
@@ -199,7 +211,7 @@ func ProcessMergeMetadata(cfg *Config, aidaDb ethdb.Database, sourceDbs []ethdb.
 		err error
 	)
 
-	tarGetMD := NewAidaDbMetadata(aidaDb, cfg.LogLevel)
+	targetMD := NewAidaDbMetadata(aidaDb, cfg.LogLevel)
 
 	for i, db := range sourceDbs {
 		md := NewAidaDbMetadata(db, cfg.LogLevel)
@@ -208,12 +220,12 @@ func ProcessMergeMetadata(cfg *Config, aidaDb ethdb.Database, sourceDbs []ethdb.
 		// todo do we need to check whether blocks align?
 
 		// Get chainID of first source db
-		if tarGetMD.chainId == 0 {
-			tarGetMD.chainId = md.chainId
+		if targetMD.chainId == 0 {
+			targetMD.chainId = md.chainId
 		}
 
 		// if chain ids doesn't match, we should not be merging
-		if md.chainId != tarGetMD.chainId {
+		if md.chainId != targetMD.chainId {
 			md.log.Critical("ChainIDs in Dbs metadata does not match!")
 		}
 
@@ -236,34 +248,46 @@ func ProcessMergeMetadata(cfg *Config, aidaDb ethdb.Database, sourceDbs []ethdb.
 			}
 		}
 
-		if md.firstBlock < tarGetMD.firstBlock || tarGetMD.firstBlock == 0 {
-			tarGetMD.firstBlock = md.firstBlock
+		if md.firstBlock < targetMD.firstBlock || targetMD.firstBlock == 0 {
+			targetMD.firstBlock = md.firstBlock
 		}
 
-		if md.lastBlock > tarGetMD.lastBlock || tarGetMD.lastBlock == 0 {
-			tarGetMD.lastBlock = md.lastBlock
+		if md.lastBlock > targetMD.lastBlock || targetMD.lastBlock == 0 {
+			targetMD.lastBlock = md.lastBlock
 		}
 
 		// if any of dbs is a CloneType, tarGetDb will always be CloneType
 		// if any of dbs is a genType and no db is CloneType, tarGetDb will always be genType
 		if md.dbType == CloneType {
-			tarGetMD.dbType = CloneType
-		} else if tarGetMD.dbType != CloneType {
+			targetMD.dbType = CloneType
+		} else if targetMD.dbType != CloneType {
 			if md.dbType == GenType {
-				tarGetMD.dbType = GenType
+				targetMD.dbType = GenType
 			} else if md.dbType != noType {
-				tarGetMD.dbType = PatchType
+				targetMD.dbType = PatchType
 			}
 		}
 
 	}
 
-	if tarGetMD.chainId == 0 {
-		tarGetMD.log.Warningf("your dbs does not have chain-id, Setting value from config (%v)", cfg.ChainID)
-		tarGetMD.chainId = cfg.ChainID
+	if err = targetMD.findEpochs(); err != nil {
+		return nil, err
 	}
 
-	return tarGetMD, nil
+	if err = targetMD.SetFirstEpoch(targetMD.firstEpoch); err != nil {
+		return nil, err
+	}
+
+	if err = targetMD.SetLastEpoch(targetMD.lastEpoch); err != nil {
+		return nil, err
+	}
+
+	if targetMD.chainId == 0 {
+		targetMD.log.Warningf("your dbs does not have chain-id, Setting value from config (%v)", cfg.ChainID)
+		targetMD.chainId = cfg.ChainID
+	}
+
+	return targetMD, nil
 }
 
 // GetMetadata from given Db and save it
