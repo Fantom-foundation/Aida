@@ -133,7 +133,7 @@ func (g *generator) Generate() error {
 		return err
 	}
 
-	err = processGenLikeMetadata(g.cfg.AidaDb, g.opera.firstBlock, g.opera.lastBlock, g.opera.firstEpoch, g.opera.lastEpoch, g.cfg.ChainID, g.cfg.LogLevel)
+	err = utils.ProcessGenLikeMetadata(g.cfg.AidaDb, g.opera.firstBlock, g.opera.lastBlock, g.opera.firstEpoch, g.opera.lastEpoch, g.cfg.ChainID, g.cfg.LogLevel)
 	if err != nil {
 		return err
 	}

@@ -100,6 +100,7 @@ func printMetadataCmd(ctx *cli.Context) error {
 
 // printMetadata from given AidaDb
 func printMetadata(pathToDb string) error {
+	log := logger.NewLogger("INFO", "Print-Metadata")
 	// open db
 	aidaDb, err := rawdb.NewLevelDBDatabase(pathToDb, 1024, 100, "profiling", true)
 	if err != nil {
@@ -108,66 +109,48 @@ func printMetadata(pathToDb string) error {
 
 	defer MustCloseDB(aidaDb)
 
-	md := newAidaMetadata(aidaDb, "INFO")
+	md := utils.NewAidaDbMetadata(aidaDb, "INFO")
 
-	md.log.Notice("AIDA-DB INFO:")
+	log.Notice("AIDA-DB INFO:")
 
 	if err = printDbType(md); err != nil {
-		md.log.Warning("Metadata are not yet in this DB; Looking for block range in substate...")
+		log.Warning("Metadata are not yet in this DB; Looking for block range in substate...")
 
-		fb, lb, err := findBlockRangeInSubstate(pathToDb)
+		fb, lb, err := utils.FindBlockRangeInSubstate(pathToDb)
 		if err != nil {
 			return fmt.Errorf("cannot find block range in substate; %v", err)
 		}
-		md.log.Noticef("First Block: %v Last Block: %v", fb, lb)
+		log.Noticef("First Block: %v Last Block: %v", fb, lb)
 		return nil
 	}
 
 	// CHAIN-ID
-	chainID, err := md.getChainID()
-	if err != nil {
-		md.log.Warning("Value for ChainID does not exist in given Dbs metadata")
-	} else {
-		md.log.Infof("Chain-ID: %v", chainID)
-	}
+	chainID := md.GetChainID()
+
+	log.Infof("Chain-ID: %v", chainID)
 
 	// BLOCKS
-	firstBlock, err := md.getFirstBlock()
-	if err != nil {
-		md.log.Warning("Value for first block does not exist in given Dbs metadata")
-	} else {
-		md.log.Infof("First Block: %v", firstBlock)
-	}
+	firstBlock := md.GetFirstBlock()
 
-	lastBlock, err := md.getLastBlock()
-	if err != nil {
-		md.log.Warning("Value for last block does not exist in given Dbs metadata")
-	} else {
-		md.log.Infof("Last Block: %v", lastBlock)
-	}
+	log.Infof("First Block: %v", firstBlock)
+
+	lastBlock := md.GetLastBlock()
+
+	log.Infof("Last Block: %v", lastBlock)
 
 	// EPOCHS
-	firstEpoch, err := md.getFirstEpoch()
-	if err != nil {
-		md.log.Warning("Value for first epoch does not exist in given Dbs metadata")
-	} else {
-		md.log.Infof("First Epoch: %v", firstEpoch)
-	}
+	firstEpoch := md.GetFirstEpoch()
 
-	lastEpoch, err := md.getLastEpoch()
-	if err != nil {
-		md.log.Warning("Value for last epoch does not exist in given Dbs metadata")
-	} else {
-		md.log.Infof("Last Epoch: %v", lastEpoch)
-	}
+	log.Infof("First Epoch: %v", firstEpoch)
+
+	lastEpoch := md.GetLastEpoch()
+
+	log.Infof("Last Epoch: %v", lastEpoch)
 
 	// TIMESTAMP
-	timestamp, err := md.getTimestamp()
-	if err != nil {
-		md.log.Warning("Value for creation time does not exist in given Dbs metadata")
-	} else {
-		md.log.Infof("Created: %v", time.Unix(int64(timestamp), 0))
-	}
+	timestamp := md.GetTimestamp()
+
+	log.Infof("Created: %v", time.Unix(int64(timestamp), 0))
 
 	// UPDATE-SET
 	printUpdateSetInfo(md)
@@ -176,47 +159,47 @@ func printMetadata(pathToDb string) error {
 }
 
 // printUpdateSetInfo from given AidaDb
-func printUpdateSetInfo(m *aidaMetadata) {
-	m.log.Notice("UPDATE-SET INFO:")
+func printUpdateSetInfo(m *utils.AidaDbMetadata) {
+	log := logger.NewLogger("INFO", "Print-Metadata")
 
-	intervalBytes, err := m.db.Get([]byte(substate.UpdatesetIntervalKey))
+	log.Notice("UPDATE-SET INFO:")
+
+	intervalBytes, err := m.Db.Get([]byte(substate.UpdatesetIntervalKey))
 	if err != nil {
-		m.log.Warning("Value for update-set interval does not exist in given Dbs metadata")
+		log.Warning("Value for update-set interval does not exist in given Dbs metadata")
 	} else {
-		m.log.Infof("Interval: %v blocks", bigendian.BytesToUint64(intervalBytes))
+		log.Infof("Interval: %v blocks", bigendian.BytesToUint64(intervalBytes))
 	}
 
-	sizeBytes, err := m.db.Get([]byte(substate.UpdatesetSizeKey))
+	sizeBytes, err := m.Db.Get([]byte(substate.UpdatesetSizeKey))
 	if err != nil {
-		m.log.Warning("Value for update-set size does not exist in given Dbs metadata")
+		log.Warning("Value for update-set size does not exist in given Dbs metadata")
 	} else {
 		u := bigendian.BytesToUint64(sizeBytes)
 
 		// todo convert to mb
-		m.log.Infof("Size: %.1f MB", float64(u)/float64(1_000_000))
+		log.Infof("Size: %.1f MB", float64(u)/float64(1_000_000))
 	}
 }
 
 // printDbType from given AidaDb
-func printDbType(m *aidaMetadata) error {
-	t, err := m.getDbType()
-	if err != nil {
-		return err
-	}
+func printDbType(m *utils.AidaDbMetadata) error {
+	t := m.GetDbType()
 
 	var typePrint string
 	switch t {
-	case genType:
+	case utils.GenType:
 		typePrint = "Generate"
-	case cloneType:
+	case utils.CloneType:
 		typePrint = "Clone"
-	case patchType:
+	case utils.PatchType:
 		typePrint = "Patch"
 	default:
 		return errors.New("unknown db type")
 	}
 
-	m.log.Noticef("DB-Type: %v", typePrint)
+	logger.NewLogger("INFO", "Print-Metadata").Noticef("DB-Type: %v", typePrint)
+
 	return nil
 }
 
@@ -241,7 +224,7 @@ func printAllCount(ctx *cli.Context) error {
 		logDetailedSize(aidaDb, log)
 	} else {
 		log.Notice("Counting overall size...")
-		log.Noticef("All AidaDb records: %v", getDbSize(aidaDb))
+		log.Noticef("All AidaDb records: %v", GetDbSize(aidaDb))
 	}
 
 	return nil
@@ -279,7 +262,7 @@ func printDestroyedCount(ctx *cli.Context) error {
 
 	accounts, err := db.GetAccountsDestroyedInRange(cfg.First, cfg.Last)
 	if err != nil {
-		return fmt.Errorf("cannot get all destroyed accounts; %v", err)
+		return fmt.Errorf("cannot Get all destroyed accounts; %v", err)
 	}
 
 	log.Noticef("Found %v deleted accounts between blocks %v-%v", len(accounts), cfg.First, cfg.Last)
@@ -330,7 +313,7 @@ func printDeletedAccountInfo(ctx *cli.Context) error {
 
 	accounts, err := db.GetAccountsDestroyedInRange(cfg.First, cfg.Last)
 	if err != nil {
-		return fmt.Errorf("cannot get all destroyed accounts; %v", err)
+		return fmt.Errorf("cannot Get all destroyed accounts; %v", err)
 	}
 
 	wantedAcc := ctx.String(flags.Account.Name)
@@ -349,8 +332,8 @@ func printDeletedAccountInfo(ctx *cli.Context) error {
 
 }
 
-// getDbSize retrieves database size
-func getDbSize(db ethdb.Database) uint64 {
+// GetDbSize retrieves database size
+func GetDbSize(db ethdb.Database) uint64 {
 	var count uint64
 	iter := db.NewIterator(nil, nil)
 	defer iter.Release()
