@@ -552,8 +552,9 @@ func (md *AidaDbMetadata) SetAllMetadata(firstBlock uint64, lastBlock uint64, fi
 // findEpochs for block range in metadata
 func (md *AidaDbMetadata) findEpochs() error {
 	var (
-		err     error
-		testnet bool
+		err                            error
+		testnet                        bool
+		firstEpochMinus, lastEpochPlus uint64
 	)
 
 	if md.chainId == 250 {
@@ -564,23 +565,41 @@ func (md *AidaDbMetadata) findEpochs() error {
 		return fmt.Errorf("unknown chain-id %v", md.chainId)
 	}
 
-	firstEpoch, err := findEpochNumber(md.firstBlock, testnet)
+	md.firstEpoch, err = findEpochNumber(md.firstBlock, testnet)
 	if err != nil {
 		return err
 	}
 
-	md.firstEpoch = firstEpoch
-
-	md.log.Noticef("Found first epoch #%v", md.firstEpoch)
-
-	lastEpoch, err := findEpochNumber(md.lastBlock, testnet)
+	// we need to check if block is really first block of an epoch
+	firstEpochMinus, err = findEpochNumber(md.firstBlock-1, testnet)
 	if err != nil {
 		return err
 	}
 
-	md.lastEpoch = lastEpoch
+	if firstEpochMinus >= md.firstEpoch {
+		md.log.Warningf("first block of db is not beginning of an epoch; setting first epoch to 0")
+		md.firstEpoch = 0
+	} else {
+		md.log.Noticef("Found first epoch #%v", md.firstEpoch)
+	}
 
-	md.log.Noticef("Found last epoch #%v; patching now continues", md.lastEpoch)
+	md.lastEpoch, err = findEpochNumber(md.lastBlock, testnet)
+	if err != nil {
+		return err
+	}
+
+	// we need to check if block is really last block of an epoch
+	lastEpochPlus, err = findEpochNumber(md.lastBlock+1, testnet)
+	if err != nil {
+		return err
+	}
+
+	if lastEpochPlus <= md.firstEpoch {
+		md.log.Warningf("lastBlock block of db is not end of an epoch; setting last epoch to 0")
+		md.lastEpoch = 0
+	} else {
+		md.log.Noticef("Found last epoch #%v; patching now continues", md.lastEpoch)
+	}
 
 	return nil
 }
