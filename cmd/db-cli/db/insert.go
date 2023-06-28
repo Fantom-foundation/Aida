@@ -49,7 +49,7 @@ func removeMetadata(ctx *cli.Context) error {
 		return fmt.Errorf("cannot open targetDb. Error: %v", err)
 	}
 
-	md := utils.NewAidaMetadata(aidaDb, "DEBUG")
+	md := utils.NewAidaDbMetadata(aidaDb, "DEBUG")
 	md.DeleteMetadata()
 
 	return nil
@@ -79,7 +79,7 @@ func insertMetadata(ctx *cli.Context) error {
 
 	defer MustCloseDB(aidaDb)
 
-	md := utils.NewAidaMetadata(aidaDb, "INFO")
+	md := utils.NewAidaDbMetadata(aidaDb, "INFO")
 
 	switch substate.MetadataPrefix + keyArg {
 	case utils.FirstBlockPrefix:

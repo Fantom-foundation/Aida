@@ -17,8 +17,8 @@ import (
 const cloneWriteChanSize = 1
 
 const (
-	ClonePatchType byte = 0
-	CloneDbType         = 1
+	ClonePatchType = iota
+	CloneDbType
 )
 
 // CloneCommand clones aida-db as standalone or patch database
@@ -117,7 +117,7 @@ func clonePatch(ctx *cli.Context) error {
 		return fmt.Errorf("cannot open aida-db; %v", err)
 	}
 
-	md := utils.NewAidaMetadata(targetDb, cfg.LogLevel)
+	md := utils.NewAidaDbMetadata(targetDb, cfg.LogLevel)
 	err = md.SetFirstEpoch(firstEpoch)
 	if err != nil {
 		return err
@@ -232,7 +232,7 @@ func (c *cloner) clone() error {
 
 	close(c.writeCh)
 
-	sourceMD := utils.NewAidaMetadata(c.aidaDb, c.cfg.LogLevel)
+	sourceMD := utils.NewAidaDbMetadata(c.aidaDb, c.cfg.LogLevel)
 	chainID := sourceMD.GetChainID()
 
 	if err = utils.ProcessCloneLikeMetadata(c.cloneDb, c.cfg.LogLevel, c.cfg.First, c.cfg.Last, chainID); err != nil {

@@ -149,7 +149,7 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 
 	firstRun := true
 
-	var targetMD *utils.AidaMetadata
+	var targetMD *utils.AidaDbMetadata
 
 	for {
 		select {
@@ -188,7 +188,7 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 					if err != nil {
 						return fmt.Errorf("can't open aidaDb; %v", err)
 					}
-					targetMD = utils.NewAidaMetadata(targetDb, cfg.LogLevel)
+					targetMD = utils.NewAidaDbMetadata(targetDb, cfg.LogLevel)
 
 					targetMD.UpdateMetadataInOldAidaDb(cfg.ChainID, firstAidaDbBlock, lastAidaDbBlock)
 
@@ -210,7 +210,7 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 					return fmt.Errorf("cannot open targetDb; %v", err)
 				}
 
-				patchMD := utils.NewAidaMetadata(patchDb, cfg.LogLevel)
+				patchMD := utils.NewAidaDbMetadata(patchDb, cfg.LogLevel)
 
 				firstBlock, firstEpoch, err := targetMD.CheckUpdateMetadata(cfg, patchMD)
 				if err != nil {

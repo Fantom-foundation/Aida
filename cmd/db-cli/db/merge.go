@@ -38,11 +38,11 @@ type merger struct {
 	targetDb      ethdb.Database
 	sourceDbs     []ethdb.Database
 	sourceDbPaths []string
-	md            *utils.AidaMetadata
+	md            *utils.AidaDbMetadata
 }
 
 // newMerger returns new instance of merger
-func newMerger(cfg *utils.Config, targetDb ethdb.Database, sourceDbs []ethdb.Database, sourceDbPaths []string, md *utils.AidaMetadata) *merger {
+func newMerger(cfg *utils.Config, targetDb ethdb.Database, sourceDbs []ethdb.Database, sourceDbPaths []string, md *utils.AidaDbMetadata) *merger {
 	return &merger{
 		cfg:           cfg,
 		log:           logger.NewLogger(cfg.LogLevel, "aida-db-merger"),
@@ -77,7 +77,7 @@ func merge(ctx *cli.Context) error {
 
 	var (
 		dbs []ethdb.Database
-		md  *utils.AidaMetadata
+		md  *utils.AidaDbMetadata
 	)
 
 	if !cfg.SkipMetadata {

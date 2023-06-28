@@ -109,7 +109,7 @@ func printMetadata(pathToDb string) error {
 
 	defer MustCloseDB(aidaDb)
 
-	md := utils.NewAidaMetadata(aidaDb, "INFO")
+	md := utils.NewAidaDbMetadata(aidaDb, "INFO")
 
 	log.Notice("AIDA-DB INFO:")
 
@@ -159,7 +159,7 @@ func printMetadata(pathToDb string) error {
 }
 
 // printUpdateSetInfo from given AidaDb
-func printUpdateSetInfo(m *utils.AidaMetadata) {
+func printUpdateSetInfo(m *utils.AidaDbMetadata) {
 	log := logger.NewLogger("INFO", "Print-Metadata")
 
 	log.Notice("UPDATE-SET INFO:")
@@ -183,7 +183,7 @@ func printUpdateSetInfo(m *utils.AidaMetadata) {
 }
 
 // printDbType from given AidaDb
-func printDbType(m *utils.AidaMetadata) error {
+func printDbType(m *utils.AidaDbMetadata) error {
 	t := m.GetDbType()
 
 	var typePrint string
