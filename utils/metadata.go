@@ -127,6 +127,10 @@ func ProcessCloneLikeMetadata(aidaDb ethdb.Database, logLevel string, firstBlock
 		return err
 	}
 
+	if err = md.SetChainID(chainID); err != nil {
+		return err
+	}
+
 	if err = md.findEpochs(); err != nil {
 		return err
 	}
@@ -136,10 +140,6 @@ func ProcessCloneLikeMetadata(aidaDb ethdb.Database, logLevel string, firstBlock
 	}
 
 	if err = md.SetLastEpoch(md.lastEpoch); err != nil {
-		return err
-	}
-
-	if err = md.SetChainID(chainID); err != nil {
 		return err
 	}
 
@@ -271,14 +271,6 @@ func ProcessMergeMetadata(cfg *Config, aidaDb ethdb.Database, sourceDbs []ethdb.
 	}
 
 	if err = targetMD.findEpochs(); err != nil {
-		return nil, err
-	}
-
-	if err = targetMD.SetFirstEpoch(targetMD.firstEpoch); err != nil {
-		return nil, err
-	}
-
-	if err = targetMD.SetLastEpoch(targetMD.lastEpoch); err != nil {
 		return nil, err
 	}
 
@@ -618,11 +610,11 @@ func (md *AidaDbMetadata) findEpochs() error {
 		return err
 	}
 
-	if lastEpochPlus <= md.firstEpoch {
-		md.log.Warningf("lastBlock block of db is not end of an epoch; setting last epoch to 0")
+	if lastEpochPlus <= md.lastEpoch {
+		md.log.Warningf("last block block of db is not end of an epoch; setting last epoch to 0")
 		md.lastEpoch = 0
 	} else {
-		md.log.Noticef("Found last epoch #%v; patching now continues", md.lastEpoch)
+		md.log.Noticef("Found last epoch #%v", md.lastEpoch)
 	}
 
 	return nil
@@ -792,7 +784,7 @@ func findEpochNumber(blockNumber uint64, testnet bool) (uint64, error) {
 	hex := strconv.FormatUint(blockNumber, 16)
 
 	payload := JsonRPCRequest{
-		Method:  "ftm_GetBlockByNumber",
+		Method:  "ftm_getBlockByNumber",
 		Params:  []interface{}{"0x" + hex, false},
 		ID:      1,
 		JSONRPC: "2.0",
