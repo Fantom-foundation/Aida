@@ -14,6 +14,7 @@ import (
 	"github.com/op/go-logging"
 )
 
+// validator is used to iterate over all key/value pairs inside AidaDb and creating md5 hash
 type validator struct {
 	db     ethdb.Database
 	start  time.Time
@@ -21,6 +22,7 @@ type validator struct {
 	log    *logging.Logger
 }
 
+// newDbValidator returns new insta of validator
 func newDbValidator(pathToDb, logLevel string) *validator {
 	l := logger.NewLogger(logLevel, "Db-Validator")
 
@@ -37,6 +39,7 @@ func newDbValidator(pathToDb, logLevel string) *validator {
 	}
 }
 
+// validate AidaDb on given path pathToDb
 func validate(pathToDb, logLevel string) ([]byte, error) {
 	v := newDbValidator(pathToDb, logLevel)
 
@@ -51,6 +54,7 @@ func validate(pathToDb, logLevel string) ([]byte, error) {
 	return sum, nil
 }
 
+// iterate calls doIterate func for each prefix inside metadata
 func (v *validator) iterate() error {
 	var (
 		err error
@@ -99,6 +103,7 @@ func (v *validator) iterate() error {
 
 }
 
+// doIterate over all key/value inside AidaDb and create md5 hash for each par for given prefix
 func (v *validator) doIterate(prefix string) error {
 	iter := v.db.NewIterator([]byte(prefix), nil)
 
