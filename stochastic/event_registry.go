@@ -1,7 +1,11 @@
 package stochastic
 
 import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"log"
+	"os"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/paulmach/orb"
@@ -34,20 +38,6 @@ type EventRegistry struct {
 	snapshotFreq map[int]uint64
 }
 
-// EventRegistryJSON is the JSON output for an event registry.
-type EventRegistryJSON struct {
-	Operations       []string    `json:"operations"`       // name of operations with argument classes
-	StochasticMatrix [][]float64 `json:"stochasticMatrix"` // observed stochastic matrix
-
-	// access statistics for contracts, keys, and values
-	Contracts statistics.AccessJSON `json:"contractStats"`
-	Keys      statistics.AccessJSON `json:"keyStats"`
-	Values    statistics.AccessJSON `json:"valueSats"`
-
-	// snapshot delta frequencies
-	SnapshotEcdf [][2]float64 `json:"snapshotEcdf"`
-}
-
 // NewEventRegistry creates a new event registry.
 func NewEventRegistry() EventRegistry {
 	return EventRegistry{
@@ -70,7 +60,7 @@ func (r *EventRegistry) RegisterOp(op int) {
 	keyClass := statistics.NoArgID
 	valueClass := statistics.NoArgID
 
-	// update operations's frequency and transition frequency
+	// update operation's frequency and transition frequency
 	// depending on type of simulation arguments
 	r.updateFreq(op, addrClass, keyClass, valueClass)
 }
@@ -107,7 +97,7 @@ func (r *EventRegistry) RegisterKeyOp(op int, address *common.Address, key *comm
 	keyClass := r.keys.Classify(*key)
 	valueClass := statistics.NoArgID
 
-	// update operations's frequency and transition frequency
+	// update operations' frequency and transition frequency
 	// depending on type of simulation arguments
 	r.updateFreq(op, addrClass, keyClass, valueClass)
 
@@ -128,7 +118,7 @@ func (r *EventRegistry) RegisterValueOp(op int, address *common.Address, key *co
 	keyClass := r.keys.Classify(*key)
 	valueClass := r.values.Classify(*value)
 
-	// update operations's frequency and transition frequency
+	// update operation's frequency and transition frequency
 	// depending on type of simulation arguments
 	r.updateFreq(op, addrClass, keyClass, valueClass)
 
@@ -153,13 +143,46 @@ func (r *EventRegistry) updateFreq(op int, addr int, key int, value int) {
 	r.prevArgOp = argOp
 }
 
-// RegisterSnapshotDelta counts the delta of a snapshot. The delta is the
+// RegisterSnapshotDelta counts the delta of a snapshot. The delta is
 // the number of stack elements between the top-of-stack of the snapshot stack
 // and the reverted snapshot. A delta of zero means that the state is reverted
 // to the previously created snapshot, a delta of one means that the state is
 // reverted to the previous of the previous snapshot and so on.
 func (r *EventRegistry) RegisterSnapshotDelta(delta int) {
 	r.snapshotFreq[delta]++
+}
+
+// WriteJSON writes an event registry in JSON format.
+func (r *EventRegistry) WriteJSON(filename string) error {
+	f, fErr := os.Create(filename)
+	if fErr != nil {
+		return fmt.Errorf("cannot open JSON file; %v", fErr)
+	}
+	defer f.Close()
+	jOut, jErr := json.MarshalIndent(r.NewEventRegistryJSON(), "", "    ")
+	if jErr != nil {
+		return fmt.Errorf("failed to convert JSON file; %v", jErr)
+	}
+	_, pErr := fmt.Fprintln(f, string(jOut))
+	if pErr != nil {
+		return fmt.Errorf("failed to convert JSON file; %v", pErr)
+	}
+	return nil
+}
+
+// EventRegistryJSON is the JSON struct for an event registry.
+type EventRegistryJSON struct {
+	FileId           string      `json:"FileId"`           // file identification
+	Operations       []string    `json:"operations"`       // name of operations with argument classes
+	StochasticMatrix [][]float64 `json:"stochasticMatrix"` // observed stochastic matrix
+
+	// access statistics for contracts, keys, and values
+	Contracts statistics.AccessJSON `json:"contractStats"`
+	Keys      statistics.AccessJSON `json:"keyStats"`
+	Values    statistics.AccessJSON `json:"valueSats"`
+
+	// snapshot delta frequencies
+	SnapshotEcdf [][2]float64 `json:"snapshotEcdf"`
 }
 
 // NewEventRegistry produces the JSON output for an event registry.
@@ -254,6 +277,7 @@ func (r *EventRegistry) NewEventRegistryJSON() EventRegistryJSON {
 	}
 
 	return EventRegistryJSON{
+		FileId:           "events",
 		Operations:       label,
 		StochasticMatrix: A,
 		Contracts:        r.contracts.NewAccessJSON(),
@@ -261,4 +285,26 @@ func (r *EventRegistry) NewEventRegistryJSON() EventRegistryJSON {
 		Values:           r.values.NewAccessJSON(),
 		SnapshotEcdf:     eCdf,
 	}
+}
+
+// ReadEventsJSON reads event file in JSON format.
+func ReadEvents(filename string) (*EventRegistryJSON, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, fmt.Errorf("failed opening event file %v; %v", filename, err)
+	}
+	defer file.Close()
+	contents, err := ioutil.ReadAll(file)
+	if err != nil {
+		return nil, fmt.Errorf("failed reading event file; %v", err)
+	}
+	var eventsJSON EventRegistryJSON
+	err = json.Unmarshal(contents, &eventsJSON)
+	if err != nil {
+		return nil, fmt.Errorf("cannot unmarshal event registry; %v", err)
+	}
+	if eventsJSON.FileId != "events" {
+		return nil, fmt.Errorf("file %v is not an events file", filename)
+	}
+	return &eventsJSON, nil
 }
