@@ -7,7 +7,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// StochasticGenerateCommand data structure for the record app
+// StochasticGenerateCommand data structure for the record app.
 var StochasticGenerateCommand = cli.Command{
 	Action:    stochasticGenerateAction,
 	Name:      "generate",
@@ -26,27 +26,24 @@ var StochasticGenerateCommand = cli.Command{
 	Description: "The stochastic produces an events.json file with uniform parameters",
 }
 
-// stochasticGenerateAction generates the uniform simulation data and writes the JSON file.
+// stochasticGenerateAction produces an event file with uniform parameters.
 func stochasticGenerateAction(ctx *cli.Context) error {
-
 	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
 	if err != nil {
 		return err
 	}
-
 	log := logger.NewLogger(cfg.LogLevel, "StochasticGenerate")
 
-	log.Info("Produce uniform stochastic event file")
-
 	// create a new uniformly distributed event registry
+	log.Info("Produce uniform stochastic events")
 	eventRegistry := stochastic.GenerateUniformRegistry(cfg, log)
 
-	// writing event registry
+	// writing event registry in JSON format
 	if cfg.Output == "" {
 		cfg.Output = "./events.json"
 	}
-	log.Noticef("Write event file to %v", cfg.Output)
-	err = WriteEvents(eventRegistry, cfg.Output)
+	log.Noticef("Write events file %v", cfg.Output)
+	err = eventRegistry.WriteJSON(cfg.Output)
 	if err != nil {
 		return err
 	}
