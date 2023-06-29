@@ -20,7 +20,7 @@ import (
 type AidaDbType byte
 
 const (
-	noType AidaDbType = iota
+	NoType AidaDbType = iota
 	GenType
 	PatchType
 	CloneType
@@ -257,18 +257,37 @@ func ProcessMergeMetadata(cfg *Config, aidaDb ethdb.Database, sourceDbs []ethdb.
 			targetMD.LastBlock = md.LastBlock
 		}
 
-		// if any of dbs is a CloneType, tarGetDb will always be CloneType
-		// if any of dbs is a genType and no db is CloneType, tarGetDb will always be genType
-		if md.DbType == CloneType {
-			targetMD.DbType = CloneType
-		} else if targetMD.DbType != CloneType {
-			if md.DbType == GenType {
+		// set first
+		if targetMD.DbType == NoType {
+			targetMD.DbType = md.DbType
+			continue
+		}
+
+		if targetMD.DbType == GenType && (md.DbType == PatchType || md.DbType == GenType) {
+			targetMD.DbType = GenType
+			continue
+		}
+
+		if targetMD.DbType == PatchType {
+			switch md.DbType {
+			case GenType:
 				targetMD.DbType = GenType
-			} else if md.DbType != noType {
+				continue
+			case PatchType:
 				targetMD.DbType = PatchType
+				continue
+			case CloneType:
+				targetMD.DbType = CloneType
+				continue
 			}
 		}
 
+		if targetMD.DbType == CloneType && md.DbType == PatchType {
+			targetMD.DbType = CloneType
+			continue
+		}
+
+		return nil, fmt.Errorf("cannot merge %v with %v", targetMD.getVerboseDbType(), md.getVerboseDbType())
 	}
 
 	if err = targetMD.findEpochs(); err != nil {
@@ -428,7 +447,7 @@ func (md *AidaDbMetadata) GetDbType() AidaDbType {
 	byteDbType, err := md.Db.Get([]byte(TypePrefix))
 	if err != nil {
 		if errors.Is(err, leveldb.ErrNotFound) {
-			return noType
+			return NoType
 		}
 		md.log.Criticalf("cannot get db type from metadata; %v", err)
 		return 0
@@ -782,6 +801,22 @@ func (md *AidaDbMetadata) UpdateMetadataInOldAidaDb(chainId int, firstAidaDbBloc
 	}
 
 	return nil
+}
+
+func (md *AidaDbMetadata) getVerboseDbType() string {
+	switch md.DbType {
+	case GenType:
+		return "Generate"
+	case CloneType:
+		return "Clone"
+	case PatchType:
+		return "Patch"
+	case NoType:
+		return "NoType"
+
+	default:
+		return "unknown db type"
+	}
 }
 
 // findEpochNumber via RPC request GetBlockByNumber
