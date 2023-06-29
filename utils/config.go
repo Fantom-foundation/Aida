@@ -384,6 +384,7 @@ type Config struct {
 	ContinueOnFailure   bool              // continue validation when an error detected
 	ContractNumber      int64             // number of contracts to create
 	CompactDb           bool              // compact database after merging
+	CopySrcDb           bool              // if true, make a copy the source statedb
 	CPUProfile          string            // pprof cpu profile output file name
 	Db                  string            // path to database
 	DbTmp               string            // path to temporary database
@@ -534,8 +535,10 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		CarmenSchema:        ctx.Int(CarmenSchemaFlag.Name),
 		ChainID:             ctx.Int(ChainIDFlag.Name),
 		Cache:               ctx.Int(CacheFlag.Name),
+		CompactDb:           ctx.Bool(CompactDbFlag.Name),
 		ContractNumber:      ctx.Int64(ContractNumberFlag.Name),
 		ContinueOnFailure:   ctx.Bool(ContinueOnFailureFlag.Name),
+		CopySrcDb:           false,
 		CPUProfile:          ctx.String(CpuProfileFlag.Name),
 		Db:                  ctx.Path(DbFlag.Name),
 		DbTmp:               ctx.Path(DbTmpFlag.Name),
@@ -551,7 +554,6 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		DbLogging:           ctx.Bool(StateDbLoggingFlag.Name),
 		DeletionDb:          ctx.Path(DeletionDbFlag.Name),
 		DeleteSourceDbs:     ctx.Bool(DeleteSourceDbsFlag.Name),
-		CompactDb:           ctx.Bool(CompactDbFlag.Name),
 		HasDeletedAccounts:  true,
 		KeepDb:              ctx.Bool(KeepDbFlag.Name),
 		KeysNumber:          ctx.Int64(KeysNumberFlag.Name),
