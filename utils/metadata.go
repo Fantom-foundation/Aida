@@ -278,12 +278,20 @@ func ProcessMergeMetadata(cfg *Config, aidaDb ethdb.Database, sourceDbs []ethdb.
 				continue
 			case CloneType:
 				targetMD.DbType = CloneType
+				// we cannot merge patch with smaller first block onto clone because... todo explain + error
+				if targetMD.FirstBlock < md.FirstBlock {
+					return nil, errors.New("cannot prepend patch on clone")
+				}
 				continue
 			}
 		}
 
 		if targetMD.DbType == CloneType && md.DbType == PatchType {
 			targetMD.DbType = CloneType
+			// we cannot merge patch with smaller first block onto clone because... todo explain + error
+			if md.FirstBlock < targetMD.FirstBlock {
+				return nil, errors.New("cannot prepend patch on clone")
+			}
 			continue
 		}
 
