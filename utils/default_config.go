@@ -93,36 +93,28 @@ func createConfig(ctx *cli.Context) *Config {
 func getFlagValue(ctx *cli.Context, flag interface{}) interface{} {
 	cmdFlags := ctx.Command.Flags
 	for _, cmdFlag := range cmdFlags {
-		switch f := flag.(type) {
-		case cli.IntFlag:
-			if cmdFlag.Names()[0] == f.Name {
+		if cmdFlag.Names()[0] == flag.(cli.Flag).Names()[0] {
+			switch f := flag.(type) {
+			case cli.IntFlag:
 				return ctx.Int(f.Name)
-			}
 
-		case cli.Uint64Flag:
-			if cmdFlag.Names()[0] == UpdateBufferSizeFlag.Name {
-				return ctx.Uint64(f.Name) * 1_000_000
-			} else if cmdFlag.Names()[0] == f.Name {
-				return ctx.Uint64(f.Name)
-			}
+			case cli.Uint64Flag:
+				if f.Name == UpdateBufferSizeFlag.Name {
+					return ctx.Uint64(f.Name) * 1_000_000
+				} else {
+					return ctx.Uint64(f.Name)
+				}
 
-		case cli.Int64Flag:
-			if cmdFlag.Names()[0] == f.Name {
+			case cli.Int64Flag:
 				return ctx.Int64(f.Name)
-			}
 
-		case cli.StringFlag:
-			if cmdFlag.Names()[0] == f.Name {
+			case cli.StringFlag:
 				return ctx.String(f.Name)
-			}
 
-		case cli.PathFlag:
-			if cmdFlag.Names()[0] == f.Name {
+			case cli.PathFlag:
 				return ctx.Path(f.Name)
-			}
 
-		case cli.BoolFlag:
-			if cmdFlag.Names()[0] == f.Name {
+			case cli.BoolFlag:
 				return ctx.Bool(f.Name)
 			}
 		}
