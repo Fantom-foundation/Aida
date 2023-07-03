@@ -98,7 +98,6 @@ func getFlagValue(ctx *cli.Context, flag interface{}) interface{} {
 			if cmdFlag.Names()[0] == f.Name {
 				return ctx.Int(f.Name)
 			}
-			return f.Value
 
 		case cli.Uint64Flag:
 			if cmdFlag.Names()[0] == UpdateBufferSizeFlag.Name {
@@ -106,32 +105,43 @@ func getFlagValue(ctx *cli.Context, flag interface{}) interface{} {
 			} else if cmdFlag.Names()[0] == f.Name {
 				return ctx.Uint64(f.Name)
 			}
-			return f.Value
 
 		case cli.Int64Flag:
 			if cmdFlag.Names()[0] == f.Name {
 				return ctx.Int64(f.Name)
 			}
-			return f.Value
 
 		case cli.StringFlag:
 			if cmdFlag.Names()[0] == f.Name {
 				return ctx.String(f.Name)
 			}
-			return f.Value
 
 		case cli.PathFlag:
 			if cmdFlag.Names()[0] == f.Name {
 				return ctx.Path(f.Name)
 			}
-			return f.Value
 
 		case cli.BoolFlag:
 			if cmdFlag.Names()[0] == f.Name {
 				return ctx.Bool(f.Name)
 			}
-			return f.Value
 		}
+	}
+
+	// If flag not found, return the default value of the flag
+	switch f := flag.(type) {
+	case cli.IntFlag:
+		return f.Value
+	case cli.Uint64Flag:
+		return f.Value
+	case cli.Int64Flag:
+		return f.Value
+	case cli.StringFlag:
+		return f.Value
+	case cli.PathFlag:
+		return f.Value
+	case cli.BoolFlag:
+		return f.Value
 	}
 
 	return nil
