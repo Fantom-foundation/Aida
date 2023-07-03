@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"math/big"
@@ -14,6 +15,7 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	_ "github.com/Fantom-foundation/Tosca/go/vm"
 	"github.com/c2h5oh/datasize"
+	"github.com/ethereum/go-ethereum/core/rawdb"
 	_ "github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/urfave/cli/v2"
@@ -491,13 +493,28 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	switch mode {
 	case BlockRangeArgs:
 		// process arguments and flags
-		if ctx.Args().Len() != 2 {
-			return nil, fmt.Errorf("command requires exactly 2 arguments")
+		if ctx.Args().Len() == 0 {
+			log.Notice("Loading first block, last block and ChainID from AidaDb...")
+			aidaDb, err := rawdb.NewLevelDBDatabase(ctx.String(AidaDbFlag.Name), 1024, 100, "profiling", true)
+			if err != nil {
+				return nil, fmt.Errorf("you either need to specify block range using arguments <first> <last>, or path to existing AidaDb (--%v)", AidaDbFlag.Name)
+			}
+
+			md := NewAidaDbMetadata(aidaDb, ctx.String(logger.LogLevelFlag.Name))
+			first = md.GetFirstBlock()
+			last = md.GetLastBlock()
+
+			if first == 0 || last == 0 {
+				return nil, errors.New("your AidaDb does not have metadata")
+			}
+
+		} else if ctx.Args().Len() == 2 {
+			first, last, argErr = SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
+			if argErr != nil {
+				return nil, argErr
+			}
 		}
-		first, last, argErr = SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
-		if argErr != nil {
-			return nil, argErr
-		}
+
 	case LastBlockArg:
 		last, argErr = strconv.ParseUint(ctx.Args().Get(0), 10, 64)
 		if argErr != nil {
@@ -513,7 +530,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		}
 	case NoArgs:
 	default:
-		return nil, fmt.Errorf("Unknown mode. Unable to process commandline arguments.")
+		return nil, errors.New("Unknown mode. Unable to process commandline arguments.")
 	}
 
 	// --continue-on-failure implicitly enables transaction state validation
@@ -605,9 +622,27 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		TargetBlock:         ctx.Uint64(TargetBlockFlag.Name),
 		UpdateBufferSize:    ctx.Uint64(UpdateBufferSizeFlag.Name) * 1_000_000, // convert from MB to B
 	}
+
 	if cfg.ChainID == 0 {
-		log.Warning("--chainid was not set; setting default value for mainnet (250)")
-		cfg.ChainID = 250
+
+		log.Warningf("ChainID (--%v) was not set; looking for it in AidaDb", ChainIDFlag.Name)
+
+		aidaDb, err := rawdb.NewLevelDBDatabase(ctx.String(AidaDbFlag.Name), 1024, 100, "profiling", true)
+		if err != nil {
+			return nil, fmt.Errorf("given path to AidaDb (--%v) does not contain existing db", AidaDbFlag.Name)
+		}
+
+		md := NewAidaDbMetadata(aidaDb, ctx.String(logger.LogLevelFlag.Name))
+
+		if err = aidaDb.Close(); err != nil {
+			return nil, fmt.Errorf("cannot close db; %v", err)
+		}
+
+		cfg.ChainID = md.GetChainID()
+
+		if cfg.ChainID == 0 {
+			return nil, fmt.Errorf("you either need to specify chain-id using flag --%v, or path to existing AidaDb (--%v)", ChainIDFlag.Name, AidaDbFlag.Name)
+		}
 	}
 	setFirstBlockFromChainID(cfg.ChainID)
 	if cfg.RandomSeed < 0 {
