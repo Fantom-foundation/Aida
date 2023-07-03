@@ -63,7 +63,7 @@ var (
 		Name:  "archive-variant",
 		Usage: "set the archive implementation variant for the selected DB implementation, ignored if not running in archive mode",
 	}
-	BlockLengthFlag = cli.Int64Flag{
+	BlockLengthFlag = cli.Uint64Flag{
 		Name:  "block-length",
 		Usage: "defines the number of transactions per block",
 		Value: 10,
@@ -112,7 +112,7 @@ var (
 		Name:  "memory-profile",
 		Usage: "enables memory allocation profiling",
 	}
-	SyncPeriodLengthFlag = cli.Int64Flag{
+	SyncPeriodLengthFlag = cli.Uint64Flag{
 		Name:  "sync-period",
 		Usage: "defines the number of blocks per sync-period",
 		Value: 300,
