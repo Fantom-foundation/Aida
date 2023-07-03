@@ -110,7 +110,7 @@ func getTargetDbBlockRange(cfg *utils.Config) (uint64, uint64, error) {
 		}
 	} else {
 		// load last block from existing aida-db metadata
-		firstAidaDbBlock, lastAidaDbBlock, err := findBlockRangeInSubstate(cfg.AidaDb)
+		firstAidaDbBlock, lastAidaDbBlock, err := utils.FindBlockRangeInSubstate(cfg.AidaDb)
 		if err != nil {
 			return 0, 0, fmt.Errorf("using corrupted aida-db database; %v", err)
 		}
@@ -149,7 +149,7 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 
 	firstRun := true
 
-	var targetMD *aidaMetadata
+	var targetMD *utils.AidaDbMetadata
 
 	for {
 		select {
@@ -188,13 +188,13 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 					if err != nil {
 						return fmt.Errorf("can't open aidaDb; %v", err)
 					}
-					targetMD = newAidaMetadata(targetDb, cfg.LogLevel)
+					targetMD = utils.NewAidaDbMetadata(targetDb, cfg.LogLevel)
 
-					targetMD.updateMetadataInOldAidaDb(cfg.ChainID, firstAidaDbBlock, lastAidaDbBlock)
+					targetMD.UpdateMetadataInOldAidaDb(cfg.ChainID, firstAidaDbBlock, lastAidaDbBlock)
 
 					defer func() {
-						if err = targetMD.db.Close(); err != nil {
-							targetMD.log.Warningf("patchesDownloader: cannot close targetDb; %v", err)
+						if err = targetMD.Db.Close(); err != nil {
+							log.Warningf("patchesDownloader: cannot close targetDb; %v", err)
 						}
 					}()
 
@@ -210,21 +210,21 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 					return fmt.Errorf("cannot open targetDb; %v", err)
 				}
 
-				patchMD := newAidaMetadata(patchDb, cfg.LogLevel)
+				patchMD := utils.NewAidaDbMetadata(patchDb, cfg.LogLevel)
 
-				firstBlock, firstEpoch, err := targetMD.checkUpdateMetadata(cfg, patchMD)
+				firstBlock, firstEpoch, err := targetMD.CheckUpdateMetadata(cfg, patchMD)
 				if err != nil {
 					return err
 				}
 
-				m := newMerger(cfg, targetMD.db, []ethdb.Database{patchDb}, []string{extractedPatchPath}, nil)
+				m := newMerger(cfg, targetMD.Db, []ethdb.Database{patchDb}, []string{extractedPatchPath}, nil)
 
 				err = m.merge()
 				if err != nil {
 					return fmt.Errorf("unable to merge %v; %v", extractedPatchPath, err)
 				}
 
-				err = targetMD.setAllMetadata(firstBlock, patchMD.lastBlock, firstEpoch, patchMD.lastEpoch, patchMD.chainId, genType)
+				err = targetMD.SetAllMetadata(firstBlock, patchMD.GetLastBlock(), firstEpoch, patchMD.GetLastEpoch(), patchMD.GetChainID(), utils.GenType)
 				if err != nil {
 					return err
 				}

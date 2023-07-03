@@ -46,11 +46,13 @@ func RunVM(ctx *cli.Context) error {
 
 	// process general arguments
 	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
+	// if source db is supplied, make a copy and modify the copy
 	if argErr != nil {
 		return argErr
 	}
 
 	cfg.StateValidationMode = utils.SubsetCheck
+	cfg.CopySrcDb = true
 
 	log := logger.NewLogger(cfg.LogLevel, "Run-VM")
 
@@ -70,7 +72,7 @@ func RunVM(ctx *cli.Context) error {
 		return err
 	}
 	if !cfg.KeepDb {
-		log.Warningf("StateDB at %v will be removed at the end of this run.", stateDbDir)
+		log.Warningf("--keep-db is not used. Directory %v with DB will be removed at the end of this run.", stateDbDir)
 		defer os.RemoveAll(stateDbDir)
 	}
 
