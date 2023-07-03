@@ -116,7 +116,7 @@ func (m *merger) finishMerge() error {
 	if !m.cfg.SkipMetadata {
 		// merge type db does not have epoch calculations yet
 		m.md.Db = m.targetDb
-		err := m.md.SetAllMetadata(m.md.GetFirstBlock(), m.md.GetLastBlock(), m.md.GetFirstEpoch(), m.md.GetLastEpoch(), m.md.GetChainID(), m.md.GetDbType())
+		err := m.md.SetAllMetadata(m.md.FirstBlock, m.md.LastBlock, m.md.FirstEpoch, m.md.LastEpoch, m.md.ChainId, m.md.DbType)
 		if err != nil {
 			return err
 		}
