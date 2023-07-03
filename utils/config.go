@@ -627,22 +627,21 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 
 		log.Warningf("ChainID (--%v) was not set; looking for it in AidaDb", ChainIDFlag.Name)
 
-		aidaDb, err := rawdb.NewLevelDBDatabase(ctx.String(AidaDbFlag.Name), 1024, 100, "profiling", true)
-		if err != nil {
-			return nil, fmt.Errorf("given path to AidaDb (--%v) does not contain existing db", AidaDbFlag.Name)
+		if aidaDb, err := rawdb.NewLevelDBDatabase(ctx.String(AidaDbFlag.Name), 1024, 100, "profiling", true); err == nil {
+			md := NewAidaDbMetadata(aidaDb, ctx.String(logger.LogLevelFlag.Name))
+
+			cfg.ChainID = md.GetChainID()
+
+			if err = aidaDb.Close(); err != nil {
+				return nil, fmt.Errorf("cannot close db; %v", err)
+			}
 		}
-
-		md := NewAidaDbMetadata(aidaDb, ctx.String(logger.LogLevelFlag.Name))
-
-		if err = aidaDb.Close(); err != nil {
-			return nil, fmt.Errorf("cannot close db; %v", err)
-		}
-
-		cfg.ChainID = md.GetChainID()
 
 		if cfg.ChainID == 0 {
-			return nil, fmt.Errorf("you either need to specify chain-id using flag --%v, or path to existing AidaDb (--%v)", ChainIDFlag.Name, AidaDbFlag.Name)
+			log.Warningf("ChainID was not specified neither with flag (--%v) nor was found in AidaDb (%v); setting default value for mainnet", ChainIDFlag.Name, ctx.String(AidaDbFlag.Name))
+			cfg.ChainID = 250
 		}
+
 	}
 	setFirstBlockFromChainID(cfg.ChainID)
 	if cfg.RandomSeed < 0 {
