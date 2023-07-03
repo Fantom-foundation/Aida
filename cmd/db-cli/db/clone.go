@@ -16,11 +16,6 @@ import (
 
 const cloneWriteChanSize = 1
 
-const (
-	ClonePatchType = iota
-	CloneDbType
-)
-
 // CloneCommand clones aida-db as standalone or patch database
 var CloneCommand = cli.Command{
 	Name:  "clone",
@@ -72,7 +67,7 @@ type cloner struct {
 	log             *logging.Logger
 	aidaDb, cloneDb ethdb.Database
 	count           uint64
-	typ             byte
+	typ             utils.AidaDbType
 	writeCh         chan rawEntry
 	errCh           chan error
 	closeCh         chan any
@@ -107,7 +102,7 @@ func clonePatch(ctx *cli.Context) error {
 		return err
 	}
 
-	err = clone(cfg, ClonePatchType)
+	err = clone(cfg, utils.PatchType)
 	if err != nil {
 		return err
 	}
@@ -143,7 +138,7 @@ func cloneDb(ctx *cli.Context) error {
 		return err
 	}
 
-	err = clone(cfg, CloneDbType)
+	err = clone(cfg, utils.CloneType)
 	if err != nil {
 		return err
 	}
@@ -155,7 +150,7 @@ func cloneDb(ctx *cli.Context) error {
 	return printMetadata(cfg.TargetDb)
 }
 
-func clone(cfg *utils.Config, cloneType byte) error {
+func clone(cfg *utils.Config, cloneType utils.AidaDbType) error {
 	var err error
 	log := logger.NewLogger(cfg.LogLevel, "AidaDb Clone")
 
@@ -219,7 +214,7 @@ func (c *cloner) clone() error {
 	c.read([]byte(substate.Stage1CodePrefix), 0, nil)
 	c.read([]byte(substate.DestroyedAccountPrefix), 0, nil)
 	lastUpdateBeforeRange := c.readUpdateSet()
-	if c.typ == CloneDbType {
+	if c.typ == utils.CloneType {
 		if lastUpdateBeforeRange < c.cfg.First {
 			c.log.Noticef("Last updateset found at block %v, changing first block to %v", lastUpdateBeforeRange, lastUpdateBeforeRange+1)
 			c.cfg.First = lastUpdateBeforeRange + 1
@@ -235,7 +230,7 @@ func (c *cloner) clone() error {
 	sourceMD := utils.NewAidaDbMetadata(c.aidaDb, c.cfg.LogLevel)
 	chainID := sourceMD.GetChainID()
 
-	if err = utils.ProcessCloneLikeMetadata(c.cloneDb, c.cfg.LogLevel, c.cfg.First, c.cfg.Last, chainID); err != nil {
+	if err = utils.ProcessCloneLikeMetadata(c.cloneDb, c.typ, c.cfg.LogLevel, c.cfg.First, c.cfg.Last, chainID); err != nil {
 		return err
 	}
 
@@ -381,7 +376,7 @@ func (c *cloner) readUpdateSet() uint64 {
 		return false, nil
 	}
 
-	if c.typ == CloneDbType {
+	if c.typ == utils.CloneType {
 		c.read([]byte(substate.SubstateAllocPrefix), 0, endCond)
 
 		// check if update-set contained at least one set (first set with world-state), then aida-db must be corrupted
@@ -391,7 +386,7 @@ func (c *cloner) readUpdateSet() uint64 {
 		}
 
 		return lastUpdateBeforeRange
-	} else if c.typ == ClonePatchType {
+	} else if c.typ == utils.PatchType {
 		c.read([]byte(substate.SubstateAllocPrefix), c.cfg.First, endCond)
 		return 0
 	} else {

@@ -212,6 +212,9 @@ func printDbType(m *utils.AidaDbMetadata) error {
 		typePrint = "Clone"
 	case utils.PatchType:
 		typePrint = "Patch"
+	case utils.NoType:
+		typePrint = "NoType"
+
 	default:
 		return errors.New("unknown db type")
 	}
