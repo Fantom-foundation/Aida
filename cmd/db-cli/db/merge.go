@@ -38,11 +38,11 @@ type merger struct {
 	targetDb      ethdb.Database
 	sourceDbs     []ethdb.Database
 	sourceDbPaths []string
-	md            *aidaMetadata
+	md            *utils.AidaDbMetadata
 }
 
 // newMerger returns new instance of merger
-func newMerger(cfg *utils.Config, targetDb ethdb.Database, sourceDbs []ethdb.Database, sourceDbPaths []string, md *aidaMetadata) *merger {
+func newMerger(cfg *utils.Config, targetDb ethdb.Database, sourceDbs []ethdb.Database, sourceDbPaths []string, md *utils.AidaDbMetadata) *merger {
 	return &merger{
 		cfg:           cfg,
 		log:           logger.NewLogger(cfg.LogLevel, "aida-db-merger"),
@@ -77,7 +77,7 @@ func merge(ctx *cli.Context) error {
 
 	var (
 		dbs []ethdb.Database
-		md  *aidaMetadata
+		md  *utils.AidaDbMetadata
 	)
 
 	if !cfg.SkipMetadata {
@@ -85,7 +85,7 @@ func merge(ctx *cli.Context) error {
 		if err != nil {
 			return err
 		}
-		md, err = processMergeMetadata(cfg, targetDb, dbs, sourcePaths)
+		md, err = utils.ProcessMergeMetadata(cfg, targetDb, dbs, sourcePaths)
 		if err != nil {
 			return err
 		}
@@ -115,8 +115,8 @@ func merge(ctx *cli.Context) error {
 func (m *merger) finishMerge() error {
 	if !m.cfg.SkipMetadata {
 		// merge type db does not have epoch calculations yet
-		m.md.db = m.targetDb
-		err := m.md.setAllMetadata(m.md.firstBlock, m.md.lastBlock, 0, 0, m.md.chainId, m.md.dbType)
+		m.md.Db = m.targetDb
+		err := m.md.SetAllMetadata(m.md.GetFirstBlock(), m.md.GetLastBlock(), m.md.GetFirstEpoch(), m.md.GetLastEpoch(), m.md.GetChainID(), m.md.GetDbType())
 		if err != nil {
 			return err
 		}

@@ -18,6 +18,7 @@ var InitDb = cli.App{
 	Commands: []*cli.Command{
 		&db.AutoGenCommand,
 		&db.CloneCommand,
+		&db.CompactCommand,
 		&db.GenerateCommand,
 		&db.MergeCommand,
 		&db.UpdateCommand,
