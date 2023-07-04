@@ -421,13 +421,23 @@ func (db *inMemoryStateDB) GetSubstatePostAlloc() substate.SubstateAlloc {
 	}
 
 	for key := range res {
-		if db.HasSuicided(key) {
+		if db.HasSuicided(key) || isPrecompiledContract(key) {
 			delete(res, key)
 			continue
 		}
 	}
 
 	return res
+}
+
+func isPrecompiledContract(addr common.Address) bool {
+	// Precompiled contract addresses are all-zero addresses with a
+	// final byte > 0 and < 10.
+	if addr[19] == 0 || addr[19] > 10 {
+		return false
+	}
+	addr[19] = 0
+	return addr == common.Address{}
 }
 
 func (db *inMemoryStateDB) BeginTransaction(number uint32) {
