@@ -13,6 +13,8 @@ import (
 	"github.com/op/go-logging"
 )
 
+const validatorInputBufferSize = 1000
+
 // validator is used to iterate over all key/value pairs inside AidaDb and creating md5 hash
 type validator struct {
 	db     ethdb.Database
@@ -36,7 +38,7 @@ func newDbValidator(pathToDb, logLevel string) *validator {
 	return &validator{
 		closed: make(chan any, 1),
 		db:     db,
-		input:  make(chan []byte),
+		input:  make(chan []byte, validatorInputBufferSize),
 		result: make(chan []byte, 1),
 		start:  time.Now(),
 		log:    l,
