@@ -98,9 +98,6 @@ func (db *inMemoryStateDB) SubBalance(addr common.Address, value *big.Int) {
 }
 
 func (db *inMemoryStateDB) AddBalance(addr common.Address, value *big.Int) {
-	if value.Sign() == 0 {
-		return
-	}
 	db.state.touched[addr] = 0
 	db.state.balances[addr] = new(big.Int).Add(db.GetBalance(addr), value)
 }
@@ -139,6 +136,9 @@ func (db *inMemoryStateDB) SetNonce(addr common.Address, value uint64) {
 }
 
 func (db *inMemoryStateDB) GetCodeHash(addr common.Address) common.Hash {
+	if !db.Exist(addr) {
+		return common.Hash{}
+	}
 	return getHash(addr, db.GetCode(addr))
 }
 
