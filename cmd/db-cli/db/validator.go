@@ -19,7 +19,8 @@ const validatorInputBufferSize = 1000
 type validator struct {
 	db     ethdb.Database
 	start  time.Time
-	input  chan []byte
+	input1 chan []byte
+	input2 chan []byte
 	result chan []byte
 	closed chan any
 	log    *logging.Logger
@@ -38,7 +39,8 @@ func newDbValidator(pathToDb, logLevel string) *validator {
 	return &validator{
 		closed: make(chan any, 1),
 		db:     db,
-		input:  make(chan []byte, validatorInputBufferSize),
+		input1: make(chan []byte, validatorInputBufferSize),
+		input2: make(chan []byte, validatorInputBufferSize),
 		result: make(chan []byte, 1),
 		start:  time.Now(),
 		log:    l,
@@ -50,23 +52,35 @@ func newDbValidator(pathToDb, logLevel string) *validator {
 func validate(pathToDb, logLevel string) ([]byte, error) {
 	v := newDbValidator(pathToDb, logLevel)
 
-	go v.calculate()
+	v.wg.Add(3)
+
+	go v.calculate(v.input1)
+	go v.calculate(v.input2)
 	go v.iterate()
 
-	v.wg.Add(2)
+	h := md5.New()
 
-	var sum []byte
+	var (
+		sum, totalSum []byte
+		finished      bool
+	)
 
-	select {
-	case sum = <-v.result:
-		v.log.Noticef("AidaDb MD5 sum: %v", hex.EncodeToString(sum))
-		break
-	case <-v.closed:
-		break
+	for {
+		sum = <-v.result
+		h.Write(sum)
+		if finished {
+			break
+		}
+
+		finished = true
 	}
 
+	totalSum = h.Sum(nil)
+
 	v.wg.Wait()
-	return sum, nil
+
+	v.log.Noticef("AidaDb MD5 sum: %v", hex.EncodeToString(totalSum))
+	return totalSum, nil
 }
 
 // iterate calls doIterate func for each prefix inside metadata
@@ -74,7 +88,8 @@ func (v *validator) iterate() {
 	var now time.Time
 
 	defer func() {
-		close(v.input)
+		close(v.input1)
+		close(v.input2)
 		v.wg.Done()
 	}()
 
@@ -121,7 +136,9 @@ func (v *validator) doIterate(prefix string) {
 	}()
 
 	var (
-		dst []byte
+		dstKey      []byte
+		dstVal      []byte
+		whichWorker bool
 	)
 
 	for iter.Next() {
@@ -129,11 +146,18 @@ func (v *validator) doIterate(prefix string) {
 		case <-v.closed:
 			return
 		default:
-			copy(dst, iter.Key())
-			v.input <- dst
+			copy(dstKey, iter.Key())
+			copy(dstVal, iter.Value())
 
-			copy(dst, iter.Value())
-			v.input <- dst
+			if whichWorker {
+				v.input1 <- dstKey
+				v.input1 <- dstVal
+			} else {
+				v.input2 <- dstKey
+				v.input2 <- dstVal
+			}
+
+			whichWorker = !whichWorker
 
 		}
 	}
@@ -155,7 +179,7 @@ func (v *validator) stop() {
 	}
 }
 
-func (v *validator) calculate() {
+func (v *validator) calculate(input chan []byte) {
 	var (
 		in         []byte
 		h          = md5.New()
@@ -173,7 +197,7 @@ func (v *validator) calculate() {
 		select {
 		case <-v.closed:
 			return
-		case in, ok = <-v.input:
+		case in, ok = <-input:
 			if !ok {
 				v.result <- h.Sum(nil)
 				return
