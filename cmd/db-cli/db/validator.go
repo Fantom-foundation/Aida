@@ -3,8 +3,7 @@ package db
 import (
 	"crypto/md5"
 	"encoding/hex"
-	"fmt"
-	"hash"
+	"sync"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/logger"
@@ -18,11 +17,14 @@ import (
 type validator struct {
 	db     ethdb.Database
 	start  time.Time
-	hasher hash.Hash
+	input  chan []byte
+	result chan []byte
+	closed chan any
 	log    *logging.Logger
+	wg     *sync.WaitGroup
 }
 
-// newDbValidator returns new insta of validator
+// newDbValidator returns new instance of validator
 func newDbValidator(pathToDb, logLevel string) *validator {
 	l := logger.NewLogger(logLevel, "Db-Validator")
 
@@ -32,10 +34,13 @@ func newDbValidator(pathToDb, logLevel string) *validator {
 	}
 
 	return &validator{
+		closed: make(chan any, 1),
 		db:     db,
+		input:  make(chan []byte),
+		result: make(chan []byte, 1),
 		start:  time.Now(),
-		hasher: md5.New(),
 		log:    l,
+		wg:     new(sync.WaitGroup),
 	}
 }
 
@@ -43,103 +48,150 @@ func newDbValidator(pathToDb, logLevel string) *validator {
 func validate(pathToDb, logLevel string) ([]byte, error) {
 	v := newDbValidator(pathToDb, logLevel)
 
-	if err := v.iterate(); err != nil {
-		return nil, fmt.Errorf("cannot iterate over aida-db; %v", err)
+	go v.calculate()
+	go v.iterate()
+
+	v.wg.Add(2)
+
+	var sum []byte
+
+	select {
+	case sum = <-v.result:
+		v.log.Noticef("AidaDb MD5 sum: %v", hex.EncodeToString(sum))
+		break
+	case <-v.closed:
+		break
 	}
 
-	sum := v.hasher.Sum(nil)
-
-	v.log.Noticef("AidaDb MD5 sum: %v", hex.EncodeToString(sum))
-
+	v.wg.Wait()
 	return sum, nil
 }
 
 // iterate calls doIterate func for each prefix inside metadata
-func (v *validator) iterate() error {
-	var (
-		err error
-		now time.Time
-	)
+func (v *validator) iterate() {
+	var now time.Time
+
+	defer func() {
+		close(v.input)
+		v.wg.Done()
+	}()
 
 	now = time.Now()
 
 	v.log.Notice("Iterating over Stage 1 Substate...")
-	if err = v.doIterate(substate.Stage1SubstatePrefix); err != nil {
-		return err
-	}
+	v.doIterate(substate.Stage1SubstatePrefix)
 
 	v.log.Infof("Stage 1 Substate took %v.", time.Since(now).Round(1*time.Second))
 
 	now = time.Now()
 
 	v.log.Notice("Iterating over Substate Alloc...")
-	if err = v.doIterate(substate.SubstateAllocPrefix); err != nil {
-		return err
-	}
+	v.doIterate(substate.SubstateAllocPrefix)
 
 	v.log.Infof("Substate Alloc took %v.", time.Since(now).Round(1*time.Second))
 
 	now = time.Now()
 
 	v.log.Notice("Iterating over Destroyed Accounts...")
-	if err = v.doIterate(substate.DestroyedAccountPrefix); err != nil {
-		return err
-	}
+	v.doIterate(substate.DestroyedAccountPrefix)
 
 	v.log.Infof("Destroyed Accounts took %v.", time.Since(now).Round(1*time.Second))
 
 	now = time.Now()
 
 	v.log.Notice("Iterating over Stage 1 Code...")
-	if err = v.doIterate(substate.Stage1CodePrefix); err != nil {
-		return err
-	}
+	v.doIterate(substate.Stage1CodePrefix)
 
 	v.log.Infof("Stage 1 Code took %v.", time.Since(now).Round(1*time.Second))
 
 	v.log.Noticef("Total time elapsed: %v", time.Since(v.start).Round(1*time.Second))
 
-	return nil
+	return
 
 }
 
 // doIterate over all key/value inside AidaDb and create md5 hash for each par for given prefix
-func (v *validator) doIterate(prefix string) error {
+func (v *validator) doIterate(prefix string) {
 	iter := v.db.NewIterator([]byte(prefix), nil)
 
+	defer func() {
+		iter.Release()
+	}()
+
 	var (
-		n, written int
-		err        error
+		dst []byte
 	)
 
 	for iter.Next() {
-		// we must make sure we wrote all data
-		for written < len(iter.Key()) {
-			n, err = v.hasher.Write(iter.Key())
-			written += n
-		}
+		select {
+		case <-v.closed:
+			return
+		default:
+			copy(dst, iter.Key())
+			v.input <- dst
 
-		// reset check
-		written = 0
+			copy(dst, iter.Value())
+			v.input <- dst
 
-		// we must make sure we wrote all data
-		for written < len(iter.Value()) {
-			n, err = v.hasher.Write(iter.Value())
-			written += n
-		}
-
-		// reset check
-		written = 0
-
-		// checking error for both key and value just slows down the program. Check the error at the end only once
-		if err != nil {
-			return fmt.Errorf("cannot write; %v", err)
 		}
 	}
 
 	if iter.Error() != nil {
-		return iter.Error()
+		v.stop()
+		v.log.Errorf("cannot iterate; %v", iter.Error())
 	}
 
-	return nil
+	return
+}
+
+func (v *validator) stop() {
+	select {
+	case <-v.closed:
+		return
+	default:
+		close(v.closed)
+	}
+}
+
+func (v *validator) calculate() {
+	var (
+		in         []byte
+		h          = md5.New()
+		written, n int
+		err        error
+		ok         bool
+	)
+
+	defer func() {
+		v.wg.Done()
+	}()
+
+	for {
+
+		select {
+		case <-v.closed:
+			return
+		case in, ok = <-v.input:
+			if !ok {
+				v.result <- h.Sum(nil)
+				return
+			}
+
+			// we need to make sure we have written all the data
+			for written < len(in) {
+				n, err = h.Write(in[written:])
+				written += n
+			}
+
+			// reset counter
+			written = 0
+
+			if err != nil {
+				v.log.Criticalf("cannot write hash; %v", err)
+				v.stop()
+				return
+			}
+
+		}
+	}
 }
