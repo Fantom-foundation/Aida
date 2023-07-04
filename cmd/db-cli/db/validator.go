@@ -50,10 +50,10 @@ func newDbValidator(pathToDb, logLevel string) *validator {
 func validate(pathToDb, logLevel string) ([]byte, error) {
 	v := newDbValidator(pathToDb, logLevel)
 
+	v.wg.Add(2)
+
 	go v.calculate()
 	go v.iterate()
-
-	v.wg.Add(2)
 
 	var sum []byte
 
