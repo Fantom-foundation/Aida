@@ -47,6 +47,20 @@ const (
 	EqualityCheck                       // confirms whether a substate and StateDB are identical.
 )
 
+var hardForksMainnet = map[string]uint64{
+	"zero":   0,
+	"opera":  4_564_026,
+	"berlin": 37_455_223,
+	"london": 37_534_833,
+}
+
+var hardForksTestnet = map[string]uint64{
+	"zero":   0,
+	"opera":  479_327,
+	"berlin": 1_559_470,
+	"london": 7_513_335,
+}
+
 // GitCommit represents the GitHub commit hash the app was built from.
 var GitCommit = "0000000000000000000000000000000000000000"
 
@@ -494,7 +508,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		if ctx.Args().Len() != 2 {
 			return nil, fmt.Errorf("command requires exactly 2 arguments")
 		}
-		first, last, argErr = SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1))
+		first, last, argErr = SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1), ctx.Int(ChainIDFlag.Name))
 		if argErr != nil {
 			return nil, argErr
 		}
@@ -725,14 +739,41 @@ func setAidaDbRepositoryUrl(chainId int) error {
 }
 
 // SetBlockRange checks the validity of a block range and return the first and last block as numbers.
-func SetBlockRange(firstArg string, lastArg string) (uint64, uint64, error) {
+func SetBlockRange(firstArg string, lastArg string, chainId int) (uint64, uint64, error) {
 	var err error = nil
 	first, ferr := strconv.ParseUint(firstArg, 10, 64)
 	last, lerr := strconv.ParseUint(lastArg, 10, 64)
-	if ferr != nil || lerr != nil {
-		err = fmt.Errorf("error: block number not an integer")
-	} else if first > last {
+
+	if ferr != nil {
+		first, err = setBlockNumber(firstArg, chainId)
+	}
+
+	if lerr != nil {
+		last, err = setBlockNumber(lastArg, chainId)
+	}
+
+	if first > last {
 		err = fmt.Errorf("error: first block has larger number than last block")
 	}
+
 	return first, last, err
+}
+
+func setBlockNumber(arg string, chainId int) (uint64, error) {
+	var blkNum uint64
+	if chainId == 4002 {
+		if val, ok := hardForksTestnet[strings.ToLower(arg)]; ok {
+			blkNum = val
+		} else {
+			return 0, fmt.Errorf("error: block number not a valid keyword or integer")
+		}
+	} else if chainId == 250 || chainId == 0 {
+		if val, ok := hardForksMainnet[strings.ToLower(arg)]; ok {
+			blkNum = val
+		} else {
+			return 0, fmt.Errorf("error: block number not a valid keyword or integer")
+		}
+	}
+
+	return blkNum, nil
 }
