@@ -103,6 +103,13 @@ func replayTask(config ReplayConfig, block uint64, tx int, recording *substate.S
 		return nil
 	}
 
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("execution of block %d / tx %d paniced: %v\n", block, tx, r)
+			panic(r)
+		}
+	}()
+
 	inputAlloc := recording.InputAlloc
 	inputEnv := recording.Env
 	inputMessage := recording.Message
