@@ -472,12 +472,12 @@ func GetChainConfig(chainID int) *params.ChainConfig {
 	chainConfig.ChainID = big.NewInt(int64(chainID))
 	if chainID == 250 {
 		// mainnet chainID 250
-		chainConfig.BerlinBlock = new(big.Int).SetUint64(37455223)
-		chainConfig.LondonBlock = new(big.Int).SetUint64(37534833)
+		chainConfig.BerlinBlock = new(big.Int).SetUint64(hardForksMainnet["berlin"])
+		chainConfig.LondonBlock = new(big.Int).SetUint64(hardForksMainnet["london"])
 	} else if chainID == 4002 {
 		// testnet chainID 4002
-		chainConfig.BerlinBlock = new(big.Int).SetUint64(1559470)
-		chainConfig.LondonBlock = new(big.Int).SetUint64(7513335)
+		chainConfig.BerlinBlock = new(big.Int).SetUint64(hardForksTestnet["berlin"])
+		chainConfig.LondonBlock = new(big.Int).SetUint64(hardForksTestnet["london"])
 	} else {
 		log.Fatalf("unknown chain id %v", chainID)
 	}
@@ -486,9 +486,9 @@ func GetChainConfig(chainID int) *params.ChainConfig {
 
 func setFirstBlockFromChainID(chainID int) {
 	if chainID == 250 {
-		FirstSubstateBlock = 4564026
+		FirstSubstateBlock = hardForksMainnet["opera"]
 	} else if chainID == 4002 {
-		FirstSubstateBlock = 479327
+		FirstSubstateBlock = hardForksTestnet["opera"]
 	} else {
 		log.Fatalf("unknown chain id %v", chainID)
 	}
