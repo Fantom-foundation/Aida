@@ -416,7 +416,7 @@ func (db *inMemoryStateDB) GetSubstatePostAlloc() substate.SubstateAlloc {
 	}
 
 	for key := range res {
-		if db.HasSuicided(key) || (isPrecompiledContract(key) && db.Empty(key)) {
+		if db.HasSuicided(key) || db.Empty(key) {
 			delete(res, key)
 			continue
 		}
