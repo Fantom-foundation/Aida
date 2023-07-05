@@ -224,20 +224,15 @@ func (db *inMemoryStateDB) Exist(addr common.Address) bool {
 	for state := db.state; state != nil; state = state.parent {
 		_, exists := state.touched[addr]
 		if exists {
-			//fmt.Printf("Exists called for %v - it exists: true\n", addr)
 			return true
 		}
 	}
 	_, exists := (*db.alloc)[addr]
-	//fmt.Printf("Exists called for %v - it exists: %t\n", addr, exists)
 	return exists
 }
 
 func (db *inMemoryStateDB) Empty(addr common.Address) bool {
-	//res := db.GetNonce(addr) == 0 && db.GetBalance(addr).Sign() == 0
-	//fmt.Printf("Is empty called for %v - result: %t\n", addr, res)
-	//return res
-	return db.GetNonce(addr) == 0 && db.GetBalance(addr).Sign() == 0
+	return db.GetNonce(addr) == 0 && db.GetBalance(addr).Sign() == 0 && db.GetCodeSize(addr) == 0
 }
 
 func (db *inMemoryStateDB) PrepareAccessList(sender common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
@@ -421,7 +416,7 @@ func (db *inMemoryStateDB) GetSubstatePostAlloc() substate.SubstateAlloc {
 	}
 
 	for key := range res {
-		if db.HasSuicided(key) || isPrecompiledContract(key) {
+		if db.HasSuicided(key) || (isPrecompiledContract(key) && db.Empty(key)) {
 			delete(res, key)
 			continue
 		}
