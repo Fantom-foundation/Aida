@@ -514,18 +514,19 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		return nil, fmt.Errorf("Unknown mode. Unable to process commandline arguments.")
 	}
 
-	// --continue-on-failure implicitly enables transaction state validation
-	validateTxState := ctx.Bool(ValidateFlag.Name) ||
-		ctx.Bool(ValidateTxStateFlag.Name) ||
-		ctx.Bool(ContinueOnFailureFlag.Name)
-	validateWorldState := ctx.Bool(ValidateFlag.Name) ||
-		ctx.Bool(ValidateWorldStateFlag.Name)
-
 	cfg := createConfig(ctx)
 	cfg.Events = events
 	cfg.First = first
 	cfg.Last = last
+
+	// --continue-on-failure implicitly enables transaction state validation
+	validateTxState := ctx.Bool(ValidateFlag.Name) ||
+		ctx.Bool(ValidateTxStateFlag.Name) ||
+		ctx.Bool(ContinueOnFailureFlag.Name)
 	cfg.ValidateTxState = validateTxState
+
+	validateWorldState := ctx.Bool(ValidateFlag.Name) ||
+		ctx.Bool(ValidateWorldStateFlag.Name)
 	cfg.ValidateWorldState = validateWorldState
 
 	if cfg.ChainID == 0 {
