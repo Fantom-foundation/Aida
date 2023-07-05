@@ -135,11 +135,11 @@ func replayTask(config ReplayConfig, block uint64, tx int, recording *substate.S
 
 	// TODO: implement other state db types
 	var statedb state.StateDB
-	switch config.state_db_impl {
+	switch strings.ToLower(config.state_db_impl) {
 	case "geth":
 		statedb = state.MakeOffTheChainStateDB(inputAlloc)
-	case "geth-memory":
-		statedb = state.MakeGethInMemoryStateDB(&inputAlloc, block)
+	case "geth-memory", "memory":
+		statedb = state.MakeInMemoryStateDB(&inputAlloc, block)
 	default:
 		return fmt.Errorf("unsupported db type: %s", config.state_db_impl)
 	}
@@ -197,6 +197,10 @@ func replayTask(config ReplayConfig, block uint64, tx int, recording *substate.S
 		statedb.Finalise(true)
 	} else {
 		statedb.IntermediateRoot(chainConfig.IsEIP158(blockCtx.BlockNumber))
+	}
+
+	if err := statedb.Error(); err != nil {
+		return err
 	}
 
 	evmResult := &substate.SubstateResult{}

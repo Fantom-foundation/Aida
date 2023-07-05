@@ -99,15 +99,15 @@ func NewOffTheChainStateDB() *state.StateDB {
 }
 
 type code_key struct {
-	addr   common.Address
-	length int
+	addr common.Address
+	code string
 }
 
 var code_hashes_lock = sync.Mutex{}
 var code_hashes = map[code_key]common.Hash{}
 
 func getHash(addr common.Address, code []byte) common.Hash {
-	key := code_key{addr, len(code)}
+	key := code_key{addr, string(code)}
 	code_hashes_lock.Lock()
 	res, exists := code_hashes[key]
 	code_hashes_lock.Unlock()
