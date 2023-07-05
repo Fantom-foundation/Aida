@@ -16,10 +16,6 @@ func MakeEmptyGethInMemoryStateDB(variant string) (StateDB, error) {
 	return MakeInMemoryStateDB(&substate.SubstateAlloc{}, 0), nil
 }
 
-func MakeGethInMemoryStateDB(substate *substate.SubstateAlloc, block uint64) StateDB {
-	return MakeInMemoryStateDB(substate, block)
-}
-
 // MakeInMemoryStateDB creates a StateDB instance reflecting the state
 // captured by the provided Substate allocation.
 func MakeInMemoryStateDB(alloc *substate.SubstateAlloc, block uint64) StateDB {
@@ -423,16 +419,6 @@ func (db *inMemoryStateDB) GetSubstatePostAlloc() substate.SubstateAlloc {
 	}
 
 	return res
-}
-
-func isPrecompiledContract(addr common.Address) bool {
-	// Precompiled contract addresses are all-zero addresses with a
-	// final byte > 0 and < 10.
-	if addr[19] == 0 || addr[19] > 10 {
-		return false
-	}
-	addr[19] = 0
-	return addr == common.Address{}
 }
 
 func (db *inMemoryStateDB) BeginTransaction(number uint32) {

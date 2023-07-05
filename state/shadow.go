@@ -42,8 +42,7 @@ func (s *shadowStateDB) CreateAccount(addr common.Address) {
 }
 
 func (s *shadowStateDB) Exist(addr common.Address) bool {
-	return s.prime.Exist(addr)
-	//return s.getBool("Exist", func(s StateDB) bool { return s.Exist(addr) }, addr)
+	return s.getBool("Exist", func(s StateDB) bool { return s.Exist(addr) }, addr)
 }
 
 func (s *shadowStateDB) Empty(addr common.Address) bool {
@@ -99,7 +98,6 @@ func (s *shadowStateDB) GetCodeSize(addr common.Address) int {
 }
 
 func (s *shadowStateDB) GetCodeHash(addr common.Address) common.Hash {
-	s.getBool("GetCodeHash-Exist", func(s StateDB) bool { return s.Exist(addr) }, addr)
 	return s.getHash("GetCodeHash", func(s StateDB) common.Hash { return s.GetCodeHash(addr) }, addr)
 }
 
@@ -194,8 +192,24 @@ func (s *shadowStateDB) AddLog(log *types.Log) {
 }
 
 func (s *shadowStateDB) GetLogs(hash common.Hash, blockHash common.Hash) []*types.Log {
-	// TODO: check that prime and secondary produce the same log
-	return s.prime.GetLogs(hash, blockHash)
+	logsP := s.prime.GetLogs(hash, blockHash)
+	logsS := s.shadow.GetLogs(hash, blockHash)
+
+	equal := len(logsP) == len(logsS)
+	if equal {
+		for i, logP := range logsP {
+			logS := logsS[i]
+			if logP != logS {
+				equal = false
+				break
+			}
+		}
+	}
+	if !equal {
+		s.logIssue("GetLogs", logsP, logsS, hash, blockHash)
+		s.err = fmt.Errorf("%v diverged from shadow DB", getOpcodeString("GetLogs", hash, blockHash))
+	}
+	return logsP
 }
 
 func (s *shadowStateDB) Finalise(deleteEmptyObjects bool) {

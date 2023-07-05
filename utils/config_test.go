@@ -95,7 +95,7 @@ func TestUtilsConfig_SetBlockRangeLastSmallerThanFirst(t *testing.T) {
 func TestUtilsConfig_VmImplsAreRegistered(t *testing.T) {
 	checkedImpls := []string{"lfvm", "lfvm-si", "geth"}
 
-	statedb := state.MakeGethInMemoryStateDB(nil, 0)
+	statedb := state.MakeInMemoryStateDB(nil, 0)
 	defer func(statedb state.StateDB) {
 		err := statedb.Close()
 		if err != nil {
