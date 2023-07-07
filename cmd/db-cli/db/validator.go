@@ -120,16 +120,20 @@ func (v *validator) doIterate(prefix string) {
 	)
 
 	for iter.Next() {
+		copy(dst, iter.Key())
 		select {
 		case <-v.closed:
 			return
-		default:
-			copy(dst, iter.Key())
-			v.input <- dst
+		case v.input <- dst:
+			break
+		}
 
-			copy(dst, iter.Value())
-			v.input <- dst
-
+		copy(dst, iter.Value())
+		select {
+		case <-v.closed:
+			return
+		case v.input <- dst:
+			break
 		}
 	}
 
