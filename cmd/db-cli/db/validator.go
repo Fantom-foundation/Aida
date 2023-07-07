@@ -101,11 +101,6 @@ func (v *validator) iterate() {
 
 	now = time.Now()
 
-	v.log.Notice("Iterating over Stage 1 Code...")
-	v.doIterate(substate.Stage1CodePrefix)
-
-	v.log.Infof("Stage 1 Code took %v.", time.Since(now).Round(1*time.Second))
-
 	v.log.Noticef("Total time elapsed: %v", time.Since(v.start).Round(1*time.Second))
 
 	return
