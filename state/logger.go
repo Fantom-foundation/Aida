@@ -271,8 +271,10 @@ func (s *loggingStateDB) ForEachStorage(addr common.Address, op func(common.Hash
 }
 
 func (s *loggingStateDB) StartBulkLoad(block uint64) BulkLoad {
-	// no loggin in this case
-	return s.db.StartBulkLoad(block)
+	return &loggingBulkLoad{
+		nested: s.db.StartBulkLoad(block),
+		log:    s.log,
+	}
 }
 
 func (s *loggingStateDB) GetArchiveState(block uint64) (StateDB, error) {
@@ -290,4 +292,39 @@ func (s *loggingStateDB) GetMemoryUsage() *MemoryUsage {
 
 func (s *loggingStateDB) GetShadowDB() StateDB {
 	return s.db.GetShadowDB()
+}
+
+type loggingBulkLoad struct {
+	nested BulkLoad
+	log    *logging.Logger
+}
+
+func (l *loggingBulkLoad) CreateAccount(addr common.Address) {
+	l.nested.CreateAccount(addr)
+	l.log.Infof("Bulk, CreateAccount, %v", addr)
+}
+func (l *loggingBulkLoad) SetBalance(addr common.Address, balance *big.Int) {
+	l.nested.SetBalance(addr, balance)
+	l.log.Infof("Bulk, SetBalance, %v, %v", addr, balance)
+}
+
+func (l *loggingBulkLoad) SetNonce(addr common.Address, nonce uint64) {
+	l.nested.SetNonce(addr, nonce)
+	l.log.Infof("Bulk, SetNonce, %v, %v", addr, nonce)
+}
+
+func (l *loggingBulkLoad) SetState(addr common.Address, key common.Hash, value common.Hash) {
+	l.nested.SetState(addr, key, value)
+	l.log.Infof("Bulk, SetState, %v, %v, %v", addr, key, value)
+}
+
+func (l *loggingBulkLoad) SetCode(addr common.Address, code []byte) {
+	l.nested.SetCode(addr, code)
+	l.log.Infof("Bulk, SetCode, %v, %v", addr, code)
+}
+
+func (l *loggingBulkLoad) Close() error {
+	res := l.nested.Close()
+	l.log.Infof("Bulk, Close, %v", res)
+	return res
 }
