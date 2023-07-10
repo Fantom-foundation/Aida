@@ -497,15 +497,21 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 			log.Notice("Loading first block, last block and ChainID from AidaDb...")
 			aidaDb, err := rawdb.NewLevelDBDatabase(ctx.String(AidaDbFlag.Name), 1024, 100, "profiling", true)
 			if err != nil {
-				return nil, fmt.Errorf("you either need to specify block range using arguments <first> <last>, or path to existing AidaDb (--%v)", AidaDbFlag.Name)
+				if errors.Is(err, os.ErrNotExist) {
+					return nil, fmt.Errorf("you either need to specify block range using arguments <first> <last>, or path to existing AidaDb (--%v) with block range in metadata", AidaDbFlag.Name)
+				}
+				return nil, fmt.Errorf("cannot open aida-db; %v", err)
 			}
 
 			md := NewAidaDbMetadata(aidaDb, ctx.String(logger.LogLevelFlag.Name))
 			first = md.GetFirstBlock()
 			last = md.GetLastBlock()
 
-			if first == 0 || last == 0 {
-				return nil, errors.New("your AidaDb does not have metadata")
+			if first == 0 {
+				return nil, errors.New("your AidaDb does not have metadata with first block")
+			}
+			if last == 0 {
+				return nil, errors.New("your AidaDb does not have metadata with last block")
 			}
 
 		} else if ctx.Args().Len() == 2 {
