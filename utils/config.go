@@ -517,9 +517,21 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 			}
 		}
 
+		if first == 0 {
+			return nil, fmt.Errorf("did not find first block range in AidaDb (%v)", ctx.String(AidaDbFlag.Name))
+		}
+
+		if last == 0 {
+			return nil, fmt.Errorf("did not find last block in AidaDb (%v)", ctx.String(AidaDbFlag.Name))
+		}
+
+		log.Noticef("Found first block (%v) and last block in AidaDb (%v)", first, last)
+
 		if chainId == 0 {
 			log.Warningf("ChainID was neither specified with flag (--%v) nor was found in AidaDb (%v); setting default value for mainnet", ChainIDFlag.Name, ctx.String(AidaDbFlag.Name))
 			chainId = 250
+		} else {
+			log.Noticef("Found chainId (%v) in AidaDb", chainId)
 		}
 
 	} else {
