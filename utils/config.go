@@ -9,9 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Fantom-foundation/Aida/cmd/db-cli/flags"
 	"github.com/Fantom-foundation/Aida/logger"
-	substate "github.com/Fantom-foundation/Substate"
 	_ "github.com/Fantom-foundation/Tosca/go/vm"
 	"github.com/c2h5oh/datasize"
 	_ "github.com/ethereum/go-ethereum/core/vm"
@@ -65,7 +63,7 @@ var (
 		Name:  "archive-variant",
 		Usage: "set the archive implementation variant for the selected DB implementation, ignored if not running in archive mode",
 	}
-	BlockLengthFlag = cli.IntFlag{
+	BlockLengthFlag = cli.Uint64Flag{
 		Name:  "block-length",
 		Usage: "defines the number of transactions per block",
 		Value: 10,
@@ -114,7 +112,7 @@ var (
 		Name:  "memory-profile",
 		Usage: "enables memory allocation profiling",
 	}
-	SyncPeriodLengthFlag = cli.IntFlag{
+	SyncPeriodLengthFlag = cli.Uint64Flag{
 		Name:  "sync-period",
 		Usage: "defines the number of blocks per sync-period",
 		Value: 300,
@@ -154,7 +152,7 @@ var (
 		Usage: "set number of accounts written to stateDB before applying pending state updates",
 		Value: 0,
 	}
-	RandomSeedFlag = cli.IntFlag{
+	RandomSeedFlag = cli.Int64Flag{
 		Name:  "random-seed",
 		Usage: "Set random seed",
 		Value: -1,
@@ -276,17 +274,17 @@ var (
 		Usage: "Batch size for the execution stage",
 		Value: "512M",
 	}
-	ContractNumberFlag = cli.IntFlag{
+	ContractNumberFlag = cli.Int64Flag{
 		Name:  "num-contracts",
 		Usage: "Number of contracts to create",
 		Value: 1_000,
 	}
-	KeysNumberFlag = cli.IntFlag{
+	KeysNumberFlag = cli.Int64Flag{
 		Name:  "num-keys",
 		Usage: "Number of keys to generate",
 		Value: 1_000,
 	}
-	ValuesNumberFlag = cli.IntFlag{
+	ValuesNumberFlag = cli.Int64Flag{
 		Name:  "num-values",
 		Usage: "Number of values to generate",
 		Value: 1_000,
@@ -516,95 +514,21 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		return nil, fmt.Errorf("Unknown mode. Unable to process commandline arguments.")
 	}
 
+	cfg := createConfig(ctx)
+	cfg.Events = events
+	cfg.First = first
+	cfg.Last = last
+
 	// --continue-on-failure implicitly enables transaction state validation
 	validateTxState := ctx.Bool(ValidateFlag.Name) ||
 		ctx.Bool(ValidateTxStateFlag.Name) ||
 		ctx.Bool(ContinueOnFailureFlag.Name)
+	cfg.ValidateTxState = validateTxState
+
 	validateWorldState := ctx.Bool(ValidateFlag.Name) ||
 		ctx.Bool(ValidateWorldStateFlag.Name)
+	cfg.ValidateWorldState = validateWorldState
 
-	cfg := &Config{
-		AppName:     ctx.App.HelpName,
-		CommandName: ctx.Command.Name,
-
-		APIRecordingSrcFile: ctx.Path(APIRecordingSrcFileFlag.Name),
-		ArchiveMode:         ctx.Bool(ArchiveModeFlag.Name),
-		ArchiveVariant:      ctx.String(ArchiveVariantFlag.Name),
-		BlockLength:         ctx.Uint64(BlockLengthFlag.Name),
-		BalanceRange:        ctx.Int64(BalanceRangeFlag.Name),
-		CarmenSchema:        ctx.Int(CarmenSchemaFlag.Name),
-		ChainID:             ctx.Int(ChainIDFlag.Name),
-		Cache:               ctx.Int(CacheFlag.Name),
-		CompactDb:           ctx.Bool(CompactDbFlag.Name),
-		ContractNumber:      ctx.Int64(ContractNumberFlag.Name),
-		ContinueOnFailure:   ctx.Bool(ContinueOnFailureFlag.Name),
-		CopySrcDb:           false,
-		CPUProfile:          ctx.String(CpuProfileFlag.Name),
-		Db:                  ctx.Path(DbFlag.Name),
-		DbTmp:               ctx.Path(DbTmpFlag.Name),
-		Debug:               ctx.Bool(TraceDebugFlag.Name),
-		DebugFrom:           ctx.Uint64(DebugFromFlag.Name),
-		Quiet:               ctx.Bool(QuietFlag.Name),
-		SyncPeriodLength:    ctx.Uint64(SyncPeriodLengthFlag.Name),
-		Events:              events,
-		First:               first,
-		Genesis:             ctx.Path(GenesisFlag.Name),
-		DbImpl:              ctx.String(StateDbImplementationFlag.Name),
-		DbVariant:           ctx.String(StateDbVariantFlag.Name),
-		DbLogging:           ctx.Bool(StateDbLoggingFlag.Name),
-		DeletionDb:          ctx.Path(DeletionDbFlag.Name),
-		DeleteSourceDbs:     ctx.Bool(DeleteSourceDbsFlag.Name),
-		HasDeletedAccounts:  true,
-		KeepDb:              ctx.Bool(KeepDbFlag.Name),
-		KeysNumber:          ctx.Int64(KeysNumberFlag.Name),
-		Last:                last,
-		MaxNumTransactions:  ctx.Int(MaxNumTransactionsFlag.Name),
-		MemoryBreakdown:     ctx.Bool(MemoryBreakdownFlag.Name),
-		MemoryProfile:       ctx.String(MemoryProfileFlag.Name),
-		NonceRange:          ctx.Int(NonceRangeFlag.Name),
-		TransactionLength:   ctx.Uint64(TransactionLengthFlag.Name),
-		PrimeRandom:         ctx.Bool(RandomizePrimingFlag.Name),
-		RandomSeed:          ctx.Int64(RandomSeedFlag.Name),
-		PrimeThreshold:      ctx.Int(PrimeThresholdFlag.Name),
-		Profile:             ctx.Bool(ProfileFlag.Name),
-		ProfileFile:         ctx.String(ProfileFileFlag.Name),
-		ProfileInterval:     ctx.Uint64(ProfileIntervalFlag.Name),
-		SkipPriming:         ctx.Bool(SkipPrimingFlag.Name),
-		SkipMetadata:        ctx.Bool(flags.SkipMetadata.Name),
-		ShadowDb:            ctx.Bool(ShadowDb.Name),
-		ShadowImpl:          ctx.String(ShadowDbImplementationFlag.Name),
-		ShadowVariant:       ctx.String(ShadowDbVariantFlag.Name),
-		SnapshotDepth:       ctx.Int(SnapshotDepthFlag.Name),
-		StateDbSrc:          ctx.Path(StateDbSrcFlag.Name),
-		AidaDb:              ctx.Path(AidaDbFlag.Name),
-		Output:              ctx.Path(OutputFlag.Name),
-		StateValidationMode: EqualityCheck,
-		UpdateDb:            ctx.Path(UpdateDbFlag.Name),
-		SubstateDb:          ctx.Path(substate.SubstateDbFlag.Name),
-		OperaDatadir:        ctx.Path(OperaDatadirFlag.Name),
-		ValuesNumber:        ctx.Int64(ValuesNumberFlag.Name),
-		Validate:            ctx.Bool(ValidateFlag.Name),
-		ValidateTxState:     validateTxState,
-		ValidateWorldState:  validateWorldState,
-		VmImpl:              ctx.String(VmImplementation.Name),
-		Workers:             ctx.Int(substate.WorkersFlag.Name),
-		WorldStateDb:        ctx.Path(WorldStateFlag.Name),
-		TraceFile:           ctx.Path(TraceFileFlag.Name),
-		Trace:               ctx.Bool(TraceFlag.Name),
-		LogLevel:            ctx.String(logger.LogLevelFlag.Name),
-		SourceTableName:     ctx.String(SourceTableNameFlag.Name),
-		TargetDb:            ctx.Path(TargetDbFlag.Name),
-		TrieRootHash:        ctx.String(TrieRootHashFlag.Name),
-		IncludeStorage:      ctx.Bool(IncludeStorageFlag.Name),
-		ProfileEVMCall:      ctx.Bool(ProfileEVMCallFlag.Name),
-		MicroProfiling:      ctx.Bool(MicroProfilingFlag.Name),
-		BasicBlockProfiling: ctx.Bool(BasicBlockProfilingFlag.Name),
-		OnlySuccessful:      ctx.Bool(OnlySuccessfulFlag.Name),
-		ProfilingDbName:     ctx.String(ProfilingDbNameFlag.Name),
-		ChannelBufferSize:   ctx.Int(ChannelBufferSizeFlag.Name),
-		TargetBlock:         ctx.Uint64(TargetBlockFlag.Name),
-		UpdateBufferSize:    ctx.Uint64(UpdateBufferSizeFlag.Name) * 1_000_000, // convert from MB to B
-	}
 	if cfg.ChainID == 0 {
 		log.Warning("--chainid was not set; setting default value for mainnet (250)")
 		cfg.ChainID = 250
