@@ -145,6 +145,7 @@ func (v *validator) doIterate(prefix string) {
 	return
 }
 
+// stop sends stopping signal by closing the closed chanel
 func (v *validator) stop() {
 	select {
 	case <-v.closed:
@@ -154,6 +155,7 @@ func (v *validator) stop() {
 	}
 }
 
+// calculate receives data from input chanel and calculates hash for each key and value
 func (v *validator) calculate() {
 	var (
 		in         []byte
