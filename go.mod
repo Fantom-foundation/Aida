@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/Fantom-foundation/Carmen/go v0.0.0-00010101000000-000000000000
-	github.com/Fantom-foundation/Substate v0.0.0-20230626111329-cea6a1bc4f15
+	github.com/Fantom-foundation/Substate v0.0.0-20230706061427-c6c0c25f5307
 	github.com/Fantom-foundation/Tosca v0.0.0-20230527064715-aa1fc97baebe
 	github.com/Fantom-foundation/go-opera v1.1.1-rc.2
 	github.com/Fantom-foundation/go-opera-erigon v0.0.0-00010101000000-000000000000
@@ -125,8 +125,8 @@ require (
 	go.uber.org/atomic v1.10.0 // indirect
 	golang.org/x/crypto v0.1.0 // indirect
 	golang.org/x/exp v0.0.0-20230321023759-10a507213a29 // indirect
-	golang.org/x/image v0.0.0-20200927104501-e162460cd6b5 // indirect
-	golang.org/x/net v0.6.0 // indirect
+	golang.org/x/image v0.5.0 // indirect
+	golang.org/x/net v0.7.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/sys v0.5.0 // indirect
 	golang.org/x/time v0.0.0-20220922220347-f3bd1da661af // indirect

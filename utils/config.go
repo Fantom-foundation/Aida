@@ -10,9 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Fantom-foundation/Aida/cmd/db-cli/flags"
 	"github.com/Fantom-foundation/Aida/logger"
-	substate "github.com/Fantom-foundation/Substate"
 	_ "github.com/Fantom-foundation/Tosca/go/vm"
 	"github.com/c2h5oh/datasize"
 	"github.com/ethereum/go-ethereum/core/rawdb"
@@ -49,6 +47,20 @@ const (
 	EqualityCheck                       // confirms whether a substate and StateDB are identical.
 )
 
+var hardForksMainnet = map[string]uint64{
+	"zero":   0,
+	"opera":  4_564_026,
+	"berlin": 37_455_223,
+	"london": 37_534_833,
+}
+
+var hardForksTestnet = map[string]uint64{
+	"zero":   0,
+	"opera":  479_327,
+	"berlin": 1_559_470,
+	"london": 7_513_335,
+}
+
 // GitCommit represents the GitHub commit hash the app was built from.
 var GitCommit = "0000000000000000000000000000000000000000"
 
@@ -67,7 +79,7 @@ var (
 		Name:  "archive-variant",
 		Usage: "set the archive implementation variant for the selected DB implementation, ignored if not running in archive mode",
 	}
-	BlockLengthFlag = cli.IntFlag{
+	BlockLengthFlag = cli.Uint64Flag{
 		Name:  "block-length",
 		Usage: "defines the number of transactions per block",
 		Value: 10,
@@ -116,7 +128,7 @@ var (
 		Name:  "memory-profile",
 		Usage: "enables memory allocation profiling",
 	}
-	SyncPeriodLengthFlag = cli.IntFlag{
+	SyncPeriodLengthFlag = cli.Uint64Flag{
 		Name:  "sync-period",
 		Usage: "defines the number of blocks per sync-period",
 		Value: 300,
@@ -156,7 +168,7 @@ var (
 		Usage: "set number of accounts written to stateDB before applying pending state updates",
 		Value: 0,
 	}
-	RandomSeedFlag = cli.IntFlag{
+	RandomSeedFlag = cli.Int64Flag{
 		Name:  "random-seed",
 		Usage: "Set random seed",
 		Value: -1,
@@ -278,17 +290,17 @@ var (
 		Usage: "Batch size for the execution stage",
 		Value: "512M",
 	}
-	ContractNumberFlag = cli.IntFlag{
+	ContractNumberFlag = cli.Int64Flag{
 		Name:  "num-contracts",
 		Usage: "Number of contracts to create",
 		Value: 1_000,
 	}
-	KeysNumberFlag = cli.IntFlag{
+	KeysNumberFlag = cli.Int64Flag{
 		Name:  "num-keys",
 		Usage: "Number of keys to generate",
 		Value: 1_000,
 	}
-	ValuesNumberFlag = cli.IntFlag{
+	ValuesNumberFlag = cli.Int64Flag{
 		Name:  "num-values",
 		Usage: "Number of values to generate",
 		Value: 1_000,
@@ -460,12 +472,12 @@ func GetChainConfig(chainID int) *params.ChainConfig {
 	chainConfig.ChainID = big.NewInt(int64(chainID))
 	if chainID == 250 {
 		// mainnet chainID 250
-		chainConfig.BerlinBlock = new(big.Int).SetUint64(37455223)
-		chainConfig.LondonBlock = new(big.Int).SetUint64(37534833)
+		chainConfig.BerlinBlock = new(big.Int).SetUint64(hardForksMainnet["berlin"])
+		chainConfig.LondonBlock = new(big.Int).SetUint64(hardForksMainnet["london"])
 	} else if chainID == 4002 {
 		// testnet chainID 4002
-		chainConfig.BerlinBlock = new(big.Int).SetUint64(1559470)
-		chainConfig.LondonBlock = new(big.Int).SetUint64(7513335)
+		chainConfig.BerlinBlock = new(big.Int).SetUint64(hardForksTestnet["berlin"])
+		chainConfig.LondonBlock = new(big.Int).SetUint64(hardForksTestnet["london"])
 	} else {
 		log.Fatalf("unknown chain id %v", chainID)
 	}
@@ -474,9 +486,9 @@ func GetChainConfig(chainID int) *params.ChainConfig {
 
 func setFirstBlockFromChainID(chainID int) {
 	if chainID == 250 {
-		FirstSubstateBlock = 4564026
+		FirstSubstateBlock = hardForksMainnet["opera"]
 	} else if chainID == 4002 {
-		FirstSubstateBlock = 479327
+		FirstSubstateBlock = hardForksTestnet["opera"]
 	} else {
 		log.Fatalf("unknown chain id %v", chainID)
 	}
@@ -520,7 +532,6 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 				return nil, argErr
 			}
 		}
-
 	case LastBlockArg:
 		last, argErr = strconv.ParseUint(ctx.Args().Get(0), 10, 64)
 		if argErr != nil {
@@ -536,98 +547,23 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		}
 	case NoArgs:
 	default:
-		return nil, errors.New("Unknown mode. Unable to process commandline arguments.")
+		return nil, errors.New("unknown mode; unable to process commandline arguments.")
 	}
+
+	cfg := createConfig(ctx)
+	cfg.Events = events
+	cfg.First = first
+	cfg.Last = last
 
 	// --continue-on-failure implicitly enables transaction state validation
 	validateTxState := ctx.Bool(ValidateFlag.Name) ||
 		ctx.Bool(ValidateTxStateFlag.Name) ||
 		ctx.Bool(ContinueOnFailureFlag.Name)
+	cfg.ValidateTxState = validateTxState
+
 	validateWorldState := ctx.Bool(ValidateFlag.Name) ||
 		ctx.Bool(ValidateWorldStateFlag.Name)
-
-	cfg := &Config{
-		AppName:     ctx.App.HelpName,
-		CommandName: ctx.Command.Name,
-
-		APIRecordingSrcFile: ctx.Path(APIRecordingSrcFileFlag.Name),
-		ArchiveMode:         ctx.Bool(ArchiveModeFlag.Name),
-		ArchiveVariant:      ctx.String(ArchiveVariantFlag.Name),
-		BlockLength:         ctx.Uint64(BlockLengthFlag.Name),
-		BalanceRange:        ctx.Int64(BalanceRangeFlag.Name),
-		CarmenSchema:        ctx.Int(CarmenSchemaFlag.Name),
-		ChainID:             ctx.Int(ChainIDFlag.Name),
-		Cache:               ctx.Int(CacheFlag.Name),
-		CompactDb:           ctx.Bool(CompactDbFlag.Name),
-		ContractNumber:      ctx.Int64(ContractNumberFlag.Name),
-		ContinueOnFailure:   ctx.Bool(ContinueOnFailureFlag.Name),
-		CopySrcDb:           false,
-		CPUProfile:          ctx.String(CpuProfileFlag.Name),
-		Db:                  ctx.Path(DbFlag.Name),
-		DbTmp:               ctx.Path(DbTmpFlag.Name),
-		Debug:               ctx.Bool(TraceDebugFlag.Name),
-		DebugFrom:           ctx.Uint64(DebugFromFlag.Name),
-		Quiet:               ctx.Bool(QuietFlag.Name),
-		SyncPeriodLength:    ctx.Uint64(SyncPeriodLengthFlag.Name),
-		Events:              events,
-		First:               first,
-		Genesis:             ctx.Path(GenesisFlag.Name),
-		DbImpl:              ctx.String(StateDbImplementationFlag.Name),
-		DbVariant:           ctx.String(StateDbVariantFlag.Name),
-		DbLogging:           ctx.Bool(StateDbLoggingFlag.Name),
-		DeletionDb:          ctx.Path(DeletionDbFlag.Name),
-		DeleteSourceDbs:     ctx.Bool(DeleteSourceDbsFlag.Name),
-		HasDeletedAccounts:  true,
-		KeepDb:              ctx.Bool(KeepDbFlag.Name),
-		KeysNumber:          ctx.Int64(KeysNumberFlag.Name),
-		Last:                last,
-		MaxNumTransactions:  ctx.Int(MaxNumTransactionsFlag.Name),
-		MemoryBreakdown:     ctx.Bool(MemoryBreakdownFlag.Name),
-		MemoryProfile:       ctx.String(MemoryProfileFlag.Name),
-		NonceRange:          ctx.Int(NonceRangeFlag.Name),
-		TransactionLength:   ctx.Uint64(TransactionLengthFlag.Name),
-		PrimeRandom:         ctx.Bool(RandomizePrimingFlag.Name),
-		RandomSeed:          ctx.Int64(RandomSeedFlag.Name),
-		PrimeThreshold:      ctx.Int(PrimeThresholdFlag.Name),
-		Profile:             ctx.Bool(ProfileFlag.Name),
-		ProfileFile:         ctx.String(ProfileFileFlag.Name),
-		ProfileInterval:     ctx.Uint64(ProfileIntervalFlag.Name),
-		SkipPriming:         ctx.Bool(SkipPrimingFlag.Name),
-		SkipMetadata:        ctx.Bool(flags.SkipMetadata.Name),
-		ShadowDb:            ctx.Bool(ShadowDb.Name),
-		ShadowImpl:          ctx.String(ShadowDbImplementationFlag.Name),
-		ShadowVariant:       ctx.String(ShadowDbVariantFlag.Name),
-		SnapshotDepth:       ctx.Int(SnapshotDepthFlag.Name),
-		StateDbSrc:          ctx.Path(StateDbSrcFlag.Name),
-		AidaDb:              ctx.Path(AidaDbFlag.Name),
-		Output:              ctx.Path(OutputFlag.Name),
-		StateValidationMode: EqualityCheck,
-		UpdateDb:            ctx.Path(UpdateDbFlag.Name),
-		SubstateDb:          ctx.Path(substate.SubstateDbFlag.Name),
-		OperaDatadir:        ctx.Path(OperaDatadirFlag.Name),
-		ValuesNumber:        ctx.Int64(ValuesNumberFlag.Name),
-		Validate:            ctx.Bool(ValidateFlag.Name),
-		ValidateTxState:     validateTxState,
-		ValidateWorldState:  validateWorldState,
-		VmImpl:              ctx.String(VmImplementation.Name),
-		Workers:             ctx.Int(substate.WorkersFlag.Name),
-		WorldStateDb:        ctx.Path(WorldStateFlag.Name),
-		TraceFile:           ctx.Path(TraceFileFlag.Name),
-		Trace:               ctx.Bool(TraceFlag.Name),
-		LogLevel:            ctx.String(logger.LogLevelFlag.Name),
-		SourceTableName:     ctx.String(SourceTableNameFlag.Name),
-		TargetDb:            ctx.Path(TargetDbFlag.Name),
-		TrieRootHash:        ctx.String(TrieRootHashFlag.Name),
-		IncludeStorage:      ctx.Bool(IncludeStorageFlag.Name),
-		ProfileEVMCall:      ctx.Bool(ProfileEVMCallFlag.Name),
-		MicroProfiling:      ctx.Bool(MicroProfilingFlag.Name),
-		BasicBlockProfiling: ctx.Bool(BasicBlockProfilingFlag.Name),
-		OnlySuccessful:      ctx.Bool(OnlySuccessfulFlag.Name),
-		ProfilingDbName:     ctx.String(ProfilingDbNameFlag.Name),
-		ChannelBufferSize:   ctx.Int(ChannelBufferSizeFlag.Name),
-		TargetBlock:         ctx.Uint64(TargetBlockFlag.Name),
-		UpdateBufferSize:    ctx.Uint64(UpdateBufferSizeFlag.Name) * 1_000_000, // convert from MB to B
-	}
+	cfg.ValidateWorldState = validateWorldState
 
 	if cfg.ChainID == 0 {
 
@@ -765,14 +701,41 @@ func setAidaDbRepositoryUrl(chainId int) error {
 }
 
 // SetBlockRange checks the validity of a block range and return the first and last block as numbers.
-func SetBlockRange(firstArg string, lastArg string) (uint64, uint64, error) {
+func SetBlockRange(firstArg string, lastArg string, chainId int) (uint64, uint64, error) {
 	var err error = nil
 	first, ferr := strconv.ParseUint(firstArg, 10, 64)
 	last, lerr := strconv.ParseUint(lastArg, 10, 64)
-	if ferr != nil || lerr != nil {
-		err = fmt.Errorf("error: block number not an integer")
-	} else if first > last {
+
+	if ferr != nil {
+		first, err = setBlockNumber(firstArg, chainId)
+	}
+
+	if lerr != nil {
+		last, err = setBlockNumber(lastArg, chainId)
+	}
+
+	if first > last {
 		err = fmt.Errorf("error: first block has larger number than last block")
 	}
+
 	return first, last, err
+}
+
+func setBlockNumber(arg string, chainId int) (uint64, error) {
+	var blkNum uint64
+	if chainId == 4002 {
+		if val, ok := hardForksTestnet[strings.ToLower(arg)]; ok {
+			blkNum = val
+		} else {
+			return 0, fmt.Errorf("error: block number not a valid keyword or integer")
+		}
+	} else if chainId == 250 || chainId == 0 {
+		if val, ok := hardForksMainnet[strings.ToLower(arg)]; ok {
+			blkNum = val
+		} else {
+			return 0, fmt.Errorf("error: block number not a valid keyword or integer")
+		}
+	}
+
+	return blkNum, nil
 }

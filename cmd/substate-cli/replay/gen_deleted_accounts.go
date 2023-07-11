@@ -130,7 +130,7 @@ func genDeletedAccountsTask(block uint64, tx int, recording *substate.Substate, 
 
 	ch := make(chan ContractLiveness, channelSize)
 	var statedb state.StateDB
-	statedb = state.MakeGethInMemoryStateDB(&inputAlloc, block)
+	statedb = state.MakeInMemoryStateDB(&inputAlloc, block)
 	//wrapper
 	statedb = NewProxyDeletion(statedb, ch)
 

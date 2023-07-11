@@ -344,7 +344,15 @@ func (r *ProxyRecorder) EndSyncPeriod() {
 }
 
 func (r *ProxyRecorder) GetArchiveState(block uint64) (state.StateDB, error) {
-	return r.db.GetArchiveState(block)
+	archive, err := r.db.GetArchiveState(block)
+	if err != nil {
+		return nil, err
+	}
+
+	return &ProxyRecorder{
+		db:  archive,
+		ctx: r.ctx,
+	}, nil
 }
 
 func (r *ProxyRecorder) Close() error {

@@ -70,9 +70,9 @@ func TestUtilsConfig_NewConfig(t *testing.T) {
 }
 
 func TestUtilsConfig_SetBlockRange(t *testing.T) {
-	first, last, err := SetBlockRange("0", "40000000")
+	first, last, err := SetBlockRange("0", "40000000", 0)
 	if err != nil {
-		t.Fatalf("Failed to set block range: %v", err)
+		t.Fatalf("Failed to set block range (0-40000000): %v", err)
 	}
 
 	if first != uint64(0) {
@@ -82,10 +82,48 @@ func TestUtilsConfig_SetBlockRange(t *testing.T) {
 	if last != uint64(40_000_000) {
 		t.Fatalf("Failed to parse last block; Should be: %d, but is: %d", 40_000_000, last)
 	}
+
+	first, last, err = SetBlockRange("OpeRa", "berlin", 250)
+	if err != nil {
+		t.Fatalf("Failed to set block range (opera-berlin on mainnet): %v", err)
+	}
+
+	if first != uint64(4_564_026) {
+		t.Fatalf("Failed to parse first block; Should be: %d, but is: %d", 4_564_026, first)
+	}
+
+	if last != uint64(37_455_223) {
+		t.Fatalf("Failed to parse last block; Should be: %d, but is: %d", 37_455_223, last)
+	}
+
+	first, last, err = SetBlockRange("zero", "London", 4002)
+	if err != nil {
+		t.Fatalf("Failed to set block range (zero-london on testnet): %v", err)
+	}
+
+	if first != uint64(0) {
+		t.Fatalf("Failed to parse first block; Should be: %d, but is: %d", 0, first)
+	}
+
+	if last != uint64(7_513_335) {
+		t.Fatalf("Failed to parse last block; Should be: %d, but is: %d", 7_513_335, last)
+	}
+}
+
+func TestUtilsConfig_SetInvalidBlockRange(t *testing.T) {
+	_, _, err := SetBlockRange("test", "40000000", 0)
+	if err == nil {
+		t.Fatalf("Failed to throw an error")
+	}
+
+	_, _, err = SetBlockRange("1000", "0", 4002)
+	if err == nil {
+		t.Fatalf("Failed to throw an error")
+	}
 }
 
 func TestUtilsConfig_SetBlockRangeLastSmallerThanFirst(t *testing.T) {
-	_, _, err := SetBlockRange("5", "0")
+	_, _, err := SetBlockRange("5", "0", 0)
 	if err == nil {
 		t.Fatalf("Failed to throw an error when last block number is smaller than first")
 	}
@@ -95,7 +133,7 @@ func TestUtilsConfig_SetBlockRangeLastSmallerThanFirst(t *testing.T) {
 func TestUtilsConfig_VmImplsAreRegistered(t *testing.T) {
 	checkedImpls := []string{"lfvm", "lfvm-si", "geth"}
 
-	statedb := state.MakeGethInMemoryStateDB(nil, 0)
+	statedb := state.MakeInMemoryStateDB(nil, 0)
 	defer func(statedb state.StateDB) {
 		err := statedb.Close()
 		if err != nil {
