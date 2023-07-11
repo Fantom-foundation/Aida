@@ -16,10 +16,6 @@ func MakeEmptyGethInMemoryStateDB(variant string) (StateDB, error) {
 	return MakeInMemoryStateDB(&substate.SubstateAlloc{}, 0), nil
 }
 
-func MakeGethInMemoryStateDB(substate *substate.SubstateAlloc, block uint64) StateDB {
-	return MakeInMemoryStateDB(substate, block)
-}
-
 // MakeInMemoryStateDB creates a StateDB instance reflecting the state
 // captured by the provided Substate allocation.
 func MakeInMemoryStateDB(alloc *substate.SubstateAlloc, block uint64) StateDB {
@@ -98,9 +94,6 @@ func (db *inMemoryStateDB) SubBalance(addr common.Address, value *big.Int) {
 }
 
 func (db *inMemoryStateDB) AddBalance(addr common.Address, value *big.Int) {
-	if value.Sign() == 0 {
-		return
-	}
 	db.state.touched[addr] = 0
 	db.state.balances[addr] = new(big.Int).Add(db.GetBalance(addr), value)
 }
@@ -139,6 +132,9 @@ func (db *inMemoryStateDB) SetNonce(addr common.Address, value uint64) {
 }
 
 func (db *inMemoryStateDB) GetCodeHash(addr common.Address) common.Hash {
+	if !db.Exist(addr) {
+		return common.Hash{}
+	}
 	return getHash(addr, db.GetCode(addr))
 }
 
@@ -224,20 +220,15 @@ func (db *inMemoryStateDB) Exist(addr common.Address) bool {
 	for state := db.state; state != nil; state = state.parent {
 		_, exists := state.touched[addr]
 		if exists {
-			//fmt.Printf("Exists called for %v - it exists: true\n", addr)
 			return true
 		}
 	}
 	_, exists := (*db.alloc)[addr]
-	//fmt.Printf("Exists called for %v - it exists: %t\n", addr, exists)
 	return exists
 }
 
 func (db *inMemoryStateDB) Empty(addr common.Address) bool {
-	//res := db.GetNonce(addr) == 0 && db.GetBalance(addr).Sign() == 0
-	//fmt.Printf("Is empty called for %v - result: %t\n", addr, res)
-	//return res
-	return db.GetNonce(addr) == 0 && db.GetBalance(addr).Sign() == 0
+	return db.GetNonce(addr) == 0 && db.GetBalance(addr).Sign() == 0 && db.GetCodeSize(addr) == 0
 }
 
 func (db *inMemoryStateDB) PrepareAccessList(sender common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
@@ -421,7 +412,7 @@ func (db *inMemoryStateDB) GetSubstatePostAlloc() substate.SubstateAlloc {
 	}
 
 	for key := range res {
-		if db.HasSuicided(key) {
+		if db.HasSuicided(key) || db.Empty(key) {
 			delete(res, key)
 			continue
 		}

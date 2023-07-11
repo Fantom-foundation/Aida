@@ -192,8 +192,24 @@ func (s *shadowStateDB) AddLog(log *types.Log) {
 }
 
 func (s *shadowStateDB) GetLogs(hash common.Hash, blockHash common.Hash) []*types.Log {
-	// ignored
-	return nil
+	logsP := s.prime.GetLogs(hash, blockHash)
+	logsS := s.shadow.GetLogs(hash, blockHash)
+
+	equal := len(logsP) == len(logsS)
+	if equal {
+		for i, logP := range logsP {
+			logS := logsS[i]
+			if logP != logS {
+				equal = false
+				break
+			}
+		}
+	}
+	if !equal {
+		s.logIssue("GetLogs", logsP, logsS, hash, blockHash)
+		s.err = fmt.Errorf("%v diverged from shadow DB", getOpcodeString("GetLogs", hash, blockHash))
+	}
+	return logsP
 }
 
 func (s *shadowStateDB) Finalise(deleteEmptyObjects bool) {

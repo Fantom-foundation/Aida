@@ -134,7 +134,7 @@ func TestValidateVMResult(t *testing.T) {
 func TestValidateVMAlloc(t *testing.T) {
 	expectedResult := newDummyAlloc(t)
 	vmResult := newDummyAlloc(t)
-	db := state.MakeGethInMemoryStateDB(&vmResult, uint64(1234567))
+	db := state.MakeInMemoryStateDB(&vmResult, uint64(1234567))
 
 	// test positive
 	if err := validateVMAlloc(db, expectedResult, SubsetCheck); err != nil {
@@ -147,7 +147,7 @@ func TestValidateVMAlloc(t *testing.T) {
 	// DB has one more contract than expected result
 	newAddress := common.HexToAddress("0x0000000000085a12481aEdb59eb3200332aCA000")
 	vmResult[newAddress] = substate.NewSubstateAccount(1, big.NewInt(1000000), []byte{})
-	db = state.MakeGethInMemoryStateDB(&vmResult, uint64(1234567))
+	db = state.MakeInMemoryStateDB(&vmResult, uint64(1234567))
 
 	// check whether expectedResult is contained.
 	if err := validateVMAlloc(db, expectedResult, SubsetCheck); err != nil {

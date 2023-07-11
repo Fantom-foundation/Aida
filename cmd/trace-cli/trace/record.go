@@ -111,7 +111,7 @@ func traceRecordAction(ctx *cli.Context) error {
 			operation.WriteOp(rCtx, operation.NewBeginBlock(tx.Block))
 		}
 		var statedb state.StateDB
-		statedb = state.MakeGethInMemoryStateDB(&tx.Substate.InputAlloc, tx.Block)
+		statedb = state.MakeInMemoryStateDB(&tx.Substate.InputAlloc, tx.Block)
 		statedb = tracer.NewProxyRecorder(statedb, rCtx)
 
 		if err := utils.ProcessTx(statedb, cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
