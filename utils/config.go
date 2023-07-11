@@ -507,6 +507,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 
 		log.Warningf("ChainID (--%v) was not set; looking for it in AidaDb", ChainIDFlag.Name)
 
+		// we check if AidaDb was set with err == nil
 		if aidaDb, err := rawdb.NewLevelDBDatabase(ctx.String(AidaDbFlag.Name), 1024, 100, "profiling", true); err == nil {
 			md := NewAidaDbMetadata(aidaDb, ctx.String(logger.LogLevelFlag.Name))
 
@@ -515,8 +516,6 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 			if err = aidaDb.Close(); err != nil {
 				return nil, fmt.Errorf("cannot close db; %v", err)
 			}
-		} else {
-			return nil, fmt.Errorf("cannot open AidaDb; %v", err)
 		}
 
 		if chainId == 0 {
