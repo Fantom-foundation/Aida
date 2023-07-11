@@ -515,17 +515,9 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 			if err = aidaDb.Close(); err != nil {
 				return nil, fmt.Errorf("cannot close db; %v", err)
 			}
+		} else {
+			return nil, fmt.Errorf("cannot open AidaDb; %v", err)
 		}
-
-		if first == 0 {
-			return nil, fmt.Errorf("did not find first block range in AidaDb (%v)", ctx.String(AidaDbFlag.Name))
-		}
-
-		if last == 0 {
-			return nil, fmt.Errorf("did not find last block in AidaDb (%v)", ctx.String(AidaDbFlag.Name))
-		}
-
-		log.Noticef("Found first block (%v) and last block in AidaDb (%v)", first, last)
 
 		if chainId == 0 {
 			log.Warningf("ChainID was neither specified with flag (--%v) nor was found in AidaDb (%v); setting default value for mainnet", ChainIDFlag.Name, ctx.String(AidaDbFlag.Name))
@@ -562,6 +554,8 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 			if last == 0 {
 				return nil, errors.New("your AidaDb does not have metadata with last block")
 			}
+
+			log.Noticef("Found first block (%v) and last block in AidaDb (%v)", first, last)
 
 		} else if ctx.Args().Len() == 2 {
 			first, last, argErr = SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1), chainId)
