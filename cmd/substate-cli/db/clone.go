@@ -38,7 +38,7 @@ func clone(ctx *cli.Context) error {
 
 	srcPath := ctx.Args().Get(0)
 	dstPath := ctx.Args().Get(1)
-	first, last, rerr := utils.SetBlockRange(ctx.Args().Get(2), ctx.Args().Get(3))
+	first, last, rerr := utils.SetBlockRange(ctx.Args().Get(2), ctx.Args().Get(3), ctx.Int(utils.ChainIDFlag.Name))
 	if rerr != nil {
 		return rerr
 	}
