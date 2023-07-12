@@ -3,6 +3,7 @@ package db
 import (
 	"crypto/md5"
 	"encoding/hex"
+	"fmt"
 	"sync"
 	"time"
 
@@ -13,8 +14,7 @@ import (
 	"github.com/op/go-logging"
 )
 
-const standardInputBufferSize = 1000
-const updateInputBufferSize = 50
+const standardInputBufferSize = 100
 
 // validator is used to iterate over all key/value pairs inside AidaDb and creating md5 hash
 type validator struct {
@@ -102,9 +102,6 @@ func (v *validator) iterate() {
 
 	now = time.Now()
 
-	// since update-set can be large we use smaller buffer-size
-	v.input = make(chan []byte, updateInputBufferSize)
-
 	v.log.Notice("Iterating over Update-Sets...")
 	v.doIterate(substate.UpdatesetPrefix)
 
@@ -175,12 +172,10 @@ func (v *validator) calculate() {
 	)
 
 	defer func() {
-		v.result <- h.Sum(nil)
 		v.wg.Done()
 	}()
 
 	for {
-
 		select {
 		case <-v.closed:
 			return
@@ -200,6 +195,7 @@ func (v *validator) calculate() {
 			written = 0
 
 			if err != nil {
+				fmt.Println("err")
 				v.log.Criticalf("cannot write hash; %v", err)
 				v.stop()
 				return
