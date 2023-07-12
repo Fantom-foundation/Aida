@@ -175,6 +175,7 @@ func (v *validator) calculate() {
 	)
 
 	defer func() {
+		v.result <- h.Sum(nil)
 		v.wg.Done()
 	}()
 
