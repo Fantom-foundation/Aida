@@ -46,7 +46,7 @@ Creates patch of aida-db for desired block range
 
 // CloneDb enables creation of aida-db read or subset
 var CloneDb = cli.Command{
-	Action:    cloneDb,
+	Action:    createDbClone,
 	Name:      "db",
 	Usage:     "clone db creates aida-db subset",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
@@ -81,6 +81,7 @@ type rawEntry struct {
 
 // clonePatch creates aida-db patch
 func clonePatch(ctx *cli.Context) error {
+	// TODO refactor
 	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
 	if err != nil {
 		return err
@@ -106,24 +107,19 @@ func clonePatch(ctx *cli.Context) error {
 		return fmt.Errorf("cannot open aida-db; %v", err)
 	}
 
-	err = CreateClonePatch(cfg, targetDb, firstEpoch, lastEpoch)
+	err = CreatePatchClone(cfg, targetDb, firstEpoch, lastEpoch)
 	if err != nil {
 		return err
 	}
 
 	MustCloseDB(targetDb)
 
-	err = ctx.Set(utils.AidaDbFlag.Name, cfg.TargetDb)
-	if err != nil {
-		return err
-	}
-
 	return printMetadata(cfg.TargetDb)
 
 }
 
-// CreateClonePatch creates aida-db patch
-func CreateClonePatch(cfg *utils.Config, targetDb ethdb.Database, firstEpoch uint64, lastEpoch uint64) error {
+// CreatePatchClone creates aida-db patch
+func CreatePatchClone(cfg *utils.Config, targetDb ethdb.Database, firstEpoch uint64, lastEpoch uint64) error {
 	err := clone(cfg, utils.PatchType)
 	if err != nil {
 		return err
@@ -142,8 +138,8 @@ func CreateClonePatch(cfg *utils.Config, targetDb ethdb.Database, firstEpoch uin
 	return nil
 }
 
-// cloneDb creates aida-db copy or subset
-func cloneDb(ctx *cli.Context) error {
+// createDbClone creates aida-db copy or subset
+func createDbClone(ctx *cli.Context) error {
 	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if err != nil {
 		return err
@@ -192,11 +188,13 @@ func clone(cfg *utils.Config, cloneType utils.AidaDbType) error {
 func (c *cloner) openDbs() error {
 	var err error
 
+	// if source db doesn't exist raise error
 	_, err = os.Stat(c.cfg.AidaDb)
 	if os.IsNotExist(err) {
 		return fmt.Errorf("specified aida-db %v is empty\n", c.cfg.AidaDb)
 	}
 
+	// if target db exists raise error
 	_, err = os.Stat(c.cfg.TargetDb)
 	if !os.IsNotExist(err) {
 		return fmt.Errorf("specified target-db %v already exists\n", c.cfg.TargetDb)
@@ -208,7 +206,7 @@ func (c *cloner) openDbs() error {
 		return fmt.Errorf("targetDb; %v", err)
 	}
 
-	// open cloneDb
+	// open createDbClone
 	c.cloneDb, err = rawdb.NewLevelDBDatabase(c.cfg.TargetDb, 1024, 100, "profiling", false)
 	if err != nil {
 		return fmt.Errorf("targetDb; %v", err)
@@ -217,23 +215,25 @@ func (c *cloner) openDbs() error {
 	return nil
 }
 
-// cloneDb AidaDb in given block range
+// createDbClone AidaDb in given block range
 func (c *cloner) clone() error {
 	go c.write()
 	go c.checkErrors()
 
 	c.read([]byte(substate.Stage1CodePrefix), 0, nil)
-	err := c.readDeletions()
-	if err != nil {
-		return err
-	}
 
+	// update c.cfg.First block before loading deletions and substates, because for utils.CloneType those are necessery to be from last updateset onward
 	lastUpdateBeforeRange := c.readUpdateSet()
 	if c.typ == utils.CloneType {
 		if lastUpdateBeforeRange < c.cfg.First {
 			c.log.Noticef("Last updateset found at block %v, changing first block to %v", lastUpdateBeforeRange, lastUpdateBeforeRange+1)
 			c.cfg.First = lastUpdateBeforeRange + 1
 		}
+	}
+
+	err := c.readDeletions()
+	if err != nil {
+		return err
 	}
 	err = c.readSubstate()
 	if err != nil {
@@ -282,7 +282,7 @@ func (c *cloner) checkErrors() {
 	}
 }
 
-// write data read from func read() into new cloneDb
+// write data read from func read() into new createDbClone
 func (c *cloner) write() {
 	var (
 		err         error
@@ -301,7 +301,7 @@ func (c *cloner) write() {
 				if batchWriter.ValueSize() > 0 {
 					err = batchWriter.Write()
 					if err != nil {
-						c.errCh <- fmt.Errorf("cannot read rest of the data into cloneDb; %v", err)
+						c.errCh <- fmt.Errorf("cannot read rest of the data into createDbClone; %v", err)
 						return
 					}
 				}
@@ -310,7 +310,7 @@ func (c *cloner) write() {
 
 			err = batchWriter.Put(data.Key, data.Value)
 			if err != nil {
-				c.errCh <- fmt.Errorf("cannot put data into cloneDb %v", err)
+				c.errCh <- fmt.Errorf("cannot put data into createDbClone %v", err)
 				return
 			}
 
@@ -441,7 +441,7 @@ func (c *cloner) readDeletions() error {
 		return false, nil
 	}
 
-	c.read([]byte(substate.Stage1SubstatePrefix), c.cfg.First, endCond)
+	c.read([]byte(substate.DestroyedAccountPrefix), c.cfg.First, endCond)
 
 	return nil
 }
