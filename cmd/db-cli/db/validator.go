@@ -14,7 +14,7 @@ import (
 	"github.com/op/go-logging"
 )
 
-const standardInputBufferSize = 100
+const standardInputBufferSize = 50
 
 // validator is used to iterate over all key/value pairs inside AidaDb and creating md5 hash
 type validator struct {
