@@ -3,7 +3,6 @@ package db
 import (
 	"crypto/md5"
 	"encoding/hex"
-	"fmt"
 	"sync"
 	"time"
 
@@ -188,7 +187,6 @@ func (v *validator) calculate() {
 			written = 0
 
 			if err != nil {
-				fmt.Println("err")
 				v.log.Criticalf("cannot write hash; %v", err)
 				v.stop()
 				return
