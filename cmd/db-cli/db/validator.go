@@ -100,13 +100,6 @@ func (v *validator) iterate() {
 
 	v.log.Infof("Destroyed Accounts took %v.", time.Since(now).Round(1*time.Second))
 
-	now = time.Now()
-
-	v.log.Notice("Iterating over Update-Sets...")
-	v.doIterate(substate.UpdatesetPrefix)
-
-	v.log.Infof("Update-Sets took %v.", time.Since(now).Round(1*time.Second))
-
 	v.log.Noticef("Total time elapsed: %v", time.Since(v.start).Round(1*time.Second))
 
 	return
