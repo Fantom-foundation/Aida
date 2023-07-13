@@ -162,7 +162,7 @@ func createDbClone(ctx *cli.Context) error {
 	return printMetadata(cfg.TargetDb)
 }
 
-func clone(cfg *utils.Config, cloneDb, aidaDb ethdb.Database, cloneType utils.AidaDbType) error {
+func clone(cfg *utils.Config, aidaDb, cloneDb ethdb.Database, cloneType utils.AidaDbType) error {
 	var err error
 	log := logger.NewLogger(cfg.LogLevel, "AidaDb Clone")
 
