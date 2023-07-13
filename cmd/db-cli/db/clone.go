@@ -102,7 +102,7 @@ func clonePatch(ctx *cli.Context) error {
 		return err
 	}
 
-	aidaDb, targetDb, err := openCloningDbs(cfg.AidaDb, cfg.AidaDb)
+	aidaDb, targetDb, err := openCloningDbs(cfg.AidaDb, cfg.TargetDb)
 	if err != nil {
 		return err
 	}
