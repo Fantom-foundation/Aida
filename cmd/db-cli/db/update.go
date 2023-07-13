@@ -18,6 +18,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/klauspost/compress/gzip"
@@ -119,7 +120,11 @@ func getTargetDbBlockRange(cfg *utils.Config) (uint64, uint64, error) {
 		}
 	} else {
 		// load last block from existing aida-db metadata
-		firstAidaDbBlock, lastAidaDbBlock, ok := utils.FindBlockRangeInSubstate(cfg.AidaDb)
+		substate.SetSubstateDb(cfg.AidaDb)
+		substate.OpenSubstateDBReadOnly()
+		defer substate.CloseSubstateDB()
+
+		firstAidaDbBlock, lastAidaDbBlock, ok := utils.FindBlockRangeInSubstate()
 		if !ok {
 			return 0, 0, fmt.Errorf("cannot find blocks in substate; is substate present in given db? %v", cfg.AidaDb)
 		}

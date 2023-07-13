@@ -56,6 +56,8 @@ func (opera *aidaOpera) init() error {
 		if err = opera.prepareDumpCliContext(); err != nil {
 			return fmt.Errorf("cannot prepare dump; %v", err)
 		}
+	} else {
+
 	}
 
 	// get first block and epoch
@@ -89,6 +91,19 @@ func (opera *aidaOpera) initFromGenesis() error {
 		return fmt.Errorf("load opera genesis; %v", err.Error())
 	}
 
+	return nil
+}
+
+// rollbackToEpoch file TODO should be part of future autogen recovery
+func (opera *aidaOpera) rollbackToEpoch() error {
+	//cmd := exec.Command("opera", "--datadir", opera.cfg.Db, "--genesis", opera.cfg.Genesis,
+	//	"--exitwhensynced.epoch=0", "--cache", strconv.Itoa(opera.cfg.Cache), "--db.preset=legacy-ldb", "--maxpeers=0", "db", "heal", "--experimental")
+	//
+	//err := runCommand(cmd, nil, opera.log)
+	//if err != nil {
+	//	return fmt.Errorf("load opera genesis; %v", err.Error())
+	//}
+	//
 	return nil
 }
 
@@ -151,21 +166,4 @@ func (opera *aidaOpera) prepareDumpCliContext() error {
 	ctx.Command = command
 
 	return state.DumpState(ctx)
-}
-
-// generateEvents from given event argument
-func (opera *aidaOpera) generateEvents(firstEpoch, lastEpoch uint64, aidaDbTmp string) error {
-	eventsFile := fmt.Sprintf("events-%v-%v", firstEpoch, lastEpoch)
-	opera.cfg.Events = filepath.Join(aidaDbTmp, eventsFile)
-
-	opera.log.Debugf("Generating events from %v to %v into %v", firstEpoch, lastEpoch, opera.cfg.Events)
-
-	cmd := exec.Command("opera", "--datadir", opera.cfg.OperaDatadir, "export", "events", opera.cfg.Events,
-		strconv.FormatUint(firstEpoch, 10), strconv.FormatUint(lastEpoch, 10))
-	err := runCommand(cmd, nil, opera.log)
-	if err != nil {
-		return fmt.Errorf("opera cannot doGenerations events; %v", err)
-	}
-
-	return nil
 }

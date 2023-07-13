@@ -81,7 +81,6 @@ type rawEntry struct {
 
 // clonePatch creates aida-db patch
 func clonePatch(ctx *cli.Context) error {
-	// TODO refactor
 	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
 	if err != nil {
 		return err
@@ -102,14 +101,32 @@ func clonePatch(ctx *cli.Context) error {
 		return err
 	}
 
-	err = clone(cfg, utils.PatchType)
+	targetDb, err := rawdb.NewLevelDBDatabase(cfg.TargetDb, 1024, 100, "profiling", false)
+	if err != nil {
+		return fmt.Errorf("cannot open aida-db; %v", err)
+	}
+
+	err = CreateClonePatch(cfg, targetDb, firstEpoch, lastEpoch)
 	if err != nil {
 		return err
 	}
 
-	targetDb, err := rawdb.NewLevelDBDatabase(cfg.TargetDb, 1024, 100, "profiling", false)
+	MustCloseDB(targetDb)
+
+	err = ctx.Set(utils.AidaDbFlag.Name, cfg.TargetDb)
 	if err != nil {
-		return fmt.Errorf("cannot open aida-db; %v", err)
+		return err
+	}
+
+	return printMetadata(cfg.TargetDb)
+
+}
+
+// CreateClonePatch creates aida-db patch
+func CreateClonePatch(cfg *utils.Config, targetDb ethdb.Database, firstEpoch uint64, lastEpoch uint64) error {
+	err := clone(cfg, utils.PatchType)
+	if err != nil {
+		return err
 	}
 
 	md := utils.NewAidaDbMetadata(targetDb, cfg.LogLevel)
@@ -122,13 +139,7 @@ func clonePatch(ctx *cli.Context) error {
 		return err
 	}
 
-	MustCloseDB(targetDb)
-
-	err = ctx.Set(utils.AidaDbFlag.Name, cfg.TargetDb)
-	if err != nil {
-		return err
-	}
-	return printMetadata(cfg.TargetDb)
+	return nil
 }
 
 // cloneDb creates aida-db copy or subset
@@ -212,7 +223,11 @@ func (c *cloner) clone() error {
 	go c.checkErrors()
 
 	c.read([]byte(substate.Stage1CodePrefix), 0, nil)
-	c.read([]byte(substate.DestroyedAccountPrefix), 0, nil)
+	err := c.readDeletions()
+	if err != nil {
+		return err
+	}
+
 	lastUpdateBeforeRange := c.readUpdateSet()
 	if c.typ == utils.CloneType {
 		if lastUpdateBeforeRange < c.cfg.First {
@@ -220,7 +235,7 @@ func (c *cloner) clone() error {
 			c.cfg.First = lastUpdateBeforeRange + 1
 		}
 	}
-	err := c.readSubstate()
+	err = c.readSubstate()
 	if err != nil {
 		return err
 	}
@@ -399,6 +414,24 @@ func (c *cloner) readUpdateSet() uint64 {
 func (c *cloner) readSubstate() error {
 	endCond := func(key []byte) (bool, error) {
 		block, _, err := substate.DecodeStage1SubstateKey(key)
+		if err != nil {
+			return false, err
+		}
+		if block > c.cfg.Last {
+			return true, nil
+		}
+		return false, nil
+	}
+
+	c.read([]byte(substate.Stage1SubstatePrefix), c.cfg.First, endCond)
+
+	return nil
+}
+
+// readDeletions from last updateSet before cfg.First until cfg.Last
+func (c *cloner) readDeletions() error {
+	endCond := func(key []byte) (bool, error) {
+		block, _, err := substate.DecodeDestroyedAccountKey(key)
 		if err != nil {
 			return false, err
 		}

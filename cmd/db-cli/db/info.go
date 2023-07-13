@@ -145,6 +145,10 @@ func printMetadata(pathToDb string) error {
 	firstBlock = md.GetFirstBlock()
 
 	if firstBlock == 0 && lastBlock == 0 {
+		substate.SetSubstateDb(pathToDb)
+		substate.OpenSubstateDBReadOnly()
+		defer substate.CloseSubstateDB()
+
 		firstBlock, lastBlock, ok = utils.FindBlockRangeInSubstate(pathToDb)
 		if !ok {
 			return errors.New("no substate found")

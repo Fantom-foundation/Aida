@@ -26,7 +26,6 @@ const (
 	BlockRangeArgs          ArgumentMode = iota // requires 2 arguments: first block and last block
 	BlockRangeArgsProfileDB                     // requires 3 arguments: first block, last block and profile db
 	LastBlockArg                                // requires 1 argument: last block
-	EventArg                                    // requires 1 argument: events path
 	NoArgs                                      // requires no arguments
 )
 
@@ -407,7 +406,6 @@ type Config struct {
 	Db                  string            // path to database
 	DbTmp               string            // path to temporary database
 	DbImpl              string            // storage implementation
-	Events              string            // events
 	Genesis             string            // genesis file
 	DbVariant           string            // database variant
 	DbLogging           bool              // set to true if all DB operations should be logged
@@ -503,9 +501,12 @@ func setFirstBlockFromChainID(chainID int) {
 func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "Config")
 
-	var first, last uint64
-	var events, profileDB string
-	var chainId int
+	var (
+		first, last uint64
+		profileDB string
+		chainId int
+	)
+
 
 	// first look for chainId since we need it for verbal block indication
 	if ctx.Int(ChainIDFlag.Name) == 0 {
@@ -585,21 +586,12 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		if argErr != nil {
 			return nil, argErr
 		}
-	case EventArg:
-		if ctx.Args().Len() != 1 {
-			return nil, fmt.Errorf("command requires events as argument")
-		}
-		events = ctx.Args().Get(0)
-		if argErr != nil {
-			return nil, argErr
-		}
 	case NoArgs:
 	default:
 		return nil, errors.New("unknown mode; unable to process commandline arguments.")
 	}
 
 	cfg := createConfig(ctx)
-	cfg.Events = events
 	cfg.First = first
 	cfg.Last = last
 	cfg.ProfileDB = profileDB
