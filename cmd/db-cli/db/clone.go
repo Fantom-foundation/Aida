@@ -102,16 +102,17 @@ func clonePatch(ctx *cli.Context) error {
 		return err
 	}
 
-	targetDb, err := rawdb.NewLevelDBDatabase(cfg.TargetDb, 1024, 100, "profiling", false)
-	if err != nil {
-		return fmt.Errorf("cannot open aida-db; %v", err)
-	}
-
-	err = CreatePatchClone(cfg, targetDb, firstEpoch, lastEpoch)
+	aidaDb, targetDb, err := openCloningDbs(cfg.AidaDb, cfg.AidaDb)
 	if err != nil {
 		return err
 	}
 
+	err = CreatePatchClone(cfg, aidaDb, targetDb, firstEpoch, lastEpoch)
+	if err != nil {
+		return err
+	}
+
+	MustCloseDB(aidaDb)
 	MustCloseDB(targetDb)
 
 	return printMetadata(cfg.TargetDb)
@@ -119,8 +120,8 @@ func clonePatch(ctx *cli.Context) error {
 }
 
 // CreatePatchClone creates aida-db patch
-func CreatePatchClone(cfg *utils.Config, targetDb ethdb.Database, firstEpoch uint64, lastEpoch uint64) error {
-	err := clone(cfg, utils.PatchType)
+func CreatePatchClone(cfg *utils.Config, aidaDb, targetDb ethdb.Database, firstEpoch uint64, lastEpoch uint64) error {
+	err := clone(cfg, aidaDb, targetDb, utils.PatchType)
 	if err != nil {
 		return err
 	}
@@ -145,24 +146,30 @@ func createDbClone(ctx *cli.Context) error {
 		return err
 	}
 
-	err = clone(cfg, utils.CloneType)
+	aidaDb, targetDb, err := openCloningDbs(cfg.AidaDb, cfg.TargetDb)
 	if err != nil {
 		return err
 	}
 
-	err = ctx.Set(utils.AidaDbFlag.Name, cfg.TargetDb)
+	err = clone(cfg, aidaDb, targetDb, utils.CloneType)
 	if err != nil {
 		return err
 	}
+
+	MustCloseDB(aidaDb)
+	MustCloseDB(targetDb)
+
 	return printMetadata(cfg.TargetDb)
 }
 
-func clone(cfg *utils.Config, cloneType utils.AidaDbType) error {
+func clone(cfg *utils.Config, cloneDb, aidaDb ethdb.Database, cloneType utils.AidaDbType) error {
 	var err error
 	log := logger.NewLogger(cfg.LogLevel, "AidaDb Clone")
 
 	c := cloner{
 		cfg:     cfg,
+		cloneDb: cloneDb,
+		aidaDb:  aidaDb,
 		log:     log,
 		typ:     cloneType,
 		writeCh: make(chan rawEntry, cloneWriteChanSize),
@@ -170,46 +177,8 @@ func clone(cfg *utils.Config, cloneType utils.AidaDbType) error {
 		closeCh: make(chan any),
 	}
 
-	if err = c.openDbs(); err != nil {
-		return err
-	}
-
 	if err = c.clone(); err != nil {
 		return err
-	}
-
-	MustCloseDB(c.aidaDb)
-	MustCloseDB(c.cloneDb)
-
-	return nil
-}
-
-// openDbs prepares aida and target databases
-func (c *cloner) openDbs() error {
-	var err error
-
-	// if source db doesn't exist raise error
-	_, err = os.Stat(c.cfg.AidaDb)
-	if os.IsNotExist(err) {
-		return fmt.Errorf("specified aida-db %v is empty\n", c.cfg.AidaDb)
-	}
-
-	// if target db exists raise error
-	_, err = os.Stat(c.cfg.TargetDb)
-	if !os.IsNotExist(err) {
-		return fmt.Errorf("specified target-db %v already exists\n", c.cfg.TargetDb)
-	}
-
-	// open db
-	c.aidaDb, err = rawdb.NewLevelDBDatabase(c.cfg.AidaDb, 1024, 100, "profiling", true)
-	if err != nil {
-		return fmt.Errorf("targetDb; %v", err)
-	}
-
-	// open createDbClone
-	c.cloneDb, err = rawdb.NewLevelDBDatabase(c.cfg.TargetDb, 1024, 100, "profiling", false)
-	if err != nil {
-		return fmt.Errorf("targetDb; %v", err)
 	}
 
 	return nil
@@ -477,4 +446,37 @@ func (c *cloner) stop() {
 		close(c.closeCh)
 		c.closeDbs()
 	}
+}
+
+// openCloningDbs prepares aida and target databases
+func openCloningDbs(aidaDbPath, targetDbPath string) (ethdb.Database, ethdb.Database, error) {
+	var err error
+
+	// if source db doesn't exist raise error
+	_, err = os.Stat(aidaDbPath)
+	if os.IsNotExist(err) {
+		return nil, nil, fmt.Errorf("specified aida-db %v is empty\n", aidaDbPath)
+	}
+
+	// if target db exists raise error
+	_, err = os.Stat(targetDbPath)
+	if !os.IsNotExist(err) {
+		return nil, nil, fmt.Errorf("specified target-db %v already exists\n", targetDbPath)
+	}
+
+	var aidaDb, cloneDb ethdb.Database
+
+	// open db
+	aidaDb, err = rawdb.NewLevelDBDatabase(aidaDbPath, 1024, 100, "profiling", true)
+	if err != nil {
+		return nil, nil, fmt.Errorf("aidaDb %v; %v", aidaDbPath, err)
+	}
+
+	// open createDbClone
+	cloneDb, err = rawdb.NewLevelDBDatabase(targetDbPath, 1024, 100, "profiling", false)
+	if err != nil {
+		return nil, nil, fmt.Errorf("targetDb %v; %v", targetDbPath, err)
+	}
+
+	return aidaDb, cloneDb, nil
 }

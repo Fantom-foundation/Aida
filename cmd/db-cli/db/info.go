@@ -149,7 +149,7 @@ func printMetadata(pathToDb string) error {
 		substate.OpenSubstateDBReadOnly()
 		defer substate.CloseSubstateDB()
 
-		firstBlock, lastBlock, ok = utils.FindBlockRangeInSubstate(pathToDb)
+		firstBlock, lastBlock, ok = utils.FindBlockRangeInSubstate()
 		if !ok {
 			return errors.New("no substate found")
 		}
@@ -161,7 +161,6 @@ func printMetadata(pathToDb string) error {
 	log.Infof("Chain-ID: %v", chainID)
 
 	// BLOCKS
-
 	log.Infof("First Block: %v", firstBlock)
 
 	log.Infof("Last Block: %v", lastBlock)

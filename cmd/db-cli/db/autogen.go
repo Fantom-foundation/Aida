@@ -41,6 +41,11 @@ func autogen(ctx *cli.Context) error {
 		return err
 	}
 
+	err = g.opera.init()
+	if err != nil {
+		return err
+	}
+
 	stopAtEpoch, err := g.calculatePatchEnd()
 	if err != nil {
 		return err

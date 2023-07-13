@@ -56,8 +56,6 @@ func (opera *aidaOpera) init() error {
 		if err = opera.prepareDumpCliContext(); err != nil {
 			return fmt.Errorf("cannot prepare dump; %v", err)
 		}
-	} else {
-
 	}
 
 	// get first block and epoch
@@ -127,7 +125,6 @@ func (opera *aidaOpera) getOperaBlockAndEpoch(isFirst bool) error {
 
 	// we are assuming that we are at brink of epochs
 	// in this special case epochNumber is already one number higher
-
 	epochNumber -= 1
 
 	// todo check ifNew then fb + 1
@@ -153,6 +150,7 @@ func (opera *aidaOpera) prepareDumpCliContext() error {
 	flagSet.String(utils.TrieRootHashFlag.Name, utils.TrieRootHashFlag.Value, "")
 	flagSet.Int(substate.WorkersFlag.Name, substate.WorkersFlag.Value, "")
 	flagSet.Uint64(utils.TargetBlockFlag.Name, utils.TargetBlockFlag.Value, "")
+	flagSet.String(utils.StateDbVariantFlag.Name, utils.StateDbVariantFlag.Value, "")
 	flagSet.Int(utils.ChainIDFlag.Name, opera.cfg.ChainID, "")
 	flagSet.String(logger.LogLevelFlag.Name, opera.cfg.LogLevel, "")
 
