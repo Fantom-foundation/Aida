@@ -1,9 +1,12 @@
 package db
 
 import (
+	"log"
+
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
+	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/urfave/cli/v2"
 )
 
@@ -53,6 +56,8 @@ func autogen(ctx *cli.Context) error {
 
 	g.log.Noticef("Starting substate generation %d - %d", g.opera.lastEpoch, stopAtEpoch)
 
+	MustCloseDB(g.aidaDb)
+
 	// stop opera to be able to export events
 	errCh := startOperaRecording(g.cfg, stopAtEpoch)
 
@@ -62,6 +67,12 @@ func autogen(ctx *cli.Context) error {
 		return err
 	}
 	g.log.Noticef("Successfully recorded opera: %v substates until: %d", g.cfg.Db, stopAtEpoch)
+
+	// reopen aida-db
+	g.aidaDb, err = rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
+	if err != nil {
+		log.Fatalf("cannot create new db; %v", err)
+	}
 
 	err = g.Generate()
 	if err != nil {

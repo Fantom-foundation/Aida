@@ -207,7 +207,7 @@ func startOperaRecording(cfg *utils.Config, syncUntilEpoch uint64) chan error {
 	go func() {
 		defer close(errChan)
 		// syncUntilEpoch +1 because command is off by one
-		cmd := exec.Command("opera", "--datadir", cfg.Db, "--recording", "--substate", cfg.SubstateDb, "--exitwhensynced.epoch", strconv.FormatUint(syncUntilEpoch+1, 10))
+		cmd := exec.Command("opera", "--datadir", cfg.Db, "--recording", "--substate-db", cfg.SubstateDb, "--exitwhensynced.epoch", strconv.FormatUint(syncUntilEpoch+1, 10))
 		err := runCommand(cmd, nil, log)
 		if err != nil {
 			errChan <- fmt.Errorf("unable record opera substates %v; %v", cfg.Db, err)

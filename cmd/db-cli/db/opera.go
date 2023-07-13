@@ -150,7 +150,6 @@ func (opera *aidaOpera) prepareDumpCliContext() error {
 	flagSet.String(utils.TrieRootHashFlag.Name, utils.TrieRootHashFlag.Value, "")
 	flagSet.Int(substate.WorkersFlag.Name, substate.WorkersFlag.Value, "")
 	flagSet.Uint64(utils.TargetBlockFlag.Name, utils.TargetBlockFlag.Value, "")
-	flagSet.String(utils.StateDbVariantFlag.Name, utils.StateDbVariantFlag.Value, "")
 	flagSet.Int(utils.ChainIDFlag.Name, opera.cfg.ChainID, "")
 	flagSet.String(logger.LogLevelFlag.Name, opera.cfg.LogLevel, "")
 
@@ -162,6 +161,7 @@ func (opera *aidaOpera) prepareDumpCliContext() error {
 	}
 	command := &cli.Command{Name: state.CmdDumpState.Name}
 	ctx.Command = command
+	ctx.Command.Flags = state.CmdDumpState.Flags
 
 	return state.DumpState(ctx)
 }

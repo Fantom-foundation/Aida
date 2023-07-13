@@ -500,6 +500,7 @@ func (g *generator) calculatePatchEnd() (uint64, error) {
 		return 0, err
 	}
 
+	// TODO lastEpoch is off one
 	stopAtEpoch := g.opera.lastEpoch
 
 	// next patch will be at least X epochs large
