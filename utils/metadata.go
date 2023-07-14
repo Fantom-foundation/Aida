@@ -34,6 +34,7 @@ const (
 	TypePrefix       = substate.MetadataPrefix + "ty"
 	ChainIDPrefix    = substate.MetadataPrefix + "ci"
 	TimestampPrefix  = substate.MetadataPrefix + "ti"
+	DbHashPrefix     = substate.MetadataPrefix + "md"
 )
 
 // merge is determined by what are we merging
@@ -114,7 +115,7 @@ func ProcessPatchLikeMetadata(aidaDb ethdb.Database, logLevel string, firstBlock
 
 // ProcessCloneLikeMetadata inserts every metadata from sourceDb, only epochs are excluded.
 // We can't be certain if given epoch is whole
-func ProcessCloneLikeMetadata(aidaDb ethdb.Database, typ AidaDbType, logLevel string, firstBlock, lastBlock uint64, chainID int) error {
+func ProcessCloneLikeMetadata(aidaDb ethdb.Database, typ AidaDbType, logLevel string, firstBlock, lastBlock uint64, chainID int, dbHash []byte) error {
 	var err error
 
 	md := NewAidaDbMetadata(aidaDb, logLevel)
@@ -149,6 +150,10 @@ func ProcessCloneLikeMetadata(aidaDb ethdb.Database, typ AidaDbType, logLevel st
 	}
 
 	if err = md.SetTimestamp(); err != nil {
+		return err
+	}
+
+	if err = md.SetDbHash(dbHash); err != nil {
 		return err
 	}
 
@@ -561,6 +566,31 @@ func (md *AidaDbMetadata) SetDbType(dbType AidaDbType) error {
 	md.log.Info("METADATA: DB Type saved successfully")
 
 	return nil
+}
+
+// SetDbHash in given Db
+func (md *AidaDbMetadata) SetDbHash(dbHash []byte) error {
+	if err := md.Db.Put([]byte(DbHashPrefix), dbHash); err != nil {
+		return fmt.Errorf("cannot put metadata; %v", err)
+	}
+
+	md.log.Info("METADATA: Db hash saved successfully")
+
+	return nil
+}
+
+// GetDbHash and return it
+func (md *AidaDbMetadata) GetDbHash() []byte {
+	dbHash, err := md.Db.Get([]byte(DbHashPrefix))
+	if err != nil {
+		if errors.Is(err, leveldb.ErrNotFound) {
+			return nil
+		}
+		md.log.Criticalf("cannot get Db hash from metadata; %v", err)
+		return nil
+	}
+
+	return dbHash
 }
 
 // SetAllMetadata in given Db

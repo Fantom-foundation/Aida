@@ -229,8 +229,18 @@ func (c *cloner) clone() error {
 
 	sourceMD := utils.NewAidaDbMetadata(c.aidaDb, c.cfg.LogLevel)
 	chainID := sourceMD.GetChainID()
+	dbHash := sourceMD.GetDbHash()
 
-	if err = utils.ProcessCloneLikeMetadata(c.cloneDb, c.typ, c.cfg.LogLevel, c.cfg.First, c.cfg.Last, chainID); err != nil {
+	// only generate dbHash when creating a patch and dbHash in SourceDb is not present, otherwise take the one in SourceDb
+	if c.typ == utils.PatchType && dbHash == nil {
+		// we put path to source db because we need dbHash of whole source db to be put into Patch
+		dbHash, err = validate(c.aidaDb, c.cfg.LogLevel)
+		if err != nil {
+			return fmt.Errorf("cannot validate; %v", err)
+		}
+	}
+
+	if err = utils.ProcessCloneLikeMetadata(c.cloneDb, c.typ, c.cfg.LogLevel, c.cfg.First, c.cfg.Last, chainID, dbHash); err != nil {
 		return err
 	}
 
