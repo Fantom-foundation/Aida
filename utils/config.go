@@ -377,6 +377,12 @@ var (
 		Usage:   "target block ID",
 		Value:   0,
 	}
+
+	SQLiteFileFlag = cli.PathFlag{
+		Name:  "sql-file",
+		Usage: "sets the file path for sqlite file for parallel execution experiment",
+		Value: "./build/sqlite.db",
+	}
 )
 
 // Config represents execution configuration for replay command.
@@ -463,6 +469,7 @@ type Config struct {
 	TargetBlock         uint64            // represents the ID of target block to be reached by state evolve process or in dump state
 	UpdateBufferSize    uint64            // cache size in Bytes
 	ErigonBatchSize     datasize.ByteSize // erigon batch size for runVM
+	SQLiteFile          string            // path for result of speedup experiment
 
 }
 
