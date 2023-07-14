@@ -469,7 +469,7 @@ type Config struct {
 	TargetBlock         uint64            // represents the ID of target block to be reached by state evolve process or in dump state
 	UpdateBufferSize    uint64            // cache size in Bytes
 	ErigonBatchSize     datasize.ByteSize // erigon batch size for runVM
-	SQLiteFile          string            // path for result of speedup experiment
+	SQLiteFile          string            // path for result of parallel execution experiment
 
 }
 
@@ -676,6 +676,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		}
 		log.Infof("\tValidate world state: %v, validate tx state: %v\n", cfg.ValidateWorldState, cfg.ValidateTxState)
 		log.Infof("\tErigon batch size: %v", cfg.ErigonBatchSize.HumanReadable())
+		log.Infof("\tSQLite File Path: %v", cfg.SQLiteFile)
 	}
 
 	if cfg.ValidateTxState {
