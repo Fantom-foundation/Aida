@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bufio"
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -38,6 +39,7 @@ var UpdateCommand = cli.Command{
 		&logger.LogLevelFlag,
 		&utils.CompactDbFlag,
 		&utils.DbTmpFlag,
+		&utils.ValidateFlag,
 	},
 	Description: ` 
 Updates aida-db by downloading patches from aida-db generation server.
@@ -154,16 +156,18 @@ func patchesDownloader(cfg *utils.Config, patches []string, firstBlock, lastBloc
 
 // mergePatch takes decompressed patches and merges them into aida-db
 func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan error, firstAidaDbBlock, lastAidaDbBlock uint64) error {
-	log := logger.NewLogger(cfg.LogLevel, "aida-merge-patch")
+	var (
+		targetMD    *utils.AidaDbMetadata
+		patchDbHash []byte
+		isNewDb     bool
+		log         = logger.NewLogger(cfg.LogLevel, "aida-merge-patch")
+	)
 
-	var isNewDb bool
 	if lastAidaDbBlock == 0 {
 		isNewDb = true
 	}
 
 	firstRun := true
-
-	var targetMD *utils.AidaDbMetadata
 
 	for {
 		select {
@@ -224,7 +228,11 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 					return fmt.Errorf("cannot open targetDb; %v", err)
 				}
 
-				err = targetMD.CheckUpdateMetadata(cfg, patchDb)
+				patchMD := utils.NewAidaDbMetadata(patchDb, cfg.LogLevel)
+
+				patchDbHash = patchMD.GetDbHash()
+
+				firstBlock, firstEpoch, err := targetMD.CheckUpdateMetadata(cfg, patchMD)
 				if err != nil {
 					return err
 				}
@@ -239,6 +247,23 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 				err = targetMD.SetAll()
 				if err != nil {
 					return err
+				}
+
+				if cfg.Validate {
+					if patchDbHash == nil {
+						log.Critical("DbHash inside Patch was not found, validation cannot be done")
+					} else {
+						targetDbHash, err := validate(targetMD.Db, cfg.LogLevel)
+						if err != nil {
+							return fmt.Errorf("cannot create patchDbHash of updated db; %v", err)
+						}
+
+						if cmp := bytes.Compare(patchDbHash, targetDbHash); cmp != 0 {
+							log.Criticalf("Db Hashes are not same! Patch: %v; AidaDb: %v", hex.EncodeToString(patchDbHash), hex.EncodeToString(targetDbHash))
+						} else {
+							log.Notice("Validation successful!")
+						}
+					}
 				}
 
 				m.closeSourceDbs()

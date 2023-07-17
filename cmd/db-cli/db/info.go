@@ -24,7 +24,7 @@ var InfoCommand = cli.Command{
 		&cmdMetadata,
 		&cmdDelAcc,
 		&cmdCount,
-		&cmdPrintMD5,
+		&cmdPrintDbHash,
 	},
 }
 
@@ -90,17 +90,22 @@ var cmdMetadata = cli.Command{
 	},
 }
 
-var cmdPrintMD5 = cli.Command{
-	Action: printMD5Sum,
-	Name:   "print-md5",
-	Usage:  "Creates md5 sum of all data (both key and value) inside AidaDb and prints it",
+var cmdPrintDbHash = cli.Command{
+	Action: printDbHash,
+	Name:   "print-db-hash",
+	Usage:  "Prints db-hash (md5) for all key/value data inside AidaDb. If this value is not present in metadata it iterates through all of data.",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 	},
 }
 
-func printMD5Sum(ctx *cli.Context) error {
-	if _, err := validate(ctx.String(utils.AidaDbFlag.Name), "INFO"); err != nil {
+func printDbHash(ctx *cli.Context) error {
+	aidaDb, err := rawdb.NewLevelDBDatabase(ctx.String(utils.AidaDbFlag.Name), 1024, 100, "profiling", true)
+	if err != nil {
+		return fmt.Errorf("cannot open db; %v", err)
+	}
+
+	if _, err = validate(aidaDb, "INFO"); err != nil {
 		return err
 	}
 
