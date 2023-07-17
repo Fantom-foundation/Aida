@@ -302,6 +302,14 @@ func ProcessMergeMetadata(cfg *Config, aidaDb ethdb.Database, sourceDbs []ethdb.
 		return nil, fmt.Errorf("cannot merge %v with %v", targetMD.getVerboseDbType(), md.getVerboseDbType())
 	}
 
+	// if source dbs had neither metadata nor substate, we try to find the block range inside substate of targetDb
+	if targetMD.FirstBlock == 0 && targetMD.LastBlock == 0 {
+		targetMD.FirstBlock, targetMD.LastBlock, ok = FindBlockRangeInSubstate(cfg.AidaDb)
+		if !ok {
+			targetMD.log.Warningf("cannot find block range in substate of AidaDb (%v); this will in corrupted metadata but will not affect data itself", cfg.AidaDb)
+		}
+	}
+
 	if err = targetMD.findEpochs(cfg.ChainID); err != nil {
 		return nil, err
 	}
