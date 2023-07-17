@@ -14,6 +14,9 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+// address of sfc contract in Hex
+const sfcAddrHex = "0xFC00FACE00000000000000000000000000000000"
+
 var LachesisUpdateCommand = cli.Command{
 	Action: lachesisUpdate,
 	Name:   "lachesis-update",
@@ -92,8 +95,7 @@ func lachesisUpdate(ctx *cli.Context) error {
 
 	lachesis.Merge(untrackedState)
 	log.Notice("Find accounts differences between lachesis's and opera's world state")
-	err = validateTransistion(lachesis, opera, log)
-	return err
+	return validateTransistion(lachesis, opera, log)
 }
 
 // loadOperaWorldState loads opera initial world state from worldstate-db as SubstateAlloc
@@ -123,7 +125,7 @@ func createLachesisWorldState(cfg *utils.Config) (substate.SubstateAlloc, error)
 
 // fixSfcContract reset lachesis's storage keys to zeros while keeping opera keys
 func fixSfcContract(lachesis substate.SubstateAlloc, transition *substate.Substate) error {
-	sfcAddr := common.HexToAddress("0xFC00FACE00000000000000000000000000000000")
+	sfcAddr := common.HexToAddress(sfcAddrHex)
 	lachesisSfc, hasLachesisSfc := lachesis[sfcAddr]
 	_, hasTransitionSfc := transition.OutputAlloc[sfcAddr]
 
