@@ -210,6 +210,7 @@ func (md *AidaDbMetadata) genMetadata(firstBlock uint64, lastBlock uint64, first
 func ProcessMergeMetadata(cfg *Config, aidaDb ethdb.Database, sourceDbs []ethdb.Database, paths []string) (*AidaDbMetadata, error) {
 	var (
 		err error
+		ok  bool
 	)
 
 	targetMD := NewAidaDbMetadata(aidaDb, cfg.LogLevel)
@@ -237,9 +238,9 @@ func ProcessMergeMetadata(cfg *Config, aidaDb ethdb.Database, sourceDbs []ethdb.
 				return nil, fmt.Errorf("cannot close db; %v", err)
 			}
 
-			md.FirstBlock, md.LastBlock, err = FindBlockRangeInSubstate(paths[i])
-			if err != nil {
-				return nil, fmt.Errorf("cannot find blocks in substate; %v", err)
+			md.FirstBlock, md.LastBlock, ok = FindBlockRangeInSubstate(paths[i])
+			if !ok {
+				md.log.Warningf("cannot find blocks in substate; is substate present in given db? %v", paths[i])
 			}
 
 			// reopen db
@@ -249,12 +250,15 @@ func ProcessMergeMetadata(cfg *Config, aidaDb ethdb.Database, sourceDbs []ethdb.
 			}
 		}
 
-		if md.FirstBlock < targetMD.FirstBlock || targetMD.FirstBlock == 0 {
-			targetMD.FirstBlock = md.FirstBlock
-		}
+		// only check blocks when merged db has metadata or substate
+		if ok {
+			if md.FirstBlock < targetMD.FirstBlock || targetMD.FirstBlock == 0 {
+				targetMD.FirstBlock = md.FirstBlock
+			}
 
-		if md.LastBlock > targetMD.LastBlock || targetMD.LastBlock == 0 {
-			targetMD.LastBlock = md.LastBlock
+			if md.LastBlock > targetMD.LastBlock || targetMD.LastBlock == 0 {
+				targetMD.LastBlock = md.LastBlock
+			}
 		}
 
 		// set first
@@ -862,25 +866,25 @@ func findEpochNumber(blockNumber uint64, testnet bool) (uint64, error) {
 }
 
 // FindBlockRangeInSubstate if AidaDb does not yet have metadata
-func FindBlockRangeInSubstate(pathToAidaDb string) (uint64, uint64, error) {
+func FindBlockRangeInSubstate(pathToAidaDb string) (uint64, uint64, bool) {
 	substate.SetSubstateDb(pathToAidaDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
 	firstSubstate := substate.GetFirstSubstate()
 	if firstSubstate == nil {
-		return 0, 0, errors.New("unable to Get first substate from AidaDb")
+		return 0, 0, false
 	}
 	firstBlock := firstSubstate.Env.Number
 
 	lastSubstate, err := substate.GetLastSubstate()
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, false
 	}
 	if lastSubstate == nil {
-		return 0, 0, errors.New("unable to Get last substate from AidaDb")
+		return 0, 0, false
 	}
 	lastBlock := lastSubstate.Env.Number
 
-	return firstBlock, lastBlock, nil
+	return firstBlock, lastBlock, true
 }

@@ -110,9 +110,9 @@ func getTargetDbBlockRange(cfg *utils.Config) (uint64, uint64, error) {
 		}
 	} else {
 		// load last block from existing aida-db metadata
-		firstAidaDbBlock, lastAidaDbBlock, err := utils.FindBlockRangeInSubstate(cfg.AidaDb)
-		if err != nil {
-			return 0, 0, fmt.Errorf("using corrupted aida-db database; %v", err)
+		firstAidaDbBlock, lastAidaDbBlock, ok := utils.FindBlockRangeInSubstate(cfg.AidaDb)
+		if !ok {
+			return 0, 0, fmt.Errorf("cannot find blocks in substate; is substate present in given db? %v", cfg.AidaDb)
 		}
 		return firstAidaDbBlock, lastAidaDbBlock, nil
 	}
