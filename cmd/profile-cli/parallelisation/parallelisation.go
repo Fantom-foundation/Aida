@@ -41,16 +41,13 @@ var ParallelisationCommand = cli.Command{
 		&utils.ChainIDFlag,
 		&utils.SyncPeriodLengthFlag,
 		&logger.LogLevelFlag,
-
-		// speed up experiment
-		&utils.SQLiteFileFlag,
 	},
 }
 
 // parallelisationAction produces parallelisation statistics for transactions.
 func parallelisationAction(ctx *cli.Context) error {
 	// process arguments
-	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
+	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgsProfileDB)
 	if argErr != nil {
 		return argErr
 	}
@@ -77,7 +74,7 @@ func parallelisationAction(ctx *cli.Context) error {
 
 	// init sqlite DB that stores parallelisation information
 	log.Notice("Open profile database.")
-	profileDB, err := parallelisation.NewProfileDB(cfg.SQLiteFile)
+	profileDB, err := parallelisation.NewProfileDB(cfg.ProfileDB)
 	if err != nil {
 		log.Fatalf("Unable to open out SQlite DB, err: %q", err)
 	}

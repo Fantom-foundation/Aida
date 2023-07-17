@@ -84,7 +84,6 @@ func createConfig(ctx *cli.Context) *Config {
 		ChannelBufferSize:   getFlagValue(ctx, ChannelBufferSizeFlag).(int),
 		TargetBlock:         getFlagValue(ctx, TargetBlockFlag).(uint64),
 		UpdateBufferSize:    getFlagValue(ctx, UpdateBufferSizeFlag).(uint64),
-		SQLiteFile:          getFlagValue(ctx, SQLiteFileFlag).(string),
 	}
 
 	return cfg

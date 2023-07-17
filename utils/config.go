@@ -23,10 +23,11 @@ type ArgumentMode int
 
 // An enums of argument modes used by trace subcommands
 const (
-	BlockRangeArgs ArgumentMode = iota // requires 2 arguments: first block and last block
-	LastBlockArg                       // requires 1 argument: last block
-	EventArg                           // requires 1 argument: events path
-	NoArgs                             // requires no arguments
+	BlockRangeArgs          ArgumentMode = iota // requires 2 arguments: first block and last block
+	BlockRangeArgsProfileDB                     // requires 3 arguments: first block, last block and profile db
+	LastBlockArg                                // requires 1 argument: last block
+	EventArg                                    // requires 1 argument: events path
+	NoArgs                                      // requires no arguments
 )
 
 const (
@@ -377,12 +378,6 @@ var (
 		Usage:   "target block ID",
 		Value:   0,
 	}
-
-	SQLiteFileFlag = cli.PathFlag{
-		Name:  "sql-file",
-		Usage: "sets the file path for sqlite file for parallel execution experiment",
-		Value: "./build/sqlite.db",
-	}
 )
 
 // Config represents execution configuration for replay command.
@@ -469,7 +464,7 @@ type Config struct {
 	TargetBlock         uint64            // represents the ID of target block to be reached by state evolve process or in dump state
 	UpdateBufferSize    uint64            // cache size in Bytes
 	ErigonBatchSize     datasize.ByteSize // erigon batch size for runVM
-	SQLiteFile          string            // path for result of parallel execution experiment
+	ProfileDB           string            // profile db for parallel transaction execution
 
 }
 
@@ -506,7 +501,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "Config")
 
 	var first, last uint64
-	var events string
+	var events, profileDB string
 	var chainId int
 
 	// first look for chainId since we need it for verbal block indication
@@ -569,6 +564,19 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 				return nil, argErr
 			}
 		}
+	case BlockRangeArgsProfileDB:
+		// process arguments and flags
+		if ctx.Args().Len() == 3 {
+			first, last, argErr = SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1), chainId)
+			if argErr != nil {
+				return nil, argErr
+			}
+			profileDB = ctx.Args().Get(2)
+		} else if ctx.Args().Len() == 2 {
+			return nil, fmt.Errorf("command requires profile db as argument")
+		} else {
+			return nil, fmt.Errorf("command requires 3 arguments")
+		}
 	case LastBlockArg:
 		last, argErr = strconv.ParseUint(ctx.Args().Get(0), 10, 64)
 		if argErr != nil {
@@ -591,6 +599,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	cfg.Events = events
 	cfg.First = first
 	cfg.Last = last
+	cfg.ProfileDB = profileDB
 	cfg.ChainID = chainId
 
 	// --continue-on-failure implicitly enables transaction state validation
@@ -676,7 +685,6 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		}
 		log.Infof("\tValidate world state: %v, validate tx state: %v\n", cfg.ValidateWorldState, cfg.ValidateTxState)
 		log.Infof("\tErigon batch size: %v", cfg.ErigonBatchSize.HumanReadable())
-		log.Infof("\tSQLite File Path: %v", cfg.SQLiteFile)
 	}
 
 	if cfg.ValidateTxState {
