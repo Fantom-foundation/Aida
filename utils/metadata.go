@@ -856,7 +856,7 @@ func findEpochNumber(blockNumber uint64, testnet bool) (uint64, error) {
 
 	resultMap, ok := m["result"].(map[string]interface{})
 	if !ok {
-		return 0, fmt.Errorf("unexpecetd answer: %v", m)
+		return 0, fmt.Errorf("unexpecetd answer: %v\nreq: %v", m, payload)
 	}
 
 	firstEpochHex, ok := resultMap["epoch"].(string)
