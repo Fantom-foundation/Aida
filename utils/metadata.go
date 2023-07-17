@@ -304,10 +304,22 @@ func ProcessMergeMetadata(cfg *Config, aidaDb ethdb.Database, sourceDbs []ethdb.
 
 	// if source dbs had neither metadata nor substate, we try to find the block range inside substate of targetDb
 	if targetMD.FirstBlock == 0 && targetMD.LastBlock == 0 {
+		// we must close db before accessing substate
+		if err = targetMD.Db.Close(); err != nil {
+			return nil, fmt.Errorf("cannot close targetDb; %v", err)
+		}
+
 		targetMD.FirstBlock, targetMD.LastBlock, ok = FindBlockRangeInSubstate(cfg.AidaDb)
 		if !ok {
 			targetMD.log.Warningf("cannot find block range in substate of AidaDb (%v); this will in corrupted metadata but will not affect data itself", cfg.AidaDb)
 		}
+
+		// re-open db
+		targetMD.Db, err = rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
+		if err != nil {
+			return nil, fmt.Errorf("cannot re-open targetDb; %v", err)
+		}
+
 	}
 
 	if err = targetMD.findEpochs(cfg.ChainID); err != nil {
