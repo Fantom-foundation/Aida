@@ -629,17 +629,20 @@ func (md *AidaDbMetadata) findEpochs(chainId int) error {
 		return err
 	}
 
-	// we need to check if block is really first block of an epoch
-	firstEpochMinus, err = findEpochNumber(md.FirstBlock-1, testnet)
-	if err != nil {
-		return err
-	}
+	// if first block is 0 we can be sure the block begins an epoch so no need to check that
+	if md.FirstBlock != 0 {
+		// we need to check if block is really first block of an epoch
+		firstEpochMinus, err = findEpochNumber(md.FirstBlock-1, testnet)
+		if err != nil {
+			return err
+		}
 
-	if firstEpochMinus >= md.FirstEpoch {
-		md.log.Warningf("first block of db is not beginning of an epoch; setting first epoch to 0")
-		md.FirstEpoch = 0
-	} else {
-		md.log.Noticef("Found first epoch #%v", md.FirstEpoch)
+		if firstEpochMinus >= md.FirstEpoch {
+			md.log.Warningf("first block of db is not beginning of an epoch; setting first epoch to 0")
+			md.FirstEpoch = 0
+		} else {
+			md.log.Noticef("Found first epoch #%v", md.FirstEpoch)
+		}
 	}
 
 	md.LastEpoch, err = findEpochNumber(md.LastBlock, testnet)
