@@ -1,14 +1,12 @@
 package parallelisation
 
 import (
-	"time"
 	"errors"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/profile/graphutil"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
-
-
 )
 
 // AddressSet is a set of contract/wallet addresses

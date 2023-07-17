@@ -416,7 +416,6 @@ func TestGetProfileDataWith2Transactions(t *testing.T) {
 		t.Errorf("Error does not match expected one")
 	}
 
-
 	ctx.tOverheads = 0
 	ctx.tSequential = 200
 	_, err = ctx.GetProfileData(0, time.Duration(100))
