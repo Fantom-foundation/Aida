@@ -132,7 +132,7 @@ func ProcessCloneLikeMetadata(aidaDb ethdb.Database, typ AidaDbType, logLevel st
 		return err
 	}
 
-	if err = md.findEpochs(); err != nil {
+	if err = md.findEpochs(chainID); err != nil {
 		return err
 	}
 
@@ -302,7 +302,7 @@ func ProcessMergeMetadata(cfg *Config, aidaDb ethdb.Database, sourceDbs []ethdb.
 		return nil, fmt.Errorf("cannot merge %v with %v", targetMD.getVerboseDbType(), md.getVerboseDbType())
 	}
 
-	if err = targetMD.findEpochs(); err != nil {
+	if err = targetMD.findEpochs(cfg.ChainID); err != nil {
 		return nil, err
 	}
 
@@ -602,19 +602,26 @@ func (md *AidaDbMetadata) SetAllMetadata(firstBlock uint64, lastBlock uint64, fi
 }
 
 // findEpochs for block range in metadata
-func (md *AidaDbMetadata) findEpochs() error {
+func (md *AidaDbMetadata) findEpochs(chainId int) error {
 	var (
 		err                            error
 		testnet                        bool
 		firstEpochMinus, lastEpochPlus uint64
 	)
 
-	if md.ChainId == 250 {
+	switch md.ChainId {
+	case 250:
 		testnet = false
-	} else if md.ChainId == 4002 {
+	case 4002:
 		testnet = true
-	} else {
-		return fmt.Errorf("unknown chain-id %v", md.ChainId)
+	case 0:
+		// 0 means chain-id was not found inside metadata
+		md.log.Warningf("chain-id was not found inside metadata; using value from config (%v)", chainId)
+		md.ChainId = chainId
+		testnet = true
+	default:
+		// anything else is wrong chain-id, and we cannot let it through
+		return fmt.Errorf("unknown chain-id %v", chainId)
 	}
 
 	md.FirstEpoch, err = findEpochNumber(md.FirstBlock, testnet)
@@ -706,7 +713,7 @@ func (md *AidaDbMetadata) SetFreshUpdateMetadata(chainID int) error {
 		return err
 	}
 
-	if err = md.findEpochs(); err != nil {
+	if err = md.findEpochs(chainID); err != nil {
 		return err
 	}
 
