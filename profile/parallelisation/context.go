@@ -1,12 +1,14 @@
 package parallelisation
 
 import (
-	"fmt"
 	"time"
+	"errors"
 
 	"github.com/Fantom-foundation/Aida/profile/graphutil"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
+
+
 )
 
 // AddressSet is a set of contract/wallet addresses
@@ -31,6 +33,9 @@ type Context struct {
 	tCompletion TxTime        // earliest completion time of a transaction
 	tCritical   time.Duration // critical path runtime for transactions
 }
+
+var errBlockOverheadTime = errors.New("block or overhead time measurements went wrong")
+var errBlockTxsTime = errors.New("block or txs time measurements went wrong")
 
 // NewContext returns a new context.
 func NewContext() *Context {
@@ -165,13 +170,13 @@ func (ctx *Context) GetProfileData(curBlock uint64, tBlock time.Duration) (*Prof
 
 	// remove overheads from block runtime
 	if tBlock < ctx.tOverheads {
-		return nil, fmt.Errorf("block or overhead time measurements went wrong, block time: %d, overhead time: %d", tBlock, ctx.tOverheads)
+		return nil, errBlockOverheadTime
 	}
 	tBlock -= ctx.tOverheads
 
 	// time consistency check
 	if tBlock < ctx.tSequential {
-		return nil, fmt.Errorf("block or txs time measurements went wrong, block time: %d, Txs time: %d", tBlock, ctx.tSequential)
+		return nil, errBlockTxsTime
 	}
 
 	// compute commit time

@@ -1,6 +1,7 @@
 package parallelisation
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -377,21 +378,49 @@ func TestRecordTransaction(t *testing.T) {
 // TestGetProfileDataEmpty tests the retrieval of profile data from an empty block
 func TestGetProfileDataWith2Transactions(t *testing.T) {
 	ctx := NewContext()
-	_, err := ctx.GetProfileData(0, time.Duration(100))
+	tBlock := time.Duration(100)
+	ctx.tOverheads = time.Duration(50)
+
+	pd, err := ctx.GetProfileData(0, tBlock)
 	if err != nil {
 		t.Errorf("error occurred while processing a block, err: %q", err)
 	}
 
+	expTBlock := tBlock - ctx.tOverheads
+	if pd.tBlock != expTBlock.Nanoseconds() {
+		t.Errorf("tBlock does not match expected one")
+	}
+
+	expTCommit := expTBlock - ctx.tSequential
+	if pd.tCommit != expTCommit.Nanoseconds() {
+		t.Errorf("tCommit does not match expected one")
+	}
+
+	expSpeedup := float64(expTBlock) / float64(expTCommit+ctx.tCritical)
+	if pd.speedup != expSpeedup {
+		t.Errorf("speed up does not match expected one")
+	}
+
+	if pd.ubNumProc != int64(len(graphutil.MinChainCover(ctx.txDependencies))) {
+		t.Errorf("ubNumProc does not match expected one")
+	}
+
+	if pd.numTx != 0 {
+		t.Errorf("Number of transactions should be zero")
+	}
+
+	// check for errors
 	ctx.tOverheads = 200
 	_, err = ctx.GetProfileData(0, time.Duration(100))
-	if err == nil {
-		t.Errorf("Error expected")
+	if !errors.Is(err, errBlockOverheadTime) {
+		t.Errorf("Error does not match expected one")
 	}
+
 
 	ctx.tOverheads = 0
 	ctx.tSequential = 200
 	_, err = ctx.GetProfileData(0, time.Duration(100))
-	if err == nil {
-		t.Errorf("Error expected")
+	if !errors.Is(err, errBlockTxsTime) {
+		t.Errorf("Error does not match expected one")
 	}
 }
