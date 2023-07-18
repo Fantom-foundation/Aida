@@ -20,7 +20,7 @@ GOPROXY ?= "https://proxy.golang.org,direct"
 
 .PHONY: all clean help test tosca
 
-all: aida-api-replay aida-worldstate aida-updateset aida-db aida-trace aida-runarchive aida-runvm aida-stochastic aida-substate
+all: aida-api-replay aida-worldstate aida-updateset aida-db aida-trace aida-runarchive aida-runvm aida-stochastic aida-substate aida-profile
 
 aida-api-replay:
 	@cd carmen/go/lib ; \
