@@ -191,8 +191,8 @@ func traceReplayTask(cfg *utils.Config, log *logging.Logger) error {
 	if cfg.ValidateWorldState {
 		log.Notice("Validate final state")
 		ws, err := utils.GenerateWorldStateFromUpdateDB(cfg, cfg.Last)
-		if err = utils.DeleteDestroyedAccountsFromWorldState(ws, cfg, cfg.Last); err != nil {
-			return fmt.Errorf("Failed to remove detroyed accounts. %v\n", err)
+		if err != nil {
+			return err
 		}
 		if err := utils.ValidateStateDB(ws, db, false); err != nil {
 			return fmt.Errorf("Validation failed. %v\n", err)
