@@ -126,7 +126,7 @@ func ProcessTx(db state.StateDB, cfg *Config, block uint64, txIndex int, tx *sub
 }
 
 // ProcessLachesisSfc processes an sfc pseudo transaction by applying the change in db state.
-func ProcessLachesisSfc(sa substate.SubstateAlloc, db state.StateDB) error {
+func ProcessLachesisSfc(sa substate.SubstateAlloc, db state.StateDB) {
 	db.BeginTransaction(LachesisSfc)
 	for addr, account := range sa {
 		db.SubBalance(addr, db.GetBalance(addr))
@@ -138,7 +138,6 @@ func ProcessLachesisSfc(sa substate.SubstateAlloc, db state.StateDB) error {
 		}
 	}
 	db.EndTransaction()
-	return nil
 }
 
 // prepareBlockCtx creates a block context for evm call from an environment of a substate.
