@@ -174,9 +174,9 @@ func RunVM(ctx *cli.Context) error {
 		}
 		// run VM
 		db.PrepareSubstate(&tx.Substate.InputAlloc, tx.Substate.Env.Number)
-		if tx.Transaction >= utils.LachesisSfc {
-			log.Debugf("Block %v Tx %v: sfc tx", tx.Block, tx.Transaction)
-			utils.ProcessLachesisSfc(tx.Substate.OutputAlloc, db)
+		if tx.Transaction >= utils.PseudoTx {
+			log.Debugf("Block %v Tx %v: pseudo tx", tx.Block, tx.Transaction)
+			utils.ProcessPseudoTx(tx.Substate.OutputAlloc, db)
 		} else {
 			log.Debugf("Block %v Tx %v: external tx", tx.Block, tx.Transaction)
 			err = utils.ProcessTx(db, cfg, tx.Block, tx.Transaction, tx.Substate)

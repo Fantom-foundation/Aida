@@ -61,8 +61,8 @@ var hardForksTestnet = map[string]uint64{
 	"london": 7_513_335,
 }
 
-// special sfc transaction number for lachesis blocks
-const LachesisSfc = 99999
+// special transaction number for pseudo transactions
+const PseudoTx = 99999
 
 // GitCommit represents the GitHub commit hash the app was built from.
 var GitCommit = "0000000000000000000000000000000000000000"

@@ -158,7 +158,7 @@ func GenDeletedAccountsAction(cfg *utils.Config, firstBlock uint64) error {
 			break
 		}
 
-		if tx.Transaction < utils.LachesisSfc {
+		if tx.Transaction < utils.PseudoTx {
 			err := genDeletedAccountsTask(tx.Block, tx.Transaction, tx.Substate, ddb, cfg)
 			if err != nil {
 				return err

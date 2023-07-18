@@ -97,7 +97,7 @@ func getVmDuration() time.Duration {
 
 // replayTask replays a transaction substate
 func replayTask(config ReplayConfig, block uint64, tx int, recording *substate.Substate, taskPool *substate.SubstateTaskPool, log *logging.Logger) error {
-	if tx == utils.LachesisSfc {
+	if tx == utils.PseudoTx {
 		return nil
 	}
 	// If requested, skip failed transactions.

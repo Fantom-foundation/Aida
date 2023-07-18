@@ -125,9 +125,10 @@ func ProcessTx(db state.StateDB, cfg *Config, block uint64, txIndex int, tx *sub
 	return
 }
 
-// ProcessLachesisSfc processes an sfc pseudo transaction by applying the change in db state.
-func ProcessLachesisSfc(sa substate.SubstateAlloc, db state.StateDB) {
-	db.BeginTransaction(LachesisSfc)
+// ProcessPseudoTx processes pseudo transactions in Lachesis by applying the change in db state.
+// The pseudo transactions includes Lachesis SFC, lachesis genesis and lachesis-opera transition.
+func ProcessPseudoTx(sa substate.SubstateAlloc, db state.StateDB) {
+	db.BeginTransaction(PseudoTx)
 	for addr, account := range sa {
 		db.SubBalance(addr, db.GetBalance(addr))
 		db.AddBalance(addr, account.Balance)

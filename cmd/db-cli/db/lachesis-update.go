@@ -2,7 +2,6 @@ package db
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/Fantom-foundation/Aida/logger"
@@ -10,7 +9,6 @@ import (
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
@@ -20,7 +18,7 @@ const sfcAddrHex = "0xFC00FACE00000000000000000000000000000000"
 var LachesisUpdateCommand = cli.Command{
 	Action: lachesisUpdate,
 	Name:   "lachesis-update",
-	Usage:  "update state of lachesis substate at hard fork transition",
+	Usage:  "Computes pseudo transition that transits the last world state of Lachesis to the world state of Opera in block in 4,564,026",
 	Flags: []cli.Flag{
 		&utils.ChainIDFlag,
 		&utils.DeletionDbFlag,
@@ -49,13 +47,13 @@ func lachesisUpdate(ctx *cli.Context) error {
 	substate.OpenSubstateDB()
 	defer substate.CloseSubstateDB()
 
-	log.Notice("Load Opera initial world state as substateAlloc")
+	log.Notice("Load Opera initial world state")
 	opera, err := loadOperaWorldState(cfg.WorldStateDb)
 	if err != nil {
 		return err
 	}
 
-	log.Notice("Generate Lachesis world state from substate")
+	log.Notice("Generate Lachesis world state")
 	lachesis, err := createLachesisWorldState(cfg)
 	if err != nil {
 		return err
@@ -86,16 +84,13 @@ func lachesisUpdate(ctx *cli.Context) error {
 		// write to db
 		log.Noticef("Write a transition tx to Block %v Tx %v with %v accounts",
 			lachesisLastBlock,
-			utils.LachesisSfc,
+			utils.PseudoTx,
 			len(untrackedState))
-		substate.PutSubstate(lachesisLastBlock, utils.LachesisSfc, transitionTx)
+		substate.PutSubstate(lachesisLastBlock, utils.PseudoTx, transitionTx)
 	} else {
-		log.Warningf("Transition block exists. Skip writing to substate-db")
+		log.Warningf("Transition transaction has already been produced. Skip writing")
 	}
-
-	lachesis.Merge(untrackedState)
-	log.Notice("Find accounts differences between lachesis's and opera's world state")
-	return validateTransistion(lachesis, opera, log)
+	return nil
 }
 
 // loadOperaWorldState loads opera initial world state from worldstate-db as SubstateAlloc
@@ -139,19 +134,6 @@ func fixSfcContract(lachesis substate.SubstateAlloc, transition *substate.Substa
 		}
 	} else {
 		return fmt.Errorf("the SFC contract is not found.")
-	}
-	return nil
-}
-
-// validateTransistion compares lachesis's last world state and opera's first world state.
-// it reports any differences found in lachesis which doesn't exists in opera.
-func validateTransistion(lachesis, opera substate.SubstateAlloc, log *logging.Logger) error {
-	diff := lachesis.Diff(opera)
-	if len(diff) > 0 {
-		jbytes, _ := json.MarshalIndent(diff, "", " ")
-		log.Warning("\tDiff accounts:")
-		log.Infof("%s", jbytes)
-		return fmt.Errorf("found %v accounts in lachesis which are not in opera", len(diff))
 	}
 	return nil
 }
