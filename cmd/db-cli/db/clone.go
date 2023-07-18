@@ -216,7 +216,8 @@ func (c *cloner) clone() error {
 	dbHash := sourceMD.GetDbHash()
 
 	// only generate dbHash when creating a patch and dbHash in SourceDb is not present, otherwise take the one in SourceDb
-	if c.typ == utils.PatchType && dbHash == nil {
+	// also if the last block of the patch is not last block of the db, there is no point in saving
+	if c.typ == utils.PatchType && dbHash == nil && c.cfg.Last == sourceMD.GetLastBlock() {
 		// we put path to source db because we need dbHash of whole source db to be put into Patch
 		dbHash, err = validate(c.aidaDb, c.cfg.LogLevel)
 		if err != nil {

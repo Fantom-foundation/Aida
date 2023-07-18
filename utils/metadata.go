@@ -151,6 +151,11 @@ func ProcessCloneLikeMetadata(aidaDb ethdb.Database, typ AidaDbType, logLevel st
 		return err
 	}
 
+	if dbHash != nil {
+		// we do not want hash to be nil, by this we mark that the patch is not last patch - only last patch contains the dbHash
+		dbHash = []byte{0}
+	}
+
 	if err = md.SetDbHash(dbHash); err != nil {
 		return err
 	}
