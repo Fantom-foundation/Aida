@@ -125,6 +125,22 @@ func ProcessTx(db state.StateDB, cfg *Config, block uint64, txIndex int, tx *sub
 	return
 }
 
+// ProcessPseudoTx processes pseudo transactions in Lachesis by applying the change in db state.
+// The pseudo transactions includes Lachesis SFC, lachesis genesis and lachesis-opera transition.
+func ProcessPseudoTx(sa substate.SubstateAlloc, db state.StateDB) {
+	db.BeginTransaction(PseudoTx)
+	for addr, account := range sa {
+		db.SubBalance(addr, db.GetBalance(addr))
+		db.AddBalance(addr, account.Balance)
+		db.SetNonce(addr, account.Nonce)
+		db.SetCode(addr, account.Code)
+		for key, value := range account.Storage {
+			db.SetState(addr, key, value)
+		}
+	}
+	db.EndTransaction()
+}
+
 // prepareBlockCtx creates a block context for evm call from an environment of a substate.
 func prepareBlockCtx(inputEnv *substate.SubstateEnv) *vm.BlockContext {
 	getHash := func(num uint64) common.Hash {
@@ -308,10 +324,10 @@ func printAccountDiffSummary(label string, want, have *substate.SubstateAccount)
 	printIfDifferentBytes(fmt.Sprintf("%s.Code", label), want.Code, have.Code)
 
 	printIfDifferent(fmt.Sprintf("len(%s.Storage)", label), len(want.Storage), len(have.Storage))
-	for key := range want.Storage {
+	for key, val := range want.Storage {
 		_, present := have.Storage[key]
-		if !present {
-			fmt.Printf("    %s.Storage misses key %v\n", label, key)
+		if !present && (val != common.Hash{}) {
+			fmt.Printf("    %s.Storage misses key %v val %v\n", label, key, val)
 		}
 	}
 

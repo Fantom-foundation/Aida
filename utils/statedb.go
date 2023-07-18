@@ -234,6 +234,10 @@ func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *Config, target ui
 		return err
 	}
 	log.Noticef("Deleting %d accounts ...", len(accounts))
+	if len(accounts) == 0 {
+		// nothing to delete, skip
+		return nil
+	}
 	db.BeginSyncPeriod(0)
 	db.BeginBlock(target)
 	db.BeginTransaction(0)
