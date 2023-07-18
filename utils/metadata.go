@@ -633,15 +633,16 @@ func (md *AidaDbMetadata) findEpochs(chainId int) error {
 		firstEpochMinus, lastEpochPlus uint64
 	)
 
+	if md.ChainId == 0 {
+		// 0 means chain-id was not found inside metadata
+		md.log.Warningf("chain-id was not found inside metadata; using value from config (%v)", chainId)
+		md.ChainId = chainId
+	}
+
 	switch md.ChainId {
 	case 250:
 		testnet = false
 	case 4002:
-		testnet = true
-	case 0:
-		// 0 means chain-id was not found inside metadata
-		md.log.Warningf("chain-id was not found inside metadata; using value from config (%v)", chainId)
-		md.ChainId = chainId
 		testnet = true
 	default:
 		// anything else is wrong chain-id, and we cannot let it through
