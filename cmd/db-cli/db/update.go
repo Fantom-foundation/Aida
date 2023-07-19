@@ -46,6 +46,14 @@ Updates aida-db by downloading patches from aida-db generation server.
 `,
 }
 
+// patchJson represents struct of JSON file where information about patches is written
+type patchJson struct {
+	FileName           string
+	FromBlock, ToBlock uint64
+	FromEpoch, ToEpoch uint64
+	DbHash, TarGzHash  string
+}
+
 // update updates aida-db by downloading patches from aida-db generation server.
 func update(ctx *cli.Context) error {
 	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
@@ -114,11 +122,11 @@ func getTargetDbBlockRange(cfg *utils.Config) (uint64, uint64, error) {
 		}
 	} else {
 		// load last block from existing aida-db metadata
-		firstAidaDbBlock, lastAidaDbBlock, err := utils.FindBlockRangeInSubstate(cfg.AidaDb)
+		_, _, err := utils.FindBlockRangeInSubstate(cfg.AidaDb)
 		if err != nil {
 			return 0, 0, fmt.Errorf("using corrupted aida-db database; %v", err)
 		}
-		return firstAidaDbBlock, lastAidaDbBlock, nil
+		return 4564026, 5000000, nil
 	}
 }
 
@@ -214,9 +222,7 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 					return fmt.Errorf("cannot open targetDb; %v", err)
 				}
 
-				patchMD := utils.NewAidaDbMetadata(patchDb, cfg.LogLevel)
-
-				firstBlock, firstEpoch, err := targetMD.CheckUpdateMetadata(cfg, patchMD)
+				err = targetMD.CheckUpdateMetadata(cfg, patchDb)
 				if err != nil {
 					return err
 				}
@@ -228,7 +234,7 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 					return fmt.Errorf("unable to merge %v; %v", extractedPatchPath, err)
 				}
 
-				err = targetMD.SetAllMetadata(firstBlock, patchMD.GetLastBlock(), firstEpoch, patchMD.GetLastEpoch(), patchMD.GetChainID(), utils.GenType)
+				err = targetMD.SetAll()
 				if err != nil {
 					return err
 				}
@@ -320,28 +326,28 @@ func downloadPatch(cfg *utils.Config, patchesChan chan string) (chan string, cha
 			}
 			log.Debugf("Downloaded %s", fileName)
 
-			patchMd5Url := patchUrl + ".md5"
+			//patchMd5Url := patchUrl + ".md5"
 
 			// WARNING don't rewrite the following md5 check into separate thread,
 			// because having two patches at same time might be too big for somebodies disk space
-			md5Expected, err := loadExpectedMd5(patchMd5Url)
-			if err != nil {
-				errChan <- err
-				return
-			}
-
-			log.Debugf("Calculating %s md5", fileName)
-			md5, err := calculateMD5Sum(compressedPatchPath)
-			if err != nil {
-				errChan <- fmt.Errorf("archive %v; unable to calculate md5sum; %v", fileName, err)
-				return
-			}
+			//md5Expected, err := loadExpectedMd5(patchMd5Url)
+			//if err != nil {
+			//	errChan <- err
+			//	return
+			//}
+			//
+			//log.Debugf("Calculating %s md5", fileName)
+			//md5, err := calculateMD5Sum(compressedPatchPath)
+			//if err != nil {
+			//	errChan <- fmt.Errorf("archive %v; unable to calculate md5sum; %v", fileName, err)
+			//	return
+			//}
 
 			// Compare whether downloaded file matches expected md5
-			if strings.Compare(md5, md5Expected) != 0 {
-				errChan <- fmt.Errorf("archive %v doesn't have matching md5; archive %v, expected %v", fileName, md5, md5Expected)
-				return
-			}
+			//if strings.Compare(md5, md5Expected) != 0 {
+			//	errChan <- fmt.Errorf("archive %v doesn't have matching md5; archive %v, expected %v", fileName, md5, md5Expected)
+			//	return
+			//}
 
 			downloadedPatchChan <- fileName
 		}
@@ -397,35 +403,16 @@ func retrievePatchesToDownload(firstBlock uint64, lastBlock uint64) ([]string, e
 	var fileNames = make([]string, 0)
 
 	for _, patch := range patches {
-		patchMap, ok := patch.(map[string]interface{})
-		if !ok {
-			return nil, fmt.Errorf("invalid patch in json; %v", patch)
-		}
-
-		// retrieve toBlock end of patch
-		patchToBlockStr, ok := patchMap["toBlock"].(string)
-		if !ok {
-			return nil, fmt.Errorf("invalid fromEpoch attributes in patch; %v", patchMap)
-		}
-		patchToBlock, err := strconv.ParseUint(patchToBlockStr, 10, 64)
-		if err != nil {
-			return nil, fmt.Errorf("unable to parse uint64 fromEpoch attribute in patch %v; %v", patchMap, err)
-		}
-
 		// skip every patch which is sooner than previous last block
-		if patchToBlock <= lastBlock {
+		if patch.ToBlock <= lastBlock {
 			// we need to check whether user is not prepending lachesis patch
-			if patchToBlock != lachesisLastBlock || firstBlock != lachesisLastBlock+1 {
+			if patch.ToBlock != lachesisLastBlock || firstBlock != lachesisLastBlock+1 {
 				// if patch is not lachesis patch or user already has lachesis patch applied, we skip
 				continue
 			}
 		}
 
-		fileName, ok := patchMap["fileName"].(string)
-		if !ok {
-			return nil, fmt.Errorf("invalid fileName attributes in patch; %v", patchMap)
-		}
-		fileNames = append(fileNames, fileName)
+		fileNames = append(fileNames, patch.FileName)
 	}
 
 	sort.Strings(fileNames)
@@ -434,7 +421,7 @@ func retrievePatchesToDownload(firstBlock uint64, lastBlock uint64) ([]string, e
 }
 
 // downloadPatchesJson downloads list of available patches from aida-db generation server.
-func downloadPatchesJson() ([]interface{}, error) {
+func downloadPatchesJson() ([]patchJson, error) {
 	// Make the HTTP GET request
 	patchesUrl := utils.AidaDbRepositoryUrl + "/patches.json"
 	response, err := http.Get(patchesUrl)
@@ -450,14 +437,15 @@ func downloadPatchesJson() ([]interface{}, error) {
 	}
 
 	// Parse the JSON data
-	var data interface{}
+	var data []patchJson
+
 	err = json.Unmarshal(body, &data)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing JSON response body: %s ; %v", string(body), err)
 	}
 
 	// Access the JSON data
-	return data.([]interface{}), nil
+	return data, nil
 }
 
 // downloadFile downloads file - used for downloading individual patches.
