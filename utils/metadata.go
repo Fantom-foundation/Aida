@@ -132,7 +132,7 @@ func ProcessCloneLikeMetadata(aidaDb ethdb.Database, typ AidaDbType, logLevel st
 		return err
 	}
 
-	if err = md.findEpochs(); err != nil {
+	if err = md.findEpochs(chainID); err != nil {
 		return err
 	}
 
@@ -210,6 +210,7 @@ func (md *AidaDbMetadata) genMetadata(firstBlock uint64, lastBlock uint64, first
 func ProcessMergeMetadata(cfg *Config, aidaDb ethdb.Database, sourceDbs []ethdb.Database, paths []string) (*AidaDbMetadata, error) {
 	var (
 		err error
+		ok  bool
 	)
 
 	targetMD := NewAidaDbMetadata(aidaDb, cfg.LogLevel)
@@ -237,9 +238,11 @@ func ProcessMergeMetadata(cfg *Config, aidaDb ethdb.Database, sourceDbs []ethdb.
 				return nil, fmt.Errorf("cannot close db; %v", err)
 			}
 
-			md.FirstBlock, md.LastBlock, err = FindBlockRangeInSubstate(paths[i])
-			if err != nil {
-				return nil, fmt.Errorf("cannot find blocks in substate; %v", err)
+			md.FirstBlock, md.LastBlock, ok = FindBlockRangeInSubstate(paths[i])
+			if !ok {
+				md.log.Warningf("Cannot find blocks in substate; is substate present in given db? %v", paths[i])
+			} else {
+				md.log.Noticef("Found block range inside substate of %v (%v-%v)", paths[i], md.FirstBlock, md.LastBlock)
 			}
 
 			// reopen db
@@ -249,12 +252,15 @@ func ProcessMergeMetadata(cfg *Config, aidaDb ethdb.Database, sourceDbs []ethdb.
 			}
 		}
 
-		if md.FirstBlock < targetMD.FirstBlock || targetMD.FirstBlock == 0 {
-			targetMD.FirstBlock = md.FirstBlock
-		}
+		// only check blocks when merged db has metadata or substate
+		if ok {
+			if md.FirstBlock < targetMD.FirstBlock || targetMD.FirstBlock == 0 {
+				targetMD.FirstBlock = md.FirstBlock
+			}
 
-		if md.LastBlock > targetMD.LastBlock || targetMD.LastBlock == 0 {
-			targetMD.LastBlock = md.LastBlock
+			if md.LastBlock > targetMD.LastBlock || targetMD.LastBlock == 0 {
+				targetMD.LastBlock = md.LastBlock
+			}
 		}
 
 		// set first
@@ -298,7 +304,29 @@ func ProcessMergeMetadata(cfg *Config, aidaDb ethdb.Database, sourceDbs []ethdb.
 		return nil, fmt.Errorf("cannot merge %v with %v", targetMD.getVerboseDbType(), md.getVerboseDbType())
 	}
 
-	if err = targetMD.findEpochs(); err != nil {
+	// if source dbs had neither metadata nor substate, we try to find the block range inside substate of targetDb
+	if targetMD.FirstBlock == 0 && targetMD.LastBlock == 0 {
+		// we must close db before accessing substate
+		if err = targetMD.Db.Close(); err != nil {
+			return nil, fmt.Errorf("cannot close targetDb; %v", err)
+		}
+
+		targetMD.FirstBlock, targetMD.LastBlock, ok = FindBlockRangeInSubstate(cfg.AidaDb)
+		if !ok {
+			targetMD.log.Warningf("Cannot find block range in substate of AidaDb (%v); this will in corrupted metadata but will not affect data itself", cfg.AidaDb)
+		} else {
+			targetMD.log.Noticef("Found block range inside substate of AidaDb %v (%v-%v)", cfg.AidaDb, targetMD.FirstBlock, targetMD.LastBlock)
+		}
+
+		// re-open db
+		targetMD.Db, err = rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
+		if err != nil {
+			return nil, fmt.Errorf("cannot re-open targetDb; %v", err)
+		}
+
+	}
+
+	if err = targetMD.findEpochs(cfg.ChainID); err != nil {
 		return nil, err
 	}
 
@@ -634,19 +662,27 @@ func (md *AidaDbMetadata) SetAllMetadata(firstBlock uint64, lastBlock uint64, fi
 }
 
 // findEpochs for block range in metadata
-func (md *AidaDbMetadata) findEpochs() error {
+func (md *AidaDbMetadata) findEpochs(chainId int) error {
 	var (
 		err                            error
 		testnet                        bool
 		firstEpochMinus, lastEpochPlus uint64
 	)
 
-	if md.ChainId == 250 {
+	if md.ChainId == 0 {
+		// 0 means chain-id was not found inside metadata
+		md.log.Warningf("chain-id was not found inside metadata; using value from config (%v)", chainId)
+		md.ChainId = chainId
+	}
+
+	switch md.ChainId {
+	case 250:
 		testnet = false
-	} else if md.ChainId == 4002 {
+	case 4002:
 		testnet = true
-	} else {
-		return fmt.Errorf("unknown chain-id %v", md.ChainId)
+	default:
+		// anything else is wrong chain-id, and we cannot let it through
+		return fmt.Errorf("unknown chain-id %v", chainId)
 	}
 
 	md.FirstEpoch, err = findEpochNumber(md.FirstBlock, testnet)
@@ -654,17 +690,20 @@ func (md *AidaDbMetadata) findEpochs() error {
 		return err
 	}
 
-	// we need to check if block is really first block of an epoch
-	firstEpochMinus, err = findEpochNumber(md.FirstBlock-1, testnet)
-	if err != nil {
-		return err
-	}
+	// if first block is 0 we can be sure the block begins an epoch so no need to check that
+	if md.FirstBlock != 0 {
+		// we need to check if block is really first block of an epoch
+		firstEpochMinus, err = findEpochNumber(md.FirstBlock-1, testnet)
+		if err != nil {
+			return err
+		}
 
-	if firstEpochMinus >= md.FirstEpoch {
-		md.log.Warningf("first block of db is not beginning of an epoch; setting first epoch to 0")
-		md.FirstEpoch = 0
-	} else {
-		md.log.Noticef("Found first epoch #%v", md.FirstEpoch)
+		if firstEpochMinus >= md.FirstEpoch {
+			md.log.Warningf("first block of db is not beginning of an epoch; setting first epoch to 0")
+			md.FirstEpoch = 0
+		} else {
+			md.log.Noticef("Found first epoch #%v", md.FirstEpoch)
+		}
 	}
 
 	md.LastEpoch, err = findEpochNumber(md.LastBlock, testnet)
@@ -762,7 +801,7 @@ func (md *AidaDbMetadata) SetFreshMetadata(chainID int) error {
 		return err
 	}
 
-	if err = md.findEpochs(); err != nil {
+	if err = md.findEpochs(chainID); err != nil {
 		return err
 	}
 
@@ -905,7 +944,7 @@ func findEpochNumber(blockNumber uint64, testnet bool) (uint64, error) {
 
 	resultMap, ok := m["result"].(map[string]interface{})
 	if !ok {
-		return 0, fmt.Errorf("unexpecetd answer: %v", m)
+		return 0, fmt.Errorf("unexpecetd answer: %v\nreq: %v", m, payload)
 	}
 
 	firstEpochHex, ok := resultMap["epoch"].(string)
@@ -922,25 +961,25 @@ func findEpochNumber(blockNumber uint64, testnet bool) (uint64, error) {
 }
 
 // FindBlockRangeInSubstate if AidaDb does not yet have metadata
-func FindBlockRangeInSubstate(pathToAidaDb string) (uint64, uint64, error) {
+func FindBlockRangeInSubstate(pathToAidaDb string) (uint64, uint64, bool) {
 	substate.SetSubstateDb(pathToAidaDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
 	firstSubstate := substate.GetFirstSubstate()
 	if firstSubstate == nil {
-		return 0, 0, errors.New("unable to Get first substate from AidaDb")
+		return 0, 0, false
 	}
 	firstBlock := firstSubstate.Env.Number
 
 	lastSubstate, err := substate.GetLastSubstate()
 	if err != nil {
-		return 0, 0, err
+		return 0, 0, false
 	}
 	if lastSubstate == nil {
-		return 0, 0, errors.New("unable to Get last substate from AidaDb")
+		return 0, 0, false
 	}
 	lastBlock := lastSubstate.Env.Number
 
-	return firstBlock, lastBlock, nil
+	return firstBlock, lastBlock, true
 }

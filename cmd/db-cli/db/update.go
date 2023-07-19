@@ -122,11 +122,11 @@ func getTargetDbBlockRange(cfg *utils.Config) (uint64, uint64, error) {
 		}
 	} else {
 		// load last block from existing aida-db metadata
-		_, _, err := utils.FindBlockRangeInSubstate(cfg.AidaDb)
-		if err != nil {
-			return 0, 0, fmt.Errorf("using corrupted aida-db database; %v", err)
+		firstAidaDbBlock, lastAidaDbBlock, ok := utils.FindBlockRangeInSubstate(cfg.AidaDb)
+		if !ok {
+			return 0, 0, fmt.Errorf("cannot find blocks in substate; is substate present in given db? %v", cfg.AidaDb)
 		}
-		return 4564026, 5000000, nil
+		return firstAidaDbBlock, lastAidaDbBlock, nil
 	}
 }
 
@@ -326,28 +326,28 @@ func downloadPatch(cfg *utils.Config, patchesChan chan string) (chan string, cha
 			}
 			log.Debugf("Downloaded %s", fileName)
 
-			//patchMd5Url := patchUrl + ".md5"
+			patchMd5Url := patchUrl + ".md5"
 
 			// WARNING don't rewrite the following md5 check into separate thread,
 			// because having two patches at same time might be too big for somebodies disk space
-			//md5Expected, err := loadExpectedMd5(patchMd5Url)
-			//if err != nil {
-			//	errChan <- err
-			//	return
-			//}
-			//
-			//log.Debugf("Calculating %s md5", fileName)
-			//md5, err := calculateMD5Sum(compressedPatchPath)
-			//if err != nil {
-			//	errChan <- fmt.Errorf("archive %v; unable to calculate md5sum; %v", fileName, err)
-			//	return
-			//}
+			md5Expected, err := loadExpectedMd5(patchMd5Url)
+			if err != nil {
+				errChan <- err
+				return
+			}
+
+			log.Debugf("Calculating %s md5", fileName)
+			md5, err := calculateMD5Sum(compressedPatchPath)
+			if err != nil {
+				errChan <- fmt.Errorf("archive %v; unable to calculate md5sum; %v", fileName, err)
+				return
+			}
 
 			// Compare whether downloaded file matches expected md5
-			//if strings.Compare(md5, md5Expected) != 0 {
-			//	errChan <- fmt.Errorf("archive %v doesn't have matching md5; archive %v, expected %v", fileName, md5, md5Expected)
-			//	return
-			//}
+			if strings.Compare(md5, md5Expected) != 0 {
+				errChan <- fmt.Errorf("archive %v doesn't have matching md5; archive %v, expected %v", fileName, md5, md5Expected)
+				return
+			}
 
 			downloadedPatchChan <- fileName
 		}
