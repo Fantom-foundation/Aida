@@ -20,7 +20,7 @@ GOPROXY ?= "https://proxy.golang.org,direct"
 
 .PHONY: all clean help test tosca
 
-all: aida-api-replay aida-worldstate aida-updateset aida-db aida-trace aida-runarchive aida-runvm aida-stochastic aida-substate
+all: aida-api-replay aida-worldstate aida-updateset aida-db aida-trace aida-runarchive aida-runvm aida-stochastic aida-substate aida-profile
 
 aida-api-replay:
 	@cd carmen/go/lib ; \
@@ -94,6 +94,14 @@ aida-db: carmen/go/lib/libcarmen.so tosca
 	go build -ldflags "-s -w" \
 	-o $(GO_BIN)/aida-db \
 	./cmd/db-cli
+
+aida-profile: carmen/go/lib/libcarmen.so tosca
+	GOPROXY=$(GOPROXY) \
+	GOPRIVATE=github.com/Fantom-foundation/Carmen \
+	CGO_CFLAGS="-g -O2  -DMDBX_FORCE_ASSERTIONS=1 -Wno-error=strict-prototypes" \
+	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
+	-o $(GO_BIN)/aida-profile \
+	./cmd/profile-cli
 
 test:
 	@go test ./...
