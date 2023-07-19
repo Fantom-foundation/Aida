@@ -1,0 +1,77 @@
+---
+title: "Parallelisation Experiment"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include = FALSE}
+library(ggplot2)
+library(dplyr)
+library(DBI)
+library(RSQLite)
+con <- dbConnect(SQLite(), "./profile.db")
+experiment <- dbReadTable(con, 'parallelprofile')
+parallelisable <- experiment %>%
+  filter(speedup > 1.0)
+dbDisconnect(con)
+```
+
+## 1. Block Range
+
+The experiment was performed on the block range from `r format(min(experiment$block),big.mark=",")` 
+to `r format(max(experiment$block),big.mark=",")`.
+
+## 2. Degree of Parallelisation 
+
+We have `r format(nrow(experiment), big.mark=",")` blocks of which 
+`r format(nrow(parallelisable), big.mark=",")` are parallelisable.
+`r format(100.0*(nrow(experiment)-nrow(parallelisable))/nrow(experiment), digits=4)`% of blocks are 
+strictly sequential (not parallelisable) blocks. 
+The maximal achievable parallelism of a block is `r format(max(experiment$speedup), digits=4)`.
+The geometric mean of the speedup is `r format(exp(mean(log(experiment$speedup))), digits=4)`.
+
+The distribution of the speedup is shown below:
+```{r, echo = FALSE}
+experiment %>% 
+  ggplot(aes(speedup)) + 
+  geom_freqpoly(binwidth = 0.01)
+```
+
+## 3. Number of Transactions per Block
+
+We have on average `r mean(experiment$numTx)` transactions per block. The 
+smallest number of transactions per block is `r min(experiment$numTx)` and the 
+largest number is `r max(experiment$numTx)`. The distribution of number of 
+transactions per block is shown below:
+
+```{r, echo = FALSE}
+experiment %>% 
+  ggplot(aes(numTx)) + 
+  geom_freqpoly(binwidth = 0.01)
+```
+
+## 4. Processor Utilisation / Efficiency
+
+The lower bound of the processor utilisation is `r format(100.0*exp(mean(log(experiment$speedup/experiment$ubNumProc))), digits=4)`% on average and with a maximum of `r max(experiment$ubNumProc)` processors (upper bound).
+
+## 5. Sequential Block Runtime and Commit Time
+
+The average block execution time is `r mean(experiment$tBlock)/1e6` milliseconds with 
+a minimum of `r min(experiment$tBlock)/1e6` milliseconds and a maximum of `r max(experiment$tBlock)/1e6` milliseconds. 
+The average commit time is `r mean(experiment$tCommit)/1e6` milliseconds with 
+a minimum of `r min(experiment$tCommit)/1e6` milliseconds and a maximum of `r max(experiment$tCommit)/1e6` milliseconds.
+The distribution of the block execution time is shown below:
+
+```{r, echo = FALSE}
+experiment %>% 
+  ggplot(aes(tBlock)) + 
+  geom_freqpoly(binwidth = 10000)
+```
+
+The distribution of the commit time is shown below:
+
+```{r, echo = FALSE}
+experiment %>% 
+  ggplot(aes(tCommit)) + 
+  geom_freqpoly(binwidth = 10000)
+```
