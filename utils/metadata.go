@@ -658,7 +658,7 @@ func (md *AidaDbMetadata) GetDbHash() []byte {
 }
 
 // SetAllMetadata in given Db
-func (md *AidaDbMetadata) SetAllMetadata(firstBlock uint64, lastBlock uint64, firstEpoch uint64, lastEpoch uint64, chainID int, dbType AidaDbType) error {
+func (md *AidaDbMetadata) SetAllMetadata(firstBlock uint64, lastBlock uint64, firstEpoch uint64, lastEpoch uint64, chainID int, dbHash []byte, dbType AidaDbType) error {
 	var err error
 
 	if err = md.SetFirstBlock(firstBlock); err != nil {
@@ -688,6 +688,11 @@ func (md *AidaDbMetadata) SetAllMetadata(firstBlock uint64, lastBlock uint64, fi
 	if err = md.SetTimestamp(); err != nil {
 		return err
 	}
+
+	if err = md.SetDbHash(dbHash); err != nil {
+		return err
+	}
+
 	return nil
 }
 
