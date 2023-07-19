@@ -3,7 +3,8 @@ title: "Parallelisation Experiment"
 date: "`r Sys.Date()`"
 output: html_document
 params: 
-  configuration: "TBA"
+  Configuration: "Geth VM and Geth MPT"
+  ProfileDB: "./profile.db"
 ---
 
 ```{r, include = FALSE}
@@ -11,7 +12,7 @@ library(ggplot2)
 library(dplyr)
 library(DBI)
 library(RSQLite)
-con <- dbConnect(SQLite(), "./profile.db")
+con <- dbConnect(SQLite(), params$ProfileDB)
 experiment <- dbReadTable(con, 'parallelprofile')
 parallelisable <- experiment %>%
   filter(speedup > 1.0)
@@ -22,7 +23,7 @@ dbDisconnect(con)
 
 The experiment was conducted for the block range from `r format(min(experiment$block),big.mark=",")`  
 to `r format(max(experiment$block),big.mark=",")`. The parallelisation experiment was
-performed with following configuration: `r params$configuration`.
+performed with following configuration: **`r params$Configuration`**.
 
 ## 2. Degree of Parallelisation 
 
@@ -51,7 +52,7 @@ transactions per block is shown below:
 ```{r, echo = FALSE, message=FALSE}
 experiment %>% 
   ggplot(aes(numTx)) + 
-  geom_freqpoly(binwidth = 0.01) +
+  geom_freqpoly(binwidth = 1) +
   labs(x="Number of Transactions per Block")
 ```
 
