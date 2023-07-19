@@ -240,9 +240,9 @@ func ProcessMergeMetadata(cfg *Config, aidaDb ethdb.Database, sourceDbs []ethdb.
 
 			md.FirstBlock, md.LastBlock, ok = FindBlockRangeInSubstate(paths[i])
 			if !ok {
-				md.log.Warningf("cannot find blocks in substate; is substate present in given db? %v", paths[i])
+				md.log.Warningf("Cannot find blocks in substate; is substate present in given db? %v", paths[i])
 			} else {
-				md.log.Noticef("found block range inside substate of %v (%v-%v)", paths[i], md.FirstBlock, md.LastBlock)
+				md.log.Noticef("Found block range inside substate of %v (%v-%v)", paths[i], md.FirstBlock, md.LastBlock)
 			}
 
 			// reopen db
@@ -313,9 +313,9 @@ func ProcessMergeMetadata(cfg *Config, aidaDb ethdb.Database, sourceDbs []ethdb.
 
 		targetMD.FirstBlock, targetMD.LastBlock, ok = FindBlockRangeInSubstate(cfg.AidaDb)
 		if !ok {
-			targetMD.log.Warningf("cannot find block range in substate of AidaDb (%v); this will in corrupted metadata but will not affect data itself", cfg.AidaDb)
+			targetMD.log.Warningf("Cannot find block range in substate of AidaDb (%v); this will in corrupted metadata but will not affect data itself", cfg.AidaDb)
 		} else {
-			targetMD.log.Noticef("found block range inside substate of AidaDb %v (%v-%v)", cfg.AidaDb, targetMD.FirstBlock, targetMD.LastBlock)
+			targetMD.log.Noticef("Found block range inside substate of AidaDb %v (%v-%v)", cfg.AidaDb, targetMD.FirstBlock, targetMD.LastBlock)
 		}
 
 		// re-open db
