@@ -90,6 +90,8 @@ func merge(ctx *cli.Context) error {
 			return err
 		}
 
+		targetDb = md.Db
+
 		for _, db := range dbs {
 			MustCloseDB(db)
 		}

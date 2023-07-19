@@ -132,14 +132,23 @@ func printMetadata(pathToDb string) error {
 	log.Notice("AIDA-DB INFO:")
 
 	if err = printDbType(md); err != nil {
-		log.Warning("Metadata are not yet in this DB; Looking for block range in substate...")
+		return err
+	}
 
-		fb, lb, err := utils.FindBlockRangeInSubstate(pathToDb)
-		if err != nil {
-			return fmt.Errorf("cannot find block range in substate; %v", err)
+	var (
+		firstBlock, lastBlock uint64
+		ok                    bool
+	)
+
+	lastBlock = md.GetLastBlock()
+
+	firstBlock = md.GetFirstBlock()
+
+	if firstBlock == 0 && lastBlock == 0 {
+		firstBlock, lastBlock, ok = utils.FindBlockRangeInSubstate(pathToDb)
+		if !ok {
+			return errors.New("no substate found")
 		}
-		log.Noticef("First Block: %v Last Block: %v", fb, lb)
-		return nil
 	}
 
 	// CHAIN-ID
@@ -148,11 +157,8 @@ func printMetadata(pathToDb string) error {
 	log.Infof("Chain-ID: %v", chainID)
 
 	// BLOCKS
-	firstBlock := md.GetFirstBlock()
 
 	log.Infof("First Block: %v", firstBlock)
-
-	lastBlock := md.GetLastBlock()
 
 	log.Infof("Last Block: %v", lastBlock)
 
