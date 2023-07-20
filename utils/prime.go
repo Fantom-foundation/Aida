@@ -264,7 +264,7 @@ func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error 
 	// advance from the latest precomputed state to the target block
 	if block < target || target == 0 {
 		log.Infof("\tPriming from substate from block %v", block)
-		update, deletedAccounts, err := GenerateUpdateSet(block, target, cfg)
+		update, deletedAccounts, err := GenerateUpdateSet(block, nil, target, cfg)
 		if err != nil {
 			return err
 		}

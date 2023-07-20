@@ -2,11 +2,13 @@ package db
 
 import (
 	"log"
+	"os"
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
@@ -21,9 +23,10 @@ var AutoGenCommand = cli.Command{
 		&utils.ChainIDFlag,
 		&utils.DbFlag,
 		&utils.GenesisFlag,
-		&utils.WorldStateFlag,
+		&utils.DbTmpFlag,
 		&utils.UpdateBufferSizeFlag,
 		&utils.OutputFlag,
+		&utils.WorldStateFlag,
 		&substate.WorkersFlag,
 		&logger.LogLevelFlag,
 	},
@@ -49,12 +52,22 @@ func autogen(ctx *cli.Context) error {
 		return err
 	}
 
+	// remove worldstate directory if it was created
+	defer func(log *logging.Logger) {
+		if cfg.WorldStateDb != "" {
+			err = os.RemoveAll(cfg.WorldStateDb)
+			if err != nil {
+				log.Criticalf("can't remove temporary folder: %v; %v", cfg.WorldStateDb, err)
+			}
+		}
+	}(g.log)
+
 	stopAtEpoch, err := g.calculatePatchEnd()
 	if err != nil {
 		return err
 	}
 
-	g.log.Noticef("Starting substate generation %d - %d", g.opera.lastEpoch, stopAtEpoch)
+	g.log.Noticef("Starting substate generation %d - %d", g.opera.lastEpoch+1, stopAtEpoch)
 
 	MustCloseDB(g.aidaDb)
 
@@ -66,16 +79,19 @@ func autogen(ctx *cli.Context) error {
 	if ok && err != nil {
 		return err
 	}
-	g.log.Noticef("Successfully recorded opera: %v substates until: %d", g.cfg.Db, stopAtEpoch)
+	g.log.Noticef("Opera %v - successfully substates for epoch range %d - %d", g.cfg.Db, g.opera.lastEpoch+1, stopAtEpoch)
 
 	// reopen aida-db
 	g.aidaDb, err = rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
 	if err != nil {
 		log.Fatalf("cannot create new db; %v", err)
+		return err
 	}
+	substate.SetSubstateDbBackend(g.aidaDb)
 
 	err = g.Generate()
 	if err != nil {
+		log.Fatalf("generate error; %v", err)
 		return err
 	}
 

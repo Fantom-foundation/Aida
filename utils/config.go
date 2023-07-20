@@ -510,7 +510,6 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 
 	// first look for chainId since we need it for verbal block indication
 	if ctx.Int(ChainIDFlag.Name) == 0 {
-
 		log.Warningf("ChainID (--%v) was not set; looking for it in AidaDb", ChainIDFlag.Name)
 
 		// we check if AidaDb was set with err == nil

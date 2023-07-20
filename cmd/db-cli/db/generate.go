@@ -89,10 +89,10 @@ func newGenerator(ctx *cli.Context, cfg *utils.Config) (*generator, error) {
 		return nil, fmt.Errorf("you need to specify aida-db (--aida-db)")
 	}
 
-	_, err := os.Stat(cfg.AidaDb)
-	if os.IsNotExist(err) {
-		return nil, fmt.Errorf("supplied aida-db %s doesn't exist", cfg.AidaDb)
-	}
+	//_, err := os.Stat(cfg.AidaDb)
+	//if os.IsNotExist(err) {
+	//	return nil, fmt.Errorf("supplied aida-db %s doesn't exist", cfg.AidaDb)
+	//}
 
 	db, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
 	if err != nil {
@@ -125,6 +125,8 @@ func (g *generator) Generate() error {
 	if err != nil {
 		return err
 	}
+
+	g.log.Noticef("Generation starting for range:  %v (%v) - %v (%v)", g.patchFirstBlock, g.patchFirstEpoch, g.opera.lastBlock, g.opera.lastEpoch)
 
 	deleteDb, updateDb, nextUpdateSetStart, err := g.init()
 	if err != nil {
@@ -210,7 +212,7 @@ func (g *generator) processUpdateSet(deleteDb *substate.DestroyedAccountDB, upda
 	// nextUpdateSetStart TODO MATEJ probably off by one
 	err = updateset.GenUpdateSet(g.cfg, updateDb, deleteDb, nextUpdateSetStart, updateSetInterval)
 	if err != nil {
-		return fmt.Errorf("cannot doGenerations update-db %v", err)
+		return fmt.Errorf("cannot doGenerations update-db; %v", err)
 	}
 
 	g.log.Notice("UpdateDb generated successfully")
@@ -483,6 +485,7 @@ func (g *generator) createTarGz(filePath string, fileName string) interface{} {
 // loadPatchRange load first block and epoch where should patch start
 func (g *generator) loadPatchRange() error {
 	md := utils.NewAidaDbMetadata(g.aidaDb, g.cfg.LogLevel)
+	// TODO when lachesis range is added this might not work
 	g.patchFirstEpoch = md.GetLastEpoch() + 1
 	g.patchFirstBlock = md.GetLastBlock() + 1
 
@@ -500,7 +503,7 @@ func (g *generator) calculatePatchEnd() (uint64, error) {
 		return 0, err
 	}
 
-	// TODO lastEpoch is off one
+	// load last finished epoch to calculate next target
 	stopAtEpoch := g.opera.lastEpoch
 
 	// next patch will be at least X epochs large
@@ -521,6 +524,10 @@ func (g *generator) calculatePatchEnd() (uint64, error) {
 	if headEpochNumber > stopAtEpoch {
 		stopAtEpoch = headEpochNumber
 	}
+
+	//// TODO remove before push for testing only
+	//stopAtEpoch = g.opera.lastEpoch + 1
+
 	return stopAtEpoch, nil
 }
 

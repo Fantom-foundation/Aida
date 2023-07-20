@@ -1,7 +1,6 @@
 package db
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"os/exec"
@@ -9,10 +8,8 @@ import (
 	"strconv"
 
 	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/state"
-	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	wsOpera "github.com/Fantom-foundation/Aida/world-state/db/opera"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
@@ -52,6 +49,14 @@ func (opera *aidaOpera) init() error {
 			return fmt.Errorf("cannot init opera from gensis; %v", err)
 		}
 
+		// create tmpDir for worldstate
+		var tmpDir string
+		tmpDir, err = createTmpDir(opera.cfg)
+		if err != nil {
+			return fmt.Errorf("cannot create tmp dir; %v", err)
+		}
+		opera.cfg.WorldStateDb = filepath.Join(tmpDir, "worldstate")
+
 		// dumping the MPT into world state
 		if err = opera.prepareDumpCliContext(); err != nil {
 			return fmt.Errorf("cannot prepare dump; %v", err)
@@ -77,6 +82,25 @@ func (opera *aidaOpera) init() error {
 	opera.cfg.First = opera.firstBlock + 1
 	opera.firstEpoch += 1
 	return nil
+}
+
+func createTmpDir(cfg *utils.Config) (string, error) {
+	if cfg.DbTmp != "" {
+		// create a parents of temporary directory
+		err := os.MkdirAll(cfg.DbTmp, 0755)
+		if err != nil {
+			return "", fmt.Errorf("failed to create %s directory; %s", cfg.DbTmp, err)
+		}
+	}
+
+	//fName := fmt.Sprintf("%v/%v-%v", cfg.DbTmp, "tmp_aida_db_*", rand.Int())
+	// create a temporary working directory
+	fName, err := os.MkdirTemp(cfg.DbTmp, "aida_db_tmp_*")
+	if err != nil {
+		return "", fmt.Errorf("failed to create a temporary directory. %v", err)
+	}
+
+	return fName, nil
 }
 
 // initFromGenesis file
@@ -142,26 +166,36 @@ func (opera *aidaOpera) getOperaBlockAndEpoch(isFirst bool) error {
 
 // prepareDumpCliContext
 func (opera *aidaOpera) prepareDumpCliContext() error {
-	flagSet := flag.NewFlagSet("", 0)
-	flagSet.String(utils.WorldStateFlag.Name, opera.cfg.WorldStateDb, "")
-	flagSet.String(utils.DbFlag.Name, opera.cfg.Db+"/chaindata/leveldb-fsh/", "")
-	flagSet.String(utils.StateDbVariantFlag.Name, "ldb", "")
-	flagSet.String(utils.SourceTableNameFlag.Name, utils.SourceTableNameFlag.Value, "")
-	flagSet.String(utils.TrieRootHashFlag.Name, utils.TrieRootHashFlag.Value, "")
-	flagSet.Int(substate.WorkersFlag.Name, substate.WorkersFlag.Value, "")
-	flagSet.Uint64(utils.TargetBlockFlag.Name, utils.TargetBlockFlag.Value, "")
-	flagSet.Int(utils.ChainIDFlag.Name, opera.cfg.ChainID, "")
-	flagSet.String(logger.LogLevelFlag.Name, opera.cfg.LogLevel, "")
-
-	ctx := cli.NewContext(cli.NewApp(), flagSet, nil)
-
-	err := ctx.Set(utils.DbFlag.Name, opera.cfg.Db+"/chaindata/leveldb-fsh/")
+	// TODO rewrite
+	tmpSaveDbPath := opera.cfg.Db
+	opera.cfg.Db = filepath.Join(opera.cfg.Db, "chaindata/leveldb-fsh/")
+	opera.cfg.DbVariant = "ldb"
+	err := state.DumpState(opera.ctx, opera.cfg)
 	if err != nil {
 		return err
 	}
-	command := &cli.Command{Name: state.CmdDumpState.Name}
-	ctx.Command = command
-	ctx.Command.Flags = state.CmdDumpState.Flags
-
-	return state.DumpState(ctx)
+	opera.cfg.Db = tmpSaveDbPath
+	return nil
+	//flagSet := flag.NewFlagSet("", 0)
+	//flagSet.String(utils.WorldStateFlag.Name, opera.cfg.WorldStateDb, "")
+	//flagSet.String(utils.DbFlag.Name, opera.cfg.Db+"/chaindata/leveldb-fsh/", "")
+	//flagSet.String(utils.StateDbVariantFlag.Name, "ldb", "")
+	//flagSet.String(utils.SourceTableNameFlag.Name, utils.SourceTableNameFlag.Value, "")
+	//flagSet.String(utils.TrieRootHashFlag.Name, utils.TrieRootHashFlag.Value, "")
+	//flagSet.Int(substate.WorkersFlag.Name, substate.WorkersFlag.Value, "")
+	//flagSet.Uint64(utils.TargetBlockFlag.Name, utils.TargetBlockFlag.Value, "")
+	//flagSet.Int(utils.ChainIDFlag.Name, opera.cfg.ChainID, "")
+	//flagSet.String(logger.LogLevelFlag.Name, opera.cfg.LogLevel, "")
+	//
+	//ctx := cli.NewContext(cli.NewApp(), flagSet, nil)
+	//
+	//err := ctx.Set(utils.DbFlag.Name, opera.cfg.Db+"/chaindata/leveldb-fsh/")
+	//if err != nil {
+	//	return err
+	//}
+	//command := &cli.Command{Name: state.CmdDumpState.Name}
+	//ctx.Command = command
+	//ctx.Command.Flags = state.CmdDumpState.Flags
+	//
+	//return state.DumpState(ctx)
 }
