@@ -43,6 +43,14 @@ Updates aida-db by downloading patches from aida-db generation server.
 `,
 }
 
+// patchJson represents struct of JSON file where information about patches is written
+type patchJson struct {
+	FileName           string
+	FromBlock, ToBlock uint64
+	FromEpoch, ToEpoch uint64
+	DbHash, TarGzHash  string
+}
+
 // update updates aida-db by downloading patches from aida-db generation server.
 func update(ctx *cli.Context) error {
 	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
@@ -65,10 +73,11 @@ func Update(cfg *utils.Config) error {
 		return fmt.Errorf("unable retrieve aida-db metadata; %v", err)
 	}
 
-	log.Noticef("lastAidaDbBlock %v", lastBlock)
+	log.Noticef("First block of your AidaDb: #%v", firstBlock)
+	log.Noticef("Last block of your AidaDb: #%v", lastBlock)
 
 	// retrieve available patches from aida-db generation server
-	patches, err := retrievePatchesToDownload(lastBlock)
+	patches, err := retrievePatchesToDownload(firstBlock, lastBlock)
 	if err != nil {
 		return fmt.Errorf("unable to prepare list of aida-db patches for download; %v", err)
 	}
@@ -210,9 +219,7 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 					return fmt.Errorf("cannot open targetDb; %v", err)
 				}
 
-				patchMD := utils.NewAidaDbMetadata(patchDb, cfg.LogLevel)
-
-				firstBlock, firstEpoch, err := targetMD.CheckUpdateMetadata(cfg, patchMD)
+				err = targetMD.CheckUpdateMetadata(cfg, patchDb)
 				if err != nil {
 					return err
 				}
@@ -224,7 +231,7 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 					return fmt.Errorf("unable to merge %v; %v", extractedPatchPath, err)
 				}
 
-				err = targetMD.SetAllMetadata(firstBlock, patchMD.GetLastBlock(), firstEpoch, patchMD.GetLastEpoch(), patchMD.GetChainID(), utils.GenType)
+				err = targetMD.SetAll()
 				if err != nil {
 					return err
 				}
@@ -382,7 +389,7 @@ func pushStringsToChannel(strings []string) chan string {
 }
 
 // retrievePatchesToDownload retrieves all available patches from aida-db generation server.
-func retrievePatchesToDownload(startDownloadFromBlock uint64) ([]string, error) {
+func retrievePatchesToDownload(firstBlock uint64, lastBlock uint64) ([]string, error) {
 	// download list of available patches
 	patches, err := downloadPatchesJson()
 	if err != nil {
@@ -393,30 +400,16 @@ func retrievePatchesToDownload(startDownloadFromBlock uint64) ([]string, error) 
 	var fileNames = make([]string, 0)
 
 	for _, patch := range patches {
-		patchMap, ok := patch.(map[string]interface{})
-		if !ok {
-			return nil, fmt.Errorf("invalid patch in json; %v", patch)
+		// skip every patch which is sooner than previous last block
+		if patch.ToBlock <= lastBlock {
+			// we need to check whether user is not prepending lachesis patch
+			if patch.ToBlock != utils.FirstOperaBlock-1 || firstBlock != utils.FirstOperaBlock {
+				// if patch is not lachesis patch or user already has lachesis patch applied, we skip
+				continue
+			}
 		}
 
-		// retrieve toBlock end of patch
-		patchToBlockStr, ok := patchMap["toBlock"].(string)
-		if !ok {
-			return nil, fmt.Errorf("invalid fromEpoch attributes in patch; %v", patchMap)
-		}
-		patchToBlock, err := strconv.ParseUint(patchToBlockStr, 10, 64)
-		if err != nil {
-			return nil, fmt.Errorf("unable to parse uint64 fromEpoch attribute in patch %v; %v", patchMap, err)
-		}
-		if patchToBlock <= startDownloadFromBlock {
-			// skip every patch which is sooner than previous last block
-			continue
-		}
-
-		fileName, ok := patchMap["fileName"].(string)
-		if !ok {
-			return nil, fmt.Errorf("invalid fileName attributes in patch; %v", patchMap)
-		}
-		fileNames = append(fileNames, fileName)
+		fileNames = append(fileNames, patch.FileName)
 	}
 
 	sort.Strings(fileNames)
@@ -425,7 +418,7 @@ func retrievePatchesToDownload(startDownloadFromBlock uint64) ([]string, error) 
 }
 
 // downloadPatchesJson downloads list of available patches from aida-db generation server.
-func downloadPatchesJson() ([]interface{}, error) {
+func downloadPatchesJson() ([]patchJson, error) {
 	// Make the HTTP GET request
 	patchesUrl := utils.AidaDbRepositoryUrl + "/patches.json"
 	response, err := http.Get(patchesUrl)
@@ -441,14 +434,15 @@ func downloadPatchesJson() ([]interface{}, error) {
 	}
 
 	// Parse the JSON data
-	var data interface{}
+	var data []patchJson
+
 	err = json.Unmarshal(body, &data)
 	if err != nil {
 		return nil, fmt.Errorf("error parsing JSON response body: %s ; %v", string(body), err)
 	}
 
 	// Access the JSON data
-	return data.([]interface{}), nil
+	return data, nil
 }
 
 // downloadFile downloads file - used for downloading individual patches.
