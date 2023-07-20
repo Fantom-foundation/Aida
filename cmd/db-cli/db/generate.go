@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"compress/gzip"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -240,14 +241,15 @@ func (g *generator) merge(pathToDb string) error {
 
 // loadRangeFromSubstates loads range of block and epochs from given substate
 func (g *generator) loadRangeFromSubstates() error {
-	var err error
-	g.opera.firstBlock, g.opera.lastBlock, err = utils.FindBlockRangeInSubstate()
-	if err != nil {
-		return err
+	var ok bool
+	g.opera.firstBlock, g.opera.lastBlock, ok = utils.FindBlockRangeInSubstate()
+	if !ok {
+		return errors.New("cannot find substate")
 	}
 
 	// TODO overwrite g.opera.lastBlock so it is aligned with epoch
 
+	var err error
 	g.opera.firstEpoch, err = utils.FindEpochNumber(g.opera.firstBlock, g.cfg.ChainID)
 	if err != nil {
 		return err
@@ -526,7 +528,7 @@ func (g *generator) calculatePatchEnd() (uint64, error) {
 	}
 
 	//// TODO remove before push for testing only
-	//stopAtEpoch = g.opera.lastEpoch + 1
+	stopAtEpoch = g.opera.lastEpoch + 725
 
 	return stopAtEpoch, nil
 }
