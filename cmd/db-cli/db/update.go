@@ -18,13 +18,17 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/klauspost/compress/gzip"
 	"github.com/urfave/cli/v2"
 )
 
-const maxNumberOfDownloadAttempts = 5
+const (
+	maxNumberOfDownloadAttempts = 5
+	firstPatchFileName          = "5577-46750"
+)
 
 // UpdateCommand downloads aida-db and new patches
 var UpdateCommand = cli.Command{
@@ -77,9 +81,19 @@ func Update(cfg *utils.Config) error {
 	log.Noticef("Last block of your AidaDb: #%v", lastBlock)
 
 	// retrieve available patches from aida-db generation server
-	patches, err := retrievePatchesToDownload(firstBlock, lastBlock)
+	patches, isAddingLachesisPatch, err := retrievePatchesToDownload(firstBlock, lastBlock)
 	if err != nil {
 		return fmt.Errorf("unable to prepare list of aida-db patches for download; %v", err)
+	}
+
+	// if user has second patch already in their db, we have to re-download it again and delete old update-set key
+	if firstBlock == utils.FirstOperaBlock && isAddingLachesisPatch {
+		patches = append(patches, firstPatchFileName)
+		err = removeOldUpdateSetKey(cfg.AidaDb)
+		if err != nil {
+			return fmt.Errorf("cannot open update-set; %v", err)
+		}
+
 	}
 
 	if len(patches) == 0 {
@@ -389,11 +403,13 @@ func pushStringsToChannel(strings []string) chan string {
 }
 
 // retrievePatchesToDownload retrieves all available patches from aida-db generation server.
-func retrievePatchesToDownload(firstBlock uint64, lastBlock uint64) ([]string, error) {
+func retrievePatchesToDownload(firstBlock uint64, lastBlock uint64) ([]string, bool, error) {
+	var isAddingLachesisPatch = false
+
 	// download list of available patches
 	patches, err := downloadPatchesJson()
 	if err != nil {
-		return nil, fmt.Errorf("unable to download patches: %v", err)
+		return nil, false, fmt.Errorf("unable to download patches: %v", err)
 	}
 
 	// list of patches to be downloaded
@@ -402,9 +418,10 @@ func retrievePatchesToDownload(firstBlock uint64, lastBlock uint64) ([]string, e
 	for _, patch := range patches {
 		// skip every patch which is sooner than previous last block
 		if patch.ToBlock <= lastBlock {
-			// we need to check whether user is not prepending lachesis patch
-			if patch.ToBlock != utils.FirstOperaBlock-1 || firstBlock != utils.FirstOperaBlock {
-				// if patch is not lachesis patch or user already has lachesis patch applied, we skip
+			// if patch is lachesis and user has not got it in their db we download it
+			if patch.ToBlock == utils.FirstOperaBlock-1 && firstBlock == utils.FirstOperaBlock {
+				isAddingLachesisPatch = true
+			} else {
 				continue
 			}
 		}
@@ -414,7 +431,21 @@ func retrievePatchesToDownload(firstBlock uint64, lastBlock uint64) ([]string, e
 
 	sort.Strings(fileNames)
 
-	return fileNames, nil
+	return fileNames, isAddingLachesisPatch, nil
+}
+
+// removeOldUpdateSetKey when user has already merged second patch, and we are prepending lachesis patch.
+// This situation can happen due to lachesis patch being implemented later than rest of the Db
+func removeOldUpdateSetKey(dbPath string) error {
+	updateDb, err := substate.OpenUpdateDB(dbPath)
+	if err != nil {
+		return fmt.Errorf("cannot open update-db; %v", err)
+	}
+
+	updateDb.DeleteSubstateAlloc(utils.FirstOperaBlock)
+	substate.CloseSubstateDB()
+
+	return nil
 }
 
 // downloadPatchesJson downloads list of available patches from aida-db generation server.
