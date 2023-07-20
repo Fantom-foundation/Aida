@@ -24,10 +24,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-const (
-	maxNumberOfDownloadAttempts = 5
-	lachesisLastBlock           = 4_564_025
-)
+const maxNumberOfDownloadAttempts = 5
 
 // UpdateCommand downloads aida-db and new patches
 var UpdateCommand = cli.Command{
@@ -406,7 +403,7 @@ func retrievePatchesToDownload(firstBlock uint64, lastBlock uint64) ([]string, e
 		// skip every patch which is sooner than previous last block
 		if patch.ToBlock <= lastBlock {
 			// we need to check whether user is not prepending lachesis patch
-			if patch.ToBlock != lachesisLastBlock || firstBlock != lachesisLastBlock+1 {
+			if patch.ToBlock != utils.FirstOperaBlock-1 || firstBlock != utils.FirstOperaBlock {
 				// if patch is not lachesis patch or user already has lachesis patch applied, we skip
 				continue
 			}
