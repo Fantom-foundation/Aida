@@ -200,6 +200,7 @@ func startOperaPruning(cfg *utils.Config) chan error {
 // startOperaRecording records substates
 func startOperaRecording(cfg *utils.Config, syncUntilEpoch uint64) chan error {
 	errChan := make(chan error, 1)
+	// todo check if path to aidaDb exists otherwise create the dir
 
 	log := logger.NewLogger(cfg.LogLevel, "autogen-recording")
 	log.Noticef("Starting opera recording %v", cfg.Db)

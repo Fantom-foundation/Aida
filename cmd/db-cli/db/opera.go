@@ -149,6 +149,7 @@ func (opera *aidaOpera) getOperaBlockAndEpoch(isFirst bool) error {
 
 	// we are assuming that we are at brink of epochs
 	// in this special case epochNumber is already one number higher
+	// todo epoch number at first blocks should not be modified if the recording started midst of epoch
 	epochNumber -= 1
 
 	// todo check ifNew then fb + 1

@@ -120,7 +120,7 @@ func clonePatch(ctx *cli.Context) error {
 }
 
 // CreatePatchClone creates aida-db patch
-func CreatePatchClone(cfg *utils.Config, aidaDb, targetDb ethdb.Database, firstEpoch uint64, lastEpoch uint64) error {
+func CreatePatchClone(cfg *utils.Config, aidaDb, targetDb ethdb.Database, firstEpoch, lastEpoch uint64) error {
 	err := clone(cfg, aidaDb, targetDb, utils.PatchType)
 	if err != nil {
 		return err
@@ -131,6 +131,7 @@ func CreatePatchClone(cfg *utils.Config, aidaDb, targetDb ethdb.Database, firstE
 	if err != nil {
 		return err
 	}
+
 	err = md.SetLastEpoch(lastEpoch)
 	if err != nil {
 		return err

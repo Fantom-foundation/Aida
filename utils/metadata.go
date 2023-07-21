@@ -65,7 +65,7 @@ func NewAidaDbMetadata(db ethdb.Database, logLevel string) *AidaDbMetadata {
 
 // ProcessPatchLikeMetadata decides whether patch is new or not. If so the DbType is Set to GenType, otherwise its PatchType.
 // Then it inserts all given metadata
-func ProcessPatchLikeMetadata(aidaDb ethdb.Database, logLevel string, firstBlock, lastBlock, firstEpoch, lastEpoch uint64, chainID int, isNew bool) error {
+func ProcessPatchLikeMetadata(aidaDb ethdb.Database, logLevel string, firstBlock, lastBlock, firstEpoch, lastEpoch uint64, chainID int, isNew bool, dbHash []byte) error {
 	var (
 		dbType AidaDbType
 		err    error
@@ -103,6 +103,11 @@ func ProcessPatchLikeMetadata(aidaDb ethdb.Database, logLevel string, firstBlock
 	}
 
 	if err = md.SetTimestamp(); err != nil {
+		return err
+	}
+
+	err = md.SetDbHash(dbHash)
+	if err != nil {
 		return err
 	}
 
@@ -164,14 +169,14 @@ func ProcessCloneLikeMetadata(aidaDb ethdb.Database, typ AidaDbType, logLevel st
 	return nil
 }
 
-func ProcessGenLikeMetadata(aidaDb ethdb.Database, firstBlock uint64, lastBlock uint64, firstEpoch uint64, lastEpoch uint64, chainID int, logLevel string) error {
+func ProcessGenLikeMetadata(aidaDb ethdb.Database, firstBlock uint64, lastBlock uint64, firstEpoch uint64, lastEpoch uint64, chainID int, logLevel string, dbHash []byte) error {
 	md := NewAidaDbMetadata(aidaDb, logLevel)
-	return md.genMetadata(firstBlock, lastBlock, firstEpoch, lastEpoch, chainID)
+	return md.genMetadata(firstBlock, lastBlock, firstEpoch, lastEpoch, chainID, dbHash)
 }
 
 // genMetadata inserts metadata into newly generated AidaDb.
 // If generate is used onto an existing AidaDb it updates last block, last epoch and timestamp.
-func (md *AidaDbMetadata) genMetadata(firstBlock uint64, lastBlock uint64, firstEpoch uint64, lastEpoch uint64, chainID int) error {
+func (md *AidaDbMetadata) genMetadata(firstBlock uint64, lastBlock uint64, firstEpoch uint64, lastEpoch uint64, chainID int, dbHash []byte) error {
 	var err error
 
 	firstBlock, lastBlock = md.compareBlocks(firstBlock, lastBlock)
@@ -201,6 +206,10 @@ func (md *AidaDbMetadata) genMetadata(firstBlock uint64, lastBlock uint64, first
 	}
 
 	if err = md.SetTimestamp(); err != nil {
+		return err
+	}
+
+	if err = md.SetDbHash(dbHash); err != nil {
 		return err
 	}
 

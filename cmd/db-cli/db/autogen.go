@@ -62,24 +62,24 @@ func autogen(ctx *cli.Context) error {
 		}
 	}(g.log)
 
-	stopAtEpoch, err := g.calculatePatchEnd()
+	err = g.calculatePatchEnd()
 	if err != nil {
 		return err
 	}
 
-	g.log.Noticef("Starting substate generation %d - %d", g.opera.lastEpoch+1, stopAtEpoch)
+	g.log.Noticef("Starting substate generation %d - %d", g.opera.lastEpoch+1, g.stopAtEpoch)
 
 	MustCloseDB(g.aidaDb)
 
 	// stop opera to be able to export events
-	errCh := startOperaRecording(g.cfg, stopAtEpoch)
+	errCh := startOperaRecording(g.cfg, g.stopAtEpoch)
 
 	// wait for opera recording response
 	err, ok := <-errCh
 	if ok && err != nil {
 		return err
 	}
-	g.log.Noticef("Opera %v - successfully substates for epoch range %d - %d", g.cfg.Db, g.opera.lastEpoch+1, stopAtEpoch)
+	g.log.Noticef("Opera %v - successfully substates for epoch range %d - %d", g.cfg.Db, g.opera.lastEpoch+1, g.stopAtEpoch)
 
 	// reopen aida-db
 	g.aidaDb, err = rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
@@ -89,11 +89,10 @@ func autogen(ctx *cli.Context) error {
 	}
 	substate.SetSubstateDbBackend(g.aidaDb)
 
-	err = g.Generate()
+	err = g.opera.getOperaBlockAndEpoch(false)
 	if err != nil {
-		log.Fatalf("generate error; %v", err)
 		return err
 	}
 
-	return nil
+	return g.Generate()
 }

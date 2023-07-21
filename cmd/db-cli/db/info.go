@@ -1,6 +1,7 @@
 package db
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
@@ -178,6 +179,10 @@ func printMetadata(pathToDb string) error {
 	lastEpoch := md.GetLastEpoch()
 
 	log.Infof("Last Epoch: %v", lastEpoch)
+
+	dbHash := md.GetDbHash()
+
+	log.Infof("Db Hash: %v", hex.EncodeToString(dbHash))
 
 	// TIMESTAMP
 	timestamp := md.GetTimestamp()
