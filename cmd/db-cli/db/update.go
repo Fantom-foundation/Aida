@@ -91,7 +91,14 @@ func Update(cfg *utils.Config) error {
 
 	// if user has second patch already in their db, we have to re-download it again and delete old update-set key
 	if firstBlock == utils.FirstOperaBlock && isAddingLachesisPatch {
-		patches = append(patches, firstPatchFileName)
+		if cfg.ChainID == 250 {
+			patches = append(patches, firstMainnetPatchFileName)
+		} else if cfg.ChainID == 4002 {
+			patches = append(patches, firstTestnetPatchFileName)
+		} else {
+			return errors.New("please choose chain-id with --chainid")
+		}
+
 		err = removeOldUpdateSetKey(cfg.AidaDb)
 		if err != nil {
 			return fmt.Errorf("cannot open update-set; %v", err)
