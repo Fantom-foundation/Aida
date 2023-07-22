@@ -2,6 +2,8 @@ package context
 
 import (
 	"bufio"
+	"encoding/binary"
+	"fmt"
 	"log"
 	"os"
 
@@ -27,14 +29,16 @@ type Record struct {
 	file  *os.File      // trace file
 	bFile *bufio.Writer // buffer for trace file
 	ZFile *bzip2.Writer // compressed file
+	First uint64        // the first recorded block
 }
 
 // Replay is the replaying environment/facade
 type Replay struct {
 	Context
 	snapshot *SnapshotIndex // snapshot translation table for replay
-	Profile  bool           // collect stats
-	Stats    *profile.Stats
+	Profile  bool           // if true collect stats
+	Stats    *profile.Stats // stats object
+	First    uint64         // the first recorded block
 }
 
 // NewContext creates a new replay context.
@@ -52,24 +56,33 @@ func (ctx *Replay) EnableProfiling(csv string) {
 }
 
 // NewContext creates a new record context.
-func NewRecord(filename string) *Record {
+func NewRecord(filename string, first uint64) (*Record, error) {
+	if _, err := os.Stat(filename); err == nil {
+		return nil, fmt.Errorf("file %v already exists", filename)
+	}
 	// open trace file, write buffer, and compressed stream
 	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
 	if err != nil {
-		log.Fatalf("Cannot open trace file. Error: %v", err)
+		return nil, fmt.Errorf("cannot open trace file; %v", err)
 	}
 	bFile := bufio.NewWriterSize(file, WriteBufferSize)
 	ZFile, err := bzip2.NewWriter(bFile, &bzip2.WriterConfig{Level: 9})
 	if err != nil {
-		log.Fatalf("Cannot open bzip2 stream. Error: %v", err)
+		return nil, fmt.Errorf("cannot open bzip2 stream; %v", err)
 	}
+	// write header
+	if err := binary.Write(ZFile, binary.LittleEndian, first); err != nil {
+		return nil, fmt.Errorf("fail to write file header")
+	}
+
 	return &Record{
 		Context: Context{prevContract: common.Address{},
 			keyCache: NewKeyCache()},
 		file:  file,
 		bFile: bFile,
 		ZFile: ZFile,
-	}
+		First: first,
+	}, nil
 }
 
 // Close the trace file in the record context.

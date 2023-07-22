@@ -1,8 +1,14 @@
 package trace
 
 import (
+	"bufio"
+	"encoding/binary"
 	"fmt"
+	"io"
+	"log"
 	"os"
+	"path/filepath"
+	"sort"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/logger"
@@ -11,6 +17,7 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
+	"github.com/dsnet/compress/bzip2"
 	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
@@ -53,6 +60,7 @@ var TraceReplayCommand = cli.Command{
 		&substate.SubstateDbFlag,
 		&substate.WorkersFlag,
 		&utils.TraceFileFlag,
+		&utils.TraceDirectoryFlag,
 		&utils.TraceDebugFlag,
 		&utils.DebugFromFlag,
 		&utils.UpdateDbFlag,
@@ -69,9 +77,102 @@ The trace replay command requires two arguments:
 last block of the inclusive range of blocks to replay storage traces.`,
 }
 
+func readTraceHeader(fname string) uint64 {
+	file, err := os.Open(fname)
+	if err != nil {
+		log.Fatalf("cannot open trace file; %v", err)
+	}
+	zreader, err := bzip2.NewReader(file, &bzip2.ReaderConfig{})
+	if err != nil {
+		log.Fatalf("cannot open bzip stream; %v", err)
+	}
+	defer func() {
+		if err := zreader.Close(); err != nil {
+			log.Fatalf("Cannot close compressed stream. Error: %v", err)
+		}
+		if err := file.Close(); err != nil {
+			log.Fatalf("Cannot close trace file. Error: %v", err)
+		}
+	}()
+	reader := bufio.NewReaderSize(zreader, 256) // set buffer to 1MB
+
+	//read
+	var header [8]byte
+	if _, err := io.ReadFull(reader, header[:]); err != nil {
+		log.Fatalf("fail to read file  header; %v", err)
+	}
+	return binary.LittleEndian.Uint64(header[:])
+}
+
+// deleteTraceOutOfRange remove trace file which doesn't overlap the input range from the file list.
+func deleteTraceOutOfRange(cfg *utils.Config, list map[uint64]string) {
+	var highestFirstBlock uint64
+	for firstBlock := range list {
+		// remove a file with the first block is large than the target last block
+		if firstBlock > cfg.Last {
+			delete(list, firstBlock)
+			continue
+		}
+		if firstBlock > highestFirstBlock && firstBlock <= cfg.First {
+			// delete a file with a range lower than the first block
+			if _, found := list[highestFirstBlock]; found {
+				delete(list, highestFirstBlock)
+			}
+			highestFirstBlock = firstBlock
+		}
+	}
+}
+
+func getTraceFiles(cfg *utils.Config, log *logging.Logger) []string {
+	var traceFiles []string
+	if cfg.TraceDirectory != "" {
+		var firstBlockList []uint64
+		blockFile := make(map[uint64]string)
+		dir, err := os.Open(cfg.TraceDirectory)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer dir.Close()
+		fileList, err := dir.Readdirnames(0)
+		if err != nil {
+			log.Fatal(err)
+		}
+		for _, name := range fileList {
+			fname := filepath.Join(cfg.TraceDirectory, name)
+			first := readTraceHeader(fname)
+			blockFile[first] = fname
+			firstBlockList = append(firstBlockList, first)
+		}
+		sort.Slice(firstBlockList, func(i, j int) bool { return firstBlockList[i] < firstBlockList[j] })
+		deleteTraceOutOfRange(cfg, blockFile)
+		log.Warning(blockFile)
+
+		for _, firstBlock := range firstBlockList {
+			if _, found := blockFile[firstBlock]; found {
+				log.Warningf("add %v, %v", firstBlock, blockFile[firstBlock])
+				traceFiles = append(traceFiles, blockFile[firstBlock])
+			}
+		}
+
+	} else if cfg.TraceFile != "" {
+		first := readTraceHeader(cfg.TraceFile)
+		if first <= cfg.Last {
+			traceFiles = append(traceFiles, cfg.TraceFile)
+		}
+	} else {
+		log.Fatalf("Trace file is not found.")
+	}
+	if len(traceFiles) == 0 {
+		log.Fatalf("No trace for the specified block range")
+	}
+	return traceFiles
+}
+
 // readTrace reads operations from trace files and puts them into a channel.
-func readTrace(cfg *utils.Config, ch chan operation.Operation) {
-	traceIter := tracer.NewTraceIterator(cfg.TraceFile, cfg.First, cfg.Last)
+func readTrace(cfg *utils.Config, ch chan operation.Operation, log *logging.Logger) {
+	// create a list of files
+	traceFiles := getTraceFiles(cfg, log)
+	traceIter := tracer.NewTraceIterator(traceFiles, cfg.First)
 	defer traceIter.Release()
 	for traceIter.Next() {
 		op := traceIter.Value()
@@ -86,7 +187,7 @@ func traceReplayTask(cfg *utils.Config, log *logging.Logger) error {
 	// starting reading in parallel
 	log.Notice("Start reading operations in parallel")
 	opChannel := make(chan operation.Operation, readBufferSize)
-	go readTrace(cfg, opChannel)
+	go readTrace(cfg, opChannel, log)
 
 	// create a directory for the store to place all its files, and
 	// instantiate the state DB under testing.
