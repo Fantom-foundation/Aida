@@ -5,7 +5,6 @@ import (
 	"bufio"
 	"compress/gzip"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -236,32 +235,6 @@ func (g *generator) merge(pathToDb string) error {
 	return m.merge()
 }
 
-// loadRangeFromSubstates loads range of block and epochs from given substate
-func (g *generator) loadRangeFromSubstates() error {
-	var ok bool
-	g.opera.firstBlock, g.opera.lastBlock, ok = utils.FindBlockRangeInSubstate()
-	if !ok {
-		return errors.New("cannot find substate")
-	}
-
-	// TODO overwrite g.opera.lastBlock so it is aligned with epoch
-
-	var err error
-	g.opera.firstEpoch, err = utils.FindEpochNumber(g.opera.firstBlock, g.cfg.ChainID)
-	if err != nil {
-		return err
-	}
-
-	g.opera.lastEpoch, err = utils.FindEpochNumber(g.opera.lastBlock, g.cfg.ChainID)
-	if err != nil {
-		return err
-	}
-
-	g.log.Noticef("Generating for %d - %d (%d - %d)", g.opera.firstBlock, g.opera.lastBlock, g.opera.firstEpoch, g.opera.lastEpoch)
-
-	return nil
-}
-
 // createPatch for updating data in AidaDb
 func (g *generator) createPatch() (string, error) {
 	// create a parents of output directory
@@ -283,7 +256,6 @@ func (g *generator) createPatch() (string, error) {
 		return "", fmt.Errorf("cannot open patch db; %v", err)
 	}
 
-	// todo mby rework to oop
 	err = CreatePatchClone(g.cfg, g.aidaDb, patchDb, g.opera.lastEpoch, g.opera.lastEpoch)
 
 	g.log.Notice("Patch metadata")
@@ -516,9 +488,6 @@ func (g *generator) calculatePatchEnd() error {
 	if headEpochNumber > g.stopAtEpoch {
 		g.stopAtEpoch = headEpochNumber
 	}
-
-	//// TODO remove before push for testing only
-	g.stopAtEpoch = g.opera.lastEpoch + 2
 
 	return nil
 }
