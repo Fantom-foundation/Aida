@@ -136,7 +136,7 @@ func ProcessCloneLikeMetadata(aidaDb ethdb.Database, typ AidaDbType, logLevel st
 		return err
 	}
 
-	if err = md.findEpochs(chainID); err != nil {
+	if err = md.findEpochs(); err != nil {
 		return err
 	}
 
@@ -241,7 +241,7 @@ func ProcessMergeMetadata(cfg *Config, aidaDb ethdb.Database, sourceDbs []ethdb.
 
 			substate.SetSubstateDb(paths[i])
 			substate.OpenSubstateDBReadOnly()
-			md.firstBlock, md.lastBlock, ok = FindBlockRangeInSubstate()
+			md.FirstBlock, md.LastBlock, ok = FindBlockRangeInSubstate()
 			if !ok {
 				md.log.Warningf("Cannot find blocks in substate; is substate present in given db? %v", paths[i])
 			} else {
@@ -316,12 +316,17 @@ func ProcessMergeMetadata(cfg *Config, aidaDb ethdb.Database, sourceDbs []ethdb.
 			return nil, fmt.Errorf("cannot close targetDb; %v", err)
 		}
 
-		targetMD.FirstBlock, targetMD.LastBlock, ok = FindBlockRangeInSubstate(cfg.AidaDb)
+		substate.SetSubstateDb(cfg.AidaDb)
+		substate.OpenSubstateDBReadOnly()
+
+		targetMD.FirstBlock, targetMD.LastBlock, ok = FindBlockRangeInSubstate()
 		if !ok {
 			targetMD.log.Warningf("Cannot find block range in substate of AidaDb (%v); this will in corrupted metadata but will not affect data itself", cfg.AidaDb)
 		} else {
 			targetMD.log.Noticef("Found block range inside substate of AidaDb %v (%v-%v)", cfg.AidaDb, targetMD.FirstBlock, targetMD.LastBlock)
 		}
+
+		substate.CloseSubstateDB()
 
 		// re-open db
 		targetMD.Db, err = rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
@@ -331,7 +336,7 @@ func ProcessMergeMetadata(cfg *Config, aidaDb ethdb.Database, sourceDbs []ethdb.
 
 	}
 
-	if err = targetMD.findEpochs(cfg.ChainID); err != nil {
+	if err = targetMD.findEpochs(); err != nil {
 		return nil, err
 	}
 
@@ -819,7 +824,7 @@ func (md *AidaDbMetadata) SetFreshMetadata(chainID int) error {
 		return err
 	}
 
-	if err = md.findEpochs(chainID); err != nil {
+	if err = md.findEpochs(); err != nil {
 		return err
 	}
 

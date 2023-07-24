@@ -246,11 +246,7 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 					}
 				}
 
-				patchMD := utils.NewAidaDbMetadata(patchDb, cfg.LogLevel)
-
-				patchDbHash = patchMD.GetDbHash()
-
-				firstBlock, firstEpoch, err := targetMD.CheckUpdateMetadata(cfg, patchMD)
+				err = targetMD.CheckUpdateMetadata(cfg, patchDb)
 				if err != nil {
 					return err
 				}
