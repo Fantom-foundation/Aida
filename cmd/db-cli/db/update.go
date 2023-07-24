@@ -98,7 +98,7 @@ func Update(cfg *utils.Config) error {
 			return errors.New("please choose chain-id with --chainid")
 		}
 
-		err = removeOldUpdateSetKey(cfg.AidaDb)
+		err = deleteUpdateSet(cfg.AidaDb)
 		if err != nil {
 			return fmt.Errorf("cannot open update-set; %v", err)
 		}
@@ -443,15 +443,15 @@ func retrievePatchesToDownload(firstBlock uint64, lastBlock uint64) ([]string, b
 	return fileNames, isAddingLachesisPatch, nil
 }
 
-// removeOldUpdateSetKey when user has already merged second patch, and we are prepending lachesis patch.
+// deleteUpdateSet when user has already merged second patch, and we are prepending lachesis patch.
 // This situation can happen due to lachesis patch being implemented later than rest of the Db
-func removeOldUpdateSetKey(dbPath string) error {
+func deleteUpdateSet(dbPath string) error {
 	updateDb, err := substate.OpenUpdateDB(dbPath)
 	if err != nil {
 		return fmt.Errorf("cannot open update-db; %v", err)
 	}
 
-	updateDb.DeleteSubstateAlloc(utils.FirstOperaBlock)
+	updateDb.DeleteSubstateAlloc(utils.FirstOperaBlock - 1)
 	substate.CloseSubstateDB()
 
 	return nil
