@@ -4,22 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Fantom-foundation/Aida/cmd/substate-cli/db"
 	"github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
-)
-
-var (
-	dbCommand = cli.Command{
-		Name:        "db",
-		Usage:       "A set of commands on substate DB",
-		Description: "",
-		Subcommands: []*cli.Command{
-			&db.CloneCommand,
-			&db.CompactCommand,
-		},
-	}
 )
 
 func main() {
@@ -38,7 +25,6 @@ func main() {
 			&replay.GetAddressStatsCommand,
 			&replay.GetKeyStatsCommand,
 			&replay.GetLocationStatsCommand,
-			&dbCommand,
 		},
 	}
 	substate.RecordReplay = true

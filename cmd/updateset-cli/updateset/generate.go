@@ -72,7 +72,9 @@ func generateUpdateSet(ctx *cli.Context) error {
 		return err
 	}
 	// set first block
-	cfg.First = db.GetLastKey() + 1
+	if db.GetLastKey() > 0 {
+		cfg.First = db.GetLastKey() + 1
+	}
 	db.Close()
 
 	return GenUpdateSet(cfg, cfg.First, interval)
@@ -103,18 +105,19 @@ func GenUpdateSet(cfg *utils.Config, first uint64, interval uint64) error {
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
-	// store world state if applicable
-	skipWorldState := first > utils.FirstSubstateBlock
+	skipOperaWorldState := true
+	// legacy support if a user wants to generate update set from the first opera world state
+	// store world state if a path is provided
 	worldState := cfg.WorldStateDb
-	if _, err := os.Stat(worldState); os.IsNotExist(err) {
-		skipWorldState = true
+	if _, err := os.Stat(worldState); err == nil {
+		skipOperaWorldState = false
 	}
 
 	update := make(substate.SubstateAlloc)
-	if !skipWorldState {
-		first = utils.FirstSubstateBlock
+	if !skipOperaWorldState {
+		first = utils.FirstOperaBlock
 		log.Notice("Load initial worldstate and store its substateAlloc")
-		ws, err := utils.GenerateWorldState(worldState, first-1, cfg)
+		ws, err := utils.GenerateFirstOperaWorldState(worldState, cfg)
 		if err != nil {
 			return err
 		}

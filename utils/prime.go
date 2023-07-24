@@ -201,21 +201,20 @@ func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error 
 	pc := NewPrimeContext(cfg, db, log)
 
 	var (
-		totalSize uint64
-		maxSize   uint64 = cfg.UpdateBufferSize
-		blockPos  uint64 = FirstSubstateBlock - 1
+		totalSize uint64 // total size of unprimed update set
+		maxSize   uint64 // maximum size of update set before priming
+		block     uint64 // current block position
+		hasPrimed bool   // if true, db has been primed
 	)
 
-	if target < blockPos {
-		return fmt.Errorf("the target block, %v, is earlier than the initial world state block, %v. The world state is not loaded.", target, blockPos)
-	}
+	maxSize = cfg.UpdateBufferSize
 	// load pre-computed update-set from update-set db
 	udb, err := substate.OpenUpdateDBReadOnly(cfg.UpdateDb)
 	if err != nil {
 		return err
 	}
 	defer udb.Close()
-	updateIter := substate.NewUpdateSetIterator(udb, blockPos, target)
+	updateIter := substate.NewUpdateSetIterator(udb, block, target)
 	update := make(substate.SubstateAlloc)
 
 	for updateIter.Next() {
@@ -223,10 +222,10 @@ func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error 
 		if newSet.Block > target {
 			break
 		}
-		blockPos = newSet.Block
+		block = newSet.Block
 
-		// Prime StateDB
 		incrementalSize := update.EstimateIncrementalSize(*newSet.UpdateSet)
+		// Prime StateDB
 		if totalSize+incrementalSize > maxSize {
 			log.Infof("\tPriming...")
 			if err := pc.PrimeStateDB(update, db); err != nil {
@@ -234,6 +233,7 @@ func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error 
 			}
 			totalSize = 0
 			update = make(substate.SubstateAlloc)
+			hasPrimed = true
 		}
 
 		// Reset accessed storage locationas of suicided accounts prior to updateset block.
@@ -241,28 +241,36 @@ func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error 
 		// reset when generating the update set database.
 		ClearAccountStorage(update, newSet.DeletedAccounts)
 		// if exists in DB, suicide
-		// TODO may aggregate list and delete only once before priming
-		pc.SuicideAccounts(db, newSet.DeletedAccounts)
+		if hasPrimed {
+			pc.SuicideAccounts(db, newSet.DeletedAccounts)
+		}
 
 		update.Merge(*newSet.UpdateSet)
 		totalSize += incrementalSize
-		log.Infof("\tMerge update set at block %v. New toal size %v MB (+%v MB)", newSet.Block, totalSize/1_000_000, incrementalSize/1_000_000)
+		log.Infof("\tMerge update set at block %v. New toal size %v MB (+%v MB)",
+			newSet.Block, totalSize/1_000_000,
+			incrementalSize/1_000_000)
 	}
-	// prime the remaining from updateset
-	if err := pc.PrimeStateDB(update, db); err != nil {
-		return err
+	// if update set is not empty, prime the remaining
+	if len(update) > 0 {
+		if err := pc.PrimeStateDB(update, db); err != nil {
+			return err
+		}
+		update = make(substate.SubstateAlloc)
+		hasPrimed = true
 	}
 	updateIter.Release()
-	update = make(substate.SubstateAlloc)
 
 	// advance from the latest precomputed state to the target block
-	if blockPos < target {
-		log.Infof("\tPriming from substate from block %v", blockPos)
-		update, deletedAccounts, err := generateUpdateSet(blockPos+1, target, cfg)
+	if block < target || target == 0 {
+		log.Infof("\tPriming from substate from block %v", block)
+		update, deletedAccounts, err := GenerateUpdateSet(block, target, cfg)
 		if err != nil {
 			return err
 		}
-		pc.SuicideAccounts(db, deletedAccounts)
+		if hasPrimed {
+			pc.SuicideAccounts(db, deletedAccounts)
+		}
 		if err := pc.PrimeStateDB(update, db); err != nil {
 			return err
 		}
@@ -271,7 +279,6 @@ func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error 
 	// delete destroyed accounts from stateDB
 	log.Notice("Delete destroyed accounts")
 	// remove destroyed accounts until one block before the first block
-	err = DeleteDestroyedAccountsFromStateDB(db, cfg, cfg.First-1)
-
+	err = DeleteDestroyedAccountsFromStateDB(db, cfg, pc.block)
 	return err
 }

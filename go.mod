@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/Fantom-foundation/Carmen/go v0.0.0-00010101000000-000000000000
-	github.com/Fantom-foundation/Substate v0.0.0-20230706061427-c6c0c25f5307
+	github.com/Fantom-foundation/Substate v0.0.0-20230717050741-1969ed5d05e2
 	github.com/Fantom-foundation/Tosca v0.0.0-20230527064715-aa1fc97baebe
 	github.com/Fantom-foundation/go-opera v1.1.1-rc.2
 	github.com/Fantom-foundation/go-opera-erigon v0.0.0-00010101000000-000000000000
@@ -21,11 +21,14 @@ require (
 	github.com/klauspost/compress v1.15.11
 	github.com/ledgerwatch/erigon v0.0.0-00010101000000-000000000000
 	github.com/ledgerwatch/erigon-lib v0.0.0-20220421034346-3c5275752634
+	github.com/mattn/go-sqlite3 v2.0.2+incompatible
 	github.com/olekukonko/tablewriter v0.0.5
+	github.com/onsi/gomega v1.17.0
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
 	github.com/paulmach/orb v0.9.0
 	github.com/sigurn/crc8 v0.0.0-20220107193325-2243fe600f9f
 	github.com/status-im/keycard-go v0.0.0-20190424133014-d95853db0f48
+	github.com/stretchr/testify v1.8.0
 	github.com/syndtr/goleveldb v1.0.1-0.20220614013038-64ee5596c38a
 	github.com/urfave/cli/v2 v2.24.4
 	golang.org/x/text v0.8.0
@@ -90,7 +93,6 @@ require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
-	github.com/mattn/go-sqlite3 v2.0.2+incompatible // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
 	github.com/mschoch/smat v0.2.0 // indirect
 	github.com/naoina/go-stringutil v0.1.0 // indirect
@@ -98,6 +100,7 @@ require (
 	github.com/opentracing/opentracing-go v1.1.0 // indirect
 	github.com/peterh/liner v1.1.1-0.20190123174540-a2c9a5303de7 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_golang v1.12.0 // indirect
 	github.com/prometheus/client_model v0.2.1-0.20210607210712-147c58e9608a // indirect
 	github.com/prometheus/common v0.32.1 // indirect
@@ -137,12 +140,20 @@ require (
 	gopkg.in/olebedev/go-duktape.v3 v3.0.0-20200619000410-60c24ae608a6 // indirect
 	gopkg.in/urfave/cli.v1 v1.20.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
 // The Carmen project is integrated as a git-submodule since we need to run extra
 // build steps when importing the project. This is handled in the Makefile.
 replace github.com/Fantom-foundation/Carmen/go => ./carmen/go
 
+// The Tosca project is also integrated as a git-submodule for the same reasons as
+// Carmen. Furthermore, the EVMC library, which is part of Tosca, needs to be used.
+replace github.com/Fantom-foundation/Tosca => ./tosca
+
+replace github.com/ethereum/evmc/v10 => ./tosca/third_party/evmc
+
+// Erigon
 replace github.com/Fantom-foundation/go-opera-erigon => github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230418094634-9d555752574a
 
 replace github.com/Fantom-foundation/go-opera-flat => github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230329105747-dd1f4d815c71
@@ -162,9 +173,3 @@ replace github.com/ugorji/go/codec/codecgen => github.com/ugorji/go/codec/codecg
 replace github.com/torquem-ch/mdbx-go => github.com/torquem-ch/mdbx-go v0.26.3
 
 replace github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
-
-// The Tosca project is also integrated as a git-submodule for the same reasons as
-// Carmen. Furthermore, the EVMC library, which is part of Tosca, needs to be used.
-replace github.com/Fantom-foundation/Tosca => ./tosca
-
-replace github.com/ethereum/evmc/v10 => ./tosca/third_party/evmc

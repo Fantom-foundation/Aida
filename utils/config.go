@@ -23,10 +23,11 @@ type ArgumentMode int
 
 // An enums of argument modes used by trace subcommands
 const (
-	BlockRangeArgs ArgumentMode = iota // requires 2 arguments: first block and last block
-	LastBlockArg                       // requires 1 argument: last block
-	EventArg                           // requires 1 argument: events path
-	NoArgs                             // requires no arguments
+	BlockRangeArgs          ArgumentMode = iota // requires 2 arguments: first block and last block
+	BlockRangeArgsProfileDB                     // requires 3 arguments: first block, last block and profile db
+	LastBlockArg                                // requires 1 argument: last block
+	EventArg                                    // requires 1 argument: events path
+	NoArgs                                      // requires no arguments
 )
 
 const (
@@ -35,7 +36,7 @@ const (
 )
 
 var (
-	FirstSubstateBlock  uint64 // id of the first block in substate
+	FirstOperaBlock     uint64 // id of the first block in substate
 	AidaDbRepositoryUrl string // url of the Aida DB repository
 )
 
@@ -60,6 +61,9 @@ var hardForksTestnet = map[string]uint64{
 	"berlin": 1_559_470,
 	"london": 7_513_335,
 }
+
+// special transaction number for pseudo transactions
+const PseudoTx = 99999
 
 // GitCommit represents the GitHub commit hash the app was built from.
 var GitCommit = "0000000000000000000000000000000000000000"
@@ -463,6 +467,7 @@ type Config struct {
 	TargetBlock         uint64            // represents the ID of target block to be reached by state evolve process or in dump state
 	UpdateBufferSize    uint64            // cache size in Bytes
 	ErigonBatchSize     datasize.ByteSize // erigon batch size for runVM
+	ProfileDB           string            // profile db for parallel transaction execution
 
 }
 
@@ -486,9 +491,9 @@ func GetChainConfig(chainID int) *params.ChainConfig {
 
 func setFirstBlockFromChainID(chainID int) {
 	if chainID == 250 {
-		FirstSubstateBlock = hardForksMainnet["opera"]
+		FirstOperaBlock = hardForksMainnet["opera"]
 	} else if chainID == 4002 {
-		FirstSubstateBlock = hardForksTestnet["opera"]
+		FirstOperaBlock = hardForksTestnet["opera"]
 	} else {
 		log.Fatalf("unknown chain id %v", chainID)
 	}
@@ -499,7 +504,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "Config")
 
 	var first, last uint64
-	var events string
+	var events, profileDB string
 	var chainId int
 
 	// first look for chainId since we need it for verbal block indication
@@ -562,6 +567,19 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 				return nil, argErr
 			}
 		}
+	case BlockRangeArgsProfileDB:
+		// process arguments and flags
+		if ctx.Args().Len() == 3 {
+			first, last, argErr = SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1), chainId)
+			if argErr != nil {
+				return nil, argErr
+			}
+			profileDB = ctx.Args().Get(2)
+		} else if ctx.Args().Len() == 2 {
+			return nil, fmt.Errorf("command requires profile db as argument")
+		} else {
+			return nil, fmt.Errorf("command requires 3 arguments")
+		}
 	case LastBlockArg:
 		last, argErr = strconv.ParseUint(ctx.Args().Get(0), 10, 64)
 		if argErr != nil {
@@ -584,6 +602,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	cfg.Events = events
 	cfg.First = first
 	cfg.Last = last
+	cfg.ProfileDB = profileDB
 	cfg.ChainID = chainId
 
 	// --continue-on-failure implicitly enables transaction state validation
@@ -617,9 +636,6 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		if err != nil {
 			return cfg, fmt.Errorf("invalid batchSize provided: %v", err)
 		}
-	}
-	if mode == NoArgs {
-		return cfg, nil
 	}
 
 	if !cfg.Quiet {
@@ -658,6 +674,9 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		}
 		log.Infof("Used VM implementation: %v", cfg.VmImpl)
 		log.Infof("Update DB directory: %v", cfg.UpdateDb)
+		if cfg.First == 0 {
+			cfg.SkipPriming = true
+		}
 		if cfg.SkipPriming {
 			log.Infof("Priming: Skipped")
 		} else {
@@ -667,8 +686,8 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 			}
 			log.Infof("Update buffer size: %v bytes", cfg.UpdateBufferSize)
 		}
-		log.Infof("\tValidate world state: %v, validate tx state: %v\n", cfg.ValidateWorldState, cfg.ValidateTxState)
-		log.Infof("\tErigon batch size: %v", cfg.ErigonBatchSize.HumanReadable())
+		log.Infof("Validate world state: %v, validate tx state: %v", cfg.ValidateWorldState, cfg.ValidateTxState)
+		log.Infof("Erigon batch size: %v", cfg.ErigonBatchSize.HumanReadable())
 	}
 
 	if cfg.ValidateTxState {
@@ -684,15 +703,11 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		log.Warning("Deleted-account-dir is not provided or does not exist")
 		cfg.HasDeletedAccounts = false
 	}
-	//if cfg.KeepDb && cfg.ShadowDb {
-	//	log.Warning("Keeping persistent stateDB with a shadow db is not supported yet")
-	//	cfg.KeepDb = false
-	//}
 	if cfg.KeepDb && strings.Contains(cfg.DbVariant, "memory") {
 		log.Warning("Unable to keep in-memory stateDB")
 		cfg.KeepDb = false
 	}
-	if cfg.SkipPriming && cfg.ValidateWorldState {
+	if cfg.First != 0 && cfg.SkipPriming && cfg.ValidateWorldState {
 		return cfg, fmt.Errorf("skipPriming and world-state validation can not be enabled at the same time")
 	}
 
