@@ -1,6 +1,6 @@
 #!/usr/bin/env Rscript
 # TODO: Explain usage here
-# This script aims to pass a list of parameters and of flags to a markdown file to yield a report for parallel transaction execution experiment.
+# This script aims to pass a list of parameters and flags to a markdown file to yield the report for parallel transaction execution experiment.
 # List of parameters:
 #  Configuration
 #  Processor
@@ -54,7 +54,8 @@ if (opt$options$format == "html") {
    stop(sprintf("R-Markdown file ( %s) cannot be found", file))
 }
 
-# TODO: Check for existence of files / directories // where ? in parameters ?
+# where and why? in parameters ?
+# TODO: Check for existence of files / directories
 
 
 # Check input file
