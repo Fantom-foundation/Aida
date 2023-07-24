@@ -503,10 +503,9 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 
 	var (
 		first, last uint64
-		profileDB string
-		chainId int
+		profileDB   string
+		chainId     int
 	)
-
 
 	// first look for chainId since we need it for verbal block indication
 	if ctx.Int(ChainIDFlag.Name) == 0 {
