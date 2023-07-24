@@ -5,7 +5,13 @@ output:
   html_document: default
   pdf_document: default
 params:
-  Configuration: Geth VM and Geth MPT
+  HW: (HWConf)
+  SW: (SWConf)
+  GHAida: (GithubKey)
+  GHTosca: (GithubKey)
+  GHCarmen: (GithubKey)
+  DB: Carmen
+  VM: Geth VM
   ProfileDB: ./test.db
 ---
 
@@ -21,24 +27,28 @@ parallelisable <- experiment %>%
 dbDisconnect(con)
 ```
 
-## 1. Block Range
+## 1. Configuration
+The experiment is run on a `r param$HW` computer with `r param$SW` as an operating system.
+For the experiment, we use `r param$DB` as a StateDB and `r param$VM` as a virtual machine.
+The github hash of the Carmen repository is `r param$GHCarmen`, of Tosca `r param$GHTosca`, 
+and of Aida `r param$GHAida`.  
 
-The experiment was conducted for the block range from `r format(min(experiment$block),big.mark=",")`  to `r format(max(experiment$block),big.mark=",")`. The parallelisation experiment was performed with following configuration: **`r params$Configuration`**.
+## 2. Block Range
 
-## 2. Degree of Parallelisation 
+The experiment was conducted for the block range from `r format(min(experiment$block),big.mark=",")`  to `r format(max(experiment$block),big.mark=",")`. 
+
+## 3. Degree of Parallelisation 
 
 We have `r format(nrow(experiment), big.mark=",")` blocks of which `r format(nrow(parallelisable), big.mark=",")` are parallelisable.  `r format(100.0*(nrow(experiment)-nrow(parallelisable))/nrow(experiment), digits=4)`% of blocks are strictly sequential (not parallelisable) blocks.  The maximal achievable parallelism in a block is `r format(max(experiment$speedup), digits=4)`.  The geometric mean of the speedup is `r format(exp(mean(log(experiment$speedup))), digits=4)`.
 
 The distribution of the speedup is shown below:
 
 ```{r, echo = FALSE, message=FALSE}
-parallelisable %>% 
-  ggplot(aes(speedup)) + 
-  geom_freqpoly() + 
-  labs (x="Speedup per Block")
+hist(parallelisable$speedup, main="Speedup Distribution without Sequential Blocks", breaks = quantile(parallelisable$speedup, 0:10 / 10), xlab="Speedup", col="lightblue1")
+lines(density(parallelisable$speedup), col="dodgerblue3", lwd=2)
 ```
 
-## 3. Number of Transactions per Block
+## 4. Number of Transactions per Block
 
 We have on average `r mean(experiment$numTx)` transactions per block. The 
 smallest number of transactions per block is `r min(experiment$numTx)` and the 
@@ -46,13 +56,11 @@ largest number is `r max(experiment$numTx)`. The distribution of number of
 transactions per block is shown below:
 
 ```{r, echo = FALSE, message=FALSE}
-experiment %>% 
-  ggplot(aes(numTx)) + 
-  geom_freqpoly(binwidth = 1) +
-  labs(x="Number of Transactions per Block")
+hist(experiment$numTx, freq=FALSE, main="Number of Transaction Distribution", xlab="Number of Transactions", col="lightblue1"); rug(experiment$numTx)
+abline(v=mean(experiment$numTx), col="dodgerblue3", lty=2, lwd=2)
 ```
 
-## 4. Processor Utilisation / Efficiency
+## 5. Processor Utilisation / Efficiency
 
 The lower bound of the processor utilisation is `r format(100.0*exp(mean(log(experiment$speedup/experiment$ubNumProc))), digits=4)`% on average and with a maximum of `r max(experiment$ubNumProc)` processors (upper bound).
 
@@ -61,10 +69,8 @@ The lower bound of the processor utilisation is `r format(100.0*exp(mean(log(exp
 The average block execution time is `r mean(experiment$tBlock)/1e6` milliseconds with a minimum of `r min(experiment$tBlock)/1e6` milliseconds and a maximum of `r max(experiment$tBlock)/1e6` milliseconds.  The distribution of the block execution time in nanoseconds is shown below:
 
 ```{r setup, echo=FALSE, message=FALSE}
-experiment %>% 
-  ggplot(aes(tBlock)) + 
-  geom_freqpoly(binwidth = 10000) + 
-  labs(x="Block time in ns")
+hist(experiment$tBlock, main="Block Runtime Distribution", freq=FALSE, xlab="Block Runtime (ns)", col="lightblue1")
+lines(density(experiment$tBlock), col="dodgerblue3", lwd=2)
 ```
 
 The smoothened trend line for block time in nanoseconds is shown below:
@@ -76,15 +82,13 @@ experiment %>%
   labs(x="Block Height", y="Block time in ns")
 ```
 
-## 6. Commit Time
+## 7. Commit Time
 
 The average commit time is `r mean(experiment$tCommit)/1e6` milliseconds with a minimum of `r min(experiment$tCommit)/1e6` milliseconds and a maximum of `r max(experiment$tCommit)/1e6` milliseconds.  The distribution of the commit time in nanoseconds is shown below:
 
 ```{r, echo=FALSE, message=FALSE}
-experiment %>% 
-  ggplot(aes(tCommit)) + 
-  geom_freqpoly(binwidth = 10000) + 
-  labs(x="Commit time in ns")
+hist(experiment$tCommit, main="Commit Runtime Distribution", freq=FALSE, xlab="Commit Runtime (ns)", col="lightblue1")
+lines(density(experiment$tCommit), col="dodgerblue3", lwd=2)
 ```
 
 The smoothened trend line of the commit time in nanoseconds is shown below:
