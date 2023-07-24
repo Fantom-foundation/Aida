@@ -1,11 +1,51 @@
 #!/usr/bin/env Rscript
+# TODO: Explain usage here
+# scripts/knit.r -p 'Configuration="a", Processor="ppp", Drive="ddd", RepoSha="sha"' -f html_pdf -o myreport -i ./profile.db reports/parallel_experiment.rmd
 library(rmarkdown)
-args = commandArgs(trailingOnly=TRUE)
-if (length(args)==0) {
-  stop("At least one argument must be supplied (input file).n", call.=FALSE)
+library(optparse)
+option_list <- list(
+    make_option(c("-v", "--verbose"), action="store_true", default=FALSE, help="Print verbose messages"),
+    make_option(c("-p", "--parameter"), default="", help="Parameters for R-Markdown renderer"),
+    make_option(c("-o", "--output"), default="./parallel.html", help="Output file"),
+    make_option(c("-d", "--outputdir"), default="./", help="Output Directory"),
+    make_option(c("-f", "--format"), default="html", help="Output format [html|pdf|html_pdf]"),
+    make_option(c("-i", "--input"), default="./profile.db", help="Profile DB for rendering.")
+)
+opt <- parse_args(OptionParser(usage="%prog [options] file", option_list=option_list), positional_argument=1)
+file <- opt$args 
+profileDB <- opt$options$input
+param <- eval(parse(text=paste("list(",opt$options$param,")")))
+output <- opt$options$output
+output_dir <- opt$options$outputdir
+
+# Check output format
+if (opt$options$format == "html") {
+    format = "html_document"
+} else if (opt$options$format == "pdf") {
+    format = "pdf_document"
+} else if (opt$options$format == "html_pdf") {
+    format = c("html_document", "pdf_document")
+} else {
+   stop(sprintf("R-Markdown file ( %s) cannot be found", file))
 }
+
+# TODO: Check for existence of files / directories 
+# TODO: Check that for pdf output format, the filename should not have html suffix (and vice versa for pdf)
+# TODO: Check that for html_pdf output format, the filename should not have no suffix
+
+
+# Check input file
+if(file.access(file)== -1) {
+   stop(sprintf("R-Markdown file ( %s) cannot be found", file))
+}
+
+# TODO: Check that all necessary options of render are covered. You find options here
+#       https://pkgs.rstudio.com/rmarkdown/reference/render.html
 render(
-  input = './reports/parallel_experiment.rmd', 
-  params = list(
-    ProfileDB = args[1]
-))
+  input = file, 
+  output_file = output, 
+  output_dir = output_dir,
+  output_format = format,
+  params = c(list( "ProfileDB" = profileDB), param)
+)
+exit(0)
