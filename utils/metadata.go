@@ -118,7 +118,7 @@ func ProcessPatchLikeMetadata(aidaDb ethdb.Database, logLevel string, firstBlock
 
 // ProcessCloneLikeMetadata inserts every metadata from sourceDb, only epochs are excluded.
 // We can't be certain if given epoch is whole
-func ProcessCloneLikeMetadata(aidaDb ethdb.Database, typ AidaDbType, logLevel string, firstBlock, lastBlock uint64, chainID int, dbHash []byte) error {
+func ProcessCloneLikeMetadata(aidaDb ethdb.Database, typ AidaDbType, logLevel string, firstBlock, lastBlock uint64, chainID int) error {
 	var err error
 
 	md := NewAidaDbMetadata(aidaDb, logLevel)
@@ -153,15 +153,6 @@ func ProcessCloneLikeMetadata(aidaDb ethdb.Database, typ AidaDbType, logLevel st
 	}
 
 	if err = md.SetTimestamp(); err != nil {
-		return err
-	}
-
-	if dbHash != nil {
-		// we do not want hash to be nil, by this we mark that the patch is not last patch - only last patch contains the dbHash
-		dbHash = []byte{0}
-	}
-
-	if err = md.SetDbHash(dbHash); err != nil {
 		return err
 	}
 
