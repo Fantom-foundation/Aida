@@ -91,11 +91,6 @@ func newGenerator(ctx *cli.Context, cfg *utils.Config) (*generator, error) {
 		return nil, fmt.Errorf("you need to specify aida-db (--aida-db)")
 	}
 
-	//_, err := os.Stat(cfg.AidaDb)
-	//if os.IsNotExist(err) {
-	//	return nil, fmt.Errorf("supplied aida-db %s doesn't exist", cfg.AidaDb)
-	//}
-
 	db, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
 	if err != nil {
 		log.Fatalf("cannot create new db; %v", err)

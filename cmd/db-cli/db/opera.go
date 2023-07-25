@@ -177,26 +177,4 @@ func (opera *aidaOpera) prepareDumpCliContext() error {
 	}
 	opera.cfg.Db = tmpSaveDbPath
 	return nil
-	//flagSet := flag.NewFlagSet("", 0)
-	//flagSet.String(utils.WorldStateFlag.Name, opera.cfg.WorldStateDb, "")
-	//flagSet.String(utils.DbFlag.Name, opera.cfg.Db+"/chaindata/leveldb-fsh/", "")
-	//flagSet.String(utils.StateDbVariantFlag.Name, "ldb", "")
-	//flagSet.String(utils.SourceTableNameFlag.Name, utils.SourceTableNameFlag.Value, "")
-	//flagSet.String(utils.TrieRootHashFlag.Name, utils.TrieRootHashFlag.Value, "")
-	//flagSet.Int(substate.WorkersFlag.Name, substate.WorkersFlag.Value, "")
-	//flagSet.Uint64(utils.TargetBlockFlag.Name, utils.TargetBlockFlag.Value, "")
-	//flagSet.Int(utils.ChainIDFlag.Name, opera.cfg.ChainID, "")
-	//flagSet.String(logger.LogLevelFlag.Name, opera.cfg.LogLevel, "")
-	//
-	//ctx := cli.NewContext(cli.NewApp(), flagSet, nil)
-	//
-	//err := ctx.Set(utils.DbFlag.Name, opera.cfg.Db+"/chaindata/leveldb-fsh/")
-	//if err != nil {
-	//	return err
-	//}
-	//command := &cli.Command{Name: state.CmdDumpState.Name}
-	//ctx.Command = command
-	//ctx.Command.Flags = state.CmdDumpState.Flags
-	//
-	//return state.DumpState(ctx)
 }
