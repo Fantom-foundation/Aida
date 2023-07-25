@@ -2,7 +2,6 @@
 #
 # Synopsis: 
 #    run_parallel_experiment.sh <aida-db> <carmen-impl> <carmen-variant> <tosca-impl> <output-directory>
-#
 
 #  HardwareDescription() queries the hardware configuration of the server.
 #  Requires Linux as an operating system, and hwinfo must be installed.
@@ -33,7 +32,7 @@ GoVersion() {
 }
 
 # Run full parallel experiment
-./build/aida-profile --aid-db $1 opera last "$5/profile.db"
+./build/aida-profile parallelisation --aida-db $1 --db-impl $2 --db-variant $3 --vm-impl=$4 --db-tmp /var/data/tmp-andrei 4564026 4664026 "$5/profile.db"
 
 # Query the configuration
 hw=`HardwareDescription`
