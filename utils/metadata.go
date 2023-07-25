@@ -204,6 +204,10 @@ func (md *AidaDbMetadata) genMetadata(firstBlock uint64, lastBlock uint64, first
 		return err
 	}
 
+	if err = md.SetDbHash(dbHash); err != nil {
+		return err
+	}
+
 	return nil
 }
 
