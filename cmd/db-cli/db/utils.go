@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -16,29 +17,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/op/go-logging"
 )
-
-// prepareDbDirs updates config for flags required in invoked generation commands
-// these flags are not expected from user, so we need to specify them for the generation process
-func prepareDbDirs(cfg *utils.Config) (string, error) {
-	if cfg.DbTmp != "" {
-		// create a parents of temporary directory
-		err := os.MkdirAll(cfg.DbTmp, 0755)
-		if err != nil {
-			return "", fmt.Errorf("failed to create %s directory; %s", cfg.DbTmp, err)
-		}
-	}
-
-	//fName := fmt.Sprintf("%v/%v-%v", cfg.DbTmp, "tmp_aida_db_*", rand.Int())
-	// create a temporary working directory
-	fName, err := os.MkdirTemp(cfg.DbTmp, "aida_db_tmp_*")
-	if err != nil {
-		return "", fmt.Errorf("failed to create a temporary directory. %v", err)
-	}
-
-	loadSourceDBPaths(cfg, fName)
-
-	return fName, nil
-}
 
 // openSourceDatabases opens all databases required for merge
 func openSourceDatabases(sourceDbPaths []string) ([]ethdb.Database, error) {
@@ -214,6 +192,26 @@ func startOperaPruning(cfg *utils.Config) chan error {
 		err := runCommand(cmd, nil, log)
 		if err != nil {
 			errChan <- fmt.Errorf("unable prune opera %v; %v", cfg.Db, err)
+		}
+	}()
+	return errChan
+}
+
+// startOperaRecording records substates
+func startOperaRecording(cfg *utils.Config, syncUntilEpoch uint64) chan error {
+	errChan := make(chan error, 1)
+	// todo check if path to aidaDb exists otherwise create the dir
+
+	log := logger.NewLogger(cfg.LogLevel, "autogen-recording")
+	log.Noticef("Starting opera recording %v", cfg.Db)
+
+	go func() {
+		defer close(errChan)
+		// syncUntilEpoch +1 because command is off by one
+		cmd := exec.Command("opera", "--datadir", cfg.Db, "--recording", "--substate-db", cfg.SubstateDb, "--exitwhensynced.epoch", strconv.FormatUint(syncUntilEpoch+1, 10))
+		err := runCommand(cmd, nil, log)
+		if err != nil {
+			errChan <- fmt.Errorf("unable record opera substates %v; %v", cfg.Db, err)
 		}
 	}()
 	return errChan

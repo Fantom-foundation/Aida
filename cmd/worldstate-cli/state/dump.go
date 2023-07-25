@@ -29,7 +29,7 @@ import (
 //   - Code (hash + separate storage)
 //   - Contract Storage
 var CmdDumpState = cli.Command{
-	Action:  DumpState,
+	Action:  dumpState,
 	Name:    "dump",
 	Aliases: []string{"d"},
 	Usage:   "Extracts world state MPT trie at given root from input database into state snapshot output database.",
@@ -51,15 +51,20 @@ var CmdDumpState = cli.Command{
 }
 
 // DumpState dumps state from given EVM trie into an output account-state database
-func DumpState(ctx *cli.Context) error {
+func dumpState(ctx *cli.Context) error {
 	// make config
 	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
 	if err != nil {
 		return err
 	}
+	cfg.Db = DefaultPath(ctx, &utils.DbFlag, ".opera/chaindata/leveldb-fsh")
 
+	return DumpState(ctx, cfg)
+}
+
+func DumpState(ctx *cli.Context, cfg *utils.Config) error {
 	// open the source trie DB
-	store, err := opera.Connect(cfg.DbVariant, DefaultPath(ctx, &utils.DbFlag, ".opera/chaindata/leveldb-fsh"), cfg.SourceTableName)
+	store, err := opera.Connect(cfg.DbVariant, cfg.Db, cfg.SourceTableName)
 	if err != nil {
 		return err
 	}

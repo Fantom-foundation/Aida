@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bufio"
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -43,6 +44,7 @@ var UpdateCommand = cli.Command{
 		&logger.LogLevelFlag,
 		&utils.CompactDbFlag,
 		&utils.DbTmpFlag,
+		&utils.ValidateFlag,
 	},
 	Description: ` 
 Updates aida-db by downloading patches from aida-db generation server.
@@ -143,7 +145,11 @@ func getTargetDbBlockRange(cfg *utils.Config) (uint64, uint64, error) {
 		}
 	} else {
 		// load last block from existing aida-db metadata
-		firstAidaDbBlock, lastAidaDbBlock, ok := utils.FindBlockRangeInSubstate(cfg.AidaDb)
+		substate.SetSubstateDb(cfg.AidaDb)
+		substate.OpenSubstateDBReadOnly()
+		defer substate.CloseSubstateDB()
+
+		firstAidaDbBlock, lastAidaDbBlock, ok := utils.FindBlockRangeInSubstate()
 		if !ok {
 			return 0, 0, fmt.Errorf("cannot find blocks in substate; is substate present in given db? %v", cfg.AidaDb)
 		}
@@ -173,16 +179,18 @@ func patchesDownloader(cfg *utils.Config, patches []string, firstBlock, lastBloc
 
 // mergePatch takes decompressed patches and merges them into aida-db
 func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan error, firstAidaDbBlock, lastAidaDbBlock uint64) error {
-	log := logger.NewLogger(cfg.LogLevel, "aida-merge-patch")
+	var (
+		targetMD                            *utils.AidaDbMetadata
+		patchDbHash, targetDbHash, trueHash []byte
+		isNewDb                             bool
+		log                                 = logger.NewLogger(cfg.LogLevel, "aida-merge-patch")
+	)
 
-	var isNewDb bool
 	if lastAidaDbBlock == 0 {
 		isNewDb = true
 	}
 
 	firstRun := true
-
-	var targetMD *utils.AidaDbMetadata
 
 	for {
 		select {
@@ -241,6 +249,24 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 				patchDb, err := rawdb.NewLevelDBDatabase(extractedPatchPath, 1024, 100, "profiling", false)
 				if err != nil {
 					return fmt.Errorf("cannot open targetDb; %v", err)
+				}
+
+				targetDbHash = targetMD.GetDbHash()
+				if cfg.Validate {
+					if patchDbHash == nil {
+						log.Critical("DbHash inside Patch was not found, validation cannot be done")
+					} else {
+						trueHash, err = validate(targetMD.Db, cfg.LogLevel)
+						if err != nil {
+							return fmt.Errorf("cannot create patchDbHash of updated db; %v", err)
+						}
+
+						if cmp := bytes.Compare(targetDbHash, trueHash); cmp != 0 {
+							return fmt.Errorf("db Hashes are not same! \nMetadata: %v; Calculated: %v", hex.EncodeToString(targetDbHash), hex.EncodeToString(trueHash))
+						} else {
+							log.Notice("Validation successful!")
+						}
+					}
 				}
 
 				err = targetMD.CheckUpdateMetadata(cfg, patchDb)

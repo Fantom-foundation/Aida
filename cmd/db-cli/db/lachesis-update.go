@@ -107,7 +107,7 @@ func loadOperaWorldState(path string) (substate.SubstateAlloc, error) {
 // createLachesisWorldState creates update-set from block 0 to the last lachesis block
 func createLachesisWorldState(cfg *utils.Config) (substate.SubstateAlloc, error) {
 	lachesisLastBlock := utils.FirstOperaBlock - 1
-	lachesis, _, err := utils.GenerateUpdateSet(0, lachesisLastBlock, cfg)
+	lachesis, _, err := utils.GenerateUpdateSet(0, nil, lachesisLastBlock, cfg)
 	if err != nil {
 		return nil, err
 	}
