@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
+
+	"github.com/ethereum/go-ethereum/common/math"
 )
 
 const (
@@ -19,11 +22,15 @@ type JsonRPCRequest struct {
 	JSONRPC string        `json:"jsonrpc"`
 }
 
-func SendRPCRequest(payload JsonRPCRequest, testnet bool) (map[string]interface{}, error) {
-	var url = RPCMainnet
+func SendRPCRequest(payload JsonRPCRequest, chainId int) (map[string]interface{}, error) {
+	var url string
 
-	if testnet {
+	if chainId == 250 {
+		url = RPCMainnet
+	} else if chainId == 4002 {
 		url = RPCTestnet
+	} else {
+		return nil, fmt.Errorf("unknown chain-id %v", chainId)
 	}
 
 	jsonReq, err := json.Marshal(payload)
@@ -50,4 +57,51 @@ func SendRPCRequest(payload JsonRPCRequest, testnet bool) (map[string]interface{
 	}
 
 	return m, nil
+}
+
+// FindEpochNumber via RPC request GetBlockByNumber
+func FindEpochNumber(blockNumber uint64, chainId int) (uint64, error) {
+	hex := strconv.FormatUint(blockNumber, 16)
+
+	blockStr := "0x" + hex
+
+	return getBlockByNumber(blockStr, chainId)
+}
+
+// FindHeadEpochNumber via RPC request GetBlockByNumber
+func FindHeadEpochNumber(chainId int) (uint64, error) {
+	blockStr := "latest"
+
+	return getBlockByNumber(blockStr, chainId)
+}
+
+func getBlockByNumber(blockStr string, chainId int) (uint64, error) {
+	payload := JsonRPCRequest{
+		Method:  "ftm_getBlockByNumber",
+		Params:  []interface{}{blockStr, false},
+		ID:      1,
+		JSONRPC: "2.0",
+	}
+
+	m, err := SendRPCRequest(payload, chainId)
+	if err != nil {
+		return 0, err
+	}
+
+	resultMap, ok := m["result"].(map[string]interface{})
+	if !ok {
+		return 0, fmt.Errorf("unexpecetd answer: %v", m)
+	}
+
+	firstEpochHex, ok := resultMap["epoch"].(string)
+	if !ok {
+		return 0, fmt.Errorf("cannot find epoch in result: %v", resultMap)
+	}
+
+	epoch, ok := math.ParseUint64(firstEpochHex)
+	if !ok {
+		return 0, fmt.Errorf("cannot parse hex first epoch to uint: %v", firstEpochHex)
+	}
+
+	return epoch, nil
 }

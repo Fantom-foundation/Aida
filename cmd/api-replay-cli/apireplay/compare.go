@@ -240,7 +240,8 @@ func tryRecovery(data OutData, input chan *OutData) *comparatorError {
 	// append correct block number
 	payload.Params[len(payload.Params)-1] = "0x" + strconv.FormatUint(data.BlockID, 16)
 
-	m, err := utils.SendRPCRequest(payload, false)
+	// we only record on mainnet, so we can safely put mainnet chainID constant here
+	m, err := utils.SendRPCRequest(payload, 250)
 	if err != nil {
 		return newComparatorError(nil, nil, &data, cannotSendRPCRequest)
 	}

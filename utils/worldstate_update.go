@@ -12,7 +12,7 @@ import (
 )
 
 // GenerateUpdateSet generates an update set for a block range.
-func GenerateUpdateSet(first uint64, last uint64, cfg *Config) (substate.SubstateAlloc, []common.Address, error) {
+func GenerateUpdateSet(first uint64, ddb *substate.DestroyedAccountDB, last uint64, cfg *Config) (substate.SubstateAlloc, []common.Address, error) {
 	var (
 		deletedAccountDB *substate.DestroyedAccountDB
 		deletedAccounts  []common.Address
@@ -23,11 +23,14 @@ func GenerateUpdateSet(first uint64, last uint64, cfg *Config) (substate.Substat
 	defer stateIter.Release()
 
 	if cfg.HasDeletedAccounts {
-		deletedAccountDB, err = substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
-		if err != nil {
-			return nil, nil, err
+		// Todo rewrite in wrapping functions
+		if ddb == nil {
+			deletedAccountDB, err = substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
+			if err != nil {
+				return nil, nil, err
+			}
+			defer deletedAccountDB.Close()
 		}
-		defer deletedAccountDB.Close()
 	}
 
 	for stateIter.Next() {
@@ -85,7 +88,7 @@ func GenerateWorldStateFromUpdateDB(cfg *Config, target uint64) (substate.Substa
 	updateIter.Release()
 
 	// advance from the latest precomputed block to the target block
-	update, _, err := GenerateUpdateSet(blockPos, target, cfg)
+	update, _, err := GenerateUpdateSet(blockPos, nil, target, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +106,7 @@ func ClearAccountStorage(update substate.SubstateAlloc, accounts []common.Addres
 	}
 }
 
-// GenerateWorldState generates an initial world-state for a block.
+// GenerateFirstOperaWorldState generates an initial world-state for a block.
 func GenerateFirstOperaWorldState(worldStateDbDir string, cfg *Config) (substate.SubstateAlloc, error) {
 	worldStateDB, err := snapshot.OpenStateDB(worldStateDbDir)
 	if err != nil {
