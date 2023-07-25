@@ -1,22 +1,19 @@
 #!/usr/bin/env Rscript
-# TODO: Explain usage here
-# This script aims to pass a list of parameters and flags to a markdown file to yield the report for parallel transaction execution experiment.
-# List of parameters:
-#  Configuration
-#  Processor
-#  Drive
-#  RepoSha
+#
+# Render script for R Markdown files.
+#
 # List of flags:
-#  -v (--verbose) prints verbose messages
 #  -p (--parameter) parameters for R-Markdown renderer
 #  -o (--output) output file
+#  -d (--outputdir) output directory
 #  -f (--format) Output format [html|pdf|html_pdf]
 #  -i (--input) Profile DB for rendering
-# scripts/knit.r -p 'Configuration="a", Processor="ppp", Drive="ddd", RepoSha="sha"' -f html_pdf -o myreport -i ./profile.db reports/parallel_experiment.rmd
+#
 library(rmarkdown)
 library(optparse)
+library("tools")
+
 option_list <- list(
-    make_option(c("-v", "--verbose"), action="store_true", default=FALSE, help="Print verbose messages"),
     make_option(c("-p", "--parameter"), default="", help="Parameters for R-Markdown renderer"),
     make_option(c("-o", "--output"), default="./parallel.html", help="Output file"),
     make_option(c("-d", "--outputdir"), default="./", help="Output Directory"),
@@ -30,7 +27,6 @@ param <- eval(parse(text=paste("list(",opt$options$param,")")))
 output <- opt$options$output
 output_dir <- opt$options$outputdir
 
-library("tools")
 # checkExt checks if file extension matches expected one
 checkExt <- function(file, expExtension) {
   if (file_ext(file) == expExtension) {
@@ -47,22 +43,16 @@ if (opt$options$format == "html") {
     checkExt(file, "pdf")
 } else if (opt$options$format == "html_pdf") {
     format = c("html_document", "pdf_document")
-    if (file_ext(file) != "") { # should file have any suffix or no suffix at all?
-       stop(sprintf("file (%s) should not contain any extension", file))
-    }
 } else {
    stop(sprintf("R-Markdown file ( %s) cannot be found", file))
 }
-
-# where and why? in parameters ?
-# TODO: Check for existence of files / directories
-
 
 # Check input file
 if(file.access(file)== -1) {
    stop(sprintf("R-Markdown file ( %s) cannot be found", file))
 }
 
+# Render the R markdown
 render(
   input = file, 
   output_file = output, 
