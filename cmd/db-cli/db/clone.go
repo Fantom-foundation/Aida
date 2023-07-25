@@ -107,7 +107,7 @@ func clonePatch(ctx *cli.Context) error {
 		return err
 	}
 
-	err = CreatePatchClone(cfg, aidaDb, targetDb, firstEpoch, lastEpoch)
+	err = CreatePatchClone(cfg, aidaDb, targetDb, firstEpoch, lastEpoch, false)
 	if err != nil {
 		return err
 	}
@@ -120,8 +120,21 @@ func clonePatch(ctx *cli.Context) error {
 }
 
 // CreatePatchClone creates aida-db patch
-func CreatePatchClone(cfg *utils.Config, aidaDb, targetDb ethdb.Database, firstEpoch, lastEpoch uint64) error {
-	err := clone(cfg, aidaDb, targetDb, utils.PatchType)
+func CreatePatchClone(cfg *utils.Config, aidaDb, targetDb ethdb.Database, firstEpoch, lastEpoch uint64, isNewOpera bool) error {
+	var isFirstPatch = false
+
+	// if the patch is first, we need to make some exceptions hence cloner needs to know
+	if isNewOpera {
+		if firstEpoch == 5577 && cfg.ChainID == 250 {
+			isFirstPatch = true
+		}
+
+		if firstEpoch == 2458 && cfg.ChainID == 4002 {
+			isFirstPatch = true
+		}
+	}
+
+	err := clone(cfg, aidaDb, targetDb, utils.PatchType, isFirstPatch)
 	if err != nil {
 		return err
 	}
@@ -152,7 +165,7 @@ func createDbClone(ctx *cli.Context) error {
 		return err
 	}
 
-	err = clone(cfg, aidaDb, targetDb, utils.CloneType)
+	err = clone(cfg, aidaDb, targetDb, utils.CloneType, false)
 	if err != nil {
 		return err
 	}
@@ -163,7 +176,7 @@ func createDbClone(ctx *cli.Context) error {
 	return printMetadata(cfg.TargetDb)
 }
 
-func clone(cfg *utils.Config, aidaDb, cloneDb ethdb.Database, cloneType utils.AidaDbType) error {
+func clone(cfg *utils.Config, aidaDb, cloneDb ethdb.Database, cloneType utils.AidaDbType, isFirstPatch bool) error {
 	var err error
 	log := logger.NewLogger(cfg.LogLevel, "AidaDb Clone")
 
@@ -178,7 +191,7 @@ func clone(cfg *utils.Config, aidaDb, cloneDb ethdb.Database, cloneType utils.Ai
 		closeCh: make(chan any),
 	}
 
-	if err = c.clone(); err != nil {
+	if err = c.clone(isFirstPatch); err != nil {
 		return err
 	}
 
@@ -186,14 +199,14 @@ func clone(cfg *utils.Config, aidaDb, cloneDb ethdb.Database, cloneType utils.Ai
 }
 
 // createDbClone AidaDb in given block range
-func (c *cloner) clone() error {
+func (c *cloner) clone(isFirstPatch bool) error {
 	go c.write()
 	go c.checkErrors()
 
 	c.read([]byte(substate.Stage1CodePrefix), 0, nil)
 
 	// update c.cfg.First block before loading deletions and substates, because for utils.CloneType those are necessery to be from last updateset onward
-	lastUpdateBeforeRange := c.readUpdateSet()
+	lastUpdateBeforeRange := c.readUpdateSet(isFirstPatch)
 	if c.typ == utils.CloneType {
 		if lastUpdateBeforeRange < c.cfg.First {
 			c.log.Noticef("Last updateset found at block %v, changing first block to %v", lastUpdateBeforeRange, lastUpdateBeforeRange+1)
@@ -344,7 +357,7 @@ func (c *cloner) read(prefix []byte, start uint64, condition func(key []byte) (b
 }
 
 // readUpdateSet from UpdateDb
-func (c *cloner) readUpdateSet() uint64 {
+func (c *cloner) readUpdateSet(isFirstPatch bool) uint64 {
 	// labeling last updateSet before interval - need to export substate for that range as well
 	var lastUpdateBeforeRange uint64
 	endCond := func(key []byte) (bool, error) {
@@ -372,7 +385,17 @@ func (c *cloner) readUpdateSet() uint64 {
 
 		return lastUpdateBeforeRange
 	} else if c.typ == utils.PatchType {
-		c.read([]byte(substate.SubstateAllocPrefix), c.cfg.First, endCond)
+		var wantedBlock uint64
+
+		// if we are working with first patch we need to move the start of the iterator minus one block
+		// so first update-set gets inserted
+		if isFirstPatch {
+			wantedBlock = c.cfg.First - 1
+		} else {
+			wantedBlock = c.cfg.First
+		}
+
+		c.read([]byte(substate.SubstateAllocPrefix), wantedBlock, endCond)
 		return 0
 	} else {
 		c.errCh <- fmt.Errorf("incorrect clone type: %v", c.typ)

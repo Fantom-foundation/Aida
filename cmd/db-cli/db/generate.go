@@ -256,7 +256,7 @@ func (g *generator) createPatch() (string, error) {
 		return "", fmt.Errorf("cannot open patch db; %v", err)
 	}
 
-	err = CreatePatchClone(g.cfg, g.aidaDb, patchDb, g.opera.lastEpoch, g.opera.lastEpoch)
+	err = CreatePatchClone(g.cfg, g.aidaDb, patchDb, g.opera.lastEpoch, g.opera.lastEpoch, g.opera.isNew)
 
 	g.log.Notice("Patch metadata")
 
@@ -488,6 +488,9 @@ func (g *generator) calculatePatchEnd() error {
 	if headEpochNumber > g.stopAtEpoch {
 		g.stopAtEpoch = headEpochNumber
 	}
+
+	// todo remove testing code
+	g.stopAtEpoch = g.opera.lastEpoch + 1
 
 	return nil
 }
