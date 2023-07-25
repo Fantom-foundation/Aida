@@ -48,4 +48,3 @@ render(
   output_format = format,
   params = c(list( "ProfileDB" = profileDB), param)
 )
-exit(0)
