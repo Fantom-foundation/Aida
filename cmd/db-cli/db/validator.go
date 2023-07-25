@@ -108,11 +108,14 @@ func (v *validator) doIterate(prefix string) {
 	}()
 
 	var (
-		dst []byte
+		dst, b []byte
 	)
 
 	for iter.Next() {
-		copy(dst, iter.Key())
+		b = iter.Key()
+		dst = make([]byte, len(b))
+		copy(dst, b)
+
 		select {
 		case <-v.closed:
 			return
@@ -120,7 +123,10 @@ func (v *validator) doIterate(prefix string) {
 			break
 		}
 
-		copy(dst, iter.Value())
+		b = iter.Value()
+		dst = make([]byte, len(b))
+		copy(dst, b)
+
 		select {
 		case <-v.closed:
 			return
@@ -150,6 +156,7 @@ func (v *validator) stop() {
 // calculate receives data from input chanel and calculates hash for each key and value
 func (v *validator) calculate() {
 	var (
+		//hash       []byte
 		in         []byte
 		h          = md5.New()
 		written, n int

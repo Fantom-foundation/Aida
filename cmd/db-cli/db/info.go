@@ -102,7 +102,7 @@ var cmdPrintDbHash = cli.Command{
 }
 
 func printDbHash(ctx *cli.Context) error {
-	aidaDb, err := rawdb.NewLevelDBDatabase(ctx.String(utils.AidaDbFlag.Name), 1024, 100, "profiling", true)
+	aidaDb, err := rawdb.NewLevelDBDatabase(ctx.String(utils.AidaDbFlag.Name), 1024, 100, "profiling", !ctx.Bool(flags.InsertFlag.Name))
 	if err != nil {
 		return fmt.Errorf("cannot open db; %v", err)
 	}
