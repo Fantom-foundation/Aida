@@ -1,62 +1,83 @@
 #!/usr/bin/env Rscript
+
 #
 # Render script for R Markdown files.
 #
 # List of flags:
-#  -p (--parameter) parameters for R-Markdown renderer
-#  -o (--output) output file
-#  -d (--outputdir) output directory
-#  -f (--format) Output format [html|pdf|html_pdf]
-#  -i (--input) Profile DB for rendering
-#
+#  -d (--profile-db) profile DB for rendering
+#  -o (--output)     output file of the renderer
+#  -O (--output-dir) output directory
+#  -f (--format)     output format [html|pdf|html_pdf]
+#  -p (--parameter)  specify the parameters for R-Markdown [p1=x1,p2=x2,...]
+
+# required libraries
 library(rmarkdown)
 library(optparse)
-library("tools")
+library(tools)
 
+# parse command-line arguments 
 option_list <- list(
-    make_option(c("-p", "--parameter"), default="", help="Parameters for R-Markdown renderer"),
-    make_option(c("-o", "--output"), default="./parallel.html", help="Output file"),
-    make_option(c("-d", "--outputdir"), default="./", help="Output Directory"),
-    make_option(c("-f", "--format"), default="html", help="Output format [html|pdf|html_pdf]"),
-    make_option(c("-i", "--input"), default="./profile.db", help="Profile DB for rendering.")
+    make_option(c("-d", "--profile-db"), default="./profile.db",    help="db for rendering."),
+    make_option(c("-o", "--output"),     default="./parallel.html", help="output file"),
+    make_option(c("-O", "--output-dir"), default="./",              help="output Directory"),
+    make_option(c("-f", "--format"),     default="html",            help="output format [html|pdf|html_pdf]"),
+    make_option(c("-p", "--parameter"),  default="",                help="parameters for rmd document [p1=x1,p2=x2,...]")
 )
 opt <- parse_args(OptionParser(usage="%prog [options] file", option_list=option_list), positional_argument=1)
-file <- opt$args 
-profileDB <- opt$options$input
-param <- eval(parse(text=paste("list(",opt$options$param,")")))
+
+# retrieve options and argument
+profileDB <- opt$options$`profile-db`
 output <- opt$options$output
-output_dir <- opt$options$outputdir
+outputDirectory <- opt$options$`output-dir`
+outputFormat <- opt$options$format
+parameter <- eval(parse(text=paste("list(",opt$options$param,")")))
+rmdFile <- opt$args 
 
-# checkExt checks if file extension matches expected one
-checkExt <- function(file, expExtension) {
-  if (file_ext(file) == expExtension) {
-     stop(sprintf("file (%s) contains (%s) extension", file, expExtension))
-  }
+# checkExtension checks the extension of a filename.
+checkExtension <- function(file, extension) {
+    if (file_ext(file) != extension) {
+        if (extension == "")  {
+            stop(sprintf("file %s does not have extension %s", file, expExtension))
+        } else {
+            stop(sprintf("file %s must not have an extension", file, expExtension))
+        }
+    }
 }
 
-# Check output format
-if (opt$options$format == "html") {
-    format = "html_document"
-    checkExt(file, "html")
-} else if (opt$options$format == "pdf") {
-    format = "pdf_document"
-    checkExt(file, "pdf")
-} else if (opt$options$format == "html_pdf") {
-    format = c("html_document", "pdf_document")
+# check output format
+if (outputFormat == "html") {
+    checkExtension(output, "html")
+    docFormat = "html_document"
+} else if (outputFormat == "pdf") {
+    checkExtension(output, "pdf")
+    docFormat = "pdf_document"
+} else if (outputFormat == "html_pdf") {
+    checkExtension(output, "")
+    docFormat = c("html_document", "pdf_document")
 } else {
-   stop(sprintf("R-Markdown file ( %s) cannot be found", file))
+    stop(sprintf("Unknown output file format"))
 }
 
-# Check input file
-if(file.access(file)== -1) {
-   stop(sprintf("R-Markdown file ( %s) cannot be found", file))
+# check whether R Markdown file exists
+if(file.access(rmdFile)==-1) {
+    stop(sprintf("R-Markdown file %s cannot be found", rmdFile))
 }
 
-# Render the R markdown
+# check whether the profile DB file exists
+if(file.access(profileDB)==-1) {
+    stop(sprintf("Profile DB %s cannot be found", profileDB))
+}
+
+# check whether output directory exists
+if(file.access(outputDirectory)==-1) {
+    stop(sprintf("Output directory %s cannot be found", outputDirectory))
+}
+
+# render the R markdown document
 render(
-  input = file, 
-  output_file = output, 
-  output_dir = output_dir,
-  output_format = format,
-  params = c(list( "ProfileDB" = profileDB), param)
+    input = rmdFile, 
+    output_file = output, 
+    output_dir = outputDirectory,
+    output_format = docFormat,
+    params = c(list( ProfileDB = normalizePath(profileDB)), parameter)
 )
