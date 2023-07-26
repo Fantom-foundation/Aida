@@ -32,7 +32,6 @@ GoVersion() {
 }
 
 # Run full parallel experiment
-make aida-profile
 echo "Running profiling from startBlock $7 up endBlock $8 ..."
 ./build/aida-profile parallelisation --aida-db $1 --db-impl $2 --db-variant $3 --vm-impl=$4 --db-tmp $6 $7 $8 "$5/profile.db"
 
