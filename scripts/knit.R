@@ -10,7 +10,7 @@
 #  -f (--format)     output format [html|pdf|html_pdf]
 #  -p (--parameter)  specify the parameters for R-Markdown [p1=x1,p2=x2,...]
 
-# required libraries
+# The required libraries have to be installed beforehand using R console
 library(rmarkdown)
 library(optparse)
 library(tools)

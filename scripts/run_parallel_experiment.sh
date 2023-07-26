@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Synopsis: 
-#    run_parallel_experiment.sh <aida-db> <carmen-impl> <carmen-variant> <tosca-impl> <output-directory> <tmp-directory> 
+#    run_parallel_experiment.sh <aida-db> <carmen-impl> <carmen-variant> <tosca-impl> <tmp-directory> <startBlock> <endBlock> <output-directory>
 
 #  HardwareDescription() queries the hardware configuration of the server.
 #  Requires Linux as an operating system, and hwinfo must be installed.
@@ -32,9 +32,9 @@ GoVersion() {
 }
 
 # Run full parallel experiment
-# TODO: Make run parameterisable 
-echo "Running profiling..."
-#./build/aida-profile parallelisation --aida-db $1 --db-impl $2 --db-variant $3 --vm-impl=$4 --db-tmp $6 $7 $8 "$5/profile.db"
+make aida-profile
+echo "Running profiling from startBlock $7 up endBlock $8 ..."
+./build/aida-profile parallelisation --aida-db $1 --db-impl $2 --db-variant $3 --vm-impl=$4 --db-tmp $6 $7 $8 "$5/profile.db"
 
 # Reduce dataset in sqlite3 (R is too slow / consumes too much memory)
 echo "Reducing data set..."
