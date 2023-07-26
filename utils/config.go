@@ -228,11 +228,11 @@ var (
 	}
 	TraceFileFlag = cli.PathFlag{
 		Name:  "trace-file",
-		Usage: "set storage trace's output file",
+		Usage: "set storage trace file",
 	}
 	TraceDirectoryFlag = cli.PathFlag{
 		Name:  "trace-dir",
-		Usage: "set storage trace's output directory",
+		Usage: "set storage trace directory",
 	}
 	UpdateDbFlag = cli.PathFlag{
 		Name:  "update-db",
