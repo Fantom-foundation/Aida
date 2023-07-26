@@ -34,7 +34,7 @@ GoVersion() {
 # Run full parallel experiment
 # TODO: Make run parameterisable 
 echo "Running profiling..."
-#./build/aida-profile parallelisation --aida-db $1 --db-impl $2 --db-variant $3 --vm-impl=$4 --db-tmp $6 0 last "$5/profile.db"
+#./build/aida-profile parallelisation --aida-db $1 --db-impl $2 --db-variant $3 --vm-impl=$4 --db-tmp $6 $7 $8 "$5/profile.db"
 
 # Reduce dataset in sqlite3 (R is too slow / consumes too much memory)
 echo "Reducing data set..."
