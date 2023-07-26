@@ -156,7 +156,6 @@ func (v *validator) stop() {
 // calculate receives data from input chanel and calculates hash for each key and value
 func (v *validator) calculate() {
 	var (
-		//hash       []byte
 		in         []byte
 		h          = md5.New()
 		written, n int
