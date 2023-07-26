@@ -32,8 +32,8 @@ GoVersion() {
 }
 
 # Run full parallel experiment
-echo "Running profiling from startBlock $7 up endBlock $8 ..."
-./build/aida-profile parallelisation --aida-db $1 --db-impl $2 --db-variant $3 --vm-impl=$4 --db-tmp $6 $7 $8 "$5/profile.db"
+echo "Running profiling from startBlock $6 up endBlock $7 ..."
+./build/aida-profile parallelisation --aida-db $1 --db-impl $2 --db-variant $3 --vm-impl=$4 --db-tmp $5 $6 $7 "$8/profile.db"
 
 # Reduce dataset in sqlite3 (R is too slow / consumes too much memory)
 echo "Reducing data set..."
