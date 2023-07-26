@@ -37,7 +37,6 @@ type Replay struct {
 	snapshot *SnapshotIndex // snapshot translation table for replay
 	Profile  bool           // if true collect stats
 	Stats    *profile.Stats // stats object
-	First    uint64         // the first recorded block
 }
 
 // NewContext creates a new replay context.
