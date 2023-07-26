@@ -8,7 +8,7 @@ params:
   GitHash: (GithubKey)
   StateDB: Carmen
   VM: Geth
-  ProfileDB: ./profile.db
+  db: ./profile.db
 ---
 
 ```{r, include = FALSE}
@@ -16,23 +16,24 @@ library(ggplot2)
 library(dplyr)
 library(DBI)
 library(RSQLite)
-con <- dbConnect(SQLite(), params$ProfileDB)
-experiment <- dbReadTable(con, 'parallelprofile')
-parallelisable <- experiment %>%
+con <- dbConnect(SQLite(), params$db)
+data <- dbReadTable(con, 'parallelprofile')
+reduced <- dbReadTable(con, 'aggregatedParallelProfile')
+parallelisable <- data %>%
   filter(speedup > 1.0)
 dbDisconnect(con)
 ```
 
-## 1. Configuration/GitHub Hashes
-The experiment is run on a `r params$HwInfo` computer. The operating system is a `r param$OsInfo`. 
+## 1. Experiment
+The experiment is run on a `r params$HwInfo` computer. The operating system is a `r params$OsInfo`. 
 The system has installed `r params$GoInfo`. The github hash of the Aida repository is 
 `r params$GitHash`. For this experiment, we use **`r params$StateDB`** as a StateDB and **`r params$VM`** as a virtual machine.  
 
-The experiment was conducted for the block range from **`r format(min(experiment$block),big.mark=",")`**  to **`r format(max(experiment$block),big.mark=",")`**. 
+The experiment was conducted for the block range from **`r format(min(data$block),big.mark=",")`**  to **`r format(max(data$block),big.mark=",")`**. 
 
 ## 2. Degree of Parallelisation 
 
-We have `r format(nrow(experiment), big.mark=",")` blocks of which `r format(nrow(parallelisable), big.mark=",")` are parallelisable.  `r format(100.0*(nrow(experiment)-nrow(parallelisable))/nrow(experiment), digits=4)`% of blocks are strictly sequential (not parallelisable) blocks.  The maximal achievable parallelism in a block is `r format(max(experiment$speedup), digits=4)`.  The geometric mean of the speedup is `r format(exp(mean(log(experiment$speedup))), digits=4)`.
+We have `r format(nrow(data), big.mark=",")` blocks of which `r format(nrow(parallelisable), big.mark=",")` are parallelisable.  `r format(100.0*(nrow(data)-nrow(parallelisable))/nrow(data), digits=4)`% of blocks are strictly sequential (not parallelisable) blocks.  The maximal achievable parallelism in a block is `r format(max(data$speedup), digits=4)`.  The geometric mean of the speedup is `r format(exp(mean(log(data$speedup))), digits=4)`.
 
 The distribution of the speedup is shown below:
 
@@ -43,52 +44,44 @@ lines(density(parallelisable$speedup), col="dodgerblue3", lwd=2)
 
 ## 3. Number of Transactions per Block
 
-We have on average `r mean(experiment$numTx)` transactions per block. The 
-smallest number of transactions per block is `r min(experiment$numTx)` and the 
-largest number is `r max(experiment$numTx)`. The distribution of number of 
+We have on average `r mean(data$numTx)` transactions per block. The 
+smallest number of transactions per block is `r min(data$numTx)` and the 
+largest number is `r max(data$numTx)`. The distribution of number of 
 transactions per block is shown below:
 
 ```{r, echo = FALSE, message=FALSE}
-hist(experiment$numTx, freq=FALSE, main="Number of Transaction Distribution", xlab="Number of Transactions", col="lightblue1"); rug(experiment$numTx)
-abline(v=mean(experiment$numTx), col="dodgerblue3", lty=2, lwd=2)
+hist(data$numTx, freq=FALSE, main="Number of Transaction Distribution", xlab="Number of Transactions", col="lightblue1"); rug(data$numTx)
+abline(v=mean(data$numTx), col="dodgerblue3", lty=2, lwd=2)
 ```
 
 ## 4. Processor Utilisation / Efficiency
 
-The lower bound of the processor utilisation is `r format(100.0*exp(mean(log(experiment$speedup/experiment$ubNumProc))), digits=4)`% on average and with a maximum of `r max(experiment$ubNumProc)` processors (upper bound).
+The lower bound of the processor utilisation is `r format(100.0*exp(mean(log(data$speedup/data$ubNumProc))), digits=4)`% on average and with a maximum of `r max(data$ubNumProc)` processors (upper bound).
 
 ## 5. Sequential Block Runtime 
 
-The average block execution time is `r mean(experiment$tBlock)/1e6` milliseconds with a minimum of `r min(experiment$tBlock)/1e6` milliseconds and a maximum of `r max(experiment$tBlock)/1e6` milliseconds.  The distribution of the block execution time in nanoseconds is shown below:
-
-```{r setup, echo=FALSE, message=FALSE}
-hist(experiment$tBlock, main="Block Runtime Distribution", freq=FALSE, xlab="Block Runtime (ns)", col="lightblue1")
-lines(density(experiment$tBlock), col="dodgerblue3", lwd=2)
-```
+The average block execution time is `r mean(data$tBlock)/1e6` milliseconds with a minimum of `r min(data$tBlock)/1e3` microseconds and a maximum of `r max(data$tBlock)/1e9` seconds.  The distribution of the block execution time in nanoseconds is shown below:
 
 The smoothened trend line for block time in nanoseconds is shown below:
 
 ```{r, echo=FALSE, message=FALSE}
-experiment %>% 
+reduced %>% 
   ggplot(aes(x = block, y = tBlock)) + 
   geom_smooth(color = "tomato") + 
+  geom_point(alpha=0.3) + 
   labs(x="Block Height", y="Block time in ns")
 ```
 
 ## 6. Commit Time
 
-The average commit time is `r mean(experiment$tCommit)/1e6` milliseconds with a minimum of `r min(experiment$tCommit)/1e6` milliseconds and a maximum of `r max(experiment$tCommit)/1e6` milliseconds.  The distribution of the commit time in nanoseconds is shown below:
-
-```{r, echo=FALSE, message=FALSE}
-hist(experiment$tCommit, main="Commit Runtime Distribution", freq=FALSE, xlab="Commit Runtime (ns)", col="lightblue1")
-lines(density(experiment$tCommit), col="dodgerblue3", lwd=2)
-```
+The average commit time is `r mean(data$tCommit)/1e6` milliseconds with a minimum of `r min(data$tCommit)/1e3` microseconds and a maximum of `r max(data$tCommit)/1e9` seconds.  The distribution of the commit time in nanoseconds is shown below:
 
 The smoothened trend line of the commit time in nanoseconds is shown below:
 
 ```{r, echo = FALSE, message=FALSE}
-experiment %>% 
+reduced %>% 
   ggplot(aes(x = block, y = tCommit)) + 
   geom_smooth(color = "tomato") + 
+  geom_point(alpha=0.3) + 
   labs(x="Block Height", y="Commit time in ns")
 ```
