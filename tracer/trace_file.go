@@ -13,6 +13,8 @@ import (
 	"github.com/dsnet/compress/bzip2"
 )
 
+const ReaderBufferSize = 65536 * 256 // 16MiB
+
 // TraceFile data structure for reading a trace file
 type TraceFile struct {
 	firstBlock uint64        // first block in trace file
@@ -35,7 +37,7 @@ func NewTraceFile(fname string) (*TraceFile, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot open bzip stream; %v", err)
 	}
-	tf.reader = bufio.NewReaderSize(tf.zreader, 65536*256) // set buffer to 1MB
+	tf.reader = bufio.NewReaderSize(tf.zreader, ReaderBufferSize)
 
 	//read first block
 	var header [8]byte
@@ -57,11 +59,6 @@ func (tf *TraceFile) Release() error {
 	return nil
 }
 
-// getFristBlock returns the first block recorded in a trace file
-func (tf *TraceFile) getFirstBlock() uint64 {
-	return tf.firstBlock
-}
-
 // keepRelevantTraceFiles remove out trace files whose first block is
 // out of range of the specified range.
 // 1. a trace file contains blocks larger than the specified range
@@ -72,7 +69,7 @@ func keepRelevantTraceFiles(first, last uint64, sortedList []uint64, blockFile m
 		traceFiles        []string
 	)
 	for _, fileFirstBlock := range sortedList {
-		// remove a file with the first block is larger than the target last block
+		// remove a file if the first block is larger than the target last block
 		if fileFirstBlock > last {
 			delete(blockFile, fileFirstBlock)
 			continue
@@ -122,7 +119,7 @@ func GetTraceFiles(cfg *utils.Config) ([]string, error) {
 			if err != nil {
 				return traceFiles, err
 			}
-			first := tf.getFirstBlock()
+			first := tf.firstBlock
 			if err := tf.Release(); err != nil {
 				return traceFiles, err
 			}
@@ -140,16 +137,17 @@ func GetTraceFiles(cfg *utils.Config) ([]string, error) {
 		if err != nil {
 			return traceFiles, err
 		}
-		first := tf.getFirstBlock()
+		first := tf.firstBlock
 		// exclude the file if it starts after the last target block
 		if first <= cfg.Last {
 			traceFiles = append(traceFiles, cfg.TraceFile)
 		}
 	} else {
-		return traceFiles, fmt.Errorf("Trace file is not found.")
+		return traceFiles, fmt.Errorf("trace file is not found.")
 	}
 	if len(traceFiles) == 0 {
-		return traceFiles, fmt.Errorf("No traces for the specified block range")
+		return traceFiles,
+			fmt.Errorf("no trace files for the specified block range %v - %v", cfg.First, cfg.Last)
 	}
 	return traceFiles, nil
 }

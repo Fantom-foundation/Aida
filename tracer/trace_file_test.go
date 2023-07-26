@@ -134,27 +134,6 @@ func TestTraceFile_NewAndRelease(t *testing.T) {
 	}
 }
 
-// Test retrieving trace's first block in TraceFile structure
-func TestTraceFile_getFirstBlock(t *testing.T) {
-	// first and last block don't matter in this test
-	cfg := makeTestTraceFileConfig()
-	if err := prepareTraceFile(cfg.TraceFile); err != nil {
-		t.Fatalf("Fail to create a trace file %v; %v", cfg.TraceFile, err)
-	}
-	defer os.Remove(cfg.TraceFile)
-	// open an existing trace file -- expecting no errors
-	tf, err := NewTraceFile(cfg.TraceFile)
-	if err != nil {
-		t.Fatalf("Fail to read a trace file %v; %v", cfg.TraceFile, err)
-	}
-	if tf.getFirstBlock() != firstBlockInTrace {
-		t.Fatalf("Wrong first block; have %v, want %v", tf.getFirstBlock(), firstBlockInTrace)
-	}
-	if err := tf.Release(); err != nil {
-		t.Fatalf("Fail to release a trace file; %v", err)
-	}
-}
-
 // Test function keepRelevantTraceFiles. The test ensures that any files not in
 // the target range are removed from the return list.
 func TestTraceFile_keepRelevantTraceFiles(t *testing.T) {
