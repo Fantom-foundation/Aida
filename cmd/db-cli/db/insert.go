@@ -1,6 +1,7 @@
 package db
 
 import (
+	"encoding/hex"
 	"fmt"
 	"strconv"
 
@@ -132,6 +133,14 @@ func insertMetadata(ctx *cli.Context) error {
 		}
 	case utils.TimestampPrefix:
 		if err = md.SetTimestamp(); err != nil {
+			return err
+		}
+	case utils.DbHashPrefix:
+		hash, err := hex.DecodeString(valArg)
+		if err != nil {
+			return fmt.Errorf("cannot decode db-hash string into []byte; %v", err)
+		}
+		if err = md.SetDbHash(hash); err != nil {
 			return err
 		}
 	default:
