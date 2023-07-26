@@ -66,7 +66,10 @@ func traceReplaySubstateTask(cfg *utils.Config, log *logging.Logger) error {
 	defer stateIter.Release()
 
 	// replay storage trace
-	traceFiles := getTraceFiles(cfg, log)
+	traceFiles, err := tracer.GetTraceFiles(cfg)
+	if err != nil {
+		return err
+	}
 	traceIter := tracer.NewTraceIterator(traceFiles, cfg.First)
 	defer traceIter.Release()
 

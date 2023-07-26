@@ -29,7 +29,6 @@ type Record struct {
 	file  *os.File      // trace file
 	bFile *bufio.Writer // buffer for trace file
 	ZFile *bzip2.Writer // compressed file
-	First uint64        // the first recorded block
 }
 
 // Replay is the replaying environment/facade
@@ -81,7 +80,6 @@ func NewRecord(filename string, first uint64) (*Record, error) {
 		file:  file,
 		bFile: bFile,
 		ZFile: ZFile,
-		First: first,
 	}, nil
 }
 
