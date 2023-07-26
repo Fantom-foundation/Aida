@@ -336,13 +336,13 @@ func ProcessMergeMetadata(cfg *Config, aidaDb ethdb.Database, sourceDbs []ethdb.
 
 	}
 
-	if err = targetMD.findEpochs(); err != nil {
-		return nil, err
-	}
-
 	if targetMD.ChainId == 0 {
 		targetMD.log.Warningf("your dbs does not have chain-id, Setting value from config (%v)", cfg.ChainID)
 		targetMD.ChainId = cfg.ChainID
+	}
+
+	if err = targetMD.findEpochs(); err != nil {
+		return nil, err
 	}
 
 	return targetMD, nil
