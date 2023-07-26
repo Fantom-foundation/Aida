@@ -13,10 +13,6 @@ import (
 )
 
 func MakeCarmenStateDB(directory, variant, archive string, schema int) (StateDB, error) {
-	if variant == "" {
-		variant = "go-memory"
-	}
-
 	var archiveType carmen.ArchiveType
 	switch strings.ToLower(archive) {
 	case "none":
@@ -48,6 +44,8 @@ func MakeCarmenStateDB(directory, variant, archive string, schema int) (StateDB,
 		db, err = carmen.NewGoMemoryState(params)
 	case "go-file-nocache":
 		db, err = carmen.NewGoFileState(params)
+	case "":
+		fallthrough
 	case "go-file":
 		db, err = carmen.NewGoCachedFileState(params)
 	case "go-ldb-nocache":
