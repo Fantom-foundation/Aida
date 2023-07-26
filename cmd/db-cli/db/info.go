@@ -92,17 +92,23 @@ var cmdMetadata = cli.Command{
 }
 
 var cmdPrintDbHash = cli.Command{
-	Action: printDbHash,
+	Action: doDbHash,
 	Name:   "db-hash",
 	Usage:  "Prints db-hash (md5) inside AidaDb. If this value is not present in metadata it iterates through all of data.",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 		&flags.InsertFlag,
+		&flags.ForceFlag,
 	},
 }
 
-func printDbHash(ctx *cli.Context) error {
-	aidaDb, err := rawdb.NewLevelDBDatabase(ctx.String(utils.AidaDbFlag.Name), 1024, 100, "profiling", !ctx.Bool(flags.InsertFlag.Name))
+func doDbHash(ctx *cli.Context) error {
+	var (
+		insert = ctx.Bool(flags.InsertFlag.Name)
+		force  = ctx.Bool(flags.ForceFlag.Name)
+	)
+
+	aidaDb, err := rawdb.NewLevelDBDatabase(ctx.String(utils.AidaDbFlag.Name), 1024, 100, "profiling", !insert)
 	if err != nil {
 		return fmt.Errorf("cannot open db; %v", err)
 	}
@@ -115,8 +121,9 @@ func printDbHash(ctx *cli.Context) error {
 
 	// first try to extract from db
 	dbHash = md.GetDbHash()
-	if len(dbHash) != 0 {
-		fmt.Println(hex.EncodeToString(dbHash))
+	if len(dbHash) != 0 && !force {
+		fmt.Printf("Db-Hash: %v", hex.EncodeToString(dbHash))
+
 		return nil
 	}
 
@@ -125,8 +132,7 @@ func printDbHash(ctx *cli.Context) error {
 		return err
 	}
 
-	if ctx.Bool(flags.InsertFlag.Name) {
-
+	if insert {
 		if err = md.SetDbHash(dbHash); err != nil {
 			return fmt.Errorf("cannot insert db-hash; %v", err)
 		}

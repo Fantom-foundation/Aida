@@ -17,9 +17,12 @@ var (
 		Name:  "skip-metadata",
 		Usage: "Skips metadata inserting and getting. Useful especially when working with old AidaDb that does not have Metadata yet",
 	}
-
 	InsertFlag = cli.BoolFlag{
 		Name:  "insert",
 		Usage: "Inserts printed db-hash into AidaDb",
+	}
+	ForceFlag = cli.BoolFlag{
+		Name:  "force",
+		Usage: "Forces generation even when dbHash is found.",
 	}
 )
