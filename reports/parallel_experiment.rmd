@@ -1,0 +1,86 @@
+---
+title: "Parallelisation Experiment"
+date: "`r Sys.Date()`"
+params:
+  HwInfo: (Hardware Info)
+  OsInfo: (OS Info)
+  GoInfo: (GO Info)
+  GitHash: (GithubKey)
+  StateDB: Carmen
+  VM: Geth
+  db: ./test.db
+---
+
+```{r, include = FALSE}
+library(ggplot2)
+library(dplyr)
+library(RSQLite)
+con <- dbConnect(SQLite(), params$db)
+data <- dbReadTable(con, 'parallelprofile')
+reducedData <- dbReadTable(con, 'aggregatedParallelProfile')
+parallelisable <- data %>% filter(speedup > 1.0)
+dbDisconnect(con)
+```
+
+## 1. Experiment
+The experiment is run on a `r params$HwInfo` computer. The operating system is a `r params$OsInfo`.  The system has installed `r params$GoInfo`. The github hash of the Aida repository is `r params$GitHash`. For this experiment, we use **`r params$StateDB`** as a StateDB and **`r params$VM`** as a virtual machine. For the experiment, the database `r params$db` has been used.
+
+The experiment was conducted for the block range from **`r format(min(data$block),big.mark=",")`**  to **`r format(max(data$block),big.mark=",")`**. 
+
+## 2. Degree of Parallelisation 
+
+We have `r format(nrow(data), big.mark=",")` blocks of which `r format(nrow(parallelisable), big.mark=",")` are parallelisable.  `r format(100.0*(nrow(data)-nrow(parallelisable))/nrow(data), digits=4)`% of blocks are strictly sequential (not parallelisable) blocks.  The maximal achievable parallelism in a block is `r format(max(data$speedup), digits=4)`.  The geometric mean of the speedup is `r format(exp(mean(log(data$speedup))), digits=4)`.
+
+We show the distribution of the speedup for blocks that are not sequential. Sequential blocks whose speedup is one, are omitted from the following distribution:
+
+```{r, echo = FALSE, message=FALSE}
+hist(parallelisable$speedup, main="Speedup Distribution without Sequential Blocks", breaks = quantile(parallelisable$speedup, 0:10 / 10), xlab="Speedup", col="lightblue1")
+lines(density(parallelisable$speedup), col="dodgerblue3", lwd=2)
+```
+
+The next figure shows the speedup over block height. For this distribution, we did not filter the sequential blocks, i.e., all blocks are included for the following time line:
+
+```{r, echo = FALSE, message=FALSE}
+reducedData %>% 
+  ggplot(aes(x = block, y = speedup)) + 
+  geom_smooth(color = "tomato") + 
+  geom_point(alpha=0.3) + 
+  labs(x="Block Height", y="Speedup")
+```
+
+## 3. Number of Transactions per Block
+
+We have on average `r mean(data$numTx)` transactions per block. The smallest number of transactions per block is `r min(data$numTx)` and the largest number is `r max(data$numTx)`. The distribution of number of transactions per block is shown below:
+
+```{r, echo = FALSE, message=FALSE}
+hist(data$numTx, freq=FALSE, main="Number of Transaction Distribution", xlab="Number of Transactions", col="lightblue1"); rug(data$numTx)
+abline(v=mean(data$numTx), col="dodgerblue3", lty=2, lwd=2)
+```
+
+## 4. Processor Utilisation / Efficiency
+
+The lower bound of the processor utilisation is `r format(100.0*exp(mean(log(data$speedup/data$ubNumProc))), digits=4)`% on average and with a maximum of `r max(data$ubNumProc)` processors (upper bound).
+
+## 5. Sequential Block Time 
+
+The average block execution time is `r mean(data$tBlock)/1e6` milliseconds with a minimum of `r min(data$tBlock)/1e3` microseconds and a maximum of `r max(data$tBlock)/1e9` seconds.  The smoothened trend line for block time in milliseconds is shown below:
+
+```{r, echo=FALSE, message=FALSE}
+reducedData %>% 
+  ggplot(aes(x = block, y = tBlock)) + 
+  geom_smooth(color = "tomato") + 
+  geom_point(alpha=0.3) + 
+  labs(x="Block Height", y="Block Time (ms)", title="Sequential Block Time")
+```
+
+## 6. Commit Time
+
+The average commit time is `r mean(data$tCommit)/1e6` milliseconds with a minimum of `r min(data$tCommit)/1e3` microseconds and a maximum of `r max(data$tCommit)/1e9` seconds. The smoothened trend line of the commit time in milliseconds is shown below:
+
+```{r, echo = FALSE, message=FALSE}
+reducedData %>% 
+  ggplot(aes(x = block, y = tCommit)) + 
+  geom_smooth(color = "tomato") + 
+  geom_point(alpha=0.3) + 
+  labs(x="Block Height", y="Commit Time (ms)", title="Commit Time")
+```
