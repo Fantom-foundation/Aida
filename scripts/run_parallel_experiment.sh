@@ -60,4 +60,4 @@ vm="$4"
 
 # Render R Markdown file
 echo "Rendering document..."
-./scripts/knit.R -p "GitHash='$gh', HwInfo='$hw', OsInfo='$os', GoInfo='$go', VM='$vm', StateDB='$statedb'" -d "$8/profile.db" -f html -o parallel_experiment.html -O $8reports/parallel_experiment.rmd
+./scripts/knit.R -p "GitHash='$gh', HwInfo='$hw', OsInfo='$os', GoInfo='$go', VM='$vm', StateDB='$statedb'" -d "$8/profile.db" -f html -o parallel_experiment.html -O $8 reports/parallel_experiment.rmd
