@@ -37,7 +37,7 @@ echo "Running profiling from startBlock $6 up endBlock $7 ..."
 
 # Reduce dataset in sqlite3 (R is too slow / consumes too much memory)
 echo "Reducing data set..."
-sqlite3 $5/profile.db << EOF
+sqlite3 $8/profile.db << EOF
 -- create temporary table groupedParallelProfile to group data for every 100,000 blocks
 DROP TABLE IF EXISTS  groupedParallelProfile; 
 CREATE TABLE groupedParallelProfile(block INTEGER, tBlock REAL, tCommit REAL, speedup REAL);
