@@ -55,9 +55,6 @@ func (ctx *Replay) EnableProfiling(csv string) {
 
 // NewContext creates a new record context.
 func NewRecord(filename string, first uint64) (*Record, error) {
-	if _, err := os.Stat(filename); err == nil {
-		return nil, fmt.Errorf("file %v already exists", filename)
-	}
 	// open trace file, write buffer, and compressed stream
 	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0755)
 	if err != nil {
