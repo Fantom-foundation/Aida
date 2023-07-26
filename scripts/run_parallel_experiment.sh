@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # Synopsis: 
-#    run_parallel_experiment.sh <aida-db> <carmen-impl> <carmen-variant> <tosca-impl> <output-directory>
+#    run_parallel_experiment.sh <aida-db> <carmen-impl> <carmen-variant> <tosca-impl> <output-directory> <tmp-directory> 
 
 #  HardwareDescription() queries the hardware configuration of the server.
 #  Requires Linux as an operating system, and hwinfo must be installed.
@@ -20,7 +20,7 @@ OperatingSystemDescription() {
 
 ## GitHash() queries the git hash of the Aida repository
 # Requires a git command installed and the AIDA repository.
-# TODO: Make Aida directory parameterisable
+# TODO: Make Aida github directory parameterisable
 GitHash() {
    git rev-parse HEAD
 }
@@ -32,9 +32,26 @@ GoVersion() {
 }
 
 # Run full parallel experiment
-./build/aida-profile parallelisation --aida-db $1 --db-impl $2 --db-variant $3 --vm-impl=$4 --db-tmp /var/data/tmp-andrei 4564026 4664026 "$5/profile.db"
+# TODO: Make run parameterisable 
+echo "Running profiling..."
+#./build/aida-profile parallelisation --aida-db $1 --db-impl $2 --db-variant $3 --vm-impl=$4 --db-tmp $6 0 last "$5/profile.db"
+
+# Reduce dataset in sqlite3 (R is too slow / consumes too much memory)
+echo "Reducing data set..."
+sqlite3 $5/profile.db << EOF
+-- create temporary table groupedParallelProfile to group data for every 100,000 blocks
+DROP TABLE IF EXISTS  groupedParallelProfile; 
+CREATE TABLE groupedParallelProfile(block INTEGER, tBlock REAL, tCommit REAL, speedup REAL);
+INSERT INTO groupedParallelProfile SELECT block/100000, tBlock, tCommit, log(speedup) FROM parallelprofile;
+-- aggregate data 
+DROP TABLE IF EXISTS aggregatedParallelProfile;
+CREATE TABLE aggregatedParallelProfile(block INTEGER, tBlock REAL, tCommit REAL, speedup REAL);
+INSERT INTO aggregatedParallelProfile SELECT min(block)*100000, avg(tBlock)/1e6, avg(tCommit)/1e6, exp(avg(speedup)) FROM groupedParallelProfile GROUP BY block;
+DROP TABLE groupedParallelProfile;
+EOF
 
 # Query the configuration
+echo "Query configuration..."
 hw=`HardwareDescription`
 os=`OperatingSystemDescription`
 gh=`GitHash`
@@ -43,4 +60,5 @@ statedb="$2 $3"
 vm="$4"
 
 # Render R Markdown file
-./scripts/knit.R -p "GitHash='$gh', HwInfo='$hw', OsInfo='$os', GoInfo='$go', VM='$vm', StateDB='$statedb'" -i "$5/profile.db" -f html_pdf -d "$5" -o parallel_experiment reports/parallel_experiment.rmd 
+echo "Rendering document..."
+./scripts/knit.R -p "GitHash='$gh', HwInfo='$hw', OsInfo='$os', GoInfo='$go', VM='$vm', StateDB='$statedb'" -d "$5/profile.db" -f html -o parallel_experiment.html -O $5 reports/parallel_experiment.rmd 

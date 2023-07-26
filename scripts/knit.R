@@ -18,7 +18,7 @@ library(tools)
 # parse command-line arguments 
 option_list <- list(
     make_option(c("-d", "--db"),         default="./data.db",       help="db for rendering experiment."),
-    make_option(c("-o", "--output"),     default="./report",   help="output file"),
+    make_option(c("-o", "--output"),     default="./report",        help="output file"),
     make_option(c("-O", "--output-dir"), default="./",              help="output Directory"),
     make_option(c("-f", "--format"),     default="html",            help="output format [html|pdf|html_pdf]"),
     make_option(c("-p", "--parameter"),  default="",                help="parameters for rmd document [p1=x1,p2=x2,...]")
@@ -31,6 +31,7 @@ output <- opt$options$output
 outputDirectory <- opt$options$`output-dir`
 outputFormat <- opt$options$format
 parameter <- eval(parse(text=paste("list(",opt$options$param,")")))
+parameter <- c(list( db = normalizePath(db)), parameter)
 rmdFile <- opt$args 
 
 # check output format
@@ -65,5 +66,5 @@ render(
     output_file = output, 
     output_dir = outputDirectory,
     output_format = docFormat,
-    params = c(list( db = normalizePath(db)), parameter)
+    params =  parameter
 )
