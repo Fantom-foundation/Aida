@@ -629,8 +629,6 @@ func (md *AidaDbMetadata) SetAll() error {
 		return err
 	}
 
-	// todo set hash
-
 	if err = md.SetTimestamp(); err != nil {
 		return err
 	}
