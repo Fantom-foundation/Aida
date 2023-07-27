@@ -70,6 +70,7 @@ func update(ctx *cli.Context) error {
 // Update implements updating command to be called from various commands and automatically downloads aida-db patches.
 func Update(cfg *utils.Config) error {
 	log := logger.NewLogger(cfg.LogLevel, "DB Update")
+	start := time.Now()
 
 	firstBlock, lastBlock, err := getTargetDbBlockRange(cfg)
 	if err != nil {
@@ -104,7 +105,7 @@ func Update(cfg *utils.Config) error {
 		return err
 	}
 
-	log.Notice("Aida-db update finished successfully")
+	log.Notice("Aida-Db %v updated finished successfully. Total elapsed time: %v", time.Since(start).Round(1*time.Second))
 
 	return nil
 }

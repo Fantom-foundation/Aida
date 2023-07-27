@@ -3,6 +3,7 @@ package db
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -180,6 +181,7 @@ func clone(cfg *utils.Config, aidaDb, cloneDb ethdb.Database, cloneType utils.Ai
 	var err error
 	log := logger.NewLogger(cfg.LogLevel, "AidaDb Clone")
 
+	start := time.Now()
 	c := cloner{
 		cfg:     cfg,
 		cloneDb: cloneDb,
@@ -195,6 +197,7 @@ func clone(cfg *utils.Config, aidaDb, cloneDb ethdb.Database, cloneType utils.Ai
 		return err
 	}
 
+	c.log.Noticef("Cloning finished. Db saved to %v. Total elapsed time: %v", cfg.TargetDb, time.Since(start).Round(1*time.Second))
 	return nil
 }
 
