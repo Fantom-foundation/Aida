@@ -13,11 +13,19 @@
 #    The script must be invoked in the main directory of the Aida repository.
 # 
 
+# assign variables for command line arguments
+aidadbpath=$1
+dbimpl=$2
+dbvariant=$3
+vmimpl=$4
+tmpdir=$5
+startblock=$6
+endblock=$7
 outputdir=$8
 
 # logging 
 log() {
-    echo "$(date) $1" | tee -a "$outputdir/parallel_experiment.log"
+    echo "$(date) $aidadbpath" | tee -a "$outputdir/parallel_experiment.log"
 }
 
 #  HardwareDescription() queries the hardware configuration of the server.
@@ -49,12 +57,12 @@ Machine() {
 }
 
 # run full parallel experiment
-log "run parallel experiment in the block range from $6 to $7 ..."
-./build/aida-profile parallelisation --aida-db $1 --db-impl $2 --db-variant $3 --vm-impl=$4 --db-tmp $5 $6 $7 "$8/profile.db"
+log "run parallel experiment in the block range from $startblock to $endblock ..."
+./build/aida-profile parallelisation --aida-db $aidadbpath --db-impl $dbimpl --db-variant $dbvariant --vm-impl=$vmimpl --db-tmp $tmpdir $startblock $endblock "$outputdir/profile.db"
 
 # reduce dataset in sqlite3 (NB: R consumes too much memory/is too slow for the reduction)
 log "reduce data set ..."
-sqlite3 $8/profile.db << EOF
+sqlite3 $outputdir/profile.db << EOF
 -- create temporary table groupedParallelProfile to group data for every 100,000 blocks
 DROP TABLE IF EXISTS  groupedParallelProfile; 
 CREATE TABLE groupedParallelProfile(block INTEGER, tBlock REAL, tCommit REAL, speedup REAL);
@@ -73,12 +81,11 @@ os=`OperatingSystemDescription`
 machine=`Machine`
 gh=`GitHash`
 go=`GoVersion`
-statedb="$2($3)"
-vm="$4"
+statedb="$dbimpl($dbvariant)"
 
 # render R Markdown file
 log "render document ..."
-./scripts/knit.R -p "GitHash='$gh', HwInfo='$hw', OsInfo='$os', Machine='$machine', GoInfo='$go', VM='$vm', StateDB='$statedb'" \
+./scripts/knit.R -p "GitHash='$gh', HwInfo='$hw', OsInfo='$os', Machine='$machine', GoInfo='$go', VM='$vmimpl', StateDB='$statedb'" \
                  -d "$8/profile.db" -f html -o parallel_experiment.html -O $8 reports/parallel_experiment.rmd
 
 log "finished."
