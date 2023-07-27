@@ -31,7 +31,7 @@ outputdir=$8
 
 # logging 
 log() {
-    echo "$(date) $aidadbpath" | tee -a "$outputdir/parallel_experiment.log"
+    echo "$(date) $1" | tee -a "$outputdir/parallel_experiment.log"
 }
 
 #  HardwareDescription() queries the hardware configuration of the server.
