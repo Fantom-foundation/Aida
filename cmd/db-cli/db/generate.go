@@ -484,9 +484,6 @@ func (g *generator) calculatePatchEnd() error {
 		g.stopAtEpoch = headEpochNumber
 	}
 
-	// todo remove testing code
-	g.stopAtEpoch = g.opera.lastEpoch + 1
-
 	return nil
 }
 

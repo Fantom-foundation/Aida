@@ -43,6 +43,12 @@ func (opera *aidaOpera) init() error {
 
 		opera.log.Noticef("Initialising opera from genesis")
 
+		err = os.Mkdir(opera.cfg.Db, 0755)
+		if err != nil {
+			return fmt.Errorf("cannot create opera db dir; %v", err)
+
+		}
+
 		// previous opera database isn't used - generate new one from genesis
 		err = opera.initFromGenesis()
 		if err != nil {

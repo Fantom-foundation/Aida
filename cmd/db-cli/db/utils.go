@@ -205,6 +205,9 @@ func startOperaRecording(cfg *utils.Config, syncUntilEpoch uint64) chan error {
 	log := logger.NewLogger(cfg.LogLevel, "autogen-recording")
 	log.Noticef("Starting opera recording %v", cfg.Db)
 
+	// this is needed for first fresh autogen run
+	cfg.SubstateDb = cfg.AidaDb
+
 	go func() {
 		defer close(errChan)
 		// syncUntilEpoch +1 because command is off by one

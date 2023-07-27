@@ -765,3 +765,17 @@ func setBlockNumber(arg string, chainId int) (uint64, error) {
 
 	return blkNum, nil
 }
+
+// CreateTestEnvironment creates plain config and context for testing purpose.
+// Any changes to the config should be applied on the struct itself.
+func CreateTestEnvironment() (*cli.Context, *Config) {
+	ctx := cli.NewContext(cli.NewApp(), nil, nil)
+
+	cfg, err := NewConfig(ctx, NoArgs)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return ctx, cfg
+
+}
