@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
 	"github.com/Fantom-foundation/Aida/cmd/updateset-cli/updateset"
@@ -62,6 +63,7 @@ type generator struct {
 	opera       *aidaOpera
 	stopAtEpoch uint64
 	dbHash      []byte
+	start       time.Time
 }
 
 // generate AidaDb
@@ -105,6 +107,7 @@ func newGenerator(ctx *cli.Context, cfg *utils.Config) (*generator, error) {
 		log:    log,
 		opera:  newAidaOpera(ctx, cfg, log),
 		aidaDb: db,
+		start:  time.Now(),
 	}, nil
 }
 
@@ -127,11 +130,17 @@ func (g *generator) Generate() error {
 		return err
 	}
 
+	start := time.Now()
+	g.log.Notice("Starting validation...")
+
 	// after generation is complete, we validate the db and save it into the patch
 	g.dbHash, err = validate(g.aidaDb, g.cfg.LogLevel)
 	if err != nil {
 		return fmt.Errorf("cannot validate newly generated db; %v", err)
 	}
+
+	g.log.Noticef("Validation complete. It took: %v", time.Since(start).Round(1*time.Second))
+	g.log.Noticef("Total elapsed time: %v", time.Since(g.start).Round(1*time.Second))
 
 	// if patch output dir is selected inserting patch.tar.gz, patch.tar.gz.md5 into there and updating patches.json
 	if g.cfg.Output != "" {
@@ -149,7 +158,9 @@ func (g *generator) Generate() error {
 	if err != nil {
 		return err
 	}
+
 	g.log.Noticef("AidaDb %v generation done", g.cfg.AidaDb)
+	g.log.Noticef("Total elapsed time: %v", time.Since(g.start).Round(1*time.Second))
 
 	return nil
 }
@@ -182,8 +193,12 @@ func (g *generator) init() (*substate.DestroyedAccountDB, *substate.UpdateDB, ui
 
 // processDeletedAccounts invokes DeletedAccounts generation and then merges it into AidaDb
 func (g *generator) processDeletedAccounts(ddb *substate.DestroyedAccountDB) error {
-	var err error
+	var (
+		err   error
+		start time.Time
+	)
 
+	start = time.Now()
 	g.log.Noticef("Generating DeletionDb...")
 
 	err = replay.GenDeletedAccountsAction(g.cfg, ddb, 0)
@@ -191,14 +206,19 @@ func (g *generator) processDeletedAccounts(ddb *substate.DestroyedAccountDB) err
 		return fmt.Errorf("cannot doGenerations deleted accounts; %v", err)
 	}
 
-	g.log.Noticef("Deleted accounts generated successfully")
+	g.log.Noticef("Deleted accounts generated successfully. It took: %v", time.Since(start).Round(1*time.Second))
+	g.log.Noticef("Total elapsed time: %v", time.Since(g.start).Round(1*time.Second))
 	return nil
 }
 
 // processUpdateSet invokes UpdateSet generation and then merges it into AidaDb
 func (g *generator) processUpdateSet(deleteDb *substate.DestroyedAccountDB, updateDb *substate.UpdateDB, nextUpdateSetStart uint64) error {
-	var err error
+	var (
+		err   error
+		start time.Time
+	)
 
+	start = time.Now()
 	g.log.Notice("Generating UpdateDb...")
 
 	// nextUpdateSetStart TODO MATEJ probably off by one
@@ -207,7 +227,8 @@ func (g *generator) processUpdateSet(deleteDb *substate.DestroyedAccountDB, upda
 		return fmt.Errorf("cannot doGenerations update-db; %v", err)
 	}
 
-	g.log.Notice("UpdateDb generated successfully")
+	g.log.Noticef("Update-Set generated successfully. It took: %v", time.Since(start).Round(1*time.Second))
+	g.log.Noticef("Total elapsed time: %v", time.Since(g.start).Round(1*time.Second))
 	return nil
 
 }
@@ -232,6 +253,9 @@ func (g *generator) merge(pathToDb string) error {
 
 // createPatch for updating data in AidaDb
 func (g *generator) createPatch() (string, error) {
+	start := time.Now()
+	g.log.Notice("Creating patch...")
+
 	// create a parents of output directory
 	err := os.MkdirAll(g.cfg.Output, 0755)
 	if err != nil {
@@ -296,6 +320,9 @@ func (g *generator) createPatch() (string, error) {
 	if err != nil {
 		return "", err
 	}
+
+	g.log.Noticef("Patch created successfully. It took: %v", time.Since(start).Round(1*time.Second))
+	g.log.Noticef("Total elapsed time: %v", time.Since(g.start).Round(1*time.Second))
 
 	return patchTarPath, nil
 }
