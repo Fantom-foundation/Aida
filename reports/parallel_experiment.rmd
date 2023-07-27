@@ -7,8 +7,8 @@ params:
   Machine: (Machine Info)
   GoInfo: (GO Info)
   GitHash: (GithubKey)
-  StateDB: Carmen
-  VM: Geth
+  StateDB: (StateDB)
+  VM: (VM)
   db: ./test.db
 ---
 
