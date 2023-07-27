@@ -13,6 +13,12 @@
 #    The script must be invoked in the main directory of the Aida repository.
 # 
 
+# check the number of command line arguments
+if [ "$#" -ne 8 ]; then
+    echo "Invalid number of command line arguments supplied"
+    exit 1
+fi
+
 # assign variables for command line arguments
 aidadbpath=$1
 dbimpl=$2
