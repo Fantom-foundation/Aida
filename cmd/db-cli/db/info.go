@@ -88,6 +88,7 @@ var cmdMetadata = cli.Command{
 	Usage:  "Prints metadata",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
+		&flags.ForceFlag,
 	},
 }
 
@@ -147,11 +148,11 @@ func printMetadataCmd(ctx *cli.Context) error {
 		return argErr
 	}
 
-	return printMetadata(cfg.AidaDb)
+	return printMetadata(cfg.AidaDb, ctx.Bool(flags.ForceFlag.Name))
 }
 
 // printMetadata from given AidaDb
-func printMetadata(pathToDb string) error {
+func printMetadata(pathToDb string, force bool) error {
 	log := logger.NewLogger("INFO", "Print-Metadata")
 	// open db
 	aidaDb, err := rawdb.NewLevelDBDatabase(pathToDb, 1024, 100, "profiling", true)
@@ -178,7 +179,7 @@ func printMetadata(pathToDb string) error {
 
 	firstBlock = md.GetFirstBlock()
 
-	if firstBlock == 0 && lastBlock == 0 {
+	if (firstBlock == 0 && lastBlock == 0) || force {
 		substate.SetSubstateDb(pathToDb)
 		substate.OpenSubstateDBReadOnly()
 		defer substate.CloseSubstateDB()

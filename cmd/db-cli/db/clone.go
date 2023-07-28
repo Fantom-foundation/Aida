@@ -115,7 +115,7 @@ func clonePatch(ctx *cli.Context) error {
 	MustCloseDB(aidaDb)
 	MustCloseDB(targetDb)
 
-	return printMetadata(cfg.TargetDb)
+	return printMetadata(cfg.TargetDb, false)
 
 }
 
@@ -173,7 +173,7 @@ func createDbClone(ctx *cli.Context) error {
 	MustCloseDB(aidaDb)
 	MustCloseDB(targetDb)
 
-	return printMetadata(cfg.TargetDb)
+	return printMetadata(cfg.TargetDb, false)
 }
 
 func clone(cfg *utils.Config, aidaDb, cloneDb ethdb.Database, cloneType utils.AidaDbType, isFirstPatch bool) error {

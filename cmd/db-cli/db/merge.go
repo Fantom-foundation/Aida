@@ -124,7 +124,7 @@ func (m *merger) finishMerge() error {
 		}
 		MustCloseDB(m.targetDb)
 
-		err = printMetadata(m.cfg.AidaDb)
+		err = printMetadata(m.cfg.AidaDb, false)
 		if err != nil {
 			return err
 		}

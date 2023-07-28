@@ -82,7 +82,7 @@ func generate(ctx *cli.Context) error {
 
 	MustCloseDB(g.aidaDb)
 
-	return printMetadata(g.cfg.AidaDb)
+	return printMetadata(g.cfg.AidaDb, false)
 }
 
 // newGenerator returns new instance of generator
@@ -265,7 +265,7 @@ func (g *generator) createPatch() (string, error) {
 	MustCloseDB(patchDb)
 
 	g.log.Noticef("Printing newly generated patch METADATA:")
-	err = printMetadata(patchPath)
+	err = printMetadata(patchPath, false)
 	if err != nil {
 		return "", err
 	}
