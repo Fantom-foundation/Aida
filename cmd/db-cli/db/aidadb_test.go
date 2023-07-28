@@ -144,6 +144,7 @@ func checkTestMetadata(db ethdb.Database, typ utils.AidaDbType) error {
 	return nil
 }
 
+// testMerge merges cloneDb and patchDb created by these tests which results in same db as the source (generatedDb)
 func testMerge(cfg *utils.Config) error {
 	cfg.AidaDb = pathToCloneTestDb
 
@@ -199,6 +200,7 @@ func testMerge(cfg *utils.Config) error {
 	return nil
 }
 
+// testAutogen by generating small db (2 epoch large) that is used in later stages for testing cloning as a source db.
 func testAutogen(cfg *utils.Config, g *generator) error {
 	var err error
 
@@ -305,6 +307,7 @@ func testClone(cfg *utils.Config) error {
 	return nil
 }
 
+// deleteAllTestDb after tests are complete. This is called even though any test fails.
 func deleteAllTestDb(log *logging.Logger) {
 	var err error
 	err = os.RemoveAll(pathToAidaTestDb)
