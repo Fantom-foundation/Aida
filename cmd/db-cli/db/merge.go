@@ -190,6 +190,7 @@ func (m *merger) merge() error {
 		m.log.Noticef("Compaction finished! Elapsed time %v", elapsed.Round(1*time.Second))
 	}
 
+	m.log.Noticef("Merge elapsed time: %v", time.Since(m.start).Round(1*time.Second))
 	return nil
 }
 
