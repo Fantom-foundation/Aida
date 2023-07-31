@@ -77,33 +77,39 @@ func generateUpdateSet(ctx *cli.Context) error {
 	}
 	db.Close()
 
-	return GenUpdateSet(cfg, cfg.First, interval)
+	// initialize updateDB
+	udb, err := substate.OpenUpdateDB(cfg.UpdateDb)
+	if err != nil {
+		return err
+	}
+	defer udb.Close()
+
+	// iterate through subsets in sequence
+	substate.SetSubstateDb(cfg.SubstateDb)
+	substate.OpenSubstateDBReadOnly()
+	defer substate.CloseSubstateDB()
+
+	ddb, err := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
+	if err != nil {
+		return err
+	}
+	defer ddb.Close()
+
+	return GenUpdateSet(cfg, udb, ddb, cfg.First, interval)
 }
 
 // GenUpdateSet generates a series of update sets from substate db
-func GenUpdateSet(cfg *utils.Config, first uint64, interval uint64) error {
+func GenUpdateSet(cfg *utils.Config, udb *substate.UpdateDB, ddb *substate.DestroyedAccountDB, first uint64, interval uint64) error {
 	var (
 		err               error
 		destroyedAccounts []common.Address
 		log               = logger.NewLogger(cfg.LogLevel, "Generate Update Set")
 	)
 
-	// initialize updateDB
-	db, err := substate.OpenUpdateDB(cfg.UpdateDb)
-	if err != nil {
+	// start with putting metadata into the udb
+	if err = udb.PutMetadata(interval, cfg.UpdateBufferSize); err != nil {
 		return err
 	}
-	defer db.Close()
-
-	// start with putting metadata into the db
-	if err = db.PutMetadata(interval, cfg.UpdateBufferSize); err != nil {
-		return err
-	}
-
-	// iterate through subsets in sequence
-	substate.SetSubstateDb(cfg.SubstateDb)
-	substate.OpenSubstateDBReadOnly()
-	defer substate.CloseSubstateDB()
 
 	skipOperaWorldState := true
 	// legacy support if a user wants to generate update set from the first opera world state
@@ -123,17 +129,12 @@ func GenUpdateSet(cfg *utils.Config, first uint64, interval uint64) error {
 		}
 		size := update.EstimateIncrementalSize(ws)
 		log.Infof("Write block %v to updateDB", first-1)
-		db.PutUpdateSet(first-1, &ws, destroyedAccounts)
+		udb.PutUpdateSet(first-1, &ws, destroyedAccounts)
 		log.Infof("\tAccounts: %v, Size: %v", len(ws), size)
 	}
 
 	iter := substate.NewSubstateIterator(first, cfg.Workers)
 	defer iter.Release()
-	deletedAccountDB, err := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
-	if err != nil {
-		return err
-	}
-	defer deletedAccountDB.Close()
 
 	var (
 		txCount       uint64                 // transaction counter
@@ -157,11 +158,11 @@ func GenUpdateSet(cfg *utils.Config, first uint64, interval uint64) error {
 			// write an update-set to updatedb if 1) interval condition is met or 2) estimated size > max size
 			if tx.Block > checkPoint || estimatedSize > maxSize {
 				log.Infof("Write block %v to updateDB", curBlock)
-				db.PutUpdateSet(curBlock, &update, destroyedAccounts)
+				udb.PutUpdateSet(curBlock, &update, destroyedAccounts)
 				log.Infof("\tTx: %v, Accounts: %v, Suicided: %v, Size: %v",
 					txCount, len(update), len(destroyedAccounts), estimatedSize)
 				if cfg.ValidateTxState {
-					if !db.GetUpdateSet(curBlock).Equal(update) {
+					if !udb.GetUpdateSet(curBlock).Equal(update) {
 						return fmt.Errorf("validation failed\n")
 					}
 				}
@@ -185,7 +186,7 @@ func GenUpdateSet(cfg *utils.Config, first uint64, interval uint64) error {
 
 		// clear storage of destroyed and resurrected accounts in
 		// the current transaction before merging its substate
-		destroyed, resurrected, err := deletedAccountDB.GetDestroyedAccounts(curBlock, tx.Transaction)
+		destroyed, resurrected, err := ddb.GetDestroyedAccounts(curBlock, tx.Transaction)
 		if !(err == nil || errors.Is(err, leveldb.ErrNotFound)) {
 			return err
 		}

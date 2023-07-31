@@ -31,7 +31,7 @@ func MakeErigonStateDB(directory, variant string, rootHash common.Hash, batchLim
 	// erigon go-memory variant is not compatible with erigon batch mode
 	switch variant {
 	case "": // = default option
-		kv = launcher.InitChainKV(erigonDirectory)
+		fallthrough
 	case "go-mdbx":
 		kv = launcher.InitChainKV(erigonDirectory)
 	default:

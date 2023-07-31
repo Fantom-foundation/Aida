@@ -8,7 +8,6 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	substate "github.com/Fantom-foundation/Substate"
-	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/op/go-logging"
 )
@@ -27,13 +26,8 @@ type validator struct {
 }
 
 // newDbValidator returns new instance of validator
-func newDbValidator(pathToDb, logLevel string) *validator {
+func newDbValidator(db ethdb.Database, logLevel string) *validator {
 	l := logger.NewLogger(logLevel, "Db-Validator")
-
-	db, err := rawdb.NewLevelDBDatabase(pathToDb, 1024, 100, "profiling", true)
-	if err != nil {
-		l.Fatalf("cannot create new db; %v", err)
-	}
 
 	return &validator{
 		closed: make(chan any, 1),
@@ -47,8 +41,8 @@ func newDbValidator(pathToDb, logLevel string) *validator {
 }
 
 // validate AidaDb on given path pathToDb
-func validate(pathToDb, logLevel string) ([]byte, error) {
-	v := newDbValidator(pathToDb, logLevel)
+func validate(db ethdb.Database, logLevel string) ([]byte, error) {
+	v := newDbValidator(db, logLevel)
 
 	v.wg.Add(2)
 
@@ -114,11 +108,14 @@ func (v *validator) doIterate(prefix string) {
 	}()
 
 	var (
-		dst []byte
+		dst, b []byte
 	)
 
 	for iter.Next() {
-		copy(dst, iter.Key())
+		b = iter.Key()
+		dst = make([]byte, len(b))
+		copy(dst, b)
+
 		select {
 		case <-v.closed:
 			return
@@ -126,7 +123,10 @@ func (v *validator) doIterate(prefix string) {
 			break
 		}
 
-		copy(dst, iter.Value())
+		b = iter.Value()
+		dst = make([]byte, len(b))
+		copy(dst, b)
+
 		select {
 		case <-v.closed:
 			return

@@ -46,7 +46,7 @@ Creates patch of aida-db for desired block range
 
 // CloneDb enables creation of aida-db read or subset
 var CloneDb = cli.Command{
-	Action:    cloneDb,
+	Action:    createDbClone,
 	Name:      "db",
 	Usage:     "clone db creates aida-db subset",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
@@ -102,14 +102,41 @@ func clonePatch(ctx *cli.Context) error {
 		return err
 	}
 
-	err = clone(cfg, utils.PatchType)
+	aidaDb, targetDb, err := openCloningDbs(cfg.AidaDb, cfg.TargetDb)
 	if err != nil {
 		return err
 	}
 
-	targetDb, err := rawdb.NewLevelDBDatabase(cfg.TargetDb, 1024, 100, "profiling", false)
+	err = CreatePatchClone(cfg, aidaDb, targetDb, firstEpoch, lastEpoch, false)
 	if err != nil {
-		return fmt.Errorf("cannot open aida-db; %v", err)
+		return err
+	}
+
+	MustCloseDB(aidaDb)
+	MustCloseDB(targetDb)
+
+	return printMetadata(cfg.TargetDb)
+
+}
+
+// CreatePatchClone creates aida-db patch
+func CreatePatchClone(cfg *utils.Config, aidaDb, targetDb ethdb.Database, firstEpoch, lastEpoch uint64, isNewOpera bool) error {
+	var isFirstPatch = false
+
+	// if the patch is first, we need to make some exceptions hence cloner needs to know
+	if isNewOpera {
+		if firstEpoch == 5577 && cfg.ChainID == 250 {
+			isFirstPatch = true
+		}
+
+		if firstEpoch == 2458 && cfg.ChainID == 4002 {
+			isFirstPatch = true
+		}
+	}
+
+	err := clone(cfg, aidaDb, targetDb, utils.PatchType, isFirstPatch)
+	if err != nil {
+		return err
 	}
 
 	md := utils.NewAidaDbMetadata(targetDb, cfg.LogLevel)
@@ -117,45 +144,46 @@ func clonePatch(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+
 	err = md.SetLastEpoch(lastEpoch)
 	if err != nil {
 		return err
 	}
 
-	MustCloseDB(targetDb)
-
-	err = ctx.Set(utils.AidaDbFlag.Name, cfg.TargetDb)
-	if err != nil {
-		return err
-	}
-	return printMetadata(cfg.TargetDb)
+	return nil
 }
 
-// cloneDb creates aida-db copy or subset
-func cloneDb(ctx *cli.Context) error {
+// createDbClone creates aida-db copy or subset
+func createDbClone(ctx *cli.Context) error {
 	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if err != nil {
 		return err
 	}
 
-	err = clone(cfg, utils.CloneType)
+	aidaDb, targetDb, err := openCloningDbs(cfg.AidaDb, cfg.TargetDb)
 	if err != nil {
 		return err
 	}
 
-	err = ctx.Set(utils.AidaDbFlag.Name, cfg.TargetDb)
+	err = clone(cfg, aidaDb, targetDb, utils.CloneType, false)
 	if err != nil {
 		return err
 	}
+
+	MustCloseDB(aidaDb)
+	MustCloseDB(targetDb)
+
 	return printMetadata(cfg.TargetDb)
 }
 
-func clone(cfg *utils.Config, cloneType utils.AidaDbType) error {
+func clone(cfg *utils.Config, aidaDb, cloneDb ethdb.Database, cloneType utils.AidaDbType, isFirstPatch bool) error {
 	var err error
 	log := logger.NewLogger(cfg.LogLevel, "AidaDb Clone")
 
 	c := cloner{
 		cfg:     cfg,
+		cloneDb: cloneDb,
+		aidaDb:  aidaDb,
 		log:     log,
 		typ:     cloneType,
 		writeCh: make(chan rawEntry, cloneWriteChanSize),
@@ -163,64 +191,34 @@ func clone(cfg *utils.Config, cloneType utils.AidaDbType) error {
 		closeCh: make(chan any),
 	}
 
-	if err = c.openDbs(); err != nil {
+	if err = c.clone(isFirstPatch); err != nil {
 		return err
-	}
-
-	if err = c.clone(); err != nil {
-		return err
-	}
-
-	MustCloseDB(c.aidaDb)
-	MustCloseDB(c.cloneDb)
-
-	return nil
-}
-
-// openDbs prepares aida and target databases
-func (c *cloner) openDbs() error {
-	var err error
-
-	_, err = os.Stat(c.cfg.AidaDb)
-	if os.IsNotExist(err) {
-		return fmt.Errorf("specified aida-db %v is empty\n", c.cfg.AidaDb)
-	}
-
-	_, err = os.Stat(c.cfg.TargetDb)
-	if !os.IsNotExist(err) {
-		return fmt.Errorf("specified target-db %v already exists\n", c.cfg.TargetDb)
-	}
-
-	// open db
-	c.aidaDb, err = rawdb.NewLevelDBDatabase(c.cfg.AidaDb, 1024, 100, "profiling", true)
-	if err != nil {
-		return fmt.Errorf("targetDb; %v", err)
-	}
-
-	// open cloneDb
-	c.cloneDb, err = rawdb.NewLevelDBDatabase(c.cfg.TargetDb, 1024, 100, "profiling", false)
-	if err != nil {
-		return fmt.Errorf("targetDb; %v", err)
 	}
 
 	return nil
 }
 
-// cloneDb AidaDb in given block range
-func (c *cloner) clone() error {
+// createDbClone AidaDb in given block range
+func (c *cloner) clone(isFirstPatch bool) error {
 	go c.write()
 	go c.checkErrors()
 
 	c.read([]byte(substate.Stage1CodePrefix), 0, nil)
-	c.read([]byte(substate.DestroyedAccountPrefix), 0, nil)
-	lastUpdateBeforeRange := c.readUpdateSet()
+
+	// update c.cfg.First block before loading deletions and substates, because for utils.CloneType those are necessery to be from last updateset onward
+	lastUpdateBeforeRange := c.readUpdateSet(isFirstPatch)
 	if c.typ == utils.CloneType {
 		if lastUpdateBeforeRange < c.cfg.First {
 			c.log.Noticef("Last updateset found at block %v, changing first block to %v", lastUpdateBeforeRange, lastUpdateBeforeRange+1)
 			c.cfg.First = lastUpdateBeforeRange + 1
 		}
 	}
-	err := c.readSubstate()
+
+	err := c.readDeletions()
+	if err != nil {
+		return err
+	}
+	err = c.readSubstate()
 	if err != nil {
 		return err
 	}
@@ -267,7 +265,7 @@ func (c *cloner) checkErrors() {
 	}
 }
 
-// write data read from func read() into new cloneDb
+// write data read from func read() into new createDbClone
 func (c *cloner) write() {
 	var (
 		err         error
@@ -286,7 +284,7 @@ func (c *cloner) write() {
 				if batchWriter.ValueSize() > 0 {
 					err = batchWriter.Write()
 					if err != nil {
-						c.errCh <- fmt.Errorf("cannot read rest of the data into cloneDb; %v", err)
+						c.errCh <- fmt.Errorf("cannot read rest of the data into createDbClone; %v", err)
 						return
 					}
 				}
@@ -295,7 +293,7 @@ func (c *cloner) write() {
 
 			err = batchWriter.Put(data.Key, data.Value)
 			if err != nil {
-				c.errCh <- fmt.Errorf("cannot put data into cloneDb %v", err)
+				c.errCh <- fmt.Errorf("cannot put data into createDbClone %v", err)
 				return
 			}
 
@@ -359,7 +357,7 @@ func (c *cloner) read(prefix []byte, start uint64, condition func(key []byte) (b
 }
 
 // readUpdateSet from UpdateDb
-func (c *cloner) readUpdateSet() uint64 {
+func (c *cloner) readUpdateSet(isFirstPatch bool) uint64 {
 	// labeling last updateSet before interval - need to export substate for that range as well
 	var lastUpdateBeforeRange uint64
 	endCond := func(key []byte) (bool, error) {
@@ -387,7 +385,17 @@ func (c *cloner) readUpdateSet() uint64 {
 
 		return lastUpdateBeforeRange
 	} else if c.typ == utils.PatchType {
-		c.read([]byte(substate.SubstateAllocPrefix), c.cfg.First, endCond)
+		var wantedBlock uint64
+
+		// if we are working with first patch we need to move the start of the iterator minus one block
+		// so first update-set gets inserted
+		if isFirstPatch {
+			wantedBlock = c.cfg.First - 1
+		} else {
+			wantedBlock = c.cfg.First
+		}
+
+		c.read([]byte(substate.SubstateAllocPrefix), wantedBlock, endCond)
 		return 0
 	} else {
 		c.errCh <- fmt.Errorf("incorrect clone type: %v", c.typ)
@@ -409,6 +417,24 @@ func (c *cloner) readSubstate() error {
 	}
 
 	c.read([]byte(substate.Stage1SubstatePrefix), c.cfg.First, endCond)
+
+	return nil
+}
+
+// readDeletions from last updateSet before cfg.First until cfg.Last
+func (c *cloner) readDeletions() error {
+	endCond := func(key []byte) (bool, error) {
+		block, _, err := substate.DecodeDestroyedAccountKey(key)
+		if err != nil {
+			return false, err
+		}
+		if block > c.cfg.Last {
+			return true, nil
+		}
+		return false, nil
+	}
+
+	c.read([]byte(substate.DestroyedAccountPrefix), c.cfg.First, endCond)
 
 	return nil
 }
@@ -444,4 +470,37 @@ func (c *cloner) stop() {
 		close(c.closeCh)
 		c.closeDbs()
 	}
+}
+
+// openCloningDbs prepares aida and target databases
+func openCloningDbs(aidaDbPath, targetDbPath string) (ethdb.Database, ethdb.Database, error) {
+	var err error
+
+	// if source db doesn't exist raise error
+	_, err = os.Stat(aidaDbPath)
+	if os.IsNotExist(err) {
+		return nil, nil, fmt.Errorf("specified aida-db %v is empty\n", aidaDbPath)
+	}
+
+	// if target db exists raise error
+	_, err = os.Stat(targetDbPath)
+	if !os.IsNotExist(err) {
+		return nil, nil, fmt.Errorf("specified target-db %v already exists\n", targetDbPath)
+	}
+
+	var aidaDb, cloneDb ethdb.Database
+
+	// open db
+	aidaDb, err = rawdb.NewLevelDBDatabase(aidaDbPath, 1024, 100, "profiling", true)
+	if err != nil {
+		return nil, nil, fmt.Errorf("aidaDb %v; %v", aidaDbPath, err)
+	}
+
+	// open createDbClone
+	cloneDb, err = rawdb.NewLevelDBDatabase(targetDbPath, 1024, 100, "profiling", false)
+	if err != nil {
+		return nil, nil, fmt.Errorf("targetDb %v; %v", targetDbPath, err)
+	}
+
+	return aidaDb, cloneDb, nil
 }

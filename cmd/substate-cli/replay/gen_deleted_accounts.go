@@ -32,7 +32,7 @@ The substate-cli replay command requires two arguments:
 last block of the inclusive range of blocks to replay transactions.`,
 }
 
-const channelSize = 10000 //size of deletion channel
+const channelSize = 10000 // size of deletion channel
 
 var DeleteHistory map[common.Address]bool //address recently and deleted
 
@@ -98,7 +98,10 @@ func genDeletedAccountsTask(block uint64, tx int, recording *substate.Substate, 
 		// if transaction completed successfully, put destroyed accounts
 		// and resurrected accounts to a database
 		if recording.Result.Status == types.ReceiptStatusSuccessful {
-			ddb.SetDestroyedAccounts(block, tx, des, res)
+			err = ddb.SetDestroyedAccounts(block, tx, des, res)
+			if err != nil {
+				return err
+			}
 		}
 	}
 
@@ -120,18 +123,6 @@ func genDeletedAccountsAction(ctx *cli.Context) error {
 		return fmt.Errorf("you need to specify path to existing substate (--substate-db)")
 	}
 
-	return GenDeletedAccountsAction(cfg, cfg.First)
-}
-
-// GenDeletedAccountsAction replays transactions and record self-destructed accounts and resurrected accounts.
-func GenDeletedAccountsAction(cfg *utils.Config, firstBlock uint64) error {
-	var err error
-
-	log := logger.NewLogger(cfg.LogLevel, "Substate Replay")
-
-	chainID = cfg.ChainID
-	log.Infof("chain-id: %v", chainID)
-
 	substate.SetSubstateDb(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
@@ -141,6 +132,18 @@ func GenDeletedAccountsAction(cfg *utils.Config, firstBlock uint64) error {
 		return err
 	}
 	defer ddb.Close()
+
+	return GenDeletedAccountsAction(cfg, ddb, cfg.First)
+}
+
+// GenDeletedAccountsAction replays transactions and record self-destructed accounts and resurrected accounts.
+func GenDeletedAccountsAction(cfg *utils.Config, ddb *substate.DestroyedAccountDB, firstBlock uint64) error {
+	var err error
+
+	log := logger.NewLogger(cfg.LogLevel, "Generate Deleted Accounts")
+
+	chainID = cfg.ChainID
+	log.Infof("chain-id: %v", chainID)
 
 	start := time.Now()
 	sec := time.Since(start).Seconds()

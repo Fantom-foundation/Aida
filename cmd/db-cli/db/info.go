@@ -1,6 +1,7 @@
 package db
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
@@ -24,7 +25,7 @@ var InfoCommand = cli.Command{
 		&cmdMetadata,
 		&cmdDelAcc,
 		&cmdCount,
-		&cmdPrintMD5,
+		&cmdPrintDbHash,
 	},
 }
 
@@ -90,18 +91,51 @@ var cmdMetadata = cli.Command{
 	},
 }
 
-var cmdPrintMD5 = cli.Command{
-	Action: printMD5Sum,
-	Name:   "print-md5",
-	Usage:  "Creates md5 sum of all data (both key and value) inside AidaDb and prints it",
+var cmdPrintDbHash = cli.Command{
+	Action: doDbHash,
+	Name:   "db-hash",
+	Usage:  "Prints db-hash (md5) inside AidaDb. If this value is not present in metadata it iterates through all of data.",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
+		&flags.InsertFlag,
+		&flags.ForceFlag,
 	},
 }
 
-func printMD5Sum(ctx *cli.Context) error {
-	if _, err := validate(ctx.String(utils.AidaDbFlag.Name), "INFO"); err != nil {
+func doDbHash(ctx *cli.Context) error {
+	var (
+		insert = ctx.Bool(flags.InsertFlag.Name)
+		force  = ctx.Bool(flags.ForceFlag.Name)
+	)
+
+	aidaDb, err := rawdb.NewLevelDBDatabase(ctx.String(utils.AidaDbFlag.Name), 1024, 100, "profiling", !insert)
+	if err != nil {
+		return fmt.Errorf("cannot open db; %v", err)
+	}
+
+	defer MustCloseDB(aidaDb)
+
+	var dbHash []byte
+
+	md := utils.NewAidaDbMetadata(aidaDb, "INFO")
+
+	// first try to extract from db
+	dbHash = md.GetDbHash()
+	if len(dbHash) != 0 && !force {
+		fmt.Printf("Db-Hash: %v", hex.EncodeToString(dbHash))
+
+		return nil
+	}
+
+	// if not found in db, we need to iterate and create the hash
+	if dbHash, err = validate(aidaDb, "INFO"); err != nil {
 		return err
+	}
+
+	if insert {
+		if err = md.SetDbHash(dbHash); err != nil {
+			return fmt.Errorf("cannot insert db-hash; %v", err)
+		}
 	}
 
 	return nil
@@ -145,7 +179,11 @@ func printMetadata(pathToDb string) error {
 	firstBlock = md.GetFirstBlock()
 
 	if firstBlock == 0 && lastBlock == 0 {
-		firstBlock, lastBlock, ok = utils.FindBlockRangeInSubstate(pathToDb)
+		substate.SetSubstateDb(pathToDb)
+		substate.OpenSubstateDBReadOnly()
+		defer substate.CloseSubstateDB()
+
+		firstBlock, lastBlock, ok = utils.FindBlockRangeInSubstate()
 		if !ok {
 			return errors.New("no substate found")
 		}
@@ -157,7 +195,6 @@ func printMetadata(pathToDb string) error {
 	log.Infof("Chain-ID: %v", chainID)
 
 	// BLOCKS
-
 	log.Infof("First Block: %v", firstBlock)
 
 	log.Infof("Last Block: %v", lastBlock)
@@ -170,6 +207,10 @@ func printMetadata(pathToDb string) error {
 	lastEpoch := md.GetLastEpoch()
 
 	log.Infof("Last Epoch: %v", lastEpoch)
+
+	dbHash := md.GetDbHash()
+
+	log.Infof("Db Hash: %v", hex.EncodeToString(dbHash))
 
 	// TIMESTAMP
 	timestamp := md.GetTimestamp()

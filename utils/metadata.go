@@ -4,13 +4,11 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/logger"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/Fantom-foundation/lachesis-base/common/bigendian"
-	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/op/go-logging"
@@ -34,6 +32,7 @@ const (
 	TypePrefix       = substate.MetadataPrefix + "ty"
 	ChainIDPrefix    = substate.MetadataPrefix + "ci"
 	TimestampPrefix  = substate.MetadataPrefix + "ti"
+	DbHashPrefix     = substate.MetadataPrefix + "md"
 )
 
 // merge is determined by what are we merging
@@ -66,7 +65,7 @@ func NewAidaDbMetadata(db ethdb.Database, logLevel string) *AidaDbMetadata {
 
 // ProcessPatchLikeMetadata decides whether patch is new or not. If so the DbType is Set to GenType, otherwise its PatchType.
 // Then it inserts all given metadata
-func ProcessPatchLikeMetadata(aidaDb ethdb.Database, logLevel string, firstBlock, lastBlock, firstEpoch, lastEpoch uint64, chainID int, isNew bool) error {
+func ProcessPatchLikeMetadata(aidaDb ethdb.Database, logLevel string, firstBlock, lastBlock, firstEpoch, lastEpoch uint64, chainID int, isNew bool, dbHash []byte) error {
 	var (
 		dbType AidaDbType
 		err    error
@@ -107,6 +106,11 @@ func ProcessPatchLikeMetadata(aidaDb ethdb.Database, logLevel string, firstBlock
 		return err
 	}
 
+	err = md.SetDbHash(dbHash)
+	if err != nil {
+		return err
+	}
+
 	md.log.Notice("Metadata added successfully")
 
 	return nil
@@ -132,7 +136,7 @@ func ProcessCloneLikeMetadata(aidaDb ethdb.Database, typ AidaDbType, logLevel st
 		return err
 	}
 
-	if err = md.findEpochs(chainID); err != nil {
+	if err = md.findEpochs(); err != nil {
 		return err
 	}
 
@@ -156,21 +160,14 @@ func ProcessCloneLikeMetadata(aidaDb ethdb.Database, typ AidaDbType, logLevel st
 	return nil
 }
 
-func ProcessGenLikeMetadata(pathToAidaDb string, firstBlock uint64, lastBlock uint64, firstEpoch uint64, lastEpoch uint64, chainID int, logLevel string) error {
-	aidaDb, err := rawdb.NewLevelDBDatabase(pathToAidaDb, 1024, 100, "profiling", false)
-	if err != nil {
-		return fmt.Errorf("metadata cannot open AidaDb; %v", err)
-	}
-
-	defer aidaDb.Close()
-
+func ProcessGenLikeMetadata(aidaDb ethdb.Database, firstBlock uint64, lastBlock uint64, firstEpoch uint64, lastEpoch uint64, chainID int, logLevel string, dbHash []byte) error {
 	md := NewAidaDbMetadata(aidaDb, logLevel)
-	return md.genMetadata(firstBlock, lastBlock, firstEpoch, lastEpoch, chainID)
+	return md.genMetadata(firstBlock, lastBlock, firstEpoch, lastEpoch, chainID, dbHash)
 }
 
 // genMetadata inserts metadata into newly generated AidaDb.
 // If generate is used onto an existing AidaDb it updates last block, last epoch and timestamp.
-func (md *AidaDbMetadata) genMetadata(firstBlock uint64, lastBlock uint64, firstEpoch uint64, lastEpoch uint64, chainID int) error {
+func (md *AidaDbMetadata) genMetadata(firstBlock uint64, lastBlock uint64, firstEpoch uint64, lastEpoch uint64, chainID int, dbHash []byte) error {
 	var err error
 
 	firstBlock, lastBlock = md.compareBlocks(firstBlock, lastBlock)
@@ -200,6 +197,10 @@ func (md *AidaDbMetadata) genMetadata(firstBlock uint64, lastBlock uint64, first
 	}
 
 	if err = md.SetTimestamp(); err != nil {
+		return err
+	}
+
+	if err = md.SetDbHash(dbHash); err != nil {
 		return err
 	}
 
@@ -238,12 +239,16 @@ func ProcessMergeMetadata(cfg *Config, aidaDb ethdb.Database, sourceDbs []ethdb.
 				return nil, fmt.Errorf("cannot close db; %v", err)
 			}
 
-			md.FirstBlock, md.LastBlock, ok = FindBlockRangeInSubstate(paths[i])
+			substate.SetSubstateDb(paths[i])
+			substate.OpenSubstateDBReadOnly()
+			md.FirstBlock, md.LastBlock, ok = FindBlockRangeInSubstate()
 			if !ok {
 				md.log.Warningf("Cannot find blocks in substate; is substate present in given db? %v", paths[i])
 			} else {
 				md.log.Noticef("Found block range inside substate of %v (%v-%v)", paths[i], md.FirstBlock, md.LastBlock)
 			}
+
+			substate.CloseSubstateDB()
 
 			// reopen db
 			md.Db, err = rawdb.NewLevelDBDatabase(paths[i], 1024, 100, "profiling", true)
@@ -311,12 +316,17 @@ func ProcessMergeMetadata(cfg *Config, aidaDb ethdb.Database, sourceDbs []ethdb.
 			return nil, fmt.Errorf("cannot close targetDb; %v", err)
 		}
 
-		targetMD.FirstBlock, targetMD.LastBlock, ok = FindBlockRangeInSubstate(cfg.AidaDb)
+		substate.SetSubstateDb(cfg.AidaDb)
+		substate.OpenSubstateDBReadOnly()
+
+		targetMD.FirstBlock, targetMD.LastBlock, ok = FindBlockRangeInSubstate()
 		if !ok {
 			targetMD.log.Warningf("Cannot find block range in substate of AidaDb (%v); this will in corrupted metadata but will not affect data itself", cfg.AidaDb)
 		} else {
 			targetMD.log.Noticef("Found block range inside substate of AidaDb %v (%v-%v)", cfg.AidaDb, targetMD.FirstBlock, targetMD.LastBlock)
 		}
+
+		substate.CloseSubstateDB()
 
 		// re-open db
 		targetMD.Db, err = rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
@@ -326,13 +336,13 @@ func ProcessMergeMetadata(cfg *Config, aidaDb ethdb.Database, sourceDbs []ethdb.
 
 	}
 
-	if err = targetMD.findEpochs(cfg.ChainID); err != nil {
-		return nil, err
-	}
-
 	if targetMD.ChainId == 0 {
 		targetMD.log.Warningf("your dbs does not have chain-id, Setting value from config (%v)", cfg.ChainID)
 		targetMD.ChainId = cfg.ChainID
+	}
+
+	if err = targetMD.findEpochs(); err != nil {
+		return nil, err
 	}
 
 	return targetMD, nil
@@ -627,8 +637,33 @@ func (md *AidaDbMetadata) SetAll() error {
 	return nil
 }
 
+// SetDbHash in given Db
+func (md *AidaDbMetadata) SetDbHash(dbHash []byte) error {
+	if err := md.Db.Put([]byte(DbHashPrefix), dbHash); err != nil {
+		return fmt.Errorf("cannot put metadata; %v", err)
+	}
+
+	md.log.Info("METADATA: Db hash saved successfully")
+
+	return nil
+}
+
+// GetDbHash and return it
+func (md *AidaDbMetadata) GetDbHash() []byte {
+	dbHash, err := md.Db.Get([]byte(DbHashPrefix))
+	if err != nil {
+		if errors.Is(err, leveldb.ErrNotFound) {
+			return nil
+		}
+		md.log.Criticalf("cannot get Db hash from metadata; %v", err)
+		return nil
+	}
+
+	return dbHash
+}
+
 // SetAllMetadata in given Db
-func (md *AidaDbMetadata) SetAllMetadata(firstBlock uint64, lastBlock uint64, firstEpoch uint64, lastEpoch uint64, chainID int, dbType AidaDbType) error {
+func (md *AidaDbMetadata) SetAllMetadata(firstBlock uint64, lastBlock uint64, firstEpoch uint64, lastEpoch uint64, chainID int, dbHash []byte, dbType AidaDbType) error {
 	var err error
 
 	if err = md.SetFirstBlock(firstBlock); err != nil {
@@ -658,34 +693,22 @@ func (md *AidaDbMetadata) SetAllMetadata(firstBlock uint64, lastBlock uint64, fi
 	if err = md.SetTimestamp(); err != nil {
 		return err
 	}
+
+	if err = md.SetDbHash(dbHash); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 // findEpochs for block range in metadata
-func (md *AidaDbMetadata) findEpochs(chainId int) error {
+func (md *AidaDbMetadata) findEpochs() error {
 	var (
 		err                            error
-		testnet                        bool
 		firstEpochMinus, lastEpochPlus uint64
 	)
 
-	if md.ChainId == 0 {
-		// 0 means chain-id was not found inside metadata
-		md.log.Warningf("chain-id was not found inside metadata; using value from config (%v)", chainId)
-		md.ChainId = chainId
-	}
-
-	switch md.ChainId {
-	case 250:
-		testnet = false
-	case 4002:
-		testnet = true
-	default:
-		// anything else is wrong chain-id, and we cannot let it through
-		return fmt.Errorf("unknown chain-id %v", chainId)
-	}
-
-	md.FirstEpoch, err = findEpochNumber(md.FirstBlock, testnet)
+	md.FirstEpoch, err = FindEpochNumber(md.FirstBlock, md.ChainId)
 	if err != nil {
 		return err
 	}
@@ -693,7 +716,7 @@ func (md *AidaDbMetadata) findEpochs(chainId int) error {
 	// if first block is 0 we can be sure the block begins an epoch so no need to check that
 	if md.FirstBlock != 0 {
 		// we need to check if block is really first block of an epoch
-		firstEpochMinus, err = findEpochNumber(md.FirstBlock-1, testnet)
+		firstEpochMinus, err = FindEpochNumber(md.FirstBlock-1, md.ChainId)
 		if err != nil {
 			return err
 		}
@@ -706,13 +729,13 @@ func (md *AidaDbMetadata) findEpochs(chainId int) error {
 		}
 	}
 
-	md.LastEpoch, err = findEpochNumber(md.LastBlock, testnet)
+	md.LastEpoch, err = FindEpochNumber(md.LastBlock, md.ChainId)
 	if err != nil {
 		return err
 	}
 
 	// we need to check if block is really last block of an epoch
-	lastEpochPlus, err = findEpochNumber(md.LastBlock+1, testnet)
+	lastEpochPlus, err = FindEpochNumber(md.LastBlock+1, md.ChainId)
 	if err != nil {
 		return err
 	}
@@ -801,7 +824,7 @@ func (md *AidaDbMetadata) SetFreshMetadata(chainID int) error {
 		return err
 	}
 
-	if err = md.findEpochs(chainID); err != nil {
+	if err = md.findEpochs(); err != nil {
 		return err
 	}
 
@@ -910,62 +933,8 @@ func (md *AidaDbMetadata) UpdateMetadataInOldAidaDb(chainId int, firstAidaDbBloc
 	return nil
 }
 
-func (md *AidaDbMetadata) getVerboseDbType() string {
-	switch md.DbType {
-	case GenType:
-		return "Generate"
-	case CloneType:
-		return "Clone"
-	case PatchType:
-		return "Patch"
-	case NoType:
-		return "NoType"
-
-	default:
-		return "unknown db type"
-	}
-}
-
-// findEpochNumber via RPC request GetBlockByNumber
-func findEpochNumber(blockNumber uint64, testnet bool) (uint64, error) {
-	hex := strconv.FormatUint(blockNumber, 16)
-
-	payload := JsonRPCRequest{
-		Method:  "ftm_getBlockByNumber",
-		Params:  []interface{}{"0x" + hex, false},
-		ID:      1,
-		JSONRPC: "2.0",
-	}
-
-	m, err := SendRPCRequest(payload, testnet)
-	if err != nil {
-		return 0, err
-	}
-
-	resultMap, ok := m["result"].(map[string]interface{})
-	if !ok {
-		return 0, fmt.Errorf("unexpecetd answer: %v\nreq: %v", m, payload)
-	}
-
-	firstEpochHex, ok := resultMap["epoch"].(string)
-	if !ok {
-		return 0, fmt.Errorf("cannot find epoch in result: %v", resultMap)
-	}
-
-	epoch, ok := math.ParseUint64(firstEpochHex)
-	if !ok {
-		return 0, fmt.Errorf("cannot parse hex first epoch to uint: %v", firstEpochHex)
-	}
-
-	return epoch, nil
-}
-
 // FindBlockRangeInSubstate if AidaDb does not yet have metadata
-func FindBlockRangeInSubstate(pathToAidaDb string) (uint64, uint64, bool) {
-	substate.SetSubstateDb(pathToAidaDb)
-	substate.OpenSubstateDBReadOnly()
-	defer substate.CloseSubstateDB()
-
+func FindBlockRangeInSubstate() (uint64, uint64, bool) {
 	firstSubstate := substate.GetFirstSubstate()
 	if firstSubstate == nil {
 		return 0, 0, false
@@ -982,4 +951,20 @@ func FindBlockRangeInSubstate(pathToAidaDb string) (uint64, uint64, bool) {
 	lastBlock := lastSubstate.Env.Number
 
 	return firstBlock, lastBlock, true
+}
+
+func (md *AidaDbMetadata) getVerboseDbType() string {
+	switch md.DbType {
+	case GenType:
+		return "Generate"
+	case CloneType:
+		return "Clone"
+	case PatchType:
+		return "Patch"
+	case NoType:
+		return "NoType"
+
+	default:
+		return "unknown db type"
+	}
 }
