@@ -30,6 +30,8 @@ type Context struct {
 
 	tCompletion TxTime        // earliest completion time of a transaction
 	tCritical   time.Duration // critical path runtime for transactions
+
+	tTransactions []time.Duration // runtime of transactions
 }
 
 var errBlockOverheadTime = errors.New("block or overhead time measurements went wrong")
@@ -41,6 +43,7 @@ func NewContext() *Context {
 		tCompletion:    TxTime{},
 		txDependencies: graphutil.StrictPartialOrder{},
 		txAddresses:    TxAddresses{},
+		tTransactions:  []time.Duration{},
 	}
 }
 
@@ -121,6 +124,7 @@ func (ctx *Context) RecordTransaction(tx *substate.Transaction, tTransaction tim
 
 	// update sequential time
 	ctx.tSequential += tTransaction
+	ctx.tTransactions = append(ctx.tTransactions, tTransaction)
 
 	// retrieve contract/wallet addresses of transaction
 	addresses := findTxAddresses(tx)
@@ -153,14 +157,15 @@ func (ctx *Context) RecordTransaction(tx *substate.Transaction, tTransaction tim
 
 // ProfileData for one block
 type ProfileData struct {
-	curBlock    uint64  // current block number
-	tBlock      int64   // block runtime
-	tSequential int64   // total transaction runtime
-	tCritical   int64   // critical path runtime for transactions
-	tCommit     int64   // commit runtime
-	speedup     float64 // speedup value for experiment
-	ubNumProc   int64   // upper bound on the number of processors (i.e. width of task graph)
-	numTx       int     // number of transactions
+	curBlock      uint64  // current block number
+	tBlock        int64   // block runtime
+	tSequential   int64   // total transaction runtime
+	tCritical     int64   // critical path runtime for transactions
+	tCommit       int64   // commit runtime
+	speedup       float64 // speedup value for experiment
+	ubNumProc     int64   // upper bound on the number of processors (i.e. width of task graph)
+	numTx         int     // number of transactions
+	tTransactions []int64 // runtime of transactions
 }
 
 // GetProfileData produces a profile record for the SQLITE3 DB.
@@ -200,6 +205,7 @@ func (ctx *Context) GetProfileData(curBlock uint64, tBlock time.Duration) (*Prof
 		speedup:     speedup,
 		ubNumProc:   ubNumProc,
 		numTx:       ctx.n,
+		tTransactions: -- copy ctx.tTransactions
 	}
 	return &data, nil
 }

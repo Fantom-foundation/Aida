@@ -32,7 +32,11 @@ INSERT INTO parallelprofile (
 	tCommit INTEGER,
 	speedup FLOAT,
 	ubNumProc INTEGER,
-	numTx INTEGER
+	numTx INTEGER);
+	CREATE TABLE IF NOT EXISTS txProfile (
+    block INTEGER,
+	tx    INTEGER, 
+	duration INTEGER
 );
 `
 
@@ -108,6 +112,7 @@ func (db *ProfileDB) Flush() error {
 	for _, ProfileData := range db.buffer {
 		_, err := tx.Stmt(db.stmt).Exec(ProfileData.curBlock, ProfileData.tBlock, ProfileData.tSequential, ProfileData.tCritical,
 			ProfileData.tCommit, ProfileData.speedup, ProfileData.ubNumProc, ProfileData.numTx)
+		// write into new txProfile table here the transaction durations
 		if err != nil {
 			tx.Rollback()
 			return err
