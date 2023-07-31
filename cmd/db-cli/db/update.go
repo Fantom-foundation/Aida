@@ -54,7 +54,7 @@ type patchJson struct {
 	FileName           string
 	FromBlock, ToBlock uint64
 	FromEpoch, ToEpoch uint64
-	DbHash, TarGzHash  string
+	DbHash, TarHash    string
 }
 
 // update updates aida-db by downloading patches from aida-db generation server.
