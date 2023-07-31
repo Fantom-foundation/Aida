@@ -74,26 +74,27 @@ func update(ctx *cli.Context) error {
 func Update(cfg *utils.Config) error {
 	log := logger.NewLogger(cfg.LogLevel, "DB Update")
 
-	firstBlock, lastBlock, err := getTargetDbBlockRange(cfg)
+	targetDbFirstBlock, targetDbLastBlock, err := getTargetDbBlockRange(cfg)
 	if err != nil {
 		return fmt.Errorf("unable retrieve aida-db metadata; %v", err)
 	}
 
-	log.Noticef("First block of your AidaDb: #%v", firstBlock)
-	log.Noticef("Last block of your AidaDb: #%v", lastBlock)
+	log.Noticef("First block of your AidaDb: #%v", targetDbFirstBlock)
+	log.Noticef("Last block of your AidaDb: #%v", targetDbLastBlock)
 
 	// retrieve available patches from aida-db generation server
-	patches, isAddingLachesisPatch, err := retrievePatchesToDownload(firstBlock, lastBlock)
+	patches, isAddingLachesisPatch, err := retrievePatchesToDownload(targetDbFirstBlock, targetDbLastBlock)
 	if err != nil {
 		return fmt.Errorf("unable to prepare list of aida-db patches for download; %v", err)
 	}
 
 	// if user has second patch already in their db, we have to re-download it again and delete old update-set key
-	if firstBlock == utils.FirstOperaBlock && isAddingLachesisPatch {
+	if targetDbFirstBlock == utils.FirstOperaBlock && isAddingLachesisPatch {
 		if cfg.ChainID == 250 {
 			patches = append(patches, firstMainnetPatchFileName)
 		} else if cfg.ChainID == 4002 {
-			patches = append(patches, firstTestnetPatchFileName)
+			// todo uncomment when lachesis patch is released for testnet
+			//patches = append(patches, firstTestnetPatchFileName)
 		} else {
 			return errors.New("please choose chain-id with --chainid")
 		}
@@ -119,7 +120,7 @@ func Update(cfg *utils.Config) error {
 	log.Noticef("Downloading Aida-db - %d new patches", len(patches))
 
 	// we need to know whether Db is new for metadata
-	err = patchesDownloader(cfg, patches, firstBlock, lastBlock)
+	err = patchesDownloader(cfg, patches, targetDbFirstBlock, targetDbLastBlock)
 	if err != nil {
 		return err
 	}
@@ -412,7 +413,7 @@ func pushStringsToChannel(strings []string) chan string {
 }
 
 // retrievePatchesToDownload retrieves all available patches from aida-db generation server.
-func retrievePatchesToDownload(firstBlock uint64, lastBlock uint64) ([]string, bool, error) {
+func retrievePatchesToDownload(targetDbFirstBlock uint64, targetDbLastBlock uint64) ([]string, bool, error) {
 	var isAddingLachesisPatch = false
 
 	// download list of available patches
@@ -426,9 +427,9 @@ func retrievePatchesToDownload(firstBlock uint64, lastBlock uint64) ([]string, b
 
 	for _, patch := range patches {
 		// skip every patch which is sooner than previous last block
-		if patch.ToBlock <= lastBlock {
+		if patch.ToBlock <= targetDbLastBlock {
 			// if patch is lachesis and user has not got it in their db we download it
-			if patch.ToBlock == utils.FirstOperaBlock-1 && firstBlock == utils.FirstOperaBlock {
+			if patch.ToBlock == utils.FirstOperaBlock-1 && targetDbFirstBlock == utils.FirstOperaBlock {
 				isAddingLachesisPatch = true
 			} else {
 				continue
