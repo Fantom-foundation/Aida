@@ -752,7 +752,7 @@ func (md *AidaDbMetadata) findEpochs() error {
 
 // CheckUpdateMetadata goes through metadata of updated AidaDb and its patch,
 // looks if blocks and epoch align and if chainIDs are same for both Dbs
-func (md *AidaDbMetadata) CheckUpdateMetadata(cfg *Config, patchDb ethdb.Database) error {
+func (md *AidaDbMetadata) CheckUpdateMetadata(cfg *Config, patchDb ethdb.Database) ([]byte, error) {
 	var (
 		err             error
 		isLachesisPatch bool
@@ -767,7 +767,7 @@ func (md *AidaDbMetadata) CheckUpdateMetadata(cfg *Config, patchDb ethdb.Databas
 	md.GetMetadata()
 	if md.LastBlock == 0 {
 		if err = md.SetFreshMetadata(cfg.ChainID); err != nil {
-			return fmt.Errorf("cannot set fresh metadata for existing AidaDb; %v", err)
+			return nil, fmt.Errorf("cannot set fresh metadata for existing AidaDb; %v", err)
 		}
 	}
 	// we check if patch is lachesis with first condition
@@ -775,7 +775,7 @@ func (md *AidaDbMetadata) CheckUpdateMetadata(cfg *Config, patchDb ethdb.Databas
 	if patchMD.FirstBlock == 0 {
 		if patchMD.LastBlock == 0 {
 			// todo find in substate when Matejs autogen optimizer is merged
-			return errors.New("patch does not contain metadata")
+			return nil, errors.New("patch does not contain metadata")
 		}
 		isLachesisPatch = true
 	}
@@ -786,14 +786,14 @@ func (md *AidaDbMetadata) CheckUpdateMetadata(cfg *Config, patchDb ethdb.Databas
 		// if patch is lachesis patch, we continue with merge
 
 		if !isLachesisPatch {
-			return fmt.Errorf("metadata blocks does not align; aida-db %v-%v, patch %v-%v", md.FirstBlock, md.LastBlock, patchMD.FirstBlock, patchMD.LastBlock)
+			return nil, fmt.Errorf("metadata blocks does not align; aida-db %v-%v, patch %v-%v", md.FirstBlock, md.LastBlock, patchMD.FirstBlock, patchMD.LastBlock)
 		}
 
 	}
 
 	// if chainIDs doesn't match, we can't patch the DB
 	if md.ChainId != patchMD.ChainId {
-		return fmt.Errorf("metadata chain-ids does not match; aida-db: %v, patch: %v", md.ChainId, patchMD.ChainId)
+		return nil, fmt.Errorf("metadata chain-ids does not match; aida-db: %v, patch: %v", md.ChainId, patchMD.ChainId)
 	}
 
 	if isLachesisPatch {
@@ -808,7 +808,7 @@ func (md *AidaDbMetadata) CheckUpdateMetadata(cfg *Config, patchDb ethdb.Databas
 		md.LastEpoch = patchMD.LastEpoch
 	}
 
-	return nil
+	return patchMD.GetDbHash(), nil
 }
 
 // SetFreshMetadata for an existing AidaDb without metadata

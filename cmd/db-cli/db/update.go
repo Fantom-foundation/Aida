@@ -161,10 +161,10 @@ func patchesDownloader(cfg *utils.Config, patches []patchJson, firstBlock, lastB
 // mergePatch takes decompressed patches and merges them into aida-db
 func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan error, firstAidaDbBlock, lastAidaDbBlock uint64) error {
 	var (
-		targetMD                            *utils.AidaDbMetadata
-		patchDbHash, targetDbHash, trueHash []byte
-		isNewDb                             bool
-		log                                 = logger.NewLogger(cfg.LogLevel, "aida-merge-patch")
+		targetMD                  *utils.AidaDbMetadata
+		patchDbHash, targetDbHash []byte
+		isNewDb                   bool
+		log                       = logger.NewLogger(cfg.LogLevel, "aida-merge-patch")
 	)
 
 	if lastAidaDbBlock == 0 {
@@ -232,25 +232,7 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 					return fmt.Errorf("cannot open targetDb; %v", err)
 				}
 
-				targetDbHash = targetMD.GetDbHash()
-				if cfg.Validate {
-					if patchDbHash == nil {
-						log.Critical("DbHash inside Patch was not found, validation cannot be done")
-					} else {
-						trueHash, err = validate(targetMD.Db, cfg.LogLevel)
-						if err != nil {
-							return fmt.Errorf("cannot create patchDbHash of updated db; %v", err)
-						}
-
-						if cmp := bytes.Compare(targetDbHash, trueHash); cmp != 0 {
-							return fmt.Errorf("db Hashes are not same! \nMetadata: %v; Calculated: %v", hex.EncodeToString(targetDbHash), hex.EncodeToString(trueHash))
-						} else {
-							log.Notice("Validation successful!")
-						}
-					}
-				}
-
-				err = targetMD.CheckUpdateMetadata(cfg, patchDb)
+				patchDbHash, err = targetMD.CheckUpdateMetadata(cfg, patchDb)
 				if err != nil {
 					return err
 				}
@@ -260,6 +242,24 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 				err = m.merge()
 				if err != nil {
 					return fmt.Errorf("unable to merge %v; %v", extractedPatchPath, err)
+				}
+
+				if cfg.Validate {
+					if patchDbHash == nil {
+						log.Critical("DbHash not found in downloaded Patch - cannot perform validation.")
+					} else {
+						log.Notice("Starting db-validation; This may take a while...")
+						targetDbHash, err = validate(targetMD.Db, cfg.LogLevel)
+						if err != nil {
+							return fmt.Errorf("cannot create DbHash of merged AidaDb; %v", err)
+						}
+
+						if cmp := bytes.Compare(patchDbHash, targetDbHash); cmp != 0 {
+							return fmt.Errorf("db hashes are not same! \nPatch: %v; Calculated: %v", hex.EncodeToString(patchDbHash), hex.EncodeToString(targetDbHash))
+						} else {
+							log.Notice("Validation successful!")
+						}
+					}
 				}
 
 				err = targetMD.SetAll()
@@ -373,30 +373,6 @@ func downloadPatch(cfg *utils.Config, patchesChan chan patchJson) (chan patchJso
 	return downloadedPatchChan, errChan
 }
 
-// loadExpectedMd5 loads md5 of file at given url
-func loadExpectedMd5(patchMd5Url string) (string, error) {
-	var buf bytes.Buffer
-
-	writer := bufio.NewWriter(&buf)
-
-	err := getFileContentsFromUrl(patchMd5Url, 0, writer)
-	if err != nil {
-		return "", fmt.Errorf("unable to download %s; %v", patchMd5Url, err)
-	}
-
-	// Flush the buffered writer to ensure all data is written to the buffer
-	err = writer.Flush()
-	if err != nil {
-		return "", fmt.Errorf("flushing writer; %v", err)
-	}
-
-	// Get the written content as a string
-	md5Expected := buf.String()
-
-	// trimming whitespaces
-	return strings.TrimSpace(md5Expected), nil
-}
-
 // pushPatchToChanel used to pipe strings into channel
 func pushPatchToChanel(strings []patchJson) chan patchJson {
 	ch := make(chan patchJson, 1)
@@ -442,6 +418,8 @@ func retrievePatchesToDownload(cfg *utils.Config, targetDbFirstBlock uint64, tar
 
 		patchesToDownload = append(patchesToDownload, patch)
 	}
+
+	// todo do we need to sort?
 
 	return patchesToDownload, nil
 }
