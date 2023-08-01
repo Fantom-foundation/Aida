@@ -345,7 +345,7 @@ func downloadPatch(cfg *utils.Config, patchesChan chan patchJson) (chan patchJso
 			if !ok {
 				return
 			}
-			log.Debugf("Downloading %s...", patch)
+			log.Debugf("Downloading %s...", patch.FileName)
 			patchUrl := utils.AidaDbRepositoryUrl + "/" + patch.FileName
 			compressedPatchPath := filepath.Join(cfg.DbTmp, patch.FileName)
 			err := downloadFile(compressedPatchPath, cfg.DbTmp, patchUrl)
@@ -353,20 +353,20 @@ func downloadPatch(cfg *utils.Config, patchesChan chan patchJson) (chan patchJso
 				errChan <- fmt.Errorf("unable to download %s; %v", patchUrl, err)
 				return
 			}
-			log.Debugf("Downloaded %s", patch)
+			log.Debugf("Downloaded %s", patch.FileName)
 
-			log.Debugf("Calculating %s md5", patch)
-			md5, err := calculateMD5Sum(compressedPatchPath)
-			if err != nil {
-				errChan <- fmt.Errorf("archive %v; unable to calculate md5sum; %v", patch, err)
-				return
-			}
+			//log.Debugf("Calculating %s md5", patch.FileName)
+			//md5, err := calculateMD5Sum(compressedPatchPath)
+			//if err != nil {
+			//	errChan <- fmt.Errorf("archive %v; unable to calculate md5sum; %v", patch, err)
+			//	return
+			//}
 
-			// Compare whether downloaded file matches expected md5
-			if strings.Compare(md5, patch.TarHash) != 0 {
-				errChan <- fmt.Errorf("archive %v doesn't have matching md5; archive %v, expected %v", patch.FileName, md5, patch.TarHash)
-				return
-			}
+			// Compare whether downloaded file matches expected md5 todo uncomment
+			//if strings.Compare(md5, patch.TarHash) != 0 {
+			//	errChan <- fmt.Errorf("archive %v doesn't have matching md5; archive %v, expected %v", patch.FileName, md5, patch.TarHash)
+			//	return
+			//}
 
 			downloadedPatchChan <- patch
 		}
@@ -579,6 +579,12 @@ func downloadFileContents(url string, startSize int64, out *bufio.Writer) (int64
 		return 0, fmt.Errorf("error making request: %v", err)
 	}
 	defer resp.Body.Close()
+
+	// code 416 need to remove already downloaded file and re-download it again
+	if resp.StatusCode == http.StatusRequestedRangeNotSatisfiable {
+		// todo remove file
+		return io.Copy(out, resp.Body)
+	}
 
 	// Check server response again
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {

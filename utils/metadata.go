@@ -774,10 +774,25 @@ func (md *AidaDbMetadata) CheckUpdateMetadata(cfg *Config, patchDb ethdb.Databas
 	// we also need to check that metadata were set with second condition
 	if patchMD.FirstBlock == 0 {
 		if patchMD.LastBlock == 0 {
-			// todo find in substate when Matejs autogen optimizer is merged
-			return nil, errors.New("patch does not contain metadata")
+			var ok bool
+			patchMD.FirstBlock, patchMD.LastBlock, ok = FindBlockRangeInSubstate()
+			if !ok {
+				return nil, errors.New("patch does not contain metadata and block range was not found in substate")
+			}
+
+			md.FirstEpoch, err = FindEpochNumber(md.FirstBlock, md.ChainId)
+			if err != nil {
+				return nil, err
+			}
+			md.LastEpoch, err = FindEpochNumber(md.LastBlock, md.ChainId)
+			if err != nil {
+				return nil, err
+			}
 		}
-		isLachesisPatch = true
+		// we need to check again whether first block is still 0 after substate search
+		if patchMD.FirstBlock == 0 {
+			isLachesisPatch = true
+		}
 	}
 
 	// the patch is usable only if its FirstBlock is within targetDbs block range
@@ -928,6 +943,17 @@ func (md *AidaDbMetadata) UpdateMetadataInOldAidaDb(chainId int, firstAidaDbBloc
 		if err != nil {
 			return err
 		}
+	}
+
+	// anything apart from clone db is always gentype db
+	inType := md.GetDbType()
+	if inType != CloneType {
+		inType = GenType
+	}
+
+	err = md.SetDbType(inType)
+	if err != nil {
+		return err
 	}
 
 	return nil
