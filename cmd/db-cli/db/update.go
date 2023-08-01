@@ -161,6 +161,8 @@ func patchesDownloader(cfg *utils.Config, patches []patchJson, firstBlock, lastB
 // mergePatch takes decompressed patches and merges them into aida-db
 func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan error, firstAidaDbBlock, lastAidaDbBlock uint64) error {
 	var (
+		err                       error
+		patchDb                   ethdb.Database
 		targetMD                  *utils.AidaDbMetadata
 		patchDbHash, targetDbHash []byte
 		isNewDb                   bool
@@ -184,6 +186,25 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 		case extractedPatchPath, ok := <-decompressChan:
 			{
 				if !ok {
+					if cfg.Validate {
+						if patchDbHash == nil {
+							log.Critical("DbHash not found in downloaded Patch - cannot perform validation. If you were only missing lachesis patch, this would normal behaviour.")
+						} else {
+							log.Notice("Starting db-validation; This may take up to 4 hours...")
+							targetDbHash, err = validate(targetMD.Db, cfg.LogLevel)
+							if err != nil {
+								return fmt.Errorf("cannot create DbHash of merged AidaDb; %v", err)
+							}
+
+							if cmp := bytes.Compare(patchDbHash, targetDbHash); cmp != 0 {
+								log.Criticalf("db hashes are not same! \nPatch: %v; Calculated: %v", hex.EncodeToString(patchDbHash), hex.EncodeToString(targetDbHash))
+							} else {
+								log.Notice("Validation successful!")
+								return targetMD.SetDbHash(patchDbHash)
+							}
+						}
+					}
+
 					return nil
 				}
 
@@ -197,7 +218,7 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 					if isNewDb {
 						log.Noticef("AIDA-DB was empty - directly saving first patch")
 						// move extracted patch to target location - first attempting with os.Rename because it is fastest
-						if err := os.Rename(extractedPatchPath, cfg.AidaDb); err != nil {
+						if err = os.Rename(extractedPatchPath, cfg.AidaDb); err != nil {
 							// attempting with deep copy - needed when moving across different disks
 							if err2 := utils.CopyDir(extractedPatchPath, cfg.AidaDb); err2 != nil {
 								return fmt.Errorf("unable to move patch into aida-db target; %v (%v)", err2, err)
@@ -227,11 +248,12 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 				}
 
 				// merge newly extracted patch
-				patchDb, err := rawdb.NewLevelDBDatabase(extractedPatchPath, 1024, 100, "profiling", false)
+				patchDb, err = rawdb.NewLevelDBDatabase(extractedPatchPath, 1024, 100, "profiling", false)
 				if err != nil {
 					return fmt.Errorf("cannot open targetDb; %v", err)
 				}
 
+				// save patch dbHash - last hash gets validated if validation is turned on
 				patchDbHash, err = targetMD.CheckUpdateMetadata(cfg, patchDb)
 				if err != nil {
 					return err
@@ -242,24 +264,6 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 				err = m.merge()
 				if err != nil {
 					return fmt.Errorf("unable to merge %v; %v", extractedPatchPath, err)
-				}
-
-				if cfg.Validate {
-					if patchDbHash == nil {
-						log.Critical("DbHash not found in downloaded Patch - cannot perform validation.")
-					} else {
-						log.Notice("Starting db-validation; This may take a while...")
-						targetDbHash, err = validate(targetMD.Db, cfg.LogLevel)
-						if err != nil {
-							return fmt.Errorf("cannot create DbHash of merged AidaDb; %v", err)
-						}
-
-						if cmp := bytes.Compare(patchDbHash, targetDbHash); cmp != 0 {
-							return fmt.Errorf("db hashes are not same! \nPatch: %v; Calculated: %v", hex.EncodeToString(patchDbHash), hex.EncodeToString(targetDbHash))
-						} else {
-							log.Notice("Validation successful!")
-						}
-					}
 				}
 
 				err = targetMD.SetAll()
@@ -353,20 +357,20 @@ func downloadPatch(cfg *utils.Config, patchesChan chan patchJson) (chan patchJso
 				errChan <- fmt.Errorf("unable to download %s; %v", patchUrl, err)
 				return
 			}
-			log.Debugf("Downloaded %s", patch.FileName)
+			log.Debugf("Finished downloading %s!", patch.FileName)
 
-			//log.Debugf("Calculating %s md5", patch.FileName)
-			//md5, err := calculateMD5Sum(compressedPatchPath)
-			//if err != nil {
-			//	errChan <- fmt.Errorf("archive %v; unable to calculate md5sum; %v", patch, err)
-			//	return
-			//}
+			log.Debugf("Calculating %s md5...", patch.FileName)
+			md5, err := calculateMD5Sum(compressedPatchPath)
+			if err != nil {
+				errChan <- fmt.Errorf("archive %v; unable to calculate md5sum; %v", patch, err)
+				return
+			}
 
-			// Compare whether downloaded file matches expected md5 todo uncomment
-			//if strings.Compare(md5, patch.TarHash) != 0 {
-			//	errChan <- fmt.Errorf("archive %v doesn't have matching md5; archive %v, expected %v", patch.FileName, md5, patch.TarHash)
-			//	return
-			//}
+			// Compare whether downloaded file matches expected md5
+			if strings.Compare(md5, patch.TarHash) != 0 {
+				errChan <- fmt.Errorf("archive %v doesn't have matching md5; archive %v, expected %v", patch.FileName, md5, patch.TarHash)
+				return
+			}
 
 			downloadedPatchChan <- patch
 		}
@@ -420,8 +424,6 @@ func retrievePatchesToDownload(cfg *utils.Config, targetDbFirstBlock uint64, tar
 		patchesToDownload = append(patchesToDownload, patch)
 	}
 
-	// todo do we need to sort?
-
 	return patchesToDownload, nil
 }
 
@@ -466,9 +468,8 @@ func deleteUpdateSet(dbPath string) error {
 	}
 
 	updateDb.DeleteSubstateAlloc(utils.FirstOperaBlock - 1)
-	substate.CloseSubstateDB()
 
-	return nil
+	return updateDb.Close()
 }
 
 // downloadPatchesJson downloads list of available patches from aida-db generation server.
@@ -580,14 +581,8 @@ func downloadFileContents(url string, startSize int64, out *bufio.Writer) (int64
 	}
 	defer resp.Body.Close()
 
-	// code 416 need to remove already downloaded file and re-download it again
-	if resp.StatusCode == http.StatusRequestedRangeNotSatisfiable {
-		// todo remove file
-		return io.Copy(out, resp.Body)
-	}
-
 	// Check server response again
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent && resp.StatusCode != http.StatusRequestedRangeNotSatisfiable {
 		return 0, fmt.Errorf("downloading %s, bad status: %s", url, resp.Status)
 	}
 
