@@ -30,8 +30,9 @@ const (
 )
 
 const (
-	aidaDbRepositoryMainnetUrl = "https://aida.repository.fantom.network"
-	aidaDbRepositoryTestnetUrl = "https://aida.testnet.repository.fantom.network"
+	// todo remove after testing is finished
+	aidaDbRepositoryMainnetUrl = "http://xapi241.fantom.network"
+	aidaDbRepositoryTestnetUrl = "http://xapi241.fantom.network"
 )
 
 var (

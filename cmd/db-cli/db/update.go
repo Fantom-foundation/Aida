@@ -351,6 +351,7 @@ func downloadPatch(cfg *utils.Config, patchesChan chan patchJson) (chan patchJso
 			err := downloadFile(compressedPatchPath, cfg.DbTmp, patchUrl)
 			if err != nil {
 				errChan <- fmt.Errorf("unable to download %s; %v", patchUrl, err)
+				return
 			}
 			log.Debugf("Downloaded %s", patch)
 
@@ -363,7 +364,7 @@ func downloadPatch(cfg *utils.Config, patchesChan chan patchJson) (chan patchJso
 
 			// Compare whether downloaded file matches expected md5
 			if strings.Compare(md5, patch.TarHash) != 0 {
-				errChan <- fmt.Errorf("archive %v doesn't have matching md5; archive %v, expected %v", patch, md5, patch.TarHash)
+				errChan <- fmt.Errorf("archive %v doesn't have matching md5; archive %v, expected %v", patch.FileName, md5, patch.TarHash)
 				return
 			}
 
@@ -553,7 +554,7 @@ func getFileContentsFromUrl(url string, startSize int64, out *bufio.Writer) erro
 		}
 
 		// wait until next attempt
-		time.Sleep(1 * time.Second)
+		time.Sleep(2 * time.Second)
 
 		startSize += written
 	}
