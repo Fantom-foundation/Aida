@@ -89,23 +89,6 @@ func Update(cfg *utils.Config) error {
 		return fmt.Errorf("unable to prepare list of aida-db patches for download; %v", err)
 	}
 
-	// if user has second patch already in their db, we have to re-download it again and delete old update-set key
-	if firstBlock == utils.FirstOperaBlock && isAddingLachesisPatch {
-		if cfg.ChainID == 250 {
-			patches = append(patches, firstMainnetPatchFileName)
-		} else if cfg.ChainID == 4002 {
-			patches = append(patches, firstTestnetPatchFileName)
-		} else {
-			return errors.New("please choose chain-id with --chainid")
-		}
-
-		err = removeOldUpdateSetKey(cfg.AidaDb)
-		if err != nil {
-			return fmt.Errorf("cannot open update-set; %v", err)
-		}
-
-	}
-
 	if len(patches) == 0 {
 		log.Warning("No new patches to download are available")
 		return nil
