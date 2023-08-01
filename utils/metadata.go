@@ -208,6 +208,10 @@ func (md *AidaDbMetadata) genMetadata(firstBlock uint64, lastBlock uint64, first
 		return err
 	}
 
+	if err = md.SetDbHash(dbHash); err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -637,6 +641,31 @@ func (md *AidaDbMetadata) SetAll() error {
 		return err
 	}
 	return nil
+}
+
+// SetDbHash in given Db
+func (md *AidaDbMetadata) SetDbHash(dbHash []byte) error {
+	if err := md.Db.Put([]byte(DbHashPrefix), dbHash); err != nil {
+		return fmt.Errorf("cannot put metadata; %v", err)
+	}
+
+	md.log.Info("METADATA: Db hash saved successfully")
+
+	return nil
+}
+
+// GetDbHash and return it
+func (md *AidaDbMetadata) GetDbHash() []byte {
+	dbHash, err := md.Db.Get([]byte(DbHashPrefix))
+	if err != nil {
+		if errors.Is(err, leveldb.ErrNotFound) {
+			return nil
+		}
+		md.log.Criticalf("cannot get Db hash from metadata; %v", err)
+		return nil
+	}
+
+	return dbHash
 }
 
 // SetDbHash in given Db
