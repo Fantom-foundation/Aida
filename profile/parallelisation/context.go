@@ -194,18 +194,23 @@ func (ctx *Context) GetProfileData(curBlock uint64, tBlock time.Duration) (*Prof
 	// run independently.
 	ubNumProc := int64(len(graphutil.MinChainCover(ctx.txDependencies)))
 
+	tTransactions := make([]int64, 0, len(ctx.tTransactions))
+	for _, tTransaction := range ctx.tTransactions {
+		tTransactions = append(tTransactions, tTransaction.Nanoseconds())
+	}
+
 	// write data into SQLiteDB
 	// profileData for parallel execution speedup experiment
 	data := ProfileData{
-		curBlock:    curBlock,
-		tBlock:      tBlock.Nanoseconds(),
-		tSequential: ctx.tSequential.Nanoseconds(),
-		tCritical:   ctx.tCritical.Nanoseconds(),
-		tCommit:     tCommit.Nanoseconds(),
-		speedup:     speedup,
-		ubNumProc:   ubNumProc,
-		numTx:       ctx.n,
-		tTransactions: -- copy ctx.tTransactions
+		curBlock:      curBlock,
+		tBlock:        tBlock.Nanoseconds(),
+		tSequential:   ctx.tSequential.Nanoseconds(),
+		tCritical:     ctx.tCritical.Nanoseconds(),
+		tCommit:       tCommit.Nanoseconds(),
+		speedup:       speedup,
+		ubNumProc:     ubNumProc,
+		numTx:         ctx.n,
+		tTransactions: tTransactions,
 	}
 	return &data, nil
 }

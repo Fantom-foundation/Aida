@@ -12,12 +12,20 @@ const (
 	// bufferSize is the buffer size of the in-memory buffer for storing profile data
 	bufferSize = 1000
 
-	// SQL for inserting new data records
-	insertSQL = `
+	// SQL for inserting new block
+	insertBlockSQL = `
 INSERT INTO parallelprofile (
 	block, tBlock, tSequential, tCritical, tCommit, speedup, ubNumProc, numTx
 ) VALUES (
 	?, ?, ?, ?, ?, ?, ?, ?
+)
+`
+	// SQL for inserting new transaction
+	insertTxSQL = `
+INSERT INTO txProfile (
+block, tx, duration
+) VALUES (
+?, ?, ?
 )
 `
 
@@ -49,9 +57,10 @@ INSERT INTO parallelprofile (
 
 // ProfileDB is a database of ProfileData
 type ProfileDB struct {
-	sql    *sql.DB       // Sqlite3 database
-	stmt   *sql.Stmt     // Prepared insert statement
-	buffer []ProfileData // record buffer
+	sql       *sql.DB       // Sqlite3 database
+	blockStmt *sql.Stmt     // Prepared insert statement for a block
+	txStmt    *sql.Stmt     // Prepared insert statement for a transaction
+	buffer    []ProfileData // record buffer
 }
 
 // NewProfileDB constructs a ProfileDatas value for managing stock ProfileDatas in a
@@ -67,14 +76,20 @@ func NewProfileDB(dbFile string) (*ProfileDB, error) {
 		return nil, fmt.Errorf("sqlDB.Exec, err: %q", err)
 	}
 	// prepare the INSERT statement for subsequent use
-	stmt, err := sqlDB.Prepare(insertSQL)
+	blockStmt, err := sqlDB.Prepare(insertBlockSQL)
+	if err != nil {
+		return nil, err
+	}
+
+	txStmt, err := sqlDB.Prepare(insertTxSQL)
 	if err != nil {
 		return nil, err
 	}
 	db := ProfileDB{
-		sql:    sqlDB,
-		stmt:   stmt,
-		buffer: make([]ProfileData, 0, bufferSize),
+		sql:       sqlDB,
+		blockStmt: blockStmt,
+		txStmt:    txStmt,
+		buffer:    make([]ProfileData, 0, bufferSize),
 	}
 	return &db, nil
 }
@@ -82,7 +97,8 @@ func NewProfileDB(dbFile string) (*ProfileDB, error) {
 // Close flushes all ProfileDatas to the database and prevents any future trading.
 func (db *ProfileDB) Close() error {
 	defer func() {
-		db.stmt.Close()
+		db.txStmt.Close()
+		db.blockStmt.Close()
 		db.sql.Close()
 	}()
 	if err := db.Flush(); err != nil {
@@ -110,12 +126,19 @@ func (db *ProfileDB) Flush() error {
 		return err
 	}
 	for _, ProfileData := range db.buffer {
-		_, err := tx.Stmt(db.stmt).Exec(ProfileData.curBlock, ProfileData.tBlock, ProfileData.tSequential, ProfileData.tCritical,
+		_, err := tx.Stmt(db.blockStmt).Exec(ProfileData.curBlock, ProfileData.tBlock, ProfileData.tSequential, ProfileData.tCritical,
 			ProfileData.tCommit, ProfileData.speedup, ProfileData.ubNumProc, ProfileData.numTx)
-		// write into new txProfile table here the transaction durations
 		if err != nil {
-			tx.Rollback()
+			_ = tx.Rollback()
 			return err
+		}
+		// write into new txProfile table here the transaction durations
+		for i, tTransaction := range ProfileData.tTransactions {
+			_, err = tx.Stmt(db.txStmt).Exec(ProfileData.curBlock, i, tTransaction)
+			if err != nil {
+				_ = tx.Rollback()
+				return err
+			}
 		}
 	}
 	db.buffer = db.buffer[:0]
@@ -134,7 +157,7 @@ func (db *ProfileDB) DeleteByBlockRange(firstBlock, lastBlock uint64) (int64, er
 	}
 	res, err := tx.Stmt(stmt).Exec(firstBlock, lastBlock)
 	if err != nil {
-		tx.Rollback()
+		_ = tx.Rollback()
 		return 0, err
 	}
 
