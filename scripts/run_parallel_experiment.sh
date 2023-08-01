@@ -64,20 +64,20 @@ Machine() {
 
 # run full parallel experiment
 log "run parallel experiment in the block range from $startblock to $endblock ..."
-./build/aida-profile parallelisation --aida-db $aidadbpath --db-impl $dbimpl --db-variant $dbvariant --vm-impl=$vmimpl --db-tmp $tmpdir $startblock $endblock "$outputdir/profile.db"
+#./build/aida-profile parallelisation --aida-db $aidadbpath --db-impl $dbimpl --db-variant $dbvariant --vm-impl=$vmimpl --db-tmp $tmpdir $startblock $endblock "$outputdir/profile.db"
 
 # reduce dataset in sqlite3 (NB: R consumes too much memory/is too slow for the reduction)
 log "reduce data set ..."
 sqlite3 $outputdir/profile.db << EOF
 -- create temporary table groupedParallelProfile to group data for every 100,000 blocks
-DROP TABLE IF EXISTS  groupedParallelProfile; 
-CREATE TABLE groupedParallelProfile(block INTEGER, tBlock REAL, tCommit REAL, speedup REAL);
-INSERT INTO groupedParallelProfile SELECT block/100000, tBlock, tCommit, log(speedup) FROM parallelprofile;
+DROP VIEW IF EXISTS  groupedParallelProfile; 
+CREATE VIEW groupedParallelProfile(block, tBlock, tCommit, numTx, speedup) AS
+SELECT block/100000, tBlock, tCommit, numTx, log(speedup) FROM parallelprofile;
 -- aggregate data 
 DROP TABLE IF EXISTS aggregatedParallelProfile;
-CREATE TABLE aggregatedParallelProfile(block INTEGER, tBlock REAL, tCommit REAL, speedup REAL);
-INSERT INTO aggregatedParallelProfile SELECT min(block)*100000, avg(tBlock)/1e6, avg(tCommit)/1e6, exp(avg(speedup)) FROM groupedParallelProfile GROUP BY block;
-DROP TABLE groupedParallelProfile;
+CREATE TABLE aggregatedParallelProfile(block INTEGER, tBlock REAL, tCommit REAL, numTx REAL,  speedup REAL);
+INSERT INTO aggregatedParallelProfile SELECT min(block)*100000, avg(tBlock)/1e6, avg(tCommit)/1e6, avg(numTx), exp(avg(speedup)) FROM groupedParallelProfile GROUP BY block;
+DROP VIEW groupedParallelProfile;
 EOF
 
 # query the configuration
