@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -100,7 +101,13 @@ func Update(cfg *utils.Config) error {
 		return fmt.Errorf("failed to create %s directory; %s", cfg.DbTmp, err)
 	}
 
-	log.Noticef("Downloading Aida-db - %d new patches", len(patches))
+	var str string
+	for _, p := range patches {
+		str += " "
+		str += p.FileName
+	}
+
+	log.Noticef("These patches are in que for download:%v", str)
 
 	// we need to know whether Db is new for metadata
 	err = patchesDownloader(cfg, patches, targetDbFirstBlock, targetDbLastBlock)
@@ -188,9 +195,9 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 				if !ok {
 					if cfg.Validate {
 						if patchDbHash == nil {
-							log.Critical("DbHash not found in downloaded Patch - cannot perform validation. If you were only missing lachesis patch, this would normal behaviour.")
+							log.Critical("DbHash not found in downloaded Patch - cannot perform validation. If you were missing only lachesis patch, this would be normal behaviour.")
 						} else {
-							log.Notice("Starting db-validation; This may take up to 4 hours...")
+							log.Notice("Starting db-validation. This may take several hours...")
 							targetDbHash, err = validate(targetMD.Db, cfg.LogLevel)
 							if err != nil {
 								return fmt.Errorf("cannot create DbHash of merged AidaDb; %v", err)
@@ -362,7 +369,7 @@ func downloadPatch(cfg *utils.Config, patchesChan chan patchJson) (chan patchJso
 			log.Debugf("Calculating %s md5...", patch.FileName)
 			md5, err := calculateMD5Sum(compressedPatchPath)
 			if err != nil {
-				errChan <- fmt.Errorf("archive %v; unable to calculate md5sum; %v", patch, err)
+				errChan <- fmt.Errorf("archive %v; unable to calculate md5sum; %v", patch.FileName, err)
 				return
 			}
 
@@ -414,22 +421,38 @@ func retrievePatchesToDownload(cfg *utils.Config, targetDbFirstBlock uint64, tar
 			}
 		}
 
-		// if user has second patch already in their db, we have to re-download it again and delete old update-set key
-		if isAddingLachesisPatch && targetDbFirstBlock == utils.FirstOperaBlock {
-			if err = appendFirstPatch(cfg, availablePatches, patchesToDownload); err != nil {
-				return nil, err
-			}
-		}
-
 		patchesToDownload = append(patchesToDownload, patch)
 	}
+
+	// if user has second patch already in their db, we have to re-download it again and delete old update-set key
+	if isAddingLachesisPatch && targetDbFirstBlock == utils.FirstOperaBlock {
+		patchesToDownload, err = appendFirstPatch(cfg, availablePatches, patchesToDownload)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	sort.Sort(ByToBlock(patchesToDownload))
 
 	return patchesToDownload, nil
 }
 
+// ByToBlock is an interface that is used to sort the patches by ToBlock
+type ByToBlock []patchJson
+
+func (a ByToBlock) Len() int {
+	return len(a)
+}
+func (a ByToBlock) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
+}
+func (a ByToBlock) Less(i, j int) bool {
+	return a[i].ToBlock < a[j].ToBlock
+}
+
 // appendFirstPatch finds whether user is downloading fresh new db or updating an existing one.
 // If updating an existing one, first patch is appended to download and first update-set is deleted
-func appendFirstPatch(cfg *utils.Config, availablePatches []patchJson, patchesToDownload []patchJson) error {
+func appendFirstPatch(cfg *utils.Config, availablePatches []patchJson, patchesToDownload []patchJson) ([]patchJson, error) {
 	var expectedFileName string
 
 	if cfg.ChainID == 250 {
@@ -437,31 +460,36 @@ func appendFirstPatch(cfg *utils.Config, availablePatches []patchJson, patchesTo
 	} else if cfg.ChainID == 4002 {
 		expectedFileName = firstTestnetPatchFileName
 	} else {
-		return errors.New("please choose chain-id with --chainid")
+		return nil, errors.New("please choose chain-id with --chainid")
 	}
 
 	// did we already append first patch?
-	for _, patch := range availablePatches {
+	for _, patch := range patchesToDownload {
 		if patch.FileName == expectedFileName {
+
 			// first patch was already appended - that means user is downloading fresh db
-			return nil
+			return patchesToDownload, nil
 		}
 	}
 
 	for _, patch := range availablePatches {
 		if patch.FileName == expectedFileName {
-			patchesToDownload = append(availablePatches, patch)
+			patchesToDownload = append(patchesToDownload, patch)
 			// we need to remove first update-set for data consistency
-			return deleteUpdateSet(cfg.AidaDb)
+			err := deleteOperaWorldStateFromUpdateSet(cfg.AidaDb)
+			if err != nil {
+				return nil, err
+			}
+			break
 		}
 	}
 
-	return nil
+	return patchesToDownload, nil
 }
 
-// deleteUpdateSet when user has already merged second patch, and we are prepending lachesis patch.
-// This situation can happen due to lachesis patch being implemented later than rest of the Db
-func deleteUpdateSet(dbPath string) error {
+// deleteOperaWorldStateFromUpdateSet when user has already merged second patch, and we are prepending lachesis patch.
+// This situation could happen due to lachesis patch being implemented later than rest of the Db
+func deleteOperaWorldStateFromUpdateSet(dbPath string) error {
 	updateDb, err := substate.OpenUpdateDB(dbPath)
 	if err != nil {
 		return fmt.Errorf("cannot open update-db; %v", err)

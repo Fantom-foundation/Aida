@@ -668,31 +668,6 @@ func (md *AidaDbMetadata) GetDbHash() []byte {
 	return dbHash
 }
 
-// SetDbHash in given Db
-func (md *AidaDbMetadata) SetDbHash(dbHash []byte) error {
-	if err := md.Db.Put([]byte(DbHashPrefix), dbHash); err != nil {
-		return fmt.Errorf("cannot put metadata; %v", err)
-	}
-
-	md.log.Info("METADATA: Db hash saved successfully")
-
-	return nil
-}
-
-// GetDbHash and return it
-func (md *AidaDbMetadata) GetDbHash() []byte {
-	dbHash, err := md.Db.Get([]byte(DbHashPrefix))
-	if err != nil {
-		if errors.Is(err, leveldb.ErrNotFound) {
-			return nil
-		}
-		md.log.Criticalf("cannot get Db hash from metadata; %v", err)
-		return nil
-	}
-
-	return dbHash
-}
-
 // SetAllMetadata in given Db
 func (md *AidaDbMetadata) SetAllMetadata(firstBlock uint64, lastBlock uint64, firstEpoch uint64, lastEpoch uint64, chainID int, dbHash []byte, dbType AidaDbType) error {
 	var err error
@@ -785,8 +760,8 @@ func (md *AidaDbMetadata) findEpochs() error {
 // looks if blocks and epoch align and if chainIDs are same for both Dbs
 func (md *AidaDbMetadata) CheckUpdateMetadata(cfg *Config, patchDb ethdb.Database) ([]byte, error) {
 	var (
-		err             error
-		isLachesisPatch bool
+		err                  error
+		ignoreBlockAlignment bool
 	)
 
 	patchMD := NewAidaDbMetadata(patchDb, cfg.LogLevel)
@@ -822,8 +797,14 @@ func (md *AidaDbMetadata) CheckUpdateMetadata(cfg *Config, patchDb ethdb.Databas
 		}
 		// we need to check again whether first block is still 0 after substate search
 		if patchMD.FirstBlock == 0 {
-			isLachesisPatch = true
+			ignoreBlockAlignment = true
 		}
+	}
+
+	// we ignore block alignment also for first patch - this exception is for a situation when user has first patch
+	// and lachesis is being installed, so first patch is getting replaced
+	if patchMD.FirstBlock == 4564026 {
+		ignoreBlockAlignment = true
 	}
 
 	// the patch is usable only if its FirstBlock is within targetDbs block range
@@ -831,7 +812,7 @@ func (md *AidaDbMetadata) CheckUpdateMetadata(cfg *Config, patchDb ethdb.Databas
 	if patchMD.FirstBlock > md.LastBlock+1 || patchMD.FirstBlock < md.FirstBlock || patchMD.LastBlock <= md.LastBlock {
 		// if patch is lachesis patch, we continue with merge
 
-		if !isLachesisPatch {
+		if !ignoreBlockAlignment {
 			return nil, fmt.Errorf("metadata blocks does not align; aida-db %v-%v, patch %v-%v", md.FirstBlock, md.LastBlock, patchMD.FirstBlock, patchMD.LastBlock)
 		}
 
@@ -842,7 +823,7 @@ func (md *AidaDbMetadata) CheckUpdateMetadata(cfg *Config, patchDb ethdb.Databas
 		return nil, fmt.Errorf("metadata chain-ids does not match; aida-db: %v, patch: %v", md.ChainId, patchMD.ChainId)
 	}
 
-	if isLachesisPatch {
+	if ignoreBlockAlignment {
 		// we set the first block and epoch to 0
 		// last block and epoch stays
 		md.FirstBlock = 0
