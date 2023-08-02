@@ -53,6 +53,7 @@ var TraceReplayCommand = cli.Command{
 		&substate.SubstateDbFlag,
 		&substate.WorkersFlag,
 		&utils.TraceFileFlag,
+		&utils.TraceDirectoryFlag,
 		&utils.TraceDebugFlag,
 		&utils.DebugFromFlag,
 		&utils.UpdateDbFlag,
@@ -70,8 +71,14 @@ last block of the inclusive range of blocks to replay storage traces.`,
 }
 
 // readTrace reads operations from trace files and puts them into a channel.
-func readTrace(cfg *utils.Config, ch chan operation.Operation) {
-	traceIter := tracer.NewTraceIterator(cfg.TraceFile, cfg.First, cfg.Last)
+func readTrace(cfg *utils.Config, ch chan operation.Operation, log *logging.Logger) {
+	// create a list of files
+	traceFiles, err := tracer.GetTraceFiles(cfg)
+	if err != nil {
+		log.Fatalf("Fail to find trace files; %v", err)
+	}
+	log.Debugf("List of trace files to be processed: %v", traceFiles)
+	traceIter := tracer.NewTraceIterator(traceFiles, cfg.First)
 	defer traceIter.Release()
 	for traceIter.Next() {
 		op := traceIter.Value()
@@ -86,7 +93,7 @@ func traceReplayTask(cfg *utils.Config, log *logging.Logger) error {
 	// starting reading in parallel
 	log.Notice("Start reading operations in parallel")
 	opChannel := make(chan operation.Operation, readBufferSize)
-	go readTrace(cfg, opChannel)
+	go readTrace(cfg, opChannel, log)
 
 	// create a directory for the store to place all its files, and
 	// instantiate the state DB under testing.

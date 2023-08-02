@@ -95,7 +95,10 @@ func stochasticReplayAction(ctx *cli.Context) error {
 
 	// Enable tracing if debug flag is set
 	if cfg.Trace {
-		rCtx := context.NewRecord(cfg.TraceFile)
+		rCtx, err := context.NewRecord(cfg.TraceFile, uint64(0))
+		if err != nil {
+			return err
+		}
 		defer rCtx.Close()
 		db = tracer.NewProxyRecorder(db, rCtx)
 	}

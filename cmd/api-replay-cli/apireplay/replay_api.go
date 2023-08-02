@@ -42,7 +42,10 @@ func ReplayAPI(ctx *cli.Context) error {
 
 	// Enable tracing if debug flag is set
 	if cfg.Trace {
-		rCtx := traceCtx.NewRecord(cfg.TraceFile)
+		rCtx, err := traceCtx.NewRecord(cfg.TraceFile, cfg.First)
+		if err != nil {
+			return err
+		}
 		defer rCtx.Close()
 		db = tracer.NewProxyRecorder(db, rCtx)
 	}

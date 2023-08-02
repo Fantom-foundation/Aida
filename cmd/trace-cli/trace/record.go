@@ -62,7 +62,10 @@ func traceRecordAction(ctx *cli.Context) error {
 	defer utils.StopCPUProfile(cfg)
 
 	// create record context
-	rCtx := context.NewRecord(cfg.TraceFile)
+	rCtx, err := context.NewRecord(cfg.TraceFile, cfg.First)
+	if err != nil {
+		return err
+	}
 	defer rCtx.Close()
 
 	// open SubstateDB and create an substate iterator
