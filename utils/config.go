@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"math/rand"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -558,10 +559,14 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 				return nil, errors.New("your AidaDb does not have metadata with last block")
 			}
 
+			if err = aidaDb.Close(); err != nil {
+				return nil, fmt.Errorf("cannot close db; %v", err)
+			}
+
 			log.Noticef("Found first block (%v) and last block in AidaDb (%v)", first, last)
 
 		} else if ctx.Args().Len() == 2 {
-			first, last, argErr = SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1), chainId)
+			first, last, argErr = SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1), chainId, ctx)
 			if argErr != nil {
 				return nil, argErr
 			}
@@ -569,7 +574,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	case BlockRangeArgsProfileDB:
 		// process arguments and flags
 		if ctx.Args().Len() == 3 {
-			first, last, argErr = SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1), chainId)
+			first, last, argErr = SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1), chainId, ctx)
 			if argErr != nil {
 				return nil, argErr
 			}
@@ -717,17 +722,17 @@ func setAidaDbRepositoryUrl(chainId int) error {
 }
 
 // SetBlockRange checks the validity of a block range and return the first and last block as numbers.
-func SetBlockRange(firstArg string, lastArg string, chainId int) (uint64, uint64, error) {
+func SetBlockRange(firstArg string, lastArg string, chainId int, ctx *cli.Context) (uint64, uint64, error) {
 	var err error = nil
 	first, ferr := strconv.ParseUint(firstArg, 10, 64)
 	last, lerr := strconv.ParseUint(lastArg, 10, 64)
 
 	if ferr != nil {
-		first, err = setBlockNumber(firstArg, chainId)
+		first, err = setBlockNumber(firstArg, chainId, ctx)
 	}
 
 	if lerr != nil {
-		last, err = setBlockNumber(lastArg, chainId)
+		last, err = setBlockNumber(lastArg, chainId, ctx)
 	}
 
 	if first > last {
@@ -737,21 +742,114 @@ func SetBlockRange(firstArg string, lastArg string, chainId int) (uint64, uint64
 	return first, last, err
 }
 
-func setBlockNumber(arg string, chainId int) (uint64, error) {
+func setBlockNumber(arg string, chainId int, ctx *cli.Context) (uint64, error) {
 	var blkNum uint64
+	var hasOffset bool
+	var keyword string
+	var symbol string
+	var offset uint64
+
+	// check if keyword has an offset and extract the keyword, offset direction (arithmetical symbol) and offset value
+	if hasOffset, _ = regexp.MatchString("/([a-zA-Z])\\w+([+-])\\d+/g", arg); hasOffset {
+		var err error
+		if keyword, symbol, offset, err = parseOffset(arg); err != nil {
+			return 0, err
+		}
+	} else {
+		keyword = strings.ToLower(arg)
+	}
+
+	// find base block number from keyword
 	if chainId == 4002 {
-		if val, ok := hardForksTestnet[strings.ToLower(arg)]; ok {
+		if val, ok := hardForksTestnet[keyword]; ok {
 			blkNum = val
 		} else {
 			return 0, fmt.Errorf("error: block number not a valid keyword or integer")
 		}
 	} else if chainId == 250 || chainId == 0 {
-		if val, ok := hardForksMainnet[strings.ToLower(arg)]; ok {
+		if val, ok := hardForksMainnet[keyword]; ok {
 			blkNum = val
 		} else {
 			return 0, fmt.Errorf("error: block number not a valid keyword or integer")
 		}
 	}
 
+	// shift base block number by the offset
+	if hasOffset {
+		blkNum = offsetBlockNum(blkNum, symbol, offset)
+
+		aidaDb, err := rawdb.NewLevelDBDatabase(ctx.String(AidaDbFlag.Name), 1024, 100, "profiling", true)
+
+		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				return 0, fmt.Errorf("you either need to specify block range using arguments <first> <last>, or path to existing AidaDb (--%v) with block range in metadata", AidaDbFlag.Name)
+			}
+			return 0, fmt.Errorf("cannot open aida-db; %v", err)
+		}
+
+		md := NewAidaDbMetadata(aidaDb, ctx.String(logger.LogLevelFlag.Name))
+		first := md.GetFirstBlock()
+		last := md.GetLastBlock()
+
+		if first == 0 {
+			return 0, errors.New("your AidaDb does not have metadata with first block")
+		}
+		if last == 0 {
+			return 0, errors.New("your AidaDb does not have metadata with last block")
+		}
+
+		if err = aidaDb.Close(); err != nil {
+			return 0, fmt.Errorf("cannot close db; %v", err)
+		}
+
+		if first > blkNum || last < blkNum {
+			return 0, errors.New("block number with offset is out of range of given AidaDB")
+		}
+	}
+
 	return blkNum, nil
+}
+
+func parseOffset(arg string) (string, string, uint64, error) {
+	if strings.Contains(arg, "+") {
+		if keyword, offset, ok := splitKeywordOffset(arg, "+"); ok {
+			return keyword, "+", offset, nil
+		}
+
+		return "", "", 0, fmt.Errorf("error: block number not a valid keyword with offset")
+	} else if strings.Contains(arg, "-") {
+		if keyword, offset, ok := splitKeywordOffset(arg, "-"); ok {
+			return keyword, "-", offset, nil
+		}
+
+		return "", "", 0, fmt.Errorf("error: block number not a valid keyword with offset")
+	}
+
+	return "", "", 0, fmt.Errorf("error: block number not a valid keyword with offset")
+}
+
+func splitKeywordOffset(arg string, symbol string) (string, uint64, bool) {
+	res := strings.Split(arg, symbol)
+
+	if _, ok := hardForksMainnet[res[0]]; !ok {
+		return "", 0, false
+	}
+
+	offset, err := strconv.ParseUint(res[1], 10, 64)
+	if err != nil {
+		return "", 0, false
+	}
+
+	return res[0], offset, true
+}
+
+func offsetBlockNum(blkNum uint64, symbol string, offset uint64) uint64 {
+	res := uint64(0)
+	if symbol == "+" {
+		res = blkNum + offset
+	} else if symbol == "-" {
+		res = blkNum - offset
+	}
+
+	return res
 }

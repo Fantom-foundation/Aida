@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/urfave/cli/v2"
 
 	"github.com/Fantom-foundation/Aida/state"
@@ -22,6 +23,8 @@ func prepareMockCliContext() *cli.Context {
 	flagSet.Bool(ValidateTxStateFlag.Name, true, "enables transaction state validation")
 	flagSet.Bool(ContinueOnFailureFlag.Name, true, "continue execute after validation failure detected")
 	flagSet.Bool(ValidateWorldStateFlag.Name, true, "enables end-state validation")
+	flagSet.String(AidaDbFlag.Name, "/", "set substate, updateset and deleted accounts directory")
+	flagSet.String(logger.LogLevelFlag.Name, "info", "Level of the logging of the app action (\"critical\", \"error\", \"warning\", \"notice\", \"info\", \"debug\"; default: INFO)")
 
 	ctx := cli.NewContext(cli.NewApp(), flagSet, nil)
 
@@ -70,7 +73,9 @@ func TestUtilsConfig_NewConfig(t *testing.T) {
 }
 
 func TestUtilsConfig_SetBlockRange(t *testing.T) {
-	first, last, err := SetBlockRange("0", "40000000", 0)
+	ctx := prepareMockCliContext()
+
+	first, last, err := SetBlockRange("0", "40000000", 0, ctx)
 	if err != nil {
 		t.Fatalf("Failed to set block range (0-40000000): %v", err)
 	}
@@ -83,7 +88,7 @@ func TestUtilsConfig_SetBlockRange(t *testing.T) {
 		t.Fatalf("Failed to parse last block; Should be: %d, but is: %d", 40_000_000, last)
 	}
 
-	first, last, err = SetBlockRange("OpeRa", "berlin", 250)
+	first, last, err = SetBlockRange("OpeRa", "berlin", 250, ctx)
 	if err != nil {
 		t.Fatalf("Failed to set block range (opera-berlin on mainnet): %v", err)
 	}
@@ -96,7 +101,7 @@ func TestUtilsConfig_SetBlockRange(t *testing.T) {
 		t.Fatalf("Failed to parse last block; Should be: %d, but is: %d", 37_455_223, last)
 	}
 
-	first, last, err = SetBlockRange("zero", "London", 4002)
+	first, last, err = SetBlockRange("zero", "London", 4002, ctx)
 	if err != nil {
 		t.Fatalf("Failed to set block range (zero-london on testnet): %v", err)
 	}
@@ -111,19 +116,23 @@ func TestUtilsConfig_SetBlockRange(t *testing.T) {
 }
 
 func TestUtilsConfig_SetInvalidBlockRange(t *testing.T) {
-	_, _, err := SetBlockRange("test", "40000000", 0)
+	ctx := prepareMockCliContext()
+
+	_, _, err := SetBlockRange("test", "40000000", 0, ctx)
 	if err == nil {
 		t.Fatalf("Failed to throw an error")
 	}
 
-	_, _, err = SetBlockRange("1000", "0", 4002)
+	_, _, err = SetBlockRange("1000", "0", 4002, ctx)
 	if err == nil {
 		t.Fatalf("Failed to throw an error")
 	}
 }
 
 func TestUtilsConfig_SetBlockRangeLastSmallerThanFirst(t *testing.T) {
-	_, _, err := SetBlockRange("5", "0", 0)
+	ctx := prepareMockCliContext()
+
+	_, _, err := SetBlockRange("5", "0", 0, ctx)
 	if err == nil {
 		t.Fatalf("Failed to throw an error when last block number is smaller than first")
 	}
