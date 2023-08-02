@@ -15,7 +15,7 @@ import (
 
 const ReaderBufferSize = 65536 * 256 // 16MiB
 
-// TraceFile data structure for reading a trace file
+// TraceFile data structure for reading a trace file.
 type TraceFile struct {
 	firstBlock uint64        // first block in trace file
 	file       *os.File      // trace file
@@ -59,9 +59,9 @@ func (tf *TraceFile) Release() error {
 	return nil
 }
 
-// keepRelevantTraceFiles remove out trace files whose first block is
+// keepRelevantTraceFiles remove trace files whose first block is
 // out of range of the specified range.
-// 1. a trace file contains blocks larger than the specified range
+// 1. a trace file contains blocks larger than the specified range, and
 // 2. a trace file contains blocks prior to the specified range.
 func keepRelevantTraceFiles(first, last uint64, sortedList []uint64, blockFile map[uint64]string) []string {
 	var (

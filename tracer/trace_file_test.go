@@ -205,7 +205,7 @@ func TestTraceFile_GetTraceFiles(t *testing.T) {
 		t.Fatalf("No trace files found")
 	}
 
-	// get trace files retruns an error if trace files are not given
+	// get trace files returns an error if trace files are not given
 	cfg = &utils.Config{
 		First: 1500,
 		Last:  5500,
