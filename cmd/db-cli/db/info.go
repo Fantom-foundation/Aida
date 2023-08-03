@@ -97,18 +97,14 @@ var cmdPrintDbHash = cli.Command{
 	Usage:  "Prints db-hash (md5) inside AidaDb. If this value is not present in metadata it iterates through all of data.",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
-		&flags.InsertFlag,
 		&flags.ForceFlag,
 	},
 }
 
 func doDbHash(ctx *cli.Context) error {
-	var (
-		insert = ctx.Bool(flags.InsertFlag.Name)
-		force  = ctx.Bool(flags.ForceFlag.Name)
-	)
+	var force = ctx.Bool(flags.ForceFlag.Name)
 
-	aidaDb, err := rawdb.NewLevelDBDatabase(ctx.String(utils.AidaDbFlag.Name), 1024, 100, "profiling", !insert)
+	aidaDb, err := rawdb.NewLevelDBDatabase(ctx.String(utils.AidaDbFlag.Name), 1024, 100, "profiling", false)
 	if err != nil {
 		return fmt.Errorf("cannot open db; %v", err)
 	}
@@ -123,7 +119,6 @@ func doDbHash(ctx *cli.Context) error {
 	dbHash = md.GetDbHash()
 	if len(dbHash) != 0 && !force {
 		fmt.Printf("Db-Hash: %v", hex.EncodeToString(dbHash))
-
 		return nil
 	}
 
@@ -132,12 +127,7 @@ func doDbHash(ctx *cli.Context) error {
 		return err
 	}
 
-	if insert {
-		if err = md.SetDbHash(dbHash); err != nil {
-			return fmt.Errorf("cannot insert db-hash; %v", err)
-		}
-	}
-
+	fmt.Printf("Db-Hash: %v", hex.EncodeToString(dbHash))
 	return nil
 }
 

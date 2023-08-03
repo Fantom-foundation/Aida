@@ -26,6 +26,7 @@ var InitDb = cli.App{
 		&db.InfoCommand,
 		&db.InsertMetadataCommand,
 		&db.RemoveMetadataCommand,
+		&db.ValidateCommand,
 	},
 }
 
