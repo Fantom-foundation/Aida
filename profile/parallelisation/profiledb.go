@@ -47,12 +47,6 @@ block, tx, duration
 	duration INTEGER
 );
 `
-
-	// SQL for deleting data records for a given block range
-	deleteSql = `
-	DELETE FROM parallelprofile 
-	WHERE block >= $1 AND block <= $2
-`
 )
 
 // ProfileDB is a database of ProfileData
@@ -146,29 +140,37 @@ func (db *ProfileDB) Flush() error {
 }
 
 // DeleteByBlockRange deletes rows in a given block range
+
 func (db *ProfileDB) DeleteByBlockRange(firstBlock, lastBlock uint64) (int64, error) {
+	const (
+		parallelProfile = "parallelprofile"
+		txProfile       = "txProfile"
+	)
+	var totalNumRows int64
+
 	tx, err := db.sql.Begin()
 	if err != nil {
 		return 0, err
 	}
-	stmt, err := db.sql.Prepare(deleteSql)
-	if err != nil {
-		return 0, err
-	}
-	res, err := tx.Stmt(stmt).Exec(firstBlock, lastBlock)
-	if err != nil {
-		_ = tx.Rollback()
-		return 0, err
-	}
 
-	rows, err := res.RowsAffected()
-	if err != nil {
-		return 0, err
+	for _, table := range []string{parallelProfile, txProfile} {
+		deleteSql := fmt.Sprintf("DELETE FROM %s WHERE block >= %d AND block <= %d;", table, firstBlock, lastBlock)
+		res, err := db.sql.Exec(deleteSql)
+		if err != nil {
+			panic(err.Error())
+		}
+
+		numRowsAffected, err := res.RowsAffected()
+		if err != nil {
+			return 0, err
+		}
+
+		totalNumRows += numRowsAffected
 	}
 
 	if err := tx.Commit(); err != nil {
 		return 0, err
 	}
 
-	return rows, nil
+	return totalNumRows, nil
 }
