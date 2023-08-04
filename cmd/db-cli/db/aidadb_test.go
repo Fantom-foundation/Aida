@@ -74,6 +74,8 @@ func TestAidaDb(t *testing.T) {
 		return
 	}
 
+	MustCloseDB(g.aidaDb)
+
 	err = testClone(cfg)
 	if err != nil {
 		t.Error(err)
@@ -104,27 +106,27 @@ func checkTestMetadata(db ethdb.Database, typ utils.AidaDbType) error {
 	)
 
 	switch typ {
-	case utils.GenType:
-		// gen and merged db are expected to have same range
-		fallthrough
 	case utils.CloneType:
 		efb = firstCloneDbBlock
 		efe = firstCloneDbEpoch
 		elb = lastCloneDbBlock
 		ele = lastCloneDbEpoch
-		dbType = "clone"
+		dbType = "clone-db"
 	case utils.PatchType:
 		efb = firstPatchDbBlock
 		efe = firstPatchDbEpoch
 		elb = lastPatchDbBlock
 		ele = lastPatchDbEpoch
-		dbType = "patch"
+		dbType = "patch-db"
+	case utils.GenType:
+		// gen and merged db are expected to have same range
+		fallthrough
 	default:
 		efb = firstGenAndMergeDbBlock
 		efe = firstGenAndMergeDbEpoch
 		elb = lastGenAndMergeDbBlock
 		ele = lastGenAndMergeDbEpoch
-		dbType = "gen/merge"
+		dbType = "gen/merge-db"
 
 	}
 
