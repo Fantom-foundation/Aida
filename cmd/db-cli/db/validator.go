@@ -18,7 +18,10 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-const standardInputBufferSize = 50
+const (
+	standardInputBufferSize = 50
+	firstOperaTestnetBlock  = 479326
+)
 
 var ValidateCommand = cli.Command{
 	Action: validateCmd,
@@ -55,6 +58,12 @@ func validateCmd(ctx *cli.Context) error {
 
 	md := utils.NewAidaDbMetadata(aidaDb, "INFO")
 
+	md.ChainId = md.GetChainID()
+	if md.ChainId == 0 {
+		log.Warning("cannot find db-hash in your aida-db metadata, this operation is needed because db-hash was not found inside your aida-db; please make sure you specified correct chain-id with flag --%v", utils.ChainIDFlag.Name)
+		md.ChainId = cfg.ChainID
+	}
+
 	// validation only makes sense if user has pure AidaDb
 	dbType := md.GetDbType()
 	if dbType != utils.GenType {
@@ -62,9 +71,10 @@ func validateCmd(ctx *cli.Context) error {
 	}
 
 	// we need to make sure aida-db starts from beginning, otherwise validation is impossible
-	fb := md.GetFirstBlock()
-	if fb != 0 {
-		return fmt.Errorf("validation cannot be performed - your db does not start at block 0; your first block: %v", fb)
+	// todo simplify condition once lachesis patch is ready for testnet
+	md.FirstBlock = md.GetFirstBlock()
+	if (md.ChainId == 250 && md.FirstBlock != 0) || (md.ChainId == 4002 && md.FirstBlock != firstOperaTestnetBlock) {
+		return fmt.Errorf("validation cannot be performed - your db does not start at block 0; your first block: %v", md.FirstBlock)
 	}
 
 	var saveHash = false
@@ -74,11 +84,13 @@ func validateCmd(ctx *cli.Context) error {
 	if len(expectedHash) == 0 {
 		// we want to save the hash inside metadata
 		saveHash = true
-		expectedHash, err = findDbHashOnline(cfg, log, md)
+		expectedHash, err = findDbHashOnline(md.ChainId, log, md)
 		if err != nil {
 			return fmt.Errorf("validation cannot be performed; %v", err)
 		}
 	}
+
+	log.Noticef("Found DbHash for your Db: %v", hex.EncodeToString(expectedHash))
 
 	log.Noticef("Starting DbHash calculation for %v; this may take several hours...", cfg.AidaDb)
 	trueHash, err := validate(aidaDb, "INFO")
@@ -103,17 +115,8 @@ func validateCmd(ctx *cli.Context) error {
 }
 
 // findDbHashOnline if user has no dbHash inside his AidaDb metadata
-func findDbHashOnline(cfg *utils.Config, log *logging.Logger, md *utils.AidaDbMetadata) ([]byte, error) {
-	var (
-		url     string
-		chainId int
-	)
-
-	chainId = md.GetChainID()
-	if chainId == 0 {
-		log.Warning("cannot find db-hash in your aida-db metadata, this operation is needed because db-hash was not found inside your aida-db; please make sure you specified correct chain-id with flag --%v", utils.ChainIDFlag.Name)
-		chainId = cfg.ChainID
-	}
+func findDbHashOnline(chainId int, log *logging.Logger, md *utils.AidaDbMetadata) ([]byte, error) {
+	var url string
 
 	if chainId == 250 {
 		url = utils.AidaDbRepositoryMainnetUrl
@@ -127,24 +130,26 @@ func findDbHashOnline(cfg *utils.Config, log *logging.Logger, md *utils.AidaDbMe
 		return nil, err
 	}
 
-	lb := md.GetLastBlock()
+	md.LastBlock = md.GetLastBlock()
 
-	if lb == 0 {
+	if md.LastBlock == 0 {
 		log.Warning("your aida-db seems to have empty metadata; looking for block range in substate")
 	}
 
-	fb, lb, ok := utils.FindBlockRangeInSubstate()
+	var ok bool
+
+	md.FirstBlock, md.LastBlock, ok = utils.FindBlockRangeInSubstate()
 	if !ok {
 		return nil, errors.New("cannot find block range in substate")
 	}
 
-	err = md.SetBlockRange(fb, lb)
+	err = md.SetBlockRange(md.FirstBlock, md.LastBlock)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, patch := range patches {
-		if patch.ToBlock == lb {
+		if patch.ToBlock == md.LastBlock {
 			return hex.DecodeString(patch.DbHash)
 		}
 	}
