@@ -760,8 +760,8 @@ func (md *AidaDbMetadata) findEpochs() error {
 // looks if blocks and epoch align and if chainIDs are same for both Dbs
 func (md *AidaDbMetadata) CheckUpdateMetadata(cfg *Config, patchDb ethdb.Database) ([]byte, error) {
 	var (
-		err                  error
-		ignoreBlockAlignment bool
+		err                                   error
+		ignoreBlockAlignment, isLachesisPatch bool
 	)
 
 	patchMD := NewAidaDbMetadata(patchDb, cfg.LogLevel)
@@ -798,6 +798,7 @@ func (md *AidaDbMetadata) CheckUpdateMetadata(cfg *Config, patchDb ethdb.Databas
 		// we need to check again whether first block is still 0 after substate search
 		if patchMD.FirstBlock == 0 {
 			ignoreBlockAlignment = true
+			isLachesisPatch = true
 		}
 	}
 
@@ -823,7 +824,7 @@ func (md *AidaDbMetadata) CheckUpdateMetadata(cfg *Config, patchDb ethdb.Databas
 		return nil, fmt.Errorf("metadata chain-ids does not match; aida-db: %v, patch: %v", md.ChainId, patchMD.ChainId)
 	}
 
-	if ignoreBlockAlignment {
+	if isLachesisPatch {
 		// we set the first block and epoch to 0
 		// last block and epoch stays
 		md.FirstBlock = 0
