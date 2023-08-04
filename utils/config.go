@@ -776,6 +776,8 @@ func CreateTestEnvironment() (*cli.Context, *Config) {
 		log.Fatal(err)
 	}
 
+	cfg.DbTmp = "/var/opera/Aida/tmp"
+
 	return ctx, cfg
 
 }

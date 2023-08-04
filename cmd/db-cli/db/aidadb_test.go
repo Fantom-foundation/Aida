@@ -3,6 +3,7 @@ package db
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/utils"
@@ -13,12 +14,13 @@ import (
 )
 
 const (
-	pathToAidaTestDb   = "/var/opera/Aida/testnet-data/aida-db"
-	pathToGenesis      = "/var/opera/Aida/testnet-data/genesis/testnet-2458-pruned-mpt.g"
-	pathToOperaTestDb  = "/var/opera/Aida/testnet-data/opera-db"
-	pathToCloneTestDb  = "/var/opera/Aida/testnet-data/clone-db"
-	pathToPatchTestDb  = "/var/opera/Aida/testnet-data/patch"
-	pathToMergedTestDb = "/var/opera/Aida/testnet-data/merged-db"
+	pathToGenesis = "/var/opera/Aida/testnet-data/genesis/testnet-2458-pruned-mpt.g"
+
+	pathToAidaTestDb   = "/test-db"
+	pathToOperaTestDb  = "/opera-db"
+	pathToCloneTestDb  = "/clone-db"
+	pathToPatchTestDb  = "/patch"
+	pathToMergedTestDb = "/merged-db"
 
 	firstGenAndMergeDbBlock = 479327
 	lastGenAndMergeDbBlock  = 481383
@@ -42,9 +44,10 @@ func TestAidaDb(t *testing.T) {
 
 	ctx, cfg := utils.CreateTestEnvironment()
 
-	cfg.AidaDb = pathToAidaTestDb
-	cfg.Db = pathToOperaTestDb
 	cfg.Genesis = pathToGenesis
+
+	cfg.AidaDb = filepath.Join(cfg.DbTmp, pathToAidaTestDb)
+	cfg.Db = filepath.Join(cfg.DbTmp, pathToOperaTestDb)
 
 	g, err := newGenerator(ctx, cfg)
 	if err != nil {
@@ -259,7 +262,7 @@ func testAutogen(cfg *utils.Config, g *generator) error {
 // testClone creates cloneDb for range of testing AidaDb - 10
 func testClone(cfg *utils.Config) error {
 	// set testing variables
-	cfg.TargetDb = pathToCloneTestDb
+	cfg.TargetDb = filepath.Join(cfg.DbTmp, pathToCloneTestDb)
 	cfg.First = firstCloneDbBlock
 	cfg.Last = lastCloneDbBlock
 
@@ -282,7 +285,7 @@ func testClone(cfg *utils.Config) error {
 	MustCloseDB(aidaDb)
 
 	// set the block range, so it aligns with clone db, so we can use these dbs for testing merge
-	cfg.TargetDb = pathToPatchTestDb
+	cfg.TargetDb = filepath.Join(cfg.DbTmp, pathToPatchTestDb)
 	cfg.First = firstPatchDbBlock
 	cfg.Last = lastPatchDbBlock
 
