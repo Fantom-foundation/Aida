@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Fantom-foundation/Aida/cmd/aida-vm-sdb/vm-sdb"
+	vm_sdb "github.com/Fantom-foundation/Aida/cmd/aida-vm-sdb/vm-sdb"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"

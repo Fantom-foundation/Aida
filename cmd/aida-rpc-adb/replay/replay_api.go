@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/Fantom-foundation/Aida/cmd/aida-vm-sdb/vm-sdb"
+	vm_sdb "github.com/Fantom-foundation/Aida/cmd/aida-vm-sdb/vm-sdb"
 	"github.com/Fantom-foundation/Aida/iterator"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/tracer"
