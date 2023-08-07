@@ -79,6 +79,17 @@ hist(data$numTx, freq=FALSE, main="Number of Transaction Distribution", xlab="Nu
 abline(v=mean(data$numTx), col="dodgerblue3", lty=2, lwd=2)
 ```
 
+The smoothened trend line for the number of transaction is shown below. In this diagram, we aggregated the number
+of transactions per block for 100K blocks shown as a point.
+
+```{r, echo=FALSE, message=FALSE}
+reducedData %>%
+  ggplot(aes(x = block, y = numTx)) +
+  geom_smooth(color = "tomato") +
+  geom_point(alpha=0.3) +
+  labs(x="Block Height", y="Number of Transactions", title="Number of Transactions per Block")
+```
+
 ## 4. Processor Utilisation / Efficiency
 
 We measure the processor utilisation of a block by constructing the task graph for a block.
@@ -91,7 +102,7 @@ The lower bound of the processor utilisation is `r format(100.0*exp(mean(log(dat
 ## 5. Sequential Block Time
 
 The average block execution time is `r mean(data$tBlock)/1e6` milliseconds with a minimum of `r min(data$tBlock)/1e3` microseconds and a maximum of `r max(data$tBlock)/1e9` seconds.
-The smoothened trend line for block time (in milliseconds) is shown below:
+The smoothened trend line for block time (in milliseconds) is shown below. In the diagram, we aggregated the block time for all 100K blocks shown as a point.
 
 ```{r, echo=FALSE, message=FALSE}
 reducedData %>%
@@ -104,7 +115,7 @@ reducedData %>%
 ## 6. Commit Time
 
 The average commit time is `r mean(data$tCommit)/1e6` milliseconds with a minimum of `r min(data$tCommit)/1e3` microseconds and a maximum of `r max(data$tCommit)/1e9` seconds.
-The smoothened trend line of the commit time in milliseconds is shown below:
+The smoothened trend line of the commit time in milliseconds is shown below. In the diagram, we aggregated the commit time for all 100K blocks shown as a point.
 
 ```{r, echo = FALSE, message=FALSE}
 reducedData %>%

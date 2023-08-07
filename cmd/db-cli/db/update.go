@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -26,7 +27,11 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-const maxNumberOfDownloadAttempts = 5
+const (
+	maxNumberOfDownloadAttempts = 5
+	firstMainnetPatchFileName   = "5577-46750.tar.gz"
+	firstTestnetPatchFileName   = "" // todo fill with first testnet patch once lachesis patch for testnet is released
+)
 
 // UpdateCommand downloads aida-db and new patches
 var UpdateCommand = cli.Command{
@@ -51,7 +56,7 @@ type patchJson struct {
 	FileName           string
 	FromBlock, ToBlock uint64
 	FromEpoch, ToEpoch uint64
-	DbHash, TarGzHash  string
+	DbHash, TarHash    string
 }
 
 // update updates aida-db by downloading patches from aida-db generation server.
@@ -71,16 +76,16 @@ func update(ctx *cli.Context) error {
 func Update(cfg *utils.Config) error {
 	log := logger.NewLogger(cfg.LogLevel, "DB Update")
 
-	firstBlock, lastBlock, err := getTargetDbBlockRange(cfg)
+	targetDbFirstBlock, targetDbLastBlock, err := getTargetDbBlockRange(cfg)
 	if err != nil {
 		return fmt.Errorf("unable retrieve aida-db metadata; %v", err)
 	}
 
-	log.Noticef("First block of your AidaDb: #%v", firstBlock)
-	log.Noticef("Last block of your AidaDb: #%v", lastBlock)
+	log.Noticef("First block of your AidaDb: #%v", targetDbFirstBlock)
+	log.Noticef("Last block of your AidaDb: #%v", targetDbLastBlock)
 
 	// retrieve available patches from aida-db generation server
-	patches, err := retrievePatchesToDownload(firstBlock, lastBlock)
+	patches, err := retrievePatchesToDownload(cfg, targetDbFirstBlock, targetDbLastBlock)
 	if err != nil {
 		return fmt.Errorf("unable to prepare list of aida-db patches for download; %v", err)
 	}
@@ -96,10 +101,16 @@ func Update(cfg *utils.Config) error {
 		return fmt.Errorf("failed to create %s directory; %s", cfg.DbTmp, err)
 	}
 
-	log.Noticef("Downloading Aida-db - %d new patches", len(patches))
+	var str string
+	for _, p := range patches {
+		str += " "
+		str += p.FileName
+	}
+
+	log.Noticef("These patches are in que for download:%v", str)
 
 	// we need to know whether Db is new for metadata
-	err = patchesDownloader(cfg, patches, firstBlock, lastBlock)
+	err = patchesDownloader(cfg, patches, targetDbFirstBlock, targetDbLastBlock)
 	if err != nil {
 		return err
 	}
@@ -135,9 +146,9 @@ func getTargetDbBlockRange(cfg *utils.Config) (uint64, uint64, error) {
 }
 
 // patchesDownloader processes patch names to download then download them in pipelined process
-func patchesDownloader(cfg *utils.Config, patches []string, firstBlock, lastBlock uint64) error {
+func patchesDownloader(cfg *utils.Config, patches []patchJson, firstBlock, lastBlock uint64) error {
 	// create channel to push patch labels trough channel
-	patchesChan := pushStringsToChannel(patches)
+	patchesChan := pushPatchToChanel(patches)
 
 	// download patches
 	downloadedPatchChan, errChan := downloadPatch(cfg, patchesChan)
@@ -157,10 +168,12 @@ func patchesDownloader(cfg *utils.Config, patches []string, firstBlock, lastBloc
 // mergePatch takes decompressed patches and merges them into aida-db
 func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan error, firstAidaDbBlock, lastAidaDbBlock uint64) error {
 	var (
-		targetMD                            *utils.AidaDbMetadata
-		patchDbHash, targetDbHash, trueHash []byte
-		isNewDb                             bool
-		log                                 = logger.NewLogger(cfg.LogLevel, "aida-merge-patch")
+		err                       error
+		patchDb                   ethdb.Database
+		targetMD                  *utils.AidaDbMetadata
+		patchDbHash, targetDbHash []byte
+		isNewDb                   bool
+		log                       = logger.NewLogger(cfg.LogLevel, "aida-merge-patch")
 	)
 
 	if lastAidaDbBlock == 0 {
@@ -180,6 +193,25 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 		case extractedPatchPath, ok := <-decompressChan:
 			{
 				if !ok {
+					if cfg.Validate {
+						if patchDbHash == nil {
+							log.Critical("DbHash not found in downloaded Patch - cannot perform validation. If you were missing only lachesis patch, this would be normal behaviour.")
+						} else {
+							log.Notice("Starting db-validation. This may take several hours...")
+							targetDbHash, err = validate(targetMD.Db, cfg.LogLevel)
+							if err != nil {
+								return fmt.Errorf("cannot create DbHash of merged AidaDb; %v", err)
+							}
+
+							if cmp := bytes.Compare(patchDbHash, targetDbHash); cmp != 0 {
+								log.Criticalf("db hashes are not same! \nPatch: %v; Calculated: %v", hex.EncodeToString(patchDbHash), hex.EncodeToString(targetDbHash))
+							} else {
+								log.Notice("Validation successful!")
+								return targetMD.SetDbHash(patchDbHash)
+							}
+						}
+					}
+
 					return nil
 				}
 
@@ -193,7 +225,7 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 					if isNewDb {
 						log.Noticef("AIDA-DB was empty - directly saving first patch")
 						// move extracted patch to target location - first attempting with os.Rename because it is fastest
-						if err := os.Rename(extractedPatchPath, cfg.AidaDb); err != nil {
+						if err = os.Rename(extractedPatchPath, cfg.AidaDb); err != nil {
 							// attempting with deep copy - needed when moving across different disks
 							if err2 := utils.CopyDir(extractedPatchPath, cfg.AidaDb); err2 != nil {
 								return fmt.Errorf("unable to move patch into aida-db target; %v (%v)", err2, err)
@@ -223,30 +255,13 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 				}
 
 				// merge newly extracted patch
-				patchDb, err := rawdb.NewLevelDBDatabase(extractedPatchPath, 1024, 100, "profiling", false)
+				patchDb, err = rawdb.NewLevelDBDatabase(extractedPatchPath, 1024, 100, "profiling", false)
 				if err != nil {
 					return fmt.Errorf("cannot open targetDb; %v", err)
 				}
 
-				targetDbHash = targetMD.GetDbHash()
-				if cfg.Validate {
-					if patchDbHash == nil {
-						log.Critical("DbHash inside Patch was not found, validation cannot be done")
-					} else {
-						trueHash, err = validate(targetMD.Db, cfg.LogLevel)
-						if err != nil {
-							return fmt.Errorf("cannot create patchDbHash of updated db; %v", err)
-						}
-
-						if cmp := bytes.Compare(targetDbHash, trueHash); cmp != 0 {
-							return fmt.Errorf("db Hashes are not same! \nMetadata: %v; Calculated: %v", hex.EncodeToString(targetDbHash), hex.EncodeToString(trueHash))
-						} else {
-							log.Notice("Validation successful!")
-						}
-					}
-				}
-
-				err = targetMD.CheckUpdateMetadata(cfg, patchDb)
+				// save patch dbHash - last hash gets validated if validation is turned on
+				patchDbHash, err = targetMD.CheckUpdateMetadata(cfg, patchDb)
 				if err != nil {
 					return err
 				}
@@ -276,7 +291,7 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 }
 
 // decompressPatch takes tar.gz archives and decompresses them, then sends them for further processing
-func decompressPatch(cfg *utils.Config, patchChan chan string, errChan chan error) (chan string, chan error) {
+func decompressPatch(cfg *utils.Config, patchChan chan patchJson, errChan chan error) (chan string, chan error) {
 	log := logger.NewLogger(cfg.LogLevel, "Decompress patch")
 	decompressedPatchChan := make(chan string, 1)
 	errDecompressChan := make(chan error, 1)
@@ -293,14 +308,14 @@ func decompressPatch(cfg *utils.Config, patchChan chan string, errChan chan erro
 						return
 					}
 				}
-			case fileName, ok := <-patchChan:
+			case patch, ok := <-patchChan:
 				{
 					if !ok {
 						return
 					}
-					log.Debugf("Decompressing %v...", fileName)
+					log.Debugf("Decompressing %v...", patch.FileName)
 
-					compressedPatchPath := filepath.Join(cfg.DbTmp, fileName)
+					compressedPatchPath := filepath.Join(cfg.DbTmp, patch.FileName)
 					err := extractTarGz(compressedPatchPath, cfg.DbTmp)
 					if err != nil {
 						errDecompressChan <- err
@@ -328,84 +343,51 @@ func decompressPatch(cfg *utils.Config, patchChan chan string, errChan chan erro
 }
 
 // downloadPatch downloads patches from server and sends them towards decompressor
-func downloadPatch(cfg *utils.Config, patchesChan chan string) (chan string, chan error) {
+func downloadPatch(cfg *utils.Config, patchesChan chan patchJson) (chan patchJson, chan error) {
 	log := logger.NewLogger(cfg.LogLevel, "Download patch")
-	downloadedPatchChan := make(chan string, 1)
+	downloadedPatchChan := make(chan patchJson, 1)
 	errChan := make(chan error, 1)
 
 	go func() {
 		defer close(downloadedPatchChan)
 		defer close(errChan)
 		for {
-			fileName, ok := <-patchesChan
+			patch, ok := <-patchesChan
 			if !ok {
 				return
 			}
-			log.Debugf("Downloading %s...", fileName)
-			patchUrl := utils.AidaDbRepositoryUrl + "/" + fileName
-			compressedPatchPath := filepath.Join(cfg.DbTmp, fileName)
+			log.Debugf("Downloading %s...", patch.FileName)
+			patchUrl := utils.AidaDbRepositoryUrl + "/" + patch.FileName
+			compressedPatchPath := filepath.Join(cfg.DbTmp, patch.FileName)
 			err := downloadFile(compressedPatchPath, cfg.DbTmp, patchUrl)
 			if err != nil {
 				errChan <- fmt.Errorf("unable to download %s; %v", patchUrl, err)
-			}
-			log.Debugf("Downloaded %s", fileName)
-
-			patchMd5Url := patchUrl + ".md5"
-
-			// WARNING don't rewrite the following md5 check into separate thread,
-			// because having two patches at same time might be too big for somebodies disk space
-			md5Expected, err := loadExpectedMd5(patchMd5Url)
-			if err != nil {
-				errChan <- err
 				return
 			}
+			log.Debugf("Finished downloading %s!", patch.FileName)
 
-			log.Debugf("Calculating %s md5", fileName)
+			log.Debugf("Calculating %s md5...", patch.FileName)
 			md5, err := calculateMD5Sum(compressedPatchPath)
 			if err != nil {
-				errChan <- fmt.Errorf("archive %v; unable to calculate md5sum; %v", fileName, err)
+				errChan <- fmt.Errorf("archive %v; unable to calculate md5sum; %v", patch.FileName, err)
 				return
 			}
 
 			// Compare whether downloaded file matches expected md5
-			if strings.Compare(md5, md5Expected) != 0 {
-				errChan <- fmt.Errorf("archive %v doesn't have matching md5; archive %v, expected %v", fileName, md5, md5Expected)
+			if strings.Compare(md5, patch.TarHash) != 0 {
+				errChan <- fmt.Errorf("archive %v doesn't have matching md5; archive %v, expected %v", patch.FileName, md5, patch.TarHash)
 				return
 			}
 
-			downloadedPatchChan <- fileName
+			downloadedPatchChan <- patch
 		}
 	}()
 	return downloadedPatchChan, errChan
 }
 
-// loadExpectedMd5 loads md5 of file at given url
-func loadExpectedMd5(patchMd5Url string) (string, error) {
-	var buf bytes.Buffer
-
-	writer := bufio.NewWriter(&buf)
-
-	err := getFileContentsFromUrl(patchMd5Url, 0, writer)
-	if err != nil {
-		return "", fmt.Errorf("unable to download %s; %v", patchMd5Url, err)
-	}
-
-	// Flush the buffered writer to ensure all data is written to the buffer
-	err = writer.Flush()
-	if err != nil {
-		return "", fmt.Errorf("flushing writer; %v", err)
-	}
-
-	// Get the written content as a string
-	md5Expected := buf.String()
-
-	// trimming whitespaces
-	return strings.TrimSpace(md5Expected), nil
-}
-
-// pushStringsToChannel used to pipe strings into channel
-func pushStringsToChannel(strings []string) chan string {
-	ch := make(chan string, 1)
+// pushPatchToChanel used to pipe strings into channel
+func pushPatchToChanel(strings []patchJson) chan patchJson {
+	ch := make(chan patchJson, 1)
 	go func() {
 		defer close(ch)
 		for _, str := range strings {
@@ -416,32 +398,106 @@ func pushStringsToChannel(strings []string) chan string {
 }
 
 // retrievePatchesToDownload retrieves all available patches from aida-db generation server.
-func retrievePatchesToDownload(firstBlock uint64, lastBlock uint64) ([]string, error) {
-	// download list of available patches
-	patches, err := downloadPatchesJson()
+func retrievePatchesToDownload(cfg *utils.Config, targetDbFirstBlock uint64, targetDbLastBlock uint64) ([]patchJson, error) {
+	var isAddingLachesisPatch = false
+
+	// download list of available availablePatches
+	availablePatches, err := downloadPatchesJson()
 	if err != nil {
-		return nil, fmt.Errorf("unable to download patches: %v", err)
+		return nil, fmt.Errorf("unable to download patches.json: %v", err)
 	}
 
-	// list of patches to be downloaded
-	var fileNames = make([]string, 0)
+	// list of availablePatches to be downloaded
+	var patchesToDownload = make([]patchJson, 0)
 
-	for _, patch := range patches {
+	for _, patch := range availablePatches {
 		// skip every patch which is sooner than previous last block
-		if patch.ToBlock <= lastBlock {
-			// we need to check whether user is not prepending lachesis patch
-			if patch.ToBlock != utils.FirstOperaBlock-1 || firstBlock != utils.FirstOperaBlock {
-				// if patch is not lachesis patch or user already has lachesis patch applied, we skip
+		if patch.ToBlock <= targetDbLastBlock {
+			// if patch is lachesis and user has not got it in their db we download it
+			if patch.ToBlock == utils.FirstOperaBlock-1 && targetDbFirstBlock == utils.FirstOperaBlock {
+				isAddingLachesisPatch = true
+			} else {
 				continue
 			}
 		}
 
-		fileNames = append(fileNames, patch.FileName)
+		patchesToDownload = append(patchesToDownload, patch)
 	}
 
-	sort.Strings(fileNames)
+	// if user has second patch already in their db, we have to re-download it again and delete old update-set key
+	if isAddingLachesisPatch && targetDbFirstBlock == utils.FirstOperaBlock {
+		patchesToDownload, err = appendFirstPatch(cfg, availablePatches, patchesToDownload)
+		if err != nil {
+			return nil, err
+		}
+	}
 
-	return fileNames, nil
+	sort.Sort(ByToBlock(patchesToDownload))
+
+	return patchesToDownload, nil
+}
+
+// ByToBlock is an interface that is used to sort the patches by ToBlock
+type ByToBlock []patchJson
+
+func (a ByToBlock) Len() int {
+	return len(a)
+}
+func (a ByToBlock) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
+}
+func (a ByToBlock) Less(i, j int) bool {
+	return a[i].ToBlock < a[j].ToBlock
+}
+
+// appendFirstPatch finds whether user is downloading fresh new db or updating an existing one.
+// If updating an existing one, first patch is appended to download and first update-set is deleted
+func appendFirstPatch(cfg *utils.Config, availablePatches []patchJson, patchesToDownload []patchJson) ([]patchJson, error) {
+	var expectedFileName string
+
+	if cfg.ChainID == 250 {
+		expectedFileName = firstMainnetPatchFileName
+	} else if cfg.ChainID == 4002 {
+		expectedFileName = firstTestnetPatchFileName
+	} else {
+		return nil, errors.New("please choose chain-id with --chainid")
+	}
+
+	// did we already append first patch?
+	for _, patch := range patchesToDownload {
+		if patch.FileName == expectedFileName {
+
+			// first patch was already appended - that means user is downloading fresh db
+			return patchesToDownload, nil
+		}
+	}
+
+	for _, patch := range availablePatches {
+		if patch.FileName == expectedFileName {
+			patchesToDownload = append(patchesToDownload, patch)
+			// we need to remove first update-set for data consistency
+			err := deleteOperaWorldStateFromUpdateSet(cfg.AidaDb)
+			if err != nil {
+				return nil, err
+			}
+			break
+		}
+	}
+
+	return patchesToDownload, nil
+}
+
+// deleteOperaWorldStateFromUpdateSet when user has already merged second patch, and we are prepending lachesis patch.
+// This situation could happen due to lachesis patch being implemented later than rest of the Db
+func deleteOperaWorldStateFromUpdateSet(dbPath string) error {
+	updateDb, err := substate.OpenUpdateDB(dbPath)
+	if err != nil {
+		return fmt.Errorf("cannot open update-db; %v", err)
+	}
+
+	updateDb.DeleteSubstateAlloc(utils.FirstOperaBlock - 1)
+
+	return updateDb.Close()
 }
 
 // downloadPatchesJson downloads list of available patches from aida-db generation server.
@@ -527,7 +583,7 @@ func getFileContentsFromUrl(url string, startSize int64, out *bufio.Writer) erro
 		}
 
 		// wait until next attempt
-		time.Sleep(1 * time.Second)
+		time.Sleep(2 * time.Second)
 
 		startSize += written
 	}
@@ -554,7 +610,7 @@ func downloadFileContents(url string, startSize int64, out *bufio.Writer) (int64
 	defer resp.Body.Close()
 
 	// Check server response again
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent && resp.StatusCode != http.StatusRequestedRangeNotSatisfiable {
 		return 0, fmt.Errorf("downloading %s, bad status: %s", url, resp.Status)
 	}
 

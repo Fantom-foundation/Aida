@@ -38,6 +38,7 @@ var TraceReplaySubstateCommand = cli.Command{
 		&utils.SyncPeriodLengthFlag,
 		&substate.WorkersFlag,
 		&utils.TraceFileFlag,
+		&utils.TraceDirectoryFlag,
 		&utils.TraceDebugFlag,
 		&utils.DebugFromFlag,
 		&utils.ValidateFlag,
@@ -65,7 +66,11 @@ func traceReplaySubstateTask(cfg *utils.Config, log *logging.Logger) error {
 	defer stateIter.Release()
 
 	// replay storage trace
-	traceIter := tracer.NewTraceIterator(cfg.TraceFile, cfg.First, cfg.Last)
+	traceFiles, err := tracer.GetTraceFiles(cfg)
+	if err != nil {
+		return err
+	}
+	traceIter := tracer.NewTraceIterator(traceFiles, cfg.First)
 	defer traceIter.Release()
 
 	// Create a directory for the store to place all its files.

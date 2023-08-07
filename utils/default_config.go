@@ -70,6 +70,7 @@ func createConfig(ctx *cli.Context) *Config {
 		Workers:             getFlagValue(ctx, substate.WorkersFlag).(int),
 		WorldStateDb:        getFlagValue(ctx, WorldStateFlag).(string),
 		TraceFile:           getFlagValue(ctx, TraceFileFlag).(string),
+		TraceDirectory:      getFlagValue(ctx, TraceDirectoryFlag).(string),
 		Trace:               getFlagValue(ctx, TraceFlag).(bool),
 		LogLevel:            getFlagValue(ctx, logger.LogLevelFlag).(string),
 		SourceTableName:     getFlagValue(ctx, SourceTableNameFlag).(string),
