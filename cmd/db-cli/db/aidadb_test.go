@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	pathToGenesis = "/var/opera/Aida/testnet-data/genesis/testnet-2458-pruned-mpt.g"
+	pathToGenesis = "/var/opera/Aida/testnet-data/genesis/testnet-2458-full-mpt.g"
 
 	pathToAidaTestDb   = "/test-db"
 	pathToOperaTestDb  = "/opera-db"
