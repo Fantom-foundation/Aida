@@ -17,4 +17,4 @@ vendor/
 go.work
 
 # Data produced by unit tests
-cmd/trace-cli/trace-test/
+cmd/aida-sdb/trace-test/

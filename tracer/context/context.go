@@ -39,7 +39,7 @@ type Replay struct {
 	Stats    *profile.Stats // stats object
 }
 
-// NewContext creates a new replay context.
+// NewReplay creates a new replay context.
 func NewReplay() *Replay {
 	return &Replay{
 		Context: Context{prevContract: common.Address{},

@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
+	"github.com/Fantom-foundation/Aida/cmd/aida-vm/vm"
 	"github.com/Fantom-foundation/Aida/cmd/util-updateset/updateset"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -186,7 +186,7 @@ func (g *generator) processDeletedAccounts(ddb *substate.DestroyedAccountDB) err
 
 	g.log.Noticef("Generating DeletionDb...")
 
-	err = replay.GenDeletedAccountsAction(g.cfg, ddb, 0)
+	err = vm.GenDeletedAccountsAction(g.cfg, ddb, 0)
 	if err != nil {
 		return fmt.Errorf("cannot doGenerations deleted accounts; %v", err)
 	}
