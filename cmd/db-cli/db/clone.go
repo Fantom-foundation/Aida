@@ -91,13 +91,13 @@ func clonePatch(ctx *cli.Context) error {
 		return fmt.Errorf("clone patch command requires exactly 4 arguments")
 	}
 
-	cfg.First, cfg.Last, err = utils.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1), cfg.ChainID, ctx)
+	cfg.First, cfg.Last, err = utils.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1), cfg.ChainID)
 	if err != nil {
 		return err
 	}
 
 	var firstEpoch, lastEpoch uint64
-	firstEpoch, lastEpoch, err = utils.SetBlockRange(ctx.Args().Get(2), ctx.Args().Get(3), cfg.ChainID, ctx)
+	firstEpoch, lastEpoch, err = utils.SetBlockRange(ctx.Args().Get(2), ctx.Args().Get(3), cfg.ChainID)
 	if err != nil {
 		return err
 	}
