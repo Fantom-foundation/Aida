@@ -315,6 +315,15 @@ var (
 		Name:  "profiling-call",
 		Usage: "enable profiling for EVM call",
 	}
+	ProfileFileFlag = cli.StringFlag{
+		Name:  "profile-file",
+		Usage: "output file containing profiling data",
+	}
+	ProfileIntervalFlag = cli.Uint64Flag{
+		Name:  "profile-interval",
+		Usage: "Frequency of logging block statistics",
+		Value: 1_000_000_000,
+	}
 	MicroProfilingFlag = cli.BoolFlag{
 		Name:  "micro-profiling",
 		Usage: "enable micro-profiling of EVM",
@@ -396,6 +405,8 @@ type config struct {
 	PrimeRandom         bool           // enable randomized priming
 	PrimeThreshold      int            // set account threshold before commit
 	Profile             bool           // enable micro profiling
+	ProfileFile         string         // output file containing profiling result
+	ProfileInterval     uint64         // interval of printing profile result
 	RandomSeed          int64          // set random seed for stochastic testing
 	SkipPriming         bool           // skip priming of the state DB
 	ShadowDb            bool           // defines we want to open an existing db as shadow
@@ -548,6 +559,8 @@ func newconfig(ctx *cli.Context, mode ArgumentMode) (*config, error) {
 		RandomSeed:          ctx.Int64(RandomSeedFlag.Name),
 		PrimeThreshold:      ctx.Int(PrimeThresholdFlag.Name),
 		Profile:             ctx.Bool(ProfileFlag.Name),
+		ProfileFile:         ctx.String(ProfileFileFlag.Name),
+		ProfileInterval:     ctx.Uint64(ProfileIntervalFlag.Name),
 		SkipPriming:         ctx.Bool(SkipPrimingFlag.Name),
 		ShadowDb:            ctx.Bool(ShadowDb.Name),
 		ShadowImpl:          ctx.String(ShadowDbImplementationFlag.Name),

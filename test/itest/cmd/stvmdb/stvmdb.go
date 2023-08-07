@@ -9,6 +9,7 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/Fantom-foundation/rc-testing/test/itest/logger"
 	"github.com/urfave/cli/v2"
+	"github.com/Fantom-foundation/rc-testing/test/itest/tracer/profile"
 )
 
 const (
@@ -54,6 +55,7 @@ var StVmDbCommand = cli.Command{
 		&MemoryProfileFlag,
 		&RandomSeedFlag,
 		&PrimeThresholdFlag,
+		&ProfileIntervalFlag,
 		&ProfileFlag,
 
 		// Priming
@@ -73,6 +75,9 @@ var StVmDbCommand = cli.Command{
 		&ValidateWorldStateFlag,
 		&ValidateFlag,
 		&logger.LogLevelFlag,
+
+		// Performance
+		&ProfileFileFlag,
 	},
 	Description: `
 The stvmdb command requires two arguments: <blockNumFirst> <blockNumLast>
@@ -102,6 +107,7 @@ func stVmDb(ctx *cli.Context) error {
 		lastBlockProgressReportTime     time.Time
 		lastBlockProgressReportTxCount  int
 		lastBlockProgressReportGasCount = new(big.Int)
+		lastProfileBlock                uint64
 		stateDbDir                      string
 	)
 	beginning = time.Now()
@@ -117,13 +123,10 @@ func stVmDb(ctx *cli.Context) error {
 	log := logger.NewLogger(cfg.LogLevel, "StVMDB")
 
 	// start CPU profiling if requested.
-	/*
-		if err := utils.StartCPUProfile(cfg); err != nil {
-			return err
-		}
-		defer utils.StopCPUProfile(cfg)
-	*/
-
+	if err := StartCPUProfile(cfg); err != nil {
+		return err
+	}
+	defer StopCPUProfile(cfg)
 	// iterate through subsets in sequence
 	substate.SetSubstateDb(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
@@ -156,22 +159,14 @@ func stVmDb(ctx *cli.Context) error {
 	}
 
 	// print memory usage after priming
-	if cfg.MemoryBreakdown {
-		if usage := db.GetMemoryUsage(); usage != nil {
-			log.Noticef("State DB memory usage: %d byte\n%s", usage.UsedBytes, usage.Breakdown)
-		} else {
-			log.Info("Utilized storage solution does not support memory breakdowns.")
-		}
-	}
+	// print memory usage after priming
+	MemoryBreakdown(db, cfg, log)
 
 	// wrap stateDB for profiling
-	/*
-		var stats *operation.ProfileStats
-		if cfg.Profile {
-			db, stats = NewProxyProfiler(db)
-		}
-	*/
-
+	var stats *profile.Stats
+	if cfg.Profile {
+		db, stats = NewProxyProfiler(db, cfg.ProfileFile)
+	}
 	if cfg.ValidateWorldState {
 		if len(ws) == 0 {
 			ws, err = GenerateWorldStateFromUpdateDB(cfg, cfg.First-1)
@@ -194,7 +189,7 @@ func stVmDb(ctx *cli.Context) error {
 		start = time.Now()
 	}
 
-	log.Notice("Run VM")
+	log.Notice("STVMDB")
 	var curBlock uint64 = 0
 	var curSyncPeriod uint64
 	isFirstBlock := true
@@ -217,6 +212,7 @@ func stVmDb(ctx *cli.Context) error {
 			lastBlockProgressReportBlock = tx.Block
 			lastBlockProgressReportBlock -= lastBlockProgressReportBlock % progressReportBlockInterval
 			lastBlockProgressReportTime = time.Now()
+			lastProfileBlock = tx.Block - (tx.Block % cfg.ProfileInterval)
 			isFirstBlock = false
 			// close off old block and possibly sync-periods
 		} else if curBlock != tx.Block {
@@ -291,6 +287,17 @@ func stVmDb(ctx *cli.Context) error {
 				log.Noticef("Reached block %d, last interval rate ~ %.0f Tx/s, ~ %.0f Gas/s", tx.Block, txRate, gasRate)
 				lastBlockProgressReportBlock += progressReportBlockInterval
 			}
+			if cfg.Profile {
+				if tx.Block >= lastProfileBlock+cfg.ProfileInterval {
+					// print stats
+					if err := stats.PrintProfiling(lastProfileBlock, lastProfileBlock+cfg.ProfileInterval); err != nil {
+						return err
+					}
+					// reset
+					stats.Reset()
+					lastProfileBlock += cfg.ProfileInterval
+				}
+			}
 		}
 	}
 
@@ -318,6 +325,7 @@ func stVmDb(ctx *cli.Context) error {
 		}
 	}
 
+	/*
 	if cfg.MemoryBreakdown {
 		if usage := db.GetMemoryUsage(); usage != nil {
 			log.Notice("State DB memory usage: %d byte\n%s", usage.UsedBytes, usage.Breakdown)
@@ -325,21 +333,21 @@ func stVmDb(ctx *cli.Context) error {
 			log.Info("Utilized storage solution does not support memory breakdowns.")
 		}
 	}
+	*/
+
+
+	MemoryBreakdown(db, cfg, log)
 
 	// write memory profile if requested
-	/*
-		if err := StartMemoryProfile(cfg); err != nil {
+	if err := StartMemoryProfile(cfg); err != nil {
+		return err
+	}
+
+	if cfg.Profile && curBlock != lastProfileBlock {
+		if err := stats.PrintProfiling(lastProfileBlock, curBlock); err != nil {
 			return err
 		}
-	*/
-
-	/*
-		if cfg.Profile {
-			fmt.Println("=================Statistics=================")
-			stats.PrintProfiling(log)
-			fmt.Println("============================================")
-		}
-	*/
+	}
 
 	if cfg.KeepDb && !isFirstBlock {
 		rootHash, _ := db.Commit(true)

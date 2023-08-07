@@ -9,16 +9,10 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var (
-	gitCommit = "" // Git SHA1 commit hash of the release (set via linker flags)
-	gitDate   = ""
-)
-
 func main() {
 	app := &cli.App{
 		Name:     "Integration Tester",
 		HelpName: "itest",
-		// Version:   params.VersionWithCommit(gitCommit, gitDate),
 		Copyright: "(c) 2022 Fantom Foundation",
 		Flags:     []cli.Flag{},
 		Commands: []*cli.Command{
