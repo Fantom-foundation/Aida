@@ -32,10 +32,16 @@ type Context struct {
 	tCritical   time.Duration // critical path runtime for transactions
 
 	tTransactions []time.Duration // runtime of transactions
+
+	transactionGas []uint64 // gas used for each transaction
+	blockGas       uint64   // gas used for each block
 }
 
-var errBlockOverheadTime = errors.New("block or overhead time measurements went wrong")
-var errBlockTxsTime = errors.New("block or txs time measurements went wrong")
+var (
+	errBlockOverheadTime = errors.New("block or overhead time measurements went wrong")
+	errBlockTxsTime      = errors.New("block or txs time measurements went wrong")
+	errInvalidLen        = errors.New("tTransactions or transactinGas length is invalid")
+)
 
 // NewContext returns a new context.
 func NewContext() *Context {
@@ -44,6 +50,7 @@ func NewContext() *Context {
 		txDependencies: graphutil.StrictPartialOrder{},
 		txAddresses:    TxAddresses{},
 		tTransactions:  []time.Duration{},
+		transactionGas: []uint64{},
 	}
 }
 
@@ -125,6 +132,7 @@ func (ctx *Context) RecordTransaction(tx *substate.Transaction, tTransaction tim
 	// update sequential time
 	ctx.tSequential += tTransaction
 	ctx.tTransactions = append(ctx.tTransactions, tTransaction)
+	ctx.transactionGas = append(ctx.transactionGas, tx.Substate.Result.GasUsed)
 
 	// retrieve contract/wallet addresses of transaction
 	addresses := findTxAddresses(tx)
@@ -157,15 +165,17 @@ func (ctx *Context) RecordTransaction(tx *substate.Transaction, tTransaction tim
 
 // ProfileData for one block
 type ProfileData struct {
-	curBlock      uint64  // current block number
-	tBlock        int64   // block runtime
-	tSequential   int64   // total transaction runtime
-	tCritical     int64   // critical path runtime for transactions
-	tCommit       int64   // commit runtime
-	speedup       float64 // speedup value for experiment
-	ubNumProc     int64   // upper bound on the number of processors (i.e. width of task graph)
-	numTx         int     // number of transactions
-	tTransactions []int64 // runtime of transactions
+	curBlock       uint64   // current block number
+	tBlock         int64    // block runtime
+	tSequential    int64    // total transaction runtime
+	tCritical      int64    // critical path runtime for transactions
+	tCommit        int64    // commit runtime
+	speedup        float64  // speedup value for experiment
+	ubNumProc      int64    // upper bound on the number of processors (i.e. width of task graph)
+	numTx          int      // number of transactions
+	tTransactions  []int64  // runtime of transactions
+	transactionGas []uint64 // gasUsed per transaction
+	blockGas       uint64   // gasUsed per block
 }
 
 // GetProfileData produces a profile record for the SQLITE3 DB.
@@ -194,23 +204,32 @@ func (ctx *Context) GetProfileData(curBlock uint64, tBlock time.Duration) (*Prof
 	// run independently.
 	ubNumProc := int64(len(graphutil.MinChainCover(ctx.txDependencies)))
 
+	if len(ctx.tTransactions) != len(ctx.transactionGas) {
+		return nil, errInvalidLen
+	}
+
 	tTransactions := make([]int64, 0, len(ctx.tTransactions))
-	for _, tTransaction := range ctx.tTransactions {
+	transactionGas := make([]uint64, 0, len(ctx.transactionGas))
+	for i, tTransaction := range ctx.tTransactions {
 		tTransactions = append(tTransactions, tTransaction.Nanoseconds())
+		transactionGas = append(transactionGas, ctx.transactionGas[i])
+		ctx.blockGas += ctx.transactionGas[i]
 	}
 
 	// write data into SQLiteDB
 	// profileData for parallel execution speedup experiment
 	data := ProfileData{
-		curBlock:      curBlock,
-		tBlock:        tBlock.Nanoseconds(),
-		tSequential:   ctx.tSequential.Nanoseconds(),
-		tCritical:     ctx.tCritical.Nanoseconds(),
-		tCommit:       tCommit.Nanoseconds(),
-		speedup:       speedup,
-		ubNumProc:     ubNumProc,
-		numTx:         ctx.n,
-		tTransactions: tTransactions,
+		curBlock:       curBlock,
+		tBlock:         tBlock.Nanoseconds(),
+		tSequential:    ctx.tSequential.Nanoseconds(),
+		tCritical:      ctx.tCritical.Nanoseconds(),
+		tCommit:        tCommit.Nanoseconds(),
+		speedup:        speedup,
+		ubNumProc:      ubNumProc,
+		numTx:          ctx.n,
+		tTransactions:  tTransactions,
+		transactionGas: transactionGas,
+		blockGas:       ctx.blockGas,
 	}
 	return &data, nil
 }

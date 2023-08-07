@@ -15,17 +15,17 @@ const (
 	// SQL for inserting new block
 	insertBlockSQL = `
 INSERT INTO parallelprofile (
-	block, tBlock, tSequential, tCritical, tCommit, speedup, ubNumProc, numTx
+	block, tBlock, tSequential, tCritical, tCommit, speedup, ubNumProc, numTx, blockGas
 ) VALUES (
-	?, ?, ?, ?, ?, ?, ?, ?
+	?, ?, ?, ?, ?, ?, ?, ?, ?
 )
 `
 	// SQL for inserting new transaction
 	insertTxSQL = `
 INSERT INTO txProfile (
-block, tx, duration
+block, tx, duration, transactionGas
 ) VALUES (
-?, ?, ?
+?, ?, ?, ?
 )
 `
 
@@ -40,11 +40,13 @@ block, tx, duration
 	tCommit INTEGER,
 	speedup FLOAT,
 	ubNumProc INTEGER,
-	numTx INTEGER);
+	numTx INTEGER,
+	blockGas INTEGER);
 	CREATE TABLE IF NOT EXISTS txProfile (
     block INTEGER,
 	tx    INTEGER, 
-	duration INTEGER
+	duration INTEGER,
+	transactionGas INTEGER
 );
 `
 )
@@ -121,14 +123,14 @@ func (db *ProfileDB) Flush() error {
 	}
 	for _, ProfileData := range db.buffer {
 		_, err := tx.Stmt(db.blockStmt).Exec(ProfileData.curBlock, ProfileData.tBlock, ProfileData.tSequential, ProfileData.tCritical,
-			ProfileData.tCommit, ProfileData.speedup, ProfileData.ubNumProc, ProfileData.numTx)
+			ProfileData.tCommit, ProfileData.speedup, ProfileData.ubNumProc, ProfileData.numTx, ProfileData.blockGas)
 		if err != nil {
 			_ = tx.Rollback()
 			return err
 		}
 		// write into new txProfile table here the transaction durations
 		for i, tTransaction := range ProfileData.tTransactions {
-			_, err = tx.Stmt(db.txStmt).Exec(ProfileData.curBlock, i, tTransaction)
+			_, err = tx.Stmt(db.txStmt).Exec(ProfileData.curBlock, i, tTransaction, ProfileData.transactionGas[i])
 			if err != nil {
 				_ = tx.Rollback()
 				return err
