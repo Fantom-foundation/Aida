@@ -5,8 +5,8 @@ import (
 	"log"
 	"os"
 
-	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/state"
-	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/version"
+	"github.com/Fantom-foundation/Aida/cmd/util-worldstate/state"
+	"github.com/Fantom-foundation/Aida/cmd/util-worldstate/version"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/urfave/cli/v2"
