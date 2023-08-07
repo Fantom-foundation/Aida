@@ -13,7 +13,7 @@ import (
 	"strconv"
 
 	"github.com/Fantom-foundation/Aida/cmd/substate-cli/replay"
-	"github.com/Fantom-foundation/Aida/cmd/updateset-cli/updateset"
+	"github.com/Fantom-foundation/Aida/cmd/util-updateset/updateset"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"

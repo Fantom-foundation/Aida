@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/Fantom-foundation/Aida/cmd/worldstate-cli/state"
+	"github.com/Fantom-foundation/Aida/cmd/util-worldstate/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	wsOpera "github.com/Fantom-foundation/Aida/world-state/db/opera"
 	"github.com/op/go-logging"

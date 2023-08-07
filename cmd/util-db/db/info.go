@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Fantom-foundation/Aida/cmd/db-cli/flags"
+	"github.com/Fantom-foundation/Aida/cmd/util-db/flags"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"

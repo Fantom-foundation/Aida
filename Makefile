@@ -20,7 +20,7 @@ GOPROXY ?= "https://proxy.golang.org,direct"
 
 .PHONY: all clean help test tosca
 
-all: aida-api-replay aida-worldstate aida-updateset aida-db aida-trace aida-runarchive aida-runvm aida-stochastic aida-substate aida-profile
+all: aida-api-replay util-worldstate util-updateset util-db aida-trace aida-runarchive aida-runvm aida-stochastic aida-substate aida-profile
 
 aida-api-replay:
 	@cd carmen/go/lib ; \
@@ -40,12 +40,12 @@ tosca:
 	@cd ./tosca ; \
 	make
 
-aida-worldstate:
+util-worldstate:
 	@go build \
-		-ldflags="-X 'github.com/Fantom-foundation/Aida/cmd/worldstate-cli/version.Version=$(APP_VERSION)' -X 'github.com/Fantom-foundation/Aida/cmd/worldstate-cli/version.Time=$(BUILD_DATE)' -X 'github.com/Fantom-foundation/Aida/cmd/worldstate-cli/version.Compiler=$(BUILD_COMPILER)' -X 'github.com/Fantom-foundation/Aida/cmd/worldstate-cli/version.Commit=$(BUILD_COMMIT)' -X 'github.com/Fantom-foundation/Aida/cmd/worldstate-cli/version.CommitTime=$(BUILD_COMMIT_TIME)'" \
-		-o $(GO_BIN)/aida-worldstate \
+		-ldflags="-X 'github.com/Fantom-foundation/Aida/cmd/util-worldstate/version.Version=$(APP_VERSION)' -X 'github.com/Fantom-foundation/Aida/cmd/util-worldstate/version.Time=$(BUILD_DATE)' -X 'github.com/Fantom-foundation/Aida/cmd/util-worldstate/version.Compiler=$(BUILD_COMPILER)' -X 'github.com/Fantom-foundation/Aida/cmd/util-worldstate/version.Commit=$(BUILD_COMMIT)' -X 'github.com/Fantom-foundation/Aida/cmd/util-worldstate/version.CommitTime=$(BUILD_COMMIT_TIME)'" \
+		-o $(GO_BIN)/util-worldstate \
 		-v \
-		./cmd/worldstate-cli
+		./cmd/util-worldstate
 
 aida-stochastic: carmen/go/lib/libcarmen.so tosca
 	GOPROXY=$(GOPROXY) \
@@ -83,17 +83,17 @@ aida-substate: carmen/go/lib/libcarmen.so tosca
 	-o $(GO_BIN)/aida-substate \
 	./cmd/substate-cli
 
-aida-updateset: carmen/go/lib/libcarmen.so tosca
+util-updateset: carmen/go/lib/libcarmen.so tosca
 	GOPROXY=$(GOPROXY) \
 	go build -ldflags "-s -w" \
-	-o $(GO_BIN)/aida-updateset \
-	./cmd/updateset-cli
+	-o $(GO_BIN)/util-updateset \
+	./cmd/util-updateset
 
-aida-db: carmen/go/lib/libcarmen.so tosca
+util-db: carmen/go/lib/libcarmen.so tosca
 	GOPROXY=$(GOPROXY) \
 	go build -ldflags "-s -w" \
-	-o $(GO_BIN)/aida-db \
-	./cmd/db-cli
+	-o $(GO_BIN)/util-db \
+	./cmd/util-db
 
 aida-profile: carmen/go/lib/libcarmen.so tosca
 	GOPROXY=$(GOPROXY) \
