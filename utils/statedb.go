@@ -49,20 +49,6 @@ func PrepareStateDB(cfg *Config) (state.StateDB, string, error) {
 			return nil, "", fmt.Errorf("priming failed. %v", err)
 		}
 	}
-
-	if cfg.ValidateWorldState {
-		ws, err := GenerateWorldStateFromUpdateDB(cfg, cfg.First-1)
-		if err != nil {
-			return nil, "", fmt.Errorf("failed generating worldstate. %v", err)
-		}
-		if err := DeleteDestroyedAccountsFromWorldState(ws, cfg, cfg.First-1); err != nil {
-			return nil, "", fmt.Errorf("failed to remove deleted accoount from the world state. %v", err)
-		}
-		if err := ValidateStateDB(ws, db, false); err != nil {
-			return nil, "", fmt.Errorf("pre: World state is not contained in the stateDB. %v", err)
-		}
-	}
-
 	return db, dbPath, nil
 }
 
