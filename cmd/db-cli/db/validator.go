@@ -1,18 +1,36 @@
 package db
 
 import (
+	"bytes"
 	"crypto/md5"
 	"encoding/hex"
+	"errors"
+	"fmt"
 	"sync"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/logger"
+	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
+	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/op/go-logging"
+	"github.com/urfave/cli/v2"
 )
 
-const standardInputBufferSize = 50
+const (
+	standardInputBufferSize = 50
+	firstOperaTestnetBlock  = 479326
+)
+
+var ValidateCommand = cli.Command{
+	Action: validateCmd,
+	Name:   "validate",
+	Usage:  "Validates AidaDb using md5 DbHash.",
+	Flags: []cli.Flag{
+		&utils.AidaDbFlag,
+	},
+}
 
 // validator is used to iterate over all key/value pairs inside AidaDb and creating md5 hash
 type validator struct {
@@ -23,6 +41,120 @@ type validator struct {
 	closed chan any
 	log    *logging.Logger
 	wg     *sync.WaitGroup
+}
+
+// validateCmd calculates the dbHash for given AidaDb and compares it to expected hash either found in metadata or online
+func validateCmd(ctx *cli.Context) error {
+	log := logger.NewLogger("INFO", "ValidateCMD")
+
+	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
+
+	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", true)
+	if err != nil {
+		return fmt.Errorf("cannot open db; %v", err)
+	}
+
+	defer MustCloseDB(aidaDb)
+
+	md := utils.NewAidaDbMetadata(aidaDb, "INFO")
+
+	md.ChainId = md.GetChainID()
+	if md.ChainId == 0 {
+		log.Warning("cannot find db-hash in your aida-db metadata, this operation is needed because db-hash was not found inside your aida-db; please make sure you specified correct chain-id with flag --%v", utils.ChainIDFlag.Name)
+		md.ChainId = cfg.ChainID
+	}
+
+	// validation only makes sense if user has pure AidaDb
+	dbType := md.GetDbType()
+	if dbType != utils.GenType {
+		return fmt.Errorf("validation cannot be performed - your db type (%v) cannot be validated; aborting", dbType)
+	}
+
+	// we need to make sure aida-db starts from beginning, otherwise validation is impossible
+	// todo simplify condition once lachesis patch is ready for testnet
+	md.FirstBlock = md.GetFirstBlock()
+	if (md.ChainId == 250 && md.FirstBlock != 0) || (md.ChainId == 4002 && md.FirstBlock != firstOperaTestnetBlock) {
+		return fmt.Errorf("validation cannot be performed - your db does not start at block 0; your first block: %v", md.FirstBlock)
+	}
+
+	var saveHash = false
+
+	// if db hash is not present, look for it in patches.json
+	expectedHash := md.GetDbHash()
+	if len(expectedHash) == 0 {
+		// we want to save the hash inside metadata
+		saveHash = true
+		expectedHash, err = findDbHashOnline(md.ChainId, log, md)
+		if err != nil {
+			return fmt.Errorf("validation cannot be performed; %v", err)
+		}
+	}
+
+	log.Noticef("Found DbHash for your Db: %v", hex.EncodeToString(expectedHash))
+
+	log.Noticef("Starting DbHash calculation for %v; this may take several hours...", cfg.AidaDb)
+	trueHash, err := validate(aidaDb, "INFO")
+	if err != nil {
+		return err
+	}
+
+	if bytes.Compare(expectedHash, trueHash) != 0 {
+		return fmt.Errorf("hashes are different! expected: %v; your aida-db:%v", hex.EncodeToString(expectedHash), hex.EncodeToString(trueHash))
+	}
+
+	log.Noticef("Validation successful!")
+
+	if saveHash {
+		err = md.SetDbHash(trueHash)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// findDbHashOnline if user has no dbHash inside his AidaDb metadata
+func findDbHashOnline(chainId int, log *logging.Logger, md *utils.AidaDbMetadata) ([]byte, error) {
+	var url string
+
+	if chainId == 250 {
+		url = utils.AidaDbRepositoryMainnetUrl
+	} else if chainId == 4002 {
+		url = utils.AidaDbRepositoryTestnetUrl
+	}
+
+	log.Noticef("looking for db-hash online on %v", url)
+	patches, err := downloadPatchesJson()
+	if err != nil {
+		return nil, err
+	}
+
+	md.LastBlock = md.GetLastBlock()
+
+	if md.LastBlock == 0 {
+		log.Warning("your aida-db seems to have empty metadata; looking for block range in substate")
+	}
+
+	var ok bool
+
+	md.FirstBlock, md.LastBlock, ok = utils.FindBlockRangeInSubstate()
+	if !ok {
+		return nil, errors.New("cannot find block range in substate")
+	}
+
+	err = md.SetBlockRange(md.FirstBlock, md.LastBlock)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, patch := range patches {
+		if patch.ToBlock == md.LastBlock {
+			return hex.DecodeString(patch.DbHash)
+		}
+	}
+
+	return nil, errors.New("could not find db-hash for your db range")
 }
 
 // newDbValidator returns new instance of validator
