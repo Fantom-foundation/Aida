@@ -27,7 +27,7 @@ var GenDeletedAccountsCommand = cli.Command{
 		&logger.LogLevelFlag,
 	},
 	Description: `
-The aida-vm replay command requires two arguments:
+The util-db gen-deleted-accounts command requires two arguments:
 <blockNumFirst> <blockNumLast>
 <blockNumFirst> and <blockNumLast> are the first and
 last block of the inclusive range of blocks to replay transactions.`,
