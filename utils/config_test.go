@@ -110,6 +110,32 @@ func TestUtilsConfig_SetBlockRange(t *testing.T) {
 	if last != uint64(7_513_335) {
 		t.Fatalf("Failed to parse last block; Should be: %d, but is: %d", 7_513_335, last)
 	}
+
+	first, last, err = SetBlockRange("opera+23456", "London-100", 4002)
+	if err != nil {
+		t.Fatalf("Failed to set block range (opera+23456-London-100 on testnet): %v", err)
+	}
+
+	if first != uint64(502_783) {
+		t.Fatalf("Failed to parse first block; Should be: %d, but is: %d", 502_783, first)
+	}
+
+	if last != uint64(7_513_235) {
+		t.Fatalf("Failed to parse last block; Should be: %d, but is: %d", 7_513_235, last)
+	}
+
+	first, last, err = SetBlockRange("berlin-1000", "LonDoN", 250)
+	if err != nil {
+		t.Fatalf("Failed to set block range (berlin-1000-LonDoN on testnet): %v", err)
+	}
+
+	if first != uint64(37_454_223) {
+		t.Fatalf("Failed to parse first block; Should be: %d, but is: %d", 37_454_223, first)
+	}
+
+	if last != uint64(37_534_833) {
+		t.Fatalf("Failed to parse last block; Should be: %d, but is: %d", 37_534_833, last)
+	}
 }
 
 func TestUtilsConfig_SetInvalidBlockRange(t *testing.T) {

@@ -812,7 +812,7 @@ func parseOffset(arg string) (string, string, uint64, error) {
 func splitKeywordOffset(arg string, symbol string) (string, uint64, bool) {
 	res := strings.Split(arg, symbol)
 
-	if _, ok := hardForksMainnet[res[0]]; !ok {
+	if _, ok := hardForksMainnet[strings.ToLower(res[0])]; !ok {
 		return "", 0, false
 	}
 
