@@ -112,7 +112,6 @@ func getReferenceStatsActionWithConsumer[T comparable](ctx *cli.Context, cli_com
 
 	log := logger.NewLogger(cfg.LogLevel, "Replay Substate")
 
-
 	log.Infof("chain-id: %v\n", cfg.ChainID)
 	log.Infof("contract-db: %v\n", cfg.Db)
 
