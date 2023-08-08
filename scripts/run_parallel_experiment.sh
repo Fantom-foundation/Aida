@@ -71,12 +71,12 @@ log "reduce data set ..."
 sqlite3 $outputdir/profile.db << EOF
 -- create temporary table groupedParallelProfile to group data for every 100,000 blocks
 DROP TABLE IF EXISTS  groupedParallelProfile; 
-CREATE TABLE groupedParallelProfile(block INTEGER, tBlock REAL, tCommit REAL, speedup REAL);
-INSERT INTO groupedParallelProfile SELECT block/100000, tBlock, tCommit, log(speedup) FROM parallelprofile;
+CREATE TABLE groupedParallelProfile(block INTEGER, blockGas REAL, tBlock REAL, tCommit REAL, speedup REAL);
+INSERT INTO groupedParallelProfile SELECT block/100000, blockGas, tBlock, tCommit, log(speedup) FROM parallelprofile;
 -- aggregate data 
 DROP TABLE IF EXISTS aggregatedParallelProfile;
-CREATE TABLE aggregatedParallelProfile(block INTEGER, tBlock REAL, tCommit REAL, speedup REAL);
-INSERT INTO aggregatedParallelProfile SELECT min(block)*100000, avg(tBlock)/1e6, avg(tCommit)/1e6, exp(avg(speedup)) FROM groupedParallelProfile GROUP BY block;
+CREATE TABLE aggregatedParallelProfile(block INTEGER, blockGas REAL, tBlock REAL, tCommit REAL, speedup REAL);
+INSERT INTO aggregatedParallelProfile SELECT min(block)*100000, avg(blockGas), avg(tBlock)/1e6, avg(tCommit)/1e6, exp(avg(speedup)) FROM groupedParallelProfile GROUP BY block;
 DROP TABLE groupedParallelProfile;
 EOF
 
