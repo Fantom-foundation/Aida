@@ -20,7 +20,7 @@ GOPROXY ?= "https://proxy.golang.org,direct"
 
 .PHONY: all clean help test tosca
 
-all: rpc-adb sdb vm-adb vm-sdb stochastic-sdb vm profile util-worldstate util-updateset util-db
+all: aida-rpc-adb aida-sdb aida-vm-adb aida-vm-sdb aida-stochastic-sdb aida-vm aida-profile util-worldstate util-updateset util-db
 
 
 carmen/go/lib/libcarmen.so:
@@ -31,7 +31,7 @@ tosca:
 	@cd ./tosca ; \
 	make
 
-rpc-adb:
+aida-rpc-adb:
 	@cd carmen/go/lib ; \
 	./build_libcarmen.sh ; \
 	cd ../../.. ; \
@@ -41,21 +41,21 @@ rpc-adb:
 	-o $(GO_BIN)/aida-rpc-adb \
 	./cmd/aida-rpc-adb
 
-stochastic-sdb: carmen/go/lib/libcarmen.so tosca
+aida-stochastic-sdb: carmen/go/lib/libcarmen.so tosca
 	GOPROXY=$(GOPROXY) \
 	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/go-opera-fvm \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-stochastic-sdb \
 	./cmd/aida-stochastic-sdb
 
-vm-adb: carmen/go/lib/libcarmen.so tosca
+aida-vm-adb: carmen/go/lib/libcarmen.so tosca
 	GOPROXY=$(GOPROXY) \
 	GOPRIVATE=github.com/Fantom-foundation/Carmen \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-vm-adb \
 	./cmd/aida-vm-adb
 
-vm-sdb: carmen/go/lib/libcarmen.so tosca
+aida-vm-sdb: carmen/go/lib/libcarmen.so tosca
 	GOPROXY=$(GOPROXY) \
 	GOPRIVATE=github.com/Fantom-foundation/Carmen \
 	CGO_CFLAGS="-g -O2  -DMDBX_FORCE_ASSERTIONS=1 -Wno-error=strict-prototypes" \
@@ -63,21 +63,21 @@ vm-sdb: carmen/go/lib/libcarmen.so tosca
 	-o $(GO_BIN)/aida-vm-sdb \
 	./cmd/aida-vm-sdb
 
-vm: carmen/go/lib/libcarmen.so tosca
+aida-vm: carmen/go/lib/libcarmen.so tosca
 	GOPROXY=$(GOPROXY) \
 	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/go-opera-fvm \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-vm \
 	./cmd/aida-vm
 
-sdb: carmen/go/lib/libcarmen.so tosca
+aida-sdb: carmen/go/lib/libcarmen.so tosca
 	GOPROXY=$(GOPROXY) \
 	GOPRIVATE=github.com/Fantom-foundation/Carmen \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-sdb \
 	./cmd/aida-sdb
 
-profile: carmen/go/lib/libcarmen.so tosca
+aida-profile: carmen/go/lib/libcarmen.so tosca
 	GOPROXY=$(GOPROXY) \
 	GOPRIVATE=github.com/Fantom-foundation/Carmen \
 	CGO_CFLAGS="-g -O2  -DMDBX_FORCE_ASSERTIONS=1 -Wno-error=strict-prototypes" \
