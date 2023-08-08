@@ -26,9 +26,6 @@ func (la *ValidationAction) PostPrepare(bp *BlockProcessor) error {
 		if err != nil {
 			return fmt.Errorf("failed generating worldstate. %v", err)
 		}
-		if err := utils.DeleteDestroyedAccountsFromWorldState(ws, bp.cfg, bp.cfg.First-1); err != nil {
-			return fmt.Errorf("failed to remove deleted accoount from the world state. %v", err)
-		}
 		if err := utils.ValidateStateDB(ws, bp.db, false); err != nil {
 			return fmt.Errorf("pre: World state is not contained in the stateDB. %v", err)
 		}
@@ -47,9 +44,6 @@ func (la *ValidationAction) PostProcessing(bp *BlockProcessor) error {
 		ws, err := utils.GenerateWorldStateFromUpdateDB(bp.cfg, bp.cfg.Last)
 		if err != nil {
 			return err
-		}
-		if err := utils.DeleteDestroyedAccountsFromWorldState(ws, bp.cfg, bp.cfg.Last); err != nil {
-			return fmt.Errorf("Failed to remove deleted accoount from the world state. %v", err)
 		}
 		if err := utils.ValidateStateDB(ws, bp.db, false); err != nil {
 			return fmt.Errorf("World state is not contained in the stateDB. %v", err)

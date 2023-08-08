@@ -43,12 +43,6 @@ func PrepareStateDB(cfg *Config) (state.StateDB, string, error) {
 	if cfg.DbLogging {
 		db = proxy.NewLoggerProxy(db, cfg.LogLevel)
 	}
-
-	if !cfg.SkipPriming && cfg.StateDbSrc == "" {
-		if err := LoadWorldStateAndPrime(db, cfg, cfg.First-1); err != nil {
-			return nil, "", fmt.Errorf("priming failed. %v", err)
-		}
-	}
 	return db, dbPath, nil
 }
 

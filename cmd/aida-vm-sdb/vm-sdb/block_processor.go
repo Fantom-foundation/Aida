@@ -1,6 +1,7 @@
 package runvm
 
 import (
+	"fmt"
 	"math/big"
 	"os"
 
@@ -70,11 +71,31 @@ func (bp *BlockProcessor) Run(name string, actions []ProcessorActions) error {
 			return err
 		}
 	}
+	defer func() error {
+		// call exit actions
+		for _, a := range actions {
+			if err := a.Exit(bp); err != nil {
+				return fmt.Errorf("failed to close actions; %v", err)
+			}
+		}
+		return nil
+	}()
+
+	// open substate database
+	log.Notice("Open substate database")
+	substate.SetSubstateDb(cfg.SubstateDb)
+	substate.OpenSubstateDBReadOnly()
+	defer substate.CloseSubstateDB()
 
 	// create and prime a stateDB
 	bp.db, bp.stateDbDir, err = utils.PrepareStateDB(cfg)
 	if err != nil {
 		return err
+	}
+	if !cfg.SkipPriming && cfg.StateDbSrc == "" {
+		if err := utils.LoadWorldStateAndPrime(bp.db, cfg, cfg.First-1); err != nil {
+			return fmt.Errorf("priming failed. %v", err)
+		}
 	}
 	if !cfg.KeepDb {
 		log.Warningf("--keep-db is not used. Directory %v with DB will be removed at the end of this run.", bp.stateDbDir)
@@ -87,12 +108,6 @@ func (bp *BlockProcessor) Run(name string, actions []ProcessorActions) error {
 			return err
 		}
 	}
-
-	// open substate database
-	log.Notice("Open substate database")
-	substate.SetSubstateDb(cfg.SubstateDb)
-	substate.OpenSubstateDBReadOnly()
-	defer substate.CloseSubstateDB()
 
 	// create new iterator over substates and iterate
 	log.Notice("Process blocks")
@@ -153,11 +168,15 @@ func (bp *BlockProcessor) Run(name string, actions []ProcessorActions) error {
 		}
 
 		// process transaction
-		if err := utils.ProcessTx(bp.db, cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
-			log.Critical("\tFailed processing transaction: %v", err)
-			return err
+		if tx.Transaction >= utils.PseudoTx {
+			utils.ProcessPseudoTx(tx.Substate.OutputAlloc, bp.db)
+		} else {
+			if err := utils.ProcessTx(bp.db, cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
+				log.Criticalf("\tFailed processing transaction: %v", err)
+				return err
+			}
+			bp.totalGas.Add(bp.totalGas, new(big.Int).SetUint64(tx.Substate.Result.GasUsed))
 		}
-		bp.totalGas.Add(bp.totalGas, new(big.Int).SetUint64(tx.Substate.Result.GasUsed))
 
 		// call post-transaction actions
 		for _, a := range actions {
@@ -184,14 +203,7 @@ func (bp *BlockProcessor) Run(name string, actions []ProcessorActions) error {
 	// close the DB and print disk usage
 	log.Info("Close StateDB")
 	if err := bp.db.Close(); err != nil {
-		log.Errorf("Failed to close database: %v", err)
-	}
-
-	// call exit actions
-	for _, a := range actions {
-		if err := a.Exit(bp); err != nil {
-			return err
-		}
+		return fmt.Errorf("Failed to close database: %v", err)
 	}
 
 	return err
