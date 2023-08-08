@@ -64,7 +64,7 @@ Machine() {
 
 # run full parallel experiment
 log "run parallel experiment in the block range from $startblock to $endblock ..."
-#./build/aida-profile parallelisation --aida-db $aidadbpath --db-impl $dbimpl --db-variant $dbvariant --vm-impl=$vmimpl --db-tmp $tmpdir $startblock $endblock "$outputdir/profile.db"
+./build/aida-profile parallelisation --aida-db $aidadbpath --db-impl $dbimpl --db-variant $dbvariant --vm-impl=$vmimpl --db-tmp $tmpdir $startblock $endblock "$outputdir/profile.db"
 
 # reduce dataset in sqlite3 (NB: R consumes too much memory/is too slow for the reduction)
 log "reduce data set ..."
