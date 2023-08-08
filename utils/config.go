@@ -756,7 +756,8 @@ func setBlockNumber(arg string, chainId int) (uint64, error) {
 	var offset uint64
 
 	// check if keyword has an offset and extract the keyword, offset direction (arithmetical symbol) and offset value
-	if hasOffset, _ = regexp.MatchString("/([a-zA-Z])\\w+([+-])\\d+/g", arg); hasOffset {
+	re := regexp.MustCompile(`^[a-zA-Z]+\w*[+-]\d+$`)
+	if hasOffset = re.MatchString(arg); hasOffset {
 		var err error
 		if keyword, symbol, offset, err = parseOffset(arg); err != nil {
 			return 0, err
