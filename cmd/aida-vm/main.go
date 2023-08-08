@@ -19,7 +19,6 @@ func main() {
 			&vm.ReplayCommand,
 			&vm.GenDeletedAccountsCommand,
 			&vm.GetStorageUpdateSizeCommand,
-			&vm.GetCodeCommand,
 			&vm.GetCodeSizeCommand,
 			&vm.SubstateDumpCommand,
 			&vm.GetAddressStatsCommand,

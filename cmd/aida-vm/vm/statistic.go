@@ -103,7 +103,10 @@ func getReferenceStatsAction[T comparable](ctx *cli.Context, cli_command string,
 // getReferenceStatsActionWithConsumer extends the abilities of the function above by
 // allowing some post-processing to be applied on the collected statistics.
 func getReferenceStatsActionWithConsumer[T comparable](ctx *cli.Context, cli_command string, extract Extractor[T], consume AccessStatisticsConsumer[T]) error {
-	var err error
+	var (
+		err        error
+		contractDb string
+	)
 
 	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if err != nil {
@@ -112,10 +115,10 @@ func getReferenceStatsActionWithConsumer[T comparable](ctx *cli.Context, cli_com
 
 	log := logger.NewLogger(cfg.LogLevel, "Replay Substate")
 
-	ContractDB = cfg.Db
+	contractDb = cfg.Db
 	chainID = cfg.ChainID
 	log.Infof("chain-id: %v\n", chainID)
-	log.Infof("contract-db: %v\n", ContractDB)
+	log.Infof("contract-db: %v\n", contractDb)
 
 	substate.SetSubstateDb(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
