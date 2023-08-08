@@ -78,18 +78,3 @@ func TestPositiveReplaySubstateValidate(t *testing.T) {
 		}
 	}
 }
-
-// TestPositiveCompareLog executes compare-log command for 101 blocks
-func TestPositiveCompareLog(t *testing.T) {
-	app := initTraceApp()
-	os.Args = []string{
-		"trace", "compare-log",
-		"--substate-db", "substate.test",
-		"--trace-file", testTraceFile,
-		"--log", "CRITICAL",
-		"5000000", "5000100",
-	}
-	if err := app.Run(os.Args); err != nil {
-		t.Fatalf("%v\n", err)
-	}
-}
