@@ -28,6 +28,14 @@ block, tx, duration, transactionGas
 ?, ?, ?, ?
 )
 `
+	// SQL for inserting new transaction
+	insertTxSQL = `
+INSERT INTO txProfile (
+block, tx, duration
+) VALUES (
+?, ?, ?
+)
+`
 
 	// SQL for creating a new profiling table
 	createSQL = `

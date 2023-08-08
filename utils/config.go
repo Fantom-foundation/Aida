@@ -30,8 +30,8 @@ const (
 )
 
 const (
-	aidaDbRepositoryMainnetUrl = "https://aida.repository.fantom.network"
-	aidaDbRepositoryTestnetUrl = "https://aida.testnet.repository.fantom.network"
+	AidaDbRepositoryMainnetUrl = "https://aida.repository.fantom.network"
+	AidaDbRepositoryTestnetUrl = "https://aida.testnet.repository.fantom.network"
 )
 
 var (
@@ -227,8 +227,11 @@ var (
 	}
 	TraceFileFlag = cli.PathFlag{
 		Name:  "trace-file",
-		Usage: "set storage trace's output directory",
-		Value: "./",
+		Usage: "set storage trace file",
+	}
+	TraceDirectoryFlag = cli.PathFlag{
+		Name:  "trace-dir",
+		Usage: "set storage trace directory",
 	}
 	UpdateDbFlag = cli.PathFlag{
 		Name:  "update-db",
@@ -450,6 +453,7 @@ type Config struct {
 	WorldStateDb        string            // path to worldstate
 	Workers             int               // number of worker threads
 	TraceFile           string            // name of trace file
+	TraceDirectory      string            // name of trace directory
 	Trace               bool              // trace flag
 	LogLevel            string            // level of the logging of the app action
 	SourceTableName     string            // represents the name of a source DB table
@@ -717,9 +721,9 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 // setAidaDbRepositoryUrl based on chain id selects correct aida-db repository url
 func setAidaDbRepositoryUrl(chainId int) error {
 	if chainId == 250 {
-		AidaDbRepositoryUrl = aidaDbRepositoryMainnetUrl
+		AidaDbRepositoryUrl = AidaDbRepositoryMainnetUrl
 	} else if chainId == 4002 {
-		AidaDbRepositoryUrl = aidaDbRepositoryTestnetUrl
+		AidaDbRepositoryUrl = AidaDbRepositoryTestnetUrl
 	} else {
 		return fmt.Errorf("invalid chain id %d", chainId)
 	}
