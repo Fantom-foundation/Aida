@@ -65,17 +65,17 @@ func FindEpochNumber(blockNumber uint64, chainId int) (uint64, error) {
 
 	blockStr := "0x" + hex
 
-	return getBlockByNumber(blockStr, chainId)
+	return getEpochByNumber(blockStr, chainId)
 }
 
 // FindHeadEpochNumber via RPC request GetBlockByNumber
 func FindHeadEpochNumber(chainId int) (uint64, error) {
 	blockStr := "latest"
 
-	return getBlockByNumber(blockStr, chainId)
+	return getEpochByNumber(blockStr, chainId)
 }
 
-func getBlockByNumber(blockStr string, chainId int) (uint64, error) {
+func getEpochByNumber(blockStr string, chainId int) (uint64, error) {
 	payload := JsonRPCRequest{
 		Method:  "ftm_getBlockByNumber",
 		Params:  []interface{}{blockStr, false},
