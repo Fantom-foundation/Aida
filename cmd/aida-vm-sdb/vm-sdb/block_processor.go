@@ -1,9 +1,10 @@
-package runvm
+package vm_sdb
 
 import (
 	"fmt"
 	"math/big"
 	"os"
+	"reflect"
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
@@ -46,39 +47,90 @@ func NewBlockProcessor(ctx *cli.Context) (*BlockProcessor, error) {
 	}, nil
 }
 
-// Run executes all blocks in sequence
-func (bp *BlockProcessor) Run(name string, actions []ProcessorActions) error {
+type ActionList []ProcessorActions
+
+func (al ActionList) ExecuteAll(method string, args ...interface{}) error {
+	inputs := make([]reflect.Value, len(args))
+	for i := range args {
+		inputs[i] = reflect.ValueOf(args[i])
+	}
+
+	for _, action := range al {
+		out := reflect.ValueOf(action).MethodByName(method).Call(inputs)
+		if out[0].Interface() != nil {
+			return out[0].Interface().(error)
+		}
+	}
+	return nil
+}
+
+// Prepare creates and primes a stateDB
+func (bp *BlockProcessor) Prepare() error {
 	var err error
+	bp.db, bp.stateDbDir, err = utils.PrepareStateDB(bp.cfg)
+	if err != nil {
+		return err
+	}
+	if !bp.cfg.SkipPriming && bp.cfg.StateDbSrc == "" {
+		if err := utils.LoadWorldStateAndPrime(bp.db, bp.cfg, bp.cfg.First-1); err != nil {
+			return fmt.Errorf("priming failed. %v", err)
+		}
+	}
+	return nil
+}
 
-	// retrieve configuration
-	cfg := bp.cfg
+func (bp *BlockProcessor) ProcessFirstBlock(iter substate.SubstateIterator) error {
+	// no transaction available for the specified range
+	if !iter.Next() {
+		return nil
+	}
 
-	// TODO: there should not be a side-effect on cfg in runvm - that is a design failure
-	cfg.StateValidationMode = utils.SubsetCheck
-	cfg.CopySrcDb = true
+	// process first transaction
+	tx := iter.Value()
+	if tx.Block > bp.cfg.Last {
+		return nil
+	}
+	bp.syncPeriod = tx.Block / bp.cfg.SyncPeriodLength
+	bp.block = tx.Block
+	bp.totalTx = 0
+	bp.db.BeginSyncPeriod(bp.syncPeriod)
+	bp.db.BeginBlock(bp.block)
+
+	// process transaction
+	if err := utils.ProcessTx(bp.db, bp.cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
+		bp.log.Criticalf("\tFailed processing transaction: %v", err)
+		return err
+	}
+	bp.totalGas.Add(bp.totalGas, new(big.Int).SetUint64(tx.Substate.Result.GasUsed))
+	return nil
+}
+
+// Run executes all blocks in sequence
+func (bp *BlockProcessor) Run(name string, actions ActionList) error {
+	var err error
 
 	// reset state
 	bp.block = uint64(0)
 	bp.syncPeriod = uint64(0)
+
+	// TODO: there should not be a side-effect on cfg in runvm - that is a design failure
+	bp.cfg.StateValidationMode = utils.SubsetCheck
+	bp.cfg.CopySrcDb = true
+
+	// retrieve configuration
+	cfg := bp.cfg
 
 	// open logger
 	bp.log = logger.NewLogger(cfg.LogLevel, name)
 	log := bp.log
 
 	// call init actions
-	for _, a := range actions {
-		if err := a.Init(bp); err != nil {
-			return err
-		}
+	if err := actions.ExecuteAll("Init", bp); err != nil {
+		return err
 	}
+
 	defer func() error {
-		// call exit actions
-		for _, a := range actions {
-			if err := a.Exit(bp); err != nil {
-				return fmt.Errorf("failed to close actions; %v", err)
-			}
-		}
-		return nil
+		return actions.ExecuteAll("Exit", bp)
 	}()
 
 	// open substate database
@@ -87,15 +139,8 @@ func (bp *BlockProcessor) Run(name string, actions []ProcessorActions) error {
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
-	// create and prime a stateDB
-	bp.db, bp.stateDbDir, err = utils.PrepareStateDB(cfg)
-	if err != nil {
+	if err := bp.Prepare(); err != nil {
 		return err
-	}
-	if !cfg.SkipPriming && cfg.StateDbSrc == "" {
-		if err := utils.LoadWorldStateAndPrime(bp.db, cfg, cfg.First-1); err != nil {
-			return fmt.Errorf("priming failed. %v", err)
-		}
 	}
 	if !cfg.KeepDb {
 		log.Warningf("--keep-db is not used. Directory %v with DB will be removed at the end of this run.", bp.stateDbDir)
@@ -103,10 +148,8 @@ func (bp *BlockProcessor) Run(name string, actions []ProcessorActions) error {
 	}
 
 	// call post-prepare actions
-	for _, a := range actions {
-		if err := a.PostPrepare(bp); err != nil {
-			return err
-		}
+	if err := actions.ExecuteAll("PostPrepare", bp); err != nil {
+		return err
 	}
 
 	// create new iterator over substates and iterate
@@ -114,28 +157,9 @@ func (bp *BlockProcessor) Run(name string, actions []ProcessorActions) error {
 	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
 	defer iter.Release()
 
-	// no transaction available for the specified range
-	if !iter.Next() {
-		return nil
-	}
-
-	// process first transaction
-	tx := iter.Value()
-	if tx.Block > cfg.Last {
-		return nil
-	}
-	bp.syncPeriod = tx.Block / cfg.SyncPeriodLength
-	bp.block = tx.Block
-	bp.totalTx = 0
-	bp.db.BeginSyncPeriod(bp.syncPeriod)
-	bp.db.BeginBlock(bp.block)
-
-	// process transaction
-	if err := utils.ProcessTx(bp.db, cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
-		log.Critical("\tFailed processing transaction: %v", err)
+	if err := bp.ProcessFirstBlock(iter); err != nil {
 		return err
 	}
-	bp.totalGas.Add(bp.totalGas, new(big.Int).SetUint64(tx.Substate.Result.GasUsed))
 
 	for iter.Next() {
 		tx := iter.Value()
@@ -168,36 +192,27 @@ func (bp *BlockProcessor) Run(name string, actions []ProcessorActions) error {
 		}
 
 		// process transaction
-		if tx.Transaction >= utils.PseudoTx {
-			utils.ProcessPseudoTx(tx.Substate.OutputAlloc, bp.db)
-		} else {
-			if err := utils.ProcessTx(bp.db, cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
-				log.Criticalf("\tFailed processing transaction: %v", err)
-				return err
-			}
-			bp.totalGas.Add(bp.totalGas, new(big.Int).SetUint64(tx.Substate.Result.GasUsed))
+		if err := utils.ProcessTx(bp.db, cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
+			log.Criticalf("\tFailed processing transaction: %v", err)
+			return err
 		}
 
+		bp.totalGas.Add(bp.totalGas, new(big.Int).SetUint64(tx.Substate.Result.GasUsed))
+
 		// call post-transaction actions
-		for _, a := range actions {
-			if err := a.PostTransaction(bp); err != nil {
-				return err
-			}
+		if err := actions.ExecuteAll("PostTransaction", bp); err != nil {
+			return err
 		}
 		bp.totalTx++
 	}
 	bp.db.EndBlock()
 	bp.db.EndSyncPeriod()
 
-	if cfg.ContinueOnFailure {
-		log.Warningf("%v errors found", utils.NumErrors)
-	}
+	log.Noticef("%v errors found.", utils.NumErrors)
 
 	// call post-processing actions
-	for _, a := range actions {
-		if err := a.PostProcessing(bp); err != nil {
-			return err
-		}
+	if err := actions.ExecuteAll("PostProcessing", bp); err != nil {
+		return err
 	}
 
 	// close the DB and print disk usage

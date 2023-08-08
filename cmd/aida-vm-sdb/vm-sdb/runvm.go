@@ -6,7 +6,7 @@ import (
 
 // RunVM performs block processing
 func RunVM(ctx *cli.Context) error {
-	actions := []ProcessorActions{NewLoggingAction(), NewValidationAction()}
+	actions := []ProcessorActions{NewLoggingAction(), NewValidationAction(), NewProfileAction()}
 	bp, err := NewBlockProcessor(ctx)
 	if err != nil {
 		return err
