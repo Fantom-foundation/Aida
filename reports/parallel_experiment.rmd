@@ -113,3 +113,16 @@ reducedData %>%
   geom_point(alpha=0.3) +
   labs(x="Block Height", y="Commit Time (ms)", title="Commit Time")
 ```
+
+## 7. Block gas
+
+The average block gas is `r mean(data$blockGas)`
+The smoothened trend line of the commit time in milliseconds is shown below:
+
+```{r, echo = FALSE, message=FALSE}
+reducedData %>%
+  ggplot(aes(x = block, y = blockGas)) +
+  geom_smooth(color = "tomato") +
+  geom_point(alpha=0.3) +
+  labs(x="Block Height", y="Block Gas", title=Block gas")
+```
