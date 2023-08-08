@@ -125,7 +125,7 @@ func findDbHashOnline(chainId int, log *logging.Logger, md *utils.AidaDbMetadata
 	}
 
 	log.Noticef("looking for db-hash online on %v", url)
-	patches, err := downloadPatchesJson()
+	patches, err := utils.DownloadPatchesJson()
 	if err != nil {
 		return nil, err
 	}
