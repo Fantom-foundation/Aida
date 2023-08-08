@@ -1059,7 +1059,7 @@ func getPatchFirstBlock(lastPatchBlock uint64) (uint64, error) {
 
 	for _, p := range patches {
 		if p.ToBlock == lastPatchBlock {
-			return p.FromEpoch, nil
+			return p.FromBlock, nil
 		}
 		availableLastBlocks += fmt.Sprintf("%v ", p.ToBlock)
 	}
