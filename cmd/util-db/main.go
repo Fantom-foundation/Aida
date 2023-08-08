@@ -28,6 +28,7 @@ var InitDb = cli.App{
 		&db.RemoveMetadataCommand,
 		&db.ValidateCommand,
 		&db.GenDeletedAccountsCommand,
+		&db.SubstateDumpCommand,
 	},
 }
 
