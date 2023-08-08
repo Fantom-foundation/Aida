@@ -1,4 +1,4 @@
-package vm
+package profile
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// record-vm: aida-vm key-stats command
+// GetKeyStatsCommand computes usage statistics of accessed storage locations
 var GetKeyStatsCommand = cli.Command{
 	Action:    getKeyStatsAction,
 	Name:      "key-stats",
@@ -23,7 +23,7 @@ var GetKeyStatsCommand = cli.Command{
 		&logger.LogLevelFlag,
 	},
 	Description: `
-The aida-vm key-stats command requires two arguments:
+The aida-profile key-stats command requires two arguments:
 <blockNumFirst> <blockNumLast>
 
 <blockNumFirst> and <blockNumLast> are the first and

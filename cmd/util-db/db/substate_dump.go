@@ -1,4 +1,4 @@
-package vm
+package db
 
 import (
 	"encoding/json"
@@ -10,10 +10,10 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// aida-vm dump command
+// SubstateDumpCommand returns content in substates in json format
 var SubstateDumpCommand = cli.Command{
 	Action:    substateDumpAction,
-	Name:      "dump",
+	Name:      "dump-substate",
 	Usage:     "returns content in substates in json format",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{

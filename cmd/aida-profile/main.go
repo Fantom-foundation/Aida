@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/Fantom-foundation/Aida/cmd/aida-profile/parallelisation"
+	"github.com/Fantom-foundation/Aida/cmd/aida-profile/profile"
 	"github.com/urfave/cli/v2"
 )
 
@@ -17,6 +18,13 @@ func main() {
 		Copyright: "(c) 2023 Fantom Foundation",
 		Commands: []*cli.Command{
 			&parallelisation.ParallelisationCommand,
+
+			// profile
+			&profile.GetCodeSizeCommand,
+			&profile.GetStorageUpdateSizeCommand,
+			&profile.GetAddressStatsCommand,
+			&profile.GetKeyStatsCommand,
+			&profile.GetLocationStatsCommand,
 		},
 	}
 	if err := app.Run(os.Args); err != nil {

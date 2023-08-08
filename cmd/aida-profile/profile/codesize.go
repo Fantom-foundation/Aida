@@ -1,4 +1,4 @@
-package vm
+package profile
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// aida-vm code-size command
+// GetCodeSizeCommand reports code size and nonce of smart contracts in the specified block range
 var GetCodeSizeCommand = cli.Command{
 	Action:    getCodeSizeAction,
 	Name:      "code-size",
@@ -21,7 +21,7 @@ var GetCodeSizeCommand = cli.Command{
 		&utils.ChainIDFlag,
 	},
 	Description: `
-The aida-vm code-size command requires two arguments:
+The aida-profile code-size command requires two arguments:
 <blockNumFirst> <blockNumLast>
 
 <blockNumFirst> and <blockNumLast> are the first and
@@ -83,8 +83,7 @@ func getCodeSizeAction(ctx *cli.Context) error {
 		return err
 	}
 
-	chainID = cfg.ChainID
-	fmt.Printf("chain-id: %v\n", chainID)
+	fmt.Printf("chain-id: %v\n", cfg.ChainID)
 
 	substate.SetSubstateDb(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()

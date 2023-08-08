@@ -1,4 +1,4 @@
-package vm
+package profile
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// record-vm: aida-vm storage command
+// GetStorageUpdateSizeCommand returns changes in storage size by transactions in the specified block range
 var GetStorageUpdateSizeCommand = cli.Command{
 	Action:    getStorageUpdateSizeAction,
 	Name:      "storage-size",
@@ -23,7 +23,7 @@ var GetStorageUpdateSizeCommand = cli.Command{
 		&logger.LogLevelFlag,
 	},
 	Description: `
-The aida-vm storage-size command requires two arguments:
+The util-db storage-size command requires two arguments:
 <blockNumFirst> <blockNumLast>
 
 <blockNumFirst> and <blockNumLast> are the first and
@@ -116,8 +116,7 @@ func getStorageUpdateSizeAction(ctx *cli.Context) error {
 
 	log := logger.NewLogger(cfg.LogLevel, "Substate Replay")
 
-	chainID = cfg.ChainID
-	log.Infof("chain-id: %v\n", chainID)
+	log.Infof("chain-id: %v\n", cfg.ChainID)
 
 	substate.SetSubstateDb(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()
