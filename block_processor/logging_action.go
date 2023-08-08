@@ -1,4 +1,4 @@
-package vm_sdb
+package blockprocessor
 
 import (
 	"math/big"
