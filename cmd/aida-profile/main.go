@@ -22,6 +22,9 @@ func main() {
 			// profile
 			&profile.GetCodeSizeCommand,
 			&profile.GetStorageUpdateSizeCommand,
+			&profile.GetAddressStatsCommand,
+			&profile.GetKeyStatsCommand,
+			&profile.GetLocationStatsCommand,
 		},
 	}
 	if err := app.Run(os.Args); err != nil {

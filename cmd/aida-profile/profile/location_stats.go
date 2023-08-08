@@ -1,4 +1,4 @@
-package vm
+package profile
 
 import (
 	"sync"
@@ -10,7 +10,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// record-vm: aida-vm location-stats command
+// GetLocationStatsCommand computes usage statistics of accessed storage locations
 var GetLocationStatsCommand = cli.Command{
 	Action:    getLocationStatsAction,
 	Name:      "location-stats",
@@ -23,7 +23,7 @@ var GetLocationStatsCommand = cli.Command{
 		&logger.LogLevelFlag,
 	},
 	Description: `
-The aida-vm location-stats command requires two arguments:
+The aida-profile location-stats command requires two arguments:
 <blockNumFirst> <blockNumLast>
 
 <blockNumFirst> and <blockNumLast> are the first and

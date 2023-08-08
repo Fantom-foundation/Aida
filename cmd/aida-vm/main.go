@@ -17,9 +17,6 @@ func main() {
 		Flags:     []cli.Flag{},
 		Commands: []*cli.Command{
 			&vm.ReplayCommand,
-			&vm.GetAddressStatsCommand,
-			&vm.GetKeyStatsCommand,
-			&vm.GetLocationStatsCommand,
 		},
 	}
 	substate.RecordReplay = true
