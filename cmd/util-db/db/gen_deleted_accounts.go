@@ -1,9 +1,10 @@
-package vm
+package db
 
 import (
 	"fmt"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/cmd/aida-vm/vm"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -37,7 +38,7 @@ const channelSize = 10000 // size of deletion channel
 var DeleteHistory map[common.Address]bool //address recently and deleted
 
 // readAccounts reads contracts which were suicided or created and adds them to lists
-func readAccounts(ch chan ContractLiveness) ([]common.Address, []common.Address) {
+func readAccounts(ch chan vm.ContractLiveness) ([]common.Address, []common.Address) {
 	des := make(map[common.Address]bool)
 	res := make(map[common.Address]bool)
 	for contract := range ch {
@@ -81,11 +82,11 @@ func readAccounts(ch chan ContractLiveness) ([]common.Address, []common.Address)
 // and resurrected accounts to a database.
 func genDeletedAccountsTask(block uint64, tx int, recording *substate.Substate, ddb *substate.DestroyedAccountDB, cfg *utils.Config) error {
 
-	ch := make(chan ContractLiveness, channelSize)
+	ch := make(chan vm.ContractLiveness, channelSize)
 	var statedb state.StateDB
 	statedb = state.MakeInMemoryStateDB(&recording.InputAlloc, block)
 	//wrapper
-	statedb = NewProxyDeletion(statedb, ch)
+	statedb = vm.NewProxyDeletion(statedb, ch)
 
 	err := utils.ProcessTx(statedb, cfg, block, tx, recording)
 	if err != nil {
@@ -142,8 +143,7 @@ func GenDeletedAccountsAction(cfg *utils.Config, ddb *substate.DestroyedAccountD
 
 	log := logger.NewLogger(cfg.LogLevel, "Generate Deleted Accounts")
 
-	chainID = cfg.ChainID
-	log.Infof("chain-id: %v", chainID)
+	log.Infof("chain-id: %v", cfg.ChainID)
 
 	start := time.Now()
 	sec := time.Since(start).Seconds()
@@ -162,7 +162,7 @@ func GenDeletedAccountsAction(cfg *utils.Config, ddb *substate.DestroyedAccountD
 		}
 
 		if tx.Transaction < utils.PseudoTx {
-			err := genDeletedAccountsTask(tx.Block, tx.Transaction, tx.Substate, ddb, cfg)
+			err = genDeletedAccountsTask(tx.Block, tx.Transaction, tx.Substate, ddb, cfg)
 			if err != nil {
 				return err
 			}

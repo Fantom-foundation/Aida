@@ -116,8 +116,7 @@ func getStorageUpdateSizeAction(ctx *cli.Context) error {
 
 	log := logger.NewLogger(cfg.LogLevel, "Substate Replay")
 
-	chainID = cfg.ChainID
-	log.Infof("chain-id: %v\n", chainID)
+	log.Infof("chain-id: %v\n", cfg.ChainID)
 
 	substate.SetSubstateDb(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()

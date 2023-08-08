@@ -83,8 +83,7 @@ func getCodeSizeAction(ctx *cli.Context) error {
 		return err
 	}
 
-	chainID = cfg.ChainID
-	fmt.Printf("chain-id: %v\n", chainID)
+	fmt.Printf("chain-id: %v\n", cfg.ChainID)
 
 	substate.SetSubstateDb(cfg.SubstateDb)
 	substate.OpenSubstateDBReadOnly()

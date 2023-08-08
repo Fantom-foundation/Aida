@@ -17,7 +17,6 @@ func main() {
 		Flags:     []cli.Flag{},
 		Commands: []*cli.Command{
 			&vm.ReplayCommand,
-			&vm.GenDeletedAccountsCommand,
 			&vm.GetStorageUpdateSizeCommand,
 			&vm.GetCodeSizeCommand,
 			&vm.SubstateDumpCommand,
