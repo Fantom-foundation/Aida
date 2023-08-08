@@ -543,10 +543,6 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 			return nil, err
 		}
 
-		if mdLast == 0 {
-			return nil, errors.New("your AidaDb does not have metadata with last block. Please run ./build/util-db info metadata --aida-db <path>")
-		}
-
 		// process arguments and flags
 		if ctx.Args().Len() == 0 {
 			first = mdFirst
@@ -573,10 +569,6 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 			mdFirst, mdLast, err := getMdBlockRange(ctx)
 			if err != nil {
 				return nil, err
-			}
-
-			if mdLast == 0 {
-				return nil, errors.New("your AidaDb does not have metadata with last block. Please run ./build/util-db info metadata --aida-db <path>")
 			}
 
 			// try to parse and check block range
@@ -748,7 +740,7 @@ func SetBlockRange(firstArg string, lastArg string, chainId int) (uint64, uint64
 	}
 
 	if first > last {
-		err = fmt.Errorf("error: first block has larger number than last block")
+		err = fmt.Errorf("first block has larger number than last block")
 	}
 
 	return first, last, err
@@ -778,13 +770,13 @@ func setBlockNumber(arg string, chainId int) (uint64, error) {
 		if val, ok := hardForksTestnet[keyword]; ok {
 			blkNum = val
 		} else {
-			return 0, fmt.Errorf("error: block number not a valid keyword or integer")
+			return 0, fmt.Errorf("block number not a valid keyword or integer")
 		}
 	} else if chainId == 250 || chainId == 0 {
 		if val, ok := hardForksMainnet[keyword]; ok {
 			blkNum = val
 		} else {
-			return 0, fmt.Errorf("error: block number not a valid keyword or integer")
+			return 0, fmt.Errorf("block number not a valid keyword or integer")
 		}
 	}
 
@@ -803,16 +795,16 @@ func parseOffset(arg string) (string, string, uint64, error) {
 			return strings.ToLower(keyword), "+", offset, nil
 		}
 
-		return "", "", 0, fmt.Errorf("error: block number not a valid keyword with offset")
+		return "", "", 0, fmt.Errorf("block number not a valid keyword with offset")
 	} else if strings.Contains(arg, "-") {
 		if keyword, offset, ok := splitKeywordOffset(arg, "-"); ok {
 			return strings.ToLower(keyword), "-", offset, nil
 		}
 
-		return "", "", 0, fmt.Errorf("error: block number not a valid keyword with offset")
+		return "", "", 0, fmt.Errorf("block number not a valid keyword with offset")
 	}
 
-	return "", "", 0, nil
+	return "", "", 0, fmt.Errorf("block number has invalid arithmetical sign")
 }
 
 // splitKeywordOffset split the hardfork keyword and the arithmetical sign determining the direction of the offset
@@ -856,6 +848,10 @@ func getMdBlockRange(ctx *cli.Context) (uint64, uint64, error) {
 	md := NewAidaDbMetadata(aidaDb, ctx.String(logger.LogLevelFlag.Name))
 	mdFirst := md.GetFirstBlock()
 	mdLast := md.GetLastBlock()
+
+	if mdLast == 0 {
+		return 0, 0, errors.New("your AidaDb does not have metadata with last block. Please run ./build/util-db info metadata --aida-db <path>")
+	}
 
 	err = aidaDb.Close()
 	if err != nil {
