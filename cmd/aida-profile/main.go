@@ -20,6 +20,7 @@ func main() {
 			&parallelisation.ParallelisationCommand,
 
 			// profile
+			&profile.GetCodeSizeCommand,
 			&profile.GetStorageUpdateSizeCommand,
 		},
 	}
