@@ -2,8 +2,11 @@ package utils
 
 import (
 	"encoding/binary"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"net/http"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/logger"
@@ -41,6 +44,14 @@ const (
 // genType + PatchType = genType
 // CloneType + PatchType = CloneType
 // PatchType + PatchType = PatchType
+
+// PatchJson represents struct of JSON file where information about patches is written
+type PatchJson struct {
+	FileName           string
+	FromBlock, ToBlock uint64
+	FromEpoch, ToEpoch uint64
+	DbHash, TarHash    string
+}
 
 // AidaDbMetadata holds any information about AidaDb needed for putting it into the Db
 type AidaDbMetadata struct {
@@ -1006,4 +1017,53 @@ func (md *AidaDbMetadata) getVerboseDbType() string {
 	default:
 		return "unknown db type"
 	}
+}
+
+// DownloadPatchesJson downloads list of available patches from aida-db generation server.
+func DownloadPatchesJson() ([]PatchJson, error) {
+	// Make the HTTP GET request
+	patchesUrl := AidaDbRepositoryUrl + "/patches.json"
+	response, err := http.Get(patchesUrl)
+	if err != nil {
+		return nil, fmt.Errorf("error making GET request for %s: %v", patchesUrl, err)
+	}
+	defer response.Body.Close()
+
+	// Read the response body
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error reading response body: %v", err)
+	}
+
+	// Parse the JSON data
+	var data []PatchJson
+
+	err = json.Unmarshal(body, &data)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing JSON response body: %s ; %v", string(body), err)
+	}
+
+	// Access the JSON data
+	return data, nil
+}
+
+// getPatchFirstBlock finds first block of patch for given lastPatchBlock.
+// given lastPatchBlock needs to end an epoch, otherwise an error is raised
+func getPatchFirstBlock(lastPatchBlock uint64) (uint64, error) {
+	var availableLastBlocks string
+
+	patches, err := DownloadPatchesJson()
+	if err != nil {
+		return 0, fmt.Errorf("cannot download patches json; %v", err)
+	}
+
+	for _, p := range patches {
+		if p.ToBlock == lastPatchBlock {
+			return p.FromBlock, nil
+		}
+		availableLastBlocks += fmt.Sprintf("%v ", p.ToBlock)
+	}
+
+	return 0, fmt.Errorf("cannot find find first block for requested last block; requested: %v; available: [%v]", lastPatchBlock, availableLastBlocks)
+
 }
