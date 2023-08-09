@@ -609,6 +609,17 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	cfg.ProfileDB = profileDB
 	cfg.ChainID = chainId
 
+	// set default db variant if not provided.
+	if cfg.DbVariant == "" {
+		if cfg.DbImpl == "carmen" {
+			cfg.DbVariant = "go-file"
+		} else if cfg.DbImpl == "flat" {
+			cfg.DbVariant = "go-ldb"
+		} else if cfg.DbImpl == "erigon" {
+			cfg.DbVariant = "go-mdbx"
+		}
+	}
+
 	// --continue-on-failure implicitly enables transaction state validation
 	validateTxState := ctx.Bool(ValidateFlag.Name) ||
 		ctx.Bool(ValidateTxStateFlag.Name) ||
