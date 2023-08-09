@@ -41,8 +41,8 @@ const (
 var AvailableChainIDs = ChainIDs{MainnetChainID, TestnetChainID}
 
 const (
-	aidaDbRepositoryMainnetUrl = "https://aida.repository.fantom.network"
-	aidaDbRepositoryTestnetUrl = "https://aida.testnet.repository.fantom.network"
+	AidaDbRepositoryMainnetUrl = "https://aida.repository.fantom.network"
+	AidaDbRepositoryTestnetUrl = "https://aida.testnet.repository.fantom.network"
 )
 
 var (
@@ -782,13 +782,12 @@ func SetBlockRange(firstArg string, lastArg string, chainId ChainID) (uint64, ui
 // returns calculated block number
 func setBlockNumber(arg string, chainId ChainID) (uint64, error) {
 	var (
-		blkNum uint64
-	hasOffset bool
-	 keyword string
-	 symbol string
-	 offset uint64
+		blkNum    uint64
+		hasOffset bool
+		keyword   string
+		symbol    string
+		offset    uint64
 	)
-
 
 	// check if keyword has an offset and extract the keyword, offset direction (arithmetical symbol) and offset value
 	re := regexp.MustCompile(`^[a-zA-Z]+\w*[+-]\d+$`)
