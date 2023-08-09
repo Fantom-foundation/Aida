@@ -778,10 +778,32 @@ func SetBlockRange(firstArg string, lastArg string, chainId ChainID) (uint64, ui
 	return first, last, err
 }
 
-func setBlockNumber(arg string, chainId int) (uint64, error) {
-	var blkNum uint64
+// setBlockNumber parse the command line argument (number, hardfork keyword or keyword with offset)
+// returns calculated block number
+func setBlockNumber(arg string, chainId ChainID) (uint64, error) {
+	var (
+		blkNum uint64
+	hasOffset bool
+	 keyword string
+	 symbol string
+	 offset uint64
+	)
+
+
+	// check if keyword has an offset and extract the keyword, offset direction (arithmetical symbol) and offset value
+	re := regexp.MustCompile(`^[a-zA-Z]+\w*[+-]\d+$`)
+	if hasOffset = re.MatchString(arg); hasOffset {
+		var err error
+		if keyword, symbol, offset, err = parseOffset(arg); err != nil {
+			return 0, err
+		}
+	} else {
+		keyword = strings.ToLower(arg)
+	}
+
+	// find base block number from keyword
 	if chainId == TestnetChainID {
-		if val, ok := hardForksTestnet[strings.ToLower(arg)]; ok {
+		if val, ok := hardForksTestnet[keyword]; ok {
 			blkNum = val
 		} else {
 			return 0, fmt.Errorf("block number not a valid keyword or integer")
