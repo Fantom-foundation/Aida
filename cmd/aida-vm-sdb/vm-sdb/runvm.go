@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/logger"
+	"github.com/Fantom-foundation/Aida/state/proxy"
 	"github.com/Fantom-foundation/Aida/tracer/profile"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -99,7 +100,7 @@ func RunVM(ctx *cli.Context) error {
 	// wrap stateDB for profiling
 	var stats *profile.Stats
 	if cfg.Profile {
-		db, stats = NewProxyProfiler(db, cfg.ProfileFile)
+		db, stats = proxy.NewProfilerProxy(db, cfg.ProfileFile)
 	}
 
 	if cfg.ValidateWorldState {
