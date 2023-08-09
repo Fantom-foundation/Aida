@@ -21,8 +21,6 @@ import (
 )
 
 type ArgumentMode int
-type ChainID int
-type ChainIDs []ChainID
 
 // An enums of argument modes used by trace subcommands
 const (
@@ -31,13 +29,6 @@ const (
 	LastBlockArg                                // requires 1 argument: last block
 	NoArgs                                      // requires no arguments
 )
-
-const (
-	MainnetChainID ChainID = 250
-	TestnetChainID ChainID = 4002
-)
-
-var AvailableChainIDs = ChainIDs{MainnetChainID, TestnetChainID}
 
 const (
 	AidaDbRepositoryMainnetUrl = "https://aida.repository.fantom.network"
