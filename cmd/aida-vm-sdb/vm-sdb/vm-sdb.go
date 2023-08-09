@@ -8,9 +8,9 @@ import (
 // RunVM performs block processing
 func RunVM(ctx *cli.Context) error {
 	actions := []bp.ProcessorActions{bp.NewLoggingAction(), bp.NewValidationAction(), bp.NewProfileAction()}
-	bp, err := bp.NewBlockProcessor(ctx)
+	bp, err := bp.NewBlockProcessor("vm-sdb", ctx)
 	if err != nil {
 		return err
 	}
-	return bp.Run("vm-sdb", actions)
+	return bp.Run(actions)
 }

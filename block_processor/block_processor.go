@@ -36,7 +36,7 @@ type BlockProcessor struct {
 }
 
 // NewBlockProcessor creates a new block processor instance
-func NewBlockProcessor(ctx *cli.Context) (*BlockProcessor, error) {
+func NewBlockProcessor(name string, ctx *cli.Context) (*BlockProcessor, error) {
 	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if err != nil {
 		return nil, err
@@ -44,16 +44,17 @@ func NewBlockProcessor(ctx *cli.Context) (*BlockProcessor, error) {
 	return &BlockProcessor{
 		cfg:      cfg,
 		totalGas: new(big.Int),
+		log:      logger.NewLogger(cfg.LogLevel, name),
 	}, nil
 }
 
+// a list of processor actions
 type ActionList []ProcessorActions
 
-func (al ActionList) ExecuteAll(method string, args ...interface{}) error {
-	inputs := make([]reflect.Value, len(args))
-	for i := range args {
-		inputs[i] = reflect.ValueOf(args[i])
-	}
+// ExecuteAll executes a matching method name of actions in the action list.
+func (al ActionList) ExecuteAll(method string, bp *BlockProcessor) error {
+	inputs := make([]reflect.Value, 1)
+	inputs[0] = reflect.ValueOf(bp)
 
 	for _, action := range al {
 		out := reflect.ValueOf(action).MethodByName(method).Call(inputs)
@@ -64,7 +65,7 @@ func (al ActionList) ExecuteAll(method string, args ...interface{}) error {
 	return nil
 }
 
-// Prepare creates and primes a stateDB
+// Prepare creates and primes a stateDB.
 func (bp *BlockProcessor) Prepare() error {
 	var err error
 	bp.db, bp.stateDbDir, err = utils.PrepareStateDB(bp.cfg)
@@ -79,6 +80,8 @@ func (bp *BlockProcessor) Prepare() error {
 	return nil
 }
 
+// ProcessFirstBlock sets appropiate block and sync period number and
+// process transaction.
 func (bp *BlockProcessor) ProcessFirstBlock(iter substate.SubstateIterator) error {
 	// no transaction available for the specified range
 	if !iter.Next() {
@@ -105,8 +108,8 @@ func (bp *BlockProcessor) ProcessFirstBlock(iter substate.SubstateIterator) erro
 	return nil
 }
 
-// Run executes all blocks in sequence
-func (bp *BlockProcessor) Run(name string, actions ActionList) error {
+// Run executes all blocks in sequence.
+func (bp *BlockProcessor) Run(actions ActionList) error {
 	var err error
 
 	// reset state
@@ -121,7 +124,6 @@ func (bp *BlockProcessor) Run(name string, actions ActionList) error {
 	cfg := bp.cfg
 
 	// open logger
-	bp.log = logger.NewLogger(cfg.LogLevel, name)
 	log := bp.log
 
 	// call init actions
@@ -129,6 +131,7 @@ func (bp *BlockProcessor) Run(name string, actions ActionList) error {
 		return err
 	}
 
+	// close actions when return
 	defer func() error {
 		return actions.ExecuteAll("Exit", bp)
 	}()
@@ -139,6 +142,7 @@ func (bp *BlockProcessor) Run(name string, actions ActionList) error {
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
+	// prepare statedb and priming
 	if err := bp.Prepare(); err != nil {
 		return err
 	}
@@ -157,10 +161,12 @@ func (bp *BlockProcessor) Run(name string, actions ActionList) error {
 	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
 	defer iter.Release()
 
+	// process the first block
 	if err := bp.ProcessFirstBlock(iter); err != nil {
 		return err
 	}
 
+	// process the remaining blocks
 	for iter.Next() {
 		tx := iter.Value()
 		// initiate first sync-period and block.

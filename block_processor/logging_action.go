@@ -75,7 +75,7 @@ func (la *LoggingAction) PostTransaction(bp *BlockProcessor) error {
 		gasUsed, _ := new(big.Float).SetInt(new(big.Int).Sub(bp.totalGas, la.lastTimeProcessedGas)).Float64()
 		txRate := float64(bp.totalTx-la.lastTimeProcessedTx) / (float64(elapsed.Nanoseconds()) / 1e9)
 		gasRate := gasUsed / (float64(elapsed.Nanoseconds()) / 1e9)
-		hours, minutes, seconds := logger.ParseTime(elapsed)
+		hours, minutes, seconds := logger.ParseTime(time.Since(la.processingStart))
 		bp.log.Infof("Elapsed time: %vh %vm %vs, at block %v (~ %.0f Tx/s, ~ %.0f Gas/s)", hours, minutes, seconds, bp.block, txRate, gasRate)
 		la.lastTimeReport = time.Now()
 		la.lastTimeProcessedTx = bp.totalTx
