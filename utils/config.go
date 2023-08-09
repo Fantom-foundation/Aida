@@ -31,8 +31,8 @@ const (
 )
 
 const (
-	aidaDbRepositoryMainnetUrl = "https://aida.repository.fantom.network"
-	aidaDbRepositoryTestnetUrl = "https://aida.testnet.repository.fantom.network"
+	AidaDbRepositoryMainnetUrl = "https://aida.repository.fantom.network"
+	AidaDbRepositoryTestnetUrl = "https://aida.testnet.repository.fantom.network"
 )
 
 var (
@@ -721,9 +721,9 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 // setAidaDbRepositoryUrl based on chain id selects correct aida-db repository url
 func setAidaDbRepositoryUrl(chainId int) error {
 	if chainId == 250 {
-		AidaDbRepositoryUrl = aidaDbRepositoryMainnetUrl
+		AidaDbRepositoryUrl = AidaDbRepositoryMainnetUrl
 	} else if chainId == 4002 {
-		AidaDbRepositoryUrl = aidaDbRepositoryTestnetUrl
+		AidaDbRepositoryUrl = AidaDbRepositoryTestnetUrl
 	} else {
 		return fmt.Errorf("invalid chain id %d", chainId)
 	}
