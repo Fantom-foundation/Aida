@@ -241,6 +241,10 @@ var (
 		Usage: "set storage trace's output directory",
 		Value: "./",
 	}
+	TraceDirectoryFlag = cli.PathFlag{
+		Name:  "trace-dir",
+		Usage: "set storage trace directory",
+	}
 	UpdateDbFlag = cli.PathFlag{
 		Name:  "update-db",
 		Usage: "set update-set database directory",
@@ -461,6 +465,7 @@ type Config struct {
 	WorldStateDb        string            // path to worldstate
 	Workers             int               // number of worker threads
 	TraceFile           string            // name of trace file
+	TraceDirectory      string            // name of trace directory
 	Trace               bool              // trace flag
 	LogLevel            string            // level of the logging of the app action
 	SourceTableName     string            // represents the name of a source DB table
