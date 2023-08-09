@@ -148,6 +148,26 @@ func TestUtilsConfig_SetInvalidBlockRange(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Failed to throw an error")
 	}
+
+	_, _, err = SetBlockRange("tokyo", "berlin", 250)
+	if err == nil {
+		t.Fatalf("Failed to throw an error")
+	}
+
+	_, _, err = SetBlockRange("tokyo", "berlin", 4002)
+	if err == nil {
+		t.Fatalf("Failed to throw an error")
+	}
+
+	_, _, err = SetBlockRange("london-opera", "opera+london", 250)
+	if err == nil {
+		t.Fatalf("Failed to throw an error")
+	}
+
+	_, _, err = SetBlockRange("london-opera", "opera+london", 4002)
+	if err == nil {
+		t.Fatalf("Failed to throw an error")
+	}
 }
 
 func TestUtilsConfig_SetBlockRangeLastSmallerThanFirst(t *testing.T) {

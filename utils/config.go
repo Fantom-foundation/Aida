@@ -733,14 +733,20 @@ func SetBlockRange(firstArg string, lastArg string, chainId int) (uint64, uint64
 
 	if ferr != nil {
 		first, err = setBlockNumber(firstArg, chainId)
+		if err != nil {
+			return 0, 0, err
+		}
 	}
 
 	if lerr != nil {
 		last, err = setBlockNumber(lastArg, chainId)
+		if err != nil {
+			return 0, 0, err
+		}
 	}
 
 	if first > last {
-		err = fmt.Errorf("first block has larger number than last block")
+		return 0, 0, fmt.Errorf("first block has larger number than last block")
 	}
 
 	return first, last, err
