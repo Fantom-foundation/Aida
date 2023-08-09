@@ -12,9 +12,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/vm"
 )
 
-const mainNetChainId int = 250
-const testNetChainId int = 4002
-
 func prepareMockCliContext() *cli.Context {
 	flagSet := flag.NewFlagSet("utils_config_test", 0)
 	flagSet.Uint64(SyncPeriodLengthFlag.Name, 1000, "Number of blocks")
@@ -32,29 +29,29 @@ func prepareMockCliContext() *cli.Context {
 }
 
 func TestUtilsConfig_GetChainConfig(t *testing.T) {
-	testCases := []int{
-		testNetChainId,
-		mainNetChainId,
+	testCases := []ChainID{
+		TestnetChainID,
+		MainnetChainID,
 	}
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("ChainID: %d", tc), func(t *testing.T) {
 			chainConfig := GetChainConfig(tc)
 
-			if tc == mainNetChainId && chainConfig.BerlinBlock.Cmp(new(big.Int).SetUint64(37455223)) != 0 {
-				t.Fatalf("Incorrect Berlin fork block on chainID: %d; Block number: %d, should be: %d", mainNetChainId, chainConfig.BerlinBlock, 37455223)
+			if tc == MainnetChainID && chainConfig.BerlinBlock.Cmp(new(big.Int).SetUint64(37455223)) != 0 {
+				t.Fatalf("Incorrect Berlin fork block on chainID: %d; Block number: %d, should be: %d", MainnetChainID, chainConfig.BerlinBlock, 37455223)
 			}
 
-			if tc == mainNetChainId && chainConfig.LondonBlock.Cmp(new(big.Int).SetUint64(37534833)) != 0 {
-				t.Fatalf("Incorrect London fork block on chainID: %d; Block number: %d, should be: %d", mainNetChainId, chainConfig.LondonBlock, 37534833)
+			if tc == MainnetChainID && chainConfig.LondonBlock.Cmp(new(big.Int).SetUint64(37534833)) != 0 {
+				t.Fatalf("Incorrect London fork block on chainID: %d; Block number: %d, should be: %d", MainnetChainID, chainConfig.LondonBlock, 37534833)
 			}
 
-			if tc == testNetChainId && chainConfig.BerlinBlock.Cmp(new(big.Int).SetUint64(1559470)) != 0 {
-				t.Fatalf("Incorrect Berlin fork block on chainID: %d; Block number: %d, should be: %d", testNetChainId, chainConfig.BerlinBlock, 1559470)
+			if tc == TestnetChainID && chainConfig.BerlinBlock.Cmp(new(big.Int).SetUint64(1559470)) != 0 {
+				t.Fatalf("Incorrect Berlin fork block on chainID: %d; Block number: %d, should be: %d", TestnetChainID, chainConfig.BerlinBlock, 1559470)
 			}
 
-			if tc == testNetChainId && chainConfig.LondonBlock.Cmp(new(big.Int).SetUint64(7513335)) != 0 {
-				t.Fatalf("Incorrect London fork block on chainID: %d; Block number: %d, should be: %d", testNetChainId, chainConfig.LondonBlock, 7513335)
+			if tc == TestnetChainID && chainConfig.LondonBlock.Cmp(new(big.Int).SetUint64(7513335)) != 0 {
+				t.Fatalf("Incorrect London fork block on chainID: %d; Block number: %d, should be: %d", TestnetChainID, chainConfig.LondonBlock, 7513335)
 			}
 		})
 	}
