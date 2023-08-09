@@ -21,6 +21,8 @@ import (
 )
 
 type ArgumentMode int
+type ChainID int
+type ChainIDs []ChainID
 
 // An enums of argument modes used by trace subcommands
 const (
@@ -29,6 +31,14 @@ const (
 	LastBlockArg                                // requires 1 argument: last block
 	NoArgs                                      // requires no arguments
 )
+
+const (
+	UnknownChainID ChainID = 0
+	MainnetChainID ChainID = 250
+	TestnetChainID ChainID = 4002
+)
+
+var AvailableChainIDs = ChainIDs{MainnetChainID, TestnetChainID}
 
 const (
 	AidaDbRepositoryMainnetUrl = "https://aida.repository.fantom.network"
@@ -401,7 +411,7 @@ type Config struct {
 	BlockLength         uint64            // length of a block in number of transactions
 	BalanceRange        int64             // balance range for stochastic simulation/replay
 	CarmenSchema        int               // the current DB schema ID to use in Carmen
-	ChainID             int               // Blockchain ID (mainnet: 250/testnet: 4002)
+	ChainID             ChainID           // Blockchain ID (mainnet: 250/testnet: 4002)
 	Cache               int               // Cache for StateDb or Priming
 	ContinueOnFailure   bool              // continue validation when an error detected
 	ContractNumber      int64             // number of contracts to create
@@ -476,14 +486,14 @@ type Config struct {
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.
-func GetChainConfig(chainID int) *params.ChainConfig {
+func GetChainConfig(chainID ChainID) *params.ChainConfig {
 	chainConfig := params.AllEthashProtocolChanges
 	chainConfig.ChainID = big.NewInt(int64(chainID))
-	if chainID == 250 {
+	if chainID == MainnetChainID {
 		// mainnet chainID 250
 		chainConfig.BerlinBlock = new(big.Int).SetUint64(hardForksMainnet["berlin"])
 		chainConfig.LondonBlock = new(big.Int).SetUint64(hardForksMainnet["london"])
-	} else if chainID == 4002 {
+	} else if chainID == TestnetChainID {
 		// testnet chainID 4002
 		chainConfig.BerlinBlock = new(big.Int).SetUint64(hardForksTestnet["berlin"])
 		chainConfig.LondonBlock = new(big.Int).SetUint64(hardForksTestnet["london"])
@@ -493,10 +503,10 @@ func GetChainConfig(chainID int) *params.ChainConfig {
 	return chainConfig
 }
 
-func setFirstBlockFromChainID(chainID int) {
-	if chainID == 250 {
+func setFirstBlockFromChainID(chainID ChainID) {
+	if chainID == MainnetChainID {
 		FirstOperaBlock = hardForksMainnet["opera"]
-	} else if chainID == 4002 {
+	} else if chainID == TestnetChainID {
 		FirstOperaBlock = hardForksTestnet["opera"]
 	} else {
 		log.Fatalf("unknown chain id %v", chainID)
@@ -510,11 +520,13 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	var (
 		first, last uint64
 		profileDB   string
-		chainId     int
+		chainId     ChainID
 	)
 
+	chainId = ChainID(ctx.Int(ChainIDFlag.Name))
+
 	// first look for chainId since we need it for verbal block indication
-	if ctx.Int(ChainIDFlag.Name) == 0 {
+	if chainId == UnknownChainID {
 		log.Warningf("ChainID (--%v) was not set; looking for it in AidaDb", ChainIDFlag.Name)
 
 		// we check if AidaDb was set with err == nil
@@ -536,7 +548,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		}
 
 	} else {
-		chainId = ctx.Int(ChainIDFlag.Name)
+
 	}
 
 	var argErr error
@@ -730,7 +742,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 }
 
 // setAidaDbRepositoryUrl based on chain id selects correct aida-db repository url
-func setAidaDbRepositoryUrl(chainId int) error {
+func setAidaDbRepositoryUrl(chainId ChainID) error {
 	if chainId == 250 {
 		AidaDbRepositoryUrl = AidaDbRepositoryMainnetUrl
 	} else if chainId == 4002 {
@@ -742,7 +754,7 @@ func setAidaDbRepositoryUrl(chainId int) error {
 }
 
 // SetBlockRange checks the validity of a block range and return the first and last block as numbers.
-func SetBlockRange(firstArg string, lastArg string, chainId int) (uint64, uint64, error) {
+func SetBlockRange(firstArg string, lastArg string, chainId ChainID) (uint64, uint64, error) {
 	var err error = nil
 	first, ferr := strconv.ParseUint(firstArg, 10, 64)
 	last, lerr := strconv.ParseUint(lastArg, 10, 64)
@@ -770,7 +782,7 @@ func SetBlockRange(firstArg string, lastArg string, chainId int) (uint64, uint64
 
 // setBlockNumber parse the command line argument (number, hardfork keyword or keyword with offset)
 // returns calculated block number
-func setBlockNumber(arg string, chainId int) (uint64, error) {
+func setBlockNumber(arg string, chainId ChainID) (uint64, error) {
 	var blkNum uint64
 	var hasOffset bool
 	var keyword string
