@@ -41,8 +41,8 @@ const (
 var AvailableChainIDs = ChainIDs{MainnetChainID, TestnetChainID}
 
 const (
-	aidaDbRepositoryMainnetUrl = "https://aida.repository.fantom.network"
-	aidaDbRepositoryTestnetUrl = "https://aida.testnet.repository.fantom.network"
+	AidaDbRepositoryMainnetUrl = "https://aida.repository.fantom.network"
+	AidaDbRepositoryTestnetUrl = "https://aida.testnet.repository.fantom.network"
 )
 
 var (
