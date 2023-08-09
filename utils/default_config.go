@@ -19,7 +19,7 @@ func createConfig(ctx *cli.Context) *Config {
 		BlockLength:         getFlagValue(ctx, BlockLengthFlag).(uint64),
 		BalanceRange:        getFlagValue(ctx, BalanceRangeFlag).(int64),
 		CarmenSchema:        getFlagValue(ctx, CarmenSchemaFlag).(int),
-		ChainID:             getFlagValue(ctx, ChainIDFlag).(int),
+		ChainID:             getFlagValue(ctx, ChainIDFlag).(ChainID),
 		Cache:               getFlagValue(ctx, CacheFlag).(int),
 		ContractNumber:      getFlagValue(ctx, ContractNumberFlag).(int64),
 		ContinueOnFailure:   getFlagValue(ctx, ContinueOnFailureFlag).(bool),

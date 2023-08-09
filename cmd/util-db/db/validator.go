@@ -115,7 +115,7 @@ func validateCmd(ctx *cli.Context) error {
 }
 
 // findDbHashOnline if user has no dbHash inside his AidaDb metadata
-func findDbHashOnline(chainId int, log *logging.Logger, md *utils.AidaDbMetadata) ([]byte, error) {
+func findDbHashOnline(chainId utils.ChainID, log *logging.Logger, md *utils.AidaDbMetadata) ([]byte, error) {
 	var url string
 
 	if chainId == 250 {

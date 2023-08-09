@@ -32,6 +32,7 @@ const (
 )
 
 const (
+	UnknownChainID ChainID = 0
 	MainnetChainID ChainID = 250
 	TestnetChainID ChainID = 4002
 )
@@ -408,7 +409,7 @@ type Config struct {
 	BlockLength         uint64            // length of a block in number of transactions
 	BalanceRange        int64             // balance range for stochastic simulation/replay
 	CarmenSchema        int               // the current DB schema ID to use in Carmen
-	ChainID             int               // Blockchain ID (mainnet: 250/testnet: 4002)
+	ChainID             ChainID           // Blockchain ID (mainnet: 250/testnet: 4002)
 	Cache               int               // Cache for StateDb or Priming
 	ContinueOnFailure   bool              // continue validation when an error detected
 	ContractNumber      int64             // number of contracts to create
@@ -483,14 +484,14 @@ type Config struct {
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.
-func GetChainConfig(chainID int) *params.ChainConfig {
+func GetChainConfig(chainID ChainID) *params.ChainConfig {
 	chainConfig := params.AllEthashProtocolChanges
 	chainConfig.ChainID = big.NewInt(int64(chainID))
-	if chainID == 250 {
+	if chainID == MainnetChainID {
 		// mainnet chainID 250
 		chainConfig.BerlinBlock = new(big.Int).SetUint64(hardForksMainnet["berlin"])
 		chainConfig.LondonBlock = new(big.Int).SetUint64(hardForksMainnet["london"])
-	} else if chainID == 4002 {
+	} else if chainID == TestnetChainID {
 		// testnet chainID 4002
 		chainConfig.BerlinBlock = new(big.Int).SetUint64(hardForksTestnet["berlin"])
 		chainConfig.LondonBlock = new(big.Int).SetUint64(hardForksTestnet["london"])
@@ -500,10 +501,10 @@ func GetChainConfig(chainID int) *params.ChainConfig {
 	return chainConfig
 }
 
-func setFirstBlockFromChainID(chainID int) {
-	if chainID == 250 {
+func setFirstBlockFromChainID(chainID ChainID) {
+	if chainID == MainnetChainID {
 		FirstOperaBlock = hardForksMainnet["opera"]
-	} else if chainID == 4002 {
+	} else if chainID == TestnetChainID {
 		FirstOperaBlock = hardForksTestnet["opera"]
 	} else {
 		log.Fatalf("unknown chain id %v", chainID)
@@ -517,33 +518,33 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	var (
 		first, last uint64
 		profileDB   string
-		chainId     int
+		chainId     ChainID
 	)
 
+	chainId = ChainID(ctx.Int(ChainIDFlag.Name))
+
 	// first look for chainId since we need it for verbal block indication
-	if ctx.Int(ChainIDFlag.Name) == 0 {
+	if chainId == UnknownChainID {
 		log.Warningf("ChainID (--%v) was not set; looking for it in AidaDb", ChainIDFlag.Name)
 
 		// we check if AidaDb was set with err == nil
 		if aidaDb, err := rawdb.NewLevelDBDatabase(ctx.String(AidaDbFlag.Name), 1024, 100, "profiling", true); err == nil {
 			md := NewAidaDbMetadata(aidaDb, ctx.String(logger.LogLevelFlag.Name))
 
-			chainId = md.GetChainID()
+			chainId = ChainID(md.GetChainID())
 
 			if err = aidaDb.Close(); err != nil {
 				return nil, fmt.Errorf("cannot close db; %v", err)
 			}
 		}
 
-		if chainId == 0 {
+		if chainId == UnknownChainID {
 			log.Warningf("ChainID was neither specified with flag (--%v) nor was found in AidaDb (%v); setting default value for mainnet", ChainIDFlag.Name, ctx.String(AidaDbFlag.Name))
-			chainId = 250
+			chainId = MainnetChainID
 		} else {
 			log.Noticef("Found chainId (%v) in AidaDb", chainId)
 		}
 
-	} else {
-		chainId = ctx.Int(ChainIDFlag.Name)
 	}
 
 	var argErr error
@@ -628,11 +629,11 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		ctx.Bool(ValidateWorldStateFlag.Name)
 	cfg.ValidateWorldState = validateWorldState
 
-	setFirstBlockFromChainID(cfg.ChainID)
+	setFirstBlockFromChainID(ChainID(cfg.ChainID))
 	if cfg.RandomSeed < 0 {
 		cfg.RandomSeed = int64(rand.Uint32())
 	}
-	err := setAidaDbRepositoryUrl(cfg.ChainID)
+	err := setAidaDbRepositoryUrl(ChainID(cfg.ChainID))
 	if err != nil {
 		return cfg, fmt.Errorf("Unable to prepareUrl from ChainId %v; %v", cfg.ChainID, err)
 	}
@@ -728,10 +729,10 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 }
 
 // setAidaDbRepositoryUrl based on chain id selects correct aida-db repository url
-func setAidaDbRepositoryUrl(chainId int) error {
-	if chainId == 250 {
+func setAidaDbRepositoryUrl(chainId ChainID) error {
+	if chainId == MainnetChainID {
 		AidaDbRepositoryUrl = AidaDbRepositoryMainnetUrl
-	} else if chainId == 4002 {
+	} else if chainId == TestnetChainID {
 		AidaDbRepositoryUrl = AidaDbRepositoryTestnetUrl
 	} else {
 		return fmt.Errorf("invalid chain id %d", chainId)
@@ -740,7 +741,7 @@ func setAidaDbRepositoryUrl(chainId int) error {
 }
 
 // SetBlockRange checks the validity of a block range and return the first and last block as numbers.
-func SetBlockRange(firstArg string, lastArg string, chainId int) (uint64, uint64, error) {
+func SetBlockRange(firstArg string, lastArg string, chainId ChainID) (uint64, uint64, error) {
 	var err error = nil
 	first, ferr := strconv.ParseUint(firstArg, 10, 64)
 	last, lerr := strconv.ParseUint(lastArg, 10, 64)
@@ -760,15 +761,15 @@ func SetBlockRange(firstArg string, lastArg string, chainId int) (uint64, uint64
 	return first, last, err
 }
 
-func setBlockNumber(arg string, chainId int) (uint64, error) {
+func setBlockNumber(arg string, chainId ChainID) (uint64, error) {
 	var blkNum uint64
-	if chainId == 4002 {
+	if chainId == TestnetChainID {
 		if val, ok := hardForksTestnet[strings.ToLower(arg)]; ok {
 			blkNum = val
 		} else {
 			return 0, fmt.Errorf("error: block number not a valid keyword or integer")
 		}
-	} else if chainId == 250 || chainId == 0 {
+	} else if chainId == MainnetChainID || chainId == UnknownChainID {
 		if val, ok := hardForksMainnet[strings.ToLower(arg)]; ok {
 			blkNum = val
 		} else {
