@@ -7,7 +7,6 @@ import (
 	"math/big"
 	"math/rand"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -541,50 +540,42 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	var argErr error
 	switch mode {
 	case BlockRangeArgs:
-		// try to extract block range from db metadata
-		mdFirst, mdLast, err := getMdBlockRange(ctx)
-		if err != nil {
-			return nil, err
-		}
-
 		// process arguments and flags
 		if ctx.Args().Len() == 0 {
-			first = mdFirst
-			last = mdLast
-
-			log.Noticef("Found first block (%v) and last block in AidaDb (%v)", first, last)
-		} else if ctx.Args().Len() == 2 {
-			// try to parse and check block range
-			firstArg, lastArg, argErr := SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1), chainId)
-			if argErr != nil {
-				return nil, argErr
+			log.Notice("Loading first block, last block and ChainID from AidaDb...")
+			aidaDb, err := rawdb.NewLevelDBDatabase(ctx.String(AidaDbFlag.Name), 1024, 100, "profiling", true)
+			if err != nil {
+				if errors.Is(err, os.ErrNotExist) {
+					return nil, fmt.Errorf("you either need to specify block range using arguments <first> <last>, or path to existing AidaDb (--%v) with block range in metadata", AidaDbFlag.Name)
+				}
+				return nil, fmt.Errorf("cannot open aida-db; %v", err)
 			}
 
-			// find if values overlap
-			first, last, err = adjustBlockRange(firstArg, lastArg, mdFirst, mdLast)
-			if err != nil {
-				return nil, err
+			md := NewAidaDbMetadata(aidaDb, ctx.String(logger.LogLevelFlag.Name))
+			first = md.GetFirstBlock()
+			last = md.GetLastBlock()
+
+			if first == 0 {
+				return nil, errors.New("your AidaDb does not have metadata with first block")
+			}
+			if last == 0 {
+				return nil, errors.New("your AidaDb does not have metadata with last block")
+			}
+
+			log.Noticef("Found first block (%v) and last block in AidaDb (%v)", first, last)
+
+		} else if ctx.Args().Len() == 2 {
+			first, last, argErr = SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1), chainId)
+			if argErr != nil {
+				return nil, argErr
 			}
 		}
 	case BlockRangeArgsProfileDB:
 		// process arguments and flags
 		if ctx.Args().Len() == 3 {
-			// try to extract block range from db metadata
-			mdFirst, mdLast, err := getMdBlockRange(ctx)
-			if err != nil {
-				return nil, err
-			}
-
-			// try to parse and check block range
-			firstArg, lastArg, argErr := SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1), chainId)
+			first, last, argErr = SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1), chainId)
 			if argErr != nil {
 				return nil, argErr
-			}
-
-			// find if values overlap
-			first, last, err = adjustBlockRange(firstArg, lastArg, mdFirst, mdLast)
-			if err != nil {
-				return nil, err
 			}
 			profileDB = ctx.Args().Get(2)
 		} else if ctx.Args().Len() == 2 {
@@ -747,162 +738,34 @@ func SetBlockRange(firstArg string, lastArg string, chainId int) (uint64, uint64
 
 	if ferr != nil {
 		first, err = setBlockNumber(firstArg, chainId)
-		if err != nil {
-			return 0, 0, err
-		}
 	}
 
 	if lerr != nil {
 		last, err = setBlockNumber(lastArg, chainId)
-		if err != nil {
-			return 0, 0, err
-		}
 	}
 
 	if first > last {
-		return 0, 0, fmt.Errorf("first block has larger number than last block")
+		err = fmt.Errorf("error: first block has larger number than last block")
 	}
 
 	return first, last, err
 }
 
-// setBlockNumber parse the command line argument (number, hardfork keyword or keyword with offset)
-// returns calculated block number
 func setBlockNumber(arg string, chainId int) (uint64, error) {
 	var blkNum uint64
-	var hasOffset bool
-	var keyword string
-	var symbol string
-	var offset uint64
-
-	// check if keyword has an offset and extract the keyword, offset direction (arithmetical symbol) and offset value
-	re := regexp.MustCompile(`^[a-zA-Z]+\w*[+-]\d+$`)
-	if hasOffset = re.MatchString(arg); hasOffset {
-		var err error
-		if keyword, symbol, offset, err = parseOffset(arg); err != nil {
-			return 0, err
-		}
-	} else {
-		keyword = strings.ToLower(arg)
-	}
-
-	// find base block number from keyword
 	if chainId == 4002 {
-		if val, ok := hardForksTestnet[keyword]; ok {
+		if val, ok := hardForksTestnet[strings.ToLower(arg)]; ok {
 			blkNum = val
 		} else {
-			return 0, fmt.Errorf("block number not a valid keyword or integer")
+			return 0, fmt.Errorf("error: block number not a valid keyword or integer")
 		}
 	} else if chainId == 250 || chainId == 0 {
-		if val, ok := hardForksMainnet[keyword]; ok {
+		if val, ok := hardForksMainnet[strings.ToLower(arg)]; ok {
 			blkNum = val
 		} else {
-			return 0, fmt.Errorf("block number not a valid keyword or integer")
+			return 0, fmt.Errorf("error: block number not a valid keyword or integer")
 		}
-	}
-
-	// shift base block number by the offset
-	if hasOffset {
-		blkNum = offsetBlockNum(blkNum, symbol, offset)
 	}
 
 	return blkNum, nil
-}
-
-// parseOffset parse the hardfork keyword, offset value and a direction of the offset
-func parseOffset(arg string) (string, string, uint64, error) {
-	if strings.Contains(arg, "+") {
-		if keyword, offset, ok := splitKeywordOffset(arg, "+"); ok {
-			return strings.ToLower(keyword), "+", offset, nil
-		}
-
-		return "", "", 0, fmt.Errorf("block number not a valid keyword with offset")
-	} else if strings.Contains(arg, "-") {
-		if keyword, offset, ok := splitKeywordOffset(arg, "-"); ok {
-			return strings.ToLower(keyword), "-", offset, nil
-		}
-
-		return "", "", 0, fmt.Errorf("block number not a valid keyword with offset")
-	}
-
-	return "", "", 0, fmt.Errorf("block number has invalid arithmetical sign")
-}
-
-// splitKeywordOffset split the hardfork keyword and the arithmetical sign determining the direction of the offset
-func splitKeywordOffset(arg string, symbol string) (string, uint64, bool) {
-	res := strings.Split(arg, symbol)
-
-	if _, ok := hardForksMainnet[strings.ToLower(res[0])]; !ok {
-		return "", 0, false
-	}
-
-	offset, err := strconv.ParseUint(res[1], 10, 64)
-	if err != nil {
-		return "", 0, false
-	}
-
-	return res[0], offset, true
-}
-
-// offsetBlockNum adds/subtracts the offset to/from block number
-func offsetBlockNum(blkNum uint64, symbol string, offset uint64) uint64 {
-	res := uint64(0)
-	if symbol == "+" {
-		res = blkNum + offset
-	} else if symbol == "-" {
-		res = blkNum - offset
-	}
-
-	return res
-}
-
-// getMdBlockRange gets block range from aidaDB metadata
-func getMdBlockRange(ctx *cli.Context) (uint64, uint64, error) {
-	aidaDb, err := rawdb.NewLevelDBDatabase(ctx.String(AidaDbFlag.Name), 1024, 100, "profiling", true)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return 0, 0, fmt.Errorf("you either need to specify block range using arguments <first> <last>, or path to existing AidaDb (--%v) with block range in metadata", AidaDbFlag.Name)
-		}
-		return 0, 0, fmt.Errorf("cannot open aida-db; %v", err)
-	}
-
-	md := NewAidaDbMetadata(aidaDb, ctx.String(logger.LogLevelFlag.Name))
-	mdFirst := md.GetFirstBlock()
-	mdLast := md.GetLastBlock()
-
-	if mdLast == 0 {
-		return 0, 0, errors.New("your AidaDb does not have metadata with last block. Please run ./build/util-db info metadata --aida-db <path>")
-	}
-
-	err = aidaDb.Close()
-	if err != nil {
-		return 0, 0, fmt.Errorf("cannot close db; %v", err)
-	}
-
-	return mdFirst, mdLast, nil
-}
-
-// adjustBlockRange finds overlap between metadata block range and block range specified by user in command line
-func adjustBlockRange(firstArg uint64, lastArg uint64, mdFirst uint64, mdLast uint64) (uint64, uint64, error) {
-	var first, last uint64
-
-	if lastArg >= mdFirst && mdLast >= firstArg {
-		// get first block number
-		if firstArg > mdFirst {
-			first = firstArg
-		} else {
-			first = mdFirst
-		}
-
-		// get last block number
-		if lastArg < mdLast {
-			last = lastArg
-		} else {
-			last = mdLast
-		}
-
-		return first, last, nil
-	} else {
-		return 0, 0, fmt.Errorf("given block range does NOT overlap with the block range of given aidaDB")
-	}
 }
