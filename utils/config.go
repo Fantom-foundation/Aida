@@ -639,11 +639,11 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		ctx.Bool(ValidateWorldStateFlag.Name)
 	cfg.ValidateWorldState = validateWorldState
 
-	setFirstBlockFromChainID(ChainID(cfg.ChainID))
+	setFirstBlockFromChainID(cfg.ChainID)
 	if cfg.RandomSeed < 0 {
 		cfg.RandomSeed = int64(rand.Uint32())
 	}
-	err := setAidaDbRepositoryUrl(ChainID(cfg.ChainID))
+	err := setAidaDbRepositoryUrl(cfg.ChainID)
 	if err != nil {
 		return cfg, fmt.Errorf("Unable to prepareUrl from ChainId %v; %v", cfg.ChainID, err)
 	}
