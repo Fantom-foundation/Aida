@@ -181,6 +181,9 @@ func makeStateDBVariant(directory, impl, variant, archiveVariant string, carmenS
 			archiveVariant = "none"
 		}
 		return state.MakeCarmenStateDB(directory, variant, archiveVariant, carmenSchema)
+	case "opera":
+		return state.MakeOperaStateDB(directory, variant)
+
 	case "flat":
 		return state.MakeFlatStateDB(directory, variant, rootHash)
 	case "erigon":
