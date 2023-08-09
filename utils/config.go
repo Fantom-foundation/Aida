@@ -465,6 +465,7 @@ type Config struct {
 	WorldStateDb        string            // path to worldstate
 	Workers             int               // number of worker threads
 	TraceFile           string            // name of trace file
+	TraceDirectory      string            // name of trace directory
 	Trace               bool              // trace flag
 	LogLevel            string            // level of the logging of the app action
 	SourceTableName     string            // represents the name of a source DB table
