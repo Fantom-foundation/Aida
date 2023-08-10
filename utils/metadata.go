@@ -840,7 +840,8 @@ func (md *AidaDbMetadata) CheckUpdateMetadata(cfg *Config, patchDb ethdb.Databas
 		// last block and epoch stays
 		md.FirstBlock = 0
 		md.FirstEpoch = 0
-	} else {
+	} else if md.LastBlock < patchMD.LastBlock {
+		// this condition is needed when we try to overwrite the first patch, then we dont want to overwrite the metadata
 		// if patch is not lachesis hence is being appended, we take last block and epoch from it
 		// first block and epoch stays
 		md.LastBlock = patchMD.LastBlock
