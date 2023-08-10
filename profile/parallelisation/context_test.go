@@ -288,7 +288,10 @@ func TestRecordTransaction(t *testing.T) {
 	}
 
 	tTransaction1 := time.Duration(50)
-	ctx.RecordTransaction(tx, tTransaction1)
+	err := ctx.RecordTransaction(tx, tTransaction1)
+	if err != nil {
+		t.Errorf("Unexpected error occurred: err: %q", err)
+	}
 	if ctx.n != 1 {
 		t.Errorf("Unexpected number of transactions")
 	}
@@ -301,6 +304,9 @@ func TestRecordTransaction(t *testing.T) {
 	}
 	if ctx.tOverheads == 0 {
 		t.Errorf("RecordTransaction cannot be executed in zero time")
+	}
+	if len(ctx.tTransactions) != 1 {
+		t.Errorf("invalid length of ctx.tTransactions")
 	}
 
 	checkAddr := func(s AddressSet) bool {
@@ -345,7 +351,10 @@ func TestRecordTransaction(t *testing.T) {
 	}
 
 	tTransaction2 := time.Duration(100)
-	ctx.RecordTransaction(tx2, tTransaction2)
+	err = ctx.RecordTransaction(tx2, tTransaction2)
+	if err != nil {
+		t.Errorf("Unexpected error occurred: err: %q", err)
+	}
 	if ctx.n != 2 {
 		t.Errorf("Unexpected number of transactions")
 	}
@@ -357,6 +366,9 @@ func TestRecordTransaction(t *testing.T) {
 	}
 	if ctx.tOverheads == 0 {
 		t.Errorf("RecordTransaction cannot be executed in zero time")
+	}
+	if len(ctx.tTransactions) != 2 {
+		t.Errorf("invalid length of ctx.tTransactions")
 	}
 
 	if len(ctx.txAddresses) == 2 && len(ctx.txAddresses[0]) == 3 && len(ctx.txAddresses[0]) == 3 {
@@ -405,7 +417,7 @@ func TestGetProfileDataWith2Transactions(t *testing.T) {
 		t.Errorf("ubNumProc does not match expected one")
 	}
 
-	if pd.numTx != 0 {
+	if pd.numTx != 0 || len(ctx.tTransactions) != 0 {
 		t.Errorf("Number of transactions should be zero")
 	}
 

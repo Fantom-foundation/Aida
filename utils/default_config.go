@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"github.com/Fantom-foundation/Aida/cmd/db-cli/flags"
+	"github.com/Fantom-foundation/Aida/cmd/util-db/flags"
 	"github.com/Fantom-foundation/Aida/logger"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
