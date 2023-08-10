@@ -13,7 +13,6 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	_ "github.com/Fantom-foundation/Tosca/go/vm"
-	"github.com/c2h5oh/datasize"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	_ "github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
@@ -302,11 +301,6 @@ var (
 	AidaDbFlag = cli.PathFlag{
 		Name:  "aida-db",
 		Usage: "set substate, updateset and deleted accounts directory",
-	}
-	ErigonBatchSizeFlag = cli.StringFlag{
-		Name:  "erigonbatchsize",
-		Usage: "Batch size for the execution stage",
-		Value: "512M",
 	}
 	ContractNumberFlag = cli.Int64Flag{
 		Name:  "num-contracts",
@@ -623,10 +617,6 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	if cfg.DbVariant == "" {
 		if cfg.DbImpl == "carmen" {
 			cfg.DbVariant = "go-file"
-		} else if cfg.DbImpl == "flat" {
-			cfg.DbVariant = "go-ldb"
-		} else if cfg.DbImpl == "erigon" {
-			cfg.DbVariant = "go-mdbx"
 		}
 	}
 
@@ -654,13 +644,6 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		cfg.UpdateDb = cfg.AidaDb
 		cfg.DeletionDb = cfg.AidaDb
 		cfg.SubstateDb = cfg.AidaDb
-	}
-
-	if ctx.String(ErigonBatchSizeFlag.Name) != "" {
-		err := cfg.ErigonBatchSize.UnmarshalText([]byte(ctx.String(ErigonBatchSizeFlag.Name)))
-		if err != nil {
-			return cfg, fmt.Errorf("invalid batchSize provided: %v", err)
-		}
 	}
 
 	if !cfg.Quiet {
@@ -712,7 +695,6 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 			log.Infof("Update buffer size: %v bytes", cfg.UpdateBufferSize)
 		}
 		log.Infof("Validate world state: %v, validate tx state: %v", cfg.ValidateWorldState, cfg.ValidateTxState)
-		log.Infof("Erigon batch size: %v", cfg.ErigonBatchSize.HumanReadable())
 	}
 
 	if cfg.ValidateTxState {

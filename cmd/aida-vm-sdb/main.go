@@ -73,9 +73,6 @@ var RunVMApp = cli.App{
 		&utils.ValidateWorldStateFlag,
 		&utils.ValidateFlag,
 		&logger.LogLevelFlag,
-
-		// erigon
-		&utils.ErigonBatchSizeFlag,
 	},
 	Description: `
 The run-vm command requires two arguments: <blockNumFirst> <blockNumLast>
