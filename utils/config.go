@@ -547,8 +547,6 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 			log.Noticef("Found chainId (%v) in AidaDb", chainId)
 		}
 
-	} else {
-
 	}
 
 	var argErr error
@@ -743,9 +741,9 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 
 // setAidaDbRepositoryUrl based on chain id selects correct aida-db repository url
 func setAidaDbRepositoryUrl(chainId ChainID) error {
-	if chainId == 250 {
+	if chainId == MainnetChainID {
 		AidaDbRepositoryUrl = AidaDbRepositoryMainnetUrl
-	} else if chainId == 4002 {
+	} else if chainId == TestnetChainID {
 		AidaDbRepositoryUrl = AidaDbRepositoryTestnetUrl
 	} else {
 		return fmt.Errorf("invalid chain id %d", chainId)
