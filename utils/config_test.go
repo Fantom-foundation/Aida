@@ -6,14 +6,12 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/urfave/cli/v2"
 
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/ethereum/go-ethereum/core/vm"
 )
-
-const mainNetChainId int = 250
-const testNetChainId int = 4002
 
 func prepareMockCliContext() *cli.Context {
 	flagSet := flag.NewFlagSet("utils_config_test", 0)
@@ -22,6 +20,7 @@ func prepareMockCliContext() *cli.Context {
 	flagSet.Bool(ValidateTxStateFlag.Name, true, "enables transaction state validation")
 	flagSet.Bool(ContinueOnFailureFlag.Name, true, "continue execute after validation failure detected")
 	flagSet.Bool(ValidateWorldStateFlag.Name, true, "enables end-state validation")
+	flagSet.String(logger.LogLevelFlag.Name, "info", "Level of the logging of the app action (\"critical\", \"error\", \"warning\", \"notice\", \"info\", \"debug\"; default: INFO)")
 
 	ctx := cli.NewContext(cli.NewApp(), flagSet, nil)
 
@@ -32,29 +31,29 @@ func prepareMockCliContext() *cli.Context {
 }
 
 func TestUtilsConfig_GetChainConfig(t *testing.T) {
-	testCases := []int{
-		testNetChainId,
-		mainNetChainId,
+	testCases := []ChainID{
+		TestnetChainID,
+		MainnetChainID,
 	}
 
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("ChainID: %d", tc), func(t *testing.T) {
 			chainConfig := GetChainConfig(tc)
 
-			if tc == mainNetChainId && chainConfig.BerlinBlock.Cmp(new(big.Int).SetUint64(37455223)) != 0 {
-				t.Fatalf("Incorrect Berlin fork block on chainID: %d; Block number: %d, should be: %d", mainNetChainId, chainConfig.BerlinBlock, 37455223)
+			if tc == MainnetChainID && chainConfig.BerlinBlock.Cmp(new(big.Int).SetUint64(37455223)) != 0 {
+				t.Fatalf("Incorrect Berlin fork block on chainID: %d; Block number: %d, should be: %d", MainnetChainID, chainConfig.BerlinBlock, 37455223)
 			}
 
-			if tc == mainNetChainId && chainConfig.LondonBlock.Cmp(new(big.Int).SetUint64(37534833)) != 0 {
-				t.Fatalf("Incorrect London fork block on chainID: %d; Block number: %d, should be: %d", mainNetChainId, chainConfig.LondonBlock, 37534833)
+			if tc == MainnetChainID && chainConfig.LondonBlock.Cmp(new(big.Int).SetUint64(37534833)) != 0 {
+				t.Fatalf("Incorrect London fork block on chainID: %d; Block number: %d, should be: %d", MainnetChainID, chainConfig.LondonBlock, 37534833)
 			}
 
-			if tc == testNetChainId && chainConfig.BerlinBlock.Cmp(new(big.Int).SetUint64(1559470)) != 0 {
-				t.Fatalf("Incorrect Berlin fork block on chainID: %d; Block number: %d, should be: %d", testNetChainId, chainConfig.BerlinBlock, 1559470)
+			if tc == TestnetChainID && chainConfig.BerlinBlock.Cmp(new(big.Int).SetUint64(1559470)) != 0 {
+				t.Fatalf("Incorrect Berlin fork block on chainID: %d; Block number: %d, should be: %d", TestnetChainID, chainConfig.BerlinBlock, 1559470)
 			}
 
-			if tc == testNetChainId && chainConfig.LondonBlock.Cmp(new(big.Int).SetUint64(7513335)) != 0 {
-				t.Fatalf("Incorrect London fork block on chainID: %d; Block number: %d, should be: %d", testNetChainId, chainConfig.LondonBlock, 7513335)
+			if tc == TestnetChainID && chainConfig.LondonBlock.Cmp(new(big.Int).SetUint64(7513335)) != 0 {
+				t.Fatalf("Incorrect London fork block on chainID: %d; Block number: %d, should be: %d", TestnetChainID, chainConfig.LondonBlock, 7513335)
 			}
 		})
 	}
@@ -108,6 +107,32 @@ func TestUtilsConfig_SetBlockRange(t *testing.T) {
 	if last != uint64(7_513_335) {
 		t.Fatalf("Failed to parse last block; Should be: %d, but is: %d", 7_513_335, last)
 	}
+
+	first, last, err = SetBlockRange("opera+23456", "London-100", 4002)
+	if err != nil {
+		t.Fatalf("Failed to set block range (opera+23456-London-100 on testnet): %v", err)
+	}
+
+	if first != uint64(502_783) {
+		t.Fatalf("Failed to parse first block; Should be: %d, but is: %d", 502_783, first)
+	}
+
+	if last != uint64(7_513_235) {
+		t.Fatalf("Failed to parse last block; Should be: %d, but is: %d", 7_513_235, last)
+	}
+
+	first, last, err = SetBlockRange("berlin-1000", "LonDoN", 250)
+	if err != nil {
+		t.Fatalf("Failed to set block range (berlin-1000-LonDoN on testnet): %v", err)
+	}
+
+	if first != uint64(37_454_223) {
+		t.Fatalf("Failed to parse first block; Should be: %d, but is: %d", 37_454_223, first)
+	}
+
+	if last != uint64(37_534_833) {
+		t.Fatalf("Failed to parse last block; Should be: %d, but is: %d", 37_534_833, last)
+	}
 }
 
 func TestUtilsConfig_SetInvalidBlockRange(t *testing.T) {
@@ -117,6 +142,26 @@ func TestUtilsConfig_SetInvalidBlockRange(t *testing.T) {
 	}
 
 	_, _, err = SetBlockRange("1000", "0", 4002)
+	if err == nil {
+		t.Fatalf("Failed to throw an error")
+	}
+
+	_, _, err = SetBlockRange("tokyo", "berlin", 250)
+	if err == nil {
+		t.Fatalf("Failed to throw an error")
+	}
+
+	_, _, err = SetBlockRange("tokyo", "berlin", 4002)
+	if err == nil {
+		t.Fatalf("Failed to throw an error")
+	}
+
+	_, _, err = SetBlockRange("london-opera", "opera+london", 250)
+	if err == nil {
+		t.Fatalf("Failed to throw an error")
+	}
+
+	_, _, err = SetBlockRange("london-opera", "opera+london", 4002)
 	if err == nil {
 		t.Fatalf("Failed to throw an error")
 	}
