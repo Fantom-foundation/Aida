@@ -6,20 +6,20 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
-type ValidationAction struct {
-	ProcessorActions
+type ValidationExtension struct {
+	ProcessorExtensions
 }
 
-func NewValidationAction() *ValidationAction {
-	return &ValidationAction{}
+func NewValidationExtension() *ValidationExtension {
+	return &ValidationExtension{}
 }
 
-func (la *ValidationAction) Init(bp *BlockProcessor) error {
+func (la *ValidationExtension) Init(bp *BlockProcessor) error {
 	return nil
 }
 
 // PostPrepare validates the worldstate after preparing/priming db
-func (la *ValidationAction) PostPrepare(bp *BlockProcessor) error {
+func (la *ValidationExtension) PostPrepare(bp *BlockProcessor) error {
 	if bp.cfg.ValidateWorldState {
 		bp.log.Notice("Validate primed world-state\n")
 		ws, err := utils.GenerateWorldStateFromUpdateDB(bp.cfg, bp.cfg.First-1)
@@ -33,12 +33,12 @@ func (la *ValidationAction) PostPrepare(bp *BlockProcessor) error {
 	return nil
 }
 
-func (la *ValidationAction) PostTransaction(bp *BlockProcessor) error {
+func (la *ValidationExtension) PostTransaction(bp *BlockProcessor) error {
 	return nil
 }
 
 // PostProcessing checks the world-state after processing has completed
-func (la *ValidationAction) PostProcessing(bp *BlockProcessor) error {
+func (la *ValidationExtension) PostProcessing(bp *BlockProcessor) error {
 	if bp.cfg.ValidateWorldState {
 		bp.log.Notice("Validate final world-state\n")
 		ws, err := utils.GenerateWorldStateFromUpdateDB(bp.cfg, bp.cfg.Last)
@@ -52,6 +52,6 @@ func (la *ValidationAction) PostProcessing(bp *BlockProcessor) error {
 	return nil
 }
 
-func (la *ValidationAction) Exit(bp *BlockProcessor) error {
+func (la *ValidationExtension) Exit(bp *BlockProcessor) error {
 	return nil
 }

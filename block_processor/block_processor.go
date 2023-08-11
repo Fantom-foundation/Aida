@@ -3,7 +3,6 @@ package blockprocessor
 import (
 	"fmt"
 	"math/big"
-	"os"
 	"reflect"
 
 	"github.com/Fantom-foundation/Aida/logger"
@@ -14,14 +13,17 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// ProcessorActions supports block processing actions
-type ProcessorActions interface {
+// ProcessorExtensions supports block processing actions
+type ProcessorExtensions interface {
 	Init(*BlockProcessor) error            // Initialise action (before block processing starts)
 	PostPrepare(*BlockProcessor) error     // Post-prepare action (after statedb has been created/primed)
 	PostTransaction(*BlockProcessor) error // Post-transaction action (after a transaction has been processed)
 	PostProcessing(*BlockProcessor) error  // Post-processing action (after all transactions have been processed/before closing statedb)
 	Exit(*BlockProcessor) error            // Exit action (after completing block processing)
 }
+
+// a list of processor actions
+type ExtensionList []ProcessorExtensions
 
 // BlockProcessor's state
 type BlockProcessor struct {
@@ -48,11 +50,8 @@ func NewBlockProcessor(name string, ctx *cli.Context) (*BlockProcessor, error) {
 	}, nil
 }
 
-// a list of processor actions
-type ActionList []ProcessorActions
-
-// ExecuteAll executes a matching method name of actions in the action list.
-func (al ActionList) ExecuteAll(method string, bp *BlockProcessor) error {
+// ExecuteExtensions executes a matching method name of actions in the action list.
+func (al ExtensionList) ExecuteExtensions(method string, bp *BlockProcessor) error {
 	inputs := make([]reflect.Value, 1)
 	inputs[0] = reflect.ValueOf(bp)
 
@@ -109,7 +108,7 @@ func (bp *BlockProcessor) ProcessFirstBlock(iter substate.SubstateIterator) erro
 }
 
 // Run executes all blocks in sequence.
-func (bp *BlockProcessor) Run(actions ActionList) error {
+func (bp *BlockProcessor) Run(actions ExtensionList) error {
 	var err error
 
 	// reset state
@@ -127,13 +126,13 @@ func (bp *BlockProcessor) Run(actions ActionList) error {
 	log := bp.log
 
 	// call init actions
-	if err := actions.ExecuteAll("Init", bp); err != nil {
+	if err := actions.ExecuteExtensions("Init", bp); err != nil {
 		return err
 	}
 
 	// close actions when return
 	defer func() error {
-		return actions.ExecuteAll("Exit", bp)
+		return actions.ExecuteExtensions("Exit", bp)
 	}()
 
 	// open substate database
@@ -146,13 +145,9 @@ func (bp *BlockProcessor) Run(actions ActionList) error {
 	if err := bp.Prepare(); err != nil {
 		return err
 	}
-	if !cfg.KeepDb {
-		log.Warningf("--keep-db is not used. Directory %v with DB will be removed at the end of this run.", bp.stateDbDir)
-		defer os.RemoveAll(bp.stateDbDir)
-	}
 
 	// call post-prepare actions
-	if err := actions.ExecuteAll("PostPrepare", bp); err != nil {
+	if err := actions.ExecuteExtensions("PostPrepare", bp); err != nil {
 		return err
 	}
 
@@ -206,7 +201,7 @@ func (bp *BlockProcessor) Run(actions ActionList) error {
 		bp.totalGas.Add(bp.totalGas, new(big.Int).SetUint64(tx.Substate.Result.GasUsed))
 
 		// call post-transaction actions
-		if err := actions.ExecuteAll("PostTransaction", bp); err != nil {
+		if err := actions.ExecuteExtensions("PostTransaction", bp); err != nil {
 			return err
 		}
 		bp.totalTx++
@@ -217,7 +212,7 @@ func (bp *BlockProcessor) Run(actions ActionList) error {
 	log.Noticef("%v errors found.", utils.NumErrors)
 
 	// call post-processing actions
-	if err := actions.ExecuteAll("PostProcessing", bp); err != nil {
+	if err := actions.ExecuteExtensions("PostProcessing", bp); err != nil {
 		return err
 	}
 

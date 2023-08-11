@@ -1,8 +1,4 @@
-<<<<<<<< HEAD:state/proxy/profiler.go
 package proxy
-========
-package blockprocessor
->>>>>>>> 6361035 (Move block processor and actions to a new folder):block_processor/proxy_profiler.go
 
 import (
 	"fmt"

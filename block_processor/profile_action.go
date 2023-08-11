@@ -7,22 +7,22 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
-// ProfileAction provide the logging action for block processing
-type ProfileAction struct {
-	ProcessorActions
+// ProfileExtension provide the logging action for block processing
+type ProfileExtension struct {
+	ProcessorExtensions
 
 	// state for profiling StateDB operations
 	dbStats          *profile.Stats
 	lastDbStatsBlock uint64
 }
 
-// NewProfileAction creates a new logging action for block processing.
-func NewProfileAction() *ProfileAction {
-	return &ProfileAction{}
+// NewProfileExtension creates a new logging action for block processing.
+func NewProfileExtension() *ProfileExtension {
+	return &ProfileExtension{}
 }
 
 // Init opens the CPU profiler if specied in the cli.
-func (pa *ProfileAction) Init(bp *BlockProcessor) error {
+func (pa *ProfileExtension) Init(bp *BlockProcessor) error {
 	// CPU profiling (if enabled)
 	if err := utils.StartCPUProfile(bp.cfg); err != nil {
 		return fmt.Errorf("failed to open CPU profiler; %v", err)
@@ -31,7 +31,7 @@ func (pa *ProfileAction) Init(bp *BlockProcessor) error {
 }
 
 // PostPrepare initialises state and reports on disk usage after priming.
-func (pa *ProfileAction) PostPrepare(bp *BlockProcessor) error {
+func (pa *ProfileExtension) PostPrepare(bp *BlockProcessor) error {
 	// print memory usage after priming/preparing
 	utils.MemoryBreakdown(bp.db, bp.cfg, bp.log)
 
@@ -44,7 +44,7 @@ func (pa *ProfileAction) PostPrepare(bp *BlockProcessor) error {
 }
 
 // PostTransactions issues periodic stateDB reports.
-func (pa *ProfileAction) PostTransaction(bp *BlockProcessor) error {
+func (pa *ProfileExtension) PostTransaction(bp *BlockProcessor) error {
 
 	// initialise the last-block variables for the first time to suppress block report
 	// at the beginning (in case the user has specified a large enough starting block)
@@ -68,7 +68,7 @@ func (pa *ProfileAction) PostTransaction(bp *BlockProcessor) error {
 }
 
 // PostProcessing issues a summary report.
-func (pa *ProfileAction) PostProcessing(bp *BlockProcessor) error {
+func (pa *ProfileExtension) PostProcessing(bp *BlockProcessor) error {
 
 	// write memory profile
 	if err := utils.StartMemoryProfile(bp.cfg); err != nil {
@@ -86,7 +86,7 @@ func (pa *ProfileAction) PostProcessing(bp *BlockProcessor) error {
 }
 
 // Exit stops CPU profiling and issues disk report
-func (la *ProfileAction) Exit(bp *BlockProcessor) error {
+func (la *ProfileExtension) Exit(bp *BlockProcessor) error {
 	utils.StopCPUProfile(bp.cfg)
 	return nil
 }
