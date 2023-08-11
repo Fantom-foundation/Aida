@@ -43,7 +43,6 @@ func PrepareStateDB(cfg *Config) (state.StateDB, string, error) {
 	if cfg.DbLogging {
 		db = proxy.NewLoggerProxy(db, cfg.LogLevel)
 	}
-
 	return db, dbPath, nil
 }
 
