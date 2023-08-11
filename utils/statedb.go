@@ -182,10 +182,8 @@ func makeStateDBVariant(directory, impl, variant, archiveVariant string, carmenS
 			archiveVariant = "none"
 		}
 		return state.MakeCarmenStateDB(directory, variant, archiveVariant, carmenSchema)
-	case "flat":
-		return state.MakeFlatStateDB(directory, variant, rootHash)
-	case "erigon":
-		return state.MakeErigonStateDB(directory, variant, rootHash, cfg.ErigonBatchSize, cfg.First, cfg.Last, cfg.AppName)
+	case "opera":
+		return state.MakeOperaStateDB(directory, variant)
 	}
 	return nil, fmt.Errorf("unknown Db implementation: %v", impl)
 }

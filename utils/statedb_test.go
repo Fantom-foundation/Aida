@@ -35,8 +35,6 @@ func getStatedbTestCases() []statedbTestCase {
 		{"carmen", "geth", false, "none", false},
 		{"carmen", "geth", true, "ldb", false},
 		{"carmen", "geth", true, "sqlite", false},
-		{"flat", "geth", false, "none", false},
-		{"flat", "geth", false, "none", true},
 	}
 
 	return testCases

@@ -153,16 +153,12 @@ func RunVM(ctx *cli.Context) error {
 				break
 			}
 
-			if cfg.DbImpl != "erigon" {
-				db.EndBlock()
-			}
+			db.EndBlock()
 
 			// Move on sync-periods if needed.
 			newSyncPeriod := tx.Block / cfg.SyncPeriodLength
 			for curSyncPeriod < newSyncPeriod {
-				if cfg.DbImpl != "erigon" {
-					db.EndSyncPeriod()
-				}
+				db.EndSyncPeriod()
 				curSyncPeriod++
 				db.BeginSyncPeriod(curSyncPeriod)
 			}
