@@ -128,7 +128,7 @@ func insertMetadata(ctx *cli.Context) error {
 		if err != nil {
 			return fmt.Errorf("cannot parse uint %v; %v", valArg, err)
 		}
-		if err = md.SetChainID(int(val)); err != nil {
+		if err = md.SetChainID(utils.ChainID(val)); err != nil {
 			return err
 		}
 	case utils.TimestampPrefix:

@@ -96,7 +96,7 @@ func getVmDuration() time.Duration {
 }
 
 // replayTask replays a transaction substate
-func replayTask(config ReplayConfig, block uint64, tx int, recording *substate.Substate, chainID int, log *logging.Logger) error {
+func replayTask(config ReplayConfig, block uint64, tx int, recording *substate.Substate, chainID utils.ChainID, log *logging.Logger) error {
 	if tx == utils.PseudoTx {
 		return nil
 	}
