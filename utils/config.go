@@ -405,7 +405,7 @@ type Config struct {
 	BlockLength         uint64         // length of a block in number of transactions
 	BalanceRange        int64          // balance range for stochastic simulation/replay
 	CarmenSchema        int            // the current DB schema ID to use in Carmen
-	ChainID             ChainID            // Blockchain ID (mainnet: 250/testnet: 4002)
+	ChainID             ChainID        // Blockchain ID (mainnet: 250/testnet: 4002)
 	Cache               int            // Cache for StateDb or Priming
 	ContinueOnFailure   bool           // continue validation when an error detected
 	ContractNumber      int64          // number of contracts to create

@@ -18,7 +18,7 @@ var GetKeyStatsCommand = cli.Command{
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		&substate.WorkersFlag,
-		&substate.SubstateDbFlag,
+		&utils.AidaDbFlag,
 		&utils.ChainIDFlag,
 		&logger.LogLevelFlag,
 	},
