@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"log"
 
-	vm_sdb "github.com/Fantom-foundation/Aida/cmd/aida-vm-sdb/vm-sdb"
 	"github.com/Fantom-foundation/Aida/iterator"
 	"github.com/Fantom-foundation/Aida/state"
-	"github.com/Fantom-foundation/Aida/tracer"
+	"github.com/Fantom-foundation/Aida/state/proxy"
 	traceCtx "github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/Fantom-foundation/Aida/tracer/profile"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -47,11 +46,11 @@ func ReplayAPI(ctx *cli.Context) error {
 			return err
 		}
 		defer rCtx.Close()
-		db = tracer.NewProxyRecorder(db, rCtx)
+		db = proxy.NewRecorderProxy(db, rCtx)
 	}
 
 	if cfg.Profile {
-		db, stats = vm_sdb.NewProxyProfiler(db, cfg.ProfileFile)
+		db, stats = proxy.NewProfilerProxy(db, cfg.ProfileFile)
 	}
 
 	err = utils.StartCPUProfile(cfg)

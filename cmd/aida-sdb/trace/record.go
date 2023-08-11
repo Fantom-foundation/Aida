@@ -7,7 +7,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
-	"github.com/Fantom-foundation/Aida/tracer"
+	"github.com/Fantom-foundation/Aida/state/proxy"
 	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -114,7 +114,7 @@ func traceRecordAction(ctx *cli.Context) error {
 		}
 		var statedb state.StateDB
 		statedb = state.MakeInMemoryStateDB(&tx.Substate.InputAlloc, tx.Block)
-		statedb = tracer.NewProxyRecorder(statedb, rCtx)
+		statedb = proxy.NewRecorderProxy(statedb, rCtx)
 
 		if tx.Transaction >= utils.PseudoTx {
 			utils.ProcessPseudoTx(tx.Substate.OutputAlloc, statedb)
