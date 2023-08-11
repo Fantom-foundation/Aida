@@ -3,6 +3,7 @@ package blockprocessor
 import (
 	"fmt"
 
+	"github.com/Fantom-foundation/Aida/state/proxy"
 	"github.com/Fantom-foundation/Aida/tracer/profile"
 	"github.com/Fantom-foundation/Aida/utils"
 )
@@ -22,7 +23,7 @@ func NewProfileExtension() *ProfileExtension {
 }
 
 // Init opens the CPU profiler if specied in the cli.
-func (pa *ProfileExtension) Init(bp *BlockProcessor) error {
+func (ext *ProfileExtension) Init(bp *BlockProcessor) error {
 	// CPU profiling (if enabled)
 	if err := utils.StartCPUProfile(bp.cfg); err != nil {
 		return fmt.Errorf("failed to open CPU profiler; %v", err)
@@ -31,44 +32,44 @@ func (pa *ProfileExtension) Init(bp *BlockProcessor) error {
 }
 
 // PostPrepare initialises state and reports on disk usage after priming.
-func (pa *ProfileExtension) PostPrepare(bp *BlockProcessor) error {
+func (ext *ProfileExtension) PostPrepare(bp *BlockProcessor) error {
 	// print memory usage after priming/preparing
 	utils.MemoryBreakdown(bp.db, bp.cfg, bp.log)
 
 	// is StateDb profiling switched on
 	if bp.cfg.Profile {
-		bp.db, pa.dbStats = NewProxyProfiler(bp.db, bp.cfg.ProfileFile)
+		bp.db, ext.dbStats = proxy.NewProfilerProxy(bp.db, bp.cfg.ProfileFile)
 	}
 
 	return nil
 }
 
 // PostTransactions issues periodic stateDB reports.
-func (pa *ProfileExtension) PostTransaction(bp *BlockProcessor) error {
+func (ext *ProfileExtension) PostTransaction(bp *BlockProcessor) error {
 
 	// initialise the last-block variables for the first time to suppress block report
 	// at the beginning (in case the user has specified a large enough starting block)
-	if pa.lastDbStatsBlock == 0 {
-		pa.lastDbStatsBlock = bp.block
+	if ext.lastDbStatsBlock == 0 {
+		ext.lastDbStatsBlock = bp.block - (bp.block % bp.cfg.ProfileInterval)
 	}
 
 	// issue periodic StateDB report
 	if bp.cfg.Profile {
-		if bp.block-pa.lastDbStatsBlock >= bp.cfg.ProfileInterval {
+		if bp.block-ext.lastDbStatsBlock >= bp.cfg.ProfileInterval {
 			// print dbStats
-			if err := pa.dbStats.PrintProfiling(pa.lastDbStatsBlock, bp.block); err != nil {
+			if err := ext.dbStats.PrintProfiling(ext.lastDbStatsBlock, bp.block); err != nil {
 				return err
 			}
 			// reset stats in proxy
-			pa.dbStats.Reset()
-			pa.lastDbStatsBlock = bp.block
+			ext.dbStats.Reset()
+			ext.lastDbStatsBlock = bp.block
 		}
 	}
 	return nil
 }
 
 // PostProcessing issues a summary report.
-func (pa *ProfileExtension) PostProcessing(bp *BlockProcessor) error {
+func (ext *ProfileExtension) PostProcessing(bp *BlockProcessor) error {
 
 	// write memory profile
 	if err := utils.StartMemoryProfile(bp.cfg); err != nil {
@@ -76,8 +77,8 @@ func (pa *ProfileExtension) PostProcessing(bp *BlockProcessor) error {
 	}
 
 	// final block profile report
-	if bp.cfg.Profile && bp.block != pa.lastDbStatsBlock {
-		if err := pa.dbStats.PrintProfiling(pa.lastDbStatsBlock, bp.block); err != nil {
+	if bp.cfg.Profile && bp.block != ext.lastDbStatsBlock {
+		if err := ext.dbStats.PrintProfiling(ext.lastDbStatsBlock, bp.block); err != nil {
 			return err
 		}
 	}

@@ -14,12 +14,12 @@ func NewValidationExtension() *ValidationExtension {
 	return &ValidationExtension{}
 }
 
-func (la *ValidationExtension) Init(bp *BlockProcessor) error {
+func (ext *ValidationExtension) Init(bp *BlockProcessor) error {
 	return nil
 }
 
 // PostPrepare validates the worldstate after preparing/priming db
-func (la *ValidationExtension) PostPrepare(bp *BlockProcessor) error {
+func (ext *ValidationExtension) PostPrepare(bp *BlockProcessor) error {
 	if bp.cfg.ValidateWorldState {
 		bp.log.Notice("Validate primed world-state\n")
 		ws, err := utils.GenerateWorldStateFromUpdateDB(bp.cfg, bp.cfg.First-1)
@@ -33,12 +33,12 @@ func (la *ValidationExtension) PostPrepare(bp *BlockProcessor) error {
 	return nil
 }
 
-func (la *ValidationExtension) PostTransaction(bp *BlockProcessor) error {
+func (ext *ValidationExtension) PostTransaction(bp *BlockProcessor) error {
 	return nil
 }
 
 // PostProcessing checks the world-state after processing has completed
-func (la *ValidationExtension) PostProcessing(bp *BlockProcessor) error {
+func (ext *ValidationExtension) PostProcessing(bp *BlockProcessor) error {
 	if bp.cfg.ValidateWorldState {
 		bp.log.Notice("Validate final world-state\n")
 		ws, err := utils.GenerateWorldStateFromUpdateDB(bp.cfg, bp.cfg.Last)
@@ -52,6 +52,6 @@ func (la *ValidationExtension) PostProcessing(bp *BlockProcessor) error {
 	return nil
 }
 
-func (la *ValidationExtension) Exit(bp *BlockProcessor) error {
+func (ext *ValidationExtension) Exit(bp *BlockProcessor) error {
 	return nil
 }

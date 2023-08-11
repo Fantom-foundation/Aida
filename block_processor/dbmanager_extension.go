@@ -16,20 +16,20 @@ func NewDbManagerExtension() *DbManagerExtension {
 	return &DbManagerExtension{}
 }
 
-func (la *DbManagerExtension) Init(bp *BlockProcessor) error {
+func (ext *DbManagerExtension) Init(bp *BlockProcessor) error {
 	return nil
 }
 
-func (la *DbManagerExtension) PostPrepare(bp *BlockProcessor) error {
+func (ext *DbManagerExtension) PostPrepare(bp *BlockProcessor) error {
 	return nil
 }
 
-func (la *DbManagerExtension) PostTransaction(bp *BlockProcessor) error {
+func (ext *DbManagerExtension) PostTransaction(bp *BlockProcessor) error {
 	return nil
 }
 
 // PostProcessing writes state-db info file
-func (la *DbManagerExtension) PostProcessing(bp *BlockProcessor) error {
+func (ext *DbManagerExtension) PostProcessing(bp *BlockProcessor) error {
 	if bp.cfg.KeepDb {
 		rootHash, _ := bp.db.Commit(true)
 		if err := utils.WriteStateDbInfo(bp.stateDbDir, bp.cfg, bp.block, rootHash); err != nil {
@@ -40,7 +40,7 @@ func (la *DbManagerExtension) PostProcessing(bp *BlockProcessor) error {
 }
 
 // Exit rename or remove state-db directory depending on the flags.
-func (la *DbManagerExtension) Exit(bp *BlockProcessor) error {
+func (ext *DbManagerExtension) Exit(bp *BlockProcessor) error {
 	if bp.cfg.KeepDb {
 		newName := utils.RenameTempStateDBDirectory(bp.cfg, bp.stateDbDir, bp.block)
 		bp.log.Noticef("State-db directory: %v", newName)
