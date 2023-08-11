@@ -99,7 +99,7 @@ func RunVM(ctx *cli.Context) error {
 	// wrap stateDB for profiling
 	var stats *profile.Stats
 	if cfg.Profile {
-		db, stats = NewProxyProfiler(db, cfg.ProfileFile)
+		db, stats = NewProxyProfiler(db, cfg.ProfileFile, cfg.LogLevel)
 	}
 
 	if cfg.ValidateWorldState {

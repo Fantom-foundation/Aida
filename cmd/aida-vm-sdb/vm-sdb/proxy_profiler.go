@@ -5,27 +5,31 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/tracer/profile"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/op/go-logging"
 )
 
 // ProxyProfiler data structure for capturing and recording
 // invoked StateDB operations.
 type ProxyProfiler struct {
-	db state.StateDB  // state db
-	ps *profile.Stats // operation statistics
+	db  state.StateDB  // state db
+	ps  *profile.Stats // operation statistics
+	log *logging.Logger
 }
 
 // NewProxyProfiler creates a new StateDB proxy.
-func NewProxyProfiler(db state.StateDB, csv string) (*ProxyProfiler, *profile.Stats) {
+func NewProxyProfiler(db state.StateDB, csv string, logLevel string) (*ProxyProfiler, *profile.Stats) {
 	p := new(ProxyProfiler)
 	p.db = db
 	p.ps = profile.NewStats(csv)
 	p.ps.FillLabels(operation.CreateIdLabelMap())
+	p.log = logger.NewLogger(logLevel, "Proxy Profiler")
 	return p, p.ps
 }
 
@@ -397,7 +401,8 @@ func (p *ProxyProfiler) Close() error {
 }
 
 func (p *ProxyProfiler) StartBulkLoad(block uint64) state.BulkLoad {
-	panic("StartBulkLoad not supported by ProxyProfiler")
+	p.log.Warning("StartBulkLoad not supported by ProxyProfiler")
+	return nil
 }
 
 func (p *ProxyProfiler) GetArchiveState(block uint64) (state.StateDB, error) {

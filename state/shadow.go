@@ -116,8 +116,9 @@ func (s *shadowStateDB) Snapshot() int {
 
 func (s *shadowStateDB) RevertToSnapshot(id int) {
 	if id < 0 || len(s.snapshots) <= id {
-		panic(fmt.Sprintf("invalid snapshot id: %v, max: %v", id, len(s.snapshots)))
+		s.log.Fatalf(fmt.Sprintf("invalid snapshot id: %v, max: %v", id, len(s.snapshots)))
 	}
+
 	s.prime.RevertToSnapshot(s.snapshots[id].prime)
 	s.shadow.RevertToSnapshot(s.snapshots[id].shadow)
 }
@@ -256,7 +257,8 @@ func (s *shadowStateDB) AddPreimage(hash common.Hash, plain []byte) {
 
 func (s *shadowStateDB) ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error {
 	// ignored
-	panic("ForEachStorage not implemented")
+	s.log.Fatal("ForEachStorage not implemented")
+	return nil
 }
 
 func (s *shadowStateDB) StartBulkLoad(block uint64) BulkLoad {

@@ -107,7 +107,7 @@ func replayTask(config ReplayConfig, block uint64, tx int, recording *substate.S
 
 	defer func() {
 		if r := recover(); r != nil {
-			log.Fatalf("Execution of block %d / tx %d paniced: %v", block, tx, r)
+			log.Criticalf("Execution of block %d / tx %d panicked: %v", block, tx, r)
 		}
 	}()
 
@@ -142,10 +142,16 @@ func replayTask(config ReplayConfig, block uint64, tx int, recording *substate.S
 	}
 
 	// TODO: implement other state db types
-	var statedb state.StateDB
+	var (
+		statedb state.StateDB
+		err     error
+	)
 	switch strings.ToLower(config.state_db_impl) {
 	case "geth":
-		statedb = state.MakeOffTheChainStateDB(inputAlloc)
+		statedb, err = state.MakeOffTheChainStateDB(inputAlloc)
+		if err != nil {
+			return err
+		}
 	case "geth-memory", "memory":
 		statedb = state.MakeInMemoryStateDB(&inputAlloc, block)
 	default:

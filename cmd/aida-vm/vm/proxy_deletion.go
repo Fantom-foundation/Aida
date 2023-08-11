@@ -3,10 +3,12 @@ package vm
 import (
 	"math/big"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/op/go-logging"
 )
 
 type ContractLiveness struct {
@@ -17,15 +19,17 @@ type ContractLiveness struct {
 // ProxyDeletion data structure for capturing and recording
 // invoked StateDB operations.
 type ProxyDeletion struct {
-	db state.StateDB // state db
-	ch chan ContractLiveness
+	db  state.StateDB // state db
+	ch  chan ContractLiveness
+	log *logging.Logger
 }
 
 // NewProxyDeletion creates a new StateDB proxy.
-func NewProxyDeletion(db state.StateDB, ch chan ContractLiveness) *ProxyDeletion {
+func NewProxyDeletion(db state.StateDB, ch chan ContractLiveness, logLevel string) *ProxyDeletion {
 	r := new(ProxyDeletion)
 	r.db = db
 	r.ch = ch
+	r.log = logger.NewLogger(logLevel, "Proxy Deletion")
 	return r
 }
 
@@ -282,7 +286,8 @@ func (r *ProxyDeletion) Close() error {
 }
 
 func (r *ProxyDeletion) StartBulkLoad(uint64) state.BulkLoad {
-	panic("StartBulkLoad not supported by ProxyDeletion")
+	r.log.Warning("StartBulkLoad not supported by ProxyDeletion")
+	return nil
 }
 
 func (r *ProxyDeletion) GetMemoryUsage() *state.MemoryUsage {

@@ -38,8 +38,13 @@ func cloneDB(ctx *cli.Context) error {
 	}
 	defer snapshot.MustCloseStateDB(inputDB)
 
+	path, err := DefaultPath(ctx, &utils.TargetDbFlag, ".aida/clone")
+	if err != nil {
+		return err
+	}
+
 	// try to open source DB
-	outputDB, err := snapshot.OpenStateDB(DefaultPath(ctx, &utils.TargetDbFlag, ".aida/clone"))
+	outputDB, err := snapshot.OpenStateDB(path)
 	if err != nil {
 		return err
 	}

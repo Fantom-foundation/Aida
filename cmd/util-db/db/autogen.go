@@ -1,7 +1,7 @@
 package db
 
 import (
-	"log"
+	"fmt"
 	"os"
 
 	"github.com/Fantom-foundation/Aida/logger"
@@ -84,8 +84,7 @@ func autogen(ctx *cli.Context) error {
 	// reopen aida-db
 	g.aidaDb, err = rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
 	if err != nil {
-		log.Fatalf("cannot create new db; %v", err)
-		return err
+		return fmt.Errorf("cannot create new db; %v", err)
 	}
 	substate.SetSubstateDbBackend(g.aidaDb)
 

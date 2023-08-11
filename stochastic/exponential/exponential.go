@@ -1,6 +1,7 @@
 package exponential
 
 import (
+	"errors"
 	"fmt"
 	"math"
 	"math/rand"
@@ -55,9 +56,9 @@ func mean(points [][2]float64) float64 {
 }
 
 // mle is the Maximum Likelihood Estimation function for finding a suitable lambda.
-func mle(lambda float64, mean float64) float64 {
+func mle(lambda float64, mean float64) (float64, error) {
 	if math.IsNaN(lambda) || math.IsNaN(mean) {
-		panic("Lambda or mean values are not a number")
+		return 0, errors.New("lambda or mean values are not a number")
 	}
 	t := 1 / (math.Exp(lambda) - 1)
 	// ensure that exponent calculation is stable
@@ -70,21 +71,22 @@ func mle(lambda float64, mean float64) float64 {
 			t = 1.0
 		}
 	}
-	return 1/lambda - t - mean
+	return 1/lambda - t - mean, nil
 }
 
 // dMle computes the derivative of the Maximum Likelihood Estimation function.
-func dMle(lambda float64) float64 {
+func dMle(lambda float64) (float64, error) {
 	if math.IsNaN(lambda) {
-		panic("Lambda or mean values are not a number")
+		return 0, errors.New("lambda is not a number")
 	}
+
 	t := math.Exp(lambda) / math.Pow(math.Exp(lambda)-1, 2)
 	// ensure that exponent calculation is stable
 	if math.IsNaN(t) {
 		// If numerical limits are reached, replace by symbolic limits.
 		t = 1.0
 	}
-	return t - 1/(lambda*lambda)
+	return t - 1/(lambda*lambda), nil
 }
 
 // ApproximateLambda performs a classical Newtonian to determine
@@ -97,9 +99,18 @@ func ApproximateLambda(points [][2]float64) (float64, error) {
 	m := mean(points)
 	l := newtonInitLambda
 	for step := 0; step < newtonMaxStep; step++ {
-		err := mle(l, m)
-		l = l - err/dMle(l)
-		if math.Abs(err) < newtonError {
+		mleValue, err := mle(l, m)
+		if err != nil {
+			return 0, err
+		}
+
+		dMleValue, err := dMle(l)
+		if err != nil {
+			return 0, err
+		}
+
+		l = l - mleValue/dMleValue
+		if math.Abs(mleValue) < newtonError {
 			return l, nil
 		}
 	}
