@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/logger"
+	"github.com/Fantom-foundation/Aida/state/proxy"
 	"github.com/Fantom-foundation/Aida/stochastic"
-	"github.com/Fantom-foundation/Aida/tracer"
 	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/urfave/cli/v2"
@@ -100,7 +100,7 @@ func stochasticReplayAction(ctx *cli.Context) error {
 			return err
 		}
 		defer rCtx.Close()
-		db = tracer.NewProxyRecorder(db, rCtx)
+		db = proxy.NewRecorderProxy(db, rCtx)
 	}
 
 	// run simulation.
