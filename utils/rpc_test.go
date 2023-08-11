@@ -7,8 +7,6 @@ import (
 	"testing"
 )
 
-var chainIDs = []int{250, 4002}
-
 // TestSendRPCRequest sends a getEpochByNumber with "latest" argument and tries to unmarshal the result
 func TestSendRPCRequest(t *testing.T) {
 	req := JsonRPCRequest{
@@ -18,7 +16,7 @@ func TestSendRPCRequest(t *testing.T) {
 		JSONRPC: "2.0",
 	}
 
-	for _, id := range chainIDs {
+	for _, id := range AvailableChainIDs {
 		t.Run(fmt.Sprintf("ChainID %v", id), func(t *testing.T) {
 
 			res, err := SendRPCRequest(req, id)
@@ -72,7 +70,7 @@ func TestRPCFindEpochNumber(t *testing.T) {
 		testingTestnetBlock  uint64 = 479_326
 	)
 
-	for _, id := range chainIDs {
+	for _, id := range AvailableChainIDs {
 		t.Run(fmt.Sprintf("ChainID %v", id), func(t *testing.T) {
 			var testingBlock, expectedEpoch uint64
 
