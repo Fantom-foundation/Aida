@@ -27,7 +27,6 @@ var TraceRecordCommand = cli.Command{
 		&utils.SyncPeriodLengthFlag,
 		&utils.QuietFlag,
 		&substate.WorkersFlag,
-		&substate.SubstateDbFlag,
 		&utils.ChainIDFlag,
 		&utils.TraceFileFlag,
 		&utils.TraceDebugFlag,
@@ -69,7 +68,7 @@ func traceRecordAction(ctx *cli.Context) error {
 	defer rCtx.Close()
 
 	// open SubstateDB and create an substate iterator
-	substate.SetSubstateDb(cfg.SubstateDb)
+	substate.SetSubstateDb(cfg.AidaDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)

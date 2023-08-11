@@ -38,7 +38,6 @@ var ReplayCommand = cli.Command{
 		&substate.SkipTransferTxsFlag,
 		&substate.SkipCallTxsFlag,
 		&substate.SkipCreateTxsFlag,
-		&substate.SubstateDbFlag,
 		&utils.ChainIDFlag,
 		&utils.ProfileEVMCallFlag,
 		&utils.MicroProfilingFlag,
@@ -49,6 +48,7 @@ var ReplayCommand = cli.Command{
 		&utils.OnlySuccessfulFlag,
 		&utils.CpuProfileFlag,
 		&utils.StateDbImplementationFlag,
+		&utils.AidaDbFlag,
 		&logger.LogLevelFlag,
 	},
 	Description: `
@@ -342,7 +342,7 @@ func replayAction(ctx *cli.Context) error {
 		vm.BasicBlockProfilingDB = cfg.ProfilingDbName
 	}
 
-	substate.SetSubstateDb(cfg.SubstateDb)
+	substate.SetSubstateDb(cfg.AidaDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 

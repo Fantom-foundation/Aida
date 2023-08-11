@@ -50,7 +50,7 @@ func RunArchive(ctx *cli.Context) error {
 	defer db.Close()
 
 	// open substate DB
-	substate.SetSubstateDb(cfg.SubstateDb)
+	substate.SetSubstateDb(cfg.AidaDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 

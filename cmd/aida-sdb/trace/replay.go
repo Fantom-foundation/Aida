@@ -27,7 +27,6 @@ var TraceReplayCommand = cli.Command{
 		&utils.CarmenSchemaFlag,
 		&utils.ChainIDFlag,
 		&utils.CpuProfileFlag,
-		&utils.DeletionDbFlag,
 		&utils.QuietFlag,
 		&utils.SyncPeriodLengthFlag,
 		&utils.KeepDbFlag,
@@ -50,13 +49,11 @@ var TraceReplayCommand = cli.Command{
 		&utils.ShadowDb,
 		&utils.ShadowDbImplementationFlag,
 		&utils.ShadowDbVariantFlag,
-		&substate.SubstateDbFlag,
 		&substate.WorkersFlag,
 		&utils.TraceFileFlag,
 		&utils.TraceDirectoryFlag,
 		&utils.TraceDebugFlag,
 		&utils.DebugFromFlag,
-		&utils.UpdateDbFlag,
 		&utils.ValidateFlag,
 		&utils.ValidateWorldStateFlag,
 		&utils.AidaDbFlag,
@@ -258,7 +255,7 @@ func traceReplayAction(ctx *cli.Context) error {
 	defer utils.StopCPUProfile(cfg)
 
 	// run storage driver
-	substate.SetSubstateDb(cfg.SubstateDb)
+	substate.SetSubstateDb(cfg.AidaDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 

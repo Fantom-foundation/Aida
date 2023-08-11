@@ -115,7 +115,7 @@ func getReferenceStatsActionWithConsumer[T comparable](ctx *cli.Context, cli_com
 	log.Infof("chain-id: %v\n", cfg.ChainID)
 	log.Infof("contract-db: %v\n", cfg.Db)
 
-	substate.SetSubstateDb(cfg.SubstateDb)
+	substate.SetSubstateDb(cfg.AidaDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 

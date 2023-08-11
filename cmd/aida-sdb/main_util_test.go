@@ -24,7 +24,8 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-// setup prepares substateDB and creates trace directory
+// setup prepares
+// substateDB and creates trace directory
 func setup() {
 	// download and extract substate.test
 	err := setupTestSubstateDB()
