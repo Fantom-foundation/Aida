@@ -401,7 +401,7 @@ func (p *ProxyProfiler) Close() error {
 }
 
 func (p *ProxyProfiler) StartBulkLoad(block uint64) state.BulkLoad {
-	p.log.Warning("StartBulkLoad not supported by ProxyProfiler")
+	p.log.Fatal("StartBulkLoad not supported by ProxyProfiler")
 	return nil
 }
 
