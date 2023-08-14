@@ -8,7 +8,6 @@ require (
 	github.com/Fantom-foundation/Tosca v0.0.0-20230527064715-aa1fc97baebe
 	github.com/Fantom-foundation/go-opera v1.1.1-rc.2
 	github.com/Fantom-foundation/lachesis-base v0.0.0-20221208123620-82a6d15f995c
-	github.com/c2h5oh/datasize v0.0.0-20220606134207-859f65c6625b
 	github.com/dsnet/compress v0.0.1
 	github.com/ethereum/go-ethereum v1.10.25
 	github.com/fatih/color v1.13.0
@@ -138,3 +137,5 @@ replace github.com/ethereum/evmc/v10 => ./tosca/third_party/evmc
 replace github.com/ethereum/go-ethereum => github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20230621093123-9c5132fd78c1
 
 replace github.com/Fantom-foundation/go-opera => github.com/Fantom-foundation/go-opera-substate v1.0.1-0.20230523093256-e592c59c5996
+
+replace github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
