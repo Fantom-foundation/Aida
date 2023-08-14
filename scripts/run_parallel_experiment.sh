@@ -2,16 +2,16 @@
 # Name:
 #    run_parallel_experiment.sh -  script for running the parallel experiment for block processing
 #
-# Synopsis: 
+# Synopsis:
 #    run_parallel_experiment.sh <aida-db> <carmen-impl> <carmen-variant> <tosca-impl> <tmp-directory> <startBlock> <endBlock> <output-directory>
 #
-# Description: 
+# Description:
 #    Conducts the parallel execution experiment and produces in the output directory the dataset in the form
-#    of a sqlite3 database, a report in the HTML format, and the log file of the script. 
+#    of a sqlite3 database, a report in the HTML format, and the log file of the script.
 #
 #    The script requires a linux environment with installed commands hwinfo, free, git, go, sqlite3, and curl.
 #    The script must be invoked in the main directory of the Aida repository.
-# 
+#
 
 # check the number of command line arguments
 if [ "$#" -ne 8 ]; then
@@ -29,7 +29,7 @@ startblock=$6
 endblock=$7
 outputdir=$8
 
-# logging 
+# logging
 log() {
     echo "$(date) $1" | tee -a "$outputdir/parallel_experiment.log"
 }
@@ -37,7 +37,7 @@ log() {
 #  HardwareDescription() queries the hardware configuration of the server.
 HardwareDescription()  {
     processor=`cat /proc/cpuinfo | grep "^model name" | head -n 1 | awk -F': ' '{print $2}'`
-    memory=`free | grep "^Mem:" | awk '{printf("%dGB RAM\n", $2/1024/1024)}'` 
+    memory=`free | grep "^Mem:" | awk '{printf("%dGB RAM\n", $2/1024/1024)}'`
     disks=`hwinfo  --disk | grep Model | awk -F ': \"' '{if (NR > 1) printf(", "); printf("%s", substr($2,1,length($2)-1));}  END {printf("\n")}'`
     echo "$processor, $memory, disks: $disks"
 }
@@ -65,19 +65,23 @@ Machine() {
 # run full parallel experiment
 log "run parallel experiment in the block range from $startblock to $endblock ..."
 ./build/aida-profile parallelisation --aida-db $aidadbpath --db-impl $dbimpl --db-variant $dbvariant --vm-impl=$vmimpl --db-tmp $tmpdir $startblock $endblock "$outputdir/profile.db"
+retVal=$?
+if [ $retVal -ne 0 ]; then
+    log "Failed running profiling."
+    exit 1
+fi
 
 # reduce dataset in sqlite3 (NB: R consumes too much memory/is too slow for the reduction)
 log "reduce data set ..."
 sqlite3 $outputdir/profile.db << EOF
 -- create temporary table groupedParallelProfile to group data for every 100,000 blocks
-DROP TABLE IF EXISTS  groupedParallelProfile; 
-CREATE TABLE groupedParallelProfile(block INTEGER, blockGas REAL, tBlock REAL, tCommit REAL, speedup REAL);
-INSERT INTO groupedParallelProfile SELECT block/100000, blockGas, tBlock, tCommit, log(speedup) FROM parallelprofile;
--- aggregate data 
-DROP TABLE IF EXISTS aggregatedParallelProfile;
-CREATE TABLE aggregatedParallelProfile(block INTEGER, blockGas REAL, tBlock REAL, tCommit REAL, speedup REAL);
-INSERT INTO aggregatedParallelProfile SELECT min(block)*100000, avg(blockGas), avg(tBlock)/1e6, avg(tCommit)/1e6, exp(avg(speedup)) FROM groupedParallelProfile GROUP BY block;
-DROP TABLE groupedParallelProfile;
+DROP VIEW IF EXISTS  groupedParallelProfile;
+CREATE VIEW groupedParallelProfile(block, tBlock, tCommit, numTx, speedup, gasBlock) AS
+SELECT block/100000, tBlock, tCommit, numTx, log(speedup), gasBlock FROM parallelprofile;
+-- aggregate data
+CREATE TABLE aggregatedParallelProfile(block INTEGER, tBlock REAL, tCommit REAL, numTx REAL,  speedup REAL, gasBlock REAL);
+INSERT INTO aggregatedParallelProfile SELECT min(block)*100000, avg(tBlock)/1e6, avg(tCommit)/1e6, avg(numTx), exp(avg(speedup)), avg(gasBlock) FROM groupedParallelProfile GROUP BY block;
+DROP VIEW groupedParallelProfile;
 EOF
 
 # query the configuration
