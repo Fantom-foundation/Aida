@@ -22,13 +22,17 @@ import (
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/klauspost/compress/gzip"
+	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
 const (
-	maxNumberOfDownloadAttempts = 5
-	firstMainnetPatchFileName   = "5577-46750.tar.gz"
-	firstTestnetPatchFileName   = "" // todo fill with first testnet patch once lachesis patch for testnet is released
+	maxNumberOfDownloadAttempts  = 10
+	maxDownloadTimeout           = 5 * time.Second
+	sleepTimeAfterFailedDownload = 5 * time.Second
+
+	firstMainnetPatchFileName = "5577-46750.tar.gz"
+	firstTestnetPatchFileName = "" // todo fill with first testnet patch once lachesis patch for testnet is released
 )
 
 // UpdateCommand downloads aida-db and new patches
@@ -334,11 +338,13 @@ func decompressPatch(cfg *utils.Config, patchChan chan utils.PatchJson, errChan 
 
 // downloadPatch downloads patches from server and sends them towards decompressor
 func downloadPatch(cfg *utils.Config, patchesChan chan utils.PatchJson) (chan utils.PatchJson, chan error) {
-	log := logger.NewLogger(cfg.LogLevel, "Download patch")
+
 	downloadedPatchChan := make(chan utils.PatchJson, 1)
 	errChan := make(chan error, 1)
 
 	go func() {
+		log := logger.NewLogger(cfg.LogLevel, "Download patch")
+
 		defer close(downloadedPatchChan)
 		defer close(errChan)
 		for {
@@ -349,12 +355,12 @@ func downloadPatch(cfg *utils.Config, patchesChan chan utils.PatchJson) (chan ut
 			log.Debugf("Downloading %s...", patch.FileName)
 			patchUrl := utils.AidaDbRepositoryUrl + "/" + patch.FileName
 			compressedPatchPath := filepath.Join(cfg.DbTmp, patch.FileName)
-			err := downloadFile(compressedPatchPath, cfg.DbTmp, patchUrl)
+			err := downloadFile(compressedPatchPath, cfg.DbTmp, patchUrl, log)
 			if err != nil {
 				errChan <- fmt.Errorf("unable to download %s; %v", patchUrl, err)
 				return
 			}
-			log.Debugf("Finished downloading %s!", patch.FileName)
+			log.Noticef("Finished downloading %s!", patch.FileName)
 
 			log.Debugf("Calculating %s md5...", patch.FileName)
 			md5, err := calculateMD5Sum(compressedPatchPath)
@@ -368,6 +374,8 @@ func downloadPatch(cfg *utils.Config, patchesChan chan utils.PatchJson) (chan ut
 				errChan <- fmt.Errorf("archive %v doesn't have matching md5; archive %v, expected %v", patch.FileName, md5, patch.TarHash)
 				return
 			}
+
+			log.Noticef("Finished checking %s md5!", patch.FileName)
 
 			downloadedPatchChan <- patch
 		}
@@ -491,7 +499,7 @@ func deleteOperaWorldStateFromUpdateSet(dbPath string) error {
 }
 
 // downloadFile downloads file - used for downloading individual patches.
-func downloadFile(filePath string, parentPath string, url string) error {
+func downloadFile(filePath string, parentPath string, url string, log *logging.Logger) error {
 	// Create parent directories if they don't exist
 	err := os.MkdirAll(parentPath, 0755)
 	if err != nil {
@@ -510,6 +518,7 @@ func downloadFile(filePath string, parentPath string, url string) error {
 	if err != nil {
 		return fmt.Errorf("error getting file info: %v", err)
 	}
+
 	currentSize := fileInfo.Size()
 
 	// Seek to the end of the file
@@ -520,7 +529,7 @@ func downloadFile(filePath string, parentPath string, url string) error {
 
 	writer := bufio.NewWriter(file)
 
-	err = getFileContentsFromUrl(url, currentSize, writer)
+	err = getFileContentsFromUrl(url, currentSize, writer, log)
 	if err != nil {
 		return err
 	}
@@ -534,7 +543,7 @@ func downloadFile(filePath string, parentPath string, url string) error {
 }
 
 // getFileContentsFromUrl retrieves file contents stream from file at given url address
-func getFileContentsFromUrl(url string, startSize int64, out *bufio.Writer) error {
+func getFileContentsFromUrl(url string, startSize int64, out *bufio.Writer, log *logging.Logger) error {
 	var err error
 	var written int64
 
@@ -544,8 +553,10 @@ func getFileContentsFromUrl(url string, startSize int64, out *bufio.Writer) erro
 			return nil
 		}
 
+		log.Warningf("downloading %v failed, retrying after %v; %v more attempts", url, sleepTimeAfterFailedDownload, tries)
+
 		// wait until next attempt
-		time.Sleep(2 * time.Second)
+		time.Sleep(sleepTimeAfterFailedDownload)
 
 		startSize += written
 	}
@@ -564,8 +575,13 @@ func downloadFileContents(url string, startSize int64, out *bufio.Writer) (int64
 		req.Header.Set("Range", "bytes="+strconv.FormatInt(startSize, 10)+"-")
 	}
 
+	// by default, go sets Timeout to 0, so creating own client is necessary
+	client := http.Client{
+		Timeout: maxDownloadTimeout,
+	}
+
 	// Make the request
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := client.Do(req)
 	if err != nil {
 		return 0, fmt.Errorf("error making request: %v", err)
 	}
@@ -577,7 +593,12 @@ func downloadFileContents(url string, startSize int64, out *bufio.Writer) (int64
 	}
 
 	// Writer the body to file
-	return io.Copy(out, resp.Body)
+	i, err := io.Copy(out, resp.Body)
+	if err != nil {
+		return 0, fmt.Errorf("cannot copy contents from response; %v", err)
+	}
+
+	return i, nil
 }
 
 // extractTarGz extracts tar file contents into location of output folder
