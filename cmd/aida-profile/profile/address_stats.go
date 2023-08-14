@@ -1,4 +1,4 @@
-package vm
+package profile
 
 import (
 	"github.com/Fantom-foundation/Aida/utils"
@@ -7,7 +7,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// record-vm: aida-vm address-stats command
+// GetAddressStatsCommand computes usage statistics of addresses
 var GetAddressStatsCommand = cli.Command{
 	Action:    getAddressStatsAction,
 	Name:      "address-stats",
@@ -15,11 +15,11 @@ var GetAddressStatsCommand = cli.Command{
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		&substate.WorkersFlag,
-		&substate.SubstateDbFlag,
+		&utils.AidaDbFlag,
 		&utils.ChainIDFlag,
 	},
 	Description: `
-The aida-vm address-stats command requires two arguments:
+The aida-profile address-stats command requires two arguments:
 <blockNumFirst> <blockNumLast>
 
 <blockNumFirst> and <blockNumLast> are the first and

@@ -22,9 +22,6 @@ var RunVMApp = cli.App{
 	Flags: []cli.Flag{
 		// AidaDb
 		&utils.AidaDbFlag,
-		&substate.SubstateDbFlag,
-		&utils.DeletionDbFlag,
-		&utils.UpdateDbFlag,
 
 		// StateDb
 		&utils.CarmenSchemaFlag,
@@ -73,9 +70,6 @@ var RunVMApp = cli.App{
 		&utils.ValidateWorldStateFlag,
 		&utils.ValidateFlag,
 		&logger.LogLevelFlag,
-
-		// erigon
-		&utils.ErigonBatchSizeFlag,
 	},
 	Description: `
 The run-vm command requires two arguments: <blockNumFirst> <blockNumLast>

@@ -38,7 +38,6 @@ var ReplayCommand = cli.Command{
 		&substate.SkipTransferTxsFlag,
 		&substate.SkipCallTxsFlag,
 		&substate.SkipCreateTxsFlag,
-		&substate.SubstateDbFlag,
 		&utils.ChainIDFlag,
 		&utils.ProfileEVMCallFlag,
 		&utils.MicroProfilingFlag,
@@ -49,6 +48,7 @@ var ReplayCommand = cli.Command{
 		&utils.OnlySuccessfulFlag,
 		&utils.CpuProfileFlag,
 		&utils.StateDbImplementationFlag,
+		&utils.AidaDbFlag,
 		&logger.LogLevelFlag,
 	},
 	Description: `
@@ -96,7 +96,7 @@ func getVmDuration() time.Duration {
 }
 
 // replayTask replays a transaction substate
-func replayTask(config ReplayConfig, block uint64, tx int, recording *substate.Substate, taskPool *substate.SubstateTaskPool, log *logging.Logger) error {
+func replayTask(config ReplayConfig, block uint64, tx int, recording *substate.Substate, chainID utils.ChainID, log *logging.Logger) error {
 	if tx == utils.PseudoTx {
 		return nil
 	}
@@ -293,7 +293,7 @@ func replayAction(ctx *cli.Context) error {
 			for i := 0; i < 5; i++ {
 				stats.Merge(dcc[i].stats)
 			}
-			version := fmt.Sprintf("chaind-id:%v", chainID)
+			version := fmt.Sprintf("chaind-id:%v", cfg.ChainID)
 			stats.Dump(version)
 			log.Noticef("aida-vm: replay-action: recorded micro profiling statistics in %v", vm.MicroProfilingDB)
 		}()
@@ -324,8 +324,7 @@ func replayAction(ctx *cli.Context) error {
 		}()
 	}
 
-	chainID = cfg.ChainID
-	log.Infof("chain-id: %v\n", chainID)
+	log.Infof("chain-id: %v\n", cfg.ChainID)
 
 	if cfg.ProfileEVMCall {
 		evmcore.ProfileEVMCall = true
@@ -343,7 +342,7 @@ func replayAction(ctx *cli.Context) error {
 		vm.BasicBlockProfilingDB = cfg.ProfilingDbName
 	}
 
-	substate.SetSubstateDb(cfg.SubstateDb)
+	substate.SetSubstateDb(cfg.AidaDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
@@ -365,7 +364,7 @@ func replayAction(ctx *cli.Context) error {
 	}
 
 	task := func(block uint64, tx int, recording *substate.Substate, taskPool *substate.SubstateTaskPool) error {
-		return replayTask(config, block, tx, recording, taskPool, log)
+		return replayTask(config, block, tx, recording, cfg.ChainID, log)
 	}
 
 	resetVmDuration()

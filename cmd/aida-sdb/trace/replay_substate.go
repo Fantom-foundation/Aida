@@ -34,7 +34,6 @@ var TraceReplaySubstateCommand = cli.Command{
 		&utils.StateDbLoggingFlag,
 		&utils.ShadowDbImplementationFlag,
 		&utils.ShadowDbVariantFlag,
-		&substate.SubstateDbFlag,
 		&utils.SyncPeriodLengthFlag,
 		&substate.WorkersFlag,
 		&utils.TraceFileFlag,
@@ -45,8 +44,6 @@ var TraceReplaySubstateCommand = cli.Command{
 		&utils.ValidateWorldStateFlag,
 		&utils.AidaDbFlag,
 		&logger.LogLevelFlag,
-		// erigon
-		&utils.ErigonBatchSizeFlag,
 	},
 	Description: `
 The trace replay-substate command requires two arguments:
@@ -200,7 +197,7 @@ func traceReplaySubstateAction(ctx *cli.Context) error {
 		return err
 	}
 	// run storage driver
-	substate.SetSubstateDb(cfg.SubstateDb)
+	substate.SetSubstateDb(cfg.AidaDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 

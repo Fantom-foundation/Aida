@@ -9,6 +9,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/state/proxy"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/google/martian/log"
@@ -40,9 +41,8 @@ func PrepareStateDB(cfg *Config) (state.StateDB, string, error) {
 	}
 
 	if cfg.DbLogging {
-		db = state.MakeLoggingStateDB(db, cfg.LogLevel)
+		db = proxy.NewLoggerProxy(db, cfg.LogLevel)
 	}
-
 	return db, dbPath, nil
 }
 
@@ -115,7 +115,7 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 		return nil, "", fmt.Errorf("cannot create ShadowDb; %v", err)
 	}
 
-	return state.MakeShadowStateDB(stateDb, shadowDb), cfg.StateDbSrc, nil
+	return proxy.NewShadowProxy(stateDb, shadowDb), cfg.StateDbSrc, nil
 }
 
 // makeNewStateDB creates a DB instance with a potential shadow instance.
@@ -165,7 +165,7 @@ func makeNewStateDB(cfg *Config) (state.StateDB, string, error) {
 		return nil, "", fmt.Errorf("cannnot make shadowDb; %v", err)
 	}
 
-	return state.MakeShadowStateDB(stateDb, shadowDb), tmpDir, nil
+	return proxy.NewShadowProxy(stateDb, shadowDb), tmpDir, nil
 }
 
 // makeStateDBVariant creates a DB instance of the requested kind.
@@ -181,10 +181,8 @@ func makeStateDBVariant(directory, impl, variant, archiveVariant string, carmenS
 			archiveVariant = "none"
 		}
 		return state.MakeCarmenStateDB(directory, variant, archiveVariant, carmenSchema)
-	case "flat":
-		return state.MakeFlatStateDB(directory, variant, rootHash)
-	case "erigon":
-		return state.MakeErigonStateDB(directory, variant, rootHash, cfg.ErigonBatchSize, cfg.First, cfg.Last, cfg.AppName)
+	case "opera":
+		return state.MakeOperaStateDB(directory, variant)
 	}
 	return nil, fmt.Errorf("unknown Db implementation: %v", impl)
 }

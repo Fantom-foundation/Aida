@@ -67,7 +67,7 @@ func GenerateWorldStateFromUpdateDB(cfg *Config, target uint64) (substate.Substa
 	ws := make(substate.SubstateAlloc)
 	blockPos := uint64(0)
 	// load pre-computed update-set from update-set db
-	db, err := substate.OpenUpdateDBReadOnly(cfg.UpdateDb)
+	db, err := substate.OpenUpdateDBReadOnly(cfg.AidaDb)
 	if err != nil {
 		return nil, err
 	}

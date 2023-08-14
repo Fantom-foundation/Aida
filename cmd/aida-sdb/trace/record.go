@@ -7,7 +7,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
-	"github.com/Fantom-foundation/Aida/tracer"
+	"github.com/Fantom-foundation/Aida/state/proxy"
 	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -27,7 +27,6 @@ var TraceRecordCommand = cli.Command{
 		&utils.SyncPeriodLengthFlag,
 		&utils.QuietFlag,
 		&substate.WorkersFlag,
-		&substate.SubstateDbFlag,
 		&utils.ChainIDFlag,
 		&utils.TraceFileFlag,
 		&utils.TraceDebugFlag,
@@ -69,7 +68,7 @@ func traceRecordAction(ctx *cli.Context) error {
 	defer rCtx.Close()
 
 	// open SubstateDB and create an substate iterator
-	substate.SetSubstateDb(cfg.SubstateDb)
+	substate.SetSubstateDb(cfg.AidaDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
@@ -115,14 +114,10 @@ func traceRecordAction(ctx *cli.Context) error {
 		}
 		var statedb state.StateDB
 		statedb = state.MakeInMemoryStateDB(&tx.Substate.InputAlloc, tx.Block)
-		statedb = tracer.NewProxyRecorder(statedb, rCtx)
+		statedb = proxy.NewRecorderProxy(statedb, rCtx)
 
-		if tx.Transaction >= utils.PseudoTx {
-			utils.ProcessPseudoTx(tx.Substate.OutputAlloc, statedb)
-		} else {
-			if err := utils.ProcessTx(statedb, cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
-				return fmt.Errorf("Failed to process block %v tx %v. %v", tx.Block, tx.Transaction, err)
-			}
+		if err := utils.ProcessTx(statedb, cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
+			return fmt.Errorf("Failed to process block %v tx %v. %v", tx.Block, tx.Transaction, err)
 		}
 		if !cfg.Quiet {
 			// report progress

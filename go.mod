@@ -7,8 +7,6 @@ require (
 	github.com/Fantom-foundation/Substate v0.0.0-20230717050741-1969ed5d05e2
 	github.com/Fantom-foundation/Tosca v0.0.0-20230527064715-aa1fc97baebe
 	github.com/Fantom-foundation/go-opera v1.1.1-rc.2
-	github.com/Fantom-foundation/go-opera-erigon v0.0.0-00010101000000-000000000000
-	github.com/Fantom-foundation/go-opera-flat v0.0.0-00010101000000-000000000000
 	github.com/Fantom-foundation/lachesis-base v0.0.0-20221208123620-82a6d15f995c
 	github.com/c2h5oh/datasize v0.0.0-20220606134207-859f65c6625b
 	github.com/dsnet/compress v0.0.1
@@ -17,13 +15,10 @@ require (
 	github.com/go-echarts/go-echarts/v2 v2.2.5
 	github.com/goccy/go-graphviz v0.1.0
 	github.com/google/martian v2.1.0+incompatible
-	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d
 	github.com/klauspost/compress v1.15.11
-	github.com/ledgerwatch/erigon v0.0.0-00010101000000-000000000000
-	github.com/ledgerwatch/erigon-lib v0.0.0-20220421034346-3c5275752634
 	github.com/mattn/go-sqlite3 v2.0.2+incompatible
 	github.com/olekukonko/tablewriter v0.0.5
-	github.com/onsi/gomega v1.17.0
+	github.com/onsi/gomega v1.19.0
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
 	github.com/paulmach/orb v0.9.0
 	github.com/sigurn/crc8 v0.0.0-20220107193325-2243fe600f9f
@@ -37,11 +32,8 @@ require (
 
 require (
 	github.com/DataDog/zstd v1.5.2 // indirect
-	github.com/RoaringBitmap/roaring v1.2.1 // indirect
 	github.com/VictoriaMetrics/fastcache v1.12.0 // indirect
-	github.com/VictoriaMetrics/metrics v1.22.2 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/bits-and-blooms/bitset v1.2.0 // indirect
 	github.com/btcsuite/btcd v0.22.0-beta // indirect
 	github.com/cakturk/go-netstat v0.0.0-20200220111822-e5b49efee7a5 // indirect
 	github.com/certifi/gocertifi v0.0.0-20210507211836-431795d63e8d // indirect
@@ -74,10 +66,10 @@ require (
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/google/btree v1.1.2 // indirect
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/graph-gophers/graphql-go v1.3.0 // indirect
+	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect
 	github.com/holiman/bloomfilter/v2 v2.0.3 // indirect
 	github.com/holiman/uint256 v1.2.1 // indirect
 	github.com/huin/goupnp v1.0.3 // indirect
@@ -88,13 +80,10 @@ require (
 	github.com/karalabe/usb v0.0.2 // indirect
 	github.com/kr/pretty v0.3.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
-	github.com/ledgerwatch/log/v3 v3.4.1 // indirect
-	github.com/ledgerwatch/secp256k1 v1.0.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.16 // indirect
 	github.com/mattn/go-runewidth v0.0.14 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
-	github.com/mschoch/smat v0.2.0 // indirect
 	github.com/naoina/go-stringutil v0.1.0 // indirect
 	github.com/naoina/toml v0.1.2-0.20170918210437-9fafd6967416 // indirect
 	github.com/opentracing/opentracing-go v1.1.0 // indirect
@@ -115,14 +104,9 @@ require (
 	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.11 // indirect
 	github.com/tklauser/numcpus v0.6.0 // indirect
-	github.com/torquem-ch/mdbx-go v0.26.0 // indirect
 	github.com/tyler-smith/go-bip39 v1.0.2 // indirect
 	github.com/uber/jaeger-client-go v2.20.1+incompatible // indirect
 	github.com/uber/jaeger-lib v2.2.0+incompatible // indirect
-	github.com/ugorji/go/codec v1.2.7 // indirect
-	github.com/valyala/fastjson v1.6.3 // indirect
-	github.com/valyala/fastrand v1.1.0 // indirect
-	github.com/valyala/histogram v1.2.0 // indirect
 	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
@@ -133,8 +117,6 @@ require (
 	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/sys v0.5.0 // indirect
 	golang.org/x/time v0.0.0-20220922220347-f3bd1da661af // indirect
-	google.golang.org/genproto v0.0.0-20210624195500-8bfb893ecb84 // indirect
-	google.golang.org/grpc v1.48.0 // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/olebedev/go-duktape.v3 v3.0.0-20200619000410-60c24ae608a6 // indirect
@@ -153,23 +135,6 @@ replace github.com/Fantom-foundation/Tosca => ./tosca
 
 replace github.com/ethereum/evmc/v10 => ./tosca/third_party/evmc
 
-// Erigon
-replace github.com/Fantom-foundation/go-opera-erigon => github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230418094634-9d555752574a
-
-replace github.com/Fantom-foundation/go-opera-flat => github.com/Fantom-foundation/go-opera-fvm v0.0.0-20230329105747-dd1f4d815c71
-
-replace github.com/dvyukov/go-fuzz => github.com/guzenok/go-fuzz v0.0.0-20210103140116-f9104dfb626f
-
 replace github.com/ethereum/go-ethereum => github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20230621093123-9c5132fd78c1
 
 replace github.com/Fantom-foundation/go-opera => github.com/Fantom-foundation/go-opera-substate v1.0.1-0.20230523093256-e592c59c5996
-
-replace github.com/ledgerwatch/erigon => github.com/ledgerwatch/erigon v1.9.7-0.20220421151921-057740ac2019
-
-replace github.com/ugorji/go/codec => github.com/ugorji/go/codec v1.1.13
-
-replace github.com/ugorji/go/codec/codecgen => github.com/ugorji/go/codec/codecgen v1.1.13
-
-replace github.com/torquem-ch/mdbx-go => github.com/torquem-ch/mdbx-go v0.26.3
-
-replace github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7

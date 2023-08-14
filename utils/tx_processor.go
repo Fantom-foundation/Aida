@@ -29,30 +29,43 @@ var (
 	hashError error // error when retriving block hashes
 )
 
-// runVMTask executes VM on a chosen storage system.
-func ProcessTx(db state.StateDB, cfg *Config, block uint64, txIndex int, tx *substate.Substate) (txerr error) {
-	db.BeginTransaction(uint32(txIndex))
+// ProcessTx detects transaction type
+func ProcessTx(db state.StateDB, cfg *Config, block uint64, tx int, st *substate.Substate) error {
+	// process transaction
+	if tx >= PseudoTx {
+		processPseudoTx(st.OutputAlloc, db)
+	} else {
+		if err := processRegularTx(db, cfg, block, tx, st); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// processRegularTx executes VM on a chosen storage system.
+func processRegularTx(db state.StateDB, cfg *Config, block uint64, tx int, st *substate.Substate) (txerr error) {
+	db.BeginTransaction(uint32(tx))
 
 	var (
 		gaspool   = new(evmcore.GasPool)
 		blockHash = common.HexToHash(fmt.Sprintf("0x%016d", block))
-		txHash    = common.HexToHash(fmt.Sprintf("0x%016d%016d", block, txIndex))
+		txHash    = common.HexToHash(fmt.Sprintf("0x%016d%016d", block, tx))
 		newErrors int
 		errMsg    strings.Builder
-		inputEnv  = tx.Env
+		inputEnv  = st.Env
 	)
 	defer handleErrorOnExit(&txerr, &errMsg, &newErrors, cfg.ContinueOnFailure)
 	vmConfig := opera.DefaultVMConfig
 	vmConfig.NoBaseFee = true
 	vmConfig.InterpreterImpl = cfg.VmImpl
 	hashError = nil
-	errMsg.WriteString(fmt.Sprintf("Block: %v Transaction: %v\n", block, txIndex))
+	errMsg.WriteString(fmt.Sprintf("Block: %v Transaction: %v\n", block, tx))
 	// get chain configuration
 	chainConfig := GetChainConfig(cfg.ChainID)
 
 	// validate whether the input alloc is contained in the db
 	if cfg.ValidateTxState {
-		if err := ValidateStateDB(tx.InputAlloc, db, UpdateOnFailure); err != nil {
+		if err := ValidateStateDB(st.InputAlloc, db, UpdateOnFailure); err != nil {
 			newErrors++
 			errMsg.WriteString("Input alloc is not contained in the stateDB.\n")
 			errMsg.WriteString(err.Error())
@@ -64,8 +77,8 @@ func ProcessTx(db state.StateDB, cfg *Config, block uint64, txIndex int, tx *sub
 
 	// prepare tx
 	gaspool.AddGas(inputEnv.GasLimit)
-	msg := tx.Message.AsMessage()
-	db.Prepare(txHash, txIndex)
+	msg := st.Message.AsMessage()
+	db.Prepare(txHash, tx)
 	blockCtx := prepareBlockCtx(inputEnv)
 	txCtx := evmcore.NewEVMTxContext(msg)
 	evm := vm.NewEVM(*blockCtx, txCtx, db, chainConfig, vmConfig)
@@ -104,7 +117,7 @@ func ProcessTx(db state.StateDB, cfg *Config, block uint64, txIndex int, tx *sub
 			contract = crypto.CreateAddress(evm.TxContext.Origin, msg.Nonce())
 		}
 		vmResult := compileVMResult(logs, msgResult, contract)
-		if err := validateVMResult(vmResult, tx.Result); err != nil {
+		if err := validateVMResult(vmResult, st.Result); err != nil {
 			newErrors++
 			errMsg.WriteString(err.Error())
 			if !cfg.ContinueOnFailure {
@@ -113,7 +126,7 @@ func ProcessTx(db state.StateDB, cfg *Config, block uint64, txIndex int, tx *sub
 		}
 
 		// validate state
-		if err := validateVMAlloc(db, tx.OutputAlloc, cfg.StateValidationMode); err != nil {
+		if err := validateVMAlloc(db, st.OutputAlloc, cfg.StateValidationMode); err != nil {
 			newErrors++
 			errMsg.WriteString("Output alloc is not contained in the stateDB.\n")
 			errMsg.WriteString(err.Error())
@@ -125,9 +138,9 @@ func ProcessTx(db state.StateDB, cfg *Config, block uint64, txIndex int, tx *sub
 	return
 }
 
-// ProcessPseudoTx processes pseudo transactions in Lachesis by applying the change in db state.
+// processPseudoTx processes pseudo transactions in Lachesis by applying the change in db state.
 // The pseudo transactions includes Lachesis SFC, lachesis genesis and lachesis-opera transition.
-func ProcessPseudoTx(sa substate.SubstateAlloc, db state.StateDB) {
+func processPseudoTx(sa substate.SubstateAlloc, db state.StateDB) {
 	db.BeginTransaction(PseudoTx)
 	for addr, account := range sa {
 		db.SubBalance(addr, db.GetBalance(addr))
