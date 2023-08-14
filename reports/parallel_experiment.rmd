@@ -163,3 +163,16 @@ reducedData %>%
   geom_point(alpha=0.3) +
   labs(x="Block Height", y="Commit Time (ms)", title="Commit Time")
 ```
+
+## 7. Block gas
+
+The average gas consumption of a block is `r mean(data$gasBlock)` with a minimum of `r min(data$gasBlock)` and a maximum of `r max(data$gasBlock)`.
+The smoothened trend line of the gas consumption is shown in the figure below. In the figure, we aggregate the gas consumption for all 100K blocks as points.
+
+```{r, echo = FALSE, message=FALSE}
+reducedData %>%
+  ggplot(aes(x = block, y = gasBlock)) +
+  geom_smooth(color = "tomato") +
+  geom_point(alpha=0.3) +
+  labs(x="Block Height", y="Block Gas", title="Gas Consumption of Blocks")
+```
