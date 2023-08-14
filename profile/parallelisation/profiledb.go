@@ -9,39 +9,31 @@ import (
 )
 
 const (
-	// bufferSize is the buffer size of the in-memory buffer for storing profile data
+	// bufferSize of the in-memory buffer for storing profile data
 	bufferSize = 1000
 
-	// SQL for inserting new block
+	// SQL statement for inserting a profile record of a new block
 	insertBlockSQL = `
 INSERT INTO parallelprofile (
-	block, tBlock, tSequential, tCritical, tCommit, speedup, ubNumProc, numTx, blockGas
+	block, tBlock, tSequential, tCritical, tCommit, speedup, ubNumProc, numTx, gasBlock
 ) VALUES (
 	?, ?, ?, ?, ?, ?, ?, ?, ?
 )
 `
-	// SQL for inserting new transaction
+	// SQL statement for inserting a profile record of a new transaction
 	insertTxSQL = `
 INSERT INTO txProfile (
-block, tx, duration, transactionGas
+block, tx, duration, gas
 ) VALUES (
 ?, ?, ?, ?
 )
 `
-	// SQL for inserting new transaction
-	insertTxSQL = `
-INSERT INTO txProfile (
-block, tx, duration
-) VALUES (
-?, ?, ?
-)
-`
 
-	// SQL for creating a new profiling table
+	// SQL statement for creating profiling tables
 	createSQL = `
-	PRAGMA journal_mode = MEMORY;
-	CREATE TABLE IF NOT EXISTS parallelprofile (
-    block INTEGER,
+PRAGMA journal_mode = MEMORY;
+CREATE TABLE IF NOT EXISTS parallelprofile (
+	block INTEGER,
 	tBlock INTEGER,
 	tSequential INTEGER,
 	tCritical INTEGER,
@@ -49,17 +41,18 @@ block, tx, duration
 	speedup FLOAT,
 	ubNumProc INTEGER,
 	numTx INTEGER,
-	blockGas INTEGER);
-	CREATE TABLE IF NOT EXISTS txProfile (
-    block INTEGER,
+	gasBlock INTEGER
+);
+CREATE TABLE IF NOT EXISTS txProfile (
+	block INTEGER,
 	tx    INTEGER, 
 	duration INTEGER,
-	transactionGas INTEGER
+	gas INTEGER
 );
 `
 )
 
-// ProfileDB is a database of ProfileData
+// ProfileDB is a profiling database for block processing.
 type ProfileDB struct {
 	sql       *sql.DB       // Sqlite3 database
 	blockStmt *sql.Stmt     // Prepared insert statement for a block
@@ -67,8 +60,7 @@ type ProfileDB struct {
 	buffer    []ProfileData // record buffer
 }
 
-// NewProfileDB constructs a ProfileDatas value for managing stock ProfileDatas in a
-// SQLite database. This API is not thread safe.
+// NewProfileDB constructs a new profiling database.
 func NewProfileDB(dbFile string) (*ProfileDB, error) {
 	// open SQLITE3 DB
 	sqlDB, err := sql.Open("sqlite3", dbFile)
@@ -79,26 +71,24 @@ func NewProfileDB(dbFile string) (*ProfileDB, error) {
 	if _, err = sqlDB.Exec(createSQL); err != nil {
 		return nil, fmt.Errorf("sqlDB.Exec, err: %q", err)
 	}
-	// prepare the INSERT statement for subsequent use
+	// prepare INSERT statements for subsequent use
 	blockStmt, err := sqlDB.Prepare(insertBlockSQL)
 	if err != nil {
 		return nil, err
 	}
-
 	txStmt, err := sqlDB.Prepare(insertTxSQL)
 	if err != nil {
 		return nil, err
 	}
-	db := ProfileDB{
+	return &ProfileDB{
 		sql:       sqlDB,
 		blockStmt: blockStmt,
 		txStmt:    txStmt,
 		buffer:    make([]ProfileData, 0, bufferSize),
-	}
-	return &db, nil
+	}, nil
 }
 
-// Close flushes all ProfileDatas to the database and prevents any future trading.
+// Close flushes buffers of profiling database and closes the profiling database.
 func (db *ProfileDB) Close() error {
 	defer func() {
 		db.txStmt.Close()
@@ -111,8 +101,7 @@ func (db *ProfileDB) Close() error {
 	return nil
 }
 
-// Add stores a profile data record into a buffer. Once the buffer is full, the
-// records are flushed into the database.
+// Add a profile data record to the profiling database.
 func (db *ProfileDB) Add(ProfileData ProfileData) error {
 	db.buffer = append(db.buffer, ProfileData)
 	if len(db.buffer) == cap(db.buffer) {
@@ -123,34 +112,38 @@ func (db *ProfileDB) Add(ProfileData ProfileData) error {
 	return nil
 }
 
-// Flush inserts pending ProfileDatas into the database inside DB transaction.
+// Flush the profiling records in the database.
 func (db *ProfileDB) Flush() error {
+	// open new transaction
 	tx, err := db.sql.Begin()
 	if err != nil {
 		return err
 	}
+	// write profiling records into sqlite3 database
 	for _, ProfileData := range db.buffer {
+		// write block data
 		_, err := tx.Stmt(db.blockStmt).Exec(ProfileData.curBlock, ProfileData.tBlock, ProfileData.tSequential, ProfileData.tCritical,
-			ProfileData.tCommit, ProfileData.speedup, ProfileData.ubNumProc, ProfileData.numTx, ProfileData.blockGas)
+			ProfileData.tCommit, ProfileData.speedup, ProfileData.ubNumProc, ProfileData.numTx, ProfileData.gasBlock)
 		if err != nil {
 			_ = tx.Rollback()
 			return err
 		}
-		// write into new txProfile table here the transaction durations
+		// write transactions
 		for i, tTransaction := range ProfileData.tTransactions {
-			_, err = tx.Stmt(db.txStmt).Exec(ProfileData.curBlock, i, tTransaction, ProfileData.transactionGas[i])
+			_, err = tx.Stmt(db.txStmt).Exec(ProfileData.curBlock, i, tTransaction, ProfileData.gasTransactions[i])
 			if err != nil {
 				_ = tx.Rollback()
 				return err
 			}
 		}
 	}
+	// clear buffer
 	db.buffer = db.buffer[:0]
+	// commit transaction
 	return tx.Commit()
 }
 
-// DeleteByBlockRange deletes rows in a given block range
-
+// DeleteByBlockRange deletes information for a block range; used prior insertion
 func (db *ProfileDB) DeleteByBlockRange(firstBlock, lastBlock uint64) (int64, error) {
 	const (
 		parallelProfile = "parallelprofile"

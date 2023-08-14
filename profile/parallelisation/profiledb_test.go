@@ -29,16 +29,16 @@ func TestAdd(t *testing.T) {
 	defer db.Close()
 
 	ProfileData := ProfileData{
-		curBlock:       5637800,
-		tBlock:         5838,
-		tSequential:    4439,
-		tCritical:      2424,
-		tCommit:        1398,
-		speedup:        1.527263,
-		ubNumProc:      2,
-		numTx:          3,
-		tTransactions:  []int64{2382388, 11218838, 5939392888},
-		transactionGas: []uint64{111111, 222222, 333333},
+		curBlock:        5637800,
+		tBlock:          5838,
+		tSequential:     4439,
+		tCritical:       2424,
+		tCommit:         1398,
+		speedup:         1.527263,
+		ubNumProc:       2,
+		numTx:           3,
+		tTransactions:   []int64{2382388, 11218838, 5939392888},
+		gasTransactions: []uint64{111111, 222222, 333333},
 	}
 
 	err = db.Add(ProfileData)
@@ -47,7 +47,7 @@ func TestAdd(t *testing.T) {
 	require.Len(db.buffer, 1)
 
 	require.Len(db.buffer[0].tTransactions, 3)
-	require.Len(db.buffer[0].transactionGas, 3)
+	require.Len(db.buffer[0].gasTransactions, 3)
 }
 
 func TestFlush(t *testing.T) {
@@ -69,40 +69,40 @@ func TestFlush(t *testing.T) {
 	require.NoError(err)
 
 	pd := ProfileData{
-		curBlock:       5637800,
-		tBlock:         5838,
-		tSequential:    4439,
-		tCritical:      2424,
-		tCommit:        1398,
-		speedup:        1.527263,
-		ubNumProc:      2,
-		numTx:          3,
-		tTransactions:  []int64{2382388, 11218838, 5939392888},
-		transactionGas: []uint64{111111, 222222, 333333},
+		curBlock:        5637800,
+		tBlock:          5838,
+		tSequential:     4439,
+		tCritical:       2424,
+		tCommit:         1398,
+		speedup:         1.527263,
+		ubNumProc:       2,
+		numTx:           3,
+		tTransactions:   []int64{2382388, 11218838, 5939392888},
+		gasTransactions: []uint64{111111, 222222, 333333},
 	}
 
 	err = db.Add(pd)
 	require.NoError(err)
 
 	pd = ProfileData{
-		curBlock:       3239933,
-		tBlock:         44939,
-		tSequential:    3493848,
-		tCritical:      434838,
-		tCommit:        2332,
-		speedup:        1.203983,
-		ubNumProc:      2,
-		numTx:          2,
-		tTransactions:  []int64{2382388, 11218838},
-		transactionGas: []uint64{444444, 555555},
+		curBlock:        3239933,
+		tBlock:          44939,
+		tSequential:     3493848,
+		tCritical:       434838,
+		tCommit:         2332,
+		speedup:         1.203983,
+		ubNumProc:       2,
+		numTx:           2,
+		tTransactions:   []int64{2382388, 11218838},
+		gasTransactions: []uint64{444444, 555555},
 	}
 	err = db.Add(pd)
 	require.NoError(err)
 	require.Len(db.buffer, 2)
 	require.Len(db.buffer[0].tTransactions, 3)
-	require.Len(db.buffer[0].transactionGas, 3)
+	require.Len(db.buffer[0].gasTransactions, 3)
 	require.Len(db.buffer[1].tTransactions, 2)
-	require.Len(db.buffer[1].transactionGas, 2)
+	require.Len(db.buffer[1].gasTransactions, 2)
 	err = db.Flush()
 	require.NoError(err)
 	require.Len(db.buffer, 0)
@@ -115,16 +115,16 @@ func TestFlush(t *testing.T) {
 
 	for i := 1; i < bufferSize; i++ {
 		profileData := ProfileData{
-			curBlock:       uint64(i),
-			tBlock:         5838,
-			tSequential:    4439,
-			tCritical:      2424,
-			tCommit:        1398,
-			speedup:        1.527263,
-			ubNumProc:      2,
-			numTx:          2,
-			tTransactions:  []int64{2382388, 11218838},
-			transactionGas: []uint64{444444, 555555},
+			curBlock:        uint64(i),
+			tBlock:          5838,
+			tSequential:     4439,
+			tCritical:       2424,
+			tCommit:         1398,
+			speedup:         1.527263,
+			ubNumProc:       2,
+			numTx:           2,
+			tTransactions:   []int64{2382388, 11218838},
+			gasTransactions: []uint64{444444, 555555},
 		}
 		err = db.Add(profileData)
 		require.NoError(err)
@@ -132,16 +132,16 @@ func TestFlush(t *testing.T) {
 	}
 
 	pd = ProfileData{
-		curBlock:       uint64(bufferSize),
-		tBlock:         5838,
-		tSequential:    4439,
-		tCritical:      2424,
-		tCommit:        1398,
-		speedup:        1.527263,
-		ubNumProc:      2,
-		numTx:          3,
-		tTransactions:  []int64{2382388, 11218838, 232348228},
-		transactionGas: []uint64{444444, 555555, 666666},
+		curBlock:        uint64(bufferSize),
+		tBlock:          5838,
+		tSequential:     4439,
+		tCritical:       2424,
+		tCommit:         1398,
+		speedup:         1.527263,
+		ubNumProc:       2,
+		numTx:           3,
+		tTransactions:   []int64{2382388, 11218838, 232348228},
+		gasTransactions: []uint64{444444, 555555, 666666},
 	}
 
 	err = db.Add(pd)
@@ -162,16 +162,16 @@ func TestDeleteBlockRangeOverlapOneTx(t *testing.T) {
 	blockRange := endBlock - startBlock
 	for i := startBlock; i <= endBlock; i++ {
 		profileData := ProfileData{
-			curBlock:       uint64(i),
-			tBlock:         5838,
-			tSequential:    4439,
-			tCritical:      2424,
-			tCommit:        1398,
-			speedup:        1.527263,
-			ubNumProc:      2,
-			numTx:          1,
-			tTransactions:  []int64{232939829},
-			transactionGas: []uint64{111111},
+			curBlock:        uint64(i),
+			tBlock:          5838,
+			tSequential:     4439,
+			tCritical:       2424,
+			tCommit:         1398,
+			speedup:         1.527263,
+			ubNumProc:       2,
+			numTx:           1,
+			tTransactions:   []int64{232939829},
+			gasTransactions: []uint64{111111},
 		}
 		err = db.Add(profileData)
 		require.NoError(err)
@@ -189,16 +189,16 @@ func TestDeleteBlockRangeOverlapOneTx(t *testing.T) {
 	defer db.Close()
 	for i := startBlock; i <= endBlock; i++ {
 		profileData := ProfileData{
-			curBlock:       uint64(i),
-			tBlock:         5838,
-			tSequential:    4439,
-			tCritical:      2424,
-			tCommit:        1398,
-			speedup:        1.527263,
-			ubNumProc:      2,
-			numTx:          1,
-			tTransactions:  []int64{232939829},
-			transactionGas: []uint64{111111},
+			curBlock:        uint64(i),
+			tBlock:          5838,
+			tSequential:     4439,
+			tCritical:       2424,
+			tCommit:         1398,
+			speedup:         1.527263,
+			ubNumProc:       2,
+			numTx:           1,
+			tTransactions:   []int64{232939829},
+			gasTransactions: []uint64{111111},
 		}
 		err = db.Add(profileData)
 		require.NoError(err)
@@ -225,16 +225,16 @@ func TestDeleteBlockRangeOverlapMultipleTx(t *testing.T) {
 	numTx := 4
 	for i := startBlock; i <= endBlock; i++ {
 		profileData := ProfileData{
-			curBlock:       uint64(i),
-			tBlock:         5838,
-			tSequential:    4439,
-			tCritical:      2424,
-			tCommit:        1398,
-			speedup:        1.527263,
-			ubNumProc:      2,
-			numTx:          numTx,
-			tTransactions:  []int64{232939829, 938828288, 92388277, 9238828},
-			transactionGas: []uint64{111111, 222222, 333333, 444444},
+			curBlock:        uint64(i),
+			tBlock:          5838,
+			tSequential:     4439,
+			tCritical:       2424,
+			tCommit:         1398,
+			speedup:         1.527263,
+			ubNumProc:       2,
+			numTx:           numTx,
+			tTransactions:   []int64{232939829, 938828288, 92388277, 9238828},
+			gasTransactions: []uint64{111111, 222222, 333333, 444444},
 		}
 		err = db.Add(profileData)
 		require.NoError(err)
@@ -253,16 +253,16 @@ func TestDeleteBlockRangeOverlapMultipleTx(t *testing.T) {
 	defer db.Close()
 	for i := startBlock; i <= endBlock; i++ {
 		profileData := ProfileData{
-			curBlock:       uint64(i),
-			tBlock:         5838,
-			tSequential:    4439,
-			tCritical:      2424,
-			tCommit:        1398,
-			speedup:        1.527263,
-			ubNumProc:      2,
-			numTx:          numTx,
-			tTransactions:  []int64{232939829, 938828288, 92388277, 9238828},
-			transactionGas: []uint64{111111, 222222, 333333, 444444},
+			curBlock:        uint64(i),
+			tBlock:          5838,
+			tSequential:     4439,
+			tCritical:       2424,
+			tCommit:         1398,
+			speedup:         1.527263,
+			ubNumProc:       2,
+			numTx:           numTx,
+			tTransactions:   []int64{232939829, 938828288, 92388277, 9238828},
+			gasTransactions: []uint64{111111, 222222, 333333, 444444},
 		}
 		err = db.Add(profileData)
 		require.NoError(err)
@@ -289,16 +289,16 @@ func TestDeleteBlockRangeNoOverlap(t *testing.T) {
 	startBlock, endBlock := uint64(500), uint64(2500)
 	for i := startBlock; i <= endBlock; i++ {
 		profileData := ProfileData{
-			curBlock:       uint64(i),
-			tBlock:         5838,
-			tSequential:    4439,
-			tCritical:      2424,
-			tCommit:        1398,
-			speedup:        1.527263,
-			ubNumProc:      2,
-			numTx:          3,
-			tTransactions:  []int64{232444, 92398, 9282887},
-			transactionGas: []uint64{111111, 222222, 333333, 444444},
+			curBlock:        uint64(i),
+			tBlock:          5838,
+			tSequential:     4439,
+			tCritical:       2424,
+			tCommit:         1398,
+			speedup:         1.527263,
+			ubNumProc:       2,
+			numTx:           3,
+			tTransactions:   []int64{232444, 92398, 9282887},
+			gasTransactions: []uint64{111111, 222222, 333333, 444444},
 		}
 		err = db.Add(profileData)
 		require.NoError(err)
@@ -349,16 +349,16 @@ func ExampleDB() {
 	const count = 10_000
 	for i := 0; i < count; i++ {
 		ProfileData := ProfileData{
-			curBlock:       5637800,
-			tBlock:         5838,
-			tSequential:    4439,
-			tCritical:      2424,
-			tCommit:        1398,
-			speedup:        rand.Float64() * 10,
-			ubNumProc:      2,
-			numTx:          3,
-			tTransactions:  []int64{2382388, 11218838, 5939392888},
-			transactionGas: []uint64{111111, 222222, 333333},
+			curBlock:        5637800,
+			tBlock:          5838,
+			tSequential:     4439,
+			tCritical:       2424,
+			tCommit:         1398,
+			speedup:         rand.Float64() * 10,
+			ubNumProc:       2,
+			numTx:           3,
+			tTransactions:   []int64{2382388, 11218838, 5939392888},
+			gasTransactions: []uint64{111111, 222222, 333333},
 		}
 		if err := db.Add(ProfileData); err != nil {
 			fmt.Println("ERROR: insert - ", err)
@@ -381,23 +381,23 @@ func TestFlushProfileData(t *testing.T) {
 	defer db.Close()
 
 	ProfileData := ProfileData{
-		curBlock:       5637800,
-		tBlock:         5838,
-		tSequential:    4439,
-		tCritical:      2424,
-		tCommit:        1398,
-		speedup:        1.527263,
-		ubNumProc:      2,
-		numTx:          4,
-		tTransactions:  []int64{292988, 8387773, 923828772, 293923929},
-		transactionGas: []uint64{111111, 222222, 333333, 444444},
+		curBlock:        5637800,
+		tBlock:          5838,
+		tSequential:     4439,
+		tCritical:       2424,
+		tCommit:         1398,
+		speedup:         1.527263,
+		ubNumProc:       2,
+		numTx:           4,
+		tTransactions:   []int64{292988, 8387773, 923828772, 293923929},
+		gasTransactions: []uint64{111111, 222222, 333333, 444444},
 	}
 
 	// start db transaction
 	tx, err := db.sql.Begin()
 	require.NoError(err)
 	res, err := tx.Stmt(db.blockStmt).Exec(ProfileData.curBlock, ProfileData.tBlock, ProfileData.tSequential, ProfileData.tCritical,
-		ProfileData.tCommit, ProfileData.speedup, ProfileData.ubNumProc, ProfileData.numTx, ProfileData.blockGas)
+		ProfileData.tCommit, ProfileData.speedup, ProfileData.ubNumProc, ProfileData.numTx, ProfileData.gasBlock)
 	require.NoError(err)
 	numRowsAffected, err := res.RowsAffected()
 	require.NoError(err)
@@ -406,7 +406,7 @@ func TestFlushProfileData(t *testing.T) {
 	}
 
 	for i, tTransaction := range ProfileData.tTransactions {
-		res, err = tx.Stmt(db.txStmt).Exec(ProfileData.curBlock, i, tTransaction, ProfileData.transactionGas[i])
+		res, err = tx.Stmt(db.txStmt).Exec(ProfileData.curBlock, i, tTransaction, ProfileData.gasTransactions[i])
 		require.NoError(err)
 		numRowsAffected, err := res.RowsAffected()
 		require.NoError(err)
