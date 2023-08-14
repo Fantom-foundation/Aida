@@ -282,6 +282,9 @@ func TestRecordTransaction(t *testing.T) {
 				From: addr1,
 				To:   &addr2,
 			},
+			Result: &substate.SubstateResult{
+				GasUsed: 11111,
+			},
 		},
 		Transaction: 1,
 		Block:       0,
@@ -307,6 +310,9 @@ func TestRecordTransaction(t *testing.T) {
 	}
 	if len(ctx.tTransactions) != 1 {
 		t.Errorf("invalid length of ctx.tTransactions")
+	}
+	if len(ctx.gasTransactions) != 1 {
+		t.Errorf("invalid length of ctx.gasTransactions")
 	}
 
 	checkAddr := func(s AddressSet) bool {
@@ -345,6 +351,9 @@ func TestRecordTransaction(t *testing.T) {
 				From: addr1,
 				To:   &addr2,
 			},
+			Result: &substate.SubstateResult{
+				GasUsed: 22222,
+			},
 		},
 		Transaction: 2,
 		Block:       0,
@@ -369,6 +378,10 @@ func TestRecordTransaction(t *testing.T) {
 	}
 	if len(ctx.tTransactions) != 2 {
 		t.Errorf("invalid length of ctx.tTransactions")
+	}
+
+	if len(ctx.gasTransactions) != 2 {
+		t.Errorf("invalid length of ctx.gasTransactions")
 	}
 
 	if len(ctx.txAddresses) == 2 && len(ctx.txAddresses[0]) == 3 && len(ctx.txAddresses[0]) == 3 {
@@ -433,5 +446,30 @@ func TestGetProfileDataWith2Transactions(t *testing.T) {
 	_, err = ctx.GetProfileData(0, time.Duration(100))
 	if !errors.Is(err, errBlockTxsTime) {
 		t.Errorf("Error does not match expected one")
+	}
+
+	ctx = NewContext()
+	tBlock = time.Duration(100)
+	ctx.tOverheads = time.Duration(50)
+	ctx.tTransactions = []time.Duration{11222223}
+	ctx.gasTransactions = []uint64{921929192818, 23892818218}
+	_, err = ctx.GetProfileData(0, tBlock)
+	if !errors.Is(err, errInvalidLen) {
+		t.Errorf("Error does not match expected one")
+	}
+
+	ctx = NewContext()
+	tBlock = time.Duration(100)
+	ctx.tOverheads = time.Duration(50)
+	ctx.tTransactions = []time.Duration{11222223, 29282388, 92382837}
+	ctx.gasTransactions = []uint64{111111, 111111, 111111}
+	ctx.gasBlock = uint64(333333)
+	expBlockGas := uint64(333333)
+	pd, err = ctx.GetProfileData(0, tBlock)
+	if err != nil {
+		t.Errorf("error occurred while processing a block, err: %q", err)
+	}
+	if pd.gasBlock != expBlockGas {
+		t.Errorf("error occurred while computing block gas, got: %d, expected: %d", pd.gasBlock, expBlockGas)
 	}
 }
