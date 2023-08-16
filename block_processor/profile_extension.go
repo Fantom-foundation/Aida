@@ -38,7 +38,7 @@ func (ext *ProfileExtension) PostPrepare(bp *BlockProcessor) error {
 
 	// is StateDb profiling switched on
 	if bp.cfg.Profile {
-		bp.db, ext.dbStats = proxy.NewProfilerProxy(bp.db, bp.cfg.ProfileFile)
+		bp.db, ext.dbStats = proxy.NewProfilerProxy(bp.db, bp.cfg.ProfileFile, bp.cfg.LogLevel)
 	}
 
 	return nil

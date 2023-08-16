@@ -18,13 +18,13 @@ import (
 // ProfilerProxy data structure for capturing and recording
 // invoked StateDB operations.
 type ProfilerProxy struct {
-	db state.StateDB  // state db
-	ps *profile.Stats // operation statistics
+	db  state.StateDB  // state db
+	ps  *profile.Stats // operation statistics
 	log *logging.Logger
 }
 
 // NewProfilerProxy creates a new StateDB profiler.
-func NewProfilerProxy(db state.StateDB, csv string, logLevel string)) (*ProfilerProxy, *profile.Stats) {
+func NewProfilerProxy(db state.StateDB, csv string, logLevel string) (*ProfilerProxy, *profile.Stats) {
 	p := new(ProfilerProxy)
 	p.db = db
 	p.ps = profile.NewStats(csv)

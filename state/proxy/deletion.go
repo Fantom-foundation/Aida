@@ -19,13 +19,13 @@ type ContractLiveliness struct {
 // DeletionProxy data structure for capturing and recording
 // invoked StateDB operations.
 type DeletionProxy struct {
-	db state.StateDB // state db
-	ch  chan ContractLiveness
+	db  state.StateDB // state db
+	ch  chan ContractLiveliness
 	log *logging.Logger
 }
 
 // NewDeletionProxy creates a new StateDB proxy.
-func NewDeletionProxy(db state.StateDB, ch chan ContractLiveness, logLevel string) *DeletionProxy {
+func NewDeletionProxy(db state.StateDB, ch chan ContractLiveliness, logLevel string) *DeletionProxy {
 	r := new(DeletionProxy)
 	r.db = db
 	r.ch = ch
