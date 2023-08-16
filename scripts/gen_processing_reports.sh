@@ -60,14 +60,24 @@ Machine() {
 ## Reduce data set
 ReduceData() {
 sqlite3 $1 << EOF
--- create temporary table groupedParallelProfile to group data for every 100,000 blocks
-DROP VIEW IF EXISTS  groupedParallelProfile;
+-- create view groupedParallelProfile to group block data for every 100,000 blocks
+DROP VIEW IF EXISTS groupedParallelProfile;
 CREATE VIEW groupedParallelProfile(block, tBlock, tCommit, numTx, speedup, gasBlock) AS
-SELECT block/100000, tBlock, tCommit, numTx, log(speedup), gasBlock FROM parallelprofile;
--- aggregate data
-CREATE TABLE aggregatedParallelProfile(block INTEGER, tBlock REAL, tCommit REAL, numTx REAL,  speedup REAL, gasBlock REAL);
-INSERT INTO aggregatedParallelProfile SELECT min(block)*100000, avg(tBlock)/1e6, avg(tCommit)/1e6, avg(numTx), exp(avg(speedup)), avg(gasBlock) FROM groupedParallelProfile GROUP BY block;
+ SELECT block/100000, tBlock, tCommit, numTx, log(speedup), gasBlock FROM parallelprofile;
+-- aggregate block data
+DROP TABLE IF EXISTS aggregatedParallelProfile;
+CREATE TABLE aggregatedParallelProfile(block INTEGER, tBlock REAL, tCommit REAL, numTx REAL,  speedup REAL, gasBlock REAL, gps REAL, tps REAL);
+INSERT INTO aggregatedParallelProfile SELECT min(block)*100000, avg(tBlock)/1e6, avg(tCommit)/1e6, avg(numTx), exp(avg(speedup)), avg(gasBlock), sum(gasBlock)/count(*)/10e6, sum(numTx)/count(*) FROM groupedParallelProfile GROUP BY block;
 DROP VIEW groupedParallelProfile;
+-- create view groupedeTxProfile to group transaction data for every 1,000,000 transactions
+DROP VIEW IF EXISTS  groupedTxProfile;
+CREATE VIEW groupedTxProfile(tx, duration, gas) AS
+ SELECT rowid/1000000, duration, gas FROM txProfile ORDER BY block ASC, tx ASC;
+-- aggregate transaction data
+DROP TABLE IF EXISTS aggregatedTxProfile;
+CREATE TABLE aggregatedTxProfile(tx INTEGER, duration REAL, gas REAL);
+INSERT INTO aggregatedTxProfile SELECT min(tx)*1000000, avg(duration)/1e6, avg(gas) FROM groupedTxProfile GROUP BY tx;
+DROP VIEW groupedTxProfile;
 EOF
 }
 
