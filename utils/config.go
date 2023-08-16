@@ -550,7 +550,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	switch mode {
 	case BlockRangeArgs:
 		// try to extract block range from db metadata
-		mdFirst, mdLast, md, err := getMdBlockRange(ctx)
+		mdFirst, mdLast, err := getMdBlockRange(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -569,8 +569,15 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 				adjustedLast  uint64
 			)
 
-			first, firstIsSet = checkMDKeywords(ctx.Args().Get(0), md)
-			last, lastIsSet = checkMDKeywords(ctx.Args().Get(1), md)
+			first, firstIsSet, err = checkMDKeywords(ctx.Args().Get(0), ctx)
+			if err != nil {
+				return nil, err
+			}
+
+			last, lastIsSet, err = checkMDKeywords(ctx.Args().Get(1), ctx)
+			if err != nil {
+				return nil, err
+			}
 
 			if firstIsSet && lastIsSet {
 				break
@@ -607,13 +614,20 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 			)
 
 			// try to extract block range from db metadata
-			mdFirst, mdLast, md, err := getMdBlockRange(ctx)
+			mdFirst, mdLast, err := getMdBlockRange(ctx)
 			if err != nil {
 				return nil, err
 			}
 
-			first, firstIsSet = checkMDKeywords(ctx.Args().Get(0), md)
-			last, lastIsSet = checkMDKeywords(ctx.Args().Get(1), md)
+			first, firstIsSet, err = checkMDKeywords(ctx.Args().Get(0), ctx)
+			if err != nil {
+				return nil, err
+			}
+
+			last, lastIsSet, err = checkMDKeywords(ctx.Args().Get(1), ctx)
+			if err != nil {
+				return nil, err
+			}
 
 			if firstIsSet && lastIsSet {
 				break
@@ -911,13 +925,13 @@ func offsetBlockNum(blkNum uint64, symbol string, offset uint64) uint64 {
 }
 
 // getMdBlockRange gets block range from aidaDB metadata
-func getMdBlockRange(ctx *cli.Context) (uint64, uint64, *AidaDbMetadata, error) {
+func getMdBlockRange(ctx *cli.Context) (uint64, uint64, error) {
 	aidaDb, err := rawdb.NewLevelDBDatabase(ctx.String(AidaDbFlag.Name), 1024, 100, "profiling", true)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return 0, 0, nil, fmt.Errorf("you either need to specify block range using arguments <first> <last>, or path to existing AidaDb (--%v) with block range in metadata", AidaDbFlag.Name)
+			return 0, 0, fmt.Errorf("you either need to specify block range using arguments <first> <last>, or path to existing AidaDb (--%v) with block range in metadata", AidaDbFlag.Name)
 		}
-		return 0, 0, nil, fmt.Errorf("cannot open aida-db; %v", err)
+		return 0, 0, fmt.Errorf("cannot open aida-db; %v", err)
 	}
 
 	md := NewAidaDbMetadata(aidaDb, ctx.String(logger.LogLevelFlag.Name))
@@ -925,15 +939,15 @@ func getMdBlockRange(ctx *cli.Context) (uint64, uint64, *AidaDbMetadata, error) 
 	mdLast := md.GetLastBlock()
 
 	if mdLast == 0 {
-		return 0, 0, nil, errors.New("your AidaDb does not have metadata with last block. Please run ./build/util-db info metadata --aida-db <path>")
+		return 0, 0, errors.New("your AidaDb does not have metadata with last block. Please run ./build/util-db info metadata --aida-db <path>")
 	}
 
 	err = aidaDb.Close()
 	if err != nil {
-		return 0, 0, nil, fmt.Errorf("cannot close db; %v", err)
+		return 0, 0, fmt.Errorf("cannot close db; %v", err)
 	}
 
-	return mdFirst, mdLast, md, nil
+	return mdFirst, mdLast, nil
 }
 
 // adjustBlockRange finds overlap between metadata block range and block range specified by user in command line
@@ -961,22 +975,37 @@ func adjustBlockRange(firstArg uint64, lastArg uint64, mdFirst uint64, mdLast ui
 	}
 }
 
-func checkMDKeywords(arg string, md *AidaDbMetadata) (uint64, bool) {
+func checkMDKeywords(arg string, ctx *cli.Context) (uint64, bool, error) {
+	aidaDb, err := rawdb.NewLevelDBDatabase(ctx.String(AidaDbFlag.Name), 1024, 100, "profiling", true)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return 0, false, fmt.Errorf("you either need to specify block range using arguments <first> <last>, or path to existing AidaDb (--%v) with block range in metadata", AidaDbFlag.Name)
+		}
+		return 0, false, fmt.Errorf("cannot open aida-db; %v", err)
+	}
+
+	md := NewAidaDbMetadata(aidaDb, ctx.String(logger.LogLevelFlag.Name))
+
 	if strings.ToLower(arg) == "first" {
-		return md.GetFirstBlock(), true
+		return md.GetFirstBlock(), true, nil
 	}
 
 	if strings.ToLower(arg) == "last" {
-		return md.GetLastBlock(), true
+		return md.GetLastBlock(), true, nil
 	}
 
 	if strings.ToLower(arg) == "lastpatch" {
 		lstPatchBlock, err := getPatchFirstBlock(md.GetLastBlock())
 		if err != nil {
-			return 0, false
+			return 0, false, fmt.Errorf("cannot get first block of the last patch of given AidaDB; %v", err)
 		}
-		return lstPatchBlock, true
+		return lstPatchBlock, true, nil
 	}
 
-	return 0, false
+	err = aidaDb.Close()
+	if err != nil {
+		return 0, false, fmt.Errorf("cannot close db; %v", err)
+	}
+
+	return 0, false, nil
 }
