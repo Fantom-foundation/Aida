@@ -7,8 +7,10 @@ import (
 	"testing"
 )
 
-// TestSendRPCRequest sends a getEpochByNumber with "latest" argument and tries to unmarshal the result
-func TestSendRPCRequest(t *testing.T) {
+const invalidChainID ChainID = -1
+
+// TestSendRPCRequest_Positive tests whether SendRPCRequest does not return error for a valid request and chainID
+func TestSendRPCRequest_Positive(t *testing.T) {
 	req := JsonRPCRequest{
 		Method:  "ftm_getBlockByNumber",
 		Params:  []interface{}{"latest", false},
@@ -61,7 +63,95 @@ func TestSendRPCRequest(t *testing.T) {
 
 }
 
-func TestRPCFindEpochNumber(t *testing.T) {
+// TestSendRPCRequest_InvalidChainID tests whether SendRPCRequest does return an error for a valid request and invalid chainID
+func TestSendRPCRequest_InvalidChainID(t *testing.T) {
+	req := JsonRPCRequest{
+		Method:  "ftm_getBlockByNumber",
+		Params:  []interface{}{"latest", false},
+		ID:      1,
+		JSONRPC: "2.0",
+	}
+
+	_, err := SendRPCRequest(req, invalidChainID)
+	if err == nil {
+		t.Fatal("SendRPCRequest must return an err")
+	}
+
+	if !strings.Contains(err.Error(), "invalid chain-id") {
+		t.Fatalf("SendRPCRequest returned unexpected error: %v", err.Error())
+	}
+
+}
+
+// TestSendRPCRequest_InvalidReqMethod tests whether SendRPCRequest does return an error for an invalid method inside request
+func TestSendRPCRequest_InvalidReqMethod(t *testing.T) {
+	req := JsonRPCRequest{
+		Method:  "ftm_invalid",
+		Params:  []interface{}{"latest", false},
+		ID:      1,
+		JSONRPC: "2.0",
+	}
+
+	for _, id := range AvailableChainIDs {
+		t.Run(fmt.Sprintf("ChainID %v", id), func(t *testing.T) {
+			res, err := SendRPCRequest(req, id)
+			if err != nil {
+				t.Fatalf("SendRPCRequest returned err; %v", err)
+			}
+
+			if res == nil {
+				t.Fatal("response was nil")
+			}
+
+			e, ok := res["error"]
+			if !ok {
+				t.Fatal("response did not have an error")
+			}
+
+			_, ok = e.(map[string]interface{})
+			if !ok {
+				t.Fatal("error cannot be retyped to map")
+			}
+		})
+	}
+}
+
+// TestSendRPCRequest_InvalidReqMethod tests whether SendRPCRequest does return an error for an invalid block number inside request
+func TestSendRPCRequest_InvalidBlockNumber(t *testing.T) {
+	req := JsonRPCRequest{
+		Method:  "ftm_getBlockByNumber",
+		Params:  []interface{}{"0xinvalid", false},
+		ID:      1,
+		JSONRPC: "2.0",
+	}
+
+	for _, id := range AvailableChainIDs {
+		t.Run(fmt.Sprintf("ChainID %v", id), func(t *testing.T) {
+			res, err := SendRPCRequest(req, id)
+			if err != nil {
+				t.Fatalf("SendRPCRequest returned err; %v", err)
+			}
+
+			if res == nil {
+				t.Fatal("response was nil")
+			}
+
+			e, ok := res["error"]
+			if !ok {
+				t.Fatal("response did not have an error")
+			}
+
+			_, ok = e.(map[string]interface{})
+			if !ok {
+				t.Fatal("error cannot be retyped to map")
+			}
+		})
+	}
+
+}
+
+// TestRPCFindEpochNumber_Positive tests whether FindEpochNumber does not return error for a valid block and chainID
+func TestRPCFindEpochNumber_Positive(t *testing.T) {
 	var (
 		expectedMainnetEpoch uint64 = 5576
 		testingMainnetBlock  uint64 = 4_564_025
