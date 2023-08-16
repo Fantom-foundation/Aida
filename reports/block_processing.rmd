@@ -17,8 +17,10 @@ library(ggplot2)
 library(dplyr)
 library(RSQLite)
 con <- dbConnect(SQLite(), params$db)
-data <- dbReadTable(con, 'parallelprofile')
-reducedData <- dbReadTable(con, 'aggregatedParallelProfile')
+blockData <- dbReadTable(con, 'parallelprofile')
+reducedBlockData <- dbReadTable(con, 'aggregatedParallelProfile')
+txData <- dbReadTable(con, 'TxProfile')
+reducedTxData <- dbReadTable(con, 'aggregatedTxProfile')
 dbDisconnect(con)
 ```
 
@@ -30,28 +32,28 @@ The github hash of the Aida repository is `r params$GitHash`.
 For this experiment, we use **`r params$StateDB`** as a StateDB and **`r params$VM`** as a virtual machine.
 The data set for this experiment is stored in the database `r params$db`.
 
-The experiment was conducted for the block range from **`r format(min(data$block),big.mark=",")`**  to **`r format(max(data$block),big.mark=",")`**.
+The experiment was conducted for the block range from **`r format(min(blockData$block),big.mark=",")`**  to **`r format(max(blockData$block),big.mark=",")`**.
 
 ## 2. Block Processing Time
 
-The average block execution time is `r mean(data$tBlock)/1e6` milliseconds with a minimum of `r min(data$tBlock)/1e3` microseconds and a maximum of `r max(data$tBlock)/1e9` seconds.
+The average block execution time is `r mean(blockData$tBlock)/1e6` milliseconds with a minimum of `r min(blockData$tBlock)/1e3` microseconds and a maximum of `r max(blockData$tBlock)/1e9` seconds.
 The smoothened trend line for block time (in milliseconds) is shown below. In the diagram, we aggregated the block time for all 100K blocks shown as points.
 
 ```{r, echo=FALSE, message=FALSE}
-reducedData %>%
+reducedBlockData %>%
   ggplot(aes(x = block, y = tBlock)) +
   geom_smooth(color = "tomato") +
   geom_point(alpha=0.3) +
-  labs(x="Block Height", y="Block Time (ms)", title="Sequential Block Time")
+  labs(x="Block Height", y="Block Time (ms)", title="Block Processing Time")
 ```
 
 ## 3. Commit Time
 
-The average commit time is `r mean(data$tCommit)/1e6` milliseconds with a minimum of `r min(data$tCommit)/1e3` microseconds and a maximum of `r max(data$tCommit)/1e9` seconds.
+The average commit time is `r mean(blockData$tCommit)/1e6` milliseconds with a minimum of `r min(blockData$tCommit)/1e3` microseconds and a maximum of `r max(blockData$tCommit)/1e9` seconds.
 The smoothened trend line of the commit time in milliseconds is shown below. In the diagram, we aggregated the commit time for all 100K blocks shown as points.
 
 ```{r, echo = FALSE, message=FALSE}
-reducedData %>%
+reducedBlockData %>%
   ggplot(aes(x = block, y = tCommit)) +
   geom_smooth(color = "tomato") +
   geom_point(alpha=0.3) +
@@ -59,13 +61,13 @@ reducedData %>%
 ```
 
 
-## 4. Block gas
+## 4. Gas Consumption of Blocks
 
-The average gas consumption of a block is `r mean(data$gasBlock)` with a minimum of `r min(data$gasBlock)` and a maximum of `r max(data$gasBlock)`.
+The average gas consumption of a block is `r mean(blockData$gasBlock)` with a minimum of `r min(blockData$gasBlock)` and a maximum of `r max(blockData$gasBlock)`.
 The smoothened trend line of the gas consumption is shown in the figure below. In the figure, we aggregate the gas consumption for all 100K blocks as points.
 
 ```{r, echo = FALSE, message=FALSE}
-reducedData %>%
+reducedBlockData %>%
   ggplot(aes(x = block, y = gasBlock)) +
   geom_smooth(color = "tomato") +
   geom_point(alpha=0.3) +
@@ -74,23 +76,73 @@ reducedData %>%
 
 ## 5. Number of Transactions per Block
 
-We have, on average `r mean(data$numTx)` transactions per block.
-The smallest number of transactions per block is `r min(data$numTx)`, and the largest number is `r max(data$numTx)`.
+We have, on average `r mean(blockData$numTx)` transactions per block.
+The smallest number of transactions per block is `r min(blockData$numTx)`, and the largest number is `r max(blockData$numTx)`.
 The distribution of number of transactions per block is shown below:
 
 ```{r, echo = FALSE, message=FALSE}
-hist(data$numTx, freq=FALSE, main="Number of Transaction Distribution", xlab="Number of Transactions", col="lightblue1"); rug(data$numTx)
-abline(v=mean(data$numTx), col="dodgerblue3", lty=2, lwd=2)
+hist(blockData$numTx, freq=FALSE, main="Number of Transaction Distribution", xlab="Number of Transactions", col="lightblue1"); rug(blockData$numTx)
+abline(v=mean(blockData$numTx), col="dodgerblue3", lty=2, lwd=2)
 ```
 
 The smoothened trend line for the number of transaction is shown below. In this diagram, we aggregated the number
 of transactions per block for 100K blocks shown as points.
 
 ```{r, echo=FALSE, message=FALSE}
-reducedData %>%
+reducedBlockData %>%
   ggplot(aes(x = block, y = numTx)) +
   geom_smooth(color = "tomato") +
   geom_point(alpha=0.3) +
   labs(x="Block Height", y="Number of Transactions", title="Number of Transactions per Block")
 ```
 
+## 5. Transaction Processing Time
+
+```{r, echo = FALSE, message=FALSE}
+hist(txData$duration/1e6, freq=FALSE, main="Transaction Processing Time", xlab="Processing Time (ms)", col="lightblue1", breaks = quantile(txData$duration/1e6, 0:10 / 10))
+lines(density(txData$duration/1e6), col="dodgerblue3", lwd=2)
+abline(v=mean(txData$duration)/1e6, col="tomato", lty=2, lwd=2)
+```
+
+```{r, echo=FALSE, message=FALSE}
+reducedTxData %>%
+  ggplot(aes(x = tx, y = duration)) +
+  geom_smooth(color = "tomato") +
+  geom_point(alpha=0.3) +
+  labs(x="Transactions", y="Processing Time (ms)", title="Transaction Processing Time")
+```
+
+## 6. Gas Consumption of Transactions
+
+```{r, echo = FALSE, message=FALSE}
+hist(txData$gas, freq=FALSE, main="Gas Consumption of Transactions", xlab="Gas Consumption", col="lightblue1", breaks=quantile(txData$gas, 0:10/10))
+lines(density(txData$gas), col="dodgerblue3", lwd=2)
+abline(v=mean(txData$gas), col="tomato", lty=2, lwd=2)
+
+```
+
+```{r, echo=FALSE, message=FALSE}
+reducedTxData %>%
+  ggplot(aes(x = tx, y = gas)) +
+  geom_smooth(color = "tomato") +
+  geom_point(alpha=0.3) +
+  labs(x="Transactions", y="Gas Consumption", title="Gas Consumption of Transactions")
+```
+
+## 7. Throughput
+
+```{r, echo=FALSE, message=FALSE}
+reducedBlockData %>%
+  ggplot(aes(x = block, y = gps)) +
+  geom_smooth(color = "tomato") +
+  geom_point(alpha=0.3) +
+  labs(x="Block Height", y="MGas Per Second", title="Throughput in MGas per Second")
+```
+
+```{r, echo=FALSE, message=FALSE}
+reducedBlockData %>%
+  ggplot(aes(x = block, y = tps)) +
+  geom_smooth(color = "tomato") +
+  geom_point(alpha=0.3) +
+  labs(x="Block Height", y="Transactions Per Second", title="Throughput in Transactions per Second")
+```
