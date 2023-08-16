@@ -3,7 +3,6 @@ package replay
 import (
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/Fantom-foundation/Aida/iterator"
 	"github.com/Fantom-foundation/Aida/state"
@@ -50,7 +49,7 @@ func ReplayAPI(ctx *cli.Context) error {
 	}
 
 	if cfg.Profile {
-		db, stats = proxy.NewProfilerProxy(db, cfg.ProfileFile)
+		db, stats = proxy.NewProfilerProxy(db, cfg.ProfileFile, cfg.LogLevel)
 	}
 
 	err = utils.StartCPUProfile(cfg)
@@ -63,18 +62,23 @@ func ReplayAPI(ctx *cli.Context) error {
 		return err
 	}
 	// closing gracefully both Substate and StateDB is necessary
-	defer func() {
+	defer func() error {
 		err = db.Close()
 		if err != nil {
-			log.Fatalf("cannot close db; %v", err)
+			return fmt.Errorf("cannot close db; %v", err)
 		}
+		return nil
 	}()
 
 	// start the rpc replay
-	r := newController(ctx, cfg, db, fr, stats)
+	r, err := newController(ctx, cfg, db, fr, stats)
+	if err != nil {
+		return err
+	}
+
 	r.Start()
 
 	r.Wait()
 
-	return err
+	return nil
 }

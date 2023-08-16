@@ -79,7 +79,7 @@ func (r *Reader) read() {
 					close(r.closed)
 					return
 				}
-				r.log.Fatalf("unexpected iter err; %v", r.iter.Error())
+				r.log.Errorf("unexpected iter err; %v", r.iter.Error())
 				close(r.closed)
 				return
 			}

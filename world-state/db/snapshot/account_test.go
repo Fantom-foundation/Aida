@@ -3,7 +3,6 @@ package snapshot
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"math/rand"
 	"strconv"
 	"testing"
@@ -49,7 +48,7 @@ func (i *mockSubstateIterator) Storage() map[common.Hash]common.Hash {
 
 func (i *mockSubstateIterator) Value() *substate.Transaction {
 	if i.current < 0 || i.current >= len(i.list) {
-		panic(fmt.Errorf("invalid iterator position"))
+		panic("invalid iterator position")
 	}
 
 	// we mention each address as many times as we can (6x)

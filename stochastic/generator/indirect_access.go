@@ -1,6 +1,8 @@
 package generator
 
 import (
+	"errors"
+
 	"github.com/Fantom-foundation/Aida/stochastic/statistics"
 )
 
@@ -58,7 +60,7 @@ func (a *IndirectAccess) DeleteIndex(k int64) error {
 	// find index in translation table
 	i := a.findIndex(k)
 	if i < 0 {
-		panic("index not found")
+		return errors.New("index not found")
 	}
 
 	// delete index i from the translation table and the random access generator.

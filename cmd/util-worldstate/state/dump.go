@@ -57,7 +57,10 @@ func dumpState(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	cfg.Db = DefaultPath(ctx, &utils.DbFlag, ".opera/chaindata/leveldb-fsh")
+	cfg.Db, err = DefaultPath(ctx, &utils.DbFlag, ".opera/chaindata/leveldb-fsh")
+	if err != nil {
+		return err
+	}
 
 	return DumpState(ctx, cfg)
 }
