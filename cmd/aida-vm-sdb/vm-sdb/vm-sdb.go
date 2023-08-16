@@ -12,6 +12,9 @@ func RunVM(ctx *cli.Context) error {
 		bp.NewValidationExtension(),
 		bp.NewProfileExtension(),
 		bp.NewDbManagerExtension(),
+		bp.NewProxyLoggerExtension(),
+		bp.NewProxyProfilerExtension(),
+		bp.NewProxyRecorderExtension(),
 	}
 	bp, err := bp.NewBlockProcessor("vm-sdb", ctx)
 	if err != nil {
