@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-// AddressSet is a set of contract/wallet addresses
+// AddressSet is a set of contract/wallet addresses.
 type AddressSet map[common.Address]struct{}
 
 // TxAddresses stores the used addresses of a transaction. The
@@ -19,31 +19,36 @@ type TxAddresses []AddressSet
 // TxTime stores time duration of transactions.
 type TxTime []time.Duration
 
-// Context stores the book-keeping information for parallelisation profiling
+// Context stores the book-keeping information for parallelisation profiling.
 type Context struct {
 	n              int                          // number of transactions
 	txDependencies graphutil.StrictPartialOrder // transaction dependencies
 	txAddresses    TxAddresses                  // contract/wallet addresses used in a transaction
 
-	tSequential time.Duration // sequential transaction runtime of all transactions
-	tOverheads  time.Duration // time overheads for  calculating dependencies
+	tSequential   time.Duration   // sequential runtime of transactions
+	tOverheads    time.Duration   // time overheads for profiling
+	tCritical     time.Duration   // critical path runtime for transactions
+	tCompletion   TxTime          // earliest completion time of a transaction
+	tTransactions []time.Duration // runtime of a transaction
 
-	tCompletion TxTime        // earliest completion time of a transaction
-	tCritical   time.Duration // critical path runtime for transactions
-
-	tTransactions []time.Duration // runtime of transactions
+	gasTransactions []uint64 // gas used for transactions
+	gasBlock        uint64   // gas used for a block
 }
 
-var errBlockOverheadTime = errors.New("block or overhead time measurements went wrong")
-var errBlockTxsTime = errors.New("block or txs time measurements went wrong")
+var (
+	errBlockOverheadTime = errors.New("block or overhead time measurements went wrong")
+	errBlockTxsTime      = errors.New("block or txs time measurements went wrong")
+	errInvalidLen        = errors.New("tTransactions or transactinGas length is invalid")
+)
 
 // NewContext returns a new context.
 func NewContext() *Context {
 	return &Context{
-		tCompletion:    TxTime{},
-		txDependencies: graphutil.StrictPartialOrder{},
-		txAddresses:    TxAddresses{},
-		tTransactions:  []time.Duration{},
+		tCompletion:     TxTime{},
+		txDependencies:  graphutil.StrictPartialOrder{},
+		txAddresses:     TxAddresses{},
+		tTransactions:   []time.Duration{},
+		gasTransactions: []uint64{},
 	}
 }
 
@@ -67,7 +72,7 @@ func interfere(u, v AddressSet) bool {
 	}
 }
 
-// findTxAddresses gets wallet/contract addresses of a transaction
+// findTxAddresses gets wallet/contract addresses of a transaction.
 func findTxAddresses(tx *substate.Transaction) AddressSet {
 	addresses := AddressSet{}
 	for addr := range tx.Substate.InputAlloc {
@@ -86,7 +91,7 @@ func findTxAddresses(tx *substate.Transaction) AddressSet {
 	return addresses
 }
 
-// earliestTimeToRun computes the earliest time to run the current transaction
+// earliestTimeToRun computes the earliest time to run the current transaction.
 func (ctx *Context) earliestTimeToRun(addresses AddressSet) time.Duration {
 	tEarliest := time.Duration(0)
 	for i := 0; i < ctx.n; i++ {
@@ -102,7 +107,7 @@ func (ctx *Context) earliestTimeToRun(addresses AddressSet) time.Duration {
 	return tEarliest
 }
 
-// dependencies finds the transaction dependencies of the current transaction
+// dependencies finds the transaction dependencies of the current transaction.
 func (ctx *Context) dependencies(addresses AddressSet) graphutil.OrdinalSet {
 	dependentOn := graphutil.OrdinalSet{}
 	for i := 0; i < ctx.n; i++ {
@@ -118,13 +123,18 @@ func (ctx *Context) dependencies(addresses AddressSet) graphutil.OrdinalSet {
 	return dependentOn
 }
 
-// RecordTransaction collects addresses and computes earliest time
+// RecordTransaction collects addresses and computes earliest time.
 func (ctx *Context) RecordTransaction(tx *substate.Transaction, tTransaction time.Duration) error {
 	overheadTimer := time.Now()
 
-	// update sequential time
+	// update time for block and transaction
 	ctx.tSequential += tTransaction
 	ctx.tTransactions = append(ctx.tTransactions, tTransaction)
+
+	// update gas used for block and transaction
+	gasUsed := tx.Substate.Result.GasUsed
+	ctx.gasBlock += gasUsed
+	ctx.gasTransactions = append(ctx.gasTransactions, gasUsed)
 
 	// retrieve contract/wallet addresses of transaction
 	addresses := findTxAddresses(tx)
@@ -155,34 +165,40 @@ func (ctx *Context) RecordTransaction(tx *substate.Transaction, tTransaction tim
 	return nil
 }
 
-// ProfileData for one block
+// ProfileData for a block.
 type ProfileData struct {
-	curBlock      uint64  // current block number
-	tBlock        int64   // block runtime
-	tSequential   int64   // total transaction runtime
-	tCritical     int64   // critical path runtime for transactions
-	tCommit       int64   // commit runtime
-	speedup       float64 // speedup value for experiment
-	ubNumProc     int64   // upper bound on the number of processors (i.e. width of task graph)
-	numTx         int     // number of transactions
-	tTransactions []int64 // runtime of transactions
+	curBlock        uint64   // current block number
+	numTx           int      // number of transactions
+	tBlock          int64    // block runtime
+	tSequential     int64    // total transaction runtime
+	tCritical       int64    // critical path runtime for transactions
+	tCommit         int64    // commit runtime
+	tTransactions   []int64  // runtime per transaction
+	speedup         float64  // speedup value for experiment
+	ubNumProc       int64    // upper bound on the number of processors (i.e. width of task graph)
+	gasTransactions []uint64 // gas consumption per transaction
+	gasBlock        uint64   // gas consumption of block
 }
 
-// GetProfileData produces a profile record for the SQLITE3 DB.
+// GetProfileData produces a profile record for the profiling database.
 func (ctx *Context) GetProfileData(curBlock uint64, tBlock time.Duration) (*ProfileData, error) {
 
-	// remove overheads from block runtime
+	// perform consistency check
+	if len(ctx.tTransactions) != len(ctx.gasTransactions) {
+		return nil, errInvalidLen
+	}
 	if tBlock < ctx.tOverheads {
 		return nil, errBlockOverheadTime
 	}
-	tBlock -= ctx.tOverheads
-
-	// time consistency check
 	if tBlock < ctx.tSequential {
 		return nil, errBlockTxsTime
 	}
 
+	// remove overheads from block runtime
+	tBlock -= ctx.tOverheads
+
 	// compute commit time
+	// TODO: Includes BeginBlock()/BeginSyncPeriod() as well
 	tCommit := tBlock - ctx.tSequential
 
 	// compute speedup
@@ -194,23 +210,25 @@ func (ctx *Context) GetProfileData(curBlock uint64, tBlock time.Duration) (*Prof
 	// run independently.
 	ubNumProc := int64(len(graphutil.MinChainCover(ctx.txDependencies)))
 
+	// transfer fields from context to profile record
 	tTransactions := make([]int64, 0, len(ctx.tTransactions))
-	for _, tTransaction := range ctx.tTransactions {
+	gasTransactions := make([]uint64, 0, len(ctx.gasTransactions))
+	for i, tTransaction := range ctx.tTransactions {
 		tTransactions = append(tTransactions, tTransaction.Nanoseconds())
+		gasTransactions = append(gasTransactions, ctx.gasTransactions[i])
 	}
-
-	// write data into SQLiteDB
-	// profileData for parallel execution speedup experiment
 	data := ProfileData{
-		curBlock:      curBlock,
-		tBlock:        tBlock.Nanoseconds(),
-		tSequential:   ctx.tSequential.Nanoseconds(),
-		tCritical:     ctx.tCritical.Nanoseconds(),
-		tCommit:       tCommit.Nanoseconds(),
-		speedup:       speedup,
-		ubNumProc:     ubNumProc,
-		numTx:         ctx.n,
-		tTransactions: tTransactions,
+		curBlock:        curBlock,
+		numTx:           ctx.n,
+		tBlock:          tBlock.Nanoseconds(),
+		tSequential:     ctx.tSequential.Nanoseconds(),
+		tCritical:       ctx.tCritical.Nanoseconds(),
+		tCommit:         tCommit.Nanoseconds(),
+		tTransactions:   tTransactions,
+		speedup:         speedup,
+		ubNumProc:       ubNumProc,
+		gasTransactions: gasTransactions,
+		gasBlock:        ctx.gasBlock,
 	}
 	return &data, nil
 }

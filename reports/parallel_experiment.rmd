@@ -80,7 +80,7 @@ abline(v=mean(data$numTx), col="dodgerblue3", lty=2, lwd=2)
 ```
 
 The smoothened trend line for the number of transaction is shown below. In this diagram, we aggregated the number
-of transactions per block for 100K blocks shown as a point.
+of transactions per block for 100K blocks shown as points.
 
 ```{r, echo=FALSE, message=FALSE}
 reducedData %>%
@@ -97,12 +97,51 @@ The width of the task graph is a proxy for the maximum number of processors that
 The ratio between speedup and width gives an upper bound on the processor utilisation (aka. efficiency).
 However, a precise measure of efficiency is NP-hard problem and cannot be computed in polynomial time.
 
-The lower bound of the processor utilisation is `r format(100.0*exp(mean(log(data$speedup/data$ubNumProc))), digits=4)`% on average, with a maximum of `r max(data$ubNumProc)` processors (upper bound).
+The average number of processors is `r mean(data$ubNumProc)` to execute the task graphs optimally with a maximum of `r max(data$ubNumProc)`.
+The lower bound of the processor utilisation is `r format(100.0*exp(mean(log(data$speedup/data$ubNumProc))), digits=4)`% on average, with a maximum of `r max(data$ubNumProc)` processors (upper bound).  A processor utilisation histogram for only parallelisable blocks (i.e. blocks whose speed-up is greater than one) is shown below,
 
-## 5. Sequential Block Time
+```{r, echo = FALSE, message=FALSE}
+parallelisable$utilisation <- parallelisable$speedup / parallelisable$ubNumProc
+hist(parallelisable$utilisation, main="Processor Utilisation/Effienciy for Best Speedup", breaks = quantile(parallelisable$utilisation, 0:10 / 10), xlab="Processor Utilisation", col="lightblue1")
+lines(density(parallelisable$utilisation), col="dodgerblue3", lwd=2)
+```
+
+## 5. Linear Prediction Model
+
+```{r, include = FALSE}
+lmSequentialTx <- lm(tSequential~numTx, data=data)
+lmCriticalTx <- lm(tCritical~numTx, data=data)
+coeffCriticalTx <- lmCriticalTx$coefficients
+coeffSequentialTx <- lmSequentialTx$coefficients
+a1 <- coeffSequentialTx["numTx"]
+b1 <- coeffCriticalTx["numTx"]
+a0 <- coeffSequentialTx["(Intercept)"]
+b0 <- coeffCriticalTx["(Intercept)"]
+tCommit <- mean(data$tCommit)
+speedup <-  exp(mean(log(data$speedup)))
+tn <- function (s) {
+    (a0 - s * b0 + (1-s) * tCommit)/ (s * b1 - a1)
+}
+X <- seq(speedup, a1/b1*0.95, 0.01)
+Y <- tn(X)
+```
+
+The linear speedup prediction model estimates a maximum speedup of `r format(a1/b1, digits=4)` assuming an infinite number
+of processors. The underlying assumption of the prediction model is that the degree of parallisation (ratio of sequential
+transaction execution time and critical path) does not change with an increasing number of transactions.
+
+The number of transactions required for a given speedup is shown in the figure below,
+
+```{r, echo=FALSE, message=FALSE}
+plot(X,Y, type="l", lwd=2, col="tomato", main="Linear Prediction Model", xlab="Speedup", ylab="# Tx")
+```
+
+Note that the number of transactions grows infinitely reaching the maximum speedup of `r format(a1/b1, digits=4)`.
+
+## 6. Sequential Block Time
 
 The average block execution time is `r mean(data$tBlock)/1e6` milliseconds with a minimum of `r min(data$tBlock)/1e3` microseconds and a maximum of `r max(data$tBlock)/1e9` seconds.
-The smoothened trend line for block time (in milliseconds) is shown below. In the diagram, we aggregated the block time for all 100K blocks shown as a point.
+The smoothened trend line for block time (in milliseconds) is shown below. In the diagram, we aggregated the block time for all 100K blocks shown as points.
 
 ```{r, echo=FALSE, message=FALSE}
 reducedData %>%
@@ -112,10 +151,10 @@ reducedData %>%
   labs(x="Block Height", y="Block Time (ms)", title="Sequential Block Time")
 ```
 
-## 6. Commit Time
+## 7. Commit Time
 
 The average commit time is `r mean(data$tCommit)/1e6` milliseconds with a minimum of `r min(data$tCommit)/1e3` microseconds and a maximum of `r max(data$tCommit)/1e9` seconds.
-The smoothened trend line of the commit time in milliseconds is shown below. In the diagram, we aggregated the commit time for all 100K blocks shown as a point.
+The smoothened trend line of the commit time in milliseconds is shown below. In the diagram, we aggregated the commit time for all 100K blocks shown as points.
 
 ```{r, echo = FALSE, message=FALSE}
 reducedData %>%
@@ -123,4 +162,17 @@ reducedData %>%
   geom_smooth(color = "tomato") +
   geom_point(alpha=0.3) +
   labs(x="Block Height", y="Commit Time (ms)", title="Commit Time")
+```
+
+## 7. Block gas
+
+The average gas consumption of a block is `r mean(data$gasBlock)` with a minimum of `r min(data$gasBlock)` and a maximum of `r max(data$gasBlock)`.
+The smoothened trend line of the gas consumption is shown in the figure below. In the figure, we aggregate the gas consumption for all 100K blocks as points.
+
+```{r, echo = FALSE, message=FALSE}
+reducedData %>%
+  ggplot(aes(x = block, y = gasBlock)) +
+  geom_smooth(color = "tomato") +
+  geom_point(alpha=0.3) +
+  labs(x="Block Height", y="Block Gas", title="Gas Consumption of Blocks")
 ```
