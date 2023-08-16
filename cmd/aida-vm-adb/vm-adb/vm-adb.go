@@ -1,20 +1,19 @@
-package vm_sdb
+package vm_adb
 
 import (
 	bp "github.com/Fantom-foundation/Aida/block_processor"
 	"github.com/urfave/cli/v2"
 )
 
-// RunVM performs block processing
-func RunVM(ctx *cli.Context) error {
+// RunArchive performs block processing
+func RunArchive(ctx *cli.Context) error {
 	actions := bp.ExtensionList{
-		bp.NewVMSdbExtension(),
+		bp.NewVMAdbExtension(),
 		bp.NewProgressReportExtension(),
 		bp.NewValidationExtension(),
 		bp.NewProfileExtension(),
-		bp.NewDbManagerExtension(),
 	}
-	bp, err := bp.NewBlockProcessor("vm-sdb", ctx)
+	bp, err := bp.NewBlockProcessor("vm-adb", ctx)
 	if err != nil {
 		return err
 	}
