@@ -160,7 +160,7 @@ func (db *ProfileDB) DeleteByBlockRange(firstBlock, lastBlock uint64) (int64, er
 		deleteSql := fmt.Sprintf("DELETE FROM %s WHERE block >= %d AND block <= %d;", table, firstBlock, lastBlock)
 		res, err := db.sql.Exec(deleteSql)
 		if err != nil {
-			panic(err.Error())
+			return 0, err
 		}
 
 		numRowsAffected, err := res.RowsAffected()

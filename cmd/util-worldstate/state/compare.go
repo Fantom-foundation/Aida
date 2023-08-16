@@ -39,8 +39,13 @@ func compareDb(ctx *cli.Context) error {
 	}
 	defer snapshot.MustCloseStateDB(stateDB)
 
+	path, err := DefaultPath(ctx, &utils.TargetDbFlag, "clone")
+	if err != nil {
+		return err
+	}
+
 	// try to open target state DB
-	stateRefDB, err := snapshot.OpenStateDB(DefaultPath(ctx, &utils.TargetDbFlag, "clone"))
+	stateRefDB, err := snapshot.OpenStateDB(path)
 	if err != nil {
 		return err
 	}

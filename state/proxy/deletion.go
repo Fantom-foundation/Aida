@@ -3,10 +3,12 @@ package proxy
 import (
 	"math/big"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/op/go-logging"
 )
 
 type ContractLiveliness struct {
@@ -17,15 +19,17 @@ type ContractLiveliness struct {
 // DeletionProxy data structure for capturing and recording
 // invoked StateDB operations.
 type DeletionProxy struct {
-	db state.StateDB // state db
-	ch chan ContractLiveliness
+	db  state.StateDB // state db
+	ch  chan ContractLiveliness
+	log *logging.Logger
 }
 
 // NewDeletionProxy creates a new StateDB proxy.
-func NewDeletionProxy(db state.StateDB, ch chan ContractLiveliness) *DeletionProxy {
+func NewDeletionProxy(db state.StateDB, ch chan ContractLiveliness, logLevel string) *DeletionProxy {
 	r := new(DeletionProxy)
 	r.db = db
 	r.ch = ch
+	r.log = logger.NewLogger(logLevel, "Proxy Deletion")
 	return r
 }
 
@@ -282,7 +286,8 @@ func (r *DeletionProxy) Close() error {
 }
 
 func (r *DeletionProxy) StartBulkLoad(uint64) state.BulkLoad {
-	panic("StartBulkLoad not supported by DeletionProxy")
+	r.log.Fatal("StartBulkLoad not supported by DeletionProxy")
+	return nil
 }
 
 func (r *DeletionProxy) GetMemoryUsage() *state.MemoryUsage {

@@ -47,6 +47,10 @@ func main() {
 
 // assertDBPath makes sure a default world state path is set in the calling flags.
 func assertDBPath(ctx *cli.Context) error {
-	state.DefaultPath(ctx, &utils.WorldStateFlag, ".aida/world-state")
+	_, err := state.DefaultPath(ctx, &utils.WorldStateFlag, ".aida/world-state")
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

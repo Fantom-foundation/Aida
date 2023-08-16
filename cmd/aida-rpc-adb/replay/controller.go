@@ -46,7 +46,7 @@ type Controller struct {
 }
 
 // newController creates new instances of Controller, ReplayExecutors and Comparators
-func newController(ctx *cli.Context, cfg *utils.Config, db state.StateDB, iter *iterator.FileReader, stats *profile.Stats) *Controller {
+func newController(ctx *cli.Context, cfg *utils.Config, db state.StateDB, iter *iterator.FileReader, stats *profile.Stats) (*Controller, error) {
 
 	// create close signals
 	readerClosed := make(chan any)
@@ -70,13 +70,17 @@ func newController(ctx *cli.Context, cfg *utils.Config, db state.StateDB, iter *
 		writer       *logWriter
 		writerInput  chan *comparatorError
 		writerWg     *sync.WaitGroup
+		err          error
 	)
 
 	// only create writer if logging into file is enabled
 	if ctx.Bool(flags.LogToFile.Name) {
 		writerClosed = make(chan any)
 		writerWg = new(sync.WaitGroup)
-		writer, writerInput = newWriter(cfg.LogLevel, writerClosed, ctx.Path(flags.LogFileDir.Name), writerWg)
+		writer, writerInput, err = newWriter(cfg.LogLevel, writerClosed, ctx.Path(flags.LogFileDir.Name), writerWg)
+		if err != nil {
+			return nil, fmt.Errorf("cannot create writer; %v", err)
+		}
 	}
 
 	comparators, failure := createComparators(cfg, output, comparatorsClosed, writerInput, counterInput, comparatorsWg)
@@ -104,7 +108,7 @@ func newController(ctx *cli.Context, cfg *utils.Config, db state.StateDB, iter *
 		writerWg:          writerWg,
 		stats:             stats,
 		cfg:               cfg,
-	}
+	}, nil
 }
 
 // Start all the services

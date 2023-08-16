@@ -318,7 +318,6 @@ func (db *inMemoryStateDB) Finalise(bool) {
 }
 func (db *inMemoryStateDB) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	panic("not implemented")
-	return common.Hash{}
 }
 
 func (db *inMemoryStateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {

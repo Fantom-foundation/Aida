@@ -122,7 +122,7 @@ func getHash(addr common.Address, code []byte) common.Hash {
 }
 
 // MakeOffTheChainStateDB returns an in-memory *state.StateDB initialized with alloc
-func MakeOffTheChainStateDB(alloc substate.SubstateAlloc) StateDB {
+func MakeOffTheChainStateDB(alloc substate.SubstateAlloc) (StateDB, error) {
 	statedb := NewOffTheChainStateDB()
 	for addr, a := range alloc {
 		statedb.SetPrehashedCode(addr, getHash(addr, a.Code), a.Code)
@@ -137,7 +137,7 @@ func MakeOffTheChainStateDB(alloc substate.SubstateAlloc) StateDB {
 	// Commit and re-open to start with a clean state.
 	_, err := statedb.Commit(false)
 	if err != nil {
-		panic(fmt.Errorf("error calling statedb.Commit() in MakeOffTheChainStateDB(): %v", err))
+		return nil, fmt.Errorf("cannot commit ofTheChainDb; %v", err)
 	}
-	return &gethStateDB{db: statedb}
+	return &gethStateDB{db: statedb}, nil
 }

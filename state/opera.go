@@ -1,9 +1,12 @@
 package state
 
 import (
+	"errors"
+	"fmt"
 	"math/big"
 	"path"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/Fantom-foundation/go-opera/cmd/opera/launcher"
 	"github.com/Fantom-foundation/go-opera/gossip"
@@ -14,6 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	geth "github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/op/go-logging"
 )
 
 // operaStateDB implements stateDb using Opera database
@@ -25,20 +29,22 @@ type operaStateDB struct {
 	block         uint64
 	isArchiveMode bool
 	gdb           *gossip.Store
+	log           *logging.Logger
 }
 
 // newOperaStateDB returns a new operaStateDB instance
-func newOperaStateDB(db *geth.StateDB, stateReader *gossip.EvmStateReader, store *gossip.Store, stateRoot common.Hash) *operaStateDB {
+func newOperaStateDB(db *geth.StateDB, stateReader *gossip.EvmStateReader, store *gossip.Store, stateRoot common.Hash, logLevel string) *operaStateDB {
 	return &operaStateDB{
 		gdb:         store,
 		db:          db,
 		stateReader: stateReader,
 		stateRoot:   stateRoot,
+		log:         logger.NewLogger(logLevel, "Opera StateDb"),
 	}
 }
 
 // MakeOperaStateDB creates gossip.Store, gossip.Service and gossip.EvmStateReader and returns new operaStateDB
-func MakeOperaStateDB(pathToDb, dbVariant string) (StateDB, error) {
+func MakeOperaStateDB(pathToDb, dbVariant, logLevel string) (StateDB, error) {
 	store, err := makeNewStore(pathToDb, dbVariant)
 	if err != nil {
 		return nil, err
@@ -50,7 +56,7 @@ func MakeOperaStateDB(pathToDb, dbVariant string) (StateDB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return newOperaStateDB(db, stateReader, store, common.Hash{}), nil
+	return newOperaStateDB(db, stateReader, store, common.Hash{}, logLevel), nil
 }
 
 // makeNewStore reads gossip.Store from db and returns it
@@ -61,7 +67,10 @@ func makeNewStore(pathToDb, dbVariant string) (*gossip.Store, error) {
 	}
 
 	// todo we might be able to extract this information from the db
-	dbCfg := setDBConfig(dbVariant, cacheRatio)
+	dbCfg, err := setDBConfig(dbVariant, cacheRatio)
+	if err != nil {
+		return nil, fmt.Errorf("cannot create db config; %v", err)
+	}
 
 	// first check the db is present
 	if err := integration.CheckStateInitialized(path.Join(pathToDb, "chaindata"), dbCfg); err != nil {
@@ -78,18 +87,18 @@ func makeNewStore(pathToDb, dbVariant string) (*gossip.Store, error) {
 	return gossip.NewStore(multiRawDbs, gossip.DefaultStoreConfig(cacheRatio)), nil
 }
 
-func setDBConfig(dbPreset string, cacheRatio cachescale.Func) integration.DBsConfig {
+func setDBConfig(dbPreset string, cacheRatio cachescale.Func) (integration.DBsConfig, error) {
 	switch dbPreset {
 	case "pbl-1":
-		return integration.Pbl1DBsConfig(cacheRatio.U64, uint64(operaUtils.MakeDatabaseHandles()))
+		return integration.Pbl1DBsConfig(cacheRatio.U64, uint64(operaUtils.MakeDatabaseHandles())), nil
 	case "ldb-1":
-		return integration.Ldb1DBsConfig(cacheRatio.U64, uint64(operaUtils.MakeDatabaseHandles()))
+		return integration.Ldb1DBsConfig(cacheRatio.U64, uint64(operaUtils.MakeDatabaseHandles())), nil
 	case "legacy-ldb":
-		return integration.LdbLegacyDBsConfig(cacheRatio.U64, uint64(operaUtils.MakeDatabaseHandles()))
+		return integration.LdbLegacyDBsConfig(cacheRatio.U64, uint64(operaUtils.MakeDatabaseHandles())), nil
 	case "legacy-pbl":
-		return integration.PblLegacyDBsConfig(cacheRatio.U64, uint64(operaUtils.MakeDatabaseHandles()))
+		return integration.PblLegacyDBsConfig(cacheRatio.U64, uint64(operaUtils.MakeDatabaseHandles())), nil
 	default:
-		panic("unknown db preset")
+		return integration.DBsConfig{}, errors.New("unknown db preset")
 	}
 }
 
@@ -199,7 +208,7 @@ func (s *operaStateDB) EndTransaction() {
 
 func (s *operaStateDB) BeginBlock(number uint64) {
 	if err := s.openStateDB(); err != nil {
-		panic(err)
+		s.log.Fatalf("cannot begin block; %v", err)
 	}
 	s.block = number
 }
@@ -207,7 +216,7 @@ func (s *operaStateDB) EndBlock() {
 	var err error
 	s.stateRoot, err = s.Commit(true)
 	if err != nil {
-		panic("StateDB commit failed")
+		s.log.Fatalf("cannot commit; %v", err)
 	}
 
 	// todo trie commit/cap
@@ -242,7 +251,8 @@ func (s *operaStateDB) Close() error {
 }
 
 func (s *operaStateDB) StartBulkLoad(block uint64) BulkLoad {
-	panic("bulkload not yet supported for opera statedb")
+	s.log.Fatal("bulkload not yet implemented for opera statedb")
+	return nil
 }
 
 func (s *operaStateDB) GetArchiveState(block uint64) (StateDB, error) {
@@ -252,11 +262,11 @@ func (s *operaStateDB) GetArchiveState(block uint64) (StateDB, error) {
 		return nil, err
 	}
 
-	return newOperaStateDB(state, s.stateReader, nil, header), nil
+	return newOperaStateDB(state, s.stateReader, nil, header, "INFO"), nil
 }
 
 func (s *operaStateDB) GetMemoryUsage() *MemoryUsage {
-	// not supported yet
+	s.log.Warning("GetMemoryUsage is not yet implemented.")
 	return &MemoryUsage{uint64(0), nil}
 }
 

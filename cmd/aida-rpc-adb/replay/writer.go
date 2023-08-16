@@ -2,7 +2,6 @@ package replay
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -21,7 +20,7 @@ type logWriter struct {
 	wg     *sync.WaitGroup
 }
 
-func newWriter(logLevel string, closed chan any, path string, wg *sync.WaitGroup) (*logWriter, chan *comparatorError) {
+func newWriter(logLevel string, closed chan any, path string, wg *sync.WaitGroup) (*logWriter, chan *comparatorError, error) {
 	now := time.Now()
 	y, m, d := now.Date()
 	var (
@@ -47,7 +46,7 @@ func newWriter(logLevel string, closed chan any, path string, wg *sync.WaitGroup
 
 	file, err := os.Create(filePath)
 	if err != nil {
-		log.Fatalf("cannot open file %v; %v", file, err)
+		return nil, nil, fmt.Errorf("cannot open file %v; %v", file, err)
 	}
 
 	input := make(chan *comparatorError, 100)
@@ -58,7 +57,7 @@ func newWriter(logLevel string, closed chan any, path string, wg *sync.WaitGroup
 		log:    logger.NewLogger(logLevel, "Error file Writer"),
 		closed: closed,
 		wg:     wg,
-	}, input
+	}, input, nil
 
 }
 

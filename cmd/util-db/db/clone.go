@@ -258,7 +258,7 @@ func (c *cloner) checkErrors() {
 		case <-c.closeCh:
 			return
 		case err := <-c.errCh:
-			c.log.Fatal(err)
+			c.log.Error(err)
 			c.stop()
 			return
 		}
