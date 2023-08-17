@@ -15,6 +15,7 @@ func NewProxyProfilerExtension() *ProxyProfilerExtension {
 	return &ProxyProfilerExtension{}
 }
 
+// Init creates a ProfilerProxy and assigns it to the BlockProcessor's db
 func (ext *ProxyProfilerExtension) Init(bp *BlockProcessor) error {
 	if !bp.cfg.Profile {
 		return nil
@@ -24,9 +25,7 @@ func (ext *ProxyProfilerExtension) Init(bp *BlockProcessor) error {
 	return nil
 }
 
-// PostPrepare validates the world-state after preparing/priming db
 func (ext *ProxyProfilerExtension) PostPrepare(bp *BlockProcessor) error {
-
 	return nil
 }
 
@@ -34,12 +33,8 @@ func (ext *ProxyProfilerExtension) PostTransaction(bp *BlockProcessor) error {
 	return nil
 }
 
-// PostProcessing checks the world-state after processing has completed
+// PostProcessing prints profiling information it was enabled
 func (ext *ProxyProfilerExtension) PostProcessing(bp *BlockProcessor) error {
-	return nil
-}
-
-func (ext *ProxyProfilerExtension) Exit(bp *BlockProcessor) error {
 	if !bp.cfg.Profile {
 		return nil
 	}
@@ -48,5 +43,9 @@ func (ext *ProxyProfilerExtension) Exit(bp *BlockProcessor) error {
 		bp.log.Warningf("cannot print profiling stats; %v", err)
 	}
 
+	return nil
+}
+
+func (ext *ProxyProfilerExtension) Exit(bp *BlockProcessor) error {
 	return nil
 }

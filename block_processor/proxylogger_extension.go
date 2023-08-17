@@ -11,6 +11,7 @@ func NewProxyLoggerExtension() *ProxyLoggerExtension {
 	return &ProxyLoggerExtension{}
 }
 
+// Init creates a LoggerProxy and assigns it to the BlockProcessor's db
 func (ext *ProxyLoggerExtension) Init(bp *BlockProcessor) error {
 	if !bp.cfg.DbLogging {
 		return nil
@@ -20,9 +21,7 @@ func (ext *ProxyLoggerExtension) Init(bp *BlockProcessor) error {
 	return nil
 }
 
-// PostPrepare validates the world-state after preparing/priming Proxy
 func (ext *ProxyLoggerExtension) PostPrepare(bp *BlockProcessor) error {
-
 	return nil
 }
 
@@ -34,9 +33,7 @@ func (ext *ProxyLoggerExtension) PostTransaction(bp *BlockProcessor) error {
 	return nil
 }
 
-// PostProcessing checks the world-state after processing has completed
 func (ext *ProxyLoggerExtension) PostProcessing(bp *BlockProcessor) error {
-
 	return nil
 }
 

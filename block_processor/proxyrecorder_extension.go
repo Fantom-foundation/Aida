@@ -15,6 +15,7 @@ func NewProxyRecorderExtension() *ProxyRecorderExtension {
 	return &ProxyRecorderExtension{}
 }
 
+// Init creates a RecorderProxy and assigns it to the BlockProcessor's db
 func (ext *ProxyRecorderExtension) Init(bp *BlockProcessor) error {
 	var err error
 
@@ -32,7 +33,6 @@ func (ext *ProxyRecorderExtension) Init(bp *BlockProcessor) error {
 	return nil
 }
 
-// PostPrepare validates the world-state after preparing/priming db
 func (ext *ProxyRecorderExtension) PostPrepare(bp *BlockProcessor) error {
 	return nil
 }
@@ -41,11 +41,11 @@ func (ext *ProxyRecorderExtension) PostTransaction(bp *BlockProcessor) error {
 	return nil
 }
 
-// PostProcessing checks the world-state after processing has completed
 func (ext *ProxyRecorderExtension) PostProcessing(bp *BlockProcessor) error {
 	return nil
 }
 
+// Exit makes sure the trace Context is closed gracefully
 func (ext *ProxyRecorderExtension) Exit(bp *BlockProcessor) error {
 	ext.rCtx.Close()
 	return nil
