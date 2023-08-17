@@ -224,3 +224,9 @@ func (bp *BlockProcessor) Run(actions ExtensionList) error {
 
 	return err
 }
+
+// GetConfig provides the processes configuration parsed by this block processor
+// from command line parameters, default values, and other sources.
+func (bp *BlockProcessor) GetConfig() *utils.Config {
+	return bp.cfg
+}
