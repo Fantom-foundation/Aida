@@ -12,7 +12,7 @@ import (
 )
 
 // GenerateUpdateSet generates an update set for a block range.
-func GenerateUpdateSet(first uint64, ddb *substate.DestroyedAccountDB, last uint64, cfg *Config) (substate.SubstateAlloc, []common.Address, error) {
+func GenerateUpdateSet(first uint64, last uint64, cfg *Config) (substate.SubstateAlloc, []common.Address, error) {
 	var (
 		deletedAccountDB *substate.DestroyedAccountDB
 		deletedAccounts  []common.Address
@@ -24,13 +24,11 @@ func GenerateUpdateSet(first uint64, ddb *substate.DestroyedAccountDB, last uint
 
 	if cfg.HasDeletedAccounts {
 		// Todo rewrite in wrapping functions
-		if ddb == nil {
-			deletedAccountDB, err = substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
-			if err != nil {
-				return nil, nil, err
-			}
-			defer deletedAccountDB.Close()
+		deletedAccountDB, err = substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
+		if err != nil {
+			return nil, nil, err
 		}
+		defer deletedAccountDB.Close()
 	}
 
 	for stateIter.Next() {
@@ -65,30 +63,31 @@ func GenerateUpdateSet(first uint64, ddb *substate.DestroyedAccountDB, last uint
 // from pre-computed update-set
 func GenerateWorldStateFromUpdateDB(cfg *Config, target uint64) (substate.SubstateAlloc, error) {
 	ws := make(substate.SubstateAlloc)
-	blockPos := uint64(0)
+	block := uint64(0)
 	// load pre-computed update-set from update-set db
 	db, err := substate.OpenUpdateDBReadOnly(cfg.AidaDb)
 	if err != nil {
 		return nil, err
 	}
 	defer db.Close()
-	updateIter := substate.NewUpdateSetIterator(db, blockPos, target)
+	updateIter := substate.NewUpdateSetIterator(db, block, target)
 	for updateIter.Next() {
 		blk := updateIter.Value()
 		if blk.Block > target {
 			break
 		}
-		blockPos = blk.Block
+		block = blk.Block
 		// Reset accessed storage locations of suicided accounts prior to updateset block.
 		// The known accessed storage locations in the updateset range has already been
 		// reset when generating the update set database.
 		ClearAccountStorage(ws, blk.DeletedAccounts)
 		ws.Merge(*blk.UpdateSet)
+		block++
 	}
 	updateIter.Release()
 
-	// advance from the latest precomputed block to the target block
-	update, _, err := GenerateUpdateSet(blockPos, nil, target, cfg)
+	// advance from the latest precomputed updateset to the target block
+	update, _, err := GenerateUpdateSet(block, target, cfg)
 	if err != nil {
 		return nil, err
 	}
