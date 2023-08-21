@@ -28,7 +28,6 @@ var RunArchiveApp = cli.App{
 		&utils.ChainIDFlag,
 		&logger.LogLevelFlag,
 		&utils.StateDbLoggingFlag,
-		&utils.AidaDbFlag,
 
 		// StateDb
 		&utils.AidaDbFlag,

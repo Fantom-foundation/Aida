@@ -15,26 +15,26 @@ import (
 
 // ProcessorExtensions supports block processing actions
 type ProcessorExtensions interface {
-	Init(*BlockProcessor) error            // Initialise action (before block processing starts)
-	PostPrepare(*BlockProcessor) error     // Post-prepare action (after statedb has been created/primed)
+	Init(*BlockProcessor) error        // Initialise action (before block processing starts)
+	PostPrepare(*BlockProcessor) error // Post-prepare action (after statedb has been created/primed)
+	PostBlock(*BlockProcessor) error
 	PostTransaction(*BlockProcessor) error // Post-transaction action (after a transaction has been processed)
 	PostProcessing(*BlockProcessor) error  // Post-processing action (after all transactions have been processed/before closing statedb)
 	Exit(*BlockProcessor) error            // Exit action (after completing block processing)
 }
 
-// a list of processor actions
 type ExtensionList []ProcessorExtensions
 
-// BlockProcessor's state
 type BlockProcessor struct {
-	cfg        *utils.Config   // configuration
-	log        *logging.Logger // logger
-	stateDbDir string          // directory of the StateDB
-	db         state.StateDB   // StateDB
-	block      uint64          // current block
-	syncPeriod uint64          // current sync period
-	totalTx    uint64          // total number of transactions so far
-	totalGas   *big.Int        // total gas consumed so far
+	cfg        *utils.Config         // configuration
+	log        *logging.Logger       // logger
+	stateDbDir string                // directory of the StateDB
+	db         state.StateDB         // StateDB
+	tx         *substate.Transaction // current tx
+	block      uint64                // current block
+	syncPeriod uint64                // current sync period
+	totalTx    uint64                // total number of transactions so far
+	totalGas   *big.Int              // total gas consumed so far
 }
 
 // NewBlockProcessor creates a new block processor instance
@@ -43,6 +43,7 @@ func NewBlockProcessor(name string, ctx *cli.Context) (*BlockProcessor, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return &BlockProcessor{
 		cfg:      cfg,
 		totalGas: new(big.Int),
@@ -67,10 +68,13 @@ func (al ExtensionList) ExecuteExtensions(method string, bp *BlockProcessor) err
 // Prepare creates and primes a stateDB.
 func (bp *BlockProcessor) Prepare() error {
 	var err error
+
+	bp.log.Notice("Open StateDb")
 	bp.db, bp.stateDbDir, err = utils.PrepareStateDB(bp.cfg)
 	if err != nil {
 		return err
 	}
+
 	if !bp.cfg.SkipPriming && bp.cfg.StateDbSrc == "" {
 		if err := utils.LoadWorldStateAndPrime(bp.db, bp.cfg, bp.cfg.First-1); err != nil {
 			return fmt.Errorf("priming failed. %v", err)
@@ -79,7 +83,7 @@ func (bp *BlockProcessor) Prepare() error {
 	return nil
 }
 
-// ProcessFirstBlock sets appropiate block and sync period number and
+// ProcessFirstBlock sets appropriate block and sync period number and
 // process transaction.
 func (bp *BlockProcessor) ProcessFirstBlock(iter substate.SubstateIterator) error {
 	// no transaction available for the specified range
@@ -117,16 +121,9 @@ func (bp *BlockProcessor) Run(actions ExtensionList) error {
 
 	// TODO: there should not be a side-effect on cfg in runvm - that is a design failure
 	bp.cfg.StateValidationMode = utils.SubsetCheck
-	bp.cfg.CopySrcDb = true
-
-	// retrieve configuration
-	cfg := bp.cfg
-
-	// open logger
-	log := bp.log
 
 	// call init actions
-	if err := actions.ExecuteExtensions("Init", bp); err != nil {
+	if err = actions.ExecuteExtensions("Init", bp); err != nil {
 		return err
 	}
 
@@ -136,93 +133,98 @@ func (bp *BlockProcessor) Run(actions ExtensionList) error {
 	}()
 
 	// open substate database
-	log.Notice("Open substate database")
-	substate.SetSubstateDb(cfg.SubstateDb)
+	bp.log.Notice("Open substate database")
+	substate.SetSubstateDb(bp.cfg.AidaDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
 	// prepare statedb and priming
-	if err := bp.Prepare(); err != nil {
+	if err = bp.Prepare(); err != nil {
 		return err
 	}
 
 	// call post-prepare actions
-	if err := actions.ExecuteExtensions("PostPrepare", bp); err != nil {
+	if err = actions.ExecuteExtensions("PostPrepare", bp); err != nil {
 		return err
 	}
 
 	// create new iterator over substates and iterate
-	log.Notice("Process blocks")
-	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
+	bp.log.Notice("Process blocks")
+	iter := substate.NewSubstateIterator(bp.cfg.First, bp.cfg.Workers)
 	defer iter.Release()
 
 	// process the first block
-	if err := bp.ProcessFirstBlock(iter); err != nil {
+	if err = bp.ProcessFirstBlock(iter); err != nil {
 		return err
 	}
 
 	// process the remaining blocks
-	for iter.Next() {
-		tx := iter.Value()
-		// initiate first sync-period and block.
-		// close off old block and possibly sync-periods
-		if bp.block != tx.Block {
-			if tx.Block > cfg.Last {
-				break
-			}
-			bp.db.EndBlock()
-
-			// switch to next sync-period if needed.
-			// TODO: Revisit semantics - is this really necessary ????
-			newSyncPeriod := tx.Block / cfg.SyncPeriodLength
-			for bp.syncPeriod < newSyncPeriod {
-				bp.db.EndSyncPeriod()
-				bp.syncPeriod++
-				bp.db.BeginSyncPeriod(bp.syncPeriod)
-			}
-
-			// Mark the beginning of a new block
-			bp.block = tx.Block
-			bp.db.BeginBlock(bp.block)
-		}
-
-		// check whether we have processed enough transaction
-		// TODO: cfg.MaxNumTransactions should be a uint64 flag
-		if cfg.MaxNumTransactions >= 0 && bp.totalTx >= uint64(cfg.MaxNumTransactions) {
-			break
-		}
-
-		// process transaction
-		if err := utils.ProcessTx(bp.db, cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
-			log.Criticalf("\tFailed processing transaction: %v", err)
-			return err
-		}
-
-		bp.totalGas.Add(bp.totalGas, new(big.Int).SetUint64(tx.Substate.Result.GasUsed))
-
-		// call post-transaction actions
-		if err := actions.ExecuteExtensions("PostTransaction", bp); err != nil {
-			return err
-		}
-		bp.totalTx++
+	if err = bp.iterate(iter, actions); err != nil {
+		return err
 	}
+
 	bp.db.EndBlock()
 	bp.db.EndSyncPeriod()
 
-	log.Noticef("%v errors found.", utils.NumErrors)
+	bp.log.Noticef("%v errors found.", utils.NumErrors)
 
 	// call post-processing actions
-	if err := actions.ExecuteExtensions("PostProcessing", bp); err != nil {
+	if err = actions.ExecuteExtensions("PostProcessing", bp); err != nil {
 		return err
 	}
 
 	// close the DB and print disk usage
-	log.Info("Close StateDB")
+	bp.log.Info("Close StateDB")
 	if err := bp.db.Close(); err != nil {
 		return fmt.Errorf("Failed to close database: %v", err)
 	}
 
 	return err
+}
+
+// iterate over substate
+func (bp *BlockProcessor) iterate(iter substate.SubstateIterator, actions ExtensionList) error {
+	var err error
+
+	for iter.Next() {
+		bp.tx = iter.Value()
+
+		// initiate first sync-period and block.
+		// close off old block and possibly sync-periods
+		if bp.block != bp.tx.Block {
+			// exit if we processed last block
+			if bp.tx.Block > bp.cfg.Last {
+				return nil
+			}
+
+			if err = actions.ExecuteExtensions("PostBlock", bp); err != nil {
+				return err
+			}
+		}
+
+		// check whether we have processed enough transaction
+		// TODO: cfg.MaxNumTransactions should be a uint64 flag
+		if bp.cfg.MaxNumTransactions >= 0 && bp.totalTx >= uint64(bp.cfg.MaxNumTransactions) {
+			break
+		}
+
+		// process transaction
+		if err = utils.ProcessTx(bp.db, bp.cfg, bp.tx.Block, bp.tx.Transaction, bp.tx.Substate); err != nil {
+			bp.log.Criticalf("\tFailed processing transaction: %v", err)
+			return err
+		}
+
+		bp.totalGas.Add(bp.totalGas, new(big.Int).SetUint64(bp.tx.Substate.Result.GasUsed))
+
+		// call post-transaction actions
+		if err = actions.ExecuteExtensions("PostTransaction", bp); err != nil {
+			return err
+		}
+
+		bp.totalTx++
+	}
+
+	return nil
 }
 
 // GetConfig provides the processes configuration parsed by this block processor

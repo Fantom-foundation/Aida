@@ -9,6 +9,7 @@ import (
 // RunVM performs block processing
 func RunVM(ctx *cli.Context) error {
 	actions := bp.ExtensionList{
+		bp.NewVMSdbExtension(),
 		bp.NewProgressReportExtension(),
 		bp.NewValidationExtension(),
 		bp.NewProfileExtension(),
