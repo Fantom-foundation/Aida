@@ -1,5 +1,5 @@
 // Package ProfileDatas provides an SQLite based ProfileDatas database.
-package parallelisation
+package blockprofile
 
 import (
 	"fmt"

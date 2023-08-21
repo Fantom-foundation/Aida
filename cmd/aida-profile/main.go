@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Fantom-foundation/Aida/cmd/aida-profile/parallelisation"
+	"github.com/Fantom-foundation/Aida/cmd/aida-profile/blockprofile"
 	"github.com/Fantom-foundation/Aida/cmd/aida-profile/profile"
 	"github.com/urfave/cli/v2"
 )
@@ -17,7 +17,7 @@ func main() {
 		Usage:     "profile on the world-state",
 		Copyright: "(c) 2023 Fantom Foundation",
 		Commands: []*cli.Command{
-			&parallelisation.ParallelisationCommand,
+			&blockprofile.BlockProfileCommand,
 
 			// profile
 			&profile.GetCodeSizeCommand,

@@ -1,14 +1,14 @@
-package parallelisation
+package blockprofile
 
 import (
 	"fmt"
 	"os"
 	"time"
 
-	"github.com/Fantom-foundation/Aida/profile/parallelisation"
 	_ "github.com/mattn/go-sqlite3"
 
 	"github.com/Fantom-foundation/Aida/logger"
+	"github.com/Fantom-foundation/Aida/profile/blockprofile"
 	"github.com/Fantom-foundation/Aida/utils"
 
 	substate "github.com/Fantom-foundation/Substate"
@@ -16,10 +16,10 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-var ParallelisationCommand = cli.Command{
-	Action:    parallelisationAction,
-	Name:      "parallelisation",
-	Usage:     "produces parallelisation statistics for transactions.",
+var BlockProfileCommand = cli.Command{
+	Action:    blockProfileAction,
+	Name:      "blockprofile",
+	Usage:     "produces blockprofile statistics for transactions.",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		// AidaDb
@@ -44,14 +44,14 @@ var ParallelisationCommand = cli.Command{
 	},
 }
 
-// parallelisationAction produces parallelisation statistics for transactions.
-func parallelisationAction(ctx *cli.Context) error {
+// blockProfileAction produces block-processing statistics for transactions.
+func blockProfileAction(ctx *cli.Context) error {
 	// process arguments
 	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgsProfileDB)
 	if argErr != nil {
 		return argErr
 	}
-	log := logger.NewLogger(cfg.LogLevel, "Profile Parallelisation")
+	log := logger.NewLogger(cfg.LogLevel, "Profile blockprofile")
 
 	// open Aida database
 	log.Notice("Open Aida database.")
@@ -72,9 +72,9 @@ func parallelisationAction(ctx *cli.Context) error {
 		return fmt.Errorf("priming failed. %v", err)
 	}
 
-	// init sqlite DB that stores parallelisation information
+	// init sqlite DB that stores blockprofile information
 	log.Notice("Open profile database.")
-	profileDB, err := parallelisation.NewProfileDB(cfg.ProfileDB)
+	profileDB, err := blockprofile.NewProfileDB(cfg.ProfileDB)
 	if err != nil {
 		return fmt.Errorf("unable to open out SQlite DB; %v", err)
 	}
@@ -84,12 +84,12 @@ func parallelisationAction(ctx *cli.Context) error {
 		return fmt.Errorf("unable to delete rows within block range: %d-%d; %v", cfg.First, cfg.Last, err)
 	}
 
-	log.Notice("Profile parallelisation.")
+	log.Notice("Profile blocks and their transactions.")
 	curBlock := uint64(0)
 	curSyncPeriod := uint64(0)
 	isFirstBlock := true
 	var blockTimer time.Time
-	var context *parallelisation.Context
+	var context *blockprofile.Context
 
 	// process all transaction in sequential order from first to last block
 	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
@@ -110,7 +110,7 @@ func parallelisationAction(ctx *cli.Context) error {
 			curSyncPeriod = tx.Block / cfg.SyncPeriodLength
 
 			curBlock = tx.Block
-			context = parallelisation.NewContext()
+			context = blockprofile.NewContext()
 
 			db.BeginSyncPeriod(curSyncPeriod)
 
@@ -135,9 +135,9 @@ func parallelisationAction(ctx *cli.Context) error {
 			// write profile data into profile database
 			profileDB.Add(*data)
 
-			// create a new parallelisation profiling context
+			// create a new blockprofile profiling context
 			curBlock = tx.Block
-			context = parallelisation.NewContext()
+			context = blockprofile.NewContext()
 
 			// switch to new sync period if enough blocks processed
 			newSyncPeriod := tx.Block / cfg.SyncPeriodLength
@@ -190,7 +190,7 @@ func parallelisationAction(ctx *cli.Context) error {
 		log.Errorf("Failed to profiling database: %v", err)
 	}
 
-	log.Info("Finished parallelisation profiling.")
+	log.Info("Finished blockprofile profiling.")
 
 	return err
 }
