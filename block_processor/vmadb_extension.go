@@ -39,13 +39,13 @@ func (ext *VMAdbExtension) PostPrepare(bp *BlockProcessor) error {
 func (ext *VMAdbExtension) PostBlock(bp *BlockProcessor) error {
 	var err error
 
-	bp.db, err = ext.db.GetArchiveState(bp.currentTx.Block - 1)
+	bp.db, err = ext.db.GetArchiveState(bp.tx.Block - 1)
 	if err != nil {
 		return err
 	}
 
 	// Mark the beginning of a new block
-	bp.block = bp.currentTx.Block
+	bp.block = bp.tx.Block
 	bp.db.BeginBlock(bp.block)
 
 	return nil

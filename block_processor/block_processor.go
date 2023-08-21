@@ -26,15 +26,15 @@ type ProcessorExtensions interface {
 type ExtensionList []ProcessorExtensions
 
 type BlockProcessor struct {
-	cfg        *utils.Config   // configuration
-	log        *logging.Logger // logger
-	stateDbDir string          // directory of the StateDB
-	db         state.StateDB   // StateDB
-	currentTx  *substate.Transaction
-	block      uint64   // current block
-	syncPeriod uint64   // current sync period
-	totalTx    uint64   // total number of transactions so far
-	totalGas   *big.Int // total gas consumed so far
+	cfg        *utils.Config         // configuration
+	log        *logging.Logger       // logger
+	stateDbDir string                // directory of the StateDB
+	db         state.StateDB         // StateDB
+	tx         *substate.Transaction // current tx
+	block      uint64                // current block
+	syncPeriod uint64                // current sync period
+	totalTx    uint64                // total number of transactions so far
+	totalGas   *big.Int              // total gas consumed so far
 }
 
 // NewBlockProcessor creates a new block processor instance
@@ -121,7 +121,6 @@ func (bp *BlockProcessor) Run(actions ExtensionList) error {
 
 	// TODO: there should not be a side-effect on cfg in runvm - that is a design failure
 	bp.cfg.StateValidationMode = utils.SubsetCheck
-	bp.cfg.CopySrcDb = true
 
 	// call init actions
 	if err = actions.ExecuteExtensions("Init", bp); err != nil {
@@ -188,13 +187,13 @@ func (bp *BlockProcessor) iterate(iter substate.SubstateIterator, actions Extens
 	var err error
 
 	for iter.Next() {
-		bp.currentTx = iter.Value()
+		bp.tx = iter.Value()
 
 		// initiate first sync-period and block.
 		// close off old block and possibly sync-periods
-		if bp.block != bp.currentTx.Block {
+		if bp.block != bp.tx.Block {
 			// exit if we processed last block
-			if bp.currentTx.Block > bp.cfg.Last {
+			if bp.tx.Block > bp.cfg.Last {
 				return nil
 			}
 
@@ -210,12 +209,12 @@ func (bp *BlockProcessor) iterate(iter substate.SubstateIterator, actions Extens
 		}
 
 		// process transaction
-		if err = utils.ProcessTx(bp.db, bp.cfg, bp.currentTx.Block, bp.currentTx.Transaction, bp.currentTx.Substate); err != nil {
+		if err = utils.ProcessTx(bp.db, bp.cfg, bp.tx.Block, bp.tx.Transaction, bp.tx.Substate); err != nil {
 			bp.log.Criticalf("\tFailed processing transaction: %v", err)
 			return err
 		}
 
-		bp.totalGas.Add(bp.totalGas, new(big.Int).SetUint64(bp.currentTx.Substate.Result.GasUsed))
+		bp.totalGas.Add(bp.totalGas, new(big.Int).SetUint64(bp.tx.Substate.Result.GasUsed))
 
 		// call post-transaction actions
 		if err = actions.ExecuteExtensions("PostTransaction", bp); err != nil {

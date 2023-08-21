@@ -9,6 +9,7 @@ func NewVMSdbExtension() *VMSdbExtension {
 }
 
 func (ext *VMSdbExtension) Init(bp *BlockProcessor) error {
+	bp.cfg.CopySrcDb = true
 	return nil
 }
 
@@ -23,7 +24,7 @@ func (ext *VMSdbExtension) PostBlock(bp *BlockProcessor) error {
 
 	// switch to next sync-period if needed.
 	// TODO: Revisit semantics - is this really necessary ????
-	newSyncPeriod := bp.currentTx.Block / bp.cfg.SyncPeriodLength
+	newSyncPeriod := bp.tx.Block / bp.cfg.SyncPeriodLength
 	for bp.syncPeriod < newSyncPeriod {
 		bp.db.EndSyncPeriod()
 		bp.syncPeriod++
@@ -31,7 +32,7 @@ func (ext *VMSdbExtension) PostBlock(bp *BlockProcessor) error {
 	}
 
 	// Mark the beginning of a new block
-	bp.block = bp.currentTx.Block
+	bp.block = bp.tx.Block
 	bp.db.BeginBlock(bp.block)
 
 	return nil
