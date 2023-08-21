@@ -227,3 +227,9 @@ func (bp *BlockProcessor) iterate(iter substate.SubstateIterator, actions Extens
 
 	return nil
 }
+
+// GetConfig provides the processes configuration parsed by this block processor
+// from command line parameters, default values, and other sources.
+func (bp *BlockProcessor) GetConfig() *utils.Config {
+	return bp.cfg
+}

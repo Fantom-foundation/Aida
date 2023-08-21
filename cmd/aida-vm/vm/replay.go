@@ -14,7 +14,6 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
-	"github.com/Fantom-foundation/Tosca/go/vm/lfvm"
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/Fantom-foundation/go-opera/opera"
 	"github.com/ethereum/go-ethereum/common"
@@ -378,9 +377,7 @@ func replayAction(ctx *cli.Context) error {
 	err = taskPool.Execute()
 
 	log.Noticef("net VM time: %v\n", getVmDuration())
-	if strings.HasSuffix(cfg.VmImpl, "-stats") {
-		lfvm.PrintCollectedInstructionStatistics()
-	}
+	utils.PrintEvmStatistics(cfg)
 
 	return err
 }
