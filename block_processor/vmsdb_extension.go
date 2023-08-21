@@ -1,5 +1,6 @@
 package blockprocessor
 
+// VMSdbExtension implements functionality that is only relevant for vm-sdb into BlockProcessor as a ProcessorExtensions
 type VMSdbExtension struct {
 	ProcessorExtensions
 }
@@ -8,16 +9,17 @@ func NewVMSdbExtension() *VMSdbExtension {
 	return &VMSdbExtension{}
 }
 
+// Init forces copying source db
 func (ext *VMSdbExtension) Init(bp *BlockProcessor) error {
 	bp.cfg.CopySrcDb = true
 	return nil
 }
 
-// PostPrepare validates the world-state after preparing/priming db
 func (ext *VMSdbExtension) PostPrepare(bp *BlockProcessor) error {
 	return nil
 }
 
+// PostBlock ends block and epoch if the block is last block of the epoch
 func (ext *VMSdbExtension) PostBlock(bp *BlockProcessor) error {
 
 	bp.db.EndBlock()
@@ -42,9 +44,7 @@ func (ext *VMSdbExtension) PostTransaction(bp *BlockProcessor) error {
 	return nil
 }
 
-// PostProcessing checks the world-state after processing has completed
 func (ext *VMSdbExtension) PostProcessing(bp *BlockProcessor) error {
-
 	return nil
 }
 

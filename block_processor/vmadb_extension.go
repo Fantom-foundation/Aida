@@ -4,6 +4,8 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 )
 
+// VMAdbExtension implements functionality that is only relevant for vm-adb into BlockProcessor as a ProcessorExtensions
+// and holds instance of original StateDb for extracting ArchiveDb for each block
 type VMAdbExtension struct {
 	ProcessorExtensions
 	db state.StateDB
@@ -14,11 +16,10 @@ func NewVMAdbExtension() *VMAdbExtension {
 }
 
 func (ext *VMAdbExtension) Init(bp *BlockProcessor) error {
-
 	return nil
 }
 
-// PostPrepare validates the world-state after preparing/priming db
+// PostPrepare extracts first ArchiveDb
 func (ext *VMAdbExtension) PostPrepare(bp *BlockProcessor) error {
 	var err error
 
@@ -36,6 +37,7 @@ func (ext *VMAdbExtension) PostPrepare(bp *BlockProcessor) error {
 	return nil
 }
 
+// PostBlock extracts ArchiveDb for next block
 func (ext *VMAdbExtension) PostBlock(bp *BlockProcessor) error {
 	var err error
 
@@ -55,9 +57,7 @@ func (ext *VMAdbExtension) PostTransaction(bp *BlockProcessor) error {
 	return nil
 }
 
-// PostProcessing checks the world-state after processing has completed
 func (ext *VMAdbExtension) PostProcessing(bp *BlockProcessor) error {
-
 	return nil
 }
 
