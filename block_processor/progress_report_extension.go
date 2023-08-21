@@ -42,14 +42,18 @@ func (ext *ProgressReportExtension) Init(bp *BlockProcessor) error {
 
 // PostPrepare starts timers.
 func (ext *ProgressReportExtension) PostPrepare(bp *BlockProcessor) error {
-	// time time for block and periodic report
+	// time for block and periodic report
 	ext.lastBlockReport = time.Now()
 	ext.processingStart = time.Now()
 
 	return nil
 }
 
-// PostTransactions issues periodic, block, and stateDB memory reports.
+func (ext *ProgressReportExtension) PostBlock(bp *BlockProcessor) error {
+	return nil
+}
+
+// PostTransaction issues periodic, block, and stateDB memory reports.
 func (ext *ProgressReportExtension) PostTransaction(bp *BlockProcessor) error {
 	// suppress reports when quiet flag is enabled
 	if bp.cfg.Quiet {
@@ -71,13 +75,16 @@ func (ext *ProgressReportExtension) PostTransaction(bp *BlockProcessor) error {
 		memoryUsage := float64(bp.db.GetMemoryUsage().UsedBytes) / 1024 / 1024 / 1024
 		diskUsage := float64(utils.GetDirectorySize(bp.stateDbDir)) / 1024 / 1024 / 1024
 		hours, minutes, seconds := logger.ParseTime(time.Since(ext.processingStart))
+
 		bp.log.Infof("Elapsed time: %d:%02d:%02d; reached block %d using ~ %0.2f GiB of memory, ~ %0.2f GiB of disk, last interval rate ~ %.2f Tx/s, ~ %.2f MGas/s",
 			hours, minutes, seconds, bp.block, memoryUsage, diskUsage, txRate, gasRate)
+
 		ext.lastBlock = bp.block
 		ext.lastBlockReport = time.Now()
 		ext.lastBlockProcessedTx = bp.totalTx
 		ext.lastBlockProcessedGas.Set(bp.totalGas)
 	}
+
 	return nil
 }
 
@@ -95,6 +102,7 @@ func (ext *ProgressReportExtension) PostProcessing(bp *BlockProcessor) error {
 	txRate := float64(bp.totalTx) / (float64(elapsed.Nanoseconds()) / 1e9)
 	hours, minutes, seconds := logger.ParseTime(time.Since(ext.processingStart))
 	blocks := bp.cfg.Last - bp.cfg.First + 1
+
 	bp.log.Infof("Total elapsed time: %d:%02d:%02d, processed %v blocks, %v transactions (~ %.2f Tx/s) (~ %.2f MGas/s)\n",
 		hours, minutes, seconds, blocks, bp.totalTx, txRate, gasRate)
 
@@ -106,5 +114,6 @@ func (ext *ProgressReportExtension) Exit(bp *BlockProcessor) error {
 	if !bp.cfg.Quiet {
 		bp.log.Infof("Final disk usage: %v GiB\n", float32(utils.GetDirectorySize(bp.stateDbDir))/float32(1024*1024*1024))
 	}
+
 	return nil
 }

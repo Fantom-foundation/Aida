@@ -44,7 +44,11 @@ func (ext *ProfileExtension) PostPrepare(bp *BlockProcessor) error {
 	return nil
 }
 
-// PostTransactions issues periodic stateDB reports.
+func (ext *ProfileExtension) PostBlock(bp *BlockProcessor) error {
+	return nil
+}
+
+// PostTransaction issues periodic stateDB reports.
 func (ext *ProfileExtension) PostTransaction(bp *BlockProcessor) error {
 
 	// initialise the last-block variables for the first time to suppress block report
@@ -60,6 +64,7 @@ func (ext *ProfileExtension) PostTransaction(bp *BlockProcessor) error {
 			if err := ext.dbStats.PrintProfiling(ext.lastDbStatsBlock, bp.block); err != nil {
 				return err
 			}
+
 			// reset stats in proxy
 			ext.dbStats.Reset()
 			ext.lastDbStatsBlock = bp.block
@@ -87,7 +92,7 @@ func (ext *ProfileExtension) PostProcessing(bp *BlockProcessor) error {
 }
 
 // Exit stops CPU profiling and issues disk report
-func (la *ProfileExtension) Exit(bp *BlockProcessor) error {
+func (ext *ProfileExtension) Exit(bp *BlockProcessor) error {
 	utils.StopCPUProfile(bp.cfg)
 	return nil
 }

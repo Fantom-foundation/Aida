@@ -7,7 +7,7 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
-// DbManagerExtension mananges state-db directory
+// DbManagerExtension manages state-db directory
 type DbManagerExtension struct {
 	ProcessorExtensions
 }
@@ -17,10 +17,19 @@ func NewDbManagerExtension() *DbManagerExtension {
 }
 
 func (ext *DbManagerExtension) Init(bp *BlockProcessor) error {
+	if !bp.cfg.KeepDb {
+		bp.log.Warningf("--keep-db was not used, the StateDb will be deleted after the run")
+		return nil
+	}
+
 	return nil
 }
 
 func (ext *DbManagerExtension) PostPrepare(bp *BlockProcessor) error {
+	return nil
+}
+
+func (ext *DbManagerExtension) PostBlock(bp *BlockProcessor) error {
 	return nil
 }
 
@@ -30,12 +39,15 @@ func (ext *DbManagerExtension) PostTransaction(bp *BlockProcessor) error {
 
 // PostProcessing writes state-db info file
 func (ext *DbManagerExtension) PostProcessing(bp *BlockProcessor) error {
-	if bp.cfg.KeepDb {
-		rootHash, _ := bp.db.Commit(true)
-		if err := utils.WriteStateDbInfo(bp.stateDbDir, bp.cfg, bp.block, rootHash); err != nil {
-			return fmt.Errorf("failed to create state-db info file; %v", err)
-		}
+	if !bp.cfg.KeepDb {
+		return nil
 	}
+
+	rootHash, _ := bp.db.Commit(true)
+	if err := utils.WriteStateDbInfo(bp.stateDbDir, bp.cfg, bp.block, rootHash); err != nil {
+		return fmt.Errorf("failed to create state-db info file; %v", err)
+	}
+
 	return nil
 }
 
@@ -44,9 +56,14 @@ func (ext *DbManagerExtension) Exit(bp *BlockProcessor) error {
 	if bp.cfg.KeepDb {
 		newName := utils.RenameTempStateDBDirectory(bp.cfg, bp.stateDbDir, bp.block)
 		bp.log.Noticef("State-db directory: %v", newName)
-	} else {
-		bp.log.Warningf("--keep-db is not used. Directory %v with DB will be removed at the end of this run.", bp.stateDbDir)
-		return os.RemoveAll(bp.stateDbDir)
+		return nil
 	}
+
+	bp.log.Warningf("removing state-db %v", bp.stateDbDir)
+	err := os.RemoveAll(bp.stateDbDir)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
