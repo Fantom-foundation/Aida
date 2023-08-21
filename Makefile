@@ -31,7 +31,7 @@ tosca:
 	@cd ./tosca ; \
 	make
 
-aida-rpc-adb:
+aida-rpc-adb: tosca
 	@cd carmen/go/lib ; \
 	./build_libcarmen.sh ; \
 	cd ../../.. ; \
