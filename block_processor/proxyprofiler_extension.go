@@ -33,6 +33,10 @@ func (ext *ProxyProfilerExtension) PostTransaction(bp *BlockProcessor) error {
 	return nil
 }
 
+func (ext *ProxyProfilerExtension) PostBlock(bp *BlockProcessor) error {
+	return nil
+}
+
 // PostProcessing prints profiling information it was enabled
 func (ext *ProxyProfilerExtension) PostProcessing(bp *BlockProcessor) error {
 	if !bp.cfg.Profile {

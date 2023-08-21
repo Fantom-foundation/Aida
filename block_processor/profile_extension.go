@@ -44,13 +44,8 @@ func (ext *ProfileExtension) PostPrepare(bp *BlockProcessor) error {
 	return nil
 }
 
-func (ext *ProfileExtension) PostBlock(bp *BlockProcessor) error {
-	return nil
-}
-
 // PostTransaction issues periodic stateDB reports.
 func (ext *ProfileExtension) PostTransaction(bp *BlockProcessor) error {
-
 	// initialise the last-block variables for the first time to suppress block report
 	// at the beginning (in case the user has specified a large enough starting block)
 	if ext.lastDbStatsBlock == 0 {
@@ -70,6 +65,10 @@ func (ext *ProfileExtension) PostTransaction(bp *BlockProcessor) error {
 			ext.lastDbStatsBlock = bp.block
 		}
 	}
+	return nil
+}
+
+func (ext *ProfileExtension) PostBlock(bp *BlockProcessor) error {
 	return nil
 }
 

@@ -3,7 +3,6 @@ package blockprocessor
 import (
 	"fmt"
 	"math/big"
-	"reflect"
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
@@ -12,18 +11,6 @@ import (
 	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
-
-// ProcessorExtensions supports block processing actions
-type ProcessorExtensions interface {
-	Init(*BlockProcessor) error        // Initialise action (before block processing starts)
-	PostPrepare(*BlockProcessor) error // Post-prepare action (after statedb has been created/primed)
-	PostBlock(*BlockProcessor) error
-	PostTransaction(*BlockProcessor) error // Post-transaction action (after a transaction has been processed)
-	PostProcessing(*BlockProcessor) error  // Post-processing action (after all transactions have been processed/before closing statedb)
-	Exit(*BlockProcessor) error            // Exit action (after completing block processing)
-}
-
-type ExtensionList []ProcessorExtensions
 
 type BlockProcessor struct {
 	cfg        *utils.Config         // configuration
@@ -51,20 +38,6 @@ func NewBlockProcessor(name string, ctx *cli.Context) (*BlockProcessor, error) {
 	}, nil
 }
 
-// ExecuteExtensions executes a matching method name of actions in the action list.
-func (al ExtensionList) ExecuteExtensions(method string, bp *BlockProcessor) error {
-	inputs := make([]reflect.Value, 1)
-	inputs[0] = reflect.ValueOf(bp)
-
-	for _, action := range al {
-		out := reflect.ValueOf(action).MethodByName(method).Call(inputs)
-		if out[0].Interface() != nil {
-			return out[0].Interface().(error)
-		}
-	}
-	return nil
-}
-
 // Prepare creates and primes a stateDB.
 func (bp *BlockProcessor) Prepare() error {
 	var err error
@@ -83,8 +56,7 @@ func (bp *BlockProcessor) Prepare() error {
 	return nil
 }
 
-// ProcessFirstBlock sets appropriate block and sync period number and
-// process transaction.
+// ProcessFirstBlock sets appropriate block and sync period number and process transaction.
 func (bp *BlockProcessor) ProcessFirstBlock(iter substate.SubstateIterator) error {
 	// no transaction available for the specified range
 	if !iter.Next() {

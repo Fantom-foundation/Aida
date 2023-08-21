@@ -37,6 +37,10 @@ func (ext *VMAdbExtension) PostPrepare(bp *BlockProcessor) error {
 	return nil
 }
 
+func (ext *VMAdbExtension) PostTransaction(bp *BlockProcessor) error {
+	return nil
+}
+
 // PostBlock extracts ArchiveDb for next block
 func (ext *VMAdbExtension) PostBlock(bp *BlockProcessor) error {
 	var err error
@@ -50,10 +54,6 @@ func (ext *VMAdbExtension) PostBlock(bp *BlockProcessor) error {
 	bp.block = bp.tx.Block
 	bp.db.BeginBlock(bp.block)
 
-	return nil
-}
-
-func (ext *VMAdbExtension) PostTransaction(bp *BlockProcessor) error {
 	return nil
 }
 
