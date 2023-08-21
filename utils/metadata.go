@@ -1081,7 +1081,7 @@ func (md *AidaDbMetadata) getBlockRange() (uint64, uint64, error) {
 
 		md.FirstBlock, md.LastBlock, ok = FindBlockRangeInSubstate()
 		if !ok || md.LastBlock == 0 {
-			return 0, 0, errors.New("your AidaDb does not seems to contain substates")
+			return 0, 0, errors.New("your AidaDb does not seem to contain substates")
 		}
 
 		err := md.SetBlockRange(md.FirstBlock, md.LastBlock)
