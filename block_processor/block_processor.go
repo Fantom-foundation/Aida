@@ -75,7 +75,7 @@ func (bp *BlockProcessor) ProcessFirstBlock(iter substate.SubstateIterator) erro
 	bp.db.BeginBlock(bp.block)
 
 	// process transaction
-	if err := utils.ProcessTx(bp.db, bp.cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
+	if _, err := utils.ProcessTx(bp.db, bp.cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
 		bp.log.Criticalf("\tFailed processing transaction: %v", err)
 		return err
 	}
@@ -181,7 +181,7 @@ func (bp *BlockProcessor) iterate(iter substate.SubstateIterator, actions Extens
 		}
 
 		// process transaction
-		if err = utils.ProcessTx(bp.db, bp.cfg, bp.tx.Block, bp.tx.Transaction, bp.tx.Substate); err != nil {
+		if _, err = utils.ProcessTx(bp.db, bp.cfg, bp.tx.Block, bp.tx.Transaction, bp.tx.Substate); err != nil {
 			bp.log.Criticalf("\tFailed processing transaction: %v", err)
 			return err
 		}

@@ -3,7 +3,6 @@ package vm
 import (
 	"context"
 	"fmt"
-	"math/big"
 	"os"
 	"runtime/pprof"
 	"strings"
@@ -15,13 +14,7 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/Fantom-foundation/go-opera/evmcore"
-	"github.com/Fantom-foundation/go-opera/opera"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/params"
 	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
@@ -60,12 +53,6 @@ last block of the inclusive range of blocks to replay transactions.`,
 
 var vm_duration time.Duration
 
-type ReplayConfig struct {
-	vm_impl         string
-	only_successful bool
-	state_db_impl   string
-}
-
 // data collection execution context
 type MicroProfilingCollectorContext struct {
 	stats  *vm.MicroProfileStatistic
@@ -95,156 +82,30 @@ func getVmDuration() time.Duration {
 }
 
 // replayTask replays a transaction substate
-func replayTask(config ReplayConfig, block uint64, tx int, recording *substate.Substate, chainID utils.ChainID, log *logging.Logger) error {
-	if tx == utils.PseudoTx {
-		return nil
-	}
+func replayTask(cfg *utils.Config, block uint64, tx int, recording *substate.Substate, chainID utils.ChainID, log *logging.Logger) error {
 	// If requested, skip failed transactions.
-	if config.only_successful && recording.Result.Status != types.ReceiptStatusSuccessful {
-		return nil
-	}
-
-	defer func() {
-		if r := recover(); r != nil {
-			log.Criticalf("Execution of block %d / tx %d panicked: %v", block, tx, r)
-		}
-	}()
-
-	inputAlloc := recording.InputAlloc
-	inputEnv := recording.Env
-	inputMessage := recording.Message
-
-	outputAlloc := recording.OutputAlloc
-	outputResult := recording.Result
-
-	var (
-		vmConfig    vm.Config
-		chainConfig *params.ChainConfig
-	)
-
-	vmConfig = opera.DefaultVMConfig
-	vmConfig.NoBaseFee = true
-
-	chainConfig = utils.GetChainConfig(chainID)
-
-	var hashError error
-	getHash := func(num uint64) common.Hash {
-		if inputEnv.BlockHashes == nil {
-			hashError = fmt.Errorf("getHash(%d) invoked, no blockhashes provided", num)
-			return common.Hash{}
-		}
-		h, ok := inputEnv.BlockHashes[num]
-		if !ok {
-			hashError = fmt.Errorf("getHash(%d) invoked, blockhash for that block not provided", num)
-		}
-		return h
-	}
-
-	// TODO: implement other state db types
 	var (
 		statedb state.StateDB
 		err     error
 	)
-	switch strings.ToLower(config.state_db_impl) {
+
+	switch strings.ToLower(cfg.DbImpl) {
 	case "geth":
-		statedb, err = state.MakeOffTheChainStateDB(inputAlloc)
+		statedb, err = state.MakeOffTheChainStateDB(recording.InputAlloc)
 		if err != nil {
 			return err
 		}
 	case "geth-memory", "memory":
-		statedb = state.MakeInMemoryStateDB(&inputAlloc, block)
+		statedb = state.MakeInMemoryStateDB(&recording.InputAlloc, block)
 	default:
-		return fmt.Errorf("unsupported db type: %s", config.state_db_impl)
+		return fmt.Errorf("unsupported db type: %s", cfg.DbImpl)
 	}
 
-	// Apply Message
-	var (
-		gaspool   = new(evmcore.GasPool)
-		blockHash = common.Hash{0x01}
-		txHash    = common.Hash{0x02}
-		txIndex   = tx
-	)
-
-	gaspool.AddGas(inputEnv.GasLimit)
-	blockCtx := vm.BlockContext{
-		CanTransfer: core.CanTransfer,
-		Transfer:    core.Transfer,
-		Coinbase:    inputEnv.Coinbase,
-		BlockNumber: new(big.Int).SetUint64(inputEnv.Number),
-		Time:        new(big.Int).SetUint64(inputEnv.Timestamp),
-		Difficulty:  inputEnv.Difficulty,
-		GasLimit:    inputEnv.GasLimit,
-		GetHash:     getHash,
-	}
-	// If currentBaseFee is defined, add it to the vmContext.
-	if inputEnv.BaseFee != nil {
-		blockCtx.BaseFee = new(big.Int).Set(inputEnv.BaseFee)
-	}
-
-	msg := inputMessage.AsMessage()
-
-	vmConfig.Tracer = nil
-	vmConfig.Debug = false
-	vmConfig.InterpreterImpl = config.vm_impl
-	statedb.Prepare(txHash, txIndex)
-
-	txCtx := evmcore.NewEVMTxContext(msg)
-
-	evm := vm.NewEVM(blockCtx, txCtx, statedb, chainConfig, vmConfig)
-
-	snapshot := statedb.Snapshot()
-	start := time.Now()
-	msgResult, err := evmcore.ApplyMessage(evm, msg, gaspool)
-	addVmDuration(time.Since(start))
-
+	runtime, err := utils.ProcessTx(statedb, cfg, block, tx, recording)
 	if err != nil {
-		statedb.RevertToSnapshot(snapshot)
-		return err
+		return fmt.Errorf("failed to process block %v, tx %v; %v", block, tx, err)
 	}
-
-	if hashError != nil {
-		return hashError
-	}
-
-	if chainConfig.IsByzantium(blockCtx.BlockNumber) {
-		statedb.Finalise(true)
-	} else {
-		statedb.IntermediateRoot(chainConfig.IsEIP158(blockCtx.BlockNumber))
-	}
-
-	if err := statedb.Error(); err != nil {
-		return err
-	}
-
-	evmResult := &substate.SubstateResult{}
-	if msgResult.Failed() {
-		evmResult.Status = types.ReceiptStatusFailed
-	} else {
-		evmResult.Status = types.ReceiptStatusSuccessful
-	}
-	evmResult.Logs = statedb.GetLogs(txHash, blockHash)
-	evmResult.Bloom = types.BytesToBloom(types.LogsBloom(evmResult.Logs))
-	if to := msg.To(); to == nil {
-		evmResult.ContractAddress = crypto.CreateAddress(evm.TxContext.Origin, msg.Nonce())
-	}
-	evmResult.GasUsed = msgResult.UsedGas
-
-	evmAlloc := statedb.GetSubstatePostAlloc()
-
-	r := outputResult.Equal(evmResult)
-	a := outputAlloc.Equal(evmAlloc)
-	if !(r && a) {
-		log.Infof("block: %v Transaction: %v", block, tx)
-		if !r {
-			log.Criticalf("inconsistent output: result")
-			utils.PrintResultDiffSummary(outputResult, evmResult)
-		}
-		if !a {
-			log.Criticalf("inconsistent output: alloc")
-			utils.PrintAllocationDiffSummary(&outputAlloc, &evmAlloc)
-		}
-		return fmt.Errorf("inconsistent output")
-	}
+	addVmDuration(runtime)
 
 	return nil
 }
@@ -362,14 +223,8 @@ func replayAction(ctx *cli.Context) error {
 		defer pprof.StopCPUProfile()
 	}
 
-	var config = ReplayConfig{
-		vm_impl:         cfg.VmImpl,
-		only_successful: cfg.OnlySuccessful,
-		state_db_impl:   cfg.DbImpl,
-	}
-
 	task := func(block uint64, tx int, recording *substate.Substate, taskPool *substate.SubstateTaskPool) error {
-		return replayTask(config, block, tx, recording, cfg.ChainID, log)
+		return replayTask(cfg, block, tx, recording, cfg.ChainID, log)
 	}
 
 	resetVmDuration()

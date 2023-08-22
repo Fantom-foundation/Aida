@@ -154,7 +154,7 @@ func blockProfileAction(ctx *cli.Context) error {
 
 		// process current transaction
 		txTimer := time.Now()
-		if err = utils.ProcessTx(db, cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
+		if _, err = utils.ProcessTx(db, cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
 			log.Critical("\tFAILED executing transaction.")
 			return fmt.Errorf("execution failed; %v", err)
 		}
