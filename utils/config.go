@@ -17,6 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	_ "github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
@@ -555,7 +556,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		var err error
 
 		// try to extract block range from db metadata
-		aidaDbBlkNumRange["first"], aidaDbBlkNumRange["last"], aidaDbBlkNumRange["lastpatch"], err = getMdBlockRange(ctx)
+		aidaDbBlkNumRange["first"], aidaDbBlkNumRange["last"], aidaDbBlkNumRange["lastpatch"], err = getMdBlockRange(ctx, log)
 		if err != nil {
 			return nil, err
 		}
@@ -573,6 +574,12 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 				return nil, argErr
 			}
 
+			if ctx.String(AidaDbFlag.Name) == "" {
+				first = firstArg
+				last = lastArg
+				break
+			}
+
 			// find if values overlap
 			first, last, err = adjustBlockRange(firstArg, lastArg)
 			if err != nil {
@@ -585,7 +592,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 			var err error
 
 			// try to extract block range from db metadata
-			aidaDbBlkNumRange["first"], aidaDbBlkNumRange["last"], aidaDbBlkNumRange["lastpatch"], err = getMdBlockRange(ctx)
+			aidaDbBlkNumRange["first"], aidaDbBlkNumRange["last"], aidaDbBlkNumRange["lastpatch"], err = getMdBlockRange(ctx, log)
 			if err != nil {
 				return nil, err
 			}
@@ -594,6 +601,12 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 			firstArg, lastArg, argErr := SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1), chainId)
 			if argErr != nil {
 				return nil, argErr
+			}
+
+			if ctx.String(AidaDbFlag.Name) == "" {
+				first = firstArg
+				last = lastArg
+				break
 			}
 
 			// find if values overlap
@@ -795,13 +808,13 @@ func setBlockNumber(arg string, chainId ChainID) (uint64, error) {
 	if val, ok := aidaDbBlkNumRange[keyword]; ok {
 		blkNum = val
 	} else {
-		if chainId == 4002 {
+		if chainId == TestnetChainID {
 			if val, ok = hardForksTestnet[keyword]; ok {
 				blkNum = val
 			} else {
 				return 0, fmt.Errorf("block number not a valid keyword or integer")
 			}
-		} else if chainId == 250 || chainId == 0 {
+		} else if chainId == MainnetChainID || chainId == UnknownChainID {
 			if val, ok = hardForksMainnet[keyword]; ok {
 				blkNum = val
 			} else {
@@ -866,26 +879,25 @@ func offsetBlockNum(blkNum uint64, symbol string, offset uint64) uint64 {
 }
 
 // getMdBlockRange gets block range from aidaDB metadata
-func getMdBlockRange(ctx *cli.Context) (uint64, uint64, uint64, error) {
+func getMdBlockRange(ctx *cli.Context, log *logging.Logger) (uint64, uint64, uint64, error) {
 	aidaDb, err := rawdb.NewLevelDBDatabase(ctx.String(AidaDbFlag.Name), 1024, 100, "profiling", true)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return 0, 0, 0, fmt.Errorf("you either need to specify block range using arguments <first> <last>, or path to existing AidaDb (--%v) with block range in metadata", AidaDbFlag.Name)
+			log.Warningf("cannot get the block range of AidaDB, because no AidaDB was specified; %v", err)
+			return 0, 0, 0, nil
 		}
 		return 0, 0, 0, fmt.Errorf("cannot open aida-db; %v", err)
 	}
 
 	md := NewAidaDbMetadata(aidaDb, ctx.String(logger.LogLevelFlag.Name))
-	mdFirst := md.GetFirstBlock()
-	mdLast := md.GetLastBlock()
-
-	lastPatchBlock, err := getPatchFirstBlock(md.GetLastBlock())
+	mdFirst, mdLast, err := md.getBlockRange()
 	if err != nil {
-		return 0, 0, 0, fmt.Errorf("cannot get first block of the last patch of given AidaDB; %v", err)
+		return 0, 0, 0, fmt.Errorf("cannot get first and last block of given AidaDB; %v", err)
 	}
 
-	if mdLast == 0 {
-		return 0, 0, 0, errors.New("your AidaDb does not have metadata with last block. Please run ./build/util-db info metadata --aida-db <path>")
+	lastPatchBlock, err := getPatchFirstBlock(mdLast)
+	if err != nil && (strings.ToLower(ctx.Args().Get(0)) == "lastpatch" || strings.ToLower(ctx.Args().Get(1)) == "lastpatch") {
+		log.Warningf("cannot get first block of the last patch of given AidaDB; %v", err)
 	}
 
 	err = aidaDb.Close()
