@@ -15,10 +15,10 @@ import (
 
 // ProcessorExtensions supports block processing actions
 type ProcessorExtensions interface {
-	Init(*BlockProcessor) error        // Initialise action (before block processing starts)
-	PostPrepare(*BlockProcessor) error // Post-prepare action (after statedb has been created/primed)
-	PostBlock(*BlockProcessor) error
+	Init(*BlockProcessor) error            // Initialise action (before block processing starts)
+	PostPrepare(*BlockProcessor) error     // Post-prepare action (after statedb has been created/primed)
 	PostTransaction(*BlockProcessor) error // Post-transaction action (after a transaction has been processed)
+	PostBlock(*BlockProcessor) error       // Post-block action (after a block has been processed)
 	PostProcessing(*BlockProcessor) error  // Post-processing action (after all transactions have been processed/before closing statedb)
 	Exit(*BlockProcessor) error            // Exit action (after completing block processing)
 }

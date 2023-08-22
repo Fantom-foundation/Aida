@@ -29,11 +29,11 @@ func (ext *DbManagerExtension) PostPrepare(bp *BlockProcessor) error {
 	return nil
 }
 
-func (ext *DbManagerExtension) PostBlock(bp *BlockProcessor) error {
+func (ext *DbManagerExtension) PostTransaction(bp *BlockProcessor) error {
 	return nil
 }
 
-func (ext *DbManagerExtension) PostTransaction(bp *BlockProcessor) error {
+func (ext *DbManagerExtension) PostBlock(bp *BlockProcessor) error {
 	return nil
 }
 
