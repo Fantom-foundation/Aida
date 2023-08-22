@@ -33,10 +33,6 @@ func (ext *ProxyLoggerExtension) PostBlock(bp *BlockProcessor) error {
 	return nil
 }
 
-func (ext *ProxyLoggerExtension) PostBlock(bp *BlockProcessor) error {
-	return nil
-}
-
 func (ext *ProxyLoggerExtension) PostProcessing(bp *BlockProcessor) error {
 	return nil
 }
