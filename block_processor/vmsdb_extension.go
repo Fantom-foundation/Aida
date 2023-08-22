@@ -19,9 +19,12 @@ func (ext *VMSdbExtension) PostPrepare(bp *BlockProcessor) error {
 	return nil
 }
 
+func (ext *VMSdbExtension) PostTransaction(bp *BlockProcessor) error {
+	return nil
+}
+
 // PostBlock ends block and epoch if the block is last block of the epoch
 func (ext *VMSdbExtension) PostBlock(bp *BlockProcessor) error {
-
 	bp.db.EndBlock()
 
 	// switch to next sync-period if needed.
@@ -39,11 +42,6 @@ func (ext *VMSdbExtension) PostBlock(bp *BlockProcessor) error {
 
 	return nil
 }
-
-func (ext *VMSdbExtension) PostTransaction(bp *BlockProcessor) error {
-	return nil
-}
-
 func (ext *VMSdbExtension) PostProcessing(bp *BlockProcessor) error {
 	return nil
 }

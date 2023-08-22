@@ -37,12 +37,11 @@ func (ext *ValidationExtension) PostPrepare(bp *BlockProcessor) error {
 	return nil
 }
 
-func (ext *ValidationExtension) PostBlock(bp *BlockProcessor) error {
+func (ext *ValidationExtension) PostTransaction(bp *BlockProcessor) error {
 	return nil
 }
 
-func (ext *ValidationExtension) PostTransaction(bp *BlockProcessor) error {
-
+func (ext *ValidationExtension) PostBlock(bp *BlockProcessor) error {
 	return nil
 }
 
