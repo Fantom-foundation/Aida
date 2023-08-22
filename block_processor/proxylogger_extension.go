@@ -25,11 +25,11 @@ func (ext *ProxyLoggerExtension) PostPrepare(bp *BlockProcessor) error {
 	return nil
 }
 
-func (ext *ProxyLoggerExtension) PreTransaction(bp *BlockProcessor) error {
+func (ext *ProxyLoggerExtension) PostTransaction(bp *BlockProcessor) error {
 	return nil
 }
 
-func (ext *ProxyLoggerExtension) PostTransaction(bp *BlockProcessor) error {
+func (ext *ProxyLoggerExtension) PostBlock(bp *BlockProcessor) error {
 	return nil
 }
 
