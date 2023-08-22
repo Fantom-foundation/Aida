@@ -49,10 +49,6 @@ func (ext *ProgressReportExtension) PostPrepare(bp *BlockProcessor) error {
 	return nil
 }
 
-func (ext *ProgressReportExtension) PostBlock(bp *BlockProcessor) error {
-	return nil
-}
-
 // PostTransaction issues periodic, block, and stateDB memory reports.
 func (ext *ProgressReportExtension) PostTransaction(bp *BlockProcessor) error {
 	// suppress reports when quiet flag is enabled
@@ -85,6 +81,10 @@ func (ext *ProgressReportExtension) PostTransaction(bp *BlockProcessor) error {
 		ext.lastBlockProcessedGas.Set(bp.totalGas)
 	}
 
+	return nil
+}
+
+func (ext *ProgressReportExtension) PostBlock(bp *BlockProcessor) error {
 	return nil
 }
 

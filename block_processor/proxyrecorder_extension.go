@@ -41,6 +41,10 @@ func (ext *ProxyRecorderExtension) PostTransaction(bp *BlockProcessor) error {
 	return nil
 }
 
+func (ext *ProxyRecorderExtension) PostBlock(bp *BlockProcessor) error {
+	return nil
+}
+
 func (ext *ProxyRecorderExtension) PostProcessing(bp *BlockProcessor) error {
 	return nil
 }
