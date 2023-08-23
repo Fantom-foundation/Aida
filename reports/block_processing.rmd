@@ -72,7 +72,7 @@ reducedBlockData %>%
   ggplot(aes(x = block, y = gasBlock)) +
   geom_smooth(color = "tomato") +
   geom_point(alpha=0.3) +
-  labs(x="Block Height", y="Block Gas", title="Gas Consumption of Blocks")
+  labs(x="Block Height", y="MGas", title="Gas Consumption of Blocks")
 ```
 
 ## 5. Number of Transactions per Block
@@ -119,7 +119,7 @@ reducedTxData %>%
   ggplot(aes(x = tx, y = gas)) +
   geom_smooth(color = "tomato") +
   geom_point(alpha=0.3) +
-  labs(x="Transactions", y="Gas Consumption", title="Gas Consumption of Transactions")
+  labs(x="Transactions", y="KGas", title="Gas Consumption of Transactions")
 ```
 
 ## 7. Transaction Throughput

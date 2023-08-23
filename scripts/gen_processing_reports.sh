@@ -67,7 +67,7 @@ CREATE VIEW groupedBlockProfile(block, tBlock, tCommit, numTx, speedup, gasBlock
 -- aggregate block data
 DROP TABLE IF EXISTS AggregatedBlockProfile;
 CREATE TABLE AggregatedBlockProfile(block INTEGER, tBlock REAL, tCommit REAL, numTx REAL,  speedup REAL, gasBlock REAL, gps REAL, tps REAL);
-INSERT INTO AggregatedBlockProfile SELECT min(block)*100000, avg(tBlock)/1e6, avg(tCommit)/1e3, avg(numTx), exp(avg(speedup)), avg(gasBlock), sum(gasBlock)/(sum(tBlock)/1e9), sum(numTx)/(sum(tBlock)/1e9) FROM groupedBlockProfile GROUP BY block;
+INSERT INTO AggregatedBlockProfile SELECT min(block)*100000, avg(tBlock)/1e6, avg(tCommit)/1e3, avg(numTx), exp(avg(speedup)), avg(gasBlock)/1e6, sum(gasBlock)/(sum(tBlock)/1e3), sum(numTx)/(sum(tBlock)/1e9) FROM groupedBlockProfile GROUP BY block;
 DROP VIEW groupedBlockProfile;
 -- create view groupedeTxProfile to group transaction data for every 1,000,000 transactions
 DROP VIEW IF EXISTS  groupedTxProfile;
@@ -76,7 +76,7 @@ CREATE VIEW groupedTxProfile(tx, duration, gas) AS
 -- aggregate transaction data
 DROP TABLE IF EXISTS aggregatedTxProfile;
 CREATE TABLE aggregatedTxProfile(tx INTEGER, duration REAL, gas REAL);
-INSERT INTO aggregatedTxProfile SELECT min(tx)*1000000, avg(duration)/1e3, avg(gas) FROM groupedTxProfile GROUP BY tx;
+INSERT INTO aggregatedTxProfile SELECT min(tx)*1000000, avg(duration)/1e3, avg(gas)/1e3 FROM groupedTxProfile GROUP BY tx;
 DROP VIEW groupedTxProfile;
 EOF
 }
