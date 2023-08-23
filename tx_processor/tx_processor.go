@@ -107,11 +107,6 @@ func (tp *TxProcessor) Run(actions ExtensionList) error {
 			return err
 		}
 
-		// call post-task actions
-		if err = actions.ExecuteExtensions("PostTask", tp); err != nil {
-			return err
-		}
-
 		return nil
 	}
 

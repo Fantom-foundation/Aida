@@ -11,7 +11,6 @@ import (
 type ProcessorExtensions interface {
 	Init(*TxProcessor) error           // Initialise action (before block processing starts)
 	PostPrepare(*TxProcessor) error    // Post-prepare action (after statedb has been created/primed)
-	PostTask(*TxProcessor) error       // Post-task action (after a task has been processed)
 	PostProcessing(*TxProcessor) error // Post-processing action (after all transactions have been processed/before closing statedb)
 	Exit(*TxProcessor) error           // Exit action (after completing block processing)
 }

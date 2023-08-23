@@ -67,10 +67,6 @@ func (ext *BasicProfileExtension) PostPrepare(tp *TxProcessor) error {
 	return nil
 }
 
-func (ext *BasicProfileExtension) PostTask(tp *TxProcessor) error {
-	return nil
-}
-
 // PostProcessing cancels all collectors context and merges and dumps collected stats into one single MicroProfilingDB
 func (ext *BasicProfileExtension) PostProcessing(tp *TxProcessor) error {
 	if !tp.cfg.BasicBlockProfiling {
