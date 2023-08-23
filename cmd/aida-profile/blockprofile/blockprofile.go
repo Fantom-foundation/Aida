@@ -44,14 +44,14 @@ var BlockProfileCommand = cli.Command{
 	},
 }
 
-// blockProfileAction produces block-processing statistics for transactions.
+// blockProfileAction produces block processing statistics for transactions.
 func blockProfileAction(ctx *cli.Context) error {
 	// process arguments
 	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgsProfileDB)
 	if argErr != nil {
 		return argErr
 	}
-	log := logger.NewLogger(cfg.LogLevel, "Profile blockprofile")
+	log := logger.NewLogger(cfg.LogLevel, "Profile block processing")
 
 	// open Aida database
 	log.Notice("Open Aida database.")

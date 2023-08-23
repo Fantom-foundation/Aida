@@ -19,7 +19,7 @@ type TxAddresses []AddressSet
 // TxTime stores time duration of transactions.
 type TxTime []time.Duration
 
-// Context stores the book-keeping information for blockprocessing profiling.
+// Context stores the book-keeping information for block processing profiling.
 type Context struct {
 	n              int                          // number of transactions
 	txDependencies graphutil.StrictPartialOrder // transaction dependencies
