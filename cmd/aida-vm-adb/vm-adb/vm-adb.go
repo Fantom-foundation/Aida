@@ -13,9 +13,9 @@ func RunArchive(ctx *cli.Context) error {
 		blockprocessor.NewValidationExtension(),
 		blockprocessor.NewProfileExtension(),
 	})
-	bp, err := blockprocessor.NewBlockProcessor("vm-adb", ctx)
+	bp, err := blockprocessor.NewBlockProcessor(ctx, "vm-adb")
 	if err != nil {
 		return err
 	}
-	return bp.Run(actions)
+	return bp.Run(actions, blockprocessor.VmAdbIterate)
 }

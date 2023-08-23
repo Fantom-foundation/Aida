@@ -24,8 +24,11 @@ type BlockProcessor struct {
 	totalGas   *big.Int              // total gas consumed so far
 }
 
+// IterateFunc declares how iteration should be done
+type IterateFunc func(substate.SubstateIterator, ExtensionList, *BlockProcessor) error
+
 // NewBlockProcessor creates a new block processor instance
-func NewBlockProcessor(name string, ctx *cli.Context) (*BlockProcessor, error) {
+func NewBlockProcessor(ctx *cli.Context, name string) (*BlockProcessor, error) {
 	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if err != nil {
 		return nil, err
@@ -70,7 +73,6 @@ func (bp *BlockProcessor) ProcessFirstBlock(iter substate.SubstateIterator) erro
 	}
 	bp.syncPeriod = tx.Block / bp.cfg.SyncPeriodLength
 	bp.block = tx.Block
-	bp.totalTx = 0
 	bp.db.BeginSyncPeriod(bp.syncPeriod)
 	bp.db.BeginBlock(bp.block)
 
@@ -84,7 +86,7 @@ func (bp *BlockProcessor) ProcessFirstBlock(iter substate.SubstateIterator) erro
 }
 
 // Run executes all blocks in sequence.
-func (bp *BlockProcessor) Run(actions ExtensionList) error {
+func (bp *BlockProcessor) Run(actions ExtensionList, iterate IterateFunc) error {
 	var err error
 
 	// reset state
@@ -122,7 +124,7 @@ func (bp *BlockProcessor) Run(actions ExtensionList) error {
 		return err
 	}
 
-	// create new iterator over substates and iterate
+	// create new BasicIterator over substates and BasicIterator
 	bp.log.Notice("Process blocks")
 	iter := substate.NewSubstateIterator(bp.cfg.First, bp.cfg.Workers)
 	defer iter.Release()
@@ -133,7 +135,7 @@ func (bp *BlockProcessor) Run(actions ExtensionList) error {
 	}
 
 	// process the remaining blocks
-	if err = bp.iterate(iter, actions); err != nil {
+	if err = iterate(iter, actions, bp); err != nil {
 		return err
 	}
 
@@ -154,65 +156,6 @@ func (bp *BlockProcessor) Run(actions ExtensionList) error {
 	}
 
 	return err
-}
-
-// iterate over substate
-func (bp *BlockProcessor) iterate(iter substate.SubstateIterator, actions ExtensionList) error {
-	var err error
-
-	for iter.Next() {
-		bp.tx = iter.Value()
-
-		// initiate first sync-period and block.
-		// close off old block and possibly sync-periods
-		if bp.block != bp.tx.Block {
-			// exit if we processed last block
-			if bp.tx.Block > bp.cfg.Last {
-				return nil
-			}
-			bp.db.EndBlock()
-			// call post-block actions
-			if err = actions.ExecuteExtensions("PostBlock", bp); err != nil {
-				return err
-			}
-			// switch to next sync-period if needed.
-			// TODO: Revisit semantics - is this really necessary ????
-			newSyncPeriod := bp.tx.Block / bp.cfg.SyncPeriodLength
-			for bp.syncPeriod < newSyncPeriod {
-				bp.db.EndSyncPeriod()
-				bp.syncPeriod++
-				bp.db.BeginSyncPeriod(bp.syncPeriod)
-			}
-
-			// Mark the beginning of a new block
-			bp.block = bp.tx.Block
-			bp.db.BeginBlock(bp.block)
-
-		}
-
-		// check whether we have processed enough transaction
-		// TODO: cfg.MaxNumTransactions should be a uint64 flag
-		if bp.cfg.MaxNumTransactions >= 0 && bp.totalTx >= uint64(bp.cfg.MaxNumTransactions) {
-			break
-		}
-
-		// process transaction
-		if _, err = utils.ProcessTx(bp.db, bp.cfg, bp.tx.Block, bp.tx.Transaction, bp.tx.Substate); err != nil {
-			bp.log.Criticalf("\tFailed processing transaction: %v", err)
-			return err
-		}
-
-		bp.totalGas.Add(bp.totalGas, new(big.Int).SetUint64(bp.tx.Substate.Result.GasUsed))
-
-		// call post-transaction actions
-		if err = actions.ExecuteExtensions("PostTransaction", bp); err != nil {
-			return err
-		}
-
-		bp.totalTx++
-	}
-
-	return nil
 }
 
 // GetConfig provides the processes configuration parsed by this block processor
