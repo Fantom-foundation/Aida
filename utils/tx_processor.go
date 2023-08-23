@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/big"
 	"strings"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
 	substate "github.com/Fantom-foundation/Substate"
@@ -30,20 +31,27 @@ var (
 )
 
 // ProcessTx detects transaction type
-func ProcessTx(db state.StateDB, cfg *Config, block uint64, tx int, st *substate.Substate) error {
+func ProcessTx(db state.StateDB, cfg *Config, block uint64, tx int, st *substate.Substate) (time.Duration, error) {
+	var (
+		runtime time.Duration
+		err     error
+	)
 	// process transaction
 	if tx >= PseudoTx {
+		start := time.Now()
 		processPseudoTx(st.OutputAlloc, db)
+		runtime = time.Since(start)
 	} else {
-		if err := processRegularTx(db, cfg, block, tx, st); err != nil {
-			return err
+		runtime, err = processRegularTx(db, cfg, block, tx, st)
+		if err != nil {
+			return runtime, err
 		}
 	}
-	return nil
+	return runtime, nil
 }
 
 // processRegularTx executes VM on a chosen storage system.
-func processRegularTx(db state.StateDB, cfg *Config, block uint64, tx int, st *substate.Substate) (txerr error) {
+func processRegularTx(db state.StateDB, cfg *Config, block uint64, tx int, st *substate.Substate) (runtime time.Duration, txerr error) {
 	db.BeginTransaction(uint32(tx))
 
 	var (
@@ -56,8 +64,10 @@ func processRegularTx(db state.StateDB, cfg *Config, block uint64, tx int, st *s
 	)
 	defer handleErrorOnExit(&txerr, &errMsg, &newErrors, cfg.ContinueOnFailure)
 	vmConfig := opera.DefaultVMConfig
-	vmConfig.NoBaseFee = true
 	vmConfig.InterpreterImpl = cfg.VmImpl
+	vmConfig.NoBaseFee = true
+	vmConfig.Tracer = nil
+	vmConfig.Debug = false
 	hashError = nil
 	errMsg.WriteString(fmt.Sprintf("Block: %v Transaction: %v\n", block, tx))
 	// get chain configuration
@@ -84,7 +94,9 @@ func processRegularTx(db state.StateDB, cfg *Config, block uint64, tx int, st *s
 	evm := vm.NewEVM(*blockCtx, txCtx, db, chainConfig, vmConfig)
 	snapshot := db.Snapshot()
 	// call ApplyMessage
+	start := time.Now()
 	msgResult, err := evmcore.ApplyMessage(evm, msg, gaspool)
+	runtime = time.Since(start)
 
 	// if transaction fails, revert to the first snapshot.
 	if err != nil {

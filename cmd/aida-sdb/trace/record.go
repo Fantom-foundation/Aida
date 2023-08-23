@@ -116,7 +116,7 @@ func traceRecordAction(ctx *cli.Context) error {
 		statedb = state.MakeInMemoryStateDB(&tx.Substate.InputAlloc, tx.Block)
 		statedb = proxy.NewRecorderProxy(statedb, rCtx)
 
-		if err := utils.ProcessTx(statedb, cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
+		if _, err := utils.ProcessTx(statedb, cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
 			return fmt.Errorf("Failed to process block %v tx %v. %v", tx.Block, tx.Transaction, err)
 		}
 		if !cfg.Quiet {
