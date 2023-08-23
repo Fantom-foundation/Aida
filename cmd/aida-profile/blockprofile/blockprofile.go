@@ -18,7 +18,7 @@ import (
 
 var BlockProfileCommand = cli.Command{
 	Action:    blockProfileAction,
-	Name:      "blockprofile",
+	Name:      "blocks",
 	Usage:     "produces blockprofile statistics for transactions.",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
