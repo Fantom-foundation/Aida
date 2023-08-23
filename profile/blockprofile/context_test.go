@@ -1,4 +1,4 @@
-package parallelisation
+package blockprofile
 
 import (
 	"errors"

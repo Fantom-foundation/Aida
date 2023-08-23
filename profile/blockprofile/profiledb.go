@@ -1,4 +1,4 @@
-package parallelisation
+package blockprofile
 
 import (
 	"database/sql"
@@ -14,7 +14,7 @@ const (
 
 	// SQL statement for inserting a profile record of a new block
 	insertBlockSQL = `
-INSERT INTO parallelprofile (
+INSERT INTO blockProfile (
 	block, tBlock, tSequential, tCritical, tCommit, speedup, ubNumProc, numTx, gasBlock
 ) VALUES (
 	?, ?, ?, ?, ?, ?, ?, ?, ?
@@ -32,7 +32,7 @@ block, tx, duration, gas
 	// SQL statement for creating profiling tables
 	createSQL = `
 PRAGMA journal_mode = MEMORY;
-CREATE TABLE IF NOT EXISTS parallelprofile (
+CREATE TABLE IF NOT EXISTS blockProfile (
 	block INTEGER,
 	tBlock INTEGER,
 	tSequential INTEGER,
@@ -146,8 +146,8 @@ func (db *ProfileDB) Flush() error {
 // DeleteByBlockRange deletes information for a block range; used prior insertion
 func (db *ProfileDB) DeleteByBlockRange(firstBlock, lastBlock uint64) (int64, error) {
 	const (
-		parallelProfile = "parallelprofile"
-		txProfile       = "txProfile"
+		blockProfile = "blockProfile"
+		txProfile    = "txProfile"
 	)
 	var totalNumRows int64
 
@@ -156,7 +156,7 @@ func (db *ProfileDB) DeleteByBlockRange(firstBlock, lastBlock uint64) (int64, er
 		return 0, err
 	}
 
-	for _, table := range []string{parallelProfile, txProfile} {
+	for _, table := range []string{blockProfile, txProfile} {
 		deleteSql := fmt.Sprintf("DELETE FROM %s WHERE block >= %d AND block <= %d;", table, firstBlock, lastBlock)
 		res, err := db.sql.Exec(deleteSql)
 		if err != nil {
