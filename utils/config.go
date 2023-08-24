@@ -7,12 +7,12 @@ import (
 	"math/big"
 	"math/rand"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
 
 	"github.com/Fantom-foundation/Aida/logger"
 	_ "github.com/Fantom-foundation/Tosca/go/vm"
-	"github.com/c2h5oh/datasize"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	_ "github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
@@ -20,6 +20,8 @@ import (
 )
 
 type ArgumentMode int
+type ChainID int
+type ChainIDs []ChainID
 
 // An enums of argument modes used by trace subcommands
 const (
@@ -28,6 +30,14 @@ const (
 	LastBlockArg                                // requires 1 argument: last block
 	NoArgs                                      // requires no arguments
 )
+
+const (
+	UnknownChainID ChainID = 0
+	MainnetChainID ChainID = 250
+	TestnetChainID ChainID = 4002
+)
+
+var AvailableChainIDs = ChainIDs{MainnetChainID, TestnetChainID}
 
 const (
 	AidaDbRepositoryMainnetUrl = "https://aida.repository.fantom.network"
@@ -227,7 +237,8 @@ var (
 	}
 	TraceFileFlag = cli.PathFlag{
 		Name:  "trace-file",
-		Usage: "set storage trace file",
+		Usage: "set storage trace's output directory",
+		Value: "./",
 	}
 	TraceDirectoryFlag = cli.PathFlag{
 		Name:  "trace-dir",
@@ -290,11 +301,6 @@ var (
 	AidaDbFlag = cli.PathFlag{
 		Name:  "aida-db",
 		Usage: "set substate, updateset and deleted accounts directory",
-	}
-	ErigonBatchSizeFlag = cli.StringFlag{
-		Name:  "erigonbatchsize",
-		Usage: "Batch size for the execution stage",
-		Value: "512M",
 	}
 	ContractNumberFlag = cli.Int64Flag{
 		Name:  "num-contracts",
@@ -393,95 +399,94 @@ type Config struct {
 	First uint64 // first block
 	Last  uint64 // last block
 
-	APIRecordingSrcFile string            // path to source file with recorded API data
-	ArchiveMode         bool              // enable archive mode
-	ArchiveVariant      string            // selects the implementation variant of the archive
-	BlockLength         uint64            // length of a block in number of transactions
-	BalanceRange        int64             // balance range for stochastic simulation/replay
-	CarmenSchema        int               // the current DB schema ID to use in Carmen
-	ChainID             int               // Blockchain ID (mainnet: 250/testnet: 4002)
-	Cache               int               // Cache for StateDb or Priming
-	ContinueOnFailure   bool              // continue validation when an error detected
-	ContractNumber      int64             // number of contracts to create
-	CompactDb           bool              // compact database after merging
-	CopySrcDb           bool              // if true, make a copy the source statedb
-	CPUProfile          string            // pprof cpu profile output file name
-	Db                  string            // path to database
-	DbTmp               string            // path to temporary database
-	DbImpl              string            // storage implementation
-	Genesis             string            // genesis file
-	DbVariant           string            // database variant
-	DbLogging           bool              // set to true if all DB operations should be logged
-	Debug               bool              // enable trace debug flag
-	DeleteSourceDbs     bool              // delete source databases
-	DebugFrom           uint64            // the first block to print trace debug
-	DeletionDb          string            // directory of deleted account database
-	Quiet               bool              // disable progress report flag
-	SyncPeriodLength    uint64            // length of a sync-period in number of blocks
-	HasDeletedAccounts  bool              // true if DeletionDb is not empty; otherwise false
-	KeepDb              bool              // set to true if db is kept after run
-	KeysNumber          int64             // number of keys to generate
-	MaxNumTransactions  int               // the maximum number of processed transactions
-	MemoryBreakdown     bool              // enable printing of memory breakdown
-	MemoryProfile       string            // capture the memory heap profile into the file
-	NonceRange          int               // nonce range for stochastic simulation/replay
-	TransactionLength   uint64            // determines indirectly the length of a transaction
-	PrimeRandom         bool              // enable randomized priming
-	PrimeThreshold      int               // set account threshold before commit
-	Profile             bool              // enable micro profiling
-	ProfileFile         string            // output file containing profiling result
-	ProfileInterval     uint64            // interval of printing profile result
-	RandomSeed          int64             // set random seed for stochastic testing
-	SkipPriming         bool              // skip priming of the state DB
-	SkipMetadata        bool              // skip metadata insert/getting into AidaDb
-	ShadowDb            bool              // defines we want to open an existing db as shadow
-	ShadowImpl          string            // implementation of the shadow DB to use, empty if disabled
-	ShadowVariant       string            // database variant of the shadow DB to be used
-	StateDbSrc          string            // directory to load an existing State DB data
-	AidaDb              string            // directory to profiling database containing substate, update, delete accounts data
-	StateValidationMode ValidationMode    // state validation mode
-	UpdateDb            string            // update-set directory
-	Output              string            // output directory for aida-db patches or path to events.json file in stochastic generation
-	SnapshotDepth       int               // depth of snapshot history
-	SubstateDb          string            // substate directory
-	OperaDatadir        string            // source opera directory
-	Validate            bool              // validate validate aida-db
-	ValidateTxState     bool              // validate stateDB before and after transaction
-	ValidateWorldState  bool              // validate stateDB before and after replay block range
-	ValuesNumber        int64             // number of values to generate
-	VmImpl              string            // vm implementation (geth/lfvm)
-	WorldStateDb        string            // path to worldstate
-	Workers             int               // number of worker threads
-	TraceFile           string            // name of trace file
-	TraceDirectory      string            // name of trace directory
-	Trace               bool              // trace flag
-	LogLevel            string            // level of the logging of the app action
-	SourceTableName     string            // represents the name of a source DB table
-	TargetDb            string            // represents the path of a target DB
-	TrieRootHash        string            // represents a hash of a state trie root to be decoded
-	IncludeStorage      bool              // represents a flag for contract storage inclusion in an operation
-	ProfileEVMCall      bool              // enable profiling for EVM call
-	MicroProfiling      bool              // enable micro-profiling of EVM
-	BasicBlockProfiling bool              // enable profiling of basic block
-	OnlySuccessful      bool              // only runs transactions that have been successful
-	ProfilingDbName     string            // set a database name for storing micro-profiling results
-	ChannelBufferSize   int               // set a buffer size for profiling channel
-	TargetBlock         uint64            // represents the ID of target block to be reached by state evolve process or in dump state
-	UpdateBufferSize    uint64            // cache size in Bytes
-	ErigonBatchSize     datasize.ByteSize // erigon batch size for runVM
-	ProfileDB           string            // profile db for parallel transaction execution
+	APIRecordingSrcFile string         // path to source file with recorded API data
+	ArchiveMode         bool           // enable archive mode
+	ArchiveVariant      string         // selects the implementation variant of the archive
+	BlockLength         uint64         // length of a block in number of transactions
+	BalanceRange        int64          // balance range for stochastic simulation/replay
+	CarmenSchema        int            // the current DB schema ID to use in Carmen
+	ChainID             ChainID        // Blockchain ID (mainnet: 250/testnet: 4002)
+	Cache               int            // Cache for StateDb or Priming
+	ContinueOnFailure   bool           // continue validation when an error detected
+	ContractNumber      int64          // number of contracts to create
+	CompactDb           bool           // compact database after merging
+	CopySrcDb           bool           // if true, make a copy the source statedb
+	CPUProfile          string         // pprof cpu profile output file name
+	Db                  string         // path to database
+	DbTmp               string         // path to temporary database
+	DbImpl              string         // storage implementation
+	Genesis             string         // genesis file
+	DbVariant           string         // database variant
+	DbLogging           bool           // set to true if all DB operations should be logged
+	Debug               bool           // enable trace debug flag
+	DeleteSourceDbs     bool           // delete source databases
+	DebugFrom           uint64         // the first block to print trace debug
+	DeletionDb          string         // directory of deleted account database
+	Quiet               bool           // disable progress report flag
+	SyncPeriodLength    uint64         // length of a sync-period in number of blocks
+	HasDeletedAccounts  bool           // true if DeletionDb is not empty; otherwise false
+	KeepDb              bool           // set to true if db is kept after run
+	KeysNumber          int64          // number of keys to generate
+	MaxNumTransactions  int            // the maximum number of processed transactions
+	MemoryBreakdown     bool           // enable printing of memory breakdown
+	MemoryProfile       string         // capture the memory heap profile into the file
+	NonceRange          int            // nonce range for stochastic simulation/replay
+	TransactionLength   uint64         // determines indirectly the length of a transaction
+	PrimeRandom         bool           // enable randomized priming
+	PrimeThreshold      int            // set account threshold before commit
+	Profile             bool           // enable micro profiling
+	ProfileFile         string         // output file containing profiling result
+	ProfileInterval     uint64         // interval of printing profile result
+	RandomSeed          int64          // set random seed for stochastic testing
+	SkipPriming         bool           // skip priming of the state DB
+	SkipMetadata        bool           // skip metadata insert/getting into AidaDb
+	ShadowDb            bool           // defines we want to open an existing db as shadow
+	ShadowImpl          string         // implementation of the shadow DB to use, empty if disabled
+	ShadowVariant       string         // database variant of the shadow DB to be used
+	StateDbSrc          string         // directory to load an existing State DB data
+	AidaDb              string         // directory to profiling database containing substate, update, delete accounts data
+	StateValidationMode ValidationMode // state validation mode
+	UpdateDb            string         // update-set directory
+	Output              string         // output directory for aida-db patches or path to events.json file in stochastic generation
+	SnapshotDepth       int            // depth of snapshot history
+	SubstateDb          string         // substate directory
+	OperaDatadir        string         // source opera directory
+	Validate            bool           // validate validate aida-db
+	ValidateTxState     bool           // validate stateDB before and after transaction
+	ValidateWorldState  bool           // validate stateDB before and after replay block range
+	ValuesNumber        int64          // number of values to generate
+	VmImpl              string         // vm implementation (geth/lfvm)
+	WorldStateDb        string         // path to worldstate
+	Workers             int            // number of worker threads
+	TraceFile           string         // name of trace file
+	TraceDirectory      string         // name of trace directory
+	Trace               bool           // trace flag
+	LogLevel            string         // level of the logging of the app action
+	SourceTableName     string         // represents the name of a source DB table
+	TargetDb            string         // represents the path of a target DB
+	TrieRootHash        string         // represents a hash of a state trie root to be decoded
+	IncludeStorage      bool           // represents a flag for contract storage inclusion in an operation
+	ProfileEVMCall      bool           // enable profiling for EVM call
+	MicroProfiling      bool           // enable micro-profiling of EVM
+	BasicBlockProfiling bool           // enable profiling of basic block
+	OnlySuccessful      bool           // only runs transactions that have been successful
+	ProfilingDbName     string         // set a database name for storing micro-profiling results
+	ChannelBufferSize   int            // set a buffer size for profiling channel
+	TargetBlock         uint64         // represents the ID of target block to be reached by state evolve process or in dump state
+	UpdateBufferSize    uint64         // cache size in Bytes
+	ProfileDB           string         // profile db for parallel transaction execution
 
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.
-func GetChainConfig(chainID int) *params.ChainConfig {
+func GetChainConfig(chainID ChainID) *params.ChainConfig {
 	chainConfig := params.AllEthashProtocolChanges
 	chainConfig.ChainID = big.NewInt(int64(chainID))
-	if chainID == 250 {
+	if chainID == MainnetChainID {
 		// mainnet chainID 250
 		chainConfig.BerlinBlock = new(big.Int).SetUint64(hardForksMainnet["berlin"])
 		chainConfig.LondonBlock = new(big.Int).SetUint64(hardForksMainnet["london"])
-	} else if chainID == 4002 {
+	} else if chainID == TestnetChainID {
 		// testnet chainID 4002
 		chainConfig.BerlinBlock = new(big.Int).SetUint64(hardForksTestnet["berlin"])
 		chainConfig.LondonBlock = new(big.Int).SetUint64(hardForksTestnet["london"])
@@ -491,10 +496,10 @@ func GetChainConfig(chainID int) *params.ChainConfig {
 	return chainConfig
 }
 
-func setFirstBlockFromChainID(chainID int) {
-	if chainID == 250 {
+func setFirstBlockFromChainID(chainID ChainID) {
+	if chainID == MainnetChainID {
 		FirstOperaBlock = hardForksMainnet["opera"]
-	} else if chainID == 4002 {
+	} else if chainID == TestnetChainID {
 		FirstOperaBlock = hardForksTestnet["opera"]
 	} else {
 		log.Fatalf("unknown chain id %v", chainID)
@@ -508,11 +513,13 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	var (
 		first, last uint64
 		profileDB   string
-		chainId     int
+		chainId     ChainID
 	)
 
+	chainId = ChainID(ctx.Int(ChainIDFlag.Name))
+
 	// first look for chainId since we need it for verbal block indication
-	if ctx.Int(ChainIDFlag.Name) == 0 {
+	if chainId == UnknownChainID {
 		log.Warningf("ChainID (--%v) was not set; looking for it in AidaDb", ChainIDFlag.Name)
 
 		// we check if AidaDb was set with err == nil
@@ -533,49 +540,55 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 			log.Noticef("Found chainId (%v) in AidaDb", chainId)
 		}
 
-	} else {
-		chainId = ctx.Int(ChainIDFlag.Name)
 	}
 
 	var argErr error
 	switch mode {
 	case BlockRangeArgs:
+		// try to extract block range from db metadata
+		mdFirst, mdLast, err := getMdBlockRange(ctx)
+		if err != nil {
+			return nil, err
+		}
+
 		// process arguments and flags
 		if ctx.Args().Len() == 0 {
-			log.Notice("Loading first block, last block and ChainID from AidaDb...")
-			aidaDb, err := rawdb.NewLevelDBDatabase(ctx.String(AidaDbFlag.Name), 1024, 100, "profiling", true)
-			if err != nil {
-				if errors.Is(err, os.ErrNotExist) {
-					return nil, fmt.Errorf("you either need to specify block range using arguments <first> <last>, or path to existing AidaDb (--%v) with block range in metadata", AidaDbFlag.Name)
-				}
-				return nil, fmt.Errorf("cannot open aida-db; %v", err)
-			}
-
-			md := NewAidaDbMetadata(aidaDb, ctx.String(logger.LogLevelFlag.Name))
-			first = md.GetFirstBlock()
-			last = md.GetLastBlock()
-
-			if first == 0 {
-				return nil, errors.New("your AidaDb does not have metadata with first block")
-			}
-			if last == 0 {
-				return nil, errors.New("your AidaDb does not have metadata with last block")
-			}
+			first = mdFirst
+			last = mdLast
 
 			log.Noticef("Found first block (%v) and last block in AidaDb (%v)", first, last)
-
 		} else if ctx.Args().Len() == 2 {
-			first, last, argErr = SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1), chainId)
+			// try to parse and check block range
+			firstArg, lastArg, argErr := SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1), chainId)
 			if argErr != nil {
 				return nil, argErr
+			}
+
+			// find if values overlap
+			first, last, err = adjustBlockRange(firstArg, lastArg, mdFirst, mdLast)
+			if err != nil {
+				return nil, err
 			}
 		}
 	case BlockRangeArgsProfileDB:
 		// process arguments and flags
 		if ctx.Args().Len() == 3 {
-			first, last, argErr = SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1), chainId)
+			// try to extract block range from db metadata
+			mdFirst, mdLast, err := getMdBlockRange(ctx)
+			if err != nil {
+				return nil, err
+			}
+
+			// try to parse and check block range
+			firstArg, lastArg, argErr := SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1), chainId)
 			if argErr != nil {
 				return nil, argErr
+			}
+
+			// find if values overlap
+			first, last, err = adjustBlockRange(firstArg, lastArg, mdFirst, mdLast)
+			if err != nil {
+				return nil, err
 			}
 			profileDB = ctx.Args().Get(2)
 		} else if ctx.Args().Len() == 2 {
@@ -603,12 +616,9 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	if cfg.DbVariant == "" {
 		if cfg.DbImpl == "carmen" {
 			cfg.DbVariant = "go-file"
-		} else if cfg.DbImpl == "flat" {
-			cfg.DbVariant = "go-ldb"
-		} else if cfg.DbImpl == "erigon" {
-			cfg.DbVariant = "go-mdbx"
 		}
 	}
+
 	// --continue-on-failure implicitly enables transaction state validation
 	validateTxState := ctx.Bool(ValidateFlag.Name) ||
 		ctx.Bool(ValidateTxStateFlag.Name) ||
@@ -633,13 +643,6 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		cfg.UpdateDb = cfg.AidaDb
 		cfg.DeletionDb = cfg.AidaDb
 		cfg.SubstateDb = cfg.AidaDb
-	}
-
-	if ctx.String(ErigonBatchSizeFlag.Name) != "" {
-		err := cfg.ErigonBatchSize.UnmarshalText([]byte(ctx.String(ErigonBatchSizeFlag.Name)))
-		if err != nil {
-			return cfg, fmt.Errorf("invalid batchSize provided: %v", err)
-		}
 	}
 
 	if !cfg.Quiet {
@@ -691,7 +694,6 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 			log.Infof("Update buffer size: %v bytes", cfg.UpdateBufferSize)
 		}
 		log.Infof("Validate world state: %v, validate tx state: %v", cfg.ValidateWorldState, cfg.ValidateTxState)
-		log.Infof("Erigon batch size: %v", cfg.ErigonBatchSize.HumanReadable())
 	}
 
 	if cfg.ValidateTxState {
@@ -719,10 +721,10 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 }
 
 // setAidaDbRepositoryUrl based on chain id selects correct aida-db repository url
-func setAidaDbRepositoryUrl(chainId int) error {
-	if chainId == 250 {
+func setAidaDbRepositoryUrl(chainId ChainID) error {
+	if chainId == MainnetChainID {
 		AidaDbRepositoryUrl = AidaDbRepositoryMainnetUrl
-	} else if chainId == 4002 {
+	} else if chainId == TestnetChainID {
 		AidaDbRepositoryUrl = AidaDbRepositoryTestnetUrl
 	} else {
 		return fmt.Errorf("invalid chain id %d", chainId)
@@ -731,41 +733,169 @@ func setAidaDbRepositoryUrl(chainId int) error {
 }
 
 // SetBlockRange checks the validity of a block range and return the first and last block as numbers.
-func SetBlockRange(firstArg string, lastArg string, chainId int) (uint64, uint64, error) {
+func SetBlockRange(firstArg string, lastArg string, chainId ChainID) (uint64, uint64, error) {
 	var err error = nil
 	first, ferr := strconv.ParseUint(firstArg, 10, 64)
 	last, lerr := strconv.ParseUint(lastArg, 10, 64)
 
 	if ferr != nil {
 		first, err = setBlockNumber(firstArg, chainId)
+		if err != nil {
+			return 0, 0, err
+		}
 	}
 
 	if lerr != nil {
 		last, err = setBlockNumber(lastArg, chainId)
+		if err != nil {
+			return 0, 0, err
+		}
 	}
 
 	if first > last {
-		err = fmt.Errorf("error: first block has larger number than last block")
+		return 0, 0, fmt.Errorf("first block has larger number than last block")
 	}
 
 	return first, last, err
 }
 
-func setBlockNumber(arg string, chainId int) (uint64, error) {
+// setBlockNumber parse the command line argument (number, hardfork keyword or keyword with offset)
+// returns calculated block number
+func setBlockNumber(arg string, chainId ChainID) (uint64, error) {
 	var blkNum uint64
+	var hasOffset bool
+	var keyword string
+	var symbol string
+	var offset uint64
+
+	// check if keyword has an offset and extract the keyword, offset direction (arithmetical symbol) and offset value
+	re := regexp.MustCompile(`^[a-zA-Z]+\w*[+-]\d+$`)
+	if hasOffset = re.MatchString(arg); hasOffset {
+		var err error
+		if keyword, symbol, offset, err = parseOffset(arg); err != nil {
+			return 0, err
+		}
+	} else {
+		keyword = strings.ToLower(arg)
+	}
+
+	// find base block number from keyword
 	if chainId == 4002 {
-		if val, ok := hardForksTestnet[strings.ToLower(arg)]; ok {
+		if val, ok := hardForksTestnet[keyword]; ok {
 			blkNum = val
 		} else {
-			return 0, fmt.Errorf("error: block number not a valid keyword or integer")
+			return 0, fmt.Errorf("block number not a valid keyword or integer")
 		}
 	} else if chainId == 250 || chainId == 0 {
-		if val, ok := hardForksMainnet[strings.ToLower(arg)]; ok {
+		if val, ok := hardForksMainnet[keyword]; ok {
 			blkNum = val
 		} else {
-			return 0, fmt.Errorf("error: block number not a valid keyword or integer")
+			return 0, fmt.Errorf("block number not a valid keyword or integer")
 		}
 	}
 
+	// shift base block number by the offset
+	if hasOffset {
+		blkNum = offsetBlockNum(blkNum, symbol, offset)
+	}
+
 	return blkNum, nil
+}
+
+// parseOffset parse the hardfork keyword, offset value and a direction of the offset
+func parseOffset(arg string) (string, string, uint64, error) {
+	if strings.Contains(arg, "+") {
+		if keyword, offset, ok := splitKeywordOffset(arg, "+"); ok {
+			return strings.ToLower(keyword), "+", offset, nil
+		}
+
+		return "", "", 0, fmt.Errorf("block number not a valid keyword with offset")
+	} else if strings.Contains(arg, "-") {
+		if keyword, offset, ok := splitKeywordOffset(arg, "-"); ok {
+			return strings.ToLower(keyword), "-", offset, nil
+		}
+
+		return "", "", 0, fmt.Errorf("block number not a valid keyword with offset")
+	}
+
+	return "", "", 0, fmt.Errorf("block number has invalid arithmetical sign")
+}
+
+// splitKeywordOffset split the hardfork keyword and the arithmetical sign determining the direction of the offset
+func splitKeywordOffset(arg string, symbol string) (string, uint64, bool) {
+	res := strings.Split(arg, symbol)
+
+	if _, ok := hardForksMainnet[strings.ToLower(res[0])]; !ok {
+		return "", 0, false
+	}
+
+	offset, err := strconv.ParseUint(res[1], 10, 64)
+	if err != nil {
+		return "", 0, false
+	}
+
+	return res[0], offset, true
+}
+
+// offsetBlockNum adds/subtracts the offset to/from block number
+func offsetBlockNum(blkNum uint64, symbol string, offset uint64) uint64 {
+	res := uint64(0)
+	if symbol == "+" {
+		res = blkNum + offset
+	} else if symbol == "-" {
+		res = blkNum - offset
+	}
+
+	return res
+}
+
+// getMdBlockRange gets block range from aidaDB metadata
+func getMdBlockRange(ctx *cli.Context) (uint64, uint64, error) {
+	aidaDb, err := rawdb.NewLevelDBDatabase(ctx.String(AidaDbFlag.Name), 1024, 100, "profiling", true)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return 0, 0, fmt.Errorf("you either need to specify block range using arguments <first> <last>, or path to existing AidaDb (--%v) with block range in metadata", AidaDbFlag.Name)
+		}
+		return 0, 0, fmt.Errorf("cannot open aida-db; %v", err)
+	}
+
+	md := NewAidaDbMetadata(aidaDb, ctx.String(logger.LogLevelFlag.Name))
+	mdFirst := md.GetFirstBlock()
+	mdLast := md.GetLastBlock()
+
+	if mdLast == 0 {
+		return 0, 0, errors.New("your AidaDb does not have metadata with last block. Please run ./build/util-db info metadata --aida-db <path>")
+	}
+
+	err = aidaDb.Close()
+	if err != nil {
+		return 0, 0, fmt.Errorf("cannot close db; %v", err)
+	}
+
+	return mdFirst, mdLast, nil
+}
+
+// adjustBlockRange finds overlap between metadata block range and block range specified by user in command line
+func adjustBlockRange(firstArg uint64, lastArg uint64, mdFirst uint64, mdLast uint64) (uint64, uint64, error) {
+	var first, last uint64
+
+	if lastArg >= mdFirst && mdLast >= firstArg {
+		// get first block number
+		if firstArg > mdFirst {
+			first = firstArg
+		} else {
+			first = mdFirst
+		}
+
+		// get last block number
+		if lastArg < mdLast {
+			last = lastArg
+		} else {
+			last = mdLast
+		}
+
+		return first, last, nil
+	} else {
+		return 0, 0, fmt.Errorf("given block range does NOT overlap with the block range of given aidaDB")
+	}
 }

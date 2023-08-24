@@ -50,7 +50,7 @@ func RunArchive(ctx *cli.Context) error {
 	defer db.Close()
 
 	// open substate DB
-	substate.SetSubstateDb(cfg.SubstateDb)
+	substate.SetSubstateDb(cfg.AidaDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
@@ -174,13 +174,9 @@ func runBlocks(
 
 		state.BeginBlock(block)
 		for _, tx := range transactions {
-			if tx.Transaction >= utils.PseudoTx {
-				utils.ProcessPseudoTx(tx.Substate.OutputAlloc, state)
-			} else {
-				if err = utils.ProcessTx(state, cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
-					issues <- fmt.Errorf("processing of transaction %d/%d failed: %v", block, tx.Transaction, err)
-					break
-				}
+			if err = utils.ProcessTx(state, cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
+				issues <- fmt.Errorf("processing of transaction %d/%d failed: %v", block, tx.Transaction, err)
+				break
 			}
 			transactionDone <- tx.Transaction
 		}

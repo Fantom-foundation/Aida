@@ -7,6 +7,7 @@ import (
 	"runtime/pprof"
 
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Tosca/go/vm"
 	"github.com/op/go-logging"
 )
 
@@ -52,5 +53,14 @@ func MemoryBreakdown(db state.StateDB, cfg *Config, log *logging.Logger) {
 		} else {
 			log.Notice("Utilized storage solution does not support memory breakdowns.")
 		}
+	}
+}
+
+// PrintEvmStatistics prints EVM implementation specific stastical information
+// to the console. Does nothing, if such information is not offered.
+func PrintEvmStatistics(cfg *Config) {
+	pvm, ok := vm.GetVirtualMachine(cfg.VmImpl).(vm.ProfilingVM)
+	if pvm != nil && ok {
+		pvm.DumpProfile()
 	}
 }

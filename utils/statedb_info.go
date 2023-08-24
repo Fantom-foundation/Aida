@@ -127,7 +127,7 @@ func ReadStateDbInfo(filename string) (StateDbInfo, error) {
 }
 
 // RenameTempStateDBDirectory renames a temp directory to a meaningful name
-func RenameTempStateDBDirectory(cfg *Config, oldDirectory string, block uint64) {
+func RenameTempStateDBDirectory(cfg *Config, oldDirectory string, block uint64) string {
 	var newDirectory string
 	if cfg.DbImpl != "geth" {
 		newDirectory = fmt.Sprintf("state_db_%v_%v_%v", cfg.DbImpl, cfg.DbVariant, block)
@@ -139,5 +139,5 @@ func RenameTempStateDBDirectory(cfg *Config, oldDirectory string, block uint64) 
 		log.Printf("WARNING: failed to rename state directory. %v\n", err)
 		newDirectory = oldDirectory
 	}
-	log.Printf("StateDB directory: %v\n", newDirectory)
+	return newDirectory
 }

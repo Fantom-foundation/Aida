@@ -76,12 +76,12 @@ func parallelisationAction(ctx *cli.Context) error {
 	log.Notice("Open profile database.")
 	profileDB, err := parallelisation.NewProfileDB(cfg.ProfileDB)
 	if err != nil {
-		log.Fatalf("Unable to open out SQlite DB, err: %q", err)
+		return fmt.Errorf("unable to open out SQlite DB; %v", err)
 	}
 
 	_, err = profileDB.DeleteByBlockRange(cfg.First, cfg.Last)
 	if err != nil {
-		log.Fatalf("Unable to delete rows within block range: %d-%d, err: %q", cfg.First, cfg.Last, err)
+		return fmt.Errorf("unable to delete rows within block range: %d-%d; %v", cfg.First, cfg.Last, err)
 	}
 
 	log.Notice("Profile parallelisation.")
@@ -154,13 +154,13 @@ func parallelisationAction(ctx *cli.Context) error {
 
 		// process current transaction
 		txTimer := time.Now()
-		if err := utils.ProcessTx(db, cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
+		if err = utils.ProcessTx(db, cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
 			log.Critical("\tFAILED executing transaction.")
 			return fmt.Errorf("execution failed; %v", err)
 		}
 
 		// record transaction for parallel experiment
-		if err := context.RecordTransaction(tx, time.Since(txTimer)); err != nil {
+		if err = context.RecordTransaction(tx, time.Since(txTimer)); err != nil {
 			log.Critical("\tFAILED profiling transaction.")
 			return fmt.Errorf("transaction profiling error; %v", err)
 		}
@@ -182,11 +182,11 @@ func parallelisationAction(ctx *cli.Context) error {
 
 	// close databases
 	log.Info("Close Aida database.")
-	if err := db.Close(); err != nil {
+	if err = db.Close(); err != nil {
 		log.Errorf("Failed to close StateDB: %v", err)
 	}
 	log.Info("Close Profile database.")
-	if err := profileDB.Close(); err != nil {
+	if err = profileDB.Close(); err != nil {
 		log.Errorf("Failed to profiling database: %v", err)
 	}
 

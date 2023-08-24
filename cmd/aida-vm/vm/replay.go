@@ -14,7 +14,6 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
-	"github.com/Fantom-foundation/Tosca/go/vm/lfvm"
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/Fantom-foundation/go-opera/opera"
 	"github.com/ethereum/go-ethereum/common"
@@ -38,7 +37,6 @@ var ReplayCommand = cli.Command{
 		&substate.SkipTransferTxsFlag,
 		&substate.SkipCallTxsFlag,
 		&substate.SkipCreateTxsFlag,
-		&substate.SubstateDbFlag,
 		&utils.ChainIDFlag,
 		&utils.ProfileEVMCallFlag,
 		&utils.MicroProfilingFlag,
@@ -49,6 +47,7 @@ var ReplayCommand = cli.Command{
 		&utils.OnlySuccessfulFlag,
 		&utils.CpuProfileFlag,
 		&utils.StateDbImplementationFlag,
+		&utils.AidaDbFlag,
 		&logger.LogLevelFlag,
 	},
 	Description: `
@@ -96,7 +95,7 @@ func getVmDuration() time.Duration {
 }
 
 // replayTask replays a transaction substate
-func replayTask(config ReplayConfig, block uint64, tx int, recording *substate.Substate, chainID int, log *logging.Logger) error {
+func replayTask(config ReplayConfig, block uint64, tx int, recording *substate.Substate, chainID utils.ChainID, log *logging.Logger) error {
 	if tx == utils.PseudoTx {
 		return nil
 	}
@@ -107,7 +106,7 @@ func replayTask(config ReplayConfig, block uint64, tx int, recording *substate.S
 
 	defer func() {
 		if r := recover(); r != nil {
-			log.Fatalf("Execution of block %d / tx %d paniced: %v", block, tx, r)
+			log.Criticalf("Execution of block %d / tx %d panicked: %v", block, tx, r)
 		}
 	}()
 
@@ -142,10 +141,16 @@ func replayTask(config ReplayConfig, block uint64, tx int, recording *substate.S
 	}
 
 	// TODO: implement other state db types
-	var statedb state.StateDB
+	var (
+		statedb state.StateDB
+		err     error
+	)
 	switch strings.ToLower(config.state_db_impl) {
 	case "geth":
-		statedb = state.MakeOffTheChainStateDB(inputAlloc)
+		statedb, err = state.MakeOffTheChainStateDB(inputAlloc)
+		if err != nil {
+			return err
+		}
 	case "geth-memory", "memory":
 		statedb = state.MakeInMemoryStateDB(&inputAlloc, block)
 	default:
@@ -342,7 +347,7 @@ func replayAction(ctx *cli.Context) error {
 		vm.BasicBlockProfilingDB = cfg.ProfilingDbName
 	}
 
-	substate.SetSubstateDb(cfg.SubstateDb)
+	substate.SetSubstateDb(cfg.AidaDb)
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
@@ -372,9 +377,7 @@ func replayAction(ctx *cli.Context) error {
 	err = taskPool.Execute()
 
 	log.Noticef("net VM time: %v\n", getVmDuration())
-	if strings.HasSuffix(cfg.VmImpl, "-stats") {
-		lfvm.PrintCollectedInstructionStatistics()
-	}
+	utils.PrintEvmStatistics(cfg)
 
 	return err
 }

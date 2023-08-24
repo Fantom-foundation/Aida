@@ -5,11 +5,9 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -49,14 +47,6 @@ var UpdateCommand = cli.Command{
 	Description: ` 
 Updates aida-db by downloading patches from aida-db generation server.
 `,
-}
-
-// patchJson represents struct of JSON file where information about patches is written
-type patchJson struct {
-	FileName           string
-	FromBlock, ToBlock uint64
-	FromEpoch, ToEpoch uint64
-	DbHash, TarHash    string
 }
 
 // update updates aida-db by downloading patches from aida-db generation server.
@@ -146,7 +136,7 @@ func getTargetDbBlockRange(cfg *utils.Config) (uint64, uint64, error) {
 }
 
 // patchesDownloader processes patch names to download then download them in pipelined process
-func patchesDownloader(cfg *utils.Config, patches []patchJson, firstBlock, lastBlock uint64) error {
+func patchesDownloader(cfg *utils.Config, patches []utils.PatchJson, firstBlock, lastBlock uint64) error {
 	// create channel to push patch labels trough channel
 	patchesChan := pushPatchToChanel(patches)
 
@@ -291,7 +281,7 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 }
 
 // decompressPatch takes tar.gz archives and decompresses them, then sends them for further processing
-func decompressPatch(cfg *utils.Config, patchChan chan patchJson, errChan chan error) (chan string, chan error) {
+func decompressPatch(cfg *utils.Config, patchChan chan utils.PatchJson, errChan chan error) (chan string, chan error) {
 	log := logger.NewLogger(cfg.LogLevel, "Decompress patch")
 	decompressedPatchChan := make(chan string, 1)
 	errDecompressChan := make(chan error, 1)
@@ -343,9 +333,9 @@ func decompressPatch(cfg *utils.Config, patchChan chan patchJson, errChan chan e
 }
 
 // downloadPatch downloads patches from server and sends them towards decompressor
-func downloadPatch(cfg *utils.Config, patchesChan chan patchJson) (chan patchJson, chan error) {
+func downloadPatch(cfg *utils.Config, patchesChan chan utils.PatchJson) (chan utils.PatchJson, chan error) {
 	log := logger.NewLogger(cfg.LogLevel, "Download patch")
-	downloadedPatchChan := make(chan patchJson, 1)
+	downloadedPatchChan := make(chan utils.PatchJson, 1)
 	errChan := make(chan error, 1)
 
 	go func() {
@@ -386,8 +376,8 @@ func downloadPatch(cfg *utils.Config, patchesChan chan patchJson) (chan patchJso
 }
 
 // pushPatchToChanel used to pipe strings into channel
-func pushPatchToChanel(strings []patchJson) chan patchJson {
-	ch := make(chan patchJson, 1)
+func pushPatchToChanel(strings []utils.PatchJson) chan utils.PatchJson {
+	ch := make(chan utils.PatchJson, 1)
 	go func() {
 		defer close(ch)
 		for _, str := range strings {
@@ -398,17 +388,17 @@ func pushPatchToChanel(strings []patchJson) chan patchJson {
 }
 
 // retrievePatchesToDownload retrieves all available patches from aida-db generation server.
-func retrievePatchesToDownload(cfg *utils.Config, targetDbFirstBlock uint64, targetDbLastBlock uint64) ([]patchJson, error) {
+func retrievePatchesToDownload(cfg *utils.Config, targetDbFirstBlock uint64, targetDbLastBlock uint64) ([]utils.PatchJson, error) {
 	var isAddingLachesisPatch = false
 
 	// download list of available availablePatches
-	availablePatches, err := downloadPatchesJson()
+	availablePatches, err := utils.DownloadPatchesJson()
 	if err != nil {
 		return nil, fmt.Errorf("unable to download patches.json: %v", err)
 	}
 
 	// list of availablePatches to be downloaded
-	var patchesToDownload = make([]patchJson, 0)
+	var patchesToDownload = make([]utils.PatchJson, 0)
 
 	for _, patch := range availablePatches {
 		// skip every patch which is sooner than previous last block
@@ -438,7 +428,7 @@ func retrievePatchesToDownload(cfg *utils.Config, targetDbFirstBlock uint64, tar
 }
 
 // ByToBlock is an interface that is used to sort the patches by ToBlock
-type ByToBlock []patchJson
+type ByToBlock []utils.PatchJson
 
 func (a ByToBlock) Len() int {
 	return len(a)
@@ -452,7 +442,7 @@ func (a ByToBlock) Less(i, j int) bool {
 
 // appendFirstPatch finds whether user is downloading fresh new db or updating an existing one.
 // If updating an existing one, first patch is appended to download and first update-set is deleted
-func appendFirstPatch(cfg *utils.Config, availablePatches []patchJson, patchesToDownload []patchJson) ([]patchJson, error) {
+func appendFirstPatch(cfg *utils.Config, availablePatches []utils.PatchJson, patchesToDownload []utils.PatchJson) ([]utils.PatchJson, error) {
 	var expectedFileName string
 
 	if cfg.ChainID == 250 {
@@ -498,34 +488,6 @@ func deleteOperaWorldStateFromUpdateSet(dbPath string) error {
 	updateDb.DeleteSubstateAlloc(utils.FirstOperaBlock - 1)
 
 	return updateDb.Close()
-}
-
-// downloadPatchesJson downloads list of available patches from aida-db generation server.
-func downloadPatchesJson() ([]patchJson, error) {
-	// Make the HTTP GET request
-	patchesUrl := utils.AidaDbRepositoryUrl + "/patches.json"
-	response, err := http.Get(patchesUrl)
-	if err != nil {
-		return nil, fmt.Errorf("error making GET request for %s: %v", patchesUrl, err)
-	}
-	defer response.Body.Close()
-
-	// Read the response body
-	body, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return nil, fmt.Errorf("error reading response body: %v", err)
-	}
-
-	// Parse the JSON data
-	var data []patchJson
-
-	err = json.Unmarshal(body, &data)
-	if err != nil {
-		return nil, fmt.Errorf("error parsing JSON response body: %s ; %v", string(body), err)
-	}
-
-	// Access the JSON data
-	return data, nil
 }
 
 // downloadFile downloads file - used for downloading individual patches.

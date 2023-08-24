@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -92,7 +91,7 @@ func newGenerator(ctx *cli.Context, cfg *utils.Config) (*generator, error) {
 
 	db, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
 	if err != nil {
-		log.Fatalf("cannot create new db; %v", err)
+		return nil, fmt.Errorf("cannot create new db; %v", err)
 	}
 
 	substate.SetSubstateDbBackend(db)

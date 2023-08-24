@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Fantom-foundation/Aida/cmd/aida-vm/vm"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/state/proxy"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
@@ -38,7 +38,7 @@ const channelSize = 10000 // size of deletion channel
 var DeleteHistory map[common.Address]bool //address recently and deleted
 
 // readAccounts reads contracts which were suicided or created and adds them to lists
-func readAccounts(ch chan vm.ContractLiveness) ([]common.Address, []common.Address) {
+func readAccounts(ch chan proxy.ContractLiveliness) ([]common.Address, []common.Address) {
 	des := make(map[common.Address]bool)
 	res := make(map[common.Address]bool)
 	for contract := range ch {
@@ -82,11 +82,11 @@ func readAccounts(ch chan vm.ContractLiveness) ([]common.Address, []common.Addre
 // and resurrected accounts to a database.
 func genDeletedAccountsTask(block uint64, tx int, recording *substate.Substate, ddb *substate.DestroyedAccountDB, cfg *utils.Config) error {
 
-	ch := make(chan vm.ContractLiveness, channelSize)
+	ch := make(chan proxy.ContractLiveliness, channelSize)
 	var statedb state.StateDB
 	statedb = state.MakeInMemoryStateDB(&recording.InputAlloc, block)
 	//wrapper
-	statedb = vm.NewProxyDeletion(statedb, ch)
+	statedb = proxy.NewDeletionProxy(statedb, ch, cfg.LogLevel)
 
 	err := utils.ProcessTx(statedb, cfg, block, tx, recording)
 	if err != nil {
