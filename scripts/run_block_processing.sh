@@ -42,7 +42,7 @@ log() {
 
 # profile block processing 
 log "profile block processing from $startblock to $endblock ..."
-./build/aida-profile parallelisation --aida-db $aidadbpath --db-impl $dbimpl --db-variant $dbvariant --vm-impl=$vmimpl --db-tmp $tmpdir --carmen-schema $carmenschema $startblock $endblock "$outputdir/profile.db"
+./build/aida-profile blocks --aida-db $aidadbpath --db-impl $dbimpl --db-variant $dbvariant --vm-impl=$vmimpl --db-tmp $tmpdir --carmen-schema $carmenschema $startblock $endblock "$outputdir/profile.db"
 
 # produce block processing reports
 log "produce processing reports ..."
