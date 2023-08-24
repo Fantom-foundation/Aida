@@ -30,6 +30,11 @@ startblock=$7
 endblock=$8
 outputdir=$9
 
+# create output directory if doesn't exist
+if [[ ! -e $outputdir ]]; then
+	mkdir $outputdir
+fi
+
 # logging 
 log() {
     echo "$(date) $1" | tee -a "$outputdir/block_processing.log"
