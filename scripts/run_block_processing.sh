@@ -29,6 +29,7 @@ tmpdir=$6
 startblock=$7
 endblock=$8
 outputdir=$9
+buffersize=2048
 
 # create output directory if doesn't exist
 if [[ ! -e $outputdir ]]; then
@@ -42,7 +43,7 @@ log() {
 
 # profile block processing 
 log "profile block processing from $startblock to $endblock ..."
-./build/aida-profile blocks --aida-db $aidadbpath --db-impl $dbimpl --db-variant $dbvariant --vm-impl=$vmimpl --db-tmp $tmpdir --carmen-schema $carmenschema $startblock $endblock "$outputdir/profile.db"
+./build/aida-profile blocks --aida-db $aidadbpath --db-impl $dbimpl --db-variant $dbvariant --vm-impl=$vmimpl --db-tmp $tmpdir --carmen-schema $carmenschema --update-buffer-size $buffersize $startblock $endblock "$outputdir/profile.db"
 
 # produce block processing reports
 log "produce processing reports ..."

@@ -23,9 +23,9 @@ INSERT INTO blockProfile (
 	// SQL statement for inserting a profile record of a new transaction
 	insertTxSQL = `
 INSERT INTO txProfile (
-block, tx, duration, gas
+block, tx, txType, duration, gas
 ) VALUES (
-?, ?, ?, ?
+?, ?, ?, ?, ?
 )
 `
 
@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS blockProfile (
 CREATE TABLE IF NOT EXISTS txProfile (
 	block INTEGER,
 	tx    INTEGER, 
+	txType INTEGER,
 	duration INTEGER,
 	gas INTEGER
 );
@@ -65,7 +66,7 @@ func NewProfileDB(dbFile string) (*ProfileDB, error) {
 	// open SQLITE3 DB
 	sqlDB, err := sql.Open("sqlite3", dbFile)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open database %v; %v", dbFile, err)
 	}
 	// create profile schema if not exists
 	if _, err = sqlDB.Exec(createSQL); err != nil {
@@ -74,11 +75,11 @@ func NewProfileDB(dbFile string) (*ProfileDB, error) {
 	// prepare INSERT statements for subsequent use
 	blockStmt, err := sqlDB.Prepare(insertBlockSQL)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to prepare a SQL statement for block profile; %v", err)
 	}
 	txStmt, err := sqlDB.Prepare(insertTxSQL)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to prepare a SQL statement for tx profile; %v", err)
 	}
 	return &ProfileDB{
 		sql:       sqlDB,
@@ -130,7 +131,7 @@ func (db *ProfileDB) Flush() error {
 		}
 		// write transactions
 		for i, tTransaction := range ProfileData.tTransactions {
-			_, err = tx.Stmt(db.txStmt).Exec(ProfileData.curBlock, i, tTransaction, ProfileData.gasTransactions[i])
+			_, err = tx.Stmt(db.txStmt).Exec(ProfileData.curBlock, i, ProfileData.tTypes[i], tTransaction, ProfileData.gasTransactions[i])
 			if err != nil {
 				_ = tx.Rollback()
 				return err

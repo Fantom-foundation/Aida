@@ -19,6 +19,17 @@ type TxAddresses []AddressSet
 // TxTime stores time duration of transactions.
 type TxTime []time.Duration
 
+// TxType stores type of transaction
+type TxType int
+
+const (
+	TransferTx TxType = iota
+	CreateTx
+	CallTx
+	EpochSealingTx
+	UnknownTx
+)
+
 // Context stores the book-keeping information for block processing profiling.
 type Context struct {
 	n              int                          // number of transactions
@@ -30,6 +41,7 @@ type Context struct {
 	tCritical     time.Duration   // critical path runtime for transactions
 	tCompletion   TxTime          // earliest completion time of a transaction
 	tTransactions []time.Duration // runtime of a transaction
+	tTypes        []TxType        // types of transaction
 
 	gasTransactions []uint64 // gas used for transactions
 	gasBlock        uint64   // gas used for a block
@@ -48,6 +60,7 @@ func NewContext() *Context {
 		txDependencies:  graphutil.StrictPartialOrder{},
 		txAddresses:     TxAddresses{},
 		tTransactions:   []time.Duration{},
+		tTypes:          []TxType{},
 		gasTransactions: []uint64{},
 	}
 }
@@ -130,6 +143,7 @@ func (ctx *Context) RecordTransaction(tx *substate.Transaction, tTransaction tim
 	// update time for block and transaction
 	ctx.tSequential += tTransaction
 	ctx.tTransactions = append(ctx.tTransactions, tTransaction)
+	ctx.tTypes = append(ctx.tTypes, GetTransactionType(tx.Substate))
 
 	// update gas used for block and transaction
 	gasUsed := tx.Substate.Result.GasUsed
@@ -174,6 +188,7 @@ type ProfileData struct {
 	tCritical       int64    // critical path runtime for transactions
 	tCommit         int64    // commit runtime
 	tTransactions   []int64  // runtime per transaction
+	tTypes          []TxType // a list of transaction type
 	speedup         float64  // speedup value for experiment
 	ubNumProc       int64    // upper bound on the number of processors (i.e. width of task graph)
 	gasTransactions []uint64 // gas consumption per transaction
@@ -225,10 +240,34 @@ func (ctx *Context) GetProfileData(curBlock uint64, tBlock time.Duration) (*Prof
 		tCritical:       ctx.tCritical.Nanoseconds(),
 		tCommit:         tCommit.Nanoseconds(),
 		tTransactions:   tTransactions,
+		tTypes:          ctx.tTypes,
 		speedup:         speedup,
 		ubNumProc:       ubNumProc,
 		gasTransactions: gasTransactions,
 		gasBlock:        ctx.gasBlock,
 	}
 	return &data, nil
+}
+
+func GetTransactionType(st *substate.Substate) TxType {
+	msg := st.Message
+	alloc := st.InputAlloc
+	to := msg.To
+	if to != nil {
+		// regular transactions
+		if account, exist := alloc[*to]; !exist || len(account.Code) == 0 {
+			return TransferTx
+		}
+	}
+	if to != nil {
+		// CALL trasnactions with contract bytecode
+		if account, exist := alloc[*to]; exist && len(account.Code) > 0 {
+			return CallTx
+		}
+	}
+	if to == nil {
+		// CREATE transactions
+		return CreateTx
+	}
+	return UnknownTx
 }
