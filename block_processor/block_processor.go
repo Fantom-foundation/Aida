@@ -93,6 +93,7 @@ func (bp *BlockProcessor) Run(actions ExtensionList) error {
 
 	// TODO: there should not be a side-effect on cfg in runvm - that is a design failure
 	bp.cfg.StateValidationMode = utils.SubsetCheck
+	bp.cfg.CopySrcDb = true
 
 	// call init actions
 	if err = actions.ExecuteExtensions("Init", bp); err != nil {
@@ -168,10 +169,24 @@ func (bp *BlockProcessor) iterate(iter substate.SubstateIterator, actions Extens
 			if bp.tx.Block > bp.cfg.Last {
 				return nil
 			}
-
+			bp.db.EndBlock()
+			// call post-block actions
 			if err = actions.ExecuteExtensions("PostBlock", bp); err != nil {
 				return err
 			}
+			// switch to next sync-period if needed.
+			// TODO: Revisit semantics - is this really necessary ????
+			newSyncPeriod := bp.tx.Block / bp.cfg.SyncPeriodLength
+			for bp.syncPeriod < newSyncPeriod {
+				bp.db.EndSyncPeriod()
+				bp.syncPeriod++
+				bp.db.BeginSyncPeriod(bp.syncPeriod)
+			}
+
+			// Mark the beginning of a new block
+			bp.block = bp.tx.Block
+			bp.db.BeginBlock(bp.block)
+
 		}
 
 		// check whether we have processed enough transaction
