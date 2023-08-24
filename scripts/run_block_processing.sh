@@ -41,6 +41,6 @@ log "profile block processing from $startblock to $endblock ..."
 
 # produce block processing reports
 log "produce processing reports ..."
-./scripts/gen_processing_reports.sh $dbimpl $dbvariant $vmimpl $outputdir
+./scripts/gen_processing_reports.sh $dbimpl $dbvariant $carmenschema $vmimpl $outputdir
 
 log "finished ..."

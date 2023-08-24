@@ -22,7 +22,8 @@ fi
 dbimpl=$1
 dbvariant=$2
 vmimpl=$3
-outputdir=$4
+carmenschema=$4
+outputdir=$5
 
 # logging 
 log() {
@@ -92,7 +93,7 @@ os=`OperatingSystemDescription`
 machine=`Machine`
 gh=`GitHash`
 go=`GoVersion`
-statedb="$dbimpl($dbvariant)"
+statedb="$dbimpl($dbvariant $carmenschema)"
 
 # render R Markdown file
 log "render block processing report ..."
