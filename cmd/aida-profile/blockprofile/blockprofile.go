@@ -26,6 +26,7 @@ var BlockProfileCommand = cli.Command{
 		&utils.AidaDbFlag,
 
 		// StateDb
+		&utils.CarmenSchemaFlag,
 		&utils.StateDbImplementationFlag,
 		&utils.StateDbVariantFlag,
 		&utils.DbTmpFlag,

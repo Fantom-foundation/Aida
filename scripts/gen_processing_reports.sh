@@ -13,7 +13,7 @@
 # 
 
 # check the number of command line arguments
-if [ "$#" -ne 4 ]; then
+if [ "$#" -ne 5 ]; then
     echo "Invalid number of command line arguments supplied"
     exit 1
 fi
@@ -22,7 +22,8 @@ fi
 dbimpl=$1
 dbvariant=$2
 vmimpl=$3
-outputdir=$4
+carmenschema=$4
+outputdir=$5
 
 # logging 
 log() {
@@ -65,8 +66,8 @@ DROP VIEW IF EXISTS groupedBlockProfile;
 CREATE VIEW groupedBlockProfile(block, tBlock, tCommit, numTx, speedup, gasBlock) AS
  SELECT block/100000, tBlock, tCommit, numTx, log(speedup), gasBlock FROM blockProfile;
 -- aggregate block data
-DROP TABLE IF EXISTS AggregatedBlockProfile;
-CREATE TABLE AggregatedBlockProfile(block INTEGER, tBlock REAL, tCommit REAL, numTx REAL,  speedup REAL, gasBlock REAL, gps REAL, tps REAL);
+DROP TABLE IF EXISTS aggregatedBlockProfile;
+CREATE TABLE aggregatedBlockProfile(block INTEGER, tBlock REAL, tCommit REAL, numTx REAL,  speedup REAL, gasBlock REAL, gps REAL, tps REAL);
 INSERT INTO AggregatedBlockProfile SELECT min(block)*100000, avg(tBlock)/1e6, avg(tCommit)/1e3, avg(numTx), exp(avg(speedup)), avg(gasBlock)/1e6, sum(gasBlock)/(sum(tBlock)/1e3), sum(numTx)/(sum(tBlock)/1e9) FROM groupedBlockProfile GROUP BY block;
 DROP VIEW groupedBlockProfile;
 -- create view groupedeTxProfile to group transaction data for every 1,000,000 transactions
@@ -92,7 +93,7 @@ os=`OperatingSystemDescription`
 machine=`Machine`
 gh=`GitHash`
 go=`GoVersion`
-statedb="$dbimpl($dbvariant)"
+statedb="$dbimpl($dbvariant $carmenschema)"
 
 # render R Markdown file
 log "render block processing report ..."
