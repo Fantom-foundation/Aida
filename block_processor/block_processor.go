@@ -93,7 +93,8 @@ func (bp *BlockProcessor) Run(actions ExtensionList) error {
 
 	// TODO: there should not be a side-effect on cfg in runvm - that is a design failure
 	bp.cfg.StateValidationMode = utils.SubsetCheck
-	bp.cfg.CopySrcDb = true
+	// TODO: add this option back when splitting vm-adb's and vm-sdb's run func
+	// bp.cfg.CopySrcDb = true
 
 	// call init actions
 	if err = actions.ExecuteExtensions("Init", bp); err != nil {
