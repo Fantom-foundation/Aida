@@ -40,8 +40,7 @@ type Context struct {
 	tCritical     time.Duration   // critical path runtime for transactions
 	tCompletion   TxTime          // earliest completion time of a transaction
 	tTransactions []time.Duration // runtime of a transaction
-	tTypes        []TxType        // transaction types per transaction
-
+	tTypes        []TxType        // transaction type per transaction
 	gasTransactions []uint64 // gas used for transactions
 	gasBlock        uint64   // gas used for a block
 }
