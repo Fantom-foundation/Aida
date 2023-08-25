@@ -19,7 +19,7 @@ type TxAddresses []AddressSet
 // TxTime stores time duration of transactions.
 type TxTime []time.Duration
 
-// TxType stores type of transaction
+// TxType stores type of transaction.
 type TxType int
 
 const (
@@ -28,6 +28,14 @@ const (
 	CallTx                       // a transaction which executes contracts
 	EpochSealingTx               // a special transaction sealing an epoch
 )
+
+// readable labels of transaction types.
+var TypeLabel = map[TxType]string{
+	TransferTx:     "transafer",
+	CreateTx:       "create",
+	CallTx:         "call",
+	EpochSealingTx: "epoch sealing",
+}
 
 // Context stores the book-keeping information for block processing profiling.
 type Context struct {
@@ -41,6 +49,7 @@ type Context struct {
 	tCompletion   TxTime          // earliest completion time of a transaction
 	tTransactions []time.Duration // runtime of a transaction
 	tTypes        []TxType        // transaction type per transaction
+
 	gasTransactions []uint64 // gas used for transactions
 	gasBlock        uint64   // gas used for a block
 }
@@ -141,7 +150,7 @@ func (ctx *Context) RecordTransaction(tx *substate.Transaction, tTransaction tim
 	// update time for block and transaction
 	ctx.tSequential += tTransaction
 	ctx.tTransactions = append(ctx.tTransactions, tTransaction)
-	ctx.tTypes = append(ctx.tTypes, getTransactionType(tx.Substate))
+	ctx.tTypes = append(ctx.tTypes, getTransactionType(tx))
 
 	// update gas used for block and transaction
 	gasUsed := tx.Substate.Result.GasUsed
@@ -248,10 +257,17 @@ func (ctx *Context) GetProfileData(curBlock uint64, tBlock time.Duration) (*Prof
 }
 
 // getTransactionType reads a message and determines a transaction type.
-func getTransactionType(st *substate.Substate) TxType {
-	msg := st.Message
-	alloc := st.InputAlloc
+func getTransactionType(tx *substate.Transaction) TxType {
+	idx := tx.Transaction
+	msg := tx.Substate.Message
 	to := msg.To
+	from := msg.From
+	alloc := tx.Substate.InputAlloc
+
+	// special contract addresses
+	sfc := common.HexToAddress("0xd100a01e00000000000000000000000000000000")
+	zero := common.HexToAddress("0x0000000000000000000000000000000000000000")
+
 	if to != nil {
 		account, exist := alloc[*to]
 		// regular transaction
@@ -259,6 +275,9 @@ func getTransactionType(st *substate.Substate) TxType {
 			return TransferTx
 			// CALL transaction with contract bytecode
 		} else {
+			if from == zero && *to == sfc && idx <= 1 {
+				return EpochSealingTx
+			}
 			return CallTx
 		}
 	}
