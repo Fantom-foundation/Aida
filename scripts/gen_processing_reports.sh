@@ -34,12 +34,7 @@ log() {
 HardwareDescription()  {
     processor=`cat /proc/cpuinfo | grep "^model name" | head -n 1 | awk -F': ' '{print $2}'`
     memory=`free | grep "^Mem:" | awk '{printf("%dGB RAM\n", $2/1024/1024)}'` 
-    # if hwinfo fails, use "unknown disk"
-    if hwinfo --short; then
-	    disks=`hwinfo  --disk | grep Model | awk -F ': \"' '{if (NR > 1) printf(", "); printf("%s", substr($2,1,length($2)-1));}  END {printf("\n")}'`
-    else
-	    disks="unknown disk"
-    fi
+    disks=`hwinfo  --disk | grep Model | awk -F ': \"' '{if (NR > 1) printf(", "); printf("%s", substr($2,1,length($2)-1));}  END {printf("\n")}'`
     echo "$processor, $memory, disks: $disks"
 }
 
