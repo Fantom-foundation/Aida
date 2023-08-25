@@ -77,7 +77,7 @@ func TestSendRPCRequest_InvalidChainID(t *testing.T) {
 		t.Fatal("SendRPCRequest must return an err")
 	}
 
-	if !strings.Contains(err.Error(), "invalid chain-id") {
+	if !strings.Contains(err.Error(), "unknown chain-id") {
 		t.Fatalf("SendRPCRequest returned unexpected error: %v", err.Error())
 	}
 
