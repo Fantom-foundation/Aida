@@ -681,9 +681,6 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		}
 		log.Infof("Used VM implementation: %v", cfg.VmImpl)
 		log.Infof("Update DB directory: %v", cfg.UpdateDb)
-		if cfg.First == 0 {
-			cfg.SkipPriming = true
-		}
 		if cfg.SkipPriming {
 			log.Infof("Priming: Skipped")
 		} else {
@@ -712,6 +709,9 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	if cfg.KeepDb && strings.Contains(cfg.DbVariant, "memory") {
 		log.Warning("Unable to keep in-memory stateDB")
 		cfg.KeepDb = false
+	}
+	if cfg.First == 0 {
+		cfg.SkipPriming = true
 	}
 	if cfg.First != 0 && cfg.SkipPriming && cfg.ValidateWorldState {
 		return cfg, fmt.Errorf("skipPriming and world-state validation can not be enabled at the same time")

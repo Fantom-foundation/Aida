@@ -197,6 +197,9 @@ func (pc *PrimeContext) SuicideAccounts(db state.StateDB, accounts []common.Addr
 
 // GenerateWorldStateAndPrime
 func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error {
+	if cfg.SkipPriming {
+		return nil
+	}
 	log := logger.NewLogger(cfg.LogLevel, "Priming")
 	pc := NewPrimeContext(cfg, db, log)
 

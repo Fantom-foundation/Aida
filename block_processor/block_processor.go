@@ -48,7 +48,7 @@ func (bp *BlockProcessor) Prepare() error {
 		return err
 	}
 
-	if !bp.cfg.SkipPriming && bp.cfg.StateDbSrc == "" {
+	if bp.cfg.StateDbSrc == "" {
 		if err := utils.LoadWorldStateAndPrime(bp.db, bp.cfg, bp.cfg.First-1); err != nil {
 			return fmt.Errorf("priming failed. %v", err)
 		}

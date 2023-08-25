@@ -104,7 +104,7 @@ func traceReplayTask(cfg *utils.Config, log *logging.Logger) error {
 		defer os.RemoveAll(stateDbDir)
 	}
 
-	if cfg.SkipPriming || cfg.StateDbSrc != "" {
+	if cfg.StateDbSrc != "" {
 		log.Warning("Skipping DB priming.")
 	} else {
 		log.Notice("Prime stateDB")
