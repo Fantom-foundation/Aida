@@ -103,6 +103,8 @@ func VmAdbIterate(iter substate.SubstateIterator, actions ExtensionList, bp *Blo
 	go it.countProgress()
 	go it.groupTransactions()
 
+	defer it.passValuesToBp(bp)
+
 	for i := 0; i < it.cfg.Workers; i++ {
 		it.wg.Add(1)
 		go it.runBlocks()
@@ -175,7 +177,7 @@ func (it *VmAdbIterator) printProgress(log *logging.Logger, txs uint64, gas uint
 	s := time.Since(start).Seconds()
 	txRate := float64(txs) / s
 
-	log.Infof("Elapsed time: %v, at block %v, used gas: %v, speed: (~ %.1f Tx/s)", time.Since(start).Round(1*time.Second), block, gas, txRate)
+	log.Infof("Elapsed time: %v, at block %v, used gas: %v, speed: (~ %.1f Tx/s), tx processed: %v", time.Since(start).Round(1*time.Second), block, gas, txRate, txs)
 
 }
 
@@ -280,4 +282,10 @@ func (it *VmAdbIterator) processTransactions(transactions []*substate.Transactio
 	}
 
 	return nil
+}
+
+// passValuesToBp for end progress report
+func (it *VmAdbIterator) passValuesToBp(bp *BlockProcessor) {
+	bp.totalGas = it.totalGas
+	bp.totalTx = it.totalTxs.Uint64()
 }

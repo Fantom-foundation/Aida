@@ -140,7 +140,7 @@ func (bp *BlockProcessor) Run(actions ExtensionList, iterate IterateFunc) error 
 	}
 
 	bp.db.EndBlock()
-	bp.db.EndSyncPeriod()
+	//bp.db.EndSyncPeriod() todo this causes vm adb to panic with leveldb: not found even if leveldb is initialized
 
 	bp.log.Noticef("%v errors found.", utils.NumErrors)
 
