@@ -220,7 +220,6 @@ func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error 
 	updateIter := substate.NewUpdateSetIterator(udb, block, target)
 	update := make(substate.SubstateAlloc)
 
-	fmt.Println(target)
 	for updateIter.Next() {
 		newSet := updateIter.Value()
 		if newSet.Block > target {
