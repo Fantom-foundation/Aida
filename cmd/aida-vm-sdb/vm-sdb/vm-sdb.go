@@ -17,7 +17,7 @@ func RunVM(ctx *cli.Context) error {
 		blockprocessor.NewProxyProfilerExtension(),
 	})
 
-	bp, err := blockprocessor.NewBlockProcessor(ctx, "vm-sdb")
+	bp, err := blockprocessor.NewBlockProcessor(ctx, blockprocessor.VmSdbToolName)
 	if err != nil {
 		return err
 	}

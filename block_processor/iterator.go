@@ -97,7 +97,7 @@ func newVmAdbIterator(iter substate.SubstateIterator, actions ExtensionList, bp 
 	}
 }
 
-// VmAdbIterate is an iterator for vm-adb tool
+// VmAdbIterate is an iterator for vm-adb toolName
 func VmAdbIterate(iter substate.SubstateIterator, actions ExtensionList, bp *BlockProcessor) error {
 	it := newVmAdbIterator(iter, actions, bp)
 	go it.countProgress()

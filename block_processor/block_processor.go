@@ -22,7 +22,15 @@ type BlockProcessor struct {
 	syncPeriod uint64                // current sync period
 	totalTx    uint64                // total number of transactions so far
 	totalGas   *big.Int              // total gas consumed so far
+
+	// this is needed because some functionality needs to be executed only on vm-sdb, this will be removed in next refactor PR
+	toolName string
 }
+
+const (
+	VmSdbToolName = "vm-sdb"
+	VmAdbToolName = "vm-adb"
+)
 
 // IterateFunc declares how iteration should be done
 type IterateFunc func(substate.SubstateIterator, ExtensionList, *BlockProcessor) error
@@ -38,6 +46,7 @@ func NewBlockProcessor(ctx *cli.Context, name string) (*BlockProcessor, error) {
 		cfg:      cfg,
 		totalGas: new(big.Int),
 		log:      logger.NewLogger(cfg.LogLevel, name),
+		toolName: name,
 	}, nil
 }
 
@@ -129,19 +138,21 @@ func (bp *BlockProcessor) Run(actions ExtensionList, iterate IterateFunc) error 
 	iter := substate.NewSubstateIterator(bp.cfg.First, bp.cfg.Workers)
 	defer iter.Release()
 
-	// process the first block
-	if err = bp.ProcessFirstBlock(iter); err != nil {
-		return err
+	if bp.toolName == VmSdbToolName {
+		// process the first block
+		if err = bp.ProcessFirstBlock(iter); err != nil {
+			return err
+		}
 	}
 
 	// process the remaining blocks
 	if err = iterate(iter, actions, bp); err != nil {
 		return err
 	}
-
-	bp.db.EndBlock()
-	//bp.db.EndSyncPeriod() todo this causes vm adb to panic with leveldb: not found even if leveldb is initialized
-
+	if bp.toolName == VmSdbToolName {
+		bp.db.EndBlock()
+		bp.db.EndSyncPeriod()
+	}
 	bp.log.Noticef("%v errors found.", utils.NumErrors)
 
 	// call post-processing actions
