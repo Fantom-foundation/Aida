@@ -197,6 +197,9 @@ func (pc *PrimeContext) SuicideAccounts(db state.StateDB, accounts []common.Addr
 
 // GenerateWorldStateAndPrime
 func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error {
+	if cfg.SkipPriming {
+		return nil
+	}
 	log := logger.NewLogger(cfg.LogLevel, "Priming")
 	pc := NewPrimeContext(cfg, db, log)
 
@@ -217,6 +220,7 @@ func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error 
 	updateIter := substate.NewUpdateSetIterator(udb, block, target)
 	update := make(substate.SubstateAlloc)
 
+	fmt.Println(target)
 	for updateIter.Next() {
 		newSet := updateIter.Value()
 		if newSet.Block > target {

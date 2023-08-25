@@ -23,11 +23,10 @@ type TxTime []time.Duration
 type TxType int
 
 const (
-	TransferTx TxType = iota
-	CreateTx
-	CallTx
-	EpochSealingTx
-	UnknownTx
+	TransferTx     TxType = iota // a transaction which transafers balance
+	CreateTx                     // a transaction which creates new contracts
+	CallTx                       // a transaction which executes contracts
+	EpochSealingTx               // a special transaction sealing an epoch
 )
 
 // Context stores the book-keeping information for block processing profiling.
@@ -41,7 +40,7 @@ type Context struct {
 	tCritical     time.Duration   // critical path runtime for transactions
 	tCompletion   TxTime          // earliest completion time of a transaction
 	tTransactions []time.Duration // runtime of a transaction
-	tTypes        []TxType        // types of transaction
+	tTypes        []TxType        // transaction types per transaction
 
 	gasTransactions []uint64 // gas used for transactions
 	gasBlock        uint64   // gas used for a block
@@ -143,7 +142,7 @@ func (ctx *Context) RecordTransaction(tx *substate.Transaction, tTransaction tim
 	// update time for block and transaction
 	ctx.tSequential += tTransaction
 	ctx.tTransactions = append(ctx.tTransactions, tTransaction)
-	ctx.tTypes = append(ctx.tTypes, GetTransactionType(tx.Substate))
+	ctx.tTypes = append(ctx.tTypes, getTransactionType(tx.Substate))
 
 	// update gas used for block and transaction
 	gasUsed := tx.Substate.Result.GasUsed
@@ -249,25 +248,21 @@ func (ctx *Context) GetProfileData(curBlock uint64, tBlock time.Duration) (*Prof
 	return &data, nil
 }
 
-func GetTransactionType(st *substate.Substate) TxType {
+// getTransactionType reads a message and determines a transaction type.
+func getTransactionType(st *substate.Substate) TxType {
 	msg := st.Message
 	alloc := st.InputAlloc
 	to := msg.To
 	if to != nil {
-		// regular transactions
-		if account, exist := alloc[*to]; !exist || len(account.Code) == 0 {
+		account, exist := alloc[*to]
+		// regular transaction
+		if !exist || len(account.Code) == 0 {
 			return TransferTx
-		}
-	}
-	if to != nil {
-		// CALL trasnactions with contract bytecode
-		if account, exist := alloc[*to]; exist && len(account.Code) > 0 {
+			// CALL transaction with contract bytecode
+		} else {
 			return CallTx
 		}
 	}
-	if to == nil {
-		// CREATE transactions
-		return CreateTx
-	}
-	return UnknownTx
+	// CREATE transaction
+	return CreateTx
 }

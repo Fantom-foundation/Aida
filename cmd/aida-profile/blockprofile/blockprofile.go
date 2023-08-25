@@ -92,6 +92,10 @@ func blockProfileAction(ctx *cli.Context) error {
 	var blockTimer time.Time
 	var context *blockprofile.Context
 
+	// simple progress report
+	var blockPeriod uint64 = 100_000
+	var lastBlockReport uint64 = cfg.First - cfg.First%blockPeriod
+
 	// process all transaction in sequential order from first to last block
 	iter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
 	defer iter.Release()
@@ -127,6 +131,12 @@ func blockProfileAction(ctx *cli.Context) error {
 			// close last block
 			db.EndBlock()
 
+			// report progress
+			// TODO: reuse progress report of aida-vm-sdb
+			if tx.Block >= lastBlockReport+blockPeriod {
+				log.Infof("At block %v.", tx.Block)
+				lastBlockReport += blockPeriod
+			}
 			// obtain profile data for block
 			data, err := context.GetProfileData(curBlock, time.Since(blockTimer))
 			if err != nil {
@@ -147,7 +157,6 @@ func blockProfileAction(ctx *cli.Context) error {
 				curSyncPeriod++
 				db.BeginSyncPeriod(curSyncPeriod)
 			}
-
 			// open new block
 			blockTimer = time.Now()
 			db.BeginBlock(curBlock)
@@ -191,7 +200,7 @@ func blockProfileAction(ctx *cli.Context) error {
 		log.Errorf("Failed to profiling database: %v", err)
 	}
 
-	log.Info("Finished blockprofile profiling.")
+	log.Notice("Finished blockprofile profiling.")
 
 	return err
 }
