@@ -19,11 +19,11 @@ func NewProxyRecorderExtension() *ProxyRecorderExtension {
 func (ext *ProxyRecorderExtension) Init(bp *BlockProcessor) error {
 	var err error
 
-	if !bp.cfg.Trace {
+	if !bp.Cfg.Trace {
 		return nil
 	}
 
-	ext.rCtx, err = traceCtx.NewRecord(bp.cfg.TraceFile, bp.cfg.First)
+	ext.rCtx, err = traceCtx.NewRecord(bp.Cfg.TraceFile, bp.Cfg.First)
 	if err != nil {
 		return err
 	}

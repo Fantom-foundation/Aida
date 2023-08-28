@@ -13,7 +13,7 @@ import (
 
 // RunVMApp data structure
 var RunVMApp = cli.App{
-	Action:    vm_sdb.RunVM,
+	Action:    vm_sdb.RunVmSdb,
 	Name:      "Aida Storage Run VM Manager",
 	HelpName:  "vm-sdb",
 	Usage:     "run VM on the world-state",

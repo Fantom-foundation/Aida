@@ -20,12 +20,12 @@ func (ext *ValidationExtension) Init(bp *BlockProcessor) error {
 
 // PostPrepare validates the world-state after preparing/priming db
 func (ext *ValidationExtension) PostPrepare(bp *BlockProcessor) error {
-	if !bp.cfg.ValidateWorldState {
+	if !bp.Cfg.ValidateWorldState {
 		return nil
 	}
 
 	bp.log.Notice("Validate primed world-state\n")
-	ws, err := utils.GenerateWorldStateFromUpdateDB(bp.cfg, bp.cfg.First-1)
+	ws, err := utils.GenerateWorldStateFromUpdateDB(bp.Cfg, bp.Cfg.First-1)
 	if err != nil {
 		return fmt.Errorf("failed generating worldstate. %v", err)
 	}
@@ -47,12 +47,12 @@ func (ext *ValidationExtension) PostBlock(bp *BlockProcessor) error {
 
 // PostProcessing checks the world-state after processing has completed
 func (ext *ValidationExtension) PostProcessing(bp *BlockProcessor) error {
-	if !bp.cfg.ValidateWorldState {
+	if !bp.Cfg.ValidateWorldState {
 		return nil
 	}
 
 	bp.log.Notice("Validate final world-state")
-	ws, err := utils.GenerateWorldStateFromUpdateDB(bp.cfg, bp.cfg.Last)
+	ws, err := utils.GenerateWorldStateFromUpdateDB(bp.Cfg, bp.Cfg.Last)
 	if err != nil {
 		return err
 	}

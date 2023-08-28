@@ -13,11 +13,11 @@ func NewProxyLoggerExtension() *ProxyLoggerExtension {
 
 // Init creates a LoggerProxy and assigns it to the BlockProcessor's db
 func (ext *ProxyLoggerExtension) Init(bp *BlockProcessor) error {
-	if !bp.cfg.DbLogging {
+	if !bp.Cfg.DbLogging {
 		return nil
 	}
 
-	bp.db = proxy.NewLoggerProxy(bp.db, bp.cfg.LogLevel)
+	bp.db = proxy.NewLoggerProxy(bp.db, bp.Cfg.LogLevel)
 	return nil
 }
 
