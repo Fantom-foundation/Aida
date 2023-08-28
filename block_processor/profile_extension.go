@@ -84,6 +84,8 @@ func (ext *ProfileExtension) PostProcessing(bp *BlockProcessor) error {
 	// final block profile report
 	if bp.Cfg.Profile && bp.Block != ext.lastDbStatsBlock {
 		if err := ext.dbStats.PrintProfiling(ext.lastDbStatsBlock, bp.Block); err != nil {
+	if bp.Cfg.Profile && bp.block != ext.lastDbStatsBlock {
+		if err := ext.dbStats.PrintProfiling(ext.lastDbStatsBlock, bp.block); err != nil {
 			return err
 		}
 	}

@@ -29,8 +29,10 @@ type ProgressReportExtension struct {
 }
 
 // NewProgressReportExtension creates a new logging action for block processing.
-func NewProgressReportExtension() *ProgressReportExtension {
+func NewProgressReportExtension(cfg *utils.Config) *ProgressReportExtension {
 	return &ProgressReportExtension{
+		first:                 cfg.First,
+		last:                  cfg.Last,
 		lastBlockProcessedGas: new(big.Int),
 		gasUsed:               new(big.Float),
 	}
@@ -57,10 +59,6 @@ func (ext *ProgressReportExtension) PostPrepare(bp *BlockProcessor) error {
 	return nil
 }
 
-func (ext *ProgressReportExtension) PostBlock(bp *BlockProcessor) error {
-	// ignored.
-	return nil
-}
 
 func (ext *ProgressReportExtension) PostTransaction(bp *BlockProcessor) error {
 	return nil
