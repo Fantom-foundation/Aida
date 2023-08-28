@@ -3,6 +3,7 @@ package utils
 import (
 	"flag"
 	"fmt"
+	"math"
 	"math/big"
 	"testing"
 
@@ -75,11 +76,11 @@ func TestUtilsConfig_SetBlockRange(t *testing.T) {
 	}
 
 	if first != uint64(0) {
-		t.Fatalf("Failed to parse first block; Should be: %d, but is: %d", 0, first)
+		t.Fatalf("Failed to parse first block; expected: %d, have: %d", 0, first)
 	}
 
 	if last != uint64(40_000_000) {
-		t.Fatalf("Failed to parse last block; Should be: %d, but is: %d", 40_000_000, last)
+		t.Fatalf("Failed to parse last block; expected: %d, have: %d", 40_000_000, last)
 	}
 
 	first, last, err = SetBlockRange("OpeRa", "berlin", 250)
@@ -88,11 +89,11 @@ func TestUtilsConfig_SetBlockRange(t *testing.T) {
 	}
 
 	if first != uint64(4_564_026) {
-		t.Fatalf("Failed to parse first block; Should be: %d, but is: %d", 4_564_026, first)
+		t.Fatalf("Failed to parse first block; expected: %d, have: %d", 4_564_026, first)
 	}
 
 	if last != uint64(37_455_223) {
-		t.Fatalf("Failed to parse last block; Should be: %d, but is: %d", 37_455_223, last)
+		t.Fatalf("Failed to parse last block; expected: %d, have: %d", 37_455_223, last)
 	}
 
 	first, last, err = SetBlockRange("zero", "London", 4002)
@@ -101,37 +102,67 @@ func TestUtilsConfig_SetBlockRange(t *testing.T) {
 	}
 
 	if first != uint64(0) {
-		t.Fatalf("Failed to parse first block; Should be: %d, but is: %d", 0, first)
+		t.Fatalf("Failed to parse first block; expected: %d, have: %d", 0, first)
 	}
 
 	if last != uint64(7_513_335) {
-		t.Fatalf("Failed to parse last block; Should be: %d, but is: %d", 7_513_335, last)
+		t.Fatalf("Failed to parse last block; expected: %d, have: %d", 7_513_335, last)
 	}
 
+	// test addition/subtraction
 	first, last, err = SetBlockRange("opera+23456", "London-100", 4002)
 	if err != nil {
-		t.Fatalf("Failed to set block range (opera+23456-London-100 on testnet): %v", err)
+		t.Fatalf("Failed to set block range (opera+23456-London-100 on mainnet): %v", err)
 	}
 
 	if first != uint64(502_783) {
-		t.Fatalf("Failed to parse first block; Should be: %d, but is: %d", 502_783, first)
+		t.Fatalf("Failed to parse first block; expected: %d, have: %d", 502_783, first)
 	}
 
 	if last != uint64(7_513_235) {
-		t.Fatalf("Failed to parse last block; Should be: %d, but is: %d", 7_513_235, last)
+		t.Fatalf("Failed to parse last block; expected: %d, have: %d", 7_513_235, last)
 	}
 
+	// test upper/lower cases
 	first, last, err = SetBlockRange("berlin-1000", "LonDoN", 250)
 	if err != nil {
-		t.Fatalf("Failed to set block range (berlin-1000-LonDoN on testnet): %v", err)
+		t.Fatalf("Failed to set block range (berlin-1000-LonDoN on mainnet): %v", err)
 	}
 
 	if first != uint64(37_454_223) {
-		t.Fatalf("Failed to parse first block; Should be: %d, but is: %d", 37_454_223, first)
+		t.Fatalf("Failed to parse first block; expected: %d, have: %d", 37_454_223, first)
 	}
 
 	if last != uint64(37_534_833) {
-		t.Fatalf("Failed to parse last block; Should be: %d, but is: %d", 37_534_833, last)
+		t.Fatalf("Failed to parse last block; expected: %d, have: %d", 37_534_833, last)
+	}
+
+	// test first and last keyword. Since no metadata, default values are expected
+	first, last, err = SetBlockRange("first", "last", 250)
+	if err != nil {
+		t.Fatalf("Failed to set block range (first-last on mainnet): %v", err)
+	}
+
+	if first != uint64(0) {
+		t.Fatalf("Failed to parse first block; expected: %d, have: %d", 0, first)
+	}
+
+	if last != math.MaxUint64 {
+		t.Fatalf("Failed to parse last block; expected: %v, have: %v", uint64(math.MaxUint64), last)
+	}
+
+	// test lastpatch and last keyword
+	first, last, err = SetBlockRange("lastpatch", "last", 250)
+	if err != nil {
+		t.Fatalf("Failed to set block range (lastpatch-last on mainnet): %v", err)
+	}
+
+	if first != uint64(0) {
+		t.Fatalf("Failed to parse first block; expected: %d, have: %d", 0, first)
+	}
+
+	if last != math.MaxUint64 {
+		t.Fatalf("Failed to parse last block; expected: %v, have: %v", uint64(math.MaxUint64), last)
 	}
 }
 
