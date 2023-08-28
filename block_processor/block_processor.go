@@ -23,7 +23,8 @@ type BlockProcessor struct {
 	totalTx    uint64                // total number of transactions so far
 	totalGas   *big.Int              // total gas consumed so far
 
-	// this is needed because some functionality needs to be executed only on vm-sdb, this will be removed in next refactor PR
+	// this is needed because some functionality needs to be executed only on vm-sdb,
+	// the tool is getting refactored in next PR, so this variable will get deleted
 	toolName string
 }
 

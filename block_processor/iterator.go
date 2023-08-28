@@ -31,6 +31,8 @@ func BasicIterator(iter substate.SubstateIterator, actions ExtensionList, bp *Bl
 				return nil
 			}
 
+			bp.block = bp.tx.Block
+
 			if err = actions.ExecuteExtensions("PostBlock", bp); err != nil {
 				return err
 			}
@@ -97,14 +99,21 @@ func newVmAdbIterator(iter substate.SubstateIterator, actions ExtensionList, bp 
 	}
 }
 
-// VmAdbIterate is an iterator for vm-adb toolName
+// VmAdbIterate is an iterator for vm-adb tool. It groups txs by block number in one thread,
+// it counts how much gas has been used, how much txs and blocks has been processed.
+// Then there are multiple threads for processing the txs. Number of threads depends on cfg.Workers flag
 func VmAdbIterate(iter substate.SubstateIterator, actions ExtensionList, bp *BlockProcessor) error {
 	it := newVmAdbIterator(iter, actions, bp)
+
+	// start thread for progress
 	go it.countProgress()
+
+	// start thread for grouping transactions by block number
 	go it.groupTransactions()
 
 	defer it.passValuesToBp(bp)
 
+	// start processing threads
 	for i := 0; i < it.cfg.Workers; i++ {
 		it.wg.Add(1)
 		go it.runBlocks()

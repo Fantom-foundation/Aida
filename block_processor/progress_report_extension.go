@@ -84,10 +84,6 @@ func (ext *ProgressReportExtension) PostTransaction(bp *BlockProcessor) error {
 	return nil
 }
 
-func (ext *ProgressReportExtension) PostBlock(bp *BlockProcessor) error {
-	return nil
-}
-
 // PostProcessing issues a summary report.
 func (ext *ProgressReportExtension) PostProcessing(bp *BlockProcessor) error {
 	// suppress reports when quiet flag is enabled

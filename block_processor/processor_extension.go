@@ -29,7 +29,7 @@ func NewExtensionList(extensions []ProcessorExtensions) ExtensionList {
 
 	t := reflect.TypeOf((*ProcessorExtensions)(nil)).Elem()
 
-	// BasicIterator over all chosen extensions
+	// iterate over all chosen extensions
 	for _, e := range extensions {
 		m := make(ExtensionFuncMap)
 		// BasicIterator over all methods inside extensions
