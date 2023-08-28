@@ -3,7 +3,7 @@
 #    gen_processing_reports.sh -  script for generating the block processing reports
 #
 # Synopsis: 
-#    gen_processing_report.sh <db-impl> <db-variant> <vm-impl> <output-dir>
+#    gen_processing_report.sh <db-impl> <db-variant> <carmen-schema> <vm-impl> <output-dir>
 #
 # Description: 
 #    Produces block processing reports in the HTML format.
@@ -21,8 +21,8 @@ fi
 # assign variables for command line arguments
 dbimpl=$1
 dbvariant=$2
-vmimpl=$3
-carmenschema=$4
+carmenschema=$3
+vmimpl=$4
 outputdir=$5
 
 # logging 
