@@ -32,7 +32,7 @@ func NewExtensionList(extensions []ProcessorExtensions) ExtensionList {
 	// iterate over all chosen extensions
 	for _, e := range extensions {
 		m := make(ExtensionFuncMap)
-		// iterate over all methods inside extensions
+		// BasicIterator over all methods inside extensions
 		for i := 0; i < t.NumMethod(); i++ {
 			// assign method name to callback
 			m[t.Method(i).Name] = reflect.ValueOf(e).MethodByName(t.Method(i).Name).Interface().(func(*BlockProcessor) error)

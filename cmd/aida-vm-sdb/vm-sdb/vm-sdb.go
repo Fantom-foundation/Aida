@@ -17,11 +17,11 @@ func RunVM(ctx *cli.Context) error {
 		blockprocessor.NewProxyProfilerExtension(),
 	})
 
-	bp, err := blockprocessor.NewBlockProcessor("vm-sdb", ctx)
+	bp, err := blockprocessor.NewBlockProcessor(ctx, blockprocessor.VmSdbToolName)
 	if err != nil {
 		return err
 	}
 	defer utils.PrintEvmStatistics(bp.GetConfig())
 
-	return bp.Run(actions)
+	return bp.Run(actions, blockprocessor.BasicIterator)
 }

@@ -8,14 +8,13 @@ import (
 // RunArchive performs block processing
 func RunArchive(ctx *cli.Context) error {
 	actions := blockprocessor.NewExtensionList([]blockprocessor.ProcessorExtensions{
-		blockprocessor.NewVMAdbExtension(),
 		blockprocessor.NewProgressReportExtension(),
 		blockprocessor.NewValidationExtension(),
 		blockprocessor.NewProfileExtension(),
 	})
-	bp, err := blockprocessor.NewBlockProcessor("vm-adb", ctx)
+	bp, err := blockprocessor.NewBlockProcessor(ctx, blockprocessor.VmAdbToolName)
 	if err != nil {
 		return err
 	}
-	return bp.Run(actions)
+	return bp.Run(actions, blockprocessor.VmAdbIterate)
 }
