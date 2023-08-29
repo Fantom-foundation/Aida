@@ -17,7 +17,7 @@ func (ext *ProxyLoggerExtension) Init(bp *BlockProcessor) error {
 		return nil
 	}
 
-	bp.db = proxy.NewLoggerProxy(bp.db, bp.Cfg.LogLevel)
+	bp.Db = proxy.NewLoggerProxy(bp.Db, bp.Cfg.LogLevel)
 	return nil
 }
 

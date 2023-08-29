@@ -67,8 +67,8 @@ func (bp *VmSdb) Run() error {
 	}
 
 	// create new BasicIterator over substates and BasicIterator
-	bp.Log().Notice("Process blocks")
-	iter := substate.NewSubstateIterator(bp.Config().First, bp.Config().Workers)
+	bp.Log.Notice("Process blocks")
+	iter := substate.NewSubstateIterator(bp.Cfg.First, bp.Cfg.Workers)
 	defer iter.Release()
 
 	if err = bp.ProcessFirstBlock(iter); err != nil {
@@ -80,9 +80,9 @@ func (bp *VmSdb) Run() error {
 		return err
 	}
 
-	bp.Db().EndBlock()
-	bp.Db().EndSyncPeriod()
-	bp.Log().Noticef("%v errors found.", utils.NumErrors)
+	bp.Db.EndBlock()
+	bp.Db.EndSyncPeriod()
+	bp.Log.Noticef("%v errors found.", utils.NumErrors)
 
 	// call post-processing actions
 	if err = bp.ExecuteExtension("PostProcessing"); err != nil {
@@ -90,8 +90,8 @@ func (bp *VmSdb) Run() error {
 	}
 
 	// close the DB and print disk usage
-	bp.Log().Info("Close StateDB")
-	if err = bp.Db().Close(); err != nil {
+	bp.Log.Info("Close StateDB")
+	if err = bp.Db.Close(); err != nil {
 		return fmt.Errorf("Failed to close database: %v", err)
 	}
 
@@ -107,66 +107,90 @@ func (bp *VmSdb) ProcessFirstBlock(iter substate.SubstateIterator) error {
 
 	// process first transaction
 	tx := iter.Value()
-	if tx.Block > bp.Config().Last {
+	if tx.Block > bp.Cfg.Last {
 		return nil
 	}
-	bp.syncPeriod = tx.Block / bp.Config().SyncPeriodLength
-	bp.SetBlock(tx.Block)
-	bp.Db().BeginSyncPeriod(bp.syncPeriod)
-	bp.Db().BeginBlock(bp.Block())
+	bp.syncPeriod = tx.Block / bp.Cfg.SyncPeriodLength
+	bp.Block = tx.Block
+	bp.Db.BeginSyncPeriod(bp.syncPeriod)
+	bp.Db.BeginBlock(bp.Block)
 
 	// process transaction
-	if _, err := utils.ProcessTx(bp.Db(), bp.Config(), tx.Block, tx.Transaction, tx.Substate); err != nil {
-		bp.Log().Criticalf("\tFailed processing transaction: %v", err)
+	if _, err := utils.ProcessTx(bp.Db, bp.Cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
+		bp.Log.Criticalf("\tFailed processing transaction: %v", err)
 		return err
 	}
 
-	bp.AddTotalGas(tx.Substate.Result.GasUsed)
+	bp.TotalTx.SetUint64(bp.TotalTx.Uint64() + tx.Substate.Result.GasUsed)
 	return nil
 }
 
 // Iterate over substates
 func (bp *VmSdb) Iterate(iter substate.SubstateIterator) error {
-	var err error
+	var (
+		err           error
+		newSyncPeriod uint64
+		txsInBlock    uint64
+		gasInBlock    uint64
+	)
 
 	for iter.Next() {
 		bp.tx = iter.Value()
 
 		// initiate first sync-period and block.
 		// close off old block and possibly sync-periods
-		if bp.Block() != bp.tx.Block {
+		if bp.Block != bp.tx.Block {
 			// exit if we processed last block
-			if bp.tx.Block > bp.Config().Last {
+			if bp.tx.Block > bp.Cfg.Last {
 				return nil
 			}
 
-			bp.SetBlock(bp.tx.Block)
+			bp.Db.EndBlock()
+
+			// add txs and gas for the block
+			bp.TotalTx.SetUint64(bp.TotalTx.Uint64() + txsInBlock)
+			bp.TotalGas.SetUint64(bp.TotalGas.Uint64() + gasInBlock)
+
+			txsInBlock = 0
+			gasInBlock = 0
 
 			if err = bp.ExecuteExtension("PostBlock"); err != nil {
 				return err
 			}
+
+			// switch to next sync-period if needed.
+			// TODO: Revisit semantics - is this really necessary ????
+			newSyncPeriod = bp.tx.Block / bp.Cfg.SyncPeriodLength
+			for bp.syncPeriod < newSyncPeriod {
+				bp.Db.EndSyncPeriod()
+				bp.syncPeriod++
+				bp.Db.BeginSyncPeriod(bp.syncPeriod)
+			}
+
+			bp.Block = bp.tx.Block
+			bp.Db.BeginBlock(bp.Block)
+
 		}
 
 		// check whether we have processed enough transaction
 		// TODO: cfg.MaxNumTransactions should be a uint64 flag
-		if bp.Config().MaxNumTransactions >= 0 && bp.TotalTx() >= uint64(bp.Config().MaxNumTransactions) {
+		if bp.Cfg.MaxNumTransactions >= 0 && bp.TotalTx.Uint64() >= uint64(bp.Cfg.MaxNumTransactions) {
 			break
 		}
 
 		// process transaction
-		if _, err = utils.ProcessTx(bp.Db(), bp.Config(), bp.tx.Block, bp.tx.Transaction, bp.tx.Substate); err != nil {
-			bp.Log().Criticalf("\tFailed processing transaction: %v", err)
+		if _, err = utils.ProcessTx(bp.Db, bp.Cfg, bp.tx.Block, bp.tx.Transaction, bp.tx.Substate); err != nil {
+			bp.Log.Criticalf("\tFailed processing transaction: %v", err)
 			return err
 		}
-
-		bp.AddTotalGas(bp.tx.Substate.Result.GasUsed)
 
 		// call post-transaction actions
 		if err = bp.ExecuteExtension("PostTransaction"); err != nil {
 			return err
 		}
 
-		bp.AddTotalTx(1)
+		txsInBlock++
+		gasInBlock += bp.tx.Substate.Result.GasUsed
 	}
 	return nil
 }

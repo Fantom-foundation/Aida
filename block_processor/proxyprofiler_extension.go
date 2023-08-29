@@ -21,7 +21,7 @@ func (ext *ProxyProfilerExtension) Init(bp *BlockProcessor) error {
 		return nil
 	}
 
-	bp.db, ext.stats = proxy.NewProfilerProxy(bp.db, bp.Cfg.ProfileFile, bp.Cfg.LogLevel)
+	bp.Db, ext.stats = proxy.NewProfilerProxy(bp.Db, bp.Cfg.ProfileFile, bp.Cfg.LogLevel)
 	return nil
 }
 
@@ -44,7 +44,7 @@ func (ext *ProxyProfilerExtension) PostProcessing(bp *BlockProcessor) error {
 	}
 
 	if err := ext.stats.PrintProfiling(bp.Cfg.First, bp.Cfg.Last); err != nil {
-		bp.log.Warningf("cannot print profiling stats; %v", err)
+		bp.Log.Warningf("cannot print profiling stats; %v", err)
 	}
 
 	return nil

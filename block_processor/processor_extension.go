@@ -49,11 +49,11 @@ func NewExtensionList(extensions []ProcessorExtensions) ExtensionList {
 func (al ExtensionList) executeExtensions(method string, bp *BlockProcessor) error {
 	var err error
 
-	bp.log.Debug("Executing...")
-	bp.log.Debugf("Method: %v", method)
+	bp.Log.Debug("Executing...")
+	bp.Log.Debugf("Method: %v", method)
 
 	for extensionName, action := range al {
-		bp.log.Debugf("Extension: %v", extensionName)
+		bp.Log.Debugf("Extension: %v", extensionName)
 		if err = action[method](bp); err != nil {
 			return fmt.Errorf("cannot call ExecuteExtension: %v; func name: %v; err: %v", extensionName, method, err)
 		}

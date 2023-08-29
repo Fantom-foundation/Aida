@@ -70,13 +70,13 @@ func (bp *VmAdb) Run() error {
 		return fmt.Errorf("cannot prepare block processor; %v", err)
 	}
 
-	bp.Log().Notice("Process blocks")
-	iter := substate.NewSubstateIterator(bp.Config().First, bp.Config().Workers)
+	bp.Log.Notice("Process blocks")
+	iter := substate.NewSubstateIterator(bp.Cfg.First, bp.Cfg.Workers)
 	defer iter.Release()
 
 	// start threads
-	go bp.Iterate(iter, bp.Config().First, bp.Config().Last)
-	go bp.countProgress(uint64(bp.Config().MaxNumTransactions), bp.Config().First)
+	go bp.Iterate(iter, bp.Cfg.First, bp.Cfg.Last)
+	go bp.countProgress(uint64(bp.Cfg.MaxNumTransactions), bp.Cfg.First)
 
 	// start workers
 	for i := 0; i < bp.Config().Workers; i++ {
@@ -96,7 +96,7 @@ func (bp *VmAdb) Run() error {
 	return err
 }
 
-// Iterate over substates, unite it by block number and then send it to process
+// Iterate over substates, unite transactions it by block number and then send it to process
 func (bp *VmAdb) Iterate(iter substate.SubstateIterator, firstBlock, lastBlock uint64) {
 	var (
 		currentBlock = firstBlock
@@ -144,11 +144,12 @@ func (bp *VmAdb) Iterate(iter substate.SubstateIterator, firstBlock, lastBlock u
 // hence here we call the PostBlock extensions for ProgressReportExtension
 func (bp *VmAdb) countProgress(maximumTxs uint64, firstBlock uint64) {
 	var (
-		txCount         int
-		gas             uint64
-		err             error
-		processedBlocks = firstBlock
+		txCount int
+		gas     uint64
+		err     error
 	)
+
+	bp.Block = firstBlock
 
 	bp.wg.Add(1)
 	defer bp.wg.Done()
@@ -158,15 +159,15 @@ func (bp *VmAdb) countProgress(maximumTxs uint64, firstBlock uint64) {
 		case <-bp.closeCh:
 			return
 		case txCount = <-bp.totalTxCh:
-			bp.AddTotalTx(uint64(txCount))
+			bp.TotalTx.SetUint64(bp.TotalTx.Uint64() + uint64(txCount))
 
 			// check whether we have processed enough transaction
-			if maximumTxs >= 0 && bp.TotalTx() >= maximumTxs {
+			// TODO: cfg.MaxNumTransactions should be a uint64 flag
+			if maximumTxs >= 0 && bp.TotalTx.Uint64() >= maximumTxs {
 				break
 			}
-			processedBlocks++
 
-			bp.SetBlock(processedBlocks)
+			bp.Block++
 
 			if err = bp.ExecuteExtension("PostBlock"); err != nil {
 				bp.errCh <- fmt.Errorf("cannot execute 'post-block' extension; %v", err)
@@ -174,7 +175,7 @@ func (bp *VmAdb) countProgress(maximumTxs uint64, firstBlock uint64) {
 			}
 
 		case gas = <-bp.totalGasCh:
-			bp.AddTotalGas(gas)
+			bp.TotalGas.SetUint64(bp.TotalGas.Uint64() + gas)
 		}
 	}
 }
@@ -211,7 +212,7 @@ func (bp *VmAdb) runBlocks(cfg utils.Config) {
 // processTransactions united by block number and send info about them to respective channels
 func (bp *VmAdb) processTransactions(transactions []*substate.Transaction, cfg *utils.Config) error {
 	block := transactions[0].Block - 1
-	archive, err := bp.Db().GetArchiveState(block)
+	archive, err := bp.Db.GetArchiveState(block)
 	if err != nil {
 		return err
 	}

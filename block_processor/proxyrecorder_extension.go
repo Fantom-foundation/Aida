@@ -28,7 +28,7 @@ func (ext *ProxyRecorderExtension) Init(bp *BlockProcessor) error {
 		return err
 	}
 
-	bp.db = proxy.NewRecorderProxy(bp.db, ext.rCtx)
+	bp.Db = proxy.NewRecorderProxy(bp.Db, ext.rCtx)
 
 	return nil
 }
