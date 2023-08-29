@@ -5,30 +5,28 @@
 library(dplyr)
 library(RSQLite)
 
-# load arguments
-args <- commandArgs(trailingOnly = TRUE)
-if (length(args) != 1) {
-	stop("path to profile.db must be supplied.")
-}
-path <- args[1]
-db <- paste(path, "profile.db", sep="/")
-if (!file.exists(db)) {
-	stop("database not found.")
-}
+# find absoluate path and source r_utils.R
+args <- commandArgs(trailingOnly = FALSE)
+file.arg.name <- "--file="
+script.name <- sub(file.arg.name, "", args[grep(file.arg.name, args)])
+script.dirname <- dirname(script.name)
+utils <- paste(getwd(),script.dirname, "utils.R",sep="/")
+source(utils)
+
+# read cli arguments
+ret  <- loadArgs(commandArgs(trailingOnly = TRUE))
+path  <- ret[[1]]
+db <- ret[[2]]
 # variables
 numBuckets <- 10
 
-# connect to sqlite database
-con <- dbConnect(SQLite(), db)
-# create a dataframe from a table
-df <- dbReadTable(con, "txProfile")
+# load txProfile
+df <- loadTxProfileFromDb(db)
 
 # compute gas quantiles and save them as a CSV file
-quantilesDf <- quantile(df$gas, 0:numBuckets/numBuckets)
-# write to file
-qpath <- paste(path, "gas_quantiles.csv", sep="/")
-print(paste("Write to ", qpath))
-write.csv(quantilesDf, qpath, row.names = TRUE)
+quantileDf <- computeQuantiles(df$gas, 0:numBuckets/numBuckets)
+# write to a csv file
+writeCsv(quantileDf, path, "gas_quantiles.csv")
 
 # add buckets
 df$gas_classifier <- ntile(df$gas, numBuckets)
@@ -44,6 +42,4 @@ normalizedDf <- normalizedDf[,c(3,4,1,2,6)]
 normalizedDf <- normalizedDf[with(normalizedDf, order(prev_txType, prev_gas_classifier, txType, gas_classifier)), ]
 
 # save to a csv file
-txpath <- paste(path, "tx_transitions.csv", sep="/")
-print(paste("Write to ", txpath))
-write.csv(normalizedDf, txpath, row.names = FALSE)
+writeCsv(normalizedDf, path, "tx_transitions.csv")
