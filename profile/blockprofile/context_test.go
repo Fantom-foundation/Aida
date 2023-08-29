@@ -476,9 +476,9 @@ func TestGetProfileDataWith2Transactions(t *testing.T) {
 }
 
 func TestGetTransactionType(t *testing.T) {
-	toAddr1 := common.HexToAddress("0xabcdef0000000000000000000000000000000001")
-	toAddr2 := common.HexToAddress("0xd100a01e00000000000000000000000000000000")
-	fromAddr := common.HexToAddress("0x0000000000000000000000000000000000000000")
+	toAddr := common.HexToAddress("0xabcdef0000000000000000000000000000000001")
+	fromAddr1 := common.HexToAddress("0xabcdef0000000000000000000000000000000002")
+	fromAddr2 := common.HexToAddress("0x0000000000000000000000000000000000000000")
 
 	testTransaction := &substate.Transaction{
 		Substate: &substate.Substate{
@@ -494,30 +494,30 @@ func TestGetTransactionType(t *testing.T) {
 	}
 
 	// expect transafer type
-	testTransaction.Substate.Message.To = &toAddr1
+	testTransaction.Substate.Message.To = &toAddr
 	// to address doesn't exist in input substate
 	if tt := getTransactionType(testTransaction); tt != TransferTx {
 		t.Errorf("incorrect transaction type, got: %v, expected %v", TypeLabel[tt], TypeLabel[TransferTx])
 	}
 	// to address exists in input substate but doesn't have byte-code
-	testTransaction.Substate.InputAlloc[toAddr1] = substate.NewSubstateAccount(1, big.NewInt(1), []byte{})
+	testTransaction.Substate.InputAlloc[toAddr] = substate.NewSubstateAccount(1, big.NewInt(1), []byte{})
 	if tt := getTransactionType(testTransaction); tt != TransferTx {
 		t.Errorf("incorrect transaction type, got: %v, expected %v", TypeLabel[tt], TypeLabel[TransferTx])
 	}
 
 	// expect call type
 	// to address exists in input substate and has byte-code
-	testTransaction.Substate.InputAlloc[toAddr1].Code = []byte{1, 2, 3, 4}
+	testTransaction.Substate.InputAlloc[toAddr].Code = []byte{1, 2, 3, 4}
+	testTransaction.Substate.Message.From = fromAddr1
 	if tt := getTransactionType(testTransaction); tt != CallTx {
 		t.Errorf("incorrect transaction type, got: %v, expected %v", TypeLabel[tt], TypeLabel[CallTx])
 	}
 
 	// expect epoch sealing type
 	// from address 0 to an sfc address (with byte-code
-	testTransaction.Substate.Message.To = &toAddr2
-	testTransaction.Substate.Message.From = fromAddr
-	testTransaction.Substate.InputAlloc[toAddr2] = substate.NewSubstateAccount(1, big.NewInt(1), []byte{1, 2, 3, 4})
-	if tt := getTransactionType(testTransaction); tt != EpochSealingTx {
-		t.Errorf("incorrect transaction type, got: %v, expected %v", TypeLabel[tt], TypeLabel[EpochSealingTx])
+	testTransaction.Substate.Message.From = fromAddr2
+	testTransaction.Substate.InputAlloc[toAddr] = substate.NewSubstateAccount(1, big.NewInt(1), []byte{1, 2, 3, 4})
+	if tt := getTransactionType(testTransaction); tt != MaintenanceTx {
+		t.Errorf("incorrect transaction type, got: %v, expected %v", TypeLabel[tt], TypeLabel[MaintenanceTx])
 	}
 }

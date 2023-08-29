@@ -23,18 +23,18 @@ type TxTime []time.Duration
 type TxType int
 
 const (
-	TransferTx     TxType = iota // a transaction which transafers balance
-	CreateTx                     // a transaction which creates new contracts
-	CallTx                       // a transaction which executes contracts
-	EpochSealingTx               // a special transaction sealing an epoch
+	TransferTx    TxType = iota // a transaction which transafers balance
+	CreateTx                    // a transaction which creates new contracts
+	CallTx                      // a transaction which executes contracts
+	MaintenanceTx               // an internal transaction which performs maintenance
 )
 
 // readable labels of transaction types.
 var TypeLabel = map[TxType]string{
-	TransferTx:     "transafer",
-	CreateTx:       "create",
-	CallTx:         "call",
-	EpochSealingTx: "epoch sealing",
+	TransferTx:    "transafer",
+	CreateTx:      "create",
+	CallTx:        "call",
+	MaintenanceTx: "maintenance",
 }
 
 // Context stores the book-keeping information for block processing profiling.
@@ -258,14 +258,11 @@ func (ctx *Context) GetProfileData(curBlock uint64, tBlock time.Duration) (*Prof
 
 // getTransactionType reads a message and determines a transaction type.
 func getTransactionType(tx *substate.Transaction) TxType {
-	idx := tx.Transaction
 	msg := tx.Substate.Message
 	to := msg.To
 	from := msg.From
 	alloc := tx.Substate.InputAlloc
 
-	// special contract addresses
-	sfc := common.HexToAddress("0xd100a01e00000000000000000000000000000000")
 	zero := common.HexToAddress("0x0000000000000000000000000000000000000000")
 
 	if to != nil {
@@ -275,8 +272,9 @@ func getTransactionType(tx *substate.Transaction) TxType {
 			return TransferTx
 			// CALL transaction with contract bytecode
 		} else {
-			if from == zero && *to == sfc && idx <= 1 {
-				return EpochSealingTx
+			// a maintenance transaction is sent from address zero
+			if from == zero {
+				return MaintenanceTx
 			}
 			return CallTx
 		}
