@@ -1,4 +1,5 @@
 #!/usr/bin/env  Rscript
+#./tx_transitions.R /path/to/profile.db/directory
 
 # load libraries
 library(dplyr)
@@ -38,11 +39,11 @@ df$prev_txType <- lag(df$txType, n=1)
 # count transitions
 countingDf <- df %>% filter(!is.na(prev_txType)) %>% count(txType, gas_classifier, prev_txType, prev_gas_classifier)
 # normalize ocurrences
-normalizedDf <- countingDf %>% group_by(prev_txType, prev_gas_classifier) %>% mutate(percent = n/sum(n))
+normalizedDf <- countingDf %>% group_by(prev_txType, prev_gas_classifier) %>% mutate(probs = n/sum(n))
 normalizedDf <- normalizedDf[,c(3,4,1,2,6)]
 normalizedDf <- normalizedDf[with(normalizedDf, order(prev_txType, prev_gas_classifier, txType, gas_classifier)), ]
 
-# write to csv
+# save to a csv file
 txpath <- paste(path, "tx_transitions.csv", sep="/")
 print(paste("Write to ", txpath))
 write.csv(normalizedDf, txpath, row.names = FALSE)
