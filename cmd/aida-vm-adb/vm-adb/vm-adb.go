@@ -89,7 +89,7 @@ func (adb *VmAdb) Run() error {
 	return nil
 }
 
-// Iterate over substates, unite transactions it by block number and then send it to process
+// Iterate over substates, unite transactions by block number and then send it to process
 func (adb *VmAdb) Iterate(iter substate.SubstateIterator, firstBlock uint64) {
 	var (
 		currentBlock = firstBlock
@@ -132,6 +132,8 @@ func (adb *VmAdb) checkProgress(maximumTxs uint64, firstBlock uint64, lastBlock 
 		gas     uint64
 		err     error
 	)
+
+	bp.Block = firstBlock
 
 	adb.Block = firstBlock
 

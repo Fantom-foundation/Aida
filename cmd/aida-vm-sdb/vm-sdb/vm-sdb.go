@@ -150,12 +150,12 @@ func (sdb *VmSdb) Iterate(iter substate.SubstateIterator) error {
 			sdb.TotalTx.SetUint64(sdb.TotalTx.Uint64() + txsInBlock)
 			sdb.TotalGas.SetUint64(sdb.TotalGas.Uint64() + gasInBlock)
 
-			txsInBlock = 0
-			gasInBlock = 0
-
-			if err = sdb.ExecuteExtension("PostBlock"); err != nil {
+			if err = bp.ExecuteExtension("PostBlock"); err != nil {
 				return err
 			}
+
+			txsInBlock = 0
+			gasInBlock = 0
 
 			// switch to next sync-period if needed.
 			// TODO: Revisit semantics - is this really necessary ????
