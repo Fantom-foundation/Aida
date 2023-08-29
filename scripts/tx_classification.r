@@ -22,12 +22,12 @@ con <- dbConnect(SQLite(), db)
 # create a dataframe from a table
 df <- dbReadTable(con, "txProfile")
 
-# compute quantile and save in csv
-qdf <- quantile(df$gas, 0:numBuckets/numBuckets)
+# compute gas quantiles and save them as a CSV file
+quantilesDf <- quantile(df$gas, 0:numBuckets/numBuckets)
 # write to file
 qpath <- paste(path, "gas_quantiles.csv", sep="/")
 print(paste("Write to ", qpath))
-write.csv(qdf, qpath, row.names = TRUE)
+write.csv(quantilesDf, qpath, row.names = TRUE)
 
 # add buckets
 df$gas_classifier <- ntile(df$gas, numBuckets)
