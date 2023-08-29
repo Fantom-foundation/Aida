@@ -48,7 +48,7 @@ reducedBlockData %>%
   labs(x="Block Height", y="Block Time (ms)", title="Block Processing Time")
 ```
 
-## 3. Throughput: Transaction per Seconds
+## 3. Transaction Throughput
 
 For all blocks, we achieve a throughput of `r format(1e9*sum(blockData$numTx)/sum(blockData$tBlock), digits=3, nsmall=3)` transactions per second.
 The smoothened trend line of the throughput is shown in the figure below. The throughput is aggregated for each 100K blocks shown as points.
