@@ -19,18 +19,18 @@ type BlockProcessor struct {
 	TotalTx    *big.Int        // total number of transactions so far
 	TotalGas   *big.Int        // total gas consumed so far
 	Block      uint64
-	actions    ExtensionList
+	extensions ExtensionList
 }
 
 // NewBlockProcessor creates a new block processor instance
-func NewBlockProcessor(cfg *utils.Config, actions ExtensionList, name string) *BlockProcessor {
+func NewBlockProcessor(cfg *utils.Config, extensions ExtensionList, name string) *BlockProcessor {
 
 	return &BlockProcessor{
-		Cfg:      cfg,
-		Log:      logger.NewLogger(cfg.LogLevel, name),
-		TotalGas: new(big.Int),
-		TotalTx:  new(big.Int),
-		actions:  actions,
+		Cfg:        cfg,
+		Log:        logger.NewLogger(cfg.LogLevel, name),
+		TotalGas:   new(big.Int),
+		TotalTx:    new(big.Int),
+		extensions: extensions,
 	}
 }
 
@@ -55,7 +55,7 @@ func (bp *BlockProcessor) Prepare() error {
 		}
 	}
 
-	// call post-prepare actions
+	// call post-prepare extensions
 	if err = bp.ExecuteExtension("PostPrepare"); err != nil {
 		return fmt.Errorf("cannot execute 'post-prepare' extensions")
 	}
@@ -70,7 +70,7 @@ func (bp *BlockProcessor) Config() *utils.Config {
 }
 
 func (bp *BlockProcessor) ExecuteExtension(method string) error {
-	return bp.actions.executeExtensions(method, bp)
+	return bp.extensions.executeExtensions(method, bp)
 }
 
 // Exit is always executed in defer
@@ -80,8 +80,6 @@ func (bp *BlockProcessor) Exit() error {
 	if err := bp.ExecuteExtension("Exit"); err != nil {
 		return fmt.Errorf("cannot execute 'exit' extensions; %v", err)
 	}
-
-	utils.PrintEvmStatistics(bp.Cfg)
 
 	return nil
 }

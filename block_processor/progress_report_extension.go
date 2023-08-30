@@ -17,7 +17,6 @@ const (
 // ProgressReportExtension provide the logging action for block processing
 type ProgressReportExtension struct {
 	ProcessorExtensions
-	first, last     uint64
 	processingStart time.Time // start time
 
 	// state for block range logging
@@ -29,10 +28,8 @@ type ProgressReportExtension struct {
 }
 
 // NewProgressReportExtension creates a new logging action for block processing.
-func NewProgressReportExtension(cfg *utils.Config) *ProgressReportExtension {
+func NewProgressReportExtension() *ProgressReportExtension {
 	return &ProgressReportExtension{
-		first:                 cfg.First,
-		last:                  cfg.Last,
 		lastBlockProcessedGas: new(big.Int),
 	}
 }
@@ -111,7 +108,7 @@ func (ext *ProgressReportExtension) PostProcessing(bp *BlockProcessor) error {
 	gasRate := gasUsed / (float64(elapsed.Nanoseconds()) / 1e9) / 1e6 // convert to MGas
 	txRate := float64(totalTx) / (float64(elapsed.Nanoseconds()) / 1e9)
 	hours, minutes, seconds := logger.ParseTime(time.Since(ext.processingStart))
-	blocks := ext.last - ext.first + 1
+	blocks := bp.Cfg.Last - bp.Cfg.First + 1
 
 	bp.Log.Infof("Total elapsed time: %d:%02d:%02d, processed %v blocks, %v transactions (~ %.2f Tx/s) (~ %.2f MGas/s)\n",
 		hours, minutes, seconds, blocks, bp.TotalTx, txRate, gasRate)

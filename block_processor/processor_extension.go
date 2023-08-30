@@ -5,7 +5,7 @@ import (
 	"reflect"
 )
 
-// ProcessorExtensions supports block processing actions
+// ProcessorExtensions supports block processing extensions
 // NOTE: ALl methods MUST be implemented.
 // If you do not find any functionality for a method, simply make it return nil.
 type ProcessorExtensions interface {
@@ -29,7 +29,7 @@ func NewExtensionList(extensions []ProcessorExtensions) ExtensionList {
 
 	t := reflect.TypeOf((*ProcessorExtensions)(nil)).Elem()
 
-	// BasicIterator over all chosen extensions
+	// iterate over all chosen extensions
 	for _, e := range extensions {
 		m := make(ExtensionFuncMap)
 		// BasicIterator over all methods inside extensions
@@ -45,7 +45,7 @@ func NewExtensionList(extensions []ProcessorExtensions) ExtensionList {
 	return l
 }
 
-// executeExtensions executes a matching method name of actions in the action list.
+// executeExtensions executes a matching method name of extensions in the action list.
 func (al ExtensionList) executeExtensions(method string, bp *BlockProcessor) error {
 	var err error
 

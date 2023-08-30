@@ -17,13 +17,13 @@ func RunVmAdb(ctx *cli.Context) error {
 		return err
 	}
 
-	actions := blockprocessor.NewExtensionList([]blockprocessor.ProcessorExtensions{
-		blockprocessor.NewProgressReportExtension(cfg),
+	extensions := blockprocessor.NewExtensionList([]blockprocessor.ProcessorExtensions{
+		blockprocessor.NewProgressReportExtension(),
 		blockprocessor.NewValidationExtension(),
 		blockprocessor.NewProfileExtension(),
 	})
 
-	bp := NewVmAdb(cfg, actions)
+	bp := NewVmAdb(cfg, extensions)
 	return bp.Run()
 }
 
@@ -49,71 +49,63 @@ func NewVmAdb(cfg *utils.Config, actions blockprocessor.ExtensionList) *VmAdb {
 	}
 }
 
-func (bp *VmAdb) Run() error {
-	var err error
-
+func (adb *VmAdb) Run() error {
 	// call init actions
-	if err = bp.ExecuteExtension("Init"); err != nil {
+	if err := adb.ExecuteExtension("Init"); err != nil {
 		return err
 	}
 
 	// close actions when return
 	defer func() error {
-		close(bp.errCh)
-		close(bp.totalGasCh)
-		close(bp.totalTxCh)
-		return bp.Exit()
+		close(adb.errCh)
+		close(adb.totalGasCh)
+		close(adb.totalTxCh)
+		return adb.Exit()
 	}()
 
 	// prepare statedb and priming
-	if err = bp.Prepare(); err != nil {
+	if err := adb.Prepare(); err != nil {
 		return fmt.Errorf("cannot prepare block processor; %v", err)
 	}
 
-	bp.Log.Notice("Process blocks")
-	iter := substate.NewSubstateIterator(bp.Cfg.First, bp.Cfg.Workers)
+	adb.Log.Notice("Process blocks")
+	iter := substate.NewSubstateIterator(adb.Cfg.First, adb.Cfg.Workers)
 	defer iter.Release()
 
 	// start threads
-	go bp.Iterate(iter, bp.Cfg.First, bp.Cfg.Last)
-	go bp.countProgress(uint64(bp.Cfg.MaxNumTransactions), bp.Cfg.First)
+	go adb.Iterate(iter, adb.Cfg.First)
+	go adb.checkProgress(uint64(adb.Cfg.MaxNumTransactions), adb.Cfg.First, adb.Cfg.Last)
 
 	// start workers
-	for i := 0; i < bp.Config().Workers; i++ {
-		bp.wg.Add(1)
+	for i := 0; i < adb.Config().Workers; i++ {
+		adb.wg.Add(1)
 		// for thread safety, we need to copy value of config to each worker
-		go bp.runBlocks(*bp.Config())
+		go adb.runBlocks(*adb.Config())
 	}
 
-	select {
-	case err = <-bp.errCh:
-		bp.Close()
-	default:
-	}
+	adb.wg.Wait()
 
-	bp.wg.Wait()
-
-	return err
+	return nil
 }
 
 // Iterate over substates, unite transactions it by block number and then send it to process
-func (bp *VmAdb) Iterate(iter substate.SubstateIterator, firstBlock, lastBlock uint64) {
+func (adb *VmAdb) Iterate(iter substate.SubstateIterator, firstBlock uint64) {
 	var (
 		currentBlock = firstBlock
 		tx           *substate.Transaction
 		txPool       []*substate.Transaction
 	)
 
-	bp.wg.Add(1)
+	adb.wg.Add(1)
 
 	defer func() {
-		close(bp.unitedTransactionsCh)
-		bp.wg.Done()
+		close(adb.unitedTransactionsCh)
+		adb.wg.Done()
 	}()
 
 	for iter.Next() {
 		select {
-		case <-bp.closeCh:
+		case <-adb.closeCh:
 			return
 		default:
 		}
@@ -124,11 +116,9 @@ func (bp *VmAdb) Iterate(iter substate.SubstateIterator, firstBlock, lastBlock u
 		if tx.Block != currentBlock {
 			currentBlock = tx.Block
 			select {
-			case bp.unitedTransactionsCh <- txPool:
-				// was this last block?
-				if tx.Block > lastBlock {
-					return
-				}
+			case <-adb.closeCh:
+				return
+			case adb.unitedTransactionsCh <- txPool:
 			default:
 			}
 			// reset the buffer
@@ -139,69 +129,72 @@ func (bp *VmAdb) Iterate(iter substate.SubstateIterator, firstBlock, lastBlock u
 	}
 }
 
-// countProgress is a thread for counting total gas and number of transactions
+// checkProgress is a thread for counting total gas, total number of transactions and completed blocks
 // this is the only thread we access these two variables,
-// hence here we call the PostBlock extensions for ProgressReportExtension
-func (bp *VmAdb) countProgress(maximumTxs uint64, firstBlock uint64) {
+// hence here we call the PostBlock extensions for ProgressReportExtension.
+// This thread sends signal to close the program once we complete enough blocks/txs
+func (adb *VmAdb) checkProgress(maximumTxs uint64, firstBlock uint64, lastBlock uint64) {
 	var (
 		txCount int
 		gas     uint64
 		err     error
 	)
 
-	bp.Block = firstBlock
+	adb.Block = firstBlock
 
-	bp.wg.Add(1)
-	defer bp.wg.Done()
+	adb.wg.Add(1)
+	defer func() {
+		adb.wg.Done()
+		adb.Close()
+	}()
 
 	for {
 		select {
-		case <-bp.closeCh:
+		case <-adb.closeCh:
 			return
-		case txCount = <-bp.totalTxCh:
-			bp.TotalTx.SetUint64(bp.TotalTx.Uint64() + uint64(txCount))
+		case txCount = <-adb.totalTxCh:
+			adb.TotalTx.SetUint64(adb.TotalTx.Uint64() + uint64(txCount))
 
 			// check whether we have processed enough transaction
 			// TODO: cfg.MaxNumTransactions should be a uint64 flag
-			if maximumTxs >= 0 && bp.TotalTx.Uint64() >= maximumTxs {
-				break
-			}
-
-			bp.Block++
-
-			if err = bp.ExecuteExtension("PostBlock"); err != nil {
-				bp.errCh <- fmt.Errorf("cannot execute 'post-block' extension; %v", err)
+			if maximumTxs >= 0 && adb.TotalTx.Uint64() >= maximumTxs {
 				return
 			}
 
-		case gas = <-bp.totalGasCh:
-			bp.TotalGas.SetUint64(bp.TotalGas.Uint64() + gas)
+			adb.Block++
+
+			// check whether we have processed enough blocks
+			if adb.Block > lastBlock {
+				return
+			}
+
+			if err = adb.ExecuteExtension("PostBlock"); err != nil {
+				adb.errCh <- fmt.Errorf("cannot execute 'post-block' extension; %v", err)
+				return
+			}
+
+		case gas = <-adb.totalGasCh:
+			adb.TotalGas.SetUint64(adb.TotalGas.Uint64() + gas)
 		}
 	}
 }
 
 // runBlocks reads the united transactions and sends them to processing
-func (bp *VmAdb) runBlocks(cfg utils.Config) {
+func (adb *VmAdb) runBlocks(cfg utils.Config) {
 	var (
 		transactions []*substate.Transaction
 		err          error
 	)
 
-	defer bp.wg.Done()
+	defer adb.wg.Done()
 
 	for {
 		select {
-		case <-bp.closeCh:
+		case <-adb.closeCh:
 			return
-		case transactions = <-bp.unitedTransactionsCh:
-			// chanel has been closed and its empty
-			if transactions == nil {
-				// stop only when all transactions have been processed
-				bp.Close()
-				return
-			}
-			if err = bp.processTransactions(transactions, &cfg); err != nil {
-				bp.errCh <- err
+		case transactions = <-adb.unitedTransactionsCh:
+			if err = adb.processTransactions(transactions, &cfg); err != nil {
+				adb.errCh <- err
 				return
 			}
 
@@ -210,9 +203,9 @@ func (bp *VmAdb) runBlocks(cfg utils.Config) {
 }
 
 // processTransactions united by block number and send info about them to respective channels
-func (bp *VmAdb) processTransactions(transactions []*substate.Transaction, cfg *utils.Config) error {
+func (adb *VmAdb) processTransactions(transactions []*substate.Transaction, cfg *utils.Config) error {
 	block := transactions[0].Block - 1
-	archive, err := bp.Db.GetArchiveState(block)
+	archive, err := adb.Db.GetArchiveState(block)
 	if err != nil {
 		return err
 	}
@@ -225,26 +218,26 @@ func (bp *VmAdb) processTransactions(transactions []*substate.Transaction, cfg *
 			return fmt.Errorf("failed processing transaction; %v", err)
 		}
 
-		bp.totalGasCh <- tx.Substate.Result.GasUsed
+		adb.totalGasCh <- tx.Substate.Result.GasUsed
 
 	}
 
-	bp.totalTxCh <- len(transactions)
+	adb.totalTxCh <- len(transactions)
 
 	if err = archive.Close(); err != nil {
-		bp.errCh <- fmt.Errorf("cannot close archive number %v; %v", block, err)
+		adb.errCh <- fmt.Errorf("cannot close archive number %v; %v", block, err)
 	}
 
 	return nil
 }
 
 // Close sends the exit signal
-func (bp *VmAdb) Close() {
+func (adb *VmAdb) Close() {
 	select {
-	case <-bp.closeCh:
+	case <-adb.closeCh:
 		return
 	default:
-		close(bp.closeCh)
+		close(adb.closeCh)
 
 	}
 }
