@@ -18,7 +18,10 @@ const progressPeriod = 15 * time.Second
 
 // BasicIterator iterates over substates and saves info about them
 func BasicIterator(iter substate.SubstateIterator, actions ExtensionList, bp *BlockProcessor) error {
-	var err error
+	var (
+		err           error
+		newSyncPeriod uint64
+	)
 
 	for iter.Next() {
 		bp.tx = iter.Value()
@@ -31,11 +34,24 @@ func BasicIterator(iter substate.SubstateIterator, actions ExtensionList, bp *Bl
 				return nil
 			}
 
-			bp.block = bp.tx.Block
+			bp.db.EndBlock()
 
 			if err = actions.ExecuteExtensions("PostBlock", bp); err != nil {
 				return err
 			}
+
+			// switch to next sync-period if needed.
+			// TODO: Revisit semantics - is this really necessary ????
+			newSyncPeriod = bp.tx.Block / bp.cfg.SyncPeriodLength
+			for bp.syncPeriod < newSyncPeriod {
+				bp.db.EndSyncPeriod()
+				bp.syncPeriod++
+				bp.db.BeginSyncPeriod(bp.syncPeriod)
+			}
+
+			bp.block = bp.tx.Block
+			bp.db.BeginBlock(bp.block)
+
 		}
 
 		// check whether we have processed enough transaction
