@@ -248,7 +248,7 @@ func TestDeleteBlockRangeOverlapMultipleTx(t *testing.T) {
 			ubNumProc:       2,
 			numTx:           numTx,
 			tTransactions:   []int64{232939829, 938828288, 92388277, 9238828},
-			tTypes:          []TxType{TransferTx, CreateTx, CallTx, EpochSealingTx},
+			tTypes:          []TxType{TransferTx, CreateTx, CallTx, MaintenanceTx},
 			gasTransactions: []uint64{111111, 222222, 333333, 444444},
 		}
 		err = db.Add(profileData)
@@ -277,7 +277,7 @@ func TestDeleteBlockRangeOverlapMultipleTx(t *testing.T) {
 			ubNumProc:       2,
 			numTx:           numTx,
 			tTransactions:   []int64{232939829, 938828288, 92388277, 9238828},
-			tTypes:          []TxType{TransferTx, CreateTx, CallTx, EpochSealingTx},
+			tTypes:          []TxType{TransferTx, CreateTx, CallTx, MaintenanceTx},
 			gasTransactions: []uint64{111111, 222222, 333333, 444444},
 		}
 		err = db.Add(profileData)
@@ -411,7 +411,7 @@ func TestFlushProfileData(t *testing.T) {
 		ubNumProc:       2,
 		numTx:           4,
 		tTransactions:   []int64{292988, 8387773, 923828772, 293923929},
-		tTypes:          []TxType{TransferTx, CreateTx, CallTx, EpochSealingTx},
+		tTypes:          []TxType{TransferTx, CreateTx, CallTx, MaintenanceTx},
 		gasTransactions: []uint64{111111, 222222, 333333, 444444},
 	}
 
