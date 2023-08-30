@@ -76,6 +76,7 @@ func (adb *VmAdb) Run() error {
 	go adb.Iterate(iter, adb.Cfg.First)
 	go adb.checkProgress(uint64(adb.Cfg.MaxNumTransactions), adb.Cfg.First, adb.Cfg.Last)
 
+	adb.Log.Infof("Starting %v workers", adb.Config().Workers)
 	// start workers
 	for i := 0; i < adb.Config().Workers; i++ {
 		adb.wg.Add(1)
@@ -99,17 +100,10 @@ func (adb *VmAdb) Iterate(iter substate.SubstateIterator, firstBlock uint64) {
 	adb.wg.Add(1)
 
 	defer func() {
-		close(adb.unitedTransactionsCh)
 		adb.wg.Done()
 	}()
 
 	for iter.Next() {
-		select {
-		case <-adb.closeCh:
-			return
-		default:
-		}
-
 		tx = iter.Value()
 
 		// if we have gotten all txs from block, we send them to processes
@@ -119,7 +113,6 @@ func (adb *VmAdb) Iterate(iter substate.SubstateIterator, firstBlock uint64) {
 			case <-adb.closeCh:
 				return
 			case adb.unitedTransactionsCh <- txPool:
-			default:
 			}
 			// reset the buffer
 			txPool = []*substate.Transaction{}
@@ -144,6 +137,14 @@ func (adb *VmAdb) checkProgress(maximumTxs uint64, firstBlock uint64, lastBlock 
 
 	adb.wg.Add(1)
 	defer func() {
+		if err = adb.ExecuteExtension("PostProcessing"); err != nil {
+			select {
+			case <-adb.closeCh:
+				return
+			case adb.errCh <- fmt.Errorf("cannot execute 'post-processing' extension; %v", err):
+				return
+			}
+		}
 		adb.wg.Done()
 		adb.Close()
 	}()
@@ -169,10 +170,13 @@ func (adb *VmAdb) checkProgress(maximumTxs uint64, firstBlock uint64, lastBlock 
 			}
 
 			if err = adb.ExecuteExtension("PostBlock"); err != nil {
-				adb.errCh <- fmt.Errorf("cannot execute 'post-block' extension; %v", err)
-				return
+				select {
+				case <-adb.closeCh:
+					return
+				case adb.errCh <- fmt.Errorf("cannot execute 'post-block' extension; %v", err):
+					return
+				}
 			}
-
 		case gas = <-adb.totalGasCh:
 			adb.TotalGas.SetUint64(adb.TotalGas.Uint64() + gas)
 		}
@@ -186,7 +190,9 @@ func (adb *VmAdb) runBlocks(cfg utils.Config) {
 		err          error
 	)
 
-	defer adb.wg.Done()
+	defer func() {
+		adb.wg.Done()
+	}()
 
 	for {
 		select {
@@ -194,8 +200,12 @@ func (adb *VmAdb) runBlocks(cfg utils.Config) {
 			return
 		case transactions = <-adb.unitedTransactionsCh:
 			if err = adb.processTransactions(transactions, &cfg); err != nil {
-				adb.errCh <- err
-				return
+				select {
+				case <-adb.closeCh:
+					return
+				case adb.errCh <- err:
+					return
+				}
 			}
 
 		}
@@ -217,15 +227,22 @@ func (adb *VmAdb) processTransactions(transactions []*substate.Transaction, cfg 
 		if _, err = utils.ProcessTx(archive, cfg, block, tx.Transaction, tx.Substate); err != nil {
 			return fmt.Errorf("failed processing transaction; %v", err)
 		}
-
-		adb.totalGasCh <- tx.Substate.Result.GasUsed
+		select {
+		case <-adb.closeCh:
+			return nil
+		case adb.totalGasCh <- tx.Substate.Result.GasUsed:
+		}
 
 	}
 
-	adb.totalTxCh <- len(transactions)
+	select {
+	case <-adb.closeCh:
+		return nil
+	case adb.totalTxCh <- len(transactions):
+	}
 
 	if err = archive.Close(); err != nil {
-		adb.errCh <- fmt.Errorf("cannot close archive number %v; %v", block, err)
+		return fmt.Errorf("cannot close archive number %v; %v", block, err)
 	}
 
 	return nil
