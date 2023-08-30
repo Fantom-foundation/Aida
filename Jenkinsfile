@@ -20,7 +20,6 @@ pipeline {
                     currentBuild.description = "Building on ${env.NODE_NAME}"
                 }
                 sh "git submodule update --init --recursive"
-                sh "make clean"
                 sh "make all"
             }
         }
@@ -63,6 +62,11 @@ pipeline {
                     sh "build/aida-vm-adb ${AIDADB} --db-src /var/opera/Aida/dbtmpjenkins/state_db_carmen_go-file_4600000 ${fromBlock} ${toBlock} "
                 }
                 sh "rm -rf /var/opera/Aida/dbtmpjenkins/state_db_carmen_go-file_4600000"
+            }
+        }
+        stage('tear-down') {
+            steps {
+                sh "make clean"
             }
         }
     }
