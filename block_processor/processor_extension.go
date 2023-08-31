@@ -6,7 +6,7 @@ import (
 )
 
 // ProcessorExtensions supports block processing extensions
-// NOTE: ALl methods MUST be implemented.
+// NOTE: ALL methods MUST be implemented.
 // If you do not find any functionality for a method, simply make it return nil.
 type ProcessorExtensions interface {
 	Init(*BlockProcessor) error        // Initialise action (before block processing starts)
@@ -45,7 +45,7 @@ func NewExtensionList(extensions []ProcessorExtensions) ExtensionList {
 	return l
 }
 
-// executeExtensions executes a matching method name of extensions in the action list.
+// executeExtensions executes a matching method name of extensions in the ExtensionList
 func (al ExtensionList) executeExtensions(method string, bp *BlockProcessor) error {
 	var err error
 

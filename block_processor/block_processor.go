@@ -49,7 +49,7 @@ func (bp *BlockProcessor) Prepare() error {
 		return err
 	}
 
-	if !bp.Cfg.SkipPriming && bp.Cfg.StateDbSrc == "" {
+	if bp.Cfg.StateDbSrc == "" {
 		if err = utils.LoadWorldStateAndPrime(bp.Db, bp.Cfg, bp.Cfg.First-1); err != nil {
 			return fmt.Errorf("priming failed. %v", err)
 		}
@@ -63,12 +63,7 @@ func (bp *BlockProcessor) Prepare() error {
 	return nil
 }
 
-// Config provides the processes configuration parsed by this block processor
-// from command line parameters, default values, and other sources.
-func (bp *BlockProcessor) Config() *utils.Config {
-	return bp.Cfg
-}
-
+// ExecuteExtension by its method name
 func (bp *BlockProcessor) ExecuteExtension(method string) error {
 	return bp.extensions.executeExtensions(method, bp)
 }

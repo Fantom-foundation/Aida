@@ -76,12 +76,12 @@ func (adb *VmAdb) Run() error {
 	go adb.Iterate(iter, adb.Cfg.First)
 	go adb.checkProgress(uint64(adb.Cfg.MaxNumTransactions), adb.Cfg.First, adb.Cfg.Last)
 
-	adb.Log.Infof("Starting %v workers", adb.Config().Workers)
+	adb.Log.Infof("Starting %v workers", adb.Cfg.Workers)
 	// start workers
-	for i := 0; i < adb.Config().Workers; i++ {
+	for i := 0; i < adb.Cfg.Workers; i++ {
 		adb.wg.Add(1)
 		// for thread safety, we need to copy value of config to each worker
-		go adb.runBlocks(*adb.Config())
+		go adb.runBlocks(*adb.Cfg)
 	}
 
 	adb.wg.Wait()

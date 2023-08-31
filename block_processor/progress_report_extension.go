@@ -24,19 +24,20 @@ type ProgressReportExtension struct {
 	lastBlockProcessedTx  uint64    // number of transactions processed
 	lastBlockProcessedGas *big.Int  // gas processed
 	lastBlock             uint64    // block number of last block report
-
+	gasUsed               *big.Float
 }
 
 // NewProgressReportExtension creates a new logging action for block processing.
 func NewProgressReportExtension() *ProgressReportExtension {
 	return &ProgressReportExtension{
 		lastBlockProcessedGas: new(big.Int),
+		gasUsed:               new(big.Float),
 	}
 }
 
 // Init prepares ProgressReport Extension.
 func (ext *ProgressReportExtension) Init(bp *BlockProcessor) error {
-	if bp.Config().Quiet {
+	if bp.Cfg.Quiet {
 		return nil
 	}
 	ext.lastBlock = bp.Block - (bp.Block % BlockPeriod)
@@ -45,7 +46,7 @@ func (ext *ProgressReportExtension) Init(bp *BlockProcessor) error {
 
 // PostPrepare starts timers.
 func (ext *ProgressReportExtension) PostPrepare(bp *BlockProcessor) error {
-	if bp.Config().Quiet {
+	if bp.Cfg.Quiet {
 		return nil
 	}
 	// time for block and periodic report
@@ -61,7 +62,7 @@ func (ext *ProgressReportExtension) PostTransaction(bp *BlockProcessor) error {
 
 // PostBlock issues periodic, block, and stateDB memory reports.
 func (ext *ProgressReportExtension) PostBlock(bp *BlockProcessor) error {
-	if bp.Config().Quiet {
+	if bp.Cfg.Quiet {
 		return nil
 	}
 	block := bp.Block
@@ -76,7 +77,7 @@ func (ext *ProgressReportExtension) PostBlock(bp *BlockProcessor) error {
 	// issue a report after a block range of length "BlockPeriod"
 	if block-ext.lastBlock >= BlockPeriod {
 		elapsed := time.Since(ext.lastBlockReport)
-		gasUsed, _ := new(big.Float).SetInt(new(big.Int).Sub(bp.TotalGas, ext.lastBlockProcessedGas)).Float64()
+		gasUsed, _ := ext.gasUsed.SetInt(new(big.Int).Sub(bp.TotalGas, ext.lastBlockProcessedGas)).Float64()
 		txRate := float64(totalTx-ext.lastBlockProcessedTx) / (float64(elapsed.Nanoseconds()) / 1e9)
 		gasRate := gasUsed / (float64(elapsed.Nanoseconds()) / 1e9) / 1e6 // convert to MGas
 		memoryUsage := float64(bp.Db.GetMemoryUsage().UsedBytes) / 1024 / 1024 / 1024
@@ -97,14 +98,14 @@ func (ext *ProgressReportExtension) PostBlock(bp *BlockProcessor) error {
 
 // PostProcessing issues a summary report.
 func (ext *ProgressReportExtension) PostProcessing(bp *BlockProcessor) error {
-	if bp.Config().Quiet {
+	if bp.Cfg.Quiet {
 		return nil
 	}
 	totalTx := bp.TotalTx.Uint64()
 
 	// print progress summary
 	elapsed := time.Since(ext.processingStart)
-	gasUsed, _ := new(big.Float).SetInt(bp.TotalGas).Float64()
+	gasUsed, _ := ext.gasUsed.SetInt(bp.TotalGas).Float64()
 	gasRate := gasUsed / (float64(elapsed.Nanoseconds()) / 1e9) / 1e6 // convert to MGas
 	txRate := float64(totalTx) / (float64(elapsed.Nanoseconds()) / 1e9)
 	hours, minutes, seconds := logger.ParseTime(time.Since(ext.processingStart))
@@ -118,7 +119,7 @@ func (ext *ProgressReportExtension) PostProcessing(bp *BlockProcessor) error {
 
 // Exit issues disk report
 func (ext *ProgressReportExtension) Exit(bp *BlockProcessor) error {
-	if bp.Config().Quiet {
+	if bp.Cfg.Quiet {
 		return nil
 	}
 	bp.Log.Infof("Final disk usage: %v GiB\n", float32(utils.GetDirectorySize(bp.stateDbDir))/float32(1024*1024*1024))
