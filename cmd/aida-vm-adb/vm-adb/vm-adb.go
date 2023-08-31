@@ -32,6 +32,7 @@ type VmAdb struct {
 	unitedTransactionsCh chan []*substate.Transaction
 	totalGasCh           chan uint64
 	totalTxCh            chan int
+	blocksDoneCh         chan uint64
 	closeCh              chan any
 	errCh                chan error
 	wg                   *sync.WaitGroup
@@ -43,6 +44,7 @@ func NewVmAdb(cfg *utils.Config, actions blockprocessor.ExtensionList) *VmAdb {
 		unitedTransactionsCh: make(chan []*substate.Transaction, 10*cfg.Workers),
 		totalGasCh:           make(chan uint64, 10*cfg.Workers),
 		totalTxCh:            make(chan int, 10*cfg.Workers),
+		blocksDoneCh:         make(chan uint64, 10*cfg.Workers),
 		closeCh:              make(chan any, 1),
 		errCh:                make(chan error, 1),
 		wg:                   new(sync.WaitGroup),
@@ -60,6 +62,7 @@ func (adb *VmAdb) Run() error {
 		close(adb.errCh)
 		close(adb.totalGasCh)
 		close(adb.totalTxCh)
+		close(adb.blocksDoneCh)
 		return adb.Exit()
 	}()
 
@@ -108,6 +111,13 @@ func (adb *VmAdb) Iterate(iter substate.SubstateIterator, firstBlock uint64) {
 
 		// if we have gotten all txs from block, we send them to processes
 		if tx.Block != currentBlock {
+			select {
+			// we need to subtract new tx block number from the current one in case block without substate occurred
+			case adb.blocksDoneCh <- tx.Block - currentBlock:
+			case <-adb.closeCh:
+				return
+			}
+
 			currentBlock = tx.Block
 			select {
 			case <-adb.closeCh:
@@ -128,9 +138,9 @@ func (adb *VmAdb) Iterate(iter substate.SubstateIterator, firstBlock uint64) {
 // This thread sends signal to close the program once we complete enough blocks/txs
 func (adb *VmAdb) checkProgress(maximumTxs uint64, firstBlock uint64, lastBlock uint64) {
 	var (
-		txCount int
-		gas     uint64
-		err     error
+		txCount        int
+		gas, blockDone uint64
+		err            error
 	)
 
 	adb.Block = firstBlock
@@ -161,13 +171,10 @@ func (adb *VmAdb) checkProgress(maximumTxs uint64, firstBlock uint64, lastBlock 
 			if maximumTxs >= 0 && adb.TotalTx.Uint64() >= maximumTxs {
 				return
 			}
-
-			adb.Block++
-
-			// check whether we have processed enough blocks
-			if adb.Block > lastBlock {
-				return
-			}
+		case gas = <-adb.totalGasCh:
+			adb.TotalGas.SetUint64(adb.TotalGas.Uint64() + gas)
+		case blockDone = <-adb.blocksDoneCh:
+			adb.Block += blockDone
 
 			if err = adb.ExecuteExtension("PostBlock"); err != nil {
 				select {
@@ -177,8 +184,11 @@ func (adb *VmAdb) checkProgress(maximumTxs uint64, firstBlock uint64, lastBlock 
 					return
 				}
 			}
-		case gas = <-adb.totalGasCh:
-			adb.TotalGas.SetUint64(adb.TotalGas.Uint64() + gas)
+
+			// check whether we have processed enough blocks
+			if adb.Block >= lastBlock {
+				return
+			}
 		}
 	}
 }
