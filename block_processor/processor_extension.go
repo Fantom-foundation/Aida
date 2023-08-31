@@ -5,8 +5,8 @@ import (
 	"reflect"
 )
 
-// ProcessorExtensions supports block processing actions
-// NOTE: ALl methods MUST be implemented.
+// ProcessorExtensions supports block processing extensions
+// NOTE: ALL methods MUST be implemented.
 // If you do not find any functionality for a method, simply make it return nil.
 type ProcessorExtensions interface {
 	Init(*BlockProcessor) error        // Initialise action (before block processing starts)
@@ -25,11 +25,11 @@ type ExtensionList map[string]ExtensionFuncMap
 
 // NewExtensionList creates maps for all ProcessorExtensions function name to function callback for each method
 func NewExtensionList(extensions []ProcessorExtensions) ExtensionList {
-	l := make(ExtensionList, len(extensions))
+	l := make(ExtensionList)
 
 	t := reflect.TypeOf((*ProcessorExtensions)(nil)).Elem()
 
-	// iterate over all chosen extensions
+	// BasicIterator over all chosen extensions
 	for _, e := range extensions {
 		m := make(ExtensionFuncMap)
 		// BasicIterator over all methods inside extensions
@@ -45,15 +45,15 @@ func NewExtensionList(extensions []ProcessorExtensions) ExtensionList {
 	return l
 }
 
-// ExecuteExtensions executes a matching method name of actions in the action list.
-func (al ExtensionList) ExecuteExtensions(method string, bp *BlockProcessor) error {
+// executeExtensions executes a matching method name of extensions in the ExtensionList
+func (al ExtensionList) executeExtensions(method string, bp *BlockProcessor) error {
 	var err error
 
-	bp.log.Debug("Executing...")
-	bp.log.Debugf("Method: %v", method)
+	bp.Log.Debug("Executing...")
+	bp.Log.Debugf("Method: %v", method)
 
 	for extensionName, action := range al {
-		bp.log.Debugf("Extension: %v", extensionName)
+		bp.Log.Debugf("Extension: %v", extensionName)
 		if err = action[method](bp); err != nil {
 			return fmt.Errorf("cannot call ExecuteExtension: %v; func name: %v; err: %v", extensionName, method, err)
 		}

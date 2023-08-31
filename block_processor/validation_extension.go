@@ -20,17 +20,17 @@ func (ext *ValidationExtension) Init(bp *BlockProcessor) error {
 
 // PostPrepare validates the world-state after preparing/priming db
 func (ext *ValidationExtension) PostPrepare(bp *BlockProcessor) error {
-	if !bp.cfg.ValidateWorldState {
+	if !bp.Cfg.ValidateWorldState {
 		return nil
 	}
 
-	bp.log.Notice("Validate primed world-state\n")
-	ws, err := utils.GenerateWorldStateFromUpdateDB(bp.cfg, bp.cfg.First-1)
+	bp.Log.Notice("Validate primed world-state\n")
+	ws, err := utils.GenerateWorldStateFromUpdateDB(bp.Cfg, bp.Cfg.First-1)
 	if err != nil {
 		return fmt.Errorf("failed generating worldstate. %v", err)
 	}
 
-	if err = utils.ValidateStateDB(ws, bp.db, false); err != nil {
+	if err = utils.ValidateStateDB(ws, bp.Db, false); err != nil {
 		return fmt.Errorf("pre: World state is not contained in the stateDB. %v", err)
 	}
 
@@ -47,17 +47,17 @@ func (ext *ValidationExtension) PostBlock(bp *BlockProcessor) error {
 
 // PostProcessing checks the world-state after processing has completed
 func (ext *ValidationExtension) PostProcessing(bp *BlockProcessor) error {
-	if !bp.cfg.ValidateWorldState {
+	if !bp.Cfg.ValidateWorldState {
 		return nil
 	}
 
-	bp.log.Notice("Validate final world-state")
-	ws, err := utils.GenerateWorldStateFromUpdateDB(bp.cfg, bp.cfg.Last)
+	bp.Log.Notice("Validate final world-state")
+	ws, err := utils.GenerateWorldStateFromUpdateDB(bp.Cfg, bp.Cfg.Last)
 	if err != nil {
 		return err
 	}
 
-	if err = utils.ValidateStateDB(ws, bp.db, false); err != nil {
+	if err = utils.ValidateStateDB(ws, bp.Db, false); err != nil {
 		return fmt.Errorf("world state is not contained in the state-db. %v", err)
 	}
 

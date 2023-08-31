@@ -13,7 +13,7 @@ import (
 
 // RunArchiveApp defines metadata and configuration options the vm-adb executable.
 var RunArchiveApp = cli.App{
-	Action:    vm_adb.RunArchive,
+	Action:    vm_adb.RunVmAdb,
 	Name:      "Aida Archive Evaluation Tool",
 	HelpName:  "vm-adb",
 	Usage:     "run VM on the archive",
