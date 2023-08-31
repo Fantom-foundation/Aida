@@ -11,7 +11,7 @@ import (
 // Time constants for reports
 const (
 	// todo increase after testing
-	BlockPeriod uint64 = 1000 // when to issue a block report
+	BlockPeriod uint64 = 100_000 // when to issue a block report
 )
 
 // ProgressReportExtension provide the logging action for block processing
