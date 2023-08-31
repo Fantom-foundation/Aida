@@ -133,8 +133,6 @@ func (adb *VmAdb) checkProgress(maximumTxs uint64, firstBlock uint64, lastBlock 
 		err     error
 	)
 
-	bp.Block = firstBlock
-
 	adb.Block = firstBlock
 
 	adb.wg.Add(1)

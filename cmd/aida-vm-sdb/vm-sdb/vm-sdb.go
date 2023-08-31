@@ -150,7 +150,7 @@ func (sdb *VmSdb) Iterate(iter substate.SubstateIterator) error {
 			sdb.TotalTx.SetUint64(sdb.TotalTx.Uint64() + txsInBlock)
 			sdb.TotalGas.SetUint64(sdb.TotalGas.Uint64() + gasInBlock)
 
-			if err = bp.ExecuteExtension("PostBlock"); err != nil {
+			if err = sdb.ExecuteExtension("PostBlock"); err != nil {
 				return err
 			}
 

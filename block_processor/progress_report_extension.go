@@ -10,7 +10,7 @@ import (
 
 // Time constants for reports
 const (
-	BlockPeriod uint64 = 100_000 // when to issue a block report
+	BlockPeriod uint64 = 100_00 // when to issue a block report
 )
 
 // ProgressReportExtension provide the logging action for block processing
@@ -24,15 +24,13 @@ type ProgressReportExtension struct {
 	lastBlockProcessedGas *big.Int  // gas processed
 	lastBlock             uint64    // block number of last block report
 	gasUsed               *big.Float
-	lastBlockInitialized  bool      // true if the last block got initialized, false otherwise
+	lastBlockInitialized  bool // true if the last block got initialized, false otherwise
 
 }
 
 // NewProgressReportExtension creates a new logging action for block processing.
-func NewProgressReportExtension(cfg *utils.Config) *ProgressReportExtension {
+func NewProgressReportExtension() *ProgressReportExtension {
 	return &ProgressReportExtension{
-		first:                 cfg.First,
-		last:                  cfg.Last,
 		lastBlockProcessedGas: new(big.Int),
 		gasUsed:               new(big.Float),
 	}
@@ -58,7 +56,6 @@ func (ext *ProgressReportExtension) PostPrepare(bp *BlockProcessor) error {
 
 	return nil
 }
-
 
 func (ext *ProgressReportExtension) PostTransaction(bp *BlockProcessor) error {
 	return nil
