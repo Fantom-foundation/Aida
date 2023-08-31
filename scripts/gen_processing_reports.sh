@@ -58,34 +58,6 @@ Machine() {
     echo "`hostname`(`curl -s api.ipify.org`)"
 }
 
-## Reduce data set
-ReduceData() {
-sqlite3 $1 << EOF
--- create view groupedBlockProfile to group block data for every 100,000 blocks
-DROP VIEW IF EXISTS groupedBlockProfile;
-CREATE VIEW groupedBlockProfile(block, tBlock, tCommit, numTx, speedup, gasBlock) AS
- SELECT block/100000, tBlock, tCommit, numTx, log(speedup), gasBlock FROM blockProfile;
--- aggregate block data
-DROP TABLE IF EXISTS aggregatedBlockProfile;
-CREATE TABLE aggregatedBlockProfile(block INTEGER, tBlock REAL, tCommit REAL, numTx REAL,  speedup REAL, gasBlock REAL, gps REAL, tps REAL);
-INSERT INTO aggregatedBlockProfile SELECT min(block)*100000, avg(tBlock)/1e6, avg(tCommit)/1e3, avg(numTx), exp(avg(speedup)), avg(gasBlock)/1e6, sum(gasBlock)/(sum(tBlock)/1e3), sum(numTx)/(sum(tBlock)/1e9) FROM groupedBlockProfile GROUP BY block;
-DROP VIEW groupedBlockProfile;
--- create view groupedeTxProfile to group transaction data for every 1,000,000 transactions
-DROP VIEW IF EXISTS  groupedTxProfile;
-CREATE VIEW groupedTxProfile(tx, duration, gas) AS
- SELECT rowid/1000000, duration, gas FROM txProfile ORDER BY block ASC, tx ASC;
--- aggregate transaction data
-DROP TABLE IF EXISTS aggregatedTxProfile;
-CREATE TABLE aggregatedTxProfile(tx INTEGER, duration REAL, gas REAL);
-INSERT INTO aggregatedTxProfile SELECT min(tx)*1000000, avg(duration)/1e3, avg(gas)/1e3 FROM groupedTxProfile GROUP BY tx;
-DROP VIEW groupedTxProfile;
-EOF
-}
-
-# reduce dataset in sqlite3 (NB: R consumes too much memory/is too slow for the reduction)
-log "reduce data set ..."
-ReduceData $outputdir/profile.db
-
 # query the configuration
 log "query configuration ..."
 hw=`HardwareDescription`
@@ -99,6 +71,11 @@ statedb="$dbimpl($dbvariant $carmenschema)"
 log "render block processing report ..."
 ./scripts/knit.R -p "GitHash='$gh', HwInfo='$hw', OsInfo='$os', Machine='$machine', GoInfo='$go', VM='$vmimpl', StateDB='$statedb'" \
                  -d "$outputdir/profile.db" -f html -o block_processing.html -O $outputdir reports/block_processing.rmd
+
+# produce mainnet report
+log "render mainnet report ..."
+./scripts/knit.R -p "GitHash='$gh', HwInfo='$hw', OsInfo='$os', Machine='$machine', GoInfo='$go', VM='$vmimpl', StateDB='$statedb'" \
+                 -d "$outputdir/profile.db" -f html -o mainnet_report.html -O $outputdir reports/mainnet_report.rmd
 
 # produce parallel experiment report
 log "render parallel experiment report ..."
