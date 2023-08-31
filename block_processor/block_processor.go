@@ -18,8 +18,8 @@ type BlockProcessor struct {
 	Db         state.StateDB   // StateDB
 	TotalTx    *big.Int        // total number of transactions so far
 	TotalGas   *big.Int        // total gas consumed so far
-	Block      uint64
-	extensions ExtensionList
+	Block      uint64          // which block has been processed
+	extensions ExtensionList   // which extensions are enabled for the package
 }
 
 // NewBlockProcessor creates a new block processor instance
