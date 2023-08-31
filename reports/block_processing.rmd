@@ -34,8 +34,8 @@ The data set for this experiment is stored in the database `r params$db`.
 
 ## 2. Block Processing Time
 
-The experiment was conducted for the block range from **`r format(min(blockData$block),big.mark=",")`**  to **`r format(max(blockData$block),big.mark=",")`**. 
-The block range contains **`r format(sum(blockData$numTx), big.mark=",")`** transactions.
+The experiment was conducted for the block range from **`r format(min(blockData$block),big.mark=",")`**  to **`r format(max(blockData$block),big.mark=",")`**.
+The block range contains **`r format(sum(blockData$numTx), big.mark=",")`** transactions. We have `r format((max(blockData$block)-min(blockData$block)+1)-nrow(blockData), big.mark=",")` empty blocks.
 The accumulated block processing time is **`r format(sum(blockData$tBlock)/(1e9*3600), digits=3, nsmall=2)`** hours. The block rate is `r format(1e9*(max(blockData$block)-min(blockData$block)+1)/sum(blockData$tBlock), digits=3, nsmall=2)` blocks per second.
 The average block execution time is `r format(mean(blockData$tBlock)/1e6, digits=3, nsmall=3)` milliseconds, with a minimum of `r format(min(blockData$tBlock)/1e3, digits=3, nsmall=3)` microseconds and a maximum of `r format(max(blockData$tBlock)/1e9, digits=3, nsmall=3)` seconds.
 The smoothened trend line for the block time (in milliseconds) is shown below. In the figure, we aggregated the block time for all 100K blocks shown as points.
@@ -48,19 +48,19 @@ reducedBlockData %>%
   labs(x="Block Height", y="Block Time (ms)", title="Block Processing Time")
 ```
 
-## 3. Commit Time
+## 3. Transaction Throughput
 
-The average commit time of a block is `r format(mean(blockData$tCommit)/1e3, digits=3, nsmall=3)` microseconds, with a minimum of `r format(min(blockData$tCommit), digits=3, nsmall=3)` nanoseconds and a maximum of `r format(max(blockData$tCommit)/1e9, digits=3, nsmall=3)` seconds.
-The smoothened trend line of the commit time of a block is shown below. In the figure, we aggregated the commit time in microseconds for all 100K blocks shown as points.
+For all blocks, we achieve a throughput of `r format(1e9*sum(blockData$numTx)/sum(blockData$tBlock), digits=3, nsmall=3)` transactions per second.
+The smoothened trend line of the throughput is shown in the figure below. The throughput is aggregated for each 100K blocks shown as points.
+The numbers and the figure below include maintenance transactions as well (SFC, etc.).
 
-```{r, echo = FALSE, message=FALSE}
+```{r, echo=FALSE, message=FALSE}
 reducedBlockData %>%
-  ggplot(aes(x = block, y = tCommit)) +
+  ggplot(aes(x = block, y = tps)) +
   geom_smooth(color = "tomato") +
   geom_point(alpha=0.3) +
-  labs(x="Block Height", y="Commit Time (us)", title="Commit Time")
+  labs(x="Block Height", y="Transactions Per Second", title="Transactions per Second")
 ```
-
 
 ## 4. Gas Consumption of Blocks
 
@@ -75,7 +75,33 @@ reducedBlockData %>%
   labs(x="Block Height", y="MGas", title="Gas Consumption of Blocks")
 ```
 
-## 5. Number of Transactions per Block
+## 5. Block Gas Rate
+
+We achieve a gas rate of `r format(1e3*sum(blockData$gas)/sum(blockData$tBlock), digits=3, nsmall=3)` MGas per second.
+The smoothened trend line of the gas rate for each 100K blocks is shown in the figure below as points.
+
+```{r, echo=FALSE, message=FALSE}
+reducedBlockData %>%
+  ggplot(aes(x = block, y = gps)) +
+  geom_smooth(color = "tomato") +
+  geom_point(alpha=0.3) +
+  labs(x="Block Height", y="MGas Per Second", title="Throughput in MGas per Second")
+```
+
+## 6. Commit Time
+
+The average commit time of a block is `r format(mean(blockData$tCommit)/1e3, digits=3, nsmall=3)` microseconds, with a minimum of `r format(min(blockData$tCommit), digits=3, nsmall=3)` nanoseconds and a maximum of `r format(max(blockData$tCommit)/1e9, digits=3, nsmall=3)` seconds.
+The smoothened trend line of the commit time of a block is shown below. In the figure, we aggregated the commit time in microseconds for all 100K blocks shown as points.
+
+```{r, echo = FALSE, message=FALSE}
+reducedBlockData %>%
+  ggplot(aes(x = block, y = tCommit)) +
+  geom_smooth(color = "tomato") +
+  geom_point(alpha=0.3) +
+  labs(x="Block Height", y="Commit Time (us)", title="Commit Time")
+```
+
+## 7. Number of Transactions per Block
 
 We have an average  of `r format(mean(blockData$numTx), digits=3, nsmall=3)` transactions per block.
 The smallest number of transactions in a block is `r min(blockData$numTx)`, and the largest number of transactions in a block is `r max(blockData$numTx)`.
@@ -96,10 +122,21 @@ reducedBlockData %>%
   labs(x="Block Height", y="Number of Transactions", title="Number of Transactions per Block")
 ```
 
-## 5. Transaction Processing Time
+The numbers and the figure above include maintenance transactions as well (SFC, etc.).
+
+Transactions are either wallet transfers, smart contract executions, smart contract creations, and maintenance contracts.
+```{r, echo=FALSE, message=FALSE}
+txTypeDf <- txData %>% count(txType)
+txTypeDf$label <- c("Wallet Transfer", "Contract Creation", "Contract Execution", "Maintenance Contract")
+txTypeDf$percent <- round(100 * txTypeDf$n / sum(txTypeDf$n), 1)
+pie(txTypeDf$n, labels = paste0(txTypeDf$label, " (", txTypeDf$percent, "%)"), main ="Transaction Types")
+```
+
+## 8. Transaction Processing Time
 
 The average transaction processing time is `r format(mean(txData$duration)/1e3, digits=3, nsmall=3)` microseconds, with a minimum of `r format(min(txData$duration)/1e3, digits=3, nsmall=3)` microseconds and a maximum of `r format(max(txData$duration)/1e9, digits=3, nsmall=3)` seconds.
 The smoothened trend line of the transaction processing time is shown in the figure below. In the figure, we aggregated the transaction processing time for one million transactions shown as points.
+The numbers and the figure below include maintenance transactions as well (SFC, etc.).
 
 ```{r, echo=FALSE, message=FALSE}
 reducedTxData %>%
@@ -109,10 +146,12 @@ reducedTxData %>%
   labs(x="Transactions", y="Processing Time (us)", title="Transaction Processing Time")
 ```
 
-## 6. Gas Consumption of Transactions
 
-The average gas consumption of a transaction is `r format(mean(blockData$gas)/1e6, digits=3, nsmall=3)` MGas, with a minimum gas consumption of `r format(min(blockData$gas)/1e3, digits=3, nsmall=3)` KGas and a maximum gas consumption of `r format(max(blockData$gas)/1e6, digits=3, nsmall=3)` MGas.
+## 9. Gas Consumption of Transactions
+
+The average gas consumption of a transaction is `r format(mean(txData$gas)/1e3, digits=3, nsmall=3)` KGas, with a minimum gas consumption of `r format(min(txData$gas)/1e3, digits=3, nsmall=3)` KGas and a maximum gas consumption of `r format(max(txData$gas)/1e6, digits=3, nsmall=3)` MGas.
 The smoothened trend line of gas consumption is shown below. In the figure, we aggregated the gas consumption for one million transactions shown as points.
+The numbers and the figure below include maintenance transactions as well (SFC, etc.).
 
 ```{r, echo=FALSE, message=FALSE}
 reducedTxData %>%
@@ -122,28 +161,3 @@ reducedTxData %>%
   labs(x="Transactions", y="KGas", title="Gas Consumption of Transactions")
 ```
 
-## 7. Transaction Throughput
-
-For all blocks, we achieve a throughput of `r format(1e9*sum(blockData$numTx)/sum(blockData$tBlock), digits=3, nsmall=3)` transactions per second.
-The smoothened trend line of the throughput is shown in the figure below. The throughput is aggregated for each 100K blocks shown as points.
-
-```{r, echo=FALSE, message=FALSE}
-reducedBlockData %>%
-  ggplot(aes(x = block, y = tps)) +
-  geom_smooth(color = "tomato") +
-  geom_point(alpha=0.3) +
-  labs(x="Block Height", y="Transactions Per Second", title="Throughput in Transactions per Second")
-```
-
-## 8. Gas Rate
-
-We achieve a gas rate of `r format(1e3*sum(blockData$gas)/sum(blockData$tBlock), digits=3, nsmall=3)` MGas per second.
-The smoothened trend line of the gas rate for each 100K blocks is shown in the figure below as points.
-
-```{r, echo=FALSE, message=FALSE}
-reducedBlockData %>%
-  ggplot(aes(x = block, y = gps)) +
-  geom_smooth(color = "tomato") +
-  geom_point(alpha=0.3) +
-  labs(x="Block Height", y="MGas Per Second", title="Throughput in MGas per Second")
-```

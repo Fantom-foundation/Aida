@@ -50,6 +50,9 @@ log "produce processing reports ..."
 ./scripts/gen_processing_reports.sh $dbimpl $dbvariant $carmenschema $vmimpl $outputdir
 
 log "compute tx transitions"
-Rscript ./scripts/tx_classification.r "$outputdir"
+Rscript ./scripts/tx_transitions.R "$outputdir"
+
+log "compute steady state"
+Rscript ./scripts/tx_steady_state.R "$outputdir"
 
 log "finished ..."
