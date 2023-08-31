@@ -1,0 +1,142 @@
+---
+title: "Mainnet Report"
+date: "`r Sys.Date()`"
+params:
+  HwInfo: (Hardware Info)
+  OsInfo: (OS Info)
+  Machine: (Machine Info)
+  GoInfo: (GO Info)
+  GitHash: (GithubKey)
+  StateDB: (StateDB)
+  VM: (VM)
+  db: ./test.db
+---
+
+```{r, include = FALSE}
+library(ggplot2)
+library(dplyr)
+library(RSQLite)
+
+# open database
+con <- dbConnect(SQLite(), params$db)
+
+# load block and transaction tables into data frames
+blockData <- dbReadTable(con, 'blockProfile')
+txData <- dbReadTable(con, 'TxProfile')
+
+# compress block dataframe for each 100K blocks
+block_group_size <- 100000
+blockData$block_group <- blockData$block %/% block_group_size
+reducedBlockData <- blockData %>% group_by(block_group) %>% summarise(numTx=mean(numTx),           # average number of transactions
+                                                                      gasBlock=mean(gasBlock)/1e6) # in MGas
+reducedBlockData$block <- reducedBlockData$block_group * block_group_size
+
+# compress transactional data for each 1M transactions
+tx_group_size <- 1000000
+txData$tx_group <- 1:nrow(txData) %/% tx_group_size
+reducedTxData <- txData %>% group_by(tx_group) %>% summarise(duration=mean(duration)/1e3,  # duration in us
+                                                             gas=mean(gas)/1e3)            # gas in KGas
+reducedTxData$tx <- reducedTxData$tx_group * tx_group_size
+dbDisconnect(con)
+```
+
+The following report characterises the mainnet including charts related to block and transaction complexity.
+The report covers the block range from **`r format(min(blockData$block),big.mark=",")`**  to **`r format(max(blockData$block),big.mark=",")`**.
+The block range contains **`r format(sum(blockData$numTx), big.mark=",")`** transactions.
+We have **`r format((max(blockData$block)-min(blockData$block)+1)-nrow(blockData), big.mark=",")`** empty blocks.
+
+## 1. Number of Transactions per Block
+
+We have an average  of `r format(mean(blockData$numTx), digits=3, nsmall=3)` transactions per block.
+The smallest number of transactions in a block is `r min(blockData$numTx)`, and the largest number of transactions in a block is `r max(blockData$numTx)`.
+The histogram of the number of transactions in a block is shown below:
+
+```{r, echo = FALSE, message=FALSE}
+hist(blockData$numTx, freq=FALSE, main="Number of Transaction Distribution", xlab="Number of Transactions", col="lightblue1"); rug(blockData$numTx)
+abline(v=mean(blockData$numTx), col="dodgerblue3", lty=2, lwd=2)
+```
+
+The smoothened trend line for the number of transactions in a block is shown below. In this figure, we aggregated the number of transactions in a block for 100K blocks shown as points.
+
+```{r, echo=FALSE, message=FALSE}
+reducedBlockData %>%
+  ggplot(aes(x = block, y = numTx)) +
+  geom_smooth(color = "tomato") +
+  geom_point(alpha=0.3) +
+  labs(x="Block Height", y="Number of Transactions", title="Number of Transactions per Block")
+```
+
+The numbers and the figure above include maintenance transactions as well (SFC, etc.).
+
+Transactions are either wallet transfers, smart contract executions, smart contract creations, and maintenance contracts.
+```{r, echo=FALSE, message=FALSE}
+txTypeDf <- txData %>% count(txType)
+txTypeDf$label <- c("Wallet Transfer", "Contract Creation", "Contract Execution", "Maintenance Contract")
+txTypeDf$percent <- round(100 * txTypeDf$n / sum(txTypeDf$n), 1)
+pie(txTypeDf$n, labels = paste0(txTypeDf$label, " (", txTypeDf$percent, "%)"), main ="Transaction Types")
+```
+
+## 2. Gas Consumption of Blocks
+
+The average gas consumption of a block is `r format(mean(blockData$gasBlock)/1e6, digits=3, nsmall=3)` MGas, with a minimum of `r format(min(blockData$gasBlock)/1e3, digits=3, nsmall=3)` KGas and a maximum of `r format(max(blockData$gasBlock)/1e6, digits=3, nsmall=3)` MGas.
+The smoothened trend line of gas consumption is shown in the figure below. In the figure, we aggregate the gas consumption for all 100K blocks as points.
+
+```{r, echo = FALSE, message=FALSE}
+reducedBlockData %>%
+  ggplot(aes(x = block, y = gasBlock)) +
+  geom_smooth(color = "tomato") +
+  geom_point(alpha=0.3) +
+  labs(x="Block Height", y="MGas", title="Gas Consumption of Blocks")
+```
+
+## 3. Gas Consumption of Transactions
+
+The average gas consumption of a transaction is `r format(mean(txData$gas)/1e3, digits=3, nsmall=3)` KGas, with a minimum gas consumption of `r format(min(txData$gas)/1e3, digits=3, nsmall=3)` KGas and a maximum gas consumption of `r format(max(txData$gas)/1e6, digits=3, nsmall=3)` MGas.
+
+The gas consumption based on the transaction type is shown below:
+
+```{r, echo=FALSE, message=FALSE}
+txGasTypeDf <- txData %>% group_by(txType) %>% summarize(gas=sum(gas))
+txGasTypeDf$label <- c("Wallet Transfer", "Contract Creation", "Contract Execution", "Maintenance Contract")
+txGasTypeDf$percent <- round(100 * txGasTypeDf$gas / sum(txGasTypeDf$gas), 1)
+pie(txGasTypeDf$gas, labels = paste0(txGasTypeDf$label, " (", txGasTypeDf$percent, "%)"), main ="Gas Consumption of Transaction Types")
+```
+
+The smoothened trend line of gas consumption over all transaction is shown below. In the figure, we aggregate the gas consumption for one million transactions shown as points. The numbers and the figure below include maintenance transactions as well (SFC, etc.).
+
+```{r, echo=FALSE, message=FALSE}
+reducedTxData %>%
+  ggplot(aes(x = tx, y = gas)) +
+  geom_smooth(color = "tomato") +
+  geom_point(alpha=0.3) +
+  labs(x="Transactions", y="KGas", title="Gas Consumption of Transactions")
+```
+
+## 4. Gas Consumption for Transaction Types
+### Wallet Transfers
+
+```{r, echo=FALSE, message=FALSE}
+WalletTransferDf <- txData %>% filter(txType == 0)
+hist(WalletTransferDf$gas, main="Histogram for Wallet Transfers", freq=FALSE, xlab="Gas Consumption", col="lightblue1")
+```
+
+### Contract Creation 
+
+```{r, echo=FALSE, message=FALSE}
+ContractCreationDf <- txData %>% filter(txType == 1)
+hist(ContractCreationDf$gas, main="Histogram for Contract Creations", freq=FALSE, xlab="Gas Consumption", col="lightblue1")
+```
+
+### Contract Execution
+
+```{r, echo=FALSE, message=FALSE}
+ContractExecutionDf <- txData %>% filter(txType == 2)
+hist(ContractExecutionDf$gas, main="Histogram for Contract Executions", freq=FALSE, xlab="Gas Consumption", col="lightblue1")
+```
+
+### Maintenance Contract
+
+```{r, echo=FALSE, message=FALSE}
+MaintenanceContractDf <- txData %>% filter(txType == 3)
+hist(MaintenanceContractDf$gas, main="Histogram for Maintenance Contract (SFC, etc.)", freq=FALSE, xlab="Gas Consumption", col="lightblue1")
+```
