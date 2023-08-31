@@ -10,7 +10,7 @@ import (
 
 // Time constants for reports
 const (
-	BlockPeriod uint64 = 10000 // when to issue a block report
+	BlockPeriod uint64 = 100_000 // when to issue a block report
 )
 
 // ProgressReportExtension provide the logging action for block processing
