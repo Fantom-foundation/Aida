@@ -38,14 +38,15 @@ MODEs = [
 # Define the list of EVMs to be used. The cross-product of each EVM listed here
 # and storage solution configured below will be executed.
 EVMs = [
-#  "geth",
+  "geth",
   "lfvm",
-#  "lfvm-si",
+  "lfvm-si",
+  "evmzero",
 ]
 
 # Define the storage solutions to be evaluted.
 DB_IMPLs = [
-  "memory",  # < this is the substate-only option
+#  "memory",  # < this is the substate-only option
 #  "geth",
   #  carmen is enabled if any of the variants is enabled
 ]
@@ -63,19 +64,19 @@ CARMEN_VARIANTs = [
 # The current-state DB of Carmen can implement several different schemas.
 # With this option the set of schemas to be evaluated can be configured.
 CARMEN_SCHEMAs = [
-    1,   # address and key indexed, no reincarnation numbers
-    2,   # address indexed, keys not, no reincarnation numbers
+#    1,   # address and key indexed, no reincarnation numbers
+#    2,   # address indexed, keys not, no reincarnation numbers
     3,   # address indexed, keys not, using reincarnation numbers
 ]
 
 # If set to true, the evaluation will run in a loop continiously.
-ENDLESS = true
+ENDLESS = false
 
 # The start of the range of blocks to be evaluated.
-StartBlock = 4564026 
+StartBlock = 0
 
 # The end of the range of blocks to be evaluated.
-EndBlock = 60000000
+EndBlock = 70000000
 
 # An uper bound on the time spend on evaluating a single configuration before aborting it
 # and moving on to the next configuration.
@@ -97,7 +98,7 @@ ExtraFlags = ""
 
 # Step 1 - build Aida
 puts "Building ... "
-build_ok = system("make")
+build_ok = system("make -j aida-vm-sdb")
 if !build_ok then
     puts "Build failed, aborting."
     exit()
@@ -120,7 +121,7 @@ def runAida (mode, evm, db, variant, schema, iteration)
     puts "Running #{mode} with #{evm} and #{db}/#{variant}/s#{schema} .."
     cmd = ""
     cmd += "timeout #{MaxDuration} "
-    cmd += "./build/aida-runvm --aida-db #{AidaDb} "
+    cmd += "./build/aida-vm-sdb --aida-db #{AidaDb} "
     cmd += "--db-impl #{db} --db-variant \"#{variant}\" --carmen-schema \"#{schema}\" "
     cmd += "--vm-impl #{evm} "
     cmd += "--cpu-profile=#{PROFILE_FILE_PREFIX}_profile_#{mode}_#{evm}_#{db}_#{variant}_#{StartBlock}_#{EndBlock}_#{iteration}.dat "
@@ -142,7 +143,7 @@ def runAida (mode, evm, db, variant, schema, iteration)
     }
 
     res = []
-    out.scan(/Reached block (.*) using ~ (.*) bytes of memory, ~ (.*) bytes of disk, last interval rate ~ (.*) Tx\/s, ~ (.*) Gas\/s/) { |block,mem_usage,disk_usage,tx_rate,gas_rate| res.append([block,tx_rate,gas_rate,mem_usage,disk_usage]) }
+    out.scan(/.*reached block (.*) using ~ (.*) bytes of memory, ~ (.*) bytes of disk, last interval rate ~ (.*) Tx\/s, ~ (.*) Gas\/s/) { |block,mem_usage,disk_usage,tx_rate,gas_rate| res.append([block,tx_rate,gas_rate,mem_usage,disk_usage]) }
     return res
 end
 

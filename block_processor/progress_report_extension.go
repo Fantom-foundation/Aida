@@ -10,7 +10,6 @@ import (
 
 // Time constants for reports
 const (
-	// todo increase after testing
 	BlockPeriod uint64 = 100_000 // when to issue a block report
 )
 
@@ -25,6 +24,8 @@ type ProgressReportExtension struct {
 	lastBlockProcessedGas *big.Int  // gas processed
 	lastBlock             uint64    // block number of last block report
 	gasUsed               *big.Float
+	lastBlockInitialized  bool      // true if the last block got initialized, false otherwise
+
 }
 
 // NewProgressReportExtension creates a new logging action for block processing.
@@ -56,6 +57,11 @@ func (ext *ProgressReportExtension) PostPrepare(bp *BlockProcessor) error {
 	return nil
 }
 
+func (ext *ProgressReportExtension) PostBlock(bp *BlockProcessor) error {
+	// ignored.
+	return nil
+}
+
 func (ext *ProgressReportExtension) PostTransaction(bp *BlockProcessor) error {
 	return nil
 }
@@ -70,8 +76,10 @@ func (ext *ProgressReportExtension) PostBlock(bp *BlockProcessor) error {
 
 	// initialise the last-block variables for the first time to suppress block report
 	// at the beginning (in case the user has specified a large enough starting block)
-	if ext.lastBlock == 0 {
-		ext.lastBlock = block - (block % BlockPeriod)
+	boundary := block - (block % BlockPeriod)
+	if !ext.lastBlockInitialized {
+		ext.lastBlock = boundary
+		ext.lastBlockInitialized = true
 	}
 
 	// issue a report after a block range of length "BlockPeriod"
@@ -84,10 +92,12 @@ func (ext *ProgressReportExtension) PostBlock(bp *BlockProcessor) error {
 		diskUsage := float64(utils.GetDirectorySize(bp.stateDbDir)) / 1024 / 1024 / 1024
 		hours, minutes, seconds := logger.ParseTime(time.Since(ext.processingStart))
 
+		// Note: when modifying the output format here make sure to update the
+		// parser of this line in scripts/run_throughput_eval.rb as well.
 		bp.Log.Infof("Elapsed time: %d:%02d:%02d; reached block %d using ~ %0.2f GiB of memory, ~ %0.2f GiB of disk, last interval rate ~ %.2f Tx/s, ~ %.2f MGas/s",
 			hours, minutes, seconds, block, memoryUsage, diskUsage, txRate, gasRate)
 
-		ext.lastBlock = block
+		ext.lastBlock = boundary
 		ext.lastBlockReport = time.Now()
 		ext.lastBlockProcessedTx = totalTx
 		ext.lastBlockProcessedGas.Set(bp.TotalGas)
