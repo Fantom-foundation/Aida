@@ -197,6 +197,9 @@ func (pc *PrimeContext) SuicideAccounts(db state.StateDB, accounts []common.Addr
 
 // GenerateWorldStateAndPrime
 func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error {
+	if cfg.SkipPriming {
+		return nil
+	}
 	log := logger.NewLogger(cfg.LogLevel, "Priming")
 	pc := NewPrimeContext(cfg, db, log)
 
@@ -250,6 +253,8 @@ func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error 
 		log.Infof("\tMerge update set at block %v. New toal size %v MB (+%v MB)",
 			newSet.Block, totalSize/1_000_000,
 			incrementalSize/1_000_000)
+		// advance block after merge update set
+		block++
 	}
 	// if update set is not empty, prime the remaining
 	if len(update) > 0 {
@@ -261,10 +266,10 @@ func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error 
 	}
 	updateIter.Release()
 
-	// advance from the latest precomputed state to the target block
-	if block < target || target == 0 {
-		log.Infof("\tPriming from substate from block %v", block)
-		update, deletedAccounts, err := GenerateUpdateSet(block, nil, target, cfg)
+	// advance from the latest precomputed updateset to the target block
+	if block < target {
+		log.Infof("\tPriming using substate from %v to %v", block, target)
+		update, deletedAccounts, err := GenerateUpdateSet(block, target, cfg)
 		if err != nil {
 			return err
 		}

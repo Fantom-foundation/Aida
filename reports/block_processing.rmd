@@ -1,0 +1,126 @@
+---
+title: "Block Processing Report"
+date: "`r Sys.Date()`"
+params:
+  HwInfo: (Hardware Info)
+  OsInfo: (OS Info)
+  Machine: (Machine Info)
+  GoInfo: (GO Info)
+  GitHash: (GithubKey)
+  StateDB: (StateDB)
+  VM: (VM)
+  db: ./test.db
+---
+
+```{r, include = FALSE}
+library(ggplot2)
+library(dplyr)
+library(RSQLite)
+
+# open database
+con <- dbConnect(SQLite(), params$db)
+
+# load block and transaction tables into data frames
+blockData <- dbReadTable(con, 'blockProfile')
+txData <- dbReadTable(con, 'TxProfile')
+
+# compress block dataframe for each 100K blocks
+block_group_size <- 100000
+blockData$block_group <- blockData$block %/% block_group_size
+reducedBlockData <- blockData %>% group_by(block_group) %>% summarise(tBlock=mean(tBlock)/1e6,             # block time in ms
+                                                                      tCommit=mean(tCommit)/1e3,           # commit time in us
+                                                                      numTx=mean(numTx),                   # average number of transactions
+                                                                      gasBlock=mean(gasBlock)/1e6,         # in MGas
+                                                                      gps=sum(gasBlock)/(sum(tBlock)/1e3), # gas rate in MGas/s
+                                                                      tps=sum(numTx)/(sum(tBlock)/1e9))    # transactions per second
+reducedBlockData$block <- reducedBlockData$block_group * block_group_size
+
+# compress transactional data for each 1M transactions
+tx_group_size <- 1000000
+txData$tx_group <- 1:nrow(txData) %/% tx_group_size
+reducedTxData <- txData %>% group_by(tx_group) %>% summarise(duration=mean(duration)/1e3,  # duration in us
+                                                             gas=mean(gas)/1e3)            # gas in KGas
+reducedTxData$tx <- reducedTxData$tx_group * tx_group_size
+dbDisconnect(con)
+```
+
+## 1. Experimental Setup
+The experiment is run on the machine `r params$Machine`, which is a `r params$HwInfo` computer.
+The operating system is `r params$OsInfo`.
+The system has installed `r params$GoInfo`.
+The github hash of the Aida repository is `r params$GitHash`.
+For this experiment, we use **`r params$StateDB`** as a StateDB and **`r params$VM`** as a virtual machine.
+The data set for this experiment is stored in the database `r params$db`.
+
+## 2. Block Processing Time
+
+The experiment was conducted for the block range from **`r format(min(blockData$block),big.mark=",")`**  to **`r format(max(blockData$block),big.mark=",")`**.
+The block range contains **`r format(sum(blockData$numTx), big.mark=",")`** transactions.
+We have **`r format((max(blockData$block)-min(blockData$block)+1)-nrow(blockData), big.mark=",")`** empty blocks.
+The accumulated block processing time is **`r format(sum(blockData$tBlock)/(1e9*3600), digits=3, nsmall=2)`** hours.
+The block rate is `r format(1e9*(max(blockData$block)-min(blockData$block)+1)/sum(blockData$tBlock), digits=3, nsmall=2)` blocks per second.
+The average block execution time is `r format(mean(blockData$tBlock)/1e6, digits=3, nsmall=3)` milliseconds, with a minimum of `r format(min(blockData$tBlock)/1e3, digits=3, nsmall=3)` microseconds and a maximum of `r format(max(blockData$tBlock)/1e9, digits=3, nsmall=3)` seconds.
+The smoothened trend line for the block time (in milliseconds) is shown below. In the figure, we aggregated the block time for all 100K blocks shown as points.
+
+```{r, echo=FALSE, message=FALSE}
+reducedBlockData %>%
+  ggplot(aes(x = block, y = tBlock)) +
+  geom_smooth(color = "tomato") +
+  geom_point(alpha=0.3) +
+  labs(x="Block Height", y="Block Time (ms)", title="Block Processing Time")
+```
+
+## 3. Transaction Throughput
+
+For all blocks, we achieve a throughput of `r format(1e9*sum(blockData$numTx)/sum(blockData$tBlock), digits=3, nsmall=3)` transactions per second.
+The smoothened trend line of the throughput is shown in the figure below. The throughput is aggregated for each 100K blocks shown as points.
+The numbers and the figure below include maintenance transactions as well (SFC, etc.).
+
+```{r, echo=FALSE, message=FALSE}
+reducedBlockData %>%
+  ggplot(aes(x = block, y = tps)) +
+  geom_smooth(color = "tomato") +
+  geom_point(alpha=0.3) +
+  labs(x="Block Height", y="Transactions Per Second", title="Transactions per Second")
+```
+
+## 4. Block Gas Rate
+
+We achieve a gas rate of `r format(1e3*sum(blockData$gas)/sum(blockData$tBlock), digits=3, nsmall=3)` MGas per second.
+The smoothened trend line of the gas rate for each 100K blocks is shown in the figure below as points.
+
+```{r, echo=FALSE, message=FALSE}
+reducedBlockData %>%
+  ggplot(aes(x = block, y = gps)) +
+  geom_smooth(color = "tomato") +
+  geom_point(alpha=0.3) +
+  labs(x="Block Height", y="MGas Per Second", title="Throughput in MGas per Second")
+```
+
+## 5. Commit Time
+
+The average commit time of a block is `r format(mean(blockData$tCommit)/1e3, digits=3, nsmall=3)` microseconds, with a minimum of `r format(min(blockData$tCommit), digits=3, nsmall=3)` nanoseconds and a maximum of `r format(max(blockData$tCommit)/1e9, digits=3, nsmall=3)` seconds.
+The smoothened trend line of the commit time of a block is shown below. In the figure, we aggregated the commit time in microseconds for all 100K blocks shown as points.
+
+```{r, echo = FALSE, message=FALSE}
+reducedBlockData %>%
+  ggplot(aes(x = block, y = tCommit)) +
+  geom_smooth(color = "tomato") +
+  geom_point(alpha=0.3) +
+  labs(x="Block Height", y="Commit Time (us)", title="Commit Time")
+```
+
+## 6. Transaction Processing Time
+
+The average transaction processing time is `r format(mean(txData$duration)/1e3, digits=3, nsmall=3)` microseconds, with a minimum of `r format(min(txData$duration)/1e3, digits=3, nsmall=3)` microseconds and a maximum of `r format(max(txData$duration)/1e9, digits=3, nsmall=3)` seconds.
+The smoothened trend line of the transaction processing time is shown in the figure below. In the figure, we aggregated the transaction processing time for one million transactions shown as points.
+The numbers and the figure below include maintenance transactions as well (SFC, etc.).
+
+```{r, echo=FALSE, message=FALSE}
+reducedTxData %>%
+  ggplot(aes(x = tx, y = duration)) +
+  geom_smooth(color = "tomato") +
+  geom_point(alpha=0.3) +
+  labs(x="Transactions", y="Processing Time (us)", title="Transaction Processing Time")
+```
+

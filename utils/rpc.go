@@ -22,7 +22,7 @@ type JsonRPCRequest struct {
 	JSONRPC string        `json:"jsonrpc"`
 }
 
-func SendRPCRequest(payload JsonRPCRequest, chainId int) (map[string]interface{}, error) {
+func SendRPCRequest(payload JsonRPCRequest, chainId ChainID) (map[string]interface{}, error) {
 	var url string
 
 	if chainId == 250 {
@@ -60,22 +60,22 @@ func SendRPCRequest(payload JsonRPCRequest, chainId int) (map[string]interface{}
 }
 
 // FindEpochNumber via RPC request GetBlockByNumber
-func FindEpochNumber(blockNumber uint64, chainId int) (uint64, error) {
+func FindEpochNumber(blockNumber uint64, chainId ChainID) (uint64, error) {
 	hex := strconv.FormatUint(blockNumber, 16)
 
 	blockStr := "0x" + hex
 
-	return getBlockByNumber(blockStr, chainId)
+	return getEpochByNumber(blockStr, chainId)
 }
 
 // FindHeadEpochNumber via RPC request GetBlockByNumber
-func FindHeadEpochNumber(chainId int) (uint64, error) {
+func FindHeadEpochNumber(chainId ChainID) (uint64, error) {
 	blockStr := "latest"
 
-	return getBlockByNumber(blockStr, chainId)
+	return getEpochByNumber(blockStr, chainId)
 }
 
-func getBlockByNumber(blockStr string, chainId int) (uint64, error) {
+func getEpochByNumber(blockStr string, chainId ChainID) (uint64, error) {
 	payload := JsonRPCRequest{
 		Method:  "ftm_getBlockByNumber",
 		Params:  []interface{}{blockStr, false},

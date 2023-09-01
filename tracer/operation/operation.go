@@ -149,7 +149,7 @@ type Operation interface {
 }
 
 // Read an operation from file.
-func Read(f io.Reader) Operation {
+func Read(f io.Reader) (Operation, error) {
 	var (
 		op Operation
 		ID byte
@@ -158,23 +158,23 @@ func Read(f io.Reader) Operation {
 	// read ID from file
 	err := binary.Read(f, binary.LittleEndian, &ID)
 	if err == io.EOF {
-		return nil
+		return nil, err
 	} else if err != nil {
-		log.Fatalf("Cannot read ID from file. Error:%v", err)
+		return nil, fmt.Errorf("cannot read ID from file; %v", err)
 	}
 	if ID >= NumOperations {
-		log.Fatalf("ID out of range %v", ID)
+		return nil, fmt.Errorf("operaiton ID out of range %v", ID)
 	}
 
 	// read state operation
 	op, err = opDict[ID].readfunc(f)
 	if err != nil {
-		log.Fatalf("Failed to read operation %v. Error %v", GetLabel(ID), err)
+		return nil, fmt.Errorf("failed to read operation %v; %v", GetLabel(ID), err)
 	}
 	if op.GetId() != ID {
-		log.Fatalf("Generated object of type %v has wrong ID (%v) ", GetLabel(op.GetId()), GetLabel(ID))
+		return nil, fmt.Errorf("generated object of type %v has wrong ID (%v)", GetLabel(op.GetId()), GetLabel(ID))
 	}
-	return op
+	return op, err
 }
 
 func ReadPanic(f io.Reader) (Operation, error) {

@@ -1,7 +1,7 @@
 package utils
 
 import (
-	"github.com/Fantom-foundation/Aida/cmd/db-cli/flags"
+	"github.com/Fantom-foundation/Aida/cmd/util-db/flags"
 	"github.com/Fantom-foundation/Aida/logger"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
@@ -19,7 +19,7 @@ func createConfig(ctx *cli.Context) *Config {
 		BlockLength:         getFlagValue(ctx, BlockLengthFlag).(uint64),
 		BalanceRange:        getFlagValue(ctx, BalanceRangeFlag).(int64),
 		CarmenSchema:        getFlagValue(ctx, CarmenSchemaFlag).(int),
-		ChainID:             getFlagValue(ctx, ChainIDFlag).(int),
+		ChainID:             ChainID(getFlagValue(ctx, ChainIDFlag).(int)),
 		Cache:               getFlagValue(ctx, CacheFlag).(int),
 		ContractNumber:      getFlagValue(ctx, ContractNumberFlag).(int64),
 		ContinueOnFailure:   getFlagValue(ctx, ContinueOnFailureFlag).(bool),
@@ -70,6 +70,7 @@ func createConfig(ctx *cli.Context) *Config {
 		Workers:             getFlagValue(ctx, substate.WorkersFlag).(int),
 		WorldStateDb:        getFlagValue(ctx, WorldStateFlag).(string),
 		TraceFile:           getFlagValue(ctx, TraceFileFlag).(string),
+		TraceDirectory:      getFlagValue(ctx, TraceDirectoryFlag).(string),
 		Trace:               getFlagValue(ctx, TraceFlag).(bool),
 		LogLevel:            getFlagValue(ctx, logger.LogLevelFlag).(string),
 		SourceTableName:     getFlagValue(ctx, SourceTableNameFlag).(string),
