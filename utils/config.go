@@ -31,6 +31,7 @@ const (
 	BlockRangeArgsProfileDB                     // requires 3 arguments: first block, last block and profile db
 	LastBlockArg                                // requires 1 argument: last block
 	NoArgs                                      // requires no arguments
+	OneToNArgs                                  // requires at least one argument, but accepts up to N
 )
 
 const (
@@ -597,6 +598,10 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		last, err = strconv.ParseUint(ctx.Args().Get(0), 10, 64)
 		if err != nil {
 			return nil, err
+		}
+	case OneToNArgs:
+		if ctx.Args().Len() < 1 {
+			return nil, errors.New("this command requires at least 1 argument")
 		}
 	case NoArgs:
 	default:
