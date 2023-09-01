@@ -44,6 +44,7 @@ last block of the inclusive range of blocks to replay transactions.`,
 
 func Replay(ctx *cli.Context) error {
 	actions := tx_processor.NewExtensionList([]tx_processor.ProcessorExtensions{
+		tx_processor.NewProfileExtension(),
 		tx_processor.NewMicroProfileExtension(),
 		tx_processor.NewBasicProfileExtension(),
 	})
