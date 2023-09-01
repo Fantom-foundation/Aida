@@ -489,31 +489,22 @@ type Config struct {
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.
-func GetChainConfig(chainID ChainID) *params.ChainConfig {
+func GetChainConfig(chainId ChainID) *params.ChainConfig {
 	chainConfig := params.AllEthashProtocolChanges
-	chainConfig.ChainID = big.NewInt(int64(chainID))
-	if chainID == MainnetChainID {
-		// mainnet chainID 250
-		chainConfig.BerlinBlock = new(big.Int).SetUint64(keywordBlocks[MainnetChainID]["berlin"])
-		chainConfig.LondonBlock = new(big.Int).SetUint64(keywordBlocks[MainnetChainID]["london"])
-	} else if chainID == TestnetChainID {
-		// testnet chainID 4002
-		chainConfig.BerlinBlock = new(big.Int).SetUint64(keywordBlocks[TestnetChainID]["berlin"])
-		chainConfig.LondonBlock = new(big.Int).SetUint64(keywordBlocks[TestnetChainID]["london"])
-	} else {
-		log.Fatalf("unknown chain id %v", chainID)
+	chainConfig.ChainID = big.NewInt(int64(chainId))
+	if !(chainId == MainnetChainID || chainId == TestnetChainID) {
+		log.Fatalf("unknown chain id %v", chainId)
 	}
+	chainConfig.BerlinBlock = new(big.Int).SetUint64(keywordBlocks[chainId]["berlin"])
+	chainConfig.LondonBlock = new(big.Int).SetUint64(keywordBlocks[chainId]["london"])
 	return chainConfig
 }
 
-func setFirstBlockFromChainID(chainID ChainID) {
-	if chainID == MainnetChainID {
-		FirstOperaBlock = keywordBlocks[MainnetChainID]["opera"]
-	} else if chainID == TestnetChainID {
-		FirstOperaBlock = keywordBlocks[TestnetChainID]["opera"]
-	} else {
-		log.Fatalf("unknown chain id %v", chainID)
+func setFirstBlockFromChainID(chainId ChainID) {
+	if !(chainId == MainnetChainID || chainId == TestnetChainID) {
+		log.Fatalf("unknown chain id %v", chainId)
 	}
+	FirstOperaBlock = keywordBlocks[chainId]["opera"]
 }
 
 // NewConfig creates and initializes Config with commandline arguments.
@@ -779,18 +770,10 @@ func setBlockNumber(arg string, chainId ChainID) (uint64, error) {
 		keyword = strings.ToLower(arg)
 	}
 	// find base block number from keyword
-	if chainId == TestnetChainID {
-		if val, ok := keywordBlocks[TestnetChainID][keyword]; ok {
-			blkNum = val
-		} else {
-			return 0, fmt.Errorf("block number not a valid keyword or integer")
-		}
-	} else if chainId == MainnetChainID || chainId == UnknownChainID {
-		if val, ok := keywordBlocks[MainnetChainID][keyword]; ok {
-			blkNum = val
-		} else {
-			return 0, fmt.Errorf("block number not a valid keyword or integer")
-		}
+	if val, ok := keywordBlocks[chainId][keyword]; ok {
+		blkNum = val
+	} else {
+		return 0, fmt.Errorf("block number not a valid keyword or integer")
 	}
 
 	// shift base block number by the offset
@@ -824,6 +807,7 @@ func parseOffset(arg string) (string, string, uint64, error) {
 func splitKeywordOffset(arg string, symbol string) (string, uint64, bool) {
 	res := strings.Split(arg, symbol)
 
+	// if the keyword doesn't exist, return.
 	if _, ok := keywordBlocks[MainnetChainID][strings.ToLower(res[0])]; !ok {
 		return "", 0, false
 	}
