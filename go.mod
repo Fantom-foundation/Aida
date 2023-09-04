@@ -15,7 +15,7 @@ require (
 	github.com/goccy/go-graphviz v0.1.0
 	github.com/google/martian v2.1.0+incompatible
 	github.com/klauspost/compress v1.15.11
-	github.com/mattn/go-sqlite3 v2.0.2+incompatible
+	github.com/mattn/go-sqlite3 v1.14.17
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/onsi/gomega v1.19.0
 	github.com/op/go-logging v0.0.0-20160315200505-970db520ece7
