@@ -16,6 +16,7 @@ params:
 library(ggplot2)
 library(dplyr)
 library(RSQLite)
+library(gt)
 
 # open database
 con <- dbConnect(SQLite(), params$db)
@@ -34,6 +35,7 @@ reducedBlockData <- blockData %>% group_by(block_group) %>% summarise(tBlock=mea
                                                                       gps=sum(gasBlock)/(sum(tBlock)/1e3), # gas rate in MGas/s
                                                                       tps=sum(numTx)/(sum(tBlock)/1e9))    # transactions per second
 reducedBlockData$block <- reducedBlockData$block_group * block_group_size
+blockData$block_group <- NULL
 
 # compress transactional data for each 1M transactions
 tx_group_size <- 1000000
@@ -41,6 +43,9 @@ txData$tx_group <- 1:nrow(txData) %/% tx_group_size
 reducedTxData <- txData %>% group_by(tx_group) %>% summarise(duration=mean(duration)/1e3,  # duration in us
                                                              gas=mean(gas)/1e3)            # gas in KGas
 reducedTxData$tx <- reducedTxData$tx_group * tx_group_size
+txData$tx_group <- NULL
+
+# close database connection
 dbDisconnect(con)
 ```
 
@@ -60,6 +65,15 @@ We have **`r format((max(blockData$block)-min(blockData$block)+1)-nrow(blockData
 The accumulated block processing time is **`r format(sum(blockData$tBlock)/(1e9*3600), digits=3, nsmall=2)`** hours.
 The block rate is `r format(1e9*(max(blockData$block)-min(blockData$block)+1)/sum(blockData$tBlock), digits=3, nsmall=2)` blocks per second.
 The average block execution time is `r format(mean(blockData$tBlock)/1e6, digits=3, nsmall=3)` milliseconds, with a minimum of `r format(min(blockData$tBlock)/1e3, digits=3, nsmall=3)` microseconds and a maximum of `r format(max(blockData$tBlock)/1e9, digits=3, nsmall=3)` seconds.
+The top seven blocks with the longest block processing time are the following:
+
+```{r echo=FALSE, message=FALSE}
+top7Blocks <- blockData %>% top_n(7, tBlock) %>% select(block, tBlock) %>% arrange(desc(tBlock)) %>% rename(Block = block)
+top7Blocks$Milliseconds = top7Blocks$tBlock / 1e6
+top7Blocks$tBlock <- NULL
+gt(top7Blocks)
+```
+
 The smoothened trend line for the block time (in milliseconds) is shown below. In the figure, we aggregated the block time for all 100K blocks shown as points.
 
 ```{r, echo=FALSE, message=FALSE}
@@ -113,6 +127,13 @@ reducedBlockData %>%
 ## 6. Transaction Processing Time
 
 The average transaction processing time is `r format(mean(txData$duration)/1e3, digits=3, nsmall=3)` microseconds, with a minimum of `r format(min(txData$duration)/1e3, digits=3, nsmall=3)` microseconds and a maximum of `r format(max(txData$duration)/1e9, digits=3, nsmall=3)` seconds.
+The top seven transactions with the longest transaction processing time are the following:
+```{r echo=FALSE, message=FALSE}
+top7Transactions <- txData %>% top_n(7, duration) %>% select(block, tx, duration) %>% arrange(desc(duration)) %>% rename(Block = block, Transaction = tx)
+top7Transactions$Seconds <- top7Transactions$duration / 1e9
+top7Transactions$duration <- NULL
+gt(top7Transactions)
+```
 The smoothened trend line of the transaction processing time is shown in the figure below. In the figure, we aggregated the transaction processing time for one million transactions shown as points.
 The numbers and the figure below include maintenance transactions as well (SFC, etc.).
 

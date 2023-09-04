@@ -120,11 +120,11 @@ transaction execution time and critical path) does not change with an increasing
 functions for $t_{\textit{sequential}}(n)=$ `r a1` $n +$ `r a0` and $t_{\textit{criticial}}(n)=$ `r b1` $n +$ `r b0`
 where $n$ is the number of transactions. The units of the functions are in microseconds.
 
-The figure below shows the number of transactions required for achieving a given speedup between the speedup from the clairvoyance experiment and the five percent from the maximum theoretical speedup. 
+The figure below shows the number of transactions required for achieving a given speedup between the speedup from the clairvoyance experiment and the five percent from the maximum theoretical speedup.
 
 ```{r, echo=FALSE, message=TRUE}
 # check that fitting parameters are positive for plotting
-if (a1 >= 0 && a0 >= 0 && b1 >= 0 && b0 >= 0) { 
+if (a1 >= 0 && a0 >= 0 && b1 >= 0 && b0 >= 0) {
    # check that speedup range is positive
    if (speedup <= a1/b1) {
        X <- seq(speedup, speedup+(a1/b1-speedup)*0.95, 0.01)
