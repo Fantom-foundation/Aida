@@ -1,4 +1,4 @@
-package parallelisation
+package blockprofile
 
 import (
 	"errors"
@@ -19,7 +19,25 @@ type TxAddresses []AddressSet
 // TxTime stores time duration of transactions.
 type TxTime []time.Duration
 
-// Context stores the book-keeping information for parallelisation profiling.
+// TxType stores type of transaction.
+type TxType int
+
+const (
+	TransferTx    TxType = iota // a transaction which transafers balance
+	CreateTx                    // a transaction which creates new contracts
+	CallTx                      // a transaction which executes contracts
+	MaintenanceTx               // an internal transaction which performs maintenance
+)
+
+// readable labels of transaction types.
+var TypeLabel = map[TxType]string{
+	TransferTx:    "transafer",
+	CreateTx:      "create",
+	CallTx:        "call",
+	MaintenanceTx: "maintenance",
+}
+
+// Context stores the book-keeping information for block processing profiling.
 type Context struct {
 	n              int                          // number of transactions
 	txDependencies graphutil.StrictPartialOrder // transaction dependencies
@@ -30,6 +48,7 @@ type Context struct {
 	tCritical     time.Duration   // critical path runtime for transactions
 	tCompletion   TxTime          // earliest completion time of a transaction
 	tTransactions []time.Duration // runtime of a transaction
+	tTypes        []TxType        // transaction type per transaction
 
 	gasTransactions []uint64 // gas used for transactions
 	gasBlock        uint64   // gas used for a block
@@ -48,6 +67,7 @@ func NewContext() *Context {
 		txDependencies:  graphutil.StrictPartialOrder{},
 		txAddresses:     TxAddresses{},
 		tTransactions:   []time.Duration{},
+		tTypes:          []TxType{},
 		gasTransactions: []uint64{},
 	}
 }
@@ -130,6 +150,7 @@ func (ctx *Context) RecordTransaction(tx *substate.Transaction, tTransaction tim
 	// update time for block and transaction
 	ctx.tSequential += tTransaction
 	ctx.tTransactions = append(ctx.tTransactions, tTransaction)
+	ctx.tTypes = append(ctx.tTypes, getTransactionType(tx))
 
 	// update gas used for block and transaction
 	gasUsed := tx.Substate.Result.GasUsed
@@ -174,6 +195,7 @@ type ProfileData struct {
 	tCritical       int64    // critical path runtime for transactions
 	tCommit         int64    // commit runtime
 	tTransactions   []int64  // runtime per transaction
+	tTypes          []TxType // a list of transaction type
 	speedup         float64  // speedup value for experiment
 	ubNumProc       int64    // upper bound on the number of processors (i.e. width of task graph)
 	gasTransactions []uint64 // gas consumption per transaction
@@ -225,10 +247,38 @@ func (ctx *Context) GetProfileData(curBlock uint64, tBlock time.Duration) (*Prof
 		tCritical:       ctx.tCritical.Nanoseconds(),
 		tCommit:         tCommit.Nanoseconds(),
 		tTransactions:   tTransactions,
+		tTypes:          ctx.tTypes,
 		speedup:         speedup,
 		ubNumProc:       ubNumProc,
 		gasTransactions: gasTransactions,
 		gasBlock:        ctx.gasBlock,
 	}
 	return &data, nil
+}
+
+// getTransactionType reads a message and determines a transaction type.
+func getTransactionType(tx *substate.Transaction) TxType {
+	msg := tx.Substate.Message
+	to := msg.To
+	from := msg.From
+	alloc := tx.Substate.InputAlloc
+
+	zero := common.HexToAddress("0x0000000000000000000000000000000000000000")
+
+	if to != nil {
+		account, exist := alloc[*to]
+		// regular transaction
+		if !exist || len(account.Code) == 0 {
+			return TransferTx
+			// CALL transaction with contract bytecode
+		} else {
+			// a maintenance transaction is sent from address zero
+			if from == zero {
+				return MaintenanceTx
+			}
+			return CallTx
+		}
+	}
+	// CREATE transaction
+	return CreateTx
 }

@@ -3,14 +3,16 @@ package utils
 import (
 	"flag"
 	"fmt"
+	"math"
 	"math/big"
+	"os"
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/logger"
-	"github.com/urfave/cli/v2"
-
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/urfave/cli/v2"
 )
 
 func prepareMockCliContext() *cli.Context {
@@ -75,11 +77,11 @@ func TestUtilsConfig_SetBlockRange(t *testing.T) {
 	}
 
 	if first != uint64(0) {
-		t.Fatalf("Failed to parse first block; Should be: %d, but is: %d", 0, first)
+		t.Fatalf("Failed to parse first block; expected: %d, have: %d", 0, first)
 	}
 
 	if last != uint64(40_000_000) {
-		t.Fatalf("Failed to parse last block; Should be: %d, but is: %d", 40_000_000, last)
+		t.Fatalf("Failed to parse last block; expected: %d, have: %d", 40_000_000, last)
 	}
 
 	first, last, err = SetBlockRange("OpeRa", "berlin", 250)
@@ -88,11 +90,11 @@ func TestUtilsConfig_SetBlockRange(t *testing.T) {
 	}
 
 	if first != uint64(4_564_026) {
-		t.Fatalf("Failed to parse first block; Should be: %d, but is: %d", 4_564_026, first)
+		t.Fatalf("Failed to parse first block; expected: %d, have: %d", 4_564_026, first)
 	}
 
 	if last != uint64(37_455_223) {
-		t.Fatalf("Failed to parse last block; Should be: %d, but is: %d", 37_455_223, last)
+		t.Fatalf("Failed to parse last block; expected: %d, have: %d", 37_455_223, last)
 	}
 
 	first, last, err = SetBlockRange("zero", "London", 4002)
@@ -101,37 +103,67 @@ func TestUtilsConfig_SetBlockRange(t *testing.T) {
 	}
 
 	if first != uint64(0) {
-		t.Fatalf("Failed to parse first block; Should be: %d, but is: %d", 0, first)
+		t.Fatalf("Failed to parse first block; expected: %d, have: %d", 0, first)
 	}
 
 	if last != uint64(7_513_335) {
-		t.Fatalf("Failed to parse last block; Should be: %d, but is: %d", 7_513_335, last)
+		t.Fatalf("Failed to parse last block; expected: %d, have: %d", 7_513_335, last)
 	}
 
+	// test addition/subtraction
 	first, last, err = SetBlockRange("opera+23456", "London-100", 4002)
 	if err != nil {
-		t.Fatalf("Failed to set block range (opera+23456-London-100 on testnet): %v", err)
+		t.Fatalf("Failed to set block range (opera+23456-London-100 on mainnet): %v", err)
 	}
 
 	if first != uint64(502_783) {
-		t.Fatalf("Failed to parse first block; Should be: %d, but is: %d", 502_783, first)
+		t.Fatalf("Failed to parse first block; expected: %d, have: %d", 502_783, first)
 	}
 
 	if last != uint64(7_513_235) {
-		t.Fatalf("Failed to parse last block; Should be: %d, but is: %d", 7_513_235, last)
+		t.Fatalf("Failed to parse last block; expected: %d, have: %d", 7_513_235, last)
 	}
 
+	// test upper/lower cases
 	first, last, err = SetBlockRange("berlin-1000", "LonDoN", 250)
 	if err != nil {
-		t.Fatalf("Failed to set block range (berlin-1000-LonDoN on testnet): %v", err)
+		t.Fatalf("Failed to set block range (berlin-1000-LonDoN on mainnet): %v", err)
 	}
 
 	if first != uint64(37_454_223) {
-		t.Fatalf("Failed to parse first block; Should be: %d, but is: %d", 37_454_223, first)
+		t.Fatalf("Failed to parse first block; expected: %d, have: %d", 37_454_223, first)
 	}
 
 	if last != uint64(37_534_833) {
-		t.Fatalf("Failed to parse last block; Should be: %d, but is: %d", 37_534_833, last)
+		t.Fatalf("Failed to parse last block; expected: %d, have: %d", 37_534_833, last)
+	}
+
+	// test first and last keyword. Since no metadata, default values are expected
+	first, last, err = SetBlockRange("first", "last", 250)
+	if err != nil {
+		t.Fatalf("Failed to set block range (first-last on mainnet): %v", err)
+	}
+
+	if first != uint64(0) {
+		t.Fatalf("Failed to parse first block; expected: %d, have: %d", 0, first)
+	}
+
+	if last != math.MaxUint64 {
+		t.Fatalf("Failed to parse last block; expected: %v, have: %v", uint64(math.MaxUint64), last)
+	}
+
+	// test lastpatch and last keyword
+	first, last, err = SetBlockRange("lastpatch", "last", 250)
+	if err != nil {
+		t.Fatalf("Failed to set block range (lastpatch-last on mainnet): %v", err)
+	}
+
+	if first != uint64(0) {
+		t.Fatalf("Failed to parse first block; expected: %d, have: %d", 0, first)
+	}
+
+	if last != math.MaxUint64 {
+		t.Fatalf("Failed to parse last block; expected: %v, have: %v", uint64(math.MaxUint64), last)
 	}
 }
 
@@ -171,6 +203,111 @@ func TestUtilsConfig_SetBlockRangeLastSmallerThanFirst(t *testing.T) {
 	_, _, err := SetBlockRange("5", "0", 0)
 	if err == nil {
 		t.Fatalf("Failed to throw an error when last block number is smaller than first")
+	}
+}
+
+func TestUtilsConfig_adjustBlockRange(t *testing.T) {
+	var (
+		chainId           ChainID
+		first, last       uint64
+		firstArg, lastArg uint64
+		err               error
+	)
+	chainId = MainnetChainID
+	keywordBlocks[chainId]["first"] = 1000
+	keywordBlocks[chainId]["last"] = 2000
+
+	firstArg = 1100
+	lastArg = 1900
+	first, last, err = adjustBlockRange(chainId, firstArg, lastArg)
+	if first != firstArg && last != lastArg {
+		t.Fatalf("wrong block range; expected %v:%v, have %v:%v", firstArg, lastArg, first, last)
+	}
+
+	firstArg = 3000
+	lastArg = 4000
+	first, last, err = adjustBlockRange(chainId, firstArg, lastArg)
+	if err == nil {
+		t.Fatalf("Ranges not overlapped. Expected an error.")
+	}
+
+	// check corner cases
+	firstArg = 100
+	lastArg = 1000
+	first, last, err = adjustBlockRange(chainId, firstArg, lastArg)
+	if first != firstArg && last != lastArg {
+		t.Fatalf("wrong block range; expected %v:%v, have %v:%v", lastArg, lastArg, first, last)
+	}
+
+	firstArg = 2000
+	lastArg = 2200
+	first, last, err = adjustBlockRange(chainId, firstArg, lastArg)
+	if first != firstArg && last != lastArg {
+		t.Fatalf("wrong block range; expected %v:%v, have %v:%v", firstArg, firstArg, first, last)
+	}
+	// reset keywords for the following tests
+	keywordBlocks[chainId]["first"] = 0
+	keywordBlocks[chainId]["last"] = math.MaxUint64
+}
+
+func TestUtilsConfig_getMdBlockRange(t *testing.T) {
+	// prepare components
+	// create new leveldb
+	var (
+		logLevel   = "INFO"
+		firstBlock = uint64(4564026)
+		lastBlock  = uint64(20001704)
+		firstEpoch = uint64(100)
+		lastEpoch  = uint64(200)
+		chainId    = MainnetChainID
+	)
+	log := logger.NewLogger(logLevel, "Test-Log")
+	testDb, err := rawdb.NewLevelDBDatabase("./test.db", 1024, 100, "test-db", false)
+	if err != nil {
+		t.Fatalf("cannot open patch db; %v", err)
+	}
+	defer os.RemoveAll("./test.db")
+	// create fake metadata
+	err = ProcessPatchLikeMetadata(testDb, logLevel, firstBlock, lastBlock, firstEpoch, lastEpoch, chainId, true, nil)
+	if err != nil {
+		t.Fatalf("cannot create a metadata; %v", err)
+	}
+	err = testDb.Close()
+	if err != nil {
+		t.Fatalf("cannot close db; %v", err)
+	}
+
+	// test getMdBlockRange
+	// getMdBlockRange returns default values if unble to open
+	first, last, lastpatch, ok, err := getMdBlockRange("./test-wrong.db", MainnetChainID, log)
+	if ok || first != uint64(0) || last != math.MaxUint64 {
+		t.Fatalf("wrong block range; expected %v:%v, have %v:%v", 0, uint64(math.MaxUint64), first, last)
+	} else if err != nil {
+		t.Fatalf("unexpected error; %v", err)
+	} else if lastpatch != uint64(0) {
+		t.Fatalf("wrong last patch block; expected %v, have %v", 0, lastpatch)
+	}
+
+	// open an existing AidaDb
+	setAidaDbRepositoryUrl(chainId)
+	first, last, lastpatch, ok, err = getMdBlockRange("./test.db", MainnetChainID, log)
+	if !ok || first != firstBlock || last != lastBlock {
+		t.Fatalf("wrong block range; expected %v:%v, have %v:%v", firstBlock, lastBlock, first, last)
+	} else if err != nil {
+		t.Fatalf("unexpected error; %v", err)
+	} else if lastpatch != uint64(45640256) {
+		t.Fatalf("wrong last patch block; expected %v, have %v", 45640256, lastpatch)
+	}
+
+	// aida url is not set; expected lastpatch is 0.
+	AidaDbRepositoryUrl = ""
+	first, last, lastpatch, ok, err = getMdBlockRange("./test.db", MainnetChainID, log)
+	if !ok || first != firstBlock || last != lastBlock {
+		t.Fatalf("wrong block range; expected %v:%v, have %v:%v", firstBlock, lastBlock, first, last)
+	} else if err != nil {
+		t.Fatalf("unexpected error; %v", err)
+	} else if lastpatch != uint64(0) {
+		t.Fatalf("wrong last patch block; expected %v, have %v", 0, lastpatch)
 	}
 }
 

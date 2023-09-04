@@ -17,9 +17,18 @@ library(ggplot2)
 library(dplyr)
 library(RSQLite)
 con <- dbConnect(SQLite(), params$db)
-data <- dbReadTable(con, 'parallelprofile')
-reducedData <- dbReadTable(con, 'aggregatedParallelProfile')
+data <- dbReadTable(con, 'blockProfile')
+
+# Find parallelisable blocks whose speedup is greater than 1.0
 parallelisable <- data %>% filter(speedup > 1.0)
+
+# Compress data to 100K blocks for visualisation
+group_size <- 100000
+data$block_group <- data$block %/% group_size
+reducedData <- data %>% group_by(block_group)  %>% summarise(speedup=exp(mean(log(speedup))))
+reducedData$block <- reducedData$block_group * group_size
+
+# close DB
 dbDisconnect(con)
 ```
 
@@ -37,6 +46,7 @@ The experiment was conducted for the block range from **`r format(min(data$block
 
 The parallelisation experiment simulates the parallel execution of transactions inside a block.
 We assume the best possible/theoretical scheduling called clairvoyance scheduling.
+The background about this parallel experiment is summarised in this [slide stack](https://docs.google.com/presentation/d/1us5ViXOMftJqktXY3Yf8MGTzed6NKaiq/edit?usp=sharing&ouid=115076270420310973960&rtpof=true&sd=true).
 The schedule is constructed with the [substate work](https://usenix.org/conference/atc21/presentation/kim-yeonsoo).
 Two transactions inside a block interfere if they use the same contract addresses.
 Note that this information is available after the execution of a smart contract only.
@@ -57,8 +67,8 @@ hist(parallelisable$speedup, main="Speedup Distribution without Sequential Block
 lines(density(parallelisable$speedup), col="dodgerblue3", lwd=2)
 ```
 
-The following figure shows the speedup over block height.
-For this distribution, we did not filter the sequential blocks, i.e., all blocks are included for the following timeline:
+The following figure shows the speedup over block height. Points are the geometric mean of 100K aggregated blocks,
+for which we did not filter the sequential blocks.
 
 ```{r, echo = FALSE, message=FALSE}
 reducedData %>%
@@ -86,33 +96,46 @@ lines(density(parallelisable$utilisation), col="dodgerblue3", lwd=2)
 
 ## 4. Linear Prediction Model
 
-```{r, include = FALSE}
-lmSequentialTx <- lm(tSequential~numTx, data=data)
-lmCriticalTx <- lm(tCritical~numTx, data=data)
+```{r, message=FALSE, echo=FALSE}
+data$tSequentialUSec <- data$tSequential / 1e3
+data$tCriticalUSec <- data$tCritical / 1e3
+lmSequentialTx <- lm(tSequentialUSec~numTx, data=data)
+lmCriticalTx <- lm(tCriticalUSec~numTx, data=data)
 coeffCriticalTx <- lmCriticalTx$coefficients
 coeffSequentialTx <- lmSequentialTx$coefficients
-a1 <- coeffSequentialTx["numTx"]
-b1 <- coeffCriticalTx["numTx"]
-a0 <- coeffSequentialTx["(Intercept)"]
-b0 <- coeffCriticalTx["(Intercept)"]
+a1 <- unname(coeffSequentialTx["numTx"])
+b1 <- unname(coeffCriticalTx["numTx"])
+a0 <- unname(coeffSequentialTx["(Intercept)"])
+b0 <- unname(coeffCriticalTx["(Intercept)"])
 tCommit <- mean(data$tCommit)
 speedup <-  exp(mean(log(data$speedup)))
 tn <- function (s) {
     (a0 - s * b0 + (1-s) * tCommit)/ (s * b1 - a1)
 }
-X <- seq(speedup, a1/b1*0.95, 0.01)
-Y <- tn(X)
 ```
 
-The linear speedup prediction model estimates a maximum speedup of `r format(a1/b1, digits=4)` assuming an infinite number
+The linear speedup prediction model estimates a maximum theoretical speedup of `r format(a1/b1, digits=4)` assuming an infinite number
 of processors. The underlying assumption of the prediction model is that the degree of parallisation (ratio of sequential
-transaction execution time and critical path) does not change with an increasing number of transactions.
+transaction execution time and critical path) does not change with an increasing number of transactions in a block. We have
+functions for $t_{\textit{sequential}}(n)=$ `r a1` $n +$ `r a0` and $t_{\textit{criticial}}(n)=$ `r b1` $n +$ `r b0`
+where $n$ is the number of transactions. The units of the functions are in microseconds.
 
-The number of transactions required for a given speedup is shown in the figure below,
+The figure below shows the number of transactions required for achieving a given speedup between the speedup from the clairvoyance experiment and the five percent from the maximum theoretical speedup. 
 
-```{r, echo=FALSE, message=FALSE}
-plot(X,Y, type="l", lwd=2, col="tomato", main="Linear Prediction Model", xlab="Speedup", ylab="# Tx")
+```{r, echo=FALSE, message=TRUE}
+# check that fitting parameters are positive for plotting
+if (a1 >= 0 && a0 >= 0 && b1 >= 0 && b0 >= 0) { 
+   # check that speedup range is positive
+   if (speedup <= a1/b1) {
+       X <- seq(speedup, speedup+(a1/b1-speedup)*0.95, 0.01)
+       Y <- tn(X)
+       plot(X,Y, type="l", lwd=2, col="tomato", main="Linear Prediction Model", xlab="Speedup", ylab="# Tx")
+   } else {
+    print("plotting not possible because of invalid speedup range")
+   }
+} else {
+    print("plotting not possible because of negative coefficients of t_critical and/or t_sequential")
+}
 ```
 
 Note that the number of transactions grows infinitely reaching the maximum speedup of `r format(a1/b1, digits=4)`.
-

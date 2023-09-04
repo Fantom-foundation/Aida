@@ -1068,3 +1068,38 @@ func getPatchFirstBlock(lastPatchBlock uint64) (uint64, error) {
 	return 0, fmt.Errorf("cannot find find first block for requested last block; requested: %v; available: [%v]", lastPatchBlock, availableLastBlocks)
 
 }
+
+// getBlockRange returns first and last block inside metadata.
+// If last block is zero, it looks for block range in substate, and tries to get even the epoch range
+func (md *AidaDbMetadata) getBlockRange() (uint64, uint64, error) {
+	md.FirstBlock = md.GetFirstBlock()
+	md.LastBlock = md.GetLastBlock()
+
+	// check if AidaDb has block range
+	if md.LastBlock == 0 {
+		var ok bool
+
+		md.FirstBlock, md.LastBlock, ok = FindBlockRangeInSubstate()
+		if !ok || md.LastBlock == 0 {
+			return 0, 0, errors.New("your AidaDb does not seem to contain substates")
+		}
+
+		err := md.SetBlockRange(md.FirstBlock, md.LastBlock)
+		if err != nil {
+			return 0, 0, fmt.Errorf("cannot set block range; %v", err)
+		}
+
+		// try to find epochs, function returns error if blocks does not start and end an epoch, so we do not save it
+		if err = md.findEpochs(); err == nil {
+			if err = md.SetFirstEpoch(md.FirstEpoch); err != nil {
+				md.log.Warningf("cannot set first epoch; %v", err)
+			}
+
+			if err = md.SetLastEpoch(md.LastEpoch); err != nil {
+				md.log.Warningf("cannot set first epoch; %v", err)
+			}
+		}
+	}
+
+	return md.FirstBlock, md.LastBlock, nil
+}

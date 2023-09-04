@@ -1,8 +1,9 @@
-package parallelisation
+package blockprofile
 
 import (
 	"errors"
 	"fmt"
+	"math/big"
 	"testing"
 	"time"
 
@@ -471,5 +472,52 @@ func TestGetProfileDataWith2Transactions(t *testing.T) {
 	}
 	if pd.gasBlock != expBlockGas {
 		t.Errorf("error occurred while computing block gas, got: %d, expected: %d", pd.gasBlock, expBlockGas)
+	}
+}
+
+func TestGetTransactionType(t *testing.T) {
+	toAddr := common.HexToAddress("0xabcdef0000000000000000000000000000000001")
+	fromAddr1 := common.HexToAddress("0xabcdef0000000000000000000000000000000002")
+	fromAddr2 := common.HexToAddress("0x0000000000000000000000000000000000000000")
+
+	testTransaction := &substate.Transaction{
+		Substate: &substate.Substate{
+			InputAlloc: substate.SubstateAlloc{},
+			Message:    &substate.SubstateMessage{},
+		},
+		Transaction: 0,
+	}
+
+	// expect create type, to address is nil
+	if tt := getTransactionType(testTransaction); tt != CreateTx {
+		t.Errorf("incorrect transaction type, got: %v, expected %v", TypeLabel[tt], TypeLabel[CreateTx])
+	}
+
+	// expect transafer type
+	testTransaction.Substate.Message.To = &toAddr
+	// to address doesn't exist in input substate
+	if tt := getTransactionType(testTransaction); tt != TransferTx {
+		t.Errorf("incorrect transaction type, got: %v, expected %v", TypeLabel[tt], TypeLabel[TransferTx])
+	}
+	// to address exists in input substate but doesn't have byte-code
+	testTransaction.Substate.InputAlloc[toAddr] = substate.NewSubstateAccount(1, big.NewInt(1), []byte{})
+	if tt := getTransactionType(testTransaction); tt != TransferTx {
+		t.Errorf("incorrect transaction type, got: %v, expected %v", TypeLabel[tt], TypeLabel[TransferTx])
+	}
+
+	// expect call type
+	// to address exists in input substate and has byte-code
+	testTransaction.Substate.InputAlloc[toAddr].Code = []byte{1, 2, 3, 4}
+	testTransaction.Substate.Message.From = fromAddr1
+	if tt := getTransactionType(testTransaction); tt != CallTx {
+		t.Errorf("incorrect transaction type, got: %v, expected %v", TypeLabel[tt], TypeLabel[CallTx])
+	}
+
+	// expect epoch sealing type
+	// from address 0 to an sfc address (with byte-code
+	testTransaction.Substate.Message.From = fromAddr2
+	testTransaction.Substate.InputAlloc[toAddr] = substate.NewSubstateAccount(1, big.NewInt(1), []byte{1, 2, 3, 4})
+	if tt := getTransactionType(testTransaction); tt != MaintenanceTx {
+		t.Errorf("incorrect transaction type, got: %v, expected %v", TypeLabel[tt], TypeLabel[MaintenanceTx])
 	}
 }

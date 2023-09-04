@@ -1,5 +1,5 @@
 // Package ProfileDatas provides an SQLite based ProfileDatas database.
-package parallelisation
+package blockprofile
 
 import (
 	"fmt"
@@ -27,6 +27,7 @@ func TestAdd(t *testing.T) {
 	db, err := NewProfileDB(dbFile)
 	require.NoError(err)
 	defer db.Close()
+	defer os.Remove(dbFile)
 
 	ProfileData := ProfileData{
 		curBlock:        5637800,
@@ -38,6 +39,7 @@ func TestAdd(t *testing.T) {
 		ubNumProc:       2,
 		numTx:           3,
 		tTransactions:   []int64{2382388, 11218838, 5939392888},
+		tTypes:          []TxType{TransferTx, CreateTx, CallTx},
 		gasTransactions: []uint64{111111, 222222, 333333},
 	}
 
@@ -47,6 +49,7 @@ func TestAdd(t *testing.T) {
 	require.Len(db.buffer, 1)
 
 	require.Len(db.buffer[0].tTransactions, 3)
+	require.Len(db.buffer[0].tTypes, 3)
 	require.Len(db.buffer[0].gasTransactions, 3)
 }
 
@@ -55,6 +58,7 @@ func TestFlush(t *testing.T) {
 	require := require.New(t)
 	dbFile := tempFile(require)
 	t.Logf("db file: %s", dbFile)
+	defer os.Remove(dbFile)
 	db, err := NewProfileDB(dbFile)
 	require.NoError(err)
 	err = db.Add(ProfileData{})
@@ -78,6 +82,7 @@ func TestFlush(t *testing.T) {
 		ubNumProc:       2,
 		numTx:           3,
 		tTransactions:   []int64{2382388, 11218838, 5939392888},
+		tTypes:          []TxType{TransferTx, CreateTx, CallTx},
 		gasTransactions: []uint64{111111, 222222, 333333},
 	}
 
@@ -94,14 +99,17 @@ func TestFlush(t *testing.T) {
 		ubNumProc:       2,
 		numTx:           2,
 		tTransactions:   []int64{2382388, 11218838},
+		tTypes:          []TxType{TransferTx, CreateTx},
 		gasTransactions: []uint64{444444, 555555},
 	}
 	err = db.Add(pd)
 	require.NoError(err)
 	require.Len(db.buffer, 2)
 	require.Len(db.buffer[0].tTransactions, 3)
+	require.Len(db.buffer[0].tTypes, 3)
 	require.Len(db.buffer[0].gasTransactions, 3)
 	require.Len(db.buffer[1].tTransactions, 2)
+	require.Len(db.buffer[1].tTypes, 2)
 	require.Len(db.buffer[1].gasTransactions, 2)
 	err = db.Flush()
 	require.NoError(err)
@@ -124,6 +132,7 @@ func TestFlush(t *testing.T) {
 			ubNumProc:       2,
 			numTx:           2,
 			tTransactions:   []int64{2382388, 11218838},
+			tTypes:          []TxType{TransferTx, CreateTx},
 			gasTransactions: []uint64{444444, 555555},
 		}
 		err = db.Add(profileData)
@@ -141,6 +150,7 @@ func TestFlush(t *testing.T) {
 		ubNumProc:       2,
 		numTx:           3,
 		tTransactions:   []int64{2382388, 11218838, 232348228},
+		tTypes:          []TxType{TransferTx, CreateTx, CallTx},
 		gasTransactions: []uint64{444444, 555555, 666666},
 	}
 
@@ -155,6 +165,7 @@ func TestDeleteBlockRangeOverlapOneTx(t *testing.T) {
 
 	dbFile := tempFile(require)
 	t.Logf("db file: %s", dbFile)
+	defer os.Remove(dbFile)
 	db, err := NewProfileDB(dbFile)
 	require.NoError(err)
 
@@ -171,6 +182,7 @@ func TestDeleteBlockRangeOverlapOneTx(t *testing.T) {
 			ubNumProc:       2,
 			numTx:           1,
 			tTransactions:   []int64{232939829},
+			tTypes:          []TxType{TransferTx},
 			gasTransactions: []uint64{111111},
 		}
 		err = db.Add(profileData)
@@ -198,6 +210,7 @@ func TestDeleteBlockRangeOverlapOneTx(t *testing.T) {
 			ubNumProc:       2,
 			numTx:           1,
 			tTransactions:   []int64{232939829},
+			tTypes:          []TxType{TransferTx},
 			gasTransactions: []uint64{111111},
 		}
 		err = db.Add(profileData)
@@ -217,6 +230,7 @@ func TestDeleteBlockRangeOverlapMultipleTx(t *testing.T) {
 
 	dbFile := tempFile(require)
 	t.Logf("db file: %s", dbFile)
+	defer os.Remove(dbFile)
 	db, err := NewProfileDB(dbFile)
 	require.NoError(err)
 
@@ -234,6 +248,7 @@ func TestDeleteBlockRangeOverlapMultipleTx(t *testing.T) {
 			ubNumProc:       2,
 			numTx:           numTx,
 			tTransactions:   []int64{232939829, 938828288, 92388277, 9238828},
+			tTypes:          []TxType{TransferTx, CreateTx, CallTx, MaintenanceTx},
 			gasTransactions: []uint64{111111, 222222, 333333, 444444},
 		}
 		err = db.Add(profileData)
@@ -262,6 +277,7 @@ func TestDeleteBlockRangeOverlapMultipleTx(t *testing.T) {
 			ubNumProc:       2,
 			numTx:           numTx,
 			tTransactions:   []int64{232939829, 938828288, 92388277, 9238828},
+			tTypes:          []TxType{TransferTx, CreateTx, CallTx, MaintenanceTx},
 			gasTransactions: []uint64{111111, 222222, 333333, 444444},
 		}
 		err = db.Add(profileData)
@@ -285,6 +301,7 @@ func TestDeleteBlockRangeNoOverlap(t *testing.T) {
 	db, err := NewProfileDB(dbFile)
 	require.NoError(err)
 	defer db.Close()
+	defer os.Remove(dbFile)
 
 	startBlock, endBlock := uint64(500), uint64(2500)
 	for i := startBlock; i <= endBlock; i++ {
@@ -298,6 +315,7 @@ func TestDeleteBlockRangeNoOverlap(t *testing.T) {
 			ubNumProc:       2,
 			numTx:           3,
 			tTransactions:   []int64{232444, 92398, 9282887},
+			tTypes:          []TxType{TransferTx, CreateTx, CallTx},
 			gasTransactions: []uint64{111111, 222222, 333333, 444444},
 		}
 		err = db.Add(profileData)
@@ -316,6 +334,7 @@ func BenchmarkAdd(b *testing.B) {
 	require := require.New(b)
 	dbFile := tempFile(require)
 	b.Logf("db file: %s", dbFile)
+	defer os.Remove(dbFile)
 
 	db, err := NewProfileDB(dbFile)
 	require.NoError(err)
@@ -358,6 +377,7 @@ func ExampleDB() {
 			ubNumProc:       2,
 			numTx:           3,
 			tTransactions:   []int64{2382388, 11218838, 5939392888},
+			tTypes:          []TxType{TransferTx, CreateTx, CallTx},
 			gasTransactions: []uint64{111111, 222222, 333333},
 		}
 		if err := db.Add(ProfileData); err != nil {
@@ -379,6 +399,7 @@ func TestFlushProfileData(t *testing.T) {
 	db, err := NewProfileDB(dbFile)
 	require.NoError(err)
 	defer db.Close()
+	defer os.Remove(dbFile)
 
 	ProfileData := ProfileData{
 		curBlock:        5637800,
@@ -390,6 +411,7 @@ func TestFlushProfileData(t *testing.T) {
 		ubNumProc:       2,
 		numTx:           4,
 		tTransactions:   []int64{292988, 8387773, 923828772, 293923929},
+		tTypes:          []TxType{TransferTx, CreateTx, CallTx, MaintenanceTx},
 		gasTransactions: []uint64{111111, 222222, 333333, 444444},
 	}
 
@@ -406,7 +428,7 @@ func TestFlushProfileData(t *testing.T) {
 	}
 
 	for i, tTransaction := range ProfileData.tTransactions {
-		res, err = tx.Stmt(db.txStmt).Exec(ProfileData.curBlock, i, tTransaction, ProfileData.gasTransactions[i])
+		res, err = tx.Stmt(db.txStmt).Exec(ProfileData.curBlock, i, ProfileData.tTypes[i], tTransaction, ProfileData.gasTransactions[i])
 		require.NoError(err)
 		numRowsAffected, err := res.RowsAffected()
 		require.NoError(err)

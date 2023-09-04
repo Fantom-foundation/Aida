@@ -3,7 +3,7 @@
 #    gen_processing_reports.sh -  script for generating the block processing reports
 #
 # Synopsis: 
-#    gen_processing_report.sh <db-impl> <db-variant> <vm-impl> <output-dir>
+#    gen_processing_report.sh <db-impl> <db-variant> <carmen-schema> <vm-impl> <output-dir>
 #
 # Description: 
 #    Produces block processing reports in the HTML format.
@@ -13,7 +13,7 @@
 # 
 
 # check the number of command line arguments
-if [ "$#" -ne 4 ]; then
+if [ "$#" -ne 5 ]; then
     echo "Invalid number of command line arguments supplied"
     exit 1
 fi
@@ -21,8 +21,9 @@ fi
 # assign variables for command line arguments
 dbimpl=$1
 dbvariant=$2
-vmimpl=$3
-outputdir=$4
+carmenschema=$3
+vmimpl=$4
+outputdir=$5
 
 # logging 
 log() {
@@ -57,34 +58,6 @@ Machine() {
     echo "`hostname`(`curl -s api.ipify.org`)"
 }
 
-## Reduce data set
-ReduceData() {
-sqlite3 $1 << EOF
--- create view groupedParallelProfile to group block data for every 100,000 blocks
-DROP VIEW IF EXISTS groupedParallelProfile;
-CREATE VIEW groupedParallelProfile(block, tBlock, tCommit, numTx, speedup, gasBlock) AS
- SELECT block/100000, tBlock, tCommit, numTx, log(speedup), gasBlock FROM parallelprofile;
--- aggregate block data
-DROP TABLE IF EXISTS aggregatedParallelProfile;
-CREATE TABLE aggregatedParallelProfile(block INTEGER, tBlock REAL, tCommit REAL, numTx REAL,  speedup REAL, gasBlock REAL, gps REAL, tps REAL);
-INSERT INTO aggregatedParallelProfile SELECT min(block)*100000, avg(tBlock)/1e6, avg(tCommit)/1e6, avg(numTx), exp(avg(speedup)), avg(gasBlock), sum(gasBlock)/count(*)/10e6, sum(numTx)/count(*) FROM groupedParallelProfile GROUP BY block;
-DROP VIEW groupedParallelProfile;
--- create view groupedeTxProfile to group transaction data for every 1,000,000 transactions
-DROP VIEW IF EXISTS  groupedTxProfile;
-CREATE VIEW groupedTxProfile(tx, duration, gas) AS
- SELECT rowid/1000000, duration, gas FROM txProfile ORDER BY block ASC, tx ASC;
--- aggregate transaction data
-DROP TABLE IF EXISTS aggregatedTxProfile;
-CREATE TABLE aggregatedTxProfile(tx INTEGER, duration REAL, gas REAL);
-INSERT INTO aggregatedTxProfile SELECT min(tx)*1000000, avg(duration)/1e6, avg(gas) FROM groupedTxProfile GROUP BY tx;
-DROP VIEW groupedTxProfile;
-EOF
-}
-
-# reduce dataset in sqlite3 (NB: R consumes too much memory/is too slow for the reduction)
-log "reduce data set ..."
-ReduceData $outputdir/profile.db
-
 # query the configuration
 log "query configuration ..."
 hw=`HardwareDescription`
@@ -92,12 +65,17 @@ os=`OperatingSystemDescription`
 machine=`Machine`
 gh=`GitHash`
 go=`GoVersion`
-statedb="$dbimpl($dbvariant)"
+statedb="$dbimpl($dbvariant $carmenschema)"
 
 # render R Markdown file
 log "render block processing report ..."
 ./scripts/knit.R -p "GitHash='$gh', HwInfo='$hw', OsInfo='$os', Machine='$machine', GoInfo='$go', VM='$vmimpl', StateDB='$statedb'" \
                  -d "$outputdir/profile.db" -f html -o block_processing.html -O $outputdir reports/block_processing.rmd
+
+# produce mainnet report
+log "render mainnet report ..."
+./scripts/knit.R -p "GitHash='$gh', HwInfo='$hw', OsInfo='$os', Machine='$machine', GoInfo='$go', VM='$vmimpl', StateDB='$statedb'" \
+                 -d "$outputdir/profile.db" -f html -o mainnet_report.html -O $outputdir reports/mainnet_report.rmd
 
 # produce parallel experiment report
 log "render parallel experiment report ..."

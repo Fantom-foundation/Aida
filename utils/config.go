@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"math"
 	"math/big"
 	"math/rand"
 	"os"
@@ -16,6 +17,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	_ "github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
+	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
@@ -57,18 +59,26 @@ const (
 	EqualityCheck                       // confirms whether a substate and StateDB are identical.
 )
 
-var hardForksMainnet = map[string]uint64{
-	"zero":   0,
-	"opera":  4_564_026,
-	"berlin": 37_455_223,
-	"london": 37_534_833,
-}
-
-var hardForksTestnet = map[string]uint64{
-	"zero":   0,
-	"opera":  479_327,
-	"berlin": 1_559_470,
-	"london": 7_513_335,
+// A map of key blocks on Fantom chain
+var keywordBlocks = map[ChainID]map[string]uint64{
+	MainnetChainID: {
+		"zero":      0,
+		"opera":     4_564_026,
+		"berlin":    37_455_223,
+		"london":    37_534_833,
+		"first":     0,
+		"last":      math.MaxUint64,
+		"lastpatch": 0,
+	},
+	TestnetChainID: {
+		"zero":      0,
+		"opera":     479_327,
+		"berlin":    1_559_470,
+		"london":    7_513_335,
+		"first":     0,
+		"last":      math.MaxUint64,
+		"lastpatch": 0,
+	},
 }
 
 // special transaction number for pseudo transactions
@@ -105,7 +115,7 @@ var (
 	CarmenSchemaFlag = cli.IntFlag{
 		Name:  "carmen-schema",
 		Usage: "select the DB schema used by Carmen's current state DB",
-		Value: 0,
+		Value: 3,
 	}
 	ChainIDFlag = cli.IntFlag{
 		Name:  "chainid",
@@ -479,31 +489,22 @@ type Config struct {
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.
-func GetChainConfig(chainID ChainID) *params.ChainConfig {
+func GetChainConfig(chainId ChainID) *params.ChainConfig {
 	chainConfig := params.AllEthashProtocolChanges
-	chainConfig.ChainID = big.NewInt(int64(chainID))
-	if chainID == MainnetChainID {
-		// mainnet chainID 250
-		chainConfig.BerlinBlock = new(big.Int).SetUint64(hardForksMainnet["berlin"])
-		chainConfig.LondonBlock = new(big.Int).SetUint64(hardForksMainnet["london"])
-	} else if chainID == TestnetChainID {
-		// testnet chainID 4002
-		chainConfig.BerlinBlock = new(big.Int).SetUint64(hardForksTestnet["berlin"])
-		chainConfig.LondonBlock = new(big.Int).SetUint64(hardForksTestnet["london"])
-	} else {
-		log.Fatalf("unknown chain id %v", chainID)
+	chainConfig.ChainID = big.NewInt(int64(chainId))
+	if !(chainId == MainnetChainID || chainId == TestnetChainID) {
+		log.Fatalf("unknown chain id %v", chainId)
 	}
+	chainConfig.BerlinBlock = new(big.Int).SetUint64(keywordBlocks[chainId]["berlin"])
+	chainConfig.LondonBlock = new(big.Int).SetUint64(keywordBlocks[chainId]["london"])
 	return chainConfig
 }
 
-func setFirstBlockFromChainID(chainID ChainID) {
-	if chainID == MainnetChainID {
-		FirstOperaBlock = hardForksMainnet["opera"]
-	} else if chainID == TestnetChainID {
-		FirstOperaBlock = hardForksTestnet["opera"]
-	} else {
-		log.Fatalf("unknown chain id %v", chainID)
+func setFirstBlockFromChainID(chainId ChainID) {
+	if !(chainId == MainnetChainID || chainId == TestnetChainID) {
+		log.Fatalf("unknown chain id %v", chainId)
 	}
+	FirstOperaBlock = keywordBlocks[chainId]["opera"]
 }
 
 // NewConfig creates and initializes Config with commandline arguments.
@@ -541,69 +542,60 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		}
 
 	}
+	err := setAidaDbRepositoryUrl(chainId)
 
-	var argErr error
 	switch mode {
+	case BlockRangeArgsProfileDB:
+		// process arguments and flags
+		if ctx.Args().Len() != 3 {
+			return nil, fmt.Errorf("command requires 3 arguments")
+		} else if ctx.Args().Len() == 3 {
+			// set profileDB from argument
+			profileDB = ctx.Args().Get(2)
+		}
+		fallthrough
 	case BlockRangeArgs:
-		// try to extract block range from db metadata
-		mdFirst, mdLast, err := getMdBlockRange(ctx)
+		// process arguments and flags
+		if ctx.Args().Len() >= 2 {
+			// try to extract block range from db metadata
+			aidaDbPath := ctx.String(AidaDbFlag.Name)
+			firstMd, lastMd, lastPatchMd, mdOk, err := getMdBlockRange(aidaDbPath, chainId, log)
+			if err != nil {
+				return nil, err
+			}
+			keywordBlocks[chainId]["first"] = firstMd
+			keywordBlocks[chainId]["last"] = lastMd
+			keywordBlocks[chainId]["lastpatch"] = lastPatchMd
+
+			// try to parse and check block range
+			firstArg, lastArg, argErr := SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1), chainId)
+			if argErr != nil {
+				return nil, argErr
+			}
+
+			if !mdOk {
+				first = firstArg
+				last = lastArg
+				break
+			}
+
+			// find if values overlap
+			first, last, err = adjustBlockRange(chainId, firstArg, lastArg)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, fmt.Errorf("command requires 2 arguments")
+		}
+	case LastBlockArg:
+		var err error
+		last, err = strconv.ParseUint(ctx.Args().Get(0), 10, 64)
 		if err != nil {
 			return nil, err
 		}
-
-		// process arguments and flags
-		if ctx.Args().Len() == 0 {
-			first = mdFirst
-			last = mdLast
-
-			log.Noticef("Found first block (%v) and last block in AidaDb (%v)", first, last)
-		} else if ctx.Args().Len() == 2 {
-			// try to parse and check block range
-			firstArg, lastArg, argErr := SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1), chainId)
-			if argErr != nil {
-				return nil, argErr
-			}
-
-			// find if values overlap
-			first, last, err = adjustBlockRange(firstArg, lastArg, mdFirst, mdLast)
-			if err != nil {
-				return nil, err
-			}
-		}
-	case BlockRangeArgsProfileDB:
-		// process arguments and flags
-		if ctx.Args().Len() == 3 {
-			// try to extract block range from db metadata
-			mdFirst, mdLast, err := getMdBlockRange(ctx)
-			if err != nil {
-				return nil, err
-			}
-
-			// try to parse and check block range
-			firstArg, lastArg, argErr := SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1), chainId)
-			if argErr != nil {
-				return nil, argErr
-			}
-
-			// find if values overlap
-			first, last, err = adjustBlockRange(firstArg, lastArg, mdFirst, mdLast)
-			if err != nil {
-				return nil, err
-			}
-			profileDB = ctx.Args().Get(2)
-		} else if ctx.Args().Len() == 2 {
-			return nil, fmt.Errorf("command requires profile db as argument")
-		} else {
-			return nil, fmt.Errorf("command requires 3 arguments")
-		}
-	case LastBlockArg:
-		last, argErr = strconv.ParseUint(ctx.Args().Get(0), 10, 64)
-		if argErr != nil {
-			return nil, argErr
-		}
 	case NoArgs:
 	default:
-		return nil, errors.New("unknown mode; unable to process commandline arguments.")
+		return nil, errors.New("unknown mode; unable to process commandline arguments")
 	}
 
 	cfg := createConfig(ctx)
@@ -633,7 +625,6 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	if cfg.RandomSeed < 0 {
 		cfg.RandomSeed = int64(rand.Uint32())
 	}
-	err := setAidaDbRepositoryUrl(cfg.ChainID)
 	if err != nil {
 		return cfg, fmt.Errorf("Unable to prepareUrl from ChainId %v; %v", cfg.ChainID, err)
 	}
@@ -681,9 +672,6 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		}
 		log.Infof("Used VM implementation: %v", cfg.VmImpl)
 		log.Infof("Update DB directory: %v", cfg.UpdateDb)
-		if cfg.First == 0 {
-			cfg.SkipPriming = true
-		}
 		if cfg.SkipPriming {
 			log.Infof("Priming: Skipped")
 		} else {
@@ -712,6 +700,9 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	if cfg.KeepDb && strings.Contains(cfg.DbVariant, "memory") {
 		log.Warning("Unable to keep in-memory stateDB")
 		cfg.KeepDb = false
+	}
+	if cfg.First == 0 {
+		cfg.SkipPriming = true
 	}
 	if cfg.First != 0 && cfg.SkipPriming && cfg.ValidateWorldState {
 		return cfg, fmt.Errorf("skipPriming and world-state validation can not be enabled at the same time")
@@ -753,7 +744,7 @@ func SetBlockRange(firstArg string, lastArg string, chainId ChainID) (uint64, ui
 	}
 
 	if first > last {
-		return 0, 0, fmt.Errorf("first block has larger number than last block")
+		return 0, 0, fmt.Errorf("first block %v has larger number than last block %v", first, last)
 	}
 
 	return first, last, err
@@ -778,20 +769,11 @@ func setBlockNumber(arg string, chainId ChainID) (uint64, error) {
 	} else {
 		keyword = strings.ToLower(arg)
 	}
-
 	// find base block number from keyword
-	if chainId == 4002 {
-		if val, ok := hardForksTestnet[keyword]; ok {
-			blkNum = val
-		} else {
-			return 0, fmt.Errorf("block number not a valid keyword or integer")
-		}
-	} else if chainId == 250 || chainId == 0 {
-		if val, ok := hardForksMainnet[keyword]; ok {
-			blkNum = val
-		} else {
-			return 0, fmt.Errorf("block number not a valid keyword or integer")
-		}
+	if val, ok := keywordBlocks[chainId][keyword]; ok {
+		blkNum = val
+	} else {
+		return 0, fmt.Errorf("block number not a valid keyword or integer")
 	}
 
 	// shift base block number by the offset
@@ -825,7 +807,8 @@ func parseOffset(arg string) (string, string, uint64, error) {
 func splitKeywordOffset(arg string, symbol string) (string, uint64, bool) {
 	res := strings.Split(arg, symbol)
 
-	if _, ok := hardForksMainnet[strings.ToLower(res[0])]; !ok {
+	// if the keyword doesn't exist, return.
+	if _, ok := keywordBlocks[MainnetChainID][strings.ToLower(res[0])]; !ok {
 		return "", 0, false
 	}
 
@@ -850,48 +833,61 @@ func offsetBlockNum(blkNum uint64, symbol string, offset uint64) uint64 {
 }
 
 // getMdBlockRange gets block range from aidaDB metadata
-func getMdBlockRange(ctx *cli.Context) (uint64, uint64, error) {
-	aidaDb, err := rawdb.NewLevelDBDatabase(ctx.String(AidaDbFlag.Name), 1024, 100, "profiling", true)
+func getMdBlockRange(aidaDbPath string, chainId ChainID, log *logging.Logger) (uint64, uint64, uint64, bool, error) {
+	defaultFirst := keywordBlocks[chainId]["first"]
+	defaultLast := keywordBlocks[chainId]["last"]
+	defaultLastPatch := keywordBlocks[chainId]["lastpatch"]
+
+	if _, err := os.Stat(aidaDbPath); errors.Is(err, os.ErrNotExist) {
+		log.Warningf("Unable to open Aida-db; %v", aidaDbPath, err)
+		fmt.Println(defaultFirst)
+		return defaultFirst, defaultLast, defaultLastPatch, false, nil
+	}
+	aidaDb, err := rawdb.NewLevelDBDatabase(aidaDbPath, 1024, 100, "profiling", true)
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return 0, 0, fmt.Errorf("you either need to specify block range using arguments <first> <last>, or path to existing AidaDb (--%v) with block range in metadata", AidaDbFlag.Name)
-		}
-		return 0, 0, fmt.Errorf("cannot open aida-db; %v", err)
+		log.Warningf("Cannot open AidaDB; %v", err)
+		return defaultFirst, defaultLast, defaultLastPatch, false, nil
 	}
 
-	md := NewAidaDbMetadata(aidaDb, ctx.String(logger.LogLevelFlag.Name))
-	mdFirst := md.GetFirstBlock()
-	mdLast := md.GetLastBlock()
+	md := NewAidaDbMetadata(aidaDb, logging.GetLevel(log.Module).String())
+	mdFirst, mdLast, err := md.getBlockRange()
+	if err != nil {
+		log.Warningf("Cannot get first and last block of given AidaDB; %v", err)
+		return defaultFirst, defaultLast, defaultLastPatch, false, nil
+	}
 
-	if mdLast == 0 {
-		return 0, 0, errors.New("your AidaDb does not have metadata with last block. Please run ./build/util-db info metadata --aida-db <path>")
+	lastPatchBlock, err := getPatchFirstBlock(mdLast)
+	if err != nil {
+		log.Warningf("Cannot get first block of the last patch of given AidaDB; %v", err)
 	}
 
 	err = aidaDb.Close()
 	if err != nil {
-		return 0, 0, fmt.Errorf("cannot close db; %v", err)
+		return defaultFirst, defaultLast, defaultLastPatch, false, fmt.Errorf("cannot close db; %v", err)
 	}
 
-	return mdFirst, mdLast, nil
+	return mdFirst, mdLast, lastPatchBlock, true, nil
 }
 
 // adjustBlockRange finds overlap between metadata block range and block range specified by user in command line
-func adjustBlockRange(firstArg uint64, lastArg uint64, mdFirst uint64, mdLast uint64) (uint64, uint64, error) {
-	var first, last uint64
+func adjustBlockRange(chainId ChainID, firstArg, lastArg uint64) (uint64, uint64, error) {
+	var first, last, firstMd, lastMd uint64
+	firstMd = keywordBlocks[chainId]["first"]
+	lastMd = keywordBlocks[chainId]["last"]
 
-	if lastArg >= mdFirst && mdLast >= firstArg {
+	if lastArg >= firstMd && lastMd >= firstArg {
 		// get first block number
-		if firstArg > mdFirst {
+		if firstArg > firstMd {
 			first = firstArg
 		} else {
-			first = mdFirst
+			first = firstMd
 		}
 
 		// get last block number
-		if lastArg < mdLast {
+		if lastArg < lastMd {
 			last = lastArg
 		} else {
-			last = mdLast
+			last = lastMd
 		}
 
 		return first, last, nil
