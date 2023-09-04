@@ -5,6 +5,7 @@ package executor
 import (
 	"errors"
 
+	"github.com/Fantom-foundation/Aida/state"
 	substate "github.com/Fantom-foundation/Substate"
 )
 
@@ -42,12 +43,23 @@ type Executor interface {
 	// PostXXX events are delivered in reverse order. If any of the extensions
 	// reports an error during processing of an event, the same event is still
 	// delivered to the remaining extensions before processing is aborted.
-	Run(from int, to int, processor Processor, extensions []Extension) error
+	Run(params Params, processor Processor, extensions []Extension) error
 }
 
 // NewExecutor creates a new executor based on the given substate provider.
 func NewExecutor(substate SubstateProvider) Executor {
 	return &executor{substate}
+}
+
+// Params summarizes input parameters for a run of the executor.
+type Params struct {
+	// From is the begin of the range of blocks to be processed (inclusive).
+	From int
+	// From is the end of the range of blocks to be processed (exclusive).
+	To int
+	// State is an optional StateDB instance to be made available to the
+	// processor and extensions during execution.
+	State state.StateDB
 }
 
 // Processor is an interface for the entity to which an executor is feeding
@@ -115,6 +127,10 @@ type State struct {
 	// Substate is the input required for the current transaction. It is only
 	// valid for Pre- and PostTransaction events.
 	Substate *substate.Substate
+
+	// State is an optional StateDB instance manipulated during by the processor
+	// and extensions of a block-range execution.
+	State state.StateDB
 }
 
 // ----------------------------------------------------------------------------
@@ -125,8 +141,8 @@ type executor struct {
 	substate SubstateProvider
 }
 
-func (e *executor) Run(from int, to int, processor Processor, extensions []Extension) (err error) {
-	state := State{}
+func (e *executor) Run(params Params, processor Processor, extensions []Extension) (err error) {
+	state := State{State: params.State}
 
 	defer func() {
 		err = errors.Join(
@@ -136,11 +152,11 @@ func (e *executor) Run(from int, to int, processor Processor, extensions []Exten
 	}()
 
 	first := true
-	state.Block = from
+	state.Block = params.From
 	if err = signalPreRun(state, extensions); err != nil {
 		return
 	}
-	err = e.substate.Run(from, to, func(block int, transaction int, substate *substate.Substate) error {
+	err = e.substate.Run(params.From, params.To, func(block int, transaction int, substate *substate.Substate) error {
 		if first {
 			state.Block = block
 			if err := signalPreBlock(state, extensions); err != nil {
@@ -175,7 +191,7 @@ func (e *executor) Run(from int, to int, processor Processor, extensions []Exten
 	// Finish final block.
 	if !first {
 		signalPostBlock(state, extensions)
-		state.Block = to
+		state.Block = params.To
 	}
 
 	return err
