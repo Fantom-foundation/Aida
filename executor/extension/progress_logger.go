@@ -11,40 +11,51 @@ import (
 	"github.com/op/go-logging"
 )
 
-const reportFrequency = 10 * time.Second
+const DefaultReportFrequency = 10 * time.Second
 
-func MakeProgressLogger(config *utils.Config) executor.Extension {
+// MakeProgressLogger creates progress logger. It logs progress about processor depending on reportFrequency.
+// If reportFrequency is 0, it is set to DefaultReportFrequency.
+func MakeProgressLogger(config *utils.Config, reportFrequency time.Duration) executor.Extension {
 	if config.Quiet {
 		return NilExtension{}
 	}
 
+	if reportFrequency == 0 {
+		reportFrequency = DefaultReportFrequency
+	}
+
 	return &progressLogger{
-		config:  config,
-		log:     logger.NewLogger(config.LogLevel, "Progress-Reporter"),
-		inputCh: make(chan executor.State, 10),
-		closeCh: make(chan any, 1),
-		wg:      new(sync.WaitGroup),
+		config:          config,
+		log:             logger.NewLogger(config.LogLevel, "Progress-Reporter"),
+		inputCh:         make(chan executor.State, 10),
+		closeCh:         make(chan any, 1),
+		wg:              new(sync.WaitGroup),
+		reportFrequency: reportFrequency,
 	}
 }
 
 type progressLogger struct {
 	NilExtension
-	config  *utils.Config
-	log     *logging.Logger
-	inputCh chan executor.State
-	closeCh chan any
-	wg      *sync.WaitGroup
+	config          *utils.Config
+	log             *logging.Logger
+	inputCh         chan executor.State
+	closeCh         chan any
+	wg              *sync.WaitGroup
+	reportFrequency time.Duration
 }
 
 // PreRun starts the report goroutine
 func (l *progressLogger) PreRun(_ executor.State) error {
-	go l.report()
+	l.wg.Add(1)
+
+	// pass the value for thread safety
+	go l.startReport(l.reportFrequency)
 	return nil
 }
 
 // PostRun gracefully closes the Extension and awaits the report goroutine correct closure.
 func (l *progressLogger) PostRun(_ executor.State, _ error) error {
-	l.Close()
+	l.close()
 	l.wg.Wait()
 
 	return nil
@@ -57,11 +68,9 @@ func (l *progressLogger) PostBlock(state executor.State) error {
 	return nil
 }
 
-// report runs in own goroutine. It accepts data from Executor from PostBock func.
-// It reports current progress everytime we hit the ticker with reportFrequency.
-func (l *progressLogger) report() {
-	l.wg.Add(1)
-
+// startReport runs in own goroutine. It accepts data from Executor from PostBock func.
+// It reports current progress everytime we hit the ticker with defaultReportFrequencyInSeconds.
+func (l *progressLogger) startReport(reportFrequency time.Duration) {
 	ticker := time.NewTicker(reportFrequency)
 	start := time.Now()
 
@@ -102,8 +111,8 @@ func (l *progressLogger) report() {
 
 }
 
-// Close sends signal to the report goroutine to gracefully end
-func (l *progressLogger) Close() {
+// close sends signal to the report goroutine to gracefully end
+func (l *progressLogger) close() {
 	select {
 	case <-l.closeCh:
 		return

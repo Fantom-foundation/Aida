@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"bytes"
 	"os"
 	"time"
 
@@ -36,6 +37,23 @@ func NewLogger(level string, module string) *logging.Logger {
 
 	logging.SetBackend(lvlBackend)
 	return logging.MustGetLogger(module)
+}
+
+// NewTestLogger creates a logger and buffer in which logger writes the messages.
+func NewTestLogger() (*logging.Logger, *bytes.Buffer) {
+	var buf bytes.Buffer
+	backend := logging.NewLogBackend(&buf, "", 0)
+
+	fm := logging.MustStringFormatter(defaultLogFormat)
+	fmtBackend := logging.NewBackendFormatter(backend, fm)
+
+	lvl, _ := logging.LogLevel("DEBUG")
+
+	lvlBackend := logging.AddModuleLevel(fmtBackend)
+	lvlBackend.SetLevel(lvl, "")
+
+	logging.SetBackend(lvlBackend)
+	return logging.MustGetLogger("TEST"), &buf
 }
 
 // ParseTime from seconds to hours, minutes and seconds
