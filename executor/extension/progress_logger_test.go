@@ -65,8 +65,8 @@ func TestProgressLoggerExtension_LoggingHappens(t *testing.T) {
 	ext.PreRun(executor.State{})
 
 	gomock.InOrder(
-		log.EXPECT().Infof(MatchFormat(progressReportFormat), gomock.Any(), MatchBlockNumber(1), MatchTxRate()),
-		log.EXPECT().Infof(MatchFormat(progressReportFormat), gomock.Any(), MatchBlockNumber(2), MatchTxRate()),
+		log.EXPECT().Infof(MatchFormat(progressReportFormat), gomock.Any(), uint64(1), MatchTxRate()),
+		log.EXPECT().Infof(MatchFormat(progressReportFormat), gomock.Any(), uint64(2), MatchTxRate()),
 	)
 
 	// fill the logger with some data
@@ -101,23 +101,6 @@ func (m matchFormat) Matches(value any) bool {
 
 func (m matchFormat) String() string {
 	return fmt.Sprintf("log format should look like this: %v", m.format)
-}
-
-func MatchBlockNumber(blocks uint64) gomock.Matcher {
-	return matchBlockNumber{blocks}
-}
-
-type matchBlockNumber struct {
-	blocks uint64
-}
-
-func (m matchBlockNumber) Matches(value any) bool {
-	blocks, ok := value.(uint64)
-	return ok && m.blocks == blocks
-}
-
-func (m matchBlockNumber) String() string {
-	return fmt.Sprintf("log should have proccessed %v blocks", m.blocks)
 }
 
 func MatchTxRate() gomock.Matcher {
