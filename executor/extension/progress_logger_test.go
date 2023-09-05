@@ -58,7 +58,6 @@ func TestProgressLoggerExtension_LoggingHappens(t *testing.T) {
 		config:          config,
 		log:             log,
 		inputCh:         make(chan executor.State, 10),
-		closeCh:         make(chan any, 1),
 		wg:              new(sync.WaitGroup),
 		reportFrequency: testReportFrequency,
 	}
@@ -83,7 +82,6 @@ func TestProgressLoggerExtension_LoggingHappens(t *testing.T) {
 
 	// wait a bit until the logger gets the data
 	time.Sleep(time.Second)
-
 }
 
 // MATCHERS

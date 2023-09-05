@@ -30,7 +30,6 @@ func MakeProgressLogger(config *utils.Config, reportFrequency int) executor.Exte
 		config:          config,
 		log:             logger.NewLogger(config.LogLevel, "Progress-Reporter"),
 		inputCh:         make(chan executor.State, 10),
-		closeCh:         make(chan any, 1),
 		wg:              new(sync.WaitGroup),
 		reportFrequency: reportFrequency,
 	}
@@ -41,7 +40,6 @@ type progressLogger struct {
 	config          *utils.Config
 	log             logger.Logger
 	inputCh         chan executor.State
-	closeCh         chan any
 	wg              *sync.WaitGroup
 	reportFrequency int
 }
@@ -57,7 +55,7 @@ func (l *progressLogger) PreRun(_ executor.State) error {
 
 // PostRun gracefully closes the Extension and awaits the report goroutine correct closure.
 func (l *progressLogger) PostRun(_ executor.State, _ error) error {
-	l.close()
+	close(l.inputCh)
 	l.wg.Wait()
 
 	return nil
@@ -84,19 +82,22 @@ func (l *progressLogger) startReport(reportFrequency int) {
 		elapsed := time.Since(start)
 		txRate := float64(totalTx.Uint64()) / elapsed.Seconds()
 
-		close(l.inputCh)
-
 		l.log.Infof(progressReportFormat, elapsed.Round(time.Second), totalBlocks.Uint64(), txRate)
 
 		l.wg.Done()
 	}()
 
-	var in executor.State
+	var (
+		in executor.State
+		ok bool
+	)
 	for {
 		select {
-		case <-l.closeCh:
-			return
-		case in = <-l.inputCh:
+		case in, ok = <-l.inputCh:
+			if !ok {
+				return
+			}
+
 			// we must do tx + 1 because first tx is actually marked as 0
 			lastIntervalTx += uint64(in.Transaction + 1)
 			totalBlocks.SetUint64(uint64(in.Block))
@@ -113,14 +114,4 @@ func (l *progressLogger) startReport(reportFrequency int) {
 		}
 	}
 
-}
-
-// close sends signal to the report goroutine to gracefully end
-func (l *progressLogger) close() {
-	select {
-	case <-l.closeCh:
-		return
-	default:
-		close(l.closeCh)
-	}
 }
