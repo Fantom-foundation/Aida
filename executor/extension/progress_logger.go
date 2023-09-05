@@ -7,12 +7,13 @@ import (
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/logger"
+	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
 const (
 	DefaultReportFrequencyInBlocks = 100_000
-	progressReportFormat           = "Elapsed time: %v; reached block %d; last interval rate ~%.2f Tx/s"
+	progressReportFormat           = "Elapsed time: %v; reached block %d; last interval rate ~%.2f Tx/s; memory usage ~%.2f GiB; disk usage ~%.2f GiB"
 )
 
 // MakeProgressLogger creates progress logger. It logs progress about processor depending on reportFrequency.
@@ -49,7 +50,7 @@ func (l *progressLogger) PreRun(_ executor.State) error {
 	l.wg.Add(1)
 
 	// pass the value for thread safety
-	go l.startReport(l.reportFrequency)
+	go l.startReport(l.reportFrequency, l.config.StateDbSrc)
 	return nil
 }
 
@@ -70,27 +71,31 @@ func (l *progressLogger) PostBlock(state executor.State) error {
 
 // startReport runs in own goroutine. It accepts data from Executor from PostBock func.
 // It reports current progress everytime we hit the ticker with defaultReportFrequencyInSeconds.
-func (l *progressLogger) startReport(reportFrequency int) {
+func (l *progressLogger) startReport(reportFrequency int, statePath string) {
 	start := time.Now()
 	lastReport := time.Now()
 
 	totalTx := new(big.Int)
 	totalBlocks := new(big.Int)
-	var lastIntervalTx uint64
+
+	var (
+		lastIntervalTx uint64
+		in             executor.State
+		ok             bool
+	)
 
 	defer func() {
 		elapsed := time.Since(start)
 		txRate := float64(totalTx.Uint64()) / elapsed.Seconds()
 
-		l.log.Infof(progressReportFormat, elapsed.Round(time.Second), totalBlocks.Uint64(), txRate)
+		memoryUsage := float64(in.State.GetMemoryUsage().UsedBytes) / 1024 / 1024 / 1024 // convert to GiB
+		diskUsage := float64(utils.GetDirectorySize(statePath)) / 1024 / 1024 / 1024     // convert to GiB
+
+		l.log.Infof(progressReportFormat, elapsed.Round(time.Second), totalBlocks.Uint64(), txRate, memoryUsage, diskUsage)
 
 		l.wg.Done()
 	}()
 
-	var (
-		in executor.State
-		ok bool
-	)
 	for {
 		select {
 		case in, ok = <-l.inputCh:
@@ -104,14 +109,35 @@ func (l *progressLogger) startReport(reportFrequency int) {
 
 			// did we hit the block milestone?
 			if in.Block%reportFrequency == 0 {
-				elapsed := time.Since(start)
-				txRate := float64(lastIntervalTx) / time.Since(lastReport).Seconds()
+				l.report(start, lastReport, lastIntervalTx, in.State, statePath, totalBlocks.Uint64())
 
-				// todo add file size and gas rate once StateDb is added to new processor
-				l.log.Infof(progressReportFormat, elapsed.Round(1*time.Second), totalBlocks.Uint64(), txRate)
+				// add values to total counter
+				totalTx.SetUint64(totalTx.Uint64() + lastIntervalTx)
+
+				// reset interval values
 				lastReport = time.Now()
+				lastIntervalTx = 0
 			}
 		}
 	}
 
+}
+
+// report calculates the data from Executor and logs info to os.Stdout.
+func (l *progressLogger) report(
+	start, lastReport time.Time,
+	lastIntervalTx uint64,
+	state state.StateDB,
+	statePath string,
+	totalBlocks uint64,
+) {
+	elapsed := time.Since(start)
+	txRate := float64(lastIntervalTx) / time.Since(lastReport).Seconds()
+
+	memoryUsage := float64(state.GetMemoryUsage().UsedBytes) / 1024 / 1024 / 1024 // convert to GiB
+	diskUsage := float64(utils.GetDirectorySize(statePath)) / 1024 / 1024 / 1024  // convert to GiB
+
+	// todo add file size and gas rate once StateDb is added to new processor
+	l.log.Infof(progressReportFormat,
+		elapsed.Round(1*time.Second), totalBlocks, txRate, memoryUsage, diskUsage)
 }

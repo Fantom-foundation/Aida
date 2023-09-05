@@ -9,6 +9,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/logger"
+	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	"go.uber.org/mock/gomock"
 )
@@ -50,6 +51,7 @@ func TestProgressLoggerExtension_NoLoggerIsCreatedIfDisabled(t *testing.T) {
 func TestProgressLoggerExtension_LoggingHappens(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
+	db := state.NewMockStateDB(ctrl)
 
 	config := &utils.Config{}
 	config.Quiet = true
@@ -62,26 +64,30 @@ func TestProgressLoggerExtension_LoggingHappens(t *testing.T) {
 		reportFrequency: testReportFrequency,
 	}
 
-	ext.PreRun(executor.State{})
-
 	gomock.InOrder(
-		log.EXPECT().Infof(MatchFormat(progressReportFormat), gomock.Any(), uint64(1), MatchTxRate()),
-		log.EXPECT().Infof(MatchFormat(progressReportFormat), gomock.Any(), uint64(2), MatchTxRate()),
+		db.EXPECT().GetMemoryUsage(),
+		log.EXPECT().Infof(MatchFormat(progressReportFormat), gomock.Any(), uint64(1), MatchTxRate(), 0, 0),
+		db.EXPECT().GetMemoryUsage(),
+		log.EXPECT().Infof(MatchFormat(progressReportFormat), gomock.Any(), uint64(2), MatchTxRate(), 0, 0),
 	)
+
+	ext.PreRun(executor.State{})
 
 	// fill the logger with some data
 	ext.PostBlock(executor.State{
 		Block:       1,
 		Transaction: 1,
+		State:       db,
 	})
 
 	ext.PostBlock(executor.State{
 		Block:       2,
 		Transaction: 2,
+		State:       db,
 	})
 
 	// wait a bit until the logger gets the data
-	time.Sleep(time.Second)
+	time.Sleep(6 * time.Second)
 }
 
 // MATCHERS
