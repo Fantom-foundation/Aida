@@ -169,10 +169,12 @@ func blockProfileAction(ctx *cli.Context) error {
 			return fmt.Errorf("execution failed; %v", err)
 		}
 
-		// record transaction for parallel experiment
-		if err = context.RecordTransaction(tx, time.Since(txTimer)); err != nil {
-			log.Critical("\tFAILED profiling transaction.")
-			return fmt.Errorf("transaction profiling error; %v", err)
+		// record transaction (exclude Lachesis' pseudo transactions)
+		if tx.Transaction != utils.PseudoTx {
+			if err = context.RecordTransaction(tx, time.Since(txTimer)); err != nil {
+				log.Critical("\tFAILED profiling transaction.")
+				return fmt.Errorf("transaction profiling error; %v", err)
+			}
 		}
 	}
 	if !isFirstBlock {
