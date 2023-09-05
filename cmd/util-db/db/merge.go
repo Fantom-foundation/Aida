@@ -55,7 +55,7 @@ func newMerger(cfg *utils.Config, targetDb ethdb.Database, sourceDbs []ethdb.Dat
 
 // merge two or more Dbs together
 func merge(ctx *cli.Context) error {
-	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
+	cfg, err := utils.NewConfig(ctx, utils.OneToNArgs)
 	if err != nil {
 		return err
 	}
