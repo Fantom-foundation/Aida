@@ -27,40 +27,25 @@ func MakeCarmenStateDB(directory, variant, archive string, schema int) (StateDB,
 		fallthrough
 	case "sqlite":
 		archiveType = carmen.SqliteArchive
+	case "s4":
+		archiveType = carmen.S4Archive
+	case "s5":
+		archiveType = carmen.S5Archive
 	default:
 		return nil, fmt.Errorf("unsupported archive type: %s", archive)
 	}
 
+	if variant == "" {
+		variant = "go-file"
+	}
 	params := carmen.Parameters{
+		Variant:   carmen.Variant(variant),
 		Schema:    carmen.StateSchema(schema),
 		Directory: directory,
 		Archive:   archiveType,
 	}
 
-	var db carmen.State
-	var err error
-	switch variant {
-	case "go-memory":
-		db, err = carmen.NewGoMemoryState(params)
-	case "go-file-nocache":
-		db, err = carmen.NewGoFileState(params)
-	case "":
-		fallthrough
-	case "go-file":
-		db, err = carmen.NewGoCachedFileState(params)
-	case "go-ldb-nocache":
-		db, err = carmen.NewGoLeveLIndexAndStoreState(params)
-	case "go-ldb":
-		db, err = carmen.NewGoCachedLeveLIndexAndStoreState(params)
-	case "cpp-memory":
-		db, err = carmen.NewCppInMemoryState(params)
-	case "cpp-file":
-		db, err = carmen.NewCppFileBasedState(params)
-	case "cpp-ldb":
-		db, err = carmen.NewCppLevelDbBasedState(params)
-	default:
-		return nil, fmt.Errorf("unknown variant: %v", variant)
-	}
+	db, err := carmen.NewState(params)
 	if err != nil {
 		return nil, err
 	}

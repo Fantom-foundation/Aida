@@ -4,6 +4,8 @@ import (
 	"math/rand"
 	"testing"
 	"time"
+
+	carmen "github.com/Fantom-foundation/Carmen/go/state"
 )
 
 type CarmenStateTestCase struct {
@@ -12,22 +14,17 @@ type CarmenStateTestCase struct {
 }
 
 func GetCarmenStateTestCases() []CarmenStateTestCase {
-	variants := []string{
-		"",
-		"go-memory",
-		"go-file-nocache",
-		"go-file",
-		"go-ldb-nocache",
-		"go-ldb",
-		"cpp-memory",
-		"cpp-file",
-		"cpp-ldb",
+	variants := []string{""}
+	for _, variant := range carmen.GetAllVariants() {
+		variants = append(variants, string(variant))
 	}
 
 	archives := []string{
 		"none",
 		"leveldb",
 		"sqlite",
+		"s4",
+		"s5",
 	}
 
 	var testCases []CarmenStateTestCase
