@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/Fantom-foundation/Aida/state"
 	"go.uber.org/mock/gomock"
 )
 
@@ -32,7 +33,7 @@ func TestProcessor_ProcessorGetsCalledForEachTransaction(t *testing.T) {
 	)
 
 	executor := NewExecutor(substate)
-	if err := executor.Run(10, 12, processor, nil); err != nil {
+	if err := executor.Run(Params{From: 10, To: 12}, processor, nil); err != nil {
 		t.Errorf("execution failed: %v", err)
 	}
 }
@@ -60,7 +61,7 @@ func TestProcessor_FailingProcessorStopsExecution(t *testing.T) {
 	)
 
 	executor := NewExecutor(substate)
-	if got, want := executor.Run(10, 20, processor, nil), stop; !errors.Is(got, want) {
+	if got, want := executor.Run(Params{From: 10, To: 20}, processor, nil), stop; !errors.Is(got, want) {
 		t.Errorf("execution did not produce expected error, wanted %v, got %v", got, want)
 	}
 }
@@ -107,7 +108,7 @@ func TestProcessor_ExtensionsGetSignaledAboutEvents(t *testing.T) {
 	)
 
 	executor := NewExecutor(substate)
-	if err := executor.Run(10, 12, processor, []Extension{extension}); err != nil {
+	if err := executor.Run(Params{From: 10, To: 12}, processor, []Extension{extension}); err != nil {
 		t.Errorf("execution failed: %v", err)
 	}
 }
@@ -139,7 +140,7 @@ func TestProcessor_FailingProcessorShouldStopExecutionButEndEventsAreDelivered(t
 	)
 
 	executor := NewExecutor(substate)
-	if got, want := executor.Run(10, 20, processor, []Extension{extension}), stop; !errors.Is(got, want) {
+	if got, want := executor.Run(Params{From: 10, To: 20}, processor, []Extension{extension}), stop; !errors.Is(got, want) {
 		t.Errorf("execution did not fail as expected, wanted %v, got %v", want, got)
 	}
 }
@@ -158,7 +159,7 @@ func TestProcessor_EmptyIntervalEmitsNoEvents(t *testing.T) {
 	)
 
 	executor := NewExecutor(substate)
-	if err := executor.Run(10, 10, processor, []Extension{extension}); err != nil {
+	if err := executor.Run(Params{From: 10, To: 10}, processor, []Extension{extension}); err != nil {
 		t.Errorf("execution failed: %v", err)
 	}
 }
@@ -208,7 +209,7 @@ func TestProcessor_MultipleExtensionsGetSignaledInOrder(t *testing.T) {
 	)
 
 	executor := NewExecutor(substate)
-	if err := executor.Run(10, 11, processor, []Extension{extension1, extension2}); err != nil {
+	if err := executor.Run(Params{From: 10, To: 11}, processor, []Extension{extension1, extension2}); err != nil {
 		t.Errorf("execution failed: %v", err)
 	}
 }
@@ -231,7 +232,7 @@ func TestProcessor_FailingExtensionPreEventCausesExecutionToStop(t *testing.T) {
 	)
 
 	executor := NewExecutor(substate)
-	if got, want := executor.Run(10, 20, processor, []Extension{extension1, extension2}), resultError; errors.Is(got, want) {
+	if got, want := executor.Run(Params{From: 10, To: 20}, processor, []Extension{extension1, extension2}), resultError; errors.Is(got, want) {
 		t.Errorf("execution failed with wrong error, wanted %v, got %v", want, got)
 	}
 }
@@ -276,10 +277,55 @@ func TestProcessor_FailingExtensionPostEventCausesExecutionToStop(t *testing.T) 
 	)
 
 	executor := NewExecutor(substate)
-	if got, want := executor.Run(10, 20, processor, []Extension{extension1, extension2}), resultError; errors.Is(got, want) {
+	if got, want := executor.Run(Params{From: 10, To: 20}, processor, []Extension{extension1, extension2}), resultError; errors.Is(got, want) {
 		t.Errorf("execution failed with wrong error, wanted %v, got %v", want, got)
 	}
 }
+
+func TestProcessor_StateDbIsPropagatedToTheProcessorAndAllExtensions(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	substate := NewMockSubstateProvider(ctrl)
+	processor := NewMockProcessor(ctrl)
+	extension := NewMockExtension(ctrl)
+	state := state.NewMockStateDB(ctrl)
+
+	substate.EXPECT().
+		Run(gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(from int, to int, consume Consumer) error {
+			// We simulate two transactions per block.
+			for i := from; i < to; i++ {
+				consume(i, 7, nil)
+				consume(i, 9, nil)
+			}
+			return nil
+		})
+
+	gomock.InOrder(
+		extension.EXPECT().PreRun(WithState(state)),
+		extension.EXPECT().PreBlock(WithState(state)),
+		extension.EXPECT().PreTransaction(WithState(state)),
+		processor.EXPECT().Process(WithState(state)),
+		extension.EXPECT().PostTransaction(WithState(state)),
+		extension.EXPECT().PreTransaction(WithState(state)),
+		processor.EXPECT().Process(WithState(state)),
+		extension.EXPECT().PostTransaction(WithState(state)),
+		extension.EXPECT().PostBlock(WithState(state)),
+		extension.EXPECT().PostRun(WithState(state), nil),
+	)
+
+	err := NewExecutor(substate).Run(
+		Params{From: 10, To: 11, State: state},
+		processor,
+		[]Extension{extension},
+	)
+	if err != nil {
+		t.Errorf("execution failed: %v", err)
+	}
+}
+
+// ----------------------------------------------------------------------------
+//                                   Matcher
+// ----------------------------------------------------------------------------
 
 func AtBlock(block int) gomock.Matcher {
 	return atBlock{block}
@@ -314,4 +360,21 @@ func (m atTransaction) Matches(value any) bool {
 
 func (m atTransaction) String() string {
 	return fmt.Sprintf("should be at transaction %d/%d", m.expectedBlock, m.expectedTransaction)
+}
+
+func WithState(state state.StateDB) gomock.Matcher {
+	return withState{state}
+}
+
+type withState struct {
+	state state.StateDB
+}
+
+func (m withState) Matches(value any) bool {
+	state, ok := value.(State)
+	return ok && state.State == m.state
+}
+
+func (m withState) String() string {
+	return fmt.Sprintf("should reference state %p", m.state)
 }

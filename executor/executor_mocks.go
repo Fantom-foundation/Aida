@@ -34,17 +34,17 @@ func (m *MockExecutor) EXPECT() *MockExecutorMockRecorder {
 }
 
 // Run mocks base method.
-func (m *MockExecutor) Run(from, to int, processor Processor, extensions []Extension) error {
+func (m *MockExecutor) Run(params Params, processor Processor, extensions []Extension) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Run", from, to, processor, extensions)
+	ret := m.ctrl.Call(m, "Run", params, processor, extensions)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Run indicates an expected call of Run.
-func (mr *MockExecutorMockRecorder) Run(from, to, processor, extensions interface{}) *gomock.Call {
+func (mr *MockExecutorMockRecorder) Run(params, processor, extensions interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockExecutor)(nil).Run), from, to, processor, extensions)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockExecutor)(nil).Run), params, processor, extensions)
 }
 
 // MockProcessor is a mock of Processor interface.

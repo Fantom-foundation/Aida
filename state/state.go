@@ -1,5 +1,7 @@
 package state
 
+//go:generate mockgen -source state.go -destination state_mocks.go -package state
+
 import (
 	"fmt"
 	"math/big"
