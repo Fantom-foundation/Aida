@@ -20,8 +20,8 @@ type SubstateProvider interface {
 	// Run iterates through transaction in the block range [from,to) in order
 	// and forwards substate information for each transaction in the range to
 	// the provided consumer. Execution aborts if the consumer returns an error
-	// or an error during the substate retrieval process occured.
-	Run(from int, to int, comsumer Consumer) error
+	// or an error during the substate retrieval process occurred.
+	Run(from int, to int, consumer Consumer) error
 	// Close releases resources held by the Substate implementation. After this
 	// no more operations are allowed on the same instance.
 	Close()
@@ -29,7 +29,15 @@ type SubstateProvider interface {
 
 // Consumer is a type alias for the type of function to which substate information
 // can be forwarded by the SubstateProvider.
-type Consumer func(block int, transaction int, substate *substate.Substate) error
+type Consumer func(Transaction) error
+
+// Transaction summarizes the per-transaction information provided by a
+// SubstateProvider.
+type Transaction struct {
+	Block       int
+	Transaction int
+	Substate    *substate.Substate
+}
 
 // ----------------------------------------------------------------------------
 //                              Implementation
@@ -37,7 +45,7 @@ type Consumer func(block int, transaction int, substate *substate.Substate) erro
 
 // OpenSubstateDb opens a substate database as configured in the given parameters.
 func OpenSubstateDb(config *utils.Config, ctxt *cli.Context) (res SubstateProvider, err error) {
-	// Substate is panicing if we are opening a non-existing directory. To mitigate
+	// Substate is panicking if we are opening a non-existing directory. To mitigate
 	// the damage, we recover here and forward an error instead.
 	defer func() {
 		if issue := recover(); issue != nil {

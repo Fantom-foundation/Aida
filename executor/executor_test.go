@@ -3,6 +3,7 @@ package executor
 import (
 	"errors"
 	"fmt"
+	"sync"
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/state"
@@ -19,8 +20,8 @@ func TestProcessor_ProcessorGetsCalledForEachTransaction(t *testing.T) {
 		DoAndReturn(func(from int, to int, consume Consumer) error {
 			// We simulate two transactions per block.
 			for i := from; i < to; i++ {
-				consume(i, 0, nil)
-				consume(i, 1, nil)
+				consume(Transaction{i, 0, nil})
+				consume(Transaction{i, 1, nil})
 			}
 			return nil
 		})
@@ -47,7 +48,7 @@ func TestProcessor_FailingProcessorStopsExecution(t *testing.T) {
 		Run(gomock.Any(), gomock.Any(), gomock.Any()).
 		DoAndReturn(func(from int, to int, consume Consumer) error {
 			for i := from; i < to; i++ {
-				if err := consume(i, 0, nil); err != nil {
+				if err := consume(Transaction{i, 0, nil}); err != nil {
 					return err
 				}
 			}
@@ -77,8 +78,8 @@ func TestProcessor_ExtensionsGetSignaledAboutEvents(t *testing.T) {
 		DoAndReturn(func(from int, to int, consume Consumer) error {
 			// We simulate two transactions per block.
 			for i := from; i < to; i++ {
-				consume(i, 7, nil)
-				consume(i, 9, nil)
+				consume(Transaction{i, 7, nil})
+				consume(Transaction{i, 9, nil})
 			}
 			return nil
 		})
@@ -123,7 +124,7 @@ func TestProcessor_FailingProcessorShouldStopExecutionButEndEventsAreDelivered(t
 		Run(gomock.Any(), gomock.Any(), gomock.Any()).
 		DoAndReturn(func(from int, to int, consume Consumer) error {
 			for i := from; i < to; i++ {
-				if err := consume(i, 7, nil); err != nil {
+				if err := consume(Transaction{i, 7, nil}); err != nil {
 					return err
 				}
 			}
@@ -176,8 +177,8 @@ func TestProcessor_MultipleExtensionsGetSignaledInOrder(t *testing.T) {
 		DoAndReturn(func(from int, to int, consume Consumer) error {
 			// We simulate two transactions per block.
 			for i := from; i < to; i++ {
-				consume(i, 7, nil)
-				consume(i, 9, nil)
+				consume(Transaction{i, 7, nil})
+				consume(Transaction{i, 9, nil})
 			}
 			return nil
 		})
@@ -248,7 +249,7 @@ func TestProcessor_FailingExtensionPostEventCausesExecutionToStop(t *testing.T) 
 		Run(gomock.Any(), gomock.Any(), gomock.Any()).
 		DoAndReturn(func(from int, to int, consume Consumer) error {
 			for i := from; i < to; i++ {
-				if err := consume(i, 7, nil); err != nil {
+				if err := consume(Transaction{i, 7, nil}); err != nil {
 					return err
 				}
 			}
@@ -294,8 +295,8 @@ func TestProcessor_StateDbIsPropagatedToTheProcessorAndAllExtensions(t *testing.
 		DoAndReturn(func(from int, to int, consume Consumer) error {
 			// We simulate two transactions per block.
 			for i := from; i < to; i++ {
-				consume(i, 7, nil)
-				consume(i, 9, nil)
+				consume(Transaction{i, 7, nil})
+				consume(Transaction{i, 9, nil})
 			}
 			return nil
 		})
@@ -323,6 +324,210 @@ func TestProcessor_StateDbIsPropagatedToTheProcessorAndAllExtensions(t *testing.
 	}
 }
 
+func TestProcessor_TransactionsAreProcessedWithMultipleWorkersIfRequested(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	substate := NewMockSubstateProvider(ctrl)
+	processor := NewMockProcessor(ctrl)
+
+	substate.EXPECT().
+		Run(gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(from int, to int, consume Consumer) error {
+			// We simulate two transactions per block.
+			for i := from; i < to; i++ {
+				consume(Transaction{i, 7, nil})
+				consume(Transaction{i, 9, nil})
+			}
+			return nil
+		})
+
+	// Simulate two processors that need to be called in parallel.
+	var wg sync.WaitGroup
+	wg.Add(2)
+	processor.EXPECT().Process(gomock.Any()).Times(2).Do(func(State) {
+		wg.Done()
+		wg.Wait()
+	})
+
+	err := NewExecutor(substate).Run(
+		Params{From: 10, To: 11, NumProcessors: 2},
+		processor,
+		nil,
+	)
+	if err != nil {
+		t.Errorf("execution failed: %v", err)
+	}
+}
+
+func TestProcessor_SignalsAreDeliveredInConcurrentExecution(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	substate := NewMockSubstateProvider(ctrl)
+	processor := NewMockProcessor(ctrl)
+	extension := NewMockExtension(ctrl)
+
+	substate.EXPECT().
+		Run(gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(from int, to int, consume Consumer) error {
+			// We simulate two transactions per block.
+			for i := from; i < to; i++ {
+				consume(Transaction{i, 7, nil})
+				consume(Transaction{i, 9, nil})
+			}
+			return nil
+		})
+
+	// For each transaction, PreTransaction, Process, and PostTransaction
+	// should happen in order. However, Transactions may be processed
+	// out-of-order.
+	// Note: In the parallel context there is no block boundary.
+	pre := extension.EXPECT().PreRun(gomock.Any())
+	post := extension.EXPECT().PostRun(gomock.Any(), nil)
+
+	gomock.InOrder(
+		pre,
+		extension.EXPECT().PreTransaction(AtTransaction(10, 7)),
+		processor.EXPECT().Process(AtTransaction(10, 7)),
+		extension.EXPECT().PostTransaction(AtTransaction(10, 7)),
+		post,
+	)
+
+	gomock.InOrder(
+		pre,
+		extension.EXPECT().PreTransaction(AtTransaction(10, 9)),
+		processor.EXPECT().Process(AtTransaction(10, 9)),
+		extension.EXPECT().PostTransaction(AtTransaction(10, 9)),
+		post,
+	)
+
+	gomock.InOrder(
+		pre,
+		extension.EXPECT().PreTransaction(AtTransaction(11, 7)),
+		processor.EXPECT().Process(AtTransaction(11, 7)),
+		extension.EXPECT().PostTransaction(AtTransaction(11, 7)),
+		post,
+	)
+
+	gomock.InOrder(
+		pre,
+		extension.EXPECT().PreTransaction(AtTransaction(11, 9)),
+		processor.EXPECT().Process(AtTransaction(11, 9)),
+		extension.EXPECT().PostTransaction(AtTransaction(11, 9)),
+		post,
+	)
+
+	err := NewExecutor(substate).Run(
+		Params{From: 10, To: 12, NumProcessors: 2},
+		processor,
+		[]Extension{extension},
+	)
+	if err != nil {
+		t.Errorf("execution failed: %v", err)
+	}
+}
+
+func TestProcessor_ProcessErrorAbortsParallelProcessing(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	substate := NewMockSubstateProvider(ctrl)
+	processor := NewMockProcessor(ctrl)
+
+	substate.EXPECT().
+		Run(gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(from int, to int, consume Consumer) error {
+			for i := from; i < to; i++ {
+				if err := consume(Transaction{i, 7, nil}); err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+
+	stop := fmt.Errorf("stop!")
+	processor.EXPECT().Process(AtBlock(4)).Return(stop)
+	processor.EXPECT().Process(gomock.Any()).MaxTimes(20)
+
+	err := NewExecutor(substate).Run(
+		Params{To: 1000, NumProcessors: 2},
+		processor,
+		nil,
+	)
+	if got, want := err, stop; !errors.Is(got, want) {
+		t.Errorf("execution did not stop with correct error, wanted %v, got %v", want, got)
+	}
+}
+
+func TestProcessor_PreEventErrorAbortsParallelProcessing(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	substate := NewMockSubstateProvider(ctrl)
+	processor := NewMockProcessor(ctrl)
+	extension := NewMockExtension(ctrl)
+
+	substate.EXPECT().
+		Run(gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(from int, to int, consume Consumer) error {
+			for i := from; i < to; i++ {
+				if err := consume(Transaction{i, 7, nil}); err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+
+	processor.EXPECT().Process(gomock.Any()).MaxTimes(20)
+
+	stop := fmt.Errorf("stop!")
+	extension.EXPECT().PreTransaction(AtBlock(4)).Return(stop)
+
+	extension.EXPECT().PreRun(gomock.Any())
+	extension.EXPECT().PreTransaction(gomock.Any()).MaxTimes(20)
+	extension.EXPECT().PostTransaction(gomock.Any()).MaxTimes(20)
+	extension.EXPECT().PostRun(gomock.Any(), WithError(stop))
+
+	err := NewExecutor(substate).Run(
+		Params{To: 1000, NumProcessors: 2},
+		processor,
+		[]Extension{extension},
+	)
+	if got, want := err, stop; !errors.Is(got, want) {
+		t.Errorf("execution did not stop with correct error, wanted %v, got %v", want, got)
+	}
+}
+
+func TestProcessor_PostEventErrorAbortsParallelProcessing(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	substate := NewMockSubstateProvider(ctrl)
+	processor := NewMockProcessor(ctrl)
+	extension := NewMockExtension(ctrl)
+
+	substate.EXPECT().
+		Run(gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(from int, to int, consume Consumer) error {
+			for i := from; i < to; i++ {
+				if err := consume(Transaction{i, 7, nil}); err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+
+	processor.EXPECT().Process(gomock.Any()).MaxTimes(20)
+
+	stop := fmt.Errorf("stop!")
+	extension.EXPECT().PostTransaction(AtBlock(4)).Return(stop)
+
+	extension.EXPECT().PreRun(gomock.Any())
+	extension.EXPECT().PreTransaction(gomock.Any()).MaxTimes(20)
+	extension.EXPECT().PostTransaction(gomock.Any()).MaxTimes(20)
+	extension.EXPECT().PostRun(gomock.Any(), WithError(stop))
+
+	err := NewExecutor(substate).Run(
+		Params{To: 1000, NumProcessors: 2},
+		processor,
+		[]Extension{extension},
+	)
+	if got, want := err, stop; !errors.Is(got, want) {
+		t.Errorf("execution did not stop with correct error, wanted %v, got %v", want, got)
+	}
+}
+
 // ----------------------------------------------------------------------------
 //                                   Matcher
 // ----------------------------------------------------------------------------
@@ -341,7 +546,7 @@ func (m atBlock) Matches(value any) bool {
 }
 
 func (m atBlock) String() string {
-	return fmt.Sprintf("should be at block %d", m.expectedBlock)
+	return fmt.Sprintf("at block %d", m.expectedBlock)
 }
 
 func AtTransaction(block int, transaction int) gomock.Matcher {
@@ -359,7 +564,7 @@ func (m atTransaction) Matches(value any) bool {
 }
 
 func (m atTransaction) String() string {
-	return fmt.Sprintf("should be at transaction %d/%d", m.expectedBlock, m.expectedTransaction)
+	return fmt.Sprintf("at transaction %d/%d", m.expectedBlock, m.expectedTransaction)
 }
 
 func WithState(state state.StateDB) gomock.Matcher {
@@ -376,5 +581,22 @@ func (m withState) Matches(value any) bool {
 }
 
 func (m withState) String() string {
-	return fmt.Sprintf("should reference state %p", m.state)
+	return fmt.Sprintf("with state %p", m.state)
+}
+
+func WithError(err error) gomock.Matcher {
+	return withError{err}
+}
+
+type withError struct {
+	err error
+}
+
+func (m withError) Matches(value any) bool {
+	err, ok := value.(error)
+	return ok && errors.Is(err, m.err)
+}
+
+func (m withError) String() string {
+	return fmt.Sprintf("with error %v", m.err)
 }
