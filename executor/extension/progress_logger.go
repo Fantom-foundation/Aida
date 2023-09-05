@@ -8,20 +8,22 @@ import (
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/op/go-logging"
 )
 
-const DefaultReportFrequency = 10 * time.Second
+const (
+	DefaultReportFrequencyInBlocks = 100_000
+	progressReportFormat           = "Elapsed time: %v; reached block %d; last interval rate ~%.2f Tx/s"
+)
 
 // MakeProgressLogger creates progress logger. It logs progress about processor depending on reportFrequency.
-// If reportFrequency is 0, it is set to DefaultReportFrequency.
-func MakeProgressLogger(config *utils.Config, reportFrequency time.Duration) executor.Extension {
+// If reportFrequency is 0, it is set to DefaultReportFrequencyInBlocks.
+func MakeProgressLogger(config *utils.Config, reportFrequency int) executor.Extension {
 	if config.Quiet {
 		return NilExtension{}
 	}
 
 	if reportFrequency == 0 {
-		reportFrequency = DefaultReportFrequency
+		reportFrequency = DefaultReportFrequencyInBlocks
 	}
 
 	return &progressLogger{
@@ -37,11 +39,11 @@ func MakeProgressLogger(config *utils.Config, reportFrequency time.Duration) exe
 type progressLogger struct {
 	NilExtension
 	config          *utils.Config
-	log             *logging.Logger
+	log             logger.Logger
 	inputCh         chan executor.State
 	closeCh         chan any
 	wg              *sync.WaitGroup
-	reportFrequency time.Duration
+	reportFrequency int
 }
 
 // PreRun starts the report goroutine
@@ -70,9 +72,9 @@ func (l *progressLogger) PostBlock(state executor.State) error {
 
 // startReport runs in own goroutine. It accepts data from Executor from PostBock func.
 // It reports current progress everytime we hit the ticker with defaultReportFrequencyInSeconds.
-func (l *progressLogger) startReport(reportFrequency time.Duration) {
-	ticker := time.NewTicker(reportFrequency)
+func (l *progressLogger) startReport(reportFrequency int) {
 	start := time.Now()
+	lastReport := time.Now()
 
 	totalTx := new(big.Int)
 	totalBlocks := new(big.Int)
@@ -84,8 +86,7 @@ func (l *progressLogger) startReport(reportFrequency time.Duration) {
 
 		close(l.inputCh)
 
-		l.log.Infof("Elapsed time: %v; reached block %d; interval rate ~%.2f Tx/s",
-			elapsed.Round(1*time.Second), totalBlocks.Uint64(), txRate)
+		l.log.Infof(progressReportFormat, elapsed.Round(time.Second), totalBlocks.Uint64(), txRate)
 
 		l.wg.Done()
 	}()
@@ -99,13 +100,16 @@ func (l *progressLogger) startReport(reportFrequency time.Duration) {
 			// we must do tx + 1 because first tx is actually marked as 0
 			lastIntervalTx += uint64(in.Transaction + 1)
 			totalBlocks.SetUint64(uint64(in.Block))
-		case <-ticker.C:
-			elapsed := time.Since(start)
-			txRate := float64(lastIntervalTx) / reportFrequency.Seconds()
 
-			// todo add file size and gas rate once StateDb is added to new processor
-			l.log.Infof("Elapsed time: %v; reached block %d; last interval rate ~%.2f Tx/s",
-				elapsed.Round(1*time.Second), totalBlocks.Uint64(), txRate)
+			// did we hit the block milestone?
+			if in.Block%reportFrequency == 0 {
+				elapsed := time.Since(start)
+				txRate := float64(lastIntervalTx) / time.Since(lastReport).Seconds()
+
+				// todo add file size and gas rate once StateDb is added to new processor
+				l.log.Infof(progressReportFormat, elapsed.Round(1*time.Second), totalBlocks.Uint64(), txRate)
+				lastReport = time.Now()
+			}
 		}
 	}
 

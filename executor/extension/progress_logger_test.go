@@ -1,6 +1,8 @@
 package extension
 
 import (
+	"fmt"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -8,9 +10,10 @@ import (
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
+	"go.uber.org/mock/gomock"
 )
 
-const testReportFrequency = 1 * time.Second
+const testReportFrequency = 1
 
 func TestProgressLoggerExtension_CorrectClose(t *testing.T) {
 	config := &utils.Config{}
@@ -19,25 +22,19 @@ func TestProgressLoggerExtension_CorrectClose(t *testing.T) {
 	// start the report thread
 	ext.PreRun(executor.State{})
 
-	// signal that the thread was closed correctly
-	good := make(chan any, 1)
-
+	// make sure PostRun is not blocking.
+	done := make(chan bool)
 	go func() {
-		// we need a way out in case the logger does not close correctly
-		ticker := time.NewTicker(2 * time.Second)
-		for {
-			select {
-			case <-good:
-				return
-			case <-ticker.C:
-				t.Errorf("Logger did not close correctly")
-				return
-			}
-		}
+		ext.PostRun(executor.State{}, nil)
+		close(done)
 	}()
 
-	ext.PostRun(executor.State{}, nil)
-	close(good)
+	select {
+	case <-done:
+		return
+	case <-time.After(time.Second):
+		t.Fatalf("PostRun blocked unexpectedly")
+	}
 }
 
 func TestProgressLoggerExtension_NoLoggerIsCreatedIfDisabled(t *testing.T) {
@@ -51,14 +48,15 @@ func TestProgressLoggerExtension_NoLoggerIsCreatedIfDisabled(t *testing.T) {
 }
 
 func TestProgressLoggerExtension_LoggingHappens(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	log := logger.NewMockLogger(ctrl)
+
 	config := &utils.Config{}
 	config.Quiet = true
 
-	l, buf := logger.NewTestLogger()
-
 	ext := progressLogger{
 		config:          config,
-		log:             l,
+		log:             log,
 		inputCh:         make(chan executor.State, 10),
 		closeCh:         make(chan any, 1),
 		wg:              new(sync.WaitGroup),
@@ -67,42 +65,75 @@ func TestProgressLoggerExtension_LoggingHappens(t *testing.T) {
 
 	ext.PreRun(executor.State{})
 
+	gomock.InOrder(
+		log.EXPECT().Infof(MatchFormat(progressReportFormat), gomock.Any(), MatchBlockNumber(1), MatchTxRate()),
+		log.EXPECT().Infof(MatchFormat(progressReportFormat), gomock.Any(), MatchBlockNumber(2), MatchTxRate()),
+	)
+
 	// fill the logger with some data
 	ext.PostBlock(executor.State{
 		Block:       1,
-		Transaction: 0,
-	})
-
-	ext.PostBlock(executor.State{
-		Block:       1,
 		Transaction: 1,
 	})
 
 	ext.PostBlock(executor.State{
 		Block:       2,
-		Transaction: 0,
+		Transaction: 2,
 	})
 
-	ext.PostBlock(executor.State{
-		Block:       2,
-		Transaction: 1,
-	})
+	// wait a bit until the logger gets the data
+	time.Sleep(time.Second)
 
-	// wait for the ticker to tick
-	time.Sleep(2 * time.Second)
+}
 
-	// check if perpetual logging happened
-	if buf.String() == "" {
-		t.Errorf("Logger did not produce any messages")
-	}
+// MATCHERS
 
-	buf.Reset()
+func MatchFormat(format string) gomock.Matcher {
+	return matchFormat{format}
+}
 
-	ext.PostRun(executor.State{}, nil)
+type matchFormat struct {
+	format string
+}
 
-	// check if defer logging happened
-	if buf.String() == "" {
-		t.Errorf("Logger did not produce any messages")
-	}
+func (m matchFormat) Matches(value any) bool {
+	format, ok := value.(string)
+	return ok && strings.Compare(m.format, format) == 0
+}
 
+func (m matchFormat) String() string {
+	return fmt.Sprintf("log format should look like this: %v", m.format)
+}
+
+func MatchBlockNumber(blocks uint64) gomock.Matcher {
+	return matchBlockNumber{blocks}
+}
+
+type matchBlockNumber struct {
+	blocks uint64
+}
+
+func (m matchBlockNumber) Matches(value any) bool {
+	blocks, ok := value.(uint64)
+	return ok && m.blocks == blocks
+}
+
+func (m matchBlockNumber) String() string {
+	return fmt.Sprintf("log should have proccessed %v blocks", m.blocks)
+}
+
+func MatchTxRate() gomock.Matcher {
+	return matchTxRate{}
+}
+
+type matchTxRate struct {
+}
+
+func (m matchTxRate) Matches(value any) bool {
+	txRate, ok := value.(float64)
+	return ok && txRate > 0
+}
+
+func (m matchTxRate) String() string {
+	return fmt.Sprintf("log should have a txRate that is larger than 0")
 }
