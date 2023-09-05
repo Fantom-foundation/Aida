@@ -7,12 +7,16 @@ import (
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/state"
+	carmen "github.com/Fantom-foundation/Carmen/go/state"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
 func makeTestShadowDB(t *testing.T, ctc state.CarmenStateTestCase) state.StateDB {
 	csDB, err := state.MakeCarmenStateDB(t.TempDir(), ctc.Variant, ctc.Archive, 1)
+	if _, ok := err.(carmen.UnsupportedConfiguration); ok {
+		t.Skip("unsupported configuration")
+	}
 
 	if err != nil {
 		t.Fatalf("failed to create carmen state DB: %v", err)
@@ -625,6 +629,9 @@ func TestShadowState_GetShadowDB(t *testing.T) {
 
 		t.Run(testCaseTitle, func(t *testing.T) {
 			csDB, err := state.MakeCarmenStateDB(t.TempDir(), ctc.Variant, ctc.Archive, 1)
+			if _, ok := err.(carmen.UnsupportedConfiguration); ok {
+				t.Skip("unsupported configuration")
+			}
 
 			if err != nil {
 				t.Fatalf("failed to create carmen state DB: %v", err)
