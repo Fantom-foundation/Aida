@@ -35,8 +35,8 @@ type Consumer func(block int, transaction int, substate *substate.Substate) erro
 //                              Implementation
 // ----------------------------------------------------------------------------
 
-// OpenSubstate opens a substate database as configured in the given parameters.
-func OpenSubstate(config *utils.Config, ctxt *cli.Context) (res SubstateProvider, err error) {
+// OpenSubstateDb opens a substate database as configured in the given parameters.
+func OpenSubstateDb(config *utils.Config, ctxt *cli.Context) (res SubstateProvider, err error) {
 	// Substate is panicing if we are opening a non-existing directory. To mitigate
 	// the damage, we recover here and forward an error instead.
 	defer func() {

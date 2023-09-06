@@ -16,7 +16,7 @@ func TestSubstateProvider_OpeningANonExistingDbResultsInAnError(t *testing.T) {
 	config := utils.Config{}
 	config.AidaDb = t.TempDir()
 	// Important: the following code does not panic.
-	_, err := OpenSubstate(&config, nil)
+	_, err := OpenSubstateDb(&config, nil)
 	if err == nil {
 		t.Errorf("attempting to open a non-existing substate DB should fail")
 	}
@@ -33,7 +33,7 @@ func TestSubstateProvider_IterateOverExistingDb(t *testing.T) {
 	}
 
 	// Open the substate data for reading.
-	provider, err := openSubstate(path)
+	provider, err := openSubstateDb(path)
 	if err != nil {
 		t.Fatalf("failed to open substate DB: %v", err)
 	}
@@ -61,7 +61,7 @@ func TestSubstateProvider_LowerBoundIsInclusive(t *testing.T) {
 	}
 
 	// Open the substate data for reading.
-	provider, err := openSubstate(path)
+	provider, err := openSubstateDb(path)
 	if err != nil {
 		t.Fatalf("failed to open substate DB: %v", err)
 	}
@@ -89,7 +89,7 @@ func TestSubstateProvider_UpperBoundIsExclusive(t *testing.T) {
 	}
 
 	// Open the substate data for reading.
-	provider, err := openSubstate(path)
+	provider, err := openSubstateDb(path)
 	if err != nil {
 		t.Fatalf("failed to open substate DB: %v", err)
 	}
@@ -116,7 +116,7 @@ func TestSubstateProvider_RangeCanBeEmpty(t *testing.T) {
 	}
 
 	// Open the substate data for reading.
-	provider, err := openSubstate(path)
+	provider, err := openSubstateDb(path)
 	if err != nil {
 		t.Fatalf("failed to open substate DB: %v", err)
 	}
@@ -138,7 +138,7 @@ func TestSubstateProvider_IterationCanBeAbortedByConsumer(t *testing.T) {
 	}
 
 	// Open the substate data for reading.
-	provider, err := openSubstate(path)
+	provider, err := openSubstateDb(path)
 	if err != nil {
 		t.Fatalf("failed to open substate DB: %v", err)
 	}
@@ -165,11 +165,11 @@ func toConsumer(c TxConsumer) Consumer {
 	}
 }
 
-func openSubstate(path string) (SubstateProvider, error) {
+func openSubstateDb(path string) (SubstateProvider, error) {
 	config := utils.Config{}
 	config.AidaDb = path
 	config.Workers = 1
-	return OpenSubstate(&config, nil)
+	return OpenSubstateDb(&config, nil)
 }
 
 func createSubstateDb(path string) error {
