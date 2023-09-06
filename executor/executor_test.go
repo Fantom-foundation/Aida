@@ -20,8 +20,8 @@ func TestProcessor_ProcessorGetsCalledForEachTransaction(t *testing.T) {
 		DoAndReturn(func(from int, to int, consume Consumer) error {
 			// We simulate two transactions per block.
 			for i := from; i < to; i++ {
-				consume(Transaction{i, 0, nil})
-				consume(Transaction{i, 1, nil})
+				consume(TransactionInfo{i, 0, nil})
+				consume(TransactionInfo{i, 1, nil})
 			}
 			return nil
 		})
@@ -48,7 +48,7 @@ func TestProcessor_FailingProcessorStopsExecution(t *testing.T) {
 		Run(gomock.Any(), gomock.Any(), gomock.Any()).
 		DoAndReturn(func(from int, to int, consume Consumer) error {
 			for i := from; i < to; i++ {
-				if err := consume(Transaction{i, 0, nil}); err != nil {
+				if err := consume(TransactionInfo{i, 0, nil}); err != nil {
 					return err
 				}
 			}
@@ -78,8 +78,8 @@ func TestProcessor_ExtensionsGetSignaledAboutEvents(t *testing.T) {
 		DoAndReturn(func(from int, to int, consume Consumer) error {
 			// We simulate two transactions per block.
 			for i := from; i < to; i++ {
-				consume(Transaction{i, 7, nil})
-				consume(Transaction{i, 9, nil})
+				consume(TransactionInfo{i, 7, nil})
+				consume(TransactionInfo{i, 9, nil})
 			}
 			return nil
 		})
@@ -124,7 +124,7 @@ func TestProcessor_FailingProcessorShouldStopExecutionButEndEventsAreDelivered(t
 		Run(gomock.Any(), gomock.Any(), gomock.Any()).
 		DoAndReturn(func(from int, to int, consume Consumer) error {
 			for i := from; i < to; i++ {
-				if err := consume(Transaction{i, 7, nil}); err != nil {
+				if err := consume(TransactionInfo{i, 7, nil}); err != nil {
 					return err
 				}
 			}
@@ -177,8 +177,8 @@ func TestProcessor_MultipleExtensionsGetSignaledInOrder(t *testing.T) {
 		DoAndReturn(func(from int, to int, consume Consumer) error {
 			// We simulate two transactions per block.
 			for i := from; i < to; i++ {
-				consume(Transaction{i, 7, nil})
-				consume(Transaction{i, 9, nil})
+				consume(TransactionInfo{i, 7, nil})
+				consume(TransactionInfo{i, 9, nil})
 			}
 			return nil
 		})
@@ -249,7 +249,7 @@ func TestProcessor_FailingExtensionPostEventCausesExecutionToStop(t *testing.T) 
 		Run(gomock.Any(), gomock.Any(), gomock.Any()).
 		DoAndReturn(func(from int, to int, consume Consumer) error {
 			for i := from; i < to; i++ {
-				if err := consume(Transaction{i, 7, nil}); err != nil {
+				if err := consume(TransactionInfo{i, 7, nil}); err != nil {
 					return err
 				}
 			}
@@ -295,8 +295,8 @@ func TestProcessor_StateDbIsPropagatedToTheProcessorAndAllExtensions(t *testing.
 		DoAndReturn(func(from int, to int, consume Consumer) error {
 			// We simulate two transactions per block.
 			for i := from; i < to; i++ {
-				consume(Transaction{i, 7, nil})
-				consume(Transaction{i, 9, nil})
+				consume(TransactionInfo{i, 7, nil})
+				consume(TransactionInfo{i, 9, nil})
 			}
 			return nil
 		})
@@ -334,8 +334,8 @@ func TestProcessor_TransactionsAreProcessedWithMultipleWorkersIfRequested(t *tes
 		DoAndReturn(func(from int, to int, consume Consumer) error {
 			// We simulate two transactions per block.
 			for i := from; i < to; i++ {
-				consume(Transaction{i, 7, nil})
-				consume(Transaction{i, 9, nil})
+				consume(TransactionInfo{i, 7, nil})
+				consume(TransactionInfo{i, 9, nil})
 			}
 			return nil
 		})
@@ -349,7 +349,7 @@ func TestProcessor_TransactionsAreProcessedWithMultipleWorkersIfRequested(t *tes
 	})
 
 	err := NewExecutor(substate).Run(
-		Params{From: 10, To: 11, NumProcessors: 2},
+		Params{From: 10, To: 11, NumWorkers: 2},
 		processor,
 		nil,
 	)
@@ -369,8 +369,8 @@ func TestProcessor_SignalsAreDeliveredInConcurrentExecution(t *testing.T) {
 		DoAndReturn(func(from int, to int, consume Consumer) error {
 			// We simulate two transactions per block.
 			for i := from; i < to; i++ {
-				consume(Transaction{i, 7, nil})
-				consume(Transaction{i, 9, nil})
+				consume(TransactionInfo{i, 7, nil})
+				consume(TransactionInfo{i, 9, nil})
 			}
 			return nil
 		})
@@ -415,7 +415,7 @@ func TestProcessor_SignalsAreDeliveredInConcurrentExecution(t *testing.T) {
 	)
 
 	err := NewExecutor(substate).Run(
-		Params{From: 10, To: 12, NumProcessors: 2},
+		Params{From: 10, To: 12, NumWorkers: 2},
 		processor,
 		[]Extension{extension},
 	)
@@ -433,7 +433,7 @@ func TestProcessor_ProcessErrorAbortsParallelProcessing(t *testing.T) {
 		Run(gomock.Any(), gomock.Any(), gomock.Any()).
 		DoAndReturn(func(from int, to int, consume Consumer) error {
 			for i := from; i < to; i++ {
-				if err := consume(Transaction{i, 7, nil}); err != nil {
+				if err := consume(TransactionInfo{i, 7, nil}); err != nil {
 					return err
 				}
 			}
@@ -445,7 +445,7 @@ func TestProcessor_ProcessErrorAbortsParallelProcessing(t *testing.T) {
 	processor.EXPECT().Process(gomock.Any()).MaxTimes(20)
 
 	err := NewExecutor(substate).Run(
-		Params{To: 1000, NumProcessors: 2},
+		Params{To: 1000, NumWorkers: 2},
 		processor,
 		nil,
 	)
@@ -464,7 +464,7 @@ func TestProcessor_PreEventErrorAbortsParallelProcessing(t *testing.T) {
 		Run(gomock.Any(), gomock.Any(), gomock.Any()).
 		DoAndReturn(func(from int, to int, consume Consumer) error {
 			for i := from; i < to; i++ {
-				if err := consume(Transaction{i, 7, nil}); err != nil {
+				if err := consume(TransactionInfo{i, 7, nil}); err != nil {
 					return err
 				}
 			}
@@ -482,7 +482,7 @@ func TestProcessor_PreEventErrorAbortsParallelProcessing(t *testing.T) {
 	extension.EXPECT().PostRun(gomock.Any(), WithError(stop))
 
 	err := NewExecutor(substate).Run(
-		Params{To: 1000, NumProcessors: 2},
+		Params{To: 1000, NumWorkers: 2},
 		processor,
 		[]Extension{extension},
 	)
@@ -501,7 +501,7 @@ func TestProcessor_PostEventErrorAbortsParallelProcessing(t *testing.T) {
 		Run(gomock.Any(), gomock.Any(), gomock.Any()).
 		DoAndReturn(func(from int, to int, consume Consumer) error {
 			for i := from; i < to; i++ {
-				if err := consume(Transaction{i, 7, nil}); err != nil {
+				if err := consume(TransactionInfo{i, 7, nil}); err != nil {
 					return err
 				}
 			}
@@ -519,7 +519,7 @@ func TestProcessor_PostEventErrorAbortsParallelProcessing(t *testing.T) {
 	extension.EXPECT().PostRun(gomock.Any(), WithError(stop))
 
 	err := NewExecutor(substate).Run(
-		Params{To: 1000, NumProcessors: 2},
+		Params{To: 1000, NumWorkers: 2},
 		processor,
 		[]Extension{extension},
 	)

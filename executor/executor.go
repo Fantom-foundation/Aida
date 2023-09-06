@@ -73,11 +73,12 @@ type Params struct {
 	// State is an optional StateDB instance to be made available to the
 	// processor and extensions during execution.
 	State state.StateDB
-	// NumProcessors is the number of concurrent goroutines to be used to
-	// process blocks. If the number of processors is 1, transactions are
-	// guranteed to be processed in-order. Any number <= 1 is considered to
-	// be 1, thus the default value of 0 is valid.
-	NumProcessors int
+	// NumWorkers is the number of concurrent goroutines to be used to
+	// process blocks. If the number of workers is 1, transactions are
+	// guranteed to be processed in-order. If it is > 1 no fixed order
+	// is guranteed. Any number <= 1 is considered to be 1, thus the default
+	// value of 0 is valid.
+	NumWorkers int
 }
 
 // Processor is an interface for the entity to which an executor is feeding
@@ -181,7 +182,7 @@ func (e *executor) Run(params Params, processor Processor, extensions []Extensio
 		return err
 	}
 
-	if params.NumProcessors <= 1 {
+	if params.NumWorkers <= 1 {
 		return e.runSequential(params, processor, extensions, &state)
 	}
 	return e.runParallel(params, processor, extensions, &state)
@@ -189,7 +190,7 @@ func (e *executor) Run(params Params, processor Processor, extensions []Extensio
 
 func (e *executor) runSequential(params Params, processor Processor, extensions []Extension, state *State) error {
 	first := true
-	err := e.substate.Run(params.From, params.To, func(tx Transaction) error {
+	err := e.substate.Run(params.From, params.To, func(tx TransactionInfo) error {
 		if first {
 			state.Block = tx.Block
 			if err := signalPreBlock(*state, extensions); err != nil {
@@ -206,16 +207,7 @@ func (e *executor) runSequential(params Params, processor Processor, extensions 
 			}
 		}
 		state.Transaction = tx.Transaction
-		if err := signalPreTransaction(*state, extensions); err != nil {
-			return err
-		}
-		if err := processor.Process(*state); err != nil {
-			return err
-		}
-		if err := signalPostTransaction(*state, extensions); err != nil {
-			return err
-		}
-		return nil
+		return runTransaction(*state, processor, extensions)
 	})
 	if err != nil {
 		return err
@@ -233,22 +225,22 @@ func (e *executor) runSequential(params Params, processor Processor, extensions 
 }
 
 func (e *executor) runParallel(params Params, processor Processor, extensions []Extension, state *State) error {
-	numWorkers := params.NumProcessors
+	numWorkers := params.NumWorkers
 
 	// A channel that is closed if an error occurs.
-	isAborted := make(chan bool)
+	abort := MakeEvent()
 
 	// Start one go-routine forwarding transactions from the provider to a local channel.
 	var forwardErr error
-	transactions := make(chan *Transaction, 10*numWorkers)
+	transactions := make(chan *TransactionInfo, 10*numWorkers)
 	go func() {
 		defer close(transactions)
 		abortErr := errors.New("aborted")
-		err := e.substate.Run(params.From, params.To, func(tx Transaction) error {
+		err := e.substate.Run(params.From, params.To, func(tx TransactionInfo) error {
 			select {
 			case transactions <- &tx:
 				return nil
-			case <-isAborted:
+			case <-abort.Wait():
 				return abortErr
 			}
 		})
@@ -264,37 +256,21 @@ func (e *executor) runParallel(params Params, processor Processor, extensions []
 	for i := 0; i < numWorkers; i++ {
 		go func(i int) {
 			defer wg.Done()
-			abort := func(err error) {
-				workerErrs[i] = err
-				select {
-				case <-isAborted:
-					return
-				default:
-					close(isAborted)
-				}
-			}
 			for {
 				select {
 				case tx := <-transactions:
 					if tx == nil {
-						return
+						return // reached an end without abort
 					}
 					localState := *state
 					localState.Block = tx.Block
 					localState.Transaction = tx.Transaction
-					if err := signalPreTransaction(localState, extensions); err != nil {
-						abort(err)
+					if err := runTransaction(localState, processor, extensions); err != nil {
+						workerErrs[i] = err
+						abort.Signal()
 						return
 					}
-					if err := processor.Process(localState); err != nil {
-						abort(err)
-						return
-					}
-					if err := signalPostTransaction(localState, extensions); err != nil {
-						abort(err)
-						return
-					}
-				case <-isAborted:
+				case <-abort.Wait():
 					return
 				}
 			}
@@ -305,6 +281,19 @@ func (e *executor) runParallel(params Params, processor Processor, extensions []
 		forwardErr,
 		errors.Join(workerErrs...),
 	)
+}
+
+func runTransaction(state State, processor Processor, extensions []Extension) error {
+	if err := signalPreTransaction(state, extensions); err != nil {
+		return err
+	}
+	if err := processor.Process(state); err != nil {
+		return err
+	}
+	if err := signalPostTransaction(state, extensions); err != nil {
+		return err
+	}
+	return nil
 }
 
 func signalPreRun(state State, extensions []Extension) error {

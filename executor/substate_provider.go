@@ -29,11 +29,11 @@ type SubstateProvider interface {
 
 // Consumer is a type alias for the type of function to which substate information
 // can be forwarded by the SubstateProvider.
-type Consumer func(Transaction) error
+type Consumer func(TransactionInfo) error
 
-// Transaction summarizes the per-transaction information provided by a
+// TransactionInfo summarizes the per-transaction information provided by a
 // SubstateProvider.
-type Transaction struct {
+type TransactionInfo struct {
 	Block       int
 	Transaction int
 	Substate    *substate.Substate
@@ -73,7 +73,7 @@ func (s substateProvider) Run(from int, to int, consumer Consumer) error {
 		if tx.Block >= uint64(to) {
 			return nil
 		}
-		if err := consumer(int(tx.Block), int(tx.Transaction), tx.Substate); err != nil {
+		if err := consumer(TransactionInfo{int(tx.Block), int(tx.Transaction), tx.Substate}); err != nil {
 			return err
 		}
 	}
