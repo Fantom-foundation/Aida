@@ -13,11 +13,11 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-const testReportFrequency = time.Second / 4
+const testProgressReportFrequency = time.Second / 4
 
 func TestProgressLoggerExtension_CorrectClose(t *testing.T) {
 	config := &utils.Config{}
-	ext := MakeProgressLogger(config, testReportFrequency)
+	ext := MakeProgressLogger(config, testProgressReportFrequency)
 
 	// start the report thread
 	ext.PreRun(executor.State{})
@@ -40,7 +40,7 @@ func TestProgressLoggerExtension_CorrectClose(t *testing.T) {
 func TestProgressLoggerExtension_NoLoggerIsCreatedIfDisabled(t *testing.T) {
 	config := &utils.Config{}
 	config.Quiet = true
-	ext := MakeProgressLogger(config, testReportFrequency)
+	ext := MakeProgressLogger(config, testProgressReportFrequency)
 	if _, ok := ext.(NilExtension); !ok {
 		t.Errorf("Logger is enabled although not set in configuration")
 	}
@@ -52,23 +52,22 @@ func TestProgressLoggerExtension_LoggingHappens(t *testing.T) {
 	log := logger.NewMockLogger(ctrl)
 
 	config := &utils.Config{}
-	config.Quiet = true
 
 	ext := progressLogger{
 		config:          config,
 		log:             log,
 		inputCh:         make(chan executor.State, 10),
 		wg:              new(sync.WaitGroup),
-		reportFrequency: testReportFrequency,
+		reportFrequency: testProgressReportFrequency,
 	}
 
 	ext.PreRun(executor.State{})
 
 	gomock.InOrder(
 		// scheduled logging
-		log.EXPECT().Infof(MatchFormat(progressReportFormat), gomock.Any(), uint64(1), MatchTxRate()),
+		log.EXPECT().Infof(MatchFormat(progressLoggerReportFormat), gomock.Any(), uint64(1), MatchTxRate()),
 		// defer logging
-		log.EXPECT().Infof(MatchFormat(progressReportFormat), gomock.Any(), uint64(1), MatchTxRate()),
+		log.EXPECT().Noticef(MatchFormat(deferProgressLoggerReportFormat), gomock.Any(), uint64(1), MatchTxRate()),
 	)
 
 	// fill the logger with some data

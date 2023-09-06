@@ -11,24 +11,25 @@ import (
 )
 
 const (
-	DefaultReportFrequencyInBlocks = 15 * time.Second
-	progressReportFormat           = "Elapsed time: %v; reached block %d; last interval rate ~%.2f Tx/s"
+	ProgressLoggerDefaultReportFrequency = 15 * time.Second // how often will ticker trigger
+	progressLoggerReportFormat           = "Elapsed time: %v; reached block %d; last interval rate ~%.2f Tx/s"
+	deferProgressLoggerReportFormat      = "Total elapsed time: %v; reached block %d; total transaction rate ~%.2f Tx/s"
 )
 
 // MakeProgressLogger creates progress logger. It logs progress about processor depending on reportFrequency.
-// If reportFrequency is 0, it is set to DefaultReportFrequencyInBlocks.
+// If reportFrequency is 0, it is set to ProgressLoggerDefaultReportFrequency.
 func MakeProgressLogger(config *utils.Config, reportFrequency time.Duration) executor.Extension {
 	if config.Quiet {
 		return NilExtension{}
 	}
 
 	if reportFrequency == 0 {
-		reportFrequency = DefaultReportFrequencyInBlocks
+		reportFrequency = ProgressLoggerDefaultReportFrequency
 	}
 
 	return &progressLogger{
 		config:          config,
-		log:             logger.NewLogger(config.LogLevel, "Progress-Reporter"),
+		log:             logger.NewLogger(config.LogLevel, "Progress-Logger"),
 		inputCh:         make(chan executor.State, 10),
 		wg:              new(sync.WaitGroup),
 		reportFrequency: reportFrequency,
@@ -83,7 +84,7 @@ func (l *progressLogger) startReport(reportFrequency time.Duration) {
 		elapsed := time.Since(start)
 		txRate := float64(totalTx.Uint64()) / elapsed.Seconds()
 
-		l.log.Infof(progressReportFormat, elapsed.Round(time.Second), totalBlocks.Uint64(), txRate)
+		l.log.Noticef(deferProgressLoggerReportFormat, elapsed.Round(time.Second), totalBlocks.Uint64(), txRate)
 
 		l.wg.Done()
 	}()
@@ -107,7 +108,7 @@ func (l *progressLogger) startReport(reportFrequency time.Duration) {
 			txRate := float64(lastIntervalTx) / time.Since(lastReport).Seconds()
 
 			// todo add file size and gas rate once StateDb is added to new processor
-			l.log.Infof(progressReportFormat, elapsed.Round(1*time.Second), totalBlocks.Uint64(), txRate)
+			l.log.Infof(progressLoggerReportFormat, elapsed.Round(1*time.Second), totalBlocks.Uint64(), txRate)
 			lastReport = time.Now()
 			totalTx.SetUint64(totalTx.Uint64() + lastIntervalTx)
 		}
