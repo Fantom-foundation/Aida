@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 )
 
@@ -227,8 +228,8 @@ func (e *executor) runSequential(params Params, processor Processor, extensions 
 func (e *executor) runParallel(params Params, processor Processor, extensions []Extension, state *State) error {
 	numWorkers := params.NumWorkers
 
-	// A channel that is closed if an error occurs.
-	abort := MakeEvent()
+	// An event for signaling an abort of the execution.
+	abort := utils.MakeEvent()
 
 	// Start one go-routine forwarding transactions from the provider to a local channel.
 	var forwardErr error
