@@ -9,12 +9,11 @@ import (
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/logger"
-	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	"go.uber.org/mock/gomock"
 )
 
-const testReportFrequency = 1
+const testReportFrequency = time.Second / 4
 
 func TestProgressLoggerExtension_CorrectClose(t *testing.T) {
 	config := &utils.Config{}
@@ -51,7 +50,6 @@ func TestProgressLoggerExtension_NoLoggerIsCreatedIfDisabled(t *testing.T) {
 func TestProgressLoggerExtension_LoggingHappens(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
-	db := state.NewMockStateDB(ctrl)
 
 	config := &utils.Config{}
 	config.Quiet = true
@@ -64,30 +62,25 @@ func TestProgressLoggerExtension_LoggingHappens(t *testing.T) {
 		reportFrequency: testReportFrequency,
 	}
 
-	gomock.InOrder(
-		db.EXPECT().GetMemoryUsage(),
-		log.EXPECT().Infof(MatchFormat(progressReportFormat), gomock.Any(), uint64(1), MatchTxRate(), 0, 0),
-		db.EXPECT().GetMemoryUsage(),
-		log.EXPECT().Infof(MatchFormat(progressReportFormat), gomock.Any(), uint64(2), MatchTxRate(), 0, 0),
-	)
-
 	ext.PreRun(executor.State{})
+
+	gomock.InOrder(
+		// scheduled logging
+		log.EXPECT().Infof(MatchFormat(progressReportFormat), gomock.Any(), uint64(1), MatchTxRate()),
+		// defer logging
+		log.EXPECT().Infof(MatchFormat(progressReportFormat), gomock.Any(), uint64(1), MatchTxRate()),
+	)
 
 	// fill the logger with some data
 	ext.PostBlock(executor.State{
 		Block:       1,
 		Transaction: 1,
-		State:       db,
 	})
 
-	ext.PostBlock(executor.State{
-		Block:       2,
-		Transaction: 2,
-		State:       db,
-	})
+	// we must wait for the ticker to tick
+	time.Sleep(time.Second / 4)
 
-	// wait a bit until the logger gets the data
-	time.Sleep(6 * time.Second)
+	ext.PostRun(executor.State{}, nil)
 }
 
 // MATCHERS
