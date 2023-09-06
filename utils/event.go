@@ -1,5 +1,7 @@
 package utils
 
+import "sync/atomic"
+
 // Event is a synchronization primitive for signaling the occurrence of
 // a one-time event. The life cycle of each event is divided in two
 // phases: the time before and the time after the event.
@@ -22,35 +24,26 @@ type Event interface {
 }
 
 func MakeEvent() Event {
-	return event{make(chan struct{})}
+	return &event{channel: make(chan struct{})}
 }
 
 type event struct {
-	channel chan struct{}
+	channel  chan struct{}
+	occurred atomic.Bool
 }
 
-func (e event) HasHappened() bool {
-	// Tests whether the event has already happened by
-	// attempting to read from the owned channel.
-	select {
-	case <-e.channel:
-		return true
-	default:
-		return false
-	}
+func (e *event) HasHappened() bool {
+	return e.occurred.Load()
 }
 
-func (e event) Wait() <-chan struct{} {
+func (e *event) Wait() <-chan struct{} {
 	return e.channel
 }
 
-func (e event) Signal() {
+func (e *event) Signal() {
 	// Atomically checks whether the channel is already closed and
 	// closes the channel if this is not the case.
-	select {
-	case <-e.channel:
-		return
-	default:
+	if hasOccurred := e.occurred.Swap(true); !hasOccurred {
 		close(e.channel)
 	}
 }
