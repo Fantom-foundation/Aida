@@ -33,6 +33,18 @@ func (m *MockSubstateProvider) EXPECT() *MockSubstateProviderMockRecorder {
 	return m.recorder
 }
 
+// Close mocks base method.
+func (m *MockSubstateProvider) Close() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Close")
+}
+
+// Close indicates an expected call of Close.
+func (mr *MockSubstateProviderMockRecorder) Close() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Close", reflect.TypeOf((*MockSubstateProvider)(nil).Close))
+}
+
 // Run mocks base method.
 func (m *MockSubstateProvider) Run(from, to int, comsumer Consumer) error {
 	m.ctrl.T.Helper()
