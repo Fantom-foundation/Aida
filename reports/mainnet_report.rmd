@@ -16,27 +16,32 @@ params:
 library(ggplot2)
 library(dplyr)
 library(RSQLite)
+library(gt)
 
 # open database
 con <- dbConnect(SQLite(), params$db)
 
-# load block and transaction tables into data frames
-blockData <- dbReadTable(con, 'blockProfile')
-txData <- dbReadTable(con, 'TxProfile')
+# load block and transaction tables into data frames and exclude Lachesis' transition block
+blockData <- dbReadTable(con, 'blockProfile') %>% filter(block != 4564025)
+txData <- dbReadTable(con, 'txProfile') %>% filter(block != 456025)
 
 # compress block dataframe for each 100K blocks
 block_group_size <- 100000
 blockData$block_group <- blockData$block %/% block_group_size
 reducedBlockData <- blockData %>% group_by(block_group) %>% summarise(numTx=mean(numTx),           # average number of transactions
-                                                                      gasBlock=mean(gasBlock)/1e6) # in MGas
+                                                                      gasBlock=mean(gasBlock)/1e6) # average gas (in MGas)
 reducedBlockData$block <- reducedBlockData$block_group * block_group_size
+reducedBlockData$block_group <- NULL
 
 # compress transactional data for each 1M transactions
 tx_group_size <- 1000000
 txData$tx_group <- 1:nrow(txData) %/% tx_group_size
-reducedTxData <- txData %>% group_by(tx_group) %>% summarise(duration=mean(duration)/1e3,  # duration in us
-                                                             gas=mean(gas)/1e3)            # gas in KGas
+reducedTxData <- txData %>% group_by(tx_group) %>% summarise(duration=mean(duration)/1e3,  # average duration (in us)
+                                                             gas=mean(gas)/1e3)            # average gas (in KGas)
 reducedTxData$tx <- reducedTxData$tx_group * tx_group_size
+reducedTxData$tx_group <- NULL
+
+# close database connection
 dbDisconnect(con)
 ```
 
@@ -79,6 +84,13 @@ pie(txTypeDf$n, labels = paste0(txTypeDf$label, " (", txTypeDf$percent, "%)"), m
 ## 2. Gas Consumption of Blocks
 
 The average gas consumption of a block is `r format(mean(blockData$gasBlock)/1e6, digits=3, nsmall=3)` MGas, with a minimum of `r format(min(blockData$gasBlock)/1e3, digits=3, nsmall=3)` KGas and a maximum of `r format(max(blockData$gasBlock)/1e6, digits=3, nsmall=3)` MGas.
+The top seven most gas-consuming blocks are the following:
+
+```{r echo=FALSE, message=FALSE}
+top7Blocks <- blockData %>% top_n(7, gasBlock) %>% arrange(desc(gasBlock)) %>% select(block, gasBlock) %>% rename(Block = block, Gas = gasBlock)
+gt(top7Blocks)
+```
+
 The smoothened trend line of gas consumption is shown in the figure below. In the figure, we aggregate the gas consumption for all 100K blocks as points.
 
 ```{r, echo = FALSE, message=FALSE}
@@ -90,8 +102,17 @@ reducedBlockData %>%
 ```
 
 ## 3. Gas Consumption of Transactions
+```{r echo=FALSE, message=FALSE}
+txDataNoSfc <- txData %>% filter(txType != 3)
+```
 
-The average gas consumption of a transaction is `r format(mean(txData$gas)/1e3, digits=3, nsmall=3)` KGas, with a minimum gas consumption of `r format(min(txData$gas)/1e3, digits=3, nsmall=3)` KGas and a maximum gas consumption of `r format(max(txData$gas)/1e6, digits=3, nsmall=3)` MGas.
+Ecluding maintenance transaction, the average gas consumption of a transaction is `r format(mean(txDataNoSfc$gas)/1e3, digits=3, nsmall=3)` KGas, with a minimum gas consumption of `r format(min(txDataNoSfc$gas)/1e3, digits=3, nsmall=3)` KGas and a maximum gas consumption of `r format(max(txDataNoSfc$gas)/1e6, digits=3, nsmall=3)` MGas.
+The top seven most gas-consuming transactions (excluding maintenance transactions) are the following:
+
+```{r echo=FALSE, message=FALSE}
+top7Transactions <- txDataNoSfc %>% top_n(7,gas) %>% arrange(desc(gas)) %>% select(block, tx, gas) %>% rename(Gas = gas, Block = block, Transaction = tx)
+gt(top7Transactions)
+```
 
 The gas consumption based on the transaction type is shown below:
 
@@ -120,7 +141,7 @@ WalletTransferDf <- txData %>% filter(txType == 0)
 hist(WalletTransferDf$gas, main="Histogram for Wallet Transfers", freq=FALSE, xlab="Gas Consumption", col="lightblue1")
 ```
 
-### Contract Creation 
+### Contract Creation
 
 ```{r, echo=FALSE, message=FALSE}
 ContractCreationDf <- txData %>% filter(txType == 1)
