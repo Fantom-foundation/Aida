@@ -445,7 +445,7 @@ func (db *inMemoryStateDB) EndSyncPeriod() {
 }
 
 func (s *inMemoryStateDB) GetHash() common.Hash {
-	return common.Hash{} // not supported
+	return common.Hash{} // not a great hash function, but a valid one :)
 }
 
 func (db *inMemoryStateDB) Close() error {
