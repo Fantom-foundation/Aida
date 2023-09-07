@@ -46,15 +46,15 @@ func (mr *MockSubstateProviderMockRecorder) Close() *gomock.Call {
 }
 
 // Run mocks base method.
-func (m *MockSubstateProvider) Run(from, to int, comsumer Consumer) error {
+func (m *MockSubstateProvider) Run(from, to int, consumer Consumer) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Run", from, to, comsumer)
+	ret := m.ctrl.Call(m, "Run", from, to, consumer)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // Run indicates an expected call of Run.
-func (mr *MockSubstateProviderMockRecorder) Run(from, to, comsumer interface{}) *gomock.Call {
+func (mr *MockSubstateProviderMockRecorder) Run(from, to, consumer interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockSubstateProvider)(nil).Run), from, to, comsumer)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Run", reflect.TypeOf((*MockSubstateProvider)(nil).Run), from, to, consumer)
 }

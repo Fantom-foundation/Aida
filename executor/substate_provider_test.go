@@ -160,8 +160,8 @@ type TxConsumer interface {
 }
 
 func toConsumer(c TxConsumer) Consumer {
-	return func(block int, transaction int, substate *substate.Substate) error {
-		return c.Consume(block, transaction, substate)
+	return func(info TransactionInfo) error {
+		return c.Consume(info.Block, info.Transaction, info.Substate)
 	}
 }
 
