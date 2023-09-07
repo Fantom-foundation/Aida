@@ -85,6 +85,8 @@ func createConfig(ctx *cli.Context) *Config {
 		ChannelBufferSize:   getFlagValue(ctx, ChannelBufferSizeFlag).(int),
 		TargetBlock:         getFlagValue(ctx, TargetBlockFlag).(uint64),
 		UpdateBufferSize:    getFlagValue(ctx, UpdateBufferSizeFlag).(uint64),
+		UpdateOnFailure:     getFlagValue(ctx, UpdateOnFailure).(bool),
+		MaxNumErrors:        getFlagValue(ctx, MaxNumErrorsFlag).(int),
 	}
 
 	return cfg

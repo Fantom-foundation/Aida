@@ -15,7 +15,7 @@ func TestTxValidator_NoValidatorIsCreatedIfDisabled(t *testing.T) {
 	config := &utils.Config{}
 	config.ValidateTxState = false
 
-	ext := MakeTxValidator(config, false, 0)
+	ext := MakeTxValidator(config)
 
 	if _, ok := ext.(NilExtension); !ok {
 		t.Errorf("Logger is enabled although not set in configuration")
@@ -29,10 +29,7 @@ func TestTxValidator_ValidatorIsEnabled(t *testing.T) {
 	config := &utils.Config{}
 	config.ValidateTxState = true
 
-	ext := txValidator{
-		config: config,
-		log:    log,
-	}
+	ext := makeTxValidator(config, log)
 
 	log.EXPECT().Warning(gomock.Any())
 	ext.PreRun(executor.State{})
@@ -46,10 +43,7 @@ func TestTxValidator_ValidatorDoesNotFailWithEmptySubstate(t *testing.T) {
 	config := &utils.Config{}
 	config.ValidateTxState = true
 
-	ext := txValidator{
-		config: config,
-		log:    log,
-	}
+	ext := makeTxValidator(config, log)
 
 	log.EXPECT().Warning(gomock.Any())
 	ext.PreRun(executor.State{})

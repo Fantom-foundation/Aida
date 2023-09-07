@@ -10,33 +10,29 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
-const defaultMaxErrors = 50
-
 type txValidator struct {
 	NilExtension
-	config          *utils.Config
-	log             logger.Logger
-	updateOnFailure bool
-	maxErrors       int
-	lock            sync.Mutex
-	inputErrors     []error
-	outputErrors    []error
+	config       *utils.Config
+	log          logger.Logger
+	lock         sync.Mutex
+	inputErrors  []error
+	outputErrors []error
 }
 
-func MakeTxValidator(config *utils.Config, updateOnFailure bool, maxErrors int) executor.Extension {
+func MakeTxValidator(config *utils.Config) executor.Extension {
 	if !config.ValidateTxState {
 		return NilExtension{}
 	}
 
-	if maxErrors == 0 {
-		maxErrors = defaultMaxErrors
-	}
+	log := logger.NewLogger(config.LogLevel, "Tx-Verifier")
 
+	return makeTxValidator(config, log)
+}
+
+func makeTxValidator(config *utils.Config, log logger.Logger) *txValidator {
 	return &txValidator{
-		config:          config,
-		log:             logger.NewLogger(config.LogLevel, "Tx-Verifier"),
-		updateOnFailure: updateOnFailure,
-		maxErrors:       maxErrors,
+		config: config,
+		log:    log,
 	}
 }
 
@@ -47,7 +43,7 @@ func (v *txValidator) PreRun(_ executor.State) error {
 
 	if v.config.ContinueOnFailure {
 		v.log.Warningf("Continue on Failure for tx validation is enabled though "+
-			"program will exit when %v errors occur!", v.maxErrors)
+			"program will exit when %v errors occur!", v.config.MaxNumErrors)
 	}
 
 	return nil
@@ -55,7 +51,7 @@ func (v *txValidator) PreRun(_ executor.State) error {
 
 // PreTransaction validates InputAlloc in given substate
 func (v *txValidator) PreTransaction(state executor.State) error {
-	err := utils.ValidateStateDB(state.Substate.InputAlloc, state.State, v.updateOnFailure)
+	err := utils.ValidateStateDB(state.Substate.InputAlloc, state.State, v.config.UpdateOnFailure)
 	if err == nil {
 		return nil
 	}
@@ -75,7 +71,7 @@ func (v *txValidator) PreTransaction(state executor.State) error {
 	v.inputErrors = append(v.inputErrors, err)
 
 	// check if error cap has been reached
-	if len(v.inputErrors)+len(v.outputErrors) >= v.maxErrors {
+	if len(v.inputErrors)+len(v.outputErrors) >= v.config.MaxNumErrors {
 		return errors.New("maximum number of errors occurred")
 	}
 
@@ -84,7 +80,7 @@ func (v *txValidator) PreTransaction(state executor.State) error {
 
 // PostTransaction validates OutputAlloc in given substate
 func (v *txValidator) PostTransaction(state executor.State) error {
-	err := utils.ValidateStateDB(state.Substate.InputAlloc, state.State, v.updateOnFailure)
+	err := utils.ValidateStateDB(state.Substate.InputAlloc, state.State, v.config.UpdateOnFailure)
 	if err == nil {
 		return nil
 	}
@@ -104,7 +100,7 @@ func (v *txValidator) PostTransaction(state executor.State) error {
 	v.inputErrors = append(v.inputErrors, err)
 
 	// check if error cap has been reached
-	if len(v.inputErrors)+len(v.outputErrors) >= v.maxErrors {
+	if len(v.inputErrors)+len(v.outputErrors) >= v.config.MaxNumErrors {
 		return errors.New("maximum number of errors occurred")
 	}
 

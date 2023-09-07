@@ -21,8 +21,9 @@ import (
 
 // Count total errors occured while processing transactions
 const (
-	MaxErrors       = 50   // maximum number of errors before terminating program
-	UpdateOnFailure = true // update when statedb validation detects discrepancy
+	// todo remove these const once tx validator is moved to executor
+	MaxErrors            = 50   // maximum number of errors before terminating program
+	UpdateOnFailureConst = true // update when statedb validation detects discrepancy
 )
 
 var (
@@ -75,7 +76,7 @@ func processRegularTx(db state.StateDB, cfg *Config, block uint64, tx int, st *s
 
 	// validate whether the input alloc is contained in the db
 	if cfg.ValidateTxState {
-		if err := ValidateStateDB(st.InputAlloc, db, UpdateOnFailure); err != nil {
+		if err := ValidateStateDB(st.InputAlloc, db, UpdateOnFailureConst); err != nil {
 			newErrors++
 			errMsg.WriteString("Input alloc is not contained in the stateDB.\n")
 			errMsg.WriteString(err.Error())
@@ -230,7 +231,7 @@ func validateVMAlloc(db state.StateDB, expectedAlloc substate.SubstateAlloc, mod
 	var err error
 	switch mode {
 	case SubsetCheck:
-		err = ValidateStateDB(expectedAlloc, db, !UpdateOnFailure)
+		err = ValidateStateDB(expectedAlloc, db, !UpdateOnFailureConst)
 	case EqualityCheck:
 		vmAlloc := db.GetSubstatePostAlloc()
 		isEqual := expectedAlloc.Equal(vmAlloc)

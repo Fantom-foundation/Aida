@@ -400,6 +400,16 @@ var (
 		Usage:   "target block ID",
 		Value:   0,
 	}
+	MaxNumErrorsFlag = cli.IntFlag{
+		Name:  "max-errors",
+		Usage: "maximum number of errors when ContinueOnFailure is enabled, default is 50",
+		Value: 50,
+	}
+	UpdateOnFailure = cli.BoolFlag{
+		Name:  "update-on-failure",
+		Usage: "", // todo explain
+		Value: true,
+	}
 )
 
 // Config represents execution configuration for replay command.
@@ -486,7 +496,8 @@ type Config struct {
 	TargetBlock         uint64         // represents the ID of target block to be reached by state evolve process or in dump state
 	UpdateBufferSize    uint64         // cache size in Bytes
 	ProfileDB           string         // profile db for parallel transaction execution
-
+	MaxNumErrors        int            // maximum number of errors when ContinueOnFailure is enabled
+	UpdateOnFailure     bool           // todo explain
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.
