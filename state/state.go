@@ -121,7 +121,7 @@ type StateDB interface {
 
 	// Used to initiate the state DB for the next transaction.
 	// This is mainly for development purposes to support in-memory DB implementations.
-	PrepareSubstate(*substate.SubstateAlloc, uint64)
+	PrepareSubstate(substate *substate.SubstateAlloc, block uint64)
 
 	// Used to retrieve the shadow DB (if there is one) for testing purposes so that
 	// the shadow DB can be used to query state directly. If there is no shadow DB,
