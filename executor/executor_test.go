@@ -529,7 +529,7 @@ func TestProcessor_PostEventErrorAbortsParallelProcessing(t *testing.T) {
 	}
 }
 
-func TestProcessor_SubstateIsPropagatedToTheProcessorAndAllExtensions(t *testing.T) {
+func TestProcessor_SubstateIsPropagatedToTheProcessorAndAllExtensionsInSequentialExecution(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	provider := NewMockSubstateProvider(ctrl)
 	processor := NewMockProcessor(ctrl)
@@ -555,14 +555,60 @@ func TestProcessor_SubstateIsPropagatedToTheProcessorAndAllExtensions(t *testing
 		extension.EXPECT().PreTransaction(WithSubstate(substateB)),
 		processor.EXPECT().Process(WithSubstate(substateB)),
 		extension.EXPECT().PostTransaction(WithSubstate(substateB)),
-		extension.EXPECT().PostBlock(WithSubstate(substateB)),
+		extension.EXPECT().PostBlock(WithSubstate(nil)),
 		extension.EXPECT().PostRun(WithSubstate(nil), nil),
 	)
 
 	err := NewExecutor(provider).Run(
 		Params{From: 10, To: 11},
 		processor,
-		nil,
+		[]Extension{extension},
+	)
+	if err != nil {
+		t.Errorf("execution failed: %v", err)
+	}
+}
+
+func TestProcessor_SubstateIsPropagatedToTheProcessorAndAllExtensionsInParallelExecution(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	provider := NewMockSubstateProvider(ctrl)
+	processor := NewMockProcessor(ctrl)
+	extension := NewMockExtension(ctrl)
+
+	substateA := &substate.Substate{}
+	substateB := &substate.Substate{}
+
+	provider.EXPECT().
+		Run(gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(from int, to int, consume Consumer) error {
+			consume(TransactionInfo{from, 7, substateA})
+			consume(TransactionInfo{from, 8, substateB})
+			return nil
+		})
+
+	pre := extension.EXPECT().PreRun(WithSubstate(nil))
+	post := extension.EXPECT().PostRun(WithSubstate(nil), nil)
+
+	gomock.InOrder(
+		pre,
+		extension.EXPECT().PreTransaction(WithSubstate(substateA)),
+		processor.EXPECT().Process(WithSubstate(substateA)),
+		extension.EXPECT().PostTransaction(WithSubstate(substateA)),
+		post,
+	)
+
+	gomock.InOrder(
+		pre,
+		extension.EXPECT().PreTransaction(WithSubstate(substateB)),
+		processor.EXPECT().Process(WithSubstate(substateB)),
+		extension.EXPECT().PostTransaction(WithSubstate(substateB)),
+		post,
+	)
+
+	err := NewExecutor(provider).Run(
+		Params{From: 10, To: 11, NumWorkers: 2},
+		processor,
+		[]Extension{extension},
 	)
 	if err != nil {
 		t.Errorf("execution failed: %v", err)

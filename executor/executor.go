@@ -208,7 +208,7 @@ func (e *executor) runSequential(params Params, processor Processor, extensions 
 			}
 		}
 		state.Transaction = tx.Transaction
-		return runTransaction(*state, processor, extensions)
+		return runTransaction(*state, tx.Substate, processor, extensions)
 	})
 	if err != nil {
 		return err
@@ -266,7 +266,7 @@ func (e *executor) runParallel(params Params, processor Processor, extensions []
 					localState := *state
 					localState.Block = tx.Block
 					localState.Transaction = tx.Transaction
-					if err := runTransaction(localState, processor, extensions); err != nil {
+					if err := runTransaction(localState, tx.Substate, processor, extensions); err != nil {
 						workerErrs[i] = err
 						abort.Signal()
 						return
@@ -284,7 +284,8 @@ func (e *executor) runParallel(params Params, processor Processor, extensions []
 	)
 }
 
-func runTransaction(state State, processor Processor, extensions []Extension) error {
+func runTransaction(state State, substate *substate.Substate, processor Processor, extensions []Extension) error {
+	state.Substate = substate
 	if err := signalPreTransaction(state, extensions); err != nil {
 		return err
 	}
