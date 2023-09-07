@@ -38,15 +38,26 @@ type stateDbInfoLogger struct {
 	log             logger.Logger
 	reportFrequency int
 	// we want to know roughly where we had the highest memory usage
-	highestMemoryUsage float64
-	highestMemoryBlock int
+	highestMemoryUsage   float64
+	highestMemoryBlock   int
+	lastBlock            int
+	lastBlockInitialized bool // true if the last block got initialized, false otherwise
+
 }
 
 // PostBlock sends the state to the report goroutine.
 // We only care about total number of transactions we can do this here rather in PostTransaction.
 func (l *stateDbInfoLogger) PostBlock(state executor.State) error {
 
-	if state.Block%l.reportFrequency != 0 {
+	// initialise the last-block variables for the first time to suppress block report
+	// at the beginning (in case the user has specified a large enough starting block)
+	boundary := state.Block - (state.Block % l.reportFrequency)
+	if !l.lastBlockInitialized {
+		l.lastBlock = boundary
+		l.lastBlockInitialized = true
+	}
+
+	if !(state.Block-l.lastBlock >= l.reportFrequency) {
 		return nil
 	}
 
@@ -66,6 +77,8 @@ func (l *stateDbInfoLogger) PostBlock(state executor.State) error {
 		l.highestMemoryUsage = memory
 		l.highestMemoryBlock = state.Block
 	}
+
+	l.lastBlock = boundary
 
 	return nil
 }

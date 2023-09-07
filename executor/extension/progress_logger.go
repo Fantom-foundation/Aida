@@ -1,6 +1,7 @@
 package extension
 
 import (
+	"math/big"
 	"sync"
 	"time"
 
@@ -11,8 +12,8 @@ import (
 
 const (
 	ProgressLoggerDefaultReportFrequency = 15 * time.Second // how often will ticker trigger
-	progressLoggerReportFormat           = "Elapsed time: %v; reached block %d; last interval rate ~%.2f Tx/s"
-	finalSummaryProgressReportFormat     = "Total elapsed time: %v; reached block %d; total transaction rate ~%.2f Tx/s"
+	progressLoggerReportFormat           = "Elapsed time: %v; reached block %d; last interval rate ~%.2f Tx/s, ~%.2f Gas/s"
+	finalSummaryProgressReportFormat     = "Total elapsed time: %v; reached block %d; total transaction rate ~%.2f Tx/s, ~%.2f Gas/s"
 )
 
 // MakeProgressLogger creates progress logger. It logs progress about processor depending on reportFrequency.
@@ -82,13 +83,17 @@ func (l *progressLogger) startReport(reportFrequency time.Duration) {
 	var (
 		currentBlock            int
 		totalTx, lastIntervalTx uint64
+		lastIntervalGas         uint64
+		totalGas                = new(big.Int)
 	)
 
 	defer func() {
 		elapsed := time.Since(start)
 		txRate := float64(totalTx) / elapsed.Seconds()
+		gas, _ := totalGas.Float64()
+		gasRate := gas / (float64(elapsed.Nanoseconds()) / 1e9)
 
-		l.log.Noticef(finalSummaryProgressReportFormat, elapsed.Round(time.Second), currentBlock, txRate)
+		l.log.Noticef(finalSummaryProgressReportFormat, elapsed.Round(time.Second), currentBlock, txRate, gasRate)
 
 		l.wg.Done()
 	}()
@@ -105,6 +110,7 @@ func (l *progressLogger) startReport(reportFrequency time.Duration) {
 			}
 
 			lastIntervalTx++
+			lastIntervalGas += in.Substate.Result.GasUsed
 
 			if in.Block > currentBlock {
 				currentBlock = in.Block
@@ -112,11 +118,13 @@ func (l *progressLogger) startReport(reportFrequency time.Duration) {
 		case now := <-ticker.C:
 			elapsed := now.Sub(start)
 			txRate := float64(lastIntervalTx) / time.Since(lastReport).Seconds()
+			gasRate := float64(lastIntervalGas) / (float64(elapsed.Nanoseconds()) / 1e9)
 
-			// todo add file size and gas rate once StateDb is added to new processor
-			l.log.Infof(progressLoggerReportFormat, elapsed.Round(1*time.Second), currentBlock, txRate)
+			l.log.Infof(progressLoggerReportFormat, elapsed.Round(1*time.Second), currentBlock, txRate, gasRate)
+
 			lastReport = now
 			totalTx += lastIntervalTx
+			totalGas.SetUint64(totalGas.Uint64() + lastIntervalGas)
 
 			lastIntervalTx = 0
 		}
