@@ -307,6 +307,20 @@ func (mr *MockBasicStateDBMockRecorder) GetCommittedState(arg0, arg1 interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCommittedState", reflect.TypeOf((*MockBasicStateDB)(nil).GetCommittedState), arg0, arg1)
 }
 
+// GetHash mocks base method.
+func (m *MockBasicStateDB) GetHash() common.Hash {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetHash")
+	ret0, _ := ret[0].(common.Hash)
+	return ret0
+}
+
+// GetHash indicates an expected call of GetHash.
+func (mr *MockBasicStateDBMockRecorder) GetHash() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHash", reflect.TypeOf((*MockBasicStateDB)(nil).GetHash))
+}
+
 // GetLogs mocks base method.
 func (m *MockBasicStateDB) GetLogs(arg0, arg1 common.Hash) []*types.Log {
 	m.ctrl.T.Helper()
@@ -879,6 +893,20 @@ func (mr *MockStateDBMockRecorder) GetCommittedState(arg0, arg1 interface{}) *go
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCommittedState", reflect.TypeOf((*MockStateDB)(nil).GetCommittedState), arg0, arg1)
 }
 
+// GetHash mocks base method.
+func (m *MockStateDB) GetHash() common.Hash {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetHash")
+	ret0, _ := ret[0].(common.Hash)
+	return ret0
+}
+
+// GetHash indicates an expected call of GetHash.
+func (mr *MockStateDBMockRecorder) GetHash() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHash", reflect.TypeOf((*MockStateDB)(nil).GetHash))
+}
+
 // GetLogs mocks base method.
 func (m *MockStateDB) GetLogs(arg0, arg1 common.Hash) []*types.Log {
 	m.ctrl.T.Helper()
@@ -1030,15 +1058,15 @@ func (mr *MockStateDBMockRecorder) PrepareAccessList(sender, dest, precompiles, 
 }
 
 // PrepareSubstate mocks base method.
-func (m *MockStateDB) PrepareSubstate(arg0 *substate.SubstateAlloc, arg1 uint64) {
+func (m *MockStateDB) PrepareSubstate(substate *substate.SubstateAlloc, block uint64) {
 	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "PrepareSubstate", arg0, arg1)
+	m.ctrl.Call(m, "PrepareSubstate", substate, block)
 }
 
 // PrepareSubstate indicates an expected call of PrepareSubstate.
-func (mr *MockStateDBMockRecorder) PrepareSubstate(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockStateDBMockRecorder) PrepareSubstate(substate, block interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareSubstate", reflect.TypeOf((*MockStateDB)(nil).PrepareSubstate), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareSubstate", reflect.TypeOf((*MockStateDB)(nil).PrepareSubstate), substate, block)
 }
 
 // RevertToSnapshot mocks base method.

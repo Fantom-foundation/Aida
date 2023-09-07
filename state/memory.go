@@ -444,6 +444,10 @@ func (db *inMemoryStateDB) EndSyncPeriod() {
 	// ignored
 }
 
+func (s *inMemoryStateDB) GetHash() common.Hash {
+	return common.Hash{} // not supported
+}
+
 func (db *inMemoryStateDB) Close() error {
 	// Nothing to do.
 	return nil

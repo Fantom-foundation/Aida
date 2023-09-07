@@ -343,6 +343,11 @@ func (r *RecorderProxy) EndSyncPeriod() {
 	r.db.EndSyncPeriod()
 }
 
+func (r *RecorderProxy) GetHash() common.Hash {
+	// TODO: record this event
+	return r.db.GetHash()
+}
+
 func (r *RecorderProxy) GetArchiveState(block uint64) (state.StateDB, error) {
 	archive, err := r.db.GetArchiveState(block)
 	if err != nil {
