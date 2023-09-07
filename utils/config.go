@@ -314,8 +314,9 @@ var (
 		Value: false,
 	}
 	AidaDbFlag = cli.PathFlag{
-		Name:  "aida-db",
-		Usage: "set substate, updateset and deleted accounts directory",
+		Name:     "aida-db",
+		Usage:    "set substate, updateset and deleted accounts directory",
+		Required: true,
 	}
 	ContractNumberFlag = cli.Int64Flag{
 		Name:  "num-contracts",
@@ -860,7 +861,7 @@ func getMdBlockRange(aidaDbPath string, chainId ChainID, log *logging.Logger) (u
 	defaultLastPatch := keywordBlocks[chainId]["lastpatch"]
 
 	if _, err := os.Stat(aidaDbPath); errors.Is(err, os.ErrNotExist) {
-		log.Warningf("Unable to open Aida-db; %v", aidaDbPath, err)
+		log.Warningf("Unable to open Aida-db in %s: %v", aidaDbPath, err)
 		fmt.Println(defaultFirst)
 		return defaultFirst, defaultLast, defaultLastPatch, false, nil
 	}
