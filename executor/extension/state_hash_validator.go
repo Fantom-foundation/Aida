@@ -35,13 +35,13 @@ type validateStateHashExtension struct {
 
 func (e *validateStateHashExtension) PreRun(executor.State) error {
 	path := e.config.StateRootFile
-	e.log.Infof("Loading state root hashes from %v ...\n", path)
+	e.log.Infof("Loading state root hashes from %v ...", path)
 	hashes, err := loadStateHashes(path, int(e.config.Last)+1)
 	if err != nil {
 		return err
 	}
 	e.hashes = hashes
-	e.log.Infof("Loaded %d state root hashes from %v\n", len(e.hashes), path)
+	e.log.Infof("Loaded %d state root hashes from %v", len(e.hashes), path)
 	return nil
 }
 

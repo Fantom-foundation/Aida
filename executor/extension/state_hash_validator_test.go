@@ -41,8 +41,8 @@ func TestStateHashValidator_ActiveIfAFileIsProvided(t *testing.T) {
 	}
 
 	gomock.InOrder(
-		log.EXPECT().Infof("Loading state root hashes from %v ...\n", path),
-		log.EXPECT().Infof("Loaded %d state root hashes from %v\n", 6, path),
+		log.EXPECT().Infof("Loading state root hashes from %v ...", path),
+		log.EXPECT().Infof("Loaded %d state root hashes from %v", 6, path),
 		db.EXPECT().GetHash().Return(common.Hash{0x03}),
 	)
 
