@@ -278,10 +278,14 @@ func (e *executor) runParallel(params Params, processor Processor, extensions []
 		}(i)
 	}
 	wg.Wait()
-	return errors.Join(
+	err := errors.Join(
 		forwardErr,
 		errors.Join(workerErrs...),
 	)
+	if err == nil {
+		state.Block = params.To
+	}
+	return err
 }
 
 func runTransaction(state State, substate *substate.Substate, processor Processor, extensions []Extension) error {
