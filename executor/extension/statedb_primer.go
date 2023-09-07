@@ -11,9 +11,13 @@ func MakeStateDbPrimer(config *utils.Config) executor.Extension {
 		return NilExtension{}
 	}
 
+	return makeStateDbPrimer(config, logger.NewLogger(config.LogLevel, "StateDb-Primer"))
+}
+
+func makeStateDbPrimer(config *utils.Config, log logger.Logger) *stateDbPrimer {
 	return &stateDbPrimer{
 		config: config,
-		log:    logger.NewLogger(config.LogLevel, "StateDb-Primer"),
+		log:    log,
 	}
 }
 
@@ -26,7 +30,7 @@ type stateDbPrimer struct {
 // PreRun primes StateDb to given block.
 func (p *stateDbPrimer) PreRun(state executor.State) error {
 	if p.config.StateDbSrc != "" {
-		p.log.Warning("Skipping priming")
+		p.log.Warning("Skipping priming due to usage of preexisting StateDb")
 		return nil
 	}
 
