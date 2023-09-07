@@ -9,7 +9,7 @@ import (
 const (
 	StateDbInfoLoggerDefaultReportFrequency = 100_000 // in blocks
 	stateDbInfoLoggerReportFormat           = "Reached block %d; disk usage %.2f GiB; memory usage %.2f GiB"
-	deferStateDbInfoLoggerReportFormat      = "Total blocks produced: %v; total disk usage %.2f GiB; highest memory usage %.2f GiB at block %v"
+	finalSummaryStateDbInfoReportFormat     = "Total blocks produced: %v; total disk usage %.2f GiB; highest memory usage %.2f GiB at block %v"
 )
 
 func MakeStateDbInfoLogger(config *utils.Config, reportFrequency int) executor.Extension {
@@ -69,7 +69,7 @@ func (l *stateDbInfoLogger) PostRun(_ executor.State, _ error) error {
 	blocks := l.config.Last - l.config.First
 	disk := float64(utils.GetDirectorySize(l.config.StateDbSrc)) / 1024 / 1024 / 1024
 
-	l.log.Noticef(deferStateDbInfoLoggerReportFormat, blocks, disk, l.highestMemoryUsage, l.highestMemoryBlock)
+	l.log.Noticef(finalSummaryStateDbInfoReportFormat, blocks, disk, l.highestMemoryUsage, l.highestMemoryBlock)
 
 	return nil
 }

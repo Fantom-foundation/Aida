@@ -44,7 +44,7 @@ func TestStateDbInfoLoggerExtension_LoggingHappens(t *testing.T) {
 		db.EXPECT().GetMemoryUsage(),
 		log.EXPECT().Infof(MatchFormat(stateDbInfoLoggerReportFormat), 1, float64(0), gomock.Any()),
 		// defer logging
-		log.EXPECT().Noticef(MatchFormat(deferStateDbInfoLoggerReportFormat), uint64(1), float64(0), float64(0), 1),
+		log.EXPECT().Noticef(MatchFormat(finalSummaryStateDbInfoReportFormat), uint64(1), float64(0), float64(0), 1),
 	)
 
 	ext.PostBlock(executor.State{

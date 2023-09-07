@@ -1,7 +1,6 @@
 package extension
 
 import (
-	"math/big"
 	"sync"
 	"time"
 
@@ -13,7 +12,7 @@ import (
 const (
 	ProgressLoggerDefaultReportFrequency = 15 * time.Second // how often will ticker trigger
 	progressLoggerReportFormat           = "Elapsed time: %v; reached block %d; last interval rate ~%.2f Tx/s"
-	deferProgressLoggerReportFormat      = "Total elapsed time: %v; reached block %d; total transaction rate ~%.2f Tx/s"
+	finalSummaryProgressReportFormat     = "Total elapsed time: %v; reached block %d; total transaction rate ~%.2f Tx/s"
 )
 
 // MakeProgressLogger creates progress logger. It logs progress about processor depending on reportFrequency.
@@ -62,9 +61,9 @@ func (l *progressLogger) PostRun(_ executor.State, _ error) error {
 	return nil
 }
 
-// PostBlock sends the state to the report goroutine.
+// PostTransaction sends the state to the report goroutine.
 // We only care about total number of transactions we can do this here rather in PostTransaction.
-func (l *progressLogger) PostBlock(state executor.State) error {
+func (l *progressLogger) PostTransaction(state executor.State) error {
 	l.inputCh <- state
 	return nil
 }
@@ -76,15 +75,16 @@ func (l *progressLogger) startReport(reportFrequency time.Duration) {
 	lastReport := time.Now()
 	ticker := time.NewTicker(reportFrequency)
 
-	totalTx := new(big.Int)
-	totalBlocks := new(big.Int)
-	var lastIntervalTx uint64
+	var (
+		currentBlock            int
+		totalTx, lastIntervalTx uint64
+	)
 
 	defer func() {
 		elapsed := time.Since(start)
-		txRate := float64(totalTx.Uint64()) / elapsed.Seconds()
+		txRate := float64(totalTx) / elapsed.Seconds()
 
-		l.log.Noticef(deferProgressLoggerReportFormat, elapsed.Round(time.Second), totalBlocks.Uint64(), txRate)
+		l.log.Noticef(finalSummaryProgressReportFormat, elapsed.Round(time.Second), currentBlock, txRate)
 
 		l.wg.Done()
 	}()
@@ -100,17 +100,21 @@ func (l *progressLogger) startReport(reportFrequency time.Duration) {
 				return
 			}
 
-			// we must do tx + 1 because first tx is actually marked as 0
-			lastIntervalTx += uint64(in.Transaction + 1)
-			totalBlocks.SetUint64(uint64(in.Block))
-		case <-ticker.C:
-			elapsed := time.Since(start)
+			lastIntervalTx++
+
+			if in.Block > currentBlock {
+				currentBlock = in.Block
+			}
+		case now := <-ticker.C:
+			elapsed := now.Sub(start)
 			txRate := float64(lastIntervalTx) / time.Since(lastReport).Seconds()
 
 			// todo add file size and gas rate once StateDb is added to new processor
-			l.log.Infof(progressLoggerReportFormat, elapsed.Round(1*time.Second), totalBlocks.Uint64(), txRate)
-			lastReport = time.Now()
-			totalTx.SetUint64(totalTx.Uint64() + lastIntervalTx)
+			l.log.Infof(progressLoggerReportFormat, elapsed.Round(1*time.Second), currentBlock, txRate)
+			lastReport = now
+			totalTx += lastIntervalTx
+
+			lastIntervalTx = 0
 		}
 	}
 
