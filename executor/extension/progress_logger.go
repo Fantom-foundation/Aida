@@ -34,7 +34,7 @@ func makeProgressLogger(config *utils.Config, reportFrequency time.Duration, log
 	return &progressLogger{
 		config:          config,
 		log:             logger,
-		inputCh:         make(chan executor.State, 10),
+		inputCh:         make(chan executor.State, config.Workers*10),
 		wg:              new(sync.WaitGroup),
 		reportFrequency: reportFrequency,
 	}
