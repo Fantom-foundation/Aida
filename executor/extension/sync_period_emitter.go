@@ -1,24 +1,30 @@
 package extension
 
 import (
+	"errors"
+
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
-type blockManager struct {
+type SyncPeriodHook struct {
 	NilExtension
 	config       *utils.Config
 	syncPeriod   uint64
 	isFirstBlock bool
 }
 
-// MakeBlockBeginner creates a executor.Extension call beginBlock and handles SyncPeriod beginning and end.
-func MakeBlockBeginner(config *utils.Config) executor.Extension {
-	return &blockManager{config: config, syncPeriod: 0, isFirstBlock: true}
+// MakeSyncPeriodHook creates an executor.Extension handling SyncPeriod beginnings and ends.
+func MakeSyncPeriodHook(config *utils.Config) executor.Extension {
+	return &SyncPeriodHook{config: config, syncPeriod: 0, isFirstBlock: true}
 }
 
 // PreBlock first needs to calculate current sync period and then invokes necessary state operations.
-func (l *blockManager) PreBlock(state executor.State) error {
+func (l *SyncPeriodHook) PreBlock(state executor.State) error {
+	if l.config.SyncPeriodLength == 0 {
+		return errors.New("syncPeriodLength from config can't be set to 0")
+	}
+
 	// only when first block number is known then syncPeriod can be calculated - therefore this can't be done in preRun
 	if l.isFirstBlock {
 		// initiate a sync period
@@ -30,24 +36,17 @@ func (l *blockManager) PreBlock(state executor.State) error {
 	// calculate the syncPeriod for given block
 	newSyncPeriod := uint64(state.Block) / l.config.SyncPeriodLength
 
-	// loop because multiple empty periods could have been empty
+	// loop because multiple periods could have been empty
 	for l.syncPeriod < newSyncPeriod {
 		state.State.EndSyncPeriod()
 		l.syncPeriod++
 		state.State.BeginSyncPeriod(l.syncPeriod)
 	}
 
-	state.State.BeginBlock(uint64(state.Block))
 	return nil
 }
 
-// PostBlock
-func (l *blockManager) PostBlock(state executor.State) error {
-	state.State.EndBlock()
-	return nil
-}
-
-func (l *blockManager) PostRun(state executor.State, _ error) error {
+func (l *SyncPeriodHook) PostRun(state executor.State, _ error) error {
 	// end syncPeriod if at least one was started
 	if !l.isFirstBlock {
 		state.State.EndSyncPeriod()
