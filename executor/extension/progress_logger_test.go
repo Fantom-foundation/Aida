@@ -3,7 +3,6 @@ package extension
 import (
 	"fmt"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -53,13 +52,7 @@ func TestProgressLoggerExtension_LoggingHappens(t *testing.T) {
 
 	config := &utils.Config{}
 
-	ext := progressLogger{
-		config:          config,
-		log:             log,
-		inputCh:         make(chan executor.State, 10),
-		wg:              new(sync.WaitGroup),
-		reportFrequency: testProgressReportFrequency,
-	}
+	ext := makeProgressLogger(config, testProgressReportFrequency, log)
 
 	ext.PreRun(executor.State{})
 
@@ -71,7 +64,7 @@ func TestProgressLoggerExtension_LoggingHappens(t *testing.T) {
 	)
 
 	// fill the logger with some data
-	ext.PostBlock(executor.State{
+	ext.PostTransaction(executor.State{
 		Block:       1,
 		Transaction: 1,
 	})

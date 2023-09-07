@@ -22,13 +22,17 @@ func MakeProgressLogger(config *utils.Config, reportFrequency time.Duration) exe
 		return NilExtension{}
 	}
 
-	if reportFrequency == 0 {
+	if reportFrequency <= 0 {
 		reportFrequency = ProgressLoggerDefaultReportFrequency
 	}
 
+	return makeProgressLogger(config, reportFrequency, logger.NewLogger(config.LogLevel, "Progress-Logger"))
+}
+
+func makeProgressLogger(config *utils.Config, reportFrequency time.Duration, logger logger.Logger) *progressLogger {
 	return &progressLogger{
 		config:          config,
-		log:             logger.NewLogger(config.LogLevel, "Progress-Logger"),
+		log:             logger,
 		inputCh:         make(chan executor.State, 10),
 		wg:              new(sync.WaitGroup),
 		reportFrequency: reportFrequency,

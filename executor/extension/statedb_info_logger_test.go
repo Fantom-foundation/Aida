@@ -29,22 +29,14 @@ func TestStateDbInfoLoggerExtension_LoggingHappens(t *testing.T) {
 
 	config := &utils.Config{}
 
-	config.First = 1
-	config.Last = 2
-
-	ext := stateDbInfoLogger{
-		NilExtension:    NilExtension{},
-		config:          config,
-		log:             log,
-		reportFrequency: testStateDbInfoFrequency,
-	}
+	ext := makeStateDbInfoLogger(config, testStateDbInfoFrequency, log)
 
 	gomock.InOrder(
 		// scheduled logging
 		db.EXPECT().GetMemoryUsage(),
 		log.EXPECT().Infof(MatchFormat(stateDbInfoLoggerReportFormat), 1, float64(0), gomock.Any()),
 		// defer logging
-		log.EXPECT().Noticef(MatchFormat(finalSummaryStateDbInfoReportFormat), uint64(1), float64(0), float64(0), 1),
+		log.EXPECT().Noticef(MatchFormat(finalSummaryStateDbInfoReportFormat), float64(0), float64(0), 1),
 	)
 
 	ext.PostBlock(executor.State{
