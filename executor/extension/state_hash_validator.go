@@ -23,17 +23,17 @@ func makeStateHashValidator(config *utils.Config, log logger.Logger) executor.Ex
 	if config.StateRootFile == "" {
 		return NilExtension{}
 	}
-	return &validateStateHashExtension{config: config, log: log}
+	return &stateHashValidator{config: config, log: log}
 }
 
-type validateStateHashExtension struct {
+type stateHashValidator struct {
 	NilExtension
 	config *utils.Config
 	log    logger.Logger
 	hashes []common.Hash
 }
 
-func (e *validateStateHashExtension) PreRun(executor.State) error {
+func (e *stateHashValidator) PreRun(executor.State) error {
 	path := e.config.StateRootFile
 	e.log.Infof("Loading state root hashes from %v ...", path)
 	hashes, err := loadStateHashes(path, int(e.config.Last)+1)
@@ -45,7 +45,7 @@ func (e *validateStateHashExtension) PreRun(executor.State) error {
 	return nil
 }
 
-func (e *validateStateHashExtension) PostBlock(state executor.State) error {
+func (e *stateHashValidator) PostBlock(state executor.State) error {
 	if state.State == nil || state.Block >= len(e.hashes) {
 		return nil
 	}
