@@ -211,7 +211,7 @@ func TestTxValidator_TwoErrorsDoNotReturnAnErrorWhenContinueOnFailureIsEnabledAn
 	}
 }
 
-func TestTxValidator_TwoErrorsDoesReturnErrorContinueOnFailureIsEnabledAndMaxNumErrorsIsNotHighEnough(t *testing.T) {
+func TestTxValidator_TwoErrorsDoReturnErrorOnEventWhenContinueOnFailureIsEnabledAndMaxNumErrorsIsNotHighEnough(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	db := state.NewMockStateDB(ctrl)
 	log := logger.NewMockLogger(ctrl)
