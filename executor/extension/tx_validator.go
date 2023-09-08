@@ -50,12 +50,26 @@ func (v *txValidator) PreRun(_ executor.State) error {
 
 // PreTransaction validates InputAlloc in given substate
 func (v *txValidator) PreTransaction(state executor.State) error {
-	return v.checkTransaction(state, "input")
+	err := utils.ValidateStateDB(state.Substate.InputAlloc, state.State, v.config.UpdateOnFailure)
+	if err == nil {
+		return nil
+	}
+
+	err = fmt.Errorf("input error at block %v tx %v; %v", state.Block, state.Transaction, err)
+
+	return v.checkTxErr(err)
 }
 
 // PostTransaction validates OutputAlloc in given substate
 func (v *txValidator) PostTransaction(state executor.State) error {
-	return v.checkTransaction(state, "output")
+	err := utils.ValidateStateDB(state.Substate.OutputAlloc, state.State, v.config.UpdateOnFailure)
+	if err == nil {
+		return nil
+	}
+
+	err = fmt.Errorf("output error at block %v tx %v; %v", state.Block, state.Transaction, err)
+
+	return v.checkTxErr(err)
 }
 
 // PostRun informs user how many errors were found - if ContinueOnFailureIsEnabled otherwise success is reported.
@@ -71,16 +85,8 @@ func (v *txValidator) PostRun(_ executor.State, _ error) error {
 	return errors.Join(v.errors...)
 }
 
-// checkTransaction validates state after each transaction. It checks both InputAlloc and OutputAlloc and decides
-// whether return the error (and exit the app) or log and collect it. This decision is based on configuration.
-func (v *txValidator) checkTransaction(state executor.State, name string) error {
-	err := utils.ValidateStateDB(state.Substate.OutputAlloc, state.State, v.config.UpdateOnFailure)
-	if err == nil {
-		return nil
-	}
-
-	err = fmt.Errorf("%v error at block %v tx %v; %v", name, state.Block, state.Transaction, err)
-
+// checkTxErr decides whether return the error (and exit the app) or log and collect it. This decision is based on configuration.
+func (v *txValidator) checkTxErr(err error) error {
 	// ContinueOnFailure is disabled, return the error thus exit the program
 	if !v.config.ContinueOnFailure {
 		return err
@@ -91,8 +97,8 @@ func (v *txValidator) checkTransaction(state executor.State, name string) error 
 
 	// this func must be thread safe
 	v.lock.Lock()
+	defer v.lock.Unlock()
 	v.errors = append(v.errors, err)
-	v.lock.Unlock()
 
 	if len(v.errors) >= v.config.MaxNumErrors {
 		return errors.New("maximum number of errors occurred")

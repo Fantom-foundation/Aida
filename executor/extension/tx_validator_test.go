@@ -1,7 +1,9 @@
 package extension
 
 import (
+	"errors"
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/executor"
@@ -11,6 +13,18 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"go.uber.org/mock/gomock"
+)
+
+const (
+	maxNumErrorsTestErr   = "maximum number of errors occurred"
+	incorrectInputTestErr = "input error at block 1 tx 1;   Account 0x0000000000000000000000000000000000000000 does not exist\n  " +
+		"Failed to validate code for account 0x0000000000000000000000000000000000000000\n    " +
+		"have len 1\n    " +
+		"want len 0\n"
+	incorrectOutputTestErr = "output error at block 1 tx 1;   Account 0x0000000000000000000000000000000000000000 does not exist\n  " +
+		"Failed to validate code for account 0x0000000000000000000000000000000000000000\n    " +
+		"have len 1\n    " +
+		"want len 0\n"
 )
 
 func TestTxValidator_NoValidatorIsCreatedIfDisabled(t *testing.T) {
@@ -92,6 +106,18 @@ func TestTxValidator_SingleErrorInPreTransactionDoesNotEndProgramWithContinueOnF
 	if err != nil {
 		t.Errorf("PreTransaction must not return an error, got %v", err)
 	}
+
+	err = ext.PostRun(executor.State{}, nil)
+	if err == nil {
+		t.Errorf("PostRun must return an error")
+	}
+
+	got := err.Error()
+	want := incorrectInputTestErr
+
+	if strings.Compare(got, want) != 0 {
+		t.Errorf("Unexpected err!\nGot: %v; want: %v", got, want)
+	}
 }
 
 func TestTxValidator_SingleErrorInPreTransactionReturnsErrorWithNoContinueOnFailure(t *testing.T) {
@@ -123,6 +149,14 @@ func TestTxValidator_SingleErrorInPreTransactionReturnsErrorWithNoContinueOnFail
 	if err == nil {
 		t.Errorf("PreTransaction must return an error!")
 	}
+
+	got := err.Error()
+	want := incorrectInputTestErr
+
+	if strings.Compare(got, want) != 0 {
+		t.Errorf("Unexpected err!\nGot: %v; want: %v", got, want)
+	}
+
 }
 
 func TestTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueOnFailure(t *testing.T) {
@@ -153,6 +187,13 @@ func TestTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueOnFai
 
 	if err == nil {
 		t.Errorf("PreTransaction must return an error!")
+	}
+
+	got := err.Error()
+	want := incorrectOutputTestErr
+
+	if strings.Compare(got, want) != 0 {
+		t.Errorf("Unexpected err!\nGot: %v; want: %v", got, want)
 	}
 }
 
@@ -218,6 +259,13 @@ func TestTxValidator_TwoErrorsDoNotReturnAnErrorWhenContinueOnFailureIsEnabledAn
 	if err == nil {
 		t.Errorf("PostRun must return an error!")
 	}
+
+	got := err.Error()
+	want := errors.Join(errors.New(incorrectInputTestErr), errors.New(incorrectOutputTestErr)).Error()
+
+	if strings.Compare(got, want) != 0 {
+		t.Errorf("Unexpected err!\nGot: %v; want: %v", got, want)
+	}
 }
 
 func TestTxValidator_TwoErrorsDoReturnErrorOnEventWhenContinueOnFailureIsEnabledAndMaxNumErrorsIsNotHighEnough(t *testing.T) {
@@ -276,9 +324,23 @@ func TestTxValidator_TwoErrorsDoReturnErrorOnEventWhenContinueOnFailureIsEnabled
 		t.Errorf("PostTransaction must return an error because MaxNumErrors is not high enough!")
 	}
 
+	got := err.Error()
+	want := maxNumErrorsTestErr
+
+	if strings.Compare(got, want) != 0 {
+		t.Errorf("Unexpected err!\nGot: %v; want: %v", got, want)
+	}
+
 	err = ext.PostRun(executor.State{}, nil)
 	if err == nil {
 		t.Errorf("PostRun must return an error because MaxNumErrors is not high enough!")
+	}
+
+	got = err.Error()
+	want = errors.Join(errors.New(incorrectInputTestErr), errors.New(incorrectOutputTestErr)).Error()
+
+	if strings.Compare(got, want) != 0 {
+		t.Errorf("Unexpected err!\nGot: %v; want: %v", got, want)
 	}
 }
 
