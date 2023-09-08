@@ -1,42 +1,39 @@
 package extension
 
 import (
-	"errors"
-
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
 type TestSyncPeriodEmitter struct {
 	NilExtension
-	config       *utils.Config
-	syncPeriod   uint64
-	isFirstBlock bool
+	config     *utils.Config
+	syncPeriod uint64
 }
 
 // MakeTestSyncPeriodEmitter creates an executor.Extension handling SyncPeriod beginnings and ends.
 func MakeTestSyncPeriodEmitter(config *utils.Config) executor.Extension {
-	return &TestSyncPeriodEmitter{config: config, syncPeriod: 0, isFirstBlock: true}
+	if config.SyncPeriodLength <= 0 {
+		log := logger.NewLogger(config.LogLevel, "Progress-Reporter")
+		log.Warning("SyncPeriodLength was set in config to 0; SyncPeriodEmitter disabled")
+		return NilExtension{}
+	}
+
+	return &TestSyncPeriodEmitter{config: config, syncPeriod: 0}
 }
 
 // PreRun checks whether syncPeriodLength isn't invalid
 func (l *TestSyncPeriodEmitter) PreRun(state executor.State) error {
-	if l.config.SyncPeriodLength == 0 {
-		return errors.New("syncPeriodLength from config can't be set to 0")
-	}
+	// initiate a sync period
+	l.syncPeriod = uint64(state.Block) / l.config.SyncPeriodLength
+	state.State.BeginSyncPeriod(l.syncPeriod)
+
 	return nil
 }
 
-// PreBlock first needs to calculate current sync period and then invokes necessary state operations.
+// PreBlock calculates current sync period and then invokes necessary state operations.
 func (l *TestSyncPeriodEmitter) PreBlock(state executor.State) error {
-	// only when first block number is known then syncPeriod can be calculated - therefore this can't be done in preRun
-	if l.isFirstBlock {
-		// initiate a sync period
-		l.syncPeriod = uint64(state.Block) / l.config.SyncPeriodLength
-		state.State.BeginSyncPeriod(l.syncPeriod)
-		l.isFirstBlock = false
-	}
-
 	// calculate the syncPeriod for given block
 	newSyncPeriod := uint64(state.Block) / l.config.SyncPeriodLength
 
@@ -51,10 +48,6 @@ func (l *TestSyncPeriodEmitter) PreBlock(state executor.State) error {
 }
 
 func (l *TestSyncPeriodEmitter) PostRun(state executor.State, _ error) error {
-	// end syncPeriod if at least one was started
-	if !l.isFirstBlock {
-		state.State.EndSyncPeriod()
-	}
-
+	state.State.EndSyncPeriod()
 	return nil
 }
