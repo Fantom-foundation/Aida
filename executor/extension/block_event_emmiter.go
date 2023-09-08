@@ -4,23 +4,23 @@ import (
 	"github.com/Fantom-foundation/Aida/executor"
 )
 
-type blockEventExtension struct {
+type blockEventEmitter struct {
 	NilExtension
-	skipEndBlocks bool
+	skipEndBlock bool
 }
 
-// MakeBlockEventExtension creates a executor.Extension to call beginBlock and endBlock
-func MakeBlockEventExtension(skipEndBlocks bool) executor.Extension {
-	return &blockEventExtension{skipEndBlocks: skipEndBlocks}
+// MakeBlockEventEmitter creates a executor.Extension to call beginBlock and endBlock
+func MakeBlockEventEmitter(skipEndBlock bool) executor.Extension {
+	return &blockEventEmitter{skipEndBlock: skipEndBlock}
 }
 
-func (l *blockEventExtension) PreBlock(state executor.State) error {
+func (l *blockEventEmitter) PreBlock(state executor.State) error {
 	state.State.BeginBlock(uint64(state.Block))
 	return nil
 }
 
-func (l *blockEventExtension) PostBlock(state executor.State) error {
-	if !l.skipEndBlocks {
+func (l *blockEventEmitter) PostBlock(state executor.State) error {
+	if !l.skipEndBlock {
 		state.State.EndBlock()
 	}
 	return nil

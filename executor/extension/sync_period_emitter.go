@@ -7,24 +7,28 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
-type SyncPeriodHook struct {
+type TestSyncPeriodEmitter struct {
 	NilExtension
 	config       *utils.Config
 	syncPeriod   uint64
 	isFirstBlock bool
 }
 
-// MakeSyncPeriodHook creates an executor.Extension handling SyncPeriod beginnings and ends.
-func MakeSyncPeriodHook(config *utils.Config) executor.Extension {
-	return &SyncPeriodHook{config: config, syncPeriod: 0, isFirstBlock: true}
+// MakeTestSyncPeriodEmitter creates an executor.Extension handling SyncPeriod beginnings and ends.
+func MakeTestSyncPeriodEmitter(config *utils.Config) executor.Extension {
+	return &TestSyncPeriodEmitter{config: config, syncPeriod: 0, isFirstBlock: true}
 }
 
-// PreBlock first needs to calculate current sync period and then invokes necessary state operations.
-func (l *SyncPeriodHook) PreBlock(state executor.State) error {
+// PreRun checks whether syncPeriodLength isn't invalid
+func (l *TestSyncPeriodEmitter) PreRun(state executor.State) error {
 	if l.config.SyncPeriodLength == 0 {
 		return errors.New("syncPeriodLength from config can't be set to 0")
 	}
+	return nil
+}
 
+// PreBlock first needs to calculate current sync period and then invokes necessary state operations.
+func (l *TestSyncPeriodEmitter) PreBlock(state executor.State) error {
 	// only when first block number is known then syncPeriod can be calculated - therefore this can't be done in preRun
 	if l.isFirstBlock {
 		// initiate a sync period
@@ -46,7 +50,7 @@ func (l *SyncPeriodHook) PreBlock(state executor.State) error {
 	return nil
 }
 
-func (l *SyncPeriodHook) PostRun(state executor.State, _ error) error {
+func (l *TestSyncPeriodEmitter) PostRun(state executor.State, _ error) error {
 	// end syncPeriod if at least one was started
 	if !l.isFirstBlock {
 		state.State.EndSyncPeriod()

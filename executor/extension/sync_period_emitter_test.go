@@ -9,10 +9,10 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestSyncPeriod_Single(t *testing.T) {
+func TestSyncPeriodEmitter_Single(t *testing.T) {
 	config := &utils.Config{}
 	config.SyncPeriodLength = 300
-	ext := MakeSyncPeriodHook(config)
+	ext := MakeTestSyncPeriodEmitter(config)
 
 	mockCtrl := gomock.NewController(t)
 	mockStateDB := state.NewMockStateDB(mockCtrl)
@@ -26,18 +26,21 @@ func TestSyncPeriod_Single(t *testing.T) {
 		Block: 0,
 		State: mockStateDB,
 	}
+	if err := ext.PreRun(state); err != nil {
+		t.Fatalf("failed to to run pre-run: %v", err)
+	}
 	if err := ext.PreBlock(state); err != nil {
 		t.Fatalf("failed to to run pre-block: %v", err)
 	}
 	if err := ext.PostRun(state, nil); err != nil {
-		t.Fatalf("failed to to run post-block: %v", err)
+		t.Fatalf("failed to to run post-run: %v", err)
 	}
 }
 
-func TestSyncPeriod_MultipleSyncPeriodsSingleBlockLength(t *testing.T) {
+func TestSyncPeriodEmitter_MultipleSyncPeriodsSingleBlockLength(t *testing.T) {
 	config := &utils.Config{}
 	config.SyncPeriodLength = 1
-	ext := MakeSyncPeriodHook(config)
+	ext := MakeTestSyncPeriodEmitter(config)
 
 	mockCtrl := gomock.NewController(t)
 	mockStateDB := state.NewMockStateDB(mockCtrl)
@@ -55,30 +58,29 @@ func TestSyncPeriod_MultipleSyncPeriodsSingleBlockLength(t *testing.T) {
 		Block: 0,
 		State: mockStateDB,
 	}
+	if err := ext.PreRun(state); err != nil {
+		t.Fatalf("failed to to run pre-run: %v", err)
+	}
 	if err := ext.PreBlock(state); err != nil {
 		t.Fatalf("failed to to run pre-block: %v", err)
 	}
 	state.Block = 1
-
 	if err := ext.PreBlock(state); err != nil {
 		t.Fatalf("failed to to run pre-block: %v", err)
 	}
-
 	state.Block = 2
-
 	if err := ext.PreBlock(state); err != nil {
 		t.Fatalf("failed to to run pre-block: %v", err)
 	}
-
 	if err := ext.PostRun(state, nil); err != nil {
-		t.Fatalf("failed to to run post-block: %v", err)
+		t.Fatalf("failed to to run post-run: %v", err)
 	}
 }
 
-func TestSyncPeriod_MultipleSyncPeriodsWithoutBlocks(t *testing.T) {
+func TestSyncPeriodEmitter_MultipleSyncPeriodsWithoutBlocks(t *testing.T) {
 	config := &utils.Config{}
 	config.SyncPeriodLength = 2
-	ext := MakeSyncPeriodHook(config)
+	ext := MakeTestSyncPeriodEmitter(config)
 
 	mockCtrl := gomock.NewController(t)
 	mockStateDB := state.NewMockStateDB(mockCtrl)
@@ -98,25 +100,25 @@ func TestSyncPeriod_MultipleSyncPeriodsWithoutBlocks(t *testing.T) {
 		Block: 0,
 		State: mockStateDB,
 	}
+	if err := ext.PreRun(state); err != nil {
+		t.Fatalf("failed to to run pre-run: %v", err)
+	}
 	if err := ext.PreBlock(state); err != nil {
 		t.Fatalf("failed to to run pre-block: %v", err)
 	}
-
 	state.Block = 6
-
 	if err := ext.PreBlock(state); err != nil {
 		t.Fatalf("failed to to run pre-block: %v", err)
 	}
-
 	if err := ext.PostRun(state, nil); err != nil {
-		t.Fatalf("failed to to run post-block: %v", err)
+		t.Fatalf("failed to to run post-run: %v", err)
 	}
 }
 
-func TestSyncPeriod_MultipleSyncPeriodsEmpty(t *testing.T) {
+func TestSyncPeriodEmitter_MultipleSyncPeriodsEmpty(t *testing.T) {
 	config := &utils.Config{}
 	config.SyncPeriodLength = 2
-	ext := MakeSyncPeriodHook(config)
+	ext := MakeTestSyncPeriodEmitter(config)
 
 	mockCtrl := gomock.NewController(t)
 	mockStateDB := state.NewMockStateDB(mockCtrl)
@@ -128,7 +130,29 @@ func TestSyncPeriod_MultipleSyncPeriodsEmpty(t *testing.T) {
 		State: mockStateDB,
 	}
 
+	if err := ext.PreRun(state); err != nil {
+		t.Fatalf("failed to to run pre-run: %v", err)
+	}
 	if err := ext.PostRun(state, nil); err != nil {
-		t.Fatalf("failed to to run post-block: %v", err)
+		t.Fatalf("failed to to run post-run: %v", err)
+	}
+}
+
+func TestSyncPeriodEmitter_InvalidSyncPeriodLength(t *testing.T) {
+	config := &utils.Config{}
+	config.SyncPeriodLength = 0
+	ext := MakeTestSyncPeriodEmitter(config)
+
+	mockCtrl := gomock.NewController(t)
+	mockStateDB := state.NewMockStateDB(mockCtrl)
+
+	gomock.InOrder()
+
+	state := executor.State{
+		Block: 0,
+		State: mockStateDB,
+	}
+	if err := ext.PreRun(state); err == nil {
+		t.Fatalf("syncPeriodLength of 0 didn't result in an error in pre-run")
 	}
 }

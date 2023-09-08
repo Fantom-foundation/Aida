@@ -8,8 +8,8 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestBlockEventExtension_SingleBlock(t *testing.T) {
-	ext := MakeBlockEventExtension(false)
+func TestBlockEventEmitter_SingleBlock(t *testing.T) {
+	ext := MakeBlockEventEmitter(false)
 
 	mockCtrl := gomock.NewController(t)
 	mockStateDB := state.NewMockStateDB(mockCtrl)
@@ -31,8 +31,8 @@ func TestBlockEventExtension_SingleBlock(t *testing.T) {
 	}
 }
 
-func TestBlockEventExtension_SkipEndBlocks(t *testing.T) {
-	ext := MakeBlockEventExtension(true)
+func TestBlockEventEmitter_SkipEndBlocks(t *testing.T) {
+	ext := MakeBlockEventEmitter(true)
 
 	mockCtrl := gomock.NewController(t)
 	mockStateDB := state.NewMockStateDB(mockCtrl)
@@ -53,8 +53,8 @@ func TestBlockEventExtension_SkipEndBlocks(t *testing.T) {
 	}
 }
 
-func TestBlockEventExtension_MultipleBlocks(t *testing.T) {
-	ext := MakeBlockEventExtension(false)
+func TestBlockEventEmitter_MultipleBlocks(t *testing.T) {
+	ext := MakeBlockEventEmitter(false)
 
 	mockCtrl := gomock.NewController(t)
 	mockStateDB := state.NewMockStateDB(mockCtrl)
