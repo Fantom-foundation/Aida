@@ -90,8 +90,7 @@ func (l *progressLogger) startReport(reportFrequency time.Duration) {
 	defer func() {
 		elapsed := time.Since(start)
 		txRate := float64(totalTx) / elapsed.Seconds()
-		gas, _ := totalGas.Float64()
-		gasRate := gas / (float64(elapsed.Nanoseconds()) / 1e9)
+		gasRate := float64(totalGas.Uint64()) / (float64(elapsed.Nanoseconds()) / 1e9)
 
 		l.log.Noticef(finalSummaryProgressReportFormat, elapsed.Round(time.Second), currentBlock, txRate, gasRate)
 
