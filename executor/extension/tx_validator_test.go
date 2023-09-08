@@ -156,7 +156,7 @@ func TestTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueOnFai
 	}
 }
 
-func TestTxValidator_TwoErrorsDoesNotReturnErrorWhenContinueOnFailureIsEnabledAndMaxNumErrorsIsHighEnough(t *testing.T) {
+func TestTxValidator_TwoErrorsDoNotReturnAnErrorWhenContinueOnFailureIsEnabledAndMaxNumErrorsIsHighEnough(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	db := state.NewMockStateDB(ctrl)
 	log := logger.NewMockLogger(ctrl)
