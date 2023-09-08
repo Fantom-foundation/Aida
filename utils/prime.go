@@ -197,6 +197,7 @@ func (pc *PrimeContext) SuicideAccounts(db state.StateDB, accounts []common.Addr
 
 // GenerateWorldStateAndPrime
 func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error {
+	// todo remove when new executor is used through the app
 	if cfg.SkipPriming {
 		return nil
 	}

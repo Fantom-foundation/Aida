@@ -240,6 +240,10 @@ func (r *DeletionProxy) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 	return r.db.Commit(deleteEmptyObjects)
 }
 
+func (r *DeletionProxy) GetHash() common.Hash {
+	return r.db.GetHash()
+}
+
 func (r *DeletionProxy) Error() error {
 	return r.db.Error()
 }

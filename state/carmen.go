@@ -160,6 +160,10 @@ func (s *carmenStateDB) EndSyncPeriod() {
 	s.db.EndEpoch(s.syncPeriodNumber)
 }
 
+func (s *carmenStateDB) GetHash() common.Hash {
+	return common.Hash(s.db.GetHash())
+}
+
 func (s *carmenStateDB) Close() error {
 	return s.db.Close()
 }

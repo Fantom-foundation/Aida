@@ -312,6 +312,10 @@ func (p *EventProxy) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 	return p.db.Commit(deleteEmptyObjects)
 }
 
+func (p *EventProxy) GetHash() common.Hash {
+	return p.db.GetHash()
+}
+
 func (p *EventProxy) Error() error {
 	return p.db.Error()
 }

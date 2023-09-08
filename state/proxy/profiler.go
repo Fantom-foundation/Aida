@@ -318,6 +318,11 @@ func (p *ProfilerProxy) EndSyncPeriod() {
 	})
 }
 
+func (p *ProfilerProxy) GetHash() common.Hash {
+	// TODO: add profiling for this operation
+	return p.db.GetHash()
+}
+
 // AddLog adds a log entry.
 func (p *ProfilerProxy) AddLog(log *types.Log) {
 	p.do(operation.AddLogID, func() {
