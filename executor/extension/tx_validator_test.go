@@ -251,7 +251,7 @@ func TestTxValidator_TwoErrorsDoReturnErrorOnEventWhenContinueOnFailureIsEnabled
 	})
 
 	if err != nil {
-		t.Errorf("PreTransaction must not return an error because continue on failure is true!")
+		t.Errorf("PreTransaction must not return an error because continue on failure is true, got %v", err)
 	}
 
 	err = ext.PostTransaction(executor.State{
