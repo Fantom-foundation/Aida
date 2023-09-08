@@ -35,14 +35,14 @@ func makeTxValidator(config *utils.Config, log logger.Logger) *txValidator {
 	}
 }
 
-// PreRun informs user the txValidator is enabled thus he should count with slower processing speed.
+// PreRun informs the user that txValidator is enabled and that they should expect slower processing speed.
 func (v *txValidator) PreRun(_ executor.State) error {
 
 	v.log.Warning("Transaction verification is enabled, this may slow down the block processing.")
 
 	if v.config.ContinueOnFailure {
-		v.log.Warningf("Continue on Failure for tx validation is enabled though "+
-			"program will exit when %v errors occur!", v.config.MaxNumErrors)
+		v.log.Warningf("Continue on Failure for transaction validation is enabled, yet "+
+			"block processing will stop after %v encountered issues.", v.config.MaxNumErrors)
 	}
 
 	return nil
@@ -50,67 +50,16 @@ func (v *txValidator) PreRun(_ executor.State) error {
 
 // PreTransaction validates InputAlloc in given substate
 func (v *txValidator) PreTransaction(state executor.State) error {
-	err := utils.ValidateStateDB(state.Substate.InputAlloc, state.State, v.config.UpdateOnFailure)
-	if err == nil {
-		return nil
-	}
-
-	// this func must be thread safe
-	v.lock.Lock()
-	defer v.lock.Unlock()
-
-	e := fmt.Errorf("input error at block %v tx %v; %v", state.Block, state.Transaction, err)
-	// ContinueOnFailure is disabled, return the error thus exit the program
-	if !v.config.ContinueOnFailure {
-		return e
-	}
-
-	v.log.Error(e)
-	// ContinueOnFailure is enabled, log the error to user
-	v.errors = append(v.errors, err)
-
-	// check if error cap has been reached
-	if len(v.errors) >= v.config.MaxNumErrors {
-		return errors.New("maximum number of errors occurred")
-	}
-
-	return nil
+	return v.checkTransaction(state, "input")
 }
 
 // PostTransaction validates OutputAlloc in given substate
 func (v *txValidator) PostTransaction(state executor.State) error {
-	err := utils.ValidateStateDB(state.Substate.InputAlloc, state.State, v.config.UpdateOnFailure)
-	if err == nil {
-		return nil
-	}
-
-	// this func must be thread safe
-	v.lock.Lock()
-	defer v.lock.Unlock()
-
-	e := fmt.Errorf("output error at block %v tx %v; %v", state.Block, state.Transaction, err)
-	// ContinueOnFailure is disabled, return the error thus exit the program
-	if !v.config.ContinueOnFailure {
-		return e
-	}
-
-	v.log.Error(e)
-	// ContinueOnFailure is enabled, log the error to user
-	v.errors = append(v.errors, err)
-
-	// check if error cap has been reached
-	if len(v.errors) >= v.config.MaxNumErrors {
-		return errors.New("maximum number of errors occurred")
-	}
-
-	return nil
+	return v.checkTransaction(state, "output")
 }
 
 // PostRun informs user how many errors were found - if ContinueOnFailureIsEnabled otherwise success is reported.
 func (v *txValidator) PostRun(_ executor.State, _ error) error {
-	v.lock.Lock()
-	defer v.lock.Unlock()
-
 	// no errors occurred
 	if len(v.errors) == 0 {
 		v.log.Noticef("Validation successful!")
@@ -120,4 +69,34 @@ func (v *txValidator) PostRun(_ executor.State, _ error) error {
 	v.log.Warningf("%v errors caught", len(v.errors))
 
 	return errors.Join(v.errors...)
+}
+
+// checkTransaction validates state after each transaction. It checks both InputAlloc and OutputAlloc and decides
+// whether return the error (and exit the app) or log and collect it. This decision is based on configuration.
+func (v *txValidator) checkTransaction(state executor.State, name string) error {
+	err := utils.ValidateStateDB(state.Substate.OutputAlloc, state.State, v.config.UpdateOnFailure)
+	if err == nil {
+		return nil
+	}
+
+	err = fmt.Errorf("%v error at block %v tx %v; %v", name, state.Block, state.Transaction, err)
+
+	// ContinueOnFailure is disabled, return the error thus exit the program
+	if !v.config.ContinueOnFailure {
+		return err
+	}
+
+	// ContinueOnFailure is enabled, log the error to user and collect it
+	v.log.Error(err)
+
+	// this func must be thread safe
+	v.lock.Lock()
+	v.errors = append(v.errors, err)
+	v.lock.Unlock()
+
+	if len(v.errors) >= v.config.MaxNumErrors {
+		return errors.New("maximum number of errors occurred")
+	}
+
+	return nil
 }

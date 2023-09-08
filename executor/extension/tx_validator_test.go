@@ -20,7 +20,7 @@ func TestTxValidator_NoValidatorIsCreatedIfDisabled(t *testing.T) {
 	ext := MakeTxValidator(config)
 
 	if _, ok := ext.(NilExtension); !ok {
-		t.Errorf("Logger is enabled although not set in configuration")
+		t.Errorf("Validator is enabled although not set in configuration")
 	}
 }
 
@@ -58,11 +58,11 @@ func TestTxValidator_ValidatorDoesNotFailWithEmptySubstate(t *testing.T) {
 	})
 
 	if err != nil {
-		t.Errorf("PostTransaction must not return an error!")
+		t.Errorf("PostTransaction must not return an error, got %v", err)
 	}
 }
 
-func TestTxValidator_SingleErrorInPostTransactionDoesNotEndProgramWithNoContinueOnFailure(t *testing.T) {
+func TestTxValidator_SingleErrorInPreTransactionDoesNotEndProgramWithContinueOnFailure(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	db := state.NewMockStateDB(ctrl)
 
@@ -90,7 +90,7 @@ func TestTxValidator_SingleErrorInPostTransactionDoesNotEndProgramWithNoContinue
 	})
 
 	if err != nil {
-		t.Errorf("PostTransaction must return an error!")
+		t.Errorf("PreTransaction must not return an error, got %v", err)
 	}
 }
 
@@ -144,7 +144,7 @@ func TestTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueOnFai
 
 	ext.PreRun(executor.State{})
 
-	err := ext.PreTransaction(executor.State{
+	err := ext.PostTransaction(executor.State{
 		Block:       1,
 		Transaction: 1,
 		Substate:    getIncorrectTestSubstateAlloc(),
@@ -152,7 +152,7 @@ func TestTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueOnFai
 	})
 
 	if err == nil {
-		t.Errorf("PostTransaction must return an error!")
+		t.Errorf("PreTransaction must return an error!")
 	}
 }
 

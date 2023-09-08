@@ -56,7 +56,7 @@ func TestStateHashValidator_ActiveIfAFileIsProvided(t *testing.T) {
 	}
 
 	if err := ext.PostBlock(executor.State{Block: 4, State: db}); err != nil {
-		t.Errorf("failed to check hash: %v", err)
+		t.Errorf("failed to checkTransaction hash: %v", err)
 	}
 }
 
