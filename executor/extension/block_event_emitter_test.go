@@ -9,7 +9,7 @@ import (
 )
 
 func TestBlockEventEmitter_SingleBlock(t *testing.T) {
-	ext := MakeBlockEventEmitter(false)
+	ext := MakeBlockEventEmitter()
 
 	mockCtrl := gomock.NewController(t)
 	mockStateDB := state.NewMockStateDB(mockCtrl)
@@ -32,7 +32,7 @@ func TestBlockEventEmitter_SingleBlock(t *testing.T) {
 }
 
 func TestBlockEventEmitter_SkipEndBlocks(t *testing.T) {
-	ext := MakeBlockEventEmitter(true)
+	ext := MakeBeginOnlyEmitter()
 
 	mockCtrl := gomock.NewController(t)
 	mockStateDB := state.NewMockStateDB(mockCtrl)
@@ -54,7 +54,7 @@ func TestBlockEventEmitter_SkipEndBlocks(t *testing.T) {
 }
 
 func TestBlockEventEmitter_MultipleBlocks(t *testing.T) {
-	ext := MakeBlockEventEmitter(false)
+	ext := MakeBlockEventEmitter()
 
 	mockCtrl := gomock.NewController(t)
 	mockStateDB := state.NewMockStateDB(mockCtrl)

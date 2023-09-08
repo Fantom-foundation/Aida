@@ -10,8 +10,13 @@ type blockEventEmitter struct {
 }
 
 // MakeBlockEventEmitter creates a executor.Extension to call beginBlock and endBlock
-func MakeBlockEventEmitter(skipEndBlock bool) executor.Extension {
-	return &blockEventEmitter{skipEndBlock: skipEndBlock}
+func MakeBlockEventEmitter() executor.Extension {
+	return &blockEventEmitter{skipEndBlock: false}
+}
+
+// MakeBlockEventEmitter creates a executor.Extension to call beginBlock and endBlock
+func MakeBeginOnlyEmitter() executor.Extension {
+	return &blockEventEmitter{skipEndBlock: true}
 }
 
 func (l *blockEventEmitter) PreBlock(state executor.State) error {
