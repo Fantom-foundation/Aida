@@ -215,6 +215,10 @@ var (
 		Name:  "db-src",
 		Usage: "sets the directory contains source state DB data",
 	}
+	StateRootHashesFlag = cli.PathFlag{
+		Name:  "state-roots",
+		Usage: "set the filename containing a list of state roots",
+	}
 	DbTmpFlag = cli.PathFlag{
 		Name:  "db-tmp",
 		Usage: "sets the temporary directory where to place DB data; uses system default if empty",
@@ -486,7 +490,7 @@ type Config struct {
 	TargetBlock         uint64         // represents the ID of target block to be reached by state evolve process or in dump state
 	UpdateBufferSize    uint64         // cache size in Bytes
 	ProfileDB           string         // profile db for parallel transaction execution
-
+	StateRootFile       string         // the optional file name containing state roots to be checked (empty if not enabled)
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.
