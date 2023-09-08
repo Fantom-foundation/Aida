@@ -38,7 +38,7 @@ func makeTxValidator(config *utils.Config, log logger.Logger) *txValidator {
 // PreRun informs user the txValidator is enabled thus he should count with slower processing speed.
 func (v *txValidator) PreRun(_ executor.State) error {
 
-	v.log.Warning("Transaction verification is enabled, this may slow down the process.")
+	v.log.Warning("Transaction verification is enabled, this may slow down the block processing.")
 
 	if v.config.ContinueOnFailure {
 		v.log.Warningf("Continue on Failure for tx validation is enabled though "+
