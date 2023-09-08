@@ -344,27 +344,78 @@ func TestTxValidator_TwoErrorsDoReturnErrorOnEventWhenContinueOnFailureIsEnabled
 	}
 }
 
+func TestTxValidator_PreTransactionDoesNotFailWithIncorrectOutput(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	db := state.NewMockStateDB(ctrl)
+
+	config := &utils.Config{}
+	config.ValidateTxState = true
+	config.ContinueOnFailure = false
+
+	ext := MakeTxValidator(config)
+
+	ext.PreRun(executor.State{})
+
+	err := ext.PreTransaction(executor.State{
+		Block:       1,
+		Transaction: 1,
+		Substate: &substate.Substate{
+			OutputAlloc: getIncorrectSubstateAlloc(),
+		},
+		State: db,
+	})
+
+	if err != nil {
+		t.Errorf("PreTransaction must not return an error, got %v", err)
+	}
+}
+
+func TestTxValidator_PostTransactionDoesNotFailWithIncorrectInput(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	db := state.NewMockStateDB(ctrl)
+
+	config := &utils.Config{}
+	config.ValidateTxState = true
+	config.ContinueOnFailure = false
+
+	ext := MakeTxValidator(config)
+
+	ext.PreRun(executor.State{})
+
+	err := ext.PostTransaction(executor.State{
+		Block:       1,
+		Transaction: 1,
+		Substate: &substate.Substate{
+			InputAlloc: getIncorrectSubstateAlloc(),
+		},
+		State: db,
+	})
+
+	if err != nil {
+		t.Errorf("PostTransaction must not return an error, got %v", err)
+	}
+}
+
 // getIncorrectTestSubstateAlloc returns an error
 // Substate with incorrect InputAlloc and OutputAlloc.
 // This func is only used in testing.
 func getIncorrectTestSubstateAlloc() *substate.Substate {
 	sub := &substate.Substate{
-		InputAlloc:  make(substate.SubstateAlloc),
-		OutputAlloc: make(substate.SubstateAlloc),
-	}
-	sub.InputAlloc[common.Address{0}] = &substate.SubstateAccount{
-		Nonce:   0,
-		Balance: new(big.Int),
-		Storage: make(map[common.Hash]common.Hash),
-		Code:    make([]byte, 0),
-	}
-
-	sub.OutputAlloc[common.Address{0}] = &substate.SubstateAccount{
-		Nonce:   0,
-		Balance: new(big.Int),
-		Storage: make(map[common.Hash]common.Hash),
-		Code:    make([]byte, 0),
+		InputAlloc:  getIncorrectSubstateAlloc(),
+		OutputAlloc: getIncorrectSubstateAlloc(),
 	}
 
 	return sub
+}
+
+func getIncorrectSubstateAlloc() substate.SubstateAlloc {
+	alloc := make(substate.SubstateAlloc)
+	alloc[common.Address{0}] = &substate.SubstateAccount{
+		Nonce:   0,
+		Balance: new(big.Int),
+		Storage: make(map[common.Hash]common.Hash),
+		Code:    make([]byte, 0),
+	}
+
+	return alloc
 }

@@ -74,6 +74,9 @@ func (v *txValidator) PostTransaction(state executor.State) error {
 
 // PostRun informs user how many errors were found - if ContinueOnFailureIsEnabled otherwise success is reported.
 func (v *txValidator) PostRun(_ executor.State, _ error) error {
+	v.lock.Lock()
+	defer v.lock.Unlock()
+
 	// no errors occurred
 	if len(v.errors) == 0 {
 		v.log.Noticef("Validation successful!")
