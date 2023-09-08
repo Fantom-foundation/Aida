@@ -87,7 +87,10 @@ func (l *stateDbInfoLogger) PostBlock(state executor.State) error {
 func (l *stateDbInfoLogger) PostRun(_ executor.State, _ error) error {
 	diskUsage := float64(utils.GetDirectorySize(l.config.StateDbSrc)) / 1024 / 1024 / 1024
 
-	l.log.Noticef(finalSummaryStateDbInfoReportFormat, diskUsage, l.highestMemoryUsage, l.highestMemoryBlock)
+	// only log when something happened
+	if diskUsage != 0 {
+		l.log.Noticef(finalSummaryStateDbInfoReportFormat, diskUsage, l.highestMemoryUsage, l.highestMemoryBlock)
+	}
 
 	return nil
 }

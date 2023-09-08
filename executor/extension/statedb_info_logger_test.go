@@ -34,10 +34,34 @@ func TestStateDbInfoLoggerExtension_LoggingHappens(t *testing.T) {
 	gomock.InOrder(
 		// scheduled logging
 		db.EXPECT().GetMemoryUsage(),
-		log.EXPECT().Infof(stateDbInfoLoggerReportFormat, 1, float64(0), gomock.Any()),
+		log.EXPECT().Infof(stateDbInfoLoggerReportFormat, 2, float64(0), float64(0)),
 		// defer logging
-		log.EXPECT().Noticef(finalSummaryStateDbInfoReportFormat, float64(0), float64(0), 1),
+		log.EXPECT().Noticef(finalSummaryStateDbInfoReportFormat, float64(0), float64(0), 2),
 	)
+
+	ext.PostBlock(executor.State{
+		Block: 1,
+		State: db,
+	})
+
+	ext.PostBlock(executor.State{
+		Block: 2,
+		State: db,
+	})
+
+	ext.PostRun(executor.State{}, nil)
+}
+
+func TestStateDbInfoLoggerExtension_FirstBlockIsIgnored(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	log := logger.NewMockLogger(ctrl)
+	db := state.NewMockStateDB(ctrl)
+
+	config := &utils.Config{}
+
+	ext := makeStateDbInfoLogger(config, testStateDbInfoFrequency, log)
+
+	// no scheduled logging happens with only one block
 
 	ext.PostBlock(executor.State{
 		Block: 1,
