@@ -35,8 +35,6 @@ func TestStateDbInfoLoggerExtension_LoggingHappens(t *testing.T) {
 		// scheduled logging
 		db.EXPECT().GetMemoryUsage(),
 		log.EXPECT().Infof(stateDbInfoLoggerReportFormat, 2, float64(0), float64(0)),
-		// defer logging
-		log.EXPECT().Noticef(finalSummaryStateDbInfoReportFormat, float64(0), float64(0), 2),
 	)
 
 	ext.PostBlock(executor.State{
