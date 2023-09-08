@@ -184,6 +184,8 @@ func TestTxValidator_TwoErrorsDoNotReturnAnErrorWhenContinueOnFailureIsEnabledAn
 		db.EXPECT().GetNonce(common.Address{0}).Return(uint64(0)),
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 		log.EXPECT().Error(gomock.Any()),
+		// PostRun
+		log.EXPECT().Warningf(gomock.Any(), 2),
 	)
 
 	ext.PreRun(executor.State{})
@@ -206,8 +208,15 @@ func TestTxValidator_TwoErrorsDoNotReturnAnErrorWhenContinueOnFailureIsEnabledAn
 		State:       db,
 	})
 
+	// PostTransaction must not return error because ContinueOnFailure is enabled and error threshold is high enough
 	if err != nil {
 		t.Errorf("PostTransaction must not return an error because continue on failure is true!")
+	}
+
+	// though PostRun must return error because we want to see the errors at the end of the run
+	err = ext.PostRun(executor.State{}, nil)
+	if err == nil {
+		t.Errorf("PostRun must return an error!")
 	}
 }
 
@@ -239,6 +248,8 @@ func TestTxValidator_TwoErrorsDoReturnErrorOnEventWhenContinueOnFailureIsEnabled
 		db.EXPECT().GetNonce(common.Address{0}).Return(uint64(0)),
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 		log.EXPECT().Error(gomock.Any()),
+		// PostRun
+		log.EXPECT().Warningf(gomock.Any(), 2),
 	)
 
 	ext.PreRun(executor.State{})
@@ -263,6 +274,11 @@ func TestTxValidator_TwoErrorsDoReturnErrorOnEventWhenContinueOnFailureIsEnabled
 
 	if err == nil {
 		t.Errorf("PostTransaction must return an error because MaxNumErrors is not high enough!")
+	}
+
+	err = ext.PostRun(executor.State{}, nil)
+	if err == nil {
+		t.Errorf("PostRun must return an error because MaxNumErrors is not high enough!")
 	}
 }
 

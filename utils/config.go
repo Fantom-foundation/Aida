@@ -407,7 +407,7 @@ var (
 	}
 	UpdateOnFailure = cli.BoolFlag{
 		Name:  "update-on-failure",
-		Usage: "", // todo explain
+		Usage: "if enabled and continue-on-failure is also enabled, this updates any error found in StateDb",
 		Value: true,
 	}
 )
@@ -497,7 +497,7 @@ type Config struct {
 	UpdateBufferSize    uint64         // cache size in Bytes
 	ProfileDB           string         // profile db for parallel transaction execution
 	MaxNumErrors        int            // maximum number of errors when ContinueOnFailure is enabled
-	UpdateOnFailure     bool           // todo explain
+	UpdateOnFailure     bool           // if enabled and continue-on-failure is also enabled, this updates any error found in StateDb
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.

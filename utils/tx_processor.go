@@ -22,8 +22,7 @@ import (
 // Count total errors occured while processing transactions
 const (
 	// todo remove these const once tx validator is moved to executor
-	MaxErrors            = 50   // maximum number of errors before terminating program
-	UpdateOnFailureConst = true // update when statedb validation detects discrepancy
+	MaxErrors = 50 // maximum number of errors before terminating program
 )
 
 var (
@@ -76,7 +75,7 @@ func processRegularTx(db state.StateDB, cfg *Config, block uint64, tx int, st *s
 
 	// validate whether the input alloc is contained in the db
 	if cfg.ValidateTxState {
-		if err := ValidateStateDB(st.InputAlloc, db, UpdateOnFailureConst); err != nil {
+		if err := ValidateStateDB(st.InputAlloc, db, cfg.UpdateOnFailure); err != nil {
 			newErrors++
 			errMsg.WriteString("Input alloc is not contained in the stateDB.\n")
 			errMsg.WriteString(err.Error())
@@ -139,7 +138,7 @@ func processRegularTx(db state.StateDB, cfg *Config, block uint64, tx int, st *s
 		}
 
 		// validate state
-		if err := validateVMAlloc(db, st.OutputAlloc, cfg.StateValidationMode); err != nil {
+		if err := validateVMAlloc(db, st.OutputAlloc, cfg); err != nil {
 			newErrors++
 			errMsg.WriteString("Output alloc is not contained in the stateDB.\n")
 			errMsg.WriteString(err.Error())
@@ -227,11 +226,11 @@ func validateVMResult(vmResult, expectedResult *substate.SubstateResult) error {
 // validateVMAlloc compares states of accounts in stateDB to an expected set of states.
 // If fullState mode, check if expected stae is contained in stateDB.
 // If partialState mode, check for equality of sets.
-func validateVMAlloc(db state.StateDB, expectedAlloc substate.SubstateAlloc, mode ValidationMode) error {
+func validateVMAlloc(db state.StateDB, expectedAlloc substate.SubstateAlloc, cfg *Config) error {
 	var err error
-	switch mode {
+	switch cfg.StateValidationMode {
 	case SubsetCheck:
-		err = ValidateStateDB(expectedAlloc, db, !UpdateOnFailureConst)
+		err = ValidateStateDB(expectedAlloc, db, !cfg.UpdateOnFailure)
 	case EqualityCheck:
 		vmAlloc := db.GetSubstatePostAlloc()
 		isEqual := expectedAlloc.Equal(vmAlloc)

@@ -131,16 +131,22 @@ func TestValidateVMResult(t *testing.T) {
 }
 
 // TestValidateVMResult tests validatation of statedb after tx processing.
-func TestValidateVMAlloc(t *testing.T) {
+func TestValidateVMAlloc_Positive(t *testing.T) {
 	expectedResult := newDummyAlloc(t)
 	vmResult := newDummyAlloc(t)
 	db := state.MakeInMemoryStateDB(&vmResult, uint64(1234567))
 
+	cfg := &Config{}
+	cfg.StateValidationMode = SubsetCheck
+	cfg.UpdateOnFailure = true
+
 	// test positive
-	if err := validateVMAlloc(db, expectedResult, SubsetCheck); err != nil {
+	if err := validateVMAlloc(db, expectedResult, cfg); err != nil {
 		t.Fatalf("Failed to validate VM output. %v", err)
 	}
-	if err := validateVMAlloc(db, expectedResult, EqualityCheck); err != nil {
+
+	cfg.StateValidationMode = EqualityCheck
+	if err := validateVMAlloc(db, expectedResult, cfg); err != nil {
 		t.Fatalf("Failed to validate VM output. %v", err)
 	}
 
@@ -150,20 +156,63 @@ func TestValidateVMAlloc(t *testing.T) {
 	db = state.MakeInMemoryStateDB(&vmResult, uint64(1234567))
 
 	// check whether expectedResult is contained.
-	if err := validateVMAlloc(db, expectedResult, SubsetCheck); err != nil {
+	cfg.StateValidationMode = SubsetCheck
+	if err := validateVMAlloc(db, expectedResult, cfg); err != nil {
 		t.Fatalf("Failed to validate VM output. %v", err)
 	}
 	// check for equality. Since db has an extra contract, an error is expected.
-	if err := validateVMAlloc(db, expectedResult, EqualityCheck); err == nil {
+	cfg.StateValidationMode = EqualityCheck
+	if err := validateVMAlloc(db, expectedResult, cfg); err == nil {
+		t.Fatalf("Failed to detect an error.")
+	}
+}
+
+func TestValidateVMAlloc_Negative(t *testing.T) {
+	expectedResult := newDummyAlloc(t)
+	vmResult := newDummyAlloc(t)
+	db := state.MakeInMemoryStateDB(&vmResult, uint64(1234567))
+
+	cfg := &Config{}
+	cfg.UpdateOnFailure = true
+
+	// DB has one more contract than expected result
+	newAddress := common.HexToAddress("0x0000000000085a12481aEdb59eb3200332aCA000")
+	vmResult[newAddress] = substate.NewSubstateAccount(1, big.NewInt(1000000), []byte{})
+	db = state.MakeInMemoryStateDB(&vmResult, uint64(1234567))
+
+	// test negative
+	cfg.StateValidationMode = SubsetCheck
+	vmResult = make(substate.SubstateAlloc)
+	if err := validateVMAlloc(db, expectedResult, cfg); err == nil {
 		t.Fatalf("Failed to detect an error.")
 	}
 
-	// test negative
-	vmResult = make(substate.SubstateAlloc)
-	if err := validateVMAlloc(db, expectedResult, SubsetCheck); err == nil {
+	cfg.StateValidationMode = EqualityCheck
+	if err := validateVMAlloc(db, expectedResult, cfg); err == nil {
 		t.Fatalf("Failed to detect an error.")
 	}
-	if err := validateVMAlloc(db, expectedResult, EqualityCheck); err == nil {
+}
+
+func TestValidateVMAlloc_DbHasOneMoreContractThanExpected(t *testing.T) {
+	expectedResult := newDummyAlloc(t)
+	vmResult := newDummyAlloc(t)
+	db := state.MakeInMemoryStateDB(&vmResult, uint64(1234567))
+
+	cfg := &Config{}
+	cfg.UpdateOnFailure = true
+
+	newAddress := common.HexToAddress("0x0000000000085a12481aEdb59eb3200332aCA000")
+	vmResult[newAddress] = substate.NewSubstateAccount(1, big.NewInt(1000000), []byte{})
+	db = state.MakeInMemoryStateDB(&vmResult, uint64(1234567))
+
+	// check whether expectedResult is contained.
+	cfg.StateValidationMode = SubsetCheck
+	if err := validateVMAlloc(db, expectedResult, cfg); err != nil {
+		t.Fatalf("Failed to validate VM output. %v", err)
+	}
+	// check for equality. Since db has an extra contract, an error is expected.
+	cfg.StateValidationMode = EqualityCheck
+	if err := validateVMAlloc(db, expectedResult, cfg); err == nil {
 		t.Fatalf("Failed to detect an error.")
 	}
 }

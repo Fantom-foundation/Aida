@@ -12,11 +12,10 @@ import (
 
 type txValidator struct {
 	NilExtension
-	config       *utils.Config
-	log          logger.Logger
-	lock         sync.Mutex
-	inputErrors  []error
-	outputErrors []error
+	config *utils.Config
+	log    logger.Logger
+	lock   sync.Mutex
+	errors []error
 }
 
 func MakeTxValidator(config *utils.Config) executor.Extension {
@@ -68,10 +67,10 @@ func (v *txValidator) PreTransaction(state executor.State) error {
 
 	v.log.Error(e)
 	// ContinueOnFailure is enabled, log the error to user
-	v.inputErrors = append(v.inputErrors, err)
+	v.errors = append(v.errors, err)
 
 	// check if error cap has been reached
-	if len(v.inputErrors)+len(v.outputErrors) >= v.config.MaxNumErrors {
+	if len(v.errors) >= v.config.MaxNumErrors {
 		return errors.New("maximum number of errors occurred")
 	}
 
@@ -97,10 +96,10 @@ func (v *txValidator) PostTransaction(state executor.State) error {
 
 	v.log.Error(e)
 	// ContinueOnFailure is enabled, log the error to user
-	v.inputErrors = append(v.inputErrors, err)
+	v.errors = append(v.errors, err)
 
 	// check if error cap has been reached
-	if len(v.inputErrors)+len(v.outputErrors) >= v.config.MaxNumErrors {
+	if len(v.errors) >= v.config.MaxNumErrors {
 		return errors.New("maximum number of errors occurred")
 	}
 
@@ -113,18 +112,12 @@ func (v *txValidator) PostRun(_ executor.State, _ error) error {
 	defer v.lock.Unlock()
 
 	// no errors occurred
-	if len(v.outputErrors) == 0 && len(v.inputErrors) == 0 {
+	if len(v.errors) == 0 {
 		v.log.Noticef("Validation successful!")
 		return nil
 	}
 
-	v.log.Warningf("%v output errors caught", len(v.outputErrors))
-	v.log.Warningf("%v input errors caught", len(v.inputErrors))
+	v.log.Warningf("%v errors caught", len(v.errors))
 
-	var err error
-
-	err = errors.Join(v.inputErrors...)
-	err = errors.Join(v.outputErrors...)
-
-	return err
+	return errors.Join(v.errors...)
 }
