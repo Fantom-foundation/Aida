@@ -2,17 +2,17 @@ package extension
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
+	substate "github.com/Fantom-foundation/Substate"
 	"go.uber.org/mock/gomock"
 )
 
-const testProgressReportFrequency = time.Second / 4
+const testProgressReportFrequency = time.Second
 
 func TestProgressLoggerExtension_CorrectClose(t *testing.T) {
 	config := &utils.Config{}
@@ -58,47 +58,35 @@ func TestProgressLoggerExtension_LoggingHappens(t *testing.T) {
 
 	gomock.InOrder(
 		// scheduled logging
-		log.EXPECT().Infof(MatchFormat(progressLoggerReportFormat), gomock.Any(), 1, MatchTxRate(), float64(0)),
+		log.EXPECT().Infof(progressLoggerReportFormat, gomock.Any(), 1, MatchRate("txRate"), MatchRate("gasRate")).MinTimes(1).MaxTimes(2),
 		// defer logging
-		log.EXPECT().Noticef(MatchFormat(finalSummaryProgressReportFormat), gomock.Any(), 1, MatchTxRate(), float64(0)),
+		log.EXPECT().Noticef(finalSummaryProgressReportFormat, gomock.Any(), 1, MatchRate("txRate"), MatchRate("gasRate")),
 	)
 
 	// fill the logger with some data
 	ext.PostTransaction(executor.State{
 		Block:       1,
 		Transaction: 1,
+		Substate: &substate.Substate{
+			Result: &substate.SubstateResult{
+				GasUsed: 1,
+			},
+		},
 	})
 
 	// we must wait for the ticker to tick
-	time.Sleep(time.Second / 4)
+	time.Sleep(time.Second)
 
 	ext.PostRun(executor.State{}, nil)
 }
 
 // MATCHERS
-
-func MatchFormat(format string) gomock.Matcher {
-	return matchFormat{format}
-}
-
-type matchFormat struct {
-	format string
-}
-
-func (m matchFormat) Matches(value any) bool {
-	format, ok := value.(string)
-	return ok && strings.Compare(m.format, format) == 0
-}
-
-func (m matchFormat) String() string {
-	return fmt.Sprintf("log format should look like this: %v", m.format)
-}
-
-func MatchTxRate() gomock.Matcher {
-	return matchTxRate{}
+func MatchRate(name string) gomock.Matcher {
+	return matchTxRate{name}
 }
 
 type matchTxRate struct {
+	name string
 }
 
 func (m matchTxRate) Matches(value any) bool {
@@ -107,5 +95,5 @@ func (m matchTxRate) Matches(value any) bool {
 }
 
 func (m matchTxRate) String() string {
-	return fmt.Sprintf("log should have a txRate that is larger than 0")
+	return fmt.Sprintf("log should have a %v that is larger than 0", m.name)
 }

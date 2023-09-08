@@ -109,12 +109,13 @@ func (l *progressLogger) startReport(reportFrequency time.Duration) {
 				return
 			}
 
-			lastIntervalTx++
-			lastIntervalGas += in.Substate.Result.GasUsed
-
 			if in.Block > currentBlock {
 				currentBlock = in.Block
 			}
+
+			lastIntervalTx++
+			lastIntervalGas += in.Substate.Result.GasUsed
+
 		case now := <-ticker.C:
 			elapsed := now.Sub(start)
 			txRate := float64(lastIntervalTx) / time.Since(lastReport).Seconds()
@@ -127,6 +128,7 @@ func (l *progressLogger) startReport(reportFrequency time.Duration) {
 			totalGas.SetUint64(totalGas.Uint64() + lastIntervalGas)
 
 			lastIntervalTx = 0
+			lastIntervalGas = 0
 		}
 	}
 
