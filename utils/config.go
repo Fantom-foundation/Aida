@@ -411,7 +411,7 @@ var (
 	}
 	UpdateOnFailure = cli.BoolFlag{
 		Name:  "update-on-failure",
-		Usage: "if enabled and continue-on-failure is also enabled, this updates any error found in StateDb",
+		Usage: "if enabled and continue-on-failure is also enabled, this corrects any error found in StateDb",
 		Value: true,
 	}
 )
