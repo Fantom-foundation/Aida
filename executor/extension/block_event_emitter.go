@@ -6,15 +6,15 @@ import (
 
 type blockEventEmitter struct {
 	NilExtension
-	skipEndBlock bool
+	skipEndBlock bool // switch for vm-adb, which requires BeginBlock(), but can't call EndBlock()
 }
 
-// MakeBlockEventEmitter creates a executor.Extension to call beginBlock and endBlock
+// MakeBlockEventEmitter creates a executor.Extension to call BeginBlock() and EndBlock()
 func MakeBlockEventEmitter() executor.Extension {
 	return &blockEventEmitter{skipEndBlock: false}
 }
 
-// MakeBlockEventEmitter creates a executor.Extension to call beginBlock and endBlock
+// MakeBeginOnlyEmitter creates a executor.Extension to call beginBlock, but skips EndBlock()
 func MakeBeginOnlyEmitter() executor.Extension {
 	return &blockEventEmitter{skipEndBlock: true}
 }

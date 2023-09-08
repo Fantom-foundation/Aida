@@ -37,9 +37,7 @@ func TestBlockEventEmitter_SkipEndBlocks(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	mockStateDB := state.NewMockStateDB(mockCtrl)
 
-	gomock.InOrder(
-		mockStateDB.EXPECT().BeginBlock(uint64(0)),
-	)
+	mockStateDB.EXPECT().BeginBlock(uint64(0))
 
 	state := executor.State{
 		Block: 0,
