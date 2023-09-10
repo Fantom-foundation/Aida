@@ -24,7 +24,6 @@ func TestDbManager_DoNotKeepDb(t *testing.T) {
 	mockCtrl := gomock.NewController(t)
 	mockStateDB := state.NewMockStateDB(mockCtrl)
 
-	// fill the logger with some data
 	ext.PostRun(executor.State{
 		Block: 0,
 		State: mockStateDB,
@@ -36,8 +35,11 @@ func TestDbManager_KeepDb(t *testing.T) {
 
 	// need two separate tempDirs to be able to move db to new location
 	tmpDir := t.TempDir()
+	defer os.RemoveAll(tmpDir)
 	config.StateDbSrc = tmpDir
+
 	tmpOutDir := t.TempDir()
+	defer os.RemoveAll(tmpOutDir)
 	config.DbTmp = tmpOutDir
 	config.DbImpl = "geth"
 	config.KeepDb = true
@@ -56,7 +58,6 @@ func TestDbManager_KeepDb(t *testing.T) {
 		State: mockStateDB,
 	}
 
-	// fill the logger with some data
 	ext.PostRun(state, nil)
 
 	expectedName := fmt.Sprintf("state_db_%v_%v", config.DbImpl, state.Block)
