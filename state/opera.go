@@ -231,6 +231,10 @@ func (s *operaStateDB) EndSyncPeriod() {
 
 }
 
+func (s *operaStateDB) GetHash() common.Hash {
+	return common.Hash{} // not supported
+}
+
 func (s *operaStateDB) Error() error {
 	return nil
 }

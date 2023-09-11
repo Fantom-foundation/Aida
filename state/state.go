@@ -75,6 +75,13 @@ type BasicStateDB interface {
 	BeginSyncPeriod(uint64)
 	EndSyncPeriod()
 
+	// GetHash computes a comprehensive hash over a snapshot of the entire state. Note, to
+	// be of any value, no concurrent modifications should be conducted while computing the
+	// hash. State implementations are not required to implement any specific hash function
+	// function unless specifically declared to do so. For instance, Geth and Carmen S5 are
+	// expected to produce the same hashes for the same content.
+	GetHash() common.Hash
+
 	Error() error
 }
 
@@ -121,7 +128,7 @@ type StateDB interface {
 
 	// Used to initiate the state DB for the next transaction.
 	// This is mainly for development purposes to support in-memory DB implementations.
-	PrepareSubstate(*substate.SubstateAlloc, uint64)
+	PrepareSubstate(substate *substate.SubstateAlloc, block uint64)
 
 	// Used to retrieve the shadow DB (if there is one) for testing purposes so that
 	// the shadow DB can be used to query state directly. If there is no shadow DB,

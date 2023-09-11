@@ -215,6 +215,10 @@ var (
 		Name:  "db-src",
 		Usage: "sets the directory contains source state DB data",
 	}
+	StateRootHashesFlag = cli.PathFlag{
+		Name:  "state-roots",
+		Usage: "set the filename containing a list of state roots",
+	}
 	DbTmpFlag = cli.PathFlag{
 		Name:  "db-tmp",
 		Usage: "sets the temporary directory where to place DB data; uses system default if empty",
@@ -400,6 +404,16 @@ var (
 		Usage:   "target block ID",
 		Value:   0,
 	}
+	MaxNumErrorsFlag = cli.IntFlag{
+		Name:  "max-errors",
+		Usage: "maximum number of errors when ContinueOnFailure is enabled, default is 50",
+		Value: 50,
+	}
+	UpdateOnFailure = cli.BoolFlag{
+		Name:  "update-on-failure",
+		Usage: "if enabled and continue-on-failure is also enabled, this corrects any error found in StateDb",
+		Value: true,
+	}
 	NoHeartbeatLoggingFlag = cli.BoolFlag{
 		Name:  "no-heartbeat-logging",
 		Usage: "disables heartbeat logging",
@@ -494,6 +508,9 @@ type Config struct {
 	TargetBlock         uint64         // represents the ID of target block to be reached by state evolve process or in dump state
 	UpdateBufferSize    uint64         // cache size in Bytes
 	ProfileDB           string         // profile db for parallel transaction execution
+	StateRootFile       string         // the optional file name containing state roots to be checked (empty if not enabled)
+	MaxNumErrors        int            // maximum number of errors when ContinueOnFailure is enabled
+	UpdateOnFailure     bool           // if enabled and continue-on-failure is also enabled, this updates any error found in StateDb
 	NoHeartbeatLogging  bool           // disables heartbeat logging
 	TrackProgress       bool           // enables track progress logging
 }

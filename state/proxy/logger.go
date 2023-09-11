@@ -168,6 +168,12 @@ func (s *LoggerProxy) EndSyncPeriod() {
 	s.db.EndSyncPeriod()
 }
 
+func (s *LoggerProxy) GetHash() common.Hash {
+	hash := s.db.GetHash()
+	s.log.Info("GetHash, %v", hash)
+	return hash
+}
+
 func (s *LoggerProxy) Close() error {
 	res := s.db.Close()
 	s.log.Infof("EndSyncPeriod, %v", res)
