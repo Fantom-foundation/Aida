@@ -12,7 +12,7 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-const testProgressReportFrequency = time.Second
+const testProgressReportFrequency = 2 * time.Second
 
 func TestProgressLoggerExtension_CorrectClose(t *testing.T) {
 	config := &utils.Config{}
@@ -75,25 +75,25 @@ func TestProgressLoggerExtension_LoggingHappens(t *testing.T) {
 	})
 
 	// we must wait for the ticker to tick
-	time.Sleep(time.Second)
+	time.Sleep(3 * time.Second)
 
 	ext.PostRun(executor.State{}, nil)
 }
 
 // MATCHERS
 func MatchRate(name string) gomock.Matcher {
-	return matchTxRate{name}
+	return matchRate{name}
 }
 
-type matchTxRate struct {
+type matchRate struct {
 	name string
 }
 
-func (m matchTxRate) Matches(value any) bool {
+func (m matchRate) Matches(value any) bool {
 	txRate, ok := value.(float64)
 	return ok && txRate > 0
 }
 
-func (m matchTxRate) String() string {
+func (m matchRate) String() string {
 	return fmt.Sprintf("log should have a %v that is larger than 0", m.name)
 }

@@ -1,7 +1,6 @@
 package extension
 
 import (
-	"math/big"
 	"sync"
 	"time"
 
@@ -40,6 +39,8 @@ func makeProgressLogger(config *utils.Config, reportFrequency time.Duration, log
 	}
 }
 
+// progressLogger logs human-readable information about progress
+// in "heartbeat" depending on reportFrequency - default is 15s.
 type progressLogger struct {
 	NilExtension
 	config          *utils.Config
@@ -67,7 +68,6 @@ func (l *progressLogger) PostRun(_ executor.State, _ error) error {
 }
 
 // PostTransaction sends the state to the report goroutine.
-// We only care about total number of transactions we can do this here rather in PostTransaction.
 func (l *progressLogger) PostTransaction(state executor.State) error {
 	l.inputCh <- state
 	return nil
@@ -81,16 +81,15 @@ func (l *progressLogger) startReport(reportFrequency time.Duration) {
 	ticker := time.NewTicker(reportFrequency)
 
 	var (
-		currentBlock            int
-		totalTx, lastIntervalTx uint64
-		lastIntervalGas         uint64
-		totalGas                = new(big.Int)
+		currentBlock                 int
+		totalTx, currentIntervalTx   uint64
+		totalGas, currentIntervalGas uint64
 	)
 
 	defer func() {
 		elapsed := time.Since(start)
 		txRate := float64(totalTx) / elapsed.Seconds()
-		gasRate := float64(totalGas.Uint64()) / (float64(elapsed.Nanoseconds()) / 1e9)
+		gasRate := float64(totalGas) / (float64(elapsed.Nanoseconds()) / 1e9)
 
 		l.log.Noticef(finalSummaryProgressReportFormat, elapsed.Round(time.Second), currentBlock, txRate, gasRate)
 
@@ -112,22 +111,22 @@ func (l *progressLogger) startReport(reportFrequency time.Duration) {
 				currentBlock = in.Block
 			}
 
-			lastIntervalTx++
-			lastIntervalGas += in.Substate.Result.GasUsed
+			currentIntervalTx++
+			currentIntervalGas += in.Substate.Result.GasUsed
 
 		case now := <-ticker.C:
 			elapsed := now.Sub(start)
-			txRate := float64(lastIntervalTx) / time.Since(lastReport).Seconds()
-			gasRate := float64(lastIntervalGas) / (float64(elapsed.Nanoseconds()) / 1e9)
+			txRate := float64(currentIntervalTx) / now.Sub(lastReport).Seconds()
+			gasRate := float64(currentIntervalTx) / now.Sub(lastReport).Seconds()
 
 			l.log.Infof(progressLoggerReportFormat, elapsed.Round(1*time.Second), currentBlock, txRate, gasRate)
 
 			lastReport = now
-			totalTx += lastIntervalTx
-			totalGas.SetUint64(totalGas.Uint64() + lastIntervalGas)
+			totalTx += currentIntervalTx
+			totalGas += currentIntervalGas
 
-			lastIntervalTx = 0
-			lastIntervalGas = 0
+			currentIntervalTx = 0
+			currentIntervalGas = 0
 		}
 	}
 
