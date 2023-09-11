@@ -15,7 +15,7 @@ const testStateDbInfoFrequency = 2
 
 func TestProgressTrackerExtension_NoLoggerIsCreatedIfDisabled(t *testing.T) {
 	config := &utils.Config{}
-	config.Quiet = true
+	config.TrackProgress = false
 	ext := MakeProgressTracker(config, testStateDbInfoFrequency)
 	if _, ok := ext.(NilExtension); !ok {
 		t.Errorf("Logger is enabled although not set in configuration")
@@ -29,6 +29,7 @@ func TestProgressTrackerExtension_LoggingHappens(t *testing.T) {
 	db := state.NewMockStateDB(ctrl)
 
 	config := &utils.Config{}
+	config.First = 4
 
 	ext := makeProgressTracker(config, testStateDbInfoFrequency, log)
 
@@ -100,6 +101,7 @@ func TestProgressTrackerExtension_FirstLoggingIsIgnored(t *testing.T) {
 	db := state.NewMockStateDB(ctrl)
 
 	config := &utils.Config{}
+	config.First = 4
 
 	ext := makeProgressTracker(config, testStateDbInfoFrequency, log)
 

@@ -1,7 +1,7 @@
 package extension
 
 import (
-	"sync/atomic"
+	"sync"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
@@ -14,8 +14,10 @@ const (
 	progressTrackerReportFormat           = "Reached block %d; using ~ %v bytes of memory, ~ %v bytes of disk, last interval rate ~ %v Tx/s, ~ %v Gas/s"
 )
 
+// MakeProgressTracker creates a progressTracker that depends on the
+// PostBlock event and is only useful as part of a sequential evaluation.
 func MakeProgressTracker(config *utils.Config, reportFrequency int) executor.Extension {
-	if config.Quiet {
+	if !config.TrackProgress {
 		return NilExtension{}
 	}
 
@@ -28,10 +30,12 @@ func MakeProgressTracker(config *utils.Config, reportFrequency int) executor.Ext
 
 func makeProgressTracker(config *utils.Config, reportFrequency int, log logger.Logger) *progressTracker {
 	return &progressTracker{
-		config:           config,
-		log:              log,
-		reportFrequency:  reportFrequency,
-		lastIntervalInfo: new(atomic.Pointer[processInfo]),
+		config:            config,
+		log:               log,
+		reportFrequency:   reportFrequency,
+		lastReportedBlock: int(config.First) - (int(config.First) % reportFrequency),
+		lastIntervalInfo:  new(processInfo),
+		lock:              new(sync.Mutex),
 	}
 }
 
@@ -44,7 +48,8 @@ type progressTracker struct {
 	reportFrequency   int
 	lastReportedBlock int
 	start             time.Time
-	lastIntervalInfo  *atomic.Pointer[processInfo]
+	lastIntervalInfo  *processInfo
+	lock              *sync.Mutex
 }
 
 type processInfo struct {
@@ -52,26 +57,19 @@ type processInfo struct {
 	gas             uint64
 }
 
-// PreRun initialises the lastReportedBlock variables for the first time to suppress block
-// report at the beginning (in case the user has specified a large enough starting block).
-func (t *progressTracker) PreRun(state executor.State) error {
-	t.lastReportedBlock = state.Block - (state.Block % t.reportFrequency)
-
-	t.lastIntervalInfo.Store(new(processInfo))
-
+// PreRun starts the timer marking down start of the run.
+func (t *progressTracker) PreRun(_ executor.State) error {
 	t.start = time.Now()
-
 	return nil
 }
 
 // PostTransaction increments number of transactions and saves gas used in last substate.
 func (t *progressTracker) PostTransaction(state executor.State) error {
-	info := t.lastIntervalInfo.Load()
+	t.lock.Lock()
+	defer t.lock.Unlock()
 
-	info.numTransactions++
-	info.gas += state.Substate.Result.GasUsed
-
-	t.lastIntervalInfo.Store(info)
+	t.lastIntervalInfo.numTransactions++
+	t.lastIntervalInfo.gas += state.Substate.Result.GasUsed
 
 	return nil
 }
@@ -86,7 +84,13 @@ func (t *progressTracker) PostBlock(state executor.State) error {
 	}
 
 	elapsed := time.Since(t.start)
-	info := t.lastIntervalInfo.Load()
+
+	// quickly extract interval info and reset its values
+	t.lock.Lock()
+	info := *t.lastIntervalInfo
+	t.lastIntervalInfo.gas = 0
+	t.lastIntervalInfo.numTransactions = 0
+	t.lock.Unlock()
 
 	disk := float64(utils.GetDirectorySize(t.config.StateDbSrc))
 	m := state.State.GetMemoryUsage()

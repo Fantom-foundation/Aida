@@ -18,7 +18,7 @@ const (
 // MakeProgressLogger creates progress logger. It logs progress about processor depending on reportFrequency.
 // If reportFrequency is 0, it is set to ProgressLoggerDefaultReportFrequency.
 func MakeProgressLogger(config *utils.Config, reportFrequency time.Duration) executor.Extension {
-	if config.Quiet {
+	if config.NoHeartbeatLogging {
 		return NilExtension{}
 	}
 
@@ -40,7 +40,7 @@ func makeProgressLogger(config *utils.Config, reportFrequency time.Duration, log
 }
 
 // progressLogger logs human-readable information about progress
-// in "heartbeat" depending on reportFrequency - default is 15s.
+// in "heartbeat" depending on reportFrequency.
 type progressLogger struct {
 	NilExtension
 	config          *utils.Config

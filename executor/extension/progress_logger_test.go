@@ -38,7 +38,7 @@ func TestProgressLoggerExtension_CorrectClose(t *testing.T) {
 
 func TestProgressLoggerExtension_NoLoggerIsCreatedIfDisabled(t *testing.T) {
 	config := &utils.Config{}
-	config.Quiet = true
+	config.NoHeartbeatLogging = true
 	ext := MakeProgressLogger(config, testProgressReportFrequency)
 	if _, ok := ext.(NilExtension); !ok {
 		t.Errorf("Logger is enabled although not set in configuration")

@@ -400,6 +400,14 @@ var (
 		Usage:   "target block ID",
 		Value:   0,
 	}
+	NoHeartbeatLoggingFlag = cli.BoolFlag{
+		Name:  "no-heartbeat-logging",
+		Usage: "disables heartbeat logging",
+	}
+	TrackProgressFlag = cli.BoolFlag{
+		Name:  "track-progress",
+		Usage: "enables track progress logging",
+	}
 )
 
 // Config represents execution configuration for replay command.
@@ -486,7 +494,8 @@ type Config struct {
 	TargetBlock         uint64         // represents the ID of target block to be reached by state evolve process or in dump state
 	UpdateBufferSize    uint64         // cache size in Bytes
 	ProfileDB           string         // profile db for parallel transaction execution
-
+	NoHeartbeatLogging  bool           // disables heartbeat logging
+	TrackProgress       bool           // enables track progress logging
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.

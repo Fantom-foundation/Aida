@@ -85,6 +85,8 @@ func createConfig(ctx *cli.Context) *Config {
 		ChannelBufferSize:   getFlagValue(ctx, ChannelBufferSizeFlag).(int),
 		TargetBlock:         getFlagValue(ctx, TargetBlockFlag).(uint64),
 		UpdateBufferSize:    getFlagValue(ctx, UpdateBufferSizeFlag).(uint64),
+		NoHeartbeatLogging:  getFlagValue(ctx, NoHeartbeatLoggingFlag).(bool),
+		TrackProgress:       getFlagValue(ctx, TrackProgressFlag).(bool),
 	}
 
 	return cfg
