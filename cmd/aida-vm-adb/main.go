@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	vm_adb "github.com/Fantom-foundation/Aida/cmd/aida-vm-adb/vm-adb"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -13,12 +12,13 @@ import (
 
 // RunArchiveApp defines metadata and configuration options the vm-adb executable.
 var RunArchiveApp = cli.App{
-	Action:    vm_adb.RunVmAdb,
+	Action:    RunVmAdb,
 	Name:      "Aida Archive Evaluation Tool",
 	HelpName:  "vm-adb",
 	Usage:     "run VM on the archive",
 	Copyright: "(c) 2023 Fantom Foundation",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
+	// TODO: derive supported flags from utilized executor extensions (issue #664).
 	Flags: []cli.Flag{
 		// substate
 		&substate.WorkersFlag,
@@ -27,7 +27,7 @@ var RunArchiveApp = cli.App{
 		&utils.CpuProfileFlag,
 		&utils.ChainIDFlag,
 		&logger.LogLevelFlag,
-		&utils.StateDbLoggingFlag,
+		//&utils.StateDbLoggingFlag,
 
 		// StateDb
 		&utils.AidaDbFlag,
@@ -35,7 +35,7 @@ var RunArchiveApp = cli.App{
 		&utils.ValidateTxStateFlag,
 
 		// ShadowDb
-		&utils.ShadowDb,
+		//&utils.ShadowDb,
 
 		// VM
 		&utils.VmImplementation,
