@@ -180,6 +180,10 @@ func (s *gethStateDB) EndSyncPeriod() {
 	}
 }
 
+func (s *gethStateDB) GetHash() common.Hash {
+	return s.IntermediateRoot(true)
+}
+
 func (s *gethStateDB) Finalise(deleteEmptyObjects bool) {
 	if db, ok := s.db.(*geth.StateDB); ok {
 		db.Finalise(deleteEmptyObjects)

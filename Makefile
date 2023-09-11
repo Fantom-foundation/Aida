@@ -18,44 +18,41 @@ BUILD_COMMIT := $(shell git show --format="%H" --no-patch)
 BUILD_COMMIT_TIME := $(shell git show --format="%cD" --no-patch)
 GOPROXY ?= "https://proxy.golang.org,direct"
 
-.PHONY: all clean help test tosca
+.PHONY: all clean help test carmen tosca
 
 all: aida-rpc-adb aida-sdb aida-vm-adb aida-vm-sdb aida-stochastic-sdb aida-vm aida-profile util-worldstate util-updateset util-db
 
 
-carmen/go/lib/libcarmen.so:
-	@cd carmen/go/lib ; \
-	./build_libcarmen.sh ;
+carmen:
+	@cd ./carmen ; \
+	make -j
 
 tosca:
 	@cd ./tosca ; \
-	make
+	make -j
 
-aida-rpc-adb: tosca
-	@cd carmen/go/lib ; \
-	./build_libcarmen.sh ; \
-	cd ../../.. ; \
+aida-rpc-adb: carmen tosca
 	GOPROXY=$(GOPROXY) \
 	GOPRIVATE=github.com/Fantom-foundation/Carmen \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-rpc-adb \
 	./cmd/aida-rpc-adb
 
-aida-stochastic-sdb: carmen/go/lib/libcarmen.so tosca
+aida-stochastic-sdb: carmen tosca
 	GOPROXY=$(GOPROXY) \
 	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/go-opera-fvm \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-stochastic-sdb \
 	./cmd/aida-stochastic-sdb
 
-aida-vm-adb: carmen/go/lib/libcarmen.so tosca
+aida-vm-adb: carmen tosca
 	GOPROXY=$(GOPROXY) \
 	GOPRIVATE=github.com/Fantom-foundation/Carmen \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-vm-adb \
 	./cmd/aida-vm-adb
 
-aida-vm-sdb: carmen/go/lib/libcarmen.so tosca
+aida-vm-sdb: carmen tosca
 	GOPROXY=$(GOPROXY) \
 	GOPRIVATE=github.com/Fantom-foundation/Carmen \
 	CGO_CFLAGS="-g -O2  -DMDBX_FORCE_ASSERTIONS=1 -Wno-error=strict-prototypes" \
@@ -63,21 +60,21 @@ aida-vm-sdb: carmen/go/lib/libcarmen.so tosca
 	-o $(GO_BIN)/aida-vm-sdb \
 	./cmd/aida-vm-sdb
 
-aida-vm: carmen/go/lib/libcarmen.so tosca
+aida-vm: carmen tosca
 	GOPROXY=$(GOPROXY) \
 	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/go-opera-fvm \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-vm \
 	./cmd/aida-vm
 
-aida-sdb: carmen/go/lib/libcarmen.so tosca
+aida-sdb: carmen tosca
 	GOPROXY=$(GOPROXY) \
 	GOPRIVATE=github.com/Fantom-foundation/Carmen \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-sdb \
 	./cmd/aida-sdb
 
-aida-profile: carmen/go/lib/libcarmen.so tosca
+aida-profile: carmen tosca
 	GOPROXY=$(GOPROXY) \
 	GOPRIVATE=github.com/Fantom-foundation/Carmen \
 	CGO_CFLAGS="-g -O2  -DMDBX_FORCE_ASSERTIONS=1 -Wno-error=strict-prototypes" \
@@ -85,34 +82,32 @@ aida-profile: carmen/go/lib/libcarmen.so tosca
 	-o $(GO_BIN)/aida-profile \
 	./cmd/aida-profile
 
-util-updateset: carmen/go/lib/libcarmen.so tosca
+util-updateset: carmen tosca
 	GOPROXY=$(GOPROXY) \
 	go build -ldflags "-s -w" \
 	-o $(GO_BIN)/util-updateset \
 	./cmd/util-updateset
 
-util-db: carmen/go/lib/libcarmen.so tosca
+util-db: carmen tosca
 	GOPROXY=$(GOPROXY) \
 	go build -ldflags "-s -w" \
 	-o $(GO_BIN)/util-db \
 	./cmd/util-db
 
-util-worldstate:
+util-worldstate: carmen tosca
 	@go build \
 		-ldflags="-X 'github.com/Fantom-foundation/Aida/cmd/util-worldstate/version.Version=$(APP_VERSION)' -X 'github.com/Fantom-foundation/Aida/cmd/util-worldstate/version.Time=$(BUILD_DATE)' -X 'github.com/Fantom-foundation/Aida/cmd/util-worldstate/version.Compiler=$(BUILD_COMPILER)' -X 'github.com/Fantom-foundation/Aida/cmd/util-worldstate/version.Commit=$(BUILD_COMMIT)' -X 'github.com/Fantom-foundation/Aida/cmd/util-worldstate/version.CommitTime=$(BUILD_COMMIT_TIME)'" \
 		-o $(GO_BIN)/util-worldstate \
 		-v \
 		./cmd/util-worldstate
 
-test:
+test: carmen tosca
 	@go test ./...
 
 clean:
-	cd carmen/go ; \
-	rm -f lib/libcarmen.so ; \
-	cd ../cpp ; \
-	bazel clean ; \
-	cd ../../tosca ; \
+	cd ./carmen ; \
+	make clean ; \
+	cd ../tosca ; \
 	make clean ; \
 	cd .. ; \
 	rm -fr ./build/*

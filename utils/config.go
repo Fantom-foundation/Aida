@@ -31,6 +31,7 @@ const (
 	BlockRangeArgsProfileDB                     // requires 3 arguments: first block, last block and profile db
 	LastBlockArg                                // requires 1 argument: last block
 	NoArgs                                      // requires no arguments
+	OneToNArgs                                  // requires at least one argument, but accepts up to N
 )
 
 const (
@@ -213,6 +214,10 @@ var (
 	StateDbSrcFlag = cli.PathFlag{
 		Name:  "db-src",
 		Usage: "sets the directory contains source state DB data",
+	}
+	StateRootHashesFlag = cli.PathFlag{
+		Name:  "state-roots",
+		Usage: "set the filename containing a list of state roots",
 	}
 	DbTmpFlag = cli.PathFlag{
 		Name:  "db-tmp",
@@ -399,6 +404,16 @@ var (
 		Usage:   "target block ID",
 		Value:   0,
 	}
+	MaxNumErrorsFlag = cli.IntFlag{
+		Name:  "max-errors",
+		Usage: "maximum number of errors when ContinueOnFailure is enabled, default is 50",
+		Value: 50,
+	}
+	UpdateOnFailure = cli.BoolFlag{
+		Name:  "update-on-failure",
+		Usage: "if enabled and continue-on-failure is also enabled, this corrects any error found in StateDb",
+		Value: true,
+	}
 )
 
 // Config represents execution configuration for replay command.
@@ -485,7 +500,9 @@ type Config struct {
 	TargetBlock         uint64         // represents the ID of target block to be reached by state evolve process or in dump state
 	UpdateBufferSize    uint64         // cache size in Bytes
 	ProfileDB           string         // profile db for parallel transaction execution
-
+	StateRootFile       string         // the optional file name containing state roots to be checked (empty if not enabled)
+	MaxNumErrors        int            // maximum number of errors when ContinueOnFailure is enabled
+	UpdateOnFailure     bool           // if enabled and continue-on-failure is also enabled, this updates any error found in StateDb
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.
@@ -592,6 +609,10 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		last, err = strconv.ParseUint(ctx.Args().Get(0), 10, 64)
 		if err != nil {
 			return nil, err
+		}
+	case OneToNArgs:
+		if ctx.Args().Len() < 1 {
+			return nil, errors.New("this command requires at least 1 argument")
 		}
 	case NoArgs:
 	default:

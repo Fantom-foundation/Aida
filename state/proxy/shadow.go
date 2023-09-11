@@ -148,6 +148,10 @@ func (s *ShadowProxy) EndSyncPeriod() {
 	s.run("EndSyncPeriod", func(s state.StateDB) { s.EndSyncPeriod() })
 }
 
+func (s *ShadowProxy) GetHash() common.Hash {
+	return s.prime.GetHash()
+}
+
 func (s *ShadowProxy) Close() error {
 	return s.getError("Close", func(s state.StateDB) error { return s.Close() })
 }
