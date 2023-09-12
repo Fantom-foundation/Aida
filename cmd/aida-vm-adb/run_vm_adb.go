@@ -41,9 +41,9 @@ type txProcessor struct {
 	config *utils.Config
 }
 
-func (r txProcessor) Process(state executor.State) error {
+func (r txProcessor) Process(state executor.State, context *executor.Context) error {
 	// todo rework this once executor.State is divided between mutable and immutable part
-	archive, err := state.State.GetArchiveState(uint64(state.Block) - 1)
+	archive, err := context.State.GetArchiveState(uint64(state.Block) - 1)
 	if err != nil {
 		return err
 	}

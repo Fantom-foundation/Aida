@@ -158,7 +158,7 @@ type State struct {
 
 // Context summarizes context data for the current execution and is passed
 // as a mutable object to Processors and Extensions. Either max decide to
-// modifey its content to implement their respective features.
+// modify its content to implement their respective features.
 type Context struct {
 	// State is an optional StateDB instance manipulated during by the processor
 	// and extensions of a block-range execution.
