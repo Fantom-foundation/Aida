@@ -15,10 +15,10 @@ func TestCpuExtension_CollectsProfileDataIfEnabled(t *testing.T) {
 	config.CPUProfile = path
 	ext := MakeCpuProfiler(config)
 
-	if err := ext.PreRun(executor.State{}); err != nil {
+	if err := ext.PreRun(executor.State{}, nil); err != nil {
 		t.Fatalf("failed to to run pre-run: %v", err)
 	}
-	ext.PostRun(executor.State{}, nil)
+	ext.PostRun(executor.State{}, nil, nil)
 
 	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
 		t.Errorf("no profile was collected")

@@ -28,14 +28,14 @@ type stateDbPrimer struct {
 }
 
 // PreRun primes StateDb to given block.
-func (p *stateDbPrimer) PreRun(state executor.State) error {
+func (p *stateDbPrimer) PreRun(state executor.State, context *executor.Context) error {
 	if p.config.StateDbSrc != "" {
 		p.log.Warning("Skipping priming due to usage of preexisting StateDb")
 		return nil
 	}
 
 	p.log.Noticef("Priming to block %v", p.config.First-1)
-	if err := utils.LoadWorldStateAndPrime(state.State, p.config, p.config.First-1); err != nil {
+	if err := utils.LoadWorldStateAndPrime(context.State, p.config, p.config.First-1); err != nil {
 		return err
 	}
 

@@ -19,12 +19,12 @@ func TestProgressLoggerExtension_CorrectClose(t *testing.T) {
 	ext := MakeProgressLogger(config, testProgressReportFrequency)
 
 	// start the report thread
-	ext.PreRun(executor.State{})
+	ext.PreRun(executor.State{}, nil)
 
 	// make sure PostRun is not blocking.
 	done := make(chan bool)
 	go func() {
-		ext.PostRun(executor.State{}, nil)
+		ext.PostRun(executor.State{}, nil, nil)
 		close(done)
 	}()
 
@@ -54,7 +54,7 @@ func TestProgressLoggerExtension_LoggingHappens(t *testing.T) {
 
 	ext := makeProgressLogger(config, testProgressReportFrequency, log)
 
-	ext.PreRun(executor.State{})
+	ext.PreRun(executor.State{}, nil)
 
 	gomock.InOrder(
 		// scheduled logging
@@ -80,12 +80,12 @@ func TestProgressLoggerExtension_LoggingHappens(t *testing.T) {
 				GasUsed: 100_000_000,
 			},
 		},
-	})
+	}, nil)
 
 	// we must wait for the ticker to tick
 	time.Sleep((3 * testProgressReportFrequency) / 2)
 
-	ext.PostRun(executor.State{}, nil)
+	ext.PostRun(executor.State{}, nil, nil)
 }
 
 // MATCHERS

@@ -16,6 +16,7 @@ func TestStatePrepper_PreparesStateBeforeEachTransaction(t *testing.T) {
 
 	allocA := substate.SubstateAlloc{common.Address{1}: nil}
 	allocB := substate.SubstateAlloc{common.Address{2}: nil}
+	context := &executor.Context{State: db}
 
 	gomock.InOrder(
 		db.EXPECT().PrepareSubstate(&allocA, uint64(5)),
@@ -26,23 +27,22 @@ func TestStatePrepper_PreparesStateBeforeEachTransaction(t *testing.T) {
 
 	prepper.PreTransaction(executor.State{
 		Block:    5,
-		State:    db,
 		Substate: &substate.Substate{InputAlloc: allocA},
-	})
+	}, context)
 
 	prepper.PreTransaction(executor.State{
 		Block:    7,
-		State:    db,
 		Substate: &substate.Substate{InputAlloc: allocB},
-	})
+	}, context)
 }
 
 func TestStatePrepper_DoesNotCrashOnMissingStateOrSubstate(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	db := state.NewMockStateDB(ctrl)
+	context := &executor.Context{State: db}
 
 	prepper := MakeStateDbPreparator()
-	prepper.PreTransaction(executor.State{Block: 5})                                 // misses both
-	prepper.PreTransaction(executor.State{Block: 5, State: db})                      // misses the substate
-	prepper.PreTransaction(executor.State{Block: 5, Substate: &substate.Substate{}}) // misses the state
+	prepper.PreTransaction(executor.State{Block: 5}, nil)                                 // misses both
+	prepper.PreTransaction(executor.State{Block: 5}, context)                             // misses the substate
+	prepper.PreTransaction(executor.State{Block: 5, Substate: &substate.Substate{}}, nil) // misses the state
 }

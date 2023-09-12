@@ -36,7 +36,7 @@ func makeTxValidator(config *utils.Config, log logger.Logger) *txValidator {
 }
 
 // PreRun informs the user that txValidator is enabled and that they should expect slower processing speed.
-func (v *txValidator) PreRun(_ executor.State) error {
+func (v *txValidator) PreRun(executor.State, *executor.Context) error {
 
 	v.log.Warning("Transaction verification is enabled, this may slow down the block processing.")
 
@@ -49,8 +49,8 @@ func (v *txValidator) PreRun(_ executor.State) error {
 }
 
 // PreTransaction validates InputAlloc in given substate
-func (v *txValidator) PreTransaction(state executor.State) error {
-	err := utils.ValidateStateDB(state.Substate.InputAlloc, state.State, v.config.UpdateOnFailure)
+func (v *txValidator) PreTransaction(state executor.State, context *executor.Context) error {
+	err := utils.ValidateStateDB(state.Substate.InputAlloc, context.State, v.config.UpdateOnFailure)
 	if err == nil {
 		return nil
 	}
@@ -61,8 +61,8 @@ func (v *txValidator) PreTransaction(state executor.State) error {
 }
 
 // PostTransaction validates OutputAlloc in given substate
-func (v *txValidator) PostTransaction(state executor.State) error {
-	err := utils.ValidateStateDB(state.Substate.OutputAlloc, state.State, v.config.UpdateOnFailure)
+func (v *txValidator) PostTransaction(state executor.State, context *executor.Context) error {
+	err := utils.ValidateStateDB(state.Substate.OutputAlloc, context.State, v.config.UpdateOnFailure)
 	if err == nil {
 		return nil
 	}
@@ -73,7 +73,7 @@ func (v *txValidator) PostTransaction(state executor.State) error {
 }
 
 // PostRun informs user how many errors were found - if ContinueOnFailureIsEnabled otherwise success is reported.
-func (v *txValidator) PostRun(_ executor.State, _ error) error {
+func (v *txValidator) PostRun(executor.State, *executor.Context, error) error {
 	v.lock.Lock()
 	defer v.lock.Unlock()
 

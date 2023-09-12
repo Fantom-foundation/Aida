@@ -21,12 +21,14 @@ func TestBlockEventEmitter_SingleBlock(t *testing.T) {
 
 	state := executor.State{
 		Block: 0,
+	}
+	context := &executor.Context{
 		State: mockStateDB,
 	}
-	if err := ext.PreBlock(state); err != nil {
+	if err := ext.PreBlock(state, context); err != nil {
 		t.Fatalf("failed to to run pre-block: %v", err)
 	}
-	if err := ext.PostBlock(state); err != nil {
+	if err := ext.PostBlock(state, context); err != nil {
 		t.Fatalf("failed to to run post-block: %v", err)
 	}
 }
@@ -41,12 +43,14 @@ func TestBlockEventEmitter_SkipEndBlocks(t *testing.T) {
 
 	state := executor.State{
 		Block: 0,
+	}
+	context := &executor.Context{
 		State: mockStateDB,
 	}
-	if err := ext.PreBlock(state); err != nil {
+	if err := ext.PreBlock(state, context); err != nil {
 		t.Fatalf("failed to to run pre-block: %v", err)
 	}
-	if err := ext.PostBlock(state); err != nil {
+	if err := ext.PostBlock(state, context); err != nil {
 		t.Fatalf("failed to to run post-block: %v", err)
 	}
 }
@@ -68,28 +72,30 @@ func TestBlockEventEmitter_MultipleBlocks(t *testing.T) {
 
 	state := executor.State{
 		Block: 0,
+	}
+	context := &executor.Context{
 		State: mockStateDB,
 	}
-	if err := ext.PreBlock(state); err != nil {
+	if err := ext.PreBlock(state, context); err != nil {
 		t.Fatalf("failed to to run pre-block: %v", err)
 	}
-	if err := ext.PostBlock(state); err != nil {
+	if err := ext.PostBlock(state, context); err != nil {
 		t.Fatalf("failed to to run post-block: %v", err)
 	}
 
 	state.Block = 1
-	if err := ext.PreBlock(state); err != nil {
+	if err := ext.PreBlock(state, context); err != nil {
 		t.Fatalf("failed to to run pre-block: %v", err)
 	}
-	if err := ext.PostBlock(state); err != nil {
+	if err := ext.PostBlock(state, context); err != nil {
 		t.Fatalf("failed to to run post-block: %v", err)
 	}
 
 	state.Block = 2
-	if err := ext.PreBlock(state); err != nil {
+	if err := ext.PreBlock(state, context); err != nil {
 		t.Fatalf("failed to to run pre-block: %v", err)
 	}
-	if err := ext.PostBlock(state); err != nil {
+	if err := ext.PostBlock(state, context); err != nil {
 		t.Fatalf("failed to to run post-block: %v", err)
 	}
 }

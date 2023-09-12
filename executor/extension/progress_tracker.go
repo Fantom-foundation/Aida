@@ -57,7 +57,7 @@ type processInfo struct {
 	gas             uint64
 }
 
-func (t *progressTracker) PreRun(_ executor.State) error {
+func (t *progressTracker) PreRun(_ executor.State, _ *executor.Context) error {
 	now := time.Now()
 	t.startOfRun = now
 	t.startOfLastInterval = now
@@ -65,7 +65,7 @@ func (t *progressTracker) PreRun(_ executor.State) error {
 }
 
 // PostTransaction increments number of transactions and saves gas used in last substate.
-func (t *progressTracker) PostTransaction(state executor.State) error {
+func (t *progressTracker) PostTransaction(state executor.State, _ *executor.Context) error {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
@@ -77,7 +77,7 @@ func (t *progressTracker) PostTransaction(state executor.State) error {
 
 // PostBlock sends the state to the report goroutine.
 // We only care about total number of transactions we can do this here rather in PostTransaction.
-func (t *progressTracker) PostBlock(state executor.State) error {
+func (t *progressTracker) PostBlock(state executor.State, context *executor.Context) error {
 	boundary := state.Block - (state.Block % t.reportFrequency)
 
 	if state.Block-t.lastReportedBlock < t.reportFrequency {
@@ -94,7 +94,7 @@ func (t *progressTracker) PostBlock(state executor.State) error {
 	t.lock.Unlock()
 
 	disk := utils.GetDirectorySize(t.config.StateDbSrc)
-	m := state.State.GetMemoryUsage()
+	m := context.State.GetMemoryUsage()
 
 	memory := uint64(0)
 	if m != nil {

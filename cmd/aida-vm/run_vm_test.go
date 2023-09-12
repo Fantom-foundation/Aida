@@ -27,36 +27,36 @@ func TestVmSdb_TransactionsAreExecutedForCorrectRange(t *testing.T) {
 			return nil
 		})
 
-	pre := ext.EXPECT().PreRun(executor.AtBlock(10))
-	post := ext.EXPECT().PostRun(executor.AtBlock(12), nil)
+	pre := ext.EXPECT().PreRun(executor.AtBlock(10), gomock.Any())
+	post := ext.EXPECT().PostRun(executor.AtBlock(12), gomock.Any(), nil)
 
 	// All transactions are processed, but in no specific order.
 	gomock.InOrder(
 		pre,
-		ext.EXPECT().PreTransaction(executor.AtTransaction(10, 3)),
-		processor.EXPECT().Process(executor.AtTransaction(10, 3)),
-		ext.EXPECT().PostTransaction(executor.AtTransaction(10, 3)),
+		ext.EXPECT().PreTransaction(executor.AtTransaction(10, 3), gomock.Any()),
+		processor.EXPECT().Process(executor.AtTransaction(10, 3), gomock.Any()),
+		ext.EXPECT().PostTransaction(executor.AtTransaction(10, 3), gomock.Any()),
 		post,
 	)
 	gomock.InOrder(
 		pre,
-		ext.EXPECT().PreTransaction(executor.AtTransaction(10, utils.PseudoTx)),
-		processor.EXPECT().Process(executor.AtTransaction(10, utils.PseudoTx)),
-		ext.EXPECT().PostTransaction(executor.AtTransaction(10, utils.PseudoTx)),
+		ext.EXPECT().PreTransaction(executor.AtTransaction(10, utils.PseudoTx), gomock.Any()),
+		processor.EXPECT().Process(executor.AtTransaction(10, utils.PseudoTx), gomock.Any()),
+		ext.EXPECT().PostTransaction(executor.AtTransaction(10, utils.PseudoTx), gomock.Any()),
 		post,
 	)
 	gomock.InOrder(
 		pre,
-		ext.EXPECT().PreTransaction(executor.AtTransaction(11, 3)),
-		processor.EXPECT().Process(executor.AtTransaction(11, 3)),
-		ext.EXPECT().PostTransaction(executor.AtTransaction(11, 3)),
+		ext.EXPECT().PreTransaction(executor.AtTransaction(11, 3), gomock.Any()),
+		processor.EXPECT().Process(executor.AtTransaction(11, 3), gomock.Any()),
+		ext.EXPECT().PostTransaction(executor.AtTransaction(11, 3), gomock.Any()),
 		post,
 	)
 	gomock.InOrder(
 		pre,
-		ext.EXPECT().PreTransaction(executor.AtTransaction(11, utils.PseudoTx)),
-		processor.EXPECT().Process(executor.AtTransaction(11, utils.PseudoTx)),
-		ext.EXPECT().PostTransaction(executor.AtTransaction(11, utils.PseudoTx)),
+		ext.EXPECT().PreTransaction(executor.AtTransaction(11, utils.PseudoTx), gomock.Any()),
+		processor.EXPECT().Process(executor.AtTransaction(11, utils.PseudoTx), gomock.Any()),
+		ext.EXPECT().PostTransaction(executor.AtTransaction(11, utils.PseudoTx), gomock.Any()),
 		post,
 	)
 
