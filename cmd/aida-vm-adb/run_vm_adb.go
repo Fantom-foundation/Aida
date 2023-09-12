@@ -15,6 +15,13 @@ func RunVmAdb(ctx *cli.Context) error {
 		return err
 	}
 
+	// executing archive blocks always calls ArchiveDb with block -1
+	// this condition prevents an incorrect call for block that does not exist (block number -1 in this case)
+	// there is nothing before block 0 so running this app on this block does nothing
+	if cfg.First == 0 {
+		cfg.First = 1
+	}
+
 	substateDb, err := executor.OpenSubstateDb(cfg, ctx)
 	if err != nil {
 		return err
@@ -35,7 +42,8 @@ type txProcessor struct {
 }
 
 func (r txProcessor) Process(state executor.State) error {
-	archive, err := state.State.GetArchiveState(uint64(state.Block))
+	// todo rework this once executor.State is divided between mutable and immutable part
+	archive, err := state.State.GetArchiveState(uint64(state.Block) - 1)
 	if err != nil {
 		return err
 	}
