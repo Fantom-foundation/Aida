@@ -16,7 +16,7 @@ type vmStatPrinter struct {
 	config *utils.Config
 }
 
-func (p *vmStatPrinter) PostRun(executor.State, error) error {
+func (p *vmStatPrinter) PostRun(executor.State, *executor.Context, error) error {
 	utils.PrintEvmStatistics(p.config)
 	return nil
 }

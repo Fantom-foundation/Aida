@@ -20,11 +20,11 @@ type cpuProfiler struct {
 	config *utils.Config
 }
 
-func (p *cpuProfiler) PreRun(_ executor.State) error {
+func (p *cpuProfiler) PreRun(executor.State, *executor.Context) error {
 	return utils.StartCPUProfile(p.config)
 }
 
-func (p *cpuProfiler) PostRun(_ executor.State, _ error) error {
+func (p *cpuProfiler) PostRun(executor.State, *executor.Context, error) error {
 	utils.StopCPUProfile(p.config)
 	return nil
 }

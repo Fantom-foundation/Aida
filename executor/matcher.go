@@ -78,8 +78,13 @@ type withState struct {
 }
 
 func (m withState) Matches(value any) bool {
-	state, ok := value.(State)
-	return ok && state.State == m.state
+	if context, ok := value.(Context); ok {
+		return context.State == m.state
+	}
+	if context, ok := value.(*Context); ok {
+		return context.State == m.state
+	}
+	return false
 }
 
 func (m withState) String() string {
