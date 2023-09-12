@@ -124,6 +124,7 @@ def runAida (mode, evm, db, variant, schema, iteration)
     cmd += "./build/aida-vm-sdb --aida-db #{AidaDb} "
     cmd += "--db-impl #{db} --db-variant \"#{variant}\" --carmen-schema \"#{schema}\" "
     cmd += "--vm-impl #{evm} "
+    cmd += "--track-progress "
     cmd += "--cpu-profile=#{PROFILE_FILE_PREFIX}_profile_#{mode}_#{evm}_#{db}_#{variant}_#{StartBlock}_#{EndBlock}_#{iteration}.dat "
     cmd += "#{extraFlags} "
     cmd += "#{StartBlock} #{EndBlock}"
@@ -143,13 +144,16 @@ def runAida (mode, evm, db, variant, schema, iteration)
     }
 
     res = []
-    out.scan(/.*reached block (.*) using ~ (.*) bytes of memory, ~ (.*) bytes of disk, last interval rate ~ (.*) Tx\/s, ~ (.*) Gas\/s/) { |block,mem_usage,disk_usage,tx_rate,gas_rate| res.append([block,tx_rate,gas_rate,mem_usage,disk_usage]) }
+    pattern = /.*Track: block (\d+), memory (\d+), disk (\d+), interval_tx_rate (\d+.\d*), interval_gas_rate (\d+.\d*), overall_tx_rate (\d+.\d*), overall_gas_rate (\d+.\d*)/
+    out.scan(pattern) { |block,mem_usage,disk_usage,interval_tx_rate,interval_gas_rate,overall_tx_rate,overall_gas_rate| res.append([block,mem_usage,disk_usage,interval_tx_rate,interval_gas_rate,overall_tx_rate,overall_gas_rate]) }
     return res
 end
 
-$res = ["mode, vm, db, variant, schema, iteration, interval_end, tx_rate, gas_rate, mem_usage, disk_usage"]
+$res = ["mode, vm, db, variant, schema, iteration, interval_end, mem_usage, disk_usage, interval_tx_rate, interval_gas_rate, overall_tx_rate, overall_gas_rate"]
 def addResult (mode, vm, db, variant, schema, iteration, rates)
-    rates.each{|block,tx_rate,gas_rate,mem_usage,disk_usage| $res.append("#{mode}, #{vm}, #{db}, #{variant}, #{schema}, #{iteration}, #{block}, #{tx_rate}, #{gas_rate}, #{mem_usage}, #{disk_usage}") }
+    rates.each{|block,mem_usage,disk_usage,interval_tx_rate,interval_gas_rate,overall_tx_rate,overall_gas_rate| 
+        $res.append("#{mode}, #{vm}, #{db}, #{variant}, #{schema}, #{iteration}, #{block}, #{mem_usage}, #{disk_usage}, #{interval_tx_rate}, #{interval_gas_rate}, #{overall_tx_rate}, #{overall_gas_rate}")
+    }
     $res.each{ |l| puts "#{l}\n" }
 end
 
