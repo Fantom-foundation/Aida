@@ -15,6 +15,7 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	substate := executor.NewMockSubstateProvider(ctrl)
 	db := state.NewMockStateDB(ctrl)
+	archive := state.NewMockStateDB(ctrl)
 	config := &utils.Config{
 		First:    1,
 		Last:     1,
@@ -35,14 +36,14 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder(t *testing.T) {
 	gomock.InOrder(
 		db.EXPECT().BeginBlock(uint64(1)),
 		db.EXPECT().PrepareSubstate(gomock.Any(), uint64(1)),
-		db.EXPECT().GetArchiveState(uint64(0)).Return(db, nil),
-		db.EXPECT().BeginTransaction(uint32(1)),
-		db.EXPECT().Prepare(gomock.Any(), 1),
-		db.EXPECT().Snapshot().Return(15),
-		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
-		db.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
-		db.EXPECT().RevertToSnapshot(15),
-		db.EXPECT().EndTransaction(),
+		db.EXPECT().GetArchiveState(uint64(0)).Return(archive, nil),
+		archive.EXPECT().BeginTransaction(uint32(1)),
+		archive.EXPECT().Prepare(gomock.Any(), 1),
+		archive.EXPECT().Snapshot().Return(15),
+		archive.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
+		archive.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
+		archive.EXPECT().RevertToSnapshot(15),
+		archive.EXPECT().EndTransaction(),
 	)
 
 	if err := run(config, substate, db); err != nil {
