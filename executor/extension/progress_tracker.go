@@ -34,8 +34,6 @@ func makeProgressTracker(config *utils.Config, reportFrequency int, log logger.L
 		log:               log,
 		reportFrequency:   reportFrequency,
 		lastReportedBlock: int(config.First) - (int(config.First) % reportFrequency),
-		lastIntervalInfo:  new(processInfo),
-		lock:              new(sync.Mutex),
 	}
 }
 
@@ -48,8 +46,8 @@ type progressTracker struct {
 	reportFrequency     int
 	lastReportedBlock   int
 	startOfLastInterval time.Time
-	lastIntervalInfo    *processInfo
-	lock                *sync.Mutex
+	lastIntervalInfo    processInfo
+	lock                sync.Mutex
 }
 
 type processInfo struct {
@@ -86,19 +84,17 @@ func (t *progressTracker) PostBlock(state executor.State) error {
 
 	// quickly extract interval info and reset its values
 	t.lock.Lock()
-	info := *t.lastIntervalInfo
+	info := t.lastIntervalInfo
 	t.lastIntervalInfo.gas = 0
 	t.lastIntervalInfo.numTransactions = 0
 	t.lock.Unlock()
 
-	disk := float64(utils.GetDirectorySize(t.config.StateDbSrc))
+	disk := utils.GetDirectorySize(t.config.StateDbSrc)
 	m := state.State.GetMemoryUsage()
 
-	var memory float64
-	if m == nil {
-		memory = 0
-	} else {
-		memory = float64(m.UsedBytes)
+	memory := uint64(0)
+	if m != nil {
+		memory = m.UsedBytes
 	}
 
 	txRate := float64(info.numTransactions) / elapsed.Seconds()

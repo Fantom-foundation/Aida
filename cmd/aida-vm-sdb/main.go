@@ -71,6 +71,8 @@ var RunVMApp = cli.App{
 		//&utils.ValidateWorldStateFlag,
 		&utils.ValidateFlag,
 		&logger.LogLevelFlag,
+		&utils.NoHeartbeatLoggingFlag,
+		&utils.TrackProgressFlag,
 	},
 	Description: `
 The aida-vm-sdb command requires two arguments: <blockNumFirst> <blockNumLast>

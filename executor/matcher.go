@@ -34,6 +34,16 @@ func WithSubstate(substate *substate.Substate) gomock.Matcher {
 	return withSubstate{substate}
 }
 
+// Lt matches every value less than the given limit.
+func Lt(limit float64) gomock.Matcher {
+	return lt{limit}
+}
+
+// Gt matches every value greater than the given limit.
+func Gt(limit float64) gomock.Matcher {
+	return gt{limit}
+}
+
 // ----------------------------------------------------------------------------
 
 type atBlock struct {
@@ -104,4 +114,30 @@ func (m withSubstate) Matches(value any) bool {
 
 func (m withSubstate) String() string {
 	return fmt.Sprintf("with substate %p", m.substate)
+}
+
+type lt struct {
+	limit float64
+}
+
+func (m lt) Matches(value any) bool {
+	v, ok := value.(float64)
+	return ok && v < m.limit
+}
+
+func (m lt) String() string {
+	return fmt.Sprintf("less than %v", m.limit)
+}
+
+type gt struct {
+	limit float64
+}
+
+func (m gt) Matches(value any) bool {
+	v, ok := value.(float64)
+	return ok && v > m.limit
+}
+
+func (m gt) String() string {
+	return fmt.Sprintf("greater than %v", m.limit)
 }

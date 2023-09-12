@@ -1,6 +1,8 @@
 package main
 
 import (
+	"time"
+
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/state"
@@ -56,7 +58,8 @@ func run(config *utils.Config, provider executor.SubstateProvider, stateDb state
 		[]executor.Extension{
 			extension.MakeCpuProfiler(config),
 			extension.MakeVirtualMachineStatisticsPrinter(config),
-			extension.MakeProgressLogger(config, 100),
+			extension.MakeProgressLogger(config, 15*time.Second),
+			extension.MakeProgressTracker(config, 100_000),
 			extension.MakeStateDbPreparator(),
 			extension.MakeTxValidator(config),
 			extension.MakeStateHashValidator(config),

@@ -11,8 +11,8 @@ import (
 
 const (
 	ProgressLoggerDefaultReportFrequency = 15 * time.Second // how often will ticker trigger
-	progressLoggerReportFormat           = "Elapsed time: %v; reached block %d; last interval rate ~%.2f Tx/s, ~%.2f Gas/s"
-	finalSummaryProgressReportFormat     = "Total elapsed time: %v; reached block %d; total transaction rate ~%.2f Tx/s, ~%.2f Gas/s"
+	progressLoggerReportFormat           = "Elapsed time: %v; current block %d; last interval rate ~%.2f Tx/s, ~%.2f MGas/s"
+	finalSummaryProgressReportFormat     = "Total elapsed time: %v; last block %d; total transaction rate ~%.2f Tx/s, ~%.2f MGas/s"
 )
 
 // MakeProgressLogger creates progress logger. It logs progress about processor depending on reportFrequency.
@@ -75,6 +75,8 @@ func (l *progressLogger) PostTransaction(state executor.State) error {
 // startReport runs in own goroutine. It accepts data from Executor from PostBock func.
 // It reports current progress everytime we hit the ticker with defaultReportFrequencyInSeconds.
 func (l *progressLogger) startReport(reportFrequency time.Duration) {
+	defer l.wg.Done()
+
 	start := time.Now()
 	lastReport := time.Now()
 	ticker := time.NewTicker(reportFrequency)
@@ -90,9 +92,7 @@ func (l *progressLogger) startReport(reportFrequency time.Duration) {
 		txRate := float64(totalTx) / elapsed.Seconds()
 		gasRate := float64(totalGas) / elapsed.Seconds()
 
-		l.log.Noticef(finalSummaryProgressReportFormat, elapsed.Round(time.Second), currentBlock, txRate, gasRate)
-
-		l.wg.Done()
+		l.log.Noticef(finalSummaryProgressReportFormat, elapsed.Round(time.Second), currentBlock, txRate, gasRate/1e6)
 	}()
 
 	var (
@@ -116,9 +116,9 @@ func (l *progressLogger) startReport(reportFrequency time.Duration) {
 		case now := <-ticker.C:
 			elapsed := now.Sub(start)
 			txRate := float64(currentIntervalTx) / now.Sub(lastReport).Seconds()
-			gasRate := float64(currentIntervalTx) / now.Sub(lastReport).Seconds()
+			gasRate := float64(currentIntervalGas) / now.Sub(lastReport).Seconds()
 
-			l.log.Infof(progressLoggerReportFormat, elapsed.Round(1*time.Second), currentBlock, txRate, gasRate)
+			l.log.Infof(progressLoggerReportFormat, elapsed.Round(1*time.Second), currentBlock, txRate, gasRate/1e6)
 
 			lastReport = now
 			totalTx += currentIntervalTx
