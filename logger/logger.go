@@ -19,7 +19,7 @@ var LogLevelFlag = cli.StringFlag{
 
 // defaultLogFormat defines the format used for log output.
 const (
-	defaultLogFormat = "%{time:2006/01/02 15:04:05} %{color}%{level:-8s} %{shortpkg}/%{shortfunc}%{color:reset}: %{message}"
+	defaultLogFormat = "%{time:2006/01/02 15:04:05} %{color}%{level}%{color:reset}: %{message}"
 )
 
 // Logger is responsible for logging any info to user.
