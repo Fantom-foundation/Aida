@@ -53,6 +53,7 @@ func ProcessTx(db state.StateDB, cfg *Config, block uint64, tx int, st *substate
 // processRegularTx executes VM on a chosen storage system.
 func processRegularTx(db state.StateDB, cfg *Config, block uint64, tx int, st *substate.Substate) (runtime time.Duration, txerr error) {
 	db.BeginTransaction(uint32(tx))
+	defer db.EndTransaction()
 
 	var (
 		gaspool   = new(evmcore.GasPool)
@@ -114,11 +115,6 @@ func processRegularTx(db state.StateDB, cfg *Config, block uint64, tx int, st *s
 			return
 		}
 	}
-
-	// Log messages are associated to a single transaction and may be reset
-	// at the end of the transaction. Thus, we have to collect them before
-	// ending the transaction.
-	defer db.EndTransaction()
 
 	// check whether the outputAlloc substate is contained in the world-state db.
 	if cfg.ValidateTxState {
