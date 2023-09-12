@@ -22,12 +22,12 @@ func RunVm(ctx *cli.Context) error {
 	}
 	defer substateDb.Close()
 
-	log := logger.NewLogger("INFO", "aida-vm")
+	log := logger.NewLogger(cfg.LogLevel, "aida-vm")
 	workers := cfg.Workers
 	if workers <= 1 {
 		workers = 1
 	}
-	log.Infof("Processing transactions using %d workers (--workers)...\n", workers)
+	log.Infof("Processing transactions using %d workers (--workers)...", workers)
 
 	return run(cfg, substateDb, txProcessor{cfg}, nil)
 }
