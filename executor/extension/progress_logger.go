@@ -1,7 +1,6 @@
 package extension
 
 import (
-	"math/big"
 	"sync"
 	"time"
 
@@ -11,37 +10,44 @@ import (
 )
 
 const (
-	DefaultReportFrequencyInBlocks = 100_000
-	progressReportFormat           = "Elapsed time: %v; reached block %d; last interval rate ~%.2f Tx/s"
+	ProgressLoggerDefaultReportFrequency = 15 * time.Second // how often will ticker trigger
+	progressLoggerReportFormat           = "Elapsed time: %v; reached block %d; last interval rate ~%.2f Tx/s, ~%.2f Gas/s"
+	finalSummaryProgressReportFormat     = "Total elapsed time: %v; reached block %d; total transaction rate ~%.2f Tx/s, ~%.2f Gas/s"
 )
 
 // MakeProgressLogger creates progress logger. It logs progress about processor depending on reportFrequency.
-// If reportFrequency is 0, it is set to DefaultReportFrequencyInBlocks.
-func MakeProgressLogger(config *utils.Config, reportFrequency int) executor.Extension {
-	if config.Quiet {
+// If reportFrequency is 0, it is set to ProgressLoggerDefaultReportFrequency.
+func MakeProgressLogger(config *utils.Config, reportFrequency time.Duration) executor.Extension {
+	if config.NoHeartbeatLogging {
 		return NilExtension{}
 	}
 
-	if reportFrequency == 0 {
-		reportFrequency = DefaultReportFrequencyInBlocks
+	if reportFrequency <= 0 {
+		reportFrequency = ProgressLoggerDefaultReportFrequency
 	}
 
+	return makeProgressLogger(config, reportFrequency, logger.NewLogger(config.LogLevel, "Progress-Logger"))
+}
+
+func makeProgressLogger(config *utils.Config, reportFrequency time.Duration, logger logger.Logger) *progressLogger {
 	return &progressLogger{
 		config:          config,
-		log:             logger.NewLogger(config.LogLevel, "Progress-Reporter"),
-		inputCh:         make(chan executor.State, 10),
+		log:             logger,
+		inputCh:         make(chan executor.State, config.Workers*10),
 		wg:              new(sync.WaitGroup),
 		reportFrequency: reportFrequency,
 	}
 }
 
+// progressLogger logs human-readable information about progress
+// in "heartbeat" depending on reportFrequency.
 type progressLogger struct {
 	NilExtension
 	config          *utils.Config
 	log             logger.Logger
 	inputCh         chan executor.State
 	wg              *sync.WaitGroup
-	reportFrequency int
+	reportFrequency time.Duration
 }
 
 // PreRun starts the report goroutine
@@ -61,28 +67,30 @@ func (l *progressLogger) PostRun(_ executor.State, _ error) error {
 	return nil
 }
 
-// PostBlock sends the state to the report goroutine.
-// We only care about total number of transactions we can do this here rather in PostTransaction.
-func (l *progressLogger) PostBlock(state executor.State) error {
+func (l *progressLogger) PostTransaction(state executor.State) error {
 	l.inputCh <- state
 	return nil
 }
 
 // startReport runs in own goroutine. It accepts data from Executor from PostBock func.
 // It reports current progress everytime we hit the ticker with defaultReportFrequencyInSeconds.
-func (l *progressLogger) startReport(reportFrequency int) {
+func (l *progressLogger) startReport(reportFrequency time.Duration) {
 	start := time.Now()
 	lastReport := time.Now()
+	ticker := time.NewTicker(reportFrequency)
 
-	totalTx := new(big.Int)
-	totalBlocks := new(big.Int)
-	var lastIntervalTx uint64
+	var (
+		currentBlock                 int
+		totalTx, currentIntervalTx   uint64
+		totalGas, currentIntervalGas uint64
+	)
 
 	defer func() {
 		elapsed := time.Since(start)
-		txRate := float64(totalTx.Uint64()) / elapsed.Seconds()
+		txRate := float64(totalTx) / elapsed.Seconds()
+		gasRate := float64(totalGas) / elapsed.Seconds()
 
-		l.log.Infof(progressReportFormat, elapsed.Round(time.Second), totalBlocks.Uint64(), txRate)
+		l.log.Noticef(finalSummaryProgressReportFormat, elapsed.Round(time.Second), currentBlock, txRate, gasRate)
 
 		l.wg.Done()
 	}()
@@ -98,19 +106,26 @@ func (l *progressLogger) startReport(reportFrequency int) {
 				return
 			}
 
-			// we must do tx + 1 because first tx is actually marked as 0
-			lastIntervalTx += uint64(in.Transaction + 1)
-			totalBlocks.SetUint64(uint64(in.Block))
-
-			// did we hit the block milestone?
-			if in.Block%reportFrequency == 0 {
-				elapsed := time.Since(start)
-				txRate := float64(lastIntervalTx) / time.Since(lastReport).Seconds()
-
-				// todo add file size and gas rate once StateDb is added to new processor
-				l.log.Infof(progressReportFormat, elapsed.Round(1*time.Second), totalBlocks.Uint64(), txRate)
-				lastReport = time.Now()
+			if in.Block > currentBlock {
+				currentBlock = in.Block
 			}
+
+			currentIntervalTx++
+			currentIntervalGas += in.Substate.Result.GasUsed
+
+		case now := <-ticker.C:
+			elapsed := now.Sub(start)
+			txRate := float64(currentIntervalTx) / now.Sub(lastReport).Seconds()
+			gasRate := float64(currentIntervalTx) / now.Sub(lastReport).Seconds()
+
+			l.log.Infof(progressLoggerReportFormat, elapsed.Round(1*time.Second), currentBlock, txRate, gasRate)
+
+			lastReport = now
+			totalTx += currentIntervalTx
+			totalGas += currentIntervalGas
+
+			currentIntervalTx = 0
+			currentIntervalGas = 0
 		}
 	}
 

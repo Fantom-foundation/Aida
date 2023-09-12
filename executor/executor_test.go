@@ -380,8 +380,8 @@ func TestProcessor_SignalsAreDeliveredInConcurrentExecution(t *testing.T) {
 	// should happen in order. However, Transactions may be processed
 	// out-of-order.
 	// Note: In the parallel context there is no block boundary.
-	pre := extension.EXPECT().PreRun(gomock.Any())
-	post := extension.EXPECT().PostRun(gomock.Any(), nil)
+	pre := extension.EXPECT().PreRun(AtBlock(10))
+	post := extension.EXPECT().PostRun(AtBlock(12), nil)
 
 	gomock.InOrder(
 		pre,
@@ -613,94 +613,4 @@ func TestProcessor_SubstateIsPropagatedToTheProcessorAndAllExtensionsInParallelE
 	if err != nil {
 		t.Errorf("execution failed: %v", err)
 	}
-}
-
-// ----------------------------------------------------------------------------
-//                                   Matcher
-// ----------------------------------------------------------------------------
-
-func AtBlock(block int) gomock.Matcher {
-	return atBlock{block}
-}
-
-type atBlock struct {
-	expectedBlock int
-}
-
-func (m atBlock) Matches(value any) bool {
-	state, ok := value.(State)
-	return ok && state.Block == m.expectedBlock
-}
-
-func (m atBlock) String() string {
-	return fmt.Sprintf("at block %d", m.expectedBlock)
-}
-
-func AtTransaction(block int, transaction int) gomock.Matcher {
-	return atTransaction{block, transaction}
-}
-
-type atTransaction struct {
-	expectedBlock       int
-	expectedTransaction int
-}
-
-func (m atTransaction) Matches(value any) bool {
-	state, ok := value.(State)
-	return ok && state.Block == m.expectedBlock && state.Transaction == m.expectedTransaction
-}
-
-func (m atTransaction) String() string {
-	return fmt.Sprintf("at transaction %d/%d", m.expectedBlock, m.expectedTransaction)
-}
-
-func WithState(state state.StateDB) gomock.Matcher {
-	return withState{state}
-}
-
-type withState struct {
-	state state.StateDB
-}
-
-func (m withState) Matches(value any) bool {
-	state, ok := value.(State)
-	return ok && state.State == m.state
-}
-
-func (m withState) String() string {
-	return fmt.Sprintf("with state %p", m.state)
-}
-
-func WithError(err error) gomock.Matcher {
-	return withError{err}
-}
-
-type withError struct {
-	err error
-}
-
-func (m withError) Matches(value any) bool {
-	err, ok := value.(error)
-	return ok && errors.Is(err, m.err)
-}
-
-func (m withError) String() string {
-	return fmt.Sprintf("with error %v", m.err)
-}
-
-func WithSubstate(substate *substate.Substate) gomock.Matcher {
-	return withSubstate{substate}
-}
-
-type withSubstate struct {
-	substate *substate.Substate
-}
-
-func (m withSubstate) Matches(value any) bool {
-	state, ok := value.(State)
-	return ok && state.Substate == m.substate
-}
-
-func (m withSubstate) String() string {
-	return fmt.Sprintf("with substate %p", m.substate)
 }

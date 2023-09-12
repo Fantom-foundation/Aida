@@ -2,22 +2,21 @@ package extension
 
 import (
 	"fmt"
-	"strings"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
+	substate "github.com/Fantom-foundation/Substate"
 	"go.uber.org/mock/gomock"
 )
 
-const testReportFrequency = 1
+const testProgressReportFrequency = 2 * time.Second
 
 func TestProgressLoggerExtension_CorrectClose(t *testing.T) {
 	config := &utils.Config{}
-	ext := MakeProgressLogger(config, testReportFrequency)
+	ext := MakeProgressLogger(config, testProgressReportFrequency)
 
 	// start the report thread
 	ext.PreRun(executor.State{})
@@ -39,8 +38,8 @@ func TestProgressLoggerExtension_CorrectClose(t *testing.T) {
 
 func TestProgressLoggerExtension_NoLoggerIsCreatedIfDisabled(t *testing.T) {
 	config := &utils.Config{}
-	config.Quiet = true
-	ext := MakeProgressLogger(config, testReportFrequency)
+	config.NoHeartbeatLogging = true
+	ext := MakeProgressLogger(config, testProgressReportFrequency)
 	if _, ok := ext.(NilExtension); !ok {
 		t.Errorf("Logger is enabled although not set in configuration")
 	}
@@ -52,69 +51,49 @@ func TestProgressLoggerExtension_LoggingHappens(t *testing.T) {
 	log := logger.NewMockLogger(ctrl)
 
 	config := &utils.Config{}
-	config.Quiet = true
 
-	ext := progressLogger{
-		config:          config,
-		log:             log,
-		inputCh:         make(chan executor.State, 10),
-		wg:              new(sync.WaitGroup),
-		reportFrequency: testReportFrequency,
-	}
+	ext := makeProgressLogger(config, testProgressReportFrequency, log)
 
 	ext.PreRun(executor.State{})
 
 	gomock.InOrder(
-		log.EXPECT().Infof(MatchFormat(progressReportFormat), gomock.Any(), uint64(1), MatchTxRate()),
-		log.EXPECT().Infof(MatchFormat(progressReportFormat), gomock.Any(), uint64(2), MatchTxRate()),
+		// scheduled logging
+		log.EXPECT().Infof(progressLoggerReportFormat, gomock.Any(), 1, MatchRate("txRate"), MatchRate("gasRate")).MinTimes(1).MaxTimes(2),
+		// defer logging
+		log.EXPECT().Noticef(finalSummaryProgressReportFormat, gomock.Any(), 1, MatchRate("txRate"), MatchRate("gasRate")),
 	)
 
 	// fill the logger with some data
-	ext.PostBlock(executor.State{
+	ext.PostTransaction(executor.State{
 		Block:       1,
 		Transaction: 1,
+		Substate: &substate.Substate{
+			Result: &substate.SubstateResult{
+				GasUsed: 1,
+			},
+		},
 	})
 
-	ext.PostBlock(executor.State{
-		Block:       2,
-		Transaction: 2,
-	})
+	// we must wait for the ticker to tick
+	time.Sleep(3 * time.Second)
 
-	// wait a bit until the logger gets the data
-	time.Sleep(time.Second)
+	ext.PostRun(executor.State{}, nil)
 }
 
 // MATCHERS
-
-func MatchFormat(format string) gomock.Matcher {
-	return matchFormat{format}
+func MatchRate(name string) gomock.Matcher {
+	return matchRate{name}
 }
 
-type matchFormat struct {
-	format string
+type matchRate struct {
+	name string
 }
 
-func (m matchFormat) Matches(value any) bool {
-	format, ok := value.(string)
-	return ok && strings.Compare(m.format, format) == 0
-}
-
-func (m matchFormat) String() string {
-	return fmt.Sprintf("log format should look like this: %v", m.format)
-}
-
-func MatchTxRate() gomock.Matcher {
-	return matchTxRate{}
-}
-
-type matchTxRate struct {
-}
-
-func (m matchTxRate) Matches(value any) bool {
+func (m matchRate) Matches(value any) bool {
 	txRate, ok := value.(float64)
 	return ok && txRate > 0
 }
 
-func (m matchTxRate) String() string {
-	return fmt.Sprintf("log should have a txRate that is larger than 0")
+func (m matchRate) String() string {
+	return fmt.Sprintf("log should have a %v that is larger than 0", m.name)
 }

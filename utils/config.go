@@ -314,8 +314,9 @@ var (
 		Value: false,
 	}
 	AidaDbFlag = cli.PathFlag{
-		Name:  "aida-db",
-		Usage: "set substate, updateset and deleted accounts directory",
+		Name:     "aida-db",
+		Usage:    "set substate, updateset and deleted accounts directory",
+		Required: true,
 	}
 	ContractNumberFlag = cli.Int64Flag{
 		Name:  "num-contracts",
@@ -414,6 +415,14 @@ var (
 		Usage: "if enabled and continue-on-failure is also enabled, this corrects any error found in StateDb",
 		Value: true,
 	}
+	NoHeartbeatLoggingFlag = cli.BoolFlag{
+		Name:  "no-heartbeat-logging",
+		Usage: "disables heartbeat logging",
+	}
+	TrackProgressFlag = cli.BoolFlag{
+		Name:  "track-progress",
+		Usage: "enables track progress logging",
+	}
 )
 
 // Config represents execution configuration for replay command.
@@ -503,6 +512,8 @@ type Config struct {
 	StateRootFile       string         // the optional file name containing state roots to be checked (empty if not enabled)
 	MaxNumErrors        int            // maximum number of errors when ContinueOnFailure is enabled
 	UpdateOnFailure     bool           // if enabled and continue-on-failure is also enabled, this updates any error found in StateDb
+	NoHeartbeatLogging  bool           // disables heartbeat logging
+	TrackProgress       bool           // enables track progress logging
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.
@@ -860,7 +871,7 @@ func getMdBlockRange(aidaDbPath string, chainId ChainID, log *logging.Logger) (u
 	defaultLastPatch := keywordBlocks[chainId]["lastpatch"]
 
 	if _, err := os.Stat(aidaDbPath); errors.Is(err, os.ErrNotExist) {
-		log.Warningf("Unable to open Aida-db; %v", aidaDbPath, err)
+		log.Warningf("Unable to open Aida-db in %s: %v", aidaDbPath, err)
 		fmt.Println(defaultFirst)
 		return defaultFirst, defaultLast, defaultLastPatch, false, nil
 	}
