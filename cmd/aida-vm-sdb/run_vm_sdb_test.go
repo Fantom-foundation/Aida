@@ -75,4 +75,7 @@ var emptyTx = &substate.Substate{
 	Message: &substate.SubstateMessage{
 		GasPrice: big.NewInt(12),
 	},
+	Result: &substate.SubstateResult{
+		GasUsed: 1,
+	},
 }

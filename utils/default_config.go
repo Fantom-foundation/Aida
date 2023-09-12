@@ -88,6 +88,8 @@ func createConfig(ctx *cli.Context) *Config {
 		StateRootFile:       getFlagValue(ctx, StateRootHashesFlag).(string),
 		UpdateOnFailure:     getFlagValue(ctx, UpdateOnFailure).(bool),
 		MaxNumErrors:        getFlagValue(ctx, MaxNumErrorsFlag).(int),
+		NoHeartbeatLogging:  getFlagValue(ctx, NoHeartbeatLoggingFlag).(bool),
+		TrackProgress:       getFlagValue(ctx, TrackProgressFlag).(bool),
 	}
 
 	return cfg

@@ -415,6 +415,14 @@ var (
 		Usage: "if enabled and continue-on-failure is also enabled, this corrects any error found in StateDb",
 		Value: true,
 	}
+	NoHeartbeatLoggingFlag = cli.BoolFlag{
+		Name:  "no-heartbeat-logging",
+		Usage: "disables heartbeat logging",
+	}
+	TrackProgressFlag = cli.BoolFlag{
+		Name:  "track-progress",
+		Usage: "enables track progress logging",
+	}
 )
 
 // Config represents execution configuration for replay command.
@@ -504,6 +512,8 @@ type Config struct {
 	StateRootFile       string         // the optional file name containing state roots to be checked (empty if not enabled)
 	MaxNumErrors        int            // maximum number of errors when ContinueOnFailure is enabled
 	UpdateOnFailure     bool           // if enabled and continue-on-failure is also enabled, this updates any error found in StateDb
+	NoHeartbeatLogging  bool           // disables heartbeat logging
+	TrackProgress       bool           // enables track progress logging
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.
