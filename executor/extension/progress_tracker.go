@@ -43,13 +43,13 @@ func makeProgressTracker(config *utils.Config, reportFrequency int, log logger.L
 // Default is 100_000 blocks. This is mainly used for gathering information about process.
 type progressTracker struct {
 	NilExtension
-	config            *utils.Config
-	log               logger.Logger
-	reportFrequency   int
-	lastReportedBlock int
-	start             time.Time
-	lastIntervalInfo  *processInfo
-	lock              *sync.Mutex
+	config              *utils.Config
+	log                 logger.Logger
+	reportFrequency     int
+	lastReportedBlock   int
+	startOfLastInterval time.Time
+	lastIntervalInfo    *processInfo
+	lock                *sync.Mutex
 }
 
 type processInfo struct {
@@ -57,9 +57,8 @@ type processInfo struct {
 	gas             uint64
 }
 
-// PreRun starts the timer marking down start of the run.
 func (t *progressTracker) PreRun(_ executor.State) error {
-	t.start = time.Now()
+	t.startOfLastInterval = time.Now()
 	return nil
 }
 
@@ -83,7 +82,7 @@ func (t *progressTracker) PostBlock(state executor.State) error {
 		return nil
 	}
 
-	elapsed := time.Since(t.start)
+	elapsed := time.Since(t.startOfLastInterval)
 
 	// quickly extract interval info and reset its values
 	t.lock.Lock()
@@ -108,6 +107,7 @@ func (t *progressTracker) PostBlock(state executor.State) error {
 	t.log.Noticef(progressTrackerReportFormat, boundary, disk, memory, txRate, gasRate)
 
 	t.lastReportedBlock = boundary
+	t.startOfLastInterval = time.Now()
 
 	return nil
 }

@@ -67,7 +67,6 @@ func (l *progressLogger) PostRun(_ executor.State, _ error) error {
 	return nil
 }
 
-// PostTransaction sends the state to the report goroutine.
 func (l *progressLogger) PostTransaction(state executor.State) error {
 	l.inputCh <- state
 	return nil
@@ -89,7 +88,7 @@ func (l *progressLogger) startReport(reportFrequency time.Duration) {
 	defer func() {
 		elapsed := time.Since(start)
 		txRate := float64(totalTx) / elapsed.Seconds()
-		gasRate := float64(totalGas) / (float64(elapsed.Nanoseconds()) / 1e9)
+		gasRate := float64(totalGas) / elapsed.Seconds()
 
 		l.log.Noticef(finalSummaryProgressReportFormat, elapsed.Round(time.Second), currentBlock, txRate, gasRate)
 
