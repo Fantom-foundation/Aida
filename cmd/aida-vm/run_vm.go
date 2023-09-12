@@ -67,7 +67,7 @@ type txProcessor struct {
 	config *utils.Config
 }
 
-func (r txProcessor) Process(s executor.State) error {
+func (r txProcessor) Process(s executor.State, _ *executor.Context) error {
 	_, err := utils.ProcessTx(
 		state.MakeInMemoryStateDB(&s.Substate.InputAlloc, uint64(s.Block)),
 		r.config,

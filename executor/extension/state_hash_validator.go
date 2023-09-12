@@ -33,7 +33,7 @@ type stateHashValidator struct {
 	hashes []common.Hash
 }
 
-func (e *stateHashValidator) PreRun(executor.State) error {
+func (e *stateHashValidator) PreRun(executor.State, *executor.Context) error {
 	path := e.config.StateRootFile
 	e.log.Infof("Loading state root hashes from %v ...", path)
 	hashes, err := loadStateHashes(path, int(e.config.Last)+1)
@@ -45,12 +45,12 @@ func (e *stateHashValidator) PreRun(executor.State) error {
 	return nil
 }
 
-func (e *stateHashValidator) PostBlock(state executor.State) error {
-	if state.State == nil || state.Block >= len(e.hashes) {
+func (e *stateHashValidator) PostBlock(state executor.State, context *executor.Context) error {
+	if context.State == nil || state.Block >= len(e.hashes) {
 		return nil
 	}
 	want := e.hashes[state.Block]
-	got := state.State.GetHash()
+	got := context.State.GetHash()
 	if want != got {
 		return fmt.Errorf("unexpected hash for block %d\nwanted %v\n   got %v", state.Block, want, got)
 	}

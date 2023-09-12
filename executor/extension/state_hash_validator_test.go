@@ -50,12 +50,13 @@ func TestStateHashValidator_ActiveIfAFileIsProvided(t *testing.T) {
 	config.StateRootFile = path
 	config.Last = 5
 	ext := makeStateHashValidator(config, log)
+	context := &executor.Context{State: db}
 
-	if err := ext.PreRun(executor.State{}); err != nil {
+	if err := ext.PreRun(executor.State{}, context); err != nil {
 		t.Errorf("failed to initialize extension: %v", err)
 	}
 
-	if err := ext.PostBlock(executor.State{Block: 4, State: db}); err != nil {
+	if err := ext.PostBlock(executor.State{Block: 4}, context); err != nil {
 		t.Errorf("failed to check hash: %v", err)
 	}
 }
@@ -77,12 +78,13 @@ func TestStateHashValidator_InvalidHashIsDetected(t *testing.T) {
 	config.StateRootFile = path
 	config.Last = 5
 	ext := makeStateHashValidator(config, log)
+	context := &executor.Context{State: db}
 
-	if err := ext.PreRun(executor.State{}); err != nil {
+	if err := ext.PreRun(executor.State{}, context); err != nil {
 		t.Errorf("failed to initialize extension: %v", err)
 	}
 
-	if err := ext.PostBlock(executor.State{Block: 4, State: db}); err == nil || !strings.Contains(err.Error(), "unexpected hash for block 4") {
+	if err := ext.PostBlock(executor.State{Block: 4}, context); err == nil || !strings.Contains(err.Error(), "unexpected hash for block 4") {
 		t.Errorf("failed to detect incorrect hash, err %v", err)
 	}
 }

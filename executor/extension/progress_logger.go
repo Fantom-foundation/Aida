@@ -51,7 +51,7 @@ type progressLogger struct {
 }
 
 // PreRun starts the report goroutine
-func (l *progressLogger) PreRun(_ executor.State) error {
+func (l *progressLogger) PreRun(executor.State, *executor.Context) error {
 	l.wg.Add(1)
 
 	// pass the value for thread safety
@@ -60,14 +60,14 @@ func (l *progressLogger) PreRun(_ executor.State) error {
 }
 
 // PostRun gracefully closes the Extension and awaits the report goroutine correct closure.
-func (l *progressLogger) PostRun(_ executor.State, _ error) error {
+func (l *progressLogger) PostRun(executor.State, *executor.Context, error) error {
 	close(l.inputCh)
 	l.wg.Wait()
 
 	return nil
 }
 
-func (l *progressLogger) PostTransaction(state executor.State) error {
+func (l *progressLogger) PostTransaction(state executor.State, _ *executor.Context) error {
 	l.inputCh <- state
 	return nil
 }
