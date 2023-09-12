@@ -12,7 +12,7 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-const testProgressReportFrequency = 2 * time.Second
+const testProgressReportFrequency = time.Second
 
 func TestProgressLoggerExtension_CorrectClose(t *testing.T) {
 	config := &utils.Config{}
@@ -58,9 +58,17 @@ func TestProgressLoggerExtension_LoggingHappens(t *testing.T) {
 
 	gomock.InOrder(
 		// scheduled logging
-		log.EXPECT().Infof(progressLoggerReportFormat, gomock.Any(), 1, MatchRate("txRate"), MatchRate("gasRate")).MinTimes(1).MaxTimes(2),
+		log.EXPECT().Infof(progressLoggerReportFormat,
+			gomock.Any(), 1,
+			MatchRate(gomock.All(executor.Gt(0.9), executor.Lt(1.1)), "txRate"),
+			MatchRate(gomock.All(executor.Gt(90), executor.Lt(100)), "gasRate"),
+		),
 		// defer logging
-		log.EXPECT().Noticef(finalSummaryProgressReportFormat, gomock.Any(), 1, MatchRate("txRate"), MatchRate("gasRate")),
+		log.EXPECT().Noticef(finalSummaryProgressReportFormat,
+			gomock.Any(), 1,
+			MatchRate(gomock.All(executor.Gt(0.6), executor.Lt(0.7)), "txRate"),
+			MatchRate(gomock.All(executor.Gt(60), executor.Lt(70)), "gasRate"),
+		),
 	)
 
 	// fill the logger with some data
@@ -69,31 +77,32 @@ func TestProgressLoggerExtension_LoggingHappens(t *testing.T) {
 		Transaction: 1,
 		Substate: &substate.Substate{
 			Result: &substate.SubstateResult{
-				GasUsed: 1,
+				GasUsed: 100_000_000,
 			},
 		},
 	})
 
 	// we must wait for the ticker to tick
-	time.Sleep(3 * time.Second)
+	time.Sleep((3 * testProgressReportFrequency) / 2)
 
 	ext.PostRun(executor.State{}, nil)
 }
 
 // MATCHERS
-func MatchRate(name string) gomock.Matcher {
-	return matchRate{name}
+func MatchRate(constraint gomock.Matcher, name string) gomock.Matcher {
+	return matchRate{constraint, name}
 }
 
 type matchRate struct {
-	name string
+	constraint gomock.Matcher
+	name       string
 }
 
 func (m matchRate) Matches(value any) bool {
 	txRate, ok := value.(float64)
-	return ok && txRate > 0
+	return ok && m.constraint.Matches(txRate)
 }
 
 func (m matchRate) String() string {
-	return fmt.Sprintf("log should have a %v that is larger than 0", m.name)
+	return fmt.Sprintf("log should have a %v that is %v", m.name, m.constraint)
 }

@@ -2,6 +2,7 @@ package extension
 
 import (
 	"testing"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/logger"
@@ -36,14 +37,18 @@ func TestProgressTrackerExtension_LoggingHappens(t *testing.T) {
 	s := &substate.Substate{
 		Result: &substate.SubstateResult{
 			Status:  0,
-			GasUsed: 10,
+			GasUsed: 100,
 		},
 	}
 
 	gomock.InOrder(
 		// scheduled logging
 		db.EXPECT().GetMemoryUsage(),
-		log.EXPECT().Noticef(progressTrackerReportFormat, 6, float64(0), float64(0), MatchRate("txRate"), MatchRate("gasRate")),
+		log.EXPECT().Noticef(progressTrackerReportFormat,
+			6, int64(0), uint64(0),
+			MatchRate(gomock.All(executor.Gt(7), executor.Lt(9)), "txRate"),
+			MatchRate(gomock.All(executor.Gt(700), executor.Lt(900)), "gasRate"),
+		),
 	)
 
 	ext.PreRun(executor.State{
@@ -72,6 +77,8 @@ func TestProgressTrackerExtension_LoggingHappens(t *testing.T) {
 		State:       db,
 		Substate:    s,
 	})
+
+	time.Sleep(500 * time.Millisecond)
 
 	// second processed block
 	ext.PostTransaction(executor.State{
