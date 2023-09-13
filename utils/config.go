@@ -316,7 +316,6 @@ var (
 	AidaDbFlag = cli.PathFlag{
 		Name:     "aida-db",
 		Usage:    "set substate, updateset and deleted accounts directory",
-		Required: true,
 	}
 	ContractNumberFlag = cli.Int64Flag{
 		Name:  "num-contracts",
