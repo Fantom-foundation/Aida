@@ -31,10 +31,10 @@ pipeline {
             }
 	}
 
-        stage('aida-vm-replay') {
+        stage('aida-vm') {
             steps {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
-                    sh "build/aida-vm replay ${VM} --aida-db=/var/opera/Aida/mainnet-data/aida-db --workers 32 ${fromBlock} ${toBlock}"
+                    sh "build/aida-vm ${VM} --aida-db=/var/opera/Aida/mainnet-data/aida-db --workers 32 ${fromBlock} ${toBlock}"
                 }
             }
         }
