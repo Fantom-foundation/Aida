@@ -42,7 +42,7 @@ func RunVm(ctx *cli.Context) error {
 // execution, in particular during unit tests.
 func run(
 	config *utils.Config,
-	provider executor.SubstateProvider,
+	provider executor.ActionProvider,
 	processor executor.Processor,
 	extra []executor.Extension,
 ) error {

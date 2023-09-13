@@ -29,7 +29,7 @@ func WithState(state state.StateDB) gomock.Matcher {
 	return withState{state}
 }
 
-// WithSubstate matches executor.State instances with the given substate.
+// WithSubstate matches executor.State instances with the given provider.
 func WithSubstate(substate *substate.Substate) gomock.Matcher {
 	return withSubstate{substate}
 }
@@ -118,7 +118,7 @@ func (m withSubstate) Matches(value any) bool {
 }
 
 func (m withSubstate) String() string {
-	return fmt.Sprintf("with substate %p", m.substate)
+	return fmt.Sprintf("with provider %p", m.substate)
 }
 
 type lt struct {

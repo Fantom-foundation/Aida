@@ -15,32 +15,6 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// TraceRecordCommand data structure for the record app
-var TraceRecordCommand = cli.Command{
-	Action:    traceRecordAction,
-	Name:      "record",
-	Usage:     "captures and records StateDB operations while processing blocks",
-	ArgsUsage: "<blockNumFirst> <blockNumLast>",
-	Flags: []cli.Flag{
-		&utils.UpdateBufferSizeFlag,
-		&utils.CpuProfileFlag,
-		&utils.SyncPeriodLengthFlag,
-		&utils.QuietFlag,
-		&substate.WorkersFlag,
-		&utils.ChainIDFlag,
-		&utils.TraceFileFlag,
-		&utils.TraceDebugFlag,
-		&utils.DebugFromFlag,
-		&utils.AidaDbFlag,
-		&logger.LogLevelFlag,
-	},
-	Description: `
-The trace record command requires two arguments:
-<blockNumFirst> <blockNumLast>
-<blockNumFirst> and <blockNumLast> are the first and
-last block of the inclusive range of blocks to trace transactions.`,
-}
-
 // traceRecordAction implements trace command for recording.
 func traceRecordAction(ctx *cli.Context) error {
 	substate.RecordReplay = true

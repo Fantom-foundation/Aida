@@ -10,7 +10,7 @@ import (
 	gomock "go.uber.org/mock/gomock"
 )
 
-// MockSubstateProvider is a mock of SubstateProvider interface.
+// MockSubstateProvider is a mock of ActionProvider interface.
 type MockSubstateProvider struct {
 	ctrl     *gomock.Controller
 	recorder *MockSubstateProviderMockRecorder

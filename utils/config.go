@@ -82,6 +82,13 @@ var keywordBlocks = map[ChainID]map[string]uint64{
 	},
 }
 
+type LoggerType byte
+
+const (
+	TransactionType LoggerType = iota
+	OperationType   LoggerType = iota
+)
+
 // special transaction number for pseudo transactions
 const PseudoTx = 99999
 
@@ -514,6 +521,7 @@ type Config struct {
 	UpdateOnFailure     bool           // if enabled and continue-on-failure is also enabled, this updates any error found in StateDb
 	NoHeartbeatLogging  bool           // disables heartbeat logging
 	TrackProgress       bool           // enables track progress logging
+	ProgressLoggerType  LoggerType
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.

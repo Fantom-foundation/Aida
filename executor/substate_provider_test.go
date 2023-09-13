@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"go.uber.org/mock/gomock"
@@ -18,7 +19,7 @@ func TestSubstateProvider_OpeningANonExistingDbResultsInAnError(t *testing.T) {
 	// Important: the following code does not panic.
 	_, err := OpenSubstateDb(&config, nil)
 	if err == nil {
-		t.Errorf("attempting to open a non-existing substate DB should fail")
+		t.Errorf("attempting to open a non-existing provider DB should fail")
 	}
 }
 
@@ -26,16 +27,16 @@ func TestSubstateProvider_IterateOverExistingDb(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	consumer := NewMockTxConsumer(ctrl)
 
-	// Prepare a directory containing some substate data.
+	// Prepare a directory containing some provider data.
 	path := t.TempDir()
 	if err := createSubstateDb(path); err != nil {
 		t.Fatalf("failed to setup test DB: %v", err)
 	}
 
-	// Open the substate data for reading.
+	// Open the provider data for reading.
 	provider, err := openSubstateDb(path)
 	if err != nil {
-		t.Fatalf("failed to open substate DB: %v", err)
+		t.Fatalf("failed to open provider DB: %v", err)
 	}
 	defer provider.Close()
 
@@ -54,16 +55,16 @@ func TestSubstateProvider_LowerBoundIsInclusive(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	consumer := NewMockTxConsumer(ctrl)
 
-	// Prepare a directory containing some substate data.
+	// Prepare a directory containing some provider data.
 	path := t.TempDir()
 	if err := createSubstateDb(path); err != nil {
 		t.Fatalf("failed to setup test DB: %v", err)
 	}
 
-	// Open the substate data for reading.
+	// Open the provider data for reading.
 	provider, err := openSubstateDb(path)
 	if err != nil {
-		t.Fatalf("failed to open substate DB: %v", err)
+		t.Fatalf("failed to open provider DB: %v", err)
 	}
 	defer provider.Close()
 
@@ -82,16 +83,16 @@ func TestSubstateProvider_UpperBoundIsExclusive(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	consumer := NewMockTxConsumer(ctrl)
 
-	// Prepare a directory containing some substate data.
+	// Prepare a directory containing some provider data.
 	path := t.TempDir()
 	if err := createSubstateDb(path); err != nil {
 		t.Fatalf("failed to setup test DB: %v", err)
 	}
 
-	// Open the substate data for reading.
+	// Open the provider data for reading.
 	provider, err := openSubstateDb(path)
 	if err != nil {
-		t.Fatalf("failed to open substate DB: %v", err)
+		t.Fatalf("failed to open provider DB: %v", err)
 	}
 	defer provider.Close()
 
@@ -109,16 +110,16 @@ func TestSubstateProvider_RangeCanBeEmpty(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	consumer := NewMockTxConsumer(ctrl)
 
-	// Prepare a directory containing some substate data.
+	// Prepare a directory containing some provider data.
 	path := t.TempDir()
 	if err := createSubstateDb(path); err != nil {
 		t.Fatalf("failed to setup test DB: %v", err)
 	}
 
-	// Open the substate data for reading.
+	// Open the provider data for reading.
 	provider, err := openSubstateDb(path)
 	if err != nil {
-		t.Fatalf("failed to open substate DB: %v", err)
+		t.Fatalf("failed to open provider DB: %v", err)
 	}
 	defer provider.Close()
 
@@ -131,16 +132,16 @@ func TestSubstateProvider_IterationCanBeAbortedByConsumer(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	consumer := NewMockTxConsumer(ctrl)
 
-	// Prepare a directory containing some substate data.
+	// Prepare a directory containing some provider data.
 	path := t.TempDir()
 	if err := createSubstateDb(path); err != nil {
 		t.Fatalf("failed to setup test DB: %v", err)
 	}
 
-	// Open the substate data for reading.
+	// Open the provider data for reading.
 	provider, err := openSubstateDb(path)
 	if err != nil {
-		t.Fatalf("failed to open substate DB: %v", err)
+		t.Fatalf("failed to open provider DB: %v", err)
 	}
 	defer provider.Close()
 
@@ -160,12 +161,12 @@ type TxConsumer interface {
 }
 
 func toConsumer(c TxConsumer) Consumer {
-	return func(info TransactionInfo) error {
+	return func(info TransactionInfo, _ operation.Operation) error {
 		return c.Consume(info.Block, info.Transaction, info.Substate)
 	}
 }
 
-func openSubstateDb(path string) (SubstateProvider, error) {
+func openSubstateDb(path string) (ActionProvider, error) {
 	config := utils.Config{}
 	config.AidaDb = path
 	config.Workers = 1

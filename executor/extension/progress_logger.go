@@ -10,9 +10,12 @@ import (
 )
 
 const (
-	ProgressLoggerDefaultReportFrequency = 15 * time.Second // how often will ticker trigger
-	progressLoggerReportFormat           = "Elapsed time: %v; current block %d; last interval rate ~%.2f Tx/s, ~%.2f MGas/s"
-	finalSummaryProgressReportFormat     = "Total elapsed time: %v; last block %d; total transaction rate ~%.2f Tx/s, ~%.2f MGas/s"
+	ProgressLoggerDefaultReportFrequency       = 15 * time.Second // how often will ticker trigger
+	transactionProgressLoggerReportFormat      = "Elapsed time: %v; current block %d; last interval rate ~%.2f Tx/s, ~%.2f MGas/s"
+	transactionProgressLoggerFinalReportFormat = "Total elapsed time: %v; last block %d; total transaction rate ~%.2f Tx/s, ~%.2f MGas/s"
+
+	operationProgressLoggerReportFormat      = "Elapsed time: %v; current block %d; last operation rate ~%.2f Op/s"
+	operationProgressLoggerFinalReportFormat = "Total elapsed time: %v; last block %d; total operation rate ~%.2f Op/s"
 )
 
 // MakeProgressLogger creates progress logger. It logs progress about processor depending on reportFrequency.
@@ -54,8 +57,12 @@ type progressLogger struct {
 func (l *progressLogger) PreRun(executor.State, *executor.Context) error {
 	l.wg.Add(1)
 
-	// pass the value for thread safety
-	go l.startReport(l.reportFrequency)
+	switch l.config.ProgressLoggerType {
+	case utils.OperationType:
+		go l.startOperationProgressLogger(l.reportFrequency)
+	case utils.TransactionType:
+		go l.startTransactionProgressLogger(l.reportFrequency)
+	}
 	return nil
 }
 
@@ -72,9 +79,9 @@ func (l *progressLogger) PostTransaction(state executor.State, _ *executor.Conte
 	return nil
 }
 
-// startReport runs in own goroutine. It accepts data from Executor from PostBock func.
+// startTransactionProgressLogger runs in own goroutine. It accepts data from Executor from PostBock func.
 // It reports current progress everytime we hit the ticker with defaultReportFrequencyInSeconds.
-func (l *progressLogger) startReport(reportFrequency time.Duration) {
+func (l *progressLogger) startTransactionProgressLogger(reportFrequency time.Duration) {
 	defer l.wg.Done()
 
 	start := time.Now()
@@ -92,7 +99,7 @@ func (l *progressLogger) startReport(reportFrequency time.Duration) {
 		txRate := float64(totalTx) / elapsed.Seconds()
 		gasRate := float64(totalGas) / elapsed.Seconds()
 
-		l.log.Noticef(finalSummaryProgressReportFormat, elapsed.Round(time.Second), currentBlock, txRate, gasRate/1e6)
+		l.log.Noticef(transactionProgressLoggerFinalReportFormat, elapsed.Round(time.Second), currentBlock, txRate, gasRate/1e6)
 	}()
 
 	var (
@@ -118,7 +125,7 @@ func (l *progressLogger) startReport(reportFrequency time.Duration) {
 			txRate := float64(currentIntervalTx) / now.Sub(lastReport).Seconds()
 			gasRate := float64(currentIntervalGas) / now.Sub(lastReport).Seconds()
 
-			l.log.Infof(progressLoggerReportFormat, elapsed.Round(1*time.Second), currentBlock, txRate, gasRate/1e6)
+			l.log.Infof(transactionProgressLoggerReportFormat, elapsed.Round(1*time.Second), currentBlock, txRate, gasRate/1e6)
 
 			lastReport = now
 			totalTx += currentIntervalTx
@@ -126,6 +133,56 @@ func (l *progressLogger) startReport(reportFrequency time.Duration) {
 
 			currentIntervalTx = 0
 			currentIntervalGas = 0
+		}
+	}
+
+}
+
+func (l *progressLogger) startOperationProgressLogger(reportFrequency time.Duration) {
+	defer l.wg.Done()
+
+	start := time.Now()
+	lastReport := time.Now()
+	ticker := time.NewTicker(reportFrequency)
+
+	var (
+		currentBlock                               int
+		totalOperations, currentIntervalOperations uint64
+	)
+
+	defer func() {
+		elapsed := time.Since(start)
+		opRate := float64(totalOperations) / elapsed.Seconds()
+
+		l.log.Noticef(operationProgressLoggerFinalReportFormat, elapsed.Round(time.Second), currentBlock, opRate)
+	}()
+
+	var (
+		in executor.State
+		ok bool
+	)
+	for {
+		select {
+		case in, ok = <-l.inputCh:
+			if !ok {
+				return
+			}
+
+			if in.Block > currentBlock {
+				currentBlock = in.Block
+			}
+
+			currentIntervalOperations++
+			totalOperations++
+
+		case now := <-ticker.C:
+			elapsed := now.Sub(start)
+			opRate := float64(currentIntervalOperations) / now.Sub(lastReport).Seconds()
+
+			l.log.Infof(operationProgressLoggerReportFormat, elapsed.Round(1*time.Second), currentBlock, opRate)
+
+			lastReport = now
+			currentIntervalOperations = 0
 		}
 	}
 

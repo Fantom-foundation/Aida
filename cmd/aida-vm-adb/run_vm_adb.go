@@ -57,7 +57,7 @@ func (r txProcessor) Process(state executor.State, context *executor.Context) er
 	return err
 }
 
-func run(config *utils.Config, provider executor.SubstateProvider, stateDb state.StateDB) error {
+func run(config *utils.Config, provider executor.ActionProvider, stateDb state.StateDB) error {
 	return executor.NewExecutor(provider).Run(
 		executor.Params{
 			From:       int(config.First),

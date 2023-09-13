@@ -58,13 +58,13 @@ func TestProgressLoggerExtension_LoggingHappens(t *testing.T) {
 
 	gomock.InOrder(
 		// scheduled logging
-		log.EXPECT().Infof(progressLoggerReportFormat,
+		log.EXPECT().Infof(transactionProgressLoggerReportFormat,
 			gomock.Any(), 1,
 			MatchRate(gomock.All(executor.Gt(0.9), executor.Lt(1.1)), "txRate"),
 			MatchRate(gomock.All(executor.Gt(90), executor.Lt(100)), "gasRate"),
 		),
 		// defer logging
-		log.EXPECT().Noticef(finalSummaryProgressReportFormat,
+		log.EXPECT().Noticef(transactionProgressLoggerFinalReportFormat,
 			gomock.Any(), 1,
 			MatchRate(gomock.All(executor.Gt(0.6), executor.Lt(0.7)), "txRate"),
 			MatchRate(gomock.All(executor.Gt(60), executor.Lt(70)), "gasRate"),

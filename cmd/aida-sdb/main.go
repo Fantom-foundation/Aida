@@ -17,8 +17,8 @@ func initTraceApp() *cli.App {
 		Copyright: "(c) 2022 Fantom Foundation",
 		Flags:     []cli.Flag{},
 		Commands: []*cli.Command{
-			&trace.TraceRecordCommand,
-			&trace.TraceReplayCommand,
+			&TraceRecordCommand,
+			&TraceReplayCommand,
 			&trace.TraceReplaySubstateCommand,
 		},
 	}

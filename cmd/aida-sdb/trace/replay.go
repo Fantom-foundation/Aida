@@ -17,56 +17,6 @@ import (
 
 const readBufferSize = 100000
 
-// TraceReplayCommand data structure for the replay app
-var TraceReplayCommand = cli.Command{
-	Action:    traceReplayAction,
-	Name:      "replay",
-	Usage:     "executes storage trace",
-	ArgsUsage: "<blockNumFirst> <blockNumLast>",
-	Flags: []cli.Flag{
-		&utils.CarmenSchemaFlag,
-		&utils.ChainIDFlag,
-		&utils.CpuProfileFlag,
-		&utils.QuietFlag,
-		&utils.SyncPeriodLengthFlag,
-		&utils.KeepDbFlag,
-		&utils.MemoryBreakdownFlag,
-		&utils.MemoryProfileFlag,
-		&utils.RandomSeedFlag,
-		&utils.PrimeThresholdFlag,
-		&utils.ProfileFlag,
-		&utils.ProfileFileFlag,
-		&utils.ProfileIntervalFlag,
-		&utils.RandomizePrimingFlag,
-		&utils.SkipPrimingFlag,
-		&utils.StateDbImplementationFlag,
-		&utils.StateDbVariantFlag,
-		&utils.StateDbSrcFlag,
-		&utils.VmImplementation,
-		&utils.DbTmpFlag,
-		&utils.UpdateBufferSizeFlag,
-		&utils.StateDbLoggingFlag,
-		&utils.ShadowDb,
-		&utils.ShadowDbImplementationFlag,
-		&utils.ShadowDbVariantFlag,
-		&substate.WorkersFlag,
-		&utils.TraceFileFlag,
-		&utils.TraceDirectoryFlag,
-		&utils.TraceDebugFlag,
-		&utils.DebugFromFlag,
-		&utils.ValidateFlag,
-		&utils.ValidateWorldStateFlag,
-		&utils.AidaDbFlag,
-		&logger.LogLevelFlag,
-	},
-	Description: `
-The trace replay command requires two arguments:
-<blockNumFirst> <blockNumLast>
-
-<blockNumFirst> and <blockNumLast> are the first and
-last block of the inclusive range of blocks to replay storage traces.`,
-}
-
 // readTrace reads operations from trace files and puts them into a channel.
 func readTrace(cfg *utils.Config, ch chan operation.Operation, log *logging.Logger) {
 	// create a list of files
