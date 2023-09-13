@@ -335,6 +335,9 @@ func TestProcessor_StateDbCanBeModifiedByExtensionsAndProcessorInSequentialRun(t
 	stateB := state.NewMockStateDB(ctrl)
 	stateC := state.NewMockStateDB(ctrl)
 	stateD := state.NewMockStateDB(ctrl)
+	stateE := state.NewMockStateDB(ctrl)
+	stateF := state.NewMockStateDB(ctrl)
+	stateG := state.NewMockStateDB(ctrl)
 
 	substate.EXPECT().
 		Run(gomock.Any(), gomock.Any(), gomock.Any()).
@@ -343,20 +346,20 @@ func TestProcessor_StateDbCanBeModifiedByExtensionsAndProcessorInSequentialRun(t
 			return nil
 		})
 
+	setState := func(state state.StateDB) func(State, *Context) {
+		return func(_ State, c *Context) {
+			c.State = state
+		}
+	}
+
 	gomock.InOrder(
-		extension.EXPECT().PreRun(gomock.Any(), WithState(stateA)),
-		extension.EXPECT().PreBlock(gomock.Any(), WithState(stateA)),
-		extension.EXPECT().PreTransaction(gomock.Any(), WithState(stateA)).Do(func(_ State, c *Context) {
-			c.State = stateB
-		}),
-		processor.EXPECT().Process(gomock.Any(), WithState(stateB)).Do(func(_ State, c *Context) {
-			c.State = stateC
-		}),
-		extension.EXPECT().PostTransaction(gomock.Any(), WithState(stateC)).Do(func(_ State, c *Context) {
-			c.State = stateD
-		}),
-		extension.EXPECT().PostBlock(gomock.Any(), WithState(stateD)),
-		extension.EXPECT().PostRun(gomock.Any(), WithState(stateD), nil),
+		extension.EXPECT().PreRun(gomock.Any(), WithState(stateA)).Do(setState(stateB)),
+		extension.EXPECT().PreBlock(gomock.Any(), WithState(stateB)).Do(setState(stateC)),
+		extension.EXPECT().PreTransaction(gomock.Any(), WithState(stateC)).Do(setState(stateD)),
+		processor.EXPECT().Process(gomock.Any(), WithState(stateD)).Do(setState(stateE)),
+		extension.EXPECT().PostTransaction(gomock.Any(), WithState(stateE)).Do(setState(stateF)),
+		extension.EXPECT().PostBlock(gomock.Any(), WithState(stateF)).Do(setState(stateG)),
+		extension.EXPECT().PostRun(gomock.Any(), WithState(stateG), nil),
 	)
 
 	err := NewExecutor(substate).Run(
@@ -379,6 +382,7 @@ func TestProcessor_StateDbCanBeModifiedByExtensionsAndProcessorInParallelRun(t *
 	stateB := state.NewMockStateDB(ctrl)
 	stateC := state.NewMockStateDB(ctrl)
 	stateD := state.NewMockStateDB(ctrl)
+	stateE := state.NewMockStateDB(ctrl)
 
 	substate.EXPECT().
 		Run(gomock.Any(), gomock.Any(), gomock.Any()).
@@ -387,19 +391,19 @@ func TestProcessor_StateDbCanBeModifiedByExtensionsAndProcessorInParallelRun(t *
 			return nil
 		})
 
+	setState := func(state state.StateDB) func(State, *Context) {
+		return func(_ State, c *Context) {
+			c.State = state
+		}
+	}
+
 	gomock.InOrder(
-		extension.EXPECT().PreRun(gomock.Any(), WithState(stateA)),
-		extension.EXPECT().PreTransaction(gomock.Any(), WithState(stateA)).Do(func(_ State, c *Context) {
-			c.State = stateB
-		}),
-		processor.EXPECT().Process(gomock.Any(), WithState(stateB)).Do(func(_ State, c *Context) {
-			c.State = stateC
-		}),
-		extension.EXPECT().PostTransaction(gomock.Any(), WithState(stateC)).Do(func(_ State, c *Context) {
-			c.State = stateD
-		}),
+		extension.EXPECT().PreRun(gomock.Any(), WithState(stateA)).Do(setState(stateB)),
+		extension.EXPECT().PreTransaction(gomock.Any(), WithState(stateB)).Do(setState(stateC)),
+		processor.EXPECT().Process(gomock.Any(), WithState(stateC)).Do(setState(stateD)),
+		extension.EXPECT().PostTransaction(gomock.Any(), WithState(stateD)).Do(setState(stateE)),
 		// the context from a parallel execution is not merged back to the top-level context
-		extension.EXPECT().PostRun(gomock.Any(), WithState(stateA), nil),
+		extension.EXPECT().PostRun(gomock.Any(), WithState(stateB), nil),
 	)
 
 	err := NewExecutor(substate).Run(
