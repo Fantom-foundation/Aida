@@ -3,6 +3,7 @@ package extension
 import (
 	"fmt"
 	"io"
+	"math/big"
 	"os"
 	"path/filepath"
 	"testing"
@@ -10,6 +11,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/ethereum/go-ethereum/common"
 	"go.uber.org/mock/gomock"
 )
 
@@ -178,23 +180,29 @@ func TestStateDbManager_UsingExistingSourceDb(t *testing.T) {
 
 	ext := MakeStateDbManager(config)
 
-	state := executor.State{
+	state0 := executor.State{
 		Block: 0,
 	}
 
 	ctx := &executor.Context{}
 
-	if err := ext.PreRun(state, ctx); err != nil {
+	if err := ext.PreRun(state0, ctx); err != nil {
 		t.Fatalf("failed to to run pre-run: %v", err)
 	}
 
-	if err := ext.PostRun(state, ctx, nil); err != nil {
+	// insert random data into the source
+	// then the second stateDb hash can be confirmed as correct copy of the source
+	insertRandomDataIntoStateDb(t, ctx)
+
+	expectedHash := ctx.State.GetHash()
+
+	if err := ext.PostRun(state0, ctx, nil); err != nil {
 		t.Fatalf("failed to to run post-run: %v", err)
 	}
 
 	// create database from source
 
-	expectedName := fmt.Sprintf("state_db_%v_%v", config.DbImpl, state.Block)
+	expectedName := fmt.Sprintf("state_db_%v_%v", config.DbImpl, state0.Block)
 	sourcePath := filepath.Join(config.DbTmp, expectedName)
 
 	tmpOutDir := t.TempDir()
@@ -206,11 +214,17 @@ func TestStateDbManager_UsingExistingSourceDb(t *testing.T) {
 
 	ctx = &executor.Context{}
 
-	if err := ext.PreRun(state, ctx); err != nil {
+	if err := ext.PreRun(state0, ctx); err != nil {
 		t.Fatalf("failed to to run pre-run: %v", err)
 	}
 
-	if err := ext.PostRun(state, ctx, nil); err != nil {
+	currentHash := ctx.State.GetHash()
+
+	if currentHash != expectedHash {
+		t.Fatalf("stateDB created from existing source stateDB had incorrect hash; got: %v expected: %v", currentHash, expectedHash)
+	}
+
+	if err := ext.PostRun(state0, ctx, nil); err != nil {
 		t.Fatalf("failed to to run post-run: %v", err)
 	}
 
@@ -222,6 +236,17 @@ func TestStateDbManager_UsingExistingSourceDb(t *testing.T) {
 	if empty {
 		t.Fatalf("Source StateDb was removed from %v; %v", sourcePath, err)
 	}
+}
+
+func insertRandomDataIntoStateDb(t *testing.T, ctx *executor.Context) {
+	addr := common.BytesToAddress(state.MakeRandomByteSlice(t, 40))
+
+	// get randomized balance
+	additionBase := state.GetRandom(1, 1000*5000)
+	addition := big.NewInt(int64(additionBase))
+
+	ctx.State.CreateAccount(addr)
+	ctx.State.AddBalance(addr, addition)
 }
 
 func IsEmptyDirectory(name string) (bool, error) {

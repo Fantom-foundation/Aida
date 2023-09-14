@@ -36,13 +36,16 @@ func (m *StateDbManager) PostRun(state executor.State, ctx *executor.Context, _ 
 		return os.RemoveAll(m.config.StateDbSrc)
 	}
 
-	rootHash, _ := ctx.State.Commit(true)
+	rootHash := ctx.State.GetHash()
 	if err := utils.WriteStateDbInfo(m.StateDbPath, m.config, uint64(state.Block), rootHash); err != nil {
 		return fmt.Errorf("failed to create state-db info file; %v", err)
 	}
 
 	// stateDb needs to be closed between committing and renaming
-	ctx.State.Close()
+	if err := ctx.State.Close(); err != nil {
+		return fmt.Errorf("failed to close state-db; %v", err)
+	}
+
 	newName := utils.RenameTempStateDBDirectory(m.config, m.StateDbPath, uint64(state.Block))
 	m.log.Noticef("State-db directory: %v", newName)
 	return nil
