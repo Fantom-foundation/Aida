@@ -64,7 +64,7 @@ func TestVmSdb_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		db.EXPECT().EndBlock(),
 	)
 
-	if err := run(config, substate, db); err != nil {
+	if err := run(config, substate, db, true); err != nil {
 		t.Errorf("run failed: %v", err)
 	}
 }
