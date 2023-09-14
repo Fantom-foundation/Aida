@@ -38,7 +38,6 @@ func TestStateDbManager_DbClosureWithKeepDb(t *testing.T) {
 	config := &utils.Config{}
 
 	tmpDir := t.TempDir()
-	defer os.RemoveAll(tmpDir)
 	config.DbTmp = tmpDir
 	config.DbImpl = "geth"
 	config.KeepDb = true
@@ -71,7 +70,6 @@ func TestStateDbManager_DoNotKeepDb(t *testing.T) {
 	config := &utils.Config{}
 
 	tmpDir := t.TempDir()
-	defer os.RemoveAll(tmpDir)
 	config.DbTmp = tmpDir
 	config.DbImpl = "geth"
 	config.KeepDb = false
@@ -105,7 +103,6 @@ func TestStateDbManager_KeepDb(t *testing.T) {
 	config := &utils.Config{}
 
 	tmpDir := t.TempDir()
-	defer os.RemoveAll(tmpDir)
 	config.DbTmp = tmpDir
 	config.DbImpl = "geth"
 	config.KeepDb = true
@@ -139,7 +136,6 @@ func TestStateDbManager_StateDbInfoExistence(t *testing.T) {
 	config := &utils.Config{}
 
 	tmpDir := t.TempDir()
-	defer os.RemoveAll(tmpDir)
 	config.DbTmp = tmpDir
 	config.DbImpl = "geth"
 	config.KeepDb = true
@@ -176,7 +172,6 @@ func TestStateDbManager_UsingExistingSourceDb(t *testing.T) {
 
 	// create source database
 	tmpDir := t.TempDir()
-	defer os.RemoveAll(tmpDir)
 	config.DbTmp = tmpDir
 	config.DbImpl = "geth"
 	config.KeepDb = true
@@ -203,7 +198,6 @@ func TestStateDbManager_UsingExistingSourceDb(t *testing.T) {
 	sourcePath := filepath.Join(config.DbTmp, expectedName)
 
 	tmpOutDir := t.TempDir()
-	defer os.RemoveAll(tmpOutDir)
 	config.DbTmp = tmpOutDir
 	config.StateDbSrc = sourcePath
 	config.CopySrcDb = true
