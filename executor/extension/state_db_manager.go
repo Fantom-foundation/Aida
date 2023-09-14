@@ -9,35 +9,40 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
-type StateDbManager struct {
+type stateDbManager struct {
 	NilExtension
 	config      *utils.Config
-	StateDbPath string
+	stateDbPath string
 	log         logger.Logger
 }
 
 // MakeStateDbManager creates a executor.Extension that commits state of StateDb if keep-db is enabled
-func MakeStateDbManager(config *utils.Config) *StateDbManager {
-	return &StateDbManager{
+func MakeStateDbManager(config *utils.Config) *stateDbManager {
+	return &stateDbManager{
 		config: config,
 		log:    logger.NewLogger(config.LogLevel, "Db manager"),
 	}
 }
 
-func (m *StateDbManager) PreRun(state executor.State, ctx *executor.Context) error {
+func (m *stateDbManager) PreRun(state executor.State, ctx *executor.Context) error {
 	var err error
-	ctx.State, m.StateDbPath, err = utils.PrepareStateDB(m.config)
+	ctx.State, m.stateDbPath, err = utils.PrepareStateDB(m.config)
+	if !m.config.KeepDb {
+		m.log.Warningf("--keep-db is not used. Directory %v with DB will be removed at the end of this run.", m.stateDbPath)
+	}
 	return err
 }
 
-func (m *StateDbManager) PostRun(state executor.State, ctx *executor.Context, _ error) error {
+func (m *stateDbManager) PostRun(state executor.State, ctx *executor.Context, _ error) error {
 	if !m.config.KeepDb {
-		ctx.State.Close()
+		if err := ctx.State.Close(); err != nil {
+			return fmt.Errorf("failed to close state-db; %v", err)
+		}
 		return os.RemoveAll(m.config.StateDbSrc)
 	}
 
 	rootHash := ctx.State.GetHash()
-	if err := utils.WriteStateDbInfo(m.StateDbPath, m.config, uint64(state.Block), rootHash); err != nil {
+	if err := utils.WriteStateDbInfo(m.stateDbPath, m.config, uint64(state.Block), rootHash); err != nil {
 		return fmt.Errorf("failed to create state-db info file; %v", err)
 	}
 
@@ -46,7 +51,7 @@ func (m *StateDbManager) PostRun(state executor.State, ctx *executor.Context, _ 
 		return fmt.Errorf("failed to close state-db; %v", err)
 	}
 
-	newName := utils.RenameTempStateDBDirectory(m.config, m.StateDbPath, uint64(state.Block))
+	newName := utils.RenameTempStateDBDirectory(m.config, m.stateDbPath, uint64(state.Block))
 	m.log.Noticef("State-db directory: %v", newName)
 	return nil
 }

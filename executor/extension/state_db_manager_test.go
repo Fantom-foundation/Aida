@@ -47,13 +47,13 @@ func TestStateDbManager_DbClosureWithKeepDb(t *testing.T) {
 	ext := MakeStateDbManager(config)
 
 	// setting dummy StateDbPath path for statedb_info.json output
-	ext.StateDbPath = tmpDir
+	ext.stateDbPath = tmpDir
 
 	mockCtrl := gomock.NewController(t)
 	mockStateDB := state.NewMockStateDB(mockCtrl)
 
 	gomock.InOrder(
-		mockStateDB.EXPECT().Commit(true),
+		mockStateDB.EXPECT().GetHash(),
 		mockStateDB.EXPECT().Close(),
 	)
 
