@@ -65,7 +65,7 @@ var RunVMApp = cli.App{
 		&utils.ContinueOnFailureFlag,
 		&utils.QuietFlag,
 		&utils.SyncPeriodLengthFlag,
-		//&utils.KeepDbFlag,
+		&utils.KeepDbFlag,
 		//&utils.MaxNumTransactionsFlag,
 		&utils.ValidateTxStateFlag,
 		//&utils.ValidateWorldStateFlag,
