@@ -67,7 +67,6 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 			return nil, "", fmt.Errorf("failed to copy source statedb to temporary directory; %v", err)
 		}
 		stateDbPath = tmpStateDbPath
-		fmt.Println(stateDbPath)
 	} else {
 		// when not using ShadowDb, StateDbSrc is path to the StateDb itself
 		stateDbPath = cfg.StateDbSrc
