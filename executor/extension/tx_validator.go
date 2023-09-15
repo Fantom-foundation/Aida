@@ -19,6 +19,10 @@ type txValidator struct {
 }
 
 func MakeTxValidator(config *utils.Config) executor.Extension {
+	// todo remove this line once utils.ProcessTx(...) is moved here
+	// tx validation is integrated in utils.ProcessTx(...) so using the Extension now would validate two times the same substate
+	return NilExtension{}
+
 	if !config.ValidateTxState {
 		return NilExtension{}
 	}

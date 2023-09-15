@@ -17,6 +17,8 @@ func RunVmSdb(ctx *cli.Context) error {
 		return err
 	}
 
+	cfg.StateValidationMode = utils.SubsetCheck
+
 	substateDb, err := executor.OpenSubstateDb(cfg, ctx)
 	if err != nil {
 		return err
