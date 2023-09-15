@@ -377,12 +377,7 @@ func (c *cloner) readUpdateSet(isFirstPatch bool) uint64 {
 	if c.typ == utils.CloneType {
 		c.read([]byte(substate.SubstateAllocPrefix), 0, endCond)
 
-		// check if update-set contained at least one set (first set with world-state), then aida-db must be corrupted
-		if lastUpdateBeforeRange == 0 {
-			c.errCh <- fmt.Errorf("updateset didn't contain any records - unable to create aida-db without initial world-state")
-			return 0
-		}
-
+		// if there is no updateset before interval (first 1M blocks) then 0 is returned
 		return lastUpdateBeforeRange
 	} else if c.typ == utils.PatchType {
 		var wantedBlock uint64
