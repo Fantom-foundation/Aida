@@ -61,7 +61,7 @@ func (v *txValidator) PreTransaction(state executor.State, context *executor.Con
 		return nil
 	}
 
-	return errors.New("too many errors")
+	return errors.New("maximum number of errors occurred")
 }
 
 // PostTransaction validates OutputAlloc in given substate
@@ -77,7 +77,7 @@ func (v *txValidator) PostTransaction(state executor.State, context *executor.Co
 		return nil
 	}
 
-	return errors.New("too many errors")
+	return errors.New("maximum number of errors occurred")
 }
 
 // PostRun informs user how many errors were found - if ContinueOnFailureIsEnabled otherwise success is reported.

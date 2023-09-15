@@ -150,6 +150,11 @@ func TestTxValidator_SingleErrorInPreTransactionReturnsErrorWithNoContinueOnFail
 		t.Errorf("PreTransaction must return an error!")
 	}
 
+	err = ext.PostRun(executor.State{}, nil, nil)
+	if err == nil {
+		t.Errorf("PostRun must return an error!")
+	}
+
 	got := err.Error()
 	want := incorrectInputTestErr
 
@@ -187,6 +192,11 @@ func TestTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueOnFai
 
 	if err == nil {
 		t.Errorf("PreTransaction must return an error!")
+	}
+
+	err = ext.PostRun(executor.State{}, nil, nil)
+	if err == nil {
+		t.Errorf("PostRun must return an error!")
 	}
 
 	got := err.Error()

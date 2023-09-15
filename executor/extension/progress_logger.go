@@ -83,18 +83,9 @@ func (l *progressLogger) startReport(reportFrequency time.Duration) {
 		totalGas, currentIntervalGas uint64
 	)
 
-	// block the reporting before first data appears
-	in, ok := <-l.inputCh
-	if !ok {
-		return
-	}
-
 	start := time.Now()
 	lastReport := time.Now()
 	ticker := time.NewTicker(reportFrequency)
-
-	currentIntervalTx++
-	currentIntervalGas += in.Substate.Result.GasUsed
 
 	defer func() {
 		elapsed := time.Since(start)
@@ -104,6 +95,10 @@ func (l *progressLogger) startReport(reportFrequency time.Duration) {
 		l.log.Noticef(finalSummaryProgressReportFormat, elapsed.Round(time.Second), currentBlock, txRate, gasRate/1e6)
 	}()
 
+	var (
+		in executor.State
+		ok bool
+	)
 	for {
 		select {
 		case in, ok = <-l.inputCh:
@@ -119,6 +114,10 @@ func (l *progressLogger) startReport(reportFrequency time.Duration) {
 			currentIntervalGas += in.Substate.Result.GasUsed
 
 		case now := <-ticker.C:
+			// skip if no data are present
+			if currentIntervalTx == 0 {
+				continue
+			}
 			elapsed := now.Sub(start)
 			txRate := float64(currentIntervalTx) / now.Sub(lastReport).Seconds()
 			gasRate := float64(currentIntervalGas) / now.Sub(lastReport).Seconds()
