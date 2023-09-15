@@ -705,3 +705,88 @@ func TestProcessor_SubstateIsPropagatedToTheProcessorAndAllExtensionsInParallelE
 		t.Errorf("execution failed: %v", err)
 	}
 }
+
+func TestProcessor_APanicInAnExecutorSkipsPostRunActions_InSequentialExecution(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	provider := NewMockSubstateProvider(ctrl)
+	processor := NewMockProcessor(ctrl)
+	extension := NewMockExtension(ctrl)
+
+	provider.EXPECT().
+		Run(gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(from int, to int, consume Consumer) error {
+			return consume(TransactionInfo{Block: from, Transaction: 7})
+		})
+
+	extension.EXPECT().PreRun(gomock.Any(), gomock.Any())
+	extension.EXPECT().PreBlock(gomock.Any(), gomock.Any())
+	extension.EXPECT().PreTransaction(gomock.Any(), gomock.Any())
+
+	stop := "stop"
+	processor.EXPECT().Process(gomock.Any(), gomock.Any()).Do(func(any, any) {
+		panic(stop)
+	})
+
+	panicReachedCaller := new(bool)
+	t.Cleanup(func() {
+		if !*panicReachedCaller {
+			t.Errorf("expected panic did not reach top-level")
+		}
+	})
+	defer func() {
+		if r := recover(); r != nil {
+			if r != stop {
+				t.Errorf("unexpected panic, wanted %v, got %v", r, stop)
+			}
+			*panicReachedCaller = true
+		}
+	}()
+
+	NewExecutor(provider).Run(
+		Params{From: 10, To: 11},
+		processor,
+		[]Extension{extension},
+	)
+}
+
+func TestProcessor_APanicInAnExecutorSkipsPostRunActions_InParallelExecution(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	provider := NewMockSubstateProvider(ctrl)
+	processor := NewMockProcessor(ctrl)
+	extension := NewMockExtension(ctrl)
+
+	provider.EXPECT().
+		Run(gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(from int, to int, consume Consumer) error {
+			return consume(TransactionInfo{Block: from, Transaction: 7})
+		})
+
+	extension.EXPECT().PreRun(gomock.Any(), gomock.Any())
+	extension.EXPECT().PreTransaction(gomock.Any(), gomock.Any())
+
+	stop := "stop"
+	processor.EXPECT().Process(gomock.Any(), gomock.Any()).Do(func(any, any) {
+		panic(stop)
+	})
+
+	panicReachedCaller := new(bool)
+	t.Cleanup(func() {
+		if !*panicReachedCaller {
+			t.Errorf("expected panic did not reach top-level")
+		}
+	})
+	defer func() {
+		if r := recover(); r != nil {
+			if r != stop {
+				t.Errorf("unexpected panic, wanted %v, got %v", r, stop)
+			}
+			*panicReachedCaller = true
+		}
+	}()
+
+	NewExecutor(provider).Run(
+		Params{From: 10, To: 11, NumWorkers: 2},
+		processor,
+		[]Extension{extension},
+	)
+}
