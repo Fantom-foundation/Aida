@@ -208,7 +208,8 @@ func (c *cloner) clone(isFirstPatch bool) error {
 	// update c.cfg.First block before loading deletions and substates, because for utils.CloneType those are necessery to be from last updateset onward
 	lastUpdateBeforeRange := c.readUpdateSet(isFirstPatch)
 	if c.typ == utils.CloneType {
-		if lastUpdateBeforeRange < c.cfg.First {
+		// check whether updateset before interval exists
+		if lastUpdateBeforeRange < c.cfg.First && lastUpdateBeforeRange != 0 {
 			c.log.Noticef("Last updateset found at block %v, changing first block to %v", lastUpdateBeforeRange, lastUpdateBeforeRange+1)
 			c.cfg.First = lastUpdateBeforeRange + 1
 		}
