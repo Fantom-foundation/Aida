@@ -6,6 +6,7 @@ import (
 	"math"
 	"math/big"
 	"os"
+	"strconv"
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/logger"
@@ -22,6 +23,7 @@ func prepareMockCliContext() *cli.Context {
 	flagSet.Bool(ValidateTxStateFlag.Name, true, "enables transaction state validation")
 	flagSet.Bool(ContinueOnFailureFlag.Name, true, "continue execute after validation failure detected")
 	flagSet.Bool(ValidateWorldStateFlag.Name, true, "enables end-state validation")
+	flagSet.String(AidaDbFlag.Name, "./test.db", "set substate, updateset and deleted accounts directory")
 	flagSet.String(logger.LogLevelFlag.Name, "info", "Level of the logging of the app action (\"critical\", \"error\", \"warning\", \"notice\", \"info\", \"debug\"; default: INFO)")
 
 	ctx := cli.NewContext(cli.NewApp(), flagSet, nil)
@@ -331,5 +333,222 @@ func TestUtilsConfig_VmImplsAreRegistered(t *testing.T) {
 		if evm == nil {
 			t.Errorf("Unable to create EVM with InterpreterImpl %s", interpreterImpl)
 		}
+	}
+}
+
+// TestUtilsConfig_getChainIdFromDB tests if chainID can be loaded from AidaDB correctly
+func TestUtilsConfig_getChainIdFromDB(t *testing.T) {
+	// prepare components
+	// create new leveldb
+	var (
+		logLevel         = "INFO"
+		firstBlock       = uint64(4564026)
+		lastBlock        = uint64(20001704)
+		firstEpoch       = uint64(100)
+		lastEpoch        = uint64(200)
+		chainId          = MainnetChainID
+		extractedChainId = UnknownChainID
+	)
+
+	testDb, err := rawdb.NewLevelDBDatabase("./test.db", 1024, 100, "test-db", false)
+	if err != nil {
+		t.Fatalf("cannot open patch db; %v", err)
+	}
+	defer func() {
+		err := os.RemoveAll("./test.db")
+		if err != nil {
+
+		}
+	}()
+
+	// create fake metadata
+	err = ProcessPatchLikeMetadata(testDb, logLevel, firstBlock, lastBlock, firstEpoch, lastEpoch, chainId, true, nil)
+	if err != nil {
+		t.Fatalf("cannot create a metadata; %v", err)
+	}
+	err = testDb.Close()
+	if err != nil {
+		t.Fatalf("cannot close db; %v", err)
+	}
+
+	// prepare mock config
+	cfg := &Config{AidaDb: "./test.db", LogLevel: "info"}
+
+	// prepare logger
+	log := logger.NewLogger(cfg.LogLevel, "Utils_config_test")
+
+	// test getChainId function
+	extractedChainId, err = getChainId(cfg, log)
+	if err != nil {
+		t.Fatalf("cannot get chain ID; %v", err)
+	}
+
+	if extractedChainId != chainId {
+		t.Fatalf("failed to get chainId correctly from AidaDB; Is: %v; Should be: %v", extractedChainId, chainId)
+	}
+}
+
+// TestUtilsConfig_getDefaultChainId tests if unknown chainID will be replaced with the mainnet chainID
+func TestUtilsConfig_getDefaultChainId(t *testing.T) {
+	// prepare components
+	var (
+		err              error
+		chainId          = MainnetChainID
+		extractedChainId = UnknownChainID
+	)
+
+	// prepare mock config
+	cfg := &Config{AidaDb: "./test.db", LogLevel: "info"}
+
+	// prepare logger
+	log := logger.NewLogger(cfg.LogLevel, "Utils_config_test")
+
+	// test getChainId function
+	extractedChainId, err = getChainId(cfg, log)
+	if err != nil {
+		t.Fatalf("cannot get chain ID; %v", err)
+	}
+
+	if extractedChainId != chainId {
+		t.Fatalf("failed to get chainId correctly from AidaDB; Is: %v; Should be: %v", extractedChainId, chainId)
+	}
+}
+
+// TestUtilsConfig_parseCmdArgsBlockRange tests correct parsing of cli arguments for block range
+func TestUtilsConfig_parseCmdArgsBlockRange(t *testing.T) {
+	// prepare components
+	var (
+		mode     = BlockRangeArgs
+		firstArg = "15"
+		lastArg  = "30"
+	)
+
+	// parse cli arguments slice
+	first, last, _, err := parseCmdArgs([]string{firstArg, lastArg}, mode)
+	if err != nil {
+		t.Fatalf("cannot parse the cli arguments; %v", err)
+	}
+
+	// check if the arguments were parsed correctly
+	if parsedFirst, _ := strconv.ParseUint(firstArg, 10, 64); parsedFirst != first {
+		t.Fatalf("failed to get first argument correctly; Is: %d; Should be: %s", parsedFirst, firstArg)
+	}
+
+	if parsedLast, _ := strconv.ParseUint(lastArg, 10, 64); parsedLast != last {
+		t.Fatalf("failed to get last argument correctly; Is: %d; Should be: %s", parsedLast, lastArg)
+	}
+}
+
+// TestUtilsConfig_parseCmdArgsBlockRangeInvalid tests parsing of invalid cli arguments length for block range
+func TestUtilsConfig_parseCmdArgsBlockRangeInvalid(t *testing.T) {
+	// prepare components
+	var (
+		mode = BlockRangeArgs
+	)
+
+	// parse cli arguments slice of insufficient length
+	_, _, _, err := parseCmdArgs([]string{"test"}, mode)
+	if err == nil {
+		t.Fatalf("failed to throw an error")
+	}
+}
+
+// TestUtilsConfig_parseCmdArgsBlockRangeProfileDb tests correct parsing of cli arguments for block range
+// and profiling DB
+func TestUtilsConfig_parseCmdArgsBlockRangeProfileDb(t *testing.T) {
+	// prepare components
+	var (
+		mode         = BlockRangeArgsProfileDB
+		firstArg     = "15"
+		lastArg      = "30"
+		profileDbArg = "./test.db"
+	)
+
+	// parse cli arguments slice
+	first, last, profileDb, err := parseCmdArgs([]string{firstArg, lastArg, profileDbArg}, mode)
+	if err != nil {
+		t.Fatalf("cannot parse the cli arguments; %v", err)
+	}
+
+	// check if the arguments were parsed correctly
+	if parsedFirst, _ := strconv.ParseUint(firstArg, 10, 64); parsedFirst != first {
+		t.Fatalf("failed to get first argument correctly; Is: %d; Should be: %s", parsedFirst, firstArg)
+	}
+
+	if parsedLast, _ := strconv.ParseUint(lastArg, 10, 64); parsedLast != last {
+		t.Fatalf("failed to get last argument correctly; Is: %d; Should be: %s", parsedLast, lastArg)
+	}
+
+	if profileDbArg != profileDb {
+		t.Fatalf("failed to get last argument correctly; Is: %s; Should be: %s", profileDb, profileDbArg)
+	}
+}
+
+// TestUtilsConfig_parseCmdArgsBlockRangeProfileDbInvalid tests parsing of invalid cli arguments length for block range
+// and profiling DB
+func TestUtilsConfig_parseCmdArgsBlockRangeProfileDbInvalid(t *testing.T) {
+	// prepare components
+	var (
+		mode = BlockRangeArgsProfileDB
+	)
+
+	// parse cli arguments slice of insufficient length
+	_, _, _, err := parseCmdArgs([]string{"test"}, mode)
+	if err == nil {
+		t.Fatalf("failed to throw an error")
+	}
+
+	// second try with length bigger than 3
+	_, _, _, err = parseCmdArgs([]string{"test", "test", "test", "test"}, mode)
+	if err == nil {
+		t.Fatalf("failed to throw an error")
+	}
+}
+
+// TestUtilsConfig_parseCmdArgsLastBlock tests correct parsing of cli argument for last block number
+func TestUtilsConfig_parseCmdArgsLastBlock(t *testing.T) {
+	// prepare components
+	var (
+		mode    = LastBlockArg
+		lastArg = "30"
+	)
+
+	// parse cli arguments slice
+	_, last, _, err := parseCmdArgs([]string{lastArg}, mode)
+	if err != nil {
+		t.Fatalf("cannot parse the cli arguments; %v", err)
+	}
+
+	// check if the arguments were parsed correctly
+	if parsedLast, _ := strconv.ParseUint(lastArg, 10, 64); parsedLast != last {
+		t.Fatalf("failed to get last argument correctly; Is: %d; Should be: %s", parsedLast, lastArg)
+	}
+}
+
+// TestUtilsConfig_parseCmdArgsLastBlockInvalid tests parsing of invalid cli arguments length for last block number
+func TestUtilsConfig_parseCmdArgsLastBlockInvalid(t *testing.T) {
+	// prepare components
+	var (
+		mode = LastBlockArg
+	)
+
+	// parse cli arguments slice of insufficient length
+	_, _, _, err := parseCmdArgs([]string{"test"}, mode)
+	if err == nil {
+		t.Fatalf("failed to throw an error")
+	}
+}
+
+// TestUtilsConfig_parseCmdArgsOneToNInvalid tests parsing of invalid cli arguments length for last block number
+func TestUtilsConfig_parseCmdArgsOneToNInvalid(t *testing.T) {
+	// prepare components
+	var (
+		mode = OneToNArgs
+	)
+
+	// parse cli arguments slice of insufficient length
+	_, _, _, err := parseCmdArgs([]string{}, mode)
+	if err == nil {
+		t.Fatalf("failed to throw an error")
 	}
 }
