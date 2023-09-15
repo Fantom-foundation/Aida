@@ -32,6 +32,7 @@ func PrepareStateDB(cfg *Config) (state.StateDB, string, error) {
 	// db source was specified
 	if cfg.StateDbSrc != "" {
 		db, dbPath, err = useExistingStateDB(cfg)
+		cfg.IsExistingStateDb = true
 	} else {
 		db, dbPath, err = makeNewStateDB(cfg)
 		cfg.StateDbSrc = dbPath

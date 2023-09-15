@@ -77,15 +77,24 @@ func (l *progressLogger) PostTransaction(state executor.State, _ *executor.Conte
 func (l *progressLogger) startReport(reportFrequency time.Duration) {
 	defer l.wg.Done()
 
-	start := time.Now()
-	lastReport := time.Now()
-	ticker := time.NewTicker(reportFrequency)
-
 	var (
 		currentBlock                 int
 		totalTx, currentIntervalTx   uint64
 		totalGas, currentIntervalGas uint64
 	)
+
+	// block the reporting before first data appears
+	in, ok := <-l.inputCh
+	if !ok {
+		return
+	}
+
+	start := time.Now()
+	lastReport := time.Now()
+	ticker := time.NewTicker(reportFrequency)
+
+	currentIntervalTx++
+	currentIntervalGas += in.Substate.Result.GasUsed
 
 	defer func() {
 		elapsed := time.Since(start)
@@ -95,10 +104,6 @@ func (l *progressLogger) startReport(reportFrequency time.Duration) {
 		l.log.Noticef(finalSummaryProgressReportFormat, elapsed.Round(time.Second), currentBlock, txRate, gasRate/1e6)
 	}()
 
-	var (
-		in executor.State
-		ok bool
-	)
 	for {
 		select {
 		case in, ok = <-l.inputCh:
