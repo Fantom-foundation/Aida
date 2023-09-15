@@ -57,11 +57,11 @@ func (v *txValidator) PreTransaction(state executor.State, context *executor.Con
 
 	err = fmt.Errorf("input error at block %v tx %v; %v", state.Block, state.Transaction, err)
 
-	if v.checkTxErr(err) {
-		return nil
+	if v.hasHasErr(err) {
+		return errors.New("maximum number of errors occurred")
 	}
 
-	return errors.New("maximum number of errors occurred")
+	return nil
 }
 
 // PostTransaction validates OutputAlloc in given substate
@@ -73,11 +73,11 @@ func (v *txValidator) PostTransaction(state executor.State, context *executor.Co
 
 	err = fmt.Errorf("output error at block %v tx %v; %v", state.Block, state.Transaction, err)
 
-	if v.checkTxErr(err) {
-		return nil
+	if v.hasHasErr(err) {
+		return errors.New("maximum number of errors occurred")
 	}
 
-	return errors.New("maximum number of errors occurred")
+	return nil
 }
 
 // PostRun informs user how many errors were found - if ContinueOnFailureIsEnabled otherwise success is reported.
@@ -96,22 +96,22 @@ func (v *txValidator) PostRun(executor.State, *executor.Context, error) error {
 	return errors.Join(v.errors...)
 }
 
-// checkTxErr decides whether return the error (and exit the app) or log and collect it. This decision is based on configuration.
-func (v *txValidator) checkTxErr(err error) bool {
+// hasHasErr decides whether given error should stop the program or not depending on ContinueOnFailure and MaxNumErrors.
+func (v *txValidator) hasHasErr(err error) bool {
 	v.lock.Lock()
 	v.errors = append(v.errors, err)
 	v.lock.Unlock()
 
 	// ContinueOnFailure is disabled, return the error thus exit the program
 	if !v.config.ContinueOnFailure {
-		return false
+		return true
 	}
 
 	v.log.Error(err)
 
 	if len(v.errors) >= v.config.MaxNumErrors {
-		return false
+		return true
 	}
 
-	return true
+	return false
 }
