@@ -206,6 +206,8 @@ func (c *cloner) clone(isFirstPatch bool) error {
 	c.read([]byte(substate.Stage1CodePrefix), 0, nil)
 
 	// update c.cfg.First block before loading deletions and substates, because for utils.CloneType those are necessery to be from last updateset onward
+	// lastUpdateBeforeRange contains blocknumber at which is first updateset preceding the given block range,
+	// it is only required in CloneType db
 	lastUpdateBeforeRange := c.readUpdateSet(isFirstPatch)
 	if c.typ == utils.CloneType {
 		// check whether updateset before interval exists
