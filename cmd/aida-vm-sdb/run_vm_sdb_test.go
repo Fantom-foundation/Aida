@@ -73,7 +73,7 @@ func TestVmSdb_AllDbEventsAreIssuedInOrder(t *testing.T) {
 	}
 }
 
-func TestVmSdb_ValidationDoesNotFail(t *testing.T) {
+func TestVmSdb_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	substate := executor.NewMockSubstateProvider(ctrl)
 	db := state.NewMockStateDB(ctrl)
@@ -123,7 +123,7 @@ func TestVmSdb_ValidationDoesNotFail(t *testing.T) {
 
 }
 
-func TestVmSdb_ValidationFails(t *testing.T) {
+func TestVmSdb_ValidationFailsOnInvalidTransaction(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	substate := executor.NewMockSubstateProvider(ctrl)
 	db := state.NewMockStateDB(ctrl)
