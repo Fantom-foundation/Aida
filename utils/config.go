@@ -200,14 +200,9 @@ func setFirstBlockFromChainID(chainId ChainID) {
 
 // NewConfig creates and initializes Config with commandline arguments.
 func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
-	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "Config")
+	var err error
 
-	var (
-		err         error
-		first, last uint64
-		profileDB   string
-		chainId     ChainID
-	)
+	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "Config")
 
 	// create config with user flag values, if not set default values are used
 	cfg := createConfig(ctx)
@@ -218,69 +213,13 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		return nil, fmt.Errorf("cannot get chainID; %v", err)
 	}
 
-	err = setAidaDbRepositoryUrl(chainId)
-
-	switch mode {
-	case BlockRangeArgsProfileDB:
-		// process arguments and flags
-		if ctx.Args().Len() != 3 {
-			return nil, fmt.Errorf("command requires 3 arguments")
-		} else if ctx.Args().Len() == 3 {
-			// set profileDB from argument
-			profileDB = ctx.Args().Get(2)
-		}
-		fallthrough
-	case BlockRangeArgs:
-		// process arguments and flags
-		if ctx.Args().Len() >= 2 {
-			// try to extract block range from db metadata
-			aidaDbPath := cfg.AidaDb
-			firstMd, lastMd, lastPatchMd, mdOk, err := getMdBlockRange(aidaDbPath, chainId, log)
-			if err != nil {
-				return nil, err
-			}
-			keywordBlocks[chainId]["first"] = firstMd
-			keywordBlocks[chainId]["last"] = lastMd
-			keywordBlocks[chainId]["lastpatch"] = lastPatchMd
-
-			// try to parse and check block range
-			firstArg, lastArg, argErr := SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1), chainId)
-			if argErr != nil {
-				return nil, argErr
-			}
-
-			if !mdOk {
-				first = firstArg
-				last = lastArg
-				break
-			}
-
-			// find if values overlap
-			first, last, err = adjustBlockRange(chainId, firstArg, lastArg)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			return nil, fmt.Errorf("command requires 2 arguments")
-		}
-	case LastBlockArg:
-		last, err = strconv.ParseUint(ctx.Args().Get(0), 10, 64)
-		if err != nil {
-			return nil, err
-		}
-	case OneToNArgs:
-		if ctx.Args().Len() < 1 {
-			return nil, errors.New("this command requires at least 1 argument")
-		}
-	case NoArgs:
-	default:
-		return nil, errors.New("unknown mode; unable to process commandline arguments")
+	// set numbers of first block, last block and path to profilingDB
+	cfg.First, cfg.Last, cfg.ProfileDB, err = parseCmdArgs(ctx.Args().Slice(), cfg, mode, log)
+	if err != nil {
+		return cfg, fmt.Errorf("unable to parse cli arguments; %v", err)
 	}
 
-	// set numbers of first block, last block and path to profilingDB
-	cfg.First = first
-	cfg.Last = last
-	cfg.ProfileDB = profileDB
+	err = setAidaDbRepositoryUrl(cfg.ChainID)
 
 	// set default db variant if not provided.
 	if cfg.DbVariant == "" {
@@ -304,7 +243,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		cfg.RandomSeed = int64(rand.Uint32())
 	}
 	if err != nil {
-		return cfg, fmt.Errorf("Unable to prepareUrl from ChainId %v; %v", cfg.ChainID, err)
+		return cfg, fmt.Errorf("unable to prepareUrl from ChainId %v; %v", cfg.ChainID, err)
 	}
 
 	if _, err := os.Stat(cfg.AidaDb); !os.IsNotExist(err) {
@@ -602,8 +541,73 @@ func getChainId(cfg *Config, log *logging.Logger) (ChainID, error) {
 	return chainId, nil
 }
 
-func parseCmdArgs(args []string, mode ArgumentMode) (uint64, uint64, string, error) {
-	return 0, 0, "", nil
+func parseCmdArgs(args []string, cfg *Config, mode ArgumentMode, log *logging.Logger) (uint64, uint64, string, error) {
+	var (
+		first     uint64
+		last      uint64
+		profileDB string
+	)
+
+	switch mode {
+	case BlockRangeArgsProfileDB:
+		// process arguments and flags
+		if len(args) != 3 {
+			return 0, 0, "", fmt.Errorf("command requires 3 arguments")
+		} else if len(args) == 3 {
+			// set profileDB from argument
+			profileDB = args[2]
+		}
+		fallthrough
+	case BlockRangeArgs:
+		// process arguments and flags
+		if len(args) >= 2 {
+			// try to extract block range from db metadata
+			aidaDbPath := cfg.AidaDb
+			firstMd, lastMd, lastPatchMd, mdOk, err := getMdBlockRange(aidaDbPath, cfg.ChainID, log)
+			if err != nil {
+				return 0, 0, "", err
+			}
+			keywordBlocks[cfg.ChainID]["first"] = firstMd
+			keywordBlocks[cfg.ChainID]["last"] = lastMd
+			keywordBlocks[cfg.ChainID]["lastpatch"] = lastPatchMd
+
+			// try to parse and check block range
+			firstArg, lastArg, argErr := SetBlockRange(args[0], args[1], cfg.ChainID)
+			if argErr != nil {
+				return 0, 0, "", argErr
+			}
+
+			if !mdOk {
+				first = firstArg
+				last = lastArg
+				break
+			}
+
+			// find if values overlap
+			first, last, err = adjustBlockRange(cfg.ChainID, firstArg, lastArg)
+			if err != nil {
+				return 0, 0, "", err
+			}
+		} else {
+			return 0, 0, "", fmt.Errorf("command requires 2 arguments")
+		}
+	case LastBlockArg:
+		var err error
+
+		last, err = strconv.ParseUint(args[0], 10, 64)
+		if err != nil {
+			return 0, 0, "", err
+		}
+	case OneToNArgs:
+		if len(args) < 1 {
+			return 0, 0, "", errors.New("this command requires at least 1 argument")
+		}
+	case NoArgs:
+	default:
+		return 0, 0, "", errors.New("unknown mode; unable to process commandline arguments")
+	}
+
+	return first, last, profileDB, nil
 }
 
 func checkNewConfig(cfg *Config) error {

@@ -418,13 +418,39 @@ func TestUtilsConfig_getDefaultChainId(t *testing.T) {
 func TestUtilsConfig_parseCmdArgsBlockRange(t *testing.T) {
 	// prepare components
 	var (
-		mode     = BlockRangeArgs
-		firstArg = "15"
-		lastArg  = "30"
+		firstBlock = uint64(4564026)
+		lastBlock  = uint64(20001704)
+		firstEpoch = uint64(100)
+		lastEpoch  = uint64(200)
+		mode       = BlockRangeArgs
+		firstArg   = "4564026"
+		lastArg    = "5000000"
 	)
 
+	// prepare mock config
+	cfg := &Config{AidaDb: "./test.db", LogLevel: "info", ChainID: MainnetChainID}
+
+	// prepare logger
+	log := logger.NewLogger("info", "Utils_config_test")
+
+	testDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "test-db", false)
+	if err != nil {
+		t.Fatalf("cannot open patch db; %v", err)
+	}
+	defer os.RemoveAll(cfg.AidaDb)
+
+	// create fake metadata
+	err = ProcessPatchLikeMetadata(testDb, cfg.LogLevel, firstBlock, lastBlock, firstEpoch, lastEpoch, cfg.ChainID, true, nil)
+	if err != nil {
+		t.Fatalf("cannot create a metadata; %v", err)
+	}
+	err = testDb.Close()
+	if err != nil {
+		t.Fatalf("cannot close db; %v", err)
+	}
+
 	// parse cli arguments slice
-	first, last, _, err := parseCmdArgs([]string{firstArg, lastArg}, mode)
+	first, last, _, err := parseCmdArgs([]string{firstArg, lastArg}, cfg, mode, log)
 	if err != nil {
 		t.Fatalf("cannot parse the cli arguments; %v", err)
 	}
@@ -446,8 +472,14 @@ func TestUtilsConfig_parseCmdArgsBlockRangeInvalid(t *testing.T) {
 		mode = BlockRangeArgs
 	)
 
+	// prepare mock config
+	cfg := &Config{AidaDb: "./test.db", LogLevel: "info"}
+
+	// prepare logger
+	log := logger.NewLogger("info", "Utils_config_test")
+
 	// parse cli arguments slice of insufficient length
-	_, _, _, err := parseCmdArgs([]string{"test"}, mode)
+	_, _, _, err := parseCmdArgs([]string{"test"}, cfg, mode, log)
 	if err == nil {
 		t.Fatalf("failed to throw an error")
 	}
@@ -458,14 +490,40 @@ func TestUtilsConfig_parseCmdArgsBlockRangeInvalid(t *testing.T) {
 func TestUtilsConfig_parseCmdArgsBlockRangeProfileDb(t *testing.T) {
 	// prepare components
 	var (
+		firstBlock   = uint64(4564026)
+		lastBlock    = uint64(20001704)
+		firstEpoch   = uint64(100)
+		lastEpoch    = uint64(200)
 		mode         = BlockRangeArgsProfileDB
-		firstArg     = "15"
-		lastArg      = "30"
-		profileDbArg = "./test.db"
+		firstArg     = "4564026"
+		lastArg      = "5000000"
+		profileDbArg = "./profile.db"
 	)
 
+	// prepare mock config
+	cfg := &Config{AidaDb: "./test.db", LogLevel: "info", ChainID: MainnetChainID}
+
+	// prepare logger
+	log := logger.NewLogger("info", "Utils_config_test")
+
+	testDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "test-db", false)
+	if err != nil {
+		t.Fatalf("cannot open patch db; %v", err)
+	}
+	defer os.RemoveAll(cfg.AidaDb)
+
+	// create fake metadata
+	err = ProcessPatchLikeMetadata(testDb, cfg.LogLevel, firstBlock, lastBlock, firstEpoch, lastEpoch, cfg.ChainID, true, nil)
+	if err != nil {
+		t.Fatalf("cannot create a metadata; %v", err)
+	}
+	err = testDb.Close()
+	if err != nil {
+		t.Fatalf("cannot close db; %v", err)
+	}
+
 	// parse cli arguments slice
-	first, last, profileDb, err := parseCmdArgs([]string{firstArg, lastArg, profileDbArg}, mode)
+	first, last, profileDb, err := parseCmdArgs([]string{firstArg, lastArg, profileDbArg}, cfg, mode, log)
 	if err != nil {
 		t.Fatalf("cannot parse the cli arguments; %v", err)
 	}
@@ -492,14 +550,20 @@ func TestUtilsConfig_parseCmdArgsBlockRangeProfileDbInvalid(t *testing.T) {
 		mode = BlockRangeArgsProfileDB
 	)
 
+	// prepare mock config
+	cfg := &Config{AidaDb: "./test.db", LogLevel: "info"}
+
+	// prepare logger
+	log := logger.NewLogger("info", "Utils_config_test")
+
 	// parse cli arguments slice of insufficient length
-	_, _, _, err := parseCmdArgs([]string{"test"}, mode)
+	_, _, _, err := parseCmdArgs([]string{"test"}, cfg, mode, log)
 	if err == nil {
 		t.Fatalf("failed to throw an error")
 	}
 
 	// second try with length bigger than 3
-	_, _, _, err = parseCmdArgs([]string{"test", "test", "test", "test"}, mode)
+	_, _, _, err = parseCmdArgs([]string{"test", "test", "test", "test"}, cfg, mode, log)
 	if err == nil {
 		t.Fatalf("failed to throw an error")
 	}
@@ -513,8 +577,14 @@ func TestUtilsConfig_parseCmdArgsLastBlock(t *testing.T) {
 		lastArg = "30"
 	)
 
+	// prepare mock config
+	cfg := &Config{AidaDb: "./test.db", LogLevel: "info"}
+
+	// prepare logger
+	log := logger.NewLogger("info", "Utils_config_test")
+
 	// parse cli arguments slice
-	_, last, _, err := parseCmdArgs([]string{lastArg}, mode)
+	_, last, _, err := parseCmdArgs([]string{lastArg}, cfg, mode, log)
 	if err != nil {
 		t.Fatalf("cannot parse the cli arguments; %v", err)
 	}
@@ -532,8 +602,14 @@ func TestUtilsConfig_parseCmdArgsLastBlockInvalid(t *testing.T) {
 		mode = LastBlockArg
 	)
 
+	// prepare mock config
+	cfg := &Config{AidaDb: "./test.db", LogLevel: "info"}
+
+	// prepare logger
+	log := logger.NewLogger("info", "Utils_config_test")
+
 	// parse cli arguments slice of insufficient length
-	_, _, _, err := parseCmdArgs([]string{"test"}, mode)
+	_, _, _, err := parseCmdArgs([]string{"test"}, cfg, mode, log)
 	if err == nil {
 		t.Fatalf("failed to throw an error")
 	}
@@ -546,8 +622,14 @@ func TestUtilsConfig_parseCmdArgsOneToNInvalid(t *testing.T) {
 		mode = OneToNArgs
 	)
 
+	// prepare mock config
+	cfg := &Config{AidaDb: "./test.db", LogLevel: "info"}
+
+	// prepare logger
+	log := logger.NewLogger("info", "Utils_config_test")
+
 	// parse cli arguments slice of insufficient length
-	_, _, _, err := parseCmdArgs([]string{}, mode)
+	_, _, _, err := parseCmdArgs([]string{}, cfg, mode, log)
 	if err == nil {
 		t.Fatalf("failed to throw an error")
 	}
