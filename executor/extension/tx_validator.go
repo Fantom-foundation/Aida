@@ -57,8 +57,10 @@ func (v *txValidator) PreTransaction(state executor.State, context *executor.Con
 
 	err = fmt.Errorf("input error at block %v tx %v; %v", state.Block, state.Transaction, err)
 
-	if v.hasHasErr(err) {
-		return errors.New("maximum number of errors occurred")
+	if v.isErrFatal(err) {
+		err = errors.New("maximum number of errors occurred")
+		v.log.Critical(err)
+		return err
 	}
 
 	return nil
@@ -73,8 +75,10 @@ func (v *txValidator) PostTransaction(state executor.State, context *executor.Co
 
 	err = fmt.Errorf("output error at block %v tx %v; %v", state.Block, state.Transaction, err)
 
-	if v.hasHasErr(err) {
-		return errors.New("maximum number of errors occurred")
+	if v.isErrFatal(err) {
+		err = errors.New("maximum number of errors occurred")
+		v.log.Critical(err)
+		return err
 	}
 
 	return nil
@@ -96,8 +100,8 @@ func (v *txValidator) PostRun(executor.State, *executor.Context, error) error {
 	return errors.Join(v.errors...)
 }
 
-// hasHasErr decides whether given error should stop the program or not depending on ContinueOnFailure and MaxNumErrors.
-func (v *txValidator) hasHasErr(err error) bool {
+// isErrFatal decides whether given error should stop the program or not depending on ContinueOnFailure and MaxNumErrors.
+func (v *txValidator) isErrFatal(err error) bool {
 	v.lock.Lock()
 	v.errors = append(v.errors, err)
 	v.lock.Unlock()
