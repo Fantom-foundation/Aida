@@ -108,7 +108,7 @@ func (t *progressTracker) PostBlock(state executor.State, context *executor.Cont
 	overallTxRate := float64(info.numTransactions) / overall.Seconds()
 	overallGasRate := float64(info.gas) / overall.Seconds()
 
-	t.log.Noticef(progressTrackerReportFormat, boundary, disk, memory, intervalTxRate, intervalGasRate, overallTxRate, overallGasRate)
+	t.log.Noticef(progressTrackerReportFormat, boundary, memory, disk, intervalTxRate, intervalGasRate, overallTxRate, overallGasRate)
 
 	t.lastReportedBlock = boundary
 	t.startOfLastInterval = now
