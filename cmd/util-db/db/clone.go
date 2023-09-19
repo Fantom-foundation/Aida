@@ -206,9 +206,12 @@ func (c *cloner) clone(isFirstPatch bool) error {
 	c.read([]byte(substate.Stage1CodePrefix), 0, nil)
 
 	// update c.cfg.First block before loading deletions and substates, because for utils.CloneType those are necessery to be from last updateset onward
+	// lastUpdateBeforeRange contains blocknumber at which is first updateset preceding the given block range,
+	// it is only required in CloneType db
 	lastUpdateBeforeRange := c.readUpdateSet(isFirstPatch)
 	if c.typ == utils.CloneType {
-		if lastUpdateBeforeRange < c.cfg.First {
+		// check whether updateset before interval exists
+		if lastUpdateBeforeRange < c.cfg.First && lastUpdateBeforeRange != 0 {
 			c.log.Noticef("Last updateset found at block %v, changing first block to %v", lastUpdateBeforeRange, lastUpdateBeforeRange+1)
 			c.cfg.First = lastUpdateBeforeRange + 1
 		}
@@ -377,12 +380,7 @@ func (c *cloner) readUpdateSet(isFirstPatch bool) uint64 {
 	if c.typ == utils.CloneType {
 		c.read([]byte(substate.SubstateAllocPrefix), 0, endCond)
 
-		// check if update-set contained at least one set (first set with world-state), then aida-db must be corrupted
-		if lastUpdateBeforeRange == 0 {
-			c.errCh <- fmt.Errorf("updateset didn't contain any records - unable to create aida-db without initial world-state")
-			return 0
-		}
-
+		// if there is no updateset before interval (first 1M blocks) then 0 is returned
 		return lastUpdateBeforeRange
 	} else if c.typ == utils.PatchType {
 		var wantedBlock uint64

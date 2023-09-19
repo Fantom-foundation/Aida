@@ -113,6 +113,9 @@ func (l *progressLogger) startReport(reportFrequency time.Duration) {
 			currentIntervalTx++
 			currentIntervalGas += in.Substate.Result.GasUsed
 
+			totalTx++
+			totalGas += in.Substate.Result.GasUsed
+
 		case now := <-ticker.C:
 			// skip if no data are present
 			if currentIntervalTx == 0 {
@@ -125,8 +128,6 @@ func (l *progressLogger) startReport(reportFrequency time.Duration) {
 			l.log.Infof(progressLoggerReportFormat, elapsed.Round(1*time.Second), currentBlock, txRate, gasRate/1e6)
 
 			lastReport = now
-			totalTx += currentIntervalTx
-			totalGas += currentIntervalGas
 
 			currentIntervalTx = 0
 			currentIntervalGas = 0

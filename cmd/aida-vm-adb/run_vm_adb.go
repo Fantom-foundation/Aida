@@ -62,7 +62,6 @@ func run(config *utils.Config, provider executor.SubstateProvider, stateDb state
 	extensionList = append(extensionList, []executor.Extension{
 		extension.MakeProgressLogger(config, 100),
 		extension.MakeStateDbPreparator(),
-		extension.MakeTxValidator(config),
 		extension.MakeBeginOnlyEmitter(),
 	}...)
 	return executor.NewExecutor(provider).Run(

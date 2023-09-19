@@ -5,6 +5,7 @@ package executor
 import (
 	"errors"
 	"sync"
+	"sync/atomic"
 
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -178,6 +179,11 @@ func (e *executor) Run(params Params, processor Processor, extensions []Extensio
 	context := Context{State: params.State}
 
 	defer func() {
+		// Skip PostRun actions if a panic occurred. In such a case there is no guarantee
+		// on the state of anything, and PostRun operations may deadlock or cause damage.
+		if r := recover(); r != nil {
+			panic(r) // just forward
+		}
 		err = errors.Join(
 			err,
 			signalPostRun(state, &context, err, extensions),
@@ -257,11 +263,19 @@ func (e *executor) runParallel(params Params, processor Processor, extensions []
 	}()
 
 	// Start numWorkers go-routines processing transactions in parallel.
+	var cachedPanic atomic.Value
 	var wg sync.WaitGroup
 	wg.Add(numWorkers)
 	workerErrs := make([]error, numWorkers)
 	for i := 0; i < numWorkers; i++ {
 		go func(i int) {
+			// channel panics back to the main thread.
+			defer func() {
+				if r := recover(); r != nil {
+					abort.Signal() // stop forwarder and other workers too
+					cachedPanic.Store(r)
+				}
+			}()
 			defer wg.Done()
 			for {
 				select {
@@ -285,6 +299,11 @@ func (e *executor) runParallel(params Params, processor Processor, extensions []
 		}(i)
 	}
 	wg.Wait()
+
+	if r := cachedPanic.Load(); r != nil {
+		panic(r)
+	}
+
 	err := errors.Join(
 		forwardErr,
 		errors.Join(workerErrs...),

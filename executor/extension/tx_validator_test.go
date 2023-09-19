@@ -109,7 +109,7 @@ func TestTxValidator_SingleErrorInPreTransactionDoesNotEndProgramWithContinueOnF
 
 	err = ext.PostRun(executor.State{}, context, nil)
 	if err == nil {
-		t.Errorf("PostRun must return an error")
+		t.Fatalf("PostRun must return an error")
 	}
 
 	got := err.Error()
