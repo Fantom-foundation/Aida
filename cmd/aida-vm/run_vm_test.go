@@ -21,8 +21,8 @@ func TestVmSdb_TransactionsAreExecutedForCorrectRange(t *testing.T) {
 		Run(10, 12, gomock.Any()).
 		DoAndReturn(func(from int, to int, consumer executor.Consumer) error {
 			for i := from; i < to; i++ {
-				consumer(executor.TransactionInfo{Block: i, Transaction: 3, Substate: emptyTx})
-				consumer(executor.TransactionInfo{Block: i, Transaction: utils.PseudoTx, Substate: emptyTx})
+				consumer(executor.TransactionInfo{Block: i, Transaction: 3, Substate: emptyTx}, nil)
+				consumer(executor.TransactionInfo{Block: i, Transaction: utils.PseudoTx, Substate: emptyTx}, nil)
 			}
 			return nil
 		})

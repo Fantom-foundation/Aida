@@ -26,10 +26,10 @@ func TestVmSdb_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		Run(0, 3, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer) error {
 			// block 0
-			consumer(executor.TransactionInfo{Block: 0, Transaction: 1, Substate: emptyTx})
+			consumer(executor.TransactionInfo{Block: 0, Transaction: 1, Substate: emptyTx}, nil)
 			// block 2
-			consumer(executor.TransactionInfo{Block: 2, Transaction: 3, Substate: emptyTx})
-			consumer(executor.TransactionInfo{Block: 2, Transaction: utils.PseudoTx, Substate: emptyTx})
+			consumer(executor.TransactionInfo{Block: 2, Transaction: 3, Substate: emptyTx}, nil)
+			consumer(executor.TransactionInfo{Block: 2, Transaction: utils.PseudoTx, Substate: emptyTx}, nil)
 			return nil
 		})
 
