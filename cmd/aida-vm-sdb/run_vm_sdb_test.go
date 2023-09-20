@@ -83,6 +83,7 @@ func TestVmSdb_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 		Last:            2,
 		ChainID:         utils.MainnetChainID,
 		ValidateTxState: true,
+		SkipPriming:     true,
 	}
 
 	substate.EXPECT().
@@ -133,6 +134,7 @@ func TestVmSdb_ValidationFailsOnInvalidTransaction(t *testing.T) {
 		Last:            2,
 		ChainID:         utils.MainnetChainID,
 		ValidateTxState: true,
+		SkipPriming:     true,
 	}
 
 	substate.EXPECT().

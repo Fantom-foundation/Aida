@@ -306,6 +306,7 @@ func TestTxValidator_TwoErrorsDoReturnErrorOnEventWhenContinueOnFailureIsEnabled
 		db.EXPECT().GetNonce(common.Address{0}).Return(uint64(0)),
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 		log.EXPECT().Error(gomock.Any()),
+		log.EXPECT().Critical(errors.New("maximum number of errors occurred")),
 		// PostRun
 		log.EXPECT().Warningf(gomock.Any(), 2),
 	)
