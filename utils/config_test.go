@@ -355,7 +355,7 @@ func TestUtilsConfig_getChainIdFromDB(t *testing.T) {
 		t.Fatalf("cannot open patch db; %v", err)
 	}
 	defer func() {
-		err := os.RemoveAll("./test.db")
+		err = os.RemoveAll("./test.db")
 		if err != nil {
 			t.Fatalf("cannot remove db; %v", err)
 		}
@@ -439,7 +439,12 @@ func TestUtilsConfig_parseCmdArgsBlockRange(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot open patch db; %v", err)
 	}
-	defer os.RemoveAll(cfg.AidaDb)
+	defer func() {
+		err = os.RemoveAll(cfg.AidaDb)
+		if err != nil {
+			t.Fatalf("cannot remove db; %v", err)
+		}
+	}()
 
 	// create fake metadata
 	err = ProcessPatchLikeMetadata(testDb, cfg.LogLevel, firstBlock, lastBlock, firstEpoch, lastEpoch, cfg.ChainID, true, nil)
@@ -514,7 +519,12 @@ func TestUtilsConfig_parseCmdArgsBlockRangeProfileDb(t *testing.T) {
 	if err != nil {
 		t.Fatalf("cannot open patch db; %v", err)
 	}
-	defer os.RemoveAll(cfg.AidaDb)
+	defer func() {
+		err = os.RemoveAll(cfg.AidaDb)
+		if err != nil {
+			t.Fatalf("cannot remove db; %v", err)
+		}
+	}()
 
 	// create fake metadata
 	err = ProcessPatchLikeMetadata(testDb, cfg.LogLevel, firstBlock, lastBlock, firstEpoch, lastEpoch, cfg.ChainID, true, nil)
