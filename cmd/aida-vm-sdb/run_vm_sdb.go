@@ -55,6 +55,8 @@ func run(config *utils.Config, provider executor.SubstateProvider, stateDb state
 		extension.MakeVirtualMachineStatisticsPrinter(config),
 		extension.MakeProgressLogger(config, 15*time.Second),
 		extension.MakeProgressTracker(config, 100_000),
+		extension.MakeMemoryProfiler(config),
+		extension.MakeMemoryUsagePrinter(config),
 		extension.MakeStateDbPreparator(),
 		extension.MakeStateHashValidator(config),
 		extension.MakeBlockEventEmitter(),

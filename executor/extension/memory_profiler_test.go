@@ -25,7 +25,7 @@ func TestMemoryProfiler_CollectsProfileDataIfEnabled(t *testing.T) {
 	}
 }
 
-func TestMemoryProfiler_NpProfileIsCollectedIfDisabled(t *testing.T) {
+func TestMemoryProfiler_NoProfileIsCollectedIfDisabled(t *testing.T) {
 	config := &utils.Config{}
 	ext := MakeCpuProfiler(config)
 
