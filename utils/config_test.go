@@ -341,13 +341,13 @@ func TestUtilsConfig_getChainIdFromDB(t *testing.T) {
 	// prepare components
 	// create new leveldb
 	var (
-		logLevel         = "INFO"
-		firstBlock       = uint64(4564026)
-		lastBlock        = uint64(20001704)
-		firstEpoch       = uint64(100)
-		lastEpoch        = uint64(200)
-		chainId          = MainnetChainID
-		extractedChainId = UnknownChainID
+		logLevel                = "INFO"
+		firstBlock              = keywordBlocks[MainnetChainID]["opera"]
+		lastBlock        uint64 = 20001704
+		firstEpoch       uint64 = 100
+		lastEpoch        uint64 = 200
+		chainId                 = MainnetChainID
+		extractedChainId ChainID
 	)
 
 	testDb, err := rawdb.NewLevelDBDatabase("./test.db", 1024, 100, "test-db", false)
@@ -357,7 +357,7 @@ func TestUtilsConfig_getChainIdFromDB(t *testing.T) {
 	defer func() {
 		err := os.RemoveAll("./test.db")
 		if err != nil {
-
+			t.Fatalf("cannot remove db; %v", err)
 		}
 	}()
 
@@ -372,7 +372,7 @@ func TestUtilsConfig_getChainIdFromDB(t *testing.T) {
 	}
 
 	// prepare mock config
-	cfg := &Config{AidaDb: "./test.db", LogLevel: "info"}
+	cfg := &Config{AidaDb: "./test.db", LogLevel: logLevel}
 
 	// prepare logger
 	log := logger.NewLogger(cfg.LogLevel, "Utils_config_test")
@@ -384,7 +384,7 @@ func TestUtilsConfig_getChainIdFromDB(t *testing.T) {
 	}
 
 	if extractedChainId != chainId {
-		t.Fatalf("failed to get chainId correctly from AidaDB; Is: %v; Should be: %v", extractedChainId, chainId)
+		t.Fatalf("failed to get chainId correctly from AidaDB; got: %v; expected: %v", extractedChainId, chainId)
 	}
 }
 
@@ -393,12 +393,13 @@ func TestUtilsConfig_getDefaultChainId(t *testing.T) {
 	// prepare components
 	var (
 		err              error
+		logLevel         = "INFO"
 		chainId          = MainnetChainID
-		extractedChainId = UnknownChainID
+		extractedChainId ChainID
 	)
 
 	// prepare mock config
-	cfg := &Config{AidaDb: "./test.db", LogLevel: "info"}
+	cfg := &Config{AidaDb: "./test.db", LogLevel: logLevel}
 
 	// prepare logger
 	log := logger.NewLogger(cfg.LogLevel, "Utils_config_test")
@@ -410,7 +411,7 @@ func TestUtilsConfig_getDefaultChainId(t *testing.T) {
 	}
 
 	if extractedChainId != chainId {
-		t.Fatalf("failed to get chainId correctly from AidaDB; Is: %v; Should be: %v", extractedChainId, chainId)
+		t.Fatalf("failed to get chainId correctly from AidaDB; got: %v; expected: %v", extractedChainId, chainId)
 	}
 }
 
@@ -418,20 +419,21 @@ func TestUtilsConfig_getDefaultChainId(t *testing.T) {
 func TestUtilsConfig_parseCmdArgsBlockRange(t *testing.T) {
 	// prepare components
 	var (
-		firstBlock = uint64(4564026)
-		lastBlock  = uint64(20001704)
-		firstEpoch = uint64(100)
-		lastEpoch  = uint64(200)
-		mode       = BlockRangeArgs
-		firstArg   = "4564026"
-		lastArg    = "5000000"
+		logLevel          = "INFO"
+		firstBlock        = keywordBlocks[MainnetChainID]["opera"]
+		lastBlock  uint64 = 20001704
+		firstEpoch uint64 = 100
+		lastEpoch  uint64 = 200
+		mode              = BlockRangeArgs
+		firstArg          = "4564026"
+		lastArg           = "5000000"
 	)
 
 	// prepare mock config
-	cfg := &Config{AidaDb: "./test.db", LogLevel: "info", ChainID: MainnetChainID}
+	cfg := &Config{AidaDb: "./test.db", LogLevel: logLevel, ChainID: MainnetChainID}
 
 	// prepare logger
-	log := logger.NewLogger("info", "Utils_config_test")
+	log := logger.NewLogger(cfg.LogLevel, "Utils_config_test")
 
 	testDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "test-db", false)
 	if err != nil {
@@ -457,11 +459,11 @@ func TestUtilsConfig_parseCmdArgsBlockRange(t *testing.T) {
 
 	// check if the arguments were parsed correctly
 	if parsedFirst, _ := strconv.ParseUint(firstArg, 10, 64); parsedFirst != first {
-		t.Fatalf("failed to get first argument correctly; Is: %d; Should be: %s", parsedFirst, firstArg)
+		t.Fatalf("failed to get first argument correctly; got: %d; expected: %s", parsedFirst, firstArg)
 	}
 
 	if parsedLast, _ := strconv.ParseUint(lastArg, 10, 64); parsedLast != last {
-		t.Fatalf("failed to get last argument correctly; Is: %d; Should be: %s", parsedLast, lastArg)
+		t.Fatalf("failed to get last argument correctly; got: %d; expected: %s", parsedLast, lastArg)
 	}
 }
 
@@ -469,14 +471,15 @@ func TestUtilsConfig_parseCmdArgsBlockRange(t *testing.T) {
 func TestUtilsConfig_parseCmdArgsBlockRangeInvalid(t *testing.T) {
 	// prepare components
 	var (
-		mode = BlockRangeArgs
+		mode     = BlockRangeArgs
+		logLevel = "INFO"
 	)
 
 	// prepare mock config
-	cfg := &Config{AidaDb: "./test.db", LogLevel: "info"}
+	cfg := &Config{AidaDb: "./test.db", LogLevel: logLevel}
 
 	// prepare logger
-	log := logger.NewLogger("info", "Utils_config_test")
+	log := logger.NewLogger(cfg.LogLevel, "Utils_config_test")
 
 	// parse cli arguments slice of insufficient length
 	_, _, _, err := parseCmdArgs([]string{"test"}, cfg, mode, log)
@@ -490,21 +493,22 @@ func TestUtilsConfig_parseCmdArgsBlockRangeInvalid(t *testing.T) {
 func TestUtilsConfig_parseCmdArgsBlockRangeProfileDb(t *testing.T) {
 	// prepare components
 	var (
-		firstBlock   = uint64(4564026)
-		lastBlock    = uint64(20001704)
-		firstEpoch   = uint64(100)
-		lastEpoch    = uint64(200)
-		mode         = BlockRangeArgsProfileDB
-		firstArg     = "4564026"
-		lastArg      = "5000000"
-		profileDbArg = "./profile.db"
+		logLevel            = "INFO"
+		firstBlock          = keywordBlocks[MainnetChainID]["opera"]
+		lastBlock    uint64 = 20001704
+		firstEpoch   uint64 = 100
+		lastEpoch    uint64 = 200
+		mode                = BlockRangeArgsProfileDB
+		firstArg            = "4564026"
+		lastArg             = "5000000"
+		profileDbArg        = "./profile.db"
 	)
 
 	// prepare mock config
-	cfg := &Config{AidaDb: "./test.db", LogLevel: "info", ChainID: MainnetChainID}
+	cfg := &Config{AidaDb: "./test.db", LogLevel: logLevel, ChainID: MainnetChainID}
 
 	// prepare logger
-	log := logger.NewLogger("info", "Utils_config_test")
+	log := logger.NewLogger(cfg.LogLevel, "Utils_config_test")
 
 	testDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "test-db", false)
 	if err != nil {
@@ -530,15 +534,15 @@ func TestUtilsConfig_parseCmdArgsBlockRangeProfileDb(t *testing.T) {
 
 	// check if the arguments were parsed correctly
 	if parsedFirst, _ := strconv.ParseUint(firstArg, 10, 64); parsedFirst != first {
-		t.Fatalf("failed to get first argument correctly; Is: %d; Should be: %s", parsedFirst, firstArg)
+		t.Fatalf("failed to get first argument correctly; got: %d; expected: %s", parsedFirst, firstArg)
 	}
 
 	if parsedLast, _ := strconv.ParseUint(lastArg, 10, 64); parsedLast != last {
-		t.Fatalf("failed to get last argument correctly; Is: %d; Should be: %s", parsedLast, lastArg)
+		t.Fatalf("failed to get last argument correctly; got: %d; expected: %s", parsedLast, lastArg)
 	}
 
 	if profileDbArg != profileDb {
-		t.Fatalf("failed to get last argument correctly; Is: %s; Should be: %s", profileDb, profileDbArg)
+		t.Fatalf("failed to get last argument correctly; got: %s; expected: %s", profileDb, profileDbArg)
 	}
 }
 
@@ -547,14 +551,15 @@ func TestUtilsConfig_parseCmdArgsBlockRangeProfileDb(t *testing.T) {
 func TestUtilsConfig_parseCmdArgsBlockRangeProfileDbInvalid(t *testing.T) {
 	// prepare components
 	var (
-		mode = BlockRangeArgsProfileDB
+		logLevel = "INFO"
+		mode     = BlockRangeArgsProfileDB
 	)
 
 	// prepare mock config
-	cfg := &Config{AidaDb: "./test.db", LogLevel: "info"}
+	cfg := &Config{AidaDb: "./test.db", LogLevel: logLevel}
 
 	// prepare logger
-	log := logger.NewLogger("info", "Utils_config_test")
+	log := logger.NewLogger(cfg.LogLevel, "Utils_config_test")
 
 	// parse cli arguments slice of insufficient length
 	_, _, _, err := parseCmdArgs([]string{"test"}, cfg, mode, log)
@@ -573,15 +578,16 @@ func TestUtilsConfig_parseCmdArgsBlockRangeProfileDbInvalid(t *testing.T) {
 func TestUtilsConfig_parseCmdArgsLastBlock(t *testing.T) {
 	// prepare components
 	var (
-		mode    = LastBlockArg
-		lastArg = "30"
+		logLevel = "INFO"
+		mode     = LastBlockArg
+		lastArg  = "30"
 	)
 
 	// prepare mock config
-	cfg := &Config{AidaDb: "./test.db", LogLevel: "info"}
+	cfg := &Config{AidaDb: "./test.db", LogLevel: logLevel}
 
 	// prepare logger
-	log := logger.NewLogger("info", "Utils_config_test")
+	log := logger.NewLogger(cfg.LogLevel, "Utils_config_test")
 
 	// parse cli arguments slice
 	_, last, _, err := parseCmdArgs([]string{lastArg}, cfg, mode, log)
@@ -591,7 +597,7 @@ func TestUtilsConfig_parseCmdArgsLastBlock(t *testing.T) {
 
 	// check if the arguments were parsed correctly
 	if parsedLast, _ := strconv.ParseUint(lastArg, 10, 64); parsedLast != last {
-		t.Fatalf("failed to get last argument correctly; Is: %d; Should be: %s", parsedLast, lastArg)
+		t.Fatalf("failed to get last argument correctly; got: %d; expected: %s", parsedLast, lastArg)
 	}
 }
 
@@ -599,14 +605,15 @@ func TestUtilsConfig_parseCmdArgsLastBlock(t *testing.T) {
 func TestUtilsConfig_parseCmdArgsLastBlockInvalid(t *testing.T) {
 	// prepare components
 	var (
-		mode = LastBlockArg
+		logLevel = "INFO"
+		mode     = LastBlockArg
 	)
 
 	// prepare mock config
-	cfg := &Config{AidaDb: "./test.db", LogLevel: "info"}
+	cfg := &Config{AidaDb: "./test.db", LogLevel: logLevel}
 
 	// prepare logger
-	log := logger.NewLogger("info", "Utils_config_test")
+	log := logger.NewLogger(cfg.LogLevel, "Utils_config_test")
 
 	// parse cli arguments slice of insufficient length
 	_, _, _, err := parseCmdArgs([]string{"test"}, cfg, mode, log)
@@ -619,14 +626,15 @@ func TestUtilsConfig_parseCmdArgsLastBlockInvalid(t *testing.T) {
 func TestUtilsConfig_parseCmdArgsOneToNInvalid(t *testing.T) {
 	// prepare components
 	var (
-		mode = OneToNArgs
+		logLevel = "INFO"
+		mode     = OneToNArgs
 	)
 
 	// prepare mock config
-	cfg := &Config{AidaDb: "./test.db", LogLevel: "info"}
+	cfg := &Config{AidaDb: "./test.db", LogLevel: logLevel}
 
 	// prepare logger
-	log := logger.NewLogger("info", "Utils_config_test")
+	log := logger.NewLogger(cfg.LogLevel, "Utils_config_test")
 
 	// parse cli arguments slice of insufficient length
 	_, _, _, err := parseCmdArgs([]string{}, cfg, mode, log)
