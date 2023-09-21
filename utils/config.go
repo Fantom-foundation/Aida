@@ -191,7 +191,7 @@ func GetChainConfig(chainId ChainID) *params.ChainConfig {
 	return chainConfig
 }
 
-func setFirstBlockFromChainID(chainId ChainID) {
+func setFirstOperaBlock(chainId ChainID) {
 	if !(chainId == MainnetChainID || chainId == TestnetChainID) {
 		log.Fatalf("unknown chain id %v", chainId)
 	}
@@ -202,16 +202,18 @@ func setFirstBlockFromChainID(chainId ChainID) {
 func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	var err error
 
-	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "Config")
-
 	// create config with user flag values, if not set default values are used
-	cfg := createConfig(ctx)
+	cfg := createConfigFromFlags(ctx)
+
+	log := logger.NewLogger(cfg.LogLevel, "Config")
 
 	// check if chainID is set correctly
 	cfg.ChainID, err = getChainId(cfg, log)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get chainID; %v", err)
 	}
+
+	setFirstOperaBlock(cfg.ChainID)
 
 	// set numbers of first block, last block and path to profilingDB
 	err = updateConfigBlockRange(ctx.Args().Slice(), cfg, mode, log)
@@ -220,110 +222,13 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	}
 
 	err = setAidaDbRepositoryUrl(cfg.ChainID)
-
-	// set default db variant if not provided.
-	if cfg.DbVariant == "" {
-		if cfg.DbImpl == "carmen" {
-			cfg.DbVariant = "go-file"
-		}
-	}
-
-	// --continue-on-failure implicitly enables transaction state validation
-	validateTxState := ctx.Bool(ValidateFlag.Name) ||
-		ctx.Bool(ValidateTxStateFlag.Name) ||
-		ctx.Bool(ContinueOnFailureFlag.Name)
-	cfg.ValidateTxState = validateTxState
-
-	validateWorldState := ctx.Bool(ValidateFlag.Name) ||
-		ctx.Bool(ValidateWorldStateFlag.Name)
-	cfg.ValidateWorldState = validateWorldState
-
-	setFirstBlockFromChainID(cfg.ChainID)
-	if cfg.RandomSeed < 0 {
-		cfg.RandomSeed = int64(rand.Uint32())
-	}
 	if err != nil {
 		return cfg, fmt.Errorf("unable to prepareUrl from ChainId %v; %v", cfg.ChainID, err)
 	}
 
-	if _, err := os.Stat(cfg.AidaDb); !os.IsNotExist(err) {
-		log.Noticef("Found merged Aida-DB: %s redirecting UpdateDB, DeletedAccountDB, SubstateDB paths to it", cfg.AidaDb)
-		cfg.UpdateDb = cfg.AidaDb
-		cfg.DeletionDb = cfg.AidaDb
-		cfg.SubstateDb = cfg.AidaDb
-	}
+	adjustMissingConfigValues(cfg)
 
-	if !cfg.Quiet {
-		log.Noticef("Run config:")
-		log.Infof("Block range: %v to %v", cfg.First, cfg.Last)
-		if cfg.MaxNumTransactions >= 0 {
-			log.Infof("Transaction limit: %d", cfg.MaxNumTransactions)
-		}
-		log.Infof("Chain id: %v (record & run-vm only)", cfg.ChainID)
-		log.Infof("SyncPeriod length: %v", cfg.SyncPeriodLength)
-
-		logDbMode := func(prefix, impl, variant string) {
-			if cfg.DbImpl == "carmen" {
-				log.Infof("%s: %v, DB variant: %v, DB schema: %d", prefix, impl, variant, cfg.CarmenSchema)
-			} else {
-				log.Infof("%s: %v, DB variant: %v", prefix, impl, variant)
-			}
-		}
-		if !cfg.ShadowDb {
-			logDbMode("Storage system", cfg.DbImpl, cfg.DbVariant)
-		} else {
-			logDbMode("Prime storage system", cfg.DbImpl, cfg.DbVariant)
-			logDbMode("Shadow storage system", cfg.ShadowImpl, cfg.ShadowVariant)
-		}
-		log.Infof("Source storage directory (empty if new): %v", cfg.StateDbSrc)
-		log.Infof("Working storage directory: %v", cfg.DbTmp)
-		if cfg.ArchiveMode {
-			log.Noticef("Archive mode: enabled")
-			if cfg.ArchiveVariant == "" {
-				log.Infof("Archive variant: <implementation-default>")
-			} else {
-				log.Infof("Archive variant: %s", cfg.ArchiveVariant)
-			}
-		} else {
-			log.Infof("Archive mode: disabled")
-		}
-		log.Infof("Used VM implementation: %v", cfg.VmImpl)
-		log.Infof("Update DB directory: %v", cfg.UpdateDb)
-		if cfg.SkipPriming {
-			log.Infof("Priming: Skipped")
-		} else {
-			log.Infof("Randomized Priming: %v", cfg.PrimeRandom)
-			if cfg.PrimeRandom {
-				log.Infof("Seed: %v, threshold: %v", cfg.RandomSeed, cfg.PrimeThreshold)
-			}
-			log.Infof("Update buffer size: %v bytes", cfg.UpdateBufferSize)
-		}
-		log.Infof("Validate world state: %v, validate tx state: %v", cfg.ValidateWorldState, cfg.ValidateTxState)
-	}
-
-	if cfg.ValidateTxState {
-		log.Warning("Validation enabled, reducing Tx throughput")
-	}
-	if cfg.ShadowDb {
-		log.Warning("DB shadowing enabled, reducing Tx throughput and increasing memory and storage usage")
-	}
-	if cfg.DbLogging {
-		log.Warning("DB logging enabled, reducing Tx throughput")
-	}
-	if _, err := os.Stat(cfg.DeletionDb); os.IsNotExist(err) {
-		log.Warning("Deleted-account-dir is not provided or does not exist")
-		cfg.HasDeletedAccounts = false
-	}
-	if cfg.KeepDb && strings.Contains(cfg.DbVariant, "memory") {
-		log.Warning("Unable to keep in-memory stateDB")
-		cfg.KeepDb = false
-	}
-	if cfg.First == 0 {
-		cfg.SkipPriming = true
-	}
-	if cfg.First != 0 && cfg.SkipPriming && cfg.ValidateWorldState {
-		return cfg, fmt.Errorf("skipPriming and world-state validation can not be enabled at the same time")
-	}
+	reportNewConfig(cfg, log)
 
 	return cfg, nil
 }
@@ -456,7 +361,7 @@ func getMdBlockRange(aidaDbPath string, chainId ChainID, log *logging.Logger) (u
 	defaultLastPatch := keywordBlocks[chainId]["lastpatch"]
 
 	if _, err := os.Stat(aidaDbPath); errors.Is(err, os.ErrNotExist) {
-		log.Warningf("Unable to open Aida-db in %s: %v", aidaDbPath, err)
+		log.Warningf("Unable to open Aida-db in %s; %v", aidaDbPath, err)
 		fmt.Println(defaultFirst)
 		return defaultFirst, defaultLast, defaultLastPatch, false, nil
 	}
@@ -613,6 +518,100 @@ func updateConfigBlockRange(args []string, cfg *Config, mode ArgumentMode, log *
 	return nil
 }
 
-func checkNewConfig(cfg *Config) error {
-	return nil
+func adjustMissingConfigValues(cfg *Config) {
+	// set default db variant if not provided.
+	if cfg.DbImpl == "carmen" && cfg.DbVariant == "" {
+		cfg.DbVariant = "go-file"
+	}
+
+	// --continue-on-failure implicitly enables transaction state validation
+	cfg.ValidateTxState = cfg.Validate || cfg.ValidateTxState || cfg.ContinueOnFailure
+
+	cfg.ValidateWorldState = cfg.Validate || cfg.ValidateWorldState
+
+	if cfg.RandomSeed < 0 {
+		cfg.RandomSeed = int64(rand.Uint32())
+	}
+
+	if _, err := os.Stat(cfg.AidaDb); !os.IsNotExist(err) {
+		cfg.UpdateDb = cfg.AidaDb
+		cfg.DeletionDb = cfg.AidaDb
+		cfg.SubstateDb = cfg.AidaDb
+	}
+
+	if _, err := os.Stat(cfg.DeletionDb); os.IsNotExist(err) {
+		cfg.HasDeletedAccounts = false
+	}
+	if cfg.KeepDb && strings.Contains(cfg.DbVariant, "memory") {
+		cfg.KeepDb = false
+	}
+	if cfg.First == 0 {
+		cfg.SkipPriming = true
+	}
+}
+
+func reportNewConfig(cfg *Config, log *logging.Logger) {
+	if !cfg.Quiet {
+		log.Noticef("Run config:")
+		log.Infof("Block range: %v to %v", cfg.First, cfg.Last)
+		if cfg.MaxNumTransactions >= 0 {
+			log.Infof("Transaction limit: %d", cfg.MaxNumTransactions)
+		}
+		log.Infof("Chain id: %v (record & run-vm only)", cfg.ChainID)
+		log.Infof("SyncPeriod length: %v", cfg.SyncPeriodLength)
+
+		logDbMode := func(prefix, impl, variant string) {
+			if cfg.DbImpl == "carmen" {
+				log.Infof("%s: %v, DB variant: %v, DB schema: %d", prefix, impl, variant, cfg.CarmenSchema)
+			} else {
+				log.Infof("%s: %v, DB variant: %v", prefix, impl, variant)
+			}
+		}
+		if !cfg.ShadowDb {
+			logDbMode("Storage system", cfg.DbImpl, cfg.DbVariant)
+		} else {
+			logDbMode("Prime storage system", cfg.DbImpl, cfg.DbVariant)
+			logDbMode("Shadow storage system", cfg.ShadowImpl, cfg.ShadowVariant)
+		}
+		log.Infof("Source storage directory (empty if new): %v", cfg.StateDbSrc)
+		log.Infof("Working storage directory: %v", cfg.DbTmp)
+		if cfg.ArchiveMode {
+			log.Noticef("Archive mode: enabled")
+			if cfg.ArchiveVariant == "" {
+				log.Infof("Archive variant: <implementation-default>")
+			} else {
+				log.Infof("Archive variant: %s", cfg.ArchiveVariant)
+			}
+		} else {
+			log.Infof("Archive mode: disabled")
+		}
+		log.Infof("Used VM implementation: %v", cfg.VmImpl)
+		log.Infof("Update DB directory: %v", cfg.UpdateDb)
+		if cfg.SkipPriming {
+			log.Infof("Priming: Skipped")
+		} else {
+			log.Infof("Randomized Priming: %v", cfg.PrimeRandom)
+			if cfg.PrimeRandom {
+				log.Infof("Seed: %v, threshold: %v", cfg.RandomSeed, cfg.PrimeThreshold)
+			}
+			log.Infof("Update buffer size: %v bytes", cfg.UpdateBufferSize)
+		}
+		log.Infof("Validate world state: %v, validate tx state: %v", cfg.ValidateWorldState, cfg.ValidateTxState)
+	}
+
+	if cfg.ValidateTxState {
+		log.Warning("Validation enabled, reducing Tx throughput")
+	}
+	if cfg.ShadowDb {
+		log.Warning("DB shadowing enabled, reducing Tx throughput and increasing memory and storage usage")
+	}
+	if cfg.DbLogging {
+		log.Warning("DB logging enabled, reducing Tx throughput")
+	}
+	if !cfg.HasDeletedAccounts {
+		log.Warning("Deleted-account-dir is not provided or does not exist")
+	}
+	if !cfg.KeepDb {
+		log.Warning("Keeping the stateDB disabled")
+	}
 }
