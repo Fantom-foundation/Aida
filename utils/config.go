@@ -214,7 +214,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	}
 
 	// set numbers of first block, last block and path to profilingDB
-	cfg.First, cfg.Last, cfg.ProfileDB, err = parseCmdArgs(ctx.Args().Slice(), cfg, mode, log)
+	err = updateConfigBlockRange(ctx.Args().Slice(), cfg, mode, log)
 	if err != nil {
 		return cfg, fmt.Errorf("unable to parse cli arguments; %v", err)
 	}
@@ -541,7 +541,7 @@ func getChainId(cfg *Config, log *logging.Logger) (ChainID, error) {
 	return chainId, nil
 }
 
-func parseCmdArgs(args []string, cfg *Config, mode ArgumentMode, log *logging.Logger) (uint64, uint64, string, error) {
+func updateConfigBlockRange(args []string, cfg *Config, mode ArgumentMode, log *logging.Logger) error {
 	var (
 		first     uint64
 		last      uint64
@@ -552,7 +552,7 @@ func parseCmdArgs(args []string, cfg *Config, mode ArgumentMode, log *logging.Lo
 	case BlockRangeArgsProfileDB:
 		// process arguments and flags
 		if len(args) != 3 {
-			return 0, 0, "", fmt.Errorf("command requires 3 arguments")
+			return fmt.Errorf("command requires 3 arguments")
 		} else if len(args) == 3 {
 			// set profileDB from argument
 			profileDB = args[2]
@@ -565,7 +565,7 @@ func parseCmdArgs(args []string, cfg *Config, mode ArgumentMode, log *logging.Lo
 			aidaDbPath := cfg.AidaDb
 			firstMd, lastMd, lastPatchMd, mdOk, err := getMdBlockRange(aidaDbPath, cfg.ChainID, log)
 			if err != nil {
-				return 0, 0, "", err
+				return err
 			}
 			keywordBlocks[cfg.ChainID]["first"] = firstMd
 			keywordBlocks[cfg.ChainID]["last"] = lastMd
@@ -574,7 +574,7 @@ func parseCmdArgs(args []string, cfg *Config, mode ArgumentMode, log *logging.Lo
 			// try to parse and check block range
 			firstArg, lastArg, argErr := SetBlockRange(args[0], args[1], cfg.ChainID)
 			if argErr != nil {
-				return 0, 0, "", argErr
+				return argErr
 			}
 
 			if !mdOk {
@@ -586,28 +586,31 @@ func parseCmdArgs(args []string, cfg *Config, mode ArgumentMode, log *logging.Lo
 			// find if values overlap
 			first, last, err = adjustBlockRange(cfg.ChainID, firstArg, lastArg)
 			if err != nil {
-				return 0, 0, "", err
+				return err
 			}
 		} else {
-			return 0, 0, "", fmt.Errorf("command requires 2 arguments")
+			return fmt.Errorf("command requires 2 arguments")
 		}
 	case LastBlockArg:
 		var err error
 
 		last, err = strconv.ParseUint(args[0], 10, 64)
 		if err != nil {
-			return 0, 0, "", err
+			return err
 		}
 	case OneToNArgs:
 		if len(args) < 1 {
-			return 0, 0, "", errors.New("this command requires at least 1 argument")
+			return errors.New("this command requires at least 1 argument")
 		}
 	case NoArgs:
 	default:
-		return 0, 0, "", errors.New("unknown mode; unable to process commandline arguments")
+		return errors.New("unknown mode; unable to process commandline arguments")
 	}
 
-	return first, last, profileDB, nil
+	cfg.First = first
+	cfg.Last = last
+	cfg.ProfileDB = profileDB
+	return nil
 }
 
 func checkNewConfig(cfg *Config) error {

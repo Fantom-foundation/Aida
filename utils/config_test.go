@@ -388,6 +388,11 @@ func TestUtilsConfig_getChainIdFromDB(t *testing.T) {
 	}
 }
 
+// TestUtilsConfig_getChainIdFromFlag tests if chainID can be loaded from flag correctly
+func TestUtilsConfig_getChainIdFromFlag(t *testing.T) {
+	// TODO
+}
+
 // TestUtilsConfig_getDefaultChainId tests if unknown chainID will be replaced with the mainnet chainID
 func TestUtilsConfig_getDefaultChainId(t *testing.T) {
 	// prepare components
@@ -415,8 +420,8 @@ func TestUtilsConfig_getDefaultChainId(t *testing.T) {
 	}
 }
 
-// TestUtilsConfig_parseCmdArgsBlockRange tests correct parsing of cli arguments for block range
-func TestUtilsConfig_parseCmdArgsBlockRange(t *testing.T) {
+// TestUtilsConfig_updateConfigBlockRangeBlockRange tests correct parsing of cli arguments for block range
+func TestUtilsConfig_updateConfigBlockRangeBlockRange(t *testing.T) {
 	// prepare components
 	var (
 		logLevel          = "INFO"
@@ -457,23 +462,23 @@ func TestUtilsConfig_parseCmdArgsBlockRange(t *testing.T) {
 	}
 
 	// parse cli arguments slice
-	first, last, _, err := parseCmdArgs([]string{firstArg, lastArg}, cfg, mode, log)
+	err = updateConfigBlockRange([]string{firstArg, lastArg}, cfg, mode, log)
 	if err != nil {
 		t.Fatalf("cannot parse the cli arguments; %v", err)
 	}
 
 	// check if the arguments were parsed correctly
-	if parsedFirst, _ := strconv.ParseUint(firstArg, 10, 64); parsedFirst != first {
+	if parsedFirst, _ := strconv.ParseUint(firstArg, 10, 64); parsedFirst != cfg.First {
 		t.Fatalf("failed to get first argument correctly; got: %d; expected: %s", parsedFirst, firstArg)
 	}
 
-	if parsedLast, _ := strconv.ParseUint(lastArg, 10, 64); parsedLast != last {
+	if parsedLast, _ := strconv.ParseUint(lastArg, 10, 64); parsedLast != cfg.Last {
 		t.Fatalf("failed to get last argument correctly; got: %d; expected: %s", parsedLast, lastArg)
 	}
 }
 
-// TestUtilsConfig_parseCmdArgsBlockRangeInvalid tests parsing of invalid cli arguments length for block range
-func TestUtilsConfig_parseCmdArgsBlockRangeInvalid(t *testing.T) {
+// TestUtilsConfig_updateConfigBlockRangeBlockRangeInvalid tests parsing of invalid cli arguments length for block range
+func TestUtilsConfig_updateConfigBlockRangeBlockRangeInvalid(t *testing.T) {
 	// prepare components
 	var (
 		mode     = BlockRangeArgs
@@ -487,15 +492,15 @@ func TestUtilsConfig_parseCmdArgsBlockRangeInvalid(t *testing.T) {
 	log := logger.NewLogger(cfg.LogLevel, "Utils_config_test")
 
 	// parse cli arguments slice of insufficient length
-	_, _, _, err := parseCmdArgs([]string{"test"}, cfg, mode, log)
+	err := updateConfigBlockRange([]string{"test"}, cfg, mode, log)
 	if err == nil {
 		t.Fatalf("failed to throw an error")
 	}
 }
 
-// TestUtilsConfig_parseCmdArgsBlockRangeProfileDb tests correct parsing of cli arguments for block range
+// TestUtilsConfig_updateConfigBlockRangeBlockRangeProfileDb tests correct parsing of cli arguments for block range
 // and profiling DB
-func TestUtilsConfig_parseCmdArgsBlockRangeProfileDb(t *testing.T) {
+func TestUtilsConfig_updateConfigBlockRangeBlockRangeProfileDb(t *testing.T) {
 	// prepare components
 	var (
 		logLevel            = "INFO"
@@ -537,28 +542,28 @@ func TestUtilsConfig_parseCmdArgsBlockRangeProfileDb(t *testing.T) {
 	}
 
 	// parse cli arguments slice
-	first, last, profileDb, err := parseCmdArgs([]string{firstArg, lastArg, profileDbArg}, cfg, mode, log)
+	err = updateConfigBlockRange([]string{firstArg, lastArg, profileDbArg}, cfg, mode, log)
 	if err != nil {
 		t.Fatalf("cannot parse the cli arguments; %v", err)
 	}
 
 	// check if the arguments were parsed correctly
-	if parsedFirst, _ := strconv.ParseUint(firstArg, 10, 64); parsedFirst != first {
+	if parsedFirst, _ := strconv.ParseUint(firstArg, 10, 64); parsedFirst != cfg.First {
 		t.Fatalf("failed to get first argument correctly; got: %d; expected: %s", parsedFirst, firstArg)
 	}
 
-	if parsedLast, _ := strconv.ParseUint(lastArg, 10, 64); parsedLast != last {
+	if parsedLast, _ := strconv.ParseUint(lastArg, 10, 64); parsedLast != cfg.Last {
 		t.Fatalf("failed to get last argument correctly; got: %d; expected: %s", parsedLast, lastArg)
 	}
 
-	if profileDbArg != profileDb {
-		t.Fatalf("failed to get last argument correctly; got: %s; expected: %s", profileDb, profileDbArg)
+	if profileDbArg != cfg.ProfileDB {
+		t.Fatalf("failed to get last argument correctly; got: %s; expected: %s", cfg.ProfileDB, profileDbArg)
 	}
 }
 
-// TestUtilsConfig_parseCmdArgsBlockRangeProfileDbInvalid tests parsing of invalid cli arguments length for block range
+// TestUtilsConfig_updateConfigBlockRangeBlockRangeProfileDbInvalid tests parsing of invalid cli arguments length for block range
 // and profiling DB
-func TestUtilsConfig_parseCmdArgsBlockRangeProfileDbInvalid(t *testing.T) {
+func TestUtilsConfig_updateConfigBlockRangeBlockRangeProfileDbInvalid(t *testing.T) {
 	// prepare components
 	var (
 		logLevel = "INFO"
@@ -572,20 +577,20 @@ func TestUtilsConfig_parseCmdArgsBlockRangeProfileDbInvalid(t *testing.T) {
 	log := logger.NewLogger(cfg.LogLevel, "Utils_config_test")
 
 	// parse cli arguments slice of insufficient length
-	_, _, _, err := parseCmdArgs([]string{"test"}, cfg, mode, log)
+	err := updateConfigBlockRange([]string{"test"}, cfg, mode, log)
 	if err == nil {
 		t.Fatalf("failed to throw an error")
 	}
 
 	// second try with length bigger than 3
-	_, _, _, err = parseCmdArgs([]string{"test", "test", "test", "test"}, cfg, mode, log)
+	err = updateConfigBlockRange([]string{"test", "test", "test", "test"}, cfg, mode, log)
 	if err == nil {
 		t.Fatalf("failed to throw an error")
 	}
 }
 
-// TestUtilsConfig_parseCmdArgsLastBlock tests correct parsing of cli argument for last block number
-func TestUtilsConfig_parseCmdArgsLastBlock(t *testing.T) {
+// TestUtilsConfig_updateConfigBlockRangeLastBlock tests correct parsing of cli argument for last block number
+func TestUtilsConfig_updateConfigBlockRangeLastBlock(t *testing.T) {
 	// prepare components
 	var (
 		logLevel = "INFO"
@@ -600,19 +605,19 @@ func TestUtilsConfig_parseCmdArgsLastBlock(t *testing.T) {
 	log := logger.NewLogger(cfg.LogLevel, "Utils_config_test")
 
 	// parse cli arguments slice
-	_, last, _, err := parseCmdArgs([]string{lastArg}, cfg, mode, log)
+	err := updateConfigBlockRange([]string{lastArg}, cfg, mode, log)
 	if err != nil {
 		t.Fatalf("cannot parse the cli arguments; %v", err)
 	}
 
 	// check if the arguments were parsed correctly
-	if parsedLast, _ := strconv.ParseUint(lastArg, 10, 64); parsedLast != last {
+	if parsedLast, _ := strconv.ParseUint(lastArg, 10, 64); parsedLast != cfg.Last {
 		t.Fatalf("failed to get last argument correctly; got: %d; expected: %s", parsedLast, lastArg)
 	}
 }
 
-// TestUtilsConfig_parseCmdArgsLastBlockInvalid tests parsing of invalid cli arguments length for last block number
-func TestUtilsConfig_parseCmdArgsLastBlockInvalid(t *testing.T) {
+// TestUtilsConfig_updateConfigBlockRangeLastBlockInvalid tests parsing of invalid cli arguments length for last block number
+func TestUtilsConfig_updateConfigBlockRangeLastBlockInvalid(t *testing.T) {
 	// prepare components
 	var (
 		logLevel = "INFO"
@@ -626,14 +631,14 @@ func TestUtilsConfig_parseCmdArgsLastBlockInvalid(t *testing.T) {
 	log := logger.NewLogger(cfg.LogLevel, "Utils_config_test")
 
 	// parse cli arguments slice of insufficient length
-	_, _, _, err := parseCmdArgs([]string{"test"}, cfg, mode, log)
+	err := updateConfigBlockRange([]string{"test"}, cfg, mode, log)
 	if err == nil {
 		t.Fatalf("failed to throw an error")
 	}
 }
 
-// TestUtilsConfig_parseCmdArgsOneToNInvalid tests parsing of invalid cli arguments length for last block number
-func TestUtilsConfig_parseCmdArgsOneToNInvalid(t *testing.T) {
+// TestUtilsConfig_updateConfigBlockRangeOneToNInvalid tests parsing of invalid cli arguments length for last block number
+func TestUtilsConfig_updateConfigBlockRangeOneToNInvalid(t *testing.T) {
 	// prepare components
 	var (
 		logLevel = "INFO"
@@ -647,7 +652,7 @@ func TestUtilsConfig_parseCmdArgsOneToNInvalid(t *testing.T) {
 	log := logger.NewLogger(cfg.LogLevel, "Utils_config_test")
 
 	// parse cli arguments slice of insufficient length
-	_, _, _, err := parseCmdArgs([]string{}, cfg, mode, log)
+	err := updateConfigBlockRange([]string{}, cfg, mode, log)
 	if err == nil {
 		t.Fatalf("failed to throw an error")
 	}
