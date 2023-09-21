@@ -208,7 +208,6 @@ func TestStateDbManager_UsingExistingSourceDb(t *testing.T) {
 	tmpOutDir := t.TempDir()
 	config.DbTmp = tmpOutDir
 	config.StateDbSrc = sourcePath
-	config.CopySrcDb = true
 
 	ext = MakeStateDbManager(config)
 

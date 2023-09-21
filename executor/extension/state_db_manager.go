@@ -1,6 +1,7 @@
 package extension
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -34,11 +35,25 @@ func (m *stateDbManager) PreRun(state executor.State, ctx *executor.Context) err
 }
 
 func (m *stateDbManager) PostRun(state executor.State, ctx *executor.Context, _ error) error {
+	//  if state was not correctly initialized remove the stateDbPath and abort
+	if ctx.State == nil {
+		var err = fmt.Errorf("state-db is nil")
+		if m.config.CopySrcDb {
+			err = errors.Join(err, os.RemoveAll(m.stateDbPath))
+		}
+		return err
+	}
+
+	// if db isn't kept, then close and delete temporary state-db
 	if !m.config.KeepDb {
 		if err := ctx.State.Close(); err != nil {
 			return fmt.Errorf("failed to close state-db; %v", err)
 		}
-		return os.RemoveAll(m.config.StateDbSrc)
+
+		if m.config.CopySrcDb {
+			return os.RemoveAll(m.stateDbPath)
+		}
+		return nil
 	}
 
 	rootHash := ctx.State.GetHash()
