@@ -222,6 +222,7 @@ var (
 	DbTmpFlag = cli.PathFlag{
 		Name:  "db-tmp",
 		Usage: "sets the temporary directory where to place DB data; uses system default if empty",
+		Value: "/tmp",
 	}
 	StateDbLoggingFlag = cli.BoolFlag{
 		Name:  "db-logging",
