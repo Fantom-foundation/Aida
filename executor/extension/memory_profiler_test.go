@@ -27,7 +27,7 @@ func TestMemoryProfiler_CollectsProfileDataIfEnabled(t *testing.T) {
 
 func TestMemoryProfiler_NoProfileIsCollectedIfDisabled(t *testing.T) {
 	config := &utils.Config{}
-	ext := MakeCpuProfiler(config)
+	ext := MakeMemoryProfiler(config)
 
 	if _, ok := ext.(NilExtension); !ok {
 		t.Errorf("profiler is enabled although not set in configuration")
