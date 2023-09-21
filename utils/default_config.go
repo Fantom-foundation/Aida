@@ -7,8 +7,8 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// createConfig returns Config instance with user specified values or the default ones
-func createConfig(ctx *cli.Context) *Config {
+// createConfigFromFlags returns Config instance with user specified values or the default ones
+func createConfigFromFlags(ctx *cli.Context) *Config {
 	cfg := &Config{
 		AppName:     ctx.App.HelpName,
 		CommandName: ctx.Command.Name,

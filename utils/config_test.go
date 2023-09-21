@@ -679,3 +679,27 @@ func TestUtilsConfig_updateConfigBlockRangeOneToNInvalid(t *testing.T) {
 		t.Fatalf("failed to throw an error")
 	}
 }
+
+// TestUtilsConfig_adjustMissingConfigValues tests if missing config values are set correctly
+func TestUtilsConfig_adjustMissingConfigValues(t *testing.T) {
+	// prepare components
+	var (
+		chainId   = MainnetChainID
+		aidaDB    = "./test.db"
+		dbImpl    = "carmen"
+		dbVariant = ""
+	)
+
+	// prepare mock config
+	cfg := &Config{ChainID: chainId, AidaDb: aidaDB, DbImpl: dbImpl, DbVariant: dbVariant}
+
+	// set missing values
+	adjustMissingConfigValues(cfg)
+
+	// checks
+	if cfg.DbVariant == dbVariant {
+		t.Fatalf("failed to adjust carmen DBvariant; got: %s; expected: %s", cfg.DbVariant, dbVariant)
+	}
+
+	// TODO: test rest of the function
+}
