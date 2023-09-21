@@ -1,4 +1,4 @@
-package executor
+package action_provider
 
 //go:generate mockgen -source substate_provider_test.go -destination substate_provider_test_mocks.go -package executor
 

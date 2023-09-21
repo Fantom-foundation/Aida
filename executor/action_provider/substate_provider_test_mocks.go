@@ -2,7 +2,7 @@
 // Source: substate_provider_test.go
 
 // Package executor is a generated GoMock package.
-package executor
+package action_provider
 
 import (
 	reflect "reflect"

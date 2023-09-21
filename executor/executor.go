@@ -6,6 +6,7 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/Fantom-foundation/Aida/executor/action_provider"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -62,7 +63,7 @@ type Executor interface {
 }
 
 // NewExecutor creates a new executor based on the given provider provider.
-func NewExecutor(substate ActionProvider) Executor {
+func NewExecutor(substate action_provider.ActionProvider) Executor {
 	return &executor{substate}
 }
 
@@ -81,6 +82,8 @@ type Params struct {
 	// is guranteed. Any number <= 1 is considered to be 1, thus the default
 	// value of 0 is valid.
 	NumWorkers int
+	// RunMode represents what is being iterated over
+	RunMode RunMode
 }
 
 // Processor is an interface for the entity to which an executor is feeding
@@ -141,13 +144,6 @@ type Extension interface {
 	PostTransaction(State, *Context) error
 }
 
-type RunType byte
-
-const (
-	SubstateType RunType = iota
-	OperationType
-)
-
 // State summarizes the current state of an execution and is passed to
 // Processors and Extensions as an input for their actions.
 type State struct {
@@ -179,8 +175,15 @@ type Context struct {
 //                               Implementations
 // ----------------------------------------------------------------------------
 
+type RunMode byte
+
+const (
+	SubstateMode RunMode = iota
+	OperationMode
+)
+
 type executor struct {
-	provider ActionProvider
+	provider action_provider.ActionProvider
 }
 
 func (e *executor) Run(params Params, processor Processor, extensions []Extension) (err error) {
@@ -199,13 +202,13 @@ func (e *executor) Run(params Params, processor Processor, extensions []Extensio
 		return err
 	}
 
-	switch e.provider.(type) {
-	case *substateProvider:
+	switch params.RunMode {
+	case SubstateMode:
 		if params.NumWorkers <= 1 {
 			return e.runSubstateSequential(params, processor, extensions, &state, &context)
 		}
 		return e.runSubstateParallel(params, processor, extensions, &state, &context)
-	case *operationProvider:
+	case OperationMode:
 		return e.runOperations(params, processor, extensions, &state, &context)
 	default:
 		return errors.New("unknown provider")
@@ -221,11 +224,11 @@ func (e *executor) runSubstateParallel(params Params, processor Processor, exten
 
 	// Start one go-routine forwarding transactions from the provider to a local channel.
 	var forwardErr error
-	transactions := make(chan *TransactionInfo, 10*numWorkers)
+	transactions := make(chan *action_provider.TransactionInfo, 10*numWorkers)
 	go func() {
 		defer close(transactions)
 		abortErr := errors.New("aborted")
-		err := e.provider.Run(params.From, params.To, func(tx TransactionInfo, _ operation.Operation) error {
+		err := e.provider.Run(params.From, params.To, func(tx action_provider.TransactionInfo, _ operation.Operation) error {
 			select {
 			case transactions <- &tx:
 				return nil
@@ -281,7 +284,7 @@ func (e *executor) runSubstateParallel(params Params, processor Processor, exten
 
 func (e *executor) runSubstateSequential(params Params, processor Processor, extensions []Extension, state *State, context *Context) error {
 	first := true
-	err := e.provider.Run(params.From, params.To, func(tx TransactionInfo, _ operation.Operation) error {
+	err := e.provider.Run(params.From, params.To, func(tx action_provider.TransactionInfo, _ operation.Operation) error {
 		if first {
 			state.Block = tx.Block
 			if err := signalPreBlock(*state, context, extensions); err != nil {
@@ -324,7 +327,7 @@ func (e *executor) runOperations(params Params, processor Processor, extensions 
 		first      = true
 	)
 
-	err := e.provider.Run(params.From, params.To, func(_ TransactionInfo, op operation.Operation) error {
+	err := e.provider.Run(params.From, params.To, func(_ action_provider.TransactionInfo, op operation.Operation) error {
 		if beginBlock, ok = state.Operation.(*operation.BeginBlock); ok {
 			// new block has appeared
 			if first {

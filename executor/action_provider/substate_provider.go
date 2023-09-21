@@ -1,11 +1,10 @@
-package executor
+package action_provider
 
-//go:generate mockgen -source substate_provider.go -destination substate_provider_mocks.go -package executor
+//go:generate mockgen -source substate_provider.go -destination substate_provider_mocks.go -package action_provider
 
 import (
 	"fmt"
 
-	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
@@ -15,22 +14,18 @@ import (
 //                               Interface
 // ----------------------------------------------------------------------------
 
-// ActionProvider is an interface for components capable of enumerating
-// provider-data for ranges of transactions.
-type ActionProvider interface {
+// SubstateProvider is an interface for components capable of enumerating
+// substate-data for ranges of transactions.
+type SubstateProvider interface {
 	// Run iterates through transaction in the block range [from,to) in order
-	// and forwards provider information for each transaction in the range to
+	// and forwards substate information for each transaction in the range to
 	// the provided consumer. Execution aborts if the consumer returns an error
-	// or an error during the provider retrieval process occurred.
+	// or an error during the substate retrieval process occurred.
 	Run(from int, to int, consumer Consumer) error
 	// Close releases resources held by the Substate implementation. After this
 	// no more operations are allowed on the same instance.
 	Close()
 }
-
-// Consumer is a type alias for the type of function to which provider information
-// can be forwarded by the ActionProvider.
-type Consumer func(TransactionInfo, operation.Operation) error
 
 // TransactionInfo summarizes the per-transaction information provided by a
 // ActionProvider.
@@ -39,10 +34,6 @@ type TransactionInfo struct {
 	Transaction int
 	Substate    *substate.Substate
 }
-
-// ----------------------------------------------------------------------------
-//                              Implementation
-// ----------------------------------------------------------------------------
 
 // OpenSubstateDb opens a provider database as configured in the given parameters.
 func OpenSubstateDb(config *utils.Config, ctxt *cli.Context) (res ActionProvider, err error) {

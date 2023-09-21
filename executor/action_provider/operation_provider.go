@@ -1,9 +1,23 @@
-package executor
+package action_provider
+
+//go:generate mockgen -source operation_provider.go -destination operation_provider_mocks.go -package action_provider
 
 import (
 	"github.com/Fantom-foundation/Aida/tracer"
 	"github.com/Fantom-foundation/Aida/utils"
 )
+
+// OperationProvider is an interface for components
+// capable of enumerating StateDb operations.
+type OperationProvider interface {
+	// Run iterates through operations in the block range [from,to) in order
+	// and forwards provider information for each operation in the range to
+	// the provided consumer. Execution aborts if the consumer returns an error
+	// or an error during the provider retrieval process occurred.
+	Run(from int, to int, consumer Consumer) error
+
+	Close()
+}
 
 type operationProvider struct {
 	traceFiles []string
@@ -26,7 +40,7 @@ func (p operationProvider) Run(from int, _ int, consumer Consumer) error {
 }
 
 func (p operationProvider) Close() {
-
+	// ignored
 }
 
 func OpenOperations(config *utils.Config) (ActionProvider, error) {

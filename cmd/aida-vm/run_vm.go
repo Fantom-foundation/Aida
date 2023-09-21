@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/action_provider"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
@@ -18,7 +19,7 @@ func RunVm(ctx *cli.Context) error {
 		return err
 	}
 
-	substateDb, err := executor.OpenSubstateDb(cfg, ctx)
+	substateDb, err := action_provider.OpenSubstateDb(cfg, ctx)
 	if err != nil {
 		return err
 	}
@@ -42,7 +43,7 @@ func RunVm(ctx *cli.Context) error {
 // execution, in particular during unit tests.
 func run(
 	config *utils.Config,
-	provider executor.ActionProvider,
+	provider action_provider.ActionProvider,
 	processor executor.Processor,
 	extra []executor.Extension,
 ) error {

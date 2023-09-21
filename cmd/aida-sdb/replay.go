@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/action_provider"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
 	state_db "github.com/Fantom-foundation/Aida/state"
@@ -78,7 +79,7 @@ func Replay(ctx *cli.Context) error {
 		return fmt.Errorf("db-impl memory is not supported")
 	}
 
-	operations, err := executor.OpenOperations(cfg)
+	operations, err := action_provider.OpenOperations(cfg)
 	if err != nil {
 		return err
 	}
@@ -119,12 +120,13 @@ func (r replayer) Process(state executor.State, context *executor.Context) error
 	return nil
 }
 
-func replay(config *utils.Config, provider executor.ActionProvider, stateDb state_db.StateDB, rep replayer) error {
+func replay(config *utils.Config, provider action_provider.ActionProvider, stateDb state_db.StateDB, rep replayer) error {
 	return executor.NewExecutor(provider).Run(
 		executor.Params{
-			From:  int(config.First),
-			To:    int(config.Last) + 1,
-			State: stateDb,
+			From:    int(config.First),
+			To:      int(config.Last) + 1,
+			State:   stateDb,
+			RunMode: executor.OperationMode,
 		},
 		rep,
 		[]executor.Extension{

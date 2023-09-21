@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/action_provider"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
 	state_db "github.com/Fantom-foundation/Aida/state"
@@ -51,7 +52,7 @@ func Record(ctx *cli.Context) error {
 	cfg.ValidateTxState = true
 
 	substate.RecordReplay = true
-	substateDb, err := executor.OpenSubstateDb(cfg, ctx)
+	substateDb, err := action_provider.OpenSubstateDb(cfg, ctx)
 	if err != nil {
 		return err
 	}
@@ -130,7 +131,7 @@ func (r recorder) close() {
 	r.ctx.Close()
 }
 
-func record(config *utils.Config, provider executor.ActionProvider, stateDb state_db.StateDB, rec executor.Processor) error {
+func record(config *utils.Config, provider action_provider.ActionProvider, stateDb state_db.StateDB, rec executor.Processor) error {
 	return executor.NewExecutor(provider).Run(
 		executor.Params{
 			From:  int(config.First),

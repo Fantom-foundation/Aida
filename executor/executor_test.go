@@ -6,6 +6,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/Fantom-foundation/Aida/executor/action_provider"
 	"github.com/Fantom-foundation/Aida/state"
 	substate "github.com/Fantom-foundation/Substate"
 	"go.uber.org/mock/gomock"
@@ -13,16 +14,16 @@ import (
 
 func TestProcessor_ProcessorGetsCalledForEachTransaction(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	substate := NewMockSubstateProvider(ctrl)
+	substate := action_provider.NewMockSubstateProvider(ctrl)
 	processor := NewMockProcessor(ctrl)
 
 	substate.EXPECT().
 		Run(10, 12, gomock.Any()).
-		DoAndReturn(func(from int, to int, consume Consumer) error {
+		DoAndReturn(func(from int, to int, consume action_provider.Consumer) error {
 			// We simulate two transactions per block.
 			for i := from; i < to; i++ {
-				consume(TransactionInfo{i, 0, nil})
-				consume(TransactionInfo{i, 1, nil})
+				consume(action_provider.TransactionInfo{i, 0, nil}, nil)
+				consume(action_provider.TransactionInfo{i, 1, nil}, nil)
 			}
 			return nil
 		})
@@ -42,14 +43,14 @@ func TestProcessor_ProcessorGetsCalledForEachTransaction(t *testing.T) {
 
 func TestProcessor_FailingProcessorStopsExecution(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	substate := NewMockSubstateProvider(ctrl)
+	substate := action_provider.NewMockSubstateProvider(ctrl)
 	processor := NewMockProcessor(ctrl)
 
 	substate.EXPECT().
 		Run(gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(from int, to int, consume Consumer) error {
+		DoAndReturn(func(from int, to int, consume action_provider.Consumer) error {
 			for i := from; i < to; i++ {
-				if err := consume(TransactionInfo{i, 0, nil}); err != nil {
+				if err := consume(action_provider.TransactionInfo{i, 0, nil}, nil); err != nil {
 					return err
 				}
 			}
@@ -70,17 +71,17 @@ func TestProcessor_FailingProcessorStopsExecution(t *testing.T) {
 
 func TestProcessor_ExtensionsGetSignaledAboutEvents(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	substate := NewMockSubstateProvider(ctrl)
+	substate := action_provider.NewMockSubstateProvider(ctrl)
 	processor := NewMockProcessor(ctrl)
 	extension := NewMockExtension(ctrl)
 
 	substate.EXPECT().
 		Run(10, 12, gomock.Any()).
-		DoAndReturn(func(from int, to int, consume Consumer) error {
+		DoAndReturn(func(from int, to int, consume action_provider.Consumer) error {
 			// We simulate two transactions per block.
 			for i := from; i < to; i++ {
-				consume(TransactionInfo{i, 7, nil})
-				consume(TransactionInfo{i, 9, nil})
+				consume(action_provider.TransactionInfo{i, 7, nil}, nil)
+				consume(action_provider.TransactionInfo{i, 9, nil}, nil)
 			}
 			return nil
 		})
@@ -117,15 +118,15 @@ func TestProcessor_ExtensionsGetSignaledAboutEvents(t *testing.T) {
 
 func TestProcessor_FailingProcessorShouldStopExecutionButEndEventsAreDelivered(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	substate := NewMockSubstateProvider(ctrl)
+	substate := action_provider.NewMockSubstateProvider(ctrl)
 	processor := NewMockProcessor(ctrl)
 	extension := NewMockExtension(ctrl)
 
 	substate.EXPECT().
 		Run(gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(from int, to int, consume Consumer) error {
+		DoAndReturn(func(from int, to int, consume action_provider.Consumer) error {
 			for i := from; i < to; i++ {
-				if err := consume(TransactionInfo{i, 7, nil}); err != nil {
+				if err := consume(action_provider.TransactionInfo{i, 7, nil}, nil); err != nil {
 					return err
 				}
 			}
@@ -149,7 +150,7 @@ func TestProcessor_FailingProcessorShouldStopExecutionButEndEventsAreDelivered(t
 
 func TestProcessor_EmptyIntervalEmitsNoEvents(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	substate := NewMockSubstateProvider(ctrl)
+	substate := action_provider.NewMockSubstateProvider(ctrl)
 	processor := NewMockProcessor(ctrl)
 	extension := NewMockExtension(ctrl)
 
@@ -168,18 +169,18 @@ func TestProcessor_EmptyIntervalEmitsNoEvents(t *testing.T) {
 
 func TestProcessor_MultipleExtensionsGetSignaledInOrder(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	substate := NewMockSubstateProvider(ctrl)
+	substate := action_provider.NewMockSubstateProvider(ctrl)
 	processor := NewMockProcessor(ctrl)
 	extension1 := NewMockExtension(ctrl)
 	extension2 := NewMockExtension(ctrl)
 
 	substate.EXPECT().
 		Run(gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(from int, to int, consume Consumer) error {
+		DoAndReturn(func(from int, to int, consume action_provider.Consumer) error {
 			// We simulate two transactions per block.
 			for i := from; i < to; i++ {
-				consume(TransactionInfo{i, 7, nil})
-				consume(TransactionInfo{i, 9, nil})
+				consume(action_provider.TransactionInfo{i, 7, nil}, nil)
+				consume(action_provider.TransactionInfo{i, 9, nil}, nil)
 			}
 			return nil
 		})
@@ -218,7 +219,7 @@ func TestProcessor_MultipleExtensionsGetSignaledInOrder(t *testing.T) {
 
 func TestProcessor_FailingExtensionPreEventCausesExecutionToStop(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	substate := NewMockSubstateProvider(ctrl)
+	substate := action_provider.NewMockSubstateProvider(ctrl)
 	processor := NewMockProcessor(ctrl)
 	extension1 := NewMockExtension(ctrl)
 	extension2 := NewMockExtension(ctrl)
@@ -241,16 +242,16 @@ func TestProcessor_FailingExtensionPreEventCausesExecutionToStop(t *testing.T) {
 
 func TestProcessor_FailingExtensionPostEventCausesExecutionToStop(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	substate := NewMockSubstateProvider(ctrl)
+	substate := action_provider.NewMockSubstateProvider(ctrl)
 	processor := NewMockProcessor(ctrl)
 	extension1 := NewMockExtension(ctrl)
 	extension2 := NewMockExtension(ctrl)
 
 	substate.EXPECT().
 		Run(gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(from int, to int, consume Consumer) error {
+		DoAndReturn(func(from int, to int, consume action_provider.Consumer) error {
 			for i := from; i < to; i++ {
-				if err := consume(TransactionInfo{i, 7, nil}); err != nil {
+				if err := consume(action_provider.TransactionInfo{i, 7, nil}, nil); err != nil {
 					return err
 				}
 			}
@@ -286,18 +287,18 @@ func TestProcessor_FailingExtensionPostEventCausesExecutionToStop(t *testing.T) 
 
 func TestProcessor_StateDbIsPropagatedToTheProcessorAndAllExtensions(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	substate := NewMockSubstateProvider(ctrl)
+	substate := action_provider.NewMockSubstateProvider(ctrl)
 	processor := NewMockProcessor(ctrl)
 	extension := NewMockExtension(ctrl)
 	state := state.NewMockStateDB(ctrl)
 
 	substate.EXPECT().
 		Run(gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(from int, to int, consume Consumer) error {
+		DoAndReturn(func(from int, to int, consume action_provider.Consumer) error {
 			// We simulate two transactions per block.
 			for i := from; i < to; i++ {
-				consume(TransactionInfo{i, 7, nil})
-				consume(TransactionInfo{i, 9, nil})
+				consume(action_provider.TransactionInfo{i, 7, nil}, nil)
+				consume(action_provider.TransactionInfo{i, 9, nil}, nil)
 			}
 			return nil
 		})
@@ -327,7 +328,7 @@ func TestProcessor_StateDbIsPropagatedToTheProcessorAndAllExtensions(t *testing.
 
 func TestProcessor_StateDbCanBeModifiedByExtensionsAndProcessorInSequentialRun(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	substate := NewMockSubstateProvider(ctrl)
+	substate := action_provider.NewMockSubstateProvider(ctrl)
 	processor := NewMockProcessor(ctrl)
 	extension := NewMockExtension(ctrl)
 
@@ -338,8 +339,8 @@ func TestProcessor_StateDbCanBeModifiedByExtensionsAndProcessorInSequentialRun(t
 
 	substate.EXPECT().
 		Run(gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(from int, to int, consume Consumer) error {
-			consume(TransactionInfo{from, 7, nil})
+		DoAndReturn(func(from int, to int, consume action_provider.Consumer) error {
+			consume(action_provider.TransactionInfo{from, 7, nil}, nil)
 			return nil
 		})
 
@@ -371,7 +372,7 @@ func TestProcessor_StateDbCanBeModifiedByExtensionsAndProcessorInSequentialRun(t
 
 func TestProcessor_StateDbCanBeModifiedByExtensionsAndProcessorInParallelRun(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	substate := NewMockSubstateProvider(ctrl)
+	substate := action_provider.NewMockSubstateProvider(ctrl)
 	processor := NewMockProcessor(ctrl)
 	extension := NewMockExtension(ctrl)
 
@@ -382,8 +383,8 @@ func TestProcessor_StateDbCanBeModifiedByExtensionsAndProcessorInParallelRun(t *
 
 	substate.EXPECT().
 		Run(gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(from int, to int, consume Consumer) error {
-			consume(TransactionInfo{from, 7, nil})
+		DoAndReturn(func(from int, to int, consume action_provider.Consumer) error {
+			consume(action_provider.TransactionInfo{from, 7, nil}, nil)
 			return nil
 		})
 
@@ -414,16 +415,16 @@ func TestProcessor_StateDbCanBeModifiedByExtensionsAndProcessorInParallelRun(t *
 
 func TestProcessor_TransactionsAreProcessedWithMultipleWorkersIfRequested(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	substate := NewMockSubstateProvider(ctrl)
+	substate := action_provider.NewMockSubstateProvider(ctrl)
 	processor := NewMockProcessor(ctrl)
 
 	substate.EXPECT().
 		Run(gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(from int, to int, consume Consumer) error {
+		DoAndReturn(func(from int, to int, consume action_provider.Consumer) error {
 			// We simulate two transactions per block.
 			for i := from; i < to; i++ {
-				consume(TransactionInfo{i, 7, nil})
-				consume(TransactionInfo{i, 9, nil})
+				consume(action_provider.TransactionInfo{i, 7, nil}, nil)
+				consume(action_provider.TransactionInfo{i, 9, nil}, nil)
 			}
 			return nil
 		})
@@ -448,17 +449,17 @@ func TestProcessor_TransactionsAreProcessedWithMultipleWorkersIfRequested(t *tes
 
 func TestProcessor_SignalsAreDeliveredInConcurrentExecution(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	substate := NewMockSubstateProvider(ctrl)
+	substate := action_provider.NewMockSubstateProvider(ctrl)
 	processor := NewMockProcessor(ctrl)
 	extension := NewMockExtension(ctrl)
 
 	substate.EXPECT().
 		Run(gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(from int, to int, consume Consumer) error {
+		DoAndReturn(func(from int, to int, consume action_provider.Consumer) error {
 			// We simulate two transactions per block.
 			for i := from; i < to; i++ {
-				consume(TransactionInfo{i, 7, nil})
-				consume(TransactionInfo{i, 9, nil})
+				consume(action_provider.TransactionInfo{i, 7, nil}, nil)
+				consume(action_provider.TransactionInfo{i, 9, nil}, nil)
 			}
 			return nil
 		})
@@ -514,14 +515,14 @@ func TestProcessor_SignalsAreDeliveredInConcurrentExecution(t *testing.T) {
 
 func TestProcessor_ProcessErrorAbortsParallelProcessing(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	substate := NewMockSubstateProvider(ctrl)
+	substate := action_provider.NewMockSubstateProvider(ctrl)
 	processor := NewMockProcessor(ctrl)
 
 	substate.EXPECT().
 		Run(gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(from int, to int, consume Consumer) error {
+		DoAndReturn(func(from int, to int, consume action_provider.Consumer) error {
 			for i := from; i < to; i++ {
-				if err := consume(TransactionInfo{i, 7, nil}); err != nil {
+				if err := consume(action_provider.TransactionInfo{i, 7, nil}, nil); err != nil {
 					return err
 				}
 			}
@@ -544,15 +545,15 @@ func TestProcessor_ProcessErrorAbortsParallelProcessing(t *testing.T) {
 
 func TestProcessor_PreEventErrorAbortsParallelProcessing(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	substate := NewMockSubstateProvider(ctrl)
+	substate := action_provider.NewMockSubstateProvider(ctrl)
 	processor := NewMockProcessor(ctrl)
 	extension := NewMockExtension(ctrl)
 
 	substate.EXPECT().
 		Run(gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(from int, to int, consume Consumer) error {
+		DoAndReturn(func(from int, to int, consume action_provider.Consumer) error {
 			for i := from; i < to; i++ {
-				if err := consume(TransactionInfo{i, 7, nil}); err != nil {
+				if err := consume(action_provider.TransactionInfo{i, 7, nil}, nil); err != nil {
 					return err
 				}
 			}
@@ -581,15 +582,15 @@ func TestProcessor_PreEventErrorAbortsParallelProcessing(t *testing.T) {
 
 func TestProcessor_PostEventErrorAbortsParallelProcessing(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	substate := NewMockSubstateProvider(ctrl)
+	substate := action_provider.NewMockSubstateProvider(ctrl)
 	processor := NewMockProcessor(ctrl)
 	extension := NewMockExtension(ctrl)
 
 	substate.EXPECT().
 		Run(gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(from int, to int, consume Consumer) error {
+		DoAndReturn(func(from int, to int, consume action_provider.Consumer) error {
 			for i := from; i < to; i++ {
-				if err := consume(TransactionInfo{i, 7, nil}); err != nil {
+				if err := consume(action_provider.TransactionInfo{i, 7, nil}, nil); err != nil {
 					return err
 				}
 			}
@@ -618,7 +619,7 @@ func TestProcessor_PostEventErrorAbortsParallelProcessing(t *testing.T) {
 
 func TestProcessor_SubstateIsPropagatedToTheProcessorAndAllExtensionsInSequentialExecution(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	provider := NewMockSubstateProvider(ctrl)
+	provider := action_provider.NewMockSubstateProvider(ctrl)
 	processor := NewMockProcessor(ctrl)
 	extension := NewMockExtension(ctrl)
 
@@ -627,9 +628,9 @@ func TestProcessor_SubstateIsPropagatedToTheProcessorAndAllExtensionsInSequentia
 
 	provider.EXPECT().
 		Run(gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(from int, to int, consume Consumer) error {
-			consume(TransactionInfo{from, 7, substateA})
-			consume(TransactionInfo{from, 8, substateB})
+		DoAndReturn(func(from int, to int, consume action_provider.Consumer) error {
+			consume(action_provider.TransactionInfo{from, 7, substateA}, nil)
+			consume(action_provider.TransactionInfo{from, 8, substateB}, nil)
 			return nil
 		})
 
@@ -658,7 +659,7 @@ func TestProcessor_SubstateIsPropagatedToTheProcessorAndAllExtensionsInSequentia
 
 func TestProcessor_SubstateIsPropagatedToTheProcessorAndAllExtensionsInParallelExecution(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	provider := NewMockSubstateProvider(ctrl)
+	provider := action_provider.NewMockSubstateProvider(ctrl)
 	processor := NewMockProcessor(ctrl)
 	extension := NewMockExtension(ctrl)
 
@@ -667,9 +668,9 @@ func TestProcessor_SubstateIsPropagatedToTheProcessorAndAllExtensionsInParallelE
 
 	provider.EXPECT().
 		Run(gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(from int, to int, consume Consumer) error {
-			consume(TransactionInfo{from, 7, substateA})
-			consume(TransactionInfo{from, 8, substateB})
+		DoAndReturn(func(from int, to int, consume action_provider.Consumer) error {
+			consume(action_provider.TransactionInfo{from, 7, substateA}, nil)
+			consume(action_provider.TransactionInfo{from, 8, substateB}, nil)
 			return nil
 		})
 

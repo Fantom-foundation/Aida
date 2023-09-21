@@ -4,7 +4,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/action_provider"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -13,7 +13,7 @@ import (
 
 func TestVmSdb_AllDbEventsAreIssuedInOrder(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	substate := executor.NewMockSubstateProvider(ctrl)
+	substate := action_provider.NewMockSubstateProvider(ctrl)
 	db := state.NewMockStateDB(ctrl)
 	config := &utils.Config{
 		First:   0,
@@ -24,12 +24,12 @@ func TestVmSdb_AllDbEventsAreIssuedInOrder(t *testing.T) {
 	// Simulate the execution of three transactions in two blocks.
 	substate.EXPECT().
 		Run(0, 3, gomock.Any()).
-		DoAndReturn(func(_ int, _ int, consumer executor.Consumer) error {
+		DoAndReturn(func(_ int, _ int, consumer action_provider.Consumer) error {
 			// block 0
-			consumer(executor.TransactionInfo{Block: 0, Transaction: 1, Substate: emptyTx}, nil)
+			consumer(action_provider.TransactionInfo{Block: 0, Transaction: 1, Substate: emptyTx}, nil)
 			// block 2
-			consumer(executor.TransactionInfo{Block: 2, Transaction: 3, Substate: emptyTx}, nil)
-			consumer(executor.TransactionInfo{Block: 2, Transaction: utils.PseudoTx, Substate: emptyTx}, nil)
+			consumer(action_provider.TransactionInfo{Block: 2, Transaction: 3, Substate: emptyTx}, nil)
+			consumer(action_provider.TransactionInfo{Block: 2, Transaction: utils.PseudoTx, Substate: emptyTx}, nil)
 			return nil
 		})
 

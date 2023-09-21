@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/action_provider"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -17,7 +18,7 @@ func RunVmSdb(ctx *cli.Context) error {
 		return err
 	}
 
-	substateDb, err := executor.OpenSubstateDb(cfg, ctx)
+	substateDb, err := action_provider.OpenSubstateDb(cfg, ctx)
 	if err != nil {
 		return err
 	}
@@ -47,7 +48,7 @@ func (r txProcessor) Process(state executor.State, context *executor.Context) er
 	return err
 }
 
-func run(config *utils.Config, provider executor.ActionProvider, stateDb state.StateDB) error {
+func run(config *utils.Config, provider action_provider.ActionProvider, stateDb state.StateDB) error {
 	return executor.NewExecutor(provider).Run(
 		executor.Params{
 			From:  int(config.First),
