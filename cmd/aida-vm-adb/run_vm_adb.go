@@ -52,7 +52,7 @@ func (r txProcessor) Process(state executor.State, context *executor.Context) er
 	return err
 }
 
-func run(config *utils.Config, provider.ActionProvider, stateDb state.StateDB, disableStateDbExtension bool) error {
+func run(config *utils.Config, provider action_provider.ActionProvider, stateDb state.StateDB, disableStateDbExtension bool) error {
 	// order of extensionList has to be maintained
 	var extensionList = []executor.Extension{extension.MakeCpuProfiler(config)}
 
