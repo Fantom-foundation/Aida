@@ -35,7 +35,7 @@ var RunArchiveApp = cli.App{
 		&utils.ValidateTxStateFlag,
 
 		// ShadowDb
-		//&utils.ShadowDb,
+		&utils.ShadowDb,
 
 		// VM
 		&utils.VmImplementation,

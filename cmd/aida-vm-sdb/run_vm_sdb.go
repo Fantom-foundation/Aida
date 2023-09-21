@@ -58,6 +58,7 @@ func run(config *utils.Config, provider executor.SubstateProvider, stateDb state
 		extension.MakeMemoryProfiler(config),
 		extension.MakeMemoryUsagePrinter(config),
 		extension.MakeStateDbPreparator(),
+		extension.MakeStateDbPrimer(config),
 		extension.MakeStateHashValidator(config),
 		extension.MakeBlockEventEmitter(),
 	}...,

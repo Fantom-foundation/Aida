@@ -20,9 +20,10 @@ func TestVmSdb_AllDbEventsAreIssuedInOrder(t *testing.T) {
 	substate := executor.NewMockSubstateProvider(ctrl)
 	db := state.NewMockStateDB(ctrl)
 	config := &utils.Config{
-		First:   0,
-		Last:    2,
-		ChainID: utils.MainnetChainID,
+		First:       0,
+		Last:        2,
+		ChainID:     utils.MainnetChainID,
+		SkipPriming: true,
 	}
 
 	// Simulate the execution of three transactions in two blocks.
@@ -82,6 +83,7 @@ func TestVmSdb_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 		Last:            2,
 		ChainID:         utils.MainnetChainID,
 		ValidateTxState: true,
+		SkipPriming:     true,
 	}
 
 	substate.EXPECT().
@@ -132,6 +134,7 @@ func TestVmSdb_ValidationFailsOnInvalidTransaction(t *testing.T) {
 		Last:            2,
 		ChainID:         utils.MainnetChainID,
 		ValidateTxState: true,
+		SkipPriming:     true,
 	}
 
 	substate.EXPECT().
