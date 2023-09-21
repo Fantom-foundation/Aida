@@ -26,7 +26,7 @@ func TestProgressLoggerExtension_PrimingDoesNotTriggerForExistingStateDb(t *test
 
 	config := &utils.Config{}
 	config.SkipPriming = false
-	config.StateDbSrc = "existing_state_db"
+	config.IsExistingStateDb = true
 
 	log.EXPECT().Warning("Skipping priming due to usage of preexisting StateDb")
 

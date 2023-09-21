@@ -336,8 +336,7 @@ func signalPreRun(state State, context *Context, extensions []Extension) error {
 
 func signalPostRun(state State, context *Context, err error, extensions []Extension) error {
 	return forEachBackward(extensions, func(extension Extension) error {
-		extension.PostRun(state, context, err)
-		return nil
+		return extension.PostRun(state, context, err)
 	})
 }
 
