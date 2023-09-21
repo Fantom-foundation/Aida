@@ -52,7 +52,6 @@ func run(
 		extension.MakeVirtualMachineStatisticsPrinter(config),
 		extension.MakeProgressLogger(config, 15*time.Second),
 		temporaryStatePrepper{},
-		extension.MakeTxValidator(config),
 	}
 	extensions = append(extensions, extra...)
 

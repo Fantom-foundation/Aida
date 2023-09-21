@@ -46,8 +46,8 @@ var RunVMApp = cli.App{
 
 		// Profiling
 		&utils.CpuProfileFlag,
-		//&utils.MemoryBreakdownFlag,
-		//&utils.MemoryProfileFlag,
+		&utils.MemoryBreakdownFlag,
+		&utils.MemoryProfileFlag,
 		&utils.RandomSeedFlag,
 		&utils.PrimeThresholdFlag,
 		//&utils.ProfileFlag,
@@ -65,7 +65,7 @@ var RunVMApp = cli.App{
 		&utils.ContinueOnFailureFlag,
 		&utils.QuietFlag,
 		&utils.SyncPeriodLengthFlag,
-		//&utils.KeepDbFlag,
+		&utils.KeepDbFlag,
 		//&utils.MaxNumTransactionsFlag,
 		&utils.ValidateTxStateFlag,
 		//&utils.ValidateWorldStateFlag,

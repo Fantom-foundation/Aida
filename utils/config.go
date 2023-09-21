@@ -521,6 +521,7 @@ type Config struct {
 	UpdateOnFailure     bool           // if enabled and continue-on-failure is also enabled, this updates any error found in StateDb
 	NoHeartbeatLogging  bool           // disables heartbeat logging
 	TrackProgress       bool           // enables track progress logging
+	IsExistingStateDb   bool           // this is true if we are using an existing StateDb
 	ProgressLoggerType  LoggerType
 }
 

@@ -336,6 +336,9 @@ func TestProcessor_StateDbCanBeModifiedByExtensionsAndProcessorInSequentialRun(t
 	stateB := state.NewMockStateDB(ctrl)
 	stateC := state.NewMockStateDB(ctrl)
 	stateD := state.NewMockStateDB(ctrl)
+	stateE := state.NewMockStateDB(ctrl)
+	stateF := state.NewMockStateDB(ctrl)
+	stateG := state.NewMockStateDB(ctrl)
 
 	substate.EXPECT().
 		Run(gomock.Any(), gomock.Any(), gomock.Any()).
@@ -344,20 +347,20 @@ func TestProcessor_StateDbCanBeModifiedByExtensionsAndProcessorInSequentialRun(t
 			return nil
 		})
 
+	setState := func(state state.StateDB) func(State, *Context) {
+		return func(_ State, c *Context) {
+			c.State = state
+		}
+	}
+
 	gomock.InOrder(
-		extension.EXPECT().PreRun(gomock.Any(), WithState(stateA)),
-		extension.EXPECT().PreBlock(gomock.Any(), WithState(stateA)),
-		extension.EXPECT().PreTransaction(gomock.Any(), WithState(stateA)).Do(func(_ State, c *Context) {
-			c.State = stateB
-		}),
-		processor.EXPECT().Process(gomock.Any(), WithState(stateB)).Do(func(_ State, c *Context) {
-			c.State = stateC
-		}),
-		extension.EXPECT().PostTransaction(gomock.Any(), WithState(stateC)).Do(func(_ State, c *Context) {
-			c.State = stateD
-		}),
-		extension.EXPECT().PostBlock(gomock.Any(), WithState(stateD)),
-		extension.EXPECT().PostRun(gomock.Any(), WithState(stateD), nil),
+		extension.EXPECT().PreRun(gomock.Any(), WithState(stateA)).Do(setState(stateB)),
+		extension.EXPECT().PreBlock(gomock.Any(), WithState(stateB)).Do(setState(stateC)),
+		extension.EXPECT().PreTransaction(gomock.Any(), WithState(stateC)).Do(setState(stateD)),
+		processor.EXPECT().Process(gomock.Any(), WithState(stateD)).Do(setState(stateE)),
+		extension.EXPECT().PostTransaction(gomock.Any(), WithState(stateE)).Do(setState(stateF)),
+		extension.EXPECT().PostBlock(gomock.Any(), WithState(stateF)).Do(setState(stateG)),
+		extension.EXPECT().PostRun(gomock.Any(), WithState(stateG), nil),
 	)
 
 	err := NewExecutor(substate).Run(
@@ -380,6 +383,7 @@ func TestProcessor_StateDbCanBeModifiedByExtensionsAndProcessorInParallelRun(t *
 	stateB := state.NewMockStateDB(ctrl)
 	stateC := state.NewMockStateDB(ctrl)
 	stateD := state.NewMockStateDB(ctrl)
+	stateE := state.NewMockStateDB(ctrl)
 
 	substate.EXPECT().
 		Run(gomock.Any(), gomock.Any(), gomock.Any()).
@@ -388,19 +392,19 @@ func TestProcessor_StateDbCanBeModifiedByExtensionsAndProcessorInParallelRun(t *
 			return nil
 		})
 
+	setState := func(state state.StateDB) func(State, *Context) {
+		return func(_ State, c *Context) {
+			c.State = state
+		}
+	}
+
 	gomock.InOrder(
-		extension.EXPECT().PreRun(gomock.Any(), WithState(stateA)),
-		extension.EXPECT().PreTransaction(gomock.Any(), WithState(stateA)).Do(func(_ State, c *Context) {
-			c.State = stateB
-		}),
-		processor.EXPECT().Process(gomock.Any(), WithState(stateB)).Do(func(_ State, c *Context) {
-			c.State = stateC
-		}),
-		extension.EXPECT().PostTransaction(gomock.Any(), WithState(stateC)).Do(func(_ State, c *Context) {
-			c.State = stateD
-		}),
+		extension.EXPECT().PreRun(gomock.Any(), WithState(stateA)).Do(setState(stateB)),
+		extension.EXPECT().PreTransaction(gomock.Any(), WithState(stateB)).Do(setState(stateC)),
+		processor.EXPECT().Process(gomock.Any(), WithState(stateC)).Do(setState(stateD)),
+		extension.EXPECT().PostTransaction(gomock.Any(), WithState(stateD)).Do(setState(stateE)),
 		// the context from a parallel execution is not merged back to the top-level context
-		extension.EXPECT().PostRun(gomock.Any(), WithState(stateA), nil),
+		extension.EXPECT().PostRun(gomock.Any(), WithState(stateB), nil),
 	)
 
 	err := NewExecutor(substate).Run(
@@ -701,4 +705,89 @@ func TestProcessor_SubstateIsPropagatedToTheProcessorAndAllExtensionsInParallelE
 	if err != nil {
 		t.Errorf("execution failed: %v", err)
 	}
+}
+
+func TestProcessor_APanicInAnExecutorSkipsPostRunActions_InSequentialExecution(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	provider := NewMockSubstateProvider(ctrl)
+	processor := NewMockProcessor(ctrl)
+	extension := NewMockExtension(ctrl)
+
+	provider.EXPECT().
+		Run(gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(from int, to int, consume Consumer) error {
+			return consume(TransactionInfo{Block: from, Transaction: 7})
+		})
+
+	extension.EXPECT().PreRun(gomock.Any(), gomock.Any())
+	extension.EXPECT().PreBlock(gomock.Any(), gomock.Any())
+	extension.EXPECT().PreTransaction(gomock.Any(), gomock.Any())
+
+	stop := "stop"
+	processor.EXPECT().Process(gomock.Any(), gomock.Any()).Do(func(any, any) {
+		panic(stop)
+	})
+
+	panicReachedCaller := new(bool)
+	t.Cleanup(func() {
+		if !*panicReachedCaller {
+			t.Errorf("expected panic did not reach top-level")
+		}
+	})
+	defer func() {
+		if r := recover(); r != nil {
+			if r != stop {
+				t.Errorf("unexpected panic, wanted %v, got %v", r, stop)
+			}
+			*panicReachedCaller = true
+		}
+	}()
+
+	NewExecutor(provider).Run(
+		Params{From: 10, To: 11},
+		processor,
+		[]Extension{extension},
+	)
+}
+
+func TestProcessor_APanicInAnExecutorSkipsPostRunActions_InParallelExecution(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	provider := NewMockSubstateProvider(ctrl)
+	processor := NewMockProcessor(ctrl)
+	extension := NewMockExtension(ctrl)
+
+	provider.EXPECT().
+		Run(gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(from int, to int, consume Consumer) error {
+			return consume(TransactionInfo{Block: from, Transaction: 7})
+		})
+
+	extension.EXPECT().PreRun(gomock.Any(), gomock.Any())
+	extension.EXPECT().PreTransaction(gomock.Any(), gomock.Any())
+
+	stop := "stop"
+	processor.EXPECT().Process(gomock.Any(), gomock.Any()).Do(func(any, any) {
+		panic(stop)
+	})
+
+	panicReachedCaller := new(bool)
+	t.Cleanup(func() {
+		if !*panicReachedCaller {
+			t.Errorf("expected panic did not reach top-level")
+		}
+	})
+	defer func() {
+		if r := recover(); r != nil {
+			if r != stop {
+				t.Errorf("unexpected panic, wanted %v, got %v", r, stop)
+			}
+			*panicReachedCaller = true
+		}
+	}()
+
+	NewExecutor(provider).Run(
+		Params{From: 10, To: 11, NumWorkers: 2},
+		processor,
+		[]Extension{extension},
+	)
 }

@@ -88,6 +88,40 @@ func TestProgressLoggerExtension_LoggingHappens(t *testing.T) {
 	ext.PostRun(executor.State{}, nil, nil)
 }
 
+func TestProgressLoggerExtension_LoggingHappensEvenWhenProgramEndsBeforeTickerTicks(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	log := logger.NewMockLogger(ctrl)
+
+	config := &utils.Config{}
+
+	// we set large tick rate that does not trigger the ticker
+	ext := makeProgressLogger(config, 10*time.Second, log)
+
+	ext.PreRun(executor.State{}, nil)
+
+	log.EXPECT().Noticef(finalSummaryProgressReportFormat,
+		gomock.Any(), 1,
+		MatchRate(gomock.All(executor.Gt(0.6), executor.Lt(0.7)), "txRate"),
+		MatchRate(gomock.All(executor.Gt(60), executor.Lt(70)), "gasRate"),
+	)
+
+	// fill the logger with some data
+	ext.PostTransaction(executor.State{
+		Block:       1,
+		Transaction: 1,
+		Substate: &substate.Substate{
+			Result: &substate.SubstateResult{
+				GasUsed: 100_000_000,
+			},
+		},
+	}, nil)
+
+	// wait for data to get into logger
+	time.Sleep((3 * testProgressReportFrequency) / 2)
+
+	ext.PostRun(executor.State{}, nil, nil)
+}
+
 // MATCHERS
 func MatchRate(constraint gomock.Matcher, name string) gomock.Matcher {
 	return matchRate{constraint, name}

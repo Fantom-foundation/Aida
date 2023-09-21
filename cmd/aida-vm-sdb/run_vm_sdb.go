@@ -18,19 +18,15 @@ func RunVmSdb(ctx *cli.Context) error {
 		return err
 	}
 
+	cfg.StateValidationMode = utils.SubsetCheck
+
 	substateDb, err := action_provider.OpenSubstateDb(cfg, ctx)
 	if err != nil {
 		return err
 	}
 	defer substateDb.Close()
 
-	stateDb, _, err := utils.PrepareStateDB(cfg)
-	if err != nil {
-		return err
-	}
-	defer stateDb.Close()
-
-	return run(cfg, substateDb, stateDb)
+	return run(cfg, substateDb, nil, false)
 }
 
 type txProcessor struct {
@@ -48,7 +44,27 @@ func (r txProcessor) Process(state executor.State, context *executor.Context) er
 	return err
 }
 
-func run(config *utils.Config, provider action_provider.ActionProvider, stateDb state.StateDB) error {
+func run(config *utils.Config, provider action_provider.ActionProvider, stateDb state.StateDB, disableStateDbExtension bool) error {
+	// order of extensionList has to be maintained
+	var extensionList = []executor.Extension{extension.MakeCpuProfiler(config)}
+
+	if !disableStateDbExtension {
+		extensionList = append(extensionList, extension.MakeStateDbManager(config))
+	}
+
+	extensionList = append(extensionList, []executor.Extension{
+		extension.MakeVirtualMachineStatisticsPrinter(config),
+		extension.MakeProgressLogger(config, 15*time.Second),
+		extension.MakeProgressTracker(config, 100_000),
+		extension.MakeStateDbPrimer(config),
+		extension.MakeMemoryUsagePrinter(config),
+		extension.MakeMemoryProfiler(config),
+		extension.MakeStateDbPreparator(),
+		extension.MakeStateHashValidator(config),
+		extension.MakeBlockEventEmitter(),
+	}...,
+	)
+
 	return executor.NewExecutor(provider).Run(
 		executor.Params{
 			From:  int(config.First),
@@ -56,15 +72,6 @@ func run(config *utils.Config, provider action_provider.ActionProvider, stateDb 
 			State: stateDb,
 		},
 		txProcessor{config},
-		[]executor.Extension{
-			extension.MakeCpuProfiler(config),
-			extension.MakeVirtualMachineStatisticsPrinter(config),
-			extension.MakeProgressLogger(config, 15*time.Second),
-			extension.MakeProgressTracker(config, 100_000),
-			extension.MakeStateDbPreparator(),
-			extension.MakeTxValidator(config),
-			extension.MakeStateHashValidator(config),
-			extension.MakeBlockEventEmitter(),
-		},
+		extensionList,
 	)
 }
