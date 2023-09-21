@@ -21,8 +21,6 @@ type OperationProvider interface {
 
 type operationProvider struct {
 	traceFiles []string
-	debug      bool
-	debugFrom  int
 }
 
 func (p operationProvider) Run(from int, _ int, consumer Consumer) error {
@@ -46,12 +44,10 @@ func (p operationProvider) Close() {
 func OpenOperations(config *utils.Config) (ActionProvider, error) {
 	traceFiles, err := tracer.GetTraceFiles(config)
 	if err != nil {
-		return substateProvider{}, err
+		return operationProvider{}, err
 	}
 
 	return &operationProvider{
 		traceFiles: traceFiles,
-		debug:      config.Debug,
-		debugFrom:  int(config.DebugFrom),
 	}, nil
 }

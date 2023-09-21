@@ -98,7 +98,6 @@ func Replay(ctx *cli.Context) error {
 }
 
 func newReplayer(config *utils.Config, ctx *context.Replay) replayer {
-
 	return replayer{
 		config:        config,
 		ctx:           ctx,
