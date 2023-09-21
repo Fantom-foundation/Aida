@@ -99,7 +99,7 @@ func TestProgressLoggerExtension_LoggingHappensEvenWhenProgramEndsBeforeTickerTi
 
 	ext.PreRun(executor.State{}, nil)
 
-	log.EXPECT().Noticef(finalSummaryProgressReportFormat,
+	log.EXPECT().Noticef(transactionProgressLoggerFinalReportFormat,
 		gomock.Any(), 1,
 		MatchRate(gomock.All(executor.Gt(0.6), executor.Lt(0.7)), "txRate"),
 		MatchRate(gomock.All(executor.Gt(60), executor.Lt(70)), "gasRate"),

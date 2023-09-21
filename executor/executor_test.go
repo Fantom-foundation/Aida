@@ -647,8 +647,8 @@ func TestProcessor_SubstateIsPropagatedToTheProcessorAndAllExtensionsInSequentia
 		extension.EXPECT().PreTransaction(WithSubstate(substateB), gomock.Any()),
 		processor.EXPECT().Process(WithSubstate(substateB), gomock.Any()),
 		extension.EXPECT().PostTransaction(WithSubstate(substateB), gomock.Any()),
-		extension.EXPECT().PostBlock(WithSubstate(nil), gomock.Any()),
-		extension.EXPECT().PostRun(WithSubstate(nil), gomock.Any(), nil),
+		extension.EXPECT().PostBlock(WithSubstate(substateB), gomock.Any()),
+		extension.EXPECT().PostRun(WithSubstate(substateB), gomock.Any(), nil),
 	)
 
 	err := NewExecutor(provider).Run(
@@ -709,14 +709,14 @@ func TestProcessor_SubstateIsPropagatedToTheProcessorAndAllExtensionsInParallelE
 
 func TestProcessor_APanicInAnExecutorSkipsPostRunActions_InSequentialExecution(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	provider := NewMockSubstateProvider(ctrl)
+	provider := action_provider.NewMockSubstateProvider(ctrl)
 	processor := NewMockProcessor(ctrl)
 	extension := NewMockExtension(ctrl)
 
 	provider.EXPECT().
 		Run(gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(from int, to int, consume Consumer) error {
-			return consume(TransactionInfo{Block: from, Transaction: 7})
+		DoAndReturn(func(from int, to int, consume action_provider.Consumer) error {
+			return consume(action_provider.TransactionInfo{Block: from, Transaction: 7}, nil)
 		})
 
 	extension.EXPECT().PreRun(gomock.Any(), gomock.Any())
@@ -752,14 +752,14 @@ func TestProcessor_APanicInAnExecutorSkipsPostRunActions_InSequentialExecution(t
 
 func TestProcessor_APanicInAnExecutorSkipsPostRunActions_InParallelExecution(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	provider := NewMockSubstateProvider(ctrl)
+	provider := action_provider.NewMockSubstateProvider(ctrl)
 	processor := NewMockProcessor(ctrl)
 	extension := NewMockExtension(ctrl)
 
 	provider.EXPECT().
 		Run(gomock.Any(), gomock.Any(), gomock.Any()).
-		DoAndReturn(func(from int, to int, consume Consumer) error {
-			return consume(TransactionInfo{Block: from, Transaction: 7})
+		DoAndReturn(func(from int, to int, consume action_provider.Consumer) error {
+			return consume(action_provider.TransactionInfo{Block: from, Transaction: 7}, nil)
 		})
 
 	extension.EXPECT().PreRun(gomock.Any(), gomock.Any())

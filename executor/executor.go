@@ -272,8 +272,7 @@ func (e *executor) runSubstateParallel(params Params, processor Processor, exten
 					localState.Block = tx.Block
 					localState.Transaction = tx.Transaction
 					localContext := *context
-
-					state.Substate = tx.Substate
+					localState.Substate = tx.Substate
 					if err := runAction(localState, &localContext, processor, extensions); err != nil {
 						workerErrs[i] = err
 						abort.Signal()

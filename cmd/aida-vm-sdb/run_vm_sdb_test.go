@@ -76,7 +76,7 @@ func TestVmSdb_AllDbEventsAreIssuedInOrder(t *testing.T) {
 
 func TestVmSdb_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	substate := executor.NewMockSubstateProvider(ctrl)
+	substate := action_provider.NewMockSubstateProvider(ctrl)
 	db := state.NewMockStateDB(ctrl)
 	config := &utils.Config{
 		First:           0,
@@ -88,8 +88,8 @@ func TestVmSdb_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 
 	substate.EXPECT().
 		Run(0, 3, gomock.Any()).
-		DoAndReturn(func(_ int, _ int, consumer executor.Consumer) error {
-			return consumer(executor.TransactionInfo{Block: 0, Transaction: 1, Substate: testTx})
+		DoAndReturn(func(_ int, _ int, consumer action_provider.Consumer) error {
+			return consumer(action_provider.TransactionInfo{Block: 0, Transaction: 1, Substate: testTx}, nil)
 		})
 
 	gomock.InOrder(
@@ -127,7 +127,7 @@ func TestVmSdb_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 
 func TestVmSdb_ValidationFailsOnInvalidTransaction(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	substate := executor.NewMockSubstateProvider(ctrl)
+	substate := action_provider.NewMockSubstateProvider(ctrl)
 	db := state.NewMockStateDB(ctrl)
 	config := &utils.Config{
 		First:           0,
@@ -139,8 +139,8 @@ func TestVmSdb_ValidationFailsOnInvalidTransaction(t *testing.T) {
 
 	substate.EXPECT().
 		Run(0, 3, gomock.Any()).
-		DoAndReturn(func(_ int, _ int, consumer executor.Consumer) error {
-			return consumer(executor.TransactionInfo{Block: 0, Transaction: 1, Substate: testTx})
+		DoAndReturn(func(_ int, _ int, consumer action_provider.Consumer) error {
+			return consumer(action_provider.TransactionInfo{Block: 0, Transaction: 1, Substate: testTx}, nil)
 		})
 
 	gomock.InOrder(
