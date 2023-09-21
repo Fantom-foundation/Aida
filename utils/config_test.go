@@ -390,7 +390,29 @@ func TestUtilsConfig_getChainIdFromDB(t *testing.T) {
 
 // TestUtilsConfig_getChainIdFromFlag tests if chainID can be loaded from flag correctly
 func TestUtilsConfig_getChainIdFromFlag(t *testing.T) {
-	// TODO
+	// prepare components
+	var (
+		err              error
+		logLevel         = "INFO"
+		chainId          = MainnetChainID
+		extractedChainId ChainID
+	)
+
+	// prepare mock config
+	cfg := &Config{AidaDb: "./test.db", LogLevel: logLevel, ChainID: chainId}
+
+	// prepare logger
+	log := logger.NewLogger(cfg.LogLevel, "Utils_config_test")
+
+	// test getChainId function
+	extractedChainId, err = getChainId(cfg, log)
+	if err != nil {
+		t.Fatalf("cannot get chain ID; %v", err)
+	}
+
+	if extractedChainId != chainId {
+		t.Fatalf("failed to get chainId correctly from AidaDB; got: %v; expected: %v", extractedChainId, chainId)
+	}
 }
 
 // TestUtilsConfig_getDefaultChainId tests if unknown chainID will be replaced with the mainnet chainID
