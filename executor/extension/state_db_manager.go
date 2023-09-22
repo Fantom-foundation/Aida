@@ -60,6 +60,11 @@ func (m *stateDbManager) PostRun(state executor.State, ctx *executor.Context, _ 
 		return nil
 	}
 
+	lastProcessedBlock, err := calculateLastBlock(m.config, uint64(state.Block))
+	if err != nil {
+		return err
+	}
+
 	rootHash := ctx.State.GetHash()
 	if err := utils.WriteStateDbInfo(ctx.StateDbPath, m.config, uint64(state.Block), rootHash); err != nil {
 		return fmt.Errorf("failed to create state-db info file; %v", err)
@@ -73,4 +78,18 @@ func (m *stateDbManager) PostRun(state executor.State, ctx *executor.Context, _ 
 	newName := utils.RenameTempStateDBDirectory(m.config, ctx.StateDbPath, uint64(state.Block))
 	m.log.Noticef("State-db directory: %v", newName)
 	return nil
+}
+
+func calculateLastBlock(cfg *utils.Config, lastProcessedBlock uint64) (uint64, error) {
+	// in case block processing ended successfully state.Block is actually pointing already to
+	// the next block, hence actually last processed block is state.Block - 1 (or cfg.Last)
+	if cfg.Last == lastProcessedBlock-1 {
+		return cfg.Last, nil
+	} else if cfg.Last < lastProcessedBlock {
+		// state.Block shouldn't ever be bigger than cfg.Last + 1
+		return 0, fmt.Errorf("block processing went beyond cfg.Last, which is forbidden")
+	}
+
+	// in case state.Block is smaller/equal than cfg.Last than error in processing occurred
+	return lastProcessedBlock, nil
 }
