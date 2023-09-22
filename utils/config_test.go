@@ -257,30 +257,31 @@ func TestUtilsConfig_getMdBlockRange(t *testing.T) {
 	// create new leveldb
 	var (
 		logLevel   = "INFO"
-		firstBlock = uint64(4564026)
+		firstBlock = keywordBlocks[MainnetChainID]["opera"]
 		lastBlock  = uint64(20001704)
-		firstEpoch = uint64(100)
-		lastEpoch  = uint64(200)
 		chainId    = MainnetChainID
 	)
-	log := logger.NewLogger(logLevel, "Test-Log")
-	testDb, err := rawdb.NewLevelDBDatabase("./test.db", 1024, 100, "test-db", false)
+	// prepare mock config
+	cfg := &Config{AidaDb: "./test.db", LogLevel: logLevel}
+
+	// prepare logger
+	log := logger.NewLogger(logLevel, "Utils_config_test")
+
+	// prepare fake AidaDb
+	err := createFakeAidaDb(cfg)
 	if err != nil {
-		t.Fatalf("cannot open patch db; %v", err)
-	}
-	defer os.RemoveAll("./test.db")
-	// create fake metadata
-	err = ProcessPatchLikeMetadata(testDb, logLevel, firstBlock, lastBlock, firstEpoch, lastEpoch, chainId, true, nil)
-	if err != nil {
-		t.Fatalf("cannot create a metadata; %v", err)
-	}
-	err = testDb.Close()
-	if err != nil {
-		t.Fatalf("cannot close db; %v", err)
+		t.Fatalf("cannot create fake AidaDb; %v", err)
 	}
 
+	defer func() {
+		err = os.RemoveAll(cfg.AidaDb)
+		if err != nil {
+			t.Fatalf("cannot remove db; %v", err)
+		}
+	}()
+
 	// test getMdBlockRange
-	// getMdBlockRange returns default values if unble to open
+	// getMdBlockRange returns default values if unable to open
 	first, last, lastpatch, ok, err := getMdBlockRange("./test-wrong.db", MainnetChainID, log)
 	if ok || first != uint64(0) || last != math.MaxUint64 {
 		t.Fatalf("wrong block range; expected %v:%v, have %v:%v", 0, uint64(math.MaxUint64), first, last)
@@ -341,41 +342,29 @@ func TestUtilsConfig_getChainIdFromDB(t *testing.T) {
 	// prepare components
 	// create new leveldb
 	var (
-		logLevel                = "INFO"
-		firstBlock              = keywordBlocks[MainnetChainID]["opera"]
-		lastBlock        uint64 = 20001704
-		firstEpoch       uint64 = 100
-		lastEpoch        uint64 = 200
-		chainId                 = MainnetChainID
+		logLevel         = "INFO"
+		chainId          = MainnetChainID
 		extractedChainId ChainID
 	)
-
-	testDb, err := rawdb.NewLevelDBDatabase("./test.db", 1024, 100, "test-db", false)
-	if err != nil {
-		t.Fatalf("cannot open patch db; %v", err)
-	}
-	defer func() {
-		err = os.RemoveAll("./test.db")
-		if err != nil {
-			t.Fatalf("cannot remove db; %v", err)
-		}
-	}()
-
-	// create fake metadata
-	err = ProcessPatchLikeMetadata(testDb, logLevel, firstBlock, lastBlock, firstEpoch, lastEpoch, chainId, true, nil)
-	if err != nil {
-		t.Fatalf("cannot create a metadata; %v", err)
-	}
-	err = testDb.Close()
-	if err != nil {
-		t.Fatalf("cannot close db; %v", err)
-	}
 
 	// prepare mock config
 	cfg := &Config{AidaDb: "./test.db", LogLevel: logLevel}
 
 	// prepare logger
 	log := logger.NewLogger(cfg.LogLevel, "Utils_config_test")
+
+	// prepare fake AidaDb
+	err := createFakeAidaDb(cfg)
+	if err != nil {
+		t.Fatalf("cannot create fake AidaDb; %v", err)
+	}
+
+	defer func() {
+		err = os.RemoveAll(cfg.AidaDb)
+		if err != nil {
+			t.Fatalf("cannot remove db; %v", err)
+		}
+	}()
 
 	// test getChainId function
 	extractedChainId, err = getChainId(cfg, log)
@@ -446,14 +435,10 @@ func TestUtilsConfig_getDefaultChainId(t *testing.T) {
 func TestUtilsConfig_updateConfigBlockRangeBlockRange(t *testing.T) {
 	// prepare components
 	var (
-		logLevel          = "INFO"
-		firstBlock        = keywordBlocks[MainnetChainID]["opera"]
-		lastBlock  uint64 = 20001704
-		firstEpoch uint64 = 100
-		lastEpoch  uint64 = 200
-		mode              = BlockRangeArgs
-		firstArg          = "4564026"
-		lastArg           = "5000000"
+		logLevel = "INFO"
+		mode     = BlockRangeArgs
+		firstArg = "4564026"
+		lastArg  = "5000000"
 	)
 
 	// prepare mock config
@@ -462,26 +447,18 @@ func TestUtilsConfig_updateConfigBlockRangeBlockRange(t *testing.T) {
 	// prepare logger
 	log := logger.NewLogger(cfg.LogLevel, "Utils_config_test")
 
-	testDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "test-db", false)
+	// prepare fake AidaDb
+	err := createFakeAidaDb(cfg)
 	if err != nil {
-		t.Fatalf("cannot open patch db; %v", err)
+		t.Fatalf("cannot create fake AidaDb; %v", err)
 	}
+
 	defer func() {
 		err = os.RemoveAll(cfg.AidaDb)
 		if err != nil {
 			t.Fatalf("cannot remove db; %v", err)
 		}
 	}()
-
-	// create fake metadata
-	err = ProcessPatchLikeMetadata(testDb, cfg.LogLevel, firstBlock, lastBlock, firstEpoch, lastEpoch, cfg.ChainID, true, nil)
-	if err != nil {
-		t.Fatalf("cannot create a metadata; %v", err)
-	}
-	err = testDb.Close()
-	if err != nil {
-		t.Fatalf("cannot close db; %v", err)
-	}
 
 	// parse cli arguments slice
 	err = updateConfigBlockRange([]string{firstArg, lastArg}, cfg, mode, log)
@@ -525,15 +502,11 @@ func TestUtilsConfig_updateConfigBlockRangeBlockRangeInvalid(t *testing.T) {
 func TestUtilsConfig_updateConfigBlockRangeBlockRangeProfileDb(t *testing.T) {
 	// prepare components
 	var (
-		logLevel            = "INFO"
-		firstBlock          = keywordBlocks[MainnetChainID]["opera"]
-		lastBlock    uint64 = 20001704
-		firstEpoch   uint64 = 100
-		lastEpoch    uint64 = 200
-		mode                = BlockRangeArgsProfileDB
-		firstArg            = "4564026"
-		lastArg             = "5000000"
-		profileDbArg        = "./profile.db"
+		logLevel     = "INFO"
+		mode         = BlockRangeArgsProfileDB
+		firstArg     = "4564026"
+		lastArg      = "5000000"
+		profileDbArg = "./profile.db"
 	)
 
 	// prepare mock config
@@ -542,26 +515,18 @@ func TestUtilsConfig_updateConfigBlockRangeBlockRangeProfileDb(t *testing.T) {
 	// prepare logger
 	log := logger.NewLogger(cfg.LogLevel, "Utils_config_test")
 
-	testDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "test-db", false)
+	// prepare fake AidaDb
+	err := createFakeAidaDb(cfg)
 	if err != nil {
-		t.Fatalf("cannot open patch db; %v", err)
+		t.Fatalf("cannot create fake AidaDb; %v", err)
 	}
+
 	defer func() {
 		err = os.RemoveAll(cfg.AidaDb)
 		if err != nil {
 			t.Fatalf("cannot remove db; %v", err)
 		}
 	}()
-
-	// create fake metadata
-	err = ProcessPatchLikeMetadata(testDb, cfg.LogLevel, firstBlock, lastBlock, firstEpoch, lastEpoch, cfg.ChainID, true, nil)
-	if err != nil {
-		t.Fatalf("cannot create a metadata; %v", err)
-	}
-	err = testDb.Close()
-	if err != nil {
-		t.Fatalf("cannot close db; %v", err)
-	}
 
 	// parse cli arguments slice
 	err = updateConfigBlockRange([]string{firstArg, lastArg, profileDbArg}, cfg, mode, log)
@@ -684,14 +649,36 @@ func TestUtilsConfig_updateConfigBlockRangeOneToNInvalid(t *testing.T) {
 func TestUtilsConfig_adjustMissingConfigValues(t *testing.T) {
 	// prepare components
 	var (
-		chainId   = MainnetChainID
-		aidaDB    = "./test.db"
-		dbImpl    = "carmen"
-		dbVariant = ""
+		chainId           = MainnetChainID
+		aidaDB            = "./test.db"
+		dbImpl            = "carmen"
+		dbVariant         = ""
+		randomSeed int64  = -1
+		first      uint64 = 0
 	)
 
 	// prepare mock config
-	cfg := &Config{ChainID: chainId, AidaDb: aidaDB, DbImpl: dbImpl, DbVariant: dbVariant}
+	cfg := &Config{
+		ChainID:    chainId,
+		AidaDb:     aidaDB,
+		DbImpl:     dbImpl,
+		DbVariant:  dbVariant,
+		RandomSeed: randomSeed,
+		First:      first,
+	}
+
+	// prepare fake AidaDb
+	err := createFakeAidaDb(cfg)
+	if err != nil {
+		t.Fatalf("cannot create fake AidaDb; %v", err)
+	}
+
+	defer func() {
+		err = os.RemoveAll(cfg.AidaDb)
+		if err != nil {
+			t.Fatalf("cannot remove db; %v", err)
+		}
+	}()
 
 	// set missing values
 	adjustMissingConfigValues(cfg)
@@ -701,5 +688,156 @@ func TestUtilsConfig_adjustMissingConfigValues(t *testing.T) {
 		t.Fatalf("failed to adjust carmen DBvariant; got: %s; expected: %s", cfg.DbVariant, dbVariant)
 	}
 
-	// TODO: test rest of the function
+	if cfg.RandomSeed <= 0 {
+		t.Fatalf("failed to adjust random seed value; got: %d; expected: Random int64 greater than 0", cfg.RandomSeed)
+	}
+
+	if cfg.DeletionDb != cfg.AidaDb {
+		t.Fatalf("failed to adjust deletion db path; got: %s; expected: %s", cfg.DeletionDb, aidaDB)
+	}
+
+	if cfg.SubstateDb != cfg.AidaDb {
+		t.Fatalf("failed to adjust substate db path; got: %s; expected: %s", cfg.SubstateDb, aidaDB)
+	}
+
+	if cfg.UpdateDb != cfg.AidaDb {
+		t.Fatalf("failed to adjust update db path; got: %s; expected: %s", cfg.UpdateDb, aidaDB)
+	}
+
+	if !cfg.SkipPriming {
+		t.Fatalf("failed to adjust skip priming value; got: %v; expected: %v", cfg.SkipPriming, true)
+	}
+}
+
+// TestUtilsConfig_adjustMissingConfigValuesValidationOn tests if missing config validation values are set correctly
+func TestUtilsConfig_adjustMissingConfigValuesValidationOn(t *testing.T) {
+	// prepare mock configs
+	for _, cfg := range []Config{
+		{
+			Validate:           true,
+			ValidateTxState:    false,
+			ValidateWorldState: false,
+			ContinueOnFailure:  false,
+		},
+		{
+			Validate:           false,
+			ValidateTxState:    true,
+			ValidateWorldState: true,
+			ContinueOnFailure:  false,
+		},
+		{
+			Validate:           false,
+			ValidateTxState:    false,
+			ValidateWorldState: true,
+			ContinueOnFailure:  true,
+		},
+		{
+			Validate:           false,
+			ValidateTxState:    true,
+			ValidateWorldState: true,
+			ContinueOnFailure:  true,
+		},
+		{
+			Validate:           true,
+			ValidateTxState:    true,
+			ValidateWorldState: true,
+			ContinueOnFailure:  true,
+		},
+	} {
+		t.Run("validation adjustment", func(t *testing.T) {
+			// set missing values
+			adjustMissingConfigValues(&cfg)
+
+			// checks
+			if !cfg.ValidateTxState {
+				t.Fatalf("failed to adjust ValidateTxState; got: %v; expected: %v", cfg.ValidateTxState, true)
+			}
+
+			if !cfg.ValidateWorldState {
+				t.Fatalf("failed to adjust ValidateWorldState; got: %v; expected: %v", cfg.ValidateWorldState, true)
+			}
+		})
+	}
+}
+
+// TestUtilsConfig_adjustMissingConfigValuesValidationOff tests if missing config validation values are set correctly
+func TestUtilsConfig_adjustMissingConfigValuesValidationOff(t *testing.T) {
+	// prepare mock config
+	cfg := &Config{
+		Validate:           false,
+		ValidateTxState:    false,
+		ValidateWorldState: false,
+		ContinueOnFailure:  false,
+	}
+
+	adjustMissingConfigValues(cfg)
+
+	// checks
+	if cfg.ValidateTxState {
+		t.Fatalf("failed to adjust ValidateTxState; got: %v; expected: %v", cfg.ValidateTxState, true)
+	}
+
+	if cfg.ValidateWorldState {
+		t.Fatalf("failed to adjust ValidateWorldState; got: %v; expected: %v", cfg.ValidateWorldState, true)
+	}
+}
+
+// TestUtilsConfig_adjustMissingConfigValuesDeletionDb tests if missing config deleted accounts values are set correctly
+func TestUtilsConfig_adjustMissingConfigValuesDeletionDb(t *testing.T) {
+	// prepare mock config
+	cfg := &Config{
+		HasDeletedAccounts: true,
+		DeletionDb:         "./test.db",
+	}
+
+	adjustMissingConfigValues(cfg)
+
+	// checks
+	if cfg.HasDeletedAccounts {
+		t.Fatalf("failed to adjust HasDeletedAccounts value; got: %v; expected: %v", cfg.HasDeletedAccounts, false)
+	}
+}
+
+// TestUtilsConfig_adjustMissingConfigValuesKeepStateDb tests if missing config keepDb value is set correctly
+func TestUtilsConfig_adjustMissingConfigValuesKeepStateDb(t *testing.T) {
+	// prepare mock config
+	cfg := &Config{
+		KeepDb:    true,
+		DbVariant: "go-memory",
+	}
+
+	adjustMissingConfigValues(cfg)
+
+	// checks
+	if cfg.KeepDb {
+		t.Fatalf("failed to adjust KeepDb value; got: %v; expected: %v", cfg.KeepDb, false)
+	}
+}
+
+func createFakeAidaDb(cfg *Config) error {
+	// fake metadata values
+	var (
+		firstBlock        = keywordBlocks[MainnetChainID]["opera"]
+		lastBlock  uint64 = 20001704
+		firstEpoch uint64 = 100
+		lastEpoch  uint64 = 200
+	)
+
+	// open fake aidaDB
+	testDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "test-db", false)
+	if err != nil {
+		return fmt.Errorf("cannot open patch db; %v", err)
+	}
+
+	// create fake metadata
+	err = ProcessPatchLikeMetadata(testDb, cfg.LogLevel, firstBlock, lastBlock, firstEpoch, lastEpoch, cfg.ChainID, true, nil)
+	if err != nil {
+		return fmt.Errorf("cannot create a metadata; %v", err)
+	}
+	err = testDb.Close()
+	if err != nil {
+		return fmt.Errorf("cannot close db; %v", err)
+	}
+
+	return nil
 }
