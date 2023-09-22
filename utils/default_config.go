@@ -23,7 +23,7 @@ func createConfig(ctx *cli.Context) *Config {
 		Cache:               getFlagValue(ctx, CacheFlag).(int),
 		ContractNumber:      getFlagValue(ctx, ContractNumberFlag).(int64),
 		ContinueOnFailure:   getFlagValue(ctx, ContinueOnFailureFlag).(bool),
-		CopySrcDb:           true,
+		SrcDbReadonly:       false,
 		CPUProfile:          getFlagValue(ctx, CpuProfileFlag).(string),
 		Db:                  getFlagValue(ctx, DbFlag).(string),
 		DbTmp:               getFlagValue(ctx, DbTmpFlag).(string),

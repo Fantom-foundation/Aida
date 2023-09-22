@@ -169,6 +169,85 @@ func TestStateDbManager_StateDbInfoExistence(t *testing.T) {
 	}
 }
 
+func TestStateDbManager_StateDbSrcStateDbIsReadOnly(t *testing.T) {
+	cfg := &utils.Config{}
+
+	// create source database
+	tmpDir := t.TempDir()
+	cfg.DbTmp = tmpDir
+	cfg.DbImpl = "geth"
+	cfg.KeepDb = true
+
+	ext := MakeStateDbManager(cfg)
+
+	state0 := executor.State{
+		Block: 0,
+	}
+
+	ctx := &executor.Context{}
+
+	if err := ext.PreRun(state0, ctx); err != nil {
+		t.Fatalf("failed to to run pre-run: %v", err)
+	}
+
+	// insert random data into the source
+	// then the second stateDb hash can be confirmed as correct copy of the source
+	insertRandomDataIntoStateDb(t, ctx)
+
+	expectedHash := ctx.State.GetHash()
+
+	if err := ext.PostRun(state0, ctx, nil); err != nil {
+		t.Fatalf("failed to to run post-run: %v", err)
+	}
+
+	// create database from source
+
+	expectedName := fmt.Sprintf("state_db_%v_%v", cfg.DbImpl, state0.Block)
+	sourcePath := filepath.Join(cfg.DbTmp, expectedName)
+
+	tmpOutDir := t.TempDir()
+	cfg.DbTmp = tmpOutDir
+	cfg.StateDbSrc = sourcePath
+	cfg.KeepDb = false
+	cfg.SrcDbReadonly = true
+
+	ext = MakeStateDbManager(cfg)
+
+	ctx = &executor.Context{}
+
+	if err := ext.PreRun(state0, ctx); err != nil {
+		t.Fatalf("failed to to run pre-run: %v", err)
+	}
+
+	currentHash := ctx.State.GetHash()
+
+	if currentHash != expectedHash {
+		t.Fatalf("stateDB created from existing source stateDB had incorrect hash; got: %v expected: %v", currentHash, expectedHash)
+	}
+
+	if err := ext.PostRun(state0, ctx, nil); err != nil {
+		t.Fatalf("failed to to run post-run: %v", err)
+	}
+
+	//  check original source stateDb, that it wasn't deleted
+	empty, err := IsEmptyDirectory(sourcePath)
+	if err != nil {
+		t.Fatalf("failed to retrieve source stateDb; %v", err)
+	}
+	if empty {
+		t.Fatalf("Source StateDb was removed from %v; %v", sourcePath, err)
+	}
+
+	//  check that the readonly database was used instead of using working directory from second run
+	empty, err = IsEmptyDirectory(tmpOutDir)
+	if err != nil {
+		t.Fatalf("failed to retrieve source stateDb; %v", err)
+	}
+	if empty {
+		t.Fatalf("Source StateDb was removed from %v; %v", sourcePath, err)
+	}
+}
+
 func TestStateDbManager_UsingExistingSourceDb(t *testing.T) {
 	config := &utils.Config{}
 

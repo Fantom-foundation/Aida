@@ -33,7 +33,7 @@ func ReplayAPI(ctx *cli.Context) error {
 	}
 
 	// there is no need to make temporary copy of stateDb because it isn't modified by this command
-	cfg.CopySrcDb = false
+	cfg.SrcDbReadonly = true
 
 	// create StateDB
 	db, _, err = utils.PrepareStateDB(cfg)

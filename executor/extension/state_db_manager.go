@@ -38,7 +38,7 @@ func (m *stateDbManager) PostRun(state executor.State, ctx *executor.Context, _ 
 	//  if state was not correctly initialized remove the stateDbPath and abort
 	if ctx.State == nil {
 		var err = fmt.Errorf("state-db is nil")
-		if m.config.CopySrcDb {
+		if !m.config.SrcDbReadonly {
 			err = errors.Join(err, os.RemoveAll(m.stateDbPath))
 		}
 		return err
@@ -50,9 +50,14 @@ func (m *stateDbManager) PostRun(state executor.State, ctx *executor.Context, _ 
 			return fmt.Errorf("failed to close state-db; %v", err)
 		}
 
-		if m.config.CopySrcDb {
+		if !m.config.SrcDbReadonly {
 			return os.RemoveAll(m.stateDbPath)
 		}
+		return nil
+	}
+
+	if m.config.SrcDbReadonly {
+		m.log.Noticef("State-db directory was readonly %v", m.stateDbPath)
 		return nil
 	}
 
