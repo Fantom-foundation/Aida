@@ -222,6 +222,7 @@ var (
 	DbTmpFlag = cli.PathFlag{
 		Name:  "db-tmp",
 		Usage: "sets the temporary directory where to place DB data; uses system default if empty",
+		Value: "/tmp",
 	}
 	StateDbLoggingFlag = cli.BoolFlag{
 		Name:  "db-logging",
@@ -444,7 +445,7 @@ type Config struct {
 	ContinueOnFailure   bool           // continue validation when an error detected
 	ContractNumber      int64          // number of contracts to create
 	CompactDb           bool           // compact database after merging
-	CopySrcDb           bool           // if true, make a copy the source statedb
+	SrcDbReadonly       bool           // if false, make a copy the source statedb
 	CPUProfile          string         // pprof cpu profile output file name
 	Db                  string         // path to database
 	DbTmp               string         // path to temporary database
