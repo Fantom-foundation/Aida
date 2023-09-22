@@ -231,7 +231,7 @@ func (e *executor) runSequential(params Params, processor Processor, extensions 
 		if err := signalPostBlock(*state, context, extensions); err != nil {
 			return err
 		}
-		state.Block = params.To
+		state.Block = params.To - 1
 	}
 
 	return nil
@@ -309,7 +309,7 @@ func (e *executor) runParallel(params Params, processor Processor, extensions []
 		errors.Join(workerErrs...),
 	)
 	if err == nil {
-		state.Block = params.To
+		state.Block = params.To - 1
 	}
 	return err
 }
