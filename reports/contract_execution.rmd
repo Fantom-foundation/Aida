@@ -1,0 +1,67 @@
+---
+title: "Contract Execution Report on Mainnet"
+date: "`r Sys.Date()`"
+params:
+  HwInfo: (Hardware Info)
+  OsInfo: (OS Info)
+  Machine: (Machine Info)
+  GoInfo: (GO Info)
+  GitHash: (GithubKey)
+  StateDB: (StateDB)
+  VM: (VM)
+  db: ./profile.db
+---
+
+```{r, include = FALSE}
+library(ggplot2)
+library(dplyr)
+library(RSQLite)
+library(gt)
+
+# open database
+con <- dbConnect(SQLite(), params$db)
+
+# load contract executions into a data frame
+txData <- dbReadTable(con, 'txProfile') %>% filter(txType == 2)
+
+# compress contract executions for each 1M transactions
+tx_group_size <- 1000000
+txData$tx_group <- 1:nrow(txData) %/% tx_group_size
+reducedTxData <- txData %>% group_by(tx_group) %>% summarise(gas=mean(gas)/1e3) # average gas (in KGas)
+reducedTxData$tx <- reducedTxData$tx_group * tx_group_size
+reducedTxData$tx_group <- NULL
+
+# close database connection
+dbDisconnect(con)
+```
+
+The following report characterises contract executions on the mainnet.
+Contract executions are found in the block range from **`r format(min(txData$block),big.mark=",")`**  to **`r format(max(txData$block),big.mark=",")`**.
+The block range contains **`r format(count(txData), big.mark=",")`** contract executions.
+
+The average gas consumption of contract executions is `r format(mean(txData$gas)/1e3, digits=3, nsmall=3)` KGas, with a minimum gas consumption of `r format(min(txData$gas)/1e3, digits=3, nsmall=3)` KGas and a maximum gas consumption of `r format(max(txData$gas)/1e6, digits=3, nsmall=3)` MGas.
+The top seven most gas-consuming contract executions are the following:
+
+```{r echo=FALSE, message=FALSE}
+top7Transactions <- txData %>% top_n(7,gas) %>% arrange(desc(gas)) %>% select(block, tx, gas) %>% rename(Gas = gas, Block = block, Transaction = tx)
+gt(top7Transactions)
+```
+
+The smoothened trend line of gas consumption over all contract executions is shown below.
+In the figure, we aggregate the gas consumption for one million contract executions shown as points.
+
+```{r, echo=FALSE, message=FALSE}
+reducedTxData %>%
+  ggplot(aes(x = tx, y = gas)) +
+  geom_smooth(color = "tomato") +
+  geom_point(alpha=0.3) +
+  labs(x="Transactions", y="KGas", title="Gas Consumption of Contract Executions")
+```
+
+The histogram with density function of contract executions' gas is shown below:
+
+```{r, echo=FALSE, message=FALSE}
+hist(txData$gas, main="Histogram for Contract Executions", freq=FALSE, xlab="Gas Consumption", col="lightblue1")
+lines(density(txData$gas), col="dodgerblue3", lwd=2)
+```
+
