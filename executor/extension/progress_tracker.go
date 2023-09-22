@@ -93,7 +93,7 @@ func (t *progressTracker) PostBlock(state executor.State, context *executor.Cont
 	info := t.overallInfo
 	t.lock.Unlock()
 
-	disk := utils.GetDirectorySize(t.config.StateDbSrc)
+	disk := utils.GetDirectorySize(context.StateDbPath)
 	m := context.State.GetMemoryUsage()
 
 	memory := uint64(0)

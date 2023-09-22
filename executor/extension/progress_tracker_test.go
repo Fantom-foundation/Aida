@@ -42,7 +42,7 @@ func TestProgressTrackerExtension_LoggingHappens(t *testing.T) {
 
 	ext := makeProgressTracker(config, testStateDbInfoFrequency, log)
 
-	context := &executor.Context{State: db}
+	context := &executor.Context{State: db, StateDbPath: config.StateDbSrc}
 
 	s := &substate.Substate{
 		Result: &substate.SubstateResult{
