@@ -1,20 +1,21 @@
-package extension
+package profiler_extensions
 
 import (
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
 // MakeMemoryProfiler creates an executor.Extension that records memory profiling data if enabled in the configuration.
 func MakeMemoryProfiler(config *utils.Config) executor.Extension {
 	if config.MemoryProfile == "" {
-		return NilExtension{}
+		return extension.NilExtension{}
 	}
 	return &memoryProfiler{config: config}
 }
 
 type memoryProfiler struct {
-	NilExtension
+	extension.NilExtension
 	config *utils.Config
 }
 

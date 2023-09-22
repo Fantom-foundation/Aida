@@ -1,13 +1,14 @@
-package extension
+package state_db_extensions
 
 import (
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
 type TestSyncPeriodEmitter struct {
-	NilExtension
+	extension.NilExtension
 	config     *utils.Config
 	syncPeriod uint64
 }
@@ -17,7 +18,7 @@ func MakeTestSyncPeriodEmitter(config *utils.Config) executor.Extension {
 	if config.SyncPeriodLength <= 0 {
 		log := logger.NewLogger(config.LogLevel, "Progress-Reporter")
 		log.Warning("SyncPeriodLength was set in config to 0; SyncPeriodEmitter disabled")
-		return NilExtension{}
+		return extension.NilExtension{}
 	}
 
 	return &TestSyncPeriodEmitter{config: config, syncPeriod: 0}

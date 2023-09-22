@@ -2,7 +2,7 @@
 // Source: vm_statistics_printer_test.go
 
 // Package extension is a generated GoMock package.
-package extension
+package profiler_extensions
 
 import (
 	reflect "reflect"

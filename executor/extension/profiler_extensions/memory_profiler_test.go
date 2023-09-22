@@ -1,4 +1,4 @@
-package extension
+package profiler_extensions
 
 import (
 	"errors"
@@ -6,14 +6,15 @@ import (
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
-func TestCpuExtension_CollectsProfileDataIfEnabled(t *testing.T) {
+func TestMemoryProfiler_CollectsProfileDataIfEnabled(t *testing.T) {
 	path := t.TempDir() + "/profile.dat"
 	config := &utils.Config{}
-	config.CPUProfile = path
-	ext := MakeCpuProfiler(config)
+	config.MemoryProfile = path
+	ext := MakeMemoryProfiler(config)
 
 	if err := ext.PreRun(executor.State{}, nil); err != nil {
 		t.Fatalf("failed to to run pre-run: %v", err)
@@ -25,11 +26,11 @@ func TestCpuExtension_CollectsProfileDataIfEnabled(t *testing.T) {
 	}
 }
 
-func TestCpuExtension_NpProfileIsCollectedIfDisabled(t *testing.T) {
+func TestMemoryProfiler_NoProfileIsCollectedIfDisabled(t *testing.T) {
 	config := &utils.Config{}
-	ext := MakeCpuProfiler(config)
+	ext := MakeMemoryProfiler(config)
 
-	if _, ok := ext.(NilExtension); !ok {
+	if _, ok := ext.(extension.NilExtension); !ok {
 		t.Errorf("profiler is enabled although not set in configuration")
 	}
 }

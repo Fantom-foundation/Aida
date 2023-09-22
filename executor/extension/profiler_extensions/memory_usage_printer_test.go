@@ -1,9 +1,10 @@
-package extension
+package profiler_extensions
 
 import (
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -74,7 +75,7 @@ func TestMemoryUsagePrinter_NoPrinterIsCreatedIfNotEnabled(t *testing.T) {
 	config := &utils.Config{}
 	ext := MakeMemoryUsagePrinter(config)
 
-	if _, ok := ext.(NilExtension); !ok {
+	if _, ok := ext.(extension.NilExtension); !ok {
 		t.Errorf("profiler is enabled although not set in configuration")
 	}
 }

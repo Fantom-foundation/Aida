@@ -1,14 +1,15 @@
-package extension
+package state_db_extensions
 
 import (
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
 func MakeStateDbPrimer(config *utils.Config) executor.Extension {
 	if config.SkipPriming {
-		return NilExtension{}
+		return extension.NilExtension{}
 	}
 
 	return makeStateDbPrimer(config, logger.NewLogger(config.LogLevel, "StateDb-Primer"))
@@ -22,7 +23,7 @@ func makeStateDbPrimer(config *utils.Config, log logger.Logger) *stateDbPrimer {
 }
 
 type stateDbPrimer struct {
-	NilExtension
+	extension.NilExtension
 	config *utils.Config
 	log    logger.Logger
 }

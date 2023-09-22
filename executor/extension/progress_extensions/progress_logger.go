@@ -1,10 +1,11 @@
-package extension
+package progress_extensions
 
 import (
 	"sync"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 )
@@ -19,7 +20,7 @@ const (
 // If reportFrequency is 0, it is set to ProgressLoggerDefaultReportFrequency.
 func MakeProgressLogger(config *utils.Config, reportFrequency time.Duration) executor.Extension {
 	if config.NoHeartbeatLogging {
-		return NilExtension{}
+		return extension.NilExtension{}
 	}
 
 	if reportFrequency <= 0 {
@@ -42,7 +43,7 @@ func makeProgressLogger(config *utils.Config, reportFrequency time.Duration, log
 // progressLogger logs human-readable information about progress
 // in "heartbeat" depending on reportFrequency.
 type progressLogger struct {
-	NilExtension
+	extension.NilExtension
 	config          *utils.Config
 	log             logger.Logger
 	inputCh         chan executor.State

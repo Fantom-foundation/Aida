@@ -2,7 +2,9 @@ package main
 
 import (
 	"github.com/Fantom-foundation/Aida/executor"
-	"github.com/Fantom-foundation/Aida/executor/extension"
+	"github.com/Fantom-foundation/Aida/executor/extension/profiler_extensions"
+	"github.com/Fantom-foundation/Aida/executor/extension/progress_extensions"
+	"github.com/Fantom-foundation/Aida/executor/extension/state_db_extensions"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/urfave/cli/v2"
@@ -53,16 +55,16 @@ func (r txProcessor) Process(state executor.State, context *executor.Context) er
 
 func run(config *utils.Config, provider executor.SubstateProvider, stateDb state.StateDB, disableStateDbExtension bool) error {
 	// order of extensionList has to be maintained
-	var extensionList = []executor.Extension{extension.MakeCpuProfiler(config)}
+	var extensionList = []executor.Extension{profiler_extensions.MakeCpuProfiler(config)}
 
 	if !disableStateDbExtension {
-		extensionList = append(extensionList, extension.MakeStateDbManager(config))
+		extensionList = append(extensionList, state_db_extensions.MakeStateDbManager(config))
 	}
 
 	extensionList = append(extensionList, []executor.Extension{
-		extension.MakeProgressLogger(config, 100),
-		extension.MakeStateDbPreparator(),
-		extension.MakeBeginOnlyEmitter(),
+		progress_extensions.MakeProgressLogger(config, 100),
+		state_db_extensions.MakeStateDbPreparator(),
+		state_db_extensions.MakeBeginOnlyEmitter(),
 	}...)
 	return executor.NewExecutor(provider).Run(
 		executor.Params{

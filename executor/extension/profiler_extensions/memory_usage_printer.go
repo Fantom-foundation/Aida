@@ -1,7 +1,8 @@
-package extension
+package profiler_extensions
 
 import (
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 )
@@ -9,7 +10,7 @@ import (
 // MakeMemoryUsagePrinter creates an executor.Extension that prints memory breakdown if enabled.
 func MakeMemoryUsagePrinter(config *utils.Config) executor.Extension {
 	if !config.MemoryBreakdown {
-		return NilExtension{}
+		return extension.NilExtension{}
 	}
 
 	log := logger.NewLogger(config.LogLevel, "Memory-Usage-Printer")
@@ -24,7 +25,7 @@ func makeMemoryUsagePrinter(config *utils.Config, log logger.Logger) executor.Ex
 }
 
 type memoryUsagePrinter struct {
-	NilExtension
+	extension.NilExtension
 	log    logger.Logger
 	config *utils.Config
 }

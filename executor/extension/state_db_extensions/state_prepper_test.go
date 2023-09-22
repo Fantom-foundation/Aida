@@ -1,4 +1,4 @@
-package extension
+package state_db_extensions
 
 import (
 	"testing"

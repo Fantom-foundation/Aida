@@ -1,16 +1,17 @@
-package extension
+package state_db_extensions
 
 import (
 	"fmt"
 	"os"
 
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
 type stateDbManager struct {
-	NilExtension
+	extension.NilExtension
 	config      *utils.Config
 	stateDbPath string
 	log         logger.Logger

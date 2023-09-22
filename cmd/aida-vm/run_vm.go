@@ -5,6 +5,8 @@ import (
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
+	"github.com/Fantom-foundation/Aida/executor/extension/profiler_extensions"
+	"github.com/Fantom-foundation/Aida/executor/extension/progress_extensions"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -47,9 +49,9 @@ func run(
 	extra []executor.Extension,
 ) error {
 	extensions := []executor.Extension{
-		extension.MakeCpuProfiler(config),
-		extension.MakeVirtualMachineStatisticsPrinter(config),
-		extension.MakeProgressLogger(config, 15*time.Second),
+		profiler_extensions.MakeCpuProfiler(config),
+		profiler_extensions.MakeVirtualMachineStatisticsPrinter(config),
+		progress_extensions.MakeProgressLogger(config, 15*time.Second),
 		temporaryStatePrepper{},
 	}
 	extensions = append(extensions, extra...)

@@ -1,4 +1,4 @@
-package extension
+package profiler_extensions
 
 //go:generate mockgen -source vm_statistics_printer_test.go -destination vm_statistics_printer_mocks_test.go -package extension
 

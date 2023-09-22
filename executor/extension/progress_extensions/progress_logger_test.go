@@ -1,4 +1,4 @@
-package extension
+package progress_extensions
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -40,7 +41,7 @@ func TestProgressLoggerExtension_NoLoggerIsCreatedIfDisabled(t *testing.T) {
 	config := &utils.Config{}
 	config.NoHeartbeatLogging = true
 	ext := MakeProgressLogger(config, testProgressReportFrequency)
-	if _, ok := ext.(NilExtension); !ok {
+	if _, ok := ext.(extension.NilExtension); !ok {
 		t.Errorf("Logger is enabled although not set in configuration")
 	}
 

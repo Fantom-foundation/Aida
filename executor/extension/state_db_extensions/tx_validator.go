@@ -1,4 +1,4 @@
-package extension
+package state_db_extensions
 
 import (
 	"errors"
@@ -6,12 +6,13 @@ import (
 	"sync"
 
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
 type txValidator struct {
-	NilExtension
+	extension.NilExtension
 	config *utils.Config
 	log    logger.Logger
 	lock   sync.Mutex
@@ -20,7 +21,7 @@ type txValidator struct {
 
 func MakeTxValidator(config *utils.Config) executor.Extension {
 	if !config.ValidateTxState {
-		return NilExtension{}
+		return extension.NilExtension{}
 	}
 
 	log := logger.NewLogger(config.LogLevel, "Tx-Verifier")

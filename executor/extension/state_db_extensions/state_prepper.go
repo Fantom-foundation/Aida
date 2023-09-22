@@ -1,6 +1,9 @@
-package extension
+package state_db_extensions
 
-import "github.com/Fantom-foundation/Aida/executor"
+import (
+	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension"
+)
 
 // MakeStateDbPreparator creates an executor extension calling PrepareSubstate on
 // an optional StateDB instance before each transaction of an execution. Its main
@@ -11,7 +14,7 @@ func MakeStateDbPreparator() executor.Extension {
 }
 
 type statePreparator struct {
-	NilExtension
+	extension.NilExtension
 }
 
 func (e *statePreparator) PreTransaction(state executor.State, context *executor.Context) error {

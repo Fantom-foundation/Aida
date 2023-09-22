@@ -1,4 +1,4 @@
-package extension
+package state_db_extensions
 
 import (
 	"errors"
@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -33,7 +34,7 @@ func TestTxValidator_NoValidatorIsCreatedIfDisabled(t *testing.T) {
 
 	ext := MakeTxValidator(config)
 
-	if _, ok := ext.(NilExtension); !ok {
+	if _, ok := ext.(extension.NilExtension); !ok {
 		t.Errorf("Validator is enabled although not set in configuration")
 	}
 }

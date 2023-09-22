@@ -1,7 +1,8 @@
-package extension
+package profiler_extensions
 
 import (
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
@@ -12,7 +13,7 @@ func MakeVirtualMachineStatisticsPrinter(config *utils.Config) executor.Extensio
 }
 
 type vmStatPrinter struct {
-	NilExtension
+	extension.NilExtension
 	config *utils.Config
 }
 

@@ -1,10 +1,11 @@
-package extension
+package progress_extensions
 
 import (
 	"sync"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 )
@@ -18,7 +19,7 @@ const (
 // PostBlock event and is only useful as part of a sequential evaluation.
 func MakeProgressTracker(config *utils.Config, reportFrequency int) executor.Extension {
 	if !config.TrackProgress {
-		return NilExtension{}
+		return extension.NilExtension{}
 	}
 
 	if reportFrequency == 0 {
@@ -40,7 +41,7 @@ func makeProgressTracker(config *utils.Config, reportFrequency int, log logger.L
 // progressTracker logs progress every XXX blocks depending on reportFrequency.
 // Default is 100_000 blocks. This is mainly used for gathering information about process.
 type progressTracker struct {
-	NilExtension
+	extension.NilExtension
 	config              *utils.Config
 	log                 logger.Logger
 	reportFrequency     int

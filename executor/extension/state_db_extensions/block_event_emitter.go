@@ -1,11 +1,12 @@
-package extension
+package state_db_extensions
 
 import (
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension"
 )
 
 type blockEventEmitter struct {
-	NilExtension
+	extension.NilExtension
 	skipEndBlock bool // switch for vm-adb, which requires BeginBlock(), but can't call EndBlock()
 }
 

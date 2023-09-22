@@ -1,7 +1,8 @@
-package extension
+package profiler_extensions
 
 import (
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
@@ -10,13 +11,13 @@ import (
 // enabled in the provided configuration.
 func MakeCpuProfiler(config *utils.Config) executor.Extension {
 	if config.CPUProfile == "" {
-		return NilExtension{}
+		return extension.NilExtension{}
 	}
 	return &cpuProfiler{config: config}
 }
 
 type cpuProfiler struct {
-	NilExtension
+	extension.NilExtension
 	config *utils.Config
 }
 

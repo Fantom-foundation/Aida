@@ -5,6 +5,9 @@ import (
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
+	"github.com/Fantom-foundation/Aida/executor/extension/profiler_extensions"
+	"github.com/Fantom-foundation/Aida/executor/extension/progress_extensions"
+	"github.com/Fantom-foundation/Aida/executor/extension/state_db_extensions"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/urfave/cli/v2"
@@ -45,22 +48,22 @@ func (r txProcessor) Process(state executor.State, context *executor.Context) er
 
 func run(config *utils.Config, provider executor.SubstateProvider, stateDb state.StateDB, disableStateDbExtension bool) error {
 	// order of extensionList has to be maintained
-	var extensionList = []executor.Extension{extension.MakeCpuProfiler(config)}
+	var extensionList = []executor.Extension{profiler_extensions.MakeCpuProfiler(config)}
 
 	if !disableStateDbExtension {
-		extensionList = append(extensionList, extension.MakeStateDbManager(config))
+		extensionList = append(extensionList, state_db_extensions.MakeStateDbManager(config))
 	}
 
 	extensionList = append(extensionList, []executor.Extension{
-		extension.MakeVirtualMachineStatisticsPrinter(config),
-		extension.MakeProgressLogger(config, 15*time.Second),
-		extension.MakeProgressTracker(config, 100_000),
-		extension.MakeStateDbPrimer(config),
-		extension.MakeMemoryUsagePrinter(config),
-		extension.MakeMemoryProfiler(config),
-		extension.MakeStateDbPreparator(),
+		profiler_extensions.MakeVirtualMachineStatisticsPrinter(config),
+		progress_extensions.MakeProgressLogger(config, 15*time.Second),
+		progress_extensions.MakeProgressTracker(config, 100_000),
+		state_db_extensions.MakeStateDbPrimer(config),
+		profiler_extensions.MakeMemoryUsagePrinter(config),
+		profiler_extensions.MakeMemoryProfiler(config),
+		state_db_extensions.MakeStateDbPreparator(),
 		extension.MakeStateHashValidator(config),
-		extension.MakeBlockEventEmitter(),
+		state_db_extensions.MakeBlockEventEmitter(),
 	}...,
 	)
 

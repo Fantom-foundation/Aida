@@ -1,9 +1,10 @@
-package extension
+package state_db_extensions
 
 import (
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	"go.uber.org/mock/gomock"
@@ -14,7 +15,7 @@ func TestProgressLoggerExtension_NoPrimerIsCreatedIfDisabled(t *testing.T) {
 	config.SkipPriming = true
 
 	ext := MakeStateDbPrimer(config)
-	if _, ok := ext.(NilExtension); !ok {
+	if _, ok := ext.(extension.NilExtension); !ok {
 		t.Errorf("Primer is enabled although not set in configuration")
 	}
 
