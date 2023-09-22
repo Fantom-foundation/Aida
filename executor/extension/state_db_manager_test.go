@@ -257,7 +257,7 @@ func TestStateDbManager_StateDbSrcStateDbIsReadOnly(t *testing.T) {
 		t.Fatalf("failed to retrieve source stateDb; %v", err)
 	}
 	if empty {
-		t.Fatalf("Source StateDb was removed from %v; %v", sourcePath, err)
+		t.Fatalf("Source StateDb was removed from %v", sourcePath)
 	}
 
 	//  check that the readonly database was used instead of using working directory from second run
@@ -265,8 +265,8 @@ func TestStateDbManager_StateDbSrcStateDbIsReadOnly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to retrieve source stateDb; %v", err)
 	}
-	if empty {
-		t.Fatalf("Source StateDb was removed from %v; %v", sourcePath, err)
+	if !empty {
+		t.Fatalf("Source StateDb was removed from %v", sourcePath)
 	}
 }
 
@@ -334,7 +334,7 @@ func TestStateDbManager_UsingExistingSourceDb(t *testing.T) {
 		t.Fatalf("failed to retrieve source stateDb; %v", err)
 	}
 	if empty {
-		t.Fatalf("Source StateDb was removed from %v; %v", sourcePath, err)
+		t.Fatalf("Source StateDb was removed from %v", sourcePath)
 	}
 }
 
