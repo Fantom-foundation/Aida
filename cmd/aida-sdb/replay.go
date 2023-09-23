@@ -73,7 +73,7 @@ func Replay(ctx *cli.Context) error {
 	}
 
 	cfg.ProgressLoggerType = utils.OperationType
-	cfg.CopySrcDb = true
+	cfg.SrcDbReadonly = true
 
 	if cfg.DbImpl == "memory" {
 		return fmt.Errorf("db-impl memory is not supported")
