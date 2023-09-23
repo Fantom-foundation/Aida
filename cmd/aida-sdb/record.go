@@ -81,37 +81,17 @@ func Record(ctx *cli.Context) error {
 
 func newRecorder(config *utils.Config, ctx *context.Record) recorder {
 	return recorder{
-		config:        config,
-		ctx:           ctx,
-		curSyncPeriod: config.First / config.SyncPeriodLength,
+		config: config,
+		ctx:    ctx,
 	}
 }
 
 type recorder struct {
-	config        *utils.Config
-	ctx           *context.Record
-	curSyncPeriod uint64
+	config *utils.Config
+	ctx    *context.Record
 }
 
 func (r recorder) Process(state executor.State, context *executor.Context) error {
-	if !r.ctx.Debug {
-		r.ctx.Debug = r.config.Debug && (uint64(state.Block) >= r.config.DebugFrom)
-	}
-
-	operation.WriteOp(r.ctx, operation.NewEndBlock())
-
-	newSyncPeriod := uint64(state.Block) / r.config.SyncPeriodLength
-	for r.curSyncPeriod < newSyncPeriod {
-		operation.WriteOp(r.ctx, operation.NewEndSyncPeriod())
-		r.curSyncPeriod++
-		operation.WriteOp(r.ctx, operation.NewBeginSyncPeriod(r.curSyncPeriod))
-	}
-
-	operation.WriteOp(r.ctx, operation.NewBeginBlock(uint64(state.Block)))
-
-	context.State = state_db.MakeInMemoryStateDB(&state.Substate.InputAlloc, uint64(state.Block))
-	context.State = proxy.NewRecorderProxy(context.State, r.ctx)
-
 	_, err := utils.ProcessTx(
 		context.State,
 		r.config,
@@ -125,13 +105,73 @@ func (r recorder) Process(state executor.State, context *executor.Context) error
 
 func (r recorder) close() {
 	// end last block
-	operation.WriteOp(r.ctx, operation.NewEndBlock())
-	operation.WriteOp(r.ctx, operation.NewEndSyncPeriod())
-
 	r.ctx.Close()
 }
 
-func record(config *utils.Config, provider action_provider.ActionProvider, stateDb state_db.StateDB, rec executor.Processor) error {
+// makeProxyRecorderPrepper creates an extension which creates RecorderProxy before each transaction
+func makeProxyRecorderPrepper(ctx *context.Record) proxyRecorderPrepper {
+	return proxyRecorderPrepper{
+		ctx: ctx,
+	}
+}
+
+type proxyRecorderPrepper struct {
+	extension.NilExtension
+	ctx *context.Record
+}
+
+// PreTransaction creates a RecorderProxy
+func (p proxyRecorderPrepper) PreTransaction(_ executor.State, ctx *executor.Context) error {
+	ctx.State = proxy.NewRecorderProxy(ctx.State, p.ctx)
+	return nil
+}
+
+// makeOperationWriter creates an extension which writes block operations
+// 1) before transaction is executed
+// 2) after whole run
+func makeOperationWriter(cfg *utils.Config, ctx *context.Record) operationWriter {
+	return operationWriter{
+		config:        cfg,
+		ctx:           ctx,
+		curSyncPeriod: cfg.First / cfg.SyncPeriodLength,
+	}
+}
+
+type operationWriter struct {
+	extension.NilExtension
+	config        *utils.Config
+	ctx           *context.Record
+	curSyncPeriod uint64
+}
+
+// PreTransaction writes block operations into record before executing the transaction
+func (w operationWriter) PreTransaction(state executor.State, _ *executor.Context) error {
+	if !w.ctx.Debug {
+		w.ctx.Debug = w.config.Debug && (uint64(state.Block) >= w.config.DebugFrom)
+	}
+
+	operation.WriteOp(w.ctx, operation.NewEndBlock())
+
+	newSyncPeriod := uint64(state.Block) / w.config.SyncPeriodLength
+	for w.curSyncPeriod < newSyncPeriod {
+		operation.WriteOp(w.ctx, operation.NewEndSyncPeriod())
+		w.curSyncPeriod++
+		operation.WriteOp(w.ctx, operation.NewBeginSyncPeriod(w.curSyncPeriod))
+	}
+
+	operation.WriteOp(w.ctx, operation.NewBeginBlock(uint64(state.Block)))
+	return nil
+}
+
+// PostRun writes final operations into record
+func (w operationWriter) PostRun(executor.State, *executor.Context, error) error {
+	operation.WriteOp(w.ctx, operation.NewEndBlock())
+	operation.WriteOp(w.ctx, operation.NewEndSyncPeriod())
+
+	return nil
+}
+
+func record(config *utils.Config, provider action_provider.ActionProvider, stateDb state_db.StateDB, rec recorder) error {
 	return executor.NewExecutor(provider).Run(
 		executor.Params{
 			From:  int(config.First),
@@ -144,8 +184,14 @@ func record(config *utils.Config, provider action_provider.ActionProvider, state
 			extension.MakeVirtualMachineStatisticsPrinter(config),
 			extension.MakeProgressLogger(config, 15*time.Second),
 			extension.MakeProgressTracker(config, 100_000),
+
+			// order needs to be kept accordingly
+			// operationWriter > temporaryStatePrepper > proxyRecorderPrepper
+			makeOperationWriter(rec.config, rec.ctx),
+			extension.MakeTemporaryStatePrepper(),
+			makeProxyRecorderPrepper(rec.ctx),
+
 			extension.MakeStateDbPreparator(),
-			extension.MakeTxValidator(config),
 			extension.MakeBlockEventEmitter(),
 		},
 	)

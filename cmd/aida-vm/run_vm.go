@@ -7,7 +7,6 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/action_provider"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
-	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/urfave/cli/v2"
 )
@@ -51,7 +50,7 @@ func run(
 		extension.MakeCpuProfiler(config),
 		extension.MakeVirtualMachineStatisticsPrinter(config),
 		extension.MakeProgressLogger(config, 15*time.Second),
-		temporaryStatePrepper{},
+		extension.MakeTemporaryStatePrepper(),
 	}
 	extensions = append(extensions, extra...)
 
@@ -79,15 +78,4 @@ func (r txProcessor) Process(s executor.State, c *executor.Context) error {
 		s.Substate,
 	)
 	return err
-}
-
-// temporaryStatePrepper is an extension that introduces a fresh in-memory
-// StateDB instance before each transaction execution.
-type temporaryStatePrepper struct {
-	extension.NilExtension
-}
-
-func (temporaryStatePrepper) PreTransaction(s executor.State, c *executor.Context) error {
-	c.State = state.MakeInMemoryStateDB(&s.Substate.InputAlloc, uint64(s.Block))
-	return nil
 }

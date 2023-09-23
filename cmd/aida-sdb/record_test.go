@@ -40,7 +40,6 @@ func TestRecord_AllDbEventsAreIssuedInOrder(t *testing.T) {
 
 	gomock.InOrder(
 		db.EXPECT().BeginBlock(uint64(1)),
-		db.EXPECT().PrepareSubstate(gomock.Any(), uint64(1)),
 		// anything else is called on a RecorderProxy
 	)
 
