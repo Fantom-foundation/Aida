@@ -26,6 +26,8 @@ func ReplayAPI(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	// there is no need to make temporary copy of stateDb because it isn't modified by this command
+	cfg.SrcDbReadonly = true
 
 	fr, err = iterator.NewFileReader(context.Background(), cfg.APIRecordingSrcFile)
 	if err != nil {

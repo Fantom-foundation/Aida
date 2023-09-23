@@ -193,7 +193,7 @@ func traceReplayAction(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	cfg.CopySrcDb = true
+
 	if cfg.DbImpl == "memory" {
 		return fmt.Errorf("db-impl memory is not supported")
 	}
