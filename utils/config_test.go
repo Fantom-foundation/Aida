@@ -814,6 +814,7 @@ func TestUtilsConfig_adjustMissingConfigValuesKeepStateDb(t *testing.T) {
 	}
 }
 
+// createFakeAidaDb creates fake empty aidaDB with metadata for testing purposes
 func createFakeAidaDb(cfg *Config) error {
 	// fake metadata values
 	var (

@@ -419,6 +419,8 @@ func adjustBlockRange(chainId ChainID, firstArg, lastArg uint64) (uint64, uint64
 	}
 }
 
+// getChainId return either default or user specified chainID
+// if the chainID is unknown type, it'll be loaded from aidaDB
 func getChainId(cfg *Config, log *logging.Logger) (ChainID, error) {
 	chainId := cfg.ChainID
 	// first look for chainId since we need it for verbal block indication
@@ -447,6 +449,8 @@ func getChainId(cfg *Config, log *logging.Logger) (ChainID, error) {
 	return chainId, nil
 }
 
+// updateConfigBlockRange parse the command line arguments according to the mode in which selected tool runs
+// and store them into the config
 func updateConfigBlockRange(args []string, cfg *Config, mode ArgumentMode, log *logging.Logger) error {
 	var (
 		first     uint64
@@ -519,6 +523,7 @@ func updateConfigBlockRange(args []string, cfg *Config, mode ArgumentMode, log *
 	return nil
 }
 
+// adjustMissingConfigValues fill the missing values in the config
 func adjustMissingConfigValues(cfg *Config) {
 	// set default db variant if not provided.
 	if cfg.DbImpl == "carmen" && cfg.DbVariant == "" {
@@ -551,6 +556,7 @@ func adjustMissingConfigValues(cfg *Config) {
 	}
 }
 
+// reportNewConfig logs out the state of config in current run
 func reportNewConfig(cfg *Config, log *logging.Logger) {
 	if !cfg.Quiet {
 		log.Noticef("Run config:")
