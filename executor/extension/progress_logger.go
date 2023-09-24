@@ -77,15 +77,15 @@ func (l *progressLogger) PostTransaction(state executor.State, _ *executor.Conte
 func (l *progressLogger) startReport(reportFrequency time.Duration) {
 	defer l.wg.Done()
 
-	start := time.Now()
-	lastReport := time.Now()
-	ticker := time.NewTicker(reportFrequency)
-
 	var (
 		currentBlock                 int
 		totalTx, currentIntervalTx   uint64
 		totalGas, currentIntervalGas uint64
 	)
+
+	start := time.Now()
+	lastReport := time.Now()
+	ticker := time.NewTicker(reportFrequency)
 
 	defer func() {
 		elapsed := time.Since(start)
@@ -113,7 +113,14 @@ func (l *progressLogger) startReport(reportFrequency time.Duration) {
 			currentIntervalTx++
 			currentIntervalGas += in.Substate.Result.GasUsed
 
+			totalTx++
+			totalGas += in.Substate.Result.GasUsed
+
 		case now := <-ticker.C:
+			// skip if no data are present
+			if currentIntervalTx == 0 {
+				continue
+			}
 			elapsed := now.Sub(start)
 			txRate := float64(currentIntervalTx) / now.Sub(lastReport).Seconds()
 			gasRate := float64(currentIntervalGas) / now.Sub(lastReport).Seconds()
@@ -121,8 +128,6 @@ func (l *progressLogger) startReport(reportFrequency time.Duration) {
 			l.log.Infof(progressLoggerReportFormat, elapsed.Round(1*time.Second), currentBlock, txRate, gasRate/1e6)
 
 			lastReport = now
-			totalTx += currentIntervalTx
-			totalGas += currentIntervalGas
 
 			currentIntervalTx = 0
 			currentIntervalGas = 0

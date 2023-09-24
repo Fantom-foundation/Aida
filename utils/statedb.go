@@ -32,6 +32,7 @@ func PrepareStateDB(cfg *Config) (state.StateDB, string, error) {
 	// db source was specified
 	if cfg.StateDbSrc != "" {
 		db, dbPath, err = useExistingStateDB(cfg)
+		cfg.IsExistingStateDb = true
 	} else {
 		db, dbPath, err = makeNewStateDB(cfg)
 		cfg.StateDbSrc = dbPath
@@ -58,7 +59,7 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 	)
 
 	// make a copy of source statedb
-	if cfg.CopySrcDb {
+	if !cfg.SrcDbReadonly {
 		tmpStateDbPath, err = os.MkdirTemp(cfg.DbTmp, "state_db_tmp_*")
 		if err != nil {
 			return nil, "", fmt.Errorf("failed to create a temporary directory; %v", err)

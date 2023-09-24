@@ -17,6 +17,8 @@ func RunVmSdb(ctx *cli.Context) error {
 		return err
 	}
 
+	cfg.StateValidationMode = utils.SubsetCheck
+
 	substateDb, err := executor.OpenSubstateDb(cfg, ctx)
 	if err != nil {
 		return err
@@ -53,8 +55,10 @@ func run(config *utils.Config, provider executor.SubstateProvider, stateDb state
 		extension.MakeVirtualMachineStatisticsPrinter(config),
 		extension.MakeProgressLogger(config, 15*time.Second),
 		extension.MakeProgressTracker(config, 100_000),
+		extension.MakeStateDbPrimer(config),
+		extension.MakeMemoryUsagePrinter(config),
+		extension.MakeMemoryProfiler(config),
 		extension.MakeStateDbPreparator(),
-		extension.MakeTxValidator(config),
 		extension.MakeStateHashValidator(config),
 		extension.MakeBlockEventEmitter(),
 	}...,

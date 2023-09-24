@@ -107,7 +107,7 @@ type Config struct {
 	ContinueOnFailure   bool           // continue validation when an error detected
 	ContractNumber      int64          // number of contracts to create
 	CompactDb           bool           // compact database after merging
-	CopySrcDb           bool           // if true, make a copy the source statedb
+	SrcDbReadonly       bool           // if false, make a copy the source statedb
 	CPUProfile          string         // pprof cpu profile output file name
 	Db                  string         // path to database
 	DbTmp               string         // path to temporary database
@@ -177,6 +177,7 @@ type Config struct {
 	UpdateOnFailure     bool           // if enabled and continue-on-failure is also enabled, this updates any error found in StateDb
 	NoHeartbeatLogging  bool           // disables heartbeat logging
 	TrackProgress       bool           // enables track progress logging
+	IsExistingStateDb   bool           // this is true if we are using an existing StateDb
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.

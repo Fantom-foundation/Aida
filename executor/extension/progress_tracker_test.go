@@ -2,6 +2,7 @@ package extension
 
 import (
 	"fmt"
+	"os"
 	"regexp"
 	"testing"
 	"time"
@@ -33,6 +34,11 @@ func TestProgressTrackerExtension_LoggingHappens(t *testing.T) {
 
 	config := &utils.Config{}
 	config.First = 4
+	config.StateDbSrc = t.TempDir()
+
+	if err := os.WriteFile(config.StateDbSrc+"/dummy.txt", []byte("hello world"), 0x600); err != nil {
+		t.Fatalf("failed to prepare disk content")
+	}
 
 	ext := makeProgressTracker(config, testStateDbInfoFrequency, log)
 
@@ -46,17 +52,17 @@ func TestProgressTrackerExtension_LoggingHappens(t *testing.T) {
 	}
 
 	gomock.InOrder(
-		db.EXPECT().GetMemoryUsage(),
+		db.EXPECT().GetMemoryUsage().Return(&state.MemoryUsage{UsedBytes: 1234}),
 		log.EXPECT().Noticef(progressTrackerReportFormat,
-			6, int64(0), uint64(0),
+			6, uint64(1234), int64(11),
 			MatchRate(gomock.All(executor.Gt(7), executor.Lt(9)), "txRate"),
 			MatchRate(gomock.All(executor.Gt(700), executor.Lt(900)), "gasRate"),
 			MatchRate(gomock.All(executor.Gt(7), executor.Lt(9)), "txRate"),
 			MatchRate(gomock.All(executor.Gt(700), executor.Lt(900)), "gasRate"),
 		),
-		db.EXPECT().GetMemoryUsage(),
+		db.EXPECT().GetMemoryUsage().Return(&state.MemoryUsage{UsedBytes: 4321}),
 		log.EXPECT().Noticef(progressTrackerReportFormat,
-			8, int64(0), uint64(0),
+			8, uint64(4321), int64(11),
 			MatchRate(gomock.All(executor.Gt(1), executor.Lt(2)), "txRate"),
 			MatchRate(gomock.All(executor.Gt(180), executor.Lt(220)), "gasRate"),
 			MatchRate(gomock.All(executor.Gt(4), executor.Lt(6)), "txRate"),

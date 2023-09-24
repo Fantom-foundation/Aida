@@ -77,6 +77,21 @@ log "render mainnet report ..."
 ./scripts/knit.R -p "GitHash='$gh', HwInfo='$hw', OsInfo='$os', Machine='$machine', GoInfo='$go', VM='$vmimpl', StateDB='$statedb'" \
                  -d "$outputdir/profile.db" -f html -o mainnet_report.html -O $outputdir reports/mainnet_report.rmd
 
+# produce wallet transfer report
+log "render wallet transfer report ..."
+./scripts/knit.R -p "GitHash='$gh', HwInfo='$hw', OsInfo='$os', Machine='$machine', GoInfo='$go', VM='$vmimpl', StateDB='$statedb'" \
+                 -d "$outputdir/profile.db" -f html -o wallet_transfer.html -O $outputdir reports/wallet_transfer.rmd
+
+# produce contract creation report
+log "render contract creation report ..."
+./scripts/knit.R -p "GitHash='$gh', HwInfo='$hw', OsInfo='$os', Machine='$machine', GoInfo='$go', VM='$vmimpl', StateDB='$statedb'" \
+                 -d "$outputdir/profile.db" -f html -o contract_creation.html -O $outputdir reports/contract_creation.rmd
+
+# produce contract execution report
+log "render contract execution report ..."
+./scripts/knit.R -p "GitHash='$gh', HwInfo='$hw', OsInfo='$os', Machine='$machine', GoInfo='$go', VM='$vmimpl', StateDB='$statedb'" \
+                 -d "$outputdir/profile.db" -f html -o contract_execution.html -O $outputdir reports/contract_execution.rmd
+
 # produce parallel experiment report
 log "render parallel experiment report ..."
 ./scripts/knit.R -p "GitHash='$gh', HwInfo='$hw', OsInfo='$os', Machine='$machine', GoInfo='$go', VM='$vmimpl', StateDB='$statedb'" \
