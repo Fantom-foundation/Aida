@@ -63,7 +63,10 @@ func (m *stateDbManager) PostRun(state executor.State, ctx *executor.Context, _ 
 	// lastProcessedBlock contains number of last successfully processed block
 	// - processing finished successfully to the end, but then state.Block is set to params.To
 	// - error occurred therefore previous block is last successful
-	lastProcessedBlock := uint64(state.Block - 1)
+	lastProcessedBlock := uint64(state.Block)
+	if lastProcessedBlock > 0 {
+		lastProcessedBlock -= 1
+	}
 
 	rootHash := ctx.State.GetHash()
 	if err := utils.WriteStateDbInfo(ctx.StateDbPath, m.config, lastProcessedBlock, rootHash); err != nil {
