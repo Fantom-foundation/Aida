@@ -46,7 +46,7 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		archive.EXPECT().EndTransaction(),
 	)
 
-	if err := run(config, substate, db, true); err != nil {
+	if err := run(config, substate, db); err != nil {
 		t.Errorf("run failed: %v", err)
 	}
 }
