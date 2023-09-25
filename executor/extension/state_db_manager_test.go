@@ -66,7 +66,7 @@ func TestStateDbManager_DbClosureWithKeepDb(t *testing.T) {
 	}
 }
 
-func TestStateDbManager_DoNotKeepDb(t *testing.T) {
+func TestStateDbManager_DoNotKeepDbAndDoesntUnderflowBellowZero(t *testing.T) {
 	cfg := &utils.Config{}
 
 	tmpDir := t.TempDir()
@@ -359,4 +359,37 @@ func IsEmptyDirectory(name string) (bool, error) {
 		return true, nil
 	}
 	return false, err
+}
+
+func TestStateDbManager_StateDbBlockNumberDecrements(t *testing.T) {
+	cfg := &utils.Config{}
+
+	tmpDir := t.TempDir()
+	cfg.DbTmp = tmpDir
+	cfg.DbImpl = "geth"
+	cfg.KeepDb = true
+
+	ext := MakeStateDbManager(cfg)
+
+	state := executor.State{
+		Block: 10,
+	}
+
+	ctx := &executor.Context{}
+
+	if err := ext.PreRun(state, ctx); err != nil {
+		t.Fatalf("failed to to run pre-run: %v", err)
+	}
+
+	if err := ext.PostRun(state, ctx, nil); err != nil {
+		t.Fatalf("failed to to run post-run: %v", err)
+	}
+
+	expectedName := fmt.Sprintf("state_db_%v_%v", cfg.DbImpl, state.Block-1)
+	expectedPath := filepath.Join(cfg.DbTmp, expectedName)
+
+	_, err := os.Stat(expectedPath)
+	if err != nil {
+		t.Fatalf("failed to create stateDb; %v", err)
+	}
 }
