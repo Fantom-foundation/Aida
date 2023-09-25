@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/action_provider"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
@@ -18,7 +19,7 @@ func RunVm(ctx *cli.Context) error {
 		return err
 	}
 
-	substateDb, err := executor.OpenSubstateDb(cfg, ctx)
+	substateDb, err := action_provider.OpenSubstateDb(cfg, ctx)
 	if err != nil {
 		return err
 	}
@@ -34,6 +35,17 @@ func RunVm(ctx *cli.Context) error {
 	return run(cfg, substateDb, txProcessor{cfg}, nil)
 }
 
+// temporaryStatePrepper is an extension that introduces a fresh in-memory
+// StateDB instance before each transaction execution.
+type temporaryStatePrepper struct {
+	extension.NilExtension
+}
+
+func (temporaryStatePrepper) PreAction(s executor.State, c *executor.Context) error {
+	c.State = state.MakeInMemoryStateDB(&s.Substate.InputAlloc, uint64(s.Block))
+	return nil
+}
+
 // run executes the actual block-processing evaluation for RunVm above.
 // It is factored out to facilitate testing without the need to create
 // a cli.Context or to provide an actual SubstateDb on disk.
@@ -42,7 +54,7 @@ func RunVm(ctx *cli.Context) error {
 // execution, in particular during unit tests.
 func run(
 	config *utils.Config,
-	provider executor.SubstateProvider,
+	provider action_provider.ActionProvider,
 	processor executor.Processor,
 	extra []executor.Extension,
 ) error {
@@ -78,15 +90,4 @@ func (r txProcessor) Process(s executor.State, c *executor.Context) error {
 		s.Substate,
 	)
 	return err
-}
-
-// temporaryStatePrepper is an extension that introduces a fresh in-memory
-// StateDB instance before each transaction execution.
-type temporaryStatePrepper struct {
-	extension.NilExtension
-}
-
-func (temporaryStatePrepper) PreTransaction(s executor.State, c *executor.Context) error {
-	c.State = state.MakeInMemoryStateDB(&s.Substate.InputAlloc, uint64(s.Block))
-	return nil
 }

@@ -136,9 +136,9 @@ func (mr *MockExtensionMockRecorder) PostRun(arg0, arg1, arg2 interface{}) *gomo
 }
 
 // PostTransaction mocks base method.
-func (m *MockExtension) PostTransaction(arg0 State, arg1 *Context) error {
+func (m *MockExtension) PostAction(arg0 State, arg1 *Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PostTransaction", arg0, arg1)
+	ret := m.ctrl.Call(m, "PostAction", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
@@ -146,7 +146,7 @@ func (m *MockExtension) PostTransaction(arg0 State, arg1 *Context) error {
 // PostTransaction indicates an expected call of PostTransaction.
 func (mr *MockExtensionMockRecorder) PostTransaction(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostTransaction", reflect.TypeOf((*MockExtension)(nil).PostTransaction), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PostAction", reflect.TypeOf((*MockExtension)(nil).PostAction), arg0, arg1)
 }
 
 // PreBlock mocks base method.
@@ -178,9 +178,9 @@ func (mr *MockExtensionMockRecorder) PreRun(arg0, arg1 interface{}) *gomock.Call
 }
 
 // PreTransaction mocks base method.
-func (m *MockExtension) PreTransaction(arg0 State, arg1 *Context) error {
+func (m *MockExtension) PreAction(arg0 State, arg1 *Context) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "PreTransaction", arg0, arg1)
+	ret := m.ctrl.Call(m, "PreAction", arg0, arg1)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
@@ -188,5 +188,5 @@ func (m *MockExtension) PreTransaction(arg0 State, arg1 *Context) error {
 // PreTransaction indicates an expected call of PreTransaction.
 func (mr *MockExtensionMockRecorder) PreTransaction(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreTransaction", reflect.TypeOf((*MockExtension)(nil).PreTransaction), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreAction", reflect.TypeOf((*MockExtension)(nil).PreAction), arg0, arg1)
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/action_provider"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -22,7 +23,7 @@ func RunVmAdb(ctx *cli.Context) error {
 		cfg.First = 1
 	}
 
-	substateDb, err := executor.OpenSubstateDb(cfg, ctx)
+	substateDb, err := action_provider.OpenSubstateDb(cfg, ctx)
 	if err != nil {
 		return err
 	}
@@ -51,7 +52,7 @@ func (r txProcessor) Process(state executor.State, context *executor.Context) er
 	return err
 }
 
-func run(config *utils.Config, provider executor.SubstateProvider, stateDb state.StateDB, disableStateDbExtension bool) error {
+func run(config *utils.Config, provider action_provider.ActionProvider, stateDb state.StateDB, disableStateDbExtension bool) error {
 	// order of extensionList has to be maintained
 	var extensionList = []executor.Extension{extension.MakeCpuProfiler(config)}
 

@@ -49,7 +49,7 @@ func (v *txValidator) PreRun(executor.State, *executor.Context) error {
 }
 
 // PreTransaction validates InputAlloc in given substate
-func (v *txValidator) PreTransaction(state executor.State, context *executor.Context) error {
+func (v *txValidator) PreAction(state executor.State, context *executor.Context) error {
 	err := utils.ValidateStateDB(state.Substate.InputAlloc, context.State, v.config.UpdateOnFailure)
 	if err == nil {
 		return nil
@@ -67,7 +67,7 @@ func (v *txValidator) PreTransaction(state executor.State, context *executor.Con
 }
 
 // PostTransaction validates OutputAlloc in given substate
-func (v *txValidator) PostTransaction(state executor.State, context *executor.Context) error {
+func (v *txValidator) PostAction(state executor.State, context *executor.Context) error {
 	err := utils.ValidateStateDB(state.Substate.OutputAlloc, context.State, v.config.UpdateOnFailure)
 	if err == nil {
 		return nil

@@ -1,13 +1,14 @@
 package executor
 
 //go:generate mockgen -source executor.go -destination executor_mocks.go -package executor
-
 import (
 	"errors"
 	"sync"
 	"sync/atomic"
 
+	"github.com/Fantom-foundation/Aida/executor/action_provider"
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 )
@@ -26,9 +27,9 @@ import (
 //	for each block {
 //	   PreBlock()
 //	   for each transaction {
-//	       PreTransaction()
+//	       PreAction()
 //	       Processor.Process(transaction)
-//	       PostTransaction()
+//	       PostAction()
 //	   }
 //	   PostBlock()
 //	}
@@ -38,9 +39,9 @@ import (
 //
 //	PreRun()
 //	for transaction in parallel {
-//	    PreTransaction()
+//	    PreAction()
 //	    Processor.Process(transaction)
-//	    PostTransaction()
+//	    PostAction()
 //	}
 //	PostRun()
 //
@@ -61,26 +62,32 @@ type Executor interface {
 	Run(params Params, processor Processor, extensions []Extension) error
 }
 
-// NewExecutor creates a new executor based on the given substate provider.
-func NewExecutor(substate SubstateProvider) Executor {
+// NewExecutor creates a new executor based on the given provider.
+func NewExecutor(substate action_provider.ActionProvider) Executor {
 	return &executor{substate}
 }
 
 // Params summarizes input parameters for a run of the executor.
 type Params struct {
-	// From is the begin of the range of blocks to be processed (inclusive).
+	// From is the beginning of the range of blocks to be processed (inclusive).
 	From int
+
 	// From is the end of the range of blocks to be processed (exclusive).
 	To int
+
 	// State is an optional StateDB instance to be made available to the
 	// processor and extensions during execution.
 	State state.StateDB
+
 	// NumWorkers is the number of concurrent goroutines to be used to
 	// process blocks. If the number of workers is 1, transactions are
-	// guranteed to be processed in-order. If it is > 1 no fixed order
-	// is guranteed. Any number <= 1 is considered to be 1, thus the default
+	// guaranteed to be processed in-order. If it is > 1 no fixed order
+	// is guaranteed. Any number <= 1 is considered to be 1, thus the default
 	// value of 0 is valid.
 	NumWorkers int
+
+	// RunMode represents what is being iterated over
+	RunMode RunMode
 }
 
 // Processor is an interface for the entity to which an executor is feeding
@@ -96,7 +103,7 @@ type Processor interface {
 // a range of transactions. During various stages, methods of extensions are
 // called, enabling them to monitor and/or interfere with the execution.
 // Since blocks may be processed in parallel, callbacks are generally
-// required to be thread safe (with the exception of the Pre-/ and PostRun)
+// required to be thread safe (except for the Pre-/ and PostRun)
 // callback.
 type Extension interface {
 	// PreRun is called before the begin of the execution of a block range,
@@ -120,25 +127,23 @@ type Extension interface {
 	// called when running with multiple workers.
 	PreBlock(State, *Context) error
 
-	// PreBlock is called once after the end of processing a block with
+	// PostBlock is called once after the end of processing a block with
 	// the state containing the number of the Block and the last transaction
 	// processed in the block. This function is not called when running with
 	// multiple workers.
 	PostBlock(State, *Context) error
 
-	// PreTransaction is called once before each transaction with the state
-	// listing the block number, the transaction number, and the substate data
-	// providing the input for the subsequent execution of the transaction.
-	// When running with multiple workers, this function may be called
-	// concurrently, and must thus be thread safe.
-	PreTransaction(State, *Context) error
+	// PreAction is called once before each action (transaction or operation) with the state listing
+	// the block number, the transaction number (if iterating over transactions), and the provider
+	// data providing the input for the subsequent execution of the action. When running with multiple
+	// workers, this function may be called concurrently, and must thus be thread safe.
+	PreAction(State, *Context) error
 
-	// PostTransaction is called once after each transaction with the state
-	// listing the block number, the transaction number, and the substate data
-	// providing the input for the subsequent execution of the transaction.
-	// When running with multiple workers, this function may be called
-	// concurrently, and must thus be thread safe.
-	PostTransaction(State, *Context) error
+	// PostAction is called once after each action (transaction or operation) with the state listing
+	// the block number, the transaction number (if iterating over transactions), and the provider
+	// data providing the input for the subsequent execution of the action. When running with multiple
+	// workers, this function may be called concurrently, and must thus be thread safe.
+	PostAction(State, *Context) error
 }
 
 // State summarizes the current state of an execution and is passed to
@@ -148,13 +153,17 @@ type State struct {
 	Block int
 
 	// Transaction is the transaction number of the current transaction within
-	// its respective block. It is only valid for PreTransaction, PostTransaction,
+	// its respective block. It is only valid for PreAction, PostAction,
 	// PostBlock, and for PostRun events in case of an abort.
 	Transaction int
 
 	// Substate is the input required for the current transaction. It is only
-	// valid for Pre- and PostTransaction events.
+	// valid for Pre- and PostAction events. Used only with SubstateProvider.
 	Substate *substate.Substate
+
+	// Operation is the input required for the current StateDb operation. It is only
+	// valid for Pre- and PostAction events. Used only with OperationProvider.
+	Operation operation.Operation
 }
 
 // Context summarizes context data for the current execution and is passed
@@ -173,8 +182,15 @@ type Context struct {
 //                               Implementations
 // ----------------------------------------------------------------------------
 
+type RunMode byte
+
+const (
+	SubstateMode RunMode = iota
+	OperationMode
+)
+
 type executor struct {
-	substate SubstateProvider
+	provider action_provider.ActionProvider
 }
 
 func (e *executor) Run(params Params, processor Processor, extensions []Extension) (err error) {
@@ -192,55 +208,26 @@ func (e *executor) Run(params Params, processor Processor, extensions []Extensio
 			signalPostRun(state, &context, err, extensions),
 		)
 	}()
-
 	state.Block = params.From
 	if err := signalPreRun(state, &context, extensions); err != nil {
 		return err
 	}
 
-	if params.NumWorkers <= 1 {
-		return e.runSequential(params, processor, extensions, &state, &context)
+	switch params.RunMode {
+	case SubstateMode:
+		if params.NumWorkers <= 1 {
+			return e.runSubstateSequential(params, processor, extensions, &state, &context)
+		}
+		return e.runSubstateParallel(params, processor, extensions, &state, &context)
+	case OperationMode:
+		return e.runOperations(params, processor, extensions, &state, &context)
+	default:
+		return errors.New("unknown provider")
 	}
-	return e.runParallel(params, processor, extensions, &state, &context)
+
 }
 
-func (e *executor) runSequential(params Params, processor Processor, extensions []Extension, state *State, context *Context) error {
-	first := true
-	err := e.substate.Run(params.From, params.To, func(tx TransactionInfo) error {
-		if first {
-			state.Block = tx.Block
-			if err := signalPreBlock(*state, context, extensions); err != nil {
-				return err
-			}
-			first = false
-		} else if state.Block != tx.Block {
-			if err := signalPostBlock(*state, context, extensions); err != nil {
-				return err
-			}
-			state.Block = tx.Block
-			if err := signalPreBlock(*state, context, extensions); err != nil {
-				return err
-			}
-		}
-		state.Transaction = tx.Transaction
-		return runTransaction(*state, context, tx.Substate, processor, extensions)
-	})
-	if err != nil {
-		return err
-	}
-
-	// Finish final block.
-	if !first {
-		if err := signalPostBlock(*state, context, extensions); err != nil {
-			return err
-		}
-		state.Block = params.To
-	}
-
-	return nil
-}
-
-func (e *executor) runParallel(params Params, processor Processor, extensions []Extension, state *State, context *Context) error {
+func (e *executor) runSubstateParallel(params Params, processor Processor, extensions []Extension, state *State, context *Context) error {
 	numWorkers := params.NumWorkers
 
 	// An event for signaling an abort of the execution.
@@ -248,11 +235,11 @@ func (e *executor) runParallel(params Params, processor Processor, extensions []
 
 	// Start one go-routine forwarding transactions from the provider to a local channel.
 	var forwardErr error
-	transactions := make(chan *TransactionInfo, 10*numWorkers)
+	transactions := make(chan *action_provider.TransactionInfo, 10*numWorkers)
 	go func() {
 		defer close(transactions)
 		abortErr := errors.New("aborted")
-		err := e.substate.Run(params.From, params.To, func(tx TransactionInfo) error {
+		err := e.provider.Run(params.From, params.To, func(tx action_provider.TransactionInfo, _ operation.Operation) error {
 			select {
 			case transactions <- &tx:
 				return nil
@@ -264,7 +251,6 @@ func (e *executor) runParallel(params Params, processor Processor, extensions []
 			forwardErr = err
 		}
 	}()
-
 	// Start numWorkers go-routines processing transactions in parallel.
 	var cachedPanic atomic.Value
 	var wg sync.WaitGroup
@@ -290,7 +276,8 @@ func (e *executor) runParallel(params Params, processor Processor, extensions []
 					localState.Block = tx.Block
 					localState.Transaction = tx.Transaction
 					localContext := *context
-					if err := runTransaction(localState, &localContext, tx.Substate, processor, extensions); err != nil {
+					localState.Substate = tx.Substate
+					if err := runAction(localState, &localContext, processor, extensions); err != nil {
 						workerErrs[i] = err
 						abort.Signal()
 						return
@@ -302,11 +289,9 @@ func (e *executor) runParallel(params Params, processor Processor, extensions []
 		}(i)
 	}
 	wg.Wait()
-
 	if r := cachedPanic.Load(); r != nil {
 		panic(r)
 	}
-
 	err := errors.Join(
 		forwardErr,
 		errors.Join(workerErrs...),
@@ -317,8 +302,91 @@ func (e *executor) runParallel(params Params, processor Processor, extensions []
 	return err
 }
 
-func runTransaction(state State, context *Context, substate *substate.Substate, processor Processor, extensions []Extension) error {
-	state.Substate = substate
+func (e *executor) runSubstateSequential(params Params, processor Processor, extensions []Extension, state *State, context *Context) error {
+	first := true
+	err := e.provider.Run(params.From, params.To, func(tx action_provider.TransactionInfo, _ operation.Operation) error {
+		if first {
+			state.Block = tx.Block
+			if err := signalPreBlock(*state, context, extensions); err != nil {
+				return err
+			}
+			first = false
+		} else if state.Block != tx.Block {
+			if err := signalPostBlock(*state, context, extensions); err != nil {
+				return err
+			}
+			state.Block = tx.Block
+			if err := signalPreBlock(*state, context, extensions); err != nil {
+				return err
+			}
+		}
+
+		state.Transaction = tx.Transaction
+		state.Substate = tx.Substate
+		return runAction(*state, context, processor, extensions)
+	})
+	if err != nil {
+		return err
+	}
+
+	// Finish final block.
+	if !first {
+		if err := signalPostBlock(*state, context, extensions); err != nil {
+			return err
+		}
+		state.Block = params.To
+	}
+
+	return nil
+}
+
+func (e *executor) runOperations(params Params, processor Processor, extensions []Extension, state *State, context *Context) error {
+	var (
+		beginBlock *operation.BeginBlock
+		ok         bool
+		first      = true
+	)
+
+	err := e.provider.Run(params.From, params.To, func(_ action_provider.TransactionInfo, op operation.Operation) error {
+		if beginBlock, ok = state.Operation.(*operation.BeginBlock); ok {
+			// new block has appeared
+			if first {
+				state.Block = int(beginBlock.BlockNumber)
+				if err := signalPreBlock(*state, context, extensions); err != nil {
+					return err
+				}
+				first = false
+			} else {
+				if err := signalPostBlock(*state, context, extensions); err != nil {
+					return err
+				}
+				state.Block = int(beginBlock.BlockNumber)
+				if err := signalPreBlock(*state, context, extensions); err != nil {
+					return err
+				}
+			}
+		}
+
+		state.Operation = op
+		return runAction(*state, context, processor, extensions)
+	})
+
+	if err != nil {
+		return err
+	}
+
+	// Finish final block.
+	if !first {
+		if err := signalPostBlock(*state, context, extensions); err != nil {
+			return err
+		}
+		state.Block = params.To
+	}
+
+	return nil
+}
+
+func runAction(state State, context *Context, processor Processor, extensions []Extension) error {
 	if err := signalPreTransaction(state, context, extensions); err != nil {
 		return err
 	}
@@ -330,43 +398,36 @@ func runTransaction(state State, context *Context, substate *substate.Substate, 
 	}
 	return nil
 }
-
 func signalPreRun(state State, context *Context, extensions []Extension) error {
 	return forEachForward(extensions, func(extension Extension) error {
 		return extension.PreRun(state, context)
 	})
 }
-
 func signalPostRun(state State, context *Context, err error, extensions []Extension) error {
 	return forEachBackward(extensions, func(extension Extension) error {
 		return extension.PostRun(state, context, err)
 	})
 }
-
 func signalPreBlock(state State, context *Context, extensions []Extension) error {
 	return forEachForward(extensions, func(extension Extension) error {
 		return extension.PreBlock(state, context)
 	})
 }
-
 func signalPostBlock(state State, context *Context, extensions []Extension) error {
 	return forEachBackward(extensions, func(extension Extension) error {
 		return extension.PostBlock(state, context)
 	})
 }
-
 func signalPreTransaction(state State, context *Context, extensions []Extension) error {
 	return forEachForward(extensions, func(extension Extension) error {
-		return extension.PreTransaction(state, context)
+		return extension.PreAction(state, context)
 	})
 }
-
 func signalPostTransaction(state State, context *Context, extensions []Extension) error {
 	return forEachBackward(extensions, func(extension Extension) error {
-		return extension.PostTransaction(state, context)
+		return extension.PostAction(state, context)
 	})
 }
-
 func forEachForward(extensions []Extension, op func(extension Extension) error) error {
 	errs := []error{}
 	for _, extension := range extensions {
@@ -376,7 +437,6 @@ func forEachForward(extensions []Extension, op func(extension Extension) error) 
 	}
 	return errors.Join(errs...)
 }
-
 func forEachBackward(extensions []Extension, op func(extension Extension) error) error {
 	errs := []error{}
 	for i := len(extensions) - 1; i >= 0; i-- {

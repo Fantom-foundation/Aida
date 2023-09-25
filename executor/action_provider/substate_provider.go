@@ -1,6 +1,6 @@
-package executor
+package action_provider
 
-//go:generate mockgen -source substate_provider.go -destination substate_provider_mocks.go -package executor
+//go:generate mockgen -source substate_provider.go -destination substate_provider_mocks.go -package action_provider
 
 import (
 	"fmt"
@@ -27,30 +27,22 @@ type SubstateProvider interface {
 	Close()
 }
 
-// Consumer is a type alias for the type of function to which substate information
-// can be forwarded by the SubstateProvider.
-type Consumer func(TransactionInfo) error
-
 // TransactionInfo summarizes the per-transaction information provided by a
-// SubstateProvider.
+// ActionProvider.
 type TransactionInfo struct {
 	Block       int
 	Transaction int
 	Substate    *substate.Substate
 }
 
-// ----------------------------------------------------------------------------
-//                              Implementation
-// ----------------------------------------------------------------------------
-
-// OpenSubstateDb opens a substate database as configured in the given parameters.
-func OpenSubstateDb(config *utils.Config, ctxt *cli.Context) (res SubstateProvider, err error) {
+// OpenSubstateDb opens a provider database as configured in the given parameters.
+func OpenSubstateDb(config *utils.Config, ctxt *cli.Context) (res ActionProvider, err error) {
 	// Substate is panicking if we are opening a non-existing directory. To mitigate
 	// the damage, we recover here and forward an error instead.
 	defer func() {
 		if issue := recover(); issue != nil {
 			res = nil
-			err = fmt.Errorf("failed to open substate DB: %v", issue)
+			err = fmt.Errorf("failed to open provider DB: %v", issue)
 		}
 	}()
 	substate.SetSubstateDb(config.AidaDb)
@@ -58,8 +50,8 @@ func OpenSubstateDb(config *utils.Config, ctxt *cli.Context) (res SubstateProvid
 	return &substateProvider{ctxt, config.Workers}, nil
 }
 
-// substateProvider is an adapter of Aida's SubstateProvider interface defined above to the
-// current substate implementation offered by github.com/Fantom-foundation/Substate.
+// substateProvider is an adapter of Aida's ActionProvider interface defined above to the
+// current provider implementation offered by github.com/Fantom-foundation/Substate.
 type substateProvider struct {
 	ctxt                *cli.Context
 	numParallelDecoders int
@@ -73,13 +65,12 @@ func (s substateProvider) Run(from int, to int, consumer Consumer) error {
 		if tx.Block >= uint64(to) {
 			return nil
 		}
-		if err := consumer(TransactionInfo{int(tx.Block), int(tx.Transaction), tx.Substate}); err != nil {
+		if err := consumer(TransactionInfo{int(tx.Block), int(tx.Transaction), tx.Substate}, nil); err != nil {
 			return err
 		}
 	}
 	return nil
 }
-
 func (substateProvider) Close() {
 	substate.CloseSubstateDB()
 }

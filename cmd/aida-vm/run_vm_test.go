@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/action_provider"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"go.uber.org/mock/gomock"
@@ -12,17 +13,17 @@ import (
 
 func TestVmSdb_TransactionsAreExecutedForCorrectRange(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	provider := executor.NewMockSubstateProvider(ctrl)
+	provider := action_provider.NewMockSubstateProvider(ctrl)
 	processor := executor.NewMockProcessor(ctrl)
 	ext := executor.NewMockExtension(ctrl)
 
 	// Simulate the execution of three transactions in two blocks.
 	provider.EXPECT().
 		Run(10, 12, gomock.Any()).
-		DoAndReturn(func(from int, to int, consumer executor.Consumer) error {
+		DoAndReturn(func(from int, to int, consumer action_provider.Consumer) error {
 			for i := from; i < to; i++ {
-				consumer(executor.TransactionInfo{Block: i, Transaction: 3, Substate: emptyTx})
-				consumer(executor.TransactionInfo{Block: i, Transaction: utils.PseudoTx, Substate: emptyTx})
+				consumer(action_provider.TransactionInfo{Block: i, Transaction: 3, Substate: emptyTx}, nil)
+				consumer(action_provider.TransactionInfo{Block: i, Transaction: utils.PseudoTx, Substate: emptyTx}, nil)
 			}
 			return nil
 		})

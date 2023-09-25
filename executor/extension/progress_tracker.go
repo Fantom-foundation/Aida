@@ -65,7 +65,7 @@ func (t *progressTracker) PreRun(_ executor.State, _ *executor.Context) error {
 }
 
 // PostTransaction increments number of transactions and saves gas used in last substate.
-func (t *progressTracker) PostTransaction(state executor.State, _ *executor.Context) error {
+func (t *progressTracker) PostAction(state executor.State, _ *executor.Context) error {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 

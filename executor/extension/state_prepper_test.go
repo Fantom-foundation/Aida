@@ -25,12 +25,12 @@ func TestStatePrepper_PreparesStateBeforeEachTransaction(t *testing.T) {
 
 	prepper := MakeStateDbPreparator()
 
-	prepper.PreTransaction(executor.State{
+	prepper.PreAction(executor.State{
 		Block:    5,
 		Substate: &substate.Substate{InputAlloc: allocA},
 	}, context)
 
-	prepper.PreTransaction(executor.State{
+	prepper.PreAction(executor.State{
 		Block:    7,
 		Substate: &substate.Substate{InputAlloc: allocB},
 	}, context)
@@ -42,7 +42,7 @@ func TestStatePrepper_DoesNotCrashOnMissingStateOrSubstate(t *testing.T) {
 	context := &executor.Context{State: db}
 
 	prepper := MakeStateDbPreparator()
-	prepper.PreTransaction(executor.State{Block: 5}, nil)                                 // misses both
-	prepper.PreTransaction(executor.State{Block: 5}, context)                             // misses the substate
-	prepper.PreTransaction(executor.State{Block: 5, Substate: &substate.Substate{}}, nil) // misses the state
+	prepper.PreAction(executor.State{Block: 5}, nil)                                 // misses both
+	prepper.PreAction(executor.State{Block: 5}, context)                             // misses the substate
+	prepper.PreAction(executor.State{Block: 5, Substate: &substate.Substate{}}, nil) // misses the state
 }

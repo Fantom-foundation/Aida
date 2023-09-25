@@ -73,8 +73,8 @@ func TestProgressTrackerExtension_LoggingHappens(t *testing.T) {
 	ext.PreRun(executor.State{}, context)
 
 	// first processed block
-	ext.PostTransaction(executor.State{Substate: s}, context)
-	ext.PostTransaction(executor.State{Substate: s}, context)
+	ext.PostAction(executor.State{Substate: s}, context)
+	ext.PostAction(executor.State{Substate: s}, context)
 	ext.PostBlock(executor.State{
 		Block:    5,
 		Substate: s,
@@ -83,8 +83,8 @@ func TestProgressTrackerExtension_LoggingHappens(t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 
 	// second processed block
-	ext.PostTransaction(executor.State{Substate: s}, context)
-	ext.PostTransaction(executor.State{Substate: s}, context)
+	ext.PostAction(executor.State{Substate: s}, context)
+	ext.PostAction(executor.State{Substate: s}, context)
 	ext.PostBlock(executor.State{
 		Block:    6,
 		Substate: s,
@@ -92,7 +92,7 @@ func TestProgressTrackerExtension_LoggingHappens(t *testing.T) {
 
 	time.Sleep(500 * time.Millisecond)
 
-	ext.PostTransaction(executor.State{Substate: s}, context)
+	ext.PostAction(executor.State{Substate: s}, context)
 	ext.PostBlock(executor.State{
 		Block:    8,
 		Substate: s,
@@ -124,12 +124,12 @@ func TestProgressTrackerExtension_FirstLoggingIsIgnored(t *testing.T) {
 		Substate:    s,
 	}, context)
 
-	ext.PostTransaction(executor.State{
+	ext.PostAction(executor.State{
 		Block:       4,
 		Transaction: 0,
 		Substate:    s,
 	}, context)
-	ext.PostTransaction(executor.State{
+	ext.PostAction(executor.State{
 		Block:       4,
 		Transaction: 1,
 		Substate:    s,
