@@ -31,6 +31,12 @@ func RunVmAdb(ctx *cli.Context) error {
 	defer substateDb.Close()
 
 	stateDb, _, err := utils.PrepareStateDB(cfg)
+	if err != nil {
+		return err
+	}
+	defer func() error {
+		return stateDb.Close()
+	}()
 
 	return run(cfg, substateDb, stateDb)
 }
