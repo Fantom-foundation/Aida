@@ -60,8 +60,16 @@ func (m *stateDbManager) PostRun(state executor.State, ctx *executor.Context, _ 
 		return nil
 	}
 
+	// lastProcessedBlock contains number of last successfully processed block
+	// - processing finished successfully to the end, but then state.Block is set to params.To
+	// - error occurred therefore previous block is last successful
+	lastProcessedBlock := uint64(state.Block)
+	if lastProcessedBlock > 0 {
+		lastProcessedBlock -= 1
+	}
+
 	rootHash := ctx.State.GetHash()
-	if err := utils.WriteStateDbInfo(ctx.StateDbPath, m.config, uint64(state.Block), rootHash); err != nil {
+	if err := utils.WriteStateDbInfo(ctx.StateDbPath, m.config, lastProcessedBlock, rootHash); err != nil {
 		return fmt.Errorf("failed to create state-db info file; %v", err)
 	}
 
@@ -70,7 +78,7 @@ func (m *stateDbManager) PostRun(state executor.State, ctx *executor.Context, _ 
 		return fmt.Errorf("failed to close state-db; %v", err)
 	}
 
-	newName := utils.RenameTempStateDBDirectory(m.config, ctx.StateDbPath, uint64(state.Block))
+	newName := utils.RenameTempStateDBDirectory(m.config, ctx.StateDbPath, lastProcessedBlock)
 	m.log.Noticef("State-db directory: %v", newName)
 	return nil
 }
