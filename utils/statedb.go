@@ -35,7 +35,6 @@ func PrepareStateDB(cfg *Config) (state.StateDB, string, error) {
 		cfg.IsExistingStateDb = true
 	} else {
 		db, dbPath, err = makeNewStateDB(cfg)
-		cfg.StateDbSrc = dbPath
 	}
 
 	if err != nil {

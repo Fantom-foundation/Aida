@@ -164,6 +164,9 @@ type Context struct {
 	// State is an optional StateDB instance manipulated during by the processor
 	// and extensions of a block-range execution.
 	State state.StateDB
+
+	// StateDbPath contains path to working stateDb directory
+	StateDbPath string
 }
 
 // ----------------------------------------------------------------------------

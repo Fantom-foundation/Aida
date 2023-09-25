@@ -46,9 +46,6 @@ func TestStateDbManager_DbClosureWithKeepDb(t *testing.T) {
 
 	ext := MakeStateDbManager(cfg)
 
-	// setting dummy StateDbPath path for statedb_info.json output
-	ext.stateDbPath = tmpDir
-
 	mockCtrl := gomock.NewController(t)
 	mockStateDB := state.NewMockStateDB(mockCtrl)
 
@@ -61,7 +58,8 @@ func TestStateDbManager_DbClosureWithKeepDb(t *testing.T) {
 		Block: 0,
 	}
 
-	ctx := &executor.Context{State: mockStateDB}
+	// setting mockStateDb and StateDbPath path for statedb_info.json output
+	ctx := &executor.Context{State: mockStateDB, StateDbPath: tmpDir}
 
 	if err := ext.PostRun(state, ctx, nil); err != nil {
 		t.Fatalf("failed to to run post-run: %v", err)

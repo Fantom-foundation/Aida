@@ -12,9 +12,8 @@ import (
 
 type stateDbManager struct {
 	NilExtension
-	config      *utils.Config
-	stateDbPath string
-	log         logger.Logger
+	config *utils.Config
+	log    logger.Logger
 }
 
 // MakeStateDbManager creates a executor.Extension that commits state of StateDb if keep-db is enabled
@@ -27,9 +26,9 @@ func MakeStateDbManager(config *utils.Config) *stateDbManager {
 
 func (m *stateDbManager) PreRun(state executor.State, ctx *executor.Context) error {
 	var err error
-	ctx.State, m.stateDbPath, err = utils.PrepareStateDB(m.config)
+	ctx.State, ctx.StateDbPath, err = utils.PrepareStateDB(m.config)
 	if !m.config.KeepDb {
-		m.log.Warningf("--keep-db is not used. Directory %v with DB will be removed at the end of this run.", m.stateDbPath)
+		m.log.Warningf("--keep-db is not used. Directory %v with DB will be removed at the end of this run.", ctx.StateDbPath)
 	}
 	return err
 }
@@ -39,7 +38,7 @@ func (m *stateDbManager) PostRun(state executor.State, ctx *executor.Context, _ 
 	if ctx.State == nil {
 		var err = fmt.Errorf("state-db is nil")
 		if !m.config.SrcDbReadonly {
-			err = errors.Join(err, os.RemoveAll(m.stateDbPath))
+			err = errors.Join(err, os.RemoveAll(ctx.StateDbPath))
 		}
 		return err
 	}
@@ -51,18 +50,18 @@ func (m *stateDbManager) PostRun(state executor.State, ctx *executor.Context, _ 
 		}
 
 		if !m.config.SrcDbReadonly {
-			return os.RemoveAll(m.stateDbPath)
+			return os.RemoveAll(ctx.StateDbPath)
 		}
 		return nil
 	}
 
 	if m.config.SrcDbReadonly {
-		m.log.Noticef("State-db directory was readonly %v", m.stateDbPath)
+		m.log.Noticef("State-db directory was readonly %v", ctx.StateDbPath)
 		return nil
 	}
 
 	rootHash := ctx.State.GetHash()
-	if err := utils.WriteStateDbInfo(m.stateDbPath, m.config, uint64(state.Block), rootHash); err != nil {
+	if err := utils.WriteStateDbInfo(ctx.StateDbPath, m.config, uint64(state.Block), rootHash); err != nil {
 		return fmt.Errorf("failed to create state-db info file; %v", err)
 	}
 
@@ -71,7 +70,7 @@ func (m *stateDbManager) PostRun(state executor.State, ctx *executor.Context, _ 
 		return fmt.Errorf("failed to close state-db; %v", err)
 	}
 
-	newName := utils.RenameTempStateDBDirectory(m.config, m.stateDbPath, uint64(state.Block))
+	newName := utils.RenameTempStateDBDirectory(m.config, ctx.StateDbPath, uint64(state.Block))
 	m.log.Noticef("State-db directory: %v", newName)
 	return nil
 }
