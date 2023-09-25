@@ -15,6 +15,8 @@ func RunVmAdb(ctx *cli.Context) error {
 		return err
 	}
 
+	cfg.SrcDbReadonly = true
+
 	// executing archive blocks always calls ArchiveDb with block -1
 	// this condition prevents an incorrect call for block that does not exist (block number -1 in this case)
 	// there is nothing before block 0 so running this app on this block does nothing
@@ -28,7 +30,9 @@ func RunVmAdb(ctx *cli.Context) error {
 	}
 	defer substateDb.Close()
 
-	return run(cfg, substateDb, nil, false)
+	stateDb, _, err := utils.PrepareStateDB(cfg)
+
+	return run(cfg, substateDb, stateDb)
 }
 
 type txProcessor struct {
@@ -36,7 +40,6 @@ type txProcessor struct {
 }
 
 func (r txProcessor) Process(state executor.State, context *executor.Context) error {
-	// todo rework this once executor.State is divided between mutable and immutable part
 	archive, err := context.State.GetArchiveState(uint64(state.Block) - 1)
 	if err != nil {
 		return err
@@ -51,19 +54,14 @@ func (r txProcessor) Process(state executor.State, context *executor.Context) er
 	return err
 }
 
-func run(config *utils.Config, provider executor.SubstateProvider, stateDb state.StateDB, disableStateDbExtension bool) error {
+func run(config *utils.Config, provider executor.SubstateProvider, stateDb state.StateDB) error {
 	// order of extensionList has to be maintained
-	var extensionList = []executor.Extension{extension.MakeCpuProfiler(config)}
-
-	if !disableStateDbExtension {
-		extensionList = append(extensionList, extension.MakeStateDbManager(config))
-	}
-
-	extensionList = append(extensionList, []executor.Extension{
+	extensionList := []executor.Extension{
+		extension.MakeCpuProfiler(config),
 		extension.MakeProgressLogger(config, 100),
 		extension.MakeStateDbPreparator(),
 		extension.MakeBeginOnlyEmitter(),
-	}...)
+	}
 	return executor.NewExecutor(provider).Run(
 		executor.Params{
 			From:       int(config.First),

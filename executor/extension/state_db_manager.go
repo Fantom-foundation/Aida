@@ -16,15 +16,16 @@ type stateDbManager struct {
 	log    logger.Logger
 }
 
-// MakeStateDbManager creates a executor.Extension that commits state of StateDb if keep-db is enabled
-func MakeStateDbManager(config *utils.Config) *stateDbManager {
+// MakeStateDbManager creates an executor.Extension that commits state of StateDb if keep-db is enabled.
+// Note that this extension should only be used for sequential runs.
+func MakeStateDbManager(config *utils.Config) executor.Extension {
 	return &stateDbManager{
 		config: config,
 		log:    logger.NewLogger(config.LogLevel, "Db manager"),
 	}
 }
 
-func (m *stateDbManager) PreRun(state executor.State, ctx *executor.Context) error {
+func (m *stateDbManager) PreRun(_ executor.State, ctx *executor.Context) error {
 	var err error
 	ctx.State, ctx.StateDbPath, err = utils.PrepareStateDB(m.config)
 	if !m.config.KeepDb {
