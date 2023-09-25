@@ -66,7 +66,7 @@ func TestStateDbManager_DbClosureWithKeepDb(t *testing.T) {
 	}
 }
 
-func TestStateDbManager_DoNotKeepDbAndDoesntUnderflowBellowZero(t *testing.T) {
+func TestStateDbManager_DoNotKeepDb(t *testing.T) {
 	cfg := &utils.Config{}
 
 	tmpDir := t.TempDir()
@@ -99,7 +99,7 @@ func TestStateDbManager_DoNotKeepDbAndDoesntUnderflowBellowZero(t *testing.T) {
 	}
 }
 
-func TestStateDbManager_KeepDb(t *testing.T) {
+func TestStateDbManager_KeepDbAndDoesntUnderflowBellowZero(t *testing.T) {
 	cfg := &utils.Config{}
 
 	tmpDir := t.TempDir()
