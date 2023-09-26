@@ -1,6 +1,8 @@
 package main
 
 import (
+	"log"
+
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/state"
@@ -10,7 +12,7 @@ import (
 
 // RunVmAdb performs block processing on an ArchiveDb
 func RunVmAdb(ctx *cli.Context) error {
-	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
+	config, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if err != nil {
 		return err
 	}
@@ -18,40 +20,140 @@ func RunVmAdb(ctx *cli.Context) error {
 	// executing archive blocks always calls ArchiveDb with block -1
 	// this condition prevents an incorrect call for block that does not exist (block number -1 in this case)
 	// there is nothing before block 0 so running this app on this block does nothing
-	if cfg.First == 0 {
-		cfg.First = 1
+	if config.First == 0 {
+		config.First = 1
 	}
 
-	substateDb, err := executor.OpenSubstateDb(cfg, ctx)
+	substateDb, err := executor.OpenSubstateDb(config, ctx)
 	if err != nil {
 		return err
 	}
 	defer substateDb.Close()
 
-	return run(cfg, substateDb, nil, false)
+	p := makeTxProcessor(config)
+	go p.unite(int(config.Last))
+
+	// start workers
+	for i := 0; i < config.Workers; i++ {
+		go p.process()
+	}
+
+	return run(config, substateDb, nil, false, p)
+}
+
+// makeTxProcessor which processes united transactions by block. United transactions are processed in parallel.
+func makeTxProcessor(config *utils.Config) *txProcessor {
+	return &txProcessor{
+		config:    config,
+		stateCh:   make(chan executor.State, 10*config.Workers),
+		archiveCh: make(chan state.StateDB, 10*config.Workers),
+		toProcess: make(chan unitedStates, 10*config.Workers),
+	}
 }
 
 type txProcessor struct {
-	config *utils.Config
+	config    *utils.Config
+	stateCh   chan executor.State
+	archiveCh chan state.StateDB
+	toProcess chan unitedStates
 }
 
-func (r txProcessor) Process(state executor.State, context *executor.Context) error {
-	// todo rework this once executor.State is divided between mutable and immutable part
-	archive, err := context.State.GetArchiveState(uint64(state.Block) - 1)
+// unitedStates are all united with correct archive state by block number
+type unitedStates struct {
+	states  []executor.State
+	archive state.StateDB
+}
+
+type archiveGetter struct {
+	extension.NilExtension
+	currBlock int
+}
+
+// PreBlock sends needed archive to the processor.
+func (r *archiveGetter) PreBlock(state executor.State, context *executor.Context) error {
+	if state.Block-1 == r.currBlock {
+		return nil
+	}
+
+	var err error
+	context.Archive, err = context.State.GetArchiveState(uint64(state.Block) - 1)
 	if err != nil {
 		return err
 	}
-	_, err = utils.ProcessTx(
-		archive,
-		r.config,
-		uint64(state.Block),
-		state.Transaction,
-		state.Substate,
-	)
-	return err
+
+	r.currBlock = state.Block - 1
+
+	return nil
 }
 
-func run(config *utils.Config, provider executor.SubstateProvider, stateDb state.StateDB, disableStateDbExtension bool) error {
+// unite transactions by blocks and wait until archive arrives then send transactions to process with given archive.
+func (r *txProcessor) unite(last int) {
+	var (
+		united  unitedStates
+		archive state.StateDB
+		first   bool
+	)
+
+	defer close(r.toProcess)
+
+	for {
+		select {
+		// when archive arrives it means we united all transactions for previous block
+		// hence we can send transactions to process with correct archive state
+		case archive = <-r.archiveCh:
+			// save first archive - translations have not been united for first block yet
+			if first {
+				first = false
+				united.archive = archive
+				continue
+			}
+
+			r.toProcess <- united
+
+			// reset states and assign archive for next block
+			united.states = []executor.State{}
+			united.archive = archive
+
+			if united.states[0].Block == last {
+				return
+			}
+
+		case s := <-r.stateCh:
+			united.states = append(united.states, s)
+
+		}
+	}
+}
+
+// process united transactions by block.
+func (r *txProcessor) process() {
+	var u unitedStates
+	for {
+		u = <-r.toProcess
+		for _, s := range u.states {
+			_, err := utils.ProcessTx(
+				u.archive,
+				r.config,
+				uint64(s.Block),
+				s.Transaction,
+				s.Substate,
+			)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+	}
+}
+
+func (r *txProcessor) Process(state executor.State, context *executor.Context) error {
+	if state.Block == 0 {
+		r.archiveCh <- context.Archive
+	}
+	r.stateCh <- state
+	return nil
+}
+
+func run(config *utils.Config, provider executor.SubstateProvider, stateDb state.StateDB, disableStateDbExtension bool, p executor.Processor) error {
 	// order of extensionList has to be maintained
 	var extensionList = []executor.Extension{extension.MakeCpuProfiler(config)}
 
@@ -60,6 +162,7 @@ func run(config *utils.Config, provider executor.SubstateProvider, stateDb state
 	}
 
 	extensionList = append(extensionList, []executor.Extension{
+		&archiveGetter{},
 		extension.MakeProgressLogger(config, 0),
 		extension.MakeStateDbPreparator(),
 		extension.MakeBeginOnlyEmitter(),
@@ -71,7 +174,7 @@ func run(config *utils.Config, provider executor.SubstateProvider, stateDb state
 			State:      stateDb,
 			NumWorkers: config.Workers,
 		},
-		txProcessor{config},
+		p,
 		extensionList,
 	)
 }

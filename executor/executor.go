@@ -165,6 +165,8 @@ type Context struct {
 	// and extensions of a block-range execution.
 	State state.StateDB
 
+	Archive state.StateDB
+
 	// StateDbPath contains path to working stateDb directory
 	StateDbPath string
 }
