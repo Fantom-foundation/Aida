@@ -17,6 +17,8 @@ func RunVmAdb(ctx *cli.Context) error {
 		return err
 	}
 
+	config.SrcDbReadonly = true
+
 	// executing archive blocks always calls ArchiveDb with block -1
 	// this condition prevents an incorrect call for block that does not exist (block number -1 in this case)
 	// there is nothing before block 0 so running this app on this block does nothing
