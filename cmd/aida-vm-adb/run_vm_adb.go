@@ -48,8 +48,8 @@ func makeTxProcessor(config *utils.Config) *txProcessor {
 	return &txProcessor{
 		config:    config,
 		stateCh:   make(chan executor.State, 10*config.Workers),
-		archiveCh: make(chan state.StateDB, 10*config.Workers),
-		toProcess: make(chan unitedStates, 10*config.Workers),
+		archiveCh: make(chan state.StateDB, 2*config.Workers),
+		toProcess: make(chan unitedStates, 2*config.Workers),
 	}
 }
 
@@ -143,6 +143,7 @@ func (r *txProcessor) process() {
 			if err != nil {
 				log.Fatal(err)
 			}
+			u.archive.Close()
 		}
 	}
 }
@@ -165,7 +166,7 @@ func run(config *utils.Config, provider executor.SubstateProvider, stateDb state
 
 	extensionList = append(extensionList, []executor.Extension{
 		&archiveGetter{},
-		extension.MakeProgressLogger(config, 0),
+		extension.MakeProgressTracker(config, 0),
 		extension.MakeStateDbPreparator(),
 		extension.MakeBeginOnlyEmitter(),
 	}...)
