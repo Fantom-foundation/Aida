@@ -297,6 +297,10 @@ func (s *gethStateDB) GetArchiveState(block uint64) (StateDB, error) {
 	return nil, fmt.Errorf("archive states are not (yet) supported by this DB implementation")
 }
 
+func (s *gethStateDB) GetArchiveBlockHeight() (uint64, bool, error) {
+	return 0, false, fmt.Errorf("archive states are not (yet) supported by this DB implementation")
+}
+
 func (s *gethStateDB) GetMemoryUsage() *MemoryUsage {
 	// not supported yet
 	return &MemoryUsage{uint64(0), nil}

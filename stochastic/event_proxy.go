@@ -400,6 +400,10 @@ func (p *EventProxy) GetArchiveState(block uint64) (state.StateDB, error) {
 	return p.db.GetArchiveState(block)
 }
 
+func (p *EventProxy) GetArchiveBlockHeight() (uint64, bool, error) {
+	return p.db.GetArchiveBlockHeight()
+}
+
 func (p *EventProxy) GetShadowDB() state.StateDB {
 	return p.db.GetShadowDB()
 }

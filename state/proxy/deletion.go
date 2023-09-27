@@ -285,6 +285,10 @@ func (r *DeletionProxy) GetArchiveState(block uint64) (state.StateDB, error) {
 	return r.db.GetArchiveState(block)
 }
 
+func (r *DeletionProxy) GetArchiveBlockHeight() (uint64, bool, error) {
+	return r.db.GetArchiveBlockHeight()
+}
+
 func (r *DeletionProxy) Close() error {
 	return r.db.Close()
 }

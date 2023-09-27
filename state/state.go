@@ -104,13 +104,17 @@ type StateDB interface {
 	// specified block is not present in the archive.
 	GetArchiveState(block uint64) (StateDB, error)
 
+	// GetArchiveBlockHeight provides the block height available in the archive.
+	// An error is returned if the archive is not enabled or a lookup issue occurred.
+	GetArchiveBlockHeight() (height uint64, empty bool, err error)
+
 	// Requests a description of the current memory usage of this State DB. Implementations
 	// not supporting this may return nil.
 	GetMemoryUsage() *MemoryUsage
 
-	// ---- Artefacts from Geth dependency ----
+	// ---- Artifacts from Geth dependency ----
 
-	// The following functions may be used by StateDB implementations for backward-compatibilty
+	// The following functions may be used by StateDB implementations for backward-compatibility
 	// and will be called accordingly by the tracer and EVM runner. However, implementations may
 	// chose to ignore those.
 

@@ -157,6 +157,10 @@ func (s *MockStateDB) GetArchiveState(block uint64) (state.StateDB, error) {
 	panic("Archive state not supported in mock")
 }
 
+func (s *MockStateDB) GetArchiveBlockHeight() (uint64, bool, error) {
+	panic("Archive state not supported in mock")
+}
+
 func (s *MockStateDB) GetMemoryUsage() *state.MemoryUsage {
 	panic("GetMemoryUsage not supported in mock")
 }
