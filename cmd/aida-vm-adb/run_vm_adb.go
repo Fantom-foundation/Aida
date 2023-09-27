@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/state"
@@ -35,12 +37,13 @@ type txProcessor struct {
 	config *utils.Config
 }
 
-func (r txProcessor) Process(state executor.State, context *executor.Context) error {
+func (r txProcessor) Process(state executor.State, context *executor.Context, archive state.StateDB) error {
 	// todo rework this once executor.State is divided between mutable and immutable part
-	archive, err := context.State.GetArchiveState(uint64(state.Block) - 1)
-	if err != nil {
-		return err
+	var err error
+	if archive == nil {
+		return fmt.Errorf("archive is nil; Block: %v", state.Block)
 	}
+
 	_, err = utils.ProcessTx(
 		archive,
 		r.config,
@@ -66,10 +69,11 @@ func run(config *utils.Config, provider executor.SubstateProvider, stateDb state
 	}...)
 	return executor.NewExecutor(provider).Run(
 		executor.Params{
-			From:       int(config.First),
-			To:         int(config.Last) + 1,
-			State:      stateDb,
-			NumWorkers: config.Workers,
+			From:          int(config.First),
+			To:            int(config.Last) + 1,
+			State:         stateDb,
+			NumWorkers:    config.Workers,
+			ExecutionType: executor.BlockIsolated,
 		},
 		txProcessor{config},
 		extensionList,

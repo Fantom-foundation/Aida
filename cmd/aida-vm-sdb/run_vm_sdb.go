@@ -32,7 +32,7 @@ type txProcessor struct {
 	config *utils.Config
 }
 
-func (r txProcessor) Process(state executor.State, context *executor.Context) error {
+func (r txProcessor) Process(state executor.State, context *executor.Context, _ state.StateDB) error {
 	_, err := utils.ProcessTx(
 		context.State,
 		r.config,
