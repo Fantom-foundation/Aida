@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/Fantom-foundation/Aida/executor"
@@ -32,24 +33,30 @@ func RunVmAdb(ctx *cli.Context) error {
 	}
 	defer substateDb.Close()
 
-	p := makeTxProcessor(config)
-	go p.unite(int(config.Last))
+	db, _, err := utils.PrepareStateDB(config)
+	if err != nil {
+		return err
+	}
+
+	p := makeTxProcessor(config, db)
+	go p.unite(int(config.First), int(config.Last))
 
 	// start workers
 	for i := 0; i < config.Workers; i++ {
 		go p.process()
 	}
 
-	return run(config, substateDb, nil, false, p)
+	return run(config, substateDb, db, p)
 }
 
 // makeTxProcessor which processes united transactions by block. United transactions are processed in parallel.
-func makeTxProcessor(config *utils.Config) *txProcessor {
+func makeTxProcessor(config *utils.Config, db state.StateDB) *txProcessor {
 	return &txProcessor{
 		config:    config,
 		stateCh:   make(chan executor.State, 10*config.Workers),
 		archiveCh: make(chan state.StateDB, 2*config.Workers),
 		toProcess: make(chan unitedStates, 2*config.Workers),
+		db:        db,
 	}
 }
 
@@ -58,6 +65,7 @@ type txProcessor struct {
 	stateCh   chan executor.State
 	archiveCh chan state.StateDB
 	toProcess chan unitedStates
+	db        state.StateDB
 }
 
 // unitedStates are all united with correct archive state by block number
@@ -68,32 +76,26 @@ type unitedStates struct {
 
 type archiveGetter struct {
 	extension.NilExtension
-	currBlock int
 }
 
 // PreBlock sends needed archive to the processor.
 func (r *archiveGetter) PreBlock(state executor.State, context *executor.Context) error {
-	if state.Block-1 == r.currBlock {
-		return nil
-	}
-
 	var err error
 	context.Archive, err = context.State.GetArchiveState(uint64(state.Block) - 1)
 	if err != nil {
 		return err
 	}
 
-	r.currBlock = state.Block - 1
-
 	return nil
 }
 
 // unite transactions by blocks and wait until archive arrives then send transactions to process with given archive.
-func (r *txProcessor) unite(last int) {
+func (r *txProcessor) unite(first, last int) {
 	var (
 		united  unitedStates
 		archive state.StateDB
-		first   bool
+		firstB  = true
+		block   = first
 	)
 
 	defer close(r.toProcess)
@@ -104,23 +106,28 @@ func (r *txProcessor) unite(last int) {
 		// hence we can send transactions to process with correct archive state
 		case archive = <-r.archiveCh:
 			// save first archive - translations have not been united for first block yet
-			if first {
-				first = false
+			if firstB {
+				firstB = false
 				united.archive = archive
 				continue
 			}
 
 			r.toProcess <- united
 
-			// reset states and assign archive for next block
-			united.states = []executor.State{}
-			united.archive = archive
-
 			if united.states[0].Block == last {
 				return
 			}
 
+			// reset states and assign archive for next block
+			united.states = []executor.State{}
+			united.archive = archive
+
 		case s := <-r.stateCh:
+			if s.Block > block {
+				r.toProcess <- united
+				united.states = []executor.State{}
+				block = s.Block
+			}
 			united.states = append(united.states, s)
 
 		}
@@ -132,9 +139,16 @@ func (r *txProcessor) process() {
 	var u unitedStates
 	for {
 		u = <-r.toProcess
+		archive, err := r.db.GetArchiveState(uint64(u.states[0].Block) - 1)
+		if err != nil {
+			log.Fatal(err)
+		}
+		//r.archiveCh <- archive
 		for _, s := range u.states {
+			fmt.Println(s.Block)
+			fmt.Println(s.Transaction)
 			_, err := utils.ProcessTx(
-				u.archive,
+				archive,
 				r.config,
 				uint64(s.Block),
 				s.Transaction,
@@ -143,26 +157,23 @@ func (r *txProcessor) process() {
 			if err != nil {
 				log.Fatal(err)
 			}
-			u.archive.Close()
 		}
+		archive.Close()
 	}
 }
 
 func (r *txProcessor) Process(state executor.State, context *executor.Context) error {
-	if state.Block == 0 {
-		r.archiveCh <- context.Archive
-	}
 	r.stateCh <- state
 	return nil
 }
 
-func run(config *utils.Config, provider executor.SubstateProvider, stateDb state.StateDB, disableStateDbExtension bool, p executor.Processor) error {
+func run(config *utils.Config, provider executor.SubstateProvider, stateDb state.StateDB, p executor.Processor) error {
 	// order of extensionList has to be maintained
 	var extensionList = []executor.Extension{extension.MakeCpuProfiler(config)}
 
-	if !disableStateDbExtension {
-		extensionList = append(extensionList, extension.MakeStateDbManager(config))
-	}
+	//if !disableStateDbExtension {
+	//	extensionList = append(extensionList, extension.MakeStateDbManager(config))
+	//}
 
 	extensionList = append(extensionList, []executor.Extension{
 		&archiveGetter{},
