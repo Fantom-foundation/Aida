@@ -1,6 +1,7 @@
 package extension
 
 import (
+	"fmt"
 	"os"
 	"reflect"
 	"strings"
@@ -59,9 +60,13 @@ func TestStateHashValidator_ActiveIfAFileIsProvided(t *testing.T) {
 	if err := ext.PostBlock(executor.State{Block: 4}, context); err != nil {
 		t.Errorf("failed to check hash: %v", err)
 	}
+
+	if err := ext.PostRun(executor.State{Block: 5}, context, nil); err != nil {
+		t.Errorf("failed to finish PostRun: %v", err)
+	}
 }
 
-func TestStateHashValidator_InvalidHashIsDetected(t *testing.T) {
+func TestStateHashValidator_InvalidHashOfLiveDbIsDetected(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
 	db := state.NewMockStateDB(ctrl)
@@ -84,8 +89,198 @@ func TestStateHashValidator_InvalidHashIsDetected(t *testing.T) {
 		t.Errorf("failed to initialize extension: %v", err)
 	}
 
-	if err := ext.PostBlock(executor.State{Block: 4}, context); err == nil || !strings.Contains(err.Error(), "unexpected hash for block 4") {
+	if err := ext.PostBlock(executor.State{Block: 4}, context); err == nil || !strings.Contains(err.Error(), "unexpected hash for Live block 4") {
 		t.Errorf("failed to detect incorrect hash, err %v", err)
+	}
+}
+
+func TestStateHashValidator_InvalidHashOfArchiveDbIsDetected(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	log := logger.NewMockLogger(ctrl)
+	db := state.NewMockStateDB(ctrl)
+
+	path := t.TempDir() + "/hashes.dat"
+	if err := os.WriteFile(path, []byte(exampleHashes), 0600); err != nil {
+		t.Fatalf("failed to prepare input file: %v", err)
+	}
+
+	log.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
+	db.EXPECT().GetHash().Return(common.Hash{0x0a, 0x0b, 0x0c})
+
+	db.EXPECT().GetArchiveBlockHeight().Return(uint64(2), false, nil)
+
+	archive0 := state.NewMockStateDB(ctrl)
+	archive0.EXPECT().GetHash().Return(common.Hash{0x01})
+	db.EXPECT().GetArchiveState(uint64(0)).Return(archive0, nil)
+	archive1 := state.NewMockStateDB(ctrl)
+	archive1.EXPECT().GetHash().Return(common.Hash{0x01, 0x02})
+	db.EXPECT().GetArchiveState(uint64(1)).Return(archive1, nil)
+	archive2 := state.NewMockStateDB(ctrl)
+	archive2.EXPECT().GetHash().Return(common.Hash{0xFF})
+	db.EXPECT().GetArchiveState(uint64(2)).Return(archive2, nil)
+
+	config := &utils.Config{}
+	config.StateRootFile = path
+	config.Last = 5
+	config.ArchiveMode = true
+	ext := makeStateHashValidator(config, log)
+	context := &executor.Context{State: db}
+
+	if err := ext.PreRun(executor.State{}, context); err != nil {
+		t.Errorf("failed to initialize extension: %v", err)
+	}
+
+	if err := ext.PostBlock(executor.State{Block: 2}, context); err == nil || !strings.Contains(err.Error(), "unexpected hash for Archive block 2") {
+		t.Errorf("failed to detect incorrect hash, err %v", err)
+	}
+}
+
+func TestStateHashValidator_ChecksArchiveHashesOfLaggingArchive(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	log := logger.NewMockLogger(ctrl)
+	db := state.NewMockStateDB(ctrl)
+
+	path := t.TempDir() + "/hashes.dat"
+	if err := os.WriteFile(path, []byte(exampleHashes), 0600); err != nil {
+		t.Fatalf("failed to prepare input file: %v", err)
+	}
+
+	log.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
+	db.EXPECT().GetHash().Return(common.Hash{0x0a, 0x0b, 0x0c})
+
+	archive0 := state.NewMockStateDB(ctrl)
+	archive1 := state.NewMockStateDB(ctrl)
+	archive2 := state.NewMockStateDB(ctrl)
+
+	gomock.InOrder(
+		db.EXPECT().GetArchiveBlockHeight().Return(uint64(0), false, nil),
+		db.EXPECT().GetArchiveState(uint64(0)).Return(archive0, nil),
+		archive0.EXPECT().GetHash().Return(common.Hash{0x01}),
+
+		db.EXPECT().GetArchiveBlockHeight().Return(uint64(0), false, nil),
+		db.EXPECT().GetArchiveBlockHeight().Return(uint64(0), false, nil),
+
+		db.EXPECT().GetArchiveBlockHeight().Return(uint64(2), false, nil),
+		db.EXPECT().GetArchiveState(uint64(1)).Return(archive1, nil),
+		archive1.EXPECT().GetHash().Return(common.Hash{0x01, 0x02}),
+		db.EXPECT().GetArchiveState(uint64(2)).Return(archive2, nil),
+		archive2.EXPECT().GetHash().Return(common.Hash{0xFF}),
+	)
+
+	config := &utils.Config{}
+	config.StateRootFile = path
+	config.Last = 5
+	config.ArchiveMode = true
+	ext := makeStateHashValidator(config, log)
+	context := &executor.Context{State: db}
+
+	if err := ext.PreRun(executor.State{}, context); err != nil {
+		t.Errorf("failed to initialize extension: %v", err)
+	}
+
+	// A PostBlock run should check the LiveDB and the ArchiveDB up to block 0.
+	if err := ext.PostBlock(executor.State{Block: 2}, context); err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	// PostRun should finish up checking all remaining archive hashes and detect the error in block 2.
+	if err := ext.PostRun(executor.State{Block: 3}, context, nil); err == nil || !strings.Contains(err.Error(), "unexpected hash for Archive block 2") {
+		t.Errorf("failed to detect incorrect hash, err %v", err)
+	}
+}
+
+func TestStateHashValidator_ChecksArchiveHashesOfLaggingArchiveDoesNotWaitForNonexistingBlocks(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	log := logger.NewMockLogger(ctrl)
+	db := state.NewMockStateDB(ctrl)
+
+	path := t.TempDir() + "/hashes.dat"
+	if err := os.WriteFile(path, []byte(exampleHashes), 0600); err != nil {
+		t.Fatalf("failed to prepare input file: %v", err)
+	}
+
+	log.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
+	db.EXPECT().GetHash().Return(common.Hash{0x0a, 0x0b, 0x0c})
+
+	archive0 := state.NewMockStateDB(ctrl)
+	archive1 := state.NewMockStateDB(ctrl)
+	archive2 := state.NewMockStateDB(ctrl)
+
+	gomock.InOrder(
+		db.EXPECT().GetArchiveBlockHeight().Return(uint64(0), false, nil),
+		db.EXPECT().GetArchiveState(uint64(0)).Return(archive0, nil),
+		archive0.EXPECT().GetHash().Return(common.Hash{0x01}),
+
+		db.EXPECT().GetArchiveBlockHeight().Return(uint64(2), false, nil),
+		db.EXPECT().GetArchiveState(uint64(1)).Return(archive1, nil),
+		archive1.EXPECT().GetHash().Return(common.Hash{0x01, 0x02}),
+		db.EXPECT().GetArchiveState(uint64(2)).Return(archive2, nil),
+		archive2.EXPECT().GetHash().Return(common.Hash{0x0a, 0x0b, 0x0c}),
+	)
+
+	config := &utils.Config{}
+	config.StateRootFile = path
+	config.Last = 5
+	config.ArchiveMode = true
+	ext := makeStateHashValidator(config, log)
+	context := &executor.Context{State: db}
+
+	if err := ext.PreRun(executor.State{}, context); err != nil {
+		t.Errorf("failed to initialize extension: %v", err)
+	}
+
+	// A PostBlock run should check the LiveDB and the ArchiveDB up to block 0.
+	if err := ext.PostBlock(executor.State{Block: 2}, context); err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	// PostRun should finish up checking all remaining archive blocks, even if the
+	// there are some blocks missing at the end of the range.
+	if err := ext.PostRun(executor.State{Block: 10}, context, nil); err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestStateHashValidator_ValidatingLaggingArchivesIsSkippedIfRunIsAborted(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	log := logger.NewMockLogger(ctrl)
+	db := state.NewMockStateDB(ctrl)
+
+	path := t.TempDir() + "/hashes.dat"
+	if err := os.WriteFile(path, []byte(exampleHashes), 0600); err != nil {
+		t.Fatalf("failed to prepare input file: %v", err)
+	}
+
+	log.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
+	db.EXPECT().GetHash().Return(common.Hash{0x0a, 0x0b, 0x0c})
+
+	archive0 := state.NewMockStateDB(ctrl)
+
+	gomock.InOrder(
+		db.EXPECT().GetArchiveBlockHeight().Return(uint64(0), false, nil),
+		db.EXPECT().GetArchiveState(uint64(0)).Return(archive0, nil),
+		archive0.EXPECT().GetHash().Return(common.Hash{0x01}),
+	)
+
+	config := &utils.Config{}
+	config.StateRootFile = path
+	config.Last = 5
+	config.ArchiveMode = true
+	ext := makeStateHashValidator(config, log)
+	context := &executor.Context{State: db}
+
+	if err := ext.PreRun(executor.State{}, context); err != nil {
+		t.Errorf("failed to initialize extension: %v", err)
+	}
+
+	// A PostBlock run should check the LiveDB and the ArchiveDB up to block 0.
+	if err := ext.PostBlock(executor.State{Block: 2}, context); err != nil {
+		t.Errorf("unexpected error: %v", err)
+	}
+
+	// PostRun should finish up checking all remaining archive hashes and detect the error in block 2.
+	if err := ext.PostRun(executor.State{Block: 2}, context, fmt.Errorf("dummy")); err != nil {
+		t.Errorf("unexpected error: %v", err)
 	}
 }
 
