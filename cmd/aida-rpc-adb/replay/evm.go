@@ -24,7 +24,7 @@ import (
 // EVMExecutor represents requests executed over Ethereum Virtual Machine
 type EVMExecutor struct {
 	args      ethapi.TransactionArgs
-	archive   state.StateDB
+	archive   state.VmStateDB
 	timestamp uint64 // EVM requests require timestamp for correct execution
 	chainCfg  *params.ChainConfig
 	vmImpl    string
@@ -37,7 +37,7 @@ const maxGasLimit = 9995800   // used when request does not specify gas
 const globalGasCap = 50000000 // highest gas allowance used for estimateGas
 
 // newEVMExecutor creates EVMExecutor for executing requests into StateDB that demand usage of EVM
-func newEVMExecutor(blockID uint64, archive state.StateDB, vmImpl string, chainCfg *params.ChainConfig, params map[string]interface{}, timestamp uint64, log *logging.Logger) *EVMExecutor {
+func newEVMExecutor(blockID uint64, archive state.VmStateDB, vmImpl string, chainCfg *params.ChainConfig, params map[string]interface{}, timestamp uint64, log *logging.Logger) *EVMExecutor {
 	return &EVMExecutor{
 		args:      newTxArgs(params),
 		archive:   archive,

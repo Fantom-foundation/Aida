@@ -458,7 +458,7 @@ func (db *inMemoryStateDB) GetMemoryUsage() *MemoryUsage {
 	return &MemoryUsage{uint64(0), nil}
 }
 
-func (db *inMemoryStateDB) GetArchiveState(block uint64) (StateDB, error) {
+func (db *inMemoryStateDB) GetArchiveState(block uint64) (NonCommittableStateDB, error) {
 	return nil, fmt.Errorf("archive states are not (yet) supported by this DB implementation")
 }
 

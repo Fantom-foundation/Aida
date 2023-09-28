@@ -109,15 +109,24 @@ func TestStateHashValidator_InvalidHashOfArchiveDbIsDetected(t *testing.T) {
 
 	db.EXPECT().GetArchiveBlockHeight().Return(uint64(2), false, nil)
 
-	archive0 := state.NewMockStateDB(ctrl)
-	archive0.EXPECT().GetHash().Return(common.Hash{0x01})
-	db.EXPECT().GetArchiveState(uint64(0)).Return(archive0, nil)
-	archive1 := state.NewMockStateDB(ctrl)
-	archive1.EXPECT().GetHash().Return(common.Hash{0x01, 0x02})
-	db.EXPECT().GetArchiveState(uint64(1)).Return(archive1, nil)
-	archive2 := state.NewMockStateDB(ctrl)
-	archive2.EXPECT().GetHash().Return(common.Hash{0xFF})
-	db.EXPECT().GetArchiveState(uint64(2)).Return(archive2, nil)
+	archive0 := state.NewMockNonCommittableStateDB(ctrl)
+	gomock.InOrder(
+		db.EXPECT().GetArchiveState(uint64(0)).Return(archive0, nil),
+		archive0.EXPECT().GetHash().Return(common.Hash{0x01}),
+		archive0.EXPECT().Release(),
+	)
+	archive1 := state.NewMockNonCommittableStateDB(ctrl)
+	gomock.InOrder(
+		db.EXPECT().GetArchiveState(uint64(1)).Return(archive1, nil),
+		archive1.EXPECT().GetHash().Return(common.Hash{0x01, 0x02}),
+		archive1.EXPECT().Release(),
+	)
+	archive2 := state.NewMockNonCommittableStateDB(ctrl)
+	gomock.InOrder(
+		db.EXPECT().GetArchiveState(uint64(2)).Return(archive2, nil),
+		archive2.EXPECT().GetHash().Return(common.Hash{0xFF}),
+		archive2.EXPECT().Release(),
+	)
 
 	config := &utils.Config{}
 	config.StateRootFile = path
@@ -148,14 +157,15 @@ func TestStateHashValidator_ChecksArchiveHashesOfLaggingArchive(t *testing.T) {
 	log.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
 	db.EXPECT().GetHash().Return(common.Hash{0x0a, 0x0b, 0x0c})
 
-	archive0 := state.NewMockStateDB(ctrl)
-	archive1 := state.NewMockStateDB(ctrl)
-	archive2 := state.NewMockStateDB(ctrl)
+	archive0 := state.NewMockNonCommittableStateDB(ctrl)
+	archive1 := state.NewMockNonCommittableStateDB(ctrl)
+	archive2 := state.NewMockNonCommittableStateDB(ctrl)
 
 	gomock.InOrder(
 		db.EXPECT().GetArchiveBlockHeight().Return(uint64(0), false, nil),
 		db.EXPECT().GetArchiveState(uint64(0)).Return(archive0, nil),
 		archive0.EXPECT().GetHash().Return(common.Hash{0x01}),
+		archive0.EXPECT().Release(),
 
 		db.EXPECT().GetArchiveBlockHeight().Return(uint64(0), false, nil),
 		db.EXPECT().GetArchiveBlockHeight().Return(uint64(0), false, nil),
@@ -163,8 +173,10 @@ func TestStateHashValidator_ChecksArchiveHashesOfLaggingArchive(t *testing.T) {
 		db.EXPECT().GetArchiveBlockHeight().Return(uint64(2), false, nil),
 		db.EXPECT().GetArchiveState(uint64(1)).Return(archive1, nil),
 		archive1.EXPECT().GetHash().Return(common.Hash{0x01, 0x02}),
+		archive1.EXPECT().Release(),
 		db.EXPECT().GetArchiveState(uint64(2)).Return(archive2, nil),
 		archive2.EXPECT().GetHash().Return(common.Hash{0xFF}),
+		archive2.EXPECT().Release(),
 	)
 
 	config := &utils.Config{}
@@ -202,20 +214,23 @@ func TestStateHashValidator_ChecksArchiveHashesOfLaggingArchiveDoesNotWaitForNon
 	log.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
 	db.EXPECT().GetHash().Return(common.Hash{0x0a, 0x0b, 0x0c})
 
-	archive0 := state.NewMockStateDB(ctrl)
-	archive1 := state.NewMockStateDB(ctrl)
-	archive2 := state.NewMockStateDB(ctrl)
+	archive0 := state.NewMockNonCommittableStateDB(ctrl)
+	archive1 := state.NewMockNonCommittableStateDB(ctrl)
+	archive2 := state.NewMockNonCommittableStateDB(ctrl)
 
 	gomock.InOrder(
 		db.EXPECT().GetArchiveBlockHeight().Return(uint64(0), false, nil),
 		db.EXPECT().GetArchiveState(uint64(0)).Return(archive0, nil),
 		archive0.EXPECT().GetHash().Return(common.Hash{0x01}),
+		archive0.EXPECT().Release(),
 
 		db.EXPECT().GetArchiveBlockHeight().Return(uint64(2), false, nil),
 		db.EXPECT().GetArchiveState(uint64(1)).Return(archive1, nil),
 		archive1.EXPECT().GetHash().Return(common.Hash{0x01, 0x02}),
+		archive1.EXPECT().Release(),
 		db.EXPECT().GetArchiveState(uint64(2)).Return(archive2, nil),
 		archive2.EXPECT().GetHash().Return(common.Hash{0x0a, 0x0b, 0x0c}),
+		archive2.EXPECT().Release(),
 	)
 
 	config := &utils.Config{}
@@ -254,12 +269,13 @@ func TestStateHashValidator_ValidatingLaggingArchivesIsSkippedIfRunIsAborted(t *
 	log.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
 	db.EXPECT().GetHash().Return(common.Hash{0x0a, 0x0b, 0x0c})
 
-	archive0 := state.NewMockStateDB(ctrl)
+	archive0 := state.NewMockNonCommittableStateDB(ctrl)
 
 	gomock.InOrder(
 		db.EXPECT().GetArchiveBlockHeight().Return(uint64(0), false, nil),
 		db.EXPECT().GetArchiveState(uint64(0)).Return(archive0, nil),
 		archive0.EXPECT().GetHash().Return(common.Hash{0x01}),
+		archive0.EXPECT().Release(),
 	)
 
 	config := &utils.Config{}

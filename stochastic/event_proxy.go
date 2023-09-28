@@ -396,7 +396,7 @@ func (p *EventProxy) GetMemoryUsage() *state.MemoryUsage {
 	return p.db.GetMemoryUsage()
 }
 
-func (p *EventProxy) GetArchiveState(block uint64) (state.StateDB, error) {
+func (p *EventProxy) GetArchiveState(block uint64) (state.NonCommittableStateDB, error) {
 	return p.db.GetArchiveState(block)
 }
 

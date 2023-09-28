@@ -410,7 +410,7 @@ func (p *ProfilerProxy) StartBulkLoad(block uint64) state.BulkLoad {
 	return nil
 }
 
-func (p *ProfilerProxy) GetArchiveState(block uint64) (state.StateDB, error) {
+func (p *ProfilerProxy) GetArchiveState(block uint64) (state.NonCommittableStateDB, error) {
 	return nil, fmt.Errorf("archive states are not (yet) supported by the profiling profiler")
 }
 

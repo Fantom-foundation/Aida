@@ -281,7 +281,7 @@ func (r *DeletionProxy) EndSyncPeriod() {
 	r.db.EndSyncPeriod()
 }
 
-func (r *DeletionProxy) GetArchiveState(block uint64) (state.StateDB, error) {
+func (r *DeletionProxy) GetArchiveState(block uint64) (state.NonCommittableStateDB, error) {
 	return r.db.GetArchiveState(block)
 }
 

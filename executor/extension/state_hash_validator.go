@@ -109,6 +109,7 @@ func (e *stateHashValidator) checkArchiveHashes(state state.StateDB) error {
 
 		want := e.hashes[cur]
 		got := archive.GetHash()
+		archive.Release()
 		if want != got {
 			return fmt.Errorf("unexpected hash for Archive block %d\nwanted %v\n   got %v", cur, want, got)
 		}

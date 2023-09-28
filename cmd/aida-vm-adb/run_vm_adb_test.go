@@ -15,7 +15,7 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	substate := executor.NewMockSubstateProvider(ctrl)
 	db := state.NewMockStateDB(ctrl)
-	archive := state.NewMockStateDB(ctrl)
+	archive := state.NewMockNonCommittableStateDB(ctrl)
 	config := &utils.Config{
 		First:    1,
 		Last:     1,
