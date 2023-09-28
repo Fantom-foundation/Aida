@@ -269,6 +269,10 @@ func (s *operaStateDB) GetArchiveState(block uint64) (StateDB, error) {
 	return newOperaStateDB(state, s.stateReader, nil, header, "INFO"), nil
 }
 
+func (s *operaStateDB) GetArchiveBlockHeight() (uint64, bool, error) {
+	return 0, false, fmt.Errorf("retrieving of the Archive's block height is not (yet) supported by this DB implementation")
+}
+
 func (s *operaStateDB) GetMemoryUsage() *MemoryUsage {
 	s.log.Warning("GetMemoryUsage is not yet implemented.")
 	return &MemoryUsage{uint64(0), nil}

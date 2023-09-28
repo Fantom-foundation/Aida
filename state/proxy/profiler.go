@@ -414,6 +414,10 @@ func (p *ProfilerProxy) GetArchiveState(block uint64) (state.StateDB, error) {
 	return nil, fmt.Errorf("archive states are not (yet) supported by the profiling profiler")
 }
 
+func (p *ProfilerProxy) GetArchiveBlockHeight() (uint64, bool, error) {
+	return 0, false, fmt.Errorf("archive states are not (yet) supported by the profiling profiler")
+}
+
 func (p *ProfilerProxy) GetMemoryUsage() *state.MemoryUsage {
 	return p.db.GetMemoryUsage()
 }

@@ -298,6 +298,10 @@ func (s *carmenStateDB) GetArchiveState(block uint64) (StateDB, error) {
 	return &carmenStateDB{db: state}, nil
 }
 
+func (s *carmenStateDB) GetArchiveBlockHeight() (uint64, bool, error) {
+	return s.db.GetArchiveBlockHeight()
+}
+
 func (s *carmenStateDB) GetMemoryUsage() *MemoryUsage {
 	usage := s.db.GetMemoryFootprint()
 	return &MemoryUsage{uint64(usage.Total()), usage}

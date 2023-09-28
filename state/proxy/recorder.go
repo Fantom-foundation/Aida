@@ -360,6 +360,11 @@ func (r *RecorderProxy) GetArchiveState(block uint64) (state.StateDB, error) {
 	}, nil
 }
 
+func (r *RecorderProxy) GetArchiveBlockHeight() (uint64, bool, error) {
+	// TODO: record this event
+	return r.db.GetArchiveBlockHeight()
+}
+
 func (r *RecorderProxy) Close() error {
 	return r.db.Close()
 }

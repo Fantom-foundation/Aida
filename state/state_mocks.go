@@ -808,6 +808,22 @@ func (mr *MockStateDBMockRecorder) ForEachStorage(arg0, arg1 interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForEachStorage", reflect.TypeOf((*MockStateDB)(nil).ForEachStorage), arg0, arg1)
 }
 
+// GetArchiveBlockHeight mocks base method.
+func (m *MockStateDB) GetArchiveBlockHeight() (uint64, bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetArchiveBlockHeight")
+	ret0, _ := ret[0].(uint64)
+	ret1, _ := ret[1].(bool)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// GetArchiveBlockHeight indicates an expected call of GetArchiveBlockHeight.
+func (mr *MockStateDBMockRecorder) GetArchiveBlockHeight() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetArchiveBlockHeight", reflect.TypeOf((*MockStateDB)(nil).GetArchiveBlockHeight))
+}
+
 // GetArchiveState mocks base method.
 func (m *MockStateDB) GetArchiveState(block uint64) (StateDB, error) {
 	m.ctrl.T.Helper()

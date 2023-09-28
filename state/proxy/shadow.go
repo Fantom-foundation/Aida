@@ -286,6 +286,27 @@ func (s *ShadowProxy) GetArchiveState(block uint64) (state.StateDB, error) {
 	}, nil
 }
 
+func (s *ShadowProxy) GetArchiveBlockHeight() (uint64, bool, error) {
+	// There is no strict need for both archives to be on the same level.
+	// Thus, we report the minimum of the two available block heights.
+	pBlock, pEmpty, pErr := s.prime.GetArchiveBlockHeight()
+	sBlock, sEmpty, sErr := s.shadow.GetArchiveBlockHeight()
+	if pErr != nil {
+		return 0, false, pErr
+	}
+	if sErr != nil {
+		return 0, false, sErr
+	}
+	if pEmpty || sEmpty {
+		return 0, true, nil
+	}
+	min := pBlock
+	if sBlock < min {
+		min = sBlock
+	}
+	return min, false, nil
+}
+
 type stringStringer struct {
 	str string
 }

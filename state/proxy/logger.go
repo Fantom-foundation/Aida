@@ -292,6 +292,12 @@ func (s *LoggerProxy) GetArchiveState(block uint64) (state.StateDB, error) {
 	return NewLoggerProxy(archive, "DEBUG"), nil
 }
 
+func (s *LoggerProxy) GetArchiveBlockHeight() (uint64, bool, error) {
+	res, empty, err := s.db.GetArchiveBlockHeight()
+	s.log.Infof("GetArchiveBlockHeight, %v, %t, %v", res, empty, err)
+	return res, empty, err
+}
+
 func (s *LoggerProxy) GetMemoryUsage() *state.MemoryUsage {
 	// no loggin in this case
 	return s.db.GetMemoryUsage()
