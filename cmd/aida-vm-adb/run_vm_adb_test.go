@@ -27,7 +27,7 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder(t *testing.T) {
 	substate.EXPECT().
 		Run(1, 2, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer) error {
-			consumer(executor.TransactionInfo{Block: 1, Transaction: 1, Substate: emptyTx})
+			consumer(executor.TransactionInfo{Block: 1, Transaction: 0, Substate: emptyTx})
 			return nil
 		})
 
@@ -35,10 +35,10 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder(t *testing.T) {
 	// are properly opened, prepared, executed, and closed.
 	gomock.InOrder(
 		db.EXPECT().BeginBlock(uint64(1)),
-		db.EXPECT().PrepareSubstate(gomock.Any(), uint64(1)),
 		db.EXPECT().GetArchiveState(uint64(0)).Return(archive, nil),
-		archive.EXPECT().BeginTransaction(uint32(1)),
-		archive.EXPECT().Prepare(gomock.Any(), 1),
+		db.EXPECT().PrepareSubstate(gomock.Any(), uint64(1)),
+		archive.EXPECT().BeginTransaction(uint32(0)),
+		archive.EXPECT().Prepare(gomock.Any(), 0),
 		archive.EXPECT().Snapshot().Return(15),
 		archive.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
 		archive.EXPECT().SubBalance(gomock.Any(), gomock.Any()),

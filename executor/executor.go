@@ -72,7 +72,7 @@ type IsolationLevel byte
 
 const (
 	TransactionIsolated IsolationLevel = iota
-	BlockIsolated
+	BlockIsolatedArchive
 )
 
 // Params summarizes input parameters for a run of the executor.
@@ -100,9 +100,7 @@ type Processor interface {
 	// Process is called on each transaction in the range of blocks covered
 	// by an Executor run. When running with multiple workers, the Process
 	// function is required to be thread safe.
-	// StateDB contains state is used to send StateDB at given archive state
-	// vm-adb transactions require tx state of stateDB with shared state within the block
-	Process(State, *Context, state.StateDB) error
+	Process(State, *Context) error
 }
 
 // Extension is an interface for modulare annotations to the execution of
@@ -216,7 +214,7 @@ func (e *executor) Run(params Params, processor Processor, extensions []Extensio
 	}
 	if params.ExecutionType == TransactionIsolated {
 		return e.runParallelTransaction(params, processor, extensions, &state, &context)
-	} else if params.ExecutionType == BlockIsolated {
+	} else if params.ExecutionType == BlockIsolatedArchive {
 		return e.runParallelBlock(params, processor, extensions, &state, &context)
 	} else {
 		return fmt.Errorf("incorrect parallelism type: %v", params.ExecutionType)
@@ -225,9 +223,6 @@ func (e *executor) Run(params Params, processor Processor, extensions []Extensio
 
 func (e *executor) runSequential(params Params, processor Processor, extensions []Extension, txState *State, context *Context) error {
 	first := true
-	// archive is only used when processing based on blocks is enabled, otherwise is kept nil
-	// is used to preserve state for transactions within the block
-	var archive state.StateDB
 
 	err := e.substate.Run(params.From, params.To, func(tx TransactionInfo) error {
 		if first {
@@ -248,18 +243,18 @@ func (e *executor) runSequential(params Params, processor Processor, extensions 
 
 		txState.Transaction = tx.Transaction
 
-		if params.ExecutionType == BlockIsolated {
+		if params.ExecutionType == BlockIsolatedArchive {
 			if txState.Transaction == 0 {
 				// archive has to be maintained throughout the whole block
 				var err error
-				archive, err = context.State.GetArchiveState(uint64(txState.Block) - 1)
+				context.State, err = context.State.GetArchiveState(uint64(txState.Block) - 1)
 				if err != nil {
 					return err
 				}
 			}
 		}
 
-		return runTransaction(*txState, context, tx.Substate, processor, archive, extensions)
+		return runTransaction(*txState, context, tx.Substate, processor, extensions)
 	})
 	if err != nil {
 		return err
@@ -326,7 +321,7 @@ func (e *executor) runParallelTransaction(params Params, processor Processor, ex
 					localState.Block = tx.Block
 					localState.Transaction = tx.Transaction
 					localContext := *context
-					if err := runTransaction(localState, &localContext, tx.Substate, processor, nil, extensions); err != nil {
+					if err := runTransaction(localState, &localContext, tx.Substate, processor, extensions); err != nil {
 						workerErrs[i] = err
 						abort.Signal()
 						return
@@ -353,12 +348,12 @@ func (e *executor) runParallelTransaction(params Params, processor Processor, ex
 	return err
 }
 
-func runTransaction(state State, context *Context, substate *substate.Substate, processor Processor, archive state.StateDB, extensions []Extension) error {
+func runTransaction(state State, context *Context, substate *substate.Substate, processor Processor, extensions []Extension) error {
 	state.Substate = substate
 	if err := signalPreTransaction(state, context, extensions); err != nil {
 		return err
 	}
-	if err := processor.Process(state, context, archive); err != nil {
+	if err := processor.Process(state, context); err != nil {
 		return err
 	}
 	if err := signalPostTransaction(state, context, extensions); err != nil {
@@ -381,12 +376,9 @@ func (e *executor) runParallelBlock(params Params, processor Processor, extensio
 		abortErr := errors.New("aborted")
 
 		block := make([]*TransactionInfo, 0)
-		first := true
 		err := e.substate.Run(params.From, params.To, func(tx TransactionInfo) error {
-			// when new block is encountered and all tx for the previous block are complete, then send them to queue
-			if first {
-				first = false
-			} else if len(blocks) > 0 && (tx.Transaction == 0 || tx.Transaction == utils.PseudoTx) {
+			// TODO rewrite
+			if len(block) > 0 && (tx.Transaction == 0 || tx.Transaction == utils.PseudoTx) {
 				select {
 				case blocks <- &block:
 					// clean block for reuse
@@ -437,26 +429,34 @@ func (e *executor) runParallelBlock(params Params, processor Processor, extensio
 						return // reached an end without abort
 					}
 
-					bb := *block
+					blockTransactions := *block
 
 					// shouldn't occur
-					if len(bb) == 0 {
+					if len(blockTransactions) == 0 {
 						continue
 					}
 
-					archive, err := context.State.GetArchiveState(uint64(bb[0].Block) - 1)
+					// each block has separate context
+					localState := *state
+					localState.Block = blockTransactions[0].Block
+					localContext := *context
+
+					var err error
+					// todo move to preblock - extension probably exists
+					localContext.State, err = context.State.GetArchiveState(uint64(blockTransactions[0].Block) - 1)
 					if err != nil {
 						workerErrs[i] = err
 						abort.Signal()
 						return
 					}
 
-					for _, tx := range bb {
-						localState := *state
-						localState.Block = tx.Block
+					// TODO preblock
+
+					for _, tx := range blockTransactions {
+						localState.Substate = tx.Substate
 						localState.Transaction = tx.Transaction
-						localContext := *context
-						if err := runTransaction(localState, &localContext, tx.Substate, processor, archive, extensions); err != nil {
+
+						if err := runTransaction(localState, &localContext, tx.Substate, processor, extensions); err != nil {
 							workerErrs[i] = err
 							abort.Signal()
 							return
@@ -470,6 +470,8 @@ func (e *executor) runParallelBlock(params Params, processor Processor, extensio
 							continue
 						}
 					}
+
+					// TODO postblock with local context
 				case <-abort.Wait():
 					return
 				}
