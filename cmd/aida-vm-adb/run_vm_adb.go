@@ -38,7 +38,7 @@ func RunVmAdb(ctx *cli.Context) error {
 		return stateDb.Close()
 	}()
 
-	return run(cfg, substateDb, stateDb, false)
+	return run(cfg, substateDb, stateDb)
 }
 
 type archiveGetter struct {
@@ -52,6 +52,8 @@ func (r *archiveGetter) PreBlock(state executor.State, context *executor.Context
 	if err != nil {
 		return err
 	}
+
+	context.State.BeginBlock(uint64(state.Block) - 1)
 
 	return nil
 }
@@ -71,22 +73,20 @@ func (r txProcessor) Process(state executor.State, context *executor.Context) er
 	return err
 }
 
-func run(config *utils.Config, provider executor.SubstateProvider, stateDb state.StateDB, disableStateDbExtension bool) error {
+func run(config *utils.Config, provider executor.SubstateProvider, stateDb state.StateDB) error {
 	extensionList := []executor.Extension{
 		extension.MakeCpuProfiler(config),
 		&archiveGetter{},
 		extension.MakeProgressLogger(config, 0),
 		extension.MakeProgressTracker(config, 0),
-		extension.MakeStateDbPreparator(),
-		extension.MakeBeginOnlyEmitter(),
 	}
 	return executor.NewExecutor(provider).Run(
 		executor.Params{
-			From:          int(config.First),
-			To:            int(config.Last) + 1,
-			State:         stateDb,
-			NumWorkers:    config.Workers,
-			ExecutionType: executor.BlockIsolatedArchive,
+			From:                   int(config.First),
+			To:                     int(config.Last) + 1,
+			State:                  stateDb,
+			NumWorkers:             config.Workers,
+			ParallelismGranularity: executor.BlockLevel,
 		},
 		txProcessor{config},
 		extensionList,

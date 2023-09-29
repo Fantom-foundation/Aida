@@ -34,9 +34,8 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder(t *testing.T) {
 	// The expectation is that all of those blocks and transactions
 	// are properly opened, prepared, executed, and closed.
 	gomock.InOrder(
-		db.EXPECT().BeginBlock(uint64(1)),
 		db.EXPECT().GetArchiveState(uint64(0)).Return(archive, nil),
-		db.EXPECT().PrepareSubstate(gomock.Any(), uint64(1)),
+		archive.EXPECT().BeginBlock(uint64(0)),
 		archive.EXPECT().BeginTransaction(uint32(0)),
 		archive.EXPECT().Prepare(gomock.Any(), 0),
 		archive.EXPECT().Snapshot().Return(15),
@@ -46,7 +45,7 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		archive.EXPECT().EndTransaction(),
 	)
 
-	if err := run(config, substate, db, true); err != nil {
+	if err := run(config, substate, db); err != nil {
 		t.Errorf("run failed: %v", err)
 	}
 }

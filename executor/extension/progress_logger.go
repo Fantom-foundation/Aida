@@ -67,7 +67,7 @@ func (l *progressLogger) PostRun(executor.State, *executor.Context, error) error
 	return nil
 }
 
-func (l *progressLogger) PostBlock(state executor.State, _ *executor.Context) error {
+func (l *progressLogger) PostTransaction(state executor.State, _ *executor.Context) error {
 	l.inputCh <- state
 	return nil
 }

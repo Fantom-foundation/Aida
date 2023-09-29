@@ -35,7 +35,7 @@ import (
 //	}
 //	PostRun()
 //
-// When running with multiple workers, the execution is structures like this:
+// When running with multiple workers on TransactionLevel granularity, the execution is structures like this:
 //
 //	PreRun()
 //	for transaction in parallel {
@@ -46,6 +46,22 @@ import (
 //	PostRun()
 //
 // Note that there are no block boundary events in the parallel mode.
+//
+// When running with multiple workers on BlockLevel granularity, the execution is structures like this:
+//
+//	PreRun()
+//	for block in parallel {
+//	   PreBlock()
+//	   for each transaction {
+//	       PreTransaction()
+//	       Processor.Process(transaction)
+//	       PostTransaction()
+//	   }
+//	   PostBlock()
+//	}
+//	PostRun()
+//
+// Not that every worker has its own Context so any manipulation with this variable does not need to be thread safe.
 //
 // Each PreXXX() and PostXXX() is a hook-in point at which extensions may
 // track information and/or interfere with the execution. For more details on
@@ -64,20 +80,20 @@ type Executor interface {
 
 // NewExecutor creates a new executor based on the given substate provider.
 func NewExecutor(substate SubstateProvider) Executor {
-	return &executor{substate}
+	return &executor{substate: substate}
 }
 
-// IsolationLevel determines isolation level if same archive is kept for all transactions in block or for each is created new one
-type IsolationLevel byte
+// ParallelismGranularity determines isolation level if same archive is kept for all transactions in block or for each is created new one
+type ParallelismGranularity byte
 
 const (
-	TransactionIsolated IsolationLevel = iota
-	BlockIsolatedArchive
+	TransactionLevel ParallelismGranularity = iota
+	BlockLevel
 )
 
 // Params summarizes input parameters for a run of the executor.
 type Params struct {
-	// From is the begin of the range of blocks to be processed (inclusive).
+	// From is the beginning of the range of blocks to be processed (inclusive).
 	From int
 	// From is the end of the range of blocks to be processed (exclusive).
 	To int
@@ -90,8 +106,8 @@ type Params struct {
 	// is guranteed. Any number <= 1 is considered to be 1, thus the default
 	// value of 0 is valid.
 	NumWorkers int
-	// ExecutionType determines whether parallelism is done on block or transaction level
-	ExecutionType IsolationLevel
+	// ParallelismGranularity determines whether parallelism is done on block or transaction level
+	ParallelismGranularity ParallelismGranularity
 }
 
 // Processor is an interface for the entity to which an executor is feeding
@@ -205,19 +221,21 @@ func (e *executor) Run(params Params, processor Processor, extensions []Extensio
 	}()
 
 	state.Block = params.From
-	if err := signalPreRun(state, &context, extensions); err != nil {
+	if err = signalPreRun(state, &context, extensions); err != nil {
 		return err
 	}
 
 	if params.NumWorkers <= 1 {
 		return e.runSequential(params, processor, extensions, &state, &context)
 	}
-	if params.ExecutionType == TransactionIsolated {
+
+	switch params.ParallelismGranularity {
+	case TransactionLevel:
 		return e.runParallelTransaction(params, processor, extensions, &state, &context)
-	} else if params.ExecutionType == BlockIsolatedArchive {
+	case BlockLevel:
 		return e.runParallelBlock(params, processor, extensions, &state, &context)
-	} else {
-		return fmt.Errorf("incorrect parallelism type: %v", params.ExecutionType)
+	default:
+		return fmt.Errorf("incorrect parallelism type: %v", params.ParallelismGranularity)
 	}
 }
 
@@ -245,18 +263,6 @@ func (e *executor) runSequential(params Params, processor Processor, extensions 
 		}
 
 		txState.Transaction = tx.Transaction
-
-		if params.ExecutionType == BlockIsolatedArchive {
-			if txState.Transaction == 0 {
-				// archive has to be maintained throughout the whole block
-				var err error
-				context.State, err = context.State.GetArchiveState(uint64(txState.Block) - 1)
-				if err != nil {
-					return err
-				}
-			}
-		}
-
 		return runTransaction(*txState, context, tx.Substate, processor, extensions)
 	})
 	if err != nil {
@@ -378,10 +384,13 @@ func (e *executor) runParallelBlock(params Params, processor Processor, extensio
 		defer close(blocks)
 		abortErr := errors.New("aborted")
 
+		previousBlock := params.From
+
 		block := make([]*TransactionInfo, 0)
 		err := e.substate.Run(params.From, params.To, func(tx TransactionInfo) error {
 			// TODO rewrite first tx with id0 or pseudo is not mandatory
-			if len(block) > 0 && (tx.Transaction == 0 || tx.Transaction == utils.PseudoTx) {
+			if tx.Block != previousBlock {
+				previousBlock = tx.Block
 				select {
 				case blocks <- &block:
 					// clean block for reuse
@@ -444,14 +453,6 @@ func (e *executor) runParallelBlock(params Params, processor Processor, extensio
 					localState.Block = blockTransactions[0].Block
 					localContext := *context
 
-					//var err error
-					// todo move to preblock - extension probably exists
-					//localContext.State, err = context.State.GetArchiveState(uint64(blockTransactions[0].Block) - 1)
-					//if err != nil {
-					//	workerErrs[i] = err
-					//	abort.Signal()
-					//	return
-					//}
 					if err := signalPreBlock(localState, &localContext, extensions); err != nil {
 						workerErrs[i] = err
 						abort.Signal()
