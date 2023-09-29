@@ -76,6 +76,7 @@ func run(config *utils.Config, provider executor.SubstateProvider, stateDb state
 		extension.MakeCpuProfiler(config),
 		&archiveGetter{},
 		extension.MakeProgressLogger(config, 0),
+		extension.MakeProgressTracker(config, 0),
 		extension.MakeStateDbPreparator(),
 		extension.MakeBeginOnlyEmitter(),
 	}
