@@ -153,7 +153,7 @@ func (s *MockStateDB) StartBulkLoad(uint64) state.BulkLoad {
 	panic("Bulk load not supported in mock")
 }
 
-func (s *MockStateDB) GetArchiveState(block uint64) (state.StateDB, error) {
+func (s *MockStateDB) GetArchiveState(block uint64) (state.NonCommittableStateDB, error) {
 	panic("Archive state not supported in mock")
 }
 

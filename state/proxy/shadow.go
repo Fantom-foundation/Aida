@@ -14,99 +14,115 @@ import (
 	"github.com/op/go-logging"
 )
 
-// NewShadowProxy creates a StateDB instance bundeling two other instances and running each
+// NewShadowProxy creates a StateDB instance bundling two other instances and running each
 // operation on both of them, cross checking results. If the results are not equal, an error
 // is logged and the result of the primary instance is returned.
 func NewShadowProxy(prime, shadow state.StateDB) state.StateDB {
-	return &ShadowProxy{
-		prime:     prime,
-		shadow:    shadow,
-		snapshots: []snapshotPair{},
-		err:       nil,
+	return &shadowStateDb{
+		shadowVmStateDb: shadowVmStateDb{
+			prime:     prime,
+			shadow:    shadow,
+			snapshots: []snapshotPair{},
+			err:       nil,
+		},
+		prime:  prime,
+		shadow: shadow,
 	}
 }
 
-type ShadowProxy struct {
-	prime     state.StateDB
-	shadow    state.StateDB
+type shadowVmStateDb struct {
+	prime     state.VmStateDB
+	shadow    state.VmStateDB
 	snapshots []snapshotPair
 	err       error
 	log       *logging.Logger
+}
+
+type shadowNonCommittableStateDb struct {
+	shadowVmStateDb
+	prime  state.NonCommittableStateDB
+	shadow state.NonCommittableStateDB
+}
+
+type shadowStateDb struct {
+	shadowVmStateDb
+	prime  state.StateDB
+	shadow state.StateDB
 }
 
 type snapshotPair struct {
 	prime, shadow int
 }
 
-func (s *ShadowProxy) CreateAccount(addr common.Address) {
-	s.run("CreateAccount", func(s state.StateDB) { s.CreateAccount(addr) })
+func (s *shadowVmStateDb) CreateAccount(addr common.Address) {
+	s.run("CreateAccount", func(s state.VmStateDB) { s.CreateAccount(addr) })
 }
 
-func (s *ShadowProxy) Exist(addr common.Address) bool {
-	return s.getBool("Exist", func(s state.StateDB) bool { return s.Exist(addr) }, addr)
+func (s *shadowVmStateDb) Exist(addr common.Address) bool {
+	return s.getBool("Exist", func(s state.VmStateDB) bool { return s.Exist(addr) }, addr)
 }
 
-func (s *ShadowProxy) Empty(addr common.Address) bool {
-	return s.getBool("Empty", func(s state.StateDB) bool { return s.Empty(addr) }, addr)
+func (s *shadowVmStateDb) Empty(addr common.Address) bool {
+	return s.getBool("Empty", func(s state.VmStateDB) bool { return s.Empty(addr) }, addr)
 }
 
-func (s *ShadowProxy) Suicide(addr common.Address) bool {
-	return s.getBool("Suicide", func(s state.StateDB) bool { return s.Suicide(addr) }, addr)
+func (s *shadowVmStateDb) Suicide(addr common.Address) bool {
+	return s.getBool("Suicide", func(s state.VmStateDB) bool { return s.Suicide(addr) }, addr)
 }
 
-func (s *ShadowProxy) HasSuicided(addr common.Address) bool {
-	return s.getBool("HasSuicided", func(s state.StateDB) bool { return s.HasSuicided(addr) }, addr)
+func (s *shadowVmStateDb) HasSuicided(addr common.Address) bool {
+	return s.getBool("HasSuicided", func(s state.VmStateDB) bool { return s.HasSuicided(addr) }, addr)
 }
 
-func (s *ShadowProxy) GetBalance(addr common.Address) *big.Int {
-	return s.getBigInt("GetBalance", func(s state.StateDB) *big.Int { return s.GetBalance(addr) }, addr)
+func (s *shadowVmStateDb) GetBalance(addr common.Address) *big.Int {
+	return s.getBigInt("GetBalance", func(s state.VmStateDB) *big.Int { return s.GetBalance(addr) }, addr)
 }
 
-func (s *ShadowProxy) AddBalance(addr common.Address, value *big.Int) {
-	s.run("AddBalance", func(s state.StateDB) { s.AddBalance(addr, value) })
+func (s *shadowVmStateDb) AddBalance(addr common.Address, value *big.Int) {
+	s.run("AddBalance", func(s state.VmStateDB) { s.AddBalance(addr, value) })
 }
 
-func (s *ShadowProxy) SubBalance(addr common.Address, value *big.Int) {
-	s.run("SubBalance", func(s state.StateDB) { s.SubBalance(addr, value) })
+func (s *shadowVmStateDb) SubBalance(addr common.Address, value *big.Int) {
+	s.run("SubBalance", func(s state.VmStateDB) { s.SubBalance(addr, value) })
 }
 
-func (s *ShadowProxy) GetNonce(addr common.Address) uint64 {
-	return s.getUint64("GetNonce", func(s state.StateDB) uint64 { return s.GetNonce(addr) }, addr)
+func (s *shadowVmStateDb) GetNonce(addr common.Address) uint64 {
+	return s.getUint64("GetNonce", func(s state.VmStateDB) uint64 { return s.GetNonce(addr) }, addr)
 }
 
-func (s *ShadowProxy) SetNonce(addr common.Address, value uint64) {
-	s.run("SetNonce", func(s state.StateDB) { s.SetNonce(addr, value) })
+func (s *shadowVmStateDb) SetNonce(addr common.Address, value uint64) {
+	s.run("SetNonce", func(s state.VmStateDB) { s.SetNonce(addr, value) })
 }
 
-func (s *ShadowProxy) GetCommittedState(addr common.Address, key common.Hash) common.Hash {
-	return s.getHash("GetCommittedState", func(s state.StateDB) common.Hash { return s.GetCommittedState(addr, key) }, addr, key)
+func (s *shadowVmStateDb) GetCommittedState(addr common.Address, key common.Hash) common.Hash {
+	return s.getHash("GetCommittedState", func(s state.VmStateDB) common.Hash { return s.GetCommittedState(addr, key) }, addr, key)
 }
 
-func (s *ShadowProxy) GetState(addr common.Address, key common.Hash) common.Hash {
-	return s.getHash("GetState", func(s state.StateDB) common.Hash { return s.GetState(addr, key) }, addr, key)
+func (s *shadowVmStateDb) GetState(addr common.Address, key common.Hash) common.Hash {
+	return s.getHash("GetState", func(s state.VmStateDB) common.Hash { return s.GetState(addr, key) }, addr, key)
 }
 
-func (s *ShadowProxy) SetState(addr common.Address, key common.Hash, value common.Hash) {
-	s.run("SetState", func(s state.StateDB) { s.SetState(addr, key, value) })
+func (s *shadowVmStateDb) SetState(addr common.Address, key common.Hash, value common.Hash) {
+	s.run("SetState", func(s state.VmStateDB) { s.SetState(addr, key, value) })
 }
 
-func (s *ShadowProxy) GetCode(addr common.Address) []byte {
-	return s.getBytes("GetCode", func(s state.StateDB) []byte { return s.GetCode(addr) }, addr)
+func (s *shadowVmStateDb) GetCode(addr common.Address) []byte {
+	return s.getBytes("GetCode", func(s state.VmStateDB) []byte { return s.GetCode(addr) }, addr)
 }
 
-func (s *ShadowProxy) GetCodeSize(addr common.Address) int {
-	return s.getInt("GetCodeSize", func(s state.StateDB) int { return s.GetCodeSize(addr) }, addr)
+func (s *shadowVmStateDb) GetCodeSize(addr common.Address) int {
+	return s.getInt("GetCodeSize", func(s state.VmStateDB) int { return s.GetCodeSize(addr) }, addr)
 }
 
-func (s *ShadowProxy) GetCodeHash(addr common.Address) common.Hash {
-	return s.getHash("GetCodeHash", func(s state.StateDB) common.Hash { return s.GetCodeHash(addr) }, addr)
+func (s *shadowVmStateDb) GetCodeHash(addr common.Address) common.Hash {
+	return s.getHash("GetCodeHash", func(s state.VmStateDB) common.Hash { return s.GetCodeHash(addr) }, addr)
 }
 
-func (s *ShadowProxy) SetCode(addr common.Address, code []byte) {
-	s.run("SetCode", func(s state.StateDB) { s.SetCode(addr, code) })
+func (s *shadowVmStateDb) SetCode(addr common.Address, code []byte) {
+	s.run("SetCode", func(s state.VmStateDB) { s.SetCode(addr, code) })
 }
 
-func (s *ShadowProxy) Snapshot() int {
+func (s *shadowVmStateDb) Snapshot() int {
 	pair := snapshotPair{
 		s.prime.Snapshot(),
 		s.shadow.Snapshot(),
@@ -115,7 +131,7 @@ func (s *ShadowProxy) Snapshot() int {
 	return len(s.snapshots) - 1
 }
 
-func (s *ShadowProxy) RevertToSnapshot(id int) {
+func (s *shadowVmStateDb) RevertToSnapshot(id int) {
 	if id < 0 || len(s.snapshots) <= id {
 		panic(fmt.Sprintf("invalid snapshot id: %v, max: %v", id, len(s.snapshots)))
 	}
@@ -123,80 +139,88 @@ func (s *ShadowProxy) RevertToSnapshot(id int) {
 	s.shadow.RevertToSnapshot(s.snapshots[id].shadow)
 }
 
-func (s *ShadowProxy) BeginTransaction(tx uint32) {
+func (s *shadowVmStateDb) BeginTransaction(tx uint32) {
 	s.snapshots = s.snapshots[0:0]
-	s.run("BeginTransaction", func(s state.StateDB) { s.BeginTransaction(tx) })
+	s.run("BeginTransaction", func(s state.VmStateDB) { s.BeginTransaction(tx) })
 }
 
-func (s *ShadowProxy) EndTransaction() {
-	s.run("EndTransaction", func(s state.StateDB) { s.EndTransaction() })
+func (s *shadowVmStateDb) EndTransaction() {
+	s.run("EndTransaction", func(s state.VmStateDB) { s.EndTransaction() })
 }
 
-func (s *ShadowProxy) BeginBlock(blk uint64) {
+func (s *shadowStateDb) BeginBlock(blk uint64) {
 	s.run("BeginBlock", func(s state.StateDB) { s.BeginBlock(blk) })
 }
 
-func (s *ShadowProxy) EndBlock() {
+func (s *shadowStateDb) EndBlock() {
 	s.run("EndBlock", func(s state.StateDB) { s.EndBlock() })
 }
 
-func (s *ShadowProxy) BeginSyncPeriod(number uint64) {
+func (s *shadowStateDb) BeginSyncPeriod(number uint64) {
 	s.run("BeginSyncPeriod", func(s state.StateDB) { s.BeginSyncPeriod(number) })
 }
 
-func (s *ShadowProxy) EndSyncPeriod() {
+func (s *shadowStateDb) EndSyncPeriod() {
 	s.run("EndSyncPeriod", func(s state.StateDB) { s.EndSyncPeriod() })
 }
 
-func (s *ShadowProxy) GetHash() common.Hash {
+func (s *shadowStateDb) GetHash() common.Hash {
 	return s.prime.GetHash()
 }
 
-func (s *ShadowProxy) Close() error {
+func (s *shadowNonCommittableStateDb) GetHash() common.Hash {
+	return s.prime.GetHash()
+}
+
+func (s *shadowStateDb) Close() error {
 	return s.getError("Close", func(s state.StateDB) error { return s.Close() })
 }
 
-func (s *ShadowProxy) AddRefund(amount uint64) {
-	s.run("AddRefund", func(s state.StateDB) { s.AddRefund(amount) })
+func (s *shadowNonCommittableStateDb) Release() {
+	s.run("Release", func(s state.NonCommittableStateDB) { s.Release() })
+}
+
+func (s *shadowVmStateDb) AddRefund(amount uint64) {
+	s.run("AddRefund", func(s state.VmStateDB) { s.AddRefund(amount) })
 	// check that the update value is the same
-	s.getUint64("AddRefund", func(s state.StateDB) uint64 { return s.GetRefund() })
+	s.getUint64("AddRefund", func(s state.VmStateDB) uint64 { return s.GetRefund() })
 }
 
-func (s *ShadowProxy) SubRefund(amount uint64) {
-	s.run("SubRefund", func(s state.StateDB) { s.SubRefund(amount) })
+func (s *shadowVmStateDb) SubRefund(amount uint64) {
+	s.run("SubRefund", func(s state.VmStateDB) { s.SubRefund(amount) })
 	// check that the update value is the same
-	s.getUint64("SubRefund", func(s state.StateDB) uint64 { return s.GetRefund() })
+	s.getUint64("SubRefund", func(s state.VmStateDB) uint64 { return s.GetRefund() })
 }
 
-func (s *ShadowProxy) GetRefund() uint64 {
-	return s.getUint64("GetRefund", func(s state.StateDB) uint64 { return s.GetRefund() })
+func (s *shadowVmStateDb) GetRefund() uint64 {
+	return s.getUint64("GetRefund", func(s state.VmStateDB) uint64 { return s.GetRefund() })
 }
 
-func (s *ShadowProxy) PrepareAccessList(sender common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
-	s.run("PrepareAccessList", func(s state.StateDB) { s.PrepareAccessList(sender, dest, precompiles, txAccesses) })
+func (s *shadowVmStateDb) PrepareAccessList(sender common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
+	s.run("PrepareAccessList", func(s state.VmStateDB) { s.PrepareAccessList(sender, dest, precompiles, txAccesses) })
 }
 
-func (s *ShadowProxy) AddressInAccessList(addr common.Address) bool {
-	return s.getBool("AddressInAccessList", func(s state.StateDB) bool { return s.AddressInAccessList(addr) }, addr)
+func (s *shadowVmStateDb) AddressInAccessList(addr common.Address) bool {
+	return s.getBool("AddressInAccessList", func(s state.VmStateDB) bool { return s.AddressInAccessList(addr) }, addr)
 }
 
-func (s *ShadowProxy) SlotInAccessList(addr common.Address, slot common.Hash) (addressOk bool, slotOk bool) {
-	return s.getBoolBool("SlotInAccessList", func(s state.StateDB) (bool, bool) { return s.SlotInAccessList(addr, slot) }, addr, slot)
+func (s *shadowVmStateDb) SlotInAccessList(addr common.Address, slot common.Hash) (addressOk bool, slotOk bool) {
+	return s.getBoolBool("SlotInAccessList", func(s state.VmStateDB) (bool, bool) { return s.SlotInAccessList(addr, slot) }, addr, slot)
 }
 
-func (s *ShadowProxy) AddAddressToAccessList(addr common.Address) {
-	s.run("AddAddressToAccessList", func(s state.StateDB) { s.AddAddressToAccessList(addr) })
+func (s *shadowVmStateDb) AddAddressToAccessList(addr common.Address) {
+	s.run("AddAddressToAccessList", func(s state.VmStateDB) { s.AddAddressToAccessList(addr) })
 }
 
-func (s *ShadowProxy) AddSlotToAccessList(addr common.Address, slot common.Hash) {
-	s.run("AddSlotToAccessList", func(s state.StateDB) { s.AddSlotToAccessList(addr, slot) })
+func (s *shadowVmStateDb) AddSlotToAccessList(addr common.Address, slot common.Hash) {
+	s.run("AddSlotToAccessList", func(s state.VmStateDB) { s.AddSlotToAccessList(addr, slot) })
 }
 
-func (s *ShadowProxy) AddLog(log *types.Log) {
-	s.run("AddLog", func(s state.StateDB) { s.AddLog(log) })
+func (s *shadowVmStateDb) AddLog(log *types.Log) {
+	s.run("AddLog", func(s state.VmStateDB) { s.AddLog(log) })
 }
 
-func (s *ShadowProxy) GetLogs(hash common.Hash, blockHash common.Hash) []*types.Log {
+func (s *shadowVmStateDb) GetLogs(hash common.Hash, blockHash common.Hash) []*types.Log {
 	logsP := s.prime.GetLogs(hash, blockHash)
 	logsS := s.shadow.GetLogs(hash, blockHash)
 
@@ -217,59 +241,59 @@ func (s *ShadowProxy) GetLogs(hash common.Hash, blockHash common.Hash) []*types.
 	return logsP
 }
 
-func (s *ShadowProxy) Finalise(deleteEmptyObjects bool) {
+func (s *shadowStateDb) Finalise(deleteEmptyObjects bool) {
 	s.run("Finalise", func(s state.StateDB) { s.Finalise(deleteEmptyObjects) })
 }
 
-func (s *ShadowProxy) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
+func (s *shadowStateDb) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	// Do not check hashes for equivalents.
 	s.shadow.IntermediateRoot(deleteEmptyObjects)
 	return s.prime.IntermediateRoot(deleteEmptyObjects)
 }
 
-func (s *ShadowProxy) Commit(deleteEmptyObjects bool) (common.Hash, error) {
+func (s *shadowStateDb) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 	// Do not check hashes for equivalents.
 	s.shadow.Commit(deleteEmptyObjects)
 	return s.prime.Commit(deleteEmptyObjects)
 }
 
 // GetError returns an error then reset it.
-func (s *ShadowProxy) Error() error {
+func (s *shadowVmStateDb) Error() error {
 	err := s.err
 	// reset error message
 	s.err = nil
 	return err
 }
 
-func (s *ShadowProxy) Prepare(thash common.Hash, ti int) {
-	s.run("Prepare", func(s state.StateDB) { s.Prepare(thash, ti) })
+func (s *shadowVmStateDb) Prepare(thash common.Hash, ti int) {
+	s.run("Prepare", func(s state.VmStateDB) { s.Prepare(thash, ti) })
 }
 
-func (s *ShadowProxy) PrepareSubstate(substate *substate.SubstateAlloc, block uint64) {
+func (s *shadowStateDb) PrepareSubstate(substate *substate.SubstateAlloc, block uint64) {
 	s.run("PrepareSubstate", func(s state.StateDB) { s.PrepareSubstate(substate, block) })
 }
 
-func (s *ShadowProxy) GetSubstatePostAlloc() substate.SubstateAlloc {
+func (s *shadowVmStateDb) GetSubstatePostAlloc() substate.SubstateAlloc {
 	// Skip comparing those results.
 	s.shadow.GetSubstatePostAlloc()
 	return s.prime.GetSubstatePostAlloc()
 }
 
-func (s *ShadowProxy) AddPreimage(hash common.Hash, plain []byte) {
-	s.run("AddPreimage", func(s state.StateDB) { s.AddPreimage(hash, plain) })
+func (s *shadowVmStateDb) AddPreimage(hash common.Hash, plain []byte) {
+	s.run("AddPreimage", func(s state.VmStateDB) { s.AddPreimage(hash, plain) })
 }
 
-func (s *ShadowProxy) ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error {
+func (s *shadowVmStateDb) ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error {
 	// ignored
 	panic("ForEachStorage not implemented")
 }
 
-func (s *ShadowProxy) StartBulkLoad(block uint64) state.BulkLoad {
+func (s *shadowStateDb) StartBulkLoad(block uint64) state.BulkLoad {
 	return &shadowBulkLoad{s.prime.StartBulkLoad(block), s.shadow.StartBulkLoad(block)}
 }
 
-func (s *ShadowProxy) GetArchiveState(block uint64) (state.StateDB, error) {
-	var prime, shadow state.StateDB
+func (s *shadowStateDb) GetArchiveState(block uint64) (state.NonCommittableStateDB, error) {
+	var prime, shadow state.NonCommittableStateDB
 	var err error
 	if prime, err = s.prime.GetArchiveState(block); err != nil {
 		return nil, err
@@ -277,16 +301,20 @@ func (s *ShadowProxy) GetArchiveState(block uint64) (state.StateDB, error) {
 	if shadow, err = s.shadow.GetArchiveState(block); err != nil {
 		return nil, err
 	}
-	return &ShadowProxy{
-		prime:     prime,
-		shadow:    shadow,
-		snapshots: []snapshotPair{},
-		err:       nil,
-		log:       s.log,
+	return &shadowNonCommittableStateDb{
+		shadowVmStateDb: shadowVmStateDb{
+			prime:     prime,
+			shadow:    shadow,
+			snapshots: []snapshotPair{},
+			err:       nil,
+			log:       s.log,
+		},
+		prime:  prime,
+		shadow: shadow,
 	}, nil
 }
 
-func (s *ShadowProxy) GetArchiveBlockHeight() (uint64, bool, error) {
+func (s *shadowStateDb) GetArchiveBlockHeight() (uint64, bool, error) {
 	// There is no strict need for both archives to be on the same level.
 	// Thus, we report the minimum of the two available block heights.
 	pBlock, pEmpty, pErr := s.prime.GetArchiveBlockHeight()
@@ -315,7 +343,7 @@ func (s stringStringer) String() string {
 	return s.str
 }
 
-func (s *ShadowProxy) GetMemoryUsage() *state.MemoryUsage {
+func (s *shadowStateDb) GetMemoryUsage() *state.MemoryUsage {
 	var (
 		breakdown strings.Builder
 		usedBytes uint64 = 0
@@ -343,7 +371,7 @@ func (s *ShadowProxy) GetMemoryUsage() *state.MemoryUsage {
 	}
 }
 
-func (s *ShadowProxy) GetShadowDB() state.StateDB {
+func (s *shadowStateDb) GetShadowDB() state.StateDB {
 	return s.shadow
 }
 
@@ -387,12 +415,22 @@ func (l *shadowBulkLoad) Close() error {
 	return nil
 }
 
-func (s *ShadowProxy) run(opName string, op func(s state.StateDB)) {
+func (s *shadowVmStateDb) run(opName string, op func(s state.VmStateDB)) {
 	op(s.prime)
 	op(s.shadow)
 }
 
-func (s *ShadowProxy) getBool(opName string, op func(s state.StateDB) bool, args ...any) bool {
+func (s *shadowNonCommittableStateDb) run(opName string, op func(s state.NonCommittableStateDB)) {
+	op(s.prime)
+	op(s.shadow)
+}
+
+func (s *shadowStateDb) run(opName string, op func(s state.StateDB)) {
+	op(s.prime)
+	op(s.shadow)
+}
+
+func (s *shadowVmStateDb) getBool(opName string, op func(s state.VmStateDB) bool, args ...any) bool {
 	resP := op(s.prime)
 	resS := op(s.shadow)
 	if resP != resS {
@@ -402,7 +440,7 @@ func (s *ShadowProxy) getBool(opName string, op func(s state.StateDB) bool, args
 	return resP
 }
 
-func (s *ShadowProxy) getBoolBool(opName string, op func(s state.StateDB) (bool, bool), args ...any) (bool, bool) {
+func (s *shadowVmStateDb) getBoolBool(opName string, op func(s state.VmStateDB) (bool, bool), args ...any) (bool, bool) {
 	resP1, resP2 := op(s.prime)
 	resS1, resS2 := op(s.shadow)
 	if resP1 != resS1 || resP2 != resS2 {
@@ -412,7 +450,7 @@ func (s *ShadowProxy) getBoolBool(opName string, op func(s state.StateDB) (bool,
 	return resP1, resP2
 }
 
-func (s *ShadowProxy) getInt(opName string, op func(s state.StateDB) int, args ...any) int {
+func (s *shadowVmStateDb) getInt(opName string, op func(s state.VmStateDB) int, args ...any) int {
 	resP := op(s.prime)
 	resS := op(s.shadow)
 	if resP != resS {
@@ -422,7 +460,7 @@ func (s *ShadowProxy) getInt(opName string, op func(s state.StateDB) int, args .
 	return resP
 }
 
-func (s *ShadowProxy) getUint64(opName string, op func(s state.StateDB) uint64, args ...any) uint64 {
+func (s *shadowVmStateDb) getUint64(opName string, op func(s state.VmStateDB) uint64, args ...any) uint64 {
 	resP := op(s.prime)
 	resS := op(s.shadow)
 	if resP != resS {
@@ -432,7 +470,7 @@ func (s *ShadowProxy) getUint64(opName string, op func(s state.StateDB) uint64, 
 	return resP
 }
 
-func (s *ShadowProxy) getHash(opName string, op func(s state.StateDB) common.Hash, args ...any) common.Hash {
+func (s *shadowVmStateDb) getHash(opName string, op func(s state.VmStateDB) common.Hash, args ...any) common.Hash {
 	resP := op(s.prime)
 	resS := op(s.shadow)
 	if resP != resS {
@@ -442,7 +480,7 @@ func (s *ShadowProxy) getHash(opName string, op func(s state.StateDB) common.Has
 	return resP
 }
 
-func (s *ShadowProxy) getBigInt(opName string, op func(s state.StateDB) *big.Int, args ...any) *big.Int {
+func (s *shadowVmStateDb) getBigInt(opName string, op func(s state.VmStateDB) *big.Int, args ...any) *big.Int {
 	resP := op(s.prime)
 	resS := op(s.shadow)
 	if resP.Cmp(resS) != 0 {
@@ -452,7 +490,7 @@ func (s *ShadowProxy) getBigInt(opName string, op func(s state.StateDB) *big.Int
 	return resP
 }
 
-func (s *ShadowProxy) getBytes(opName string, op func(s state.StateDB) []byte, args ...any) []byte {
+func (s *shadowVmStateDb) getBytes(opName string, op func(s state.VmStateDB) []byte, args ...any) []byte {
 	resP := op(s.prime)
 	resS := op(s.shadow)
 	if bytes.Compare(resP, resS) != 0 {
@@ -462,7 +500,17 @@ func (s *ShadowProxy) getBytes(opName string, op func(s state.StateDB) []byte, a
 	return resP
 }
 
-func (s *ShadowProxy) getError(opName string, op func(s state.StateDB) error, args ...any) error {
+func (s *shadowVmStateDb) getError(opName string, op func(s state.VmStateDB) error, args ...any) error {
+	resP := op(s.prime)
+	resS := op(s.shadow)
+	if resP != resS {
+		s.logIssue(opName, resP, resS, args)
+		s.err = fmt.Errorf("%v diverged from shadow DB.", getOpcodeString(opName, args))
+	}
+	return resP
+}
+
+func (s *shadowStateDb) getError(opName string, op func(s state.StateDB) error, args ...any) error {
 	resP := op(s.prime)
 	resS := op(s.shadow)
 	if resP != resS {
@@ -482,7 +530,7 @@ func getOpcodeString(opName string, args ...any) string {
 	return opcode.String()
 }
 
-func (s *ShadowProxy) logIssue(opName string, prime, shadow any, args ...any) {
+func (s *shadowVmStateDb) logIssue(opName string, prime, shadow any, args ...any) {
 	log.Printf("Diff for %v\n"+
 		"\tPrimary: %v \n"+
 		"\tShadow: %v", getOpcodeString(opName, args), prime, shadow)

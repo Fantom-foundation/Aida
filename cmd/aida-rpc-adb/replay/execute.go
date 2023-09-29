@@ -9,7 +9,7 @@ import (
 )
 
 // executeGetBalance request into given archive and send result to comparator
-func executeGetBalance(param interface{}, archive state.StateDB) (out *StateDBData) {
+func executeGetBalance(param interface{}, archive state.VmStateDB) (out *StateDBData) {
 	var (
 		address common.Address
 	)
@@ -27,7 +27,7 @@ func executeGetBalance(param interface{}, archive state.StateDB) (out *StateDBDa
 }
 
 // executeGetTransactionCount request into given archive and send result to comparator
-func executeGetTransactionCount(param interface{}, archive state.StateDB) (out *StateDBData) {
+func executeGetTransactionCount(param interface{}, archive state.VmStateDB) (out *StateDBData) {
 	var (
 		address common.Address
 	)
@@ -75,7 +75,7 @@ func executeEstimateGas(evm *EVMExecutor) (out *StateDBData) {
 }
 
 // executeGetCode request into given archive and send result to comparator
-func executeGetCode(param interface{}, archive state.StateDB) (out *StateDBData) {
+func executeGetCode(param interface{}, archive state.VmStateDB) (out *StateDBData) {
 	var (
 		address common.Address
 	)
@@ -92,7 +92,7 @@ func executeGetCode(param interface{}, archive state.StateDB) (out *StateDBData)
 }
 
 // executeGetStorageAt request into given archive and send result to comparator
-func executeGetStorageAt(params []interface{}, archive state.StateDB) (out *StateDBData) {
+func executeGetStorageAt(params []interface{}, archive state.VmStateDB) (out *StateDBData) {
 	var (
 		address   common.Address
 		hash, res common.Hash

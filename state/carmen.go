@@ -45,142 +45,156 @@ func MakeCarmenStateDB(directory, variant, archive string, schema int) (StateDB,
 		Archive:   archiveType,
 	}
 
-	db, err := carmen.NewState(params)
+	state, err := carmen.NewState(params)
 	if err != nil {
 		return nil, err
 	}
-	return &carmenStateDB{db: carmen.CreateStateDBUsing(db)}, nil
+	db := carmen.CreateStateDBUsing(state)
+	return &carmenStateDB{
+		carmenVmStateDB: carmenVmStateDB{db},
+		stateDb:         db,
+	}, nil
+}
+
+type carmenVmStateDB struct {
+	db carmen.VmStateDB
+}
+
+type carmenNonCommittableStateDB struct {
+	carmenVmStateDB
+	nonCommittableStateDB carmen.NonCommittableStateDB
 }
 
 type carmenStateDB struct {
-	db               carmen.StateDB
+	carmenVmStateDB
+	stateDb          carmen.StateDB
 	syncPeriodNumber uint64
 	blockNumber      uint64
 }
 
-func (s *carmenStateDB) CreateAccount(addr common.Address) {
+func (s *carmenVmStateDB) CreateAccount(addr common.Address) {
 	s.db.CreateAccount(cc.Address(addr))
 }
 
-func (s *carmenStateDB) Exist(addr common.Address) bool {
+func (s *carmenVmStateDB) Exist(addr common.Address) bool {
 	return s.db.Exist(cc.Address(addr))
 }
 
-func (s *carmenStateDB) Empty(addr common.Address) bool {
+func (s *carmenVmStateDB) Empty(addr common.Address) bool {
 	return s.db.Empty(cc.Address(addr))
 }
 
-func (s *carmenStateDB) Suicide(addr common.Address) bool {
+func (s *carmenVmStateDB) Suicide(addr common.Address) bool {
 	return s.db.Suicide(cc.Address(addr))
 }
 
-func (s *carmenStateDB) HasSuicided(addr common.Address) bool {
+func (s *carmenVmStateDB) HasSuicided(addr common.Address) bool {
 	return s.db.HasSuicided(cc.Address(addr))
 }
 
-func (s *carmenStateDB) GetBalance(addr common.Address) *big.Int {
+func (s *carmenVmStateDB) GetBalance(addr common.Address) *big.Int {
 	return s.db.GetBalance(cc.Address(addr))
 }
 
-func (s *carmenStateDB) AddBalance(addr common.Address, value *big.Int) {
+func (s *carmenVmStateDB) AddBalance(addr common.Address, value *big.Int) {
 	s.db.AddBalance(cc.Address(addr), value)
 }
 
-func (s *carmenStateDB) SubBalance(addr common.Address, value *big.Int) {
+func (s *carmenVmStateDB) SubBalance(addr common.Address, value *big.Int) {
 	s.db.SubBalance(cc.Address(addr), value)
 }
 
-func (s *carmenStateDB) GetNonce(addr common.Address) uint64 {
+func (s *carmenVmStateDB) GetNonce(addr common.Address) uint64 {
 	return s.db.GetNonce(cc.Address(addr))
 }
 
-func (s *carmenStateDB) SetNonce(addr common.Address, value uint64) {
+func (s *carmenVmStateDB) SetNonce(addr common.Address, value uint64) {
 	s.db.SetNonce(cc.Address(addr), value)
 }
 
-func (s *carmenStateDB) GetCommittedState(addr common.Address, key common.Hash) common.Hash {
+func (s *carmenVmStateDB) GetCommittedState(addr common.Address, key common.Hash) common.Hash {
 	return common.Hash(s.db.GetCommittedState(cc.Address(addr), cc.Key(key)))
 }
 
-func (s *carmenStateDB) GetState(addr common.Address, key common.Hash) common.Hash {
+func (s *carmenVmStateDB) GetState(addr common.Address, key common.Hash) common.Hash {
 	return common.Hash(s.db.GetState(cc.Address(addr), cc.Key(key)))
 }
 
-func (s *carmenStateDB) SetState(addr common.Address, key common.Hash, value common.Hash) {
+func (s *carmenVmStateDB) SetState(addr common.Address, key common.Hash, value common.Hash) {
 	s.db.SetState(cc.Address(addr), cc.Key(key), cc.Value(value))
 }
 
-func (s *carmenStateDB) GetCode(addr common.Address) []byte {
+func (s *carmenVmStateDB) GetCode(addr common.Address) []byte {
 	return s.db.GetCode(cc.Address(addr))
 }
 
-func (s *carmenStateDB) GetCodeSize(addr common.Address) int {
+func (s *carmenVmStateDB) GetCodeSize(addr common.Address) int {
 	return s.db.GetCodeSize(cc.Address(addr))
 }
 
-func (s *carmenStateDB) GetCodeHash(addr common.Address) common.Hash {
+func (s *carmenVmStateDB) GetCodeHash(addr common.Address) common.Hash {
 	return common.Hash(s.db.GetCodeHash(cc.Address(addr)))
 }
 
-func (s *carmenStateDB) SetCode(addr common.Address, code []byte) {
+func (s *carmenVmStateDB) SetCode(addr common.Address, code []byte) {
 	s.db.SetCode(cc.Address(addr), code)
 }
 
-func (s *carmenStateDB) Snapshot() int {
+func (s *carmenVmStateDB) Snapshot() int {
 	return s.db.Snapshot()
 }
 
-func (s *carmenStateDB) RevertToSnapshot(id int) {
+func (s *carmenVmStateDB) RevertToSnapshot(id int) {
 	s.db.RevertToSnapshot(id)
 }
 
-func (s *carmenStateDB) BeginTransaction(uint32) {
+func (s *carmenVmStateDB) BeginTransaction(uint32) {
 	s.db.BeginTransaction()
 }
 
-func (s *carmenStateDB) EndTransaction() {
+func (s *carmenVmStateDB) EndTransaction() {
 	s.db.EndTransaction()
 }
 
 func (s *carmenStateDB) BeginBlock(block uint64) {
-	s.db.BeginBlock()
+	s.stateDb.BeginBlock()
 	s.blockNumber = block
 }
 
 func (s *carmenStateDB) EndBlock() {
-	s.db.EndBlock(s.blockNumber)
+	s.stateDb.EndBlock(s.blockNumber)
 }
 
 func (s *carmenStateDB) BeginSyncPeriod(number uint64) {
-	s.db.BeginEpoch()
+	s.stateDb.BeginEpoch()
 	s.syncPeriodNumber = number
 }
 
 func (s *carmenStateDB) EndSyncPeriod() {
-	s.db.EndEpoch(s.syncPeriodNumber)
+	s.stateDb.EndEpoch(s.syncPeriodNumber)
 }
 
-func (s *carmenStateDB) GetHash() common.Hash {
+func (s *carmenVmStateDB) GetHash() common.Hash {
 	return common.Hash(s.db.GetHash())
 }
 
 func (s *carmenStateDB) Close() error {
-	return s.db.Close()
+	return s.stateDb.Close()
 }
 
-func (s *carmenStateDB) AddRefund(amount uint64) {
+func (s *carmenVmStateDB) AddRefund(amount uint64) {
 	s.db.AddRefund(amount)
 }
 
-func (s *carmenStateDB) SubRefund(amount uint64) {
+func (s *carmenVmStateDB) SubRefund(amount uint64) {
 	s.db.SubRefund(amount)
 }
 
-func (s *carmenStateDB) GetRefund() uint64 {
+func (s *carmenVmStateDB) GetRefund() uint64 {
 	return s.db.GetRefund()
 }
 
-func (s *carmenStateDB) PrepareAccessList(sender common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
+func (s *carmenVmStateDB) PrepareAccessList(sender common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
 	s.db.ClearAccessList()
 	s.db.AddAddressToAccessList(cc.Address(sender))
 	if dest != nil {
@@ -197,23 +211,23 @@ func (s *carmenStateDB) PrepareAccessList(sender common.Address, dest *common.Ad
 	}
 }
 
-func (s *carmenStateDB) AddressInAccessList(addr common.Address) bool {
+func (s *carmenVmStateDB) AddressInAccessList(addr common.Address) bool {
 	return s.db.IsAddressInAccessList(cc.Address(addr))
 }
 
-func (s *carmenStateDB) SlotInAccessList(addr common.Address, slot common.Hash) (addressOk bool, slotOk bool) {
+func (s *carmenVmStateDB) SlotInAccessList(addr common.Address, slot common.Hash) (addressOk bool, slotOk bool) {
 	return s.db.IsSlotInAccessList(cc.Address(addr), cc.Key(slot))
 }
 
-func (s *carmenStateDB) AddAddressToAccessList(addr common.Address) {
+func (s *carmenVmStateDB) AddAddressToAccessList(addr common.Address) {
 	s.db.AddAddressToAccessList(cc.Address(addr))
 }
 
-func (s *carmenStateDB) AddSlotToAccessList(addr common.Address, slot common.Hash) {
+func (s *carmenVmStateDB) AddSlotToAccessList(addr common.Address, slot common.Hash) {
 	s.db.AddSlotToAccessList(cc.Address(addr), cc.Key(slot))
 }
 
-func (s *carmenStateDB) AddLog(log *types.Log) {
+func (s *carmenVmStateDB) AddLog(log *types.Log) {
 	topics := make([]cc.Hash, 0, len(log.Topics))
 	for _, topic := range log.Topics {
 		topics = append(topics, cc.Hash(topic))
@@ -225,7 +239,7 @@ func (s *carmenStateDB) AddLog(log *types.Log) {
 	})
 }
 
-func (s *carmenStateDB) GetLogs(common.Hash, common.Hash) []*types.Log {
+func (s *carmenVmStateDB) GetLogs(common.Hash, common.Hash) []*types.Log {
 	list := s.db.GetLogs()
 
 	res := make([]*types.Log, 0, len(list))
@@ -258,7 +272,7 @@ func (s *carmenStateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 	return common.Hash{}, nil
 }
 
-func (s *carmenStateDB) Prepare(thash common.Hash, ti int) {
+func (s *carmenVmStateDB) Prepare(thash common.Hash, ti int) {
 	// ignored
 }
 
@@ -266,17 +280,17 @@ func (s *carmenStateDB) PrepareSubstate(substate *substate.SubstateAlloc, block 
 	// ignored
 }
 
-func (s *carmenStateDB) GetSubstatePostAlloc() substate.SubstateAlloc {
+func (s *carmenVmStateDB) GetSubstatePostAlloc() substate.SubstateAlloc {
 	// ignored
 	return substate.SubstateAlloc{}
 }
 
-func (s *carmenStateDB) AddPreimage(common.Hash, []byte) {
+func (s *carmenVmStateDB) AddPreimage(common.Hash, []byte) {
 	// ignored
 	panic("AddPreimage not implemented")
 }
 
-func (s *carmenStateDB) ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error {
+func (s *carmenVmStateDB) ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error {
 	// ignored
 	panic("ForEachStorage not implemented")
 }
@@ -287,24 +301,35 @@ func (s *carmenStateDB) Error() error {
 }
 
 func (s *carmenStateDB) StartBulkLoad(block uint64) BulkLoad {
-	return &carmenBulkLoad{s.db.StartBulkLoad(block)}
+	return &carmenBulkLoad{s.stateDb.StartBulkLoad(block)}
 }
 
-func (s *carmenStateDB) GetArchiveState(block uint64) (StateDB, error) {
-	state, err := s.db.GetArchiveStateDB(block)
+func (s *carmenStateDB) GetArchiveState(block uint64) (NonCommittableStateDB, error) {
+	archive, err := s.stateDb.GetArchiveStateDB(block)
 	if err != nil {
 		return nil, err
 	}
-	return &carmenStateDB{db: state}, nil
+	return &carmenNonCommittableStateDB{
+		carmenVmStateDB:       carmenVmStateDB{archive},
+		nonCommittableStateDB: archive,
+	}, nil
 }
 
 func (s *carmenStateDB) GetArchiveBlockHeight() (uint64, bool, error) {
-	return s.db.GetArchiveBlockHeight()
+	return s.stateDb.GetArchiveBlockHeight()
 }
 
 func (s *carmenStateDB) GetMemoryUsage() *MemoryUsage {
-	usage := s.db.GetMemoryFootprint()
+	usage := s.stateDb.GetMemoryFootprint()
 	return &MemoryUsage{uint64(usage.Total()), usage}
+}
+
+func (s *carmenStateDB) GetShadowDB() StateDB {
+	return nil
+}
+
+func (s *carmenNonCommittableStateDB) Release() {
+	s.nonCommittableStateDB.Release()
 }
 
 type carmenBulkLoad struct {
@@ -333,8 +358,4 @@ func (l *carmenBulkLoad) SetCode(addr common.Address, code []byte) {
 
 func (l *carmenBulkLoad) Close() error {
 	return l.load.Close()
-}
-
-func (s *carmenStateDB) GetShadowDB() StateDB {
-	return nil
 }

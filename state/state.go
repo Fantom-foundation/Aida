@@ -11,7 +11,9 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-type BasicStateDB interface {
+// VmStateDB is the basic StateDB interface required by the EVM and related
+// transaction processing components for interacting with the StateDB.
+type VmStateDB interface {
 	// Account management.
 	CreateAccount(common.Address)
 	Exist(common.Address) bool
@@ -59,15 +61,57 @@ type BasicStateDB interface {
 	// Transaction handling
 	// There are 4 layers of concepts governing the visibility of state effects:
 	//  - snapshots .. enclosing (sub-)contract calls, supporting reverts (=rollbacks)
-	//  - transactions .. processing a single block chain event, comprising a hierachy of contract calls
+	//  - transactions .. processing a single block chain event, comprising a hierarchy of contract calls
 	//  - blocks .. groups of transactions, at boundaries effects become visible (and final) to API servers
-	//  - sync-periods .. groups of blocks, at boundaries state becomes syncable between nodes
+	//  - sync-periods .. groups of blocks, at boundaries state becomes synchronizable between nodes
 
 	Snapshot() int
 	RevertToSnapshot(int)
 
 	BeginTransaction(uint32)
 	EndTransaction()
+
+	// ---- Artifacts from Geth dependency ----
+
+	// The following functions may be used by the Geth implementations for backward-compatibility
+	// and will be called accordingly by the tracer and EVM runner. However, implementations may
+	// chose to ignore those.
+
+	Prepare(common.Hash, int)
+	AddPreimage(common.Hash, []byte)
+	ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error
+
+	// ---- Optional Development & Debugging Features ----
+
+	// Substate specific
+	GetSubstatePostAlloc() substate.SubstateAlloc
+}
+
+// NonCommittableStateDB is an extension of the VmStateDB interface and is intended
+// to serve as the type used for referencing immutable historical state, in particular
+// state views obtained from Archive DBs. While transaction-local updates and
+// modifications are allowed, the interface does not provide means for persisting those
+// changes (=commit them).
+type NonCommittableStateDB interface {
+	VmStateDB
+
+	// GetHash obtains a cryptographic hash certifying the committed content of the
+	// represented state. It does not consider any temporary modifications conducted
+	// through the VmStateDB interface on the state.
+	GetHash() common.Hash
+
+	// Release frees resources bound by this view. Release should be called on every
+	// instance once all operations have been completed. Once released, no further
+	// operations on the respective instance are allowed.
+	Release()
+}
+
+// StateDB is an extension of the VmStateDB interface adding general DB management
+// operations that are beyond the interface required by the EVM. In particular,
+// this includes the handling of blocks and sync-periods, archive handling, and
+// BulkLoad support.
+type StateDB interface {
+	VmStateDB
 
 	BeginBlock(uint64)
 	EndBlock()
@@ -83,10 +127,6 @@ type BasicStateDB interface {
 	GetHash() common.Hash
 
 	Error() error
-}
-
-type StateDB interface {
-	BasicStateDB
 
 	// Requests the StateDB to flush all its content to secondary storage and shut down.
 	// After this call no more operations will be allowed on the state.
@@ -102,7 +142,7 @@ type StateDB interface {
 	// GetArchiveState creates a state instance linked to a historic block state in an
 	// optionally present archive. The operation fails if there is no archive or the
 	// specified block is not present in the archive.
-	GetArchiveState(block uint64) (StateDB, error)
+	GetArchiveState(block uint64) (NonCommittableStateDB, error)
 
 	// GetArchiveBlockHeight provides the block height available in the archive.
 	// An error is returned if the archive is not enabled or a lookup issue occurred.
@@ -118,17 +158,11 @@ type StateDB interface {
 	// and will be called accordingly by the tracer and EVM runner. However, implementations may
 	// chose to ignore those.
 
-	Prepare(common.Hash, int)
-	AddPreimage(common.Hash, []byte)
 	Finalise(bool)
 	IntermediateRoot(bool) common.Hash
 	Commit(bool) (common.Hash, error)
-	ForEachStorage(common.Address, func(common.Hash, common.Hash) bool) error
 
 	// ---- Optional Development & Debugging Features ----
-
-	// Substate specific
-	GetSubstatePostAlloc() substate.SubstateAlloc
 
 	// Used to initiate the state DB for the next transaction.
 	// This is mainly for development purposes to support in-memory DB implementations.

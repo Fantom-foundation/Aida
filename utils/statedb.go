@@ -265,7 +265,7 @@ func GetDirectorySize(directory string) int64 {
 
 // ValidateStateDB validates whether the world-state is contained in the db object.
 // NB: We can only check what must be in the db (but cannot check whether db stores more).
-func ValidateStateDB(ws substate.SubstateAlloc, db state.StateDB, updateOnFail bool) error {
+func ValidateStateDB(ws substate.SubstateAlloc, db state.VmStateDB, updateOnFail bool) error {
 	var err string
 	for addr, account := range ws {
 		if !db.Exist(addr) {

@@ -31,7 +31,7 @@ var (
 )
 
 // ProcessTx detects transaction type
-func ProcessTx(db state.StateDB, cfg *Config, block uint64, tx int, st *substate.Substate) (time.Duration, error) {
+func ProcessTx(db state.VmStateDB, cfg *Config, block uint64, tx int, st *substate.Substate) (time.Duration, error) {
 	var (
 		runtime time.Duration
 		err     error
@@ -51,7 +51,7 @@ func ProcessTx(db state.StateDB, cfg *Config, block uint64, tx int, st *substate
 }
 
 // processRegularTx executes VM on a chosen storage system.
-func processRegularTx(db state.StateDB, cfg *Config, block uint64, tx int, st *substate.Substate) (runtime time.Duration, txerr error) {
+func processRegularTx(db state.VmStateDB, cfg *Config, block uint64, tx int, st *substate.Substate) (runtime time.Duration, txerr error) {
 	db.BeginTransaction(uint32(tx))
 	defer db.EndTransaction()
 
@@ -148,7 +148,7 @@ func processRegularTx(db state.StateDB, cfg *Config, block uint64, tx int, st *s
 
 // processPseudoTx processes pseudo transactions in Lachesis by applying the change in db state.
 // The pseudo transactions includes Lachesis SFC, lachesis genesis and lachesis-opera transition.
-func processPseudoTx(sa substate.SubstateAlloc, db state.StateDB) {
+func processPseudoTx(sa substate.SubstateAlloc, db state.VmStateDB) {
 	db.BeginTransaction(PseudoTx)
 	for addr, account := range sa {
 		db.SubBalance(addr, db.GetBalance(addr))
@@ -222,7 +222,7 @@ func validateVMResult(vmResult, expectedResult *substate.SubstateResult) error {
 // validateVMAlloc compares states of accounts in stateDB to an expected set of states.
 // If fullState mode, check if expected stae is contained in stateDB.
 // If partialState mode, check for equality of sets.
-func validateVMAlloc(db state.StateDB, expectedAlloc substate.SubstateAlloc, cfg *Config) error {
+func validateVMAlloc(db state.VmStateDB, expectedAlloc substate.SubstateAlloc, cfg *Config) error {
 	var err error
 	switch cfg.StateValidationMode {
 	case SubsetCheck:
