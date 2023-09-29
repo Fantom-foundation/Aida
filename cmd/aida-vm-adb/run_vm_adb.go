@@ -31,6 +31,21 @@ func RunVmAdb(ctx *cli.Context) error {
 	return run(cfg, substateDb, nil, false)
 }
 
+type archiveGetter struct {
+	extension.NilExtension
+}
+
+// PreBlock sends needed archive to the processor.
+func (r *archiveGetter) PreBlock(state executor.State, context *executor.Context) error {
+	var err error
+	context.State, err = context.State.GetArchiveState(uint64(state.Block) - 1)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 type txProcessor struct {
 	config *utils.Config
 }
@@ -55,6 +70,7 @@ func run(config *utils.Config, provider executor.SubstateProvider, stateDb state
 	}
 
 	extensionList = append(extensionList, []executor.Extension{
+		&archiveGetter{},
 		extension.MakeProgressLogger(config, 0),
 		extension.MakeStateDbPreparator(),
 		extension.MakeBeginOnlyEmitter(),

@@ -131,7 +131,7 @@ type Extension interface {
 	// called when running with multiple workers.
 	PreBlock(State, *Context) error
 
-	// PreBlock is called once after the end of processing a block with
+	// PostBlock is called once after the end of processing a block with
 	// the state containing the number of the Block and the last transaction
 	// processed in the block. This function is not called when running with
 	// multiple workers.
@@ -444,19 +444,19 @@ func (e *executor) runParallelBlock(params Params, processor Processor, extensio
 					localState.Block = blockTransactions[0].Block
 					localContext := *context
 
-					var err error
+					//var err error
 					// todo move to preblock - extension probably exists
-					localContext.State, err = context.State.GetArchiveState(uint64(blockTransactions[0].Block) - 1)
-					if err != nil {
+					//localContext.State, err = context.State.GetArchiveState(uint64(blockTransactions[0].Block) - 1)
+					//if err != nil {
+					//	workerErrs[i] = err
+					//	abort.Signal()
+					//	return
+					//}
+					if err := signalPreBlock(localState, &localContext, extensions); err != nil {
 						workerErrs[i] = err
 						abort.Signal()
 						return
 					}
-					// if err := signalPreBlock(localState, &localContext, extensions); err != nil {
-					// 	workerErrs[i] = err
-					// 	abort.Signal()
-					// 	return
-					// }
 
 					for _, tx := range blockTransactions {
 						localState.Substate = tx.Substate
@@ -477,12 +477,11 @@ func (e *executor) runParallelBlock(params Params, processor Processor, extensio
 						}
 					}
 
-					// TODO postblock with local context
-					// if err := signalPostBlock(localState, &localContext, extensions); err != nil {
-					// 	workerErrs[i] = err
-					// 	abort.Signal()
-					// 	return
-					// }
+					if err := signalPostBlock(localState, &localContext, extensions); err != nil {
+						workerErrs[i] = err
+						abort.Signal()
+						return
+					}
 				case <-abort.Wait():
 					return
 				}
