@@ -225,6 +225,9 @@ func (e *executor) runSequential(params Params, processor Processor, extensions 
 	first := true
 
 	err := e.substate.Run(params.From, params.To, func(tx TransactionInfo) error {
+		// TODO rewrite
+		txState.Substate = tx.Substate
+
 		if first {
 			txState.Block = tx.Block
 			if err := signalPreBlock(*txState, context, extensions); err != nil {
@@ -377,7 +380,7 @@ func (e *executor) runParallelBlock(params Params, processor Processor, extensio
 
 		block := make([]*TransactionInfo, 0)
 		err := e.substate.Run(params.From, params.To, func(tx TransactionInfo) error {
-			// TODO rewrite
+			// TODO rewrite first tx with id0 or pseudo is not mandatory
 			if len(block) > 0 && (tx.Transaction == 0 || tx.Transaction == utils.PseudoTx) {
 				select {
 				case blocks <- &block:
@@ -449,8 +452,11 @@ func (e *executor) runParallelBlock(params Params, processor Processor, extensio
 						abort.Signal()
 						return
 					}
-
-					// TODO preblock
+					// if err := signalPreBlock(localState, &localContext, extensions); err != nil {
+					// 	workerErrs[i] = err
+					// 	abort.Signal()
+					// 	return
+					// }
 
 					for _, tx := range blockTransactions {
 						localState.Substate = tx.Substate
@@ -472,6 +478,11 @@ func (e *executor) runParallelBlock(params Params, processor Processor, extensio
 					}
 
 					// TODO postblock with local context
+					// if err := signalPostBlock(localState, &localContext, extensions); err != nil {
+					// 	workerErrs[i] = err
+					// 	abort.Signal()
+					// 	return
+					// }
 				case <-abort.Wait():
 					return
 				}
