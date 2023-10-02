@@ -382,7 +382,7 @@ func (e *executor) runParallelBlock(params Params, processor Processor, extensio
 
 	// Start one go-routine forwarding blocks from the provider to a local channel.
 	var forwardErr error
-	blocks := make(chan *[]*TransactionInfo, 10*numWorkers)
+	blocks := make(chan []*TransactionInfo, 10*numWorkers)
 	go func() {
 		defer close(blocks)
 		abortErr := errors.New("aborted")
@@ -395,7 +395,7 @@ func (e *executor) runParallelBlock(params Params, processor Processor, extensio
 			if tx.Block != previousBlock {
 				previousBlock = tx.Block
 				select {
-				case blocks <- &block:
+				case blocks <- block:
 					// clean block for reuse
 					block = make([]*TransactionInfo, 0)
 				case <-abort.Wait():
@@ -411,7 +411,7 @@ func (e *executor) runParallelBlock(params Params, processor Processor, extensio
 		// send last block to the queue
 		if err == nil {
 			select {
-			case blocks <- &block:
+			case blocks <- block:
 			case <-abort.Wait():
 				err = abortErr
 			}
@@ -444,7 +444,7 @@ func (e *executor) runParallelBlock(params Params, processor Processor, extensio
 						return // reached an end without abort
 					}
 
-					blockTransactions := *block
+					blockTransactions := block
 
 					// shouldn't occur
 					if len(blockTransactions) == 0 {
