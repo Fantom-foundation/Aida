@@ -48,7 +48,7 @@ type archiveGetter struct {
 // PreBlock sends needed archive to the processor.
 func (r *archiveGetter) PreBlock(state executor.State, context *executor.Context) error {
 	var err error
-	context.State, err = context.State.GetArchiveState(uint64(state.Block) - 1)
+	context.Archive, err = context.State.GetArchiveState(uint64(state.Block) - 1)
 	if err != nil {
 		return err
 	}
@@ -64,7 +64,7 @@ type txProcessor struct {
 
 func (r txProcessor) Process(state executor.State, context *executor.Context) error {
 	_, err := utils.ProcessTx(
-		context.State,
+		context.Archive,
 		r.config,
 		uint64(state.Block),
 		state.Transaction,

@@ -192,6 +192,9 @@ type Context struct {
 	// and extensions of a block-range execution.
 	State state.StateDB
 
+	// Archive represents a historical State
+	Archive state.NonCommittableStateDB
+
 	// StateDbPath contains path to working stateDb directory
 	StateDbPath string
 }
