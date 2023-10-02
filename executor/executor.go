@@ -283,6 +283,128 @@ func (e *executor) runSequential(params Params, processor Processor, extensions 
 	return nil
 }
 
+type inputChannels interface {
+	chan []*TransactionInfo | chan *TransactionInfo
+}
+
+func runBlocks(numWorkers int, blocks chan []*TransactionInfo, wg *sync.WaitGroup, abort utils.Event, workerErrs []error, processor Processor, extensions []Extension, state *State, context *Context) atomic.Value {
+	var cachedPanic atomic.Value
+	wg.Add(numWorkers)
+
+	for i := 0; i < numWorkers; i++ {
+		go func(i int) {
+			// channel panics back to the main thread.
+			defer func() {
+				if r := recover(); r != nil {
+					abort.Signal() // stop forwarder and other workers too
+					cachedPanic.Store(r)
+				}
+			}()
+			defer wg.Done()
+			for {
+				select {
+				case block := <-blocks:
+					if block == nil {
+						return // reached an end without abort
+					}
+
+					blockTransactions := block
+
+					// shouldn't occur
+					if len(blockTransactions) == 0 {
+						continue
+					}
+
+					// each block has separate context
+					localState := *state
+					localState.Block = blockTransactions[0].Block
+					localContext := *context
+
+					if err := signalPreBlock(localState, &localContext, extensions); err != nil {
+						workerErrs[i] = err
+						abort.Signal()
+						return
+					}
+
+					for _, tx := range blockTransactions {
+						localState.Substate = tx.Substate
+						localState.Transaction = tx.Transaction
+
+						if err := runTransaction(localState, &localContext, tx.Substate, processor, extensions); err != nil {
+							workerErrs[i] = err
+							abort.Signal()
+							return
+						}
+
+						// listen for possible abort between the transactions
+						select {
+						case <-abort.Wait():
+							return
+						default:
+							continue
+						}
+					}
+
+					if err := signalPostBlock(localState, &localContext, extensions); err != nil {
+						workerErrs[i] = err
+						abort.Signal()
+						return
+					}
+				case <-abort.Wait():
+					return
+				}
+			}
+		}(i)
+	}
+
+	return cachedPanic
+}
+
+// forwardBlocks is a worker that unites transactions by block and forwards them to execution.
+func (e *executor) forwardBlocks(params Params, abort utils.Event, forwardErr *error) chan []*TransactionInfo {
+	blocks := make(chan []*TransactionInfo, 10*params.NumWorkers)
+
+	go func() {
+		defer close(blocks)
+		abortErr := errors.New("aborted")
+
+		previousBlock := params.From
+
+		block := make([]*TransactionInfo, 0)
+		err := e.substate.Run(params.From, params.To, func(tx TransactionInfo) error {
+			if tx.Block != previousBlock {
+				previousBlock = tx.Block
+				select {
+				case blocks <- block:
+					// clean block for reuse
+					block = make([]*TransactionInfo, 0)
+				case <-abort.Wait():
+					return abortErr
+				}
+			}
+
+			block = append(block, &tx)
+
+			return nil
+		})
+
+		// send last block to the queue
+		if err == nil {
+			select {
+			case blocks <- block:
+			case <-abort.Wait():
+				err = abortErr
+			}
+		}
+
+		if err != abortErr {
+			*forwardErr = err
+		}
+	}()
+
+	return blocks
+}
+
 func (e *executor) runParallelTransaction(params Params, processor Processor, extensions []Extension, state *State, context *Context) error {
 	numWorkers := params.NumWorkers
 
@@ -381,117 +503,15 @@ func (e *executor) runParallelBlock(params Params, processor Processor, extensio
 	abort := utils.MakeEvent()
 
 	// Start one go-routine forwarding blocks from the provider to a local channel.
-	var forwardErr error
-	blocks := make(chan []*TransactionInfo, 10*numWorkers)
-	go func() {
-		defer close(blocks)
-		abortErr := errors.New("aborted")
-
-		previousBlock := params.From
-
-		block := make([]*TransactionInfo, 0)
-		err := e.substate.Run(params.From, params.To, func(tx TransactionInfo) error {
-			// TODO rewrite first tx with id0 or pseudo is not mandatory
-			if tx.Block != previousBlock {
-				previousBlock = tx.Block
-				select {
-				case blocks <- block:
-					// clean block for reuse
-					block = make([]*TransactionInfo, 0)
-				case <-abort.Wait():
-					return abortErr
-				}
-			}
-
-			block = append(block, &tx)
-
-			return nil
-		})
-
-		// send last block to the queue
-		if err == nil {
-			select {
-			case blocks <- block:
-			case <-abort.Wait():
-				err = abortErr
-			}
-		}
-
-		if err != abortErr {
-			forwardErr = err
-		}
-	}()
+	var forwardErr *error
+	blocks := e.forwardBlocks(params, abort, forwardErr)
 
 	// Start numWorkers go-routines processing blocks in parallel.
-	var cachedPanic atomic.Value
-	var wg sync.WaitGroup
-	wg.Add(numWorkers)
+	wg := new(sync.WaitGroup)
 	workerErrs := make([]error, numWorkers)
-	for i := 0; i < numWorkers; i++ {
-		go func(i int) {
-			// channel panics back to the main thread.
-			defer func() {
-				if r := recover(); r != nil {
-					abort.Signal() // stop forwarder and other workers too
-					cachedPanic.Store(r)
-				}
-			}()
-			defer wg.Done()
-			for {
-				select {
-				case block := <-blocks:
-					if block == nil {
-						return // reached an end without abort
-					}
 
-					blockTransactions := block
+	cachedPanic := runBlocks(params.NumWorkers, blocks, wg, abort, workerErrs, processor, extensions, state, context)
 
-					// shouldn't occur
-					if len(blockTransactions) == 0 {
-						continue
-					}
-
-					// each block has separate context
-					localState := *state
-					localState.Block = blockTransactions[0].Block
-					localContext := *context
-
-					if err := signalPreBlock(localState, &localContext, extensions); err != nil {
-						workerErrs[i] = err
-						abort.Signal()
-						return
-					}
-
-					for _, tx := range blockTransactions {
-						localState.Substate = tx.Substate
-						localState.Transaction = tx.Transaction
-
-						if err := runTransaction(localState, &localContext, tx.Substate, processor, extensions); err != nil {
-							workerErrs[i] = err
-							abort.Signal()
-							return
-						}
-
-						// listen for possible abort between the transactions
-						select {
-						case <-abort.Wait():
-							return
-						default:
-							continue
-						}
-					}
-
-					if err := signalPostBlock(localState, &localContext, extensions); err != nil {
-						workerErrs[i] = err
-						abort.Signal()
-						return
-					}
-				case <-abort.Wait():
-					return
-				}
-			}
-		}(i)
-	}
 	wg.Wait()
 
 	if r := cachedPanic.Load(); r != nil {
@@ -499,7 +519,7 @@ func (e *executor) runParallelBlock(params Params, processor Processor, extensio
 	}
 
 	err := errors.Join(
-		forwardErr,
+		*forwardErr,
 		errors.Join(workerErrs...),
 	)
 	if err == nil {
