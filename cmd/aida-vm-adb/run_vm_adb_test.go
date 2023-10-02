@@ -35,7 +35,6 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder(t *testing.T) {
 	// are properly opened, prepared, executed, and closed.
 	gomock.InOrder(
 		db.EXPECT().GetArchiveState(uint64(0)).Return(archive, nil),
-		archive.EXPECT().BeginBlock(uint64(0)),
 		archive.EXPECT().BeginTransaction(uint32(0)),
 		archive.EXPECT().Prepare(gomock.Any(), 0),
 		archive.EXPECT().Snapshot().Return(15),

@@ -53,8 +53,6 @@ func (r *archiveGetter) PreBlock(state executor.State, context *executor.Context
 		return err
 	}
 
-	context.State.BeginBlock(uint64(state.Block) - 1)
-
 	return nil
 }
 
