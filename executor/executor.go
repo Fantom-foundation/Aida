@@ -506,7 +506,7 @@ func (e *executor) runParallelBlock(params Params, processor Processor, extensio
 
 	wg.Add(numWorkers)
 	for i := 0; i < numWorkers; i++ {
-		go runBlock(params.NumWorkers, blocks, wg, abort, workerErrs, processor, extensions, context, cachedPanic)
+		go runBlock(i, blocks, wg, abort, workerErrs, processor, extensions, context, cachedPanic)
 	}
 
 	wg.Wait()
