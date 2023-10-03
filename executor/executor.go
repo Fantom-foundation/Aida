@@ -283,81 +283,73 @@ func (e *executor) runSequential(params Params, processor Processor, extensions 
 	return nil
 }
 
-type inputChannels interface {
-	chan []*TransactionInfo | chan *TransactionInfo
-}
+// runBlock runs transaction execution in a block
+func runBlock(
+	workerNumber int,
+	blocks chan []*TransactionInfo,
+	wg *sync.WaitGroup,
+	abort utils.Event,
+	workerErrs []error,
+	processor Processor,
+	extensions []Extension,
+	context *Context,
+	cachedPanic *atomic.Value,
+) {
 
-func runBlocks(numWorkers int, blocks chan []*TransactionInfo, wg *sync.WaitGroup, abort utils.Event, workerErrs []error, processor Processor, extensions []Extension, state *State, context *Context) atomic.Value {
-	var cachedPanic atomic.Value
-	wg.Add(numWorkers)
+	// channel panics back to the main thread.
+	defer func() {
+		if r := recover(); r != nil {
+			abort.Signal() // stop forwarder and other workers too
+			cachedPanic.Store(r)
+		}
+		wg.Done()
+	}()
 
-	for i := 0; i < numWorkers; i++ {
-		go func(i int) {
-			// channel panics back to the main thread.
-			defer func() {
-				if r := recover(); r != nil {
-					abort.Signal() // stop forwarder and other workers too
-					cachedPanic.Store(r)
-				}
-			}()
-			defer wg.Done()
-			for {
-				select {
-				case block := <-blocks:
-					if block == nil {
-						return // reached an end without abort
-					}
+	var localState State
+	for {
+		select {
+		case blockTransactions := <-blocks:
+			if blockTransactions == nil {
+				return // reached an end without abort
+			}
 
-					blockTransactions := block
+			localState.Block = blockTransactions[0].Block
+			localContext := *context
 
-					// shouldn't occur
-					if len(blockTransactions) == 0 {
-						continue
-					}
+			if err := signalPreBlock(localState, &localContext, extensions); err != nil {
+				workerErrs[workerNumber] = err
+				abort.Signal()
+				return
+			}
 
-					// each block has separate context
-					localState := *state
-					localState.Block = blockTransactions[0].Block
-					localContext := *context
+			for _, tx := range blockTransactions {
+				localState.Substate = tx.Substate
+				localState.Transaction = tx.Transaction
 
-					if err := signalPreBlock(localState, &localContext, extensions); err != nil {
-						workerErrs[i] = err
-						abort.Signal()
-						return
-					}
-
-					for _, tx := range blockTransactions {
-						localState.Substate = tx.Substate
-						localState.Transaction = tx.Transaction
-
-						if err := runTransaction(localState, &localContext, tx.Substate, processor, extensions); err != nil {
-							workerErrs[i] = err
-							abort.Signal()
-							return
-						}
-
-						// listen for possible abort between the transactions
-						select {
-						case <-abort.Wait():
-							return
-						default:
-							continue
-						}
-					}
-
-					if err := signalPostBlock(localState, &localContext, extensions); err != nil {
-						workerErrs[i] = err
-						abort.Signal()
-						return
-					}
-				case <-abort.Wait():
+				if err := runTransaction(localState, &localContext, tx.Substate, processor, extensions); err != nil {
+					workerErrs[workerNumber] = err
+					abort.Signal()
 					return
 				}
-			}
-		}(i)
-	}
 
-	return cachedPanic
+				// listen for possible abort between the transactions
+				select {
+				case <-abort.Wait():
+					return
+				default:
+					continue
+				}
+			}
+
+			if err := signalPostBlock(localState, &localContext, extensions); err != nil {
+				workerErrs[workerNumber] = err
+				abort.Signal()
+				return
+			}
+		case <-abort.Wait():
+			return
+		}
+	}
 }
 
 // forwardBlocks is a worker that unites transactions by block and forwards them to execution.
@@ -510,7 +502,12 @@ func (e *executor) runParallelBlock(params Params, processor Processor, extensio
 	wg := new(sync.WaitGroup)
 	workerErrs := make([]error, numWorkers)
 
-	cachedPanic := runBlocks(params.NumWorkers, blocks, wg, abort, workerErrs, processor, extensions, state, context)
+	cachedPanic := new(atomic.Value)
+
+	wg.Add(numWorkers)
+	for i := 0; i < numWorkers; i++ {
+		go runBlock(params.NumWorkers, blocks, wg, abort, workerErrs, processor, extensions, context, cachedPanic)
+	}
 
 	wg.Wait()
 
