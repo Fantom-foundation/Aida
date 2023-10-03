@@ -183,13 +183,13 @@ func (s *loggingStateDb) EndSyncPeriod() {
 
 func (s *loggingStateDb) GetHash() common.Hash {
 	hash := s.state.GetHash()
-	s.log.Info("GetHash, %v", hash)
+	s.log.Info("GetStateHash, %v", hash)
 	return hash
 }
 
 func (s *loggingNonCommittableStateDb) GetHash() common.Hash {
 	hash := s.nonCommittableStateDB.GetHash()
-	s.log.Info("GetHash, %v", hash)
+	s.log.Info("GetStateHash, %v", hash)
 	return hash
 }
 

@@ -184,7 +184,7 @@ func (s *MockStateDB) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 }
 
 func (s *MockStateDB) GetHash() common.Hash {
-	panic("GetHash not supported in mock")
+	panic("GetStateHash not supported in mock")
 }
 
 func (s *MockStateDB) Prepare(thash common.Hash, ti int) {

@@ -129,10 +129,6 @@ var (
 		Name:  "db-src",
 		Usage: "sets the directory contains source state DB data",
 	}
-	StateRootHashesFlag = cli.PathFlag{
-		Name:  "state-roots",
-		Usage: "set the filename containing a list of state roots",
-	}
 	DbTmpFlag = cli.PathFlag{
 		Name:  "db-tmp",
 		Usage: "sets the temporary directory where to place DB data; uses system default if empty",
@@ -336,5 +332,9 @@ var (
 	TrackProgressFlag = cli.BoolFlag{
 		Name:  "track-progress",
 		Usage: "enables track progress logging",
+	}
+	ValidateStateHashesFlag = cli.BoolFlag{
+		Name:  "validate-state-hash",
+		Usage: "enables state hash validation",
 	}
 )

@@ -754,7 +754,7 @@ func (mr *MockNonCommittableStateDBMockRecorder) GetCommittedState(arg0, arg1 in
 // GetHash mocks base method.
 func (m *MockNonCommittableStateDB) GetHash() common.Hash {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetHash")
+	ret := m.ctrl.Call(m, "GetStateHash")
 	ret0, _ := ret[0].(common.Hash)
 	return ret0
 }
@@ -762,7 +762,7 @@ func (m *MockNonCommittableStateDB) GetHash() common.Hash {
 // GetHash indicates an expected call of GetHash.
 func (mr *MockNonCommittableStateDBMockRecorder) GetHash() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHash", reflect.TypeOf((*MockNonCommittableStateDB)(nil).GetHash))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStateHash", reflect.TypeOf((*MockNonCommittableStateDB)(nil).GetHash))
 }
 
 // GetLogs mocks base method.
@@ -1394,7 +1394,7 @@ func (mr *MockStateDBMockRecorder) GetCommittedState(arg0, arg1 interface{}) *go
 // GetHash mocks base method.
 func (m *MockStateDB) GetHash() common.Hash {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetHash")
+	ret := m.ctrl.Call(m, "GetStateHash")
 	ret0, _ := ret[0].(common.Hash)
 	return ret0
 }
@@ -1402,7 +1402,7 @@ func (m *MockStateDB) GetHash() common.Hash {
 // GetHash indicates an expected call of GetHash.
 func (mr *MockStateDBMockRecorder) GetHash() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHash", reflect.TypeOf((*MockStateDB)(nil).GetHash))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStateHash", reflect.TypeOf((*MockStateDB)(nil).GetHash))
 }
 
 // GetLogs mocks base method.

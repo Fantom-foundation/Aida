@@ -30,7 +30,7 @@ var RunVMApp = cli.App{
 		&utils.StateDbSrcFlag,
 		&utils.DbTmpFlag,
 		&utils.StateDbLoggingFlag,
-		&utils.StateRootHashesFlag,
+		&utils.ValidateStateHashesFlag,
 
 		// ArchiveDb
 		&utils.ArchiveModeFlag,
