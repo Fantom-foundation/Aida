@@ -26,7 +26,7 @@ jobs:
       - name: Setup cmake
         uses: jwlawson/actions-setup-cmake@v1.13
         with:
-         cmake-version: '3.16.x'
+         cmake-version: '3.19.x'
 
       - name: Mount bazel cache
         uses: actions/cache@v3
