@@ -182,14 +182,16 @@ type Config struct {
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.
 func GetChainConfig(chainId ChainID) *params.ChainConfig {
-	chainConfig := params.AllEthashProtocolChanges
+	// Make a copy of of the basic config before modifying it to avoid
+	// unexpected side-effects and synchronization issues in parallel runs.
+	chainConfig := *params.AllEthashProtocolChanges
 	chainConfig.ChainID = big.NewInt(int64(chainId))
 	if !(chainId == MainnetChainID || chainId == TestnetChainID) {
 		log.Fatalf("unknown chain id %v", chainId)
 	}
 	chainConfig.BerlinBlock = new(big.Int).SetUint64(keywordBlocks[chainId]["berlin"])
 	chainConfig.LondonBlock = new(big.Int).SetUint64(keywordBlocks[chainId]["london"])
-	return chainConfig
+	return &chainConfig
 }
 
 func setFirstOperaBlock(chainId ChainID) {
