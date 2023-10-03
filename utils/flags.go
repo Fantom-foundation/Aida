@@ -49,6 +49,10 @@ var (
 		Name:  "cpu-profile",
 		Usage: "enables CPU profiling",
 	}
+	CpuProfilePerIntervalFlag = cli.BoolFlag{
+		Name:  "cpu-profile-per-interval",
+		Usage: "enables CPU profiling for individual 100k intervals",
+	}
 	DebugFromFlag = cli.Uint64Flag{
 		Name:  "debug-from",
 		Usage: "sets the first block to print trace debug",
