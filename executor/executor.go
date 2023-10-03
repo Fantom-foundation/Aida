@@ -61,7 +61,7 @@ import (
 //	}
 //	PostRun()
 //
-// Not that every worker has its own Context so any manipulation with this variable does not need to be thread safe.
+// Note that every worker has its own Context so any manipulation with this variable does not need to be thread safe.
 //
 // Each PreXXX() and PostXXX() is a hook-in point at which extensions may
 // track information and/or interfere with the execution. For more details on
@@ -242,31 +242,31 @@ func (e *executor) Run(params Params, processor Processor, extensions []Extensio
 	}
 }
 
-func (e *executor) runSequential(params Params, processor Processor, extensions []Extension, txState *State, context *Context) error {
+func (e *executor) runSequential(params Params, processor Processor, extensions []Extension, state *State, context *Context) error {
 	first := true
 
 	err := e.substate.Run(params.From, params.To, func(tx TransactionInfo) error {
 		// TODO rewrite
-		txState.Substate = tx.Substate
+		state.Substate = tx.Substate
 
 		if first {
-			txState.Block = tx.Block
-			if err := signalPreBlock(*txState, context, extensions); err != nil {
+			state.Block = tx.Block
+			if err := signalPreBlock(*state, context, extensions); err != nil {
 				return err
 			}
 			first = false
-		} else if txState.Block != tx.Block {
-			if err := signalPostBlock(*txState, context, extensions); err != nil {
+		} else if state.Block != tx.Block {
+			if err := signalPostBlock(*state, context, extensions); err != nil {
 				return err
 			}
-			txState.Block = tx.Block
-			if err := signalPreBlock(*txState, context, extensions); err != nil {
+			state.Block = tx.Block
+			if err := signalPreBlock(*state, context, extensions); err != nil {
 				return err
 			}
 		}
 
-		txState.Transaction = tx.Transaction
-		return runTransaction(*txState, context, tx.Substate, processor, extensions)
+		state.Transaction = tx.Transaction
+		return runTransaction(*state, context, tx.Substate, processor, extensions)
 	})
 	if err != nil {
 		return err
@@ -274,10 +274,10 @@ func (e *executor) runSequential(params Params, processor Processor, extensions 
 
 	// Finish final block.
 	if !first {
-		if err := signalPostBlock(*txState, context, extensions); err != nil {
+		if err := signalPostBlock(*state, context, extensions); err != nil {
 			return err
 		}
-		txState.Block = params.To
+		state.Block = params.To
 	}
 
 	return nil
