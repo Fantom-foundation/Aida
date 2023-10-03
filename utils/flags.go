@@ -58,6 +58,11 @@ var (
 		Name:  "deletion-db",
 		Usage: "sets the directory containing deleted accounts database",
 	}
+	DiagnosticServerFlag = cli.Int64Flag{
+		Name:  "diagnostic-port",
+		Usage: "enable hosting of a realtime diagnostic server by providing a port",
+		Value: 0,
+	}
 	KeepDbFlag = cli.BoolFlag{
 		Name:  "keep-db",
 		Usage: "if set, statedb is not deleted after run",

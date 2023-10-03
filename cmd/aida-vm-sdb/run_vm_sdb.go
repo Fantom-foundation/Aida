@@ -45,7 +45,10 @@ func (r txProcessor) Process(state executor.State, context *executor.Context) er
 
 func run(config *utils.Config, provider executor.SubstateProvider, stateDb state.StateDB, disableStateDbExtension bool) error {
 	// order of extensionList has to be maintained
-	var extensionList = []executor.Extension{extension.MakeCpuProfiler(config)}
+	var extensionList = []executor.Extension{
+		extension.MakeCpuProfiler(config),
+		extension.MakeDiagnosticServer(config),
+	}
 
 	if !disableStateDbExtension {
 		extensionList = append(extensionList, extension.MakeStateDbManager(config))
