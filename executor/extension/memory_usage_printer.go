@@ -7,34 +7,34 @@ import (
 )
 
 // MakeMemoryUsagePrinter creates an executor.Extension that prints memory breakdown if enabled.
-func MakeMemoryUsagePrinter(config *utils.Config) executor.Extension {
+func MakeMemoryUsagePrinter[T any](config *utils.Config) executor.Extension[T] {
 	if !config.MemoryBreakdown {
-		return NilExtension{}
+		return NilExtension[T]{}
 	}
 
 	log := logger.NewLogger(config.LogLevel, "Memory-Usage-Printer")
-	return makeMemoryUsagePrinter(config, log)
+	return makeMemoryUsagePrinter[T](config, log)
 }
 
-func makeMemoryUsagePrinter(config *utils.Config, log logger.Logger) executor.Extension {
-	return &memoryUsagePrinter{
+func makeMemoryUsagePrinter[T any](config *utils.Config, log logger.Logger) executor.Extension[T] {
+	return &memoryUsagePrinter[T]{
 		log:    log,
 		config: config,
 	}
 }
 
-type memoryUsagePrinter struct {
-	NilExtension
+type memoryUsagePrinter[T any] struct {
+	NilExtension[T]
 	log    logger.Logger
 	config *utils.Config
 }
 
-func (p *memoryUsagePrinter) PreRun(_ executor.State, ctx *executor.Context) error {
+func (p *memoryUsagePrinter[T]) PreRun(_ executor.State[T], ctx *executor.Context) error {
 	utils.MemoryBreakdown(ctx.State, p.config, p.log)
 	return nil
 }
 
-func (p *memoryUsagePrinter) PostRun(_ executor.State, ctx *executor.Context, _ error) error {
+func (p *memoryUsagePrinter[T]) PostRun(_ executor.State[T], ctx *executor.Context, _ error) error {
 	utils.MemoryBreakdown(ctx.State, p.config, p.log)
 	return nil
 }

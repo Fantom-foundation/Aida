@@ -6,25 +6,25 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
-type TestSyncPeriodEmitter struct {
-	NilExtension
+type TestSyncPeriodEmitter[T any] struct {
+	NilExtension[T]
 	config     *utils.Config
 	syncPeriod uint64
 }
 
 // MakeTestSyncPeriodEmitter creates an executor.Extension handling SyncPeriod beginnings and ends.
-func MakeTestSyncPeriodEmitter(config *utils.Config) executor.Extension {
+func MakeTestSyncPeriodEmitter[T any](config *utils.Config) executor.Extension[T] {
 	if config.SyncPeriodLength <= 0 {
 		log := logger.NewLogger(config.LogLevel, "Progress-Reporter")
 		log.Warning("SyncPeriodLength was set in config to 0; SyncPeriodEmitter disabled")
-		return NilExtension{}
+		return NilExtension[T]{}
 	}
 
-	return &TestSyncPeriodEmitter{config: config, syncPeriod: 0}
+	return &TestSyncPeriodEmitter[T]{config: config, syncPeriod: 0}
 }
 
 // PreRun checks whether syncPeriodLength isn't invalid
-func (l *TestSyncPeriodEmitter) PreRun(state executor.State, context *executor.Context) error {
+func (l *TestSyncPeriodEmitter[T]) PreRun(state executor.State[T], context *executor.Context) error {
 	// initiate a sync period
 	l.syncPeriod = uint64(state.Block) / l.config.SyncPeriodLength
 	context.State.BeginSyncPeriod(l.syncPeriod)
@@ -33,7 +33,7 @@ func (l *TestSyncPeriodEmitter) PreRun(state executor.State, context *executor.C
 }
 
 // PreBlock calculates current sync period and then invokes necessary state operations.
-func (l *TestSyncPeriodEmitter) PreBlock(state executor.State, context *executor.Context) error {
+func (l *TestSyncPeriodEmitter[T]) PreBlock(state executor.State[T], context *executor.Context) error {
 	// calculate the syncPeriod for given block
 	newSyncPeriod := uint64(state.Block) / l.config.SyncPeriodLength
 
@@ -47,7 +47,7 @@ func (l *TestSyncPeriodEmitter) PreBlock(state executor.State, context *executor
 	return nil
 }
 
-func (l *TestSyncPeriodEmitter) PostRun(_ executor.State, context *executor.Context, _ error) error {
+func (l *TestSyncPeriodEmitter[T]) PostRun(_ executor.State[T], context *executor.Context, _ error) error {
 	context.State.EndSyncPeriod()
 	return nil
 }

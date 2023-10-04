@@ -8,19 +8,20 @@ import (
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
+	substate "github.com/Fantom-foundation/Substate"
 )
 
 type txValidator struct {
-	NilExtension
+	NilExtension[*substate.Substate]
 	config *utils.Config
 	log    logger.Logger
 	lock   sync.Mutex
 	errors []error
 }
 
-func MakeTxValidator(config *utils.Config) executor.Extension {
+func MakeTxValidator(config *utils.Config) executor.Extension[*substate.Substate] {
 	if !config.ValidateTxState {
-		return NilExtension{}
+		return NilExtension[*substate.Substate]{}
 	}
 
 	log := logger.NewLogger(config.LogLevel, "Tx-Verifier")
@@ -36,7 +37,7 @@ func makeTxValidator(config *utils.Config, log logger.Logger) *txValidator {
 }
 
 // PreRun informs the user that txValidator is enabled and that they should expect slower processing speed.
-func (v *txValidator) PreRun(executor.State, *executor.Context) error {
+func (v *txValidator) PreRun(executor.State[*substate.Substate], *executor.Context) error {
 
 	v.log.Warning("Transaction verification is enabled, this may slow down the block processing.")
 
@@ -49,8 +50,8 @@ func (v *txValidator) PreRun(executor.State, *executor.Context) error {
 }
 
 // PreTransaction validates InputAlloc in given substate
-func (v *txValidator) PreTransaction(state executor.State, context *executor.Context) error {
-	err := utils.ValidateStateDB(state.Substate.InputAlloc, context.State, v.config.UpdateOnFailure)
+func (v *txValidator) PreTransaction(state executor.State[*substate.Substate], context *executor.Context) error {
+	err := utils.ValidateStateDB(state.Payload.InputAlloc, context.State, v.config.UpdateOnFailure)
 	if err == nil {
 		return nil
 	}
@@ -67,8 +68,8 @@ func (v *txValidator) PreTransaction(state executor.State, context *executor.Con
 }
 
 // PostTransaction validates OutputAlloc in given substate
-func (v *txValidator) PostTransaction(state executor.State, context *executor.Context) error {
-	err := utils.ValidateStateDB(state.Substate.OutputAlloc, context.State, v.config.UpdateOnFailure)
+func (v *txValidator) PostTransaction(state executor.State[*substate.Substate], context *executor.Context) error {
+	err := utils.ValidateStateDB(state.Payload.OutputAlloc, context.State, v.config.UpdateOnFailure)
 	if err == nil {
 		return nil
 	}
@@ -85,7 +86,7 @@ func (v *txValidator) PostTransaction(state executor.State, context *executor.Co
 }
 
 // PostRun informs user how many errors were found - if ContinueOnFailureIsEnabled otherwise success is reported.
-func (v *txValidator) PostRun(executor.State, *executor.Context, error) error {
+func (v *txValidator) PostRun(executor.State[*substate.Substate], *executor.Context, error) error {
 	v.lock.Lock()
 	defer v.lock.Unlock()
 

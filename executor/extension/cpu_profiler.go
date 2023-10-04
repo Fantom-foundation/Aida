@@ -8,23 +8,23 @@ import (
 // MakeCpuProfiler creates a executor.Extension that records CPU profiling
 // data for the duration between the begin and end of the execution run, if
 // enabled in the provided configuration.
-func MakeCpuProfiler(config *utils.Config) executor.Extension {
+func MakeCpuProfiler[T any](config *utils.Config) executor.Extension[T] {
 	if config.CPUProfile == "" {
-		return NilExtension{}
+		return NilExtension[T]{}
 	}
-	return &cpuProfiler{config: config}
+	return &cpuProfiler[T]{config: config}
 }
 
-type cpuProfiler struct {
-	NilExtension
+type cpuProfiler[T any] struct {
+	NilExtension[T]
 	config *utils.Config
 }
 
-func (p *cpuProfiler) PreRun(executor.State, *executor.Context) error {
+func (p *cpuProfiler[T]) PreRun(executor.State[T], *executor.Context) error {
 	return utils.StartCPUProfile(p.config)
 }
 
-func (p *cpuProfiler) PostRun(executor.State, *executor.Context, error) error {
+func (p *cpuProfiler[T]) PostRun(executor.State[T], *executor.Context, error) error {
 	utils.StopCPUProfile(p.config)
 	return nil
 }

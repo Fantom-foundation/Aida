@@ -7,6 +7,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -32,35 +33,35 @@ type txProcessor struct {
 	config *utils.Config
 }
 
-func (r txProcessor) Process(state executor.State, context *executor.Context) error {
+func (r txProcessor) Process(state executor.State[*substate.Substate], context *executor.Context) error {
 	_, err := utils.ProcessTx(
 		context.State,
 		r.config,
 		uint64(state.Block),
 		state.Transaction,
-		state.Substate,
+		state.Payload,
 	)
 	return err
 }
 
-func run(config *utils.Config, provider executor.SubstateProvider, stateDb state.StateDB, disableStateDbExtension bool) error {
+func run(config *utils.Config, provider executor.Provider[*substate.Substate], stateDb state.StateDB, disableStateDbExtension bool) error {
 	// order of extensionList has to be maintained
-	var extensionList = []executor.Extension{extension.MakeCpuProfiler(config)}
+	var extensionList = []executor.Extension[*substate.Substate]{extension.MakeCpuProfiler[*substate.Substate](config)}
 
 	if !disableStateDbExtension {
-		extensionList = append(extensionList, extension.MakeStateDbManager(config))
+		extensionList = append(extensionList, extension.MakeStateDbManager[*substate.Substate](config))
 	}
 
-	extensionList = append(extensionList, []executor.Extension{
-		extension.MakeVirtualMachineStatisticsPrinter(config),
-		extension.MakeProgressLogger(config, 15*time.Second),
+	extensionList = append(extensionList, []executor.Extension[*substate.Substate]{
+		extension.MakeVirtualMachineStatisticsPrinter[*substate.Substate](config),
+		extension.MakeProgressLogger[*substate.Substate](config, 15*time.Second),
 		extension.MakeProgressTracker(config, 100_000),
-		extension.MakeStateDbPrimer(config),
-		extension.MakeMemoryUsagePrinter(config),
-		extension.MakeMemoryProfiler(config),
+		extension.MakeStateDbPrimer[*substate.Substate](config),
+		extension.MakeMemoryUsagePrinter[*substate.Substate](config),
+		extension.MakeMemoryProfiler[*substate.Substate](config),
 		extension.MakeStateDbPreparator(),
-		extension.MakeStateHashValidator(config),
-		extension.MakeBlockEventEmitter(),
+		extension.MakeStateHashValidator[*substate.Substate](config),
+		extension.MakeBlockEventEmitter[*substate.Substate](),
 	}...,
 	)
 

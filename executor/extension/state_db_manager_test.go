@@ -18,14 +18,14 @@ import (
 func TestStateDbManager_DbClosureWithoutKeepDb(t *testing.T) {
 	cfg := &utils.Config{}
 
-	ext := MakeStateDbManager(cfg)
+	ext := MakeStateDbManager[any](cfg)
 
 	mockCtrl := gomock.NewController(t)
 	mockStateDB := state.NewMockStateDB(mockCtrl)
 
 	mockStateDB.EXPECT().Close()
 
-	state := executor.State{
+	state := executor.State[any]{
 		Block: 0,
 	}
 
@@ -44,7 +44,7 @@ func TestStateDbManager_DbClosureWithKeepDb(t *testing.T) {
 	cfg.DbImpl = "geth"
 	cfg.KeepDb = true
 
-	ext := MakeStateDbManager(cfg)
+	ext := MakeStateDbManager[any](cfg)
 
 	mockCtrl := gomock.NewController(t)
 	mockStateDB := state.NewMockStateDB(mockCtrl)
@@ -54,7 +54,7 @@ func TestStateDbManager_DbClosureWithKeepDb(t *testing.T) {
 		mockStateDB.EXPECT().Close(),
 	)
 
-	state := executor.State{
+	state := executor.State[any]{
 		Block: 0,
 	}
 
@@ -74,9 +74,9 @@ func TestStateDbManager_DoNotKeepDb(t *testing.T) {
 	cfg.DbImpl = "geth"
 	cfg.KeepDb = false
 
-	ext := MakeStateDbManager(cfg)
+	ext := MakeStateDbManager[any](cfg)
 
-	state := executor.State{
+	state := executor.State[any]{
 		Block: 0,
 	}
 
@@ -107,9 +107,9 @@ func TestStateDbManager_KeepDbAndDoesntUnderflowBellowZero(t *testing.T) {
 	cfg.DbImpl = "geth"
 	cfg.KeepDb = true
 
-	ext := MakeStateDbManager(cfg)
+	ext := MakeStateDbManager[any](cfg)
 
-	state := executor.State{
+	state := executor.State[any]{
 		Block: 0,
 	}
 
@@ -140,9 +140,9 @@ func TestStateDbManager_StateDbInfoExistence(t *testing.T) {
 	cfg.DbImpl = "geth"
 	cfg.KeepDb = true
 
-	ext := MakeStateDbManager(cfg)
+	ext := MakeStateDbManager[any](cfg)
 
-	state := executor.State{
+	state := executor.State[any]{
 		Block: 0,
 	}
 
@@ -176,9 +176,9 @@ func TestStateDbManager_NonExistentStateDbSrc(t *testing.T) {
 	cfg.DbImpl = "geth"
 	cfg.KeepDb = true
 
-	ext := MakeStateDbManager(cfg)
+	ext := MakeStateDbManager[any](cfg)
 
-	state := executor.State{
+	state := executor.State[any]{
 		Block: 0,
 	}
 
@@ -198,9 +198,9 @@ func TestStateDbManager_StateDbSrcStateDbIsReadOnly(t *testing.T) {
 	cfg.DbImpl = "geth"
 	cfg.KeepDb = true
 
-	ext := MakeStateDbManager(cfg)
+	ext := MakeStateDbManager[any](cfg)
 
-	state0 := executor.State{
+	state0 := executor.State[any]{
 		Block: 0,
 	}
 
@@ -231,7 +231,7 @@ func TestStateDbManager_StateDbSrcStateDbIsReadOnly(t *testing.T) {
 	cfg.KeepDb = false
 	cfg.SrcDbReadonly = true
 
-	ext = MakeStateDbManager(cfg)
+	ext = MakeStateDbManager[any](cfg)
 
 	ctx = &executor.Context{}
 
@@ -277,9 +277,9 @@ func TestStateDbManager_UsingExistingSourceDb(t *testing.T) {
 	cfg.DbImpl = "geth"
 	cfg.KeepDb = true
 
-	ext := MakeStateDbManager(cfg)
+	ext := MakeStateDbManager[any](cfg)
 
-	state0 := executor.State{
+	state0 := executor.State[any]{
 		Block: 0,
 	}
 
@@ -308,7 +308,7 @@ func TestStateDbManager_UsingExistingSourceDb(t *testing.T) {
 	cfg.DbTmp = tmpOutDir
 	cfg.StateDbSrc = sourcePath
 
-	ext = MakeStateDbManager(cfg)
+	ext = MakeStateDbManager[any](cfg)
 
 	ctx = &executor.Context{}
 
@@ -369,9 +369,9 @@ func TestStateDbManager_StateDbBlockNumberDecrements(t *testing.T) {
 	cfg.DbImpl = "geth"
 	cfg.KeepDb = true
 
-	ext := MakeStateDbManager(cfg)
+	ext := MakeStateDbManager[any](cfg)
 
-	state := executor.State{
+	state := executor.State[any]{
 		Block: 10,
 	}
 

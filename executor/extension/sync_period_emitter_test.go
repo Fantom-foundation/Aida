@@ -12,7 +12,7 @@ import (
 func TestSyncPeriodEmitter_Single(t *testing.T) {
 	config := &utils.Config{}
 	config.SyncPeriodLength = 300
-	ext := MakeTestSyncPeriodEmitter(config)
+	ext := MakeTestSyncPeriodEmitter[any](config)
 
 	mockCtrl := gomock.NewController(t)
 	mockStateDB := state.NewMockStateDB(mockCtrl)
@@ -22,7 +22,7 @@ func TestSyncPeriodEmitter_Single(t *testing.T) {
 		mockStateDB.EXPECT().EndSyncPeriod(),
 	)
 
-	state := executor.State{Block: 0}
+	state := executor.State[any]{Block: 0}
 	context := &executor.Context{State: mockStateDB}
 	if err := ext.PreRun(state, context); err != nil {
 		t.Fatalf("failed to to run pre-run: %v", err)
@@ -38,7 +38,7 @@ func TestSyncPeriodEmitter_Single(t *testing.T) {
 func TestSyncPeriodEmitter_MultipleSyncPeriodsSingleBlockLength(t *testing.T) {
 	config := &utils.Config{}
 	config.SyncPeriodLength = 1
-	ext := MakeTestSyncPeriodEmitter(config)
+	ext := MakeTestSyncPeriodEmitter[any](config)
 
 	mockCtrl := gomock.NewController(t)
 	mockStateDB := state.NewMockStateDB(mockCtrl)
@@ -52,7 +52,7 @@ func TestSyncPeriodEmitter_MultipleSyncPeriodsSingleBlockLength(t *testing.T) {
 		mockStateDB.EXPECT().EndSyncPeriod(),
 	)
 
-	state := executor.State{Block: 0}
+	state := executor.State[any]{Block: 0}
 	context := &executor.Context{State: mockStateDB}
 	if err := ext.PreRun(state, context); err != nil {
 		t.Fatalf("failed to to run pre-run: %v", err)
@@ -76,7 +76,7 @@ func TestSyncPeriodEmitter_MultipleSyncPeriodsSingleBlockLength(t *testing.T) {
 func TestSyncPeriodEmitter_MultipleSyncPeriodsWithoutBlocks(t *testing.T) {
 	config := &utils.Config{}
 	config.SyncPeriodLength = 2
-	ext := MakeTestSyncPeriodEmitter(config)
+	ext := MakeTestSyncPeriodEmitter[any](config)
 
 	mockCtrl := gomock.NewController(t)
 	mockStateDB := state.NewMockStateDB(mockCtrl)
@@ -92,7 +92,7 @@ func TestSyncPeriodEmitter_MultipleSyncPeriodsWithoutBlocks(t *testing.T) {
 		mockStateDB.EXPECT().EndSyncPeriod(),
 	)
 
-	state := executor.State{Block: 0}
+	state := executor.State[any]{Block: 0}
 	context := &executor.Context{State: mockStateDB}
 	if err := ext.PreRun(state, context); err != nil {
 		t.Fatalf("failed to to run pre-run: %v", err)
@@ -112,12 +112,12 @@ func TestSyncPeriodEmitter_MultipleSyncPeriodsWithoutBlocks(t *testing.T) {
 func TestSyncPeriodEmitter_DisabledBecauseOfInvalidSyncPeriodLength(t *testing.T) {
 	config := &utils.Config{}
 	config.SyncPeriodLength = 0
-	ext := MakeTestSyncPeriodEmitter(config)
+	ext := MakeTestSyncPeriodEmitter[any](config)
 
 	mockCtrl := gomock.NewController(t)
 	mockStateDB := state.NewMockStateDB(mockCtrl)
 
-	state := executor.State{Block: 0}
+	state := executor.State[any]{Block: 0}
 	context := &executor.Context{State: mockStateDB}
 	if err := ext.PreRun(state, context); err != nil {
 		t.Fatalf("failed to to run pre-run: %v", err)

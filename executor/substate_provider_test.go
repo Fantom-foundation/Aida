@@ -159,13 +159,13 @@ type TxConsumer interface {
 	Consume(block int, transaction int, substate *substate.Substate) error
 }
 
-func toConsumer(c TxConsumer) Consumer {
-	return func(info TransactionInfo) error {
-		return c.Consume(info.Block, info.Transaction, info.Substate)
+func toConsumer(c TxConsumer) Consumer[*substate.Substate] {
+	return func(info TransactionInfo[*substate.Substate]) error {
+		return c.Consume(info.Block, info.Transaction, info.Payload)
 	}
 }
 
-func openSubstateDb(path string) (SubstateProvider, error) {
+func openSubstateDb(path string) (Provider[*substate.Substate], error) {
 	config := utils.Config{}
 	config.AidaDb = path
 	config.Workers = 1

@@ -8,6 +8,7 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -42,14 +43,14 @@ func RunVm(ctx *cli.Context) error {
 // execution, in particular during unit tests.
 func run(
 	config *utils.Config,
-	provider executor.SubstateProvider,
-	processor executor.Processor,
-	extra []executor.Extension,
+	provider executor.Provider[*substate.Substate],
+	processor executor.Processor[*substate.Substate],
+	extra []executor.Extension[*substate.Substate],
 ) error {
-	extensions := []executor.Extension{
-		extension.MakeCpuProfiler(config),
-		extension.MakeVirtualMachineStatisticsPrinter(config),
-		extension.MakeProgressLogger(config, 15*time.Second),
+	extensions := []executor.Extension[*substate.Substate]{
+		extension.MakeCpuProfiler[*substate.Substate](config),
+		extension.MakeVirtualMachineStatisticsPrinter[*substate.Substate](config),
+		extension.MakeProgressLogger[*substate.Substate](config, 15*time.Second),
 		temporaryStatePrepper{},
 	}
 	extensions = append(extensions, extra...)
@@ -69,13 +70,13 @@ type txProcessor struct {
 	config *utils.Config
 }
 
-func (r txProcessor) Process(s executor.State, c *executor.Context) error {
+func (r txProcessor) Process(s executor.State[*substate.Substate], c *executor.Context) error {
 	_, err := utils.ProcessTx(
 		c.State,
 		r.config,
 		uint64(s.Block),
 		s.Transaction,
-		s.Substate,
+		s.Payload,
 	)
 	return err
 }
@@ -83,10 +84,10 @@ func (r txProcessor) Process(s executor.State, c *executor.Context) error {
 // temporaryStatePrepper is an extension that introduces a fresh in-memory
 // StateDB instance before each transaction execution.
 type temporaryStatePrepper struct {
-	extension.NilExtension
+	extension.NilExtension[*substate.Substate]
 }
 
-func (temporaryStatePrepper) PreTransaction(s executor.State, c *executor.Context) error {
-	c.State = state.MakeInMemoryStateDB(&s.Substate.InputAlloc, uint64(s.Block))
+func (temporaryStatePrepper) PreTransaction(s executor.State[*substate.Substate], c *executor.Context) error {
+	c.State = state.MakeInMemoryStateDB(&s.Payload.InputAlloc, uint64(s.Block))
 	return nil
 }

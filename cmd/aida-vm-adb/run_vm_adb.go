@@ -5,6 +5,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -35,7 +36,7 @@ type txProcessor struct {
 	config *utils.Config
 }
 
-func (r txProcessor) Process(state executor.State, context *executor.Context) error {
+func (r txProcessor) Process(state executor.State[*substate.Substate], context *executor.Context) error {
 	// todo rework this once executor.State is divided between mutable and immutable part
 	archive, err := context.State.GetArchiveState(uint64(state.Block) - 1)
 	if err != nil {
@@ -46,23 +47,23 @@ func (r txProcessor) Process(state executor.State, context *executor.Context) er
 		r.config,
 		uint64(state.Block),
 		state.Transaction,
-		state.Substate,
+		state.Payload,
 	)
 	return err
 }
 
-func run(config *utils.Config, provider executor.SubstateProvider, stateDb state.StateDB, disableStateDbExtension bool) error {
+func run(config *utils.Config, provider executor.Provider[*substate.Substate], stateDb state.StateDB, disableStateDbExtension bool) error {
 	// order of extensionList has to be maintained
-	var extensionList = []executor.Extension{extension.MakeCpuProfiler(config)}
+	var extensionList = []executor.Extension[*substate.Substate]{extension.MakeCpuProfiler[*substate.Substate](config)}
 
 	if !disableStateDbExtension {
-		extensionList = append(extensionList, extension.MakeStateDbManager(config))
+		extensionList = append(extensionList, extension.MakeStateDbManager[*substate.Substate](config))
 	}
 
-	extensionList = append(extensionList, []executor.Extension{
-		extension.MakeProgressLogger(config, 0),
+	extensionList = append(extensionList, []executor.Extension[*substate.Substate]{
+		extension.MakeProgressLogger[*substate.Substate](config, 0),
 		extension.MakeStateDbPreparator(),
-		extension.MakeBeginOnlyEmitter(),
+		extension.MakeBeginOnlyEmitter[*substate.Substate](),
 	}...)
 	return executor.NewExecutor(provider).Run(
 		executor.Params{

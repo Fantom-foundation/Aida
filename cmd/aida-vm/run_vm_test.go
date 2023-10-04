@@ -12,51 +12,51 @@ import (
 
 func TestVmSdb_TransactionsAreExecutedForCorrectRange(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	provider := executor.NewMockSubstateProvider(ctrl)
-	processor := executor.NewMockProcessor(ctrl)
-	ext := executor.NewMockExtension(ctrl)
+	provider := executor.NewMockProvider[*substate.Substate](ctrl)
+	processor := executor.NewMockProcessor[*substate.Substate](ctrl)
+	ext := executor.NewMockExtension[*substate.Substate](ctrl)
 
 	// Simulate the execution of three transactions in two blocks.
 	provider.EXPECT().
 		Run(10, 12, gomock.Any()).
-		DoAndReturn(func(from int, to int, consumer executor.Consumer) error {
+		DoAndReturn(func(from int, to int, consumer executor.Consumer[*substate.Substate]) error {
 			for i := from; i < to; i++ {
-				consumer(executor.TransactionInfo{Block: i, Transaction: 3, Substate: emptyTx})
-				consumer(executor.TransactionInfo{Block: i, Transaction: utils.PseudoTx, Substate: emptyTx})
+				consumer(executor.TransactionInfo[*substate.Substate]{Block: i, Transaction: 3, Payload: emptyTx})
+				consumer(executor.TransactionInfo[*substate.Substate]{Block: i, Transaction: utils.PseudoTx, Payload: emptyTx})
 			}
 			return nil
 		})
 
-	pre := ext.EXPECT().PreRun(executor.AtBlock(10), gomock.Any())
-	post := ext.EXPECT().PostRun(executor.AtBlock(12), gomock.Any(), nil)
+	pre := ext.EXPECT().PreRun(executor.AtBlock[*substate.Substate](10), gomock.Any())
+	post := ext.EXPECT().PostRun(executor.AtBlock[*substate.Substate](12), gomock.Any(), nil)
 
 	// All transactions are processed, but in no specific order.
 	gomock.InOrder(
 		pre,
-		ext.EXPECT().PreTransaction(executor.AtTransaction(10, 3), gomock.Any()),
-		processor.EXPECT().Process(executor.AtTransaction(10, 3), gomock.Any()),
-		ext.EXPECT().PostTransaction(executor.AtTransaction(10, 3), gomock.Any()),
+		ext.EXPECT().PreTransaction(executor.AtTransaction[*substate.Substate](10, 3), gomock.Any()),
+		processor.EXPECT().Process(executor.AtTransaction[*substate.Substate](10, 3), gomock.Any()),
+		ext.EXPECT().PostTransaction(executor.AtTransaction[*substate.Substate](10, 3), gomock.Any()),
 		post,
 	)
 	gomock.InOrder(
 		pre,
-		ext.EXPECT().PreTransaction(executor.AtTransaction(10, utils.PseudoTx), gomock.Any()),
-		processor.EXPECT().Process(executor.AtTransaction(10, utils.PseudoTx), gomock.Any()),
-		ext.EXPECT().PostTransaction(executor.AtTransaction(10, utils.PseudoTx), gomock.Any()),
+		ext.EXPECT().PreTransaction(executor.AtTransaction[*substate.Substate](10, utils.PseudoTx), gomock.Any()),
+		processor.EXPECT().Process(executor.AtTransaction[*substate.Substate](10, utils.PseudoTx), gomock.Any()),
+		ext.EXPECT().PostTransaction(executor.AtTransaction[*substate.Substate](10, utils.PseudoTx), gomock.Any()),
 		post,
 	)
 	gomock.InOrder(
 		pre,
-		ext.EXPECT().PreTransaction(executor.AtTransaction(11, 3), gomock.Any()),
-		processor.EXPECT().Process(executor.AtTransaction(11, 3), gomock.Any()),
-		ext.EXPECT().PostTransaction(executor.AtTransaction(11, 3), gomock.Any()),
+		ext.EXPECT().PreTransaction(executor.AtTransaction[*substate.Substate](11, 3), gomock.Any()),
+		processor.EXPECT().Process(executor.AtTransaction[*substate.Substate](11, 3), gomock.Any()),
+		ext.EXPECT().PostTransaction(executor.AtTransaction[*substate.Substate](11, 3), gomock.Any()),
 		post,
 	)
 	gomock.InOrder(
 		pre,
-		ext.EXPECT().PreTransaction(executor.AtTransaction(11, utils.PseudoTx), gomock.Any()),
-		processor.EXPECT().Process(executor.AtTransaction(11, utils.PseudoTx), gomock.Any()),
-		ext.EXPECT().PostTransaction(executor.AtTransaction(11, utils.PseudoTx), gomock.Any()),
+		ext.EXPECT().PreTransaction(executor.AtTransaction[*substate.Substate](11, utils.PseudoTx), gomock.Any()),
+		processor.EXPECT().Process(executor.AtTransaction[*substate.Substate](11, utils.PseudoTx), gomock.Any()),
+		ext.EXPECT().PostTransaction(executor.AtTransaction[*substate.Substate](11, utils.PseudoTx), gomock.Any()),
 		post,
 	)
 
@@ -65,7 +65,7 @@ func TestVmSdb_TransactionsAreExecutedForCorrectRange(t *testing.T) {
 	config.Workers = 4
 	config.First = 10
 	config.Last = 11
-	if err := run(config, provider, processor, []executor.Extension{ext}); err != nil {
+	if err := run(config, provider, processor, []executor.Extension[*substate.Substate]{ext}); err != nil {
 		t.Errorf("run failed: %v", err)
 	}
 }

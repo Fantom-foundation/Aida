@@ -13,7 +13,7 @@ import (
 
 func TestVmAdb_AllDbEventsAreIssuedInOrder(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	substate := executor.NewMockSubstateProvider(ctrl)
+	provider := executor.NewMockProvider[*substate.Substate](ctrl)
 	db := state.NewMockStateDB(ctrl)
 	archive := state.NewMockNonCommittableStateDB(ctrl)
 	config := &utils.Config{
@@ -24,10 +24,10 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder(t *testing.T) {
 	}
 
 	// Simulate the execution of three transactions in two blocks.
-	substate.EXPECT().
+	provider.EXPECT().
 		Run(1, 2, gomock.Any()).
-		DoAndReturn(func(_ int, _ int, consumer executor.Consumer) error {
-			consumer(executor.TransactionInfo{Block: 1, Transaction: 1, Substate: emptyTx})
+		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[*substate.Substate]) error {
+			consumer(executor.TransactionInfo[*substate.Substate]{Block: 1, Transaction: 1, Payload: emptyTx})
 			return nil
 		})
 
@@ -46,7 +46,7 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		archive.EXPECT().EndTransaction(),
 	)
 
-	if err := run(config, substate, db, true); err != nil {
+	if err := run(config, provider, db, true); err != nil {
 		t.Errorf("run failed: %v", err)
 	}
 }

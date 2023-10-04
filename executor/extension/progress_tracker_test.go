@@ -21,7 +21,7 @@ func TestProgressTrackerExtension_NoLoggerIsCreatedIfDisabled(t *testing.T) {
 	config := &utils.Config{}
 	config.TrackProgress = false
 	ext := MakeProgressTracker(config, testStateDbInfoFrequency)
-	if _, ok := ext.(NilExtension); !ok {
+	if _, ok := ext.(NilExtension[*substate.Substate]); !ok {
 		t.Errorf("Logger is enabled although not set in configuration")
 	}
 
@@ -70,32 +70,32 @@ func TestProgressTrackerExtension_LoggingHappens(t *testing.T) {
 		),
 	)
 
-	ext.PreRun(executor.State{}, context)
+	ext.PreRun(executor.State[*substate.Substate]{}, context)
 
 	// first processed block
-	ext.PostTransaction(executor.State{Substate: s}, context)
-	ext.PostTransaction(executor.State{Substate: s}, context)
-	ext.PostBlock(executor.State{
-		Block:    5,
-		Substate: s,
+	ext.PostTransaction(executor.State[*substate.Substate]{Payload: s}, context)
+	ext.PostTransaction(executor.State[*substate.Substate]{Payload: s}, context)
+	ext.PostBlock(executor.State[*substate.Substate]{
+		Block:   5,
+		Payload: s,
 	}, context)
 
 	time.Sleep(500 * time.Millisecond)
 
 	// second processed block
-	ext.PostTransaction(executor.State{Substate: s}, context)
-	ext.PostTransaction(executor.State{Substate: s}, context)
-	ext.PostBlock(executor.State{
-		Block:    6,
-		Substate: s,
+	ext.PostTransaction(executor.State[*substate.Substate]{Payload: s}, context)
+	ext.PostTransaction(executor.State[*substate.Substate]{Payload: s}, context)
+	ext.PostBlock(executor.State[*substate.Substate]{
+		Block:   6,
+		Payload: s,
 	}, context)
 
 	time.Sleep(500 * time.Millisecond)
 
-	ext.PostTransaction(executor.State{Substate: s}, context)
-	ext.PostBlock(executor.State{
-		Block:    8,
-		Substate: s,
+	ext.PostTransaction(executor.State[*substate.Substate]{Payload: s}, context)
+	ext.PostBlock(executor.State[*substate.Substate]{
+		Block:   8,
+		Payload: s,
 	}, context)
 }
 
@@ -118,26 +118,26 @@ func TestProgressTrackerExtension_FirstLoggingIsIgnored(t *testing.T) {
 		},
 	}
 
-	ext.PreRun(executor.State{
+	ext.PreRun(executor.State[*substate.Substate]{
 		Block:       4,
 		Transaction: 0,
-		Substate:    s,
+		Payload:     s,
 	}, context)
 
-	ext.PostTransaction(executor.State{
+	ext.PostTransaction(executor.State[*substate.Substate]{
 		Block:       4,
 		Transaction: 0,
-		Substate:    s,
+		Payload:     s,
 	}, context)
-	ext.PostTransaction(executor.State{
+	ext.PostTransaction(executor.State[*substate.Substate]{
 		Block:       4,
 		Transaction: 1,
-		Substate:    s,
+		Payload:     s,
 	}, context)
-	ext.PostBlock(executor.State{
+	ext.PostBlock(executor.State[*substate.Substate]{
 		Block:       5,
 		Transaction: 0,
-		Substate:    s,
+		Payload:     s,
 	}, context)
 }
 

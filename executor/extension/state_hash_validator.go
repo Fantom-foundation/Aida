@@ -16,20 +16,20 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func MakeStateHashValidator(config *utils.Config) executor.Extension {
+func MakeStateHashValidator[T any](config *utils.Config) executor.Extension[T] {
 	log := logger.NewLogger("INFO", "state-hash-validator")
-	return makeStateHashValidator(config, log)
+	return makeStateHashValidator[T](config, log)
 }
 
-func makeStateHashValidator(config *utils.Config, log logger.Logger) executor.Extension {
+func makeStateHashValidator[T any](config *utils.Config, log logger.Logger) executor.Extension[T] {
 	if config.StateRootFile == "" {
-		return NilExtension{}
+		return NilExtension[T]{}
 	}
-	return &stateHashValidator{config: config, log: log}
+	return &stateHashValidator[T]{config: config, log: log}
 }
 
-type stateHashValidator struct {
-	NilExtension
+type stateHashValidator[T any] struct {
+	NilExtension[T]
 	config                  *utils.Config
 	log                     logger.Logger
 	hashes                  []common.Hash
@@ -37,7 +37,7 @@ type stateHashValidator struct {
 	lastProcessedBlock      int
 }
 
-func (e *stateHashValidator) PreRun(executor.State, *executor.Context) error {
+func (e *stateHashValidator[T]) PreRun(executor.State[T], *executor.Context) error {
 	path := e.config.StateRootFile
 	e.log.Infof("Loading state root hashes from %v ...", path)
 	hashes, err := loadStateHashes(path, int(e.config.Last)+1)
@@ -49,7 +49,7 @@ func (e *stateHashValidator) PreRun(executor.State, *executor.Context) error {
 	return nil
 }
 
-func (e *stateHashValidator) PostBlock(state executor.State, context *executor.Context) error {
+func (e *stateHashValidator[T]) PostBlock(state executor.State[T], context *executor.Context) error {
 	if context.State == nil || state.Block >= len(e.hashes) {
 		return nil
 	}
@@ -72,7 +72,7 @@ func (e *stateHashValidator) PostBlock(state executor.State, context *executor.C
 	return nil
 }
 
-func (e *stateHashValidator) PostRun(state executor.State, context *executor.Context, err error) error {
+func (e *stateHashValidator[T]) PostRun(state executor.State[T], context *executor.Context, err error) error {
 	// Skip processing if run is aborted due to an error.
 	if err != nil {
 		return nil
@@ -91,7 +91,7 @@ func (e *stateHashValidator) PostRun(state executor.State, context *executor.Con
 	return nil
 }
 
-func (e *stateHashValidator) checkArchiveHashes(state state.StateDB) error {
+func (e *stateHashValidator[T]) checkArchiveHashes(state state.StateDB) error {
 	// Note: the archive may be lagging behind the life DB, so block hashes need
 	// to be checked as they become available.
 	height, empty, err := state.GetArchiveBlockHeight()

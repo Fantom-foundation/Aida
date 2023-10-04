@@ -25,8 +25,8 @@ const exampleHashes = `
 
 func TestStateHashValidator_NotActiveIfNoFileIsProvided(t *testing.T) {
 	config := &utils.Config{}
-	ext := MakeStateHashValidator(config)
-	if _, ok := ext.(NilExtension); !ok {
+	ext := MakeStateHashValidator[any](config)
+	if _, ok := ext.(NilExtension[any]); !ok {
 		t.Errorf("extension is active although it should not")
 	}
 }
@@ -50,18 +50,18 @@ func TestStateHashValidator_ActiveIfAFileIsProvided(t *testing.T) {
 	config := &utils.Config{}
 	config.StateRootFile = path
 	config.Last = 5
-	ext := makeStateHashValidator(config, log)
+	ext := makeStateHashValidator[any](config, log)
 	context := &executor.Context{State: db}
 
-	if err := ext.PreRun(executor.State{}, context); err != nil {
+	if err := ext.PreRun(executor.State[any]{}, context); err != nil {
 		t.Errorf("failed to initialize extension: %v", err)
 	}
 
-	if err := ext.PostBlock(executor.State{Block: 4}, context); err != nil {
+	if err := ext.PostBlock(executor.State[any]{Block: 4}, context); err != nil {
 		t.Errorf("failed to check hash: %v", err)
 	}
 
-	if err := ext.PostRun(executor.State{Block: 5}, context, nil); err != nil {
+	if err := ext.PostRun(executor.State[any]{Block: 5}, context, nil); err != nil {
 		t.Errorf("failed to finish PostRun: %v", err)
 	}
 }
@@ -82,14 +82,14 @@ func TestStateHashValidator_InvalidHashOfLiveDbIsDetected(t *testing.T) {
 	config := &utils.Config{}
 	config.StateRootFile = path
 	config.Last = 5
-	ext := makeStateHashValidator(config, log)
+	ext := makeStateHashValidator[any](config, log)
 	context := &executor.Context{State: db}
 
-	if err := ext.PreRun(executor.State{}, context); err != nil {
+	if err := ext.PreRun(executor.State[any]{}, context); err != nil {
 		t.Errorf("failed to initialize extension: %v", err)
 	}
 
-	if err := ext.PostBlock(executor.State{Block: 4}, context); err == nil || !strings.Contains(err.Error(), "unexpected hash for Live block 4") {
+	if err := ext.PostBlock(executor.State[any]{Block: 4}, context); err == nil || !strings.Contains(err.Error(), "unexpected hash for Live block 4") {
 		t.Errorf("failed to detect incorrect hash, err %v", err)
 	}
 }
@@ -132,14 +132,14 @@ func TestStateHashValidator_InvalidHashOfArchiveDbIsDetected(t *testing.T) {
 	config.StateRootFile = path
 	config.Last = 5
 	config.ArchiveMode = true
-	ext := makeStateHashValidator(config, log)
+	ext := makeStateHashValidator[any](config, log)
 	context := &executor.Context{State: db}
 
-	if err := ext.PreRun(executor.State{}, context); err != nil {
+	if err := ext.PreRun(executor.State[any]{}, context); err != nil {
 		t.Errorf("failed to initialize extension: %v", err)
 	}
 
-	if err := ext.PostBlock(executor.State{Block: 2}, context); err == nil || !strings.Contains(err.Error(), "unexpected hash for Archive block 2") {
+	if err := ext.PostBlock(executor.State[any]{Block: 2}, context); err == nil || !strings.Contains(err.Error(), "unexpected hash for Archive block 2") {
 		t.Errorf("failed to detect incorrect hash, err %v", err)
 	}
 }
@@ -183,20 +183,20 @@ func TestStateHashValidator_ChecksArchiveHashesOfLaggingArchive(t *testing.T) {
 	config.StateRootFile = path
 	config.Last = 5
 	config.ArchiveMode = true
-	ext := makeStateHashValidator(config, log)
+	ext := makeStateHashValidator[any](config, log)
 	context := &executor.Context{State: db}
 
-	if err := ext.PreRun(executor.State{}, context); err != nil {
+	if err := ext.PreRun(executor.State[any]{}, context); err != nil {
 		t.Errorf("failed to initialize extension: %v", err)
 	}
 
 	// A PostBlock run should check the LiveDB and the ArchiveDB up to block 0.
-	if err := ext.PostBlock(executor.State{Block: 2}, context); err != nil {
+	if err := ext.PostBlock(executor.State[any]{Block: 2}, context); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 
 	// PostRun should finish up checking all remaining archive hashes and detect the error in block 2.
-	if err := ext.PostRun(executor.State{Block: 3}, context, nil); err == nil || !strings.Contains(err.Error(), "unexpected hash for Archive block 2") {
+	if err := ext.PostRun(executor.State[any]{Block: 3}, context, nil); err == nil || !strings.Contains(err.Error(), "unexpected hash for Archive block 2") {
 		t.Errorf("failed to detect incorrect hash, err %v", err)
 	}
 }
@@ -237,21 +237,21 @@ func TestStateHashValidator_ChecksArchiveHashesOfLaggingArchiveDoesNotWaitForNon
 	config.StateRootFile = path
 	config.Last = 5
 	config.ArchiveMode = true
-	ext := makeStateHashValidator(config, log)
+	ext := makeStateHashValidator[any](config, log)
 	context := &executor.Context{State: db}
 
-	if err := ext.PreRun(executor.State{}, context); err != nil {
+	if err := ext.PreRun(executor.State[any]{}, context); err != nil {
 		t.Errorf("failed to initialize extension: %v", err)
 	}
 
 	// A PostBlock run should check the LiveDB and the ArchiveDB up to block 0.
-	if err := ext.PostBlock(executor.State{Block: 2}, context); err != nil {
+	if err := ext.PostBlock(executor.State[any]{Block: 2}, context); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 
 	// PostRun should finish up checking all remaining archive blocks, even if the
 	// there are some blocks missing at the end of the range.
-	if err := ext.PostRun(executor.State{Block: 10}, context, nil); err != nil {
+	if err := ext.PostRun(executor.State[any]{Block: 10}, context, nil); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 }
@@ -282,20 +282,20 @@ func TestStateHashValidator_ValidatingLaggingArchivesIsSkippedIfRunIsAborted(t *
 	config.StateRootFile = path
 	config.Last = 5
 	config.ArchiveMode = true
-	ext := makeStateHashValidator(config, log)
+	ext := makeStateHashValidator[any](config, log)
 	context := &executor.Context{State: db}
 
-	if err := ext.PreRun(executor.State{}, context); err != nil {
+	if err := ext.PreRun(executor.State[any]{}, context); err != nil {
 		t.Errorf("failed to initialize extension: %v", err)
 	}
 
 	// A PostBlock run should check the LiveDB and the ArchiveDB up to block 0.
-	if err := ext.PostBlock(executor.State{Block: 2}, context); err != nil {
+	if err := ext.PostBlock(executor.State[any]{Block: 2}, context); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 
 	// PostRun should finish up checking all remaining archive hashes and detect the error in block 2.
-	if err := ext.PostRun(executor.State{Block: 2}, context, fmt.Errorf("dummy")); err != nil {
+	if err := ext.PostRun(executor.State[any]{Block: 2}, context, fmt.Errorf("dummy")); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 }

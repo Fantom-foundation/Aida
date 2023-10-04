@@ -7,5 +7,5 @@ import (
 )
 
 func TestNilExtensionIsExtension(t *testing.T) {
-	var _ executor.Extension = NilExtension{}
+	var _ executor.Extension[any] = NilExtension[any]{}
 }

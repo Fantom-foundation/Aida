@@ -13,8 +13,8 @@ func TestProgressLoggerExtension_NoPrimerIsCreatedIfDisabled(t *testing.T) {
 	config := &utils.Config{}
 	config.SkipPriming = true
 
-	ext := MakeStateDbPrimer(config)
-	if _, ok := ext.(NilExtension); !ok {
+	ext := MakeStateDbPrimer[any](config)
+	if _, ok := ext.(NilExtension[any]); !ok {
 		t.Errorf("Primer is enabled although not set in configuration")
 	}
 
@@ -30,9 +30,9 @@ func TestProgressLoggerExtension_PrimingDoesNotTriggerForExistingStateDb(t *test
 
 	log.EXPECT().Warning("Skipping priming due to usage of preexisting StateDb")
 
-	ext := makeStateDbPrimer(config, log)
+	ext := makeStateDbPrimer[any](config, log)
 
-	ext.PreRun(executor.State{}, nil)
+	ext.PreRun(executor.State[any]{}, nil)
 
 }
 
@@ -47,7 +47,7 @@ func TestProgressLoggerExtension_PrimingDoesTriggerForNonExistingStateDb(t *test
 
 	log.EXPECT().Noticef("Priming to block %v", config.First-1)
 
-	ext := makeStateDbPrimer(config, log)
+	ext := makeStateDbPrimer[any](config, log)
 
-	ext.PreRun(executor.State{}, &executor.Context{})
+	ext.PreRun(executor.State[any]{}, &executor.Context{})
 }
