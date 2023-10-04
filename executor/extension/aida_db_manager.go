@@ -10,10 +10,10 @@ import (
 
 // MakeAidaDbManager opens AidaDb if path is given and adds it to the context.
 func MakeAidaDbManager(cfg *utils.Config) executor.Extension {
-	if cfg.AidaDb != "" {
-		return &AidaDbManager{path: cfg.AidaDb}
+	if cfg.AidaDb == "" {
+		return NilExtension{}
 	}
-	return nil
+	return &AidaDbManager{path: cfg.AidaDb}
 }
 
 type AidaDbManager struct {
