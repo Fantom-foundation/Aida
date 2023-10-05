@@ -38,7 +38,7 @@ func RunVmAdb(ctx *cli.Context) error {
 		return stateDb.Close()
 	}()
 
-	return run(cfg, substateDb, stateDb, blockProcessor{cfg})
+	return run(cfg, substateDb, stateDb, blockProcessor{cfg}, nil)
 }
 
 type blockProcessor struct {
@@ -56,13 +56,20 @@ func (r blockProcessor) Process(state executor.State, context *executor.Context)
 	return err
 }
 
-func run(config *utils.Config, provider executor.SubstateProvider, stateDb state.StateDB, blkProcessor executor.Processor) error {
+func run(
+	config *utils.Config,
+	provider executor.SubstateProvider,
+	stateDb state.StateDB,
+	processor executor.Processor,
+	extra []executor.Extension,
+) error {
 	extensionList := []executor.Extension{
 		extension.MakeCpuProfiler(config),
 		extension.MakeArchiveGetter(),
 		extension.MakeProgressLogger(config, 0),
 		extension.MakeProgressTracker(config, 0),
 	}
+	extensionList = append(extensionList, extra...)
 	return executor.NewExecutor(provider).Run(
 		executor.Params{
 			From:                   int(config.First),
@@ -71,7 +78,7 @@ func run(config *utils.Config, provider executor.SubstateProvider, stateDb state
 			NumWorkers:             config.Workers,
 			ParallelismGranularity: executor.BlockLevel,
 		},
-		blkProcessor,
+		processor,
 		extensionList,
 	)
 }
