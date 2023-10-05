@@ -18,8 +18,8 @@ type statePreparator struct {
 }
 
 func (e *statePreparator) PreTransaction(state executor.State[*substate.Substate], context *executor.Context) error {
-	if context != nil && context.State != nil && state.Payload != nil {
-		context.State.PrepareSubstate(&state.Payload.InputAlloc, uint64(state.Block))
+	if context != nil && context.State != nil && state.Data != nil {
+		context.State.PrepareSubstate(&state.Data.InputAlloc, uint64(state.Block))
 	}
 	return nil
 }

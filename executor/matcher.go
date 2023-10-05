@@ -114,7 +114,7 @@ type withSubstate struct {
 
 func (m withSubstate) Matches(value any) bool {
 	state, ok := value.(State[*substate.Substate])
-	return ok && state.Payload == m.substate
+	return ok && state.Data == m.substate
 }
 
 func (m withSubstate) String() string {

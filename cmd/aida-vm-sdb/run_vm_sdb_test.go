@@ -31,10 +31,10 @@ func TestVmSdb_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		Run(0, 3, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[*substate.Substate]) error {
 			// block 0
-			consumer(executor.TransactionInfo[*substate.Substate]{Block: 0, Transaction: 1, Payload: emptyTx})
+			consumer(executor.TransactionInfo[*substate.Substate]{Block: 0, Transaction: 1, Data: emptyTx})
 			// block 2
-			consumer(executor.TransactionInfo[*substate.Substate]{Block: 2, Transaction: 3, Payload: emptyTx})
-			consumer(executor.TransactionInfo[*substate.Substate]{Block: 2, Transaction: utils.PseudoTx, Payload: emptyTx})
+			consumer(executor.TransactionInfo[*substate.Substate]{Block: 2, Transaction: 3, Data: emptyTx})
+			consumer(executor.TransactionInfo[*substate.Substate]{Block: 2, Transaction: utils.PseudoTx, Data: emptyTx})
 			return nil
 		})
 
@@ -89,7 +89,7 @@ func TestVmSdb_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 	provider.EXPECT().
 		Run(0, 3, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[*substate.Substate]) error {
-			return consumer(executor.TransactionInfo[*substate.Substate]{Block: 0, Transaction: 1, Payload: testTx})
+			return consumer(executor.TransactionInfo[*substate.Substate]{Block: 0, Transaction: 1, Data: testTx})
 		})
 
 	gomock.InOrder(
@@ -140,7 +140,7 @@ func TestVmSdb_ValidationFailsOnInvalidTransaction(t *testing.T) {
 	provider.EXPECT().
 		Run(0, 3, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[*substate.Substate]) error {
-			return consumer(executor.TransactionInfo[*substate.Substate]{Block: 0, Transaction: 1, Payload: testTx})
+			return consumer(executor.TransactionInfo[*substate.Substate]{Block: 0, Transaction: 1, Data: testTx})
 		})
 
 	gomock.InOrder(

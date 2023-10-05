@@ -75,7 +75,7 @@ func TestProgressLoggerExtension_LoggingHappens(t *testing.T) {
 	ext.PostTransaction(executor.State[*substate.Substate]{
 		Block:       1,
 		Transaction: 1,
-		Payload: &substate.Substate{
+		Data: &substate.Substate{
 			Result: &substate.SubstateResult{
 				GasUsed: 100_000_000,
 			},
@@ -109,7 +109,7 @@ func TestProgressLoggerExtension_LoggingHappensEvenWhenProgramEndsBeforeTickerTi
 	ext.PostTransaction(executor.State[*substate.Substate]{
 		Block:       1,
 		Transaction: 1,
-		Payload: &substate.Substate{
+		Data: &substate.Substate{
 			Result: &substate.SubstateResult{
 				GasUsed: 100_000_000,
 			},

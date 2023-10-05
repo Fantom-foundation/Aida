@@ -22,5 +22,5 @@ type Consumer[T any] func(TransactionInfo[T]) error
 type TransactionInfo[T any] struct {
 	Block       int
 	Transaction int
-	Payload     T
+	Data        T
 }

@@ -71,7 +71,7 @@ func (t *progressTracker) PostTransaction(state executor.State[*substate.Substat
 	defer t.lock.Unlock()
 
 	t.overallInfo.numTransactions++
-	t.overallInfo.gas += state.Payload.Result.GasUsed
+	t.overallInfo.gas += state.Data.Result.GasUsed
 
 	return nil
 }

@@ -76,7 +76,7 @@ func (r txProcessor) Process(s executor.State[*substate.Substate], c *executor.C
 		r.config,
 		uint64(s.Block),
 		s.Transaction,
-		s.Payload,
+		s.Data,
 	)
 	return err
 }
@@ -88,6 +88,6 @@ type temporaryStatePrepper struct {
 }
 
 func (temporaryStatePrepper) PreTransaction(s executor.State[*substate.Substate], c *executor.Context) error {
-	c.State = state.MakeInMemoryStateDB(&s.Payload.InputAlloc, uint64(s.Block))
+	c.State = state.MakeInMemoryStateDB(&s.Data.InputAlloc, uint64(s.Block))
 	return nil
 }

@@ -73,29 +73,29 @@ func TestProgressTrackerExtension_LoggingHappens(t *testing.T) {
 	ext.PreRun(executor.State[*substate.Substate]{}, context)
 
 	// first processed block
-	ext.PostTransaction(executor.State[*substate.Substate]{Payload: s}, context)
-	ext.PostTransaction(executor.State[*substate.Substate]{Payload: s}, context)
+	ext.PostTransaction(executor.State[*substate.Substate]{Data: s}, context)
+	ext.PostTransaction(executor.State[*substate.Substate]{Data: s}, context)
 	ext.PostBlock(executor.State[*substate.Substate]{
-		Block:   5,
-		Payload: s,
+		Block: 5,
+		Data:  s,
 	}, context)
 
 	time.Sleep(500 * time.Millisecond)
 
 	// second processed block
-	ext.PostTransaction(executor.State[*substate.Substate]{Payload: s}, context)
-	ext.PostTransaction(executor.State[*substate.Substate]{Payload: s}, context)
+	ext.PostTransaction(executor.State[*substate.Substate]{Data: s}, context)
+	ext.PostTransaction(executor.State[*substate.Substate]{Data: s}, context)
 	ext.PostBlock(executor.State[*substate.Substate]{
-		Block:   6,
-		Payload: s,
+		Block: 6,
+		Data:  s,
 	}, context)
 
 	time.Sleep(500 * time.Millisecond)
 
-	ext.PostTransaction(executor.State[*substate.Substate]{Payload: s}, context)
+	ext.PostTransaction(executor.State[*substate.Substate]{Data: s}, context)
 	ext.PostBlock(executor.State[*substate.Substate]{
-		Block:   8,
-		Payload: s,
+		Block: 8,
+		Data:  s,
 	}, context)
 }
 
@@ -121,23 +121,23 @@ func TestProgressTrackerExtension_FirstLoggingIsIgnored(t *testing.T) {
 	ext.PreRun(executor.State[*substate.Substate]{
 		Block:       4,
 		Transaction: 0,
-		Payload:     s,
+		Data:        s,
 	}, context)
 
 	ext.PostTransaction(executor.State[*substate.Substate]{
 		Block:       4,
 		Transaction: 0,
-		Payload:     s,
+		Data:        s,
 	}, context)
 	ext.PostTransaction(executor.State[*substate.Substate]{
 		Block:       4,
 		Transaction: 1,
-		Payload:     s,
+		Data:        s,
 	}, context)
 	ext.PostBlock(executor.State[*substate.Substate]{
 		Block:       5,
 		Transaction: 0,
-		Payload:     s,
+		Data:        s,
 	}, context)
 }
 

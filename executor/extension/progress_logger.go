@@ -114,7 +114,7 @@ func (l *progressLogger[T]) startReport(reportFrequency time.Duration) {
 			currentIntervalTx++
 			totalTx++
 
-			var content any = in.Payload
+			var content any = in.Data
 			if substate, ok := content.(*substate.Substate); ok {
 				currentIntervalGas += substate.Result.GasUsed
 				totalGas += substate.Result.GasUsed

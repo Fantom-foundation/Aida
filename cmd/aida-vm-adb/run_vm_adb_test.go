@@ -27,7 +27,7 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder(t *testing.T) {
 	provider.EXPECT().
 		Run(1, 2, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[*substate.Substate]) error {
-			consumer(executor.TransactionInfo[*substate.Substate]{Block: 1, Transaction: 1, Payload: emptyTx})
+			consumer(executor.TransactionInfo[*substate.Substate]{Block: 1, Transaction: 1, Data: emptyTx})
 			return nil
 		})
 

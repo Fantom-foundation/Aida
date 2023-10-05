@@ -151,9 +151,9 @@ type State[T any] struct {
 	// PostBlock, and for PostRun events in case of an abort.
 	Transaction int
 
-	// Payload is the input required for the current transaction. It is only
-	// valid for Pre- and PostTransaction events.
-	Payload T
+	// Data is the input required for processing the current transaction. It is
+	// only valid for Pre- and PostTransaction events.
+	Data T
 }
 
 // Context summarizes context data for the current execution and is passed
@@ -222,7 +222,7 @@ func (e *executor[T]) runSequential(params Params, processor Processor[T], exten
 			}
 		}
 		state.Transaction = tx.Transaction
-		return runTransaction(*state, context, tx.Payload, processor, extensions)
+		return runTransaction(*state, context, tx.Data, processor, extensions)
 	})
 	if err != nil {
 		return err
@@ -289,7 +289,7 @@ func (e *executor[T]) runParallel(params Params, processor Processor[T], extensi
 					localState.Block = tx.Block
 					localState.Transaction = tx.Transaction
 					localContext := *context
-					if err := runTransaction(localState, &localContext, tx.Payload, processor, extensions); err != nil {
+					if err := runTransaction(localState, &localContext, tx.Data, processor, extensions); err != nil {
 						workerErrs[i] = err
 						abort.Signal()
 						return
@@ -316,8 +316,8 @@ func (e *executor[T]) runParallel(params Params, processor Processor[T], extensi
 	return err
 }
 
-func runTransaction[T any](state State[T], context *Context, payload T, processor Processor[T], extensions []Extension[T]) error {
-	state.Payload = payload
+func runTransaction[T any](state State[T], context *Context, data T, processor Processor[T], extensions []Extension[T]) error {
+	state.Data = data
 	if err := signalPreTransaction(state, context, extensions); err != nil {
 		return err
 	}

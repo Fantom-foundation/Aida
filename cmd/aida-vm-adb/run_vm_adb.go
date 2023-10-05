@@ -47,7 +47,7 @@ func (r txProcessor) Process(state executor.State[*substate.Substate], context *
 		r.config,
 		uint64(state.Block),
 		state.Transaction,
-		state.Payload,
+		state.Data,
 	)
 	return err
 }

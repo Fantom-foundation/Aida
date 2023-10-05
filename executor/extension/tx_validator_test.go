@@ -68,7 +68,7 @@ func TestTxValidator_ValidatorDoesNotFailWithEmptySubstate(t *testing.T) {
 	err := ext.PostTransaction(executor.State[*substate.Substate]{
 		Block:       1,
 		Transaction: 1,
-		Payload:     &substate.Substate{},
+		Data:        &substate.Substate{},
 	}, context)
 
 	if err != nil {
@@ -100,7 +100,7 @@ func TestTxValidator_SingleErrorInPreTransactionDoesNotEndProgramWithContinueOnF
 	err := ext.PreTransaction(executor.State[*substate.Substate]{
 		Block:       1,
 		Transaction: 1,
-		Payload:     getIncorrectTestSubstateAlloc(),
+		Data:        getIncorrectTestSubstateAlloc(),
 	}, context)
 
 	if err != nil {
@@ -143,7 +143,7 @@ func TestTxValidator_SingleErrorInPreTransactionReturnsErrorWithNoContinueOnFail
 	err := ext.PreTransaction(executor.State[*substate.Substate]{
 		Block:       1,
 		Transaction: 1,
-		Payload:     getIncorrectTestSubstateAlloc(),
+		Data:        getIncorrectTestSubstateAlloc(),
 	}, context)
 
 	if err == nil {
@@ -187,7 +187,7 @@ func TestTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueOnFai
 	err := ext.PostTransaction(executor.State[*substate.Substate]{
 		Block:       1,
 		Transaction: 1,
-		Payload:     getIncorrectTestSubstateAlloc(),
+		Data:        getIncorrectTestSubstateAlloc(),
 	}, context)
 
 	if err == nil {
@@ -245,7 +245,7 @@ func TestTxValidator_TwoErrorsDoNotReturnAnErrorWhenContinueOnFailureIsEnabledAn
 	err := ext.PreTransaction(executor.State[*substate.Substate]{
 		Block:       1,
 		Transaction: 1,
-		Payload:     getIncorrectTestSubstateAlloc(),
+		Data:        getIncorrectTestSubstateAlloc(),
 	}, context)
 
 	if err != nil {
@@ -255,7 +255,7 @@ func TestTxValidator_TwoErrorsDoNotReturnAnErrorWhenContinueOnFailureIsEnabledAn
 	err = ext.PostTransaction(executor.State[*substate.Substate]{
 		Block:       1,
 		Transaction: 1,
-		Payload:     getIncorrectTestSubstateAlloc(),
+		Data:        getIncorrectTestSubstateAlloc(),
 	}, context)
 
 	// PostTransaction must not return error because ContinueOnFailure is enabled and error threshold is high enough
@@ -316,7 +316,7 @@ func TestTxValidator_TwoErrorsDoReturnErrorOnEventWhenContinueOnFailureIsEnabled
 	err := ext.PreTransaction(executor.State[*substate.Substate]{
 		Block:       1,
 		Transaction: 1,
-		Payload:     getIncorrectTestSubstateAlloc(),
+		Data:        getIncorrectTestSubstateAlloc(),
 	}, context)
 
 	if err != nil {
@@ -326,7 +326,7 @@ func TestTxValidator_TwoErrorsDoReturnErrorOnEventWhenContinueOnFailureIsEnabled
 	err = ext.PostTransaction(executor.State[*substate.Substate]{
 		Block:       1,
 		Transaction: 1,
-		Payload:     getIncorrectTestSubstateAlloc(),
+		Data:        getIncorrectTestSubstateAlloc(),
 	}, context)
 
 	if err == nil {
@@ -369,7 +369,7 @@ func TestTxValidator_PreTransactionDoesNotFailWithIncorrectOutput(t *testing.T) 
 	err := ext.PreTransaction(executor.State[*substate.Substate]{
 		Block:       1,
 		Transaction: 1,
-		Payload: &substate.Substate{
+		Data: &substate.Substate{
 			OutputAlloc: getIncorrectSubstateAlloc(),
 		},
 	}, context)
@@ -395,7 +395,7 @@ func TestTxValidator_PostTransactionDoesNotFailWithIncorrectInput(t *testing.T) 
 	err := ext.PostTransaction(executor.State[*substate.Substate]{
 		Block:       1,
 		Transaction: 1,
-		Payload: &substate.Substate{
+		Data: &substate.Substate{
 			InputAlloc: getIncorrectSubstateAlloc(),
 		},
 	}, context)
