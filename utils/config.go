@@ -112,6 +112,7 @@ type Config struct {
 	Db                  string         // path to database
 	DbTmp               string         // path to temporary database
 	DbImpl              string         // storage implementation
+	DiagnosticServer    int64          // if not zero, the port used for hosting a HTTP server for performance diagnostics
 	Genesis             string         // genesis file
 	DbVariant           string         // database variant
 	DbLogging           bool           // set to true if all DB operations should be logged
