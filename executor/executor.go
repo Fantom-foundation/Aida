@@ -4,6 +4,7 @@ package executor
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"sync/atomic"
 
@@ -34,7 +35,7 @@ import (
 //	}
 //	PostRun()
 //
-// When running with multiple workers, the execution is structures like this:
+// When running with multiple workers on TransactionLevel granularity, the execution is structures like this:
 //
 //	PreRun()
 //	for transaction in parallel {
@@ -45,6 +46,22 @@ import (
 //	PostRun()
 //
 // Note that there are no block boundary events in the parallel mode.
+//
+// When running with multiple workers on BlockLevel granularity, the execution is structures like this:
+//
+//	PreRun()
+//	for block in parallel {
+//	   PreBlock()
+//	   for each transaction {
+//	       PreTransaction()
+//	       Processor.Process(transaction)
+//	       PostTransaction()
+//	   }
+//	   PostBlock()
+//	}
+//	PostRun()
+//
+// Note that every worker has its own Context so any manipulation with this variable does not need to be thread safe.
 //
 // Each PreXXX() and PostXXX() is a hook-in point at which extensions may
 // track information and/or interfere with the execution. For more details on
@@ -63,12 +80,20 @@ type Executor interface {
 
 // NewExecutor creates a new executor based on the given substate provider.
 func NewExecutor(substate SubstateProvider) Executor {
-	return &executor{substate}
+	return &executor{substate: substate}
 }
+
+// ParallelismGranularity determines isolation level if same archive is kept for all transactions in block or for each is created new one
+type ParallelismGranularity byte
+
+const (
+	TransactionLevel ParallelismGranularity = iota
+	BlockLevel
+)
 
 // Params summarizes input parameters for a run of the executor.
 type Params struct {
-	// From is the begin of the range of blocks to be processed (inclusive).
+	// From is the beginning of the range of blocks to be processed (inclusive).
 	From int
 	// From is the end of the range of blocks to be processed (exclusive).
 	To int
@@ -81,6 +106,8 @@ type Params struct {
 	// is guranteed. Any number <= 1 is considered to be 1, thus the default
 	// value of 0 is valid.
 	NumWorkers int
+	// ParallelismGranularity determines whether parallelism is done on block or transaction level
+	ParallelismGranularity ParallelismGranularity
 }
 
 // Processor is an interface for the entity to which an executor is feeding
@@ -120,7 +147,7 @@ type Extension interface {
 	// called when running with multiple workers.
 	PreBlock(State, *Context) error
 
-	// PreBlock is called once after the end of processing a block with
+	// PostBlock is called once after the end of processing a block with
 	// the state containing the number of the Block and the last transaction
 	// processed in the block. This function is not called when running with
 	// multiple workers.
@@ -165,6 +192,9 @@ type Context struct {
 	// and extensions of a block-range execution.
 	State state.StateDB
 
+	// Archive represents a historical State
+	Archive state.NonCommittableStateDB
+
 	// StateDbPath contains path to working stateDb directory
 	StateDbPath string
 }
@@ -194,19 +224,31 @@ func (e *executor) Run(params Params, processor Processor, extensions []Extensio
 	}()
 
 	state.Block = params.From
-	if err := signalPreRun(state, &context, extensions); err != nil {
+	if err = signalPreRun(state, &context, extensions); err != nil {
 		return err
 	}
 
 	if params.NumWorkers <= 1 {
 		return e.runSequential(params, processor, extensions, &state, &context)
 	}
-	return e.runParallel(params, processor, extensions, &state, &context)
+
+	switch params.ParallelismGranularity {
+	case TransactionLevel:
+		return e.runParallelTransaction(params, processor, extensions, &state, &context)
+	case BlockLevel:
+		return e.runParallelBlock(params, processor, extensions, &state, &context)
+	default:
+		return fmt.Errorf("incorrect parallelism type: %v", params.ParallelismGranularity)
+	}
 }
 
 func (e *executor) runSequential(params Params, processor Processor, extensions []Extension, state *State, context *Context) error {
 	first := true
+
 	err := e.substate.Run(params.From, params.To, func(tx TransactionInfo) error {
+		// TODO rewrite
+		state.Substate = tx.Substate
+
 		if first {
 			state.Block = tx.Block
 			if err := signalPreBlock(*state, context, extensions); err != nil {
@@ -222,6 +264,7 @@ func (e *executor) runSequential(params Params, processor Processor, extensions 
 				return err
 			}
 		}
+
 		state.Transaction = tx.Transaction
 		return runTransaction(*state, context, tx.Substate, processor, extensions)
 	})
@@ -240,7 +283,122 @@ func (e *executor) runSequential(params Params, processor Processor, extensions 
 	return nil
 }
 
-func (e *executor) runParallel(params Params, processor Processor, extensions []Extension, state *State, context *Context) error {
+// runBlock runs transaction execution in a block
+func runBlock(
+	workerNumber int,
+	blocks chan []*TransactionInfo,
+	wg *sync.WaitGroup,
+	abort utils.Event,
+	workerErrs []error,
+	processor Processor,
+	extensions []Extension,
+	context *Context,
+	cachedPanic *atomic.Value,
+) {
+
+	// channel panics back to the main thread.
+	defer func() {
+		if r := recover(); r != nil {
+			abort.Signal() // stop forwarder and other workers too
+			cachedPanic.Store(r)
+		}
+		wg.Done()
+	}()
+
+	var localState State
+	for {
+		select {
+		case blockTransactions := <-blocks:
+			if blockTransactions == nil {
+				return // reached an end without abort
+			}
+
+			localState.Block = blockTransactions[0].Block
+			localContext := *context
+
+			if err := signalPreBlock(localState, &localContext, extensions); err != nil {
+				workerErrs[workerNumber] = err
+				abort.Signal()
+				return
+			}
+
+			for _, tx := range blockTransactions {
+				localState.Substate = tx.Substate
+				localState.Transaction = tx.Transaction
+
+				if err := runTransaction(localState, &localContext, tx.Substate, processor, extensions); err != nil {
+					workerErrs[workerNumber] = err
+					abort.Signal()
+					return
+				}
+
+				// listen for possible abort between the transactions
+				select {
+				case <-abort.Wait():
+					return
+				default:
+					continue
+				}
+			}
+
+			if err := signalPostBlock(localState, &localContext, extensions); err != nil {
+				workerErrs[workerNumber] = err
+				abort.Signal()
+				return
+			}
+		case <-abort.Wait():
+			return
+		}
+	}
+}
+
+// forwardBlocks is a worker that unites transactions by block and forwards them to execution.
+func (e *executor) forwardBlocks(params Params, abort utils.Event) (chan []*TransactionInfo, *error) {
+	blocks := make(chan []*TransactionInfo, 10*params.NumWorkers)
+	forwardErr := new(error)
+
+	go func() {
+		defer close(blocks)
+		abortErr := errors.New("aborted")
+
+		previousBlock := params.From
+
+		block := make([]*TransactionInfo, 0)
+		err := e.substate.Run(params.From, params.To, func(tx TransactionInfo) error {
+			if tx.Block != previousBlock {
+				previousBlock = tx.Block
+				select {
+				case blocks <- block:
+					// clean block for reuse
+					block = make([]*TransactionInfo, 0)
+				case <-abort.Wait():
+					return abortErr
+				}
+			}
+
+			block = append(block, &tx)
+
+			return nil
+		})
+
+		// send last block to the queue
+		if err == nil {
+			select {
+			case blocks <- block:
+			case <-abort.Wait():
+				err = abortErr
+			}
+		}
+
+		if err != abortErr {
+			*forwardErr = err
+		}
+	}()
+
+	return blocks, forwardErr
+}
+
+func (e *executor) runParallelTransaction(params Params, processor Processor, extensions []Extension, state *State, context *Context) error {
 	numWorkers := params.NumWorkers
 
 	// An event for signaling an abort of the execution.
@@ -329,6 +487,42 @@ func runTransaction(state State, context *Context, substate *substate.Substate, 
 		return err
 	}
 	return nil
+}
+
+func (e *executor) runParallelBlock(params Params, processor Processor, extensions []Extension, state *State, context *Context) error {
+	numWorkers := params.NumWorkers
+
+	// An event for signaling an abort of the execution.
+	abort := utils.MakeEvent()
+
+	// Start one go-routine forwarding blocks from the provider to a local channel.
+	blocks, forwardErr := e.forwardBlocks(params, abort)
+
+	// Start numWorkers go-routines processing blocks in parallel.
+	wg := new(sync.WaitGroup)
+	workerErrs := make([]error, numWorkers)
+
+	cachedPanic := new(atomic.Value)
+
+	wg.Add(numWorkers)
+	for i := 0; i < numWorkers; i++ {
+		go runBlock(i, blocks, wg, abort, workerErrs, processor, extensions, context, cachedPanic)
+	}
+
+	wg.Wait()
+
+	if r := cachedPanic.Load(); r != nil {
+		panic(r)
+	}
+
+	err := errors.Join(
+		*forwardErr,
+		errors.Join(workerErrs...),
+	)
+	if err == nil {
+		state.Block = params.To
+	}
+	return err
 }
 
 func signalPreRun(state State, context *Context, extensions []Extension) error {

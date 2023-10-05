@@ -27,7 +27,9 @@ var RunArchiveApp = cli.App{
 		&utils.CpuProfileFlag,
 		&utils.ChainIDFlag,
 		&logger.LogLevelFlag,
-		//&utils.StateDbLoggingFlag,
+		&utils.StateDbLoggingFlag,
+		&utils.TrackProgressFlag,
+		&utils.NoHeartbeatLoggingFlag,
 
 		// StateDb
 		&utils.AidaDbFlag,
