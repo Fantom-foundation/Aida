@@ -146,7 +146,7 @@ func printMetadata(pathToDb string) error {
 	// open db
 	aidaDb, err := rawdb.NewLevelDBDatabase(pathToDb, 1024, 100, "profiling", true)
 	if err != nil {
-		return fmt.Errorf("cannot open aida-db; %v", err)
+		return fmt.Errorf("cannot open aida-db for printing metadata; %v", err)
 	}
 
 	defer MustCloseDB(aidaDb)
