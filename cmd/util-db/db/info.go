@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/Fantom-foundation/lachesis-base/common/bigendian"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/op/go-logging"
@@ -26,6 +28,7 @@ var InfoCommand = cli.Command{
 		&cmdDelAcc,
 		&cmdCount,
 		&cmdPrintDbHash,
+		&cmdGetStateHash,
 	},
 }
 
@@ -98,6 +101,16 @@ var cmdPrintDbHash = cli.Command{
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 		&flags.ForceFlag,
+	},
+}
+
+var cmdGetStateHash = cli.Command{
+	Action:    getStateHash,
+	Name:      "state-hash",
+	Usage:     "Prints state hash for given block number.",
+	ArgsUsage: "<BlockNum>",
+	Flags: []cli.Flag{
+		&utils.AidaDbFlag,
 	},
 }
 
@@ -399,4 +412,34 @@ func GetDbSize(db ethdb.Database) uint64 {
 		count++
 	}
 	return count
+}
+
+func getStateHash(ctx *cli.Context) error {
+	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-getStateHash")
+
+	cfg, argErr := utils.NewConfig(ctx, utils.OneToNArgs)
+	if argErr != nil {
+		return argErr
+	}
+
+	blockNum, err := strconv.ParseUint(ctx.Args().Slice()[0], 10, 64)
+	if err != nil {
+		return err
+	}
+
+	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", true)
+	if err != nil {
+		return fmt.Errorf("cannot open aida-db; %v", err)
+	}
+
+	hexStr := hexutil.EncodeUint64(blockNum)
+
+	bytes, err := aidaDb.Get([]byte(utils.StateHashPrefix + hexStr))
+	if err != nil {
+		return fmt.Errorf("cannot get hash from db")
+	}
+
+	log.Noticef("State hash for block %v is 0x%v", blockNum, hex.EncodeToString(bytes))
+
+	return nil
 }

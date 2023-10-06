@@ -37,6 +37,7 @@ const (
 	TimestampPrefix         = substate.MetadataPrefix + "ti"
 	DbHashPrefix            = substate.MetadataPrefix + "md"
 	HasStateHashPatchPrefix = substate.MetadataPrefix + "sh"
+	StateHashPrefix         = "dbh"
 )
 
 // merge is determined by what are we merging
