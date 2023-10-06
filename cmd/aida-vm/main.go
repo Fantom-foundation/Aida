@@ -33,6 +33,7 @@ func main() {
 			&utils.ValidateTxStateFlag,
 			//&utils.OnlySuccessfulFlag,
 			&utils.CpuProfileFlag,
+			&utils.DiagnosticServerFlag,
 			&utils.AidaDbFlag,
 			&logger.LogLevelFlag,
 		},

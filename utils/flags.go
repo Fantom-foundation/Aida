@@ -49,6 +49,10 @@ var (
 		Name:  "cpu-profile",
 		Usage: "enables CPU profiling",
 	}
+	CpuProfilePerIntervalFlag = cli.BoolFlag{
+		Name:  "cpu-profile-per-interval",
+		Usage: "enables CPU profiling for individual 100k intervals",
+	}
 	DebugFromFlag = cli.Uint64Flag{
 		Name:  "debug-from",
 		Usage: "sets the first block to print trace debug",
@@ -57,6 +61,11 @@ var (
 	DeletionDbFlag = cli.PathFlag{
 		Name:  "deletion-db",
 		Usage: "sets the directory containing deleted accounts database",
+	}
+	DiagnosticServerFlag = cli.Int64Flag{
+		Name:  "diagnostic-port",
+		Usage: "enable hosting of a realtime diagnostic server by providing a port",
+		Value: 0,
 	}
 	KeepDbFlag = cli.BoolFlag{
 		Name:  "keep-db",

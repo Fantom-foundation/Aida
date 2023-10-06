@@ -372,7 +372,7 @@ func TestProcessor_StateDbCanBeModifiedByExtensionsAndProcessorInSequentialRun(t
 	}
 }
 
-func TestProcessor_StateDbCanBeModifiedByExtensionsAndProcessorInParallelRun(t *testing.T) {
+func TestProcessor_StateDbCanBeModifiedByExtensionsAndProcessorInTransactionLevelParallelRun(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	substate := NewMockSubstateProvider(ctrl)
 	processor := NewMockProcessor(ctrl)
@@ -407,7 +407,7 @@ func TestProcessor_StateDbCanBeModifiedByExtensionsAndProcessorInParallelRun(t *
 	)
 
 	err := NewExecutor(substate).Run(
-		Params{State: stateA, NumWorkers: 2},
+		Params{State: stateA, NumWorkers: 2, ParallelismGranularity: TransactionLevel},
 		processor,
 		[]Extension{extension},
 	)
@@ -470,7 +470,7 @@ func TestProcessor_SignalsAreDeliveredInConcurrentExecution(t *testing.T) {
 	// For each transaction, PreTransaction, Process, and PostTransaction
 	// should happen in order. However, Transactions may be processed
 	// out-of-order.
-	// Note: In the parallel context there is no block boundary.
+	// Note: In the transaction level parallel context there is no block boundary.
 	pre := extension.EXPECT().PreRun(AtBlock(10), gomock.Any())
 	post := extension.EXPECT().PostRun(AtBlock(12), gomock.Any(), nil)
 
@@ -516,7 +516,7 @@ func TestProcessor_SignalsAreDeliveredInConcurrentExecution(t *testing.T) {
 	}
 }
 
-func TestProcessor_ProcessErrorAbortsParallelProcessing(t *testing.T) {
+func TestProcessor_ProcessErrorAbortsTransactionLevelParallelProcessing(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	substate := NewMockSubstateProvider(ctrl)
 	processor := NewMockProcessor(ctrl)
@@ -537,7 +537,7 @@ func TestProcessor_ProcessErrorAbortsParallelProcessing(t *testing.T) {
 	processor.EXPECT().Process(gomock.Any(), gomock.Any()).MaxTimes(20)
 
 	err := NewExecutor(substate).Run(
-		Params{To: 1000, NumWorkers: 2},
+		Params{To: 1000, NumWorkers: 2, ParallelismGranularity: TransactionLevel},
 		processor,
 		nil,
 	)
@@ -546,7 +546,7 @@ func TestProcessor_ProcessErrorAbortsParallelProcessing(t *testing.T) {
 	}
 }
 
-func TestProcessor_PreEventErrorAbortsParallelProcessing(t *testing.T) {
+func TestProcessor_PreEventErrorAbortsTransactionLevelParallelProcessing(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	substate := NewMockSubstateProvider(ctrl)
 	processor := NewMockProcessor(ctrl)
@@ -574,7 +574,7 @@ func TestProcessor_PreEventErrorAbortsParallelProcessing(t *testing.T) {
 	extension.EXPECT().PostRun(gomock.Any(), gomock.Any(), WithError(stop))
 
 	err := NewExecutor(substate).Run(
-		Params{To: 1000, NumWorkers: 2},
+		Params{To: 1000, NumWorkers: 2, ParallelismGranularity: TransactionLevel},
 		processor,
 		[]Extension{extension},
 	)
@@ -583,7 +583,7 @@ func TestProcessor_PreEventErrorAbortsParallelProcessing(t *testing.T) {
 	}
 }
 
-func TestProcessor_PostEventErrorAbortsParallelProcessing(t *testing.T) {
+func TestProcessor_PostEventErrorAbortsTransactionLevelParallelProcessing(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	substate := NewMockSubstateProvider(ctrl)
 	processor := NewMockProcessor(ctrl)
@@ -611,7 +611,7 @@ func TestProcessor_PostEventErrorAbortsParallelProcessing(t *testing.T) {
 	extension.EXPECT().PostRun(gomock.Any(), gomock.Any(), WithError(stop))
 
 	err := NewExecutor(substate).Run(
-		Params{To: 1000, NumWorkers: 2},
+		Params{To: 1000, NumWorkers: 2, ParallelismGranularity: TransactionLevel},
 		processor,
 		[]Extension{extension},
 	)
@@ -639,15 +639,15 @@ func TestProcessor_SubstateIsPropagatedToTheProcessorAndAllExtensionsInSequentia
 
 	gomock.InOrder(
 		extension.EXPECT().PreRun(WithSubstate(nil), gomock.Any()),
-		extension.EXPECT().PreBlock(WithSubstate(nil), gomock.Any()),
+		extension.EXPECT().PreBlock(WithSubstate(substateA), gomock.Any()),
 		extension.EXPECT().PreTransaction(WithSubstate(substateA), gomock.Any()),
 		processor.EXPECT().Process(WithSubstate(substateA), gomock.Any()),
 		extension.EXPECT().PostTransaction(WithSubstate(substateA), gomock.Any()),
 		extension.EXPECT().PreTransaction(WithSubstate(substateB), gomock.Any()),
 		processor.EXPECT().Process(WithSubstate(substateB), gomock.Any()),
 		extension.EXPECT().PostTransaction(WithSubstate(substateB), gomock.Any()),
-		extension.EXPECT().PostBlock(WithSubstate(nil), gomock.Any()),
-		extension.EXPECT().PostRun(WithSubstate(nil), gomock.Any(), nil),
+		extension.EXPECT().PostBlock(WithSubstate(substateB), gomock.Any()),
+		extension.EXPECT().PostRun(WithSubstate(substateB), gomock.Any(), nil),
 	)
 
 	err := NewExecutor(provider).Run(
@@ -660,7 +660,7 @@ func TestProcessor_SubstateIsPropagatedToTheProcessorAndAllExtensionsInSequentia
 	}
 }
 
-func TestProcessor_SubstateIsPropagatedToTheProcessorAndAllExtensionsInParallelExecution(t *testing.T) {
+func TestProcessor_SubstateIsPropagatedToTheProcessorAndAllExtensionsInTransactionLevelParallelExecution(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	provider := NewMockSubstateProvider(ctrl)
 	processor := NewMockProcessor(ctrl)
@@ -697,7 +697,7 @@ func TestProcessor_SubstateIsPropagatedToTheProcessorAndAllExtensionsInParallelE
 	)
 
 	err := NewExecutor(provider).Run(
-		Params{From: 10, To: 11, NumWorkers: 2},
+		Params{From: 10, To: 11, NumWorkers: 2, ParallelismGranularity: TransactionLevel},
 		processor,
 		[]Extension{extension},
 	)
@@ -749,7 +749,7 @@ func TestProcessor_APanicInAnExecutorSkipsPostRunActions_InSequentialExecution(t
 	)
 }
 
-func TestProcessor_APanicInAnExecutorSkipsPostRunActions_InParallelExecution(t *testing.T) {
+func TestProcessor_APanicInAnExecutorSkipsPostRunActions_InTransactionLevelParallelExecution(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	provider := NewMockSubstateProvider(ctrl)
 	processor := NewMockProcessor(ctrl)
@@ -785,8 +785,102 @@ func TestProcessor_APanicInAnExecutorSkipsPostRunActions_InParallelExecution(t *
 	}()
 
 	NewExecutor(provider).Run(
-		Params{From: 10, To: 11, NumWorkers: 2},
+		Params{From: 10, To: 11, NumWorkers: 2, ParallelismGranularity: TransactionLevel},
 		processor,
 		[]Extension{extension},
 	)
+}
+
+func TestProcessor_BlocksParallelSingleBlockRun(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	substate := NewMockSubstateProvider(ctrl)
+	processor := NewMockProcessor(ctrl)
+	extension := NewMockExtension(ctrl)
+
+	stateA := state.NewMockStateDB(ctrl)
+	stateB := state.NewMockStateDB(ctrl)
+	stateC := state.NewMockStateDB(ctrl)
+	stateD := state.NewMockStateDB(ctrl)
+	stateE := state.NewMockStateDB(ctrl)
+	stateF := state.NewMockStateDB(ctrl)
+	stateG := state.NewMockStateDB(ctrl)
+
+	substate.EXPECT().
+		Run(gomock.Any(), gomock.Any(), gomock.Any()).
+		DoAndReturn(func(from int, to int, consume Consumer) error {
+			consume(TransactionInfo{from, 7, nil})
+			return nil
+		})
+
+	setState := func(state state.StateDB) func(State, *Context) {
+		return func(_ State, c *Context) {
+			c.State = state
+		}
+	}
+
+	gomock.InOrder(
+		extension.EXPECT().PreRun(gomock.Any(), WithState(stateA)).Do(setState(stateB)),
+		extension.EXPECT().PreBlock(gomock.Any(), WithState(stateB)).Do(setState(stateC)),
+		extension.EXPECT().PreTransaction(gomock.Any(), WithState(stateC)).Do(setState(stateD)),
+		processor.EXPECT().Process(gomock.Any(), WithState(stateD)).Do(setState(stateE)),
+		extension.EXPECT().PostTransaction(gomock.Any(), WithState(stateE)).Do(setState(stateF)),
+		extension.EXPECT().PostBlock(gomock.Any(), WithState(stateF)).Do(setState(stateG)),
+		// the context from a parallel block execution is not merged back to the top-level context
+		extension.EXPECT().PostRun(gomock.Any(), WithState(stateB), nil),
+	)
+
+	err := NewExecutor(substate).Run(
+		Params{State: stateA, NumWorkers: 2, ParallelismGranularity: BlockLevel},
+		processor,
+		[]Extension{extension},
+	)
+	if err != nil {
+		t.Errorf("execution failed: %v", err)
+	}
+}
+
+func TestProcessor_ParallelBlocksMultipleBlocksRun(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	substate := NewMockSubstateProvider(ctrl)
+	processor := NewMockProcessor(ctrl)
+	extension := NewMockExtension(ctrl)
+
+	substate.EXPECT().
+		Run(10, 12, gomock.Any()).
+		DoAndReturn(func(from int, to int, consume Consumer) error {
+			// We simulate two transactions per block.
+			consume(TransactionInfo{10, 7, nil})
+			consume(TransactionInfo{10, 9, nil})
+			consume(TransactionInfo{11, 8, nil})
+			consume(TransactionInfo{11, 10, nil})
+			return nil
+		})
+
+	extension.EXPECT().PreRun(AtBlock(10), gomock.Any())
+	extension.EXPECT().PreBlock(AtBlock(10), gomock.Any())
+	extension.EXPECT().PreTransaction(AtTransaction(10, 7), gomock.Any())
+	processor.EXPECT().Process(AtTransaction(10, 7), gomock.Any())
+	extension.EXPECT().PostTransaction(AtTransaction(10, 7), gomock.Any())
+	extension.EXPECT().PreTransaction(AtTransaction(10, 9), gomock.Any())
+	processor.EXPECT().Process(AtTransaction(10, 9), gomock.Any())
+	extension.EXPECT().PostTransaction(AtTransaction(10, 9), gomock.Any())
+	extension.EXPECT().PostBlock(AtTransaction(10, 9), gomock.Any())
+
+	extension.EXPECT().PreBlock(AtBlock(11), gomock.Any())
+	extension.EXPECT().PreTransaction(AtTransaction(11, 8), gomock.Any())
+	processor.EXPECT().Process(AtTransaction(11, 8), gomock.Any())
+	extension.EXPECT().PostTransaction(AtTransaction(11, 8), gomock.Any())
+	extension.EXPECT().PreTransaction(AtTransaction(11, 10), gomock.Any())
+	processor.EXPECT().Process(AtTransaction(11, 10), gomock.Any())
+	extension.EXPECT().PostTransaction(AtTransaction(11, 10), gomock.Any())
+	extension.EXPECT().PostBlock(AtTransaction(11, 10), gomock.Any())
+
+	extension.EXPECT().PostRun(AtBlock(12), gomock.Any(), nil)
+
+	executor := NewExecutor(substate)
+	if err := executor.Run(Params{From: 10, To: 12, NumWorkers: 2, ParallelismGranularity: BlockLevel},
+		processor,
+		[]Extension{extension}); err != nil {
+		t.Errorf("execution failed: %v", err)
+	}
 }

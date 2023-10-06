@@ -48,6 +48,7 @@ func run(
 ) error {
 	extensions := []executor.Extension{
 		extension.MakeCpuProfiler(config),
+		extension.MakeDiagnosticServer(config),
 		extension.MakeVirtualMachineStatisticsPrinter(config),
 		extension.MakeProgressLogger(config, 15*time.Second),
 		temporaryStatePrepper{},
