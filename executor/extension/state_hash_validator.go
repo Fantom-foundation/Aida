@@ -41,7 +41,7 @@ type stateHashValidator struct {
 }
 
 func (e *stateHashValidator) PreRun(_ executor.State, ctx *executor.Context) error {
-	e.hashProvider = utils.MakeStateRootProvider(ctx.AidaDb)
+	e.hashProvider = utils.MakeStateHashProvider(ctx.AidaDb)
 	return nil
 }
 
@@ -50,13 +50,9 @@ func (e *stateHashValidator) PostBlock(state executor.State, context *executor.C
 		return nil
 	}
 
-	want, err := e.hashProvider.GetStateHash(state.Block)
+	want, err := e.getStateHash(state.Block)
 	if err != nil {
-		if errors.Is(err, leveldb.ErrNotFound) {
-			e.log.Warningf("State hash for block %v is not present in the db", state.Block)
-			return nil
-		}
-		return fmt.Errorf("cannot get state hash for block %v; %v", state.Block, err)
+		return err
 	}
 
 	got := context.State.GetHash()
@@ -105,18 +101,14 @@ func (e *stateHashValidator) checkArchiveHashes(state state.StateDB) error {
 	cur := uint64(e.nextArchiveBlockToCheck)
 	for !empty && cur <= height {
 
-		archive, err := state.GetArchiveState(cur)
+		want, err := e.getStateHash(int(cur))
 		if err != nil {
 			return err
 		}
 
-		want, err := e.hashProvider.GetStateHash(int(cur))
+		archive, err := state.GetArchiveState(cur)
 		if err != nil {
-			if errors.Is(err, leveldb.ErrNotFound) {
-				e.log.Warningf("State hash for block %v is not present in the db", cur)
-				return nil
-			}
-			return fmt.Errorf("cannot get state hash for block %v; %v", cur, err)
+			return err
 		}
 
 		got := archive.GetHash()
@@ -129,6 +121,20 @@ func (e *stateHashValidator) checkArchiveHashes(state state.StateDB) error {
 	}
 	e.nextArchiveBlockToCheck = int(cur)
 	return nil
+}
+
+func (e *stateHashValidator) getStateHash(blockNumber int) (common.Hash, error) {
+	want, err := e.hashProvider.GetStateHash(blockNumber)
+	if err != nil {
+		if errors.Is(err, leveldb.ErrNotFound) {
+			e.log.Warningf("State hash for block %v is not present in the db", blockNumber)
+			return common.Hash{}, nil
+		}
+		return common.Hash{}, fmt.Errorf("cannot get state hash for block %v; %v", blockNumber, err)
+	}
+
+	return want, nil
+
 }
 
 // loadStateHashes attempts to parse a file listing state roots in the format

@@ -74,7 +74,6 @@ func TestStateHashValidator_InvalidHashOfLiveDbIsDetected(t *testing.T) {
 		db.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashB))),
 	)
 
-	config.Last = 2
 	ctx := &executor.Context{State: db}
 
 	if err := ext.PostBlock(executor.State{Block: blockNumber}, ctx); err == nil || !strings.Contains(err.Error(), fmt.Sprintf("unexpected hash for Live block %v", blockNumber)) {
@@ -90,6 +89,8 @@ func TestStateHashValidator_InvalidHashOfArchiveDbIsDetected(t *testing.T) {
 	blockNumber := 1
 
 	config := &utils.Config{}
+	config.ArchiveMode = true
+
 	ext := makeStateHashValidator(config, log)
 	ext.hashProvider = hashProvider
 
@@ -108,8 +109,6 @@ func TestStateHashValidator_InvalidHashOfArchiveDbIsDetected(t *testing.T) {
 		archive.EXPECT().Release(),
 	)
 
-	config.Last = 2
-	config.ArchiveMode = true
 	ctx := &executor.Context{State: db}
 
 	if err := ext.PostBlock(executor.State{Block: blockNumber}, ctx); err == nil || !strings.Contains(err.Error(), fmt.Sprintf("unexpected hash for archive block %d", blockNumber-1)) {
@@ -152,7 +151,6 @@ func TestStateHashValidator_ChecksArchiveHashesOfLaggingArchive(t *testing.T) {
 	)
 
 	config := &utils.Config{}
-	//config.StateRootFile = path
 	config.Last = 5
 	config.ArchiveMode = true
 	ext := makeStateHashValidator(config, log)
@@ -202,7 +200,6 @@ func TestStateHashValidator_ChecksArchiveHashesOfLaggingArchiveDoesNotWaitForNon
 	)
 
 	config := &utils.Config{}
-	//config.StateRootFile = path
 	config.Last = 5
 	config.ArchiveMode = true
 	ext := makeStateHashValidator(config, log)
@@ -241,7 +238,6 @@ func TestStateHashValidator_ValidatingLaggingArchivesIsSkippedIfRunIsAborted(t *
 	)
 
 	config := &utils.Config{}
-	//config.StateRootFile = path
 	config.Last = 5
 	config.ArchiveMode = true
 	ext := makeStateHashValidator(config, log)

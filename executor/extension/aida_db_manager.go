@@ -36,5 +36,7 @@ func (e *AidaDbManager) PostRun(_ executor.State, context *executor.Context, _ e
 		return fmt.Errorf("cannot close AidaDb; %v", err)
 	}
 
+	context.AidaDb = nil
+
 	return nil
 }

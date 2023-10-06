@@ -183,7 +183,7 @@ func (s *loggingStateDb) EndSyncPeriod() {
 
 func (s *loggingStateDb) GetHash() common.Hash {
 	hash := s.state.GetHash()
-	s.log.Info("GetStateHash, %v", hash)
+	s.log.Info("GetHash, %v", hash)
 	return hash
 }
 

@@ -15,15 +15,15 @@ type StateHashProvider interface {
 	GetStateHash(blockNumber int) (common.Hash, error)
 }
 
-func MakeStateRootProvider(db ethdb.Database) StateHashProvider {
-	return &StateRootProvider{db}
+func MakeStateHashProvider(db ethdb.Database) StateHashProvider {
+	return &stateHashProvider{db}
 }
 
-type StateRootProvider struct {
+type stateHashProvider struct {
 	db ethdb.Database
 }
 
-func (p *StateRootProvider) GetStateHash(number int) (common.Hash, error) {
+func (p *stateHashProvider) GetStateHash(number int) (common.Hash, error) {
 	hex := strconv.FormatUint(uint64(number), 16)
 	stateRoot, err := p.db.Get([]byte(stateRootPrefix + hex))
 	if err != nil {
