@@ -4,25 +4,42 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Fantom-foundation/Aida/cmd/aida-vm/vm"
+	"github.com/Fantom-foundation/Aida/logger"
+	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 
 func main() {
 	app := &cli.App{
-		Name:      "Substate CLI Manger",
+		Action:    RunVm,
+		Name:      "EVM evaluation tool",
 		HelpName:  "aida-vm",
-		Copyright: "(c) 2022 Fantom Foundation",
-		Flags:     []cli.Flag{},
-		Commands: []*cli.Command{
-			&vm.ReplayCommand,
+		Copyright: "(c) 2023 Fantom Foundation",
+		ArgsUsage: "<blockNumFirst> <blockNumLast>",
+		// TODO: derive supported flags from utilized executor extensions.
+		Flags: []cli.Flag{
+			&substate.WorkersFlag,
+			//&substate.SkipTransferTxsFlag,
+			//&substate.SkipCallTxsFlag,
+			//&substate.SkipCreateTxsFlag,
+			&utils.ChainIDFlag,
+			//&utils.ProfileEVMCallFlag,
+			//&utils.MicroProfilingFlag,
+			//&utils.BasicBlockProfilingFlag,
+			//&utils.ProfilingDbNameFlag,
+			&utils.ChannelBufferSizeFlag,
+			&utils.VmImplementation,
+			&utils.ValidateTxStateFlag,
+			//&utils.OnlySuccessfulFlag,
+			&utils.CpuProfileFlag,
+			&utils.DiagnosticServerFlag,
+			&utils.AidaDbFlag,
+			&logger.LogLevelFlag,
 		},
 	}
-	substate.RecordReplay = true
 	if err := app.Run(os.Args); err != nil {
-		code := 1
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(code)
+		os.Exit(1)
 	}
 }

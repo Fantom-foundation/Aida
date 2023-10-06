@@ -56,7 +56,7 @@ func TestPrepareBlockCtx(t *testing.T) {
 	}
 
 	// BlockHashes are nil, expect an error
-	blockCtx := prepareBlockCtx(env)
+	blockCtx := prepareBlockCtx(env, nil)
 
 	if blocknum != blockCtx.BlockNumber.Uint64() {
 		t.Fatalf("Wrong block number")

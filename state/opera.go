@@ -259,7 +259,7 @@ func (s *operaStateDB) StartBulkLoad(block uint64) BulkLoad {
 	return nil
 }
 
-func (s *operaStateDB) GetArchiveState(block uint64) (StateDB, error) {
+func (s *operaStateDB) GetArchiveState(block uint64) (NonCommittableStateDB, error) {
 	header := common.Hash(s.gdb.GetBlock(idx.Block(block)).Root)
 	state, err := s.stateReader.StateAt(header)
 	if err != nil {
@@ -267,6 +267,10 @@ func (s *operaStateDB) GetArchiveState(block uint64) (StateDB, error) {
 	}
 
 	return newOperaStateDB(state, s.stateReader, nil, header, "INFO"), nil
+}
+
+func (s *operaStateDB) GetArchiveBlockHeight() (uint64, bool, error) {
+	return 0, false, fmt.Errorf("retrieving of the Archive's block height is not (yet) supported by this DB implementation")
 }
 
 func (s *operaStateDB) GetMemoryUsage() *MemoryUsage {
@@ -311,4 +315,8 @@ func (s *operaStateDB) openStateDB() error {
 	// open new StateDb
 	s.db, err = s.stateReader.StateAt(common.Hash{})
 	return err
+}
+
+func (s *operaStateDB) Release() {
+	// nothing to do
 }

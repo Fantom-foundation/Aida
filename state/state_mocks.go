@@ -14,91 +14,103 @@ import (
 	gomock "go.uber.org/mock/gomock"
 )
 
-// MockBasicStateDB is a mock of BasicStateDB interface.
-type MockBasicStateDB struct {
+// MockVmStateDB is a mock of VmStateDB interface.
+type MockVmStateDB struct {
 	ctrl     *gomock.Controller
-	recorder *MockBasicStateDBMockRecorder
+	recorder *MockVmStateDBMockRecorder
 }
 
-// MockBasicStateDBMockRecorder is the mock recorder for MockBasicStateDB.
-type MockBasicStateDBMockRecorder struct {
-	mock *MockBasicStateDB
+// MockVmStateDBMockRecorder is the mock recorder for MockVmStateDB.
+type MockVmStateDBMockRecorder struct {
+	mock *MockVmStateDB
 }
 
-// NewMockBasicStateDB creates a new mock instance.
-func NewMockBasicStateDB(ctrl *gomock.Controller) *MockBasicStateDB {
-	mock := &MockBasicStateDB{ctrl: ctrl}
-	mock.recorder = &MockBasicStateDBMockRecorder{mock}
+// NewMockVmStateDB creates a new mock instance.
+func NewMockVmStateDB(ctrl *gomock.Controller) *MockVmStateDB {
+	mock := &MockVmStateDB{ctrl: ctrl}
+	mock.recorder = &MockVmStateDBMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockBasicStateDB) EXPECT() *MockBasicStateDBMockRecorder {
+func (m *MockVmStateDB) EXPECT() *MockVmStateDBMockRecorder {
 	return m.recorder
 }
 
 // AddAddressToAccessList mocks base method.
-func (m *MockBasicStateDB) AddAddressToAccessList(addr common.Address) {
+func (m *MockVmStateDB) AddAddressToAccessList(addr common.Address) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "AddAddressToAccessList", addr)
 }
 
 // AddAddressToAccessList indicates an expected call of AddAddressToAccessList.
-func (mr *MockBasicStateDBMockRecorder) AddAddressToAccessList(addr interface{}) *gomock.Call {
+func (mr *MockVmStateDBMockRecorder) AddAddressToAccessList(addr interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddAddressToAccessList", reflect.TypeOf((*MockBasicStateDB)(nil).AddAddressToAccessList), addr)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddAddressToAccessList", reflect.TypeOf((*MockVmStateDB)(nil).AddAddressToAccessList), addr)
 }
 
 // AddBalance mocks base method.
-func (m *MockBasicStateDB) AddBalance(arg0 common.Address, arg1 *big.Int) {
+func (m *MockVmStateDB) AddBalance(arg0 common.Address, arg1 *big.Int) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "AddBalance", arg0, arg1)
 }
 
 // AddBalance indicates an expected call of AddBalance.
-func (mr *MockBasicStateDBMockRecorder) AddBalance(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockVmStateDBMockRecorder) AddBalance(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddBalance", reflect.TypeOf((*MockBasicStateDB)(nil).AddBalance), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddBalance", reflect.TypeOf((*MockVmStateDB)(nil).AddBalance), arg0, arg1)
 }
 
 // AddLog mocks base method.
-func (m *MockBasicStateDB) AddLog(arg0 *types.Log) {
+func (m *MockVmStateDB) AddLog(arg0 *types.Log) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "AddLog", arg0)
 }
 
 // AddLog indicates an expected call of AddLog.
-func (mr *MockBasicStateDBMockRecorder) AddLog(arg0 interface{}) *gomock.Call {
+func (mr *MockVmStateDBMockRecorder) AddLog(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddLog", reflect.TypeOf((*MockBasicStateDB)(nil).AddLog), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddLog", reflect.TypeOf((*MockVmStateDB)(nil).AddLog), arg0)
+}
+
+// AddPreimage mocks base method.
+func (m *MockVmStateDB) AddPreimage(arg0 common.Hash, arg1 []byte) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "AddPreimage", arg0, arg1)
+}
+
+// AddPreimage indicates an expected call of AddPreimage.
+func (mr *MockVmStateDBMockRecorder) AddPreimage(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddPreimage", reflect.TypeOf((*MockVmStateDB)(nil).AddPreimage), arg0, arg1)
 }
 
 // AddRefund mocks base method.
-func (m *MockBasicStateDB) AddRefund(arg0 uint64) {
+func (m *MockVmStateDB) AddRefund(arg0 uint64) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "AddRefund", arg0)
 }
 
 // AddRefund indicates an expected call of AddRefund.
-func (mr *MockBasicStateDBMockRecorder) AddRefund(arg0 interface{}) *gomock.Call {
+func (mr *MockVmStateDBMockRecorder) AddRefund(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRefund", reflect.TypeOf((*MockBasicStateDB)(nil).AddRefund), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRefund", reflect.TypeOf((*MockVmStateDB)(nil).AddRefund), arg0)
 }
 
 // AddSlotToAccessList mocks base method.
-func (m *MockBasicStateDB) AddSlotToAccessList(addr common.Address, slot common.Hash) {
+func (m *MockVmStateDB) AddSlotToAccessList(addr common.Address, slot common.Hash) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "AddSlotToAccessList", addr, slot)
 }
 
 // AddSlotToAccessList indicates an expected call of AddSlotToAccessList.
-func (mr *MockBasicStateDBMockRecorder) AddSlotToAccessList(addr, slot interface{}) *gomock.Call {
+func (mr *MockVmStateDBMockRecorder) AddSlotToAccessList(addr, slot interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddSlotToAccessList", reflect.TypeOf((*MockBasicStateDB)(nil).AddSlotToAccessList), addr, slot)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddSlotToAccessList", reflect.TypeOf((*MockVmStateDB)(nil).AddSlotToAccessList), addr, slot)
 }
 
 // AddressInAccessList mocks base method.
-func (m *MockBasicStateDB) AddressInAccessList(addr common.Address) bool {
+func (m *MockVmStateDB) AddressInAccessList(addr common.Address) bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "AddressInAccessList", addr)
 	ret0, _ := ret[0].(bool)
@@ -106,61 +118,37 @@ func (m *MockBasicStateDB) AddressInAccessList(addr common.Address) bool {
 }
 
 // AddressInAccessList indicates an expected call of AddressInAccessList.
-func (mr *MockBasicStateDBMockRecorder) AddressInAccessList(addr interface{}) *gomock.Call {
+func (mr *MockVmStateDBMockRecorder) AddressInAccessList(addr interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddressInAccessList", reflect.TypeOf((*MockBasicStateDB)(nil).AddressInAccessList), addr)
-}
-
-// BeginBlock mocks base method.
-func (m *MockBasicStateDB) BeginBlock(arg0 uint64) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "BeginBlock", arg0)
-}
-
-// BeginBlock indicates an expected call of BeginBlock.
-func (mr *MockBasicStateDBMockRecorder) BeginBlock(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BeginBlock", reflect.TypeOf((*MockBasicStateDB)(nil).BeginBlock), arg0)
-}
-
-// BeginSyncPeriod mocks base method.
-func (m *MockBasicStateDB) BeginSyncPeriod(arg0 uint64) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "BeginSyncPeriod", arg0)
-}
-
-// BeginSyncPeriod indicates an expected call of BeginSyncPeriod.
-func (mr *MockBasicStateDBMockRecorder) BeginSyncPeriod(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BeginSyncPeriod", reflect.TypeOf((*MockBasicStateDB)(nil).BeginSyncPeriod), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddressInAccessList", reflect.TypeOf((*MockVmStateDB)(nil).AddressInAccessList), addr)
 }
 
 // BeginTransaction mocks base method.
-func (m *MockBasicStateDB) BeginTransaction(arg0 uint32) {
+func (m *MockVmStateDB) BeginTransaction(arg0 uint32) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "BeginTransaction", arg0)
 }
 
 // BeginTransaction indicates an expected call of BeginTransaction.
-func (mr *MockBasicStateDBMockRecorder) BeginTransaction(arg0 interface{}) *gomock.Call {
+func (mr *MockVmStateDBMockRecorder) BeginTransaction(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BeginTransaction", reflect.TypeOf((*MockBasicStateDB)(nil).BeginTransaction), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BeginTransaction", reflect.TypeOf((*MockVmStateDB)(nil).BeginTransaction), arg0)
 }
 
 // CreateAccount mocks base method.
-func (m *MockBasicStateDB) CreateAccount(arg0 common.Address) {
+func (m *MockVmStateDB) CreateAccount(arg0 common.Address) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "CreateAccount", arg0)
 }
 
 // CreateAccount indicates an expected call of CreateAccount.
-func (mr *MockBasicStateDBMockRecorder) CreateAccount(arg0 interface{}) *gomock.Call {
+func (mr *MockVmStateDBMockRecorder) CreateAccount(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAccount", reflect.TypeOf((*MockBasicStateDB)(nil).CreateAccount), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAccount", reflect.TypeOf((*MockVmStateDB)(nil).CreateAccount), arg0)
 }
 
 // Empty mocks base method.
-func (m *MockBasicStateDB) Empty(arg0 common.Address) bool {
+func (m *MockVmStateDB) Empty(arg0 common.Address) bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Empty", arg0)
 	ret0, _ := ret[0].(bool)
@@ -168,63 +156,25 @@ func (m *MockBasicStateDB) Empty(arg0 common.Address) bool {
 }
 
 // Empty indicates an expected call of Empty.
-func (mr *MockBasicStateDBMockRecorder) Empty(arg0 interface{}) *gomock.Call {
+func (mr *MockVmStateDBMockRecorder) Empty(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Empty", reflect.TypeOf((*MockBasicStateDB)(nil).Empty), arg0)
-}
-
-// EndBlock mocks base method.
-func (m *MockBasicStateDB) EndBlock() {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "EndBlock")
-}
-
-// EndBlock indicates an expected call of EndBlock.
-func (mr *MockBasicStateDBMockRecorder) EndBlock() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EndBlock", reflect.TypeOf((*MockBasicStateDB)(nil).EndBlock))
-}
-
-// EndSyncPeriod mocks base method.
-func (m *MockBasicStateDB) EndSyncPeriod() {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "EndSyncPeriod")
-}
-
-// EndSyncPeriod indicates an expected call of EndSyncPeriod.
-func (mr *MockBasicStateDBMockRecorder) EndSyncPeriod() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EndSyncPeriod", reflect.TypeOf((*MockBasicStateDB)(nil).EndSyncPeriod))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Empty", reflect.TypeOf((*MockVmStateDB)(nil).Empty), arg0)
 }
 
 // EndTransaction mocks base method.
-func (m *MockBasicStateDB) EndTransaction() {
+func (m *MockVmStateDB) EndTransaction() {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "EndTransaction")
 }
 
 // EndTransaction indicates an expected call of EndTransaction.
-func (mr *MockBasicStateDBMockRecorder) EndTransaction() *gomock.Call {
+func (mr *MockVmStateDBMockRecorder) EndTransaction() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EndTransaction", reflect.TypeOf((*MockBasicStateDB)(nil).EndTransaction))
-}
-
-// Error mocks base method.
-func (m *MockBasicStateDB) Error() error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Error")
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Error indicates an expected call of Error.
-func (mr *MockBasicStateDBMockRecorder) Error() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Error", reflect.TypeOf((*MockBasicStateDB)(nil).Error))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EndTransaction", reflect.TypeOf((*MockVmStateDB)(nil).EndTransaction))
 }
 
 // Exist mocks base method.
-func (m *MockBasicStateDB) Exist(arg0 common.Address) bool {
+func (m *MockVmStateDB) Exist(arg0 common.Address) bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Exist", arg0)
 	ret0, _ := ret[0].(bool)
@@ -232,13 +182,27 @@ func (m *MockBasicStateDB) Exist(arg0 common.Address) bool {
 }
 
 // Exist indicates an expected call of Exist.
-func (mr *MockBasicStateDBMockRecorder) Exist(arg0 interface{}) *gomock.Call {
+func (mr *MockVmStateDBMockRecorder) Exist(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exist", reflect.TypeOf((*MockBasicStateDB)(nil).Exist), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exist", reflect.TypeOf((*MockVmStateDB)(nil).Exist), arg0)
+}
+
+// ForEachStorage mocks base method.
+func (m *MockVmStateDB) ForEachStorage(arg0 common.Address, arg1 func(common.Hash, common.Hash) bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ForEachStorage", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ForEachStorage indicates an expected call of ForEachStorage.
+func (mr *MockVmStateDBMockRecorder) ForEachStorage(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForEachStorage", reflect.TypeOf((*MockVmStateDB)(nil).ForEachStorage), arg0, arg1)
 }
 
 // GetBalance mocks base method.
-func (m *MockBasicStateDB) GetBalance(arg0 common.Address) *big.Int {
+func (m *MockVmStateDB) GetBalance(arg0 common.Address) *big.Int {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetBalance", arg0)
 	ret0, _ := ret[0].(*big.Int)
@@ -246,13 +210,13 @@ func (m *MockBasicStateDB) GetBalance(arg0 common.Address) *big.Int {
 }
 
 // GetBalance indicates an expected call of GetBalance.
-func (mr *MockBasicStateDBMockRecorder) GetBalance(arg0 interface{}) *gomock.Call {
+func (mr *MockVmStateDBMockRecorder) GetBalance(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBalance", reflect.TypeOf((*MockBasicStateDB)(nil).GetBalance), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBalance", reflect.TypeOf((*MockVmStateDB)(nil).GetBalance), arg0)
 }
 
 // GetCode mocks base method.
-func (m *MockBasicStateDB) GetCode(arg0 common.Address) []byte {
+func (m *MockVmStateDB) GetCode(arg0 common.Address) []byte {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetCode", arg0)
 	ret0, _ := ret[0].([]byte)
@@ -260,13 +224,13 @@ func (m *MockBasicStateDB) GetCode(arg0 common.Address) []byte {
 }
 
 // GetCode indicates an expected call of GetCode.
-func (mr *MockBasicStateDBMockRecorder) GetCode(arg0 interface{}) *gomock.Call {
+func (mr *MockVmStateDBMockRecorder) GetCode(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCode", reflect.TypeOf((*MockBasicStateDB)(nil).GetCode), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCode", reflect.TypeOf((*MockVmStateDB)(nil).GetCode), arg0)
 }
 
 // GetCodeHash mocks base method.
-func (m *MockBasicStateDB) GetCodeHash(arg0 common.Address) common.Hash {
+func (m *MockVmStateDB) GetCodeHash(arg0 common.Address) common.Hash {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetCodeHash", arg0)
 	ret0, _ := ret[0].(common.Hash)
@@ -274,13 +238,13 @@ func (m *MockBasicStateDB) GetCodeHash(arg0 common.Address) common.Hash {
 }
 
 // GetCodeHash indicates an expected call of GetCodeHash.
-func (mr *MockBasicStateDBMockRecorder) GetCodeHash(arg0 interface{}) *gomock.Call {
+func (mr *MockVmStateDBMockRecorder) GetCodeHash(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCodeHash", reflect.TypeOf((*MockBasicStateDB)(nil).GetCodeHash), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCodeHash", reflect.TypeOf((*MockVmStateDB)(nil).GetCodeHash), arg0)
 }
 
 // GetCodeSize mocks base method.
-func (m *MockBasicStateDB) GetCodeSize(arg0 common.Address) int {
+func (m *MockVmStateDB) GetCodeSize(arg0 common.Address) int {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetCodeSize", arg0)
 	ret0, _ := ret[0].(int)
@@ -288,13 +252,13 @@ func (m *MockBasicStateDB) GetCodeSize(arg0 common.Address) int {
 }
 
 // GetCodeSize indicates an expected call of GetCodeSize.
-func (mr *MockBasicStateDBMockRecorder) GetCodeSize(arg0 interface{}) *gomock.Call {
+func (mr *MockVmStateDBMockRecorder) GetCodeSize(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCodeSize", reflect.TypeOf((*MockBasicStateDB)(nil).GetCodeSize), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCodeSize", reflect.TypeOf((*MockVmStateDB)(nil).GetCodeSize), arg0)
 }
 
 // GetCommittedState mocks base method.
-func (m *MockBasicStateDB) GetCommittedState(arg0 common.Address, arg1 common.Hash) common.Hash {
+func (m *MockVmStateDB) GetCommittedState(arg0 common.Address, arg1 common.Hash) common.Hash {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetCommittedState", arg0, arg1)
 	ret0, _ := ret[0].(common.Hash)
@@ -302,27 +266,13 @@ func (m *MockBasicStateDB) GetCommittedState(arg0 common.Address, arg1 common.Ha
 }
 
 // GetCommittedState indicates an expected call of GetCommittedState.
-func (mr *MockBasicStateDBMockRecorder) GetCommittedState(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockVmStateDBMockRecorder) GetCommittedState(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCommittedState", reflect.TypeOf((*MockBasicStateDB)(nil).GetCommittedState), arg0, arg1)
-}
-
-// GetHash mocks base method.
-func (m *MockBasicStateDB) GetHash() common.Hash {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetHash")
-	ret0, _ := ret[0].(common.Hash)
-	return ret0
-}
-
-// GetHash indicates an expected call of GetHash.
-func (mr *MockBasicStateDBMockRecorder) GetHash() *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHash", reflect.TypeOf((*MockBasicStateDB)(nil).GetHash))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCommittedState", reflect.TypeOf((*MockVmStateDB)(nil).GetCommittedState), arg0, arg1)
 }
 
 // GetLogs mocks base method.
-func (m *MockBasicStateDB) GetLogs(arg0, arg1 common.Hash) []*types.Log {
+func (m *MockVmStateDB) GetLogs(arg0, arg1 common.Hash) []*types.Log {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetLogs", arg0, arg1)
 	ret0, _ := ret[0].([]*types.Log)
@@ -330,13 +280,13 @@ func (m *MockBasicStateDB) GetLogs(arg0, arg1 common.Hash) []*types.Log {
 }
 
 // GetLogs indicates an expected call of GetLogs.
-func (mr *MockBasicStateDBMockRecorder) GetLogs(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockVmStateDBMockRecorder) GetLogs(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLogs", reflect.TypeOf((*MockBasicStateDB)(nil).GetLogs), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLogs", reflect.TypeOf((*MockVmStateDB)(nil).GetLogs), arg0, arg1)
 }
 
 // GetNonce mocks base method.
-func (m *MockBasicStateDB) GetNonce(arg0 common.Address) uint64 {
+func (m *MockVmStateDB) GetNonce(arg0 common.Address) uint64 {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetNonce", arg0)
 	ret0, _ := ret[0].(uint64)
@@ -344,13 +294,13 @@ func (m *MockBasicStateDB) GetNonce(arg0 common.Address) uint64 {
 }
 
 // GetNonce indicates an expected call of GetNonce.
-func (mr *MockBasicStateDBMockRecorder) GetNonce(arg0 interface{}) *gomock.Call {
+func (mr *MockVmStateDBMockRecorder) GetNonce(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNonce", reflect.TypeOf((*MockBasicStateDB)(nil).GetNonce), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNonce", reflect.TypeOf((*MockVmStateDB)(nil).GetNonce), arg0)
 }
 
 // GetRefund mocks base method.
-func (m *MockBasicStateDB) GetRefund() uint64 {
+func (m *MockVmStateDB) GetRefund() uint64 {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetRefund")
 	ret0, _ := ret[0].(uint64)
@@ -358,13 +308,13 @@ func (m *MockBasicStateDB) GetRefund() uint64 {
 }
 
 // GetRefund indicates an expected call of GetRefund.
-func (mr *MockBasicStateDBMockRecorder) GetRefund() *gomock.Call {
+func (mr *MockVmStateDBMockRecorder) GetRefund() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRefund", reflect.TypeOf((*MockBasicStateDB)(nil).GetRefund))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRefund", reflect.TypeOf((*MockVmStateDB)(nil).GetRefund))
 }
 
 // GetState mocks base method.
-func (m *MockBasicStateDB) GetState(arg0 common.Address, arg1 common.Hash) common.Hash {
+func (m *MockVmStateDB) GetState(arg0 common.Address, arg1 common.Hash) common.Hash {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetState", arg0, arg1)
 	ret0, _ := ret[0].(common.Hash)
@@ -372,13 +322,27 @@ func (m *MockBasicStateDB) GetState(arg0 common.Address, arg1 common.Hash) commo
 }
 
 // GetState indicates an expected call of GetState.
-func (mr *MockBasicStateDBMockRecorder) GetState(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockVmStateDBMockRecorder) GetState(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetState", reflect.TypeOf((*MockBasicStateDB)(nil).GetState), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetState", reflect.TypeOf((*MockVmStateDB)(nil).GetState), arg0, arg1)
+}
+
+// GetSubstatePostAlloc mocks base method.
+func (m *MockVmStateDB) GetSubstatePostAlloc() substate.SubstateAlloc {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSubstatePostAlloc")
+	ret0, _ := ret[0].(substate.SubstateAlloc)
+	return ret0
+}
+
+// GetSubstatePostAlloc indicates an expected call of GetSubstatePostAlloc.
+func (mr *MockVmStateDBMockRecorder) GetSubstatePostAlloc() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSubstatePostAlloc", reflect.TypeOf((*MockVmStateDB)(nil).GetSubstatePostAlloc))
 }
 
 // HasSuicided mocks base method.
-func (m *MockBasicStateDB) HasSuicided(arg0 common.Address) bool {
+func (m *MockVmStateDB) HasSuicided(arg0 common.Address) bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "HasSuicided", arg0)
 	ret0, _ := ret[0].(bool)
@@ -386,73 +350,85 @@ func (m *MockBasicStateDB) HasSuicided(arg0 common.Address) bool {
 }
 
 // HasSuicided indicates an expected call of HasSuicided.
-func (mr *MockBasicStateDBMockRecorder) HasSuicided(arg0 interface{}) *gomock.Call {
+func (mr *MockVmStateDBMockRecorder) HasSuicided(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasSuicided", reflect.TypeOf((*MockBasicStateDB)(nil).HasSuicided), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasSuicided", reflect.TypeOf((*MockVmStateDB)(nil).HasSuicided), arg0)
+}
+
+// Prepare mocks base method.
+func (m *MockVmStateDB) Prepare(arg0 common.Hash, arg1 int) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Prepare", arg0, arg1)
+}
+
+// Prepare indicates an expected call of Prepare.
+func (mr *MockVmStateDBMockRecorder) Prepare(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Prepare", reflect.TypeOf((*MockVmStateDB)(nil).Prepare), arg0, arg1)
 }
 
 // PrepareAccessList mocks base method.
-func (m *MockBasicStateDB) PrepareAccessList(sender common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
+func (m *MockVmStateDB) PrepareAccessList(sender common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "PrepareAccessList", sender, dest, precompiles, txAccesses)
 }
 
 // PrepareAccessList indicates an expected call of PrepareAccessList.
-func (mr *MockBasicStateDBMockRecorder) PrepareAccessList(sender, dest, precompiles, txAccesses interface{}) *gomock.Call {
+func (mr *MockVmStateDBMockRecorder) PrepareAccessList(sender, dest, precompiles, txAccesses interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareAccessList", reflect.TypeOf((*MockBasicStateDB)(nil).PrepareAccessList), sender, dest, precompiles, txAccesses)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareAccessList", reflect.TypeOf((*MockVmStateDB)(nil).PrepareAccessList), sender, dest, precompiles, txAccesses)
 }
 
 // RevertToSnapshot mocks base method.
-func (m *MockBasicStateDB) RevertToSnapshot(arg0 int) {
+func (m *MockVmStateDB) RevertToSnapshot(arg0 int) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "RevertToSnapshot", arg0)
 }
 
 // RevertToSnapshot indicates an expected call of RevertToSnapshot.
-func (mr *MockBasicStateDBMockRecorder) RevertToSnapshot(arg0 interface{}) *gomock.Call {
+func (mr *MockVmStateDBMockRecorder) RevertToSnapshot(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RevertToSnapshot", reflect.TypeOf((*MockBasicStateDB)(nil).RevertToSnapshot), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RevertToSnapshot", reflect.TypeOf((*MockVmStateDB)(nil).RevertToSnapshot), arg0)
 }
 
 // SetCode mocks base method.
-func (m *MockBasicStateDB) SetCode(arg0 common.Address, arg1 []byte) {
+func (m *MockVmStateDB) SetCode(arg0 common.Address, arg1 []byte) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "SetCode", arg0, arg1)
 }
 
 // SetCode indicates an expected call of SetCode.
-func (mr *MockBasicStateDBMockRecorder) SetCode(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockVmStateDBMockRecorder) SetCode(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetCode", reflect.TypeOf((*MockBasicStateDB)(nil).SetCode), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetCode", reflect.TypeOf((*MockVmStateDB)(nil).SetCode), arg0, arg1)
 }
 
 // SetNonce mocks base method.
-func (m *MockBasicStateDB) SetNonce(arg0 common.Address, arg1 uint64) {
+func (m *MockVmStateDB) SetNonce(arg0 common.Address, arg1 uint64) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "SetNonce", arg0, arg1)
 }
 
 // SetNonce indicates an expected call of SetNonce.
-func (mr *MockBasicStateDBMockRecorder) SetNonce(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockVmStateDBMockRecorder) SetNonce(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetNonce", reflect.TypeOf((*MockBasicStateDB)(nil).SetNonce), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetNonce", reflect.TypeOf((*MockVmStateDB)(nil).SetNonce), arg0, arg1)
 }
 
 // SetState mocks base method.
-func (m *MockBasicStateDB) SetState(arg0 common.Address, arg1, arg2 common.Hash) {
+func (m *MockVmStateDB) SetState(arg0 common.Address, arg1, arg2 common.Hash) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "SetState", arg0, arg1, arg2)
 }
 
 // SetState indicates an expected call of SetState.
-func (mr *MockBasicStateDBMockRecorder) SetState(arg0, arg1, arg2 interface{}) *gomock.Call {
+func (mr *MockVmStateDBMockRecorder) SetState(arg0, arg1, arg2 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetState", reflect.TypeOf((*MockBasicStateDB)(nil).SetState), arg0, arg1, arg2)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetState", reflect.TypeOf((*MockVmStateDB)(nil).SetState), arg0, arg1, arg2)
 }
 
 // SlotInAccessList mocks base method.
-func (m *MockBasicStateDB) SlotInAccessList(addr common.Address, slot common.Hash) (bool, bool) {
+func (m *MockVmStateDB) SlotInAccessList(addr common.Address, slot common.Hash) (bool, bool) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SlotInAccessList", addr, slot)
 	ret0, _ := ret[0].(bool)
@@ -461,13 +437,13 @@ func (m *MockBasicStateDB) SlotInAccessList(addr common.Address, slot common.Has
 }
 
 // SlotInAccessList indicates an expected call of SlotInAccessList.
-func (mr *MockBasicStateDBMockRecorder) SlotInAccessList(addr, slot interface{}) *gomock.Call {
+func (mr *MockVmStateDBMockRecorder) SlotInAccessList(addr, slot interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SlotInAccessList", reflect.TypeOf((*MockBasicStateDB)(nil).SlotInAccessList), addr, slot)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SlotInAccessList", reflect.TypeOf((*MockVmStateDB)(nil).SlotInAccessList), addr, slot)
 }
 
 // Snapshot mocks base method.
-func (m *MockBasicStateDB) Snapshot() int {
+func (m *MockVmStateDB) Snapshot() int {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Snapshot")
 	ret0, _ := ret[0].(int)
@@ -475,37 +451,37 @@ func (m *MockBasicStateDB) Snapshot() int {
 }
 
 // Snapshot indicates an expected call of Snapshot.
-func (mr *MockBasicStateDBMockRecorder) Snapshot() *gomock.Call {
+func (mr *MockVmStateDBMockRecorder) Snapshot() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Snapshot", reflect.TypeOf((*MockBasicStateDB)(nil).Snapshot))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Snapshot", reflect.TypeOf((*MockVmStateDB)(nil).Snapshot))
 }
 
 // SubBalance mocks base method.
-func (m *MockBasicStateDB) SubBalance(arg0 common.Address, arg1 *big.Int) {
+func (m *MockVmStateDB) SubBalance(arg0 common.Address, arg1 *big.Int) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "SubBalance", arg0, arg1)
 }
 
 // SubBalance indicates an expected call of SubBalance.
-func (mr *MockBasicStateDBMockRecorder) SubBalance(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockVmStateDBMockRecorder) SubBalance(arg0, arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubBalance", reflect.TypeOf((*MockBasicStateDB)(nil).SubBalance), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubBalance", reflect.TypeOf((*MockVmStateDB)(nil).SubBalance), arg0, arg1)
 }
 
 // SubRefund mocks base method.
-func (m *MockBasicStateDB) SubRefund(arg0 uint64) {
+func (m *MockVmStateDB) SubRefund(arg0 uint64) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "SubRefund", arg0)
 }
 
 // SubRefund indicates an expected call of SubRefund.
-func (mr *MockBasicStateDBMockRecorder) SubRefund(arg0 interface{}) *gomock.Call {
+func (mr *MockVmStateDBMockRecorder) SubRefund(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubRefund", reflect.TypeOf((*MockBasicStateDB)(nil).SubRefund), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubRefund", reflect.TypeOf((*MockVmStateDB)(nil).SubRefund), arg0)
 }
 
 // Suicide mocks base method.
-func (m *MockBasicStateDB) Suicide(arg0 common.Address) bool {
+func (m *MockVmStateDB) Suicide(arg0 common.Address) bool {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Suicide", arg0)
 	ret0, _ := ret[0].(bool)
@@ -513,9 +489,515 @@ func (m *MockBasicStateDB) Suicide(arg0 common.Address) bool {
 }
 
 // Suicide indicates an expected call of Suicide.
-func (mr *MockBasicStateDBMockRecorder) Suicide(arg0 interface{}) *gomock.Call {
+func (mr *MockVmStateDBMockRecorder) Suicide(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Suicide", reflect.TypeOf((*MockBasicStateDB)(nil).Suicide), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Suicide", reflect.TypeOf((*MockVmStateDB)(nil).Suicide), arg0)
+}
+
+// MockNonCommittableStateDB is a mock of NonCommittableStateDB interface.
+type MockNonCommittableStateDB struct {
+	ctrl     *gomock.Controller
+	recorder *MockNonCommittableStateDBMockRecorder
+}
+
+// MockNonCommittableStateDBMockRecorder is the mock recorder for MockNonCommittableStateDB.
+type MockNonCommittableStateDBMockRecorder struct {
+	mock *MockNonCommittableStateDB
+}
+
+// NewMockNonCommittableStateDB creates a new mock instance.
+func NewMockNonCommittableStateDB(ctrl *gomock.Controller) *MockNonCommittableStateDB {
+	mock := &MockNonCommittableStateDB{ctrl: ctrl}
+	mock.recorder = &MockNonCommittableStateDBMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockNonCommittableStateDB) EXPECT() *MockNonCommittableStateDBMockRecorder {
+	return m.recorder
+}
+
+// AddAddressToAccessList mocks base method.
+func (m *MockNonCommittableStateDB) AddAddressToAccessList(addr common.Address) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "AddAddressToAccessList", addr)
+}
+
+// AddAddressToAccessList indicates an expected call of AddAddressToAccessList.
+func (mr *MockNonCommittableStateDBMockRecorder) AddAddressToAccessList(addr interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddAddressToAccessList", reflect.TypeOf((*MockNonCommittableStateDB)(nil).AddAddressToAccessList), addr)
+}
+
+// AddBalance mocks base method.
+func (m *MockNonCommittableStateDB) AddBalance(arg0 common.Address, arg1 *big.Int) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "AddBalance", arg0, arg1)
+}
+
+// AddBalance indicates an expected call of AddBalance.
+func (mr *MockNonCommittableStateDBMockRecorder) AddBalance(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddBalance", reflect.TypeOf((*MockNonCommittableStateDB)(nil).AddBalance), arg0, arg1)
+}
+
+// AddLog mocks base method.
+func (m *MockNonCommittableStateDB) AddLog(arg0 *types.Log) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "AddLog", arg0)
+}
+
+// AddLog indicates an expected call of AddLog.
+func (mr *MockNonCommittableStateDBMockRecorder) AddLog(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddLog", reflect.TypeOf((*MockNonCommittableStateDB)(nil).AddLog), arg0)
+}
+
+// AddPreimage mocks base method.
+func (m *MockNonCommittableStateDB) AddPreimage(arg0 common.Hash, arg1 []byte) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "AddPreimage", arg0, arg1)
+}
+
+// AddPreimage indicates an expected call of AddPreimage.
+func (mr *MockNonCommittableStateDBMockRecorder) AddPreimage(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddPreimage", reflect.TypeOf((*MockNonCommittableStateDB)(nil).AddPreimage), arg0, arg1)
+}
+
+// AddRefund mocks base method.
+func (m *MockNonCommittableStateDB) AddRefund(arg0 uint64) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "AddRefund", arg0)
+}
+
+// AddRefund indicates an expected call of AddRefund.
+func (mr *MockNonCommittableStateDBMockRecorder) AddRefund(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddRefund", reflect.TypeOf((*MockNonCommittableStateDB)(nil).AddRefund), arg0)
+}
+
+// AddSlotToAccessList mocks base method.
+func (m *MockNonCommittableStateDB) AddSlotToAccessList(addr common.Address, slot common.Hash) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "AddSlotToAccessList", addr, slot)
+}
+
+// AddSlotToAccessList indicates an expected call of AddSlotToAccessList.
+func (mr *MockNonCommittableStateDBMockRecorder) AddSlotToAccessList(addr, slot interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddSlotToAccessList", reflect.TypeOf((*MockNonCommittableStateDB)(nil).AddSlotToAccessList), addr, slot)
+}
+
+// AddressInAccessList mocks base method.
+func (m *MockNonCommittableStateDB) AddressInAccessList(addr common.Address) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "AddressInAccessList", addr)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// AddressInAccessList indicates an expected call of AddressInAccessList.
+func (mr *MockNonCommittableStateDBMockRecorder) AddressInAccessList(addr interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "AddressInAccessList", reflect.TypeOf((*MockNonCommittableStateDB)(nil).AddressInAccessList), addr)
+}
+
+// BeginTransaction mocks base method.
+func (m *MockNonCommittableStateDB) BeginTransaction(arg0 uint32) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "BeginTransaction", arg0)
+}
+
+// BeginTransaction indicates an expected call of BeginTransaction.
+func (mr *MockNonCommittableStateDBMockRecorder) BeginTransaction(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BeginTransaction", reflect.TypeOf((*MockNonCommittableStateDB)(nil).BeginTransaction), arg0)
+}
+
+// CreateAccount mocks base method.
+func (m *MockNonCommittableStateDB) CreateAccount(arg0 common.Address) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "CreateAccount", arg0)
+}
+
+// CreateAccount indicates an expected call of CreateAccount.
+func (mr *MockNonCommittableStateDBMockRecorder) CreateAccount(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAccount", reflect.TypeOf((*MockNonCommittableStateDB)(nil).CreateAccount), arg0)
+}
+
+// Empty mocks base method.
+func (m *MockNonCommittableStateDB) Empty(arg0 common.Address) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Empty", arg0)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// Empty indicates an expected call of Empty.
+func (mr *MockNonCommittableStateDBMockRecorder) Empty(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Empty", reflect.TypeOf((*MockNonCommittableStateDB)(nil).Empty), arg0)
+}
+
+// EndTransaction mocks base method.
+func (m *MockNonCommittableStateDB) EndTransaction() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "EndTransaction")
+}
+
+// EndTransaction indicates an expected call of EndTransaction.
+func (mr *MockNonCommittableStateDBMockRecorder) EndTransaction() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EndTransaction", reflect.TypeOf((*MockNonCommittableStateDB)(nil).EndTransaction))
+}
+
+// Exist mocks base method.
+func (m *MockNonCommittableStateDB) Exist(arg0 common.Address) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Exist", arg0)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// Exist indicates an expected call of Exist.
+func (mr *MockNonCommittableStateDBMockRecorder) Exist(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Exist", reflect.TypeOf((*MockNonCommittableStateDB)(nil).Exist), arg0)
+}
+
+// ForEachStorage mocks base method.
+func (m *MockNonCommittableStateDB) ForEachStorage(arg0 common.Address, arg1 func(common.Hash, common.Hash) bool) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "ForEachStorage", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// ForEachStorage indicates an expected call of ForEachStorage.
+func (mr *MockNonCommittableStateDBMockRecorder) ForEachStorage(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForEachStorage", reflect.TypeOf((*MockNonCommittableStateDB)(nil).ForEachStorage), arg0, arg1)
+}
+
+// GetBalance mocks base method.
+func (m *MockNonCommittableStateDB) GetBalance(arg0 common.Address) *big.Int {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBalance", arg0)
+	ret0, _ := ret[0].(*big.Int)
+	return ret0
+}
+
+// GetBalance indicates an expected call of GetBalance.
+func (mr *MockNonCommittableStateDBMockRecorder) GetBalance(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBalance", reflect.TypeOf((*MockNonCommittableStateDB)(nil).GetBalance), arg0)
+}
+
+// GetCode mocks base method.
+func (m *MockNonCommittableStateDB) GetCode(arg0 common.Address) []byte {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCode", arg0)
+	ret0, _ := ret[0].([]byte)
+	return ret0
+}
+
+// GetCode indicates an expected call of GetCode.
+func (mr *MockNonCommittableStateDBMockRecorder) GetCode(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCode", reflect.TypeOf((*MockNonCommittableStateDB)(nil).GetCode), arg0)
+}
+
+// GetCodeHash mocks base method.
+func (m *MockNonCommittableStateDB) GetCodeHash(arg0 common.Address) common.Hash {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCodeHash", arg0)
+	ret0, _ := ret[0].(common.Hash)
+	return ret0
+}
+
+// GetCodeHash indicates an expected call of GetCodeHash.
+func (mr *MockNonCommittableStateDBMockRecorder) GetCodeHash(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCodeHash", reflect.TypeOf((*MockNonCommittableStateDB)(nil).GetCodeHash), arg0)
+}
+
+// GetCodeSize mocks base method.
+func (m *MockNonCommittableStateDB) GetCodeSize(arg0 common.Address) int {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCodeSize", arg0)
+	ret0, _ := ret[0].(int)
+	return ret0
+}
+
+// GetCodeSize indicates an expected call of GetCodeSize.
+func (mr *MockNonCommittableStateDBMockRecorder) GetCodeSize(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCodeSize", reflect.TypeOf((*MockNonCommittableStateDB)(nil).GetCodeSize), arg0)
+}
+
+// GetCommittedState mocks base method.
+func (m *MockNonCommittableStateDB) GetCommittedState(arg0 common.Address, arg1 common.Hash) common.Hash {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetCommittedState", arg0, arg1)
+	ret0, _ := ret[0].(common.Hash)
+	return ret0
+}
+
+// GetCommittedState indicates an expected call of GetCommittedState.
+func (mr *MockNonCommittableStateDBMockRecorder) GetCommittedState(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetCommittedState", reflect.TypeOf((*MockNonCommittableStateDB)(nil).GetCommittedState), arg0, arg1)
+}
+
+// GetHash mocks base method.
+func (m *MockNonCommittableStateDB) GetHash() common.Hash {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetHash")
+	ret0, _ := ret[0].(common.Hash)
+	return ret0
+}
+
+// GetHash indicates an expected call of GetHash.
+func (mr *MockNonCommittableStateDBMockRecorder) GetHash() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetHash", reflect.TypeOf((*MockNonCommittableStateDB)(nil).GetHash))
+}
+
+// GetLogs mocks base method.
+func (m *MockNonCommittableStateDB) GetLogs(arg0, arg1 common.Hash) []*types.Log {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetLogs", arg0, arg1)
+	ret0, _ := ret[0].([]*types.Log)
+	return ret0
+}
+
+// GetLogs indicates an expected call of GetLogs.
+func (mr *MockNonCommittableStateDBMockRecorder) GetLogs(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetLogs", reflect.TypeOf((*MockNonCommittableStateDB)(nil).GetLogs), arg0, arg1)
+}
+
+// GetNonce mocks base method.
+func (m *MockNonCommittableStateDB) GetNonce(arg0 common.Address) uint64 {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetNonce", arg0)
+	ret0, _ := ret[0].(uint64)
+	return ret0
+}
+
+// GetNonce indicates an expected call of GetNonce.
+func (mr *MockNonCommittableStateDBMockRecorder) GetNonce(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetNonce", reflect.TypeOf((*MockNonCommittableStateDB)(nil).GetNonce), arg0)
+}
+
+// GetRefund mocks base method.
+func (m *MockNonCommittableStateDB) GetRefund() uint64 {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRefund")
+	ret0, _ := ret[0].(uint64)
+	return ret0
+}
+
+// GetRefund indicates an expected call of GetRefund.
+func (mr *MockNonCommittableStateDBMockRecorder) GetRefund() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRefund", reflect.TypeOf((*MockNonCommittableStateDB)(nil).GetRefund))
+}
+
+// GetState mocks base method.
+func (m *MockNonCommittableStateDB) GetState(arg0 common.Address, arg1 common.Hash) common.Hash {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetState", arg0, arg1)
+	ret0, _ := ret[0].(common.Hash)
+	return ret0
+}
+
+// GetState indicates an expected call of GetState.
+func (mr *MockNonCommittableStateDBMockRecorder) GetState(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetState", reflect.TypeOf((*MockNonCommittableStateDB)(nil).GetState), arg0, arg1)
+}
+
+// GetSubstatePostAlloc mocks base method.
+func (m *MockNonCommittableStateDB) GetSubstatePostAlloc() substate.SubstateAlloc {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetSubstatePostAlloc")
+	ret0, _ := ret[0].(substate.SubstateAlloc)
+	return ret0
+}
+
+// GetSubstatePostAlloc indicates an expected call of GetSubstatePostAlloc.
+func (mr *MockNonCommittableStateDBMockRecorder) GetSubstatePostAlloc() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSubstatePostAlloc", reflect.TypeOf((*MockNonCommittableStateDB)(nil).GetSubstatePostAlloc))
+}
+
+// HasSuicided mocks base method.
+func (m *MockNonCommittableStateDB) HasSuicided(arg0 common.Address) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "HasSuicided", arg0)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// HasSuicided indicates an expected call of HasSuicided.
+func (mr *MockNonCommittableStateDBMockRecorder) HasSuicided(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "HasSuicided", reflect.TypeOf((*MockNonCommittableStateDB)(nil).HasSuicided), arg0)
+}
+
+// Prepare mocks base method.
+func (m *MockNonCommittableStateDB) Prepare(arg0 common.Hash, arg1 int) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Prepare", arg0, arg1)
+}
+
+// Prepare indicates an expected call of Prepare.
+func (mr *MockNonCommittableStateDBMockRecorder) Prepare(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Prepare", reflect.TypeOf((*MockNonCommittableStateDB)(nil).Prepare), arg0, arg1)
+}
+
+// PrepareAccessList mocks base method.
+func (m *MockNonCommittableStateDB) PrepareAccessList(sender common.Address, dest *common.Address, precompiles []common.Address, txAccesses types.AccessList) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "PrepareAccessList", sender, dest, precompiles, txAccesses)
+}
+
+// PrepareAccessList indicates an expected call of PrepareAccessList.
+func (mr *MockNonCommittableStateDBMockRecorder) PrepareAccessList(sender, dest, precompiles, txAccesses interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PrepareAccessList", reflect.TypeOf((*MockNonCommittableStateDB)(nil).PrepareAccessList), sender, dest, precompiles, txAccesses)
+}
+
+// Release mocks base method.
+func (m *MockNonCommittableStateDB) Release() {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "Release")
+}
+
+// Release indicates an expected call of Release.
+func (mr *MockNonCommittableStateDBMockRecorder) Release() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Release", reflect.TypeOf((*MockNonCommittableStateDB)(nil).Release))
+}
+
+// RevertToSnapshot mocks base method.
+func (m *MockNonCommittableStateDB) RevertToSnapshot(arg0 int) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "RevertToSnapshot", arg0)
+}
+
+// RevertToSnapshot indicates an expected call of RevertToSnapshot.
+func (mr *MockNonCommittableStateDBMockRecorder) RevertToSnapshot(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RevertToSnapshot", reflect.TypeOf((*MockNonCommittableStateDB)(nil).RevertToSnapshot), arg0)
+}
+
+// SetCode mocks base method.
+func (m *MockNonCommittableStateDB) SetCode(arg0 common.Address, arg1 []byte) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetCode", arg0, arg1)
+}
+
+// SetCode indicates an expected call of SetCode.
+func (mr *MockNonCommittableStateDBMockRecorder) SetCode(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetCode", reflect.TypeOf((*MockNonCommittableStateDB)(nil).SetCode), arg0, arg1)
+}
+
+// SetNonce mocks base method.
+func (m *MockNonCommittableStateDB) SetNonce(arg0 common.Address, arg1 uint64) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetNonce", arg0, arg1)
+}
+
+// SetNonce indicates an expected call of SetNonce.
+func (mr *MockNonCommittableStateDBMockRecorder) SetNonce(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetNonce", reflect.TypeOf((*MockNonCommittableStateDB)(nil).SetNonce), arg0, arg1)
+}
+
+// SetState mocks base method.
+func (m *MockNonCommittableStateDB) SetState(arg0 common.Address, arg1, arg2 common.Hash) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetState", arg0, arg1, arg2)
+}
+
+// SetState indicates an expected call of SetState.
+func (mr *MockNonCommittableStateDBMockRecorder) SetState(arg0, arg1, arg2 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetState", reflect.TypeOf((*MockNonCommittableStateDB)(nil).SetState), arg0, arg1, arg2)
+}
+
+// SlotInAccessList mocks base method.
+func (m *MockNonCommittableStateDB) SlotInAccessList(addr common.Address, slot common.Hash) (bool, bool) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SlotInAccessList", addr, slot)
+	ret0, _ := ret[0].(bool)
+	ret1, _ := ret[1].(bool)
+	return ret0, ret1
+}
+
+// SlotInAccessList indicates an expected call of SlotInAccessList.
+func (mr *MockNonCommittableStateDBMockRecorder) SlotInAccessList(addr, slot interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SlotInAccessList", reflect.TypeOf((*MockNonCommittableStateDB)(nil).SlotInAccessList), addr, slot)
+}
+
+// Snapshot mocks base method.
+func (m *MockNonCommittableStateDB) Snapshot() int {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Snapshot")
+	ret0, _ := ret[0].(int)
+	return ret0
+}
+
+// Snapshot indicates an expected call of Snapshot.
+func (mr *MockNonCommittableStateDBMockRecorder) Snapshot() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Snapshot", reflect.TypeOf((*MockNonCommittableStateDB)(nil).Snapshot))
+}
+
+// SubBalance mocks base method.
+func (m *MockNonCommittableStateDB) SubBalance(arg0 common.Address, arg1 *big.Int) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SubBalance", arg0, arg1)
+}
+
+// SubBalance indicates an expected call of SubBalance.
+func (mr *MockNonCommittableStateDBMockRecorder) SubBalance(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubBalance", reflect.TypeOf((*MockNonCommittableStateDB)(nil).SubBalance), arg0, arg1)
+}
+
+// SubRefund mocks base method.
+func (m *MockNonCommittableStateDB) SubRefund(arg0 uint64) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SubRefund", arg0)
+}
+
+// SubRefund indicates an expected call of SubRefund.
+func (mr *MockNonCommittableStateDBMockRecorder) SubRefund(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SubRefund", reflect.TypeOf((*MockNonCommittableStateDB)(nil).SubRefund), arg0)
+}
+
+// Suicide mocks base method.
+func (m *MockNonCommittableStateDB) Suicide(arg0 common.Address) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Suicide", arg0)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// Suicide indicates an expected call of Suicide.
+func (mr *MockNonCommittableStateDBMockRecorder) Suicide(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Suicide", reflect.TypeOf((*MockNonCommittableStateDB)(nil).Suicide), arg0)
 }
 
 // MockStateDB is a mock of StateDB interface.
@@ -808,11 +1290,27 @@ func (mr *MockStateDBMockRecorder) ForEachStorage(arg0, arg1 interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ForEachStorage", reflect.TypeOf((*MockStateDB)(nil).ForEachStorage), arg0, arg1)
 }
 
+// GetArchiveBlockHeight mocks base method.
+func (m *MockStateDB) GetArchiveBlockHeight() (uint64, bool, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetArchiveBlockHeight")
+	ret0, _ := ret[0].(uint64)
+	ret1, _ := ret[1].(bool)
+	ret2, _ := ret[2].(error)
+	return ret0, ret1, ret2
+}
+
+// GetArchiveBlockHeight indicates an expected call of GetArchiveBlockHeight.
+func (mr *MockStateDBMockRecorder) GetArchiveBlockHeight() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetArchiveBlockHeight", reflect.TypeOf((*MockStateDB)(nil).GetArchiveBlockHeight))
+}
+
 // GetArchiveState mocks base method.
-func (m *MockStateDB) GetArchiveState(block uint64) (StateDB, error) {
+func (m *MockStateDB) GetArchiveState(block uint64) (NonCommittableStateDB, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetArchiveState", block)
-	ret0, _ := ret[0].(StateDB)
+	ret0, _ := ret[0].(NonCommittableStateDB)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }

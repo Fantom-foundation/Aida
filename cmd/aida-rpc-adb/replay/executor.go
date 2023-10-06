@@ -18,7 +18,7 @@ import (
 
 // executorInput represents data needed for executing request into StateDB
 type executorInput struct {
-	archive state.StateDB
+	archive state.NonCommittableStateDB
 	req     *iterator.RequestWithResponse
 	result  json.RawMessage
 	error   *iterator.ErrorMessage
@@ -122,6 +122,9 @@ func (e *ReplayExecutor) execute() {
 				// no need to execute rest of the loop
 				continue
 			}
+
+			// make sure to release archive resources
+			defer in.archive.Release()
 
 			// doExecute into db
 			res = e.doExecute(in)
@@ -267,7 +270,7 @@ func (e *ReplayExecutor) createInput(req *iterator.RequestWithResponse) *executo
 }
 
 // getStateArchive for given block
-func (e *ReplayExecutor) getStateArchive(wantedBlockNumber uint64) state.StateDB {
+func (e *ReplayExecutor) getStateArchive(wantedBlockNumber uint64) state.NonCommittableStateDB {
 	if !e.isBlockNumberWithinRange(wantedBlockNumber) {
 		return nil
 	}

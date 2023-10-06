@@ -24,30 +24,30 @@ func MakeTestSyncPeriodEmitter(config *utils.Config) executor.Extension {
 }
 
 // PreRun checks whether syncPeriodLength isn't invalid
-func (l *TestSyncPeriodEmitter) PreRun(state executor.State) error {
+func (l *TestSyncPeriodEmitter) PreRun(state executor.State, context *executor.Context) error {
 	// initiate a sync period
 	l.syncPeriod = uint64(state.Block) / l.config.SyncPeriodLength
-	state.State.BeginSyncPeriod(l.syncPeriod)
+	context.State.BeginSyncPeriod(l.syncPeriod)
 
 	return nil
 }
 
 // PreBlock calculates current sync period and then invokes necessary state operations.
-func (l *TestSyncPeriodEmitter) PreBlock(state executor.State) error {
+func (l *TestSyncPeriodEmitter) PreBlock(state executor.State, context *executor.Context) error {
 	// calculate the syncPeriod for given block
 	newSyncPeriod := uint64(state.Block) / l.config.SyncPeriodLength
 
 	// loop because multiple periods could have been empty
 	for l.syncPeriod < newSyncPeriod {
-		state.State.EndSyncPeriod()
+		context.State.EndSyncPeriod()
 		l.syncPeriod++
-		state.State.BeginSyncPeriod(l.syncPeriod)
+		context.State.BeginSyncPeriod(l.syncPeriod)
 	}
 
 	return nil
 }
 
-func (l *TestSyncPeriodEmitter) PostRun(state executor.State, _ error) error {
-	state.State.EndSyncPeriod()
+func (l *TestSyncPeriodEmitter) PostRun(_ executor.State, context *executor.Context, _ error) error {
+	context.State.EndSyncPeriod()
 	return nil
 }

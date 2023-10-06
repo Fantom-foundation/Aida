@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"os"
 
-	vm_sdb "github.com/Fantom-foundation/Aida/cmd/aida-vm-sdb/vm-sdb"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -13,12 +12,13 @@ import (
 
 // RunVMApp data structure
 var RunVMApp = cli.App{
-	Action:    vm_sdb.RunVmSdb,
+	Action:    RunVmSdb,
 	Name:      "Aida Storage Run VM Manager",
 	HelpName:  "vm-sdb",
 	Usage:     "run VM on the world-state",
-	Copyright: "(c) 2022 Fantom Foundation",
+	Copyright: "(c) 2023 Fantom Foundation",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
+	// TODO: derive supported flags from utilized executor extensions (issue #664).
 	Flags: []cli.Flag{
 		// AidaDb
 		&utils.AidaDbFlag,
@@ -30,6 +30,7 @@ var RunVMApp = cli.App{
 		&utils.StateDbSrcFlag,
 		&utils.DbTmpFlag,
 		&utils.StateDbLoggingFlag,
+		&utils.StateRootHashesFlag,
 
 		// ArchiveDb
 		&utils.ArchiveModeFlag,
@@ -45,13 +46,15 @@ var RunVMApp = cli.App{
 
 		// Profiling
 		&utils.CpuProfileFlag,
+		&utils.CpuProfilePerIntervalFlag,
+		&utils.DiagnosticServerFlag,
 		&utils.MemoryBreakdownFlag,
 		&utils.MemoryProfileFlag,
 		&utils.RandomSeedFlag,
 		&utils.PrimeThresholdFlag,
-		&utils.ProfileFlag,
-		&utils.ProfileFileFlag,
-		&utils.ProfileIntervalFlag,
+		//&utils.ProfileFlag,
+		//&utils.ProfileFileFlag,
+		//&utils.ProfileIntervalFlag,
 
 		// Priming
 		&utils.RandomizePrimingFlag,
@@ -65,14 +68,16 @@ var RunVMApp = cli.App{
 		&utils.QuietFlag,
 		&utils.SyncPeriodLengthFlag,
 		&utils.KeepDbFlag,
-		&utils.MaxNumTransactionsFlag,
+		//&utils.MaxNumTransactionsFlag,
 		&utils.ValidateTxStateFlag,
-		&utils.ValidateWorldStateFlag,
+		//&utils.ValidateWorldStateFlag,
 		&utils.ValidateFlag,
 		&logger.LogLevelFlag,
+		&utils.NoHeartbeatLoggingFlag,
+		&utils.TrackProgressFlag,
 	},
 	Description: `
-The run-vm command requires two arguments: <blockNumFirst> <blockNumLast>
+The aida-vm-sdb command requires two arguments: <blockNumFirst> <blockNumLast>
 
 <blockNumFirst> and <blockNumLast> are the first and last block of
 the inclusive range of blocks.`,
@@ -81,8 +86,7 @@ the inclusive range of blocks.`,
 // main implements vm-sdb cli.
 func main() {
 	if err := RunVMApp.Run(os.Args); err != nil {
-		code := 1
 		fmt.Fprintln(os.Stderr, err)
-		os.Exit(code)
+		os.Exit(1)
 	}
 }

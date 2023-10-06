@@ -26,13 +26,13 @@ func TestProgressLoggerExtension_PrimingDoesNotTriggerForExistingStateDb(t *test
 
 	config := &utils.Config{}
 	config.SkipPriming = false
-	config.StateDbSrc = "existing_state_db"
+	config.IsExistingStateDb = true
 
 	log.EXPECT().Warning("Skipping priming due to usage of preexisting StateDb")
 
 	ext := makeStateDbPrimer(config, log)
 
-	ext.PreRun(executor.State{})
+	ext.PreRun(executor.State{}, nil)
 
 }
 
@@ -49,5 +49,5 @@ func TestProgressLoggerExtension_PrimingDoesTriggerForNonExistingStateDb(t *test
 
 	ext := makeStateDbPrimer(config, log)
 
-	ext.PreRun(executor.State{})
+	ext.PreRun(executor.State{}, &executor.Context{})
 }

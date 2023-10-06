@@ -32,6 +32,7 @@ func PrepareStateDB(cfg *Config) (state.StateDB, string, error) {
 	// db source was specified
 	if cfg.StateDbSrc != "" {
 		db, dbPath, err = useExistingStateDB(cfg)
+		cfg.IsExistingStateDb = true
 	} else {
 		db, dbPath, err = makeNewStateDB(cfg)
 	}
@@ -57,7 +58,7 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 	)
 
 	// make a copy of source statedb
-	if cfg.CopySrcDb {
+	if !cfg.SrcDbReadonly {
 		tmpStateDbPath, err = os.MkdirTemp(cfg.DbTmp, "state_db_tmp_*")
 		if err != nil {
 			return nil, "", fmt.Errorf("failed to create a temporary directory; %v", err)
@@ -66,7 +67,6 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 			return nil, "", fmt.Errorf("failed to copy source statedb to temporary directory; %v", err)
 		}
 		stateDbPath = tmpStateDbPath
-		fmt.Println(stateDbPath)
 	} else {
 		// when not using ShadowDb, StateDbSrc is path to the StateDb itself
 		stateDbPath = cfg.StateDbSrc
@@ -265,7 +265,7 @@ func GetDirectorySize(directory string) int64 {
 
 // ValidateStateDB validates whether the world-state is contained in the db object.
 // NB: We can only check what must be in the db (but cannot check whether db stores more).
-func ValidateStateDB(ws substate.SubstateAlloc, db state.StateDB, updateOnFail bool) error {
+func ValidateStateDB(ws substate.SubstateAlloc, db state.VmStateDB, updateOnFail bool) error {
 	var err string
 	for addr, account := range ws {
 		if !db.Exist(addr) {

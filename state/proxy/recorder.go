@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/Fantom-foundation/Aida/state"
@@ -348,16 +349,12 @@ func (r *RecorderProxy) GetHash() common.Hash {
 	return r.db.GetHash()
 }
 
-func (r *RecorderProxy) GetArchiveState(block uint64) (state.StateDB, error) {
-	archive, err := r.db.GetArchiveState(block)
-	if err != nil {
-		return nil, err
-	}
+func (r *RecorderProxy) GetArchiveState(block uint64) (state.NonCommittableStateDB, error) {
+	return nil, fmt.Errorf("archive states are not (yet) supported by this DB implementation")
+}
 
-	return &RecorderProxy{
-		db:  archive,
-		ctx: r.ctx,
-	}, nil
+func (r *RecorderProxy) GetArchiveBlockHeight() (uint64, bool, error) {
+	return 0, false, fmt.Errorf("archive states are not (yet) supported by this DB implementation")
 }
 
 func (r *RecorderProxy) Close() error {

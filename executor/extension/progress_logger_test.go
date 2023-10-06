@@ -2,30 +2,29 @@ package extension
 
 import (
 	"fmt"
-	"strings"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
+	substate "github.com/Fantom-foundation/Substate"
 	"go.uber.org/mock/gomock"
 )
 
-const testReportFrequency = 1
+const testProgressReportFrequency = time.Second
 
 func TestProgressLoggerExtension_CorrectClose(t *testing.T) {
 	config := &utils.Config{}
-	ext := MakeProgressLogger(config, testReportFrequency)
+	ext := MakeProgressLogger(config, testProgressReportFrequency)
 
 	// start the report thread
-	ext.PreRun(executor.State{})
+	ext.PreRun(executor.State{}, nil)
 
 	// make sure PostRun is not blocking.
 	done := make(chan bool)
 	go func() {
-		ext.PostRun(executor.State{}, nil)
+		ext.PostRun(executor.State{}, nil, nil)
 		close(done)
 	}()
 
@@ -39,8 +38,8 @@ func TestProgressLoggerExtension_CorrectClose(t *testing.T) {
 
 func TestProgressLoggerExtension_NoLoggerIsCreatedIfDisabled(t *testing.T) {
 	config := &utils.Config{}
-	config.Quiet = true
-	ext := MakeProgressLogger(config, testReportFrequency)
+	config.NoHeartbeatLogging = true
+	ext := MakeProgressLogger(config, testProgressReportFrequency)
 	if _, ok := ext.(NilExtension); !ok {
 		t.Errorf("Logger is enabled although not set in configuration")
 	}
@@ -52,69 +51,92 @@ func TestProgressLoggerExtension_LoggingHappens(t *testing.T) {
 	log := logger.NewMockLogger(ctrl)
 
 	config := &utils.Config{}
-	config.Quiet = true
 
-	ext := progressLogger{
-		config:          config,
-		log:             log,
-		inputCh:         make(chan executor.State, 10),
-		wg:              new(sync.WaitGroup),
-		reportFrequency: testReportFrequency,
-	}
+	ext := makeProgressLogger(config, testProgressReportFrequency, log)
 
-	ext.PreRun(executor.State{})
+	ext.PreRun(executor.State{}, nil)
 
 	gomock.InOrder(
-		log.EXPECT().Infof(MatchFormat(progressReportFormat), gomock.Any(), uint64(1), MatchTxRate()),
-		log.EXPECT().Infof(MatchFormat(progressReportFormat), gomock.Any(), uint64(2), MatchTxRate()),
+		// scheduled logging
+		log.EXPECT().Infof(progressLoggerReportFormat,
+			gomock.Any(), 1,
+			MatchRate(gomock.All(executor.Gt(0.9), executor.Lt(1.1)), "txRate"),
+			MatchRate(gomock.All(executor.Gt(90), executor.Lt(100)), "gasRate"),
+		),
+		// defer logging
+		log.EXPECT().Noticef(finalSummaryProgressReportFormat,
+			gomock.Any(), 1,
+			MatchRate(gomock.All(executor.Gt(0.6), executor.Lt(0.7)), "txRate"),
+			MatchRate(gomock.All(executor.Gt(60), executor.Lt(70)), "gasRate"),
+		),
 	)
 
 	// fill the logger with some data
-	ext.PostBlock(executor.State{
+	ext.PostTransaction(executor.State{
 		Block:       1,
 		Transaction: 1,
-	})
+		Substate: &substate.Substate{
+			Result: &substate.SubstateResult{
+				GasUsed: 100_000_000,
+			},
+		},
+	}, nil)
 
-	ext.PostBlock(executor.State{
-		Block:       2,
-		Transaction: 2,
-	})
+	// we must wait for the ticker to tick
+	time.Sleep((3 * testProgressReportFrequency) / 2)
 
-	// wait a bit until the logger gets the data
-	time.Sleep(time.Second)
+	ext.PostRun(executor.State{}, nil, nil)
+}
+
+func TestProgressLoggerExtension_LoggingHappensEvenWhenProgramEndsBeforeTickerTicks(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	log := logger.NewMockLogger(ctrl)
+
+	config := &utils.Config{}
+
+	// we set large tick rate that does not trigger the ticker
+	ext := makeProgressLogger(config, 10*time.Second, log)
+
+	ext.PreRun(executor.State{}, nil)
+
+	log.EXPECT().Noticef(finalSummaryProgressReportFormat,
+		gomock.Any(), 1,
+		MatchRate(gomock.All(executor.Gt(0.6), executor.Lt(0.7)), "txRate"),
+		MatchRate(gomock.All(executor.Gt(60), executor.Lt(70)), "gasRate"),
+	)
+
+	// fill the logger with some data
+	ext.PostTransaction(executor.State{
+		Block:       1,
+		Transaction: 1,
+		Substate: &substate.Substate{
+			Result: &substate.SubstateResult{
+				GasUsed: 100_000_000,
+			},
+		},
+	}, nil)
+
+	// wait for data to get into logger
+	time.Sleep((3 * testProgressReportFrequency) / 2)
+
+	ext.PostRun(executor.State{}, nil, nil)
 }
 
 // MATCHERS
-
-func MatchFormat(format string) gomock.Matcher {
-	return matchFormat{format}
+func MatchRate(constraint gomock.Matcher, name string) gomock.Matcher {
+	return matchRate{constraint, name}
 }
 
-type matchFormat struct {
-	format string
+type matchRate struct {
+	constraint gomock.Matcher
+	name       string
 }
 
-func (m matchFormat) Matches(value any) bool {
-	format, ok := value.(string)
-	return ok && strings.Compare(m.format, format) == 0
-}
-
-func (m matchFormat) String() string {
-	return fmt.Sprintf("log format should look like this: %v", m.format)
-}
-
-func MatchTxRate() gomock.Matcher {
-	return matchTxRate{}
-}
-
-type matchTxRate struct {
-}
-
-func (m matchTxRate) Matches(value any) bool {
+func (m matchRate) Matches(value any) bool {
 	txRate, ok := value.(float64)
-	return ok && txRate > 0
+	return ok && m.constraint.Matches(txRate)
 }
 
-func (m matchTxRate) String() string {
-	return fmt.Sprintf("log should have a txRate that is larger than 0")
+func (m matchRate) String() string {
+	return fmt.Sprintf("log should have a %v that is %v", m.name, m.constraint)
 }

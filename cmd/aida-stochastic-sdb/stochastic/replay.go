@@ -39,7 +39,6 @@ var StochasticReplayCommand = cli.Command{
 		&utils.TraceFlag,
 		&utils.ShadowDbImplementationFlag,
 		&utils.ShadowDbVariantFlag,
-		&utils.AidaDbFlag,
 		&logger.LogLevelFlag,
 	},
 	Description: `

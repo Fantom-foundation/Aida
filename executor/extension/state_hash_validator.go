@@ -7,9 +7,11 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/logger"
+	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -28,12 +30,14 @@ func makeStateHashValidator(config *utils.Config, log logger.Logger) executor.Ex
 
 type stateHashValidator struct {
 	NilExtension
-	config *utils.Config
-	log    logger.Logger
-	hashes []common.Hash
+	config                  *utils.Config
+	log                     logger.Logger
+	hashes                  []common.Hash
+	nextArchiveBlockToCheck int
+	lastProcessedBlock      int
 }
 
-func (e *stateHashValidator) PreRun(executor.State) error {
+func (e *stateHashValidator) PreRun(executor.State, *executor.Context) error {
 	path := e.config.StateRootFile
 	e.log.Infof("Loading state root hashes from %v ...", path)
 	hashes, err := loadStateHashes(path, int(e.config.Last)+1)
@@ -45,15 +49,74 @@ func (e *stateHashValidator) PreRun(executor.State) error {
 	return nil
 }
 
-func (e *stateHashValidator) PostBlock(state executor.State) error {
-	if state.State == nil || state.Block >= len(e.hashes) {
+func (e *stateHashValidator) PostBlock(state executor.State, context *executor.Context) error {
+	if context.State == nil || state.Block >= len(e.hashes) {
 		return nil
 	}
+
+	// Check the LiveDB
 	want := e.hashes[state.Block]
-	got := state.State.GetHash()
+	got := context.State.GetHash()
 	if want != got {
-		return fmt.Errorf("unexpected hash for block %d\nwanted %v\n   got %v", state.Block, want, got)
+		return fmt.Errorf("unexpected hash for Live block %d\nwanted %v\n   got %v", state.Block, want, got)
 	}
+
+	// Check the ArchiveDB
+	if e.config.ArchiveMode {
+		e.lastProcessedBlock = state.Block
+		if err := e.checkArchiveHashes(context.State); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (e *stateHashValidator) PostRun(state executor.State, context *executor.Context, err error) error {
+	// Skip processing if run is aborted due to an error.
+	if err != nil {
+		return nil
+	}
+	// Complete processing remaining archive blocks.
+	if e.config.ArchiveMode {
+		for e.nextArchiveBlockToCheck < e.lastProcessedBlock {
+			if err := e.checkArchiveHashes(context.State); err != nil {
+				return err
+			}
+			if int(e.nextArchiveBlockToCheck) < e.lastProcessedBlock {
+				time.Sleep(10 * time.Millisecond)
+			}
+		}
+	}
+	return nil
+}
+
+func (e *stateHashValidator) checkArchiveHashes(state state.StateDB) error {
+	// Note: the archive may be lagging behind the life DB, so block hashes need
+	// to be checked as they become available.
+	height, empty, err := state.GetArchiveBlockHeight()
+	if err != nil {
+		return fmt.Errorf("failed to get archive block height: %v", err)
+	}
+
+	cur := uint64(e.nextArchiveBlockToCheck)
+	for !empty && cur <= height {
+
+		archive, err := state.GetArchiveState(cur)
+		if err != nil {
+			return err
+		}
+
+		want := e.hashes[cur]
+		got := archive.GetHash()
+		archive.Release()
+		if want != got {
+			return fmt.Errorf("unexpected hash for Archive block %d\nwanted %v\n   got %v", cur, want, got)
+		}
+
+		cur++
+	}
+	e.nextArchiveBlockToCheck = int(cur)
 	return nil
 }
 
