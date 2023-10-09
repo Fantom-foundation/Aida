@@ -251,6 +251,7 @@ func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *Config, target ui
 	db.BeginTransaction(0)
 	for _, addr := range accounts {
 		db.Suicide(addr)
+		log.Debugf("Perform suicide on %v", addr)
 	}
 	db.EndTransaction()
 	db.EndBlock()
