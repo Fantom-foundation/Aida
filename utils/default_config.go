@@ -92,7 +92,7 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		MaxNumErrors:          getFlagValue(ctx, MaxNumErrorsFlag).(int),
 		NoHeartbeatLogging:    getFlagValue(ctx, NoHeartbeatLoggingFlag).(bool),
 		TrackProgress:         getFlagValue(ctx, TrackProgressFlag).(bool),
-		ValidateStateHashes: getFlagValue(ctx, ValidateStateHashesFlag).(bool),
+		ValidateStateHashes:   getFlagValue(ctx, ValidateStateHashesFlag).(bool),
 	}
 
 	return cfg

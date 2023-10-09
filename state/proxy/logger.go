@@ -189,7 +189,7 @@ func (s *loggingStateDb) GetHash() common.Hash {
 
 func (s *loggingNonCommittableStateDb) GetHash() common.Hash {
 	hash := s.nonCommittableStateDB.GetHash()
-	s.log.Info("GetStateHash, %v", hash)
+	s.log.Info("GetHash, %v", hash)
 	return hash
 }
 
