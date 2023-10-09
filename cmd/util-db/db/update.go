@@ -408,21 +408,19 @@ func retrievePatchesToDownload(cfg *utils.Config, targetDbFirstBlock uint64, tar
 		return nil, fmt.Errorf("unable to download patches.json: %v", err)
 	}
 
-	// list of availablePatches to be downloaded
-	var patchesToDownload = make([]utils.PatchJson, 0)
-
 	hasStateHashPatch, err := utils.HasStateHashPatch(cfg.AidaDb)
 	if err != nil {
 		return nil, err
 	}
 
+	// list of availablePatches to be downloaded
+	var patchesToDownload = make([]utils.PatchJson, 0)
+
 	for _, patch := range availablePatches {
 		if patch.FileName == stateHashPatchFileName+".tar.gz" {
-			patchesToDownload = make([]utils.PatchJson, 0)
 			if !hasStateHashPatch {
 				patchesToDownload = append(patchesToDownload, patch)
 			}
-			break
 		}
 		// skip every patch which is sooner than previous last block
 		if patch.ToBlock <= targetDbLastBlock {

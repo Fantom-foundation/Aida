@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/logger"
@@ -1110,6 +1111,10 @@ func (md *AidaDbMetadata) getBlockRange() (uint64, uint64, error) {
 func HasStateHashPatch(path string) (bool, error) {
 	db, err := rawdb.NewLevelDBDatabase(path, 1024, 100, "profiling", true)
 	if err != nil {
+		// if AidaDb does not exist force downloading the state hash patch
+		if errors.Is(err, os.ErrNotExist) {
+			return false, nil
+		}
 		return false, fmt.Errorf("cannot open aida-db to check if it already has state hash patch; %v", err)
 	}
 
