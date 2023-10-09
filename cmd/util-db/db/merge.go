@@ -3,6 +3,7 @@ package db
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/cmd/util-db/flags"
 	"github.com/Fantom-foundation/Aida/logger"
@@ -39,6 +40,7 @@ type merger struct {
 	sourceDbs     []ethdb.Database
 	sourceDbPaths []string
 	md            *utils.AidaDbMetadata
+	start         time.Time
 }
 
 // newMerger returns new instance of merger
@@ -50,6 +52,7 @@ func newMerger(cfg *utils.Config, targetDb ethdb.Database, sourceDbs []ethdb.Dat
 		sourceDbs:     sourceDbs,
 		sourceDbPaths: sourceDbPaths,
 		md:            md,
+		start:         time.Now(),
 	}
 }
 
@@ -118,7 +121,7 @@ func (m *merger) finishMerge() error {
 	if !m.cfg.SkipMetadata {
 		// merge type db does not have epoch calculations yet
 		m.md.Db = m.targetDb
-		err := m.md.SetAllMetadata(m.md.FirstBlock, m.md.LastBlock, m.md.FirstEpoch, m.md.LastEpoch, m.md.ChainId, nil, m.md.DbType)
+		err := m.md.SetAll()
 		if err != nil {
 			return err
 		}
@@ -141,7 +144,8 @@ func (m *merger) finishMerge() error {
 		}
 	}
 
-	m.log.Notice("Merge finished successfully")
+	elapsed := time.Since(m.start)
+	m.log.Noticef("Merge finished successfully! Total elapsed time: %v", elapsed.Round(1*time.Second))
 
 	return nil
 }
@@ -151,9 +155,13 @@ func (m *merger) merge() error {
 	var (
 		err     error
 		written uint64
+		elapsed time.Duration
+		start   time.Time
 	)
 
 	for i, sourceDb := range m.sourceDbs {
+		m.log.Noticef("Merging %v...", m.sourceDbPaths[i])
+		start = time.Now()
 
 		// copy the sourceDb to the target database
 		written, err = m.copyData(sourceDb)
@@ -165,18 +173,24 @@ func (m *merger) merge() error {
 			m.log.Warningf("merge did not copy any data")
 		}
 
-		m.log.Noticef("Merging of %v", m.sourceDbPaths[i])
+		elapsed = time.Since(start)
+		m.log.Noticef("Finished merging of %v! It took: %v", m.sourceDbPaths[i], elapsed.Round(1*time.Second))
+		m.log.Noticef("Total elapsed time so far: %v", time.Since(m.start).Round(1*time.Second))
 	}
 
 	// compact written data
 	if m.cfg.CompactDb {
-		m.log.Noticef("Starting compaction")
+		start = time.Now()
+		m.log.Noticef("Starting compaction...")
 		err = m.targetDb.Compact(nil, nil)
 		if err != nil {
 			return fmt.Errorf("cannot compact targetDb; %v", err)
 		}
+		elapsed = time.Since(start)
+		m.log.Noticef("Compaction finished! Elapsed time %v", elapsed.Round(1*time.Second))
 	}
 
+	m.log.Noticef("Merge elapsed time: %v", time.Since(m.start).Round(1*time.Second))
 	return nil
 }
 
