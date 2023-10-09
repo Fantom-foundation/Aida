@@ -55,6 +55,12 @@ func (e *stateHashValidator) PostBlock(state executor.State, context *executor.C
 		return err
 	}
 
+	// is stat hash present?
+	nilHash := common.Hash{}
+	if want == nilHash {
+		return nil
+	}
+
 	got := context.State.GetHash()
 	if want != got {
 		return fmt.Errorf("unexpected hash for Live block %d\nwanted %v\n   got %v", state.Block, want, got)
@@ -104,6 +110,12 @@ func (e *stateHashValidator) checkArchiveHashes(state state.StateDB) error {
 		want, err := e.getStateHash(int(cur))
 		if err != nil {
 			return err
+		}
+
+		// is state hash present?
+		nilHash := common.Hash{}
+		if want == nilHash {
+			return nil
 		}
 
 		archive, err := state.GetArchiveState(cur)
