@@ -101,10 +101,10 @@ func TestStateHashValidator_InvalidHashOfArchiveDbIsDetected(t *testing.T) {
 		hashProvider.EXPECT().GetStateHash(blockNumber).Return(common.Hash([]byte(exampleHashA)), nil),
 		db.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashA))),
 		db.EXPECT().GetArchiveBlockHeight().Return(uint64(blockNumber), false, nil),
-		db.EXPECT().GetArchiveState(uint64(blockNumber-1)).Return(archive, nil),
 
 		// archive state check fails
 		hashProvider.EXPECT().GetStateHash(blockNumber-1).Return(common.Hash([]byte(exampleHashA)), nil),
+		db.EXPECT().GetArchiveState(uint64(blockNumber-1)).Return(archive, nil),
 		archive.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashB))),
 		archive.EXPECT().Release(),
 	)
@@ -131,8 +131,8 @@ func TestStateHashValidator_ChecksArchiveHashesOfLaggingArchive(t *testing.T) {
 
 	gomock.InOrder(
 		db.EXPECT().GetArchiveBlockHeight().Return(uint64(0), false, nil),
-		db.EXPECT().GetArchiveState(uint64(0)).Return(archive0, nil),
 		hashProvider.EXPECT().GetStateHash(0).Return(common.Hash([]byte(exampleHashB)), nil),
+		db.EXPECT().GetArchiveState(uint64(0)).Return(archive0, nil),
 		archive0.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashB))),
 		archive0.EXPECT().Release(),
 
@@ -140,12 +140,12 @@ func TestStateHashValidator_ChecksArchiveHashesOfLaggingArchive(t *testing.T) {
 		db.EXPECT().GetArchiveBlockHeight().Return(uint64(0), false, nil),
 
 		db.EXPECT().GetArchiveBlockHeight().Return(uint64(2), false, nil),
-		db.EXPECT().GetArchiveState(uint64(1)).Return(archive1, nil),
 		hashProvider.EXPECT().GetStateHash(1).Return(common.Hash([]byte(exampleHashC)), nil),
+		db.EXPECT().GetArchiveState(uint64(1)).Return(archive1, nil),
 		archive1.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashC))),
 		archive1.EXPECT().Release(),
-		db.EXPECT().GetArchiveState(uint64(2)).Return(archive2, nil),
 		hashProvider.EXPECT().GetStateHash(2).Return(common.Hash([]byte(exampleHashD)), nil),
+		db.EXPECT().GetArchiveState(uint64(2)).Return(archive2, nil),
 		archive2.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashA))),
 		archive2.EXPECT().Release(),
 	)
@@ -183,18 +183,18 @@ func TestStateHashValidator_ChecksArchiveHashesOfLaggingArchiveDoesNotWaitForNon
 
 	gomock.InOrder(
 		db.EXPECT().GetArchiveBlockHeight().Return(uint64(0), false, nil),
-		db.EXPECT().GetArchiveState(uint64(0)).Return(archive0, nil),
 		hashProvider.EXPECT().GetStateHash(0).Return(common.Hash([]byte(exampleHashB)), nil),
+		db.EXPECT().GetArchiveState(uint64(0)).Return(archive0, nil),
 		archive0.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashB))),
 		archive0.EXPECT().Release(),
 
 		db.EXPECT().GetArchiveBlockHeight().Return(uint64(2), false, nil),
-		db.EXPECT().GetArchiveState(uint64(1)).Return(archive1, nil),
 		hashProvider.EXPECT().GetStateHash(1).Return(common.Hash([]byte(exampleHashC)), nil),
+		db.EXPECT().GetArchiveState(uint64(1)).Return(archive1, nil),
 		archive1.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashC))),
 		archive1.EXPECT().Release(),
-		db.EXPECT().GetArchiveState(uint64(2)).Return(archive2, nil),
 		hashProvider.EXPECT().GetStateHash(2).Return(common.Hash([]byte(exampleHashD)), nil),
+		db.EXPECT().GetArchiveState(uint64(2)).Return(archive2, nil),
 		archive2.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashD))),
 		archive2.EXPECT().Release(),
 	)
@@ -231,8 +231,8 @@ func TestStateHashValidator_ValidatingLaggingArchivesIsSkippedIfRunIsAborted(t *
 
 	gomock.InOrder(
 		db.EXPECT().GetArchiveBlockHeight().Return(uint64(0), false, nil),
-		db.EXPECT().GetArchiveState(uint64(0)).Return(archive0, nil),
 		hashProvider.EXPECT().GetStateHash(0).Return(common.Hash([]byte(exampleHashB)), nil),
+		db.EXPECT().GetArchiveState(uint64(0)).Return(archive0, nil),
 		archive0.EXPECT().GetHash().Return(common.Hash([]byte(exampleHashB))),
 		archive0.EXPECT().Release(),
 	)
