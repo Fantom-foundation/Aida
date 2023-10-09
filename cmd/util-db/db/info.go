@@ -28,7 +28,7 @@ var InfoCommand = cli.Command{
 		&cmdDelAcc,
 		&cmdCount,
 		&cmdPrintDbHash,
-		&cmdGetStateHash,
+		&cmdPrintStateHash,
 	},
 }
 
@@ -104,8 +104,8 @@ var cmdPrintDbHash = cli.Command{
 	},
 }
 
-var cmdGetStateHash = cli.Command{
-	Action:    getStateHash,
+var cmdPrintStateHash = cli.Command{
+	Action:    printStateHash,
 	Name:      "state-hash",
 	Usage:     "Prints state hash for given block number.",
 	ArgsUsage: "<BlockNum>",
@@ -414,8 +414,8 @@ func GetDbSize(db ethdb.Database) uint64 {
 	return count
 }
 
-func getStateHash(ctx *cli.Context) error {
-	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-getStateHash")
+func printStateHash(ctx *cli.Context) error {
+	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-Print-State-Hash")
 
 	cfg, argErr := utils.NewConfig(ctx, utils.OneToNArgs)
 	if argErr != nil {
