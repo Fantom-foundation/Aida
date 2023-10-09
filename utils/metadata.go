@@ -623,8 +623,8 @@ func (md *AidaDbMetadata) SetDbType(dbType AidaDbType) error {
 	return nil
 }
 
-// SetMetadata in given Db
-func (md *AidaDbMetadata) SetMetadata() error {
+// SetAll in given Db
+func (md *AidaDbMetadata) SetAll() error {
 	var err error
 
 	if err = md.SetFirstBlock(md.FirstBlock); err != nil {

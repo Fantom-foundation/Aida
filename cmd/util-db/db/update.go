@@ -274,7 +274,7 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 						return fmt.Errorf("cannot set has-hash-patch; %v", err)
 					}
 				} else {
-					err = targetMD.SetMetadata()
+					err = targetMD.SetAll()
 					if err != nil {
 						return fmt.Errorf("cannot set metadata; %v", err)
 					}
