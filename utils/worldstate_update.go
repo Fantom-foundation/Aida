@@ -45,12 +45,14 @@ func GenerateUpdateSet(first uint64, last uint64, cfg *Config) (substate.Substat
 			if !(err == nil || errors.Is(err, leveldb.ErrNotFound)) {
 				return update, deletedAccounts, fmt.Errorf("failed to get deleted account. %v", err)
 			}
-			// reset storage
-			deletedAccounts = append(deletedAccounts, destroyed...)
-			deletedAccounts = append(deletedAccounts, resurrected...)
-
-			ClearAccountStorage(update, destroyed)
-			ClearAccountStorage(update, resurrected)
+			// reset storagea
+			if len(destroyed) > 0 {
+				deletedAccounts = append(deletedAccounts, destroyed...)
+			}
+			if len(resurrected) > 0 {
+				deletedAccounts = append(deletedAccounts, resurrected...)
+				ClearAccountStorage(update, resurrected)
+			}
 		}
 
 		// merge output substate to update
