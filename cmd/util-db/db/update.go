@@ -29,6 +29,7 @@ const (
 	maxNumberOfDownloadAttempts = 5
 	firstMainnetPatchFileName   = "5577-46750.tar.gz"
 	firstTestnetPatchFileName   = "" // todo fill with first testnet patch once lachesis patch for testnet is released
+	stateHashPatchFileName      = "state-hashes_0-65436418"
 )
 
 // UpdateCommand downloads aida-db and new patches
@@ -251,10 +252,13 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 					return fmt.Errorf("cannot open targetDb; %v", err)
 				}
 
-				// save patch dbHash - last hash gets validated if validation is turned on
-				patchDbHash, err = targetMD.CheckUpdateMetadata(cfg, patchDb)
-				if err != nil {
-					return err
+				// we only check metadata if not applying stateHashPatch
+				if !strings.Contains(extractedPatchPath, stateHashPatchFileName) {
+					// save patch dbHash - last hash gets validated if validation is turned on
+					patchDbHash, err = targetMD.CheckUpdateMetadata(cfg, patchDb)
+					if err != nil {
+						return err
+					}
 				}
 
 				m := newMerger(cfg, targetMD.Db, []ethdb.Database{patchDb}, []string{extractedPatchPath}, nil)
@@ -264,11 +268,18 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 					return fmt.Errorf("unable to merge %v; %v", extractedPatchPath, err)
 				}
 
-				err = targetMD.SetAll()
-				if err != nil {
-					return err
+				// we only set metadata if not applying stateHashPatch
+				if strings.Contains(extractedPatchPath, stateHashPatchFileName) {
+					err = targetMD.SetHasHashPatch()
+					if err != nil {
+						return fmt.Errorf("cannot set has-hash-patch; %v", err)
+					}
+				} else {
+					err = targetMD.SetAll()
+					if err != nil {
+						return fmt.Errorf("cannot set metadata; %v", err)
+					}
 				}
-
 				m.closeSourceDbs()
 
 				// remove patch
@@ -398,10 +409,20 @@ func retrievePatchesToDownload(cfg *utils.Config, targetDbFirstBlock uint64, tar
 		return nil, fmt.Errorf("unable to download patches.json: %v", err)
 	}
 
+	hasStateHashPatch, err := utils.HasStateHashPatch(cfg.AidaDb)
+	if err != nil {
+		return nil, err
+	}
+
 	// list of availablePatches to be downloaded
 	var patchesToDownload = make([]utils.PatchJson, 0)
 
 	for _, patch := range availablePatches {
+		if patch.FileName == stateHashPatchFileName+".tar.gz" {
+			if !hasStateHashPatch {
+				patchesToDownload = append(patchesToDownload, patch)
+			}
+		}
 		// skip every patch which is sooner than previous last block
 		if patch.ToBlock <= targetDbLastBlock {
 			// if patch is lachesis and user has not got it in their db we download it
