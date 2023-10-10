@@ -23,9 +23,47 @@ const (
 	firstOperaTestnetBlock  = 479326
 )
 
+var GenerateDbHashCommand = cli.Command{
+	Action: generateDbHashCmd,
+	Name:   "generate-db-hash",
+	Usage:  "Generates new db-hash. Note that this will overwrite the current AidaDb hash.",
+	Flags: []cli.Flag{
+		&utils.AidaDbFlag,
+	},
+}
+
+// validateCmd calculates the dbHash for given AidaDb and saves it.
+func generateDbHashCmd(ctx *cli.Context) error {
+	log := logger.NewLogger("INFO", "DbHashGenerateCMD")
+
+	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
+
+	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
+	if err != nil {
+		return fmt.Errorf("cannot open db; %v", err)
+	}
+
+	defer MustCloseDB(aidaDb)
+
+	md := utils.NewAidaDbMetadata(aidaDb, "INFO")
+
+	log.Noticef("Starting DbHash generation for %v; this may take several hours...", cfg.AidaDb)
+	hash, err := generateDbHash(aidaDb, "INFO")
+	if err != nil {
+		return err
+	}
+
+	err = md.SetDbHash(hash)
+	if err != nil {
+		return fmt.Errorf("cannot set db-hash; %v", err)
+	}
+
+	return nil
+}
+
 var ValidateCommand = cli.Command{
 	Action: validateCmd,
-	Name:   "validate",
+	Name:   "generateDbHash",
 	Usage:  "Validates AidaDb using md5 DbHash.",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
@@ -93,7 +131,7 @@ func validateCmd(ctx *cli.Context) error {
 	log.Noticef("Found DbHash for your Db: %v", hex.EncodeToString(expectedHash))
 
 	log.Noticef("Starting DbHash calculation for %v; this may take several hours...", cfg.AidaDb)
-	trueHash, err := validate(aidaDb, "INFO")
+	trueHash, err := generateDbHash(aidaDb, "INFO")
 	if err != nil {
 		return err
 	}
@@ -172,8 +210,8 @@ func newDbValidator(db ethdb.Database, logLevel string) *validator {
 	}
 }
 
-// validate AidaDb on given path pathToDb
-func validate(db ethdb.Database, logLevel string) ([]byte, error) {
+// generateDbHash for given AidaDb
+func generateDbHash(db ethdb.Database, logLevel string) ([]byte, error) {
 	v := newDbValidator(db, logLevel)
 
 	v.wg.Add(2)
@@ -185,6 +223,7 @@ func validate(db ethdb.Database, logLevel string) ([]byte, error) {
 
 	select {
 	case sum = <-v.result:
+		v.log.Notice("DbHash Generation complete!")
 		v.log.Noticef("AidaDb MD5 sum: %v", hex.EncodeToString(sum))
 		break
 	case <-v.closed:
@@ -224,6 +263,13 @@ func (v *validator) iterate() {
 	v.doIterate(substate.DestroyedAccountPrefix)
 
 	v.log.Infof("Destroyed Accounts took %v.", time.Since(now).Round(1*time.Second))
+
+	v.log.Noticef("Total time elapsed: %v", time.Since(v.start).Round(1*time.Second))
+
+	v.log.Notice("Iterating over State Hashes...")
+	v.doIterate(utils.StateHashPrefix)
+
+	v.log.Infof("State Hashes took %v.", time.Since(now).Round(1*time.Second))
 
 	v.log.Noticef("Total time elapsed: %v", time.Since(v.start).Round(1*time.Second))
 

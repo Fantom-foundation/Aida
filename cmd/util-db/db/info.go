@@ -136,7 +136,7 @@ func doDbHash(ctx *cli.Context) error {
 	}
 
 	// if not found in db, we need to iterate and create the hash
-	if dbHash, err = validate(aidaDb, "INFO"); err != nil {
+	if dbHash, err = generateDbHash(aidaDb, "INFO"); err != nil {
 		return err
 	}
 
