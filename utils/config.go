@@ -232,7 +232,6 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		return cfg, fmt.Errorf("unable to parse cli arguments; %v", err)
 	}
 
-
 	adjustMissingConfigValues(cfg)
 
 	reportNewConfig(cfg, log)
