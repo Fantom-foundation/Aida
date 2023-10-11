@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/Fantom-foundation/lachesis-base/common/bigendian"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/op/go-logging"
@@ -26,6 +28,7 @@ var InfoCommand = cli.Command{
 		&cmdDelAcc,
 		&cmdCount,
 		&cmdPrintDbHash,
+		&cmdPrintStateHash,
 	},
 }
 
@@ -101,6 +104,16 @@ var cmdPrintDbHash = cli.Command{
 	},
 }
 
+var cmdPrintStateHash = cli.Command{
+	Action:    printStateHash,
+	Name:      "state-hash",
+	Usage:     "Prints state hash for given block number.",
+	ArgsUsage: "<BlockNum>",
+	Flags: []cli.Flag{
+		&utils.AidaDbFlag,
+	},
+}
+
 func doDbHash(ctx *cli.Context) error {
 	var force = ctx.Bool(flags.ForceFlag.Name)
 
@@ -146,7 +159,7 @@ func printMetadata(pathToDb string) error {
 	// open db
 	aidaDb, err := rawdb.NewLevelDBDatabase(pathToDb, 1024, 100, "profiling", true)
 	if err != nil {
-		return fmt.Errorf("cannot open aida-db; %v", err)
+		return fmt.Errorf("cannot open aida-db for printing metadata; %v", err)
 	}
 
 	defer MustCloseDB(aidaDb)
@@ -399,4 +412,34 @@ func GetDbSize(db ethdb.Database) uint64 {
 		count++
 	}
 	return count
+}
+
+func printStateHash(ctx *cli.Context) error {
+	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-Print-State-Hash")
+
+	cfg, argErr := utils.NewConfig(ctx, utils.OneToNArgs)
+	if argErr != nil {
+		return argErr
+	}
+
+	blockNum, err := strconv.ParseUint(ctx.Args().Slice()[0], 10, 64)
+	if err != nil {
+		return err
+	}
+
+	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", true)
+	if err != nil {
+		return fmt.Errorf("cannot open aida-db; %v", err)
+	}
+
+	hexStr := hexutil.EncodeUint64(blockNum)
+
+	bytes, err := aidaDb.Get([]byte(utils.StateHashPrefix + hexStr))
+	if err != nil {
+		return fmt.Errorf("cannot get hash from db")
+	}
+
+	log.Noticef("State hash for block %v is 0x%v", blockNum, hex.EncodeToString(bytes))
+
+	return nil
 }
