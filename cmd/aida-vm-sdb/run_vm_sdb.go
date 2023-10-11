@@ -49,7 +49,6 @@ func run(config *utils.Config, provider executor.Provider[*substate.Substate], s
 	var extensionList = []executor.Extension[*substate.Substate]{
 		extension.MakeCpuProfiler[*substate.Substate](config),
 		extension.MakeDiagnosticServer[*substate.Substate](config),
-
 	}
 
 	if !disableStateDbExtension {

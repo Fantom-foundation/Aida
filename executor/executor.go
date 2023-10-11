@@ -244,7 +244,7 @@ func (e *executor[T]) Run(params Params, processor Processor[T], extensions []Ex
 func (e *executor[T]) runSequential(params Params, processor Processor[T], extensions []Extension[T], state *State[T], context *Context) error {
 	first := true
 	err := e.provider.Run(params.From, params.To, func(tx TransactionInfo[T]) error {
-		state.Substate = tx.Substate
+		state.Data = tx.Data
 
 		if first {
 			state.Block = tx.Block
@@ -281,14 +281,14 @@ func (e *executor[T]) runSequential(params Params, processor Processor[T], exten
 }
 
 // runBlock runs transaction execution in a block
-func runBlock(
+func runBlock[T any](
 	workerNumber int,
-	blocks chan []*TransactionInfo,
+	blocks chan []*TransactionInfo[T],
 	wg *sync.WaitGroup,
 	abort utils.Event,
 	workerErrs []error,
-	processor Processor,
-	extensions []Extension,
+	processor Processor[T],
+	extensions []Extension[T],
 	context *Context,
 	cachedPanic *atomic.Value,
 ) {
@@ -302,7 +302,7 @@ func runBlock(
 		wg.Done()
 	}()
 
-	var localState State
+	var localState State[T]
 	for {
 		select {
 		case blockTransactions := <-blocks:
@@ -320,10 +320,10 @@ func runBlock(
 			}
 
 			for _, tx := range blockTransactions {
-				localState.Substate = tx.Substate
+				localState.Data = tx.Data
 				localState.Transaction = tx.Transaction
 
-				if err := runTransaction(localState, &localContext, tx.Substate, processor, extensions); err != nil {
+				if err := runTransaction(localState, &localContext, tx.Data, processor, extensions); err != nil {
 					workerErrs[workerNumber] = err
 					abort.Signal()
 					return
@@ -350,8 +350,8 @@ func runBlock(
 }
 
 // forwardBlocks is a worker that unites transactions by block and forwards them to execution.
-func (e *executor) forwardBlocks(params Params, abort utils.Event) (chan []*TransactionInfo, *error) {
-	blocks := make(chan []*TransactionInfo, 10*params.NumWorkers)
+func (e *executor[T]) forwardBlocks(params Params, abort utils.Event) (chan []*TransactionInfo[T], *error) {
+	blocks := make(chan []*TransactionInfo[T], 10*params.NumWorkers)
 	forwardErr := new(error)
 
 	go func() {
@@ -360,14 +360,14 @@ func (e *executor) forwardBlocks(params Params, abort utils.Event) (chan []*Tran
 
 		previousBlock := params.From
 
-		block := make([]*TransactionInfo, 0)
-		err := e.substate.Run(params.From, params.To, func(tx TransactionInfo) error {
+		block := make([]*TransactionInfo[T], 0)
+		err := e.provider.Run(params.From, params.To, func(tx TransactionInfo[T]) error {
 			if tx.Block != previousBlock {
 				previousBlock = tx.Block
 				select {
 				case blocks <- block:
 					// clean block for reuse
-					block = make([]*TransactionInfo, 0)
+					block = make([]*TransactionInfo[T], 0)
 				case <-abort.Wait():
 					return abortErr
 				}
@@ -395,7 +395,7 @@ func (e *executor) forwardBlocks(params Params, abort utils.Event) (chan []*Tran
 	return blocks, forwardErr
 }
 
-func (e *executor) runParallelTransaction(params Params, processor Processor, extensions []Extension, state *State, context *Context) error {
+func (e *executor[T]) runParallelTransaction(params Params, processor Processor[T], extensions []Extension[T], state *State[T], context *Context) error {
 	numWorkers := params.NumWorkers
 
 	// An event for signaling an abort of the execution.
@@ -485,7 +485,7 @@ func runTransaction[T any](state State[T], context *Context, data T, processor P
 	}
 	return nil
 }
-func (e *executor) runParallelBlock(params Params, processor Processor, extensions []Extension, state *State, context *Context) error {
+func (e *executor[T]) runParallelBlock(params Params, processor Processor[T], extensions []Extension[T], state *State[T], context *Context) error {
 	numWorkers := params.NumWorkers
 
 	// An event for signaling an abort of the execution.
@@ -520,7 +520,6 @@ func (e *executor) runParallelBlock(params Params, processor Processor, extensio
 	}
 	return err
 }
-
 
 func signalPreRun[T any](state State[T], context *Context, extensions []Extension[T]) error {
 	return forEachForward(extensions, func(extension Extension[T]) error {

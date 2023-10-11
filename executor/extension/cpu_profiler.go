@@ -21,11 +21,11 @@ func MakeCpuProfiler[T any](config *utils.Config) executor.Extension[T] {
 
 type cpuProfiler[T any] struct {
 	NilExtension[T]
-	config *utils.Config
+	config         *utils.Config
 	sequenceNumber int
 }
 
-func (p *cpuProfiler[T]) PreRun(executor.State[T], *executor.Context) error {
+func (p *cpuProfiler[T]) PreRun(state executor.State[T], _ *executor.Context) error {
 	filename := p.config.CPUProfile
 	if p.config.CPUProfilePerInterval {
 		p.sequenceNumber = state.Block / 100_000
@@ -34,7 +34,7 @@ func (p *cpuProfiler[T]) PreRun(executor.State[T], *executor.Context) error {
 	return startCpuProfiler(filename)
 }
 
-func (p *cpuProfiler[T]) PreBlock(state executor.State, _ *executor.Context) error {
+func (p *cpuProfiler[T]) PreBlock(state executor.State[T], _ *executor.Context) error {
 	if !p.config.CPUProfilePerInterval {
 		return nil
 	}

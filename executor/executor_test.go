@@ -787,7 +787,7 @@ func TestProcessor_APanicInAnExecutorSkipsPostRunActions_InTransactionLevelParal
 	NewExecutor[any](provider).Run(
 		Params{From: 10, To: 11, NumWorkers: 2, ParallelismGranularity: TransactionLevel},
 		processor,
-		[]Extension{extension},
+		[]Extension[any]{extension},
 	)
 }
 
@@ -856,26 +856,26 @@ func TestProcessor_ParallelBlocksMultipleBlocksRun(t *testing.T) {
 			return nil
 		})
 
-	extension.EXPECT().PreRun(AtBlock(10), gomock.Any())
-	extension.EXPECT().PreBlock(AtBlock(10), gomock.Any())
-	extension.EXPECT().PreTransaction(AtTransaction(10, 7), gomock.Any())
-	processor.EXPECT().Process(AtTransaction(10, 7), gomock.Any())
-	extension.EXPECT().PostTransaction(AtTransaction(10, 7), gomock.Any())
-	extension.EXPECT().PreTransaction(AtTransaction(10, 9), gomock.Any())
-	processor.EXPECT().Process(AtTransaction(10, 9), gomock.Any())
-	extension.EXPECT().PostTransaction(AtTransaction(10, 9), gomock.Any())
-	extension.EXPECT().PostBlock(AtTransaction(10, 9), gomock.Any())
+	extension.EXPECT().PreRun(AtBlock[any](10), gomock.Any())
+	extension.EXPECT().PreBlock(AtBlock[any](10), gomock.Any())
+	extension.EXPECT().PreTransaction(AtTransaction[any](10, 7), gomock.Any())
+	processor.EXPECT().Process(AtTransaction[any](10, 7), gomock.Any())
+	extension.EXPECT().PostTransaction(AtTransaction[any](10, 7), gomock.Any())
+	extension.EXPECT().PreTransaction(AtTransaction[any](10, 9), gomock.Any())
+	processor.EXPECT().Process(AtTransaction[any](10, 9), gomock.Any())
+	extension.EXPECT().PostTransaction(AtTransaction[any](10, 9), gomock.Any())
+	extension.EXPECT().PostBlock(AtTransaction[any](10, 9), gomock.Any())
 
-	extension.EXPECT().PreBlock(AtBlock(11), gomock.Any())
-	extension.EXPECT().PreTransaction(AtTransaction(11, 8), gomock.Any())
-	processor.EXPECT().Process(AtTransaction(11, 8), gomock.Any())
-	extension.EXPECT().PostTransaction(AtTransaction(11, 8), gomock.Any())
-	extension.EXPECT().PreTransaction(AtTransaction(11, 10), gomock.Any())
-	processor.EXPECT().Process(AtTransaction(11, 10), gomock.Any())
-	extension.EXPECT().PostTransaction(AtTransaction(11, 10), gomock.Any())
-	extension.EXPECT().PostBlock(AtTransaction(11, 10), gomock.Any())
+	extension.EXPECT().PreBlock(AtBlock[any](11), gomock.Any())
+	extension.EXPECT().PreTransaction(AtTransaction[any](11, 8), gomock.Any())
+	processor.EXPECT().Process(AtTransaction[any](11, 8), gomock.Any())
+	extension.EXPECT().PostTransaction(AtTransaction[any](11, 8), gomock.Any())
+	extension.EXPECT().PreTransaction(AtTransaction[any](11, 10), gomock.Any())
+	processor.EXPECT().Process(AtTransaction[any](11, 10), gomock.Any())
+	extension.EXPECT().PostTransaction(AtTransaction[any](11, 10), gomock.Any())
+	extension.EXPECT().PostBlock(AtTransaction[any](11, 10), gomock.Any())
 
-	extension.EXPECT().PostRun(AtBlock(12), gomock.Any(), nil)
+	extension.EXPECT().PostRun(AtBlock[any](12), gomock.Any(), nil)
 
 	executor := NewExecutor[any](substate)
 	if err := executor.Run(Params{From: 10, To: 12, NumWorkers: 2, ParallelismGranularity: BlockLevel},

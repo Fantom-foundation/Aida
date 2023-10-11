@@ -61,16 +61,16 @@ func (r blockProcessor) Process(state executor.State[*substate.Substate], contex
 
 func run(
 	config *utils.Config,
-	provider executor.Provider[*substate.Substate] ,
+	provider executor.Provider[*substate.Substate],
 	stateDb state.StateDB,
-	processor executor.Processor,
-	extra []executor.Extension,
+	processor executor.Processor[*substate.Substate],
+	extra []executor.Extension[*substate.Substate],
 ) error {
-	extensionList := []executor.Extension{
-		extension.MakeCpuProfiler(config),
-		extension.MakeArchiveGetter(),
+	extensionList := []executor.Extension[*substate.Substate]{
+		extension.MakeCpuProfiler[*substate.Substate](config),
+		extension.MakeArchiveGetter[*substate.Substate](),
 		extension.MakeProgressLogger[*substate.Substate](config, 0),
-		extension.MakeProgressTracker[*substate.Substate](config, 0),
+		extension.MakeProgressTracker(config, 0),
 	}
 	extensionList = append(extensionList, extra...)
 	return executor.NewExecutor(provider).Run(
