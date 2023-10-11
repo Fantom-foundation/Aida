@@ -71,10 +71,10 @@ pipeline {
                 sh "rm -rf ${TRACEDIR}"
             }
         }
-                stage('aida-vm-sdb') {
+        stage('aida-vm-sdb validate') {
             steps {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
-                    sh "build/aida-vm-sdb ${VM} ${STORAGE} ${AIDADB} ${PRIME} --keep-db --archive --archive-variant ldb --validate-tx --cpu-profile cpu-profile.dat --memory-profile mem-profile.dat --memory-breakdown --update-buffer-size 4000 --continue-on-failure ${FROMBLOCK} ${TOBLOCK} "
+                    sh "build/aida-vm-sdb ${VM} ${STORAGE} ${AIDADB} ${PRIME} --validate-state-hash --keep-db --archive --archive-variant ldb --validate-tx --cpu-profile cpu-profile.dat --memory-profile mem-profile.dat --memory-breakdown --update-buffer-size 4000 --continue-on-failure ${FROMBLOCK} ${TOBLOCK} "
                 }
                 sh "rm -rf *.dat"
             }
