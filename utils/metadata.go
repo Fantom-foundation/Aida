@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/logger"
@@ -28,14 +29,16 @@ const (
 )
 
 const (
-	FirstBlockPrefix = substate.MetadataPrefix + "fb"
-	LastBlockPrefix  = substate.MetadataPrefix + "lb"
-	FirstEpochPrefix = substate.MetadataPrefix + "fe"
-	LastEpochPrefix  = substate.MetadataPrefix + "le"
-	TypePrefix       = substate.MetadataPrefix + "ty"
-	ChainIDPrefix    = substate.MetadataPrefix + "ci"
-	TimestampPrefix  = substate.MetadataPrefix + "ti"
-	DbHashPrefix     = substate.MetadataPrefix + "md"
+	FirstBlockPrefix        = substate.MetadataPrefix + "fb"
+	LastBlockPrefix         = substate.MetadataPrefix + "lb"
+	FirstEpochPrefix        = substate.MetadataPrefix + "fe"
+	LastEpochPrefix         = substate.MetadataPrefix + "le"
+	TypePrefix              = substate.MetadataPrefix + "ty"
+	ChainIDPrefix           = substate.MetadataPrefix + "ci"
+	TimestampPrefix         = substate.MetadataPrefix + "ti"
+	DbHashPrefix            = substate.MetadataPrefix + "md"
+	HasStateHashPatchPrefix = substate.MetadataPrefix + "sh"
+	StateHashPrefix         = "dbh"
 )
 
 // merge is determined by what are we merging
@@ -272,7 +275,7 @@ func ProcessMergeMetadata(cfg *Config, aidaDb ethdb.Database, sourceDbs []ethdb.
 			// reopen db
 			md.Db, err = rawdb.NewLevelDBDatabase(paths[i], 1024, 100, "profiling", true)
 			if err != nil {
-				return nil, fmt.Errorf("cannot open aida-db; %v", err)
+				return nil, fmt.Errorf("cannot open aida-db to process merge metadata; %v", err)
 			}
 		}
 
@@ -1102,4 +1105,37 @@ func (md *AidaDbMetadata) getBlockRange() (uint64, uint64, error) {
 	}
 
 	return md.FirstBlock, md.LastBlock, nil
+}
+
+// HasStateHashPatch checks whether given db has already acquired patch with StateHashes.
+func HasStateHashPatch(path string) (bool, error) {
+	db, err := rawdb.NewLevelDBDatabase(path, 1024, 100, "profiling", true)
+	if err != nil {
+		// if AidaDb does not exist force downloading the state hash patch
+		if errors.Is(err, os.ErrNotExist) {
+			return false, nil
+		}
+		return false, fmt.Errorf("cannot open aida-db to check if it already has state hash patch; %v", err)
+	}
+
+	_, getErr := db.Get([]byte(HasStateHashPatchPrefix))
+
+	err = db.Close()
+	if err != nil {
+		return false, fmt.Errorf("cannot close aida-db after checking if it already has state hash patch; %v", err)
+	}
+
+	if getErr != nil {
+		if errors.Is(getErr, leveldb.ErrNotFound) {
+			return false, nil
+		}
+		return false, err
+	}
+
+	return true, nil
+}
+
+// SetHasHashPatch marks AidaDb that it already has HashPatch merged so it will not get downloaded next update.
+func (md *AidaDbMetadata) SetHasHashPatch() error {
+	return md.Db.Put([]byte(HasStateHashPatchPrefix), []byte{1})
 }

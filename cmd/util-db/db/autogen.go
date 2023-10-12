@@ -3,6 +3,7 @@ package db
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -71,6 +72,7 @@ func autogen(ctx *cli.Context) error {
 
 	MustCloseDB(g.aidaDb)
 
+	start := time.Now()
 	// stop opera to be able to export events
 	errCh := startOperaRecording(g.cfg, g.stopAtEpoch)
 
@@ -79,7 +81,8 @@ func autogen(ctx *cli.Context) error {
 	if ok && err != nil {
 		return err
 	}
-	g.log.Noticef("Opera %v - successfully substates for epoch range %d - %d", g.cfg.Db, g.opera.lastEpoch+1, g.stopAtEpoch)
+	g.log.Noticef("Recording for epoch range %d - %d finished. It took: %v", g.cfg.Db, g.opera.lastEpoch+1, g.stopAtEpoch, time.Since(start).Round(1*time.Second))
+	g.log.Noticef("Total elapsed time: %v", time.Since(g.start).Round(1*time.Second))
 
 	// reopen aida-db
 	g.aidaDb, err = rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)

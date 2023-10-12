@@ -184,6 +184,7 @@ func (pc *PrimeContext) SuicideAccounts(db state.StateDB, accounts []common.Addr
 	for _, addr := range accounts {
 		if db.Exist(addr) {
 			db.Suicide(addr)
+			pc.log.Debugf("\t\t Perform suicide on %v", addr)
 			count++
 			pc.exist[addr] = false
 		}
@@ -268,7 +269,8 @@ func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error 
 	updateIter.Release()
 
 	// advance from the latest precomputed updateset to the target block
-	if block < target {
+	// if the first block is 1, target must prime the genesis block
+	if block < target || target == 0 {
 		log.Infof("\tPriming using substate from %v to %v", block, target)
 		update, deletedAccounts, err := GenerateUpdateSet(block, target, cfg)
 		if err != nil {
@@ -283,8 +285,8 @@ func LoadWorldStateAndPrime(db state.StateDB, cfg *Config, target uint64) error 
 	}
 
 	// delete destroyed accounts from stateDB
-	log.Notice("Delete destroyed accounts")
+	log.Noticef("Delete destroyed accounts until block %v", target)
 	// remove destroyed accounts until one block before the first block
-	err = DeleteDestroyedAccountsFromStateDB(db, cfg, pc.block)
+	err = DeleteDestroyedAccountsFromStateDB(db, cfg, target)
 	return err
 }
