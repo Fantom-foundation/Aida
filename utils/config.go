@@ -220,15 +220,16 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 
 	setFirstOperaBlock(cfg.ChainID)
 
+	// set aida db repository url
+	err = setAidaDbRepositoryUrl(cfg.ChainID)
+	if err != nil {
+		return cfg, fmt.Errorf("unable to prepareUrl from ChainId %v; %v", cfg.ChainID, err)
+	}
+
 	// set numbers of first block, last block and path to profilingDB
 	err = updateConfigBlockRange(ctx.Args().Slice(), cfg, mode, log)
 	if err != nil {
 		return cfg, fmt.Errorf("unable to parse cli arguments; %v", err)
-	}
-
-	err = setAidaDbRepositoryUrl(cfg.ChainID)
-	if err != nil {
-		return cfg, fmt.Errorf("unable to prepareUrl from ChainId %v; %v", cfg.ChainID, err)
 	}
 
 	adjustMissingConfigValues(cfg)

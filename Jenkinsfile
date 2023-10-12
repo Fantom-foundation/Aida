@@ -1,5 +1,5 @@
 pipeline {
-    agent { label 'short' }
+    agent { label 'pullrequest' }
     
     options { timestamps () }
     
@@ -9,8 +9,9 @@ pipeline {
         PRIME = '--update-buffer-size 4096'
         VM = '--vm-impl lfvm'
         AIDADB = '--aida-db=/var/opera/Aida/mainnet-data/aida-db'
-        fromBlock = 'opera'
-        toBlock = '4600000'
+        TRACEDIR = 'tracefiles'
+        FROMBLOCK = 'opera'
+        TOBLOCK = '4600000'
     }
 
     stages {
@@ -23,6 +24,7 @@ pipeline {
                 sh "make all"
             }
         }
+
 	stage('Test') {
             steps {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
@@ -34,8 +36,9 @@ pipeline {
         stage('aida-vm') {
             steps {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
-                    sh "build/aida-vm ${VM} --aida-db=/var/opera/Aida/mainnet-data/aida-db --workers 32 ${fromBlock} ${toBlock}"
+                    sh "build/aida-vm ${VM} --aida-db=/var/opera/Aida/mainnet-data/aida-db --cpu-profile cpu-profile.dat --workers 32 --validate-tx ${FROMBLOCK} ${TOBLOCK}"
                 }
+                sh "rm -rf *.dat"
             }
         }
         
@@ -46,29 +49,51 @@ pipeline {
                 }
             }
         }
-        
-        stage('aida-vm-sdb') {
+
+        stage('aida-sdb record') {
             steps {
+                sh "mkdir -p ${TRACEDIR}"
+                sh "rm -rf ${TRACEDIR}/*"
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
-                    sh "build/aida-vm-sdb ${VM} ${STORAGE} ${AIDADB} ${PRIME} --keep-db --archive --archive-variant ldb ${fromBlock} ${toBlock} "
+                    sh "build/aida-sdb record --cpu-profile cpu-profile-0.dat --trace-file ${TRACEDIR}/trace-0.dat ${AIDADB} ${FROMBLOCK} ${FROMBLOCK}+1000"
+                    sh "build/aida-sdb record --cpu-profile cpu-profile-1.dat --trace-file ${TRACEDIR}/trace-1.dat ${AIDADB} ${FROMBLOCK}+1001 ${FROMBLOCK}+2000"
+                    sh "build/aida-sdb record --cpu-profile cpu-profile-2.dat --trace-file ${TRACEDIR}/trace-2.dat ${AIDADB} ${FROMBLOCK}+2001 ${TOBLOCK}"
                 }
             }
         }
-        
+
+        stage('aida-sdb replay') {
+            steps {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
+                    sh "build/aida-sdb replay ${VM} ${STORAGE} ${AIDADB} ${PRIME} --shadow-db --db-shadow-impl geth --cpu-profile cpu-profile.dat --memory-profile mem-profile.dat --memory-breakdown --update-buffer-size 4000 --trace-file ${TRACEDIR}/trace-0.dat ${FROMBLOCK} ${TOBLOCK}"
+                    sh "build/aida-sdb replay ${VM} ${STORAGE} ${AIDADB} ${PRIME} --cpu-profile cpu-profile.dat --memory-profile mem-profile.dat --memory-breakdown --update-buffer-size 4000 --trace-dir ${TRACEDIR} ${FROMBLOCK} ${TOBLOCK}"
+                }
+                sh "rm -rf ${TRACEDIR}"
+            }
+        }
+                stage('aida-vm-sdb') {
+            steps {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
+                    sh "build/aida-vm-sdb ${VM} ${STORAGE} ${AIDADB} ${PRIME} --keep-db --archive --archive-variant ldb --validate-tx --cpu-profile cpu-profile.dat --memory-profile mem-profile.dat --memory-breakdown --update-buffer-size 4000 --continue-on-failure ${FROMBLOCK} ${TOBLOCK} "
+                }
+                sh "rm -rf *.dat"
+            }
+        }
+
         stage('aida-vm-adb') {
             steps {
-                sh "rm -f *.cpuprofile *.memprofile *.log"
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
-                    sh "build/aida-vm-adb ${AIDADB} --db-src /var/opera/Aida/dbtmpjenkins/state_db_carmen_go-file_4600000 ${fromBlock} ${toBlock} "
+                    sh "build/aida-vm-adb ${AIDADB} --db-src /var/opera/Aida/dbtmpjenkins/state_db_carmen_go-file_4600000 --cpu-profile cpu-profile.dat --validate-tx ${FROMBLOCK} ${TOBLOCK} "
                 }
                 sh "rm -rf /var/opera/Aida/dbtmpjenkins/state_db_carmen_go-file_4600000"
+                sh "rm -rf *.dat"
             }
         }
         stage('tear-down') {
             steps {
                 sh "make clean"
+                sh "rm -rf *.dat ${TRACEDIR}"
             }
         }
     }
 }
-
