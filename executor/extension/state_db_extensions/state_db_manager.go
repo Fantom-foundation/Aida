@@ -13,8 +13,8 @@ import (
 
 type stateDbManager struct {
 	extension.NilExtension
-	config      *utils.Config
-	log         logger.Logger
+	config *utils.Config
+	log    logger.Logger
 }
 
 // MakeStateDbManager creates a executor.Extension that commits state of StateDb if keep-db is enabled

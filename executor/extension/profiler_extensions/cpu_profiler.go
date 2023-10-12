@@ -22,7 +22,7 @@ func MakeCpuProfiler(config *utils.Config) executor.Extension {
 
 type cpuProfiler struct {
 	extension.NilExtension
-	config *utils.Config
+	config         *utils.Config
 	sequenceNumber int
 }
 
