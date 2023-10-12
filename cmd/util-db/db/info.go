@@ -211,6 +211,8 @@ func printMetadata(pathToDb string) error {
 
 	log.Infof("Last Epoch: %v", lastEpoch)
 
+	log.Infof("Has State-Hash-Patch: %v", md.HashStateHashPatch())
+
 	dbHash := md.GetDbHash()
 
 	log.Infof("Db Hash: %v", hex.EncodeToString(dbHash))

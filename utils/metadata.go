@@ -468,6 +468,15 @@ func (md *AidaDbMetadata) GetFirstEpoch() uint64 {
 	return bigendian.BytesToUint64(firstEpochBytes)
 }
 
+func (md *AidaDbMetadata) HashStateHashPatch() bool {
+	_, getErr := md.Db.Get([]byte(HasStateHashPatchPrefix))
+	if getErr != nil {
+		return false
+	}
+
+	return true
+}
+
 // GetLastEpoch and return it
 func (md *AidaDbMetadata) GetLastEpoch() uint64 {
 	lastEpochBytes, err := md.Db.Get([]byte(LastEpochPrefix))

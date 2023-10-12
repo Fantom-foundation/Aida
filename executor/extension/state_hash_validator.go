@@ -1,21 +1,13 @@
 package extension
 
 import (
-	"bufio"
-	"encoding/hex"
-	"errors"
 	"fmt"
-	"os"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/syndtr/goleveldb/leveldb"
 )
 
 func MakeStateHashValidator(config *utils.Config) executor.Extension {
@@ -41,7 +33,11 @@ type stateHashValidator struct {
 }
 
 func (e *stateHashValidator) PreRun(_ executor.State, ctx *executor.Context) error {
-	e.hashProvider = utils.MakeStateHashProvider(ctx.AidaDb)
+	e.hashProvider = utils.MakeStateHashProvider(ctx.AidaDb, e.log)
+	err := e.hashProvider.PreLoadStateHashes(int(e.config.First), int(e.config.Last))
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -50,16 +46,7 @@ func (e *stateHashValidator) PostBlock(state executor.State, context *executor.C
 		return nil
 	}
 
-	want, err := e.getStateHash(state.Block)
-	if err != nil {
-		return err
-	}
-
-	// is stat hash present?
-	nilHash := common.Hash{}
-	if want == nilHash {
-		return nil
-	}
+	want := e.hashProvider.GetStateHash(state.Block)
 
 	got := context.State.GetHash()
 	if want != got {
@@ -69,9 +56,14 @@ func (e *stateHashValidator) PostBlock(state executor.State, context *executor.C
 	// Check the ArchiveDB
 	if e.config.ArchiveMode {
 		e.lastProcessedBlock = state.Block
-		if err = e.checkArchiveHashes(context.State); err != nil {
+		if err := e.checkArchiveHashes(context.State); err != nil {
 			return err
 		}
+	} else {
+		// delete the record only if archive is enabled, since archive can be delayed,
+		// so delete for this case is done inside e.checkArchiveHashes
+		e.hashProvider.DeletePreLoadedStateHash(state.Block)
+
 	}
 
 	return nil
@@ -107,16 +99,7 @@ func (e *stateHashValidator) checkArchiveHashes(state state.StateDB) error {
 	cur := uint64(e.nextArchiveBlockToCheck)
 	for !empty && cur <= height {
 
-		want, err := e.getStateHash(int(cur))
-		if err != nil {
-			return err
-		}
-
-		// is state hash present?
-		nilHash := common.Hash{}
-		if want == nilHash {
-			return nil
-		}
+		want := e.hashProvider.GetStateHash(int(cur))
 
 		archive, err := state.GetArchiveState(cur)
 		if err != nil {
@@ -129,90 +112,11 @@ func (e *stateHashValidator) checkArchiveHashes(state state.StateDB) error {
 			return fmt.Errorf("unexpected hash for archive block %d\nwanted %v\n   got %v", cur, want, got)
 		}
 
+		// if archive is enabled delete the record only after it's been used for archive check
+		e.hashProvider.DeletePreLoadedStateHash(int(cur))
+
 		cur++
 	}
 	e.nextArchiveBlockToCheck = int(cur)
 	return nil
-}
-
-func (e *stateHashValidator) getStateHash(blockNumber int) (common.Hash, error) {
-	want, err := e.hashProvider.GetStateHash(blockNumber)
-	if err != nil {
-		if errors.Is(err, leveldb.ErrNotFound) {
-			e.log.Warningf("State hash for block %v is not present in the db", blockNumber)
-			return common.Hash{}, nil
-		}
-		return common.Hash{}, fmt.Errorf("cannot get state hash for block %v; %v", blockNumber, err)
-	}
-
-	return want, nil
-
-}
-
-// loadStateHashes attempts to parse a file listing state roots in the format
-//
-//	(<block> - <hash>\n)*
-//
-// where <block> is a decimal block number and <hash> is a 64-character long,
-// hexadecimal hash. Blocks are required to be listed in order, however, gaps
-// may exist for blocks exhibiting the same hash as their predecessor.
-// The limit parameter is the first block that is no longer loaded.
-func loadStateHashes(path string, limit int) ([]common.Hash, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	hashes := make([]common.Hash, 0, limit)
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if line == "" {
-			continue
-		}
-		parts := strings.Split(line, " - ")
-		if len(parts) != 2 || len(parts[1]) < 3 {
-			return nil, fmt.Errorf("invalid line in hash list detected: `%s`", line)
-		}
-
-		block, err := strconv.Atoi(parts[0])
-		if err != nil {
-			return nil, err
-		}
-
-		if block < len(hashes) {
-			return nil, fmt.Errorf("lines in state hash file are not sorted, encountered block %d after block %d", block, len(hashes)-1)
-		}
-
-		limitReached := false
-		if block >= limit {
-			block = limit
-			limitReached = true
-		}
-
-		for len(hashes) < block {
-			if len(hashes) == 0 {
-				hashes = append(hashes, common.Hash{})
-			} else {
-				hashes = append(hashes, hashes[len(hashes)-1])
-			}
-		}
-
-		if limitReached {
-			break
-		}
-
-		bytes, err := hex.DecodeString(parts[1][2:])
-		if err != nil {
-			return nil, fmt.Errorf("unable to decode %s as hash value", parts[1][2:])
-		}
-		var hash common.Hash
-		copy(hash[:], bytes)
-
-		hashes = append(hashes, hash)
-	}
-
-	return hashes, nil
 }
