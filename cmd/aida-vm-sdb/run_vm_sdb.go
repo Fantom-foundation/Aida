@@ -4,10 +4,10 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
-	"github.com/Fantom-foundation/Aida/executor/extension/profiler_extensions"
-	"github.com/Fantom-foundation/Aida/executor/extension/progress_extensions"
-	"github.com/Fantom-foundation/Aida/executor/extension/state_db_extensions"
-	"github.com/Fantom-foundation/Aida/executor/extension/validation_extensions"
+	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
+	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
+	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
+	"github.com/Fantom-foundation/Aida/executor/extension/validator"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/urfave/cli/v2"
@@ -49,24 +49,24 @@ func (r txProcessor) Process(state executor.State, context *executor.Context) er
 func run(config *utils.Config, provider executor.SubstateProvider, stateDb state.StateDB, disableStateDbExtension bool) error {
 	// order of extensionList has to be maintained
 	var extensionList = []executor.Extension{
-		profiler_extensions.MakeCpuProfiler(config),
-		profiler_extensions.MakeDiagnosticServer(config),
+		profiler.MakeCpuProfiler(config),
+		profiler.MakeDiagnosticServer(config),
 	}
 
 	if !disableStateDbExtension {
-		extensionList = append(extensionList, state_db_extensions.MakeStateDbManager(config))
+		extensionList = append(extensionList, statedb.MakeStateDbManager(config))
 	}
 
 	extensionList = append(extensionList, []executor.Extension{
-		profiler_extensions.MakeVirtualMachineStatisticsPrinter(config),
-		progress_extensions.MakeProgressLogger(config, 15*time.Second),
-		progress_extensions.MakeProgressTracker(config, 100_000),
-		state_db_extensions.MakeStateDbPrimer(config),
-		profiler_extensions.MakeMemoryUsagePrinter(config),
-		profiler_extensions.MakeMemoryProfiler(config),
-		state_db_extensions.MakeStateDbPrepper(),
-		validation_extensions.MakeStateHashValidator(config),
-		state_db_extensions.MakeBlockEventEmitter(),
+		profiler.MakeVirtualMachineStatisticsPrinter(config),
+		tracker.MakeProgressLogger(config, 15*time.Second),
+		tracker.MakeProgressTracker(config, 100_000),
+		statedb.MakeStateDbPrimer(config),
+		profiler.MakeMemoryUsagePrinter(config),
+		profiler.MakeMemoryProfiler(config),
+		statedb.MakeStateDbPrepper(),
+		validator.MakeStateHashValidator(config),
+		statedb.MakeBlockEventEmitter(),
 	}...,
 	)
 

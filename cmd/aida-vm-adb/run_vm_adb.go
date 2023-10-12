@@ -2,9 +2,9 @@ package main
 
 import (
 	"github.com/Fantom-foundation/Aida/executor"
-	"github.com/Fantom-foundation/Aida/executor/extension/profiler_extensions"
-	"github.com/Fantom-foundation/Aida/executor/extension/progress_extensions"
-	"github.com/Fantom-foundation/Aida/executor/extension/state_db_extensions"
+	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
+	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
+	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/urfave/cli/v2"
@@ -66,9 +66,9 @@ func run(
 	extra []executor.Extension,
 ) error {
 	extensionList := []executor.Extension{
-		profiler_extensions.MakeCpuProfiler(config),
-		state_db_extensions.MakeArchivePrepper(),
-		progress_extensions.MakeProgressLogger(config, 100),
+		profiler.MakeCpuProfiler(config),
+		statedb.MakeArchivePrepper(),
+		tracker.MakeProgressLogger(config, 100),
 	}
 	extensionList = append(extensionList, extra...)
 	return executor.NewExecutor(provider).Run(
