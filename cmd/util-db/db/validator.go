@@ -63,7 +63,7 @@ func generateDbHashCmd(ctx *cli.Context) error {
 
 var ValidateCommand = cli.Command{
 	Action: validateCmd,
-	Name:   "generateDbHash",
+	Name:   "validate",
 	Usage:  "Validates AidaDb using md5 DbHash.",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
