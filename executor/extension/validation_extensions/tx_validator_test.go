@@ -1,4 +1,4 @@
-package state_db_extensions
+package validation_extensions
 
 import (
 	"errors"

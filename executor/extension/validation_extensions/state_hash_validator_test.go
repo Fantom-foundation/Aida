@@ -1,4 +1,4 @@
-package extension
+package validation_extensions
 
 import (
 	"fmt"
@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -26,7 +27,7 @@ const exampleHashes = `
 func TestStateHashValidator_NotActiveIfNoFileIsProvided(t *testing.T) {
 	config := &utils.Config{}
 	ext := MakeStateHashValidator(config)
-	if _, ok := ext.(NilExtension); !ok {
+	if _, ok := ext.(extension.NilExtension); !ok {
 		t.Errorf("extension is active although it should not")
 	}
 }

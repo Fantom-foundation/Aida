@@ -50,7 +50,7 @@ func run(
 ) error {
 	extensions := []executor.Extension{
 		profiler_extensions.MakeCpuProfiler(config),
-		extension.MakeDiagnosticServer(config),
+		profiler_extensions.MakeDiagnosticServer(config),
 		profiler_extensions.MakeVirtualMachineStatisticsPrinter(config),
 		progress_extensions.MakeProgressLogger(config, 15*time.Second),
 		temporaryStatePrepper{},

@@ -4,10 +4,10 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
-	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler_extensions"
 	"github.com/Fantom-foundation/Aida/executor/extension/progress_extensions"
 	"github.com/Fantom-foundation/Aida/executor/extension/state_db_extensions"
+	"github.com/Fantom-foundation/Aida/executor/extension/validation_extensions"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/urfave/cli/v2"
@@ -50,7 +50,7 @@ func run(config *utils.Config, provider executor.SubstateProvider, stateDb state
 	// order of extensionList has to be maintained
 	var extensionList = []executor.Extension{
 		profiler_extensions.MakeCpuProfiler(config),
-		extension.MakeDiagnosticServer(config),
+		profiler_extensions.MakeDiagnosticServer(config),
 	}
 
 	if !disableStateDbExtension {
@@ -64,8 +64,8 @@ func run(config *utils.Config, provider executor.SubstateProvider, stateDb state
 		state_db_extensions.MakeStateDbPrimer(config),
 		profiler_extensions.MakeMemoryUsagePrinter(config),
 		profiler_extensions.MakeMemoryProfiler(config),
-		state_db_extensions.MakeStateDbPreparator(),
-		extension.MakeStateHashValidator(config),
+		state_db_extensions.MakeStateDbPrepper(),
+		validation_extensions.MakeStateHashValidator(config),
 		state_db_extensions.MakeBlockEventEmitter(),
 	}...,
 	)

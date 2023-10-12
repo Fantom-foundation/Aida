@@ -66,11 +66,10 @@ func run(
 	extra []executor.Extension,
 ) error {
 	extensionList := []executor.Extension{
-		profiler_extensions.MakeCpuProfiler(config)
-		extension.MakeArchiveGetter(),
+		profiler_extensions.MakeCpuProfiler(config),
+		state_db_extensions.MakeArchivePrepper(),
 		progress_extensions.MakeProgressLogger(config, 100),
-		state_db_extensions.MakeStateDbPreparator(),
-		state_db_extensions.MakeBeginOnlyEmitter(),
+		state_db_extensions.MakeStateDbPrepper(),
 	}
 	extensionList = append(extensionList, extra...)
 	return executor.NewExecutor(provider).Run(

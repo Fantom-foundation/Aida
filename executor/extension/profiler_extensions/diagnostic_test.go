@@ -1,4 +1,4 @@
-package extension
+package profiler_extensions
 
 import (
 	"net/http"
@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	"go.uber.org/mock/gomock"
@@ -40,7 +41,7 @@ func TestDiagnosticServer_NoServerIsHostedWhenDisabled(t *testing.T) {
 	config := &utils.Config{}
 	ext := MakeDiagnosticServer(config)
 
-	if _, ok := ext.(NilExtension); !ok {
+	if _, ok := ext.(extension.NilExtension); !ok {
 		t.Errorf("profiler is enabled although not set in configuration")
 	}
 }

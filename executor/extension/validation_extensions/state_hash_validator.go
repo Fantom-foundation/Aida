@@ -1,4 +1,4 @@
-package extension
+package validation_extensions
 
 import (
 	"bufio"
@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -23,13 +24,13 @@ func MakeStateHashValidator(config *utils.Config) executor.Extension {
 
 func makeStateHashValidator(config *utils.Config, log logger.Logger) executor.Extension {
 	if config.StateRootFile == "" {
-		return NilExtension{}
+		return extension.NilExtension{}
 	}
 	return &stateHashValidator{config: config, log: log}
 }
 
 type stateHashValidator struct {
-	NilExtension
+	extension.NilExtension
 	config                  *utils.Config
 	log                     logger.Logger
 	hashes                  []common.Hash

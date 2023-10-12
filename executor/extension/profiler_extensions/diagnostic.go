@@ -1,4 +1,4 @@
-package extension
+package profiler_extensions
 
 import (
 	"fmt"
@@ -9,6 +9,7 @@ import (
 	"runtime"
 
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 )
@@ -21,7 +22,7 @@ func MakeDiagnosticServer(config *utils.Config) executor.Extension {
 
 func makeDiagnosticServer(config *utils.Config, logger logger.Logger) executor.Extension {
 	if config.DiagnosticServer < 1 || config.DiagnosticServer > math.MaxUint16 {
-		return NilExtension{}
+		return extension.NilExtension{}
 	}
 	return &diagnosticServer{
 		port: config.DiagnosticServer,
@@ -30,7 +31,7 @@ func makeDiagnosticServer(config *utils.Config, logger logger.Logger) executor.E
 }
 
 type diagnosticServer struct {
-	NilExtension
+	extension.NilExtension
 	port int64
 	log  logger.Logger
 }
