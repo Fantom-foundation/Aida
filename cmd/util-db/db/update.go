@@ -29,7 +29,7 @@ const (
 	maxNumberOfDownloadAttempts = 5
 	firstMainnetPatchFileName   = "5577-46750.tar.gz"
 	firstTestnetPatchFileName   = "" // todo fill with first testnet patch once lachesis patch for testnet is released
-	stateHashPatchFileName      = "state-hashes_0-65436418"
+	stateHashPatchFileName      = "state-hashes_0-68940000"
 )
 
 // UpdateCommand downloads aida-db and new patches
