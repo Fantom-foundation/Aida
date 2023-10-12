@@ -69,7 +69,6 @@ func run(
 		profiler_extensions.MakeCpuProfiler(config),
 		state_db_extensions.MakeArchivePrepper(),
 		progress_extensions.MakeProgressLogger(config, 100),
-		state_db_extensions.MakeStateDbPrepper(),
 	}
 	extensionList = append(extensionList, extra...)
 	return executor.NewExecutor(provider).Run(
