@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/big"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
@@ -19,19 +20,18 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
-// Count total errors occured while processing transactions
+// Count total errors occurred while processing transactions
 const (
 	// todo remove these const once tx validator is moved to executor
 	MaxErrors = 50 // maximum number of errors before terminating program
 )
 
 var (
-	NumErrors int   // total number of errors across processed transactions
-	hashError error // error when retriving block hashes
+	NumErrors atomic.Int32 // total number of errors across processed transactions
 )
 
 // ProcessTx detects transaction type
-func ProcessTx(db state.StateDB, cfg *Config, block uint64, tx int, st *substate.Substate) (time.Duration, error) {
+func ProcessTx(db state.VmStateDB, cfg *Config, block uint64, tx int, st *substate.Substate) (time.Duration, error) {
 	var (
 		runtime time.Duration
 		err     error
@@ -51,7 +51,7 @@ func ProcessTx(db state.StateDB, cfg *Config, block uint64, tx int, st *substate
 }
 
 // processRegularTx executes VM on a chosen storage system.
-func processRegularTx(db state.StateDB, cfg *Config, block uint64, tx int, st *substate.Substate) (runtime time.Duration, txerr error) {
+func processRegularTx(db state.VmStateDB, cfg *Config, block uint64, tx int, st *substate.Substate) (runtime time.Duration, txerr error) {
 	db.BeginTransaction(uint32(tx))
 	defer db.EndTransaction()
 
@@ -69,7 +69,7 @@ func processRegularTx(db state.StateDB, cfg *Config, block uint64, tx int, st *s
 	vmConfig.NoBaseFee = true
 	vmConfig.Tracer = nil
 	vmConfig.Debug = false
-	hashError = nil
+	var hashError error
 	errMsg.WriteString(fmt.Sprintf("Block: %v Transaction: %v\n", block, tx))
 	// get chain configuration
 	chainConfig := GetChainConfig(cfg.ChainID)
@@ -90,7 +90,7 @@ func processRegularTx(db state.StateDB, cfg *Config, block uint64, tx int, st *s
 	gaspool.AddGas(inputEnv.GasLimit)
 	msg := st.Message.AsMessage()
 	db.Prepare(txHash, tx)
-	blockCtx := prepareBlockCtx(inputEnv)
+	blockCtx := prepareBlockCtx(inputEnv, &hashError)
 	txCtx := evmcore.NewEVMTxContext(msg)
 	evm := vm.NewEVM(*blockCtx, txCtx, db, chainConfig, vmConfig)
 	snapshot := db.Snapshot()
@@ -148,7 +148,7 @@ func processRegularTx(db state.StateDB, cfg *Config, block uint64, tx int, st *s
 
 // processPseudoTx processes pseudo transactions in Lachesis by applying the change in db state.
 // The pseudo transactions includes Lachesis SFC, lachesis genesis and lachesis-opera transition.
-func processPseudoTx(sa substate.SubstateAlloc, db state.StateDB) {
+func processPseudoTx(sa substate.SubstateAlloc, db state.VmStateDB) {
 	db.BeginTransaction(PseudoTx)
 	for addr, account := range sa {
 		db.SubBalance(addr, db.GetBalance(addr))
@@ -163,15 +163,15 @@ func processPseudoTx(sa substate.SubstateAlloc, db state.StateDB) {
 }
 
 // prepareBlockCtx creates a block context for evm call from an environment of a substate.
-func prepareBlockCtx(inputEnv *substate.SubstateEnv) *vm.BlockContext {
+func prepareBlockCtx(inputEnv *substate.SubstateEnv, hashError *error) *vm.BlockContext {
 	getHash := func(num uint64) common.Hash {
 		if inputEnv.BlockHashes == nil {
-			hashError = fmt.Errorf("getHash(%d) invoked, no blockhashes provided", num)
+			*hashError = fmt.Errorf("getHash(%d) invoked, no blockhashes provided", num)
 			return common.Hash{}
 		}
 		h, ok := inputEnv.BlockHashes[num]
 		if !ok {
-			hashError = fmt.Errorf("getHash(%d) invoked, blockhash for that block not provided", num)
+			*hashError = fmt.Errorf("getHash(%d) invoked, blockhash for that block not provided", num)
 		}
 		return h
 	}
@@ -222,7 +222,7 @@ func validateVMResult(vmResult, expectedResult *substate.SubstateResult) error {
 // validateVMAlloc compares states of accounts in stateDB to an expected set of states.
 // If fullState mode, check if expected stae is contained in stateDB.
 // If partialState mode, check for equality of sets.
-func validateVMAlloc(db state.StateDB, expectedAlloc substate.SubstateAlloc, cfg *Config) error {
+func validateVMAlloc(db state.VmStateDB, expectedAlloc substate.SubstateAlloc, cfg *Config) error {
 	var err error
 	switch cfg.StateValidationMode {
 	case SubsetCheck:
@@ -238,7 +238,7 @@ func validateVMAlloc(db state.StateDB, expectedAlloc substate.SubstateAlloc, cfg
 	return err
 }
 
-// handleErrorOnExit reports error appropiately based on continue-on-failure option.
+// handleErrorOnExit reports error appropriately based on continue-on-failure option.
 func handleErrorOnExit(err *error, errMsg *strings.Builder, newErrors *int, continueOnFailure bool) {
 	if *newErrors > 0 {
 		if continueOnFailure {
@@ -247,8 +247,8 @@ func handleErrorOnExit(err *error, errMsg *strings.Builder, newErrors *int, cont
 			*err = fmt.Errorf(errMsg.String())
 		}
 	}
-	NumErrors += *newErrors
-	if NumErrors > MaxErrors {
+	numErrors := NumErrors.Add(int32(*newErrors))
+	if numErrors > MaxErrors {
 		*err = fmt.Errorf("%w\nToo many errors...", *err)
 	}
 }

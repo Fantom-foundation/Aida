@@ -458,8 +458,12 @@ func (db *inMemoryStateDB) GetMemoryUsage() *MemoryUsage {
 	return &MemoryUsage{uint64(0), nil}
 }
 
-func (db *inMemoryStateDB) GetArchiveState(block uint64) (StateDB, error) {
+func (db *inMemoryStateDB) GetArchiveState(block uint64) (NonCommittableStateDB, error) {
 	return nil, fmt.Errorf("archive states are not (yet) supported by this DB implementation")
+}
+
+func (s *inMemoryStateDB) GetArchiveBlockHeight() (uint64, bool, error) {
+	return 0, false, fmt.Errorf("archive states are not (yet) supported by this DB implementation")
 }
 
 func (db *inMemoryStateDB) PrepareSubstate(alloc *substate.SubstateAlloc, block uint64) {

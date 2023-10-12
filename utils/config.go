@@ -88,343 +88,6 @@ const PseudoTx = 99999
 // GitCommit represents the GitHub commit hash the app was built from.
 var GitCommit = "0000000000000000000000000000000000000000"
 
-// Command line options for common flags in record and replay.
-var (
-	APIRecordingSrcFileFlag = cli.PathFlag{
-		Name:    "api-recording",
-		Usage:   "Path to source file with recorded API data",
-		Aliases: []string{"r"},
-	}
-	ArchiveModeFlag = cli.BoolFlag{
-		Name:  "archive",
-		Usage: "set node type to archival mode. If set, the node keep all the EVM state history; otherwise the state history will be pruned.",
-	}
-	ArchiveVariantFlag = cli.StringFlag{
-		Name:  "archive-variant",
-		Usage: "set the archive implementation variant for the selected DB implementation, ignored if not running in archive mode",
-	}
-	BlockLengthFlag = cli.Uint64Flag{
-		Name:  "block-length",
-		Usage: "defines the number of transactions per block",
-		Value: 10,
-	}
-	BalanceRangeFlag = cli.Int64Flag{
-		Name:  "balance-range",
-		Usage: "sets the balance range of the stochastic simulation",
-		Value: 1000000,
-	}
-	CarmenSchemaFlag = cli.IntFlag{
-		Name:  "carmen-schema",
-		Usage: "select the DB schema used by Carmen's current state DB",
-		Value: 3,
-	}
-	ChainIDFlag = cli.IntFlag{
-		Name:  "chainid",
-		Usage: "ChainID for replayer",
-	}
-	CacheFlag = cli.IntFlag{
-		Name:  "cache",
-		Usage: "Cache limit for StateDb or Priming",
-		Value: 8192,
-	}
-	ContinueOnFailureFlag = cli.BoolFlag{
-		Name:  "continue-on-failure",
-		Usage: "continue execute after validation failure detected",
-	}
-	CpuProfileFlag = cli.StringFlag{
-		Name:  "cpu-profile",
-		Usage: "enables CPU profiling",
-	}
-	DebugFromFlag = cli.Uint64Flag{
-		Name:  "debug-from",
-		Usage: "sets the first block to print trace debug",
-		Value: 0,
-	}
-	DeletionDbFlag = cli.PathFlag{
-		Name:  "deletion-db",
-		Usage: "sets the directory containing deleted accounts database",
-	}
-	KeepDbFlag = cli.BoolFlag{
-		Name:  "keep-db",
-		Usage: "if set, statedb is not deleted after run",
-	}
-	MemoryProfileFlag = cli.StringFlag{
-		Name:  "memory-profile",
-		Usage: "enables memory allocation profiling",
-	}
-	SyncPeriodLengthFlag = cli.Uint64Flag{
-		Name:  "sync-period",
-		Usage: "defines the number of blocks per sync-period",
-		Value: 300,
-	}
-	MemoryBreakdownFlag = cli.BoolFlag{
-		Name:  "memory-breakdown",
-		Usage: "enables printing of memory usage breakdown",
-	}
-	NonceRangeFlag = cli.IntFlag{
-		Name:  "nonce-range",
-		Usage: "sets nonce range for stochastic simulation",
-		Value: 1000000,
-	}
-	ProfileFlag = cli.BoolFlag{
-		Name:  "profile",
-		Usage: "enable profiling",
-	}
-	ProfileFileFlag = cli.StringFlag{
-		Name:  "profile-file",
-		Usage: "output file containing profiling data",
-	}
-	ProfileIntervalFlag = cli.Uint64Flag{
-		Name:  "profile-interval",
-		Usage: "Frequency of logging block statistics",
-		Value: 1_000_000_000,
-	}
-	QuietFlag = cli.BoolFlag{
-		Name:  "quiet",
-		Usage: "disable progress report",
-	}
-	RandomizePrimingFlag = cli.BoolFlag{
-		Name:  "prime-random",
-		Usage: "randomize order of accounts in StateDB priming",
-	}
-	PrimeThresholdFlag = cli.IntFlag{
-		Name:  "prime-threshold",
-		Usage: "set number of accounts written to stateDB before applying pending state updates",
-		Value: 0,
-	}
-	RandomSeedFlag = cli.Int64Flag{
-		Name:  "random-seed",
-		Usage: "Set random seed",
-		Value: -1,
-	}
-	SkipPrimingFlag = cli.BoolFlag{
-		Name:  "skip-priming",
-		Usage: "if set, DB priming should be skipped; most useful with the 'memory' DB implementation",
-	}
-	StateDbImplementationFlag = cli.StringFlag{
-		Name:  "db-impl",
-		Usage: "select state DB implementation",
-		Value: "geth",
-	}
-	StateDbVariantFlag = cli.StringFlag{
-		Name:  "db-variant",
-		Usage: "select a state DB variant",
-		Value: "",
-	}
-	StateDbSrcFlag = cli.PathFlag{
-		Name:  "db-src",
-		Usage: "sets the directory contains source state DB data",
-	}
-	StateRootHashesFlag = cli.PathFlag{
-		Name:  "state-roots",
-		Usage: "set the filename containing a list of state roots",
-	}
-	DbTmpFlag = cli.PathFlag{
-		Name:  "db-tmp",
-		Usage: "sets the temporary directory where to place DB data; uses system default if empty",
-	}
-	StateDbLoggingFlag = cli.BoolFlag{
-		Name:  "db-logging",
-		Usage: "enable logging of all DB operations",
-	}
-	ShadowDb = cli.BoolFlag{
-		Name:  "shadow-db",
-		Usage: "use this flag when using an existing ShadowDb",
-		Value: false,
-	}
-	ShadowDbImplementationFlag = cli.StringFlag{
-		Name:  "db-shadow-impl",
-		Usage: "select state DB implementation to shadow the prime DB implementation",
-		Value: "",
-	}
-	ShadowDbVariantFlag = cli.StringFlag{
-		Name:  "db-shadow-variant",
-		Usage: "select a state DB variant to shadow the prime DB implementation",
-		Value: "",
-	}
-	TraceFlag = cli.BoolFlag{
-		Name:  "trace",
-		Usage: "enable tracing",
-	}
-	TraceDebugFlag = cli.BoolFlag{
-		Name:  "trace-debug",
-		Usage: "enable debug output for tracing",
-	}
-	TraceFileFlag = cli.PathFlag{
-		Name:  "trace-file",
-		Usage: "set storage trace's output directory",
-		Value: "./",
-	}
-	TraceDirectoryFlag = cli.PathFlag{
-		Name:  "trace-dir",
-		Usage: "set storage trace directory",
-	}
-	UpdateDbFlag = cli.PathFlag{
-		Name:  "update-db",
-		Usage: "set update-set database directory",
-	}
-	OperaDatadirFlag = cli.PathFlag{
-		Name:  "datadir",
-		Usage: "opera datadir directory",
-	}
-	ValidateFlag = cli.BoolFlag{
-		Name:  "validate",
-		Usage: "enables validation",
-	}
-	ValidateTxStateFlag = cli.BoolFlag{
-		Name:  "validate-tx",
-		Usage: "enables transaction state validation",
-	}
-	ValidateWorldStateFlag = cli.BoolFlag{
-		Name:  "validate-ws",
-		Usage: "enables end-state validation",
-	}
-	VmImplementation = cli.StringFlag{
-		Name:  "vm-impl",
-		Usage: "select VM implementation",
-		Value: "geth",
-	}
-	WorldStateFlag = cli.PathFlag{
-		Name:  "world-state",
-		Usage: "world state snapshot database path",
-	}
-	MaxNumTransactionsFlag = cli.IntFlag{
-		Name:  "max-tx",
-		Usage: "limit the maximum number of processed transactions, default: unlimited",
-		Value: -1,
-	}
-	OutputFlag = cli.PathFlag{
-		Name:  "output",
-		Usage: "output path",
-	}
-	PortFlag = cli.StringFlag{
-		Name:        "port",
-		Aliases:     []string{"v"},
-		Usage:       "enable visualization on `PORT`",
-		DefaultText: "8080",
-	}
-	DeleteSourceDbsFlag = cli.BoolFlag{
-		Name:  "delete-source-dbs",
-		Usage: "delete source databases while merging into one database",
-		Value: false,
-	}
-	CompactDbFlag = cli.BoolFlag{
-		Name:  "compact",
-		Usage: "compact target database",
-		Value: false,
-	}
-	AidaDbFlag = cli.PathFlag{
-		Name:     "aida-db",
-		Usage:    "set substate, updateset and deleted accounts directory",
-		Required: true,
-	}
-	ContractNumberFlag = cli.Int64Flag{
-		Name:  "num-contracts",
-		Usage: "Number of contracts to create",
-		Value: 1_000,
-	}
-	KeysNumberFlag = cli.Int64Flag{
-		Name:  "num-keys",
-		Usage: "Number of keys to generate",
-		Value: 1_000,
-	}
-	ValuesNumberFlag = cli.Int64Flag{
-		Name:  "num-values",
-		Usage: "Number of values to generate",
-		Value: 1_000,
-	}
-	TransactionLengthFlag = cli.Uint64Flag{
-		Name:  "transaction-length",
-		Usage: "Determines indirectly the length of a transaction",
-		Value: 10,
-	}
-	SnapshotDepthFlag = cli.IntFlag{
-		Name:  "snapshot-depth",
-		Usage: "Depth of snapshot history",
-		Value: 100,
-	}
-	DbFlag = cli.PathFlag{
-		Name:  "db",
-		Usage: "Path to the database",
-	}
-	GenesisFlag = cli.PathFlag{
-		Name:  "genesis",
-		Usage: "Path to genesis file",
-	}
-	SourceTableNameFlag = cli.StringFlag{
-		Name:  "source-table",
-		Usage: "name of the database table to be used",
-		Value: "main",
-	}
-	TargetDbFlag = cli.PathFlag{
-		Name:  "target-db",
-		Usage: "target database path",
-	}
-	TrieRootHashFlag = cli.StringFlag{
-		Name:  "root",
-		Usage: "state trie root hash to be analysed",
-	}
-	IncludeStorageFlag = cli.BoolFlag{
-		Name:  "include-storage",
-		Usage: "display full storage content",
-	}
-	ProfileEVMCallFlag = cli.BoolFlag{
-		Name:  "profiling-call",
-		Usage: "enable profiling for EVM call",
-	}
-	MicroProfilingFlag = cli.BoolFlag{
-		Name:  "micro-profiling",
-		Usage: "enable micro-profiling of EVM",
-	}
-	BasicBlockProfilingFlag = cli.BoolFlag{
-		Name:  "basic-block-profiling",
-		Usage: "enable profiling of basic block",
-	}
-	OnlySuccessfulFlag = cli.BoolFlag{
-		Name:  "only-successful",
-		Usage: "only runs transactions that have been successful",
-	}
-	ProfilingDbNameFlag = cli.StringFlag{
-		Name:  "profiling-db-name",
-		Usage: "set a database name for storing micro-profiling results",
-		Value: "./profiling.db",
-	}
-	ChannelBufferSizeFlag = cli.IntFlag{
-		Name:  "buffer-size",
-		Usage: "set a buffer size for profiling channel",
-		Value: 100_000,
-	}
-	UpdateBufferSizeFlag = cli.Uint64Flag{
-		Name:  "update-buffer-size",
-		Usage: "buffer size for holding update set in MB",
-		Value: 1_000_000,
-	}
-	TargetBlockFlag = cli.Uint64Flag{
-		Name:    "target-block",
-		Aliases: []string{"block", "blk"},
-		Usage:   "target block ID",
-		Value:   0,
-	}
-	MaxNumErrorsFlag = cli.IntFlag{
-		Name:  "max-errors",
-		Usage: "maximum number of errors when ContinueOnFailure is enabled, default is 50",
-		Value: 50,
-	}
-	UpdateOnFailure = cli.BoolFlag{
-		Name:  "update-on-failure",
-		Usage: "if enabled and continue-on-failure is also enabled, this corrects any error found in StateDb",
-		Value: true,
-	}
-	NoHeartbeatLoggingFlag = cli.BoolFlag{
-		Name:  "no-heartbeat-logging",
-		Usage: "disables heartbeat logging",
-	}
-	TrackProgressFlag = cli.BoolFlag{
-		Name:  "track-progress",
-		Usage: "enables track progress logging",
-	}
-)
-
 // Config represents execution configuration for replay command.
 type Config struct {
 	AppName     string
@@ -433,103 +96,107 @@ type Config struct {
 	First uint64 // first block
 	Last  uint64 // last block
 
-	APIRecordingSrcFile string         // path to source file with recorded API data
-	ArchiveMode         bool           // enable archive mode
-	ArchiveVariant      string         // selects the implementation variant of the archive
-	BlockLength         uint64         // length of a block in number of transactions
-	BalanceRange        int64          // balance range for stochastic simulation/replay
-	CarmenSchema        int            // the current DB schema ID to use in Carmen
-	ChainID             ChainID        // Blockchain ID (mainnet: 250/testnet: 4002)
-	Cache               int            // Cache for StateDb or Priming
-	ContinueOnFailure   bool           // continue validation when an error detected
-	ContractNumber      int64          // number of contracts to create
-	CompactDb           bool           // compact database after merging
-	CopySrcDb           bool           // if true, make a copy the source statedb
-	CPUProfile          string         // pprof cpu profile output file name
-	Db                  string         // path to database
-	DbTmp               string         // path to temporary database
-	DbImpl              string         // storage implementation
-	Genesis             string         // genesis file
-	DbVariant           string         // database variant
-	DbLogging           bool           // set to true if all DB operations should be logged
-	Debug               bool           // enable trace debug flag
-	DeleteSourceDbs     bool           // delete source databases
-	DebugFrom           uint64         // the first block to print trace debug
-	DeletionDb          string         // directory of deleted account database
-	Quiet               bool           // disable progress report flag
-	SyncPeriodLength    uint64         // length of a sync-period in number of blocks
-	HasDeletedAccounts  bool           // true if DeletionDb is not empty; otherwise false
-	KeepDb              bool           // set to true if db is kept after run
-	KeysNumber          int64          // number of keys to generate
-	MaxNumTransactions  int            // the maximum number of processed transactions
-	MemoryBreakdown     bool           // enable printing of memory breakdown
-	MemoryProfile       string         // capture the memory heap profile into the file
-	NonceRange          int            // nonce range for stochastic simulation/replay
-	TransactionLength   uint64         // determines indirectly the length of a transaction
-	PrimeRandom         bool           // enable randomized priming
-	PrimeThreshold      int            // set account threshold before commit
-	Profile             bool           // enable micro profiling
-	ProfileFile         string         // output file containing profiling result
-	ProfileInterval     uint64         // interval of printing profile result
-	RandomSeed          int64          // set random seed for stochastic testing
-	SkipPriming         bool           // skip priming of the state DB
-	SkipMetadata        bool           // skip metadata insert/getting into AidaDb
-	ShadowDb            bool           // defines we want to open an existing db as shadow
-	ShadowImpl          string         // implementation of the shadow DB to use, empty if disabled
-	ShadowVariant       string         // database variant of the shadow DB to be used
-	StateDbSrc          string         // directory to load an existing State DB data
-	AidaDb              string         // directory to profiling database containing substate, update, delete accounts data
-	StateValidationMode ValidationMode // state validation mode
-	UpdateDb            string         // update-set directory
-	Output              string         // output directory for aida-db patches or path to events.json file in stochastic generation
-	SnapshotDepth       int            // depth of snapshot history
-	SubstateDb          string         // substate directory
-	OperaDatadir        string         // source opera directory
-	Validate            bool           // validate validate aida-db
-	ValidateTxState     bool           // validate stateDB before and after transaction
-	ValidateWorldState  bool           // validate stateDB before and after replay block range
-	ValuesNumber        int64          // number of values to generate
-	VmImpl              string         // vm implementation (geth/lfvm)
-	WorldStateDb        string         // path to worldstate
-	Workers             int            // number of worker threads
-	TraceFile           string         // name of trace file
-	TraceDirectory      string         // name of trace directory
-	Trace               bool           // trace flag
-	LogLevel            string         // level of the logging of the app action
-	SourceTableName     string         // represents the name of a source DB table
-	TargetDb            string         // represents the path of a target DB
-	TrieRootHash        string         // represents a hash of a state trie root to be decoded
-	IncludeStorage      bool           // represents a flag for contract storage inclusion in an operation
-	ProfileEVMCall      bool           // enable profiling for EVM call
-	MicroProfiling      bool           // enable micro-profiling of EVM
-	BasicBlockProfiling bool           // enable profiling of basic block
-	OnlySuccessful      bool           // only runs transactions that have been successful
-	ProfilingDbName     string         // set a database name for storing micro-profiling results
-	ChannelBufferSize   int            // set a buffer size for profiling channel
-	TargetBlock         uint64         // represents the ID of target block to be reached by state evolve process or in dump state
-	UpdateBufferSize    uint64         // cache size in Bytes
-	ProfileDB           string         // profile db for parallel transaction execution
-	StateRootFile       string         // the optional file name containing state roots to be checked (empty if not enabled)
-	MaxNumErrors        int            // maximum number of errors when ContinueOnFailure is enabled
-	UpdateOnFailure     bool           // if enabled and continue-on-failure is also enabled, this updates any error found in StateDb
-	NoHeartbeatLogging  bool           // disables heartbeat logging
-	TrackProgress       bool           // enables track progress logging
-	IsExistingStateDb   bool           // this is true if we are using an existing StateDb
+	APIRecordingSrcFile   string         // path to source file with recorded API data
+	ArchiveMode           bool           // enable archive mode
+	ArchiveVariant        string         // selects the implementation variant of the archive
+	BlockLength           uint64         // length of a block in number of transactions
+	BalanceRange          int64          // balance range for stochastic simulation/replay
+	CarmenSchema          int            // the current DB schema ID to use in Carmen
+	ChainID               ChainID        // Blockchain ID (mainnet: 250/testnet: 4002)
+	Cache                 int            // Cache for StateDb or Priming
+	ContinueOnFailure     bool           // continue validation when an error detected
+	ContractNumber        int64          // number of contracts to create
+	CompactDb             bool           // compact database after merging
+	SrcDbReadonly         bool           // if false, make a copy the source statedb
+	CPUProfile            string         // pprof cpu profile output file name
+	CPUProfilePerInterval bool           // a different CPU profile is taken per 100k block interval
+	Db                    string         // path to database
+	DbTmp                 string         // path to temporary database
+	DbImpl                string         // storage implementation
+	DiagnosticServer      int64          // if not zero, the port used for hosting a HTTP server for performance diagnostics
+	Genesis               string         // genesis file
+	DbVariant             string         // database variant
+	DbLogging             bool           // set to true if all DB operations should be logged
+	Debug                 bool           // enable trace debug flag
+	DeleteSourceDbs       bool           // delete source databases
+	DebugFrom             uint64         // the first block to print trace debug
+	DeletionDb            string         // directory of deleted account database
+	Quiet                 bool           // disable progress report flag
+	SyncPeriodLength      uint64         // length of a sync-period in number of blocks
+	HasDeletedAccounts    bool           // true if DeletionDb is not empty; otherwise false
+	KeepDb                bool           // set to true if db is kept after run
+	KeysNumber            int64          // number of keys to generate
+	MaxNumTransactions    int            // the maximum number of processed transactions
+	MemoryBreakdown       bool           // enable printing of memory breakdown
+	MemoryProfile         string         // capture the memory heap profile into the file
+	NonceRange            int            // nonce range for stochastic simulation/replay
+	TransactionLength     uint64         // determines indirectly the length of a transaction
+	PrimeRandom           bool           // enable randomized priming
+	PrimeThreshold        int            // set account threshold before commit
+	Profile               bool           // enable micro profiling
+	ProfileFile           string         // output file containing profiling result
+	ProfileInterval       uint64         // interval of printing profile result
+	RandomSeed            int64          // set random seed for stochastic testing
+	SkipPriming           bool           // skip priming of the state DB
+	SkipMetadata          bool           // skip metadata insert/getting into AidaDb
+	ShadowDb              bool           // defines we want to open an existing db as shadow
+	ShadowImpl            string         // implementation of the shadow DB to use, empty if disabled
+	ShadowVariant         string         // database variant of the shadow DB to be used
+	StateDbSrc            string         // directory to load an existing State DB data
+	AidaDb                string         // directory to profiling database containing substate, update, delete accounts data
+	StateValidationMode   ValidationMode // state validation mode
+	UpdateDb              string         // update-set directory
+	Output                string         // output directory for aida-db patches or path to events.json file in stochastic generation
+	SnapshotDepth         int            // depth of snapshot history
+	SubstateDb            string         // substate directory
+	OperaDatadir          string         // source opera directory
+	Validate              bool           // validate validate aida-db
+	ValidateTxState       bool           // validate stateDB before and after transaction
+	ValidateWorldState    bool           // validate stateDB before and after replay block range
+	ValuesNumber          int64          // number of values to generate
+	VmImpl                string         // vm implementation (geth/lfvm)
+	WorldStateDb          string         // path to worldstate
+	Workers               int            // number of worker threads
+	TraceFile             string         // name of trace file
+	TraceDirectory        string         // name of trace directory
+	Trace                 bool           // trace flag
+	LogLevel              string         // level of the logging of the app action
+	SourceTableName       string         // represents the name of a source DB table
+	TargetDb              string         // represents the path of a target DB
+	TrieRootHash          string         // represents a hash of a state trie root to be decoded
+	IncludeStorage        bool           // represents a flag for contract storage inclusion in an operation
+	ProfileEVMCall        bool           // enable profiling for EVM call
+	MicroProfiling        bool           // enable micro-profiling of EVM
+	BasicBlockProfiling   bool           // enable profiling of basic block
+	OnlySuccessful        bool           // only runs transactions that have been successful
+	ProfilingDbName       string         // set a database name for storing micro-profiling results
+	ChannelBufferSize     int            // set a buffer size for profiling channel
+	TargetBlock           uint64         // represents the ID of target block to be reached by state evolve process or in dump state
+	UpdateBufferSize      uint64         // cache size in Bytes
+	ProfileDB             string         // profile db for parallel transaction execution
+	StateRootFile         string         // the optional file name containing state roots to be checked (empty if not enabled)
+	MaxNumErrors          int            // maximum number of errors when ContinueOnFailure is enabled
+	UpdateOnFailure       bool           // if enabled and continue-on-failure is also enabled, this updates any error found in StateDb
+	NoHeartbeatLogging    bool           // disables heartbeat logging
+	TrackProgress         bool           // enables track progress logging
+	IsExistingStateDb     bool           // this is true if we are using an existing StateDb
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.
 func GetChainConfig(chainId ChainID) *params.ChainConfig {
-	chainConfig := params.AllEthashProtocolChanges
+	// Make a copy of of the basic config before modifying it to avoid
+	// unexpected side-effects and synchronization issues in parallel runs.
+	chainConfig := *params.AllEthashProtocolChanges
 	chainConfig.ChainID = big.NewInt(int64(chainId))
 	if !(chainId == MainnetChainID || chainId == TestnetChainID) {
 		log.Fatalf("unknown chain id %v", chainId)
 	}
 	chainConfig.BerlinBlock = new(big.Int).SetUint64(keywordBlocks[chainId]["berlin"])
 	chainConfig.LondonBlock = new(big.Int).SetUint64(keywordBlocks[chainId]["london"])
-	return chainConfig
+	return &chainConfig
 }
 
-func setFirstBlockFromChainID(chainId ChainID) {
+func setFirstOperaBlock(chainId ChainID) {
 	if !(chainId == MainnetChainID || chainId == TestnetChainID) {
 		log.Fatalf("unknown chain id %v", chainId)
 	}
@@ -538,208 +205,36 @@ func setFirstBlockFromChainID(chainId ChainID) {
 
 // NewConfig creates and initializes Config with commandline arguments.
 func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
-	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "Config")
+	var err error
 
-	var (
-		first, last uint64
-		profileDB   string
-		chainId     ChainID
-	)
+	// create config with user flag values, if not set default values are used
+	cfg := createConfigFromFlags(ctx)
 
-	chainId = ChainID(ctx.Int(ChainIDFlag.Name))
+	log := logger.NewLogger(cfg.LogLevel, "Config")
 
-	// first look for chainId since we need it for verbal block indication
-	if chainId == UnknownChainID {
-		log.Warningf("ChainID (--%v) was not set; looking for it in AidaDb", ChainIDFlag.Name)
-
-		// we check if AidaDb was set with err == nil
-		if aidaDb, err := rawdb.NewLevelDBDatabase(ctx.String(AidaDbFlag.Name), 1024, 100, "profiling", true); err == nil {
-			md := NewAidaDbMetadata(aidaDb, ctx.String(logger.LogLevelFlag.Name))
-
-			chainId = md.GetChainID()
-
-			if err = aidaDb.Close(); err != nil {
-				return nil, fmt.Errorf("cannot close db; %v", err)
-			}
-		}
-
-		if chainId == 0 {
-			log.Warningf("ChainID was neither specified with flag (--%v) nor was found in AidaDb (%v); setting default value for mainnet", ChainIDFlag.Name, ctx.String(AidaDbFlag.Name))
-			chainId = 250
-		} else {
-			log.Noticef("Found chainId (%v) in AidaDb", chainId)
-		}
-
-	}
-	err := setAidaDbRepositoryUrl(chainId)
-
-	switch mode {
-	case BlockRangeArgsProfileDB:
-		// process arguments and flags
-		if ctx.Args().Len() != 3 {
-			return nil, fmt.Errorf("command requires 3 arguments")
-		} else if ctx.Args().Len() == 3 {
-			// set profileDB from argument
-			profileDB = ctx.Args().Get(2)
-		}
-		fallthrough
-	case BlockRangeArgs:
-		// process arguments and flags
-		if ctx.Args().Len() >= 2 {
-			// try to extract block range from db metadata
-			aidaDbPath := ctx.String(AidaDbFlag.Name)
-			firstMd, lastMd, lastPatchMd, mdOk, err := getMdBlockRange(aidaDbPath, chainId, log)
-			if err != nil {
-				return nil, err
-			}
-			keywordBlocks[chainId]["first"] = firstMd
-			keywordBlocks[chainId]["last"] = lastMd
-			keywordBlocks[chainId]["lastpatch"] = lastPatchMd
-
-			// try to parse and check block range
-			firstArg, lastArg, argErr := SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1), chainId)
-			if argErr != nil {
-				return nil, argErr
-			}
-
-			if !mdOk {
-				first = firstArg
-				last = lastArg
-				break
-			}
-
-			// find if values overlap
-			first, last, err = adjustBlockRange(chainId, firstArg, lastArg)
-			if err != nil {
-				return nil, err
-			}
-		} else {
-			return nil, fmt.Errorf("command requires 2 arguments")
-		}
-	case LastBlockArg:
-		var err error
-		last, err = strconv.ParseUint(ctx.Args().Get(0), 10, 64)
-		if err != nil {
-			return nil, err
-		}
-	case OneToNArgs:
-		if ctx.Args().Len() < 1 {
-			return nil, errors.New("this command requires at least 1 argument")
-		}
-	case NoArgs:
-	default:
-		return nil, errors.New("unknown mode; unable to process commandline arguments")
-	}
-
-	cfg := createConfig(ctx)
-	cfg.First = first
-	cfg.Last = last
-	cfg.ProfileDB = profileDB
-	cfg.ChainID = chainId
-
-	// set default db variant if not provided.
-	if cfg.DbVariant == "" {
-		if cfg.DbImpl == "carmen" {
-			cfg.DbVariant = "go-file"
-		}
-	}
-
-	// --continue-on-failure implicitly enables transaction state validation
-	validateTxState := ctx.Bool(ValidateFlag.Name) ||
-		ctx.Bool(ValidateTxStateFlag.Name) ||
-		ctx.Bool(ContinueOnFailureFlag.Name)
-	cfg.ValidateTxState = validateTxState
-
-	validateWorldState := ctx.Bool(ValidateFlag.Name) ||
-		ctx.Bool(ValidateWorldStateFlag.Name)
-	cfg.ValidateWorldState = validateWorldState
-
-	setFirstBlockFromChainID(cfg.ChainID)
-	if cfg.RandomSeed < 0 {
-		cfg.RandomSeed = int64(rand.Uint32())
-	}
+	// check if chainID is set correctly
+	cfg.ChainID, err = getChainId(cfg, log)
 	if err != nil {
-		return cfg, fmt.Errorf("Unable to prepareUrl from ChainId %v; %v", cfg.ChainID, err)
+		return nil, fmt.Errorf("cannot get chainID; %v", err)
 	}
 
-	if _, err := os.Stat(cfg.AidaDb); !os.IsNotExist(err) {
-		log.Noticef("Found merged Aida-DB: %s redirecting UpdateDB, DeletedAccountDB, SubstateDB paths to it", cfg.AidaDb)
-		cfg.UpdateDb = cfg.AidaDb
-		cfg.DeletionDb = cfg.AidaDb
-		cfg.SubstateDb = cfg.AidaDb
+	setFirstOperaBlock(cfg.ChainID)
+
+	// set aida db repository url
+	err = setAidaDbRepositoryUrl(cfg.ChainID)
+	if err != nil {
+		return cfg, fmt.Errorf("unable to prepareUrl from ChainId %v; %v", cfg.ChainID, err)
 	}
 
-	if !cfg.Quiet {
-		log.Noticef("Run config:")
-		log.Infof("Block range: %v to %v", cfg.First, cfg.Last)
-		if cfg.MaxNumTransactions >= 0 {
-			log.Infof("Transaction limit: %d", cfg.MaxNumTransactions)
-		}
-		log.Infof("Chain id: %v (record & run-vm only)", cfg.ChainID)
-		log.Infof("SyncPeriod length: %v", cfg.SyncPeriodLength)
-
-		logDbMode := func(prefix, impl, variant string) {
-			if cfg.DbImpl == "carmen" {
-				log.Infof("%s: %v, DB variant: %v, DB schema: %d", prefix, impl, variant, cfg.CarmenSchema)
-			} else {
-				log.Infof("%s: %v, DB variant: %v", prefix, impl, variant)
-			}
-		}
-		if !cfg.ShadowDb {
-			logDbMode("Storage system", cfg.DbImpl, cfg.DbVariant)
-		} else {
-			logDbMode("Prime storage system", cfg.DbImpl, cfg.DbVariant)
-			logDbMode("Shadow storage system", cfg.ShadowImpl, cfg.ShadowVariant)
-		}
-		log.Infof("Source storage directory (empty if new): %v", cfg.StateDbSrc)
-		log.Infof("Working storage directory: %v", cfg.DbTmp)
-		if cfg.ArchiveMode {
-			log.Noticef("Archive mode: enabled")
-			if cfg.ArchiveVariant == "" {
-				log.Infof("Archive variant: <implementation-default>")
-			} else {
-				log.Infof("Archive variant: %s", cfg.ArchiveVariant)
-			}
-		} else {
-			log.Infof("Archive mode: disabled")
-		}
-		log.Infof("Used VM implementation: %v", cfg.VmImpl)
-		log.Infof("Update DB directory: %v", cfg.UpdateDb)
-		if cfg.SkipPriming {
-			log.Infof("Priming: Skipped")
-		} else {
-			log.Infof("Randomized Priming: %v", cfg.PrimeRandom)
-			if cfg.PrimeRandom {
-				log.Infof("Seed: %v, threshold: %v", cfg.RandomSeed, cfg.PrimeThreshold)
-			}
-			log.Infof("Update buffer size: %v bytes", cfg.UpdateBufferSize)
-		}
-		log.Infof("Validate world state: %v, validate tx state: %v", cfg.ValidateWorldState, cfg.ValidateTxState)
+	// set numbers of first block, last block and path to profilingDB
+	err = updateConfigBlockRange(ctx.Args().Slice(), cfg, mode, log)
+	if err != nil {
+		return cfg, fmt.Errorf("unable to parse cli arguments; %v", err)
 	}
 
-	if cfg.ValidateTxState {
-		log.Warning("Validation enabled, reducing Tx throughput")
-	}
-	if cfg.ShadowDb {
-		log.Warning("DB shadowing enabled, reducing Tx throughput and increasing memory and storage usage")
-	}
-	if cfg.DbLogging {
-		log.Warning("DB logging enabled, reducing Tx throughput")
-	}
-	if _, err := os.Stat(cfg.DeletionDb); os.IsNotExist(err) {
-		log.Warning("Deleted-account-dir is not provided or does not exist")
-		cfg.HasDeletedAccounts = false
-	}
-	if cfg.KeepDb && strings.Contains(cfg.DbVariant, "memory") {
-		log.Warning("Unable to keep in-memory stateDB")
-		cfg.KeepDb = false
-	}
-	if cfg.First == 0 {
-		cfg.SkipPriming = true
-	}
-	if cfg.First != 0 && cfg.SkipPriming && cfg.ValidateWorldState {
-		return cfg, fmt.Errorf("skipPriming and world-state validation can not be enabled at the same time")
-	}
+	adjustMissingConfigValues(cfg)
+
+	reportNewConfig(cfg, log)
 
 	return cfg, nil
 }
@@ -872,7 +367,7 @@ func getMdBlockRange(aidaDbPath string, chainId ChainID, log *logging.Logger) (u
 	defaultLastPatch := keywordBlocks[chainId]["lastpatch"]
 
 	if _, err := os.Stat(aidaDbPath); errors.Is(err, os.ErrNotExist) {
-		log.Warningf("Unable to open Aida-db in %s: %v", aidaDbPath, err)
+		log.Warningf("Unable to open Aida-db in %s; %v", aidaDbPath, err)
 		fmt.Println(defaultFirst)
 		return defaultFirst, defaultLast, defaultLastPatch, false, nil
 	}
@@ -926,5 +421,209 @@ func adjustBlockRange(chainId ChainID, firstArg, lastArg uint64) (uint64, uint64
 		return first, last, nil
 	} else {
 		return 0, 0, fmt.Errorf("given block range does NOT overlap with the block range of given aidaDB")
+	}
+}
+
+// getChainId return either default or user specified chainID
+// if the chainID is unknown type, it'll be loaded from aidaDB
+func getChainId(cfg *Config, log *logging.Logger) (ChainID, error) {
+	chainId := cfg.ChainID
+	// first look for chainId since we need it for verbal block indication
+	if chainId == UnknownChainID {
+		log.Warningf("ChainID (--%v) was not set; looking for it in AidaDb", ChainIDFlag.Name)
+
+		// we check if AidaDb was set with err == nil
+		if aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", true); err == nil {
+			md := NewAidaDbMetadata(aidaDb, cfg.LogLevel)
+
+			chainId = md.GetChainID()
+
+			if err = aidaDb.Close(); err != nil {
+				return -1, fmt.Errorf("cannot close db; %v", err)
+			}
+		}
+
+		if chainId == 0 {
+			log.Warningf("ChainID was neither specified with flag (--%v) nor was found in AidaDb (%v); setting default value for mainnet", ChainIDFlag.Name, cfg.AidaDb)
+			chainId = 250
+		} else {
+			log.Noticef("Found chainId (%v) in AidaDb", chainId)
+		}
+	}
+
+	return chainId, nil
+}
+
+// updateConfigBlockRange parse the command line arguments according to the mode in which selected tool runs
+// and store them into the config
+func updateConfigBlockRange(args []string, cfg *Config, mode ArgumentMode, log *logging.Logger) error {
+	var (
+		first     uint64
+		last      uint64
+		profileDB string
+	)
+
+	switch mode {
+	case BlockRangeArgsProfileDB:
+		// process arguments and flags
+		if len(args) != 3 {
+			return fmt.Errorf("command requires 3 arguments")
+		} else if len(args) == 3 {
+			// set profileDB from argument
+			profileDB = args[2]
+		}
+		fallthrough
+	case BlockRangeArgs:
+		// process arguments and flags
+		if len(args) >= 2 {
+			// try to extract block range from db metadata
+			aidaDbPath := cfg.AidaDb
+			firstMd, lastMd, lastPatchMd, mdOk, err := getMdBlockRange(aidaDbPath, cfg.ChainID, log)
+			if err != nil {
+				return err
+			}
+			keywordBlocks[cfg.ChainID]["first"] = firstMd
+			keywordBlocks[cfg.ChainID]["last"] = lastMd
+			keywordBlocks[cfg.ChainID]["lastpatch"] = lastPatchMd
+
+			// try to parse and check block range
+			firstArg, lastArg, argErr := SetBlockRange(args[0], args[1], cfg.ChainID)
+			if argErr != nil {
+				return argErr
+			}
+
+			if !mdOk {
+				first = firstArg
+				last = lastArg
+				break
+			}
+
+			// find if values overlap
+			first, last, err = adjustBlockRange(cfg.ChainID, firstArg, lastArg)
+			if err != nil {
+				return err
+			}
+		} else {
+			return fmt.Errorf("command requires 2 arguments")
+		}
+	case LastBlockArg:
+		var err error
+
+		last, err = strconv.ParseUint(args[0], 10, 64)
+		if err != nil {
+			return err
+		}
+	case OneToNArgs:
+		if len(args) < 1 {
+			return errors.New("this command requires at least 1 argument")
+		}
+	case NoArgs:
+	default:
+		return errors.New("unknown mode; unable to process commandline arguments")
+	}
+
+	cfg.First = first
+	cfg.Last = last
+	cfg.ProfileDB = profileDB
+	return nil
+}
+
+// adjustMissingConfigValues fill the missing values in the config
+func adjustMissingConfigValues(cfg *Config) {
+	// set default db variant if not provided.
+	if cfg.DbImpl == "carmen" && cfg.DbVariant == "" {
+		cfg.DbVariant = "go-file"
+	}
+
+	// --continue-on-failure implicitly enables transaction state validation
+	cfg.ValidateTxState = cfg.Validate || cfg.ValidateTxState || cfg.ContinueOnFailure
+
+	cfg.ValidateWorldState = cfg.Validate || cfg.ValidateWorldState
+
+	if cfg.RandomSeed < 0 {
+		cfg.RandomSeed = int64(rand.Uint32())
+	}
+
+	if _, err := os.Stat(cfg.AidaDb); !os.IsNotExist(err) {
+		cfg.UpdateDb = cfg.AidaDb
+		cfg.DeletionDb = cfg.AidaDb
+		cfg.SubstateDb = cfg.AidaDb
+	}
+
+	if _, err := os.Stat(cfg.DeletionDb); os.IsNotExist(err) {
+		cfg.HasDeletedAccounts = false
+	}
+	if cfg.KeepDb && strings.Contains(cfg.DbVariant, "memory") {
+		cfg.KeepDb = false
+	}
+	if cfg.First == 0 {
+		cfg.SkipPriming = true
+	}
+}
+
+// reportNewConfig logs out the state of config in current run
+func reportNewConfig(cfg *Config, log *logging.Logger) {
+	if !cfg.Quiet {
+		log.Noticef("Run config:")
+		log.Infof("Block range: %v to %v", cfg.First, cfg.Last)
+		if cfg.MaxNumTransactions >= 0 {
+			log.Infof("Transaction limit: %d", cfg.MaxNumTransactions)
+		}
+		log.Infof("Chain id: %v (record & run-vm only)", cfg.ChainID)
+		log.Infof("SyncPeriod length: %v", cfg.SyncPeriodLength)
+
+		logDbMode := func(prefix, impl, variant string) {
+			if cfg.DbImpl == "carmen" {
+				log.Infof("%s: %v, DB variant: %v, DB schema: %d", prefix, impl, variant, cfg.CarmenSchema)
+			} else {
+				log.Infof("%s: %v, DB variant: %v", prefix, impl, variant)
+			}
+		}
+		if !cfg.ShadowDb {
+			logDbMode("Storage system", cfg.DbImpl, cfg.DbVariant)
+		} else {
+			logDbMode("Prime storage system", cfg.DbImpl, cfg.DbVariant)
+			logDbMode("Shadow storage system", cfg.ShadowImpl, cfg.ShadowVariant)
+		}
+		log.Infof("Source storage directory (empty if new): %v", cfg.StateDbSrc)
+		log.Infof("Working storage directory: %v", cfg.DbTmp)
+		if cfg.ArchiveMode {
+			log.Noticef("Archive mode: enabled")
+			if cfg.ArchiveVariant == "" {
+				log.Infof("Archive variant: <implementation-default>")
+			} else {
+				log.Infof("Archive variant: %s", cfg.ArchiveVariant)
+			}
+		} else {
+			log.Infof("Archive mode: disabled")
+		}
+		log.Infof("Used VM implementation: %v", cfg.VmImpl)
+		log.Infof("Update DB directory: %v", cfg.UpdateDb)
+		if cfg.SkipPriming {
+			log.Infof("Priming: Skipped")
+		} else {
+			log.Infof("Randomized Priming: %v", cfg.PrimeRandom)
+			if cfg.PrimeRandom {
+				log.Infof("Seed: %v, threshold: %v", cfg.RandomSeed, cfg.PrimeThreshold)
+			}
+			log.Infof("Update buffer size: %v bytes", cfg.UpdateBufferSize)
+		}
+		log.Infof("Validate world state: %v, validate tx state: %v", cfg.ValidateWorldState, cfg.ValidateTxState)
+	}
+
+	if cfg.ValidateTxState {
+		log.Warning("Validation enabled, reducing Tx throughput")
+	}
+	if cfg.ShadowDb {
+		log.Warning("DB shadowing enabled, reducing Tx throughput and increasing memory and storage usage")
+	}
+	if cfg.DbLogging {
+		log.Warning("DB logging enabled, reducing Tx throughput")
+	}
+	if !cfg.HasDeletedAccounts {
+		log.Warning("Deleted-account-dir is not provided or does not exist")
+	}
+	if !cfg.KeepDb {
+		log.Warning("Keeping the stateDB disabled")
 	}
 }

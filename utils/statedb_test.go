@@ -400,6 +400,7 @@ func TestStatedb_PrepareStateDB(t *testing.T) {
 			cfg.DbTmp = t.TempDir()
 			cfg.StateDbSrc = t.TempDir()
 			cfg.First = 2
+			cfg.Last = 4
 
 			// Create state DB info of existing state DB
 			dbInfo := StateDbInfo{
@@ -408,7 +409,7 @@ func TestStatedb_PrepareStateDB(t *testing.T) {
 				ArchiveMode:    cfg.ArchiveMode,
 				ArchiveVariant: cfg.ArchiveVariant,
 				Schema:         0,
-				Block:          cfg.First - 1,
+				Block:          cfg.Last,
 				RootHash:       common.Hash{},
 				GitCommit:      GitCommit,
 				CreateTime:     time.Now().UTC().Format(time.UnixDate),

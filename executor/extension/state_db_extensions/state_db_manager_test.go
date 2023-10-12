@@ -16,9 +16,9 @@ import (
 )
 
 func TestStateDbManager_DbClosureWithoutKeepDb(t *testing.T) {
-	config := &utils.Config{}
+	cfg := &utils.Config{}
 
-	ext := MakeStateDbManager(config)
+	ext := MakeStateDbManager(cfg)
 
 	mockCtrl := gomock.NewController(t)
 	mockStateDB := state.NewMockStateDB(mockCtrl)
@@ -37,17 +37,14 @@ func TestStateDbManager_DbClosureWithoutKeepDb(t *testing.T) {
 }
 
 func TestStateDbManager_DbClosureWithKeepDb(t *testing.T) {
-	config := &utils.Config{}
+	cfg := &utils.Config{}
 
 	tmpDir := t.TempDir()
-	config.DbTmp = tmpDir
-	config.DbImpl = "geth"
-	config.KeepDb = true
+	cfg.DbTmp = tmpDir
+	cfg.DbImpl = "geth"
+	cfg.KeepDb = true
 
-	ext := MakeStateDbManager(config)
-
-	// setting dummy StateDbPath path for statedb_info.json output
-	ext.stateDbPath = tmpDir
+	ext := MakeStateDbManager(cfg)
 
 	mockCtrl := gomock.NewController(t)
 	mockStateDB := state.NewMockStateDB(mockCtrl)
@@ -61,7 +58,8 @@ func TestStateDbManager_DbClosureWithKeepDb(t *testing.T) {
 		Block: 0,
 	}
 
-	ctx := &executor.Context{State: mockStateDB}
+	// setting mockStateDb and StateDbPath path for statedb_info.json output
+	ctx := &executor.Context{State: mockStateDB, StateDbPath: tmpDir}
 
 	if err := ext.PostRun(state, ctx, nil); err != nil {
 		t.Fatalf("failed to to run post-run: %v", err)
@@ -69,14 +67,14 @@ func TestStateDbManager_DbClosureWithKeepDb(t *testing.T) {
 }
 
 func TestStateDbManager_DoNotKeepDb(t *testing.T) {
-	config := &utils.Config{}
+	cfg := &utils.Config{}
 
 	tmpDir := t.TempDir()
-	config.DbTmp = tmpDir
-	config.DbImpl = "geth"
-	config.KeepDb = false
+	cfg.DbTmp = tmpDir
+	cfg.DbImpl = "geth"
+	cfg.KeepDb = false
 
-	ext := MakeStateDbManager(config)
+	ext := MakeStateDbManager(cfg)
 
 	state := executor.State{
 		Block: 0,
@@ -92,24 +90,24 @@ func TestStateDbManager_DoNotKeepDb(t *testing.T) {
 		t.Fatalf("failed to to run post-run: %v", err)
 	}
 
-	empty, err := IsEmptyDirectory(config.DbTmp)
+	empty, err := IsEmptyDirectory(cfg.DbTmp)
 	if err != nil {
 		t.Fatalf("failed to check DbTmp; %v", err)
 	}
 	if !empty {
-		t.Fatalf("failed to clean up DbTmp %v after post-run; %v", config.DbTmp, err)
+		t.Fatalf("failed to clean up DbTmp %v after post-run; %v", cfg.DbTmp, err)
 	}
 }
 
-func TestStateDbManager_KeepDb(t *testing.T) {
-	config := &utils.Config{}
+func TestStateDbManager_KeepDbAndDoesntUnderflowBellowZero(t *testing.T) {
+	cfg := &utils.Config{}
 
 	tmpDir := t.TempDir()
-	config.DbTmp = tmpDir
-	config.DbImpl = "geth"
-	config.KeepDb = true
+	cfg.DbTmp = tmpDir
+	cfg.DbImpl = "geth"
+	cfg.KeepDb = true
 
-	ext := MakeStateDbManager(config)
+	ext := MakeStateDbManager(cfg)
 
 	state := executor.State{
 		Block: 0,
@@ -125,8 +123,8 @@ func TestStateDbManager_KeepDb(t *testing.T) {
 		t.Fatalf("failed to to run post-run: %v", err)
 	}
 
-	expectedName := fmt.Sprintf("state_db_%v_%v", config.DbImpl, state.Block)
-	expectedPath := filepath.Join(config.DbTmp, expectedName)
+	expectedName := fmt.Sprintf("state_db_%v_%v", cfg.DbImpl, state.Block)
+	expectedPath := filepath.Join(cfg.DbTmp, expectedName)
 
 	_, err := os.Stat(expectedPath)
 	if err != nil {
@@ -135,14 +133,14 @@ func TestStateDbManager_KeepDb(t *testing.T) {
 }
 
 func TestStateDbManager_StateDbInfoExistence(t *testing.T) {
-	config := &utils.Config{}
+	cfg := &utils.Config{}
 
 	tmpDir := t.TempDir()
-	config.DbTmp = tmpDir
-	config.DbImpl = "geth"
-	config.KeepDb = true
+	cfg.DbTmp = tmpDir
+	cfg.DbImpl = "geth"
+	cfg.KeepDb = true
 
-	ext := MakeStateDbManager(config)
+	ext := MakeStateDbManager(cfg)
 
 	state := executor.State{
 		Block: 0,
@@ -158,8 +156,8 @@ func TestStateDbManager_StateDbInfoExistence(t *testing.T) {
 		t.Fatalf("failed to to run post-run: %v", err)
 	}
 
-	expectedName := fmt.Sprintf("state_db_%v_%v", config.DbImpl, state.Block)
-	expectedPath := filepath.Join(config.DbTmp, expectedName)
+	expectedName := fmt.Sprintf("state_db_%v_%v", cfg.DbImpl, state.Block)
+	expectedPath := filepath.Join(cfg.DbTmp, expectedName)
 
 	filename := filepath.Join(expectedPath, utils.PathToDbInfo)
 
@@ -169,16 +167,38 @@ func TestStateDbManager_StateDbInfoExistence(t *testing.T) {
 	}
 }
 
-func TestStateDbManager_UsingExistingSourceDb(t *testing.T) {
-	config := &utils.Config{}
+func TestStateDbManager_NonExistentStateDbSrc(t *testing.T) {
+	cfg := &utils.Config{}
+
+	tmpDir := t.TempDir()
+	cfg.DbTmp = tmpDir
+	cfg.StateDbSrc = "/non-existant-path/123456789"
+	cfg.DbImpl = "geth"
+	cfg.KeepDb = true
+
+	ext := MakeStateDbManager(cfg)
+
+	state := executor.State{
+		Block: 0,
+	}
+
+	ctx := &executor.Context{}
+
+	if err := ext.PreRun(state, ctx); err == nil {
+		t.Fatalf("using nonexistent statedb didn't produce error in pre-run")
+	}
+}
+
+func TestStateDbManager_StateDbSrcStateDbIsReadOnly(t *testing.T) {
+	cfg := &utils.Config{}
 
 	// create source database
 	tmpDir := t.TempDir()
-	config.DbTmp = tmpDir
-	config.DbImpl = "geth"
-	config.KeepDb = true
+	cfg.DbTmp = tmpDir
+	cfg.DbImpl = "geth"
+	cfg.KeepDb = true
 
-	ext := MakeStateDbManager(config)
+	ext := MakeStateDbManager(cfg)
 
 	state0 := executor.State{
 		Block: 0,
@@ -202,15 +222,16 @@ func TestStateDbManager_UsingExistingSourceDb(t *testing.T) {
 
 	// create database from source
 
-	expectedName := fmt.Sprintf("state_db_%v_%v", config.DbImpl, state0.Block)
-	sourcePath := filepath.Join(config.DbTmp, expectedName)
+	expectedName := fmt.Sprintf("state_db_%v_%v", cfg.DbImpl, state0.Block)
+	sourcePath := filepath.Join(cfg.DbTmp, expectedName)
 
 	tmpOutDir := t.TempDir()
-	config.DbTmp = tmpOutDir
-	config.StateDbSrc = sourcePath
-	config.CopySrcDb = true
+	cfg.DbTmp = tmpOutDir
+	cfg.StateDbSrc = sourcePath
+	cfg.KeepDb = false
+	cfg.SrcDbReadonly = true
 
-	ext = MakeStateDbManager(config)
+	ext = MakeStateDbManager(cfg)
 
 	ctx = &executor.Context{}
 
@@ -234,7 +255,84 @@ func TestStateDbManager_UsingExistingSourceDb(t *testing.T) {
 		t.Fatalf("failed to retrieve source stateDb; %v", err)
 	}
 	if empty {
-		t.Fatalf("Source StateDb was removed from %v; %v", sourcePath, err)
+		t.Fatalf("Source StateDb was removed from %v", sourcePath)
+	}
+
+	//  check that the readonly database was used instead of using working directory from second run
+	empty, err = IsEmptyDirectory(tmpOutDir)
+	if err != nil {
+		t.Fatalf("failed to retrieve source stateDb; %v", err)
+	}
+	if !empty {
+		t.Fatalf("Source StateDb was removed from %v", sourcePath)
+	}
+}
+
+func TestStateDbManager_UsingExistingSourceDb(t *testing.T) {
+	cfg := &utils.Config{}
+
+	// create source database
+	tmpDir := t.TempDir()
+	cfg.DbTmp = tmpDir
+	cfg.DbImpl = "geth"
+	cfg.KeepDb = true
+
+	ext := MakeStateDbManager(cfg)
+
+	state0 := executor.State{
+		Block: 0,
+	}
+
+	ctx := &executor.Context{}
+
+	if err := ext.PreRun(state0, ctx); err != nil {
+		t.Fatalf("failed to to run pre-run: %v", err)
+	}
+
+	// insert random data into the source
+	// then the second stateDb hash can be confirmed as correct copy of the source
+	insertRandomDataIntoStateDb(t, ctx)
+
+	expectedHash := ctx.State.GetHash()
+
+	if err := ext.PostRun(state0, ctx, nil); err != nil {
+		t.Fatalf("failed to to run post-run: %v", err)
+	}
+
+	// create database from source
+
+	expectedName := fmt.Sprintf("state_db_%v_%v", cfg.DbImpl, state0.Block)
+	sourcePath := filepath.Join(cfg.DbTmp, expectedName)
+
+	tmpOutDir := t.TempDir()
+	cfg.DbTmp = tmpOutDir
+	cfg.StateDbSrc = sourcePath
+
+	ext = MakeStateDbManager(cfg)
+
+	ctx = &executor.Context{}
+
+	if err := ext.PreRun(state0, ctx); err != nil {
+		t.Fatalf("failed to to run pre-run: %v", err)
+	}
+
+	currentHash := ctx.State.GetHash()
+
+	if currentHash != expectedHash {
+		t.Fatalf("stateDB created from existing source stateDB had incorrect hash; got: %v expected: %v", currentHash, expectedHash)
+	}
+
+	if err := ext.PostRun(state0, ctx, nil); err != nil {
+		t.Fatalf("failed to to run post-run: %v", err)
+	}
+
+	//  check original source stateDb, that it wasn't deleted
+	empty, err := IsEmptyDirectory(sourcePath)
+	if err != nil {
+		t.Fatalf("failed to retrieve source stateDb; %v", err)
+	}
+	if empty {
+		t.Fatalf("Source StateDb was removed from %v", sourcePath)
 	}
 }
 
@@ -261,4 +359,37 @@ func IsEmptyDirectory(name string) (bool, error) {
 		return true, nil
 	}
 	return false, err
+}
+
+func TestStateDbManager_StateDbBlockNumberDecrements(t *testing.T) {
+	cfg := &utils.Config{}
+
+	tmpDir := t.TempDir()
+	cfg.DbTmp = tmpDir
+	cfg.DbImpl = "geth"
+	cfg.KeepDb = true
+
+	ext := MakeStateDbManager(cfg)
+
+	state := executor.State{
+		Block: 10,
+	}
+
+	ctx := &executor.Context{}
+
+	if err := ext.PreRun(state, ctx); err != nil {
+		t.Fatalf("failed to to run pre-run: %v", err)
+	}
+
+	if err := ext.PostRun(state, ctx, nil); err != nil {
+		t.Fatalf("failed to to run post-run: %v", err)
+	}
+
+	expectedName := fmt.Sprintf("state_db_%v_%v", cfg.DbImpl, state.Block-1)
+	expectedPath := filepath.Join(cfg.DbTmp, expectedName)
+
+	_, err := os.Stat(expectedPath)
+	if err != nil {
+		t.Fatalf("failed to create stateDb; %v", err)
+	}
 }

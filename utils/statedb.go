@@ -35,7 +35,6 @@ func PrepareStateDB(cfg *Config) (state.StateDB, string, error) {
 		cfg.IsExistingStateDb = true
 	} else {
 		db, dbPath, err = makeNewStateDB(cfg)
-		cfg.StateDbSrc = dbPath
 	}
 
 	if err != nil {
@@ -59,7 +58,7 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 	)
 
 	// make a copy of source statedb
-	if cfg.CopySrcDb {
+	if !cfg.SrcDbReadonly {
 		tmpStateDbPath, err = os.MkdirTemp(cfg.DbTmp, "state_db_tmp_*")
 		if err != nil {
 			return nil, "", fmt.Errorf("failed to create a temporary directory; %v", err)
@@ -82,6 +81,16 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 	stateDbInfo, err = ReadStateDbInfo(stateDbInfoFile)
 	if err != nil {
 		return nil, "", fmt.Errorf("cannot read StateDb cfg file '%v'; %v", stateDbInfoFile, err)
+	}
+
+	// are we in block range?
+	if stateDbInfo.Block < cfg.First {
+		return nil, "", fmt.Errorf("first block must be smaller than last block of given archive which is %v", stateDbInfo.Block)
+	}
+
+	// set last block to Archives last block
+	if cfg.Last > stateDbInfo.Block {
+		cfg.Last = stateDbInfo.Block
 	}
 
 	// do we have an archive inside loaded StateDb?
@@ -242,6 +251,7 @@ func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *Config, target ui
 	db.BeginTransaction(0)
 	for _, addr := range accounts {
 		db.Suicide(addr)
+		log.Debugf("Perform suicide on %v", addr)
 	}
 	db.EndTransaction()
 	db.EndBlock()
@@ -266,7 +276,7 @@ func GetDirectorySize(directory string) int64 {
 
 // ValidateStateDB validates whether the world-state is contained in the db object.
 // NB: We can only check what must be in the db (but cannot check whether db stores more).
-func ValidateStateDB(ws substate.SubstateAlloc, db state.StateDB, updateOnFail bool) error {
+func ValidateStateDB(ws substate.SubstateAlloc, db state.VmStateDB, updateOnFail bool) error {
 	var err string
 	for addr, account := range ws {
 		if !db.Exist(addr) {

@@ -293,8 +293,12 @@ func (s *gethStateDB) StartBulkLoad(block uint64) BulkLoad {
 	return &gethBulkLoad{db: s}
 }
 
-func (s *gethStateDB) GetArchiveState(block uint64) (StateDB, error) {
+func (s *gethStateDB) GetArchiveState(block uint64) (NonCommittableStateDB, error) {
 	return nil, fmt.Errorf("archive states are not (yet) supported by this DB implementation")
+}
+
+func (s *gethStateDB) GetArchiveBlockHeight() (uint64, bool, error) {
+	return 0, false, fmt.Errorf("archive states are not (yet) supported by this DB implementation")
 }
 
 func (s *gethStateDB) GetMemoryUsage() *MemoryUsage {

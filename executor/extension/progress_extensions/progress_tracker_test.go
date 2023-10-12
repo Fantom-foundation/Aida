@@ -35,15 +35,15 @@ func TestProgressTrackerExtension_LoggingHappens(t *testing.T) {
 
 	config := &utils.Config{}
 	config.First = 4
-	config.StateDbSrc = t.TempDir()
+	dummyStateDbPath := t.TempDir()
 
-	if err := os.WriteFile(config.StateDbSrc+"/dummy.txt", []byte("hello world"), 0x600); err != nil {
+	if err := os.WriteFile(dummyStateDbPath+"/dummy.txt", []byte("hello world"), 0x600); err != nil {
 		t.Fatalf("failed to prepare disk content")
 	}
 
 	ext := makeProgressTracker(config, testStateDbInfoFrequency, log)
 
-	context := &executor.Context{State: db}
+	context := &executor.Context{State: db, StateDbPath: dummyStateDbPath}
 
 	s := &substate.Substate{
 		Result: &substate.SubstateResult{
