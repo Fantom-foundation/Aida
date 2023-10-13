@@ -16,7 +16,7 @@ import (
 
 func MakeStateHashValidator(config *utils.Config) executor.Extension {
 	if !config.ValidateStateHashes {
-		return NilExtension{}
+		return extension.NilExtension{}
 	}
 
 	log := logger.NewLogger("INFO", "state-hash-validator")
