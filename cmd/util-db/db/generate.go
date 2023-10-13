@@ -41,6 +41,7 @@ var GenerateCommand = cli.Command{
 		&utils.ChainIDFlag,
 		&utils.GenesisFlag,
 		&utils.WorldStateFlag,
+		&utils.OperaBinaryFlag,
 		&utils.OutputFlag,
 		&utils.TargetEpochFlag,
 		&utils.UpdateBufferSizeFlag,
