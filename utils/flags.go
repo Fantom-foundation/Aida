@@ -186,9 +186,9 @@ var (
 		Name:  "update-db",
 		Usage: "set update-set database directory",
 	}
-	OperaDatadirFlag = cli.PathFlag{
-		Name:  "datadir",
-		Usage: "opera datadir directory",
+	OperaBinaryFlag = cli.PathFlag{
+		Name:  "opera-binary",
+		Usage: "opera binary path",
 	}
 	ValidateFlag = cli.BoolFlag{
 		Name:  "validate",
@@ -326,6 +326,12 @@ var (
 		Name:    "target-block",
 		Aliases: []string{"block", "blk"},
 		Usage:   "target block ID",
+		Value:   0,
+	}
+	TargetEpochFlag = cli.Uint64Flag{
+		Name:    "target-epoch",
+		Aliases: []string{"epoch"},
+		Usage:   "target epoch ID",
 		Value:   0,
 	}
 	MaxNumErrorsFlag = cli.IntFlag{
