@@ -34,17 +34,57 @@ func (m *MockStateHashProvider) EXPECT() *MockStateHashProviderMockRecorder {
 	return m.recorder
 }
 
-// GetStateHash mocks base method.
-func (m *MockStateHashProvider) GetStateHash(blockNumber int) (common.Hash, error) {
+// DeletePreLoadedStateHash mocks base method.
+func (m *MockStateHashProvider) DeletePreLoadedStateHash(number int) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetStateHash", blockNumber)
+	m.ctrl.Call(m, "DeletePreLoadedStateHash", number)
+}
+
+// DeletePreLoadedStateHash indicates an expected call of DeletePreLoadedStateHash.
+func (mr *MockStateHashProviderMockRecorder) DeletePreLoadedStateHash(number interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePreLoadedStateHash", reflect.TypeOf((*MockStateHashProvider)(nil).DeletePreLoadedStateHash), number)
+}
+
+// GetStateHash mocks base method.
+func (m *MockStateHashProvider) GetStateHash(number int) common.Hash {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetStateHash", number)
+	ret0, _ := ret[0].(common.Hash)
+	return ret0
+}
+
+// GetStateHash indicates an expected call of GetStateHash.
+func (mr *MockStateHashProviderMockRecorder) GetStateHash(number interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStateHash", reflect.TypeOf((*MockStateHashProvider)(nil).GetStateHash), number)
+}
+
+// LoadStateHashFromDb mocks base method.
+func (m *MockStateHashProvider) LoadStateHashFromDb(number int) (common.Hash, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "LoadStateHashFromDb", number)
 	ret0, _ := ret[0].(common.Hash)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// GetStateHash indicates an expected call of GetStateHash.
-func (mr *MockStateHashProviderMockRecorder) GetStateHash(blockNumber interface{}) *gomock.Call {
+// LoadStateHashFromDb indicates an expected call of LoadStateHashFromDb.
+func (mr *MockStateHashProviderMockRecorder) LoadStateHashFromDb(number interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetStateHash", reflect.TypeOf((*MockStateHashProvider)(nil).GetStateHash), blockNumber)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LoadStateHashFromDb", reflect.TypeOf((*MockStateHashProvider)(nil).LoadStateHashFromDb), number)
+}
+
+// PreLoadStateHashes mocks base method.
+func (m *MockStateHashProvider) PreLoadStateHashes(first, last int) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "PreLoadStateHashes", first, last)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// PreLoadStateHashes indicates an expected call of PreLoadStateHashes.
+func (mr *MockStateHashProviderMockRecorder) PreLoadStateHashes(first, last interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PreLoadStateHashes", reflect.TypeOf((*MockStateHashProvider)(nil).PreLoadStateHashes), first, last)
 }
