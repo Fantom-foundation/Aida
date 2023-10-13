@@ -1,13 +1,8 @@
 package extension
 
 import (
-	"bufio"
-	"encoding/hex"
 	"errors"
 	"fmt"
-	"os"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
@@ -147,72 +142,4 @@ func (e *stateHashValidator) getStateHash(blockNumber int) (common.Hash, error) 
 
 	return want, nil
 
-}
-
-// loadStateHashes attempts to parse a file listing state roots in the format
-//
-//	(<block> - <hash>\n)*
-//
-// where <block> is a decimal block number and <hash> is a 64-character long,
-// hexadecimal hash. Blocks are required to be listed in order, however, gaps
-// may exist for blocks exhibiting the same hash as their predecessor.
-// The limit parameter is the first block that is no longer loaded.
-func loadStateHashes(path string, limit int) ([]common.Hash, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	hashes := make([]common.Hash, 0, limit)
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if line == "" {
-			continue
-		}
-		parts := strings.Split(line, " - ")
-		if len(parts) != 2 || len(parts[1]) < 3 {
-			return nil, fmt.Errorf("invalid line in hash list detected: `%s`", line)
-		}
-
-		block, err := strconv.Atoi(parts[0])
-		if err != nil {
-			return nil, err
-		}
-
-		if block < len(hashes) {
-			return nil, fmt.Errorf("lines in state hash file are not sorted, encountered block %d after block %d", block, len(hashes)-1)
-		}
-
-		limitReached := false
-		if block >= limit {
-			block = limit
-			limitReached = true
-		}
-
-		for len(hashes) < block {
-			if len(hashes) == 0 {
-				hashes = append(hashes, common.Hash{})
-			} else {
-				hashes = append(hashes, hashes[len(hashes)-1])
-			}
-		}
-
-		if limitReached {
-			break
-		}
-
-		bytes, err := hex.DecodeString(parts[1][2:])
-		if err != nil {
-			return nil, fmt.Errorf("unable to decode %s as hash value", parts[1][2:])
-		}
-		var hash common.Hash
-		copy(hash[:], bytes)
-
-		hashes = append(hashes, hash)
-	}
-
-	return hashes, nil
 }

@@ -1,6 +1,6 @@
 package utils
 
-//go:generate mockgen -source state_root.go -destination state_root_mocks.go -package utils
+//go:generate mockgen -source state_hash.go -destination state_hash_mocks.go -package utils
 
 import (
 	"strconv"
@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethdb"
 )
 
-const stateRootPrefix = "dbh0x"
+const stateHashPrefix = "dbh0x"
 
 type StateHashProvider interface {
 	GetStateHash(blockNumber int) (common.Hash, error)
@@ -25,7 +25,7 @@ type stateHashProvider struct {
 
 func (p *stateHashProvider) GetStateHash(number int) (common.Hash, error) {
 	hex := strconv.FormatUint(uint64(number), 16)
-	stateRoot, err := p.db.Get([]byte(stateRootPrefix + hex))
+	stateRoot, err := p.db.Get([]byte(stateHashPrefix + hex))
 	if err != nil {
 		return common.Hash{}, err
 	}
