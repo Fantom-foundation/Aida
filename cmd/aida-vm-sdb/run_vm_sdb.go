@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
@@ -59,15 +60,15 @@ func run(config *utils.Config, provider executor.SubstateProvider, stateDb state
 
 	extensionList = append(extensionList, []executor.Extension{
 		extension.MakeAidaDbManager(config),
-		extension.MakeVirtualMachineStatisticsPrinter(config),
-		extension.MakeProgressLogger(config, 15*time.Second),
-		extension.MakeProgressTracker(config, 100_000),
-		extension.MakeStateDbPrimer(config),
-		extension.MakeMemoryUsagePrinter(config),
-		extension.MakeMemoryProfiler(config),
+		profiler.MakeVirtualMachineStatisticsPrinter(config),
+		tracker.MakeProgressLogger(config, 15*time.Second),
+		tracker.MakeProgressTracker(config, 100_000),
+		statedb.MakeStateDbPrimer(config),
+		profiler.MakeMemoryUsagePrinter(config),
+		profiler.MakeMemoryProfiler(config),
 		statedb.MakeStateDbPrepper(),
-		extension.MakeStateHashValidator(config),
-		extension.MakeBlockEventEmitter(),
+		validator.MakeStateHashValidator(config),
+		statedb.MakeBlockEventEmitter(),
 	}...,
 	)
 
