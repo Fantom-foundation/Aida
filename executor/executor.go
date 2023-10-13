@@ -11,6 +11,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
+	"github.com/ethereum/go-ethereum/ethdb"
 )
 
 // ----------------------------------------------------------------------------
@@ -197,6 +198,9 @@ type Context struct {
 
 	// StateDbPath contains path to working stateDb directory
 	StateDbPath string
+
+	// AidaDb is an optional LevelDb readonly database containing data for testing StateDb (i.e. state hashes).
+	AidaDb ethdb.Database
 }
 
 // ----------------------------------------------------------------------------

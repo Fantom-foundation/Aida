@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
@@ -58,6 +59,7 @@ func run(config *utils.Config, provider executor.SubstateProvider, stateDb state
 	}
 
 	extensionList = append(extensionList, []executor.Extension{
+		extension.MakeAidaDbManager(config),
 		profiler.MakeVirtualMachineStatisticsPrinter(config),
 		tracker.MakeProgressLogger(config, 15*time.Second),
 		tracker.MakeProgressTracker(config, 100_000),
