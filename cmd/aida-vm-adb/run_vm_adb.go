@@ -2,7 +2,9 @@ package main
 
 import (
 	"github.com/Fantom-foundation/Aida/executor"
-	"github.com/Fantom-foundation/Aida/executor/extension"
+	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
+	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
+	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -65,10 +67,9 @@ func run(
 	extra []executor.Extension[*substate.Substate],
 ) error {
 	extensionList := []executor.Extension[*substate.Substate]{
-		extension.MakeCpuProfiler[*substate.Substate](config),
-		extension.MakeArchiveGetter[*substate.Substate](),
-		extension.MakeProgressLogger[*substate.Substate](config, 0),
-		extension.MakeProgressTracker(config, 0),
+		profiler.MakeCpuProfiler[*substate.Substate](config),
+		statedb.MakeArchivePrepper[*substate.Substate](),
+		tracker.MakeProgressLogger[*substate.Substate](config, 0),
 	}
 	extensionList = append(extensionList, extra...)
 	return executor.NewExecutor(provider).Run(

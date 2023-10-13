@@ -190,7 +190,7 @@ func mergePatch(cfg *utils.Config, decompressChan chan string, errChan chan erro
 							log.Critical("DbHash not found in downloaded Patch - cannot perform validation. If you were missing only lachesis patch, this would be normal behaviour.")
 						} else {
 							log.Notice("Starting db-validation. This may take several hours...")
-							targetDbHash, err = validate(targetMD.Db, cfg.LogLevel)
+							targetDbHash, err = generateDbHash(targetMD.Db, cfg.LogLevel)
 							if err != nil {
 								return fmt.Errorf("cannot create DbHash of merged AidaDb; %v", err)
 							}
