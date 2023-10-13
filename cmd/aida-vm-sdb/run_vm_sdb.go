@@ -65,7 +65,7 @@ func run(config *utils.Config, provider executor.Provider[*substate.Substate], s
 		statedb.MakeStateDbPrimer[*substate.Substate](config),
 		profiler.MakeMemoryUsagePrinter[*substate.Substate](config),
 		profiler.MakeMemoryProfiler[*substate.Substate](config),
-		extension.MakeStateDbPreparator(),
+		statedb.MakeStateDbPrepper(),
 		validator.MakeStateHashValidator[*substate.Substate](config),
 		statedb.MakeBlockEventEmitter[*substate.Substate](),
 	}...,

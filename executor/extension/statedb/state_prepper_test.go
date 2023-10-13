@@ -41,8 +41,8 @@ func TestStatePrepper_DoesNotCrashOnMissingStateOrSubstate(t *testing.T) {
 	db := state.NewMockStateDB(ctrl)
 	context := &executor.Context{State: db}
 
-	prepper := MakeStateDbPreparator()
-	prepper.PreTransaction(executor.State[*substate.Substate]{Block: 5}, nil)                                 // misses both
-	prepper.PreTransaction(executor.State[*substate.Substate]{Block: 5}, context)                             // misses the substate
-	prepper.PreTransaction(executor.State[*substate.Substate]{Block: 5, Substate: &substate.Substate{}}, nil) // misses the state
+	prepper := MakeStateDbPrepper()
+	prepper.PreTransaction(executor.State[*substate.Substate]{Block: 5}, nil)                             // misses both
+	prepper.PreTransaction(executor.State[*substate.Substate]{Block: 5}, context)                         // misses the substate
+	prepper.PreTransaction(executor.State[*substate.Substate]{Block: 5, Data: &substate.Substate{}}, nil) // misses the state
 }

@@ -68,7 +68,7 @@ func run(
 ) error {
 	extensionList := []executor.Extension[*substate.Substate]{
 		profiler.MakeCpuProfiler[*substate.Substate](config),
-		statedb.MakeArchivePrepper[*substate.Substate](),
+		statedb.MakeArchivePrepper(),
 		tracker.MakeProgressLogger[*substate.Substate](config, 0),
 	}
 	extensionList = append(extensionList, extra...)
