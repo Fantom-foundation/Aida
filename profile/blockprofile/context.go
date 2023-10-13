@@ -4,8 +4,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/profile/graphutil"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -93,7 +93,7 @@ func interfere(u, v AddressSet) bool {
 }
 
 // findTxAddresses gets wallet/contract addresses of a transaction.
-func findTxAddresses(tx *substate.Transaction) AddressSet {
+func findTxAddresses(tx executor.State) AddressSet {
 	addresses := AddressSet{}
 	for addr := range tx.Substate.InputAlloc {
 		addresses[addr] = struct{}{}
@@ -144,21 +144,21 @@ func (ctx *Context) dependencies(addresses AddressSet) graphutil.OrdinalSet {
 }
 
 // RecordTransaction collects addresses and computes earliest time.
-func (ctx *Context) RecordTransaction(tx *substate.Transaction, tTransaction time.Duration) error {
+func (ctx *Context) RecordTransaction(state executor.State, tTransaction time.Duration) error {
 	overheadTimer := time.Now()
 
 	// update time for block and transaction
 	ctx.tSequential += tTransaction
 	ctx.tTransactions = append(ctx.tTransactions, tTransaction)
-	ctx.tTypes = append(ctx.tTypes, getTransactionType(tx))
+	ctx.tTypes = append(ctx.tTypes, getTransactionType(state))
 
 	// update gas used for block and transaction
-	gasUsed := tx.Substate.Result.GasUsed
+	gasUsed := state.Substate.Result.GasUsed
 	ctx.gasBlock += gasUsed
 	ctx.gasTransactions = append(ctx.gasTransactions, gasUsed)
 
 	// retrieve contract/wallet addresses of transaction
-	addresses := findTxAddresses(tx)
+	addresses := findTxAddresses(state)
 
 	// compute the earliest point in time to execute transaction
 	tEarliest := ctx.earliestTimeToRun(addresses)
@@ -257,7 +257,7 @@ func (ctx *Context) GetProfileData(curBlock uint64, tBlock time.Duration) (*Prof
 }
 
 // getTransactionType reads a message and determines a transaction type.
-func getTransactionType(tx *substate.Transaction) TxType {
+func getTransactionType(tx executor.State) TxType {
 	msg := tx.Substate.Message
 	to := msg.To
 	from := msg.From

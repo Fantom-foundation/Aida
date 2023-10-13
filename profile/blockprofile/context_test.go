@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/profile/graphutil"
 	"github.com/ethereum/go-ethereum/common"
 
@@ -209,7 +210,7 @@ func TestDependenciesSimple3(t *testing.T) {
 func TestFindTxAddresses(t *testing.T) {
 
 	// test substate.Transaction with empty fields
-	testTransaction := &substate.Transaction{
+	testTransaction := executor.State{
 		Substate: &substate.Substate{
 			InputAlloc:  substate.SubstateAlloc{},
 			OutputAlloc: substate.SubstateAlloc{},
@@ -227,7 +228,7 @@ func TestFindTxAddresses(t *testing.T) {
 	addr2 := common.HexToAddress("0xFC00FACE00000000000000000000000000000002")
 	addr3 := common.HexToAddress("0xFC00FACE00000000000000000000000000000003")
 	addrs := []common.Address{addr1, addr2, addr3}
-	testTransaction = &substate.Transaction{
+	testTransaction = executor.State{
 		Substate: &substate.Substate{
 			InputAlloc:  substate.SubstateAlloc{addr1: &substate.SubstateAccount{}},
 			OutputAlloc: substate.SubstateAlloc{addr2: &substate.SubstateAccount{}, addr3: &substate.SubstateAccount{}},
@@ -246,7 +247,7 @@ func TestFindTxAddresses(t *testing.T) {
 
 	// test if substate.Message.To == nil and substate.Message.From == zero
 	var zero common.Address
-	testTransaction = &substate.Transaction{
+	testTransaction = executor.State{
 		Substate: &substate.Substate{
 			InputAlloc:  substate.SubstateAlloc{addr1: &substate.SubstateAccount{}},
 			OutputAlloc: substate.SubstateAlloc{addr2: &substate.SubstateAccount{}, addr1: &substate.SubstateAccount{}},
@@ -275,7 +276,7 @@ func TestRecordTransaction(t *testing.T) {
 	addr1 := common.HexToAddress("0xFC00FACE00000000000000000000000000000001")
 	addr2 := common.HexToAddress("0xFC00FACE00000000000000000000000000000002")
 	addr3 := common.HexToAddress("0xFC00FACE00000000000000000000000000000003")
-	tx := &substate.Transaction{
+	tx := executor.State{
 		Substate: &substate.Substate{
 			InputAlloc:  substate.SubstateAlloc{addr1: &substate.SubstateAccount{}},
 			OutputAlloc: substate.SubstateAlloc{addr2: &substate.SubstateAccount{}, addr3: &substate.SubstateAccount{}},
@@ -344,7 +345,7 @@ func TestRecordTransaction(t *testing.T) {
 	}
 
 	// construct second transaction
-	tx2 := &substate.Transaction{
+	tx2 := executor.State{
 		Substate: &substate.Substate{
 			InputAlloc:  substate.SubstateAlloc{addr1: &substate.SubstateAccount{}},
 			OutputAlloc: substate.SubstateAlloc{addr2: &substate.SubstateAccount{}, addr3: &substate.SubstateAccount{}},
@@ -480,7 +481,7 @@ func TestGetTransactionType(t *testing.T) {
 	fromAddr1 := common.HexToAddress("0xabcdef0000000000000000000000000000000002")
 	fromAddr2 := common.HexToAddress("0x0000000000000000000000000000000000000000")
 
-	testTransaction := &substate.Transaction{
+	testTransaction := executor.State{
 		Substate: &substate.Substate{
 			InputAlloc: substate.SubstateAlloc{},
 			Message:    &substate.SubstateMessage{},

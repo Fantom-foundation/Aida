@@ -81,6 +81,7 @@ func NewProfileDB(dbFile string) (*ProfileDB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare a SQL statement for tx profile; %v", err)
 	}
+
 	return &ProfileDB{
 		sql:       sqlDB,
 		blockStmt: blockStmt,

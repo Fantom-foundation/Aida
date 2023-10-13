@@ -346,4 +346,12 @@ var (
 		Name:  "track-progress",
 		Usage: "enables track progress logging",
 	}
+	ProfileBlocksFlag = cli.BoolFlag{
+		Name:  "profile-blocks",
+		Usage: "enables block profiling",
+	}
+	ProfileDBFlag = cli.PathFlag{
+		Name:  "profile-db",
+		Usage: "defines path to profile-db",
+	}
 )

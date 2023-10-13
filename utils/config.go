@@ -27,11 +27,10 @@ type ChainIDs []ChainID
 
 // An enums of argument modes used by trace subcommands
 const (
-	BlockRangeArgs          ArgumentMode = iota // requires 2 arguments: first block and last block
-	BlockRangeArgsProfileDB                     // requires 3 arguments: first block, last block and profile db
-	LastBlockArg                                // requires 1 argument: last block
-	NoArgs                                      // requires no arguments
-	OneToNArgs                                  // requires at least one argument, but accepts up to N
+	BlockRangeArgs ArgumentMode = iota // requires 2 arguments: first block and last block
+	LastBlockArg                       // requires 1 argument: last block
+	NoArgs                             // requires no arguments
+	OneToNArgs                         // requires at least one argument, but accepts up to N
 )
 
 const (
@@ -180,6 +179,7 @@ type Config struct {
 	NoHeartbeatLogging    bool           // disables heartbeat logging
 	TrackProgress         bool           // enables track progress logging
 	IsExistingStateDb     bool           // this is true if we are using an existing StateDb
+	ProfileBlocks         bool           // enables block profiler extension
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.
@@ -464,15 +464,6 @@ func updateConfigBlockRange(args []string, cfg *Config, mode ArgumentMode, log *
 	)
 
 	switch mode {
-	case BlockRangeArgsProfileDB:
-		// process arguments and flags
-		if len(args) != 3 {
-			return fmt.Errorf("command requires 3 arguments")
-		} else if len(args) == 3 {
-			// set profileDB from argument
-			profileDB = args[2]
-		}
-		fallthrough
 	case BlockRangeArgs:
 		// process arguments and flags
 		if len(args) >= 2 {

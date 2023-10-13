@@ -58,6 +58,7 @@ func run(config *utils.Config, provider executor.SubstateProvider, stateDb state
 	}
 
 	extensionList = append(extensionList, []executor.Extension{
+
 		profiler.MakeVirtualMachineStatisticsPrinter(config),
 		tracker.MakeProgressLogger(config, 15*time.Second),
 		tracker.MakeProgressTracker(config, 100_000),
@@ -67,6 +68,11 @@ func run(config *utils.Config, provider executor.SubstateProvider, stateDb state
 		statedb.MakeStateDbPrepper(),
 		validator.MakeStateHashValidator(config),
 		statedb.MakeBlockEventEmitter(),
+		// block profile extension should be always last because:
+		// 1) Pre-Func are called forwards so this is called last and
+		// 2) Post-Func are called backwards so this is called first
+		// that means the gap between time measurements will be as small as possible
+		profiler.MakeBlockProfiler(config),
 	}...,
 	)
 

@@ -93,6 +93,8 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		MaxNumErrors:          getFlagValue(ctx, MaxNumErrorsFlag).(int),
 		NoHeartbeatLogging:    getFlagValue(ctx, NoHeartbeatLoggingFlag).(bool),
 		TrackProgress:         getFlagValue(ctx, TrackProgressFlag).(bool),
+		ProfileDB:             getFlagValue(ctx, ProfileDBFlag).(string),
+		ProfileBlocks:         getFlagValue(ctx, ProfileBlocksFlag).(bool),
 	}
 
 	return cfg
