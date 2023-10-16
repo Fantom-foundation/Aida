@@ -1,12 +1,8 @@
 package validator
 
 import (
-	"bufio"
-	"encoding/hex"
+	"errors"
 	"fmt"
-	"os"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
@@ -15,17 +11,19 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
 func MakeStateHashValidator[T any](config *utils.Config) executor.Extension[T] {
+	if !config.ValidateStateHashes {
+		return extension.NilExtension{}
+	}
+
 	log := logger.NewLogger("INFO", "state-hash-validator")
 	return makeStateHashValidator[T](config, log)
 }
 
 func makeStateHashValidator[T any](config *utils.Config, log logger.Logger) executor.Extension[T] {
-	if config.StateRootFile == "" {
-		return extension.NilExtension[T]{}
-	}
 	return &stateHashValidator[T]{config: config, log: log}
 }
 
@@ -33,30 +31,32 @@ type stateHashValidator[T any] struct {
 	extension.NilExtension[T]
 	config                  *utils.Config
 	log                     logger.Logger
-	hashes                  []common.Hash
 	nextArchiveBlockToCheck int
 	lastProcessedBlock      int
+	hashProvider            utils.StateHashProvider
 }
 
-func (e *stateHashValidator[T]) PreRun(executor.State[T], *executor.Context) error {
-	path := e.config.StateRootFile
-	e.log.Infof("Loading state root hashes from %v ...", path)
-	hashes, err := loadStateHashes(path, int(e.config.Last)+1)
-	if err != nil {
-		return err
-	}
-	e.hashes = hashes
-	e.log.Infof("Loaded %d state root hashes from %v", len(e.hashes), path)
+func (e *stateHashValidator[T]) PreRun(_ executor.State[T], ctx *executor.Context) error {
+	e.hashProvider = utils.MakeStateHashProvider(ctx.AidaDb)
 	return nil
 }
 
 func (e *stateHashValidator[T]) PostBlock(state executor.State[T], context *executor.Context) error {
-	if context.State == nil || state.Block >= len(e.hashes) {
+	if context.State == nil {
 		return nil
 	}
 
-	// Check the LiveDB
-	want := e.hashes[state.Block]
+	want, err := e.getStateHash(state.Block)
+	if err != nil {
+		return err
+	}
+
+	// is stat hash present?
+	nilHash := common.Hash{}
+	if want == nilHash {
+		return nil
+	}
+
 	got := context.State.GetHash()
 	if want != got {
 		return fmt.Errorf("unexpected hash for Live block %d\nwanted %v\n   got %v", state.Block, want, got)
@@ -65,7 +65,7 @@ func (e *stateHashValidator[T]) PostBlock(state executor.State[T], context *exec
 	// Check the ArchiveDB
 	if e.config.ArchiveMode {
 		e.lastProcessedBlock = state.Block
-		if err := e.checkArchiveHashes(context.State); err != nil {
+		if err = e.checkArchiveHashes(context.State); err != nil {
 			return err
 		}
 	}
@@ -81,10 +81,10 @@ func (e *stateHashValidator[T]) PostRun(state executor.State[T], context *execut
 	// Complete processing remaining archive blocks.
 	if e.config.ArchiveMode {
 		for e.nextArchiveBlockToCheck < e.lastProcessedBlock {
-			if err := e.checkArchiveHashes(context.State); err != nil {
+			if err = e.checkArchiveHashes(context.State); err != nil {
 				return err
 			}
-			if int(e.nextArchiveBlockToCheck) < e.lastProcessedBlock {
+			if e.nextArchiveBlockToCheck < e.lastProcessedBlock {
 				time.Sleep(10 * time.Millisecond)
 			}
 		}
@@ -103,16 +103,26 @@ func (e *stateHashValidator[T]) checkArchiveHashes(state state.StateDB) error {
 	cur := uint64(e.nextArchiveBlockToCheck)
 	for !empty && cur <= height {
 
+		want, err := e.getStateHash(int(cur))
+		if err != nil {
+			return err
+		}
+
+		// is state hash present?
+		nilHash := common.Hash{}
+		if want == nilHash {
+			return nil
+		}
+
 		archive, err := state.GetArchiveState(cur)
 		if err != nil {
 			return err
 		}
 
-		want := e.hashes[cur]
 		got := archive.GetHash()
 		archive.Release()
 		if want != got {
-			return fmt.Errorf("unexpected hash for Archive block %d\nwanted %v\n   got %v", cur, want, got)
+			return fmt.Errorf("unexpected hash for archive block %d\nwanted %v\n   got %v", cur, want, got)
 		}
 
 		cur++
@@ -121,70 +131,16 @@ func (e *stateHashValidator[T]) checkArchiveHashes(state state.StateDB) error {
 	return nil
 }
 
-// loadStateHashes attempts to parse a file listing state roots in the format
-//
-//	(<block> - <hash>\n)*
-//
-// where <block> is a decimal block number and <hash> is a 64-character long,
-// hexadecimal hash. Blocks are required to be listed in order, however, gaps
-// may exist for blocks exhibiting the same hash as their predecessor.
-// The limit parameter is the first block that is no longer loaded.
-func loadStateHashes(path string, limit int) ([]common.Hash, error) {
-	file, err := os.Open(path)
+func (e *stateHashValidator) getStateHash(blockNumber int) (common.Hash, error) {
+	want, err := e.hashProvider.GetStateHash(blockNumber)
 	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	hashes := make([]common.Hash, 0, limit)
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if line == "" {
-			continue
+		if errors.Is(err, leveldb.ErrNotFound) {
+			e.log.Warningf("State hash for block %v is not present in the db", blockNumber)
+			return common.Hash{}, nil
 		}
-		parts := strings.Split(line, " - ")
-		if len(parts) != 2 || len(parts[1]) < 3 {
-			return nil, fmt.Errorf("invalid line in hash list detected: `%s`", line)
-		}
-
-		block, err := strconv.Atoi(parts[0])
-		if err != nil {
-			return nil, err
-		}
-
-		if block < len(hashes) {
-			return nil, fmt.Errorf("lines in state hash file are not sorted, encountered block %d after block %d", block, len(hashes)-1)
-		}
-
-		limitReached := false
-		if block >= limit {
-			block = limit
-			limitReached = true
-		}
-
-		for len(hashes) < block {
-			if len(hashes) == 0 {
-				hashes = append(hashes, common.Hash{})
-			} else {
-				hashes = append(hashes, hashes[len(hashes)-1])
-			}
-		}
-
-		if limitReached {
-			break
-		}
-
-		bytes, err := hex.DecodeString(parts[1][2:])
-		if err != nil {
-			return nil, fmt.Errorf("unable to decode %s as hash value", parts[1][2:])
-		}
-		var hash common.Hash
-		copy(hash[:], bytes)
-
-		hashes = append(hashes, hash)
+		return common.Hash{}, fmt.Errorf("cannot get state hash for block %v; %v", blockNumber, err)
 	}
 
-	return hashes, nil
+	return want, nil
+
 }
