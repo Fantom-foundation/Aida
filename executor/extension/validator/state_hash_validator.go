@@ -16,14 +16,14 @@ import (
 
 func MakeStateHashValidator[T any](config *utils.Config) executor.Extension[T] {
 	if !config.ValidateStateHashes {
-		return extension.NilExtension{}
+		return extension.NilExtension[T]{}
 	}
 
 	log := logger.NewLogger("INFO", "state-hash-validator")
 	return makeStateHashValidator[T](config, log)
 }
 
-func makeStateHashValidator[T any](config *utils.Config, log logger.Logger) executor.Extension[T] {
+func makeStateHashValidator[T any](config *utils.Config, log logger.Logger) *stateHashValidator[T] {
 	return &stateHashValidator[T]{config: config, log: log}
 }
 
@@ -131,7 +131,7 @@ func (e *stateHashValidator[T]) checkArchiveHashes(state state.StateDB) error {
 	return nil
 }
 
-func (e *stateHashValidator) getStateHash(blockNumber int) (common.Hash, error) {
+func (e *stateHashValidator[T]) getStateHash(blockNumber int) (common.Hash, error) {
 	want, err := e.hashProvider.GetStateHash(blockNumber)
 	if err != nil {
 		if errors.Is(err, leveldb.ErrNotFound) {

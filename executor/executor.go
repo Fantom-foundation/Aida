@@ -10,7 +10,6 @@ import (
 
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/ethdb"
 )
 

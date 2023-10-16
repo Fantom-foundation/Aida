@@ -60,7 +60,7 @@ func run(config *utils.Config, provider executor.Provider[*substate.Substate], s
 	}
 
 	extensionList = append(extensionList, []executor.Extension[*substate.Substate]{
-		extension.MakeAidaDbManager(config),
+		extension.MakeAidaDbManager[*substate.Substate](config),
 		profiler.MakeVirtualMachineStatisticsPrinter[*substate.Substate](config),
 		tracker.MakeProgressLogger[*substate.Substate](config, 15*time.Second),
 		tracker.MakeProgressTracker(config, 100_000),

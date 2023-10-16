@@ -9,19 +9,19 @@ import (
 )
 
 // MakeAidaDbManager opens AidaDb if path is given and adds it to the context.
-func MakeAidaDbManager(cfg *utils.Config) executor.Extension {
+func MakeAidaDbManager[T any](cfg *utils.Config) executor.Extension[T] {
 	if cfg.AidaDb == "" {
-		return NilExtension{}
+		return NilExtension[T]{}
 	}
-	return &AidaDbManager{path: cfg.AidaDb}
+	return &AidaDbManager[T]{path: cfg.AidaDb}
 }
 
-type AidaDbManager struct {
-	NilExtension
+type AidaDbManager[T any] struct {
+	NilExtension[T]
 	path string
 }
 
-func (e *AidaDbManager) PreRun(_ executor.State, context *executor.Context) error {
+func (e *AidaDbManager[T]) PreRun(_ executor.State[T], context *executor.Context) error {
 	db, err := rawdb.NewLevelDBDatabase(e.path, 1024, 100, "", true)
 	if err != nil {
 		return fmt.Errorf("cannot open aida-db; %v", err)
@@ -31,7 +31,7 @@ func (e *AidaDbManager) PreRun(_ executor.State, context *executor.Context) erro
 	return nil
 }
 
-func (e *AidaDbManager) PostRun(_ executor.State, context *executor.Context, _ error) error {
+func (e *AidaDbManager[T]) PostRun(_ executor.State[T], context *executor.Context, _ error) error {
 	if err := context.AidaDb.Close(); err != nil {
 		return fmt.Errorf("cannot close AidaDb; %v", err)
 	}
