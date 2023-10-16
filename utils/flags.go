@@ -353,5 +353,6 @@ var (
 	ProfileDBFlag = cli.PathFlag{
 		Name:  "profile-db",
 		Usage: "defines path to profile-db",
+		Value: "/var/opera/Aida/profile.db",
 	}
 )

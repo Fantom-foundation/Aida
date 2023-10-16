@@ -89,7 +89,7 @@ func (b *BlockProfiler) PostBlock(state executor.State, _ *executor.Context) err
 func (b *BlockProfiler) PostRun(executor.State, *executor.Context, error) error {
 	defer func() {
 		if r := recover(); r != nil {
-			fmt.Println("Recovered in f", r)
+			b.log.Errorf("recovered panic in block-profiler; %v", r)
 		}
 	}()
 

@@ -458,9 +458,8 @@ func getChainId(cfg *Config, log *logging.Logger) (ChainID, error) {
 // and store them into the config
 func updateConfigBlockRange(args []string, cfg *Config, mode ArgumentMode, log *logging.Logger) error {
 	var (
-		first     uint64
-		last      uint64
-		profileDB string
+		first uint64
+		last  uint64
 	)
 
 	switch mode {
@@ -515,7 +514,6 @@ func updateConfigBlockRange(args []string, cfg *Config, mode ArgumentMode, log *
 
 	cfg.First = first
 	cfg.Last = last
-	cfg.ProfileDB = profileDB
 	return nil
 }
 
