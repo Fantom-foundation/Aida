@@ -16,9 +16,6 @@ func main() {
 		Usage:     "profile on the world-state",
 		Copyright: "(c) 2023 Fantom Foundation",
 		Commands: []*cli.Command{
-			//&blockprofile.BlockProfileCommand,
-
-			// profile
 			&profile.GetCodeSizeCommand,
 			&profile.GetStorageUpdateSizeCommand,
 			&profile.GetAddressStatsCommand,
