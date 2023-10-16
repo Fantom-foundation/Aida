@@ -24,7 +24,7 @@ func MakeStateHashValidator[T any](config *utils.Config) executor.Extension[T] {
 }
 
 func makeStateHashValidator[T any](config *utils.Config, log logger.Logger) *stateHashValidator[T] {
-	return &stateHashValidator[T]{config: config, log: log}
+	return &stateHashValidator[T]{config: config, log: log, nextArchiveBlockToCheck: int(config.First)}
 }
 
 type stateHashValidator[T any] struct {
