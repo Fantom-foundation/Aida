@@ -173,12 +173,12 @@ type Config struct {
 	TargetBlock           uint64         // represents the ID of target block to be reached by state evolve process or in dump state
 	UpdateBufferSize      uint64         // cache size in Bytes
 	ProfileDB             string         // profile db for parallel transaction execution
-	StateRootFile         string         // the optional file name containing state roots to be checked (empty if not enabled)
 	MaxNumErrors          int            // maximum number of errors when ContinueOnFailure is enabled
 	UpdateOnFailure       bool           // if enabled and continue-on-failure is also enabled, this updates any error found in StateDb
 	NoHeartbeatLogging    bool           // disables heartbeat logging
 	TrackProgress         bool           // enables track progress logging
 	IsExistingStateDb     bool           // this is true if we are using an existing StateDb
+	ValidateStateHashes   bool           // if this is true state hash validation is enabled in Executor
 	ProfileBlocks         bool           // enables block profiler extension
 }
 
