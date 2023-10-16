@@ -3,6 +3,7 @@ package blockprofile
 import (
 	"database/sql"
 	"fmt"
+	"os"
 
 	// Your main or test packages require this import so the sql package is properly initialized.
 	_ "github.com/mattn/go-sqlite3"
@@ -63,6 +64,16 @@ type ProfileDB struct {
 
 // NewProfileDB constructs a new profiling database.
 func NewProfileDB(dbFile string) (*ProfileDB, error) {
+	if _, err := os.Stat(dbFile); err != nil {
+		file, err := os.Create(dbFile)
+		if err != nil {
+			return nil, fmt.Errorf("cannot create file for database %v; %v", dbFile, err)
+		}
+		err = file.Close()
+		if err != nil {
+			return nil, fmt.Errorf("cannot close db file; %v", err)
+		}
+	}
 	// open SQLITE3 DB
 	sqlDB, err := sql.Open("sqlite3", dbFile)
 	if err != nil {

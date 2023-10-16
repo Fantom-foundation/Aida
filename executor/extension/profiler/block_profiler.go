@@ -87,6 +87,12 @@ func (b *BlockProfiler) PostBlock(state executor.State, _ *executor.Context) err
 
 // PostRun closes ProfileDB
 func (b *BlockProfiler) PostRun(executor.State, *executor.Context, error) error {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Println("Recovered in f", r)
+		}
+	}()
+
 	err := b.db.Close()
 	if err != nil {
 		return fmt.Errorf("cannot close profile-db; %v", err)
