@@ -3,6 +3,7 @@ package blockprofile
 import (
 	"database/sql"
 	"fmt"
+
 	// Your main or test packages require this import so the sql package is properly initialized.
 	_ "github.com/mattn/go-sqlite3"
 )
