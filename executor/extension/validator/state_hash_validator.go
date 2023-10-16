@@ -114,6 +114,8 @@ func (e *stateHashValidator) checkArchiveHashes(state state.StateDB) error {
 			return nil
 		}
 
+		fmt.Println(cur)
+
 		archive, err := state.GetArchiveState(cur)
 		if err != nil {
 			return err
