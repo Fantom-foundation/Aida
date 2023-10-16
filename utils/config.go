@@ -420,7 +420,7 @@ func adjustBlockRange(chainId ChainID, firstArg, lastArg uint64) (uint64, uint64
 
 		return first, last, nil
 	} else {
-		return 0, 0, fmt.Errorf("given block range does NOT overlap with the block range of given aidaDB")
+		return 0, 0, fmt.Errorf("block range of your aida-db (%v-%v) cannot execute given block range %v-%v", firstMd, lastMd, firstArg, lastArg)
 	}
 }
 
