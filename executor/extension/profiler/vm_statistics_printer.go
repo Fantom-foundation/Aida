@@ -8,16 +8,16 @@ import (
 
 // MakeVirtualMachineStatisticsPrinter creates an extension that prints VM specific
 // profiling data at the end of a run, if this is supported by the VM implementation.
-func MakeVirtualMachineStatisticsPrinter(config *utils.Config) executor.Extension {
-	return &vmStatPrinter{config: config}
+func MakeVirtualMachineStatisticsPrinter[T any](config *utils.Config) executor.Extension[T] {
+	return &vmStatPrinter[T]{config: config}
 }
 
-type vmStatPrinter struct {
-	extension.NilExtension
+type vmStatPrinter[T any] struct {
+	extension.NilExtension[T]
 	config *utils.Config
 }
 
-func (p *vmStatPrinter) PostRun(executor.State, *executor.Context, error) error {
+func (p *vmStatPrinter[T]) PostRun(executor.State[T], *executor.Context, error) error {
 	utils.PrintEvmStatistics(p.config)
 	return nil
 }

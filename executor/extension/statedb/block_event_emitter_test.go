@@ -9,7 +9,7 @@ import (
 )
 
 func TestBlockEventEmitter_SingleBlock(t *testing.T) {
-	ext := MakeBlockEventEmitter()
+	ext := MakeBlockEventEmitter[any]()
 
 	mockCtrl := gomock.NewController(t)
 	mockStateDB := state.NewMockStateDB(mockCtrl)
@@ -19,7 +19,29 @@ func TestBlockEventEmitter_SingleBlock(t *testing.T) {
 		mockStateDB.EXPECT().EndBlock(),
 	)
 
-	state := executor.State{
+	state := executor.State[any]{
+		Block: 0,
+	}
+	context := &executor.Context{
+		State: mockStateDB,
+	}
+	if err := ext.PreBlock(state, context); err != nil {
+		t.Fatalf("failed to to run pre-block: %v", err)
+	}
+	if err := ext.PostBlock(state, context); err != nil {
+		t.Fatalf("failed to to run post-block: %v", err)
+	}
+}
+
+func TestBlockEventEmitter_SkipEndBlocks(t *testing.T) {
+	ext := MakeBeginOnlyEmitter[any]()
+
+	mockCtrl := gomock.NewController(t)
+	mockStateDB := state.NewMockStateDB(mockCtrl)
+
+	mockStateDB.EXPECT().BeginBlock(uint64(0))
+
+	state := executor.State[any]{
 		Block: 0,
 	}
 	context := &executor.Context{
@@ -34,7 +56,7 @@ func TestBlockEventEmitter_SingleBlock(t *testing.T) {
 }
 
 func TestBlockEventEmitter_MultipleBlocks(t *testing.T) {
-	ext := MakeBlockEventEmitter()
+	ext := MakeBlockEventEmitter[any]()
 
 	mockCtrl := gomock.NewController(t)
 	mockStateDB := state.NewMockStateDB(mockCtrl)
@@ -48,7 +70,7 @@ func TestBlockEventEmitter_MultipleBlocks(t *testing.T) {
 		mockStateDB.EXPECT().EndBlock(),
 	)
 
-	state := executor.State{
+	state := executor.State[any]{
 		Block: 0,
 	}
 	context := &executor.Context{

@@ -10,7 +10,6 @@ import (
 
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/ethdb"
 )
 
@@ -67,7 +66,7 @@ import (
 // Each PreXXX() and PostXXX() is a hook-in point at which extensions may
 // track information and/or interfere with the execution. For more details on
 // the specific call-backs see the Extension interface below.
-type Executor interface {
+type Executor[T any] interface {
 	// Run feeds all transactions of the given block range [from,to) to the
 	// provided processor and performs the needed call-backs on the provided
 	// extensions. If a processor or an extension returns an error, execution
@@ -76,12 +75,12 @@ type Executor interface {
 	// PostXXX events are delivered in reverse order. If any of the extensions
 	// reports an error during processing of an event, the same event is still
 	// delivered to the remaining extensions before processing is aborted.
-	Run(params Params, processor Processor, extensions []Extension) error
+	Run(params Params, processor Processor[T], extensions []Extension[T]) error
 }
 
-// NewExecutor creates a new executor based on the given substate provider.
-func NewExecutor(substate SubstateProvider) Executor {
-	return &executor{substate: substate}
+// NewExecutor creates a new executor based on the given provider.
+func NewExecutor[T any](provider Provider[T]) Executor[T] {
+	return &executor[T]{provider}
 }
 
 // ParallelismGranularity determines isolation level if same archive is kept for all transactions in block or for each is created new one
@@ -113,11 +112,11 @@ type Params struct {
 
 // Processor is an interface for the entity to which an executor is feeding
 // transactions to.
-type Processor interface {
+type Processor[T any] interface {
 	// Process is called on each transaction in the range of blocks covered
 	// by an Executor run. When running with multiple workers, the Process
 	// function is required to be thread safe.
-	Process(State, *Context) error
+	Process(State[T], *Context) error
 }
 
 // Extension is an interface for modulare annotations to the execution of
@@ -126,13 +125,13 @@ type Processor interface {
 // Since blocks may be processed in parallel, callbacks are generally
 // required to be thread safe (with the exception of the Pre-/ and PostRun)
 // callback.
-type Extension interface {
+type Extension[T any] interface {
 	// PreRun is called before the begin of the execution of a block range,
 	// even if the range is empty. The provided state lists the initial block
 	// of the range. For every run, PreRun is only called once, before any
 	// other call-back. If an error is reported, execution will abort after
 	// PreRun has been called on all registered Extensions.
-	PreRun(State, *Context) error
+	PreRun(State[T], *Context) error
 
 	// PostRun is guranteed to be called at the end of each execution. An
 	// execution may end successfully, if no exception has been produced by
@@ -141,37 +140,37 @@ type Extension interface {
 	// state lists the first non-executiond block, while in an error case
 	// it references the last transaction attempted to be processed. Also,
 	// the second parameter contains the error causing the abort.
-	PostRun(State, *Context, error) error
+	PostRun(State[T], *Context, error) error
 
 	// PreBlock is called once before the begin of processing a block with
 	// the state containing the number of the Block. This function is not
 	// called when running with multiple workers.
-	PreBlock(State, *Context) error
+	PreBlock(State[T], *Context) error
 
 	// PostBlock is called once after the end of processing a block with
 	// the state containing the number of the Block and the last transaction
 	// processed in the block. This function is not called when running with
 	// multiple workers.
-	PostBlock(State, *Context) error
+	PostBlock(State[T], *Context) error
 
 	// PreTransaction is called once before each transaction with the state
 	// listing the block number, the transaction number, and the substate data
 	// providing the input for the subsequent execution of the transaction.
 	// When running with multiple workers, this function may be called
 	// concurrently, and must thus be thread safe.
-	PreTransaction(State, *Context) error
+	PreTransaction(State[T], *Context) error
 
 	// PostTransaction is called once after each transaction with the state
 	// listing the block number, the transaction number, and the substate data
 	// providing the input for the subsequent execution of the transaction.
 	// When running with multiple workers, this function may be called
 	// concurrently, and must thus be thread safe.
-	PostTransaction(State, *Context) error
+	PostTransaction(State[T], *Context) error
 }
 
 // State summarizes the current state of an execution and is passed to
 // Processors and Extensions as an input for their actions.
-type State struct {
+type State[T any] struct {
 	// Block the current block number, valid for all call-backs.
 	Block int
 
@@ -180,9 +179,9 @@ type State struct {
 	// PostBlock, and for PostRun events in case of an abort.
 	Transaction int
 
-	// Substate is the input required for the current transaction. It is only
-	// valid for Pre- and PostTransaction events.
-	Substate *substate.Substate
+	// Data is the input required for processing the current transaction. It is
+	// only valid for Pre- and PostTransaction events.
+	Data T
 }
 
 // Context summarizes context data for the current execution and is passed
@@ -207,12 +206,12 @@ type Context struct {
 //                               Implementations
 // ----------------------------------------------------------------------------
 
-type executor struct {
-	substate SubstateProvider
+type executor[T any] struct {
+	provider Provider[T]
 }
 
-func (e *executor) Run(params Params, processor Processor, extensions []Extension) (err error) {
-	state := State{}
+func (e *executor[T]) Run(params Params, processor Processor[T], extensions []Extension[T]) (err error) {
+	state := State[T]{}
 	context := Context{State: params.State}
 
 	defer func() {
@@ -246,12 +245,10 @@ func (e *executor) Run(params Params, processor Processor, extensions []Extensio
 	}
 }
 
-func (e *executor) runSequential(params Params, processor Processor, extensions []Extension, state *State, context *Context) error {
+func (e *executor[T]) runSequential(params Params, processor Processor[T], extensions []Extension[T], state *State[T], context *Context) error {
 	first := true
-
-	err := e.substate.Run(params.From, params.To, func(tx TransactionInfo) error {
-		// TODO rewrite
-		state.Substate = tx.Substate
+	err := e.provider.Run(params.From, params.To, func(tx TransactionInfo[T]) error {
+		state.Data = tx.Data
 
 		if first {
 			state.Block = tx.Block
@@ -270,7 +267,7 @@ func (e *executor) runSequential(params Params, processor Processor, extensions 
 		}
 
 		state.Transaction = tx.Transaction
-		return runTransaction(*state, context, tx.Substate, processor, extensions)
+		return runTransaction(*state, context, tx.Data, processor, extensions)
 	})
 	if err != nil {
 		return err
@@ -288,14 +285,14 @@ func (e *executor) runSequential(params Params, processor Processor, extensions 
 }
 
 // runBlock runs transaction execution in a block
-func runBlock(
+func runBlock[T any](
 	workerNumber int,
-	blocks chan []*TransactionInfo,
+	blocks chan []*TransactionInfo[T],
 	wg *sync.WaitGroup,
 	abort utils.Event,
 	workerErrs []error,
-	processor Processor,
-	extensions []Extension,
+	processor Processor[T],
+	extensions []Extension[T],
 	context *Context,
 	cachedPanic *atomic.Value,
 ) {
@@ -309,7 +306,7 @@ func runBlock(
 		wg.Done()
 	}()
 
-	var localState State
+	var localState State[T]
 	for {
 		select {
 		case blockTransactions := <-blocks:
@@ -327,10 +324,10 @@ func runBlock(
 			}
 
 			for _, tx := range blockTransactions {
-				localState.Substate = tx.Substate
+				localState.Data = tx.Data
 				localState.Transaction = tx.Transaction
 
-				if err := runTransaction(localState, &localContext, tx.Substate, processor, extensions); err != nil {
+				if err := runTransaction(localState, &localContext, tx.Data, processor, extensions); err != nil {
 					workerErrs[workerNumber] = err
 					abort.Signal()
 					return
@@ -357,8 +354,8 @@ func runBlock(
 }
 
 // forwardBlocks is a worker that unites transactions by block and forwards them to execution.
-func (e *executor) forwardBlocks(params Params, abort utils.Event) (chan []*TransactionInfo, *error) {
-	blocks := make(chan []*TransactionInfo, 10*params.NumWorkers)
+func (e *executor[T]) forwardBlocks(params Params, abort utils.Event) (chan []*TransactionInfo[T], *error) {
+	blocks := make(chan []*TransactionInfo[T], 10*params.NumWorkers)
 	forwardErr := new(error)
 
 	go func() {
@@ -367,14 +364,14 @@ func (e *executor) forwardBlocks(params Params, abort utils.Event) (chan []*Tran
 
 		previousBlock := params.From
 
-		block := make([]*TransactionInfo, 0)
-		err := e.substate.Run(params.From, params.To, func(tx TransactionInfo) error {
+		block := make([]*TransactionInfo[T], 0)
+		err := e.provider.Run(params.From, params.To, func(tx TransactionInfo[T]) error {
 			if tx.Block != previousBlock {
 				previousBlock = tx.Block
 				select {
 				case blocks <- block:
 					// clean block for reuse
-					block = make([]*TransactionInfo, 0)
+					block = make([]*TransactionInfo[T], 0)
 				case <-abort.Wait():
 					return abortErr
 				}
@@ -402,7 +399,7 @@ func (e *executor) forwardBlocks(params Params, abort utils.Event) (chan []*Tran
 	return blocks, forwardErr
 }
 
-func (e *executor) runParallelTransaction(params Params, processor Processor, extensions []Extension, state *State, context *Context) error {
+func (e *executor[T]) runParallelTransaction(params Params, processor Processor[T], extensions []Extension[T], state *State[T], context *Context) error {
 	numWorkers := params.NumWorkers
 
 	// An event for signaling an abort of the execution.
@@ -410,11 +407,11 @@ func (e *executor) runParallelTransaction(params Params, processor Processor, ex
 
 	// Start one go-routine forwarding transactions from the provider to a local channel.
 	var forwardErr error
-	transactions := make(chan *TransactionInfo, 10*numWorkers)
+	transactions := make(chan *TransactionInfo[T], 10*numWorkers)
 	go func() {
 		defer close(transactions)
 		abortErr := errors.New("aborted")
-		err := e.substate.Run(params.From, params.To, func(tx TransactionInfo) error {
+		err := e.provider.Run(params.From, params.To, func(tx TransactionInfo[T]) error {
 			select {
 			case transactions <- &tx:
 				return nil
@@ -452,7 +449,7 @@ func (e *executor) runParallelTransaction(params Params, processor Processor, ex
 					localState.Block = tx.Block
 					localState.Transaction = tx.Transaction
 					localContext := *context
-					if err := runTransaction(localState, &localContext, tx.Substate, processor, extensions); err != nil {
+					if err := runTransaction(localState, &localContext, tx.Data, processor, extensions); err != nil {
 						workerErrs[i] = err
 						abort.Signal()
 						return
@@ -479,8 +476,8 @@ func (e *executor) runParallelTransaction(params Params, processor Processor, ex
 	return err
 }
 
-func runTransaction(state State, context *Context, substate *substate.Substate, processor Processor, extensions []Extension) error {
-	state.Substate = substate
+func runTransaction[T any](state State[T], context *Context, data T, processor Processor[T], extensions []Extension[T]) error {
+	state.Data = data
 	if err := signalPreTransaction(state, context, extensions); err != nil {
 		return err
 	}
@@ -492,8 +489,7 @@ func runTransaction(state State, context *Context, substate *substate.Substate, 
 	}
 	return nil
 }
-
-func (e *executor) runParallelBlock(params Params, processor Processor, extensions []Extension, state *State, context *Context) error {
+func (e *executor[T]) runParallelBlock(params Params, processor Processor[T], extensions []Extension[T], state *State[T], context *Context) error {
 	numWorkers := params.NumWorkers
 
 	// An event for signaling an abort of the execution.
@@ -529,43 +525,43 @@ func (e *executor) runParallelBlock(params Params, processor Processor, extensio
 	return err
 }
 
-func signalPreRun(state State, context *Context, extensions []Extension) error {
-	return forEachForward(extensions, func(extension Extension) error {
+func signalPreRun[T any](state State[T], context *Context, extensions []Extension[T]) error {
+	return forEachForward(extensions, func(extension Extension[T]) error {
 		return extension.PreRun(state, context)
 	})
 }
 
-func signalPostRun(state State, context *Context, err error, extensions []Extension) error {
-	return forEachBackward(extensions, func(extension Extension) error {
+func signalPostRun[T any](state State[T], context *Context, err error, extensions []Extension[T]) error {
+	return forEachBackward(extensions, func(extension Extension[T]) error {
 		return extension.PostRun(state, context, err)
 	})
 }
 
-func signalPreBlock(state State, context *Context, extensions []Extension) error {
-	return forEachForward(extensions, func(extension Extension) error {
+func signalPreBlock[T any](state State[T], context *Context, extensions []Extension[T]) error {
+	return forEachForward(extensions, func(extension Extension[T]) error {
 		return extension.PreBlock(state, context)
 	})
 }
 
-func signalPostBlock(state State, context *Context, extensions []Extension) error {
-	return forEachBackward(extensions, func(extension Extension) error {
+func signalPostBlock[T any](state State[T], context *Context, extensions []Extension[T]) error {
+	return forEachBackward(extensions, func(extension Extension[T]) error {
 		return extension.PostBlock(state, context)
 	})
 }
 
-func signalPreTransaction(state State, context *Context, extensions []Extension) error {
-	return forEachForward(extensions, func(extension Extension) error {
+func signalPreTransaction[T any](state State[T], context *Context, extensions []Extension[T]) error {
+	return forEachForward(extensions, func(extension Extension[T]) error {
 		return extension.PreTransaction(state, context)
 	})
 }
 
-func signalPostTransaction(state State, context *Context, extensions []Extension) error {
-	return forEachBackward(extensions, func(extension Extension) error {
+func signalPostTransaction[T any](state State[T], context *Context, extensions []Extension[T]) error {
+	return forEachBackward(extensions, func(extension Extension[T]) error {
 		return extension.PostTransaction(state, context)
 	})
 }
 
-func forEachForward(extensions []Extension, op func(extension Extension) error) error {
+func forEachForward[T any](extensions []Extension[T], op func(extension Extension[T]) error) error {
 	errs := []error{}
 	for _, extension := range extensions {
 		if err := op(extension); err != nil {
@@ -575,7 +571,7 @@ func forEachForward(extensions []Extension, op func(extension Extension) error) 
 	return errors.Join(errs...)
 }
 
-func forEachBackward(extensions []Extension, op func(extension Extension) error) error {
+func forEachBackward[T any](extensions []Extension[T], op func(extension Extension[T]) error) error {
 	errs := []error{}
 	for i := len(extensions) - 1; i >= 0; i-- {
 		if err := op(extensions[i]); err != nil {

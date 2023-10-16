@@ -8,9 +8,9 @@ import (
 
 func TestAidaDbManager_NoManagerIsCreatedIfPathIsNotProvided(t *testing.T) {
 	config := &utils.Config{}
-	ext := MakeAidaDbManager(config)
+	ext := MakeAidaDbManager[any](config)
 
-	if _, ok := ext.(NilExtension); !ok {
+	if _, ok := ext.(NilExtension[any]); !ok {
 		t.Errorf("manager is enabled although not set in configuration")
 	}
 }

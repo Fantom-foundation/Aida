@@ -13,8 +13,8 @@ import (
 
 func TestVirtualMachineStatisticsPrinter_WorksWithDefaultSetup(t *testing.T) {
 	config := utils.Config{}
-	ext := MakeVirtualMachineStatisticsPrinter(&config)
-	ext.PostRun(executor.State{}, nil, nil)
+	ext := MakeVirtualMachineStatisticsPrinter[any](&config)
+	ext.PostRun(executor.State[any]{}, nil, nil)
 }
 
 func TestVirtualMachineStatisticsPrinter_TriggersStatPrintingAtEndOfRun(t *testing.T) {
@@ -26,9 +26,9 @@ func TestVirtualMachineStatisticsPrinter_TriggersStatPrintingAtEndOfRun(t *testi
 
 	config := utils.Config{}
 	config.VmImpl = "test-vm"
-	ext := MakeVirtualMachineStatisticsPrinter(&config)
+	ext := MakeVirtualMachineStatisticsPrinter[any](&config)
 
-	ext.PostRun(executor.State{}, nil, nil)
+	ext.PostRun(executor.State[any]{}, nil, nil)
 }
 
 type ProfilingVm interface {

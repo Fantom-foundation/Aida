@@ -20,7 +20,7 @@ func TestMemoryUsagePrinter_MemoryBreakdownIsNotPrintedWhenBreakdownIsNil(t *tes
 
 	log := logger.NewMockLogger(ctrl)
 	db := state.NewMockStateDB(ctrl)
-	ext := makeMemoryUsagePrinter(config, log)
+	ext := makeMemoryUsagePrinter[any](config, log)
 
 	usage := &state.MemoryUsage{
 		Breakdown: nil,
@@ -36,8 +36,8 @@ func TestMemoryUsagePrinter_MemoryBreakdownIsNotPrintedWhenBreakdownIsNil(t *tes
 		log.EXPECT().Notice(gomock.Any()),
 	)
 
-	ext.PreRun(executor.State{}, &executor.Context{State: db})
-	ext.PostRun(executor.State{}, &executor.Context{State: db}, nil)
+	ext.PreRun(executor.State[any]{}, &executor.Context{State: db})
+	ext.PostRun(executor.State[any]{}, &executor.Context{State: db}, nil)
 
 }
 
@@ -49,7 +49,7 @@ func TestMemoryUsagePrinter_MemoryBreakdownIsPrintedWhenEnabled(t *testing.T) {
 
 	log := logger.NewMockLogger(ctrl)
 	db := state.NewMockStateDB(ctrl)
-	ext := makeMemoryUsagePrinter(config, log)
+	ext := makeMemoryUsagePrinter[any](config, log)
 
 	usage := &state.MemoryUsage{
 		UsedBytes: 1,
@@ -66,16 +66,16 @@ func TestMemoryUsagePrinter_MemoryBreakdownIsPrintedWhenEnabled(t *testing.T) {
 		log.EXPECT().Noticef(gomock.Any(), uint64(1), gomock.Any()),
 	)
 
-	ext.PreRun(executor.State{}, &executor.Context{State: db})
-	ext.PostRun(executor.State{}, &executor.Context{State: db}, nil)
+	ext.PreRun(executor.State[any]{}, &executor.Context{State: db})
+	ext.PostRun(executor.State[any]{}, &executor.Context{State: db}, nil)
 
 }
 
 func TestMemoryUsagePrinter_NoPrinterIsCreatedIfNotEnabled(t *testing.T) {
 	config := &utils.Config{}
-	ext := MakeMemoryUsagePrinter(config)
+	ext := MakeMemoryUsagePrinter[any](config)
 
-	if _, ok := ext.(extension.NilExtension); !ok {
+	if _, ok := ext.(extension.NilExtension[any]); !ok {
 		t.Errorf("profiler is enabled although not set in configuration")
 	}
 }

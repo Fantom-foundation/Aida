@@ -14,14 +14,14 @@ import (
 // ----------------------------------------------------------------------------
 
 // AtBlock matches executor.State instances with the given block.
-func AtBlock(block int) gomock.Matcher {
-	return atBlock{block}
+func AtBlock[T any](block int) gomock.Matcher {
+	return atBlock[T]{block}
 }
 
 // AtBlock matches executor.State instances with the given block and
 // transaction number.
-func AtTransaction(block int, transaction int) gomock.Matcher {
-	return atTransaction{block, transaction}
+func AtTransaction[T any](block int, transaction int) gomock.Matcher {
+	return atTransaction[T]{block, transaction}
 }
 
 // WithState matches executor.State instances with the given state.
@@ -46,30 +46,30 @@ func Gt(limit float64) gomock.Matcher {
 
 // ----------------------------------------------------------------------------
 
-type atBlock struct {
+type atBlock[T any] struct {
 	expectedBlock int
 }
 
-func (m atBlock) Matches(value any) bool {
-	state, ok := value.(State)
+func (m atBlock[T]) Matches(value any) bool {
+	state, ok := value.(State[T])
 	return ok && state.Block == m.expectedBlock
 }
 
-func (m atBlock) String() string {
+func (m atBlock[T]) String() string {
 	return fmt.Sprintf("at block %d", m.expectedBlock)
 }
 
-type atTransaction struct {
+type atTransaction[T any] struct {
 	expectedBlock       int
 	expectedTransaction int
 }
 
-func (m atTransaction) Matches(value any) bool {
-	state, ok := value.(State)
+func (m atTransaction[T]) Matches(value any) bool {
+	state, ok := value.(State[T])
 	return ok && state.Block == m.expectedBlock && state.Transaction == m.expectedTransaction
 }
 
-func (m atTransaction) String() string {
+func (m atTransaction[T]) String() string {
 	return fmt.Sprintf("at transaction %d/%d", m.expectedBlock, m.expectedTransaction)
 }
 
@@ -113,8 +113,8 @@ type withSubstate struct {
 }
 
 func (m withSubstate) Matches(value any) bool {
-	state, ok := value.(State)
-	return ok && state.Substate == m.substate
+	state, ok := value.(State[*substate.Substate])
+	return ok && state.Data == m.substate
 }
 
 func (m withSubstate) String() string {

@@ -8,6 +8,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
+	substate "github.com/Fantom-foundation/Substate"
 )
 
 const (
@@ -18,23 +19,23 @@ const (
 
 // MakeProgressLogger creates progress logger. It logs progress about processor depending on reportFrequency.
 // If reportFrequency is 0, it is set to ProgressLoggerDefaultReportFrequency.
-func MakeProgressLogger(config *utils.Config, reportFrequency time.Duration) executor.Extension {
+func MakeProgressLogger[T any](config *utils.Config, reportFrequency time.Duration) executor.Extension[T] {
 	if config.NoHeartbeatLogging {
-		return extension.NilExtension{}
+		return extension.NilExtension[T]{}
 	}
 
 	if reportFrequency <= 0 {
 		reportFrequency = ProgressLoggerDefaultReportFrequency
 	}
 
-	return makeProgressLogger(config, reportFrequency, logger.NewLogger(config.LogLevel, "Progress-Logger"))
+	return makeProgressLogger[T](config, reportFrequency, logger.NewLogger(config.LogLevel, "Progress-Logger"))
 }
 
-func makeProgressLogger(config *utils.Config, reportFrequency time.Duration, logger logger.Logger) *progressLogger {
-	return &progressLogger{
+func makeProgressLogger[T any](config *utils.Config, reportFrequency time.Duration, logger logger.Logger) *progressLogger[T] {
+	return &progressLogger[T]{
 		config:          config,
 		log:             logger,
-		inputCh:         make(chan executor.State, config.Workers*10),
+		inputCh:         make(chan executor.State[T], config.Workers*10),
 		wg:              new(sync.WaitGroup),
 		reportFrequency: reportFrequency,
 	}
@@ -42,17 +43,17 @@ func makeProgressLogger(config *utils.Config, reportFrequency time.Duration, log
 
 // progressLogger logs human-readable information about progress
 // in "heartbeat" depending on reportFrequency.
-type progressLogger struct {
-	extension.NilExtension
+type progressLogger[T any] struct {
+	extension.NilExtension[T]
 	config          *utils.Config
 	log             logger.Logger
-	inputCh         chan executor.State
+	inputCh         chan executor.State[T]
 	wg              *sync.WaitGroup
 	reportFrequency time.Duration
 }
 
 // PreRun starts the report goroutine
-func (l *progressLogger) PreRun(executor.State, *executor.Context) error {
+func (l *progressLogger[T]) PreRun(executor.State[T], *executor.Context) error {
 	l.wg.Add(1)
 
 	// pass the value for thread safety
@@ -61,21 +62,21 @@ func (l *progressLogger) PreRun(executor.State, *executor.Context) error {
 }
 
 // PostRun gracefully closes the Extension and awaits the report goroutine correct closure.
-func (l *progressLogger) PostRun(executor.State, *executor.Context, error) error {
+func (l *progressLogger[T]) PostRun(executor.State[T], *executor.Context, error) error {
 	close(l.inputCh)
 	l.wg.Wait()
 
 	return nil
 }
 
-func (l *progressLogger) PostTransaction(state executor.State, _ *executor.Context) error {
+func (l *progressLogger[T]) PostTransaction(state executor.State[T], _ *executor.Context) error {
 	l.inputCh <- state
 	return nil
 }
 
 // startReport runs in own goroutine. It accepts data from Executor from PostBock func.
 // It reports current progress everytime we hit the ticker with defaultReportFrequencyInSeconds.
-func (l *progressLogger) startReport(reportFrequency time.Duration) {
+func (l *progressLogger[T]) startReport(reportFrequency time.Duration) {
 	defer l.wg.Done()
 
 	var (
@@ -97,7 +98,7 @@ func (l *progressLogger) startReport(reportFrequency time.Duration) {
 	}()
 
 	var (
-		in executor.State
+		in executor.State[T]
 		ok bool
 	)
 	for {
@@ -112,10 +113,13 @@ func (l *progressLogger) startReport(reportFrequency time.Duration) {
 			}
 
 			currentIntervalTx++
-			currentIntervalGas += in.Substate.Result.GasUsed
-
 			totalTx++
-			totalGas += in.Substate.Result.GasUsed
+
+			var content any = in.Data
+			if substate, ok := content.(*substate.Substate); ok {
+				currentIntervalGas += substate.Result.GasUsed
+				totalGas += substate.Result.GasUsed
+			}
 
 		case now := <-ticker.C:
 			// skip if no data are present

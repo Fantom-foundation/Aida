@@ -13,20 +13,20 @@ import (
 // MakeCpuProfiler creates a executor.Extension that records CPU profiling
 // data for the duration between the begin and end of the execution run, if
 // enabled in the provided configuration.
-func MakeCpuProfiler(config *utils.Config) executor.Extension {
+func MakeCpuProfiler[T any](config *utils.Config) executor.Extension[T] {
 	if config.CPUProfile == "" {
-		return extension.NilExtension{}
+		return extension.NilExtension[T]{}
 	}
-	return &cpuProfiler{config: config}
+	return &cpuProfiler[T]{config: config}
 }
 
-type cpuProfiler struct {
-	extension.NilExtension
+type cpuProfiler[T any] struct {
+	extension.NilExtension[T]
 	config         *utils.Config
 	sequenceNumber int
 }
 
-func (p *cpuProfiler) PreRun(state executor.State, _ *executor.Context) error {
+func (p *cpuProfiler[T]) PreRun(state executor.State[T], _ *executor.Context) error {
 	filename := p.config.CPUProfile
 	if p.config.CPUProfilePerInterval {
 		p.sequenceNumber = state.Block / 100_000
@@ -35,7 +35,7 @@ func (p *cpuProfiler) PreRun(state executor.State, _ *executor.Context) error {
 	return startCpuProfiler(filename)
 }
 
-func (p *cpuProfiler) PreBlock(state executor.State, _ *executor.Context) error {
+func (p *cpuProfiler[T]) PreBlock(state executor.State[T], _ *executor.Context) error {
 	if !p.config.CPUProfilePerInterval {
 		return nil
 	}
@@ -48,12 +48,12 @@ func (p *cpuProfiler) PreBlock(state executor.State, _ *executor.Context) error 
 	return startCpuProfiler(p.getFileNameFor(number))
 }
 
-func (p *cpuProfiler) PostRun(executor.State, *executor.Context, error) error {
+func (p *cpuProfiler[T]) PostRun(executor.State[T], *executor.Context, error) error {
 	stopCpuProfiler()
 	return nil
 }
 
-func (p *cpuProfiler) getFileNameFor(sequenceNumber int) string {
+func (p *cpuProfiler[T]) getFileNameFor(sequenceNumber int) string {
 	return fmt.Sprintf("%s_%05d", p.config.CPUProfile, sequenceNumber)
 }
 

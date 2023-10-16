@@ -14,21 +14,21 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
-func MakeStateHashValidator(config *utils.Config) executor.Extension {
+func MakeStateHashValidator[T any](config *utils.Config) executor.Extension[T] {
 	if !config.ValidateStateHashes {
-		return extension.NilExtension{}
+		return extension.NilExtension[T]{}
 	}
 
 	log := logger.NewLogger("INFO", "state-hash-validator")
-	return makeStateHashValidator(config, log)
+	return makeStateHashValidator[T](config, log)
 }
 
-func makeStateHashValidator(config *utils.Config, log logger.Logger) *stateHashValidator {
-	return &stateHashValidator{config: config, log: log}
+func makeStateHashValidator[T any](config *utils.Config, log logger.Logger) *stateHashValidator[T] {
+	return &stateHashValidator[T]{config: config, log: log, nextArchiveBlockToCheck: int(config.First)}
 }
 
-type stateHashValidator struct {
-	extension.NilExtension
+type stateHashValidator[T any] struct {
+	extension.NilExtension[T]
 	config                  *utils.Config
 	log                     logger.Logger
 	nextArchiveBlockToCheck int
@@ -36,12 +36,12 @@ type stateHashValidator struct {
 	hashProvider            utils.StateHashProvider
 }
 
-func (e *stateHashValidator) PreRun(_ executor.State, ctx *executor.Context) error {
+func (e *stateHashValidator[T]) PreRun(_ executor.State[T], ctx *executor.Context) error {
 	e.hashProvider = utils.MakeStateHashProvider(ctx.AidaDb)
 	return nil
 }
 
-func (e *stateHashValidator) PostBlock(state executor.State, context *executor.Context) error {
+func (e *stateHashValidator[T]) PostBlock(state executor.State[T], context *executor.Context) error {
 	if context.State == nil {
 		return nil
 	}
@@ -73,7 +73,7 @@ func (e *stateHashValidator) PostBlock(state executor.State, context *executor.C
 	return nil
 }
 
-func (e *stateHashValidator) PostRun(_ executor.State, context *executor.Context, err error) error {
+func (e *stateHashValidator[T]) PostRun(state executor.State[T], context *executor.Context, err error) error {
 	// Skip processing if run is aborted due to an error.
 	if err != nil {
 		return nil
@@ -92,7 +92,7 @@ func (e *stateHashValidator) PostRun(_ executor.State, context *executor.Context
 	return nil
 }
 
-func (e *stateHashValidator) checkArchiveHashes(state state.StateDB) error {
+func (e *stateHashValidator[T]) checkArchiveHashes(state state.StateDB) error {
 	// Note: the archive may be lagging behind the life DB, so block hashes need
 	// to be checked as they become available.
 	height, empty, err := state.GetArchiveBlockHeight()
@@ -131,7 +131,7 @@ func (e *stateHashValidator) checkArchiveHashes(state state.StateDB) error {
 	return nil
 }
 
-func (e *stateHashValidator) getStateHash(blockNumber int) (common.Hash, error) {
+func (e *stateHashValidator[T]) getStateHash(blockNumber int) (common.Hash, error) {
 	want, err := e.hashProvider.GetStateHash(blockNumber)
 	if err != nil {
 		if errors.Is(err, leveldb.ErrNotFound) {

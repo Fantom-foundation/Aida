@@ -7,29 +7,29 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
-func MakeStateDbPrimer(config *utils.Config) executor.Extension {
+func MakeStateDbPrimer[T any](config *utils.Config) executor.Extension[T] {
 	if config.SkipPriming {
-		return extension.NilExtension{}
+		return extension.NilExtension[T]{}
 	}
 
-	return makeStateDbPrimer(config, logger.NewLogger(config.LogLevel, "StateDb-Primer"))
+	return makeStateDbPrimer[T](config, logger.NewLogger(config.LogLevel, "StateDb-Primer"))
 }
 
-func makeStateDbPrimer(config *utils.Config, log logger.Logger) *stateDbPrimer {
-	return &stateDbPrimer{
+func makeStateDbPrimer[T any](config *utils.Config, log logger.Logger) *stateDbPrimer[T] {
+	return &stateDbPrimer[T]{
 		config: config,
 		log:    log,
 	}
 }
 
-type stateDbPrimer struct {
-	extension.NilExtension
+type stateDbPrimer[T any] struct {
+	extension.NilExtension[T]
 	config *utils.Config
 	log    logger.Logger
 }
 
 // PreRun primes StateDb to given block.
-func (p *stateDbPrimer) PreRun(state executor.State, context *executor.Context) error {
+func (p *stateDbPrimer[T]) PreRun(state executor.State[T], context *executor.Context) error {
 	if p.config.IsExistingStateDb {
 		p.log.Warning("Skipping priming due to usage of preexisting StateDb")
 		return nil

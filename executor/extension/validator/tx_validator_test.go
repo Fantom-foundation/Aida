@@ -34,7 +34,7 @@ func TestTxValidator_NoValidatorIsCreatedIfDisabled(t *testing.T) {
 
 	ext := MakeTxValidator(config)
 
-	if _, ok := ext.(extension.NilExtension); !ok {
+	if _, ok := ext.(extension.NilExtension[*substate.Substate]); !ok {
 		t.Errorf("Validator is enabled although not set in configuration")
 	}
 }
@@ -49,7 +49,7 @@ func TestTxValidator_ValidatorIsEnabled(t *testing.T) {
 	ext := makeTxValidator(config, log)
 
 	log.EXPECT().Warning(gomock.Any())
-	ext.PreRun(executor.State{}, nil)
+	ext.PreRun(executor.State[*substate.Substate]{}, nil)
 }
 
 func TestTxValidator_ValidatorDoesNotFailWithEmptySubstate(t *testing.T) {
@@ -64,12 +64,12 @@ func TestTxValidator_ValidatorDoesNotFailWithEmptySubstate(t *testing.T) {
 	ext := makeTxValidator(config, log)
 
 	log.EXPECT().Warning(gomock.Any())
-	ext.PreRun(executor.State{}, context)
+	ext.PreRun(executor.State[*substate.Substate]{}, context)
 
-	err := ext.PostTransaction(executor.State{
+	err := ext.PostTransaction(executor.State[*substate.Substate]{
 		Block:       1,
 		Transaction: 1,
-		Substate:    &substate.Substate{},
+		Data:        &substate.Substate{},
 	}, context)
 
 	if err != nil {
@@ -96,19 +96,19 @@ func TestTxValidator_SingleErrorInPreTransactionDoesNotEndProgramWithContinueOnF
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 	)
 
-	ext.PreRun(executor.State{}, context)
+	ext.PreRun(executor.State[*substate.Substate]{}, context)
 
-	err := ext.PreTransaction(executor.State{
+	err := ext.PreTransaction(executor.State[*substate.Substate]{
 		Block:       1,
 		Transaction: 1,
-		Substate:    getIncorrectTestSubstateAlloc(),
+		Data:        getIncorrectTestSubstateAlloc(),
 	}, context)
 
 	if err != nil {
 		t.Errorf("PreTransaction must not return an error, got %v", err)
 	}
 
-	err = ext.PostRun(executor.State{}, context, nil)
+	err = ext.PostRun(executor.State[*substate.Substate]{}, context, nil)
 	if err == nil {
 		t.Fatalf("PostRun must return an error")
 	}
@@ -139,19 +139,19 @@ func TestTxValidator_SingleErrorInPreTransactionReturnsErrorWithNoContinueOnFail
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 	)
 
-	ext.PreRun(executor.State{}, context)
+	ext.PreRun(executor.State[*substate.Substate]{}, context)
 
-	err := ext.PreTransaction(executor.State{
+	err := ext.PreTransaction(executor.State[*substate.Substate]{
 		Block:       1,
 		Transaction: 1,
-		Substate:    getIncorrectTestSubstateAlloc(),
+		Data:        getIncorrectTestSubstateAlloc(),
 	}, context)
 
 	if err == nil {
 		t.Errorf("PreTransaction must return an error!")
 	}
 
-	err = ext.PostRun(executor.State{}, nil, nil)
+	err = ext.PostRun(executor.State[*substate.Substate]{}, nil, nil)
 	if err == nil {
 		t.Errorf("PostRun must return an error!")
 	}
@@ -183,19 +183,19 @@ func TestTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueOnFai
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 	)
 
-	ext.PreRun(executor.State{}, context)
+	ext.PreRun(executor.State[*substate.Substate]{}, context)
 
-	err := ext.PostTransaction(executor.State{
+	err := ext.PostTransaction(executor.State[*substate.Substate]{
 		Block:       1,
 		Transaction: 1,
-		Substate:    getIncorrectTestSubstateAlloc(),
+		Data:        getIncorrectTestSubstateAlloc(),
 	}, context)
 
 	if err == nil {
 		t.Errorf("PreTransaction must return an error!")
 	}
 
-	err = ext.PostRun(executor.State{}, nil, nil)
+	err = ext.PostRun(executor.State[*substate.Substate]{}, nil, nil)
 	if err == nil {
 		t.Errorf("PostRun must return an error!")
 	}
@@ -241,22 +241,22 @@ func TestTxValidator_TwoErrorsDoNotReturnAnErrorWhenContinueOnFailureIsEnabledAn
 		log.EXPECT().Warningf(gomock.Any(), 2),
 	)
 
-	ext.PreRun(executor.State{}, context)
+	ext.PreRun(executor.State[*substate.Substate]{}, context)
 
-	err := ext.PreTransaction(executor.State{
+	err := ext.PreTransaction(executor.State[*substate.Substate]{
 		Block:       1,
 		Transaction: 1,
-		Substate:    getIncorrectTestSubstateAlloc(),
+		Data:        getIncorrectTestSubstateAlloc(),
 	}, context)
 
 	if err != nil {
 		t.Errorf("PreTransaction must not return an error because continue on failure is true!")
 	}
 
-	err = ext.PostTransaction(executor.State{
+	err = ext.PostTransaction(executor.State[*substate.Substate]{
 		Block:       1,
 		Transaction: 1,
-		Substate:    getIncorrectTestSubstateAlloc(),
+		Data:        getIncorrectTestSubstateAlloc(),
 	}, context)
 
 	// PostTransaction must not return error because ContinueOnFailure is enabled and error threshold is high enough
@@ -265,7 +265,7 @@ func TestTxValidator_TwoErrorsDoNotReturnAnErrorWhenContinueOnFailureIsEnabledAn
 	}
 
 	// though PostRun must return error because we want to see the errors at the end of the run
-	err = ext.PostRun(executor.State{}, context, nil)
+	err = ext.PostRun(executor.State[*substate.Substate]{}, context, nil)
 	if err == nil {
 		t.Errorf("PostRun must return an error!")
 	}
@@ -312,22 +312,22 @@ func TestTxValidator_TwoErrorsDoReturnErrorOnEventWhenContinueOnFailureIsEnabled
 		log.EXPECT().Warningf(gomock.Any(), 2),
 	)
 
-	ext.PreRun(executor.State{}, context)
+	ext.PreRun(executor.State[*substate.Substate]{}, context)
 
-	err := ext.PreTransaction(executor.State{
+	err := ext.PreTransaction(executor.State[*substate.Substate]{
 		Block:       1,
 		Transaction: 1,
-		Substate:    getIncorrectTestSubstateAlloc(),
+		Data:        getIncorrectTestSubstateAlloc(),
 	}, context)
 
 	if err != nil {
 		t.Errorf("PreTransaction must not return an error because continue on failure is true, got %v", err)
 	}
 
-	err = ext.PostTransaction(executor.State{
+	err = ext.PostTransaction(executor.State[*substate.Substate]{
 		Block:       1,
 		Transaction: 1,
-		Substate:    getIncorrectTestSubstateAlloc(),
+		Data:        getIncorrectTestSubstateAlloc(),
 	}, context)
 
 	if err == nil {
@@ -341,7 +341,7 @@ func TestTxValidator_TwoErrorsDoReturnErrorOnEventWhenContinueOnFailureIsEnabled
 		t.Errorf("Unexpected err!\nGot: %v; want: %v", got, want)
 	}
 
-	err = ext.PostRun(executor.State{}, context, nil)
+	err = ext.PostRun(executor.State[*substate.Substate]{}, context, nil)
 	if err == nil {
 		t.Errorf("PostRun must return an error because MaxNumErrors is not high enough!")
 	}
@@ -365,12 +365,12 @@ func TestTxValidator_PreTransactionDoesNotFailWithIncorrectOutput(t *testing.T) 
 
 	ext := MakeTxValidator(config)
 
-	ext.PreRun(executor.State{}, context)
+	ext.PreRun(executor.State[*substate.Substate]{}, context)
 
-	err := ext.PreTransaction(executor.State{
+	err := ext.PreTransaction(executor.State[*substate.Substate]{
 		Block:       1,
 		Transaction: 1,
-		Substate: &substate.Substate{
+		Data: &substate.Substate{
 			OutputAlloc: getIncorrectSubstateAlloc(),
 		},
 	}, context)
@@ -391,12 +391,12 @@ func TestTxValidator_PostTransactionDoesNotFailWithIncorrectInput(t *testing.T) 
 
 	ext := MakeTxValidator(config)
 
-	ext.PreRun(executor.State{}, context)
+	ext.PreRun(executor.State[*substate.Substate]{}, context)
 
-	err := ext.PostTransaction(executor.State{
+	err := ext.PostTransaction(executor.State[*substate.Substate]{
 		Block:       1,
 		Transaction: 1,
-		Substate: &substate.Substate{
+		Data: &substate.Substate{
 			InputAlloc: getIncorrectSubstateAlloc(),
 		},
 	}, context)

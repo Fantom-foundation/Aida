@@ -11,21 +11,21 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
-type stateDbManager struct {
-	extension.NilExtension
+type stateDbManager[T any] struct {
+	extension.NilExtension[T]
 	config *utils.Config
 	log    logger.Logger
 }
 
 // MakeStateDbManager creates a executor.Extension that commits state of StateDb if keep-db is enabled
-func MakeStateDbManager(config *utils.Config) *stateDbManager {
-	return &stateDbManager{
+func MakeStateDbManager[T any](config *utils.Config) executor.Extension[T] {
+	return &stateDbManager[T]{
 		config: config,
 		log:    logger.NewLogger(config.LogLevel, "Db manager"),
 	}
 }
 
-func (m *stateDbManager) PreRun(state executor.State, ctx *executor.Context) error {
+func (m *stateDbManager[T]) PreRun(state executor.State[T], ctx *executor.Context) error {
 	var err error
 	ctx.State, ctx.StateDbPath, err = utils.PrepareStateDB(m.config)
 	if !m.config.KeepDb {
@@ -34,7 +34,7 @@ func (m *stateDbManager) PreRun(state executor.State, ctx *executor.Context) err
 	return err
 }
 
-func (m *stateDbManager) PostRun(state executor.State, ctx *executor.Context, _ error) error {
+func (m *stateDbManager[T]) PostRun(state executor.State[T], ctx *executor.Context, _ error) error {
 	//  if state was not correctly initialized remove the stateDbPath and abort
 	if ctx.State == nil {
 		var err = fmt.Errorf("state-db is nil")
