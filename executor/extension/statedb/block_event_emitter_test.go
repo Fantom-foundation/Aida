@@ -22,13 +22,13 @@ func TestBlockEventEmitter_SingleBlock(t *testing.T) {
 	state := executor.State[any]{
 		Block: 0,
 	}
-	context := &executor.Context{
+	ctx := &executor.Context{
 		State: mockStateDB,
 	}
-	if err := ext.PreBlock(state, context); err != nil {
+	if err := ext.PreBlock(state, ctx); err != nil {
 		t.Fatalf("failed to to run pre-block: %v", err)
 	}
-	if err := ext.PostBlock(state, context); err != nil {
+	if err := ext.PostBlock(state, ctx); err != nil {
 		t.Fatalf("failed to to run post-block: %v", err)
 	}
 }

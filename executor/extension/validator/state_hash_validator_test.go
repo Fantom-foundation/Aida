@@ -21,10 +21,10 @@ const exampleHashC = "0x0a0b0c00000000000000000000000000000000000000000000000000
 const exampleHashD = "0x0300000000000000000000000000000000000000000000000000000000000000"
 
 func TestStateHashValidator_NotActiveIfNotEnabledInConfig(t *testing.T) {
-	config := &utils.Config{}
-	config.ValidateStateHashes = false
+	cfg := &utils.Config{}
+	cfg.ValidateStateHashes = false
 
-	ext := MakeStateHashValidator[any](config)
+	ext := MakeStateHashValidator[any](cfg)
 	if _, ok := ext.(extension.NilExtension[any]); !ok {
 		t.Errorf("extension is active although it should not")
 	}
@@ -43,8 +43,8 @@ func TestStateHashValidator_DoesNotFailIfHashIsNotFoundInAidaDb(t *testing.T) {
 		log.EXPECT().Warningf("State hash for block %v is not present in the db", blockNumber),
 	)
 
-	config := &utils.Config{}
-	ext := makeStateHashValidator[any](config, log)
+	cfg := &utils.Config{}
+	ext := makeStateHashValidator[any](cfg, log)
 	ext.hashProvider = hashProvider
 
 	ctx := &executor.Context{State: db}
@@ -66,8 +66,8 @@ func TestStateHashValidator_InvalidHashOfLiveDbIsDetected(t *testing.T) {
 
 	blockNumber := 1
 
-	config := &utils.Config{}
-	ext := makeStateHashValidator[any](config, log)
+	cfg := &utils.Config{}
+	ext := makeStateHashValidator[any](cfg, log)
 	ext.hashProvider = hashProvider
 
 	gomock.InOrder(
@@ -89,10 +89,10 @@ func TestStateHashValidator_InvalidHashOfArchiveDbIsDetected(t *testing.T) {
 
 	blockNumber := 1
 
-	config := &utils.Config{}
-	config.ArchiveMode = true
+	cfg := &utils.Config{}
+	cfg.ArchiveMode = true
 
-	ext := makeStateHashValidator[any](config, log)
+	ext := makeStateHashValidator[any](cfg, log)
 	ext.hashProvider = hashProvider
 
 	archive := state.NewMockNonCommittableStateDB(ctrl)
@@ -151,10 +151,10 @@ func TestStateHashValidator_ChecksArchiveHashesOfLaggingArchive(t *testing.T) {
 		archive2.EXPECT().Release(),
 	)
 
-	config := &utils.Config{}
-	config.Last = 5
-	config.ArchiveMode = true
-	ext := makeStateHashValidator[any](config, log)
+	cfg := &utils.Config{}
+	cfg.Last = 5
+	cfg.ArchiveMode = true
+	ext := makeStateHashValidator[any](cfg, log)
 	ext.hashProvider = hashProvider
 	context := &executor.Context{State: db}
 
@@ -200,10 +200,10 @@ func TestStateHashValidator_ChecksArchiveHashesOfLaggingArchiveDoesNotWaitForNon
 		archive2.EXPECT().Release(),
 	)
 
-	config := &utils.Config{}
-	config.Last = 5
-	config.ArchiveMode = true
-	ext := makeStateHashValidator[any](config, log)
+	cfg := &utils.Config{}
+	cfg.Last = 5
+	cfg.ArchiveMode = true
+	ext := makeStateHashValidator[any](cfg, log)
 	ext.hashProvider = hashProvider
 	context := &executor.Context{State: db}
 
@@ -238,10 +238,10 @@ func TestStateHashValidator_ValidatingLaggingArchivesIsSkippedIfRunIsAborted(t *
 		archive0.EXPECT().Release(),
 	)
 
-	config := &utils.Config{}
-	config.Last = 5
-	config.ArchiveMode = true
-	ext := makeStateHashValidator[any](config, log)
+	cfg := &utils.Config{}
+	cfg.Last = 5
+	cfg.ArchiveMode = true
+	ext := makeStateHashValidator[any](cfg, log)
 	ext.hashProvider = hashProvider
 	context := &executor.Context{State: db}
 

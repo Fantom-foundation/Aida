@@ -18,9 +18,9 @@ type statePrepper struct {
 	extension.NilExtension[*substate.Substate]
 }
 
-func (e *statePrepper) PreTransaction(state executor.State[*substate.Substate], context *executor.Context) error {
-	if context != nil && context.State != nil && state.Data != nil {
-		context.State.PrepareSubstate(&state.Data.InputAlloc, uint64(state.Block))
+func (e *statePrepper) PreTransaction(state executor.State[*substate.Substate], ctx *executor.Context) error {
+	if ctx != nil && ctx.State != nil && state.Data != nil {
+		ctx.State.PrepareSubstate(&state.Data.InputAlloc, uint64(state.Block))
 	}
 	return nil
 }

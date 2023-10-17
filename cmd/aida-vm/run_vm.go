@@ -44,25 +44,25 @@ func RunVm(ctx *cli.Context) error {
 // aida-vm and allows to define extra extensions for observing the
 // execution, in particular during unit tests.
 func run(
-	config *utils.Config,
+	cfg *utils.Config,
 	provider executor.Provider[*substate.Substate],
 	processor executor.Processor[*substate.Substate],
 	extra []executor.Extension[*substate.Substate],
 ) error {
 	extensions := []executor.Extension[*substate.Substate]{
-		profiler.MakeCpuProfiler[*substate.Substate](config),
-		profiler.MakeDiagnosticServer[*substate.Substate](config),
-		profiler.MakeVirtualMachineStatisticsPrinter[*substate.Substate](config),
-		tracker.MakeProgressLogger[*substate.Substate](config, 15*time.Second),
+		profiler.MakeCpuProfiler[*substate.Substate](cfg),
+		profiler.MakeDiagnosticServer[*substate.Substate](cfg),
+		profiler.MakeVirtualMachineStatisticsPrinter[*substate.Substate](cfg),
+		tracker.MakeProgressLogger[*substate.Substate](cfg, 15*time.Second),
 		temporaryStatePrepper{},
 	}
 	extensions = append(extensions, extra...)
 
 	return executor.NewExecutor(provider).Run(
 		executor.Params{
-			From:       int(config.First),
-			To:         int(config.Last) + 1,
-			NumWorkers: config.Workers,
+			From:       int(cfg.First),
+			To:         int(cfg.Last) + 1,
+			NumWorkers: cfg.Workers,
 		},
 		processor,
 		extensions,
@@ -70,16 +70,16 @@ func run(
 }
 
 type txProcessor struct {
-	config *utils.Config
+	cfg *utils.Config
 }
 
-func (r txProcessor) Process(s executor.State[*substate.Substate], c *executor.Context) error {
+func (r txProcessor) Process(state executor.State[*substate.Substate], ctx *executor.Context) error {
 	_, err := utils.ProcessTx(
-		c.State,
-		r.config,
-		uint64(s.Block),
-		s.Transaction,
-		s.Data,
+		ctx.State,
+		r.cfg,
+		uint64(state.Block),
+		state.Transaction,
+		state.Data,
 	)
 	return err
 }

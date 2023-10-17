@@ -13,14 +13,14 @@ import (
 )
 
 func TestMemoryUsagePrinter_MemoryBreakdownIsNotPrintedWhenBreakdownIsNil(t *testing.T) {
-	config := &utils.Config{}
-	config.MemoryBreakdown = true
+	cfg := &utils.Config{}
+	cfg.MemoryBreakdown = true
 
 	ctrl := gomock.NewController(t)
 
 	log := logger.NewMockLogger(ctrl)
 	db := state.NewMockStateDB(ctrl)
-	ext := makeMemoryUsagePrinter[any](config, log)
+	ext := makeMemoryUsagePrinter[any](cfg, log)
 
 	usage := &state.MemoryUsage{
 		Breakdown: nil,
@@ -42,14 +42,14 @@ func TestMemoryUsagePrinter_MemoryBreakdownIsNotPrintedWhenBreakdownIsNil(t *tes
 }
 
 func TestMemoryUsagePrinter_MemoryBreakdownIsPrintedWhenEnabled(t *testing.T) {
-	config := &utils.Config{}
-	config.MemoryBreakdown = true
+	cfg := &utils.Config{}
+	cfg.MemoryBreakdown = true
 
 	ctrl := gomock.NewController(t)
 
 	log := logger.NewMockLogger(ctrl)
 	db := state.NewMockStateDB(ctrl)
-	ext := makeMemoryUsagePrinter[any](config, log)
+	ext := makeMemoryUsagePrinter[any](cfg, log)
 
 	usage := &state.MemoryUsage{
 		UsedBytes: 1,

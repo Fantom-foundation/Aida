@@ -16,17 +16,17 @@ import (
 
 // MakeDiagnosticServer creates an extension which runs a background
 // HTTP server for real-time diagnosing aida processes.
-func MakeDiagnosticServer[T any](config *utils.Config) executor.Extension[T] {
-	return makeDiagnosticServer[T](config, logger.NewLogger(config.LogLevel, "Diagnostic-Server"))
+func MakeDiagnosticServer[T any](cfg *utils.Config) executor.Extension[T] {
+	return makeDiagnosticServer[T](cfg, logger.NewLogger(cfg.LogLevel, "Diagnostic-Server"))
 }
 
-func makeDiagnosticServer[T any](config *utils.Config, logger logger.Logger) executor.Extension[T] {
-	if config.DiagnosticServer < 1 || config.DiagnosticServer > math.MaxUint16 {
+func makeDiagnosticServer[T any](cfg *utils.Config, log logger.Logger) executor.Extension[T] {
+	if cfg.DiagnosticServer < 1 || cfg.DiagnosticServer > math.MaxUint16 {
 		return extension.NilExtension[T]{}
 	}
 	return &diagnosticServer[T]{
-		port: config.DiagnosticServer,
-		log:  logger,
+		port: cfg.DiagnosticServer,
+		log:  log,
 	}
 }
 

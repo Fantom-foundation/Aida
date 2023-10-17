@@ -19,9 +19,9 @@ import (
 const testStateDbInfoFrequency = 2
 
 func TestProgressTrackerExtension_NoLoggerIsCreatedIfDisabled(t *testing.T) {
-	config := &utils.Config{}
-	config.TrackProgress = false
-	ext := MakeProgressTracker(config, testStateDbInfoFrequency)
+	cfg := &utils.Config{}
+	cfg.TrackProgress = false
+	ext := MakeProgressTracker(cfg, testStateDbInfoFrequency)
 	if _, ok := ext.(extension.NilExtension[*substate.Substate]); !ok {
 		t.Errorf("Logger is enabled although not set in configuration")
 	}
@@ -33,15 +33,15 @@ func TestProgressTrackerExtension_LoggingHappens(t *testing.T) {
 	log := logger.NewMockLogger(ctrl)
 	db := state.NewMockStateDB(ctrl)
 
-	config := &utils.Config{}
-	config.First = 4
+	cfg := &utils.Config{}
+	cfg.First = 4
 	dummyStateDbPath := t.TempDir()
 
 	if err := os.WriteFile(dummyStateDbPath+"/dummy.txt", []byte("hello world"), 0x600); err != nil {
 		t.Fatalf("failed to prepare disk content")
 	}
 
-	ext := makeProgressTracker(config, testStateDbInfoFrequency, log)
+	ext := makeProgressTracker(cfg, testStateDbInfoFrequency, log)
 
 	context := &executor.Context{State: db, StateDbPath: dummyStateDbPath}
 
@@ -105,10 +105,10 @@ func TestProgressTrackerExtension_FirstLoggingIsIgnored(t *testing.T) {
 	log := logger.NewMockLogger(ctrl)
 	db := state.NewMockStateDB(ctrl)
 
-	config := &utils.Config{}
-	config.First = 4
+	cfg := &utils.Config{}
+	cfg.First = 4
 
-	ext := makeProgressTracker(config, testStateDbInfoFrequency, log)
+	ext := makeProgressTracker(cfg, testStateDbInfoFrequency, log)
 
 	context := &executor.Context{State: db}
 

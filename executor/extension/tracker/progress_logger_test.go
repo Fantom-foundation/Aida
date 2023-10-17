@@ -16,8 +16,8 @@ import (
 const testProgressReportFrequency = time.Second
 
 func TestProgressLoggerExtension_CorrectClose(t *testing.T) {
-	config := &utils.Config{}
-	ext := MakeProgressLogger[any](config, testProgressReportFrequency)
+	cfg := &utils.Config{}
+	ext := MakeProgressLogger[any](cfg, testProgressReportFrequency)
 
 	// start the report thread
 	ext.PreRun(executor.State[any]{}, nil)
@@ -38,9 +38,9 @@ func TestProgressLoggerExtension_CorrectClose(t *testing.T) {
 }
 
 func TestProgressLoggerExtension_NoLoggerIsCreatedIfDisabled(t *testing.T) {
-	config := &utils.Config{}
-	config.NoHeartbeatLogging = true
-	ext := MakeProgressLogger[any](config, testProgressReportFrequency)
+	cfg := &utils.Config{}
+	cfg.NoHeartbeatLogging = true
+	ext := MakeProgressLogger[any](cfg, testProgressReportFrequency)
 	if _, ok := ext.(extension.NilExtension[any]); !ok {
 		t.Errorf("Logger is enabled although not set in configuration")
 	}
@@ -51,9 +51,9 @@ func TestProgressLoggerExtension_LoggingHappens(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
 
-	config := &utils.Config{}
+	cfg := &utils.Config{}
 
-	ext := makeProgressLogger[*substate.Substate](config, testProgressReportFrequency, log)
+	ext := makeProgressLogger[*substate.Substate](cfg, testProgressReportFrequency, log)
 
 	ext.PreRun(executor.State[*substate.Substate]{}, nil)
 
@@ -93,10 +93,10 @@ func TestProgressLoggerExtension_LoggingHappensEvenWhenProgramEndsBeforeTickerTi
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
 
-	config := &utils.Config{}
+	cfg := &utils.Config{}
 
 	// we set large tick rate that does not trigger the ticker
-	ext := makeProgressLogger[*substate.Substate](config, 10*time.Second, log)
+	ext := makeProgressLogger[*substate.Substate](cfg, 10*time.Second, log)
 
 	ext.PreRun(executor.State[*substate.Substate]{}, nil)
 

@@ -20,14 +20,14 @@ func MakeBeginOnlyEmitter[T any]() executor.Extension[T] {
 	return &blockEventEmitter[T]{skipEndBlock: true}
 }
 
-func (l *blockEventEmitter[T]) PreBlock(state executor.State[T], context *executor.Context) error {
-	context.State.BeginBlock(uint64(state.Block))
+func (l *blockEventEmitter[T]) PreBlock(state executor.State[T], ctx *executor.Context) error {
+	ctx.State.BeginBlock(uint64(state.Block))
 	return nil
 }
 
-func (l *blockEventEmitter[T]) PostBlock(_ executor.State[T], context *executor.Context) error {
+func (l *blockEventEmitter[T]) PostBlock(_ executor.State[T], ctx *executor.Context) error {
 	if !l.skipEndBlock {
-		context.State.EndBlock()
+		ctx.State.EndBlock()
 	}
 	return nil
 }

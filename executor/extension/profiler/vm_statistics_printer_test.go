@@ -1,6 +1,6 @@
 package profiler
 
-//go:generate mockgen -source vm_statistics_printer_test.go -destination vm_statistics_printer_mocks_test.go -package extension
+//go:generate mockgen -source vm_statistics_printer_test.go -destination vm_statistics_printer_mocks_test.go -package profiler
 
 import (
 	"testing"

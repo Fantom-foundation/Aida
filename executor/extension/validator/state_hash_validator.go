@@ -14,22 +14,22 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
-func MakeStateHashValidator[T any](config *utils.Config) executor.Extension[T] {
-	if !config.ValidateStateHashes {
+func MakeStateHashValidator[T any](cfg *utils.Config) executor.Extension[T] {
+	if !cfg.ValidateStateHashes {
 		return extension.NilExtension[T]{}
 	}
 
 	log := logger.NewLogger("INFO", "state-hash-validator")
-	return makeStateHashValidator[T](config, log)
+	return makeStateHashValidator[T](cfg, log)
 }
 
-func makeStateHashValidator[T any](config *utils.Config, log logger.Logger) *stateHashValidator[T] {
-	return &stateHashValidator[T]{config: config, log: log, nextArchiveBlockToCheck: int(config.First)}
+func makeStateHashValidator[T any](cfg *utils.Config, log logger.Logger) *stateHashValidator[T] {
+	return &stateHashValidator[T]{cfg: cfg, log: log, nextArchiveBlockToCheck: int(cfg.First)}
 }
 
 type stateHashValidator[T any] struct {
 	extension.NilExtension[T]
-	config                  *utils.Config
+	cfg                     *utils.Config
 	log                     logger.Logger
 	nextArchiveBlockToCheck int
 	lastProcessedBlock      int
@@ -41,8 +41,8 @@ func (e *stateHashValidator[T]) PreRun(_ executor.State[T], ctx *executor.Contex
 	return nil
 }
 
-func (e *stateHashValidator[T]) PostBlock(state executor.State[T], context *executor.Context) error {
-	if context.State == nil {
+func (e *stateHashValidator[T]) PostBlock(state executor.State[T], ctx *executor.Context) error {
+	if ctx.State == nil {
 		return nil
 	}
 
@@ -57,15 +57,15 @@ func (e *stateHashValidator[T]) PostBlock(state executor.State[T], context *exec
 		return nil
 	}
 
-	got := context.State.GetHash()
+	got := ctx.State.GetHash()
 	if want != got {
 		return fmt.Errorf("unexpected hash for Live block %d\nwanted %v\n   got %v", state.Block, want, got)
 	}
 
 	// Check the ArchiveDB
-	if e.config.ArchiveMode {
+	if e.cfg.ArchiveMode {
 		e.lastProcessedBlock = state.Block
-		if err = e.checkArchiveHashes(context.State); err != nil {
+		if err = e.checkArchiveHashes(ctx.State); err != nil {
 			return err
 		}
 	}
@@ -73,15 +73,15 @@ func (e *stateHashValidator[T]) PostBlock(state executor.State[T], context *exec
 	return nil
 }
 
-func (e *stateHashValidator[T]) PostRun(state executor.State[T], context *executor.Context, err error) error {
+func (e *stateHashValidator[T]) PostRun(_ executor.State[T], ctx *executor.Context, err error) error {
 	// Skip processing if run is aborted due to an error.
 	if err != nil {
 		return nil
 	}
 	// Complete processing remaining archive blocks.
-	if e.config.ArchiveMode {
+	if e.cfg.ArchiveMode {
 		for e.nextArchiveBlockToCheck < e.lastProcessedBlock {
-			if err = e.checkArchiveHashes(context.State); err != nil {
+			if err = e.checkArchiveHashes(ctx.State); err != nil {
 				return err
 			}
 			if e.nextArchiveBlockToCheck < e.lastProcessedBlock {
