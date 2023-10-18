@@ -9,29 +9,29 @@ import (
 )
 
 // MakeOperationProfiler creates a executor.Extension that records Operation profiling
-func MakeOperationProfiler[T any](config *utils.Config) executor.Extension[T] {
-	if !config.Profile {
+func MakeOperationProfiler[T any](cfg *utils.Config) executor.Extension[T] {
+	if !cfg.Profile {
 		return extension.NilExtension[T]{}
 	}
-	return &operationProfiler[T]{config: config}
+	return &operationProfiler[T]{cfg: cfg}
 }
 
 type operationProfiler[T any] struct {
 	extension.NilExtension[T]
-	config *utils.Config
+	cfg *utils.Config
 	stats  *profile.Stats
 }
 
-func (p *operationProfiler[T]) PreRun(_ executor.State[T], context *executor.Context) error {
-	context.State, p.stats = proxy.NewProfilerProxy(
-		context.State,
-		p.config.ProfileFile,
-		p.config.LogLevel,
+func (p *operationProfiler[T]) PreRun(_ executor.State[T], ctx *executor.Context) error {
+	ctx.State, p.stats = proxy.NewProfilerProxy(
+		ctx.State,
+		p.cfg.ProfileFile,
+		p.cfg.LogLevel,
 	)
 	return nil
 }
 
 func (p *operationProfiler[T]) PostRun(executor.State[T], *executor.Context, error) error {
-	p.stats.PrintProfiling(p.config.First, p.config.Last)
+	p.stats.PrintProfiling(p.cfg.First, p.cfg.Last)
 	return nil
 }
