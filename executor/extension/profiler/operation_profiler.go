@@ -50,7 +50,6 @@ func (p *operationProfiler[T]) PreBlock(state executor.State[T], _ *executor.Con
 
 	return nil
 }
-<<<<<<< HEAD
 
 func (p *operationProfiler[T]) PostBlock(state executor.State[T], _ *executor.Context) error {
 	p.lastProcessedBlock = uint64(state.Block)
@@ -61,5 +60,3 @@ func (p *operationProfiler[T]) PostRun(executor.State[T], *executor.Context, err
 	p.stats.PrintProfiling(p.intervalStart, p.lastProcessedBlock)
 	return nil
 }
-=======
->>>>>>> b216977 (remove unnecssary whitespace)
