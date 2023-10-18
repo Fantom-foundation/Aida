@@ -131,10 +131,10 @@ func (g *generator) Generate() error {
 	start := time.Now()
 	g.log.Notice("Starting validation...")
 
-	// after generation is complete, we validate the db and save it into the patch
-	g.dbHash, err = validate(g.aidaDb, g.cfg.LogLevel)
+	// after generation is complete, we generateDbHash the db and save it into the patch
+	g.dbHash, err = generateDbHash(g.aidaDb, g.cfg.LogLevel)
 	if err != nil {
-		return fmt.Errorf("cannot validate newly generated db; %v", err)
+		return fmt.Errorf("cannot generate db hash; %v", err)
 	}
 
 	g.log.Noticef("Validation complete. It took: %v", time.Since(start).Round(1*time.Second))

@@ -29,6 +29,7 @@ var InitDb = cli.App{
 		&db.ValidateCommand,
 		&db.GenDeletedAccountsCommand,
 		&db.SubstateDumpCommand,
+		&db.GenerateDbHashCommand,
 	},
 }
 
