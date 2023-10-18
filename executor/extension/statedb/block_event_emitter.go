@@ -7,17 +7,11 @@ import (
 
 type blockEventEmitter[T any] struct {
 	extension.NilExtension[T]
-	skipEndBlock bool // switch for vm-adb, which requires BeginBlock(), but can't call EndBlock()
 }
 
 // MakeBlockEventEmitter creates a executor.Extension to call BeginBlock() and EndBlock()
 func MakeBlockEventEmitter[T any]() executor.Extension[T] {
-	return &blockEventEmitter[T]{skipEndBlock: false}
-}
-
-// MakeBeginOnlyEmitter creates a executor.Extension to call beginBlock, but skips EndBlock()
-func MakeBeginOnlyEmitter[T any]() executor.Extension[T] {
-	return &blockEventEmitter[T]{skipEndBlock: true}
+	return &blockEventEmitter[T]{}
 }
 
 func (l *blockEventEmitter[T]) PreBlock(state executor.State[T], context *executor.Context) error {
@@ -26,8 +20,6 @@ func (l *blockEventEmitter[T]) PreBlock(state executor.State[T], context *execut
 }
 
 func (l *blockEventEmitter[T]) PostBlock(_ executor.State[T], context *executor.Context) error {
-	if !l.skipEndBlock {
-		context.State.EndBlock()
-	}
+	context.State.EndBlock()
 	return nil
 }

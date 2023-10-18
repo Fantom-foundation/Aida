@@ -2,12 +2,9 @@ package main
 
 import (
 	"math/big"
-	"os"
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/executor"
-	"github.com/Fantom-foundation/Aida/state/proxy"
-	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
@@ -15,88 +12,6 @@ import (
 )
 
 var testingAddress = common.Address{1}
-
-func TestProxyRecorderPrepper_PreTransactionCreatesRecorderProxy(t *testing.T) {
-	path := t.TempDir() + "test_trace"
-	cfg := &utils.Config{}
-	cfg.TraceFile = path
-
-	rCtx, err := context.NewRecord(cfg.TraceFile, cfg.First)
-	if err != nil {
-		t.Fatalf("unexpected error; %v", err)
-	}
-
-	p := makeProxyRecorderPrepper(rCtx)
-
-	ctx := &executor.Context{}
-
-	err = p.PreTransaction(executor.State[*substate.Substate]{}, ctx)
-	if err != nil {
-		t.Fatalf("unexpected error; %v", err)
-	}
-
-	_, ok := ctx.State.(*proxy.RecorderProxy)
-	if !ok {
-		t.Fatalf("state is not a recorder proxy")
-	}
-}
-
-func TestOperationWriter_OperationGetsWritten(t *testing.T) {
-	path := t.TempDir() + "test_trace"
-	cfg := &utils.Config{}
-	cfg.SyncPeriodLength = 1
-	cfg.First = 1
-	cfg.Last = 2
-	cfg.TraceFile = path
-
-	rCtx, err := context.NewRecord(cfg.TraceFile, cfg.First)
-	if err != nil {
-		t.Fatalf("unexpected error; %v", err)
-	}
-
-	p := makeProxyRecorderPrepper(rCtx)
-	e := makeOperationBlockEmitter(cfg, rCtx)
-
-	ctx := &executor.Context{}
-	st := executor.State[*substate.Substate]{}
-
-	// tx1
-	err = p.PreTransaction(st, ctx)
-	if err != nil {
-		t.Fatalf("unexpected error; %v", err)
-	}
-
-	err = e.PreTransaction(st, ctx)
-	if err != nil {
-		t.Fatalf("unexpected error; %v", err)
-	}
-
-	// tx2
-	err = p.PreTransaction(st, ctx)
-	if err != nil {
-		t.Fatalf("unexpected error; %v", err)
-	}
-
-	err = e.PreTransaction(st, ctx)
-	if err != nil {
-		t.Fatalf("unexpected error; %v", err)
-	}
-
-	err = e.PostRun(st, ctx, nil)
-	if err != nil {
-		t.Fatalf("unexpected error; %v", err)
-	}
-
-	stats, err := os.Stat(path)
-	if err != nil {
-		t.Fatalf("unexpected error; %v", err)
-	}
-
-	if stats.Size() <= 0 {
-		t.Fatalf("size of trace file is 0")
-	}
-
-}
 
 func TestSdbRecord_AllDbEventsAreIssuedInOrder(t *testing.T) {
 	ctrl := gomock.NewController(t)
@@ -156,12 +71,7 @@ func TestSdbRecord_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		ext.EXPECT().PostRun(executor.AtBlock[*substate.Substate](12), gomock.Any(), nil),
 	)
 
-	rCtx, err := context.NewRecord(cfg.TraceFile, cfg.First)
-	if err != nil {
-		t.Fatalf("unexpected err; %v", err)
-	}
-
-	if err = record(cfg, provider, processor, rCtx, []executor.Extension[*substate.Substate]{ext}); err != nil {
+	if err := record(cfg, provider, processor, []executor.Extension[*substate.Substate]{ext}); err != nil {
 		t.Errorf("record failed: %v", err)
 	}
 }
