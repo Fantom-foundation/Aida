@@ -70,6 +70,7 @@ func run(config *utils.Config, provider executor.Provider[*substate.Substate], s
 		statedb.MakeStateDbPrepper(),
 		validator.MakeStateHashValidator[*substate.Substate](config),
 		statedb.MakeBlockEventEmitter[*substate.Substate](),
+		profiler.MakeOperationProfiler[*substate.Substate](config),
 	}...,
 	)
 
