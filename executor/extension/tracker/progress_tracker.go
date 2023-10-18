@@ -79,7 +79,7 @@ func (t *progressTracker) PostTransaction(state executor.State[*substate.Substat
 
 // PostBlock sends the state to the report goroutine.
 // We only care about total number of transactions we can do this here rather in PostTransaction.
-func (t *progressTracker) PostBlock(state executor.State[*substate.Substate], context *executor.Context) error {
+func (t *progressTracker) PostBlock(state executor.State[*substate.Substate], ctx *executor.Context) error {
 	boundary := state.Block - (state.Block % t.reportFrequency)
 
 	if state.Block-t.lastReportedBlock < t.reportFrequency {
@@ -95,8 +95,8 @@ func (t *progressTracker) PostBlock(state executor.State[*substate.Substate], co
 	info := t.overallInfo
 	t.lock.Unlock()
 
-	disk := utils.GetDirectorySize(context.StateDbPath)
-	m := context.State.GetMemoryUsage()
+	disk := utils.GetDirectorySize(ctx.StateDbPath)
+	m := ctx.State.GetMemoryUsage()
 
 	memory := uint64(0)
 	if m != nil {

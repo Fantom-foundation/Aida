@@ -31,12 +31,12 @@ func (e *AidaDbManager[T]) PreRun(_ executor.State[T], ctx *executor.Context) er
 	return nil
 }
 
-func (e *AidaDbManager[T]) PostRun(_ executor.State[T], context *executor.Context, _ error) error {
-	if err := context.AidaDb.Close(); err != nil {
+func (e *AidaDbManager[T]) PostRun(_ executor.State[T], ctx *executor.Context, _ error) error {
+	if err := ctx.AidaDb.Close(); err != nil {
 		return fmt.Errorf("cannot close AidaDb; %v", err)
 	}
 
-	context.AidaDb = nil
+	ctx.AidaDb = nil
 
 	return nil
 }

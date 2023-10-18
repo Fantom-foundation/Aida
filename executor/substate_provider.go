@@ -15,7 +15,7 @@ import (
 // ----------------------------------------------------------------------------
 
 // OpenSubstateDb opens a substate database as configured in the given parameters.
-func OpenSubstateDb(config *utils.Config, ctxt *cli.Context) (res Provider[*substate.Substate], err error) {
+func OpenSubstateDb(cfg *utils.Config, ctxt *cli.Context) (res Provider[*substate.Substate], err error) {
 	// Substate is panicking if we are opening a non-existing directory. To mitigate
 	// the damage, we recover here and forward an error instead.
 	defer func() {
@@ -24,9 +24,9 @@ func OpenSubstateDb(config *utils.Config, ctxt *cli.Context) (res Provider[*subs
 			err = fmt.Errorf("failed to open substate DB: %v", issue)
 		}
 	}()
-	substate.SetSubstateDb(config.AidaDb)
+	substate.SetSubstateDb(cfg.AidaDb)
 	substate.OpenSubstateDBReadOnly()
-	return &substateProvider{ctxt, config.Workers}, nil
+	return &substateProvider{ctxt, cfg.Workers}, nil
 }
 
 // substateProvider is an adapter of Aida's SubstateProvider interface defined above to the

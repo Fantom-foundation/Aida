@@ -48,7 +48,7 @@ func (l *TestSyncPeriodEmitter[T]) PreBlock(state executor.State[T], ctx *execut
 	return nil
 }
 
-func (l *TestSyncPeriodEmitter[T]) PostRun(_ executor.State[T], context *executor.Context, _ error) error {
-	context.State.EndSyncPeriod()
+func (l *TestSyncPeriodEmitter[T]) PostRun(_ executor.State[T], ctx *executor.Context, _ error) error {
+	ctx.State.EndSyncPeriod()
 	return nil
 }

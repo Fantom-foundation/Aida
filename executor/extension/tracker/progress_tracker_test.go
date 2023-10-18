@@ -43,7 +43,7 @@ func TestProgressTrackerExtension_LoggingHappens(t *testing.T) {
 
 	ext := makeProgressTracker(cfg, testStateDbInfoFrequency, log)
 
-	context := &executor.Context{State: db, StateDbPath: dummyStateDbPath}
+	ctx := &executor.Context{State: db, StateDbPath: dummyStateDbPath}
 
 	s := &substate.Substate{
 		Result: &substate.SubstateResult{
@@ -71,33 +71,33 @@ func TestProgressTrackerExtension_LoggingHappens(t *testing.T) {
 		),
 	)
 
-	ext.PreRun(executor.State[*substate.Substate]{}, context)
+	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
 
 	// first processed block
-	ext.PostTransaction(executor.State[*substate.Substate]{Data: s}, context)
-	ext.PostTransaction(executor.State[*substate.Substate]{Data: s}, context)
+	ext.PostTransaction(executor.State[*substate.Substate]{Data: s}, ctx)
+	ext.PostTransaction(executor.State[*substate.Substate]{Data: s}, ctx)
 	ext.PostBlock(executor.State[*substate.Substate]{
 		Block: 5,
 		Data:  s,
-	}, context)
+	}, ctx)
 
 	time.Sleep(500 * time.Millisecond)
 
 	// second processed block
-	ext.PostTransaction(executor.State[*substate.Substate]{Data: s}, context)
-	ext.PostTransaction(executor.State[*substate.Substate]{Data: s}, context)
+	ext.PostTransaction(executor.State[*substate.Substate]{Data: s}, ctx)
+	ext.PostTransaction(executor.State[*substate.Substate]{Data: s}, ctx)
 	ext.PostBlock(executor.State[*substate.Substate]{
 		Block: 6,
 		Data:  s,
-	}, context)
+	}, ctx)
 
 	time.Sleep(500 * time.Millisecond)
 
-	ext.PostTransaction(executor.State[*substate.Substate]{Data: s}, context)
+	ext.PostTransaction(executor.State[*substate.Substate]{Data: s}, ctx)
 	ext.PostBlock(executor.State[*substate.Substate]{
 		Block: 8,
 		Data:  s,
-	}, context)
+	}, ctx)
 }
 
 func TestProgressTrackerExtension_FirstLoggingIsIgnored(t *testing.T) {
@@ -110,7 +110,7 @@ func TestProgressTrackerExtension_FirstLoggingIsIgnored(t *testing.T) {
 
 	ext := makeProgressTracker(cfg, testStateDbInfoFrequency, log)
 
-	context := &executor.Context{State: db}
+	ctx := &executor.Context{State: db}
 
 	s := &substate.Substate{
 		Result: &substate.SubstateResult{
@@ -123,23 +123,23 @@ func TestProgressTrackerExtension_FirstLoggingIsIgnored(t *testing.T) {
 		Block:       4,
 		Transaction: 0,
 		Data:        s,
-	}, context)
+	}, ctx)
 
 	ext.PostTransaction(executor.State[*substate.Substate]{
 		Block:       4,
 		Transaction: 0,
 		Data:        s,
-	}, context)
+	}, ctx)
 	ext.PostTransaction(executor.State[*substate.Substate]{
 		Block:       4,
 		Transaction: 1,
 		Data:        s,
-	}, context)
+	}, ctx)
 	ext.PostBlock(executor.State[*substate.Substate]{
 		Block:       5,
 		Transaction: 0,
 		Data:        s,
-	}, context)
+	}, ctx)
 }
 
 func Test_LoggingFormatMatchesRubyScript(t *testing.T) {

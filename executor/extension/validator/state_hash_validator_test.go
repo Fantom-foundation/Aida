@@ -156,15 +156,15 @@ func TestStateHashValidator_ChecksArchiveHashesOfLaggingArchive(t *testing.T) {
 	cfg.ArchiveMode = true
 	ext := makeStateHashValidator[any](cfg, log)
 	ext.hashProvider = hashProvider
-	context := &executor.Context{State: db}
+	ctx := &executor.Context{State: db}
 
 	// A PostBlock run should check the LiveDB and the ArchiveDB up to block 0.
-	if err := ext.PostBlock(executor.State[any]{Block: 2}, context); err != nil {
+	if err := ext.PostBlock(executor.State[any]{Block: 2}, ctx); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 
 	// PostRun should finish up checking all remaining archive hashes and detect the error in block 2.
-	if err := ext.PostRun(executor.State[any]{Block: 3}, context, nil); err == nil || !strings.Contains(err.Error(), "unexpected hash for archive block 2") {
+	if err := ext.PostRun(executor.State[any]{Block: 3}, ctx, nil); err == nil || !strings.Contains(err.Error(), "unexpected hash for archive block 2") {
 		t.Errorf("failed to detect incorrect hash, err %v", err)
 	}
 }
@@ -205,16 +205,16 @@ func TestStateHashValidator_ChecksArchiveHashesOfLaggingArchiveDoesNotWaitForNon
 	cfg.ArchiveMode = true
 	ext := makeStateHashValidator[any](cfg, log)
 	ext.hashProvider = hashProvider
-	context := &executor.Context{State: db}
+	ctx := &executor.Context{State: db}
 
 	// A PostBlock run should check the LiveDB and the ArchiveDB up to block 0.
-	if err := ext.PostBlock(executor.State[any]{Block: 2}, context); err != nil {
+	if err := ext.PostBlock(executor.State[any]{Block: 2}, ctx); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 
 	// PostRun should finish up checking all remaining archive blocks, even if the
 	// there are some blocks missing at the end of the range.
-	if err := ext.PostRun(executor.State[any]{Block: 10}, context, nil); err != nil {
+	if err := ext.PostRun(executor.State[any]{Block: 10}, ctx, nil); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 }
@@ -243,15 +243,15 @@ func TestStateHashValidator_ValidatingLaggingArchivesIsSkippedIfRunIsAborted(t *
 	cfg.ArchiveMode = true
 	ext := makeStateHashValidator[any](cfg, log)
 	ext.hashProvider = hashProvider
-	context := &executor.Context{State: db}
+	ctx := &executor.Context{State: db}
 
 	// A PostBlock run should check the LiveDB and the ArchiveDB up to block 0.
-	if err := ext.PostBlock(executor.State[any]{Block: 2}, context); err != nil {
+	if err := ext.PostBlock(executor.State[any]{Block: 2}, ctx); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 
 	// PostRun should finish up checking all remaining archive hashes and detect the error in block 2.
-	if err := ext.PostRun(executor.State[any]{Block: 2}, context, fmt.Errorf("dummy")); err != nil {
+	if err := ext.PostRun(executor.State[any]{Block: 2}, ctx, fmt.Errorf("dummy")); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
 }
