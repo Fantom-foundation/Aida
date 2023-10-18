@@ -18,8 +18,8 @@ func MakeOperationProfiler[T any](cfg *utils.Config) executor.Extension[T] {
 
 type operationProfiler[T any] struct {
 	extension.NilExtension[T]
-	cfg *utils.Config
-	stats  *profile.Stats
+	cfg   *utils.Config
+	stats *profile.Stats
 }
 
 func (p *operationProfiler[T]) PreRun(_ executor.State[T], ctx *executor.Context) error {
