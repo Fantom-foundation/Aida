@@ -12,9 +12,9 @@ import (
 
 func TestMemoryProfiler_CollectsProfileDataIfEnabled(t *testing.T) {
 	path := t.TempDir() + "/profile.dat"
-	config := &utils.Config{}
-	config.MemoryProfile = path
-	ext := MakeMemoryProfiler[any](config)
+	cfg := &utils.Config{}
+	cfg.MemoryProfile = path
+	ext := MakeMemoryProfiler[any](cfg)
 
 	if err := ext.PreRun(executor.State[any]{}, nil); err != nil {
 		t.Fatalf("failed to to run pre-run: %v", err)
@@ -27,8 +27,8 @@ func TestMemoryProfiler_CollectsProfileDataIfEnabled(t *testing.T) {
 }
 
 func TestMemoryProfiler_NoProfileIsCollectedIfDisabled(t *testing.T) {
-	config := &utils.Config{}
-	ext := MakeMemoryProfiler[any](config)
+	cfg := &utils.Config{}
+	ext := MakeMemoryProfiler[any](cfg)
 
 	if _, ok := ext.(extension.NilExtension[any]); !ok {
 		t.Errorf("profiler is enabled although not set in configuration")

@@ -14,15 +14,15 @@ import (
 
 func TestDiagnosticServer_CollectsProfileDataIfEnabled(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	logger := logger.NewMockLogger(ctrl)
+	log := logger.NewMockLogger(ctrl)
 
-	config := &utils.Config{}
-	config.DiagnosticServer = 6060
-	ext := makeDiagnosticServer[any](config, logger)
+	cfg := &utils.Config{}
+	cfg.DiagnosticServer = 6060
+	ext := makeDiagnosticServer[any](cfg, log)
 
 	// Expect a server info message and a warning on the performance impact.
-	logger.EXPECT().Infof(gomock.Any(), gomock.Any())
-	logger.EXPECT().Warning(gomock.Any())
+	log.EXPECT().Infof(gomock.Any(), gomock.Any())
+	log.EXPECT().Warning(gomock.Any())
 
 	if err := ext.PreRun(executor.State[any]{}, nil); err != nil {
 		t.Fatalf("failed to to run pre-run: %v", err)
@@ -38,8 +38,8 @@ func TestDiagnosticServer_CollectsProfileDataIfEnabled(t *testing.T) {
 }
 
 func TestDiagnosticServer_NoServerIsHostedWhenDisabled(t *testing.T) {
-	config := &utils.Config{}
-	ext := MakeDiagnosticServer[any](config)
+	cfg := &utils.Config{}
+	ext := MakeDiagnosticServer[any](cfg)
 
 	if _, ok := ext.(extension.NilExtension[any]); !ok {
 		t.Errorf("profiler is enabled although not set in configuration")

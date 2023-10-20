@@ -19,8 +19,8 @@ const (
 
 // MakeProgressLogger creates progress logger. It logs progress about processor depending on reportFrequency.
 // If reportFrequency is 0, it is set to ProgressLoggerDefaultReportFrequency.
-func MakeProgressLogger[T any](config *utils.Config, reportFrequency time.Duration) executor.Extension[T] {
-	if config.NoHeartbeatLogging {
+func MakeProgressLogger[T any](cfg *utils.Config, reportFrequency time.Duration) executor.Extension[T] {
+	if cfg.NoHeartbeatLogging {
 		return extension.NilExtension[T]{}
 	}
 
@@ -28,14 +28,14 @@ func MakeProgressLogger[T any](config *utils.Config, reportFrequency time.Durati
 		reportFrequency = ProgressLoggerDefaultReportFrequency
 	}
 
-	return makeProgressLogger[T](config, reportFrequency, logger.NewLogger(config.LogLevel, "Progress-Logger"))
+	return makeProgressLogger[T](cfg, reportFrequency, logger.NewLogger(cfg.LogLevel, "Progress-Logger"))
 }
 
-func makeProgressLogger[T any](config *utils.Config, reportFrequency time.Duration, logger logger.Logger) *progressLogger[T] {
+func makeProgressLogger[T any](cfg *utils.Config, reportFrequency time.Duration, logger logger.Logger) *progressLogger[T] {
 	return &progressLogger[T]{
-		config:          config,
+		cfg:             cfg,
 		log:             logger,
-		inputCh:         make(chan executor.State[T], config.Workers*10),
+		inputCh:         make(chan executor.State[T], cfg.Workers*10),
 		wg:              new(sync.WaitGroup),
 		reportFrequency: reportFrequency,
 	}
@@ -45,7 +45,7 @@ func makeProgressLogger[T any](config *utils.Config, reportFrequency time.Durati
 // in "heartbeat" depending on reportFrequency.
 type progressLogger[T any] struct {
 	extension.NilExtension[T]
-	config          *utils.Config
+	cfg             *utils.Config
 	log             logger.Logger
 	inputCh         chan executor.State[T]
 	wg              *sync.WaitGroup

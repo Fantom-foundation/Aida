@@ -347,8 +347,8 @@ func TestProcessor_StateDbCanBeModifiedByExtensionsAndProcessorInSequentialRun(t
 		})
 
 	setState := func(state state.StateDB) func(State[any], *Context) {
-		return func(_ State[any], c *Context) {
-			c.State = state
+		return func(_ State[any], ctx *Context) {
+			ctx.State = state
 		}
 	}
 
@@ -392,8 +392,8 @@ func TestProcessor_StateDbCanBeModifiedByExtensionsAndProcessorInTransactionLeve
 		})
 
 	setState := func(state state.StateDB) func(State[any], *Context) {
-		return func(_ State[any], c *Context) {
-			c.State = state
+		return func(_ State[any], ctx *Context) {
+			ctx.State = state
 		}
 	}
 
@@ -813,8 +813,8 @@ func TestProcessor_BlocksParallelSingleBlockRun(t *testing.T) {
 		})
 
 	setState := func(state state.StateDB) func(State[any], *Context) {
-		return func(_ State[any], c *Context) {
-			c.State = state
+		return func(_ State[any], ctx *Context) {
+			ctx.State = state
 		}
 	}
 
