@@ -13,10 +13,12 @@ func MakeOperationProfiler[T any](cfg *utils.Config) executor.Extension[T] {
 	if !cfg.Profile {
 		return extension.NilExtension[T]{}
 	}
+	adjustedIntervalStart := cfg.First - (cfg.First % cfg.ProfileInterval)
 	return &operationProfiler[T]{
 		cfg:           cfg,
 		blockNumber:   cfg.First,
-		intervalStart: cfg.First,
+		intervalStart: adjustedIntervalStart,
+		intervalEnd:   adjustedIntervalStart + cfg.ProfileInterval,
 	}
 }
 
@@ -26,6 +28,7 @@ type operationProfiler[T any] struct {
 	stats         *profile.Stats
 	blockNumber   uint64
 	intervalStart uint64
+	intervalEnd   uint64
 }
 
 func (p *operationProfiler[T]) PreRun(_ executor.State[T], ctx *executor.Context) error {
@@ -40,10 +43,10 @@ func (p *operationProfiler[T]) PreRun(_ executor.State[T], ctx *executor.Context
 func (p *operationProfiler[T]) PostBlock(state executor.State[T], _ *executor.Context) error {
 	p.blockNumber = uint64(state.Block)
 
-	intervalEnd := p.intervalStart + p.cfg.ProfileInterval
-	if p.blockNumber > intervalEnd {
-		p.stats.PrintProfiling(p.intervalStart, intervalEnd)
-		p.intervalStart = p.blockNumber
+	if p.blockNumber > p.intervalEnd {
+		p.stats.PrintProfiling(p.intervalStart, p.intervalEnd)
+		p.intervalStart = p.intervalStart + p.cfg.ProfileInterval
+		p.intervalEnd = p.intervalEnd + p.cfg.ProfileInterval
 		p.stats.Reset()
 	}
 
