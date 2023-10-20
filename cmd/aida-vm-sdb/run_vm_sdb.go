@@ -75,7 +75,7 @@ func run(
 		statedb.MakeStateDbPrepper(),
 		validator.MakeStateHashValidator[*substate.Substate](cfg),
 		statedb.MakeBlockEventEmitter[*substate.Substate](),
-		profiler.MakeOperationProfiler[*substate.Substate](config),
+		profiler.MakeOperationProfiler[*substate.Substate](cfg),
 	}...,
 	)
 
