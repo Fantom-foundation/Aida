@@ -4,11 +4,10 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
-	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
+	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/logger"
-	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
@@ -54,7 +53,7 @@ func run(
 		profiler.MakeDiagnosticServer[*substate.Substate](cfg),
 		profiler.MakeVirtualMachineStatisticsPrinter[*substate.Substate](cfg),
 		tracker.MakeProgressLogger[*substate.Substate](cfg, 15*time.Second),
-		temporaryStatePrepper{},
+		statedb.MakeTemporaryStatePrepper(),
 	}
 	extensions = append(extensions, extra...)
 
@@ -82,15 +81,4 @@ func (r txProcessor) Process(state executor.State[*substate.Substate], ctx *exec
 		state.Data,
 	)
 	return err
-}
-
-// temporaryStatePrepper is an extension that introduces a fresh in-memory
-// StateDB instance before each transaction execution.
-type temporaryStatePrepper struct {
-	extension.NilExtension[*substate.Substate]
-}
-
-func (temporaryStatePrepper) PreTransaction(s executor.State[*substate.Substate], c *executor.Context) error {
-	c.State = state.MakeInMemoryStateDB(&s.Data.InputAlloc, uint64(s.Block))
-	return nil
 }
