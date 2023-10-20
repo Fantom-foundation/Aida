@@ -25,7 +25,7 @@ func MakeStateDbManager[T any](config *utils.Config) executor.Extension[T] {
 	}
 }
 
-func (m *stateDbManager[T]) PreRun(state executor.State[T], ctx *executor.Context) error {
+func (m *stateDbManager[T]) PreRun(_ executor.State[T], ctx *executor.Context) error {
 	var err error
 	ctx.State, ctx.StateDbPath, err = utils.PrepareStateDB(m.config)
 	if !m.config.KeepDb {

@@ -4,8 +4,8 @@ import "github.com/urfave/cli/v2"
 
 // Command line options for common flags in record and replay.
 var (
-	APIRecordingSrcFileFlag = cli.PathFlag{
-		Name:    "api-recording",
+	RPCRecordingFileFlag = cli.PathFlag{
+		Name:    "rpc-recording",
 		Usage:   "Path to source file with recorded API data",
 		Aliases: []string{"r"},
 	}

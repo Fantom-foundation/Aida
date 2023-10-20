@@ -96,7 +96,7 @@ type Config struct {
 	First uint64 // first block
 	Last  uint64 // last block
 
-	APIRecordingSrcFile   string         // path to source file with recorded API data
+	RPCRecordingFile      string         // path to source file with recorded RPC requests
 	ArchiveMode           bool           // enable archive mode
 	ArchiveVariant        string         // selects the implementation variant of the archive
 	BlockLength           uint64         // length of a block in number of transactions

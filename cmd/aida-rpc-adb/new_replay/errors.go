@@ -1,4 +1,4 @@
-package replay
+package new_replay
 
 import (
 	"errors"
@@ -50,7 +50,7 @@ func newRevertError(result *evmcore.ExecutionResult) revertError {
 }
 
 // newComparatorError returns new comparatorError with given StateDB and recorded data based on the typ.
-func newComparatorError(stateDB, expected any, data *OutData, typ comparatorErrorType) *comparatorError {
+func newComparatorError(stateDB, expected any, data comparisonData, typ comparatorErrorType) *comparatorError {
 	switch typ {
 	case noMatchingResult:
 		return newNoMatchingResultErr(stateDB, expected, data)
@@ -76,7 +76,7 @@ func newComparatorError(stateDB, expected any, data *OutData, typ comparatorErro
 	}
 }
 
-func newCannotSendRPCRequestErr(data *OutData) *comparatorError {
+func newCannotSendRPCRequestErr(data comparisonData) *comparatorError {
 	return &comparatorError{
 		error: fmt.Errorf("could not resend request to rpc:"+
 			"\nMethod: %v"+
@@ -85,7 +85,7 @@ func newCannotSendRPCRequestErr(data *OutData) *comparatorError {
 			"\n\tStateDB err: %v"+
 			"\n\tExpected result: %v"+
 			"\n\tExpected err: %v"+
-			"\n\nParams: %v", data.Method, strconv.FormatUint(data.BlockID, 16), data.StateDB.Result, data.StateDB.Error, data.Recorded.Result, data.Recorded.Error, string(data.ParamsRaw)),
+			"\n\nParams: %v", data.record.Query.Method, strconv.FormatUint(data.block, 16), data.StateDB.Result, data.StateDB.Error, data.record.Response.Result, data.record.Error.Error, string(data.record.ParamsRaw)),
 		typ: cannotSendRPCRequest,
 	}
 }
@@ -93,7 +93,7 @@ func newCannotSendRPCRequestErr(data *OutData) *comparatorError {
 // newNoMatchingResultErr returns new comparatorError
 // It is returned when recording has an internal error code - this error is logged to level DEBUG and
 // is not related to StateDB
-func newInternalError(data *OutData) *comparatorError {
+func newInternalError(data comparisonData) *comparatorError {
 	return &comparatorError{
 		error: fmt.Errorf("recording with internal error for request:"+
 			"\nMethod: %v"+
@@ -102,14 +102,14 @@ func newInternalError(data *OutData) *comparatorError {
 			"\n\tStateDB err: %v"+
 			"\n\tExpected result: %v"+
 			"\n\tExpected err: %v"+
-			"\n\nParams: %v", data.Method, strconv.FormatUint(data.BlockID, 16), data.StateDB.Result, data.StateDB.Error, data.Recorded.Result, data.Recorded.Error, string(data.ParamsRaw)),
+			"\n\nParams: %v", data.record.Query.Method, strconv.FormatUint(data.block, 16), data.StateDB.Result, data.StateDB.Error, data.record.Response.Result, data.record.Error.Error, string(data.record.ParamsRaw)),
 		typ: internalError,
 	}
 }
 
 // newCannotUnmarshalResult returns new comparatorError
 // It is returned when json.Unmarshal returned an error
-func newCannotUnmarshalResult(data *OutData) *comparatorError {
+func newCannotUnmarshalResult(data comparisonData) *comparatorError {
 	return &comparatorError{
 		error: fmt.Errorf("cannot unmarshal result, returning every possible data"+
 			"\nMethod: %v"+
@@ -118,70 +118,70 @@ func newCannotUnmarshalResult(data *OutData) *comparatorError {
 			"\n\tStateDB err: %v"+
 			"\n\tRecorded result: %v"+
 			"\n\tRecorded err: %v"+
-			"\n\nParams: %v", data.Method, strconv.FormatUint(data.BlockID, 16), data.StateDB.Result, data.StateDB.Error, data.Recorded.Result, data.Recorded.Error, string(data.ParamsRaw)),
+			"\n\nParams: %v", data.record.Query.Method, strconv.FormatUint(data.block, 16), data.StateDB.Result, data.StateDB.Error, data.record.Response.Result, data.record.Error.Error, string(data.record.ParamsRaw)),
 		typ: cannotUnmarshalResult,
 	}
 }
 
 // newNoMatchingResultErr returns new comparatorError
 // It is returned when StateDB result does not match with recorded result
-func newNoMatchingResultErr(stateDBData, expectedData any, data *OutData) *comparatorError {
+func newNoMatchingResultErr(stateDBData, expectedData any, data comparisonData) *comparatorError {
 	return &comparatorError{
 		error: fmt.Errorf("result do not match"+
 			"\nMethod: %v"+
 			"\nBlockID: 0x%v"+
 			"\n\tCarmen: %v"+
 			"\n\tRecorded: %v"+
-			"\n\n\tParams: %v", data.Method, strconv.FormatUint(data.BlockID, 16), stateDBData, expectedData, string(data.ParamsRaw)),
+			"\n\n\tParams: %v", data.record.Query.Method, strconv.FormatUint(data.block, 16), stateDBData, expectedData, string(data.record.ParamsRaw)),
 		typ: noMatchingResult,
 	}
 }
 
 // newNoMatchingErrorsErr returns new comparatorError
 // It is returned when StateDB error does not match with recorded error
-func newNoMatchingErrorsErr(stateDBError, expectedError any, data *OutData) *comparatorError {
+func newNoMatchingErrorsErr(stateDBError, expectedError any, data comparisonData) *comparatorError {
 	return &comparatorError{
 		error: fmt.Errorf("errors do not match"+
 			"\nMethod: %v"+
 			"\nBlockID: 0x%v"+
 			"\n\tCarmen: %v"+
 			"\n\tRecorded: %v"+
-			"\n\nParams: %v", data.Method, strconv.FormatUint(data.BlockID, 16), stateDBError, expectedError, string(data.ParamsRaw)),
+			"\n\nParams: %v", data.record.Query.Method, strconv.FormatUint(data.block, 16), stateDBError, expectedError, string(data.record.ParamsRaw)),
 		typ: noMatchingErrors,
 	}
 }
 
 // newExpectedResultGotErrorErr returns new comparatorError
 // It is returned when StateDB returns an error but expected return is a valid result
-func newExpectedResultGotErrorErr(stateDBError, expectedResult any, data *OutData) *comparatorError {
+func newExpectedResultGotErrorErr(stateDBError, expectedResult any, data comparisonData) *comparatorError {
 	return &comparatorError{
 		error: fmt.Errorf("expected valid result but StateDB returned err"+
 			"\nMethod: %v"+
 			"\nBlockID: 0x%v"+
 			"\n\tCarmen: %v"+
 			"\n\tRecorded: %v"+
-			"\n\nParams: %v", data.Method, strconv.FormatUint(data.BlockID, 16), stateDBError, expectedResult, string(data.ParamsRaw)),
+			"\n\nParams: %v", data.record.Query.Method, strconv.FormatUint(data.block, 16), stateDBError, expectedResult, string(data.record.ParamsRaw)),
 		typ: expectedResultGotError,
 	}
 }
 
 // newExpectedErrorGotResultErr returns new comparatorError
 // It is returned when StateDB returns a valid error but expected return is an error
-func newExpectedErrorGotResultErr(stateDBResult, expectedError any, data *OutData) *comparatorError {
+func newExpectedErrorGotResultErr(stateDBResult, expectedError any, data comparisonData) *comparatorError {
 	return &comparatorError{
 		error: fmt.Errorf("expected error but StateDB returned valid result"+
 			"\nMethod: %v"+
 			"\nBlockID: 0x%v"+
 			"\n\tCarmen: %v"+
 			"\n\tRecorded: %v"+
-			"\n\nParams: %v", data.Method, strconv.FormatUint(data.BlockID, 16), stateDBResult, expectedError, string(data.ParamsRaw)),
+			"\n\nParams: %v", data.record.Query.Method, strconv.FormatUint(data.block, 16), stateDBResult, expectedError, string(data.record.ParamsRaw)),
 		typ: expectedErrorGotResult,
 	}
 }
 
 // newUnexpectedDataTypeErr returns comparatorError
 // It is returned when Comparator is given unexpected data type in result from StateDB
-func newUnexpectedDataTypeErr(data *OutData) *comparatorError {
+func newUnexpectedDataTypeErr(data comparisonData) *comparatorError {
 	return &comparatorError{
 		error: fmt.Errorf("unexpected data type:\n%v", data),
 		typ:   unexpectedDataType,

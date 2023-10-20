@@ -1,4 +1,4 @@
-package replay
+package new_replay
 
 import (
 	"math/big"
@@ -7,6 +7,14 @@ import (
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/ethereum/go-ethereum/common"
 )
+
+// StateDBData represents data that StateDB returned for requests recorded on API server
+// This is sent to Comparator and compared with RecordedData
+type StateDBData struct {
+	Result      any
+	Error       error
+	isRecovered bool
+}
 
 // executeGetBalance request into given archive and send result to comparator
 func executeGetBalance(param interface{}, archive state.VmStateDB) (out *StateDBData) {

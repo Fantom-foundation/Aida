@@ -1,4 +1,4 @@
-package replay
+package new_replay
 
 import (
 	"errors"
@@ -7,7 +7,9 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/go-opera/ethapi"
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/Fantom-foundation/go-opera/opera"
@@ -17,33 +19,32 @@ import (
 	eth "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/op/go-logging"
 	"github.com/status-im/keycard-go/hexutils"
 )
 
 // EVMExecutor represents requests executed over Ethereum Virtual Machine
 type EVMExecutor struct {
 	args      ethapi.TransactionArgs
-	archive   state.VmStateDB
+	archive   state.NonCommittableStateDB
 	timestamp uint64 // EVM requests require timestamp for correct execution
 	chainCfg  *params.ChainConfig
 	vmImpl    string
 	blockID   *big.Int
 	rules     opera.EconomyRules
-	log       *logging.Logger
+	log       logger.Logger
 }
 
 const maxGasLimit = 9995800   // used when request does not specify gas
 const globalGasCap = 50000000 // highest gas allowance used for estimateGas
 
 // newEVMExecutor creates EVMExecutor for executing requests into StateDB that demand usage of EVM
-func newEVMExecutor(blockID uint64, archive state.VmStateDB, vmImpl string, chainCfg *params.ChainConfig, params map[string]interface{}, timestamp uint64, log *logging.Logger) *EVMExecutor {
+func newEVMExecutor(blockID uint64, archive state.NonCommittableStateDB, cfg *utils.Config, params map[string]interface{}, timestamp uint64, log logger.Logger) *EVMExecutor {
 	return &EVMExecutor{
 		args:      newTxArgs(params),
 		archive:   archive,
 		timestamp: timestamp,
-		chainCfg:  chainCfg,
-		vmImpl:    vmImpl,
+		chainCfg:  utils.GetChainConfig(cfg.ChainID),
+		vmImpl:    cfg.VmImpl,
 		blockID:   new(big.Int).SetUint64(blockID),
 		rules:     opera.DefaultEconomyRules(),
 		log:       log,
@@ -106,9 +107,8 @@ func (e *EVMExecutor) newEVM(msg eth.Message) *vm.EVM {
 		txCtx    vm.TxContext
 	)
 
-	// for purpose of comparing, we need not a hash func
 	getHash = func(_ uint64) common.Hash {
-		return common.Hash{}
+		return e.archive.GetHash()
 	}
 
 	blockCtx = vm.BlockContext{
@@ -197,7 +197,7 @@ func (e *EVMExecutor) sendEstimateGas() (hexutil.Uint64, error) {
 		if failed {
 			if result != nil && result.Err != vm.ErrOutOfGas {
 				if len(result.Revert()) > 0 {
-					return 0, newRevertError(result)
+					return 0, result.Err
 				}
 				return 0, result.Err
 			}

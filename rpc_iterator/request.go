@@ -1,4 +1,4 @@
-package iterator
+package rpc_iterator
 
 import "encoding/json"
 
