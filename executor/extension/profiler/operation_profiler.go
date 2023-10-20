@@ -10,7 +10,7 @@ import (
 
 // MakeOperationProfiler creates a executor.Extension that records Operation profiling
 func MakeOperationProfiler[T any](cfg *utils.Config) executor.Extension[T] {
-	if !cfg.Profile {
+	if !cfg.Profile || (cfg.ProfileInterval <= 0) || (cfg.Last <= cfg.First) {
 		return extension.NilExtension[T]{}
 	}
 
