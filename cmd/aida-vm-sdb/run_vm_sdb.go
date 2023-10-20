@@ -34,13 +34,13 @@ func RunVmSdb(ctx *cli.Context) error {
 }
 
 type txProcessor struct {
-	config *utils.Config
+	cfg *utils.Config
 }
 
-func (r txProcessor) Process(state executor.State[*substate.Substate], context *executor.Context) error {
+func (r txProcessor) Process(state executor.State[*substate.Substate], ctx *executor.Context) error {
 	_, err := utils.ProcessTx(
-		context.State,
-		r.config,
+		ctx.State,
+		r.cfg,
 		uint64(state.Block),
 		state.Transaction,
 		state.Data,
@@ -48,38 +48,44 @@ func (r txProcessor) Process(state executor.State[*substate.Substate], context *
 	return err
 }
 
-func run(config *utils.Config, provider executor.Provider[*substate.Substate], stateDb state.StateDB, disableStateDbExtension bool) error {
+func run(
+	cfg *utils.Config,
+	provider executor.Provider[*substate.Substate],
+	stateDb state.StateDB,
+	disableStateDbExtension bool,
+) error {
 	// order of extensionList has to be maintained
 	var extensionList = []executor.Extension[*substate.Substate]{
-		profiler.MakeCpuProfiler[*substate.Substate](config),
-		profiler.MakeDiagnosticServer[*substate.Substate](config),
+		profiler.MakeCpuProfiler[*substate.Substate](cfg),
+		profiler.MakeDiagnosticServer[*substate.Substate](cfg),
 	}
 
 	if !disableStateDbExtension {
-		extensionList = append(extensionList, statedb.MakeStateDbManager[*substate.Substate](config))
+		extensionList = append(extensionList, statedb.MakeStateDbManager[*substate.Substate](cfg))
 	}
 
 	extensionList = append(extensionList, []executor.Extension[*substate.Substate]{
-		extension.MakeAidaDbManager[*substate.Substate](config),
-		profiler.MakeVirtualMachineStatisticsPrinter[*substate.Substate](config),
-		tracker.MakeProgressLogger[*substate.Substate](config, 15*time.Second),
-		tracker.MakeProgressTracker(config, 100_000),
-		statedb.MakeStateDbPrimer[*substate.Substate](config),
-		profiler.MakeMemoryUsagePrinter[*substate.Substate](config),
-		profiler.MakeMemoryProfiler[*substate.Substate](config),
+		extension.MakeAidaDbManager[*substate.Substate](cfg),
+		profiler.MakeVirtualMachineStatisticsPrinter[*substate.Substate](cfg),
+		tracker.MakeProgressLogger[*substate.Substate](cfg, 15*time.Second),
+		tracker.MakeProgressTracker(cfg, 100_000),
+		statedb.MakeStateDbPrimer[*substate.Substate](cfg),
+		profiler.MakeMemoryUsagePrinter[*substate.Substate](cfg),
+		profiler.MakeMemoryProfiler[*substate.Substate](cfg),
 		statedb.MakeStateDbPrepper(),
-		validator.MakeStateHashValidator[*substate.Substate](config),
+		validator.MakeStateHashValidator[*substate.Substate](cfg),
 		statedb.MakeBlockEventEmitter[*substate.Substate](),
+		profiler.MakeOperationProfiler[*substate.Substate](config),
 	}...,
 	)
 
 	return executor.NewExecutor(provider).Run(
 		executor.Params{
-			From:  int(config.First),
-			To:    int(config.Last) + 1,
+			From:  int(cfg.First),
+			To:    int(cfg.Last) + 1,
 			State: stateDb,
 		},
-		txProcessor{config},
+		txProcessor{cfg},
 		extensionList,
 	)
 }

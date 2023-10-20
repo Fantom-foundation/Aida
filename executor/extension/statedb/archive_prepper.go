@@ -16,9 +16,9 @@ type archivePrepper struct {
 }
 
 // PreBlock sends needed archive to the processor.
-func (r *archivePrepper) PreBlock(state executor.State[*substate.Substate], context *executor.Context) error {
+func (r *archivePrepper) PreBlock(state executor.State[*substate.Substate], ctx *executor.Context) error {
 	var err error
-	context.Archive, err = context.State.GetArchiveState(uint64(state.Block) - 1)
+	ctx.Archive, err = ctx.State.GetArchiveState(uint64(state.Block) - 1)
 	if err != nil {
 		return err
 	}

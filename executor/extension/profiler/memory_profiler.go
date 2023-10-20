@@ -7,18 +7,18 @@ import (
 )
 
 // MakeMemoryProfiler creates an executor.Extension that records memory profiling data if enabled in the configuration.
-func MakeMemoryProfiler[T any](config *utils.Config) executor.Extension[T] {
-	if config.MemoryProfile == "" {
+func MakeMemoryProfiler[T any](cfg *utils.Config) executor.Extension[T] {
+	if cfg.MemoryProfile == "" {
 		return extension.NilExtension[T]{}
 	}
-	return &memoryProfiler[T]{config: config}
+	return &memoryProfiler[T]{cfg: cfg}
 }
 
 type memoryProfiler[T any] struct {
 	extension.NilExtension[T]
-	config *utils.Config
+	cfg *utils.Config
 }
 
 func (p *memoryProfiler[T]) PostRun(executor.State[T], *executor.Context, error) error {
-	return utils.StartMemoryProfile(p.config)
+	return utils.StartMemoryProfile(p.cfg)
 }

@@ -13,14 +13,14 @@ import (
 )
 
 func TestMemoryUsagePrinter_MemoryBreakdownIsNotPrintedWhenBreakdownIsNil(t *testing.T) {
-	config := &utils.Config{}
-	config.MemoryBreakdown = true
+	cfg := &utils.Config{}
+	cfg.MemoryBreakdown = true
 
 	ctrl := gomock.NewController(t)
 
 	log := logger.NewMockLogger(ctrl)
 	db := state.NewMockStateDB(ctrl)
-	ext := makeMemoryUsagePrinter[any](config, log)
+	ext := makeMemoryUsagePrinter[any](cfg, log)
 
 	usage := &state.MemoryUsage{
 		Breakdown: nil,
@@ -42,14 +42,14 @@ func TestMemoryUsagePrinter_MemoryBreakdownIsNotPrintedWhenBreakdownIsNil(t *tes
 }
 
 func TestMemoryUsagePrinter_MemoryBreakdownIsPrintedWhenEnabled(t *testing.T) {
-	config := &utils.Config{}
-	config.MemoryBreakdown = true
+	cfg := &utils.Config{}
+	cfg.MemoryBreakdown = true
 
 	ctrl := gomock.NewController(t)
 
 	log := logger.NewMockLogger(ctrl)
 	db := state.NewMockStateDB(ctrl)
-	ext := makeMemoryUsagePrinter[any](config, log)
+	ext := makeMemoryUsagePrinter[any](cfg, log)
 
 	usage := &state.MemoryUsage{
 		UsedBytes: 1,
@@ -72,8 +72,8 @@ func TestMemoryUsagePrinter_MemoryBreakdownIsPrintedWhenEnabled(t *testing.T) {
 }
 
 func TestMemoryUsagePrinter_NoPrinterIsCreatedIfNotEnabled(t *testing.T) {
-	config := &utils.Config{}
-	ext := MakeMemoryUsagePrinter[any](config)
+	cfg := &utils.Config{}
+	ext := MakeMemoryUsagePrinter[any](cfg)
 
 	if _, ok := ext.(extension.NilExtension[any]); !ok {
 		t.Errorf("profiler is enabled although not set in configuration")
