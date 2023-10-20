@@ -13,22 +13,22 @@ func MakeOperationProfiler[T any](cfg *utils.Config) executor.Extension[T] {
 	if !cfg.Profile {
 		return extension.NilExtension[T]{}
 	}
+
 	adjustedIntervalStart := cfg.First - (cfg.First % cfg.ProfileInterval)
 	return &operationProfiler[T]{
 		cfg:           cfg,
-		blockNumber:   cfg.First,
-		intervalStart: adjustedIntervalStart,
-		intervalEnd:   adjustedIntervalStart + cfg.ProfileInterval,
+		intervalStart: cfg.First,
+		intervalEnd:   adjustedIntervalStart + cfg.ProfileInterval - 1,
 	}
 }
 
 type operationProfiler[T any] struct {
 	extension.NilExtension[T]
-	cfg           *utils.Config
-	stats         *profile.Stats
-	blockNumber   uint64
-	intervalStart uint64
-	intervalEnd   uint64
+	cfg                 *utils.Config
+	stats               *profile.Stats
+	intervalStart       uint64
+	intervalEnd         uint64
+	lastSeenBlockNumber uint64
 }
 
 func (p *operationProfiler[T]) PreRun(_ executor.State[T], ctx *executor.Context) error {
@@ -40,12 +40,10 @@ func (p *operationProfiler[T]) PreRun(_ executor.State[T], ctx *executor.Context
 	return nil
 }
 
-func (p *operationProfiler[T]) PostBlock(state executor.State[T], _ *executor.Context) error {
-	p.blockNumber = uint64(state.Block)
-
-	if p.blockNumber > p.intervalEnd {
+func (p *operationProfiler[T]) PreBlock(state executor.State[T], _ *executor.Context) error {
+	if uint64(state.Block) > p.intervalEnd {
 		p.stats.PrintProfiling(p.intervalStart, p.intervalEnd)
-		p.intervalStart = p.intervalStart + p.cfg.ProfileInterval
+		p.intervalStart = p.intervalEnd + 1
 		p.intervalEnd = p.intervalEnd + p.cfg.ProfileInterval
 		p.stats.Reset()
 	}
@@ -53,7 +51,12 @@ func (p *operationProfiler[T]) PostBlock(state executor.State[T], _ *executor.Co
 	return nil
 }
 
-func (p *operationProfiler[T]) PostRun(executor.State[T], *executor.Context, error) error {
-	p.stats.PrintProfiling(p.intervalStart, p.blockNumber)
+func (p *operationProfiler[T]) PostBlock(state executor.State[T], _ *executor.Context) error {
+	p.lastSeenBlockNumber = uint64(state.Block)
+	return nil
+}
+
+func (p *operationProfiler[T]) PostRun(state executor.State[T], _ *executor.Context, _ error) error {
+	p.stats.PrintProfiling(p.intervalStart, p.lastSeenBlockNumber)
 	return nil
 }
