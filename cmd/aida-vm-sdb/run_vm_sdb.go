@@ -73,7 +73,7 @@ func run(config *utils.Config, provider executor.SubstateProvider, stateDb state
 		// 1) Pre-Func are called forwards so this is called last and
 		// 2) Post-Func are called backwards so this is called first
 		// that means the gap between time measurements will be as small as possible
-		profiler.MakeBlockProfiler(config),
+		profiler.MakeBlockDataCollector(config),
 	}...,
 	)
 

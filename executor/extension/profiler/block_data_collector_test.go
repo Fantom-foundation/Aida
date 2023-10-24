@@ -12,7 +12,7 @@ import (
 
 func TestBlockProfilerExtension_NoProfileIsCollectedIfDisabled(t *testing.T) {
 	config := &utils.Config{}
-	ext := MakeBlockProfiler(config)
+	ext := MakeBlockDataCollector(config)
 
 	if _, ok := ext.(extension.NilExtension); !ok {
 		t.Errorf("profiler is enabled although not set in configuration")
@@ -25,7 +25,7 @@ func TestBlockProfilerExtension_ProfileDbIsCreated(t *testing.T) {
 	config.ProfileBlocks = true
 	config.ProfileDB = path
 
-	ext := MakeBlockProfiler(config)
+	ext := MakeBlockDataCollector(config)
 
 	if err := ext.PreRun(executor.State{}, nil); err != nil {
 		t.Fatalf("unexpected error during pre-run; %v", err)
