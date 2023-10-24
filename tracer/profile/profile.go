@@ -138,7 +138,7 @@ func (ps *Stats) writeCsv(builder strings.Builder) error {
 }
 
 // Added these so we can test the stats
-func (ps *Stats) GetOpOrder () []byte {
+func (ps *Stats) GetOpOrder() []byte {
 	return ps.opOrder
 }
 
@@ -152,18 +152,18 @@ type Stat struct {
 
 }
 
-func (ps *Stats) GetStatByOpId (op byte) *Stat {
+func (ps *Stats) GetStatByOpId(op byte) *Stat {
 	return &Stat{
-		Frequency: ps.opFrequency[op],
-		Duration: ps.opDuration[op],
+		Frequency:   ps.opFrequency[op],
+		Duration:    ps.opDuration[op],
 		MinDuration: ps.opMinDuration[op],
 		MaxDuration: ps.opMaxDuration[op],
-		Variance: ps.opVariance[op],
-		Label: ps.opLabel[op],
+		Variance:    ps.opVariance[op],
+		Label:       ps.opLabel[op],
 	}
 }
 
-func (ps *Stats) GetTotalOpFreq () int {
+func (ps *Stats) GetTotalOpFreq() int {
 	totalOpFreq := int(0)
 	for _, freq := range ps.opFrequency {
 		totalOpFreq += int(freq)
