@@ -1,4 +1,4 @@
-package new_replay
+package replay
 
 import (
 	"strings"
