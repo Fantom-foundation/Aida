@@ -136,3 +136,37 @@ func (ps *Stats) writeCsv(builder strings.Builder) error {
 	file.WriteString(builder.String())
 	return nil
 }
+
+// Added these so we can test the stats
+func (ps *Stats) GetOpOrder () []byte {
+	return ps.opOrder
+}
+
+type Stat struct {
+	Frequency   uint64        // operation frequency stats
+	Duration    time.Duration // accumulated operation duration
+	MinDuration time.Duration // min runtime observerd
+	MaxDuration time.Duration // max runtime observerd
+	Variance    float64       // duration variance
+	Label       string        // operation names
+
+}
+
+func (ps *Stats) GetStatByOpId (op byte) *Stat {
+	return &Stat{
+		Frequency: ps.opFrequency[op],
+		Duration: ps.opDuration[op],
+		MinDuration: ps.opMinDuration[op],
+		MaxDuration: ps.opMaxDuration[op],
+		Variance: ps.opVariance[op],
+		Label: ps.opLabel[op],
+	}
+}
+
+func (ps *Stats) GetTotalOpFreq () int {
+	totalOpFreq := int(0)
+	for _, freq := range ps.opFrequency {
+		totalOpFreq += int(freq)
+	}
+	return totalOpFreq
+}

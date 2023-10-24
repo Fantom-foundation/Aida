@@ -71,7 +71,7 @@ func (p *ProfilerProxy) GetNonce(addr common.Address) uint64 {
 	start := time.Now()
 	nonce := p.db.GetNonce(addr)
 	elapsed := time.Since(start)
-	p.ps.Profile(operation.GetBalanceID, elapsed)
+	p.ps.Profile(operation.GetNonceID, elapsed)
 	return nonce
 }
 

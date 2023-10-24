@@ -10,11 +10,11 @@ import (
 
 // MakeOperationProfiler creates a executor.Extension that records Operation profiling
 func MakeOperationProfiler[T any](cfg *utils.Config) executor.Extension[T] {
-	if !cfg.Profile || (cfg.ProfileInterval <= 0) || (cfg.Last <= cfg.First) {
+	if !cfg.Profile {
 		return extension.NilExtension[T]{}
 	}
 
-	adjustedIntervalStart := cfg.First - (cfg.First % cfg.ProfileInterval)
+	adjustedIntervalStart := cfg.First - (cfg.First % cfg.ProfileInterval) + 1
 	return &operationProfiler[T]{
 		cfg:           cfg,
 		intervalStart: cfg.First,
@@ -56,7 +56,7 @@ func (p *operationProfiler[T]) PostBlock(state executor.State[T], _ *executor.Co
 	return nil
 }
 
-func (p *operationProfiler[T]) PostRun(state executor.State[T], _ *executor.Context, _ error) error {
+func (p *operationProfiler[T]) PostRun(executor.State[T], *executor.Context, error) error {
 	p.stats.PrintProfiling(p.intervalStart, p.lastSeenBlockNumber)
 	return nil
 }
