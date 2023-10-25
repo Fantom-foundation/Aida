@@ -28,15 +28,19 @@ func NewAnalytics(opCount uint64) *Analytics {
 */
 
 type IncrementalStats struct {
-	count    uint64
-	sum      float64
-	variance float64
-	min      float64
-	max      float64
+	count uint64
+	sum   float64
+	min   float64
+	max   float64
+
+	m1 float64
+	m2 float64
+	m3 float64
+	m4 float64
 }
 
 func NewIncrementalStats() *IncrementalStats {
-	return &IncrementalStats{variance: math.NaN()}
+	return &IncrementalStats{}
 }
 
 func (s *IncrementalStats) unlessEmpty(notEmpty, empty float64) float64 {
@@ -46,6 +50,7 @@ func (s *IncrementalStats) unlessEmpty(notEmpty, empty float64) float64 {
 	return empty
 }
 
+/*
 func (s *IncrementalStats) Update(x float64) {
 	oldCount, newCount := float64(s.count), float64(s.count+1)
 	oldSum, newSum := s.sum, s.sum+x
@@ -57,7 +62,7 @@ func (s *IncrementalStats) Update(x float64) {
 	oldVariance := s.variance
 	newVariance := s.unlessEmpty(
 		//oldVariance * (oldCount - 1) / oldCount + diffMean * diffMean / newCount,
-		(oldCount/newCount)*(oldVariance+(diff*diff/newCount)),
+		(oldCount / newCount) * (oldVariance + (diff * diff / newCount)),
 		0,
 	)
 
@@ -65,6 +70,25 @@ func (s *IncrementalStats) Update(x float64) {
 	s.sum = newSum
 	s.variance = newVariance
 	//a.min = oldCount > 0 ? min(a.min, x) : x
+	s.min = s.unlessEmpty(min(s.min, x), x)
+	s.max = max(s.max, x)
+}
+*/
+
+func (s *IncrementalStats) Update(x float64) {
+	prevN, n := float64(s.count), float64(s.count+1)
+
+	delta := x - s.m1
+	delta_n := delta / n
+	delta_n2 := delta_n * delta_n
+
+	t := delta * delta_n * prevN
+	s.m1 += delta_n
+	s.m4 += t*delta_n2*(n*n-3*n+3) + (6 * delta_n2 * s.m2) - (4 * delta_n * s.m3)
+	s.m3 += t * delta_n * (n - 2) * (3 * delta_n * s.m2)
+	s.m2 += t
+
+	s.count = uint64(n)
 	s.min = s.unlessEmpty(min(s.min, x), x)
 	s.max = max(s.max, x)
 }
@@ -78,11 +102,21 @@ func (s *IncrementalStats) GetSum() float64 {
 }
 
 func (s *IncrementalStats) GetMean() float64 {
-	return s.unlessEmpty(s.sum/float64(s.count), 0)
+	//return s.unlessEmpty(s.sum/float64(s.count), 0)
+	return s.m1
 }
 
 func (s *IncrementalStats) GetVariance() float64 {
-	return s.variance
+	//return s.variance
+	return s.m2 / (float64(s.count) - 1.0)
+}
+
+func (s *IncrementalStats) GetSkewness() float64 {
+	return math.Sqrt(float64(s.count)) * s.m3 / math.Pow(s.m2, 1.5)
+}
+
+func (s *IncrementalStats) GetKurtosis() float64 {
+	return float64(s.count)*s.m4/(s.m2*s.m2) - 3.0
 }
 
 func (s *IncrementalStats) GetMin() float64 {
