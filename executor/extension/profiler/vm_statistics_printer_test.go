@@ -1,6 +1,6 @@
 package profiler
 
-//go:generate mockgen -source vm_statistics_printer_test.go -destination vm_statistics_printer_mocks_test.go -package extension
+//go:generate mockgen -source vm_statistics_printer_test.go -destination vm_statistics_printer_mocks_test.go -package profiler
 
 import (
 	"testing"
@@ -12,9 +12,9 @@ import (
 )
 
 func TestVirtualMachineStatisticsPrinter_WorksWithDefaultSetup(t *testing.T) {
-	config := utils.Config{}
-	ext := MakeVirtualMachineStatisticsPrinter(&config)
-	ext.PostRun(executor.State{}, nil, nil)
+	cfg := utils.Config{}
+	ext := MakeVirtualMachineStatisticsPrinter[any](&cfg)
+	ext.PostRun(executor.State[any]{}, nil, nil)
 }
 
 func TestVirtualMachineStatisticsPrinter_TriggersStatPrintingAtEndOfRun(t *testing.T) {
@@ -24,11 +24,11 @@ func TestVirtualMachineStatisticsPrinter_TriggersStatPrintingAtEndOfRun(t *testi
 
 	vm.EXPECT().DumpProfile()
 
-	config := utils.Config{}
-	config.VmImpl = "test-vm"
-	ext := MakeVirtualMachineStatisticsPrinter(&config)
+	cfg := utils.Config{}
+	cfg.VmImpl = "test-vm"
+	ext := MakeVirtualMachineStatisticsPrinter[any](&cfg)
 
-	ext.PostRun(executor.State{}, nil, nil)
+	ext.PostRun(executor.State[any]{}, nil, nil)
 }
 
 type ProfilingVm interface {

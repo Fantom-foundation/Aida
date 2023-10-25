@@ -16,16 +16,16 @@ import (
 const testProgressReportFrequency = time.Second
 
 func TestProgressLoggerExtension_CorrectClose(t *testing.T) {
-	config := &utils.Config{}
-	ext := MakeProgressLogger(config, testProgressReportFrequency)
+	cfg := &utils.Config{}
+	ext := MakeProgressLogger[any](cfg, testProgressReportFrequency)
 
 	// start the report thread
-	ext.PreRun(executor.State{}, nil)
+	ext.PreRun(executor.State[any]{}, nil)
 
 	// make sure PostRun is not blocking.
 	done := make(chan bool)
 	go func() {
-		ext.PostRun(executor.State{}, nil, nil)
+		ext.PostRun(executor.State[any]{}, nil, nil)
 		close(done)
 	}()
 
@@ -38,10 +38,10 @@ func TestProgressLoggerExtension_CorrectClose(t *testing.T) {
 }
 
 func TestProgressLoggerExtension_NoLoggerIsCreatedIfDisabled(t *testing.T) {
-	config := &utils.Config{}
-	config.NoHeartbeatLogging = true
-	ext := MakeProgressLogger(config, testProgressReportFrequency)
-	if _, ok := ext.(extension.NilExtension); !ok {
+	cfg := &utils.Config{}
+	cfg.NoHeartbeatLogging = true
+	ext := MakeProgressLogger[any](cfg, testProgressReportFrequency)
+	if _, ok := ext.(extension.NilExtension[any]); !ok {
 		t.Errorf("Logger is enabled although not set in configuration")
 	}
 
@@ -51,11 +51,11 @@ func TestProgressLoggerExtension_LoggingHappens(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
 
-	config := &utils.Config{}
+	cfg := &utils.Config{}
 
-	ext := makeProgressLogger(config, testProgressReportFrequency, log)
+	ext := makeProgressLogger[*substate.Substate](cfg, testProgressReportFrequency, log)
 
-	ext.PreRun(executor.State{}, nil)
+	ext.PreRun(executor.State[*substate.Substate]{}, nil)
 
 	gomock.InOrder(
 		// scheduled logging
@@ -73,10 +73,10 @@ func TestProgressLoggerExtension_LoggingHappens(t *testing.T) {
 	)
 
 	// fill the logger with some data
-	ext.PostTransaction(executor.State{
+	ext.PostTransaction(executor.State[*substate.Substate]{
 		Block:       1,
 		Transaction: 1,
-		Substate: &substate.Substate{
+		Data: &substate.Substate{
 			Result: &substate.SubstateResult{
 				GasUsed: 100_000_000,
 			},
@@ -86,19 +86,19 @@ func TestProgressLoggerExtension_LoggingHappens(t *testing.T) {
 	// we must wait for the ticker to tick
 	time.Sleep((3 * testProgressReportFrequency) / 2)
 
-	ext.PostRun(executor.State{}, nil, nil)
+	ext.PostRun(executor.State[*substate.Substate]{}, nil, nil)
 }
 
 func TestProgressLoggerExtension_LoggingHappensEvenWhenProgramEndsBeforeTickerTicks(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
 
-	config := &utils.Config{}
+	cfg := &utils.Config{}
 
 	// we set large tick rate that does not trigger the ticker
-	ext := makeProgressLogger(config, 10*time.Second, log)
+	ext := makeProgressLogger[*substate.Substate](cfg, 10*time.Second, log)
 
-	ext.PreRun(executor.State{}, nil)
+	ext.PreRun(executor.State[*substate.Substate]{}, nil)
 
 	log.EXPECT().Noticef(finalSummaryProgressReportFormat,
 		gomock.Any(), 1,
@@ -107,10 +107,10 @@ func TestProgressLoggerExtension_LoggingHappensEvenWhenProgramEndsBeforeTickerTi
 	)
 
 	// fill the logger with some data
-	ext.PostTransaction(executor.State{
+	ext.PostTransaction(executor.State[*substate.Substate]{
 		Block:       1,
 		Transaction: 1,
-		Substate: &substate.Substate{
+		Data: &substate.Substate{
 			Result: &substate.SubstateResult{
 				GasUsed: 100_000_000,
 			},
@@ -120,7 +120,7 @@ func TestProgressLoggerExtension_LoggingHappensEvenWhenProgramEndsBeforeTickerTi
 	// wait for data to get into logger
 	time.Sleep((3 * testProgressReportFrequency) / 2)
 
-	ext.PostRun(executor.State{}, nil, nil)
+	ext.PostRun(executor.State[*substate.Substate]{}, nil, nil)
 }
 
 // MATCHERS

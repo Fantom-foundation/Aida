@@ -23,7 +23,7 @@ type TxTime []time.Duration
 type TxType int
 
 const (
-	TransferTx    TxType = iota // a transaction which transafers balance
+	TransferTx    TxType = iota // a transaction which transfers balance
 	CreateTx                    // a transaction which creates new contracts
 	CallTx                      // a transaction which executes contracts
 	MaintenanceTx               // an internal transaction which performs maintenance
@@ -31,7 +31,7 @@ const (
 
 // readable labels of transaction types.
 var TypeLabel = map[TxType]string{
-	TransferTx:    "transafer",
+	TransferTx:    "transfer",
 	CreateTx:      "create",
 	CallTx:        "call",
 	MaintenanceTx: "maintenance",

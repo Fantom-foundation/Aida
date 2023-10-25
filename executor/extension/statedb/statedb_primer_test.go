@@ -11,11 +11,11 @@ import (
 )
 
 func TestProgressLoggerExtension_NoPrimerIsCreatedIfDisabled(t *testing.T) {
-	config := &utils.Config{}
-	config.SkipPriming = true
+	cfg := &utils.Config{}
+	cfg.SkipPriming = true
 
-	ext := MakeStateDbPrimer(config)
-	if _, ok := ext.(extension.NilExtension); !ok {
+	ext := MakeStateDbPrimer[any](cfg)
+	if _, ok := ext.(extension.NilExtension[any]); !ok {
 		t.Errorf("Primer is enabled although not set in configuration")
 	}
 
@@ -25,15 +25,15 @@ func TestProgressLoggerExtension_PrimingDoesNotTriggerForExistingStateDb(t *test
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
 
-	config := &utils.Config{}
-	config.SkipPriming = false
-	config.IsExistingStateDb = true
+	cfg := &utils.Config{}
+	cfg.SkipPriming = false
+	cfg.IsExistingStateDb = true
 
 	log.EXPECT().Warning("Skipping priming due to usage of preexisting StateDb")
 
-	ext := makeStateDbPrimer(config, log)
+	ext := makeStateDbPrimer[any](cfg, log)
 
-	ext.PreRun(executor.State{}, nil)
+	ext.PreRun(executor.State[any]{}, nil)
 
 }
 
@@ -41,14 +41,14 @@ func TestProgressLoggerExtension_PrimingDoesTriggerForNonExistingStateDb(t *test
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
 
-	config := &utils.Config{}
-	config.SkipPriming = false
-	config.StateDbSrc = ""
-	config.First = 2
+	cfg := &utils.Config{}
+	cfg.SkipPriming = false
+	cfg.StateDbSrc = ""
+	cfg.First = 2
 
-	log.EXPECT().Noticef("Priming to block %v", config.First-1)
+	log.EXPECT().Noticef("Priming to block %v", cfg.First-1)
 
-	ext := makeStateDbPrimer(config, log)
+	ext := makeStateDbPrimer[any](cfg, log)
 
-	ext.PreRun(executor.State{}, &executor.Context{})
+	ext.PreRun(executor.State[any]{}, &executor.Context{})
 }

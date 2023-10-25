@@ -7,6 +7,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -44,39 +45,39 @@ func RunVmAdb(ctx *cli.Context) error {
 }
 
 type blockProcessor struct {
-	config *utils.Config
+	cfg *utils.Config
 }
 
-func (r blockProcessor) Process(state executor.State, context *executor.Context) error {
+func (r blockProcessor) Process(state executor.State[*substate.Substate], ctx *executor.Context) error {
 	_, err := utils.ProcessTx(
-		context.Archive,
-		r.config,
+		ctx.Archive,
+		r.cfg,
 		uint64(state.Block),
 		state.Transaction,
-		state.Substate,
+		state.Data,
 	)
 	return err
 }
 
 func run(
-	config *utils.Config,
-	provider executor.SubstateProvider,
+	cfg *utils.Config,
+	provider executor.Provider[*substate.Substate],
 	stateDb state.StateDB,
-	processor executor.Processor,
-	extra []executor.Extension,
+	processor executor.Processor[*substate.Substate],
+	extra []executor.Extension[*substate.Substate],
 ) error {
-	extensionList := []executor.Extension{
-		profiler.MakeCpuProfiler(config),
+	extensionList := []executor.Extension[*substate.Substate]{
+		profiler.MakeCpuProfiler[*substate.Substate](cfg),
 		statedb.MakeArchivePrepper(),
-		tracker.MakeProgressLogger(config, 100),
+		tracker.MakeProgressLogger[*substate.Substate](cfg, 0),
 	}
 	extensionList = append(extensionList, extra...)
 	return executor.NewExecutor(provider).Run(
 		executor.Params{
-			From:                   int(config.First),
-			To:                     int(config.Last) + 1,
+			From:                   int(cfg.First),
+			To:                     int(cfg.Last) + 1,
 			State:                  stateDb,
-			NumWorkers:             config.Workers,
+			NumWorkers:             cfg.Workers,
 			ParallelismGranularity: executor.BlockLevel,
 		},
 		processor,

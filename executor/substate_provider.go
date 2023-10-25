@@ -11,40 +11,11 @@ import (
 )
 
 // ----------------------------------------------------------------------------
-//                               Interface
-// ----------------------------------------------------------------------------
-
-// SubstateProvider is an interface for components capable of enumerating
-// substate-data for ranges of transactions.
-type SubstateProvider interface {
-	// Run iterates through transaction in the block range [from,to) in order
-	// and forwards substate information for each transaction in the range to
-	// the provided consumer. Execution aborts if the consumer returns an error
-	// or an error during the substate retrieval process occurred.
-	Run(from int, to int, consumer Consumer) error
-	// Close releases resources held by the Substate implementation. After this
-	// no more operations are allowed on the same instance.
-	Close()
-}
-
-// Consumer is a type alias for the type of function to which substate information
-// can be forwarded by the SubstateProvider.
-type Consumer func(TransactionInfo) error
-
-// TransactionInfo summarizes the per-transaction information provided by a
-// SubstateProvider.
-type TransactionInfo struct {
-	Block       int
-	Transaction int
-	Substate    *substate.Substate
-}
-
-// ----------------------------------------------------------------------------
 //                              Implementation
 // ----------------------------------------------------------------------------
 
 // OpenSubstateDb opens a substate database as configured in the given parameters.
-func OpenSubstateDb(config *utils.Config, ctxt *cli.Context) (res SubstateProvider, err error) {
+func OpenSubstateDb(cfg *utils.Config, ctxt *cli.Context) (res Provider[*substate.Substate], err error) {
 	// Substate is panicking if we are opening a non-existing directory. To mitigate
 	// the damage, we recover here and forward an error instead.
 	defer func() {
@@ -53,9 +24,9 @@ func OpenSubstateDb(config *utils.Config, ctxt *cli.Context) (res SubstateProvid
 			err = fmt.Errorf("failed to open substate DB: %v", issue)
 		}
 	}()
-	substate.SetSubstateDb(config.AidaDb)
+	substate.SetSubstateDb(cfg.AidaDb)
 	substate.OpenSubstateDBReadOnly()
-	return &substateProvider{ctxt, config.Workers}, nil
+	return &substateProvider{ctxt, cfg.Workers}, nil
 }
 
 // substateProvider is an adapter of Aida's SubstateProvider interface defined above to the
@@ -65,7 +36,7 @@ type substateProvider struct {
 	numParallelDecoders int
 }
 
-func (s substateProvider) Run(from int, to int, consumer Consumer) error {
+func (s substateProvider) Run(from int, to int, consumer Consumer[*substate.Substate]) error {
 	iter := substate.NewSubstateIterator(uint64(from), s.numParallelDecoders)
 	defer iter.Release()
 	for iter.Next() {
@@ -73,7 +44,7 @@ func (s substateProvider) Run(from int, to int, consumer Consumer) error {
 		if tx.Block >= uint64(to) {
 			return nil
 		}
-		if err := consumer(TransactionInfo{int(tx.Block), int(tx.Transaction), tx.Substate}); err != nil {
+		if err := consumer(TransactionInfo[*substate.Substate]{int(tx.Block), int(tx.Transaction), tx.Substate}); err != nil {
 			return err
 		}
 	}

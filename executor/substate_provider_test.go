@@ -13,10 +13,10 @@ import (
 )
 
 func TestSubstateProvider_OpeningANonExistingDbResultsInAnError(t *testing.T) {
-	config := utils.Config{}
-	config.AidaDb = t.TempDir()
+	cfg := utils.Config{}
+	cfg.AidaDb = t.TempDir()
 	// Important: the following code does not panic.
-	_, err := OpenSubstateDb(&config, nil)
+	_, err := OpenSubstateDb(&cfg, nil)
 	if err == nil {
 		t.Errorf("attempting to open a non-existing substate DB should fail")
 	}
@@ -159,17 +159,17 @@ type TxConsumer interface {
 	Consume(block int, transaction int, substate *substate.Substate) error
 }
 
-func toConsumer(c TxConsumer) Consumer {
-	return func(info TransactionInfo) error {
-		return c.Consume(info.Block, info.Transaction, info.Substate)
+func toConsumer(c TxConsumer) Consumer[*substate.Substate] {
+	return func(info TransactionInfo[*substate.Substate]) error {
+		return c.Consume(info.Block, info.Transaction, info.Data)
 	}
 }
 
-func openSubstateDb(path string) (SubstateProvider, error) {
-	config := utils.Config{}
-	config.AidaDb = path
-	config.Workers = 1
-	return OpenSubstateDb(&config, nil)
+func openSubstateDb(path string) (Provider[*substate.Substate], error) {
+	cfg := utils.Config{}
+	cfg.AidaDb = path
+	cfg.Workers = 1
+	return OpenSubstateDb(&cfg, nil)
 }
 
 func createSubstateDb(path string) error {

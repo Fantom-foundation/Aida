@@ -13,14 +13,14 @@ import (
 )
 
 func TestMemoryUsagePrinter_MemoryBreakdownIsNotPrintedWhenBreakdownIsNil(t *testing.T) {
-	config := &utils.Config{}
-	config.MemoryBreakdown = true
+	cfg := &utils.Config{}
+	cfg.MemoryBreakdown = true
 
 	ctrl := gomock.NewController(t)
 
 	log := logger.NewMockLogger(ctrl)
 	db := state.NewMockStateDB(ctrl)
-	ext := makeMemoryUsagePrinter(config, log)
+	ext := makeMemoryUsagePrinter[any](cfg, log)
 
 	usage := &state.MemoryUsage{
 		Breakdown: nil,
@@ -36,20 +36,20 @@ func TestMemoryUsagePrinter_MemoryBreakdownIsNotPrintedWhenBreakdownIsNil(t *tes
 		log.EXPECT().Notice(gomock.Any()),
 	)
 
-	ext.PreRun(executor.State{}, &executor.Context{State: db})
-	ext.PostRun(executor.State{}, &executor.Context{State: db}, nil)
+	ext.PreRun(executor.State[any]{}, &executor.Context{State: db})
+	ext.PostRun(executor.State[any]{}, &executor.Context{State: db}, nil)
 
 }
 
 func TestMemoryUsagePrinter_MemoryBreakdownIsPrintedWhenEnabled(t *testing.T) {
-	config := &utils.Config{}
-	config.MemoryBreakdown = true
+	cfg := &utils.Config{}
+	cfg.MemoryBreakdown = true
 
 	ctrl := gomock.NewController(t)
 
 	log := logger.NewMockLogger(ctrl)
 	db := state.NewMockStateDB(ctrl)
-	ext := makeMemoryUsagePrinter(config, log)
+	ext := makeMemoryUsagePrinter[any](cfg, log)
 
 	usage := &state.MemoryUsage{
 		UsedBytes: 1,
@@ -66,16 +66,16 @@ func TestMemoryUsagePrinter_MemoryBreakdownIsPrintedWhenEnabled(t *testing.T) {
 		log.EXPECT().Noticef(gomock.Any(), uint64(1), gomock.Any()),
 	)
 
-	ext.PreRun(executor.State{}, &executor.Context{State: db})
-	ext.PostRun(executor.State{}, &executor.Context{State: db}, nil)
+	ext.PreRun(executor.State[any]{}, &executor.Context{State: db})
+	ext.PostRun(executor.State[any]{}, &executor.Context{State: db}, nil)
 
 }
 
 func TestMemoryUsagePrinter_NoPrinterIsCreatedIfNotEnabled(t *testing.T) {
-	config := &utils.Config{}
-	ext := MakeMemoryUsagePrinter(config)
+	cfg := &utils.Config{}
+	ext := MakeMemoryUsagePrinter[any](cfg)
 
-	if _, ok := ext.(extension.NilExtension); !ok {
+	if _, ok := ext.(extension.NilExtension[any]); !ok {
 		t.Errorf("profiler is enabled although not set in configuration")
 	}
 }
