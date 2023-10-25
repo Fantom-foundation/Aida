@@ -86,7 +86,6 @@ func runCommand(cmd *exec.Cmd, resultChan chan string, log *logging.Logger) erro
 	scanner := bufio.NewScanner(merged)
 
 	lastOutputMessagesChan := make(chan string, commandOutputLimit)
-	defer close(lastOutputMessagesChan)
 	for scanner.Scan() {
 		m := scanner.Text()
 		if resultChan != nil {
@@ -106,6 +105,7 @@ func runCommand(cmd *exec.Cmd, resultChan chan string, log *logging.Logger) erro
 			}
 		}
 	}
+	close(lastOutputMessagesChan)
 	err = cmd.Wait()
 
 	// command failed
