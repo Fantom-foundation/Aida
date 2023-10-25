@@ -43,7 +43,7 @@ func Test_compareBalanceOK(t *testing.T) {
 		},
 	}
 
-	err := compareBalance(data, new(strings.Builder))
+	err := compareBalance(data)
 	if err != nil {
 		t.Errorf("error must be nil; err: %v", err)
 	}
@@ -70,7 +70,7 @@ func Test_compareBalanceErrorNoMatchingResult(t *testing.T) {
 		},
 	}
 
-	err := compareBalance(data, new(strings.Builder))
+	err := compareBalance(data)
 	if err == nil {
 		t.Errorf("error must not be nil; err: %v", err)
 		return
@@ -101,7 +101,7 @@ func Test_compareTransactionCountOK(t *testing.T) {
 		},
 	}
 
-	err := compareTransactionCount(data, new(strings.Builder))
+	err := compareTransactionCount(data)
 
 	if err != nil {
 		t.Errorf("error must be nil; err: %v", err)
@@ -128,7 +128,7 @@ func Test_compareTransactionCountErrorNoMatchingResult(t *testing.T) {
 		},
 	}
 
-	err := compareTransactionCount(data, new(strings.Builder))
+	err := compareTransactionCount(data)
 	if err == nil {
 		t.Errorf("error must not be nil; err: %v", err)
 		return
@@ -159,7 +159,7 @@ func Test_compareCallOK(t *testing.T) {
 		},
 	}
 
-	err := compareCall(data, new(strings.Builder))
+	err := compareCall(data)
 	if err != nil {
 		t.Errorf("error must be nil; err: %v", err)
 	}
@@ -184,7 +184,7 @@ func Test_compareCallErrorNoMatchingResult(t *testing.T) {
 		},
 	}
 
-	err := compareCall(data, new(strings.Builder))
+	err := compareCall(data)
 	if err == nil {
 		t.Errorf("error must not be nil; err: %v", err)
 		return
@@ -213,7 +213,7 @@ func Test_compareCallErrorExpectedResultGotErr(t *testing.T) {
 		},
 	}
 
-	err := compareCall(data, new(strings.Builder))
+	err := compareCall(data)
 	if err == nil {
 		t.Errorf("error must not be nil; err: %v", err)
 		return
@@ -245,7 +245,7 @@ func Test_compareCallErrorExpectedErrGotResult(t *testing.T) {
 		},
 	}
 
-	err := compareCall(data, new(strings.Builder))
+	err := compareCall(data)
 	if err == nil {
 		t.Errorf("error must not be null")
 		return
@@ -276,7 +276,7 @@ func Test_compareEstimateGasOK(t *testing.T) {
 		},
 	}
 
-	err := compareEstimateGas(data, new(strings.Builder))
+	err := compareEstimateGas(data)
 	if err != nil {
 		t.Errorf("error must be nil; err: %v", err)
 	}
@@ -301,7 +301,7 @@ func Test_compareEstimateGasErrorNoMatchingResult(t *testing.T) {
 		},
 	}
 
-	err := compareEstimateGas(data, new(strings.Builder))
+	err := compareEstimateGas(data)
 	if err == nil {
 		t.Errorf("error must not be null")
 		return
@@ -330,7 +330,7 @@ func Test_compareEstimateGasErrorExpectedResultGotErr(t *testing.T) {
 		},
 	}
 
-	err := compareEstimateGas(data, new(strings.Builder))
+	err := compareEstimateGas(data)
 	if err == nil {
 		t.Errorf("error must be nil; err: %v", err)
 		return
@@ -361,7 +361,7 @@ func Test_compareEstimateGasErrorExpectedErrGotResult(t *testing.T) {
 		},
 	}
 
-	err := compareEstimateGas(data, new(strings.Builder))
+	err := compareEstimateGas(data)
 	if err == nil {
 		t.Errorf("error must not be null")
 		return
@@ -392,7 +392,7 @@ func Test_compareCodeOK(t *testing.T) {
 		},
 	}
 
-	err := compareCode(data, new(strings.Builder))
+	err := compareCode(data)
 	if err != nil {
 		t.Errorf("error must be nil; err: %v", err)
 	}
@@ -417,7 +417,7 @@ func Test_compareCodeErrorNoMatchingResult(t *testing.T) {
 		},
 	}
 
-	err := compareCode(data, new(strings.Builder))
+	err := compareCode(data)
 	if err == nil {
 		t.Errorf("error must not be nil; err: %v", err)
 		return
@@ -447,7 +447,7 @@ func Test_compareStorageAtOK(t *testing.T) {
 		},
 	}
 
-	err := compareStorageAt(data, new(strings.Builder))
+	err := compareStorageAt(data)
 	if err != nil {
 		t.Errorf("error must be nil; err: %v", err)
 	}
@@ -471,7 +471,7 @@ func Test_compareStorageAtErrorNoMatchingResult(t *testing.T) {
 		},
 	}
 
-	err := compareStorageAt(data, new(strings.Builder))
+	err := compareStorageAt(data)
 	if err == nil {
 		t.Errorf("error must not be nil; err: %v", err)
 		return

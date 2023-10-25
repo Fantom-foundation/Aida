@@ -29,15 +29,20 @@ func RunRPCAdb(ctx *cli.Context) error {
 
 	defer rpcSource.Close()
 
-	return run(cfg, rpcSource)
+	return run(cfg, rpcSource, makeRPCProcessor(cfg), nil, nil)
 }
 
-func run(cfg *utils.Config, provider executor.Provider[*rpc_iterator.RequestWithResponse]) error {
+func run(cfg *utils.Config, provider executor.Provider[*rpc_iterator.RequestWithResponse], processor executor.Processor[*rpc_iterator.RequestWithResponse], extra []executor.Extension[*rpc_iterator.RequestWithResponse], stateDb state.StateDB) error {
 	var extensionList = []executor.Extension[*rpc_iterator.RequestWithResponse]{
-		statedb.MakeStateDbManager[*rpc_iterator.RequestWithResponse](cfg),
 		profiler.MakeCpuProfiler[*rpc_iterator.RequestWithResponse](cfg),
 		tracker.MakeProgressLogger[*rpc_iterator.RequestWithResponse](cfg, 15*time.Second),
 		statedb.MakeTemporaryArchivePrepper[*rpc_iterator.RequestWithResponse](),
+	}
+
+	// this is for testing purposes so mock statedb and mock extension can be used
+	extensionList = append(extensionList, extra...)
+	if stateDb == nil {
+		extensionList = append(extensionList, statedb.MakeStateDbManager[*rpc_iterator.RequestWithResponse](cfg))
 	}
 
 	return executor.NewExecutor(provider).Run(
@@ -46,8 +51,9 @@ func run(cfg *utils.Config, provider executor.Provider[*rpc_iterator.RequestWith
 			To:                     int(cfg.Last) + 1,
 			NumWorkers:             cfg.Workers,
 			ParallelismGranularity: executor.TransactionLevel,
+			State:                  stateDb,
 		},
-		makeRPCProcessor(cfg),
+		processor,
 		extensionList,
 	)
 }
