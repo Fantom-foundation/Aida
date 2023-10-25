@@ -1,13 +1,9 @@
 package replay
 
 import (
-	"errors"
+	"encoding/json"
 	"fmt"
 	"strconv"
-
-	"github.com/Fantom-foundation/go-opera/evmcore"
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 type comparatorErrorType byte
@@ -28,25 +24,6 @@ const (
 type comparatorError struct {
 	error
 	typ comparatorErrorType
-}
-
-// revertError is returned by when transaction execution needs to be reverted by the EVMExecutor
-type revertError struct {
-	error
-	reason string // revert reason hex encoded
-}
-
-// newRevertError creates new revertError based on given result
-func newRevertError(result *evmcore.ExecutionResult) revertError {
-	reason, errUnpack := abi.UnpackRevert(result.Revert())
-	err := errors.New("execution reverted")
-	if errUnpack == nil {
-		err = fmt.Errorf("execution reverted: %v", reason)
-	}
-	return revertError{
-		error:  err,
-		reason: hexutil.Encode(result.Revert()),
-	}
 }
 
 // newComparatorError returns new comparatorError with given StateDB and recorded data based on the typ.
@@ -94,15 +71,30 @@ func newCannotSendRPCRequestErr(data comparisonData) *comparatorError {
 // It is returned when recording has an internal error code - this error is logged to level DEBUG and
 // is not related to StateDB
 func newInternalError(data comparisonData) *comparatorError {
+	var stateDbRes string
+	if data.StateDB.Result != nil {
+		stateDbRes = fmt.Sprintf("%v", data.StateDB.Result)
+	} else {
+		stateDbRes = fmt.Sprintf("%v", data.StateDB.Error)
+	}
+
+	var recordedRes string
+	if data.record.Response != nil {
+		err := json.Unmarshal(data.record.Response.Result, &recordedRes)
+		if err != nil {
+			return newComparatorError(data.record.Response.Result, string(data.record.Response.Result), data, cannotUnmarshalResult)
+		}
+	} else {
+		recordedRes = fmt.Sprintf("err: %v", data.record.Error.Error)
+	}
+
 	return &comparatorError{
 		error: fmt.Errorf("recording with internal error for request:"+
 			"\nMethod: %v"+
 			"\nBlockID: 0x%v"+
-			"\n\tStateDB result: %v"+
-			"\n\tStateDB err: %v"+
-			"\n\tExpected result: %v"+
-			"\n\tExpected err: %v"+
-			"\n\nParams: %v", data.record.Query.Method, strconv.FormatUint(data.block, 16), data.StateDB.Result, data.StateDB.Error, data.record.Response.Result, data.record.Error.Error, string(data.record.ParamsRaw)),
+			"\n\tStateDB: %v"+
+			"\n\tExpected: %v"+
+			"\n\nParams: %v", data.record.Query.Method, strconv.FormatUint(data.block, 16), stateDbRes, recordedRes, string(data.record.ParamsRaw)),
 		typ: internalError,
 	}
 }

@@ -1,7 +1,6 @@
 package replay
 
 import (
-	"strings"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
@@ -46,7 +45,7 @@ func run(cfg *utils.Config, provider executor.Provider[*rpc_iterator.RequestWith
 			From:                   int(cfg.First),
 			To:                     int(cfg.Last) + 1,
 			NumWorkers:             cfg.Workers,
-			ParallelismGranularity: executor.BlockLevel,
+			ParallelismGranularity: executor.TransactionLevel,
 		},
 		makeRPCProcessor(cfg),
 		extensionList,
@@ -55,16 +54,14 @@ func run(cfg *utils.Config, provider executor.Provider[*rpc_iterator.RequestWith
 
 func makeRPCProcessor(cfg *utils.Config) rpcProcessor {
 	return rpcProcessor{
-		cfg:     cfg,
-		builder: new(strings.Builder),
-		log:     logger.NewLogger(cfg.LogLevel, "RPC-Adb"),
+		cfg: cfg,
+		log: logger.NewLogger(cfg.LogLevel, "RPC-Adb"),
 	}
 }
 
 type rpcProcessor struct {
-	cfg     *utils.Config
-	builder *strings.Builder
-	log     logger.Logger
+	cfg *utils.Config
+	log logger.Logger
 }
 
 func (p rpcProcessor) Process(state executor.State[*rpc_iterator.RequestWithResponse], ctx *executor.Context) error {
@@ -130,11 +127,11 @@ func (p rpcProcessor) execute(req *rpc_iterator.RequestWithResponse, archive sta
 func (p rpcProcessor) compare(data comparisonData) (err *comparatorError) {
 	switch data.record.Query.MethodBase {
 	case "getBalance":
-		err = compareBalance(data, p.builder)
+		err = compareBalance(data)
 	case "getTransactionCount":
-		err = compareTransactionCount(data, p.builder)
+		err = compareTransactionCount(data)
 	case "call":
-		err = compareCall(data, p.builder)
+		err = compareCall(data)
 		if err != nil && err.typ == expectedErrorGotResult && !data.isRecovered {
 			data.isRecovered = true
 			return p.tryRecovery(data)
@@ -143,9 +140,9 @@ func (p rpcProcessor) compare(data comparisonData) (err *comparatorError) {
 		// estimateGas is currently not suitable for replay since the estimation  in geth is always calculated for current state
 		// that means recorded result and result returned by StateDB are not comparable
 	case "getCode":
-		err = compareCode(data, p.builder)
+		err = compareCode(data)
 	case "getStorageAt":
-		err = compareStorageAt(data, p.builder)
+		err = compareStorageAt(data)
 	}
 
 	return

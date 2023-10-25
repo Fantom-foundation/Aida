@@ -21,6 +21,7 @@ func main() {
 		Flags: []cli.Flag{
 			&utils.RPCRecordingFileFlag,
 			&substate.WorkersFlag,
+			&utils.LogFileFlag,
 
 			// VM
 			&utils.VmImplementation,

@@ -13,7 +13,8 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		AppName:     ctx.App.HelpName,
 		CommandName: ctx.Command.Name,
 
-		RPCRecordingFile:      getFlagValue(ctx, RPCRecordingFileFlag).(string),
+		RPCRecordingFile: getFlagValue(ctx, RPCRecordingFileFlag).(string),
+
 		ArchiveMode:           getFlagValue(ctx, ArchiveModeFlag).(bool),
 		ArchiveVariant:        getFlagValue(ctx, ArchiveVariantFlag).(string),
 		BlockLength:           getFlagValue(ctx, BlockLengthFlag).(uint64),
@@ -93,6 +94,7 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		NoHeartbeatLogging:    getFlagValue(ctx, NoHeartbeatLoggingFlag).(bool),
 		TrackProgress:         getFlagValue(ctx, TrackProgressFlag).(bool),
 		ValidateStateHashes:   getFlagValue(ctx, ValidateStateHashesFlag).(bool),
+		LogFile:               getFlagValue(ctx, LogFileFlag).(string),
 	}
 
 	return cfg

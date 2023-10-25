@@ -9,6 +9,10 @@ var (
 		Usage:   "Path to source file with recorded API data",
 		Aliases: []string{"r"},
 	}
+	LogFileFlag = cli.PathFlag{
+		Name:  "log-file",
+		Usage: "Path to log file.",
+	}
 	ArchiveModeFlag = cli.BoolFlag{
 		Name:  "archive",
 		Usage: "set node type to archival mode. If set, the node keep all the EVM state history; otherwise the state history will be pruned.",
