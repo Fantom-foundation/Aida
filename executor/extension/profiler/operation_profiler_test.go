@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"math/rand"
 	"testing"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
@@ -126,10 +127,10 @@ func prepareMockStateDb(m *state.MockStateDB) {
 	m.EXPECT().Close().AnyTimes()
 }
 
-func getRandomStateDbFunc(db state.StateDB) func() {
+func getRandomStateDbFunc(db state.StateDB, r *rand.Rand) func() {
 	funcs := getStateDbFuncs(db)
 	funcCount := len(funcs)
-	return funcs[rand.Intn(funcCount)]
+	return funcs[r.Intn(funcCount)]
 }
 
 func TestOperationProfilerWithEachOpOnce(t *testing.T) {
@@ -193,6 +194,7 @@ func TestOperationProfilerWithEachOpOnce(t *testing.T) {
 func TestOperationProfilerWithRandomInput(t *testing.T) {
 	type argument struct {
 		name           string
+		seed	       int64
 		minOpsPerBlock int
 		maxOpsPerBlock int
 		first          int
@@ -206,10 +208,11 @@ func TestOperationProfilerWithRandomInput(t *testing.T) {
 	}
 
 	tests := []testcase{
-		{args: argument{"50-100/block, interval=1", 50, 100, 1, 100, 1}},
-		{args: argument{"50-100/block, several intervals", 50, 100, 1, 100, 10}},
-		{args: argument{"50-100/block, 1 interval", 50, 100, 1, 100, 10000}},
-		{args: argument{"50-100/block, first=last", 50, 100, 100, 100, 12}},
+		{args: argument{"50-100/block, interval=1", -1, 50, 100, 1, 100, 1}},
+		{args: argument{"50-100/block, several intervals", -1, 50, 100, 1, 100, 10}},
+		{args: argument{"50-100/block, seeded several intervals", 258, 50, 100, 4000, 8000, 1000}},
+		{args: argument{"50-100/block, 1 interval", -1, 50, 100, 1, 100, 10000}},
+		{args: argument{"50-100/block, first=last", -1, 50, 100, 100, 100, 12}},
 	}
 
 	for _, test := range tests {
@@ -222,6 +225,13 @@ func TestOperationProfilerWithRandomInput(t *testing.T) {
 		}
 
 		t.Run(name, func(t *testing.T) {
+			var r *rand.Rand
+			if test.args.seed != 0 && test.args.seed != 1 {
+				r = rand.New(rand.NewSource(test.args.seed))
+			} else {
+				r = rand.New(rand.NewSource(time.Now().UnixNano()))
+			}
+
 			ext, ok := MakeOperationProfiler[any](cfg).(*operationProfiler[any])
 			if !ok {
 				t.Fatalf("Fail to create Operation Profiler despite valid config")
@@ -235,11 +245,11 @@ func TestOperationProfilerWithRandomInput(t *testing.T) {
 			totalSeenOpCount, totalGeneratedOpCount := 0, 0
 			intervalGeneratedOpCount := 0
 
-			intervalStart := test.args.first - (test.args.first % test.args.interval) + 1
-			intervalEnd := intervalStart + test.args.interval - 1
+			intervalStart := test.args.first - (test.args.first % test.args.interval) 
+			intervalEnd := intervalStart + test.args.interval
 
 			ext.PreRun(executor.State[any]{}, &mockCtx)
-			for b := test.args.first; b <= test.args.last; b += 1 + rand.Intn(3) {
+			for b := test.args.first; b <= test.args.last; b += 1 + r.Intn(3) {
 
 				if b > intervalEnd {
 					intervalStart = intervalEnd + 1
@@ -257,10 +267,10 @@ func TestOperationProfilerWithRandomInput(t *testing.T) {
 				}
 
 				gap := test.args.maxOpsPerBlock - test.args.minOpsPerBlock
-				generatedOpCount := test.args.minOpsPerBlock + rand.Intn(gap)
+				generatedOpCount := test.args.minOpsPerBlock + r.Intn(gap)
 
 				for o := 0; o < generatedOpCount; o++ {
-					getRandomStateDbFunc(mockCtx.State)()
+					getRandomStateDbFunc(mockCtx.State, r)()
 					totalGeneratedOpCount++
 					intervalGeneratedOpCount++
 				}
