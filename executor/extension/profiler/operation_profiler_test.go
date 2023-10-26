@@ -194,7 +194,7 @@ func TestOperationProfilerWithEachOpOnce(t *testing.T) {
 func TestOperationProfilerWithRandomInput(t *testing.T) {
 	type argument struct {
 		name           string
-		seed	       int64
+		seed           int64
 		minOpsPerBlock int
 		maxOpsPerBlock int
 		first          int
@@ -245,7 +245,7 @@ func TestOperationProfilerWithRandomInput(t *testing.T) {
 			totalSeenOpCount, totalGeneratedOpCount := 0, 0
 			intervalGeneratedOpCount := 0
 
-			intervalStart := test.args.first - (test.args.first % test.args.interval) 
+			intervalStart := test.args.first - (test.args.first % test.args.interval)
 			intervalEnd := intervalStart + test.args.interval
 
 			ext.PreRun(executor.State[any]{}, &mockCtx)
