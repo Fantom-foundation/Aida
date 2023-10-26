@@ -36,7 +36,8 @@ func TestStateHash_ZeroHasSameStateHashAsOne(t *testing.T) {
 	}
 }
 
-// TestStateHash_ZeroHasSameStateHashAsOne tests that the state hash of block 0 is the same as the state hash of block 1
+// TestStateHash_ZeroHasSameStateHashAsOne tests that the state hash of block 0 is different to the state hash of block 100
+// we are expecting that at least some storage has changed between block 0 and block 100
 func TestStateHash_ZeroHasDifferentStateHashAfterHundredBlocks(t *testing.T) {
 	tmpDir := t.TempDir() + "/blockHashes"
 	err := StateHashScraper(4002, tmpDir, 0, 100)
