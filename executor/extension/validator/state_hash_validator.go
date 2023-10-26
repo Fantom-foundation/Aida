@@ -58,6 +58,8 @@ func (e *stateHashValidator[T]) PostBlock(state executor.State[T], ctx *executor
 	}
 
 	got := ctx.State.GetHash()
+	fmt.Println(state.Block)
+	fmt.Println(got)
 	if want != got {
 		return fmt.Errorf("unexpected hash for Live block %d\nwanted %v\n   got %v", state.Block, want, got)
 	}
@@ -65,7 +67,7 @@ func (e *stateHashValidator[T]) PostBlock(state executor.State[T], ctx *executor
 	// Check the ArchiveDB
 	if e.cfg.ArchiveMode {
 		e.lastProcessedBlock = state.Block
-		if err = e.checkArchiveHashes(ctx.State); err != nil {
+		if err := e.checkArchiveHashes(ctx.State); err != nil {
 			return err
 		}
 	}
