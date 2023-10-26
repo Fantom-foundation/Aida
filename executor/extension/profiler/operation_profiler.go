@@ -24,11 +24,11 @@ func MakeOperationProfiler[T any](cfg *utils.Config) executor.Extension[T] {
 
 type operationProfiler[T any] struct {
 	extension.NilExtension[T]
-	cfg                 *utils.Config
-	stats               *profile.Stats
-	intervalStart       uint64
-	intervalEnd         uint64
-	lastSeenBlockNumber uint64
+	cfg                *utils.Config
+	stats              *profile.Stats
+	intervalStart      uint64
+	intervalEnd        uint64
+	lastProcessedBlock uint64
 }
 
 func (p *operationProfiler[T]) PreRun(_ executor.State[T], ctx *executor.Context) error {
@@ -52,11 +52,11 @@ func (p *operationProfiler[T]) PreBlock(state executor.State[T], _ *executor.Con
 }
 
 func (p *operationProfiler[T]) PostBlock(state executor.State[T], _ *executor.Context) error {
-	p.lastSeenBlockNumber = uint64(state.Block)
+	p.lastProcessedBlock = uint64(state.Block)
 	return nil
 }
 
 func (p *operationProfiler[T]) PostRun(executor.State[T], *executor.Context, error) error {
-	p.stats.PrintProfiling(p.intervalStart, p.lastSeenBlockNumber)
+	p.stats.PrintProfiling(p.intervalStart, p.lastProcessedBlock)
 	return nil
 }

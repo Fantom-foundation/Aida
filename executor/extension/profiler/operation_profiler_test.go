@@ -66,7 +66,6 @@ func getStateDbFuncs(db state.StateDB) []func() {
 		func() { db.EndBlock() },
 		func() { db.BeginSyncPeriod(0) },
 		func() { db.EndSyncPeriod() },
-		//func () { db.GetHash() }, // TODO: double check why getHash is not done
 		func() { db.AddLog(nil) },
 		func() { db.GetLogs(mockHash, mockHash) },
 		func() { db.AddPreimage(mockHash, []byte{0}) },
@@ -113,7 +112,6 @@ func prepareMockStateDb(m *state.MockStateDB) {
 	m.EXPECT().EndBlock().AnyTimes()
 	m.EXPECT().BeginSyncPeriod(gomock.Any()).AnyTimes()
 	m.EXPECT().EndSyncPeriod().AnyTimes()
-	//m.EXPECT().GetHash().AnyTimes()
 	m.EXPECT().AddLog(gomock.Any()).AnyTimes()
 	m.EXPECT().GetLogs(gomock.Any(), gomock.Any()).AnyTimes()
 	m.EXPECT().AddPreimage(gomock.Any(), gomock.Any()).AnyTimes()
@@ -278,8 +276,8 @@ func TestOperationProfilerWithRandomInput(t *testing.T) {
 				ext.PostBlock(executor.State[any]{Block: int(b)}, nil)
 
 				// check that ext tracks last seen block number correctly
-				if ext.lastSeenBlockNumber != uint64(b) {
-					t.Errorf("Last seen block number was %d, actual last scene block %d", ext.lastSeenBlockNumber, uint64(b))
+				if ext.lastProcessedBlock != uint64(b) {
+					t.Errorf("Last seen block number was %d, actual last seen block %d", ext.lastProcessedBlock, uint64(b))
 				}
 				// check that amount of ops seen eqals to amount of ops generated within this interval
 				if ext.stats.GetTotalOpFreq() != intervalGeneratedOpCount {
@@ -289,8 +287,8 @@ func TestOperationProfilerWithRandomInput(t *testing.T) {
 			ext.PostRun(executor.State[any]{}, nil, nil)
 
 			// check that last seen block number is within boundary
-			if ext.lastSeenBlockNumber > uint64(test.args.last) {
-				t.Errorf("Last seen block number was %d, more than last boundary %d.", ext.lastSeenBlockNumber, test.args.last)
+			if ext.lastProcessedBlock > uint64(test.args.last) {
+				t.Errorf("Last seen block number was %d, more than last boundary %d.", ext.lastProcessedBlock, test.args.last)
 			}
 			// check that amount of ops seen equals to amount of ops generated
 			totalSeenOpCount += ext.stats.GetTotalOpFreq()
