@@ -57,7 +57,7 @@ func StateHashScraper(chainId ChainID, stateHashDb string, firstBlock, lastBlock
 	var i = firstBlock
 
 	// If firstBlock is 0, we need to get the state root for block 1 and save it as the state root for block 0
-	// this is because the correct state root for block 0 is not available from the rpc node (at least in fantom mainnet)
+	// this is because the correct state root for block 0 is not available from the rpc node (at least in fantom mainnet and testnet)
 	if firstBlock == 0 {
 		block, err := retrieveStateRoot(client, "0x1")
 		if err != nil {

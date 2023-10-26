@@ -26,9 +26,9 @@ func TestStateHash_ZeroHasSameStateHashAsOne(t *testing.T) {
 		t.Fatalf("error getting state hash for block 0: %v", err)
 	}
 
-	hashOne, err := shp.GetStateHash(100)
+	hashOne, err := shp.GetStateHash(1)
 	if err != nil {
-		t.Fatalf("error getting state hash for block 100: %v", err)
+		t.Fatalf("error getting state hash for block 1: %v", err)
 	}
 
 	if hashZero != hashOne {
