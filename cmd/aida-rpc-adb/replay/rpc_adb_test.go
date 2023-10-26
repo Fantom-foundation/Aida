@@ -33,7 +33,6 @@ func TestVmSdb_TransactionsAreExecutedForCorrectRange(t *testing.T) {
 	pre := ext.EXPECT().PreRun(executor.AtBlock[*rpc_iterator.RequestWithResponse](10), gomock.Any())
 	post := ext.EXPECT().PostRun(executor.AtBlock[*rpc_iterator.RequestWithResponse](12), gomock.Any(), nil)
 
-	// All transactions are processed, but in no specific order.
 	gomock.InOrder(
 		pre,
 		stateDb.EXPECT().GetArchiveState(uint64(10)).Return(archive, nil),

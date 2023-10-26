@@ -45,7 +45,7 @@ func TestSubstateProvider_IterateOverExistingDb(t *testing.T) {
 		consumer.EXPECT().Consume(12, 5, gomock.Any()),
 	)
 
-	if err := provider.Run(0, 20, toConsumer(consumer)); err != nil {
+	if err := provider.Run(0, 20, toSubstateConsumer(consumer)); err != nil {
 		t.Fatalf("failed to iterate through states: %v", err)
 	}
 }
@@ -73,7 +73,7 @@ func TestSubstateProvider_LowerBoundIsInclusive(t *testing.T) {
 		consumer.EXPECT().Consume(12, 5, gomock.Any()),
 	)
 
-	if err := provider.Run(10, 20, toConsumer(consumer)); err != nil {
+	if err := provider.Run(10, 20, toSubstateConsumer(consumer)); err != nil {
 		t.Fatalf("failed to iterate through states: %v", err)
 	}
 }
@@ -100,7 +100,7 @@ func TestSubstateProvider_UpperBoundIsExclusive(t *testing.T) {
 		consumer.EXPECT().Consume(10, 9, gomock.Any()),
 	)
 
-	if err := provider.Run(10, 12, toConsumer(consumer)); err != nil {
+	if err := provider.Run(10, 12, toSubstateConsumer(consumer)); err != nil {
 		t.Fatalf("failed to iterate through states: %v", err)
 	}
 }
@@ -122,7 +122,7 @@ func TestSubstateProvider_RangeCanBeEmpty(t *testing.T) {
 	}
 	defer provider.Close()
 
-	if err := provider.Run(5, 10, toConsumer(consumer)); err != nil {
+	if err := provider.Run(5, 10, toSubstateConsumer(consumer)); err != nil {
 		t.Fatalf("failed to iterate through states: %v", err)
 	}
 }
@@ -150,18 +150,8 @@ func TestSubstateProvider_IterationCanBeAbortedByConsumer(t *testing.T) {
 		consumer.EXPECT().Consume(10, 9, gomock.Any()).Return(stop),
 	)
 
-	if got, want := provider.Run(10, 20, toConsumer(consumer)), stop; !errors.Is(got, want) {
+	if got, want := provider.Run(10, 20, toSubstateConsumer(consumer)), stop; !errors.Is(got, want) {
 		t.Errorf("provider run did not finish with expected exception, wanted %d, got %d", want, got)
-	}
-}
-
-type TxConsumer interface {
-	Consume(block int, transaction int, substate *substate.Substate) error
-}
-
-func toConsumer(c TxConsumer) Consumer[*substate.Substate] {
-	return func(info TransactionInfo[*substate.Substate]) error {
-		return c.Consume(info.Block, info.Transaction, info.Data)
 	}
 }
 
