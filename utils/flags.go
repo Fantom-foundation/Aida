@@ -13,6 +13,15 @@ var (
 		Name:  "archive",
 		Usage: "set node type to archival mode. If set, the node keep all the EVM state history; otherwise the state history will be pruned.",
 	}
+	ArchiveQueryRateFlag = cli.IntFlag{
+		Name:  "archive-query-rate",
+		Usage: "sets the number of queries send to the archive per second, disabled if 0 or negative",
+	}
+	ArchiveMaxQueryAgeFlag = cli.IntFlag{
+		Name:  "archive-max-query-age",
+		Usage: "sets an upper limit for the number of blocks an archive query may be lagging behind the head block",
+		Value: 100_000,
+	}
 	ArchiveVariantFlag = cli.StringFlag{
 		Name:  "archive-variant",
 		Usage: "set the archive implementation variant for the selected DB implementation, ignored if not running in archive mode",
