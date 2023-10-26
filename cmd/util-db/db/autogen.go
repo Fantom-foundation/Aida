@@ -19,14 +19,15 @@ var AutoGenCommand = cli.Command{
 	Name:   "autogen",
 	Usage:  "autogen generates aida-db periodically",
 	Flags: []cli.Flag{
-		// TODO minimal epoch length for patch generation
 		&utils.AidaDbFlag,
 		&utils.ChainIDFlag,
 		&utils.DbFlag,
 		&utils.GenesisFlag,
 		&utils.DbTmpFlag,
-		&utils.UpdateBufferSizeFlag,
+		&utils.OperaBinaryFlag,
 		&utils.OutputFlag,
+		&utils.TargetEpochFlag,
+		&utils.UpdateBufferSizeFlag,
 		&utils.WorldStateFlag,
 		&substate.WorkersFlag,
 		&logger.LogLevelFlag,
@@ -66,6 +67,10 @@ func autogen(ctx *cli.Context) error {
 	err = g.calculatePatchEnd()
 	if err != nil {
 		return err
+	}
+
+	if cfg.TargetEpoch > 0 {
+		g.stopAtEpoch = cfg.TargetEpoch
 	}
 
 	g.log.Noticef("Starting substate generation %d - %d", g.opera.lastEpoch+1, g.stopAtEpoch)
