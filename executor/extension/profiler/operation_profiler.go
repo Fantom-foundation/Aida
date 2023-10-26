@@ -14,11 +14,11 @@ func MakeOperationProfiler[T any](cfg *utils.Config) executor.Extension[T] {
 		return extension.NilExtension[T]{}
 	}
 
-	adjustedIntervalStart := cfg.First - (cfg.First % cfg.ProfileInterval) + 1
+	adjustedIntervalStart := cfg.First - (cfg.First % cfg.ProfileInterval)
 	return &operationProfiler[T]{
 		cfg:           cfg,
 		intervalStart: cfg.First,
-		intervalEnd:   adjustedIntervalStart + cfg.ProfileInterval - 1,
+		intervalEnd:   adjustedIntervalStart + cfg.ProfileInterval,
 	}
 }
 
