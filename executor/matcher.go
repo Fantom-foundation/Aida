@@ -78,11 +78,11 @@ type withState struct {
 }
 
 func (m withState) Matches(value any) bool {
-	if context, ok := value.(Context); ok {
-		return context.State == m.state
+	if ctx, ok := value.(Context); ok {
+		return ctx.State == m.state
 	}
-	if context, ok := value.(*Context); ok {
-		return context.State == m.state
+	if ctx, ok := value.(*Context); ok {
+		return ctx.State == m.state
 	}
 	return false
 }

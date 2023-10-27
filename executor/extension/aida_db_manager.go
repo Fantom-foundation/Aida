@@ -21,22 +21,22 @@ type AidaDbManager[T any] struct {
 	path string
 }
 
-func (e *AidaDbManager[T]) PreRun(_ executor.State[T], context *executor.Context) error {
+func (e *AidaDbManager[T]) PreRun(_ executor.State[T], ctx *executor.Context) error {
 	db, err := rawdb.NewLevelDBDatabase(e.path, 1024, 100, "", true)
 	if err != nil {
 		return fmt.Errorf("cannot open aida-db; %v", err)
 	}
-	context.AidaDb = db
+	ctx.AidaDb = db
 
 	return nil
 }
 
-func (e *AidaDbManager[T]) PostRun(_ executor.State[T], context *executor.Context, _ error) error {
-	if err := context.AidaDb.Close(); err != nil {
+func (e *AidaDbManager[T]) PostRun(_ executor.State[T], ctx *executor.Context, _ error) error {
+	if err := ctx.AidaDb.Close(); err != nil {
 		return fmt.Errorf("cannot close AidaDb; %v", err)
 	}
 
-	context.AidaDb = nil
+	ctx.AidaDb = nil
 
 	return nil
 }

@@ -86,7 +86,6 @@ func runCommand(cmd *exec.Cmd, resultChan chan string, log *logging.Logger) erro
 	scanner := bufio.NewScanner(merged)
 
 	lastOutputMessagesChan := make(chan string, commandOutputLimit)
-	defer close(lastOutputMessagesChan)
 	for scanner.Scan() {
 		m := scanner.Text()
 		if resultChan != nil {
@@ -106,6 +105,7 @@ func runCommand(cmd *exec.Cmd, resultChan chan string, log *logging.Logger) erro
 			}
 		}
 	}
+	close(lastOutputMessagesChan)
 	err = cmd.Wait()
 
 	// command failed
@@ -188,10 +188,10 @@ func startOperaPruning(cfg *utils.Config) chan error {
 
 	go func() {
 		defer close(errChan)
-		cmd := exec.Command("opera", "--datadir", cfg.Db, "snapshot", "prune-state")
+		cmd := exec.Command(getOperaBinary(cfg), "--datadir", cfg.Db, "snapshot", "prune-state")
 		err := runCommand(cmd, nil, log)
 		if err != nil {
-			errChan <- fmt.Errorf("unable prune opera %v; %v", cfg.Db, err)
+			errChan <- fmt.Errorf("unable prune opera %v; binary %v; %v", cfg.Db, getOperaBinary(cfg), err)
 		}
 	}()
 	return errChan
@@ -207,12 +207,21 @@ func startOperaRecording(cfg *utils.Config, syncUntilEpoch uint64) chan error {
 
 	go func() {
 		defer close(errChan)
+
 		// syncUntilEpoch +1 because command is off by one
-		cmd := exec.Command("opera", "--datadir", cfg.Db, "--recording", "--substate-db", cfg.SubstateDb, "--exitwhensynced.epoch", strconv.FormatUint(syncUntilEpoch+1, 10))
+		cmd := exec.Command(getOperaBinary(cfg), "--datadir", cfg.Db, "--recording", "--substate-db", cfg.SubstateDb, "--exitwhensynced.epoch", strconv.FormatUint(syncUntilEpoch+1, 10))
 		err := runCommand(cmd, nil, log)
 		if err != nil {
-			errChan <- fmt.Errorf("unable record opera substates %v; %v", cfg.Db, err)
+			errChan <- fmt.Errorf("unable record opera substates %v; binary %v ; %v", cfg.Db, getOperaBinary(cfg), err)
 		}
 	}()
 	return errChan
+}
+
+func getOperaBinary(cfg *utils.Config) string {
+	var operaBin = "opera"
+	if cfg.OperaBinary != "" {
+		operaBin = cfg.OperaBinary
+	}
+	return operaBin
 }

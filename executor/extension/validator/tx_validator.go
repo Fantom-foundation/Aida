@@ -14,26 +14,26 @@ import (
 
 type txValidator struct {
 	extension.NilExtension[*substate.Substate]
-	config *utils.Config
+	cfg    *utils.Config
 	log    logger.Logger
 	lock   sync.Mutex
 	errors []error
 }
 
-func MakeTxValidator(config *utils.Config) executor.Extension[*substate.Substate] {
-	if !config.ValidateTxState {
+func MakeTxValidator(cfg *utils.Config) executor.Extension[*substate.Substate] {
+	if !cfg.ValidateTxState {
 		return extension.NilExtension[*substate.Substate]{}
 	}
 
-	log := logger.NewLogger(config.LogLevel, "Tx-Verifier")
+	log := logger.NewLogger(cfg.LogLevel, "Tx-Verifier")
 
-	return makeTxValidator(config, log)
+	return makeTxValidator(cfg, log)
 }
 
-func makeTxValidator(config *utils.Config, log logger.Logger) *txValidator {
+func makeTxValidator(cfg *utils.Config, log logger.Logger) *txValidator {
 	return &txValidator{
-		config: config,
-		log:    log,
+		cfg: cfg,
+		log: log,
 	}
 }
 
@@ -42,17 +42,17 @@ func (v *txValidator) PreRun(executor.State[*substate.Substate], *executor.Conte
 
 	v.log.Warning("Transaction verification is enabled, this may slow down the block processing.")
 
-	if v.config.ContinueOnFailure {
+	if v.cfg.ContinueOnFailure {
 		v.log.Warningf("Continue on Failure for transaction validation is enabled, yet "+
-			"block processing will stop after %v encountered issues.", v.config.MaxNumErrors)
+			"block processing will stop after %v encountered issues.", v.cfg.MaxNumErrors)
 	}
 
 	return nil
 }
 
 // PreTransaction validates InputAlloc in given substate
-func (v *txValidator) PreTransaction(state executor.State[*substate.Substate], context *executor.Context) error {
-	err := utils.ValidateStateDB(state.Data.InputAlloc, context.State, v.config.UpdateOnFailure)
+func (v *txValidator) PreTransaction(state executor.State[*substate.Substate], ctx *executor.Context) error {
+	err := utils.ValidateStateDB(state.Data.InputAlloc, ctx.State, v.cfg.UpdateOnFailure)
 	if err == nil {
 		return nil
 	}
@@ -69,8 +69,8 @@ func (v *txValidator) PreTransaction(state executor.State[*substate.Substate], c
 }
 
 // PostTransaction validates OutputAlloc in given substate
-func (v *txValidator) PostTransaction(state executor.State[*substate.Substate], context *executor.Context) error {
-	err := utils.ValidateStateDB(state.Data.OutputAlloc, context.State, v.config.UpdateOnFailure)
+func (v *txValidator) PostTransaction(state executor.State[*substate.Substate], ctx *executor.Context) error {
+	err := utils.ValidateStateDB(state.Data.OutputAlloc, ctx.State, v.cfg.UpdateOnFailure)
 	if err == nil {
 		return nil
 	}
@@ -109,13 +109,13 @@ func (v *txValidator) isErrFatal(err error) bool {
 	v.lock.Unlock()
 
 	// ContinueOnFailure is disabled, return the error thus exit the program
-	if !v.config.ContinueOnFailure {
+	if !v.cfg.ContinueOnFailure {
 		return true
 	}
 
 	v.log.Error(err)
 
-	if len(v.errors) >= v.config.MaxNumErrors {
+	if len(v.errors) >= v.cfg.MaxNumErrors {
 		return true
 	}
 

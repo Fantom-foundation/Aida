@@ -13,9 +13,9 @@ import (
 
 func TestCpuExtension_CollectsProfileDataIfEnabled(t *testing.T) {
 	path := t.TempDir() + "/profile.dat"
-	config := &utils.Config{}
-	config.CPUProfile = path
-	ext := MakeCpuProfiler[any](config)
+	cfg := &utils.Config{}
+	cfg.CPUProfile = path
+	ext := MakeCpuProfiler[any](cfg)
 
 	if err := ext.PreRun(executor.State[any]{}, nil); err != nil {
 		t.Fatalf("failed to to run pre-run: %v", err)
@@ -29,10 +29,10 @@ func TestCpuExtension_CollectsProfileDataIfEnabled(t *testing.T) {
 
 func TestCpuExtension_CollectsIntervalProfileDataIfEnabled(t *testing.T) {
 	path := t.TempDir() + "/profile.dat"
-	config := &utils.Config{}
-	config.CPUProfile = path
-	config.CPUProfilePerInterval = true
-	ext := MakeCpuProfiler[any](config)
+	cfg := &utils.Config{}
+	cfg.CPUProfile = path
+	cfg.CPUProfilePerInterval = true
+	ext := MakeCpuProfiler[any](cfg)
 
 	if err := ext.PreRun(executor.State[any]{}, nil); err != nil {
 		t.Fatalf("failed to to run pre-run: %v", err)
@@ -55,8 +55,8 @@ func TestCpuExtension_CollectsIntervalProfileDataIfEnabled(t *testing.T) {
 }
 
 func TestCpuExtension_NpProfileIsCollectedIfDisabled(t *testing.T) {
-	config := &utils.Config{}
-	ext := MakeCpuProfiler[any](config)
+	cfg := &utils.Config{}
+	ext := MakeCpuProfiler[any](cfg)
 
 	if _, ok := ext.(extension.NilExtension[any]); !ok {
 		t.Errorf("profiler is enabled although not set in configuration")
