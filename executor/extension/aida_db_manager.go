@@ -32,7 +32,7 @@ func (e *AidaDbManager[T]) PreRun(_ executor.State[T], ctx *executor.Context) er
 }
 
 func (e *AidaDbManager[T]) PostRun(_ executor.State[T], ctx *executor.Context, _ error) error {
-	if context.AidaDb == nil {
+	if ctx.AidaDb == nil {
 		return nil
 	}
 
