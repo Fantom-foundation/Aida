@@ -8,13 +8,14 @@ import (
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/utils"
+	substate "github.com/Fantom-foundation/Substate"
 )
 
 func TestBlockProfilerExtension_NoProfileIsCollectedIfDisabled(t *testing.T) {
 	config := &utils.Config{}
 	ext := MakeBlockRuntimeAndGasCollector(config)
 
-	if _, ok := ext.(extension.NilExtension); !ok {
+	if _, ok := ext.(extension.NilExtension[*substate.Substate]); !ok {
 		t.Errorf("profiler is enabled although not set in configuration")
 	}
 }
@@ -27,7 +28,7 @@ func TestBlockProfilerExtension_ProfileDbIsCreated(t *testing.T) {
 
 	ext := MakeBlockRuntimeAndGasCollector(config)
 
-	if err := ext.PreRun(executor.State{}, nil); err != nil {
+	if err := ext.PreRun(executor.State[*substate.Substate]{}, nil); err != nil {
 		t.Fatalf("unexpected error during pre-run; %v", err)
 	}
 
