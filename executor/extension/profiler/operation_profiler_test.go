@@ -190,7 +190,6 @@ func TestOperationProfilerWithEachOpOnce(t *testing.T) {
 			}
 
 			s := ext.stats.GetStatByOpId(op)
-			t.Log(x, s.Label)
 			if s.Frequency != 1 {
 				t.Errorf("op %s occurs %d times, expecting exactly 1", s.Label, s.Frequency)
 			}
