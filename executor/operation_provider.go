@@ -27,8 +27,6 @@ func (p operationProvider) Run(from int, to int, consumer Consumer[[]operation.O
 	for iter.Next() {
 		op := iter.Value()
 
-		// todo does this matter?
-
 		// if next operation after operation.EndTransaction is operation.EndBlock append as well
 		if lastOperation {
 			var ok bool
@@ -38,7 +36,7 @@ func (p operationProvider) Run(from int, to int, consumer Consumer[[]operation.O
 				tx = append(tx, op)
 			}
 
-			if err := consumer(TransactionInfo[[]operation.Operation]{transactionNumber, currentBlockNumber, tx}); err != nil {
+			if err := consumer(TransactionInfo[[]operation.Operation]{currentBlockNumber, transactionNumber, tx}); err != nil {
 				return err
 			}
 			tx = make([]operation.Operation, 0)
@@ -76,8 +74,8 @@ func (p operationProvider) Close() {
 	// ignored
 }
 
-func OpenOperations(config *utils.Config) (Provider[[]operation.Operation], error) {
-	traceFiles, err := tracer.GetTraceFiles(config)
+func OpenOperations(cfg *utils.Config) (Provider[[]operation.Operation], error) {
+	traceFiles, err := tracer.GetTraceFiles(cfg)
 	if err != nil {
 		return operationProvider{}, err
 	}
