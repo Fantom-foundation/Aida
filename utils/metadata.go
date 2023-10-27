@@ -54,6 +54,7 @@ type PatchJson struct {
 	FromBlock, ToBlock uint64
 	FromEpoch, ToEpoch uint64
 	DbHash, TarHash    string
+	Nightly            bool
 }
 
 // AidaDbMetadata holds any information about AidaDb needed for putting it into the Db

@@ -16,27 +16,27 @@ import (
 
 // MakeDiagnosticServer creates an extension which runs a background
 // HTTP server for real-time diagnosing aida processes.
-func MakeDiagnosticServer(config *utils.Config) executor.Extension {
-	return makeDiagnosticServer(config, logger.NewLogger(config.LogLevel, "Diagnostic-Server"))
+func MakeDiagnosticServer[T any](cfg *utils.Config) executor.Extension[T] {
+	return makeDiagnosticServer[T](cfg, logger.NewLogger(cfg.LogLevel, "Diagnostic-Server"))
 }
 
-func makeDiagnosticServer(config *utils.Config, logger logger.Logger) executor.Extension {
-	if config.DiagnosticServer < 1 || config.DiagnosticServer > math.MaxUint16 {
-		return extension.NilExtension{}
+func makeDiagnosticServer[T any](cfg *utils.Config, log logger.Logger) executor.Extension[T] {
+	if cfg.DiagnosticServer < 1 || cfg.DiagnosticServer > math.MaxUint16 {
+		return extension.NilExtension[T]{}
 	}
-	return &diagnosticServer{
-		port: config.DiagnosticServer,
-		log:  logger,
+	return &diagnosticServer[T]{
+		port: cfg.DiagnosticServer,
+		log:  log,
 	}
 }
 
-type diagnosticServer struct {
-	extension.NilExtension
+type diagnosticServer[T any] struct {
+	extension.NilExtension[T]
 	port int64
 	log  logger.Logger
 }
 
-func (e *diagnosticServer) PreRun(executor.State, *executor.Context) error {
+func (e *diagnosticServer[T]) PreRun(executor.State[T], *executor.Context) error {
 	e.log.Infof("Starting diagnostic server at port http://localhost:%d (see https://pkg.go.dev/net/http/pprof#hdr-Usage_examples for usage examples)", e.port)
 	e.log.Warning("Block and mutex sampling rate is set to 100%% for diagnostics, which may impact overall performance")
 	go func() {

@@ -8,6 +8,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
+	substate "github.com/Fantom-foundation/Substate"
 )
 
 const (
@@ -17,32 +18,32 @@ const (
 
 // MakeProgressTracker creates a progressTracker that depends on the
 // PostBlock event and is only useful as part of a sequential evaluation.
-func MakeProgressTracker(config *utils.Config, reportFrequency int) executor.Extension {
-	if !config.TrackProgress {
-		return extension.NilExtension{}
+func MakeProgressTracker(cfg *utils.Config, reportFrequency int) executor.Extension[*substate.Substate] {
+	if !cfg.TrackProgress {
+		return extension.NilExtension[*substate.Substate]{}
 	}
 
 	if reportFrequency == 0 {
 		reportFrequency = ProgressTrackerDefaultReportFrequency
 	}
 
-	return makeProgressTracker(config, reportFrequency, logger.NewLogger(config.LogLevel, "ProgressTracker"))
+	return makeProgressTracker(cfg, reportFrequency, logger.NewLogger(cfg.LogLevel, "ProgressTracker"))
 }
 
-func makeProgressTracker(config *utils.Config, reportFrequency int, log logger.Logger) *progressTracker {
+func makeProgressTracker(cfg *utils.Config, reportFrequency int, log logger.Logger) *progressTracker {
 	return &progressTracker{
-		config:            config,
+		cfg:               cfg,
 		log:               log,
 		reportFrequency:   reportFrequency,
-		lastReportedBlock: int(config.First) - (int(config.First) % reportFrequency),
+		lastReportedBlock: int(cfg.First) - (int(cfg.First) % reportFrequency),
 	}
 }
 
 // progressTracker logs progress every XXX blocks depending on reportFrequency.
 // Default is 100_000 blocks. This is mainly used for gathering information about process.
 type progressTracker struct {
-	extension.NilExtension
-	config              *utils.Config
+	extension.NilExtension[*substate.Substate]
+	cfg                 *utils.Config
 	log                 logger.Logger
 	reportFrequency     int
 	lastReportedBlock   int
@@ -58,7 +59,7 @@ type processInfo struct {
 	gas             uint64
 }
 
-func (t *progressTracker) PreRun(_ executor.State, _ *executor.Context) error {
+func (t *progressTracker) PreRun(_ executor.State[*substate.Substate], _ *executor.Context) error {
 	now := time.Now()
 	t.startOfRun = now
 	t.startOfLastInterval = now
@@ -66,19 +67,19 @@ func (t *progressTracker) PreRun(_ executor.State, _ *executor.Context) error {
 }
 
 // PostTransaction increments number of transactions and saves gas used in last substate.
-func (t *progressTracker) PostTransaction(state executor.State, _ *executor.Context) error {
+func (t *progressTracker) PostTransaction(state executor.State[*substate.Substate], _ *executor.Context) error {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
 	t.overallInfo.numTransactions++
-	t.overallInfo.gas += state.Substate.Result.GasUsed
+	t.overallInfo.gas += state.Data.Result.GasUsed
 
 	return nil
 }
 
 // PostBlock sends the state to the report goroutine.
 // We only care about total number of transactions we can do this here rather in PostTransaction.
-func (t *progressTracker) PostBlock(state executor.State, context *executor.Context) error {
+func (t *progressTracker) PostBlock(state executor.State[*substate.Substate], ctx *executor.Context) error {
 	boundary := state.Block - (state.Block % t.reportFrequency)
 
 	if state.Block-t.lastReportedBlock < t.reportFrequency {
@@ -94,8 +95,8 @@ func (t *progressTracker) PostBlock(state executor.State, context *executor.Cont
 	info := t.overallInfo
 	t.lock.Unlock()
 
-	disk := utils.GetDirectorySize(context.StateDbPath)
-	m := context.State.GetMemoryUsage()
+	disk := utils.GetDirectorySize(ctx.StateDbPath)
+	m := ctx.State.GetMemoryUsage()
 
 	memory := uint64(0)
 	if m != nil {

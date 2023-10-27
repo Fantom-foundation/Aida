@@ -11,6 +11,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension/validator"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -33,57 +34,63 @@ func RunVmSdb(ctx *cli.Context) error {
 }
 
 type txProcessor struct {
-	config *utils.Config
+	cfg *utils.Config
 }
 
-func (r txProcessor) Process(state executor.State, context *executor.Context) error {
+func (r txProcessor) Process(state executor.State[*substate.Substate], ctx *executor.Context) error {
 	_, err := utils.ProcessTx(
-		context.State,
-		r.config,
+		ctx.State,
+		r.cfg,
 		uint64(state.Block),
 		state.Transaction,
-		state.Substate,
+		state.Data,
 	)
 	return err
 }
 
-func run(config *utils.Config, provider executor.SubstateProvider, stateDb state.StateDB, disableStateDbExtension bool) error {
+func run(
+	cfg *utils.Config,
+	provider executor.Provider[*substate.Substate],
+	stateDb state.StateDB,
+	disableStateDbExtension bool,
+) error {
 	// order of extensionList has to be maintained
-	var extensionList = []executor.Extension{
-		profiler.MakeCpuProfiler(config),
-		profiler.MakeDiagnosticServer(config),
+	var extensionList = []executor.Extension[*substate.Substate]{
+		profiler.MakeCpuProfiler[*substate.Substate](cfg),
+		profiler.MakeDiagnosticServer[*substate.Substate](cfg),
 	}
 
 	if !disableStateDbExtension {
-		extensionList = append(extensionList, statedb.MakeStateDbManager(config))
+		extensionList = append(extensionList, statedb.MakeStateDbManager[*substate.Substate](cfg))
 	}
 
-	extensionList = append(extensionList, []executor.Extension{
-		extension.MakeAidaDbManager(config),
-		profiler.MakeVirtualMachineStatisticsPrinter(config),
-		tracker.MakeProgressLogger(config, 15*time.Second),
-		tracker.MakeProgressTracker(config, 100_000),
-		statedb.MakeStateDbPrimer(config),
-		profiler.MakeMemoryUsagePrinter(config),
-		profiler.MakeMemoryProfiler(config),
+	extensionList = append(extensionList, []executor.Extension[*substate.Substate]{
+		extension.MakeAidaDbManager[*substate.Substate](cfg),
+		profiler.MakeVirtualMachineStatisticsPrinter[*substate.Substate](cfg),
+		tracker.MakeProgressLogger[*substate.Substate](cfg, 15*time.Second),
+		tracker.MakeProgressTracker(cfg, 100_000),
+		statedb.MakeStateDbPrimer[*substate.Substate](cfg),
+		profiler.MakeMemoryUsagePrinter[*substate.Substate](cfg),
+		profiler.MakeMemoryProfiler[*substate.Substate](cfg),
 		statedb.MakeStateDbPrepper(),
-		validator.MakeStateHashValidator(config),
-		statedb.MakeBlockEventEmitter(),
+		validator.MakeStateHashValidator[*substate.Substate](cfg),
+		statedb.MakeBlockEventEmitter[*substate.Substate](),
+		profiler.MakeOperationProfiler[*substate.Substate](cfg),
 		// block profile extension should be always last because:
 		// 1) Pre-Func are called forwards so this is called last and
 		// 2) Post-Func are called backwards so this is called first
 		// that means the gap between time measurements will be as small as possible
-		profiler.MakeBlockRuntimeAndGasCollector(config),
+		profiler.MakeBlockRuntimeAndGasCollector(cfg),
 	}...,
 	)
 
 	return executor.NewExecutor(provider).Run(
 		executor.Params{
-			From:  int(config.First),
-			To:    int(config.Last) + 1,
+			From:  int(cfg.First),
+			To:    int(cfg.Last) + 1,
 			State: stateDb,
 		},
-		txProcessor{config},
+		txProcessor{cfg},
 		extensionList,
 	)
 }

@@ -4,12 +4,12 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
-	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
+	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/logger"
-	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -43,25 +43,25 @@ func RunVm(ctx *cli.Context) error {
 // aida-vm and allows to define extra extensions for observing the
 // execution, in particular during unit tests.
 func run(
-	config *utils.Config,
-	provider executor.SubstateProvider,
-	processor executor.Processor,
-	extra []executor.Extension,
+	cfg *utils.Config,
+	provider executor.Provider[*substate.Substate],
+	processor executor.Processor[*substate.Substate],
+	extra []executor.Extension[*substate.Substate],
 ) error {
-	extensions := []executor.Extension{
-		profiler.MakeCpuProfiler(config),
-		profiler.MakeDiagnosticServer(config),
-		profiler.MakeVirtualMachineStatisticsPrinter(config),
-		tracker.MakeProgressLogger(config, 15*time.Second),
-		temporaryStatePrepper{},
+	extensions := []executor.Extension[*substate.Substate]{
+		profiler.MakeCpuProfiler[*substate.Substate](cfg),
+		profiler.MakeDiagnosticServer[*substate.Substate](cfg),
+		profiler.MakeVirtualMachineStatisticsPrinter[*substate.Substate](cfg),
+		tracker.MakeProgressLogger[*substate.Substate](cfg, 15*time.Second),
+		statedb.MakeTemporaryStatePrepper(),
 	}
 	extensions = append(extensions, extra...)
 
 	return executor.NewExecutor(provider).Run(
 		executor.Params{
-			From:       int(config.First),
-			To:         int(config.Last) + 1,
-			NumWorkers: config.Workers,
+			From:       int(cfg.First),
+			To:         int(cfg.Last) + 1,
+			NumWorkers: cfg.Workers,
 		},
 		processor,
 		extensions,
@@ -69,27 +69,16 @@ func run(
 }
 
 type txProcessor struct {
-	config *utils.Config
+	cfg *utils.Config
 }
 
-func (r txProcessor) Process(s executor.State, c *executor.Context) error {
+func (r txProcessor) Process(state executor.State[*substate.Substate], ctx *executor.Context) error {
 	_, err := utils.ProcessTx(
-		c.State,
-		r.config,
-		uint64(s.Block),
-		s.Transaction,
-		s.Substate,
+		ctx.State,
+		r.cfg,
+		uint64(state.Block),
+		state.Transaction,
+		state.Data,
 	)
 	return err
-}
-
-// temporaryStatePrepper is an extension that introduces a fresh in-memory
-// StateDB instance before each transaction execution.
-type temporaryStatePrepper struct {
-	extension.NilExtension
-}
-
-func (temporaryStatePrepper) PreTransaction(s executor.State, c *executor.Context) error {
-	c.State = state.MakeInMemoryStateDB(&s.Substate.InputAlloc, uint64(s.Block))
-	return nil
 }

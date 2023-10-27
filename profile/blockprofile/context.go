@@ -6,6 +6,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/profile/graphutil"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -23,7 +24,7 @@ type TxTime []time.Duration
 type TxType int
 
 const (
-	TransferTx    TxType = iota // a transaction which transafers balance
+	TransferTx    TxType = iota // a transaction which transfers balance
 	CreateTx                    // a transaction which creates new contracts
 	CallTx                      // a transaction which executes contracts
 	MaintenanceTx               // an internal transaction which performs maintenance
@@ -31,7 +32,7 @@ const (
 
 // readable labels of transaction types.
 var TypeLabel = map[TxType]string{
-	TransferTx:    "transafer",
+	TransferTx:    "transfer",
 	CreateTx:      "create",
 	CallTx:        "call",
 	MaintenanceTx: "maintenance",
@@ -93,20 +94,20 @@ func interfere(u, v AddressSet) bool {
 }
 
 // findTxAddresses gets wallet/contract addresses of a transaction.
-func findTxAddresses(tx executor.State) AddressSet {
+func findTxAddresses(tx executor.State[*substate.Substate]) AddressSet {
 	addresses := AddressSet{}
-	for addr := range tx.Substate.InputAlloc {
+	for addr := range tx.Data.InputAlloc {
 		addresses[addr] = struct{}{}
 	}
-	for addr := range tx.Substate.OutputAlloc {
+	for addr := range tx.Data.OutputAlloc {
 		addresses[addr] = struct{}{}
 	}
 	var zero common.Address
-	if tx.Substate.Message.From != zero {
-		addresses[tx.Substate.Message.From] = struct{}{}
+	if tx.Data.Message.From != zero {
+		addresses[tx.Data.Message.From] = struct{}{}
 	}
-	if tx.Substate.Message.To != nil {
-		addresses[*tx.Substate.Message.To] = struct{}{}
+	if tx.Data.Message.To != nil {
+		addresses[*tx.Data.Message.To] = struct{}{}
 	}
 	return addresses
 }
@@ -144,7 +145,7 @@ func (ctx *Context) dependencies(addresses AddressSet) graphutil.OrdinalSet {
 }
 
 // RecordTransaction collects addresses and computes earliest time.
-func (ctx *Context) RecordTransaction(state executor.State, tTransaction time.Duration) error {
+func (ctx *Context) RecordTransaction(state executor.State[*substate.Substate], tTransaction time.Duration) error {
 	overheadTimer := time.Now()
 
 	// update time for block and transaction
@@ -153,7 +154,7 @@ func (ctx *Context) RecordTransaction(state executor.State, tTransaction time.Du
 	ctx.tTypes = append(ctx.tTypes, getTransactionType(state))
 
 	// update gas used for block and transaction
-	gasUsed := state.Substate.Result.GasUsed
+	gasUsed := state.Data.Result.GasUsed
 	ctx.gasBlock += gasUsed
 	ctx.gasTransactions = append(ctx.gasTransactions, gasUsed)
 
@@ -257,11 +258,11 @@ func (ctx *Context) GetProfileData(curBlock uint64, tBlock time.Duration) (*Prof
 }
 
 // getTransactionType reads a message and determines a transaction type.
-func getTransactionType(tx executor.State) TxType {
-	msg := tx.Substate.Message
+func getTransactionType(tx executor.State[*substate.Substate]) TxType {
+	msg := tx.Data.Message
 	to := msg.To
 	from := msg.From
-	alloc := tx.Substate.InputAlloc
+	alloc := tx.Data.InputAlloc
 
 	zero := common.HexToAddress("0x0000000000000000000000000000000000000000")
 

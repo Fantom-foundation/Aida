@@ -19,10 +19,10 @@ import (
 const testStateDbInfoFrequency = 2
 
 func TestProgressTrackerExtension_NoLoggerIsCreatedIfDisabled(t *testing.T) {
-	config := &utils.Config{}
-	config.TrackProgress = false
-	ext := MakeProgressTracker(config, testStateDbInfoFrequency)
-	if _, ok := ext.(extension.NilExtension); !ok {
+	cfg := &utils.Config{}
+	cfg.TrackProgress = false
+	ext := MakeProgressTracker(cfg, testStateDbInfoFrequency)
+	if _, ok := ext.(extension.NilExtension[*substate.Substate]); !ok {
 		t.Errorf("Logger is enabled although not set in configuration")
 	}
 
@@ -33,17 +33,17 @@ func TestProgressTrackerExtension_LoggingHappens(t *testing.T) {
 	log := logger.NewMockLogger(ctrl)
 	db := state.NewMockStateDB(ctrl)
 
-	config := &utils.Config{}
-	config.First = 4
+	cfg := &utils.Config{}
+	cfg.First = 4
 	dummyStateDbPath := t.TempDir()
 
 	if err := os.WriteFile(dummyStateDbPath+"/dummy.txt", []byte("hello world"), 0x600); err != nil {
 		t.Fatalf("failed to prepare disk content")
 	}
 
-	ext := makeProgressTracker(config, testStateDbInfoFrequency, log)
+	ext := makeProgressTracker(cfg, testStateDbInfoFrequency, log)
 
-	context := &executor.Context{State: db, StateDbPath: dummyStateDbPath}
+	ctx := &executor.Context{State: db, StateDbPath: dummyStateDbPath}
 
 	s := &substate.Substate{
 		Result: &substate.SubstateResult{
@@ -71,33 +71,33 @@ func TestProgressTrackerExtension_LoggingHappens(t *testing.T) {
 		),
 	)
 
-	ext.PreRun(executor.State{}, context)
+	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
 
 	// first processed block
-	ext.PostTransaction(executor.State{Substate: s}, context)
-	ext.PostTransaction(executor.State{Substate: s}, context)
-	ext.PostBlock(executor.State{
-		Block:    5,
-		Substate: s,
-	}, context)
+	ext.PostTransaction(executor.State[*substate.Substate]{Data: s}, ctx)
+	ext.PostTransaction(executor.State[*substate.Substate]{Data: s}, ctx)
+	ext.PostBlock(executor.State[*substate.Substate]{
+		Block: 5,
+		Data:  s,
+	}, ctx)
 
 	time.Sleep(500 * time.Millisecond)
 
 	// second processed block
-	ext.PostTransaction(executor.State{Substate: s}, context)
-	ext.PostTransaction(executor.State{Substate: s}, context)
-	ext.PostBlock(executor.State{
-		Block:    6,
-		Substate: s,
-	}, context)
+	ext.PostTransaction(executor.State[*substate.Substate]{Data: s}, ctx)
+	ext.PostTransaction(executor.State[*substate.Substate]{Data: s}, ctx)
+	ext.PostBlock(executor.State[*substate.Substate]{
+		Block: 6,
+		Data:  s,
+	}, ctx)
 
 	time.Sleep(500 * time.Millisecond)
 
-	ext.PostTransaction(executor.State{Substate: s}, context)
-	ext.PostBlock(executor.State{
-		Block:    8,
-		Substate: s,
-	}, context)
+	ext.PostTransaction(executor.State[*substate.Substate]{Data: s}, ctx)
+	ext.PostBlock(executor.State[*substate.Substate]{
+		Block: 8,
+		Data:  s,
+	}, ctx)
 }
 
 func TestProgressTrackerExtension_FirstLoggingIsIgnored(t *testing.T) {
@@ -105,12 +105,12 @@ func TestProgressTrackerExtension_FirstLoggingIsIgnored(t *testing.T) {
 	log := logger.NewMockLogger(ctrl)
 	db := state.NewMockStateDB(ctrl)
 
-	config := &utils.Config{}
-	config.First = 4
+	cfg := &utils.Config{}
+	cfg.First = 4
 
-	ext := makeProgressTracker(config, testStateDbInfoFrequency, log)
+	ext := makeProgressTracker(cfg, testStateDbInfoFrequency, log)
 
-	context := &executor.Context{State: db}
+	ctx := &executor.Context{State: db}
 
 	s := &substate.Substate{
 		Result: &substate.SubstateResult{
@@ -119,27 +119,27 @@ func TestProgressTrackerExtension_FirstLoggingIsIgnored(t *testing.T) {
 		},
 	}
 
-	ext.PreRun(executor.State{
+	ext.PreRun(executor.State[*substate.Substate]{
 		Block:       4,
 		Transaction: 0,
-		Substate:    s,
-	}, context)
+		Data:        s,
+	}, ctx)
 
-	ext.PostTransaction(executor.State{
+	ext.PostTransaction(executor.State[*substate.Substate]{
 		Block:       4,
 		Transaction: 0,
-		Substate:    s,
-	}, context)
-	ext.PostTransaction(executor.State{
+		Data:        s,
+	}, ctx)
+	ext.PostTransaction(executor.State[*substate.Substate]{
 		Block:       4,
 		Transaction: 1,
-		Substate:    s,
-	}, context)
-	ext.PostBlock(executor.State{
+		Data:        s,
+	}, ctx)
+	ext.PostBlock(executor.State[*substate.Substate]{
 		Block:       5,
 		Transaction: 0,
-		Substate:    s,
-	}, context)
+		Data:        s,
+	}, ctx)
 }
 
 func Test_LoggingFormatMatchesRubyScript(t *testing.T) {

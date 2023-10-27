@@ -145,10 +145,11 @@ type Config struct {
 	AidaDb                string         // directory to profiling database containing substate, update, delete accounts data
 	StateValidationMode   ValidationMode // state validation mode
 	UpdateDb              string         // update-set directory
+	UpdateType            string         // download datatype
 	Output                string         // output directory for aida-db patches or path to events.json file in stochastic generation
 	SnapshotDepth         int            // depth of snapshot history
 	SubstateDb            string         // substate directory
-	OperaDatadir          string         // source opera directory
+	OperaBinary           string         // path to opera binary
 	Validate              bool           // validate validate aida-db
 	ValidateTxState       bool           // validate stateDB before and after transaction
 	ValidateWorldState    bool           // validate stateDB before and after replay block range
@@ -171,6 +172,7 @@ type Config struct {
 	ProfilingDbName       string         // set a database name for storing micro-profiling results
 	ChannelBufferSize     int            // set a buffer size for profiling channel
 	TargetBlock           uint64         // represents the ID of target block to be reached by state evolve process or in dump state
+	TargetEpoch           uint64         // represents the ID of target epoch to be reached by autogen patch generator
 	UpdateBufferSize      uint64         // cache size in Bytes
 	ProfileDB             string         // profile db for parallel transaction execution
 	MaxNumErrors          int            // maximum number of errors when ContinueOnFailure is enabled
