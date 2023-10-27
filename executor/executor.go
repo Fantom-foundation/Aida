@@ -212,7 +212,7 @@ type executor[T any] struct {
 
 func (e *executor[T]) Run(params Params, processor Processor[T], extensions []Extension[T]) (err error) {
 	state := State[T]{}
-	context := Context{State: params.State}
+	ctx := Context{State: params.State}
 
 	defer func() {
 		// Skip PostRun actions if a panic occurred. In such a case there is no guarantee
@@ -222,52 +222,52 @@ func (e *executor[T]) Run(params Params, processor Processor[T], extensions []Ex
 		}
 		err = errors.Join(
 			err,
-			signalPostRun(state, &context, err, extensions),
+			signalPostRun(state, &ctx, err, extensions),
 		)
 	}()
 
 	state.Block = params.From
-	if err = signalPreRun(state, &context, extensions); err != nil {
+	if err = signalPreRun(state, &ctx, extensions); err != nil {
 		return err
 	}
 
 	if params.NumWorkers <= 1 {
-		return e.runSequential(params, processor, extensions, &state, &context)
+		return e.runSequential(params, processor, extensions, &state, &ctx)
 	}
 
 	switch params.ParallelismGranularity {
 	case TransactionLevel:
-		return e.runParallelTransaction(params, processor, extensions, &state, &context)
+		return e.runParallelTransaction(params, processor, extensions, &state, &ctx)
 	case BlockLevel:
-		return e.runParallelBlock(params, processor, extensions, &state, &context)
+		return e.runParallelBlock(params, processor, extensions, &state, &ctx)
 	default:
 		return fmt.Errorf("incorrect parallelism type: %v", params.ParallelismGranularity)
 	}
 }
 
-func (e *executor[T]) runSequential(params Params, processor Processor[T], extensions []Extension[T], state *State[T], context *Context) error {
+func (e *executor[T]) runSequential(params Params, processor Processor[T], extensions []Extension[T], state *State[T], ctx *Context) error {
 	first := true
 	err := e.provider.Run(params.From, params.To, func(tx TransactionInfo[T]) error {
 		state.Data = tx.Data
 
 		if first {
 			state.Block = tx.Block
-			if err := signalPreBlock(*state, context, extensions); err != nil {
+			if err := signalPreBlock(*state, ctx, extensions); err != nil {
 				return err
 			}
 			first = false
 		} else if state.Block != tx.Block {
-			if err := signalPostBlock(*state, context, extensions); err != nil {
+			if err := signalPostBlock(*state, ctx, extensions); err != nil {
 				return err
 			}
 			state.Block = tx.Block
-			if err := signalPreBlock(*state, context, extensions); err != nil {
+			if err := signalPreBlock(*state, ctx, extensions); err != nil {
 				return err
 			}
 		}
 
 		state.Transaction = tx.Transaction
-		return runTransaction(*state, context, tx.Data, processor, extensions)
+		return runTransaction(*state, ctx, tx.Data, processor, extensions)
 	})
 	if err != nil {
 		return err
@@ -275,7 +275,7 @@ func (e *executor[T]) runSequential(params Params, processor Processor[T], exten
 
 	// Finish final block.
 	if !first {
-		if err := signalPostBlock(*state, context, extensions); err != nil {
+		if err := signalPostBlock(*state, ctx, extensions); err != nil {
 			return err
 		}
 		state.Block = params.To
@@ -293,7 +293,7 @@ func runBlock[T any](
 	workerErrs []error,
 	processor Processor[T],
 	extensions []Extension[T],
-	context *Context,
+	ctx *Context,
 	cachedPanic *atomic.Value,
 ) {
 
@@ -315,9 +315,9 @@ func runBlock[T any](
 			}
 
 			localState.Block = blockTransactions[0].Block
-			localContext := *context
+			localCtx := *ctx
 
-			if err := signalPreBlock(localState, &localContext, extensions); err != nil {
+			if err := signalPreBlock(localState, &localCtx, extensions); err != nil {
 				workerErrs[workerNumber] = err
 				abort.Signal()
 				return
@@ -327,7 +327,7 @@ func runBlock[T any](
 				localState.Data = tx.Data
 				localState.Transaction = tx.Transaction
 
-				if err := runTransaction(localState, &localContext, tx.Data, processor, extensions); err != nil {
+				if err := runTransaction(localState, &localCtx, tx.Data, processor, extensions); err != nil {
 					workerErrs[workerNumber] = err
 					abort.Signal()
 					return
@@ -342,7 +342,7 @@ func runBlock[T any](
 				}
 			}
 
-			if err := signalPostBlock(localState, &localContext, extensions); err != nil {
+			if err := signalPostBlock(localState, &localCtx, extensions); err != nil {
 				workerErrs[workerNumber] = err
 				abort.Signal()
 				return
@@ -405,7 +405,7 @@ func (e *executor[T]) forwardBlocks(params Params, abort utils.Event) (chan []*T
 	return blocks, forwardErr
 }
 
-func (e *executor[T]) runParallelTransaction(params Params, processor Processor[T], extensions []Extension[T], state *State[T], context *Context) error {
+func (e *executor[T]) runParallelTransaction(params Params, processor Processor[T], extensions []Extension[T], state *State[T], ctx *Context) error {
 	numWorkers := params.NumWorkers
 
 	// An event for signaling an abort of the execution.
@@ -454,8 +454,8 @@ func (e *executor[T]) runParallelTransaction(params Params, processor Processor[
 					localState := *state
 					localState.Block = tx.Block
 					localState.Transaction = tx.Transaction
-					localContext := *context
-					if err := runTransaction(localState, &localContext, tx.Data, processor, extensions); err != nil {
+					localCtx := *ctx
+					if err := runTransaction(localState, &localCtx, tx.Data, processor, extensions); err != nil {
 						workerErrs[i] = err
 						abort.Signal()
 						return
@@ -482,20 +482,20 @@ func (e *executor[T]) runParallelTransaction(params Params, processor Processor[
 	return err
 }
 
-func runTransaction[T any](state State[T], context *Context, data T, processor Processor[T], extensions []Extension[T]) error {
+func runTransaction[T any](state State[T], ctx *Context, data T, processor Processor[T], extensions []Extension[T]) error {
 	state.Data = data
-	if err := signalPreTransaction(state, context, extensions); err != nil {
+	if err := signalPreTransaction(state, ctx, extensions); err != nil {
 		return err
 	}
-	if err := processor.Process(state, context); err != nil {
+	if err := processor.Process(state, ctx); err != nil {
 		return err
 	}
-	if err := signalPostTransaction(state, context, extensions); err != nil {
+	if err := signalPostTransaction(state, ctx, extensions); err != nil {
 		return err
 	}
 	return nil
 }
-func (e *executor[T]) runParallelBlock(params Params, processor Processor[T], extensions []Extension[T], state *State[T], context *Context) error {
+func (e *executor[T]) runParallelBlock(params Params, processor Processor[T], extensions []Extension[T], state *State[T], ctx *Context) error {
 	numWorkers := params.NumWorkers
 
 	// An event for signaling an abort of the execution.
@@ -512,7 +512,7 @@ func (e *executor[T]) runParallelBlock(params Params, processor Processor[T], ex
 
 	wg.Add(numWorkers)
 	for i := 0; i < numWorkers; i++ {
-		go runBlock(i, blocks, wg, abort, workerErrs, processor, extensions, context, cachedPanic)
+		go runBlock(i, blocks, wg, abort, workerErrs, processor, extensions, ctx, cachedPanic)
 	}
 
 	wg.Wait()
@@ -531,39 +531,39 @@ func (e *executor[T]) runParallelBlock(params Params, processor Processor[T], ex
 	return err
 }
 
-func signalPreRun[T any](state State[T], context *Context, extensions []Extension[T]) error {
+func signalPreRun[T any](state State[T], ctx *Context, extensions []Extension[T]) error {
 	return forEachForward(extensions, func(extension Extension[T]) error {
-		return extension.PreRun(state, context)
+		return extension.PreRun(state, ctx)
 	})
 }
 
-func signalPostRun[T any](state State[T], context *Context, err error, extensions []Extension[T]) error {
+func signalPostRun[T any](state State[T], ctx *Context, err error, extensions []Extension[T]) error {
 	return forEachBackward(extensions, func(extension Extension[T]) error {
-		return extension.PostRun(state, context, err)
+		return extension.PostRun(state, ctx, err)
 	})
 }
 
-func signalPreBlock[T any](state State[T], context *Context, extensions []Extension[T]) error {
+func signalPreBlock[T any](state State[T], ctx *Context, extensions []Extension[T]) error {
 	return forEachForward(extensions, func(extension Extension[T]) error {
-		return extension.PreBlock(state, context)
+		return extension.PreBlock(state, ctx)
 	})
 }
 
-func signalPostBlock[T any](state State[T], context *Context, extensions []Extension[T]) error {
+func signalPostBlock[T any](state State[T], ctx *Context, extensions []Extension[T]) error {
 	return forEachBackward(extensions, func(extension Extension[T]) error {
-		return extension.PostBlock(state, context)
+		return extension.PostBlock(state, ctx)
 	})
 }
 
-func signalPreTransaction[T any](state State[T], context *Context, extensions []Extension[T]) error {
+func signalPreTransaction[T any](state State[T], ctx *Context, extensions []Extension[T]) error {
 	return forEachForward(extensions, func(extension Extension[T]) error {
-		return extension.PreTransaction(state, context)
+		return extension.PreTransaction(state, ctx)
 	})
 }
 
-func signalPostTransaction[T any](state State[T], context *Context, extensions []Extension[T]) error {
+func signalPostTransaction[T any](state State[T], ctx *Context, extensions []Extension[T]) error {
 	return forEachBackward(extensions, func(extension Extension[T]) error {
-		return extension.PostTransaction(state, context)
+		return extension.PostTransaction(state, ctx)
 	})
 }
 

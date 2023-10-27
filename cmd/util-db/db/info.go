@@ -434,7 +434,9 @@ func printStateHash(ctx *cli.Context) error {
 
 	hexStr := hexutil.EncodeUint64(blockNum)
 
-	bytes, err := aidaDb.Get([]byte(utils.StateHashPrefix + hexStr))
+	prefix := []byte(utils.StateHashPrefix + hexStr)
+
+	bytes, err := aidaDb.Get(prefix)
 	if err != nil {
 		return fmt.Errorf("cannot get hash from db")
 	}
