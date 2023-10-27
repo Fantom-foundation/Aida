@@ -10,6 +10,15 @@ import (
 	"github.com/klauspost/compress/gzip"
 )
 
+//go:generate mockgen -source reader.go -destination reader_mocks.go -package rpc_iterator
+
+type RPCIterator interface {
+	Next() bool
+	Value() *RequestWithResponse
+	Close()
+	Error() error
+}
+
 // FileReader implements reader of the stored API recording
 type FileReader struct {
 	f *os.File
@@ -17,7 +26,7 @@ type FileReader struct {
 }
 
 // NewFileReader creates new instance of the file reader and starts reading.
-func NewFileReader(ctx context.Context, path string) (*FileReader, error) {
+func NewFileReader(ctx context.Context, path string) (RPCIterator, error) {
 	f, err := os.OpenFile(path, os.O_RDONLY, 0640)
 	if err != nil {
 		return nil, err

@@ -13,23 +13,26 @@ func OpenRpcRecording(cfg *utils.Config, ctxt *cli.Context) (Provider[*rpc_itera
 	if err != nil {
 		return nil, fmt.Errorf("cannot open rpc recording file; %v", err)
 	}
+	return openRpcRecording(iter, cfg, ctxt), nil
+}
+
+func openRpcRecording(iter rpc_iterator.RPCIterator, cfg *utils.Config, ctxt *cli.Context) Provider[*rpc_iterator.RequestWithResponse] {
 	return rpcRequestProvider{
 		ctxt:     ctxt,
 		fileName: cfg.RPCRecordingFile,
 		iter:     iter,
-	}, nil
+	}
 }
 
 type rpcRequestProvider struct {
 	ctxt     *cli.Context
 	fileName string
-	iter     *rpc_iterator.FileReader
+	iter     rpc_iterator.RPCIterator
 }
 
 func (r rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc_iterator.RequestWithResponse]) error {
 	var blockNumber int
 
-	defer r.iter.Release()
 	for r.iter.Next() {
 		if r.iter.Error() != nil {
 			return fmt.Errorf("iterator returned error; %v", r.iter.Error())
