@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/big"
 	"math/rand"
+	"os"
 	"testing"
 	"time"
 
@@ -131,6 +132,13 @@ func getRandomStateDbFunc(db state.StateDB, r *rand.Rand) func() {
 	return funcs[r.Intn(funcCount)]
 }
 
+func suppressStdout(f func()) {
+	tmp := os.Stdout
+	os.Stdout = nil
+	f()
+	os.Stdout = tmp
+}
+
 func TestOperationProfilerWithEachOpOnce(t *testing.T) {
 	name := "OperationProfiler EachOpOnce"
 	cfg := &utils.Config{
@@ -154,13 +162,18 @@ func TestOperationProfilerWithEachOpOnce(t *testing.T) {
 		ext.PreRun(executor.State[any]{}, &mockCtx)
 		funcs := getStateDbFuncs(mockCtx.State)
 		for b := int(cfg.First); b <= int(cfg.Last); b += 1 + rand.Intn(3) {
-			ext.PreBlock(executor.State[any]{Block: int(b)}, nil)
+			suppressStdout(func() {
+				ext.PreBlock(executor.State[any]{Block: int(b)}, nil)
+			})
 			for _, f := range funcs {
 				f()
 			}
 			ext.PostBlock(executor.State[any]{Block: int(b)}, nil)
+
 		}
-		ext.PostRun(executor.State[any]{}, nil, nil)
+		suppressStdout(func() {
+			ext.PostRun(executor.State[any]{}, nil, nil)
+		})
 
 		totalOpCount := 0
 		ops := ext.stats.GetOpOrder()
@@ -186,6 +199,7 @@ func TestOperationProfilerWithEachOpOnce(t *testing.T) {
 		if totalOpCount != len(funcs) {
 			t.Errorf("Seen %d ops even though we have %d", totalOpCount, len(funcs))
 		}
+
 	})
 }
 
@@ -223,6 +237,7 @@ func TestOperationProfilerWithRandomInput(t *testing.T) {
 		}
 
 		t.Run(name, func(t *testing.T) {
+			// initialize rng with seed
 			var r *rand.Rand
 			if test.args.seed != 0 && test.args.seed != 1 {
 				r = rand.New(rand.NewSource(test.args.seed))
@@ -256,7 +271,10 @@ func TestOperationProfilerWithRandomInput(t *testing.T) {
 					intervalGeneratedOpCount = 0
 				}
 
-				ext.PreBlock(executor.State[any]{Block: int(b)}, nil)
+				suppressStdout(func() {
+					ext.PreBlock(executor.State[any]{Block: int(b)}, nil)
+				})
+
 				if b > intervalEnd {
 					// make sure that the stats is reset
 					if ext.stats.GetTotalOpFreq() != 0 {
@@ -294,7 +312,10 @@ func TestOperationProfilerWithRandomInput(t *testing.T) {
 					t.Errorf("[Interval] Seen %d ops, but generated %d ops", ext.stats.GetTotalOpFreq(), intervalGeneratedOpCount)
 				}
 			}
-			ext.PostRun(executor.State[any]{}, nil, nil)
+
+			suppressStdout(func() {
+				ext.PostRun(executor.State[any]{}, nil, nil)
+			})
 
 			// check that last seen block number is within boundary
 			if ext.lastProcessedBlock > uint64(test.args.last) {
