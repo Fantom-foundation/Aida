@@ -146,6 +146,7 @@ type Config struct {
 	AidaDb                string         // directory to profiling database containing substate, update, delete accounts data
 	StateValidationMode   ValidationMode // state validation mode
 	UpdateDb              string         // update-set directory
+	UpdateType            string         // download datatype
 	Output                string         // output directory for aida-db patches or path to events.json file in stochastic generation
 	SnapshotDepth         int            // depth of snapshot history
 	SubstateDb            string         // substate directory

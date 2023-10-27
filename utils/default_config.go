@@ -65,6 +65,7 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		Output:                getFlagValue(ctx, OutputFlag).(string),
 		StateValidationMode:   EqualityCheck,
 		UpdateDb:              getFlagValue(ctx, UpdateDbFlag).(string),
+		UpdateType:            getFlagValue(ctx, UpdateTypeFlag).(string),
 		SubstateDb:            getFlagValue(ctx, substate.SubstateDbFlag).(string),
 		OperaBinary:           getFlagValue(ctx, OperaBinaryFlag).(string),
 		ValuesNumber:          getFlagValue(ctx, ValuesNumberFlag).(int64),

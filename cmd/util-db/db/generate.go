@@ -370,6 +370,7 @@ func (g *generator) updatePatchesJson(fileName string) error {
 		"toBlock":   strconv.FormatUint(g.cfg.Last, 10),
 		"fromEpoch": strconv.FormatUint(g.opera.firstEpoch, 10),
 		"toEpoch":   strconv.FormatUint(g.opera.lastEpoch, 10),
+		"nightly":   "true",
 	}
 
 	// Append the new patch to the array
