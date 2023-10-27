@@ -184,7 +184,7 @@ func TestOperationProfilerWithEachOpOnce(t *testing.T) {
 			notImplemented[a] = true
 		}
 
-		for x, op := range ops {
+		for _, op := range ops {
 			if notImplemented[op] {
 				continue
 			}
