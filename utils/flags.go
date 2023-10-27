@@ -182,6 +182,11 @@ var (
 		Name:  "update-db",
 		Usage: "set update-set database directory",
 	}
+	UpdateTypeFlag = cli.StringFlag{
+		Name:  "update-type",
+		Usage: "select update type (\"stable\" or \"nightly\")",
+		Value: "stable",
+	}
 	OperaBinaryFlag = cli.PathFlag{
 		Name:  "opera-binary",
 		Usage: "opera binary path",
