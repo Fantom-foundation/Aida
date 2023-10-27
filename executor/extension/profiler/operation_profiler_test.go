@@ -139,7 +139,7 @@ func suppressStdout(f func()) {
 	os.Stdout = tmp
 }
 
-func TestOperationProfilerWithEachOpOnce(t *testing.T) {
+func TestOperationProfiler_WithEachOpOnce(t *testing.T) {
 	name := "OperationProfiler EachOpOnce"
 	cfg := &utils.Config{
 		Profile:         true,
@@ -202,7 +202,7 @@ func TestOperationProfilerWithEachOpOnce(t *testing.T) {
 	})
 }
 
-func TestOperationProfilerWithRandomInput(t *testing.T) {
+func TestOperationProfiler_WithRandomInput(t *testing.T) {
 	type argument struct {
 		name           string
 		seed           int64
@@ -331,7 +331,7 @@ func TestOperationProfilerWithRandomInput(t *testing.T) {
 
 // Originally this would test if interval <= 0 or if last < first.
 // This is deemed unneccessary since there is a separate validation for config, so they are never malformed.
-func TestOperationProfilerWithMalformedConfig(t *testing.T) {
+func TestOperationProfiler_WithMalformedConfig(t *testing.T) {
 	type argument struct {
 		profile  bool
 		first    uint64
