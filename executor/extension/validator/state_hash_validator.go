@@ -37,6 +37,18 @@ type stateHashValidator[T any] struct {
 }
 
 func (e *stateHashValidator[T]) PreRun(_ executor.State[T], ctx *executor.Context) error {
+	if e.cfg.DbImpl != "carmen" {
+		return errors.New("state-hash-validation only works with db-impl carmen")
+	}
+
+	if e.cfg.CarmenSchema != 5 {
+		return errors.New("state-hash-validation only works with carmen schema 5")
+	}
+
+	if e.cfg.ArchiveMode && e.cfg.ArchiveVariant != "s5" {
+		return errors.New("archive state-hash-validation only works with archive variant s5")
+	}
+
 	e.hashProvider = utils.MakeStateHashProvider(ctx.AidaDb)
 	return nil
 }
