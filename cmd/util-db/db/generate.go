@@ -35,7 +35,7 @@ const (
 var GenerateCommand = cli.Command{
 	Action: generate,
 	Name:   "generate",
-	Usage:  "generates aida-db from given events",
+	Usage:  "generates full aida-db from substatedb - generates deletiondb and updatesetdb, merges them into aida-db and then creates a patch",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 		&utils.ChainIDFlag,
@@ -61,7 +61,7 @@ type generator struct {
 	md          *utils.AidaDbMetadata
 	aidaDb      ethdb.Database
 	opera       *aidaOpera
-	stopAtEpoch uint64
+	targetEpoch uint64
 	dbHash      []byte
 	start       time.Time
 }
@@ -485,21 +485,16 @@ func (g *generator) createTarGz(filePath string, fileName string) interface{} {
 
 // calculatePatchEnd retrieve epoch at which will next patch generation end
 func (g *generator) calculatePatchEnd() error {
-	err := g.opera.getOperaBlockAndEpoch(false)
-	if err != nil {
-		return err
-	}
-
 	// load last finished epoch to calculate next target
-	g.stopAtEpoch = g.opera.lastEpoch
+	g.targetEpoch = g.opera.firstEpoch
 
 	// next patch will be at least X epochs large
 	if g.cfg.ChainID == 250 {
 		// mainnet currently takes about 250 epochs per day
-		g.stopAtEpoch += 250
+		g.targetEpoch += 250
 	} else {
 		// generic value - about 3 days on testnet 4002
-		g.stopAtEpoch += 50
+		g.targetEpoch += 50
 	}
 
 	headEpochNumber, err := utils.FindHeadEpochNumber(g.cfg.ChainID)
@@ -508,8 +503,8 @@ func (g *generator) calculatePatchEnd() error {
 	}
 
 	// if current generator is too far in history, start generation to the current head
-	if headEpochNumber > g.stopAtEpoch {
-		g.stopAtEpoch = headEpochNumber
+	if headEpochNumber > g.targetEpoch {
+		g.targetEpoch = headEpochNumber
 	}
 
 	return nil

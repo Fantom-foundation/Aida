@@ -212,7 +212,7 @@ func startOperaRecording(cfg *utils.Config, syncUntilEpoch uint64) chan error {
 		cmd := exec.Command(getOperaBinary(cfg), "--datadir", cfg.Db, "--recording", "--substate-db", cfg.SubstateDb, "--exitwhensynced.epoch", strconv.FormatUint(syncUntilEpoch+1, 10))
 		err := runCommand(cmd, nil, log)
 		if err != nil {
-			errChan <- fmt.Errorf("unable record opera substates %v; binary %v ; %v", cfg.Db, getOperaBinary(cfg), err)
+			errChan <- fmt.Errorf("unable to record opera substates %v; binary %v ; %v", cfg.Db, getOperaBinary(cfg), err)
 		}
 	}()
 	return errChan

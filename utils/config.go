@@ -591,7 +591,10 @@ func reportNewConfig(cfg *Config, log *logging.Logger) {
 			log.Infof("Archive mode: disabled")
 		}
 		log.Infof("Used VM implementation: %v", cfg.VmImpl)
+		log.Infof("Aida DB directory: %v", cfg.AidaDb)
+		log.Infof("Substate DB directory: %v", cfg.SubstateDb)
 		log.Infof("Update DB directory: %v", cfg.UpdateDb)
+		log.Infof("Delete DB directory: %v", cfg.DeletionDb)
 		if cfg.SkipPriming {
 			log.Infof("Priming: Skipped")
 		} else {
