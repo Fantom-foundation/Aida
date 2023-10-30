@@ -19,7 +19,7 @@ func TestOperationProvider_OpeningANonExistingTraceFilesResultsInAnError(t *test
 	}
 }
 
-func TestSubstateProvider_OperationsAreUnitedCorrectly(t *testing.T) {
+func TestOperationProvider_OperationsAreUnitedCorrectly(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	consumer := NewMockOperationConsumer(ctrl)
 
@@ -66,7 +66,7 @@ func TestSubstateProvider_OperationsAreUnitedCorrectly(t *testing.T) {
 	}
 }
 
-func TestSubstateProvider_BeginBlockSetsBlockNumber(t *testing.T) {
+func TestOperationProvider_BeginBlockSetsBlockNumber(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	consumer := NewMockOperationConsumer(ctrl)
 
@@ -101,7 +101,7 @@ func TestSubstateProvider_BeginBlockSetsBlockNumber(t *testing.T) {
 	}
 }
 
-func TestSubstateProvider_BeginTransactionSetsTransactionNumber(t *testing.T) {
+func TestOperationProvider_BeginTransactionSetsTransactionNumber(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	consumer := NewMockOperationConsumer(ctrl)
 
