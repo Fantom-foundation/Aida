@@ -53,8 +53,10 @@ func TestStateHashValidator_FailsIfHashIsNotFoundInAidaDb(t *testing.T) {
 		t.Error("post block must return error")
 	}
 
-	if strings.Compare(err.Error(), fmt.Sprintf("state hash for block %v is not present in the db", blockNumber)) != 0 {
-		t.Fatal("unexpected error")
+	wantedErr := fmt.Sprintf("state hash for block %v is not present in the db", blockNumber)
+
+	if strings.Compare(err.Error(), wantedErr) != 0 {
+		t.Fatalf("unexpected error\nwant: %v\ngot: %v", wantedErr, err.Error())
 	}
 
 	if err := ext.PostRun(executor.State[any]{Block: 1}, ctx, nil); err != nil {
