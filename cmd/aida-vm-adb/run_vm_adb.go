@@ -72,7 +72,7 @@ func run(
 		tracker.MakeProgressLogger[*substate.Substate](cfg, 0),
 	}
 	extensionList = append(extensionList, extra...)
-	return executor.NewExecutor(provider).Run(
+	return executor.NewExecutor(provider, cfg).Run(
 		executor.Params{
 			From:                   int(cfg.First),
 			To:                     int(cfg.Last) + 1,
