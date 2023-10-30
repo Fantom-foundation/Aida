@@ -1,6 +1,7 @@
 package state
 
 import (
+	"fmt"
 	"math/rand"
 	"testing"
 	"time"
@@ -10,15 +11,15 @@ import (
 
 type CarmenStateTestCase struct {
 	Variant string
+	Schema  int
 	Archive string
 }
 
-func GetCarmenStateTestCases() []CarmenStateTestCase {
-	variants := []string{""}
-	for _, variant := range carmen.GetAllVariants() {
-		variants = append(variants, string(variant))
-	}
+func (c CarmenStateTestCase) String() string {
+	return fmt.Sprintf("DB Variant: %s, Schema: %d, Archive type: %v", c.Variant, c.Schema, c.Archive)
+}
 
+func GetCarmenStateTestCases() []CarmenStateTestCase {
 	archives := []string{
 		"none",
 		"leveldb",
@@ -29,9 +30,15 @@ func GetCarmenStateTestCases() []CarmenStateTestCase {
 
 	var testCases []CarmenStateTestCase
 
-	for _, variant := range variants {
-		for _, archive := range archives {
-			testCases = append(testCases, CarmenStateTestCase{Variant: variant, Archive: archive})
+	for _, variant := range carmen.GetAllVariants() {
+		for _, schema := range carmen.GetAllSchemas() {
+			for _, archive := range archives {
+				testCases = append(testCases, CarmenStateTestCase{
+					Variant: string(variant),
+					Schema:  int(schema),
+					Archive: archive,
+				})
+			}
 		}
 	}
 

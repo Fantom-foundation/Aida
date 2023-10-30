@@ -2,7 +2,7 @@ package proxy
 
 import (
 	"bytes"
-	"fmt"
+	"errors"
 	"math/big"
 	"testing"
 
@@ -13,8 +13,8 @@ import (
 )
 
 func makeTestShadowDB(t *testing.T, ctc state.CarmenStateTestCase) state.StateDB {
-	csDB, err := state.MakeCarmenStateDB(t.TempDir(), ctc.Variant, ctc.Archive, 1)
-	if _, ok := err.(carmen.UnsupportedConfiguration); ok {
+	csDB, err := state.MakeCarmenStateDB(t.TempDir(), ctc.Variant, ctc.Archive, ctc.Schema)
+	if errors.Is(err, carmen.UnsupportedConfiguration) {
 		t.Skip("unsupported configuration")
 	}
 
@@ -36,9 +36,7 @@ func makeTestShadowDB(t *testing.T, ctc state.CarmenStateTestCase) state.StateDB
 // TestShadowState_InitCloseShadowDB test closing db immediately after initialization
 func TestShadowState_InitCloseShadowDB(t *testing.T) {
 	for _, ctc := range state.GetCarmenStateTestCases() {
-		testCaseTitle := fmt.Sprintf("carmenDB Variant: %s, Archive type: %s", ctc.Variant, ctc.Archive)
-
-		t.Run(testCaseTitle, func(t *testing.T) {
+		t.Run(ctc.String(), func(t *testing.T) {
 			shadowDB := makeTestShadowDB(t, ctc)
 
 			err := shadowDB.Close()
@@ -52,9 +50,7 @@ func TestShadowState_InitCloseShadowDB(t *testing.T) {
 // TestShadowState_AccountLifecycle tests account operations - create, check if it exists, if it's empty, suicide and suicide confirmation
 func TestShadowState_AccountLifecycle(t *testing.T) {
 	for _, ctc := range state.GetCarmenStateTestCases() {
-		testCaseTitle := fmt.Sprintf("carmenDB Variant: %s, Archive type: %s", ctc.Variant, ctc.Archive)
-
-		t.Run(testCaseTitle, func(t *testing.T) {
+		t.Run(ctc.String(), func(t *testing.T) {
 			shadowDB := makeTestShadowDB(t, ctc)
 
 			// Close DB after test ends
@@ -91,9 +87,7 @@ func TestShadowState_AccountLifecycle(t *testing.T) {
 // TestShadowState_AccountBalanceOperations tests balance operations - add, subtract and check if the value is correct
 func TestShadowState_AccountBalanceOperations(t *testing.T) {
 	for _, ctc := range state.GetCarmenStateTestCases() {
-		testCaseTitle := fmt.Sprintf("carmenDB Variant: %s, Archive type: %s", ctc.Variant, ctc.Archive)
-
-		t.Run(testCaseTitle, func(t *testing.T) {
+		t.Run(ctc.String(), func(t *testing.T) {
 			shadowDB := makeTestShadowDB(t, ctc)
 
 			// Close DB after test ends
@@ -133,9 +127,7 @@ func TestShadowState_AccountBalanceOperations(t *testing.T) {
 // TestShadowState_NonceOperations tests account nonce updating
 func TestShadowState_NonceOperations(t *testing.T) {
 	for _, ctc := range state.GetCarmenStateTestCases() {
-		testCaseTitle := fmt.Sprintf("carmenDB Variant: %s, Archive type: %s", ctc.Variant, ctc.Archive)
-
-		t.Run(testCaseTitle, func(t *testing.T) {
+		t.Run(ctc.String(), func(t *testing.T) {
 			shadowDB := makeTestShadowDB(t, ctc)
 
 			// Close DB after test ends
@@ -165,9 +157,7 @@ func TestShadowState_NonceOperations(t *testing.T) {
 // TestShadowState_CodeOperations tests account code updating
 func TestShadowState_CodeOperations(t *testing.T) {
 	for _, ctc := range state.GetCarmenStateTestCases() {
-		testCaseTitle := fmt.Sprintf("carmenDB Variant: %s, Archive type: %s", ctc.Variant, ctc.Archive)
-
-		t.Run(testCaseTitle, func(t *testing.T) {
+		t.Run(ctc.String(), func(t *testing.T) {
 			shadowDB := makeTestShadowDB(t, ctc)
 
 			// Close DB after test ends
@@ -205,9 +195,7 @@ func TestShadowState_CodeOperations(t *testing.T) {
 // TestShadowState_StateOperations tests account state update
 func TestShadowState_StateOperations(t *testing.T) {
 	for _, ctc := range state.GetCarmenStateTestCases() {
-		testCaseTitle := fmt.Sprintf("carmenDB Variant: %s, Archive type: %s", ctc.Variant, ctc.Archive)
-
-		t.Run(testCaseTitle, func(t *testing.T) {
+		t.Run(ctc.String(), func(t *testing.T) {
 			shadowDB := makeTestShadowDB(t, ctc)
 
 			// Close DB after test ends
@@ -238,9 +226,7 @@ func TestShadowState_StateOperations(t *testing.T) {
 // TestShadowState_TrxBlockSyncPeriodOperations tests creation of randomized sync-periods with blocks and transactions
 func TestShadowState_TrxBlockSyncPeriodOperations(t *testing.T) {
 	for _, ctc := range state.GetCarmenStateTestCases() {
-		testCaseTitle := fmt.Sprintf("carmenDB Variant: %s, Archive type: %s", ctc.Variant, ctc.Archive)
-
-		t.Run(testCaseTitle, func(t *testing.T) {
+		t.Run(ctc.String(), func(t *testing.T) {
 			shadowDB := makeTestShadowDB(t, ctc)
 
 			// Close DB after test ends
@@ -278,9 +264,7 @@ func TestShadowState_TrxBlockSyncPeriodOperations(t *testing.T) {
 // TestShadowState_RefundOperations tests adding and subtracting refund value
 func TestShadowState_RefundOperations(t *testing.T) {
 	for _, ctc := range state.GetCarmenStateTestCases() {
-		testCaseTitle := fmt.Sprintf("carmenDB Variant: %s, Archive type: %s", ctc.Variant, ctc.Archive)
-
-		t.Run(testCaseTitle, func(t *testing.T) {
+		t.Run(ctc.String(), func(t *testing.T) {
 			shadowDB := makeTestShadowDB(t, ctc)
 
 			// Close DB after test ends
@@ -312,9 +296,7 @@ func TestShadowState_RefundOperations(t *testing.T) {
 // TestShadowState_AccessListOperations tests operations with creating, updating a checking AccessList
 func TestShadowState_AccessListOperations(t *testing.T) {
 	for _, ctc := range state.GetCarmenStateTestCases() {
-		testCaseTitle := fmt.Sprintf("carmenDB Variant: %s, Archive type: %s", ctc.Variant, ctc.Archive)
-
-		t.Run(testCaseTitle, func(t *testing.T) {
+		t.Run(ctc.String(), func(t *testing.T) {
 			shadowDB := makeTestShadowDB(t, ctc)
 
 			// Close DB after test ends
@@ -404,9 +386,7 @@ func TestShadowState_AccessListOperations(t *testing.T) {
 // TestShadowState_SetBalanceUsingBulkInsertion tests setting an accounts balance
 func TestShadowState_SetBalanceUsingBulkInsertion(t *testing.T) {
 	for _, ctc := range state.GetCarmenStateTestCases() {
-		testCaseTitle := fmt.Sprintf("carmenDB Variant: %s, Archive type: %s", ctc.Variant, ctc.Archive)
-
-		t.Run(testCaseTitle, func(t *testing.T) {
+		t.Run(ctc.String(), func(t *testing.T) {
 			shadowDB := makeTestShadowDB(t, ctc)
 
 			// Close DB after test ends
@@ -441,9 +421,7 @@ func TestShadowState_SetBalanceUsingBulkInsertion(t *testing.T) {
 // TestShadowState_SetNonceUsingBulkInsertion tests setting an accounts nonce
 func TestShadowState_SetNonceUsingBulkInsertion(t *testing.T) {
 	for _, ctc := range state.GetCarmenStateTestCases() {
-		testCaseTitle := fmt.Sprintf("carmenDB Variant: %s, Archive type: %s", ctc.Variant, ctc.Archive)
-
-		t.Run(testCaseTitle, func(t *testing.T) {
+		t.Run(ctc.String(), func(t *testing.T) {
 			shadowDB := makeTestShadowDB(t, ctc)
 
 			// Close DB after test ends
@@ -479,9 +457,7 @@ func TestShadowState_SetNonceUsingBulkInsertion(t *testing.T) {
 // TestShadowState_SetStateUsingBulkInsertion tests setting an accounts state
 func TestShadowState_SetStateUsingBulkInsertion(t *testing.T) {
 	for _, ctc := range state.GetCarmenStateTestCases() {
-		testCaseTitle := fmt.Sprintf("carmenDB Variant: %s, Archive type: %s", ctc.Variant, ctc.Archive)
-
-		t.Run(testCaseTitle, func(t *testing.T) {
+		t.Run(ctc.String(), func(t *testing.T) {
 			shadowDB := makeTestShadowDB(t, ctc)
 
 			// Close DB after test ends
@@ -519,9 +495,7 @@ func TestShadowState_SetStateUsingBulkInsertion(t *testing.T) {
 // TestShadowState_SetCodeUsingBulkInsertion tests setting an accounts code
 func TestShadowState_SetCodeUsingBulkInsertion(t *testing.T) {
 	for _, ctc := range state.GetCarmenStateTestCases() {
-		testCaseTitle := fmt.Sprintf("carmenDB Variant: %s, Archive type: %s", ctc.Variant, ctc.Archive)
-
-		t.Run(testCaseTitle, func(t *testing.T) {
+		t.Run(ctc.String(), func(t *testing.T) {
 			shadowDB := makeTestShadowDB(t, ctc)
 
 			// Close DB after test ends
@@ -558,18 +532,8 @@ func TestShadowState_SetCodeUsingBulkInsertion(t *testing.T) {
 // TestShadowState_BulkloadOperations tests multiple operation in one bulkload
 func TestShadowState_BulkloadOperations(t *testing.T) {
 	for _, ctc := range state.GetCarmenStateTestCases() {
-		testCaseTitle := fmt.Sprintf("carmenDB Variant: %s, Archive type: %s", ctc.Variant, ctc.Archive)
-
-		t.Run(testCaseTitle, func(t *testing.T) {
+		t.Run(ctc.String(), func(t *testing.T) {
 			shadowDB := makeTestShadowDB(t, ctc)
-
-			// Close DB after test ends
-			defer func(shadowDB state.StateDB) {
-				err := shadowDB.Close()
-				if err != nil {
-					t.Fatalf("failed to close shadow state DB: %v", err)
-				}
-			}(shadowDB)
 
 			// generate 100 randomized accounts
 			accounts := [100]common.Address{}
@@ -619,17 +583,22 @@ func TestShadowState_BulkloadOperations(t *testing.T) {
 			if err != nil {
 				t.Fatalf("failed to close bulk load: %v", err)
 			}
+
+			// This is placed at the end instead of in a defer clause to
+			// avoid being called in case of a panic occurring during the
+			// test. This would make error diagnostic very difficult.
+			if err := shadowDB.Close(); err != nil {
+				t.Fatalf("failed to close shadow state DB: %v", err)
+			}
 		})
 	}
 }
 
 func TestShadowState_GetShadowDB(t *testing.T) {
 	for _, ctc := range state.GetCarmenStateTestCases() {
-		testCaseTitle := fmt.Sprintf("carmenDB Variant: %s, Archive type: %s", ctc.Variant, ctc.Archive)
-
-		t.Run(testCaseTitle, func(t *testing.T) {
+		t.Run(ctc.String(), func(t *testing.T) {
 			csDB, err := state.MakeCarmenStateDB(t.TempDir(), ctc.Variant, ctc.Archive, 1)
-			if _, ok := err.(carmen.UnsupportedConfiguration); ok {
+			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
 

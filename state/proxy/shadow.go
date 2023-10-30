@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"log"
 	"math/big"
@@ -406,13 +407,10 @@ func (l *shadowBulkLoad) SetCode(addr common.Address, code []byte) {
 }
 
 func (l *shadowBulkLoad) Close() error {
-	if err := l.prime.Close(); err != nil {
-		return err
-	}
-	if err := l.shadow.Close(); err != nil {
-		return err
-	}
-	return nil
+	return errors.Join(
+		l.prime.Close(),
+		l.shadow.Close(),
+	)
 }
 
 func (s *shadowVmStateDb) run(opName string, op func(s state.VmStateDB)) {
