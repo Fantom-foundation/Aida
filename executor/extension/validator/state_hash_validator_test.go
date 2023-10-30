@@ -30,7 +30,7 @@ func TestStateHashValidator_NotActiveIfNotEnabledInConfig(t *testing.T) {
 	}
 }
 
-func TestStateHashValidator_DoesNotFailIfHashIsNotFoundInAidaDb(t *testing.T) {
+func TestStateHashValidator_FailsIfHashIsNotFoundInAidaDb(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
 	db := state.NewMockStateDB(ctrl)
@@ -40,7 +40,6 @@ func TestStateHashValidator_DoesNotFailIfHashIsNotFoundInAidaDb(t *testing.T) {
 
 	gomock.InOrder(
 		hashProvider.EXPECT().GetStateHash(blockNumber).Return(common.Hash{}, leveldb.ErrNotFound),
-		log.EXPECT().Warningf("State hash for block %v is not present in the db", blockNumber),
 	)
 
 	cfg := &utils.Config{}
@@ -49,8 +48,15 @@ func TestStateHashValidator_DoesNotFailIfHashIsNotFoundInAidaDb(t *testing.T) {
 
 	ctx := &executor.Context{State: db}
 
-	if err := ext.PostBlock(executor.State[any]{Block: blockNumber}, ctx); err != nil {
-		t.Errorf("failed to check hash: %v", err)
+	err := ext.PostBlock(executor.State[any]{Block: blockNumber}, ctx)
+	if err == nil {
+		t.Error("post block must return error")
+	}
+
+	wantedErr := fmt.Sprintf("state hash for block %v is not present in the db", blockNumber)
+
+	if strings.Compare(err.Error(), wantedErr) != 0 {
+		t.Fatalf("unexpected error\nwant: %v\ngot: %v", wantedErr, err.Error())
 	}
 
 	if err := ext.PostRun(executor.State[any]{Block: 1}, ctx, nil); err != nil {
