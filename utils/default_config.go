@@ -15,6 +15,8 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 
 		APIRecordingSrcFile:   getFlagValue(ctx, APIRecordingSrcFileFlag).(string),
 		ArchiveMode:           getFlagValue(ctx, ArchiveModeFlag).(bool),
+		ArchiveQueryRate:      getFlagValue(ctx, ArchiveQueryRateFlag).(int),
+		ArchiveMaxQueryAge:    getFlagValue(ctx, ArchiveMaxQueryAgeFlag).(int),
 		ArchiveVariant:        getFlagValue(ctx, ArchiveVariantFlag).(string),
 		BlockLength:           getFlagValue(ctx, BlockLengthFlag).(uint64),
 		BalanceRange:          getFlagValue(ctx, BalanceRangeFlag).(int64),

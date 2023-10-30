@@ -34,6 +34,8 @@ var RunVMApp = cli.App{
 
 		// ArchiveDb
 		&utils.ArchiveModeFlag,
+		&utils.ArchiveQueryRateFlag,
+		&utils.ArchiveMaxQueryAgeFlag,
 		&utils.ArchiveVariantFlag,
 
 		// ShadowDb

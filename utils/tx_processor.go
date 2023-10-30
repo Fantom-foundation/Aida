@@ -249,7 +249,7 @@ func handleErrorOnExit(err *error, errMsg *strings.Builder, newErrors *int, cont
 	}
 	numErrors := NumErrors.Add(int32(*newErrors))
 	if numErrors > MaxErrors {
-		*err = fmt.Errorf("%w\nToo many errors...", *err)
+		*err = fmt.Errorf("too many errors (%d), stopping run", numErrors)
 	}
 }
 

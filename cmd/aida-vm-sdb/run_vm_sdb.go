@@ -73,6 +73,7 @@ func run(
 		profiler.MakeMemoryUsagePrinter[*substate.Substate](cfg),
 		profiler.MakeMemoryProfiler[*substate.Substate](cfg),
 		statedb.MakeStateDbPrepper(),
+		statedb.MakeArchiveInquirer(cfg),
 		validator.MakeStateHashValidator[*substate.Substate](cfg),
 		statedb.MakeBlockEventEmitter[*substate.Substate](),
 		profiler.MakeOperationProfiler[*substate.Substate](cfg),

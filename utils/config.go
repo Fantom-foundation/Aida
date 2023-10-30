@@ -97,6 +97,8 @@ type Config struct {
 
 	APIRecordingSrcFile   string         // path to source file with recorded API data
 	ArchiveMode           bool           // enable archive mode
+	ArchiveQueryRate      int            // the queries per second send to the archive
+	ArchiveMaxQueryAge    int            // the maximum age for archive queries (in blocks)
 	ArchiveVariant        string         // selects the implementation variant of the archive
 	BlockLength           uint64         // length of a block in number of transactions
 	BalanceRange          int64          // balance range for stochastic simulation/replay
