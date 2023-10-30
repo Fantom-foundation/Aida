@@ -357,4 +357,13 @@ var (
 		Name:  "validate-state-hash",
 		Usage: "enables state hash validation",
 	}
+	ProfileBlocksFlag = cli.BoolFlag{
+		Name:  "profile-blocks",
+		Usage: "enables block profiling",
+	}
+	ProfileDBFlag = cli.PathFlag{
+		Name:  "profile-db",
+		Usage: "defines path to profile-db",
+		Value: "/var/opera/Aida/profile.db",
+	}
 )

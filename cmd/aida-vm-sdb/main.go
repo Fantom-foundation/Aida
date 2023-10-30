@@ -55,6 +55,8 @@ var RunVMApp = cli.App{
 		&utils.ProfileFlag,
 		&utils.ProfileFileFlag,
 		&utils.ProfileIntervalFlag,
+		&utils.ProfileDBFlag,
+		&utils.ProfileBlocksFlag,
 
 		// Priming
 		&utils.RandomizePrimingFlag,
