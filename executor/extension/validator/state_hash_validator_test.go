@@ -290,7 +290,7 @@ func TestStateHashValidator_PreRunReturnsErrorIfWrongDbImplIsChosen(t *testing.T
 		t.Fatal("pre run must return an error")
 	}
 
-	if strings.Compare(err.Error(), "state-hash-validation only works with db-impl carmen") != 0 {
+	if strings.Compare(err.Error(), "state-hash-validation only works with db-impl carmen or geth") != 0 {
 		t.Fatalf("unexpected err")
 	}
 }
