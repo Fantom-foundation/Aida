@@ -172,6 +172,8 @@ func TestAnalyticsWithGaussianDistribution(t *testing.T) {
 			//assertAlmostEqual(t, test.want, got)
 			assertAlmostEqual(t, test.want.mean, got.mean)
 			assertAlmostEqual(t, test.want.variance, got.variance)
+			assertAlmostEqual(t, 0, a[0].GetSkewness()) // skewness should be close to 0
+			assertAlmostEqual(t, 0, a[0].GetKurtosis()) // kurtosis should be close to 0
 			assertExactlyEqual(t, test.args.amount, a[0].GetCount())
 		})
 	}
