@@ -27,6 +27,7 @@ var InfoCommand = cli.Command{
 		&cmdMetadata,
 		&cmdDelAcc,
 		&cmdCount,
+		&cmdRange,
 		&cmdPrintDbHash,
 		&cmdPrintStateHash,
 	},
@@ -70,6 +71,35 @@ var cmdCountSubstate = cli.Command{
 	ArgsUsage: "<firstBlockNum>, <lastBlockNum>",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
+	},
+}
+
+var cmdRange = cli.Command{
+	Name:  "range",
+	Usage: "Prints range of type in AidaDb",
+	Subcommands: []*cli.Command{
+		&cmdSubstateRange,
+		&cmdStateHashRange,
+	},
+}
+
+var cmdSubstateRange = cli.Command{
+	Action: printSubstateRange,
+	Name:   "substate",
+	Usage:  "Prints range of substate in AidaDb",
+	Flags: []cli.Flag{
+		&utils.AidaDbFlag,
+		&logger.LogLevelFlag,
+	},
+}
+
+var cmdStateHashRange = cli.Command{
+	Action: printStateHashRange,
+	Name:   "state-hash",
+	Usage:  "Prints range of state-hash in AidaDb",
+	Flags: []cli.Flag{
+		&utils.AidaDbFlag,
+		&logger.LogLevelFlag,
 	},
 }
 
@@ -368,6 +398,58 @@ func printSubstateCount(ctx *cli.Context) error {
 	return nil
 }
 
+// printStateHashRange prints state hash range stored in given AidaDb
+func printStateHashRange(ctx *cli.Context) error {
+	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-SubstateRange")
+
+	cfg, argErr := utils.NewConfig(ctx, utils.NoArgs)
+	if argErr != nil {
+		return argErr
+	}
+
+	db, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "aida-db", true)
+	if err != nil {
+		return fmt.Errorf("error opening aida-db %s: %v", cfg.AidaDb, err)
+	}
+
+	var firstStateHashBlock, lastStateHashBlock uint64
+	firstStateHashBlock, err = utils.GetFirstStateHash(db)
+	if err != nil {
+		return fmt.Errorf("cannot get first state hash; %v", err)
+	}
+
+	lastStateHashBlock, err = utils.GetLastStateHash(db)
+	if err != nil {
+		return fmt.Errorf("cannot get last state hash; %v", err)
+	}
+
+	log.Infof("State Hash range: %v - %v", firstStateHashBlock, lastStateHashBlock)
+
+	return nil
+}
+
+// printSubstateRange prints state substate range stored in given AidaDb
+func printSubstateRange(ctx *cli.Context) error {
+	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-SubstateRange")
+
+	cfg, argErr := utils.NewConfig(ctx, utils.NoArgs)
+	if argErr != nil {
+		return argErr
+	}
+
+	substate.SetSubstateDb(cfg.AidaDb)
+	substate.OpenSubstateDBReadOnly()
+	defer substate.CloseSubstateDB()
+
+	firstBlock, lastBlock, ok := utils.FindBlockRangeInSubstate()
+	if !ok {
+		return errors.New("no substate found")
+	}
+
+	log.Infof("Substate block range: %v - %v", firstBlock, lastBlock)
+	return nil
+}
+
 // printDeletedAccountInfo for given deleted account in AidaDb
 func printDeletedAccountInfo(ctx *cli.Context) error {
 	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-InfoCommand")
@@ -438,7 +520,7 @@ func printStateHash(ctx *cli.Context) error {
 
 	bytes, err := aidaDb.Get(prefix)
 	if err != nil {
-		return fmt.Errorf("cannot get hash from db")
+		return fmt.Errorf("aida-db doesn't contain state hash for block %v", blockNum)
 	}
 
 	log.Noticef("State hash for block %v is 0x%v", blockNum, hex.EncodeToString(bytes))
