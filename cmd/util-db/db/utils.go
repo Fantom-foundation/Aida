@@ -8,7 +8,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 
 	"github.com/Fantom-foundation/Aida/logger"
@@ -51,14 +50,6 @@ func MustCloseDB(db ethdb.Database) {
 			}
 		}
 	}
-}
-
-// loadSourceDBPaths initializes paths to source databases
-func loadSourceDBPaths(cfg *utils.Config, aidaDbTmp string) {
-	cfg.DeletionDb = filepath.Join(aidaDbTmp, "deletion")
-	cfg.SubstateDb = filepath.Join(aidaDbTmp, "substate")
-	cfg.UpdateDb = filepath.Join(aidaDbTmp, "update")
-	cfg.WorldStateDb = filepath.Join(aidaDbTmp, "worldstate")
 }
 
 // runCommand wraps cmd execution to distinguish whether to display its output
@@ -159,44 +150,6 @@ func calculateMD5Sum(filePath string) (string, error) {
 	return md5sum, nil
 }
 
-// startDaemonOpera start opera node
-func startDaemonOpera(log *logging.Logger) error {
-	cmd := exec.Command("systemctl", "--user", "start", "opera")
-	err := runCommand(cmd, nil, log)
-	if err != nil {
-		return fmt.Errorf("unable start opera; %v", err.Error())
-	}
-	return nil
-}
-
-// stopDaemonOpera stop opera node
-func stopDaemonOpera(log *logging.Logger) error {
-	cmd := exec.Command("systemctl", "--user", "stop", "opera")
-	err := runCommand(cmd, nil, log)
-	if err != nil {
-		return fmt.Errorf("unable stop opera; %v", err.Error())
-	}
-	return nil
-}
-
-// startOperaPruning prunes opera in parallel
-func startOperaPruning(cfg *utils.Config) chan error {
-	errChan := make(chan error, 1)
-
-	log := logger.NewLogger(cfg.LogLevel, "autoGen-pruning")
-	log.Noticef("Starting opera pruning %v", cfg.Db)
-
-	go func() {
-		defer close(errChan)
-		cmd := exec.Command(getOperaBinary(cfg), "--datadir", cfg.Db, "snapshot", "prune-state")
-		err := runCommand(cmd, nil, log)
-		if err != nil {
-			errChan <- fmt.Errorf("unable prune opera %v; binary %v; %v", cfg.Db, getOperaBinary(cfg), err)
-		}
-	}()
-	return errChan
-}
-
 // startOperaRecording records substates
 func startOperaRecording(cfg *utils.Config, syncUntilEpoch uint64) chan error {
 	errChan := make(chan error, 1)
@@ -218,6 +171,7 @@ func startOperaRecording(cfg *utils.Config, syncUntilEpoch uint64) chan error {
 	return errChan
 }
 
+// getOperaBinary returns path to opera binary
 func getOperaBinary(cfg *utils.Config) string {
 	var operaBin = "opera"
 	if cfg.OperaBinary != "" {

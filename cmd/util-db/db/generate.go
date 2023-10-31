@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bufio"
 	"compress/gzip"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -63,6 +64,7 @@ type generator struct {
 	opera       *aidaOpera
 	targetEpoch uint64
 	dbHash      []byte
+	tarHash     string
 	start       time.Time
 }
 
@@ -130,6 +132,78 @@ func (g *generator) Generate() error {
 		return err
 	}
 
+	err = g.runStateHashScrapper(err)
+	if err != nil {
+		return fmt.Errorf("cannot scrape state hashes; %v", err)
+	}
+
+	err = g.runDbHashGeneration(err)
+	if err != nil {
+		return fmt.Errorf("cannot validate database; %v", err)
+	}
+
+	g.log.Notice("Generate metadata for AidaDb...")
+	err = utils.ProcessGenLikeMetadata(g.aidaDb, g.opera.firstBlock, g.opera.lastBlock, g.opera.firstEpoch, g.opera.lastEpoch, g.cfg.ChainID, g.cfg.LogLevel, g.dbHash)
+	if err != nil {
+		return err
+	}
+
+	g.log.Noticef("AidaDb %v generation done", g.cfg.AidaDb)
+	g.log.Noticef("Total elapsed time: %v", time.Since(g.start).Round(1*time.Second))
+
+	// if patch output dir is selected inserting patch.tar.gz into there and updating patches.json
+	if g.cfg.Output != "" {
+		var patchTarPath string
+		patchTarPath, err = g.createPatch()
+		if err != nil {
+			return err
+		}
+
+		g.log.Noticef("Successfully generated patch at: %v", patchTarPath)
+		g.log.Noticef("Total elapsed time: %v", time.Since(g.start).Round(1*time.Second))
+	}
+
+	return nil
+}
+
+// runStateHashScrapper scrapes state hashes from a node and saves them to a leveldb database
+func (g *generator) runStateHashScrapper(err error) error {
+	start := time.Now()
+	g.log.Notice("Starting state-hash scrapping...")
+
+	firstSearchBlock := g.opera.firstBlock
+
+	// get last state hash block from AidaDb
+	lastStateHashBlock, err := utils.GetLastStateHash(g.aidaDb)
+	if err != nil {
+		// if there is no state hash in AidaDb we need to start scrapping from the first substate block from whole database
+		firstSubstate := substate.GetFirstSubstate()
+		if firstSubstate == nil {
+			return fmt.Errorf("cannot get first substate right after recording; %v", err)
+		}
+		firstSearchBlock = firstSubstate.Env.Number
+		g.log.Warningf("Scrapping: while trying to resume on state-hash got: %v", err)
+	} else if lastStateHashBlock < g.opera.firstBlock {
+		// if generation was resumed after an error we need to start scrapping from the last state hash block
+		firstSearchBlock = lastStateHashBlock + 1
+		g.log.Infof("Scrapping: resuming state-hash scrapping from block %v", firstSearchBlock)
+	}
+
+	g.log.Noticef("Scrapping: range %v - %v", firstSearchBlock, g.opera.lastBlock)
+
+	err = utils.StateHashScraper(g.cfg.ChainID, g.aidaDb, firstSearchBlock, g.opera.lastBlock, g.log)
+	if err != nil {
+		return err
+	}
+
+	g.log.Noticef("Hash scrapping complete. It took: %v", time.Since(start).Round(1*time.Second))
+	g.log.Noticef("Total elapsed time: %v", time.Since(g.start).Round(1*time.Second))
+
+	return nil
+}
+
+// runDbHashGeneration generates db hash of all items in AidaDb
+func (g *generator) runDbHashGeneration(err error) error {
 	start := time.Now()
 	g.log.Notice("Starting validation...")
 
@@ -141,27 +215,6 @@ func (g *generator) Generate() error {
 
 	g.log.Noticef("Validation complete. It took: %v", time.Since(start).Round(1*time.Second))
 	g.log.Noticef("Total elapsed time: %v", time.Since(g.start).Round(1*time.Second))
-
-	// if patch output dir is selected inserting patch.tar.gz, patch.tar.gz.md5 into there and updating patches.json
-	if g.cfg.Output != "" {
-		var patchTarPath string
-		patchTarPath, err = g.createPatch()
-		if err != nil {
-			return err
-		}
-
-		g.log.Noticef("Successfully generated patch at: %v", patchTarPath)
-	}
-
-	g.log.Notice("Generate metadata")
-	err = utils.ProcessGenLikeMetadata(g.aidaDb, g.opera.firstBlock, g.opera.lastBlock, g.opera.firstEpoch, g.opera.lastEpoch, g.cfg.ChainID, g.cfg.LogLevel, g.dbHash)
-	if err != nil {
-		return err
-	}
-
-	g.log.Noticef("AidaDb %v generation done", g.cfg.AidaDb)
-	g.log.Noticef("Total elapsed time: %v", time.Since(g.start).Round(1*time.Second))
-
 	return nil
 }
 
@@ -221,8 +274,7 @@ func (g *generator) processUpdateSet(deleteDb *substate.DestroyedAccountDB, upda
 	start = time.Now()
 	g.log.Notice("Generating UpdateDb...")
 
-	// nextUpdateSetStart TODO MATEJ probably off by one
-	err = updateset.GenUpdateSet(g.cfg, updateDb, deleteDb, nextUpdateSetStart, updateSetInterval)
+	err = updateset.GenUpdateSet(g.cfg, updateDb, deleteDb, nextUpdateSetStart, g.opera.lastBlock, updateSetInterval)
 	if err != nil {
 		return fmt.Errorf("cannot doGenerations update-db; %v", err)
 	}
@@ -305,12 +357,12 @@ func (g *generator) createPatch() (string, error) {
 	g.log.Noticef("Patch %s generated successfully: %d(%d) - %d(%d) ", patchTarName, g.cfg.First,
 		g.opera.firstEpoch, g.cfg.Last, g.opera.lastEpoch)
 
-	err = g.updatePatchesJson(patchTarName)
+	g.tarHash, err = calculateMD5Sum(patchTarPath)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("unable to calculate md5sum of %s; %v", patchTarPath, err)
 	}
 
-	err = g.storeMd5sum(patchTarPath)
+	err = g.updatePatchesJson(patchTarName)
 	if err != nil {
 		return "", err
 	}
@@ -370,6 +422,8 @@ func (g *generator) updatePatchesJson(fileName string) error {
 		"toBlock":   strconv.FormatUint(g.cfg.Last, 10),
 		"fromEpoch": strconv.FormatUint(g.opera.firstEpoch, 10),
 		"toEpoch":   strconv.FormatUint(g.opera.lastEpoch, 10),
+		"dbHash":    hex.EncodeToString(g.dbHash),
+		"tarHash":   g.tarHash,
 		"nightly":   "true",
 	}
 
