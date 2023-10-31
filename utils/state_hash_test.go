@@ -9,11 +9,21 @@ import (
 // TestStateHash_ZeroHasSameStateHashAsOne tests that the state hash of block 0 is the same as the state hash of block 1
 func TestStateHash_ZeroHasSameStateHashAsOne(t *testing.T) {
 	tmpDir := t.TempDir() + "/blockHashes"
-	err := StateHashScraper(4002, tmpDir, 0, 1)
+	db, err := rawdb.NewLevelDBDatabase(tmpDir, 1024, 100, "state-hash", false)
+	if err != nil {
+		t.Fatalf("error opening stateHash leveldb %s: %v", tmpDir, err)
+	}
+
+	err = StateHashScraper(4002, db, 0, 1, nil)
 	if err != nil {
 		t.Fatalf("error scraping state hashes: %v", err)
 	}
-	db, err := rawdb.NewLevelDBDatabase(tmpDir, 1024, 100, "state-hash", true)
+	err = db.Close()
+	if err != nil {
+		t.Fatalf("error closing stateHash leveldb %s: %v", tmpDir, err)
+	}
+
+	db, err = rawdb.NewLevelDBDatabase(tmpDir, 1024, 100, "state-hash", true)
 	if err != nil {
 		t.Fatalf("error opening stateHash leveldb %s: %v", tmpDir, err)
 	}
@@ -40,11 +50,21 @@ func TestStateHash_ZeroHasSameStateHashAsOne(t *testing.T) {
 // we are expecting that at least some storage has changed between block 0 and block 100
 func TestStateHash_ZeroHasDifferentStateHashAfterHundredBlocks(t *testing.T) {
 	tmpDir := t.TempDir() + "/blockHashes"
-	err := StateHashScraper(4002, tmpDir, 0, 100)
+	db, err := rawdb.NewLevelDBDatabase(tmpDir, 1024, 100, "state-hash", false)
+	if err != nil {
+		t.Fatalf("error opening stateHash leveldb %s: %v", tmpDir, err)
+	}
+
+	err = StateHashScraper(4002, db, 0, 100, nil)
 	if err != nil {
 		t.Fatalf("error scraping state hashes: %v", err)
 	}
-	db, err := rawdb.NewLevelDBDatabase(tmpDir, 1024, 100, "state-hash", true)
+	err = db.Close()
+	if err != nil {
+		t.Fatalf("error closing stateHash leveldb %s: %v", tmpDir, err)
+	}
+
+	db, err = rawdb.NewLevelDBDatabase(tmpDir, 1024, 100, "state-hash", true)
 	if err != nil {
 		t.Fatalf("error opening stateHash leveldb %s: %v", tmpDir, err)
 	}
@@ -65,5 +85,32 @@ func TestStateHash_ZeroHasDifferentStateHashAfterHundredBlocks(t *testing.T) {
 	// block 0 should have a different state hash than block 100
 	if hashZero == hashHundred {
 		t.Fatalf("state hash of block 0 (%s) is the same as the state hash of block 100 (%s)", hashZero.Hex(), hashHundred.Hex())
+	}
+}
+
+func TestStateHash_KeyToUint64(t *testing.T) {
+	type args struct {
+		hexBytes []byte
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    uint64
+		wantErr bool
+	}{
+		{"testZeroConvert", args{[]byte(StateHashPrefix + "0x0")}, 0, false},
+		{"testOneConvert", args{[]byte(StateHashPrefix + "0x1")}, 1, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := StateHashKeyToUint64(tt.args.hexBytes)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("StateHashKeyToUint64() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("StateHashKeyToUint64() got = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

@@ -3,13 +3,16 @@ package utils
 //go:generate mockgen -source state_hash.go -destination state_hash_mocks.go -package utils
 
 import (
+	"bytes"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/op/go-logging"
+	"github.com/status-im/keycard-go/hexutils"
 )
 
 type StateHashProvider interface {
@@ -35,13 +38,7 @@ func (p *stateHashProvider) GetStateHash(number int) (common.Hash, error) {
 }
 
 // StateHashScraper scrapes state hashes from a node and saves them to a leveldb database
-func StateHashScraper(chainId ChainID, stateHashDb string, firstBlock, lastBlock int) error {
-	db, err := rawdb.NewLevelDBDatabase(stateHashDb, 1024, 100, "state-hash", false)
-	if err != nil {
-		return fmt.Errorf("error opening stateHash leveldb %s: %v", stateHashDb, err)
-	}
-	defer db.Close()
-
+func StateHashScraper(chainId ChainID, db ethdb.Database, firstBlock, lastBlock uint64, log *logging.Logger) error {
 	provider, err := GetProvider(chainId)
 	if err != nil {
 		return err
@@ -84,7 +81,7 @@ func StateHashScraper(chainId ChainID, stateHashDb string, firstBlock, lastBlock
 		}
 
 		if i%10000 == 0 {
-			fmt.Printf("Block %d done!\n", i)
+			log.Infof("Block %d done!\n", i)
 		}
 	}
 
@@ -94,7 +91,7 @@ func StateHashScraper(chainId ChainID, stateHashDb string, firstBlock, lastBlock
 // saveStateRoot saves the state root hash to the database
 func saveStateRoot(db ethdb.Database, stateRoot string, blockNumber string) error {
 	fullPrefix := StateHashPrefix + blockNumber
-	err := db.Put([]byte(fullPrefix), []byte(stateRoot))
+	err := db.Put([]byte(fullPrefix), hexutils.HexToBytes(strings.TrimPrefix(stateRoot, "0x")))
 	if err != nil {
 		return fmt.Errorf("unable to put state hash for block %s: %v", blockNumber, err)
 	}
@@ -109,4 +106,43 @@ func retrieveStateRoot(client *rpc.Client, blockNumber string) (map[string]inter
 		return nil, fmt.Errorf("failed to get block %s: %v", blockNumber, err)
 	}
 	return block, nil
+}
+
+// StateHashKeyToUint64 converts a state hash key to a uint64
+func StateHashKeyToUint64(hexBytes []byte) (uint64, error) {
+	prefix := []byte(StateHashPrefix)
+
+	if len(hexBytes) >= len(prefix) && bytes.HasPrefix(hexBytes, prefix) {
+		hexBytes = hexBytes[len(prefix):]
+	}
+
+	res, err := strconv.ParseUint(string(hexBytes), 0, 64)
+
+	if err != nil {
+		return 0, fmt.Errorf("cannot parse uint %v; %v", string(hexBytes), err)
+	}
+	return res, nil
+}
+
+// GetFirstStateHash returns the first block number for which we have a state hash
+func GetFirstStateHash(db ethdb.Database) (uint64, error) {
+	iter := db.NewIterator([]byte(StateHashPrefix), []byte("0x"))
+
+	defer iter.Release()
+
+	// start with writing first block
+	if !iter.Next() {
+		return 0, fmt.Errorf("no state hash found")
+	}
+
+	firstStateHashBlock, err := StateHashKeyToUint64(iter.Key())
+	if err != nil {
+		return 0, err
+	}
+	return firstStateHashBlock, nil
+}
+
+// GetLastStateHash returns the last block number for which we have a state hash
+func GetLastStateHash(db ethdb.Database) (uint64, error) {
+	return GetLastKey(db, StateHashPrefix)
 }
