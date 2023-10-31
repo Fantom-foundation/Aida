@@ -44,7 +44,7 @@ func (s substateProvider) Run(from int, to int, consumer Consumer[*substate.Subs
 		if tx.Block >= uint64(to) {
 			return nil
 		}
-		if err := consumer(TransactionInfo[*substate.Substate]{int(tx.Block), int(tx.Transaction), tx.Substate}); err != nil {
+		if err := consumer(TransactionInfo[*substate.Substate]{int(tx.Block), tx.Transaction, tx.Substate}); err != nil {
 			return err
 		}
 	}
