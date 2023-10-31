@@ -149,7 +149,6 @@ func (g *generator) Generate() error {
 	}
 
 	g.log.Noticef("AidaDb %v generation done", g.cfg.AidaDb)
-	g.log.Noticef("Total elapsed time: %v", time.Since(g.start).Round(1*time.Second))
 
 	// if patch output dir is selected inserting patch.tar.gz into there and updating patches.json
 	if g.cfg.Output != "" {
@@ -160,8 +159,8 @@ func (g *generator) Generate() error {
 		}
 
 		g.log.Noticef("Successfully generated patch at: %v", patchTarPath)
-		g.log.Noticef("Total elapsed time: %v", time.Since(g.start).Round(1*time.Second))
 	}
+	g.log.Noticef("Total elapsed time: %v", time.Since(g.start).Round(1*time.Second))
 
 	return nil
 }
@@ -173,21 +172,23 @@ func (g *generator) runStateHashScrapper(err error) error {
 
 	firstSearchBlock := g.opera.firstBlock
 
-	// get last state hash block from AidaDb
-	lastStateHashBlock, err := utils.GetLastStateHash(g.aidaDb)
-	if err != nil {
-		// if there is no state hash in AidaDb we need to start scrapping from the first substate block from whole database
-		firstSubstate := substate.GetFirstSubstate()
-		if firstSubstate == nil {
-			return fmt.Errorf("cannot get first substate right after recording; %v", err)
-		}
-		firstSearchBlock = firstSubstate.Env.Number
-		g.log.Warningf("Scrapping: while trying to resume on state-hash got: %v", err)
-	} else if lastStateHashBlock < g.opera.firstBlock {
-		// if generation was resumed after an error we need to start scrapping from the last state hash block
-		firstSearchBlock = lastStateHashBlock + 1
-		g.log.Infof("Scrapping: resuming state-hash scrapping from block %v", firstSearchBlock)
-	}
+	//// get last state hash block from AidaDb
+	//lastStateHashBlock, err := utils.GetLastStateHash(g.aidaDb)
+	//if err != nil {
+	//	// if there is no state hash in AidaDb we need to start scrapping from the first substate block from whole database
+	//	firstSubstate := substate.GetFirstSubstate()
+	//	if firstSubstate == nil {
+	//		return fmt.Errorf("cannot get first substate right after recording; %v", err)
+	//	}
+	//	firstSearchBlock = firstSubstate.Env.Number
+	//	g.log.Warningf("Scrapping: while trying to resume on state-hash got: %v", err)
+	//}
+	//
+	//if lastStateHashBlock < g.opera.firstBlock {
+	//	// if generation was resumed after an error we need to start scrapping from the last state hash block
+	//	firstSearchBlock = lastStateHashBlock + 1
+	//	g.log.Infof("Scrapping: resuming state-hash scrapping from block %v", firstSearchBlock)
+	//}
 
 	g.log.Noticef("Scrapping: range %v - %v", firstSearchBlock, g.opera.lastBlock)
 

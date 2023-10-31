@@ -10,9 +10,10 @@ import (
 )
 
 var ScrapeCommand = cli.Command{
-	Action: scrapePrepare,
-	Name:   "scrape",
-	Usage:  "Stores state hashes into AidaDb for given range",
+	Action:    scrapePrepare,
+	Name:      "scrape",
+	Usage:     "Stores state hashes into AidaDb for given range",
+	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 		&utils.ChainIDFlag,

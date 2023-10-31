@@ -400,7 +400,7 @@ func printSubstateCount(ctx *cli.Context) error {
 
 // printStateHashRange prints state hash range stored in given AidaDb
 func printStateHashRange(ctx *cli.Context) error {
-	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-SubstateRange")
+	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-StateHashRange")
 
 	cfg, argErr := utils.NewConfig(ctx, utils.NoArgs)
 	if argErr != nil {
@@ -420,6 +420,7 @@ func printStateHashRange(ctx *cli.Context) error {
 
 	lastStateHashBlock, err = utils.GetLastStateHash(db)
 	if err != nil {
+		log.Infof("Found first state hash at %v", firstStateHashBlock)
 		return fmt.Errorf("cannot get last state hash; %v", err)
 	}
 

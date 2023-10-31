@@ -126,23 +126,25 @@ func StateHashKeyToUint64(hexBytes []byte) (uint64, error) {
 
 // GetFirstStateHash returns the first block number for which we have a state hash
 func GetFirstStateHash(db ethdb.Database) (uint64, error) {
-	iter := db.NewIterator([]byte(StateHashPrefix), []byte("0x"))
-
-	defer iter.Release()
-
-	// start with writing first block
-	if !iter.Next() {
-		return 0, fmt.Errorf("no state hash found")
-	}
-
-	firstStateHashBlock, err := StateHashKeyToUint64(iter.Key())
-	if err != nil {
-		return 0, err
-	}
-	return firstStateHashBlock, nil
+	//iter := db.NewIterator([]byte(StateHashPrefix), []byte("0x"))
+	//
+	//defer iter.Release()
+	//
+	//// start with writing first block
+	//if !iter.Next() {
+	//	return 0, fmt.Errorf("no state hash found")
+	//}
+	//
+	//firstStateHashBlock, err := StateHashKeyToUint64(iter.Key())
+	//if err != nil {
+	//	return 0, err
+	//}
+	//return firstStateHashBlock, nil
+	return 0, fmt.Errorf("not implemented")
 }
 
 // GetLastStateHash returns the last block number for which we have a state hash
 func GetLastStateHash(db ethdb.Database) (uint64, error) {
-	return GetLastKey(db, StateHashPrefix)
+	//return GetLastKey(db, StateHashPrefix)
+	return 0, fmt.Errorf("not implemented")
 }

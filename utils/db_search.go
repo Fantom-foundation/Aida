@@ -17,10 +17,10 @@ func NewSearchableDB(backend ethdb.Database) *SearchableDB {
 	return &SearchableDB{backend}
 }
 
-func GetLastKey(dbIn ethdb.Database, dbPrefix string) (uint64, error) {
+func GetLastKey(dbIn ethdb.Database, keyPrefix string) (uint64, error) {
 	db := NewSearchableDB(dbIn)
 
-	zeroBytes, err := db.getLongestEncodedKeyZeroPrefixLength(dbPrefix)
+	zeroBytes, err := db.getLongestEncodedKeyZeroPrefixLength(keyPrefix)
 	if err != nil {
 		return 0, err
 	}
@@ -28,12 +28,12 @@ func GetLastKey(dbIn ethdb.Database, dbPrefix string) (uint64, error) {
 	if zeroBytes > 0 {
 		blockBytes := make([]byte, zeroBytes)
 
-		lastKeyPrefix = append([]byte(dbPrefix), blockBytes...)
+		lastKeyPrefix = append([]byte(keyPrefix), blockBytes...)
 	} else {
-		lastKeyPrefix = []byte(dbPrefix)
+		lastKeyPrefix = []byte(keyPrefix)
 	}
 
-	stateHashPrefixSize := len([]byte(dbPrefix))
+	stateHashPrefixSize := len([]byte(keyPrefix))
 
 	// binary search for biggest key
 	for {

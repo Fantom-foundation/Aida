@@ -70,12 +70,6 @@ func (opera *aidaOpera) init() error {
 		return fmt.Errorf("cannot retrieve block from existing opera database %v; %v", opera.cfg.Db, err)
 	}
 
-	// when initializing fresh opera, the block returned by it is -1 because it has not generated any blocks yet
-	// for this to work correctly, we need to up operas first block by one
-	if opera.isNew {
-		opera.firstBlock++
-	}
-
 	opera.log.Noticef("Opera block from last run is: %v", opera.firstBlock)
 
 	// starting generation one block later
