@@ -538,9 +538,7 @@ func adjustMissingConfigValues(cfg *Config) {
 	}
 
 	if _, err := os.Stat(cfg.AidaDb); !os.IsNotExist(err) {
-		cfg.UpdateDb = cfg.AidaDb
-		cfg.DeletionDb = cfg.AidaDb
-		cfg.SubstateDb = cfg.AidaDb
+		OverwriteDbPathsByAidaDb(cfg)
 	}
 
 	if _, err := os.Stat(cfg.DeletionDb); os.IsNotExist(err) {
@@ -552,6 +550,13 @@ func adjustMissingConfigValues(cfg *Config) {
 	if cfg.First == 0 {
 		cfg.SkipPriming = true
 	}
+}
+
+// OverwriteDbPathsByAidaDb overwrites the paths of the DBs by the AidaDb path
+func OverwriteDbPathsByAidaDb(cfg *Config) {
+	cfg.UpdateDb = cfg.AidaDb
+	cfg.DeletionDb = cfg.AidaDb
+	cfg.SubstateDb = cfg.AidaDb
 }
 
 // reportNewConfig logs out the state of config in current run

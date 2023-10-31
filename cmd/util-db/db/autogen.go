@@ -11,7 +11,6 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
@@ -72,6 +71,10 @@ func autogen(ctx *cli.Context) error {
 
 // prepareAutogen initializes a generator object, opera binary and adjust target range
 func prepareAutogen(ctx *cli.Context, cfg *utils.Config) (*generator, error) {
+	// this explicit overwrite is necessary at first autogen run,
+	// in later runs the paths are correctly set in adjustMissingConfigValues
+	utils.OverwriteDbPathsByAidaDb(cfg)
+
 	g, err := newGenerator(ctx, cfg)
 	if err != nil {
 		return nil, err
@@ -81,16 +84,6 @@ func prepareAutogen(ctx *cli.Context, cfg *utils.Config) (*generator, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	// remove worldstate directory if it was created
-	defer func(log *logging.Logger) {
-		if cfg.WorldStateDb != "" {
-			err = os.RemoveAll(cfg.WorldStateDb)
-			if err != nil {
-				log.Criticalf("can't remove temporary folder: %v; %v", cfg.WorldStateDb, err)
-			}
-		}
-	}(g.log)
 
 	// user specified targetEpoch
 	if cfg.TargetEpoch > 0 {
