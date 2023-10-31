@@ -20,7 +20,7 @@ GOPROXY ?= "https://proxy.golang.org,direct"
 
 .PHONY: all clean help test carmen tosca
 
-all: aida-rpc-adb aida-sdb aida-vm-adb aida-vm-sdb aida-stochastic-sdb aida-vm aida-profile util-worldstate util-updateset util-db
+all: aida-rpc aida-sdb aida-vm-adb aida-vm-sdb aida-stochastic-sdb aida-vm aida-profile util-worldstate util-updateset util-db
 
 
 carmen:
@@ -31,12 +31,12 @@ tosca:
 	@cd ./tosca ; \
 	make -j
 
-aida-rpc-adb: carmen tosca
+aida-rpc: carmen tosca
 	GOPROXY=$(GOPROXY) \
 	GOPRIVATE=github.com/Fantom-foundation/Carmen \
 	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
-	-o $(GO_BIN)/aida-rpc-adb \
-	./cmd/aida-rpc-adb
+	-o $(GO_BIN)/aida-rpc \
+	./cmd/aida-rpc
 
 aida-stochastic-sdb: carmen tosca
 	GOPROXY=$(GOPROXY) \
