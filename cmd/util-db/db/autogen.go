@@ -70,7 +70,7 @@ func autogen(ctx *cli.Context) error {
 	return err
 }
 
-// prepareAutogen prepares autogen generation
+// prepareAutogen initializes a generator object, opera binary and adjust target range
 func prepareAutogen(ctx *cli.Context, cfg *utils.Config) (*generator, error) {
 	g, err := newGenerator(ctx, cfg)
 	if err != nil {
