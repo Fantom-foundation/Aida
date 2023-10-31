@@ -19,17 +19,8 @@ func max(a, b float64) float64 {
 	return b
 }
 
-type Analytics []IncrementalStats
-
-/*
-func NewAnalytics(opCount uint64) *Analytics {
-	return &Analytics{ make([]IncrementalStats, opCount){} }
-}
-*/
-
 type IncrementalStats struct {
 	count uint64
-	sum   float64
 	min   float64
 	max   float64
 
@@ -67,11 +58,10 @@ func (s *IncrementalStats) Update(x float64) {
 	s.m2 += t
 
 	s.count += 1
-	s.sum += x
 	s.min = s.unlessEmpty(min(s.min, x), x)
 	s.max = max(s.max, x)
 
-	//kahan sum
+	// kahan sum
 	y := x - s.c
 	z := s.ksum + y
 	s.c = (z - s.ksum) - y
@@ -83,10 +73,6 @@ func (s *IncrementalStats) GetCount() uint64 {
 }
 
 func (s *IncrementalStats) GetSum() float64 {
-	return s.sum
-}
-
-func (s *IncrementalStats) getKahanSum() float64 {
 	return s.ksum
 }
 
