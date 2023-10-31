@@ -86,8 +86,6 @@ func TestAnalyticsWithConstants(t *testing.T) {
 			assertExactlyEqual(t, test.args.count, a[0].GetCount())
 			assertIsNaN(t, a[0].GetSkewness())
 			assertIsNaN(t, a[0].GetKurtosis())
-			diff := assertKahanSumMoreCorrect(t, test.want.mean*float64(test.args.count), a[0].GetSum(), a[0].getKahanSum())
-			t.Log("Diff between Kahan Sum and Sum", diff)
 		})
 	}
 }
@@ -134,8 +132,6 @@ func TestAnalyticsWithAlternativeBigSmall(t *testing.T) {
 			assertExactlyEqual(t, n, a[0].GetCount())
 			assertAlmostEqual(t, test.want.mean, got.mean)
 			assertAlmostEqual(t, test.want.variance, got.variance)
-			diff := assertKahanSumMoreCorrect(t, test.want.mean*float64(n), a[0].GetSum(), a[0].getKahanSum())
-			t.Log("Diff between Kahan Sum and Sum", diff)
 		})
 	}
 }
@@ -177,8 +173,6 @@ func TestAnalyticsWithGaussianDistribution(t *testing.T) {
 			assertAlmostEqual(t, test.want.mean, got.mean)
 			assertAlmostEqual(t, test.want.variance, got.variance)
 			assertExactlyEqual(t, test.args.amount, a[0].GetCount())
-			//diff := assertKahanSumMoreCorrect(t, test.want.mean * float64(test.args.amount), a[0].GetSum(), a[0].getKahanSum())
-			//t.Log("Diff between Kahan Sum and Sum", diff)
 		})
 	}
 }
@@ -254,8 +248,6 @@ func TestAnalyticsWithKnownInput(t *testing.T) {
 			assertAlmostEqual(t, want.skewness, got.skewness)
 			assertAlmostEqual(t, want.kurtosis, sk)
 			assertAlmostEqual(t, got.kurtosis, pk)
-			diff := assertKahanSumMoreCorrect(t, want.mean*n, a[0].GetSum(), a[0].getKahanSum())
-			t.Log("Diff between Kahan Sum and Sum", diff)
 		})
 	}
 
