@@ -76,11 +76,12 @@ func (opera *aidaOpera) init() error {
 		opera.firstBlock++
 	}
 
-	opera.log.Noticef("Opera is starting at block: %v", opera.firstBlock)
+	opera.log.Noticef("Opera block from last run is: %v", opera.firstBlock)
 
 	// starting generation one block later
-	opera.cfg.First = opera.firstBlock + 1
+	opera.firstBlock += 1
 	opera.firstEpoch += 1
+
 	return nil
 }
 
