@@ -80,8 +80,8 @@ type Executor[T any] interface {
 }
 
 // NewExecutor creates a new executor based on the given provider.
-func NewExecutor[T any](provider Provider[T], cfg *utils.Config) Executor[T] {
-	return newExecutor[T](provider, logger.NewLogger(cfg.LogLevel, "Executor"))
+func NewExecutor[T any](provider Provider[T], logLevel string) Executor[T] {
+	return newExecutor[T](provider, logger.NewLogger(logLevel, "Executor"))
 }
 
 func newExecutor[T any](provider Provider[T], log logger.Logger) Executor[T] {

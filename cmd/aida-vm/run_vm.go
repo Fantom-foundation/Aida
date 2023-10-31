@@ -57,7 +57,7 @@ func run(
 	}
 	extensions = append(extensions, extra...)
 
-	return executor.NewExecutor(provider, cfg).Run(
+	return executor.NewExecutor(provider, cfg.LogLevel).Run(
 		executor.Params{
 			From:       int(cfg.First),
 			To:         int(cfg.Last) + 1,

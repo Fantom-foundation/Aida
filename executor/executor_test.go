@@ -9,7 +9,6 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
-	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"go.uber.org/mock/gomock"
 )
@@ -37,7 +36,7 @@ func TestProcessor_ProcessorGetsCalledForEachTransaction(t *testing.T) {
 		processor.EXPECT().Process(AtTransaction[any](11, 1), gomock.Any()),
 	)
 
-	executor := NewExecutor[any](ss, &utils.Config{})
+	executor := NewExecutor[any](ss, "DEBUG")
 	if err := executor.Run(Params{From: 10, To: 12}, processor, nil); err != nil {
 		t.Errorf("execution failed: %v", err)
 	}
@@ -65,7 +64,7 @@ func TestProcessor_FailingProcessorStopsExecution(t *testing.T) {
 		processor.EXPECT().Process(gomock.Any(), gomock.Any()).Return(stop),
 	)
 
-	executor := NewExecutor[any](substate, &utils.Config{})
+	executor := NewExecutor[any](substate, "DEBUG")
 	if got, want := executor.Run(Params{From: 10, To: 20}, processor, nil), stop; !errors.Is(got, want) {
 		t.Errorf("execution did not produce expected error, wanted %v, got %v", got, want)
 	}
@@ -112,7 +111,7 @@ func TestProcessor_ExtensionsGetSignaledAboutEvents(t *testing.T) {
 		extension.EXPECT().PostRun(AtBlock[any](12), gomock.Any(), nil),
 	)
 
-	executor := NewExecutor[any](substate, &utils.Config{})
+	executor := NewExecutor[any](substate, "DEBUG")
 	if err := executor.Run(Params{From: 10, To: 12}, processor, []Extension[any]{extension}); err != nil {
 		t.Errorf("execution failed: %v", err)
 	}
@@ -144,7 +143,7 @@ func TestProcessor_FailingProcessorShouldStopExecutionButEndEventsAreDelivered(t
 		extension.EXPECT().PostRun(AtTransaction[any](10, 7), gomock.Any(), stop),
 	)
 
-	executor := NewExecutor[any](substate, &utils.Config{})
+	executor := NewExecutor[any](substate, "DEBUG")
 	if got, want := executor.Run(Params{From: 10, To: 20}, processor, []Extension[any]{extension}), stop; !errors.Is(got, want) {
 		t.Errorf("execution did not fail as expected, wanted %v, got %v", want, got)
 	}
@@ -163,7 +162,7 @@ func TestProcessor_EmptyIntervalEmitsNoEvents(t *testing.T) {
 		extension.EXPECT().PostRun(AtBlock[any](10), gomock.Any(), nil),
 	)
 
-	executor := NewExecutor[any](substate, &utils.Config{})
+	executor := NewExecutor[any](substate, "DEBUG")
 	if err := executor.Run(Params{From: 10, To: 10}, processor, []Extension[any]{extension}); err != nil {
 		t.Errorf("execution failed: %v", err)
 	}
@@ -213,7 +212,7 @@ func TestProcessor_MultipleExtensionsGetSignaledInOrder(t *testing.T) {
 		extension1.EXPECT().PostRun(AtBlock[any](11), gomock.Any(), nil),
 	)
 
-	executor := NewExecutor[any](substate, &utils.Config{})
+	executor := NewExecutor[any](substate, "DEBUG")
 	if err := executor.Run(Params{From: 10, To: 11}, processor, []Extension[any]{extension1, extension2}); err != nil {
 		t.Errorf("execution failed: %v", err)
 	}
@@ -236,7 +235,7 @@ func TestProcessor_FailingExtensionPreEventCausesExecutionToStop(t *testing.T) {
 		extension1.EXPECT().PostRun(AtBlock[any](10), gomock.Any(), resultError),
 	)
 
-	executor := NewExecutor[any](substate, &utils.Config{})
+	executor := NewExecutor[any](substate, "DEBUG")
 	if got, want := executor.Run(Params{From: 10, To: 20}, processor, []Extension[any]{extension1, extension2}), resultError; errors.Is(got, want) {
 		t.Errorf("execution failed with wrong error, wanted %v, got %v", want, got)
 	}
@@ -281,7 +280,7 @@ func TestProcessor_FailingExtensionPostEventCausesExecutionToStop(t *testing.T) 
 		extension1.EXPECT().PostRun(AtBlock[any](10), gomock.Any(), resultError),
 	)
 
-	executor := NewExecutor[any](substate, &utils.Config{})
+	executor := NewExecutor[any](substate, "DEBUG")
 	if got, want := executor.Run(Params{From: 10, To: 20}, processor, []Extension[any]{extension1, extension2}), resultError; errors.Is(got, want) {
 		t.Errorf("execution failed with wrong error, wanted %v, got %v", want, got)
 	}
@@ -318,7 +317,7 @@ func TestProcessor_StateDbIsPropagatedToTheProcessorAndAllExtensions(t *testing.
 		extension.EXPECT().PostRun(gomock.Any(), WithState(state), nil),
 	)
 
-	err := NewExecutor[any](substate, &utils.Config{}).Run(
+	err := NewExecutor[any](substate, "DEBUG").Run(
 		Params{From: 10, To: 11, State: state},
 		processor,
 		[]Extension[any]{extension},
@@ -365,7 +364,7 @@ func TestProcessor_StateDbCanBeModifiedByExtensionsAndProcessorInSequentialRun(t
 		extension.EXPECT().PostRun(gomock.Any(), WithState(stateG), nil),
 	)
 
-	err := NewExecutor[any](substate, &utils.Config{}).Run(
+	err := NewExecutor[any](substate, "DEBUG").Run(
 		Params{State: stateA},
 		processor,
 		[]Extension[any]{extension},
@@ -409,7 +408,7 @@ func TestProcessor_StateDbCanBeModifiedByExtensionsAndProcessorInTransactionLeve
 		extension.EXPECT().PostRun(gomock.Any(), WithState(stateB), nil),
 	)
 
-	err := NewExecutor[any](substate, &utils.Config{}).Run(
+	err := NewExecutor[any](substate, "DEBUG").Run(
 		Params{State: stateA, NumWorkers: 2, ParallelismGranularity: TransactionLevel},
 		processor,
 		[]Extension[any]{extension},
@@ -443,7 +442,7 @@ func TestProcessor_TransactionsAreProcessedWithMultipleWorkersIfRequested(t *tes
 		wg.Wait()
 	})
 
-	err := NewExecutor[any](substate, &utils.Config{}).Run(
+	err := NewExecutor[any](substate, "DEBUG").Run(
 		Params{From: 10, To: 11, NumWorkers: 2},
 		processor,
 		nil,
@@ -509,7 +508,7 @@ func TestProcessor_SignalsAreDeliveredInConcurrentExecution(t *testing.T) {
 		post,
 	)
 
-	err := NewExecutor[any](substate, &utils.Config{}).Run(
+	err := NewExecutor[any](substate, "DEBUG").Run(
 		Params{From: 10, To: 12, NumWorkers: 2},
 		processor,
 		[]Extension[any]{extension},
@@ -539,7 +538,7 @@ func TestProcessor_ProcessErrorAbortsTransactionLevelParallelProcessing(t *testi
 	processor.EXPECT().Process(AtBlock[any](4), gomock.Any()).Return(stop)
 	processor.EXPECT().Process(gomock.Any(), gomock.Any()).MaxTimes(20)
 
-	err := NewExecutor[any](substate, &utils.Config{}).Run(
+	err := NewExecutor[any](substate, "DEBUG").Run(
 		Params{To: 1000, NumWorkers: 2, ParallelismGranularity: TransactionLevel},
 		processor,
 		nil,
@@ -576,7 +575,7 @@ func TestProcessor_PreEventErrorAbortsTransactionLevelParallelProcessing(t *test
 	extension.EXPECT().PostTransaction(gomock.Any(), gomock.Any()).MaxTimes(20)
 	extension.EXPECT().PostRun(gomock.Any(), gomock.Any(), WithError(stop))
 
-	err := NewExecutor[any](substate, &utils.Config{}).Run(
+	err := NewExecutor[any](substate, "DEBUG").Run(
 		Params{To: 1000, NumWorkers: 2, ParallelismGranularity: TransactionLevel},
 		processor,
 		[]Extension[any]{extension},
@@ -613,7 +612,7 @@ func TestProcessor_PostEventErrorAbortsTransactionLevelParallelProcessing(t *tes
 	extension.EXPECT().PostTransaction(gomock.Any(), gomock.Any()).MaxTimes(20)
 	extension.EXPECT().PostRun(gomock.Any(), gomock.Any(), WithError(stop))
 
-	err := NewExecutor[any](substate, &utils.Config{}).Run(
+	err := NewExecutor[any](substate, "DEBUG").Run(
 		Params{To: 1000, NumWorkers: 2, ParallelismGranularity: TransactionLevel},
 		processor,
 		[]Extension[any]{extension},
@@ -653,7 +652,7 @@ func TestProcessor_SubstateIsPropagatedToTheProcessorAndAllExtensionsInSequentia
 		extension.EXPECT().PostRun(WithSubstate(substateB), gomock.Any(), nil),
 	)
 
-	err := NewExecutor[*substate.Substate](provider, &utils.Config{}).Run(
+	err := NewExecutor[*substate.Substate](provider, "DEBUG").Run(
 		Params{From: 10, To: 11},
 		processor,
 		[]Extension[*substate.Substate]{extension},
@@ -699,7 +698,7 @@ func TestProcessor_SubstateIsPropagatedToTheProcessorAndAllExtensionsInTransacti
 		post,
 	)
 
-	err := NewExecutor[*substate.Substate](provider, &utils.Config{}).Run(
+	err := NewExecutor[*substate.Substate](provider, "DEBUG").Run(
 		Params{From: 10, To: 11, NumWorkers: 2, ParallelismGranularity: TransactionLevel},
 		processor,
 		[]Extension[*substate.Substate]{extension},
@@ -842,7 +841,7 @@ func TestProcessor_BlocksParallelSingleBlockRun(t *testing.T) {
 		extension.EXPECT().PostRun(gomock.Any(), WithState(stateB), nil),
 	)
 
-	err := NewExecutor[any](substate, &utils.Config{}).Run(
+	err := NewExecutor[any](substate, "DEBUG").Run(
 		Params{State: stateA, NumWorkers: 2, ParallelismGranularity: BlockLevel},
 		processor,
 		[]Extension[any]{extension},
@@ -890,7 +889,7 @@ func TestProcessor_ParallelBlocksMultipleBlocksRun(t *testing.T) {
 
 	extension.EXPECT().PostRun(AtBlock[any](12), gomock.Any(), nil)
 
-	executor := NewExecutor[any](substate, &utils.Config{})
+	executor := NewExecutor[any](substate, "DEBUG")
 	if err := executor.Run(Params{From: 10, To: 12, NumWorkers: 2, ParallelismGranularity: BlockLevel},
 		processor,
 		[]Extension[any]{extension}); err != nil {
