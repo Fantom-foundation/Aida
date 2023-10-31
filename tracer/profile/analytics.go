@@ -34,7 +34,7 @@ type IncrementalStats struct {
 	max   float64
 
 	ksum float64
-	c float64
+	c    float64
 
 	m1 float64
 	m2 float64
@@ -63,7 +63,7 @@ func (s *IncrementalStats) Update(x float64) {
 	t := delta * delta_n * prevN
 	s.m1 += delta_n
 	s.m4 += t*delta_n2*(n*n-3*n+3) + (6 * delta_n2 * s.m2) - (4 * delta_n * s.m3)
-	s.m3 += t * delta_n * (n - 2) - (3 * delta_n * s.m2)
+	s.m3 += t*delta_n*(n-2) - (3 * delta_n * s.m2)
 	s.m2 += t
 
 	s.count += 1
