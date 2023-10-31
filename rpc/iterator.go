@@ -1,4 +1,4 @@
-package rpc_iterator
+package rpc
 
 import (
 	"context"
@@ -8,24 +8,24 @@ import (
 	"sync"
 )
 
-// Iterator implements asynchronous record provider over a recorder API call set.
-type Iterator struct {
+// iterator implements asynchronous data provider over a recorder API call set.
+type iterator struct {
 	ctx    context.Context
 	in     io.ReadCloser
 	closed chan interface{}
-	out    chan *RequestWithResponse
-	item   *RequestWithResponse
+	out    chan *RequestAndResults
+	item   *RequestAndResults
 	wg     *sync.WaitGroup
 	err    error
 }
 
-// NewIterator creates a new API call records iterator over the data provided by an input reader.
-func NewIterator(ctx context.Context, rc io.ReadCloser, queueLength int) *Iterator {
-	i := Iterator{
+// newIterator creates a new API call records iterator over the data provided by an input reader.
+func newIterator(ctx context.Context, rc io.ReadCloser, queueLength int) *iterator {
+	i := iterator{
 		ctx:    ctx,
 		in:     rc,
 		closed: make(chan interface{}),
-		out:    make(chan *RequestWithResponse, queueLength),
+		out:    make(chan *RequestAndResults, queueLength),
 		wg:     new(sync.WaitGroup),
 	}
 
@@ -37,7 +37,7 @@ func NewIterator(ctx context.Context, rc io.ReadCloser, queueLength int) *Iterat
 
 // Next moves the iterator to the next item in the recording, if available.
 // Returns FALSE if the iterator is exhausted.
-func (i *Iterator) Next() bool {
+func (i *iterator) Next() bool {
 	select {
 	case <-i.ctx.Done():
 		i.err = i.ctx.Err()
@@ -54,13 +54,13 @@ func (i *Iterator) Next() bool {
 
 // Close the iterator and release internal resources.
 // The function waits for the internal routines to terminate.
-func (i *Iterator) Close() {
+func (i *iterator) Close() {
 	i.Release()
 	i.wg.Wait()
 }
 
 // Release the internal resources of the iterator without raising an error.
-func (i *Iterator) Release() {
+func (i *iterator) Release() {
 	select {
 	case <-i.closed:
 	default:
@@ -72,18 +72,18 @@ func (i *Iterator) Release() {
 // Value returns the value of the current element of the iterator.
 // The value is empty when the iterator did not start by calling Next() first,
 // or if the end of the content was reached.
-func (i *Iterator) Value() *RequestWithResponse {
+func (i *iterator) Value() *RequestAndResults {
 	return i.item
 }
 
 // Error returns an accumulated error of the iterator.
 // Exhausting all available values via an iteration loop is not considered to be an error.
-func (i *Iterator) Error() error {
+func (i *iterator) Error() error {
 	return i.err
 }
 
 // load the records from the given reader into the internal queue asynchronously.
-func (i *Iterator) load() {
+func (i *iterator) load() {
 	defer i.wg.Done()
 	defer close(i.out)
 
@@ -109,7 +109,7 @@ func (i *Iterator) load() {
 }
 
 // read next item from the reader for precessing.
-func (i *Iterator) read() (*RequestWithResponse, error) {
+func (i *iterator) read() (*RequestAndResults, error) {
 	// try to read the next header
 	hdr := new(Header)
 
@@ -132,9 +132,9 @@ func (i *Iterator) read() (*RequestWithResponse, error) {
 }
 
 // decode loaded header into target structure.
-func (i *Iterator) decode(hdr *Header, namespace, method string) (*RequestWithResponse, error) {
+func (i *iterator) decode(hdr *Header, namespace, method string) (*RequestAndResults, error) {
 	// prep to read the payload
-	req := RequestWithResponse{
+	req := RequestAndResults{
 		Query: &Body{
 			Namespace:  namespace,
 			MethodBase: method,
@@ -183,7 +183,7 @@ func (i *Iterator) decode(hdr *Header, namespace, method string) (*RequestWithRe
 }
 
 // loadPayload fills the given buffer with the payload loaded from the input reader
-func (i *Iterator) loadPayload(buf []byte) error {
+func (i *iterator) loadPayload(buf []byte) error {
 	var offset, n int
 	var err error
 

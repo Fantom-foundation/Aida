@@ -7,8 +7,8 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
-	"github.com/Fantom-foundation/Aida/logger"
-	"github.com/Fantom-foundation/Aida/rpc_iterator"
+	"github.com/Fantom-foundation/Aida/executor/extension/validator"
+	"github.com/Fantom-foundation/Aida/rpc"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/urfave/cli/v2"
@@ -32,17 +32,18 @@ func RunRPCAdb(ctx *cli.Context) error {
 	return run(cfg, rpcSource, makeRPCProcessor(cfg), nil, nil)
 }
 
-func run(cfg *utils.Config, provider executor.Provider[*rpc_iterator.RequestWithResponse], processor executor.Processor[*rpc_iterator.RequestWithResponse], extra []executor.Extension[*rpc_iterator.RequestWithResponse], stateDb state.StateDB) error {
-	var extensionList = []executor.Extension[*rpc_iterator.RequestWithResponse]{
-		profiler.MakeCpuProfiler[*rpc_iterator.RequestWithResponse](cfg),
-		tracker.MakeProgressLogger[*rpc_iterator.RequestWithResponse](cfg, 15*time.Second),
-		statedb.MakeTemporaryArchivePrepper[*rpc_iterator.RequestWithResponse](),
+func run(cfg *utils.Config, provider executor.Provider[*rpc.RequestAndResults], processor executor.Processor[*rpc.RequestAndResults], extra []executor.Extension[*rpc.RequestAndResults], stateDb state.StateDB) error {
+	var extensionList = []executor.Extension[*rpc.RequestAndResults]{
+		profiler.MakeCpuProfiler[*rpc.RequestAndResults](cfg),
+		tracker.MakeProgressLogger[*rpc.RequestAndResults](cfg, 15*time.Second),
+		statedb.MakeTemporaryArchivePrepper[*rpc.RequestAndResults](),
+		validator.MakeRPCComparator(cfg),
 	}
 
 	// this is for testing purposes so mock statedb and mock extension can be used
 	extensionList = append(extensionList, extra...)
 	if stateDb == nil {
-		extensionList = append(extensionList, statedb.MakeStateDbManager[*rpc_iterator.RequestWithResponse](cfg))
+		extensionList = append(extensionList, statedb.MakeStateDbManager[*rpc.RequestAndResults](cfg))
 	}
 
 	return executor.NewExecutor(provider).Run(
@@ -61,95 +62,14 @@ func run(cfg *utils.Config, provider executor.Provider[*rpc_iterator.RequestWith
 func makeRPCProcessor(cfg *utils.Config) rpcProcessor {
 	return rpcProcessor{
 		cfg: cfg,
-		log: logger.NewLogger(cfg.LogLevel, "RPC-Adb"),
 	}
 }
 
 type rpcProcessor struct {
 	cfg *utils.Config
-	log logger.Logger
 }
 
-func (p rpcProcessor) Process(state executor.State[*rpc_iterator.RequestWithResponse], ctx *executor.Context) error {
-	res := p.execute(state.Data, ctx.Archive, state.Block)
-	compareError := p.compare(comparisonData{
-		block:   uint64(state.Block),
-		record:  state.Data,
-		StateDB: res,
-	})
-
-	if compareError != nil {
-		p.log.Warning(compareError)
-	}
-
+func (p rpcProcessor) Process(state executor.State[*rpc.RequestAndResults], ctx *executor.Context) error {
+	state.Data.StateDB = rpc.Execute(uint64(state.Block), state.Data, ctx.Archive, p.cfg)
 	return nil
-}
-
-func (p rpcProcessor) execute(req *rpc_iterator.RequestWithResponse, archive state.NonCommittableStateDB, block int) *StateDBData {
-	switch req.Query.MethodBase {
-	case "getBalance":
-		return executeGetBalance(req.Query.Params[0], archive)
-
-	case "getTransactionCount":
-		return executeGetTransactionCount(req.Query.Params[0], archive)
-
-	case "call":
-		var timestamp uint64
-
-		// first try to extract timestamp from response
-		if req.Response != nil {
-			if req.Response.Timestamp != 0 {
-				timestamp = uint64(time.Unix(0, int64(req.Response.Timestamp)).Unix())
-			}
-		} else if req.Error != nil {
-			if req.Error.Timestamp != 0 {
-
-				timestamp = uint64(time.Unix(0, int64(req.Error.Timestamp)).Unix())
-			}
-		}
-
-		if timestamp == 0 {
-			return nil
-		}
-
-		evm := newEVMExecutor(uint64(block), archive, p.cfg, req.Query.Params[0].(map[string]interface{}), timestamp, p.log)
-		return executeCall(evm)
-
-	case "estimateGas":
-		// estimateGas is currently not suitable for rpc replay since the estimation  in geth is always calculated for current state
-		// that means recorded result and result returned by StateDB are not comparable
-	case "getCode":
-		return executeGetCode(req.Query.Params[0], archive)
-
-	case "getStorageAt":
-		return executeGetStorageAt(req.Query.Params, archive)
-
-	default:
-		break
-	}
-	return nil
-}
-
-func (p rpcProcessor) compare(data comparisonData) (err *comparatorError) {
-	switch data.record.Query.MethodBase {
-	case "getBalance":
-		err = compareBalance(data)
-	case "getTransactionCount":
-		err = compareTransactionCount(data)
-	case "call":
-		err = compareCall(data)
-		if err != nil && err.typ == expectedErrorGotResult && !data.isRecovered {
-			data.isRecovered = true
-			return p.tryRecovery(data)
-		}
-	case "estimateGas":
-		// estimateGas is currently not suitable for replay since the estimation  in geth is always calculated for current state
-		// that means recorded result and result returned by StateDB are not comparable
-	case "getCode":
-		err = compareCode(data)
-	case "getStorageAt":
-		err = compareStorageAt(data)
-	}
-
-	return
 }

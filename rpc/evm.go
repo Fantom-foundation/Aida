@@ -1,4 +1,4 @@
-package replay
+package rpc
 
 import (
 	"errors"
@@ -7,7 +7,6 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/go-opera/ethapi"
@@ -31,14 +30,13 @@ type EVMExecutor struct {
 	vmImpl    string
 	blockID   *big.Int
 	rules     opera.EconomyRules
-	log       logger.Logger
 }
 
 const maxGasLimit = 9995800   // used when request does not specify gas
 const globalGasCap = 50000000 // highest gas allowance used for estimateGas
 
 // newEVMExecutor creates EVMExecutor for executing requests into StateDB that demand usage of EVM
-func newEVMExecutor(blockID uint64, archive state.NonCommittableStateDB, cfg *utils.Config, params map[string]interface{}, timestamp uint64, log logger.Logger) *EVMExecutor {
+func newEVMExecutor(blockID uint64, archive state.NonCommittableStateDB, cfg *utils.Config, params map[string]interface{}, timestamp uint64) *EVMExecutor {
 	return &EVMExecutor{
 		args:      newTxArgs(params),
 		archive:   archive,
@@ -47,7 +45,6 @@ func newEVMExecutor(blockID uint64, archive state.NonCommittableStateDB, cfg *ut
 		vmImpl:    cfg.VmImpl,
 		blockID:   new(big.Int).SetUint64(blockID),
 		rules:     opera.DefaultEconomyRules(),
-		log:       log,
 	}
 }
 

@@ -1,4 +1,4 @@
-package rpc_iterator
+package rpc
 
 import (
 	"context"
@@ -10,11 +10,11 @@ import (
 	"github.com/klauspost/compress/gzip"
 )
 
-//go:generate mockgen -source reader.go -destination reader_mocks.go -package rpc_iterator
+//go:generate mockgen -source reader.go -destination reader_mocks.go -package rpc
 
-type RPCIterator interface {
+type Iterator interface {
 	Next() bool
-	Value() *RequestWithResponse
+	Value() *RequestAndResults
 	Close()
 	Error() error
 }
@@ -22,11 +22,11 @@ type RPCIterator interface {
 // FileReader implements reader of the stored API recording
 type FileReader struct {
 	f *os.File
-	*Iterator
+	Iterator
 }
 
 // NewFileReader creates new instance of the file reader and starts reading.
-func NewFileReader(ctx context.Context, path string) (RPCIterator, error) {
+func NewFileReader(ctx context.Context, path string) (Iterator, error) {
 	f, err := os.OpenFile(path, os.O_RDONLY, 0640)
 	if err != nil {
 		return nil, err
@@ -46,7 +46,7 @@ func NewFileReader(ctx context.Context, path string) (RPCIterator, error) {
 
 	return &FileReader{
 		f:        f,
-		Iterator: NewIterator(ctx, in, 10),
+		Iterator: newIterator(ctx, in, 10),
 	}, nil
 }
 

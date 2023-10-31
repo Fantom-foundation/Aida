@@ -3,20 +3,20 @@ package executor
 import (
 	"fmt"
 
-	"github.com/Fantom-foundation/Aida/rpc_iterator"
+	"github.com/Fantom-foundation/Aida/rpc"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/urfave/cli/v2"
 )
 
-func OpenRpcRecording(cfg *utils.Config, ctxt *cli.Context) (Provider[*rpc_iterator.RequestWithResponse], error) {
-	iter, err := rpc_iterator.NewFileReader(ctxt.Context, cfg.RPCRecordingFile)
+func OpenRpcRecording(cfg *utils.Config, ctxt *cli.Context) (Provider[*rpc.RequestAndResults], error) {
+	iter, err := rpc.NewFileReader(ctxt.Context, cfg.RPCRecordingFile)
 	if err != nil {
 		return nil, fmt.Errorf("cannot open rpc recording file; %v", err)
 	}
 	return openRpcRecording(iter, cfg, ctxt), nil
 }
 
-func openRpcRecording(iter rpc_iterator.RPCIterator, cfg *utils.Config, ctxt *cli.Context) Provider[*rpc_iterator.RequestWithResponse] {
+func openRpcRecording(iter rpc.Iterator, cfg *utils.Config, ctxt *cli.Context) Provider[*rpc.RequestAndResults] {
 	return rpcRequestProvider{
 		ctxt:     ctxt,
 		fileName: cfg.RPCRecordingFile,
@@ -27,10 +27,10 @@ func openRpcRecording(iter rpc_iterator.RPCIterator, cfg *utils.Config, ctxt *cl
 type rpcRequestProvider struct {
 	ctxt     *cli.Context
 	fileName string
-	iter     rpc_iterator.RPCIterator
+	iter     rpc.Iterator
 }
 
-func (r rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc_iterator.RequestWithResponse]) error {
+func (r rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc.RequestAndResults]) error {
 	var blockNumber int
 
 	for r.iter.Next() {
@@ -59,7 +59,7 @@ func (r rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc_iterato
 			return nil
 		}
 
-		if err := consumer(TransactionInfo[*rpc_iterator.RequestWithResponse]{blockNumber, 0, req}); err != nil {
+		if err := consumer(TransactionInfo[*rpc.RequestAndResults]{blockNumber, 0, req}); err != nil {
 			return err
 		}
 	}

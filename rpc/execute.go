@@ -1,9 +1,11 @@
-package replay
+package rpc
 
 import (
 	"math/big"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -14,6 +16,51 @@ type StateDBData struct {
 	Result      any
 	Error       error
 	isRecovered bool
+}
+
+func Execute(block uint64, rec *RequestAndResults, archive state.NonCommittableStateDB, cfg *utils.Config) *StateDBData {
+	switch rec.Query.MethodBase {
+	case "getBalance":
+		return executeGetBalance(rec.Query.Params[0], archive)
+
+	case "getTransactionCount":
+		return executeGetTransactionCount(rec.Query.Params[0], archive)
+
+	case "call":
+		var timestamp uint64
+
+		// first try to extract timestamp from response
+		if rec.Response != nil {
+			if rec.Response.Timestamp != 0 {
+				timestamp = uint64(time.Unix(0, int64(rec.Response.Timestamp)).Unix())
+			}
+		} else if rec.Error != nil {
+			if rec.Error.Timestamp != 0 {
+
+				timestamp = uint64(time.Unix(0, int64(rec.Error.Timestamp)).Unix())
+			}
+		}
+
+		if timestamp == 0 {
+			return nil
+		}
+
+		evm := newEVMExecutor(block, archive, cfg, rec.Query.Params[0].(map[string]interface{}), timestamp)
+		return executeCall(evm)
+
+	case "estimateGas":
+		// estimateGas is currently not suitable for rpc replay since the estimation  in geth is always calculated for current state
+		// that means recorded result and result returned by StateDB are not comparable
+	case "getCode":
+		return executeGetCode(rec.Query.Params[0], archive)
+
+	case "getStorageAt":
+		return executeGetStorageAt(rec.Query.Params, archive)
+
+	default:
+		break
+	}
+	return nil
 }
 
 // executeGetBalance request into given archive and send result to comparator

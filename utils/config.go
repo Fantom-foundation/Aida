@@ -180,7 +180,6 @@ type Config struct {
 	TrackProgress         bool           // enables track progress logging
 	IsExistingStateDb     bool           // this is true if we are using an existing StateDb
 	ValidateStateHashes   bool           // if this is true state hash validation is enabled in Executor
-	LogFile               string         // path to log file
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.

@@ -11,7 +11,7 @@ package executor
 import (
 	reflect "reflect"
 
-	rpc_iterator "github.com/Fantom-foundation/Aida/rpc_iterator"
+	rpc_iterator "github.com/Fantom-foundation/Aida/rpc"
 	substate "github.com/Fantom-foundation/Substate"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -77,7 +77,7 @@ func (m *MockRPCReqConsumer) EXPECT() *MockRPCReqConsumerMockRecorder {
 }
 
 // Consume mocks base method.
-func (m *MockRPCReqConsumer) Consume(block, transaction int, req *rpc_iterator.RequestWithResponse) error {
+func (m *MockRPCReqConsumer) Consume(block, transaction int, req *rpc_iterator.RequestAndResults) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Consume", block, transaction, req)
 	ret0, _ := ret[0].(error)

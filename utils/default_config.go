@@ -94,7 +94,6 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		NoHeartbeatLogging:    getFlagValue(ctx, NoHeartbeatLoggingFlag).(bool),
 		TrackProgress:         getFlagValue(ctx, TrackProgressFlag).(bool),
 		ValidateStateHashes:   getFlagValue(ctx, ValidateStateHashesFlag).(bool),
-		LogFile:               getFlagValue(ctx, LogFileFlag).(string),
 	}
 
 	return cfg

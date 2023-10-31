@@ -1,7 +1,7 @@
 package executor
 
 import (
-	"github.com/Fantom-foundation/Aida/rpc_iterator"
+	"github.com/Fantom-foundation/Aida/rpc"
 	substate "github.com/Fantom-foundation/Substate"
 )
 
@@ -23,11 +23,11 @@ func toSubstateConsumer(c TxConsumer) Consumer[*substate.Substate] {
 }
 
 type RPCReqConsumer interface {
-	Consume(block int, transaction int, req *rpc_iterator.RequestWithResponse) error
+	Consume(block int, transaction int, req *rpc.RequestAndResults) error
 }
 
-func toRPCConsumer(c RPCReqConsumer) Consumer[*rpc_iterator.RequestWithResponse] {
-	return func(info TransactionInfo[*rpc_iterator.RequestWithResponse]) error {
+func toRPCConsumer(c RPCReqConsumer) Consumer[*rpc.RequestAndResults] {
+	return func(info TransactionInfo[*rpc.RequestAndResults]) error {
 		return c.Consume(info.Block, info.Transaction, info.Data)
 	}
 }

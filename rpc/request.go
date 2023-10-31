@@ -1,14 +1,15 @@
-package rpc_iterator
+package rpc
 
 import "encoding/json"
 
-// RequestWithResponse encapsulates request query and response for post-processing.
-type RequestWithResponse struct {
+// RequestAndResults encapsulates request query and response for post-processing.
+type RequestAndResults struct {
 	Query       *Body
 	Response    *Response
 	Error       *ErrorResponse
 	ParamsRaw   []byte
 	ResponseRaw []byte
+	StateDB     *StateDBData
 }
 
 // Body represents a decoded payload of a balancer.

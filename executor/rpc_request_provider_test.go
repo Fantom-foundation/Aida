@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Fantom-foundation/Aida/rpc_iterator"
+	"github.com/Fantom-foundation/Aida/rpc"
 	"github.com/Fantom-foundation/Aida/utils"
 	"go.uber.org/mock/gomock"
 )
@@ -14,7 +14,7 @@ import (
 func TestRPCRequestProvider_WorksWithValidResponse(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	consumer := NewMockRPCReqConsumer(ctrl)
-	i := rpc_iterator.NewMockRPCIterator(ctrl)
+	i := rpc.NewMockIterator(ctrl)
 
 	cfg := &utils.Config{}
 
@@ -39,7 +39,7 @@ func TestRPCRequestProvider_WorksWithValidResponse(t *testing.T) {
 func TestRPCRequestProvider_WorksWithErrorResponse(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	consumer := NewMockRPCReqConsumer(ctrl)
-	i := rpc_iterator.NewMockRPCIterator(ctrl)
+	i := rpc.NewMockIterator(ctrl)
 
 	cfg := &utils.Config{}
 
@@ -64,7 +64,7 @@ func TestRPCRequestProvider_WorksWithErrorResponse(t *testing.T) {
 func TestRPCRequestProvider_NilRequestDoesNotGetToConsumer(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	consumer := NewMockRPCReqConsumer(ctrl)
-	i := rpc_iterator.NewMockRPCIterator(ctrl)
+	i := rpc.NewMockIterator(ctrl)
 
 	cfg := &utils.Config{}
 
@@ -87,7 +87,7 @@ func TestRPCRequestProvider_NilRequestDoesNotGetToConsumer(t *testing.T) {
 func TestRPCRequestProvider_ErrorReturnedByIteratorEndsTheApp(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	consumer := NewMockRPCReqConsumer(ctrl)
-	i := rpc_iterator.NewMockRPCIterator(ctrl)
+	i := rpc.NewMockIterator(ctrl)
 
 	cfg := &utils.Config{}
 
@@ -110,9 +110,9 @@ func TestRPCRequestProvider_ErrorReturnedByIteratorEndsTheApp(t *testing.T) {
 	}
 }
 
-var validResp = &rpc_iterator.RequestWithResponse{
+var validResp = &rpc.RequestAndResults{
 	Query: nil,
-	Response: &rpc_iterator.Response{
+	Response: &rpc.Response{
 		Version:   "2.0",
 		ID:        json.RawMessage{1},
 		BlockID:   10,
@@ -125,15 +125,15 @@ var validResp = &rpc_iterator.RequestWithResponse{
 	ResponseRaw: nil,
 }
 
-var errResp = &rpc_iterator.RequestWithResponse{
+var errResp = &rpc.RequestAndResults{
 	Query:    nil,
 	Response: nil,
-	Error: &rpc_iterator.ErrorResponse{
+	Error: &rpc.ErrorResponse{
 		Version:   "2.0",
 		Id:        json.RawMessage{1},
 		BlockID:   10,
 		Timestamp: 10,
-		Error: rpc_iterator.ErrorMessage{
+		Error: rpc.ErrorMessage{
 			Code:    -1,
 			Message: "err",
 		},
