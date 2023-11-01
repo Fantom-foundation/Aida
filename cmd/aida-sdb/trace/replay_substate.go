@@ -15,44 +15,6 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// TraceReplaySubstateCommand data structure for the replay-substate app
-var TraceReplaySubstateCommand = cli.Command{
-	Action:    traceReplaySubstateAction,
-	Name:      "replay-substate",
-	Usage:     "executes storage trace using substates",
-	ArgsUsage: "<blockNumFirst> <blockNumLast>",
-	Flags: []cli.Flag{
-		&utils.ChainIDFlag,
-		&utils.CpuProfileFlag,
-		&utils.QuietFlag,
-		&utils.RandomizePrimingFlag,
-		&utils.RandomSeedFlag,
-		&utils.PrimeThresholdFlag,
-		&utils.ProfileFlag,
-		&utils.StateDbImplementationFlag,
-		&utils.StateDbVariantFlag,
-		&utils.StateDbLoggingFlag,
-		&utils.ShadowDbImplementationFlag,
-		&utils.ShadowDbVariantFlag,
-		&utils.SyncPeriodLengthFlag,
-		&substate.WorkersFlag,
-		&utils.TraceFileFlag,
-		&utils.TraceDirectoryFlag,
-		&utils.TraceDebugFlag,
-		&utils.DebugFromFlag,
-		&utils.ValidateFlag,
-		&utils.ValidateWorldStateFlag,
-		&utils.AidaDbFlag,
-		&logger.LogLevelFlag,
-	},
-	Description: `
-The trace replay-substate command requires two arguments:
-<blockNumFirst> <blockNumLast>
-
-<blockNumFirst> and <blockNumLast> are the first and
-last block of the inclusive range of blocks to replay storage traces.`,
-}
-
 // traceReplaySubstateTask simulates storage operations from storage traces on stateDB.
 func traceReplaySubstateTask(cfg *utils.Config, log *logging.Logger) error {
 	// load context

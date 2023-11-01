@@ -1,0 +1,83 @@
+package trace
+
+import (
+	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
+	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
+	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
+	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/tracer/context"
+	"github.com/Fantom-foundation/Aida/tracer/operation"
+	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/urfave/cli/v2"
+)
+
+func ReplayTrace(ctx *cli.Context) error {
+	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
+	if err != nil {
+		return err
+	}
+
+	operationProvider, err := executor.OpenOperations(cfg)
+	if err != nil {
+
+	}
+
+	defer operationProvider.Close()
+
+	rCtx := context.NewReplay()
+
+	processor := operationProcessor{cfg, rCtx}
+
+	var extra = []executor.Extension[[]operation.Operation]{
+		profiler.MakeReplayProfiler[[]operation.Operation](cfg, rCtx),
+	}
+
+	return replay(cfg, operationProvider, processor, extra)
+}
+
+type operationProcessor struct {
+	cfg  *utils.Config
+	rCtx *context.Replay
+}
+
+func (p operationProcessor) Process(state executor.State[[]operation.Operation], ctx *executor.Context) error {
+	p.runTransaction(uint64(state.Block), state.Data, ctx.State)
+	return nil
+}
+
+func (p operationProcessor) runTransaction(block uint64, operations []operation.Operation, stateDb state.StateDB) {
+	for _, op := range operations {
+		operation.Execute(op, stateDb, p.rCtx)
+		if p.cfg.Debug && block >= p.cfg.DebugFrom {
+			operation.Debug(&p.rCtx.Context, op)
+		}
+	}
+}
+
+func replay(
+	cfg *utils.Config,
+	provider executor.Provider[[]operation.Operation],
+	processor executor.Processor[[]operation.Operation],
+	extra []executor.Extension[[]operation.Operation],
+) error {
+	var extensionList = []executor.Extension[[]operation.Operation]{
+		tracker.MakeProgressLogger[[]operation.Operation](cfg, 0),
+		profiler.MakeMemoryUsagePrinter[[]operation.Operation](cfg),
+
+		profiler.MakeMemoryProfiler[[]operation.Operation](cfg),
+		statedb.MakeStateDbManager[[]operation.Operation](cfg),
+		statedb.MakeStateDbPrimer[[]operation.Operation](cfg),
+	}
+
+	extensionList = append(extensionList, extra...)
+
+	return executor.NewExecutor(provider).Run(
+		executor.Params{
+			From: int(cfg.First),
+			To:   int(cfg.Last) + 1,
+		},
+		processor,
+		extensionList,
+	)
+}
