@@ -4,7 +4,9 @@ package utils
 
 import (
 	"bytes"
+	"context"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 
@@ -38,16 +40,10 @@ func (p *stateHashProvider) GetStateHash(number int) (common.Hash, error) {
 }
 
 // StateHashScraper scrapes state hashes from a node and saves them to a leveldb database
-func StateHashScraper(chainId ChainID, db ethdb.Database, firstBlock, lastBlock uint64, log *logging.Logger) error {
-	provider, err := GetProvider(chainId)
+func StateHashScraper(ctx context.Context, chainId ChainID, ipcPath string, db ethdb.Database, firstBlock, lastBlock uint64, log *logging.Logger) error {
+	client, err := getClient(ctx, chainId, ipcPath, log)
 	if err != nil {
 		return err
-	}
-
-	var client *rpc.Client
-	client, err = rpc.Dial(provider)
-	if err != nil {
-		return fmt.Errorf("failed to connect to the rpc client: %v", err)
 	}
 	defer client.Close()
 
@@ -59,6 +55,10 @@ func StateHashScraper(chainId ChainID, db ethdb.Database, firstBlock, lastBlock 
 		block, err := retrieveStateRoot(client, "0x1")
 		if err != nil {
 			return err
+		}
+
+		if block == nil {
+			return fmt.Errorf("block 1 not found")
 		}
 
 		err = saveStateRoot(db, block["stateRoot"].(string), "0x0")
@@ -75,17 +75,50 @@ func StateHashScraper(chainId ChainID, db ethdb.Database, firstBlock, lastBlock 
 			return err
 		}
 
+		if block == nil {
+			return fmt.Errorf("block %d not found", i)
+		}
+
 		err = saveStateRoot(db, block["stateRoot"].(string), blockNumber)
 		if err != nil {
 			return err
 		}
 
 		if i%10000 == 0 {
-			log.Infof("Block %d done!\n", i)
+			log.Infof("Scrapping block %d done!\n", i)
 		}
 	}
 
 	return nil
+}
+
+// getClient returns a rpc/ipc client
+func getClient(ctx context.Context, chainId ChainID, ipcPath string, log *logging.Logger) (*rpc.Client, error) {
+	var client *rpc.Client
+	var err error
+
+	_, errIpc := os.Stat(ipcPath)
+	if errIpc == nil {
+		// ipc file exists
+		client, err = rpc.DialIPC(ctx, ipcPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to connect to IPC at %s: %v", ipcPath, err)
+		}
+		log.Infof("Connected to IPC at %s", ipcPath)
+		return client, err
+	} else {
+		var provider string
+		provider, err = GetProvider(chainId)
+		if err != nil {
+			return nil, err
+		}
+		client, err = rpc.Dial(provider)
+		if err != nil {
+			return nil, fmt.Errorf("failed to connect to the RPC client at %s: %v", provider, err)
+		}
+		log.Infof("Connected to RPC at %s", provider)
+		return client, nil
+	}
 }
 
 // saveStateRoot saves the state root hash to the database
@@ -126,6 +159,7 @@ func StateHashKeyToUint64(hexBytes []byte) (uint64, error) {
 
 // GetFirstStateHash returns the first block number for which we have a state hash
 func GetFirstStateHash(db ethdb.Database) (uint64, error) {
+	// TODO MATEJ will be fixed in future commit
 	//iter := db.NewIterator([]byte(StateHashPrefix), []byte("0x"))
 	//
 	//defer iter.Release()
@@ -145,6 +179,7 @@ func GetFirstStateHash(db ethdb.Database) (uint64, error) {
 
 // GetLastStateHash returns the last block number for which we have a state hash
 func GetLastStateHash(db ethdb.Database) (uint64, error) {
+	// TODO MATEJ will be fixed in future commit
 	//return GetLastKey(db, StateHashPrefix)
 	return 0, fmt.Errorf("not implemented")
 }

@@ -9,11 +9,15 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
+	"syscall"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/op/go-logging"
 )
 
@@ -53,7 +57,7 @@ func MustCloseDB(db ethdb.Database) {
 }
 
 // runCommand wraps cmd execution to distinguish whether to display its output
-func runCommand(cmd *exec.Cmd, resultChan chan string, log *logging.Logger) error {
+func runCommand(cmd *exec.Cmd, resultChan chan string, stopChan chan struct{}, log *logging.Logger) error {
 	if resultChan != nil {
 		defer close(resultChan)
 	}
@@ -97,8 +101,39 @@ func runCommand(cmd *exec.Cmd, resultChan chan string, log *logging.Logger) erro
 		}
 	}
 	close(lastOutputMessagesChan)
-	err = cmd.Wait()
 
+	done := make(chan error, 1)
+	go func() {
+		done <- cmd.Wait()
+	}()
+
+	if stopChan == nil {
+		// this command doesn't expect possibility to be stopped by kill signal from aida
+		// wait for command to finish
+		res, ok := <-done
+		return processCommandResult(res, ok, scanner, lastOutputMessagesChan, resultChan, cmd)
+	}
+
+	// this command expects possibility to be stopped by kill signal from aida
+	select {
+	case <-stopChan:
+		// A stop signal was received; terminate the command.
+		// Send a kill signal to the process group (-).
+		syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+		// Wait for cmd.Wait() to return after termination.
+		<-done
+		// not returning any error because the command was terminated by aida intentionally
+		return nil
+	case res, ok := <-done:
+		return processCommandResult(res, ok, scanner, lastOutputMessagesChan, resultChan, cmd)
+	}
+}
+
+// processCommandResult is used to process command result
+func processCommandResult(err error, ok bool, scanner *bufio.Scanner, lastOutputMessagesChan chan string, resultChan chan string, cmd *exec.Cmd) error {
+	if !ok {
+		return fmt.Errorf("unexpected chan error while executing Command %v; %v", cmd, err)
+	}
 	// command failed
 	if err != nil {
 		// print out gathered output since generation failed
@@ -150,6 +185,88 @@ func calculateMD5Sum(filePath string) (string, error) {
 	return md5sum, nil
 }
 
+// startOperaIpc starts opera node for ipc requests
+func startOperaIpc(cfg *utils.Config, stopChan chan struct{}) chan error {
+	errChan := make(chan error, 1)
+
+	log := logger.NewLogger(cfg.LogLevel, "autoGen-ipc")
+	log.Noticef("Starting opera ipc %v", cfg.Db)
+
+	resChan := make(chan string, 10)
+	go func() {
+		defer close(errChan)
+
+		//cleanup opera.ipc when node is stopped
+		defer func(name string) {
+			err := os.Remove(name)
+			if err != nil {
+				log.Errorf("failed to remove ipc file %s; %v", name, err)
+			}
+		}(cfg.Db + "/opera.ipc")
+
+		cmd := exec.Command(getOperaBinary(cfg), "--datadir", cfg.Db, "--maxpeers=0")
+		err := runCommand(cmd, resChan, stopChan, log)
+		if err != nil {
+			errChan <- fmt.Errorf("unable run ipc opera --datadir %v; binary %v; %v", cfg.Db, getOperaBinary(cfg), err)
+		}
+	}()
+
+	log.Noticef("Waiting for ipc to start")
+	errChanParser := make(chan error, 1)
+
+	// wait for ipc to start
+	waitDuration := 5 * time.Minute
+	timer := time.NewTimer(waitDuration)
+
+ipcLoadingProcessWait:
+	for {
+		select {
+		// since resChan was used the output still needs to be read to prevent deadlock by chan being full
+		case res, ok := <-resChan:
+			if ok {
+				// waiting for opera message in output which indicates that ipc is ready for usage
+				if strings.Contains(res, "IPC endpoint opened") {
+					log.Noticef(res)
+					break ipcLoadingProcessWait
+				}
+			}
+		case err, ok := <-errChan:
+			if ok {
+				// error happened, the opera ipc didn't start properly
+				errChanParser <- fmt.Errorf("opera error during ipc initialization; %v", err)
+			}
+			// errChan closed, this means that stopChan signal was called to terminate opera ipc,
+			// which otherwise without an error never stops on its own
+			close(errChanParser)
+			return errChanParser
+		case <-timer.C:
+			// if ipc didn't start in given time produce an error
+			errChanParser <- fmt.Errorf("timeout waiting for opera ipc to start after %s", waitDuration.String())
+			close(errChanParser)
+			return errChanParser
+		}
+	}
+
+	// non-blocking error relaying while reading from resChan to prevent deadlock
+	go func() {
+		defer close(errChanParser)
+		for {
+			select {
+			// since resChan was used the output still needs to be read to prevent deadlock by chan being full
+			case <-resChan:
+			case err, ok := <-errChan:
+				if ok {
+					// error happened, the opera failed after ipc initialization
+					errChanParser <- fmt.Errorf("opera error after ipc initialization; %v", err)
+				}
+				return
+			}
+		}
+	}()
+
+	return errChanParser
+}
+
 // startOperaRecording records substates
 func startOperaRecording(cfg *utils.Config, syncUntilEpoch uint64) chan error {
 	errChan := make(chan error, 1)
@@ -163,7 +280,7 @@ func startOperaRecording(cfg *utils.Config, syncUntilEpoch uint64) chan error {
 
 		// syncUntilEpoch +1 because command is off by one
 		cmd := exec.Command(getOperaBinary(cfg), "--datadir", cfg.Db, "--recording", "--substate-db", cfg.SubstateDb, "--exitwhensynced.epoch", strconv.FormatUint(syncUntilEpoch+1, 10))
-		err := runCommand(cmd, nil, log)
+		err := runCommand(cmd, nil, nil, log)
 		if err != nil {
 			errChan <- fmt.Errorf("unable to record opera substates %v; binary %v ; %v", cfg.Db, getOperaBinary(cfg), err)
 		}

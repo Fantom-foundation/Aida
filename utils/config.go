@@ -112,6 +112,7 @@ type Config struct {
 	CPUProfile            string         // pprof cpu profile output file name
 	CPUProfilePerInterval bool           // a different CPU profile is taken per 100k block interval
 	Db                    string         // path to database
+	Ipc                   string         // path to opera ipc
 	DbTmp                 string         // path to temporary database
 	DbImpl                string         // storage implementation
 	DiagnosticServer      int64          // if not zero, the port used for hosting a HTTP server for performance diagnostics

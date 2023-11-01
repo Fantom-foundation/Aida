@@ -103,7 +103,7 @@ func (opera *aidaOpera) initFromGenesis() error {
 	cmd := exec.Command(getOperaBinary(opera.cfg), "--datadir", opera.cfg.Db, "--genesis", opera.cfg.Genesis,
 		"--exitwhensynced.epoch=0", "--cache", strconv.Itoa(opera.cfg.Cache), "--db.preset=legacy-ldb", "--maxpeers=0")
 
-	err := runCommand(cmd, nil, opera.log)
+	err := runCommand(cmd, nil, nil, opera.log)
 	if err != nil {
 		return fmt.Errorf("load opera genesis; %v", err.Error())
 	}

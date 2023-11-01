@@ -12,18 +12,19 @@ import (
 var ScrapeCommand = cli.Command{
 	Action:    scrapePrepare,
 	Name:      "scrape",
-	Usage:     "Stores state hashes into AidaDb for given range",
+	Usage:     "Stores state hashes into TargetDb for given range",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
-		&utils.AidaDbFlag,
+		&utils.TargetDbFlag,
 		&utils.ChainIDFlag,
+		&utils.IpcFlag,
 		&logger.LogLevelFlag,
 	},
 }
 
-// scrapePrepare stores state hashes into AidaDb for given range
+// scrapePrepare stores state hashes into Target for given range
 func scrapePrepare(ctx *cli.Context) error {
-	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-Scrape")
+	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "UtilDb-Scrape")
 
 	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if argErr != nil {
@@ -32,13 +33,13 @@ func scrapePrepare(ctx *cli.Context) error {
 
 	log.Infof("Scraping for range %d-%d", cfg.First, cfg.Last)
 
-	db, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "state-hash", false)
+	db, err := rawdb.NewLevelDBDatabase(cfg.TargetDb, 1024, 100, "state-hash", false)
 	if err != nil {
-		return fmt.Errorf("error opening stateHash leveldb %s: %v", cfg.AidaDb, err)
+		return fmt.Errorf("error opening stateHash leveldb %s: %v", cfg.TargetDb, err)
 	}
 	defer db.Close()
 
-	err = utils.StateHashScraper(cfg.ChainID, db, cfg.First, cfg.Last, log)
+	err = utils.StateHashScraper(ctx.Context, cfg.ChainID, cfg.Ipc, db, cfg.First, cfg.Last, log)
 	if err != nil {
 		return err
 	}

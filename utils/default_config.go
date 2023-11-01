@@ -29,6 +29,7 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		CPUProfile:            getFlagValue(ctx, CpuProfileFlag).(string),
 		CPUProfilePerInterval: getFlagValue(ctx, CpuProfilePerIntervalFlag).(bool),
 		Db:                    getFlagValue(ctx, DbFlag).(string),
+		Ipc:                   getFlagValue(ctx, IpcFlag).(string),
 		DbTmp:                 getFlagValue(ctx, DbTmpFlag).(string),
 		Debug:                 getFlagValue(ctx, TraceDebugFlag).(bool),
 		DebugFrom:             getFlagValue(ctx, DebugFromFlag).(uint64),

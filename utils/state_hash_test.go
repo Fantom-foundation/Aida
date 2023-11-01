@@ -1,9 +1,12 @@
 package utils
 
 import (
+	"context"
 	"testing"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/rpc"
 )
 
 // TestStateHash_ZeroHasSameStateHashAsOne tests that the state hash of block 0 is the same as the state hash of block 1
@@ -13,8 +16,9 @@ func TestStateHash_ZeroHasSameStateHashAsOne(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error opening stateHash leveldb %s: %v", tmpDir, err)
 	}
+	log := logger.NewLogger("info", "Test state hash")
 
-	err = StateHashScraper(4002, db, 0, 1, nil)
+	err = StateHashScraper(nil, 4002, "", db, 0, 1, log)
 	if err != nil {
 		t.Fatalf("error scraping state hashes: %v", err)
 	}
@@ -54,8 +58,9 @@ func TestStateHash_ZeroHasDifferentStateHashAfterHundredBlocks(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error opening stateHash leveldb %s: %v", tmpDir, err)
 	}
+	log := logger.NewLogger("info", "Test state hash")
 
-	err = StateHashScraper(4002, db, 0, 100, nil)
+	err = StateHashScraper(nil, 4002, "", db, 0, 100, log)
 	if err != nil {
 		t.Fatalf("error scraping state hashes: %v", err)
 	}
@@ -110,6 +115,38 @@ func TestStateHash_KeyToUint64(t *testing.T) {
 			}
 			if got != tt.want {
 				t.Errorf("StateHashKeyToUint64() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_getClient(t *testing.T) {
+	type args struct {
+		ctx     context.Context
+		chainId ChainID
+		ipcPath string
+	}
+	log := logger.NewLogger("info", "Test state hash")
+	tests := []struct {
+		name    string
+		args    args
+		want    *rpc.Client
+		wantErr bool
+	}{
+		{"testGetClientRpcMainnet", args{context.Background(), 250, ""}, &rpc.Client{}, false},
+		{"testGetClientRpcTestnet", args{context.Background(), 4002, ""}, &rpc.Client{}, false},
+		{"testGetClientIpcNonExistant", args{context.Background(), 4002, "/non-existant-path"}, nil, true},
+		{"testGetClientRpcUnknownChainId", args{context.Background(), 88888, ""}, nil, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := getClient(tt.args.ctx, tt.args.chainId, tt.args.ipcPath, log)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("getClient() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if tt.want != nil && got == nil {
+				t.Errorf("getClient() got nil, want non-nil")
 			}
 		})
 	}

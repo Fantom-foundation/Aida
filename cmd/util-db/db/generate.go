@@ -6,6 +6,7 @@ import (
 	"compress/gzip"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -58,6 +59,7 @@ The db generate command requires events as an argument:
 
 type generator struct {
 	cfg         *utils.Config
+	ctx         *cli.Context
 	log         *logging.Logger
 	md          *utils.AidaDbMetadata
 	aidaDb      ethdb.Database
@@ -109,6 +111,7 @@ func newGenerator(ctx *cli.Context, cfg *utils.Config) (*generator, error) {
 		log:    log,
 		opera:  newAidaOpera(ctx, cfg, log),
 		aidaDb: db,
+		ctx:    ctx,
 		start:  time.Now(),
 	}, nil
 }
@@ -132,7 +135,7 @@ func (g *generator) Generate() error {
 		return err
 	}
 
-	err = g.runStateHashScrapper(err)
+	err = g.runStateHashScrapper(g.ctx)
 	if err != nil {
 		return fmt.Errorf("cannot scrape state hashes; %v", err)
 	}
@@ -166,36 +169,30 @@ func (g *generator) Generate() error {
 }
 
 // runStateHashScrapper scrapes state hashes from a node and saves them to a leveldb database
-func (g *generator) runStateHashScrapper(err error) error {
+func (g *generator) runStateHashScrapper(ctx *cli.Context) error {
 	start := time.Now()
 	g.log.Notice("Starting state-hash scrapping...")
 
-	firstSearchBlock := g.opera.firstBlock
+	// start opera ipc for state hash scrapping
+	stopChan := make(chan struct{})
+	operaErr := startOperaIpc(g.cfg, stopChan)
 
-	//// get last state hash block from AidaDb
-	//lastStateHashBlock, err := utils.GetLastStateHash(g.aidaDb)
-	//if err != nil {
-	//	// if there is no state hash in AidaDb we need to start scrapping from the first substate block from whole database
-	//	firstSubstate := substate.GetFirstSubstate()
-	//	if firstSubstate == nil {
-	//		return fmt.Errorf("cannot get first substate right after recording; %v", err)
-	//	}
-	//	firstSearchBlock = firstSubstate.Env.Number
-	//	g.log.Warningf("Scrapping: while trying to resume on state-hash got: %v", err)
-	//}
-	//
-	//if lastStateHashBlock < g.opera.firstBlock {
-	//	// if generation was resumed after an error we need to start scrapping from the last state hash block
-	//	firstSearchBlock = lastStateHashBlock + 1
-	//	g.log.Infof("Scrapping: resuming state-hash scrapping from block %v", firstSearchBlock)
-	//}
+	g.log.Noticef("Scrapping: range %v - %v", g.opera.firstBlock, g.opera.lastBlock)
 
-	g.log.Noticef("Scrapping: range %v - %v", firstSearchBlock, g.opera.lastBlock)
-
-	err = utils.StateHashScraper(g.cfg.ChainID, g.aidaDb, firstSearchBlock, g.opera.lastBlock, g.log)
+	err := utils.StateHashScraper(ctx.Context, g.cfg.ChainID, g.cfg.Db+"/opera.ipc", g.aidaDb, g.opera.firstBlock, g.opera.lastBlock, g.log)
 	if err != nil {
-		return err
+		select {
+		case oErr, ok := <-operaErr:
+			if ok {
+				return errors.Join(oErr, err)
+			}
+			return err
+		default:
+			return err
+		}
 	}
+
+	close(stopChan)
 
 	g.log.Noticef("Hash scrapping complete. It took: %v", time.Since(start).Round(1*time.Second))
 	g.log.Noticef("Total elapsed time: %v", time.Since(g.start).Round(1*time.Second))

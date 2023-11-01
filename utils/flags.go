@@ -280,6 +280,10 @@ var (
 		Name:  "db",
 		Usage: "Path to the database",
 	}
+	IpcFlag = cli.PathFlag{
+		Name:  "ipc",
+		Usage: "Path to the opera ipc",
+	}
 	GenesisFlag = cli.PathFlag{
 		Name:  "genesis",
 		Usage: "Path to genesis file",
