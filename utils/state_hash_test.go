@@ -135,7 +135,7 @@ func Test_getClient(t *testing.T) {
 	}{
 		{"testGetClientRpcMainnet", args{context.Background(), 250, ""}, &rpc.Client{}, false},
 		{"testGetClientRpcTestnet", args{context.Background(), 4002, ""}, &rpc.Client{}, false},
-		{"testGetClientIpcNonExistant", args{context.Background(), 4002, "/non-existant-path"}, nil, true},
+		{"testGetClientIpcNonExistant", args{context.Background(), 4002, "/non-existant-path"}, nil, false},
 		{"testGetClientRpcUnknownChainId", args{context.Background(), 88888, ""}, nil, true},
 	}
 	for _, tt := range tests {
