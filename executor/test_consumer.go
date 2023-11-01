@@ -1,8 +1,8 @@
 package executor
 
 import (
-	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/rpc"
+	"github.com/Fantom-foundation/Aida/tracer/operation"
 	substate "github.com/Fantom-foundation/Substate"
 )
 

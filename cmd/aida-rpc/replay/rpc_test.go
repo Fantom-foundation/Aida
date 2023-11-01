@@ -2,6 +2,7 @@ package replay
 
 import (
 	"encoding/json"
+	"math/big"
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/executor"
@@ -11,13 +12,24 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestVmSdb_TransactionsAreExecutedForCorrectRange(t *testing.T) {
+func TestRPC_TransactionsAreExecutedForCorrectRange(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	provider := executor.NewMockProvider[*rpc.RequestAndResults](ctrl)
 	processor := executor.NewMockProcessor[*rpc.RequestAndResults](ctrl)
 	ext := executor.NewMockExtension[*rpc.RequestAndResults](ctrl)
 	stateDb := state.NewMockStateDB(ctrl)
 	archive := state.NewMockNonCommittableStateDB(ctrl)
+
+	var err error
+	emptyReqA.Response.Result, err = json.Marshal("0x1")
+	if err != nil {
+		t.Errorf("unexpected error while marshalling result; %v", err)
+	}
+
+	emptyReqB.Response.Result, err = json.Marshal("0x0")
+	if err != nil {
+		t.Errorf("unexpected error while marshalling result; %v", err)
+	}
 
 	// Simulate the execution of three transactions in two blocks.
 	provider.EXPECT().
@@ -90,17 +102,14 @@ var emptyReqA = &rpc.RequestAndResults{
 		MethodBase: "getBalance",
 	},
 	Response: &rpc.Response{
-		Version: "2.0",
-		ID:      json.RawMessage{1},
-
+		Version:   "2.0",
+		ID:        json.RawMessage{1},
 		BlockID:   10,
 		Timestamp: 10,
-		Result:    json.RawMessage{0},
-		Payload:   nil,
 	},
-	Error:       nil,
-	ParamsRaw:   nil,
-	ResponseRaw: nil,
+	StateDB: &rpc.StateDBData{
+		Result: new(big.Int).SetInt64(1),
+	},
 }
 
 var emptyReqB = &rpc.RequestAndResults{
@@ -117,10 +126,8 @@ var emptyReqB = &rpc.RequestAndResults{
 		ID:        json.RawMessage{1},
 		BlockID:   11,
 		Timestamp: 11,
-		Result:    json.RawMessage{0},
-		Payload:   nil,
 	},
-	Error:       nil,
-	ParamsRaw:   nil,
-	ResponseRaw: nil,
+	StateDB: &rpc.StateDBData{
+		Result: new(big.Int).SetInt64(0),
+	},
 }

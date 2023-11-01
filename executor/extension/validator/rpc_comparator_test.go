@@ -7,9 +7,14 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension"
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/rpc"
+	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/status-im/keycard-go/hexutils"
+	"go.uber.org/mock/gomock"
 )
 
 const (
@@ -22,6 +27,92 @@ const (
 	// 32 bytes returned by EVM as a zero result
 	longHexZero = "0x0000000000000000000000000000000000000000000000000000000000000000"
 )
+
+func TestRPCComparator_RPCComparatorIsNotCreatedIfNotEnabled(t *testing.T) {
+	cfg := &utils.Config{}
+	cfg.Validate = false
+
+	c := MakeRPCComparator(cfg)
+	if _, ok := c.(extension.NilExtension[*rpc.RequestAndResults]); !ok {
+		t.Error("extension must be nil")
+	}
+}
+
+func TestRPCComparator_PostTransactionDoesNotFailAndAppendsAndLogsErrorIfContinueOnFailureIsTrue(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	log := logger.NewMockLogger(ctrl)
+
+	cfg := &utils.Config{}
+	cfg.Validate = true
+	cfg.ContinueOnFailure = true
+
+	bigRes, _ := new(big.Int).SetString("1", 16)
+	rec, _ := json.Marshal(hexZero)
+
+	data := &rpc.RequestAndResults{
+		Query: &rpc.Body{
+			MethodBase: "getBalance",
+		},
+		Response: &rpc.Response{
+			Result: rec,
+		},
+		StateDB: &rpc.StateDBData{
+			Result: bigRes,
+		},
+	}
+
+	s := executor.State[*rpc.RequestAndResults]{
+		Data: data,
+	}
+
+	log.EXPECT().Warning(gomock.Any())
+
+	c := makeRPCComparator(cfg, log)
+	err := c.PostTransaction(s, nil)
+	if err != nil {
+		t.Errorf("unexpected error in post transaction; %v", err)
+	}
+
+	if len(c.errors) != 1 {
+		t.Errorf("incorrect number of errors appended\ngot: %v\nwant: %v", len(c.errors), 1)
+	}
+
+}
+
+func TestRPCComparator_PostTransactionFailsWhenContinueOnFailureIsNotEnabled(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	log := logger.NewMockLogger(ctrl)
+
+	cfg := &utils.Config{}
+	cfg.Validate = true
+	cfg.ContinueOnFailure = false
+
+	bigRes, _ := new(big.Int).SetString("1", 16)
+	rec, _ := json.Marshal(hexZero)
+
+	data := &rpc.RequestAndResults{
+		Query: &rpc.Body{
+			MethodBase: "getBalance",
+		},
+		Response: &rpc.Response{
+			Result: rec,
+		},
+		StateDB: &rpc.StateDBData{
+			Result: bigRes,
+		},
+	}
+
+	s := executor.State[*rpc.RequestAndResults]{
+		Data: data,
+	}
+
+	c := makeRPCComparator(cfg, log)
+	err := c.PostTransaction(s, nil)
+	if err == nil {
+		t.Errorf("post transaction must return error; %v", err)
+	}
+
+}
 
 // Test_compareBalanceOK tests compare func for getBalance method
 // It expects no error since results are same

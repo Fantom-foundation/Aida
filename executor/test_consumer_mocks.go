@@ -11,7 +11,8 @@ package executor
 import (
 	reflect "reflect"
 
-	rpc_iterator "github.com/Fantom-foundation/Aida/rpc"
+	rpc "github.com/Fantom-foundation/Aida/rpc"
+	operation "github.com/Fantom-foundation/Aida/tracer/operation"
 	substate "github.com/Fantom-foundation/Substate"
 	gomock "go.uber.org/mock/gomock"
 )
@@ -31,31 +32,11 @@ type MockTxConsumerMockRecorder struct {
 func NewMockTxConsumer(ctrl *gomock.Controller) *MockTxConsumer {
 	mock := &MockTxConsumer{ctrl: ctrl}
 	mock.recorder = &MockTxConsumerMockRecorder{mock}
-	operation "github.com/Fantom-foundation/Aida/tracer/operation"
-	gomock "go.uber.org/mock/gomock"
-)
-
-// MockOperationConsumer is a mock of OperationConsumer interface.
-type MockOperationConsumer struct {
-	ctrl     *gomock.Controller
-	recorder *MockOperationConsumerMockRecorder
-}
-
-// MockOperationConsumerMockRecorder is the mock recorder for MockOperationConsumer.
-type MockOperationConsumerMockRecorder struct {
-	mock *MockOperationConsumer
-}
-
-// NewMockOperationConsumer creates a new mock instance.
-func NewMockOperationConsumer(ctrl *gomock.Controller) *MockOperationConsumer {
-	mock := &MockOperationConsumer{ctrl: ctrl}
-	mock.recorder = &MockOperationConsumerMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
 func (m *MockTxConsumer) EXPECT() *MockTxConsumerMockRecorder {
-func (m *MockOperationConsumer) EXPECT() *MockOperationConsumerMockRecorder {
 	return m.recorder
 }
 
@@ -97,9 +78,43 @@ func (m *MockRPCReqConsumer) EXPECT() *MockRPCReqConsumerMockRecorder {
 }
 
 // Consume mocks base method.
-func (m *MockRPCReqConsumer) Consume(block, transaction int, req *rpc_iterator.RequestAndResults) error {
+func (m *MockRPCReqConsumer) Consume(block, transaction int, req *rpc.RequestAndResults) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Consume", block, transaction, req)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Consume indicates an expected call of Consume.
+func (mr *MockRPCReqConsumerMockRecorder) Consume(block, transaction, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Consume", reflect.TypeOf((*MockRPCReqConsumer)(nil).Consume), block, transaction, req)
+}
+
+// MockOperationConsumer is a mock of OperationConsumer interface.
+type MockOperationConsumer struct {
+	ctrl     *gomock.Controller
+	recorder *MockOperationConsumerMockRecorder
+}
+
+// MockOperationConsumerMockRecorder is the mock recorder for MockOperationConsumer.
+type MockOperationConsumerMockRecorder struct {
+	mock *MockOperationConsumer
+}
+
+// NewMockOperationConsumer creates a new mock instance.
+func NewMockOperationConsumer(ctrl *gomock.Controller) *MockOperationConsumer {
+	mock := &MockOperationConsumer{ctrl: ctrl}
+	mock.recorder = &MockOperationConsumerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockOperationConsumer) EXPECT() *MockOperationConsumerMockRecorder {
+	return m.recorder
+}
+
+// Consume mocks base method.
 func (m *MockOperationConsumer) Consume(block, transaction int, operations []operation.Operation) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Consume", block, transaction, operations)
@@ -111,7 +126,4 @@ func (m *MockOperationConsumer) Consume(block, transaction int, operations []ope
 func (mr *MockOperationConsumerMockRecorder) Consume(block, transaction, operations any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Consume", reflect.TypeOf((*MockOperationConsumer)(nil).Consume), block, transaction, operations)
-func (mr *MockRPCReqConsumerMockRecorder) Consume(block, transaction, req any) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Consume", reflect.TypeOf((*MockRPCReqConsumer)(nil).Consume), block, transaction, req)
 }

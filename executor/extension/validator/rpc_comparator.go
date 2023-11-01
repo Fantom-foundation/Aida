@@ -70,12 +70,17 @@ type comparatorError struct {
 // MakeRPCComparator returns extension which handles comparison of result created by the StateDb and the recording.
 // If ContinueOnFailure is enabled errors are being saved and printed after the whole run ends. Otherwise, error is returned.
 func MakeRPCComparator(cfg *utils.Config) executor.Extension[*rpc.RequestAndResults] {
+	if !cfg.Validate {
+		return extension.NilExtension[*rpc.RequestAndResults]{}
+	}
+
 	log := logger.NewLogger("INFO", "state-hash-validator")
+
 	return makeRPCComparator(cfg, log)
 }
 
 func makeRPCComparator(cfg *utils.Config, log logger.Logger) *rpcComparator {
-	return &rpcComparator{cfg: cfg, log: log}
+	return &rpcComparator{cfg: cfg, log: log, errors: make([]error, 0)}
 }
 
 type rpcComparator struct {
@@ -89,15 +94,13 @@ type rpcComparator struct {
 // is enabled error is saved. Otherwise, the error is returned.
 func (c *rpcComparator) PostTransaction(state executor.State[*rpc.RequestAndResults], _ *executor.Context) error {
 	compareErr := compare(state)
-	if compareErr != nil {
-		if c.cfg.ContinueOnFailure {
-			c.log.Warning(compareErr)
-			c.errors = append(c.errors, compareErr)
-		}
-		return compareErr
+	if compareErr != nil && c.cfg.ContinueOnFailure {
+		c.log.Warning(compareErr)
+		c.errors = append(c.errors, compareErr)
+		return nil
 	}
 
-	return nil
+	return compareErr
 }
 
 // PostRun prints all caught errors.
@@ -214,7 +217,7 @@ func compareBalance(data *rpc.RequestAndResults, block int) *comparatorError {
 	}
 
 	if stateBalance.Cmp(recordedBalance) != 0 {
-		return newComparatorError(stateBalance.Text(16), recordedBalance, data, block, noMatchingResult)
+		return newComparatorError(stateBalance.Text(16), recordedBalance.Text(16), data, block, noMatchingResult)
 	}
 
 	return nil
