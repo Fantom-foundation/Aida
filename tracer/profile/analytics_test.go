@@ -73,19 +73,19 @@ func TestAnalyticsWithConstants(t *testing.T) {
 	for _, test := range tests {
 		name := fmt.Sprintf("AnalyticsWithConstant [%v]", test.args)
 		t.Run(name, func(t *testing.T) {
-			a := [1]IncrementalStats{}
+			a := NewIncrementalAnalytics(1)
 			for i := uint64(0); i < test.args.count; i++ {
-				a[0].Update(test.args.constant)
+				a.Update(0, test.args.constant)
 			}
 			got := result{
-				a[0].GetMean(),
-				a[0].GetVariance(),
+				a.GetMean(0),
+				a.GetVariance(0),
 			}
 
 			assertExactlyEqual(t, test.want, got)
-			assertExactlyEqual(t, test.args.count, a[0].GetCount())
-			assertIsNaN(t, a[0].GetSkewness())
-			assertIsNaN(t, a[0].GetKurtosis())
+			assertExactlyEqual(t, test.args.count, a.GetCount(0))
+			assertIsNaN(t, a.GetSkewness(0))
+			assertIsNaN(t, a.GetKurtosis(0))
 		})
 	}
 }
@@ -117,19 +117,19 @@ func TestAnalyticsWithAlternativeBigSmall(t *testing.T) {
 	for _, test := range tests {
 		name := fmt.Sprintf("AnalyticsWithAlternativeBigSmall [%v]", test.args)
 		t.Run(name, func(t *testing.T) {
-			a := [1]IncrementalStats{}
+			a := NewIncrementalAnalytics(1)
 			for i := 0; i < test.args.cycleCount; i++ {
 				for j := 0; j < test.args.bigPerCycle; j++ {
-					a[0].Update(test.args.big)
+					a.Update(0, test.args.big)
 				}
 				for j := 0; j < test.args.smallPerCycle; j++ {
-					a[0].Update(test.args.small)
+					a.Update(0, test.args.small)
 				}
 			}
-			got := result{a[0].GetMean(), a[0].GetVariance()}
+			got := result{a.GetMean(0), a.GetVariance(0)}
 
 			n := uint64(test.args.cycleCount * (test.args.bigPerCycle + test.args.smallPerCycle))
-			assertExactlyEqual(t, n, a[0].GetCount())
+			assertExactlyEqual(t, n, a.GetCount(0))
 			assertAlmostEqual(t, test.want.mean, got.mean)
 			assertAlmostEqual(t, test.want.variance, got.variance)
 		})
@@ -162,19 +162,19 @@ func TestAnalyticsWithGaussianDistribution(t *testing.T) {
 	for _, test := range tests {
 		name := fmt.Sprintf("AnalyticsWithGaussian [%+v]", test.args)
 		t.Run(name, func(t *testing.T) {
-			a := [1]IncrementalStats{}
+			a := NewIncrementalAnalytics(1)
 			for i := uint64(0); i < test.args.amount; i++ {
 				x := rand.NormFloat64()*math.Sqrt(test.args.variance) + test.args.mean
-				a[0].Update(x)
+				a.Update(0, x)
 			}
-			got := result{a[0].GetMean(), a[0].GetVariance()}
+			got := result{a.GetMean(0), a.GetVariance(0)}
 
 			//assertAlmostEqual(t, test.want, got)
 			assertAlmostEqual(t, test.want.mean, got.mean)
 			assertAlmostEqual(t, test.want.variance, got.variance)
-			assertAlmostEqual(t, 0, a[0].GetSkewness()) // skewness should be close to 0
-			assertAlmostEqual(t, 0, a[0].GetKurtosis()) // kurtosis should be close to 0
-			assertExactlyEqual(t, test.args.amount, a[0].GetCount())
+			assertAlmostEqual(t, 0, a.GetSkewness(0)) // skewness should be close to 0
+			assertAlmostEqual(t, 0, a.GetKurtosis(0)) // kurtosis should be close to 0
+			assertExactlyEqual(t, test.args.amount, a.GetCount(0))
 		})
 	}
 }
@@ -222,9 +222,9 @@ func TestAnalyticsWithKnownInput(t *testing.T) {
 		name := fmt.Sprintf("AnalyticsWithKnownInput [%+v]", test.args)
 		t.Run(name, func(t *testing.T) {
 
-			a := [1]IncrementalStats{}
+			a := NewIncrementalAnalytics(1)
 			for _, x := range test.args {
-				a[0].Update(x)
+				a.Update(0, x)
 			}
 
 			n := float64(len(test.args))
@@ -236,15 +236,15 @@ func TestAnalyticsWithKnownInput(t *testing.T) {
 			}
 
 			got := result{
-				a[0].GetMean(),
-				a[0].GetVariance(),
-				a[0].GetSkewness(),
-				a[0].GetKurtosis(),
+				a.GetMean(0),
+				a.GetVariance(0),
+				a.GetSkewness(0),
+				a.GetKurtosis(0),
 			}
 
 			sk, pk := calculateKurtosis(test.args)
 
-			assertExactlyEqual(t, uint64(len(test.args)), a[0].GetCount())
+			assertExactlyEqual(t, uint64(len(test.args)), a.GetCount(0))
 			assertAlmostEqual(t, want.mean, got.mean)
 			assertAlmostEqual(t, want.variance, got.variance)
 			assertAlmostEqual(t, want.skewness, got.skewness)
