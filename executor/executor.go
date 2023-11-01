@@ -95,7 +95,7 @@ const (
 type Params struct {
 	// From is the beginning of the range of blocks to be processed (inclusive).
 	From int
-	// From is the end of the range of blocks to be processed (exclusive).
+	// To is the end of the range of blocks to be processed (exclusive).
 	To int
 	// State is an optional StateDB instance to be made available to the
 	// processor and extensions during execution.

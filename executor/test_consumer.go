@@ -1,6 +1,7 @@
 package executor
 
 import (
+	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/rpc"
 	substate "github.com/Fantom-foundation/Substate"
 )
@@ -28,6 +29,16 @@ type RPCReqConsumer interface {
 
 func toRPCConsumer(c RPCReqConsumer) Consumer[*rpc.RequestAndResults] {
 	return func(info TransactionInfo[*rpc.RequestAndResults]) error {
+		return c.Consume(info.Block, info.Transaction, info.Data)
+	}
+}
+
+type OperationConsumer interface {
+	Consume(block int, transaction int, operations []operation.Operation) error
+}
+
+func toOperationConsumer(c OperationConsumer) Consumer[[]operation.Operation] {
+	return func(info TransactionInfo[[]operation.Operation]) error {
 		return c.Consume(info.Block, info.Transaction, info.Data)
 	}
 }

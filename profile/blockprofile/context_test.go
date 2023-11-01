@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/profile/graphutil"
 	"github.com/ethereum/go-ethereum/common"
 
@@ -209,8 +210,8 @@ func TestDependenciesSimple3(t *testing.T) {
 func TestFindTxAddresses(t *testing.T) {
 
 	// test substate.Transaction with empty fields
-	testTransaction := &substate.Transaction{
-		Substate: &substate.Substate{
+	testTransaction := executor.State[*substate.Substate]{
+		Data: &substate.Substate{
 			InputAlloc:  substate.SubstateAlloc{},
 			OutputAlloc: substate.SubstateAlloc{},
 			Message:     &substate.SubstateMessage{},
@@ -227,8 +228,8 @@ func TestFindTxAddresses(t *testing.T) {
 	addr2 := common.HexToAddress("0xFC00FACE00000000000000000000000000000002")
 	addr3 := common.HexToAddress("0xFC00FACE00000000000000000000000000000003")
 	addrs := []common.Address{addr1, addr2, addr3}
-	testTransaction = &substate.Transaction{
-		Substate: &substate.Substate{
+	testTransaction = executor.State[*substate.Substate]{
+		Data: &substate.Substate{
 			InputAlloc:  substate.SubstateAlloc{addr1: &substate.SubstateAccount{}},
 			OutputAlloc: substate.SubstateAlloc{addr2: &substate.SubstateAccount{}, addr3: &substate.SubstateAccount{}},
 			Message:     &substate.SubstateMessage{},
@@ -246,8 +247,8 @@ func TestFindTxAddresses(t *testing.T) {
 
 	// test if substate.Message.To == nil and substate.Message.From == zero
 	var zero common.Address
-	testTransaction = &substate.Transaction{
-		Substate: &substate.Substate{
+	testTransaction = executor.State[*substate.Substate]{
+		Data: &substate.Substate{
 			InputAlloc:  substate.SubstateAlloc{addr1: &substate.SubstateAccount{}},
 			OutputAlloc: substate.SubstateAlloc{addr2: &substate.SubstateAccount{}, addr1: &substate.SubstateAccount{}},
 			Message: &substate.SubstateMessage{
@@ -275,8 +276,8 @@ func TestRecordTransaction(t *testing.T) {
 	addr1 := common.HexToAddress("0xFC00FACE00000000000000000000000000000001")
 	addr2 := common.HexToAddress("0xFC00FACE00000000000000000000000000000002")
 	addr3 := common.HexToAddress("0xFC00FACE00000000000000000000000000000003")
-	tx := &substate.Transaction{
-		Substate: &substate.Substate{
+	tx := executor.State[*substate.Substate]{
+		Data: &substate.Substate{
 			InputAlloc:  substate.SubstateAlloc{addr1: &substate.SubstateAccount{}},
 			OutputAlloc: substate.SubstateAlloc{addr2: &substate.SubstateAccount{}, addr3: &substate.SubstateAccount{}},
 			Message: &substate.SubstateMessage{
@@ -344,8 +345,8 @@ func TestRecordTransaction(t *testing.T) {
 	}
 
 	// construct second transaction
-	tx2 := &substate.Transaction{
-		Substate: &substate.Substate{
+	tx2 := executor.State[*substate.Substate]{
+		Data: &substate.Substate{
 			InputAlloc:  substate.SubstateAlloc{addr1: &substate.SubstateAccount{}},
 			OutputAlloc: substate.SubstateAlloc{addr2: &substate.SubstateAccount{}, addr3: &substate.SubstateAccount{}},
 			Message: &substate.SubstateMessage{
@@ -480,8 +481,8 @@ func TestGetTransactionType(t *testing.T) {
 	fromAddr1 := common.HexToAddress("0xabcdef0000000000000000000000000000000002")
 	fromAddr2 := common.HexToAddress("0x0000000000000000000000000000000000000000")
 
-	testTransaction := &substate.Transaction{
-		Substate: &substate.Substate{
+	testTransaction := executor.State[*substate.Substate]{
+		Data: &substate.Substate{
 			InputAlloc: substate.SubstateAlloc{},
 			Message:    &substate.SubstateMessage{},
 		},
@@ -494,29 +495,29 @@ func TestGetTransactionType(t *testing.T) {
 	}
 
 	// expect transafer type
-	testTransaction.Substate.Message.To = &toAddr
+	testTransaction.Data.Message.To = &toAddr
 	// to address doesn't exist in input substate
 	if tt := getTransactionType(testTransaction); tt != TransferTx {
 		t.Errorf("incorrect transaction type, got: %v, expected %v", TypeLabel[tt], TypeLabel[TransferTx])
 	}
 	// to address exists in input substate but doesn't have byte-code
-	testTransaction.Substate.InputAlloc[toAddr] = substate.NewSubstateAccount(1, big.NewInt(1), []byte{})
+	testTransaction.Data.InputAlloc[toAddr] = substate.NewSubstateAccount(1, big.NewInt(1), []byte{})
 	if tt := getTransactionType(testTransaction); tt != TransferTx {
 		t.Errorf("incorrect transaction type, got: %v, expected %v", TypeLabel[tt], TypeLabel[TransferTx])
 	}
 
 	// expect call type
 	// to address exists in input substate and has byte-code
-	testTransaction.Substate.InputAlloc[toAddr].Code = []byte{1, 2, 3, 4}
-	testTransaction.Substate.Message.From = fromAddr1
+	testTransaction.Data.InputAlloc[toAddr].Code = []byte{1, 2, 3, 4}
+	testTransaction.Data.Message.From = fromAddr1
 	if tt := getTransactionType(testTransaction); tt != CallTx {
 		t.Errorf("incorrect transaction type, got: %v, expected %v", TypeLabel[tt], TypeLabel[CallTx])
 	}
 
 	// expect epoch sealing type
 	// from address 0 to an sfc address (with byte-code
-	testTransaction.Substate.Message.From = fromAddr2
-	testTransaction.Substate.InputAlloc[toAddr] = substate.NewSubstateAccount(1, big.NewInt(1), []byte{1, 2, 3, 4})
+	testTransaction.Data.Message.From = fromAddr2
+	testTransaction.Data.InputAlloc[toAddr] = substate.NewSubstateAccount(1, big.NewInt(1), []byte{1, 2, 3, 4})
 	if tt := getTransactionType(testTransaction); tt != MaintenanceTx {
 		t.Errorf("incorrect transaction type, got: %v, expected %v", TypeLabel[tt], TypeLabel[MaintenanceTx])
 	}

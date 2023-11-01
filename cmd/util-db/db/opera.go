@@ -76,11 +76,12 @@ func (opera *aidaOpera) init() error {
 		opera.firstBlock++
 	}
 
-	opera.log.Noticef("Opera is starting at block: %v", opera.firstBlock)
+	opera.log.Noticef("Opera block from last run is: %v", opera.firstBlock)
 
 	// starting generation one block later
-	opera.cfg.First = opera.firstBlock + 1
+	opera.firstBlock += 1
 	opera.firstEpoch += 1
+
 	return nil
 }
 
@@ -105,7 +106,7 @@ func createTmpDir(cfg *utils.Config) (string, error) {
 
 // initFromGenesis file
 func (opera *aidaOpera) initFromGenesis() error {
-	cmd := exec.Command("opera", "--datadir", opera.cfg.Db, "--genesis", opera.cfg.Genesis,
+	cmd := exec.Command(getOperaBinary(opera.cfg), "--datadir", opera.cfg.Db, "--genesis", opera.cfg.Genesis,
 		"--exitwhensynced.epoch=0", "--cache", strconv.Itoa(opera.cfg.Cache), "--db.preset=legacy-ldb", "--maxpeers=0")
 
 	err := runCommand(cmd, nil, opera.log)
@@ -118,7 +119,7 @@ func (opera *aidaOpera) initFromGenesis() error {
 
 // rollbackToEpoch file TODO should be part of future autogen recovery
 func (opera *aidaOpera) rollbackToEpoch() error {
-	//cmd := exec.Command("opera", "--datadir", opera.cfg.Db, "--genesis", opera.cfg.Genesis,
+	//cmd := exec.Command(getOperaBinary(opera.cfg), "--datadir", opera.cfg.Db, "--genesis", opera.cfg.Genesis,
 	//	"--exitwhensynced.epoch=0", "--cache", strconv.Itoa(opera.cfg.Cache), "--db.preset=legacy-ldb", "--maxpeers=0", "db", "heal", "--experimental")
 	//
 	//err := runCommand(cmd, nil, opera.log)

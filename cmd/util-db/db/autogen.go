@@ -1,7 +1,9 @@
 package db
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"time"
 
@@ -19,14 +21,15 @@ var AutoGenCommand = cli.Command{
 	Name:   "autogen",
 	Usage:  "autogen generates aida-db periodically",
 	Flags: []cli.Flag{
-		// TODO minimal epoch length for patch generation
 		&utils.AidaDbFlag,
 		&utils.ChainIDFlag,
 		&utils.DbFlag,
 		&utils.GenesisFlag,
 		&utils.DbTmpFlag,
-		&utils.UpdateBufferSizeFlag,
+		&utils.OperaBinaryFlag,
 		&utils.OutputFlag,
+		&utils.TargetEpochFlag,
+		&utils.UpdateBufferSizeFlag,
 		&utils.WorldStateFlag,
 		&substate.WorkersFlag,
 		&logger.LogLevelFlag,
@@ -43,14 +46,40 @@ func autogen(ctx *cli.Context) error {
 		return err
 	}
 
-	g, err := newGenerator(ctx, cfg)
+	locked, err := getLock(cfg)
 	if err != nil {
 		return err
+	}
+	if locked != "" {
+		return fmt.Errorf("GENERATION BLOCKED: autogen failed in last run; %v", locked)
+	}
+
+	var g *generator
+	g, err = prepareAutogen(ctx, cfg)
+	if err != nil {
+		return fmt.Errorf("cannot start autogen; %v", err)
+	}
+
+	err = autogenRun(cfg, g)
+	if err != nil {
+		errLock := setLock(cfg, err.Error())
+		if errLock != nil {
+			return fmt.Errorf("%v; %v", errLock, err)
+		}
+	}
+	return err
+}
+
+// prepareAutogen initializes a generator object, opera binary and adjust target range
+func prepareAutogen(ctx *cli.Context, cfg *utils.Config) (*generator, error) {
+	g, err := newGenerator(ctx, cfg)
+	if err != nil {
+		return nil, err
 	}
 
 	err = g.opera.init()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// remove worldstate directory if it was created
@@ -63,25 +92,67 @@ func autogen(ctx *cli.Context) error {
 		}
 	}(g.log)
 
-	err = g.calculatePatchEnd()
-	if err != nil {
-		return err
+	// user specified targetEpoch
+	if cfg.TargetEpoch > 0 {
+		g.targetEpoch = cfg.TargetEpoch
+	} else {
+		err = g.calculatePatchEnd()
+		if err != nil {
+			return nil, err
+		}
 	}
-
-	g.log.Noticef("Starting substate generation %d - %d", g.opera.lastEpoch+1, g.stopAtEpoch)
 
 	MustCloseDB(g.aidaDb)
 
+	// start epoch is last epoch + 1
+	if g.opera.firstEpoch > g.targetEpoch {
+		return nil, fmt.Errorf("supplied targetEpoch %d is already reached; latest generated epoch %d", g.targetEpoch, g.opera.firstEpoch-1)
+	}
+	return g, nil
+}
+
+// setLock creates lockfile in case of error while generating
+func setLock(cfg *utils.Config, message string) error {
+	lockFile := cfg.AidaDb + ".autogen.lock"
+
+	// Write the string to the file
+	err := os.WriteFile(lockFile, []byte(message), 0655)
+	if err != nil {
+		return fmt.Errorf("error writing to lock file %v; %v", lockFile, err)
+	} else {
+		return nil
+	}
+}
+
+// getLock checks existence and contents of lockfile
+func getLock(cfg *utils.Config) (string, error) {
+	lockFile := cfg.AidaDb + ".autogen.lock"
+
+	// Read lockfile contents
+	content, err := os.ReadFile(lockFile)
+	if errors.Is(err, fs.ErrNotExist) {
+		return "", nil
+	} else if err != nil {
+		return "", fmt.Errorf("error reading from file; %v", err)
+	}
+
+	return string(content), nil
+}
+
+// autogenRun is used to record/update aida-db
+func autogenRun(cfg *utils.Config, g *generator) error {
+	g.log.Noticef("Starting substate generation %d - %d", g.opera.firstEpoch, g.targetEpoch)
+
 	start := time.Now()
 	// stop opera to be able to export events
-	errCh := startOperaRecording(g.cfg, g.stopAtEpoch)
+	errCh := startOperaRecording(g.cfg, g.targetEpoch)
 
 	// wait for opera recording response
 	err, ok := <-errCh
 	if ok && err != nil {
 		return err
 	}
-	g.log.Noticef("Recording for epoch range %d - %d finished. It took: %v", g.cfg.Db, g.opera.lastEpoch+1, g.stopAtEpoch, time.Since(start).Round(1*time.Second))
+	g.log.Noticef("Recording for epoch range %d - %d finished. It took: %v", g.cfg.Db, g.opera.firstBlock, g.targetEpoch, time.Since(start).Round(1*time.Second))
 	g.log.Noticef("Total elapsed time: %v", time.Since(g.start).Round(1*time.Second))
 
 	// reopen aida-db
