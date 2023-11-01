@@ -172,7 +172,7 @@ func (ps *Stats) GetTotalOpFreq() int {
 }
 
 type SimpleAnalytics struct {
-	stat	*Stats
+	stat *Stats
 }
 
 func NewSimpleAnalytics(filepath string) *SimpleAnalytics {
@@ -186,7 +186,7 @@ func (a *SimpleAnalytics) Reset() {
 }
 
 func (a *SimpleAnalytics) Update(id byte, data float64) {
-	a.stat.Profile(id, time.Duration(data * float64(time.Nanosecond)))
+	a.stat.Profile(id, time.Duration(data*float64(time.Nanosecond)))
 }
 
 func (a *SimpleAnalytics) GetCount(id byte) uint64 {
@@ -194,15 +194,15 @@ func (a *SimpleAnalytics) GetCount(id byte) uint64 {
 }
 
 func (a *SimpleAnalytics) GetMin(id byte) float64 {
-	return float64(a.stat.opMinDuration[id].Nanoseconds()) 
+	return float64(a.stat.opMinDuration[id].Nanoseconds())
 }
 
 func (a *SimpleAnalytics) GetMax(id byte) float64 {
-	return float64(a.stat.opMaxDuration[id].Nanoseconds()) 
+	return float64(a.stat.opMaxDuration[id].Nanoseconds())
 }
 
 func (a *SimpleAnalytics) GetSum(id byte) float64 {
-	return float64(a.stat.opDuration[id].Nanoseconds()) 
+	return float64(a.stat.opDuration[id].Nanoseconds())
 }
 
 func (a *SimpleAnalytics) GetMean(id byte) float64 {
@@ -220,4 +220,3 @@ func (a *SimpleAnalytics) GetSkewness(id byte) float64 {
 func (a *SimpleAnalytics) GetKurtosis(id byte) float64 {
 	return math.NaN()
 }
-
