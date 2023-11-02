@@ -81,58 +81,93 @@ func runCommand(cmd *exec.Cmd, resultChan chan string, stopChan chan struct{}, l
 	scanner := bufio.NewScanner(merged)
 
 	lastOutputMessagesChan := make(chan string, commandOutputLimit)
-	for scanner.Scan() {
-		m := scanner.Text()
-		if resultChan != nil {
-			resultChan <- m
+
+	// scannedChan to relay command output into channel to be able to select with stopChan
+	scannedChan := make(chan string)
+	go func() {
+		for scanner.Scan() {
+			scannedChan <- scanner.Text()
 		}
-		if log.IsEnabledFor(logging.DEBUG) {
-			log.Debug(m)
-		} else {
-			// in case debugging is turned off and resultChan doesn't listen to output
-			// we need to keep most recent output lines in case of error
-			if resultChan == nil {
-				// throw out the oldest line in case we are at limit
-				if len(lastOutputMessagesChan) == commandOutputLimit {
-					<-lastOutputMessagesChan
-				}
-				lastOutputMessagesChan <- m
-			}
-		}
-	}
-	close(lastOutputMessagesChan)
+		close(scannedChan)
+	}()
 
 	done := make(chan error, 1)
 	go func() {
 		done <- cmd.Wait()
 	}()
 
-	if stopChan == nil {
-		// this command doesn't expect possibility to be stopped by kill signal from aida
-		// wait for command to finish
-		res, ok := <-done
-		return processCommandResult(res, ok, scanner, lastOutputMessagesChan, resultChan, cmd)
+	// this command expects possibility to be stopped by kill signal from aida
+	for {
+		select {
+		case <-stopChan:
+			// not returning any error other than from failure of kill signal,
+			// because the command was terminated by aida intentionally
+			return killCommand(cmd, log, done)
+		case m, ok := <-scannedChan:
+			if !ok {
+				// set scannedChan to nil to prevent closing it twice - in next for loop cycle scannedChan will be ignored
+				scannedChan = nil
+				close(lastOutputMessagesChan)
+				break
+			}
+			processScannedCommandOutput(m, resultChan, log, lastOutputMessagesChan)
+		case res, ok := <-done:
+			return processCommandResult(res, ok, scanner, lastOutputMessagesChan, resultChan, cmd)
+		}
+	}
+}
+
+// killCommand terminates command gracefully first and then forcefully
+func killCommand(cmd *exec.Cmd, log *logging.Logger, done chan error) error {
+	// A stop signal was received; terminate the command.
+	// Attempting to interrupt command gracefully first.
+	// Create a timeout with a 1-minute duration.
+	timeout := time.NewTimer(time.Minute)
+	err := cmd.Process.Signal(syscall.SIGINT)
+	if err != nil {
+		// might be just race condition when process already finished
+		log.Warningf("unable to send SIGINT to Command %v; %v", cmd, err)
 	}
 
-	// this command expects possibility to be stopped by kill signal from aida
 	select {
-	case <-stopChan:
-		// A stop signal was received; terminate the command.
-		// Send a kill signal to the process group (-).
-		syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+	case <-done:
+		log.Noticef("Command %v terminated gracefully", cmd)
+	case <-timeout.C:
+		// Send a kill signal to the process
+		err = cmd.Process.Signal(syscall.SIGKILL)
+		if err != nil {
+			return fmt.Errorf("unable to send SIGKILL to Command %v; %v", cmd, err)
+		}
 		// Wait for cmd.Wait() to return after termination.
 		<-done
-		// not returning any error because the command was terminated by aida intentionally
-		return nil
-	case res, ok := <-done:
-		return processCommandResult(res, ok, scanner, lastOutputMessagesChan, resultChan, cmd)
+	}
+	return nil
+}
+
+// processScannedCommandOutput output and send it to resultChan if it is listening and keep lastOutputMessagesChan updated
+func processScannedCommandOutput(message string, resultChan chan string, log *logging.Logger, lastOutputMessagesChan chan string) {
+	if resultChan != nil {
+		resultChan <- message
+	}
+	if log.IsEnabledFor(logging.DEBUG) {
+		log.Debug(message)
+	} else {
+		// in case debugging is turned off and resultChan doesn't listen to output
+		// we need to keep most recent output lines in case of error
+		if resultChan == nil {
+			// throw out the oldest line in case we are at limit
+			if len(lastOutputMessagesChan) == commandOutputLimit {
+				<-lastOutputMessagesChan
+			}
+			lastOutputMessagesChan <- message
+		}
 	}
 }
 
 // processCommandResult is used to process command result
 func processCommandResult(err error, ok bool, scanner *bufio.Scanner, lastOutputMessagesChan chan string, resultChan chan string, cmd *exec.Cmd) error {
 	if !ok {
-		return fmt.Errorf("unexpected chan error while executing Command %v; %v", cmd, err)
+		return fmt.Errorf("unexpected doneChan closed error while executing Command %v; %v", cmd, err)
 	}
 	// command failed
 	if err != nil {
@@ -192,14 +227,14 @@ func startOperaIpc(cfg *utils.Config, stopChan chan struct{}) chan error {
 	log := logger.NewLogger(cfg.LogLevel, "autoGen-ipc")
 	log.Noticef("Starting opera ipc %v", cfg.Db)
 
-	resChan := make(chan string, 10)
+	resChan := make(chan string, 100)
 	go func() {
 		defer close(errChan)
 
 		//cleanup opera.ipc when node is stopped
 		defer func(name string) {
 			err := os.Remove(name)
-			if err != nil {
+			if !os.IsNotExist(err) && err != nil {
 				log.Errorf("failed to remove ipc file %s; %v", name, err)
 			}
 		}(cfg.Db + "/opera.ipc")

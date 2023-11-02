@@ -85,7 +85,7 @@ func StateHashScraper(ctx context.Context, chainId ChainID, ipcPath string, db e
 		}
 
 		if i%10000 == 0 {
-			log.Infof("Scrapping block %d done!\n", i)
+			log.Infof("Scraping block %d done!\n", i)
 		}
 	}
 
