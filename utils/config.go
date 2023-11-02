@@ -27,11 +27,10 @@ type ChainIDs []ChainID
 
 // An enums of argument modes used by trace subcommands
 const (
-	BlockRangeArgs          ArgumentMode = iota // requires 2 arguments: first block and last block
-	BlockRangeArgsProfileDB                     // requires 3 arguments: first block, last block and profile db
-	LastBlockArg                                // requires 1 argument: last block
-	NoArgs                                      // requires no arguments
-	OneToNArgs                                  // requires at least one argument, but accepts up to N
+	BlockRangeArgs ArgumentMode = iota // requires 2 arguments: first block and last block
+	LastBlockArg                       // requires 1 argument: last block
+	NoArgs                             // requires no arguments
+	OneToNArgs                         // requires at least one argument, but accepts up to N
 )
 
 const (
@@ -98,6 +97,8 @@ type Config struct {
 
 	APIRecordingSrcFile   string         // path to source file with recorded API data
 	ArchiveMode           bool           // enable archive mode
+	ArchiveQueryRate      int            // the queries per second send to the archive
+	ArchiveMaxQueryAge    int            // the maximum age for archive queries (in blocks)
 	ArchiveVariant        string         // selects the implementation variant of the archive
 	BlockLength           uint64         // length of a block in number of transactions
 	BalanceRange          int64          // balance range for stochastic simulation/replay
@@ -146,10 +147,11 @@ type Config struct {
 	AidaDb                string         // directory to profiling database containing substate, update, delete accounts data
 	StateValidationMode   ValidationMode // state validation mode
 	UpdateDb              string         // update-set directory
+	UpdateType            string         // download datatype
 	Output                string         // output directory for aida-db patches or path to events.json file in stochastic generation
 	SnapshotDepth         int            // depth of snapshot history
 	SubstateDb            string         // substate directory
-	OperaDatadir          string         // source opera directory
+	OperaBinary           string         // path to opera binary
 	Validate              bool           // validate validate aida-db
 	ValidateTxState       bool           // validate stateDB before and after transaction
 	ValidateWorldState    bool           // validate stateDB before and after replay block range
@@ -172,6 +174,7 @@ type Config struct {
 	ProfilingDbName       string         // set a database name for storing micro-profiling results
 	ChannelBufferSize     int            // set a buffer size for profiling channel
 	TargetBlock           uint64         // represents the ID of target block to be reached by state evolve process or in dump state
+	TargetEpoch           uint64         // represents the ID of target epoch to be reached by autogen patch generator
 	UpdateBufferSize      uint64         // cache size in Bytes
 	ProfileDB             string         // profile db for parallel transaction execution
 	MaxNumErrors          int            // maximum number of errors when ContinueOnFailure is enabled
@@ -180,6 +183,7 @@ type Config struct {
 	TrackProgress         bool           // enables track progress logging
 	IsExistingStateDb     bool           // this is true if we are using an existing StateDb
 	ValidateStateHashes   bool           // if this is true state hash validation is enabled in Executor
+	ProfileBlocks         bool           // enables block profiler extension
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.
@@ -420,7 +424,7 @@ func adjustBlockRange(chainId ChainID, firstArg, lastArg uint64) (uint64, uint64
 
 		return first, last, nil
 	} else {
-		return 0, 0, fmt.Errorf("given block range does NOT overlap with the block range of given aidaDB")
+		return 0, 0, fmt.Errorf("block range of your aida-db (%v-%v) cannot execute given block range %v-%v", firstMd, lastMd, firstArg, lastArg)
 	}
 }
 
@@ -458,21 +462,11 @@ func getChainId(cfg *Config, log *logging.Logger) (ChainID, error) {
 // and store them into the config
 func updateConfigBlockRange(args []string, cfg *Config, mode ArgumentMode, log *logging.Logger) error {
 	var (
-		first     uint64
-		last      uint64
-		profileDB string
+		first uint64
+		last  uint64
 	)
 
 	switch mode {
-	case BlockRangeArgsProfileDB:
-		// process arguments and flags
-		if len(args) != 3 {
-			return fmt.Errorf("command requires 3 arguments")
-		} else if len(args) == 3 {
-			// set profileDB from argument
-			profileDB = args[2]
-		}
-		fallthrough
 	case BlockRangeArgs:
 		// process arguments and flags
 		if len(args) >= 2 {
@@ -524,7 +518,6 @@ func updateConfigBlockRange(args []string, cfg *Config, mode ArgumentMode, log *
 
 	cfg.First = first
 	cfg.Last = last
-	cfg.ProfileDB = profileDB
 	return nil
 }
 

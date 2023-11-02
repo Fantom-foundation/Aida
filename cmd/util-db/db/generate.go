@@ -41,8 +41,10 @@ var GenerateCommand = cli.Command{
 		&utils.ChainIDFlag,
 		&utils.GenesisFlag,
 		&utils.WorldStateFlag,
-		&utils.UpdateBufferSizeFlag,
+		&utils.OperaBinaryFlag,
 		&utils.OutputFlag,
+		&utils.TargetEpochFlag,
+		&utils.UpdateBufferSizeFlag,
 		&substate.WorkersFlag,
 		&logger.LogLevelFlag,
 	},
@@ -368,6 +370,7 @@ func (g *generator) updatePatchesJson(fileName string) error {
 		"toBlock":   strconv.FormatUint(g.cfg.Last, 10),
 		"fromEpoch": strconv.FormatUint(g.opera.firstEpoch, 10),
 		"toEpoch":   strconv.FormatUint(g.opera.lastEpoch, 10),
+		"nightly":   "true",
 	}
 
 	// Append the new patch to the array
@@ -508,9 +511,6 @@ func (g *generator) calculatePatchEnd() error {
 	if headEpochNumber > g.stopAtEpoch {
 		g.stopAtEpoch = headEpochNumber
 	}
-
-	// todo remove testing code
-	g.stopAtEpoch = g.opera.lastEpoch + 1
 
 	return nil
 }

@@ -44,6 +44,7 @@ var UpdateCommand = cli.Command{
 		&utils.CompactDbFlag,
 		&utils.DbTmpFlag,
 		&utils.ValidateFlag,
+		&utils.UpdateTypeFlag,
 	},
 	Description: ` 
 Updates aida-db by downloading patches from aida-db generation server.
@@ -401,6 +402,12 @@ func pushPatchToChanel(strings []utils.PatchJson) chan utils.PatchJson {
 
 // retrievePatchesToDownload retrieves all available patches from aida-db generation server.
 func retrievePatchesToDownload(cfg *utils.Config, targetDbFirstBlock uint64, targetDbLastBlock uint64) ([]utils.PatchJson, error) {
+	if cfg.UpdateType != "stable" && cfg.UpdateType != "nightly" {
+		return nil, fmt.Errorf("please choose correct data-type with --data-type flag (stable/nightly)")
+	}
+
+	var includeNightly = cfg.UpdateType == "nightly"
+
 	var isAddingLachesisPatch = false
 
 	// download list of available availablePatches
@@ -433,7 +440,10 @@ func retrievePatchesToDownload(cfg *utils.Config, targetDbFirstBlock uint64, tar
 			}
 		}
 
-		patchesToDownload = append(patchesToDownload, patch)
+		// add all stable patches and nightly only if user wants to download nightly
+		if !patch.Nightly || includeNightly {
+			patchesToDownload = append(patchesToDownload, patch)
+		}
 	}
 
 	// if user has second patch already in their db, we have to re-download it again and delete old update-set key

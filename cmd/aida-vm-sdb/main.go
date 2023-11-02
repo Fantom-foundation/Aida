@@ -34,6 +34,8 @@ var RunVMApp = cli.App{
 
 		// ArchiveDb
 		&utils.ArchiveModeFlag,
+		&utils.ArchiveQueryRateFlag,
+		&utils.ArchiveMaxQueryAgeFlag,
 		&utils.ArchiveVariantFlag,
 
 		// ShadowDb
@@ -54,7 +56,9 @@ var RunVMApp = cli.App{
 		&utils.PrimeThresholdFlag,
 		&utils.ProfileFlag,
 		&utils.ProfileFileFlag,
-		//&utils.ProfileIntervalFlag,
+		&utils.ProfileIntervalFlag,
+		&utils.ProfileDBFlag,
+		&utils.ProfileBlocksFlag,
 
 		// Priming
 		&utils.RandomizePrimingFlag,

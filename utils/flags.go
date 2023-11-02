@@ -13,6 +13,15 @@ var (
 		Name:  "archive",
 		Usage: "set node type to archival mode. If set, the node keep all the EVM state history; otherwise the state history will be pruned.",
 	}
+	ArchiveQueryRateFlag = cli.IntFlag{
+		Name:  "archive-query-rate",
+		Usage: "sets the number of queries send to the archive per second, disabled if 0 or negative",
+	}
+	ArchiveMaxQueryAgeFlag = cli.IntFlag{
+		Name:  "archive-max-query-age",
+		Usage: "sets an upper limit for the number of blocks an archive query may be lagging behind the head block",
+		Value: 100_000,
+	}
 	ArchiveVariantFlag = cli.StringFlag{
 		Name:  "archive-variant",
 		Usage: "set the archive implementation variant for the selected DB implementation, ignored if not running in archive mode",
@@ -182,9 +191,14 @@ var (
 		Name:  "update-db",
 		Usage: "set update-set database directory",
 	}
-	OperaDatadirFlag = cli.PathFlag{
-		Name:  "datadir",
-		Usage: "opera datadir directory",
+	UpdateTypeFlag = cli.StringFlag{
+		Name:  "update-type",
+		Usage: "select update type (\"stable\" or \"nightly\")",
+		Value: "stable",
+	}
+	OperaBinaryFlag = cli.PathFlag{
+		Name:  "opera-binary",
+		Usage: "opera binary path",
 	}
 	ValidateFlag = cli.BoolFlag{
 		Name:  "validate",
@@ -324,6 +338,12 @@ var (
 		Usage:   "target block ID",
 		Value:   0,
 	}
+	TargetEpochFlag = cli.Uint64Flag{
+		Name:    "target-epoch",
+		Aliases: []string{"epoch"},
+		Usage:   "target epoch ID",
+		Value:   0,
+	}
 	MaxNumErrorsFlag = cli.IntFlag{
 		Name:  "max-errors",
 		Usage: "maximum number of errors when ContinueOnFailure is enabled, default is 50",
@@ -345,5 +365,14 @@ var (
 	ValidateStateHashesFlag = cli.BoolFlag{
 		Name:  "validate-state-hash",
 		Usage: "enables state hash validation",
+	}
+	ProfileBlocksFlag = cli.BoolFlag{
+		Name:  "profile-blocks",
+		Usage: "enables block profiling",
+	}
+	ProfileDBFlag = cli.PathFlag{
+		Name:  "profile-db",
+		Usage: "defines path to profile-db",
+		Value: "/var/opera/Aida/profile.db",
 	}
 )

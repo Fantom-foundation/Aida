@@ -73,9 +73,15 @@ func run(
 		profiler.MakeMemoryUsagePrinter[*substate.Substate](cfg),
 		profiler.MakeMemoryProfiler[*substate.Substate](cfg),
 		statedb.MakeStateDbPrepper(),
+		statedb.MakeArchiveInquirer(cfg),
 		validator.MakeStateHashValidator[*substate.Substate](cfg),
 		statedb.MakeBlockEventEmitter[*substate.Substate](),
 		profiler.MakeOperationProfiler[*substate.Substate](cfg),
+		// block profile extension should be always last because:
+		// 1) Pre-Func are called forwards so this is called last and
+		// 2) Post-Func are called backwards so this is called first
+		// that means the gap between time measurements will be as small as possible
+		profiler.MakeBlockRuntimeAndGasCollector(cfg),
 	}...,
 	)
 

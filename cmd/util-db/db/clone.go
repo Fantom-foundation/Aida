@@ -9,6 +9,7 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/op/go-logging"
@@ -229,6 +230,11 @@ func (c *cloner) clone(isFirstPatch bool) error {
 		return err
 	}
 
+	err = c.readStateHashes()
+	if err != nil {
+		return err
+	}
+
 	close(c.writeCh)
 
 	sourceMD := utils.NewAidaDbMetadata(c.aidaDb, c.cfg.LogLevel)
@@ -342,21 +348,9 @@ func (c *cloner) read(prefix []byte, start uint64, condition func(key []byte) (b
 
 		c.count++
 
-		// make deep read key and value
-		// need to pass deep read of values into the channel
-		// golang channels were using pointers and values read from channel were incorrect
-		key := make([]byte, len(iter.Key()))
-		copy(key, iter.Key())
-		value := make([]byte, len(iter.Value()))
-		copy(value, iter.Value())
+		c.sendToWriteChan(iter.Key(), iter.Value())
 
-		select {
-		case <-c.closeCh:
-			return
-		case c.writeCh <- rawEntry{Key: key, Value: value}:
-		}
 	}
-
 	c.log.Noticef("Prefix %v done", string(prefix))
 
 	return
@@ -420,6 +414,40 @@ func (c *cloner) readSubstate() error {
 	c.read([]byte(substate.Stage1SubstatePrefix), c.cfg.First, endCond)
 
 	return nil
+}
+
+func (c *cloner) readStateHashes() error {
+	c.log.Noticef("Copying hashes done")
+
+	for i := c.cfg.First; i < c.cfg.Last; i++ {
+		key := []byte(utils.StateHashPrefix + hexutil.EncodeUint64(i))
+		value, err := c.aidaDb.Get(key)
+		if err != nil {
+			return fmt.Errorf("cannot get state hash for block %v; %v", i, err)
+		}
+
+		c.sendToWriteChan(key, value)
+	}
+
+	c.log.Noticef("State hashes done")
+
+	return nil
+}
+
+func (c *cloner) sendToWriteChan(k, v []byte) {
+	// make deep read key and value
+	// need to pass deep read of values into the channel
+	// golang channels were using pointers and values read from channel were incorrect
+	key := make([]byte, len(k))
+	copy(key, k)
+	value := make([]byte, len(v))
+	copy(value, v)
+
+	select {
+	case <-c.closeCh:
+		return
+	case c.writeCh <- rawEntry{Key: key, Value: value}:
+	}
 }
 
 // readDeletions from last updateSet before cfg.First until cfg.Last

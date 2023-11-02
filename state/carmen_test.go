@@ -2,7 +2,7 @@ package state
 
 import (
 	"bytes"
-	"fmt"
+	"errors"
 	"math/big"
 	"testing"
 
@@ -14,7 +14,7 @@ import (
 // TestCarmenState_MakeCarmenStateDBInvalid tests db initialization with invalid Variant
 func TestCarmenState_MakeCarmenStateDBInvalid(t *testing.T) {
 	csDB, err := MakeCarmenStateDB("", "invalid-Variant", "", 1)
-	if _, ok := err.(carmen.UnsupportedConfiguration); ok {
+	if errors.Is(err, carmen.UnsupportedConfiguration) {
 		t.Skip("unsupported configuration")
 	}
 
@@ -31,9 +31,9 @@ func TestCarmenState_MakeCarmenStateDBInvalid(t *testing.T) {
 // TestCarmenState_InitCloseCarmenDB test closing db immediately after initialization
 func TestCarmenState_InitCloseCarmenDB(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
-		t.Run(fmt.Sprintf("DB Variant: %s, Archive type: %v", tc.Variant, tc.Archive), func(t *testing.T) {
+		t.Run(tc.String(), func(t *testing.T) {
 			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Archive, 1)
-			if _, ok := err.(carmen.UnsupportedConfiguration); ok {
+			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
 
@@ -52,9 +52,9 @@ func TestCarmenState_InitCloseCarmenDB(t *testing.T) {
 // TestCarmenState_AccountLifecycle tests account operations - create, check if it exists, if it's empty, suicide and suicide confirmation
 func TestCarmenState_AccountLifecycle(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
-		t.Run(fmt.Sprintf("DB Variant: %s, Archive type: %v", tc.Variant, tc.Archive), func(t *testing.T) {
+		t.Run(tc.String(), func(t *testing.T) {
 			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Archive, 1)
-			if _, ok := err.(carmen.UnsupportedConfiguration); ok {
+			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
 
@@ -96,9 +96,9 @@ func TestCarmenState_AccountLifecycle(t *testing.T) {
 // TestCarmenState_AccountBalanceOperations tests balance operations - add, subtract and check if the value is correct
 func TestCarmenState_AccountBalanceOperations(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
-		t.Run(fmt.Sprintf("DB Variant: %s, Archive type: %v", tc.Variant, tc.Archive), func(t *testing.T) {
+		t.Run(tc.String(), func(t *testing.T) {
 			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Archive, 1)
-			if _, ok := err.(carmen.UnsupportedConfiguration); ok {
+			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
 
@@ -143,9 +143,9 @@ func TestCarmenState_AccountBalanceOperations(t *testing.T) {
 // TestCarmenState_NonceOperations tests account nonce updating
 func TestCarmenState_NonceOperations(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
-		t.Run(fmt.Sprintf("DB Variant: %s, Archive type: %v", tc.Variant, tc.Archive), func(t *testing.T) {
+		t.Run(tc.String(), func(t *testing.T) {
 			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Archive, 1)
-			if _, ok := err.(carmen.UnsupportedConfiguration); ok {
+			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
 
@@ -180,9 +180,9 @@ func TestCarmenState_NonceOperations(t *testing.T) {
 // TestCarmenState_CodeOperations tests account code updating
 func TestCarmenState_CodeOperations(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
-		t.Run(fmt.Sprintf("DB Variant: %s, Archive type: %v", tc.Variant, tc.Archive), func(t *testing.T) {
+		t.Run(tc.String(), func(t *testing.T) {
 			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Archive, 1)
-			if _, ok := err.(carmen.UnsupportedConfiguration); ok {
+			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
 
@@ -225,9 +225,9 @@ func TestCarmenState_CodeOperations(t *testing.T) {
 // TestCarmenState_StateOperations tests account state update
 func TestCarmenState_StateOperations(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
-		t.Run(fmt.Sprintf("DB Variant: %s, Archive type: %v", tc.Variant, tc.Archive), func(t *testing.T) {
+		t.Run(tc.String(), func(t *testing.T) {
 			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Archive, 1)
-			if _, ok := err.(carmen.UnsupportedConfiguration); ok {
+			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
 
@@ -263,9 +263,9 @@ func TestCarmenState_StateOperations(t *testing.T) {
 // TestCarmenState_TrxBlockSyncPeriodOperations tests creation of randomized sync-periods with blocks and transactions
 func TestCarmenState_TrxBlockSyncPeriodOperations(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
-		t.Run(fmt.Sprintf("DB Variant: %s, Archive type: %v", tc.Variant, tc.Archive), func(t *testing.T) {
+		t.Run(tc.String(), func(t *testing.T) {
 			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Archive, 1)
-			if _, ok := err.(carmen.UnsupportedConfiguration); ok {
+			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
 
@@ -308,9 +308,9 @@ func TestCarmenState_TrxBlockSyncPeriodOperations(t *testing.T) {
 // TestCarmenState_RefundOperations tests adding and subtracting refund value
 func TestCarmenState_RefundOperations(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
-		t.Run(fmt.Sprintf("DB Variant: %s, Archive type: %v", tc.Variant, tc.Archive), func(t *testing.T) {
+		t.Run(tc.String(), func(t *testing.T) {
 			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Archive, 1)
-			if _, ok := err.(carmen.UnsupportedConfiguration); ok {
+			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
 
@@ -347,9 +347,9 @@ func TestCarmenState_RefundOperations(t *testing.T) {
 // TestCarmenState_AccessListOperations tests operations with creating, updating a checking AccessList
 func TestCarmenState_AccessListOperations(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
-		t.Run(fmt.Sprintf("DB Variant: %s, Archive type: %v", tc.Variant, tc.Archive), func(t *testing.T) {
+		t.Run(tc.String(), func(t *testing.T) {
 			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Archive, 1)
-			if _, ok := err.(carmen.UnsupportedConfiguration); ok {
+			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
 
@@ -447,10 +447,10 @@ func TestCarmenState_GetArchiveState(t *testing.T) {
 		if tc.Archive != "sqlite" && tc.Archive != "leveldb" {
 			continue // relevant only if the Archive is enabled
 		}
-		t.Run(fmt.Sprintf("DB Variant: %s, Archive type: %v", tc.Variant, tc.Archive), func(t *testing.T) {
+		t.Run(tc.String(), func(t *testing.T) {
 			tempDir := t.TempDir()
 			csDB, err := MakeCarmenStateDB(tempDir, tc.Variant, tc.Archive, 1)
-			if _, ok := err.(carmen.UnsupportedConfiguration); ok {
+			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
 
@@ -505,9 +505,9 @@ func TestCarmenState_GetArchiveState(t *testing.T) {
 // TestCarmenState_SetBalanceUsingBulkInsertion tests setting an accounts balance
 func TestCarmenState_SetBalanceUsingBulkInsertion(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
-		t.Run(fmt.Sprintf("DB Variant: %s, Archive type: %v", tc.Variant, tc.Archive), func(t *testing.T) {
+		t.Run(tc.String(), func(t *testing.T) {
 			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Archive, 1)
-			if _, ok := err.(carmen.UnsupportedConfiguration); ok {
+			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
 
@@ -547,9 +547,9 @@ func TestCarmenState_SetBalanceUsingBulkInsertion(t *testing.T) {
 // TestCarmenState_SetNonceUsingBulkInsertion tests setting an accounts nonce
 func TestCarmenState_SetNonceUsingBulkInsertion(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
-		t.Run(fmt.Sprintf("DB Variant: %s, Archive type: %v", tc.Variant, tc.Archive), func(t *testing.T) {
+		t.Run(tc.String(), func(t *testing.T) {
 			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Archive, 1)
-			if _, ok := err.(carmen.UnsupportedConfiguration); ok {
+			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
 
@@ -590,9 +590,9 @@ func TestCarmenState_SetNonceUsingBulkInsertion(t *testing.T) {
 // TestCarmenState_SetStateUsingBulkInsertion tests setting an accounts state
 func TestCarmenState_SetStateUsingBulkInsertion(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
-		t.Run(fmt.Sprintf("DB Variant: %s, Archive type: %v", tc.Variant, tc.Archive), func(t *testing.T) {
+		t.Run(tc.String(), func(t *testing.T) {
 			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Archive, 1)
-			if _, ok := err.(carmen.UnsupportedConfiguration); ok {
+			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
 
@@ -635,9 +635,9 @@ func TestCarmenState_SetStateUsingBulkInsertion(t *testing.T) {
 // TestCarmenState_SetCodeUsingBulkInsertion tests setting an accounts code
 func TestCarmenState_SetCodeUsingBulkInsertion(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
-		t.Run(fmt.Sprintf("DB Variant: %s, Archive type: %v", tc.Variant, tc.Archive), func(t *testing.T) {
+		t.Run(tc.String(), func(t *testing.T) {
 			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Archive, 1)
-			if _, ok := err.(carmen.UnsupportedConfiguration); ok {
+			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
 
@@ -679,9 +679,9 @@ func TestCarmenState_SetCodeUsingBulkInsertion(t *testing.T) {
 // TestCarmenState_BulkloadOperations tests multiple operation in one bulkload
 func TestCarmenState_BulkloadOperations(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
-		t.Run(fmt.Sprintf("DB Variant: %s, Archive type: %v", tc.Variant, tc.Archive), func(t *testing.T) {
+		t.Run(tc.String(), func(t *testing.T) {
 			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Archive, 1)
-			if _, ok := err.(carmen.UnsupportedConfiguration); ok {
+			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
 
@@ -753,9 +753,9 @@ func TestCarmenState_BulkloadOperations(t *testing.T) {
 
 func TestCarmenState_GetShadowDB(t *testing.T) {
 	for _, tc := range GetCarmenStateTestCases() {
-		t.Run(fmt.Sprintf("DB Variant: %s, Archive type: %v", tc.Variant, tc.Archive), func(t *testing.T) {
+		t.Run(tc.String(), func(t *testing.T) {
 			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Archive, 1)
-			if _, ok := err.(carmen.UnsupportedConfiguration); ok {
+			if errors.Is(err, carmen.UnsupportedConfiguration) {
 				t.Skip("unsupported configuration")
 			}
 

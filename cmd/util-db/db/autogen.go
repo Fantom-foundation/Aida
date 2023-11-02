@@ -1,7 +1,9 @@
 package db
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"time"
 
@@ -19,14 +21,15 @@ var AutoGenCommand = cli.Command{
 	Name:   "autogen",
 	Usage:  "autogen generates aida-db periodically",
 	Flags: []cli.Flag{
-		// TODO minimal epoch length for patch generation
 		&utils.AidaDbFlag,
 		&utils.ChainIDFlag,
 		&utils.DbFlag,
 		&utils.GenesisFlag,
 		&utils.DbTmpFlag,
-		&utils.UpdateBufferSizeFlag,
+		&utils.OperaBinaryFlag,
 		&utils.OutputFlag,
+		&utils.TargetEpochFlag,
+		&utils.UpdateBufferSizeFlag,
 		&utils.WorldStateFlag,
 		&substate.WorkersFlag,
 		&logger.LogLevelFlag,
@@ -43,12 +46,59 @@ func autogen(ctx *cli.Context) error {
 		return err
 	}
 
+	locked, err := getLock(cfg)
+	if err != nil {
+		return err
+	}
+	if locked != "" {
+		return fmt.Errorf("GENERATION BLOCKED: autogen failed in last run; %v", locked)
+	}
+
 	g, err := newGenerator(ctx, cfg)
 	if err != nil {
 		return err
 	}
+	err = autogenRun(cfg, g)
+	if err != nil {
+		errLock := setLock(cfg, err.Error())
+		if errLock != nil {
+			return fmt.Errorf("%v; %v", errLock, err)
+		}
+	}
+	return err
+}
 
-	err = g.opera.init()
+// setLock creates lockfile in case of error while generating
+func setLock(cfg *utils.Config, message string) error {
+	lockFile := cfg.AidaDb + ".autogen.lock"
+
+	// Write the string to the file
+	err := os.WriteFile(lockFile, []byte(message), 0655)
+	if err != nil {
+		return fmt.Errorf("error writing to lock file %v; %v", lockFile, err)
+	} else {
+		return nil
+	}
+}
+
+// getLock checks existence and contents of lockfile
+func getLock(cfg *utils.Config) (string, error) {
+	lockFile := cfg.AidaDb + ".autogen.lock"
+
+	// Read lockfile contents
+	content, err := os.ReadFile(lockFile)
+	if errors.Is(err, fs.ErrNotExist) {
+		return "", nil
+	} else if err != nil {
+		return "", fmt.Errorf("error reading from file; %v", err)
+	}
+
+	return string(content), nil
+}
+
+// autogenRun is used to record/update aida-db
+func autogenRun(cfg *utils.Config, g *generator) error {
+	err := g.opera.init()
 	if err != nil {
 		return err
 	}
@@ -66,6 +116,10 @@ func autogen(ctx *cli.Context) error {
 	err = g.calculatePatchEnd()
 	if err != nil {
 		return err
+	}
+
+	if cfg.TargetEpoch > 0 {
+		g.stopAtEpoch = cfg.TargetEpoch
 	}
 
 	g.log.Noticef("Starting substate generation %d - %d", g.opera.lastEpoch+1, g.stopAtEpoch)

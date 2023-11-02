@@ -23,14 +23,9 @@ type JsonRPCRequest struct {
 }
 
 func SendRPCRequest(payload JsonRPCRequest, chainId ChainID) (map[string]interface{}, error) {
-	var url string
-
-	if chainId == 250 {
-		url = RPCMainnet
-	} else if chainId == 4002 {
-		url = RPCTestnet
-	} else {
-		return nil, fmt.Errorf("unknown chain-id %v", chainId)
+	url, err := GetProvider(chainId)
+	if err != nil {
+		return nil, err
 	}
 
 	jsonReq, err := json.Marshal(payload)
@@ -57,6 +52,16 @@ func SendRPCRequest(payload JsonRPCRequest, chainId ChainID) (map[string]interfa
 	}
 
 	return m, nil
+}
+
+func GetProvider(chainId ChainID) (string, error) {
+	if chainId == 250 {
+		return RPCMainnet, nil
+	} else if chainId == 4002 {
+		return RPCTestnet, nil
+	} else {
+		return "", fmt.Errorf("unknown chain-id %v", chainId)
+	}
 }
 
 // FindEpochNumber via RPC request GetBlockByNumber

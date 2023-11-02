@@ -4,6 +4,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/profile/graphutil"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
@@ -93,20 +94,20 @@ func interfere(u, v AddressSet) bool {
 }
 
 // findTxAddresses gets wallet/contract addresses of a transaction.
-func findTxAddresses(tx *substate.Transaction) AddressSet {
+func findTxAddresses(tx executor.State[*substate.Substate]) AddressSet {
 	addresses := AddressSet{}
-	for addr := range tx.Substate.InputAlloc {
+	for addr := range tx.Data.InputAlloc {
 		addresses[addr] = struct{}{}
 	}
-	for addr := range tx.Substate.OutputAlloc {
+	for addr := range tx.Data.OutputAlloc {
 		addresses[addr] = struct{}{}
 	}
 	var zero common.Address
-	if tx.Substate.Message.From != zero {
-		addresses[tx.Substate.Message.From] = struct{}{}
+	if tx.Data.Message.From != zero {
+		addresses[tx.Data.Message.From] = struct{}{}
 	}
-	if tx.Substate.Message.To != nil {
-		addresses[*tx.Substate.Message.To] = struct{}{}
+	if tx.Data.Message.To != nil {
+		addresses[*tx.Data.Message.To] = struct{}{}
 	}
 	return addresses
 }
@@ -144,21 +145,21 @@ func (ctx *Context) dependencies(addresses AddressSet) graphutil.OrdinalSet {
 }
 
 // RecordTransaction collects addresses and computes earliest time.
-func (ctx *Context) RecordTransaction(tx *substate.Transaction, tTransaction time.Duration) error {
+func (ctx *Context) RecordTransaction(state executor.State[*substate.Substate], tTransaction time.Duration) error {
 	overheadTimer := time.Now()
 
 	// update time for block and transaction
 	ctx.tSequential += tTransaction
 	ctx.tTransactions = append(ctx.tTransactions, tTransaction)
-	ctx.tTypes = append(ctx.tTypes, getTransactionType(tx))
+	ctx.tTypes = append(ctx.tTypes, getTransactionType(state))
 
 	// update gas used for block and transaction
-	gasUsed := tx.Substate.Result.GasUsed
+	gasUsed := state.Data.Result.GasUsed
 	ctx.gasBlock += gasUsed
 	ctx.gasTransactions = append(ctx.gasTransactions, gasUsed)
 
 	// retrieve contract/wallet addresses of transaction
-	addresses := findTxAddresses(tx)
+	addresses := findTxAddresses(state)
 
 	// compute the earliest point in time to execute transaction
 	tEarliest := ctx.earliestTimeToRun(addresses)
@@ -257,11 +258,11 @@ func (ctx *Context) GetProfileData(curBlock uint64, tBlock time.Duration) (*Prof
 }
 
 // getTransactionType reads a message and determines a transaction type.
-func getTransactionType(tx *substate.Transaction) TxType {
-	msg := tx.Substate.Message
+func getTransactionType(tx executor.State[*substate.Substate]) TxType {
+	msg := tx.Data.Message
 	to := msg.To
 	from := msg.From
-	alloc := tx.Substate.InputAlloc
+	alloc := tx.Data.InputAlloc
 
 	zero := common.HexToAddress("0x0000000000000000000000000000000000000000")
 

@@ -15,6 +15,8 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 
 		APIRecordingSrcFile:   getFlagValue(ctx, APIRecordingSrcFileFlag).(string),
 		ArchiveMode:           getFlagValue(ctx, ArchiveModeFlag).(bool),
+		ArchiveQueryRate:      getFlagValue(ctx, ArchiveQueryRateFlag).(int),
+		ArchiveMaxQueryAge:    getFlagValue(ctx, ArchiveMaxQueryAgeFlag).(int),
 		ArchiveVariant:        getFlagValue(ctx, ArchiveVariantFlag).(string),
 		BlockLength:           getFlagValue(ctx, BlockLengthFlag).(uint64),
 		BalanceRange:          getFlagValue(ctx, BalanceRangeFlag).(int64),
@@ -65,8 +67,9 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		Output:                getFlagValue(ctx, OutputFlag).(string),
 		StateValidationMode:   EqualityCheck,
 		UpdateDb:              getFlagValue(ctx, UpdateDbFlag).(string),
+		UpdateType:            getFlagValue(ctx, UpdateTypeFlag).(string),
 		SubstateDb:            getFlagValue(ctx, substate.SubstateDbFlag).(string),
-		OperaDatadir:          getFlagValue(ctx, OperaDatadirFlag).(string),
+		OperaBinary:           getFlagValue(ctx, OperaBinaryFlag).(string),
 		ValuesNumber:          getFlagValue(ctx, ValuesNumberFlag).(int64),
 		Validate:              getFlagValue(ctx, ValidateFlag).(bool),
 		VmImpl:                getFlagValue(ctx, VmImplementation).(string),
@@ -87,12 +90,15 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		ProfilingDbName:       getFlagValue(ctx, ProfilingDbNameFlag).(string),
 		ChannelBufferSize:     getFlagValue(ctx, ChannelBufferSizeFlag).(int),
 		TargetBlock:           getFlagValue(ctx, TargetBlockFlag).(uint64),
+		TargetEpoch:           getFlagValue(ctx, TargetEpochFlag).(uint64),
 		UpdateBufferSize:      getFlagValue(ctx, UpdateBufferSizeFlag).(uint64),
 		UpdateOnFailure:       getFlagValue(ctx, UpdateOnFailure).(bool),
 		MaxNumErrors:          getFlagValue(ctx, MaxNumErrorsFlag).(int),
 		NoHeartbeatLogging:    getFlagValue(ctx, NoHeartbeatLoggingFlag).(bool),
 		TrackProgress:         getFlagValue(ctx, TrackProgressFlag).(bool),
 		ValidateStateHashes:   getFlagValue(ctx, ValidateStateHashesFlag).(bool),
+		ProfileDB:             getFlagValue(ctx, ProfileDBFlag).(string),
+		ProfileBlocks:         getFlagValue(ctx, ProfileBlocksFlag).(bool),
 	}
 
 	return cfg
