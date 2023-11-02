@@ -35,87 +35,82 @@ func NewProfilerProxy(db state.StateDB, csv string, logLevel string) (*ProfilerP
 
 // CreateAccount creates a new account.
 func (p *ProfilerProxy) CreateAccount(addr common.Address) {
-	start := time.Now()
-	p.db.CreateAccount(addr)
-	elapsed := time.Since(start)
-	p.ps.Profile(operation.CreateAccountID, elapsed)
+	p.do(operation.CreateAccountID, func() {
+		p.db.CreateAccount(addr)
+	})
 }
 
 // SubBalance subtracts amount from a contract address.
 func (p *ProfilerProxy) SubBalance(addr common.Address, amount *big.Int) {
-	start := time.Now()
-	p.db.SubBalance(addr, amount)
-	elapsed := time.Since(start)
-	p.ps.Profile(operation.SubBalanceID, elapsed)
+	p.do(operation.SubBalanceID, func() {
+		p.db.SubBalance(addr, amount)
+	})
 }
 
 // AddBalance adds amount to a contract address.
 func (p *ProfilerProxy) AddBalance(addr common.Address, amount *big.Int) {
-	start := time.Now()
-	p.db.AddBalance(addr, amount)
-	elapsed := time.Since(start)
-	p.ps.Profile(operation.AddBalanceID, elapsed)
+	p.do(operation.AddBalanceID, func() {
+		p.db.AddBalance(addr, amount)
+	})
 }
 
 // GetBalance retrieves the amount of a contract address.
 func (p *ProfilerProxy) GetBalance(addr common.Address) *big.Int {
-	start := time.Now()
-	balance := p.db.GetBalance(addr)
-	elapsed := time.Since(start)
-	p.ps.Profile(operation.GetBalanceID, elapsed)
-	return balance
+	var res *big.Int
+	p.do(operation.GetBalanceID, func() {
+		res = p.db.GetBalance(addr)
+	})
+	return res
 }
 
 // GetNonce retrieves the nonce of a contract address.
 func (p *ProfilerProxy) GetNonce(addr common.Address) uint64 {
-	start := time.Now()
-	nonce := p.db.GetNonce(addr)
-	elapsed := time.Since(start)
-	p.ps.Profile(operation.GetNonceID, elapsed)
-	return nonce
+	var res uint64
+	p.do(operation.GetNonceID, func() {
+		res = p.db.GetNonce(addr)
+	})
+	return res
 }
 
 // SetNonce sets the nonce of a contract address.
 func (p *ProfilerProxy) SetNonce(addr common.Address, nonce uint64) {
-	start := time.Now()
-	p.db.SetNonce(addr, nonce)
-	elapsed := time.Since(start)
-	p.ps.Profile(operation.SetNonceID, elapsed)
+	p.do(operation.SetNonceID, func() {
+		p.db.SetNonce(addr, nonce)
+	})
 }
 
 // GetCodeHash returns the hash of the EVM bytecode.
 func (p *ProfilerProxy) GetCodeHash(addr common.Address) common.Hash {
-	start := time.Now()
-	hash := p.db.GetCodeHash(addr)
-	elapsed := time.Since(start)
-	p.ps.Profile(operation.GetCodeHashID, elapsed)
-	return hash
+	var res common.Hash
+	p.do(operation.GetCodeHashID, func() {
+		res = p.db.GetCodeHash(addr)
+	})
+	return res
 }
 
 // GetCode returns the EVM bytecode of a contract.
 func (p *ProfilerProxy) GetCode(addr common.Address) []byte {
-	start := time.Now()
-	code := p.db.GetCode(addr)
-	elapsed := time.Since(start)
-	p.ps.Profile(operation.GetCodeID, elapsed)
-	return code
+	var res []byte
+	p.do(operation.GetCodeID, func() {
+		res = p.db.GetCode(addr)
+	})
+	return res
 }
 
 // SetCode sets the EVM bytecode of a contract.
 func (p *ProfilerProxy) SetCode(addr common.Address, code []byte) {
-	start := time.Now()
-	p.db.SetCode(addr, code)
-	elapsed := time.Since(start)
-	p.ps.Profile(operation.SetCodeID, elapsed)
+	p.do(operation.SetCodeID, func() {
+		p.db.SetCode(addr, code)
+	})
 }
 
 // GetCodeSize returns the EVM bytecode's size.
 func (p *ProfilerProxy) GetCodeSize(addr common.Address) int {
-	start := time.Now()
-	size := p.db.GetCodeSize(addr)
-	elapsed := time.Since(start)
-	p.ps.Profile(operation.GetCodeSizeID, elapsed)
-	return size
+	var res int
+	p.do(operation.GetCodeSizeID, func() {
+		res = p.db.GetCodeSize(addr)
+	})
+	return res
 }
 
 // AddRefund adds gas to the refund counter.
@@ -143,38 +138,37 @@ func (p *ProfilerProxy) GetRefund() uint64 {
 
 // GetCommittedState retrieves a value that is already committed.
 func (p *ProfilerProxy) GetCommittedState(addr common.Address, key common.Hash) common.Hash {
-	start := time.Now()
-	value := p.db.GetCommittedState(addr, key)
-	elapsed := time.Since(start)
-	p.ps.Profile(operation.GetCommittedStateID, elapsed)
-	return value
+	var res common.Hash
+	p.do(operation.GetCommittedStateID, func() {
+		res = p.db.GetCommittedState(addr, key)
+	})
+	return res
 }
 
 // GetState retrieves a value from the StateDB.
 func (p *ProfilerProxy) GetState(addr common.Address, key common.Hash) common.Hash {
-	start := time.Now()
-	value := p.db.GetState(addr, key)
-	elapsed := time.Since(start)
-	p.ps.Profile(operation.GetStateID, elapsed)
-	return value
+	var res common.Hash
+	p.do(operation.GetStateID, func() {
+		res = p.db.GetState(addr, key)
+	})
+	return res
 }
 
 // SetState sets a value in the StateDB.
 func (p *ProfilerProxy) SetState(addr common.Address, key common.Hash, value common.Hash) {
-	start := time.Now()
-	p.db.SetState(addr, key, value)
-	elapsed := time.Since(start)
-	p.ps.Profile(operation.SetStateID, elapsed)
+	p.do(operation.SetStateID, func() {
+		p.db.SetState(addr, key, value)
+	})
 }
 
 // Suicide marks the given account as suicided. This clears the account balance.
 // The account is still available until the state is committed;
 // return a non-nil account after Suicide.
 func (p *ProfilerProxy) Suicide(addr common.Address) bool {
-	start := time.Now()
-	suicide := p.db.Suicide(addr)
-	elapsed := time.Since(start)
-	p.ps.Profile(operation.SuicideID, elapsed)
+	var suicide bool
+	p.do(operation.SuicideID, func() {
+		suicide = p.db.Suicide(addr)
+	})
 	return suicide
 }
 
@@ -190,11 +184,11 @@ func (p *ProfilerProxy) HasSuicided(addr common.Address) bool {
 // Exist checks whether the contract exists in the StateDB.
 // Notably this also returns true for suicided accounts.
 func (p *ProfilerProxy) Exist(addr common.Address) bool {
-	start := time.Now()
-	exist := p.db.Exist(addr)
-	elapsed := time.Since(start)
-	p.ps.Profile(operation.ExistID, elapsed)
-	return exist
+	var res bool
+	p.do(operation.ExistID, func() {
+		res = p.db.Exist(addr)
+	})
+	return res
 }
 
 // Empty checks whether the contract is either non-existent
@@ -231,7 +225,7 @@ func (p *ProfilerProxy) AddAddressToAccessList(addr common.Address) {
 
 // AddressInAccessList checks whether an address is in the access list.
 func (p *ProfilerProxy) AddressInAccessList(addr common.Address) bool {
-	res := false
+	var res bool
 	p.do(operation.AddressInAccessListID, func() {
 		res = p.db.AddressInAccessList(addr)
 	})
@@ -256,19 +250,18 @@ func (p *ProfilerProxy) AddSlotToAccessList(addr common.Address, slot common.Has
 
 // Snapshot returns an identifier for the current revision of the state.
 func (p *ProfilerProxy) Snapshot() int {
-	start := time.Now()
-	snapshot := p.db.Snapshot()
-	elapsed := time.Since(start)
-	p.ps.Profile(operation.SnapshotID, elapsed)
-	return snapshot
+	var res int
+	p.do(operation.SnapshotID, func() {
+		res = p.db.Snapshot()
+	})
+	return res
 }
 
 // RevertToSnapshot reverts all state changes from a given revision.
 func (p *ProfilerProxy) RevertToSnapshot(snapshot int) {
-	start := time.Now()
-	p.db.RevertToSnapshot(snapshot)
-	elapsed := time.Since(start)
-	p.ps.Profile(operation.RevertToSnapshotID, elapsed)
+	p.do(operation.RevertToSnapshotID, func() {
+		p.db.RevertToSnapshot(snapshot)
+	})
 }
 
 func (p *ProfilerProxy) Error() error {
@@ -335,7 +328,7 @@ func (p *ProfilerProxy) GetLogs(hash common.Hash, blockHash common.Hash) (logs [
 	p.do(operation.GetLogsID, func() {
 		logs = p.db.GetLogs(hash, blockHash)
 	})
-	return
+	return logs
 }
 
 // AddPreimage adds a SHA3 preimage.
@@ -363,10 +356,9 @@ func (p *ProfilerProxy) Prepare(thash common.Hash, ti int) {
 
 // Finalise the state in StateDB.
 func (p *ProfilerProxy) Finalise(deleteEmptyObjects bool) {
-	start := time.Now()
-	p.db.Finalise(deleteEmptyObjects)
-	elapsed := time.Since(start)
-	p.ps.Profile(operation.FinaliseID, elapsed)
+	p.do(operation.FinaliseID, func() {
+		p.db.Finalise(deleteEmptyObjects)
+	})
 }
 
 // IntermediateRoot computes the current hash of the StateDB.
@@ -381,10 +373,11 @@ func (p *ProfilerProxy) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 }
 
 func (p *ProfilerProxy) Commit(deleteEmptyObjects bool) (common.Hash, error) {
-	start := time.Now()
-	hash, err := p.db.Commit(deleteEmptyObjects)
-	elapsed := time.Since(start)
-	p.ps.Profile(operation.CommitID, elapsed)
+	var hash common.Hash
+	var err error
+	p.do(operation.CommitID, func() {
+		hash, err = p.db.Commit(deleteEmptyObjects)
+	})
 	return hash, err
 }
 
