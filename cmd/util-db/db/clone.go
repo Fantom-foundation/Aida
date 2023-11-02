@@ -421,7 +421,7 @@ func (c *cloner) readSubstate() error {
 func (c *cloner) readStateHashes() error {
 	c.log.Noticef("Copying hashes done")
 
-	for i := c.cfg.First; i < c.cfg.Last; i++ {
+	for i := c.cfg.First; i <= c.cfg.Last; i++ {
 		key := []byte(utils.StateHashPrefix + hexutil.EncodeUint64(i))
 		value, err := c.aidaDb.Get(key)
 		if err != nil {
