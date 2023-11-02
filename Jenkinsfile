@@ -76,7 +76,7 @@ pipeline {
         stage('aida-vm-sdb validate-state-hash') {
             steps {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
-                    sh "build/aida-vm-sdb ${VM} ${AIDADB} ${PRIME} ${TMPDB}  --validate-state-hash --db-impl carmen --db-variant go-file  --carmen-schema 5 --archive --archive-variant ldb --validate-tx --cpu-profile cpu-profile.dat --memory-profile mem-profile.dat --memory-breakdown --continue-on-failure ${FROMBLOCK} ${TOBLOCK} "
+                    sh "build/aida-vm-sdb ${VM} ${AIDADB} ${PRIME} ${TMPDB}  --validate-state-hash --db-impl carmen --db-variant go-file  --carmen-schema 5 --archive --archive-variant s5 --validate-tx --cpu-profile cpu-profile.dat --memory-profile mem-profile.dat --memory-breakdown --continue-on-failure ${FROMBLOCK} ${TOBLOCK} "
                 }
                 sh "rm -rf *.dat"
             }
