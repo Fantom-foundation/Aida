@@ -3,6 +3,8 @@ package profile
 import (
 	"encoding/json"
 	"math"
+
+	"github.com/jedib0t/go-pretty/v6/table"
 )
 
 func min(a, b float64) float64 {
@@ -107,6 +109,7 @@ func (s *IncrementalStats) String() string {
 
 type IncrementalAnalytics struct {
 	stats []IncrementalStats
+	printers []utils.Printer
 }
 
 func NewIncrementalAnalytics(opCount uint64) *IncrementalAnalytics {
@@ -154,3 +157,62 @@ func (a *IncrementalAnalytics) GetSkewness(id byte) float64 {
 func (a *IncrementalAnalytics) GetKurtosis(id byte) float64 {
 	return a.stats[id].GetKurtosis()
 }
+
+func (a *IncrementalAnalytics) Print()  {
+	for _, printer := range a.printers() {
+		printer.Print()
+	}
+}
+
+func (a *IncrementalAnalytics) AddPrinter(p Printer) {
+	a.printer = append(a.printer, p)
+}
+
+type prettyTableStats struct {
+	totalCount uint64
+	totalSum float64
+}
+func (a *IncrementalAnalytics) prettyTable() (table.Writer, prettyTableStats) {
+	t := table.NewWriter()
+
+	t.AppendHeader(table.Row{
+		"id", "first", "last", "n", "mean(us)", "std(us)", "min(us)", "max(us)",
+	}
+
+	for opId, stat := range a.stats {
+		totalElapsed += stat.GetSum()
+		t.AppendRow(table.Row{
+			opId,
+			"first",
+			"last",
+			stat.GetCount(),
+			stat.GetMean(),
+			math.Sqrt(stat.GetVariance()),
+			stat.GetMin(),
+			stat.GetMax(),
+		})
+	}
+
+	stats := &prettyTableStats{
+		totalCount = 0,
+		totalSum = 0.0,
+	}
+
+	return t, stats
+}
+
+func (a *IncrementalAnalytics) AddCustomPrintToConsole() {
+	a.AddPrinter(utils.NewPrintToConsole(func () {
+		t, _ := a.prettyTable()
+		return t.Render()
+	}))
+}
+
+func (a *IncrementalAnalytics) AddCustomPrintToFile(filepath string) {
+	a.AddPrinter(utils.NewPrintToFile(filepath, func () {
+		t, _ := a.prettyTable()
+		return t.RenderCSV()
+	}))
+}
+
+
