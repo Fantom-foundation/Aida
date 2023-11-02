@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"log"
 )
 
 type Printer interface {
@@ -21,17 +20,17 @@ func (p *PrintToWriter) Print() error {
 	return nil
 }
 
-func NewPrintToWriter (w io.Writer, f func() string) *PrintToWriter {
+func NewPrintToWriter(w io.Writer, f func() string) *PrintToWriter {
 	return &PrintToWriter{w, f}
 }
 
-func NewPrintToConsole (f func() string) *PrintToWriter {
+func NewPrintToConsole(f func() string) *PrintToWriter {
 	return &PrintToWriter{os.Stdout, f}
 }
 
-func PrintToFile struct {
+type PrintToFile struct {
 	filepath string
-	f func() string
+	f        func() string
 }
 
 func (p *PrintToFile) Print() error {
@@ -45,5 +44,5 @@ func (p *PrintToFile) Print() error {
 }
 
 func NewPrintToFile(filepath string, f func() string) *PrintToFile {
-	return &PrintToFile(string, f)	
+	return &PrintToFile(string, f)
 }

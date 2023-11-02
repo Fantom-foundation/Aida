@@ -24,8 +24,9 @@ func MakeOperationProfiler[T any](cfg *utils.Config) executor.Extension[T] {
 
 type operationProfiler[T any] struct {
 	extension.NilExtension[T]
-	cfg                *utils.Config
-	stats              *profile.Stats
+	cfg *utils.Config
+	//stats              *profile.Stats
+	anlt               *profile.IncrementalAnalytics
 	intervalStart      uint64
 	intervalEnd        uint64
 	lastProcessedBlock uint64
@@ -42,7 +43,8 @@ func (p *operationProfiler[T]) PreRun(_ executor.State[T], ctx *executor.Context
 
 func (p *operationProfiler[T]) PreBlock(state executor.State[T], _ *executor.Context) error {
 	if uint64(state.Block) > p.intervalEnd {
-		p.stats.PrintProfiling(p.intervalStart, p.intervalEnd)
+		//p.stats.PrintProfiling(p.intervalStart, p.intervalEnd)
+		p.anlt.Print()
 		p.intervalStart = p.intervalEnd + 1
 		p.intervalEnd = p.intervalEnd + p.cfg.ProfileInterval
 		p.stats.Reset()
@@ -57,6 +59,7 @@ func (p *operationProfiler[T]) PostBlock(state executor.State[T], _ *executor.Co
 }
 
 func (p *operationProfiler[T]) PostRun(executor.State[T], *executor.Context, error) error {
-	p.stats.PrintProfiling(p.intervalStart, p.lastProcessedBlock)
+	//p.stats.PrintProfiling(p.intervalStart, p.lastProcessedBlock)
+	p.anlt.Print()
 	return nil
 }
