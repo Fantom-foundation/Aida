@@ -32,7 +32,7 @@ func TestRPCComparator_RPCComparatorIsNotCreatedIfNotEnabled(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.Validate = false
 
-	c := MakeRPCComparator(cfg)
+	c := MakeRpcComparator(cfg)
 	if _, ok := c.(extension.NilExtension[*rpc.RequestAndResults]); !ok {
 		t.Error("extension must be nil")
 	}

@@ -8,18 +8,18 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func OpenRpcRecording(cfg *utils.Config, ctxt *cli.Context) (Provider[*rpc.RequestAndResults], error) {
-	iter, err := rpc.NewFileReader(ctxt.Context, cfg.RPCRecordingFile)
+func OpenRpcRecording(cfg *utils.Config, ctx *cli.Context) (Provider[*rpc.RequestAndResults], error) {
+	iter, err := rpc.NewFileReader(ctx.Context, cfg.RpcRecordingFile)
 	if err != nil {
 		return nil, fmt.Errorf("cannot open rpc recording file; %v", err)
 	}
-	return openRpcRecording(iter, cfg, ctxt), nil
+	return openRpcRecording(iter, cfg, ctx), nil
 }
 
 func openRpcRecording(iter rpc.Iterator, cfg *utils.Config, ctxt *cli.Context) Provider[*rpc.RequestAndResults] {
 	return rpcRequestProvider{
 		ctxt:     ctxt,
-		fileName: cfg.RPCRecordingFile,
+		fileName: cfg.RpcRecordingFile,
 		iter:     iter,
 	}
 }

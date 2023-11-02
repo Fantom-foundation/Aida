@@ -1,4 +1,4 @@
-package replay
+package main
 
 import (
 	"time"
@@ -14,7 +14,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-func RunRPC(ctx *cli.Context) error {
+func RunRpc(ctx *cli.Context) error {
 	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if err != nil {
 		return err
@@ -29,7 +29,22 @@ func RunRPC(ctx *cli.Context) error {
 
 	defer rpcSource.Close()
 
-	return run(cfg, rpcSource, makeRPCProcessor(cfg), nil, nil)
+	return run(cfg, rpcSource, makeRpcProcessor(cfg), nil, nil)
+}
+
+func makeRpcProcessor(cfg *utils.Config) rpcProcessor {
+	return rpcProcessor{
+		cfg: cfg,
+	}
+}
+
+type rpcProcessor struct {
+	cfg *utils.Config
+}
+
+func (p rpcProcessor) Process(state executor.State[*rpc.RequestAndResults], ctx *executor.Context) error {
+	state.Data.StateDB = rpc.Execute(uint64(state.Block), state.Data, ctx.Archive, p.cfg)
+	return nil
 }
 
 func run(cfg *utils.Config, provider executor.Provider[*rpc.RequestAndResults], processor executor.Processor[*rpc.RequestAndResults], extra []executor.Extension[*rpc.RequestAndResults], stateDb state.StateDB) error {
@@ -37,7 +52,7 @@ func run(cfg *utils.Config, provider executor.Provider[*rpc.RequestAndResults], 
 		profiler.MakeCpuProfiler[*rpc.RequestAndResults](cfg),
 		tracker.MakeProgressLogger[*rpc.RequestAndResults](cfg, 15*time.Second),
 		statedb.MakeTemporaryArchivePrepper[*rpc.RequestAndResults](),
-		validator.MakeRPCComparator(cfg),
+		validator.MakeRpcComparator(cfg),
 	}
 
 	// this is for testing purposes so mock statedb and mock extension can be used
@@ -57,19 +72,4 @@ func run(cfg *utils.Config, provider executor.Provider[*rpc.RequestAndResults], 
 		processor,
 		extensionList,
 	)
-}
-
-func makeRPCProcessor(cfg *utils.Config) rpcProcessor {
-	return rpcProcessor{
-		cfg: cfg,
-	}
-}
-
-type rpcProcessor struct {
-	cfg *utils.Config
-}
-
-func (p rpcProcessor) Process(state executor.State[*rpc.RequestAndResults], ctx *executor.Context) error {
-	state.Data.StateDB = rpc.Execute(uint64(state.Block), state.Data, ctx.Archive, p.cfg)
-	return nil
 }

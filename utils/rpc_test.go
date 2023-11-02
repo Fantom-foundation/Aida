@@ -9,7 +9,7 @@ import (
 
 const invalidChainID ChainID = -1
 
-// TestSendRPCRequest_Positive tests whether SendRPCRequest does not return error for a valid request and chainID
+// TestSendRPCRequest_Positive tests whether SendRpcRequest does not return error for a valid request and chainID
 func TestSendRPCRequest_Positive(t *testing.T) {
 	req := JsonRPCRequest{
 		Method:  "ftm_getBlockByNumber",
@@ -21,9 +21,9 @@ func TestSendRPCRequest_Positive(t *testing.T) {
 	for _, id := range AvailableChainIDs {
 		t.Run(fmt.Sprintf("ChainID %v", id), func(t *testing.T) {
 
-			res, err := SendRPCRequest(req, id)
+			res, err := SendRpcRequest(req, id)
 			if err != nil {
-				t.Fatalf("SendRPCRequest returned err; %v", err)
+				t.Fatalf("SendRpcRequest returned err; %v", err)
 			}
 
 			if res == nil {
@@ -63,7 +63,7 @@ func TestSendRPCRequest_Positive(t *testing.T) {
 
 }
 
-// TestSendRPCRequest_InvalidChainID tests whether SendRPCRequest does return an error for a valid request and invalid chainID
+// TestSendRPCRequest_InvalidChainID tests whether SendRpcRequest does return an error for a valid request and invalid chainID
 func TestSendRPCRequest_InvalidChainID(t *testing.T) {
 	req := JsonRPCRequest{
 		Method:  "ftm_getBlockByNumber",
@@ -72,18 +72,18 @@ func TestSendRPCRequest_InvalidChainID(t *testing.T) {
 		JSONRPC: "2.0",
 	}
 
-	_, err := SendRPCRequest(req, invalidChainID)
+	_, err := SendRpcRequest(req, invalidChainID)
 	if err == nil {
-		t.Fatal("SendRPCRequest must return an err")
+		t.Fatal("SendRpcRequest must return an err")
 	}
 
 	if !strings.Contains(err.Error(), "unknown chain-id") {
-		t.Fatalf("SendRPCRequest returned unexpected error: %v", err.Error())
+		t.Fatalf("SendRpcRequest returned unexpected error: %v", err.Error())
 	}
 
 }
 
-// TestSendRPCRequest_InvalidReqMethod tests whether SendRPCRequest does return an error for an invalid method inside request
+// TestSendRPCRequest_InvalidReqMethod tests whether SendRpcRequest does return an error for an invalid method inside request
 func TestSendRPCRequest_InvalidReqMethod(t *testing.T) {
 	req := JsonRPCRequest{
 		Method:  "ftm_invalid",
@@ -94,9 +94,9 @@ func TestSendRPCRequest_InvalidReqMethod(t *testing.T) {
 
 	for _, id := range AvailableChainIDs {
 		t.Run(fmt.Sprintf("ChainID %v", id), func(t *testing.T) {
-			res, err := SendRPCRequest(req, id)
+			res, err := SendRpcRequest(req, id)
 			if err != nil {
-				t.Fatalf("SendRPCRequest returned err; %v", err)
+				t.Fatalf("SendRpcRequest returned err; %v", err)
 			}
 
 			if res == nil {
@@ -116,7 +116,7 @@ func TestSendRPCRequest_InvalidReqMethod(t *testing.T) {
 	}
 }
 
-// TestSendRPCRequest_InvalidReqMethod tests whether SendRPCRequest does return an error for an invalid block number inside request
+// TestSendRPCRequest_InvalidReqMethod tests whether SendRpcRequest does return an error for an invalid block number inside request
 func TestSendRPCRequest_InvalidBlockNumber(t *testing.T) {
 	req := JsonRPCRequest{
 		Method:  "ftm_getBlockByNumber",
@@ -127,9 +127,9 @@ func TestSendRPCRequest_InvalidBlockNumber(t *testing.T) {
 
 	for _, id := range AvailableChainIDs {
 		t.Run(fmt.Sprintf("ChainID %v", id), func(t *testing.T) {
-			res, err := SendRPCRequest(req, id)
+			res, err := SendRpcRequest(req, id)
 			if err != nil {
-				t.Fatalf("SendRPCRequest returned err; %v", err)
+				t.Fatalf("SendRpcRequest returned err; %v", err)
 			}
 
 			if res == nil {

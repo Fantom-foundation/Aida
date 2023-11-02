@@ -32,10 +32,6 @@ func (e *AidaDbManager[T]) PreRun(_ executor.State[T], ctx *executor.Context) er
 }
 
 func (e *AidaDbManager[T]) PostRun(_ executor.State[T], ctx *executor.Context, _ error) error {
-	if ctx.AidaDb == nil {
-		return nil
-	}
-
 	if err := ctx.AidaDb.Close(); err != nil {
 		return fmt.Errorf("cannot close AidaDb; %v", err)
 	}

@@ -13,7 +13,6 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/rpc"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
@@ -27,13 +26,13 @@ const (
 	expectedResultGotError
 	unexpectedDataType
 	cannotUnmarshalResult
-	cannotSendRPCRequest
+	cannotSendRpcRequest
 	internalError
 )
 
 const (
 	// internalErrorCode is created when RPC-API could not execute request
-	// - for purpose of replay, this error is not critical and is only logged into DEBUG level
+	// - for purpose of replay, this error is not critical and does not cause an error
 	internalErrorCode = -32603
 
 	invalidArgumentErrCode = -32602
@@ -43,8 +42,8 @@ const (
 	executionRevertedC = 3
 )
 
-// EVMErrors decode error code into string with which is compared with recorded error message
-var EVMErrors = map[int][]string{
+// EvmErrors decode error code into string with which is compared with recorded error message
+var EvmErrors = map[int][]string{
 	executionRevertedA: {"execution reverted"},
 
 	executionRevertedB: {
@@ -67,9 +66,9 @@ type comparatorError struct {
 	typ comparatorErrorType
 }
 
-// MakeRPCComparator returns extension which handles comparison of result created by the StateDb and the recording.
+// MakeRpcComparator returns extension which handles comparison of result created by the StateDb and the recording.
 // If ContinueOnFailure is enabled errors are being saved and printed after the whole run ends. Otherwise, error is returned.
-func MakeRPCComparator(cfg *utils.Config) executor.Extension[*rpc.RequestAndResults] {
+func MakeRpcComparator(cfg *utils.Config) executor.Extension[*rpc.RequestAndResults] {
 	if !cfg.Validate {
 		return extension.NilExtension[*rpc.RequestAndResults]{}
 	}
@@ -156,9 +155,9 @@ func tryRecovery(state executor.State[*rpc.RequestAndResults]) *comparatorError 
 	payload.Params[len(payload.Params)-1] = "0x" + strconv.FormatInt(int64(state.Block), 16)
 
 	// we only state on mainnet, so we can safely put mainnet chainID constant here
-	m, err := utils.SendRPCRequest(payload, 250)
+	m, err := utils.SendRpcRequest(payload, utils.MainnetChainID)
 	if err != nil {
-		return newComparatorError(nil, nil, state.Data, state.Block, cannotSendRPCRequest)
+		return newComparatorError(nil, nil, state.Data, state.Block, cannotSendRpcRequest)
 	}
 
 	s, ok := m["result"].(string)
@@ -196,7 +195,7 @@ func compareBalance(data *rpc.RequestAndResults, block int) *comparatorError {
 		if data.Error.Error.Code == internalErrorCode {
 			return newComparatorError(stateBalance.Text(16), data.Error.Error.Message, data, block, internalError)
 		}
-		return newComparatorError(stateBalance.Text(16), data.Error.Error.Message, data, block, internalError)
+		return newComparatorError(stateBalance.Text(16), data.Error.Error.Message, data, block, expectedErrorGotResult)
 	}
 
 	// no error
@@ -209,10 +208,6 @@ func compareBalance(data *rpc.RequestAndResults, block int) *comparatorError {
 
 	recordedBalance, ok := new(big.Int).SetString(recordedString, 16)
 	if !ok {
-		return newComparatorError(stateBalance.Text(16), string(data.Response.Result), data, block, cannotUnmarshalResult)
-	}
-
-	if err != nil {
 		return newComparatorError(stateBalance.Text(16), string(data.Response.Result), data, block, cannotUnmarshalResult)
 	}
 
@@ -237,7 +232,7 @@ func compareTransactionCount(data *rpc.RequestAndResults, block int) *comparator
 		if data.Error.Error.Code == internalErrorCode {
 			return newComparatorError(stateNonce, data.Error.Error.Message, data, block, internalError)
 		}
-		return newComparatorError(stateNonce, data.Error.Error.Message, data, block, internalError)
+		return newComparatorError(stateNonce, data.Error.Error.Message, data, block, expectedErrorGotResult)
 	}
 
 	var recordedString string
@@ -268,15 +263,15 @@ func compareCall(data *rpc.RequestAndResults, block int) *comparatorError {
 
 	// did StateDB return a valid result?
 	if data.StateDB.Result != nil {
-		return compareCallStateDBResult(data, block)
+		return compareCallStateDbResult(data, block)
 	}
 
 	return newUnexpectedDataTypeErr(data)
 }
 
-// compareCallStateDBResult compares valid call result recorded on API server with valid result returned by StateDB
-func compareCallStateDBResult(data *rpc.RequestAndResults, block int) *comparatorError {
-	dbString := "0x" + common.Bytes2Hex(data.StateDB.Result.([]byte))
+// compareCallStateDbResult compares valid call result recorded on API server with valid result returned by StateDb
+func compareCallStateDbResult(data *rpc.RequestAndResults, block int) *comparatorError {
+	dbString := hexutil.Encode(data.StateDB.Result.([]byte))
 
 	if data.Error == nil {
 		var recordedString string
@@ -306,7 +301,7 @@ func compareCallStateDBResult(data *rpc.RequestAndResults, block int) *comparato
 	var msg string
 
 	// do we know the error?
-	errs, ok := EVMErrors[data.Error.Error.Code]
+	errs, ok := EvmErrors[data.Error.Error.Code]
 	if !ok {
 		msg = fmt.Sprintf("unknown error code: %v", data.Error.Error.Code)
 	} else {
@@ -338,7 +333,7 @@ func compareCallStateDBResult(data *rpc.RequestAndResults, block int) *comparato
 		expectedErrorGotResult)
 }
 
-// compareEVMStateDBError compares error returned from EVMExecutor with recorded data
+// compareEVMStateDBError compares error returned from EvmExecutor with recorded data
 func compareEVMStateDBError(data *rpc.RequestAndResults, block int) *comparatorError {
 	if data.Error == nil {
 		return newComparatorError(
@@ -349,7 +344,7 @@ func compareEVMStateDBError(data *rpc.RequestAndResults, block int) *comparatorE
 			expectedResultGotError)
 	}
 
-	for _, e := range EVMErrors[data.Error.Error.Code] {
+	for _, e := range EvmErrors[data.Error.Error.Code] {
 		if strings.Contains(data.StateDB.Error.Error(), e) {
 			return nil
 		}
@@ -363,9 +358,9 @@ func compareEVMStateDBError(data *rpc.RequestAndResults, block int) *comparatorE
 
 	builder.WriteString("one of these error messages: ")
 
-	for i, e := range EVMErrors[data.Error.Error.Code] {
+	for i, e := range EvmErrors[data.Error.Error.Code] {
 		builder.WriteString(e)
-		if i < len(EVMErrors[data.Error.Error.Code]) {
+		if i < len(EvmErrors[data.Error.Error.Code]) {
 			builder.WriteString(" or ")
 		}
 	}
@@ -403,7 +398,7 @@ func compareEstimateGasStateDBResult(data *rpc.RequestAndResults, block int) *co
 		return newUnexpectedDataTypeErr(data)
 	}
 
-	// did we data an error
+	// did we receive an error
 	if data.Error != nil {
 		// internal error?
 		if data.Error.Error.Code == internalErrorCode {
@@ -412,7 +407,7 @@ func compareEstimateGasStateDBResult(data *rpc.RequestAndResults, block int) *co
 
 		return newComparatorError(
 			stateDBGas,
-			EVMErrors[data.Error.Error.Code],
+			EvmErrors[data.Error.Error.Code],
 			data,
 			block,
 			expectedErrorGotResult)
@@ -443,7 +438,7 @@ func compareEstimateGasStateDBResult(data *rpc.RequestAndResults, block int) *co
 
 // compareCode compares getCode data recorded on API server with data returned by StateDB
 func compareCode(data *rpc.RequestAndResults, block int) *comparatorError {
-	dbString := "0x" + common.Bytes2Hex(data.StateDB.Result.([]byte))
+	dbString := hexutil.Encode(data.StateDB.Result.([]byte))
 
 	// did we data an error?
 	if data.Error != nil {
@@ -451,7 +446,7 @@ func compareCode(data *rpc.RequestAndResults, block int) *comparatorError {
 		if data.Error.Error.Code == internalErrorCode {
 			return newComparatorError(dbString, data.Error.Error, data, block, internalError)
 		}
-		return newComparatorError(dbString, data.Error.Error, data, block, internalError)
+		return newComparatorError(dbString, data.Error.Error, data, block, expectedErrorGotResult)
 	}
 
 	var recordedString string
@@ -471,9 +466,8 @@ func compareCode(data *rpc.RequestAndResults, block int) *comparatorError {
 
 // compareStorageAt compares getStorageAt data recorded on API server with data returned by StateDB
 func compareStorageAt(data *rpc.RequestAndResults, block int) *comparatorError {
-	dbString := "0x" + common.Bytes2Hex(data.StateDB.Result.([]byte))
+	dbString := hexutil.Encode(data.StateDB.Result.([]byte))
 
-	// did we data an error?
 	if data.Error != nil {
 		// internal error?
 		if data.Error.Error.Code == internalErrorCode {
@@ -515,7 +509,7 @@ func newComparatorError(stateDB, expected any, data *rpc.RequestAndResults, bloc
 	case internalError:
 		// internalError is caused by opera, adding this to the error list does not make sense
 		return nil
-	case cannotSendRPCRequest:
+	case cannotSendRpcRequest:
 		return newCannotSendRPCRequestErr(data, block)
 	default:
 		return &comparatorError{
@@ -535,7 +529,7 @@ func newCannotSendRPCRequestErr(data *rpc.RequestAndResults, block int) *compara
 			"\n\tExpected result: %v"+
 			"\n\tExpected err: %v"+
 			"\n\nParams: %v", data.Query.Method, strconv.FormatInt(int64(block), 16), data.StateDB.Result, data.StateDB.Error, data.Response.Result, data.Error.Error, string(data.ParamsRaw)),
-		typ: cannotSendRPCRequest,
+		typ: cannotSendRpcRequest,
 	}
 }
 

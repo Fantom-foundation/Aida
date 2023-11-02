@@ -45,7 +45,7 @@ func Execute(block uint64, rec *RequestAndResults, archive state.NonCommittableS
 			return nil
 		}
 
-		evm := newEVMExecutor(block, archive, cfg, rec.Query.Params[0].(map[string]interface{}), timestamp)
+		evm := newEvmExecutor(block, archive, cfg, rec.Query.Params[0].(map[string]interface{}), timestamp)
 		return executeCall(evm)
 
 	case "estimateGas":
@@ -98,8 +98,8 @@ func executeGetTransactionCount(param interface{}, archive state.VmStateDB) (out
 	return
 }
 
-// executeCall into EVMExecutor and return the result
-func executeCall(evm *EVMExecutor) (out *StateDBData) {
+// executeCall into EvmExecutor and return the result
+func executeCall(evm *EvmExecutor) (out *StateDBData) {
 	var (
 		result *evmcore.ExecutionResult
 		err    error
@@ -107,7 +107,7 @@ func executeCall(evm *EVMExecutor) (out *StateDBData) {
 
 	out = new(StateDBData)
 
-	// get the result from EVMExecutor
+	// get the result from EvmExecutor
 	result, err = evm.sendCall()
 	if err != nil {
 		out.Error = err
@@ -120,8 +120,8 @@ func executeCall(evm *EVMExecutor) (out *StateDBData) {
 	return
 }
 
-// executeEstimateGas into EVMExecutor which calculates gas needed for a transaction
-func executeEstimateGas(evm *EVMExecutor) (out *StateDBData) {
+// executeEstimateGas into EvmExecutor which calculates gas needed for a transaction
+func executeEstimateGas(evm *EvmExecutor) (out *StateDBData) {
 	out = new(StateDBData)
 
 	out.Result, out.Error = evm.sendEstimateGas()
