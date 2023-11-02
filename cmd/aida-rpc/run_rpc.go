@@ -61,7 +61,7 @@ func run(cfg *utils.Config, provider executor.Provider[*rpc.RequestAndResults], 
 		extensionList = append(extensionList, statedb.MakeStateDbManager[*rpc.RequestAndResults](cfg))
 	}
 
-	return executor.NewExecutor(provider).Run(
+	return executor.NewExecutor(provider, cfg.LogLevel).Run(
 		executor.Params{
 			From:                   int(cfg.First),
 			To:                     int(cfg.Last) + 1,
