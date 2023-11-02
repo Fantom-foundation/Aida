@@ -39,9 +39,9 @@ func (p *operationProfiler[T]) PreRun(_ executor.State[T], ctx *executor.Context
 
 func (p *operationProfiler[T]) PreBlock(state executor.State[T], _ *executor.Context) error {
 	if uint64(state.Block) > p.interval.End() {
-		p.stats.PrintProfiling(p.interval.Start(), p.interval.End())
+		p.anlt.Print()
 		p.interval.Next()
-		p.stats.Reset()
+		p.anlt.Reset()
 	}
 
 	return nil
@@ -53,6 +53,6 @@ func (p *operationProfiler[T]) PostBlock(state executor.State[T], _ *executor.Co
 }
 
 func (p *operationProfiler[T]) PostRun(executor.State[T], *executor.Context, error) error {
-	p.stats.PrintProfiling(p.interval.Start(), p.lastProcessedBlock)
+	p.anlt.Print()
 	return nil
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"math"
 
+	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/jedib0t/go-pretty/v6/table"
 )
 
@@ -108,7 +109,7 @@ func (s *IncrementalStats) String() string {
 }
 
 type IncrementalAnalytics struct {
-	stats []IncrementalStats
+	stats    []IncrementalStats
 	printers []utils.Printer
 }
 
@@ -158,7 +159,7 @@ func (a *IncrementalAnalytics) GetKurtosis(id byte) float64 {
 	return a.stats[id].GetKurtosis()
 }
 
-func (a *IncrementalAnalytics) Print()  {
+func (a *IncrementalAnalytics) Print() {
 	for _, printer := range a.printers() {
 		printer.Print()
 	}
@@ -170,14 +171,15 @@ func (a *IncrementalAnalytics) AddPrinter(p Printer) {
 
 type prettyTableStats struct {
 	totalCount uint64
-	totalSum float64
+	totalSum   float64
 }
+
 func (a *IncrementalAnalytics) prettyTable() (table.Writer, prettyTableStats) {
 	t := table.NewWriter()
 
 	t.AppendHeader(table.Row{
 		"id", "first", "last", "n", "mean(us)", "std(us)", "min(us)", "max(us)",
-	}
+	})
 
 	for opId, stat := range a.stats {
 		totalElapsed += stat.GetSum()
@@ -194,25 +196,23 @@ func (a *IncrementalAnalytics) prettyTable() (table.Writer, prettyTableStats) {
 	}
 
 	stats := &prettyTableStats{
-		totalCount = 0,
-		totalSum = 0.0,
+		totalCount: 0,
+		totalSum:   0.0,
 	}
 
 	return t, stats
 }
 
 func (a *IncrementalAnalytics) AddCustomPrintToConsole() {
-	a.AddPrinter(utils.NewPrintToConsole(func () {
+	a.AddPrinter(utils.NewPrintToConsole(func() {
 		t, _ := a.prettyTable()
 		return t.Render()
 	}))
 }
 
 func (a *IncrementalAnalytics) AddCustomPrintToFile(filepath string) {
-	a.AddPrinter(utils.NewPrintToFile(filepath, func () {
+	a.AddPrinter(utils.NewPrintToFile(filepath, func() {
 		t, _ := a.prettyTable()
 		return t.RenderCSV()
 	}))
 }
-
-
