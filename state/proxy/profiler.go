@@ -324,7 +324,8 @@ func (p *ProfilerProxy) AddLog(log *types.Log) {
 }
 
 // GetLogs retrieves log entries.
-func (p *ProfilerProxy) GetLogs(hash common.Hash, blockHash common.Hash) (logs []*types.Log) {
+func (p *ProfilerProxy) GetLogs(hash common.Hash, blockHash common.Hash) []*types.Log {
+	var logs []*types.Log
 	p.do(operation.GetLogsID, func() {
 		logs = p.db.GetLogs(hash, blockHash)
 	})
