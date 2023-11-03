@@ -1,4 +1,4 @@
-package replay
+package validator
 
 import (
 	"encoding/json"
@@ -7,9 +7,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Fantom-foundation/Aida/iterator"
+	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension"
+	"github.com/Fantom-foundation/Aida/logger"
+	"github.com/Fantom-foundation/Aida/rpc"
+	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/status-im/keycard-go/hexutils"
+	"go.uber.org/mock/gomock"
 )
 
 const (
@@ -23,23 +28,111 @@ const (
 	longHexZero = "0x0000000000000000000000000000000000000000000000000000000000000000"
 )
 
+func TestRPCComparator_RPCComparatorIsNotCreatedIfNotEnabled(t *testing.T) {
+	cfg := &utils.Config{}
+	cfg.Validate = false
+
+	c := MakeRpcComparator(cfg)
+	if _, ok := c.(extension.NilExtension[*rpc.RequestAndResults]); !ok {
+		t.Error("extension must be nil")
+	}
+}
+
+func TestRPCComparator_PostTransactionDoesNotFailAndAppendsAndLogsErrorIfContinueOnFailureIsTrue(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	log := logger.NewMockLogger(ctrl)
+
+	cfg := &utils.Config{}
+	cfg.Validate = true
+	cfg.ContinueOnFailure = true
+
+	bigRes, _ := new(big.Int).SetString("1", 16)
+	rec, _ := json.Marshal(hexZero)
+
+	data := &rpc.RequestAndResults{
+		Query: &rpc.Body{
+			MethodBase: "getBalance",
+		},
+		Response: &rpc.Response{
+			Result: rec,
+		},
+		StateDB: &rpc.StateDBData{
+			Result: bigRes,
+		},
+	}
+
+	s := executor.State[*rpc.RequestAndResults]{
+		Data: data,
+	}
+
+	log.EXPECT().Warning(gomock.Any())
+
+	c := makeRPCComparator(cfg, log)
+	err := c.PostTransaction(s, nil)
+	if err != nil {
+		t.Errorf("unexpected error in post transaction; %v", err)
+	}
+
+	if len(c.errors) != 1 {
+		t.Errorf("incorrect number of errors appended\ngot: %v\nwant: %v", len(c.errors), 1)
+	}
+
+}
+
+func TestRPCComparator_PostTransactionFailsWhenContinueOnFailureIsNotEnabled(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	log := logger.NewMockLogger(ctrl)
+
+	cfg := &utils.Config{}
+	cfg.Validate = true
+	cfg.ContinueOnFailure = false
+
+	bigRes, _ := new(big.Int).SetString("1", 16)
+	rec, _ := json.Marshal(hexZero)
+
+	data := &rpc.RequestAndResults{
+		Query: &rpc.Body{
+			MethodBase: "getBalance",
+		},
+		Response: &rpc.Response{
+			Result: rec,
+		},
+		StateDB: &rpc.StateDBData{
+			Result: bigRes,
+		},
+	}
+
+	s := executor.State[*rpc.RequestAndResults]{
+		Data: data,
+	}
+
+	c := makeRPCComparator(cfg, log)
+	err := c.PostTransaction(s, nil)
+	if err == nil {
+		t.Errorf("post transaction must return error; %v", err)
+	}
+
+}
+
 // Test_compareBalanceOK tests compare func for getBalance method
 // It expects no error since results are same
 func Test_compareBalanceOK(t *testing.T) {
 	bigRes, _ := new(big.Int).SetString("1", 16)
 	rec, _ := json.Marshal(hexOne)
 
-	data := &OutData{
-		Method: "eth_getBalance",
-		Recorded: &RecordedData{
+	data := &rpc.RequestAndResults{
+		Query: &rpc.Body{
+			Method: "ftm_getBalance",
+		},
+		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &StateDBData{
+		StateDB: &rpc.StateDBData{
 			Result: bigRes,
 		},
 	}
 
-	err := compareBalance(data, new(strings.Builder))
+	err := compareBalance(data, 0)
 	if err != nil {
 		t.Errorf("error must be nil; err: %v", err)
 	}
@@ -52,17 +145,19 @@ func Test_compareBalanceErrorNoMatchingResult(t *testing.T) {
 	bigRes, _ := new(big.Int).SetString("1", 16)
 	rec, _ := json.Marshal(hexZero)
 
-	data := &OutData{
-		Method: "eth_getBalance",
-		Recorded: &RecordedData{
+	data := &rpc.RequestAndResults{
+		Query: &rpc.Body{
+			Method: "ftm_getBalance",
+		},
+		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &StateDBData{
+		StateDB: &rpc.StateDBData{
 			Result: bigRes,
 		},
 	}
 
-	err := compareBalance(data, new(strings.Builder))
+	err := compareBalance(data, 0)
 	if err == nil {
 		t.Errorf("error must not be nil; err: %v", err)
 		return
@@ -79,17 +174,19 @@ func Test_compareBalanceErrorNoMatchingResult(t *testing.T) {
 func Test_compareTransactionCountOK(t *testing.T) {
 	rec, _ := json.Marshal(hexOne)
 
-	data := &OutData{
-		Method: "eth_getTransactionCount",
-		Recorded: &RecordedData{
+	data := &rpc.RequestAndResults{
+		Query: &rpc.Body{
+			Method: "ftm_getTransactionCount",
+		},
+		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &StateDBData{
+		StateDB: &rpc.StateDBData{
 			Result: uint64(1),
 		},
 	}
 
-	err := compareTransactionCount(data, new(strings.Builder))
+	err := compareTransactionCount(data, 0)
 
 	if err != nil {
 		t.Errorf("error must be nil; err: %v", err)
@@ -102,17 +199,19 @@ func Test_compareTransactionCountOK(t *testing.T) {
 func Test_compareTransactionCountErrorNoMatchingResult(t *testing.T) {
 	rec, _ := json.Marshal(hexZero)
 
-	data := &OutData{
-		Method: "eth_getTransactionCount",
-		Recorded: &RecordedData{
+	data := &rpc.RequestAndResults{
+		Query: &rpc.Body{
+			Method: "ftm_getTransactionCount",
+		},
+		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &StateDBData{
+		StateDB: &rpc.StateDBData{
 			Result: uint64(1),
 		},
 	}
 
-	err := compareTransactionCount(data, new(strings.Builder))
+	err := compareTransactionCount(data, 0)
 	if err == nil {
 		t.Errorf("error must not be nil; err: %v", err)
 		return
@@ -127,19 +226,21 @@ func Test_compareTransactionCountErrorNoMatchingResult(t *testing.T) {
 // Test_compareCallOK tests compare func for call method
 // It expects no error since results are same
 func Test_compareCallOK(t *testing.T) {
-
 	rec, _ := json.Marshal(longHexOne)
-	data := &OutData{
-		Method: "eth_call",
-		Recorded: &RecordedData{
+
+	data := &rpc.RequestAndResults{
+		Query: &rpc.Body{
+			Method: "ftm_call",
+		},
+		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &StateDBData{
+		StateDB: &rpc.StateDBData{
 			Result: hexutils.HexToBytes(strings.TrimPrefix(longHexOne, "0x")),
 		},
 	}
 
-	err := compareCall(data, new(strings.Builder))
+	err := compareCall(data, 0)
 	if err != nil {
 		t.Errorf("error must be nil; err: %v", err)
 	}
@@ -149,17 +250,20 @@ func Test_compareCallOK(t *testing.T) {
 // It expects an error of no matching results since results are different
 func Test_compareCallErrorNoMatchingResult(t *testing.T) {
 	rec, _ := json.Marshal(longHexOne)
-	data := &OutData{
-		Method: "eth_call",
-		Recorded: &RecordedData{
+
+	data := &rpc.RequestAndResults{
+		Query: &rpc.Body{
+			Method: "ftm_call",
+		},
+		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &StateDBData{
+		StateDB: &rpc.StateDBData{
 			Result: hexutils.HexToBytes(strings.TrimPrefix(longHexZero, "0x")),
 		},
 	}
 
-	err := compareCall(data, new(strings.Builder))
+	err := compareCall(data, 0)
 	if err == nil {
 		t.Errorf("error must not be nil; err: %v", err)
 		return
@@ -174,17 +278,19 @@ func Test_compareCallErrorNoMatchingResult(t *testing.T) {
 // Test_compareCallErrorExpectedResultGotErr tests compare func for call method
 // It expects an error of "expected valid result, got error" since recorded data is a valid result but EVM returns error
 func Test_compareCallErrorExpectedResultGotErr(t *testing.T) {
-	data := &OutData{
-		Method: "eth_call",
-		Recorded: &RecordedData{
+	data := &rpc.RequestAndResults{
+		Query: &rpc.Body{
+			Method: "eth_call",
+		},
+		Response: &rpc.Response{
 			Result: []byte(hexOne),
 		},
-		StateDB: &StateDBData{
-			Error: errors.New("error"),
+		StateDB: &rpc.StateDBData{
+			Error: errors.New("err"),
 		},
 	}
 
-	err := compareCall(data, new(strings.Builder))
+	err := compareCall(data, 0)
 	if err == nil {
 		t.Errorf("error must not be nil; err: %v", err)
 		return
@@ -199,20 +305,22 @@ func Test_compareCallErrorExpectedResultGotErr(t *testing.T) {
 // Test_compareCallErrorExpectedErrGotResult tests compare func for call method
 // It expects an error of "expected error, got valid result" since recorded data is an error but EVM returns valid result
 func Test_compareCallErrorExpectedErrGotResult(t *testing.T) {
-	data := &OutData{
-		Method: "eth_call",
-		Recorded: &RecordedData{
-			Error: &iterator.ErrorMessage{
+	data := &rpc.RequestAndResults{
+		Query: &rpc.Body{
+			Method: "eth_call",
+		},
+		Error: &rpc.ErrorResponse{
+			Error: rpc.ErrorMessage{
 				Code:    -32000,
 				Message: "error",
 			},
 		},
-		StateDB: &StateDBData{
+		StateDB: &rpc.StateDBData{
 			Result: hexutils.HexToBytes(strings.TrimPrefix(longHexZero, "0x")),
 		},
 	}
 
-	err := compareCall(data, new(strings.Builder))
+	err := compareCall(data, 0)
 	if err == nil {
 		t.Errorf("error must not be null")
 		return
@@ -229,17 +337,19 @@ func Test_compareCallErrorExpectedErrGotResult(t *testing.T) {
 func Test_compareEstimateGasOK(t *testing.T) {
 	rec, _ := json.Marshal(hexOne)
 
-	data := &OutData{
-		Method: "eth_getTransactionCount",
-		Recorded: &RecordedData{
+	data := &rpc.RequestAndResults{
+		Query: &rpc.Body{
+			Method: "eth_estimateGas",
+		},
+		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &StateDBData{
+		StateDB: &rpc.StateDBData{
 			Result: hexutil.Uint64(1),
 		},
 	}
 
-	err := compareEstimateGas(data, new(strings.Builder))
+	err := compareEstimateGas(data, 0)
 	if err != nil {
 		t.Errorf("error must be nil; err: %v", err)
 	}
@@ -250,17 +360,19 @@ func Test_compareEstimateGasOK(t *testing.T) {
 func Test_compareEstimateGasErrorNoMatchingResult(t *testing.T) {
 	rec, _ := json.Marshal(hexOne)
 
-	data := &OutData{
-		Method: "eth_estimateGas",
-		Recorded: &RecordedData{
+	data := &rpc.RequestAndResults{
+		Query: &rpc.Body{
+			Method: "eth_estimateGas",
+		},
+		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &StateDBData{
+		StateDB: &rpc.StateDBData{
 			Result: hexutil.Uint64(0),
 		},
 	}
 
-	err := compareEstimateGas(data, new(strings.Builder))
+	err := compareEstimateGas(data, 0)
 	if err == nil {
 		t.Errorf("error must not be null")
 		return
@@ -275,17 +387,19 @@ func Test_compareEstimateGasErrorNoMatchingResult(t *testing.T) {
 // Test_compareEstimateGasErrorExpectedResultGotErr tests compare func for estimateGas method
 // It expects an error of "expected valid result, got error" since recorded data is a valid result but EVM returns error
 func Test_compareEstimateGasErrorExpectedResultGotErr(t *testing.T) {
-	data := &OutData{
-		Method: "eth_estimateGas",
-		Recorded: &RecordedData{
+	data := &rpc.RequestAndResults{
+		Query: &rpc.Body{
+			Method: "eth_estimateGas",
+		},
+		Response: &rpc.Response{
 			Result: []byte(hexOne),
 		},
-		StateDB: &StateDBData{
+		StateDB: &rpc.StateDBData{
 			Error: errors.New("error"),
 		},
 	}
 
-	err := compareEstimateGas(data, new(strings.Builder))
+	err := compareEstimateGas(data, 0)
 	if err == nil {
 		t.Errorf("error must be nil; err: %v", err)
 		return
@@ -299,20 +413,22 @@ func Test_compareEstimateGasErrorExpectedResultGotErr(t *testing.T) {
 // Test_compareEstimateGasErrorExpectedErrGotResult tests compare func for estimateGas method
 // It expects an error of "expected error, got valid result" since recorded data is an error but EVM returns valid result
 func Test_compareEstimateGasErrorExpectedErrGotResult(t *testing.T) {
-	data := &OutData{
-		Method: "eth_estimateGas",
-		Recorded: &RecordedData{
-			Error: &iterator.ErrorMessage{
+	data := &rpc.RequestAndResults{
+		Query: &rpc.Body{
+			Method: "eth_estimateGas",
+		},
+		Error: &rpc.ErrorResponse{
+			Error: rpc.ErrorMessage{
 				Code:    1000,
 				Message: "error",
 			},
 		},
-		StateDB: &StateDBData{
+		StateDB: &rpc.StateDBData{
 			Result: hexutil.Uint64(0),
 		},
 	}
 
-	err := compareEstimateGas(data, new(strings.Builder))
+	err := compareEstimateGas(data, 0)
 	if err == nil {
 		t.Errorf("error must not be null")
 		return
@@ -327,19 +443,21 @@ func Test_compareEstimateGasErrorExpectedErrGotResult(t *testing.T) {
 // Test_compareCodeOK tests compare func for getCode method
 // It expects no error since results are same
 func Test_compareCodeOK(t *testing.T) {
-
 	rec, _ := json.Marshal(longHexOne)
-	data := &OutData{
-		Method: "eth_getCode",
-		Recorded: &RecordedData{
+
+	data := &rpc.RequestAndResults{
+		Query: &rpc.Body{
+			Method: "eth_getCode",
+		},
+		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &StateDBData{
+		StateDB: &rpc.StateDBData{
 			Result: hexutils.HexToBytes(strings.TrimPrefix(longHexOne, "0x")),
 		},
 	}
 
-	err := compareCode(data, new(strings.Builder))
+	err := compareCode(data, 0)
 	if err != nil {
 		t.Errorf("error must be nil; err: %v", err)
 	}
@@ -349,17 +467,20 @@ func Test_compareCodeOK(t *testing.T) {
 // It expects an error of no matching results since results are different
 func Test_compareCodeErrorNoMatchingResult(t *testing.T) {
 	rec, _ := json.Marshal(longHexOne)
-	data := &OutData{
-		Method: "eth_getCode",
-		Recorded: &RecordedData{
+
+	data := &rpc.RequestAndResults{
+		Query: &rpc.Body{
+			Method: "eth_getCode",
+		},
+		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &StateDBData{
+		StateDB: &rpc.StateDBData{
 			Result: hexutils.HexToBytes(strings.TrimPrefix(longHexZero, "0x")),
 		},
 	}
 
-	err := compareCode(data, new(strings.Builder))
+	err := compareCode(data, 0)
 	if err == nil {
 		t.Errorf("error must not be nil; err: %v", err)
 		return
@@ -374,19 +495,21 @@ func Test_compareCodeErrorNoMatchingResult(t *testing.T) {
 // Test_compareStorageAtOK tests compare func for getStorageAt method
 // It expects no error since results are same
 func Test_compareStorageAtOK(t *testing.T) {
-
 	rec, _ := json.Marshal(longHexOne)
-	data := &OutData{
-		Method: "eth_getStorageAt",
-		Recorded: &RecordedData{
+
+	data := &rpc.RequestAndResults{
+		Query: &rpc.Body{
+			Method: "eth_getStorageAt",
+		},
+		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &StateDBData{
+		StateDB: &rpc.StateDBData{
 			Result: hexutils.HexToBytes(strings.TrimPrefix(longHexOne, "0x")),
 		},
 	}
 
-	err := compareStorageAt(data, new(strings.Builder))
+	err := compareStorageAt(data, 0)
 	if err != nil {
 		t.Errorf("error must be nil; err: %v", err)
 	}
@@ -396,17 +519,20 @@ func Test_compareStorageAtOK(t *testing.T) {
 // It expects an error of no matching results since results are different
 func Test_compareStorageAtErrorNoMatchingResult(t *testing.T) {
 	rec, _ := json.Marshal(longHexOne)
-	data := &OutData{
-		Method: "eth_getStorageAt",
-		Recorded: &RecordedData{
+
+	data := &rpc.RequestAndResults{
+		Query: &rpc.Body{
+			Method: "eth_getStorageAt",
+		},
+		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &StateDBData{
+		StateDB: &rpc.StateDBData{
 			Result: hexutils.HexToBytes(strings.TrimPrefix(longHexZero, "0x")),
 		},
 	}
 
-	err := compareStorageAt(data, new(strings.Builder))
+	err := compareStorageAt(data, 0)
 	if err == nil {
 		t.Errorf("error must not be nil; err: %v", err)
 		return

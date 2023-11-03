@@ -8,6 +8,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -79,8 +80,15 @@ type Executor[T any] interface {
 }
 
 // NewExecutor creates a new executor based on the given provider.
-func NewExecutor[T any](provider Provider[T]) Executor[T] {
-	return &executor[T]{provider}
+func NewExecutor[T any](provider Provider[T], logLevel string) Executor[T] {
+	return newExecutor[T](provider, logger.NewLogger(logLevel, "Executor"))
+}
+
+func newExecutor[T any](provider Provider[T], log logger.Logger) Executor[T] {
+	return &executor[T]{
+		provider: provider,
+		log:      log,
+	}
 }
 
 // ParallelismGranularity determines isolation level if same archive is kept for all transactions in block or for each is created new one
@@ -95,7 +103,7 @@ const (
 type Params struct {
 	// From is the beginning of the range of blocks to be processed (inclusive).
 	From int
-	// From is the end of the range of blocks to be processed (exclusive).
+	// To is the end of the range of blocks to be processed (exclusive).
 	To int
 	// State is an optional StateDB instance to be made available to the
 	// processor and extensions during execution.
@@ -208,6 +216,7 @@ type Context struct {
 
 type executor[T any] struct {
 	provider Provider[T]
+	log      logger.Logger
 }
 
 func (e *executor[T]) Run(params Params, processor Processor[T], extensions []Extension[T]) (err error) {
@@ -218,7 +227,8 @@ func (e *executor[T]) Run(params Params, processor Processor[T], extensions []Ex
 		// Skip PostRun actions if a panic occurred. In such a case there is no guarantee
 		// on the state of anything, and PostRun operations may deadlock or cause damage.
 		if r := recover(); r != nil {
-			panic(r) // just forward
+			e.log.Error(r)
+			return
 		}
 		err = errors.Join(
 			err,
@@ -246,6 +256,8 @@ func (e *executor[T]) Run(params Params, processor Processor[T], extensions []Ex
 }
 
 func (e *executor[T]) runSequential(params Params, processor Processor[T], extensions []Extension[T], state *State[T], ctx *Context) error {
+	e.log.Debug("Starting sequential run...")
+
 	first := true
 	err := e.provider.Run(params.From, params.To, func(tx TransactionInfo[T]) error {
 		state.Data = tx.Data
@@ -363,9 +375,15 @@ func (e *executor[T]) forwardBlocks(params Params, abort utils.Event) (chan []*T
 		abortErr := errors.New("aborted")
 
 		previousBlock := params.From
+		first := true
 
 		block := make([]*TransactionInfo[T], 0)
 		err := e.provider.Run(params.From, params.To, func(tx TransactionInfo[T]) error {
+			if first {
+				previousBlock = tx.Block
+				first = false
+			}
+
 			if tx.Block != previousBlock {
 				previousBlock = tx.Block
 				select {
@@ -429,6 +447,7 @@ func (e *executor[T]) runParallelTransaction(params Params, processor Processor[
 	var wg sync.WaitGroup
 	wg.Add(numWorkers)
 	workerErrs := make([]error, numWorkers)
+	e.log.Debugf("Starting %v workers run on Transaction granularity...", numWorkers)
 	for i := 0; i < numWorkers; i++ {
 		go func(i int) {
 			// channel panics back to the main thread.
@@ -505,6 +524,7 @@ func (e *executor[T]) runParallelBlock(params Params, processor Processor[T], ex
 	cachedPanic := new(atomic.Value)
 
 	wg.Add(numWorkers)
+	e.log.Debugf("Starting %v workers run on Block granularity...", numWorkers)
 	for i := 0; i < numWorkers; i++ {
 		go runBlock(i, blocks, wg, abort, workerErrs, processor, extensions, ctx, cachedPanic)
 	}
@@ -526,36 +546,78 @@ func (e *executor[T]) runParallelBlock(params Params, processor Processor[T], ex
 }
 
 func signalPreRun[T any](state State[T], ctx *Context, extensions []Extension[T]) error {
+	defer func() {
+		if r := recover(); r != nil {
+			p := fmt.Sprintf("sending forward recovered panic from PreRun; %v", r)
+			panic(p)
+		}
+
+	}()
 	return forEachForward(extensions, func(extension Extension[T]) error {
 		return extension.PreRun(state, ctx)
 	})
 }
 
-func signalPostRun[T any](state State[T], ctx *Context, err error, extensions []Extension[T]) error {
+func signalPostRun[T any](state State[T], ctx *Context, err error, extensions []Extension[T]) (recoveredPanic error) {
+	defer func() {
+		if r := recover(); r != nil {
+			recoveredPanic = fmt.Errorf("sending forward recovered panic from PostRun; %v", r)
+			return
+		}
+
+	}()
 	return forEachBackward(extensions, func(extension Extension[T]) error {
 		return extension.PostRun(state, ctx, err)
 	})
 }
 
 func signalPreBlock[T any](state State[T], ctx *Context, extensions []Extension[T]) error {
+	defer func() {
+		if r := recover(); r != nil {
+			p := fmt.Sprintf("sending forward recovered panic from PreBlock; %v", r)
+			panic(p)
+		}
+
+	}()
 	return forEachForward(extensions, func(extension Extension[T]) error {
 		return extension.PreBlock(state, ctx)
 	})
 }
 
 func signalPostBlock[T any](state State[T], ctx *Context, extensions []Extension[T]) error {
+	defer func() {
+		if r := recover(); r != nil {
+			p := fmt.Sprintf("sending forward recovered panic from PostBlock; %v", r)
+			panic(p)
+		}
+
+	}()
 	return forEachBackward(extensions, func(extension Extension[T]) error {
 		return extension.PostBlock(state, ctx)
 	})
 }
 
 func signalPreTransaction[T any](state State[T], ctx *Context, extensions []Extension[T]) error {
+	defer func() {
+		if r := recover(); r != nil {
+			p := fmt.Sprintf("sending forward recovered panic from PreTransaction; %v", r)
+			panic(p)
+		}
+
+	}()
 	return forEachForward(extensions, func(extension Extension[T]) error {
 		return extension.PreTransaction(state, ctx)
 	})
 }
 
 func signalPostTransaction[T any](state State[T], ctx *Context, extensions []Extension[T]) error {
+	defer func() {
+		if r := recover(); r != nil {
+			p := fmt.Sprintf("sending forward recovered panic from PostTransaction; %v", r)
+			panic(p)
+		}
+
+	}()
 	return forEachBackward(extensions, func(extension Extension[T]) error {
 		return extension.PostTransaction(state, ctx)
 	})

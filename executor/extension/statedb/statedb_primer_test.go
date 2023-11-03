@@ -10,7 +10,7 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestProgressLoggerExtension_NoPrimerIsCreatedIfDisabled(t *testing.T) {
+func TestStateDbPrimerExtension_NoPrimerIsCreatedIfDisabled(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.SkipPriming = true
 
@@ -21,7 +21,7 @@ func TestProgressLoggerExtension_NoPrimerIsCreatedIfDisabled(t *testing.T) {
 
 }
 
-func TestProgressLoggerExtension_PrimingDoesNotTriggerForExistingStateDb(t *testing.T) {
+func TestStateDbPrimerExtension_PrimingDoesNotTriggerForExistingStateDb(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
 
@@ -37,7 +37,7 @@ func TestProgressLoggerExtension_PrimingDoesNotTriggerForExistingStateDb(t *test
 
 }
 
-func TestProgressLoggerExtension_PrimingDoesTriggerForNonExistingStateDb(t *testing.T) {
+func TestStateDbPrimerExtension_PrimingDoesTriggerForNonExistingStateDb(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
 
@@ -51,4 +51,21 @@ func TestProgressLoggerExtension_PrimingDoesTriggerForNonExistingStateDb(t *test
 	ext := makeStateDbPrimer[any](cfg, log)
 
 	ext.PreRun(executor.State[any]{}, &executor.Context{})
+}
+
+func TestStateDbPrimerExtension_AttemptToPrimeBlockZeroDoesNotFail(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	log := logger.NewMockLogger(ctrl)
+
+	cfg := &utils.Config{}
+	cfg.SkipPriming = false
+	cfg.StateDbSrc = ""
+	cfg.First = 0
+
+	ext := makeStateDbPrimer[any](cfg, log)
+
+	err := ext.PreRun(executor.State[any]{}, &executor.Context{})
+	if err != nil {
+		t.Errorf("priming should not happen hence should not fail")
+	}
 }

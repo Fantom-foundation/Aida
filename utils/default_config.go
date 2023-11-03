@@ -13,7 +13,8 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		AppName:     ctx.App.HelpName,
 		CommandName: ctx.Command.Name,
 
-		APIRecordingSrcFile:   getFlagValue(ctx, APIRecordingSrcFileFlag).(string),
+		RpcRecordingFile: getFlagValue(ctx, RpcRecordingFileFlag).(string),
+
 		ArchiveMode:           getFlagValue(ctx, ArchiveModeFlag).(bool),
 		ArchiveQueryRate:      getFlagValue(ctx, ArchiveQueryRateFlag).(int),
 		ArchiveMaxQueryAge:    getFlagValue(ctx, ArchiveMaxQueryAgeFlag).(int),

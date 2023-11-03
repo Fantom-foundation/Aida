@@ -22,7 +22,7 @@ type JsonRPCRequest struct {
 	JSONRPC string        `json:"jsonrpc"`
 }
 
-func SendRPCRequest(payload JsonRPCRequest, chainId ChainID) (map[string]interface{}, error) {
+func SendRpcRequest(payload JsonRPCRequest, chainId ChainID) (map[string]interface{}, error) {
 	url, err := GetProvider(chainId)
 	if err != nil {
 		return nil, err
@@ -88,7 +88,7 @@ func getEpochByNumber(blockStr string, chainId ChainID) (uint64, error) {
 		JSONRPC: "2.0",
 	}
 
-	m, err := SendRPCRequest(payload, chainId)
+	m, err := SendRpcRequest(payload, chainId)
 	if err != nil {
 		return 0, err
 	}

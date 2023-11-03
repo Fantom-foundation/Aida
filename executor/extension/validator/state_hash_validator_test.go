@@ -22,6 +22,8 @@ const exampleHashD = "0x03000000000000000000000000000000000000000000000000000000
 
 func TestStateHashValidator_NotActiveIfNotEnabledInConfig(t *testing.T) {
 	cfg := &utils.Config{}
+	cfg.DbImpl = "carmen"
+	cfg.CarmenSchema = 5
 	cfg.ValidateStateHashes = false
 
 	ext := MakeStateHashValidator[any](cfg)
@@ -43,6 +45,8 @@ func TestStateHashValidator_FailsIfHashIsNotFoundInAidaDb(t *testing.T) {
 	)
 
 	cfg := &utils.Config{}
+	cfg.DbImpl = "carmen"
+	cfg.CarmenSchema = 5
 	ext := makeStateHashValidator[any](cfg, log)
 	ext.hashProvider = hashProvider
 
@@ -73,6 +77,8 @@ func TestStateHashValidator_InvalidHashOfLiveDbIsDetected(t *testing.T) {
 	blockNumber := 1
 
 	cfg := &utils.Config{}
+	cfg.DbImpl = "carmen"
+	cfg.CarmenSchema = 5
 	ext := makeStateHashValidator[any](cfg, log)
 	ext.hashProvider = hashProvider
 
@@ -96,7 +102,10 @@ func TestStateHashValidator_InvalidHashOfArchiveDbIsDetected(t *testing.T) {
 	blockNumber := 1
 
 	cfg := &utils.Config{}
+	cfg.DbImpl = "carmen"
+	cfg.CarmenSchema = 5
 	cfg.ArchiveMode = true
+	cfg.ArchiveVariant = "s5"
 
 	ext := makeStateHashValidator[any](cfg, log)
 	ext.hashProvider = hashProvider
@@ -158,8 +167,12 @@ func TestStateHashValidator_ChecksArchiveHashesOfLaggingArchive(t *testing.T) {
 	)
 
 	cfg := &utils.Config{}
+	cfg.DbImpl = "carmen"
+	cfg.CarmenSchema = 5
 	cfg.Last = 5
 	cfg.ArchiveMode = true
+	cfg.ArchiveVariant = "s5"
+
 	ext := makeStateHashValidator[any](cfg, log)
 	ext.hashProvider = hashProvider
 	ctx := &executor.Context{State: db}
@@ -207,8 +220,12 @@ func TestStateHashValidator_ChecksArchiveHashesOfLaggingArchiveDoesNotWaitForNon
 	)
 
 	cfg := &utils.Config{}
+	cfg.DbImpl = "carmen"
+	cfg.CarmenSchema = 5
 	cfg.Last = 5
 	cfg.ArchiveMode = true
+	cfg.ArchiveVariant = "s5"
+
 	ext := makeStateHashValidator[any](cfg, log)
 	ext.hashProvider = hashProvider
 	ctx := &executor.Context{State: db}
@@ -245,8 +262,12 @@ func TestStateHashValidator_ValidatingLaggingArchivesIsSkippedIfRunIsAborted(t *
 	)
 
 	cfg := &utils.Config{}
+	cfg.DbImpl = "carmen"
+	cfg.CarmenSchema = 5
 	cfg.Last = 5
 	cfg.ArchiveMode = true
+	cfg.ArchiveVariant = "s5"
+
 	ext := makeStateHashValidator[any](cfg, log)
 	ext.hashProvider = hashProvider
 	ctx := &executor.Context{State: db}
@@ -259,5 +280,63 @@ func TestStateHashValidator_ValidatingLaggingArchivesIsSkippedIfRunIsAborted(t *
 	// PostRun should finish up checking all remaining archive hashes and detect the error in block 2.
 	if err := ext.PostRun(executor.State[any]{Block: 2}, ctx, fmt.Errorf("dummy")); err != nil {
 		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+func TestStateHashValidator_PreRunReturnsErrorIfWrongDbImplIsChosen(t *testing.T) {
+	cfg := &utils.Config{}
+	cfg.DbImpl = "wrong"
+	cfg.Last = 5
+
+	ext := makeStateHashValidator[any](cfg, nil)
+
+	// A PostBlock run should check the LiveDB and the ArchiveDB up to block 0.
+	err := ext.PreRun(executor.State[any]{}, nil)
+	if err == nil {
+		t.Fatal("pre run must return an error")
+	}
+
+	if strings.Compare(err.Error(), "state-hash-validation only works with db-impl carmen or geth") != 0 {
+		t.Fatalf("unexpected err")
+	}
+}
+
+func TestStateHashValidator_PreRunReturnsErrorIfWrongDbVariantIsChosen(t *testing.T) {
+	cfg := &utils.Config{}
+	cfg.DbImpl = "carmen"
+	cfg.CarmenSchema = 3
+	cfg.Last = 5
+
+	ext := makeStateHashValidator[any](cfg, nil)
+
+	// A PostBlock run should check the LiveDB and the ArchiveDB up to block 0.
+	err := ext.PreRun(executor.State[any]{}, nil)
+	if err == nil {
+		t.Fatal("pre run must return an error")
+	}
+
+	if strings.Compare(err.Error(), "state-hash-validation only works with carmen schema 5") != 0 {
+		t.Fatalf("unexpected err")
+	}
+}
+
+func TestStateHashValidator_PreRunReturnsErrorIfArchiveIsEnabledAndWrongVariantIsChosen(t *testing.T) {
+	cfg := &utils.Config{}
+	cfg.DbImpl = "carmen"
+	cfg.CarmenSchema = 5
+	cfg.Last = 5
+	cfg.ArchiveMode = true
+	cfg.ArchiveVariant = "wrong"
+
+	ext := makeStateHashValidator[any](cfg, nil)
+
+	// A PostBlock run should check the LiveDB and the ArchiveDB up to block 0.
+	err := ext.PreRun(executor.State[any]{}, nil)
+	if err == nil {
+		t.Fatal("pre run must return an error")
+	}
+
+	if strings.Compare(err.Error(), "archive state-hash-validation only works with archive variant s5") != 0 {
+		t.Fatalf("unexpected err")
 	}
 }
