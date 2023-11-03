@@ -54,9 +54,14 @@ func autogen(ctx *cli.Context) error {
 	}
 
 	var g *generator
-	g, err = prepareAutogen(ctx, cfg)
+	var ok bool
+	g, ok, err = prepareAutogen(ctx, cfg)
 	if err != nil {
 		return fmt.Errorf("cannot start autogen; %v", err)
+	}
+	if !ok {
+		g.log.Warningf("supplied targetEpoch %d is already reached; latest generated epoch %d", g.targetEpoch, g.opera.firstEpoch-1)
+		return nil
 	}
 
 	err = autogenRun(cfg, g)
@@ -70,19 +75,19 @@ func autogen(ctx *cli.Context) error {
 }
 
 // prepareAutogen initializes a generator object, opera binary and adjust target range
-func prepareAutogen(ctx *cli.Context, cfg *utils.Config) (*generator, error) {
+func prepareAutogen(ctx *cli.Context, cfg *utils.Config) (*generator, bool, error) {
 	// this explicit overwrite is necessary at first autogen run,
 	// in later runs the paths are correctly set in adjustMissingConfigValues
 	utils.OverwriteDbPathsByAidaDb(cfg)
 
 	g, err := newGenerator(ctx, cfg)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	err = g.opera.init()
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	// user specified targetEpoch
@@ -91,7 +96,7 @@ func prepareAutogen(ctx *cli.Context, cfg *utils.Config) (*generator, error) {
 	} else {
 		err = g.calculatePatchEnd()
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 	}
 
@@ -99,9 +104,9 @@ func prepareAutogen(ctx *cli.Context, cfg *utils.Config) (*generator, error) {
 
 	// start epoch is last epoch + 1
 	if g.opera.firstEpoch > g.targetEpoch {
-		return nil, fmt.Errorf("supplied targetEpoch %d is already reached; latest generated epoch %d", g.targetEpoch, g.opera.firstEpoch-1)
+		return g, false, nil
 	}
-	return g, nil
+	return g, true, nil
 }
 
 // setLock creates lockfile in case of error while generating
