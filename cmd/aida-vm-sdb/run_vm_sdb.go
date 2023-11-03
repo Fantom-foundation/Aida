@@ -85,7 +85,7 @@ func run(
 	}...,
 	)
 
-	return executor.NewExecutor(provider).Run(
+	return executor.NewExecutor(provider, cfg.LogLevel).Run(
 		executor.Params{
 			From:  int(cfg.First),
 			To:    int(cfg.Last) + 1,

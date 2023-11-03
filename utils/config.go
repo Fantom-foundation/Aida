@@ -95,7 +95,7 @@ type Config struct {
 	First uint64 // first block
 	Last  uint64 // last block
 
-	APIRecordingSrcFile   string         // path to source file with recorded API data
+	RpcRecordingFile      string         // path to source file with recorded RPC requests
 	ArchiveMode           bool           // enable archive mode
 	ArchiveQueryRate      int            // the queries per second send to the archive
 	ArchiveMaxQueryAge    int            // the maximum age for archive queries (in blocks)
