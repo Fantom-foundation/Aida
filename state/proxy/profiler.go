@@ -19,18 +19,18 @@ import (
 // invoked StateDB operations.
 type ProfilerProxy struct {
 	db  state.StateDB  // state db
-	ps  *profile.Stats // operation statistics
+	//ps  *profile.Stats // operation statistics
+	anlt *profile.IncrementalAnalytics
 	log *logging.Logger
 }
 
 // NewProfilerProxy creates a new StateDB profiler.
-func NewProfilerProxy(db state.StateDB, csv string, logLevel string) (*ProfilerProxy, *profile.Stats) {
+func NewProfilerProxy(db state.StateDB, csv string, logLevel string) (*ProfilerProxy, *profile.IncrementalAnalytics) {
 	p := new(ProfilerProxy)
 	p.db = db
-	p.ps = profile.NewStats(csv)
-	p.ps.FillLabels(operation.CreateIdLabelMap())
+	p.anlt = profile.NewIncrementalAnalytics(len(operation.CreateIdLabelMap()))
 	p.log = logger.NewLogger(logLevel, "Proxy Profiler")
-	return p, p.ps
+	return p, p.anlt
 }
 
 // CreateAccount creates a new account.
@@ -272,7 +272,7 @@ func (p *ProfilerProxy) do(opId byte, op func()) {
 	start := time.Now()
 	op()
 	elapsed := time.Since(start)
-	p.ps.Profile(opId, elapsed)
+	p.anlt.Update(opId, float64(elapsed))
 }
 
 func (p *ProfilerProxy) BeginTransaction(number uint32) {
