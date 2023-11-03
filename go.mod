@@ -16,6 +16,7 @@ require (
 	github.com/goccy/go-graphviz v0.1.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/google/martian v2.1.0+incompatible
+	github.com/jedib0t/go-pretty/v6 v6.4.9
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/klauspost/compress v1.15.11
 	github.com/mandolyte/mdtopdf v1.5.3
@@ -78,7 +79,6 @@ require (
 	github.com/google/uuid v1.3.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/graph-gophers/graphql-go v1.3.0 // indirect
-	github.com/grd/stat v0.0.0-20130623202159-138af3fd5012 // indirect
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect
 	github.com/holiman/bloomfilter/v2 v2.0.3 // indirect
 	github.com/holiman/uint256 v1.2.1 // indirect
