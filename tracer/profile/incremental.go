@@ -85,6 +85,10 @@ func (s *IncrementalStats) GetVariance() float64 {
 	return s.m2 / (float64(s.count))
 }
 
+func (s *IncrementalStats) GetStandardDeviation() float64 {
+	return math.Sqrt(s.GetVariance())
+}
+
 func (s *IncrementalStats) GetSkewness() float64 {
 	return math.Sqrt(float64(s.count)) * s.m3 / math.Pow(s.m2, 1.5)
 }
@@ -150,6 +154,10 @@ func (a *IncrementalAnalytics) GetMean(id byte) float64 {
 
 func (a *IncrementalAnalytics) GetVariance(id byte) float64 {
 	return a.stats[id].GetVariance()
+}
+
+func (a *IncrementalAnalytics) GetStandardDeviation(id byte) float64 {
+	return a.stats[id].GetStandardDeviation()
 }
 
 func (a *IncrementalAnalytics) GetSkewness(id byte) float64 {
