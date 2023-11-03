@@ -18,7 +18,7 @@ func main() {
 			"result with result returned by DB.",
 		Copyright: "(c) 2023 Fantom Foundation",
 		Flags: []cli.Flag{
-			&utils.RPCRecordingFileFlag,
+			&utils.RpcRecordingFileFlag,
 			&substate.WorkersFlag,
 			&utils.LogFileFlag,
 
