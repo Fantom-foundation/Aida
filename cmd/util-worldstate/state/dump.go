@@ -57,6 +57,7 @@ func dumpState(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	// TODO rewrite so that the DumpState intakes just opera directory without the /chaindata/leveldb-fsh suffix
 	cfg.OperaDb, err = DefaultPath(ctx, &utils.OperaDbFlag, ".opera/chaindata/leveldb-fsh")
 	if err != nil {
 		return err
