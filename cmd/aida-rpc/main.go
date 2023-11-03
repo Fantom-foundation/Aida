@@ -4,8 +4,6 @@ import (
 	"log"
 	"os"
 
-	"github.com/Fantom-foundation/Aida/cmd/aida-rpc-adb/flags"
-	"github.com/Fantom-foundation/Aida/cmd/aida-rpc-adb/replay"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -14,17 +12,15 @@ import (
 
 func main() {
 	app := &cli.App{
-		Action: replay.ReplayAPI,
-		Name:   "Replay-API",
+		Action: RunRpc,
+		Name:   "Replay-RPC",
 		Usage: "Sends real API requests recorded on rpcapi.fantom.network to StateDB then compares recorded" +
 			"result with result returned by DB.",
 		Copyright: "(c) 2023 Fantom Foundation",
 		Flags: []cli.Flag{
-			&utils.APIRecordingSrcFileFlag,
+			&utils.RpcRecordingFileFlag,
 			&substate.WorkersFlag,
-			&flags.Skip,
-			&flags.LogToFile,
-			&flags.LogFileDir,
+			&utils.LogFileFlag,
 
 			// VM
 			&utils.VmImplementation,

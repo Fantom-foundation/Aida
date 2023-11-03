@@ -375,9 +375,15 @@ func (e *executor[T]) forwardBlocks(params Params, abort utils.Event) (chan []*T
 		abortErr := errors.New("aborted")
 
 		previousBlock := params.From
+		first := true
 
 		block := make([]*TransactionInfo[T], 0)
 		err := e.provider.Run(params.From, params.To, func(tx TransactionInfo[T]) error {
+			if first {
+				previousBlock = tx.Block
+				first = false
+			}
+
 			if tx.Block != previousBlock {
 				previousBlock = tx.Block
 				select {

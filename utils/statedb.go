@@ -55,6 +55,7 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 		stateDbInfo    StateDbInfo
 		stateDbPath    string
 		tmpStateDbPath string
+		log            = logger.NewLogger(cfg.LogLevel, "StateDB-Creation")
 	)
 
 	// make a copy of source statedb
@@ -63,6 +64,13 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 		if err != nil {
 			return nil, "", fmt.Errorf("failed to create a temporary directory; %v", err)
 		}
+
+		stat, err := os.Stat(cfg.StateDbSrc)
+		if err != nil {
+			return nil, "", fmt.Errorf("cannot find stats of stated-db %v; %v", cfg.StateDbSrc, err)
+		}
+
+		log.Infof("Copying your StateDb. Size: %v MB", stat.Size()*1000000)
 		if err := CopyDir(cfg.StateDbSrc, tmpStateDbPath); err != nil {
 			return nil, "", fmt.Errorf("failed to copy source statedb to temporary directory; %v", err)
 		}
@@ -90,6 +98,7 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 
 	// set last block to Archives last block
 	if cfg.Last > stateDbInfo.Block {
+		log.Warningf("Last block you set in arguments (%v) is not within given StateDB (%v). Setting last block to %v.", cfg.Last, stateDbInfo.Block, stateDbInfo.Block)
 		cfg.Last = stateDbInfo.Block
 	}
 
