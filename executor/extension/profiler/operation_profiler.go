@@ -44,6 +44,13 @@ type operationProfiler[T any] struct {
 	lastProcessedBlock uint64
 }
 
+func min(a, b uint64) uint64 {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 func (p *operationProfiler[T]) prettyTable() table.Writer {
 	t := table.NewWriter()
 
@@ -60,7 +67,7 @@ func (p *operationProfiler[T]) prettyTable() table.Writer {
 		t.AppendRow(table.Row{
 			opId,
 			p.intervalStart,
-			p.intervalEnd,
+			min(p.intervalEnd, p.cfg.Last),
 			stat.GetCount(),
 			stat.GetSum(),
 			stat.GetMean(),
