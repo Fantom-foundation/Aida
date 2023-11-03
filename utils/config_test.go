@@ -86,7 +86,7 @@ func TestUtilsConfig_SetBlockRange(t *testing.T) {
 		t.Fatalf("Failed to parse last block; expected: %d, have: %d", 40_000_000, last)
 	}
 
-	first, last, err = SetBlockRange("OpeRa", "berlin", 250)
+	first, last, err = SetBlockRange("OpeRa", "berlin", MainnetChainID)
 	if err != nil {
 		t.Fatalf("Failed to set block range (opera-berlin on mainnet): %v", err)
 	}
@@ -99,7 +99,7 @@ func TestUtilsConfig_SetBlockRange(t *testing.T) {
 		t.Fatalf("Failed to parse last block; expected: %d, have: %d", 37_455_223, last)
 	}
 
-	first, last, err = SetBlockRange("zero", "London", 4002)
+	first, last, err = SetBlockRange("zero", "London", TestnetChainID)
 	if err != nil {
 		t.Fatalf("Failed to set block range (zero-london on testnet): %v", err)
 	}
@@ -113,7 +113,7 @@ func TestUtilsConfig_SetBlockRange(t *testing.T) {
 	}
 
 	// test addition/subtraction
-	first, last, err = SetBlockRange("opera+23456", "London-100", 4002)
+	first, last, err = SetBlockRange("opera+23456", "London-100", TestnetChainID)
 	if err != nil {
 		t.Fatalf("Failed to set block range (opera+23456-London-100 on mainnet): %v", err)
 	}
@@ -127,7 +127,7 @@ func TestUtilsConfig_SetBlockRange(t *testing.T) {
 	}
 
 	// test upper/lower cases
-	first, last, err = SetBlockRange("berlin-1000", "LonDoN", 250)
+	first, last, err = SetBlockRange("berlin-1000", "LonDoN", MainnetChainID)
 	if err != nil {
 		t.Fatalf("Failed to set block range (berlin-1000-LonDoN on mainnet): %v", err)
 	}
@@ -141,7 +141,7 @@ func TestUtilsConfig_SetBlockRange(t *testing.T) {
 	}
 
 	// test first and last keyword. Since no metadata, default values are expected
-	first, last, err = SetBlockRange("first", "last", 250)
+	first, last, err = SetBlockRange("first", "last", MainnetChainID)
 	if err != nil {
 		t.Fatalf("Failed to set block range (first-last on mainnet): %v", err)
 	}
@@ -155,7 +155,7 @@ func TestUtilsConfig_SetBlockRange(t *testing.T) {
 	}
 
 	// test lastpatch and last keyword
-	first, last, err = SetBlockRange("lastpatch", "last", 250)
+	first, last, err = SetBlockRange("lastpatch", "last", MainnetChainID)
 	if err != nil {
 		t.Fatalf("Failed to set block range (lastpatch-last on mainnet): %v", err)
 	}
@@ -175,27 +175,27 @@ func TestUtilsConfig_SetInvalidBlockRange(t *testing.T) {
 		t.Fatalf("Failed to throw an error")
 	}
 
-	_, _, err = SetBlockRange("1000", "0", 4002)
+	_, _, err = SetBlockRange("1000", "0", TestnetChainID)
 	if err == nil {
 		t.Fatalf("Failed to throw an error")
 	}
 
-	_, _, err = SetBlockRange("tokyo", "berlin", 250)
+	_, _, err = SetBlockRange("tokyo", "berlin", MainnetChainID)
 	if err == nil {
 		t.Fatalf("Failed to throw an error")
 	}
 
-	_, _, err = SetBlockRange("tokyo", "berlin", 4002)
+	_, _, err = SetBlockRange("tokyo", "berlin", TestnetChainID)
 	if err == nil {
 		t.Fatalf("Failed to throw an error")
 	}
 
-	_, _, err = SetBlockRange("london-opera", "opera+london", 250)
+	_, _, err = SetBlockRange("london-opera", "opera+london", MainnetChainID)
 	if err == nil {
 		t.Fatalf("Failed to throw an error")
 	}
 
-	_, _, err = SetBlockRange("london-opera", "opera+london", 4002)
+	_, _, err = SetBlockRange("london-opera", "opera+london", TestnetChainID)
 	if err == nil {
 		t.Fatalf("Failed to throw an error")
 	}

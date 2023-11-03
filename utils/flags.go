@@ -280,9 +280,10 @@ var (
 		Usage: "Depth of snapshot history",
 		Value: 100,
 	}
-	DbFlag = cli.PathFlag{
-		Name:  "db",
-		Usage: "Path to the database",
+	OperaDbFlag = cli.PathFlag{
+		Name:    "db",
+		Aliases: []string{"datadir"},
+		Usage:   "Path to the opera database",
 	}
 	GenesisFlag = cli.PathFlag{
 		Name:  "genesis",

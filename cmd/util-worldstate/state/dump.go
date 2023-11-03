@@ -40,7 +40,7 @@ var CmdDumpState = cli.Command{
 		- Contract Storage`,
 	ArgsUsage: "<root> <input-db> <input-db-name> <input-db-type> <workers>",
 	Flags: []cli.Flag{
-		&utils.DbFlag,
+		&utils.OperaDbFlag,
 		&utils.StateDbVariantFlag,
 		&utils.SourceTableNameFlag,
 		&utils.TrieRootHashFlag,
@@ -57,7 +57,8 @@ func dumpState(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	cfg.Db, err = DefaultPath(ctx, &utils.DbFlag, ".opera/chaindata/leveldb-fsh")
+	// TODO rewrite so that the DumpState intakes just opera directory without the /chaindata/leveldb-fsh suffix
+	cfg.OperaDb, err = DefaultPath(ctx, &utils.OperaDbFlag, ".opera/chaindata/leveldb-fsh")
 	if err != nil {
 		return err
 	}
@@ -67,7 +68,7 @@ func dumpState(ctx *cli.Context) error {
 
 func DumpState(ctx *cli.Context, cfg *utils.Config) error {
 	// open the source trie DB
-	store, err := opera.Connect(cfg.DbVariant, cfg.Db, cfg.SourceTableName)
+	store, err := opera.Connect(cfg.DbVariant, cfg.OperaDb, cfg.SourceTableName)
 	if err != nil {
 		return err
 	}

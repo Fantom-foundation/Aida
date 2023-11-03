@@ -29,7 +29,7 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		SrcDbReadonly:         false,
 		CPUProfile:            getFlagValue(ctx, CpuProfileFlag).(string),
 		CPUProfilePerInterval: getFlagValue(ctx, CpuProfilePerIntervalFlag).(bool),
-		Db:                    getFlagValue(ctx, DbFlag).(string),
+		OperaDb:               getFlagValue(ctx, OperaDbFlag).(string),
 		DbTmp:                 getFlagValue(ctx, DbTmpFlag).(string),
 		Debug:                 getFlagValue(ctx, TraceDebugFlag).(bool),
 		DebugFrom:             getFlagValue(ctx, DebugFromFlag).(uint64),

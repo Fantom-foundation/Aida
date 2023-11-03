@@ -37,7 +37,7 @@ func newAidaOpera(ctx *cli.Context, cfg *utils.Config, log *logging.Logger) *aid
 func (opera *aidaOpera) init() error {
 	var err error
 
-	_, err = os.Stat(opera.cfg.Db)
+	_, err = os.Stat(opera.cfg.OperaDb)
 	if os.IsNotExist(err) {
 		opera.isNew = true
 
@@ -67,13 +67,7 @@ func (opera *aidaOpera) init() error {
 	// running this command before starting opera results in getting first block and epoch on which opera starts
 	err = opera.getOperaBlockAndEpoch(true)
 	if err != nil {
-		return fmt.Errorf("cannot retrieve block from existing opera database %v; %v", opera.cfg.Db, err)
-	}
-
-	// when initializing fresh opera, the block returned by it is -1 because it has not generated any blocks yet
-	// for this to work correctly, we need to up operas first block by one
-	if opera.isNew {
-		opera.firstBlock++
+		return fmt.Errorf("cannot retrieve block from existing opera database %v; %v", opera.cfg.OperaDb, err)
 	}
 
 	opera.log.Noticef("Opera block from last run is: %v", opera.firstBlock)
@@ -106,10 +100,10 @@ func createTmpDir(cfg *utils.Config) (string, error) {
 
 // initFromGenesis file
 func (opera *aidaOpera) initFromGenesis() error {
-	cmd := exec.Command(getOperaBinary(opera.cfg), "--datadir", opera.cfg.Db, "--genesis", opera.cfg.Genesis,
+	cmd := exec.Command(getOperaBinary(opera.cfg), "--datadir", opera.cfg.OperaDb, "--genesis", opera.cfg.Genesis,
 		"--exitwhensynced.epoch=0", "--cache", strconv.Itoa(opera.cfg.Cache), "--db.preset=legacy-ldb", "--maxpeers=0")
 
-	err := runCommand(cmd, nil, opera.log)
+	err := runCommand(cmd, nil, nil, opera.log)
 	if err != nil {
 		return fmt.Errorf("load opera genesis; %v", err.Error())
 	}
@@ -117,22 +111,9 @@ func (opera *aidaOpera) initFromGenesis() error {
 	return nil
 }
 
-// rollbackToEpoch file TODO should be part of future autogen recovery
-func (opera *aidaOpera) rollbackToEpoch() error {
-	//cmd := exec.Command(getOperaBinary(opera.cfg), "--datadir", opera.cfg.Db, "--genesis", opera.cfg.Genesis,
-	//	"--exitwhensynced.epoch=0", "--cache", strconv.Itoa(opera.cfg.Cache), "--db.preset=legacy-ldb", "--maxpeers=0", "db", "heal", "--experimental")
-	//
-	//err := runCommand(cmd, nil, opera.log)
-	//if err != nil {
-	//	return fmt.Errorf("load opera genesis; %v", err.Error())
-	//}
-	//
-	return nil
-}
-
 // getOperaBlockAndEpoch retrieves current block of opera head
 func (opera *aidaOpera) getOperaBlockAndEpoch(isFirst bool) error {
-	operaPath := filepath.Join(opera.cfg.Db, "/chaindata/leveldb-fsh/")
+	operaPath := filepath.Join(opera.cfg.OperaDb, "/chaindata/leveldb-fsh/")
 	store, err := wsOpera.Connect("ldb", operaPath, "main")
 	if err != nil {
 		return err
@@ -150,12 +131,9 @@ func (opera *aidaOpera) getOperaBlockAndEpoch(isFirst bool) error {
 
 	// we are assuming that we are at brink of epochs
 	// in this special case epochNumber is already one number higher
-	// todo epoch number at first blocks should not be modified if the recording started midst of epoch
 	epochNumber -= 1
 
-	// todo check ifNew then fb + 1
 	if isFirst {
-		// opera returns block off by one
 		opera.firstBlock = blockNumber
 		opera.firstEpoch = epochNumber
 	} else {
@@ -166,16 +144,18 @@ func (opera *aidaOpera) getOperaBlockAndEpoch(isFirst bool) error {
 	return nil
 }
 
-// prepareDumpCliContext
+// prepareDumpCliContext prepares cli context for dumping the MPT into world state
 func (opera *aidaOpera) prepareDumpCliContext() error {
-	// TODO rewrite
-	tmpSaveDbPath := opera.cfg.Db
-	opera.cfg.Db = filepath.Join(opera.cfg.Db, "chaindata/leveldb-fsh/")
+	// Dump uses cfg.OperaDb and overwrites it therefore the original value needs to be saved and retrieved after DumpState
+	tmpSaveDbPath := opera.cfg.OperaDb
+	defer func() {
+		opera.cfg.OperaDb = tmpSaveDbPath
+	}()
+	opera.cfg.OperaDb = filepath.Join(opera.cfg.OperaDb, "chaindata/leveldb-fsh/")
 	opera.cfg.DbVariant = "ldb"
 	err := state.DumpState(opera.ctx, opera.cfg)
 	if err != nil {
 		return err
 	}
-	opera.cfg.Db = tmpSaveDbPath
 	return nil
 }

@@ -125,18 +125,20 @@ func clonePatch(ctx *cli.Context) error {
 func CreatePatchClone(cfg *utils.Config, aidaDb, targetDb ethdb.Database, firstEpoch, lastEpoch uint64, isNewOpera bool) error {
 	var isFirstPatch = false
 
+	var cloneType = utils.PatchType
+
 	// if the patch is first, we need to make some exceptions hence cloner needs to know
 	if isNewOpera {
-		if firstEpoch == 5577 && cfg.ChainID == 250 {
+		if (firstEpoch == 5577 || firstEpoch == 0) && cfg.ChainID == utils.MainnetChainID {
 			isFirstPatch = true
-		}
-
-		if firstEpoch == 2458 && cfg.ChainID == 4002 {
+			cloneType = utils.GenType
+		} else if firstEpoch == 2458 && cfg.ChainID == utils.TestnetChainID {
 			isFirstPatch = true
+			cloneType = utils.GenType
 		}
 	}
 
-	err := clone(cfg, aidaDb, targetDb, utils.PatchType, isFirstPatch)
+	err := clone(cfg, aidaDb, targetDb, cloneType, isFirstPatch)
 	if err != nil {
 		return err
 	}
@@ -419,7 +421,7 @@ func (c *cloner) readSubstate() error {
 func (c *cloner) readStateHashes() error {
 	c.log.Noticef("Copying hashes done")
 
-	for i := c.cfg.First; i < c.cfg.Last; i++ {
+	for i := c.cfg.First; i <= c.cfg.Last; i++ {
 		key := []byte(utils.StateHashPrefix + hexutil.EncodeUint64(i))
 		value, err := c.aidaDb.Get(key)
 		if err != nil {

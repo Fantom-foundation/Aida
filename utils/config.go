@@ -111,7 +111,7 @@ type Config struct {
 	SrcDbReadonly         bool           // if false, make a copy the source statedb
 	CPUProfile            string         // pprof cpu profile output file name
 	CPUProfilePerInterval bool           // a different CPU profile is taken per 100k block interval
-	Db                    string         // path to database
+	OperaDb               string         // path to opera database
 	DbTmp                 string         // path to temporary database
 	DbImpl                string         // storage implementation
 	DiagnosticServer      int64          // if not zero, the port used for hosting a HTTP server for performance diagnostics
@@ -449,7 +449,7 @@ func getChainId(cfg *Config, log *logging.Logger) (ChainID, error) {
 
 		if chainId == 0 {
 			log.Warningf("ChainID was neither specified with flag (--%v) nor was found in AidaDb (%v); setting default value for mainnet", ChainIDFlag.Name, cfg.AidaDb)
-			chainId = 250
+			chainId = MainnetChainID
 		} else {
 			log.Noticef("Found chainId (%v) in AidaDb", chainId)
 		}
@@ -538,9 +538,7 @@ func adjustMissingConfigValues(cfg *Config) {
 	}
 
 	if _, err := os.Stat(cfg.AidaDb); !os.IsNotExist(err) {
-		cfg.UpdateDb = cfg.AidaDb
-		cfg.DeletionDb = cfg.AidaDb
-		cfg.SubstateDb = cfg.AidaDb
+		OverwriteDbPathsByAidaDb(cfg)
 	}
 
 	if _, err := os.Stat(cfg.DeletionDb); os.IsNotExist(err) {
@@ -552,6 +550,13 @@ func adjustMissingConfigValues(cfg *Config) {
 	if cfg.First == 0 {
 		cfg.SkipPriming = true
 	}
+}
+
+// OverwriteDbPathsByAidaDb overwrites the paths of the DBs by the AidaDb path
+func OverwriteDbPathsByAidaDb(cfg *Config) {
+	cfg.UpdateDb = cfg.AidaDb
+	cfg.DeletionDb = cfg.AidaDb
+	cfg.SubstateDb = cfg.AidaDb
 }
 
 // reportNewConfig logs out the state of config in current run

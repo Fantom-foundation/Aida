@@ -19,7 +19,7 @@ var CmdRoot = cli.Command{
 	ArgsUsage:   "<target>",
 	Flags: []cli.Flag{
 		&utils.StateDbVariantFlag,
-		&utils.DbFlag,
+		&utils.OperaDbFlag,
 		&utils.SourceTableNameFlag,
 		&utils.TargetBlockFlag,
 	},
@@ -34,7 +34,7 @@ func root(ctx *cli.Context) error {
 	}
 
 	// open the source trie DB
-	store, err := opera.Connect(cfg.DbVariant, cfg.Db, cfg.SourceTableName)
+	store, err := opera.Connect(cfg.DbVariant, cfg.OperaDb, cfg.SourceTableName)
 	if err != nil {
 		return err
 	}

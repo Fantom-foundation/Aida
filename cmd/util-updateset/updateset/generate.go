@@ -75,7 +75,10 @@ func generateUpdateSet(ctx *cli.Context) error {
 	if db.GetLastKey() > 0 {
 		cfg.First = db.GetLastKey() + 1
 	}
-	db.Close()
+	err = db.Close()
+	if err != nil {
+		return err
+	}
 
 	// initialize updateDB
 	udb, err := substate.OpenUpdateDB(cfg.UpdateDb)
@@ -95,11 +98,11 @@ func generateUpdateSet(ctx *cli.Context) error {
 	}
 	defer ddb.Close()
 
-	return GenUpdateSet(cfg, udb, ddb, cfg.First, interval)
+	return GenUpdateSet(cfg, udb, ddb, cfg.First, cfg.Last, interval)
 }
 
 // GenUpdateSet generates a series of update sets from substate db
-func GenUpdateSet(cfg *utils.Config, udb *substate.UpdateDB, ddb *substate.DestroyedAccountDB, first uint64, interval uint64) error {
+func GenUpdateSet(cfg *utils.Config, udb *substate.UpdateDB, ddb *substate.DestroyedAccountDB, first, last uint64, interval uint64) error {
 	var (
 		err               error
 		destroyedAccounts []common.Address
@@ -145,7 +148,7 @@ func GenUpdateSet(cfg *utils.Config, udb *substate.UpdateDB, ddb *substate.Destr
 		maxSize       = cfg.UpdateBufferSize // recommended size 700 MB
 	)
 
-	log.Noticef("Generate update sets from block %v to block %v", first, cfg.Last)
+	log.Noticef("Generate update sets from block %v to block %v", first, last)
 	for iter.Next() {
 		tx := iter.Value()
 		// if first block, calculate next change point
@@ -178,7 +181,7 @@ func GenUpdateSet(cfg *utils.Config, udb *substate.UpdateDB, ddb *substate.Destr
 			}
 
 			// stop when reaching end of block range
-			if tx.Block > cfg.Last {
+			if tx.Block > last {
 				break
 			}
 			curBlock = tx.Block
