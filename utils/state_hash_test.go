@@ -18,7 +18,7 @@ func TestStateHash_ZeroHasSameStateHashAsOne(t *testing.T) {
 	}
 	log := logger.NewLogger("info", "Test state hash")
 
-	err = StateHashScraper(nil, 4002, "", db, 0, 1, log)
+	err = StateHashScraper(nil, TestnetChainID, "", db, 0, 1, log)
 	if err != nil {
 		t.Fatalf("error scraping state hashes: %v", err)
 	}
@@ -60,7 +60,7 @@ func TestStateHash_ZeroHasDifferentStateHashAfterHundredBlocks(t *testing.T) {
 	}
 	log := logger.NewLogger("info", "Test state hash")
 
-	err = StateHashScraper(nil, 4002, "", db, 0, 100, log)
+	err = StateHashScraper(nil, TestnetChainID, "", db, 0, 100, log)
 	if err != nil {
 		t.Fatalf("error scraping state hashes: %v", err)
 	}
@@ -133,9 +133,9 @@ func Test_getClient(t *testing.T) {
 		want    *rpc.Client
 		wantErr bool
 	}{
-		{"testGetClientRpcMainnet", args{context.Background(), 250, ""}, &rpc.Client{}, false},
-		{"testGetClientRpcTestnet", args{context.Background(), 4002, ""}, &rpc.Client{}, false},
-		{"testGetClientIpcNonExistant", args{context.Background(), 4002, "/non-existant-path"}, nil, false},
+		{"testGetClientRpcMainnet", args{context.Background(), MainnetChainID, ""}, &rpc.Client{}, false},
+		{"testGetClientRpcTestnet", args{context.Background(), TestnetChainID, ""}, &rpc.Client{}, false},
+		{"testGetClientIpcNonExistant", args{context.Background(), TestnetChainID, "/non-existant-path"}, nil, false},
 		{"testGetClientRpcUnknownChainId", args{context.Background(), 88888, ""}, nil, true},
 	}
 	for _, tt := range tests {

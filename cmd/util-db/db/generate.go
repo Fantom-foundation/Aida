@@ -561,7 +561,7 @@ func (g *generator) calculatePatchEnd() error {
 	g.targetEpoch = g.opera.firstEpoch
 
 	// next patch will be at least X epochs large
-	if g.cfg.ChainID == 250 {
+	if g.cfg.ChainID == utils.MainnetChainID {
 		// mainnet currently takes about 250 epochs per day
 		g.targetEpoch += 250
 	} else {

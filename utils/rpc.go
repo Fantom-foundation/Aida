@@ -55,9 +55,9 @@ func SendRPCRequest(payload JsonRPCRequest, chainId ChainID) (map[string]interfa
 }
 
 func GetProvider(chainId ChainID) (string, error) {
-	if chainId == 250 {
+	if chainId == MainnetChainID {
 		return RPCMainnet, nil
-	} else if chainId == 4002 {
+	} else if chainId == TestnetChainID {
 		return RPCTestnet, nil
 	} else {
 		return "", fmt.Errorf("unknown chain-id %v", chainId)

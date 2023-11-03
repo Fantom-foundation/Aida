@@ -129,10 +129,10 @@ func CreatePatchClone(cfg *utils.Config, aidaDb, targetDb ethdb.Database, firstE
 
 	// if the patch is first, we need to make some exceptions hence cloner needs to know
 	if isNewOpera {
-		if (firstEpoch == 5577 || firstEpoch == 0) && cfg.ChainID == 250 {
+		if (firstEpoch == 5577 || firstEpoch == 0) && cfg.ChainID == utils.MainnetChainID {
 			isFirstPatch = true
 			cloneType = utils.GenType
-		} else if firstEpoch == 2458 && cfg.ChainID == 4002 {
+		} else if firstEpoch == 2458 && cfg.ChainID == utils.TestnetChainID {
 			isFirstPatch = true
 			cloneType = utils.GenType
 		}

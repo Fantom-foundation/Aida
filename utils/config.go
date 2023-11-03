@@ -450,7 +450,7 @@ func getChainId(cfg *Config, log *logging.Logger) (ChainID, error) {
 
 		if chainId == 0 {
 			log.Warningf("ChainID was neither specified with flag (--%v) nor was found in AidaDb (%v); setting default value for mainnet", ChainIDFlag.Name, cfg.AidaDb)
-			chainId = 250
+			chainId = MainnetChainID
 		} else {
 			log.Noticef("Found chainId (%v) in AidaDb", chainId)
 		}

@@ -164,10 +164,10 @@ func TestRPCFindEpochNumber_Positive(t *testing.T) {
 		t.Run(fmt.Sprintf("ChainID %v", id), func(t *testing.T) {
 			var testingBlock, expectedEpoch uint64
 
-			if id == 250 {
+			if id == MainnetChainID {
 				testingBlock = testingMainnetBlock
 				expectedEpoch = expectedMainnetEpoch
-			} else if id == 4002 {
+			} else if id == TestnetChainID {
 				testingBlock = testingTestnetBlock
 				expectedEpoch = expectedTestnetEpoch
 			} else {
