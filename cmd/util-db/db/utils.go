@@ -224,7 +224,7 @@ func calculateMD5Sum(filePath string) (string, error) {
 func startOperaIpc(cfg *utils.Config, stopChan chan struct{}) chan error {
 	errChan := make(chan error, 1)
 
-	log := logger.NewLogger(cfg.LogLevel, "autoGen-ipc")
+	log := logger.NewLogger(cfg.LogLevel, "Autogen-ipc")
 	log.Noticef("Starting opera ipc %v", cfg.OperaDb)
 
 	resChan := make(chan string, 100)
