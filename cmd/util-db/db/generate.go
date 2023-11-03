@@ -179,7 +179,7 @@ func (g *generator) runStateHashScraper(ctx *cli.Context) error {
 
 	g.log.Noticef("Scraping: range %v - %v", g.opera.firstBlock, g.opera.lastBlock)
 
-	err := utils.StateHashScraper(ctx.Context, g.cfg.ChainID, g.cfg.Db+"/opera.ipc", g.aidaDb, g.opera.firstBlock, g.opera.lastBlock, g.log)
+	err := utils.StateHashScraper(ctx.Context, g.cfg.ChainID, g.cfg.OperaDb, g.aidaDb, g.opera.firstBlock, g.opera.lastBlock, g.log)
 	if err != nil {
 		select {
 		case oErr, ok := <-operaErr:

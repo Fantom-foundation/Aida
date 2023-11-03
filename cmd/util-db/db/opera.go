@@ -37,7 +37,7 @@ func newAidaOpera(ctx *cli.Context, cfg *utils.Config, log *logging.Logger) *aid
 func (opera *aidaOpera) init() error {
 	var err error
 
-	_, err = os.Stat(opera.cfg.Db)
+	_, err = os.Stat(opera.cfg.OperaDb)
 	if os.IsNotExist(err) {
 		opera.isNew = true
 
@@ -67,7 +67,7 @@ func (opera *aidaOpera) init() error {
 	// running this command before starting opera results in getting first block and epoch on which opera starts
 	err = opera.getOperaBlockAndEpoch(true)
 	if err != nil {
-		return fmt.Errorf("cannot retrieve block from existing opera database %v; %v", opera.cfg.Db, err)
+		return fmt.Errorf("cannot retrieve block from existing opera database %v; %v", opera.cfg.OperaDb, err)
 	}
 
 	opera.log.Noticef("Opera block from last run is: %v", opera.firstBlock)
@@ -100,7 +100,7 @@ func createTmpDir(cfg *utils.Config) (string, error) {
 
 // initFromGenesis file
 func (opera *aidaOpera) initFromGenesis() error {
-	cmd := exec.Command(getOperaBinary(opera.cfg), "--datadir", opera.cfg.Db, "--genesis", opera.cfg.Genesis,
+	cmd := exec.Command(getOperaBinary(opera.cfg), "--datadir", opera.cfg.OperaDb, "--genesis", opera.cfg.Genesis,
 		"--exitwhensynced.epoch=0", "--cache", strconv.Itoa(opera.cfg.Cache), "--db.preset=legacy-ldb", "--maxpeers=0")
 
 	err := runCommand(cmd, nil, nil, opera.log)
@@ -113,7 +113,7 @@ func (opera *aidaOpera) initFromGenesis() error {
 
 // rollbackToEpoch file TODO should be part of future autogen recovery
 func (opera *aidaOpera) rollbackToEpoch() error {
-	//cmd := exec.Command(getOperaBinary(opera.cfg), "--datadir", opera.cfg.Db, "--genesis", opera.cfg.Genesis,
+	//cmd := exec.Command(getOperaBinary(opera.cfg), "--datadir", opera.cfg.OperaDb, "--genesis", opera.cfg.Genesis,
 	//	"--exitwhensynced.epoch=0", "--cache", strconv.Itoa(opera.cfg.Cache), "--db.preset=legacy-ldb", "--maxpeers=0", "db", "heal", "--experimental")
 	//
 	//err := runCommand(cmd, nil, opera.log)
@@ -126,7 +126,7 @@ func (opera *aidaOpera) rollbackToEpoch() error {
 
 // getOperaBlockAndEpoch retrieves current block of opera head
 func (opera *aidaOpera) getOperaBlockAndEpoch(isFirst bool) error {
-	operaPath := filepath.Join(opera.cfg.Db, "/chaindata/leveldb-fsh/")
+	operaPath := filepath.Join(opera.cfg.OperaDb, "/chaindata/leveldb-fsh/")
 	store, err := wsOpera.Connect("ldb", operaPath, "main")
 	if err != nil {
 		return err
@@ -163,13 +163,13 @@ func (opera *aidaOpera) getOperaBlockAndEpoch(isFirst bool) error {
 // prepareDumpCliContext
 func (opera *aidaOpera) prepareDumpCliContext() error {
 	// TODO rewrite
-	tmpSaveDbPath := opera.cfg.Db
-	opera.cfg.Db = filepath.Join(opera.cfg.Db, "chaindata/leveldb-fsh/")
+	tmpSaveDbPath := opera.cfg.OperaDb
+	opera.cfg.OperaDb = filepath.Join(opera.cfg.OperaDb, "chaindata/leveldb-fsh/")
 	opera.cfg.DbVariant = "ldb"
 	err := state.DumpState(opera.ctx, opera.cfg)
 	if err != nil {
 		return err
 	}
-	opera.cfg.Db = tmpSaveDbPath
+	opera.cfg.OperaDb = tmpSaveDbPath
 	return nil
 }

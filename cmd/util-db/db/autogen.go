@@ -22,7 +22,7 @@ var AutoGenCommand = cli.Command{
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 		&utils.ChainIDFlag,
-		&utils.DbFlag,
+		&utils.OperaDbFlag,
 		&utils.GenesisFlag,
 		&utils.DbTmpFlag,
 		&utils.OperaBinaryFlag,
@@ -145,7 +145,7 @@ func autogenRun(cfg *utils.Config, g *generator) error {
 	if ok && err != nil {
 		return err
 	}
-	g.log.Noticef("Recording (%v) for epoch range %d - %d finished. It took: %v", g.cfg.Db, g.opera.firstEpoch, g.targetEpoch, time.Since(start).Round(1*time.Second))
+	g.log.Noticef("Recording (%v) for epoch range %d - %d finished. It took: %v", g.cfg.OperaDb, g.opera.firstEpoch, g.targetEpoch, time.Since(start).Round(1*time.Second))
 	g.log.Noticef("Total elapsed time: %v", time.Since(g.start).Round(1*time.Second))
 
 	// reopen aida-db

@@ -40,7 +40,9 @@ func (p *stateHashProvider) GetStateHash(number int) (common.Hash, error) {
 }
 
 // StateHashScraper scrapes state hashes from a node and saves them to a leveldb database
-func StateHashScraper(ctx context.Context, chainId ChainID, ipcPath string, db ethdb.Database, firstBlock, lastBlock uint64, log *logging.Logger) error {
+func StateHashScraper(ctx context.Context, chainId ChainID, operaPath string, db ethdb.Database, firstBlock, lastBlock uint64, log *logging.Logger) error {
+	ipcPath := operaPath + "/opera.ipc"
+
 	client, err := getClient(ctx, chainId, ipcPath, log)
 	if err != nil {
 		return err
