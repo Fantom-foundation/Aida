@@ -18,10 +18,10 @@ import (
 // ProfilerProxy data structure for capturing and recording
 // invoked StateDB operations.
 type ProfilerProxy struct {
-	db  state.StateDB  // state db
+	db state.StateDB // state db
 	//ps  *profile.Stats // operation statistics
 	anlt *profile.IncrementalAnalytics
-	log *logging.Logger
+	log  *logging.Logger
 }
 
 // NewProfilerProxy creates a new StateDB profiler.

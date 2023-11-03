@@ -37,7 +37,7 @@ func NewIncrementalStats() *IncrementalStats {
 	return &IncrementalStats{}
 }
 
-func (s *IncrementalStats) unlessEmpty(notEmpty, empty float64) float64 {
+func (s *IncrementalStats) ifEmpty(empty, notEmpty float64) float64 {
 	if s.count != 0 {
 		return notEmpty
 	}
@@ -57,15 +57,16 @@ func (s *IncrementalStats) Update(x float64) {
 	s.m3 += t*delta_n*(n-2) - (3 * delta_n * s.m2)
 	s.m2 += t
 
-	s.count += 1
-	s.min = s.unlessEmpty(min(s.min, x), x)
-	s.max = max(s.max, x)
-
 	// kahan sum
 	y := x - s.c
 	z := s.ksum + y
 	s.c = (z - s.ksum) - y
 	s.ksum = z
+
+	s.min = s.ifEmpty(x, min(s.min, x))
+	s.max = max(s.max, x)
+	s.count += 1
+
 }
 
 func (s *IncrementalStats) GetCount() uint64 {
@@ -93,11 +94,11 @@ func (s *IncrementalStats) GetKurtosis() float64 {
 }
 
 func (s *IncrementalStats) GetMin() float64 {
-	return s.min
+	return s.ifEmpty(math.NaN(), s.min)
 }
 
 func (s *IncrementalStats) GetMax() float64 {
-	return s.max
+	return s.ifEmpty(math.NaN(), s.max)
 }
 
 func (s *IncrementalStats) String() string {
@@ -106,7 +107,7 @@ func (s *IncrementalStats) String() string {
 }
 
 type IncrementalAnalytics struct {
-	stats    []IncrementalStats
+	stats []IncrementalStats
 }
 
 func NewIncrementalAnalytics(opCount int) *IncrementalAnalytics {
@@ -115,7 +116,7 @@ func NewIncrementalAnalytics(opCount int) *IncrementalAnalytics {
 	return a
 }
 
-func (a *IncrementalAnalytics) Iterate() []IncrementalStats{
+func (a *IncrementalAnalytics) Iterate() []IncrementalStats {
 	return a.stats
 }
 

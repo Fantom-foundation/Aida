@@ -14,15 +14,17 @@ type Printers struct {
 	printers []Printer
 }
 
-func (ps* Printers) Print() {
-	for _, p := range ps.printers { p.Print() }
+func (ps *Printers) Print() {
+	for _, p := range ps.printers {
+		p.Print()
+	}
 }
 
 func NewPrinters() *Printers {
 	return &Printers{[]Printer{}}
 }
 
-func (ps* Printers) AddPrinter(p Printer) *Printers {
+func (ps *Printers) AddPrinter(p Printer) *Printers {
 	ps.printers = append(ps.printers, p)
 	return ps
 }
@@ -45,11 +47,11 @@ func NewPrintToConsole(f func() string) *PrintToWriter {
 	return &PrintToWriter{os.Stdout, f}
 }
 
-func (ps* Printers) AddPrintToWriter(w io.Writer, f func() string) *Printers {
+func (ps *Printers) AddPrintToWriter(w io.Writer, f func() string) *Printers {
 	return ps.AddPrinter(NewPrintToWriter(w, f))
 }
 
-func (ps* Printers) AddPrintToConsole(f func() string) *Printers {
+func (ps *Printers) AddPrintToConsole(f func() string) *Printers {
 	return ps.AddPrinter(NewPrintToConsole(f))
 }
 
@@ -72,10 +74,9 @@ func NewPrintToFile(filepath string, f func() string) *PrintToFile {
 	return &PrintToFile{filepath, f}
 }
 
-func (ps* Printers) AddPrintToFile(filepath string, f func() string) *Printers {
+func (ps *Printers) AddPrintToFile(filepath string, f func() string) *Printers {
 	if filepath != "" {
 		ps.AddPrinter(NewPrintToFile(filepath, f))
 	}
 	return ps
 }
-
