@@ -5,12 +5,12 @@ import (
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state/proxy"
 	"github.com/Fantom-foundation/Aida/tracer/profile"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/op/go-logging"
-	"github.com/Fantom-foundation/Aida/logger"
 )
 
 // MakeOperationProfiler creates a executor.Extension that records Operation profiling
@@ -26,8 +26,8 @@ func MakeOperationProfiler[T any](cfg *utils.Config) executor.Extension[T] {
 		interval: utils.NewInterval(cfg.First, cfg.Last, cfg.ProfileInterval),
 	}
 
-	p.ps.AddPrintToConsole(func () string { return p.prettyTable().Render() })
-	p.ps.AddPrintToFile(cfg.ProfileFile, func () string { return p.prettyTable().RenderCSV() })
+	p.ps.AddPrintToConsole(func() string { return p.prettyTable().Render() })
+	p.ps.AddPrintToFile(cfg.ProfileFile, func() string { return p.prettyTable().RenderCSV() })
 
 	return p
 }
@@ -44,7 +44,7 @@ type operationProfiler[T any] struct {
 
 func (p *operationProfiler[T]) prettyTable() table.Writer {
 	t := table.NewWriter()
-	
+
 	totalCount := uint64(0)
 	totalSum := 0.0
 
@@ -68,7 +68,7 @@ func (p *operationProfiler[T]) prettyTable() table.Writer {
 		})
 	}
 	t.AppendFooter(table.Row{"total", "", "", totalCount, totalSum})
-	
+
 	return t
 }
 

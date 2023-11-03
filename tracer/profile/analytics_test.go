@@ -52,6 +52,8 @@ func TestAnalyticsWithConstants(t *testing.T) {
 	type result struct {
 		mean     float64
 		variance float64
+		min      float64
+		max      float64
 	}
 
 	type argument struct {
@@ -65,14 +67,14 @@ func TestAnalyticsWithConstants(t *testing.T) {
 	}
 
 	tests := []testcase{
-		{args: argument{1e7, 1}, want: result{1, 0}},
-		{args: argument{1e7, 1e-7}, want: result{1e-7, 0}},
-		{args: argument{1e7, 1e7}, want: result{1e7, 0}},
+		{args: argument{1e7, 1}, want: result{1, 0, 1, 1}},
+		{args: argument{1e7, 1e-7}, want: result{1e-7, 0, 1e-7, 1e-7}},
+		{args: argument{1e7, 1e7}, want: result{1e7, 0, 1e7, 1e7}},
 	}
 
 	type Sut struct {
 		name string
-		a    Analytics
+		a    *IncrementalAnalytics
 	}
 
 	suts := []Sut{
@@ -89,9 +91,12 @@ func TestAnalyticsWithConstants(t *testing.T) {
 				for i := uint64(0); i < test.args.count; i++ {
 					a.Update(0, test.args.constant)
 				}
+
 				got := result{
 					a.GetMean(0),
 					a.GetVariance(0),
+					a.GetMin(0),
+					a.GetMax(0),
 				}
 
 				assertExactlyEqual(t, test.want, got)
