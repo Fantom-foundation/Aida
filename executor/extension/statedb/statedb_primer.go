@@ -35,6 +35,10 @@ func (p *stateDbPrimer[T]) PreRun(_ executor.State[T], ctx *executor.Context) er
 		return nil
 	}
 
+	if p.cfg.First == 0 {
+		return nil
+	}
+
 	p.log.Noticef("Priming to block %v", p.cfg.First-1)
 	if err := utils.LoadWorldStateAndPrime(ctx.State, p.cfg, p.cfg.First-1); err != nil {
 		return err
