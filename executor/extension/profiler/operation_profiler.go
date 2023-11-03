@@ -1,8 +1,6 @@
 package profiler
 
 import (
-	"math"
-
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
@@ -66,7 +64,7 @@ func (p *operationProfiler[T]) prettyTable() table.Writer {
 			stat.GetCount(),
 			stat.GetSum(),
 			stat.GetMean(),
-			math.Sqrt(stat.GetVariance()),
+			stat.GetStandardDeviation(),
 			stat.GetMin(),
 			stat.GetMax(),
 		})

@@ -10,6 +10,7 @@ type Analytics interface {
 
 	GetSum(id byte) float64
 	GetMean(id byte) float64
+	GetStandardDeviation(id byte) float64
 	GetVariance(id byte) float64
 	GetSkewness(id byte) float64
 	GetKurtosis(id byte) float64
