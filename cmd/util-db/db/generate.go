@@ -400,7 +400,9 @@ func (g *generator) createPatch() (string, error) {
 // updatePatchesJson with newly acquired patch
 func (g *generator) updatePatchesJson(fileName string) error {
 	jsonFilePath := filepath.Join(g.cfg.Output, patchesJsonName)
-	var patchesJson []map[string]string
+
+	// Load previous JSON
+	var patchesJson []utils.PatchJson
 
 	// Attempt to load previous JSON
 	file, err := os.Open(jsonFilePath)
@@ -430,19 +432,19 @@ func (g *generator) updatePatchesJson(fileName string) error {
 
 	// Initialize the array if it doesn't exist
 	if patchesJson == nil {
-		patchesJson = make([]map[string]string, 0)
+		patchesJson = make([]utils.PatchJson, 0)
 	}
 
 	// Create a new patch object
-	newPatch := map[string]string{
-		"fileName":     fileName,
-		"fromBlock":    strconv.FormatUint(g.cfg.First, 10),
-		"toBlock":      strconv.FormatUint(g.cfg.Last, 10),
-		"fromEpoch":    strconv.FormatUint(g.opera.firstEpoch, 10),
-		"toEpoch":      strconv.FormatUint(g.opera.lastEpoch, 10),
-		"dbHash":       hex.EncodeToString(g.dbHash),
-		"patchTarHash": g.patchTarHash,
-		"nightly":      "true",
+	newPatch := utils.PatchJson{
+		FileName:  fileName,
+		FromBlock: g.cfg.First,
+		ToBlock:   g.cfg.Last,
+		FromEpoch: g.opera.firstEpoch,
+		ToEpoch:   g.opera.lastEpoch,
+		DbHash:    hex.EncodeToString(g.dbHash),
+		TarHash:   g.patchTarHash,
+		Nightly:   true,
 	}
 
 	// Append the new patch to the array
@@ -457,7 +459,7 @@ func (g *generator) updatePatchesJson(fileName string) error {
 }
 
 // doUpdatePatchesJson with newly acquired patch
-func (g *generator) doUpdatePatchesJson(patchesJson []map[string]string, file *os.File) error {
+func (g *generator) doUpdatePatchesJson(patchesJson []utils.PatchJson, file *os.File) error {
 	// Convert the array to JSON bytes
 	jsonBytes, err := json.Marshal(patchesJson)
 	if err != nil {
