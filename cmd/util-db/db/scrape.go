@@ -24,13 +24,12 @@ var ScrapeCommand = cli.Command{
 
 // scrapePrepare stores state hashes into Target for given range
 func scrapePrepare(ctx *cli.Context) error {
-	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "UtilDb-Scrape")
-
 	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if argErr != nil {
 		return argErr
 	}
 
+	log := logger.NewLogger(cfg.LogLevel, "UtilDb-Scrape")
 	log.Infof("Scraping for range %d-%d", cfg.First, cfg.Last)
 
 	db, err := rawdb.NewLevelDBDatabase(cfg.TargetDb, 1024, 100, "state-hash", false)
