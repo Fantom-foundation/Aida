@@ -20,7 +20,7 @@ import (
 
 const (
 	standardInputBufferSize = 50
-	firstOperaTestnetBlock  = 479326
+	firstOperaTestnetBlock  = 479327
 )
 
 var GenerateDbHashCommand = cli.Command{

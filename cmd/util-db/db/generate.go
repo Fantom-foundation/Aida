@@ -345,7 +345,7 @@ func (g *generator) createPatch() (string, error) {
 		return "", fmt.Errorf("cannot open patch db; %v", err)
 	}
 
-	err = CreatePatchClone(g.cfg, g.aidaDb, patchDb, g.opera.lastEpoch, g.opera.lastEpoch, g.opera.isNew)
+	err = CreatePatchClone(g.cfg, g.aidaDb, patchDb, g.opera.firstEpoch, g.opera.lastEpoch, g.opera.isNew)
 
 	g.log.Notice("Patch metadata")
 
