@@ -17,7 +17,6 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/op/go-logging"
 )
 
@@ -57,7 +56,7 @@ func MustCloseDB(db ethdb.Database) {
 }
 
 // runCommand wraps cmd execution to distinguish whether to display its output
-func runCommand(cmd *exec.Cmd, resultChan chan string, stopChan chan struct{}, log *logging.Logger) error {
+func runCommand(cmd *exec.Cmd, resultChan chan string, stopChan chan struct{}, log logger.Logger) error {
 	if resultChan != nil {
 		defer close(resultChan)
 	}
@@ -104,21 +103,26 @@ func runCommand(cmd *exec.Cmd, resultChan chan string, stopChan chan struct{}, l
 			// because the command was terminated by aida intentionally
 			return killCommand(cmd, log, done)
 		case m, ok := <-scannedChan:
-			if !ok {
-				// set scannedChan to nil to prevent closing it twice - in next for loop cycle scannedChan will be ignored
-				scannedChan = nil
-				close(lastOutputMessagesChan)
+			if ok {
+				processScannedCommandOutput(m, resultChan, log, lastOutputMessagesChan)
 				break
 			}
-			processScannedCommandOutput(m, resultChan, log, lastOutputMessagesChan)
-		case res, ok := <-done:
-			return processCommandResult(res, ok, scanner, lastOutputMessagesChan, resultChan, cmd)
+
+			close(lastOutputMessagesChan)
+
+			// wait until command finishes or stopSignal is received
+			select {
+			case <-stopChan:
+				return killCommand(cmd, log, done)
+			case res, ok := <-done:
+				return processCommandResult(res, ok, scanner, lastOutputMessagesChan, resultChan, cmd, log)
+			}
 		}
 	}
 }
 
 // killCommand terminates command gracefully first and then forcefully
-func killCommand(cmd *exec.Cmd, log *logging.Logger, done chan error) error {
+func killCommand(cmd *exec.Cmd, log logger.Logger, done chan error) error {
 	// A stop signal was received; terminate the command.
 	// Attempting to interrupt command gracefully first.
 	// Create a timeout with a 1-minute duration.
@@ -145,7 +149,7 @@ func killCommand(cmd *exec.Cmd, log *logging.Logger, done chan error) error {
 }
 
 // processScannedCommandOutput output and send it to resultChan if it is listening and keep lastOutputMessagesChan updated
-func processScannedCommandOutput(message string, resultChan chan string, log *logging.Logger, lastOutputMessagesChan chan string) {
+func processScannedCommandOutput(message string, resultChan chan string, log logger.Logger, lastOutputMessagesChan chan string) {
 	if resultChan != nil {
 		resultChan <- message
 	}
@@ -165,7 +169,7 @@ func processScannedCommandOutput(message string, resultChan chan string, log *lo
 }
 
 // processCommandResult is used to process command result
-func processCommandResult(err error, ok bool, scanner *bufio.Scanner, lastOutputMessagesChan chan string, resultChan chan string, cmd *exec.Cmd) error {
+func processCommandResult(err error, ok bool, scanner *bufio.Scanner, lastOutputMessagesChan chan string, resultChan chan string, cmd *exec.Cmd, log logger.Logger) error {
 	if !ok {
 		return fmt.Errorf("unexpected doneChan closed error while executing Command %v; %v", cmd, err)
 	}

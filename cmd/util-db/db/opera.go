@@ -8,9 +8,9 @@ import (
 	"strconv"
 
 	"github.com/Fantom-foundation/Aida/cmd/util-worldstate/state"
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	wsOpera "github.com/Fantom-foundation/Aida/world-state/db/opera"
-	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
@@ -20,12 +20,12 @@ type aidaOpera struct {
 	firstEpoch, lastEpoch uint64
 	ctx                   *cli.Context
 	cfg                   *utils.Config
-	log                   *logging.Logger
+	log                   logger.Logger
 	isNew                 bool
 }
 
 // newAidaOpera returns new instance of Opera
-func newAidaOpera(ctx *cli.Context, cfg *utils.Config, log *logging.Logger) *aidaOpera {
+func newAidaOpera(ctx *cli.Context, cfg *utils.Config, log logger.Logger) *aidaOpera {
 	return &aidaOpera{
 		ctx: ctx,
 		cfg: cfg,
