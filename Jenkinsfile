@@ -95,7 +95,7 @@ pipeline {
         stage('aida-vm-adb') {
             steps {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
-                    sh "build/aida-vm-adb substate ${AIDADB} --db-src /var/opera/Aida/dbtmpjenkins/state_db_carmen_go-file_4600000 --cpu-profile cpu-profile.dat --validate-tx ${FROMBLOCK} ${TOBLOCK} "
+                    sh "build/aida-vm-adb ${AIDADB} --db-src /var/opera/Aida/dbtmpjenkins/state_db_carmen_go-file_4600000 --cpu-profile cpu-profile.dat --validate-tx ${FROMBLOCK} ${TOBLOCK} "
                 }
                 sh "rm -rf /var/opera/Aida/dbtmpjenkins/state_db_carmen_go-file_4600000"
                 sh "rm -rf *.dat"
