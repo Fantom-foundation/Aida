@@ -11,10 +11,13 @@ import (
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/Fantom-foundation/Aida/utils/analytics"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	gomock "go.uber.org/mock/gomock"
+	"golang.org/x/exp/maps"
 )
 
 func assertExactlyEqual[T comparable](t *testing.T, a T, b T) {
@@ -182,6 +185,14 @@ func suppressStdout(f func()) {
 	os.Stdout = tmp
 }
 
+func getTotalOpCount(a *analytics.IncrementalAnalytics) int {
+	var count uint64 = 0
+	for _, stat := range a.Iterate(){
+		count += stat.GetCount()
+	}
+	return int(count)
+}
+
 func TestOperationProfiler_WithEachOpOnce(t *testing.T) {
 	name := "OperationProfiler EachOpOnce"
 	cfg := &utils.Config{
@@ -219,7 +230,7 @@ func TestOperationProfiler_WithEachOpOnce(t *testing.T) {
 		})
 
 		totalOpCount := 0
-		ops := ext.stats.GetOpOrder()
+		ops := operation.CreateIdLabelMap()
 
 		// These are purposely not implemented, will be blacklisted here
 		notImplemented := make([]bool, len(ops))
@@ -227,16 +238,16 @@ func TestOperationProfiler_WithEachOpOnce(t *testing.T) {
 			notImplemented[a] = true
 		}
 
-		for _, op := range ops {
+		for _, op := range maps.Keys(ops) {
 			if notImplemented[op] {
 				continue
 			}
 
-			s := ext.stats.GetStatByOpId(op)
-			if s.Frequency != 1 {
-				t.Errorf("op %s occurs %d times, expecting exactly 1", s.Label, s.Frequency)
+			s := ext.anlt.GetCount(op)
+			if s != 1 {
+				t.Errorf("op %s occurs %d times, expecting exactly 1", ops[op], s)
 			}
-			totalOpCount += int(s.Frequency)
+			totalOpCount += int(s)
 		}
 		if totalOpCount != len(funcs) {
 			t.Errorf("Seen %d ops even though we have %d", totalOpCount, len(funcs))
@@ -309,7 +320,7 @@ func TestOperationProfiler_WithRandomInput(t *testing.T) {
 				if b > intervalEnd {
 					intervalStart = intervalEnd + 1
 					intervalEnd += test.args.interval
-					totalSeenOpCount += ext.stats.GetTotalOpFreq()
+					totalSeenOpCount += getTotalOpCount(ext.anlt)
 					intervalGeneratedOpCount = 0
 				}
 
@@ -319,8 +330,8 @@ func TestOperationProfiler_WithRandomInput(t *testing.T) {
 
 				if b > intervalEnd {
 					// make sure that the stats is reset
-					if ext.stats.GetTotalOpFreq() != 0 {
-						t.Errorf("Should be reset but found %d ops", ext.stats.GetTotalOpFreq())
+					if getTotalOpCount(ext.anlt) != 0 {
+						t.Errorf("Should be reset but found %d ops", getTotalOpCount(ext.anlt))
 					}
 
 					// make sure that the new interval is correct
@@ -345,13 +356,9 @@ func TestOperationProfiler_WithRandomInput(t *testing.T) {
 
 				ext.PostBlock(executor.State[any]{Block: int(b)}, nil)
 
-				// check that ext tracks last seen block number correctly
-				if ext.lastProcessedBlock != uint64(b) {
-					t.Errorf("Last seen block number was %d, actual last seen block %d", ext.lastProcessedBlock, uint64(b))
-				}
 				// check that amount of ops seen eqals to amount of ops generated within this interval
-				if ext.stats.GetTotalOpFreq() != intervalGeneratedOpCount {
-					t.Errorf("[Interval] Seen %d ops, but generated %d ops", ext.stats.GetTotalOpFreq(), intervalGeneratedOpCount)
+				if getTotalOpCount(ext.anlt) != intervalGeneratedOpCount {
+					t.Errorf("[Interval] Seen %d ops, but generated %d ops", getTotalOpCount(ext.anlt), intervalGeneratedOpCount)
 				}
 			}
 
@@ -359,12 +366,8 @@ func TestOperationProfiler_WithRandomInput(t *testing.T) {
 				ext.PostRun(executor.State[any]{}, nil, nil)
 			})
 
-			// check that last seen block number is within boundary
-			if ext.lastProcessedBlock > uint64(test.args.last) {
-				t.Errorf("Last seen block number was %d, more than last boundary %d.", ext.lastProcessedBlock, test.args.last)
-			}
 			// check that amount of ops seen equals to amount of ops generated
-			totalSeenOpCount += ext.stats.GetTotalOpFreq()
+			totalSeenOpCount += getTotalOpCount(ext.anlt)
 			if totalSeenOpCount != totalGeneratedOpCount {
 				t.Errorf("[Total] Seen %d ops, but generated %d ops", totalSeenOpCount, totalGeneratedOpCount)
 			}
