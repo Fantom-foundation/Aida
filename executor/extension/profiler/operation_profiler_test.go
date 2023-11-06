@@ -187,7 +187,7 @@ func suppressStdout(f func()) {
 
 func getTotalOpCount(a *analytics.IncrementalAnalytics) int {
 	var count uint64 = 0
-	for _, stat := range a.Iterate(){
+	for _, stat := range a.Iterate() {
 		count += stat.GetCount()
 	}
 	return int(count)
