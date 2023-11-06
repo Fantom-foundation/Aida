@@ -5,6 +5,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state/proxy"
+	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/tracer/profile"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/jedib0t/go-pretty/v6/table"
@@ -17,11 +18,14 @@ func MakeOperationProfiler[T any](cfg *utils.Config) executor.Extension[T] {
 		return extension.NilExtension[T]{}
 	}
 
+	ops := operation.CreateIdLabelMap()
 	p := &operationProfiler[T]{
 		cfg:           cfg,
-		ps: utils.NewPrinters(),
-		log: logger.NewLogger(cfg.LogLevel, "Operation Profiler"),
-		interval: utils.NewInterval(cfg.First, cfg.Last, cfg.ProfileInterval),
+		ops:           ops,
+		anlt:          profile.NewIncrementalAnalytics(len(ops)),
+		ps:            utils.NewPrinters(),
+		interval:      utils.NewInterval(cfg.First, cfg.Last, cfg.ProfileInterval),
+		log:           logger.NewLogger(cfg.LogLevel, "Operation Profiler"),
 	}
 
 	p.ps.AddPrintToConsole(func() string { return p.prettyTable().Render() })
@@ -33,10 +37,11 @@ func MakeOperationProfiler[T any](cfg *utils.Config) executor.Extension[T] {
 type operationProfiler[T any] struct {
 	extension.NilExtension[T]
 	cfg                *utils.Config
+	ops                map[byte]string
 	anlt               *profile.IncrementalAnalytics
 	ps	   	   *utils.Printers
 	interval           *utils.Interval
-	log *logging.Logger
+	log                *logging.Logger
 }
 
 func min(a, b uint64) uint64 {
@@ -53,14 +58,14 @@ func (p *operationProfiler[T]) prettyTable() table.Writer {
 	totalSum := 0.0
 
 	t.AppendHeader(table.Row{
-		"id", "first", "last", "n", "sum(us)", "mean(us)", "std(us)", "min(us)", "max(us)",
+		"op", "first", "last", "n", "sum(us)", "mean(us)", "std(us)", "min(us)", "max(us)",
 	})
 	for opId, stat := range p.anlt.Iterate() {
 		totalCount += stat.GetCount()
 		totalSum += stat.GetSum()
 
 		t.AppendRow(table.Row{
-			opId,
+			p.ops[byte(opId)],
 			p.intervalStart,
 			min(p.intervalEnd, p.cfg.Last),
 			stat.GetCount(),
@@ -77,11 +82,7 @@ func (p *operationProfiler[T]) prettyTable() table.Writer {
 }
 
 func (p *operationProfiler[T]) PreRun(_ executor.State[T], ctx *executor.Context) error {
-	ctx.State, p.anlt = proxy.NewProfilerProxy(
-		ctx.State,
-		p.cfg.ProfileFile,
-		p.cfg.LogLevel,
-	)
+	ctx.State = proxy.NewProfilerProxy(ctx.State, p.anlt, p.cfg.LogLevel)
 	return nil
 }
 
@@ -91,7 +92,6 @@ func (p *operationProfiler[T]) PreBlock(state executor.State[T], _ *executor.Con
 		p.interval.Next()
 		p.anlt.Reset()
 	}
-
 	return nil
 }
 
