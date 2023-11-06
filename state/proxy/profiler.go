@@ -8,7 +8,7 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
-	"github.com/Fantom-foundation/Aida/tracer/profile"
+	"github.com/Fantom-foundation/Aida/utils/analytics"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -19,12 +19,12 @@ import (
 // invoked StateDB operations.
 type ProfilerProxy struct {
 	db   state.StateDB // state db
-	anlt *profile.IncrementalAnalytics
+	anlt *analytics.IncrementalAnalytics
 	log  *logging.Logger
 }
 
 // NewProfilerProxy creates a new StateDB profiler.
-func NewProfilerProxy(db state.StateDB, anlt *profile.IncrementalAnalytics, logLevel string) *ProfilerProxy {
+func NewProfilerProxy(db state.StateDB, anlt *analytics.IncrementalAnalytics, logLevel string) *ProfilerProxy {
 	p := new(ProfilerProxy)
 	p.db = db
 	p.anlt = anlt
