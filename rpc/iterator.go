@@ -161,23 +161,18 @@ func (i *iterator) decode(hdr *Header, namespace, method string) (*RequestAndRes
 			return nil, err
 		}
 
-		req.Response = &Response{
-			BlockID:   hdr.BlockID(),
-			Result:    req.ResponseRaw,
-			Timestamp: hdr.BlockTimestamp(),
-		}
+		req.Response = req.ResponseRaw
 	}
 
 	// error?
 	if hdr.IsError() {
-		req.Error = &ErrorResponse{
-			BlockID:   hdr.BlockID(),
-			Timestamp: hdr.BlockTimestamp(),
-			Error: ErrorMessage{
-				Code: hdr.ErrorCode(),
-			},
+		req.Error = &Error{
+			Code: hdr.ErrorCode(),
 		}
 	}
+
+	req.Timestamp = hdr.BlockTimestamp()
+	req.Block = hdr.BlockID()
 
 	return &req, nil
 }
