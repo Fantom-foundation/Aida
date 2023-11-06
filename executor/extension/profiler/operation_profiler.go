@@ -41,7 +41,6 @@ type operationProfiler[T any] struct {
 
 	intervalStart      uint64
 	intervalEnd        uint64
-	lastProcessedBlock uint64
 }
 
 func min(a, b uint64) uint64 {
@@ -69,11 +68,11 @@ func (p *operationProfiler[T]) prettyTable() table.Writer {
 			p.intervalStart,
 			min(p.intervalEnd, p.cfg.Last),
 			stat.GetCount(),
-			stat.GetSum(),
-			stat.GetMean(),
-			stat.GetStandardDeviation(),
-			stat.GetMin(),
-			stat.GetMax(),
+			stat.GetSum() / float64(1000),
+			stat.GetMean() / float64(1000),
+			stat.GetStandardDeviation() / float64(1000),
+			stat.GetMin() / float64(1000),
+			stat.GetMax() / float64(1000),
 		})
 	}
 	t.AppendFooter(table.Row{"total", "", "", totalCount, totalSum})
@@ -98,11 +97,6 @@ func (p *operationProfiler[T]) PreBlock(state executor.State[T], _ *executor.Con
 		p.anlt.Reset()
 	}
 
-	return nil
-}
-
-func (p *operationProfiler[T]) PostBlock(state executor.State[T], _ *executor.Context) error {
-	p.lastProcessedBlock = uint64(state.Block)
 	return nil
 }
 
