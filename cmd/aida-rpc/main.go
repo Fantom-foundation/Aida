@@ -20,7 +20,6 @@ func main() {
 		Flags: []cli.Flag{
 			&utils.RpcRecordingFileFlag,
 			&substate.WorkersFlag,
-			&utils.LogFileFlag,
 
 			// VM
 			&utils.VmImplementation,
@@ -29,6 +28,7 @@ func main() {
 			&logger.LogLevelFlag,
 			&utils.ChainIDFlag,
 			&utils.ContinueOnFailureFlag,
+			&utils.ValidateFlag,
 
 			// ShadowDB
 			&utils.ShadowDb,
@@ -41,10 +41,6 @@ func main() {
 			&utils.TraceFlag,
 			&utils.TraceFileFlag,
 			&utils.TraceDebugFlag,
-
-			// ArchiveDB
-			&utils.ArchiveModeFlag,
-			&utils.ArchiveVariantFlag,
 
 			// Performance
 			&utils.CpuProfileFlag,
