@@ -17,7 +17,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	_ "github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
@@ -366,7 +365,7 @@ func offsetBlockNum(blkNum uint64, symbol string, offset uint64) uint64 {
 }
 
 // getMdBlockRange gets block range from aidaDB metadata
-func getMdBlockRange(aidaDbPath string, chainId ChainID, log *logging.Logger) (uint64, uint64, uint64, bool, error) {
+func getMdBlockRange(aidaDbPath string, chainId ChainID, log logger.Logger, logLevel string) (uint64, uint64, uint64, bool, error) {
 	defaultFirst := keywordBlocks[chainId]["first"]
 	defaultLast := keywordBlocks[chainId]["last"]
 	defaultLastPatch := keywordBlocks[chainId]["lastpatch"]
@@ -382,7 +381,7 @@ func getMdBlockRange(aidaDbPath string, chainId ChainID, log *logging.Logger) (u
 		return defaultFirst, defaultLast, defaultLastPatch, false, nil
 	}
 
-	md := NewAidaDbMetadata(aidaDb, logging.GetLevel(log.Module).String())
+	md := NewAidaDbMetadata(aidaDb, logLevel)
 	mdFirst, mdLast, err := md.getBlockRange()
 	if err != nil {
 		log.Warningf("Cannot get first and last block of given AidaDB; %v", err)
@@ -431,7 +430,7 @@ func adjustBlockRange(chainId ChainID, firstArg, lastArg uint64) (uint64, uint64
 
 // getChainId return either default or user specified chainID
 // if the chainID is unknown type, it'll be loaded from aidaDB
-func getChainId(cfg *Config, log *logging.Logger) (ChainID, error) {
+func getChainId(cfg *Config, log logger.Logger) (ChainID, error) {
 	chainId := cfg.ChainID
 	// first look for chainId since we need it for verbal block indication
 	if chainId == UnknownChainID {
@@ -461,7 +460,7 @@ func getChainId(cfg *Config, log *logging.Logger) (ChainID, error) {
 
 // updateConfigBlockRange parse the command line arguments according to the mode in which selected tool runs
 // and store them into the config
-func updateConfigBlockRange(args []string, cfg *Config, mode ArgumentMode, log *logging.Logger) error {
+func updateConfigBlockRange(args []string, cfg *Config, mode ArgumentMode, log logger.Logger) error {
 	var (
 		first uint64
 		last  uint64
@@ -473,7 +472,7 @@ func updateConfigBlockRange(args []string, cfg *Config, mode ArgumentMode, log *
 		if len(args) >= 2 {
 			// try to extract block range from db metadata
 			aidaDbPath := cfg.AidaDb
-			firstMd, lastMd, lastPatchMd, mdOk, err := getMdBlockRange(aidaDbPath, cfg.ChainID, log)
+			firstMd, lastMd, lastPatchMd, mdOk, err := getMdBlockRange(aidaDbPath, cfg.ChainID, log, cfg.LogLevel)
 			if err != nil {
 				return err
 			}
@@ -561,7 +560,7 @@ func OverwriteDbPathsByAidaDb(cfg *Config) {
 }
 
 // reportNewConfig logs out the state of config in current run
-func reportNewConfig(cfg *Config, log *logging.Logger) {
+func reportNewConfig(cfg *Config, log logger.Logger) {
 	if !cfg.Quiet {
 		log.Noticef("Run config:")
 		log.Infof("Block range: %v to %v", cfg.First, cfg.Last)

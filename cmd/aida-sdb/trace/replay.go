@@ -11,7 +11,6 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
-	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
@@ -68,7 +67,7 @@ last block of the inclusive range of blocks to replay storage traces.`,
 }
 
 // readTrace reads operations from trace files and puts them into a channel.
-func readTrace(cfg *utils.Config, ch chan operation.Operation, log *logging.Logger) {
+func readTrace(cfg *utils.Config, ch chan operation.Operation, log logger.Logger) {
 	// create a list of files
 	traceFiles, err := tracer.GetTraceFiles(cfg)
 	if err != nil {
@@ -85,7 +84,7 @@ func readTrace(cfg *utils.Config, ch chan operation.Operation, log *logging.Logg
 }
 
 // traceReplayTask simulates storage operations from storage traces on stateDB.
-func traceReplayTask(cfg *utils.Config, log *logging.Logger) error {
+func traceReplayTask(cfg *utils.Config, log logger.Logger) error {
 
 	// starting reading in parallel
 	log.Notice("Start reading operations in parallel")

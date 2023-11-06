@@ -8,11 +8,11 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/op/go-logging"
 )
 
 // NewShadowProxy creates a StateDB instance bundling two other instances and running each
@@ -36,7 +36,7 @@ type shadowVmStateDb struct {
 	shadow    state.VmStateDB
 	snapshots []snapshotPair
 	err       error
-	log       *logging.Logger
+	log       logger.Logger
 }
 
 type shadowNonCommittableStateDb struct {

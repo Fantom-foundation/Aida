@@ -15,7 +15,6 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/common/bigendian"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/op/go-logging"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
@@ -60,7 +59,7 @@ type PatchJson struct {
 // AidaDbMetadata holds any information about AidaDb needed for putting it into the Db
 type AidaDbMetadata struct {
 	Db                    ethdb.Database
-	log                   *logging.Logger
+	log                   logger.Logger
 	FirstBlock, LastBlock uint64
 	FirstEpoch, LastEpoch uint64
 	ChainId               ChainID

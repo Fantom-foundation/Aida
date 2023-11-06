@@ -11,7 +11,6 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
-	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
@@ -54,7 +53,7 @@ last block of the inclusive range of blocks to replay storage traces.`,
 }
 
 // traceReplaySubstateTask simulates storage operations from storage traces on stateDB.
-func traceReplaySubstateTask(cfg *utils.Config, log *logging.Logger) error {
+func traceReplaySubstateTask(cfg *utils.Config, log logger.Logger) error {
 	// load context
 	rCtx := context.NewReplay()
 

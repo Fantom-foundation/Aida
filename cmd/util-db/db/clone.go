@@ -12,7 +12,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
@@ -66,7 +65,7 @@ Creates clone db is used to create subset of aida-db to have more compact databa
 
 type cloner struct {
 	cfg             *utils.Config
-	log             *logging.Logger
+	log             logger.Logger
 	aidaDb, cloneDb ethdb.Database
 	count           uint64
 	typ             utils.AidaDbType
