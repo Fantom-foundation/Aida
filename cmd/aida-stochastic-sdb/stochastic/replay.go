@@ -104,7 +104,7 @@ func stochasticReplayAction(ctx *cli.Context) error {
 
 	// run simulation.
 	log.Info("Run simulation")
-	runErr := stochastic.RunStochasticReplay(db, simulation, int(simLength), cfg, logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "Stochastic"))
+	runErr := stochastic.RunStochasticReplay(db, simulation, int(simLength), cfg, logger.NewLogger(cfg.LogLevel, "Stochastic"))
 
 	// print memory usage after simulation
 	if cfg.MemoryBreakdown {

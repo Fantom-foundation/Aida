@@ -307,12 +307,12 @@ func printDbType(m *utils.AidaDbMetadata) error {
 // printAllCount counts all prefixes prints number of occurrences.
 // If DetailedFlag is called, then it prints count of each prefix
 func printAllCount(ctx *cli.Context) error {
-	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-Info")
-
 	cfg, argErr := utils.NewConfig(ctx, utils.NoArgs)
 	if argErr != nil {
 		return argErr
 	}
+
+	log := logger.NewLogger(cfg.LogLevel, "AidaDb-All-Count")
 
 	// open db
 	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", true)
@@ -349,12 +349,12 @@ func logDetailedSize(db ethdb.Database, log *logging.Logger) {
 
 // printDestroyedCount in given AidaDb
 func printDestroyedCount(ctx *cli.Context) error {
-	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-InfoCommand")
-
 	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if argErr != nil {
 		return argErr
 	}
+
+	log := logger.NewLogger(cfg.LogLevel, "AidaDb-Print-Destroyed-Count")
 
 	db, err := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
 	if err != nil {
@@ -373,12 +373,12 @@ func printDestroyedCount(ctx *cli.Context) error {
 
 // printSubstateCount in given AidaDb
 func printSubstateCount(ctx *cli.Context) error {
-	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-InfoCommand")
-
 	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if argErr != nil {
 		return argErr
 	}
+
+	log := logger.NewLogger(cfg.LogLevel, "AidaDb-Print-Substate-Count")
 
 	substate.SetSubstateDb(cfg.AidaDb)
 	substate.OpenSubstateDBReadOnly()
@@ -400,12 +400,12 @@ func printSubstateCount(ctx *cli.Context) error {
 
 // printStateHashRange prints state hash range stored in given AidaDb
 func printStateHashRange(ctx *cli.Context) error {
-	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-StateHashRange")
-
 	cfg, argErr := utils.NewConfig(ctx, utils.NoArgs)
 	if argErr != nil {
 		return argErr
 	}
+
+	log := logger.NewLogger(cfg.LogLevel, "AidaDb-State-Hash-Range")
 
 	db, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "aida-db", true)
 	if err != nil {
@@ -431,12 +431,12 @@ func printStateHashRange(ctx *cli.Context) error {
 
 // printSubstateRange prints state substate range stored in given AidaDb
 func printSubstateRange(ctx *cli.Context) error {
-	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-SubstateRange")
-
 	cfg, argErr := utils.NewConfig(ctx, utils.NoArgs)
 	if argErr != nil {
 		return argErr
 	}
+
+	log := logger.NewLogger(cfg.LogLevel, "AidaDb-Substate-Range")
 
 	substate.SetSubstateDb(cfg.AidaDb)
 	substate.OpenSubstateDBReadOnly()
@@ -453,12 +453,12 @@ func printSubstateRange(ctx *cli.Context) error {
 
 // printDeletedAccountInfo for given deleted account in AidaDb
 func printDeletedAccountInfo(ctx *cli.Context) error {
-	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-InfoCommand")
-
 	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if argErr != nil {
 		return argErr
 	}
+
+	log := logger.NewLogger(cfg.LogLevel, "AidaDb-Deleted-Account-Info")
 
 	db, err := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
 	if err != nil {
@@ -498,12 +498,12 @@ func GetDbSize(db ethdb.Database) uint64 {
 }
 
 func printStateHash(ctx *cli.Context) error {
-	log := logger.NewLogger(ctx.String(logger.LogLevelFlag.Name), "AidaDb-Print-State-Hash")
-
 	cfg, argErr := utils.NewConfig(ctx, utils.OneToNArgs)
 	if argErr != nil {
 		return argErr
 	}
+
+	log := logger.NewLogger(cfg.LogLevel, "AidaDb-Print-State-Hash")
 
 	blockNum, err := strconv.ParseUint(ctx.Args().Slice()[0], 10, 64)
 	if err != nil {
