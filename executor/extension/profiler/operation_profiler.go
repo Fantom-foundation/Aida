@@ -6,8 +6,8 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state/proxy"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
-	"github.com/Fantom-foundation/Aida/tracer/profile"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/Fantom-foundation/Aida/utils/analytics"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/op/go-logging"
 )
@@ -22,7 +22,7 @@ func MakeOperationProfiler[T any](cfg *utils.Config) executor.Extension[T] {
 	p := &operationProfiler[T]{
 		cfg:           cfg,
 		ops:           ops,
-		anlt:          profile.NewIncrementalAnalytics(len(ops)),
+		anlt:          analytics.NewIncrementalAnalytics(len(ops)),
 		ps:            utils.NewPrinters(),
 		interval:      utils.NewInterval(cfg.First, cfg.Last, cfg.ProfileInterval),
 		log:           logger.NewLogger(cfg.LogLevel, "Operation Profiler"),
