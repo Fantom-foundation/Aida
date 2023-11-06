@@ -41,20 +41,19 @@ var GenerateCommand = cli.Command{
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 		&utils.ChainIDFlag,
-		&utils.GenesisFlag,
+		&utils.OperaDbFlag,
 		&utils.WorldStateFlag,
 		&utils.OperaBinaryFlag,
 		&utils.OutputFlag,
-		&utils.TargetEpochFlag,
 		&utils.UpdateBufferSizeFlag,
 		&substate.WorkersFlag,
 		&logger.LogLevelFlag,
 	},
 	Description: `
-The db generate command requires events as an argument:
-<events>
-
-<events> are fed into the opera database (either existing or genesis needs to be specified), processing them generates updated aida-db.`,
+The db generate command requires 4 arguments:
+<firstBlock> <lastBlock> <firstEpoch> <lastEpoch>
+This command is designed for manual generation of deletion, updateset and patch just from substates in aidadb.
+`,
 }
 
 type generator struct {
@@ -82,6 +81,11 @@ func generate(ctx *cli.Context) error {
 		return err
 	}
 
+	err = g.prepareManualGenerate(ctx, cfg)
+	if err != nil {
+		return fmt.Errorf("prepareManualGenerate: %v; make sure you have correct substate range already recorded in aidadb", err)
+	}
+
 	if err = g.Generate(); err != nil {
 		return err
 	}
@@ -89,6 +93,64 @@ func generate(ctx *cli.Context) error {
 	MustCloseDB(g.aidaDb)
 
 	return printMetadata(g.cfg.AidaDb)
+}
+
+// prepareManualGenerate prepares generator for manual generation
+func (g *generator) prepareManualGenerate(ctx *cli.Context, cfg *utils.Config) (err error) {
+	if ctx.Args().Len() != 4 {
+		return fmt.Errorf("generate command requires exactly 4 arguments")
+	}
+
+	g.opera.firstBlock, g.opera.lastBlock, err = utils.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1), cfg.ChainID)
+	if err != nil {
+		return err
+	}
+
+	g.opera.firstEpoch, g.opera.lastEpoch, err = utils.SetBlockRange(ctx.Args().Get(2), ctx.Args().Get(3), cfg.ChainID)
+	if err != nil {
+		return err
+	}
+
+	if g.opera.firstBlock > g.opera.lastBlock {
+		return fmt.Errorf("generation range first block %v cannot be greater than available last block %v", g.opera.firstBlock, g.opera.lastBlock)
+	}
+
+	if g.opera.firstEpoch > g.opera.lastEpoch {
+		return fmt.Errorf("generation range first epoch %v cannot be greater than available last epoch %v", g.opera.firstEpoch, g.opera.lastEpoch)
+	}
+
+	firstSubstate := substate.NewSubstateDB(g.aidaDb).GetFirstSubstate()
+	lastSubstate, err := substate.NewSubstateDB(g.aidaDb).GetLastSubstate()
+	if err != nil {
+		return fmt.Errorf("cannot get last substate; %v", err)
+	}
+
+	if firstSubstate.Env.Number > g.opera.firstBlock {
+		return fmt.Errorf("generation range first block %v cannot be greater than first substate block %v", g.opera.firstBlock, firstSubstate.Env.Number)
+	}
+
+	if lastSubstate.Env.Number < g.opera.lastBlock {
+		return fmt.Errorf("generation range last block %v cannot be greater than last substate block %v", g.opera.lastBlock, lastSubstate.Env.Number)
+	}
+
+	firstAvailableEpoch, err := utils.FindEpochNumber(firstSubstate.Env.Number, g.cfg.ChainID)
+	if err != nil {
+		return fmt.Errorf("cannot find first epoch number; %v", err)
+	}
+
+	lastAvailableEpoch, err := utils.FindEpochNumber(lastSubstate.Env.Number, g.cfg.ChainID)
+	if err != nil {
+		return fmt.Errorf("cannot find last epoch number; %v", err)
+	}
+
+	if g.opera.firstEpoch < firstAvailableEpoch {
+		return fmt.Errorf("generation range first epoch %v cannot be less than first available epoch %v", g.opera.firstEpoch, firstAvailableEpoch)
+	}
+
+	if g.opera.lastEpoch > lastAvailableEpoch {
+		return fmt.Errorf("generation range last epoch %v cannot be greater than last available epoch %v", g.opera.lastEpoch, lastAvailableEpoch)
+	}
+	return nil
 }
 
 // newGenerator returns new instance of generator
