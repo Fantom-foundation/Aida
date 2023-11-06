@@ -108,7 +108,7 @@ func Update(cfg *utils.Config) error {
 		return err
 	}
 
-	log.Notice("Aida-Db %v updated finished successfully. Total elapsed time: %v", time.Since(start).Round(1*time.Second))
+	log.Noticef("Aida-Db %v updated finished successfully. Total elapsed time: %v", cfg.AidaDb, time.Since(start).Round(1*time.Second))
 
 	return nil
 }

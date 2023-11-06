@@ -123,22 +123,20 @@ func clonePatch(ctx *cli.Context) error {
 
 // CreatePatchClone creates aida-db patch
 func CreatePatchClone(cfg *utils.Config, aidaDb, targetDb ethdb.Database, firstEpoch, lastEpoch uint64, isNewOpera bool) error {
-	var isFirstPatch = false
+	var isFirstGenerationFromGenesis = false
 
 	var cloneType = utils.PatchType
 
 	// if the patch is first, we need to make some exceptions hence cloner needs to know
 	if isNewOpera {
-		if (firstEpoch == 5577 || firstEpoch == 0) && cfg.ChainID == utils.MainnetChainID {
-			isFirstPatch = true
-			cloneType = utils.GenType
+		if firstEpoch == 5577 && cfg.ChainID == utils.MainnetChainID {
+			isFirstGenerationFromGenesis = true
 		} else if firstEpoch == 2458 && cfg.ChainID == utils.TestnetChainID {
-			isFirstPatch = true
-			cloneType = utils.GenType
+			isFirstGenerationFromGenesis = true
 		}
 	}
 
-	err := clone(cfg, aidaDb, targetDb, cloneType, isFirstPatch)
+	err := clone(cfg, aidaDb, targetDb, cloneType, isFirstGenerationFromGenesis)
 	if err != nil {
 		return err
 	}
@@ -180,7 +178,8 @@ func createDbClone(ctx *cli.Context) error {
 	return printMetadata(cfg.TargetDb)
 }
 
-func clone(cfg *utils.Config, aidaDb, cloneDb ethdb.Database, cloneType utils.AidaDbType, isFirstPatch bool) error {
+// clone creates aida-db copy or subset - either clone(standalone - containing all necessary data for given range) or patch(containing data only for given range)
+func clone(cfg *utils.Config, aidaDb, cloneDb ethdb.Database, cloneType utils.AidaDbType, isFirstGenerationFromGenesis bool) error {
 	var err error
 	log := logger.NewLogger(cfg.LogLevel, "AidaDb Clone")
 
@@ -196,7 +195,7 @@ func clone(cfg *utils.Config, aidaDb, cloneDb ethdb.Database, cloneType utils.Ai
 		closeCh: make(chan any),
 	}
 
-	if err = c.clone(isFirstPatch); err != nil {
+	if err = c.clone(isFirstGenerationFromGenesis); err != nil {
 		return err
 	}
 
@@ -205,16 +204,16 @@ func clone(cfg *utils.Config, aidaDb, cloneDb ethdb.Database, cloneType utils.Ai
 }
 
 // createDbClone AidaDb in given block range
-func (c *cloner) clone(isFirstPatch bool) error {
+func (c *cloner) clone(isFirstGenerationFromGenesis bool) error {
 	go c.write()
 	go c.checkErrors()
 
 	c.read([]byte(substate.Stage1CodePrefix), 0, nil)
 
-	// update c.cfg.First block before loading deletions and substates, because for utils.CloneType those are necessery to be from last updateset onward
-	// lastUpdateBeforeRange contains blocknumber at which is first updateset preceding the given block range,
+	// update c.cfg.First block before loading deletions and substates, because for utils.CloneType those are necessary to be from last updateset onward
+	// lastUpdateBeforeRange contains block number at which is first updateset preceding the given block range,
 	// it is only required in CloneType db
-	lastUpdateBeforeRange := c.readUpdateSet(isFirstPatch)
+	lastUpdateBeforeRange := c.readUpdateSet(isFirstGenerationFromGenesis)
 	if c.typ == utils.CloneType {
 		// check whether updateset before interval exists
 		if lastUpdateBeforeRange < c.cfg.First && lastUpdateBeforeRange != 0 {
@@ -359,7 +358,7 @@ func (c *cloner) read(prefix []byte, start uint64, condition func(key []byte) (b
 }
 
 // readUpdateSet from UpdateDb
-func (c *cloner) readUpdateSet(isFirstPatch bool) uint64 {
+func (c *cloner) readUpdateSet(isFirstGenerationFromGenesis bool) uint64 {
 	// labeling last updateSet before interval - need to export substate for that range as well
 	var lastUpdateBeforeRange uint64
 	endCond := func(key []byte) (bool, error) {
@@ -384,9 +383,9 @@ func (c *cloner) readUpdateSet(isFirstPatch bool) uint64 {
 	} else if c.typ == utils.PatchType {
 		var wantedBlock uint64
 
-		// if we are working with first patch we need to move the start of the iterator minus one block
-		// so first update-set gets inserted
-		if isFirstPatch {
+		// if we are working with first patch that was created from genesis we need to move the start of the iterator minus one block
+		// so first update-set from worldstate gets inserted
+		if isFirstGenerationFromGenesis {
 			wantedBlock = c.cfg.First - 1
 		} else {
 			wantedBlock = c.cfg.First
