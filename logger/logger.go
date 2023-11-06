@@ -69,6 +69,8 @@ type Logger interface {
 	Debug(args ...interface{})
 	// Debugf logs a message using DEBUG as log level.
 	Debugf(format string, args ...interface{})
+
+	IsEnabledFor(level logging.Level) bool
 }
 
 // NewLogger provides a new instance of the Logger based on context flags.
