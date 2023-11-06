@@ -28,6 +28,7 @@ func main() {
 			&logger.LogLevelFlag,
 			&utils.ChainIDFlag,
 			&utils.ContinueOnFailureFlag,
+			&utils.ValidateFlag,
 
 			// ShadowDB
 			&utils.ShadowDb,
