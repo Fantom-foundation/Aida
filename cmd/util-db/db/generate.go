@@ -400,7 +400,7 @@ func (g *generator) createPatch() (string, error) {
 
 	// creating patch name
 	// add leading zeroes to filename to make it sortable
-	patchName := fmt.Sprintf("aida-db-%09s", strconv.FormatUint(g.opera.lastEpoch, 10))
+	patchName := fmt.Sprintf("%s-%s", strconv.FormatUint(g.opera.firstEpoch, 10), strconv.FormatUint(g.opera.lastEpoch, 10))
 	patchPath := filepath.Join(g.cfg.Output, patchName)
 
 	g.cfg.TargetDb = patchPath
