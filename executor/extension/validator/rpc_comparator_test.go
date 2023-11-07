@@ -54,7 +54,7 @@ func TestRPCComparator_PostTransactionDoesNotFailAndAppendsAndLogsErrorIfContinu
 			MethodBase: "getBalance",
 		},
 		Response: rec,
-		StateDbReturn: &rpc.StateDbReturn{
+		ReturnState: &rpc.ReturnState{
 			Result: bigRes,
 		},
 	}
@@ -93,7 +93,7 @@ func TestRPCComparator_PostTransactionFailsWhenContinueOnFailureIsNotEnabled(t *
 			MethodBase: "getBalance",
 		},
 		Response: rec,
-		StateDbReturn: &rpc.StateDbReturn{
+		ReturnState: &rpc.ReturnState{
 			Result: bigRes,
 		},
 	}
@@ -121,7 +121,7 @@ func Test_compareBalanceOK(t *testing.T) {
 			Method: "ftm_getBalance",
 		},
 		Response: rec,
-		StateDbReturn: &rpc.StateDbReturn{
+		ReturnState: &rpc.ReturnState{
 			Result: bigRes,
 		},
 	}
@@ -144,7 +144,7 @@ func Test_compareBalanceErrorNoMatchingResult(t *testing.T) {
 			Method: "ftm_getBalance",
 		},
 		Response: rec,
-		StateDbReturn: &rpc.StateDbReturn{
+		ReturnState: &rpc.ReturnState{
 			Result: bigRes,
 		},
 	}
@@ -171,7 +171,7 @@ func Test_compareTransactionCountOK(t *testing.T) {
 			Method: "ftm_getTransactionCount",
 		},
 		Response: rec,
-		StateDbReturn: &rpc.StateDbReturn{
+		ReturnState: &rpc.ReturnState{
 			Result: uint64(1),
 		},
 	}
@@ -194,7 +194,7 @@ func Test_compareTransactionCountErrorNoMatchingResult(t *testing.T) {
 			Method: "ftm_getTransactionCount",
 		},
 		Response: rec,
-		StateDbReturn: &rpc.StateDbReturn{
+		ReturnState: &rpc.ReturnState{
 			Result: uint64(1),
 		},
 	}
@@ -221,7 +221,7 @@ func Test_compareCallOK(t *testing.T) {
 			Method: "ftm_call",
 		},
 		Response: rec,
-		StateDbReturn: &rpc.StateDbReturn{
+		ReturnState: &rpc.ReturnState{
 			Result: hexutils.HexToBytes(strings.TrimPrefix(longHexOne, "0x")),
 		},
 	}
@@ -242,7 +242,7 @@ func Test_compareCallErrorNoMatchingResult(t *testing.T) {
 			Method: "ftm_call",
 		},
 		Response: rec,
-		StateDbReturn: &rpc.StateDbReturn{
+		ReturnState: &rpc.ReturnState{
 			Result: hexutils.HexToBytes(strings.TrimPrefix(longHexZero, "0x")),
 		},
 	}
@@ -267,7 +267,7 @@ func Test_compareCallErrorExpectedResultGotErr(t *testing.T) {
 			Method: "eth_call",
 		},
 		Response: []byte(hexOne),
-		StateDbReturn: &rpc.StateDbReturn{
+		ReturnState: &rpc.ReturnState{
 			Error: errors.New("err"),
 		},
 	}
@@ -295,7 +295,7 @@ func Test_compareCallErrorExpectedErrGotResult(t *testing.T) {
 			Code:    -32000,
 			Message: "error",
 		},
-		StateDbReturn: &rpc.StateDbReturn{
+		ReturnState: &rpc.ReturnState{
 			Result: hexutils.HexToBytes(strings.TrimPrefix(longHexZero, "0x")),
 		},
 	}
@@ -322,7 +322,7 @@ func Test_compareEstimateGasOK(t *testing.T) {
 			Method: "eth_estimateGas",
 		},
 		Response: rec,
-		StateDbReturn: &rpc.StateDbReturn{
+		ReturnState: &rpc.ReturnState{
 			Result: hexutil.Uint64(1),
 		},
 	}
@@ -343,7 +343,7 @@ func Test_compareEstimateGasErrorNoMatchingResult(t *testing.T) {
 			Method: "eth_estimateGas",
 		},
 		Response: rec,
-		StateDbReturn: &rpc.StateDbReturn{
+		ReturnState: &rpc.ReturnState{
 			Result: hexutil.Uint64(0),
 		},
 	}
@@ -368,7 +368,7 @@ func Test_compareEstimateGasErrorExpectedResultGotErr(t *testing.T) {
 			Method: "eth_estimateGas",
 		},
 		Response: []byte(hexOne),
-		StateDbReturn: &rpc.StateDbReturn{
+		ReturnState: &rpc.ReturnState{
 			Error: errors.New("error"),
 		},
 	}
@@ -395,7 +395,7 @@ func Test_compareEstimateGasErrorExpectedErrGotResult(t *testing.T) {
 			Code:    1000,
 			Message: "error",
 		},
-		StateDbReturn: &rpc.StateDbReturn{
+		ReturnState: &rpc.ReturnState{
 			Result: hexutil.Uint64(0),
 		},
 	}
@@ -422,7 +422,7 @@ func Test_compareCodeOK(t *testing.T) {
 			Method: "eth_getCode",
 		},
 		Response: rec,
-		StateDbReturn: &rpc.StateDbReturn{
+		ReturnState: &rpc.ReturnState{
 			Result: hexutils.HexToBytes(strings.TrimPrefix(longHexOne, "0x")),
 		},
 	}
@@ -443,7 +443,7 @@ func Test_compareCodeErrorNoMatchingResult(t *testing.T) {
 			Method: "eth_getCode",
 		},
 		Response: rec,
-		StateDbReturn: &rpc.StateDbReturn{
+		ReturnState: &rpc.ReturnState{
 			Result: hexutils.HexToBytes(strings.TrimPrefix(longHexZero, "0x")),
 		},
 	}
@@ -470,7 +470,7 @@ func Test_compareStorageAtOK(t *testing.T) {
 			Method: "eth_getStorageAt",
 		},
 		Response: rec,
-		StateDbReturn: &rpc.StateDbReturn{
+		ReturnState: &rpc.ReturnState{
 			Result: hexutils.HexToBytes(strings.TrimPrefix(longHexOne, "0x")),
 		},
 	}
@@ -491,7 +491,7 @@ func Test_compareStorageAtErrorNoMatchingResult(t *testing.T) {
 			Method: "eth_getStorageAt",
 		},
 		Response: rec,
-		StateDbReturn: &rpc.StateDbReturn{
+		ReturnState: &rpc.ReturnState{
 			Result: hexutils.HexToBytes(strings.TrimPrefix(longHexZero, "0x")),
 		},
 	}
