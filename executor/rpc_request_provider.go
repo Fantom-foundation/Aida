@@ -51,10 +51,6 @@ func (r rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc.Request
 			return nil
 		}
 
-		if req.Query.MethodBase == "getBalance" && req.Error != nil {
-			fmt.Sprintf("")
-		}
-
 		if err := consumer(TransactionInfo[*rpc.RequestAndResults]{req.Block, 0, req}); err != nil {
 			return err
 		}
