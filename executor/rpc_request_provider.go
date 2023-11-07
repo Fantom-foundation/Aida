@@ -95,7 +95,10 @@ func findBlockNumber(data *rpc.RequestAndResults) (int, bool) {
 		return 0, false
 	default:
 		// botched params are not recorded, so this will  never panic
-		block := hexutil.MustDecodeUint64(str)
+		block, err := hexutil.DecodeUint64(str)
+		if err != nil {
+			return 0, false
+		}
 		return int(block), true
 	}
 }
