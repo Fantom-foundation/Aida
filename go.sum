@@ -63,12 +63,12 @@ github.com/DataDog/zstd v1.5.2/go.mod h1:g4AWEaM3yOg3HYfnJ3YIawPnVdXJh9QME85blwS
 github.com/Fantom-foundation/Substate v0.0.0-20230224090651-4c8c024214f4/go.mod h1:/yIHWCDDJcdKMJYvOLdYOnHt5eUBF9XWnrvrNE+90ik=
 github.com/Fantom-foundation/Substate v0.0.0-20230717050741-1969ed5d05e2 h1:yEXWdN0Xj1CQqmVqdn6VHtydNFoO3KOI3qVvplj8Z8o=
 github.com/Fantom-foundation/Substate v0.0.0-20230717050741-1969ed5d05e2/go.mod h1:KoObQO1Wmf3ACjxcXDREHf+mtDF4MAXfHwtxMIdyhx8=
-github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20230621093123-9c5132fd78c1 h1:yUK9WxGvVWGOQmFXu5RGIkrpiO7+42sM+obmkCsyL+g=
-github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20230621093123-9c5132fd78c1/go.mod h1:Hu8U9SrXP6ABqtSNfJHw8lRGnr6tyma9PNZvwTweDjQ=
-github.com/Fantom-foundation/go-opera-substate v1.0.1-0.20230523093256-e592c59c5996 h1:YzgxEAK3dCLNvmY1pgLEgPuPOsGHFMxT6QLpZnXuxM8=
-github.com/Fantom-foundation/go-opera-substate v1.0.1-0.20230523093256-e592c59c5996/go.mod h1:qby4+H/H4DzhsQADpib01uxmECmlSJJyPozppP+Pbsk=
-github.com/Fantom-foundation/lachesis-base v0.0.0-20221208123620-82a6d15f995c h1:hgy6GWSddbPyLxRLMykSEImCqv+XuXgLYbqOgI1CBvk=
-github.com/Fantom-foundation/lachesis-base v0.0.0-20221208123620-82a6d15f995c/go.mod h1:YWx9D/y+WCiOkxjw+0FTMQAerfGfhfL/LMEMWp0f3Bw=
+github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20231024084252-bee9e77cbcf4 h1:USY2oiuz9mD29g/90sdnhV4yO2cywFVRPVeF3h2FLPk=
+github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20231024084252-bee9e77cbcf4/go.mod h1:Hu8U9SrXP6ABqtSNfJHw8lRGnr6tyma9PNZvwTweDjQ=
+github.com/Fantom-foundation/go-opera-substate v1.0.1-0.20231024085144-00c24a9e2d6c h1:9we0/uya7pk6THSPYIMJtbV5awpVi+Qt1e8SSIjeHmA=
+github.com/Fantom-foundation/go-opera-substate v1.0.1-0.20231024085144-00c24a9e2d6c/go.mod h1:cbS4uZ6E7fAAvrW7rznnwzcj8+Pt3r6QKuudJ00rrBA=
+github.com/Fantom-foundation/lachesis-base v0.0.0-20230817040848-1326ba9aa59b h1:/9+Cau3cWaKy9fQk/NWq3RJKrwEjgrhME6ACy4RjLns=
+github.com/Fantom-foundation/lachesis-base v0.0.0-20230817040848-1326ba9aa59b/go.mod h1:Ogv5etzSmM2rQ4eN3OfmyitwWaaPjd4EIDiW/NAbYGk=
 github.com/Joker/hpp v1.0.0/go.mod h1:8x5n+M1Hp5hC0g8okX3sR3vFQwynaX/UgSOM9MeBKzY=
 github.com/Joker/jade v1.0.1-0.20190614124447-d475f43051e7/go.mod h1:6E6s8o2AE4KhCrqr6GRJjdC/gNfTdxkIXvuGZZda2VM=
 github.com/OneOfOne/xxhash v1.2.2/go.mod h1:HSdplMjZKSmBqAxg5vPj2TmRDmfkzw+cTzAElWljhcU=
@@ -678,6 +678,7 @@ github.com/status-im/keycard-go v0.0.0-20190424133014-d95853db0f48/go.mod h1:RZL
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.1.1/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/objx v0.4.0/go.mod h1:YvHI0jy2hoMjB+UWwv71VJQ9isScKT/TqJzVSSt89Yw=
+github.com/stretchr/objx v0.5.0/go.mod h1:Yh+to48EsGEfYuaHDzXPcE3xhTkx73EhmCGUpEOglKo=
 github.com/stretchr/testify v1.2.0/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
 github.com/stretchr/testify v1.3.0/go.mod h1:M5WIy9Dh21IEIfnGCwXGc5bZfKNJtfHm1UVUgZn+9EI=
@@ -687,8 +688,9 @@ github.com/stretchr/testify v1.6.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/
 github.com/stretchr/testify v1.6.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
 github.com/stretchr/testify v1.7.1/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=
-github.com/stretchr/testify v1.8.0 h1:pSgiaMZlXftHpm5L7V1+rVB+AZJydKsMxsQBIJw4PKk=
 github.com/stretchr/testify v1.8.0/go.mod h1:yNjHg4UonilssWZ8iaSj1OCr/vHnekPRkoO+kdMU+MU=
+github.com/stretchr/testify v1.8.1 h1:w7B6lhMri9wdJUVmEZPGGhZzrYTPvgJArz7wNPgYKsk=
+github.com/stretchr/testify v1.8.1/go.mod h1:w2LPCIKwWwSfY2zedu0+kehJoqGctiVI29o6fzry7u4=
 github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7 h1:epCh84lMvA70Z7CTTCmYQn2CKbY8j86K7/FAIr141uY=
 github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7/go.mod h1:q4W45IWZaF22tdD+VEXcAWRA037jwmWEB5VWYORlTpc=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
