@@ -76,25 +76,13 @@ func (r rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc.Request
 
 // findBlockNumber finds what block number request wants
 func findBlockNumber(data *rpc.RequestAndResults) (int, bool) {
-	if len(data.Query.Params) < 2 {
+	l := len(data.Query.Params)
+	if l < 2 {
 		return data.Block, true
 	}
 
-	var (
-		str string
-		ok  bool
-	)
-	if len(data.Query.Params) == 2 {
-		str, ok = data.Query.Params[1].(string)
-		if !ok {
-			return data.Block, true
-		}
-	} else if len(data.Query.Params) == 3 {
-		str, ok = data.Query.Params[2].(string)
-		if !ok {
-			return data.Block, true
-		}
-	} else {
+	str, ok := data.Query.Params[l-1].(string)
+	if !ok {
 		return 0, false
 	}
 
