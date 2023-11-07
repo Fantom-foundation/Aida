@@ -103,7 +103,7 @@ var emptyReqA = &rpc.RequestAndResults{
 		Namespace:  "eth",
 		MethodBase: "getBalance",
 	},
-	StateDB: &rpc.StateDBData{
+	StateDbReturn: &rpc.StateDbReturn{
 		Result: new(big.Int).SetInt64(1),
 	},
 }
@@ -119,7 +119,7 @@ var emptyReqB = &rpc.RequestAndResults{
 		Namespace:  "eth",
 		MethodBase: "getBalance",
 	},
-	StateDB: &rpc.StateDBData{
+	StateDbReturn: &rpc.StateDbReturn{
 		Result: new(big.Int).SetInt64(0),
 	},
 }
