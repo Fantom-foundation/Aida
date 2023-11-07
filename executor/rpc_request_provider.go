@@ -31,6 +31,7 @@ type rpcRequestProvider struct {
 }
 
 func (r rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc.RequestAndResults]) error {
+	var blockNumber int
 
 	for r.iter.Next() {
 		if r.iter.Error() != nil {
@@ -43,16 +44,22 @@ func (r rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc.Request
 			return nil
 		}
 
+		if req.Response != nil {
+			blockNumber = int(req.Response.BlockID)
+		} else {
+			blockNumber = int(req.Error.BlockID)
+		}
+
 		// are we skipping requests?
-		if req.Block < from {
+		if blockNumber < from {
 			continue
 		}
 
-		if req.Block >= to {
+		if blockNumber >= to {
 			return nil
 		}
 
-		if err := consumer(TransactionInfo[*rpc.RequestAndResults]{req.Block, 0, req}); err != nil {
+		if err := consumer(TransactionInfo[*rpc.RequestAndResults]{blockNumber, 0, req}); err != nil {
 			return err
 		}
 	}

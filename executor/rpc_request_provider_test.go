@@ -111,23 +111,33 @@ func TestRPCRequestProvider_ErrorReturnedByIteratorEndsTheApp(t *testing.T) {
 }
 
 var validResp = &rpc.RequestAndResults{
-	Block:       10,
-	Timestamp:   10,
-	Query:       nil,
-	Response:    json.RawMessage{},
+	Query: nil,
+	Response: &rpc.Response{
+		Version:   "2.0",
+		ID:        json.RawMessage{1},
+		BlockID:   10,
+		Timestamp: 10,
+		Result:    nil,
+		Payload:   nil,
+	},
 	Error:       nil,
 	ParamsRaw:   nil,
 	ResponseRaw: nil,
 }
 
 var errResp = &rpc.RequestAndResults{
-	Block:     10,
-	Timestamp: 10,
-	Query:     nil,
-	Response:  nil,
-	Error: &rpc.Error{
-		Code:    -1,
-		Message: "err",
+	Query:    nil,
+	Response: nil,
+	Error: &rpc.ErrorResponse{
+		Version:   "2.0",
+		Id:        json.RawMessage{1},
+		BlockID:   10,
+		Timestamp: 10,
+		Error: rpc.ErrorMessage{
+			Code:    -1,
+			Message: "err",
+		},
+		Payload: nil,
 	},
 	ParamsRaw:   nil,
 	ResponseRaw: nil,
