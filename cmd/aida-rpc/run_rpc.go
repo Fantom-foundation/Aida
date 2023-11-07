@@ -43,7 +43,7 @@ type rpcProcessor struct {
 }
 
 func (p rpcProcessor) Process(state executor.State[*rpc.RequestAndResults], ctx *executor.Context) error {
-	state.Data.StateDB = rpc.Execute(uint64(state.Block), state.Data, ctx.Archive, p.cfg)
+	state.Data.ReturnState = rpc.Execute(uint64(state.Block), state.Data, ctx.Archive, p.cfg)
 	return nil
 }
 

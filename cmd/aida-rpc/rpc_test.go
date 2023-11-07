@@ -21,12 +21,12 @@ func TestRPC_TransactionsAreExecutedForCorrectRange(t *testing.T) {
 	archive := state.NewMockNonCommittableStateDB(ctrl)
 
 	var err error
-	emptyReqA.Response.Result, err = json.Marshal("0x1")
+	emptyReqA.Response, err = json.Marshal("0x1")
 	if err != nil {
 		t.Errorf("unexpected error while marshalling result; %v", err)
 	}
 
-	emptyReqB.Response.Result, err = json.Marshal("0x0")
+	emptyReqB.Response, err = json.Marshal("0x0")
 	if err != nil {
 		t.Errorf("unexpected error while marshalling result; %v", err)
 	}
@@ -93,6 +93,8 @@ func TestRPC_TransactionsAreExecutedForCorrectRange(t *testing.T) {
 }
 
 var emptyReqA = &rpc.RequestAndResults{
+	Block:     10,
+	Timestamp: 10,
 	Query: &rpc.Body{
 		Version:    "2.0",
 		ID:         json.RawMessage{1},
@@ -101,18 +103,14 @@ var emptyReqA = &rpc.RequestAndResults{
 		Namespace:  "eth",
 		MethodBase: "getBalance",
 	},
-	Response: &rpc.Response{
-		Version:   "2.0",
-		ID:        json.RawMessage{1},
-		BlockID:   10,
-		Timestamp: 10,
-	},
-	StateDB: &rpc.StateDBData{
+	ReturnState: &rpc.ReturnState{
 		Result: new(big.Int).SetInt64(1),
 	},
 }
 
 var emptyReqB = &rpc.RequestAndResults{
+	Block:     11,
+	Timestamp: 11,
 	Query: &rpc.Body{
 		Version:    "2.0",
 		ID:         json.RawMessage{1},
@@ -121,13 +119,7 @@ var emptyReqB = &rpc.RequestAndResults{
 		Namespace:  "eth",
 		MethodBase: "getBalance",
 	},
-	Response: &rpc.Response{
-		Version:   "2.0",
-		ID:        json.RawMessage{1},
-		BlockID:   11,
-		Timestamp: 11,
-	},
-	StateDB: &rpc.StateDBData{
+	ReturnState: &rpc.ReturnState{
 		Result: new(big.Int).SetInt64(0),
 	},
 }
