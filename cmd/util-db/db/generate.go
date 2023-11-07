@@ -338,7 +338,7 @@ func (g *generator) processDeletedAccounts(ddb *substate.DestroyedAccountDB) err
 	start = time.Now()
 	g.log.Noticef("Generating DeletionDb...")
 
-	err = GenDeletedAccountsAction(g.cfg, ddb, 0)
+	err = GenDeletedAccountsAction(g.cfg, ddb, 0, g.opera.lastBlock)
 	if err != nil {
 		return fmt.Errorf("cannot doGenerations deleted accounts; %v", err)
 	}
