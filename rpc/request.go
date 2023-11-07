@@ -9,7 +9,7 @@ type RequestAndResults struct {
 	Error       *ErrorResponse
 	ParamsRaw   []byte
 	ResponseRaw []byte
-	StateDB     *StateDBData
+	ReturnState *ReturnState
 }
 
 // Body represents a decoded payload of a balancer.

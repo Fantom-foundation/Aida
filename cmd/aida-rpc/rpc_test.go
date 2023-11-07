@@ -107,7 +107,7 @@ var emptyReqA = &rpc.RequestAndResults{
 		BlockID:   10,
 		Timestamp: 10,
 	},
-	StateDB: &rpc.StateDBData{
+	StateDB: &rpc.ReturnState{
 		Result: new(big.Int).SetInt64(1),
 	},
 }
@@ -127,7 +127,7 @@ var emptyReqB = &rpc.RequestAndResults{
 		BlockID:   11,
 		Timestamp: 11,
 	},
-	StateDB: &rpc.StateDBData{
+	StateDB: &rpc.ReturnState{
 		Result: new(big.Int).SetInt64(0),
 	},
 }

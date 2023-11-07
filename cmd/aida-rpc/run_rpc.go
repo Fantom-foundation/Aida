@@ -43,7 +43,10 @@ type rpcProcessor struct {
 }
 
 func (p rpcProcessor) Process(state executor.State[*rpc.RequestAndResults], ctx *executor.Context) error {
-	state.Data.StateDB = rpc.Execute(uint64(state.Block), state.Data, ctx.Archive, p.cfg)
+	if ctx.Archive == nil {
+		return nil
+	}
+	state.Data.ReturnState = rpc.Execute(uint64(state.Block), state.Data, ctx.Archive, p.cfg)
 	return nil
 }
 
@@ -51,7 +54,7 @@ func run(cfg *utils.Config, provider executor.Provider[*rpc.RequestAndResults], 
 	var extensionList = []executor.Extension[*rpc.RequestAndResults]{
 		profiler.MakeCpuProfiler[*rpc.RequestAndResults](cfg),
 		tracker.MakeProgressLogger[*rpc.RequestAndResults](cfg, 15*time.Second),
-		statedb.MakeTemporaryArchivePrepper[*rpc.RequestAndResults](),
+		statedb.MakeTemporaryArchivePrepper(),
 		validator.MakeRpcComparator(cfg),
 	}
 

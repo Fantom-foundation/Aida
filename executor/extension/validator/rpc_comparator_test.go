@@ -56,7 +56,7 @@ func TestRPCComparator_PostTransactionDoesNotFailAndAppendsAndLogsErrorIfContinu
 		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &rpc.StateDBData{
+		ReturnState: &rpc.ReturnState{
 			Result: bigRes,
 		},
 	}
@@ -97,7 +97,7 @@ func TestRPCComparator_PostTransactionFailsWhenContinueOnFailureIsNotEnabled(t *
 		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &rpc.StateDBData{
+		ReturnState: &rpc.ReturnState{
 			Result: bigRes,
 		},
 	}
@@ -127,7 +127,7 @@ func Test_compareBalanceOK(t *testing.T) {
 		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &rpc.StateDBData{
+		ReturnState: &rpc.ReturnState{
 			Result: bigRes,
 		},
 	}
@@ -152,7 +152,7 @@ func Test_compareBalanceErrorNoMatchingResult(t *testing.T) {
 		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &rpc.StateDBData{
+		ReturnState: &rpc.ReturnState{
 			Result: bigRes,
 		},
 	}
@@ -181,7 +181,7 @@ func Test_compareTransactionCountOK(t *testing.T) {
 		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &rpc.StateDBData{
+		ReturnState: &rpc.ReturnState{
 			Result: uint64(1),
 		},
 	}
@@ -206,7 +206,7 @@ func Test_compareTransactionCountErrorNoMatchingResult(t *testing.T) {
 		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &rpc.StateDBData{
+		ReturnState: &rpc.ReturnState{
 			Result: uint64(1),
 		},
 	}
@@ -235,7 +235,7 @@ func Test_compareCallOK(t *testing.T) {
 		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &rpc.StateDBData{
+		ReturnState: &rpc.ReturnState{
 			Result: hexutils.HexToBytes(strings.TrimPrefix(longHexOne, "0x")),
 		},
 	}
@@ -258,7 +258,7 @@ func Test_compareCallErrorNoMatchingResult(t *testing.T) {
 		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &rpc.StateDBData{
+		ReturnState: &rpc.ReturnState{
 			Result: hexutils.HexToBytes(strings.TrimPrefix(longHexZero, "0x")),
 		},
 	}
@@ -285,7 +285,7 @@ func Test_compareCallErrorExpectedResultGotErr(t *testing.T) {
 		Response: &rpc.Response{
 			Result: []byte(hexOne),
 		},
-		StateDB: &rpc.StateDBData{
+		ReturnState: &rpc.ReturnState{
 			Error: errors.New("err"),
 		},
 	}
@@ -315,7 +315,7 @@ func Test_compareCallErrorExpectedErrGotResult(t *testing.T) {
 				Message: "error",
 			},
 		},
-		StateDB: &rpc.StateDBData{
+		ReturnState: &rpc.ReturnState{
 			Result: hexutils.HexToBytes(strings.TrimPrefix(longHexZero, "0x")),
 		},
 	}
@@ -344,7 +344,7 @@ func Test_compareEstimateGasOK(t *testing.T) {
 		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &rpc.StateDBData{
+		ReturnState: &rpc.ReturnState{
 			Result: hexutil.Uint64(1),
 		},
 	}
@@ -367,7 +367,7 @@ func Test_compareEstimateGasErrorNoMatchingResult(t *testing.T) {
 		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &rpc.StateDBData{
+		ReturnState: &rpc.ReturnState{
 			Result: hexutil.Uint64(0),
 		},
 	}
@@ -394,7 +394,7 @@ func Test_compareEstimateGasErrorExpectedResultGotErr(t *testing.T) {
 		Response: &rpc.Response{
 			Result: []byte(hexOne),
 		},
-		StateDB: &rpc.StateDBData{
+		ReturnState: &rpc.ReturnState{
 			Error: errors.New("error"),
 		},
 	}
@@ -423,7 +423,7 @@ func Test_compareEstimateGasErrorExpectedErrGotResult(t *testing.T) {
 				Message: "error",
 			},
 		},
-		StateDB: &rpc.StateDBData{
+		ReturnState: &rpc.ReturnState{
 			Result: hexutil.Uint64(0),
 		},
 	}
@@ -452,7 +452,7 @@ func Test_compareCodeOK(t *testing.T) {
 		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &rpc.StateDBData{
+		ReturnState: &rpc.ReturnState{
 			Result: hexutils.HexToBytes(strings.TrimPrefix(longHexOne, "0x")),
 		},
 	}
@@ -475,7 +475,7 @@ func Test_compareCodeErrorNoMatchingResult(t *testing.T) {
 		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &rpc.StateDBData{
+		ReturnState: &rpc.ReturnState{
 			Result: hexutils.HexToBytes(strings.TrimPrefix(longHexZero, "0x")),
 		},
 	}
@@ -504,7 +504,7 @@ func Test_compareStorageAtOK(t *testing.T) {
 		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &rpc.StateDBData{
+		ReturnState: &rpc.ReturnState{
 			Result: hexutils.HexToBytes(strings.TrimPrefix(longHexOne, "0x")),
 		},
 	}
@@ -527,7 +527,7 @@ func Test_compareStorageAtErrorNoMatchingResult(t *testing.T) {
 		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &rpc.StateDBData{
+		ReturnState: &rpc.ReturnState{
 			Result: hexutils.HexToBytes(strings.TrimPrefix(longHexZero, "0x")),
 		},
 	}

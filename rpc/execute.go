@@ -10,15 +10,15 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-// StateDBData represents data that StateDB returned for requests recorded on API server
+// ReturnState represents data that StateDB returned for requests recorded on API server
 // This is sent to Comparator and compared with RecordedData
-type StateDBData struct {
+type ReturnState struct {
 	Result      any
 	Error       error
-	isRecovered bool
+	IsRecovered bool
 }
 
-func Execute(block uint64, rec *RequestAndResults, archive state.NonCommittableStateDB, cfg *utils.Config) *StateDBData {
+func Execute(block uint64, rec *RequestAndResults, archive state.NonCommittableStateDB, cfg *utils.Config) *ReturnState {
 	switch rec.Query.MethodBase {
 	case "getBalance":
 		return executeGetBalance(rec.Query.Params[0], archive)
@@ -64,12 +64,12 @@ func Execute(block uint64, rec *RequestAndResults, archive state.NonCommittableS
 }
 
 // executeGetBalance request into given archive and send result to comparator
-func executeGetBalance(param interface{}, archive state.VmStateDB) (out *StateDBData) {
+func executeGetBalance(param interface{}, archive state.VmStateDB) (out *ReturnState) {
 	var (
 		address common.Address
 	)
 
-	out = new(StateDBData)
+	out = new(ReturnState)
 	out.Result = new(big.Int)
 
 	// decode requested address
@@ -82,12 +82,12 @@ func executeGetBalance(param interface{}, archive state.VmStateDB) (out *StateDB
 }
 
 // executeGetTransactionCount request into given archive and send result to comparator
-func executeGetTransactionCount(param interface{}, archive state.VmStateDB) (out *StateDBData) {
+func executeGetTransactionCount(param interface{}, archive state.VmStateDB) (out *ReturnState) {
 	var (
 		address common.Address
 	)
 
-	out = new(StateDBData)
+	out = new(ReturnState)
 
 	// decode requested address
 	address = common.HexToAddress(param.(string))
@@ -99,13 +99,13 @@ func executeGetTransactionCount(param interface{}, archive state.VmStateDB) (out
 }
 
 // executeCall into EvmExecutor and return the result
-func executeCall(evm *EvmExecutor) (out *StateDBData) {
+func executeCall(evm *EvmExecutor) (out *ReturnState) {
 	var (
 		result *evmcore.ExecutionResult
 		err    error
 	)
 
-	out = new(StateDBData)
+	out = new(ReturnState)
 
 	// get the result from EvmExecutor
 	result, err = evm.sendCall()
@@ -121,8 +121,8 @@ func executeCall(evm *EvmExecutor) (out *StateDBData) {
 }
 
 // executeEstimateGas into EvmExecutor which calculates gas needed for a transaction
-func executeEstimateGas(evm *EvmExecutor) (out *StateDBData) {
-	out = new(StateDBData)
+func executeEstimateGas(evm *EvmExecutor) (out *ReturnState) {
+	out = new(ReturnState)
 
 	out.Result, out.Error = evm.sendEstimateGas()
 
@@ -130,12 +130,12 @@ func executeEstimateGas(evm *EvmExecutor) (out *StateDBData) {
 }
 
 // executeGetCode request into given archive and send result to comparator
-func executeGetCode(param interface{}, archive state.VmStateDB) (out *StateDBData) {
+func executeGetCode(param interface{}, archive state.VmStateDB) (out *ReturnState) {
 	var (
 		address common.Address
 	)
 
-	out = new(StateDBData)
+	out = new(ReturnState)
 
 	// decode requested address
 	address = common.HexToAddress(param.(string))
@@ -147,13 +147,13 @@ func executeGetCode(param interface{}, archive state.VmStateDB) (out *StateDBDat
 }
 
 // executeGetStorageAt request into given archive and send result to comparator
-func executeGetStorageAt(params []interface{}, archive state.VmStateDB) (out *StateDBData) {
+func executeGetStorageAt(params []interface{}, archive state.VmStateDB) (out *ReturnState) {
 	var (
 		address   common.Address
 		hash, res common.Hash
 	)
 
-	out = new(StateDBData)
+	out = new(ReturnState)
 
 	// decode requested address and position in storage
 	address = common.HexToAddress(params[0].(string))
