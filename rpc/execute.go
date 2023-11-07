@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"math/big"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -26,11 +27,25 @@ func Execute(block uint64, rec *RequestAndResults, archive state.NonCommittableS
 		return executeGetTransactionCount(rec.Query.Params[0], archive)
 
 	case "call":
-		if rec.Timestamp == 0 {
+		var timestamp uint64
+
+		// first try to extract timestamp from response
+		if rec.Response != nil {
+			if rec.Response.Timestamp != 0 {
+				timestamp = uint64(time.Unix(0, int64(rec.Response.Timestamp)).Unix())
+			}
+		} else if rec.Error != nil {
+			if rec.Error.Timestamp != 0 {
+
+				timestamp = uint64(time.Unix(0, int64(rec.Error.Timestamp)).Unix())
+			}
+		}
+
+		if timestamp == 0 {
 			return nil
 		}
 
-		evm := newEvmExecutor(block, archive, cfg, rec.Query.Params[0].(map[string]interface{}), rec.Timestamp)
+		evm := newEvmExecutor(block, archive, cfg, rec.Query.Params[0].(map[string]interface{}), timestamp)
 		return executeCall(evm)
 
 	case "estimateGas":
