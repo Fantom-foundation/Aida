@@ -5,6 +5,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/rpc"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/urfave/cli/v2"
 )
 
@@ -31,6 +32,10 @@ type rpcRequestProvider struct {
 }
 
 func (r rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc.RequestAndResults]) error {
+	var (
+		block int
+		ok    bool
+	)
 
 	for r.iter.Next() {
 		if r.iter.Error() != nil {
@@ -52,12 +57,47 @@ func (r rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc.Request
 			return nil
 		}
 
-		if err := consumer(TransactionInfo[*rpc.RequestAndResults]{req.Block, 0, req}); err != nil {
+		block, ok = findBlockNumber(req)
+		if !ok {
+			continue
+		}
+
+		if req.Query.MethodBase == "getBalance" && req.Error != nil {
+			fmt.Sprintf("")
+		}
+
+		if err := consumer(TransactionInfo[*rpc.RequestAndResults]{block, 0, req}); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+// findBlockNumber finds what block number request wants
+func findBlockNumber(data *rpc.RequestAndResults) (int, bool) {
+	if len(data.Query.Params) < 2 {
+		return data.Block, true
+	}
+
+	str, ok := data.Query.Params[1].(string)
+	if !ok {
+		return data.Block, true
+	}
+
+	switch str {
+	case "latest":
+		return data.Block, true
+	case "earliest":
+		return 0, true
+	case "pending":
+		// pending block does not work
+		return 0, false
+	default:
+		// botched params are not recorded, so this will  never panic
+		block := hexutil.MustDecodeUint64(str)
+		return int(block), true
+	}
 }
 
 func (r rpcRequestProvider) Close() {
