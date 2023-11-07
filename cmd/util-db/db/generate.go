@@ -46,6 +46,7 @@ var GenerateCommand = cli.Command{
 		&utils.OperaBinaryFlag,
 		&utils.OutputFlag,
 		&utils.UpdateBufferSizeFlag,
+		&utils.SkipStateHashScrappingFlag,
 		&substate.WorkersFlag,
 		&logger.LogLevelFlag,
 	},
@@ -197,9 +198,13 @@ func (g *generator) Generate() error {
 		return err
 	}
 
-	err = g.runStateHashScraper(g.ctx)
-	if err != nil {
-		return fmt.Errorf("cannot scrape state hashes; %v", err)
+	if g.cfg.SkipStateHashScrapping {
+		g.log.Noticef("Skipping state hash scraping...")
+	} else {
+		err = g.runStateHashScraper(g.ctx)
+		if err != nil {
+			return fmt.Errorf("cannot scrape state hashes; %v", err)
+		}
 	}
 
 	err = g.runDbHashGeneration(err)
@@ -408,8 +413,9 @@ func (g *generator) createPatch() (string, error) {
 	}
 
 	err = CreatePatchClone(g.cfg, g.aidaDb, patchDb, g.opera.firstEpoch, g.opera.lastEpoch, g.opera.isNew)
-
-	g.log.Notice("Patch metadata")
+	if err != nil {
+		return "", fmt.Errorf("cannot create patch clone; %v", err)
+	}
 
 	// metadata
 	err = utils.ProcessPatchLikeMetadata(patchDb, g.cfg.LogLevel, g.cfg.First, g.cfg.Last, g.opera.firstEpoch,
