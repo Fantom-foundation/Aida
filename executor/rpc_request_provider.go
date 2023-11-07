@@ -80,9 +80,22 @@ func findBlockNumber(data *rpc.RequestAndResults) (int, bool) {
 		return data.Block, true
 	}
 
-	str, ok := data.Query.Params[1].(string)
-	if !ok {
-		return data.Block, true
+	var (
+		str string
+		ok  bool
+	)
+	if len(data.Query.Params) == 2 {
+		str, ok = data.Query.Params[1].(string)
+		if !ok {
+			return data.Block, true
+		}
+	} else if len(data.Query.Params) == 3 {
+		str, ok = data.Query.Params[2].(string)
+		if !ok {
+			return data.Block, true
+		}
+	} else {
+		return 0, false
 	}
 
 	switch str {
@@ -95,10 +108,7 @@ func findBlockNumber(data *rpc.RequestAndResults) (int, bool) {
 		return 0, false
 	default:
 		// botched params are not recorded, so this will  never panic
-		block, err := hexutil.DecodeUint64(str)
-		if err != nil {
-			return 0, false
-		}
+		block := hexutil.MustDecodeUint64(str)
 		return int(block), true
 	}
 }
