@@ -98,6 +98,12 @@ func (c *rpcComparator) PostTransaction(state executor.State[*rpc.RequestAndResu
 	}
 	compareErr := compare(state)
 	if compareErr != nil {
+		// lot errors are recorded wrongly, for this case we resend the request and compare it again
+		if compareErr.typ == expectedErrorGotResult && !state.Data.ReturnState.IsRecovered {
+			state.Data.ReturnState.IsRecovered = true
+			return tryRecovery(state)
+		}
+
 		if c.cfg.ContinueOnFailure {
 			c.log.Warning(compareErr)
 			c.errors = append(c.errors, compareErr)
@@ -112,6 +118,11 @@ func (c *rpcComparator) PostTransaction(state executor.State[*rpc.RequestAndResu
 
 // PostRun prints all caught errors.
 func (c *rpcComparator) PostRun(executor.State[*rpc.RequestAndResults], *executor.Context, error) error {
+	// log only if continue on failure is enabled
+	if !c.cfg.ContinueOnFailure {
+		return nil
+	}
+
 	switch len(c.errors) {
 	case 0:
 		c.log.Notice("No errors found!")
@@ -126,19 +137,13 @@ func (c *rpcComparator) PostRun(executor.State[*rpc.RequestAndResults], *executo
 }
 
 func compare(state executor.State[*rpc.RequestAndResults]) *comparatorError {
-	var isRecovered bool
-
 	switch state.Data.Query.MethodBase {
 	case "getBalance":
 		return compareBalance(state.Data, state.Block)
 	case "getTransactionCount":
 		return compareTransactionCount(state.Data, state.Block)
 	case "call":
-		err := compareCall(state.Data, state.Block)
-		if err != nil && err.typ == expectedErrorGotResult && !isRecovered {
-			isRecovered = true
-			return tryRecovery(state)
-		}
+		return compareCall(state.Data, state.Block)
 	case "estimateGas":
 		// estimateGas is currently not suitable for replay since the estimation  in geth is always calculated
 		// for current state that means recorded result and result returned by StateDB are not comparable
@@ -181,7 +186,12 @@ func tryRecovery(state executor.State[*rpc.RequestAndResults]) *comparatorError 
 	state.Data.Response = result
 	state.Data.Error = nil
 
-	return compare(state)
+	e := compare(state)
+	if err != nil {
+		return e
+	}
+
+	return nil
 }
 
 // compareBalance compares getBalance data recorded on API server with data returned by StateDB
