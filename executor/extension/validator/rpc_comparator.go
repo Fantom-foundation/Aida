@@ -187,8 +187,14 @@ func tryRecovery(state executor.State[*rpc.RequestAndResults]) *comparatorError 
 	}
 
 	state.Data.Response = &rpc.Response{
-		Result: result,
+		Version:   state.Data.Error.Version,
+		ID:        state.Data.Error.Id,
+		BlockID:   state.Data.Error.BlockID,
+		Timestamp: state.Data.Error.Timestamp,
+		Result:    result,
+		Payload:   state.Data.Error.Payload,
 	}
+
 	state.Data.Error = nil
 
 	e := compare(state)
@@ -486,9 +492,9 @@ func compareStorageAt(data *rpc.RequestAndResults, block int) *comparatorError {
 	if data.Error != nil {
 		// internal error?
 		if data.Error.Error.Code == internalErrorCode {
-			return newComparatorError(dbString, data.Error.Error, data, block, internalError)
+			return newComparatorError(dbString, data.Error, data, block, internalError)
 		}
-		return newComparatorError(dbString, data.Error.Error, data, block, internalError)
+		return newComparatorError(dbString, data.Error, data, block, internalError)
 	}
 
 	var recordedString string

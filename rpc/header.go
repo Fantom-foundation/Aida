@@ -62,7 +62,7 @@ type Header struct {
 	isLongResult   bool
 	querySize      int32
 	resultCodeSize int32 // also used for error code; see ERR flag
-	blockID        uint64
+	blockID        int
 	blockTimestamp uint64
 }
 
@@ -155,12 +155,12 @@ func (h *Header) Method() (string, error) {
 }
 
 // SetBlockID configures the ID of a block context the query was executed under.
-func (h *Header) SetBlockID(id uint64) {
+func (h *Header) SetBlockID(id int) {
 	h.blockID = id
 }
 
 // BlockID returns the block ID of the data.
-func (h *Header) BlockID() uint64 {
+func (h *Header) BlockID() int {
 	return h.blockID
 }
 
@@ -385,7 +385,7 @@ func (h *Header) decodeFields(hdr []byte) {
 		offset += 2
 	}
 
-	h.blockID = uint64(binary.BigEndian.Uint32(hdr[offset : offset+4]))
+	h.blockID = int(binary.BigEndian.Uint32(hdr[offset : offset+4]))
 
 	switch h.version {
 	case 1:
