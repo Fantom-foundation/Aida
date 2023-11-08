@@ -136,6 +136,7 @@ type Config struct {
 	PrimeThreshold        int            // set account threshold before commit
 	Profile               bool           // enable micro profiling
 	ProfileFile           string         // output file containing profiling result
+	ProfileSqlite3        string         // output profiling results to sqlite3 DB
 	ProfileInterval       uint64         // interval of printing profile result
 	RandomSeed            int64          // set random seed for stochastic testing
 	SkipPriming           bool           // skip priming of the state DB

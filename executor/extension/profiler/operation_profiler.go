@@ -32,6 +32,7 @@ func MakeOperationProfiler[T any](cfg *utils.Config) executor.Extension[T] {
 
 	p.ps.AddPrintToConsole(func() string { return p.prettyTable().Render() })
 	p.ps.AddPrintToFile(cfg.ProfileFile, func() string { return p.prettyTable().RenderCSV() })
+	p.ps.AddPrintToSqlite3(p.sqlite3(cfg.ProfileSqlite3))
 
 	return p
 }
@@ -85,6 +86,35 @@ func (p *operationProfiler[T]) prettyTable() table.Writer {
 	return t
 }
 
+func (p *operationProfiler[T]) sqlite3(conn string) (string, string, func() [][]any) {
+	insert := "INSERT INTO operations(start, end, opId, opName, count, sum, mean, std, variance, skewness, kurtosis, min, max) VALUES( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )"
+
+	getValues := func() [][]any {
+		values := [][]any{{}}
+		for opId, stat := range p.anlt.Iterate() {
+			value := []any{
+				p.intervalStart,
+				min(p.intervalEnd, p.cfg.Last),
+				opId,
+				p.ops[byte(opId)],
+				stat.GetCount(),
+				stat.GetSum() / float64(1000),
+				stat.GetMean() / float64(1000),
+				stat.GetStandardDeviation() / float64(1000),
+				stat.GetVariance() / float64(1000),
+				stat.GetSkewness() / float64(1000),
+				stat.GetKurtosis() / float64(1000),
+				stat.GetMin() / float64(1000),
+				stat.GetMax() / float64(1000),
+			}
+			values = append(values, value)
+		}
+		return values
+	}
+
+	return conn, insert, getValues
+}
+
 func (p *operationProfiler[T]) PreRun(_ executor.State[T], ctx *executor.Context) error {
 	ctx.State = proxy.NewProfilerProxy(ctx.State, p.anlt, p.cfg.LogLevel)
 	return nil
@@ -102,5 +132,6 @@ func (p *operationProfiler[T]) PreBlock(state executor.State[T], _ *executor.Con
 
 func (p *operationProfiler[T]) PostRun(executor.State[T], *executor.Context, error) error {
 	p.ps.Print()
+	defer p.ps.Close()
 	return nil
 }

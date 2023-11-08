@@ -1,13 +1,17 @@
 package utils
 
 import (
+	"database/sql"
 	"fmt"
 	"io"
 	"os"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type Printer interface {
 	Print() error
+	Close()
 }
 
 type Printers struct {
@@ -17,6 +21,12 @@ type Printers struct {
 func (ps *Printers) Print() {
 	for _, p := range ps.printers {
 		p.Print()
+	}
+}
+
+func (ps *Printers) Close() {
+	for _, p := range ps.printers {
+		p.Close()
 	}
 }
 
@@ -37,6 +47,10 @@ type PrintToWriter struct {
 func (p *PrintToWriter) Print() error {
 	fmt.Fprintln(p.w, p.f())
 	return nil
+}
+
+func (p *PrintToWriter) Close() {
+	return
 }
 
 func NewPrintToWriter(w io.Writer, f func() string) *PrintToWriter {
@@ -70,6 +84,10 @@ func (p *PrintToFile) Print() error {
 	return nil
 }
 
+func (p *PrintToFile) Close() {
+	return
+}
+
 func NewPrintToFile(filepath string, f func() string) *PrintToFile {
 	return &PrintToFile{filepath, f}
 }
@@ -77,6 +95,51 @@ func NewPrintToFile(filepath string, f func() string) *PrintToFile {
 func (ps *Printers) AddPrintToFile(filepath string, f func() string) *Printers {
 	if filepath != "" {
 		ps.AddPrinter(NewPrintToFile(filepath, f))
+	}
+	return ps
+}
+
+type PrintToDb struct {
+	db     *sql.DB
+	insert string
+	f      func() [][]any
+}
+
+func (p *PrintToDb) Print() error {
+	stmt, err := p.db.Prepare(p.insert)
+
+	if err != nil {
+		return fmt.Errorf("unable to prepare statement, %s", p.insert)
+	}
+
+	defer stmt.Close()
+
+	values := p.f()
+	for _, value := range values {
+		stmt.Exec(value...)
+	}
+	return nil
+}
+
+func (p *PrintToDb) Close() {
+	p.db.Close()
+}
+
+func NewPrintToSqlite3(conn string, insert string, f func() [][]any) (*PrintToDb, error) {
+	db, err := sql.Open("sqlite3", conn)
+	if err != nil {
+		return nil, fmt.Errorf("unable to open connection to sqlite3 %s", conn)
+	}
+	return &PrintToDb{db, insert, f}, err
+}
+
+func (ps *Printers) AddPrintToSqlite3(conn string, insert string, f func() [][]any) *Printers {
+	if conn != "" {
+		p, err := NewPrintToSqlite3(conn, insert, f)
+		if err != nil {
+			return ps
+		}
+		return ps.AddPrinter(p)
 	}
 	return ps
 }

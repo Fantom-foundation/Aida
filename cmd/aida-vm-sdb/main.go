@@ -56,6 +56,7 @@ var RunVMApp = cli.App{
 		&utils.PrimeThresholdFlag,
 		&utils.ProfileFlag,
 		&utils.ProfileFileFlag,
+		&utils.ProfileSqlite3Flag,
 		&utils.ProfileIntervalFlag,
 		&utils.ProfileDBFlag,
 		&utils.ProfileBlocksFlag,
