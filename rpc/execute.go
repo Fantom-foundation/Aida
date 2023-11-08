@@ -15,7 +15,7 @@ import (
 type StateDBData struct {
 	Result      any
 	Error       error
-	isRecovered bool
+	IsRecovered bool
 }
 
 func Execute(block uint64, rec *RequestAndResults, archive state.NonCommittableStateDB, cfg *utils.Config) *StateDBData {

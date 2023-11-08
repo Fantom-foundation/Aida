@@ -84,16 +84,48 @@ func makeRPCComparator(cfg *utils.Config, log logger.Logger) *rpcComparator {
 
 type rpcComparator struct {
 	extension.NilExtension[*rpc.RequestAndResults]
-	cfg    *utils.Config
-	log    logger.Logger
-	errors []error
+	cfg                     *utils.Config
+	log                     logger.Logger
+	errors                  []error
+	numberOfRetriedRequests int
+	totalNumberOfRequests   int
 }
 
 // PostTransaction compares result with recording. If ContinueOnFailure
 // is enabled error is saved. Otherwise, the error is returned.
 func (c *rpcComparator) PostTransaction(state executor.State[*rpc.RequestAndResults], _ *executor.Context) error {
+	defer func() {
+		rec := recover()
+		if rec != nil {
+			fmt.Println("comparator")
+			fmt.Println(rec)
+		}
+	}()
+	// StateDB can be nil if invalid block number is passed
+	if state.Data.StateDB == nil {
+		return nil
+	}
+
+	c.totalNumberOfRequests++
+
 	compareErr := compare(state)
 	if compareErr != nil {
+		// lot errors are recorded wrongly, for this case we resend the request and compare it again
+		if !state.Data.StateDB.IsRecovered && state.Data.Error != nil {
+			c.log.Debugf("retrying %v request", state.Data.Query.Method)
+			c.log.Debugf("current ration retried against total %v/%v", c.numberOfRetriedRequests, c.totalNumberOfRequests)
+			c.numberOfRetriedRequests++
+			state.Data.StateDB.IsRecovered = true
+			compareErr = retryRequest(state)
+			if compareErr == nil {
+				return nil
+			}
+		}
+
+		if compareErr.typ == cannotUnmarshalResult {
+			return nil
+		}
+
 		if c.cfg.ContinueOnFailure {
 			c.log.Warning(compareErr)
 			c.errors = append(c.errors, compareErr)
@@ -108,6 +140,11 @@ func (c *rpcComparator) PostTransaction(state executor.State[*rpc.RequestAndResu
 
 // PostRun prints all caught errors.
 func (c *rpcComparator) PostRun(executor.State[*rpc.RequestAndResults], *executor.Context, error) error {
+	// log only if continue on failure is enabled
+	if !c.cfg.ContinueOnFailure {
+		return nil
+	}
+
 	switch len(c.errors) {
 	case 0:
 		c.log.Notice("No errors found!")
@@ -122,19 +159,13 @@ func (c *rpcComparator) PostRun(executor.State[*rpc.RequestAndResults], *executo
 }
 
 func compare(state executor.State[*rpc.RequestAndResults]) *comparatorError {
-	var isRecovered bool
-
 	switch state.Data.Query.MethodBase {
 	case "getBalance":
 		return compareBalance(state.Data, state.Block)
 	case "getTransactionCount":
 		return compareTransactionCount(state.Data, state.Block)
 	case "call":
-		err := compareCall(state.Data, state.Block)
-		if err != nil && err.typ == expectedErrorGotResult && !isRecovered {
-			isRecovered = true
-			return tryRecovery(state)
-		}
+		return compareCall(state.Data, state.Block)
 	case "estimateGas":
 		// estimateGas is currently not suitable for replay since the estimation  in geth is always calculated
 		// for current state that means recorded result and result returned by StateDB are not comparable
@@ -147,7 +178,7 @@ func compare(state executor.State[*rpc.RequestAndResults]) *comparatorError {
 	return nil
 }
 
-func tryRecovery(state executor.State[*rpc.RequestAndResults]) *comparatorError {
+func retryRequest(state executor.State[*rpc.RequestAndResults]) *comparatorError {
 	payload := utils.JsonRPCRequest{
 		Method:  state.Data.Query.Method,
 		Params:  state.Data.Query.Params,
@@ -185,7 +216,12 @@ func tryRecovery(state executor.State[*rpc.RequestAndResults]) *comparatorError 
 
 	state.Data.Error = nil
 
-	return compare(state)
+	e := compare(state)
+	if err != nil {
+		return e
+	}
+
+	return nil
 }
 
 // compareBalance compares getBalance data recorded on API server with data returned by StateDB
@@ -475,9 +511,9 @@ func compareStorageAt(data *rpc.RequestAndResults, block int) *comparatorError {
 	if data.Error != nil {
 		// internal error?
 		if data.Error.Error.Code == internalErrorCode {
-			return newComparatorError(dbString, data.Error.Error, data, block, internalError)
+			return newComparatorError(dbString, data.Error, data, block, internalError)
 		}
-		return newComparatorError(dbString, data.Error.Error, data, block, internalError)
+		return newComparatorError(dbString, data.Error, data, block, internalError)
 	}
 
 	var recordedString string
@@ -532,7 +568,7 @@ func newCannotSendRPCRequestErr(data *rpc.RequestAndResults, block int) *compara
 			"\n\tStateDB err: %v"+
 			"\n\tExpected result: %v"+
 			"\n\tExpected err: %v"+
-			"\n\nParams: %v", data.Query.Method, strconv.FormatInt(int64(block), 16), data.StateDB.Result, data.StateDB.Error, data.Response.Result, data.Error.Error, string(data.ParamsRaw)),
+			"\n\nParams: %v", data.Query.Method, strconv.FormatInt(int64(block), 16), data.StateDB.Result, data.StateDB.Error, data.Response, data.Error, string(data.ParamsRaw)),
 		typ: cannotSendRpcRequest,
 	}
 }
@@ -580,7 +616,7 @@ func newCannotUnmarshalResult(data *rpc.RequestAndResults, block int) *comparato
 			"\n\tStateDB err: %v"+
 			"\n\tRecorded result: %v"+
 			"\n\tRecorded err: %v"+
-			"\n\nParams: %v", data.Query.Method, strconv.FormatInt(int64(block), 16), data.StateDB.Result, data.StateDB.Error, data.Response.Result, data.Error.Error, string(data.ParamsRaw)),
+			"\n\nParams: %v", data.Query.Method, strconv.FormatInt(int64(block), 16), data.StateDB.Result, data.StateDB.Error, data.Response, data.Error, string(data.ParamsRaw)),
 		typ: cannotUnmarshalResult,
 	}
 }
