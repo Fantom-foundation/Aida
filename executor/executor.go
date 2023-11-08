@@ -605,6 +605,7 @@ func signalPreTransaction[T any](state State[T], ctx *Context, extensions []Exte
 		}
 
 	}()
+	fmt.Println("signal pre")
 	return forEachForward(extensions, func(extension Extension[T]) error {
 		return extension.PreTransaction(state, ctx)
 	})
@@ -618,6 +619,7 @@ func signalPostTransaction[T any](state State[T], ctx *Context, extensions []Ext
 		}
 
 	}()
+	fmt.Println("signal post")
 	return forEachBackward(extensions, func(extension Extension[T]) error {
 		return extension.PostTransaction(state, ctx)
 	})
