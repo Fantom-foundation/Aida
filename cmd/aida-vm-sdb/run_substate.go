@@ -140,6 +140,7 @@ func run(
 	}
 
 	extensionList = append(extensionList, []executor.Extension[*substate.Substate]{
+		profiler.MakeThreadLocker[*substate.Substate](),
 		extension.MakeAidaDbManager[*substate.Substate](cfg),
 		profiler.MakeVirtualMachineStatisticsPrinter[*substate.Substate](cfg),
 		tracker.MakeProgressLogger[*substate.Substate](cfg, 15*time.Second),
