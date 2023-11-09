@@ -8,6 +8,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/logger"
+	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
@@ -33,7 +34,7 @@ func RunVm(ctx *cli.Context) error {
 	}
 	log.Infof("Processing transactions using %d workers (--workers)...", workers)
 
-	return run(cfg, substateDb, txProcessor{cfg}, nil)
+	return run(cfg, substateDb, nil, txProcessor{cfg}, nil)
 }
 
 // run executes the actual block-processing evaluation for RunVm above.
@@ -45,6 +46,7 @@ func RunVm(ctx *cli.Context) error {
 func run(
 	cfg *utils.Config,
 	provider executor.Provider[*substate.Substate],
+	stateDb state.StateDB,
 	processor executor.Processor[*substate.Substate],
 	extra []executor.Extension[*substate.Substate],
 ) error {
@@ -53,15 +55,20 @@ func run(
 		profiler.MakeDiagnosticServer[*substate.Substate](cfg),
 		profiler.MakeVirtualMachineStatisticsPrinter[*substate.Substate](cfg),
 		tracker.MakeProgressLogger[*substate.Substate](cfg, 15*time.Second),
-		statedb.MakeTemporaryStatePrepper(),
 	}
+	if stateDb == nil {
+		extensions = append(extensions, statedb.MakeTemporaryStatePrepper())
+	}
+
 	extensions = append(extensions, extra...)
 
 	return executor.NewExecutor(provider, cfg.LogLevel).Run(
 		executor.Params{
-			From:       int(cfg.First),
-			To:         int(cfg.Last) + 1,
-			NumWorkers: cfg.Workers,
+			From:                   int(cfg.First),
+			To:                     int(cfg.Last) + 1,
+			NumWorkers:             cfg.Workers,
+			State:                  stateDb,
+			ParallelismGranularity: executor.TransactionLevel,
 		},
 		processor,
 		extensions,
