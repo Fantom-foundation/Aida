@@ -1,6 +1,8 @@
 package statedb
 
 import (
+	"fmt"
+
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
@@ -40,8 +42,9 @@ func (p *stateDbPrimer[T]) PreRun(_ executor.State[T], ctx *executor.Context) er
 	}
 
 	p.log.Noticef("Priming to block %v", p.cfg.First-1)
-	if err := utils.LoadWorldStateAndPrime(ctx.State, p.cfg, p.cfg.First-1); err != nil {
-		return err
+	err := utils.LoadWorldStateAndPrime(ctx.State, p.cfg, p.cfg.First-1)
+	if err != nil {
+		return fmt.Errorf("cannot prime; %v", err)
 	}
 
 	return nil
