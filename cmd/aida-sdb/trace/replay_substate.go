@@ -70,6 +70,7 @@ func replaySubstate(
 	extra []executor.Extension[*substate.Substate],
 ) error {
 	var extensionList = []executor.Extension[*substate.Substate]{
+		profiler.MakeCpuProfiler[*substate.Substate](cfg),
 		tracker.MakeProgressLogger[*substate.Substate](cfg, 0),
 		profiler.MakeMemoryUsagePrinter[*substate.Substate](cfg),
 		profiler.MakeMemoryProfiler[*substate.Substate](cfg),

@@ -62,9 +62,9 @@ func replay(
 	extra []executor.Extension[[]operation.Operation],
 ) error {
 	var extensionList = []executor.Extension[[]operation.Operation]{
+		profiler.MakeCpuProfiler[[]operation.Operation](cfg),
 		tracker.MakeProgressLogger[[]operation.Operation](cfg, 0),
 		profiler.MakeMemoryUsagePrinter[[]operation.Operation](cfg),
-
 		profiler.MakeMemoryProfiler[[]operation.Operation](cfg),
 		statedb.MakeStateDbManager[[]operation.Operation](cfg),
 		statedb.MakeStateDbPrimer[[]operation.Operation](cfg),
