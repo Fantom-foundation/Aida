@@ -301,7 +301,7 @@ func TestOperationProfiler_WithRandomInput(t *testing.T) {
 			intervalGeneratedOpCount := 0
 
 			intervalStart := test.args.first - (test.args.first % test.args.interval)
-			intervalEnd := intervalStart + test.args.interval
+			intervalEnd := intervalStart + test.args.interval - 1
 
 			ext.PreRun(executor.State[any]{}, &mockCtx)
 			for b := test.args.first; b <= test.args.last; b += 1 + r.Intn(3) {
@@ -320,12 +320,12 @@ func TestOperationProfiler_WithRandomInput(t *testing.T) {
 				if b > intervalEnd {
 					// make sure that the stats is reset
 					if ext.stats.GetTotalOpFreq() != 0 {
-						t.Errorf("Should be reset but found %d ops", ext.stats.GetTotalOpFreq())
+						t.Fatalf("Should be reset but found %d ops", ext.stats.GetTotalOpFreq())
 					}
 
 					// ensure 0 index (skips the initial interval where first is intervalStart)
-					if ext.interval.Start()%cfg.ProfileInterval != 0 {
-						t.Errorf("interval is not using 0-index, found %d", ext.interval.Start()%cfg.ProfileInterval)
+					if ext.interval.Start() % cfg.ProfileInterval != 0 {
+						t.Fatalf("interval is not using 0-index, found %d", ext.interval.Start()%cfg.ProfileInterval)
 					}
 				}
 
@@ -342,11 +342,11 @@ func TestOperationProfiler_WithRandomInput(t *testing.T) {
 
 				// check that ext tracks last seen block number correctly
 				if ext.lastProcessedBlock != uint64(b) {
-					t.Errorf("Last seen block number was %d, actual last seen block %d", ext.lastProcessedBlock, uint64(b))
+					t.Fatalf("Last seen block number was %d, actual last seen block %d", ext.lastProcessedBlock, uint64(b))
 				}
 				// check that amount of ops seen eqals to amount of ops generated within this interval
 				if ext.stats.GetTotalOpFreq() != intervalGeneratedOpCount {
-					t.Errorf("[Interval] Seen %d ops, but generated %d ops", ext.stats.GetTotalOpFreq(), intervalGeneratedOpCount)
+					t.Fatalf("[Interval] Seen %d ops, but generated %d ops", ext.stats.GetTotalOpFreq(), intervalGeneratedOpCount)
 				}
 			}
 
