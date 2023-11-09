@@ -99,7 +99,7 @@ func generate(ctx *cli.Context) error {
 // prepareManualGenerate prepares generator for manual generation
 func (g *generator) prepareManualGenerate(ctx *cli.Context, cfg *utils.Config) (err error) {
 	if ctx.Args().Len() != 4 {
-		return fmt.Errorf("generate command requires exactly 4 arguments")
+		return fmt.Errorf("generate command requires exactly 4 arguments - first block, last block, first epoch, last epoch")
 	}
 
 	g.opera.firstBlock, g.opera.lastBlock, err = utils.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1), cfg.ChainID)
