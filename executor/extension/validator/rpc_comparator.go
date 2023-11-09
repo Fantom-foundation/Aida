@@ -113,8 +113,8 @@ func (c *rpcComparator) PostTransaction(state executor.State[*rpc.RequestAndResu
 		// lot errors are recorded wrongly, for this case we resend the request and compare it again
 		if !state.Data.StateDB.IsRecovered && state.Data.Error != nil {
 			c.log.Debugf("retrying %v request", state.Data.Query.Method)
-			c.log.Debugf("current ration retried against total %v/%v", c.numberOfRetriedRequests, c.totalNumberOfRequests)
 			c.numberOfRetriedRequests++
+			c.log.Debugf("current ration retried against total %v/%v", 	c.numberOfRetriedRequests, c.totalNumberOfRequests)
 			state.Data.StateDB.IsRecovered = true
 			compareErr = retryRequest(state)
 			if compareErr == nil {
