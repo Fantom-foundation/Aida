@@ -10,20 +10,19 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/op/go-logging"
 )
 
 type ProgressTracker struct {
-	step   int             // step counter
-	target int             // total number of steps
-	start  time.Time       // start time
-	last   time.Time       // last reported time
-	rate   float64         // priming rate
-	log    *logging.Logger // Message logger
+	step   int           // step counter
+	target int           // total number of steps
+	start  time.Time     // start time
+	last   time.Time     // last reported time
+	rate   float64       // priming rate
+	log    logger.Logger // Message logger
 }
 
 // NewProgressTracker creates a new progress tracer
-func NewProgressTracker(target int, log *logging.Logger) *ProgressTracker {
+func NewProgressTracker(target int, log logger.Logger) *ProgressTracker {
 	now := time.Now()
 	return &ProgressTracker{
 		step:   0,
@@ -56,7 +55,7 @@ func (pt *ProgressTracker) PrintProgress() {
 // PrimeContext structure keeps context used over iterations of priming
 type PrimeContext struct {
 	cfg        *Config
-	log        *logging.Logger
+	log        logger.Logger
 	block      uint64
 	load       state.BulkLoad
 	db         state.StateDB
@@ -64,7 +63,7 @@ type PrimeContext struct {
 	operations int                     // number of operations processed without commit
 }
 
-func NewPrimeContext(cfg *Config, db state.StateDB, log *logging.Logger) *PrimeContext {
+func NewPrimeContext(cfg *Config, db state.StateDB, log logger.Logger) *PrimeContext {
 	return &PrimeContext{cfg: cfg, log: log, block: 0, db: db, exist: make(map[common.Address]bool)}
 }
 
