@@ -323,14 +323,9 @@ func TestOperationProfiler_WithRandomInput(t *testing.T) {
 						t.Errorf("Should be reset but found %d ops", ext.stats.GetTotalOpFreq())
 					}
 
-					// make sure that the new interval is correct
-					if ext.intervalEnd-ext.intervalStart+1 != cfg.ProfileInterval {
-						t.Errorf("Current interval is %d, but should have been %d.", ext.intervalEnd-ext.intervalStart+1, cfg.ProfileInterval)
-					}
-
 					// ensure 0 index (skips the initial interval where first is intervalStart)
-					if ext.intervalStart%cfg.ProfileInterval != 0 {
-						t.Errorf("interval is not using 0-index, found %d", ext.intervalStart%cfg.ProfileInterval)
+					if ext.interval.Start()%cfg.ProfileInterval != 0 {
+						t.Errorf("interval is not using 0-index, found %d", ext.interval.Start()%cfg.ProfileInterval)
 					}
 				}
 

@@ -9,7 +9,7 @@ type Interval struct {
 
 func NewInterval(first, last, interval uint64) *Interval {
 	f := first - (first % interval)
-	return &Interval{first, last, f, f + interval}
+	return &Interval{first, last, f, f + interval - 1}
 }
 
 func (i *Interval) Start() uint64 {
@@ -21,8 +21,8 @@ func (i *Interval) End() uint64 {
 }
 
 func (i *Interval) Next() *Interval {
-	interval = i.end - i.start + 1
-	i.start += interval + 1
+	interval := i.end - i.start + 1
+	i.start += interval
 	i.end += interval
 	return i
 }
