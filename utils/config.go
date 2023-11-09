@@ -136,6 +136,7 @@ type Config struct {
 	Profile                bool           // enable micro profiling
 	ProfileFile            string         // output file containing profiling result
 	ProfileInterval        uint64         // interval of printing profile result
+	ProfileSqlite3         string         // output profiling results to sqlite3 DB
 	RandomSeed             int64          // set random seed for stochastic testing
 	SkipPriming            bool           // skip priming of the state DB
 	SkipMetadata           bool           // skip metadata insert/getting into AidaDb

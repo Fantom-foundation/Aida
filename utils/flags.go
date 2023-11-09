@@ -104,6 +104,10 @@ var (
 		Name:  "profile",
 		Usage: "enable profiling",
 	}
+	ProfileSqlite3Flag = cli.StringFlag{
+		Name:  "profile-sqlite3",
+		Usage: "output profiling data to sqlite3 db",
+	}
 	ProfileFileFlag = cli.StringFlag{
 		Name:  "profile-file",
 		Usage: "output file containing profiling data",
