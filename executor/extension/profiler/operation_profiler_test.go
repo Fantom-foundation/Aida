@@ -335,8 +335,8 @@ func TestOperationProfiler_WithRandomInput(t *testing.T) {
 					}
 				}
 
-				// ensure 0 index (skips the initial interval where first is intervalStart)
-				if ext.interval.Start()%cfg.ProfileInterval != 0 {
+				// ensure 0 index 
+				if ext.interval.Start() != cfg.First && ext.interval.Start()%cfg.ProfileInterval != 0 {
 					t.Fatalf("interval is not using 0-index, found %d", ext.interval.Start()%cfg.ProfileInterval)
 				}
 
