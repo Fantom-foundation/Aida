@@ -114,7 +114,7 @@ func (c *rpcComparator) PostTransaction(state executor.State[*rpc.RequestAndResu
 		if !state.Data.StateDB.IsRecovered && state.Data.Error != nil {
 			c.log.Debugf("retrying %v request", state.Data.Query.Method)
 			c.numberOfRetriedRequests++
-			c.log.Debugf("current ration retried against total %v/%v", 	c.numberOfRetriedRequests, c.totalNumberOfRequests)
+			c.log.Debugf("current ration retried against total %v/%v", c.numberOfRetriedRequests, c.totalNumberOfRequests)
 			state.Data.StateDB.IsRecovered = true
 			compareErr = retryRequest(state)
 			if compareErr == nil {
