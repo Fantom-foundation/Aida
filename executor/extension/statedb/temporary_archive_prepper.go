@@ -19,13 +19,9 @@ type temporaryArchivePrepper struct {
 
 // PreTransaction creates temporary archive that is released after transaction is executed.
 func (r *temporaryArchivePrepper) PreTransaction(state executor.State[*rpc.RequestAndResults], ctx *executor.Context) error {
-	var err error
-	block, ok := findBlockNumber(state.Data)
-	if !ok {
-		ctx.Archive = nil
-		return nil
-	}
+	block := findBlockNumber(state.Data)
 
+	var err error
 	ctx.Archive, err = ctx.State.GetArchiveState(block)
 	if err != nil {
 		return err
@@ -36,17 +32,13 @@ func (r *temporaryArchivePrepper) PreTransaction(state executor.State[*rpc.Reque
 
 // PostTransaction releases temporary Archive.
 func (r *temporaryArchivePrepper) PostTransaction(_ executor.State[*rpc.RequestAndResults], ctx *executor.Context) error {
-	// Archive can be nil if invalid block number is passed
-	if ctx.Archive == nil {
-		return nil
-	}
 	ctx.Archive.Release()
 
 	return nil
 }
 
 // findBlockNumber finds what block number request wants
-func findBlockNumber(data *rpc.RequestAndResults) (uint64, bool) {
+func findBlockNumber(data *rpc.RequestAndResults) uint64 {
 	l := len(data.Query.Params)
 	var block uint64
 	if data.Response != nil {
@@ -55,25 +47,22 @@ func findBlockNumber(data *rpc.RequestAndResults) (uint64, bool) {
 		block = data.Error.BlockID
 	}
 	if l < 2 {
-		return block, true
+		return block
 	}
 
-	str, ok := data.Query.Params[l-1].(string)
-	if !ok {
-		return 0, false
-	}
+	str := data.Query.Params[l-1].(string)
 
 	switch str {
 	case "pending":
 		// pending does not work
-		return block, true
+		return block
 	case "latest":
-		return block, true
+		return block
 	case "earliest":
-		return 0, true
+		return 0
 
 	default:
 		// botched params are not recorded, so this will  never panic
-		return hexutil.MustDecodeUint64(str), true
+		return hexutil.MustDecodeUint64(str)
 	}
 }

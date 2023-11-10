@@ -92,12 +92,6 @@ type rpcComparator struct {
 // PostTransaction compares result with recording. If ContinueOnFailure
 // is enabled error is saved. Otherwise, the error is returned.
 func (c *rpcComparator) PostTransaction(state executor.State[*rpc.RequestAndResults], _ *executor.Context) error {
-	// StateDb result can be nil if invalid block number is passed
-	// - archive cannot be retrieved hence this request is skipped
-	if state.Data.StateDB == nil {
-		return nil
-	}
-
 	compareErr := compare(state)
 	if compareErr != nil {
 		if c.cfg.ContinueOnFailure {

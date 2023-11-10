@@ -43,12 +43,6 @@ type rpcProcessor struct {
 }
 
 func (p rpcProcessor) Process(state executor.State[*rpc.RequestAndResults], ctx *executor.Context) error {
-	// Archive can be nil if invalid block number is passed
-	// - archive cannot be retrieved hence this request is skipped
-	if ctx.Archive == nil {
-		return nil
-	}
-
 	state.Data.StateDB = rpc.Execute(uint64(state.Block), state.Data, ctx.Archive, p.cfg)
 	return nil
 }
