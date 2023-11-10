@@ -282,7 +282,7 @@ func TestUtilsConfig_getMdBlockRange(t *testing.T) {
 
 	// test getMdBlockRange
 	// getMdBlockRange returns default values if unable to open
-	first, last, lastpatch, ok, err := getMdBlockRange("./test-wrong.db", MainnetChainID, log)
+	first, last, lastpatch, ok, err := getMdBlockRange("./test-wrong.db", MainnetChainID, log, cfg.LogLevel)
 	if ok || first != uint64(0) || last != math.MaxUint64 {
 		t.Fatalf("wrong block range; expected %v:%v, have %v:%v", 0, uint64(math.MaxUint64), first, last)
 	} else if err != nil {
@@ -293,7 +293,7 @@ func TestUtilsConfig_getMdBlockRange(t *testing.T) {
 
 	// open an existing AidaDb
 	setAidaDbRepositoryUrl(chainId)
-	first, last, lastpatch, ok, err = getMdBlockRange("./test.db", MainnetChainID, log)
+	first, last, lastpatch, ok, err = getMdBlockRange("./test.db", MainnetChainID, log, cfg.LogLevel)
 	if !ok || first != firstBlock || last != lastBlock {
 		t.Fatalf("wrong block range; expected %v:%v, have %v:%v", firstBlock, lastBlock, first, last)
 	} else if err != nil {
@@ -304,7 +304,7 @@ func TestUtilsConfig_getMdBlockRange(t *testing.T) {
 
 	// aida url is not set; expected lastpatch is 0.
 	AidaDbRepositoryUrl = ""
-	first, last, lastpatch, ok, err = getMdBlockRange("./test.db", MainnetChainID, log)
+	first, last, lastpatch, ok, err = getMdBlockRange("./test.db", MainnetChainID, log, cfg.LogLevel)
 	if !ok || first != firstBlock || last != lastBlock {
 		t.Fatalf("wrong block range; expected %v:%v, have %v:%v", firstBlock, lastBlock, first, last)
 	} else if err != nil {

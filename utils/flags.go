@@ -355,6 +355,11 @@ var (
 		Usage: "if enabled and continue-on-failure is also enabled, this corrects any error found in StateDb",
 		Value: true,
 	}
+	SkipStateHashScrappingFlag = cli.BoolFlag{
+		Name:  "skip-state-hash-scrapping",
+		Usage: "if enabled, then state-hashes are not loaded from rpc",
+		Value: false,
+	}
 	NoHeartbeatLoggingFlag = cli.BoolFlag{
 		Name:  "no-heartbeat-logging",
 		Usage: "disables heartbeat logging",

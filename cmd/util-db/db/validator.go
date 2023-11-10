@@ -14,7 +14,6 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
@@ -77,7 +76,7 @@ type validator struct {
 	input  chan []byte
 	result chan []byte
 	closed chan any
-	log    *logging.Logger
+	log    logger.Logger
 	wg     *sync.WaitGroup
 }
 
@@ -153,7 +152,7 @@ func validateCmd(ctx *cli.Context) error {
 }
 
 // findDbHashOnline if user has no dbHash inside his AidaDb metadata
-func findDbHashOnline(chainId utils.ChainID, log *logging.Logger, md *utils.AidaDbMetadata) ([]byte, error) {
+func findDbHashOnline(chainId utils.ChainID, log logger.Logger, md *utils.AidaDbMetadata) ([]byte, error) {
 	var url string
 
 	if chainId == utils.MainnetChainID {

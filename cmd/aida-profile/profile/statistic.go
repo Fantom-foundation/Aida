@@ -7,7 +7,6 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
-	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
@@ -15,10 +14,10 @@ import (
 
 type AccessStatistics[T comparable] struct {
 	accesses map[T]int
-	log      *logging.Logger
+	log      logger.Logger
 }
 
-func newStatistics[T comparable](log *logging.Logger) AccessStatistics[T] {
+func newStatistics[T comparable](log logger.Logger) AccessStatistics[T] {
 	return AccessStatistics[T]{
 		accesses: map[T]int{},
 		log:      log,

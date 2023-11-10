@@ -16,7 +16,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
@@ -332,7 +331,7 @@ func printAllCount(ctx *cli.Context) error {
 }
 
 // logDetailedSize counts and prints all prefix occurrence
-func logDetailedSize(db ethdb.Database, log *logging.Logger) {
+func logDetailedSize(db ethdb.Database, log logger.Logger) {
 	iter := db.NewIterator(nil, nil)
 	defer iter.Release()
 

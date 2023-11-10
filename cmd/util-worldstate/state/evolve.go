@@ -8,7 +8,6 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	substate "github.com/Fantom-foundation/Substate"
-	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
@@ -89,7 +88,7 @@ func evolveState(ctx *cli.Context) error {
 }
 
 // getEvolutionBlockRange retrieves starting block for evolution
-func getEvolutionBlockRange(cfg *utils.Config, stateDB *snapshot.StateDB, log *logging.Logger) (uint64, uint64, error) {
+func getEvolutionBlockRange(cfg *utils.Config, stateDB *snapshot.StateDB, log logger.Logger) (uint64, uint64, error) {
 	// evolution until given target block
 	targetBlock := cfg.TargetBlock
 
@@ -119,7 +118,7 @@ func getEvolutionBlockRange(cfg *utils.Config, stateDB *snapshot.StateDB, log *l
 }
 
 // factoryMakeLogger creates logging function with runtime context.
-func factoryMakeLogger(start uint64, end uint64, log *logging.Logger) func(uint64) {
+func factoryMakeLogger(start uint64, end uint64, log logger.Logger) func(uint64) {
 	// timer for printing progress
 	tick := time.NewTicker(20 * time.Second)
 	blkProgress := start
@@ -144,7 +143,7 @@ func factoryMakeLogger(start uint64, end uint64, log *logging.Logger) func(uint6
 }
 
 // factoryValidatorLogger creates logging function with runtime context.
-func factoryValidatorLogger(log *logging.Logger) func(error) {
+func factoryValidatorLogger(log logger.Logger) func(error) {
 	return func(err error) {
 		log.Warningf("%v", err)
 

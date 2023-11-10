@@ -7,13 +7,13 @@ import (
 	"math/rand"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/stochastic/exponential"
 	"github.com/Fantom-foundation/Aida/stochastic/generator"
 	"github.com/Fantom-foundation/Aida/stochastic/statistics"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/op/go-logging"
 )
 
 // Parameterisable simulation constants
@@ -43,7 +43,7 @@ type stochasticState struct {
 	suicided       []int64                   // list of suicided accounts
 	traceDebug     bool                      // trace-debug flag
 	rg             *rand.Rand                // random generator for sampling
-	log            *logging.Logger
+	log            logger.Logger
 }
 
 // find is a helper function to find an element in a slice
@@ -57,7 +57,7 @@ func find[T comparable](a []T, x T) int {
 }
 
 // createState creates a stochastic state and primes the StateDB
-func createState(cfg *utils.Config, e *EstimationModelJSON, db state.StateDB, rg *rand.Rand, log *logging.Logger) *stochasticState {
+func createState(cfg *utils.Config, e *EstimationModelJSON, db state.StateDB, rg *rand.Rand, log logger.Logger) *stochasticState {
 	// produce random access generators for contract addresses,
 	// storage-keys, and storage addresses.
 	// (NB: Contracts need an indirect access wrapper because
@@ -108,7 +108,7 @@ func getStochasticMatrix(e *EstimationModelJSON) ([]string, [][]float64, int) {
 // It requires the simulation model and simulation length. The trace-debug flag
 // enables/disables the printing of StateDB operations and their arguments on
 // the screen.
-func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, cfg *utils.Config, log *logging.Logger) error {
+func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, cfg *utils.Config, log logger.Logger) error {
 	var (
 		opFrequency [NumOps]uint64 // operation frequency
 		numOps      uint64         // total number of operations
@@ -226,7 +226,7 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, 
 }
 
 // NewStochasticState creates a new state for execution StateDB operations
-func NewStochasticState(rg *rand.Rand, db state.StateDB, contracts *generator.IndirectAccess, keys *generator.RandomAccess, values *generator.RandomAccess, snapshotLambda float64, log *logging.Logger) stochasticState {
+func NewStochasticState(rg *rand.Rand, db state.StateDB, contracts *generator.IndirectAccess, keys *generator.RandomAccess, values *generator.RandomAccess, snapshotLambda float64, log logger.Logger) stochasticState {
 
 	// return stochastic state
 	return stochasticState{
