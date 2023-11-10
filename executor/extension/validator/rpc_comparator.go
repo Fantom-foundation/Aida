@@ -94,18 +94,6 @@ type rpcComparator struct {
 // PostTransaction compares result with recording. If ContinueOnFailure
 // is enabled error is saved. Otherwise, the error is returned.
 func (c *rpcComparator) PostTransaction(state executor.State[*rpc.RequestAndResults], _ *executor.Context) error {
-	defer func() {
-		rec := recover()
-		if rec != nil {
-			fmt.Println("comparator")
-			fmt.Println(rec)
-		}
-	}()
-	// StateDB can be nil if invalid block number is passed
-	if state.Data.StateDB == nil {
-		return nil
-	}
-
 	c.totalNumberOfRequests++
 
 	compareErr := compare(state)
@@ -216,12 +204,7 @@ func retryRequest(state executor.State[*rpc.RequestAndResults]) *comparatorError
 
 	state.Data.Error = nil
 
-	e := compare(state)
-	if err != nil {
-		return e
-	}
-
-	return nil
+	return compare(state)
 }
 
 // compareBalance compares getBalance data recorded on API server with data returned by StateDB
