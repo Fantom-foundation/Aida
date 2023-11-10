@@ -134,16 +134,16 @@ func genDeletedAccountsAction(ctx *cli.Context) error {
 	}
 	defer ddb.Close()
 
-	return GenDeletedAccountsAction(cfg, ddb, cfg.First)
+	return GenDeletedAccountsAction(cfg, ddb, cfg.First, cfg.Last)
 }
 
 // GenDeletedAccountsAction replays transactions and record self-destructed accounts and resurrected accounts.
-func GenDeletedAccountsAction(cfg *utils.Config, ddb *substate.DestroyedAccountDB, firstBlock uint64) error {
+func GenDeletedAccountsAction(cfg *utils.Config, ddb *substate.DestroyedAccountDB, firstBlock uint64, lastBlock uint64) error {
 	var err error
 
 	log := logger.NewLogger(cfg.LogLevel, "Generate Deleted Accounts")
 
-	log.Infof("chain-id: %v", cfg.ChainID)
+	log.Noticef("Generate deleted accounts from block %v to block %v", firstBlock, lastBlock)
 
 	start := time.Now()
 	sec := time.Since(start).Seconds()
@@ -157,7 +157,7 @@ func GenDeletedAccountsAction(cfg *utils.Config, ddb *substate.DestroyedAccountD
 
 	for iter.Next() {
 		tx := iter.Value()
-		if tx.Block > cfg.Last {
+		if tx.Block > lastBlock {
 			break
 		}
 

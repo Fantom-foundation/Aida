@@ -12,7 +12,6 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
@@ -20,8 +19,8 @@ import (
 // todo profile
 
 type TxProcessor struct {
-	cfg *utils.Config   // configuration
-	log *logging.Logger // logger
+	cfg *utils.Config // configuration
+	log logger.Logger // logger
 	// more
 	ctx        *cli.Context
 	vmDuration time.Duration

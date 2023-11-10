@@ -12,7 +12,6 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/op/go-logging"
 )
 
 // ProfilerProxy data structure for capturing and recording
@@ -20,7 +19,7 @@ import (
 type ProfilerProxy struct {
 	db  state.StateDB  // state db
 	ps  *profile.Stats // operation statistics
-	log *logging.Logger
+	log logger.Logger
 }
 
 // NewProfilerProxy creates a new StateDB profiler.

@@ -61,7 +61,7 @@ func TestVmSdb_TransactionsAreExecutedForCorrectRange(t *testing.T) {
 	)
 
 	config := &utils.Config{}
-	config.ChainID = 250
+	config.ChainID = utils.MainnetChainID
 	config.Workers = 4
 	config.First = 10
 	config.Last = 11

@@ -9,10 +9,6 @@ var (
 		Usage:   "Path to source file with recorded API data",
 		Aliases: []string{"r"},
 	}
-	LogFileFlag = cli.PathFlag{
-		Name:  "log-file",
-		Usage: "Path to log file.",
-	}
 	ArchiveModeFlag = cli.BoolFlag{
 		Name:  "archive",
 		Usage: "set node type to archival mode. If set, the node keep all the EVM state history; otherwise the state history will be pruned.",
@@ -280,9 +276,10 @@ var (
 		Usage: "Depth of snapshot history",
 		Value: 100,
 	}
-	DbFlag = cli.PathFlag{
-		Name:  "db",
-		Usage: "Path to the database",
+	OperaDbFlag = cli.PathFlag{
+		Name:    "db",
+		Aliases: []string{"datadir"},
+		Usage:   "Path to the opera database",
 	}
 	GenesisFlag = cli.PathFlag{
 		Name:  "genesis",
@@ -357,6 +354,11 @@ var (
 		Name:  "update-on-failure",
 		Usage: "if enabled and continue-on-failure is also enabled, this corrects any error found in StateDb",
 		Value: true,
+	}
+	SkipStateHashScrappingFlag = cli.BoolFlag{
+		Name:  "skip-state-hash-scrapping",
+		Usage: "if enabled, then state-hashes are not loaded from rpc",
+		Value: false,
 	}
 	NoHeartbeatLoggingFlag = cli.BoolFlag{
 		Name:  "no-heartbeat-logging",

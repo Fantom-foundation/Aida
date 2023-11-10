@@ -93,13 +93,17 @@ type rpcComparator struct {
 // is enabled error is saved. Otherwise, the error is returned.
 func (c *rpcComparator) PostTransaction(state executor.State[*rpc.RequestAndResults], _ *executor.Context) error {
 	compareErr := compare(state)
-	if compareErr != nil && c.cfg.ContinueOnFailure {
-		c.log.Warning(compareErr)
-		c.errors = append(c.errors, compareErr)
-		return nil
+	if compareErr != nil {
+		if c.cfg.ContinueOnFailure {
+			c.log.Warning(compareErr)
+			c.errors = append(c.errors, compareErr)
+			return nil
+		}
+
+		return compareErr
 	}
 
-	return compareErr
+	return nil
 }
 
 // PostRun prints all caught errors.

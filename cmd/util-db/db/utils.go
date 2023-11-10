@@ -8,8 +8,10 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
+	"strings"
+	"syscall"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -53,16 +55,8 @@ func MustCloseDB(db ethdb.Database) {
 	}
 }
 
-// loadSourceDBPaths initializes paths to source databases
-func loadSourceDBPaths(cfg *utils.Config, aidaDbTmp string) {
-	cfg.DeletionDb = filepath.Join(aidaDbTmp, "deletion")
-	cfg.SubstateDb = filepath.Join(aidaDbTmp, "substate")
-	cfg.UpdateDb = filepath.Join(aidaDbTmp, "update")
-	cfg.WorldStateDb = filepath.Join(aidaDbTmp, "worldstate")
-}
-
 // runCommand wraps cmd execution to distinguish whether to display its output
-func runCommand(cmd *exec.Cmd, resultChan chan string, log *logging.Logger) error {
+func runCommand(cmd *exec.Cmd, resultChan chan string, stopChan chan struct{}, log logger.Logger) error {
 	if resultChan != nil {
 		defer close(resultChan)
 	}
@@ -86,28 +80,99 @@ func runCommand(cmd *exec.Cmd, resultChan chan string, log *logging.Logger) erro
 	scanner := bufio.NewScanner(merged)
 
 	lastOutputMessagesChan := make(chan string, commandOutputLimit)
-	for scanner.Scan() {
-		m := scanner.Text()
-		if resultChan != nil {
-			resultChan <- m
+
+	// scannedChan to relay command output into channel to be able to select with stopChan
+	scannedChan := make(chan string)
+	go func() {
+		for scanner.Scan() {
+			scannedChan <- scanner.Text()
 		}
-		if log.IsEnabledFor(logging.DEBUG) {
-			log.Debug(m)
-		} else {
-			// in case debugging is turned off and resultChan doesn't listen to output
-			// we need to keep most recent output lines in case of error
-			if resultChan == nil {
-				// throw out the oldest line in case we are at limit
-				if len(lastOutputMessagesChan) == commandOutputLimit {
-					<-lastOutputMessagesChan
-				}
-				lastOutputMessagesChan <- m
+		close(scannedChan)
+	}()
+
+	done := make(chan error, 1)
+	go func() {
+		done <- cmd.Wait()
+	}()
+
+	// this command expects possibility to be stopped by kill signal from aida
+	for {
+		select {
+		case <-stopChan:
+			// not returning any error other than from failure of kill signal,
+			// because the command was terminated by aida intentionally
+			return killCommand(cmd, log, done)
+		case m, ok := <-scannedChan:
+			if ok {
+				processScannedCommandOutput(m, resultChan, log, lastOutputMessagesChan)
+				break
+			}
+
+			close(lastOutputMessagesChan)
+
+			// wait until command finishes or stopSignal is received
+			select {
+			case <-stopChan:
+				return killCommand(cmd, log, done)
+			case res, ok := <-done:
+				return processCommandResult(res, ok, scanner, lastOutputMessagesChan, resultChan, cmd, log)
 			}
 		}
 	}
-	close(lastOutputMessagesChan)
-	err = cmd.Wait()
+}
 
+// killCommand terminates command gracefully first and then forcefully
+func killCommand(cmd *exec.Cmd, log logger.Logger, done chan error) error {
+	// A stop signal was received; terminate the command.
+	// Attempting to interrupt command gracefully first.
+	// Create a timeout with a 1-minute duration.
+	timeout := time.NewTimer(time.Minute)
+	err := cmd.Process.Signal(syscall.SIGINT)
+	if err != nil {
+		// might be just race condition when process already finished
+		log.Warningf("unable to send SIGINT to Command %v; %v", cmd, err)
+	}
+
+	select {
+	case <-done:
+		log.Noticef("Command %v terminated gracefully", cmd)
+	case <-timeout.C:
+		// Send a kill signal to the process
+		err = cmd.Process.Signal(syscall.SIGKILL)
+		if err != nil {
+			return fmt.Errorf("unable to send SIGKILL to Command %v; %v", cmd, err)
+		}
+		// Wait for cmd.Wait() to return after termination.
+		<-done
+	}
+	return nil
+}
+
+// processScannedCommandOutput output and send it to resultChan if it is listening and keep lastOutputMessagesChan updated
+func processScannedCommandOutput(message string, resultChan chan string, log logger.Logger, lastOutputMessagesChan chan string) {
+	if resultChan != nil {
+		resultChan <- message
+	}
+	if log.IsEnabledFor(logging.DEBUG) {
+		log.Debug(message)
+	} else {
+		// in case debugging is turned off and resultChan doesn't listen to output
+		// we need to keep most recent output lines in case of error
+		if resultChan == nil {
+			// throw out the oldest line in case we are at limit
+			if len(lastOutputMessagesChan) == commandOutputLimit {
+				<-lastOutputMessagesChan
+			}
+			lastOutputMessagesChan <- message
+		}
+	}
+}
+
+// processCommandResult is used to process command result
+func processCommandResult(err error, ok bool, scanner *bufio.Scanner, lastOutputMessagesChan chan string, resultChan chan string, cmd *exec.Cmd, log logger.Logger) error {
+	if !ok {
+		return fmt.Errorf("unexpected doneChan closed error while executing Command %v; %v", cmd, err)
+	}
 	// command failed
 	if err != nil {
 		// print out gathered output since generation failed
@@ -159,42 +224,86 @@ func calculateMD5Sum(filePath string) (string, error) {
 	return md5sum, nil
 }
 
-// startDaemonOpera start opera node
-func startDaemonOpera(log *logging.Logger) error {
-	cmd := exec.Command("systemctl", "--user", "start", "opera")
-	err := runCommand(cmd, nil, log)
-	if err != nil {
-		return fmt.Errorf("unable start opera; %v", err.Error())
-	}
-	return nil
-}
-
-// stopDaemonOpera stop opera node
-func stopDaemonOpera(log *logging.Logger) error {
-	cmd := exec.Command("systemctl", "--user", "stop", "opera")
-	err := runCommand(cmd, nil, log)
-	if err != nil {
-		return fmt.Errorf("unable stop opera; %v", err.Error())
-	}
-	return nil
-}
-
-// startOperaPruning prunes opera in parallel
-func startOperaPruning(cfg *utils.Config) chan error {
+// startOperaIpc starts opera node for ipc requests
+func startOperaIpc(cfg *utils.Config, stopChan chan struct{}) chan error {
 	errChan := make(chan error, 1)
 
-	log := logger.NewLogger(cfg.LogLevel, "autoGen-pruning")
-	log.Noticef("Starting opera pruning %v", cfg.Db)
+	log := logger.NewLogger(cfg.LogLevel, "Autogen-ipc")
+	log.Noticef("Starting opera ipc %v", cfg.OperaDb)
 
+	resChan := make(chan string, 100)
 	go func() {
 		defer close(errChan)
-		cmd := exec.Command(getOperaBinary(cfg), "--datadir", cfg.Db, "snapshot", "prune-state")
-		err := runCommand(cmd, nil, log)
+
+		//cleanup opera.ipc when node is stopped
+		defer func(name string) {
+			err := os.Remove(name)
+			if !os.IsNotExist(err) && err != nil {
+				log.Errorf("failed to remove ipc file %s; %v", name, err)
+			}
+		}(cfg.OperaDb + "/opera.ipc")
+
+		cmd := exec.Command(getOperaBinary(cfg), "--datadir", cfg.OperaDb, "--maxpeers=0")
+		err := runCommand(cmd, resChan, stopChan, log)
 		if err != nil {
-			errChan <- fmt.Errorf("unable prune opera %v; binary %v; %v", cfg.Db, getOperaBinary(cfg), err)
+			errChan <- fmt.Errorf("unable run ipc opera --datadir %v; binary %v; %v", cfg.OperaDb, getOperaBinary(cfg), err)
 		}
 	}()
-	return errChan
+
+	log.Noticef("Waiting for ipc to start")
+	errChanParser := make(chan error, 1)
+
+	// wait for ipc to start
+	waitDuration := 5 * time.Minute
+	timer := time.NewTimer(waitDuration)
+
+ipcLoadingProcessWait:
+	for {
+		select {
+		// since resChan was used the output still needs to be read to prevent deadlock by chan being full
+		case res, ok := <-resChan:
+			if ok {
+				// waiting for opera message in output which indicates that ipc is ready for usage
+				if strings.Contains(res, "IPC endpoint opened") {
+					log.Noticef(res)
+					break ipcLoadingProcessWait
+				}
+			}
+		case err, ok := <-errChan:
+			if ok {
+				// error happened, the opera ipc didn't start properly
+				errChanParser <- fmt.Errorf("opera error during ipc initialization; %v", err)
+			}
+			// errChan closed, this means that stopChan signal was called to terminate opera ipc,
+			// which otherwise without an error never stops on its own
+			close(errChanParser)
+			return errChanParser
+		case <-timer.C:
+			// if ipc didn't start in given time produce an error
+			errChanParser <- fmt.Errorf("timeout waiting for opera ipc to start after %s", waitDuration.String())
+			close(errChanParser)
+			return errChanParser
+		}
+	}
+
+	// non-blocking error relaying while reading from resChan to prevent deadlock
+	go func() {
+		defer close(errChanParser)
+		for {
+			select {
+			// since resChan was used the output still needs to be read to prevent deadlock by chan being full
+			case <-resChan:
+			case err, ok := <-errChan:
+				if ok {
+					// error happened, the opera failed after ipc initialization
+					errChanParser <- fmt.Errorf("opera error after ipc initialization; %v", err)
+				}
+				return
+			}
+		}
+	}()
+
+	return errChanParser
 }
 
 // startOperaRecording records substates
@@ -203,21 +312,22 @@ func startOperaRecording(cfg *utils.Config, syncUntilEpoch uint64) chan error {
 	// todo check if path to aidaDb exists otherwise create the dir
 
 	log := logger.NewLogger(cfg.LogLevel, "autogen-recording")
-	log.Noticef("Starting opera recording %v", cfg.Db)
+	log.Noticef("Starting opera recording %v", cfg.OperaDb)
 
 	go func() {
 		defer close(errChan)
 
 		// syncUntilEpoch +1 because command is off by one
-		cmd := exec.Command(getOperaBinary(cfg), "--datadir", cfg.Db, "--recording", "--substate-db", cfg.SubstateDb, "--exitwhensynced.epoch", strconv.FormatUint(syncUntilEpoch+1, 10))
-		err := runCommand(cmd, nil, log)
+		cmd := exec.Command(getOperaBinary(cfg), "--datadir", cfg.OperaDb, "--recording", "--substate-db", cfg.SubstateDb, "--exitwhensynced.epoch", strconv.FormatUint(syncUntilEpoch+1, 10))
+		err := runCommand(cmd, nil, nil, log)
 		if err != nil {
-			errChan <- fmt.Errorf("unable to record opera substates %v; binary %v ; %v", cfg.Db, getOperaBinary(cfg), err)
+			errChan <- fmt.Errorf("unable to record opera substates %v; binary %v ; %v", cfg.OperaDb, getOperaBinary(cfg), err)
 		}
 	}()
 	return errChan
 }
 
+// getOperaBinary returns path to opera binary
 func getOperaBinary(cfg *utils.Config) string {
 	var operaBin = "opera"
 	if cfg.OperaBinary != "" {
