@@ -66,7 +66,7 @@ func findBlockNumber(data *rpc.RequestAndResults) (uint64, bool) {
 	switch str {
 	case "pending":
 		// pending does not work
-		return 0, false
+		return block, true
 	case "latest":
 		return block, true
 	case "earliest":
