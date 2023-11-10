@@ -1,8 +1,6 @@
 package statedb
 
 import (
-	"fmt"
-
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/rpc"
@@ -38,12 +36,10 @@ func (r *temporaryArchivePrepper) PreTransaction(state executor.State[*rpc.Reque
 
 // PostTransaction releases temporary Archive.
 func (r *temporaryArchivePrepper) PostTransaction(_ executor.State[*rpc.RequestAndResults], ctx *executor.Context) error {
-	fmt.Println("pre post")
 	// Archive can be nil if invalid block number is passed
 	if ctx.Archive == nil {
 		return nil
 	}
-	fmt.Println("archive post")
 	ctx.Archive.Release()
 
 	return nil
