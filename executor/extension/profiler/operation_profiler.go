@@ -9,7 +9,6 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Aida/utils/analytics"
 	"github.com/jedib0t/go-pretty/v6/table"
-	"github.com/op/go-logging"
 )
 
 const sqlite3_InsertIntoOperations = `
@@ -28,12 +27,12 @@ func MakeOperationProfiler[T any](cfg *utils.Config) executor.Extension[T] {
 
 	ops := operation.CreateIdLabelMap()
 	p := &operationProfiler[T]{
-		cfg:           cfg,
-		ops:           ops,
-		anlt:          analytics.NewIncrementalAnalytics(len(ops)),
-		ps:            utils.NewPrinters(),
-		interval:      utils.NewInterval(cfg.First, cfg.Last, cfg.ProfileInterval),
-		log:           logger.NewLogger(cfg.LogLevel, "Operation Profiler"),
+		cfg:      cfg,
+		ops:      ops,
+		anlt:     analytics.NewIncrementalAnalytics(len(ops)),
+		ps:       utils.NewPrinters(),
+		interval: utils.NewInterval(cfg.First, cfg.Last, cfg.ProfileInterval),
+		log:      logger.NewLogger(cfg.LogLevel, "Operation Profiler"),
 	}
 
 	p.ps.AddPrintToConsole(func() string { return p.prettyTable().Render() })
@@ -45,12 +44,12 @@ func MakeOperationProfiler[T any](cfg *utils.Config) executor.Extension[T] {
 
 type operationProfiler[T any] struct {
 	extension.NilExtension[T]
-	cfg                *utils.Config
-	ops                map[byte]string
-	anlt               *profile.IncrementalAnalytics
-	ps	   	   *utils.Printers
-	interval           *utils.Interval
-	log                *logging.Logger
+	cfg      *utils.Config
+	ops      map[byte]string
+	anlt     *analytics.IncrementalAnalytics
+	ps       *utils.Printers
+	interval *utils.Interval
+	log      logger.Logger
 }
 
 func min(a, b uint64) uint64 {
@@ -75,8 +74,8 @@ func (p *operationProfiler[T]) prettyTable() table.Writer {
 
 		t.AppendRow(table.Row{
 			p.ops[byte(opId)],
-			p.intervalStart,
-			min(p.intervalEnd, p.cfg.Last),
+			p.interval.Start(),
+			p.interval.End(),
 			stat.GetCount(),
 			stat.GetSum() / float64(1000),
 			stat.GetMean() / float64(1000),
@@ -94,8 +93,8 @@ func (p *operationProfiler[T]) insertIntoOperations() [][]any {
 	values := [][]any{{}}
 	for opId, stat := range p.anlt.Iterate() {
 		value := []any{
-			p.intervalStart,
-			min(p.intervalEnd, p.cfg.Last),
+			p.interval.Start(),
+			p.interval.End(),
 			opId,
 			p.ops[byte(opId)],
 			stat.GetCount(),
@@ -120,7 +119,7 @@ func (p *operationProfiler[T]) PreRun(_ executor.State[T], ctx *executor.Context
 
 func (p *operationProfiler[T]) PreBlock(state executor.State[T], _ *executor.Context) error {
 	if uint64(state.Block) > p.interval.End() {
-		p.anlt.Print()
+		p.ps.Print()
 		p.interval.Next()
 		p.anlt.Reset()
 	}

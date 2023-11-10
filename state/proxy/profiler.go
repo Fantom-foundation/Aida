@@ -19,7 +19,7 @@ import (
 type ProfilerProxy struct {
 	db   state.StateDB // state db
 	anlt *analytics.IncrementalAnalytics
-	log  *logging.Logger
+	log  logger.Logger
 }
 
 // NewProfilerProxy creates a new StateDB profiler.
