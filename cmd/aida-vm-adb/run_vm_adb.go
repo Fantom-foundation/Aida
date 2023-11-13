@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension/aidadb"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
@@ -33,15 +34,7 @@ func RunVmAdb(ctx *cli.Context) error {
 	}
 	defer substateDb.Close()
 
-	stateDb, _, err := utils.PrepareStateDB(cfg)
-	if err != nil {
-		return err
-	}
-	defer func() error {
-		return stateDb.Close()
-	}()
-
-	return run(cfg, substateDb, stateDb, blockProcessor{cfg}, nil)
+	return run(cfg, substateDb, nil, blockProcessor{cfg}, nil)
 }
 
 type blockProcessor struct {
@@ -70,7 +63,17 @@ func run(
 		profiler.MakeCpuProfiler[*substate.Substate](cfg),
 		statedb.MakeArchivePrepper(),
 		tracker.MakeProgressLogger[*substate.Substate](cfg, 0),
+		aidadb.MakeAidaDbBlockChecker[*substate.Substate](cfg),
 	}
+
+	if stateDb == nil {
+		extensionList = append(
+			extensionList,
+			statedb.MakeStateDbManager[*substate.Substate](cfg),
+			statedb.MakeArchiveBlockChecker[*substate.Substate](cfg),
+		)
+	}
+
 	extensionList = append(extensionList, extra...)
 	return executor.NewExecutor(provider, cfg.LogLevel).Run(
 		executor.Params{

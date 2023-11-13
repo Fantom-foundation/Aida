@@ -1,9 +1,10 @@
-package extension
+package aidadb
 
 import (
 	"fmt"
 
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 )
@@ -11,13 +12,13 @@ import (
 // MakeAidaDbManager opens AidaDb if path is given and adds it to the context.
 func MakeAidaDbManager[T any](cfg *utils.Config) executor.Extension[T] {
 	if cfg.AidaDb == "" {
-		return NilExtension[T]{}
+		return extension.NilExtension[T]{}
 	}
 	return &AidaDbManager[T]{path: cfg.AidaDb}
 }
 
 type AidaDbManager[T any] struct {
-	NilExtension[T]
+	extension.NilExtension[T]
 	path string
 }
 

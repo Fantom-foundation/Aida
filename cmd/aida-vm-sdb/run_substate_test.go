@@ -69,7 +69,7 @@ func TestVmSdb_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		db.EXPECT().EndBlock(),
 	)
 
-	if err := run(config, provider, db, true); err != nil {
+	if err := run(config, provider, db); err != nil {
 		t.Errorf("run failed: %v", err)
 	}
 }
@@ -111,7 +111,7 @@ func TestVmSdb_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 	)
 
 	// run fails but not on validation
-	err := run(config, provider, db, true)
+	err := run(config, provider, db)
 	if err == nil {
 		t.Errorf("run must fail")
 	}
@@ -154,7 +154,7 @@ func TestVmSdb_ValidationFailsOnInvalidTransaction(t *testing.T) {
 		db.EXPECT().EndTransaction(),
 	)
 
-	err := run(config, provider, db, true)
+	err := run(config, provider, db)
 	if err == nil {
 		t.Errorf("validation must fail")
 	}
