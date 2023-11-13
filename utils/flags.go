@@ -1,6 +1,8 @@
 package utils
 
-import "github.com/urfave/cli/v2"
+import (
+	"github.com/urfave/cli/v2"
+)
 
 // Command line options for common flags in record and replay.
 var (
