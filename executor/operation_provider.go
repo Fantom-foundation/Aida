@@ -39,6 +39,13 @@ func (p operationProvider) Run(from int, to int, consumer Consumer[[]operation.O
 			if err := consumer(TransactionInfo[[]operation.Operation]{currentBlockNumber, transactionNumber, tx}); err != nil {
 				return err
 			}
+
+			// this condition must be kept for replay_substate tool;
+			// it indicates that we require only one transaction to be passed to consumer
+			if from == to {
+				return nil
+			}
+
 			tx = make([]operation.Operation, 0)
 			lastOperation = false
 
@@ -58,7 +65,7 @@ func (p operationProvider) Run(from int, to int, consumer Consumer[[]operation.O
 		case *operation.BeginBlock:
 			// extract block number with operation.BeginBlock
 			currentBlockNumber = int(t.BlockNumber)
-			if currentBlockNumber == to {
+			if currentBlockNumber > to {
 				return nil
 			}
 		default:
