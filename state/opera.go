@@ -17,7 +17,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	geth "github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/op/go-logging"
 )
 
 // operaStateDB implements stateDb using Opera database
@@ -29,7 +28,7 @@ type operaStateDB struct {
 	block         uint64
 	isArchiveMode bool
 	gdb           *gossip.Store
-	log           *logging.Logger
+	log           logger.Logger
 }
 
 // newOperaStateDB returns a new operaStateDB instance

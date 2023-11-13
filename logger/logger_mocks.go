@@ -11,6 +11,7 @@ package logger
 import (
 	reflect "reflect"
 
+	logging "github.com/op/go-logging"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -200,6 +201,20 @@ func (mr *MockLoggerMockRecorder) Infof(format any, args ...any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]any{format}, args...)
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Infof", reflect.TypeOf((*MockLogger)(nil).Infof), varargs...)
+}
+
+// IsEnabledFor mocks base method.
+func (m *MockLogger) IsEnabledFor(level logging.Level) bool {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "IsEnabledFor", level)
+	ret0, _ := ret[0].(bool)
+	return ret0
+}
+
+// IsEnabledFor indicates an expected call of IsEnabledFor.
+func (mr *MockLoggerMockRecorder) IsEnabledFor(level any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "IsEnabledFor", reflect.TypeOf((*MockLogger)(nil).IsEnabledFor), level)
 }
 
 // Notice mocks base method.

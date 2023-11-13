@@ -4,7 +4,9 @@ import (
 	"archive/tar"
 	"bufio"
 	"compress/gzip"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -18,7 +20,6 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
@@ -39,31 +40,33 @@ var GenerateCommand = cli.Command{
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 		&utils.ChainIDFlag,
-		&utils.GenesisFlag,
+		&utils.OperaDbFlag,
 		&utils.WorldStateFlag,
 		&utils.OperaBinaryFlag,
 		&utils.OutputFlag,
-		&utils.TargetEpochFlag,
 		&utils.UpdateBufferSizeFlag,
+		&utils.SkipStateHashScrappingFlag,
 		&substate.WorkersFlag,
 		&logger.LogLevelFlag,
 	},
 	Description: `
-The db generate command requires events as an argument:
-<events>
-
-<events> are fed into the opera database (either existing or genesis needs to be specified), processing them generates updated aida-db.`,
+The db generate command requires 4 arguments:
+<firstBlock> <lastBlock> <firstEpoch> <lastEpoch>
+This command is designed for manual generation of deletion, updateset and patch just from substates in aidadb.
+`,
 }
 
 type generator struct {
-	cfg         *utils.Config
-	log         *logging.Logger
-	md          *utils.AidaDbMetadata
-	aidaDb      ethdb.Database
-	opera       *aidaOpera
-	targetEpoch uint64
-	dbHash      []byte
-	start       time.Time
+	cfg          *utils.Config
+	ctx          *cli.Context
+	log          logger.Logger
+	md           *utils.AidaDbMetadata
+	aidaDb       ethdb.Database
+	opera        *aidaOpera
+	targetEpoch  uint64
+	dbHash       []byte
+	patchTarHash string
+	start        time.Time
 }
 
 // generate AidaDb
@@ -78,6 +81,11 @@ func generate(ctx *cli.Context) error {
 		return err
 	}
 
+	err = g.prepareManualGenerate(ctx, cfg)
+	if err != nil {
+		return fmt.Errorf("prepareManualGenerate: %v; make sure you have correct substate range already recorded in aidadb", err)
+	}
+
 	if err = g.Generate(); err != nil {
 		return err
 	}
@@ -85,6 +93,64 @@ func generate(ctx *cli.Context) error {
 	MustCloseDB(g.aidaDb)
 
 	return printMetadata(g.cfg.AidaDb)
+}
+
+// prepareManualGenerate prepares generator for manual generation
+func (g *generator) prepareManualGenerate(ctx *cli.Context, cfg *utils.Config) (err error) {
+	if ctx.Args().Len() != 4 {
+		return fmt.Errorf("generate command requires exactly 4 arguments - first block, last block, first epoch, last epoch")
+	}
+
+	g.opera.firstBlock, g.opera.lastBlock, err = utils.SetBlockRange(ctx.Args().Get(0), ctx.Args().Get(1), cfg.ChainID)
+	if err != nil {
+		return err
+	}
+
+	g.opera.firstEpoch, g.opera.lastEpoch, err = utils.SetBlockRange(ctx.Args().Get(2), ctx.Args().Get(3), cfg.ChainID)
+	if err != nil {
+		return err
+	}
+
+	if g.opera.firstBlock > g.opera.lastBlock {
+		return fmt.Errorf("generation range first block %v cannot be greater than available last block %v", g.opera.firstBlock, g.opera.lastBlock)
+	}
+
+	if g.opera.firstEpoch > g.opera.lastEpoch {
+		return fmt.Errorf("generation range first epoch %v cannot be greater than available last epoch %v", g.opera.firstEpoch, g.opera.lastEpoch)
+	}
+
+	firstSubstate := substate.NewSubstateDB(g.aidaDb).GetFirstSubstate()
+	lastSubstate, err := substate.NewSubstateDB(g.aidaDb).GetLastSubstate()
+	if err != nil {
+		return fmt.Errorf("cannot get last substate; %v", err)
+	}
+
+	if firstSubstate.Env.Number > g.opera.firstBlock {
+		return fmt.Errorf("generation range first block %v cannot be greater than first substate block %v", g.opera.firstBlock, firstSubstate.Env.Number)
+	}
+
+	if lastSubstate.Env.Number < g.opera.lastBlock {
+		return fmt.Errorf("generation range last block %v cannot be greater than last substate block %v", g.opera.lastBlock, lastSubstate.Env.Number)
+	}
+
+	firstAvailableEpoch, err := utils.FindEpochNumber(firstSubstate.Env.Number, g.cfg.ChainID)
+	if err != nil {
+		return fmt.Errorf("cannot find first epoch number; %v", err)
+	}
+
+	lastAvailableEpoch, err := utils.FindEpochNumber(lastSubstate.Env.Number, g.cfg.ChainID)
+	if err != nil {
+		return fmt.Errorf("cannot find last epoch number; %v", err)
+	}
+
+	if g.opera.firstEpoch < firstAvailableEpoch {
+		return fmt.Errorf("generation range first epoch %v cannot be less than first available epoch %v", g.opera.firstEpoch, firstAvailableEpoch)
+	}
+
+	if g.opera.lastEpoch > lastAvailableEpoch {
+		return fmt.Errorf("generation range last epoch %v cannot be greater than last available epoch %v", g.opera.lastEpoch, lastAvailableEpoch)
+	}
+	return nil
 }
 
 // newGenerator returns new instance of generator
@@ -107,6 +173,7 @@ func newGenerator(ctx *cli.Context, cfg *utils.Config) (*generator, error) {
 		log:    log,
 		opera:  newAidaOpera(ctx, cfg, log),
 		aidaDb: db,
+		ctx:    ctx,
 		start:  time.Now(),
 	}, nil
 }
@@ -130,19 +197,29 @@ func (g *generator) Generate() error {
 		return err
 	}
 
-	start := time.Now()
-	g.log.Notice("Starting validation...")
+	if g.cfg.SkipStateHashScrapping {
+		g.log.Noticef("Skipping state hash scraping...")
+	} else {
+		err = g.runStateHashScraper(g.ctx)
+		if err != nil {
+			return fmt.Errorf("cannot scrape state hashes; %v", err)
+		}
+	}
 
-	// after generation is complete, we generateDbHash the db and save it into the patch
-	g.dbHash, err = generateDbHash(g.aidaDb, g.cfg.LogLevel)
+	err = g.runDbHashGeneration(err)
 	if err != nil {
 		return fmt.Errorf("cannot generate db hash; %v", err)
 	}
 
-	g.log.Noticef("Validation complete. It took: %v", time.Since(start).Round(1*time.Second))
-	g.log.Noticef("Total elapsed time: %v", time.Since(g.start).Round(1*time.Second))
+	g.log.Notice("Generate metadata for AidaDb...")
+	err = utils.ProcessGenLikeMetadata(g.aidaDb, g.opera.firstBlock, g.opera.lastBlock, g.opera.firstEpoch, g.opera.lastEpoch, g.cfg.ChainID, g.cfg.LogLevel, g.dbHash)
+	if err != nil {
+		return err
+	}
 
-	// if patch output dir is selected inserting patch.tar.gz, patch.tar.gz.md5 into there and updating patches.json
+	g.log.Noticef("AidaDb %v generation done", g.cfg.AidaDb)
+
+	// if patch output dir is selected inserting patch.tar.gz into there and updating patches.json
 	if g.cfg.Output != "" {
 		var patchTarPath string
 		patchTarPath, err = g.createPatch()
@@ -152,16 +229,75 @@ func (g *generator) Generate() error {
 
 		g.log.Noticef("Successfully generated patch at: %v", patchTarPath)
 	}
+	g.log.Noticef("Total elapsed time: %v", time.Since(g.start).Round(1*time.Second))
 
-	g.log.Notice("Generate metadata")
-	err = utils.ProcessGenLikeMetadata(g.aidaDb, g.opera.firstBlock, g.opera.lastBlock, g.opera.firstEpoch, g.opera.lastEpoch, g.cfg.ChainID, g.cfg.LogLevel, g.dbHash)
+	return nil
+}
+
+// runStateHashScraper scrapes state hashes from a node and saves them to a leveldb database
+func (g *generator) runStateHashScraper(ctx *cli.Context) error {
+	start := time.Now()
+	g.log.Notice("Starting state-hash scraping...")
+
+	// start opera ipc for state hash scraping
+	stopChan := make(chan struct{})
+	operaErr := startOperaIpc(g.cfg, stopChan)
+
+	g.log.Noticef("Scraping: range %v - %v", g.opera.firstBlock, g.opera.lastBlock)
+
+	err := utils.StateHashScraper(ctx.Context, g.cfg.ChainID, g.cfg.OperaDb, g.aidaDb, g.opera.firstBlock, g.opera.lastBlock, g.log)
 	if err != nil {
+		select {
+		case oErr, ok := <-operaErr:
+			if ok {
+				return errors.Join(oErr, err)
+			}
+			return err
+		default:
+			return err
+		}
+	}
+
+	g.log.Debug("Sending stop signal to opera ipc")
+stoppingOperaIpc:
+	for {
+		select {
+		case stopChan <- struct{}{}:
+			close(stopChan)
+			break stoppingOperaIpc
+		case err, ok := <-operaErr:
+			if ok {
+				return err
+			}
+		}
+	}
+
+	g.log.Debug("Waiting for opera ipc to finish")
+	// wait for child thread to finish
+	err, ok := <-operaErr
+	if ok {
 		return err
 	}
 
-	g.log.Noticef("AidaDb %v generation done", g.cfg.AidaDb)
+	g.log.Noticef("Hash scraping complete. It took: %v", time.Since(start).Round(1*time.Second))
 	g.log.Noticef("Total elapsed time: %v", time.Since(g.start).Round(1*time.Second))
 
+	return nil
+}
+
+// runDbHashGeneration generates db hash of all items in AidaDb
+func (g *generator) runDbHashGeneration(err error) error {
+	start := time.Now()
+	g.log.Notice("Starting Db hash generation...")
+
+	// after generation is complete, we generateDbHash the db and save it into the patch
+	g.dbHash, err = generateDbHash(g.aidaDb, g.cfg.LogLevel)
+	if err != nil {
+		return fmt.Errorf("cannot generate db hash; %v", err)
+	}
+
+	g.log.Noticef("Db hash generation complete. It took: %v", time.Since(start).Round(1*time.Second))
+	g.log.Noticef("Total elapsed time: %v", time.Since(g.start).Round(1*time.Second))
 	return nil
 }
 
@@ -201,7 +337,7 @@ func (g *generator) processDeletedAccounts(ddb *substate.DestroyedAccountDB) err
 	start = time.Now()
 	g.log.Noticef("Generating DeletionDb...")
 
-	err = GenDeletedAccountsAction(g.cfg, ddb, 0)
+	err = GenDeletedAccountsAction(g.cfg, ddb, 0, g.opera.lastBlock)
 	if err != nil {
 		return fmt.Errorf("cannot doGenerations deleted accounts; %v", err)
 	}
@@ -221,8 +357,7 @@ func (g *generator) processUpdateSet(deleteDb *substate.DestroyedAccountDB, upda
 	start = time.Now()
 	g.log.Notice("Generating UpdateDb...")
 
-	// nextUpdateSetStart TODO MATEJ probably off by one
-	err = updateset.GenUpdateSet(g.cfg, updateDb, deleteDb, nextUpdateSetStart, updateSetInterval)
+	err = updateset.GenUpdateSet(g.cfg, updateDb, deleteDb, nextUpdateSetStart, g.opera.lastBlock, updateSetInterval)
 	if err != nil {
 		return fmt.Errorf("cannot doGenerations update-db; %v", err)
 	}
@@ -264,20 +399,22 @@ func (g *generator) createPatch() (string, error) {
 
 	// creating patch name
 	// add leading zeroes to filename to make it sortable
-	patchName := fmt.Sprintf("aida-db-%09s", strconv.FormatUint(g.opera.lastEpoch, 10))
+	patchName := fmt.Sprintf("%s-%s", strconv.FormatUint(g.opera.firstEpoch, 10), strconv.FormatUint(g.opera.lastEpoch, 10))
 	patchPath := filepath.Join(g.cfg.Output, patchName)
 
+	g.cfg.TargetDb = patchPath
 	g.cfg.First = g.opera.firstBlock
 	g.cfg.Last = g.opera.lastBlock
 
-	patchDb, err := rawdb.NewLevelDBDatabase(patchPath, 1024, 100, "profiling", false)
+	patchDb, err := rawdb.NewLevelDBDatabase(g.cfg.TargetDb, 1024, 100, "profiling", false)
 	if err != nil {
 		return "", fmt.Errorf("cannot open patch db; %v", err)
 	}
 
-	err = CreatePatchClone(g.cfg, g.aidaDb, patchDb, g.opera.lastEpoch, g.opera.lastEpoch, g.opera.isNew)
-
-	g.log.Notice("Patch metadata")
+	err = CreatePatchClone(g.cfg, g.aidaDb, patchDb, g.opera.firstEpoch, g.opera.lastEpoch, g.opera.isNew)
+	if err != nil {
+		return "", fmt.Errorf("cannot create patch clone; %v", err)
+	}
 
 	// metadata
 	err = utils.ProcessPatchLikeMetadata(patchDb, g.cfg.LogLevel, g.cfg.First, g.cfg.Last, g.opera.firstEpoch,
@@ -305,12 +442,12 @@ func (g *generator) createPatch() (string, error) {
 	g.log.Noticef("Patch %s generated successfully: %d(%d) - %d(%d) ", patchTarName, g.cfg.First,
 		g.opera.firstEpoch, g.cfg.Last, g.opera.lastEpoch)
 
-	err = g.updatePatchesJson(patchTarName)
+	g.patchTarHash, err = calculateMD5Sum(patchTarPath)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("unable to calculate md5sum of %s; %v", patchTarPath, err)
 	}
 
-	err = g.storeMd5sum(patchTarPath)
+	err = g.updatePatchesJson(patchTarName)
 	if err != nil {
 		return "", err
 	}
@@ -330,7 +467,9 @@ func (g *generator) createPatch() (string, error) {
 // updatePatchesJson with newly acquired patch
 func (g *generator) updatePatchesJson(fileName string) error {
 	jsonFilePath := filepath.Join(g.cfg.Output, patchesJsonName)
-	var patchesJson []map[string]string
+
+	// Load previous JSON
+	var patchesJson []utils.PatchJson
 
 	// Attempt to load previous JSON
 	file, err := os.Open(jsonFilePath)
@@ -360,17 +499,19 @@ func (g *generator) updatePatchesJson(fileName string) error {
 
 	// Initialize the array if it doesn't exist
 	if patchesJson == nil {
-		patchesJson = make([]map[string]string, 0)
+		patchesJson = make([]utils.PatchJson, 0)
 	}
 
 	// Create a new patch object
-	newPatch := map[string]string{
-		"fileName":  fileName,
-		"fromBlock": strconv.FormatUint(g.cfg.First, 10),
-		"toBlock":   strconv.FormatUint(g.cfg.Last, 10),
-		"fromEpoch": strconv.FormatUint(g.opera.firstEpoch, 10),
-		"toEpoch":   strconv.FormatUint(g.opera.lastEpoch, 10),
-		"nightly":   "true",
+	newPatch := utils.PatchJson{
+		FileName:  fileName,
+		FromBlock: g.cfg.First,
+		ToBlock:   g.cfg.Last,
+		FromEpoch: g.opera.firstEpoch,
+		ToEpoch:   g.opera.lastEpoch,
+		DbHash:    hex.EncodeToString(g.dbHash),
+		TarHash:   g.patchTarHash,
+		Nightly:   true,
 	}
 
 	// Append the new patch to the array
@@ -385,7 +526,7 @@ func (g *generator) updatePatchesJson(fileName string) error {
 }
 
 // doUpdatePatchesJson with newly acquired patch
-func (g *generator) doUpdatePatchesJson(patchesJson []map[string]string, file *os.File) error {
+func (g *generator) doUpdatePatchesJson(patchesJson []utils.PatchJson, file *os.File) error {
 	// Convert the array to JSON bytes
 	jsonBytes, err := json.Marshal(patchesJson)
 	if err != nil {
@@ -489,7 +630,7 @@ func (g *generator) calculatePatchEnd() error {
 	g.targetEpoch = g.opera.firstEpoch
 
 	// next patch will be at least X epochs large
-	if g.cfg.ChainID == 250 {
+	if g.cfg.ChainID == utils.MainnetChainID {
 		// mainnet currently takes about 250 epochs per day
 		g.targetEpoch += 250
 	} else {

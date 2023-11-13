@@ -9,7 +9,6 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/op/go-logging"
 )
 
 // NewLoggerProxy wraps the given StateDB instance into a logging wrapper causing
@@ -26,7 +25,7 @@ func NewLoggerProxy(db state.StateDB, logLevel string) state.StateDB {
 
 type loggingVmStateDb struct {
 	db  state.VmStateDB
-	log *logging.Logger
+	log logger.Logger
 }
 
 type loggingNonCommittableStateDb struct {
@@ -339,7 +338,7 @@ func (s *loggingNonCommittableStateDb) Release() {
 
 type loggingBulkLoad struct {
 	nested state.BulkLoad
-	log    *logging.Logger
+	log    logger.Logger
 }
 
 func (l *loggingBulkLoad) CreateAccount(addr common.Address) {
