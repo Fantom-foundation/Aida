@@ -35,10 +35,8 @@ last block of the inclusive range of blocks to replay transactions.`,
 
 const channelSize = 10000 // size of deletion channel
 
-var DeleteHistory map[common.Address]bool //address recently and deleted
-
 // readAccounts reads contracts which were suicided or created and adds them to lists
-func readAccounts(ch chan proxy.ContractLiveliness) ([]common.Address, []common.Address) {
+func readAccounts(ch chan proxy.ContractLiveliness, deleteHistory *map[common.Address]bool) ([]common.Address, []common.Address) {
 	des := make(map[common.Address]bool)
 	res := make(map[common.Address]bool)
 	for contract := range ch {
@@ -49,7 +47,7 @@ func readAccounts(ch chan proxy.ContractLiveliness) ([]common.Address, []common.
 			if _, found := res[addr]; found {
 				delete(res, addr)
 			}
-			DeleteHistory[addr] = true // meta list
+			(*deleteHistory)[addr] = true // meta list
 			des[addr] = true
 		} else {
 			// if a contract was suicided before resurrected in the same tx,
@@ -58,8 +56,8 @@ func readAccounts(ch chan proxy.ContractLiveliness) ([]common.Address, []common.
 				delete(des, addr)
 			}
 			// an account is considered as resurrected if it was recently deleted.
-			if recentlyDeleted, found := DeleteHistory[addr]; found && recentlyDeleted {
-				DeleteHistory[addr] = false
+			if recentlyDeleted, found := (*deleteHistory)[addr]; found && recentlyDeleted {
+				(*deleteHistory)[addr] = false
 				res[addr] = true
 			} else if found && !recentlyDeleted {
 			}
@@ -80,7 +78,7 @@ func readAccounts(ch chan proxy.ContractLiveliness) ([]common.Address, []common.
 
 // genDeletedAccountsTask process a transaction substate then records self-destructed accounts
 // and resurrected accounts to a database.
-func genDeletedAccountsTask(block uint64, tx int, recording *substate.Substate, ddb *substate.DestroyedAccountDB, cfg *utils.Config) error {
+func genDeletedAccountsTask(block uint64, tx int, recording *substate.Substate, ddb *substate.DestroyedAccountDB, deleteHistory *map[common.Address]bool, cfg *utils.Config) error {
 
 	ch := make(chan proxy.ContractLiveliness, channelSize)
 	var statedb state.StateDB
@@ -94,7 +92,7 @@ func genDeletedAccountsTask(block uint64, tx int, recording *substate.Substate, 
 	}
 
 	close(ch)
-	des, res := readAccounts(ch)
+	des, res := readAccounts(ch, deleteHistory)
 	if len(des)+len(res) > 0 {
 		// if transaction completed successfully, put destroyed accounts
 		// and resurrected accounts to a database
@@ -150,7 +148,7 @@ func GenDeletedAccountsAction(cfg *utils.Config, ddb *substate.DestroyedAccountD
 	lastSec := time.Since(start).Seconds()
 	txCount := uint64(0)
 	lastTxCount := uint64(0)
-	DeleteHistory = make(map[common.Address]bool)
+	var deleteHistory = make(map[common.Address]bool) //address recently and deleted
 
 	iter := substate.NewSubstateIterator(firstBlock, cfg.Workers)
 	defer iter.Release()
@@ -162,7 +160,7 @@ func GenDeletedAccountsAction(cfg *utils.Config, ddb *substate.DestroyedAccountD
 		}
 
 		if tx.Transaction < utils.PseudoTx {
-			err = genDeletedAccountsTask(tx.Block, tx.Transaction, tx.Substate, ddb, cfg)
+			err = genDeletedAccountsTask(tx.Block, tx.Transaction, tx.Substate, ddb, &deleteHistory, cfg)
 			if err != nil {
 				return err
 			}
@@ -178,6 +176,9 @@ func GenDeletedAccountsAction(cfg *utils.Config, ddb *substate.DestroyedAccountD
 			}
 		}
 	}
+
+	// explicitly set to nil to release memory as soon as possible
+	deleteHistory = nil
 
 	return err
 }
