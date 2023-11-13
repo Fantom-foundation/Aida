@@ -54,8 +54,7 @@ func findBlockNumber(data *rpc.RequestAndResults) uint64 {
 
 	switch str {
 	case "pending":
-		// pending does not work
-		return block
+		fallthrough
 	case "latest":
 		return block
 	case "earliest":
