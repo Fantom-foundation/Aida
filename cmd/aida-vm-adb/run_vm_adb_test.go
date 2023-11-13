@@ -22,6 +22,7 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 	archiveBlockOne := state.NewMockNonCommittableStateDB(ctrl)
 	archiveBlockTwo := state.NewMockNonCommittableStateDB(ctrl)
 	archiveBlockThree := state.NewMockNonCommittableStateDB(ctrl)
+
 	cfg := &utils.Config{
 		First:       2,
 		Last:        4,
@@ -66,6 +67,7 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 		archiveBlockOne.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
 		archiveBlockOne.EXPECT().RevertToSnapshot(16),
 		archiveBlockOne.EXPECT().EndTransaction(),
+		archiveBlockOne.EXPECT().Release(),
 		// Block 3
 		db.EXPECT().GetArchiveState(uint64(2)).Return(archiveBlockTwo, nil),
 		archiveBlockTwo.EXPECT().BeginTransaction(uint32(1)),
@@ -75,11 +77,13 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 		archiveBlockTwo.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
 		archiveBlockTwo.EXPECT().RevertToSnapshot(17),
 		archiveBlockTwo.EXPECT().EndTransaction(),
+		archiveBlockTwo.EXPECT().Release(),
 		// Block 4
 		// Pseudo transaction do not use snapshots.
 		db.EXPECT().GetArchiveState(uint64(3)).Return(archiveBlockThree, nil),
 		archiveBlockThree.EXPECT().BeginTransaction(uint32(utils.PseudoTx)),
 		archiveBlockThree.EXPECT().EndTransaction(),
+		archiveBlockThree.EXPECT().Release(),
 	)
 
 	if err := run(cfg, provider, db, blockProcessor{cfg}, nil); err != nil {
@@ -142,6 +146,8 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 		archiveBlockOne.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
 		archiveBlockOne.EXPECT().RevertToSnapshot(19),
 		archiveBlockOne.EXPECT().EndTransaction(),
+
+		archiveBlockOne.EXPECT().Release(),
 	)
 	// Block 3
 	gomock.InOrder(
@@ -153,6 +159,7 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 		archiveBlockTwo.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
 		archiveBlockTwo.EXPECT().RevertToSnapshot(17),
 		archiveBlockTwo.EXPECT().EndTransaction(),
+		archiveBlockTwo.EXPECT().Release(),
 	)
 
 	// Block 4
@@ -161,6 +168,7 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 		// Pseudo transaction do not use snapshots.
 		archiveBlockThree.EXPECT().BeginTransaction(uint32(utils.PseudoTx)),
 		archiveBlockThree.EXPECT().EndTransaction(),
+		archiveBlockThree.EXPECT().Release(),
 	)
 
 	if err := run(cfg, provider, db, blockProcessor{cfg}, nil); err != nil {
@@ -172,8 +180,10 @@ func TestVmAdb_AllTransactionsAreProcessedInOrder_Sequential(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	provider := executor.NewMockProvider[*substate.Substate](ctrl)
 	db := state.NewMockStateDB(ctrl)
+	archive := state.NewMockNonCommittableStateDB(ctrl)
 	ext := executor.NewMockExtension[*substate.Substate](ctrl)
 	processor := executor.NewMockProcessor[*substate.Substate](ctrl)
+
 	config := &utils.Config{
 		First:    2,
 		Last:     4,
@@ -206,7 +216,7 @@ func TestVmAdb_AllTransactionsAreProcessedInOrder_Sequential(t *testing.T) {
 
 		// Block 2
 		// Tx 1
-		db.EXPECT().GetArchiveState(uint64(1)),
+		db.EXPECT().GetArchiveState(uint64(1)).Return(archive, nil),
 		ext.EXPECT().PreBlock(executor.AtBlock[*substate.Substate](2), gomock.Any()),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[*substate.Substate](2, 1), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[*substate.Substate](2, 1), gomock.Any()),
@@ -216,22 +226,25 @@ func TestVmAdb_AllTransactionsAreProcessedInOrder_Sequential(t *testing.T) {
 		processor.EXPECT().Process(executor.AtTransaction[*substate.Substate](2, 2), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[*substate.Substate](2, 2), gomock.Any()),
 		ext.EXPECT().PostBlock(executor.AtTransaction[*substate.Substate](2, 2), gomock.Any()),
+		archive.EXPECT().Release(),
 
 		// Block 3
-		db.EXPECT().GetArchiveState(uint64(2)),
+		db.EXPECT().GetArchiveState(uint64(2)).Return(archive, nil),
 		ext.EXPECT().PreBlock(executor.AtBlock[*substate.Substate](3), gomock.Any()),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[*substate.Substate](3, 1), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[*substate.Substate](3, 1), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[*substate.Substate](3, 1), gomock.Any()),
 		ext.EXPECT().PostBlock(executor.AtTransaction[*substate.Substate](3, 1), gomock.Any()),
+		archive.EXPECT().Release(),
 
 		// Block 4
-		db.EXPECT().GetArchiveState(uint64(3)),
+		db.EXPECT().GetArchiveState(uint64(3)).Return(archive, nil),
 		ext.EXPECT().PreBlock(executor.AtBlock[*substate.Substate](4), gomock.Any()),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[*substate.Substate](4, utils.PseudoTx), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[*substate.Substate](4, utils.PseudoTx), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[*substate.Substate](4, utils.PseudoTx), gomock.Any()),
 		ext.EXPECT().PostBlock(executor.AtTransaction[*substate.Substate](4, utils.PseudoTx), gomock.Any()),
+		archive.EXPECT().Release(),
 
 		ext.EXPECT().PostRun(executor.AtBlock[*substate.Substate](5), gomock.Any(), nil),
 	)
@@ -245,8 +258,10 @@ func TestVmAdb_AllTransactionsAreProcessed_Parallel(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	provider := executor.NewMockProvider[*substate.Substate](ctrl)
 	db := state.NewMockStateDB(ctrl)
+	archive := state.NewMockNonCommittableStateDB(ctrl)
 	ext := executor.NewMockExtension[*substate.Substate](ctrl)
 	processor := executor.NewMockProcessor[*substate.Substate](ctrl)
+
 	config := &utils.Config{
 		First:    2,
 		Last:     4,
@@ -277,7 +292,7 @@ func TestVmAdb_AllTransactionsAreProcessed_Parallel(t *testing.T) {
 
 	// Block 2
 	gomock.InOrder(
-		db.EXPECT().GetArchiveState(uint64(1)),
+		db.EXPECT().GetArchiveState(uint64(1)).Return(archive, nil),
 		ext.EXPECT().PreBlock(executor.AtBlock[*substate.Substate](2), gomock.Any()),
 		// Tx 1
 		ext.EXPECT().PreTransaction(executor.AtTransaction[*substate.Substate](2, 1), gomock.Any()),
@@ -288,26 +303,29 @@ func TestVmAdb_AllTransactionsAreProcessed_Parallel(t *testing.T) {
 		processor.EXPECT().Process(executor.AtTransaction[*substate.Substate](2, 2), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[*substate.Substate](2, 2), gomock.Any()),
 		ext.EXPECT().PostBlock(executor.AtBlock[*substate.Substate](2), gomock.Any()),
+		archive.EXPECT().Release(),
 	)
 
 	// Block 3
 	gomock.InOrder(
-		db.EXPECT().GetArchiveState(uint64(2)),
+		db.EXPECT().GetArchiveState(uint64(2)).Return(archive, nil),
 		ext.EXPECT().PreBlock(executor.AtBlock[*substate.Substate](3), gomock.Any()),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[*substate.Substate](3, 1), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[*substate.Substate](3, 1), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[*substate.Substate](3, 1), gomock.Any()),
 		ext.EXPECT().PostBlock(executor.AtTransaction[*substate.Substate](3, 1), gomock.Any()),
+		archive.EXPECT().Release(),
 	)
 
 	// Block 4
 	gomock.InOrder(
-		db.EXPECT().GetArchiveState(uint64(3)),
+		db.EXPECT().GetArchiveState(uint64(3)).Return(archive, nil),
 		ext.EXPECT().PreBlock(executor.AtBlock[*substate.Substate](4), gomock.Any()),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[*substate.Substate](4, utils.PseudoTx), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[*substate.Substate](4, utils.PseudoTx), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[*substate.Substate](4, utils.PseudoTx), gomock.Any()),
 		ext.EXPECT().PostBlock(executor.AtTransaction[*substate.Substate](4, utils.PseudoTx), gomock.Any()),
+		archive.EXPECT().Release(),
 	)
 
 	ext.EXPECT().PostRun(executor.AtBlock[*substate.Substate](5), gomock.Any(), nil)
@@ -322,6 +340,7 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) 
 	provider := executor.NewMockProvider[*substate.Substate](ctrl)
 	db := state.NewMockStateDB(ctrl)
 	archive := state.NewMockNonCommittableStateDB(ctrl)
+
 	cfg := &utils.Config{
 		First:           2,
 		Last:            4,
