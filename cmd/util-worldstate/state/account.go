@@ -21,7 +21,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/fatih/color"
 	"github.com/olekukonko/tablewriter"
-	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
@@ -168,14 +167,14 @@ func collectAccounts(ctx *cli.Context) error {
 }
 
 // collectProgressFactory observes progress in scanning.
-func collectProgressFactory(ctx context.Context, in <-chan any, label string, log *logging.Logger) <-chan any {
+func collectProgressFactory(ctx context.Context, in <-chan any, label string, log logger.Logger) <-chan any {
 	out := make(chan any, cap(in))
 	go collectProgress(ctx, in, out, label, log)
 	return out
 }
 
 // collectProgress reports progress on collector stream.
-func collectProgress(ctx context.Context, in <-chan any, out chan<- any, label string, log *logging.Logger) {
+func collectProgress(ctx context.Context, in <-chan any, out chan<- any, label string, log logger.Logger) {
 	var count int
 	var last string
 	var err error

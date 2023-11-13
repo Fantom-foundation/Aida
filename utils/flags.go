@@ -4,8 +4,8 @@ import "github.com/urfave/cli/v2"
 
 // Command line options for common flags in record and replay.
 var (
-	APIRecordingSrcFileFlag = cli.PathFlag{
-		Name:    "api-recording",
+	RpcRecordingFileFlag = cli.PathFlag{
+		Name:    "rpc-recording",
 		Usage:   "Path to source file with recorded API data",
 		Aliases: []string{"r"},
 	}
@@ -276,9 +276,10 @@ var (
 		Usage: "Depth of snapshot history",
 		Value: 100,
 	}
-	DbFlag = cli.PathFlag{
-		Name:  "db",
-		Usage: "Path to the database",
+	OperaDbFlag = cli.PathFlag{
+		Name:    "db",
+		Aliases: []string{"datadir"},
+		Usage:   "Path to the opera database",
 	}
 	GenesisFlag = cli.PathFlag{
 		Name:  "genesis",
@@ -353,6 +354,11 @@ var (
 		Name:  "update-on-failure",
 		Usage: "if enabled and continue-on-failure is also enabled, this corrects any error found in StateDb",
 		Value: true,
+	}
+	SkipStateHashScrappingFlag = cli.BoolFlag{
+		Name:  "skip-state-hash-scrapping",
+		Usage: "if enabled, then state-hashes are not loaded from rpc",
+		Value: false,
 	}
 	NoHeartbeatLoggingFlag = cli.BoolFlag{
 		Name:  "no-heartbeat-logging",

@@ -1,4 +1,4 @@
-package iterator
+package rpc
 
 import (
 	"encoding/binary"
@@ -8,7 +8,7 @@ import (
 	"github.com/sigurn/crc8"
 )
 
-// Record Header Structure (min 18 bytes, max 21 bytes per record):
+// Record Header Structure (min 18 bytes, max 21 bytes per data):
 // +-----+-----+-----+-----+-----+-----+-----+-----+
 // | ERR | HiQ | HiR |  Version  |    Namespace    |
 // +-----+-----+-----+-----+-----+-----+-----+-----+
@@ -52,7 +52,7 @@ const maxShortResponse = 0xFFFF
 
 const headerSize = 21
 
-// Header represents a single record header on a virtual recording tape represented by a Reader/Writer.
+// Header represents a single data header on a virtual recording tape represented by a Reader/Writer.
 type Header struct {
 	version        byte
 	namespace      byte
@@ -96,7 +96,7 @@ var methodDictionary = map[byte]map[string]byte{
 var checksumTable = crc8.MakeTable(crc8.CRC8_CDMA2000)
 
 // CanRecord compares namespace and function name against Header functions table
-// to verify if the function can be encoded to a record header.
+// to verify if the function can be encoded to a data header.
 func CanRecord(namespace, method string) bool {
 	ns, ok := namespaceDictionary[namespace]
 	if !ok {
@@ -159,7 +159,7 @@ func (h *Header) SetBlockID(id uint64) {
 	h.blockID = id
 }
 
-// BlockID returns the block ID of the record.
+// BlockID returns the block ID of the data.
 func (h *Header) BlockID() uint64 {
 	return h.blockID
 }
@@ -169,7 +169,7 @@ func (h *Header) SetBlockTimestamp(ts uint64) {
 	h.blockTimestamp = ts
 }
 
-// BlockTimestamp returns the timestamp of block of the record.
+// BlockTimestamp returns the timestamp of block of the data.
 func (h *Header) BlockTimestamp() uint64 {
 	return h.blockTimestamp
 }
@@ -352,7 +352,7 @@ func (h *Header) readFrom(r io.Reader) ([]byte, error) {
 	// check if what we got make sense
 	crc := crc8.Checksum(hdr[:size-1], checksumTable)
 	if crc != hdr[size-1] {
-		return nil, fmt.Errorf("invalid record header checksum")
+		return nil, fmt.Errorf("invalid data header checksum")
 	}
 
 	return hdr[:size], nil

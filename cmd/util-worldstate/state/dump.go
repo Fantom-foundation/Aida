@@ -18,7 +18,6 @@ import (
 	"github.com/Fantom-foundation/Aida/world-state/types"
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
@@ -40,7 +39,7 @@ var CmdDumpState = cli.Command{
 		- Contract Storage`,
 	ArgsUsage: "<root> <input-db> <input-db-name> <input-db-type> <workers>",
 	Flags: []cli.Flag{
-		&utils.DbFlag,
+		&utils.OperaDbFlag,
 		&utils.StateDbVariantFlag,
 		&utils.SourceTableNameFlag,
 		&utils.TrieRootHashFlag,
@@ -57,7 +56,8 @@ func dumpState(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	cfg.Db, err = DefaultPath(ctx, &utils.DbFlag, ".opera/chaindata/leveldb-fsh")
+	// TODO rewrite so that the DumpState intakes just opera directory without the /chaindata/leveldb-fsh suffix
+	cfg.OperaDb, err = DefaultPath(ctx, &utils.OperaDbFlag, ".opera/chaindata/leveldb-fsh")
 	if err != nil {
 		return err
 	}
@@ -67,7 +67,7 @@ func dumpState(ctx *cli.Context) error {
 
 func DumpState(ctx *cli.Context, cfg *utils.Config) error {
 	// open the source trie DB
-	store, err := opera.Connect(cfg.DbVariant, cfg.Db, cfg.SourceTableName)
+	store, err := opera.Connect(cfg.DbVariant, cfg.OperaDb, cfg.SourceTableName)
 	if err != nil {
 		return err
 	}
@@ -129,7 +129,7 @@ func DumpState(ctx *cli.Context, cfg *utils.Config) error {
 }
 
 // importHashesFromOpera extract addresses and storage keys from MPT dump and inserts into the worldstate
-func importHashesFromOpera(ctx *cli.Context, db *snapshot.StateDB, store eth_state.Database, root common.Hash, log *logging.Logger) error {
+func importHashesFromOpera(ctx *cli.Context, db *snapshot.StateDB, store eth_state.Database, root common.Hash, log logger.Logger) error {
 	statedb, err := eth_state.NewWithSnapLayers(root, store, nil, 0)
 	if err != nil {
 		return fmt.Errorf("error calling opening StateDB; %v", err)
@@ -182,7 +182,7 @@ func endGracefully(cancel context.CancelFunc, ec ...<-chan error) {
 
 // blockNumberAndRoot requires that root hash is determined.
 // Also tries to load blockNumber, but it might still be 0 and required to be looked up outside of scope of this function.
-func blockNumberAndRoot(store kvdb.Store, blockNumber uint64, root common.Hash, log *logging.Logger) (uint64, common.Hash, error) {
+func blockNumberAndRoot(store kvdb.Store, blockNumber uint64, root common.Hash, log logger.Logger) (uint64, common.Hash, error) {
 	var err error
 
 	// neither blockNumber nor root hash were provided, try to use lastStateRoot containing latest block and root
@@ -217,14 +217,14 @@ func blockNumberAndRoot(store kvdb.Store, blockNumber uint64, root common.Hash, 
 }
 
 // dumpProgressFactory setups and executes dump progress logger.
-func dumpProgressFactory(ctx context.Context, in <-chan types.Account, size int, log *logging.Logger) <-chan types.Account {
+func dumpProgressFactory(ctx context.Context, in <-chan types.Account, size int, log logger.Logger) <-chan types.Account {
 	out := make(chan types.Account, size)
 	go dumpProgress(ctx, in, out, log)
 	return out
 }
 
 // dumpProgress executes account channel proxying logging the progress by observing data passed.
-func dumpProgress(ctx context.Context, in <-chan types.Account, out chan<- types.Account, log *logging.Logger) {
+func dumpProgress(ctx context.Context, in <-chan types.Account, out chan<- types.Account, log logger.Logger) {
 	var count int
 	var last common.Hash
 	tick := time.NewTicker(2 * time.Second)

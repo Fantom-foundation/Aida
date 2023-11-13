@@ -14,13 +14,12 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
 const (
 	standardInputBufferSize = 50
-	firstOperaTestnetBlock  = 479326
+	firstOperaTestnetBlock  = 479327
 )
 
 var GenerateDbHashCommand = cli.Command{
@@ -77,7 +76,7 @@ type validator struct {
 	input  chan []byte
 	result chan []byte
 	closed chan any
-	log    *logging.Logger
+	log    logger.Logger
 	wg     *sync.WaitGroup
 }
 
@@ -111,7 +110,7 @@ func validateCmd(ctx *cli.Context) error {
 	// we need to make sure aida-db starts from beginning, otherwise validation is impossible
 	// todo simplify condition once lachesis patch is ready for testnet
 	md.FirstBlock = md.GetFirstBlock()
-	if (md.ChainId == 250 && md.FirstBlock != 0) || (md.ChainId == 4002 && md.FirstBlock != firstOperaTestnetBlock) {
+	if (md.ChainId == utils.MainnetChainID && md.FirstBlock != 0) || (md.ChainId == utils.TestnetChainID && md.FirstBlock != firstOperaTestnetBlock) {
 		return fmt.Errorf("validation cannot be performed - your db does not start at block 0; your first block: %v", md.FirstBlock)
 	}
 
@@ -153,7 +152,7 @@ func validateCmd(ctx *cli.Context) error {
 }
 
 // findDbHashOnline if user has no dbHash inside his AidaDb metadata
-func findDbHashOnline(chainId utils.ChainID, log *logging.Logger, md *utils.AidaDbMetadata) ([]byte, error) {
+func findDbHashOnline(chainId utils.ChainID, log logger.Logger, md *utils.AidaDbMetadata) ([]byte, error) {
 	var url string
 
 	if chainId == utils.MainnetChainID {

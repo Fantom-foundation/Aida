@@ -11,7 +11,6 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
@@ -23,7 +22,7 @@ var AutoGenCommand = cli.Command{
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 		&utils.ChainIDFlag,
-		&utils.DbFlag,
+		&utils.OperaDbFlag,
 		&utils.GenesisFlag,
 		&utils.DbTmpFlag,
 		&utils.OperaBinaryFlag,
@@ -54,10 +53,17 @@ func autogen(ctx *cli.Context) error {
 		return fmt.Errorf("GENERATION BLOCKED: autogen failed in last run; %v", locked)
 	}
 
-	g, err := newGenerator(ctx, cfg)
+	var g *generator
+	var ok bool
+	g, ok, err = prepareAutogen(ctx, cfg)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot start autogen; %v", err)
 	}
+	if !ok {
+		g.log.Warningf("supplied targetEpoch %d is already reached; latest generated epoch %d", g.targetEpoch, g.opera.firstEpoch-1)
+		return nil
+	}
+
 	err = autogenRun(cfg, g)
 	if err != nil {
 		errLock := setLock(cfg, err.Error())
@@ -66,6 +72,41 @@ func autogen(ctx *cli.Context) error {
 		}
 	}
 	return err
+}
+
+// prepareAutogen initializes a generator object, opera binary and adjust target range
+func prepareAutogen(ctx *cli.Context, cfg *utils.Config) (*generator, bool, error) {
+	// this explicit overwrite is necessary at first autogen run,
+	// in later runs the paths are correctly set in adjustMissingConfigValues
+	utils.OverwriteDbPathsByAidaDb(cfg)
+
+	g, err := newGenerator(ctx, cfg)
+	if err != nil {
+		return nil, false, err
+	}
+
+	err = g.opera.init()
+	if err != nil {
+		return nil, false, err
+	}
+
+	// user specified targetEpoch
+	if cfg.TargetEpoch > 0 {
+		g.targetEpoch = cfg.TargetEpoch
+	} else {
+		err = g.calculatePatchEnd()
+		if err != nil {
+			return nil, false, err
+		}
+	}
+
+	MustCloseDB(g.aidaDb)
+
+	// start epoch is last epoch + 1
+	if g.opera.firstEpoch > g.targetEpoch {
+		return g, false, nil
+	}
+	return g, true, nil
 }
 
 // setLock creates lockfile in case of error while generating
@@ -98,44 +139,18 @@ func getLock(cfg *utils.Config) (string, error) {
 
 // autogenRun is used to record/update aida-db
 func autogenRun(cfg *utils.Config, g *generator) error {
-	err := g.opera.init()
-	if err != nil {
-		return err
-	}
-
-	// remove worldstate directory if it was created
-	defer func(log *logging.Logger) {
-		if cfg.WorldStateDb != "" {
-			err = os.RemoveAll(cfg.WorldStateDb)
-			if err != nil {
-				log.Criticalf("can't remove temporary folder: %v; %v", cfg.WorldStateDb, err)
-			}
-		}
-	}(g.log)
-
-	err = g.calculatePatchEnd()
-	if err != nil {
-		return err
-	}
-
-	if cfg.TargetEpoch > 0 {
-		g.stopAtEpoch = cfg.TargetEpoch
-	}
-
-	g.log.Noticef("Starting substate generation %d - %d", g.opera.lastEpoch+1, g.stopAtEpoch)
-
-	MustCloseDB(g.aidaDb)
+	g.log.Noticef("Starting substate generation %d - %d", g.opera.firstEpoch, g.targetEpoch)
 
 	start := time.Now()
 	// stop opera to be able to export events
-	errCh := startOperaRecording(g.cfg, g.stopAtEpoch)
+	errCh := startOperaRecording(g.cfg, g.targetEpoch)
 
 	// wait for opera recording response
 	err, ok := <-errCh
 	if ok && err != nil {
 		return err
 	}
-	g.log.Noticef("Recording for epoch range %d - %d finished. It took: %v", g.cfg.Db, g.opera.lastEpoch+1, g.stopAtEpoch, time.Since(start).Round(1*time.Second))
+	g.log.Noticef("Recording (%v) for epoch range %d - %d finished. It took: %v", g.cfg.OperaDb, g.opera.firstEpoch, g.targetEpoch, time.Since(start).Round(1*time.Second))
 	g.log.Noticef("Total elapsed time: %v", time.Since(g.start).Round(1*time.Second))
 
 	// reopen aida-db

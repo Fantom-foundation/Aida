@@ -1,13 +1,13 @@
 package stochastic
 
 import (
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/stochastic/statistics"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/op/go-logging"
 )
 
 // GenerateUniformRegistry produces a uniformly distributed simulation file.
-func GenerateUniformRegistry(cfg *utils.Config, log *logging.Logger) *EventRegistry {
+func GenerateUniformRegistry(cfg *utils.Config, log logger.Logger) *EventRegistry {
 	r := NewEventRegistry()
 
 	// generate a uniform distribution for contracts, storage keys/values, and snapshots

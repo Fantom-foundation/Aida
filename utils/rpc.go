@@ -22,7 +22,7 @@ type JsonRPCRequest struct {
 	JSONRPC string        `json:"jsonrpc"`
 }
 
-func SendRPCRequest(payload JsonRPCRequest, chainId ChainID) (map[string]interface{}, error) {
+func SendRpcRequest(payload JsonRPCRequest, chainId ChainID) (map[string]interface{}, error) {
 	url, err := GetProvider(chainId)
 	if err != nil {
 		return nil, err
@@ -55,9 +55,9 @@ func SendRPCRequest(payload JsonRPCRequest, chainId ChainID) (map[string]interfa
 }
 
 func GetProvider(chainId ChainID) (string, error) {
-	if chainId == 250 {
+	if chainId == MainnetChainID {
 		return RPCMainnet, nil
-	} else if chainId == 4002 {
+	} else if chainId == TestnetChainID {
 		return RPCTestnet, nil
 	} else {
 		return "", fmt.Errorf("unknown chain-id %v", chainId)
@@ -88,7 +88,7 @@ func getEpochByNumber(blockStr string, chainId ChainID) (uint64, error) {
 		JSONRPC: "2.0",
 	}
 
-	m, err := SendRPCRequest(payload, chainId)
+	m, err := SendRpcRequest(payload, chainId)
 	if err != nil {
 		return 0, err
 	}

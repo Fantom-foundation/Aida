@@ -11,7 +11,6 @@ import (
 	"github.com/Fantom-foundation/lachesis-base/kvdb"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
@@ -35,7 +34,7 @@ Creates target aida-db by merging source databases from arguments:
 
 type merger struct {
 	cfg           *utils.Config
-	log           *logging.Logger
+	log           logger.Logger
 	targetDb      ethdb.Database
 	sourceDbs     []ethdb.Database
 	sourceDbPaths []string
