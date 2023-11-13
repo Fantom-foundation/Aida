@@ -10,7 +10,7 @@ pipeline {
         VM = '--vm-impl lfvm'
         AIDADB = '--aida-db=/var/opera/Aida/mainnet-data/aida-db'
         TMPDB = '--db-tmp=/var/opera/Aida/dbtmpjenkins'
-        DBSRC = '--db-src=/var/opera/Aida/dbtmpjenkins/state_db_carmen_go-file_4600000'
+        DBSRC = '--db-src=/var/opera/Aida/dbtmpjenkins/state_db_carmen_go-file_${TOBLOCK}'
         TRACEDIR = 'tracefiles'
         FROMBLOCK = 'opera'
         TOBLOCK = '4600000'
