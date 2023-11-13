@@ -25,3 +25,9 @@ func (r *archivePrepper) PreBlock(state executor.State[*substate.Substate], ctx 
 
 	return nil
 }
+
+// PostBlock releases the Archive StateDb
+func (r *archivePrepper) PostBlock(_ executor.State[*substate.Substate], ctx *executor.Context) error {
+	ctx.Archive.Release()
+	return nil
+}
