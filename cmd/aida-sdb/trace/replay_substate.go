@@ -1,214 +1,101 @@
 package trace
 
 import (
-	"fmt"
-	"os"
-	"time"
-
-	"github.com/Fantom-foundation/Aida/logger"
-	"github.com/Fantom-foundation/Aida/tracer"
+	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
+	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
+	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
+	"github.com/Fantom-foundation/Aida/executor/extension/validator"
+	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
-	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
-// TraceReplaySubstateCommand data structure for the replay-substate app
-var TraceReplaySubstateCommand = cli.Command{
-	Action:    traceReplaySubstateAction,
-	Name:      "replay-substate",
-	Usage:     "executes storage trace using substates",
-	ArgsUsage: "<blockNumFirst> <blockNumLast>",
-	Flags: []cli.Flag{
-		&utils.ChainIDFlag,
-		&utils.CpuProfileFlag,
-		&utils.QuietFlag,
-		&utils.RandomizePrimingFlag,
-		&utils.RandomSeedFlag,
-		&utils.PrimeThresholdFlag,
-		&utils.ProfileFlag,
-		&utils.StateDbImplementationFlag,
-		&utils.StateDbVariantFlag,
-		&utils.StateDbLoggingFlag,
-		&utils.ShadowDbImplementationFlag,
-		&utils.ShadowDbVariantFlag,
-		&utils.SyncPeriodLengthFlag,
-		&substate.WorkersFlag,
-		&utils.TraceFileFlag,
-		&utils.TraceDirectoryFlag,
-		&utils.TraceDebugFlag,
-		&utils.DebugFromFlag,
-		&utils.ValidateFlag,
-		&utils.ValidateWorldStateFlag,
-		&utils.AidaDbFlag,
-		&logger.LogLevelFlag,
-	},
-	Description: `
-The trace replay-substate command requires two arguments:
-<blockNumFirst> <blockNumLast>
-
-<blockNumFirst> and <blockNumLast> are the first and
-last block of the inclusive range of blocks to replay storage traces.`,
-}
-
-// traceReplaySubstateTask simulates storage operations from storage traces on stateDB.
-func traceReplaySubstateTask(cfg *utils.Config, log *logging.Logger) error {
-	// load context
-	rCtx := context.NewReplay()
-
-	// iterate substate (for in-membory state)
-	stateIter := substate.NewSubstateIterator(cfg.First, cfg.Workers)
-	defer stateIter.Release()
-
-	// replay storage trace
-	traceFiles, err := tracer.GetTraceFiles(cfg)
-	if err != nil {
-		return err
-	}
-	traceIter := tracer.NewTraceIterator(traceFiles, cfg.First)
-	defer traceIter.Release()
-
-	// Create a directory for the store to place all its files.
-	db, stateDbDir, err := utils.PrepareStateDB(cfg)
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(stateDbDir)
-
-	// create prime context
-	pc := utils.NewPrimeContext(cfg, db, log)
-
-	var (
-		start        time.Time
-		sec          float64
-		lastSec      float64
-		lastTxCount  uint64
-		txCount      uint64
-		isFirstBlock = true
-		debug        bool // if set enable trace debug
-	)
-	if !cfg.Quiet {
-		start = time.Now()
-		sec = time.Since(start).Seconds()
-		lastSec = time.Since(start).Seconds()
-	}
-
-	// A utility to run operations on the local context.
-	run := func(op operation.Operation) {
-		operation.Execute(op, db, rCtx)
-		if debug {
-			operation.Debug(&rCtx.Context, op)
-		}
-	}
-
-	for stateIter.Next() {
-		tx := stateIter.Value()
-		debug = cfg.Debug && tx.Block >= cfg.DebugFrom
-		// The first SyncPeriod begin and the final SyncPeriodEnd need to be artificially
-		// added since the range running on may not match sync-period boundaries.
-		if isFirstBlock {
-			run(operation.NewBeginSyncPeriod(cfg.First / cfg.SyncPeriodLength))
-			isFirstBlock = false
-		}
-
-		if tx.Block > cfg.Last {
-			break
-		}
-
-		if cfg.DbImpl == "memory" {
-			db.PrepareSubstate(&tx.Substate.InputAlloc, tx.Block)
-		} else {
-			if err := pc.PrimeStateDB(tx.Substate.InputAlloc, db); err != nil {
-				return err
-			}
-		}
-		for traceIter.Next() {
-			op := traceIter.Value()
-			run(op)
-
-			// find end of transaction
-			if op.GetId() == operation.EndTransactionID {
-				txCount++
-				break
-			}
-		}
-
-		// Validate stateDB and OuputAlloc
-		if cfg.ValidateWorldState {
-			if err := utils.ValidateStateDB(tx.Substate.OutputAlloc, db, false); err != nil {
-				return fmt.Errorf("Validation failed. Block %v Tx %v\n\t%v\n", tx.Block, tx.Transaction, err)
-			}
-		}
-		if !cfg.Quiet {
-			// report progress
-			sec = time.Since(start).Seconds()
-			diff := sec - lastSec
-			if diff >= 15 {
-				numTx := txCount - lastTxCount
-				lastTxCount = txCount
-				hours, minutes, seconds := logger.ParseTime(time.Since(start))
-				log.Infof("Elapsed time: %vh, %vm %vs, at block %v (~%.0f Tx/s)", hours, minutes, seconds, tx.Block, float64(numTx)/diff)
-				lastSec = sec
-			}
-		}
-	}
-
-	// replay the last EndBlock() and EndSyncPeriod()
-	hasNext := traceIter.Next()
-	op := traceIter.Value()
-	if !hasNext || op.GetId() != operation.EndBlockID {
-		return fmt.Errorf("Last operation isn't an EndBlock")
-	} else {
-		run(op) // EndBlock
-		run(operation.NewEndSyncPeriod())
-	}
-	sec = time.Since(start).Seconds()
-
-	// print profile statistics (if enabled)
-	if rCtx.Profile {
-		rCtx.Stats.FillLabels(operation.CreateIdLabelMap())
-		if err := rCtx.Stats.PrintProfiling(cfg.First, cfg.Last); err != nil {
-			return err
-		}
-	}
-
-	// close the DB and print disk usage
-	start = time.Now()
-	if err := db.Close(); err != nil {
-		log.Errorf("Failed to close database; %v", err)
-	}
-
-	if !cfg.Quiet {
-		log.Infof("Closing DB took %v", time.Since(start))
-		log.Infof("Final disk usage: %v MiB", float32(utils.GetDirectorySize(stateDbDir))/float32(1024*1024))
-		log.Infof("Total elapsed time: %.3f s, processed %v blocks (~%.1f Tx/s)", sec, cfg.Last-cfg.First+1, float64(txCount)/sec)
-	}
-
-	return nil
-}
-
-// traceReplaySubstateAction implements trace command for replaying.
-func traceReplaySubstateAction(ctx *cli.Context) error {
-	substate.RecordReplay = true
+func ReplaySubstate(ctx *cli.Context) error {
 	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if err != nil {
 		return err
 	}
-	// run storage driver
-	substate.SetSubstateDb(cfg.AidaDb)
-	substate.OpenSubstateDBReadOnly()
-	defer substate.CloseSubstateDB()
 
-	// Start CPU profiling if requested.
-	if err := utils.StartCPUProfile(cfg); err != nil {
+	substateProvider, err := executor.OpenSubstateDb(cfg, ctx)
+	if err != nil {
 		return err
 	}
-	defer utils.StopCPUProfile(cfg)
 
-	log := logger.NewLogger(cfg.LogLevel, "Trace Replay Substate Action")
-	err = traceReplaySubstateTask(cfg, log)
+	operationProvider, err := executor.OpenOperations(cfg)
+	if err != nil {
+		return err
+	}
 
-	return err
+	defer substateProvider.Close()
+
+	rCtx := context.NewReplay()
+
+	processor := makeSubstateProcessor(cfg, rCtx, operationProvider)
+
+	var extra = []executor.Extension[*substate.Substate]{
+		profiler.MakeReplayProfiler[*substate.Substate](cfg, rCtx),
+	}
+
+	return replaySubstate(cfg, substateProvider, processor, nil, extra)
+}
+
+func makeSubstateProcessor(cfg *utils.Config, rCtx *context.Replay, operationProvider executor.Provider[[]operation.Operation]) *substateProcessor {
+	return &substateProcessor{
+		operationProcessor: operationProcessor{cfg, rCtx},
+		operationProvider:  operationProvider,
+	}
+}
+
+type substateProcessor struct {
+	operationProcessor
+	operationProvider executor.Provider[[]operation.Operation]
+}
+
+func (p substateProcessor) Process(state executor.State[*substate.Substate], ctx *executor.Context) error {
+	return p.operationProvider.Run(state.Block, state.Block, func(t executor.TransactionInfo[[]operation.Operation]) error {
+		p.runTransaction(uint64(state.Block), t.Data, ctx.State)
+		return nil
+	})
+}
+
+func replaySubstate(
+	cfg *utils.Config,
+	provider executor.Provider[*substate.Substate],
+	processor executor.Processor[*substate.Substate],
+	stateDb state.StateDB,
+	extra []executor.Extension[*substate.Substate],
+) error {
+	var extensionList = []executor.Extension[*substate.Substate]{
+		profiler.MakeCpuProfiler[*substate.Substate](cfg),
+		tracker.MakeProgressLogger[*substate.Substate](cfg, 0),
+		profiler.MakeMemoryUsagePrinter[*substate.Substate](cfg),
+		profiler.MakeMemoryProfiler[*substate.Substate](cfg),
+		validator.MakeTxValidator(cfg),
+	}
+
+	if stateDb == nil {
+		extensionList = append(extensionList, statedb.MakeStateDbManager[*substate.Substate](cfg))
+	}
+
+	if cfg.DbImpl == "memory" {
+		extensionList = append(extensionList, statedb.MakeStateDbPrepper())
+	} else {
+		extensionList = append(extensionList, statedb.MakeTxPrimer(cfg))
+	}
+
+	extensionList = append(extensionList, extra...)
+
+	return executor.NewExecutor(provider, cfg.LogLevel).Run(
+		executor.Params{
+			From:  int(cfg.First),
+			To:    int(cfg.Last) + 1,
+			State: stateDb,
+		},
+		processor,
+		extensionList,
+	)
 }

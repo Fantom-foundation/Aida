@@ -10,10 +10,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/op/go-logging"
 	"github.com/status-im/keycard-go/hexutils"
 )
 
@@ -40,7 +40,7 @@ func (p *stateHashProvider) GetStateHash(number int) (common.Hash, error) {
 }
 
 // StateHashScraper scrapes state hashes from a node and saves them to a leveldb database
-func StateHashScraper(ctx context.Context, chainId ChainID, operaPath string, db ethdb.Database, firstBlock, lastBlock uint64, log *logging.Logger) error {
+func StateHashScraper(ctx context.Context, chainId ChainID, operaPath string, db ethdb.Database, firstBlock, lastBlock uint64, log logger.Logger) error {
 	ipcPath := operaPath + "/opera.ipc"
 
 	client, err := getClient(ctx, chainId, ipcPath, log)
@@ -95,7 +95,7 @@ func StateHashScraper(ctx context.Context, chainId ChainID, operaPath string, db
 }
 
 // getClient returns a rpc/ipc client
-func getClient(ctx context.Context, chainId ChainID, ipcPath string, log *logging.Logger) (*rpc.Client, error) {
+func getClient(ctx context.Context, chainId ChainID, ipcPath string, log logger.Logger) (*rpc.Client, error) {
 	var client *rpc.Client
 	var err error
 

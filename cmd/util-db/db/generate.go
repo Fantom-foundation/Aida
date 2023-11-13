@@ -20,7 +20,6 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
@@ -60,7 +59,7 @@ This command is designed for manual generation of deletion, updateset and patch 
 type generator struct {
 	cfg          *utils.Config
 	ctx          *cli.Context
-	log          *logging.Logger
+	log          logger.Logger
 	md           *utils.AidaDbMetadata
 	aidaDb       ethdb.Database
 	opera        *aidaOpera

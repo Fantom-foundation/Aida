@@ -282,7 +282,7 @@ func TestUtilsConfig_getMdBlockRange(t *testing.T) {
 
 	// test getMdBlockRange
 	// getMdBlockRange returns default values if unable to open
-	first, last, lastpatch, ok, err := getMdBlockRange("./test-wrong.db", MainnetChainID, log)
+	first, last, lastpatch, ok, err := getMdBlockRange("./test-wrong.db", MainnetChainID, log, cfg.LogLevel)
 	if ok || first != uint64(0) || last != math.MaxUint64 {
 		t.Fatalf("wrong block range; expected %v:%v, have %v:%v", 0, uint64(math.MaxUint64), first, last)
 	} else if err != nil {
@@ -293,7 +293,7 @@ func TestUtilsConfig_getMdBlockRange(t *testing.T) {
 
 	// open an existing AidaDb
 	setAidaDbRepositoryUrl(chainId)
-	first, last, lastpatch, ok, err = getMdBlockRange("./test.db", MainnetChainID, log)
+	first, last, lastpatch, ok, err = getMdBlockRange("./test.db", MainnetChainID, log, cfg.LogLevel)
 	if !ok || first != firstBlock || last != lastBlock {
 		t.Fatalf("wrong block range; expected %v:%v, have %v:%v", firstBlock, lastBlock, first, last)
 	} else if err != nil {
@@ -304,7 +304,7 @@ func TestUtilsConfig_getMdBlockRange(t *testing.T) {
 
 	// aida url is not set; expected lastpatch is 0.
 	AidaDbRepositoryUrl = ""
-	first, last, lastpatch, ok, err = getMdBlockRange("./test.db", MainnetChainID, log)
+	first, last, lastpatch, ok, err = getMdBlockRange("./test.db", MainnetChainID, log, cfg.LogLevel)
 	if !ok || first != firstBlock || last != lastBlock {
 		t.Fatalf("wrong block range; expected %v:%v, have %v:%v", firstBlock, lastBlock, first, last)
 	} else if err != nil {
@@ -707,8 +707,7 @@ func TestUtilsConfig_adjustMissingConfigValuesValidationOff(t *testing.T) {
 func TestUtilsConfig_adjustMissingConfigValuesDeletionDb(t *testing.T) {
 	// prepare mock config
 	cfg := &Config{
-		HasDeletedAccounts: true,
-		DeletionDb:         "./test.db",
+		DeletionDb: "./test.db",
 	}
 
 	adjustMissingConfigValues(cfg)
@@ -732,6 +731,21 @@ func TestUtilsConfig_adjustMissingConfigValuesKeepStateDb(t *testing.T) {
 	// checks
 	if cfg.KeepDb {
 		t.Fatalf("failed to adjust KeepDb value; got: %v; expected: %v", cfg.KeepDb, false)
+	}
+}
+
+// TestUtilsConfig_adjustMissingConfigValuesWrongDbTmp tests if temporary db path doesn't exist, system temp location is used instead.
+func TestUtilsConfig_adjustMissingConfigValuesWrongDbTmp(t *testing.T) {
+	// prepare mock config
+	cfg := &Config{
+		DbTmp: "./wrong_path",
+	}
+
+	adjustMissingConfigValues(cfg)
+
+	// checks
+	if cfg.DbTmp != os.TempDir() {
+		t.Fatalf("failed to adjust temporary database location; got: %v; expected: %v", cfg.DbTmp, os.TempDir())
 	}
 }
 

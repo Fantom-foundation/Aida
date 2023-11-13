@@ -1,266 +1,83 @@
 package trace
 
 import (
-	"fmt"
-	"os"
-	"time"
-
-	"github.com/Fantom-foundation/Aida/logger"
-	"github.com/Fantom-foundation/Aida/tracer"
+	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
+	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
+	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
+	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
-	"github.com/op/go-logging"
 	"github.com/urfave/cli/v2"
 )
 
-const readBufferSize = 100000
-
-// TraceReplayCommand data structure for the replay app
-var TraceReplayCommand = cli.Command{
-	Action:    traceReplayAction,
-	Name:      "replay",
-	Usage:     "executes storage trace",
-	ArgsUsage: "<blockNumFirst> <blockNumLast>",
-	Flags: []cli.Flag{
-		&utils.CarmenSchemaFlag,
-		&utils.ChainIDFlag,
-		&utils.CpuProfileFlag,
-		&utils.QuietFlag,
-		&utils.SyncPeriodLengthFlag,
-		&utils.KeepDbFlag,
-		&utils.MemoryBreakdownFlag,
-		&utils.MemoryProfileFlag,
-		&utils.RandomSeedFlag,
-		&utils.PrimeThresholdFlag,
-		&utils.ProfileFlag,
-		&utils.ProfileFileFlag,
-		&utils.ProfileIntervalFlag,
-		&utils.RandomizePrimingFlag,
-		&utils.SkipPrimingFlag,
-		&utils.StateDbImplementationFlag,
-		&utils.StateDbVariantFlag,
-		&utils.StateDbSrcFlag,
-		&utils.VmImplementation,
-		&utils.DbTmpFlag,
-		&utils.UpdateBufferSizeFlag,
-		&utils.StateDbLoggingFlag,
-		&utils.ShadowDb,
-		&utils.ShadowDbImplementationFlag,
-		&utils.ShadowDbVariantFlag,
-		&substate.WorkersFlag,
-		&utils.TraceFileFlag,
-		&utils.TraceDirectoryFlag,
-		&utils.TraceDebugFlag,
-		&utils.DebugFromFlag,
-		&utils.ValidateFlag,
-		&utils.ValidateWorldStateFlag,
-		&utils.AidaDbFlag,
-		&logger.LogLevelFlag,
-	},
-	Description: `
-The trace replay command requires two arguments:
-<blockNumFirst> <blockNumLast>
-
-<blockNumFirst> and <blockNumLast> are the first and
-last block of the inclusive range of blocks to replay storage traces.`,
-}
-
-// readTrace reads operations from trace files and puts them into a channel.
-func readTrace(cfg *utils.Config, ch chan operation.Operation, log *logging.Logger) {
-	// create a list of files
-	traceFiles, err := tracer.GetTraceFiles(cfg)
-	if err != nil {
-		log.Fatalf("Fail to find trace files; %v", err)
-	}
-	log.Debugf("List of trace files to be processed: %v", traceFiles)
-	traceIter := tracer.NewTraceIterator(traceFiles, cfg.First)
-	defer traceIter.Release()
-	for traceIter.Next() {
-		op := traceIter.Value()
-		ch <- op
-	}
-	close(ch)
-}
-
-// traceReplayTask simulates storage operations from storage traces on stateDB.
-func traceReplayTask(cfg *utils.Config, log *logging.Logger) error {
-
-	// starting reading in parallel
-	log.Notice("Start reading operations in parallel")
-	opChannel := make(chan operation.Operation, readBufferSize)
-	go readTrace(cfg, opChannel, log)
-
-	// create a directory for the store to place all its files, and
-	// instantiate the state DB under testing.
-	log.Notice("Create StateDB")
-	db, stateDbDir, err := utils.PrepareStateDB(cfg)
-	if err != nil {
-		return err
-	}
-	if !cfg.KeepDb {
-		log.Warningf("--keep-db is not used. Directory %v with DB will be removed at the end of this run.", stateDbDir)
-		defer os.RemoveAll(stateDbDir)
-	}
-
-	if cfg.StateDbSrc != "" {
-		log.Warning("Skipping DB priming.")
-	} else {
-		log.Notice("Prime stateDB")
-		start := time.Now()
-		if err := utils.LoadWorldStateAndPrime(db, cfg, cfg.First-1); err != nil {
-			return fmt.Errorf("priming failed. %v", err)
-		}
-
-		elapsed := time.Since(start)
-		hours, minutes, seconds := logger.ParseTime(elapsed)
-		log.Infof("\tPriming elapsed time: %vh %vm %vs\n", hours, minutes, seconds)
-	}
-
-	log.Noticef("Replay storage operations on StateDB")
-
-	// load context
-	dCtx := context.NewReplay()
-
-	// progress message setup
-	var (
-		start      time.Time
-		sec        float64
-		lastSec    float64
-		firstBlock = true
-		lastBlock  uint64
-		debug      bool
-	)
-	if !cfg.Quiet {
-		start = time.Now()
-		sec = time.Since(start).Seconds()
-		lastSec = time.Since(start).Seconds()
-	}
-
-	// A utility to run operations on the local context.
-	run := func(op operation.Operation) {
-		operation.Execute(op, db, dCtx)
-		if debug {
-			operation.Debug(&dCtx.Context, op)
-		}
-	}
-
-	// replay storage trace
-	for op := range opChannel {
-		var block uint64
-		if beginBlock, ok := op.(*operation.BeginBlock); ok {
-			block = beginBlock.BlockNumber
-			debug = cfg.Debug && block >= cfg.DebugFrom
-			// The first SyncPeriod begin and the final SyncPeriodEnd need to be artificially
-			// added since the range running on may not match sync-period boundaries.
-			if firstBlock {
-				run(operation.NewBeginSyncPeriod(cfg.First / cfg.SyncPeriodLength))
-				firstBlock = false
-			}
-
-			if block > cfg.Last {
-				run(operation.NewEndSyncPeriod())
-				break
-			}
-			lastBlock = block // track the last processed block
-			if !cfg.Quiet {
-				// report progress
-				hours, minutes, seconds := logger.ParseTime(time.Since(start))
-				if sec-lastSec >= 15 {
-					log.Infof("Elapsed time: %vh %vm %vs, at block %v", hours, minutes, seconds, block)
-					lastSec = sec
-				}
-			}
-		}
-		run(op)
-	}
-
-	sec = time.Since(start).Seconds()
-
-	log.Notice("Finished replaying storage operations on StateDB.")
-
-	// print profile statistics (if enabled)
-	if dCtx.Profile {
-		dCtx.Stats.FillLabels(operation.CreateIdLabelMap())
-		if err := dCtx.Stats.PrintProfiling(cfg.First, cfg.Last); err != nil {
-			return err
-		}
-	}
-
-	// destroy context to make space
-	dCtx = nil
-
-	// validate stateDB
-	if cfg.ValidateWorldState {
-		log.Notice("Validate final state")
-		ws, err := utils.GenerateWorldStateFromUpdateDB(cfg, cfg.Last)
-		if err != nil {
-			return err
-		}
-		if err := utils.ValidateStateDB(ws, db, false); err != nil {
-			return fmt.Errorf("Validation failed. %v\n", err)
-		}
-	}
-
-	utils.MemoryBreakdown(db, cfg, log)
-
-	// write memory profile if requested
-	if err := utils.StartMemoryProfile(cfg); err != nil {
-		return err
-	}
-
-	if cfg.KeepDb {
-		rootHash, _ := db.Commit(true)
-		if err := utils.WriteStateDbInfo(stateDbDir, cfg, lastBlock, rootHash); err != nil {
-			log.Error(err)
-		}
-		//rename directory after closing db.
-		defer utils.RenameTempStateDBDirectory(cfg, stateDbDir, lastBlock)
-	}
-
-	// close the DB and print disk usage
-	log.Notice("Close StateDB")
-	start = time.Now()
-	if err := db.Close(); err != nil {
-		log.Errorf("Failed to close: %v", err)
-	}
-
-	// print progress summary
-	if !cfg.Quiet {
-		log.Noticef("Total elapsed time: %.3f s, processed %v blocks", sec, cfg.Last-cfg.First+1)
-		log.Noticef("Closing DB took %v", time.Since(start))
-		log.Noticef("Final disk usage: %v MiB", float32(utils.GetDirectorySize(stateDbDir))/float32(1024*1024))
-	}
-
-	return nil
-}
-
-// traceReplayAction implements trace command for replaying.
-func traceReplayAction(ctx *cli.Context) error {
-	var err error
+func ReplayTrace(ctx *cli.Context) error {
 	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if err != nil {
 		return err
 	}
 
-	if cfg.DbImpl == "memory" {
-		return fmt.Errorf("db-impl memory is not supported")
+	operationProvider, err := executor.OpenOperations(cfg)
+	if err != nil {
+
 	}
 
-	// start CPU profiling if requested.
-	if err := utils.StartCPUProfile(cfg); err != nil {
-		return err
+	defer operationProvider.Close()
+
+	rCtx := context.NewReplay()
+
+	processor := operationProcessor{cfg, rCtx}
+
+	var extra = []executor.Extension[[]operation.Operation]{
+		profiler.MakeReplayProfiler[[]operation.Operation](cfg, rCtx),
 	}
-	defer utils.StopCPUProfile(cfg)
 
-	// run storage driver
-	substate.SetSubstateDb(cfg.AidaDb)
-	substate.OpenSubstateDBReadOnly()
-	defer substate.CloseSubstateDB()
+	return replay(cfg, operationProvider, processor, extra)
+}
 
-	log := logger.NewLogger(cfg.LogLevel, "Trace Replay Action")
-	err = traceReplayTask(cfg, log)
+type operationProcessor struct {
+	cfg  *utils.Config
+	rCtx *context.Replay
+}
 
-	return err
+func (p operationProcessor) Process(state executor.State[[]operation.Operation], ctx *executor.Context) error {
+	p.runTransaction(uint64(state.Block), state.Data, ctx.State)
+	return nil
+}
+
+func (p operationProcessor) runTransaction(block uint64, operations []operation.Operation, stateDb state.StateDB) {
+	for _, op := range operations {
+		operation.Execute(op, stateDb, p.rCtx)
+		if p.cfg.Debug && block >= p.cfg.DebugFrom {
+			operation.Debug(&p.rCtx.Context, op)
+		}
+	}
+}
+
+func replay(
+	cfg *utils.Config,
+	provider executor.Provider[[]operation.Operation],
+	processor executor.Processor[[]operation.Operation],
+	extra []executor.Extension[[]operation.Operation],
+) error {
+	var extensionList = []executor.Extension[[]operation.Operation]{
+		profiler.MakeCpuProfiler[[]operation.Operation](cfg),
+		tracker.MakeProgressLogger[[]operation.Operation](cfg, 0),
+		profiler.MakeMemoryUsagePrinter[[]operation.Operation](cfg),
+		profiler.MakeMemoryProfiler[[]operation.Operation](cfg),
+		statedb.MakeStateDbManager[[]operation.Operation](cfg),
+		statedb.MakeStateDbPrimer[[]operation.Operation](cfg),
+	}
+
+	extensionList = append(extensionList, extra...)
+
+	return executor.NewExecutor(provider, cfg.LogLevel).Run(
+		executor.Params{
+			From: int(cfg.First),
+			To:   int(cfg.Last) + 1,
+		},
+		processor,
+		extensionList,
+	)
 }

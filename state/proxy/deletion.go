@@ -8,7 +8,6 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/op/go-logging"
 )
 
 type ContractLiveliness struct {
@@ -21,7 +20,7 @@ type ContractLiveliness struct {
 type DeletionProxy struct {
 	db  state.StateDB // state db
 	ch  chan ContractLiveliness
-	log *logging.Logger
+	log logger.Logger
 }
 
 // NewDeletionProxy creates a new StateDB proxy.

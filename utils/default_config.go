@@ -43,7 +43,7 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		DeleteSourceDbs:        getFlagValue(ctx, DeleteSourceDbsFlag).(bool),
 		DiagnosticServer:       getFlagValue(ctx, DiagnosticServerFlag).(int64),
 		CompactDb:              getFlagValue(ctx, CompactDbFlag).(bool),
-		HasDeletedAccounts:     true,
+		HasDeletedAccounts:     false,
 		KeepDb:                 getFlagValue(ctx, KeepDbFlag).(bool),
 		KeysNumber:             getFlagValue(ctx, KeysNumberFlag).(int64),
 		MaxNumTransactions:     getFlagValue(ctx, MaxNumTransactionsFlag).(int),

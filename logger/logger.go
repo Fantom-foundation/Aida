@@ -74,7 +74,7 @@ type Logger interface {
 }
 
 // NewLogger provides a new instance of the Logger based on context flags.
-func NewLogger(level string, module string) *logging.Logger {
+func NewLogger(level string, module string) Logger {
 	backend := logging.NewLogBackend(os.Stdout, "", 0)
 
 	fm := logging.MustStringFormatter(defaultLogFormat)
