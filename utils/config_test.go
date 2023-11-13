@@ -707,8 +707,7 @@ func TestUtilsConfig_adjustMissingConfigValuesValidationOff(t *testing.T) {
 func TestUtilsConfig_adjustMissingConfigValuesDeletionDb(t *testing.T) {
 	// prepare mock config
 	cfg := &Config{
-		HasDeletedAccounts: true,
-		DeletionDb:         "./test.db",
+		DeletionDb: "./test.db",
 	}
 
 	adjustMissingConfigValues(cfg)
@@ -732,6 +731,21 @@ func TestUtilsConfig_adjustMissingConfigValuesKeepStateDb(t *testing.T) {
 	// checks
 	if cfg.KeepDb {
 		t.Fatalf("failed to adjust KeepDb value; got: %v; expected: %v", cfg.KeepDb, false)
+	}
+}
+
+// TestUtilsConfig_adjustMissingConfigValuesWrongDbTmp tests if temporary db path doesn't exist, system temp location is used instead.
+func TestUtilsConfig_adjustMissingConfigValuesWrongDbTmp(t *testing.T) {
+	// prepare mock config
+	cfg := &Config{
+		DbTmp: "./wrong_path",
+	}
+
+	adjustMissingConfigValues(cfg)
+
+	// checks
+	if cfg.DbTmp != os.TempDir() {
+		t.Fatalf("failed to adjust temporary database location; got: %v; expected: %v", cfg.DbTmp, os.TempDir())
 	}
 }
 

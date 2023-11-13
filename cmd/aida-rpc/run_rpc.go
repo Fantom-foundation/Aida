@@ -51,8 +51,7 @@ func run(cfg *utils.Config, provider executor.Provider[*rpc.RequestAndResults], 
 	var extensionList = []executor.Extension[*rpc.RequestAndResults]{
 		profiler.MakeCpuProfiler[*rpc.RequestAndResults](cfg),
 		tracker.MakeProgressLogger[*rpc.RequestAndResults](cfg, 15*time.Second),
-		statedb.MakeTemporaryArchivePrepper[*rpc.RequestAndResults](),
-
+		statedb.MakeTemporaryArchivePrepper(),
 		validator.MakeRpcComparator(cfg),
 	}
 

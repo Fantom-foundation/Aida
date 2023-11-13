@@ -256,6 +256,15 @@ func setAidaDbRepositoryUrl(chainId ChainID) error {
 	return nil
 }
 
+// directoryExists returns true if a directory exists
+func directoryExists(path string) bool {
+	if _, err := os.Stat(path); err != nil {
+		return false
+	}
+	return true
+
+}
+
 // SetBlockRange checks the validity of a block range and return the first and last block as numbers.
 func SetBlockRange(firstArg string, lastArg string, chainId ChainID) (uint64, uint64, error) {
 	var err error = nil
@@ -523,7 +532,7 @@ func updateConfigBlockRange(args []string, cfg *Config, mode ArgumentMode, log l
 }
 
 // adjustMissingConfigValues fill the missing values in the config
-func adjustMissingConfigValues(cfg *Config) {
+func adjustMissingConfigValues(cfg *Config) error {
 	// set default db variant if not provided.
 	if cfg.DbImpl == "carmen" && cfg.DbVariant == "" {
 		cfg.DbVariant = "go-file"
@@ -531,26 +540,37 @@ func adjustMissingConfigValues(cfg *Config) {
 
 	// --continue-on-failure implicitly enables transaction state validation
 	cfg.ValidateTxState = cfg.Validate || cfg.ValidateTxState || cfg.ContinueOnFailure
-
 	cfg.ValidateWorldState = cfg.Validate || cfg.ValidateWorldState
 
 	if cfg.RandomSeed < 0 {
 		cfg.RandomSeed = int64(rand.Uint32())
 	}
 
-	if _, err := os.Stat(cfg.AidaDb); !os.IsNotExist(err) {
+	// if AidaDB path is given, redirect source path to AidaDB.
+	if found := directoryExists(cfg.AidaDb); found {
 		OverwriteDbPathsByAidaDb(cfg)
 	}
 
-	if _, err := os.Stat(cfg.DeletionDb); os.IsNotExist(err) {
+	// TODO: can be deleted as AidaDB is the default data source.
+	if found := directoryExists(cfg.DeletionDb); found {
+		cfg.HasDeletedAccounts = true
+	} else {
 		cfg.HasDeletedAccounts = false
 	}
+
+	// in-memory StateDB cannot be kept after run.
 	if cfg.KeepDb && strings.Contains(cfg.DbVariant, "memory") {
 		cfg.KeepDb = false
 	}
 	if cfg.First == 0 {
 		cfg.SkipPriming = true
 	}
+
+	// if path doesn't exist, use system temp directory.
+	if found := directoryExists(cfg.DbTmp); !found {
+		cfg.DbTmp = os.TempDir()
+	}
+	return nil
 }
 
 // OverwriteDbPathsByAidaDb overwrites the paths of the DBs by the AidaDb path

@@ -42,6 +42,7 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		archive.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
 		archive.EXPECT().RevertToSnapshot(15),
 		archive.EXPECT().EndTransaction(),
+		archive.EXPECT().Release(),
 	)
 
 	if err := run(config, provider, db, blockProcessor{config}, nil); err != nil {
@@ -53,8 +54,10 @@ func TestVmAdb_AllBlocksAreProcessedInOrderInSequential(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	provider := executor.NewMockProvider[*substate.Substate](ctrl)
 	db := state.NewMockStateDB(ctrl)
+	archive := state.NewMockNonCommittableStateDB(ctrl)
 	ext := executor.NewMockExtension[*substate.Substate](ctrl)
 	processor := executor.NewMockProcessor[*substate.Substate](ctrl)
+
 	config := &utils.Config{
 		First:    10,
 		Last:     13,
@@ -78,33 +81,37 @@ func TestVmAdb_AllBlocksAreProcessedInOrderInSequential(t *testing.T) {
 	gomock.InOrder(
 		ext.EXPECT().PreRun(executor.AtBlock[*substate.Substate](10), gomock.Any()),
 
-		db.EXPECT().GetArchiveState(uint64(9)),
+		db.EXPECT().GetArchiveState(uint64(9)).Return(archive, nil),
 		ext.EXPECT().PreBlock(executor.AtBlock[*substate.Substate](10), gomock.Any()),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[*substate.Substate](10, 3), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[*substate.Substate](10, 3), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[*substate.Substate](10, 3), gomock.Any()),
 		ext.EXPECT().PostBlock(executor.AtTransaction[*substate.Substate](10, 3), gomock.Any()),
+		archive.EXPECT().Release(),
 
-		db.EXPECT().GetArchiveState(uint64(10)),
+		db.EXPECT().GetArchiveState(uint64(10)).Return(archive, nil),
 		ext.EXPECT().PreBlock(executor.AtBlock[*substate.Substate](11), gomock.Any()),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[*substate.Substate](11, 5), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[*substate.Substate](11, 5), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[*substate.Substate](11, 5), gomock.Any()),
 		ext.EXPECT().PostBlock(executor.AtTransaction[*substate.Substate](11, 5), gomock.Any()),
+		archive.EXPECT().Release(),
 
-		db.EXPECT().GetArchiveState(uint64(11)),
+		db.EXPECT().GetArchiveState(uint64(11)).Return(archive, nil),
 		ext.EXPECT().PreBlock(executor.AtBlock[*substate.Substate](12), gomock.Any()),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[*substate.Substate](12, 7), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[*substate.Substate](12, 7), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[*substate.Substate](12, 7), gomock.Any()),
 		ext.EXPECT().PostBlock(executor.AtTransaction[*substate.Substate](12, 7), gomock.Any()),
+		archive.EXPECT().Release(),
 
-		db.EXPECT().GetArchiveState(uint64(12)),
+		db.EXPECT().GetArchiveState(uint64(12)).Return(archive, nil),
 		ext.EXPECT().PreBlock(executor.AtBlock[*substate.Substate](13), gomock.Any()),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[*substate.Substate](13, 9), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[*substate.Substate](13, 9), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[*substate.Substate](13, 9), gomock.Any()),
 		ext.EXPECT().PostBlock(executor.AtTransaction[*substate.Substate](13, 9), gomock.Any()),
+		archive.EXPECT().Release(),
 
 		ext.EXPECT().PostRun(executor.AtBlock[*substate.Substate](14), gomock.Any(), nil),
 	)
@@ -118,8 +125,10 @@ func TestVmAdb_AllBlocksAreProcessedInParallel(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	provider := executor.NewMockProvider[*substate.Substate](ctrl)
 	db := state.NewMockStateDB(ctrl)
+	archive := state.NewMockNonCommittableStateDB(ctrl)
 	ext := executor.NewMockExtension[*substate.Substate](ctrl)
 	processor := executor.NewMockProcessor[*substate.Substate](ctrl)
+
 	config := &utils.Config{
 		First:    10,
 		Last:     13,
@@ -145,39 +154,43 @@ func TestVmAdb_AllBlocksAreProcessedInParallel(t *testing.T) {
 	ext.EXPECT().PreRun(executor.AtBlock[*substate.Substate](10), gomock.Any())
 
 	gomock.InOrder(
-		db.EXPECT().GetArchiveState(uint64(9)),
+		db.EXPECT().GetArchiveState(uint64(9)).Return(archive, nil),
 		ext.EXPECT().PreBlock(executor.AtBlock[*substate.Substate](10), gomock.Any()),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[*substate.Substate](10, 3), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[*substate.Substate](10, 3), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[*substate.Substate](10, 3), gomock.Any()),
 		ext.EXPECT().PostBlock(executor.AtTransaction[*substate.Substate](10, 3), gomock.Any()),
+		archive.EXPECT().Release(),
 	)
 
 	gomock.InOrder(
-		db.EXPECT().GetArchiveState(uint64(10)),
+		db.EXPECT().GetArchiveState(uint64(10)).Return(archive, nil),
 		ext.EXPECT().PreBlock(executor.AtBlock[*substate.Substate](11), gomock.Any()),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[*substate.Substate](11, 5), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[*substate.Substate](11, 5), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[*substate.Substate](11, 5), gomock.Any()),
 		ext.EXPECT().PostBlock(executor.AtTransaction[*substate.Substate](11, 5), gomock.Any()),
+		archive.EXPECT().Release(),
 	)
 
 	gomock.InOrder(
-		db.EXPECT().GetArchiveState(uint64(11)),
+		db.EXPECT().GetArchiveState(uint64(11)).Return(archive, nil),
 		ext.EXPECT().PreBlock(executor.AtBlock[*substate.Substate](12), gomock.Any()),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[*substate.Substate](12, 7), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[*substate.Substate](12, 7), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[*substate.Substate](12, 7), gomock.Any()),
 		ext.EXPECT().PostBlock(executor.AtTransaction[*substate.Substate](12, 7), gomock.Any()),
+		archive.EXPECT().Release(),
 	)
 
 	gomock.InOrder(
-		db.EXPECT().GetArchiveState(uint64(12)),
+		db.EXPECT().GetArchiveState(uint64(12)).Return(archive, nil),
 		ext.EXPECT().PreBlock(executor.AtBlock[*substate.Substate](13), gomock.Any()),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[*substate.Substate](13, 9), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[*substate.Substate](13, 9), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[*substate.Substate](13, 9), gomock.Any()),
 		ext.EXPECT().PostBlock(executor.AtTransaction[*substate.Substate](13, 9), gomock.Any()),
+		archive.EXPECT().Release(),
 	)
 
 	ext.EXPECT().PostRun(executor.AtBlock[*substate.Substate](14), gomock.Any(), nil)
