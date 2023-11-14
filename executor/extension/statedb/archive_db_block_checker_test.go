@@ -12,8 +12,8 @@ import (
 
 func TestArchiveDbBlockChecker_PreRunReturnsErrorIfStateDbDoesNotHaveArchive(t *testing.T) {
 	cfg := &utils.Config{}
-	cfg.PathToStateDb = t.TempDir()
-	err := utils.WriteStateDbInfo(cfg.PathToStateDb, cfg, 0, common.Hash{})
+	cfg.StateDbSrc = t.TempDir()
+	err := utils.WriteStateDbInfo(cfg.StateDbSrc, cfg, 0, common.Hash{})
 	if err != nil {
 		t.Fatalf("cannot create testing state db info; %v", err)
 	}
@@ -35,9 +35,9 @@ func TestArchiveDbBlockChecker_PreRunReturnsErrorIfStateDbDoesNotContainGivenBlo
 	cfg := &utils.Config{}
 	cfg.Last = 11
 
-	cfg.PathToStateDb = t.TempDir()
+	cfg.StateDbSrc = t.TempDir()
 	cfg.ArchiveMode = true
-	err := utils.WriteStateDbInfo(cfg.PathToStateDb, cfg, 10, common.Hash{})
+	err := utils.WriteStateDbInfo(cfg.StateDbSrc, cfg, 10, common.Hash{})
 	if err != nil {
 		t.Fatalf("cannot create testing state db info; %v", err)
 	}
@@ -58,11 +58,11 @@ func TestArchiveDbBlockChecker_PreRunReturnsErrorIfStateDbDoesNotContainGivenBlo
 func TestArchiveDbBlockChecker_PreRunReturnsErrorIfPrimeStateDbDoesNotHaveArchive(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.ShadowDb = true
-	cfg.PathToStateDb = t.TempDir()
-	if err := os.Mkdir(cfg.PathToStateDb+utils.PathToPrimaryStateDb, os.ModePerm); err != nil {
+	cfg.StateDbSrc = t.TempDir()
+	if err := os.Mkdir(cfg.StateDbSrc+utils.PathToPrimaryStateDb, os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
-	err := utils.WriteStateDbInfo(cfg.PathToStateDb+utils.PathToPrimaryStateDb, cfg, 0, common.Hash{})
+	err := utils.WriteStateDbInfo(cfg.StateDbSrc+utils.PathToPrimaryStateDb, cfg, 0, common.Hash{})
 	if err != nil {
 		t.Fatalf("cannot create testing state db info %v", err)
 	}
@@ -84,24 +84,24 @@ func TestArchiveDbBlockChecker_PreRunReturnsErrorIfPrimeStateDbDoesNotContainGiv
 	cfg := &utils.Config{}
 	cfg.Last = 11
 
-	cfg.PathToStateDb = t.TempDir()
+	cfg.StateDbSrc = t.TempDir()
 	cfg.ArchiveMode = true
 	cfg.ShadowDb = true
-	cfg.PathToStateDb = t.TempDir()
+	cfg.StateDbSrc = t.TempDir()
 
-	if err := os.Mkdir(cfg.PathToStateDb+utils.PathToPrimaryStateDb, os.ModePerm); err != nil {
+	if err := os.Mkdir(cfg.StateDbSrc+utils.PathToPrimaryStateDb, os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
-	err := utils.WriteStateDbInfo(cfg.PathToStateDb+utils.PathToPrimaryStateDb, cfg, 10, common.Hash{})
+	err := utils.WriteStateDbInfo(cfg.StateDbSrc+utils.PathToPrimaryStateDb, cfg, 10, common.Hash{})
 	if err != nil {
 		t.Fatalf("cannot create testing state db info %v", err)
 	}
 
-	if err = os.Mkdir(cfg.PathToStateDb+utils.PathToShadowStateDb, os.ModePerm); err != nil {
+	if err = os.Mkdir(cfg.StateDbSrc+utils.PathToShadowStateDb, os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
 
-	err = utils.WriteStateDbInfo(cfg.PathToStateDb+utils.PathToShadowStateDb, cfg, 12, common.Hash{})
+	err = utils.WriteStateDbInfo(cfg.StateDbSrc+utils.PathToShadowStateDb, cfg, 12, common.Hash{})
 	if err != nil {
 		t.Fatalf("cannot create testing state db info %v", err)
 	}
@@ -123,24 +123,24 @@ func TestArchiveDbBlockChecker_PreRunReturnsErrorIfShadowStateDbDoesNotContainGi
 	cfg := &utils.Config{}
 	cfg.Last = 11
 
-	cfg.PathToStateDb = t.TempDir()
+	cfg.StateDbSrc = t.TempDir()
 	cfg.ArchiveMode = true
 	cfg.ShadowDb = true
-	cfg.PathToStateDb = t.TempDir()
+	cfg.StateDbSrc = t.TempDir()
 
-	if err := os.Mkdir(cfg.PathToStateDb+utils.PathToPrimaryStateDb, os.ModePerm); err != nil {
+	if err := os.Mkdir(cfg.StateDbSrc+utils.PathToPrimaryStateDb, os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
-	err := utils.WriteStateDbInfo(cfg.PathToStateDb+utils.PathToPrimaryStateDb, cfg, 12, common.Hash{})
+	err := utils.WriteStateDbInfo(cfg.StateDbSrc+utils.PathToPrimaryStateDb, cfg, 12, common.Hash{})
 	if err != nil {
 		t.Fatalf("cannot create testing state db info %v", err)
 	}
 
-	if err = os.Mkdir(cfg.PathToStateDb+utils.PathToShadowStateDb, os.ModePerm); err != nil {
+	if err = os.Mkdir(cfg.StateDbSrc+utils.PathToShadowStateDb, os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
 
-	err = utils.WriteStateDbInfo(cfg.PathToStateDb+utils.PathToShadowStateDb, cfg, 10, common.Hash{})
+	err = utils.WriteStateDbInfo(cfg.StateDbSrc+utils.PathToShadowStateDb, cfg, 10, common.Hash{})
 	if err != nil {
 		t.Fatalf("cannot create testing state db info %v", err)
 	}
@@ -162,21 +162,21 @@ func TestArchiveDbBlockChecker_PreRunReturnsErrorIfShadowStateDbDoesNotHaveArchi
 	cfg := &utils.Config{}
 	cfg.ShadowDb = true
 	cfg.ArchiveMode = false
-	cfg.PathToStateDb = t.TempDir()
-	if err := os.Mkdir(cfg.PathToStateDb+utils.PathToShadowStateDb, os.ModePerm); err != nil {
+	cfg.StateDbSrc = t.TempDir()
+	if err := os.Mkdir(cfg.StateDbSrc+utils.PathToShadowStateDb, os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
-	err := utils.WriteStateDbInfo(cfg.PathToStateDb+utils.PathToShadowStateDb, cfg, 0, common.Hash{})
+	err := utils.WriteStateDbInfo(cfg.StateDbSrc+utils.PathToShadowStateDb, cfg, 0, common.Hash{})
 	if err != nil {
 		t.Fatalf("cannot create testing state db info %v", err)
 	}
 
 	cfg.ArchiveMode = true
 
-	if err = os.Mkdir(cfg.PathToStateDb+utils.PathToPrimaryStateDb, os.ModePerm); err != nil {
+	if err = os.Mkdir(cfg.StateDbSrc+utils.PathToPrimaryStateDb, os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
-	err = utils.WriteStateDbInfo(cfg.PathToStateDb+utils.PathToPrimaryStateDb, cfg, 0, common.Hash{})
+	err = utils.WriteStateDbInfo(cfg.StateDbSrc+utils.PathToPrimaryStateDb, cfg, 0, common.Hash{})
 	if err != nil {
 		t.Fatalf("cannot create testing state db info %v", err)
 	}

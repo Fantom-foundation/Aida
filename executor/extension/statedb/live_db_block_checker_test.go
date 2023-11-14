@@ -15,8 +15,8 @@ func TestLiveDbBlockChecker_PreRunReturnsErrorIfStateDbLastBlockIsTooSmall(t *te
 	cfg.First = 15
 	cfg.IsExistingStateDb = true
 
-	cfg.PathToStateDb = t.TempDir()
-	err := utils.WriteStateDbInfo(cfg.PathToStateDb, cfg, 10, common.Hash{})
+	cfg.StateDbSrc = t.TempDir()
+	err := utils.WriteStateDbInfo(cfg.StateDbSrc, cfg, 10, common.Hash{})
 	if err != nil {
 		t.Fatalf("cannot create testing state db info; %v", err)
 	}
@@ -40,20 +40,20 @@ func TestLiveDbBlockChecker_PreRunReturnsErrorIfShadowDbLastBlockIsTooSmall(t *t
 	cfg.IsExistingStateDb = true
 	cfg.ShadowDb = true
 
-	cfg.PathToStateDb = t.TempDir()
-	if err := os.Mkdir(cfg.PathToStateDb+utils.PathToPrimaryStateDb, os.ModePerm); err != nil {
+	cfg.StateDbSrc = t.TempDir()
+	if err := os.Mkdir(cfg.StateDbSrc+utils.PathToPrimaryStateDb, os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
-	err := utils.WriteStateDbInfo(cfg.PathToStateDb+utils.PathToPrimaryStateDb, cfg, 10, common.Hash{})
+	err := utils.WriteStateDbInfo(cfg.StateDbSrc+utils.PathToPrimaryStateDb, cfg, 10, common.Hash{})
 	if err != nil {
 		t.Fatalf("cannot create testing state db info %v", err)
 	}
 
-	if err = os.Mkdir(cfg.PathToStateDb+utils.PathToShadowStateDb, os.ModePerm); err != nil {
+	if err = os.Mkdir(cfg.StateDbSrc+utils.PathToShadowStateDb, os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
 
-	err = utils.WriteStateDbInfo(cfg.PathToStateDb+utils.PathToShadowStateDb, cfg, 10, common.Hash{})
+	err = utils.WriteStateDbInfo(cfg.StateDbSrc+utils.PathToShadowStateDb, cfg, 10, common.Hash{})
 	if err != nil {
 		t.Fatalf("cannot create testing state db info %v", err)
 	}
@@ -77,20 +77,20 @@ func TestShadowDbBlockChecker_PreRunReturnsErrorIfPrimeAndShadowDbHaveDifferentL
 	cfg.IsExistingStateDb = true
 	cfg.ShadowDb = true
 
-	cfg.PathToStateDb = t.TempDir()
-	if err := os.Mkdir(cfg.PathToStateDb+utils.PathToPrimaryStateDb, os.ModePerm); err != nil {
+	cfg.StateDbSrc = t.TempDir()
+	if err := os.Mkdir(cfg.StateDbSrc+utils.PathToPrimaryStateDb, os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
-	err := utils.WriteStateDbInfo(cfg.PathToStateDb+utils.PathToPrimaryStateDb, cfg, 11, common.Hash{})
+	err := utils.WriteStateDbInfo(cfg.StateDbSrc+utils.PathToPrimaryStateDb, cfg, 11, common.Hash{})
 	if err != nil {
 		t.Fatalf("cannot create testing state db info %v", err)
 	}
 
-	if err = os.Mkdir(cfg.PathToStateDb+utils.PathToShadowStateDb, os.ModePerm); err != nil {
+	if err = os.Mkdir(cfg.StateDbSrc+utils.PathToShadowStateDb, os.ModePerm); err != nil {
 		t.Fatal(err)
 	}
 
-	err = utils.WriteStateDbInfo(cfg.PathToStateDb+utils.PathToShadowStateDb, cfg, 10, common.Hash{})
+	err = utils.WriteStateDbInfo(cfg.StateDbSrc+utils.PathToShadowStateDb, cfg, 10, common.Hash{})
 	if err != nil {
 		t.Fatalf("cannot create testing state db info %v", err)
 	}

@@ -36,12 +36,12 @@ func (c *liveDbBlockChecker[T]) PreRun(executor.State[T], *executor.Context) err
 	)
 
 	if c.cfg.ShadowDb {
-		primeDbInfo, err = utils.ReadStateDbInfo(filepath.Join(c.cfg.PathToStateDb, utils.PathToPrimaryStateDb, utils.PathToDbInfo))
+		primeDbInfo, err = utils.ReadStateDbInfo(filepath.Join(c.cfg.StateDbSrc, utils.PathToPrimaryStateDb, utils.PathToDbInfo))
 		if err != nil {
 			return fmt.Errorf("cannot read state db info for primary db; %v", err)
 		}
 
-		shadowDbInfo, err = utils.ReadStateDbInfo(filepath.Join(c.cfg.PathToStateDb, utils.PathToShadowStateDb, utils.PathToDbInfo))
+		shadowDbInfo, err = utils.ReadStateDbInfo(filepath.Join(c.cfg.StateDbSrc, utils.PathToShadowStateDb, utils.PathToDbInfo))
 		if err != nil {
 			return fmt.Errorf("cannot read state db info for shadow db; %v", err)
 		}
@@ -54,7 +54,7 @@ func (c *liveDbBlockChecker[T]) PreRun(executor.State[T], *executor.Context) err
 		lastBlock = primeDbInfo.Block
 
 	} else {
-		primeDbInfo, err = utils.ReadStateDbInfo(filepath.Join(c.cfg.PathToStateDb, utils.PathToDbInfo))
+		primeDbInfo, err = utils.ReadStateDbInfo(filepath.Join(c.cfg.StateDbSrc, utils.PathToDbInfo))
 		if err != nil {
 			return fmt.Errorf("cannot read state db info; %v", err)
 		}
