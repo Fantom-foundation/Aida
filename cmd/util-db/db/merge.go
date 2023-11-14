@@ -5,7 +5,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/cmd/util-db/flags"
 	"github.com/Fantom-foundation/Aida/logger"
-	util_db "github.com/Fantom-foundation/Aida/util-db"
+	"github.com/Fantom-foundation/Aida/utildb"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -58,7 +58,7 @@ func merge(ctx *cli.Context) error {
 	)
 
 	if !cfg.SkipMetadata {
-		dbs, err = util_db.OpenSourceDatabases(sourcePaths)
+		dbs, err = utildb.OpenSourceDatabases(sourcePaths)
 		if err != nil {
 			return err
 		}
@@ -70,16 +70,16 @@ func merge(ctx *cli.Context) error {
 		targetDb = md.Db
 
 		for _, db := range dbs {
-			util_db.MustCloseDB(db)
+			utildb.MustCloseDB(db)
 		}
 	}
 
-	dbs, err = util_db.OpenSourceDatabases(sourcePaths)
+	dbs, err = utildb.OpenSourceDatabases(sourcePaths)
 	if err != nil {
 		return err
 	}
 
-	m := util_db.NewMerger(cfg, targetDb, dbs, sourcePaths, md)
+	m := utildb.NewMerger(cfg, targetDb, dbs, sourcePaths, md)
 
 	if err = m.Merge(); err != nil {
 		return err

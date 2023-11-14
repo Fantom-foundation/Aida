@@ -1,7 +1,7 @@
 package db
 
 import (
-	util_db "github.com/Fantom-foundation/Aida/util-db"
+	"github.com/Fantom-foundation/Aida/utildb"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
@@ -38,7 +38,7 @@ func substateDumpAction(ctx *cli.Context) error {
 	substate.OpenSubstateDBReadOnly()
 	defer substate.CloseSubstateDB()
 
-	taskPool := substate.NewSubstateTaskPool("aida-vm dump", util_db.SubstateDumpTask, cfg.First, cfg.Last, ctx)
+	taskPool := substate.NewSubstateTaskPool("aida-vm dump", utildb.SubstateDumpTask, cfg.First, cfg.Last, ctx)
 	err = taskPool.Execute()
 	return err
 }

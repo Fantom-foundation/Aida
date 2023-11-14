@@ -2,7 +2,7 @@ package db
 
 import (
 	"github.com/Fantom-foundation/Aida/logger"
-	util_db "github.com/Fantom-foundation/Aida/util-db"
+	util_db "github.com/Fantom-foundation/Aida/utildb"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/urfave/cli/v2"
 )

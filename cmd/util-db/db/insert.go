@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strconv"
 
-	util_db "github.com/Fantom-foundation/Aida/util-db"
+	"github.com/Fantom-foundation/Aida/utildb"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/core/rawdb"
@@ -79,7 +79,7 @@ func insertMetadata(ctx *cli.Context) error {
 		return fmt.Errorf("cannot open targetDb. Error: %v", err)
 	}
 
-	defer util_db.MustCloseDB(aidaDb)
+	defer utildb.MustCloseDB(aidaDb)
 
 	md := utils.NewAidaDbMetadata(aidaDb, "INFO")
 

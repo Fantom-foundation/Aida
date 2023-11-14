@@ -1,4 +1,4 @@
-package util_db
+package utildb
 
 import (
 	"encoding/json"

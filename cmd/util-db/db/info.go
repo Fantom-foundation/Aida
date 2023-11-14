@@ -9,7 +9,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/cmd/util-db/flags"
 	"github.com/Fantom-foundation/Aida/logger"
-	util_db "github.com/Fantom-foundation/Aida/util-db"
+	"github.com/Fantom-foundation/Aida/utildb"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -149,7 +149,7 @@ func doDbHash(ctx *cli.Context) error {
 		return fmt.Errorf("cannot open db; %v", err)
 	}
 
-	defer util_db.MustCloseDB(aidaDb)
+	defer utildb.MustCloseDB(aidaDb)
 
 	var dbHash []byte
 
@@ -163,7 +163,7 @@ func doDbHash(ctx *cli.Context) error {
 	}
 
 	// if not found in db, we need to iterate and create the hash
-	if dbHash, err = util_db.GenerateDbHash(aidaDb, "INFO"); err != nil {
+	if dbHash, err = utildb.GenerateDbHash(aidaDb, "INFO"); err != nil {
 		return err
 	}
 
@@ -177,7 +177,7 @@ func printMetadataCmd(ctx *cli.Context) error {
 		return argErr
 	}
 
-	return util_db.PrintMetadata(cfg.AidaDb)
+	return utildb.PrintMetadata(cfg.AidaDb)
 }
 
 // printAllCount counts all prefixes prints number of occurrences.
@@ -198,10 +198,10 @@ func printAllCount(ctx *cli.Context) error {
 
 	if ctx.Bool(flags.Detailed.Name) {
 		log.Notice("Counting each prefix...")
-		util_db.LogDetailedSize(aidaDb, log)
+		utildb.LogDetailedSize(aidaDb, log)
 	} else {
 		log.Notice("Counting overall size...")
-		log.Noticef("All AidaDb records: %v", util_db.GetDbSize(aidaDb))
+		log.Noticef("All AidaDb records: %v", utildb.GetDbSize(aidaDb))
 	}
 
 	return nil

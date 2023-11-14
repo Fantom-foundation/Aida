@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Fantom-foundation/Aida/logger"
-	util_db "github.com/Fantom-foundation/Aida/util-db"
+	"github.com/Fantom-foundation/Aida/utildb"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/urfave/cli/v2"
 )
@@ -78,20 +78,20 @@ func clonePatch(ctx *cli.Context) error {
 		return err
 	}
 
-	aidaDb, targetDb, err := util_db.OpenCloningDbs(cfg.AidaDb, cfg.TargetDb)
+	aidaDb, targetDb, err := utildb.OpenCloningDbs(cfg.AidaDb, cfg.TargetDb)
 	if err != nil {
 		return err
 	}
 
-	err = util_db.CreatePatchClone(cfg, aidaDb, targetDb, firstEpoch, lastEpoch, false)
+	err = utildb.CreatePatchClone(cfg, aidaDb, targetDb, firstEpoch, lastEpoch, false)
 	if err != nil {
 		return err
 	}
 
-	util_db.MustCloseDB(aidaDb)
-	util_db.MustCloseDB(targetDb)
+	utildb.MustCloseDB(aidaDb)
+	utildb.MustCloseDB(targetDb)
 
-	return util_db.PrintMetadata(cfg.TargetDb)
+	return utildb.PrintMetadata(cfg.TargetDb)
 }
 
 // createDbClone creates aida-db copy or subset
@@ -101,18 +101,18 @@ func createDbClone(ctx *cli.Context) error {
 		return err
 	}
 
-	aidaDb, targetDb, err := util_db.OpenCloningDbs(cfg.AidaDb, cfg.TargetDb)
+	aidaDb, targetDb, err := utildb.OpenCloningDbs(cfg.AidaDb, cfg.TargetDb)
 	if err != nil {
 		return err
 	}
 
-	err = util_db.Clone(cfg, aidaDb, targetDb, utils.CloneType, false)
+	err = utildb.Clone(cfg, aidaDb, targetDb, utils.CloneType, false)
 	if err != nil {
 		return err
 	}
 
-	util_db.MustCloseDB(aidaDb)
-	util_db.MustCloseDB(targetDb)
+	utildb.MustCloseDB(aidaDb)
+	utildb.MustCloseDB(targetDb)
 
-	return util_db.PrintMetadata(cfg.TargetDb)
+	return utildb.PrintMetadata(cfg.TargetDb)
 }

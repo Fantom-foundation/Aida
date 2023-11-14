@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Fantom-foundation/Aida/logger"
-	util_db "github.com/Fantom-foundation/Aida/util-db"
+	util_db "github.com/Fantom-foundation/Aida/utildb"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"

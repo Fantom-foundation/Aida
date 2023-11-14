@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/Fantom-foundation/Aida/logger"
-	util_db "github.com/Fantom-foundation/Aida/util-db"
+	"github.com/Fantom-foundation/Aida/utildb"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/urfave/cli/v2"
@@ -41,12 +41,12 @@ func generateDbHashCmd(ctx *cli.Context) error {
 		return fmt.Errorf("cannot open db; %v", err)
 	}
 
-	defer util_db.MustCloseDB(aidaDb)
+	defer utildb.MustCloseDB(aidaDb)
 
 	md := utils.NewAidaDbMetadata(aidaDb, "INFO")
 
 	log.Noticef("Starting DbHash generation for %v; this may take several hours...", cfg.AidaDb)
-	hash, err := util_db.GenerateDbHash(aidaDb, "INFO")
+	hash, err := utildb.GenerateDbHash(aidaDb, "INFO")
 	if err != nil {
 		return err
 	}
@@ -70,7 +70,7 @@ func validateCmd(ctx *cli.Context) error {
 		return fmt.Errorf("cannot open db; %v", err)
 	}
 
-	defer util_db.MustCloseDB(aidaDb)
+	defer utildb.MustCloseDB(aidaDb)
 
 	md := utils.NewAidaDbMetadata(aidaDb, "INFO")
 
@@ -89,7 +89,7 @@ func validateCmd(ctx *cli.Context) error {
 	// we need to make sure aida-db starts from beginning, otherwise validation is impossible
 	// todo simplify condition once lachesis patch is ready for testnet
 	md.FirstBlock = md.GetFirstBlock()
-	if (md.ChainId == utils.MainnetChainID && md.FirstBlock != 0) || (md.ChainId == utils.TestnetChainID && md.FirstBlock != util_db.FirstOperaTestnetBlock) {
+	if (md.ChainId == utils.MainnetChainID && md.FirstBlock != 0) || (md.ChainId == utils.TestnetChainID && md.FirstBlock != utildb.FirstOperaTestnetBlock) {
 		return fmt.Errorf("validation cannot be performed - your db does not start at block 0; your first block: %v", md.FirstBlock)
 	}
 
@@ -100,7 +100,7 @@ func validateCmd(ctx *cli.Context) error {
 	if len(expectedHash) == 0 {
 		// we want to save the hash inside metadata
 		saveHash = true
-		expectedHash, err = util_db.FindDbHashOnline(md.ChainId, log, md)
+		expectedHash, err = utildb.FindDbHashOnline(md.ChainId, log, md)
 		if err != nil {
 			return fmt.Errorf("validation cannot be performed; %v", err)
 		}
@@ -109,7 +109,7 @@ func validateCmd(ctx *cli.Context) error {
 	log.Noticef("Found DbHash for your Db: %v", hex.EncodeToString(expectedHash))
 
 	log.Noticef("Starting DbHash calculation for %v; this may take several hours...", cfg.AidaDb)
-	trueHash, err := util_db.GenerateDbHash(aidaDb, "INFO")
+	trueHash, err := utildb.GenerateDbHash(aidaDb, "INFO")
 	if err != nil {
 		return err
 	}
