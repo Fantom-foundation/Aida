@@ -486,7 +486,7 @@ func makePercentageTrend(pPng string, timeByStartByOpId map[int]map[int]float64,
 	}
 	sort.Slice(starts, func(i, j int) bool { return starts[i] < starts[j] })
 
-	for start := range starts {
+	for _, start := range starts {
 		bars = append(bars, makePercentageTrendByStart(start, timeByStartByOpId[start], nameById, clr))
 	}
 
