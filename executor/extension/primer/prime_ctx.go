@@ -12,9 +12,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-// threshold for wrapping a bulk load and reporting a priming progress
-const operationThreshold = 1_000_000
-
 func newPrimeContext(cfg *utils.Config, db state.StateDB, log logger.Logger) *primeContext {
 	return &primeContext{cfg: cfg, log: log, block: 0, db: db, exist: make(map[common.Address]bool)}
 }
@@ -32,7 +29,7 @@ type primeContext struct {
 
 // mayApplyBulkLoad closes and reopen bulk load if it has over n operations.
 func (pc *primeContext) mayApplyBulkLoad() error {
-	if pc.operations >= operationThreshold {
+	if pc.operations >= utils.OperationThreshold {
 		pc.log.Debugf("\t\tApply bulk load with %v operations...", pc.operations)
 		pc.operations = 0
 		if err := pc.load.Close(); err != nil {
@@ -52,7 +49,7 @@ func (pc *primeContext) PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB
 	}
 	pc.log.Infof("\tLoading %d accounts with %d values ..", len(ws), numValues)
 
-	pt := newProgressTracker(numValues, pc.log)
+	pt := utils.NewProgressTracker(numValues, pc.log)
 	if pc.cfg.PrimeRandom {
 		//if 0, commit once after priming all accounts
 		if pc.cfg.PrimeThreshold == 0 {
@@ -82,7 +79,7 @@ func (pc *primeContext) PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB
 }
 
 // primeOneAccount initializes an account on stateDB with substate
-func (pc *primeContext) primeOneAccount(addr common.Address, account *substate.SubstateAccount, pt *progressTracker) error {
+func (pc *primeContext) primeOneAccount(addr common.Address, account *substate.SubstateAccount, pt *utils.ProgressTracker) error {
 	// if an account was previously primed, skip account creation.
 	if exist, found := pc.exist[addr]; !found || !exist {
 		pc.load.CreateAccount(addr)
@@ -105,7 +102,7 @@ func (pc *primeContext) primeOneAccount(addr common.Address, account *substate.S
 }
 
 // PrimeStateDBRandom primes database with accounts from the world state in random order.
-func (pc *primeContext) PrimeStateDBRandom(ws substate.SubstateAlloc, db state.StateDB, pt *progressTracker) error {
+func (pc *primeContext) PrimeStateDBRandom(ws substate.SubstateAlloc, db state.StateDB, pt *utils.ProgressTracker) error {
 	contracts := make([]string, 0, len(ws))
 	for addr := range ws {
 		contracts = append(contracts, addr.Hex())

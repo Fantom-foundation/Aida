@@ -1,4 +1,4 @@
-package primer
+package utils
 
 import (
 	"time"
@@ -6,7 +6,10 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 )
 
-type progressTracker struct {
+// threshold for wrapping a bulk load and reporting a priming progress
+const OperationThreshold = 1_000_000
+
+type ProgressTracker struct {
 	step   int           // step counter
 	target int           // total number of steps
 	start  time.Time     // start time
@@ -15,10 +18,10 @@ type progressTracker struct {
 	log    logger.Logger // Message logger
 }
 
-// newProgressTracker creates a new progress tracer
-func newProgressTracker(target int, log logger.Logger) *progressTracker {
+// NewProgressTracker creates a new progress tracer
+func NewProgressTracker(target int, log logger.Logger) *ProgressTracker {
 	now := time.Now()
-	return &progressTracker{
+	return &ProgressTracker{
 		step:   0,
 		target: target,
 		start:  now,
@@ -29,11 +32,11 @@ func newProgressTracker(target int, log logger.Logger) *progressTracker {
 }
 
 // PrintProgress reports a priming rates and estimated time after n operations has been executed.
-func (pt *progressTracker) PrintProgress() {
+func (pt *ProgressTracker) PrintProgress() {
 	pt.step++
-	if pt.step%operationThreshold == 0 {
+	if pt.step%OperationThreshold == 0 {
 		now := time.Now()
-		currentRate := operationThreshold / now.Sub(pt.last).Seconds()
+		currentRate := OperationThreshold / now.Sub(pt.last).Seconds()
 		pt.rate = currentRate*0.1 + pt.rate*0.9
 		pt.last = now
 		progress := float32(pt.step) / float32(pt.target)
