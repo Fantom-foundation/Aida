@@ -73,6 +73,8 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		OperaBinary:            getFlagValue(ctx, OperaBinaryFlag).(string),
 		ValuesNumber:           getFlagValue(ctx, ValuesNumberFlag).(int64),
 		Validate:               getFlagValue(ctx, ValidateFlag).(bool),
+		ValidateTxState:        getFlagValue(ctx, ValidateTxStateFlag).(bool),
+		ValidateWorldState:     getFlagValue(ctx, ValidateWorldStateFlag).(bool),
 		VmImpl:                 getFlagValue(ctx, VmImplementation).(string),
 		Workers:                getFlagValue(ctx, substate.WorkersFlag).(int),
 		WorldStateDb:           getFlagValue(ctx, WorldStateFlag).(string),
