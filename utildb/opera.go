@@ -1,4 +1,4 @@
-package db
+package utildb
 
 import (
 	"fmt"
@@ -17,7 +17,7 @@ import (
 // aidaOpera represents running opera as a subprocess
 type aidaOpera struct {
 	firstBlock, lastBlock uint64
-	firstEpoch, lastEpoch uint64
+	FirstEpoch, lastEpoch uint64
 	ctx                   *cli.Context
 	cfg                   *utils.Config
 	log                   logger.Logger
@@ -74,7 +74,7 @@ func (opera *aidaOpera) init() error {
 
 	// starting generation one block later
 	opera.firstBlock += 1
-	opera.firstEpoch += 1
+	opera.FirstEpoch += 1
 
 	return nil
 }
@@ -135,7 +135,7 @@ func (opera *aidaOpera) getOperaBlockAndEpoch(isFirst bool) error {
 
 	if isFirst {
 		opera.firstBlock = blockNumber
-		opera.firstEpoch = epochNumber
+		opera.FirstEpoch = epochNumber
 	} else {
 		opera.lastBlock = blockNumber
 		opera.lastEpoch = epochNumber

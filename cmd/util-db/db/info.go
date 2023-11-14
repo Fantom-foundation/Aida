@@ -6,16 +6,14 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/Fantom-foundation/Aida/cmd/util-db/flags"
 	"github.com/Fantom-foundation/Aida/logger"
+	"github.com/Fantom-foundation/Aida/utildb"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
-	"github.com/Fantom-foundation/lachesis-base/common/bigendian"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/urfave/cli/v2"
 )
 
@@ -151,7 +149,7 @@ func doDbHash(ctx *cli.Context) error {
 		return fmt.Errorf("cannot open db; %v", err)
 	}
 
-	defer MustCloseDB(aidaDb)
+	defer utildb.MustCloseDB(aidaDb)
 
 	var dbHash []byte
 
@@ -165,7 +163,7 @@ func doDbHash(ctx *cli.Context) error {
 	}
 
 	// if not found in db, we need to iterate and create the hash
-	if dbHash, err = generateDbHash(aidaDb, "INFO"); err != nil {
+	if dbHash, err = utildb.GenerateDbHash(aidaDb, "INFO"); err != nil {
 		return err
 	}
 
@@ -179,128 +177,7 @@ func printMetadataCmd(ctx *cli.Context) error {
 		return argErr
 	}
 
-	return printMetadata(cfg.AidaDb)
-}
-
-// printMetadata from given AidaDb
-func printMetadata(pathToDb string) error {
-	log := logger.NewLogger("INFO", "Print-Metadata")
-	// open db
-	aidaDb, err := rawdb.NewLevelDBDatabase(pathToDb, 1024, 100, "profiling", true)
-	if err != nil {
-		return fmt.Errorf("cannot open aida-db for printing metadata; %v", err)
-	}
-
-	defer MustCloseDB(aidaDb)
-
-	md := utils.NewAidaDbMetadata(aidaDb, "INFO")
-
-	log.Notice("AIDA-DB INFO:")
-
-	if err = printDbType(md); err != nil {
-		return err
-	}
-
-	var (
-		firstBlock, lastBlock uint64
-		ok                    bool
-	)
-
-	lastBlock = md.GetLastBlock()
-
-	firstBlock = md.GetFirstBlock()
-
-	if firstBlock == 0 && lastBlock == 0 {
-		substate.SetSubstateDb(pathToDb)
-		substate.OpenSubstateDBReadOnly()
-		defer substate.CloseSubstateDB()
-
-		firstBlock, lastBlock, ok = utils.FindBlockRangeInSubstate()
-		if !ok {
-			return errors.New("no substate found")
-		}
-	}
-
-	// CHAIN-ID
-	chainID := md.GetChainID()
-
-	log.Infof("Chain-ID: %v", chainID)
-
-	// BLOCKS
-	log.Infof("First Block: %v", firstBlock)
-
-	log.Infof("Last Block: %v", lastBlock)
-
-	// EPOCHS
-	firstEpoch := md.GetFirstEpoch()
-
-	log.Infof("First Epoch: %v", firstEpoch)
-
-	lastEpoch := md.GetLastEpoch()
-
-	log.Infof("Last Epoch: %v", lastEpoch)
-
-	dbHash := md.GetDbHash()
-
-	log.Infof("Db Hash: %v", hex.EncodeToString(dbHash))
-
-	// TIMESTAMP
-	timestamp := md.GetTimestamp()
-
-	log.Infof("Created: %v", time.Unix(int64(timestamp), 0))
-
-	// UPDATE-SET
-	printUpdateSetInfo(md)
-
-	return nil
-}
-
-// printUpdateSetInfo from given AidaDb
-func printUpdateSetInfo(m *utils.AidaDbMetadata) {
-	log := logger.NewLogger("INFO", "Print-Metadata")
-
-	log.Notice("UPDATE-SET INFO:")
-
-	intervalBytes, err := m.Db.Get([]byte(substate.UpdatesetIntervalKey))
-	if err != nil {
-		log.Warning("Value for update-set interval does not exist in given Dbs metadata")
-	} else {
-		log.Infof("Interval: %v blocks", bigendian.BytesToUint64(intervalBytes))
-	}
-
-	sizeBytes, err := m.Db.Get([]byte(substate.UpdatesetSizeKey))
-	if err != nil {
-		log.Warning("Value for update-set size does not exist in given Dbs metadata")
-	} else {
-		u := bigendian.BytesToUint64(sizeBytes)
-
-		// todo convert to mb
-		log.Infof("Size: %.1f MB", float64(u)/float64(1_000_000))
-	}
-}
-
-// printDbType from given AidaDb
-func printDbType(m *utils.AidaDbMetadata) error {
-	t := m.GetDbType()
-
-	var typePrint string
-	switch t {
-	case utils.GenType:
-		typePrint = "Generate"
-	case utils.CloneType:
-		typePrint = "Clone"
-	case utils.PatchType:
-		typePrint = "Patch"
-	case utils.NoType:
-		typePrint = "NoType"
-
-	default:
-		return errors.New("unknown db type")
-	}
-
-	logger.NewLogger("INFO", "Print-Metadata").Noticef("DB-Type: %v", typePrint)
-
-	return nil
+	return utildb.PrintMetadata(cfg.AidaDb)
 }
 
 // printAllCount counts all prefixes prints number of occurrences.
@@ -321,29 +198,13 @@ func printAllCount(ctx *cli.Context) error {
 
 	if ctx.Bool(flags.Detailed.Name) {
 		log.Notice("Counting each prefix...")
-		logDetailedSize(aidaDb, log)
+		utildb.LogDetailedSize(aidaDb, log)
 	} else {
 		log.Notice("Counting overall size...")
-		log.Noticef("All AidaDb records: %v", GetDbSize(aidaDb))
+		log.Noticef("All AidaDb records: %v", utildb.GetDbSize(aidaDb))
 	}
 
 	return nil
-}
-
-// logDetailedSize counts and prints all prefix occurrence
-func logDetailedSize(db ethdb.Database, log logger.Logger) {
-	iter := db.NewIterator(nil, nil)
-	defer iter.Release()
-
-	countMap := make(map[string]uint64)
-
-	for iter.Next() {
-		countMap[string(iter.Key()[:2])]++
-	}
-
-	for key, count := range countMap {
-		log.Noticef("Prefix :%v; Count: %v", key, count)
-	}
 }
 
 // printDestroyedCount in given AidaDb
@@ -483,17 +344,6 @@ func printDeletedAccountInfo(ctx *cli.Context) error {
 
 	return nil
 
-}
-
-// GetDbSize retrieves database size
-func GetDbSize(db ethdb.Database) uint64 {
-	var count uint64
-	iter := db.NewIterator(nil, nil)
-	defer iter.Release()
-	for iter.Next() {
-		count++
-	}
-	return count
 }
 
 func printStateHash(ctx *cli.Context) error {

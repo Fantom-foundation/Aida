@@ -9,8 +9,8 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// InitDb data structure
-var InitDb = cli.App{
+// UtilDbApp data structure
+var UtilDbApp = cli.App{
 	Name:      "Aida Database",
 	HelpName:  "aida-db",
 	Usage:     "merge source data into profiling database",
@@ -36,7 +36,7 @@ var InitDb = cli.App{
 
 // main implements aida-db functions
 func main() {
-	if err := InitDb.Run(os.Args); err != nil {
+	if err := UtilDbApp.Run(os.Args); err != nil {
 		log.Fatal(err)
 	}
 }
