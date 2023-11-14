@@ -10,6 +10,7 @@ pipeline {
         VM = '--vm-impl lfvm'
         AIDADB = '--aida-db=/var/opera/Aida/mainnet-data/aida-db'
         TMPDB = '--db-tmp=/var/opera/Aida/dbtmpjenkins'
+        DBSRC = '--db-src=/var/opera/Aida/dbtmpjenkins/state_db_carmen_go-file_${TOBLOCK}'
         TRACEDIR = 'tracefiles'
         FROMBLOCK = 'opera'
         TOBLOCK = '4600000'
@@ -82,7 +83,7 @@ pipeline {
             }
         }
 
-        stage('aida-vm-sdb') {
+        stage('aida-vm-sdb new-db') {
             steps {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
                     sh "build/aida-vm-sdb substate ${VM} ${STORAGE} ${TMPDB} ${AIDADB} ${PRIME} --keep-db --archive --archive-variant ldb --validate-tx --cpu-profile cpu-profile.dat --memory-profile mem-profile.dat --memory-breakdown --continue-on-failure ${FROMBLOCK} ${TOBLOCK} "
@@ -91,6 +92,14 @@ pipeline {
             }
         }
 
+        stage('aida-vm-sdb existing-db') {
+            steps {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
+                    sh "build/aida-vm-sdb substate ${VM} ${DBSRC} ${AIDADB} --validate-tx --cpu-profile cpu-profile.dat --memory-profile mem-profile.dat --memory-breakdown --continue-on-failure 4600001 4610000"
+                }
+                sh "rm -rf *.dat"
+            }
+        }
 
         stage('aida-vm-adb') {
             steps {
@@ -101,6 +110,7 @@ pipeline {
                 sh "rm -rf *.dat"
             }
         }
+
         stage('tear-down') {
             steps {
                 sh "make clean"
