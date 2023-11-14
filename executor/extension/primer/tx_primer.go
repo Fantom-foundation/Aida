@@ -1,4 +1,4 @@
-package statedb
+package primer
 
 import (
 	"github.com/Fantom-foundation/Aida/executor"
@@ -19,13 +19,13 @@ func makeTxPrimer(cfg *utils.Config, log logger.Logger) executor.Extension[*subs
 
 type txPrimer struct {
 	extension.NilExtension[*substate.Substate]
-	primeCtx *utils.PrimeContext
+	primeCtx *primeContext
 	cfg      *utils.Config
 	log      logger.Logger
 }
 
 func (p *txPrimer) PreRun(_ executor.State[*substate.Substate], ctx *executor.Context) error {
-	p.primeCtx = utils.NewPrimeContext(p.cfg, ctx.State, p.log)
+	p.primeCtx = newPrimeContext(p.cfg, ctx.State, p.log)
 	return nil
 }
 
