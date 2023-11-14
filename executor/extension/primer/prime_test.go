@@ -1,4 +1,4 @@
-package utils
+package primer
 
 import (
 	"bytes"
@@ -8,17 +8,18 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/utils"
 )
 
 // TestStatedb_PrimeStateDB tests priming fresh state DB with randomized world state data
 func TestPrime_PrimeStateDB(t *testing.T) {
 	log := logger.NewLogger("Warning", "TestPrimeStateDB")
-	for _, tc := range getStatedbTestCases() {
-		t.Run(fmt.Sprintf("DB variant: %s; shadowImpl: %s; archive variant: %s", tc.variant, tc.shadowImpl, tc.archiveVariant), func(t *testing.T) {
-			cfg := makeTestConfig(tc)
+	for _, tc := range utils.GetStateDbTestCases() {
+		t.Run(fmt.Sprintf("DB variant: %s; shadowImpl: %s; archive variant: %s", tc.Variant, tc.ShadowImpl, tc.ArchiveVariant), func(t *testing.T) {
+			cfg := utils.MakeTestConfig(tc)
 
 			// Initialization of state DB
-			sDB, sDbDir, err := PrepareStateDB(cfg)
+			sDB, sDbDir, err := utils.PrepareStateDB(cfg)
 			defer os.RemoveAll(sDbDir)
 
 			if err != nil {
@@ -34,9 +35,9 @@ func TestPrime_PrimeStateDB(t *testing.T) {
 			}(sDB)
 
 			// Generating randomized world state
-			ws, _ := makeWorldState(t)
+			ws, _ := utils.MakeWorldState(t)
 
-			pc := NewPrimeContext(cfg, sDB, log)
+			pc := utils.NewPrimeContext(cfg, sDB, log)
 			// Priming state DB
 			pc.PrimeStateDB(ws, sDB)
 

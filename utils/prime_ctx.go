@@ -1,4 +1,4 @@
-package primer
+package utils
 
 import (
 	"fmt"
@@ -7,18 +7,17 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
-	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func newPrimeContext(cfg *utils.Config, db state.StateDB, log logger.Logger) *primeContext {
-	return &primeContext{cfg: cfg, log: log, block: 0, db: db, exist: make(map[common.Address]bool)}
+func NewPrimeContext(cfg *Config, db state.StateDB, log logger.Logger) *PrimeContext {
+	return &PrimeContext{cfg: cfg, log: log, block: 0, db: db, exist: make(map[common.Address]bool)}
 }
 
-// primeContext structure keeps context used over iterations of priming
-type primeContext struct {
-	cfg        *utils.Config
+// PrimeContext structure keeps context used over iterations of priming
+type PrimeContext struct {
+	cfg        *Config
 	log        logger.Logger
 	block      uint64
 	load       state.BulkLoad
@@ -28,8 +27,8 @@ type primeContext struct {
 }
 
 // mayApplyBulkLoad closes and reopen bulk load if it has over n operations.
-func (pc *primeContext) mayApplyBulkLoad() error {
-	if pc.operations >= utils.OperationThreshold {
+func (pc *PrimeContext) mayApplyBulkLoad() error {
+	if pc.operations >= OperationThreshold {
 		pc.log.Debugf("\t\tApply bulk load with %v operations...", pc.operations)
 		pc.operations = 0
 		if err := pc.load.Close(); err != nil {
@@ -42,14 +41,14 @@ func (pc *primeContext) mayApplyBulkLoad() error {
 }
 
 // PrimeStateDB primes database with accounts from the world state.
-func (pc *primeContext) PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB) error {
+func (pc *PrimeContext) PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB) error {
 	numValues := 0 // number of storage values
 	for _, account := range ws {
 		numValues += len(account.Storage)
 	}
 	pc.log.Infof("\tLoading %d accounts with %d values ..", len(ws), numValues)
 
-	pt := utils.NewProgressTracker(numValues, pc.log)
+	pt := NewProgressTracker(numValues, pc.log)
 	if pc.cfg.PrimeRandom {
 		//if 0, commit once after priming all accounts
 		if pc.cfg.PrimeThreshold == 0 {
@@ -79,7 +78,7 @@ func (pc *primeContext) PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB
 }
 
 // primeOneAccount initializes an account on stateDB with substate
-func (pc *primeContext) primeOneAccount(addr common.Address, account *substate.SubstateAccount, pt *utils.ProgressTracker) error {
+func (pc *PrimeContext) primeOneAccount(addr common.Address, account *substate.SubstateAccount, pt *ProgressTracker) error {
 	// if an account was previously primed, skip account creation.
 	if exist, found := pc.exist[addr]; !found || !exist {
 		pc.load.CreateAccount(addr)
@@ -102,7 +101,7 @@ func (pc *primeContext) primeOneAccount(addr common.Address, account *substate.S
 }
 
 // PrimeStateDBRandom primes database with accounts from the world state in random order.
-func (pc *primeContext) PrimeStateDBRandom(ws substate.SubstateAlloc, db state.StateDB, pt *utils.ProgressTracker) error {
+func (pc *PrimeContext) PrimeStateDBRandom(ws substate.SubstateAlloc, db state.StateDB, pt *ProgressTracker) error {
 	contracts := make([]string, 0, len(ws))
 	for addr := range ws {
 		contracts = append(contracts, addr.Hex())
@@ -134,7 +133,7 @@ func (pc *primeContext) PrimeStateDBRandom(ws substate.SubstateAlloc, db state.S
 }
 
 // SuicideAccounts clears storage of all input accounts.
-func (pc *primeContext) SuicideAccounts(db state.StateDB, accounts []common.Address) {
+func (pc *PrimeContext) SuicideAccounts(db state.StateDB, accounts []common.Address) {
 	count := 0
 	db.BeginSyncPeriod(0)
 	db.BeginBlock(pc.block)

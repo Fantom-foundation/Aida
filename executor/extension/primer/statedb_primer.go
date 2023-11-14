@@ -31,7 +31,7 @@ type stateDbPrimer[T any] struct {
 	extension.NilExtension[T]
 	cfg *utils.Config
 	log logger.Logger
-	ctx *primeContext
+	ctx *utils.PrimeContext
 }
 
 // PreRun primes StateDb to given block.
@@ -51,7 +51,7 @@ func (p *stateDbPrimer[T]) PreRun(_ executor.State[T], ctx *executor.Context) er
 	}
 
 	p.log.Noticef("Priming to block %v", p.cfg.First-1)
-	p.ctx = newPrimeContext(p.cfg, ctx.State, p.log)
+	p.ctx = utils.NewPrimeContext(p.cfg, ctx.State, p.log)
 
 	return p.prime(ctx.State)
 }

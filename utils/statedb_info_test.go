@@ -12,9 +12,9 @@ import (
 // TestStatedbInfo_WriteReadStateDbInfo tests creation of state DB info json file,
 // writing into it and subsequent reading from it
 func TestStatedbInfo_WriteReadStateDbInfo(t *testing.T) {
-	for _, tc := range getStatedbTestCases() {
-		t.Run(fmt.Sprintf("DB variant: %s; shadowImpl: %s; archive variant: %s", tc.variant, tc.shadowImpl, tc.archiveVariant), func(t *testing.T) {
-			cfg := makeTestConfig(tc)
+	for _, tc := range GetStateDbTestCases() {
+		t.Run(fmt.Sprintf("DB variant: %s; shadowImpl: %s; archive variant: %s", tc.Variant, tc.ShadowImpl, tc.ArchiveVariant), func(t *testing.T) {
+			cfg := MakeTestConfig(tc)
 			// Update config for state DB preparation by providing additional information
 			cfg.DbTmp = t.TempDir()
 			cfg.StateDbSrc = t.TempDir()
@@ -63,9 +63,9 @@ func TestStatedbInfo_WriteReadStateDbInfo(t *testing.T) {
 
 // TestStatedbInfo_RenameTempStateDBDirectory tests renaming temporary state DB directory into something more meaningful
 func TestStatedbInfo_RenameTempStateDBDirectory(t *testing.T) {
-	for _, tc := range getStatedbTestCases() {
-		t.Run(fmt.Sprintf("DB variant: %s; shadowImpl: %s; archive variant: %s", tc.variant, tc.shadowImpl, tc.archiveVariant), func(t *testing.T) {
-			cfg := makeTestConfig(tc)
+	for _, tc := range GetStateDbTestCases() {
+		t.Run(fmt.Sprintf("DB variant: %s; shadowImpl: %s; archive variant: %s", tc.Variant, tc.ShadowImpl, tc.ArchiveVariant), func(t *testing.T) {
+			cfg := MakeTestConfig(tc)
 			// Update config for state DB preparation by providing additional information
 			cfg.DbTmp = t.TempDir()
 			cfg.StateDbSrc = t.TempDir()
