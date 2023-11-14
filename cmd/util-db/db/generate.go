@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Fantom-foundation/Aida/logger"
-	util_db "github.com/Fantom-foundation/Aida/utildb"
+	"github.com/Fantom-foundation/Aida/utildb"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
@@ -41,7 +41,7 @@ func generate(ctx *cli.Context) error {
 		return fmt.Errorf("cannot create config %v", err)
 	}
 
-	g, err := util_db.NewGenerator(ctx, cfg)
+	g, err := utildb.NewGenerator(ctx, cfg)
 	if err != nil {
 		return err
 	}
@@ -55,7 +55,7 @@ func generate(ctx *cli.Context) error {
 		return err
 	}
 
-	util_db.MustCloseDB(g.AidaDb)
+	utildb.MustCloseDB(g.AidaDb)
 
-	return util_db.PrintMetadata(g.Cfg.AidaDb)
+	return utildb.PrintMetadata(g.Cfg.AidaDb)
 }

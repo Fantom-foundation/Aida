@@ -2,7 +2,7 @@ package db
 
 import (
 	"github.com/Fantom-foundation/Aida/logger"
-	util_db "github.com/Fantom-foundation/Aida/utildb"
+	"github.com/Fantom-foundation/Aida/utildb"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/urfave/cli/v2"
 )
@@ -32,9 +32,9 @@ func update(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	if err = util_db.Update(cfg); err != nil {
+	if err = utildb.Update(cfg); err != nil {
 		return err
 	}
 
-	return util_db.PrintMetadata(cfg.AidaDb)
+	return utildb.PrintMetadata(cfg.AidaDb)
 }

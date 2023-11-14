@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Fantom-foundation/Aida/logger"
-	util_db "github.com/Fantom-foundation/Aida/utildb"
+	"github.com/Fantom-foundation/Aida/utildb"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
@@ -41,7 +41,7 @@ func autogen(ctx *cli.Context) error {
 		return err
 	}
 
-	locked, err := util_db.GetLock(cfg)
+	locked, err := utildb.GetLock(cfg)
 	if err != nil {
 		return err
 	}
@@ -49,9 +49,9 @@ func autogen(ctx *cli.Context) error {
 		return fmt.Errorf("GENERATION BLOCKED: autogen failed in last run; %v", locked)
 	}
 
-	var g *util_db.Generator
+	var g *utildb.Generator
 	var ok bool
-	g, ok, err = util_db.PrepareAutogen(ctx, cfg)
+	g, ok, err = utildb.PrepareAutogen(ctx, cfg)
 	if err != nil {
 		return fmt.Errorf("cannot start autogen; %v", err)
 	}
@@ -60,9 +60,9 @@ func autogen(ctx *cli.Context) error {
 		return nil
 	}
 
-	err = util_db.AutogenRun(cfg, g)
+	err = utildb.AutogenRun(cfg, g)
 	if err != nil {
-		errLock := util_db.SetLock(cfg, err.Error())
+		errLock := utildb.SetLock(cfg, err.Error())
 		if errLock != nil {
 			return fmt.Errorf("%v; %v", errLock, err)
 		}

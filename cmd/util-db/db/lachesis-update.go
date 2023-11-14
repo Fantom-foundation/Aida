@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Fantom-foundation/Aida/logger"
-	util_db "github.com/Fantom-foundation/Aida/utildb"
+	"github.com/Fantom-foundation/Aida/utildb"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
@@ -43,13 +43,13 @@ func lachesisUpdate(ctx *cli.Context) error {
 	defer substate.CloseSubstateDB()
 
 	log.Notice("Load Opera initial world state")
-	opera, err := util_db.LoadOperaWorldState(cfg.WorldStateDb)
+	opera, err := utildb.LoadOperaWorldState(cfg.WorldStateDb)
 	if err != nil {
 		return err
 	}
 
 	log.Notice("Generate Lachesis world state")
-	lachesis, err := util_db.CreateLachesisWorldState(cfg)
+	lachesis, err := utildb.CreateLachesisWorldState(cfg)
 	if err != nil {
 		return err
 	}
@@ -72,7 +72,7 @@ func lachesisUpdate(ctx *cli.Context) error {
 			lastTx.Message,
 			lastTx.Result)
 		// replace lachesis storage with zeros
-		if err := util_db.FixSfcContract(lachesis, transitionTx); err != nil {
+		if err := utildb.FixSfcContract(lachesis, transitionTx); err != nil {
 			return err
 		}
 
