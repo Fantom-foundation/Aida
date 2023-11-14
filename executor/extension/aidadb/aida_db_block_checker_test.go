@@ -18,7 +18,7 @@ func TestAidaDbBlockChecker_PreRunReturnsErrorIfFirstBlockIsNotWithinAidaDb(t *t
 		t.Fatalf("pre-run must return error")
 	}
 
-	wantedErr := "first block of given aida-db (1) is larger than given first block (0), please chose first block in range"
+	wantedErr := "first block of given aida-db (1) is larger than given first block (0), please choose first block in range"
 
 	if strings.Compare(err.Error(), wantedErr) != 0 {
 		t.Fatalf("unexpected err\ngot: %v\n want: %v", err, wantedErr)
