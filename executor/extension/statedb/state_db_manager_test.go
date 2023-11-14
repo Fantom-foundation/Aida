@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/executor"
@@ -184,8 +185,13 @@ func TestStateDbManager_NonExistentStateDbSrc(t *testing.T) {
 
 	ctx := &executor.Context{}
 
-	if err := ext.PreRun(state, ctx); err == nil {
+	err := ext.PreRun(state, ctx)
+	if err == nil {
 		t.Fatalf("using nonexistent statedb didn't produce error in pre-run")
+	}
+
+	if strings.Compare(err.Error(), fmt.Sprintf("%v does not exist", cfg.StateDbSrc)) != 0 {
+		t.Fatalf("unexpected error")
 	}
 }
 

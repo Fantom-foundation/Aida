@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Fantom-foundation/Aida/logger"
-	util_db "github.com/Fantom-foundation/Aida/utildb"
+	"github.com/Fantom-foundation/Aida/utildb"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
@@ -54,5 +54,5 @@ func genDeletedAccountsAction(ctx *cli.Context) error {
 	}
 	defer ddb.Close()
 
-	return util_db.GenDeletedAccountsAction(cfg, ddb, cfg.First, cfg.Last)
+	return utildb.GenDeletedAccountsAction(cfg, ddb, cfg.First, cfg.Last)
 }
