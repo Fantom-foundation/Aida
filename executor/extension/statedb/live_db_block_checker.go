@@ -17,8 +17,8 @@ type liveDbBlockChecker[T any] struct {
 // MakeLiveDbBlockChecker creates an executor.Extension which checks block alignment of given Live StateDb
 func MakeLiveDbBlockChecker[T any](cfg *utils.Config) executor.Extension[T] {
 	// this extension is only necessary for existing LiveDb
-	if !cfg.IsExistingStateDb {
-		return nil
+	if cfg.StateDbSrc == "" {
+		return extension.NilExtension[T]{}
 	}
 
 	return &liveDbBlockChecker[T]{
