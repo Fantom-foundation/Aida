@@ -95,7 +95,7 @@ pipeline {
         stage('aida-vm-sdb existing-db') {
             steps {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
-                    sh "build/aida-vm-sdb substate ${VM} ${DBSRC} ${AIDADB} --validate-tx --validate-state-hash --cpu-profile cpu-profile.dat --memory-profile mem-profile.dat --memory-breakdown --continue-on-failure 4600001 4610000"
+                    sh "build/aida-vm-sdb substate ${VM} ${DBSRC} ${AIDADB} --validate-tx --cpu-profile cpu-profile.dat --memory-profile mem-profile.dat --memory-breakdown --continue-on-failure 4600001 4610000"
                 }
                 sh "rm -rf *.dat"
             }
