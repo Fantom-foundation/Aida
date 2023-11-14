@@ -20,6 +20,7 @@ func RunVmAdb(ctx *cli.Context) error {
 	}
 
 	cfg.SrcDbReadonly = true
+	cfg.StateValidationMode = utils.SubsetCheck
 
 	// executing archive blocks always calls ArchiveDb with block -1
 	// this condition prevents an incorrect call for block that does not exist (block number -1 in this case)

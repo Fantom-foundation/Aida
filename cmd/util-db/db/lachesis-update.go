@@ -1,19 +1,14 @@
 package db
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/Fantom-foundation/Aida/logger"
+	"github.com/Fantom-foundation/Aida/utildb"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	substate "github.com/Fantom-foundation/Substate"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/urfave/cli/v2"
 )
-
-// address of sfc contract in Hex
-const sfcAddrHex = "0xFC00FACE00000000000000000000000000000000"
 
 var LachesisUpdateCommand = cli.Command{
 	Action: lachesisUpdate,
@@ -48,13 +43,13 @@ func lachesisUpdate(ctx *cli.Context) error {
 	defer substate.CloseSubstateDB()
 
 	log.Notice("Load Opera initial world state")
-	opera, err := loadOperaWorldState(cfg.WorldStateDb)
+	opera, err := utildb.LoadOperaWorldState(cfg.WorldStateDb)
 	if err != nil {
 		return err
 	}
 
 	log.Notice("Generate Lachesis world state")
-	lachesis, err := createLachesisWorldState(cfg)
+	lachesis, err := utildb.CreateLachesisWorldState(cfg)
 	if err != nil {
 		return err
 	}
@@ -77,7 +72,7 @@ func lachesisUpdate(ctx *cli.Context) error {
 			lastTx.Message,
 			lastTx.Result)
 		// replace lachesis storage with zeros
-		if err := fixSfcContract(lachesis, transitionTx); err != nil {
+		if err := utildb.FixSfcContract(lachesis, transitionTx); err != nil {
 			return err
 		}
 
@@ -89,51 +84,6 @@ func lachesisUpdate(ctx *cli.Context) error {
 		substate.PutSubstate(lachesisLastBlock, utils.PseudoTx, transitionTx)
 	} else {
 		log.Warningf("Transition transaction has already been produced. Skip writing")
-	}
-	return nil
-}
-
-// loadOperaWorldState loads opera initial world state from worldstate-db as SubstateAlloc
-func loadOperaWorldState(path string) (substate.SubstateAlloc, error) {
-	worldStateDB, err := snapshot.OpenStateDB(path)
-	if err != nil {
-		return nil, err
-	}
-	defer snapshot.MustCloseStateDB(worldStateDB)
-	opera, err := worldStateDB.ToSubstateAlloc(context.Background())
-	return opera, err
-}
-
-// createLachesisWorldState creates update-set from block 0 to the last lachesis block
-func createLachesisWorldState(cfg *utils.Config) (substate.SubstateAlloc, error) {
-	lachesisLastBlock := utils.FirstOperaBlock - 1
-	lachesis, _, err := utils.GenerateUpdateSet(0, lachesisLastBlock, cfg)
-	if err != nil {
-		return nil, err
-	}
-	// remove deleted accounts
-	if err := utils.DeleteDestroyedAccountsFromWorldState(lachesis, cfg, lachesisLastBlock); err != nil {
-		return nil, err
-	}
-	return lachesis, nil
-}
-
-// fixSfcContract reset lachesis's storage keys to zeros while keeping opera keys
-func fixSfcContract(lachesis substate.SubstateAlloc, transition *substate.Substate) error {
-	sfcAddr := common.HexToAddress(sfcAddrHex)
-	lachesisSfc, hasLachesisSfc := lachesis[sfcAddr]
-	_, hasTransitionSfc := transition.OutputAlloc[sfcAddr]
-
-	if hasLachesisSfc && hasTransitionSfc {
-		// insert keys with zero value to the transition substate if
-		// the keys doesn't appear on opera
-		for key := range lachesisSfc.Storage {
-			if _, found := transition.OutputAlloc[sfcAddr].Storage[key]; !found {
-				transition.OutputAlloc[sfcAddr].Storage[key] = common.Hash{}
-			}
-		}
-	} else {
-		return fmt.Errorf("the SFC contract is not found.")
 	}
 	return nil
 }
