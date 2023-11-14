@@ -481,7 +481,8 @@ func makePercentageTrend(pPng string, timeByStartByOpId map[int]map[int]float64,
 		starts []int              = []int{}
 	)
 
-	for start, _ := range timeByStartByOpId {
+	//for start, _ := range timeByStartByOpId { // gofmt is angry with this?
+	for start := range timeByStartByOpId {
 		starts = append(starts, start)
 	}
 	sort.Slice(starts, func(i, j int) bool { return starts[i] < starts[j] })
