@@ -1,6 +1,8 @@
 package profiler
 
 import (
+	"time"
+
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
@@ -152,11 +154,11 @@ func (p *operationProfiler[T]) prettyTable() table.Writer {
 			p.interval.Start(),
 			p.interval.End(),
 			stat.GetCount(),
-			stat.GetSum() / float64(1000),
-			stat.GetMean() / float64(1000),
-			stat.GetStandardDeviation() / float64(1000),
-			stat.GetMin() / float64(1000),
-			stat.GetMax() / float64(1000),
+			stat.GetSum() / float64(time.Microsecond),
+			stat.GetMean() / float64(time.Microsecond),
+			stat.GetStandardDeviation() / float64(time.Microsecond),
+			stat.GetMin() / float64(time.Microsecond),
+			stat.GetMax() / float64(time.Microsecond),
 		})
 	}
 	t.AppendFooter(table.Row{"total", "", "", totalCount, totalSum})
@@ -254,14 +256,14 @@ func (p *operationProfiler[T]) sqlite3(conn string, depth ProfileDepth) (string,
 						opId,
 						p.ops[byte(opId)],
 						stat.GetCount(),
-						stat.GetSum() / float64(1000),
-						stat.GetMean() / float64(1000),
-						stat.GetStandardDeviation() / float64(1000),
-						stat.GetVariance() / float64(1000),
-						stat.GetSkewness() / float64(1000),
-						stat.GetKurtosis() / float64(1000),
-						stat.GetMin() / float64(1000),
-						stat.GetMax() / float64(1000),
+						stat.GetSum() / float64(time.Microsecond),
+						stat.GetMean() / float64(time.Microsecond),
+						stat.GetStandardDeviation() / float64(time.Microsecond),
+						stat.GetVariance() / float64(time.Microsecond),
+						stat.GetSkewness() / float64(time.Microsecond),
+						stat.GetKurtosis() / float64(time.Microsecond),
+						stat.GetMin() / float64(time.Microsecond),
+						stat.GetMax() / float64(time.Microsecond),
 					})
 				}
 				return values
@@ -277,14 +279,14 @@ func (p *operationProfiler[T]) sqlite3(conn string, depth ProfileDepth) (string,
 						opId,
 						p.ops[byte(opId)],
 						stat.GetCount(),
-						stat.GetSum() / float64(1000),
-						stat.GetMean() / float64(1000),
-						stat.GetStandardDeviation() / float64(1000),
-						stat.GetVariance() / float64(1000),
-						stat.GetSkewness() / float64(1000),
-						stat.GetKurtosis() / float64(1000),
-						stat.GetMin() / float64(1000),
-						stat.GetMax() / float64(1000),
+						stat.GetSum() / float64(time.Microsecond),
+						stat.GetMean() / float64(time.Microsecond),
+						stat.GetStandardDeviation() / float64(time.Microsecond),
+						stat.GetVariance() / float64(time.Microsecond),
+						stat.GetSkewness() / float64(time.Microsecond),
+						stat.GetKurtosis() / float64(time.Microsecond),
+						stat.GetMin() / float64(time.Microsecond),
+						stat.GetMax() / float64(time.Microsecond),
 					})
 				}
 				return values
@@ -301,14 +303,14 @@ func (p *operationProfiler[T]) sqlite3(conn string, depth ProfileDepth) (string,
 						opId,
 						p.ops[byte(opId)],
 						stat.GetCount(),
-						stat.GetSum() / float64(1000),
-						stat.GetMean() / float64(1000),
-						stat.GetStandardDeviation() / float64(1000),
-						stat.GetVariance() / float64(1000),
-						stat.GetSkewness() / float64(1000),
-						stat.GetKurtosis() / float64(1000),
-						stat.GetMin() / float64(1000),
-						stat.GetMax() / float64(1000),
+						stat.GetSum() / float64(time.Microsecond),
+						stat.GetMean() / float64(time.Microsecond),
+						stat.GetStandardDeviation() / float64(time.Microsecond),
+						stat.GetVariance() / float64(time.Microsecond),
+						stat.GetSkewness() / float64(time.Microsecond),
+						stat.GetKurtosis() / float64(time.Microsecond),
+						stat.GetMin() / float64(time.Microsecond),
+						stat.GetMax() / float64(time.Microsecond),
 					})
 				}
 				return values
