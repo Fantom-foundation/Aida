@@ -9,86 +9,11 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/executor/extension/validator"
-	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
-
-var RunSubstateCmd = cli.Command{
-	Action:    RunSubstate,
-	Name:      "substate",
-	HelpName:  "vm-sdb",
-	Usage:     "Iterates over substates that are executed into a StateDb",
-	ArgsUsage: "<blockNumFirst> <blockNumLast>",
-	Flags: []cli.Flag{
-		// AidaDb
-		&utils.AidaDbFlag,
-
-		// StateDb
-		&utils.CarmenSchemaFlag,
-		&utils.StateDbImplementationFlag,
-		&utils.StateDbVariantFlag,
-		&utils.StateDbSrcFlag,
-		&utils.DbTmpFlag,
-		&utils.StateDbLoggingFlag,
-		&utils.ValidateStateHashesFlag,
-
-		// ArchiveDb
-		&utils.ArchiveModeFlag,
-		&utils.ArchiveQueryRateFlag,
-		&utils.ArchiveMaxQueryAgeFlag,
-		&utils.ArchiveVariantFlag,
-
-		// ShadowDb
-		&utils.ShadowDb,
-		&utils.ShadowDbImplementationFlag,
-		&utils.ShadowDbVariantFlag,
-
-		// VM
-		&utils.VmImplementation,
-
-		// Profiling
-		&utils.CpuProfileFlag,
-		&utils.CpuProfilePerIntervalFlag,
-		&utils.DiagnosticServerFlag,
-		&utils.MemoryBreakdownFlag,
-		&utils.MemoryProfileFlag,
-		&utils.RandomSeedFlag,
-		&utils.PrimeThresholdFlag,
-		&utils.ProfileFlag,
-		&utils.ProfileFileFlag,
-		&utils.ProfileIntervalFlag,
-		&utils.ProfileDBFlag,
-		&utils.ProfileBlocksFlag,
-
-		// Priming
-		&utils.RandomizePrimingFlag,
-		&utils.SkipPrimingFlag,
-		&utils.UpdateBufferSizeFlag,
-
-		// Utils
-		&substate.WorkersFlag,
-		&utils.ChainIDFlag,
-		&utils.ContinueOnFailureFlag,
-		&utils.QuietFlag,
-		&utils.SyncPeriodLengthFlag,
-		&utils.KeepDbFlag,
-		//&utils.MaxNumTransactionsFlag,
-		&utils.ValidateTxStateFlag,
-		//&utils.ValidateWorldStateFlag,
-		&utils.ValidateFlag,
-		&logger.LogLevelFlag,
-		&utils.NoHeartbeatLoggingFlag,
-		&utils.TrackProgressFlag,
-	},
-	Description: `
-The aida-vm-sdb substate command requires two arguments: <blockNumFirst> <blockNumLast>
-
-<blockNumFirst> and <blockNumLast> are the first and last block of
-the inclusive range of blocks.`,
-}
 
 // RunSubstate performs sequential block processing on a StateDb
 func RunSubstate(ctx *cli.Context) error {
@@ -108,14 +33,14 @@ func RunSubstate(ctx *cli.Context) error {
 	return run(cfg, substateDb, nil, false, txProcessor{cfg}, nil)
 }
 
-type txProcessor struct {
+type substateProcessor struct {
 	cfg *utils.Config
 }
 
-func (r txProcessor) Process(state executor.State[*substate.Substate], ctx *executor.Context) error {
+func (p substateProcessor) Process(state executor.State[*substate.Substate], ctx *executor.Context) error {
 	_, err := utils.ProcessTx(
 		ctx.State,
-		r.cfg,
+		p.cfg,
 		uint64(state.Block),
 		state.Transaction,
 		state.Data,
@@ -123,7 +48,7 @@ func (r txProcessor) Process(state executor.State[*substate.Substate], ctx *exec
 	return err
 }
 
-func run(
+func runSubstates(
 	cfg *utils.Config,
 	provider executor.Provider[*substate.Substate],
 	stateDb state.StateDB,
