@@ -5,7 +5,6 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"slices"
 	"sort"
@@ -21,9 +20,8 @@ import (
 
 const (
 	// db
-	first uint64 = 0
-	last  uint64 = 65_436_418
-	//last uint64 = 20_000_000
+	first                        uint64 = 0
+	last                         uint64 = 65_436_418
 	interval                     uint64 = 100_000
 	connection                   string = "/home/rapolt/dev/sqlite3/test.db"
 	sqlite3_SelectFromOperations        = `SELECT * FROM operations WHERE start=:start AND end=:end`
@@ -85,9 +83,15 @@ func main() {
 	}
 
 	// db
+	db, err := sqlx.Open("sqlite3", connection)
+	if err != nil {
+		panic(err)
+	}
 
-	db, _ := sqlx.Open("sqlite3", connection)
-	stmt, _ := db.PrepareNamed(sqlite3_SelectFromOperations)
+	stmt, err := db.PrepareNamed(sqlite3_SelectFromOperations)
+	if err != nil {
+		panic(err)
+	}
 
 	stats := []statistics{}
 	q := query{int(0), int(100000)}
@@ -107,8 +111,6 @@ func main() {
 			byStart[s.Start] = append(byStart[s.Start], s)
 		}
 	}
-
-	log.Println(len(byOpId), len(byStart), len(starts))
 
 	stmt.Close()
 	db.Close()
@@ -157,8 +159,6 @@ func main() {
 		}
 	}
 
-	log.Println(target, len(countByStart))
-
 	// plot
 
 	makePieChart("./pngs/count.pie.png", countByOpId, opNameByOpId, clr)
@@ -181,7 +181,11 @@ func main() {
 
 	// package as md
 
-	f, _ := os.Create(pMd)
+	f, err := os.Create(pMd)
+	if err != nil {
+		panic(err)
+	}
+
 	mdf := md.NewMarkdown(f).
 		H2("Overall Count").
 		PlainTextf(md.Image("", "./pngs/count.pie.png")).
@@ -247,7 +251,6 @@ func (b byId) Less(i, j int) bool {
 
 func printLabel(i int) string {
 	if i%10_000_000 == 1 {
-		log.Println(i, i/10_000_000, fmt.Sprintf("%dm", i/10_000_000))
 		if i == 1 {
 			return "0"
 		}
@@ -290,7 +293,10 @@ func makeGraph(pTotalPng string, pAvgPng string, stats []statistics) string {
 		},
 	}
 
-	f, _ := os.Create(pAvgPng)
+	f, err := os.Create(pAvgPng)
+	if err != nil {
+		panic(err)
+	}
 	defer f.Close()
 	graph.Render(chart.PNG, f)
 
@@ -311,7 +317,10 @@ func makeGraph(pTotalPng string, pAvgPng string, stats []statistics) string {
 		},
 	}
 
-	f2, _ := os.Create(pTotalPng)
+	f2, err := os.Create(pTotalPng)
+	if err != nil {
+		panic(err)
+	}
 	defer f.Close()
 	graph2.Render(chart.PNG, f2)
 
@@ -362,7 +371,10 @@ func makeBarChart(pPng string, valByStart map[int]float64, clr map[int]drawing.C
 		YAxis: chart.YAxis{Ticks: ticks},
 	}
 
-	f, _ := os.Create(pPng)
+	f, err := os.Create(pPng)
+	if err != nil {
+		panic(err)
+	}
 	defer f.Close()
 	bars.Render(chart.PNG, f)
 
@@ -388,7 +400,6 @@ func makePieChart(pPng string, valByOpId map[int]float64, nameById map[int]strin
 	for _, val := range vals {
 		now += val.v
 		if now/total < 0.93 {
-			log.Println("!", val.id, nameById[val.id], val.v, total)
 			values = append(values, chart.Value{
 				Value: val.v,
 				Label: fmt.Sprintf("%s %.1f%%", nameById[val.id], val.v/total*100),
@@ -415,7 +426,10 @@ func makePieChart(pPng string, valByOpId map[int]float64, nameById map[int]strin
 		Values: values,
 	}
 
-	f, _ := os.Create(pPng)
+	f, err := os.Create(pPng)
+	if err != nil {
+		panic(err)
+	}
 	defer f.Close()
 	pie.Render(chart.PNG, f)
 
@@ -481,7 +495,6 @@ func makePercentageTrend(pPng string, timeByStartByOpId map[int]map[int]float64,
 		starts []int              = []int{}
 	)
 
-	//for start, _ := range timeByStartByOpId { // gofmt is angry with this?
 	for start := range timeByStartByOpId {
 		starts = append(starts, start)
 	}
@@ -492,7 +505,6 @@ func makePercentageTrend(pPng string, timeByStartByOpId map[int]map[int]float64,
 	}
 
 	stackedBarChart := chart.StackedBarChart{
-		//Title:      "Percentage of Time Spent",
 		TitleStyle:   chart.Shown(),
 		Width:        1200,
 		Height:       1800,
@@ -503,7 +515,10 @@ func makePercentageTrend(pPng string, timeByStartByOpId map[int]map[int]float64,
 		Bars:         bars,
 	}
 
-	f, _ := os.Create(pPng)
+	f, err := os.Create(pPng)
+	if err != nil {
+		panic(err)
+	}
 	defer f.Close()
 	stackedBarChart.Render(chart.PNG, f)
 
