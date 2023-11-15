@@ -65,7 +65,10 @@ func (ps *Printers) AddPrintToWriter(w io.Writer, f func() string) *Printers {
 	return ps.AddPrinter(NewPrintToWriter(w, f))
 }
 
-func (ps *Printers) AddPrintToConsole(f func() string) *Printers {
+func (ps *Printers) AddPrintToConsole(isDisabled bool, f func() string) *Printers {
+	if isDisabled {
+		return ps
+	}
 	return ps.AddPrinter(NewPrintToConsole(f))
 }
 

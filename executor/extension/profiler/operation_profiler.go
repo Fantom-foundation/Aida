@@ -54,7 +54,7 @@ func MakeOperationProfiler[T any](cfg *utils.Config) executor.Extension[T] {
 	}
 
 	// Always print profiling results after each interval
-	ps[IntervalLevel].AddPrintToConsole(func() string { return p.prettyTable().Render() })
+	ps[IntervalLevel].AddPrintToConsole(cfg.Quiet, func() string { return p.prettyTable().Render() })
 	ps[IntervalLevel].AddPrintToFile(cfg.ProfileFile, func() string { return p.prettyTable().RenderCSV() })
 
 	// At the configured level, print to file/db if the respective flags are enabled.
