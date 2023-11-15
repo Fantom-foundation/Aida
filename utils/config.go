@@ -134,6 +134,7 @@ type Config struct {
 	PrimeRandom            bool           // enable randomized priming
 	PrimeThreshold         int            // set account threshold before commit
 	Profile                bool           // enable micro profiling
+	ProfileDepth           int            // 0 = Interval, 1 = Block, 2 = Tx
 	ProfileFile            string         // output file containing profiling result
 	ProfileInterval        uint64         // interval of printing profile result
 	ProfileSqlite3         string         // output profiling results to sqlite3 DB
@@ -631,6 +632,15 @@ func reportNewConfig(cfg *Config, log logger.Logger) {
 			log.Infof("Update buffer size: %v bytes", cfg.UpdateBufferSize)
 		}
 		log.Infof("Validate world state: %v, validate tx state: %v", cfg.ValidateWorldState, cfg.ValidateTxState)
+		if cfg.Profile {
+			log.Infof("Profiling enabled - at depth: %d", cfg.ProfileDepth)
+			if cfg.ProfileFile != "" {
+				log.Infof("  Profiling results output file path: %s", cfg.ProfileFile)
+			}
+			if cfg.ProfileSqlite3 != "" {
+				log.Infof("  Profiling results output to sqlite3: %s", cfg.ProfileSqlite3)
+			}
+		}
 	}
 
 	if cfg.ValidateTxState {

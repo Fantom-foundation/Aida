@@ -125,17 +125,25 @@ func (p *PrintToDb) Close() {
 	p.db.Close()
 }
 
-func NewPrintToSqlite3(conn string, insert string, f func() [][]any) (*PrintToDb, error) {
+func NewPrintToSqlite3(conn string, create string, insert string, f func() [][]any) (*PrintToDb, error) {
+	var err error
+
 	db, err := sql.Open("sqlite3", conn)
 	if err != nil {
 		return nil, fmt.Errorf("unable to open connection to sqlite3 %s", conn)
 	}
+
+	_, err = db.Exec(create)
+	if err != nil {
+		return nil, fmt.Errorf("Could not confirm if table exists")
+	}
+
 	return &PrintToDb{db, insert, f}, err
 }
 
-func (ps *Printers) AddPrintToSqlite3(conn string, insert string, f func() [][]any) *Printers {
+func (ps *Printers) AddPrintToSqlite3(conn string, create string, insert string, f func() [][]any) *Printers {
 	if conn != "" {
-		p, err := NewPrintToSqlite3(conn, insert, f)
+		p, err := NewPrintToSqlite3(conn, create, insert, f)
 		if err != nil {
 			return ps
 		}

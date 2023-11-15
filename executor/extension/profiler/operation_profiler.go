@@ -11,53 +11,128 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 )
 
-const sqlite3_InsertIntoOperations = `
-	INSERT INTO operations(
-		start, end, opId, opName, count, sum, mean, std, variance, skewness, kurtosis, min, max
-	) VALUES ( 
-		?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? 
-	)
-`
+type ProfileDepth int
+
+const (
+	IntervalLevel    ProfileDepth = 0
+	BlockLevel       ProfileDepth = 1
+	TransactionLevel ProfileDepth = 2
+)
 
 // MakeOperationProfiler creates a executor.Extension that records Operation profiling
 func MakeOperationProfiler[T any](cfg *utils.Config) executor.Extension[T] {
+
 	if !cfg.Profile {
 		return extension.NilExtension[T]{}
 	}
 
-	ops := operation.CreateIdLabelMap()
+	// Fetch set of operations and prepare underlying analytics, printers object
+	var (
+		depth ProfileDepth
+		ops   map[byte]string
+		anlts []*analytics.IncrementalAnalytics
+		ps    []*utils.Printers
+	)
+
+	depth = ProfileDepth(cfg.ProfileDepth)
+	ops = operation.CreateIdLabelMap()
+	for i := 0; i < cfg.ProfileDepth+1; i++ {
+		anlts = append(anlts, analytics.NewIncrementalAnalytics(len(ops)))
+		ps = append(ps, utils.NewPrinters())
+	}
+
 	p := &operationProfiler[T]{
 		cfg:      cfg,
+		depth:    depth,
 		ops:      ops,
-		anlt:     analytics.NewIncrementalAnalytics(len(ops)),
-		ps:       utils.NewPrinters(),
+		anlts:    anlts,
+		ps:       ps,
 		interval: utils.NewInterval(cfg.First, cfg.Last, cfg.ProfileInterval),
 		log:      logger.NewLogger(cfg.LogLevel, "Operation Profiler"),
 	}
 
-	p.ps.AddPrintToConsole(func() string { return p.prettyTable().Render() })
-	p.ps.AddPrintToFile(cfg.ProfileFile, func() string { return p.prettyTable().RenderCSV() })
-	p.ps.AddPrintToSqlite3(cfg.ProfileSqlite3, sqlite3_InsertIntoOperations, p.insertIntoOperations)
+	// Always print profiling results after each interval
+	ps[IntervalLevel].AddPrintToConsole(func() string { return p.prettyTable().Render() })
+	ps[IntervalLevel].AddPrintToFile(cfg.ProfileFile, func() string { return p.prettyTable().RenderCSV() })
+
+	// At the configured level, print to file/db if the respective flags are enabled.
+	ps[cfg.ProfileDepth].AddPrintToSqlite3(p.sqlite3(cfg.ProfileSqlite3, p.depth))
 
 	return p
 }
 
 type operationProfiler[T any] struct {
 	extension.NilExtension[T]
-	cfg      *utils.Config
-	ops      map[byte]string
-	anlt     *analytics.IncrementalAnalytics
-	ps       *utils.Printers
-	interval *utils.Interval
-	log      logger.Logger
+
+	// configuration
+	cfg   *utils.Config
+	depth ProfileDepth
+
+	// analytics/printing
+	ops   map[byte]string
+	anlts []*analytics.IncrementalAnalytics
+	ps    []*utils.Printers
+
+	// where am i?
+	interval                 *utils.Interval
+	lastProcessedBlock       int
+	lastProcessedTransaction int
+
+	log logger.Logger
 }
 
-func min(a, b uint64) uint64 {
-	if a < b {
-		return a
+// Entrypoint
+// Instantiate a proxy for each level of depth
+func (p *operationProfiler[T]) PreRun(_ executor.State[T], ctx *executor.Context) error {
+	// wrap from deepest level first
+	for d := p.depth; d >= IntervalLevel; d-- {
+		ctx.State = proxy.NewProfilerProxy(ctx.State, p.anlts[d], p.cfg.LogLevel)
 	}
-	return b
+	return nil
 }
+
+// On Interval Change -> Print and reset interval level analytics
+// Since there are blocks without transaction, change can only be detected at the beginning of the upcoming block
+func (p *operationProfiler[T]) PreBlock(state executor.State[T], _ *executor.Context) error {
+	if uint64(state.Block) > p.interval.End() {
+		p.ps[IntervalLevel].Print()
+		p.interval.Next()
+		p.anlts[IntervalLevel].Reset()
+	}
+	return nil
+}
+
+// On Block End -> Print and reset block level analytics
+func (p *operationProfiler[T]) PostBlock(state executor.State[T], _ *executor.Context) error {
+	p.lastProcessedBlock = state.Block
+	if p.depth >= BlockLevel {
+		p.ps[BlockLevel].Print()
+		p.anlts[BlockLevel].Reset()
+	}
+	return nil
+}
+
+// On Transaction End -> Print and reset tx level analytics
+func (p *operationProfiler[T]) PostTransaction(state executor.State[T], _ *executor.Context) error {
+	p.lastProcessedTransaction = state.Transaction
+	if p.depth >= TransactionLevel {
+		p.ps[TransactionLevel].Print()
+		p.anlts[TransactionLevel].Reset()
+	}
+	return nil
+}
+
+// Exitpoint
+// Print any analytics still unprinted and clean up
+func (p *operationProfiler[T]) PostRun(executor.State[T], *executor.Context, error) error {
+	for _, printer := range p.ps {
+		printer.Print()
+		printer.Close()
+	}
+	return nil
+}
+
+// Printer-related
 
 func (p *operationProfiler[T]) prettyTable() table.Writer {
 	t := table.NewWriter()
@@ -68,7 +143,7 @@ func (p *operationProfiler[T]) prettyTable() table.Writer {
 	t.AppendHeader(table.Row{
 		"op", "first", "last", "n", "sum(us)", "mean(us)", "std(us)", "min(us)", "max(us)",
 	})
-	for opId, stat := range p.anlt.Iterate() {
+	for opId, stat := range p.anlts[IntervalLevel].Iterate() {
 		totalCount += stat.GetCount()
 		totalSum += stat.GetSum()
 
@@ -89,45 +164,156 @@ func (p *operationProfiler[T]) prettyTable() table.Writer {
 	return t
 }
 
-func (p *operationProfiler[T]) insertIntoOperations() [][]any {
-	values := [][]any{{}}
-	for opId, stat := range p.anlt.Iterate() {
-		value := []any{
-			p.interval.Start(),
-			p.interval.End(),
-			opId,
-			p.ops[byte(opId)],
-			stat.GetCount(),
-			stat.GetSum() / float64(1000),
-			stat.GetMean() / float64(1000),
-			stat.GetStandardDeviation() / float64(1000),
-			stat.GetVariance() / float64(1000),
-			stat.GetSkewness() / float64(1000),
-			stat.GetKurtosis() / float64(1000),
-			stat.GetMin() / float64(1000),
-			stat.GetMax() / float64(1000),
-		}
-		values = append(values, value)
+const (
+	sqlite3_Interval_CreateTableIfNotExist = `
+		CREATE TABLE IF NOT EXISTS ops_interval (
+			start INTEGER NOT NULL, 
+			end INTEGER NOT NULL, 
+			opId INTEGER NOT NULL,
+			opName STRING,
+			count INTEGER,
+		 	sum FLOAT,
+	 		mean FLOAT,
+			std FLOAT,
+			variance FLOAT,
+			skewness FLOAT,
+			kurtosis FLOAT,
+			min FLOAT,
+			max FLOAT,
+			PRIMARY KEY (start, end, opId)
+		)
+	`
+	sqlite3_Block_CreateTableIfNotExist = `
+		CREATE TABLE IF NOT EXISTS ops_block (
+			blockId INTEGER NOT NULL, 
+			opId INTEGER NOT NULL,
+			opName STRING,
+			count INTEGER,
+		 	sum FLOAT,
+	 		mean FLOAT,
+			std FLOAT,
+			variance FLOAT,
+			skewness FLOAT,
+			kurtosis FLOAT,
+			min FLOAT,
+			max FLOAT,
+			PRIMARY KEY (blockId, opId)
+		)
+	`
+	sqlite3_Transaction_CreateTableIfNotExist = `
+		CREATE TABLE IF NOT EXISTS ops_transaction (
+			blockId INTEGER NOT NULL,
+			txId INTEGER NOT NULL,
+			opId INTEGER NOT NULL,
+			opName STRING,
+			count INTEGER,
+		 	sum FLOAT,
+	 		mean FLOAT,
+			std FLOAT,
+			variance FLOAT,
+			skewness FLOAT,
+			kurtosis FLOAT,
+			min FLOAT,
+			max FLOAT,
+			PRIMARY KEY (blockId, txId, opId)
+		)
+	`
+	sqlite3_Interval_InsertOrReplace = `
+		INSERT or REPLACE INTO ops_interval (
+			start, end, opId, opName, count, sum, mean, std, variance, skewness, kurtosis, min, max
+		) VALUES ( 
+			?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? 
+		)
+	`
+	sqlite3_Block_InsertOrReplace = `
+		INSERT or REPLACE INTO ops_block (
+			blockId, opId, opName, count, sum, mean, std, variance, skewness, kurtosis, min, max
+		) VALUES ( 
+			?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+		)
+	`
+	sqlite3_Transaction_InsertOrReplace = `
+		INSERT or REPLACE INTO ops_transaction (
+			blockId, txId, opId, opName, count, sum, mean, std, variance, skewness, kurtosis, min, max
+		) VALUES ( 
+			?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? 
+		)
+	`
+)
+
+func (p *operationProfiler[T]) sqlite3(conn string, depth ProfileDepth) (string, string, string, func() [][]any) {
+	switch depth {
+	case IntervalLevel:
+		return conn, sqlite3_Interval_CreateTableIfNotExist, sqlite3_Interval_InsertOrReplace,
+			func() [][]any {
+				values := [][]any{{}}
+				for opId, stat := range p.anlts[depth].Iterate() {
+					values = append(values, []any{
+						p.interval.Start(),
+						p.interval.End(),
+						opId,
+						p.ops[byte(opId)],
+						stat.GetCount(),
+						stat.GetSum() / float64(1000),
+						stat.GetMean() / float64(1000),
+						stat.GetStandardDeviation() / float64(1000),
+						stat.GetVariance() / float64(1000),
+						stat.GetSkewness() / float64(1000),
+						stat.GetKurtosis() / float64(1000),
+						stat.GetMin() / float64(1000),
+						stat.GetMax() / float64(1000),
+					})
+				}
+				return values
+			}
+
+	case BlockLevel:
+		return conn, sqlite3_Block_CreateTableIfNotExist, sqlite3_Block_InsertOrReplace,
+			func() [][]any {
+				values := [][]any{{}}
+				for opId, stat := range p.anlts[depth].Iterate() {
+					values = append(values, []any{
+						p.lastProcessedBlock,
+						opId,
+						p.ops[byte(opId)],
+						stat.GetCount(),
+						stat.GetSum() / float64(1000),
+						stat.GetMean() / float64(1000),
+						stat.GetStandardDeviation() / float64(1000),
+						stat.GetVariance() / float64(1000),
+						stat.GetSkewness() / float64(1000),
+						stat.GetKurtosis() / float64(1000),
+						stat.GetMin() / float64(1000),
+						stat.GetMax() / float64(1000),
+					})
+				}
+				return values
+			}
+
+	case TransactionLevel:
+		return conn, sqlite3_Transaction_CreateTableIfNotExist, sqlite3_Transaction_InsertOrReplace,
+			func() [][]any {
+				values := [][]any{{}}
+				for opId, stat := range p.anlts[depth].Iterate() {
+					values = append(values, []any{
+						p.lastProcessedBlock,
+						p.lastProcessedTransaction,
+						opId,
+						p.ops[byte(opId)],
+						stat.GetCount(),
+						stat.GetSum() / float64(1000),
+						stat.GetMean() / float64(1000),
+						stat.GetStandardDeviation() / float64(1000),
+						stat.GetVariance() / float64(1000),
+						stat.GetSkewness() / float64(1000),
+						stat.GetKurtosis() / float64(1000),
+						stat.GetMin() / float64(1000),
+						stat.GetMax() / float64(1000),
+					})
+				}
+				return values
+			}
 	}
-	return values
-}
 
-func (p *operationProfiler[T]) PreRun(_ executor.State[T], ctx *executor.Context) error {
-	ctx.State = proxy.NewProfilerProxy(ctx.State, p.anlt, p.cfg.LogLevel)
-	return nil
-}
-
-func (p *operationProfiler[T]) PreBlock(state executor.State[T], _ *executor.Context) error {
-	if uint64(state.Block) > p.interval.End() {
-		p.ps.Print()
-		p.interval.Next()
-		p.anlt.Reset()
-	}
-	return nil
-}
-
-func (p *operationProfiler[T]) PostRun(executor.State[T], *executor.Context, error) error {
-	p.ps.Print()
-	p.ps.Close()
-	return nil
+	return "", "", "", nil // results in printer doing nothing
 }

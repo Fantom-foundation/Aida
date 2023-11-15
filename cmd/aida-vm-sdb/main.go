@@ -66,6 +66,7 @@ var RunSubstateCmd = cli.Command{
 		&utils.RandomSeedFlag,
 		&utils.PrimeThresholdFlag,
 		&utils.ProfileFlag,
+		&utils.ProfileDepthFlag,
 		&utils.ProfileFileFlag,
 		&utils.ProfileIntervalFlag,
 		&utils.ProfileDBFlag,

@@ -55,6 +55,8 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		RandomSeed:             getFlagValue(ctx, RandomSeedFlag).(int64),
 		PrimeThreshold:         getFlagValue(ctx, PrimeThresholdFlag).(int),
 		Profile:                getFlagValue(ctx, ProfileFlag).(bool),
+		ProfileDepth:           getFlagValue(ctx, ProfileDepthFlag).(int),
+		ProfileSqlite3:         getFlagValue(ctx, ProfileSqlite3Flag).(string),
 		ProfileFile:            getFlagValue(ctx, ProfileFileFlag).(string),
 		ProfileInterval:        getFlagValue(ctx, ProfileIntervalFlag).(uint64),
 		SkipPriming:            getFlagValue(ctx, SkipPrimingFlag).(bool),
