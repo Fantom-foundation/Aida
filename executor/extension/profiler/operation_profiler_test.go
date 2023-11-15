@@ -243,7 +243,7 @@ func TestOperationProfiler_WithEachOpOnce(t *testing.T) {
 				continue
 			}
 
-			s := ext.anlt.GetCount(op)
+			s := ext.anlts[0].GetCount(op)
 			if s != 1 {
 				t.Errorf("op %s occurs %d times, expecting exactly 1", ops[op], s)
 			}
@@ -320,7 +320,7 @@ func TestOperationProfiler_WithRandomInput(t *testing.T) {
 				if b > intervalEnd {
 					intervalStart = intervalEnd + 1
 					intervalEnd += test.args.interval
-					totalSeenOpCount += getTotalOpCount(ext.anlt)
+					totalSeenOpCount += getTotalOpCount(ext.anlts[0])
 					intervalGeneratedOpCount = 0
 				}
 
@@ -330,8 +330,8 @@ func TestOperationProfiler_WithRandomInput(t *testing.T) {
 
 				if b > intervalEnd {
 					// make sure that the stats is reset
-					if getTotalOpCount(ext.anlt) != 0 {
-						t.Errorf("Should be reset but found %d ops", getTotalOpCount(ext.anlt))
+					if getTotalOpCount(ext.anlts[0]) != 0 {
+						t.Errorf("Should be reset but found %d ops", getTotalOpCount(ext.anlts[0]))
 					}
 				}
 
@@ -352,8 +352,8 @@ func TestOperationProfiler_WithRandomInput(t *testing.T) {
 				ext.PostBlock(executor.State[any]{Block: int(b)}, nil)
 
 				// check that amount of ops seen eqals to amount of ops generated within this interval
-				if getTotalOpCount(ext.anlt) != intervalGeneratedOpCount {
-					t.Errorf("[Interval] Seen %d ops, but generated %d ops", getTotalOpCount(ext.anlt), intervalGeneratedOpCount)
+				if getTotalOpCount(ext.anlts[0]) != intervalGeneratedOpCount {
+					t.Errorf("[Interval] Seen %d ops, but generated %d ops", getTotalOpCount(ext.anlts[0]), intervalGeneratedOpCount)
 				}
 			}
 
@@ -362,7 +362,7 @@ func TestOperationProfiler_WithRandomInput(t *testing.T) {
 			})
 
 			// check that amount of ops seen equals to amount of ops generated
-			totalSeenOpCount += getTotalOpCount(ext.anlt)
+			totalSeenOpCount += getTotalOpCount(ext.anlts[0])
 			if totalSeenOpCount != totalGeneratedOpCount {
 				t.Errorf("[Total] Seen %d ops, but generated %d ops", totalSeenOpCount, totalGeneratedOpCount)
 			}
