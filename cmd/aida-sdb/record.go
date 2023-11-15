@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/Fantom-foundation/Aida/executor"
-	"github.com/Fantom-foundation/Aida/executor/extension/aidadb"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/logger"
@@ -88,7 +87,6 @@ func record(
 ) error {
 	var extensions = []executor.Extension[*substate.Substate]{
 		tracker.MakeProgressLogger[*substate.Substate](cfg, 0),
-		aidadb.MakeAidaDbBlockChecker[*substate.Substate](cfg),
 		tracker.MakeProgressTracker(cfg, 0),
 		statedb.MakeTemporaryStatePrepper(),
 		statedb.MakeTemporaryProxyRecorderPrepper(cfg),

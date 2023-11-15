@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/Fantom-foundation/Aida/executor"
-	"github.com/Fantom-foundation/Aida/executor/extension/aidadb"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
@@ -64,7 +63,6 @@ func run(
 		profiler.MakeCpuProfiler[*substate.Substate](cfg),
 		statedb.MakeArchivePrepper(),
 		tracker.MakeProgressLogger[*substate.Substate](cfg, 0),
-		aidadb.MakeAidaDbBlockChecker[*substate.Substate](cfg),
 	}
 
 	if stateDb == nil {

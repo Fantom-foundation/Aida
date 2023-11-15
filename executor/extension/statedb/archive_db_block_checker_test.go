@@ -1,7 +1,9 @@
 package statedb
 
 import (
+	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -24,7 +26,7 @@ func TestArchiveDbBlockChecker_PreRunReturnsErrorIfStateDbDoesNotHaveArchive(t *
 		t.Fatalf("pre-run must return error")
 	}
 
-	wantedErr := "your state db does not contain archive"
+	wantedErr := fmt.Sprintf("state db %v does not contain archive", cfg.StateDbSrc)
 
 	if strings.Compare(err.Error(), wantedErr) != 0 {
 		t.Fatalf("unexpected err\ngot: %v\n want: %v", err, wantedErr)
@@ -48,7 +50,7 @@ func TestArchiveDbBlockChecker_PreRunReturnsErrorIfStateDbDoesNotContainGivenBlo
 		t.Fatalf("pre-run must return error")
 	}
 
-	wantedErr := "last block of given archive-db (10) is smaller than given last block (11), please chose last block in range"
+	wantedErr := "last block of given archive-db (10) is smaller than given last block (11), please choose a block in range"
 
 	if strings.Compare(err.Error(), wantedErr) != 0 {
 		t.Fatalf("unexpected err\ngot: %v\n want: %v", err, wantedErr)
@@ -73,7 +75,7 @@ func TestArchiveDbBlockChecker_PreRunReturnsErrorIfPrimeStateDbDoesNotHaveArchiv
 		t.Fatalf("pre-run must return error")
 	}
 
-	wantedErr := "your prime state db does not contain archive"
+	wantedErr := fmt.Sprintf("prime state db %v does not contain archive", filepath.Join(cfg.StateDbSrc, utils.PathToPrimaryStateDb))
 
 	if strings.Compare(err.Error(), wantedErr) != 0 {
 		t.Fatalf("unexpected err\ngot: %v\n want: %v", err, wantedErr)
@@ -112,7 +114,7 @@ func TestArchiveDbBlockChecker_PreRunReturnsErrorIfPrimeStateDbDoesNotContainGiv
 		t.Fatalf("pre-run must return error")
 	}
 
-	wantedErr := "last block of given archive-db (10) is smaller than given last block (11), please chose last block in range"
+	wantedErr := "last block of given archive-db (10) is smaller than given last block (11), please choose a block in range"
 
 	if strings.Compare(err.Error(), wantedErr) != 0 {
 		t.Fatalf("unexpected err\ngot: %v\n want: %v", err, wantedErr)
@@ -151,7 +153,7 @@ func TestArchiveDbBlockChecker_PreRunReturnsErrorIfShadowStateDbDoesNotContainGi
 		t.Fatalf("pre-run must return error")
 	}
 
-	wantedErr := "last block of given archive-db (10) is smaller than given last block (11), please chose last block in range"
+	wantedErr := "last block of given archive-db (10) is smaller than given last block (11), please choose a block in range"
 
 	if strings.Compare(err.Error(), wantedErr) != 0 {
 		t.Fatalf("unexpected err\ngot: %v\n want: %v", err, wantedErr)
@@ -187,7 +189,7 @@ func TestArchiveDbBlockChecker_PreRunReturnsErrorIfShadowStateDbDoesNotHaveArchi
 		t.Fatalf("pre-run must return error")
 	}
 
-	wantedErr := "your shadow state db does not contain archive"
+	wantedErr := fmt.Sprintf("shadow state db %v does not contain archive", filepath.Join(cfg.StateDbSrc, utils.PathToShadowStateDb))
 
 	if strings.Compare(err.Error(), wantedErr) != 0 {
 		t.Fatalf("unexpected err\ngot: %v\n want: %v", err, wantedErr)

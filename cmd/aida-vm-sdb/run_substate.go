@@ -30,7 +30,7 @@ func RunSubstate(ctx *cli.Context) error {
 	}
 	defer substateDb.Close()
 
-	return runSubstates(cfg, substateDb, nil, false)
+	return runSubstates(cfg, substateDb, nil)
 }
 
 type substateProcessor struct {
@@ -70,7 +70,6 @@ func runSubstates(
 	extensionList = append(extensionList, []executor.Extension[*substate.Substate]{
 		profiler.MakeThreadLocker[*substate.Substate](),
 		aidadb.MakeAidaDbManager[*substate.Substate](cfg),
-		aidadb.MakeAidaDbBlockChecker[*substate.Substate](cfg),
 		profiler.MakeVirtualMachineStatisticsPrinter[*substate.Substate](cfg),
 		tracker.MakeProgressLogger[*substate.Substate](cfg, 15*time.Second),
 		tracker.MakeProgressTracker(cfg, 100_000),
