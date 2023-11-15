@@ -9,14 +9,19 @@ import (
 	"gonum.org/v1/gonum/stat"
 )
 
+//
+// General Helper Functions
+//
+
+// Assert if two objects are exactly the same
 func assertExactlyEqual(t *testing.T, a interface{}, b interface{}) {
 	if a != b {
 		t.Errorf("%s != %s", a, b)
 	}
 }
 
+// Assert that the difference between two floats are negligible, e.g. within a certain threshold
 const float64AlmostEqualThreshold = 1e-3
-
 func assertAlmostEqual(t *testing.T, a float64, b float64) {
 	if a == 0 {
 		if b > float64AlmostEqualThreshold {
@@ -28,15 +33,16 @@ func assertAlmostEqual(t *testing.T, a float64, b float64) {
 			t.Errorf("%f !~ %f", a, b)
 		}
 	}
-
 }
 
+// Assert if a float64 is NaN
 func assertIsNaN(t *testing.T, a float64) {
 	if !math.IsNaN(a) {
 		t.Errorf("%.6f should have been NaN but isn't", a)
 	}
 }
 
+// Assert if Kahan Sum is more corect than naive sum
 func assertKahanSumMoreCorrect(t *testing.T, actual float64, sum float64, ksum float64) float64 {
 	diff := math.Abs(actual - sum)
 	kdiff := math.Abs(actual - ksum)
@@ -48,6 +54,11 @@ func assertKahanSumMoreCorrect(t *testing.T, actual float64, sum float64, ksum f
 	return ksum - sum
 }
 
+//
+// Testcases
+//
+
+// Generate a large amount of a constant value to see if golang suffers from mathematical instability
 func TestAnalyticsWithConstants(t *testing.T) {
 	type result struct {
 		mean     float64
@@ -101,13 +112,14 @@ func TestAnalyticsWithConstants(t *testing.T) {
 
 				assertExactlyEqual(t, test.want, got)
 				assertExactlyEqual(t, test.args.count, a.GetCount(0))
-				assertIsNaN(t, a.GetSkewness(0))
-				assertIsNaN(t, a.GetKurtosis(0))
+				assertIsNaN(t, a.GetSkewness(0)) // Constant means there is undefined skewness
+				assertIsNaN(t, a.GetKurtosis(0)) // Constant means there is undefined kurtosis
 			})
 		}
 	}
 }
 
+// Generate a cycle of two values, to create scenario where mathematical instability would be more likely
 func TestAnalyticsWithAlternativeBigSmall(t *testing.T) {
 	type result struct {
 		mean     float64
@@ -128,7 +140,10 @@ func TestAnalyticsWithAlternativeBigSmall(t *testing.T) {
 	}
 
 	tests := []testcase{
+		// one big value follows by large amount of very small values
 		{args: argument{1, 1e10, 1, 1e-10, 1e6 - 1}, want: result{10000, 1e14 - 1e7}},
+		
+		// multiple cycles of two values
 		{args: argument{1e4, 1e6, 1e3, -1e6, 1e3}, want: result{0, 1e12}},
 	}
 
@@ -167,6 +182,7 @@ func TestAnalyticsWithAlternativeBigSmall(t *testing.T) {
 	}
 }
 
+// Generate using a defined gaussian distributions, and using the observations to reason about the population
 func TestAnalyticsWithGaussianDistribution(t *testing.T) {
 	type argument struct {
 		amount   uint64
@@ -222,6 +238,10 @@ func TestAnalyticsWithGaussianDistribution(t *testing.T) {
 	}
 }
 
+// Helper function to calculate Kurtosis manually
+// Majority of the libraries calculate "sample kurtosis", but our algorithm calculates "population kurtosis"
+// In order to check correctness of the kurtosis calculation, it's manually calculated here
+// Sample Kurtosis is compared to external library and Population Kurtosis is compared against the algorithm
 func calculateKurtosis(data []float64) (float64, float64) {
 	n := float64(len(data))
 	mean := stat.Mean(data, nil)
@@ -241,6 +261,7 @@ func calculateKurtosis(data []float64) (float64, float64) {
 	return sk, pk
 }
 
+// Generate small sequence with known results to measure correctness of calculation of mean, variance, std
 func TestAnalyticsWithKnownInput(t *testing.T) {
 	type result struct {
 		mean     float64

@@ -1,5 +1,6 @@
 package analytics
 
+// Interface for any further analytics implementation
 type Analytics interface {
 	Reset()
 	Update(id byte, data float64)
