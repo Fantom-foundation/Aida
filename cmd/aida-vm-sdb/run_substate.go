@@ -30,7 +30,7 @@ func RunSubstate(ctx *cli.Context) error {
 	}
 	defer substateDb.Close()
 
-	return run(cfg, substateDb, nil, false, txProcessor{cfg}, nil)
+	return runSubstates(cfg, substateDb, nil, substateProcessor{cfg}, nil)
 }
 
 type substateProcessor struct {
@@ -52,7 +52,6 @@ func runSubstates(
 	cfg *utils.Config,
 	provider executor.Provider[*substate.Substate],
 	stateDb state.StateDB,
-	disableStateDbExtension bool,
 	processor executor.Processor[*substate.Substate],
 	extra []executor.Extension[*substate.Substate],
 ) error {
@@ -62,7 +61,7 @@ func runSubstates(
 		profiler.MakeDiagnosticServer[*substate.Substate](cfg),
 	}
 
-	if !disableStateDbExtension {
+	if stateDb != nil {
 		extensionList = append(extensionList, statedb.MakeStateDbManager[*substate.Substate](cfg))
 	}
 

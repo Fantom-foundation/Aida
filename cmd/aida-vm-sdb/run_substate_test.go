@@ -83,7 +83,7 @@ func TestVmSdb_Substate_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		db.EXPECT().EndBlock(),
 	)
 
-	if err := run(cfg, provider, db, true, txProcessor{cfg}, nil); err != nil {
+	if err := runSubstates(cfg, provider, db, substateProcessor{cfg}, nil); err != nil {
 		t.Errorf("run failed: %v", err)
 	}
 }
@@ -162,7 +162,7 @@ func TestVmSdb_Substate_AllTransactionsAreProcessedInOrder(t *testing.T) {
 		ext.EXPECT().PostRun(executor.AtBlock[*substate.Substate](5), gomock.Any(), nil),
 	)
 
-	if err := run(cfg, provider, db, true, processor, []executor.Extension[*substate.Substate]{ext}); err != nil {
+	if err := runSubstates(cfg, provider, db, substateProcessor{cfg}, nil); err != nil {
 		t.Errorf("run failed: %v", err)
 	}
 }
@@ -204,7 +204,7 @@ func TestVmSdb_Substate_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 	)
 
 	// run fails but not on validation
-	err := run(cfg, provider, db, true, txProcessor{cfg}, nil)
+	err := runSubstates(cfg, provider, db, substateProcessor{cfg}, nil)
 	if err == nil {
 		t.Errorf("run must fail")
 	}
@@ -246,7 +246,7 @@ func TestVmSdb_Substate_ValidationFailsOnInvalidTransaction(t *testing.T) {
 		db.EXPECT().EndTransaction(),
 	)
 
-	err := run(cfg, provider, db, true, txProcessor{cfg}, nil)
+	err := runSubstates(cfg, provider, db, substateProcessor{cfg}, nil)
 	if err == nil {
 		t.Errorf("validation must fail")
 	}
