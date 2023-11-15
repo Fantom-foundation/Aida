@@ -1,7 +1,6 @@
 package statedb
 
 import (
-	"errors"
 	"fmt"
 	"path/filepath"
 
@@ -34,7 +33,7 @@ func (c *archiveBlockChecker[T]) PreRun(executor.State[T], *executor.Context) er
 		}
 
 		if !primeDbInfo.ArchiveMode {
-			return errors.New("your prime state db does not contain archive")
+			return fmt.Errorf("prime state db %v does not contain archive", filepath.Join(c.cfg.StateDbSrc, utils.PathToPrimaryStateDb))
 		}
 
 		shadowDbInfo, err := utils.ReadStateDbInfo(filepath.Join(c.cfg.StateDbSrc, utils.PathToShadowStateDb, utils.PathToDbInfo))
@@ -43,14 +42,10 @@ func (c *archiveBlockChecker[T]) PreRun(executor.State[T], *executor.Context) er
 		}
 
 		if !shadowDbInfo.ArchiveMode {
-			return errors.New("your shadow state db does not contain archive")
+			return fmt.Errorf("shadow state db %v does not contain archive", filepath.Join(c.cfg.StateDbSrc, utils.PathToShadowStateDb))
 		}
 
-		if shadowDbInfo.Block < primeDbInfo.Block {
-			lastBlock = shadowDbInfo.Block
-		} else {
-			lastBlock = primeDbInfo.Block
-		}
+		lastBlock = utils.Min(shadowDbInfo.Block, primeDbInfo.Block)
 
 	} else {
 		stateDbInfo, err := utils.ReadStateDbInfo(filepath.Join(c.cfg.StateDbSrc, utils.PathToDbInfo))
@@ -59,13 +54,13 @@ func (c *archiveBlockChecker[T]) PreRun(executor.State[T], *executor.Context) er
 		}
 
 		if !stateDbInfo.ArchiveMode {
-			return errors.New("your state db does not contain archive")
+			return fmt.Errorf("state db %v does not contain archive", c.cfg.StateDbSrc)
 		}
 		lastBlock = stateDbInfo.Block
 	}
 
 	if c.cfg.Last > lastBlock {
-		return fmt.Errorf("last block of given archive-db (%v) is smaller than given last block (%v), please chose last block in range", lastBlock, c.cfg.Last)
+		return fmt.Errorf("last block of given archive-db (%v) is smaller than given last block (%v), please choose a block in range", lastBlock, c.cfg.Last)
 	}
 
 	return nil
