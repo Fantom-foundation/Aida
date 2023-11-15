@@ -22,6 +22,7 @@ func assertExactlyEqual(t *testing.T, a interface{}, b interface{}) {
 
 // Assert that the difference between two floats are negligible, e.g. within a certain threshold
 const float64AlmostEqualThreshold = 1e-3
+
 func assertAlmostEqual(t *testing.T, a float64, b float64) {
 	if a == 0 {
 		if b > float64AlmostEqualThreshold {
@@ -142,7 +143,7 @@ func TestAnalyticsWithAlternativeBigSmall(t *testing.T) {
 	tests := []testcase{
 		// one big value follows by large amount of very small values
 		{args: argument{1, 1e10, 1, 1e-10, 1e6 - 1}, want: result{10000, 1e14 - 1e7}},
-		
+
 		// multiple cycles of two values
 		{args: argument{1e4, 1e6, 1e3, -1e6, 1e3}, want: result{0, 1e12}},
 	}
