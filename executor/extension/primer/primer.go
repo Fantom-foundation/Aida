@@ -37,7 +37,7 @@ type stateDbPrimer[T any] struct {
 // PreRun primes StateDb to given block.
 func (p *stateDbPrimer[T]) PreRun(_ executor.State[T], ctx *executor.Context) error {
 	if p.cfg.IsExistingStateDb {
-		p.log.Warning("Skipping priming due to usage of preexisting StateDb")
+		p.log.Warning("Skipping priming due to usage of pre-existing StateDb")
 		return nil
 	}
 
