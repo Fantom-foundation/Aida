@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"math/big"
 	"math/rand"
-	"os"
 	"testing"
 	"time"
 
@@ -20,169 +19,12 @@ import (
 	"golang.org/x/exp/maps"
 )
 
+// general helper functions for testing
+
 func assertExactlyEqual[T comparable](t *testing.T, a T, b T) {
 	if a != b {
 		t.Errorf("%v != %v", a, b)
 	}
-}
-
-func getStateDbFuncs(db state.StateDB) []func() {
-	mockAddress := common.HexToAddress("0x00000F1")
-	mockHash := common.BigToHash(big.NewInt(0))
-	return []func(){
-		func() { db.CreateAccount(mockAddress) },
-		func() { db.SubBalance(mockAddress, big.NewInt(0)) },
-		func() { db.AddBalance(mockAddress, big.NewInt(0)) },
-		func() { db.GetBalance(mockAddress) },
-		func() { db.GetNonce(mockAddress) },
-		func() { db.SetNonce(mockAddress, 0) },
-		func() { db.GetCodeHash(mockAddress) },
-		func() { db.GetCode(mockAddress) },
-		func() { db.SetCode(mockAddress, []byte{0}) },
-		func() { db.GetCodeSize(mockAddress) },
-		func() { db.AddRefund(0) },
-		func() { db.SubRefund(0) },
-		func() { db.GetRefund() },
-		func() { db.GetCommittedState(mockAddress, mockHash) },
-		func() { db.GetState(mockAddress, mockHash) },
-		func() { db.SetState(mockAddress, mockHash, mockHash) },
-		func() { db.Suicide(mockAddress) },
-		func() { db.HasSuicided(mockAddress) },
-		func() { db.Exist(mockAddress) },
-		func() { db.Empty(mockAddress) },
-		func() {
-			db.PrepareAccessList(
-				mockAddress,
-				&mockAddress,
-				[]common.Address{},
-				[]types.AccessTuple{{mockAddress, []common.Hash{mockHash}}},
-			)
-		},
-		func() { db.AddAddressToAccessList(mockAddress) },
-		func() { db.AddressInAccessList(mockAddress) },
-		func() { db.SlotInAccessList(mockAddress, mockHash) },
-		func() { db.AddSlotToAccessList(mockAddress, mockHash) },
-		func() { db.Snapshot() },
-		func() { db.RevertToSnapshot(0) },
-		func() { db.BeginTransaction(0) },
-		func() { db.EndTransaction() },
-		func() { db.BeginBlock(0) },
-		func() { db.EndBlock() },
-		func() { db.BeginSyncPeriod(0) },
-		func() { db.EndSyncPeriod() },
-		func() { db.AddLog(nil) },
-		func() { db.GetLogs(mockHash, mockHash) },
-		func() { db.AddPreimage(mockHash, []byte{0}) },
-		func() { db.ForEachStorage(mockAddress, func(h1, h2 common.Hash) bool { return false }) },
-		func() { db.Prepare(mockHash, 0) },
-		func() { db.Finalise(false) },
-		func() { db.IntermediateRoot(false) },
-		func() { db.Commit(false) },
-		func() { db.Close() },
-	}
-}
-
-func prepareMockStateDb(m *state.MockStateDB) {
-	m.EXPECT().CreateAccount(gomock.Any()).AnyTimes()
-	m.EXPECT().SubBalance(gomock.Any(), gomock.Any()).AnyTimes()
-	m.EXPECT().AddBalance(gomock.Any(), gomock.Any()).AnyTimes()
-	m.EXPECT().GetBalance(gomock.Any()).AnyTimes()
-	m.EXPECT().GetNonce(gomock.Any()).AnyTimes()
-	m.EXPECT().SetNonce(gomock.Any(), gomock.Any()).AnyTimes()
-	m.EXPECT().GetCodeHash(gomock.Any()).AnyTimes()
-	m.EXPECT().GetCode(gomock.Any()).AnyTimes()
-	m.EXPECT().SetCode(gomock.Any(), gomock.Any()).AnyTimes()
-	m.EXPECT().GetCodeSize(gomock.Any()).AnyTimes()
-	m.EXPECT().AddRefund(gomock.Any()).AnyTimes()
-	m.EXPECT().SubRefund(gomock.Any()).AnyTimes()
-	m.EXPECT().GetRefund().AnyTimes()
-	m.EXPECT().GetCommittedState(gomock.Any(), gomock.Any()).AnyTimes()
-	m.EXPECT().GetState(gomock.Any(), gomock.Any()).AnyTimes()
-	m.EXPECT().SetState(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-	m.EXPECT().Suicide(gomock.Any()).AnyTimes()
-	m.EXPECT().HasSuicided(gomock.Any()).AnyTimes()
-	m.EXPECT().Exist(gomock.Any()).AnyTimes()
-	m.EXPECT().Empty(gomock.Any()).AnyTimes()
-	m.EXPECT().PrepareAccessList(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-	m.EXPECT().AddAddressToAccessList(gomock.Any()).AnyTimes()
-	m.EXPECT().AddressInAccessList(gomock.Any()).AnyTimes()
-	m.EXPECT().SlotInAccessList(gomock.Any(), gomock.Any()).AnyTimes()
-	m.EXPECT().AddSlotToAccessList(gomock.Any(), gomock.Any()).AnyTimes()
-	m.EXPECT().Snapshot().AnyTimes()
-	m.EXPECT().RevertToSnapshot(gomock.Any()).AnyTimes()
-	m.EXPECT().BeginTransaction(gomock.Any()).AnyTimes()
-	m.EXPECT().EndTransaction().AnyTimes()
-	m.EXPECT().BeginBlock(gomock.Any()).AnyTimes()
-	m.EXPECT().EndBlock().AnyTimes()
-	m.EXPECT().BeginSyncPeriod(gomock.Any()).AnyTimes()
-	m.EXPECT().EndSyncPeriod().AnyTimes()
-	m.EXPECT().AddLog(gomock.Any()).AnyTimes()
-	m.EXPECT().GetLogs(gomock.Any(), gomock.Any()).AnyTimes()
-	m.EXPECT().AddPreimage(gomock.Any(), gomock.Any()).AnyTimes()
-	m.EXPECT().ForEachStorage(gomock.Any(), gomock.Any()).AnyTimes()
-	m.EXPECT().Prepare(gomock.Any(), gomock.Any()).AnyTimes()
-	m.EXPECT().Finalise(gomock.Any()).AnyTimes()
-	m.EXPECT().IntermediateRoot(gomock.Any()).AnyTimes()
-	m.EXPECT().Commit(gomock.Any()).AnyTimes()
-	m.EXPECT().Close().AnyTimes()
-}
-
-func prepareMockStateDbOnce(m *state.MockStateDB) {
-	m.EXPECT().CreateAccount(gomock.Any())
-	m.EXPECT().SubBalance(gomock.Any(), gomock.Any())
-	m.EXPECT().AddBalance(gomock.Any(), gomock.Any())
-	m.EXPECT().GetBalance(gomock.Any())
-	m.EXPECT().GetNonce(gomock.Any())
-	m.EXPECT().SetNonce(gomock.Any(), gomock.Any())
-	m.EXPECT().GetCodeHash(gomock.Any())
-	m.EXPECT().GetCode(gomock.Any())
-	m.EXPECT().SetCode(gomock.Any(), gomock.Any())
-	m.EXPECT().GetCodeSize(gomock.Any())
-	m.EXPECT().AddRefund(gomock.Any())
-	m.EXPECT().SubRefund(gomock.Any())
-	m.EXPECT().GetRefund()
-	m.EXPECT().GetCommittedState(gomock.Any(), gomock.Any())
-	m.EXPECT().GetState(gomock.Any(), gomock.Any())
-	m.EXPECT().SetState(gomock.Any(), gomock.Any(), gomock.Any())
-	m.EXPECT().Suicide(gomock.Any())
-	m.EXPECT().HasSuicided(gomock.Any())
-	m.EXPECT().Exist(gomock.Any())
-	m.EXPECT().Empty(gomock.Any())
-	m.EXPECT().PrepareAccessList(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
-	m.EXPECT().AddAddressToAccessList(gomock.Any())
-	m.EXPECT().AddressInAccessList(gomock.Any())
-	m.EXPECT().SlotInAccessList(gomock.Any(), gomock.Any())
-	m.EXPECT().AddSlotToAccessList(gomock.Any(), gomock.Any())
-	m.EXPECT().Snapshot()
-	m.EXPECT().RevertToSnapshot(gomock.Any())
-	m.EXPECT().BeginTransaction(gomock.Any())
-	m.EXPECT().EndTransaction()
-	m.EXPECT().BeginBlock(gomock.Any())
-	m.EXPECT().EndBlock()
-	m.EXPECT().BeginSyncPeriod(gomock.Any())
-	m.EXPECT().EndSyncPeriod()
-	m.EXPECT().AddLog(gomock.Any())
-	m.EXPECT().GetLogs(gomock.Any(), gomock.Any())
-	m.EXPECT().AddPreimage(gomock.Any(), gomock.Any())
-	m.EXPECT().ForEachStorage(gomock.Any(), gomock.Any())
-	m.EXPECT().Prepare(gomock.Any(), gomock.Any())
-	m.EXPECT().Finalise(gomock.Any())
-	m.EXPECT().IntermediateRoot(gomock.Any())
-	m.EXPECT().Commit(gomock.Any())
-	m.EXPECT().Close()
-}
-
-func getRandomStateDbFunc(db state.StateDB, r *rand.Rand) func() {
-	funcs := getStateDbFuncs(db)
-	funcCount := len(funcs)
-	return funcs[r.Intn(funcCount)]
-}
-
-func suppressStdout(f func()) {
-	tmp := os.Stdout
-	os.Stdout = nil
-	f()
-	os.Stdout = tmp
 }
 
 func getTotalOpCount(a *analytics.IncrementalAnalytics) int {
@@ -192,6 +34,11 @@ func getTotalOpCount(a *analytics.IncrementalAnalytics) int {
 	}
 	return int(count)
 }
+
+// This generates exactly one call per operation and test if the following are true:
+// - That op profiler correctly proxies any StateDB implementation
+// - Call each function exactly once
+//   - Make explicit the fact that some StateDB are not proxied (see black list below)
 
 func TestOperationProfiler_WithEachOpOnce(t *testing.T) {
 	name := "OperationProfiler EachOpOnce"
@@ -217,18 +64,14 @@ func TestOperationProfiler_WithEachOpOnce(t *testing.T) {
 		ext.PreRun(executor.State[any]{}, &mockCtx)
 		funcs := getStateDbFuncs(mockCtx.State)
 		for b := int(cfg.First); b <= int(cfg.Last); b += 1 + rand.Intn(3) {
-			suppressStdout(func() {
-				ext.PreBlock(executor.State[any]{Block: int(b)}, nil)
-			})
+			ext.PreBlock(executor.State[any]{Block: int(b)}, nil)
 			for _, f := range funcs {
 				f()
 			}
 			ext.PostBlock(executor.State[any]{Block: int(b)}, nil)
 
 		}
-		suppressStdout(func() {
-			ext.PostRun(executor.State[any]{}, nil, nil)
-		})
+		ext.PostRun(executor.State[any]{}, nil, nil)
 
 		totalOpCount := 0
 		ops := operation.CreateIdLabelMap()
@@ -257,10 +100,15 @@ func TestOperationProfiler_WithEachOpOnce(t *testing.T) {
 	})
 }
 
+// This generate random amount of operations call per block and test if the following are true:
+// - That profiler correctly proxies any StateDB implementation
+// - If analytics is properly reset when it should
+// - If interval is correct (and that it's 0-index), and is updated when it should
+// - That the amount of operation generated are logged on analytics agrees
 func TestOperationProfiler_WithRandomInput(t *testing.T) {
 	type argument struct {
 		name           string
-		seed           int64
+		seed           int64 // -1 = don't use my seed, random something for me
 		minOpsPerBlock int
 		maxOpsPerBlock int
 		first          int
@@ -326,10 +174,7 @@ func TestOperationProfiler_WithRandomInput(t *testing.T) {
 					intervalGeneratedOpCount = 0
 				}
 
-				suppressStdout(func() {
-					ext.PreBlock(executor.State[any]{Block: int(b)}, nil)
-				})
-
+				ext.PreBlock(executor.State[any]{Block: int(b)}, nil)
 				if b > intervalEnd {
 					// make sure that the stats is reset
 					if getTotalOpCount(ext.anlts[0]) != 0 {
@@ -359,9 +204,7 @@ func TestOperationProfiler_WithRandomInput(t *testing.T) {
 				}
 			}
 
-			suppressStdout(func() {
-				ext.PostRun(executor.State[any]{}, nil, nil)
-			})
+			ext.PostRun(executor.State[any]{}, nil, nil)
 
 			// check that amount of ops seen equals to amount of ops generated
 			totalSeenOpCount += getTotalOpCount(ext.anlts[0])
@@ -374,6 +217,7 @@ func TestOperationProfiler_WithRandomInput(t *testing.T) {
 
 // Originally this would test if interval <= 0 or if last < first.
 // This is deemed unneccessary since there is a separate validation for config, so they are never malformed.
+// Since we need to test disabled profiling, this is retained.
 func TestOperationProfiler_WithMalformedConfig(t *testing.T) {
 	type argument struct {
 		profile  bool
@@ -403,4 +247,166 @@ func TestOperationProfiler_WithMalformedConfig(t *testing.T) {
 			t.Errorf("profiler is enabled although configuration not set or malformed")
 		}
 	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+
+// HELPER FUNCTIONS
+
+// contains a list of all possible mocked operations to be tested.
+func getStateDbFuncs(db state.StateDB) []func() {
+	mockAddress := common.HexToAddress("0x00000F1")
+	mockHash := common.BigToHash(big.NewInt(0))
+	return []func(){
+		func() { db.CreateAccount(mockAddress) },
+		func() { db.SubBalance(mockAddress, big.NewInt(0)) },
+		func() { db.AddBalance(mockAddress, big.NewInt(0)) },
+		func() { db.GetBalance(mockAddress) },
+		func() { db.GetNonce(mockAddress) },
+		func() { db.SetNonce(mockAddress, 0) },
+		func() { db.GetCodeHash(mockAddress) },
+		func() { db.GetCode(mockAddress) },
+		func() { db.SetCode(mockAddress, []byte{0}) },
+		func() { db.GetCodeSize(mockAddress) },
+		func() { db.AddRefund(0) },
+		func() { db.SubRefund(0) },
+		func() { db.GetRefund() },
+		func() { db.GetCommittedState(mockAddress, mockHash) },
+		func() { db.GetState(mockAddress, mockHash) },
+		func() { db.SetState(mockAddress, mockHash, mockHash) },
+		func() { db.Suicide(mockAddress) },
+		func() { db.HasSuicided(mockAddress) },
+		func() { db.Exist(mockAddress) },
+		func() { db.Empty(mockAddress) },
+		func() {
+			db.PrepareAccessList(
+				mockAddress,
+				&mockAddress,
+				[]common.Address{},
+				[]types.AccessTuple{{mockAddress, []common.Hash{mockHash}}},
+			)
+		},
+		func() { db.AddAddressToAccessList(mockAddress) },
+		func() { db.AddressInAccessList(mockAddress) },
+		func() { db.SlotInAccessList(mockAddress, mockHash) },
+		func() { db.AddSlotToAccessList(mockAddress, mockHash) },
+		func() { db.Snapshot() },
+		func() { db.RevertToSnapshot(0) },
+		func() { db.BeginTransaction(0) },
+		func() { db.EndTransaction() },
+		func() { db.BeginBlock(0) },
+		func() { db.EndBlock() },
+		func() { db.BeginSyncPeriod(0) },
+		func() { db.EndSyncPeriod() },
+		func() { db.AddLog(nil) },
+		func() { db.GetLogs(mockHash, mockHash) },
+		func() { db.AddPreimage(mockHash, []byte{0}) },
+		func() { db.ForEachStorage(mockAddress, func(h1, h2 common.Hash) bool { return false }) },
+		func() { db.Prepare(mockHash, 0) },
+		func() { db.Finalise(false) },
+		func() { db.IntermediateRoot(false) },
+		func() { db.Commit(false) },
+		func() { db.Close() },
+	}
+}
+
+// MockStateDB must be prepared before used (it needs to know how many time each function will be called).
+// This functions tell MockStateDB to expect any number of calls (0 or more) to each of the functions (for randomized test)
+func prepareMockStateDb(m *state.MockStateDB) {
+	m.EXPECT().CreateAccount(gomock.Any()).AnyTimes()
+	m.EXPECT().SubBalance(gomock.Any(), gomock.Any()).AnyTimes()
+	m.EXPECT().AddBalance(gomock.Any(), gomock.Any()).AnyTimes()
+	m.EXPECT().GetBalance(gomock.Any()).AnyTimes()
+	m.EXPECT().GetNonce(gomock.Any()).AnyTimes()
+	m.EXPECT().SetNonce(gomock.Any(), gomock.Any()).AnyTimes()
+	m.EXPECT().GetCodeHash(gomock.Any()).AnyTimes()
+	m.EXPECT().GetCode(gomock.Any()).AnyTimes()
+	m.EXPECT().SetCode(gomock.Any(), gomock.Any()).AnyTimes()
+	m.EXPECT().GetCodeSize(gomock.Any()).AnyTimes()
+	m.EXPECT().AddRefund(gomock.Any()).AnyTimes()
+	m.EXPECT().SubRefund(gomock.Any()).AnyTimes()
+	m.EXPECT().GetRefund().AnyTimes()
+	m.EXPECT().GetCommittedState(gomock.Any(), gomock.Any()).AnyTimes()
+	m.EXPECT().GetState(gomock.Any(), gomock.Any()).AnyTimes()
+	m.EXPECT().SetState(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	m.EXPECT().Suicide(gomock.Any()).AnyTimes()
+	m.EXPECT().HasSuicided(gomock.Any()).AnyTimes()
+	m.EXPECT().Exist(gomock.Any()).AnyTimes()
+	m.EXPECT().Empty(gomock.Any()).AnyTimes()
+	m.EXPECT().PrepareAccessList(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	m.EXPECT().AddAddressToAccessList(gomock.Any()).AnyTimes()
+	m.EXPECT().AddressInAccessList(gomock.Any()).AnyTimes()
+	m.EXPECT().SlotInAccessList(gomock.Any(), gomock.Any()).AnyTimes()
+	m.EXPECT().AddSlotToAccessList(gomock.Any(), gomock.Any()).AnyTimes()
+	m.EXPECT().Snapshot().AnyTimes()
+	m.EXPECT().RevertToSnapshot(gomock.Any()).AnyTimes()
+	m.EXPECT().BeginTransaction(gomock.Any()).AnyTimes()
+	m.EXPECT().EndTransaction().AnyTimes()
+	m.EXPECT().BeginBlock(gomock.Any()).AnyTimes()
+	m.EXPECT().EndBlock().AnyTimes()
+	m.EXPECT().BeginSyncPeriod(gomock.Any()).AnyTimes()
+	m.EXPECT().EndSyncPeriod().AnyTimes()
+	m.EXPECT().AddLog(gomock.Any()).AnyTimes()
+	m.EXPECT().GetLogs(gomock.Any(), gomock.Any()).AnyTimes()
+	m.EXPECT().AddPreimage(gomock.Any(), gomock.Any()).AnyTimes()
+	m.EXPECT().ForEachStorage(gomock.Any(), gomock.Any()).AnyTimes()
+	m.EXPECT().Prepare(gomock.Any(), gomock.Any()).AnyTimes()
+	m.EXPECT().Finalise(gomock.Any()).AnyTimes()
+	m.EXPECT().IntermediateRoot(gomock.Any()).AnyTimes()
+	m.EXPECT().Commit(gomock.Any()).AnyTimes()
+	m.EXPECT().Close().AnyTimes()
+}
+
+// MockStateDB must be prepared before used (it needs to know how many time each function will be called.
+// This functions tell MockStateDB to expect exactly one call to each of the possible functions
+func prepareMockStateDbOnce(m *state.MockStateDB) {
+	m.EXPECT().CreateAccount(gomock.Any())
+	m.EXPECT().SubBalance(gomock.Any(), gomock.Any())
+	m.EXPECT().AddBalance(gomock.Any(), gomock.Any())
+	m.EXPECT().GetBalance(gomock.Any())
+	m.EXPECT().GetNonce(gomock.Any())
+	m.EXPECT().SetNonce(gomock.Any(), gomock.Any())
+	m.EXPECT().GetCodeHash(gomock.Any())
+	m.EXPECT().GetCode(gomock.Any())
+	m.EXPECT().SetCode(gomock.Any(), gomock.Any())
+	m.EXPECT().GetCodeSize(gomock.Any())
+	m.EXPECT().AddRefund(gomock.Any())
+	m.EXPECT().SubRefund(gomock.Any())
+	m.EXPECT().GetRefund()
+	m.EXPECT().GetCommittedState(gomock.Any(), gomock.Any())
+	m.EXPECT().GetState(gomock.Any(), gomock.Any())
+	m.EXPECT().SetState(gomock.Any(), gomock.Any(), gomock.Any())
+	m.EXPECT().Suicide(gomock.Any())
+	m.EXPECT().HasSuicided(gomock.Any())
+	m.EXPECT().Exist(gomock.Any())
+	m.EXPECT().Empty(gomock.Any())
+	m.EXPECT().PrepareAccessList(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any())
+	m.EXPECT().AddAddressToAccessList(gomock.Any())
+	m.EXPECT().AddressInAccessList(gomock.Any())
+	m.EXPECT().SlotInAccessList(gomock.Any(), gomock.Any())
+	m.EXPECT().AddSlotToAccessList(gomock.Any(), gomock.Any())
+	m.EXPECT().Snapshot()
+	m.EXPECT().RevertToSnapshot(gomock.Any())
+	m.EXPECT().BeginTransaction(gomock.Any())
+	m.EXPECT().EndTransaction()
+	m.EXPECT().BeginBlock(gomock.Any())
+	m.EXPECT().EndBlock()
+	m.EXPECT().BeginSyncPeriod(gomock.Any())
+	m.EXPECT().EndSyncPeriod()
+	m.EXPECT().AddLog(gomock.Any())
+	m.EXPECT().GetLogs(gomock.Any(), gomock.Any())
+	m.EXPECT().AddPreimage(gomock.Any(), gomock.Any())
+	m.EXPECT().ForEachStorage(gomock.Any(), gomock.Any())
+	m.EXPECT().Prepare(gomock.Any(), gomock.Any())
+	m.EXPECT().Finalise(gomock.Any())
+	m.EXPECT().IntermediateRoot(gomock.Any())
+	m.EXPECT().Commit(gomock.Any())
+	m.EXPECT().Close()
+}
+
+// Helper function to randomize an operation to be called
+func getRandomStateDbFunc(db state.StateDB, r *rand.Rand) func() {
+	funcs := getStateDbFuncs(db)
+	funcCount := len(funcs)
+	return funcs[r.Intn(funcCount)]
 }

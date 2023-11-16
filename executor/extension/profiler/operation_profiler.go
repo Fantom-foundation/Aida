@@ -13,6 +13,7 @@ import (
 	"github.com/jedib0t/go-pretty/v6/table"
 )
 
+// OperationProfiler can profile at interval, block or transaction level
 type ProfileDepth int
 
 const (
@@ -28,7 +29,6 @@ func MakeOperationProfiler[T any](cfg *utils.Config) executor.Extension[T] {
 		return extension.NilExtension[T]{}
 	}
 
-	// Fetch set of operations and prepare underlying analytics, printers object
 	var (
 		depth ProfileDepth
 		ops   map[byte]string
@@ -38,6 +38,8 @@ func MakeOperationProfiler[T any](cfg *utils.Config) executor.Extension[T] {
 
 	depth = ProfileDepth(cfg.ProfileDepth)
 	ops = operation.CreateIdLabelMap()
+
+	// analytics are created for each depth level
 	for i := 0; i < cfg.ProfileDepth+1; i++ {
 		anlts = append(anlts, analytics.NewIncrementalAnalytics(len(ops)))
 		ps = append(ps, utils.NewPrinters())
@@ -53,12 +55,12 @@ func MakeOperationProfiler[T any](cfg *utils.Config) executor.Extension[T] {
 		log:      logger.NewLogger(cfg.LogLevel, "Operation Profiler"),
 	}
 
-	// Always print profiling results after each interval
+	// Always print profiling results after each interval, unless cfg.Quiet
 	ps[IntervalLevel].AddPrintToConsole(cfg.Quiet, func() string { return p.prettyTable().Render() })
 	ps[IntervalLevel].AddPrintToFile(cfg.ProfileFile, func() string { return p.prettyTable().RenderCSV() })
 
 	// At the configured level, print to file/db if the respective flags are enabled.
-	ps[cfg.ProfileDepth].AddPrintToSqlite3(p.sqlite3(cfg.ProfileSqlite3, p.depth))
+	ps[p.depth].AddPrintToSqlite3(p.sqlite3(cfg.ProfileSqlite3, p.depth))
 
 	return p
 }
@@ -134,7 +136,7 @@ func (p *operationProfiler[T]) PostRun(executor.State[T], *executor.Context, err
 	return nil
 }
 
-// Printer-related
+// String Printer-related
 
 func (p *operationProfiler[T]) prettyTable() table.Writer {
 	t := table.NewWriter()
@@ -165,6 +167,8 @@ func (p *operationProfiler[T]) prettyTable() table.Writer {
 
 	return t
 }
+
+// DB Printer-related
 
 const (
 	sqlite3_Interval_CreateTableIfNotExist = `
