@@ -14,6 +14,7 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/urfave/cli/v2"
 )
 
@@ -27,6 +28,7 @@ var InfoCommand = cli.Command{
 		&cmdRange,
 		&cmdPrintDbHash,
 		&cmdPrintStateHash,
+		&cmdPrintStateHashSeparated,
 	},
 }
 
@@ -35,8 +37,9 @@ var cmdCount = cli.Command{
 	Usage: "Prints count of records",
 	Subcommands: []*cli.Command{
 		&cmdCountAll,
-		&cmdCountDestroyed,
+		&cmdCountDeleted,
 		&cmdCountSubstate,
+		&cmdCountStateHash,
 	},
 }
 
@@ -51,9 +54,9 @@ var cmdCountAll = cli.Command{
 	},
 }
 
-var cmdCountDestroyed = cli.Command{
-	Action:    printDestroyedCount,
-	Name:      "destroyed",
+var cmdCountDeleted = cli.Command{
+	Action:    printDeletedCount,
+	Name:      "deleted",
 	Usage:     "Prints how many destroyed accounts are in AidaDb between given block range",
 	ArgsUsage: "<firstBlockNum>, <lastBlockNum>",
 	Flags: []cli.Flag{
@@ -65,6 +68,16 @@ var cmdCountSubstate = cli.Command{
 	Action:    printSubstateCount,
 	Name:      "substate",
 	Usage:     "Prints how many substates are in AidaDb between given block range",
+	ArgsUsage: "<firstBlockNum>, <lastBlockNum>",
+	Flags: []cli.Flag{
+		&utils.AidaDbFlag,
+	},
+}
+
+var cmdCountStateHash = cli.Command{
+	Action:    printStateHashCount,
+	Name:      "state-hash",
+	Usage:     "Prints how many state-hashes are in AidaDb between given block range",
 	ArgsUsage: "<firstBlockNum>, <lastBlockNum>",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
@@ -141,10 +154,19 @@ var cmdPrintStateHash = cli.Command{
 	},
 }
 
+var cmdPrintStateHashSeparated = cli.Command{
+	Action: generateMd5OfPrefixes,
+	Name:   "state-hash-separated",
+	Usage:  "Prints state hash of db prefixes individually.",
+	Flags: []cli.Flag{
+		&utils.AidaDbFlag,
+	},
+}
+
 func doDbHash(ctx *cli.Context) error {
 	var force = ctx.Bool(flags.ForceFlag.Name)
 
-	aidaDb, err := rawdb.NewLevelDBDatabase(ctx.String(utils.AidaDbFlag.Name), 1024, 100, "profiling", false)
+	aidaDb, err := rawdb.NewLevelDBDatabase(ctx.String(utils.AidaDbFlag.Name), 1024, 100, "profiling", true)
 	if err != nil {
 		return fmt.Errorf("cannot open db; %v", err)
 	}
@@ -153,12 +175,14 @@ func doDbHash(ctx *cli.Context) error {
 
 	var dbHash []byte
 
+	log := logger.NewLogger("INFO", "AidaDb-Db-Hash")
+
 	md := utils.NewAidaDbMetadata(aidaDb, "INFO")
 
 	// first try to extract from db
 	dbHash = md.GetDbHash()
 	if len(dbHash) != 0 && !force {
-		fmt.Printf("Db-Hash: %v", hex.EncodeToString(dbHash))
+		log.Infof("Db-Hash: %v", hex.EncodeToString(dbHash))
 		return nil
 	}
 
@@ -207,14 +231,14 @@ func printAllCount(ctx *cli.Context) error {
 	return nil
 }
 
-// printDestroyedCount in given AidaDb
-func printDestroyedCount(ctx *cli.Context) error {
+// printDeletedCount in given AidaDb
+func printDeletedCount(ctx *cli.Context) error {
 	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if argErr != nil {
 		return argErr
 	}
 
-	log := logger.NewLogger(cfg.LogLevel, "AidaDb-Print-Destroyed-Count")
+	log := logger.NewLogger(cfg.LogLevel, "AidaDb-Print-Deleted-Count")
 
 	db, err := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
 	if err != nil {
@@ -254,6 +278,39 @@ func printSubstateCount(ctx *cli.Context) error {
 	}
 
 	log.Noticef("Found %v substates between blocks %v-%v", count, cfg.First, cfg.Last)
+
+	return nil
+}
+
+// printStateHashCount in given AidaDb
+func printStateHashCount(ctx *cli.Context) error {
+	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
+	if argErr != nil {
+		return argErr
+	}
+
+	log := logger.NewLogger(cfg.LogLevel, "AidaDb-Print-StateHash-Count")
+
+	var count uint64
+
+	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "", true)
+	if err != nil {
+		return fmt.Errorf("cannot open aida-db; %v", err)
+	}
+
+	hashProvider := utils.MakeStateHashProvider(aidaDb)
+	for i := cfg.First; i <= cfg.Last; i++ {
+		_, err := hashProvider.GetStateHash(int(i))
+		if err != nil {
+			if errors.Is(err, leveldb.ErrNotFound) {
+				continue
+			}
+			return err
+		}
+		count++
+	}
+
+	log.Noticef("Found %v state-hashes between blocks %v-%v", count, cfg.First, cfg.Last)
 
 	return nil
 }
@@ -375,5 +432,42 @@ func printStateHash(ctx *cli.Context) error {
 
 	log.Noticef("State hash for block %v is 0x%v", blockNum, hex.EncodeToString(bytes))
 
+	return nil
+}
+
+// generateMd5OfPrefixes calculates md5 of all prefixes in given AidaDb separately
+func generateMd5OfPrefixes(ctx *cli.Context) error {
+	log := logger.NewLogger("INFO", "DbHashGenerateCMD")
+
+	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
+
+	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
+	if err != nil {
+		return fmt.Errorf("cannot open db; %v", err)
+	}
+
+	defer utildb.MustCloseDB(aidaDb)
+
+	log.Noticef("Starting DbHash generation for %v; this may take several hours...", cfg.AidaDb)
+	log.Noticef("Substates...")
+	_, err = utildb.GeneratePrefixHash(aidaDb, substate.Stage1SubstatePrefix, "INFO")
+	if err != nil {
+		return err
+	}
+	log.Noticef("Updateset...")
+	_, err = utildb.GeneratePrefixHash(aidaDb, substate.SubstateAllocPrefix, "INFO")
+	if err != nil {
+		return err
+	}
+	log.Noticef("Deleted...")
+	_, err = utildb.GeneratePrefixHash(aidaDb, substate.DestroyedAccountPrefix, "INFO")
+	if err != nil {
+		return err
+	}
+	log.Noticef("StateHash...")
+	_, err = utildb.GeneratePrefixHash(aidaDb, utils.StateHashPrefix, "INFO")
+	if err != nil {
+		return err
+	}
 	return nil
 }
