@@ -63,7 +63,7 @@ func StateHashScraper(ctx context.Context, chainId ChainID, operaPath string, db
 			return fmt.Errorf("block 1 not found")
 		}
 
-		err = saveStateRoot(db, block["stateRoot"].(string), "0x0")
+		err = SaveStateRoot(db, "0x0", block["stateRoot"].(string))
 		if err != nil {
 			return err
 		}
@@ -81,7 +81,7 @@ func StateHashScraper(ctx context.Context, chainId ChainID, operaPath string, db
 			return fmt.Errorf("block %d not found", i)
 		}
 
-		err = saveStateRoot(db, block["stateRoot"].(string), blockNumber)
+		err = SaveStateRoot(db, blockNumber, block["stateRoot"].(string))
 		if err != nil {
 			return err
 		}
@@ -123,8 +123,8 @@ func getClient(ctx context.Context, chainId ChainID, ipcPath string, log logger.
 	}
 }
 
-// saveStateRoot saves the state root hash to the database
-func saveStateRoot(db ethdb.Database, stateRoot string, blockNumber string) error {
+// SaveStateRoot saves the state root hash to the database
+func SaveStateRoot(db ethdb.Database, blockNumber string, stateRoot string) error {
 	fullPrefix := StateHashPrefix + blockNumber
 	err := db.Put([]byte(fullPrefix), hexutils.HexToBytes(strings.TrimPrefix(stateRoot, "0x")))
 	if err != nil {

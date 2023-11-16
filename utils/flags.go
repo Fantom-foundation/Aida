@@ -388,4 +388,9 @@ var (
 		Name:  "err-logging",
 		Usage: "defines path to error-log-file where any PROCESSING error is recorded",
 	}
+	DbComponentFlag = cli.StringFlag{
+		Name:     "db-component",
+		Usage:    "db component to be used (\"all\", \"substate\", \"delete\", \"update\", \"state-hash\")",
+		Required: true,
+	}
 )
