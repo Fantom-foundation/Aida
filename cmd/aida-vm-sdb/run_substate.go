@@ -5,6 +5,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension/aidadb"
+	"github.com/Fantom-foundation/Aida/executor/extension/primer"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
@@ -73,7 +74,7 @@ func runSubstates(
 		profiler.MakeVirtualMachineStatisticsPrinter[*substate.Substate](cfg),
 		tracker.MakeProgressLogger[*substate.Substate](cfg, 15*time.Second),
 		tracker.MakeProgressTracker(cfg, 100_000),
-		statedb.MakeStateDbPrimer[*substate.Substate](cfg),
+		primer.MakeStateDbPrimer[*substate.Substate](cfg),
 		profiler.MakeMemoryUsagePrinter[*substate.Substate](cfg),
 		profiler.MakeMemoryProfiler[*substate.Substate](cfg),
 		statedb.MakeStateDbPrepper(),

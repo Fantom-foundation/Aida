@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"math/big"
-	"math/rand"
 	"os"
 	"path/filepath"
 	"testing"
@@ -18,123 +17,11 @@ import (
 	"github.com/ethereum/go-ethereum/core/rawdb"
 )
 
-const testAccountStorageSize = 10
-
-type statedbTestCase struct {
-	variant        string
-	shadowImpl     string
-	archiveMode    bool
-	archiveVariant string
-	primeRandom    bool
-}
-
-func getStatedbTestCases() []statedbTestCase {
-	testCases := []statedbTestCase{
-		{"geth", "", true, "", false},
-		{"geth", "geth", true, "", false},
-		{"carmen", "geth", false, "none", false},
-		{"carmen", "geth", true, "ldb", false},
-		{"carmen", "geth", true, "sqlite", false},
-	}
-
-	return testCases
-}
-
-// makeRandomByteSlice creates byte slice of given length with randomized values
-func makeRandomByteSlice(t *testing.T, bufferLength int) []byte {
-	// make byte slice
-	buffer := make([]byte, bufferLength)
-
-	// fill the slice with random data
-	_, err := rand.Read(buffer)
-	if err != nil {
-		t.Fatalf("failed test data; can not generate random byte slice; %s", err.Error())
-	}
-
-	return buffer
-}
-
-// getRandom generates random number in from given range
-func getRandom(rangeLower int, rangeUpper int) int {
-	// seed the PRNG
-	rand.Seed(time.Now().UnixNano())
-
-	// get randomized balance
-	randInt := rangeLower + rand.Intn(rangeUpper-rangeLower+1)
-	return randInt
-}
-
-// makeAccountStorage generates randomized account storage with testAccountStorageSize length
-func makeAccountStorage(t *testing.T) map[common.Hash]common.Hash {
-	// create storage map
-	storage := map[common.Hash]common.Hash{}
-
-	// fill the storage map
-	for j := 0; j < testAccountStorageSize; j++ {
-		k := common.BytesToHash(makeRandomByteSlice(t, 32))
-		storage[k] = common.BytesToHash(makeRandomByteSlice(t, 32))
-	}
-
-	return storage
-}
-
-// makeTestConfig creates a config struct for testing
-func makeTestConfig(testCase statedbTestCase) *Config {
-	cfg := &Config{
-		DbLogging:      false,
-		DbImpl:         testCase.variant,
-		DbVariant:      "",
-		ShadowImpl:     testCase.shadowImpl,
-		ShadowVariant:  "",
-		ArchiveVariant: testCase.archiveVariant,
-		ArchiveMode:    testCase.archiveMode,
-		PrimeRandom:    testCase.primeRandom,
-	}
-
-	if testCase.variant == "flat" {
-		cfg.DbVariant = "go-memory"
-	}
-
-	if testCase.primeRandom {
-		cfg.PrimeThreshold = 0
-		cfg.RandomSeed = int64(getRandom(1_000_000, 100_000_000))
-	}
-
-	return cfg
-}
-
-// makeWorldState generates randomized world state containing 100 accounts
-func makeWorldState(t *testing.T) (substate.SubstateAlloc, []common.Address) {
-	// create list of addresses
-	var addrList []common.Address
-
-	// create world state
-	ws := substate.SubstateAlloc{}
-
-	for i := 0; i < 100; i++ {
-		// create random address
-		addr := common.BytesToAddress(makeRandomByteSlice(t, 40))
-
-		// add to address list
-		addrList = append(addrList, addr)
-
-		// create account
-		ws[addr] = &substate.SubstateAccount{
-			Nonce:   uint64(getRandom(1, 1000*5000)),
-			Balance: big.NewInt(int64(getRandom(1, 1000*5000))),
-			Storage: makeAccountStorage(t),
-			Code:    makeRandomByteSlice(t, 2048),
-		}
-	}
-
-	return ws, addrList
-}
-
 // TestStatedb_InitCloseStateDB test closing db immediately after initialization
 func TestStatedb_InitCloseStateDB(t *testing.T) {
-	for _, tc := range getStatedbTestCases() {
-		t.Run(fmt.Sprintf("DB variant: %s; shadowImpl: %s; archive variant: %s", tc.variant, tc.shadowImpl, tc.archiveVariant), func(t *testing.T) {
-			cfg := makeTestConfig(tc)
+	for _, tc := range GetStateDbTestCases() {
+		t.Run(fmt.Sprintf("DB variant: %s; shadowImpl: %s; archive variant: %s", tc.Variant, tc.ShadowImpl, tc.ArchiveVariant), func(t *testing.T) {
+			cfg := MakeTestConfig(tc)
 
 			// Initialization of state DB
 			sDB, _, err := PrepareStateDB(cfg)
@@ -154,11 +41,11 @@ func TestStatedb_InitCloseStateDB(t *testing.T) {
 
 // TestStatedb_DeleteDestroyedAccountsFromWorldState tests removal of destroyed accounts from given world state
 func TestStatedb_DeleteDestroyedAccountsFromWorldState(t *testing.T) {
-	for _, tc := range getStatedbTestCases() {
-		t.Run(fmt.Sprintf("DB variant: %s; shadowImpl: %s; archive variant: %s", tc.variant, tc.shadowImpl, tc.archiveVariant), func(t *testing.T) {
-			cfg := makeTestConfig(tc)
+	for _, tc := range GetStateDbTestCases() {
+		t.Run(fmt.Sprintf("DB variant: %s; shadowImpl: %s; archive variant: %s", tc.Variant, tc.ShadowImpl, tc.ArchiveVariant), func(t *testing.T) {
+			cfg := MakeTestConfig(tc)
 			// Generating randomized world state
-			ws, addrList := makeWorldState(t)
+			ws, addrList := MakeWorldState(t)
 			// Init directory for destroyed accounts DB
 			deletionDb := t.TempDir()
 			// Pick two account which will represent destroyed ones
@@ -208,11 +95,11 @@ func TestStatedb_DeleteDestroyedAccountsFromWorldState(t *testing.T) {
 
 // TestStatedb_DeleteDestroyedAccountsFromWorldState tests removal of deleted accounts from given state DB
 func TestStatedb_DeleteDestroyedAccountsFromStateDB(t *testing.T) {
-	for _, tc := range getStatedbTestCases() {
-		t.Run(fmt.Sprintf("DB variant: %s; shadowImpl: %s; archive variant: %s", tc.variant, tc.shadowImpl, tc.archiveVariant), func(t *testing.T) {
-			cfg := makeTestConfig(tc)
+	for _, tc := range GetStateDbTestCases() {
+		t.Run(fmt.Sprintf("DB variant: %s; shadowImpl: %s; archive variant: %s", tc.Variant, tc.ShadowImpl, tc.ArchiveVariant), func(t *testing.T) {
+			cfg := MakeTestConfig(tc)
 			// Generating randomized world state
-			ws, addrList := makeWorldState(t)
+			ws, addrList := MakeWorldState(t)
 			// Init directory for destroyed accounts DB
 			deletedAccountsDir := t.TempDir()
 			// Pick two account which will represent destroyed ones
@@ -285,9 +172,9 @@ func TestStatedb_DeleteDestroyedAccountsFromStateDB(t *testing.T) {
 
 // TestStatedb_ValidateStateDB tests validation of state DB by comparing it to valid world state
 func TestStatedb_ValidateStateDB(t *testing.T) {
-	for _, tc := range getStatedbTestCases() {
-		t.Run(fmt.Sprintf("DB variant: %s; shadowImpl: %s; archive variant: %s", tc.variant, tc.shadowImpl, tc.archiveVariant), func(t *testing.T) {
-			cfg := makeTestConfig(tc)
+	for _, tc := range GetStateDbTestCases() {
+		t.Run(fmt.Sprintf("DB variant: %s; shadowImpl: %s; archive variant: %s", tc.Variant, tc.ShadowImpl, tc.ArchiveVariant), func(t *testing.T) {
+			cfg := MakeTestConfig(tc)
 
 			// Initialization of state DB
 			sDB, _, err := PrepareStateDB(cfg)
@@ -304,7 +191,7 @@ func TestStatedb_ValidateStateDB(t *testing.T) {
 			}(sDB)
 
 			// Generating randomized world state
-			ws, _ := makeWorldState(t)
+			ws, _ := MakeWorldState(t)
 
 			log := logger.NewLogger("INFO", "TestStateDb")
 
@@ -325,9 +212,9 @@ func TestStatedb_ValidateStateDB(t *testing.T) {
 // TestStatedb_ValidateStateDBWithUpdate test state DB validation comparing it to valid world state
 // given state DB should be updated if world state contains different data
 func TestStatedb_ValidateStateDBWithUpdate(t *testing.T) {
-	for _, tc := range getStatedbTestCases() {
-		t.Run(fmt.Sprintf("DB variant: %s; shadowImpl: %s; archive variant: %s", tc.variant, tc.shadowImpl, tc.archiveVariant), func(t *testing.T) {
-			cfg := makeTestConfig(tc)
+	for _, tc := range GetStateDbTestCases() {
+		t.Run(fmt.Sprintf("DB variant: %s; shadowImpl: %s; archive variant: %s", tc.Variant, tc.ShadowImpl, tc.ArchiveVariant), func(t *testing.T) {
+			cfg := MakeTestConfig(tc)
 
 			// Initialization of state DB
 			sDB, _, err := PrepareStateDB(cfg)
@@ -344,7 +231,7 @@ func TestStatedb_ValidateStateDBWithUpdate(t *testing.T) {
 			}(sDB)
 
 			// Generating randomized world state
-			ws, _ := makeWorldState(t)
+			ws, _ := MakeWorldState(t)
 
 			log := logger.NewLogger("INFO", "TestStateDb")
 
@@ -354,14 +241,14 @@ func TestStatedb_ValidateStateDBWithUpdate(t *testing.T) {
 			pc.PrimeStateDB(ws, sDB)
 
 			// create new random address
-			addr := common.BytesToAddress(makeRandomByteSlice(t, 40))
+			addr := common.BytesToAddress(MakeRandomByteSlice(t, 40))
 
 			// create new account
 			ws[addr] = &substate.SubstateAccount{
-				Nonce:   uint64(getRandom(1, 1000*5000)),
-				Balance: big.NewInt(int64(getRandom(1, 1000*5000))),
+				Nonce:   uint64(GetRandom(1, 1000*5000)),
+				Balance: big.NewInt(int64(GetRandom(1, 1000*5000))),
 				Storage: makeAccountStorage(t),
-				Code:    makeRandomByteSlice(t, 2048),
+				Code:    MakeRandomByteSlice(t, 2048),
 			}
 
 			// Call for state DB validation with update enabled and subsequent checks if the update was made correctly
@@ -393,9 +280,9 @@ func TestStatedb_ValidateStateDBWithUpdate(t *testing.T) {
 
 // TestStatedb_PrepareStateDB tests preparation and initialization of existing state DB
 func TestStatedb_PrepareStateDB(t *testing.T) {
-	for _, tc := range getStatedbTestCases() {
-		t.Run(fmt.Sprintf("DB variant: %s; shadowImpl: %s; archive variant: %s", tc.variant, tc.shadowImpl, tc.archiveVariant), func(t *testing.T) {
-			cfg := makeTestConfig(tc)
+	for _, tc := range GetStateDbTestCases() {
+		t.Run(fmt.Sprintf("DB variant: %s; shadowImpl: %s; archive variant: %s", tc.Variant, tc.ShadowImpl, tc.ArchiveVariant), func(t *testing.T) {
+			cfg := MakeTestConfig(tc)
 			// Update config for state DB preparation by providing additional information
 			cfg.DbTmp = t.TempDir()
 			cfg.StateDbSrc = t.TempDir()
@@ -455,8 +342,8 @@ func TestStatedb_PrepareStateDB(t *testing.T) {
 // TestStatedb_PrepareStateDB tests preparation and initialization of existing state DB as empty
 // because of missing PathToDbInfo file
 func TestStatedb_PrepareStateDBEmpty(t *testing.T) {
-	tc := getStatedbTestCases()[0]
-	cfg := makeTestConfig(tc)
+	tc := GetStateDbTestCases()[0]
+	cfg := MakeTestConfig(tc)
 	// Update config for state DB preparation by providing additional information
 	cfg.ShadowImpl = ""
 	cfg.DbTmp = t.TempDir()
