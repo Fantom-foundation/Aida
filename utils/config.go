@@ -184,6 +184,7 @@ type Config struct {
 	IsExistingStateDb      bool           // this is true if we are using an existing StateDb
 	ValidateStateHashes    bool           // if this is true state hash validation is enabled in Executor
 	ProfileBlocks          bool           // enables block profiler extension
+	PathToStateDb          string
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.

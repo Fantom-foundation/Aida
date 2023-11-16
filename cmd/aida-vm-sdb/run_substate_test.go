@@ -69,7 +69,7 @@ func TestVmSdbSubstate_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		db.EXPECT().EndBlock(),
 	)
 
-	if err := runSubstates(config, provider, db, true); err != nil {
+	if err := runSubstates(config, provider, db); err != nil {
 		t.Errorf("runSubstates failed: %v", err)
 	}
 }
@@ -111,9 +111,9 @@ func TestVmSdbSubstate_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 	)
 
 	// runSubstates fails but not on validation
-	err := runSubstates(config, provider, db, true)
+	err := runSubstates(config, provider, db)
 	if err == nil {
-		t.Errorf("runSubstates must fail")
+		t.Errorf("runSubstatesSubstates must fail")
 	}
 
 	expectedErr := strings.TrimSpace("Block: 0 Transaction: 1\nintrinsic gas too low: have 0, want 53000")
@@ -154,7 +154,7 @@ func TestVmSdbSubstate_ValidationFailsOnInvalidTransaction(t *testing.T) {
 		db.EXPECT().EndTransaction(),
 	)
 
-	err := runSubstates(config, provider, db, true)
+	err := runSubstates(config, provider, db)
 	if err == nil {
 		t.Errorf("validation must fail")
 	}
