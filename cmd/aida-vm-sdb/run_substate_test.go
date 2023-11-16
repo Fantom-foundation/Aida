@@ -162,7 +162,7 @@ func TestVmSdb_Substate_AllTransactionsAreProcessedInOrder(t *testing.T) {
 		ext.EXPECT().PostRun(executor.AtBlock[*substate.Substate](5), gomock.Any(), nil),
 	)
 
-	if err := runSubstates(cfg, provider, db, substateProcessor{cfg}, nil); err != nil {
+	if err := runSubstates(cfg, provider, db, processor, []executor.Extension[*substate.Substate]{ext}); err != nil {
 		t.Errorf("run failed: %v", err)
 	}
 }

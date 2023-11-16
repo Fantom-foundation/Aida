@@ -61,7 +61,7 @@ func runSubstates(
 		profiler.MakeDiagnosticServer[*substate.Substate](cfg),
 	}
 
-	if stateDb != nil {
+	if stateDb == nil {
 		extensionList = append(extensionList, statedb.MakeStateDbManager[*substate.Substate](cfg))
 	}
 
