@@ -412,7 +412,7 @@ func getMdBlockRange(aidaDbPath string, chainId ChainID, log logger.Logger, logL
 }
 
 // adjustBlockRange finds overlap between metadata block range and block range specified by user in command line
-func adjustBlockRange(chainId ChainID, firstArg, lastArg uint64) (uint64, uint64, error) {
+func adjustBlockRange(chainId ChainID, firstArg, lastArg uint64, log logger.Logger) (uint64, uint64, error) {
 	var first, last, firstMd, lastMd uint64
 	firstMd = keywordBlocks[chainId]["first"]
 	lastMd = keywordBlocks[chainId]["last"]
@@ -423,6 +423,7 @@ func adjustBlockRange(chainId ChainID, firstArg, lastArg uint64) (uint64, uint64
 			first = firstArg
 		} else {
 			first = firstMd
+			log.Warningf("First block arg (%v) is out of range of AidaDB - adjusted to the first block of AidaDB (%v)", firstArg, firstMd)
 		}
 
 		// get last block number
@@ -430,6 +431,7 @@ func adjustBlockRange(chainId ChainID, firstArg, lastArg uint64) (uint64, uint64
 			last = lastArg
 		} else {
 			last = lastMd
+			log.Warningf("Last block arg (%v) is out of range of AidaDB - adjusted to the last block of AidaDB (%v)", lastArg, lastMd)
 		}
 
 		return first, last, nil
@@ -503,7 +505,7 @@ func updateConfigBlockRange(args []string, cfg *Config, mode ArgumentMode, log l
 			}
 
 			// find if values overlap
-			first, last, err = adjustBlockRange(cfg.ChainID, firstArg, lastArg)
+			first, last, err = adjustBlockRange(cfg.ChainID, firstArg, lastArg, log)
 			if err != nil {
 				return err
 			}
