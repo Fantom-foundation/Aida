@@ -29,6 +29,7 @@ func main() {
 			&utils.ChainIDFlag,
 			&utils.ContinueOnFailureFlag,
 			&utils.ValidateFlag,
+			&utils.NoHeartbeatLoggingFlag,
 
 			// ShadowDB
 			&utils.ShadowDb,

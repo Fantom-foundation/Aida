@@ -69,7 +69,6 @@ func NewPrimeContext(cfg *Config, db state.StateDB, log logger.Logger) *PrimeCon
 
 // mayApplyBulkLoad closes and reopen bulk load if it has over n operations.
 func (pc *PrimeContext) mayApplyBulkLoad() error {
-
 	if pc.operations >= operationThreshold {
 		pc.log.Debugf("\t\tApply bulk load with %v operations...", pc.operations)
 		pc.operations = 0

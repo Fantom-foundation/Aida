@@ -60,6 +60,11 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 
 	// make a copy of source statedb
 	if !cfg.SrcDbReadonly {
+		// does path to state db exist?
+		if _, err = os.Stat(cfg.StateDbSrc); os.IsNotExist(err) {
+			return nil, "", fmt.Errorf("%v does not exist", cfg.StateDbSrc)
+		}
+
 		tmpStateDbPath, err = os.MkdirTemp(cfg.DbTmp, "state_db_tmp_*")
 		if err != nil {
 			return nil, "", fmt.Errorf("failed to create a temporary directory; %v", err)
@@ -89,17 +94,6 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 	stateDbInfo, err = ReadStateDbInfo(stateDbInfoFile)
 	if err != nil {
 		return nil, "", fmt.Errorf("cannot read StateDb cfg file '%v'; %v", stateDbInfoFile, err)
-	}
-
-	// are we in block range?
-	if stateDbInfo.Block < cfg.First {
-		return nil, "", fmt.Errorf("first block must be smaller than last block of given archive which is %v", stateDbInfo.Block)
-	}
-
-	// set last block to Archives last block
-	if cfg.Last > stateDbInfo.Block {
-		log.Warningf("Last block you set in arguments (%v) is not within given StateDB (%v). Setting last block to %v.", cfg.Last, stateDbInfo.Block, stateDbInfo.Block)
-		cfg.Last = stateDbInfo.Block
 	}
 
 	// do we have an archive inside loaded StateDb?
