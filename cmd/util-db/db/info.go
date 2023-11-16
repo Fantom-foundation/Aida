@@ -14,6 +14,7 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/urfave/cli/v2"
 )
@@ -155,9 +156,10 @@ var cmdPrintStateHash = cli.Command{
 }
 
 var cmdPrintStateHashSeparated = cli.Command{
-	Action: generateMd5OfPrefixes,
-	Name:   "state-hash-separated",
-	Usage:  "Prints state hash of db prefixes individually.",
+	Action:    generateMd5OfPrefixes,
+	Name:      "hashes-separated",
+	Usage:     "Prints state hash of db prefixes individually. Or just for single prefix specified in arg.",
+	ArgsUsage: "<prefix>",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 	},
@@ -448,26 +450,46 @@ func generateMd5OfPrefixes(ctx *cli.Context) error {
 
 	defer utildb.MustCloseDB(aidaDb)
 
-	log.Noticef("Starting DbHash generation for %v; this may take several hours...", cfg.AidaDb)
-	log.Noticef("Substates...")
-	_, err = utildb.GeneratePrefixHash(aidaDb, substate.Stage1SubstatePrefix, "INFO")
-	if err != nil {
-		return err
+	if ctx.Args().Len() > 0 {
+		prefix := ctx.Args().Slice()[0]
+		log.Noticef("Searching for data under prefix %v", prefix)
+		return generateMd5For(prefix, cfg, aidaDb, log)
+	} else {
+		err1 := generateMd5For(substate.Stage1SubstatePrefix, cfg, aidaDb, log)
+		err2 := generateMd5For(substate.SubstateAllocPrefix, cfg, aidaDb, log)
+		err3 := generateMd5For(substate.DestroyedAccountPrefix, cfg, aidaDb, log)
+		err4 := generateMd5For(utils.StateHashPrefix, cfg, aidaDb, log)
+		return errors.Join(err1, err2, err3, err4)
 	}
-	log.Noticef("Updateset...")
-	_, err = utildb.GeneratePrefixHash(aidaDb, substate.SubstateAllocPrefix, "INFO")
-	if err != nil {
-		return err
-	}
-	log.Noticef("Deleted...")
-	_, err = utildb.GeneratePrefixHash(aidaDb, substate.DestroyedAccountPrefix, "INFO")
-	if err != nil {
-		return err
-	}
-	log.Noticef("StateHash...")
-	_, err = utildb.GeneratePrefixHash(aidaDb, utils.StateHashPrefix, "INFO")
-	if err != nil {
-		return err
+}
+
+func generateMd5For(prefix string, cfg *utils.Config, aidaDb ethdb.Database, log logger.Logger) error {
+	var err error
+	if prefix == substate.Stage1SubstatePrefix {
+		log.Noticef("Starting DbHash generation for %v; this may take several hours...", cfg.AidaDb)
+		log.Noticef("Substates...")
+		_, err = utildb.GeneratePrefixHash(aidaDb, substate.Stage1SubstatePrefix, "INFO")
+		if err != nil {
+			return err
+		}
+	} else if prefix == substate.SubstateAllocPrefix {
+		log.Noticef("Updateset...")
+		_, err = utildb.GeneratePrefixHash(aidaDb, substate.SubstateAllocPrefix, "INFO")
+		if err != nil {
+			return err
+		}
+	} else if prefix == substate.DestroyedAccountPrefix {
+		log.Noticef("Deleted...")
+		_, err = utildb.GeneratePrefixHash(aidaDb, substate.DestroyedAccountPrefix, "INFO")
+		if err != nil {
+			return err
+		}
+	} else if prefix == utils.StateHashPrefix {
+		log.Noticef("StateHash...")
+		_, err = utildb.GeneratePrefixHash(aidaDb, utils.StateHashPrefix, "INFO")
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
