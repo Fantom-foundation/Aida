@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension/primer"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
@@ -65,7 +66,7 @@ func runTransactions(
 		profiler.MakeVirtualMachineStatisticsPrinter[*GeneratedTransaction](cfg),
 		tracker.MakeProgressLogger[*GeneratedTransaction](cfg, 15*time.Second),
 		//tracker.MakeProgressTracker(cfg, 100_000),
-		statedb.MakeStateDbPrimer[*GeneratedTransaction](cfg),
+		primer.MakeStateDbPrimer[*GeneratedTransaction](cfg),
 		profiler.MakeMemoryUsagePrinter[*GeneratedTransaction](cfg),
 		profiler.MakeMemoryProfiler[*GeneratedTransaction](cfg),
 		//statedb.MakeStateDbPrepper(),

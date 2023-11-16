@@ -4,7 +4,7 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
-	"github.com/Fantom-foundation/Aida/executor/extension"
+	"github.com/Fantom-foundation/Aida/executor/extension/aidadb"
 	"github.com/Fantom-foundation/Aida/executor/extension/primer"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
