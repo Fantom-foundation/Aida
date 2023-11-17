@@ -36,6 +36,7 @@ func main() {
 			&utils.DiagnosticServerFlag,
 			&utils.AidaDbFlag,
 			&logger.LogLevelFlag,
+			&utils.LogFileFlag,
 		},
 	}
 	if err := app.Run(os.Args); err != nil {
