@@ -51,7 +51,7 @@ func MemoryBreakdown(db state.StateDB, cfg *Config, log logger.Logger) {
 		if usage := db.GetMemoryUsage(); usage.Breakdown != nil {
 			log.Noticef("State DB memory usage: %d byte\n%s", usage.UsedBytes, usage.Breakdown)
 		} else {
-			log.Notice("Utilized storage solution does not support memory breakdowns.")
+			log.Notice("Memory usage summary is unavailable. The selected storage solution, %v variant: %v, may not support memory breakdowns.", cfg.DbImpl, cfg.DbVariant)
 		}
 	}
 }
