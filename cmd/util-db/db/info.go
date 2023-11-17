@@ -29,7 +29,7 @@ var InfoCommand = cli.Command{
 		&cmdRange,
 		&cmdPrintDbHash,
 		&cmdPrintStateHash,
-		&cmdPrintStateHashSeparated,
+		&cmdPrintHashesSeparated,
 	},
 }
 
@@ -155,9 +155,9 @@ var cmdPrintStateHash = cli.Command{
 	},
 }
 
-var cmdPrintStateHashSeparated = cli.Command{
+var cmdPrintHashesSeparated = cli.Command{
 	Action:    generateMd5OfPrefixes,
-	Name:      "hashes-separated",
+	Name:      "hashes",
 	Usage:     "Prints state hash of db prefixes individually. Or just for single prefix specified in arg.",
 	ArgsUsage: "<prefix>",
 	Flags: []cli.Flag{
@@ -443,7 +443,7 @@ func generateMd5OfPrefixes(ctx *cli.Context) error {
 
 	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
 
-	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
+	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", true)
 	if err != nil {
 		return fmt.Errorf("cannot open db; %v", err)
 	}
@@ -465,26 +465,27 @@ func generateMd5OfPrefixes(ctx *cli.Context) error {
 
 func generateMd5For(prefix string, cfg *utils.Config, aidaDb ethdb.Database, log logger.Logger) error {
 	var err error
-	if prefix == substate.Stage1SubstatePrefix {
+	switch prefix {
+	case substate.Stage1SubstatePrefix:
 		log.Noticef("Starting DbHash generation for %v; this may take several hours...", cfg.AidaDb)
 		log.Noticef("Substates...")
 		_, err = utildb.GeneratePrefixHash(aidaDb, substate.Stage1SubstatePrefix, "INFO")
 		if err != nil {
 			return err
 		}
-	} else if prefix == substate.SubstateAllocPrefix {
+	case substate.SubstateAllocPrefix:
 		log.Noticef("Updateset...")
 		_, err = utildb.GeneratePrefixHash(aidaDb, substate.SubstateAllocPrefix, "INFO")
 		if err != nil {
 			return err
 		}
-	} else if prefix == substate.DestroyedAccountPrefix {
+	case substate.DestroyedAccountPrefix:
 		log.Noticef("Deleted...")
 		_, err = utildb.GeneratePrefixHash(aidaDb, substate.DestroyedAccountPrefix, "INFO")
 		if err != nil {
 			return err
 		}
-	} else if prefix == utils.StateHashPrefix {
+	case utils.StateHashPrefix:
 		log.Noticef("StateHash...")
 		_, err = utildb.GeneratePrefixHash(aidaDb, utils.StateHashPrefix, "INFO")
 		if err != nil {
