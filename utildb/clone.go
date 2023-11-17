@@ -1,6 +1,7 @@
 package utildb
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
 const cloneWriteChanSize = 1
@@ -309,14 +311,25 @@ func (c *cloner) readSubstate() error {
 func (c *cloner) readStateHashes() error {
 	c.log.Noticef("Copying hashes done")
 
+	var errCounter uint64
+
 	for i := c.cfg.First; i <= c.cfg.Last; i++ {
 		key := []byte(utils.StateHashPrefix + hexutil.EncodeUint64(i))
 		value, err := c.aidaDb.Get(key)
 		if err != nil {
-			return fmt.Errorf("cannot get state hash for block %v; %v", i, err)
+			if errors.Is(err, leveldb.ErrNotFound) {
+				errCounter++
+				continue
+			} else {
+				return err
+			}
 		}
 
 		c.sendToWriteChan(key, value)
+	}
+
+	if errCounter > 0 {
+		c.log.Warningf("State hashes were missing for %v blocks", errCounter)
 	}
 
 	c.log.Noticef("State hashes done")
