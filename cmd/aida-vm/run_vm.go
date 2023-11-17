@@ -52,6 +52,7 @@ func run(
 		profiler.MakeCpuProfiler[*substate.Substate](cfg),
 		profiler.MakeDiagnosticServer[*substate.Substate](cfg),
 		profiler.MakeVirtualMachineStatisticsPrinter[*substate.Substate](cfg),
+		tracker.MakeErrorLogger[*substate.Substate](cfg),
 		tracker.MakeProgressLogger[*substate.Substate](cfg, 15*time.Second),
 		statedb.MakeTemporaryStatePrepper(),
 	}

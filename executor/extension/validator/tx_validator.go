@@ -1,9 +1,7 @@
 package validator
 
 import (
-	"errors"
 	"fmt"
-	"sync"
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
@@ -14,10 +12,9 @@ import (
 
 type txValidator struct {
 	extension.NilExtension[*substate.Substate]
-	cfg    *utils.Config
-	log    logger.Logger
-	lock   sync.Mutex
-	errors []error
+	cfg            *utils.Config
+	log            logger.Logger
+	numberOfErrors int
 }
 
 func MakeTxValidator(cfg *utils.Config) executor.Extension[*substate.Substate] {
@@ -39,7 +36,6 @@ func makeTxValidator(cfg *utils.Config, log logger.Logger) *txValidator {
 
 // PreRun informs the user that txValidator is enabled and that they should expect slower processing speed.
 func (v *txValidator) PreRun(executor.State[*substate.Substate], *executor.Context) error {
-
 	v.log.Warning("Transaction verification is enabled, this may slow down the block processing.")
 
 	if v.cfg.ContinueOnFailure {
@@ -57,11 +53,9 @@ func (v *txValidator) PreTransaction(state executor.State[*substate.Substate], c
 		return nil
 	}
 
-	err = fmt.Errorf("input error at block %v tx %v; %v", state.Block, state.Transaction, err)
+	err = fmt.Errorf("input error at block %v tx %v; %v\n", state.Block, state.Transaction, err)
 
-	if v.isErrFatal(err) {
-		err = errors.New("maximum number of errors occurred")
-		v.log.Critical(err)
+	if v.isErrFatal(err, ctx.ErrorInput) {
 		return err
 	}
 
@@ -75,47 +69,32 @@ func (v *txValidator) PostTransaction(state executor.State[*substate.Substate], 
 		return nil
 	}
 
-	err = fmt.Errorf("output error at block %v tx %v; %v", state.Block, state.Transaction, err)
+	err = fmt.Errorf("output error at block %v tx %v; %v\n", state.Block, state.Transaction, err)
 
-	if v.isErrFatal(err) {
-		err = errors.New("maximum number of errors occurred")
-		v.log.Critical(err)
+	if v.isErrFatal(err, ctx.ErrorInput) {
 		return err
 	}
 
 	return nil
 }
 
-// PostRun informs user how many errors were found - if ContinueOnFailureIsEnabled otherwise success is reported.
-func (v *txValidator) PostRun(executor.State[*substate.Substate], *executor.Context, error) error {
-	v.lock.Lock()
-	defer v.lock.Unlock()
-
-	// no errors occurred
-	if len(v.errors) == 0 {
-		v.log.Noticef("Validation successful!")
-		return nil
-	}
-
-	v.log.Warningf("%v errors caught", len(v.errors))
-
-	return errors.Join(v.errors...)
-}
-
 // isErrFatal decides whether given error should stop the program or not depending on ContinueOnFailure and MaxNumErrors.
-func (v *txValidator) isErrFatal(err error) bool {
-	v.lock.Lock()
-	v.errors = append(v.errors, err)
-	v.lock.Unlock()
-
-	// ContinueOnFailure is disabled, return the error thus exit the program
+func (v *txValidator) isErrFatal(err error, ch chan error) bool {
+	// ContinueOnFailure is disabled, return the error and exit the program
 	if !v.cfg.ContinueOnFailure {
 		return true
 	}
 
-	v.log.Error(err)
+	ch <- err
+	v.numberOfErrors++
 
-	if len(v.errors) >= v.cfg.MaxNumErrors {
+	// endless run
+	if v.cfg.MaxNumErrors == 0 {
+		return false
+	}
+
+	// too many errors
+	if v.numberOfErrors >= v.cfg.MaxNumErrors {
 		return true
 	}
 

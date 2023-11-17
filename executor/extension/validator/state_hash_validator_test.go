@@ -51,6 +51,7 @@ func TestStateHashValidator_FailsIfHashIsNotFoundInAidaDb(t *testing.T) {
 	ext.hashProvider = hashProvider
 
 	ctx := &executor.Context{State: db}
+	ctx.ErrorInput = make(chan error, 10)
 
 	err := ext.PostBlock(executor.State[any]{Block: blockNumber}, ctx)
 	if err == nil {
@@ -88,6 +89,7 @@ func TestStateHashValidator_InvalidHashOfLiveDbIsDetected(t *testing.T) {
 	)
 
 	ctx := &executor.Context{State: db}
+	ctx.ErrorInput = make(chan error, 10)
 
 	if err := ext.PostBlock(executor.State[any]{Block: blockNumber}, ctx); err == nil || !strings.Contains(err.Error(), fmt.Sprintf("unexpected hash for Live block %v", blockNumber)) {
 		t.Errorf("failed to detect incorrect hash, err %v", err)
@@ -126,6 +128,7 @@ func TestStateHashValidator_InvalidHashOfArchiveDbIsDetected(t *testing.T) {
 	)
 
 	ctx := &executor.Context{State: db}
+	ctx.ErrorInput = make(chan error, 10)
 
 	if err := ext.PostBlock(executor.State[any]{Block: blockNumber}, ctx); err == nil || !strings.Contains(err.Error(), fmt.Sprintf("unexpected hash for archive block %d", blockNumber-1)) {
 		t.Errorf("failed to detect incorrect hash, err %v", err)
@@ -176,6 +179,7 @@ func TestStateHashValidator_ChecksArchiveHashesOfLaggingArchive(t *testing.T) {
 	ext := makeStateHashValidator[any](cfg, log)
 	ext.hashProvider = hashProvider
 	ctx := &executor.Context{State: db}
+	ctx.ErrorInput = make(chan error, 10)
 
 	// A PostBlock run should check the LiveDB and the ArchiveDB up to block 0.
 	if err := ext.PostBlock(executor.State[any]{Block: 2}, ctx); err != nil {
@@ -229,6 +233,7 @@ func TestStateHashValidator_ChecksArchiveHashesOfLaggingArchiveDoesNotWaitForNon
 	ext := makeStateHashValidator[any](cfg, log)
 	ext.hashProvider = hashProvider
 	ctx := &executor.Context{State: db}
+	ctx.ErrorInput = make(chan error, 10)
 
 	// A PostBlock run should check the LiveDB and the ArchiveDB up to block 0.
 	if err := ext.PostBlock(executor.State[any]{Block: 2}, ctx); err != nil {

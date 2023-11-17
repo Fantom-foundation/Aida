@@ -2,7 +2,6 @@ package validator
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math/big"
 	"strconv"
@@ -79,21 +78,21 @@ func MakeRpcComparator(cfg *utils.Config) executor.Extension[*rpc.RequestAndResu
 }
 
 func makeRPCComparator(cfg *utils.Config, log logger.Logger) *rpcComparator {
-	return &rpcComparator{cfg: cfg, log: log, errors: make([]error, 0)}
+	return &rpcComparator{cfg: cfg, log: log}
 }
 
 type rpcComparator struct {
 	extension.NilExtension[*rpc.RequestAndResults]
 	cfg                     *utils.Config
 	log                     logger.Logger
-	errors                  []error
 	numberOfRetriedRequests int
 	totalNumberOfRequests   int
+	numberOfErrors          int
 }
 
 // PostTransaction compares result with recording. If ContinueOnFailure
 // is enabled error is saved. Otherwise, the error is returned.
-func (c *rpcComparator) PostTransaction(state executor.State[*rpc.RequestAndResults], _ *executor.Context) error {
+func (c *rpcComparator) PostTransaction(state executor.State[*rpc.RequestAndResults], ctx *executor.Context) error {
 	c.totalNumberOfRequests++
 
 	compareErr := compare(state)
@@ -114,33 +113,21 @@ func (c *rpcComparator) PostTransaction(state executor.State[*rpc.RequestAndResu
 			return nil
 		}
 
-		if c.cfg.ContinueOnFailure {
-			c.log.Warning(compareErr)
-			c.errors = append(c.errors, compareErr)
+		if !c.cfg.ContinueOnFailure {
+			return compareErr
+		}
+
+		ctx.ErrorInput <- compareErr
+		c.numberOfErrors++
+
+		// endless run
+		if c.cfg.MaxNumErrors == 0 {
 			return nil
 		}
 
-		return compareErr
-	}
-
-	return nil
-}
-
-// PostRun prints all caught errors.
-func (c *rpcComparator) PostRun(executor.State[*rpc.RequestAndResults], *executor.Context, error) error {
-	// log only if continue on failure is enabled
-	if !c.cfg.ContinueOnFailure {
-		return nil
-	}
-
-	switch len(c.errors) {
-	case 0:
-		c.log.Notice("No errors found!")
-		return nil
-	case 1:
-		c.log.Error("1 error was found:\n%v", c.errors[0].Error())
-	default:
-		c.log.Errorf("%v errors were found:\n%v", len(c.errors), errors.Join(c.errors...))
+		if c.numberOfErrors >= c.cfg.MaxNumErrors {
+			return compareErr
+		}
 	}
 
 	return nil

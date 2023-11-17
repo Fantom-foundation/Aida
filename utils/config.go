@@ -185,6 +185,7 @@ type Config struct {
 	ValidateStateHashes    bool           // if this is true state hash validation is enabled in Executor
 	ProfileBlocks          bool           // enables block profiler extension
 	PathToStateDb          string
+	LogFile                string // if defined, error logging to file is enabled
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.

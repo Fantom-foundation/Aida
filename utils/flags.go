@@ -349,8 +349,8 @@ var (
 	}
 	MaxNumErrorsFlag = cli.IntFlag{
 		Name:  "max-errors",
-		Usage: "maximum number of errors when ContinueOnFailure is enabled, default is 50",
-		Value: 50,
+		Usage: "maximum number of errors when ContinueOnFailure is enabled, 0 is endless, default is 0",
+		Value: 0,
 	}
 	UpdateOnFailure = cli.BoolFlag{
 		Name:  "update-on-failure",
@@ -382,5 +382,9 @@ var (
 		Name:  "profile-db",
 		Usage: "defines path to profile-db",
 		Value: "/var/opera/Aida/profile.db",
+	}
+	LogFileFlag = cli.PathFlag{
+		Name:  "log-file",
+		Usage: "defines path to log-file where any error is recorded",
 	}
 )

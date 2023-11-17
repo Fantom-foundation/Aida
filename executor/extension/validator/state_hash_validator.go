@@ -34,6 +34,7 @@ type stateHashValidator[T any] struct {
 	nextArchiveBlockToCheck int
 	lastProcessedBlock      int
 	hashProvider            utils.StateHashProvider
+	numberOfErrors          int
 }
 
 func (e *stateHashValidator[T]) PreRun(_ executor.State[T], ctx *executor.Context) error {
@@ -65,14 +66,19 @@ func (e *stateHashValidator[T]) PostBlock(state executor.State[T], ctx *executor
 
 	got := ctx.State.GetHash()
 	if want != got {
-		return fmt.Errorf("unexpected hash for Live block %d\nwanted %v\n   got %v", state.Block, want, got)
+		err = fmt.Errorf("unexpected hash for Live block %d\nwanted %v\n   got %v", state.Block, want, got)
+		if e.isErrorFatal(err, ctx.ErrorInput) {
+			return err
+		}
 	}
 
 	// Check the ArchiveDB
 	if e.cfg.ArchiveMode {
 		e.lastProcessedBlock = state.Block
 		if err = e.checkArchiveHashes(ctx.State); err != nil {
-			return err
+			if e.isErrorFatal(err, ctx.ErrorInput) {
+				return err
+			}
 		}
 	}
 
@@ -88,6 +94,7 @@ func (e *stateHashValidator[T]) PostRun(_ executor.State[T], ctx *executor.Conte
 	if e.cfg.ArchiveMode {
 		for e.nextArchiveBlockToCheck < e.lastProcessedBlock {
 			if err = e.checkArchiveHashes(ctx.State); err != nil {
+				ctx.ErrorInput <- err
 				return err
 			}
 			if e.nextArchiveBlockToCheck < e.lastProcessedBlock {
@@ -142,4 +149,25 @@ func (e *stateHashValidator[T]) getStateHash(blockNumber int) (common.Hash, erro
 
 	return want, nil
 
+}
+
+func (e *stateHashValidator[T]) isErrorFatal(err error, ch chan error) bool {
+	if !e.cfg.ContinueOnFailure {
+		return true
+	}
+
+	ch <- err
+	e.numberOfErrors++
+
+	// endless run
+	if e.cfg.MaxNumErrors == 0 {
+		return false
+	}
+
+	// too many errors
+	if e.numberOfErrors >= e.cfg.MaxNumErrors {
+		return true
+	}
+
+	return false
 }
