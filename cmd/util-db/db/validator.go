@@ -8,7 +8,6 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utildb"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/urfave/cli/v2"
 )
@@ -40,7 +39,6 @@ var SignatureCommand = cli.Command{
 		&utils.AidaDbFlag,
 		&utils.TargetDbFlag,
 		&logger.LogLevelFlag,
-		&substate.WorkersFlag,
 	},
 	Description: `
 Creates signatures of substates, updatesets, deletion and state-hashes, because RLP encoding is not deterministic.

@@ -18,7 +18,7 @@ import (
 
 func DbSignature(cfg *utils.Config, aidaDb ethdb.Database, log logger.Logger) error {
 	log.Info("Generating substate...")
-	aidaDbSubstateHash, processed, err := GetSubstateHash(aidaDb, cfg.Workers, log)
+	aidaDbSubstateHash, processed, err := GetSubstateHash(aidaDb, log)
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func marshaller(in chan any, out chan []byte, errChan chan error) {
 	}
 }
 
-func GetSubstateHash(db ethdb.Database, workers int, log logger.Logger) ([]byte, uint64, error) {
+func GetSubstateHash(db ethdb.Database, log logger.Logger) ([]byte, uint64, error) {
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
 
@@ -73,7 +73,7 @@ func GetSubstateHash(db ethdb.Database, workers int, log logger.Logger) ([]byte,
 		defer close(feederChan)
 
 		substate.SetSubstateDbBackend(db)
-		it := substate.NewSubstateIterator(0, workers)
+		it := substate.NewSubstateIterator(0, 10)
 		defer it.Release()
 
 		for it.Next() {
@@ -92,7 +92,7 @@ func GetSubstateHash(db ethdb.Database, workers int, log logger.Logger) ([]byte,
 		}
 	}
 
-	return parallelHashComputing(feeder, workers)
+	return parallelHashComputing(feeder)
 }
 
 func GetDeletionHash(cfg *utils.Config, db ethdb.Database, log logger.Logger) ([]byte, uint64, error) {
@@ -124,11 +124,11 @@ func GetDeletionHash(cfg *utils.Config, db ethdb.Database, log logger.Logger) ([
 			case err = <-errChan:
 				errChan <- err
 				return
-			case feederChan <- address:
+			case feederChan <- address.Hex():
 			}
 		}
 	}
-	return parallelHashComputing(feeder, cfg.Workers)
+	return parallelHashComputing(feeder)
 }
 
 func GetUpdateDbHash(cfg *utils.Config, db ethdb.Database, log logger.Logger) ([]byte, uint64, error) {
@@ -158,8 +158,7 @@ func GetUpdateDbHash(cfg *utils.Config, db ethdb.Database, log logger.Logger) ([
 			}
 		}
 	}
-	//using 1 worker to avoid memory issues
-	return parallelHashComputing(feeder, 1)
+	return parallelHashComputing(feeder)
 }
 
 func GetStateHashesHash(cfg *utils.Config, db ethdb.Database, log logger.Logger) ([]byte, uint64, error) {
@@ -197,21 +196,21 @@ func GetStateHashesHash(cfg *utils.Config, db ethdb.Database, log logger.Logger)
 		}
 	}
 
-	return parallelHashComputing(feeder, cfg.Workers)
+	return parallelHashComputing(feeder)
 }
 
-func parallelHashComputing(feeder func(chan any, chan error), workers int) ([]byte, uint64, error) {
+func parallelHashComputing(feeder func(chan any, chan error)) ([]byte, uint64, error) {
 	var wg sync.WaitGroup
-	feederChan := make(chan any, workers)
-	processedChan := make(chan []byte, workers)
+	feederChan := make(chan any, 1)
+	processedChan := make(chan []byte, 1)
 
 	errChan := make(chan error)
 
 	var counter uint64 = 0
 
 	countingFeeder := make(chan any)
+	wg.Add(1)
 	go func() {
-		wg.Add(1)
 		defer wg.Done()
 		for {
 			select {
@@ -235,21 +234,18 @@ func parallelHashComputing(feeder func(chan any, chan error), workers int) ([]by
 		}
 	}()
 
+	wg.Add(1)
 	go func() {
-		wg.Add(1)
 		defer wg.Done()
 
 		feeder(countingFeeder, errChan)
 	}()
 
-	for i := 0; i < workers; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			marshaller(feederChan, processedChan, errChan)
-		}()
-
-	}
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		marshaller(feederChan, processedChan, errChan)
+	}()
 
 	// Start a goroutine to close hashChan when all workers finish
 	go func() {
