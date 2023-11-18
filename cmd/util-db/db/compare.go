@@ -24,7 +24,7 @@ Creates clone db is used to create subset of aida-db to have more compact databa
 
 // compareDb compares aida-db to target-db whether they are the same
 func compareDb(ctx *cli.Context) error {
-	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
+	cfg, err := utils.NewConfig(ctx, utils.LastBlockArg)
 	if err != nil {
 		return err
 	}
@@ -37,7 +37,7 @@ func compareDb(ctx *cli.Context) error {
 	log := logger.NewLogger(cfg.LogLevel, "compare")
 
 	log.Info("Comparing databases...")
-	err = utildb.CompareDatabases(aidaDb, targetDb)
+	err = utildb.CompareDatabases(cfg, aidaDb, targetDb, log)
 	if err != nil {
 		return err
 	}

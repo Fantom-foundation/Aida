@@ -3,16 +3,21 @@ package utildb
 import (
 	"crypto/md5"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 
+	"github.com/Fantom-foundation/Aida/logger"
+	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
-func CompareDatabases(aidaDb, targetDb ethdb.Database) error {
+func CompareDatabases(cfg *utils.Config, aidaDb, targetDb ethdb.Database, log logger.Logger) error {
 
+	log.Info("Comparing substate...")
 	aidaDbSubstateHash, err := GetSubstateHash(aidaDb)
 	if err != nil {
 		return err
@@ -25,7 +30,9 @@ func CompareDatabases(aidaDb, targetDb ethdb.Database) error {
 	if string(aidaDbSubstateHash) != string(targetDbSubstateHash) {
 		return fmt.Errorf("substate hash mismatch aidaDb: %s targetDb: %s", aidaDbSubstateHash, targetDbSubstateHash)
 	}
+	log.Info("Substate is the same")
 
+	log.Info("Comparing deletion hash...")
 	aidaDbDeletionHash, err := GetDeletionHash(aidaDb)
 	if err != nil {
 		return err
@@ -39,7 +46,9 @@ func CompareDatabases(aidaDb, targetDb ethdb.Database) error {
 	if string(aidaDbDeletionHash) != string(targetDbDeletionHash) {
 		return fmt.Errorf("deletion hash mismatch aidaDb: %s targetDb: %s", aidaDbDeletionHash, targetDbDeletionHash)
 	}
+	log.Info("Deletion hash is the same")
 
+	log.Info("Comparing updateDb hash...")
 	aidaDbUpdateDbHash, err := GetUpdateDbHash(aidaDb)
 	if err != nil {
 		return err
@@ -53,8 +62,47 @@ func CompareDatabases(aidaDb, targetDb ethdb.Database) error {
 	if string(aidaDbUpdateDbHash) != string(targetDbUpdateDbHash) {
 		return fmt.Errorf("updateDb hash mismatch aidaDb: %s targetDb: %s", aidaDbUpdateDbHash, targetDbUpdateDbHash)
 	}
+	log.Info("UpdateDb hash is the same")
+
+	log.Info("Comparing state hashes hash...")
+	aidaDbStateHashesHash, err := GetStateHashesHash(cfg, aidaDb)
+	if err != nil {
+		return err
+	}
+
+	targetDbStateHashesHash, err := GetStateHashesHash(cfg, targetDb)
+	if err != nil {
+		return err
+	}
+
+	if string(aidaDbStateHashesHash) != string(targetDbStateHashesHash) {
+		return fmt.Errorf("state hashes hash mismatch aidaDb: %s targetDb: %s", aidaDbStateHashesHash, targetDbStateHashesHash)
+	}
+	log.Info("State hashes hash is the same")
 
 	return nil
+}
+
+func GetStateHashesHash(cfg *utils.Config, db ethdb.Database) ([]byte, error) {
+	provider := utils.MakeStateHashProvider(db)
+
+	hash := md5.New()
+
+	var i uint64 = 0
+	for ; i < cfg.Last; i++ {
+		h, err := provider.GetStateHash(int(i))
+		if err != nil {
+			if errors.Is(err, leveldb.ErrNotFound) {
+				continue
+			}
+			return nil, err
+		}
+
+		hash.Write(h.Bytes())
+	}
+
+	return hash.Sum(nil), nil
+
 }
 
 func GetDeletionHash(db ethdb.Database) ([]byte, error) {
