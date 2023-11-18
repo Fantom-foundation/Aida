@@ -16,32 +16,32 @@ import (
 
 func DbSignature(cfg *utils.Config, aidaDb ethdb.Database, log logger.Logger) error {
 	log.Info("Generating substate...")
-	aidaDbSubstateHash, err := GetSubstateHash(aidaDb, cfg.Workers, log)
+	aidaDbSubstateHash, processed, err := GetSubstateHash(aidaDb, cfg.Workers, log)
 	if err != nil {
 		return err
 	}
-	log.Infof("Substate hash: %x", aidaDbSubstateHash)
+	log.Infof("Substate hash: %x; processed %v", aidaDbSubstateHash, processed)
 
 	log.Info("Generating deletion hash...")
-	aidaDbDeletionHash, err := GetDeletionHash(cfg, aidaDb, log)
+	aidaDbDeletionHash, processed, err := GetDeletionHash(cfg, aidaDb, log)
 	if err != nil {
 		return err
 	}
-	log.Infof("Deletion hash: %x", aidaDbDeletionHash)
+	log.Infof("Deletion hash: %x; processed %v", aidaDbDeletionHash, processed)
 
 	log.Info("Generating updateDb hash...")
-	aidaDbUpdateDbHash, err := GetUpdateDbHash(cfg, aidaDb, log)
+	aidaDbUpdateDbHash, processed, err := GetUpdateDbHash(cfg, aidaDb, log)
 	if err != nil {
 		return err
 	}
-	log.Infof("UpdateDb hash: %x", aidaDbUpdateDbHash)
+	log.Infof("UpdateDb hash: %x; processed %v", aidaDbUpdateDbHash, processed)
 
 	log.Info("Generating state hashes hash...")
-	aidaDbStateHashesHash, err := GetStateHashesHash(cfg, aidaDb, log)
+	aidaDbStateHashesHash, processed, err := GetStateHashesHash(cfg, aidaDb, log)
 	if err != nil {
 		return err
 	}
-	log.Infof("State hashes hash: %x", aidaDbStateHashesHash)
+	log.Infof("State hashes hash: %x; processed %v", aidaDbStateHashesHash, processed)
 
 	return nil
 }
@@ -63,11 +63,13 @@ func marshaller(in chan any, out chan []byte, errChan chan error) {
 	}
 }
 
-func GetSubstateHash(db ethdb.Database, workers int, log logger.Logger) ([]byte, error) {
+func GetSubstateHash(db ethdb.Database, workers int, log logger.Logger) ([]byte, uint64, error) {
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
 
 	feeder := func(feederChan chan any, errChan chan error) {
+		defer close(feederChan)
+
 		substate.SetSubstateDbBackend(db)
 		it := substate.NewSubstateIterator(0, workers)
 		defer it.Release()
@@ -80,13 +82,9 @@ func GetSubstateHash(db ethdb.Database, workers int, log logger.Logger) ([]byte,
 			}
 
 			select {
-			case err, ok := <-errChan:
-				if ok {
-					if err != nil {
-						errChan <- err
-						return
-					}
-				}
+			case err := <-errChan:
+				errChan <- err
+				return
 			case feederChan <- it.Value():
 			}
 		}
@@ -95,11 +93,13 @@ func GetSubstateHash(db ethdb.Database, workers int, log logger.Logger) ([]byte,
 	return parallelHashComputing(feeder, workers)
 }
 
-func GetDeletionHash(cfg *utils.Config, db ethdb.Database, log logger.Logger) ([]byte, error) {
+func GetDeletionHash(cfg *utils.Config, db ethdb.Database, log logger.Logger) ([]byte, uint64, error) {
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
 
 	feeder := func(feederChan chan any, errChan chan error) {
+		defer close(feederChan)
+
 		ddb := substate.NewDestroyedAccountDB(db)
 		inRange, err := ddb.GetAccountsDestroyedInRange(0, cfg.Last)
 		if err != nil {
@@ -115,25 +115,23 @@ func GetDeletionHash(cfg *utils.Config, db ethdb.Database, log logger.Logger) ([
 			}
 
 			select {
-			case err, ok := <-errChan:
-				if ok {
-					if err != nil {
-						errChan <- err
-						return
-					}
-				}
-			case feederChan <- address.Bytes():
+			case err = <-errChan:
+				errChan <- err
+				return
+			case feederChan <- address:
 			}
 		}
 	}
 	return parallelHashComputing(feeder, cfg.Workers)
 }
 
-func GetUpdateDbHash(cfg *utils.Config, db ethdb.Database, log logger.Logger) ([]byte, error) {
+func GetUpdateDbHash(cfg *utils.Config, db ethdb.Database, log logger.Logger) ([]byte, uint64, error) {
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
 
 	feeder := func(feederChan chan any, errChan chan error) {
+		defer close(feederChan)
+
 		udb := substate.NewUpdateDB(db)
 		iter := substate.NewUpdateSetIterator(udb, 0, cfg.Last)
 		defer iter.Release()
@@ -147,13 +145,9 @@ func GetUpdateDbHash(cfg *utils.Config, db ethdb.Database, log logger.Logger) ([
 
 			value := iter.Value()
 			select {
-			case err, ok := <-errChan:
-				if ok {
-					if err != nil {
-						errChan <- err
-						return
-					}
-				}
+			case err := <-errChan:
+				errChan <- err
+				return
 			case feederChan <- value:
 			}
 		}
@@ -162,11 +156,13 @@ func GetUpdateDbHash(cfg *utils.Config, db ethdb.Database, log logger.Logger) ([
 	return parallelHashComputing(feeder, 1)
 }
 
-func GetStateHashesHash(cfg *utils.Config, db ethdb.Database, log logger.Logger) ([]byte, error) {
+func GetStateHashesHash(cfg *utils.Config, db ethdb.Database, log logger.Logger) ([]byte, uint64, error) {
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
 
 	feeder := func(feederChan chan any, errChan chan error) {
+		defer close(feederChan)
+
 		provider := utils.MakeStateHashProvider(db)
 
 		var i uint64 = 0
@@ -187,13 +183,9 @@ func GetStateHashesHash(cfg *utils.Config, db ethdb.Database, log logger.Logger)
 			}
 
 			select {
-			case err, ok := <-errChan:
-				if ok {
-					if err != nil {
-						errChan <- err
-						return
-					}
-				}
+			case err = <-errChan:
+				errChan <- err
+				return
 			case feederChan <- h:
 			}
 		}
@@ -202,20 +194,46 @@ func GetStateHashesHash(cfg *utils.Config, db ethdb.Database, log logger.Logger)
 	return parallelHashComputing(feeder, cfg.Workers)
 }
 
-func parallelHashComputing(feeder func(chan any, chan error), workers int) ([]byte, error) {
+func parallelHashComputing(feeder func(chan any, chan error), workers int) ([]byte, uint64, error) {
 	var wg sync.WaitGroup
 	feederChan := make(chan any, workers)
 	processedChan := make(chan []byte, workers)
 
 	errChan := make(chan error)
 
-	go func() {
-		defer close(feederChan)
+	var counter uint64 = 0
 
+	countingFeeder := make(chan any)
+	go func() {
+		wg.Add(1)
+		defer wg.Done()
+		for {
+			select {
+			case err := <-errChan:
+				errChan <- err
+				return
+			case item, ok := <-countingFeeder:
+				if !ok {
+					close(feederChan)
+					return
+				}
+				counter++
+
+				select {
+				case err := <-errChan:
+					errChan <- err
+					return
+				case feederChan <- item:
+				}
+			}
+		}
+	}()
+
+	go func() {
 		wg.Add(1)
 		defer wg.Done()
 
-		feeder(feederChan, errChan)
+		feeder(countingFeeder, errChan)
 	}()
 
 	for i := 0; i < workers; i++ {
@@ -241,12 +259,12 @@ func parallelHashComputing(feeder func(chan any, chan error), workers int) ([]by
 		case err, ok := <-errChan:
 			if ok {
 				if err != nil {
-					return nil, err
+					return nil, counter, err
 				}
 			}
 		case value, ok := <-processedChan:
 			if !ok {
-				return hasher.Sum(nil), nil
+				return hasher.Sum(nil), counter, nil
 			}
 			hasher.Write(value)
 		}
