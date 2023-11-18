@@ -154,7 +154,7 @@ func GetUpdateDbHash(cfg *utils.Config, db ethdb.Database, log logger.Logger) ([
 			case err := <-errChan:
 				errChan <- err
 				return
-			case feederChan <- value:
+			case feederChan <- value.UpdateSet:
 			}
 		}
 	}
