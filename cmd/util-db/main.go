@@ -12,13 +12,14 @@ import (
 // UtilDbApp data structure
 var UtilDbApp = cli.App{
 	Name:      "Aida Database",
-	HelpName:  "aida-db",
+	HelpName:  "util-db",
 	Usage:     "merge source data into profiling database",
 	Copyright: "(c) 2022 Fantom Foundation",
 	Commands: []*cli.Command{
 		&db.AutoGenCommand,
 		&db.CloneCommand,
 		&db.CompactCommand,
+		&db.CompareCommand,
 		&db.GenerateCommand,
 		&db.LachesisUpdateCommand,
 		&db.MergeCommand,
