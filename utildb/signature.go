@@ -1,9 +1,11 @@
 package utildb
 
 import (
+	"bytes"
 	"crypto/md5"
 	"encoding/json"
 	"errors"
+	"sort"
 	"sync"
 	"time"
 
@@ -106,6 +108,10 @@ func GetDeletionHash(cfg *utils.Config, db ethdb.Database, log logger.Logger) ([
 			errChan <- err
 			return
 		}
+
+		sort.Slice(inRange, func(i, j int) bool {
+			return bytes.Compare(inRange[i].Bytes(), inRange[j].Bytes()) < 0
+		})
 
 		for i, address := range inRange {
 			select {
