@@ -33,12 +33,12 @@ func CompareDatabases(cfg *utils.Config, aidaDb, targetDb ethdb.Database, log lo
 	log.Info("Substate is the same")
 
 	log.Info("Comparing deletion hash...")
-	aidaDbDeletionHash, err := GetDeletionHash(aidaDb)
+	aidaDbDeletionHash, err := GetDeletionHash(cfg, aidaDb)
 	if err != nil {
 		return err
 	}
 
-	targetDbDeletionHash, err := GetDeletionHash(targetDb)
+	targetDbDeletionHash, err := GetDeletionHash(cfg, targetDb)
 	if err != nil {
 		return err
 	}
@@ -49,12 +49,12 @@ func CompareDatabases(cfg *utils.Config, aidaDb, targetDb ethdb.Database, log lo
 	log.Info("Deletion hash is the same")
 
 	log.Info("Comparing updateDb hash...")
-	aidaDbUpdateDbHash, err := GetUpdateDbHash(aidaDb)
+	aidaDbUpdateDbHash, err := GetUpdateDbHash(cfg, aidaDb)
 	if err != nil {
 		return err
 	}
 
-	targetDbUpdateDbHash, err := GetUpdateDbHash(targetDb)
+	targetDbUpdateDbHash, err := GetUpdateDbHash(cfg, targetDb)
 	if err != nil {
 		return err
 	}
@@ -105,9 +105,9 @@ func GetStateHashesHash(cfg *utils.Config, db ethdb.Database) ([]byte, error) {
 
 }
 
-func GetDeletionHash(db ethdb.Database) ([]byte, error) {
+func GetDeletionHash(cfg *utils.Config, db ethdb.Database) ([]byte, error) {
 	ddb := substate.NewDestroyedAccountDB(db)
-	inRange, err := ddb.GetAccountsDestroyedInRange(0, 9999999999999999999)
+	inRange, err := ddb.GetAccountsDestroyedInRange(0, cfg.Last)
 	if err != nil {
 		return nil, err
 	}
@@ -120,10 +120,10 @@ func GetDeletionHash(db ethdb.Database) ([]byte, error) {
 	return hash.Sum(nil), nil
 }
 
-func GetUpdateDbHash(db ethdb.Database) ([]byte, error) {
+func GetUpdateDbHash(cfg *utils.Config, db ethdb.Database) ([]byte, error) {
 	udb := substate.NewUpdateDB(db)
 
-	iter := substate.NewUpdateSetIterator(udb, 0, 9999999999999999999)
+	iter := substate.NewUpdateSetIterator(udb, 0, cfg.Last)
 	defer iter.Release()
 
 	hash := md5.New()

@@ -1,6 +1,8 @@
 package db
 
 import (
+	"fmt"
+
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utildb"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -24,6 +26,10 @@ Creates clone db is used to create subset of aida-db to have more compact databa
 
 // compareDb compares aida-db to target-db whether they are the same
 func compareDb(ctx *cli.Context) error {
+	// process arguments and flags
+	if ctx.Args().Len() != 1 {
+		return fmt.Errorf("compare command requires exactly 2 arguments")
+	}
 	cfg, err := utils.NewConfig(ctx, utils.LastBlockArg)
 	if err != nil {
 		return err
