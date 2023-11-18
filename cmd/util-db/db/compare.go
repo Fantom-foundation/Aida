@@ -28,7 +28,7 @@ Creates clone db is used to create subset of aida-db to have more compact databa
 func compareDb(ctx *cli.Context) error {
 	// process arguments and flags
 	if ctx.Args().Len() != 1 {
-		return fmt.Errorf("compare command requires exactly 2 arguments")
+		return fmt.Errorf("compare command requires exactly 1 arguments")
 	}
 	cfg, err := utils.NewConfig(ctx, utils.LastBlockArg)
 	if err != nil {
