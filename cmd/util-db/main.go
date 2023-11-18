@@ -19,7 +19,7 @@ var UtilDbApp = cli.App{
 		&db.AutoGenCommand,
 		&db.CloneCommand,
 		&db.CompactCommand,
-		&db.CompareCommand,
+		&db.SignatureCommand,
 		&db.GenerateCommand,
 		&db.LachesisUpdateCommand,
 		&db.MergeCommand,

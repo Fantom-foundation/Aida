@@ -8,6 +8,7 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utildb"
 	"github.com/Fantom-foundation/Aida/utils"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/urfave/cli/v2"
 )
@@ -28,6 +29,22 @@ var ValidateCommand = cli.Command{
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 	},
+}
+
+// SignatureCommand calculates md5 of actual data stored
+var SignatureCommand = cli.Command{
+	Action: signatureCmd,
+	Name:   "signature",
+	Usage:  "Calculates md5 of actual data stored",
+	Flags: []cli.Flag{
+		&utils.AidaDbFlag,
+		&utils.TargetDbFlag,
+		&logger.LogLevelFlag,
+		&substate.WorkersFlag,
+	},
+	Description: `
+Creates signatures of substates, updatesets, deletion and state-hashes, because RLP encoding is not deterministic.
+`,
 }
 
 // validateCmd calculates the dbHash for given AidaDb and saves it.
