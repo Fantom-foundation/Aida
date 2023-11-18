@@ -18,7 +18,7 @@ import (
 
 func DbSignature(cfg *utils.Config, aidaDb ethdb.Database, log logger.Logger) error {
 	log.Info("Generating substate...")
-	aidaDbSubstateHash, processed, err := GetSubstateHash(aidaDb, log)
+	aidaDbSubstateHash, processed, err := GetSubstateHash(cfg, aidaDb, log)
 	if err != nil {
 		return err
 	}
@@ -65,7 +65,7 @@ func marshaller(in chan any, out chan []byte, errChan chan error) {
 	}
 }
 
-func GetSubstateHash(db ethdb.Database, log logger.Logger) ([]byte, uint64, error) {
+func GetSubstateHash(cfg *utils.Config, db ethdb.Database, log logger.Logger) ([]byte, uint64, error) {
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
 
@@ -79,7 +79,7 @@ func GetSubstateHash(db ethdb.Database, log logger.Logger) ([]byte, uint64, erro
 		for it.Next() {
 			select {
 			case <-ticker.C:
-				log.Infof("Substate hash: %v", it.Value().Block)
+				log.Infof("Substate hash process: %v/%v", it.Value().Block, cfg.Last)
 			default:
 			}
 
@@ -116,7 +116,7 @@ func GetDeletionHash(cfg *utils.Config, db ethdb.Database, log logger.Logger) ([
 		for i, address := range inRange {
 			select {
 			case <-ticker.C:
-				log.Infof("Deletion hash at: %v/%v", i, len(inRange))
+				log.Infof("Deletion hash process: %v/%v", i, len(inRange))
 			default:
 			}
 
@@ -145,7 +145,7 @@ func GetUpdateDbHash(cfg *utils.Config, db ethdb.Database, log logger.Logger) ([
 		for iter.Next() {
 			select {
 			case <-ticker.C:
-				log.Infof("UpdateDb hash at: %v/%v", iter.Value().Block, cfg.Last)
+				log.Infof("UpdateDb hash process: %v/%v", iter.Value().Block, cfg.Last)
 			default:
 			}
 
@@ -174,7 +174,7 @@ func GetStateHashesHash(cfg *utils.Config, db ethdb.Database, log logger.Logger)
 		for ; i < cfg.Last; i++ {
 			select {
 			case <-ticker.C:
-				log.Infof("State hashes hash at: %v/%v", i, cfg.Last)
+				log.Infof("State hashes hash process: %v/%v", i, cfg.Last)
 			default:
 			}
 
