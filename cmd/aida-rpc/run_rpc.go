@@ -65,7 +65,12 @@ func run(
 	// this is for testing purposes so mock statedb and mock extension can be used
 	extensionList = append(extensionList, extra...)
 	if stateDb == nil {
-		extensionList = append(extensionList, statedb.MakeStateDbManager[*rpc.RequestAndResults](cfg))
+		extensionList = append(
+			extensionList,
+			statedb.MakeStateDbManager[*rpc.RequestAndResults](cfg),
+			statedb.MakeArchiveBlockChecker[*rpc.RequestAndResults](cfg),
+		)
+
 	}
 
 	return executor.NewExecutor(provider, cfg.LogLevel).Run(

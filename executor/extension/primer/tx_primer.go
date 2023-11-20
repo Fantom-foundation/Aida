@@ -1,4 +1,4 @@
-package statedb
+package primer
 
 import (
 	"github.com/Fantom-foundation/Aida/executor"

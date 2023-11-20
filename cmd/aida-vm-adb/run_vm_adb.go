@@ -34,15 +34,7 @@ func RunVmAdb(ctx *cli.Context) error {
 	}
 	defer substateDb.Close()
 
-	stateDb, _, err := utils.PrepareStateDB(cfg)
-	if err != nil {
-		return err
-	}
-	defer func() error {
-		return stateDb.Close()
-	}()
-
-	return run(cfg, substateDb, stateDb, blockProcessor{cfg}, nil)
+	return run(cfg, substateDb, nil, blockProcessor{cfg}, nil)
 }
 
 type blockProcessor struct {
@@ -72,6 +64,15 @@ func run(
 		statedb.MakeArchivePrepper(),
 		tracker.MakeProgressLogger[*substate.Substate](cfg, 0),
 	}
+
+	if stateDb == nil {
+		extensionList = append(
+			extensionList,
+			statedb.MakeStateDbManager[*substate.Substate](cfg),
+			statedb.MakeArchiveBlockChecker[*substate.Substate](cfg),
+		)
+	}
+
 	extensionList = append(extensionList, extra...)
 	return executor.NewExecutor(provider, cfg.LogLevel).Run(
 		executor.Params{

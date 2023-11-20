@@ -2,6 +2,7 @@ package trace
 
 import (
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension/primer"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
@@ -67,7 +68,7 @@ func replay(
 		profiler.MakeMemoryUsagePrinter[[]operation.Operation](cfg),
 		profiler.MakeMemoryProfiler[[]operation.Operation](cfg),
 		statedb.MakeStateDbManager[[]operation.Operation](cfg),
-		statedb.MakeStateDbPrimer[[]operation.Operation](cfg),
+		primer.MakeStateDbPrimer[[]operation.Operation](cfg),
 	}
 
 	extensionList = append(extensionList, extra...)

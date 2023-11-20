@@ -4,7 +4,8 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
-	"github.com/Fantom-foundation/Aida/executor/extension"
+	"github.com/Fantom-foundation/Aida/executor/extension/aidadb"
+	"github.com/Fantom-foundation/Aida/executor/extension/primer"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
@@ -62,23 +63,29 @@ func runSubstates(
 	}
 
 	if stateDb == nil {
-		extensionList = append(extensionList, statedb.MakeStateDbManager[*substate.Substate](cfg))
+		extensionList = append(
+			extensionList,
+			statedb.MakeStateDbManager[*substate.Substate](cfg),
+			statedb.MakeLiveDbBlockChecker[*substate.Substate](cfg),
+		)
 	}
 
 	extensionList = append(extensionList, extra...)
 
 	extensionList = append(extensionList, []executor.Extension[*substate.Substate]{
-		extension.MakeAidaDbManager[*substate.Substate](cfg),
+		profiler.MakeThreadLocker[*substate.Substate](),
+		aidadb.MakeAidaDbManager[*substate.Substate](cfg),
 		profiler.MakeVirtualMachineStatisticsPrinter[*substate.Substate](cfg),
 		tracker.MakeProgressLogger[*substate.Substate](cfg, 15*time.Second),
 		tracker.MakeProgressTracker(cfg, 100_000),
-		statedb.MakeStateDbPrimer[*substate.Substate](cfg),
+		primer.MakeStateDbPrimer[*substate.Substate](cfg),
 		profiler.MakeMemoryUsagePrinter[*substate.Substate](cfg),
 		profiler.MakeMemoryProfiler[*substate.Substate](cfg),
 		statedb.MakeStateDbPrepper(),
 		statedb.MakeArchiveInquirer(cfg),
 		validator.MakeStateHashValidator[*substate.Substate](cfg),
 		statedb.MakeBlockEventEmitter[*substate.Substate](),
+
 		profiler.MakeOperationProfiler[*substate.Substate](cfg),
 		// block profile extension should be always last because:
 		// 1) Pre-Func are called forwards so this is called last and

@@ -2,6 +2,7 @@ package trace
 
 import (
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension/primer"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
@@ -84,7 +85,7 @@ func replaySubstate(
 	if cfg.DbImpl == "memory" {
 		extensionList = append(extensionList, statedb.MakeStateDbPrepper())
 	} else {
-		extensionList = append(extensionList, statedb.MakeTxPrimer(cfg))
+		extensionList = append(extensionList, primer.MakeTxPrimer(cfg))
 	}
 
 	extensionList = append(extensionList, extra...)
