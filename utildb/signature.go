@@ -31,7 +31,7 @@ func DbSignature(cfg *utils.Config, aidaDb ethdb.Database, log logger.Logger) er
 	}
 	log.Infof("DeletionDb hash: \n Got%x\n Want %v", processed, aidaDbDeletionHash)
 
-	log.Info("Generating updateDb hash...")
+	log.Info("Generating UpdateDb hash...")
 	aidaDbUpdateDbHash, processed, err := GetUpdateDbHash(cfg, aidaDb, log)
 	if err != nil {
 		return err
