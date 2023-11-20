@@ -145,7 +145,7 @@ func GetUpdateDbHash(cfg *utils.Config, db ethdb.Database, log logger.Logger) ([
 		for iter.Next() {
 			select {
 			case <-ticker.C:
-				log.Infof("UpdateDb hash process: %v/%v", iter.Value().Block, cfg.Last)
+				log.Infof("UpdateDb hash progress: %v/%v", iter.Value().Block, cfg.Last)
 			default:
 			}
 
