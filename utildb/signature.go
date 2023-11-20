@@ -17,7 +17,7 @@ import (
 )
 
 func DbSignature(cfg *utils.Config, aidaDb ethdb.Database, log logger.Logger) error {
-	log.Info("Generating substate...")
+	log.Info("Generating SubstateDb hash...")
 	aidaDbSubstateHash, processed, err := GetSubstateHash(cfg, aidaDb, log)
 	if err != nil {
 		return err
