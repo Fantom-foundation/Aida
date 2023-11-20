@@ -219,16 +219,18 @@ func TestUtilsConfig_adjustBlockRange(t *testing.T) {
 	keywordBlocks[chainId]["first"] = 1000
 	keywordBlocks[chainId]["last"] = 2000
 
+	log := logger.NewLogger("INFO", "Utils_config_test")
+
 	firstArg = 1100
 	lastArg = 1900
-	first, last, err = adjustBlockRange(chainId, firstArg, lastArg)
+	first, last, err = adjustBlockRange(chainId, firstArg, lastArg, log)
 	if first != firstArg && last != lastArg {
 		t.Fatalf("wrong block range; expected %v:%v, have %v:%v", firstArg, lastArg, first, last)
 	}
 
 	firstArg = 3000
 	lastArg = 4000
-	first, last, err = adjustBlockRange(chainId, firstArg, lastArg)
+	first, last, err = adjustBlockRange(chainId, firstArg, lastArg, log)
 	if err == nil {
 		t.Fatalf("Ranges not overlapped. Expected an error.")
 	}
@@ -236,14 +238,14 @@ func TestUtilsConfig_adjustBlockRange(t *testing.T) {
 	// check corner cases
 	firstArg = 100
 	lastArg = 1000
-	first, last, err = adjustBlockRange(chainId, firstArg, lastArg)
+	first, last, err = adjustBlockRange(chainId, firstArg, lastArg, log)
 	if first != firstArg && last != lastArg {
 		t.Fatalf("wrong block range; expected %v:%v, have %v:%v", lastArg, lastArg, first, last)
 	}
 
 	firstArg = 2000
 	lastArg = 2200
-	first, last, err = adjustBlockRange(chainId, firstArg, lastArg)
+	first, last, err = adjustBlockRange(chainId, firstArg, lastArg, log)
 	if first != firstArg && last != lastArg {
 		t.Fatalf("wrong block range; expected %v:%v, have %v:%v", firstArg, firstArg, first, last)
 	}
