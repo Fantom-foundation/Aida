@@ -79,7 +79,7 @@ func GetSubstateHash(cfg *utils.Config, db ethdb.Database, log logger.Logger) ([
 		for it.Next() {
 			select {
 			case <-ticker.C:
-				log.Infof("Substate hash process: %v/%v", it.Value().Block, cfg.Last)
+				log.Infof("SubstateDb hash progress: %v/%v", it.Value().Block, cfg.Last)
 			default:
 			}
 
