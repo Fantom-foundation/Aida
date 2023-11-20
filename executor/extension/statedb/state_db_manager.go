@@ -28,10 +28,13 @@ type stateDbManager[T any] struct {
 func (m *stateDbManager[T]) PreRun(_ executor.State[T], ctx *executor.Context) error {
 	var err error
 	ctx.State, ctx.StateDbPath, err = utils.PrepareStateDB(m.cfg)
+	if err != nil {
+		return err
+	}
 	if !m.cfg.KeepDb {
 		m.log.Warningf("--keep-db is not used. Directory %v with DB will be removed at the end of this run.", ctx.StateDbPath)
 	}
-	return err
+	return nil
 }
 
 func (m *stateDbManager[T]) PostRun(state executor.State[T], ctx *executor.Context, _ error) error {

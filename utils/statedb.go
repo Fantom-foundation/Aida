@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	pathToPrimaryStateDb = "/prime"
-	pathToShadowStateDb  = "/shadow"
+	PathToPrimaryStateDb = "/prime"
+	PathToShadowStateDb  = "/shadow"
 )
 
 // PrepareStateDB creates stateDB or load existing stateDB
@@ -53,7 +53,6 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 		err            error
 		stateDb        state.StateDB
 		stateDbInfo    StateDbInfo
-		stateDbPath    string
 		tmpStateDbPath string
 		log            = logger.NewLogger(cfg.LogLevel, "StateDB-Creation")
 	)
@@ -79,18 +78,18 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 		if err := CopyDir(cfg.StateDbSrc, tmpStateDbPath); err != nil {
 			return nil, "", fmt.Errorf("failed to copy source statedb to temporary directory; %v", err)
 		}
-		stateDbPath = tmpStateDbPath
+		cfg.PathToStateDb = tmpStateDbPath
 	} else {
 		// when not using ShadowDb, StateDbSrc is path to the StateDb itself
-		stateDbPath = cfg.StateDbSrc
+		cfg.PathToStateDb = cfg.StateDbSrc
 	}
 
 	// using ShadowDb?
 	if cfg.ShadowDb {
-		stateDbPath = filepath.Join(stateDbPath, pathToPrimaryStateDb)
+		cfg.PathToStateDb = filepath.Join(cfg.PathToStateDb, PathToPrimaryStateDb)
 	}
 
-	stateDbInfoFile := filepath.Join(stateDbPath, PathToDbInfo)
+	stateDbInfoFile := filepath.Join(cfg.PathToStateDb, PathToDbInfo)
 	stateDbInfo, err = ReadStateDbInfo(stateDbInfoFile)
 	if err != nil {
 		return nil, "", fmt.Errorf("cannot read StateDb cfg file '%v'; %v", stateDbInfoFile, err)
@@ -100,13 +99,13 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 	cfg.ArchiveMode = stateDbInfo.ArchiveMode
 
 	// open primary db
-	stateDb, err = makeStateDBVariant(stateDbPath, stateDbInfo.Impl, stateDbInfo.Variant, stateDbInfo.ArchiveVariant, stateDbInfo.Schema, stateDbInfo.RootHash, cfg)
+	stateDb, err = makeStateDBVariant(cfg.PathToStateDb, stateDbInfo.Impl, stateDbInfo.Variant, stateDbInfo.ArchiveVariant, stateDbInfo.Schema, stateDbInfo.RootHash, cfg)
 	if err != nil {
 		return nil, "", fmt.Errorf("cannot create StateDb; %v", err)
 	}
 
 	if !cfg.ShadowDb {
-		return stateDb, stateDbPath, nil
+		return stateDb, cfg.PathToStateDb, nil
 	}
 
 	var (
@@ -115,7 +114,7 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 		shadowDbPath string
 	)
 
-	shadowDbPath = filepath.Join(cfg.StateDbSrc, pathToShadowStateDb)
+	shadowDbPath = filepath.Join(cfg.StateDbSrc, PathToShadowStateDb)
 	shadowDbInfoFile := filepath.Join(shadowDbPath, PathToDbInfo)
 	shadowDbInfo, err = ReadStateDbInfo(shadowDbInfoFile)
 	if err != nil {
@@ -152,7 +151,7 @@ func makeNewStateDB(cfg *Config) (state.StateDB, string, error) {
 
 	// no shadow db
 	if cfg.ShadowDb {
-		stateDbPath = filepath.Join(stateDbPath, pathToPrimaryStateDb)
+		stateDbPath = filepath.Join(stateDbPath, PathToPrimaryStateDb)
 	}
 
 	// create primary db
@@ -170,7 +169,7 @@ func makeNewStateDB(cfg *Config) (state.StateDB, string, error) {
 		shadowDbPath string
 	)
 
-	shadowDbPath = filepath.Join(tmpDir, pathToShadowStateDb)
+	shadowDbPath = filepath.Join(tmpDir, PathToShadowStateDb)
 
 	// open shadow db
 	shadowDb, err = makeStateDBVariant(shadowDbPath, cfg.ShadowImpl, cfg.ShadowVariant, cfg.ArchiveVariant, cfg.CarmenSchema, common.Hash{}, cfg)

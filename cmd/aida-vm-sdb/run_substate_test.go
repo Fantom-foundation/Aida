@@ -15,7 +15,7 @@ import (
 
 var testingAddress = common.Address{1}
 
-func TestVmSdb_AllDbEventsAreIssuedInOrder(t *testing.T) {
+func TestVmSdbSubstate_AllDbEventsAreIssuedInOrder(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	provider := executor.NewMockProvider[*substate.Substate](ctrl)
 	db := state.NewMockStateDB(ctrl)
@@ -31,10 +31,10 @@ func TestVmSdb_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		Run(0, 3, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[*substate.Substate]) error {
 			// block 0
-			consumer(executor.TransactionInfo[*substate.Substate]{Block: 0, Transaction: 1, Data: emptyTx})
+			consumer(executor.TransactionInfo[*substate.Substate]{Block: 0, Transaction: 1, Data: emptySubstate})
 			// block 2
-			consumer(executor.TransactionInfo[*substate.Substate]{Block: 2, Transaction: 3, Data: emptyTx})
-			consumer(executor.TransactionInfo[*substate.Substate]{Block: 2, Transaction: utils.PseudoTx, Data: emptyTx})
+			consumer(executor.TransactionInfo[*substate.Substate]{Block: 2, Transaction: 3, Data: emptySubstate})
+			consumer(executor.TransactionInfo[*substate.Substate]{Block: 2, Transaction: utils.PseudoTx, Data: emptySubstate})
 			return nil
 		})
 
@@ -69,12 +69,12 @@ func TestVmSdb_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		db.EXPECT().EndBlock(),
 	)
 
-	if err := run(config, provider, db, true); err != nil {
-		t.Errorf("run failed: %v", err)
+	if err := runSubstates(config, provider, db); err != nil {
+		t.Errorf("runSubstates failed: %v", err)
 	}
 }
 
-func TestVmSdb_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
+func TestVmSdbSubstate_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	provider := executor.NewMockProvider[*substate.Substate](ctrl)
 	db := state.NewMockStateDB(ctrl)
@@ -89,7 +89,7 @@ func TestVmSdb_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 	provider.EXPECT().
 		Run(0, 3, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[*substate.Substate]) error {
-			return consumer(executor.TransactionInfo[*substate.Substate]{Block: 0, Transaction: 1, Data: testTx})
+			return consumer(executor.TransactionInfo[*substate.Substate]{Block: 0, Transaction: 1, Data: testSubstate})
 		})
 
 	gomock.InOrder(
@@ -110,10 +110,10 @@ func TestVmSdb_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 		db.EXPECT().EndTransaction(),
 	)
 
-	// run fails but not on validation
-	err := run(config, provider, db, true)
+	// runSubstates fails but not on validation
+	err := runSubstates(config, provider, db)
 	if err == nil {
-		t.Errorf("run must fail")
+		t.Errorf("runSubstatesSubstates must fail")
 	}
 
 	expectedErr := strings.TrimSpace("Block: 0 Transaction: 1\nintrinsic gas too low: have 0, want 53000")
@@ -125,7 +125,7 @@ func TestVmSdb_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 
 }
 
-func TestVmSdb_ValidationFailsOnInvalidTransaction(t *testing.T) {
+func TestVmSdbSubstate_ValidationFailsOnInvalidTransaction(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	provider := executor.NewMockProvider[*substate.Substate](ctrl)
 	db := state.NewMockStateDB(ctrl)
@@ -140,7 +140,7 @@ func TestVmSdb_ValidationFailsOnInvalidTransaction(t *testing.T) {
 	provider.EXPECT().
 		Run(0, 3, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[*substate.Substate]) error {
-			return consumer(executor.TransactionInfo[*substate.Substate]{Block: 0, Transaction: 1, Data: testTx})
+			return consumer(executor.TransactionInfo[*substate.Substate]{Block: 0, Transaction: 1, Data: testSubstate})
 		})
 
 	gomock.InOrder(
@@ -154,7 +154,7 @@ func TestVmSdb_ValidationFailsOnInvalidTransaction(t *testing.T) {
 		db.EXPECT().EndTransaction(),
 	)
 
-	err := run(config, provider, db, true)
+	err := runSubstates(config, provider, db)
 	if err == nil {
 		t.Errorf("validation must fail")
 	}
@@ -169,8 +169,8 @@ func TestVmSdb_ValidationFailsOnInvalidTransaction(t *testing.T) {
 
 }
 
-// emptyTx is a dummy substate that will be processed without crashing.
-var emptyTx = &substate.Substate{
+// emptySubstate is a dummy substate that will be processed without crashing.
+var emptySubstate = &substate.Substate{
 	Env: &substate.SubstateEnv{},
 	Message: &substate.SubstateMessage{
 		GasPrice: big.NewInt(12),
@@ -180,8 +180,8 @@ var emptyTx = &substate.Substate{
 	},
 }
 
-// testTx is a dummy substate used for testing validation.
-var testTx = &substate.Substate{
+// testSubstate is a dummy substate used for testing validation.
+var testSubstate = &substate.Substate{
 	InputAlloc: substate.SubstateAlloc{testingAddress: substate.NewSubstateAccount(1, new(big.Int).SetUint64(1), []byte{})},
 	Env:        &substate.SubstateEnv{},
 	Message: &substate.SubstateMessage{
