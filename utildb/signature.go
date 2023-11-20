@@ -24,7 +24,7 @@ func DbSignature(cfg *utils.Config, aidaDb ethdb.Database, log logger.Logger) er
 	}
 	log.Infof("SubstateDb hash: \n Got%x\n Want %v", processed, aidaDbSubstateHash)
 
-	log.Info("Generating deletion hash...")
+	log.Info("Generating DeletionDb hash...")
 	aidaDbDeletionHash, processed, err := GetDeletionHash(cfg, aidaDb, log)
 	if err != nil {
 		return err
