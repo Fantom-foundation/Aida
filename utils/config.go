@@ -553,13 +553,6 @@ func adjustMissingConfigValues(cfg *Config) error {
 		OverwriteDbPathsByAidaDb(cfg)
 	}
 
-	// TODO: can be deleted as AidaDB is the default data source.
-	if found := directoryExists(cfg.DeletionDb); found {
-		cfg.HasDeletedAccounts = true
-	} else {
-		cfg.HasDeletedAccounts = false
-	}
-
 	// in-memory StateDB cannot be kept after run.
 	if cfg.KeepDb && strings.Contains(cfg.DbVariant, "memory") {
 		cfg.KeepDb = false
@@ -588,63 +581,21 @@ func reportNewConfig(cfg *Config, log logger.Logger) {
 		log.Noticef("Run config:")
 		log.Infof("Block range: %v to %v", cfg.First, cfg.Last)
 		if cfg.MaxNumTransactions >= 0 {
-			log.Infof("Transaction limit: %d", cfg.MaxNumTransactions)
+			log.Noticef("Transaction limit: %d", cfg.MaxNumTransactions)
 		}
 		log.Infof("Chain id: %v (record & run-vm only)", cfg.ChainID)
 		log.Infof("SyncPeriod length: %v", cfg.SyncPeriodLength)
-
-		logDbMode := func(prefix, impl, variant string) {
-			if cfg.DbImpl == "carmen" {
-				log.Infof("%s: %v, DB variant: %v, DB schema: %d", prefix, impl, variant, cfg.CarmenSchema)
-			} else {
-				log.Infof("%s: %v, DB variant: %v", prefix, impl, variant)
-			}
-		}
-		if !cfg.ShadowDb {
-			logDbMode("Storage system", cfg.DbImpl, cfg.DbVariant)
-		} else {
-			logDbMode("Prime storage system", cfg.DbImpl, cfg.DbVariant)
-			logDbMode("Shadow storage system", cfg.ShadowImpl, cfg.ShadowVariant)
-		}
-		log.Infof("Source storage directory (empty if new): %v", cfg.StateDbSrc)
-		log.Infof("Working storage directory: %v", cfg.DbTmp)
-		if cfg.ArchiveMode {
-			log.Noticef("Archive mode: enabled")
-			if cfg.ArchiveVariant == "" {
-				log.Infof("Archive variant: <implementation-default>")
-			} else {
-				log.Infof("Archive variant: %s", cfg.ArchiveVariant)
-			}
-		} else {
-			log.Infof("Archive mode: disabled")
-		}
-		log.Infof("Used VM implementation: %v", cfg.VmImpl)
+		log.Noticef("Used VM implementation: %v", cfg.VmImpl)
 		log.Infof("Aida DB directory: %v", cfg.AidaDb)
-		if cfg.SkipPriming {
-			log.Infof("Priming: Skipped")
-		} else {
-			log.Infof("Randomized Priming: %v", cfg.PrimeRandom)
-			if cfg.PrimeRandom {
-				log.Infof("Seed: %v, threshold: %v", cfg.RandomSeed, cfg.PrimeThreshold)
-			}
-			log.Infof("Update buffer size: %v bytes", cfg.UpdateBufferSize)
-		}
+
+		// todo move to tx validator once finished
 		log.Infof("Validate world state: %v, validate tx state: %v", cfg.ValidateWorldState, cfg.ValidateTxState)
 	}
 
-	if cfg.ValidateTxState {
-		log.Warning("Validation enabled, reducing Tx throughput")
-	}
 	if cfg.ShadowDb {
 		log.Warning("DB shadowing enabled, reducing Tx throughput and increasing memory and storage usage")
 	}
 	if cfg.DbLogging {
 		log.Warning("DB logging enabled, reducing Tx throughput")
-	}
-	if !cfg.HasDeletedAccounts {
-		log.Warning("Deleted-account-dir is not provided or does not exist")
-	}
-	if !cfg.KeepDb {
-		log.Warning("Keeping the stateDB disabled")
 	}
 }

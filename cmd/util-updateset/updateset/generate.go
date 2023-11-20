@@ -109,6 +109,8 @@ func GenUpdateSet(cfg *utils.Config, udb *substate.UpdateDB, ddb *substate.Destr
 		log               = logger.NewLogger(cfg.LogLevel, "Generate Update Set")
 	)
 
+	log.Infof("Update buffer size: %v bytes", cfg.UpdateBufferSize)
+
 	// start with putting metadata into the udb
 	if err = udb.PutMetadata(interval, cfg.UpdateBufferSize); err != nil {
 		return err

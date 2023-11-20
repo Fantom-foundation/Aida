@@ -97,6 +97,10 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 
 	// do we have an archive inside loaded StateDb?
 	cfg.ArchiveMode = stateDbInfo.ArchiveMode
+	cfg.ArchiveVariant = stateDbInfo.ArchiveVariant
+	cfg.DbImpl = stateDbInfo.Impl
+	cfg.DbVariant = stateDbInfo.Variant
+	cfg.CarmenSchema = stateDbInfo.Schema
 
 	// open primary db
 	stateDb, err = makeStateDBVariant(cfg.PathToStateDb, stateDbInfo.Impl, stateDbInfo.Variant, stateDbInfo.ArchiveVariant, stateDbInfo.Schema, stateDbInfo.RootHash, cfg)
@@ -120,6 +124,10 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 	if err != nil {
 		return nil, "", fmt.Errorf("cannot read ShadowDb cfg file '%v'; %v", shadowDbInfoFile, err)
 	}
+
+	cfg.ShadowImpl = shadowDbInfo.Impl
+	cfg.ShadowVariant = shadowDbInfo.Variant
+	cfg.CarmenSchema = shadowDbInfo.Schema
 
 	// open shadow db
 	shadowDb, err = makeStateDBVariant(shadowDbPath, shadowDbInfo.Impl, shadowDbInfo.Variant, shadowDbInfo.ArchiveVariant, shadowDbInfo.Schema, shadowDbInfo.RootHash, cfg)
