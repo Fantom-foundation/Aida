@@ -116,7 +116,7 @@ func GetDeletionHash(cfg *utils.Config, db ethdb.Database, log logger.Logger) ([
 		for i, address := range inRange {
 			select {
 			case <-ticker.C:
-				log.Infof("Deletion hash process: %v/%v", i, len(inRange))
+				log.Infof("DeletionDb hash progress: %v/%v", i, len(inRange))
 			default:
 			}
 
