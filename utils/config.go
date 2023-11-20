@@ -423,7 +423,7 @@ func adjustBlockRange(chainId ChainID, firstArg, lastArg uint64, log logger.Logg
 			first = firstArg
 		} else {
 			first = firstMd
-			log.Warningf("First block arg (%v) is out of range of AidaDB - adjusted to the first block of AidaDB (%v)", firstArg, firstMd)
+			log.Warningf("First block arg (%v) is out of range of AidaDb - adjusted to the first block of AidaDb (%v)", firstArg, firstMd)
 		}
 
 		// get last block number
@@ -431,12 +431,12 @@ func adjustBlockRange(chainId ChainID, firstArg, lastArg uint64, log logger.Logg
 			last = lastArg
 		} else {
 			last = lastMd
-			log.Warningf("Last block arg (%v) is out of range of AidaDB - adjusted to the last block of AidaDB (%v)", lastArg, lastMd)
+			log.Warningf("Last block arg (%v) is out of range of AidaDb - adjusted to the last block of AidaDb (%v)", lastArg, lastMd)
 		}
 
 		return first, last, nil
 	} else {
-		return 0, 0, fmt.Errorf("block range of your aida-db (%v-%v) cannot execute given block range %v-%v", firstMd, lastMd, firstArg, lastArg)
+		return 0, 0, fmt.Errorf("block range of your AidaDb (%v-%v) cannot execute given block range %v-%v", firstMd, lastMd, firstArg, lastArg)
 	}
 }
 
