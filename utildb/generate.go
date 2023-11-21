@@ -478,7 +478,7 @@ func (g *Generator) updatePatchesJson(fileName string) error {
 // doUpdatePatchesJson with newly acquired patch
 func (g *Generator) doUpdatePatchesJson(patchesJson []utils.PatchJson, file *os.File) error {
 	// Convert the array to JSON bytes
-	jsonBytes, err := json.Marshal(patchesJson)
+	jsonBytes, err := json.MarshalIndent(patchesJson, "", "  ")
 	if err != nil {
 		return fmt.Errorf("unable to marshal %v; %v", patchesJson, err)
 	}

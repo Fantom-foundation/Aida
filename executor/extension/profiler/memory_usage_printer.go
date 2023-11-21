@@ -31,11 +31,15 @@ type memoryUsagePrinter[T any] struct {
 }
 
 func (p *memoryUsagePrinter[T]) PreRun(_ executor.State[T], ctx *executor.Context) error {
-	utils.MemoryBreakdown(ctx.State, p.cfg, p.log)
+	if ctx.State != nil {
+		utils.MemoryBreakdown(ctx.State, p.cfg, p.log)
+	}
 	return nil
 }
 
 func (p *memoryUsagePrinter[T]) PostRun(_ executor.State[T], ctx *executor.Context, _ error) error {
-	utils.MemoryBreakdown(ctx.State, p.cfg, p.log)
+	if ctx.State != nil {
+		utils.MemoryBreakdown(ctx.State, p.cfg, p.log)
+	}
 	return nil
 }

@@ -30,7 +30,7 @@ func TestCarmenState_MakeCarmenStateDBInvalid(t *testing.T) {
 
 // TestCarmenState_InitCloseCarmenDB test closing db immediately after initialization
 func TestCarmenState_InitCloseCarmenDB(t *testing.T) {
-	for _, tc := range GetCarmenStateTestCases() {
+	for _, tc := range GetAllCarmenConfigurations() {
 		t.Run(tc.String(), func(t *testing.T) {
 			csDB, err := MakeCarmenStateDB(t.TempDir(), tc.Variant, tc.Archive, 1)
 			if errors.Is(err, carmen.UnsupportedConfiguration) {
