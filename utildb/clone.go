@@ -118,7 +118,7 @@ func (c *cloner) clone(isFirstGenerationFromGenesis bool) error {
 
 	err := c.readDeletions(firstDeletionBlock)
 	if err != nil {
-		return fmt.Errorf("cannot read deletions; %v"; err)
+		return fmt.Errorf("cannot read deletions; %v", err)
 	}
 	err = c.readSubstate()
 	if err != nil {
