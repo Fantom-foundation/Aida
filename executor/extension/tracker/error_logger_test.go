@@ -56,7 +56,7 @@ func TestErrorLogger_LoggingHappens(t *testing.T) {
 	fileName := t.TempDir() + "test-log"
 	cfg := &utils.Config{}
 	cfg.ContinueOnFailure = true
-	cfg.LogFile = fileName
+	cfg.ErrorLogFile = fileName
 	ext := makeErrorLogger[any](cfg, log)
 
 	e := errors.New("testing error")
