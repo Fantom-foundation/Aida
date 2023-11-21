@@ -237,7 +237,10 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		return cfg, fmt.Errorf("unable to parse cli arguments; %v", err)
 	}
 
-	adjustMissingConfigValues(cfg)
+	err = adjustMissingConfigValues(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("cannot adjust missing config values; %v", err)
+	}
 
 	reportNewConfig(cfg, log)
 
@@ -551,6 +554,7 @@ func adjustMissingConfigValues(cfg *Config) error {
 	// if AidaDB path is given, redirect source path to AidaDB.
 	if found := directoryExists(cfg.AidaDb); found {
 		OverwriteDbPathsByAidaDb(cfg)
+		cfg.HasDeletedAccounts = true
 	}
 
 	// in-memory StateDB cannot be kept after run.
