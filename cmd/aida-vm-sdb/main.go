@@ -68,6 +68,7 @@ var RunSubstateCmd = cli.Command{
 		&utils.ProfileFlag,
 		&utils.ProfileDepthFlag,
 		&utils.ProfileFileFlag,
+		&utils.ProfileSqlite3Flag,
 		&utils.ProfileIntervalFlag,
 		&utils.ProfileDBFlag,
 		&utils.ProfileBlocksFlag,

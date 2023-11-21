@@ -22,6 +22,8 @@ const (
 	TransactionLevel ProfileDepth = 2
 )
 
+const BufferSize = 1_000_000
+
 // MakeOperationProfiler creates a executor.Extension that records Operation profiling
 func MakeOperationProfiler[T any](cfg *utils.Config) executor.Extension[T] {
 
@@ -60,7 +62,10 @@ func MakeOperationProfiler[T any](cfg *utils.Config) executor.Extension[T] {
 	ps[IntervalLevel].AddPrintToFile(cfg.ProfileFile, func() string { return p.prettyTable().RenderCSV() })
 
 	// At the configured level, print to file/db if the respective flags are enabled.
-	ps[p.depth].AddPrintToSqlite3(p.sqlite3(cfg.ProfileSqlite3, p.depth))
+	p2db, _ := utils.NewPrintToSqlite3(p.sqlite3(cfg.ProfileSqlite3, p.depth))
+	p2buffer, flusher := p2db.Bufferize(BufferSize)
+	ps[p.depth].AddPrinter(p2buffer)      // print to buffer at configured depth
+	ps[IntervalLevel].AddPrinter(flusher) // always flush at the end of interval, end of run
 
 	return p
 }
@@ -129,9 +134,9 @@ func (p *operationProfiler[T]) PostTransaction(state executor.State[T], _ *execu
 // Exitpoint
 // Print any analytics still unprinted and clean up
 func (p *operationProfiler[T]) PostRun(executor.State[T], *executor.Context, error) error {
-	for _, printer := range p.ps {
-		printer.Print()
-		printer.Close()
+	p.ps[IntervalLevel].Print() // print remaining statistics
+	for _, printers := range p.ps {
+		printers.Close() // close all printers
 	}
 	return nil
 }
@@ -252,8 +257,12 @@ func (p *operationProfiler[T]) sqlite3(conn string, depth ProfileDepth) (string,
 	case IntervalLevel:
 		return conn, sqlite3_Interval_CreateTableIfNotExist, sqlite3_Interval_InsertOrReplace,
 			func() [][]any {
-				values := [][]any{{}}
+				values := [][]any{}
 				for opId, stat := range p.anlts[depth].Iterate() {
+					if stat.GetCount() == 0 {
+						continue
+					}
+
 					values = append(values, []any{
 						p.interval.Start(),
 						p.interval.End(),
@@ -276,8 +285,12 @@ func (p *operationProfiler[T]) sqlite3(conn string, depth ProfileDepth) (string,
 	case BlockLevel:
 		return conn, sqlite3_Block_CreateTableIfNotExist, sqlite3_Block_InsertOrReplace,
 			func() [][]any {
-				values := [][]any{{}}
+				values := [][]any{}
 				for opId, stat := range p.anlts[depth].Iterate() {
+					if stat.GetCount() == 0 {
+						continue
+					}
+
 					values = append(values, []any{
 						p.lastProcessedBlock,
 						opId,
@@ -299,8 +312,12 @@ func (p *operationProfiler[T]) sqlite3(conn string, depth ProfileDepth) (string,
 	case TransactionLevel:
 		return conn, sqlite3_Transaction_CreateTableIfNotExist, sqlite3_Transaction_InsertOrReplace,
 			func() [][]any {
-				values := [][]any{{}}
+				values := [][]any{}
 				for opId, stat := range p.anlts[depth].Iterate() {
+					if stat.GetCount() == 0 {
+						continue
+					}
+
 					values = append(values, []any{
 						p.lastProcessedBlock,
 						p.lastProcessedTransaction,

@@ -109,19 +109,27 @@ type PrintToDb struct {
 }
 
 func (p *PrintToDb) Print() error {
-	stmt, err := p.db.Prepare(p.insert)
+	tx, err := p.db.Begin()
+	if err != nil {
+		return fmt.Errorf("unable to begin tx")
+	}
 
+	stmt, err := p.db.Prepare(p.insert)
 	if err != nil {
 		return fmt.Errorf("unable to prepare statement, %s", p.insert)
 	}
 
-	defer stmt.Close()
-
 	values := p.f()
 	for _, value := range values {
-		stmt.Exec(value...)
+		_, err = tx.Stmt(stmt).Exec(value...)
+		if err != nil {
+			tx.Rollback()
+			return err
+		}
 	}
-	return nil
+
+	defer stmt.Close()
+	return tx.Commit()
 }
 
 func (p *PrintToDb) Close() {
@@ -141,7 +149,10 @@ func NewPrintToSqlite3(conn string, create string, insert string, f func() [][]a
 		return nil, fmt.Errorf("Could not confirm if table exists")
 	}
 
-	return &PrintToDb{db, insert, f}, err
+	db.Exec("PRAGMA synchronous = OFF")
+	db.Exec("PRAGMA journal_mode = MEMORY")
+
+	return &PrintToDb{db, insert, f}, nil
 }
 
 func (ps *Printers) AddPrintToSqlite3(conn string, create string, insert string, f func() [][]any) *Printers {
@@ -153,4 +164,56 @@ func (ps *Printers) AddPrintToSqlite3(conn string, create string, insert string,
 		return ps.AddPrinter(p)
 	}
 	return ps
+}
+
+type PrintToBuffer struct {
+	capacity int
+	f        func() [][]any
+	buffer   [][]any
+	flusher  *Flusher
+}
+
+func (p *PrintToDb) Bufferize(capacity int) (*PrintToBuffer, *Flusher) {
+	pb := &PrintToBuffer{capacity, p.f, make([][]any, capacity), nil}
+	flusher := &Flusher{p, pb}
+	pb.flusher = flusher
+	return pb, flusher
+}
+
+func (p *PrintToBuffer) Print() error {
+	p.buffer = append(p.buffer, p.f()...)
+
+	if len(p.buffer) > p.capacity {
+		return p.flusher.Print()
+	}
+	return nil
+}
+
+func (p *PrintToBuffer) Close() {
+	return
+}
+
+func (p *PrintToBuffer) Reset() {
+	p.buffer = p.buffer[:0]
+}
+
+func (p *PrintToBuffer) Length() int {
+	return len(p.buffer)
+}
+
+type Flusher struct {
+	og *PrintToDb
+	bf *PrintToBuffer
+}
+
+func (p *Flusher) Print() error {
+	p.og.f = func() [][]any { return p.bf.buffer }
+
+	defer p.bf.Reset()
+	return p.og.Print()
+}
+
+func (p *Flusher) Close() {
+	p.og.Close()
+	p.bf.Close()
 }
