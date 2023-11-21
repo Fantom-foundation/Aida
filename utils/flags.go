@@ -349,8 +349,8 @@ var (
 	}
 	MaxNumErrorsFlag = cli.IntFlag{
 		Name:  "max-errors",
-		Usage: "maximum number of errors when ContinueOnFailure is enabled, 0 is endless, default is 0",
-		Value: 0,
+		Usage: "maximum number of errors when ContinueOnFailure is enabled, 0 is endless",
+		Value: 10,
 	}
 	UpdateOnFailure = cli.BoolFlag{
 		Name:  "update-on-failure",
