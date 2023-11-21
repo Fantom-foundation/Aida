@@ -383,8 +383,8 @@ var (
 		Usage: "defines path to profile-db",
 		Value: "/var/opera/Aida/profile.db",
 	}
-	ErrorLogFileFlag = cli.PathFlag{
-		Name:  "err-log-file",
-		Usage: "defines path to log-file where any error is recorded",
+	ErrorLoggingFlag = cli.PathFlag{
+		Name:  "err-logging",
+		Usage: "defines path to error-log-file where any PROCESSING error is recorded",
 	}
 )

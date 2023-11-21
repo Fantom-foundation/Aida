@@ -30,7 +30,7 @@ var RunArchiveApp = cli.App{
 		&utils.StateDbLoggingFlag,
 		&utils.TrackProgressFlag,
 		&utils.NoHeartbeatLoggingFlag,
-		&utils.ErrorLogFileFlag,
+		&utils.ErrorLoggingFlag,
 
 		// StateDb
 		&utils.AidaDbFlag,

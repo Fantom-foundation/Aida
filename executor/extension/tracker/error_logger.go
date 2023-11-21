@@ -39,16 +39,16 @@ func (l *errorLogger[T]) PreRun(_ executor.State[T], ctx *executor.Context) erro
 	l.wg.Add(1)
 	go l.doLogging(ctx.ErrorInput)
 
-	if l.cfg.ErrorLogFile == "" {
+	if l.cfg.ErrorLogging == "" {
 		return nil
 	}
 
-	l.log.Noticef("Creating log-file %v in which any processing error will be recorded.", l.cfg.ErrorLogFile)
+	l.log.Noticef("Creating log-file %v in which any processing error will be recorded.", l.cfg.ErrorLogging)
 
 	var err error
-	l.file, err = os.Create(l.cfg.ErrorLogFile)
+	l.file, err = os.Create(l.cfg.ErrorLogging)
 	if err != nil {
-		return fmt.Errorf("cannot create log file %v; %v", l.cfg.ErrorLogFile, err)
+		return fmt.Errorf("cannot create log file %v; %v", l.cfg.ErrorLogging, err)
 	}
 
 	return nil

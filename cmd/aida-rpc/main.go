@@ -30,7 +30,7 @@ func main() {
 			&utils.ContinueOnFailureFlag,
 			&utils.ValidateFlag,
 			&utils.NoHeartbeatLoggingFlag,
-			&utils.ErrorLogFileFlag,
+			&utils.ErrorLoggingFlag,
 
 			// ShadowDB
 			&utils.ShadowDb,
