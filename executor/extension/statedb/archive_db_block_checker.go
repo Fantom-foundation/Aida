@@ -7,6 +7,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/utils"
+	umath "github.com/Fantom-foundation/Aida/utils/math"
 )
 
 type archiveBlockChecker[T any] struct {
@@ -45,7 +46,7 @@ func (c *archiveBlockChecker[T]) PreRun(executor.State[T], *executor.Context) er
 			return fmt.Errorf("shadow state db %v does not contain archive", filepath.Join(c.cfg.StateDbSrc, utils.PathToShadowStateDb))
 		}
 
-		lastBlock = utils.Min(shadowDbInfo.Block, primeDbInfo.Block)
+		lastBlock = umath.Min(shadowDbInfo.Block, primeDbInfo.Block)
 
 	} else {
 		stateDbInfo, err := utils.ReadStateDbInfo(filepath.Join(c.cfg.StateDbSrc, utils.PathToDbInfo))
