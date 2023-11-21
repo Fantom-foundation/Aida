@@ -153,9 +153,9 @@ var (
 		Name:  "db-tmp",
 		Usage: "sets the temporary directory where to place DB data; uses system default if empty",
 	}
-	StateDbLoggingFlag = cli.BoolFlag{
+	StateDbLoggingFlag = cli.PathFlag{
 		Name:  "db-logging",
-		Usage: "enable logging of all DB operations",
+		Usage: "sets path to file for db-logging output",
 	}
 	ShadowDb = cli.BoolFlag{
 		Name:  "shadow-db",

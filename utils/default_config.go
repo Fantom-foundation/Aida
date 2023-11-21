@@ -38,7 +38,7 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		Genesis:                getFlagValue(ctx, GenesisFlag).(string),
 		DbImpl:                 getFlagValue(ctx, StateDbImplementationFlag).(string),
 		DbVariant:              getFlagValue(ctx, StateDbVariantFlag).(string),
-		DbLogging:              getFlagValue(ctx, StateDbLoggingFlag).(bool),
+		DbLogging:              getFlagValue(ctx, StateDbLoggingFlag).(string),
 		DeletionDb:             getFlagValue(ctx, DeletionDbFlag).(string),
 		DeleteSourceDbs:        getFlagValue(ctx, DeleteSourceDbsFlag).(bool),
 		DiagnosticServer:       getFlagValue(ctx, DiagnosticServerFlag).(int64),
