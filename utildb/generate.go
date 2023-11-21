@@ -16,6 +16,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/cmd/util-updateset/updateset"
 	"github.com/Fantom-foundation/Aida/logger"
+	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/core/rawdb"
@@ -293,6 +294,15 @@ func (g *Generator) processDeletedAccounts(ddb *substate.DestroyedAccountDB) err
 	}
 
 	g.Cfg.MemoryProfile = "/var/opera/Aida/profile-after-iterator-release.dat"
+	err = utils.StartMemoryProfile(g.Cfg)
+	if err != nil {
+		return err
+	}
+
+	// explicitly release code cache
+	state.ReleaseCache()
+
+	g.Cfg.MemoryProfile = "/var/opera/Aida/profile-after-cache-release.dat"
 	err = utils.StartMemoryProfile(g.Cfg)
 	if err != nil {
 		return err
