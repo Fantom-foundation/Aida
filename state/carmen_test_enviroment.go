@@ -19,7 +19,8 @@ func (c CarmenStateTestCase) String() string {
 	return fmt.Sprintf("DB Variant: %s, Schema: %d, Archive type: %v", c.Variant, c.Schema, c.Archive)
 }
 
-func GetCarmenStateTestCases() []CarmenStateTestCase {
+// All combinations of carmen db configuration for testing db creation/close function in Aida
+func GetAllCarmenConfigurations() []CarmenStateTestCase {
 	archives := []string{
 		"none",
 		"leveldb",
@@ -40,6 +41,29 @@ func GetCarmenStateTestCases() []CarmenStateTestCase {
 				})
 			}
 		}
+	}
+
+	return testCases
+}
+
+// A combination of carmen db configuration for testing interface
+func GetCarmenStateTestCases() []CarmenStateTestCase {
+	archives := []string{
+		"none",
+		"leveldb",
+	}
+
+	variant := "go-file"
+	schema := 3
+
+	var testCases []CarmenStateTestCase
+
+	for _, archive := range archives {
+		testCases = append(testCases, CarmenStateTestCase{
+			Variant: variant,
+			Schema:  schema,
+			Archive: archive,
+		})
 	}
 
 	return testCases
