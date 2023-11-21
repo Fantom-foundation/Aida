@@ -69,13 +69,13 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 			return nil, "", fmt.Errorf("failed to create a temporary directory; %v", err)
 		}
 
-		stat, err := os.Stat(cfg.StateDbSrc)
+		size, err := FindDirSize(cfg.StateDbSrc)
 		if err != nil {
-			return nil, "", fmt.Errorf("cannot find stats of stated-db %v; %v", cfg.StateDbSrc, err)
+			return nil, "", err
 		}
 
-		log.Infof("Copying your StateDb. Size: %v MB", stat.Size()*1000000)
-		if err := CopyDir(cfg.StateDbSrc, tmpStateDbPath); err != nil {
+		log.Infof("Copying your StateDb. Size: %.2f MB", float64(size)/float64(1000000))
+		if err = CopyDir(cfg.StateDbSrc, tmpStateDbPath); err != nil {
 			return nil, "", fmt.Errorf("failed to copy source statedb to temporary directory; %v", err)
 		}
 		cfg.PathToStateDb = tmpStateDbPath
@@ -331,4 +331,19 @@ func ValidateStateDB(ws substate.SubstateAlloc, db state.VmStateDB, updateOnFail
 		return fmt.Errorf(err)
 	}
 	return nil
+}
+
+// FindDirSize iterates over all files inside given directory (including subdirectories) and returns size in bytes.
+func FindDirSize(path string) (int64, error) {
+	var size int64
+	err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			size += info.Size()
+		}
+		return err
+	})
+	return size, err
 }
