@@ -22,7 +22,7 @@ type errorLogger[T any] struct {
 }
 
 func MakeErrorLogger[T any](cfg *utils.Config) executor.Extension[T] {
-	return makeErrorLogger[T](cfg, logger.NewLogger("critical", "Test"))
+	return makeErrorLogger[T](cfg, logger.NewLogger("critical", "Error-Logger"))
 }
 
 func makeErrorLogger[T any](cfg *utils.Config, log logger.Logger) *errorLogger[T] {
@@ -44,11 +44,6 @@ func (l *errorLogger[T]) PreRun(_ executor.State[T], ctx *executor.Context) erro
 	}
 
 	l.log.Noticef("Creating log-file %v in which any processing error will be recorded.", l.cfg.LogFile)
-
-	if !l.cfg.ContinueOnFailure {
-		l.log.Warningf("Setting continue-on-failure to true!")
-		l.cfg.ContinueOnFailure = true
-	}
 
 	var err error
 	l.file, err = os.Create(l.cfg.LogFile)

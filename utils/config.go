@@ -539,6 +539,11 @@ func adjustMissingConfigValues(cfg *Config) error {
 		cfg.DbVariant = "go-file"
 	}
 
+	// if LogFile is set we expect we want to catch all processing errors hence we enable ContinueOnFailure
+	if cfg.LogFile != "" {
+		cfg.ContinueOnFailure = true
+	}
+
 	// --continue-on-failure implicitly enables transaction state validation
 	cfg.ValidateTxState = cfg.Validate || cfg.ValidateTxState || cfg.ContinueOnFailure
 	cfg.ValidateWorldState = cfg.Validate || cfg.ValidateWorldState

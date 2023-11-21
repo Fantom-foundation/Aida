@@ -50,8 +50,8 @@ func (p rpcProcessor) Process(state executor.State[*rpc.RequestAndResults], ctx 
 func run(cfg *utils.Config, provider executor.Provider[*rpc.RequestAndResults], processor executor.Processor[*rpc.RequestAndResults], extra []executor.Extension[*rpc.RequestAndResults], stateDb state.StateDB) error {
 	var extensionList = []executor.Extension[*rpc.RequestAndResults]{
 		profiler.MakeCpuProfiler[*rpc.RequestAndResults](cfg),
-		tracker.MakeErrorLogger[*rpc.RequestAndResults](cfg),
 		tracker.MakeProgressLogger[*rpc.RequestAndResults](cfg, 15*time.Second),
+		tracker.MakeErrorLogger[*rpc.RequestAndResults](cfg),
 		statedb.MakeTemporaryArchivePrepper(),
 		validator.MakeRpcComparator(cfg),
 	}
