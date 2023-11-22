@@ -50,11 +50,11 @@ func (p *stateDbPrimer[T]) PreRun(_ executor.State[T], ctx *executor.Context) er
 		p.log.Infof("Randomized Priming enabled; Seed: %v, threshold: %v", p.cfg.RandomSeed, p.cfg.PrimeThreshold)
 	}
 
-	p.log.Infof("Update buffer size: %v bytes", p.cfg.UpdateBufferSize)
-
 	if p.cfg.First == 0 {
 		return nil
 	}
+
+	p.log.Infof("Update buffer size: %v bytes", p.cfg.UpdateBufferSize)
 
 	p.log.Noticef("Priming to block %v...", p.cfg.First-1)
 	p.ctx = utils.NewPrimeContext(p.cfg, ctx.State, p.log)
