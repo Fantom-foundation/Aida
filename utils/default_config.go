@@ -103,6 +103,7 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		ValidateStateHashes:    getFlagValue(ctx, ValidateStateHashesFlag).(bool),
 		ProfileDB:              getFlagValue(ctx, ProfileDBFlag).(string),
 		ProfileBlocks:          getFlagValue(ctx, ProfileBlocksFlag).(bool),
+		ErrorLogging:           getFlagValue(ctx, ErrorLoggingFlag).(string),
 	}
 
 	return cfg

@@ -185,6 +185,7 @@ type Config struct {
 	ValidateStateHashes    bool           // if this is true state hash validation is enabled in Executor
 	ProfileBlocks          bool           // enables block profiler extension
 	PathToStateDb          string
+	ErrorLogging           string // if defined, error logging to file is enabled
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.
@@ -538,6 +539,11 @@ func adjustMissingConfigValues(cfg *Config) error {
 	// set default db variant if not provided.
 	if cfg.DbImpl == "carmen" && cfg.DbVariant == "" {
 		cfg.DbVariant = "go-file"
+	}
+
+	// if ErrorLogging is set we expect we want to catch all processing errors hence we enable ContinueOnFailure
+	if cfg.ErrorLogging != "" {
+		cfg.ContinueOnFailure = true
 	}
 
 	// --continue-on-failure implicitly enables transaction state validation

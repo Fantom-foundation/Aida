@@ -208,6 +208,11 @@ type Context struct {
 
 	// AidaDb is an optional LevelDb readonly database containing data for testing StateDb (i.e. state hashes).
 	AidaDb ethdb.Database
+
+	// ErrorInput is used if continue-on-failure is enabled or if log-file is definer so that at the end
+	// of the run, we log all errors into a file. This chanel should be only used for processing errors,
+	// hence any non-fatal errors. Any fatal should still be returned so that the app ends.
+	ErrorInput chan error
 }
 
 // ----------------------------------------------------------------------------

@@ -63,6 +63,7 @@ func run(
 		profiler.MakeCpuProfiler[*substate.Substate](cfg),
 		statedb.MakeArchivePrepper(),
 		tracker.MakeProgressLogger[*substate.Substate](cfg, 0),
+		tracker.MakeErrorLogger[*substate.Substate](cfg),
 	}
 
 	if stateDb == nil {

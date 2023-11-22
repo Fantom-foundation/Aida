@@ -90,6 +90,7 @@ var RunSubstateCmd = cli.Command{
 		&logger.LogLevelFlag,
 		&utils.NoHeartbeatLoggingFlag,
 		&utils.TrackProgressFlag,
+		&utils.ErrorLoggingFlag,
 	},
 	Description: `
 The aida-vm-sdb substate command requires two arguments: <blockNumFirst> <blockNumLast>
