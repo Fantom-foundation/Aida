@@ -407,6 +407,7 @@ func printUpdateRange(ctx *cli.Context) error {
 		if err != nil {
 			return fmt.Errorf("cannot decode updateset key; %v", err)
 		}
+		break
 	}
 
 	// get last updateset
