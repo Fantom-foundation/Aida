@@ -48,7 +48,8 @@ func DbSignature(cfg *utils.Config, aidaDb ethdb.Database, log logger.Logger) er
 	return nil
 }
 
-func marshaller(in chan any, out chan []byte, errChan chan error) {
+// combineJson reads objects from in channel, encodes their []byte representation and writes to out channel
+func combineJson(in chan any, out chan []byte, errChan chan error) {
 	for {
 		select {
 		case value, ok := <-in:
@@ -244,7 +245,7 @@ func parallelHashComputing(feeder func(chan any, chan error)) ([]byte, uint64, e
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		marshaller(feederChan, processedChan, errChan)
+		combineJson(feederChan, processedChan, errChan)
 	}()
 
 	// Start a goroutine to close hashChan when all workers finish

@@ -34,14 +34,14 @@ var ValidateCommand = cli.Command{
 var SignatureCommand = cli.Command{
 	Action: signatureCmd,
 	Name:   "signature",
-	Usage:  "Calculates md5 of actual data stored",
+	Usage:  "Calculates md5 of decoded objects stored in AidaDb. Using []byte value from database, it decodes it and calculates md5 of the decoded objects.",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 		&utils.TargetDbFlag,
 		&logger.LogLevelFlag,
 	},
 	Description: `
-Creates signatures of substates, updatesets, deletion and state-hashes, because RLP encoding is not deterministic.
+Creates signatures of substates, updatesets, deletion and state-hashes using decoded objects from database rather than []byte value representation, because that is not deterministic.
 `,
 }
 
