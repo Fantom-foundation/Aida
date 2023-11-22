@@ -31,7 +31,7 @@ require (
 	github.com/urfave/cli/v2 v2.25.7
 	github.com/wcharczuk/go-chart/v2 v2.1.1
 	go.uber.org/mock v0.2.0
-	golang.org/x/exp v0.0.0-20230713183714-613f0c0eb8a1
+	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
 	golang.org/x/text v0.12.0
 	gonum.org/v1/gonum v0.12.0
 )
@@ -126,7 +126,7 @@ require (
 	golang.org/x/image v0.11.0 // indirect
 	golang.org/x/net v0.10.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/sys v0.11.0 // indirect
+	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/time v0.0.0-20220922220347-f3bd1da661af // indirect
 	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
@@ -134,6 +134,7 @@ require (
 	gopkg.in/urfave/cli.v1 v1.20.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
+	pgregory.net/rand v1.0.2 // indirect
 )
 
 // The Carmen project is integrated as a git-submodule since we need to run extra
