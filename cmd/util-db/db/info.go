@@ -90,6 +90,7 @@ var cmdRange = cli.Command{
 	Usage: "Prints range of type in AidaDb",
 	Subcommands: []*cli.Command{
 		&cmdSubstateRange,
+		&cmdUpdateRange,
 		&cmdStateHashRange,
 	},
 }
@@ -98,6 +99,16 @@ var cmdSubstateRange = cli.Command{
 	Action: printSubstateRange,
 	Name:   "substate",
 	Usage:  "Prints range of substate in AidaDb",
+	Flags: []cli.Flag{
+		&utils.AidaDbFlag,
+		&logger.LogLevelFlag,
+	},
+}
+
+var cmdUpdateRange = cli.Command{
+	Action: printUpdateRange,
+	Name:   "update",
+	Usage:  "Prints range of updatesets in AidaDb",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 		&logger.LogLevelFlag,
@@ -367,6 +378,41 @@ func printSubstateRange(ctx *cli.Context) error {
 	}
 
 	log.Infof("Substate block range: %v - %v", firstBlock, lastBlock)
+	return nil
+}
+
+// printUpdateRange prints state updateset range stored in given AidaDb
+func printUpdateRange(ctx *cli.Context) error {
+	cfg, argErr := utils.NewConfig(ctx, utils.NoArgs)
+	if argErr != nil {
+		return argErr
+	}
+
+	log := logger.NewLogger(cfg.LogLevel, "AidaDb-Update-Range")
+
+	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", true)
+	if err != nil {
+		return fmt.Errorf("cannot open aida-db; %v", err)
+	}
+	udb := substate.NewUpdateDB(aidaDb)
+	defer aidaDb.Close()
+
+	var firstBlock, lastBlock uint64
+	// get first updateset - TODO refactor out
+	iter := aidaDb.NewIterator([]byte(substate.SubstateAllocPrefix), nil)
+	defer iter.Release()
+
+	for iter.Next() {
+		firstBlock, err = substate.DecodeUpdateSetKey(iter.Key())
+		if err != nil {
+			return fmt.Errorf("cannot decode updateset key; %v", err)
+		}
+	}
+
+	// get last updateset
+	lastBlock = udb.GetLastKey()
+
+	log.Infof("Updateset block range: %v - %v", firstBlock, lastBlock)
 	return nil
 }
 
