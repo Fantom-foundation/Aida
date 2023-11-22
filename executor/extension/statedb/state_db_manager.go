@@ -31,6 +31,40 @@ func (m *stateDbManager[T]) PreRun(_ executor.State[T], ctx *executor.Context) e
 	if err != nil {
 		return err
 	}
+
+	if !m.cfg.ShadowDb {
+		m.logDbMode("Db Implementation", m.cfg.DbImpl, m.cfg.DbVariant)
+	} else {
+		m.logDbMode("Prime Db Implementation", m.cfg.DbImpl, m.cfg.DbVariant)
+		m.logDbMode("Shadow Db Implementation", m.cfg.ShadowImpl, m.cfg.ShadowVariant)
+	}
+
+	if m.cfg.StateDbSrc != "" {
+		// if using pre-existing StateDb and running in read-only mode, we must report both source db and working tmp dir
+		m.log.Infof("Source storage directory: %v", m.cfg.StateDbSrc)
+		if m.cfg.SrcDbReadonly {
+			m.log.Infof("Working storage directory: %v", m.cfg.DbTmp)
+		}
+
+	} else {
+		// otherwise only working directory is reported
+		m.log.Infof("Working storage directory: %v", m.cfg.DbTmp)
+	}
+
+	if m.cfg.ArchiveMode {
+		var archiveVariant string
+		if m.cfg.ArchiveVariant == "" {
+			archiveVariant = "<implementation-default>"
+		} else {
+			archiveVariant = m.cfg.ArchiveVariant
+		}
+
+		m.log.Noticef("Archive mode enabled; Variant: %v", archiveVariant)
+
+	} else {
+		m.log.Infof("Archive mode disabled")
+	}
+
 	if !m.cfg.KeepDb {
 		m.log.Warningf("--keep-db is not used. Directory %v with DB will be removed at the end of this run.", ctx.StateDbPath)
 	}
@@ -85,4 +119,12 @@ func (m *stateDbManager[T]) PostRun(state executor.State[T], ctx *executor.Conte
 	newName := utils.RenameTempStateDBDirectory(m.cfg, ctx.StateDbPath, lastProcessedBlock)
 	m.log.Noticef("State-db directory: %v", newName)
 	return nil
+}
+
+func (m *stateDbManager[T]) logDbMode(prefix, impl, variant string) {
+	if m.cfg.DbImpl == "carmen" {
+		m.log.Noticef("%s: %v; Variant: %v, Carmen Schema: %d", prefix, impl, variant, m.cfg.CarmenSchema)
+	} else {
+		m.log.Noticef("%s: %v; Variant: %v", prefix, impl, variant)
+	}
 }

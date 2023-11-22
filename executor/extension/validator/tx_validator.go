@@ -22,7 +22,9 @@ func MakeTxValidator(cfg *utils.Config) executor.Extension[*substate.Substate] {
 		return extension.NilExtension[*substate.Substate]{}
 	}
 
-	log := logger.NewLogger(cfg.LogLevel, "Tx-Verifier")
+	// todo validate world state
+	log := logger.NewLogger(cfg.LogLevel, "Tx-Validator")
+	log.Warning("Tx-Validation enabled, reducing Tx throughput")
 
 	return makeTxValidator(cfg, log)
 }
