@@ -17,33 +17,33 @@ import (
 )
 
 func DbSignature(cfg *utils.Config, aidaDb ethdb.Database, log logger.Logger) error {
-	log.Info("Generating SubstateDb hash...")
-	aidaDbSubstateHash, processed, err := GetSubstateHash(cfg, aidaDb, log)
+	log.Info("Generating Substate hash...")
+	aidaDbSubstateHash, count, err := GetSubstateHash(cfg, aidaDb, log)
 	if err != nil {
 		return err
 	}
-	log.Infof("SubstateDb hash: \n Got%x\n Want %v", processed, aidaDbSubstateHash)
+	log.Infof("Substate hash: %x; count %v", aidaDbSubstateHash, count)
 
-	log.Info("Generating DeletionDb hash...")
-	aidaDbDeletionHash, processed, err := GetDeletionHash(cfg, aidaDb, log)
+	log.Info("Generating Deletion hash...")
+	aidaDbDeletionHash, count, err := GetDeletionHash(cfg, aidaDb, log)
 	if err != nil {
 		return err
 	}
-	log.Infof("DeletionDb hash: \n Got%x\n Want %v", processed, aidaDbDeletionHash)
+	log.Infof("Deletion hash: %x; count %v", aidaDbDeletionHash, count)
 
-	log.Info("Generating UpdateDb hash...")
-	aidaDbUpdateDbHash, processed, err := GetUpdateDbHash(cfg, aidaDb, log)
+	log.Info("Generating Updateset hash...")
+	aidaDbUpdateDbHash, count, err := GetUpdateDbHash(cfg, aidaDb, log)
 	if err != nil {
 		return err
 	}
-	log.Infof("UpdateDb hash: \n Got%x\n Want %v", processed, aidaDbUpdateDbHash)
+	log.Infof("Updateset hash: %x; count %v", aidaDbUpdateDbHash, count)
 
 	log.Info("Generating State-Hashes hash...")
-	aidaDbStateHashesHash, processed, err := GetStateHashesHash(cfg, aidaDb, log)
+	aidaDbStateHashesHash, count, err := GetStateHashesHash(cfg, aidaDb, log)
 	if err != nil {
 		return err
 	}
-	log.Infof("State-Hashes hash: \n Got%x\n Want %v", processed, aidaDbStateHashesHash)
+	log.Infof("State-Hashes hash: %x; count %v", aidaDbStateHashesHash, count)
 
 	return nil
 }
