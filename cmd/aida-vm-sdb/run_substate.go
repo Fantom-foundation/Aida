@@ -31,22 +31,7 @@ func RunSubstate(ctx *cli.Context) error {
 	}
 	defer substateDb.Close()
 
-	return runSubstates(cfg, substateDb, nil, substateProcessor{cfg}, nil)
-}
-
-type substateProcessor struct {
-	cfg *utils.Config
-}
-
-func (p substateProcessor) Process(state executor.State[*substate.Substate], ctx *executor.Context) error {
-	_, err := utils.ProcessTx(
-		ctx.State,
-		p.cfg,
-		uint64(state.Block),
-		state.Transaction,
-		state.Data,
-	)
-	return err
+	return runSubstates(cfg, substateDb, nil, executor.MakeLiveDbProcessor(cfg), nil)
 }
 
 func runSubstates(
@@ -86,6 +71,7 @@ func runSubstates(
 		statedb.MakeArchiveInquirer(cfg),
 		validator.MakeStateHashValidator[*substate.Substate](cfg),
 		statedb.MakeBlockEventEmitter[*substate.Substate](),
+		validator.MakeLiveDbTxValidator(cfg),
 
 		profiler.MakeOperationProfiler[*substate.Substate](cfg),
 		// block profile extension should be always last because:

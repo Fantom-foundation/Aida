@@ -1,6 +1,8 @@
 package validator
 
 import (
+	"bytes"
+	"fmt"
 	"math/big"
 	"strings"
 	"testing"
@@ -24,13 +26,14 @@ const (
 		"Failed to validate code for account 0x0000000000000000000000000000000000000000\n    " +
 		"have len 1\n    " +
 		"want len 0\n"
+	incorrectOutputAllocErr = "output error at block 1 tx 1; inconsistent output: alloc"
 )
 
 func TestTxValidator_NoValidatorIsCreatedIfDisabled(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.ValidateTxState = false
 
-	ext := MakeTxValidator(cfg)
+	ext := MakeLiveDbTxValidator(cfg)
 
 	if _, ok := ext.(extension.NilExtension[*substate.Substate]); !ok {
 		t.Errorf("Validator is enabled although not set in configuration")
@@ -44,7 +47,7 @@ func TestTxValidator_ValidatorIsEnabled(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.ValidateTxState = true
 
-	ext := makeTxValidator(cfg, log)
+	ext := makeLiveDbTxValidator(cfg, log)
 
 	log.EXPECT().Warning(gomock.Any())
 	ext.PreRun(executor.State[*substate.Substate]{}, nil)
@@ -59,7 +62,7 @@ func TestTxValidator_ValidatorDoesNotFailWithEmptySubstate(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.ValidateTxState = true
 
-	ext := makeTxValidator(cfg, log)
+	ext := makeLiveDbTxValidator(cfg, log)
 
 	log.EXPECT().Warning(gomock.Any())
 	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
@@ -86,7 +89,7 @@ func TestTxValidator_SingleErrorInPreTransactionDoesNotEndProgramWithContinueOnF
 	cfg.ContinueOnFailure = true
 	cfg.MaxNumErrors = 2
 
-	ext := MakeTxValidator(cfg)
+	ext := MakeLiveDbTxValidator(cfg)
 
 	gomock.InOrder(
 		db.EXPECT().Exist(common.Address{0}).Return(false),
@@ -118,7 +121,7 @@ func TestTxValidator_SingleErrorInPreTransactionReturnsErrorWithNoContinueOnFail
 	cfg.ValidateTxState = true
 	cfg.ContinueOnFailure = false
 
-	ext := MakeTxValidator(cfg)
+	ext := MakeLiveDbTxValidator(cfg)
 
 	gomock.InOrder(
 		db.EXPECT().Exist(common.Address{0}).Return(false),
@@ -148,7 +151,7 @@ func TestTxValidator_SingleErrorInPreTransactionReturnsErrorWithNoContinueOnFail
 
 }
 
-func TestTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueOnFailure(t *testing.T) {
+func TestTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueOnFailure_SubsetCheck(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	db := state.NewMockStateDB(ctrl)
 	ctx := &executor.Context{State: db}
@@ -157,14 +160,17 @@ func TestTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueOnFai
 	cfg := &utils.Config{}
 	cfg.ValidateTxState = true
 	cfg.ContinueOnFailure = false
+	cfg.StateValidationMode = utils.SubsetCheck
 
-	ext := MakeTxValidator(cfg)
+	ext := MakeLiveDbTxValidator(cfg)
 
 	gomock.InOrder(
 		db.EXPECT().Exist(common.Address{0}).Return(false),
+		db.EXPECT().CreateAccount(common.Address{0}),
 		db.EXPECT().GetBalance(common.Address{0}).Return(new(big.Int)),
 		db.EXPECT().GetNonce(common.Address{0}).Return(uint64(0)),
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
+		db.EXPECT().SetCode(common.Address{0}, []byte{}),
 	)
 
 	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
@@ -176,11 +182,46 @@ func TestTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueOnFai
 	}, ctx)
 
 	if err == nil {
-		t.Errorf("PreTransaction must return an error!")
+		t.Errorf("PostTransaction must return an error!")
 	}
 
 	got := strings.TrimSpace(err.Error())
 	want := strings.TrimSpace(incorrectOutputTestErr)
+
+	if strings.Compare(got, want) != 0 {
+		t.Errorf("Unexpected err!\nGot: %v; \nWant: %v", got, want)
+	}
+}
+
+func TestTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueOnFailure_EqualityCheck(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	db := state.NewMockStateDB(ctrl)
+	ctx := &executor.Context{State: db}
+	ctx.ErrorInput = make(chan error, 10)
+
+	cfg := &utils.Config{}
+	cfg.ValidateTxState = true
+	cfg.ContinueOnFailure = false
+	cfg.StateValidationMode = utils.EqualityCheck
+
+	ext := MakeLiveDbTxValidator(cfg)
+
+	db.EXPECT().GetSubstatePostAlloc().Return(substate.SubstateAlloc{})
+
+	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
+
+	err := ext.PostTransaction(executor.State[*substate.Substate]{
+		Block:       1,
+		Transaction: 1,
+		Data:        getIncorrectTestSubstateAlloc(),
+	}, ctx)
+
+	if err == nil {
+		t.Fatal("PostTransaction must return an error!")
+	}
+
+	got := strings.TrimSpace(err.Error())
+	want := strings.TrimSpace(incorrectOutputAllocErr)
 
 	if strings.Compare(got, want) != 0 {
 		t.Errorf("Unexpected err!\nGot: %v; \nWant: %v", got, want)
@@ -199,7 +240,7 @@ func TestTxValidator_TwoErrorsDoNotReturnAnErrorWhenContinueOnFailureIsEnabledAn
 	cfg.ContinueOnFailure = true
 	cfg.MaxNumErrors = 3
 
-	ext := makeTxValidator(cfg, log)
+	ext := makeLiveDbTxValidator(cfg, log)
 
 	gomock.InOrder(
 		// PreRun
@@ -253,7 +294,7 @@ func TestTxValidator_TwoErrorsDoReturnErrorOnEventWhenContinueOnFailureIsEnabled
 	cfg.ContinueOnFailure = true
 	cfg.MaxNumErrors = 2
 
-	ext := makeTxValidator(cfg, log)
+	ext := makeLiveDbTxValidator(cfg, log)
 
 	gomock.InOrder(
 		// PreRun
@@ -266,9 +307,11 @@ func TestTxValidator_TwoErrorsDoReturnErrorOnEventWhenContinueOnFailureIsEnabled
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 		// PostTransaction
 		db.EXPECT().Exist(common.Address{0}).Return(false),
+		db.EXPECT().CreateAccount(common.Address{0}),
 		db.EXPECT().GetBalance(common.Address{0}).Return(new(big.Int)),
 		db.EXPECT().GetNonce(common.Address{0}).Return(uint64(0)),
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
+		db.EXPECT().SetCode(common.Address{0}, []byte{}),
 	)
 
 	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
@@ -304,7 +347,7 @@ func TestTxValidator_PreTransactionDoesNotFailWithIncorrectOutput(t *testing.T) 
 	cfg.ValidateTxState = true
 	cfg.ContinueOnFailure = false
 
-	ext := MakeTxValidator(cfg)
+	ext := MakeLiveDbTxValidator(cfg)
 
 	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
 
@@ -331,7 +374,7 @@ func TestTxValidator_PostTransactionDoesNotFailWithIncorrectInput(t *testing.T) 
 	cfg.ValidateTxState = true
 	cfg.ContinueOnFailure = false
 
-	ext := MakeTxValidator(cfg)
+	ext := MakeLiveDbTxValidator(cfg)
 
 	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
 
@@ -345,6 +388,114 @@ func TestTxValidator_PostTransactionDoesNotFailWithIncorrectInput(t *testing.T) 
 
 	if err != nil {
 		t.Errorf("PostTransaction must not return an error, got %v", err)
+	}
+}
+
+// TestStateDb_ValidateStateDB tests validation of state DB by comparing it to valid world state
+func TestStateDb_ValidateStateDB(t *testing.T) {
+	for _, tc := range utils.GetStateDbTestCases() {
+		t.Run(fmt.Sprintf("DB variant: %s; shadowImpl: %s; archive variant: %s", tc.Variant, tc.ShadowImpl, tc.ArchiveVariant), func(t *testing.T) {
+			cfg := utils.MakeTestConfig(tc)
+
+			// Initialization of state DB
+			sDB, _, err := utils.PrepareStateDB(cfg)
+			if err != nil {
+				t.Fatalf("failed to create state DB: %v", err)
+			}
+
+			// Closing of state DB
+			defer func(sDB state.StateDB) {
+				err = sDB.Close()
+				if err != nil {
+					t.Fatalf("failed to close state DB: %v", err)
+				}
+			}(sDB)
+
+			// Generating randomized world state
+			ws, _ := utils.MakeWorldState(t)
+
+			log := logger.NewLogger("INFO", "TestStateDb")
+
+			// Create new prime context
+			pc := utils.NewPrimeContext(cfg, sDB, log)
+			// Priming state DB with given world state
+			pc.PrimeStateDB(ws, sDB)
+
+			// Call for state DB validation and subsequent check for error
+			err = validateStateDb(ws, sDB, false)
+			if err != nil {
+				t.Fatalf("failed to validate state DB: %v", err)
+			}
+		})
+	}
+}
+
+// TestStateDb_ValidateStateDBWithUpdate test state DB validation comparing it to valid world state
+// given state DB should be updated if world state contains different data
+func TestStateDb_ValidateStateDBWithUpdate(t *testing.T) {
+	for _, tc := range utils.GetStateDbTestCases() {
+		t.Run(fmt.Sprintf("DB variant: %s; shadowImpl: %s; archive variant: %s", tc.Variant, tc.ShadowImpl, tc.ArchiveVariant), func(t *testing.T) {
+			cfg := utils.MakeTestConfig(tc)
+
+			// Initialization of state DB
+			sDB, _, err := utils.PrepareStateDB(cfg)
+			if err != nil {
+				t.Fatalf("failed to create state DB: %v", err)
+			}
+
+			// Closing of state DB
+			defer func(sDB state.StateDB) {
+				err = sDB.Close()
+				if err != nil {
+					t.Fatalf("failed to close state DB: %v", err)
+				}
+			}(sDB)
+
+			// Generating randomized world state
+			ws, _ := utils.MakeWorldState(t)
+
+			log := logger.NewLogger("INFO", "TestStateDb")
+
+			// Create new prime context
+			pc := utils.NewPrimeContext(cfg, sDB, log)
+			// Priming state DB with given world state
+			pc.PrimeStateDB(ws, sDB)
+
+			// create new random address
+			addr := common.BytesToAddress(utils.MakeRandomByteSlice(t, 40))
+
+			// create new account
+			ws[addr] = &substate.SubstateAccount{
+				Nonce:   uint64(utils.GetRandom(1, 1000*5000)),
+				Balance: big.NewInt(int64(utils.GetRandom(1, 1000*5000))),
+				Storage: utils.MakeAccountStorage(t),
+				Code:    utils.MakeRandomByteSlice(t, 2048),
+			}
+
+			// Call for state DB validation with update enabled and subsequent checks if the update was made correctly
+			err = validateStateDb(ws, sDB, true)
+			if err == nil {
+				t.Fatalf("failed to throw errors while validating state DB: %v", err)
+			}
+
+			if sDB.GetBalance(addr).Cmp(ws[addr].Balance) != 0 {
+				t.Fatalf("failed to prime account balance; Is: %v; Should be: %v", sDB.GetBalance(addr), ws[addr].Balance)
+			}
+
+			if sDB.GetNonce(addr) != ws[addr].Nonce {
+				t.Fatalf("failed to prime account nonce; Is: %v; Should be: %v", sDB.GetNonce(addr), ws[addr].Nonce)
+			}
+
+			if bytes.Compare(sDB.GetCode(addr), ws[addr].Code) != 0 {
+				t.Fatalf("failed to prime account code; Is: %v; Should be: %v", sDB.GetCode(addr), ws[addr].Code)
+			}
+
+			for sKey, sValue := range ws[addr].Storage {
+				if sDB.GetState(addr, sKey) != sValue {
+					t.Fatalf("failed to prime account storage; Is: %v; Should be: %v", sDB.GetState(addr, sKey), sValue)
+				}
+			}
+		})
 	}
 }
 
