@@ -9,6 +9,8 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+// Utility to output data from the system
+
 type Printer interface {
 	Print() error
 	Close()
@@ -38,6 +40,9 @@ func (ps *Printers) AddPrinter(p Printer) *Printers {
 	ps.printers = append(ps.printers, p)
 	return ps
 }
+
+// Print to any io.Writer
+// Wrap f, returns a string to be printed
 
 type PrintToWriter struct {
 	w io.Writer
@@ -72,6 +77,9 @@ func (ps *Printers) AddPrintToConsole(isDisabled bool, f func() string) *Printer
 	return ps.AddPrinter(NewPrintToConsole(f))
 }
 
+// Print to a File
+// Wrap f, returns a string to be printed
+
 type PrintToFile struct {
 	filepath string
 	f        func() string
@@ -102,6 +110,9 @@ func (ps *Printers) AddPrintToFile(filepath string, f func() string) *Printers {
 	return ps
 }
 
+// Print by inserting rows into DB
+// Wrap f, returns an array of values to be inserted
+
 type PrintToDb struct {
 	db     *sql.DB
 	insert string
@@ -109,6 +120,7 @@ type PrintToDb struct {
 }
 
 func (p *PrintToDb) Print() error {
+	// Transaction is used to improve efficiency over bulk insert
 	tx, err := p.db.Begin()
 	if err != nil {
 		return fmt.Errorf("unable to begin tx")
@@ -128,7 +140,7 @@ func (p *PrintToDb) Print() error {
 		}
 	}
 
-	defer stmt.Close()
+	defer stmt.Close() // Stmt to be open/close each time a transaction happens
 	return tx.Commit()
 }
 
@@ -136,6 +148,7 @@ func (p *PrintToDb) Close() {
 	p.db.Close()
 }
 
+// each printer is responsible for one create/insert type
 func NewPrintToSqlite3(conn string, create string, insert string, f func() [][]any) (*PrintToDb, error) {
 	var err error
 
@@ -149,8 +162,8 @@ func NewPrintToSqlite3(conn string, create string, insert string, f func() [][]a
 		return nil, fmt.Errorf("Could not confirm if table exists")
 	}
 
-	db.Exec("PRAGMA synchronous = OFF")
-	db.Exec("PRAGMA journal_mode = MEMORY")
+	db.Exec("PRAGMA synchronous = OFF")     // make sure that insert does not block
+	db.Exec("PRAGMA journal_mode = MEMORY") // improve efficiency - no intermediate write to file
 
 	return &PrintToDb{db, insert, f}, nil
 }
@@ -165,6 +178,8 @@ func (ps *Printers) AddPrintToSqlite3(conn string, create string, insert string,
 	}
 	return ps
 }
+
+// Split PrintToDB into 2 printers, 1. print to buffer 2. flush buffer to DB
 
 type PrintToBuffer struct {
 	capacity int
@@ -202,14 +217,14 @@ func (p *PrintToBuffer) Length() int {
 }
 
 type Flusher struct {
-	og *PrintToDb
-	bf *PrintToBuffer
+	og *PrintToDb     // needs to know how the original printer prints
+	bf *PrintToBuffer // needs to access the buffer
 }
 
 func (p *Flusher) Print() error {
 	p.og.f = func() [][]any { return p.bf.buffer }
 
-	defer p.bf.Reset()
+	defer p.bf.Reset() // clear buffer here
 	return p.og.Print()
 }
 

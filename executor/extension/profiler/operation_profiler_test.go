@@ -37,6 +37,7 @@ func getTotalOpCount(a *analytics.IncrementalAnalytics) int {
 
 // This generates exactly one call per operation and test if the following are true:
 // - That op profiler correctly proxies any StateDB implementation
+// - This is repeated for each depth level -> interval, block and transaction
 // - Call each function exactly once
 //   - Make explicit the fact that some StateDB are not proxied (see black list below)
 
@@ -44,6 +45,7 @@ func TestOperationProfiler_WithEachOpOnce(t *testing.T) {
 	name := "OperationProfiler EachOpOnce"
 	cfg := &utils.Config{
 		Profile:         true,
+		ProfileDepth:    int(TransactionLevel),
 		Quiet:           true,
 		First:           uint64(1),
 		Last:            uint64(1),
@@ -56,24 +58,29 @@ func TestOperationProfiler_WithEachOpOnce(t *testing.T) {
 			t.Fatalf("Fail to create Operation Profiler despite valid config")
 		}
 
+		ac := len(ext.anlts)
+		if ac != int(ext.depth)+1 {
+			t.Fatalf("Number of Analytics should be equal to depth configured. Configured %d, but there's %d analytics", ext.depth+1, ac)
+		}
+
 		ctrl := gomock.NewController(t)
 		mockStateDB := state.NewMockStateDB(ctrl)
 		mockCtx := executor.Context{State: mockStateDB}
 		prepareMockStateDbOnce(mockStateDB)
 
+		// PRE BLOCK
 		ext.PreRun(executor.State[any]{}, &mockCtx)
+		ext.PreBlock(executor.State[any]{Block: int(cfg.First)}, nil)
+		ext.PreTransaction(executor.State[any]{Transaction: int(0)}, nil)
+
+		// call each function once as a single tx in a single block
 		funcs := getStateDbFuncs(mockCtx.State)
-		for b := int(cfg.First); b <= int(cfg.Last); b += 1 + rand.Intn(3) {
-			ext.PreBlock(executor.State[any]{Block: int(b)}, nil)
-			for _, f := range funcs {
-				f()
-			}
-			ext.PostBlock(executor.State[any]{Block: int(b)}, nil)
-
+		for _, f := range funcs {
+			f()
 		}
-		ext.PostRun(executor.State[any]{}, nil, nil)
 
-		totalOpCount := 0
+		// Check here before the stats are reset by the extension
+		totalOpCount := make([]int, int(ext.depth)+1)
 		ops := operation.CreateIdLabelMap()
 
 		// These are purposely not implemented, will be blacklisted here
@@ -87,15 +94,25 @@ func TestOperationProfiler_WithEachOpOnce(t *testing.T) {
 				continue
 			}
 
-			s := ext.anlts[0].GetCount(op)
-			if s != 1 {
-				t.Errorf("op %s occurs %d times, expecting exactly 1", ops[op], s)
+			for depth := IntervalLevel; depth <= ext.depth; depth++ {
+				c := ext.anlts[int(depth)].GetCount(op)
+				if c != 1 {
+					t.Errorf("op %d:%s occurs %d times, expecting exactly 1", op, ops[op], c)
+				}
+				totalOpCount[depth] += int(c)
 			}
-			totalOpCount += int(s)
 		}
-		if totalOpCount != len(funcs) {
-			t.Errorf("Seen %d ops even though we have %d", totalOpCount, len(funcs))
+
+		for depth := IntervalLevel; depth <= ext.depth; depth++ {
+			if totalOpCount[int(depth)] != len(funcs) {
+				t.Errorf("Seen %d ops even though we have %d", totalOpCount[int(depth)], len(funcs))
+			}
 		}
+
+		// POST BLOCK
+		ext.PostTransaction(executor.State[any]{Transaction: int(0)}, nil)
+		ext.PostBlock(executor.State[any]{Block: int(cfg.First)}, nil)
+		ext.PostRun(executor.State[any]{}, nil, nil)
 
 	})
 }
@@ -204,13 +221,13 @@ func TestOperationProfiler_WithRandomInput(t *testing.T) {
 				}
 			}
 
-			ext.PostRun(executor.State[any]{}, nil, nil)
-
 			// check that amount of ops seen equals to amount of ops generated
 			totalSeenOpCount += getTotalOpCount(ext.anlts[0])
 			if totalSeenOpCount != totalGeneratedOpCount {
 				t.Errorf("[Total] Seen %d ops, but generated %d ops", totalSeenOpCount, totalGeneratedOpCount)
 			}
+
+			ext.PostRun(executor.State[any]{}, nil, nil)
 		})
 	}
 }

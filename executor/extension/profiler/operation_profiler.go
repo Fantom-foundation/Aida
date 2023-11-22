@@ -63,9 +63,9 @@ func MakeOperationProfiler[T any](cfg *utils.Config) executor.Extension[T] {
 
 	// At the configured level, print to file/db if the respective flags are enabled.
 	p2db, _ := utils.NewPrintToSqlite3(p.sqlite3(cfg.ProfileSqlite3, p.depth))
-	p2buffer, flusher := p2db.Bufferize(BufferSize)
-	ps[p.depth].AddPrinter(p2buffer)      // print to buffer at configured depth
-	ps[IntervalLevel].AddPrinter(flusher) // always flush at the end of interval, end of run
+	p2buffer, f2db := p2db.Bufferize(BufferSize)
+	ps[p.depth].AddPrinter(p2buffer)   // print to buffer at configured depth
+	ps[IntervalLevel].AddPrinter(f2db) // always flush at the end of interval, end of run
 
 	return p
 }
@@ -134,7 +134,8 @@ func (p *operationProfiler[T]) PostTransaction(state executor.State[T], _ *execu
 // Exitpoint
 // Print any analytics still unprinted and clean up
 func (p *operationProfiler[T]) PostRun(executor.State[T], *executor.Context, error) error {
-	p.ps[IntervalLevel].Print() // print remaining statistics
+	p.ps[IntervalLevel].Print()    // print remaining statistics
+	p.anlts[IntervalLevel].Reset() // make sure that it's consistant with other levels
 	for _, printers := range p.ps {
 		printers.Close() // close all printers
 	}
