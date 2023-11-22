@@ -116,7 +116,7 @@ type Config struct {
 	DiagnosticServer       int64          // if not zero, the port used for hosting a HTTP server for performance diagnostics
 	Genesis                string         // genesis file
 	DbVariant              string         // database variant
-	DbLogging              bool           // set to true if all DB operations should be logged
+	DbLogging              string         // set to true if all DB operations should be logged
 	Debug                  bool           // enable trace debug flag
 	DeleteSourceDbs        bool           // delete source databases
 	DebugFrom              uint64         // the first block to print trace debug
@@ -644,8 +644,8 @@ func reportNewConfig(cfg *Config, log logger.Logger) {
 	if cfg.ShadowDb {
 		log.Warning("DB shadowing enabled, reducing Tx throughput and increasing memory and storage usage")
 	}
-	if cfg.DbLogging {
-		log.Warning("DB logging enabled, reducing Tx throughput")
+	if cfg.DbLogging != "" {
+		log.Warning("Db logging enabled, reducing Tx throughput")
 	}
 	if !cfg.HasDeletedAccounts {
 		log.Warning("Deleted-account-dir is not provided or does not exist")
