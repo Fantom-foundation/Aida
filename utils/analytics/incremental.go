@@ -7,7 +7,7 @@ import (
 	xmath "github.com/Fantom-foundation/Aida/utils/math"
 )
 
-// Incremental Analytics tracks metrics defined by Analytics interface
+// IncrementalAnalytics tracks metrics defined by Analytics interface
 // Incremental here means that the values seen are discarded (aka streaming, running, etc.)
 type IncrementalAnalytics struct {
 	stats []IncrementalStats

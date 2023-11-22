@@ -134,7 +134,7 @@ type Config struct {
 	PrimeRandom            bool           // enable randomized priming
 	PrimeThreshold         int            // set account threshold before commit
 	Profile                bool           // enable micro profiling
-	ProfileDepth           int            // 0 = Interval, 1 = Block, 2 = Tx
+	ProfileDepth           int            // 0 = Interval, 1 = Interval+Block, 2 = Interval+Block+Tx
 	ProfileFile            string         // output file containing profiling result
 	ProfileInterval        uint64         // interval of printing profile result
 	ProfileSqlite3         string         // output profiling results to sqlite3 DB

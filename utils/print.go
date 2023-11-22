@@ -9,8 +9,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-// Utility to output data from the system
-
+// Printer is a utility class to output data from the system
 type Printer interface {
 	Print() error
 	Close()
@@ -41,51 +40,49 @@ func (ps *Printers) AddPrinter(p Printer) *Printers {
 	return ps
 }
 
-// Print to any io.Writer
+// PrinterToWriter writes to any io.Writer
 // Wrap f, returns a string to be printed
-
-type PrintToWriter struct {
+type PrinterToWriter struct {
 	w io.Writer
 	f func() string
 }
 
-func (p *PrintToWriter) Print() error {
+func (p *PrinterToWriter) Print() error {
 	fmt.Fprintln(p.w, p.f())
 	return nil
 }
 
-func (p *PrintToWriter) Close() {
+func (p *PrinterToWriter) Close() {
 	return
 }
 
-func NewPrintToWriter(w io.Writer, f func() string) *PrintToWriter {
-	return &PrintToWriter{w, f}
+func NewPrinterToWriter(w io.Writer, f func() string) *PrinterToWriter {
+	return &PrinterToWriter{w, f}
 }
 
-func NewPrintToConsole(f func() string) *PrintToWriter {
-	return &PrintToWriter{os.Stdout, f}
+func NewPrinterToConsole(f func() string) *PrinterToWriter {
+	return &PrinterToWriter{os.Stdout, f}
 }
 
-func (ps *Printers) AddPrintToWriter(w io.Writer, f func() string) *Printers {
-	return ps.AddPrinter(NewPrintToWriter(w, f))
+func (ps *Printers) AddPrinterToWriter(w io.Writer, f func() string) *Printers {
+	return ps.AddPrinter(NewPrinterToWriter(w, f))
 }
 
-func (ps *Printers) AddPrintToConsole(isDisabled bool, f func() string) *Printers {
+func (ps *Printers) AddPrinterToConsole(isDisabled bool, f func() string) *Printers {
 	if isDisabled {
 		return ps
 	}
-	return ps.AddPrinter(NewPrintToConsole(f))
+	return ps.AddPrinter(NewPrinterToConsole(f))
 }
 
-// Print to a File
+// PrinterToFile writes to a File
 // Wrap f, returns a string to be printed
-
-type PrintToFile struct {
+type PrinterToFile struct {
 	filepath string
 	f        func() string
 }
 
-func (p *PrintToFile) Print() error {
+func (p *PrinterToFile) Print() error {
 	file, err := os.OpenFile(p.filepath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return fmt.Errorf("unable to print to file %s - %v", p.filepath, err)
@@ -95,31 +92,30 @@ func (p *PrintToFile) Print() error {
 	return nil
 }
 
-func (p *PrintToFile) Close() {
+func (p *PrinterToFile) Close() {
 	return
 }
 
-func NewPrintToFile(filepath string, f func() string) *PrintToFile {
-	return &PrintToFile{filepath, f}
+func NewPrinterToFile(filepath string, f func() string) *PrinterToFile {
+	return &PrinterToFile{filepath, f}
 }
 
-func (ps *Printers) AddPrintToFile(filepath string, f func() string) *Printers {
+func (ps *Printers) AddPrinterToFile(filepath string, f func() string) *Printers {
 	if filepath != "" {
-		ps.AddPrinter(NewPrintToFile(filepath, f))
+		ps.AddPrinter(NewPrinterToFile(filepath, f))
 	}
 	return ps
 }
 
-// Print by inserting rows into DB
+// PrinterToDb writes by inserting rows into DB
 // Wrap f, returns an array of values to be inserted
-
-type PrintToDb struct {
+type PrinterToDb struct {
 	db     *sql.DB
 	insert string
 	f      func() [][]any
 }
 
-func (p *PrintToDb) Print() error {
+func (p *PrinterToDb) Print() error {
 	// Transaction is used to improve efficiency over bulk insert
 	tx, err := p.db.Begin()
 	if err != nil {
@@ -144,12 +140,11 @@ func (p *PrintToDb) Print() error {
 	return tx.Commit()
 }
 
-func (p *PrintToDb) Close() {
+func (p *PrinterToDb) Close() {
 	p.db.Close()
 }
 
-// each printer is responsible for one create/insert type
-func NewPrintToSqlite3(conn string, create string, insert string, f func() [][]any) (*PrintToDb, error) {
+func NewPrinterToSqlite3(conn string, create string, insert string, f func() [][]any) (*PrinterToDb, error) {
 	var err error
 
 	db, err := sql.Open("sqlite3", conn)
@@ -162,15 +157,15 @@ func NewPrintToSqlite3(conn string, create string, insert string, f func() [][]a
 		return nil, fmt.Errorf("Could not confirm if table exists")
 	}
 
-	db.Exec("PRAGMA synchronous = OFF")     // make sure that insert does not block
+	db.Exec("PRAGMA synchronous = OFF")     // so that insert does not block
 	db.Exec("PRAGMA journal_mode = MEMORY") // improve efficiency - no intermediate write to file
 
-	return &PrintToDb{db, insert, f}, nil
+	return &PrinterToDb{db, insert, f}, nil
 }
 
-func (ps *Printers) AddPrintToSqlite3(conn string, create string, insert string, f func() [][]any) *Printers {
+func (ps *Printers) AddPrinterToSqlite3(conn string, create string, insert string, f func() [][]any) *Printers {
 	if conn != "" {
-		p, err := NewPrintToSqlite3(conn, create, insert, f)
+		p, err := NewPrinterToSqlite3(conn, create, insert, f)
 		if err != nil {
 			return ps
 		}
@@ -179,46 +174,45 @@ func (ps *Printers) AddPrintToSqlite3(conn string, create string, insert string,
 	return ps
 }
 
-// Split PrintToDB into 2 printers, 1. print to buffer 2. flush buffer to DB
+// Bufferize split PrintToDB into 2 printers: 1. print to buffer 2. flush buffer to DB
+func (p *PrinterToDb) Bufferize(capacity int) (*PrinterToBuffer, *Flusher) {
+	pb := &PrinterToBuffer{capacity, p.f, make([][]any, capacity), nil}
+	flusher := &Flusher{p, pb}
+	pb.flusher = flusher
+	return pb, flusher
+}
 
-type PrintToBuffer struct {
+type PrinterToBuffer struct {
 	capacity int
 	f        func() [][]any
 	buffer   [][]any
 	flusher  *Flusher
 }
 
-func (p *PrintToDb) Bufferize(capacity int) (*PrintToBuffer, *Flusher) {
-	pb := &PrintToBuffer{capacity, p.f, make([][]any, capacity), nil}
-	flusher := &Flusher{p, pb}
-	pb.flusher = flusher
-	return pb, flusher
-}
-
-func (p *PrintToBuffer) Print() error {
+func (p *PrinterToBuffer) Print() error {
 	p.buffer = append(p.buffer, p.f()...)
-
-	if len(p.buffer) > p.capacity {
+	if len(p.buffer) >= p.capacity {
 		return p.flusher.Print()
 	}
+
 	return nil
 }
 
-func (p *PrintToBuffer) Close() {
+func (p *PrinterToBuffer) Close() {
 	return
 }
 
-func (p *PrintToBuffer) Reset() {
+func (p *PrinterToBuffer) Reset() {
 	p.buffer = p.buffer[:0]
 }
 
-func (p *PrintToBuffer) Length() int {
+func (p *PrinterToBuffer) Length() int {
 	return len(p.buffer)
 }
 
 type Flusher struct {
-	og *PrintToDb     // needs to know how the original printer prints
-	bf *PrintToBuffer // needs to access the buffer
+	og *PrinterToDb     // needs to know how the original printer prints
+	bf *PrinterToBuffer // needs to access the buffer
 }
 
 func (p *Flusher) Print() error {
