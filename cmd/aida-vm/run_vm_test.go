@@ -73,7 +73,7 @@ func TestVm_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 		db.EXPECT().EndTransaction(),
 	)
 
-	if err := run(cfg, provider, db, txProcessor{cfg}, nil); err != nil {
+	if err := run(cfg, provider, db, executor.MakeSubstateProcessor(cfg), nil); err != nil {
 		t.Errorf("run failed: %v", err)
 	}
 }
@@ -146,7 +146,7 @@ func TestVm_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 		db.EXPECT().EndTransaction(),
 	)
 
-	if err := run(cfg, provider, db, txProcessor{cfg}, nil); err != nil {
+	if err := run(cfg, provider, db, executor.MakeSubstateProcessor(cfg), nil); err != nil {
 		t.Errorf("run failed: %v", err)
 	}
 }
@@ -337,7 +337,7 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) 
 	)
 
 	// run fails but not on validation
-	err := run(cfg, provider, db, txProcessor{cfg}, nil)
+	err := run(cfg, provider, db, executor.MakeSubstateProcessor(cfg), nil)
 	if err == nil {
 		t.Errorf("run must fail")
 	}
@@ -386,7 +386,7 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Parallel(t *testing.T) {
 	)
 
 	// run fails but not on validation
-	err := run(cfg, provider, db, txProcessor{cfg}, nil)
+	err := run(cfg, provider, db, executor.MakeSubstateProcessor(cfg), nil)
 	if err == nil {
 		t.Errorf("run must fail")
 	}
@@ -427,7 +427,7 @@ func TestVm_ValidationFailsOnInvalidTransaction_Sequential(t *testing.T) {
 		db.EXPECT().EndTransaction(),
 	)
 
-	err := run(cfg, provider, db, txProcessor{cfg}, nil)
+	err := run(cfg, provider, db, executor.MakeSubstateProcessor(cfg), nil)
 	if err == nil {
 		t.Errorf("validation must fail")
 	}
@@ -469,7 +469,7 @@ func TestVm_ValidationFailsOnInvalidTransaction_Parallel(t *testing.T) {
 		db.EXPECT().EndTransaction(),
 	)
 
-	err := run(cfg, provider, db, txProcessor{cfg}, nil)
+	err := run(cfg, provider, db, executor.MakeSubstateProcessor(cfg), nil)
 	if err == nil {
 		t.Errorf("validation must fail")
 	}

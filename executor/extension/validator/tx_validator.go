@@ -1,11 +1,13 @@
 package validator
 
 import (
+	"bytes"
 	"fmt"
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
+	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 )
@@ -48,7 +50,7 @@ func (v *txValidator) PreRun(executor.State[*substate.Substate], *executor.Conte
 
 // PreTransaction validates InputAlloc in given substate
 func (v *txValidator) PreTransaction(state executor.State[*substate.Substate], ctx *executor.Context) error {
-	err := utils.ValidateStateDB(state.Data.InputAlloc, ctx.State, v.cfg.UpdateOnFailure)
+	err := validateStateDb(state.Data.InputAlloc, ctx.State, v.cfg.UpdateOnFailure)
 	if err == nil {
 		return nil
 	}
@@ -64,12 +66,12 @@ func (v *txValidator) PreTransaction(state executor.State[*substate.Substate], c
 
 // PostTransaction validates OutputAlloc in given substate
 func (v *txValidator) PostTransaction(state executor.State[*substate.Substate], ctx *executor.Context) error {
-	err := utils.ValidateStateDB(state.Data.OutputAlloc, ctx.State, v.cfg.UpdateOnFailure)
+	err := validateVmAlloc(ctx.State, state.Data.OutputAlloc, v.cfg)
 	if err == nil {
 		return nil
 	}
 
-	err = fmt.Errorf("output error at block %v tx %v; %v\n", state.Block, state.Transaction, err)
+	err = fmt.Errorf("output error at block %v tx %v; %v", state.Block, state.Transaction, err)
 
 	if v.isErrFatal(err, ctx.ErrorInput) {
 		return err
@@ -99,4 +101,79 @@ func (v *txValidator) isErrFatal(err error, ch chan error) bool {
 	}
 
 	return false
+}
+
+// validateStateDb validates whether the world-state is contained in the db object.
+// NB: We can only check what must be in the db (but cannot check whether db stores more).
+func validateStateDb(ws substate.SubstateAlloc, db state.VmStateDB, updateOnFail bool) error {
+	var err string
+	for addr, account := range ws {
+		if !db.Exist(addr) {
+			err += fmt.Sprintf("  Account %v does not exist\n", addr.Hex())
+			if updateOnFail {
+				db.CreateAccount(addr)
+			}
+		}
+		if balance := db.GetBalance(addr); account.Balance.Cmp(balance) != 0 {
+			err += fmt.Sprintf("  Failed to validate balance for account %v\n"+
+				"    have %v\n"+
+				"    want %v\n",
+				addr.Hex(), balance, account.Balance)
+			if updateOnFail {
+				db.SubBalance(addr, balance)
+				db.AddBalance(addr, account.Balance)
+			}
+		}
+		if nonce := db.GetNonce(addr); nonce != account.Nonce {
+			err += fmt.Sprintf("  Failed to validate nonce for account %v\n"+
+				"    have %v\n"+
+				"    want %v\n",
+				addr.Hex(), nonce, account.Nonce)
+			if updateOnFail {
+				db.SetNonce(addr, account.Nonce)
+			}
+		}
+		if code := db.GetCode(addr); bytes.Compare(code, account.Code) != 0 {
+			err += fmt.Sprintf("  Failed to validate code for account %v\n"+
+				"    have len %v\n"+
+				"    want len %v\n",
+				addr.Hex(), len(code), len(account.Code))
+			if updateOnFail {
+				db.SetCode(addr, account.Code)
+			}
+		}
+		for key, value := range account.Storage {
+			if db.GetState(addr, key) != value {
+				err += fmt.Sprintf("  Failed to validate storage for account %v, key %v\n"+
+					"    have %v\n"+
+					"    want %v\n",
+					addr.Hex(), key.Hex(), db.GetState(addr, key).Hex(), value.Hex())
+				if updateOnFail {
+					db.SetState(addr, key, value)
+				}
+			}
+		}
+	}
+	if len(err) > 0 {
+		return fmt.Errorf(err)
+	}
+	return nil
+}
+
+// validateVmAlloc compares states of accounts in stateDB to an expected set of states.
+// If fullState mode, check if expected state is contained in stateDB.
+// If partialState mode, check for equality of sets.
+func validateVmAlloc(db state.VmStateDB, expectedAlloc substate.SubstateAlloc, cfg *utils.Config) error {
+	var err error
+	switch cfg.StateValidationMode {
+	case utils.SubsetCheck:
+		err = validateStateDb(expectedAlloc, db, !cfg.UpdateOnFailure)
+	case utils.EqualityCheck:
+		vmAlloc := db.GetSubstatePostAlloc()
+		isEqual := expectedAlloc.Equal(vmAlloc)
+		if !isEqual {
+			err = fmt.Errorf("inconsistent output: alloc")
+		}
+	}
+	return err
 }

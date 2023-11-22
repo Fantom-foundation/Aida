@@ -34,22 +34,7 @@ func RunVmAdb(ctx *cli.Context) error {
 	}
 	defer substateDb.Close()
 
-	return run(cfg, substateDb, nil, blockProcessor{cfg}, nil)
-}
-
-type blockProcessor struct {
-	cfg *utils.Config
-}
-
-func (r blockProcessor) Process(state executor.State[*substate.Substate], ctx *executor.Context) error {
-	_, err := utils.ProcessTx(
-		ctx.Archive,
-		r.cfg,
-		uint64(state.Block),
-		state.Transaction,
-		state.Data,
-	)
-	return err
+	return run(cfg, substateDb, nil, executor.MakeSubstateProcessor(cfg), nil)
 }
 
 func run(
