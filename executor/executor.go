@@ -232,8 +232,7 @@ func (e *executor[T]) Run(params Params, processor Processor[T], extensions []Ex
 		// Skip PostRun actions if a panic occurred. In such a case there is no guarantee
 		// on the state of anything, and PostRun operations may deadlock or cause damage.
 		if r := recover(); r != nil {
-			e.log.Error(r)
-			return
+			e.log.Panic(r)
 		}
 		err = errors.Join(
 			err,
