@@ -134,8 +134,10 @@ type Config struct {
 	PrimeRandom            bool           // enable randomized priming
 	PrimeThreshold         int            // set account threshold before commit
 	Profile                bool           // enable micro profiling
+	ProfileDepth           int            // 0 = Interval, 1 = Interval+Block, 2 = Interval+Block+Tx
 	ProfileFile            string         // output file containing profiling result
 	ProfileInterval        uint64         // interval of printing profile result
+	ProfileSqlite3         string         // output profiling results to sqlite3 DB
 	RandomSeed             int64          // set random seed for stochastic testing
 	SkipPriming            bool           // skip priming of the state DB
 	SkipMetadata           bool           // skip metadata insert/getting into AidaDb
@@ -600,6 +602,15 @@ func reportNewConfig(cfg *Config, log logger.Logger) {
 
 		// todo move to tx validator once finished
 		log.Infof("Validate world state: %v, validate tx state: %v", cfg.ValidateWorldState, cfg.ValidateTxState)
+		if cfg.Profile {
+			log.Infof("Profiling enabled - at depth: %d", cfg.ProfileDepth)
+			if cfg.ProfileFile != "" {
+				log.Infof("  Profiling results output file path: %s", cfg.ProfileFile)
+			}
+			if cfg.ProfileSqlite3 != "" {
+				log.Infof("  Profiling results output to sqlite3: %s", cfg.ProfileSqlite3)
+			}
+		}
 	}
 
 	if cfg.ShadowDb {

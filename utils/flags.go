@@ -104,6 +104,15 @@ var (
 		Name:  "profile",
 		Usage: "enable profiling",
 	}
+	ProfileDepthFlag = cli.IntFlag{
+		Name:  "profile-depth",
+		Usage: "0=interval, 1=block, 2=transaction",
+		Value: 0,
+	}
+	ProfileSqlite3Flag = cli.StringFlag{
+		Name:  "profile-sqlite3",
+		Usage: "output profiling data to sqlite3 db",
+	}
 	ProfileFileFlag = cli.StringFlag{
 		Name:  "profile-file",
 		Usage: "output file containing profiling data",

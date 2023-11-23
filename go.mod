@@ -16,6 +16,7 @@ require (
 	github.com/goccy/go-graphviz v0.1.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/google/martian v2.1.0+incompatible
+	github.com/jedib0t/go-pretty/v6 v6.4.9
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/klauspost/compress v1.15.11
 	github.com/mandolyte/mdtopdf v1.5.3
