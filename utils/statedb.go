@@ -209,10 +209,6 @@ func makeStateDBVariant(directory, impl, variant, archiveVariant string, carmenS
 func DeleteDestroyedAccountsFromWorldState(ws substate.SubstateAlloc, cfg *Config, target uint64) error {
 	log := logger.NewLogger(cfg.LogLevel, "DelDestAcc")
 
-	if !cfg.HasDeletedAccounts {
-		log.Warning("Database not provided. Ignore deleted accounts")
-		return nil
-	}
 	src, err := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
 	if err != nil {
 		return err
@@ -224,6 +220,7 @@ func DeleteDestroyedAccountsFromWorldState(ws substate.SubstateAlloc, cfg *Confi
 	}
 	for _, cur := range list {
 		if _, found := ws[cur]; found {
+			log.Debugf("Remove %v from world state", cur)
 			delete(ws, cur)
 		}
 	}
@@ -235,10 +232,6 @@ func DeleteDestroyedAccountsFromWorldState(ws substate.SubstateAlloc, cfg *Confi
 func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *Config, target uint64) error {
 	log := logger.NewLogger(cfg.LogLevel, "DelDestAcc")
 
-	if !cfg.HasDeletedAccounts {
-		log.Warning("Database not provided. Ignore deleted accounts.")
-		return nil
-	}
 	src, err := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
 	if err != nil {
 		return err

@@ -46,7 +46,6 @@ func TestOperationProfiler_WithEachOpOnce(t *testing.T) {
 	cfg := &utils.Config{
 		Profile:         true,
 		ProfileDepth:    int(TransactionLevel),
-		Quiet:           true,
 		First:           uint64(1),
 		Last:            uint64(1),
 		ProfileInterval: uint64(1),
@@ -150,7 +149,6 @@ func TestOperationProfiler_WithRandomInput(t *testing.T) {
 		name := fmt.Sprintf("OperationProfiler Random [%s]", test.args.name)
 		cfg := &utils.Config{
 			Profile:         true,
-			Quiet:           true,
 			First:           uint64(test.args.first),
 			Last:            uint64(test.args.last),
 			ProfileInterval: uint64(test.args.interval),
@@ -254,7 +252,6 @@ func TestOperationProfiler_WithMalformedConfig(t *testing.T) {
 	for _, test := range tests {
 		ext := MakeOperationProfiler[any](&utils.Config{
 			Profile:         test.args.profile,
-			Quiet:           true,
 			First:           test.args.first,
 			Last:            test.args.last,
 			ProfileInterval: test.args.interval,

@@ -133,8 +133,9 @@ func MakeOperationProfiler[T any](cfg *utils.Config) executor.Extension[T] {
 		log:      logger.NewLogger(cfg.LogLevel, "Operation Profiler"),
 	}
 
-	// Always print profiling results after each interval, unless cfg.Quiet
-	ps[IntervalLevel].AddPrinterToConsole(cfg.Quiet, func() string { return p.prettyTable().Render() })
+	// Always print profiling results after each interval.
+	// TODO: log to Console
+	ps[IntervalLevel].AddPrinterToConsole(true, func() string { return p.prettyTable().Render() })
 	ps[IntervalLevel].AddPrinterToFile(cfg.ProfileFile, func() string { return p.prettyTable().RenderCSV() })
 
 	// At the configured level, print to file/db if the respective flags are enabled.

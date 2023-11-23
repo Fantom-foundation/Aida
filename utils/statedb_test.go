@@ -55,7 +55,6 @@ func TestStatedb_DeleteDestroyedAccountsFromWorldState(t *testing.T) {
 			}
 
 			// Update config to enable removal of destroyed accounts
-			cfg.HasDeletedAccounts = true
 			cfg.DeletionDb = deletionDb
 
 			// Initializing backend DB for storing destroyed accounts
@@ -109,7 +108,6 @@ func TestStatedb_DeleteDestroyedAccountsFromStateDB(t *testing.T) {
 			}
 
 			// Update config to enable removal of destroyed accounts
-			cfg.HasDeletedAccounts = true
 			cfg.DeletionDb = deletedAccountsDir
 
 			// Initializing backend DB for storing destroyed accounts

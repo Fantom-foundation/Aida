@@ -142,11 +142,9 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, 
 		errCount int
 	)
 
-	if !cfg.Quiet {
-		start = time.Now()
-		sec = time.Since(start).Seconds()
-		lastSec = time.Since(start).Seconds()
-	}
+	start = time.Now()
+	sec = time.Since(start).Seconds()
+	lastSec = time.Since(start).Seconds()
 	// if block after priming is greater or equal to debug block, enable debug.
 	if cfg.Debug && ss.blockNum >= cfg.DebugFrom {
 		ss.enableDebug()
@@ -179,13 +177,11 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, 
 			}
 		}
 
-		if !cfg.Quiet {
-			// report progress
-			sec = time.Since(start).Seconds()
-			if sec-lastSec >= 15 {
-				log.Infof("Elapsed time: %.0f s, at block %v", sec, block)
-				lastSec = sec
-			}
+		// report progress
+		sec = time.Since(start).Seconds()
+		if sec-lastSec >= 15 {
+			log.Debugf("Elapsed time: %.0f s, at block %v", sec, block)
+			lastSec = sec
 		}
 
 		// check for errors
@@ -206,9 +202,7 @@ func RunStochasticReplay(db state.StateDB, e *EstimationModelJSON, nBlocks int, 
 	}
 
 	// print progress summary
-	if !cfg.Quiet {
-		log.Noticef("Total elapsed time: %.3f s, processed %v blocks", sec, block)
-	}
+	log.Noticef("Total elapsed time: %.3f s, processed %v blocks", sec, block)
 	if errCount > 0 {
 		log.Warningf("%v errors were found", errCount)
 	}
