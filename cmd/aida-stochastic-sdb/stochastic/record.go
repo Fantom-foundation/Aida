@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/stochastic"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -54,6 +55,8 @@ func stochasticRecordAction(ctx *cli.Context) error {
 		return err
 	}
 	defer utils.StopCPUProfile(cfg)
+
+	processor := executor.MakeSubstateProcessor(cfg)
 
 	// iterate through subsets in sequence
 	substate.SetSubstateDb(cfg.AidaDb)
@@ -104,7 +107,7 @@ func stochasticRecordAction(ctx *cli.Context) error {
 		var statedb state.StateDB
 		statedb = state.MakeInMemoryStateDB(&tx.Substate.InputAlloc, tx.Block)
 		statedb = stochastic.NewEventProxy(statedb, &eventRegistry)
-		if _, err := utils.ProcessTx(statedb, cfg, tx.Block, tx.Transaction, tx.Substate); err != nil {
+		if err = processor.ProcessTransaction(statedb, int(tx.Block), tx.Transaction, tx.Substate); err != nil {
 			return err
 		}
 
