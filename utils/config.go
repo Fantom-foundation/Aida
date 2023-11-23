@@ -116,7 +116,7 @@ type Config struct {
 	DiagnosticServer       int64          // if not zero, the port used for hosting a HTTP server for performance diagnostics
 	Genesis                string         // genesis file
 	DbVariant              string         // database variant
-	DbLogging              bool           // set to true if all DB operations should be logged
+	DbLogging              string         // set to true if all DB operations should be logged
 	Debug                  bool           // enable trace debug flag
 	DeleteSourceDbs        bool           // delete source databases
 	DebugFrom              uint64         // the first block to print trace debug
@@ -134,8 +134,10 @@ type Config struct {
 	PrimeRandom            bool           // enable randomized priming
 	PrimeThreshold         int            // set account threshold before commit
 	Profile                bool           // enable micro profiling
+	ProfileDepth           int            // 0 = Interval, 1 = Interval+Block, 2 = Interval+Block+Tx
 	ProfileFile            string         // output file containing profiling result
 	ProfileInterval        uint64         // interval of printing profile result
+	ProfileSqlite3         string         // output profiling results to sqlite3 DB
 	RandomSeed             int64          // set random seed for stochastic testing
 	SkipPriming            bool           // skip priming of the state DB
 	SkipMetadata           bool           // skip metadata insert/getting into AidaDb
@@ -184,6 +186,8 @@ type Config struct {
 	IsExistingStateDb      bool           // this is true if we are using an existing StateDb
 	ValidateStateHashes    bool           // if this is true state hash validation is enabled in Executor
 	ProfileBlocks          bool           // enables block profiler extension
+	PathToStateDb          string
+	ErrorLogging           string // if defined, error logging to file is enabled
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.
@@ -236,7 +240,10 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 		return cfg, fmt.Errorf("unable to parse cli arguments; %v", err)
 	}
 
-	adjustMissingConfigValues(cfg)
+	err = adjustMissingConfigValues(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("cannot adjust missing config values; %v", err)
+	}
 
 	reportNewConfig(cfg, log)
 
@@ -411,7 +418,7 @@ func getMdBlockRange(aidaDbPath string, chainId ChainID, log logger.Logger, logL
 }
 
 // adjustBlockRange finds overlap between metadata block range and block range specified by user in command line
-func adjustBlockRange(chainId ChainID, firstArg, lastArg uint64) (uint64, uint64, error) {
+func adjustBlockRange(chainId ChainID, firstArg, lastArg uint64, log logger.Logger) (uint64, uint64, error) {
 	var first, last, firstMd, lastMd uint64
 	firstMd = keywordBlocks[chainId]["first"]
 	lastMd = keywordBlocks[chainId]["last"]
@@ -422,6 +429,7 @@ func adjustBlockRange(chainId ChainID, firstArg, lastArg uint64) (uint64, uint64
 			first = firstArg
 		} else {
 			first = firstMd
+			log.Warningf("First block arg (%v) is out of range of AidaDb - adjusted to the first block of AidaDb (%v)", firstArg, firstMd)
 		}
 
 		// get last block number
@@ -429,11 +437,12 @@ func adjustBlockRange(chainId ChainID, firstArg, lastArg uint64) (uint64, uint64
 			last = lastArg
 		} else {
 			last = lastMd
+			log.Warningf("Last block arg (%v) is out of range of AidaDb - adjusted to the last block of AidaDb (%v)", lastArg, lastMd)
 		}
 
 		return first, last, nil
 	} else {
-		return 0, 0, fmt.Errorf("block range of your aida-db (%v-%v) cannot execute given block range %v-%v", firstMd, lastMd, firstArg, lastArg)
+		return 0, 0, fmt.Errorf("block range of your AidaDb (%v-%v) cannot execute given block range %v-%v", firstMd, lastMd, firstArg, lastArg)
 	}
 }
 
@@ -502,7 +511,7 @@ func updateConfigBlockRange(args []string, cfg *Config, mode ArgumentMode, log l
 			}
 
 			// find if values overlap
-			first, last, err = adjustBlockRange(cfg.ChainID, firstArg, lastArg)
+			first, last, err = adjustBlockRange(cfg.ChainID, firstArg, lastArg, log)
 			if err != nil {
 				return err
 			}
@@ -537,6 +546,11 @@ func adjustMissingConfigValues(cfg *Config) error {
 		cfg.DbVariant = "go-file"
 	}
 
+	// if ErrorLogging is set we expect we want to catch all processing errors hence we enable ContinueOnFailure
+	if cfg.ErrorLogging != "" {
+		cfg.ContinueOnFailure = true
+	}
+
 	// --continue-on-failure implicitly enables transaction state validation
 	cfg.ValidateTxState = cfg.Validate || cfg.ValidateTxState || cfg.ContinueOnFailure
 	cfg.ValidateWorldState = cfg.Validate || cfg.ValidateWorldState
@@ -548,13 +562,7 @@ func adjustMissingConfigValues(cfg *Config) error {
 	// if AidaDB path is given, redirect source path to AidaDB.
 	if found := directoryExists(cfg.AidaDb); found {
 		OverwriteDbPathsByAidaDb(cfg)
-	}
-
-	// TODO: can be deleted as AidaDB is the default data source.
-	if found := directoryExists(cfg.DeletionDb); found {
 		cfg.HasDeletedAccounts = true
-	} else {
-		cfg.HasDeletedAccounts = false
 	}
 
 	// in-memory StateDB cannot be kept after run.
@@ -585,63 +593,30 @@ func reportNewConfig(cfg *Config, log logger.Logger) {
 		log.Noticef("Run config:")
 		log.Infof("Block range: %v to %v", cfg.First, cfg.Last)
 		if cfg.MaxNumTransactions >= 0 {
-			log.Infof("Transaction limit: %d", cfg.MaxNumTransactions)
+			log.Noticef("Transaction limit: %d", cfg.MaxNumTransactions)
 		}
 		log.Infof("Chain id: %v (record & run-vm only)", cfg.ChainID)
 		log.Infof("SyncPeriod length: %v", cfg.SyncPeriodLength)
-
-		logDbMode := func(prefix, impl, variant string) {
-			if cfg.DbImpl == "carmen" {
-				log.Infof("%s: %v, DB variant: %v, DB schema: %d", prefix, impl, variant, cfg.CarmenSchema)
-			} else {
-				log.Infof("%s: %v, DB variant: %v", prefix, impl, variant)
-			}
-		}
-		if !cfg.ShadowDb {
-			logDbMode("Storage system", cfg.DbImpl, cfg.DbVariant)
-		} else {
-			logDbMode("Prime storage system", cfg.DbImpl, cfg.DbVariant)
-			logDbMode("Shadow storage system", cfg.ShadowImpl, cfg.ShadowVariant)
-		}
-		log.Infof("Source storage directory (empty if new): %v", cfg.StateDbSrc)
-		log.Infof("Working storage directory: %v", cfg.DbTmp)
-		if cfg.ArchiveMode {
-			log.Noticef("Archive mode: enabled")
-			if cfg.ArchiveVariant == "" {
-				log.Infof("Archive variant: <implementation-default>")
-			} else {
-				log.Infof("Archive variant: %s", cfg.ArchiveVariant)
-			}
-		} else {
-			log.Infof("Archive mode: disabled")
-		}
-		log.Infof("Used VM implementation: %v", cfg.VmImpl)
+		log.Noticef("Used VM implementation: %v", cfg.VmImpl)
 		log.Infof("Aida DB directory: %v", cfg.AidaDb)
-		if cfg.SkipPriming {
-			log.Infof("Priming: Skipped")
-		} else {
-			log.Infof("Randomized Priming: %v", cfg.PrimeRandom)
-			if cfg.PrimeRandom {
-				log.Infof("Seed: %v, threshold: %v", cfg.RandomSeed, cfg.PrimeThreshold)
-			}
-			log.Infof("Update buffer size: %v bytes", cfg.UpdateBufferSize)
-		}
+
+		// todo move to tx validator once finished
 		log.Infof("Validate world state: %v, validate tx state: %v", cfg.ValidateWorldState, cfg.ValidateTxState)
+		if cfg.Profile {
+			log.Infof("Profiling enabled - at depth: %d", cfg.ProfileDepth)
+			if cfg.ProfileFile != "" {
+				log.Infof("  Profiling results output file path: %s", cfg.ProfileFile)
+			}
+			if cfg.ProfileSqlite3 != "" {
+				log.Infof("  Profiling results output to sqlite3: %s", cfg.ProfileSqlite3)
+			}
+		}
 	}
 
-	if cfg.ValidateTxState {
-		log.Warning("Validation enabled, reducing Tx throughput")
-	}
 	if cfg.ShadowDb {
 		log.Warning("DB shadowing enabled, reducing Tx throughput and increasing memory and storage usage")
 	}
-	if cfg.DbLogging {
-		log.Warning("DB logging enabled, reducing Tx throughput")
-	}
-	if !cfg.HasDeletedAccounts {
-		log.Warning("Deleted-account-dir is not provided or does not exist")
-	}
-	if !cfg.KeepDb {
-		log.Warning("Keeping the stateDB disabled")
+	if cfg.DbLogging != "" {
+		log.Warning("Db logging enabled, reducing Tx throughput")
 	}
 }

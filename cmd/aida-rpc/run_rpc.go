@@ -29,7 +29,7 @@ func RunRpc(ctx *cli.Context) error {
 
 	defer rpcSource.Close()
 
-	return run(cfg, rpcSource, makeRpcProcessor(cfg), nil, nil)
+	return run(cfg, rpcSource, nil, makeRpcProcessor(cfg), nil)
 }
 
 func makeRpcProcessor(cfg *utils.Config) rpcProcessor {
@@ -47,10 +47,18 @@ func (p rpcProcessor) Process(state executor.State[*rpc.RequestAndResults], ctx 
 	return nil
 }
 
-func run(cfg *utils.Config, provider executor.Provider[*rpc.RequestAndResults], processor executor.Processor[*rpc.RequestAndResults], extra []executor.Extension[*rpc.RequestAndResults], stateDb state.StateDB) error {
+func run(
+	cfg *utils.Config,
+	provider executor.Provider[*rpc.RequestAndResults],
+	stateDb state.StateDB,
+	processor executor.Processor[*rpc.RequestAndResults],
+	extra []executor.Extension[*rpc.RequestAndResults],
+
+) error {
 	var extensionList = []executor.Extension[*rpc.RequestAndResults]{
 		profiler.MakeCpuProfiler[*rpc.RequestAndResults](cfg),
 		tracker.MakeProgressLogger[*rpc.RequestAndResults](cfg, 15*time.Second),
+		tracker.MakeErrorLogger[*rpc.RequestAndResults](cfg),
 		statedb.MakeTemporaryArchivePrepper(),
 		validator.MakeRpcComparator(cfg),
 	}
@@ -58,7 +66,12 @@ func run(cfg *utils.Config, provider executor.Provider[*rpc.RequestAndResults], 
 	// this is for testing purposes so mock statedb and mock extension can be used
 	extensionList = append(extensionList, extra...)
 	if stateDb == nil {
-		extensionList = append(extensionList, statedb.MakeStateDbManager[*rpc.RequestAndResults](cfg))
+		extensionList = append(
+			extensionList,
+			statedb.MakeStateDbManager[*rpc.RequestAndResults](cfg),
+			statedb.MakeArchiveBlockChecker[*rpc.RequestAndResults](cfg),
+		)
+
 	}
 
 	return executor.NewExecutor(provider, cfg.LogLevel).Run(

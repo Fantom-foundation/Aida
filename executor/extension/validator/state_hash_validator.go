@@ -63,6 +63,8 @@ func (e *stateHashValidator[T]) PostBlock(state executor.State[T], ctx *executor
 		return err
 	}
 
+	// NOTE: ContinueOnFailure does not make sense here, if hash does not
+	// match every block after this block would have different hash
 	got := ctx.State.GetHash()
 	if want != got {
 		return fmt.Errorf("unexpected hash for Live block %d\nwanted %v\n   got %v", state.Block, want, got)
@@ -119,6 +121,8 @@ func (e *stateHashValidator[T]) checkArchiveHashes(state state.StateDB) error {
 			return err
 		}
 
+		// NOTE: ContinueOnFailure does not make sense here, if hash does not
+		// match every block after this block would have different hash
 		got := archive.GetHash()
 		archive.Release()
 		if want != got {

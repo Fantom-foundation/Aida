@@ -38,7 +38,7 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		Genesis:                getFlagValue(ctx, GenesisFlag).(string),
 		DbImpl:                 getFlagValue(ctx, StateDbImplementationFlag).(string),
 		DbVariant:              getFlagValue(ctx, StateDbVariantFlag).(string),
-		DbLogging:              getFlagValue(ctx, StateDbLoggingFlag).(bool),
+		DbLogging:              getFlagValue(ctx, StateDbLoggingFlag).(string),
 		DeletionDb:             getFlagValue(ctx, DeletionDbFlag).(string),
 		DeleteSourceDbs:        getFlagValue(ctx, DeleteSourceDbsFlag).(bool),
 		DiagnosticServer:       getFlagValue(ctx, DiagnosticServerFlag).(int64),
@@ -55,6 +55,8 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		RandomSeed:             getFlagValue(ctx, RandomSeedFlag).(int64),
 		PrimeThreshold:         getFlagValue(ctx, PrimeThresholdFlag).(int),
 		Profile:                getFlagValue(ctx, ProfileFlag).(bool),
+		ProfileDepth:           getFlagValue(ctx, ProfileDepthFlag).(int),
+		ProfileSqlite3:         getFlagValue(ctx, ProfileSqlite3Flag).(string),
 		ProfileFile:            getFlagValue(ctx, ProfileFileFlag).(string),
 		ProfileInterval:        getFlagValue(ctx, ProfileIntervalFlag).(uint64),
 		SkipPriming:            getFlagValue(ctx, SkipPrimingFlag).(bool),
@@ -103,6 +105,7 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		ValidateStateHashes:    getFlagValue(ctx, ValidateStateHashesFlag).(bool),
 		ProfileDB:              getFlagValue(ctx, ProfileDBFlag).(string),
 		ProfileBlocks:          getFlagValue(ctx, ProfileBlocksFlag).(bool),
+		ErrorLogging:           getFlagValue(ctx, ErrorLoggingFlag).(string),
 	}
 
 	return cfg

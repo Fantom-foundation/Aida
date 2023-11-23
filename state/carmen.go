@@ -7,6 +7,7 @@ import (
 
 	cc "github.com/Fantom-foundation/Carmen/go/common"
 	carmen "github.com/Fantom-foundation/Carmen/go/state"
+	_ "github.com/Fantom-foundation/Carmen/go/state/cppstate"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -321,6 +322,9 @@ func (s *carmenStateDB) GetArchiveBlockHeight() (uint64, bool, error) {
 
 func (s *carmenStateDB) GetMemoryUsage() *MemoryUsage {
 	usage := s.stateDb.GetMemoryFootprint()
+	if usage == nil {
+		return &MemoryUsage{uint64(0), nil}
+	}
 	return &MemoryUsage{uint64(usage.Total()), usage}
 }
 

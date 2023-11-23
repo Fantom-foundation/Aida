@@ -101,6 +101,8 @@ func (c *cloner) clone(isFirstGenerationFromGenesis bool) error {
 
 	c.read([]byte(substate.Stage1CodePrefix), 0, nil)
 
+	firstDeletionBlock := c.cfg.First
+
 	// update c.cfg.First block before loading deletions and substates, because for utils.CloneType those are necessary to be from last updateset onward
 	// lastUpdateBeforeRange contains block number at which is first updateset preceding the given block range,
 	// it is only required in CloneType db
@@ -111,11 +113,14 @@ func (c *cloner) clone(isFirstGenerationFromGenesis bool) error {
 			c.log.Noticef("Last updateset found at block %v, changing first block to %v", lastUpdateBeforeRange, lastUpdateBeforeRange+1)
 			c.cfg.First = lastUpdateBeforeRange + 1
 		}
+
+		// if database type is going to be CloneType, we need to load all deletion data, because some commands need to load deletionDb from block 0
+		firstDeletionBlock = 0
 	}
 
-	err := c.readDeletions()
+	err := c.readDeletions(firstDeletionBlock)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot read deletions; %v", err)
 	}
 	err = c.readSubstate()
 	if err != nil {
@@ -354,7 +359,7 @@ func (c *cloner) sendToWriteChan(k, v []byte) {
 }
 
 // readDeletions from last updateSet before cfg.First until cfg.Last
-func (c *cloner) readDeletions() error {
+func (c *cloner) readDeletions(firstDeletionBlock uint64) error {
 	endCond := func(key []byte) (bool, error) {
 		block, _, err := substate.DecodeDestroyedAccountKey(key)
 		if err != nil {
@@ -366,7 +371,7 @@ func (c *cloner) readDeletions() error {
 		return false, nil
 	}
 
-	c.read([]byte(substate.DestroyedAccountPrefix), c.cfg.First, endCond)
+	c.read([]byte(substate.DestroyedAccountPrefix), firstDeletionBlock, endCond)
 
 	return nil
 }

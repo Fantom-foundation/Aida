@@ -4,18 +4,22 @@ import (
 	"fmt"
 	"math/big"
 	"math/rand"
-	"os"
 	"testing"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/Fantom-foundation/Aida/utils/analytics"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	gomock "go.uber.org/mock/gomock"
+	"golang.org/x/exp/maps"
 )
+
+// general helper functions for testing
 
 func assertExactlyEqual[T comparable](t *testing.T, a T, b T) {
 	if a != b {
@@ -23,6 +27,250 @@ func assertExactlyEqual[T comparable](t *testing.T, a T, b T) {
 	}
 }
 
+func getTotalOpCount(a *analytics.IncrementalAnalytics) int {
+	var count uint64 = 0
+	for _, stat := range a.Iterate() {
+		count += stat.GetCount()
+	}
+	return int(count)
+}
+
+// This generates exactly one call per operation and test if the following are true:
+// - That op profiler correctly proxies any StateDB implementation
+// - This is repeated for each depth level -> interval, block and transaction
+// - Call each function exactly once
+//   - Make explicit the fact that some StateDB are not proxied (see black list below)
+
+func TestOperationProfiler_WithEachOpOnce(t *testing.T) {
+	name := "OperationProfiler EachOpOnce"
+	cfg := &utils.Config{
+		Profile:         true,
+		ProfileDepth:    int(TransactionLevel),
+		Quiet:           true,
+		First:           uint64(1),
+		Last:            uint64(1),
+		ProfileInterval: uint64(1),
+	}
+
+	t.Run(name, func(t *testing.T) {
+		ext, ok := MakeOperationProfiler[any](cfg).(*operationProfiler[any])
+		if !ok {
+			t.Fatalf("Fail to create Operation Profiler despite valid config")
+		}
+
+		ac := len(ext.anlts)
+		if ac != int(ext.depth)+1 {
+			t.Fatalf("Number of Analytics should be equal to depth configured. Configured %d, but there's %d analytics", ext.depth+1, ac)
+		}
+
+		ctrl := gomock.NewController(t)
+		mockStateDB := state.NewMockStateDB(ctrl)
+		mockCtx := executor.Context{State: mockStateDB}
+		prepareMockStateDbOnce(mockStateDB)
+
+		// PRE BLOCK
+		ext.PreRun(executor.State[any]{}, &mockCtx)
+		ext.PreBlock(executor.State[any]{Block: int(cfg.First)}, nil)
+		ext.PreTransaction(executor.State[any]{Transaction: int(0)}, nil)
+
+		// call each function once as a single tx in a single block
+		funcs := getStateDbFuncs(mockCtx.State)
+		for _, f := range funcs {
+			f()
+		}
+
+		// Check here before the stats are reset by the extension
+		totalOpCount := make([]int, int(ext.depth)+1)
+		ops := operation.CreateIdLabelMap()
+
+		// These are purposely not implemented, will be blacklisted here
+		notImplemented := make([]bool, len(ops))
+		for _, a := range []byte{14, 18, 21, 22, 23, 29} {
+			notImplemented[a] = true
+		}
+
+		for _, op := range maps.Keys(ops) {
+			if notImplemented[op] {
+				continue
+			}
+
+			for depth := IntervalLevel; depth <= ext.depth; depth++ {
+				c := ext.anlts[int(depth)].GetCount(op)
+				if c != 1 {
+					t.Errorf("op %d:%s occurs %d times, expecting exactly 1", op, ops[op], c)
+				}
+				totalOpCount[depth] += int(c)
+			}
+		}
+
+		for depth := IntervalLevel; depth <= ext.depth; depth++ {
+			if totalOpCount[int(depth)] != len(funcs) {
+				t.Errorf("Seen %d ops even though we have %d", totalOpCount[int(depth)], len(funcs))
+			}
+		}
+
+		// POST BLOCK
+		ext.PostTransaction(executor.State[any]{Transaction: int(0)}, nil)
+		ext.PostBlock(executor.State[any]{Block: int(cfg.First)}, nil)
+		ext.PostRun(executor.State[any]{}, nil, nil)
+
+	})
+}
+
+// This generate random amount of operations call per block and test if the following are true:
+// - That profiler correctly proxies any StateDB implementation
+// - If analytics is properly reset when it should
+// - If interval is correct (and that it's 0-index), and is updated when it should
+// - That the amount of operation generated are logged on analytics agrees
+func TestOperationProfiler_WithRandomInput(t *testing.T) {
+	type argument struct {
+		name           string
+		seed           int64 // -1 = don't use my seed, random something for me
+		minOpsPerBlock int
+		maxOpsPerBlock int
+		first          int
+		last           int
+		interval       int
+	}
+	type result struct{}
+	type testcase struct {
+		args argument
+		want result
+	}
+
+	tests := []testcase{
+		{args: argument{"50-100/block, interval=1", -1, 50, 100, 1, 100, 1}},
+		{args: argument{"50-100/block, several intervals", -1, 50, 100, 1, 100, 10}},
+		{args: argument{"50-100/block, seeded several intervals", 258, 50, 100, 4000, 8000, 1000}},
+		{args: argument{"50-100/block, 1 interval", -1, 50, 100, 1, 100, 10000}},
+		{args: argument{"50-100/block, first=last", -1, 50, 100, 100, 100, 12}},
+	}
+
+	for _, test := range tests {
+		name := fmt.Sprintf("OperationProfiler Random [%s]", test.args.name)
+		cfg := &utils.Config{
+			Profile:         true,
+			Quiet:           true,
+			First:           uint64(test.args.first),
+			Last:            uint64(test.args.last),
+			ProfileInterval: uint64(test.args.interval),
+		}
+
+		t.Run(name, func(t *testing.T) {
+			// initialize rng with seed
+			var r *rand.Rand
+			if test.args.seed != 0 && test.args.seed != 1 {
+				r = rand.New(rand.NewSource(test.args.seed))
+			} else {
+				r = rand.New(rand.NewSource(time.Now().UnixNano()))
+			}
+
+			ext, ok := MakeOperationProfiler[any](cfg).(*operationProfiler[any])
+			if !ok {
+				t.Fatalf("Fail to create Operation Profiler despite valid config")
+			}
+
+			ctrl := gomock.NewController(t)
+			mockStateDB := state.NewMockStateDB(ctrl)
+			mockCtx := executor.Context{State: mockStateDB}
+			prepareMockStateDb(mockStateDB)
+
+			totalSeenOpCount, totalGeneratedOpCount := 0, 0
+			intervalGeneratedOpCount := 0
+
+			intervalStart := test.args.first - (test.args.first % test.args.interval)
+			intervalEnd := intervalStart + test.args.interval - 1
+
+			ext.PreRun(executor.State[any]{}, &mockCtx)
+			for b := test.args.first; b <= test.args.last; b += 1 + r.Intn(3) {
+
+				if b > intervalEnd {
+					intervalStart = intervalEnd + 1
+					intervalEnd += test.args.interval
+					totalSeenOpCount += getTotalOpCount(ext.anlts[0])
+					intervalGeneratedOpCount = 0
+				}
+
+				ext.PreBlock(executor.State[any]{Block: int(b)}, nil)
+				if b > intervalEnd {
+					// make sure that the stats is reset
+					if getTotalOpCount(ext.anlts[0]) != 0 {
+						t.Errorf("Should be reset but found %d ops", getTotalOpCount(ext.anlts[0]))
+					}
+				}
+
+				// ensure 0 index
+				if ext.interval.Start() != cfg.First && ext.interval.Start()%cfg.ProfileInterval != 0 {
+					t.Fatalf("interval is not using 0-index, found %d", ext.interval.Start()%cfg.ProfileInterval)
+				}
+
+				gap := test.args.maxOpsPerBlock - test.args.minOpsPerBlock
+				generatedOpCount := test.args.minOpsPerBlock + r.Intn(gap)
+
+				for o := 0; o < generatedOpCount; o++ {
+					getRandomStateDbFunc(mockCtx.State, r)()
+					totalGeneratedOpCount++
+					intervalGeneratedOpCount++
+				}
+
+				ext.PostBlock(executor.State[any]{Block: int(b)}, nil)
+
+				// check that amount of ops seen eqals to amount of ops generated within this interval
+				if getTotalOpCount(ext.anlts[0]) != intervalGeneratedOpCount {
+					t.Errorf("[Interval] Seen %d ops, but generated %d ops", getTotalOpCount(ext.anlts[0]), intervalGeneratedOpCount)
+				}
+			}
+
+			// check that amount of ops seen equals to amount of ops generated
+			totalSeenOpCount += getTotalOpCount(ext.anlts[0])
+			if totalSeenOpCount != totalGeneratedOpCount {
+				t.Errorf("[Total] Seen %d ops, but generated %d ops", totalSeenOpCount, totalGeneratedOpCount)
+			}
+
+			ext.PostRun(executor.State[any]{}, nil, nil)
+		})
+	}
+}
+
+// Originally this would test if interval <= 0 or if last < first.
+// This is deemed unneccessary since there is a separate validation for config, so they are never malformed.
+// Since we need to test disabled profiling, this is retained.
+func TestOperationProfiler_WithMalformedConfig(t *testing.T) {
+	type argument struct {
+		profile  bool
+		first    uint64
+		last     uint64
+		interval uint64
+	}
+
+	type testcase struct {
+		args argument
+	}
+
+	tests := []testcase{
+		{args: argument{false, 0, 1000, 100}},
+	}
+
+	for _, test := range tests {
+		ext := MakeOperationProfiler[any](&utils.Config{
+			Profile:         test.args.profile,
+			Quiet:           true,
+			First:           test.args.first,
+			Last:            test.args.last,
+			ProfileInterval: test.args.interval,
+		})
+
+		if _, ok := ext.(extension.NilExtension[any]); !ok {
+			t.Errorf("profiler is enabled although configuration not set or malformed")
+		}
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+
+// HELPER FUNCTIONS
+
+// contains a list of all possible mocked operations to be tested.
 func getStateDbFuncs(db state.StateDB) []func() {
 	mockAddress := common.HexToAddress("0x00000F1")
 	mockHash := common.BigToHash(big.NewInt(0))
@@ -79,6 +327,8 @@ func getStateDbFuncs(db state.StateDB) []func() {
 	}
 }
 
+// MockStateDB must be prepared before used (it needs to know how many time each function will be called).
+// This functions tell MockStateDB to expect any number of calls (0 or more) to each of the functions (for randomized test)
 func prepareMockStateDb(m *state.MockStateDB) {
 	m.EXPECT().CreateAccount(gomock.Any()).AnyTimes()
 	m.EXPECT().SubBalance(gomock.Any(), gomock.Any()).AnyTimes()
@@ -124,6 +374,8 @@ func prepareMockStateDb(m *state.MockStateDB) {
 	m.EXPECT().Close().AnyTimes()
 }
 
+// MockStateDB must be prepared before used (it needs to know how many time each function will be called.
+// This functions tell MockStateDB to expect exactly one call to each of the possible functions
 func prepareMockStateDbOnce(m *state.MockStateDB) {
 	m.EXPECT().CreateAccount(gomock.Any())
 	m.EXPECT().SubBalance(gomock.Any(), gomock.Any())
@@ -169,232 +421,9 @@ func prepareMockStateDbOnce(m *state.MockStateDB) {
 	m.EXPECT().Close()
 }
 
+// Helper function to randomize an operation to be called
 func getRandomStateDbFunc(db state.StateDB, r *rand.Rand) func() {
 	funcs := getStateDbFuncs(db)
 	funcCount := len(funcs)
 	return funcs[r.Intn(funcCount)]
-}
-
-func suppressStdout(f func()) {
-	tmp := os.Stdout
-	os.Stdout = nil
-	f()
-	os.Stdout = tmp
-}
-
-func TestOperationProfiler_WithEachOpOnce(t *testing.T) {
-	name := "OperationProfiler EachOpOnce"
-	cfg := &utils.Config{
-		Profile:         true,
-		First:           uint64(1),
-		Last:            uint64(1),
-		ProfileInterval: uint64(1),
-	}
-
-	t.Run(name, func(t *testing.T) {
-		ext, ok := MakeOperationProfiler[any](cfg).(*operationProfiler[any])
-		if !ok {
-			t.Fatalf("Fail to create Operation Profiler despite valid config")
-		}
-
-		ctrl := gomock.NewController(t)
-		mockStateDB := state.NewMockStateDB(ctrl)
-		mockCtx := executor.Context{State: mockStateDB}
-		prepareMockStateDbOnce(mockStateDB)
-
-		ext.PreRun(executor.State[any]{}, &mockCtx)
-		funcs := getStateDbFuncs(mockCtx.State)
-		for b := int(cfg.First); b <= int(cfg.Last); b += 1 + rand.Intn(3) {
-			suppressStdout(func() {
-				ext.PreBlock(executor.State[any]{Block: int(b)}, nil)
-			})
-			for _, f := range funcs {
-				f()
-			}
-			ext.PostBlock(executor.State[any]{Block: int(b)}, nil)
-
-		}
-		suppressStdout(func() {
-			ext.PostRun(executor.State[any]{}, nil, nil)
-		})
-
-		totalOpCount := 0
-		ops := ext.stats.GetOpOrder()
-
-		// These are purposely not implemented, will be blacklisted here
-		notImplemented := make([]bool, len(ops))
-		for _, a := range []byte{14, 18, 21, 22, 23, 29} {
-			notImplemented[a] = true
-		}
-
-		for _, op := range ops {
-			if notImplemented[op] {
-				continue
-			}
-
-			s := ext.stats.GetStatByOpId(op)
-			if s.Frequency != 1 {
-				t.Errorf("op %s occurs %d times, expecting exactly 1", s.Label, s.Frequency)
-			}
-			totalOpCount += int(s.Frequency)
-		}
-		if totalOpCount != len(funcs) {
-			t.Errorf("Seen %d ops even though we have %d", totalOpCount, len(funcs))
-		}
-
-	})
-}
-
-func TestOperationProfiler_WithRandomInput(t *testing.T) {
-	type argument struct {
-		name           string
-		seed           int64
-		minOpsPerBlock int
-		maxOpsPerBlock int
-		first          int
-		last           int
-		interval       int
-	}
-	type result struct{}
-	type testcase struct {
-		args argument
-		want result
-	}
-
-	tests := []testcase{
-		{args: argument{"50-100/block, interval=1", -1, 50, 100, 1, 100, 1}},
-		{args: argument{"50-100/block, several intervals", -1, 50, 100, 1, 100, 10}},
-		{args: argument{"50-100/block, seeded several intervals", 258, 50, 100, 4000, 8000, 1000}},
-		{args: argument{"50-100/block, 1 interval", -1, 50, 100, 1, 100, 10000}},
-		{args: argument{"50-100/block, first=last", -1, 50, 100, 100, 100, 12}},
-	}
-
-	for _, test := range tests {
-		name := fmt.Sprintf("OperationProfiler Random [%s]", test.args.name)
-		cfg := &utils.Config{
-			Profile:         true,
-			First:           uint64(test.args.first),
-			Last:            uint64(test.args.last),
-			ProfileInterval: uint64(test.args.interval),
-		}
-
-		t.Run(name, func(t *testing.T) {
-			// initialize rng with seed
-			var r *rand.Rand
-			if test.args.seed != 0 && test.args.seed != 1 {
-				r = rand.New(rand.NewSource(test.args.seed))
-			} else {
-				r = rand.New(rand.NewSource(time.Now().UnixNano()))
-			}
-
-			ext, ok := MakeOperationProfiler[any](cfg).(*operationProfiler[any])
-			if !ok {
-				t.Fatalf("Fail to create Operation Profiler despite valid config")
-			}
-
-			ctrl := gomock.NewController(t)
-			mockStateDB := state.NewMockStateDB(ctrl)
-			mockCtx := executor.Context{State: mockStateDB}
-			prepareMockStateDb(mockStateDB)
-
-			totalSeenOpCount, totalGeneratedOpCount := 0, 0
-			intervalGeneratedOpCount := 0
-
-			intervalStart := test.args.first - (test.args.first % test.args.interval)
-			intervalEnd := intervalStart + test.args.interval - 1
-
-			ext.PreRun(executor.State[any]{}, &mockCtx)
-			for b := test.args.first; b <= test.args.last; b += 1 + r.Intn(3) {
-
-				if b > intervalEnd {
-					intervalStart = intervalEnd + 1
-					intervalEnd += test.args.interval
-					totalSeenOpCount += ext.stats.GetTotalOpFreq()
-					intervalGeneratedOpCount = 0
-				}
-
-				suppressStdout(func() {
-					ext.PreBlock(executor.State[any]{Block: int(b)}, nil)
-				})
-
-				if b > intervalEnd {
-					// make sure that the stats is reset
-					if ext.stats.GetTotalOpFreq() != 0 {
-						t.Fatalf("Should be reset but found %d ops", ext.stats.GetTotalOpFreq())
-					}
-
-					// ensure 0 index (skips the initial interval where first is intervalStart)
-					if ext.interval.Start()%cfg.ProfileInterval != 0 {
-						t.Fatalf("interval is not using 0-index, found %d", ext.interval.Start()%cfg.ProfileInterval)
-					}
-				}
-
-				gap := test.args.maxOpsPerBlock - test.args.minOpsPerBlock
-				generatedOpCount := test.args.minOpsPerBlock + r.Intn(gap)
-
-				for o := 0; o < generatedOpCount; o++ {
-					getRandomStateDbFunc(mockCtx.State, r)()
-					totalGeneratedOpCount++
-					intervalGeneratedOpCount++
-				}
-
-				ext.PostBlock(executor.State[any]{Block: int(b)}, nil)
-
-				// check that ext tracks last seen block number correctly
-				if ext.lastProcessedBlock != uint64(b) {
-					t.Fatalf("Last seen block number was %d, actual last seen block %d", ext.lastProcessedBlock, uint64(b))
-				}
-				// check that amount of ops seen eqals to amount of ops generated within this interval
-				if ext.stats.GetTotalOpFreq() != intervalGeneratedOpCount {
-					t.Fatalf("[Interval] Seen %d ops, but generated %d ops", ext.stats.GetTotalOpFreq(), intervalGeneratedOpCount)
-				}
-			}
-
-			suppressStdout(func() {
-				ext.PostRun(executor.State[any]{}, nil, nil)
-			})
-
-			// check that last seen block number is within boundary
-			if ext.lastProcessedBlock > uint64(test.args.last) {
-				t.Errorf("Last seen block number was %d, more than last boundary %d.", ext.lastProcessedBlock, test.args.last)
-			}
-			// check that amount of ops seen equals to amount of ops generated
-			totalSeenOpCount += ext.stats.GetTotalOpFreq()
-			if totalSeenOpCount != totalGeneratedOpCount {
-				t.Errorf("[Total] Seen %d ops, but generated %d ops", totalSeenOpCount, totalGeneratedOpCount)
-			}
-		})
-	}
-}
-
-// Originally this would test if interval <= 0 or if last < first.
-// This is deemed unneccessary since there is a separate validation for config, so they are never malformed.
-func TestOperationProfiler_WithMalformedConfig(t *testing.T) {
-	type argument struct {
-		profile  bool
-		first    uint64
-		last     uint64
-		interval uint64
-	}
-
-	type testcase struct {
-		args argument
-	}
-
-	tests := []testcase{
-		{args: argument{false, 0, 1000, 100}},
-	}
-
-	for _, test := range tests {
-		ext := MakeOperationProfiler[any](&utils.Config{
-			Profile:         test.args.profile,
-			First:           test.args.first,
-			Last:            test.args.last,
-			ProfileInterval: test.args.interval,
-		})
-
-		if _, ok := ext.(extension.NilExtension[any]); !ok {
-			t.Errorf("profiler is enabled although configuration not set or malformed")
-		}
-	}
 }

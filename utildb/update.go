@@ -55,12 +55,6 @@ func Update(cfg *utils.Config) error {
 		return nil
 	}
 
-	// create a parents of temporary directory
-	err = os.MkdirAll(cfg.DbTmp, 0755)
-	if err != nil {
-		return fmt.Errorf("failed to create %s directory; %s", cfg.DbTmp, err)
-	}
-
 	var str string
 	for _, p := range patches {
 		str += " "

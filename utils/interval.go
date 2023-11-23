@@ -1,5 +1,9 @@
 package utils
 
+import (
+	xmath "github.com/Fantom-foundation/Aida/utils/math"
+)
+
 type Interval struct {
 	first uint64
 	last  uint64
@@ -13,11 +17,11 @@ func NewInterval(first, last, interval uint64) *Interval {
 }
 
 func (i *Interval) Start() uint64 {
-	return Max(i.first, i.start)
+	return xmath.Max(i.first, i.start)
 }
 
 func (i *Interval) End() uint64 {
-	return Min(i.last, i.end)
+	return xmath.Min(i.last, i.end)
 }
 
 func (i *Interval) Next() *Interval {
