@@ -34,7 +34,7 @@ func RunVmAdb(ctx *cli.Context) error {
 	}
 	defer substateDb.Close()
 
-	return run(cfg, substateDb, nil, executor.MakeSubstateProcessor(cfg), nil)
+	return run(cfg, substateDb, nil, executor.MakeLiveDbProcessor(cfg), nil)
 }
 
 func run(

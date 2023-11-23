@@ -42,7 +42,7 @@ func makeArchiveInquirer(cfg *utils.Config, log logger.Logger, maxErrors int) ex
 
 type archiveInquirer struct {
 	extension.NilExtension[*substate.Substate]
-	executor.SubstateProcessor
+	*executor.SubstateProcessor
 
 	cfg   *utils.Config
 	log   logger.Logger

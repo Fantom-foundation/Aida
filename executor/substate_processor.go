@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"sync/atomic"
 
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -17,29 +18,98 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
+func MakeLiveDbProcessor(cfg *utils.Config) *LiveDbProcessor {
+	return &LiveDbProcessor{&SubstateProcessor{cfg: cfg}}
+}
+
+type LiveDbProcessor struct {
+	*SubstateProcessor
+}
+
+func (p *LiveDbProcessor) Process(state State[*substate.Substate], ctx *Context) error {
+	var err error
+
+	//_, err = utils.ProcessTx(ctx.State, p.cfg, uint64(state.Block), state.Transaction, state.Data)
+	//return err
+
+	err = p.ProcessTransaction(ctx.State, state.Block, state.Transaction, state.Data)
+	if err == nil {
+		return nil
+	}
+
+	if !p.isErrFatal() {
+		ctx.ErrorInput <- err
+		return nil
+	}
+
+	return err
+}
+
+func MakeArchiveDbProcessor(cfg *utils.Config) *ArchiveDbProcessor {
+	return &ArchiveDbProcessor{&SubstateProcessor{cfg: cfg}}
+}
+
+type ArchiveDbProcessor struct {
+	*SubstateProcessor
+}
+
+func (p *ArchiveDbProcessor) Process(state State[*substate.Substate], ctx *Context) error {
+	var err error
+
+	//_, err = utils.ProcessTx(ctx.State, p.cfg, uint64(state.Block), state.Transaction, state.Data)
+	//return err
+
+	err = p.ProcessTransaction(ctx.Archive, state.Block, state.Transaction, state.Data)
+	if err == nil {
+		return nil
+	}
+
+	if !p.isErrFatal() {
+		ctx.ErrorInput <- err
+		return nil
+	}
+
+	return err
+}
+
 type SubstateProcessor struct {
-	cfg *utils.Config
+	cfg       *utils.Config
+	numErrors *atomic.Int32 // transactions can be processed in parallel, so this needs to be thread safe
+
 }
 
-func MakeSubstateProcessor(cfg *utils.Config) SubstateProcessor {
-	return SubstateProcessor{cfg}
+func MakeSubstateProcessor(cfg *utils.Config) *SubstateProcessor {
+	return &SubstateProcessor{cfg: cfg}
 }
 
-func (s SubstateProcessor) Process(state State[*substate.Substate], ctx *Context) error {
-	return s.ProcessTransaction(ctx.State, state.Block, state.Transaction, state.Data)
+func (s *SubstateProcessor) isErrFatal() bool {
+	if !s.cfg.ContinueOnFailure {
+		return true
+	}
+
+	// check this first, so we don't have to access atomic value
+	if s.cfg.MaxNumErrors <= 0 {
+		return false
+	}
+
+	if s.numErrors.Load() < int32(s.cfg.MaxNumErrors) {
+		s.numErrors.Add(1)
+		return false
+	}
+
+	return true
 }
 
-func (s SubstateProcessor) ProcessTransaction(db state.VmStateDB, block int, tx int, st *substate.Substate) error {
+func (s *SubstateProcessor) ProcessTransaction(db state.VmStateDB, block int, tx int, st *substate.Substate) error {
 	if tx >= utils.PseudoTx {
 		s.processPseudoTx(st.OutputAlloc, db)
-	} else {
-		return s.processRegularTx(db, block, tx, st)
+		return nil
 	}
-	return nil
+	return s.processRegularTx(db, block, tx, st)
 }
 
 // processRegularTx executes VM on a chosen storage system.
-func (s SubstateProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st *substate.Substate) (finalError error) {
+func (s *SubstateProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st *substate.Substate) (finalError error) {
 	db.BeginTransaction(uint32(tx))
 	defer db.EndTransaction()
 
@@ -48,6 +118,7 @@ func (s SubstateProcessor) processRegularTx(db state.VmStateDB, block int, tx in
 		txHash    = common.HexToHash(fmt.Sprintf("0x%016d%016d", block, tx))
 		inputEnv  = st.Env
 		hashError error
+		validate  = s.cfg.ValidateTxState
 	)
 
 	// create vm config
@@ -73,16 +144,21 @@ func (s SubstateProcessor) processRegularTx(db state.VmStateDB, block int, tx in
 	if err != nil {
 		// if transaction fails, revert to the first snapshot.
 		db.RevertToSnapshot(snapshot)
-		finalError = errors.Join(fmt.Errorf("block: %v transaction: %v\n", block, tx), err)
+		finalError = errors.Join(fmt.Errorf("block: %v transaction: %v", block, tx), err)
+		// discontinue output alloc validation on error
+		validate = false
 	}
 
 	// check whether getHash func produced an error
 	if hashError != nil {
 		finalError = errors.Join(finalError, hashError)
+		// discontinue output alloc validation on error
+		validate = false
 	}
 
 	// check whether the outputAlloc substate is contained in the world-state db.
-	if s.cfg.ValidateTxState {
+	// todo this should be move to extension
+	if validate {
 		blockHash := common.HexToHash(fmt.Sprintf("0x%016d", block))
 
 		// validate result
@@ -102,8 +178,10 @@ func (s SubstateProcessor) processRegularTx(db state.VmStateDB, block int, tx in
 
 // processPseudoTx processes pseudo transactions in Lachesis by applying the change in db state.
 // The pseudo transactions includes Lachesis SFC, lachesis genesis and lachesis-opera transition.
-func (s SubstateProcessor) processPseudoTx(sa substate.SubstateAlloc, db state.VmStateDB) {
+func (s *SubstateProcessor) processPseudoTx(sa substate.SubstateAlloc, db state.VmStateDB) {
 	db.BeginTransaction(utils.PseudoTx)
+	defer db.EndTransaction()
+
 	for addr, account := range sa {
 		db.SubBalance(addr, db.GetBalance(addr))
 		db.AddBalance(addr, account.Balance)
@@ -113,7 +191,6 @@ func (s SubstateProcessor) processPseudoTx(sa substate.SubstateAlloc, db state.V
 			db.SetState(addr, key, value)
 		}
 	}
-	db.EndTransaction()
 }
 
 // prepareBlockCtx creates a block context for evm call from an environment of a substate.

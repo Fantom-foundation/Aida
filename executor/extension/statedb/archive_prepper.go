@@ -26,6 +26,18 @@ func (r *archivePrepper) PreBlock(state executor.State[*substate.Substate], ctx 
 	return nil
 }
 
+// PreTransaction starts the transaction.
+func (r *archivePrepper) PreTransaction(state executor.State[*substate.Substate], ctx *executor.Context) error {
+	ctx.Archive.BeginTransaction(uint32(state.Transaction))
+	return nil
+}
+
+// PostTransaction ends the transaction.
+func (r *archivePrepper) PostTransaction(_ executor.State[*substate.Substate], ctx *executor.Context) error {
+	ctx.Archive.EndTransaction()
+	return nil
+}
+
 // PostBlock releases the Archive StateDb
 func (r *archivePrepper) PostBlock(_ executor.State[*substate.Substate], ctx *executor.Context) error {
 	ctx.Archive.Release()

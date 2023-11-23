@@ -55,7 +55,7 @@ func (v *txValidator) PreTransaction(state executor.State[*substate.Substate], c
 		return nil
 	}
 
-	err = fmt.Errorf("input error at block %v tx %v; %v\n", state.Block, state.Transaction, err)
+	err = fmt.Errorf("block %v tx %v\n input alloc is not contained in the state-db\n %v\n", state.Block, state.Transaction, err)
 
 	if v.isErrFatal(err, ctx.ErrorInput) {
 		return err
