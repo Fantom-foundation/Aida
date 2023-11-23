@@ -21,21 +21,25 @@ type SubstateProcessor struct {
 	cfg *utils.Config
 }
 
-func MakeSubstateProcessor(cfg *utils.Config) *SubstateProcessor {
-	return &SubstateProcessor{cfg}
+func MakeSubstateProcessor(cfg *utils.Config) SubstateProcessor {
+	return SubstateProcessor{cfg}
 }
 
-func (s *SubstateProcessor) Process(state State[*substate.Substate], ctx *Context) error {
-	if state.Transaction >= utils.PseudoTx {
-		s.processPseudoTx(state.Data.OutputAlloc, ctx.State)
+func (s SubstateProcessor) Process(state State[*substate.Substate], ctx *Context) error {
+	return s.ProcessTransaction(ctx.State, state.Block, state.Transaction, state.Data)
+}
+
+func (s SubstateProcessor) ProcessTransaction(db state.VmStateDB, block int, tx int, st *substate.Substate) error {
+	if tx >= utils.PseudoTx {
+		s.processPseudoTx(st.OutputAlloc, db)
 	} else {
-		return s.processRegularTx(ctx.State, uint64(state.Block), state.Transaction, state.Data)
+		return s.processRegularTx(db, block, tx, st)
 	}
 	return nil
 }
 
 // processRegularTx executes VM on a chosen storage system.
-func (s *SubstateProcessor) processRegularTx(db state.VmStateDB, block uint64, tx int, st *substate.Substate) (finalError error) {
+func (s SubstateProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st *substate.Substate) (finalError error) {
 	db.BeginTransaction(uint32(tx))
 	defer db.EndTransaction()
 
@@ -98,7 +102,7 @@ func (s *SubstateProcessor) processRegularTx(db state.VmStateDB, block uint64, t
 
 // processPseudoTx processes pseudo transactions in Lachesis by applying the change in db state.
 // The pseudo transactions includes Lachesis SFC, lachesis genesis and lachesis-opera transition.
-func (s *SubstateProcessor) processPseudoTx(sa substate.SubstateAlloc, db state.VmStateDB) {
+func (s SubstateProcessor) processPseudoTx(sa substate.SubstateAlloc, db state.VmStateDB) {
 	db.BeginTransaction(utils.PseudoTx)
 	for addr, account := range sa {
 		db.SubBalance(addr, db.GetBalance(addr))
