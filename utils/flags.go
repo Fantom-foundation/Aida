@@ -122,10 +122,6 @@ var (
 		Usage: "Frequency of logging block statistics",
 		Value: 1_000_000_000,
 	}
-	QuietFlag = cli.BoolFlag{
-		Name:  "quiet",
-		Usage: "disable progress report",
-	}
 	RandomizePrimingFlag = cli.BoolFlag{
 		Name:  "prime-random",
 		Usage: "randomize order of accounts in StateDB priming",
@@ -213,15 +209,11 @@ var (
 	}
 	ValidateFlag = cli.BoolFlag{
 		Name:  "validate",
-		Usage: "enables validation",
+		Usage: "enables all validations",
 	}
 	ValidateTxStateFlag = cli.BoolFlag{
 		Name:  "validate-tx",
-		Usage: "enables transaction state validation",
-	}
-	ValidateWorldStateFlag = cli.BoolFlag{
-		Name:  "validate-ws",
-		Usage: "enables end-state validation",
+		Usage: "enables validation after transaction processing",
 	}
 	VmImplementation = cli.StringFlag{
 		Name:  "vm-impl",
