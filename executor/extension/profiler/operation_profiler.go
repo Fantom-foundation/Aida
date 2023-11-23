@@ -134,15 +134,18 @@ func MakeOperationProfiler[T any](cfg *utils.Config) executor.Extension[T] {
 	}
 
 	// Always print profiling results after each interval.
-	// TODO: log to Console
-	ps[IntervalLevel].AddPrinterToConsole(true, func() string { return p.prettyTable().Render() })
 	ps[IntervalLevel].AddPrinterToFile(cfg.ProfileFile, func() string { return p.prettyTable().RenderCSV() })
 
 	// At the configured level, print to file/db if the respective flags are enabled.
-	p2db, _ := utils.NewPrinterToSqlite3(p.sqlite3(cfg.ProfileSqlite3, p.depth))
-	p2buffer, f2db := p2db.Bufferize(BufferSize)
-	ps[p.depth].AddPrinter(p2buffer)   // print to buffer at configured depth
-	ps[IntervalLevel].AddPrinter(f2db) // always flush at the end of interval, end of run
+	p2db, err := utils.NewPrinterToSqlite3(p.sqlite3(cfg.ProfileSqlite3, p.depth))
+
+	if err != nil {
+		p.log.Debugf("Unable to open sqlite3 db at %s", cfg.ProfileSqlite3)
+	} else {
+		p2buffer, f2db := p2db.Bufferize(BufferSize)
+		ps[p.depth].AddPrinter(p2buffer)   // print to buffer at configured depth
+		ps[IntervalLevel].AddPrinter(f2db) // always flush at the end of interval, end of run
+	}
 
 	return p
 }
@@ -181,6 +184,7 @@ func (p *operationProfiler[T]) PreBlock(state executor.State[T], _ *executor.Con
 	// On Interval Change -> Print and reset interval level analytics
 	// Since there are blocks without transaction, change can only be detected at the beginning of the upcoming block
 	if uint64(state.Block) > p.interval.End() {
+		p.log.Debug(p.prettyTable().Render())
 		p.ps[IntervalLevel].Print()
 		p.interval.Next()
 		p.anlts[IntervalLevel].Reset()
