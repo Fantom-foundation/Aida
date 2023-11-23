@@ -1,6 +1,8 @@
 package validator
 
 import (
+	"bytes"
+	"fmt"
 	"math/big"
 	"strings"
 	"testing"
@@ -386,6 +388,114 @@ func TestTxValidator_PostTransactionDoesNotFailWithIncorrectInput(t *testing.T) 
 
 	if err != nil {
 		t.Errorf("PostTransaction must not return an error, got %v", err)
+	}
+}
+
+// TestStateDb_ValidateStateDB tests validation of state DB by comparing it to valid world state
+func TestStateDb_ValidateStateDB(t *testing.T) {
+	for _, tc := range utils.GetStateDbTestCases() {
+		t.Run(fmt.Sprintf("DB variant: %s; shadowImpl: %s; archive variant: %s", tc.Variant, tc.ShadowImpl, tc.ArchiveVariant), func(t *testing.T) {
+			cfg := utils.MakeTestConfig(tc)
+
+			// Initialization of state DB
+			sDB, _, err := utils.PrepareStateDB(cfg)
+			if err != nil {
+				t.Fatalf("failed to create state DB: %v", err)
+			}
+
+			// Closing of state DB
+			defer func(sDB state.StateDB) {
+				err = sDB.Close()
+				if err != nil {
+					t.Fatalf("failed to close state DB: %v", err)
+				}
+			}(sDB)
+
+			// Generating randomized world state
+			ws, _ := utils.MakeWorldState(t)
+
+			log := logger.NewLogger("INFO", "TestStateDb")
+
+			// Create new prime context
+			pc := utils.NewPrimeContext(cfg, sDB, log)
+			// Priming state DB with given world state
+			pc.PrimeStateDB(ws, sDB)
+
+			// Call for state DB validation and subsequent check for error
+			err = validateStateDb(ws, sDB, false)
+			if err != nil {
+				t.Fatalf("failed to validate state DB: %v", err)
+			}
+		})
+	}
+}
+
+// TestStateDb_ValidateStateDBWithUpdate test state DB validation comparing it to valid world state
+// given state DB should be updated if world state contains different data
+func TestStateDb_ValidateStateDBWithUpdate(t *testing.T) {
+	for _, tc := range utils.GetStateDbTestCases() {
+		t.Run(fmt.Sprintf("DB variant: %s; shadowImpl: %s; archive variant: %s", tc.Variant, tc.ShadowImpl, tc.ArchiveVariant), func(t *testing.T) {
+			cfg := utils.MakeTestConfig(tc)
+
+			// Initialization of state DB
+			sDB, _, err := utils.PrepareStateDB(cfg)
+			if err != nil {
+				t.Fatalf("failed to create state DB: %v", err)
+			}
+
+			// Closing of state DB
+			defer func(sDB state.StateDB) {
+				err = sDB.Close()
+				if err != nil {
+					t.Fatalf("failed to close state DB: %v", err)
+				}
+			}(sDB)
+
+			// Generating randomized world state
+			ws, _ := utils.MakeWorldState(t)
+
+			log := logger.NewLogger("INFO", "TestStateDb")
+
+			// Create new prime context
+			pc := utils.NewPrimeContext(cfg, sDB, log)
+			// Priming state DB with given world state
+			pc.PrimeStateDB(ws, sDB)
+
+			// create new random address
+			addr := common.BytesToAddress(utils.MakeRandomByteSlice(t, 40))
+
+			// create new account
+			ws[addr] = &substate.SubstateAccount{
+				Nonce:   uint64(utils.GetRandom(1, 1000*5000)),
+				Balance: big.NewInt(int64(utils.GetRandom(1, 1000*5000))),
+				Storage: utils.MakeAccountStorage(t),
+				Code:    utils.MakeRandomByteSlice(t, 2048),
+			}
+
+			// Call for state DB validation with update enabled and subsequent checks if the update was made correctly
+			err = validateStateDb(ws, sDB, true)
+			if err == nil {
+				t.Fatalf("failed to throw errors while validating state DB: %v", err)
+			}
+
+			if sDB.GetBalance(addr).Cmp(ws[addr].Balance) != 0 {
+				t.Fatalf("failed to prime account balance; Is: %v; Should be: %v", sDB.GetBalance(addr), ws[addr].Balance)
+			}
+
+			if sDB.GetNonce(addr) != ws[addr].Nonce {
+				t.Fatalf("failed to prime account nonce; Is: %v; Should be: %v", sDB.GetNonce(addr), ws[addr].Nonce)
+			}
+
+			if bytes.Compare(sDB.GetCode(addr), ws[addr].Code) != 0 {
+				t.Fatalf("failed to prime account code; Is: %v; Should be: %v", sDB.GetCode(addr), ws[addr].Code)
+			}
+
+			for sKey, sValue := range ws[addr].Storage {
+				if sDB.GetState(addr, sKey) != sValue {
+					t.Fatalf("failed to prime account storage; Is: %v; Should be: %v", sDB.GetState(addr, sKey), sValue)
+				}
+			}
+		})
 	}
 }
 
