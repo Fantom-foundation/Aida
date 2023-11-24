@@ -118,4 +118,15 @@ pipeline {
             }
         }
     }
+
+    post {
+        always {
+            build job: 'slack-notification-pipeline', parameters: [
+                string(name: 'result', value: "${currentBuild.result}"),
+                string(name: 'name', value: "${currentBuild.fullDisplayName}"),
+                string(name: 'duration', value: "${currentBuild.duration}"),
+                string(name: 'url', value: "$currentBuild.absoluteUrl")
+            ]
+        }
+    }
 }
