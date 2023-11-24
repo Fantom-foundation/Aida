@@ -35,7 +35,7 @@ type stateDbPrimer[T any] struct {
 }
 
 // PreRun primes StateDb to given block.
-func (p *stateDbPrimer[T]) PreRun(_ executor.State[T], ctx *executor.Context) error {
+func (p *stateDbPrimer[T]) PreRun(_ executor.State[T], ctx *executor.Context) (err error) {
 	if p.cfg.IsExistingStateDb {
 		p.log.Warning("Skipping priming due to usage of pre-existing StateDb")
 		return nil
@@ -45,10 +45,6 @@ func (p *stateDbPrimer[T]) PreRun(_ executor.State[T], ctx *executor.Context) er
 		p.log.Warning("Skipping priming (disabled by user)...")
 		return nil
 	}
-
-	substate.SetSubstateDb(p.cfg.AidaDb)
-	substate.OpenSubstateDBReadOnly()
-	defer substate.CloseSubstateDB()
 
 	if p.cfg.PrimeRandom {
 		p.log.Infof("Randomized Priming enabled; Seed: %v, threshold: %v", p.cfg.RandomSeed, p.cfg.PrimeThreshold)
@@ -62,6 +58,24 @@ func (p *stateDbPrimer[T]) PreRun(_ executor.State[T], ctx *executor.Context) er
 
 	p.log.Noticef("Priming to block %v...", p.cfg.First-1)
 	p.ctx = utils.NewPrimeContext(p.cfg, ctx.State, p.log)
+
+	// substate panics if given non-existent db
+	// catch the panic here and return it
+	defer func() {
+		r := recover()
+		if r != nil {
+			if rec, ok := r.(error); ok {
+				err = rec
+			} else {
+				panic(r)
+			}
+		}
+	}()
+
+	substate.SetSubstateDb(p.cfg.AidaDb)
+	substate.OpenSubstateDBReadOnly()
+
+	defer substate.CloseSubstateDB()
 
 	return p.prime(ctx.State)
 }
