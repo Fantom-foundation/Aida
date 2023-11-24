@@ -46,6 +46,10 @@ func (p *stateDbPrimer[T]) PreRun(_ executor.State[T], ctx *executor.Context) er
 		return nil
 	}
 
+	substate.SetSubstateDb(p.cfg.AidaDb)
+	substate.OpenSubstateDBReadOnly()
+	defer substate.CloseSubstateDB()
+
 	if p.cfg.PrimeRandom {
 		p.log.Infof("Randomized Priming enabled; Seed: %v, threshold: %v", p.cfg.RandomSeed, p.cfg.PrimeThreshold)
 	}
