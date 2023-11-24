@@ -50,7 +50,10 @@ func TestStateDbPrimerExtension_PrimingDoesTriggerForNonExistingStateDb(t *testi
 	cfg.StateDbSrc = ""
 	cfg.First = 2
 
-	log.EXPECT().Noticef("Priming to block %v", cfg.First-1)
+	gomock.InOrder(
+		log.EXPECT().Infof("Update buffer size: %v bytes", cfg.UpdateBufferSize),
+		log.EXPECT().Noticef("Priming to block %v...", cfg.First-1),
+	)
 
 	ext := makeStateDbPrimer[any](cfg, log)
 
@@ -126,4 +129,28 @@ func TestPrime_PrimeStateDB(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestStateDbPrimerExtension_UserIsInformedAboutRandomPriming(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	log := logger.NewMockLogger(ctrl)
+
+	cfg := &utils.Config{}
+	cfg.SkipPriming = false
+	cfg.StateDbSrc = ""
+	cfg.First = 10
+	cfg.PrimeRandom = true
+	cfg.RandomSeed = 111
+	cfg.PrimeThreshold = 10
+	cfg.UpdateBufferSize = 1024
+
+	ext := makeStateDbPrimer[any](cfg, log)
+
+	gomock.InOrder(
+		log.EXPECT().Infof("Randomized Priming enabled; Seed: %v, threshold: %v", int64(111), 10),
+		log.EXPECT().Infof("Update buffer size: %v bytes", uint64(1024)),
+		log.EXPECT().Noticef("Priming to block %v...", uint64(9)),
+	)
+
+	ext.PreRun(executor.State[any]{}, &executor.Context{})
 }

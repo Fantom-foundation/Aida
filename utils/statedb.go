@@ -41,9 +41,6 @@ func PrepareStateDB(cfg *Config) (state.StateDB, string, error) {
 		return nil, "", err
 	}
 
-	if cfg.DbLogging {
-		db = proxy.NewLoggerProxy(db, cfg.LogLevel)
-	}
 	return db, dbPath, nil
 }
 
@@ -69,13 +66,13 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 			return nil, "", fmt.Errorf("failed to create a temporary directory; %v", err)
 		}
 
-		stat, err := os.Stat(cfg.StateDbSrc)
+		size, err := FindDirSize(cfg.StateDbSrc)
 		if err != nil {
-			return nil, "", fmt.Errorf("cannot find stats of stated-db %v; %v", cfg.StateDbSrc, err)
+			return nil, "", err
 		}
 
-		log.Infof("Copying your StateDb. Size: %v MB", stat.Size()*1000000)
-		if err := CopyDir(cfg.StateDbSrc, tmpStateDbPath); err != nil {
+		log.Infof("Copying your StateDb. Size: %.2f MB", float64(size)/float64(1000000))
+		if err = CopyDir(cfg.StateDbSrc, tmpStateDbPath); err != nil {
 			return nil, "", fmt.Errorf("failed to copy source statedb to temporary directory; %v", err)
 		}
 		cfg.PathToStateDb = tmpStateDbPath
@@ -97,6 +94,10 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 
 	// do we have an archive inside loaded StateDb?
 	cfg.ArchiveMode = stateDbInfo.ArchiveMode
+	cfg.ArchiveVariant = stateDbInfo.ArchiveVariant
+	cfg.DbImpl = stateDbInfo.Impl
+	cfg.DbVariant = stateDbInfo.Variant
+	cfg.CarmenSchema = stateDbInfo.Schema
 
 	// open primary db
 	stateDb, err = makeStateDBVariant(cfg.PathToStateDb, stateDbInfo.Impl, stateDbInfo.Variant, stateDbInfo.ArchiveVariant, stateDbInfo.Schema, stateDbInfo.RootHash, cfg)
@@ -120,6 +121,10 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 	if err != nil {
 		return nil, "", fmt.Errorf("cannot read ShadowDb cfg file '%v'; %v", shadowDbInfoFile, err)
 	}
+
+	cfg.ShadowImpl = shadowDbInfo.Impl
+	cfg.ShadowVariant = shadowDbInfo.Variant
+	cfg.CarmenSchema = shadowDbInfo.Schema
 
 	// open shadow db
 	shadowDb, err = makeStateDBVariant(shadowDbPath, shadowDbInfo.Impl, shadowDbInfo.Variant, shadowDbInfo.ArchiveVariant, shadowDbInfo.Schema, shadowDbInfo.RootHash, cfg)
@@ -331,4 +336,19 @@ func ValidateStateDB(ws substate.SubstateAlloc, db state.VmStateDB, updateOnFail
 		return fmt.Errorf(err)
 	}
 	return nil
+}
+
+// FindDirSize iterates over all files inside given directory (including subdirectories) and returns size in bytes.
+func FindDirSize(path string) (int64, error) {
+	var size int64
+	err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			size += info.Size()
+		}
+		return err
+	})
+	return size, err
 }

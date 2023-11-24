@@ -31,7 +31,7 @@ func RunSubstate(ctx *cli.Context) error {
 	}
 	defer substateDb.Close()
 
-	return runSubstates(cfg, substateDb, nil)
+	return runSubstates(cfg, substateDb, nil, substateProcessor{cfg}, nil)
 }
 
 type substateProcessor struct {
@@ -53,6 +53,8 @@ func runSubstates(
 	cfg *utils.Config,
 	provider executor.Provider[*substate.Substate],
 	stateDb state.StateDB,
+	processor executor.Processor[*substate.Substate],
+	extra []executor.Extension[*substate.Substate],
 ) error {
 	// order of extensionList has to be maintained
 	var extensionList = []executor.Extension[*substate.Substate]{
@@ -68,11 +70,14 @@ func runSubstates(
 		)
 	}
 
+	extensionList = append(extensionList, extra...)
+
 	extensionList = append(extensionList, []executor.Extension[*substate.Substate]{
 		profiler.MakeThreadLocker[*substate.Substate](),
 		aidadb.MakeAidaDbManager[*substate.Substate](cfg),
 		profiler.MakeVirtualMachineStatisticsPrinter[*substate.Substate](cfg),
 		tracker.MakeProgressLogger[*substate.Substate](cfg, 15*time.Second),
+		tracker.MakeErrorLogger[*substate.Substate](cfg),
 		tracker.MakeProgressTracker(cfg, 100_000),
 		primer.MakeStateDbPrimer[*substate.Substate](cfg),
 		profiler.MakeMemoryUsagePrinter[*substate.Substate](cfg),
@@ -97,7 +102,7 @@ func runSubstates(
 			To:    int(cfg.Last) + 1,
 			State: stateDb,
 		},
-		substateProcessor{cfg},
+		processor,
 		extensionList,
 	)
 }

@@ -38,7 +38,7 @@ func TestRPCComparator_RPCComparatorIsNotCreatedIfNotEnabled(t *testing.T) {
 	}
 }
 
-func TestRPCComparator_PostTransactionDoesNotFailAndAppendsAndLogsErrorIfContinueOnFailureIsTrue(t *testing.T) {
+func TestRPCComparator_PostTransactionDoesNotFailIfContinueOnFailureIsTrue(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
 
@@ -65,16 +65,13 @@ func TestRPCComparator_PostTransactionDoesNotFailAndAppendsAndLogsErrorIfContinu
 		Data: data,
 	}
 
-	log.EXPECT().Warning(gomock.Any())
-
 	c := makeRPCComparator(cfg, log)
-	err := c.PostTransaction(s, nil)
+
+	ctx := new(executor.Context)
+	ctx.ErrorInput = make(chan error, 10)
+	err := c.PostTransaction(s, ctx)
 	if err != nil {
 		t.Errorf("unexpected error in post transaction; %v", err)
-	}
-
-	if len(c.errors) != 1 {
-		t.Errorf("incorrect number of errors appended\ngot: %v\nwant: %v", len(c.errors), 1)
 	}
 
 }

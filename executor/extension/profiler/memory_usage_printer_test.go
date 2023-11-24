@@ -41,6 +41,24 @@ func TestMemoryUsagePrinter_MemoryBreakdownIsNotPrintedWhenBreakdownIsNil(t *tes
 
 }
 
+func TestMemoryUsagePrinter_MemoryBreakdownIsNotPrintedWhenDatabaseIsNil(t *testing.T) {
+	cfg := &utils.Config{}
+	cfg.MemoryBreakdown = true
+
+	ctrl := gomock.NewController(t)
+
+	log := logger.NewMockLogger(ctrl)
+	ext := makeMemoryUsagePrinter[any](cfg, log)
+
+	gomock.InOrder(
+		log.EXPECT().Notice(gomock.Any()).Times(0),
+	)
+
+	ext.PreRun(executor.State[any]{}, &executor.Context{State: nil})
+	ext.PostRun(executor.State[any]{}, &executor.Context{State: nil}, nil)
+
+}
+
 func TestMemoryUsagePrinter_MemoryBreakdownIsPrintedWhenEnabled(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.MemoryBreakdown = true

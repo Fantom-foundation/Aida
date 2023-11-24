@@ -153,9 +153,9 @@ var (
 		Name:  "db-tmp",
 		Usage: "sets the temporary directory where to place DB data; uses system default if empty",
 	}
-	StateDbLoggingFlag = cli.BoolFlag{
+	StateDbLoggingFlag = cli.PathFlag{
 		Name:  "db-logging",
-		Usage: "enable logging of all DB operations",
+		Usage: "sets path to file for db-logging output",
 	}
 	ShadowDb = cli.BoolFlag{
 		Name:  "shadow-db",
@@ -349,8 +349,8 @@ var (
 	}
 	MaxNumErrorsFlag = cli.IntFlag{
 		Name:  "max-errors",
-		Usage: "maximum number of errors when ContinueOnFailure is enabled, default is 50",
-		Value: 50,
+		Usage: "maximum number of errors when ContinueOnFailure is enabled, 0 is endless",
+		Value: 10,
 	}
 	UpdateOnFailure = cli.BoolFlag{
 		Name:  "update-on-failure",
@@ -382,5 +382,9 @@ var (
 		Name:  "profile-db",
 		Usage: "defines path to profile-db",
 		Value: "/var/opera/Aida/profile.db",
+	}
+	ErrorLoggingFlag = cli.PathFlag{
+		Name:  "err-logging",
+		Usage: "defines path to error-log-file where any PROCESSING error is recorded",
 	}
 )

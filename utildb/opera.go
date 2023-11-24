@@ -80,15 +80,6 @@ func (opera *aidaOpera) init() error {
 }
 
 func createTmpDir(cfg *utils.Config) (string, error) {
-	if cfg.DbTmp != "" {
-		// create a parents of temporary directory
-		err := os.MkdirAll(cfg.DbTmp, 0755)
-		if err != nil {
-			return "", fmt.Errorf("failed to create %s directory; %s", cfg.DbTmp, err)
-		}
-	}
-
-	//fName := fmt.Sprintf("%v/%v-%v", cfg.DbTmp, "tmp_aida_db_*", rand.Int())
 	// create a temporary working directory
 	fName, err := os.MkdirTemp(cfg.DbTmp, "aida_db_tmp_*")
 	if err != nil {

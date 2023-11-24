@@ -73,7 +73,7 @@ func makeAccountStorage(t *testing.T) map[common.Hash]common.Hash {
 // MakeTestConfig creates a config struct for testing
 func MakeTestConfig(testCase StateDbTestCase) *Config {
 	cfg := &Config{
-		DbLogging:      false,
+		DbLogging:      "",
 		DbImpl:         testCase.Variant,
 		DbVariant:      "",
 		ShadowImpl:     testCase.ShadowImpl,
