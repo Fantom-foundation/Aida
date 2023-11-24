@@ -121,7 +121,7 @@ pipeline {
 
     post {
         always {
-            build job: 'slack-notification-pipeline', parameters: [
+            build job: '/Notifications/slack-notification-pipeline', parameters: [
                 string(name: 'result', value: "${currentBuild.result}"),
                 string(name: 'name', value: "${currentBuild.fullDisplayName}"),
                 string(name: 'duration', value: "${currentBuild.duration}"),
