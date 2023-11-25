@@ -67,6 +67,7 @@ func runSubstates(
 			extensionList,
 			statedb.MakeStateDbManager[*substate.Substate](cfg),
 			statedb.MakeLiveDbBlockChecker[*substate.Substate](cfg),
+			tracker.MakeDbLogger[*substate.Substate](cfg),
 		)
 	}
 
