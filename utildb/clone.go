@@ -1,8 +1,10 @@
 package utildb
 
 import (
+	"errors"
 	"fmt"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/logger"
@@ -12,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
 const cloneWriteChanSize = 1
@@ -94,7 +97,9 @@ func Clone(cfg *utils.Config, aidaDb, cloneDb ethdb.Database, cloneType utils.Ai
 
 // createDbClone AidaDb in given block range
 func (c *cloner) clone(isFirstGenerationFromGenesis bool) error {
-	go c.write()
+	var wgWriter sync.WaitGroup
+	wgWriter.Add(1)
+	go c.write(&wgWriter)
 	go c.checkErrors()
 
 	c.read([]byte(substate.Stage1CodePrefix), 0, nil)
@@ -132,6 +137,27 @@ func (c *cloner) clone(isFirstGenerationFromGenesis bool) error {
 
 	close(c.writeCh)
 
+	done := make(chan bool, 1)
+
+	go func() {
+		wgWriter.Wait()
+		done <- true
+	}()
+
+	select {
+	case <-done:
+	case <-c.closeCh:
+		// error occurred, but it was already logged
+		return nil
+	}
+
+	if c.cfg.Validate {
+		err = c.validateDbSize()
+		if err != nil {
+			return err
+		}
+	}
+
 	sourceMD := utils.NewAidaDbMetadata(c.aidaDb, c.cfg.LogLevel)
 	chainID := sourceMD.GetChainID()
 
@@ -143,13 +169,6 @@ func (c *cloner) clone(isFirstGenerationFromGenesis bool) error {
 	if c.cfg.CompactDb {
 		c.log.Noticef("Starting compaction")
 		err = c.cloneDb.Compact(nil, nil)
-		if err != nil {
-			return err
-		}
-	}
-
-	if c.cfg.Validate {
-		err = c.validateDbSize()
 		if err != nil {
 			return err
 		}
@@ -173,7 +192,8 @@ func (c *cloner) checkErrors() {
 }
 
 // write data read from func read() into new createDbClone
-func (c *cloner) write() {
+func (c *cloner) write(wg *sync.WaitGroup) {
+	defer wg.Done()
 	var (
 		err         error
 		data        rawEntry
@@ -314,14 +334,25 @@ func (c *cloner) readSubstate() error {
 func (c *cloner) readStateHashes() error {
 	c.log.Noticef("Copying hashes done")
 
+	var errCounter uint64
+
 	for i := c.cfg.First; i <= c.cfg.Last; i++ {
 		key := []byte(utils.StateHashPrefix + hexutil.EncodeUint64(i))
 		value, err := c.aidaDb.Get(key)
 		if err != nil {
-			return fmt.Errorf("cannot get state hash for block %v; %v", i, err)
+			if errors.Is(err, leveldb.ErrNotFound) {
+				errCounter++
+				continue
+			} else {
+				return err
+			}
 		}
 
 		c.sendToWriteChan(key, value)
+	}
+
+	if errCounter > 0 {
+		c.log.Warningf("State hashes were missing for %v blocks", errCounter)
 	}
 
 	c.log.Noticef("State hashes done")
