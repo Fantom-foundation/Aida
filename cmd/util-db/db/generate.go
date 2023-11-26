@@ -22,6 +22,7 @@ var GenerateCommand = cli.Command{
 		&utils.WorldStateFlag,
 		&utils.OperaBinaryFlag,
 		&utils.OutputFlag,
+		&utils.DbTmpFlag,
 		&utils.UpdateBufferSizeFlag,
 		&utils.SkipStateHashScrappingFlag,
 		&substate.WorkersFlag,
