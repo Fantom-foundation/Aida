@@ -100,9 +100,21 @@ var cmdRange = cli.Command{
 	Name:  "range",
 	Usage: "Prints range of type in AidaDb",
 	Subcommands: []*cli.Command{
+		&cmdRangeAll,
 		&cmdSubstateRange,
 		&cmdUpdateRange,
+		&cmdDeletionRange,
 		&cmdStateHashRange,
+	},
+}
+
+var cmdRangeAll = cli.Command{
+	Action: printRangeAll,
+	Name:   "all",
+	Usage:  "Prints range of all types in AidaDb",
+	Flags: []cli.Flag{
+		&utils.AidaDbFlag,
+		&logger.LogLevelFlag,
 	},
 }
 
@@ -120,6 +132,16 @@ var cmdUpdateRange = cli.Command{
 	Action: printUpdateRange,
 	Name:   "update",
 	Usage:  "Prints range of updatesets in AidaDb",
+	Flags: []cli.Flag{
+		&utils.AidaDbFlag,
+		&logger.LogLevelFlag,
+	},
+}
+
+var cmdDeletionRange = cli.Command{
+	Action: printDeletedRange,
+	Name:   "deleted",
+	Usage:  "Prints range of deleted accounts in AidaDb",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 		&logger.LogLevelFlag,
@@ -374,6 +396,53 @@ func printStateHashCount(ctx *cli.Context) error {
 	return nil
 }
 
+// printRangeAll prints range of all types stored in given AidaDb
+func printRangeAll(ctx *cli.Context) error {
+	cfg, argErr := utils.NewConfig(ctx, utils.NoArgs)
+	if argErr != nil {
+		return argErr
+	}
+
+	log := logger.NewLogger(cfg.LogLevel, "AidaDb-Range-All")
+
+	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "aida-aidaDb", true)
+	if err != nil {
+		return fmt.Errorf("error opening aida-aidaDb %s: %v", cfg.AidaDb, err)
+	}
+
+	substate.SetSubstateDb(cfg.AidaDb)
+	substate.OpenSubstateDBReadOnly()
+	defer substate.CloseSubstateDB()
+
+	firstBlock, lastBlock, ok := utils.FindBlockRangeInSubstate()
+	if !ok {
+		log.Warning("No substate found")
+	} else {
+		log.Infof("Substate block range: %v - %v", firstBlock, lastBlock)
+	}
+
+	firstUsBlock, lastUsBlock, err := utildb.FindBlockRangeInUpdate(aidaDb)
+	if err != nil {
+		log.Warningf("cannot find updateset range; %v", err)
+	}
+	log.Infof("Updateset block range: %v - %v", firstUsBlock, lastUsBlock)
+
+	first, last, err := utildb.FindBlockRangeInDeleted(aidaDb)
+	if err != nil {
+		return fmt.Errorf("cannot find deleted range; %v", err)
+	}
+	log.Infof("Deleted block range: %v - %v", first, last)
+
+	firstStateHashBlock, lastStateHashBlock, err := utildb.FindBlockRangeInStateHash(aidaDb, log)
+	if err != nil {
+		log.Warningf("cannot find state hash range; %v", err)
+	} else {
+		log.Infof("State Hash range: %v - %v", firstStateHashBlock, lastStateHashBlock)
+	}
+
+	return nil
+}
+
 // printStateHashRange prints state hash range stored in given AidaDb
 func printStateHashRange(ctx *cli.Context) error {
 	cfg, argErr := utils.NewConfig(ctx, utils.NoArgs)
@@ -388,18 +457,10 @@ func printStateHashRange(ctx *cli.Context) error {
 		return fmt.Errorf("error opening aida-db %s: %v", cfg.AidaDb, err)
 	}
 
-	var firstStateHashBlock, lastStateHashBlock uint64
-	firstStateHashBlock, err = utils.GetFirstStateHash(db)
+	firstStateHashBlock, lastStateHashBlock, err := utildb.FindBlockRangeInStateHash(db, log)
 	if err != nil {
-		return fmt.Errorf("cannot get first state hash; %v", err)
+		return fmt.Errorf("cannot find state hash range; %v", err)
 	}
-
-	lastStateHashBlock, err = utils.GetLastStateHash(db)
-	if err != nil {
-		log.Infof("Found first state hash at %v", firstStateHashBlock)
-		return fmt.Errorf("cannot get last state hash; %v", err)
-	}
-
 	log.Infof("State Hash range: %v - %v", firstStateHashBlock, lastStateHashBlock)
 
 	return nil
@@ -427,6 +488,28 @@ func printSubstateRange(ctx *cli.Context) error {
 	return nil
 }
 
+// printDeletedRange prints state deleted range stored in given AidaDb
+func printDeletedRange(ctx *cli.Context) error {
+	cfg, argErr := utils.NewConfig(ctx, utils.NoArgs)
+	if argErr != nil {
+		return argErr
+	}
+
+	log := logger.NewLogger(cfg.LogLevel, "AidaDb-Deleted-Range")
+	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "aida-db", true)
+	if err != nil {
+		return fmt.Errorf("error opening aida-db %s: %v", cfg.AidaDb, err)
+	}
+
+	first, last, err := utildb.FindBlockRangeInDeleted(aidaDb)
+	if err != nil {
+		return fmt.Errorf("cannot find deleted range; %v", err)
+	}
+	log.Infof("Deleted block range: %v - %v", first, last)
+
+	return nil
+}
+
 // printUpdateRange prints state updateset range stored in given AidaDb
 func printUpdateRange(ctx *cli.Context) error {
 	cfg, argErr := utils.NewConfig(ctx, utils.NoArgs)
@@ -440,19 +523,13 @@ func printUpdateRange(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("cannot open aida-db; %v", err)
 	}
-	udb := substate.NewUpdateDB(aidaDb)
 	defer aidaDb.Close()
 
-	var firstBlock, lastBlock uint64
-	firstBlock, err = udb.GetFirstKey()
+	firstUsBlock, lastUsBlock, err := utildb.FindBlockRangeInUpdate(aidaDb)
 	if err != nil {
-		return fmt.Errorf("cannot get first updateset; %v", err)
+		return fmt.Errorf("cannot find updateset range; %v", err)
 	}
-
-	// get last updateset
-	lastBlock = udb.GetLastKey()
-
-	log.Infof("Updateset block range: %v - %v", firstBlock, lastBlock)
+	log.Infof("Updateset block range: %v - %v", firstUsBlock, lastUsBlock)
 	return nil
 }
 
