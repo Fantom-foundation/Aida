@@ -41,6 +41,7 @@ var cmdCount = cli.Command{
 		&cmdCountDeleted,
 		&cmdCountSubstate,
 		&cmdCountStateHash,
+		&cmdCountUpdate,
 	},
 }
 
@@ -79,6 +80,16 @@ var cmdCountStateHash = cli.Command{
 	Action:    printStateHashCount,
 	Name:      "state-hash",
 	Usage:     "Prints how many state-hashes are in AidaDb between given block range",
+	ArgsUsage: "<firstBlockNum>, <lastBlockNum>",
+	Flags: []cli.Flag{
+		&utils.AidaDbFlag,
+	},
+}
+
+var cmdCountUpdate = cli.Command{
+	Action:    printUpdateCount,
+	Name:      "update",
+	Usage:     "Prints how many updates are in AidaDb between given block range",
 	ArgsUsage: "<firstBlockNum>, <lastBlockNum>",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
@@ -268,6 +279,41 @@ func printDeletedCount(ctx *cli.Context) error {
 	return nil
 }
 
+// printUpdateCount in given AidaDb
+func printUpdateCount(ctx *cli.Context) error {
+	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
+	if argErr != nil {
+		return argErr
+	}
+
+	log := logger.NewLogger(cfg.LogLevel, "AidaDb-Print-Update-Count")
+
+	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "", true)
+	if err != nil {
+		return fmt.Errorf("cannot open aida-db; %v", err)
+	}
+	defer utildb.MustCloseDB(aidaDb)
+
+	var count uint64
+
+	start := substate.SubstateAllocKey(cfg.First)[2:]
+	iter := aidaDb.NewIterator([]byte(substate.SubstateAllocPrefix), start)
+	for iter.Next() {
+		block, err := substate.DecodeUpdateSetKey(iter.Key())
+		if err != nil {
+			return fmt.Errorf("cannot decode updateset key; %v", err)
+		}
+		if block > cfg.Last {
+			break
+		}
+		count++
+	}
+
+	log.Noticef("Found %v updates between blocks %v-%v", count, cfg.First, cfg.Last)
+
+	return nil
+}
+
 // printSubstateCount in given AidaDb
 func printSubstateCount(ctx *cli.Context) error {
 	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
@@ -398,16 +444,9 @@ func printUpdateRange(ctx *cli.Context) error {
 	defer aidaDb.Close()
 
 	var firstBlock, lastBlock uint64
-	// get first updateset - TODO refactor out
-	iter := aidaDb.NewIterator([]byte(substate.SubstateAllocPrefix), nil)
-	defer iter.Release()
-
-	for iter.Next() {
-		firstBlock, err = substate.DecodeUpdateSetKey(iter.Key())
-		if err != nil {
-			return fmt.Errorf("cannot decode updateset key; %v", err)
-		}
-		break
+	firstBlock, err = udb.GetFirstKey()
+	if err != nil {
+		return fmt.Errorf("cannot get first updateset; %v", err)
 	}
 
 	// get last updateset
