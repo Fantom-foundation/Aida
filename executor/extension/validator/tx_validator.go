@@ -3,6 +3,7 @@ package validator
 import (
 	"bytes"
 	"fmt"
+	"sync/atomic"
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
@@ -123,8 +124,9 @@ func (v *archiveDbTxValidator) PostTransaction(state executor.State[*substate.Su
 // type of StateDb we are working with
 func makeTxValidator(cfg *utils.Config, log logger.Logger) *txValidator {
 	return &txValidator{
-		cfg: cfg,
-		log: log,
+		cfg:            cfg,
+		log:            log,
+		numberOfErrors: new(atomic.Int32),
 	}
 }
 
@@ -132,7 +134,7 @@ type txValidator struct {
 	extension.NilExtension[*substate.Substate]
 	cfg            *utils.Config
 	log            logger.Logger
-	numberOfErrors int
+	numberOfErrors *atomic.Int32
 }
 
 // PreRun informs the user that txValidator is enabled and that they should expect slower processing speed.
@@ -155,7 +157,7 @@ func (v *txValidator) isErrFatal(err error, ch chan error) bool {
 	}
 
 	ch <- err
-	v.numberOfErrors++
+	v.numberOfErrors.Add(1)
 
 	// endless run
 	if v.cfg.MaxNumErrors == 0 {
@@ -163,7 +165,7 @@ func (v *txValidator) isErrFatal(err error, ch chan error) bool {
 	}
 
 	// too many errors
-	if v.numberOfErrors >= v.cfg.MaxNumErrors {
+	if int(v.numberOfErrors.Load()) >= v.cfg.MaxNumErrors {
 		return true
 	}
 

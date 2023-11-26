@@ -18,10 +18,7 @@ import (
 )
 
 const (
-	incorrectInputTestErr = "input error at block 1 tx 1;   Account 0x0000000000000000000000000000000000000000 does not exist\n  " +
-		"Failed to validate code for account 0x0000000000000000000000000000000000000000\n    " +
-		"have len 1\n    " +
-		"want len 0\n"
+	incorrectInputTestErr  = "block 1 tx 1\n input alloc is not contained in the state-db\n   Account 0x0000000000000000000000000000000000000000 does not exist\n  Failed to validate code for account 0x0000000000000000000000000000000000000000\n    have len 1\n    want len 0"
 	incorrectOutputTestErr = "output error at block 1 tx 1;   Account 0x0000000000000000000000000000000000000000 does not exist\n  " +
 		"Failed to validate code for account 0x0000000000000000000000000000000000000000\n    " +
 		"have len 1\n    " +
@@ -253,9 +250,11 @@ func TestTxValidator_TwoErrorsDoNotReturnAnErrorWhenContinueOnFailureIsEnabledAn
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 		// PostTransaction
 		db.EXPECT().Exist(common.Address{0}).Return(false),
+		db.EXPECT().CreateAccount(common.Address{0}),
 		db.EXPECT().GetBalance(common.Address{0}).Return(new(big.Int)),
 		db.EXPECT().GetNonce(common.Address{0}).Return(uint64(0)),
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
+		db.EXPECT().SetCode(common.Address{0}, []byte{}),
 	)
 
 	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
