@@ -12,7 +12,7 @@ var UpdateSetStatsCommand = cli.Command{
 	Action:    reportUpdateSetStats,
 	Name:      "stats",
 	Usage:     "print number of accounts and storage keys in update-set",
-	ArgsUsage: "<blockNumLast>",
+	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		&utils.UpdateDbFlag,
 		&utils.AidaDbFlag,
@@ -26,11 +26,7 @@ func reportUpdateSetStats(ctx *cli.Context) error {
 	var (
 		err error
 	)
-	// process arguments and flags
-	if ctx.Args().Len() != 1 {
-		return fmt.Errorf("stats command requires exactly 1 arguments")
-	}
-	cfg, argErr := utils.NewConfig(ctx, utils.LastBlockArg)
+	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if argErr != nil {
 		return argErr
 	}
@@ -41,7 +37,7 @@ func reportUpdateSetStats(ctx *cli.Context) error {
 	}
 	defer db.Close()
 
-	iter := substate.NewUpdateSetIterator(db, 0, cfg.Last)
+	iter := substate.NewUpdateSetIterator(db, cfg.First, cfg.Last)
 	defer iter.Release()
 
 	for iter.Next() {
