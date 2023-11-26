@@ -15,7 +15,6 @@ var UpdateSetStatsCommand = cli.Command{
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		&utils.UpdateDbFlag,
-		&utils.AidaDbFlag,
 	},
 	Description: `
 The stats command requires one arguments: <blockNumLast> -- the last block of update-set.`,
