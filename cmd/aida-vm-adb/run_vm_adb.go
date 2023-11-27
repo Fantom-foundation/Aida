@@ -50,7 +50,7 @@ func run(
 		statedb.MakeArchivePrepper(),
 		tracker.MakeProgressLogger[*substate.Substate](cfg, 0),
 		tracker.MakeErrorLogger[*substate.Substate](cfg),
-		validator.MakeArchiveDbTxValidator(cfg),
+		validator.MakeArchiveDbValidator(cfg),
 	}
 
 	if stateDb == nil {

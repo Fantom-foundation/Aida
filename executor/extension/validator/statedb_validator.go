@@ -13,25 +13,25 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 )
 
-// MakeLiveDbTxValidator creates an extension which validates LIVE StateDb
-func MakeLiveDbTxValidator(cfg *utils.Config) executor.Extension[*substate.Substate] {
+// MakeLiveDbValidator creates an extension which validates LIVE StateDb
+func MakeLiveDbValidator(cfg *utils.Config) executor.Extension[*substate.Substate] {
 	if !cfg.ValidateTxState {
 		return extension.NilExtension[*substate.Substate]{}
 	}
 
 	log := logger.NewLogger(cfg.LogLevel, "Tx-Verifier")
 
-	return makeLiveDbTxValidator(cfg, log)
+	return makeLiveDbValidator(cfg, log)
 }
 
-func makeLiveDbTxValidator(cfg *utils.Config, log logger.Logger) *liveDbTxValidator {
+func makeLiveDbValidator(cfg *utils.Config, log logger.Logger) *liveDbTxValidator {
 	return &liveDbTxValidator{
-		makeTxValidator(cfg, log),
+		makeStateDbValidator(cfg, log),
 	}
 }
 
 type liveDbTxValidator struct {
-	*txValidator
+	*stateDbValidator
 }
 
 // PreTransaction validates InputAlloc in given substate
@@ -66,29 +66,29 @@ func (v *liveDbTxValidator) PostTransaction(state executor.State[*substate.Subst
 	return nil
 }
 
-// MakeArchiveDbTxValidator creates an extension which validates ARCHIVE StateDb
-func MakeArchiveDbTxValidator(cfg *utils.Config) executor.Extension[*substate.Substate] {
+// MakeArchiveDbValidator creates an extension which validates ARCHIVE StateDb
+func MakeArchiveDbValidator(cfg *utils.Config) executor.Extension[*substate.Substate] {
 	if !cfg.ValidateTxState {
 		return extension.NilExtension[*substate.Substate]{}
 	}
 
 	log := logger.NewLogger(cfg.LogLevel, "Tx-Verifier")
 
-	return makeArchiveDbTxValidator(cfg, log)
+	return makeArchiveDbValidator(cfg, log)
 }
 
-func makeArchiveDbTxValidator(cfg *utils.Config, log logger.Logger) *archiveDbTxValidator {
-	return &archiveDbTxValidator{
-		makeTxValidator(cfg, log),
+func makeArchiveDbValidator(cfg *utils.Config, log logger.Logger) *archiveDbValidator {
+	return &archiveDbValidator{
+		makeStateDbValidator(cfg, log),
 	}
 }
 
-type archiveDbTxValidator struct {
-	*txValidator
+type archiveDbValidator struct {
+	*stateDbValidator
 }
 
 // PreTransaction validates InputAlloc in given substate
-func (v *archiveDbTxValidator) PreTransaction(state executor.State[*substate.Substate], ctx *executor.Context) error {
+func (v *archiveDbValidator) PreTransaction(state executor.State[*substate.Substate], ctx *executor.Context) error {
 	err := validateStateDb(state.Data.InputAlloc, ctx.Archive, v.cfg.UpdateOnFailure)
 	if err == nil {
 		return nil
@@ -104,7 +104,7 @@ func (v *archiveDbTxValidator) PreTransaction(state executor.State[*substate.Sub
 }
 
 // PostTransaction validates VmAlloc
-func (v *archiveDbTxValidator) PostTransaction(state executor.State[*substate.Substate], ctx *executor.Context) error {
+func (v *archiveDbValidator) PostTransaction(state executor.State[*substate.Substate], ctx *executor.Context) error {
 	err := validateVmAlloc(ctx.Archive, state.Data.OutputAlloc, v.cfg)
 	if err == nil {
 		return nil
@@ -119,26 +119,26 @@ func (v *archiveDbTxValidator) PostTransaction(state executor.State[*substate.Su
 	return nil
 }
 
-// makeTxValidator creates an extension that validates StateDb.
-// txValidator should always be inherited depending on what
+// makeStateDbValidator creates an extension that validates StateDb.
+// stateDbValidator should always be inherited depending on what
 // type of StateDb we are working with
-func makeTxValidator(cfg *utils.Config, log logger.Logger) *txValidator {
-	return &txValidator{
+func makeStateDbValidator(cfg *utils.Config, log logger.Logger) *stateDbValidator {
+	return &stateDbValidator{
 		cfg:            cfg,
 		log:            log,
 		numberOfErrors: new(atomic.Int32),
 	}
 }
 
-type txValidator struct {
+type stateDbValidator struct {
 	extension.NilExtension[*substate.Substate]
 	cfg            *utils.Config
 	log            logger.Logger
 	numberOfErrors *atomic.Int32
 }
 
-// PreRun informs the user that txValidator is enabled and that they should expect slower processing speed.
-func (v *txValidator) PreRun(executor.State[*substate.Substate], *executor.Context) error {
+// PreRun informs the user that stateDbValidator is enabled and that they should expect slower processing speed.
+func (v *stateDbValidator) PreRun(executor.State[*substate.Substate], *executor.Context) error {
 	v.log.Warning("Transaction verification is enabled, this may slow down the block processing.")
 
 	if v.cfg.ContinueOnFailure {
@@ -150,7 +150,7 @@ func (v *txValidator) PreRun(executor.State[*substate.Substate], *executor.Conte
 }
 
 // isErrFatal decides whether given error should stop the program or not depending on ContinueOnFailure and MaxNumErrors.
-func (v *txValidator) isErrFatal(err error, ch chan error) bool {
+func (v *stateDbValidator) isErrFatal(err error, ch chan error) bool {
 	// ContinueOnFailure is disabled, return the error and exit the program
 	if !v.cfg.ContinueOnFailure {
 		return true

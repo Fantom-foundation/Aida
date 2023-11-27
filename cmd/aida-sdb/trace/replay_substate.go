@@ -75,7 +75,7 @@ func replaySubstate(
 		tracker.MakeProgressLogger[*substate.Substate](cfg, 0),
 		profiler.MakeMemoryUsagePrinter[*substate.Substate](cfg),
 		profiler.MakeMemoryProfiler[*substate.Substate](cfg),
-		validator.MakeLiveDbTxValidator(cfg),
+		validator.MakeLiveDbValidator(cfg),
 	}
 
 	if stateDb == nil {

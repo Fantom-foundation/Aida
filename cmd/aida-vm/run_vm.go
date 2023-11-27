@@ -65,7 +65,7 @@ func run(
 		extensions,
 		tracker.MakeErrorLogger[*substate.Substate](cfg),
 		tracker.MakeProgressLogger[*substate.Substate](cfg, 15*time.Second),
-		validator.MakeLiveDbTxValidator(cfg),
+		validator.MakeLiveDbValidator(cfg),
 	)
 	extensions = append(extensions, extra...)
 

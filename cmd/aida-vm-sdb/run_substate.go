@@ -71,7 +71,7 @@ func runSubstates(
 		statedb.MakeArchiveInquirer(cfg),
 		validator.MakeStateHashValidator[*substate.Substate](cfg),
 		statedb.MakeBlockEventEmitter[*substate.Substate](),
-		validator.MakeLiveDbTxValidator(cfg),
+		validator.MakeLiveDbValidator(cfg),
 
 		profiler.MakeOperationProfiler[*substate.Substate](cfg),
 		// block profile extension should be always last because:

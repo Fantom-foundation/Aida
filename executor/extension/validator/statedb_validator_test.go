@@ -30,7 +30,7 @@ func TestLiveTxValidator_NoValidatorIsCreatedIfDisabled(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.ValidateTxState = false
 
-	ext := MakeLiveDbTxValidator(cfg)
+	ext := MakeLiveDbValidator(cfg)
 
 	if _, ok := ext.(extension.NilExtension[*substate.Substate]); !ok {
 		t.Errorf("Validator is enabled although not set in configuration")
@@ -44,7 +44,7 @@ func TestLiveTxValidator_ValidatorIsEnabled(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.ValidateTxState = true
 
-	ext := makeLiveDbTxValidator(cfg, log)
+	ext := makeLiveDbValidator(cfg, log)
 
 	log.EXPECT().Warning(gomock.Any())
 	ext.PreRun(executor.State[*substate.Substate]{}, nil)
@@ -59,7 +59,7 @@ func TestLiveTxValidator_ValidatorDoesNotFailWithEmptySubstate(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.ValidateTxState = true
 
-	ext := makeLiveDbTxValidator(cfg, log)
+	ext := makeLiveDbValidator(cfg, log)
 
 	log.EXPECT().Warning(gomock.Any())
 	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
@@ -86,7 +86,7 @@ func TestLiveTxValidator_SingleErrorInPreTransactionDoesNotEndProgramWithContinu
 	cfg.ContinueOnFailure = true
 	cfg.MaxNumErrors = 2
 
-	ext := MakeLiveDbTxValidator(cfg)
+	ext := MakeLiveDbValidator(cfg)
 
 	gomock.InOrder(
 		db.EXPECT().Exist(common.Address{0}).Return(false),
@@ -118,7 +118,7 @@ func TestLiveTxValidator_SingleErrorInPreTransactionReturnsErrorWithNoContinueOn
 	cfg.ValidateTxState = true
 	cfg.ContinueOnFailure = false
 
-	ext := MakeLiveDbTxValidator(cfg)
+	ext := MakeLiveDbValidator(cfg)
 
 	gomock.InOrder(
 		db.EXPECT().Exist(common.Address{0}).Return(false),
@@ -159,7 +159,7 @@ func TestLiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueO
 	cfg.ContinueOnFailure = false
 	cfg.StateValidationMode = utils.SubsetCheck
 
-	ext := MakeLiveDbTxValidator(cfg)
+	ext := MakeLiveDbValidator(cfg)
 
 	gomock.InOrder(
 		db.EXPECT().Exist(common.Address{0}).Return(false),
@@ -201,7 +201,7 @@ func TestLiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueO
 	cfg.ContinueOnFailure = false
 	cfg.StateValidationMode = utils.EqualityCheck
 
-	ext := MakeLiveDbTxValidator(cfg)
+	ext := MakeLiveDbValidator(cfg)
 
 	db.EXPECT().GetSubstatePostAlloc().Return(substate.SubstateAlloc{})
 
@@ -237,7 +237,7 @@ func TestLiveTxValidator_TwoErrorsDoNotReturnAnErrorWhenContinueOnFailureIsEnabl
 	cfg.ContinueOnFailure = true
 	cfg.MaxNumErrors = 3
 
-	ext := makeLiveDbTxValidator(cfg, log)
+	ext := makeLiveDbValidator(cfg, log)
 
 	gomock.InOrder(
 		// PreRun
@@ -293,7 +293,7 @@ func TestLiveTxValidator_TwoErrorsDoReturnErrorOnEventWhenContinueOnFailureIsEna
 	cfg.ContinueOnFailure = true
 	cfg.MaxNumErrors = 2
 
-	ext := makeLiveDbTxValidator(cfg, log)
+	ext := makeLiveDbValidator(cfg, log)
 
 	gomock.InOrder(
 		// PreRun
@@ -346,7 +346,7 @@ func TestLiveTxValidator_PreTransactionDoesNotFailWithIncorrectOutput(t *testing
 	cfg.ValidateTxState = true
 	cfg.ContinueOnFailure = false
 
-	ext := MakeLiveDbTxValidator(cfg)
+	ext := MakeLiveDbValidator(cfg)
 
 	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
 
@@ -373,7 +373,7 @@ func TestLiveTxValidator_PostTransactionDoesNotFailWithIncorrectInput(t *testing
 	cfg.ValidateTxState = true
 	cfg.ContinueOnFailure = false
 
-	ext := MakeLiveDbTxValidator(cfg)
+	ext := MakeLiveDbValidator(cfg)
 
 	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
 
@@ -394,7 +394,7 @@ func TestArchiveTxValidator_NoValidatorIsCreatedIfDisabled(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.ValidateTxState = false
 
-	ext := MakeArchiveDbTxValidator(cfg)
+	ext := MakeArchiveDbValidator(cfg)
 
 	if _, ok := ext.(extension.NilExtension[*substate.Substate]); !ok {
 		t.Errorf("Validator is enabled although not set in configuration")
@@ -408,7 +408,7 @@ func TestArchiveTxValidator_ValidatorIsEnabled(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.ValidateTxState = true
 
-	ext := makeArchiveDbTxValidator(cfg, log)
+	ext := makeArchiveDbValidator(cfg, log)
 
 	log.EXPECT().Warning(gomock.Any())
 	ext.PreRun(executor.State[*substate.Substate]{}, nil)
@@ -423,7 +423,7 @@ func TestArchiveTxValidator_ValidatorDoesNotFailWithEmptySubstate(t *testing.T) 
 	cfg := &utils.Config{}
 	cfg.ValidateTxState = true
 
-	ext := makeArchiveDbTxValidator(cfg, log)
+	ext := makeArchiveDbValidator(cfg, log)
 
 	log.EXPECT().Warning(gomock.Any())
 	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
@@ -450,7 +450,7 @@ func TestArchiveTxValidator_SingleErrorInPreTransactionDoesNotEndProgramWithCont
 	cfg.ContinueOnFailure = true
 	cfg.MaxNumErrors = 2
 
-	ext := MakeArchiveDbTxValidator(cfg)
+	ext := MakeArchiveDbValidator(cfg)
 
 	gomock.InOrder(
 		db.EXPECT().Exist(common.Address{0}).Return(false),
@@ -482,7 +482,7 @@ func TestArchiveTxValidator_SingleErrorInPreTransactionReturnsErrorWithNoContinu
 	cfg.ValidateTxState = true
 	cfg.ContinueOnFailure = false
 
-	ext := MakeArchiveDbTxValidator(cfg)
+	ext := MakeArchiveDbValidator(cfg)
 
 	gomock.InOrder(
 		db.EXPECT().Exist(common.Address{0}).Return(false),
@@ -523,7 +523,7 @@ func TestArchiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContin
 	cfg.ContinueOnFailure = false
 	cfg.StateValidationMode = utils.SubsetCheck
 
-	ext := MakeArchiveDbTxValidator(cfg)
+	ext := MakeArchiveDbValidator(cfg)
 
 	gomock.InOrder(
 		db.EXPECT().Exist(common.Address{0}).Return(false),
@@ -565,7 +565,7 @@ func TestArchiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContin
 	cfg.ContinueOnFailure = false
 	cfg.StateValidationMode = utils.EqualityCheck
 
-	ext := MakeArchiveDbTxValidator(cfg)
+	ext := MakeArchiveDbValidator(cfg)
 
 	db.EXPECT().GetSubstatePostAlloc().Return(substate.SubstateAlloc{})
 
@@ -601,7 +601,7 @@ func TestArchiveTxValidator_TwoErrorsDoNotReturnAnErrorWhenContinueOnFailureIsEn
 	cfg.ContinueOnFailure = true
 	cfg.MaxNumErrors = 3
 
-	ext := makeArchiveDbTxValidator(cfg, log)
+	ext := makeArchiveDbValidator(cfg, log)
 
 	gomock.InOrder(
 		// PreRun
@@ -657,7 +657,7 @@ func TestArchiveTxValidator_TwoErrorsDoReturnErrorOnEventWhenContinueOnFailureIs
 	cfg.ContinueOnFailure = true
 	cfg.MaxNumErrors = 2
 
-	ext := makeArchiveDbTxValidator(cfg, log)
+	ext := makeArchiveDbValidator(cfg, log)
 
 	gomock.InOrder(
 		// PreRun
@@ -710,7 +710,7 @@ func TestArchiveTxValidator_PreTransactionDoesNotFailWithIncorrectOutput(t *test
 	cfg.ValidateTxState = true
 	cfg.ContinueOnFailure = false
 
-	ext := MakeArchiveDbTxValidator(cfg)
+	ext := MakeArchiveDbValidator(cfg)
 
 	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
 
@@ -737,7 +737,7 @@ func TestArchiveTxValidator_PostTransactionDoesNotFailWithIncorrectInput(t *test
 	cfg.ValidateTxState = true
 	cfg.ContinueOnFailure = false
 
-	ext := MakeLiveDbTxValidator(cfg)
+	ext := MakeLiveDbValidator(cfg)
 
 	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
 
