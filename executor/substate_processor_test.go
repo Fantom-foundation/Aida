@@ -20,27 +20,6 @@ func newDummyResult(t *testing.T) *substate.SubstateResult {
 	}
 }
 
-func newDummyAlloc(t *testing.T) substate.SubstateAlloc {
-	dummyAddress1 := common.HexToAddress("0x0000000000085a12481aEdb59eb3200332aCA541")
-	dummyAddress2 := common.HexToAddress("0x0000000000085a12481aEdb59eb3200332aCA542")
-	dummyAddress3 := common.HexToAddress("0x0000000000085a12481aEdb59eb3200332aCA543")
-
-	dummyKey1 := common.HexToHash("0x0fa0c3892eaaf05eeca5cf62d715e3a70780103ea10f080e42ebd1c7a2631e1b")
-	dummyKey2 := common.HexToHash("0xea79a15cb6361d6a78eee4020c57bb2f58099dcb63a8fb5c2d15b82de2afc2b5")
-
-	dummyValue1 := common.HexToHash("0x01")
-	dummyValue2 := common.HexToHash("0x02")
-
-	sa := make(substate.SubstateAlloc)
-	// prime substate alloc
-	sa[dummyAddress1] = substate.NewSubstateAccount(1, big.NewInt(1000000), []byte{})
-	sa[dummyAddress1].Storage[dummyKey1] = dummyValue1
-	sa[dummyAddress2] = substate.NewSubstateAccount(2, big.NewInt(2000000), []byte{})
-	sa[dummyAddress2].Storage[dummyKey2] = dummyValue2
-	sa[dummyAddress3] = substate.NewSubstateAccount(3, big.NewInt(3000000), []byte{})
-	return sa
-}
-
 // TestPrepareBlockCtx tests a creation of block context from substate environment.
 func TestPrepareBlockCtx(t *testing.T) {
 	gaslimit := uint64(10000000)

@@ -26,7 +26,7 @@ const (
 	incorrectOutputAllocErr = "output error at block 1 tx 1; inconsistent output: alloc"
 )
 
-func TestTxValidator_NoValidatorIsCreatedIfDisabled(t *testing.T) {
+func TestLiveTxValidator_NoValidatorIsCreatedIfDisabled(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.ValidateTxState = false
 
@@ -37,7 +37,7 @@ func TestTxValidator_NoValidatorIsCreatedIfDisabled(t *testing.T) {
 	}
 }
 
-func TestTxValidator_ValidatorIsEnabled(t *testing.T) {
+func TestLiveTxValidator_ValidatorIsEnabled(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
 
@@ -50,7 +50,7 @@ func TestTxValidator_ValidatorIsEnabled(t *testing.T) {
 	ext.PreRun(executor.State[*substate.Substate]{}, nil)
 }
 
-func TestTxValidator_ValidatorDoesNotFailWithEmptySubstate(t *testing.T) {
+func TestLiveTxValidator_ValidatorDoesNotFailWithEmptySubstate(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
 	db := state.NewMockStateDB(ctrl)
@@ -75,7 +75,7 @@ func TestTxValidator_ValidatorDoesNotFailWithEmptySubstate(t *testing.T) {
 	}
 }
 
-func TestTxValidator_SingleErrorInPreTransactionDoesNotEndProgramWithContinueOnFailure(t *testing.T) {
+func TestLiveTxValidator_SingleErrorInPreTransactionDoesNotEndProgramWithContinueOnFailure(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	db := state.NewMockStateDB(ctrl)
 	ctx := &executor.Context{State: db}
@@ -108,7 +108,7 @@ func TestTxValidator_SingleErrorInPreTransactionDoesNotEndProgramWithContinueOnF
 	}
 }
 
-func TestTxValidator_SingleErrorInPreTransactionReturnsErrorWithNoContinueOnFailure(t *testing.T) {
+func TestLiveTxValidator_SingleErrorInPreTransactionReturnsErrorWithNoContinueOnFailure(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	db := state.NewMockStateDB(ctrl)
 	ctx := &executor.Context{State: db}
@@ -148,7 +148,7 @@ func TestTxValidator_SingleErrorInPreTransactionReturnsErrorWithNoContinueOnFail
 
 }
 
-func TestTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueOnFailure_SubsetCheck(t *testing.T) {
+func TestLiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueOnFailure_SubsetCheck(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	db := state.NewMockStateDB(ctrl)
 	ctx := &executor.Context{State: db}
@@ -190,7 +190,7 @@ func TestTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueOnFai
 	}
 }
 
-func TestTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueOnFailure_EqualityCheck(t *testing.T) {
+func TestLiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueOnFailure_EqualityCheck(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	db := state.NewMockStateDB(ctrl)
 	ctx := &executor.Context{State: db}
@@ -225,7 +225,7 @@ func TestTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueOnFai
 	}
 }
 
-func TestTxValidator_TwoErrorsDoNotReturnAnErrorWhenContinueOnFailureIsEnabledAndMaxNumErrorsIsHighEnough(t *testing.T) {
+func TestLiveTxValidator_TwoErrorsDoNotReturnAnErrorWhenContinueOnFailureIsEnabledAndMaxNumErrorsIsHighEnough(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	db := state.NewMockStateDB(ctrl)
 	log := logger.NewMockLogger(ctrl)
@@ -281,7 +281,7 @@ func TestTxValidator_TwoErrorsDoNotReturnAnErrorWhenContinueOnFailureIsEnabledAn
 	}
 }
 
-func TestTxValidator_TwoErrorsDoReturnErrorOnEventWhenContinueOnFailureIsEnabledAndMaxNumErrorsIsNotHighEnough(t *testing.T) {
+func TestLiveTxValidator_TwoErrorsDoReturnErrorOnEventWhenContinueOnFailureIsEnabledAndMaxNumErrorsIsNotHighEnough(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	db := state.NewMockStateDB(ctrl)
 	log := logger.NewMockLogger(ctrl)
@@ -336,7 +336,7 @@ func TestTxValidator_TwoErrorsDoReturnErrorOnEventWhenContinueOnFailureIsEnabled
 	}
 }
 
-func TestTxValidator_PreTransactionDoesNotFailWithIncorrectOutput(t *testing.T) {
+func TestLiveTxValidator_PreTransactionDoesNotFailWithIncorrectOutput(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	db := state.NewMockStateDB(ctrl)
 	ctx := &executor.Context{State: db}
@@ -363,7 +363,7 @@ func TestTxValidator_PreTransactionDoesNotFailWithIncorrectOutput(t *testing.T) 
 	}
 }
 
-func TestTxValidator_PostTransactionDoesNotFailWithIncorrectInput(t *testing.T) {
+func TestLiveTxValidator_PostTransactionDoesNotFailWithIncorrectInput(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	db := state.NewMockStateDB(ctrl)
 	ctx := &executor.Context{State: db}
@@ -390,8 +390,372 @@ func TestTxValidator_PostTransactionDoesNotFailWithIncorrectInput(t *testing.T) 
 	}
 }
 
+func TestArchiveTxValidator_NoValidatorIsCreatedIfDisabled(t *testing.T) {
+	cfg := &utils.Config{}
+	cfg.ValidateTxState = false
+
+	ext := MakeArchiveDbTxValidator(cfg)
+
+	if _, ok := ext.(extension.NilExtension[*substate.Substate]); !ok {
+		t.Errorf("Validator is enabled although not set in configuration")
+	}
+}
+
+func TestArchiveTxValidator_ValidatorIsEnabled(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	log := logger.NewMockLogger(ctrl)
+
+	cfg := &utils.Config{}
+	cfg.ValidateTxState = true
+
+	ext := makeArchiveDbTxValidator(cfg, log)
+
+	log.EXPECT().Warning(gomock.Any())
+	ext.PreRun(executor.State[*substate.Substate]{}, nil)
+}
+
+func TestArchiveTxValidator_ValidatorDoesNotFailWithEmptySubstate(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	log := logger.NewMockLogger(ctrl)
+	db := state.NewMockNonCommittableStateDB(ctrl)
+	ctx := &executor.Context{Archive: db}
+
+	cfg := &utils.Config{}
+	cfg.ValidateTxState = true
+
+	ext := makeArchiveDbTxValidator(cfg, log)
+
+	log.EXPECT().Warning(gomock.Any())
+	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
+
+	err := ext.PostTransaction(executor.State[*substate.Substate]{
+		Block:       1,
+		Transaction: 1,
+		Data:        &substate.Substate{},
+	}, ctx)
+
+	if err != nil {
+		t.Errorf("PostTransaction must not return an error, got %v", err)
+	}
+}
+
+func TestArchiveTxValidator_SingleErrorInPreTransactionDoesNotEndProgramWithContinueOnFailure(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	db := state.NewMockNonCommittableStateDB(ctrl)
+	ctx := &executor.Context{Archive: db}
+	ctx.ErrorInput = make(chan error, 10)
+
+	cfg := &utils.Config{}
+	cfg.ValidateTxState = true
+	cfg.ContinueOnFailure = true
+	cfg.MaxNumErrors = 2
+
+	ext := MakeArchiveDbTxValidator(cfg)
+
+	gomock.InOrder(
+		db.EXPECT().Exist(common.Address{0}).Return(false),
+		db.EXPECT().GetBalance(common.Address{0}).Return(new(big.Int)),
+		db.EXPECT().GetNonce(common.Address{0}).Return(uint64(0)),
+		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
+	)
+
+	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
+
+	err := ext.PreTransaction(executor.State[*substate.Substate]{
+		Block:       1,
+		Transaction: 1,
+		Data:        getIncorrectTestSubstateAlloc(),
+	}, ctx)
+
+	if err != nil {
+		t.Errorf("PreTransaction must not return an error, got %v", err)
+	}
+}
+
+func TestArchiveTxValidator_SingleErrorInPreTransactionReturnsErrorWithNoContinueOnFailure(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	db := state.NewMockNonCommittableStateDB(ctrl)
+	ctx := &executor.Context{Archive: db}
+	ctx.ErrorInput = make(chan error, 10)
+
+	cfg := &utils.Config{}
+	cfg.ValidateTxState = true
+	cfg.ContinueOnFailure = false
+
+	ext := MakeArchiveDbTxValidator(cfg)
+
+	gomock.InOrder(
+		db.EXPECT().Exist(common.Address{0}).Return(false),
+		db.EXPECT().GetBalance(common.Address{0}).Return(new(big.Int)),
+		db.EXPECT().GetNonce(common.Address{0}).Return(uint64(0)),
+		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
+	)
+
+	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
+
+	err := ext.PreTransaction(executor.State[*substate.Substate]{
+		Block:       1,
+		Transaction: 1,
+		Data:        getIncorrectTestSubstateAlloc(),
+	}, ctx)
+
+	if err == nil {
+		t.Errorf("PreTransaction must return an error!")
+	}
+
+	got := strings.TrimSpace(err.Error())
+	want := strings.TrimSpace(incorrectInputTestErr)
+
+	if strings.Compare(got, want) != 0 {
+		t.Errorf("Unexpected err!\nGot: %v; want: %v", got, want)
+	}
+
+}
+
+func TestArchiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueOnFailure_SubsetCheck(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	db := state.NewMockNonCommittableStateDB(ctrl)
+	ctx := &executor.Context{Archive: db}
+	ctx.ErrorInput = make(chan error, 10)
+
+	cfg := &utils.Config{}
+	cfg.ValidateTxState = true
+	cfg.ContinueOnFailure = false
+	cfg.StateValidationMode = utils.SubsetCheck
+
+	ext := MakeArchiveDbTxValidator(cfg)
+
+	gomock.InOrder(
+		db.EXPECT().Exist(common.Address{0}).Return(false),
+		db.EXPECT().CreateAccount(common.Address{0}),
+		db.EXPECT().GetBalance(common.Address{0}).Return(new(big.Int)),
+		db.EXPECT().GetNonce(common.Address{0}).Return(uint64(0)),
+		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
+		db.EXPECT().SetCode(common.Address{0}, []byte{}),
+	)
+
+	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
+
+	err := ext.PostTransaction(executor.State[*substate.Substate]{
+		Block:       1,
+		Transaction: 1,
+		Data:        getIncorrectTestSubstateAlloc(),
+	}, ctx)
+
+	if err == nil {
+		t.Errorf("PostTransaction must return an error!")
+	}
+
+	got := strings.TrimSpace(err.Error())
+	want := strings.TrimSpace(incorrectOutputTestErr)
+
+	if strings.Compare(got, want) != 0 {
+		t.Errorf("Unexpected err!\nGot: %v; \nWant: %v", got, want)
+	}
+}
+
+func TestArchiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueOnFailure_EqualityCheck(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	db := state.NewMockNonCommittableStateDB(ctrl)
+	ctx := &executor.Context{Archive: db}
+	ctx.ErrorInput = make(chan error, 10)
+
+	cfg := &utils.Config{}
+	cfg.ValidateTxState = true
+	cfg.ContinueOnFailure = false
+	cfg.StateValidationMode = utils.EqualityCheck
+
+	ext := MakeArchiveDbTxValidator(cfg)
+
+	db.EXPECT().GetSubstatePostAlloc().Return(substate.SubstateAlloc{})
+
+	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
+
+	err := ext.PostTransaction(executor.State[*substate.Substate]{
+		Block:       1,
+		Transaction: 1,
+		Data:        getIncorrectTestSubstateAlloc(),
+	}, ctx)
+
+	if err == nil {
+		t.Fatal("PostTransaction must return an error!")
+	}
+
+	got := strings.TrimSpace(err.Error())
+	want := strings.TrimSpace(incorrectOutputAllocErr)
+
+	if strings.Compare(got, want) != 0 {
+		t.Errorf("Unexpected err!\nGot: %v; \nWant: %v", got, want)
+	}
+}
+
+func TestArchiveTxValidator_TwoErrorsDoNotReturnAnErrorWhenContinueOnFailureIsEnabledAndMaxNumErrorsIsHighEnough(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	db := state.NewMockNonCommittableStateDB(ctrl)
+	log := logger.NewMockLogger(ctrl)
+	ctx := &executor.Context{Archive: db}
+	ctx.ErrorInput = make(chan error, 10)
+
+	cfg := &utils.Config{}
+	cfg.ValidateTxState = true
+	cfg.ContinueOnFailure = true
+	cfg.MaxNumErrors = 3
+
+	ext := makeArchiveDbTxValidator(cfg, log)
+
+	gomock.InOrder(
+		// PreRun
+		log.EXPECT().Warning(gomock.Any()),
+		log.EXPECT().Warningf(gomock.Any(), cfg.MaxNumErrors),
+		// PreTransaction
+		db.EXPECT().Exist(common.Address{0}).Return(false),
+		db.EXPECT().GetBalance(common.Address{0}).Return(new(big.Int)),
+		db.EXPECT().GetNonce(common.Address{0}).Return(uint64(0)),
+		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
+		// PostTransaction
+		db.EXPECT().Exist(common.Address{0}).Return(false),
+		db.EXPECT().CreateAccount(common.Address{0}),
+		db.EXPECT().GetBalance(common.Address{0}).Return(new(big.Int)),
+		db.EXPECT().GetNonce(common.Address{0}).Return(uint64(0)),
+		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
+		db.EXPECT().SetCode(common.Address{0}, []byte{}),
+	)
+
+	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
+
+	err := ext.PreTransaction(executor.State[*substate.Substate]{
+		Block:       1,
+		Transaction: 1,
+		Data:        getIncorrectTestSubstateAlloc(),
+	}, ctx)
+
+	if err != nil {
+		t.Errorf("PreTransaction must not return an error because continue on failure is true!")
+	}
+
+	err = ext.PostTransaction(executor.State[*substate.Substate]{
+		Block:       1,
+		Transaction: 1,
+		Data:        getIncorrectTestSubstateAlloc(),
+	}, ctx)
+
+	// PostTransaction must not return error because ContinueOnFailure is enabled and error threshold is high enough
+	if err != nil {
+		t.Errorf("PostTransaction must not return an error because continue on failure is true!")
+	}
+}
+
+func TestArchiveTxValidator_TwoErrorsDoReturnErrorOnEventWhenContinueOnFailureIsEnabledAndMaxNumErrorsIsNotHighEnough(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	db := state.NewMockNonCommittableStateDB(ctrl)
+	log := logger.NewMockLogger(ctrl)
+	ctx := &executor.Context{Archive: db}
+	ctx.ErrorInput = make(chan error, 10)
+
+	cfg := &utils.Config{}
+	cfg.ValidateTxState = true
+	cfg.ContinueOnFailure = true
+	cfg.MaxNumErrors = 2
+
+	ext := makeArchiveDbTxValidator(cfg, log)
+
+	gomock.InOrder(
+		// PreRun
+		log.EXPECT().Warning(gomock.Any()),
+		log.EXPECT().Warningf(gomock.Any(), cfg.MaxNumErrors),
+		// PreTransaction
+		db.EXPECT().Exist(common.Address{0}).Return(false),
+		db.EXPECT().GetBalance(common.Address{0}).Return(new(big.Int)),
+		db.EXPECT().GetNonce(common.Address{0}).Return(uint64(0)),
+		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
+		// PostTransaction
+		db.EXPECT().Exist(common.Address{0}).Return(false),
+		db.EXPECT().CreateAccount(common.Address{0}),
+		db.EXPECT().GetBalance(common.Address{0}).Return(new(big.Int)),
+		db.EXPECT().GetNonce(common.Address{0}).Return(uint64(0)),
+		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
+		db.EXPECT().SetCode(common.Address{0}, []byte{}),
+	)
+
+	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
+
+	err := ext.PreTransaction(executor.State[*substate.Substate]{
+		Block:       1,
+		Transaction: 1,
+		Data:        getIncorrectTestSubstateAlloc(),
+	}, ctx)
+
+	if err != nil {
+		t.Errorf("PreTransaction must not return an error because continue on failure is true, got %v", err)
+	}
+
+	err = ext.PostTransaction(executor.State[*substate.Substate]{
+		Block:       1,
+		Transaction: 1,
+		Data:        getIncorrectTestSubstateAlloc(),
+	}, ctx)
+
+	if err == nil {
+		t.Errorf("PostTransaction must return an error because MaxNumErrors is not high enough!")
+	}
+}
+
+func TestArchiveTxValidator_PreTransactionDoesNotFailWithIncorrectOutput(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	db := state.NewMockNonCommittableStateDB(ctrl)
+	ctx := &executor.Context{Archive: db}
+	ctx.ErrorInput = make(chan error, 10)
+
+	cfg := &utils.Config{}
+	cfg.ValidateTxState = true
+	cfg.ContinueOnFailure = false
+
+	ext := MakeArchiveDbTxValidator(cfg)
+
+	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
+
+	err := ext.PreTransaction(executor.State[*substate.Substate]{
+		Block:       1,
+		Transaction: 1,
+		Data: &substate.Substate{
+			OutputAlloc: getIncorrectSubstateAlloc(),
+		},
+	}, ctx)
+
+	if err != nil {
+		t.Errorf("PreTransaction must not return an error, got %v", err)
+	}
+}
+
+func TestArchiveTxValidator_PostTransactionDoesNotFailWithIncorrectInput(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	db := state.NewMockNonCommittableStateDB(ctrl)
+	ctx := &executor.Context{Archive: db}
+	ctx.ErrorInput = make(chan error, 10)
+
+	cfg := &utils.Config{}
+	cfg.ValidateTxState = true
+	cfg.ContinueOnFailure = false
+
+	ext := MakeLiveDbTxValidator(cfg)
+
+	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
+
+	err := ext.PostTransaction(executor.State[*substate.Substate]{
+		Block:       1,
+		Transaction: 1,
+		Data: &substate.Substate{
+			InputAlloc: getIncorrectSubstateAlloc(),
+		},
+	}, ctx)
+
+	if err != nil {
+		t.Errorf("PostTransaction must not return an error, got %v", err)
+	}
+}
+
 // TestStateDb_ValidateStateDB tests validation of state DB by comparing it to valid world state
-func TestStateDb_ValidateStateDB(t *testing.T) {
+func TestValidateStateDb_ValidationDoesNotFail(t *testing.T) {
 	for _, tc := range utils.GetStateDbTestCases() {
 		t.Run(fmt.Sprintf("DB variant: %s; shadowImpl: %s; archive variant: %s", tc.Variant, tc.ShadowImpl, tc.ArchiveVariant), func(t *testing.T) {
 			cfg := utils.MakeTestConfig(tc)
@@ -431,7 +795,7 @@ func TestStateDb_ValidateStateDB(t *testing.T) {
 
 // TestStateDb_ValidateStateDBWithUpdate test state DB validation comparing it to valid world state
 // given state DB should be updated if world state contains different data
-func TestStateDb_ValidateStateDBWithUpdate(t *testing.T) {
+func TestValidateStateDb_ValidationDoesNotFailWithPriming(t *testing.T) {
 	for _, tc := range utils.GetStateDbTestCases() {
 		t.Run(fmt.Sprintf("DB variant: %s; shadowImpl: %s; archive variant: %s", tc.Variant, tc.ShadowImpl, tc.ArchiveVariant), func(t *testing.T) {
 			cfg := utils.MakeTestConfig(tc)
