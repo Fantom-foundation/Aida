@@ -262,7 +262,6 @@ func (c *cloner) read(prefix []byte, start uint64, condition func(key []byte) (b
 		}
 
 		c.count++
-
 		c.sendToWriteChan(iter.Key(), iter.Value())
 
 	}
@@ -332,7 +331,7 @@ func (c *cloner) readSubstate() error {
 }
 
 func (c *cloner) readStateHashes() error {
-	c.log.Noticef("Copying hashes done")
+	c.log.Noticef("Copying state hashes")
 
 	var errCounter uint64
 
@@ -347,7 +346,7 @@ func (c *cloner) readStateHashes() error {
 				return err
 			}
 		}
-
+		c.count++
 		c.sendToWriteChan(key, value)
 	}
 
