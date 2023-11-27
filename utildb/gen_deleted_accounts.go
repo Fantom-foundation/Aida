@@ -1,7 +1,6 @@
 package utildb
 
 import (
-	"errors"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/logger"
@@ -132,8 +131,5 @@ func GenDeletedAccountsAction(cfg *utils.Config, ddb *substate.DestroyedAccountD
 	// explicitly set to nil to release memory as soon as possible
 	deleteHistory = nil
 
-	cfg.MemoryProfile = "/var/opera/Aida/profile-before-iterator-release.dat"
-	err2 := utils.StartMemoryProfile(cfg)
-
-	return errors.Join(err, err2)
+	return err
 }

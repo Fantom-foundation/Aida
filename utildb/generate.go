@@ -293,20 +293,8 @@ func (g *Generator) processDeletedAccounts(ddb *substate.DestroyedAccountDB) err
 		return fmt.Errorf("cannot doGenerations deleted accounts; %v", err)
 	}
 
-	g.Cfg.MemoryProfile = "/var/opera/Aida/profile-after-iterator-release.dat"
-	err = utils.StartMemoryProfile(g.Cfg)
-	if err != nil {
-		return err
-	}
-
 	// explicitly release code cache
 	state.ReleaseCache()
-
-	g.Cfg.MemoryProfile = "/var/opera/Aida/profile-after-cache-release.dat"
-	err = utils.StartMemoryProfile(g.Cfg)
-	if err != nil {
-		return err
-	}
 
 	g.Log.Noticef("Deleted accounts generated successfully. It took: %v", time.Since(start).Round(1*time.Second))
 	g.Log.Noticef("Total elapsed time: %v", time.Since(g.start).Round(1*time.Second))
