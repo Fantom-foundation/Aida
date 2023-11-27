@@ -103,7 +103,7 @@ func (v *archiveDbTxValidator) PreTransaction(state executor.State[*substate.Sub
 	return nil
 }
 
-// PostTransaction validates OutputAlloc in given substate
+// PostTransaction validates VmAlloc
 func (v *archiveDbTxValidator) PostTransaction(state executor.State[*substate.Substate], ctx *executor.Context) error {
 	err := validateVmAlloc(ctx.Archive, state.Data.OutputAlloc, v.cfg)
 	if err == nil {
@@ -143,7 +143,7 @@ func (v *txValidator) PreRun(executor.State[*substate.Substate], *executor.Conte
 
 	if v.cfg.ContinueOnFailure {
 		v.log.Warningf("Continue on Failure for transaction validation is enabled, yet "+
-			"block processing will stop after %v encountered issues.", v.cfg.MaxNumErrors)
+			"block processing will stop after %v encountered issues. (0 is endless)", v.cfg.MaxNumErrors)
 	}
 
 	return nil

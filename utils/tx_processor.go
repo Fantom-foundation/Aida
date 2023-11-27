@@ -132,16 +132,6 @@ func processRegularTx(db state.VmStateDB, cfg *Config, block uint64, tx int, st 
 				return
 			}
 		}
-
-		// validate state
-		if err := validateVMAlloc(db, st.OutputAlloc, cfg); err != nil {
-			newErrors++
-			errMsg.WriteString("Output alloc is not contained in the stateDB.\n")
-			errMsg.WriteString(err.Error())
-			if !cfg.ContinueOnFailure {
-				return
-			}
-		}
 	}
 	return
 }
