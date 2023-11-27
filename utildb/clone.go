@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"sync"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/logger"
@@ -27,7 +26,7 @@ type cloner struct {
 	typ             utils.AidaDbType
 	writeCh         chan rawEntry
 	errCh           chan error
-	closeCh         chan any
+	stopCh          chan any
 }
 
 // rawEntry representation of database entry
@@ -84,7 +83,7 @@ func Clone(cfg *utils.Config, aidaDb, cloneDb ethdb.Database, cloneType utils.Ai
 		typ:     cloneType,
 		writeCh: make(chan rawEntry, cloneWriteChanSize),
 		errCh:   make(chan error, 1),
-		closeCh: make(chan any),
+		stopCh:  make(chan any),
 	}
 
 	if err = c.clone(isFirstGenerationFromGenesis); err != nil {
@@ -97,57 +96,17 @@ func Clone(cfg *utils.Config, aidaDb, cloneDb ethdb.Database, cloneType utils.Ai
 
 // createDbClone AidaDb in given block range
 func (c *cloner) clone(isFirstGenerationFromGenesis bool) error {
-	var wgWriter sync.WaitGroup
-	wgWriter.Add(1)
-	go c.write(&wgWriter)
-	go c.checkErrors()
+	go c.write()
 
-	c.read([]byte(substate.Stage1CodePrefix), 0, nil)
-
-	firstDeletionBlock := c.cfg.First
-
-	// update c.cfg.First block before loading deletions and substates, because for utils.CloneType those are necessary to be from last updateset onward
-	// lastUpdateBeforeRange contains block number at which is first updateset preceding the given block range,
-	// it is only required in CloneType db
-	lastUpdateBeforeRange := c.readUpdateSet(isFirstGenerationFromGenesis)
-	if c.typ == utils.CloneType {
-		// check whether updateset before interval exists
-		if lastUpdateBeforeRange < c.cfg.First && lastUpdateBeforeRange != 0 {
-			c.log.Noticef("Last updateset found at block %v, changing first block to %v", lastUpdateBeforeRange, lastUpdateBeforeRange+1)
-			c.cfg.First = lastUpdateBeforeRange + 1
-		}
-
-		// if database type is going to be CloneType, we need to load all deletion data, because some commands need to load deletionDb from block 0
-		firstDeletionBlock = 0
-	}
-
-	err := c.readDeletions(firstDeletionBlock)
-	if err != nil {
-		return fmt.Errorf("cannot read deletions; %v", err)
-	}
-	err = c.readSubstate()
+	err := c.readData(isFirstGenerationFromGenesis)
 	if err != nil {
 		return err
 	}
 
-	err = c.readStateHashes()
-	if err != nil {
-		return err
-	}
-
-	close(c.writeCh)
-
-	done := make(chan bool, 1)
-
-	go func() {
-		wgWriter.Wait()
-		done <- true
-	}()
-
-	select {
-	case <-done:
-	case <-c.closeCh:
-		// error occurred, but it was already logged
+	// wait for writer result
+	err, ok := <-c.errCh
+	if ok {
+		c.log.Error(err)
 		return nil
 	}
 
@@ -177,23 +136,47 @@ func (c *cloner) clone(isFirstGenerationFromGenesis bool) error {
 	return nil
 }
 
-// checkErrors is a thread for error handling. When error occurs in any thread, this thread closes every other thread
-func (c *cloner) checkErrors() {
-	for {
-		select {
-		case <-c.closeCh:
-			return
-		case err := <-c.errCh:
-			c.log.Error(err)
-			c.stop()
-			return
+// readData from source AidaDb
+func (c *cloner) readData(isFirstGenerationFromGenesis bool) error {
+	// notify writer that all data was read
+	defer close(c.writeCh)
+
+	c.read([]byte(substate.Stage1CodePrefix), 0, nil)
+
+	firstDeletionBlock := c.cfg.First
+
+	// update c.cfg.First block before loading deletions and substates, because for utils.CloneType those are necessary to be from last updateset onward
+	// lastUpdateBeforeRange contains block number at which is first updateset preceding the given block range,
+	// it is only required in CloneType db
+	lastUpdateBeforeRange := c.readUpdateSet(isFirstGenerationFromGenesis)
+	if c.typ == utils.CloneType {
+		// check whether updateset before interval exists
+		if lastUpdateBeforeRange < c.cfg.First && lastUpdateBeforeRange != 0 {
+			c.log.Noticef("Last updateset found at block %v, changing first block to %v", lastUpdateBeforeRange, lastUpdateBeforeRange+1)
+			c.cfg.First = lastUpdateBeforeRange + 1
 		}
+
+		// if database type is going to be CloneType, we need to load all deletion data, because some commands need to load deletionDb from block 0
+		firstDeletionBlock = 0
 	}
+
+	err := c.readDeletions(firstDeletionBlock)
+	if err != nil {
+		return fmt.Errorf("cannot read deletions; %v", err)
+	}
+
+	err = c.readSubstate()
+	if err != nil {
+		return err
+	}
+
+	return c.readStateHashes()
 }
 
 // write data read from func read() into new createDbClone
-func (c *cloner) write(wg *sync.WaitGroup) {
-	defer wg.Done()
+func (c *cloner) write() {
+	defer close(c.errCh)
+
 	var (
 		err         error
 		data        rawEntry
@@ -235,10 +218,9 @@ func (c *cloner) write(wg *sync.WaitGroup) {
 				// reset writer after writing batch
 				batchWriter.Reset()
 			}
-		case <-c.closeCh:
+		case <-c.stopCh:
 			return
 		}
-
 	}
 }
 
@@ -262,7 +244,10 @@ func (c *cloner) read(prefix []byte, start uint64, condition func(key []byte) (b
 		}
 
 		c.count++
-		c.sendToWriteChan(iter.Key(), iter.Value())
+		ok := c.sendToWriteChan(iter.Key(), iter.Value())
+		if !ok {
+			return
+		}
 
 	}
 	c.log.Noticef("Prefix %v done", string(prefix))
@@ -347,7 +332,10 @@ func (c *cloner) readStateHashes() error {
 			}
 		}
 		c.count++
-		c.sendToWriteChan(key, value)
+		ok := c.sendToWriteChan(key, value)
+		if !ok {
+			return nil
+		}
 	}
 
 	if errCounter > 0 {
@@ -359,7 +347,7 @@ func (c *cloner) readStateHashes() error {
 	return nil
 }
 
-func (c *cloner) sendToWriteChan(k, v []byte) {
+func (c *cloner) sendToWriteChan(k, v []byte) bool {
 	// make deep read key and value
 	// need to pass deep read of values into the channel
 	// golang channels were using pointers and values read from channel were incorrect
@@ -369,9 +357,10 @@ func (c *cloner) sendToWriteChan(k, v []byte) {
 	copy(value, v)
 
 	select {
-	case <-c.closeCh:
-		return
+	case <-c.stopCh:
+		return false
 	case c.writeCh <- rawEntry{Key: key, Value: value}:
+		return true
 	}
 }
 
@@ -418,10 +407,10 @@ func (c *cloner) closeDbs() {
 // stop all cloner threads
 func (c *cloner) stop() {
 	select {
-	case <-c.closeCh:
+	case <-c.stopCh:
 		return
 	default:
-		close(c.closeCh)
+		close(c.stopCh)
 		c.closeDbs()
 	}
 }
