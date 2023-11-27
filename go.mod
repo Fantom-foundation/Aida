@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/Fantom-foundation/Carmen/go v0.0.0-00010101000000-000000000000
-	github.com/Fantom-foundation/Substate v0.0.0-20231124222404-3e2617931ee7
+	github.com/Fantom-foundation/Substate v0.0.0-20231127120115-9e638200b828
 	github.com/Fantom-foundation/Tosca v0.0.0-20230527064715-aa1fc97baebe
 	github.com/Fantom-foundation/go-opera v1.1.1-rc.2
 	github.com/Fantom-foundation/lachesis-base v0.0.0-20221208123620-82a6d15f995c
@@ -153,5 +153,3 @@ replace github.com/ethereum/go-ethereum => github.com/Fantom-foundation/go-ether
 replace github.com/Fantom-foundation/go-opera => github.com/Fantom-foundation/go-opera-substate v1.0.1-0.20230523093256-e592c59c5996
 
 replace github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
-
-replace github.com/Fantom-foundation/Substate => ../Substate
