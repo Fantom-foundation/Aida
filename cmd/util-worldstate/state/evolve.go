@@ -60,7 +60,7 @@ func evolveState(ctx *cli.Context) error {
 
 	// logging InputSubstate inconsistencies
 	var validateLog func(error)
-	if cfg.ValidateWorldState {
+	if cfg.Validate {
 		validateLog = factoryValidatorLogger(log)
 	}
 

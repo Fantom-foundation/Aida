@@ -22,14 +22,12 @@ func GenerateUpdateSet(first uint64, last uint64, cfg *Config) (substate.Substat
 	update := make(substate.SubstateAlloc)
 	defer stateIter.Release()
 
-	if cfg.HasDeletedAccounts {
-		// Todo rewrite in wrapping functions
-		deletedAccountDB, err = substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
-		if err != nil {
-			return nil, nil, err
-		}
-		defer deletedAccountDB.Close()
+	// Todo rewrite in wrapping functions
+	deletedAccountDB, err = substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
+	if err != nil {
+		return nil, nil, err
 	}
+	defer deletedAccountDB.Close()
 
 	for stateIter.Next() {
 		tx := stateIter.Value()
@@ -39,20 +37,18 @@ func GenerateUpdateSet(first uint64, last uint64, cfg *Config) (substate.Substat
 		}
 
 		// if this transaction has suicided accounts, clear their states.
-		if cfg.HasDeletedAccounts {
-			destroyed, resurrected, err := deletedAccountDB.GetDestroyedAccounts(tx.Block, tx.Transaction)
+		destroyed, resurrected, err := deletedAccountDB.GetDestroyedAccounts(tx.Block, tx.Transaction)
 
-			if !(err == nil || errors.Is(err, leveldb.ErrNotFound)) {
-				return update, deletedAccounts, fmt.Errorf("failed to get deleted account. %v", err)
-			}
-			// reset storagea
-			if len(destroyed) > 0 {
-				deletedAccounts = append(deletedAccounts, destroyed...)
-			}
-			if len(resurrected) > 0 {
-				deletedAccounts = append(deletedAccounts, resurrected...)
-				ClearAccountStorage(update, resurrected)
-			}
+		if !(err == nil || errors.Is(err, leveldb.ErrNotFound)) {
+			return update, deletedAccounts, fmt.Errorf("failed to get deleted account. %v", err)
+		}
+		// reset storagea
+		if len(destroyed) > 0 {
+			deletedAccounts = append(deletedAccounts, destroyed...)
+		}
+		if len(resurrected) > 0 {
+			deletedAccounts = append(deletedAccounts, resurrected...)
+			ClearAccountStorage(update, resurrected)
 		}
 
 		// merge output substate to update

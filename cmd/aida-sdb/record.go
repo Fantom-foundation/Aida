@@ -21,7 +21,6 @@ var RecordCommand = cli.Command{
 		&utils.UpdateBufferSizeFlag,
 		&utils.CpuProfileFlag,
 		&utils.SyncPeriodLengthFlag,
-		&utils.QuietFlag,
 		&substate.WorkersFlag,
 		&utils.ChainIDFlag,
 		&utils.TraceFileFlag,

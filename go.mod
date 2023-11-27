@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/Fantom-foundation/Carmen/go v0.0.0-00010101000000-000000000000
-	github.com/Fantom-foundation/Substate v0.0.0-20230717050741-1969ed5d05e2
+	github.com/Fantom-foundation/Substate v0.0.0-20231124222404-3e2617931ee7
 	github.com/Fantom-foundation/Tosca v0.0.0-20230527064715-aa1fc97baebe
 	github.com/Fantom-foundation/go-opera v1.1.1-rc.2
 	github.com/Fantom-foundation/lachesis-base v0.0.0-20221208123620-82a6d15f995c
