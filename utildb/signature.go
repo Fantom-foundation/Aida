@@ -172,7 +172,7 @@ func GetStateHashesHash(cfg *utils.Config, db ethdb.Database, log logger.Logger)
 		provider := utils.MakeStateHashProvider(db)
 
 		var i uint64 = 0
-		for ; i < cfg.Last; i++ {
+		for ; i <= cfg.Last; i++ {
 			select {
 			case <-ticker.C:
 				log.Infof("Stat-Hashes hash progress: %v/%v", i, cfg.Last)
