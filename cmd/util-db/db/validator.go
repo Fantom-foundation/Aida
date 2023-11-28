@@ -185,7 +185,7 @@ var PrintTableHashCommand = cli.Command{
 		&logger.LogLevelFlag,
 	},
 	Description: `
-Creates signatures of substates, updatesets, deletion and state-hashes using decoded objects from database rather than []byte value representation, because that is not deterministic.
+Creates hash of substates, updatesets, deletion and state-hashes using decoded objects from database rather than []byte value representation, because that is not deterministic.
 `,
 }
 

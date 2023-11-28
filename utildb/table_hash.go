@@ -17,8 +17,8 @@ import (
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
-// DbSignature generates a signature for given dbcomponent
-func DbSignature(cfg *utils.Config, aidaDb ethdb.Database, log logger.Logger) error {
+// TableHash generates a hash for given dbcomponent
+func TableHash(cfg *utils.Config, aidaDb ethdb.Database, log logger.Logger) error {
 	if *cfg.DbComponent == dbcompoment.Substate || *cfg.DbComponent == dbcompoment.All {
 		log.Info("Generating Substate hash...")
 		aidaDbSubstateHash, count, err := GetSubstateHash(cfg, aidaDb, log)

@@ -239,7 +239,7 @@ func printDeletedAccountInfo(ctx *cli.Context) error {
 
 }
 
-// printTableHash creates signatures of substates, updatesets, deletion and state-hashes.
+// printTableHash creates hash of substates, updatesets, deletion and state-hashes.
 func printTableHash(ctx *cli.Context) error {
 	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if err != nil {
@@ -253,7 +253,7 @@ func printTableHash(ctx *cli.Context) error {
 
 	log := logger.NewLogger(cfg.LogLevel, "printTableHash")
 	log.Info("Inspecting database...")
-	err = utildb.DbSignature(cfg, aidaDb, log)
+	err = utildb.TableHash(cfg, aidaDb, log)
 	if err != nil {
 		return err
 	}
