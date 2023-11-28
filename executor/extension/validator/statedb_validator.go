@@ -36,7 +36,7 @@ type liveDbTxValidator struct {
 
 // PreTransaction validates InputAlloc in given substate
 func (v *liveDbTxValidator) PreTransaction(state executor.State[*substate.Substate], ctx *executor.Context) error {
-	err := validateStateDb(state.Data.InputAlloc, ctx.State, v.cfg.UpdateOnFailure)
+	err := validateSubstateAlloc(ctx.State, state.Data.InputAlloc, v.cfg)
 	if err == nil {
 		return nil
 	}
@@ -52,7 +52,7 @@ func (v *liveDbTxValidator) PreTransaction(state executor.State[*substate.Substa
 
 // PostTransaction validates OutputAlloc in given substate
 func (v *liveDbTxValidator) PostTransaction(state executor.State[*substate.Substate], ctx *executor.Context) error {
-	err := validateVmAlloc(ctx.State, state.Data.OutputAlloc, v.cfg)
+	err := validateSubstateAlloc(ctx.State, state.Data.OutputAlloc, v.cfg)
 	if err == nil {
 		return nil
 	}
@@ -89,7 +89,7 @@ type archiveDbValidator struct {
 
 // PreTransaction validates InputAlloc in given substate
 func (v *archiveDbValidator) PreTransaction(state executor.State[*substate.Substate], ctx *executor.Context) error {
-	err := validateStateDb(state.Data.InputAlloc, ctx.Archive, v.cfg.UpdateOnFailure)
+	err := validateSubstateAlloc(ctx.Archive, state.Data.InputAlloc, v.cfg)
 	if err == nil {
 		return nil
 	}
@@ -105,7 +105,7 @@ func (v *archiveDbValidator) PreTransaction(state executor.State[*substate.Subst
 
 // PostTransaction validates VmAlloc
 func (v *archiveDbValidator) PostTransaction(state executor.State[*substate.Substate], ctx *executor.Context) error {
-	err := validateVmAlloc(ctx.Archive, state.Data.OutputAlloc, v.cfg)
+	err := validateSubstateAlloc(ctx.Archive, state.Data.OutputAlloc, v.cfg)
 	if err == nil {
 		return nil
 	}
@@ -172,11 +172,29 @@ func (v *stateDbValidator) isErrFatal(err error, ch chan error) bool {
 	return false
 }
 
-// validateStateDb validates whether the world-state is contained in the db object.
+// validateSubstateAlloc compares states of accounts in stateDB to an expected set of states.
+// If fullState mode, check if expected state is contained in stateDB.
+// If partialState mode, check for equality of sets.
+func validateSubstateAlloc(db state.VmStateDB, expectedAlloc substate.SubstateAlloc, cfg *utils.Config) error {
+	var err error
+	switch cfg.StateValidationMode {
+	case utils.SubsetCheck:
+		err = doSubsetValidation(expectedAlloc, db, !cfg.UpdateOnFailure)
+	case utils.EqualityCheck:
+		vmAlloc := db.GetSubstatePostAlloc()
+		isEqual := expectedAlloc.Equal(vmAlloc)
+		if !isEqual {
+			err = fmt.Errorf("inconsistent output: alloc")
+		}
+	}
+	return err
+}
+
+// doSubsetValidation validates whether the given alloc is contained in the db object.
 // NB: We can only check what must be in the db (but cannot check whether db stores more).
-func validateStateDb(ws substate.SubstateAlloc, db state.VmStateDB, updateOnFail bool) error {
+func doSubsetValidation(alloc substate.SubstateAlloc, db state.VmStateDB, updateOnFail bool) error {
 	var err string
-	for addr, account := range ws {
+	for addr, account := range alloc {
 		if !db.Exist(addr) {
 			err += fmt.Sprintf("  Account %v does not exist\n", addr.Hex())
 			if updateOnFail {
@@ -227,22 +245,4 @@ func validateStateDb(ws substate.SubstateAlloc, db state.VmStateDB, updateOnFail
 		return fmt.Errorf(err)
 	}
 	return nil
-}
-
-// validateVmAlloc compares states of accounts in stateDB to an expected set of states.
-// If fullState mode, check if expected state is contained in stateDB.
-// If partialState mode, check for equality of sets.
-func validateVmAlloc(db state.VmStateDB, expectedAlloc substate.SubstateAlloc, cfg *utils.Config) error {
-	var err error
-	switch cfg.StateValidationMode {
-	case utils.SubsetCheck:
-		err = validateStateDb(expectedAlloc, db, !cfg.UpdateOnFailure)
-	case utils.EqualityCheck:
-		vmAlloc := db.GetSubstatePostAlloc()
-		isEqual := expectedAlloc.Equal(vmAlloc)
-		if !isEqual {
-			err = fmt.Errorf("inconsistent output: alloc")
-		}
-	}
-	return err
 }
