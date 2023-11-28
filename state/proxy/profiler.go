@@ -8,7 +8,7 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
-	"github.com/Fantom-foundation/Aida/tracer/profile"
+	"github.com/Fantom-foundation/Aida/utils/analytics"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -17,19 +17,18 @@ import (
 // ProfilerProxy data structure for capturing and recording
 // invoked StateDB operations.
 type ProfilerProxy struct {
-	db  state.StateDB  // state db
-	ps  *profile.Stats // operation statistics
-	log logger.Logger
+	db   state.StateDB // state db
+	anlt *analytics.IncrementalAnalytics
+	log  logger.Logger
 }
 
 // NewProfilerProxy creates a new StateDB profiler.
-func NewProfilerProxy(db state.StateDB, csv string, logLevel string) (*ProfilerProxy, *profile.Stats) {
+func NewProfilerProxy(db state.StateDB, anlt *analytics.IncrementalAnalytics, logLevel string) *ProfilerProxy {
 	p := new(ProfilerProxy)
 	p.db = db
-	p.ps = profile.NewStats(csv)
-	p.ps.FillLabels(operation.CreateIdLabelMap())
+	p.anlt = anlt
 	p.log = logger.NewLogger(logLevel, "Proxy Profiler")
-	return p, p.ps
+	return p
 }
 
 // CreateAccount creates a new account.
@@ -271,7 +270,7 @@ func (p *ProfilerProxy) do(opId byte, op func()) {
 	start := time.Now()
 	op()
 	elapsed := time.Since(start)
-	p.ps.Profile(opId, elapsed)
+	p.anlt.Update(opId, float64(elapsed))
 }
 
 func (p *ProfilerProxy) BeginTransaction(number uint32) {

@@ -22,7 +22,6 @@ func prepareMockCliContext() *cli.Context {
 	flagSet.Bool(ValidateFlag.Name, true, "enables validation")
 	flagSet.Bool(ValidateTxStateFlag.Name, true, "enables transaction state validation")
 	flagSet.Bool(ContinueOnFailureFlag.Name, true, "continue execute after validation failure detected")
-	flagSet.Bool(ValidateWorldStateFlag.Name, true, "enables end-state validation")
 	flagSet.String(AidaDbFlag.Name, "./test.db", "set substate, updateset and deleted accounts directory")
 	flagSet.String(logger.LogLevelFlag.Name, "info", "Level of the logging of the app action (\"critical\", \"error\", \"warning\", \"notice\", \"info\", \"debug\"; default: INFO)")
 
@@ -637,34 +636,29 @@ func TestUtilsConfig_adjustMissingConfigValuesValidationOn(t *testing.T) {
 	// prepare mock configs
 	for _, cfg := range []Config{
 		{
-			Validate:           true,
-			ValidateTxState:    false,
-			ValidateWorldState: false,
-			ContinueOnFailure:  false,
+			Validate:          true,
+			ValidateTxState:   false,
+			ContinueOnFailure: false,
 		},
 		{
-			Validate:           false,
-			ValidateTxState:    true,
-			ValidateWorldState: true,
-			ContinueOnFailure:  false,
+			Validate:          false,
+			ValidateTxState:   true,
+			ContinueOnFailure: false,
 		},
 		{
-			Validate:           false,
-			ValidateTxState:    false,
-			ValidateWorldState: true,
-			ContinueOnFailure:  true,
+			Validate:          false,
+			ValidateTxState:   false,
+			ContinueOnFailure: true,
 		},
 		{
-			Validate:           false,
-			ValidateTxState:    true,
-			ValidateWorldState: true,
-			ContinueOnFailure:  true,
+			Validate:          false,
+			ValidateTxState:   true,
+			ContinueOnFailure: true,
 		},
 		{
-			Validate:           true,
-			ValidateTxState:    true,
-			ValidateWorldState: true,
-			ContinueOnFailure:  true,
+			Validate:          true,
+			ValidateTxState:   true,
+			ContinueOnFailure: true,
 		},
 	} {
 		t.Run("validation adjustment", func(t *testing.T) {
@@ -676,9 +670,6 @@ func TestUtilsConfig_adjustMissingConfigValuesValidationOn(t *testing.T) {
 				t.Fatalf("failed to adjust ValidateTxState; got: %v; expected: %v", cfg.ValidateTxState, true)
 			}
 
-			if !cfg.ValidateWorldState {
-				t.Fatalf("failed to adjust ValidateWorldState; got: %v; expected: %v", cfg.ValidateWorldState, true)
-			}
 		})
 	}
 }
@@ -687,10 +678,9 @@ func TestUtilsConfig_adjustMissingConfigValuesValidationOn(t *testing.T) {
 func TestUtilsConfig_adjustMissingConfigValuesValidationOff(t *testing.T) {
 	// prepare mock config
 	cfg := &Config{
-		Validate:           false,
-		ValidateTxState:    false,
-		ValidateWorldState: false,
-		ContinueOnFailure:  false,
+		Validate:          false,
+		ValidateTxState:   false,
+		ContinueOnFailure: false,
 	}
 
 	adjustMissingConfigValues(cfg)
@@ -700,24 +690,6 @@ func TestUtilsConfig_adjustMissingConfigValuesValidationOff(t *testing.T) {
 		t.Fatalf("failed to adjust ValidateTxState; got: %v; expected: %v", cfg.ValidateTxState, true)
 	}
 
-	if cfg.ValidateWorldState {
-		t.Fatalf("failed to adjust ValidateWorldState; got: %v; expected: %v", cfg.ValidateWorldState, true)
-	}
-}
-
-// TestUtilsConfig_adjustMissingConfigValuesDeletionDb tests if missing config deleted accounts values are set correctly
-func TestUtilsConfig_adjustMissingConfigValuesDeletionDb(t *testing.T) {
-	// prepare mock config
-	cfg := &Config{
-		DeletionDb: "./test.db",
-	}
-
-	adjustMissingConfigValues(cfg)
-
-	// checks
-	if cfg.HasDeletedAccounts {
-		t.Fatalf("failed to adjust HasDeletedAccounts value; got: %v; expected: %v", cfg.HasDeletedAccounts, false)
-	}
 }
 
 // TestUtilsConfig_adjustMissingConfigValuesKeepStateDb tests if missing config keepDb value is set correctly

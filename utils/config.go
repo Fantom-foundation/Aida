@@ -94,98 +94,97 @@ type Config struct {
 	First uint64 // first block
 	Last  uint64 // last block
 
-	RpcRecordingFile       string         // path to source file with recorded RPC requests
+	AidaDb                 string         // directory to profiling database containing substate, update, delete accounts data
+	ArchiveMaxQueryAge     int            // the maximum age for archive queries (in blocks)
 	ArchiveMode            bool           // enable archive mode
 	ArchiveQueryRate       int            // the queries per second send to the archive
-	ArchiveMaxQueryAge     int            // the maximum age for archive queries (in blocks)
 	ArchiveVariant         string         // selects the implementation variant of the archive
-	BlockLength            uint64         // length of a block in number of transactions
 	BalanceRange           int64          // balance range for stochastic simulation/replay
-	CarmenSchema           int            // the current DB schema ID to use in Carmen
-	ChainID                ChainID        // Blockchain ID (mainnet: 250/testnet: 4002)
-	Cache                  int            // Cache for StateDb or Priming
-	ContinueOnFailure      bool           // continue validation when an error detected
-	ContractNumber         int64          // number of contracts to create
-	CompactDb              bool           // compact database after merging
-	SrcDbReadonly          bool           // if false, make a copy the source statedb
+	BasicBlockProfiling    bool           // enable profiling of basic block
+	BlockLength            uint64         // length of a block in number of transactions
 	CPUProfile             string         // pprof cpu profile output file name
 	CPUProfilePerInterval  bool           // a different CPU profile is taken per 100k block interval
-	OperaDb                string         // path to opera database
-	DbTmp                  string         // path to temporary database
+	Cache                  int            // Cache for StateDb or Priming
+	CarmenSchema           int            // the current DB schema ID to use in Carmen
+	ChainID                ChainID        // Blockchain ID (mainnet: 250/testnet: 4002)
+	ChannelBufferSize      int            // set a buffer size for profiling channel
+	CompactDb              bool           // compact database after merging
+	ContinueOnFailure      bool           // continue validation when an error detected
+	ContractNumber         int64          // number of contracts to create
 	DbImpl                 string         // storage implementation
-	DiagnosticServer       int64          // if not zero, the port used for hosting a HTTP server for performance diagnostics
-	Genesis                string         // genesis file
-	DbVariant              string         // database variant
 	DbLogging              string         // set to true if all DB operations should be logged
+	DbTmp                  string         // path to temporary database
+	DbVariant              string         // database variant
 	Debug                  bool           // enable trace debug flag
-	DeleteSourceDbs        bool           // delete source databases
 	DebugFrom              uint64         // the first block to print trace debug
+	DeleteSourceDbs        bool           // delete source databases
 	DeletionDb             string         // directory of deleted account database
-	Quiet                  bool           // disable progress report flag
-	SyncPeriodLength       uint64         // length of a sync-period in number of blocks
-	HasDeletedAccounts     bool           // true if DeletionDb is not empty; otherwise false
+	DiagnosticServer       int64          // if not zero, the port used for hosting a HTTP server for performance diagnostics
+	ErrorLogging           string         // if defined, error logging to file is enabled
+	Genesis                string         // genesis file
+	IncludeStorage         bool           // represents a flag for contract storage inclusion in an operation
+	IsExistingStateDb      bool           // this is true if we are using an existing StateDb
 	KeepDb                 bool           // set to true if db is kept after run
 	KeysNumber             int64          // number of keys to generate
+	LogLevel               string         // level of the logging of the app action
+	MaxNumErrors           int            // maximum number of errors when ContinueOnFailure is enabled
 	MaxNumTransactions     int            // the maximum number of processed transactions
 	MemoryBreakdown        bool           // enable printing of memory breakdown
 	MemoryProfile          string         // capture the memory heap profile into the file
+	MicroProfiling         bool           // enable micro-profiling of EVM
+	NoHeartbeatLogging     bool           // disables heartbeat logging
 	NonceRange             int            // nonce range for stochastic simulation/replay
-	TransactionLength      uint64         // determines indirectly the length of a transaction
+	OnlySuccessful         bool           // only runs transactions that have been successful
+	OperaBinary            string         // path to opera binary
+	OperaDb                string         // path to opera database
+	Output                 string         // output directory for aida-db patches or path to events.json file in stochastic generation
+	PathToStateDb          string         // Path to a working state-db directory
 	PrimeRandom            bool           // enable randomized priming
 	PrimeThreshold         int            // set account threshold before commit
 	Profile                bool           // enable micro profiling
+	ProfileBlocks          bool           // enables block profiler extension
+	ProfileDB              string         // profile db for parallel transaction execution
+	ProfileDepth           int            // 0 = Interval, 1 = Interval+Block, 2 = Interval+Block+Tx
+	ProfileEVMCall         bool           // enable profiling for EVM call
 	ProfileFile            string         // output file containing profiling result
 	ProfileInterval        uint64         // interval of printing profile result
+	ProfileSqlite3         string         // output profiling results to sqlite3 DB
+	ProfilingDbName        string         // set a database name for storing micro-profiling results
 	RandomSeed             int64          // set random seed for stochastic testing
-	SkipPriming            bool           // skip priming of the state DB
-	SkipMetadata           bool           // skip metadata insert/getting into AidaDb
+	RpcRecordingFile       string         // path to source file with recorded RPC requests
 	ShadowDb               bool           // defines we want to open an existing db as shadow
 	ShadowImpl             string         // implementation of the shadow DB to use, empty if disabled
 	ShadowVariant          string         // database variant of the shadow DB to be used
-	StateDbSrc             string         // directory to load an existing State DB data
-	AidaDb                 string         // directory to profiling database containing substate, update, delete accounts data
-	StateValidationMode    ValidationMode // state validation mode
-	UpdateDb               string         // update-set directory
-	UpdateType             string         // download datatype
-	Output                 string         // output directory for aida-db patches or path to events.json file in stochastic generation
+	SkipMetadata           bool           // skip metadata insert/getting into AidaDb
+	SkipPriming            bool           // skip priming of the state DB
+	SkipStateHashScrapping bool           // if enabled, then state-hashes are not loaded from rpc
 	SnapshotDepth          int            // depth of snapshot history
+	SourceTableName        string         // represents the name of a source DB table
+	SrcDbReadonly          bool           // if false, make a copy the source statedb
+	StateDbSrc             string         // directory to load an existing State DB data
+	StateValidationMode    ValidationMode // state validation mode
 	SubstateDb             string         // substate directory
-	OperaBinary            string         // path to opera binary
+	SyncPeriodLength       uint64         // length of a sync-period in number of blocks
+	TargetBlock            uint64         // represents the ID of target block to be reached by state evolve process or in dump state
+	TargetDb               string         // represents the path of a target DB
+	TargetEpoch            uint64         // represents the ID of target epoch to be reached by autogen patch generator
+	Trace                  bool           // trace flag
+	TraceDirectory         string         // name of trace directory
+	TraceFile              string         // name of trace file
+	TrackProgress          bool           // enables track progress logging
+	TransactionLength      uint64         // determines indirectly the length of a transaction
+	TrieRootHash           string         // represents a hash of a state trie root to be decoded
+	UpdateBufferSize       uint64         // cache size in Bytes
+	UpdateDb               string         // update-set directory
+	UpdateOnFailure        bool           // if enabled and continue-on-failure is also enabled, this updates any error found in StateDb
+	UpdateType             string         // download datatype
 	Validate               bool           // validate validate aida-db
+	ValidateStateHashes    bool           // if this is true state hash validation is enabled in Executor
 	ValidateTxState        bool           // validate stateDB before and after transaction
-	ValidateWorldState     bool           // validate stateDB before and after replay block range
 	ValuesNumber           int64          // number of values to generate
 	VmImpl                 string         // vm implementation (geth/lfvm)
-	WorldStateDb           string         // path to worldstate
 	Workers                int            // number of worker threads
-	TraceFile              string         // name of trace file
-	TraceDirectory         string         // name of trace directory
-	Trace                  bool           // trace flag
-	LogLevel               string         // level of the logging of the app action
-	SourceTableName        string         // represents the name of a source DB table
-	TargetDb               string         // represents the path of a target DB
-	TrieRootHash           string         // represents a hash of a state trie root to be decoded
-	IncludeStorage         bool           // represents a flag for contract storage inclusion in an operation
-	ProfileEVMCall         bool           // enable profiling for EVM call
-	MicroProfiling         bool           // enable micro-profiling of EVM
-	BasicBlockProfiling    bool           // enable profiling of basic block
-	OnlySuccessful         bool           // only runs transactions that have been successful
-	ProfilingDbName        string         // set a database name for storing micro-profiling results
-	ChannelBufferSize      int            // set a buffer size for profiling channel
-	TargetBlock            uint64         // represents the ID of target block to be reached by state evolve process or in dump state
-	TargetEpoch            uint64         // represents the ID of target epoch to be reached by autogen patch generator
-	UpdateBufferSize       uint64         // cache size in Bytes
-	ProfileDB              string         // profile db for parallel transaction execution
-	MaxNumErrors           int            // maximum number of errors when ContinueOnFailure is enabled
-	UpdateOnFailure        bool           // if enabled and continue-on-failure is also enabled, this updates any error found in StateDb
-	SkipStateHashScrapping bool           // if enabled, then state-hashes are not loaded from rpc
-	NoHeartbeatLogging     bool           // disables heartbeat logging
-	TrackProgress          bool           // enables track progress logging
-	IsExistingStateDb      bool           // this is true if we are using an existing StateDb
-	ValidateStateHashes    bool           // if this is true state hash validation is enabled in Executor
-	ProfileBlocks          bool           // enables block profiler extension
-	PathToStateDb          string
-	ErrorLogging           string // if defined, error logging to file is enabled
+	WorldStateDb           string         // path to worldstate
 }
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.
@@ -551,7 +550,6 @@ func adjustMissingConfigValues(cfg *Config) error {
 
 	// --continue-on-failure implicitly enables transaction state validation
 	cfg.ValidateTxState = cfg.Validate || cfg.ValidateTxState || cfg.ContinueOnFailure
-	cfg.ValidateWorldState = cfg.Validate || cfg.ValidateWorldState
 
 	if cfg.RandomSeed < 0 {
 		cfg.RandomSeed = int64(rand.Uint32())
@@ -560,7 +558,6 @@ func adjustMissingConfigValues(cfg *Config) error {
 	// if AidaDB path is given, redirect source path to AidaDB.
 	if found := directoryExists(cfg.AidaDb); found {
 		OverwriteDbPathsByAidaDb(cfg)
-		cfg.HasDeletedAccounts = true
 	}
 
 	// in-memory StateDB cannot be kept after run.
@@ -587,19 +584,26 @@ func OverwriteDbPathsByAidaDb(cfg *Config) {
 
 // reportNewConfig logs out the state of config in current run
 func reportNewConfig(cfg *Config, log logger.Logger) {
-	if !cfg.Quiet {
-		log.Noticef("Run config:")
-		log.Infof("Block range: %v to %v", cfg.First, cfg.Last)
-		if cfg.MaxNumTransactions >= 0 {
-			log.Noticef("Transaction limit: %d", cfg.MaxNumTransactions)
-		}
-		log.Infof("Chain id: %v (record & run-vm only)", cfg.ChainID)
-		log.Infof("SyncPeriod length: %v", cfg.SyncPeriodLength)
-		log.Noticef("Used VM implementation: %v", cfg.VmImpl)
-		log.Infof("Aida DB directory: %v", cfg.AidaDb)
+	log.Noticef("Run config:")
+	log.Infof("Block range: %v to %v", cfg.First, cfg.Last)
+	if cfg.MaxNumTransactions >= 0 {
+		log.Noticef("Transaction limit: %d", cfg.MaxNumTransactions)
+	}
+	log.Infof("Chain id: %v (record & run-vm only)", cfg.ChainID)
+	log.Infof("SyncPeriod length: %v", cfg.SyncPeriodLength)
+	log.Noticef("Used VM implementation: %v", cfg.VmImpl)
+	log.Infof("Aida DB directory: %v", cfg.AidaDb)
 
-		// todo move to tx validator once finished
-		log.Infof("Validate world state: %v, validate tx state: %v", cfg.ValidateWorldState, cfg.ValidateTxState)
+	// todo move to tx validator once finished
+	log.Infof("validate tx state: %v", cfg.ValidateTxState)
+	if cfg.Profile {
+		log.Infof("Profiling enabled - at depth: %d", cfg.ProfileDepth)
+		if cfg.ProfileFile != "" {
+			log.Infof("  Profiling results output file path: %s", cfg.ProfileFile)
+		}
+		if cfg.ProfileSqlite3 != "" {
+			log.Infof("  Profiling results output to sqlite3: %s", cfg.ProfileSqlite3)
+		}
 	}
 
 	if cfg.ShadowDb {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/logger"
@@ -20,7 +21,6 @@ var RecordCommand = cli.Command{
 		&utils.UpdateBufferSizeFlag,
 		&utils.CpuProfileFlag,
 		&utils.SyncPeriodLengthFlag,
-		&utils.QuietFlag,
 		&substate.WorkersFlag,
 		&utils.ChainIDFlag,
 		&utils.TraceFileFlag,
@@ -86,6 +86,7 @@ func record(
 	extra []executor.Extension[*substate.Substate],
 ) error {
 	var extensions = []executor.Extension[*substate.Substate]{
+		profiler.MakeCpuProfiler[*substate.Substate](cfg),
 		tracker.MakeProgressLogger[*substate.Substate](cfg, 0),
 		tracker.MakeProgressTracker(cfg, 0),
 		statedb.MakeTemporaryStatePrepper(),

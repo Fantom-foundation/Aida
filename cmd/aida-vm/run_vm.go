@@ -58,7 +58,11 @@ func run(
 		tracker.MakeProgressLogger[*substate.Substate](cfg, 15*time.Second),
 	}
 	if stateDb == nil {
-		extensions = append(extensions, statedb.MakeTemporaryStatePrepper())
+		extensions = append(
+			extensions,
+			statedb.MakeTemporaryStatePrepper(),
+			tracker.MakeDbLogger[*substate.Substate](cfg),
+		)
 	}
 
 	extensions = append(extensions, extra...)
