@@ -11,39 +11,49 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/Fantom-foundation/Aida/utils/dbcompoment"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/syndtr/goleveldb/leveldb"
 )
 
+// DbSignature generates a signature for given dbcomponent
 func DbSignature(cfg *utils.Config, aidaDb ethdb.Database, log logger.Logger) error {
-	log.Info("Generating Substate hash...")
-	aidaDbSubstateHash, count, err := GetSubstateHash(cfg, aidaDb, log)
-	if err != nil {
-		return err
+	if *cfg.DbComponent == dbcompoment.Substate || *cfg.DbComponent == dbcompoment.All {
+		log.Info("Generating Substate hash...")
+		aidaDbSubstateHash, count, err := GetSubstateHash(cfg, aidaDb, log)
+		if err != nil {
+			return err
+		}
+		log.Infof("Substate hash: %x; count %v", aidaDbSubstateHash, count)
 	}
-	log.Infof("Substate hash: %x; count %v", aidaDbSubstateHash, count)
 
-	log.Info("Generating Deletion hash...")
-	aidaDbDeletionHash, count, err := GetDeletionHash(cfg, aidaDb, log)
-	if err != nil {
-		return err
+	if *cfg.DbComponent == dbcompoment.Delete || *cfg.DbComponent == dbcompoment.All {
+		log.Info("Generating Deletion hash...")
+		aidaDbDeletionHash, count, err := GetDeletionHash(cfg, aidaDb, log)
+		if err != nil {
+			return err
+		}
+		log.Infof("Deletion hash: %x; count %v", aidaDbDeletionHash, count)
 	}
-	log.Infof("Deletion hash: %x; count %v", aidaDbDeletionHash, count)
 
-	log.Info("Generating Updateset hash...")
-	aidaDbUpdateDbHash, count, err := GetUpdateDbHash(cfg, aidaDb, log)
-	if err != nil {
-		return err
+	if *cfg.DbComponent == dbcompoment.Update || *cfg.DbComponent == dbcompoment.All {
+		log.Info("Generating Updateset hash...")
+		aidaDbUpdateDbHash, count, err := GetUpdateDbHash(cfg, aidaDb, log)
+		if err != nil {
+			return err
+		}
+		log.Infof("Updateset hash: %x; count %v", aidaDbUpdateDbHash, count)
 	}
-	log.Infof("Updateset hash: %x; count %v", aidaDbUpdateDbHash, count)
 
-	log.Info("Generating State-Hashes hash...")
-	aidaDbStateHashesHash, count, err := GetStateHashesHash(cfg, aidaDb, log)
-	if err != nil {
-		return err
+	if *cfg.DbComponent == dbcompoment.StateHash || *cfg.DbComponent == dbcompoment.All {
+		log.Info("Generating State-Hashes hash...")
+		aidaDbStateHashesHash, count, err := GetStateHashesHash(cfg, aidaDb, log)
+		if err != nil {
+			return err
+		}
+		log.Infof("State-Hashes hash: %x; count %v", aidaDbStateHashesHash, count)
 	}
-	log.Infof("State-Hashes hash: %x; count %v", aidaDbStateHashesHash, count)
 
 	return nil
 }

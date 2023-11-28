@@ -1,12 +1,14 @@
 package utildb
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
 // FindBlockRangeInUpdate finds the first and last block in the update set
@@ -56,4 +58,74 @@ func FindBlockRangeInStateHash(db ethdb.Database, log logger.Logger) (uint64, ui
 		return 0, 0, fmt.Errorf("cannot get last state hash; %v", err)
 	}
 	return firstStateHashBlock, lastStateHashBlock, nil
+}
+
+// GetSubstateCount in given AidaDb
+func GetSubstateCount(cfg *utils.Config, aidaDb ethdb.Database) uint64 {
+	substate.SetSubstateDbBackend(aidaDb)
+
+	var count uint64
+
+	iter := substate.NewSubstateIterator(cfg.First, 10)
+	defer iter.Release()
+	for iter.Next() {
+		if iter.Value().Block > cfg.Last {
+			break
+		}
+		count++
+	}
+
+	return count
+}
+
+// GetDeletedCount in given AidaDb
+func GetDeletedCount(cfg *utils.Config, aidaDb ethdb.Database) (int, error) {
+	db := substate.NewDestroyedAccountDB(aidaDb)
+
+	accounts, err := db.GetAccountsDestroyedInRange(cfg.First, cfg.Last)
+	if err != nil {
+		return 0, fmt.Errorf("cannot Get all destroyed accounts; %v", err)
+	}
+
+	return len(accounts), nil
+}
+
+// GetUpdateCount in given AidaDb
+func GetUpdateCount(cfg *utils.Config, aidaDb ethdb.Database) (uint64, error) {
+	var count uint64
+
+	start := substate.SubstateAllocKey(cfg.First)[2:]
+	iter := aidaDb.NewIterator([]byte(substate.SubstateAllocPrefix), start)
+	defer iter.Release()
+	for iter.Next() {
+		block, err := substate.DecodeUpdateSetKey(iter.Key())
+		if err != nil {
+			return 0, fmt.Errorf("cannot decode updateset key; %v", err)
+		}
+		if block > cfg.Last {
+			break
+		}
+		count++
+	}
+
+	return count, nil
+}
+
+// GetStateHashCount in given AidaDb
+func GetStateHashCount(cfg *utils.Config, aidaDb ethdb.Database) (uint64, error) {
+	var count uint64
+
+	hashProvider := utils.MakeStateHashProvider(aidaDb)
+	for i := cfg.First; i <= cfg.Last; i++ {
+		_, err := hashProvider.GetStateHash(int(i))
+		if err != nil {
+			if errors.Is(err, leveldb.ErrNotFound) {
+				continue
+			}
+			return 0, err
+		}
+		count++
+	}
+
+	return count, nil
 }

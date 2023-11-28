@@ -3,6 +3,7 @@ package utils
 import (
 	"github.com/Fantom-foundation/Aida/cmd/util-db/flags"
 	"github.com/Fantom-foundation/Aida/logger"
+	"github.com/Fantom-foundation/Aida/utils/dbcompoment"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
@@ -30,6 +31,7 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		CompactDb:              getFlagValue(ctx, CompactDbFlag).(bool),
 		ContinueOnFailure:      getFlagValue(ctx, ContinueOnFailureFlag).(bool),
 		ContractNumber:         getFlagValue(ctx, ContractNumberFlag).(int64),
+		DbComponent:            getFlagValue(ctx, DbComponentFlag).(*dbcompoment.DbComponent),
 		DbImpl:                 getFlagValue(ctx, StateDbImplementationFlag).(string),
 		DbLogging:              getFlagValue(ctx, StateDbLoggingFlag).(string),
 		DbTmp:                  getFlagValue(ctx, DbTmpFlag).(string),
@@ -143,6 +145,10 @@ func getFlagValue(ctx *cli.Context, flag interface{}) interface{} {
 			if cmdFlag.Names()[0] == f.Name {
 				return ctx.Bool(f.Name)
 			}
+		case cli.GenericFlag:
+			if cmdFlag.Names()[0] == f.Name {
+				return ctx.Generic(f.Name)
+			}
 		}
 	}
 
@@ -159,6 +165,8 @@ func getFlagValue(ctx *cli.Context, flag interface{}) interface{} {
 	case cli.PathFlag:
 		return f.Value
 	case cli.BoolFlag:
+		return f.Value
+	case cli.GenericFlag:
 		return f.Value
 	}
 

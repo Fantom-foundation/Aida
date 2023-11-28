@@ -11,11 +11,11 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utildb"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/Fantom-foundation/Aida/utils/dbcompoment"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/urfave/cli/v2"
 )
 
@@ -30,130 +30,29 @@ var InfoCommand = cli.Command{
 		&cmdPrintDbHash,
 		&cmdPrintStateHash,
 		&cmdPrintHashesSeparated,
+		&cmdSignature,
 	},
 }
 
 var cmdCount = cli.Command{
-	Name:  "count",
-	Usage: "Prints count of records",
-	Subcommands: []*cli.Command{
-		&cmdCountAll,
-		&cmdCountDeleted,
-		&cmdCountSubstate,
-		&cmdCountStateHash,
-		&cmdCountUpdate,
-	},
-}
-
-var cmdCountAll = cli.Command{
-	Action: printAllCount,
-	Name:   "all",
-	Usage:  "List of all records in AidaDb.",
+	Action:    printCount,
+	Name:      "count",
+	Usage:     "Count records in AidaDb.",
+	ArgsUsage: "<firstBlockNum>, <lastBlockNum>",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
+		&utils.DbComponentFlag,
 		&logger.LogLevelFlag,
-		&flags.Detailed,
-	},
-}
-
-var cmdCountDeleted = cli.Command{
-	Action:    printDeletedCount,
-	Name:      "deleted",
-	Usage:     "Prints how many destroyed accounts are in AidaDb between given block range",
-	ArgsUsage: "<firstBlockNum>, <lastBlockNum>",
-	Flags: []cli.Flag{
-		&utils.AidaDbFlag,
-	},
-}
-
-var cmdCountSubstate = cli.Command{
-	Action:    printSubstateCount,
-	Name:      "substate",
-	Usage:     "Prints how many substates are in AidaDb between given block range",
-	ArgsUsage: "<firstBlockNum>, <lastBlockNum>",
-	Flags: []cli.Flag{
-		&utils.AidaDbFlag,
-	},
-}
-
-var cmdCountStateHash = cli.Command{
-	Action:    printStateHashCount,
-	Name:      "state-hash",
-	Usage:     "Prints how many state-hashes are in AidaDb between given block range",
-	ArgsUsage: "<firstBlockNum>, <lastBlockNum>",
-	Flags: []cli.Flag{
-		&utils.AidaDbFlag,
-	},
-}
-
-var cmdCountUpdate = cli.Command{
-	Action:    printUpdateCount,
-	Name:      "update",
-	Usage:     "Prints how many updates are in AidaDb between given block range",
-	ArgsUsage: "<firstBlockNum>, <lastBlockNum>",
-	Flags: []cli.Flag{
-		&utils.AidaDbFlag,
 	},
 }
 
 var cmdRange = cli.Command{
-	Name:  "range",
-	Usage: "Prints range of type in AidaDb",
-	Subcommands: []*cli.Command{
-		&cmdRangeAll,
-		&cmdSubstateRange,
-		&cmdUpdateRange,
-		&cmdDeletionRange,
-		&cmdStateHashRange,
-	},
-}
-
-var cmdRangeAll = cli.Command{
-	Action: printRangeAll,
-	Name:   "all",
+	Action: printRange,
+	Name:   "range",
 	Usage:  "Prints range of all types in AidaDb",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
-		&logger.LogLevelFlag,
-	},
-}
-
-var cmdSubstateRange = cli.Command{
-	Action: printSubstateRange,
-	Name:   "substate",
-	Usage:  "Prints range of substate in AidaDb",
-	Flags: []cli.Flag{
-		&utils.AidaDbFlag,
-		&logger.LogLevelFlag,
-	},
-}
-
-var cmdUpdateRange = cli.Command{
-	Action: printUpdateRange,
-	Name:   "update",
-	Usage:  "Prints range of updatesets in AidaDb",
-	Flags: []cli.Flag{
-		&utils.AidaDbFlag,
-		&logger.LogLevelFlag,
-	},
-}
-
-var cmdDeletionRange = cli.Command{
-	Action: printDeletedRange,
-	Name:   "deleted",
-	Usage:  "Prints range of deleted accounts in AidaDb",
-	Flags: []cli.Flag{
-		&utils.AidaDbFlag,
-		&logger.LogLevelFlag,
-	},
-}
-
-var cmdStateHashRange = cli.Command{
-	Action: printStateHashRange,
-	Name:   "state-hash",
-	Usage:  "Prints range of state-hash in AidaDb",
-	Flags: []cli.Flag{
-		&utils.AidaDbFlag,
+		&utils.DbComponentFlag,
 		&logger.LogLevelFlag,
 	},
 }
@@ -197,6 +96,21 @@ var cmdPrintStateHash = cli.Command{
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 	},
+}
+
+// SignatureCmd calculates md5 of actual data stored
+var cmdSignature = cli.Command{
+	Action: signature,
+	Name:   "signature",
+	Usage:  "Calculates md5 of decoded objects stored in AidaDb. Using []byte value from database, it decodes it and calculates md5 of the decoded objects.",
+	Flags: []cli.Flag{
+		&utils.AidaDbFlag,
+		&utils.DbComponentFlag,
+		&logger.LogLevelFlag,
+	},
+	Description: `
+Creates signatures of substates, updatesets, deletion and state-hashes using decoded objects from database rather than []byte value representation, because that is not deterministic.
+`,
 }
 
 var cmdPrintHashesSeparated = cli.Command{
@@ -250,286 +164,115 @@ func printMetadataCmd(ctx *cli.Context) error {
 	return utildb.PrintMetadata(cfg.AidaDb)
 }
 
-// printAllCount counts all prefixes prints number of occurrences.
-// If DetailedFlag is called, then it prints count of each prefix
-func printAllCount(ctx *cli.Context) error {
-	cfg, argErr := utils.NewConfig(ctx, utils.NoArgs)
+// printCount prints count of given db component in given AidaDb
+func printCount(ctx *cli.Context) error {
+	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if argErr != nil {
 		return argErr
 	}
 
-	log := logger.NewLogger(cfg.LogLevel, "AidaDb-All-Count")
-
-	// open db
 	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", true)
-	if err != nil {
-		return fmt.Errorf("cannot open aida-db; %v", err)
-	}
-
-	if ctx.Bool(flags.Detailed.Name) {
-		log.Notice("Counting each prefix...")
-		utildb.LogDetailedSize(aidaDb, log)
-	} else {
-		log.Notice("Counting overall size...")
-		log.Noticef("All AidaDb records: %v", utildb.GetDbSize(aidaDb))
-	}
-
-	return nil
-}
-
-// printDeletedCount in given AidaDb
-func printDeletedCount(ctx *cli.Context) error {
-	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
-	if argErr != nil {
-		return argErr
-	}
-
-	log := logger.NewLogger(cfg.LogLevel, "AidaDb-Print-Deleted-Count")
-
-	db, err := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
-	if err != nil {
-		return err
-	}
-
-	accounts, err := db.GetAccountsDestroyedInRange(cfg.First, cfg.Last)
-	if err != nil {
-		return fmt.Errorf("cannot Get all destroyed accounts; %v", err)
-	}
-
-	log.Noticef("Found %v deleted accounts between blocks %v-%v", len(accounts), cfg.First, cfg.Last)
-
-	return nil
-}
-
-// printUpdateCount in given AidaDb
-func printUpdateCount(ctx *cli.Context) error {
-	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
-	if argErr != nil {
-		return argErr
-	}
-
-	log := logger.NewLogger(cfg.LogLevel, "AidaDb-Print-Update-Count")
-
-	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "", true)
 	if err != nil {
 		return fmt.Errorf("cannot open aida-db; %v", err)
 	}
 	defer utildb.MustCloseDB(aidaDb)
 
-	var count uint64
+	log := logger.NewLogger(cfg.LogLevel, "AidaDb-Count")
+	log.Noticef("Inspecting database between blocks %v-%v", cfg.First, cfg.Last)
 
-	start := substate.SubstateAllocKey(cfg.First)[2:]
-	iter := aidaDb.NewIterator([]byte(substate.SubstateAllocPrefix), start)
-	for iter.Next() {
-		block, err := substate.DecodeUpdateSetKey(iter.Key())
+	// print substate count
+	if *cfg.DbComponent == dbcompoment.Substate || *cfg.DbComponent == dbcompoment.All {
+		count := utildb.GetSubstateCount(cfg, aidaDb)
+		log.Noticef("Found %v substates", count)
+	}
+
+	// print update count
+	if *cfg.DbComponent == dbcompoment.Update || *cfg.DbComponent == dbcompoment.All {
+		count, err := utildb.GetUpdateCount(cfg, aidaDb)
 		if err != nil {
-			return fmt.Errorf("cannot decode updateset key; %v", err)
+			log.Warningf("cannot print update count; %v", err)
+		} else {
+			log.Noticef("Found %v updates", count)
 		}
-		if block > cfg.Last {
-			break
-		}
-		count++
 	}
 
-	log.Noticef("Found %v updates between blocks %v-%v", count, cfg.First, cfg.Last)
-
-	return nil
-}
-
-// printSubstateCount in given AidaDb
-func printSubstateCount(ctx *cli.Context) error {
-	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
-	if argErr != nil {
-		return argErr
-	}
-
-	log := logger.NewLogger(cfg.LogLevel, "AidaDb-Print-Substate-Count")
-
-	substate.SetSubstateDb(cfg.AidaDb)
-	substate.OpenSubstateDBReadOnly()
-
-	var count uint64
-
-	iter := substate.NewSubstateIterator(cfg.First, 10)
-	for iter.Next() {
-		if iter.Value().Block > cfg.Last {
-			break
-		}
-		count++
-	}
-
-	log.Noticef("Found %v substates between blocks %v-%v", count, cfg.First, cfg.Last)
-
-	return nil
-}
-
-// printStateHashCount in given AidaDb
-func printStateHashCount(ctx *cli.Context) error {
-	cfg, argErr := utils.NewConfig(ctx, utils.BlockRangeArgs)
-	if argErr != nil {
-		return argErr
-	}
-
-	log := logger.NewLogger(cfg.LogLevel, "AidaDb-Print-StateHash-Count")
-
-	var count uint64
-
-	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "", true)
-	if err != nil {
-		return fmt.Errorf("cannot open aida-db; %v", err)
-	}
-
-	hashProvider := utils.MakeStateHashProvider(aidaDb)
-	for i := cfg.First; i <= cfg.Last; i++ {
-		_, err := hashProvider.GetStateHash(int(i))
+	// print deleted count
+	if *cfg.DbComponent == dbcompoment.Delete || *cfg.DbComponent == dbcompoment.All {
+		count, err := utildb.GetDeletedCount(cfg, aidaDb)
 		if err != nil {
-			if errors.Is(err, leveldb.ErrNotFound) {
-				continue
-			}
-			return err
+			log.Warningf("cannot print deleted count; %v", err)
+		} else {
+			log.Noticef("Found %v deleted accounts", count)
 		}
-		count++
 	}
 
-	log.Noticef("Found %v state-hashes between blocks %v-%v", count, cfg.First, cfg.Last)
-
-	return nil
-}
-
-// printRangeAll prints range of all types stored in given AidaDb
-func printRangeAll(ctx *cli.Context) error {
-	cfg, argErr := utils.NewConfig(ctx, utils.NoArgs)
-	if argErr != nil {
-		return argErr
-	}
-
-	log := logger.NewLogger(cfg.LogLevel, "AidaDb-Range-All")
-
-	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "aida-aidaDb", true)
-	if err != nil {
-		return fmt.Errorf("error opening aida-aidaDb %s: %v", cfg.AidaDb, err)
-	}
-
-	substate.SetSubstateDb(cfg.AidaDb)
-	substate.OpenSubstateDBReadOnly()
-	defer substate.CloseSubstateDB()
-
-	firstBlock, lastBlock, ok := utils.FindBlockRangeInSubstate()
-	if !ok {
-		log.Warning("No substate found")
-	} else {
-		log.Infof("Substate block range: %v - %v", firstBlock, lastBlock)
-	}
-
-	firstUsBlock, lastUsBlock, err := utildb.FindBlockRangeInUpdate(aidaDb)
-	if err != nil {
-		log.Warningf("cannot find updateset range; %v", err)
-	}
-	log.Infof("Updateset block range: %v - %v", firstUsBlock, lastUsBlock)
-
-	first, last, err := utildb.FindBlockRangeInDeleted(aidaDb)
-	if err != nil {
-		return fmt.Errorf("cannot find deleted range; %v", err)
-	}
-	log.Infof("Deleted block range: %v - %v", first, last)
-
-	firstStateHashBlock, lastStateHashBlock, err := utildb.FindBlockRangeInStateHash(aidaDb, log)
-	if err != nil {
-		log.Warningf("cannot find state hash range; %v", err)
-	} else {
-		log.Infof("State Hash range: %v - %v", firstStateHashBlock, lastStateHashBlock)
+	// print state hash count
+	if *cfg.DbComponent == dbcompoment.StateHash || *cfg.DbComponent == dbcompoment.All {
+		count, err := utildb.GetStateHashCount(cfg, aidaDb)
+		if err != nil {
+			log.Warningf("cannot print state hash count; %v", err)
+		} else {
+			log.Noticef("Found %v state-hashes", count)
+		}
 	}
 
 	return nil
 }
 
-// printStateHashRange prints state hash range stored in given AidaDb
-func printStateHashRange(ctx *cli.Context) error {
+// printRange prints range of given db component in given AidaDb
+func printRange(ctx *cli.Context) error {
 	cfg, argErr := utils.NewConfig(ctx, utils.NoArgs)
 	if argErr != nil {
 		return argErr
 	}
 
-	log := logger.NewLogger(cfg.LogLevel, "AidaDb-State-Hash-Range")
+	log := logger.NewLogger(cfg.LogLevel, "AidaDb-Range")
 
-	db, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "aida-db", true)
+	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "aidaDb", true)
 	if err != nil {
-		return fmt.Errorf("error opening aida-db %s: %v", cfg.AidaDb, err)
+		return fmt.Errorf("error opening aidaDb %s: %v", cfg.AidaDb, err)
+	}
+	defer utildb.MustCloseDB(aidaDb)
+
+	// print substate range
+	if *cfg.DbComponent == dbcompoment.Substate || *cfg.DbComponent == dbcompoment.All {
+		substate.SetSubstateDbBackend(aidaDb)
+		firstBlock, lastBlock, ok := utils.FindBlockRangeInSubstate()
+		if !ok {
+			log.Warning("No substate found")
+		} else {
+			log.Infof("Substate block range: %v - %v", firstBlock, lastBlock)
+		}
 	}
 
-	firstStateHashBlock, lastStateHashBlock, err := utildb.FindBlockRangeInStateHash(db, log)
-	if err != nil {
-		return fmt.Errorf("cannot find state hash range; %v", err)
-	}
-	log.Infof("State Hash range: %v - %v", firstStateHashBlock, lastStateHashBlock)
-
-	return nil
-}
-
-// printSubstateRange prints state substate range stored in given AidaDb
-func printSubstateRange(ctx *cli.Context) error {
-	cfg, argErr := utils.NewConfig(ctx, utils.NoArgs)
-	if argErr != nil {
-		return argErr
+	// print update range
+	if *cfg.DbComponent == dbcompoment.Update || *cfg.DbComponent == dbcompoment.All {
+		firstUsBlock, lastUsBlock, err := utildb.FindBlockRangeInUpdate(aidaDb)
+		if err != nil {
+			log.Warningf("cannot find updateset range; %v", err)
+		}
+		log.Infof("Updateset block range: %v - %v", firstUsBlock, lastUsBlock)
 	}
 
-	log := logger.NewLogger(cfg.LogLevel, "AidaDb-Substate-Range")
-
-	substate.SetSubstateDb(cfg.AidaDb)
-	substate.OpenSubstateDBReadOnly()
-	defer substate.CloseSubstateDB()
-
-	firstBlock, lastBlock, ok := utils.FindBlockRangeInSubstate()
-	if !ok {
-		return errors.New("no substate found")
+	// print deleted range
+	if *cfg.DbComponent == dbcompoment.Delete || *cfg.DbComponent == dbcompoment.All {
+		first, last, err := utildb.FindBlockRangeInDeleted(aidaDb)
+		if err != nil {
+			log.Warningf("cannot find deleted range; %v", err)
+		} else {
+			log.Infof("Deleted block range: %v - %v", first, last)
+		}
 	}
 
-	log.Infof("Substate block range: %v - %v", firstBlock, lastBlock)
-	return nil
-}
-
-// printDeletedRange prints state deleted range stored in given AidaDb
-func printDeletedRange(ctx *cli.Context) error {
-	cfg, argErr := utils.NewConfig(ctx, utils.NoArgs)
-	if argErr != nil {
-		return argErr
+	// print state hash range
+	if *cfg.DbComponent == dbcompoment.StateHash || *cfg.DbComponent == dbcompoment.All {
+		firstStateHashBlock, lastStateHashBlock, err := utildb.FindBlockRangeInStateHash(aidaDb, log)
+		if err != nil {
+			log.Warningf("cannot find state hash range; %v", err)
+		} else {
+			log.Infof("State Hash range: %v - %v", firstStateHashBlock, lastStateHashBlock)
+		}
 	}
-
-	log := logger.NewLogger(cfg.LogLevel, "AidaDb-Deleted-Range")
-	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "aida-db", true)
-	if err != nil {
-		return fmt.Errorf("error opening aida-db %s: %v", cfg.AidaDb, err)
-	}
-
-	first, last, err := utildb.FindBlockRangeInDeleted(aidaDb)
-	if err != nil {
-		return fmt.Errorf("cannot find deleted range; %v", err)
-	}
-	log.Infof("Deleted block range: %v - %v", first, last)
-
-	return nil
-}
-
-// printUpdateRange prints state updateset range stored in given AidaDb
-func printUpdateRange(ctx *cli.Context) error {
-	cfg, argErr := utils.NewConfig(ctx, utils.NoArgs)
-	if argErr != nil {
-		return argErr
-	}
-
-	log := logger.NewLogger(cfg.LogLevel, "AidaDb-Update-Range")
-
-	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", true)
-	if err != nil {
-		return fmt.Errorf("cannot open aida-db; %v", err)
-	}
-	defer aidaDb.Close()
-
-	firstUsBlock, lastUsBlock, err := utildb.FindBlockRangeInUpdate(aidaDb)
-	if err != nil {
-		return fmt.Errorf("cannot find updateset range; %v", err)
-	}
-	log.Infof("Updateset block range: %v - %v", firstUsBlock, lastUsBlock)
 	return nil
 }
 
@@ -566,6 +309,34 @@ func printDeletedAccountInfo(ctx *cli.Context) error {
 
 	return nil
 
+}
+
+// signature creates signatures of substates, updatesets, deletion and state-hashes.
+func signature(ctx *cli.Context) error {
+	// process arguments and flags
+	if ctx.Args().Len() != 1 {
+		return fmt.Errorf("signature command requires exactly 1 arguments")
+	}
+	cfg, err := utils.NewConfig(ctx, utils.LastBlockArg)
+	if err != nil {
+		return err
+	}
+
+	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", true)
+	if err != nil {
+		return fmt.Errorf("aidaDb %v; %v", cfg.AidaDb, err)
+	}
+
+	log := logger.NewLogger(cfg.LogLevel, "signature")
+	log.Info("Inspecting database...")
+	err = utildb.DbSignature(cfg, aidaDb, log)
+	if err != nil {
+		return err
+	}
+	log.Info("Finished")
+
+	utildb.MustCloseDB(aidaDb)
+	return nil
 }
 
 func printStateHash(ctx *cli.Context) error {
