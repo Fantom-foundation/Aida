@@ -55,7 +55,7 @@ var cmdRange = cli.Command{
 var cmdDelAcc = cli.Command{
 	Action:    printDeletedAccountInfo,
 	Name:      "del-acc",
-	Usage:     "Prints info about given deleted account in AidaDb.",
+	Usage:     "Prints deletion info about an account in AidaDb.",
 	ArgsUsage: "<firstBlockNum>, <lastBlockNum>",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
@@ -227,13 +227,12 @@ func printDeletedAccountInfo(ctx *cli.Context) error {
 
 	for _, acc := range accounts {
 		if strings.Compare(acc.String(), wantedAcc) == 0 {
-			log.Noticef("Found record in range %v - %v", cfg.First, cfg.Last)
+			log.Noticef("Account %v, got deleted in %v - %v", wantedAcc, cfg.First, cfg.Last)
 			return nil
 		}
-
 	}
 
-	log.Warningf("Did not find record in range %v - %v", cfg.First, cfg.Last)
+	log.Warningf("Account %v, didn't get deleted in %v - %v", cfg.First, cfg.Last)
 
 	return nil
 

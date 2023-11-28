@@ -1,6 +1,7 @@
 package utildb
 
 import (
+	"encoding/binary"
 	"errors"
 	"fmt"
 
@@ -80,14 +81,25 @@ func GetSubstateCount(cfg *utils.Config, aidaDb ethdb.Database) uint64 {
 
 // GetDeletedCount in given AidaDb
 func GetDeletedCount(cfg *utils.Config, aidaDb ethdb.Database) (int, error) {
-	db := substate.NewDestroyedAccountDB(aidaDb)
+	startingBlockBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(startingBlockBytes, cfg.First)
 
-	accounts, err := db.GetAccountsDestroyedInRange(cfg.First, cfg.Last)
-	if err != nil {
-		return 0, fmt.Errorf("cannot Get all destroyed accounts; %v", err)
+	iter := aidaDb.NewIterator([]byte(substate.DestroyedAccountPrefix), startingBlockBytes)
+	defer iter.Release()
+
+	count := 0
+	for iter.Next() {
+		block, _, err := substate.DecodeDestroyedAccountKey(iter.Key())
+		if err != nil {
+			return 0, fmt.Errorf("cannot Get all destroyed accounts; %v", err)
+		}
+		if block > cfg.Last {
+			break
+		}
+		count++
 	}
 
-	return len(accounts), nil
+	return count, nil
 }
 
 // GetUpdateCount in given AidaDb

@@ -3,6 +3,7 @@ package utildb
 import (
 	"bytes"
 	"crypto/md5"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"sort"
@@ -110,36 +111,54 @@ func GetSubstateHash(cfg *utils.Config, db ethdb.Database, log logger.Logger) ([
 	return parallelHashComputing(feeder)
 }
 
-func GetDeletionHash(cfg *utils.Config, db ethdb.Database, log logger.Logger) ([]byte, uint64, error) {
+func GetDeletionHash(cfg *utils.Config, aidaDb ethdb.Database, log logger.Logger) ([]byte, uint64, error) {
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
 
 	feeder := func(feederChan chan any, errChan chan error) {
 		defer close(feederChan)
 
-		ddb := substate.NewDestroyedAccountDB(db)
-		inRange, err := ddb.GetAccountsDestroyedInRange(cfg.First, cfg.Last)
-		if err != nil {
-			errChan <- err
-			return
-		}
+		startingBlockBytes := make([]byte, 8)
+		binary.BigEndian.PutUint64(startingBlockBytes, cfg.First)
 
-		sort.Slice(inRange, func(i, j int) bool {
-			return bytes.Compare(inRange[i].Bytes(), inRange[j].Bytes()) < 0
-		})
+		iter := aidaDb.NewIterator([]byte(substate.DestroyedAccountPrefix), startingBlockBytes)
+		defer iter.Release()
 
-		for i, address := range inRange {
-			select {
-			case <-ticker.C:
-				log.Infof("DeletionDb hash progress: %v/%v", i, len(inRange))
-			default:
-			}
-
-			select {
-			case err = <-errChan:
+		for iter.Next() {
+			block, _, err := substate.DecodeDestroyedAccountKey(iter.Key())
+			if err != nil {
 				errChan <- err
 				return
-			case feederChan <- address.Hex():
+			}
+			if block > cfg.Last {
+				break
+			}
+
+			list, err := substate.DecodeAddressList(iter.Value())
+			if err != nil {
+				errChan <- err
+				return
+			}
+
+			combined := append(list.DestroyedAccounts, list.ResurrectedAccounts...)
+
+			sort.Slice(combined, func(i, j int) bool {
+				return bytes.Compare(combined[i].Bytes(), combined[j].Bytes()) < 0
+			})
+
+			for _, address := range combined {
+				select {
+				case <-ticker.C:
+					log.Infof("DeletionDb hash progress: %v/%v", block, cfg.Last)
+				default:
+				}
+
+				select {
+				case err = <-errChan:
+					errChan <- err
+					return
+				case feederChan <- address.Hex():
+				}
 			}
 		}
 	}

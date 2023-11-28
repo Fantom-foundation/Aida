@@ -113,10 +113,7 @@ func fillFakeAidaDb(t *testing.T, aidaDb ethdb.Database) (int, int, int, int) {
 	numDestroyedAccounts := rand.Intn(5) + 6
 
 	for i := 0; i < numDestroyedAccounts; i++ {
-		destroyedAccounts := []common.Address{
-			common.BytesToAddress(utils.MakeRandomByteSlice(t, 40)),
-		}
-		err := ddb.SetDestroyedAccounts(uint64(i), 0, destroyedAccounts, []common.Address{})
+		err := ddb.SetDestroyedAccounts(uint64(i), 0, []common.Address{common.BytesToAddress(utils.MakeRandomByteSlice(t, 40))}, []common.Address{})
 		if err != nil {
 			t.Fatalf("error setting destroyed accounts: %v", err)
 		}
