@@ -30,6 +30,9 @@ var UtilDbApp = cli.App{
 		&db.GenDeletedAccountsCommand,
 		&db.SubstateDumpCommand,
 		&db.GenerateDbHashCommand,
+		&db.PrintDbHashCommand,
+		&db.PrintPrefixHashCommand,
+		&db.PrintTableHashCommand,
 		&db.ScrapeCommand,
 	},
 }

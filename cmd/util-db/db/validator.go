@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/Fantom-foundation/Aida/cmd/util-db/flags"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utildb"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -128,4 +129,71 @@ func validateCmd(ctx *cli.Context) error {
 	}
 
 	return nil
+}
+
+var PrintDbHashCommand = cli.Command{
+	Action: printDbHash,
+	Name:   "print-db-hash",
+	Usage:  "Prints db-hash (md5) inside AidaDb. If this value is not present in metadata it iterates through all of data.",
+	Flags: []cli.Flag{
+		&utils.AidaDbFlag,
+		&flags.ForceFlag,
+	},
+}
+
+func printDbHash(ctx *cli.Context) error {
+	var force = ctx.Bool(flags.ForceFlag.Name)
+
+	aidaDb, err := rawdb.NewLevelDBDatabase(ctx.String(utils.AidaDbFlag.Name), 1024, 100, "profiling", true)
+	if err != nil {
+		return fmt.Errorf("cannot open db; %v", err)
+	}
+
+	defer utildb.MustCloseDB(aidaDb)
+
+	var dbHash []byte
+
+	log := logger.NewLogger("INFO", "AidaDb-Db-Hash")
+
+	md := utils.NewAidaDbMetadata(aidaDb, "INFO")
+
+	// first try to extract from db
+	dbHash = md.GetDbHash()
+	if len(dbHash) != 0 && !force {
+		log.Infof("Db-Hash (metadata): %v", hex.EncodeToString(dbHash))
+		return nil
+	}
+
+	// if not found in db, we need to iterate and create the hash
+	if dbHash, err = utildb.GenerateDbHash(aidaDb, "INFO"); err != nil {
+		return err
+	}
+
+	fmt.Printf("Db-Hash (calculated): %v", hex.EncodeToString(dbHash))
+	return nil
+}
+
+// PrintTableHashCommand calculates md5 of actual data stored
+var PrintTableHashCommand = cli.Command{
+	Action: printTableHash,
+	Name:   "print-table-hash",
+	Usage:  "Calculates md5 of decoded objects stored in AidaDb. Using []byte value from database, it decodes it and calculates md5 of the decoded objects.",
+	Flags: []cli.Flag{
+		&utils.AidaDbFlag,
+		&utils.DbComponentFlag,
+		&logger.LogLevelFlag,
+	},
+	Description: `
+Creates signatures of substates, updatesets, deletion and state-hashes using decoded objects from database rather than []byte value representation, because that is not deterministic.
+`,
+}
+
+var PrintPrefixHashCommand = cli.Command{
+	Action:    printPrefixHash,
+	Name:      "print-prefix-hash",
+	Usage:     "Prints state hash of db prefixes individually. Or just for single prefix specified in arg.",
+	ArgsUsage: "<prefix>",
+	Flags: []cli.Flag{
+		&utils.AidaDbFlag,
+	},
 }

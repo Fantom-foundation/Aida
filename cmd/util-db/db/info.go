@@ -2,7 +2,6 @@ package db
 
 import (
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -15,7 +14,6 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/urfave/cli/v2"
 )
 
@@ -27,10 +25,7 @@ var InfoCommand = cli.Command{
 		&cmdDelAcc,
 		&cmdCount,
 		&cmdRange,
-		&cmdPrintDbHash,
 		&cmdPrintStateHash,
-		&cmdPrintHashesSeparated,
-		&cmdSignature,
 	},
 }
 
@@ -78,16 +73,6 @@ var cmdMetadata = cli.Command{
 	},
 }
 
-var cmdPrintDbHash = cli.Command{
-	Action: doDbHash,
-	Name:   "db-hash",
-	Usage:  "Prints db-hash (md5) inside AidaDb. If this value is not present in metadata it iterates through all of data.",
-	Flags: []cli.Flag{
-		&utils.AidaDbFlag,
-		&flags.ForceFlag,
-	},
-}
-
 var cmdPrintStateHash = cli.Command{
 	Action:    printStateHash,
 	Name:      "state-hash",
@@ -96,63 +81,6 @@ var cmdPrintStateHash = cli.Command{
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 	},
-}
-
-// SignatureCmd calculates md5 of actual data stored
-var cmdSignature = cli.Command{
-	Action: signature,
-	Name:   "signature",
-	Usage:  "Calculates md5 of decoded objects stored in AidaDb. Using []byte value from database, it decodes it and calculates md5 of the decoded objects.",
-	Flags: []cli.Flag{
-		&utils.AidaDbFlag,
-		&utils.DbComponentFlag,
-		&logger.LogLevelFlag,
-	},
-	Description: `
-Creates signatures of substates, updatesets, deletion and state-hashes using decoded objects from database rather than []byte value representation, because that is not deterministic.
-`,
-}
-
-var cmdPrintHashesSeparated = cli.Command{
-	Action:    generateMd5OfPrefixes,
-	Name:      "hashes",
-	Usage:     "Prints state hash of db prefixes individually. Or just for single prefix specified in arg.",
-	ArgsUsage: "<prefix>",
-	Flags: []cli.Flag{
-		&utils.AidaDbFlag,
-	},
-}
-
-func doDbHash(ctx *cli.Context) error {
-	var force = ctx.Bool(flags.ForceFlag.Name)
-
-	aidaDb, err := rawdb.NewLevelDBDatabase(ctx.String(utils.AidaDbFlag.Name), 1024, 100, "profiling", true)
-	if err != nil {
-		return fmt.Errorf("cannot open db; %v", err)
-	}
-
-	defer utildb.MustCloseDB(aidaDb)
-
-	var dbHash []byte
-
-	log := logger.NewLogger("INFO", "AidaDb-Db-Hash")
-
-	md := utils.NewAidaDbMetadata(aidaDb, "INFO")
-
-	// first try to extract from db
-	dbHash = md.GetDbHash()
-	if len(dbHash) != 0 && !force {
-		log.Infof("Db-Hash: %v", hex.EncodeToString(dbHash))
-		return nil
-	}
-
-	// if not found in db, we need to iterate and create the hash
-	if dbHash, err = utildb.GenerateDbHash(aidaDb, "INFO"); err != nil {
-		return err
-	}
-
-	fmt.Printf("Db-Hash: %v", hex.EncodeToString(dbHash))
-	return nil
 }
 
 func printMetadataCmd(ctx *cli.Context) error {
@@ -311,12 +239,8 @@ func printDeletedAccountInfo(ctx *cli.Context) error {
 
 }
 
-// signature creates signatures of substates, updatesets, deletion and state-hashes.
-func signature(ctx *cli.Context) error {
-	// process arguments and flags
-	if ctx.Args().Len() != 1 {
-		return fmt.Errorf("signature command requires exactly 1 arguments")
-	}
+// printTableHash creates signatures of substates, updatesets, deletion and state-hashes.
+func printTableHash(ctx *cli.Context) error {
 	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if err != nil {
 		return err
@@ -327,7 +251,7 @@ func signature(ctx *cli.Context) error {
 		return fmt.Errorf("aidaDb %v; %v", cfg.AidaDb, err)
 	}
 
-	log := logger.NewLogger(cfg.LogLevel, "signature")
+	log := logger.NewLogger(cfg.LogLevel, "printTableHash")
 	log.Info("Inspecting database...")
 	err = utildb.DbSignature(cfg, aidaDb, log)
 	if err != nil {
@@ -371,9 +295,9 @@ func printStateHash(ctx *cli.Context) error {
 	return nil
 }
 
-// generateMd5OfPrefixes calculates md5 of all prefixes in given AidaDb separately
-func generateMd5OfPrefixes(ctx *cli.Context) error {
-	log := logger.NewLogger("INFO", "DbHashGenerateCMD")
+// printPrefixHash calculates md5 of prefix in given AidaDb
+func printPrefixHash(ctx *cli.Context) error {
+	log := logger.NewLogger("INFO", "GeneratePrefixHash")
 
 	cfg, err := utils.NewConfig(ctx, utils.NoArgs)
 
@@ -384,47 +308,12 @@ func generateMd5OfPrefixes(ctx *cli.Context) error {
 
 	defer utildb.MustCloseDB(aidaDb)
 
-	if ctx.Args().Len() > 0 {
-		prefix := ctx.Args().Slice()[0]
-		log.Noticef("Searching for data under prefix %v", prefix)
-		return generateMd5For(prefix, cfg, aidaDb, log)
-	} else {
-		err1 := generateMd5For(substate.Stage1SubstatePrefix, cfg, aidaDb, log)
-		err2 := generateMd5For(substate.SubstateAllocPrefix, cfg, aidaDb, log)
-		err3 := generateMd5For(substate.DestroyedAccountPrefix, cfg, aidaDb, log)
-		err4 := generateMd5For(utils.StateHashPrefix, cfg, aidaDb, log)
-		return errors.Join(err1, err2, err3, err4)
+	if ctx.Args().Len() == 0 || ctx.Args().Len() >= 2 {
+		return fmt.Errorf("generate-prefix-hash command requires exactly 1 argument")
 	}
-}
 
-func generateMd5For(prefix string, cfg *utils.Config, aidaDb ethdb.Database, log logger.Logger) error {
-	var err error
-	switch prefix {
-	case substate.Stage1SubstatePrefix:
-		log.Noticef("Starting DbHash generation for %v; this may take several hours...", cfg.AidaDb)
-		log.Noticef("Substates...")
-		_, err = utildb.GeneratePrefixHash(aidaDb, substate.Stage1SubstatePrefix, "INFO")
-		if err != nil {
-			return err
-		}
-	case substate.SubstateAllocPrefix:
-		log.Noticef("Updateset...")
-		_, err = utildb.GeneratePrefixHash(aidaDb, substate.SubstateAllocPrefix, "INFO")
-		if err != nil {
-			return err
-		}
-	case substate.DestroyedAccountPrefix:
-		log.Noticef("Deleted...")
-		_, err = utildb.GeneratePrefixHash(aidaDb, substate.DestroyedAccountPrefix, "INFO")
-		if err != nil {
-			return err
-		}
-	case utils.StateHashPrefix:
-		log.Noticef("StateHash...")
-		_, err = utildb.GeneratePrefixHash(aidaDb, utils.StateHashPrefix, "INFO")
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	prefix := ctx.Args().Slice()[0]
+	log.Noticef("Generating hash for prefix %v", prefix)
+	_, err = utildb.GeneratePrefixHash(aidaDb, prefix, "INFO")
+	return err
 }
