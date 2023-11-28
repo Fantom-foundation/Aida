@@ -104,6 +104,15 @@ var (
 		Name:  "profile",
 		Usage: "enable profiling",
 	}
+	ProfileDepthFlag = cli.IntFlag{
+		Name:  "profile-depth",
+		Usage: "0=interval, 1=block, 2=transaction",
+		Value: 0,
+	}
+	ProfileSqlite3Flag = cli.StringFlag{
+		Name:  "profile-sqlite3",
+		Usage: "output profiling data to sqlite3 db",
+	}
 	ProfileFileFlag = cli.StringFlag{
 		Name:  "profile-file",
 		Usage: "output file containing profiling data",
@@ -112,10 +121,6 @@ var (
 		Name:  "profile-interval",
 		Usage: "Frequency of logging block statistics",
 		Value: 1_000_000_000,
-	}
-	QuietFlag = cli.BoolFlag{
-		Name:  "quiet",
-		Usage: "disable progress report",
 	}
 	RandomizePrimingFlag = cli.BoolFlag{
 		Name:  "prime-random",
@@ -204,15 +209,11 @@ var (
 	}
 	ValidateFlag = cli.BoolFlag{
 		Name:  "validate",
-		Usage: "enables validation",
+		Usage: "enables all validations",
 	}
 	ValidateTxStateFlag = cli.BoolFlag{
 		Name:  "validate-tx",
-		Usage: "enables transaction state validation",
-	}
-	ValidateWorldStateFlag = cli.BoolFlag{
-		Name:  "validate-ws",
-		Usage: "enables end-state validation",
+		Usage: "enables validation after transaction processing",
 	}
 	VmImplementation = cli.StringFlag{
 		Name:  "vm-impl",

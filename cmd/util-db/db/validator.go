@@ -30,6 +30,21 @@ var ValidateCommand = cli.Command{
 	},
 }
 
+// SignatureCommand calculates md5 of actual data stored
+var SignatureCommand = cli.Command{
+	Action: signatureCmd,
+	Name:   "signature",
+	Usage:  "Calculates md5 of decoded objects stored in AidaDb. Using []byte value from database, it decodes it and calculates md5 of the decoded objects.",
+	Flags: []cli.Flag{
+		&utils.AidaDbFlag,
+		&utils.TargetDbFlag,
+		&logger.LogLevelFlag,
+	},
+	Description: `
+Creates signatures of substates, updatesets, deletion and state-hashes using decoded objects from database rather than []byte value representation, because that is not deterministic.
+`,
+}
+
 // validateCmd calculates the dbHash for given AidaDb and saves it.
 func generateDbHashCmd(ctx *cli.Context) error {
 	log := logger.NewLogger("INFO", "DbHashGenerateCMD")

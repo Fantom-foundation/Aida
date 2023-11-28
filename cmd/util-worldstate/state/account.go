@@ -86,9 +86,7 @@ var cmdUnknownStorage = cli.Command{
 	Name:        "storage",
 	Usage:       "Lists unknown account storages from the world state database.",
 	Description: "Command scans for storage keys in the world state database and shows those not available in the address map.",
-	Flags: []cli.Flag{
-		&utils.QuietFlag,
-	},
+	Flags:       []cli.Flag{},
 }
 
 // cmdUnknownAddress scans the account map vs. account hashes and provides a list of unknown storage keys
@@ -98,9 +96,7 @@ var cmdUnknownAddress = cli.Command{
 	Name:        "address",
 	Usage:       "Lists unknown account addresses from the world state database.",
 	Description: "Command scans for addresses in the world state database and shows those not available in the address map.",
-	Flags: []cli.Flag{
-		&utils.QuietFlag,
-	},
+	Flags:       []cli.Flag{},
 }
 
 // cmdAccountImport imports accounts from a simple CSV account list and fills the HASH to Account Address mapping.
@@ -112,9 +108,7 @@ var cmdAccountImport = cli.Command{
 	Usage:       "Imports account addresses or storages for hash mapping from a CSV file.",
 	Description: "Command imports account hash to account address mapping from a CSV file.",
 	ArgsUsage:   "<csv file path|- for stdin>",
-	Flags: []cli.Flag{
-		&utils.QuietFlag,
-	},
+	Flags:       []cli.Flag{},
 }
 
 // balanceDecimals represents a decimal correction we do for the displayed balance (6 digits).
@@ -350,17 +344,13 @@ func listUnknownAddress(ctx *cli.Context) error {
 			missing++
 
 			// display unknown account hash
-			if !cfg.Quiet {
-				_, err = fmt.Fprintln(ctx.App.Writer, ah.String())
-			}
+			_, err = fmt.Fprintln(ctx.App.Writer, ah.String())
 		}
 
 		// display progress in non-verbose mode
 		select {
 		case <-tick.C:
-			if cfg.Quiet {
-				_, err = fmt.Fprintf(ctx.App.Writer, "\rChecked: %10d  Missing: %10d", all, missing)
-			}
+			_, err = fmt.Fprintf(ctx.App.Writer, "\rChecked: %10d  Missing: %10d", all, missing)
 		default:
 		}
 
@@ -422,18 +412,14 @@ func listUnknownStorages(ctx *cli.Context) error {
 				missing++
 
 				// display unknown storage hash
-				if !cfg.Quiet {
-					_, err = fmt.Fprintln(ctx.App.Writer, h.String())
-				}
+				_, err = fmt.Fprintln(ctx.App.Writer, h.String())
 			}
 		}
 
 		// display progress in non-verbose mode
 		select {
 		case <-tick.C:
-			if cfg.Quiet {
-				_, err = fmt.Fprintf(ctx.App.Writer, "\rChecked: %10d  Missing: %10d", storagesCount, missing)
-			}
+			_, err = fmt.Fprintf(ctx.App.Writer, "\rChecked: %10d  Missing: %10d", storagesCount, missing)
 		default:
 		}
 

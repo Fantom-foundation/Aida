@@ -23,7 +23,6 @@ var StochasticRecordCommand = cli.Command{
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		&utils.CpuProfileFlag,
-		&utils.QuietFlag,
 		&utils.SyncPeriodLengthFlag,
 		&utils.OutputFlag,
 		&substate.WorkersFlag,
@@ -70,11 +69,9 @@ func stochasticRecordAction(ctx *cli.Context) error {
 		sec     float64
 		lastSec float64
 	)
-	if !cfg.Quiet {
-		start = time.Now()
-		sec = time.Since(start).Seconds()
-		lastSec = time.Since(start).Seconds()
-	}
+	start = time.Now()
+	sec = time.Since(start).Seconds()
+	lastSec = time.Since(start).Seconds()
 
 	// create a new event registry
 	eventRegistry := stochastic.NewEventRegistry()
@@ -111,13 +108,11 @@ func stochasticRecordAction(ctx *cli.Context) error {
 			return err
 		}
 
-		if !cfg.Quiet {
-			// report progress
-			sec = time.Since(start).Seconds()
-			if sec-lastSec >= 15 {
-				fmt.Printf("stochastic record: Elapsed time: %.0f s, at block %v\n", sec, oldBlock)
-				lastSec = sec
-			}
+		// report progress
+		sec = time.Since(start).Seconds()
+		if sec-lastSec >= 15 {
+			fmt.Printf("stochastic record: Elapsed time: %.0f s, at block %v\n", sec, oldBlock)
+			lastSec = sec
 		}
 	}
 	// end last block
@@ -126,10 +121,8 @@ func stochasticRecordAction(ctx *cli.Context) error {
 	}
 	eventRegistry.RegisterOp(stochastic.EndSyncPeriodID)
 
-	if !cfg.Quiet {
-		sec = time.Since(start).Seconds()
-		fmt.Printf("stochastic record: Total elapsed time: %.3f s, processed %v blocks\n", sec, cfg.Last-cfg.First+1)
-	}
+	sec = time.Since(start).Seconds()
+	fmt.Printf("stochastic record: Total elapsed time: %.3f s, processed %v blocks\n", sec, cfg.Last-cfg.First+1)
 
 	// writing event registry
 	fmt.Printf("stochastic record: write events file ...\n")

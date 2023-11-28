@@ -58,6 +58,7 @@ func run(
 			extensionList,
 			statedb.MakeStateDbManager[*substate.Substate](cfg),
 			statedb.MakeArchiveBlockChecker[*substate.Substate](cfg),
+			tracker.MakeDbLogger[*substate.Substate](cfg),
 		)
 	}
 

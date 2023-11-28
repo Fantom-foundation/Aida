@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/Fantom-foundation/Carmen/go v0.0.0-00010101000000-000000000000
-	github.com/Fantom-foundation/Substate v0.0.0-20230717050741-1969ed5d05e2
+	github.com/Fantom-foundation/Substate v0.0.0-20231124222404-3e2617931ee7
 	github.com/Fantom-foundation/Tosca v0.0.0-20230527064715-aa1fc97baebe
 	github.com/Fantom-foundation/go-opera v1.1.1-rc.2
 	github.com/Fantom-foundation/lachesis-base v0.0.0-20221208123620-82a6d15f995c
@@ -16,6 +16,7 @@ require (
 	github.com/goccy/go-graphviz v0.1.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/google/martian v2.1.0+incompatible
+	github.com/jedib0t/go-pretty/v6 v6.4.9
 	github.com/jmoiron/sqlx v1.3.5
 	github.com/klauspost/compress v1.15.11
 	github.com/mandolyte/mdtopdf v1.5.3
