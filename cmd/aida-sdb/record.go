@@ -89,7 +89,7 @@ func record(
 		profiler.MakeCpuProfiler[*substate.Substate](cfg),
 		tracker.MakeProgressLogger[*substate.Substate](cfg, 0),
 		tracker.MakeProgressTracker(cfg, 0),
-		statedb.MakeTemporaryStatePrepper(),
+		statedb.MakeTemporaryStatePrepper(cfg),
 		statedb.MakeTemporaryProxyRecorderPrepper(cfg),
 	}
 
