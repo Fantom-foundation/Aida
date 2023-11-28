@@ -134,7 +134,7 @@ func validateCmd(ctx *cli.Context) error {
 var PrintDbHashCommand = cli.Command{
 	Action: printDbHash,
 	Name:   "print-db-hash",
-	Usage:  "Prints db-hash (md5) inside AidaDb. If this value is not present in metadata it iterates through all of data.",
+	Usage:  "Prints db-hash (md5) of AidaDb. If this value is not present in metadata it iterates through all of data.",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 		&flags.ForceFlag,
@@ -173,11 +173,12 @@ func printDbHash(ctx *cli.Context) error {
 	return nil
 }
 
-// PrintTableHashCommand calculates md5 of actual data stored
+// PrintTableHashCommand calculates md5 of actual data stored.
+// Using []byte value from database, it decodes it and calculates md5 of the decoded objects.
 var PrintTableHashCommand = cli.Command{
 	Action: printTableHash,
 	Name:   "print-table-hash",
-	Usage:  "Calculates md5 of decoded objects stored in AidaDb. Using []byte value from database, it decodes it and calculates md5 of the decoded objects.",
+	Usage:  "Calculates hash of AidaDb table data.",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 		&utils.DbComponentFlag,
@@ -191,7 +192,7 @@ Creates signatures of substates, updatesets, deletion and state-hashes using dec
 var PrintPrefixHashCommand = cli.Command{
 	Action:    printPrefixHash,
 	Name:      "print-prefix-hash",
-	Usage:     "Prints state hash of db prefixes individually. Or just for single prefix specified in arg.",
+	Usage:     "Prints hash of data inside AidaDb for given prefix.",
 	ArgsUsage: "<prefix>",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
