@@ -317,7 +317,7 @@ func signature(ctx *cli.Context) error {
 	if ctx.Args().Len() != 1 {
 		return fmt.Errorf("signature command requires exactly 1 arguments")
 	}
-	cfg, err := utils.NewConfig(ctx, utils.LastBlockArg)
+	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if err != nil {
 		return err
 	}

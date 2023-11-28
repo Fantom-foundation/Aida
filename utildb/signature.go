@@ -84,10 +84,14 @@ func GetSubstateHash(cfg *utils.Config, db ethdb.Database, log logger.Logger) ([
 		defer close(feederChan)
 
 		substate.SetSubstateDbBackend(db)
-		it := substate.NewSubstateIterator(0, 10)
+		it := substate.NewSubstateIterator(cfg.First, 10)
 		defer it.Release()
 
 		for it.Next() {
+			if it.Value().Block > cfg.Last {
+				break
+			}
+
 			select {
 			case <-ticker.C:
 				log.Infof("SubstateDb hash progress: %v/%v", it.Value().Block, cfg.Last)
@@ -114,7 +118,7 @@ func GetDeletionHash(cfg *utils.Config, db ethdb.Database, log logger.Logger) ([
 		defer close(feederChan)
 
 		ddb := substate.NewDestroyedAccountDB(db)
-		inRange, err := ddb.GetAccountsDestroyedInRange(0, cfg.Last)
+		inRange, err := ddb.GetAccountsDestroyedInRange(cfg.First, cfg.Last)
 		if err != nil {
 			errChan <- err
 			return
@@ -150,7 +154,7 @@ func GetUpdateDbHash(cfg *utils.Config, db ethdb.Database, log logger.Logger) ([
 		defer close(feederChan)
 
 		udb := substate.NewUpdateDB(db)
-		iter := substate.NewUpdateSetIterator(udb, 0, cfg.Last)
+		iter := substate.NewUpdateSetIterator(udb, cfg.First, cfg.Last)
 		defer iter.Release()
 
 		for iter.Next() {
@@ -181,7 +185,7 @@ func GetStateHashesHash(cfg *utils.Config, db ethdb.Database, log logger.Logger)
 
 		provider := utils.MakeStateHashProvider(db)
 
-		var i uint64 = 0
+		var i = cfg.First
 		for ; i <= cfg.Last; i++ {
 			select {
 			case <-ticker.C:
