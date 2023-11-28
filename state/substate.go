@@ -141,3 +141,9 @@ func MakeOffTheChainStateDB(alloc substate.SubstateAlloc) (StateDB, error) {
 	}
 	return &gethStateDB{db: statedb}, nil
 }
+
+func ReleaseCache() {
+	code_hashes_lock.Lock()
+	code_hashes = map[code_key]common.Hash{}
+	code_hashes_lock.Unlock()
+}
