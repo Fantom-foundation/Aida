@@ -18,6 +18,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
+// MakeLiveDbProcessor creates a executor.Processor which processes transaction into LIVE StateDb.
 func MakeLiveDbProcessor(cfg *utils.Config) *LiveDbProcessor {
 	return &LiveDbProcessor{&SubstateProcessor{cfg: cfg}}
 }
@@ -26,11 +27,9 @@ type LiveDbProcessor struct {
 	*SubstateProcessor
 }
 
+// Process transaction inside state into given LIVE StateDb
 func (p *LiveDbProcessor) Process(state State[*substate.Substate], ctx *Context) error {
 	var err error
-
-	//_, err = utils.ProcessTx(ctx.State, p.cfg, uint64(state.Block), state.Transaction, state.Data)
-	//return err
 
 	err = p.ProcessTransaction(ctx.State, state.Block, state.Transaction, state.Data)
 	if err == nil {
@@ -45,6 +44,7 @@ func (p *LiveDbProcessor) Process(state State[*substate.Substate], ctx *Context)
 	return err
 }
 
+// MakeArchiveDbProcessor creates a executor.Processor which processes transaction into ARCHIVE StateDb.
 func MakeArchiveDbProcessor(cfg *utils.Config) *ArchiveDbProcessor {
 	return &ArchiveDbProcessor{&SubstateProcessor{cfg: cfg}}
 }
@@ -53,11 +53,9 @@ type ArchiveDbProcessor struct {
 	*SubstateProcessor
 }
 
+// Process transaction inside state into given ARCHIVE StateDb
 func (p *ArchiveDbProcessor) Process(state State[*substate.Substate], ctx *Context) error {
 	var err error
-
-	//_, err = utils.ProcessTx(ctx.State, p.cfg, uint64(state.Block), state.Transaction, state.Data)
-	//return err
 
 	err = p.ProcessTransaction(ctx.Archive, state.Block, state.Transaction, state.Data)
 	if err == nil {
