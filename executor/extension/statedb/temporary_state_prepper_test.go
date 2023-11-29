@@ -6,9 +6,9 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
-func TestTemporaryStatePrepper_DefaultDbVariantIsOffTheChainStateDb(t *testing.T) {
+func TestTemporaryStatePrepper_DefaultDbImplementationIsOffTheChainStateDb(t *testing.T) {
 	cfg := &utils.Config{}
-	cfg.DbVariant = ""
+	cfg.DbImpl = ""
 
 	ext := MakeTemporaryStatePrepper(cfg)
 
@@ -17,9 +17,9 @@ func TestTemporaryStatePrepper_DefaultDbVariantIsOffTheChainStateDb(t *testing.T
 	}
 }
 
-func TestTemporaryStatePrepper_OffTheChainDbVariant(t *testing.T) {
+func TestTemporaryStatePrepper_OffTheChainDbImplementation(t *testing.T) {
 	cfg := &utils.Config{}
-	cfg.DbVariant = "off-the-chain"
+	cfg.DbImpl = "off-the-chain"
 
 	ext := MakeTemporaryStatePrepper(cfg)
 
@@ -29,9 +29,9 @@ func TestTemporaryStatePrepper_OffTheChainDbVariant(t *testing.T) {
 
 }
 
-func TestTemporaryStatePrepper_InMemoryDbVariant(t *testing.T) {
+func TestTemporaryStatePrepper_InMemoryDbImplementation(t *testing.T) {
 	cfg := &utils.Config{}
-	cfg.DbVariant = "in-memory"
+	cfg.DbImpl = "in-memory"
 
 	ext := MakeTemporaryStatePrepper(cfg)
 

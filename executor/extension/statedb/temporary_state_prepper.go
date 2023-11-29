@@ -12,12 +12,13 @@ import (
 // after each transaction. Default is offTheChainStateDb.
 // NOTE: inMemoryStateDb currently does not work for block 67m onwards.
 func MakeTemporaryStatePrepper(cfg *utils.Config) executor.Extension[*substate.Substate] {
-	switch cfg.DbVariant {
+	switch cfg.DbImpl {
 	case "in-memory":
 		return temporaryInMemoryStatePrepper{}
 	case "off-the-chain":
 		fallthrough
 	default:
+		// offTheChainStateDb is default value
 		substate.RecordReplay = true
 		return temporaryOffTheChainStatePrepper{}
 	}
