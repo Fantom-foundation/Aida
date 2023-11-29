@@ -13,7 +13,7 @@ import (
 // NOTE: inMemoryStateDb currently does not work for block 67m onwards.
 func MakeTemporaryStatePrepper(cfg *utils.Config) executor.Extension[*substate.Substate] {
 	switch cfg.DbImpl {
-	case "in-memory":
+	case "in-memory" || "memory":
 		return temporaryInMemoryStatePrepper{}
 	case "off-the-chain":
 		fallthrough
