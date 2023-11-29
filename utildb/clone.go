@@ -106,8 +106,7 @@ func (c *cloner) clone(isFirstGenerationFromGenesis bool) error {
 	// wait for writer result
 	err, ok := <-c.errCh
 	if ok {
-		c.log.Error(err)
-		return nil
+		return err
 	}
 
 	if c.cfg.Validate {
