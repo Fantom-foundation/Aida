@@ -9,8 +9,8 @@ import (
 	"github.com/Fantom-foundation/Aida/cmd/util-db/flags"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utildb"
+	"github.com/Fantom-foundation/Aida/utildb/dbcomponent"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/Fantom-foundation/Aida/utils/dbcompoment"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/rawdb"
@@ -99,6 +99,11 @@ func printCount(ctx *cli.Context) error {
 		return argErr
 	}
 
+	dbComponent, err := dbcomponent.ParseDbComponent(cfg.DbComponent)
+	if err != nil {
+		return err
+	}
+
 	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", true)
 	if err != nil {
 		return fmt.Errorf("cannot open aida-db; %v", err)
@@ -109,13 +114,13 @@ func printCount(ctx *cli.Context) error {
 	log.Noticef("Inspecting database between blocks %v-%v", cfg.First, cfg.Last)
 
 	// print substate count
-	if *cfg.DbComponent == dbcompoment.Substate || *cfg.DbComponent == dbcompoment.All {
+	if dbComponent == dbcomponent.Substate || dbComponent == dbcomponent.All {
 		count := utildb.GetSubstateCount(cfg, aidaDb)
 		log.Noticef("Found %v substates", count)
 	}
 
 	// print update count
-	if *cfg.DbComponent == dbcompoment.Update || *cfg.DbComponent == dbcompoment.All {
+	if dbComponent == dbcomponent.Update || dbComponent == dbcomponent.All {
 		count, err := utildb.GetUpdateCount(cfg, aidaDb)
 		if err != nil {
 			log.Warningf("cannot print update count; %v", err)
@@ -125,7 +130,7 @@ func printCount(ctx *cli.Context) error {
 	}
 
 	// print deleted count
-	if *cfg.DbComponent == dbcompoment.Delete || *cfg.DbComponent == dbcompoment.All {
+	if dbComponent == dbcomponent.Delete || dbComponent == dbcomponent.All {
 		count, err := utildb.GetDeletedCount(cfg, aidaDb)
 		if err != nil {
 			log.Warningf("cannot print deleted count; %v", err)
@@ -135,7 +140,7 @@ func printCount(ctx *cli.Context) error {
 	}
 
 	// print state hash count
-	if *cfg.DbComponent == dbcompoment.StateHash || *cfg.DbComponent == dbcompoment.All {
+	if dbComponent == dbcomponent.StateHash || dbComponent == dbcomponent.All {
 		count, err := utildb.GetStateHashCount(cfg, aidaDb)
 		if err != nil {
 			log.Warningf("cannot print state hash count; %v", err)
@@ -154,6 +159,11 @@ func printRange(ctx *cli.Context) error {
 		return argErr
 	}
 
+	dbComponent, err := dbcomponent.ParseDbComponent(cfg.DbComponent)
+	if err != nil {
+		return err
+	}
+
 	log := logger.NewLogger(cfg.LogLevel, "AidaDb-Range")
 
 	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "aidaDb", true)
@@ -163,7 +173,7 @@ func printRange(ctx *cli.Context) error {
 	defer utildb.MustCloseDB(aidaDb)
 
 	// print substate range
-	if *cfg.DbComponent == dbcompoment.Substate || *cfg.DbComponent == dbcompoment.All {
+	if dbComponent == dbcomponent.Substate || dbComponent == dbcomponent.All {
 		substate.SetSubstateDbBackend(aidaDb)
 		firstBlock, lastBlock, ok := utils.FindBlockRangeInSubstate()
 		if !ok {
@@ -174,7 +184,7 @@ func printRange(ctx *cli.Context) error {
 	}
 
 	// print update range
-	if *cfg.DbComponent == dbcompoment.Update || *cfg.DbComponent == dbcompoment.All {
+	if dbComponent == dbcomponent.Update || dbComponent == dbcomponent.All {
 		firstUsBlock, lastUsBlock, err := utildb.FindBlockRangeInUpdate(aidaDb)
 		if err != nil {
 			log.Warningf("cannot find updateset range; %v", err)
@@ -183,7 +193,7 @@ func printRange(ctx *cli.Context) error {
 	}
 
 	// print deleted range
-	if *cfg.DbComponent == dbcompoment.Delete || *cfg.DbComponent == dbcompoment.All {
+	if dbComponent == dbcomponent.Delete || dbComponent == dbcomponent.All {
 		first, last, err := utildb.FindBlockRangeInDeleted(aidaDb)
 		if err != nil {
 			log.Warningf("cannot find deleted range; %v", err)
@@ -193,7 +203,7 @@ func printRange(ctx *cli.Context) error {
 	}
 
 	// print state hash range
-	if *cfg.DbComponent == dbcompoment.StateHash || *cfg.DbComponent == dbcompoment.All {
+	if dbComponent == dbcomponent.StateHash || dbComponent == dbcomponent.All {
 		firstStateHashBlock, lastStateHashBlock, err := utildb.FindBlockRangeInStateHash(aidaDb, log)
 		if err != nil {
 			log.Warningf("cannot find state hash range; %v", err)

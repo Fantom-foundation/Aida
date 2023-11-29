@@ -1,7 +1,6 @@
 package utils
 
 import (
-	"github.com/Fantom-foundation/Aida/utils/dbcompoment"
 	"github.com/urfave/cli/v2"
 )
 
@@ -389,10 +388,9 @@ var (
 		Name:  "err-logging",
 		Usage: "defines path to error-log-file where any PROCESSING error is recorded",
 	}
-	DbComponentFlag = cli.GenericFlag{
+	DbComponentFlag = cli.StringFlag{
 		Name:     "db-component",
-		Value:    new(dbcompoment.DbComponent),
-		Usage:    "db component to be used",
+		Usage:    "db component to be used (\"all\", \"substate\", \"delete\", \"update\", \"state-hash\")",
 		Required: true,
 	}
 )

@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/logger"
+	"github.com/Fantom-foundation/Aida/utildb/dbcomponent"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/Fantom-foundation/Aida/utils/dbcompoment"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
@@ -31,9 +31,8 @@ func TestTableHash_Empty(t *testing.T) {
 
 	// Create a config
 	cfg := &utils.Config{
-		DbComponent: new(dbcompoment.DbComponent), // Set this to the component you want to test
+		DbComponent: string(dbcomponent.All), // Set this to the component you want to test
 	}
-	*cfg.DbComponent = dbcompoment.All
 
 	gomock.InOrder(
 		log.EXPECT().Info(gomock.Any()),
@@ -61,11 +60,10 @@ func TestTableHash_Filled(t *testing.T) {
 
 	// Create a config
 	cfg := &utils.Config{
-		DbComponent: new(dbcompoment.DbComponent), // Set this to the component you want to test
+		DbComponent: string(dbcomponent.All), // Set this to the component you want to test
 		First:       0,
 		Last:        100, // None of the following generators must not generate record higher than this number
 	}
-	*cfg.DbComponent = dbcompoment.All
 
 	substateCount, deleteCount, updateCount, stateHashCount := fillFakeAidaDb(t, aidaDb)
 
@@ -76,6 +74,114 @@ func TestTableHash_Filled(t *testing.T) {
 		log.EXPECT().Infof(gomock.Any(), gomock.Any(), uint64(deleteCount)),
 		log.EXPECT().Info(gomock.Any()),
 		log.EXPECT().Infof(gomock.Any(), gomock.Any(), uint64(updateCount)),
+		log.EXPECT().Info(gomock.Any()),
+		log.EXPECT().Infof(gomock.Any(), gomock.Any(), uint64(stateHashCount)),
+	)
+
+	// Call the function
+	err = TableHash(cfg, aidaDb, log) // Pass a logger if needed
+	assert.NoError(t, err)
+}
+
+func TestTableHash_JustSubstate(t *testing.T) {
+	tmpDir := t.TempDir() + "/aidaDb"
+	aidaDb, err := rawdb.NewLevelDBDatabase(tmpDir, 1024, 100, "aida-db", false)
+	assert.NoError(t, err)
+
+	ctrl := gomock.NewController(t)
+	log := logger.NewMockLogger(ctrl)
+
+	// Create a config
+	cfg := &utils.Config{
+		DbComponent: string(dbcomponent.Substate), // Set this to the component you want to test
+		First:       0,
+		Last:        100, // None of the following generators must not generate record higher than this number
+	}
+
+	substateCount, _, _, _ := fillFakeAidaDb(t, aidaDb)
+
+	gomock.InOrder(
+		log.EXPECT().Info(gomock.Any()),
+		log.EXPECT().Infof(gomock.Any(), gomock.Any(), uint64(substateCount)),
+	)
+
+	// Call the function
+	err = TableHash(cfg, aidaDb, log) // Pass a logger if needed
+	assert.NoError(t, err)
+}
+
+func TestTableHash_JustDelete(t *testing.T) {
+	tmpDir := t.TempDir() + "/aidaDb"
+	aidaDb, err := rawdb.NewLevelDBDatabase(tmpDir, 1024, 100, "aida-db", false)
+	assert.NoError(t, err)
+
+	ctrl := gomock.NewController(t)
+	log := logger.NewMockLogger(ctrl)
+
+	// Create a config
+	cfg := &utils.Config{
+		DbComponent: string(dbcomponent.Delete), // Set this to the component you want to test
+		First:       0,
+		Last:        100, // None of the following generators must not generate record higher than this number
+	}
+
+	_, deleteCount, _, _ := fillFakeAidaDb(t, aidaDb)
+
+	gomock.InOrder(
+		log.EXPECT().Info(gomock.Any()),
+		log.EXPECT().Infof(gomock.Any(), gomock.Any(), uint64(deleteCount)),
+	)
+
+	// Call the function
+	err = TableHash(cfg, aidaDb, log) // Pass a logger if needed
+	assert.NoError(t, err)
+}
+
+func TestTableHash_JustUpdate(t *testing.T) {
+	tmpDir := t.TempDir() + "/aidaDb"
+	aidaDb, err := rawdb.NewLevelDBDatabase(tmpDir, 1024, 100, "aida-db", false)
+	assert.NoError(t, err)
+
+	ctrl := gomock.NewController(t)
+	log := logger.NewMockLogger(ctrl)
+
+	// Create a config
+	cfg := &utils.Config{
+		DbComponent: string(dbcomponent.Update), // Set this to the component you want to test
+		First:       0,
+		Last:        100, // None of the following generators must not generate record higher than this number
+	}
+
+	_, _, updateCount, _ := fillFakeAidaDb(t, aidaDb)
+
+	gomock.InOrder(
+		log.EXPECT().Info(gomock.Any()),
+		log.EXPECT().Infof(gomock.Any(), gomock.Any(), uint64(updateCount)),
+	)
+
+	// Call the function
+	err = TableHash(cfg, aidaDb, log) // Pass a logger if needed
+	assert.NoError(t, err)
+}
+
+func TestTableHash_JustStateHash(t *testing.T) {
+	tmpDir := t.TempDir() + "/aidaDb"
+	aidaDb, err := rawdb.NewLevelDBDatabase(tmpDir, 1024, 100, "aida-db", false)
+	assert.NoError(t, err)
+
+	ctrl := gomock.NewController(t)
+	log := logger.NewMockLogger(ctrl)
+
+	// Create a config
+	cfg := &utils.Config{
+		DbComponent: string(dbcomponent.StateHash), // Set this to the component you want to test
+		First:       0,
+		Last:        100, // None of the following generators must not generate record higher than this number
+	}
+
+	_, _, _, stateHashCount := fillFakeAidaDb(t, aidaDb)
+
+	gomock.InOrder(
 		log.EXPECT().Info(gomock.Any()),
 		log.EXPECT().Infof(gomock.Any(), gomock.Any(), uint64(stateHashCount)),
 	)
