@@ -37,7 +37,7 @@ func (p *LiveDbProcessor) Process(state State[*substate.Substate], ctx *Context)
 	}
 
 	if !p.isErrFatal() {
-		ctx.ErrorInput <- err
+		ctx.ErrorInput <- fmt.Errorf("live-db processor failed; %v", err)
 		return nil
 	}
 
@@ -63,7 +63,7 @@ func (p *ArchiveDbProcessor) Process(state State[*substate.Substate], ctx *Conte
 	}
 
 	if !p.isErrFatal() {
-		ctx.ErrorInput <- err
+		ctx.ErrorInput <- fmt.Errorf("archive-db processor failed; %v", err)
 		return nil
 	}
 
@@ -73,7 +73,6 @@ func (p *ArchiveDbProcessor) Process(state State[*substate.Substate], ctx *Conte
 type SubstateProcessor struct {
 	cfg       *utils.Config
 	numErrors *atomic.Int32 // transactions can be processed in parallel, so this needs to be thread safe
-
 }
 
 func MakeSubstateProcessor(cfg *utils.Config) *SubstateProcessor {

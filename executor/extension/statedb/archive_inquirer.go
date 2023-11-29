@@ -1,7 +1,6 @@
 package statedb
 
 import (
-	"errors"
 	"fmt"
 	"math/rand"
 	"sync"
@@ -10,6 +9,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
+	"github.com/Fantom-foundation/Aida/executor/extension/validator"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -18,31 +18,28 @@ import (
 
 // MakeArchiveInquirer creates an extension running historic queries against
 // archive states in the background to the main executor process.
-func MakeArchiveInquirer(config *utils.Config) executor.Extension[*substate.Substate] {
-	return makeArchiveInquirer(config, logger.NewLogger(config.LogLevel, "Archive Inquirer"), 10)
+func MakeArchiveInquirer(cfg *utils.Config) executor.Extension[*substate.Substate] {
+	return makeArchiveInquirer(cfg, logger.NewLogger(cfg.LogLevel, "Archive Inquirer"))
 }
 
-func makeArchiveInquirer(cfg *utils.Config, log logger.Logger, maxErrors int) executor.Extension[*substate.Substate] {
+func makeArchiveInquirer(cfg *utils.Config, log logger.Logger) executor.Extension[*substate.Substate] {
 	if cfg.ArchiveQueryRate <= 0 {
 		return extension.NilExtension[*substate.Substate]{}
 	}
-	if maxErrors <= 0 {
-		maxErrors = 1
-	}
 	return &archiveInquirer{
-		SubstateProcessor: executor.MakeSubstateProcessor(cfg),
-		cfg:               cfg,
-		log:               log,
-		throttler:         newThrottler(cfg.ArchiveQueryRate),
-		finished:          utils.MakeEvent(),
-		history:           newBuffer[historicTransaction](cfg.ArchiveMaxQueryAge),
-		maxErrors:         maxErrors,
+		ArchiveDbProcessor: executor.MakeArchiveDbProcessor(cfg),
+		cfg:                cfg,
+		log:                log,
+		throttler:          newThrottler(cfg.ArchiveQueryRate),
+		finished:           utils.MakeEvent(),
+		history:            newBuffer[historicTransaction](cfg.ArchiveMaxQueryAge),
+		validator:          validator.MakeArchiveDbValidator(cfg),
 	}
 }
 
 type archiveInquirer struct {
 	extension.NilExtension[*substate.Substate]
-	*executor.SubstateProcessor
+	*executor.ArchiveDbProcessor
 
 	cfg   *utils.Config
 	log   logger.Logger
@@ -62,25 +59,22 @@ type archiveInquirer struct {
 	gasCounter                 atomic.Uint64
 	totalQueryTimeMilliseconds atomic.Uint64
 
-	// A recording of all encountered errors
-	errors      []error
-	errorsMutex sync.Mutex
-	maxErrors   int
+	validator executor.Extension[*substate.Substate]
 }
 
-func (i *archiveInquirer) PreRun(_ executor.State[*substate.Substate], context *executor.Context) error {
+func (i *archiveInquirer) PreRun(_ executor.State[*substate.Substate], ctx *executor.Context) error {
 	if !i.cfg.ArchiveMode {
 		i.finished.Signal()
 		return fmt.Errorf("can not run archive queries without enabled archive (missing --%s flag)", utils.ArchiveModeFlag.Name)
 	}
-	i.state = context.State
+	i.state = ctx.State
 	numWorkers := i.cfg.Workers
 	if numWorkers < 1 {
 		numWorkers = 1
 	}
 	i.done.Add(1 + numWorkers)
 	for j := 0; j < numWorkers; j++ {
-		go i.runInquiry()
+		go i.runInquiry(ctx.ErrorInput)
 	}
 	go i.runProgressReport()
 	return nil
@@ -92,15 +86,6 @@ func (i *archiveInquirer) PostTransaction(state executor.State[*substate.Substat
 	if state.Transaction != 0 {
 		return nil
 	}
-
-	// If too many errors have been encountered, abort the run.
-	i.errorsMutex.Lock()
-	if len(i.errors) >= i.maxErrors {
-		err := errors.Join(i.errors...)
-		i.errorsMutex.Unlock()
-		return err
-	}
-	i.errorsMutex.Unlock()
 
 	// Add current transaction as a candidate for replays.
 	i.historyMutex.Lock()
@@ -116,10 +101,6 @@ func (i *archiveInquirer) PostTransaction(state executor.State[*substate.Substat
 func (i *archiveInquirer) PostRun(executor.State[*substate.Substate], *executor.Context, error) error {
 	i.finished.Signal()
 	i.done.Wait()
-
-	if len(i.errors) > 0 {
-		return errors.Join(i.errors...)
-	}
 	return nil
 }
 
@@ -133,12 +114,12 @@ func (i *archiveInquirer) getRandomTransaction(rnd *rand.Rand) (historicTransact
 	return i.history.Get(int(rnd.Int31n(int32(size)))), true
 }
 
-func (i *archiveInquirer) runInquiry() {
+func (i *archiveInquirer) runInquiry(errCh chan error) {
 	defer i.done.Done()
 	rnd := rand.New(rand.NewSource(time.Now().Unix()))
 	for !i.finished.HasHappened() {
 		if i.throttler.shouldRunNow() {
-			i.doInquiry(rnd)
+			i.doInquiry(rnd, errCh)
 		} else {
 			select {
 			case <-time.After(10 * time.Millisecond):
@@ -150,7 +131,7 @@ func (i *archiveInquirer) runInquiry() {
 	}
 }
 
-func (i *archiveInquirer) doInquiry(rnd *rand.Rand) {
+func (i *archiveInquirer) doInquiry(rnd *rand.Rand, errCh chan error) {
 	// Pick a random transaction that is covered by the current archive block height.
 	transaction, found := i.getRandomTransaction(rnd)
 	for found {
@@ -171,22 +152,44 @@ func (i *archiveInquirer) doInquiry(rnd *rand.Rand) {
 	// Perform historic query.
 	archive, err := i.state.GetArchiveState(uint64(transaction.block))
 	if err != nil {
-		i.registerError(fmt.Errorf("failed to obtain access to archive at block height %d: %v", transaction.block, err))
+		errCh <- fmt.Errorf("failed to obtain access to archive at block height %d: %v", transaction.block, err)
 		return
 	}
 	defer archive.Release()
 
-	start := time.Now()
-	err = i.ProcessTransaction(
-		archive,
-		transaction.block,
-		transaction.number,
-		transaction.substate,
-	)
+	state := executor.State[*substate.Substate]{
+		Block:       transaction.block,
+		Transaction: transaction.number,
+		Data:        transaction.substate,
+	}
+	ctx := &executor.Context{
+		Archive:    archive,
+		ErrorInput: errCh,
+	}
+
+	err = i.validator.PreTransaction(state, ctx)
 	if err != nil {
-		i.registerError(fmt.Errorf("failed to re-run transaction %d/%d: %v", transaction.block, transaction.number, err))
+		// ArchiveInquirer should not end the app, hence we just send the error to the errorLogger
+		errCh <- err
+		return
+	}
+
+	start := time.Now()
+	err = i.Process(state, ctx)
+	if err != nil {
+		// ArchiveInquirer should not end the app, hence we just send the error to the errorLogger
+		errCh <- err
+		return
 	}
 	duration := time.Since(start)
+
+	// output validation
+	err = i.validator.PostTransaction(state, ctx)
+	if err != nil {
+		// ArchiveInquirer should not end the app, hence we just send the error to the errorLogger
+		errCh <- err
+		return
+	}
 
 	i.transactionCounter.Add(1)
 	i.gasCounter.Add(transaction.substate.Result.GasUsed)
@@ -209,16 +212,12 @@ func (i *archiveInquirer) runProgressReport() {
 			curGas := i.gasCounter.Load()
 			curDuration := i.totalQueryTimeMilliseconds.Load()
 
-			i.errorsMutex.Lock()
-			numErrors := len(i.errors)
-			i.errorsMutex.Unlock()
-
 			delta := now.Sub(lastTime).Seconds()
 			tps := float64(curTx-lastTx) / delta
 			gps := float64(curGas-lastGas) / delta
 			averageDuration := float64(curDuration-lastDuration) / float64(curTx-lastTx)
-			i.log.Infof("Archive throughput: t=%ds, %.2f Tx/s, %.2f MGas/s, average duration %.2f ms, number of errors %d",
-				int(now.Sub(start).Round(time.Second).Seconds()), tps, gps/10e6, averageDuration, numErrors,
+			i.log.Infof("Archive throughput: t=%ds, %.2f Tx/s, %.2f MGas/s, average duration %.2f ms",
+				int(now.Sub(start).Round(time.Second).Seconds()), tps, gps/10e6, averageDuration,
 			)
 
 			lastTime = now
@@ -229,16 +228,6 @@ func (i *archiveInquirer) runProgressReport() {
 			return
 		}
 	}
-}
-
-func (i *archiveInquirer) registerError(err error) {
-	i.errorsMutex.Lock()
-	i.errors = append(i.errors, err)
-	if len(i.errors) >= i.maxErrors {
-		i.finished.Signal()
-	}
-	i.errorsMutex.Unlock()
-	i.log.Warning(err)
 }
 
 type historicTransaction struct {
