@@ -10,7 +10,6 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -37,10 +36,12 @@ func ReplayTrace(ctx *cli.Context) error {
 
 	// we need to open substate if we are priming
 	if cfg.First > 0 && !cfg.SkipPriming {
-		substate.SetSubstateDb(cfg.AidaDb)
-		substate.OpenSubstateDBReadOnly()
+		substateDb, err := executor.OpenSubstateDb(cfg, ctx)
+		if err != nil {
+			return err
+		}
 
-		defer substate.CloseSubstateDB()
+		defer substateDb.Close()
 	}
 
 	return replay(cfg, operationProvider, processor, extra)
