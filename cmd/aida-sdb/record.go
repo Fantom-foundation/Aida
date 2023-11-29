@@ -52,31 +52,7 @@ func RecordStateDbTrace(ctx *cli.Context) error {
 	}
 	defer substateDb.Close()
 
-	rec := newRecorder(cfg)
-
-	return record(cfg, substateDb, rec, nil)
-}
-
-func newRecorder(cfg *utils.Config) *recorder {
-	return &recorder{
-		cfg: cfg,
-	}
-}
-
-type recorder struct {
-	cfg *utils.Config
-}
-
-func (r *recorder) Process(state executor.State[*substate.Substate], context *executor.Context) error {
-	_, err := utils.ProcessTx(
-		context.State,
-		r.cfg,
-		uint64(state.Block),
-		state.Transaction,
-		state.Data,
-	)
-
-	return err
+	return record(cfg, substateDb, executor.MakeLiveDbProcessor(cfg), nil)
 }
 
 func record(
