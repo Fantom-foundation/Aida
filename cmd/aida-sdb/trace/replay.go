@@ -10,6 +10,7 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -32,6 +33,14 @@ func ReplayTrace(ctx *cli.Context) error {
 
 	var extra = []executor.Extension[[]operation.Operation]{
 		profiler.MakeReplayProfiler[[]operation.Operation](cfg, rCtx),
+	}
+
+	// we need to open substate if we are priming
+	if cfg.First > 0 && !cfg.SkipPriming {
+		substate.SetSubstateDb(cfg.AidaDb)
+		substate.OpenSubstateDBReadOnly()
+
+		defer substate.CloseSubstateDB()
 	}
 
 	return replay(cfg, operationProvider, processor, extra)

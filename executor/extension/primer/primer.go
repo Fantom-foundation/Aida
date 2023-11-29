@@ -59,24 +59,6 @@ func (p *stateDbPrimer[T]) PreRun(_ executor.State[T], ctx *executor.Context) (e
 	p.log.Noticef("Priming to block %v...", p.cfg.First-1)
 	p.ctx = utils.NewPrimeContext(p.cfg, ctx.State, p.log)
 
-	// substate panics if given non-existent db
-	// catch the panic here and return it
-	defer func() {
-		r := recover()
-		if r != nil {
-			if rec, ok := r.(error); ok {
-				err = rec
-			} else {
-				panic(r)
-			}
-		}
-	}()
-
-	substate.SetSubstateDb(p.cfg.AidaDb)
-	substate.OpenSubstateDBReadOnly()
-
-	defer substate.CloseSubstateDB()
-
 	return p.prime(ctx.State)
 }
 
