@@ -163,11 +163,9 @@ func TestLiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueO
 
 	gomock.InOrder(
 		db.EXPECT().Exist(common.Address{0}).Return(false),
-		db.EXPECT().CreateAccount(common.Address{0}),
 		db.EXPECT().GetBalance(common.Address{0}).Return(new(big.Int)),
 		db.EXPECT().GetNonce(common.Address{0}).Return(uint64(0)),
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
-		db.EXPECT().SetCode(common.Address{0}, []byte{}),
 	)
 
 	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
@@ -250,11 +248,9 @@ func TestLiveTxValidator_TwoErrorsDoNotReturnAnErrorWhenContinueOnFailureIsEnabl
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 		// PostTransaction
 		db.EXPECT().Exist(common.Address{0}).Return(false),
-		db.EXPECT().CreateAccount(common.Address{0}),
 		db.EXPECT().GetBalance(common.Address{0}).Return(new(big.Int)),
 		db.EXPECT().GetNonce(common.Address{0}).Return(uint64(0)),
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
-		db.EXPECT().SetCode(common.Address{0}, []byte{}),
 	)
 
 	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
@@ -306,11 +302,9 @@ func TestLiveTxValidator_TwoErrorsDoReturnErrorOnEventWhenContinueOnFailureIsEna
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 		// PostTransaction
 		db.EXPECT().Exist(common.Address{0}).Return(false),
-		db.EXPECT().CreateAccount(common.Address{0}),
 		db.EXPECT().GetBalance(common.Address{0}).Return(new(big.Int)),
 		db.EXPECT().GetNonce(common.Address{0}).Return(uint64(0)),
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
-		db.EXPECT().SetCode(common.Address{0}, []byte{}),
 	)
 
 	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
@@ -527,11 +521,9 @@ func TestArchiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContin
 
 	gomock.InOrder(
 		db.EXPECT().Exist(common.Address{0}).Return(false),
-		db.EXPECT().CreateAccount(common.Address{0}),
 		db.EXPECT().GetBalance(common.Address{0}).Return(new(big.Int)),
 		db.EXPECT().GetNonce(common.Address{0}).Return(uint64(0)),
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
-		db.EXPECT().SetCode(common.Address{0}, []byte{}),
 	)
 
 	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
@@ -614,11 +606,9 @@ func TestArchiveTxValidator_TwoErrorsDoNotReturnAnErrorWhenContinueOnFailureIsEn
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 		// PostTransaction
 		db.EXPECT().Exist(common.Address{0}).Return(false),
-		db.EXPECT().CreateAccount(common.Address{0}),
 		db.EXPECT().GetBalance(common.Address{0}).Return(new(big.Int)),
 		db.EXPECT().GetNonce(common.Address{0}).Return(uint64(0)),
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
-		db.EXPECT().SetCode(common.Address{0}, []byte{}),
 	)
 
 	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
@@ -670,11 +660,9 @@ func TestArchiveTxValidator_TwoErrorsDoReturnErrorOnEventWhenContinueOnFailureIs
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 		// PostTransaction
 		db.EXPECT().Exist(common.Address{0}).Return(false),
-		db.EXPECT().CreateAccount(common.Address{0}),
 		db.EXPECT().GetBalance(common.Address{0}).Return(new(big.Int)),
 		db.EXPECT().GetNonce(common.Address{0}).Return(uint64(0)),
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
-		db.EXPECT().SetCode(common.Address{0}, []byte{}),
 	)
 
 	ext.PreRun(executor.State[*substate.Substate]{}, ctx)

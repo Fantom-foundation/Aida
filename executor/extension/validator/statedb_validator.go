@@ -179,7 +179,7 @@ func validateSubstateAlloc(db state.VmStateDB, expectedAlloc substate.SubstateAl
 	var err error
 	switch cfg.StateValidationMode {
 	case utils.SubsetCheck:
-		err = doSubsetValidation(expectedAlloc, db, !cfg.UpdateOnFailure)
+		err = doSubsetValidation(expectedAlloc, db, cfg.UpdateOnFailure)
 	case utils.EqualityCheck:
 		vmAlloc := db.GetSubstatePostAlloc()
 		isEqual := expectedAlloc.Equal(vmAlloc)
