@@ -319,8 +319,6 @@ func (c *cloner) readStateHashes() error {
 
 	var errCounter uint64
 
-	var errCounter uint64
-
 	for i := c.cfg.First; i <= c.cfg.Last; i++ {
 		key := []byte(utils.StateHashPrefix + hexutil.EncodeUint64(i))
 		value, err := c.aidaDb.Get(key)
