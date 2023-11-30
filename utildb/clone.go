@@ -341,6 +341,10 @@ func (c *cloner) readStateHashes() error {
 		c.log.Warningf("State hashes were missing for %v blocks", errCounter)
 	}
 
+	if errCounter > 0 {
+		c.log.Warningf("State hashes were missing for %v blocks", errCounter)
+	}
+
 	c.log.Noticef("State hashes done")
 
 	return nil

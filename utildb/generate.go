@@ -260,7 +260,10 @@ func (g *Generator) init() (*substate.DestroyedAccountDB, *substate.UpdateDB, ui
 	updateDb := substate.NewUpdateDB(g.AidaDb)
 
 	// set first updateset block
-	nextUpdateSetStart := updateDb.GetLastKey()
+	nextUpdateSetStart, err := updateDb.GetLastKey()
+	if err != nil {
+		return nil, nil, 0, fmt.Errorf("cannot get last updateset; %v", err)
+	}
 
 	if nextUpdateSetStart > 0 {
 		g.Log.Infof("Previous UpdateSet found - generating from %v", nextUpdateSetStart)
