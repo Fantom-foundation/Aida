@@ -16,7 +16,6 @@ import (
 
 	"github.com/Fantom-foundation/Aida/cmd/util-updateset/updateset"
 	"github.com/Fantom-foundation/Aida/logger"
-	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/core/rawdb"
@@ -260,7 +259,10 @@ func (g *Generator) init() (*substate.DestroyedAccountDB, *substate.UpdateDB, ui
 	updateDb := substate.NewUpdateDB(g.AidaDb)
 
 	// set first updateset block
-	nextUpdateSetStart := updateDb.GetLastKey()
+	nextUpdateSetStart, err := updateDb.GetLastKey()
+	if err != nil {
+		return nil, nil, 0, fmt.Errorf("cannot get last updateset; %v", err)
+	}
 
 	if nextUpdateSetStart > 0 {
 		g.Log.Infof("Previous UpdateSet found - generating from %v", nextUpdateSetStart)
@@ -292,9 +294,6 @@ func (g *Generator) processDeletedAccounts(ddb *substate.DestroyedAccountDB) err
 	if err != nil {
 		return fmt.Errorf("cannot doGenerations deleted accounts; %v", err)
 	}
-
-	// explicitly release code cache
-	state.ReleaseCache()
 
 	g.Log.Noticef("Deleted accounts generated successfully. It took: %v", time.Since(start).Round(1*time.Second))
 	g.Log.Noticef("Total elapsed time: %v", time.Since(g.start).Round(1*time.Second))

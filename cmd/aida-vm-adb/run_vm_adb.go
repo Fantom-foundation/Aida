@@ -5,7 +5,6 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
-	"github.com/Fantom-foundation/Aida/executor/extension/validator"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -35,7 +34,22 @@ func RunVmAdb(ctx *cli.Context) error {
 	}
 	defer substateDb.Close()
 
-	return run(cfg, substateDb, nil, executor.MakeArchiveDbProcessor(cfg), nil)
+	return run(cfg, substateDb, nil, blockProcessor{cfg}, nil)
+}
+
+type blockProcessor struct {
+	cfg *utils.Config
+}
+
+func (r blockProcessor) Process(state executor.State[*substate.Substate], ctx *executor.Context) error {
+	_, err := utils.ProcessTx(
+		ctx.Archive,
+		r.cfg,
+		uint64(state.Block),
+		state.Transaction,
+		state.Data,
+	)
+	return err
 }
 
 func run(
@@ -50,7 +64,6 @@ func run(
 		statedb.MakeArchivePrepper(),
 		tracker.MakeProgressLogger[*substate.Substate](cfg, 0),
 		tracker.MakeErrorLogger[*substate.Substate](cfg),
-		validator.MakeArchiveDbValidator(cfg),
 	}
 
 	if stateDb == nil {

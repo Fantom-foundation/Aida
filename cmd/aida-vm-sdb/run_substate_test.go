@@ -83,7 +83,7 @@ func TestVmSdb_Substate_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		db.EXPECT().EndBlock(),
 	)
 
-	if err := runSubstates(cfg, provider, db, executor.MakeLiveDbProcessor(cfg), nil); err != nil {
+	if err := runSubstates(cfg, provider, db, substateProcessor{cfg}, nil); err != nil {
 		t.Errorf("run failed: %v", err)
 	}
 }
@@ -188,14 +188,13 @@ func TestVmSdb_Substate_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 	gomock.InOrder(
 		db.EXPECT().BeginBlock(uint64(2)),
 		db.EXPECT().PrepareSubstate(gomock.Any(), uint64(2)),
-
+		db.EXPECT().BeginTransaction(uint32(1)),
 		// we return correct expected data so tx does not fail
 		db.EXPECT().Exist(testingAddress).Return(true),
 		db.EXPECT().GetBalance(testingAddress).Return(new(big.Int).SetUint64(1)),
 		db.EXPECT().GetNonce(testingAddress).Return(uint64(1)),
 		db.EXPECT().GetCode(testingAddress).Return([]byte{}),
 
-		db.EXPECT().BeginTransaction(uint32(1)),
 		db.EXPECT().Prepare(gomock.Any(), 1),
 		db.EXPECT().Snapshot().Return(15),
 		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
@@ -205,12 +204,12 @@ func TestVmSdb_Substate_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 	)
 
 	// run fails but not on validation
-	err := runSubstates(cfg, provider, db, executor.MakeLiveDbProcessor(cfg), nil)
+	err := runSubstates(cfg, provider, db, substateProcessor{cfg}, nil)
 	if err == nil {
 		t.Errorf("run must fail")
 	}
 
-	expectedErr := strings.TrimSpace("block: 2 transaction: 1\nintrinsic gas too low: have 0, want 53000")
+	expectedErr := strings.TrimSpace("Block: 2 Transaction: 1\nintrinsic gas too low: have 0, want 53000")
 	returnedErr := strings.TrimSpace(err.Error())
 
 	if strings.Compare(returnedErr, expectedErr) != 0 {
@@ -239,18 +238,21 @@ func TestVmSdb_Substate_ValidationFailsOnInvalidTransaction(t *testing.T) {
 	gomock.InOrder(
 		db.EXPECT().BeginBlock(uint64(2)),
 		db.EXPECT().PrepareSubstate(gomock.Any(), uint64(2)),
+		db.EXPECT().BeginTransaction(uint32(1)),
 		db.EXPECT().Exist(testingAddress).Return(false), // address does not exist
 		db.EXPECT().GetBalance(testingAddress).Return(new(big.Int).SetUint64(1)),
 		db.EXPECT().GetNonce(testingAddress).Return(uint64(1)),
 		db.EXPECT().GetCode(testingAddress).Return([]byte{}),
+		db.EXPECT().EndTransaction(),
 	)
 
-	err := runSubstates(cfg, provider, db, executor.MakeLiveDbProcessor(cfg), nil)
+	err := runSubstates(cfg, provider, db, substateProcessor{cfg}, nil)
 	if err == nil {
 		t.Errorf("validation must fail")
 	}
 
-	expectedErr := strings.TrimSpace("block 2 tx 1\n input alloc is not contained in the state-db\n   Account 0x0100000000000000000000000000000000000000 does not exist")
+	expectedErr := strings.TrimSpace("Block: 2 Transaction: 1\nInput alloc is not contained in the stateDB.\n  " +
+		"Account 0x0100000000000000000000000000000000000000 does not exist")
 	returnedErr := strings.TrimSpace(err.Error())
 
 	if strings.Compare(returnedErr, expectedErr) != 0 {

@@ -56,8 +56,8 @@ func GetRandom(rangeLower int, rangeUpper int) int {
 	return randInt
 }
 
-// MakeAccountStorage generates randomized account storage with testAccountStorageSize length
-func MakeAccountStorage(t *testing.T) map[common.Hash]common.Hash {
+// makeAccountStorage generates randomized account storage with testAccountStorageSize length
+func makeAccountStorage(t *testing.T) map[common.Hash]common.Hash {
 	// create storage map
 	storage := map[common.Hash]common.Hash{}
 
@@ -114,7 +114,7 @@ func MakeWorldState(t *testing.T) (substate.SubstateAlloc, []common.Address) {
 		ws[addr] = &substate.SubstateAccount{
 			Nonce:   uint64(GetRandom(1, 1000*5000)),
 			Balance: big.NewInt(int64(GetRandom(1, 1000*5000))),
-			Storage: MakeAccountStorage(t),
+			Storage: makeAccountStorage(t),
 			Code:    MakeRandomByteSlice(t, 2048),
 		}
 	}

@@ -29,7 +29,6 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 		ChainID:     utils.MainnetChainID,
 		SkipPriming: true,
 		Workers:     1,
-		LogLevel:    "Critical",
 	}
 
 	// Simulate the execution of three transactions in two blocks.
@@ -87,7 +86,7 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 		archiveBlockThree.EXPECT().Release(),
 	)
 
-	if err := run(cfg, provider, db, executor.MakeArchiveDbProcessor(cfg), nil); err != nil {
+	if err := run(cfg, provider, db, blockProcessor{cfg}, nil); err != nil {
 		t.Errorf("run failed: %v", err)
 	}
 }
@@ -107,7 +106,6 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 		SkipPriming:       true,
 		Workers:           4,
 		ContinueOnFailure: true, // in this test we only check if blocks are being processed, any error can be ignored
-		LogLevel:          "Critical",
 	}
 
 	// Simulate the execution of three transactions in two blocks.
@@ -173,14 +171,8 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 		archiveBlockThree.EXPECT().Release(),
 	)
 
-	// since we are working with mock transactions, run logically fails on 'intrinsic gas too low'
-	// since this is a test that tests orded of the db events, we can ignore this error
-	err := run(cfg, provider, db, executor.MakeArchiveDbProcessor(cfg), nil)
-	if err != nil {
-		if strings.Contains(err.Error(), "intrinsic gas too low") {
-			return
-		}
-		t.Fatal("run failed")
+	if err := run(cfg, provider, db, blockProcessor{cfg}, nil); err != nil {
+		t.Errorf("run failed: %v", err)
 	}
 }
 
@@ -366,13 +358,13 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) 
 
 	gomock.InOrder(
 		db.EXPECT().GetArchiveState(uint64(1)).Return(archive, nil),
+		archive.EXPECT().BeginTransaction(uint32(1)),
 		// we return correct expected data so tx does not fail
 		archive.EXPECT().Exist(testingAddress).Return(true),
 		archive.EXPECT().GetBalance(testingAddress).Return(new(big.Int).SetUint64(1)),
 		archive.EXPECT().GetNonce(testingAddress).Return(uint64(1)),
 		archive.EXPECT().GetCode(testingAddress).Return([]byte{}),
 
-		archive.EXPECT().BeginTransaction(uint32(1)),
 		archive.EXPECT().Prepare(gomock.Any(), 1),
 		archive.EXPECT().Snapshot().Return(15),
 		archive.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
@@ -382,12 +374,12 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) 
 	)
 
 	// run fails but not on validation
-	err := run(cfg, provider, db, executor.MakeArchiveDbProcessor(cfg), nil)
+	err := run(cfg, provider, db, blockProcessor{cfg}, nil)
 	if err == nil {
 		t.Errorf("run must fail")
 	}
 
-	expectedErr := strings.TrimSpace("block: 2 transaction: 1\nintrinsic gas too low: have 0, want 53000")
+	expectedErr := strings.TrimSpace("Block: 2 Transaction: 1\nintrinsic gas too low: have 0, want 53000")
 	returnedErr := strings.TrimSpace(err.Error())
 
 	if strings.Compare(returnedErr, expectedErr) != 0 {
@@ -417,13 +409,13 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Parallel(t *testing.T) {
 
 	gomock.InOrder(
 		db.EXPECT().GetArchiveState(uint64(1)).Return(archive, nil),
+		archive.EXPECT().BeginTransaction(uint32(1)),
 		// we return correct expected data so tx does not fail
 		archive.EXPECT().Exist(testingAddress).Return(true),
 		archive.EXPECT().GetBalance(testingAddress).Return(new(big.Int).SetUint64(1)),
 		archive.EXPECT().GetNonce(testingAddress).Return(uint64(1)),
 		archive.EXPECT().GetCode(testingAddress).Return([]byte{}),
 
-		archive.EXPECT().BeginTransaction(uint32(1)),
 		archive.EXPECT().Prepare(gomock.Any(), 1),
 		archive.EXPECT().Snapshot().Return(15),
 		archive.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
@@ -433,12 +425,12 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Parallel(t *testing.T) {
 	)
 
 	// run fails but not on validation
-	err := run(cfg, provider, db, executor.MakeArchiveDbProcessor(cfg), nil)
+	err := run(cfg, provider, db, blockProcessor{cfg}, nil)
 	if err == nil {
 		t.Errorf("run must fail")
 	}
 
-	expectedErr := strings.TrimSpace("block: 2 transaction: 1\nintrinsic gas too low: have 0, want 53000")
+	expectedErr := strings.TrimSpace("Block: 2 Transaction: 1\nintrinsic gas too low: have 0, want 53000")
 	returnedErr := strings.TrimSpace(err.Error())
 
 	if strings.Compare(returnedErr, expectedErr) != 0 {
@@ -467,18 +459,21 @@ func TestVmAdb_ValidationFailsOnInvalidTransaction_Sequential(t *testing.T) {
 
 	gomock.InOrder(
 		db.EXPECT().GetArchiveState(uint64(1)).Return(archive, nil),
+		archive.EXPECT().BeginTransaction(uint32(1)),
 		archive.EXPECT().Exist(testingAddress).Return(false), // address does not exist
 		archive.EXPECT().GetBalance(testingAddress).Return(new(big.Int).SetUint64(1)),
 		archive.EXPECT().GetNonce(testingAddress).Return(uint64(1)),
 		archive.EXPECT().GetCode(testingAddress).Return([]byte{}),
+		archive.EXPECT().EndTransaction(),
 	)
 
-	err := run(cfg, provider, db, executor.MakeArchiveDbProcessor(cfg), nil)
+	err := run(cfg, provider, db, blockProcessor{cfg}, nil)
 	if err == nil {
 		t.Errorf("validation must fail")
 	}
 
-	expectedErr := strings.TrimSpace("block 2 tx 1\n input alloc is not contained in the state-db\n   Account 0x0100000000000000000000000000000000000000 does not exist")
+	expectedErr := strings.TrimSpace("Block: 2 Transaction: 1\nInput alloc is not contained in the stateDB.\n  " +
+		"Account 0x0100000000000000000000000000000000000000 does not exist")
 	returnedErr := strings.TrimSpace(err.Error())
 
 	if strings.Compare(returnedErr, expectedErr) != 0 {
@@ -509,18 +504,21 @@ func TestVmAdb_ValidationFailsOnInvalidTransaction_Parallel(t *testing.T) {
 
 	gomock.InOrder(
 		db.EXPECT().GetArchiveState(uint64(1)).Return(archive, nil),
+		archive.EXPECT().BeginTransaction(uint32(1)),
 		archive.EXPECT().Exist(testingAddress).Return(false), // address does not exist
 		archive.EXPECT().GetBalance(testingAddress).Return(new(big.Int).SetUint64(1)),
 		archive.EXPECT().GetNonce(testingAddress).Return(uint64(1)),
 		archive.EXPECT().GetCode(testingAddress).Return([]byte{}),
+		archive.EXPECT().EndTransaction(),
 	)
 
-	err := run(cfg, provider, db, executor.MakeArchiveDbProcessor(cfg), nil)
+	err := run(cfg, provider, db, blockProcessor{cfg}, nil)
 	if err == nil {
 		t.Errorf("validation must fail")
 	}
 
-	expectedErr := strings.TrimSpace("block 2 tx 1\n input alloc is not contained in the state-db\n   Account 0x0100000000000000000000000000000000000000 does not exist")
+	expectedErr := strings.TrimSpace("Block: 2 Transaction: 1\nInput alloc is not contained in the stateDB.\n  " +
+		"Account 0x0100000000000000000000000000000000000000 does not exist")
 	returnedErr := strings.TrimSpace(err.Error())
 
 	if strings.Compare(returnedErr, expectedErr) != 0 {

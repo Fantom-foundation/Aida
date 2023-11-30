@@ -17,7 +17,7 @@ type TestSyncPeriodEmitter[T any] struct {
 func MakeTestSyncPeriodEmitter[T any](cfg *utils.Config) executor.Extension[T] {
 	if cfg.SyncPeriodLength <= 0 {
 		log := logger.NewLogger(cfg.LogLevel, "Progress-Reporter")
-		log.Warning("SyncPeriodLength was set in cfg to 0; SyncPeriodEmitter disabled")
+		log.Warning("SyncPeriodLength was set in config to 0; SyncPeriodEmitter disabled")
 		return extension.NilExtension[T]{}
 	}
 

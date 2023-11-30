@@ -19,7 +19,6 @@ var UtilDbApp = cli.App{
 		&db.AutoGenCommand,
 		&db.CloneCommand,
 		&db.CompactCommand,
-		&db.SignatureCommand,
 		&db.GenerateCommand,
 		&db.LachesisUpdateCommand,
 		&db.MergeCommand,
@@ -31,6 +30,9 @@ var UtilDbApp = cli.App{
 		&db.GenDeletedAccountsCommand,
 		&db.SubstateDumpCommand,
 		&db.GenerateDbHashCommand,
+		&db.PrintDbHashCommand,
+		&db.PrintPrefixHashCommand,
+		&db.PrintTableHashCommand,
 		&db.ScrapeCommand,
 	},
 }

@@ -22,31 +22,29 @@ func MakeArchiveInquirer(config *utils.Config) executor.Extension[*substate.Subs
 	return makeArchiveInquirer(config, logger.NewLogger(config.LogLevel, "Archive Inquirer"), 10)
 }
 
-func makeArchiveInquirer(cfg *utils.Config, log logger.Logger, maxErrors int) executor.Extension[*substate.Substate] {
-	if cfg.ArchiveQueryRate <= 0 {
+func makeArchiveInquirer(config *utils.Config, log logger.Logger, maxErrors int) executor.Extension[*substate.Substate] {
+	if config.ArchiveQueryRate <= 0 {
 		return extension.NilExtension[*substate.Substate]{}
 	}
 	if maxErrors <= 0 {
 		maxErrors = 1
 	}
 	return &archiveInquirer{
-		SubstateProcessor: executor.MakeSubstateProcessor(cfg),
-		cfg:               cfg,
-		log:               log,
-		throttler:         newThrottler(cfg.ArchiveQueryRate),
-		finished:          utils.MakeEvent(),
-		history:           newBuffer[historicTransaction](cfg.ArchiveMaxQueryAge),
-		maxErrors:         maxErrors,
+		config:    config,
+		log:       log,
+		throttler: newThrottler(config.ArchiveQueryRate),
+		finished:  utils.MakeEvent(),
+		history:   newBuffer[historicTransaction](config.ArchiveMaxQueryAge),
+		maxErrors: maxErrors,
 	}
 }
 
 type archiveInquirer struct {
 	extension.NilExtension[*substate.Substate]
-	*executor.SubstateProcessor
 
-	cfg   *utils.Config
-	log   logger.Logger
-	state state.StateDB
+	config *utils.Config
+	log    logger.Logger
+	state  state.StateDB
 
 	// Buffer for historic queries to sample from
 	history      *circularBuffer[historicTransaction]
@@ -69,12 +67,12 @@ type archiveInquirer struct {
 }
 
 func (i *archiveInquirer) PreRun(_ executor.State[*substate.Substate], context *executor.Context) error {
-	if !i.cfg.ArchiveMode {
+	if !i.config.ArchiveMode {
 		i.finished.Signal()
 		return fmt.Errorf("can not run archive queries without enabled archive (missing --%s flag)", utils.ArchiveModeFlag.Name)
 	}
 	i.state = context.State
-	numWorkers := i.cfg.Workers
+	numWorkers := i.config.Workers
 	if numWorkers < 1 {
 		numWorkers = 1
 	}
@@ -177,9 +175,10 @@ func (i *archiveInquirer) doInquiry(rnd *rand.Rand) {
 	defer archive.Release()
 
 	start := time.Now()
-	err = i.ProcessTransaction(
+	_, err = utils.ProcessTx(
 		archive,
-		transaction.block,
+		i.config,
+		uint64(transaction.block),
 		transaction.number,
 		transaction.substate,
 	)
