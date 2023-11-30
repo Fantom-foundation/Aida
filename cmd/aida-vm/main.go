@@ -37,6 +37,7 @@ func main() {
 			&utils.AidaDbFlag,
 			&logger.LogLevelFlag,
 			&utils.ErrorLoggingFlag,
+			&utils.StateDbImplementationFlag,
 		},
 	}
 	if err := app.Run(os.Args); err != nil {
