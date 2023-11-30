@@ -328,11 +328,12 @@ func runBlock[T any](
 	for {
 		select {
 		case blockTransactions := <-blocks:
-			if blockTransactions == nil {
+			if blockTransactions == nil || len(blockTransactions) == 0 {
 				return // reached an end without abort
 			}
 
 			localState.Block = blockTransactions[0].Block
+			localState.Data = blockTransactions[0].Data
 			localCtx := *ctx
 
 			if err := signalPreBlock(localState, &localCtx, extensions); err != nil {
