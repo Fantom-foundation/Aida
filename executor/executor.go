@@ -246,9 +246,10 @@ func (e *executor[T]) Run(params Params, processor Processor[T], extensions []Ex
 		return err
 	}
 
-	//if params.NumWorkers <= 1 {
-	//	return e.runSequential(params, processor, extensions, &state, &ctx)
-	//}
+	if params.NumWorkers <= 1 {
+		params.NumWorkers = 1
+		//return e.runSequential(params, processor, extensions, &state, &ctx)
+	}
 
 	switch params.ParallelismGranularity {
 	case TransactionLevel:

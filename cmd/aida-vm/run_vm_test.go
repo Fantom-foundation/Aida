@@ -189,7 +189,6 @@ func TestVm_AllTransactionsAreProcessedInOrder_Sequential(t *testing.T) {
 
 		// Block 2
 		// Tx 1
-		ext.EXPECT().PreBlock(executor.AtBlock[*substate.Substate](2), gomock.Any()),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[*substate.Substate](2, 1), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[*substate.Substate](2, 1), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[*substate.Substate](2, 1), gomock.Any()),
@@ -197,21 +196,16 @@ func TestVm_AllTransactionsAreProcessedInOrder_Sequential(t *testing.T) {
 		// Tx 2
 		processor.EXPECT().Process(executor.AtTransaction[*substate.Substate](2, 2), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[*substate.Substate](2, 2), gomock.Any()),
-		ext.EXPECT().PostBlock(executor.AtTransaction[*substate.Substate](2, 2), gomock.Any()),
 
 		// Block 3
-		ext.EXPECT().PreBlock(executor.AtBlock[*substate.Substate](3), gomock.Any()),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[*substate.Substate](3, 1), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[*substate.Substate](3, 1), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[*substate.Substate](3, 1), gomock.Any()),
-		ext.EXPECT().PostBlock(executor.AtTransaction[*substate.Substate](3, 1), gomock.Any()),
 
 		// Block 4
-		ext.EXPECT().PreBlock(executor.AtBlock[*substate.Substate](4), gomock.Any()),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[*substate.Substate](4, utils.PseudoTx), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[*substate.Substate](4, utils.PseudoTx), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[*substate.Substate](4, utils.PseudoTx), gomock.Any()),
-		ext.EXPECT().PostBlock(executor.AtTransaction[*substate.Substate](4, utils.PseudoTx), gomock.Any()),
 
 		ext.EXPECT().PostRun(executor.AtBlock[*substate.Substate](5), gomock.Any(), nil),
 	)
