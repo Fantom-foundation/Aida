@@ -4,6 +4,7 @@ import (
 	"archive/tar"
 	"bufio"
 	"compress/gzip"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -34,16 +35,18 @@ const (
 )
 
 type Generator struct {
-	Cfg          *utils.Config
-	ctx          *cli.Context
-	Log          logger.Logger
-	md           *utils.AidaDbMetadata
-	AidaDb       ethdb.Database
-	Opera        *aidaOpera
-	TargetEpoch  uint64
-	dbHash       []byte
-	patchTarHash string
-	start        time.Time
+	Cfg               *utils.Config
+	ctx               *cli.Context
+	Log               logger.Logger
+	md                *utils.AidaDbMetadata
+	AidaDb            ethdb.Database
+	DeletionDbTmp     ethdb.Database
+	DeletionDbTmpPath string
+	Opera             *aidaOpera
+	TargetEpoch       uint64
+	dbHash            []byte
+	patchTarHash      string
+	start             time.Time
 }
 
 // PrepareManualGenerate prepares generator for manual generation
@@ -135,13 +138,18 @@ func (g *Generator) Generate() error {
 
 	g.Log.Noticef("Generation starting for range:  %v (%v) - %v (%v)", g.Opera.firstBlock, g.Opera.FirstEpoch, g.Opera.lastBlock, g.Opera.lastEpoch)
 
-	deleteDb, updateDb, nextUpdateSetStart, err := g.init()
+	tmpDeleteDb, updateDb, nextUpdateSetStart, err := g.init()
 	if err != nil {
 		return err
 	}
 
-	if err = g.processDeletedAccounts(deleteDb); err != nil {
+	if err = g.processDeletedAccounts(tmpDeleteDb); err != nil {
 		return err
+	}
+
+	deleteDb, err := g.mergeTemporaryDeletionDb()
+	if err != nil {
+		return fmt.Errorf("cannot merge temporary deletion-db into aida-db; %v", err)
 	}
 
 	if err = g.processUpdateSet(deleteDb, updateDb, nextUpdateSetStart); err != nil {
@@ -255,7 +263,18 @@ func (g *Generator) runDbHashGeneration(err error) error {
 // init initializes database (DestroyedDb and UpdateDb wrappers) and loads next block for updateset generation
 func (g *Generator) init() (*substate.DestroyedAccountDB, *substate.UpdateDB, uint64, error) {
 	var err error
-	deleteDb := substate.NewDestroyedAccountDB(g.AidaDb)
+
+	// create temporary deletionDb for separate generation
+	g.DeletionDbTmpPath, err = os.MkdirTemp(g.Cfg.DbTmp, "deletion_db_tmp_*")
+	if err != nil {
+		return nil, nil, 0, fmt.Errorf("cannot create tmp dir; %v", err)
+	}
+	g.DeletionDbTmp, err = rawdb.NewLevelDBDatabase(g.DeletionDbTmpPath, 1024, 100, "profiling", false)
+	if err != nil {
+		return nil, nil, 0, fmt.Errorf("cannot open tmp deletion-db; %v", err)
+	}
+
+	deleteDb := substate.NewDestroyedAccountDB(g.DeletionDbTmp)
 
 	updateDb := substate.NewUpdateDB(g.AidaDb)
 
@@ -323,24 +342,6 @@ func (g *Generator) processUpdateSet(deleteDb *substate.DestroyedAccountDB, upda
 	g.Log.Noticef("Total elapsed time: %v", time.Since(g.start).Round(1*time.Second))
 	return nil
 
-}
-
-// merge sole dbs created in generation into AidaDb
-func (g *Generator) merge(pathToDb string) error {
-	// open sourceDb
-	sourceDb, err := rawdb.NewLevelDBDatabase(pathToDb, 1024, 100, "profiling", false)
-	if err != nil {
-		return err
-	}
-
-	m := NewMerger(g.Cfg, g.AidaDb, []ethdb.Database{sourceDb}, []string{pathToDb}, nil)
-
-	defer func() {
-		MustCloseDB(g.AidaDb)
-		MustCloseDB(sourceDb)
-	}()
-
-	return m.Merge()
 }
 
 // createPatch for updating data in AidaDb
@@ -606,6 +607,39 @@ func (g *Generator) calculatePatchEnd() error {
 	}
 
 	return nil
+}
+
+// mergeTemporaryDeletionDb merges temporary deletion db into aidaDb
+func (g *Generator) mergeTemporaryDeletionDb() (*substate.DestroyedAccountDB, error) {
+	g.Log.Noticef("Merging DeletionDb...")
+	blockBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(blockBytes, g.Opera.firstBlock)
+
+	// insert just range of new patch deletion db into aidaDb
+	iter := g.DeletionDbTmp.NewIterator([]byte(substate.DestroyedAccountPrefix), blockBytes)
+	for iter.Next() {
+		_, _, err := substate.DecodeDestroyedAccountKey(iter.Key())
+		if err != nil {
+			return nil, fmt.Errorf("cannot decode deletion key; %v", err)
+		}
+		// insert the value into generation aidaDb
+		err = g.AidaDb.Put(iter.Key(), iter.Value())
+		if err != nil {
+			return nil, fmt.Errorf("unable to put deletion key %v into aida-db; %v", iter.Key(), err)
+		}
+	}
+
+	iter.Release()
+	MustCloseDB(g.DeletionDbTmp)
+	err := os.RemoveAll(g.DeletionDbTmpPath)
+	if err != nil {
+		return nil, err
+	}
+	g.Log.Noticef("DeletionDbTmp successfully merged into AidaDb...")
+
+	// return deleteDb pointing to AidaDb
+	deleteDb := substate.NewDestroyedAccountDB(g.AidaDb)
+	return deleteDb, nil
 }
 
 // walkFilePath through the directory of patch.tar.gz file recursively
