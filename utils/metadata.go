@@ -1139,7 +1139,7 @@ func (md *AidaDbMetadata) SetUpdatesetInterval(val uint64) error {
 	if err := md.Db.Put([]byte(substate.UpdatesetIntervalKey), byteInterval); err != nil {
 		return err
 	}
-	md.log.Info("METADATA: Db hash saved successfully")
+	md.log.Info("METADATA: Updateset interval saved successfully")
 
 	return nil
 }
@@ -1151,6 +1151,6 @@ func (md *AidaDbMetadata) SetUpdatesetSize(val uint64) error {
 	if err := md.Db.Put([]byte(substate.UpdatesetSizeKey), sizeInterval); err != nil {
 		return err
 	}
-	md.log.Info("METADATA: Db hash saved successfully")
+	md.log.Info("METADATA: Updateset size saved successfully")
 	return nil
 }
