@@ -103,6 +103,7 @@ type code_key struct {
 	code string
 }
 
+// todo remove globals in upcoming PR!
 var code_hashes_lock = sync.Mutex{}
 var code_hashes = map[code_key]common.Hash{}
 
@@ -126,7 +127,6 @@ func MakeOffTheChainStateDB(alloc substate.SubstateAlloc) (StateDB, error) {
 	statedb := NewOffTheChainStateDB()
 	for addr, a := range alloc {
 		statedb.SetPrehashedCode(addr, getHash(addr, a.Code), a.Code)
-		//statedb.SetCode(addr, a.Code)
 		statedb.SetNonce(addr, a.Nonce)
 		statedb.SetBalance(addr, a.Balance)
 		// DON'T USE SetStorage because it makes REVERT and dirtyStorage unavailble
@@ -140,4 +140,10 @@ func MakeOffTheChainStateDB(alloc substate.SubstateAlloc) (StateDB, error) {
 		return nil, fmt.Errorf("cannot commit ofTheChainDb; %v", err)
 	}
 	return &gethStateDB{db: statedb}, nil
+}
+
+func ReleaseCache() {
+	code_hashes_lock.Lock()
+	code_hashes = map[code_key]common.Hash{}
+	code_hashes_lock.Unlock()
 }

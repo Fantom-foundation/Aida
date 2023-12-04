@@ -3,6 +3,7 @@ package utildb
 import (
 	"time"
 
+	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/state/proxy"
@@ -57,15 +58,21 @@ func readAccounts(ch chan proxy.ContractLiveliness, deleteHistory *map[common.Ad
 
 // genDeletedAccountsTask process a transaction substate then records self-destructed accounts
 // and resurrected accounts to a database.
-func genDeletedAccountsTask(block uint64, tx int, recording *substate.Substate, ddb *substate.DestroyedAccountDB, deleteHistory *map[common.Address]bool, cfg *utils.Config) error {
+func genDeletedAccountsTask(
+	tx *substate.Transaction,
+	processor *executor.SubstateProcessor,
+	ddb *substate.DestroyedAccountDB,
+	deleteHistory *map[common.Address]bool,
+	cfg *utils.Config,
+) error {
 
 	ch := make(chan proxy.ContractLiveliness, channelSize)
 	var statedb state.StateDB
-	statedb = state.MakeInMemoryStateDB(&recording.InputAlloc, block)
+	statedb = state.MakeInMemoryStateDB(&tx.Substate.InputAlloc, tx.Block)
 	//wrapper
 	statedb = proxy.NewDeletionProxy(statedb, ch, cfg.LogLevel)
 
-	_, err := utils.ProcessTx(statedb, cfg, block, tx, recording)
+	err := processor.ProcessTransaction(statedb, int(tx.Block), tx.Transaction, tx.Substate)
 	if err != nil {
 		return nil
 	}
@@ -75,8 +82,8 @@ func genDeletedAccountsTask(block uint64, tx int, recording *substate.Substate, 
 	if len(des)+len(res) > 0 {
 		// if transaction completed successfully, put destroyed accounts
 		// and resurrected accounts to a database
-		if recording.Result.Status == types.ReceiptStatusSuccessful {
-			err = ddb.SetDestroyedAccounts(block, tx, des, res)
+		if tx.Substate.Result.Status == types.ReceiptStatusSuccessful {
+			err = ddb.SetDestroyedAccounts(tx.Block, tx.Transaction, des, res)
 			if err != nil {
 				return err
 			}
@@ -104,6 +111,8 @@ func GenDeletedAccountsAction(cfg *utils.Config, ddb *substate.DestroyedAccountD
 	iter := substate.NewSubstateIterator(firstBlock, cfg.Workers)
 	defer iter.Release()
 
+	processor := executor.MakeSubstateProcessor(cfg)
+
 	for iter.Next() {
 		tx := iter.Value()
 		if tx.Block > lastBlock {
@@ -111,7 +120,7 @@ func GenDeletedAccountsAction(cfg *utils.Config, ddb *substate.DestroyedAccountD
 		}
 
 		if tx.Transaction < utils.PseudoTx {
-			err = genDeletedAccountsTask(tx.Block, tx.Transaction, tx.Substate, ddb, &deleteHistory, cfg)
+			err = genDeletedAccountsTask(tx, processor, ddb, &deleteHistory, cfg)
 			if err != nil {
 				return err
 			}

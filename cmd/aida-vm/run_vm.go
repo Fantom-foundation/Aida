@@ -7,7 +7,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
-	"github.com/Fantom-foundation/Aida/logger"
+	"github.com/Fantom-foundation/Aida/executor/extension/validator"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -27,14 +27,7 @@ func RunVm(ctx *cli.Context) error {
 	}
 	defer substateDb.Close()
 
-	log := logger.NewLogger(cfg.LogLevel, "aida-vm")
-	workers := cfg.Workers
-	if workers <= 1 {
-		workers = 1
-	}
-	log.Infof("Processing transactions using %d workers (--workers)...", workers)
-
-	return run(cfg, substateDb, nil, txProcessor{cfg}, nil)
+	return run(cfg, substateDb, nil, executor.MakeLiveDbProcessor(cfg), nil)
 }
 
 // run executes the actual block-processing evaluation for RunVm above.
@@ -54,17 +47,22 @@ func run(
 		profiler.MakeCpuProfiler[*substate.Substate](cfg),
 		profiler.MakeDiagnosticServer[*substate.Substate](cfg),
 		profiler.MakeVirtualMachineStatisticsPrinter[*substate.Substate](cfg),
-		tracker.MakeErrorLogger[*substate.Substate](cfg),
-		tracker.MakeProgressLogger[*substate.Substate](cfg, 15*time.Second),
 	}
+
 	if stateDb == nil {
 		extensions = append(
 			extensions,
-			statedb.MakeTemporaryStatePrepper(),
+			statedb.MakeTemporaryStatePrepper(cfg),
 			tracker.MakeDbLogger[*substate.Substate](cfg),
 		)
 	}
 
+	extensions = append(
+		extensions,
+		tracker.MakeErrorLogger[*substate.Substate](cfg),
+		tracker.MakeProgressLogger[*substate.Substate](cfg, 15*time.Second),
+		validator.MakeLiveDbValidator(cfg),
+	)
 	extensions = append(extensions, extra...)
 
 	return executor.NewExecutor(provider, cfg.LogLevel).Run(
@@ -78,19 +76,4 @@ func run(
 		processor,
 		extensions,
 	)
-}
-
-type txProcessor struct {
-	cfg *utils.Config
-}
-
-func (r txProcessor) Process(state executor.State[*substate.Substate], ctx *executor.Context) error {
-	_, err := utils.ProcessTx(
-		ctx.State,
-		r.cfg,
-		uint64(state.Block),
-		state.Transaction,
-		state.Data,
-	)
-	return err
 }
