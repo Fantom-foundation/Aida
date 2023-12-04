@@ -248,58 +248,16 @@ func (e *executor[T]) Run(params Params, processor Processor[T], extensions []Ex
 
 	if params.NumWorkers <= 1 {
 		params.NumWorkers = 1
-		//return e.runSequential(params, processor, extensions, &state, &ctx)
 	}
 
 	switch params.ParallelismGranularity {
 	case TransactionLevel:
-		return e.runParallelTransaction(params, processor, extensions, &state, &ctx)
+		return e.runTransactions(params, processor, extensions, &state, &ctx)
 	case BlockLevel:
-		return e.runParallelBlock(params, processor, extensions, &state, &ctx)
+		return e.runBlocks(params, processor, extensions, &state, &ctx)
 	default:
 		return fmt.Errorf("incorrect parallelism type: %v", params.ParallelismGranularity)
 	}
-}
-
-func (e *executor[T]) runSequential(params Params, processor Processor[T], extensions []Extension[T], state *State[T], ctx *Context) error {
-	e.log.Debug("Starting sequential run...")
-
-	first := true
-	err := e.provider.Run(params.From, params.To, func(tx TransactionInfo[T]) error {
-		state.Data = tx.Data
-
-		if first {
-			state.Block = tx.Block
-			if err := signalPreBlock(*state, ctx, extensions); err != nil {
-				return err
-			}
-			first = false
-		} else if state.Block != tx.Block {
-			if err := signalPostBlock(*state, ctx, extensions); err != nil {
-				return err
-			}
-			state.Block = tx.Block
-			if err := signalPreBlock(*state, ctx, extensions); err != nil {
-				return err
-			}
-		}
-
-		state.Transaction = tx.Transaction
-		return runTransaction(*state, ctx, tx.Data, processor, extensions)
-	})
-	if err != nil {
-		return err
-	}
-
-	// Finish final block.
-	if !first {
-		if err := signalPostBlock(*state, ctx, extensions); err != nil {
-			return err
-		}
-		state.Block = params.To
-	}
-
-	return nil
 }
 
 // runBlock runs transaction execution in a block
@@ -424,7 +382,7 @@ func (e *executor[T]) forwardBlocks(params Params, abort utils.Event) (chan []*T
 	return blocks, forwardErr
 }
 
-func (e *executor[T]) runParallelTransaction(params Params, processor Processor[T], extensions []Extension[T], state *State[T], ctx *Context) error {
+func (e *executor[T]) runTransactions(params Params, processor Processor[T], extensions []Extension[T], state *State[T], ctx *Context) error {
 	numWorkers := params.NumWorkers
 
 	// An event for signaling an abort of the execution.
@@ -515,7 +473,7 @@ func runTransaction[T any](state State[T], ctx *Context, data T, processor Proce
 	}
 	return nil
 }
-func (e *executor[T]) runParallelBlock(params Params, processor Processor[T], extensions []Extension[T], state *State[T], ctx *Context) error {
+func (e *executor[T]) runBlocks(params Params, processor Processor[T], extensions []Extension[T], state *State[T], ctx *Context) error {
 	numWorkers := params.NumWorkers
 
 	// An event for signaling an abort of the execution.
