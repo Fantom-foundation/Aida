@@ -34,6 +34,16 @@ func ReplayTrace(ctx *cli.Context) error {
 		profiler.MakeReplayProfiler[[]operation.Operation](cfg, rCtx),
 	}
 
+	// we need to open substate if we are priming
+	if cfg.First > 0 && !cfg.SkipPriming {
+		substateDb, err := executor.OpenSubstateDb(cfg, ctx)
+		if err != nil {
+			return err
+		}
+
+		defer substateDb.Close()
+	}
+
 	return replay(cfg, operationProvider, processor, extra)
 }
 
