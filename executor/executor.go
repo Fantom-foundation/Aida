@@ -427,11 +427,16 @@ func (e *executor[T]) runParallelTransaction(params Params, processor Processor[
 	// An event for signaling an abort of the execution.
 	abort := utils.MakeEvent()
 
+	var wg sync.WaitGroup
 	// Start one go-routine forwarding transactions from the provider to a local channel.
 	var forwardErr error
 	transactions := make(chan *TransactionInfo[T], 10*numWorkers)
+	wg.Add(1)
 	go func() {
-		defer close(transactions)
+		defer func() {
+			close(transactions)
+			wg.Done()
+		}()
 		abortErr := errors.New("aborted")
 		err := e.provider.Run(params.From, params.To, func(tx TransactionInfo[T]) error {
 			select {
@@ -448,7 +453,7 @@ func (e *executor[T]) runParallelTransaction(params Params, processor Processor[
 
 	// Start numWorkers go-routines processing transactions in parallel.
 	var cachedPanic atomic.Value
-	var wg sync.WaitGroup
+
 	wg.Add(numWorkers)
 	workerErrs := make([]error, numWorkers)
 	e.log.Debugf("Starting %v workers run on Transaction granularity...", numWorkers)
@@ -460,8 +465,8 @@ func (e *executor[T]) runParallelTransaction(params Params, processor Processor[
 					abort.Signal() // stop forwarder and other workers too
 					cachedPanic.Store(r)
 				}
+				wg.Done()
 			}()
-			defer wg.Done()
 			for {
 				select {
 				case tx := <-transactions:
@@ -483,6 +488,7 @@ func (e *executor[T]) runParallelTransaction(params Params, processor Processor[
 			}
 		}(i)
 	}
+
 	wg.Wait()
 
 	if r := cachedPanic.Load(); r != nil {
