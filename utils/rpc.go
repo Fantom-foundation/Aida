@@ -15,6 +15,8 @@ const (
 	RPCTestnet = "https://rpc.testnet.fantom.network/"
 )
 
+var RPCUnsupported = fmt.Errorf("chain-id is not supported")
+
 type JsonRPCRequest struct {
 	Method  string        `json:"method"`
 	Params  []interface{} `json:"params"`
@@ -59,6 +61,8 @@ func GetProvider(chainId ChainID) (string, error) {
 		return RPCMainnet, nil
 	} else if chainId == TestnetChainID {
 		return RPCTestnet, nil
+	} else if chainId == EthereumChainID {
+		return "", RPCUnsupported
 	} else {
 		return "", fmt.Errorf("unknown chain-id %v", chainId)
 	}

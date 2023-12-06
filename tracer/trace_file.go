@@ -42,7 +42,7 @@ func NewTraceFile(fname string) (*TraceFile, error) {
 	//read first block
 	var header [8]byte
 	if _, err := io.ReadFull(tf.reader, header[:]); err != nil {
-		return nil, fmt.Errorf("fail to read file  header; %v", err)
+		return nil, fmt.Errorf("fail to read file header; %v", err)
 	}
 	tf.firstBlock = binary.LittleEndian.Uint64(header[:])
 	return tf, nil

@@ -1070,6 +1070,11 @@ func (md *AidaDbMetadata) getBlockRange() (uint64, uint64, error) {
 	md.FirstBlock = md.GetFirstBlock()
 	md.LastBlock = md.GetLastBlock()
 
+	// TODO rewrite getBlockRange shoudn't overwrite metadata of aidaDb
+	// TODO temporary fix - still fails because aidaDb (from getMdBlockRange) is open as ReadOnly,
+	// but because of this fail at least the block range specified by the user doesn't get changed - resulting in desired behavior.
+	// this function gave panic without staticSubstateDb being initialized temporary fixed in getMdBlockRange
+
 	// check if AidaDb has block range
 	if md.LastBlock == 0 {
 		var ok bool
