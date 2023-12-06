@@ -202,11 +202,10 @@ func GetChainConfig(chainId ChainID) *params.ChainConfig {
 	return &chainConfig
 }
 
-func setFirstOperaBlock(chainId ChainID) {
-	if !(chainId == MainnetChainID || chainId == TestnetChainID) {
-		log.Fatalf("unknown chain id %v", chainId)
-	}
-	FirstOperaBlock = keywordBlocks[chainId]["opera"]
+type configContext struct {
+	log  logger.Logger
+	mode ArgumentMode
+	cfg  *Config
 }
 
 // NewConfig creates and initializes Config with commandline arguments.
@@ -216,40 +215,54 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 	// create config with user flag values, if not set default values are used
 	cfg := createConfigFromFlags(ctx)
 
-	log := logger.NewLogger(cfg.LogLevel, "Config")
+	cc := &configContext{
+		log:  logger.NewLogger(cfg.LogLevel, "Config"),
+		mode: mode,
+		cfg:  cfg,
+	}
 
 	// check if chainID is set correctly
-	cfg.ChainID, err = getChainId(cfg, log)
+	err = cc.setChainId()
 	if err != nil {
 		return nil, fmt.Errorf("cannot get chainID; %v", err)
 	}
 
-	setFirstOperaBlock(cfg.ChainID)
+	// set first Opera block according to chian id
+	cc.setFirstOperaBlock()
 
 	// set aida db repository url
-	err = setAidaDbRepositoryUrl(cfg.ChainID)
+	err = cc.setAidaDbRepositoryUrl()
 	if err != nil {
 		return cfg, fmt.Errorf("unable to prepareUrl from ChainId %v; %v", cfg.ChainID, err)
 	}
 
 	// set numbers of first block, last block and path to profilingDB
-	err = updateConfigBlockRange(ctx.Args().Slice(), cfg, mode, log)
+	err = cc.updateConfigBlockRange(ctx.Args().Slice())
 	if err != nil {
 		return cfg, fmt.Errorf("unable to parse cli arguments; %v", err)
 	}
 
-	err = adjustMissingConfigValues(cfg)
+	err = cc.adjustMissingConfigValues()
 	if err != nil {
 		return nil, fmt.Errorf("cannot adjust missing config values; %v", err)
 	}
 
-	reportNewConfig(cfg, log)
+	cc.reportNewConfig()
 
 	return cfg, nil
 }
 
+func (cc *configContext) setFirstOperaBlock() {
+	chainId := cc.cfg.ChainID
+	if !(chainId == MainnetChainID || chainId == TestnetChainID) {
+		log.Fatalf("unknown chain id %v", chainId)
+	}
+	FirstOperaBlock = keywordBlocks[chainId]["opera"]
+}
+
 // setAidaDbRepositoryUrl based on chain id selects correct aida-db repository url
-func setAidaDbRepositoryUrl(chainId ChainID) error {
+func (cc *configContext) setAidaDbRepositoryUrl() error {
+	chainId := cc.cfg.ChainID
 	if chainId == MainnetChainID {
 		AidaDbRepositoryUrl = AidaDbRepositoryMainnetUrl
 	} else if chainId == TestnetChainID {
@@ -379,63 +392,65 @@ func offsetBlockNum(blkNum uint64, symbol string, offset uint64) uint64 {
 }
 
 // getMdBlockRange gets block range from aidaDB metadata
-func getMdBlockRange(aidaDbPath string, chainId ChainID, log logger.Logger, logLevel string) (uint64, uint64, uint64, bool, error) {
+func (cc *configContext) getMdBlockRange() (uint64, uint64, uint64, bool, error) {
+	var hasMetadata bool
+	chainId := cc.cfg.ChainID
 	defaultFirst := keywordBlocks[chainId]["first"]
 	defaultLast := keywordBlocks[chainId]["last"]
 	defaultLastPatch := keywordBlocks[chainId]["lastpatch"]
 
-	if _, err := os.Stat(aidaDbPath); errors.Is(err, os.ErrNotExist) {
-		log.Warningf("Unable to open Aida-db in %s; %v", aidaDbPath, err)
-		fmt.Println(defaultFirst)
-		return defaultFirst, defaultLast, defaultLastPatch, false, nil
-	}
-	aidaDb, err := rawdb.NewLevelDBDatabase(aidaDbPath, 1024, 100, "profiling", true)
-	if err != nil {
-		log.Warningf("Cannot open AidaDB; %v", err)
-		return defaultFirst, defaultLast, defaultLastPatch, false, nil
+	if !directoryExists(cc.cfg.AidaDb) {
+		cc.log.Warningf("Unable to open Aida-db in %s", cc.cfg.AidaDb)
+		return defaultFirst, defaultLast, defaultLastPatch, hasMetadata, nil
 	}
 
-	md := NewAidaDbMetadata(aidaDb, logLevel)
+	// read meta data
+	aidaDb, err := rawdb.NewLevelDBDatabase(cc.cfg.AidaDb, 1024, 100, "profiling", true)
+	if err != nil {
+		cc.log.Warningf("Cannot open AidaDB; %v", err)
+		return defaultFirst, defaultLast, defaultLastPatch, hasMetadata, nil
+	}
+	md := NewAidaDbMetadata(aidaDb, cc.cfg.LogLevel)
 	mdFirst, mdLast, err := md.getBlockRange()
 	if err != nil {
-		log.Warningf("Cannot get first and last block of given AidaDB; %v", err)
-		return defaultFirst, defaultLast, defaultLastPatch, false, nil
+		cc.log.Warningf("Cannot get first and last block of given AidaDB; %v", err)
+		return defaultFirst, defaultLast, defaultLastPatch, hasMetadata, nil
 	}
-
+	hasMetadata = true
 	lastPatchBlock, err := getPatchFirstBlock(mdLast)
 	if err != nil {
-		log.Warningf("Cannot get first block of the last patch of given AidaDB; %v", err)
+		cc.log.Warningf("Cannot get first block of the last patch of given AidaDB; %v", err)
 	}
 
 	err = aidaDb.Close()
 	if err != nil {
-		return defaultFirst, defaultLast, defaultLastPatch, false, fmt.Errorf("cannot close db; %v", err)
+		return defaultFirst, defaultLast, defaultLastPatch, hasMetadata, fmt.Errorf("cannot close db; %v", err)
 	}
 
 	return mdFirst, mdLast, lastPatchBlock, true, nil
 }
 
 // adjustBlockRange finds overlap between metadata block range and block range specified by user in command line
-func adjustBlockRange(chainId ChainID, firstArg, lastArg uint64, log logger.Logger) (uint64, uint64, error) {
+func (cc *configContext) adjustBlockRange(firstArg, lastArg uint64) (uint64, uint64, error) {
 	var first, last, firstMd, lastMd uint64
-	firstMd = keywordBlocks[chainId]["first"]
-	lastMd = keywordBlocks[chainId]["last"]
+	firstMd = keywordBlocks[cc.cfg.ChainID]["first"]
+	lastMd = keywordBlocks[cc.cfg.ChainID]["last"]
 
 	if lastArg >= firstMd && lastMd >= firstArg {
 		// get first block number
-		if firstArg > firstMd {
+		if firstArg >= firstMd {
 			first = firstArg
 		} else {
 			first = firstMd
-			log.Warningf("First block arg (%v) is out of range of AidaDb - adjusted to the first block of AidaDb (%v)", firstArg, firstMd)
+			cc.log.Warningf("First block arg (%v) is out of range of AidaDb - adjusted to the first block of AidaDb (%v)", firstArg, firstMd)
 		}
 
 		// get last block number
-		if lastArg < lastMd {
+		if lastArg <= lastMd {
 			last = lastArg
 		} else {
 			last = lastMd
-			log.Warningf("Last block arg (%v) is out of range of AidaDb - adjusted to the last block of AidaDb (%v)", lastArg, lastMd)
+			cc.log.Warningf("Last block arg (%v) is out of range of AidaDb - adjusted to the last block of AidaDb (%v)", lastArg, lastMd)
 		}
 
 		return first, last, nil
@@ -444,60 +459,60 @@ func adjustBlockRange(chainId ChainID, firstArg, lastArg uint64, log logger.Logg
 	}
 }
 
-// getChainId return either default or user specified chainID
+// setChainId set config chainID to the default (mainnet) or user specified chainID
 // if the chainID is unknown type, it'll be loaded from aidaDB
-func getChainId(cfg *Config, log logger.Logger) (ChainID, error) {
-	chainId := cfg.ChainID
+func (cc *configContext) setChainId() error {
+	chainId := cc.cfg.ChainID
 	// first look for chainId since we need it for verbal block indication
 	if chainId == UnknownChainID {
-		log.Warningf("ChainID (--%v) was not set; looking for it in AidaDb", ChainIDFlag.Name)
+		cc.log.Warningf("ChainID (--%v) was not set; looking for it in AidaDb", ChainIDFlag.Name)
 
 		// we check if AidaDb was set with err == nil
-		if aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", true); err == nil {
-			md := NewAidaDbMetadata(aidaDb, cfg.LogLevel)
+		if aidaDb, err := rawdb.NewLevelDBDatabase(cc.cfg.AidaDb, 1024, 100, "profiling", true); err == nil {
+			md := NewAidaDbMetadata(aidaDb, cc.cfg.LogLevel)
 
 			chainId = md.GetChainID()
 
 			if err = aidaDb.Close(); err != nil {
-				return -1, fmt.Errorf("cannot close db; %v", err)
+				return fmt.Errorf("cannot close db; %v", err)
 			}
 		}
 
 		if chainId == 0 {
-			log.Warningf("ChainID was neither specified with flag (--%v) nor was found in AidaDb (%v); setting default value for mainnet", ChainIDFlag.Name, cfg.AidaDb)
+			cc.log.Warningf("ChainID was neither specified with flag (--%v) nor was found in AidaDb (%v); setting default value for mainnet", ChainIDFlag.Name, cc.cfg.AidaDb)
 			chainId = MainnetChainID
 		} else {
-			log.Noticef("Found chainId (%v) in AidaDb", chainId)
+			cc.log.Noticef("Found chainId (%v) in AidaDb", chainId)
 		}
 	}
 
-	return chainId, nil
+	cc.cfg.ChainID = chainId
+	return nil
 }
 
 // updateConfigBlockRange parse the command line arguments according to the mode in which selected tool runs
 // and store them into the config
-func updateConfigBlockRange(args []string, cfg *Config, mode ArgumentMode, log logger.Logger) error {
+func (cc *configContext) updateConfigBlockRange(args []string) error {
 	var (
 		first uint64
 		last  uint64
 	)
 
-	switch mode {
+	switch cc.mode {
 	case BlockRangeArgs:
 		// process arguments and flags
 		if len(args) >= 2 {
 			// try to extract block range from db metadata
-			aidaDbPath := cfg.AidaDb
-			firstMd, lastMd, lastPatchMd, mdOk, err := getMdBlockRange(aidaDbPath, cfg.ChainID, log, cfg.LogLevel)
+			firstMd, lastMd, lastPatchMd, mdOk, err := cc.getMdBlockRange()
 			if err != nil {
 				return err
 			}
-			keywordBlocks[cfg.ChainID]["first"] = firstMd
-			keywordBlocks[cfg.ChainID]["last"] = lastMd
-			keywordBlocks[cfg.ChainID]["lastpatch"] = lastPatchMd
+			keywordBlocks[cc.cfg.ChainID]["first"] = firstMd
+			keywordBlocks[cc.cfg.ChainID]["last"] = lastMd
+			keywordBlocks[cc.cfg.ChainID]["lastpatch"] = lastPatchMd
 
 			// try to parse and check block range
-			firstArg, lastArg, argErr := SetBlockRange(args[0], args[1], cfg.ChainID)
+			firstArg, lastArg, argErr := SetBlockRange(args[0], args[1], cc.cfg.ChainID)
 			if argErr != nil {
 				return argErr
 			}
@@ -509,7 +524,7 @@ func updateConfigBlockRange(args []string, cfg *Config, mode ArgumentMode, log l
 			}
 
 			// find if values overlap
-			first, last, err = adjustBlockRange(cfg.ChainID, firstArg, lastArg, log)
+			first, last, err = cc.adjustBlockRange(firstArg, lastArg)
 			if err != nil {
 				return err
 			}
@@ -532,21 +547,24 @@ func updateConfigBlockRange(args []string, cfg *Config, mode ArgumentMode, log l
 		return errors.New("unknown mode; unable to process commandline arguments")
 	}
 
-	cfg.First = first
-	cfg.Last = last
+	cc.cfg.First = first
+	cc.cfg.Last = last
 	return nil
 }
 
 // adjustMissingConfigValues fill the missing values in the config
-func adjustMissingConfigValues(cfg *Config) error {
+func (cc *configContext) adjustMissingConfigValues() error {
+	cfg := cc.cfg
 	// set default db variant if not provided.
 	if cfg.DbImpl == "carmen" && cfg.DbVariant == "" {
 		cfg.DbVariant = "go-file"
+		cc.log.Info("set a DB variant to go-file")
 	}
 
 	// if ErrorLogging is set we expect we want to catch all processing errors hence we enable ContinueOnFailure
 	if cfg.ErrorLogging != "" {
 		cfg.ContinueOnFailure = true
+		cc.log.Warning("Enable continue-on-failure mode because error logging is used.")
 	}
 
 	// --continue-on-failure implicitly enables transaction state validation
@@ -564,13 +582,12 @@ func adjustMissingConfigValues(cfg *Config) error {
 	// in-memory StateDB cannot be kept after run.
 	if cfg.KeepDb && strings.Contains(cfg.DbVariant, "memory") {
 		cfg.KeepDb = false
-	}
-	if cfg.First == 0 {
-		cfg.SkipPriming = true
+		cc.log.Warning("Keep DB feature is disabled because in-memory storage is used.")
 	}
 
 	// if path doesn't exist, use system temp directory.
 	if found := directoryExists(cfg.DbTmp); !found {
+		cc.log.Warningf("Temporary directory %v is not found. Use the system default %v.", cfg.DbTmp, os.TempDir())
 		cfg.DbTmp = os.TempDir()
 	}
 	return nil
@@ -584,7 +601,10 @@ func OverwriteDbPathsByAidaDb(cfg *Config) {
 }
 
 // reportNewConfig logs out the state of config in current run
-func reportNewConfig(cfg *Config, log logger.Logger) {
+func (cc *configContext) reportNewConfig() {
+	cfg := cc.cfg
+	log := cc.log
+
 	log.Noticef("Run config:")
 	log.Infof("Block range: %v to %v", cfg.First, cfg.Last)
 	if cfg.MaxNumTransactions >= 0 {
