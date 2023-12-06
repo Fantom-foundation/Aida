@@ -60,6 +60,18 @@ func (l *dbLogger[T]) PreRun(_ executor.State[T], ctx *executor.Context) error {
 	return nil
 }
 
+// PreTransaction checks whether ctx.State has not been overwritten by temporary prepper,
+// if so it creates new NewLoggerProxy. This is mainly used by the aida-vm tool.
+func (l *dbLogger[T]) PreTransaction(_ executor.State[T], ctx *executor.Context) error {
+	// if ctx.State has not been change, no need to slow down the app by creating new Proxy
+	if _, ok := ctx.State.(*proxy.LoggingStateDb); ok {
+		return nil
+	}
+
+	ctx.State = proxy.NewLoggerProxy(ctx.State, l.log, l.input)
+	return nil
+}
+
 // PostRun flashes writer for last time and closes the file
 func (l *dbLogger[T]) PostRun(executor.State[T], *executor.Context, error) error {
 	// close the logging thread and wait for thread-safety
