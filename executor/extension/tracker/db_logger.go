@@ -43,8 +43,8 @@ func makeDbLogger[T any](cfg *utils.Config, log logger.Logger) executor.Extensio
 	}
 }
 
-// PreRun creates a logging file and starts the logging thread.
-func (l *dbLogger[T]) PreRun(_ executor.State[T], ctx *executor.Context) error {
+// PreRun creates a logging file
+func (l *dbLogger[T]) PreRun(executor.State[T], *executor.Context) error {
 	var err error
 	l.file, err = os.Create(l.cfg.DbLogging)
 	if err != nil {
@@ -56,7 +56,6 @@ func (l *dbLogger[T]) PreRun(_ executor.State[T], ctx *executor.Context) error {
 	l.wg.Add(1)
 	go l.doLogging()
 
-	ctx.State = proxy.NewLoggerProxy(ctx.State, l.log, l.input)
 	return nil
 }
 

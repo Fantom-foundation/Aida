@@ -70,6 +70,11 @@ func TestDbLoggerExtension_LoggingHappens(t *testing.T) {
 		t.Fatalf("pre-run returned err; %v", err)
 	}
 
+	err = ext.PreTransaction(executor.State[any]{}, ctx)
+	if err != nil {
+		t.Fatalf("pre-transaction returned err; %v", err)
+	}
+
 	balance := new(big.Int).SetInt64(10)
 
 	beginBlock := fmt.Sprintf("BeginBlock, %v", 1)
@@ -167,14 +172,16 @@ func TestDbLoggerExtension_PreTransactionDoesNotCreateNewLoggerProxy(t *testing.
 
 	ext := MakeDbLogger[any](cfg)
 
-	// PreRun assigns LoggerProxy onto ctx.State, hence PreTransaction does no create new
-	err := ext.PreRun(executor.State[any]{}, ctx)
+	// first call PreTransaction to assign the proxy
+	err := ext.PreTransaction(executor.State[any]{}, ctx)
 	if err != nil {
-		t.Fatalf("pre-run failed; %v", err)
+		t.Fatalf("pre-transaction failed; %v", err)
 	}
 
+	// save original state to make sure next call to PreTransaction will not have changed the ctx.State
 	originalDb := ctx.State
 
+	// then make sure it is not re-assigned again
 	err = ext.PreTransaction(executor.State[any]{}, ctx)
 	if err != nil {
 		t.Fatalf("pre-transaction failed; %v", err)
@@ -182,5 +189,28 @@ func TestDbLoggerExtension_PreTransactionDoesNotCreateNewLoggerProxy(t *testing.
 
 	if originalDb != ctx.State {
 		t.Fatal("db must not be be changed!")
+	}
+}
+
+func TestDbLoggerExtension_PreRunDoesNotCreateNewLoggerProxy(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	db := state.NewMockStateDB(ctrl)
+
+	cfg := &utils.Config{}
+	cfg.DbLogging = t.TempDir() + "test-log"
+	cfg.LogLevel = "critical"
+
+	ctx := new(executor.Context)
+	ctx.State = db
+
+	ext := MakeDbLogger[any](cfg)
+
+	err := ext.PreRun(executor.State[any]{}, ctx)
+	if err != nil {
+		t.Fatalf("pre-transaction failed; %v", err)
+	}
+
+	if _, ok := ctx.State.(*proxy.LoggingStateDb); ok {
+		t.Fatal("db must not be of type LoggingStateDb!")
 	}
 }
