@@ -39,8 +39,8 @@ type EventRegistry struct {
 }
 
 // NewEventRegistry creates a new event registry.
-func NewEventRegistry() EventRegistry {
-	return EventRegistry{
+func NewEventRegistry() *EventRegistry {
+	return &EventRegistry{
 		prevArgOp:    numArgOps,
 		contracts:    statistics.NewAccess[common.Address](),
 		keys:         statistics.NewAccess[common.Hash](),

@@ -1,25 +1,22 @@
 package stochastic
 
 import (
-	"encoding/json"
-	"fmt"
-	"math"
-	"os"
-	"time"
-
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
+	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
+	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
+	"github.com/Fantom-foundation/Aida/executor/extension/validator"
 	"github.com/Fantom-foundation/Aida/state"
-	"github.com/Fantom-foundation/Aida/stochastic"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 
-// StochasticRecordCommand data structure for the record app
-var StochasticRecordCommand = cli.Command{
-	Action:    stochasticRecordAction,
+// RecordCommand data structure for the record app
+var RecordCommand = cli.Command{
+	Action:    RecordStochastic,
 	Name:      "record",
-	Usage:     "record StateDB events while processing blocks",
+	Usage:     "Record StateDb events while processing blocks",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		&utils.CpuProfileFlag,
@@ -37,123 +34,60 @@ The stochastic record command requires two arguments:
 last block for recording events.`,
 }
 
-// stochasticRecordAction implements recording of events.
-func stochasticRecordAction(ctx *cli.Context) error {
-	substate.RecordReplay = true
-	var err error
-
+func RecordStochastic(ctx *cli.Context) error {
 	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if err != nil {
 		return err
 	}
+
 	// force enable transaction validation
 	cfg.ValidateTxState = true
 
-	// start CPU profiling if enabled.
-	if err := utils.StartCPUProfile(cfg); err != nil {
-		return err
-	}
-	defer utils.StopCPUProfile(cfg)
-
-	processor := executor.MakeLiveDbProcessor(cfg)
-
-	// iterate through subsets in sequence
-	substate.SetSubstateDb(cfg.AidaDb)
-	substate.OpenSubstateDBReadOnly()
-	defer substate.CloseSubstateDB()
-	iter := substate.NewSubstateIterator(cfg.First, ctx.Int(substate.WorkersFlag.Name))
-	defer iter.Release()
-	oldBlock := uint64(math.MaxUint64) // set to an infeasible block
-	var (
-		start   time.Time
-		sec     float64
-		lastSec float64
-	)
-	start = time.Now()
-	sec = time.Since(start).Seconds()
-	lastSec = time.Since(start).Seconds()
-
-	// create a new event registry
-	eventRegistry := stochastic.NewEventRegistry()
-
-	curSyncPeriod := cfg.First / cfg.SyncPeriodLength
-	eventRegistry.RegisterOp(stochastic.BeginSyncPeriodID)
-
-	// iterate over all substates in order
-	for iter.Next() {
-		tx := iter.Value()
-		// close off old block with an end-block operation
-		if oldBlock != tx.Block {
-			if tx.Block > cfg.Last {
-				break
-			}
-			if oldBlock != math.MaxUint64 {
-				eventRegistry.RegisterOp(stochastic.EndBlockID)
-				newSyncPeriod := tx.Block / cfg.SyncPeriodLength
-				for curSyncPeriod < newSyncPeriod {
-					eventRegistry.RegisterOp(stochastic.EndSyncPeriodID)
-					curSyncPeriod++
-					eventRegistry.RegisterOp(stochastic.BeginSyncPeriodID)
-				}
-			}
-			// open new block with a begin-block operation and clear index cache
-			eventRegistry.RegisterOp(stochastic.BeginBlockID)
-			oldBlock = tx.Block
-		}
-
-		var statedb state.StateDB
-		statedb = state.MakeInMemoryStateDB(&tx.Substate.InputAlloc, tx.Block)
-		statedb = stochastic.NewEventProxy(statedb, &eventRegistry)
-		if err = processor.ProcessTransaction(statedb, int(tx.Block), tx.Transaction, tx.Substate); err != nil {
-			return err
-		}
-
-		// report progress
-		sec = time.Since(start).Seconds()
-		if sec-lastSec >= 15 {
-			fmt.Printf("stochastic record: Elapsed time: %.0f s, at block %v\n", sec, oldBlock)
-			lastSec = sec
-		}
-	}
-	// end last block
-	if oldBlock != math.MaxUint64 {
-		eventRegistry.RegisterOp(stochastic.EndBlockID)
-	}
-	eventRegistry.RegisterOp(stochastic.EndSyncPeriodID)
-
-	sec = time.Since(start).Seconds()
-	fmt.Printf("stochastic record: Total elapsed time: %.3f s, processed %v blocks\n", sec, cfg.Last-cfg.First+1)
-
-	// writing event registry
-	fmt.Printf("stochastic record: write events file ...\n")
-	if cfg.Output == "" {
-		cfg.Output = "./events.json"
-	}
-	err = WriteEvents(&eventRegistry, cfg.Output)
+	substate.RecordReplay = true
+	substateDb, err := executor.OpenSubstateDb(cfg, ctx)
 	if err != nil {
 		return err
 	}
+	defer substateDb.Close()
 
-	return nil
+	return record(cfg, substateDb, nil, executor.MakeLiveDbProcessor(cfg), nil)
 }
 
-// WriteEvents writes event file in JSON format.
-func WriteEvents(r *stochastic.EventRegistry, filename string) error {
-	f, fErr := os.Create(filename)
-	if fErr != nil {
-		return fmt.Errorf("cannot open JSON file; %v", fErr)
-	}
-	defer f.Close()
-
-	jOut, jErr := json.MarshalIndent(r.NewEventRegistryJSON(), "", "    ")
-	if jErr != nil {
-		return fmt.Errorf("failed to convert JSON file; %v", jErr)
-	}
-
-	_, pErr := fmt.Fprintln(f, string(jOut))
-	if pErr != nil {
-		return fmt.Errorf("failed to convert JSON file; %v", pErr)
+func record(
+	cfg *utils.Config,
+	provider executor.Provider[*substate.Substate],
+	db state.StateDB,
+	processor executor.Processor[*substate.Substate],
+	extra []executor.Extension[*substate.Substate],
+) error {
+	var extensions = []executor.Extension[*substate.Substate]{
+		profiler.MakeCpuProfiler[*substate.Substate](cfg),
+		tracker.MakeProgressLogger[*substate.Substate](cfg, 0),
+		tracker.MakeProgressTracker(cfg, 0),
 	}
 
-	return nil
+	if db == nil {
+		extensions = append(extensions,
+			statedb.MakeTemporaryStatePrepper(cfg),
+			statedb.MakeEventProxyPrepper[*substate.Substate](cfg),
+		)
+
+	}
+
+	extensions = append(
+		extensions,
+		validator.MakeLiveDbValidator(cfg),
+	)
+
+	extensions = append(extensions, extra...)
+
+	return executor.NewExecutor(provider, cfg.LogLevel).Run(
+		executor.Params{
+			From:  int(cfg.First),
+			To:    int(cfg.Last) + 1,
+			State: db,
+		},
+		processor,
+		extensions,
+	)
 }
