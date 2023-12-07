@@ -47,7 +47,7 @@ func (p *temporaryProxyRecorderPrepper) PreRun(state executor.State[*substate.Su
 	return nil
 }
 
-func (p *temporaryProxyRecorderPrepper) PreBlock(state executor.State[*substate.Substate], _ *executor.Context) error {
+func (p *temporaryProxyRecorderPrepper) PreBlock(state executor.State[*substate.Substate], ctx *executor.Context) error {
 	// calculate the syncPeriod for given block
 	newSyncPeriod := uint64(state.Block) / p.cfg.SyncPeriodLength
 
@@ -62,7 +62,14 @@ func (p *temporaryProxyRecorderPrepper) PreBlock(state executor.State[*substate.
 	return nil
 }
 
+// PreTransaction checks whether ctx.State has not been overwritten by temporary prepper,
+// if so it creates RecorderProxy.
 func (p *temporaryProxyRecorderPrepper) PreTransaction(_ executor.State[*substate.Substate], ctx *executor.Context) error {
+	// if ctx.State has not been change, no need to slow down the app by creating new Proxy
+	if _, ok := ctx.State.(*proxy.RecorderProxy); ok {
+		return nil
+	}
+
 	ctx.State = proxy.NewRecorderProxy(ctx.State, p.rCtx)
 	return nil
 }
