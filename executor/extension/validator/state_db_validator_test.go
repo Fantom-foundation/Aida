@@ -18,12 +18,19 @@ import (
 )
 
 const (
-	incorrectInputTestErr  = "block 1 tx 1\n input alloc is not contained in the state-db\n   Account 0x0000000000000000000000000000000000000000 does not exist\n  Failed to validate code for account 0x0000000000000000000000000000000000000000\n    have len 1\n    want len 0"
-	incorrectOutputTestErr = "output error at block 1 tx 1;   Account 0x0000000000000000000000000000000000000000 does not exist\n  " +
+	liveDbIncorrectInputTestErr  = "live-db-validator err:\nblock 1 tx 1\n input alloc is not contained in the state-db\n   Account 0x0000000000000000000000000000000000000000 does not exist\n  Failed to validate code for account 0x0000000000000000000000000000000000000000\n    have len 1\n    want len 0"
+	liveDbIncorrectOutputTestErr = "live-db-validator err:\noutput error at block 1 tx 1;   Account 0x0000000000000000000000000000000000000000 does not exist\n  " +
 		"Failed to validate code for account 0x0000000000000000000000000000000000000000\n    " +
 		"have len 1\n    " +
 		"want len 0\n"
-	incorrectOutputAllocErr = "output error at block 1 tx 1; inconsistent output: alloc"
+	liveDbIncorrectOutputAllocErr = "live-db-validator err:\noutput error at block 1 tx 1; inconsistent output: alloc"
+
+	archiveDbIncorrectInputTestErr  = "archive-db-validator err:\nblock 1 tx 1\n input alloc is not contained in the state-db\n   Account 0x0000000000000000000000000000000000000000 does not exist\n  Failed to validate code for account 0x0000000000000000000000000000000000000000\n    have len 1\n    want len 0"
+	archiveDbIncorrectOutputTestErr = "archive-db-validator err:\noutput error at block 1 tx 1;   Account 0x0000000000000000000000000000000000000000 does not exist\n  " +
+		"Failed to validate code for account 0x0000000000000000000000000000000000000000\n    " +
+		"have len 1\n    " +
+		"want len 0\n"
+	archiveDbIncorrectOutputAllocErr = "archive-db-validator err:\noutput error at block 1 tx 1; inconsistent output: alloc"
 )
 
 func TestLiveTxValidator_NoValidatorIsCreatedIfDisabled(t *testing.T) {
@@ -140,7 +147,7 @@ func TestLiveTxValidator_SingleErrorInPreTransactionReturnsErrorWithNoContinueOn
 	}
 
 	got := strings.TrimSpace(err.Error())
-	want := strings.TrimSpace(incorrectInputTestErr)
+	want := strings.TrimSpace(liveDbIncorrectInputTestErr)
 
 	if strings.Compare(got, want) != 0 {
 		t.Errorf("Unexpected err!\nGot: %v; want: %v", got, want)
@@ -181,7 +188,7 @@ func TestLiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueO
 	}
 
 	got := strings.TrimSpace(err.Error())
-	want := strings.TrimSpace(incorrectOutputTestErr)
+	want := strings.TrimSpace(liveDbIncorrectOutputTestErr)
 
 	if strings.Compare(got, want) != 0 {
 		t.Errorf("Unexpected err!\nGot: %v; \nWant: %v", got, want)
@@ -216,7 +223,7 @@ func TestLiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueO
 	}
 
 	got := strings.TrimSpace(err.Error())
-	want := strings.TrimSpace(incorrectOutputAllocErr)
+	want := strings.TrimSpace(liveDbIncorrectOutputAllocErr)
 
 	if strings.Compare(got, want) != 0 {
 		t.Errorf("Unexpected err!\nGot: %v; \nWant: %v", got, want)
@@ -498,7 +505,7 @@ func TestArchiveTxValidator_SingleErrorInPreTransactionReturnsErrorWithNoContinu
 	}
 
 	got := strings.TrimSpace(err.Error())
-	want := strings.TrimSpace(incorrectInputTestErr)
+	want := strings.TrimSpace(archiveDbIncorrectInputTestErr)
 
 	if strings.Compare(got, want) != 0 {
 		t.Errorf("Unexpected err!\nGot: %v; want: %v", got, want)
@@ -539,7 +546,7 @@ func TestArchiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContin
 	}
 
 	got := strings.TrimSpace(err.Error())
-	want := strings.TrimSpace(incorrectOutputTestErr)
+	want := strings.TrimSpace(archiveDbIncorrectOutputTestErr)
 
 	if strings.Compare(got, want) != 0 {
 		t.Errorf("Unexpected err!\nGot: %v; \nWant: %v", got, want)
@@ -574,7 +581,7 @@ func TestArchiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContin
 	}
 
 	got := strings.TrimSpace(err.Error())
-	want := strings.TrimSpace(incorrectOutputAllocErr)
+	want := strings.TrimSpace(archiveDbIncorrectOutputAllocErr)
 
 	if strings.Compare(got, want) != 0 {
 		t.Errorf("Unexpected err!\nGot: %v; \nWant: %v", got, want)

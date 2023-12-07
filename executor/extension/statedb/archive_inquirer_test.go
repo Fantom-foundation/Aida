@@ -26,10 +26,10 @@ func TestArchiveInquirer_DisabledIfNoQueryRateIsGiven(t *testing.T) {
 
 func TestArchiveInquirer_ReportsErrorIfNoArchiveIsPresent(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	logger := logger.NewMockLogger(ctrl)
-	config := utils.Config{}
-	config.ArchiveQueryRate = 100
-	ext := makeArchiveInquirer(&config, logger, 10)
+	log := logger.NewMockLogger(ctrl)
+	cfg := utils.Config{}
+	cfg.ArchiveQueryRate = 100
+	ext := makeArchiveInquirer(&cfg, log)
 
 	state := executor.State[*substate.Substate]{}
 	if err := ext.PreRun(state, nil); err == nil {
@@ -42,13 +42,13 @@ func TestArchiveInquirer_ReportsErrorIfNoArchiveIsPresent(t *testing.T) {
 
 func TestArchiveInquirer_CanStartUpAndShutdownGracefully(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	logger := logger.NewMockLogger(ctrl)
+	log := logger.NewMockLogger(ctrl)
 	db := state.NewMockStateDB(ctrl)
 
-	config := utils.Config{}
-	config.ArchiveMode = true
-	config.ArchiveQueryRate = 100
-	ext := makeArchiveInquirer(&config, logger, 10)
+	cfg := utils.Config{}
+	cfg.ArchiveMode = true
+	cfg.ArchiveQueryRate = 100
+	ext := makeArchiveInquirer(&cfg, log)
 
 	state := executor.State[*substate.Substate]{}
 	context := executor.Context{State: db}
@@ -63,15 +63,15 @@ func TestArchiveInquirer_CanStartUpAndShutdownGracefully(t *testing.T) {
 
 func TestArchiveInquirer_RunsRandomTransactionsInBackground(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	logger := logger.NewMockLogger(ctrl)
+	log := logger.NewMockLogger(ctrl)
 	db := state.NewMockStateDB(ctrl)
 	archive := state.NewMockNonCommittableStateDB(ctrl)
 
-	config := utils.Config{}
-	config.ArchiveMode = true
-	config.ArchiveQueryRate = 100
-	config.ArchiveMaxQueryAge = 100
-	config.ChainID = utils.TestnetChainID
+	cfg := utils.Config{}
+	cfg.ArchiveMode = true
+	cfg.ArchiveQueryRate = 100
+	cfg.ArchiveMaxQueryAge = 100
+	cfg.ChainID = utils.TestnetChainID
 
 	state := executor.State[*substate.Substate]{}
 	context := executor.Context{State: db}
@@ -99,7 +99,7 @@ func TestArchiveInquirer_RunsRandomTransactionsInBackground(t *testing.T) {
 	archive.EXPECT().EndTransaction().AnyTimes()
 	archive.EXPECT().Release().MinTimes(1)
 
-	ext := makeArchiveInquirer(&config, logger, 10)
+	ext := makeArchiveInquirer(&cfg, log)
 	if err := ext.PreRun(state, &context); err != nil {
 		t.Errorf("failed PreRun, got %v", err)
 	}
@@ -136,83 +136,6 @@ func makeValidSubstate() *substate.Substate {
 			Gas:      100_000,
 			GasPrice: big.NewInt(0),
 			Value:    big.NewInt(0),
-		},
-		Result: &substate.SubstateResult{
-			GasUsed: 1,
-		},
-	}
-}
-
-func TestArchiveInquirer_QueryErrorsAreCollected(t *testing.T) {
-	const maxErrors = 10
-	ctrl := gomock.NewController(t)
-	logger := logger.NewMockLogger(ctrl)
-	db := state.NewMockStateDB(ctrl)
-	archive := state.NewMockNonCommittableStateDB(ctrl)
-
-	config := utils.Config{}
-	config.ArchiveMode = true
-	config.ArchiveQueryRate = 100
-	config.ArchiveMaxQueryAge = 100
-	config.ChainID = utils.TestnetChainID
-
-	state := executor.State[*substate.Substate]{}
-	context := executor.Context{State: db}
-
-	substate := makeInvalidSubstate()
-
-	logger.EXPECT().Warning(gomock.Any()).AnyTimes()
-
-	db.EXPECT().GetArchiveBlockHeight().AnyTimes().Return(uint64(14), false, nil)
-	db.EXPECT().GetArchiveState(gomock.Any()).MinTimes(1).Return(archive, nil)
-
-	archive.EXPECT().BeginTransaction(gomock.Any()).MinTimes(1)
-	archive.EXPECT().Prepare(gomock.Any(), gomock.Any()).AnyTimes()
-	archive.EXPECT().Snapshot().AnyTimes()
-	archive.EXPECT().GetBalance(gomock.Any()).AnyTimes().Return(big.NewInt(1000))
-	archive.EXPECT().GetNonce(gomock.Any()).AnyTimes().Return(uint64(0))
-	archive.EXPECT().SetNonce(gomock.Any(), gomock.Any()).AnyTimes().Return()
-	archive.EXPECT().GetCodeHash(gomock.Any()).AnyTimes().Return(common.Hash{})
-	archive.EXPECT().SubBalance(gomock.Any(), gomock.Any()).AnyTimes()
-	archive.EXPECT().CreateAccount(gomock.Any()).AnyTimes()
-	archive.EXPECT().AddBalance(gomock.Any(), gomock.Any()).AnyTimes()
-	archive.EXPECT().SetCode(gomock.Any(), gomock.Any()).AnyTimes()
-	archive.EXPECT().GetRefund().AnyTimes()
-	archive.EXPECT().RevertToSnapshot(gomock.Any()).AnyTimes()
-	archive.EXPECT().EndTransaction().AnyTimes()
-	archive.EXPECT().Release().MinTimes(1)
-
-	ext := makeArchiveInquirer(&config, logger, maxErrors)
-	if err := ext.PreRun(state, &context); err != nil {
-		t.Errorf("failed PreRun, got %v", err)
-	}
-
-	state.Block = 15
-	state.Transaction = 0
-	state.Data = substate
-	if err := ext.PostTransaction(state, &context); err != nil {
-		t.Fatalf("failed to add transaction to pool: %v", err)
-	}
-
-	time.Sleep(time.Second)
-
-	err := ext.PostRun(state, nil, nil)
-	if err == nil {
-		t.Fatalf("execution errors have not been collected")
-	}
-
-	errors := err.(interface{ Unwrap() []error }).Unwrap()
-	if want, got := len(errors), maxErrors; want != got {
-		t.Errorf("unexpected number of errors, wanted %d, got %d", want, got)
-	}
-}
-
-func makeInvalidSubstate() *substate.Substate {
-	// This Substate is a minimal substate that can be successfully processed.
-	return &substate.Substate{
-		Env: &substate.SubstateEnv{},
-		Message: &substate.SubstateMessage{
-			GasPrice: big.NewInt(12),
 		},
 		Result: &substate.SubstateResult{
 			GasUsed: 1,
