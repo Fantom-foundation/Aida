@@ -117,7 +117,7 @@ func TestEventRegistryOperation(t *testing.T) {
 	r := NewEventRegistry()
 
 	// check that frequencies are zero.
-	if !checkFrequencies(&r, opFreq, transitFreq) {
+	if !checkFrequencies(r, opFreq, transitFreq) {
 		t.Fatalf("operation/transit frequency diverges")
 	}
 
@@ -126,7 +126,7 @@ func TestEventRegistryOperation(t *testing.T) {
 	r.RegisterAddressOp(CreateAccountID, &addr)
 	argop1 := EncodeArgOp(CreateAccountID, statistics.NewValueID, statistics.NoArgID, statistics.NoArgID)
 	opFreq[argop1]++
-	if !checkFrequencies(&r, opFreq, transitFreq) {
+	if !checkFrequencies(r, opFreq, transitFreq) {
 		t.Fatalf("operation/transit frequency diverges")
 	}
 
@@ -136,7 +136,7 @@ func TestEventRegistryOperation(t *testing.T) {
 	argop2 := EncodeArgOp(GetStateID, statistics.PreviousValueID, statistics.NewValueID, statistics.NoArgID)
 	opFreq[argop2]++
 	transitFreq[argop1][argop2]++
-	if !checkFrequencies(&r, opFreq, transitFreq) {
+	if !checkFrequencies(r, opFreq, transitFreq) {
 		t.Fatalf("operation/transit frequency diverges")
 	}
 
@@ -146,7 +146,7 @@ func TestEventRegistryOperation(t *testing.T) {
 	argop3 := EncodeArgOp(SetStateID, statistics.PreviousValueID, statistics.PreviousValueID, statistics.ZeroValueID)
 	opFreq[argop3]++
 	transitFreq[argop2][argop3]++
-	if !checkFrequencies(&r, opFreq, transitFreq) {
+	if !checkFrequencies(r, opFreq, transitFreq) {
 		t.Fatalf("operation/transit frequency diverges")
 	}
 
@@ -155,7 +155,7 @@ func TestEventRegistryOperation(t *testing.T) {
 	argop4 := EncodeArgOp(SnapshotID, statistics.NoArgID, statistics.NoArgID, statistics.NoArgID)
 	opFreq[argop4]++
 	transitFreq[argop3][argop4]++
-	if !checkFrequencies(&r, opFreq, transitFreq) {
+	if !checkFrequencies(r, opFreq, transitFreq) {
 		t.Fatalf("operation/transit frequency diverges")
 	}
 }
@@ -172,7 +172,7 @@ func TestEventRegistryZeroOperation(t *testing.T) {
 	r := NewEventRegistry()
 
 	// check that frequencies are zero.
-	if !checkFrequencies(&r, opFreq, transitFreq) {
+	if !checkFrequencies(r, opFreq, transitFreq) {
 		t.Fatalf("operation/transit frequency diverges")
 	}
 
@@ -183,7 +183,7 @@ func TestEventRegistryZeroOperation(t *testing.T) {
 	r.RegisterValueOp(SetStateID, &addr, &key, &value)
 	argop1 := EncodeArgOp(SetStateID, statistics.ZeroValueID, statistics.ZeroValueID, statistics.ZeroValueID)
 	opFreq[argop1]++
-	if !checkFrequencies(&r, opFreq, transitFreq) {
+	if !checkFrequencies(r, opFreq, transitFreq) {
 		t.Fatalf("operation/transit frequency diverges")
 	}
 
@@ -195,7 +195,7 @@ func TestEventRegistryZeroOperation(t *testing.T) {
 	argop2 := EncodeArgOp(SetStateID, statistics.NewValueID, statistics.NewValueID, statistics.NewValueID)
 	opFreq[argop2]++
 	transitFreq[argop1][argop2]++
-	if !checkFrequencies(&r, opFreq, transitFreq) {
+	if !checkFrequencies(r, opFreq, transitFreq) {
 		t.Fatalf("operation/transit frequency diverges")
 	}
 
@@ -204,7 +204,7 @@ func TestEventRegistryZeroOperation(t *testing.T) {
 	argop3 := EncodeArgOp(SetStateID, statistics.PreviousValueID, statistics.PreviousValueID, statistics.PreviousValueID)
 	opFreq[argop3]++
 	transitFreq[argop2][argop3]++
-	if !checkFrequencies(&r, opFreq, transitFreq) {
+	if !checkFrequencies(r, opFreq, transitFreq) {
 		t.Fatalf("operation/transit frequency diverges")
 	}
 }

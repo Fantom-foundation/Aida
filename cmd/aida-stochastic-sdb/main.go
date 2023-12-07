@@ -34,7 +34,7 @@ func initStochasticApp() *cli.App {
 		Commands: []*cli.Command{
 			&stochastic.StochasticEstimateCommand,
 			&stochastic.StochasticGenerateCommand,
-			&stochastic.StochasticRecordCommand,
+			&stochastic.RecordCommand,
 			&stochastic.StochasticReplayCommand,
 			&stochastic.StochasticVisualizeCommand,
 		},

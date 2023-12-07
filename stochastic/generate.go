@@ -103,5 +103,5 @@ func GenerateUniformRegistry(cfg *utils.Config, log logger.Logger) *EventRegistr
 			}
 		}
 	}
-	return &r
+	return r
 }
