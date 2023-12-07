@@ -250,7 +250,7 @@ func TestVmSdb_Substate_ValidationFailsOnInvalidTransaction(t *testing.T) {
 		t.Errorf("validation must fail")
 	}
 
-	expectedErr := strings.TrimSpace("block 2 tx 1\n input alloc is not contained in the state-db\n   Account 0x0100000000000000000000000000000000000000 does not exist")
+	expectedErr := strings.TrimSpace("live-db-validator err:\nblock 2 tx 1\n input alloc is not contained in the state-db\n   Account 0x0100000000000000000000000000000000000000 does not exist")
 	returnedErr := strings.TrimSpace(err.Error())
 
 	if strings.Compare(returnedErr, expectedErr) != 0 {
