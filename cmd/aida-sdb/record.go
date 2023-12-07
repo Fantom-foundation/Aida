@@ -5,6 +5,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
+	"github.com/Fantom-foundation/Aida/executor/extension/validator"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -67,6 +68,7 @@ func record(
 		tracker.MakeProgressTracker(cfg, 0),
 		statedb.MakeTemporaryStatePrepper(cfg),
 		statedb.MakeTemporaryProxyRecorderPrepper(cfg),
+		validator.MakeLiveDbValidator(cfg),
 	}
 
 	extensions = append(extensions, extra...)
