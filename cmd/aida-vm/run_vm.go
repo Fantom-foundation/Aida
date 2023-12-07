@@ -8,7 +8,6 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/executor/extension/validator"
-	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -27,13 +26,6 @@ func RunVm(ctx *cli.Context) error {
 		return err
 	}
 	defer substateDb.Close()
-
-	log := logger.NewLogger(cfg.LogLevel, "aida-vm")
-	workers := cfg.Workers
-	if workers <= 1 {
-		workers = 1
-	}
-	log.Infof("Processing transactions using %d workers (--workers)...", workers)
 
 	return run(cfg, substateDb, nil, executor.MakeLiveDbProcessor(cfg), nil)
 }
@@ -60,7 +52,7 @@ func run(
 	if stateDb == nil {
 		extensions = append(
 			extensions,
-			statedb.MakeTemporaryStatePrepper(),
+			statedb.MakeTemporaryStatePrepper(cfg),
 			tracker.MakeDbLogger[*substate.Substate](cfg),
 		)
 	}

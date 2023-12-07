@@ -13,6 +13,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/state/proxy"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"go.uber.org/mock/gomock"
@@ -126,5 +127,60 @@ func TestDbLoggerExtension_LoggingHappens(t *testing.T) {
 
 	if strings.Compare(got, want) != 0 {
 		t.Fatalf("unexpected file output\nGot: %v\nWant: %v", got, want)
+	}
+}
+
+func TestDbLoggerExtension_PreTransactionCreatesNewLoggerProxy(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	db := state.NewMockStateDB(ctrl)
+
+	cfg := &utils.Config{}
+	cfg.DbLogging = t.TempDir() + "test-log"
+	cfg.LogLevel = "critical"
+
+	ctx := new(executor.Context)
+	ctx.State = db
+
+	ext := MakeDbLogger[any](cfg)
+
+	// ctx.State is not yet a LoggerProxy hence PreTransaction assigns it
+	err := ext.PreTransaction(executor.State[any]{}, ctx)
+	if err != nil {
+		t.Fatalf("pre-transaction failed; %v", err)
+	}
+
+	if _, ok := ctx.State.(*proxy.LoggingStateDb); !ok {
+		t.Fatal("db must be of type LoggingStateDb!")
+	}
+}
+
+func TestDbLoggerExtension_PreTransactionDoesNotCreateNewLoggerProxy(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	db := state.NewMockStateDB(ctrl)
+
+	cfg := &utils.Config{}
+	cfg.DbLogging = t.TempDir() + "test-log"
+	cfg.LogLevel = "critical"
+
+	ctx := new(executor.Context)
+	ctx.State = db
+
+	ext := MakeDbLogger[any](cfg)
+
+	// PreRun assigns LoggerProxy onto ctx.State, hence PreTransaction does no create new
+	err := ext.PreRun(executor.State[any]{}, ctx)
+	if err != nil {
+		t.Fatalf("pre-run failed; %v", err)
+	}
+
+	originalDb := ctx.State
+
+	err = ext.PreTransaction(executor.State[any]{}, ctx)
+	if err != nil {
+		t.Fatalf("pre-transaction failed; %v", err)
+	}
+
+	if originalDb != ctx.State {
+		t.Fatal("db must not be be changed!")
 	}
 }

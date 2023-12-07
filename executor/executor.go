@@ -232,8 +232,7 @@ func (e *executor[T]) Run(params Params, processor Processor[T], extensions []Ex
 		// Skip PostRun actions if a panic occurred. In such a case there is no guarantee
 		// on the state of anything, and PostRun operations may deadlock or cause damage.
 		if r := recover(); r != nil {
-			e.log.Error(r)
-			return
+			panic(r)
 		}
 		err = errors.Join(
 			err,
@@ -388,11 +387,16 @@ func (e *executor[T]) runTransactions(params Params, processor Processor[T], ext
 	// An event for signaling an abort of the execution.
 	abort := utils.MakeEvent()
 
+	var wg sync.WaitGroup
 	// Start one go-routine forwarding transactions from the provider to a local channel.
 	var forwardErr error
 	transactions := make(chan *TransactionInfo[T], 10*numWorkers)
+	wg.Add(1)
 	go func() {
-		defer close(transactions)
+		defer func() {
+			close(transactions)
+			wg.Done()
+		}()
 		abortErr := errors.New("aborted")
 		err := e.provider.Run(params.From, params.To, func(tx TransactionInfo[T]) error {
 			select {
@@ -409,7 +413,7 @@ func (e *executor[T]) runTransactions(params Params, processor Processor[T], ext
 
 	// Start numWorkers go-routines processing transactions in parallel.
 	var cachedPanic atomic.Value
-	var wg sync.WaitGroup
+
 	wg.Add(numWorkers)
 	workerErrs := make([]error, numWorkers)
 	e.log.Debugf("Starting %v workers run on Transaction granularity...", numWorkers)
@@ -421,8 +425,8 @@ func (e *executor[T]) runTransactions(params Params, processor Processor[T], ext
 					abort.Signal() // stop forwarder and other workers too
 					cachedPanic.Store(r)
 				}
+				wg.Done()
 			}()
-			defer wg.Done()
 			for {
 				select {
 				case tx := <-transactions:
@@ -444,6 +448,7 @@ func (e *executor[T]) runTransactions(params Params, processor Processor[T], ext
 			}
 		}(i)
 	}
+
 	wg.Wait()
 
 	if r := cachedPanic.Load(); r != nil {

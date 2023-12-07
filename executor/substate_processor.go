@@ -37,7 +37,7 @@ func (p *LiveDbProcessor) Process(state State[*substate.Substate], ctx *Context)
 	}
 
 	if !p.isErrFatal() {
-		ctx.ErrorInput <- err
+		ctx.ErrorInput <- fmt.Errorf("live-db processor failed; %v", err)
 		return nil
 	}
 
@@ -63,7 +63,7 @@ func (p *ArchiveDbProcessor) Process(state State[*substate.Substate], ctx *Conte
 	}
 
 	if !p.isErrFatal() {
-		ctx.ErrorInput <- err
+		ctx.ErrorInput <- fmt.Errorf("archive-db processor failed; %v", err)
 		return nil
 	}
 
@@ -73,7 +73,6 @@ func (p *ArchiveDbProcessor) Process(state State[*substate.Substate], ctx *Conte
 type SubstateProcessor struct {
 	cfg       *utils.Config
 	numErrors *atomic.Int32 // transactions can be processed in parallel, so this needs to be thread safe
-
 }
 
 func MakeSubstateProcessor(cfg *utils.Config) *SubstateProcessor {
@@ -240,7 +239,30 @@ func compileVMResult(logs []*types.Log, reciept *evmcore.ExecutionResult, contra
 // validateVMResult compares the result of a transaction to an expected value.
 func validateVMResult(vmResult, expectedResult *substate.SubstateResult) error {
 	if !expectedResult.Equal(vmResult) {
-		return fmt.Errorf("inconsistent output; %v", vmResult)
+		return fmt.Errorf("inconsistent output\n"+
+			"\ngot:\n"+
+			"\tstatus: %v\n"+
+			"\tbloom: %v\n"+
+			"\tlogs: %v\n"+
+			"\tcontract address: %v\n"+
+			"\tgas used: %v\n"+
+			"\nwant:\n"+
+			"\tstatus: %v\n"+
+			"\tbloom: %v\n"+
+			"\tlogs: %v\n"+
+			"\tcontract address: %v\n"+
+			"\tgas used: %v\n",
+			vmResult.Status,
+			vmResult.Bloom.Big().Uint64(),
+			vmResult.Logs,
+			vmResult.ContractAddress,
+			vmResult.GasUsed,
+			expectedResult.Status,
+			expectedResult.Bloom.Big().Uint64(),
+			expectedResult.Logs,
+			expectedResult.ContractAddress,
+			expectedResult.GasUsed,
+		)
 	}
 	return nil
 }

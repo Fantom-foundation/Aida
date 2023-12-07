@@ -16,6 +16,10 @@ pipeline {
         TOBLOCK = '4600000'
     }
 
+    parameters {
+        string(defaultValue: "develop", description: 'Which branch?', name: 'BRANCH_NAME')
+    }
+
     stages {
         stage('Build') {
             steps {
@@ -83,6 +87,15 @@ pipeline {
             }
         }
 
+        stage('aida-vm-sdb archive-inquirer') {
+            steps {
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
+                    sh "build/aida-vm-sdb substate ${VM} ${AIDADB} ${PRIME} ${TMPDB} --db-impl carmen --db-variant go-file --archive-query-rate 5000 --carmen-schema 5 --archive --archive-variant s5 --validate-tx --cpu-profile cpu-profile.dat --memory-profile mem-profile.dat --memory-breakdown --continue-on-failure ${FROMBLOCK} ${TOBLOCK} "
+                }
+                sh "rm -rf *.dat"
+            }
+        }
+
         stage('aida-vm-sdb new-db') {
             steps {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
@@ -121,12 +134,16 @@ pipeline {
 
     post {
         always {
-            build job: '/Notifications/slack-notification-pipeline', parameters: [
-                string(name: 'result', value: "${currentBuild.result}"),
-                string(name: 'name', value: "${currentBuild.fullDisplayName}"),
-                string(name: 'duration', value: "${currentBuild.duration}"),
-                string(name: 'url', value: "$currentBuild.absoluteUrl")
-            ]
+            script {
+                if( params.BRANCH_NAME == 'develop' ){
+                    build job: '/Notifications/slack-notification-pipeline', parameters: [
+                        string(name: 'result', value: "${currentBuild.result}"),
+                        string(name: 'name', value: "${currentBuild.fullDisplayName}"),
+                        string(name: 'duration', value: "${currentBuild.duration}"),
+                        string(name: 'url', value: "$currentBuild.absoluteUrl")
+                    ]
+                }
+            }
         }
     }
 }
