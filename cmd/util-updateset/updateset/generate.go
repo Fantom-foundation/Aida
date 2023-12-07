@@ -71,9 +71,14 @@ func generateUpdateSet(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	lastUpdateSetBlk, err := db.GetLastKey()
+	if err != nil {
+		return fmt.Errorf("cannot get last update-set; %v", err)
+	}
+
 	// set first block
-	if db.GetLastKey() > 0 {
-		cfg.First = db.GetLastKey() + 1
+	if lastUpdateSetBlk > 0 {
+		cfg.First = lastUpdateSetBlk + 1
 	}
 	err = db.Close()
 	if err != nil {

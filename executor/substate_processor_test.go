@@ -3,6 +3,7 @@ package executor
 import (
 	"fmt"
 	"math/big"
+	"strings"
 	"testing"
 
 	substate "github.com/Fantom-foundation/Substate"
@@ -105,5 +106,48 @@ func TestValidateVMResult(t *testing.T) {
 	err = validateVMResult(vmResult, expectedResult)
 	if err == nil {
 		t.Fatalf("Failed to validate VM output. Expect staatus mismatch error.")
+	}
+}
+
+func TestValidateVMResult_ErrorIsInCorrectFormat(t *testing.T) {
+	expectedResult := newDummyResult(t)
+	vmResult := newDummyResult(t)
+
+	// change result so validation fails
+	expectedResult.GasUsed = 15000
+
+	err := validateVMResult(vmResult, expectedResult)
+	if err == nil {
+		t.Fatal("validation must fail")
+	}
+
+	want := fmt.Sprintf("inconsistent output\n"+
+		"\ngot:\n"+
+		"\tstatus: %v\n"+
+		"\tbloom: %v\n"+
+		"\tlogs: %v\n"+
+		"\tcontract address: %v\n"+
+		"\tgas used: %v\n"+
+		"\nwant:\n"+
+		"\tstatus: %v\n"+
+		"\tbloom: %v\n"+
+		"\tlogs: %v\n"+
+		"\tcontract address: %v\n"+
+		"\tgas used: %v\n",
+		vmResult.Status,
+		vmResult.Bloom.Big().Uint64(),
+		vmResult.Logs,
+		vmResult.ContractAddress,
+		vmResult.GasUsed,
+		expectedResult.Status,
+		expectedResult.Bloom.Big().Uint64(),
+		expectedResult.Logs,
+		expectedResult.ContractAddress,
+		expectedResult.GasUsed,
+	)
+	got := err.Error()
+
+	if strings.Compare(got, want) != 0 {
+		t.Fatalf("unexpected err\ngot: %v\n want: %v\n", got, want)
 	}
 }

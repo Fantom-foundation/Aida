@@ -1,6 +1,7 @@
 package utildb
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -12,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/syndtr/goleveldb/leveldb"
 )
 
 const cloneWriteChanSize = 1
@@ -24,7 +26,7 @@ type cloner struct {
 	typ             utils.AidaDbType
 	writeCh         chan rawEntry
 	errCh           chan error
-	closeCh         chan any
+	stopCh          chan any
 }
 
 // rawEntry representation of database entry
@@ -81,7 +83,7 @@ func Clone(cfg *utils.Config, aidaDb, cloneDb ethdb.Database, cloneType utils.Ai
 		typ:     cloneType,
 		writeCh: make(chan rawEntry, cloneWriteChanSize),
 		errCh:   make(chan error, 1),
-		closeCh: make(chan any),
+		stopCh:  make(chan any),
 	}
 
 	if err = c.clone(isFirstGenerationFromGenesis); err != nil {
@@ -95,7 +97,48 @@ func Clone(cfg *utils.Config, aidaDb, cloneDb ethdb.Database, cloneType utils.Ai
 // createDbClone AidaDb in given block range
 func (c *cloner) clone(isFirstGenerationFromGenesis bool) error {
 	go c.write()
-	go c.checkErrors()
+
+	err := c.readData(isFirstGenerationFromGenesis)
+	if err != nil {
+		return err
+	}
+
+	// wait for writer result
+	err, ok := <-c.errCh
+	if ok {
+		return err
+	}
+
+	if c.cfg.Validate {
+		err = c.validateDbSize()
+		if err != nil {
+			return err
+		}
+	}
+
+	sourceMD := utils.NewAidaDbMetadata(c.aidaDb, c.cfg.LogLevel)
+	chainID := sourceMD.GetChainID()
+
+	if err = utils.ProcessCloneLikeMetadata(c.cloneDb, c.typ, c.cfg.LogLevel, c.cfg.First, c.cfg.Last, chainID); err != nil {
+		return err
+	}
+
+	//  compact written data
+	if c.cfg.CompactDb {
+		c.log.Noticef("Starting compaction")
+		err = c.cloneDb.Compact(nil, nil)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// readData from source AidaDb
+func (c *cloner) readData(isFirstGenerationFromGenesis bool) error {
+	// notify writer that all data was read
+	defer close(c.writeCh)
 
 	c.read([]byte(substate.Stage1CodePrefix), 0, nil)
 
@@ -120,60 +163,19 @@ func (c *cloner) clone(isFirstGenerationFromGenesis bool) error {
 	if err != nil {
 		return fmt.Errorf("cannot read deletions; %v", err)
 	}
+
 	err = c.readSubstate()
 	if err != nil {
 		return err
 	}
 
-	err = c.readStateHashes()
-	if err != nil {
-		return err
-	}
-
-	close(c.writeCh)
-
-	sourceMD := utils.NewAidaDbMetadata(c.aidaDb, c.cfg.LogLevel)
-	chainID := sourceMD.GetChainID()
-
-	if err = utils.ProcessCloneLikeMetadata(c.cloneDb, c.typ, c.cfg.LogLevel, c.cfg.First, c.cfg.Last, chainID); err != nil {
-		return err
-	}
-
-	//  compact written data
-	if c.cfg.CompactDb {
-		c.log.Noticef("Starting compaction")
-		err = c.cloneDb.Compact(nil, nil)
-		if err != nil {
-			return err
-		}
-	}
-
-	if c.cfg.Validate {
-		err = c.validateDbSize()
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// checkErrors is a thread for error handling. When error occurs in any thread, this thread closes every other thread
-func (c *cloner) checkErrors() {
-	for {
-		select {
-		case <-c.closeCh:
-			return
-		case err := <-c.errCh:
-			c.log.Error(err)
-			c.stop()
-			return
-		}
-	}
+	return c.readStateHashes()
 }
 
 // write data read from func read() into new createDbClone
 func (c *cloner) write() {
+	defer close(c.errCh)
+
 	var (
 		err         error
 		data        rawEntry
@@ -215,10 +217,9 @@ func (c *cloner) write() {
 				// reset writer after writing batch
 				batchWriter.Reset()
 			}
-		case <-c.closeCh:
+		case <-c.stopCh:
 			return
 		}
-
 	}
 }
 
@@ -242,8 +243,10 @@ func (c *cloner) read(prefix []byte, start uint64, condition func(key []byte) (b
 		}
 
 		c.count++
-
-		c.sendToWriteChan(iter.Key(), iter.Value())
+		ok := c.sendToWriteChan(iter.Key(), iter.Value())
+		if !ok {
+			return
+		}
 
 	}
 	c.log.Noticef("Prefix %v done", string(prefix))
@@ -312,16 +315,34 @@ func (c *cloner) readSubstate() error {
 }
 
 func (c *cloner) readStateHashes() error {
-	c.log.Noticef("Copying hashes done")
+	c.log.Noticef("Copying state hashes")
+
+	var errCounter uint64
 
 	for i := c.cfg.First; i <= c.cfg.Last; i++ {
 		key := []byte(utils.StateHashPrefix + hexutil.EncodeUint64(i))
 		value, err := c.aidaDb.Get(key)
 		if err != nil {
-			return fmt.Errorf("cannot get state hash for block %v; %v", i, err)
+			if errors.Is(err, leveldb.ErrNotFound) {
+				errCounter++
+				continue
+			} else {
+				return err
+			}
 		}
+		c.count++
+		ok := c.sendToWriteChan(key, value)
+		if !ok {
+			return nil
+		}
+	}
 
-		c.sendToWriteChan(key, value)
+	if errCounter > 0 {
+		c.log.Warningf("State hashes were missing for %v blocks", errCounter)
+	}
+
+	if errCounter > 0 {
+		c.log.Warningf("State hashes were missing for %v blocks", errCounter)
 	}
 
 	c.log.Noticef("State hashes done")
@@ -329,7 +350,7 @@ func (c *cloner) readStateHashes() error {
 	return nil
 }
 
-func (c *cloner) sendToWriteChan(k, v []byte) {
+func (c *cloner) sendToWriteChan(k, v []byte) bool {
 	// make deep read key and value
 	// need to pass deep read of values into the channel
 	// golang channels were using pointers and values read from channel were incorrect
@@ -339,9 +360,10 @@ func (c *cloner) sendToWriteChan(k, v []byte) {
 	copy(value, v)
 
 	select {
-	case <-c.closeCh:
-		return
+	case <-c.stopCh:
+		return false
 	case c.writeCh <- rawEntry{Key: key, Value: value}:
+		return true
 	}
 }
 
@@ -388,10 +410,10 @@ func (c *cloner) closeDbs() {
 // stop all cloner threads
 func (c *cloner) stop() {
 	select {
-	case <-c.closeCh:
+	case <-c.stopCh:
 		return
 	default:
-		close(c.closeCh)
+		close(c.stopCh)
 		c.closeDbs()
 	}
 }

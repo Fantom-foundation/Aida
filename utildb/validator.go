@@ -111,6 +111,36 @@ func GenerateDbHash(db ethdb.Database, logLevel string) ([]byte, error) {
 	return sum, nil
 }
 
+// GeneratePrefixHash for given AidaDb
+func GeneratePrefixHash(db ethdb.Database, prefix string, logLevel string) ([]byte, error) {
+	v := newDbValidator(db, logLevel)
+
+	v.wg.Add(2)
+
+	go v.calculate()
+	go func() {
+		now := time.Now()
+		v.log.Noticef("Iterating over Prefix %v...", prefix)
+		count := v.doIterate(prefix)
+		v.log.Infof("Prefix %v; has %v records; took %v.", prefix, count, time.Since(now).Round(1*time.Second))
+		close(v.input)
+		v.wg.Done()
+	}()
+
+	var sum []byte
+
+	select {
+	case sum = <-v.result:
+		v.log.Noticef("Prefix %v ; MD5 sum: %v", prefix, hex.EncodeToString(sum))
+		break
+	case <-v.closed:
+		break
+	}
+
+	v.wg.Wait()
+	return sum, nil
+}
+
 // iterate calls doIterate func for each prefix inside metadata
 func (v *validator) iterate() {
 	var now time.Time
@@ -141,8 +171,6 @@ func (v *validator) iterate() {
 
 	v.log.Infof("Destroyed Accounts took %v.", time.Since(now).Round(1*time.Second))
 
-	v.log.Noticef("Total time elapsed: %v", time.Since(v.start).Round(1*time.Second))
-
 	v.log.Notice("Iterating over State Hashes...")
 	v.doIterate(utils.StateHashPrefix)
 
@@ -155,7 +183,7 @@ func (v *validator) iterate() {
 }
 
 // doIterate over all key/value inside AidaDb and create md5 hash for each par for given prefix
-func (v *validator) doIterate(prefix string) {
+func (v *validator) doIterate(prefix string) (count uint64) {
 	iter := v.db.NewIterator([]byte(prefix), nil)
 
 	defer func() {
@@ -169,6 +197,7 @@ func (v *validator) doIterate(prefix string) {
 	for iter.Next() {
 		b = iter.Key()
 		dst = make([]byte, len(b))
+		count++
 		copy(dst, b)
 
 		select {
