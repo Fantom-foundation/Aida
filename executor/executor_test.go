@@ -1384,11 +1384,17 @@ func TestProcessor_PanicCaughtInPreRunIsProperlyLogged_TransactionLevelParalleli
 	extension := NewMockExtension[any](ctrl)
 	log := logger.NewMockLogger(ctrl)
 
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("program must panic")
+		}
+	}()
+
 	gomock.InOrder(
 		extension.EXPECT().PreRun(gomock.Any(), gomock.Any()).Do(func(any, any) {
 			panic("stop")
 		}),
-		log.EXPECT().Error("sending forward recovered panic from PreRun; stop"),
 	)
 
 	executor := newExecutor[any](substate, log)
