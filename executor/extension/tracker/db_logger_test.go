@@ -192,7 +192,7 @@ func TestDbLoggerExtension_PreTransactionDoesNotCreateNewLoggerProxy(t *testing.
 	}
 }
 
-func TestDbLoggerExtension_PreRunDoesNotCreateNewLoggerProxy(t *testing.T) {
+func TestDbLoggerExtension_PreRunCreatesNewLoggerProxyIfStateIsNotNil(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	db := state.NewMockStateDB(ctrl)
 
@@ -210,7 +210,26 @@ func TestDbLoggerExtension_PreRunDoesNotCreateNewLoggerProxy(t *testing.T) {
 		t.Fatalf("pre-transaction failed; %v", err)
 	}
 
-	if _, ok := ctx.State.(*proxy.LoggingStateDb); ok {
-		t.Fatal("db must not be of type LoggingStateDb!")
+	if _, ok := ctx.State.(*proxy.LoggingStateDb); !ok {
+		t.Fatal("db must be of type LoggingStateDb!")
+	}
+}
+
+func TestDbLoggerExtension_PreRunDoesNotCreateNewLoggerProxyIfStateIsNil(t *testing.T) {
+	cfg := &utils.Config{}
+	cfg.DbLogging = t.TempDir() + "test-log"
+	cfg.LogLevel = "critical"
+
+	ctx := new(executor.Context)
+
+	ext := MakeDbLogger[any](cfg)
+
+	err := ext.PreRun(executor.State[any]{}, ctx)
+	if err != nil {
+		t.Fatalf("pre-transaction failed; %v", err)
+	}
+
+	if ctx.State != nil {
+		t.Fatal("db must be nil!")
 	}
 }
