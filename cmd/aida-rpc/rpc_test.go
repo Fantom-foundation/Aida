@@ -176,7 +176,6 @@ func TestRpc_AllTransactionsAreProcessedInOrder_Sequential(t *testing.T) {
 		ext.EXPECT().PreRun(executor.AtBlock[*rpc.RequestAndResults](2), gomock.Any()),
 
 		// Req 1
-		ext.EXPECT().PreBlock(executor.AtBlock[*rpc.RequestAndResults](2), gomock.Any()),
 		db.EXPECT().GetArchiveState(uint64(2)).Return(archive, nil),
 		ext.EXPECT().PreTransaction(executor.AtBlock[*rpc.RequestAndResults](2), gomock.Any()),
 		processor.EXPECT().Process(executor.AtBlock[*rpc.RequestAndResults](2), gomock.Any()),
@@ -189,25 +188,20 @@ func TestRpc_AllTransactionsAreProcessedInOrder_Sequential(t *testing.T) {
 		processor.EXPECT().Process(executor.AtBlock[*rpc.RequestAndResults](2), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtBlock[*rpc.RequestAndResults](2), gomock.Any()),
 		archive.EXPECT().Release(),
-		ext.EXPECT().PostBlock(executor.AtBlock[*rpc.RequestAndResults](2), gomock.Any()),
 
 		// Req 3
-		ext.EXPECT().PreBlock(executor.AtBlock[*rpc.RequestAndResults](3), gomock.Any()),
 		db.EXPECT().GetArchiveState(uint64(3)).Return(archive, nil),
 		ext.EXPECT().PreTransaction(executor.AtBlock[*rpc.RequestAndResults](3), gomock.Any()),
 		processor.EXPECT().Process(executor.AtBlock[*rpc.RequestAndResults](3), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtBlock[*rpc.RequestAndResults](3), gomock.Any()),
 		archive.EXPECT().Release(),
-		ext.EXPECT().PostBlock(executor.AtBlock[*rpc.RequestAndResults](3), gomock.Any()),
 
 		// Block 4
-		ext.EXPECT().PreBlock(executor.AtBlock[*rpc.RequestAndResults](4), gomock.Any()),
 		db.EXPECT().GetArchiveState(uint64(4)).Return(archive, nil),
 		ext.EXPECT().PreTransaction(executor.AtBlock[*rpc.RequestAndResults](4), gomock.Any()),
 		processor.EXPECT().Process(executor.AtBlock[*rpc.RequestAndResults](4), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtBlock[*rpc.RequestAndResults](4), gomock.Any()),
 		archive.EXPECT().Release(),
-		ext.EXPECT().PostBlock(executor.AtBlock[*rpc.RequestAndResults](4), gomock.Any()),
 
 		ext.EXPECT().PostRun(executor.AtBlock[*rpc.RequestAndResults](5), gomock.Any(), nil),
 	)
