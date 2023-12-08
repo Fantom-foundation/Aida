@@ -66,7 +66,7 @@ func record(
 		tracker.MakeProgressLogger[*substate.Substate](cfg, 0),
 		tracker.MakeProgressTracker(cfg, 0),
 		statedb.MakeTemporaryStatePrepper(cfg),
-		statedb.MakeTemporaryProxyRecorderPrepper(cfg),
+		statedb.MakeProxyRecorderPrepper(cfg),
 	}
 
 	extensions = append(extensions, extra...)
