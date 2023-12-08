@@ -90,7 +90,7 @@ pipeline {
         stage('aida-vm-sdb archive-inquirer') {
             steps {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
-                    sh "build/aida-vm-sdb substate ${VM} ${AIDADB} ${PRIME} ${TMPDB} --archive --archive-query-rate 5000 --validate-tx --cpu-profile cpu-profile.dat --memory-profile mem-profile.dat --memory-breakdown --continue-on-failure ${FROMBLOCK} ${TOBLOCK} "
+                    sh "build/aida-vm-sdb substate ${VM} ${AIDADB} ${PRIME} ${TMPDB} --archive --archive-query-rate 5000 --db-impl carmen --validate-tx --cpu-profile cpu-profile.dat --memory-profile mem-profile.dat --memory-breakdown --continue-on-failure ${FROMBLOCK} ${TOBLOCK} "
                 }
                 sh "rm -rf *.dat"
             }
@@ -99,7 +99,7 @@ pipeline {
         stage('aida-vm-sdb keep-db') {
             steps {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
-                    sh "build/aida-vm-sdb substate ${VM} ${STORAGE} ${TMPDB} ${AIDADB} ${PRIME} --keep-db --archive --archive-variant ldb --validate-tx --cpu-profile cpu-profile.dat --memory-profile mem-profile.dat --memory-breakdown --continue-on-failure ${FROMBLOCK} ${TOBLOCK} "
+                    sh "build/aida-vm-sdb substate ${VM} ${STORAGE} ${TMPDB} ${AIDADB} ${PRIME} --keep-db --archive --archive-variant ldb --db-impl carmen --validate-tx --cpu-profile cpu-profile.dat --memory-profile mem-profile.dat --memory-breakdown --continue-on-failure ${FROMBLOCK} ${TOBLOCK} "
                 }
                 sh "rm -rf *.dat"
             }
