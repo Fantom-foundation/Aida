@@ -12,13 +12,13 @@ import (
 	substate "github.com/Fantom-foundation/Substate"
 )
 
-// MakeTemporaryProxyRecorderPrepper creates an extension which
+// MakeProxyRecorderPrepper creates an extension which
 // creates a temporary RecorderProxy before each transaction
-func MakeTemporaryProxyRecorderPrepper(cfg *utils.Config) executor.Extension[*substate.Substate] {
-	return makeTemporaryProxyRecorderPrepper(cfg)
+func MakeProxyRecorderPrepper(cfg *utils.Config) executor.Extension[*substate.Substate] {
+	return makeProxyRecorderPrepper(cfg)
 }
 
-func makeTemporaryProxyRecorderPrepper(cfg *utils.Config) *proxyRecorderPrepper {
+func makeProxyRecorderPrepper(cfg *utils.Config) *proxyRecorderPrepper {
 	return &proxyRecorderPrepper{
 		cfg: cfg,
 	}

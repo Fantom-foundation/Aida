@@ -18,7 +18,7 @@ func TestTemporaryProxyRecorderPrepper_PreTransactionCreatesRecorderProxy(t *tes
 	cfg.TraceFile = path
 	cfg.SyncPeriodLength = 1
 
-	p := MakeTemporaryProxyRecorderPrepper(cfg)
+	p := MakeProxyRecorderPrepper(cfg)
 
 	ctx := &executor.Context{}
 
@@ -50,7 +50,7 @@ func TestProxyRecorderPrepper_PreBlockWritesABeginBlockOperation(t *testing.T) {
 	cfg.TraceFile = path
 	cfg.SyncPeriodLength = 1
 
-	p := makeTemporaryProxyRecorderPrepper(cfg)
+	p := makeProxyRecorderPrepper(cfg)
 
 	ctx := &executor.Context{}
 
@@ -89,7 +89,7 @@ func TestProxyRecorderPrepper_PostBlockWritesAnEndBlockOperation(t *testing.T) {
 	cfg.TraceFile = path
 	cfg.SyncPeriodLength = 1
 
-	p := makeTemporaryProxyRecorderPrepper(cfg)
+	p := makeProxyRecorderPrepper(cfg)
 
 	ctx := &executor.Context{}
 
@@ -128,7 +128,7 @@ func TestProxyRecorderPrepper_PostRunWritesAnEndSynchPeriodOperation(t *testing.
 	cfg.TraceFile = path
 	cfg.SyncPeriodLength = 1
 
-	p := MakeTemporaryProxyRecorderPrepper(cfg)
+	p := MakeProxyRecorderPrepper(cfg)
 
 	ctx := &executor.Context{}
 
@@ -164,7 +164,7 @@ func TestProxyRecorderPrepper_PreTransactionCreatesNewLoggerProxy(t *testing.T) 
 	ctx := new(executor.Context)
 	ctx.State = db
 
-	ext := MakeTemporaryProxyRecorderPrepper(cfg)
+	ext := MakeProxyRecorderPrepper(cfg)
 
 	// ctx.State is not yet a RecorderProxy hence PreTransaction assigns it
 	err := ext.PreTransaction(executor.State[*substate.Substate]{}, ctx)
@@ -189,7 +189,7 @@ func TestProxyRecorderPrepper_PreTransactionDoesNotCreateNewLoggerProxy(t *testi
 	ctx := new(executor.Context)
 	ctx.State = db
 
-	ext := MakeTemporaryProxyRecorderPrepper(cfg)
+	ext := MakeProxyRecorderPrepper(cfg)
 
 	// first call PreTransaction to assign the proxy
 	err := ext.PreTransaction(executor.State[*substate.Substate]{}, ctx)
