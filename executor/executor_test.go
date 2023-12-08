@@ -1492,13 +1492,19 @@ func TestProcessor_PanicCaughtInPreTransactionIsProperlyLogged_TransactionLevelP
 			return nil
 		})
 
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("program must panic")
+		}
+	}()
+
 	gomock.InOrder(
 		extension.EXPECT().PreRun(gomock.Any(), gomock.Any()),
 		log.EXPECT().Debugf(gomock.Any(), gomock.Any()),
 		extension.EXPECT().PreTransaction(gomock.Any(), gomock.Any()).Do(func(any, any) {
 			panic("stop")
 		}),
-		log.EXPECT().Error("sending forward recovered panic from PreTransaction; stop"),
 	)
 
 	executor := newExecutor[any](substate, log)
@@ -1569,6 +1575,13 @@ func TestProcessor_PanicCaughtInPostTransactionIsProperlyLogged_TransactionLevel
 			return nil
 		})
 
+	defer func() {
+		r := recover()
+		if r == nil {
+			t.Fatal("program must panic")
+		}
+	}()
+
 	gomock.InOrder(
 		extension.EXPECT().PreRun(gomock.Any(), gomock.Any()),
 		log.EXPECT().Debugf(gomock.Any(), gomock.Any()),
@@ -1577,7 +1590,6 @@ func TestProcessor_PanicCaughtInPostTransactionIsProperlyLogged_TransactionLevel
 		extension.EXPECT().PostTransaction(gomock.Any(), gomock.Any()).Do(func(any, any) {
 			panic("stop")
 		}),
-		log.EXPECT().Error("sending forward recovered panic from PostTransaction; stop"),
 	)
 
 	executor := newExecutor[any](substate, log)
