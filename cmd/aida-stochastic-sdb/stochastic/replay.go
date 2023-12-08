@@ -120,7 +120,12 @@ func stochasticReplayAction(ctx *cli.Context) error {
 		log.Criticalf("Failed to close database; %v", err)
 	}
 	log.Infof("Closing DB took %v", time.Since(start))
-	log.Noticef("Final disk usage: %v MiB", float32(utils.GetDirectorySize(stateDbDir))/float32(1024*1024))
+
+	size, err := utils.GetDirectorySize(stateDbDir)
+	if err != nil {
+		return fmt.Errorf("cannot size of state-db (%v); %v", stateDbDir, err)
+	}
+	log.Noticef("Final disk usage: %v MiB", float32(size)/float32(1024*1024))
 
 	return runErr
 }
