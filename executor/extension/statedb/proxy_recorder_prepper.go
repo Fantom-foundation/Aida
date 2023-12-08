@@ -18,20 +18,20 @@ func MakeTemporaryProxyRecorderPrepper(cfg *utils.Config) executor.Extension[*su
 	return makeTemporaryProxyRecorderPrepper(cfg)
 }
 
-func makeTemporaryProxyRecorderPrepper(cfg *utils.Config) *temporaryProxyRecorderPrepper {
-	return &temporaryProxyRecorderPrepper{
+func makeTemporaryProxyRecorderPrepper(cfg *utils.Config) *proxyRecorderPrepper {
+	return &proxyRecorderPrepper{
 		cfg: cfg,
 	}
 }
 
-type temporaryProxyRecorderPrepper struct {
+type proxyRecorderPrepper struct {
 	extension.NilExtension[*substate.Substate]
 	cfg        *utils.Config
 	rCtx       *context.Record
 	syncPeriod uint64
 }
 
-func (p *temporaryProxyRecorderPrepper) PreRun(state executor.State[*substate.Substate], _ *executor.Context) error {
+func (p *proxyRecorderPrepper) PreRun(state executor.State[*substate.Substate], _ *executor.Context) error {
 	var err error
 	p.rCtx, err = context.NewRecord(p.cfg.TraceFile, p.cfg.First)
 	if err != nil {
@@ -47,7 +47,7 @@ func (p *temporaryProxyRecorderPrepper) PreRun(state executor.State[*substate.Su
 	return nil
 }
 
-func (p *temporaryProxyRecorderPrepper) PreBlock(state executor.State[*substate.Substate], ctx *executor.Context) error {
+func (p *proxyRecorderPrepper) PreBlock(state executor.State[*substate.Substate], ctx *executor.Context) error {
 	// calculate the syncPeriod for given block
 	newSyncPeriod := uint64(state.Block) / p.cfg.SyncPeriodLength
 
@@ -64,7 +64,7 @@ func (p *temporaryProxyRecorderPrepper) PreBlock(state executor.State[*substate.
 
 // PreTransaction checks whether ctx.State has not been overwritten by temporary prepper,
 // if so it creates RecorderProxy.
-func (p *temporaryProxyRecorderPrepper) PreTransaction(_ executor.State[*substate.Substate], ctx *executor.Context) error {
+func (p *proxyRecorderPrepper) PreTransaction(_ executor.State[*substate.Substate], ctx *executor.Context) error {
 	// if ctx.State has not been change, no need to slow down the app by creating new Proxy
 	if _, ok := ctx.State.(*proxy.RecorderProxy); ok {
 		return nil
@@ -74,12 +74,12 @@ func (p *temporaryProxyRecorderPrepper) PreTransaction(_ executor.State[*substat
 	return nil
 }
 
-func (p *temporaryProxyRecorderPrepper) PostBlock(executor.State[*substate.Substate], *executor.Context) error {
+func (p *proxyRecorderPrepper) PostBlock(executor.State[*substate.Substate], *executor.Context) error {
 	operation.WriteOp(p.rCtx, operation.NewEndBlock())
 	return nil
 }
 
-func (p *temporaryProxyRecorderPrepper) PostRun(_ executor.State[*substate.Substate], ctx *executor.Context, err error) error {
+func (p *proxyRecorderPrepper) PostRun(_ executor.State[*substate.Substate], ctx *executor.Context, err error) error {
 	operation.WriteOp(p.rCtx, operation.NewEndSyncPeriod())
 	p.rCtx.Close()
 	return nil
