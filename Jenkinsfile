@@ -135,7 +135,7 @@ pipeline {
                 string(name: 'name', value: "${currentBuild.fullDisplayName}"),
                 string(name: 'duration', value: "${currentBuild.duration}"),
                 string(name: 'url', value: "$currentBuild.absoluteUrl"),
-                string(name: 'user', value: env.GIT_COMMITTER_NAME),
+                string(name: 'user', value: env.CHANGE_AUTHOR),
                 string(name: 'branch', value: env.BRANCH_NAME),
             ]
         }

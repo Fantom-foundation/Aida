@@ -1,6 +1,7 @@
 package tracker
 
 import (
+	"fmt"
 	"sync"
 	"time"
 
@@ -95,7 +96,10 @@ func (t *progressTracker) PostBlock(state executor.State[*substate.Substate], ct
 	info := t.overallInfo
 	t.lock.Unlock()
 
-	disk := utils.GetDirectorySize(ctx.StateDbPath)
+	disk, err := utils.GetDirectorySize(ctx.StateDbPath)
+	if err != nil {
+		return fmt.Errorf("cannot size of state-db (%v); %v", ctx.StateDbPath, err)
+	}
 	m := ctx.State.GetMemoryUsage()
 
 	memory := uint64(0)
