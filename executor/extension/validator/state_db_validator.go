@@ -185,6 +185,7 @@ func validateSubstateAlloc(db state.VmStateDB, expectedAlloc substate.SubstateAl
 		vmAlloc := db.GetSubstatePostAlloc()
 		isEqual := expectedAlloc.Equal(vmAlloc)
 		if !isEqual {
+			// TODO bring back original functionality of PrintAllocationDiffSummary
 			err = fmt.Errorf("inconsistent output: alloc")
 			for address, vmAccount := range vmAlloc {
 				// get account from expectedAlloc

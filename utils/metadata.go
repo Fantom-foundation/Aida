@@ -1077,28 +1077,31 @@ func (md *AidaDbMetadata) getBlockRange() (uint64, uint64, error) {
 
 	// check if AidaDb has block range
 	if md.LastBlock == 0 {
-		var ok bool
+		// SHOULD be fixed in another PR
+		return 0, 0, fmt.Errorf("cannot find block range in AidaDb metadata")
 
-		md.FirstBlock, md.LastBlock, ok = FindBlockRangeInSubstate()
-		if !ok || md.LastBlock == 0 {
-			return 0, 0, errors.New("your AidaDb does not seem to contain substates")
-		}
-
-		err := md.SetBlockRange(md.FirstBlock, md.LastBlock)
-		if err != nil {
-			return 0, 0, fmt.Errorf("cannot set block range; %v", err)
-		}
-
-		// try to find epochs, function returns error if blocks does not start and end an epoch, so we do not save it
-		if err = md.findEpochs(); err == nil {
-			if err = md.SetFirstEpoch(md.FirstEpoch); err != nil {
-				md.log.Warningf("cannot set first epoch; %v", err)
-			}
-
-			if err = md.SetLastEpoch(md.LastEpoch); err != nil {
-				md.log.Warningf("cannot set first epoch; %v", err)
-			}
-		}
+		//var ok bool
+		//
+		//md.FirstBlock, md.LastBlock, ok = FindBlockRangeInSubstate()
+		//if !ok || md.LastBlock == 0 {
+		//	return 0, 0, errors.New("your AidaDb does not seem to contain substates")
+		//}
+		//
+		//err := md.SetBlockRange(md.FirstBlock, md.LastBlock)
+		//if err != nil {
+		//	return 0, 0, fmt.Errorf("cannot set block range; %v", err)
+		//}
+		//
+		//// try to find epochs, function returns error if blocks does not start and end an epoch, so we do not save it
+		//if err = md.findEpochs(); err == nil {
+		//	if err = md.SetFirstEpoch(md.FirstEpoch); err != nil {
+		//		md.log.Warningf("cannot set first epoch; %v", err)
+		//	}
+		//
+		//	if err = md.SetLastEpoch(md.LastEpoch); err != nil {
+		//		md.log.Warningf("cannot set first epoch; %v", err)
+		//	}
+		//}
 	}
 
 	return md.FirstBlock, md.LastBlock, nil

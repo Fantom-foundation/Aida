@@ -67,7 +67,6 @@ func genDeletedAccountsTask(
 ) error {
 	ch := make(chan proxy.ContractLiveliness, channelSize)
 	var statedb state.StateDB
-	//statedb = state.MakeInMemoryStateDB(&tx.Substate.InputAlloc, tx.Block)
 	var err error
 	statedb, err = state.MakeOffTheChainStateDB(tx.Substate.InputAlloc)
 	if err != nil {
