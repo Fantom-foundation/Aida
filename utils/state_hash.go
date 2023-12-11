@@ -136,7 +136,7 @@ func SaveStateRoot(db ethdb.Database, blockNumber string, stateRoot string) erro
 // retrieveStateRoot gets the state root hash from the rpc node
 func retrieveStateRoot(client *rpc.Client, blockNumber string) (map[string]interface{}, error) {
 	var block map[string]interface{}
-	err := client.Call(&block, "ftm_getBlockByNumber", blockNumber, false)
+	err := client.Call(&block, "eth_getBlockByNumber", blockNumber, false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get block %s: %v", blockNumber, err)
 	}

@@ -2,6 +2,7 @@ package validator
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"sync/atomic"
 
@@ -184,7 +185,34 @@ func validateSubstateAlloc(db state.VmStateDB, expectedAlloc substate.SubstateAl
 		vmAlloc := db.GetSubstatePostAlloc()
 		isEqual := expectedAlloc.Equal(vmAlloc)
 		if !isEqual {
+			// TODO bring back original functionality of PrintAllocationDiffSummary
 			err = fmt.Errorf("inconsistent output: alloc")
+			for address, vmAccount := range vmAlloc {
+				// get account from expectedAlloc
+				account := expectedAlloc[address]
+				if account == nil {
+					err = errors.Join(err, fmt.Errorf("account %v does not exist", address.Hex()))
+					continue
+				}
+				// compare account fields
+				if account.Nonce != vmAccount.Nonce {
+					err = errors.Join(err, fmt.Errorf("account %v nonce mismatch: have %v, want %v", address.Hex(), vmAccount.Nonce, account.Nonce))
+				}
+				if account.Balance.Cmp(vmAccount.Balance) != 0 {
+					err = errors.Join(err, fmt.Errorf("account %v balance mismatch: have %v, want %v", address.Hex(), vmAccount.Balance, account.Balance))
+				}
+				if bytes.Compare(account.Code, vmAccount.Code) != 0 {
+					err = errors.Join(err, fmt.Errorf("account %v code mismatch: have %v, want %v", address.Hex(), vmAccount.Code, account.Code))
+				}
+				// compare storage
+				for key, value := range account.Storage {
+					if vmAccount.Storage[key] != value {
+						err = errors.Join(err, fmt.Errorf("account %v storage mismatch: have %v, want %v", address.Hex(), vmAccount.Storage[key], value))
+					}
+				}
+			}
+
+			return err
 		}
 	}
 	return err

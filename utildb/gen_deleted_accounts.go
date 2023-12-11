@@ -13,7 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-const channelSize = 10000 // size of deletion channel
+const channelSize = 100000 // size of deletion channel
 
 // readAccounts reads contracts which were suicided or created and adds them to lists
 func readAccounts(ch chan proxy.ContractLiveliness, deleteHistory *map[common.Address]bool) ([]common.Address, []common.Address) {
@@ -65,14 +65,18 @@ func genDeletedAccountsTask(
 	deleteHistory *map[common.Address]bool,
 	cfg *utils.Config,
 ) error {
-
 	ch := make(chan proxy.ContractLiveliness, channelSize)
 	var statedb state.StateDB
-	statedb = state.MakeInMemoryStateDB(&tx.Substate.InputAlloc, tx.Block)
+	var err error
+	statedb, err = state.MakeOffTheChainStateDB(tx.Substate.InputAlloc)
+	if err != nil {
+		return err
+	}
+
 	//wrapper
 	statedb = proxy.NewDeletionProxy(statedb, ch, cfg.LogLevel)
 
-	err := processor.ProcessTransaction(statedb, int(tx.Block), tx.Transaction, tx.Substate)
+	err = processor.ProcessTransaction(statedb, int(tx.Block), tx.Transaction, tx.Substate)
 	if err != nil {
 		return nil
 	}
@@ -96,6 +100,11 @@ func genDeletedAccountsTask(
 // GenDeletedAccountsAction replays transactions and record self-destructed accounts and resurrected accounts.
 func GenDeletedAccountsAction(cfg *utils.Config, ddb *substate.DestroyedAccountDB, firstBlock uint64, lastBlock uint64) error {
 	var err error
+
+	err = utils.StartCPUProfile(cfg)
+	if err != nil {
+		return err
+	}
 
 	log := logger.NewLogger(cfg.LogLevel, "Generate Deleted Accounts")
 
@@ -136,6 +145,8 @@ func GenDeletedAccountsAction(cfg *utils.Config, ddb *substate.DestroyedAccountD
 			}
 		}
 	}
+
+	utils.StopCPUProfile(cfg)
 
 	// explicitly set to nil to release memory as soon as possible
 	deleteHistory = nil

@@ -33,16 +33,18 @@ const (
 )
 
 const (
-	UnknownChainID ChainID = 0
-	MainnetChainID ChainID = 250
-	TestnetChainID ChainID = 4002
+	UnknownChainID  ChainID = 0
+	EthereumChainID ChainID = 1
+	MainnetChainID  ChainID = 250
+	TestnetChainID  ChainID = 4002
 )
 
-var AvailableChainIDs = ChainIDs{MainnetChainID, TestnetChainID}
+var AvailableChainIDs = ChainIDs{MainnetChainID, TestnetChainID, EthereumChainID}
 
 const (
-	AidaDbRepositoryMainnetUrl = "https://aida.repository.fantom.network"
-	AidaDbRepositoryTestnetUrl = "https://aida.testnet.repository.fantom.network"
+	AidaDbRepositoryMainnetUrl  = "https://aida.repository.fantom.network"
+	AidaDbRepositoryTestnetUrl  = "https://aida.testnet.repository.fantom.network"
+	AidaDbRepositoryEthereumUrl = "https://aida.ethereum.repository.fantom.network"
 )
 
 var (
@@ -74,6 +76,15 @@ var keywordBlocks = map[ChainID]map[string]uint64{
 		"opera":     479_327,
 		"berlin":    1_559_470,
 		"london":    7_513_335,
+		"first":     0,
+		"last":      math.MaxUint64,
+		"lastpatch": 0,
+	},
+	// ethereum fork blocks are not stored in this structure as ethereum has already prepared config
+	// at params.MainnetChainConfig and it has bigger amount of forks than Fantom chain
+	EthereumChainID: {
+		"zero":      0,
+		"opera":     0,
 		"first":     0,
 		"last":      math.MaxUint64,
 		"lastpatch": 0,
@@ -244,7 +255,7 @@ func NewConfig(ctx *cli.Context, mode ArgumentMode) (*Config, error) {
 }
 
 func (cc *configContext) setFirstOperaBlock() {
-	if !(cc.cfg.ChainID == MainnetChainID || cc.cfg.ChainID == TestnetChainID) {
+	if !(cc.cfg.ChainID == MainnetChainID || cc.cfg.ChainID == TestnetChainID || cc.cfg.ChainID == EthereumChainID) {
 		log.Fatalf("unknown chain id %v", cc.cfg.ChainID)
 	}
 	FirstOperaBlock = keywordBlocks[cc.cfg.ChainID]["opera"]
@@ -256,6 +267,8 @@ func (cc *configContext) setAidaDbRepositoryUrl() error {
 		AidaDbRepositoryUrl = AidaDbRepositoryMainnetUrl
 	} else if cc.cfg.ChainID == TestnetChainID {
 		AidaDbRepositoryUrl = AidaDbRepositoryTestnetUrl
+	} else if cc.cfg.ChainID == EthereumChainID {
+		AidaDbRepositoryUrl = AidaDbRepositoryEthereumUrl
 	} else {
 		return fmt.Errorf("invalid chain id %d", cc.cfg.ChainID)
 	}
@@ -264,13 +277,21 @@ func (cc *configContext) setAidaDbRepositoryUrl() error {
 
 // GetChainConfig returns chain configuration of either mainnet or testnets.
 func GetChainConfig(chainId ChainID) *params.ChainConfig {
+	if !(chainId == MainnetChainID || chainId == TestnetChainID || chainId == EthereumChainID) {
+		log.Fatalf("unknown chain id %v", chainId)
+	}
+	// use prepared Ethereum ChainConfig instead
+	if chainId == EthereumChainID {
+		chainConfig := params.MainnetChainConfig
+		chainConfig.DAOForkSupport = false
+		return chainConfig
+	}
+
 	// Make a copy of of the basic config before modifying it to avoid
 	// unexpected side-effects and synchronization issues in parallel runs.
 	chainConfig := *params.AllEthashProtocolChanges
 	chainConfig.ChainID = big.NewInt(int64(chainId))
-	if !(chainId == MainnetChainID || chainId == TestnetChainID) {
-		log.Fatalf("unknown chain id %v", chainId)
-	}
+
 	chainConfig.BerlinBlock = new(big.Int).SetUint64(keywordBlocks[chainId]["berlin"])
 	chainConfig.LondonBlock = new(big.Int).SetUint64(keywordBlocks[chainId]["london"])
 	return &chainConfig

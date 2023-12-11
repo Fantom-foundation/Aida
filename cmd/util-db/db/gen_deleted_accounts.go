@@ -20,6 +20,7 @@ var GenDeletedAccountsCommand = cli.Command{
 		&substate.SubstateDbFlag,
 		&utils.ChainIDFlag,
 		&utils.DeletionDbFlag,
+		&utils.CpuProfileFlag,
 		&logger.LogLevelFlag,
 	},
 	Description: `
