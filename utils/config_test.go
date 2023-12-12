@@ -23,7 +23,7 @@ func prepareMockCliContext() *cli.Context {
 	flagSet.Bool(ValidateTxStateFlag.Name, true, "enables transaction state validation")
 	flagSet.Bool(ContinueOnFailureFlag.Name, true, "continue execute after validation failure detected")
 	flagSet.String(AidaDbFlag.Name, "./test.db", "set substate, updateset and deleted accounts directory")
-	flagSet.String(logger.LogLevelFlag.Name, "info", "Level of the logging of the app action (\"critical\", \"error\", \"warning\", \"notice\", \"info\", \"debug\"; default: INFO)")
+	flagSet.String(logger.LogLevelFlag.Name, "info", "Level of the logging of the app action (\"critical\", \"error\", \"warning\", \"notice\", \"info\", \"debug\"; default: NOTICE)")
 
 	ctx := cli.NewContext(cli.NewApp(), flagSet, nil)
 
@@ -218,18 +218,19 @@ func TestUtilsConfig_adjustBlockRange(t *testing.T) {
 	keywordBlocks[chainId]["first"] = 1000
 	keywordBlocks[chainId]["last"] = 2000
 
-	log := logger.NewLogger("INFO", "Utils_config_test")
+	cfg := &Config{ChainID: chainId, LogLevel: "NOTICE"}
+	cc := NewConfigContext(cfg)
 
 	firstArg = 1100
 	lastArg = 1900
-	first, last, err = adjustBlockRange(chainId, firstArg, lastArg, log)
+	first, last, err = cc.adjustBlockRange(firstArg, lastArg)
 	if first != firstArg && last != lastArg {
 		t.Fatalf("wrong block range; expected %v:%v, have %v:%v", firstArg, lastArg, first, last)
 	}
 
 	firstArg = 3000
 	lastArg = 4000
-	first, last, err = adjustBlockRange(chainId, firstArg, lastArg, log)
+	first, last, err = cc.adjustBlockRange(firstArg, lastArg)
 	if err == nil {
 		t.Fatalf("Ranges not overlapped. Expected an error.")
 	}
@@ -237,14 +238,14 @@ func TestUtilsConfig_adjustBlockRange(t *testing.T) {
 	// check corner cases
 	firstArg = 100
 	lastArg = 1000
-	first, last, err = adjustBlockRange(chainId, firstArg, lastArg, log)
+	first, last, err = cc.adjustBlockRange(firstArg, lastArg)
 	if first != firstArg && last != lastArg {
 		t.Fatalf("wrong block range; expected %v:%v, have %v:%v", lastArg, lastArg, first, last)
 	}
 
 	firstArg = 2000
 	lastArg = 2200
-	first, last, err = adjustBlockRange(chainId, firstArg, lastArg, log)
+	first, last, err = cc.adjustBlockRange(firstArg, lastArg)
 	if first != firstArg && last != lastArg {
 		t.Fatalf("wrong block range; expected %v:%v, have %v:%v", firstArg, firstArg, first, last)
 	}
@@ -257,16 +258,16 @@ func TestUtilsConfig_getMdBlockRange(t *testing.T) {
 	// prepare components
 	// create new leveldb
 	var (
-		logLevel   = "INFO"
+		logLevel   = "NOTICE"
 		firstBlock = keywordBlocks[MainnetChainID]["opera"]
 		lastBlock  = uint64(20001704)
 		chainId    = MainnetChainID
 	)
 	// prepare mock config
-	cfg := &Config{AidaDb: "./test.db", LogLevel: logLevel}
+	cfg := &Config{AidaDb: "./test.db", LogLevel: logLevel, ChainID: chainId}
 
-	// prepare logger
-	log := logger.NewLogger(logLevel, "Utils_config_test")
+	// prepare config context
+	cc := NewConfigContext(cfg)
 
 	// prepare fake AidaDb
 	err := createFakeAidaDb(cfg)
@@ -280,11 +281,12 @@ func TestUtilsConfig_getMdBlockRange(t *testing.T) {
 			t.Fatalf("cannot remove db; %v", err)
 		}
 	}()
+	cfg.AidaDb = "./test-wrong.db" //db doesn't exist
 
 	// test getMdBlockRange
 	// getMdBlockRange returns default values if unable to open
-	first, last, lastpatch, ok, err := getMdBlockRange("./test-wrong.db", MainnetChainID, log, cfg.LogLevel)
-	if ok || first != uint64(0) || last != math.MaxUint64 {
+	first, last, lastpatch, err := cc.getMdBlockRange()
+	if cc.hasMetadata || first != uint64(0) || last != math.MaxUint64 {
 		t.Fatalf("wrong block range; expected %v:%v, have %v:%v", 0, uint64(math.MaxUint64), first, last)
 	} else if err != nil {
 		t.Fatalf("unexpected error; %v", err)
@@ -292,10 +294,11 @@ func TestUtilsConfig_getMdBlockRange(t *testing.T) {
 		t.Fatalf("wrong last patch block; expected %v, have %v", 0, lastpatch)
 	}
 
+	cfg.AidaDb = "./test.db" //db exists
 	// open an existing AidaDb
-	setAidaDbRepositoryUrl(chainId)
-	first, last, lastpatch, ok, err = getMdBlockRange("./test.db", MainnetChainID, log, cfg.LogLevel)
-	if !ok || first != firstBlock || last != lastBlock {
+	cc.setAidaDbRepositoryUrl()
+	first, last, lastpatch, err = cc.getMdBlockRange()
+	if !cc.hasMetadata || first != firstBlock || last != lastBlock {
 		t.Fatalf("wrong block range; expected %v:%v, have %v:%v", firstBlock, lastBlock, first, last)
 	} else if err != nil {
 		t.Fatalf("unexpected error; %v", err)
@@ -305,8 +308,8 @@ func TestUtilsConfig_getMdBlockRange(t *testing.T) {
 
 	// aida url is not set; expected lastpatch is 0.
 	AidaDbRepositoryUrl = ""
-	first, last, lastpatch, ok, err = getMdBlockRange("./test.db", MainnetChainID, log, cfg.LogLevel)
-	if !ok || first != firstBlock || last != lastBlock {
+	first, last, lastpatch, err = cc.getMdBlockRange()
+	if !cc.hasMetadata || first != firstBlock || last != lastBlock {
 		t.Fatalf("wrong block range; expected %v:%v, have %v:%v", firstBlock, lastBlock, first, last)
 	} else if err != nil {
 		t.Fatalf("unexpected error; %v", err)
@@ -338,21 +341,20 @@ func TestUtilsConfig_VmImplsAreRegistered(t *testing.T) {
 	}
 }
 
-// TestUtilsConfig_getChainIdFromDB tests if chainID can be loaded from AidaDB correctly
-func TestUtilsConfig_getChainIdFromDB(t *testing.T) {
+// TestUtilsConfig_setChainIdFromDB tests if chainID can be loaded from AidaDB correctly
+func TestUtilsConfig_setChainIdFromDB(t *testing.T) {
 	// prepare components
 	// create new leveldb
 	var (
-		logLevel         = "INFO"
-		chainId          = MainnetChainID
-		extractedChainId ChainID
+		logLevel = "NOTICE"
+		chainId  = MainnetChainID
 	)
 
 	// prepare mock config
 	cfg := &Config{AidaDb: "./test.db", LogLevel: logLevel}
 
-	// prepare logger
-	log := logger.NewLogger(cfg.LogLevel, "Utils_config_test")
+	// prepare config context
+	cc := NewConfigContext(cfg)
 
 	// prepare fake AidaDb
 	err := createFakeAidaDb(cfg)
@@ -368,67 +370,65 @@ func TestUtilsConfig_getChainIdFromDB(t *testing.T) {
 	}()
 
 	// test getChainId function
-	extractedChainId, err = getChainId(cfg, log)
+	err = cc.setChainId()
 	if err != nil {
 		t.Fatalf("cannot get chain ID; %v", err)
 	}
 
-	if extractedChainId != chainId {
-		t.Fatalf("failed to get chainId correctly from AidaDB; got: %v; expected: %v", extractedChainId, chainId)
+	if cfg.ChainID != chainId {
+		t.Fatalf("failed to get chainId correctly from AidaDB; got: %v; expected: %v", cfg.ChainID, chainId)
 	}
 }
 
 // TestUtilsConfig_getChainIdFromFlag tests if chainID can be loaded from flag correctly
-func TestUtilsConfig_getChainIdFromFlag(t *testing.T) {
+func TestUtilsConfig_setChainIdFromFlag(t *testing.T) {
 	// prepare components
 	var (
-		err              error
-		logLevel         = "INFO"
-		chainId          = MainnetChainID
-		extractedChainId ChainID
+		err      error
+		logLevel = "NOTICE"
+		chainId  = MainnetChainID
 	)
 
 	// prepare mock config
 	cfg := &Config{AidaDb: "./test.db", LogLevel: logLevel, ChainID: chainId}
 
-	// prepare logger
-	log := logger.NewLogger(cfg.LogLevel, "Utils_config_test")
+	// create config context
+	cc := NewConfigContext(cfg)
 
 	// test getChainId function
-	extractedChainId, err = getChainId(cfg, log)
+	err = cc.setChainId()
 	if err != nil {
 		t.Fatalf("cannot get chain ID; %v", err)
 	}
 
-	if extractedChainId != chainId {
-		t.Fatalf("failed to get chainId correctly from AidaDB; got: %v; expected: %v", extractedChainId, chainId)
+	if cfg.ChainID != chainId {
+		t.Fatalf("failed to get chainId correctly from AidaDB; got: %v; expected: %v", cfg.ChainID, chainId)
 	}
 }
 
 // TestUtilsConfig_getDefaultChainId tests if unknown chainID will be replaced with the mainnet chainID
-func TestUtilsConfig_getDefaultChainId(t *testing.T) {
+func TestUtilsConafig_setDefaultChainId(t *testing.T) {
 	// prepare components
 	var (
-		err              error
-		logLevel         = "INFO"
-		chainId          = MainnetChainID
-		extractedChainId ChainID
+		err      error
+		logLevel = "NOTICE"
+		chainId  = MainnetChainID
 	)
 
 	// prepare mock config
 	cfg := &Config{AidaDb: "./test.db", LogLevel: logLevel}
 
-	// prepare logger
-	log := logger.NewLogger(cfg.LogLevel, "Utils_config_test")
+	// create config context
+	cc := NewConfigContext(cfg)
 
 	// test getChainId function
-	extractedChainId, err = getChainId(cfg, log)
+	err = cc.setChainId()
 	if err != nil {
 		t.Fatalf("cannot get chain ID; %v", err)
 	}
 
-	if extractedChainId != chainId {
-		t.Fatalf("failed to get chainId correctly from AidaDB; got: %v; expected: %v", extractedChainId, chainId)
+	if cfg.ChainID != chainId {
+		t.Fatalf("failed to get chainId correctly from AidaDB; got: %v; expected: %v", cfg.ChainID, chainId)
 	}
 }
 
@@ -436,7 +436,7 @@ func TestUtilsConfig_getDefaultChainId(t *testing.T) {
 func TestUtilsConfig_updateConfigBlockRangeBlockRange(t *testing.T) {
 	// prepare components
 	var (
-		logLevel = "INFO"
+		logLevel = "NOTICE"
 		mode     = BlockRangeArgs
 		firstArg = "4564026"
 		lastArg  = "5000000"
@@ -445,8 +445,8 @@ func TestUtilsConfig_updateConfigBlockRangeBlockRange(t *testing.T) {
 	// prepare mock config
 	cfg := &Config{AidaDb: "./test.db", LogLevel: logLevel, ChainID: MainnetChainID}
 
-	// prepare logger
-	log := logger.NewLogger(cfg.LogLevel, "Utils_config_test")
+	// create config context
+	cc := NewConfigContext(cfg)
 
 	// prepare fake AidaDb
 	err := createFakeAidaDb(cfg)
@@ -462,7 +462,7 @@ func TestUtilsConfig_updateConfigBlockRangeBlockRange(t *testing.T) {
 	}()
 
 	// parse cli arguments slice
-	err = updateConfigBlockRange([]string{firstArg, lastArg}, cfg, mode, log)
+	err = cc.updateConfigBlockRange([]string{firstArg, lastArg}, mode)
 	if err != nil {
 		t.Fatalf("cannot parse the cli arguments; %v", err)
 	}
@@ -482,17 +482,17 @@ func TestUtilsConfig_updateConfigBlockRangeBlockRangeInvalid(t *testing.T) {
 	// prepare components
 	var (
 		mode     = BlockRangeArgs
-		logLevel = "INFO"
+		logLevel = "NOTICE"
 	)
 
 	// prepare mock config
 	cfg := &Config{AidaDb: "./test.db", LogLevel: logLevel}
 
-	// prepare logger
-	log := logger.NewLogger(cfg.LogLevel, "Utils_config_test")
+	// create config context
+	cc := NewConfigContext(cfg)
 
 	// parse cli arguments slice of insufficient length
-	err := updateConfigBlockRange([]string{"test"}, cfg, mode, log)
+	err := cc.updateConfigBlockRange([]string{"test"}, mode)
 	if err == nil {
 		t.Fatalf("failed to throw an error")
 	}
@@ -502,7 +502,7 @@ func TestUtilsConfig_updateConfigBlockRangeBlockRangeInvalid(t *testing.T) {
 func TestUtilsConfig_updateConfigBlockRangeLastBlock(t *testing.T) {
 	// prepare components
 	var (
-		logLevel = "INFO"
+		logLevel = "NOTICE"
 		mode     = LastBlockArg
 		lastArg  = "30"
 	)
@@ -510,11 +510,11 @@ func TestUtilsConfig_updateConfigBlockRangeLastBlock(t *testing.T) {
 	// prepare mock config
 	cfg := &Config{AidaDb: "./test.db", LogLevel: logLevel}
 
-	// prepare logger
-	log := logger.NewLogger(cfg.LogLevel, "Utils_config_test")
+	// create config context
+	cc := NewConfigContext(cfg)
 
 	// parse cli arguments slice
-	err := updateConfigBlockRange([]string{lastArg}, cfg, mode, log)
+	err := cc.updateConfigBlockRange([]string{lastArg}, mode)
 	if err != nil {
 		t.Fatalf("cannot parse the cli arguments; %v", err)
 	}
@@ -529,18 +529,18 @@ func TestUtilsConfig_updateConfigBlockRangeLastBlock(t *testing.T) {
 func TestUtilsConfig_updateConfigBlockRangeLastBlockInvalid(t *testing.T) {
 	// prepare components
 	var (
-		logLevel = "INFO"
+		logLevel = "NOTICE"
 		mode     = LastBlockArg
 	)
 
 	// prepare mock config
 	cfg := &Config{AidaDb: "./test.db", LogLevel: logLevel}
 
-	// prepare logger
-	log := logger.NewLogger(cfg.LogLevel, "Utils_config_test")
+	// create config context
+	cc := NewConfigContext(cfg)
 
 	// parse cli arguments slice of insufficient length
-	err := updateConfigBlockRange([]string{"test"}, cfg, mode, log)
+	err := cc.updateConfigBlockRange([]string{"test"}, mode)
 	if err == nil {
 		t.Fatalf("failed to throw an error")
 	}
@@ -550,18 +550,18 @@ func TestUtilsConfig_updateConfigBlockRangeLastBlockInvalid(t *testing.T) {
 func TestUtilsConfig_updateConfigBlockRangeOneToNInvalid(t *testing.T) {
 	// prepare components
 	var (
-		logLevel = "INFO"
+		logLevel = "NOTICE"
 		mode     = OneToNArgs
 	)
 
 	// prepare mock config
 	cfg := &Config{AidaDb: "./test.db", LogLevel: logLevel}
 
-	// prepare logger
-	log := logger.NewLogger(cfg.LogLevel, "Utils_config_test")
+	// create config context
+	cc := NewConfigContext(cfg)
 
 	// parse cli arguments slice of insufficient length
-	err := updateConfigBlockRange([]string{}, cfg, mode, log)
+	err := cc.updateConfigBlockRange([]string{}, mode)
 	if err == nil {
 		t.Fatalf("failed to throw an error")
 	}
@@ -587,7 +587,11 @@ func TestUtilsConfig_adjustMissingConfigValues(t *testing.T) {
 		DbVariant:  dbVariant,
 		RandomSeed: randomSeed,
 		First:      first,
+		LogLevel:   "NOTICE",
 	}
+
+	// create config context
+	cc := NewConfigContext(cfg)
 
 	// prepare fake AidaDb
 	err := createFakeAidaDb(cfg)
@@ -603,7 +607,7 @@ func TestUtilsConfig_adjustMissingConfigValues(t *testing.T) {
 	}()
 
 	// set missing values
-	adjustMissingConfigValues(cfg)
+	cc.adjustMissingConfigValues()
 
 	// checks
 	if cfg.DbVariant == dbVariant {
@@ -624,10 +628,6 @@ func TestUtilsConfig_adjustMissingConfigValues(t *testing.T) {
 
 	if cfg.UpdateDb != cfg.AidaDb {
 		t.Fatalf("failed to adjust update db path; got: %s; expected: %s", cfg.UpdateDb, aidaDB)
-	}
-
-	if !cfg.SkipPriming {
-		t.Fatalf("failed to adjust skip priming value; got: %v; expected: %v", cfg.SkipPriming, true)
 	}
 }
 
@@ -663,7 +663,8 @@ func TestUtilsConfig_adjustMissingConfigValuesValidationOn(t *testing.T) {
 	} {
 		t.Run("validation adjustment", func(t *testing.T) {
 			// set missing values
-			adjustMissingConfigValues(&cfg)
+			cc := NewConfigContext(&cfg)
+			cc.adjustMissingConfigValues()
 
 			// checks
 			if !cfg.ValidateTxState {
@@ -681,9 +682,13 @@ func TestUtilsConfig_adjustMissingConfigValuesValidationOff(t *testing.T) {
 		Validate:          false,
 		ValidateTxState:   false,
 		ContinueOnFailure: false,
+		LogLevel:          "NOTICE",
 	}
 
-	adjustMissingConfigValues(cfg)
+	// prepare config context
+	cc := NewConfigContext(cfg)
+
+	cc.adjustMissingConfigValues()
 
 	// checks
 	if cfg.ValidateTxState {
@@ -698,9 +703,13 @@ func TestUtilsConfig_adjustMissingConfigValuesKeepStateDb(t *testing.T) {
 	cfg := &Config{
 		KeepDb:    true,
 		DbVariant: "go-memory",
+		LogLevel:  "NOTICE",
 	}
 
-	adjustMissingConfigValues(cfg)
+	// prepare config context
+	cc := NewConfigContext(cfg)
+
+	cc.adjustMissingConfigValues()
 
 	// checks
 	if cfg.KeepDb {
@@ -712,10 +721,14 @@ func TestUtilsConfig_adjustMissingConfigValuesKeepStateDb(t *testing.T) {
 func TestUtilsConfig_adjustMissingConfigValuesWrongDbTmp(t *testing.T) {
 	// prepare mock config
 	cfg := &Config{
-		DbTmp: "./wrong_path",
+		DbTmp:    "./wrong_path",
+		LogLevel: "NOTICE",
 	}
 
-	adjustMissingConfigValues(cfg)
+	// prepare config context
+	cc := NewConfigContext(cfg)
+
+	cc.adjustMissingConfigValues()
 
 	// checks
 	if cfg.DbTmp != os.TempDir() {

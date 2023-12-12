@@ -140,7 +140,8 @@ pipeline {
                         string(name: 'result', value: "${currentBuild.result}"),
                         string(name: 'name', value: "${currentBuild.fullDisplayName}"),
                         string(name: 'duration', value: "${currentBuild.duration}"),
-                        string(name: 'url', value: "$currentBuild.absoluteUrl")
+                        string(name: 'url', value: "$currentBuild.absoluteUrl"),
+                        string(name: 'user', value: "${env.CHANGE_AUTHOR}")
                     ]
                 }
             }

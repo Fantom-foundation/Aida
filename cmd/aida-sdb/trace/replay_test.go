@@ -37,8 +37,6 @@ func TestSdbReplay_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		ext.EXPECT().PreRun(executor.AtBlock[[]operation.Operation](0), gomock.Any()),
 
 		// tx 0
-		ext.EXPECT().PreBlock(executor.AtBlock[[]operation.Operation](0), gomock.Any()),
-
 		ext.EXPECT().PreTransaction(executor.AtTransaction[[]operation.Operation](0, 0), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[[]operation.Operation](0, 0), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[[]operation.Operation](0, 0), gomock.Any()),
@@ -47,8 +45,6 @@ func TestSdbReplay_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		ext.EXPECT().PreTransaction(executor.AtTransaction[[]operation.Operation](0, 1), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[[]operation.Operation](0, 1), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[[]operation.Operation](0, 1), gomock.Any()),
-
-		ext.EXPECT().PostBlock(executor.AtBlock[[]operation.Operation](0), gomock.Any()),
 
 		ext.EXPECT().PostRun(executor.AtBlock[[]operation.Operation](1), gomock.Any(), nil),
 	)
