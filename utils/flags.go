@@ -122,6 +122,14 @@ var (
 		Usage: "Frequency of logging block statistics",
 		Value: 1_000_000_000,
 	}
+	RegisterRunFlag = cli.StringFlag{
+		Name:  "register-run",
+		Usage: "When enabled, register results/metadata to an external service.",
+	}
+	OverwriteRunIdFlag = cli.StringFlag{
+		Name:  "overwrite-run-id",
+		Usage: "Use provided run id instead of auto-generating run id",
+	}
 	RandomizePrimingFlag = cli.BoolFlag{
 		Name:  "prime-random",
 		Usage: "randomize order of accounts in StateDB priming",
