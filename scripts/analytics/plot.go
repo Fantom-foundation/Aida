@@ -4,540 +4,526 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
-	"slices"
+	"time"
 	"sort"
 
-	"github.com/Fantom-foundation/Aida/utils"
-	md "github.com/go-spectest/markdown"
-	"github.com/jmoiron/sqlx"
-	mp "github.com/mandolyte/mdtopdf"
+	xmath "github.com/Fantom-foundation/Aida/utils/math"
+	
+	// db
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/wcharczuk/go-chart/v2"
-	"github.com/wcharczuk/go-chart/v2/drawing"
+	"github.com/jmoiron/sqlx"
+
+	//echart
+	"github.com/go-echarts/go-echarts/v2/charts"
+	"github.com/go-echarts/go-echarts/v2/components"
+	"github.com/go-echarts/go-echarts/v2/opts"
 )
 
 const (
 	// db
-	first                        uint64 = 0
-	last                         uint64 = 65_436_418
-	interval                     uint64 = 100_000
+	first			     int = 0
+	last                         int = 65_436_418
+	worker_count		     int = 10
+	bucket_count		     int = 654
+	op_count		     int = 50
+
 	connection                   string = "/home/rapolt/dev/sqlite3/test.db"
-	sqlite3_SelectFromOperations        = `SELECT * FROM operations WHERE start=:start AND end=:end`
+	sqlite3_SelectFromOperations string = `
+	SELECT start, end, opId, opName, count, sum, mean, min, max
+	FROM operations 
+	WHERE start=:start AND end=:end AND count > 0;`
+	sqlite3_SelectDistinctOps    string = ` 
+	SELECT DISTINCT opId, opName
+	FROM operations
+	ORDER BY opId ASC;`
 
 	// report
-	pPngs = "png"
-	pMd   = "report.md"
-	pPdf  = "report.pdf"
+	pHtml = "report.html"
 )
 
 type query struct {
 	Start int `db:"start"`
-	End   int `db:"end"`
+	End int `db:"end"`
+	bucket int
 }
 
-type statistics struct {
-	Start    int     `db:"start"`
+type tx_op struct {
+	Start int `db:"start"`
 	End      int     `db:"end"`
 	OpId     int     `db:"opId"`
 	OpName   string  `db:"opName"`
 	Count    int     `db:"count"`
 	Sum      float64 `db:"sum"`
 	Mean     float64 `db:"mean"`
-	Std      float64 `db:"std"`
-	Variance float64 `db:"variance"`
-	Skewness float64 `db:"skewness"`
-	Kurtosis float64 `db:"kurtosis"`
 	Min      float64 `db:"min"`
 	Max      float64 `db:"max"`
 }
 
+type op_lookup struct {
+	OpId int `db:"opId"`
+	OpName string `db:"opName"`
+}
+
+type done_msg struct {
+	q query 
+	bucket int
+	tx_count int
+}
+
+type bucket_msg struct {
+	bucket int
+	count int
+	time float64
+}
+
+type op_msg struct {
+	bucket int
+	opid int
+	count int
+	time float64
+	avg float64
+	min float64
+	max float64
+}
+
+// TODO: make sure worker returns the thread properly
+func worker(id int, opCount int, queries <-chan query, done chan<- done_msg, 
+bc chan<- bucket_msg, oc chan<- op_msg) {
+
+	for q := range queries {
+		db, err := sqlx.Open("sqlite3", connection)
+		if err != nil {
+			panic(err)
+		}
+
+		stmt, err := db.PrepareNamed(sqlite3_SelectFromOperations)
+		if err != nil {
+			panic(err)
+		}
+		
+		txs := []tx_op{}
+		stmt.Select(&txs, q)
+		stmt.Close()
+		db.Close()
+
+		var (
+			count int = 0
+			time float64 = 0
+			countByOpId map[int]int = make(map[int]int, opCount)
+			timeByOpId map[int]float64 = make(map[int]float64, opCount)
+			meanByOpId map[int]float64 = make(map[int]float64, opCount)
+			minByOpId map[int]float64 = make(map[int]float64, opCount)
+			maxByOpId map[int]float64 = make(map[int]float64, opCount)
+		)
+
+		for _, tx := range txs {
+			id := tx.OpId
+			count += tx.Count
+			time += tx.Sum
+			countByOpId[id] += tx.Count
+			timeByOpId[id] += tx.Sum
+			meanByOpId[id] = tx.Mean
+			minByOpId[id] = xmath.Min(tx.Min, minByOpId[id])
+			maxByOpId[id] = xmath.Max(tx.Max, maxByOpId[id])
+		}
+
+		bc <- bucket_msg{q.bucket, count, time}
+
+		for id := 0; id < opCount; id++ {
+			oc <- op_msg{
+				q.bucket, 
+				id, 
+				countByOpId[id], 
+				timeByOpId[id],
+				meanByOpId[id],
+				minByOpId[id],
+				maxByOpId[id],
+			}
+		}
+
+		done <- done_msg{q, id, len(txs)}
+	}
+}
+
 func main() {
 
-	var (
-		byOpId  map[int][]statistics = map[int][]statistics{}
-		byStart map[int][]statistics = map[int][]statistics{}
+	start := time.Now()
 
-		starts []uint64 = []uint64{}
+	var (
+		//interval int = (last-first) / bucket_count
+		//buckets []int = make([]int, bucket_count)
+		interval int = 100_000
+		buckets []int = make([]int, bucket_count)
+
+		opIds              []int                   = []int{}
+		opNameByOpId       map[int]string          = map[int]string{}
+
+		countTotal int = 0
+		timeTotal float64 = 0
+		countByBucket map[int]float64 = make(map[int]float64, bucket_count)
+		timeByBucket map[int]float64 = make(map[int]float64, bucket_count)
+		countByOpId  map[int]float64 = make(map[int]float64, bucket_count)
+		timeByOpId   map[int]float64 = make(map[int]float64, bucket_count)
+		countByBucketByOpId map[int]map[int]float64 = map[int]map[int]float64{}
+		timeByBucketByOpId  map[int]map[int]float64 = map[int]map[int]float64{}
+		meanByBucketByOpId  map[int]map[int]float64 = map[int]map[int]float64{}
+		minByBucketByOpId  map[int]map[int]float64 = map[int]map[int]float64{}
+		maxByBucketByOpId  map[int]map[int]float64 = map[int]map[int]float64{}
 	)
 
-	// color
-	clr := map[int]drawing.Color{
-		20: drawing.ColorFromHex("92CEA8"), //seafoam
-		37: drawing.ColorFromHex("EEE4E1"), //Egg
-		30: drawing.ColorFromHex("E5F9FE"), // Oyster Bay
-		13: drawing.ColorFromHex("FFBBDA"), //Cotton Candy
-		28: drawing.ColorFromHex("F6C6C7"), //Flamingo
-		15: drawing.ColorFromHex("916848"), //Leather
-		0:  drawing.ColorFromHex("D4C8BE"), //Dusty Rose
-		17: drawing.ColorFromHex("A8D1E7"), // Light Blue
-		7:  drawing.ColorFromHex("8BD2EC"), //skay
-		10: drawing.ColorFromHex("B3DBD8"), //Scandal
-		9:  drawing.ColorFromHex("577460"), //Ebony
-		16: drawing.ColorFromHex("E2E3DE"), //Stone White
-		35: drawing.ColorFromHex("BFCED6"), //Misty
-		38: drawing.ColorFromHex("9DA2AE"), //Winter sea
-
-		999: drawing.ColorFromHex("808080"), //other: grey
+	for b := range buckets {
+		countByBucketByOpId[b] = map[int]float64{}
+		timeByBucketByOpId[b] = map[int]float64{}
+		meanByBucketByOpId[b] = map[int]float64{}
+		minByBucketByOpId[b] = map[int]float64{}
+		maxByBucketByOpId[b] = map[int]float64{}
 	}
 
-	// db
+	fmt.Println("Bucket: ", bucket_count, "Interval: ", interval, "Worker: ", worker_count)
+
+	/////////
+	
 	db, err := sqlx.Open("sqlite3", connection)
 	if err != nil {
 		panic(err)
 	}
 
-	stmt, err := db.PrepareNamed(sqlite3_SelectFromOperations)
+	opls := []op_lookup{}
+	err = db.Select(&opls, sqlite3_SelectDistinctOps)
 	if err != nil {
 		panic(err)
 	}
 
-	stats := []statistics{}
-	q := query{int(0), int(100000)}
-	stmt.Select(&stats, q)
-	for _, stat := range stats {
-		byOpId[stat.OpId] = append(byOpId[stat.OpId], stat)
-		byStart[1] = append(byStart[1], stat)
+	for _, opl := range opls {
+		opIds = append(opIds, opl.OpId)
+		opNameByOpId[opl.OpId] = opl.OpName
 	}
 
-	for i := utils.NewInterval(first, last, interval); i.End() < last; i.Next() {
-		starts = append(starts, i.Start()+1)
-
-		q := query{int(i.Start()) + 1, int(i.End()) + 1}
-		stmt.Select(&stats, q)
-		for _, s := range stats {
-			byOpId[s.OpId] = append(byOpId[s.OpId], s)
-			byStart[s.Start] = append(byStart[s.Start], s)
-		}
-	}
-
-	stmt.Close()
 	db.Close()
 
-	// calculate total op count per interval
-	var (
-		opIds              []int                   = []int{}
-		opNameByOpId       map[int]string          = map[int]string{}
-		totalCount         uint64                  = 0
-		countByStart       map[int]float64         = map[int]float64{}
-		timeByStart        map[int]float64         = map[int]float64{}
-		countByOpId        map[int]float64         = map[int]float64{}
-		timeByOpId         map[int]float64         = map[int]float64{}
-		avgByOpId          map[int]float64         = map[int]float64{}
-		countByStartByOpId map[int]map[int]float64 = map[int]map[int]float64{}
-		timeByStartByOpId  map[int]map[int]float64 = map[int]map[int]float64{}
-	)
+	fmt.Println("op_count: ", len(opIds))
 
-	for id, stats := range byOpId {
-		opIds = append(opIds, id)
-		opNameByOpId[id] = stats[0].OpName
+	/////////
+
+	queries := make(chan query, bucket_count)
+	done := make(chan done_msg, bucket_count)
+	bc := make(chan bucket_msg, bucket_count)
+	oc := make(chan op_msg, op_count * bucket_count)
+
+	for w := 0; w < worker_count; w++ {
+	        go worker(w, 50, queries, done, bc, oc)
 	}
 
-	sort.Slice(opIds, func(i, j int) bool { return opIds[i] < opIds[j] })
+	itv := xmath.NewInterval(uint64(first), uint64(last), uint64(interval))
+	
+	queries <- query{int(0), int(100000), 0}
+	itv.Next()
 
-	target := float64(1_000_000)
-	for _, start := range starts {
-		s := int(float64(start) / target)
-		countByStartByOpId[s] = map[int]float64{}
-		timeByStartByOpId[s] = map[int]float64{}
+	for b := 1; b < bucket_count; b, itv = b+1, itv.Next() {
+		q := query{int(itv.Start()+1), int(itv.End()+1), b}
+		buckets[b] = int(itv.Start())
+	        queries <- q
 	}
+	close(queries)
+	
+	for b := 0; b < bucket_count; b++ {
+		fmt.Println(<-done)
+	}
+	close(done)
+	
+	elapsed := time.Since(start)
+	fmt.Println("time taken: ", elapsed)
 
-	for _, start := range starts {
-		stats := byStart[int(start)]
-		for _, stat := range stats {
-			s := int(float64(start) / target)
-			id := int(stat.OpId)
-			totalCount += uint64(stat.Count)
-			countByStart[s] += float64(stat.Count)
-			timeByStart[s] += float64(stat.Sum)
-			countByOpId[id] += float64(stat.Count)
-			timeByOpId[id] += float64(stat.Sum)
-			countByStartByOpId[s][id] += float64(stat.Count)
-			timeByStartByOpId[s][id] += float64(stat.Sum)
-			avgByOpId[id] = float64(timeByOpId[id]) / float64(countByOpId[id])
+	for b := 0; b < bucket_count; b++ {
+		m := <-bc
+
+		countTotal += m.count
+		countByBucket[b] += float64(m.count)
+		timeTotal += m.time
+		timeByBucket[b] += m.time
+	}
+	close(bc)
+
+	for bo := 0; bo < bucket_count * op_count; bo++ {
+		m := <- oc
+
+		countByOpId[m.opid] += float64(m.count)
+		timeByOpId[m.opid] += m.time
+		countByBucketByOpId[m.opid][m.bucket] += float64(m.count)
+		timeByBucketByOpId[m.opid][m.bucket] += m.time
+		minByBucketByOpId[m.opid][m.bucket] = xmath.Min(m.min, minByBucketByOpId[m.opid][m.bucket])
+		maxByBucketByOpId[m.opid][m.bucket] = xmath.Max(m.max, maxByBucketByOpId[m.opid][m.bucket])
+
+		if m.count > 0 {
+			meanByBucketByOpId[m.opid][m.bucket] = timeByBucketByOpId[m.opid][m.bucket] / countByBucketByOpId[m.opid][m.bucket]
+		}
+
+	}
+	close(oc)
+
+	fmt.Println("Metadata")
+	fmt.Println("count: ", countTotal, "time: ", timeTotal, "opCount: ", len(opIds))
+	printTopX(countByOpId, opNameByOpId, 7)
+	printTopX(timeByOpId, opNameByOpId, 7)
+	for _, opid := range opIds {
+		if countByOpId[opid] == 0 {
+			fmt.Println(opid, opNameByOpId[opid])
 		}
 	}
 
-	// plot
 
-	makePieChart("./pngs/count.pie.png", countByOpId, opNameByOpId, clr)
-	makePieChart("./pngs/time.pie.png", timeByOpId, opNameByOpId, clr)
-	makePieChart("./pngs/avg.pie.png", avgByOpId, opNameByOpId, clr)
+	page := components.NewPage().AddCharts(
+		PieWithTitle(
+			pie("Count By OpId", opIds, countByOpId, opNameByOpId),
+			"Percentage By Count", "",
+		),
+		BarWithTitle(
+			BarWithCustomXy(
+				bar("Count By Interval", buckets, countByBucket),
+				"Block Height",
+				"Count", "",
+			),
+			"Total Op Count / 100,000 Blocks", "",
+		),
+		PieWithTitle(
+			pie("Time By OpId", opIds, timeByOpId, opNameByOpId),
+			"Percentage By Runtime", "",
+		),
+		BarWithTitle(
+			BarWithCustomXy(
+				bar("Time By Interval", buckets, timeByBucket),
+				"Block Height",
+				"Time", "μs",
+			),
+			"Total Op Runtime  / 100,000 Blocks", "",
+		),
+	)
 
-	makeBarChart("./pngs/count.bar.png", countByStart, clr, 5000_000_000)
-	makeBarChart("./pngs/time.bar.png", timeByStart, clr, 8000_000_000)
-	makeBarChart("./pngs/avg.bar.png", avgByOpId, clr, 200)
+	for _, op := range opIds {
+		if countByOpId[op] == 0 {
+			continue
+		}
 
-	makePercentageTrend("./pngs/time.bars.png", timeByStartByOpId, opNameByOpId, clr)
-
-	for _, id := range opIds {
-		makeGraph(
-			fmt.Sprintf("./pngs/%d.total.png", id),
-			fmt.Sprintf("./pngs/%d.avg.png", id),
-			byOpId[id],
+		page.AddCharts(
+			ScatterWithTitle(
+				ScatterWithCustomXy(
+					scatter("Count", buckets, countByBucketByOpId[op]),
+					"Block Height",
+					"Count", "",
+				),
+				fmt.Sprintf("[%d]%s Total Call Count", op, opNameByOpId[op]), "",
+			),
+			ScatterWithTitle(
+				ScatterWithCustomXy(
+					scatter("Total Time", buckets, timeByBucketByOpId[op]),
+					"Block Height",
+					"Time", "μs",
+				),
+				fmt.Sprintf("[%d]%s Total Runtime", op, opNameByOpId[op]), "",
+			),
+			ScatterWithTitle(
+				ScatterWithCustomXy(
+					scatter("Avg. Time", buckets, meanByBucketByOpId[op]),
+					"Block Height",
+					"Time", "μs",
+				),
+				fmt.Sprintf("[%d]%s Average Time / 1 Call", op, opNameByOpId[op]), "",
+			),	
 		)
 	}
 
-	// package as md
-
-	f, err := os.Create(pMd)
+	f, err := os.Create(pHtml)
 	if err != nil {
 		panic(err)
 	}
 
-	mdf := md.NewMarkdown(f).
-		H2("Overall Count").
-		PlainTextf(md.Image("", "./pngs/count.pie.png")).
-		PlainTextf(md.Image("", "./pngs/count.bar.png")).
-		H2("Overall Time Taken").
-		PlainTextf(md.Image("", "./pngs/time.pie.png")).
-		PlainTextf(md.Image("", "./pngs/time.bar.png")).
-		H2("Overall Time Taken / call").
-		PlainTextf(md.Image("", "./pngs/avg.pie.png")).
-		PlainTextf(md.Image("", "./pngs/avg.bar.png"))
+	page.Render(io.MultiWriter(f))
+	fmt.Println("Rendered to ", pHtml)
+}
 
-	for _, id := range opIds {
-		mdf = mdf.
-			H2(fmt.Sprintf("[%d] %s", id, opNameByOpId[id])).
-			H3("Total Time / Block (s)").
-			PlainTextf(md.Image("", fmt.Sprintf("./pngs/%d.total.png", id))).
-			H3("Avg Time / Block (ms)").
-			PlainTextf(md.Image("", fmt.Sprintf("./pngs/%d.avg.png", id)))
+func printTopX(byOpId map[int]float64, opNameByOpId map[int]string, x int) {
+	type kv struct {
+		k int
+		v float64
 	}
 
-	mdf.Build()
-
-	// md to pdf
-
-	var r *mp.PdfRenderer = mp.NewPdfRenderer("", "", pPdf, "report.log", []mp.RenderOption{}, mp.DARK)
-
-	content, _ := ioutil.ReadFile(pMd)
-	r.Process(content)
-}
-
-type val struct {
-	id int
-	v  float64
-}
-
-type byVal []val
-
-func (a byVal) Len() int {
-	return len(a)
-}
-
-func (a byVal) Swap(i, j int) {
-	a[i], a[j] = a[j], a[i]
-}
-
-func (a byVal) Less(i, j int) bool {
-	return a[i].v > a[j].v
-}
-
-type byId []val
-
-func (b byId) Len() int {
-	return len(b)
-}
-
-func (b byId) Swap(i, j int) {
-	b[i], b[j] = b[j], b[i]
-}
-
-func (b byId) Less(i, j int) bool {
-	return b[i].id < b[j].id
-}
-
-func printLabel(i int) string {
-	if i%10_000_000 == 1 {
-		if i == 1 {
-			return "0"
-		}
-		return fmt.Sprintf("%d", i/10_000_000)
+	var kvs []kv
+	for k, v := range byOpId {
+		kvs = append(kvs, kv{k, v})
 	}
-	return ""
-}
 
-func makeGraph(pTotalPng string, pAvgPng string, stats []statistics) string {
-	var (
-		sums   []float64 = []float64{}
-		means  []float64 = []float64{}
-		starts []float64 = []float64{}
-	)
-
-	sort.Slice(stats, func(i, j int) bool {
-		return stats[i].Start < stats[j].Start
+	sort.Slice(kvs, func(i, j int) bool {
+	        return kvs[i].v > kvs[j].v
 	})
 
-	for _, stat := range stats {
-		sums = append(sums, float64(stat.Sum/1_000_000))
-		means = append(means, float64(stat.Mean))
-		starts = append(starts, float64(stat.Start/100_000))
+	for ix, kv := range kvs[:x] {
+		fmt.Println("Rank ", ix, "[", kv.k, "]", opNameByOpId[kv.k], " has value ", kv.v)
 	}
-
-	meanSeries := chart.ContinuousSeries{
-		Name: "Mean",
-		Style: chart.Style{
-			StrokeColor: chart.GetDefaultColor(0),
-		},
-		XValues: starts,
-		YValues: means,
-	}
-
-	graph := chart.Chart{
-		Width:  750,
-		Height: 325,
-		Series: []chart.Series{
-			meanSeries,
-		},
-	}
-
-	f, err := os.Create(pAvgPng)
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-	graph.Render(chart.PNG, f)
-
-	totalSeries := chart.ContinuousSeries{
-		Name: "Total",
-		Style: chart.Style{
-			StrokeColor: chart.GetDefaultColor(0),
-		},
-		XValues: starts,
-		YValues: sums,
-	}
-
-	graph2 := chart.Chart{
-		Width:  750,
-		Height: 325,
-		Series: []chart.Series{
-			totalSeries,
-		},
-	}
-
-	f2, err := os.Create(pTotalPng)
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-	graph2.Render(chart.PNG, f2)
-
-	return pTotalPng
 }
 
-func makeBarChart(pPng string, valByStart map[int]float64, clr map[int]drawing.Color, max int) string {
-	var (
-		vals  []val        = []val{}
-		ticks []chart.Tick = []chart.Tick{}
+func BarWithTitle(b *charts.Bar, title string, subtitle string) *charts.Bar {
+	b.SetGlobalOptions(
+		charts.WithTitleOpts(opts.Title{
+			Title: title,
+			Subtitle: subtitle,
+		}),
 	)
-
-	for id, v := range valByStart {
-		vals = append(vals, val{id, v})
-	}
-
-	sort.Sort(byId(vals))
-
-	values := []chart.Value{}
-	for _, val := range vals {
-		values = append(values, chart.Value{
-			Value: val.v,
-			Label: printLabel(val.id),
-			Style: chart.Style{
-				FillColor:   clr[999],
-				StrokeColor: drawing.ColorFromHex("000000"),
-				StrokeWidth: 0,
-			},
-		})
-	}
-
-	for i := 0; i <= max; i += max / 5 {
-		ticks = append(ticks, chart.Tick{
-			Value: float64(i),
-			Label: fmt.Sprintf("%d", i),
-		})
-	}
-
-	bars := chart.BarChart{
-		Width:  750,
-		Height: 400,
-		Background: chart.Style{
-			Padding: chart.Box{
-				Top: 50,
-			},
-		},
-		Bars:  values,
-		YAxis: chart.YAxis{Ticks: ticks},
-	}
-
-	f, err := os.Create(pPng)
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-	bars.Render(chart.PNG, f)
-
-	return pPng
+	return b
 }
 
-func makePieChart(pPng string, valByOpId map[int]float64, nameById map[int]string, clr map[int]drawing.Color) string {
-	var (
-		vals      []val   = []val{}
-		total     float64 = 0.0
-		now       float64 = 0.0
-		remaining float64 = 0.0
+func BarWithCustomXy(b *charts.Bar, x string, y string, yu string) *charts.Bar {
+	b.SetGlobalOptions(
+		charts.WithXAxisOpts(opts.XAxis{
+			Name: x,
+			AxisLabel: &opts.AxisLabel{
+				Show: true, 
+				Formatter: "{value}",
+				ShowMinLabel: true,
+				ShowMaxLabel: true,
+			},
+			SplitLine: &opts.SplitLine{
+				Show: true,
+			},
+		}),
+		charts.WithYAxisOpts(opts.YAxis{
+			Name: y,
+			AxisLabel: &opts.AxisLabel{
+				Show: true,
+				Formatter: fmt.Sprintf("{value} %s", yu),
+				ShowMinLabel: true,
+				ShowMaxLabel: true,
+			},
+		}),
 	)
+	return b
+}
 
-	for id, v := range valByOpId {
-		vals = append(vals, val{id, v})
-		total += v
-	}
 
-	sort.Sort(byVal(vals))
+func bar(title string, buckets []int, byBucket map[int]float64) *charts.Bar {
+	var y []opts.BarData = make([]opts.BarData, len(buckets))
 
-	values := []chart.Value{}
-	for _, val := range vals {
-		now += val.v
-		if now/total < 0.93 {
-			values = append(values, chart.Value{
-				Value: val.v,
-				Label: fmt.Sprintf("%s %.1f%%", nameById[val.id], val.v/total*100),
-				Style: chart.Style{
-					FillColor: clr[val.id],
-				},
-			})
-		} else {
-			remaining += val.v
+	for b := range buckets {
+		y[b] = opts.BarData{
+			Value: byBucket[b],
 		}
 	}
 
-	values = append(values, chart.Value{
-		Value: remaining,
-		Label: fmt.Sprintf("Others %.1f%%", remaining/total*100),
-		Style: chart.Style{
-			FillColor: clr[999],
-		},
-	})
+	bar := charts.NewBar()
+	bar.SetGlobalOptions(
+		charts.WithTooltipOpts(opts.Tooltip{Show: true}),
+	)
+	
+	bar.SetXAxis(buckets).AddSeries(title, y)
 
-	pie := chart.DonutChart{
-		Width:  750,
-		Height: 400,
-		Values: values,
-	}
-
-	f, err := os.Create(pPng)
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-	pie.Render(chart.PNG, f)
-
-	return pPng
+	return bar
 }
 
-func makePercentageTrendByStart(start int, timeByOpId map[int]float64, nameById map[int]string, clr map[int]drawing.Color) chart.StackedBar {
 
-	var (
-		tracks    []int   = []int{20, 7, 13, 9, 28, 37, 10}
-		total     float64 = 0.0
-		remainder float64 = 0.0
+func ScatterWithTitle(s *charts.Scatter, title string, subtitle string) *charts.Scatter {
+	s.SetGlobalOptions(
+		charts.WithTitleOpts(opts.Title{
+			Title: title,
+			Subtitle: subtitle,
+		}),
 	)
+	return s
+}
 
-	for _, v := range timeByOpId {
-		total += v
-	}
-
-	values := []chart.Value{}
-	for _, id := range tracks {
-		values = append(values, chart.Value{
-			Value: timeByOpId[id],
-			Label: fmt.Sprintf("%d", id),
-			Style: chart.Style{
-				FillColor:   clr[id],
-				StrokeColor: clr[id],
-				FontSize:    10,
+func ScatterWithCustomXy(s *charts.Scatter, x string, y string, yu string) *charts.Scatter {
+	s.SetGlobalOptions(
+		charts.WithXAxisOpts(opts.XAxis{
+			Name: x,
+			AxisLabel: &opts.AxisLabel{
+				Show: true, 
+				Formatter: "{value}",
+				ShowMinLabel: true,
+				ShowMaxLabel: true,
 			},
-		})
+			SplitLine: &opts.SplitLine{
+				Show: true,
+			},
+		}),
+		charts.WithYAxisOpts(opts.YAxis{
+			Name: y,
+			AxisLabel: &opts.AxisLabel{
+				Show: true,
+				Formatter: fmt.Sprintf("{value} %s", yu),
+				ShowMinLabel: true,
+				ShowMaxLabel: true,
+			},
+		}),
+	)
+	return s
+}
+
+func scatter(title string, buckets []int, byBucket map[int]float64) *charts.Scatter {
+	var y []opts.ScatterData = make([]opts.ScatterData, len(buckets))
+
+	for b := range buckets {
+		y[b] = opts.ScatterData{
+			Value: byBucket[b],
+			Symbol: "circle",
+			SymbolSize: 5,
+		}
 	}
 
-	for id, v := range timeByOpId {
-		if slices.Contains(tracks, id) {
+	scatter := charts.NewScatter()
+	scatter.SetGlobalOptions(
+		charts.WithTooltipOpts(opts.Tooltip{Show: true}),
+	)
+	scatter.SetXAxis(buckets).AddSeries(title, y)
+
+	return scatter
+}
+
+func line(title string, buckets []int, byBucket map[int]float64) *charts.Line {
+	var y []opts.LineData = make([]opts.LineData, len(buckets))
+
+	for b := range buckets {		
+		y[b] = opts.LineData{Value: byBucket[b]}
+	}
+
+	line := charts.NewLine()
+	line.SetXAxis(buckets).AddSeries(title, y)
+
+	return line
+}
+
+
+func pie(title string, opIds []int, byOpId map[int]float64, opNameByOpId map[int]string) *charts.Pie {
+	var items []opts.PieData = make([]opts.PieData, len(opIds))
+	
+	for ix, opId := range opIds {
+		if byOpId[opId] == 0 {
 			continue
 		}
-		remainder += v
-	}
-
-	values = append(values, chart.Value{
-		Value: remainder,
-		Label: "Others",
-		Style: chart.Style{
-			FillColor:   clr[999],
-			StrokeColor: clr[999],
-			FontSize:    10,
-		},
-	})
-
-	slices.Reverse(values)
-
-	return chart.StackedBar{
-		Name:   fmt.Sprintf("%d", start),
-		Width:  20,
-		Values: values,
-	}
-
-}
-
-func makePercentageTrend(pPng string, timeByStartByOpId map[int]map[int]float64, nameById map[int]string, clr map[int]drawing.Color) string {
-
-	var (
-		bars   []chart.StackedBar = []chart.StackedBar{}
-		starts []int              = []int{}
-	)
-
-	for start := range timeByStartByOpId {
-		starts = append(starts, start)
-	}
-	sort.Slice(starts, func(i, j int) bool { return starts[i] < starts[j] })
-
-	for _, start := range starts {
-		bars = append(bars, makePercentageTrendByStart(start, timeByStartByOpId[start], nameById, clr))
-	}
-
-	stackedBarChart := chart.StackedBarChart{
-		TitleStyle:   chart.Shown(),
-		Width:        1200,
-		Height:       1800,
-		XAxis:        chart.Shown(),
-		YAxis:        chart.Shown(),
-		BarSpacing:   1,
-		IsHorizontal: true,
-		Bars:         bars,
-	}
-
-	f, err := os.Create(pPng)
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-	stackedBarChart.Render(chart.PNG, f)
-
-	return pPng
-}
-
-func HashGeneric[T comparable](a, b []T) []T {
-	set := make([]T, 0)
-	hash := make(map[T]struct{})
-
-	for _, v := range a {
-		hash[v] = struct{}{}
-	}
-
-	for _, v := range b {
-		if _, ok := hash[v]; ok {
-			set = append(set, v)
+		items[ix] = opts.PieData{
+			Value: byOpId[opId],
+			Name: opNameByOpId[opId],
 		}
 	}
 
-	return set
+	pie := charts.NewPie()
+	pie.SetGlobalOptions(
+		charts.WithTooltipOpts(opts.Tooltip{Show: true}),
+	)
+	pie.AddSeries(title, items).SetSeriesOptions(
+		charts.WithLabelOpts(opts.Label{
+			Show:      true,
+			Formatter: "{b} {d}%",
+		}),
+	)
+	return pie
+}
+
+func PieWithTitle(p *charts.Pie, title string, subtitle string) *charts.Pie {
+	p.SetGlobalOptions(
+		charts.WithTitleOpts(opts.Title{
+			Title: title,
+			Subtitle: subtitle,
+		}),
+	)
+	return p
 }
