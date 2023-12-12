@@ -6,14 +6,14 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"time"
 	"sort"
+	"time"
 
 	xmath "github.com/Fantom-foundation/Aida/utils/math"
-	
+
 	// db
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/jmoiron/sqlx"
+	_ "github.com/mattn/go-sqlite3"
 
 	//echart
 	"github.com/go-echarts/go-echarts/v2/charts"
@@ -23,18 +23,18 @@ import (
 
 const (
 	// db
-	first			     int = 0
-	last                         int = 65_436_418
-	worker_count		     int = 10
-	bucket_count		     int = 654
-	op_count		     int = 50
+	first        int = 0
+	last         int = 65_436_418
+	worker_count int = 10
+	bucket_count int = 654
+	op_count     int = 50
 
 	connection                   string = "/home/rapolt/dev/sqlite3/test.db"
 	sqlite3_SelectFromOperations string = `
 	SELECT start, end, opId, opName, count, sum, mean, min, max
 	FROM operations 
 	WHERE start=:start AND end=:end AND count > 0;`
-	sqlite3_SelectDistinctOps    string = ` 
+	sqlite3_SelectDistinctOps string = ` 
 	SELECT DISTINCT opId, opName
 	FROM operations
 	ORDER BY opId ASC;`
@@ -44,53 +44,53 @@ const (
 )
 
 type query struct {
-	Start int `db:"start"`
-	End int `db:"end"`
+	Start  int `db:"start"`
+	End    int `db:"end"`
 	bucket int
 }
 
 type tx_op struct {
-	Start int `db:"start"`
-	End      int     `db:"end"`
-	OpId     int     `db:"opId"`
-	OpName   string  `db:"opName"`
-	Count    int     `db:"count"`
-	Sum      float64 `db:"sum"`
-	Mean     float64 `db:"mean"`
-	Min      float64 `db:"min"`
-	Max      float64 `db:"max"`
+	Start  int     `db:"start"`
+	End    int     `db:"end"`
+	OpId   int     `db:"opId"`
+	OpName string  `db:"opName"`
+	Count  int     `db:"count"`
+	Sum    float64 `db:"sum"`
+	Mean   float64 `db:"mean"`
+	Min    float64 `db:"min"`
+	Max    float64 `db:"max"`
 }
 
 type op_lookup struct {
-	OpId int `db:"opId"`
+	OpId   int    `db:"opId"`
 	OpName string `db:"opName"`
 }
 
 type done_msg struct {
-	q query 
-	bucket int
+	q        query
+	bucket   int
 	tx_count int
 }
 
 type bucket_msg struct {
 	bucket int
-	count int
-	time float64
+	count  int
+	time   float64
 }
 
 type op_msg struct {
 	bucket int
-	opid int
-	count int
-	time float64
-	avg float64
-	min float64
-	max float64
+	opid   int
+	count  int
+	time   float64
+	avg    float64
+	min    float64
+	max    float64
 }
 
 // TODO: make sure worker returns the thread properly
-func worker(id int, opCount int, queries <-chan query, done chan<- done_msg, 
-bc chan<- bucket_msg, oc chan<- op_msg) {
+func worker(id int, opCount int, queries <-chan query, done chan<- done_msg,
+	bc chan<- bucket_msg, oc chan<- op_msg) {
 
 	for q := range queries {
 		db, err := sqlx.Open("sqlite3", connection)
@@ -102,20 +102,20 @@ bc chan<- bucket_msg, oc chan<- op_msg) {
 		if err != nil {
 			panic(err)
 		}
-		
+
 		txs := []tx_op{}
 		stmt.Select(&txs, q)
 		stmt.Close()
 		db.Close()
 
 		var (
-			count int = 0
-			time float64 = 0
-			countByOpId map[int]int = make(map[int]int, opCount)
-			timeByOpId map[int]float64 = make(map[int]float64, opCount)
-			meanByOpId map[int]float64 = make(map[int]float64, opCount)
-			minByOpId map[int]float64 = make(map[int]float64, opCount)
-			maxByOpId map[int]float64 = make(map[int]float64, opCount)
+			count       int             = 0
+			time        float64         = 0
+			countByOpId map[int]int     = make(map[int]int, opCount)
+			timeByOpId  map[int]float64 = make(map[int]float64, opCount)
+			meanByOpId  map[int]float64 = make(map[int]float64, opCount)
+			minByOpId   map[int]float64 = make(map[int]float64, opCount)
+			maxByOpId   map[int]float64 = make(map[int]float64, opCount)
 		)
 
 		for _, tx := range txs {
@@ -133,9 +133,9 @@ bc chan<- bucket_msg, oc chan<- op_msg) {
 
 		for id := 0; id < opCount; id++ {
 			oc <- op_msg{
-				q.bucket, 
-				id, 
-				countByOpId[id], 
+				q.bucket,
+				id,
+				countByOpId[id],
 				timeByOpId[id],
 				meanByOpId[id],
 				minByOpId[id],
@@ -154,23 +154,23 @@ func main() {
 	var (
 		//interval int = (last-first) / bucket_count
 		//buckets []int = make([]int, bucket_count)
-		interval int = 100_000
-		buckets []int = make([]int, bucket_count)
+		interval int   = 100_000
+		buckets  []int = make([]int, bucket_count)
 
-		opIds              []int                   = []int{}
-		opNameByOpId       map[int]string          = map[int]string{}
+		opIds        []int          = []int{}
+		opNameByOpId map[int]string = map[int]string{}
 
-		countTotal int = 0
-		timeTotal float64 = 0
-		countByBucket map[int]float64 = make(map[int]float64, bucket_count)
-		timeByBucket map[int]float64 = make(map[int]float64, bucket_count)
-		countByOpId  map[int]float64 = make(map[int]float64, bucket_count)
-		timeByOpId   map[int]float64 = make(map[int]float64, bucket_count)
+		countTotal          int                     = 0
+		timeTotal           float64                 = 0
+		countByBucket       map[int]float64         = make(map[int]float64, bucket_count)
+		timeByBucket        map[int]float64         = make(map[int]float64, bucket_count)
+		countByOpId         map[int]float64         = make(map[int]float64, bucket_count)
+		timeByOpId          map[int]float64         = make(map[int]float64, bucket_count)
 		countByBucketByOpId map[int]map[int]float64 = map[int]map[int]float64{}
 		timeByBucketByOpId  map[int]map[int]float64 = map[int]map[int]float64{}
 		meanByBucketByOpId  map[int]map[int]float64 = map[int]map[int]float64{}
-		minByBucketByOpId  map[int]map[int]float64 = map[int]map[int]float64{}
-		maxByBucketByOpId  map[int]map[int]float64 = map[int]map[int]float64{}
+		minByBucketByOpId   map[int]map[int]float64 = map[int]map[int]float64{}
+		maxByBucketByOpId   map[int]map[int]float64 = map[int]map[int]float64{}
 	)
 
 	for b := range buckets {
@@ -184,7 +184,7 @@ func main() {
 	fmt.Println("Bucket: ", bucket_count, "Interval: ", interval, "Worker: ", worker_count)
 
 	/////////
-	
+
 	db, err := sqlx.Open("sqlite3", connection)
 	if err != nil {
 		panic(err)
@@ -210,29 +210,29 @@ func main() {
 	queries := make(chan query, bucket_count)
 	done := make(chan done_msg, bucket_count)
 	bc := make(chan bucket_msg, bucket_count)
-	oc := make(chan op_msg, op_count * bucket_count)
+	oc := make(chan op_msg, op_count*bucket_count)
 
 	for w := 0; w < worker_count; w++ {
-	        go worker(w, 50, queries, done, bc, oc)
+		go worker(w, 50, queries, done, bc, oc)
 	}
 
 	itv := xmath.NewInterval(uint64(first), uint64(last), uint64(interval))
-	
+
 	queries <- query{int(0), int(100000), 0}
 	itv.Next()
 
 	for b := 1; b < bucket_count; b, itv = b+1, itv.Next() {
-		q := query{int(itv.Start()+1), int(itv.End()+1), b}
+		q := query{int(itv.Start() + 1), int(itv.End() + 1), b}
 		buckets[b] = int(itv.Start())
-	        queries <- q
+		queries <- q
 	}
 	close(queries)
-	
+
 	for b := 0; b < bucket_count; b++ {
 		fmt.Println(<-done)
 	}
 	close(done)
-	
+
 	elapsed := time.Since(start)
 	fmt.Println("time taken: ", elapsed)
 
@@ -246,8 +246,8 @@ func main() {
 	}
 	close(bc)
 
-	for bo := 0; bo < bucket_count * op_count; bo++ {
-		m := <- oc
+	for bo := 0; bo < bucket_count*op_count; bo++ {
+		m := <-oc
 
 		countByOpId[m.opid] += float64(m.count)
 		timeByOpId[m.opid] += m.time
@@ -272,7 +272,6 @@ func main() {
 			fmt.Println(opid, opNameByOpId[opid])
 		}
 	}
-
 
 	page := components.NewPage().AddCharts(
 		PieWithTitle(
@@ -330,7 +329,7 @@ func main() {
 					"Time", "μs",
 				),
 				fmt.Sprintf("[%d]%s Average Time / 1 Call", op, opNameByOpId[op]), "",
-			),	
+			),
 		)
 	}
 
@@ -355,7 +354,7 @@ func printTopX(byOpId map[int]float64, opNameByOpId map[int]string, x int) {
 	}
 
 	sort.Slice(kvs, func(i, j int) bool {
-	        return kvs[i].v > kvs[j].v
+		return kvs[i].v > kvs[j].v
 	})
 
 	for ix, kv := range kvs[:x] {
@@ -366,7 +365,7 @@ func printTopX(byOpId map[int]float64, opNameByOpId map[int]string, x int) {
 func BarWithTitle(b *charts.Bar, title string, subtitle string) *charts.Bar {
 	b.SetGlobalOptions(
 		charts.WithTitleOpts(opts.Title{
-			Title: title,
+			Title:    title,
 			Subtitle: subtitle,
 		}),
 	)
@@ -378,8 +377,8 @@ func BarWithCustomXy(b *charts.Bar, x string, y string, yu string) *charts.Bar {
 		charts.WithXAxisOpts(opts.XAxis{
 			Name: x,
 			AxisLabel: &opts.AxisLabel{
-				Show: true, 
-				Formatter: "{value}",
+				Show:         true,
+				Formatter:    "{value}",
 				ShowMinLabel: true,
 				ShowMaxLabel: true,
 			},
@@ -390,8 +389,8 @@ func BarWithCustomXy(b *charts.Bar, x string, y string, yu string) *charts.Bar {
 		charts.WithYAxisOpts(opts.YAxis{
 			Name: y,
 			AxisLabel: &opts.AxisLabel{
-				Show: true,
-				Formatter: fmt.Sprintf("{value} %s", yu),
+				Show:         true,
+				Formatter:    fmt.Sprintf("{value} %s", yu),
 				ShowMinLabel: true,
 				ShowMaxLabel: true,
 			},
@@ -399,7 +398,6 @@ func BarWithCustomXy(b *charts.Bar, x string, y string, yu string) *charts.Bar {
 	)
 	return b
 }
-
 
 func bar(title string, buckets []int, byBucket map[int]float64) *charts.Bar {
 	var y []opts.BarData = make([]opts.BarData, len(buckets))
@@ -414,17 +412,16 @@ func bar(title string, buckets []int, byBucket map[int]float64) *charts.Bar {
 	bar.SetGlobalOptions(
 		charts.WithTooltipOpts(opts.Tooltip{Show: true}),
 	)
-	
+
 	bar.SetXAxis(buckets).AddSeries(title, y)
 
 	return bar
 }
 
-
 func ScatterWithTitle(s *charts.Scatter, title string, subtitle string) *charts.Scatter {
 	s.SetGlobalOptions(
 		charts.WithTitleOpts(opts.Title{
-			Title: title,
+			Title:    title,
 			Subtitle: subtitle,
 		}),
 	)
@@ -436,8 +433,8 @@ func ScatterWithCustomXy(s *charts.Scatter, x string, y string, yu string) *char
 		charts.WithXAxisOpts(opts.XAxis{
 			Name: x,
 			AxisLabel: &opts.AxisLabel{
-				Show: true, 
-				Formatter: "{value}",
+				Show:         true,
+				Formatter:    "{value}",
 				ShowMinLabel: true,
 				ShowMaxLabel: true,
 			},
@@ -448,8 +445,8 @@ func ScatterWithCustomXy(s *charts.Scatter, x string, y string, yu string) *char
 		charts.WithYAxisOpts(opts.YAxis{
 			Name: y,
 			AxisLabel: &opts.AxisLabel{
-				Show: true,
-				Formatter: fmt.Sprintf("{value} %s", yu),
+				Show:         true,
+				Formatter:    fmt.Sprintf("{value} %s", yu),
 				ShowMinLabel: true,
 				ShowMaxLabel: true,
 			},
@@ -463,8 +460,8 @@ func scatter(title string, buckets []int, byBucket map[int]float64) *charts.Scat
 
 	for b := range buckets {
 		y[b] = opts.ScatterData{
-			Value: byBucket[b],
-			Symbol: "circle",
+			Value:      byBucket[b],
+			Symbol:     "circle",
 			SymbolSize: 5,
 		}
 	}
@@ -481,7 +478,7 @@ func scatter(title string, buckets []int, byBucket map[int]float64) *charts.Scat
 func line(title string, buckets []int, byBucket map[int]float64) *charts.Line {
 	var y []opts.LineData = make([]opts.LineData, len(buckets))
 
-	for b := range buckets {		
+	for b := range buckets {
 		y[b] = opts.LineData{Value: byBucket[b]}
 	}
 
@@ -491,17 +488,16 @@ func line(title string, buckets []int, byBucket map[int]float64) *charts.Line {
 	return line
 }
 
-
 func pie(title string, opIds []int, byOpId map[int]float64, opNameByOpId map[int]string) *charts.Pie {
 	var items []opts.PieData = make([]opts.PieData, len(opIds))
-	
+
 	for ix, opId := range opIds {
 		if byOpId[opId] == 0 {
 			continue
 		}
 		items[ix] = opts.PieData{
 			Value: byOpId[opId],
-			Name: opNameByOpId[opId],
+			Name:  opNameByOpId[opId],
 		}
 	}
 
@@ -521,7 +517,7 @@ func pie(title string, opIds []int, byOpId map[int]float64, opNameByOpId map[int
 func PieWithTitle(p *charts.Pie, title string, subtitle string) *charts.Pie {
 	p.SetGlobalOptions(
 		charts.WithTitleOpts(opts.Title{
-			Title: title,
+			Title:    title,
 			Subtitle: subtitle,
 		}),
 	)
