@@ -9,6 +9,7 @@ import (
 	"sort"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/utils"
 	xmath "github.com/Fantom-foundation/Aida/utils/math"
 
 	// db
@@ -216,7 +217,7 @@ func main() {
 		go worker(w, 50, queries, done, bc, oc)
 	}
 
-	itv := xmath.NewInterval(uint64(first), uint64(last), uint64(interval))
+	itv := utils.NewInterval(uint64(first), uint64(last), uint64(interval))
 
 	queries <- query{int(0), int(100000), 0}
 	itv.Next()
