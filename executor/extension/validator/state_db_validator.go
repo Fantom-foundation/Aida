@@ -41,7 +41,7 @@ func (v *liveDbTxValidator) PreTransaction(state executor.State[*substate.Substa
 		return nil
 	}
 
-	err = fmt.Errorf("block %v tx %v\n input alloc is not contained in the state-db\n %v\n", state.Block, state.Transaction, err)
+	err = fmt.Errorf("live-db-validator err:\nblock %v tx %v\n input alloc is not contained in the state-db\n %v\n", state.Block, state.Transaction, err)
 
 	if v.isErrFatal(err, ctx.ErrorInput) {
 		return err
@@ -57,7 +57,7 @@ func (v *liveDbTxValidator) PostTransaction(state executor.State[*substate.Subst
 		return nil
 	}
 
-	err = fmt.Errorf("output error at block %v tx %v; %v", state.Block, state.Transaction, err)
+	err = fmt.Errorf("live-db-validator err:\noutput error at block %v tx %v; %v", state.Block, state.Transaction, err)
 
 	if v.isErrFatal(err, ctx.ErrorInput) {
 		return err
@@ -94,7 +94,7 @@ func (v *archiveDbValidator) PreTransaction(state executor.State[*substate.Subst
 		return nil
 	}
 
-	err = fmt.Errorf("block %v tx %v\n input alloc is not contained in the state-db\n %v\n", state.Block, state.Transaction, err)
+	err = fmt.Errorf("archive-db-validator err:\nblock %v tx %v\n input alloc is not contained in the state-db\n %v\n", state.Block, state.Transaction, err)
 
 	if v.isErrFatal(err, ctx.ErrorInput) {
 		return err
@@ -110,7 +110,7 @@ func (v *archiveDbValidator) PostTransaction(state executor.State[*substate.Subs
 		return nil
 	}
 
-	err = fmt.Errorf("output error at block %v tx %v; %v", state.Block, state.Transaction, err)
+	err = fmt.Errorf("archive-db-validator err:\noutput error at block %v tx %v; %v", state.Block, state.Transaction, err)
 
 	if v.isErrFatal(err, ctx.ErrorInput) {
 		return err

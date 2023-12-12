@@ -232,8 +232,7 @@ func (e *executor[T]) Run(params Params, processor Processor[T], extensions []Ex
 		// Skip PostRun actions if a panic occurred. In such a case there is no guarantee
 		// on the state of anything, and PostRun operations may deadlock or cause damage.
 		if r := recover(); r != nil {
-			e.log.Error(r)
-			return
+			panic(r)
 		}
 		err = errors.Join(
 			err,
@@ -247,58 +246,17 @@ func (e *executor[T]) Run(params Params, processor Processor[T], extensions []Ex
 	}
 
 	if params.NumWorkers <= 1 {
-		return e.runSequential(params, processor, extensions, &state, &ctx)
+		params.NumWorkers = 1
 	}
 
 	switch params.ParallelismGranularity {
 	case TransactionLevel:
-		return e.runParallelTransaction(params, processor, extensions, &state, &ctx)
+		return e.runTransactions(params, processor, extensions, &state, &ctx)
 	case BlockLevel:
-		return e.runParallelBlock(params, processor, extensions, &state, &ctx)
+		return e.runBlocks(params, processor, extensions, &state, &ctx)
 	default:
 		return fmt.Errorf("incorrect parallelism type: %v", params.ParallelismGranularity)
 	}
-}
-
-func (e *executor[T]) runSequential(params Params, processor Processor[T], extensions []Extension[T], state *State[T], ctx *Context) error {
-	e.log.Debug("Starting sequential run...")
-
-	first := true
-	err := e.provider.Run(params.From, params.To, func(tx TransactionInfo[T]) error {
-		state.Data = tx.Data
-
-		if first {
-			state.Block = tx.Block
-			if err := signalPreBlock(*state, ctx, extensions); err != nil {
-				return err
-			}
-			first = false
-		} else if state.Block != tx.Block {
-			if err := signalPostBlock(*state, ctx, extensions); err != nil {
-				return err
-			}
-			state.Block = tx.Block
-			if err := signalPreBlock(*state, ctx, extensions); err != nil {
-				return err
-			}
-		}
-
-		state.Transaction = tx.Transaction
-		return runTransaction(*state, ctx, tx.Data, processor, extensions)
-	})
-	if err != nil {
-		return err
-	}
-
-	// Finish final block.
-	if !first {
-		if err := signalPostBlock(*state, ctx, extensions); err != nil {
-			return err
-		}
-		state.Block = params.To
-	}
-
-	return nil
 }
 
 // runBlock runs transaction execution in a block
@@ -327,11 +285,12 @@ func runBlock[T any](
 	for {
 		select {
 		case blockTransactions := <-blocks:
-			if blockTransactions == nil {
+			if blockTransactions == nil || len(blockTransactions) == 0 {
 				return // reached an end without abort
 			}
 
 			localState.Block = blockTransactions[0].Block
+			localState.Data = blockTransactions[0].Data
 			localCtx := *ctx
 
 			if err := signalPreBlock(localState, &localCtx, extensions); err != nil {
@@ -422,17 +381,22 @@ func (e *executor[T]) forwardBlocks(params Params, abort utils.Event) (chan []*T
 	return blocks, forwardErr
 }
 
-func (e *executor[T]) runParallelTransaction(params Params, processor Processor[T], extensions []Extension[T], state *State[T], ctx *Context) error {
+func (e *executor[T]) runTransactions(params Params, processor Processor[T], extensions []Extension[T], state *State[T], ctx *Context) error {
 	numWorkers := params.NumWorkers
 
 	// An event for signaling an abort of the execution.
 	abort := utils.MakeEvent()
 
+	var wg sync.WaitGroup
 	// Start one go-routine forwarding transactions from the provider to a local channel.
 	var forwardErr error
 	transactions := make(chan *TransactionInfo[T], 10*numWorkers)
+	wg.Add(1)
 	go func() {
-		defer close(transactions)
+		defer func() {
+			close(transactions)
+			wg.Done()
+		}()
 		abortErr := errors.New("aborted")
 		err := e.provider.Run(params.From, params.To, func(tx TransactionInfo[T]) error {
 			select {
@@ -449,7 +413,7 @@ func (e *executor[T]) runParallelTransaction(params Params, processor Processor[
 
 	// Start numWorkers go-routines processing transactions in parallel.
 	var cachedPanic atomic.Value
-	var wg sync.WaitGroup
+
 	wg.Add(numWorkers)
 	workerErrs := make([]error, numWorkers)
 	e.log.Debugf("Starting %v workers run on Transaction granularity...", numWorkers)
@@ -461,8 +425,8 @@ func (e *executor[T]) runParallelTransaction(params Params, processor Processor[
 					abort.Signal() // stop forwarder and other workers too
 					cachedPanic.Store(r)
 				}
+				wg.Done()
 			}()
-			defer wg.Done()
 			for {
 				select {
 				case tx := <-transactions:
@@ -484,6 +448,7 @@ func (e *executor[T]) runParallelTransaction(params Params, processor Processor[
 			}
 		}(i)
 	}
+
 	wg.Wait()
 
 	if r := cachedPanic.Load(); r != nil {
@@ -513,7 +478,7 @@ func runTransaction[T any](state State[T], ctx *Context, data T, processor Proce
 	}
 	return nil
 }
-func (e *executor[T]) runParallelBlock(params Params, processor Processor[T], extensions []Extension[T], state *State[T], ctx *Context) error {
+func (e *executor[T]) runBlocks(params Params, processor Processor[T], extensions []Extension[T], state *State[T], ctx *Context) error {
 	numWorkers := params.NumWorkers
 
 	// An event for signaling an abort of the execution.

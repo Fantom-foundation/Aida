@@ -38,6 +38,7 @@ func main() {
 			&logger.LogLevelFlag,
 			&utils.ErrorLoggingFlag,
 			&utils.StateDbImplementationFlag,
+			&utils.StateDbLoggingFlag,
 		},
 	}
 	if err := app.Run(os.Args); err != nil {

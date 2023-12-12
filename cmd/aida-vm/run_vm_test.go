@@ -189,7 +189,6 @@ func TestVm_AllTransactionsAreProcessedInOrder_Sequential(t *testing.T) {
 
 		// Block 2
 		// Tx 1
-		ext.EXPECT().PreBlock(executor.AtBlock[*substate.Substate](2), gomock.Any()),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[*substate.Substate](2, 1), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[*substate.Substate](2, 1), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[*substate.Substate](2, 1), gomock.Any()),
@@ -197,21 +196,16 @@ func TestVm_AllTransactionsAreProcessedInOrder_Sequential(t *testing.T) {
 		// Tx 2
 		processor.EXPECT().Process(executor.AtTransaction[*substate.Substate](2, 2), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[*substate.Substate](2, 2), gomock.Any()),
-		ext.EXPECT().PostBlock(executor.AtTransaction[*substate.Substate](2, 2), gomock.Any()),
 
 		// Block 3
-		ext.EXPECT().PreBlock(executor.AtBlock[*substate.Substate](3), gomock.Any()),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[*substate.Substate](3, 1), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[*substate.Substate](3, 1), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[*substate.Substate](3, 1), gomock.Any()),
-		ext.EXPECT().PostBlock(executor.AtTransaction[*substate.Substate](3, 1), gomock.Any()),
 
 		// Block 4
-		ext.EXPECT().PreBlock(executor.AtBlock[*substate.Substate](4), gomock.Any()),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[*substate.Substate](4, utils.PseudoTx), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[*substate.Substate](4, utils.PseudoTx), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[*substate.Substate](4, utils.PseudoTx), gomock.Any()),
-		ext.EXPECT().PostBlock(executor.AtTransaction[*substate.Substate](4, utils.PseudoTx), gomock.Any()),
 
 		ext.EXPECT().PostRun(executor.AtBlock[*substate.Substate](5), gomock.Any(), nil),
 	)
@@ -432,7 +426,7 @@ func TestVm_ValidationFailsOnInvalidTransaction_Sequential(t *testing.T) {
 		t.Errorf("validation must fail")
 	}
 
-	expectedErr := strings.TrimSpace("block 2 tx 1\n input alloc is not contained in the state-db\n   Account 0x0100000000000000000000000000000000000000 does not exist")
+	expectedErr := strings.TrimSpace("live-db-validator err:\nblock 2 tx 1\n input alloc is not contained in the state-db\n   Account 0x0100000000000000000000000000000000000000 does not exist")
 	returnedErr := strings.TrimSpace(err.Error())
 
 	if strings.Compare(returnedErr, expectedErr) != 0 {
@@ -471,7 +465,7 @@ func TestVm_ValidationFailsOnInvalidTransaction_Parallel(t *testing.T) {
 		t.Fatal("validation must fail")
 	}
 
-	expectedErr := strings.TrimSpace("block 2 tx 1\n input alloc is not contained in the state-db\n   Account 0x0100000000000000000000000000000000000000 does not exist")
+	expectedErr := strings.TrimSpace("live-db-validator err:\nblock 2 tx 1\n input alloc is not contained in the state-db\n   Account 0x0100000000000000000000000000000000000000 does not exist")
 	returnedErr := strings.TrimSpace(err.Error())
 
 	if strings.Compare(returnedErr, expectedErr) != 0 {
