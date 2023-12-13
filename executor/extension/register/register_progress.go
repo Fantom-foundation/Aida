@@ -14,7 +14,7 @@ import (
 
 const (
 	RegisterProgress_DefaultReportFrequency = 100_000 // in blocks
-	RegisterProgress_BufferSize = 100_000
+	RegisterProgress_BufferSize             = 100_000
 
 	RegisterProgress_CreateTableIfNotExist = `
 		CREATE TABLE IF NOT EXISTS stats (
@@ -56,7 +56,7 @@ func MakeRegisterProgress(cfg *utils.Config, reportFrequency int) executor.Exten
 		ps:       utils.NewPrinters(),
 	}
 
-	p2db, err := utils.NewPrinterToSqlite3(rp.sqlite3(cfg.RegisterRun)) 
+	p2db, err := utils.NewPrinterToSqlite3(rp.sqlite3(cfg.RegisterRun))
 
 	if err != nil {
 		rp.log.Debugf("Unable to register at %s", cfg.RegisterRun)
