@@ -8,6 +8,7 @@ import (
 	"os"
 	"sort"
 	"time"
+	"sync"
 
 	"github.com/Fantom-foundation/Aida/utils"
 	xmath "github.com/Fantom-foundation/Aida/utils/math"
@@ -89,9 +90,10 @@ type op_msg struct {
 	max    float64
 }
 
-// TODO: make sure worker returns the thread properly
-func worker(id int, opCount int, queries <-chan query, done chan<- done_msg,
-	bc chan<- bucket_msg, oc chan<- op_msg) {
+func worker(id int, opCount int, 
+	queries <-chan query, queriesWg *sync.WaitGroup,
+	bc chan<- bucket_msg, bucketWg *sync.WaitGroup,
+	oc chan<- op_msg, opWg *sync.WaitGroup) {
 
 	for q := range queries {
 		db, err := sqlx.Open("sqlite3", connection)
@@ -130,9 +132,11 @@ func worker(id int, opCount int, queries <-chan query, done chan<- done_msg,
 			maxByOpId[id] = xmath.Max(tx.Max, maxByOpId[id])
 		}
 
+		bucketWg.Add(1)
 		bc <- bucket_msg{q.bucket, count, time}
 
 		for id := 0; id < opCount; id++ {
+			opWg.Add(1)
 			oc <- op_msg{
 				q.bucket,
 				id,
@@ -144,8 +148,10 @@ func worker(id int, opCount int, queries <-chan query, done chan<- done_msg,
 			}
 		}
 
-		done <- done_msg{q, id, len(txs)}
+		queriesWg.Done()
 	}
+
+	fmt.Println("worker", id, "terminated.")
 }
 
 func main() {
@@ -203,60 +209,82 @@ func main() {
 	fmt.Println("op_count: ", len(opIds))
 
 	queries := make(chan query, bucket_count)
-	done := make(chan done_msg, bucket_count)
 	bc := make(chan bucket_msg, bucket_count)
 	oc := make(chan op_msg, op_count*bucket_count)
 
+	var (
+		queriesWg	sync.WaitGroup
+		bucketWg	sync.WaitGroup
+		opWg		sync.WaitGroup
+	)
+
 	for w := 0; w < worker_count; w++ {
-		go worker(w, 50, queries, done, bc, oc)
+		go worker(
+			w, 50, 
+			queries, &queriesWg, 
+			bc, &bucketWg,
+			oc, &opWg,
+		)
 	}
 
 	itv := utils.NewInterval(uint64(first), uint64(last), uint64(interval))
 
+	queriesWg.Add(1)
 	queries <- query{int(0), int(100000), 0}
 	itv.Next()
 
 	for b := 1; b < bucket_count; b, itv = b+1, itv.Next() {
 		q := query{int(itv.Start() + 1), int(itv.End() + 1), b}
 		buckets[b] = int(itv.Start())
+		queriesWg.Add(1)
 		queries <- q
 	}
+
+	queriesWg.Wait()
 	close(queries)
 
-	for b := 0; b < bucket_count; b++ {
-		fmt.Println(<-done)
-	}
-	close(done)
-
 	elapsed := time.Since(start)
-	fmt.Println("time taken: ", elapsed)
+	fmt.Println("queries - time taken: ", elapsed)
 
-	for b := 0; b < bucket_count; b++ {
-		m := <-bc
+	for w := 0; w < 1; w++ {
+		go func () {
+			for m := range bc {
+				countTotal += m.count
+				countByBucket[m.bucket] += float64(m.count)
+				timeTotal += m.time
+				timeByBucket[m.bucket] += m.time
 
-		countTotal += m.count
-		countByBucket[b] += float64(m.count)
-		timeTotal += m.time
-		timeByBucket[b] += m.time
+				bucketWg.Done()
+			}	
+		}()
 	}
+
+	bucketWg.Wait()
 	close(bc)
 
-	for bo := 0; bo < bucket_count*op_count; bo++ {
-		m := <-oc
+	for w := 0; w < 1; w++ {
+		go func () {
+			for m := range oc {
+				countByOpId[m.opid] += float64(m.count)
+				timeByOpId[m.opid] += m.time
+				countByBucketByOpId[m.opid][m.bucket] += float64(m.count)
+				timeByBucketByOpId[m.opid][m.bucket] += m.time
+				minByBucketByOpId[m.opid][m.bucket] = xmath.Min(m.min, minByBucketByOpId[m.opid][m.bucket])
+				maxByBucketByOpId[m.opid][m.bucket] = xmath.Max(m.max, maxByBucketByOpId[m.opid][m.bucket])
 
-		countByOpId[m.opid] += float64(m.count)
-		timeByOpId[m.opid] += m.time
-		countByBucketByOpId[m.opid][m.bucket] += float64(m.count)
-		timeByBucketByOpId[m.opid][m.bucket] += m.time
-		minByBucketByOpId[m.opid][m.bucket] = xmath.Min(m.min, minByBucketByOpId[m.opid][m.bucket])
-		maxByBucketByOpId[m.opid][m.bucket] = xmath.Max(m.max, maxByBucketByOpId[m.opid][m.bucket])
+				if m.count > 0 {
+					meanByBucketByOpId[m.opid][m.bucket] = timeByBucketByOpId[m.opid][m.bucket] / countByBucketByOpId[m.opid][m.bucket]
+				}
 
-		if m.count > 0 {
-			meanByBucketByOpId[m.opid][m.bucket] = timeByBucketByOpId[m.opid][m.bucket] / countByBucketByOpId[m.opid][m.bucket]
-		}
-
+				opWg.Done()
+			}
+		}()
 	}
+
+	opWg.Wait()
 	close(oc)
+	
+	//fmt.Println(countByBucket[1], countByBucketByOpId[20][1], countByBucketByOpId[20][1]/countByBucket[1])
 
 	page := components.NewPage().AddCharts(
 		PieWithTitle(
@@ -409,9 +437,34 @@ func stackedBar(title string, buckets []int, byBucket map[int]float64, opIds []i
 	bar := charts.NewBar()
 	bar.SetGlobalOptions(
 		charts.WithTooltipOpts(opts.Tooltip{Show: true}),
+		charts.WithXAxisOpts(opts.XAxis{
+			Name: "Block Height",
+			AxisLabel: &opts.AxisLabel{
+				Show:         true,
+				Formatter:    "{value}",
+				ShowMinLabel: true,
+				ShowMaxLabel: true,
+			},
+			SplitLine: &opts.SplitLine{
+				Show: true,
+			},
+		}),
+		charts.WithYAxisOpts(opts.YAxis{
+			Name: "Percentage",
+			Max: 1.0,
+			AxisLabel: &opts.AxisLabel{
+				Show:         true,
+				Formatter:    fmt.Sprintf("{value}"),
+				ShowMinLabel: true,
+				ShowMaxLabel: true,
+			},
+		}),
 	)
 
-	buckets = buckets[:5]
+	sort.Slice(opIds, func(i, j int) bool {
+		return byOpId[opIds[i]] < byOpId[opIds[j]]
+	})
+
 
 	bar.SetXAxis(buckets)
 	for _, id := range opIds {
