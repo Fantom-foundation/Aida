@@ -153,8 +153,6 @@ func main() {
 	start := time.Now()
 
 	var (
-		//interval int = (last-first) / bucket_count
-		//buckets []int = make([]int, bucket_count)
 		interval int   = 100_000
 		buckets  []int = make([]int, bucket_count)
 
@@ -184,8 +182,6 @@ func main() {
 
 	fmt.Println("Bucket: ", bucket_count, "Interval: ", interval, "Worker: ", worker_count)
 
-	/////////
-
 	db, err := sqlx.Open("sqlite3", connection)
 	if err != nil {
 		panic(err)
@@ -205,8 +201,6 @@ func main() {
 	db.Close()
 
 	fmt.Println("op_count: ", len(opIds))
-
-	/////////
 
 	queries := make(chan query, bucket_count)
 	done := make(chan done_msg, bucket_count)
@@ -264,16 +258,6 @@ func main() {
 	}
 	close(oc)
 
-	fmt.Println("Metadata")
-	fmt.Println("count: ", countTotal, "time: ", timeTotal, "opCount: ", len(opIds))
-	printTopX(countByOpId, opNameByOpId, 7)
-	printTopX(timeByOpId, opNameByOpId, 7)
-	for _, opid := range opIds {
-		if countByOpId[opid] == 0 {
-			fmt.Println(opid, opNameByOpId[opid])
-		}
-	}
-
 	page := components.NewPage().AddCharts(
 		PieWithTitle(
 			pie("Count By OpId", opIds, countByOpId, opNameByOpId),
@@ -287,6 +271,7 @@ func main() {
 			),
 			"Total Op Count / 100,000 Blocks", "",
 		),
+		stackedBar("Percentage", buckets, countByBucket, opIds, countByOpId, countByBucketByOpId, opNameByOpId),
 		PieWithTitle(
 			pie("Time By OpId", opIds, timeByOpId, opNameByOpId),
 			"Percentage By Runtime", "",
@@ -299,6 +284,7 @@ func main() {
 			),
 			"Total Op Runtime  / 100,000 Blocks", "",
 		),
+		stackedBar("Percentage", buckets, timeByBucket, opIds, timeByOpId, timeByBucketByOpId, opNameByOpId),
 	)
 
 	for _, op := range opIds {
@@ -418,6 +404,36 @@ func bar(title string, buckets []int, byBucket map[int]float64) *charts.Bar {
 
 	return bar
 }
+
+func stackedBar(title string, buckets []int, byBucket map[int]float64, opIds []int, byOpId map[int]float64, byBucketByOpIds map[int]map[int]float64, opNameByOpId map[int]string) *charts.Bar {
+	bar := charts.NewBar()
+	bar.SetGlobalOptions(
+		charts.WithTooltipOpts(opts.Tooltip{Show: true}),
+	)
+
+	buckets = buckets[:5]
+
+	bar.SetXAxis(buckets)
+	for _, id := range opIds {
+		var y []opts.BarData = make([]opts.BarData, len(buckets))
+		for b := range buckets {
+			y[b] = opts.BarData {
+				Value: float64(byBucketByOpIds[id][b]) / byBucket[b],
+			}
+		}
+		bar.AddSeries(opNameByOpId[id], y)
+	}
+
+	bar.SetSeriesOptions(
+		charts.WithBarChartOpts(opts.BarChart{
+			Stack: title,
+		}),
+	)
+
+
+	return bar
+}
+
 
 func ScatterWithTitle(s *charts.Scatter, title string, subtitle string) *charts.Scatter {
 	s.SetGlobalOptions(
