@@ -106,7 +106,7 @@ var (
 	}
 	ProfileDepthFlag = cli.IntFlag{
 		Name:  "profile-depth",
-		Usage: "0=interval, 1=block, 2=transaction",
+		Usage: "0=interval, 1=interval+block, 2=interval+block+transaction",
 		Value: 0,
 	}
 	ProfileSqlite3Flag = cli.StringFlag{

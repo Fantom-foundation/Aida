@@ -1,4 +1,4 @@
-package run_register
+package register
 
 import (
 	"sync"
@@ -7,12 +7,14 @@ import (
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
+	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 )
 
 const (
 	RegisterProgress_DefaultReportFrequency = 100_000 // in blocks
+	RegisterProgress_BufferSize = 100_000
 
 	RegisterProgress_CreateTableIfNotExist = `
 		CREATE TABLE IF NOT EXISTS stats (
@@ -39,7 +41,7 @@ const (
 //  1. Track Progress e.g. ProgressTracker
 //  2. Register the intermediate results to an external service (sqlite3 db)
 func MakeRegisterProgress(cfg *utils.Config, reportFrequency int) executor.Extension[*substate.Substate] {
-	if !cfg.TrackProgress {
+	if cfg.RegisterRun == "" {
 		return extension.NilExtension[*substate.Substate]{}
 	}
 
@@ -47,16 +49,22 @@ func MakeRegisterProgress(cfg *utils.Config, reportFrequency int) executor.Exten
 		reportFrequency = RegisterProgress_DefaultReportFrequency
 	}
 
-	t = &registerProgress{
+	rp := &registerProgress{
 		cfg:      cfg,
-		log:      log,
-		interval: utils.NewInterval(cfg.First, cfg.Last, reportFrequency),
+		log:      logger.NewLogger(cfg.LogLevel, "Register-Progress-Logger"),
+		interval: utils.NewInterval(cfg.First, cfg.Last, uint64(reportFrequency)),
 		ps:       utils.NewPrinters(),
 	}
 
-	ps.AddPrinter(utils.NewPrinterToSqlite3(p.sqlite3(cfg.RegisterRun)))
+	p2db, err := utils.NewPrinterToSqlite3(rp.sqlite3(cfg.RegisterRun)) 
 
-	return t
+	if err != nil {
+		rp.log.Debugf("Unable to register at %s", cfg.RegisterRun)
+	} else {
+		rp.ps.AddPrinter(p2db)
+	}
+
+	return rp
 }
 
 // registerProgress logs progress every XXX blocks depending on reportFrequency.
@@ -71,7 +79,7 @@ type registerProgress struct {
 	ps   *utils.Printers
 
 	// Where am I?
-	interval           utils.Interval
+	interval           *utils.Interval
 	lastProcessedBlock int
 
 	// Stats
@@ -82,7 +90,7 @@ type registerProgress struct {
 	totalTxCount uint64
 	totalGas     uint64
 	directory    string
-	memory       uint64
+	memory       *state.MemoryUsage
 }
 
 func (rp *registerProgress) PreRun(_ executor.State[*substate.Substate], _ *executor.Context) error {
@@ -97,11 +105,12 @@ func (rp *registerProgress) PreRun(_ executor.State[*substate.Substate], _ *exec
 //
 // This is done in PreBlock because some blocks do not have transaction.
 func (rp *registerProgress) PreBlock(state executor.State[*substate.Substate], ctx *executor.Context) error {
-	if uint64(state.block) > rp.interval.End() {
+	if uint64(state.Block) > rp.interval.End() {
 		rp.directory = ctx.StateDbPath
 		rp.memory = ctx.State.GetMemoryUsage()
 		rp.ps.Print()
 		rp.Reset()
+		rp.interval.Next()
 	}
 
 	return nil
@@ -115,7 +124,7 @@ func (rp *registerProgress) PostTransaction(state executor.State[*substate.Subst
 	rp.totalTxCount++
 	rp.txCount++
 
-	rp.totalGasCount += state.Data.Result.GasUsed
+	rp.totalGas += state.Data.Result.GasUsed
 	rp.gas += state.Data.Result.GasUsed
 
 	return nil
@@ -124,23 +133,25 @@ func (rp *registerProgress) PostTransaction(state executor.State[*substate.Subst
 // PostBlock sends the state to the report goroutine.
 // We only care about total number of transactions we can do this here rather in PostTransaction.
 func (rp *registerProgress) PostBlock(state executor.State[*substate.Substate], _ *executor.Context) error {
-	rp.lastProcessedBlock = uint64(state.Block)
+	rp.lastProcessedBlock = state.Block
 	return nil
 }
 
 // PostRun prints the remaining statistics and terminates any printer resources.
-func (rp *registerProgress) PostRun(_ executor.State[T], ctx *executor.Context, _ error) error {
+func (rp *registerProgress) PostRun(_ executor.State[*substate.Substate], ctx *executor.Context, _ error) error {
 	rp.directory = ctx.StateDbPath
 	rp.memory = ctx.State.GetMemoryUsage()
 	rp.ps.Print()
 	rp.Reset()
 	rp.ps.Close()
+
+	return nil
 }
 
 // Reset set local interval trackers to initial state for the next interval.
 func (rp *registerProgress) Reset() {
-	rp.lastUpdate = now()
-	rp.txRate = 0
+	rp.lastUpdate = time.Now()
+	rp.txCount = 0
 	rp.gas = 0
 }
 
@@ -164,14 +175,14 @@ func (rp *registerProgress) sqlite3(conn string) (string, string, string, func()
 			rp.lock.Unlock()
 
 			disk := utils.GetDirectorySize(rp.directory)
-			mem := rp.memory.UsedBytes()
+			mem := rp.memory.UsedBytes
 
-			txRate := float64(txCount) / time.Now().Since(rp.lastUpdate).Seconds()
-			gasRate := float64(gas) / time.Now().Since(rp.lastUpdate).Seconds()
-			overallTxRate := float64(totalTxCount) / time.Now().Since(rp.startOfRun).Seconds()
-			overallGasRate := float64(totalGas) / time.Now().Since(rp.startOfRun).Seconds()
+			txRate := float64(txCount) / time.Now().Sub(rp.lastUpdate).Seconds()
+			gasRate := float64(gas) / time.Now().Sub(rp.lastUpdate).Seconds()
+			overallTxRate := float64(totalTxCount) / time.Now().Sub(rp.startOfRun).Seconds()
+			overallGasRate := float64(totalGas) / time.Now().Sub(rp.startOfRun).Seconds()
 
-			value = append(values, []any{
+			values = append(values, []any{
 				rp.interval.Start(),
 				rp.interval.End(),
 				disk,
@@ -181,5 +192,7 @@ func (rp *registerProgress) sqlite3(conn string) (string, string, string, func()
 				overallTxRate,
 				overallGasRate,
 			})
+
+			return values
 		}
 }
