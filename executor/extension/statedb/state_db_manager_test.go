@@ -44,6 +44,7 @@ func TestStateDbManager_DbClosureWithKeepDb(t *testing.T) {
 	cfg.DbTmp = tmpDir
 	cfg.DbImpl = "geth"
 	cfg.KeepDb = true
+	cfg.ChainID = utils.MainnetChainID
 
 	ext := MakeStateDbManager[any](cfg)
 
@@ -74,6 +75,7 @@ func TestStateDbManager_DoNotKeepDb(t *testing.T) {
 	cfg.DbTmp = tmpDir
 	cfg.DbImpl = "geth"
 	cfg.KeepDb = false
+	cfg.ChainID = utils.MainnetChainID
 
 	ext := MakeStateDbManager[any](cfg)
 
@@ -107,6 +109,7 @@ func TestStateDbManager_KeepDbAndDoesntUnderflowBellowZero(t *testing.T) {
 	cfg.DbTmp = tmpDir
 	cfg.DbImpl = "geth"
 	cfg.KeepDb = true
+	cfg.ChainID = utils.MainnetChainID
 
 	ext := MakeStateDbManager[any](cfg)
 
@@ -140,6 +143,7 @@ func TestStateDbManager_StateDbInfoExistence(t *testing.T) {
 	cfg.DbTmp = tmpDir
 	cfg.DbImpl = "geth"
 	cfg.KeepDb = true
+	cfg.ChainID = utils.MainnetChainID
 
 	ext := MakeStateDbManager[any](cfg)
 
@@ -176,6 +180,7 @@ func TestStateDbManager_NonExistentStateDbSrc(t *testing.T) {
 	cfg.StateDbSrc = "/non-existant-path/123456789"
 	cfg.DbImpl = "geth"
 	cfg.KeepDb = true
+	cfg.ChainID = utils.MainnetChainID
 
 	ext := MakeStateDbManager[any](cfg)
 
@@ -203,6 +208,7 @@ func TestStateDbManager_StateDbSrcStateDbIsReadOnly(t *testing.T) {
 	cfg.DbTmp = tmpDir
 	cfg.DbImpl = "geth"
 	cfg.KeepDb = true
+	cfg.ChainID = utils.MainnetChainID
 
 	ext := MakeStateDbManager[any](cfg)
 
@@ -282,6 +288,7 @@ func TestStateDbManager_UsingExistingSourceDb(t *testing.T) {
 	cfg.DbTmp = tmpDir
 	cfg.DbImpl = "geth"
 	cfg.KeepDb = true
+	cfg.ChainID = utils.MainnetChainID
 
 	ext := MakeStateDbManager[any](cfg)
 
@@ -374,6 +381,7 @@ func TestStateDbManager_StateDbBlockNumberDecrements(t *testing.T) {
 	cfg.DbTmp = tmpDir
 	cfg.DbImpl = "geth"
 	cfg.KeepDb = true
+	cfg.ChainID = utils.MainnetChainID
 
 	ext := MakeStateDbManager[any](cfg)
 
