@@ -174,7 +174,7 @@ func (rp *registerProgress) sqlite3(conn string) (string, string, string, func()
 			totalGas = rp.totalGas
 			rp.lock.Unlock()
 
-			disk := utils.GetDirectorySize(rp.directory)
+			disk, _ := utils.GetDirectorySize(rp.directory)
 			mem := rp.memory.UsedBytes
 
 			txRate := float64(txCount) / time.Now().Sub(rp.lastUpdate).Seconds()
