@@ -47,11 +47,11 @@ func MakeRegisterProgress(cfg *utils.Config, reportFrequency int) executor.Exten
 		reportFrequency = RegisterProgress_DefaultReportFrequency
 	}
 
-	t = &registerProgress {
+	t = &registerProgress{
 		cfg:      cfg,
 		log:      log,
 		interval: utils.NewInterval(cfg.First, cfg.Last, reportFrequency),
-		ps:	  utils.NewPrinters(),
+		ps:       utils.NewPrinters(),
 	}
 
 	ps.AddPrinter(utils.NewPrinterToSqlite3(p.sqlite3(cfg.RegisterRun)))
