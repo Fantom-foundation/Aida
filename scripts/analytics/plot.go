@@ -7,8 +7,8 @@ import (
 	"io"
 	"os"
 	"sort"
-	"time"
 	"sync"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/utils"
 	xmath "github.com/Fantom-foundation/Aida/utils/math"
@@ -90,7 +90,7 @@ type op_msg struct {
 	max    float64
 }
 
-func worker(id int, opCount int, 
+func worker(id int, opCount int,
 	queries <-chan query, queriesWg *sync.WaitGroup,
 	bc chan<- bucket_msg, bucketWg *sync.WaitGroup,
 	oc chan<- op_msg, opWg *sync.WaitGroup) {
@@ -150,8 +150,6 @@ func worker(id int, opCount int,
 
 		queriesWg.Done()
 	}
-
-	fmt.Println("worker", id, "terminated.")
 }
 
 func main() {
@@ -213,15 +211,15 @@ func main() {
 	oc := make(chan op_msg, op_count*bucket_count)
 
 	var (
-		queriesWg	sync.WaitGroup
-		bucketWg	sync.WaitGroup
-		opWg		sync.WaitGroup
+		queriesWg sync.WaitGroup
+		bucketWg  sync.WaitGroup
+		opWg      sync.WaitGroup
 	)
 
 	for w := 0; w < worker_count; w++ {
 		go worker(
-			w, 50, 
-			queries, &queriesWg, 
+			w, 50,
+			queries, &queriesWg,
 			bc, &bucketWg,
 			oc, &opWg,
 		)
@@ -247,7 +245,7 @@ func main() {
 	fmt.Println("queries - time taken: ", elapsed)
 
 	for w := 0; w < 1; w++ {
-		go func () {
+		go func() {
 			for m := range bc {
 				countTotal += m.count
 				countByBucket[m.bucket] += float64(m.count)
@@ -255,7 +253,7 @@ func main() {
 				timeByBucket[m.bucket] += m.time
 
 				bucketWg.Done()
-			}	
+			}
 		}()
 	}
 
@@ -263,7 +261,7 @@ func main() {
 	close(bc)
 
 	for w := 0; w < 1; w++ {
-		go func () {
+		go func() {
 			for m := range oc {
 				countByOpId[m.opid] += float64(m.count)
 				timeByOpId[m.opid] += m.time
@@ -283,7 +281,7 @@ func main() {
 
 	opWg.Wait()
 	close(oc)
-	
+
 	//fmt.Println(countByBucket[1], countByBucketByOpId[20][1], countByBucketByOpId[20][1]/countByBucket[1])
 
 	page := components.NewPage().AddCharts(
@@ -451,7 +449,7 @@ func stackedBar(title string, buckets []int, byBucket map[int]float64, opIds []i
 		}),
 		charts.WithYAxisOpts(opts.YAxis{
 			Name: "Percentage",
-			Max: 1.0,
+			Max:  1.0,
 			AxisLabel: &opts.AxisLabel{
 				Show:         true,
 				Formatter:    fmt.Sprintf("{value}"),
@@ -464,7 +462,6 @@ func stackedBar(title string, buckets []int, byBucket map[int]float64, opIds []i
 	sort.Slice(opIds, func(i, j int) bool {
 		return byOpId[opIds[i]] < byOpId[opIds[j]]
 	})
-
 
 	bar.SetXAxis(buckets)
 	for _, id := range opIds {
