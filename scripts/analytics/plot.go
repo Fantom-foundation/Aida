@@ -417,7 +417,7 @@ func stackedBar(title string, buckets []int, byBucket map[int]float64, opIds []i
 	for _, id := range opIds {
 		var y []opts.BarData = make([]opts.BarData, len(buckets))
 		for b := range buckets {
-			y[b] = opts.BarData {
+			y[b] = opts.BarData{
 				Value: float64(byBucketByOpIds[id][b]) / byBucket[b],
 			}
 		}
@@ -430,10 +430,8 @@ func stackedBar(title string, buckets []int, byBucket map[int]float64, opIds []i
 		}),
 	)
 
-
 	return bar
 }
-
 
 func ScatterWithTitle(s *charts.Scatter, title string, subtitle string) *charts.Scatter {
 	s.SetGlobalOptions(
