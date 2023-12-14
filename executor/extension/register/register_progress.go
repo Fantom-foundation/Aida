@@ -92,7 +92,7 @@ type registerProgress struct {
 	memory       *state.MemoryUsage
 }
 
-func (rp *registerProgress) PreRun(_ executor.State[*substate.Substate], _ *executor.Context) error {
+func (rp *registerProgress) PreRun(_ executor.State[*substate.Substate], ctx *executor.Context) error {
 	now := time.Now()
 	rp.startOfRun = now
 	rp.lastUpdate = now
