@@ -442,7 +442,7 @@ func printUpdateSetInfo(m *utils.AidaDbMetadata) {
 	} else {
 		u := bigendian.BytesToUint64(sizeBytes)
 
-		log.Infof("Size: %.1f MB", float64(u)/float64(1_000_000_000))
+		log.Infof("Size: %.1f MB", float64(u)/float64(1_000_000))
 	}
 }
 
