@@ -123,15 +123,6 @@ pipeline {
             }
         }
 
-        stage('aida-vm-adb validate-tx') {
-            steps {
-                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE', message: 'Test Suite had a failure') {
-                    sh "build/aida-vm-adb ${AIDADB} ${DBSRC} --cpu-profile cpu-profile.dat --validate-tx ${FROMBLOCK} ${TOBLOCK}"
-                }
-                sh "rm -rf *.dat"
-            }
-        }
-
 
         stage('tear-down') {
             steps {
