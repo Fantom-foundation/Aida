@@ -14,7 +14,6 @@ import (
 
 const (
 	RegisterProgress_DefaultReportFrequency = 100_000 // in blocks
-	RegisterProgress_BufferSize             = 100_000
 
 	RegisterProgress_CreateTableIfNotExist = `
 		CREATE TABLE IF NOT EXISTS stats (
@@ -97,6 +96,7 @@ func (rp *registerProgress) PreRun(_ executor.State[*substate.Substate], _ *exec
 	now := time.Now()
 	rp.startOfRun = now
 	rp.lastUpdate = now
+	rp.directory = ctx.StateDbPath
 	return nil
 }
 
@@ -106,7 +106,6 @@ func (rp *registerProgress) PreRun(_ executor.State[*substate.Substate], _ *exec
 // This is done in PreBlock because some blocks do not have transaction.
 func (rp *registerProgress) PreBlock(state executor.State[*substate.Substate], ctx *executor.Context) error {
 	if uint64(state.Block) > rp.interval.End() {
-		rp.directory = ctx.StateDbPath
 		rp.memory = ctx.State.GetMemoryUsage()
 		rp.ps.Print()
 		rp.Reset()
@@ -130,16 +129,8 @@ func (rp *registerProgress) PostTransaction(state executor.State[*substate.Subst
 	return nil
 }
 
-// PostBlock sends the state to the report goroutine.
-// We only care about total number of transactions we can do this here rather in PostTransaction.
-func (rp *registerProgress) PostBlock(state executor.State[*substate.Substate], _ *executor.Context) error {
-	rp.lastProcessedBlock = state.Block
-	return nil
-}
-
 // PostRun prints the remaining statistics and terminates any printer resources.
 func (rp *registerProgress) PostRun(_ executor.State[*substate.Substate], ctx *executor.Context, _ error) error {
-	rp.directory = ctx.StateDbPath
 	rp.memory = ctx.State.GetMemoryUsage()
 	rp.ps.Print()
 	rp.Reset()
@@ -177,10 +168,10 @@ func (rp *registerProgress) sqlite3(conn string) (string, string, string, func()
 			disk, _ := utils.GetDirectorySize(rp.directory)
 			mem := rp.memory.UsedBytes
 
-			txRate := float64(txCount) / time.Now().Sub(rp.lastUpdate).Seconds()
-			gasRate := float64(gas) / time.Now().Sub(rp.lastUpdate).Seconds()
-			overallTxRate := float64(totalTxCount) / time.Now().Sub(rp.startOfRun).Seconds()
-			overallGasRate := float64(totalGas) / time.Now().Sub(rp.startOfRun).Seconds()
+			txRate := float64(txCount) / time.Since(rp.lastUpdate).Seconds()
+			gasRate := float64(gas) / time.Since(rp.lastUpdate).Seconds()
+			overallTxRate := float64(totalTxCount) / time.Since(rp.startOfRun).Seconds()
+			overallGasRate := float64(totalGas) / time.Since(rp.startOfRun).Seconds()
 
 			values = append(values, []any{
 				rp.interval.Start(),
@@ -196,3 +187,4 @@ func (rp *registerProgress) sqlite3(conn string) (string, string, string, func()
 			return values
 		}
 }
+
