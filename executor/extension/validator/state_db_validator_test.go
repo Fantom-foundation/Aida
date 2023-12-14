@@ -198,6 +198,7 @@ func TestLiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueO
 func TestLiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueOnFailure_EqualityCheck(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	db := state.NewMockStateDB(ctrl)
+	log := logger.NewMockLogger(ctrl)
 	ctx := &executor.Context{State: db}
 	ctx.ErrorInput = make(chan error, 10)
 
@@ -206,9 +207,13 @@ func TestLiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueO
 	cfg.ContinueOnFailure = false
 	cfg.StateValidationMode = utils.EqualityCheck
 
-	ext := MakeLiveDbValidator(cfg)
+	ext := makeLiveDbValidator(cfg, log)
 
-	db.EXPECT().GetSubstatePostAlloc().Return(substate.SubstateAlloc{})
+	gomock.InOrder(
+		log.EXPECT().Warning(gomock.Any()),
+		db.EXPECT().GetSubstatePostAlloc().Return(substate.SubstateAlloc{}),
+		log.EXPECT().Errorf("Different %s:\nwant: %v\nhave: %v\n", "substate alloc size", 1, 0),
+	)
 
 	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
 
