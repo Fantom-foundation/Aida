@@ -89,16 +89,16 @@ type opMsg struct {
 func worker(id int, opCount int,
 	queries <-chan query, queriesWg *sync.WaitGroup,
 	bc chan<- bucketMsg, bucketWg *sync.WaitGroup,
-	oc chan<- opMsg, opWg *sync.WaitGroup) {
+	oc chan<- opMsg, opWg *sync.WaitGroup) error {
 
 	db, err := sqlx.Open("sqlite3", connection)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	stmt, err := db.PrepareNamed(sqlite3_SelectFromOperations)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	defer func() {
@@ -150,6 +150,34 @@ func worker(id int, opCount int,
 
 		queriesWg.Done()
 	}
+
+	return nil
+}
+
+func lookupOperations(connection string, selectDistinct string) ([]int, map[int]string, error) {
+	var (
+		opIds        []int          = []int{}
+		opNameByOpId map[int]string = map[int]string{}
+	)
+
+	db, err := sqlx.Open("sqlite3", connection)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	opls := []opLookupResponse{}
+	err = db.Select(&opls, selectDistinct)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for _, opl := range opls {
+		opIds = append(opIds, opl.OpId)
+		opNameByOpId[opl.OpId] = opl.OpName
+	}
+
+	db.Close()
+	return opIds, opNameByOpId, nil
 }
 
 func main() {
@@ -186,29 +214,28 @@ func main() {
 
 	fmt.Println("Bucket: ", bucketCount, "Interval: ", interval, "Worker: ", workerCount)
 
-	db, err := sqlx.Open("sqlite3", connection)
-	if err != nil {
-		panic(err)
-	}
-
-	opls := []opLookupResponse{}
-	err = db.Select(&opls, sqlite3_SelectDistinctOps)
-	if err != nil {
-		panic(err)
-	}
-
-	for _, opl := range opls {
-		opIds = append(opIds, opl.OpId)
-		opNameByOpId[opl.OpId] = opl.OpName
-	}
-
-	db.Close()
+	opIds, opNameByOpId, err := lookupOperations(connection, sqlite3_SelectDistinctOps)
 
 	fmt.Println("opCount: ", len(opIds))
 
 	queries := make(chan query, bucketCount)
 	bc := make(chan bucketMsg, bucketCount)
 	oc := make(chan opMsg, opCount*bucketCount)
+	ec := make(chan error, 1)
+
+	// monitor for error when querying db, close all channels + terminate if found.
+	go func() {
+		for e := range ec {
+			fmt.Println("Received an error: ", e)
+
+			close(queries)
+			close(bc)
+			close(oc)
+			close(ec)
+
+			os.Exit(1)
+		}
+	}()
 
 	var (
 		queriesWg sync.WaitGroup
@@ -217,12 +244,7 @@ func main() {
 	)
 
 	for w := 0; w < workerCount; w++ {
-		go worker(
-			w, 50,
-			queries, &queriesWg,
-			bc, &bucketWg,
-			oc, &opWg,
-		)
+		go worker(w, 50, queries, &queriesWg, bc, &bucketWg, oc, &opWg)
 	}
 
 	itv := utils.NewInterval(uint64(first), uint64(last), uint64(interval))
@@ -240,11 +262,12 @@ func main() {
 
 	queriesWg.Wait()
 	close(queries)
+	close(ec) // no more error
 
 	elapsed := time.Since(start)
 	fmt.Println("queries - time taken: ", elapsed)
 
-	for w := 0; w < 1; w++ {
+	for w := 0; w < 1; w++ { // just in case this becomes a bottleneck
 		go func() {
 			for m := range bc {
 				countTotal += m.count
@@ -260,7 +283,7 @@ func main() {
 	bucketWg.Wait()
 	close(bc)
 
-	for w := 0; w < 1; w++ {
+	for w := 0; w < 1; w++ { // just in case this becomes a bottleneck
 		go func() {
 			for m := range oc {
 				countByOpId[m.opid] += float64(m.count)
