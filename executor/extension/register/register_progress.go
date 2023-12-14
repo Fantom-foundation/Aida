@@ -187,4 +187,3 @@ func (rp *registerProgress) sqlite3(conn string) (string, string, string, func()
 			return values
 		}
 }
-
