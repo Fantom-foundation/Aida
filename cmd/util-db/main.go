@@ -35,6 +35,7 @@ var UtilDbApp = cli.App{
 		&db.PrintPrefixHashCommand,
 		&db.PrintTableHashCommand,
 		&db.ScrapeCommand,
+		&db.MetadataCommand,
 	},
 }
 

@@ -851,7 +851,7 @@ func (md *AidaDbMetadata) SetFreshMetadata(chainID ChainID) error {
 	var err error
 
 	if chainID == 0 {
-		return fmt.Errorf("since you have AidaDb without metadata you need to specify chain-id (--%v) of your aida-db", ChainIDFlag.Name)
+		return fmt.Errorf("since you have aida-db without metadata you need to specify chain-id (--%v)", ChainIDFlag.Name)
 	}
 
 	// ChainID is Set by user in
@@ -867,9 +867,16 @@ func (md *AidaDbMetadata) SetFreshMetadata(chainID ChainID) error {
 		return err
 	}
 
-	// updated AidaDb with patches will always be genType
-	if err = md.SetDbType(GenType); err != nil {
-		return err
+	_, err = getPatchFirstBlock(md.LastBlock)
+	if err != nil {
+		md.log.Warning("Uncertain AidaDbType.")
+		if err = md.SetDbType(NoType); err != nil {
+			return err
+		}
+	} else {
+		if err = md.SetDbType(GenType); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -1066,45 +1073,16 @@ func getPatchFirstBlock(lastPatchBlock uint64) (uint64, error) {
 
 // getBlockRange returns first and last block inside metadata.
 // If last block is zero, it looks for block range in substate, and tries to get even the epoch range
-func (md *AidaDbMetadata) getBlockRange() (uint64, uint64, error) {
+func (md *AidaDbMetadata) getBlockRange() error {
 	md.FirstBlock = md.GetFirstBlock()
 	md.LastBlock = md.GetLastBlock()
 
-	// TODO rewrite getBlockRange shoudn't overwrite metadata of aidaDb
-	// TODO temporary fix - still fails because aidaDb (from getMdBlockRange) is open as ReadOnly,
-	// but because of this fail at least the block range specified by the user doesn't get changed - resulting in desired behavior.
-	// this function gave panic without staticSubstateDb being initialized temporary fixed in getMdBlockRange
-
 	// check if AidaDb has block range
 	if md.LastBlock == 0 {
-		// SHOULD be fixed in another PR
-		return 0, 0, fmt.Errorf("cannot find block range in AidaDb metadata")
-
-		//var ok bool
-		//
-		//md.FirstBlock, md.LastBlock, ok = FindBlockRangeInSubstate()
-		//if !ok || md.LastBlock == 0 {
-		//	return 0, 0, errors.New("your AidaDb does not seem to contain substates")
-		//}
-		//
-		//err := md.SetBlockRange(md.FirstBlock, md.LastBlock)
-		//if err != nil {
-		//	return 0, 0, fmt.Errorf("cannot set block range; %v", err)
-		//}
-		//
-		//// try to find epochs, function returns error if blocks does not start and end an epoch, so we do not save it
-		//if err = md.findEpochs(); err == nil {
-		//	if err = md.SetFirstEpoch(md.FirstEpoch); err != nil {
-		//		md.log.Warningf("cannot set first epoch; %v", err)
-		//	}
-		//
-		//	if err = md.SetLastEpoch(md.LastEpoch); err != nil {
-		//		md.log.Warningf("cannot set first epoch; %v", err)
-		//	}
-		//}
+		return errors.New("given aida-db does not contain metadata; please generate them using util-db metadata generate")
 	}
 
-	return md.FirstBlock, md.LastBlock, nil
+	return nil
 }
 
 // HasStateHashPatch checks whether given db has already acquired patch with StateHashes.
