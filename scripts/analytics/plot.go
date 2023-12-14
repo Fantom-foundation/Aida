@@ -25,21 +25,23 @@ import (
 
 const (
 	// db
-	first        int = 0
-	last         int = 65_436_418
-	worker_count int = 10
-	bucket_count int = 654
-	op_count     int = 50
-
+	first                        int    = 0
+	last                         int    = 65_436_418
 	connection                   string = "/home/rapolt/dev/sqlite3/test.db"
 	sqlite3_SelectFromOperations string = `
-	SELECT start, end, opId, opName, count, sum, mean, min, max
-	FROM operations 
-	WHERE start=:start AND end=:end AND count > 0;`
+		SELECT start, end, opId, opName, count, sum, mean, min, max
+		FROM operations 
+		WHERE start=:start AND end=:end AND count > 0;
+	`
 	sqlite3_SelectDistinctOps string = ` 
-	SELECT DISTINCT opId, opName
-	FROM operations
-	ORDER BY opId ASC;`
+		SELECT DISTINCT opId, opName
+		FROM operations
+		ORDER BY opId ASC;
+	`
+
+	workerCount int = 10
+	bucketCount int = 654
+	opCount     int = 50
 
 	// report
 	pHtml = "report.html"
@@ -51,7 +53,7 @@ type query struct {
 	bucket int
 }
 
-type tx_op struct {
+type txResponse struct {
 	Start  int     `db:"start"`
 	End    int     `db:"end"`
 	OpId   int     `db:"opId"`
@@ -63,24 +65,18 @@ type tx_op struct {
 	Max    float64 `db:"max"`
 }
 
-type op_lookup struct {
+type opLookupResponse struct {
 	OpId   int    `db:"opId"`
 	OpName string `db:"opName"`
 }
 
-type done_msg struct {
-	q        query
-	bucket   int
-	tx_count int
-}
-
-type bucket_msg struct {
+type bucketMsg struct {
 	bucket int
 	count  int
 	time   float64
 }
 
-type op_msg struct {
+type opMsg struct {
 	bucket int
 	opid   int
 	count  int
@@ -92,24 +88,28 @@ type op_msg struct {
 
 func worker(id int, opCount int,
 	queries <-chan query, queriesWg *sync.WaitGroup,
-	bc chan<- bucket_msg, bucketWg *sync.WaitGroup,
-	oc chan<- op_msg, opWg *sync.WaitGroup) {
+	bc chan<- bucketMsg, bucketWg *sync.WaitGroup,
+	oc chan<- opMsg, opWg *sync.WaitGroup) {
 
-	for q := range queries {
-		db, err := sqlx.Open("sqlite3", connection)
-		if err != nil {
-			panic(err)
-		}
+	db, err := sqlx.Open("sqlite3", connection)
+	if err != nil {
+		panic(err)
+	}
 
-		stmt, err := db.PrepareNamed(sqlite3_SelectFromOperations)
-		if err != nil {
-			panic(err)
-		}
+	stmt, err := db.PrepareNamed(sqlite3_SelectFromOperations)
+	if err != nil {
+		panic(err)
+	}
 
-		txs := []tx_op{}
-		stmt.Select(&txs, q)
+	defer func() {
 		stmt.Close()
 		db.Close()
+	}()
+
+	for q := range queries {
+
+		txs := []txResponse{}
+		stmt.Select(&txs, q)
 
 		var (
 			count       int             = 0
@@ -133,11 +133,11 @@ func worker(id int, opCount int,
 		}
 
 		bucketWg.Add(1)
-		bc <- bucket_msg{q.bucket, count, time}
+		bc <- bucketMsg{q.bucket, count, time}
 
 		for id := 0; id < opCount; id++ {
 			opWg.Add(1)
-			oc <- op_msg{
+			oc <- opMsg{
 				q.bucket,
 				id,
 				countByOpId[id],
@@ -158,17 +158,17 @@ func main() {
 
 	var (
 		interval int   = 100_000
-		buckets  []int = make([]int, bucket_count)
+		buckets  []int = make([]int, bucketCount)
 
 		opIds        []int          = []int{}
 		opNameByOpId map[int]string = map[int]string{}
 
 		countTotal          int                     = 0
 		timeTotal           float64                 = 0
-		countByBucket       map[int]float64         = make(map[int]float64, bucket_count)
-		timeByBucket        map[int]float64         = make(map[int]float64, bucket_count)
-		countByOpId         map[int]float64         = make(map[int]float64, bucket_count)
-		timeByOpId          map[int]float64         = make(map[int]float64, bucket_count)
+		countByBucket       map[int]float64         = make(map[int]float64, bucketCount)
+		timeByBucket        map[int]float64         = make(map[int]float64, bucketCount)
+		countByOpId         map[int]float64         = make(map[int]float64, bucketCount)
+		timeByOpId          map[int]float64         = make(map[int]float64, bucketCount)
 		countByBucketByOpId map[int]map[int]float64 = map[int]map[int]float64{}
 		timeByBucketByOpId  map[int]map[int]float64 = map[int]map[int]float64{}
 		meanByBucketByOpId  map[int]map[int]float64 = map[int]map[int]float64{}
@@ -184,14 +184,14 @@ func main() {
 		maxByBucketByOpId[b] = map[int]float64{}
 	}
 
-	fmt.Println("Bucket: ", bucket_count, "Interval: ", interval, "Worker: ", worker_count)
+	fmt.Println("Bucket: ", bucketCount, "Interval: ", interval, "Worker: ", workerCount)
 
 	db, err := sqlx.Open("sqlite3", connection)
 	if err != nil {
 		panic(err)
 	}
 
-	opls := []op_lookup{}
+	opls := []opLookupResponse{}
 	err = db.Select(&opls, sqlite3_SelectDistinctOps)
 	if err != nil {
 		panic(err)
@@ -204,11 +204,11 @@ func main() {
 
 	db.Close()
 
-	fmt.Println("op_count: ", len(opIds))
+	fmt.Println("opCount: ", len(opIds))
 
-	queries := make(chan query, bucket_count)
-	bc := make(chan bucket_msg, bucket_count)
-	oc := make(chan op_msg, op_count*bucket_count)
+	queries := make(chan query, bucketCount)
+	bc := make(chan bucketMsg, bucketCount)
+	oc := make(chan opMsg, opCount*bucketCount)
 
 	var (
 		queriesWg sync.WaitGroup
@@ -216,7 +216,7 @@ func main() {
 		opWg      sync.WaitGroup
 	)
 
-	for w := 0; w < worker_count; w++ {
+	for w := 0; w < workerCount; w++ {
 		go worker(
 			w, 50,
 			queries, &queriesWg,
@@ -231,7 +231,7 @@ func main() {
 	queries <- query{int(0), int(100000), 0}
 	itv.Next()
 
-	for b := 1; b < bucket_count; b, itv = b+1, itv.Next() {
+	for b := 1; b < bucketCount; b, itv = b+1, itv.Next() {
 		q := query{int(itv.Start() + 1), int(itv.End() + 1), b}
 		buckets[b] = int(itv.Start())
 		queriesWg.Add(1)
