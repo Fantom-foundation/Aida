@@ -16,10 +16,6 @@ pipeline {
         TOBLOCK = '4600000'
     }
 
-    parameters {
-        string(defaultValue: "develop", description: 'Which branch?', name: 'BRANCH_NAME')
-    }
-
     stages {
         stage('Build') {
             steps {
@@ -134,17 +130,14 @@ pipeline {
 
     post {
         always {
-            script {
-                if( params.BRANCH_NAME == 'develop' ){
-                    build job: '/Notifications/slack-notification-pipeline', parameters: [
-                        string(name: 'result', value: "${currentBuild.result}"),
-                        string(name: 'name', value: "${currentBuild.fullDisplayName}"),
-                        string(name: 'duration', value: "${currentBuild.duration}"),
-                        string(name: 'url', value: "$currentBuild.absoluteUrl"),
-                        string(name: 'user', value: "${env.CHANGE_AUTHOR}")
-                    ]
-                }
-            }
+            build job: '/Notifications/slack-notification-pipeline', parameters: [
+                string(name: 'result', value: "${currentBuild.result}"),
+                string(name: 'name', value: "${currentBuild.fullDisplayName}"),
+                string(name: 'duration', value: "${currentBuild.duration}"),
+                string(name: 'url', value: "$currentBuild.absoluteUrl"),
+                string(name: 'user', value: env.CHANGE_AUTHOR),
+                string(name: 'branch', value: env.BRANCH_NAME),
+            ]
         }
     }
 }
