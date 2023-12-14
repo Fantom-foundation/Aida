@@ -282,8 +282,6 @@ func main() {
 	opWg.Wait()
 	close(oc)
 
-	//fmt.Println(countByBucket[1], countByBucketByOpId[20][1], countByBucketByOpId[20][1]/countByBucket[1])
-
 	page := components.NewPage().AddCharts(
 		PieWithTitle(
 			pie("Count By OpId", opIds, countByOpId, opNameByOpId),
@@ -353,26 +351,6 @@ func main() {
 
 	page.Render(io.MultiWriter(f))
 	fmt.Println("Rendered to ", pHtml)
-}
-
-func printTopX(byOpId map[int]float64, opNameByOpId map[int]string, x int) {
-	type kv struct {
-		k int
-		v float64
-	}
-
-	var kvs []kv
-	for k, v := range byOpId {
-		kvs = append(kvs, kv{k, v})
-	}
-
-	sort.Slice(kvs, func(i, j int) bool {
-		return kvs[i].v > kvs[j].v
-	})
-
-	for ix, kv := range kvs[:x] {
-		fmt.Println("Rank ", ix, "[", kv.k, "]", opNameByOpId[kv.k], " has value ", kv.v)
-	}
 }
 
 func BarWithTitle(b *charts.Bar, title string, subtitle string) *charts.Bar {
@@ -457,14 +435,43 @@ func stackedBar(title string, buckets []int, byBucket map[int]float64, opIds []i
 				ShowMaxLabel: true,
 			},
 		}),
+		charts.WithLegendOpts(opts.Legend{
+			Show:         true,
+			SelectedMode: "false",
+			Orient:       "vertical",
+			X:            "right",
+			Y:            "center",
+		}),
+		charts.WithGridOpts(opts.Grid{
+			Right: "18%",
+		}),
 	)
 
-	sort.Slice(opIds, func(i, j int) bool {
-		return byOpId[opIds[i]] < byOpId[opIds[j]]
+	var sortedOpIds []int
+	for _, id := range opIds {
+		sortedOpIds = append(sortedOpIds, id)
+	}
+
+	sort.Slice(sortedOpIds, func(i, j int) bool {
+		return byOpId[sortedOpIds[i]] < byOpId[sortedOpIds[j]]
 	})
 
+	var x int = len(opIds) - 10
 	bar.SetXAxis(buckets)
-	for _, id := range opIds {
+
+	var others []opts.BarData = make([]opts.BarData, len(buckets))
+	for b := range buckets {
+		var val float64 = 0
+		for _, id := range sortedOpIds[:x] {
+			val += float64(byBucketByOpIds[id][b])
+		}
+		others[b] = opts.BarData{
+			Value: val / byBucket[b],
+		}
+	}
+	bar.AddSeries("Others", others)
+
+	for _, id := range sortedOpIds[x:] {
 		var y []opts.BarData = make([]opts.BarData, len(buckets))
 		for b := range buckets {
 			y[b] = opts.BarData{
