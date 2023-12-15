@@ -55,15 +55,15 @@ type query struct {
 }
 
 type txResponse struct {
-	BlockId  int     `db:"blockId"`
+	BlockId int     `db:"blockId"`
 	TxId    int     `db:"txId"`
-	OpId   int     `db:"opId"`
-	OpName string  `db:"opName"`
-	Count  int     `db:"count"`
-	Sum    float64 `db:"sum"`
-	Mean   float64 `db:"mean"`
-	Min    float64 `db:"min"`
-	Max    float64 `db:"max"`
+	OpId    int     `db:"opId"`
+	OpName  string  `db:"opName"`
+	Count   int     `db:"count"`
+	Sum     float64 `db:"sum"`
+	Mean    float64 `db:"mean"`
+	Min     float64 `db:"min"`
+	Max     float64 `db:"max"`
 }
 
 type opLookupResponse struct {
@@ -91,12 +91,12 @@ type opMsg struct {
 func worker(id int, opCount int,
 	queries <-chan query,
 	bc chan<- bucketMsg,
-	oc chan<- opMsg, 
+	oc chan<- opMsg,
 	ec chan<- error) error {
 
 	db, err := sqlx.Open("sqlite3", connection)
 	if err != nil {
-		ec <- err	
+		ec <- err
 		return err
 	}
 
@@ -116,14 +116,14 @@ func worker(id int, opCount int,
 		stmt.Select(&txs, q)
 
 		var (
-			count       int             = 0
-			time        float64         = 0
-			opNameByOpId map[int]string = make(map[int]string, opCount)
-			countByOpId map[int]int     = make(map[int]int, opCount)
-			timeByOpId  map[int]float64 = make(map[int]float64, opCount)
-			meanByOpId  map[int]float64 = make(map[int]float64, opCount)
-			minByOpId   map[int]float64 = make(map[int]float64, opCount)
-			maxByOpId   map[int]float64 = make(map[int]float64, opCount)
+			count        int             = 0
+			time         float64         = 0
+			opNameByOpId map[int]string  = make(map[int]string, opCount)
+			countByOpId  map[int]int     = make(map[int]int, opCount)
+			timeByOpId   map[int]float64 = make(map[int]float64, opCount)
+			meanByOpId   map[int]float64 = make(map[int]float64, opCount)
+			minByOpId    map[int]float64 = make(map[int]float64, opCount)
+			maxByOpId    map[int]float64 = make(map[int]float64, opCount)
 		)
 
 		for _, tx := range txs {
@@ -223,7 +223,7 @@ func main() {
 	bc := make(chan bucketMsg, bucketCount)
 	oc := make(chan opMsg, opCount*bucketCount)
 	ec := make(chan error, 1)
-	
+
 	var (
 		queriesWg sync.WaitGroup
 		bucketWg  sync.WaitGroup
@@ -255,7 +255,7 @@ func main() {
 			worker(w, 50, queries, bc, oc, ec)
 		}()
 	}
-	
+
 	for w := 0; w < 1; w++ { // just in case this becomes a bottleneck
 		bucketWg.Add(1)
 		go func() {
@@ -268,7 +268,7 @@ func main() {
 			}
 		}()
 	}
-	
+
 	for w := 0; w < 1; w++ { // just in case this becomes a bottleneck
 		opWg.Add(1)
 		go func() {
