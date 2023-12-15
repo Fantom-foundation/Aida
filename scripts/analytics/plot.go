@@ -40,7 +40,7 @@ const (
 		ORDER BY opId ASC;
 	`
 
-	workerCount int = 20
+	workerCount int = 15
 	bucketCount int = 654
 	opCount     int = 50
 
@@ -92,18 +92,16 @@ func worker(id int, opCount int,
 	queries <-chan query,
 	bc chan<- bucketMsg,
 	oc chan<- opMsg,
-	ec chan<- error) error {
+	ec chan<- error) {
 
 	db, err := sqlx.Open("sqlite3", connection)
 	if err != nil {
 		ec <- err
-		return err
 	}
 
 	stmt, err := db.PrepareNamed(sqlite3_SelectFromOperations)
 	if err != nil {
 		ec <- err
-		return err
 	}
 
 	defer func() {
@@ -112,6 +110,8 @@ func worker(id int, opCount int,
 	}()
 
 	for q := range queries {
+		fmt.Println("Starting: ", id, q)
+
 		txs := []txResponse{}
 		stmt.Select(&txs, q)
 
@@ -155,8 +155,6 @@ func worker(id int, opCount int,
 
 		fmt.Println("Done: ", id, q)
 	}
-
-	return nil
 }
 
 func lookupOperations(connection string, selectDistinct string) ([]int, map[int]string, error) {
@@ -228,10 +226,13 @@ func main() {
 		queriesWg sync.WaitGroup
 		bucketWg  sync.WaitGroup
 		opWg      sync.WaitGroup
+		errWg     sync.WaitGroup
 	)
 
-	// monitor for error when querying db, close all channels + terminate if found.
+	// start a thread to monitor for error when querying db, close all channels + terminate if found.
+	errWg.Add(1)
 	go func() {
+		defer errWg.Done()
 		for e := range ec {
 			fmt.Println("Received an error: ", e)
 
@@ -248,14 +249,16 @@ func main() {
 		}
 	}()
 
+	// start multiple threads to query DB
 	for w := 0; w < workerCount; w++ {
 		queriesWg.Add(1)
-		go func() {
+		go func(id int) {
 			defer queriesWg.Done()
-			worker(w, 50, queries, bc, oc, ec)
-		}()
+			worker(id, 50, queries, bc, oc, ec)
+		}(w)
 	}
 
+	// start a thread to digest bucket-wise response from DB
 	for w := 0; w < 1; w++ { // just in case this becomes a bottleneck
 		bucketWg.Add(1)
 		go func() {
@@ -269,6 +272,7 @@ func main() {
 		}()
 	}
 
+	// start a thread to digest op-wise response from DB
 	for w := 0; w < 1; w++ { // just in case this becomes a bottleneck
 		opWg.Add(1)
 		go func() {
@@ -302,9 +306,11 @@ func main() {
 		queries <- q
 	}
 
-	queriesWg.Wait()
 	close(queries)
+	queriesWg.Wait()
+
 	close(ec) // no more error
+	errWg.Wait()
 
 	fmt.Println("queries - time taken: ", time.Since(start))
 
