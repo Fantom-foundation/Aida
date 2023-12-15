@@ -12,6 +12,7 @@ import (
 
 	"golang.org/x/exp/constraints"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 
 	// db
@@ -32,6 +33,7 @@ const (
 	// db
 	first                   int    = 479_327
 	last                    int    = 22_832_168
+	logLevel                string = "Debug"
 	connection              string = "/var/opera/Aida/tmp-rapolt/register/s5-f1.db"
 	sqlite3_SelectFromStats string = `
 		SELECT start, end, memory, disk, tx_rate, gas_rate, overall_tx_rate, overall_gas_rate
@@ -84,12 +86,18 @@ func worker(id int, qc <-chan query, bc chan<- bucketMsg, ec chan<- error) {
 		ec <- err
 	}
 
+	log := logger.NewLogger(logLevel, fmt.Sprintf("Plot F1 Worker #%d", id))
+
 	defer func() {
 		stmt.Close()
 		db.Close()
+
+		log.Debugf("Worker #%d terminated.", id)
 	}()
 
 	for q := range qc {
+		log.Debugf("Starting: %v", q)
+
 		stats := []statsResponse{}
 		stmt.Select(&stats, q)
 
@@ -105,7 +113,7 @@ func worker(id int, qc <-chan query, bc chan<- bucketMsg, ec chan<- error) {
 			stats[0].OverallGasRate,
 		}
 
-		fmt.Println("Done: ", id, q)
+		log.Debugf("Done: %v", q)
 	}
 }
 
@@ -114,8 +122,9 @@ func main() {
 	start := time.Now()
 
 	var (
-		interval int   = 100_000
-		buckets  []int = make([]int, bucketCount)
+		interval int           = 100_000
+		buckets  []int         = make([]int, bucketCount)
+		log      logger.Logger = logger.NewLogger(logLevel, "Plot F1")
 
 		memoryByBucket         map[int]int     = make(map[int]int, bucketCount)
 		diskByBucket           map[int]int     = make(map[int]int, bucketCount)
@@ -125,7 +134,7 @@ func main() {
 		overallGasRateByBucket map[int]float64 = make(map[int]float64, bucketCount)
 	)
 
-	fmt.Println("Bucket: ", bucketCount, "Interval: ", interval, "Worker: ", workerCount)
+	log.Infof("Bucket: %d, Interval: %d, Worker: %d", bucketCount, interval, workerCount)
 
 	qc := make(chan query, bucketCount)
 	bc := make(chan bucketMsg, bucketCount)
@@ -137,11 +146,12 @@ func main() {
 		eWg sync.WaitGroup
 	)
 
-	// monitor for error when querying db, close all channels + terminate if found.
+	// start a thread to monitor for error when querying db, close all channels + terminate if found.
+	eWg.Add(1)
 	go func() {
-		eWg.Add(1)
+		defer eWg.Done()
 		for e := range ec {
-			fmt.Println("Received an error: ", e)
+			log.Errorf("Received an error: %v", e)
 
 			close(qc)
 			close(bc)
@@ -155,14 +165,16 @@ func main() {
 		}
 	}()
 
+	// start multiple threads to query DB
 	for w := 0; w < workerCount; w++ {
 		qWg.Add(1)
-		go func() {
+		go func(id int) {
 			defer qWg.Done()
-			worker(w, qc, bc, ec)
-		}()
+			worker(id, qc, bc, ec)
+		}(w)
 	}
 
+	// start a thread to digest bucket-wise response from DB
 	for w := 0; w < 1; w++ { // just in case this becomes a bottleneck
 		bWg.Add(1)
 		go func() {
@@ -190,13 +202,14 @@ func main() {
 	qWg.Wait()
 
 	close(ec) // no more error
+	eWg.Wait()
 
-	fmt.Println("queries - time taken: ", time.Since(start))
+	log.Infof("queries - time taken: %f s", time.Since(start).Seconds())
 
 	close(bc)
 	bWg.Wait()
 
-	fmt.Println("postprocessing - time taken: ", time.Since(start))
+	log.Infof("postprocessing - time taken: %f s", time.Since(start).Seconds())
 	page := components.NewPage().AddCharts(
 		ScatterWithTitle(scatter("Memory", buckets, memoryByBucket), "Memory", ""),
 		ScatterWithTitle(scatter("Disk", buckets, diskByBucket), "Disk", ""),
@@ -208,12 +221,12 @@ func main() {
 
 	f, err := os.Create(pHtml)
 	if err != nil {
-		fmt.Println("Unable to create html documents at ", pHtml)
+		log.Errorf("Unable to create html documents at %s", pHtml)
 		os.Exit(1)
 	}
 
 	page.Render(io.MultiWriter(f))
-	fmt.Println("Rendered to ", pHtml)
+	log.Infof("Rendered to %s", pHtml)
 }
 
 func BarWithTitle(b *charts.Bar, title string, subtitle string) *charts.Bar {

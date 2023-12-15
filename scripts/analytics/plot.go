@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	xmath "github.com/Fantom-foundation/Aida/utils/math"
 
@@ -27,6 +28,7 @@ const (
 	// db
 	first                        int    = 0
 	last                         int    = 65_436_418
+	logLevel                     string = "Debug"
 	connection                   string = "/var/opera/Aida/tmp-rapolt/op-profiling/s5-op-profiling.db"
 	sqlite3_SelectFromOperations string = `
 		SELECT blockId, txId, opId, opName, count, sum, mean, min, max
@@ -45,7 +47,7 @@ const (
 	opCount     int = 50
 
 	// report
-	pHtml = "report2.html"
+	pHtml = "report_op_s5.html"
 )
 
 type query struct {
@@ -104,13 +106,17 @@ func worker(id int, opCount int,
 		ec <- err
 	}
 
+	log := logger.NewLogger(logLevel, fmt.Sprintf("Plot Worker #%d", id))
+
 	defer func() {
 		stmt.Close()
 		db.Close()
+
+		log.Debugf("Worker #%d terminated.", id)
 	}()
 
 	for q := range queries {
-		fmt.Println("Starting: ", id, q)
+		log.Debugf("Starting: %v", q)
 
 		txs := []txResponse{}
 		stmt.Select(&txs, q)
@@ -153,34 +159,8 @@ func worker(id int, opCount int,
 			}
 		}
 
-		fmt.Println("Done: ", id, q)
+		log.Debugf("Done: %v", q)
 	}
-}
-
-func lookupOperations(connection string, selectDistinct string) ([]int, map[int]string, error) {
-	var (
-		opIds        []int          = []int{}
-		opNameByOpId map[int]string = map[int]string{}
-	)
-
-	db, err := sqlx.Open("sqlite3", connection)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	opls := []opLookupResponse{}
-	err = db.Select(&opls, selectDistinct)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	for _, opl := range opls {
-		opIds = append(opIds, opl.OpId)
-		opNameByOpId[opl.OpId] = opl.OpName
-	}
-
-	db.Close()
-	return opIds, opNameByOpId, nil
 }
 
 func main() {
@@ -188,8 +168,9 @@ func main() {
 	start := time.Now()
 
 	var (
-		interval int   = 100_000
-		buckets  []int = make([]int, bucketCount)
+		interval int           = 100_000
+		buckets  []int         = make([]int, bucketCount)
+		log      logger.Logger = logger.NewLogger(logLevel, "Operational Profiler S5 Plot")
 
 		opIds        []int          = []int{}
 		opNameByOpId map[int]string = map[int]string{}
@@ -215,35 +196,36 @@ func main() {
 		maxByBucketByOpId[b] = map[int]float64{}
 	}
 
-	fmt.Println("Bucket: ", bucketCount, "Interval: ", interval, "Worker: ", workerCount)
+	log.Infof("Bucket: %d, Interval: %d, Worker: %d", bucketCount, interval, workerCount)
 
-	queries := make(chan query, bucketCount)
+	qc := make(chan query, bucketCount)
 	bc := make(chan bucketMsg, bucketCount)
 	oc := make(chan opMsg, opCount*bucketCount)
 	ec := make(chan error, 1)
 
 	var (
-		queriesWg sync.WaitGroup
-		bucketWg  sync.WaitGroup
-		opWg      sync.WaitGroup
-		errWg     sync.WaitGroup
+		qWg sync.WaitGroup
+		bWg sync.WaitGroup
+		oWg sync.WaitGroup
+		eWg sync.WaitGroup
 	)
 
 	// start a thread to monitor for error when querying db, close all channels + terminate if found.
-	errWg.Add(1)
+	eWg.Add(1)
 	go func() {
-		defer errWg.Done()
+		defer eWg.Done()
 		for e := range ec {
-			fmt.Println("Received an error: ", e)
+			log.Errorf("Received an error: ", e)
 
-			close(queries)
+			close(qc)
 			close(bc)
 			close(oc)
 			close(ec)
 
-			queriesWg.Wait()
-			bucketWg.Wait()
-			opWg.Wait()
+			qWg.Wait()
+			bWg.Wait()
+			oWg.Wait()
+			eWg.Wait()
 
 			os.Exit(1)
 		}
@@ -251,18 +233,18 @@ func main() {
 
 	// start multiple threads to query DB
 	for w := 0; w < workerCount; w++ {
-		queriesWg.Add(1)
+		qWg.Add(1)
 		go func(id int) {
-			defer queriesWg.Done()
-			worker(id, 50, queries, bc, oc, ec)
+			defer qWg.Done()
+			worker(id, 50, qc, bc, oc, ec)
 		}(w)
 	}
 
 	// start a thread to digest bucket-wise response from DB
 	for w := 0; w < 1; w++ { // just in case this becomes a bottleneck
-		bucketWg.Add(1)
+		bWg.Add(1)
 		go func() {
-			defer bucketWg.Done()
+			defer bWg.Done()
 			for m := range bc {
 				countTotal += m.count
 				countByBucket[m.bucket] += float64(m.count)
@@ -274,9 +256,9 @@ func main() {
 
 	// start a thread to digest op-wise response from DB
 	for w := 0; w < 1; w++ { // just in case this becomes a bottleneck
-		opWg.Add(1)
+		oWg.Add(1)
 		go func() {
-			defer opWg.Done()
+			defer oWg.Done()
 			for m := range oc {
 				countByOpId[m.opid] += float64(m.count)
 				timeByOpId[m.opid] += m.time
@@ -302,26 +284,25 @@ func main() {
 	for b := 0; b < bucketCount; b, itv = b+1, itv.Next() {
 		q := query{int(itv.Start() + 1), int(itv.End() + 1), b}
 		buckets[b] = int(itv.Start())
-		queriesWg.Add(1)
-		queries <- q
+		qc <- q
 	}
 
-	close(queries)
-	queriesWg.Wait()
+	close(qc)
+	qWg.Wait()
 
 	close(ec) // no more error
-	errWg.Wait()
+	eWg.Wait()
 
-	fmt.Println("queries - time taken: ", time.Since(start))
+	log.Infof("queries - time taken: %d s", time.Since(start).Seconds())
 
-	bucketWg.Wait()
 	close(bc)
+	bWg.Wait()
 
-	opWg.Wait()
 	close(oc)
+	oWg.Wait()
 
-	fmt.Println("postprocessing - time taken: ", time.Since(start))
-	fmt.Println("count total: ", countTotal, "time total: ", timeTotal)
+	log.Infof("postprocessing - time taken: %d s", time.Since(start).Seconds())
+	log.Infof("total: %d, time total: %f", countTotal, timeTotal)
 
 	page := components.NewPage().AddCharts(
 		PieWithTitle(
@@ -387,11 +368,11 @@ func main() {
 
 	f, err := os.Create(pHtml)
 	if err != nil {
-		panic(err)
+		log.Errorf("Unable to create html at %s.", pHtml)
 	}
 
 	page.Render(io.MultiWriter(f))
-	fmt.Println("Rendered to ", pHtml)
+	log.Infof("Rendered to %s", pHtml)
 }
 
 func BarWithTitle(b *charts.Bar, title string, subtitle string) *charts.Bar {
