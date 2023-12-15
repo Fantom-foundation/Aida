@@ -28,6 +28,7 @@ const (
 	// db
 	first                        int    = 0
 	last                         int    = 65_436_418
+	logLevel	 	     string = "Debug"
 	connection                   string = "/home/rapolt/dev/sqlite3/test.db"
 	sqlite3_SelectFromOperations string = `
 		SELECT start, end, opId, opName, count, sum, mean, min, max
@@ -91,12 +92,12 @@ func worker(id int, opCount int, qc <-chan query, bc chan<- bucketMsg, oc chan<-
 
 	db, err := sqlx.Open("sqlite3", connection)
 	if err != nil {
-		ec <- error
+		ec <- err
 	}
 
 	stmt, err := db.PrepareNamed(sqlite3_SelectFromOperations)
 	if err != nil {
-		ec <- error
+		ec <- err
 	}
 
 	log := logger.NewLogger(logLevel, fmt.Sprintf("Plot OP S3 Worker #%d", id))
@@ -219,7 +220,7 @@ func main() {
 
 	log.Infof("opCount: %d", len(opIds))
 
-	queries := make(chan query, bucketCount)
+	qc := make(chan query, bucketCount)
 	bc := make(chan bucketMsg, bucketCount)
 	oc := make(chan opMsg, opCount*bucketCount)
 	ec := make(chan error, 1)
@@ -255,7 +256,7 @@ func main() {
 		qWg.Add(1)
 		go func(id int) {
 			defer qWg.Done()
-			worker(id, 50, queries, bc, oc, ec)
+			worker(id, 50, qc, bc, oc, ec)
 		}(w)
 	}
 
@@ -386,8 +387,8 @@ func main() {
 
 	f, err := os.Create(pHtml)
 	if err != nil {
-		fmt.Println("Rendered to ", paHtml)
-		os.exit(1)
+		fmt.Println("Rendered to ", pHtml)
+		os.Exit(1)
 	}
 
 	page.Render(io.MultiWriter(f))
