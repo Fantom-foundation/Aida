@@ -369,28 +369,16 @@ func PrintMetadata(pathToDb string) error {
 		return err
 	}
 
-	var (
-		firstBlock, lastBlock uint64
-		ok                    bool
-	)
+	lastBlock := md.GetLastBlock()
 
-	lastBlock = md.GetLastBlock()
-
-	firstBlock = md.GetFirstBlock()
-
-	if firstBlock == 0 && lastBlock == 0 {
-		substate.SetSubstateDb(pathToDb)
-		substate.OpenSubstateDBReadOnly()
-		defer substate.CloseSubstateDB()
-
-		firstBlock, lastBlock, ok = utils.FindBlockRangeInSubstate()
-		if !ok {
-			return fmt.Errorf("no substate found")
-		}
-	}
+	firstBlock := md.GetFirstBlock()
 
 	// CHAIN-ID
 	chainID := md.GetChainID()
+
+	if firstBlock == 0 && lastBlock == 0 && chainID == 0 {
+		return errors.New("your db does not contain metadata; please use metadata generate command")
+	}
 
 	log.Infof("Chain-ID: %v", chainID)
 
