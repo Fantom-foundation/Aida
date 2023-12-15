@@ -282,12 +282,12 @@ func (s *loggingVmStateDb) Prepare(thash common.Hash, ti int) {
 
 func (s *LoggingStateDb) PrepareSubstate(substate *substate.SubstateAlloc, block uint64) {
 	s.state.PrepareSubstate(substate, block)
-	s.writeLog("PrepareSubstate, %v", substate)
+	s.writeLog("PrepareSubstate, %v", PrettySubstateAlloc(*substate))
 }
 
 func (s *loggingVmStateDb) GetSubstatePostAlloc() substate.SubstateAlloc {
 	res := s.db.GetSubstatePostAlloc()
-	s.writeLog("GetSubstatePostAlloc, %v", res)
+	s.writeLog("GetSubstatePostAlloc, %v", PrettySubstateAlloc(res))
 	return res
 }
 
