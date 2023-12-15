@@ -210,6 +210,8 @@ func main() {
 	bWg.Wait()
 
 	log.Infof("postprocessing - time taken: %f s", time.Since(start).Seconds())
+	
+	// Charts start here
 	page := components.NewPage().AddCharts(
 		ScatterWithTitle(scatter("Memory", buckets, memoryByBucket), "Memory", ""),
 		ScatterWithTitle(scatter("Disk", buckets, diskByBucket), "Disk", ""),

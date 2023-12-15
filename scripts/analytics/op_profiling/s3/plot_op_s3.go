@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	xmath "github.com/Fantom-foundation/Aida/utils/math"
 
@@ -44,7 +45,7 @@ const (
 	opCount     int = 50
 
 	// report
-	pHtml = "report.html"
+	pHtml = "report_op_s3.html"
 )
 
 type query struct {
@@ -86,27 +87,29 @@ type opMsg struct {
 	max    float64
 }
 
-func worker(id int, opCount int,
-	queries <-chan query, queriesWg *sync.WaitGroup,
-	bc chan<- bucketMsg, bucketWg *sync.WaitGroup,
-	oc chan<- opMsg, opWg *sync.WaitGroup) error {
+func worker(id int, opCount int, qc <-chan query, bc chan<- bucketMsg, oc chan<- opMsg, ec chan<- error) {
 
 	db, err := sqlx.Open("sqlite3", connection)
 	if err != nil {
-		return err
+		ec <- error
 	}
 
 	stmt, err := db.PrepareNamed(sqlite3_SelectFromOperations)
 	if err != nil {
-		return err
+		ec <- error
 	}
+
+	log := logger.NewLogger(logLevel, fmt.Sprintf("Plot OP S3 Worker #%d", id))
 
 	defer func() {
 		stmt.Close()
 		db.Close()
+
+		log.Debugf("Worker #%d terminated.", id)
 	}()
 
-	for q := range queries {
+	for q := range qc {
+		log.Debugf("Starting: %v", q)
 
 		txs := []txResponse{}
 		stmt.Select(&txs, q)
@@ -132,11 +135,9 @@ func worker(id int, opCount int,
 			maxByOpId[id] = xmath.Max(tx.Max, maxByOpId[id])
 		}
 
-		bucketWg.Add(1)
 		bc <- bucketMsg{q.bucket, count, time}
 
 		for id := 0; id < opCount; id++ {
-			opWg.Add(1)
 			oc <- opMsg{
 				q.bucket,
 				id,
@@ -148,10 +149,9 @@ func worker(id int, opCount int,
 			}
 		}
 
-		queriesWg.Done()
-	}
+		log.Debugf("Done: %v", q)
 
-	return nil
+	}
 }
 
 func lookupOperations(connection string, selectDistinct string) ([]int, map[int]string, error) {
@@ -185,8 +185,9 @@ func main() {
 	start := time.Now()
 
 	var (
-		interval int   = 100_000
-		buckets  []int = make([]int, bucketCount)
+		interval int           = 100_000
+		buckets  []int         = make([]int, bucketCount)
+		log      logger.Logger = logger.NewLogger(logLevel, "Plot F1")
 
 		opIds        []int          = []int{}
 		opNameByOpId map[int]string = map[int]string{}
@@ -212,79 +213,71 @@ func main() {
 		maxByBucketByOpId[b] = map[int]float64{}
 	}
 
-	fmt.Println("Bucket: ", bucketCount, "Interval: ", interval, "Worker: ", workerCount)
+	log.Infof("Bucket: %d, Interval: %d, Worker: %d", bucketCount, interval, workerCount)
 
 	opIds, opNameByOpId, err := lookupOperations(connection, sqlite3_SelectDistinctOps)
 
-	fmt.Println("opCount: ", len(opIds))
+	log.Infof("opCount: %d", len(opIds))
 
 	queries := make(chan query, bucketCount)
 	bc := make(chan bucketMsg, bucketCount)
 	oc := make(chan opMsg, opCount*bucketCount)
 	ec := make(chan error, 1)
 
+	var (
+		qWg sync.WaitGroup
+		bWg sync.WaitGroup
+		oWg sync.WaitGroup
+		eWg sync.WaitGroup
+	)
+
 	// monitor for error when querying db, close all channels + terminate if found.
 	go func() {
 		for e := range ec {
 			fmt.Println("Received an error: ", e)
 
-			close(queries)
+			close(qc)
 			close(bc)
 			close(oc)
 			close(ec)
+
+			qWg.Wait()
+			bWg.Wait()
+			oWg.Wait()
+			eWg.Wait()
 
 			os.Exit(1)
 		}
 	}()
 
-	var (
-		queriesWg sync.WaitGroup
-		bucketWg  sync.WaitGroup
-		opWg      sync.WaitGroup
-	)
-
+	// start multiple threads to query DB
 	for w := 0; w < workerCount; w++ {
-		go worker(w, 50, queries, &queriesWg, bc, &bucketWg, oc, &opWg)
+		qWg.Add(1)
+		go func(id int) {
+			defer qWg.Done()
+			worker(id, 50, queries, bc, oc, ec)
+		}(w)
 	}
 
-	itv := utils.NewInterval(uint64(first), uint64(last), uint64(interval))
-
-	queriesWg.Add(1)
-	queries <- query{int(0), int(100000), 0}
-	itv.Next()
-
-	for b := 1; b < bucketCount; b, itv = b+1, itv.Next() {
-		q := query{int(itv.Start() + 1), int(itv.End() + 1), b}
-		buckets[b] = int(itv.Start())
-		queriesWg.Add(1)
-		queries <- q
-	}
-
-	queriesWg.Wait()
-	close(queries)
-	close(ec) // no more error
-
-	elapsed := time.Since(start)
-	fmt.Println("queries - time taken: ", elapsed)
-
+	// start a thread to digest bucket-wise response from DB
 	for w := 0; w < 1; w++ { // just in case this becomes a bottleneck
+		bWg.Add(1)
 		go func() {
+			defer bWg.Done()
 			for m := range bc {
 				countTotal += m.count
 				countByBucket[m.bucket] += float64(m.count)
 				timeTotal += m.time
 				timeByBucket[m.bucket] += m.time
-
-				bucketWg.Done()
 			}
 		}()
 	}
 
-	bucketWg.Wait()
-	close(bc)
-
+	// start a thread to digest operation-wise response from DB
 	for w := 0; w < 1; w++ { // just in case this becomes a bottleneck
+		oWg.Add(1)
 		go func() {
+			defer oWg.Done()
 			for m := range oc {
 				countByOpId[m.opid] += float64(m.count)
 				timeByOpId[m.opid] += m.time
@@ -296,15 +289,39 @@ func main() {
 				if m.count > 0 {
 					meanByBucketByOpId[m.opid][m.bucket] = timeByBucketByOpId[m.opid][m.bucket] / countByBucketByOpId[m.opid][m.bucket]
 				}
-
-				opWg.Done()
 			}
 		}()
 	}
 
-	opWg.Wait()
-	close(oc)
+	// generate queries here
+	itv := utils.NewInterval(uint64(first), uint64(last), uint64(interval))
 
+	qc <- query{int(0), int(100000), 0} // first insert was wrong on the DB side
+	itv.Next()
+
+	for b := 1; b < bucketCount; b, itv = b+1, itv.Next() {
+		q := query{int(itv.Start() + 1), int(itv.End() + 1), b}
+		buckets[b] = int(itv.Start())
+		qc <- q
+	}
+
+	close(qc)
+	qWg.Wait()
+
+	close(ec) // no more error
+	eWg.Wait()
+
+	log.Infof("queries - time taken: %f s", time.Since(start).Seconds())
+
+	close(bc)
+	bWg.Wait()
+
+	close(oc)
+	oWg.Wait()
+
+	log.Infof("postprocessing - time taken: %f s", time.Since(start).Seconds())
+
+	// Charts start here
 	page := components.NewPage().AddCharts(
 		PieWithTitle(
 			pie("Count By OpId", opIds, countByOpId, opNameByOpId),
@@ -369,11 +386,12 @@ func main() {
 
 	f, err := os.Create(pHtml)
 	if err != nil {
-		panic(err)
+		fmt.Println("Rendered to ", paHtml)
+		os.exit(1)
 	}
 
 	page.Render(io.MultiWriter(f))
-	fmt.Println("Rendered to ", pHtml)
+	log.Infof("Rendered to %s", pHtml)
 }
 
 func BarWithTitle(b *charts.Bar, title string, subtitle string) *charts.Bar {
