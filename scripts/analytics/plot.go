@@ -27,24 +27,25 @@ const (
 	// db
 	first                        int    = 0
 	last                         int    = 65_436_418
-	connection                   string = "/home/rapolt/dev/sqlite3/test.db"
+	connection                   string = "/var/opera/Aida/tmp-rapolt/op-profiling/s5-op-profiling.db"
 	sqlite3_SelectFromOperations string = `
-		SELECT start, end, opId, opName, count, sum, mean, min, max
-		FROM operations 
-		WHERE start=:start AND end=:end AND count > 0;
+		SELECT blockId, txId, opId, opName, count, sum, mean, min, max
+		FROM ops_transaction
+		WHERE blockId>=:start AND blockId<=:end AND count > 0;
 	`
 	sqlite3_SelectDistinctOps string = ` 
 		SELECT DISTINCT opId, opName
-		FROM operations
+		FROM ops_transaction
+		WHERE count > 0
 		ORDER BY opId ASC;
 	`
 
-	workerCount int = 10
+	workerCount int = 20
 	bucketCount int = 654
 	opCount     int = 50
 
 	// report
-	pHtml = "report.html"
+	pHtml = "report2.html"
 )
 
 type query struct {
@@ -54,8 +55,8 @@ type query struct {
 }
 
 type txResponse struct {
-	Start  int     `db:"start"`
-	End    int     `db:"end"`
+	BlockId  int     `db:"blockId"`
+	TxId    int     `db:"txId"`
 	OpId   int     `db:"opId"`
 	OpName string  `db:"opName"`
 	Count  int     `db:"count"`
@@ -79,6 +80,7 @@ type bucketMsg struct {
 type opMsg struct {
 	bucket int
 	opid   int
+	opname string
 	count  int
 	time   float64
 	avg    float64
@@ -87,17 +89,20 @@ type opMsg struct {
 }
 
 func worker(id int, opCount int,
-	queries <-chan query, queriesWg *sync.WaitGroup,
-	bc chan<- bucketMsg, bucketWg *sync.WaitGroup,
-	oc chan<- opMsg, opWg *sync.WaitGroup) error {
+	queries <-chan query,
+	bc chan<- bucketMsg,
+	oc chan<- opMsg, 
+	ec chan<- error) error {
 
 	db, err := sqlx.Open("sqlite3", connection)
 	if err != nil {
+		ec <- err	
 		return err
 	}
 
 	stmt, err := db.PrepareNamed(sqlite3_SelectFromOperations)
 	if err != nil {
+		ec <- err
 		return err
 	}
 
@@ -107,13 +112,13 @@ func worker(id int, opCount int,
 	}()
 
 	for q := range queries {
-
 		txs := []txResponse{}
 		stmt.Select(&txs, q)
 
 		var (
 			count       int             = 0
 			time        float64         = 0
+			opNameByOpId map[int]string = make(map[int]string, opCount)
 			countByOpId map[int]int     = make(map[int]int, opCount)
 			timeByOpId  map[int]float64 = make(map[int]float64, opCount)
 			meanByOpId  map[int]float64 = make(map[int]float64, opCount)
@@ -125,6 +130,7 @@ func worker(id int, opCount int,
 			id := tx.OpId
 			count += tx.Count
 			time += tx.Sum
+			opNameByOpId[id] = tx.OpName
 			countByOpId[id] += tx.Count
 			timeByOpId[id] += tx.Sum
 			meanByOpId[id] = tx.Mean
@@ -132,14 +138,13 @@ func worker(id int, opCount int,
 			maxByOpId[id] = xmath.Max(tx.Max, maxByOpId[id])
 		}
 
-		bucketWg.Add(1)
 		bc <- bucketMsg{q.bucket, count, time}
 
 		for id := 0; id < opCount; id++ {
-			opWg.Add(1)
 			oc <- opMsg{
 				q.bucket,
 				id,
+				opNameByOpId[id],
 				countByOpId[id],
 				timeByOpId[id],
 				meanByOpId[id],
@@ -148,7 +153,7 @@ func worker(id int, opCount int,
 			}
 		}
 
-		queriesWg.Done()
+		fmt.Println("Done: ", id, q)
 	}
 
 	return nil
@@ -214,14 +219,16 @@ func main() {
 
 	fmt.Println("Bucket: ", bucketCount, "Interval: ", interval, "Worker: ", workerCount)
 
-	opIds, opNameByOpId, err := lookupOperations(connection, sqlite3_SelectDistinctOps)
-
-	fmt.Println("opCount: ", len(opIds))
-
 	queries := make(chan query, bucketCount)
 	bc := make(chan bucketMsg, bucketCount)
 	oc := make(chan opMsg, opCount*bucketCount)
 	ec := make(chan error, 1)
+	
+	var (
+		queriesWg sync.WaitGroup
+		bucketWg  sync.WaitGroup
+		opWg      sync.WaitGroup
+	)
 
 	// monitor for error when querying db, close all channels + terminate if found.
 	go func() {
@@ -233,58 +240,39 @@ func main() {
 			close(oc)
 			close(ec)
 
+			queriesWg.Wait()
+			bucketWg.Wait()
+			opWg.Wait()
+
 			os.Exit(1)
 		}
 	}()
 
-	var (
-		queriesWg sync.WaitGroup
-		bucketWg  sync.WaitGroup
-		opWg      sync.WaitGroup
-	)
-
 	for w := 0; w < workerCount; w++ {
-		go worker(w, 50, queries, &queriesWg, bc, &bucketWg, oc, &opWg)
-	}
-
-	itv := utils.NewInterval(uint64(first), uint64(last), uint64(interval))
-
-	queriesWg.Add(1)
-	queries <- query{int(0), int(100000), 0}
-	itv.Next()
-
-	for b := 1; b < bucketCount; b, itv = b+1, itv.Next() {
-		q := query{int(itv.Start() + 1), int(itv.End() + 1), b}
-		buckets[b] = int(itv.Start())
 		queriesWg.Add(1)
-		queries <- q
-	}
-
-	queriesWg.Wait()
-	close(queries)
-	close(ec) // no more error
-
-	elapsed := time.Since(start)
-	fmt.Println("queries - time taken: ", elapsed)
-
-	for w := 0; w < 1; w++ { // just in case this becomes a bottleneck
 		go func() {
+			defer queriesWg.Done()
+			worker(w, 50, queries, bc, oc, ec)
+		}()
+	}
+	
+	for w := 0; w < 1; w++ { // just in case this becomes a bottleneck
+		bucketWg.Add(1)
+		go func() {
+			defer bucketWg.Done()
 			for m := range bc {
 				countTotal += m.count
 				countByBucket[m.bucket] += float64(m.count)
 				timeTotal += m.time
 				timeByBucket[m.bucket] += m.time
-
-				bucketWg.Done()
 			}
 		}()
 	}
-
-	bucketWg.Wait()
-	close(bc)
-
+	
 	for w := 0; w < 1; w++ { // just in case this becomes a bottleneck
+		opWg.Add(1)
 		go func() {
+			defer opWg.Done()
 			for m := range oc {
 				countByOpId[m.opid] += float64(m.count)
 				timeByOpId[m.opid] += m.time
@@ -297,13 +285,37 @@ func main() {
 					meanByBucketByOpId[m.opid][m.bucket] = timeByBucketByOpId[m.opid][m.bucket] / countByBucketByOpId[m.opid][m.bucket]
 				}
 
-				opWg.Done()
+				if _, ok := opNameByOpId[m.opid]; !ok {
+					opIds = append(opIds, m.opid)
+					opNameByOpId[m.opid] = m.opname
+				}
 			}
 		}()
 	}
 
+	// generate queries here
+	itv := utils.NewInterval(uint64(first), uint64(last), uint64(interval))
+	for b := 0; b < bucketCount; b, itv = b+1, itv.Next() {
+		q := query{int(itv.Start() + 1), int(itv.End() + 1), b}
+		buckets[b] = int(itv.Start())
+		queriesWg.Add(1)
+		queries <- q
+	}
+
+	queriesWg.Wait()
+	close(queries)
+	close(ec) // no more error
+
+	fmt.Println("queries - time taken: ", time.Since(start))
+
+	bucketWg.Wait()
+	close(bc)
+
 	opWg.Wait()
 	close(oc)
+
+	fmt.Println("postprocessing - time taken: ", time.Since(start))
+	fmt.Println("count total: ", countTotal, "time total: ", timeTotal)
 
 	page := components.NewPage().AddCharts(
 		PieWithTitle(
