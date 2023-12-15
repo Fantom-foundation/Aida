@@ -28,7 +28,7 @@ const (
 	// db
 	first                        int    = 0
 	last                         int    = 65_436_418
-	logLevel	 	     string = "Debug"
+	logLevel                     string = "Debug"
 	connection                   string = "/home/rapolt/dev/sqlite3/test.db"
 	sqlite3_SelectFromOperations string = `
 		SELECT start, end, opId, opName, count, sum, mean, min, max
