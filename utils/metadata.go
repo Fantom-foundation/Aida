@@ -1139,3 +1139,26 @@ func HasStateHashPatch(path string) (bool, error) {
 func (md *AidaDbMetadata) SetHasHashPatch() error {
 	return md.Db.Put([]byte(HasStateHashPatchPrefix), []byte{1})
 }
+
+func (md *AidaDbMetadata) SetUpdatesetInterval(val uint64) error {
+	byteInterval := make([]byte, 8)
+	binary.BigEndian.PutUint64(byteInterval, val)
+
+	if err := md.Db.Put([]byte(substate.UpdatesetIntervalKey), byteInterval); err != nil {
+		return err
+	}
+	md.log.Info("METADATA: Updateset interval saved successfully")
+
+	return nil
+}
+
+func (md *AidaDbMetadata) SetUpdatesetSize(val uint64) error {
+	sizeInterval := make([]byte, 8)
+	binary.BigEndian.PutUint64(sizeInterval, val)
+
+	if err := md.Db.Put([]byte(substate.UpdatesetSizeKey), sizeInterval); err != nil {
+		return err
+	}
+	md.log.Info("METADATA: Updateset size saved successfully")
+	return nil
+}
