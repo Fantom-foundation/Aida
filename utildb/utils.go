@@ -377,33 +377,33 @@ func PrintMetadata(pathToDb string) error {
 	chainID := md.GetChainID()
 
 	if firstBlock == 0 && lastBlock == 0 && chainID == 0 {
-		return errors.New("your db does not contain metadata; please use metadata generate command")
+		log.Error("your db does not contain metadata; please use metadata generate command")
+	} else {
+		log.Infof("Chain-ID: %v", chainID)
+
+		// BLOCKS
+		log.Infof("First Block: %v", firstBlock)
+
+		log.Infof("Last Block: %v", lastBlock)
+
+		// EPOCHS
+		firstEpoch := md.GetFirstEpoch()
+
+		log.Infof("First Epoch: %v", firstEpoch)
+
+		lastEpoch := md.GetLastEpoch()
+
+		log.Infof("Last Epoch: %v", lastEpoch)
+
+		dbHash := md.GetDbHash()
+
+		log.Infof("Db Hash: %v", hex.EncodeToString(dbHash))
+
+		// TIMESTAMP
+		timestamp := md.GetTimestamp()
+
+		log.Infof("Created: %v", time.Unix(int64(timestamp), 0))
 	}
-
-	log.Infof("Chain-ID: %v", chainID)
-
-	// BLOCKS
-	log.Infof("First Block: %v", firstBlock)
-
-	log.Infof("Last Block: %v", lastBlock)
-
-	// EPOCHS
-	firstEpoch := md.GetFirstEpoch()
-
-	log.Infof("First Epoch: %v", firstEpoch)
-
-	lastEpoch := md.GetLastEpoch()
-
-	log.Infof("Last Epoch: %v", lastEpoch)
-
-	dbHash := md.GetDbHash()
-
-	log.Infof("Db Hash: %v", hex.EncodeToString(dbHash))
-
-	// TIMESTAMP
-	timestamp := md.GetTimestamp()
-
-	log.Infof("Created: %v", time.Unix(int64(timestamp), 0))
 
 	// UPDATE-SET
 	printUpdateSetInfo(md)
