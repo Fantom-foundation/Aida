@@ -110,6 +110,15 @@ func (s *SubstateProcessor) processRegularTx(db state.VmStateDB, block int, tx i
 	db.BeginTransaction(uint32(tx))
 	defer db.EndTransaction()
 
+	if s.cfg.ChainID == utils.EthereumChainID {
+		return s.ethereumTx(db, block, tx, st)
+	} else {
+		return s.fantomTx(db, block, tx, st)
+	}
+}
+
+// fantomTx processes a transaction in Fantom Opera EVM configuration
+func (s *SubstateProcessor) fantomTx(db state.VmStateDB, block int, tx int, st *substate.Substate) (finalError error) {
 	var (
 		gaspool   = new(evmcore.GasPool)
 		txHash    = common.HexToHash(fmt.Sprintf("0x%016d%016d", block, tx))
@@ -164,12 +173,75 @@ func (s *SubstateProcessor) processRegularTx(db state.VmStateDB, block int, tx i
 		if to := msg.To(); to == nil {
 			contract = crypto.CreateAddress(evm.TxContext.Origin, msg.Nonce())
 		}
-		vmResult := compileVMResult(logs, msgResult, contract)
+		vmResult := compileVMResult(logs, msgResult.UsedGas, msgResult.Failed(), contract)
 		if err = validateVMResult(vmResult, st.Result); err != nil {
 			finalError = errors.Join(finalError, err)
 		}
 	}
+	return
+}
 
+// ethereumTx processes a transaction in Ethereum EVM configuration
+func (s *SubstateProcessor) ethereumTx(db state.VmStateDB, block int, tx int, st *substate.Substate) (finalError error) {
+	var (
+		gaspool   = new(core.GasPool)
+		txHash    = common.HexToHash(fmt.Sprintf("0x%016d%016d", block, tx))
+		inputEnv  = st.Env
+		hashError error
+		validate  = s.cfg.ValidateTxState
+	)
+
+	// create vm config
+	var vmConfig vm.Config
+	vmConfig.InterpreterImpl = s.cfg.VmImpl
+	//vmConfig.NoBaseFee = true
+	vmConfig.Tracer = nil
+	vmConfig.Debug = false
+
+	chainConfig := utils.GetChainConfig(s.cfg.ChainID)
+
+	// prepare tx
+	gaspool.AddGas(inputEnv.GasLimit)
+	msg := st.Message.AsMessage()
+	db.Prepare(txHash, tx)
+	blockCtx := prepareBlockCtx(inputEnv, &hashError)
+	txCtx := core.NewEVMTxContext(msg)
+	evm := vm.NewEVM(*blockCtx, txCtx, db, chainConfig, vmConfig)
+	snapshot := db.Snapshot()
+
+	// apply
+	msgResult, err := core.ApplyMessage(evm, msg, gaspool)
+	if err != nil {
+		// if transaction fails, revert to the first snapshot.
+		db.RevertToSnapshot(snapshot)
+		finalError = errors.Join(fmt.Errorf("block: %v transaction: %v", block, tx), err)
+		// discontinue output alloc validation on error
+		validate = false
+	}
+
+	// check whether getHash func produced an error
+	if hashError != nil {
+		finalError = errors.Join(finalError, hashError)
+		// discontinue output alloc validation on error
+		validate = false
+	}
+
+	// check whether the outputAlloc substate is contained in the world-state db.
+	// todo this should be move to extension
+	if validate {
+		blockHash := common.HexToHash(fmt.Sprintf("0x%016d", block))
+
+		// validate result
+		logs := db.GetLogs(txHash, blockHash)
+		var contract common.Address
+		if to := msg.To(); to == nil {
+			contract = crypto.CreateAddress(evm.TxContext.Origin, msg.Nonce())
+		}
+		vmResult := compileVMResult(logs, msgResult.UsedGas, msgResult.Failed(), contract)
+		if err = validateVMResult(vmResult, st.Result); err != nil {
+			finalError = errors.Join(finalError, err)
+		}
+	}
 	return
 }
 
@@ -221,14 +293,14 @@ func prepareBlockCtx(inputEnv *substate.SubstateEnv, hashError *error) *vm.Block
 }
 
 // compileVMResult creates a result of a transaction as SubstateResult struct.
-func compileVMResult(logs []*types.Log, reciept *evmcore.ExecutionResult, contract common.Address) *substate.SubstateResult {
+func compileVMResult(logs []*types.Log, recieptUsedGas uint64, recieptFailed bool, contract common.Address) *substate.SubstateResult {
 	vmResult := &substate.SubstateResult{
 		ContractAddress: contract,
-		GasUsed:         reciept.UsedGas,
+		GasUsed:         recieptUsedGas,
 		Logs:            logs,
 		Bloom:           types.BytesToBloom(types.LogsBloom(logs)),
 	}
-	if reciept.Failed() {
+	if recieptFailed {
 		vmResult.Status = types.ReceiptStatusFailed
 	} else {
 		vmResult.Status = types.ReceiptStatusSuccessful

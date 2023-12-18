@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -22,6 +23,9 @@ func TestSendRPCRequest_Positive(t *testing.T) {
 		t.Run(fmt.Sprintf("ChainID %v", id), func(t *testing.T) {
 
 			res, err := SendRpcRequest(req, id)
+			if errors.Is(err, RPCUnsupported) {
+				t.Skip("RPC is not supported")
+			}
 			if err != nil {
 				t.Fatalf("SendRpcRequest returned err; %v", err)
 			}
@@ -95,6 +99,9 @@ func TestSendRPCRequest_InvalidReqMethod(t *testing.T) {
 	for _, id := range AvailableChainIDs {
 		t.Run(fmt.Sprintf("ChainID %v", id), func(t *testing.T) {
 			res, err := SendRpcRequest(req, id)
+			if errors.Is(err, RPCUnsupported) {
+				t.Skip("RPC is not supported")
+			}
 			if err != nil {
 				t.Fatalf("SendRpcRequest returned err; %v", err)
 			}
@@ -128,6 +135,9 @@ func TestSendRPCRequest_InvalidBlockNumber(t *testing.T) {
 	for _, id := range AvailableChainIDs {
 		t.Run(fmt.Sprintf("ChainID %v", id), func(t *testing.T) {
 			res, err := SendRpcRequest(req, id)
+			if errors.Is(err, RPCUnsupported) {
+				t.Skipf("RPC is not supported")
+			}
 			if err != nil {
 				t.Fatalf("SendRpcRequest returned err; %v", err)
 			}
@@ -170,6 +180,8 @@ func TestRPCFindEpochNumber_Positive(t *testing.T) {
 			} else if id == TestnetChainID {
 				testingBlock = testingTestnetBlock
 				expectedEpoch = expectedTestnetEpoch
+			} else if id == EthereumChainID {
+				t.Skip("EthereumChainID is not supported")
 			} else {
 				t.Fatalf("unknown chainID: %v", id)
 			}
