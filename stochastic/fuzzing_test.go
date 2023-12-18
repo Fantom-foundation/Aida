@@ -97,27 +97,27 @@ func FuzzStochastic(f *testing.F) {
 		rg := rand.New(fSrc)
 
 		// create a stochastic state
-		ss := createState(&cfg, &e, db, rg, logger.NewLogger("INFO", "Fuzzing Stochastic"))
+		ss := CreateState(&e, rg, logger.NewLogger("INFO", "Fuzzing Stochastic"))
 
 		// get stochastic matrix
-		operations, A, state := getStochasticMatrix(&e)
+		operations, A, state := GetStochasticMatrix(&e)
 
 		// generate operations/random parameters from fuzzing string
 		for !fSrc.End() {
 
 			// decode opcode
-			op, addrCl, keyCl, valueCl := DecodeOpcode(operations[state])
+			data := DecodeOpcode(operations[state])
 
-			// execute operation with its argument classes
-			ss.execute(op, addrCl, keyCl, valueCl)
+			// Execute operation with its argument classes
+			ss.Execute(0, 0, data, db)
 
 			// check for errors
-			if err := ss.db.Error(); err != nil {
+			if err = db.Error(); err != nil {
 				f.Errorf("failed fuzzing. Error: %v", err)
 			}
 
 			// transit to next state in Markovian process
-			state = nextState(rg, A, state)
+			state = NextState(rg, A, state)
 		}
 	})
 }

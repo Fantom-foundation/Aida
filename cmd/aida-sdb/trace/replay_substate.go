@@ -58,7 +58,7 @@ type substateProcessor struct {
 
 func (p substateProcessor) Process(state executor.State[*substate.Substate], ctx *executor.Context) error {
 	return p.operationProvider.Run(state.Block, state.Block, func(t executor.TransactionInfo[[]operation.Operation]) error {
-		p.runTransaction(uint64(state.Block), t.Data, ctx.State)
+		p.runTransaction(state.Block, t.Data, ctx.State)
 		return nil
 	})
 }

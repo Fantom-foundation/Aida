@@ -22,7 +22,7 @@ type EventRegistry struct {
 	// Transition frequencies between two subsequent argument-encoded operations
 	transitFreq [numArgOps][numArgOps]uint64
 
-	// Contract-address access statistics
+	// Address-address access statistics
 	contracts statistics.Access[common.Address]
 
 	// Storage-key access statistics

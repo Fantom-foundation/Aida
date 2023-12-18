@@ -53,11 +53,11 @@ type operationProcessor struct {
 }
 
 func (p operationProcessor) Process(state executor.State[[]operation.Operation], ctx *executor.Context) error {
-	p.runTransaction(uint64(state.Block), state.Data, ctx.State)
+	p.runTransaction(state.Block, state.Data, ctx.State)
 	return nil
 }
 
-func (p operationProcessor) runTransaction(block uint64, operations []operation.Operation, stateDb state.StateDB) {
+func (p operationProcessor) runTransaction(block int, operations []operation.Operation, stateDb state.StateDB) {
 	for _, op := range operations {
 		operation.Execute(op, stateDb, p.rCtx)
 		if p.cfg.Debug && block >= p.cfg.DebugFrom {

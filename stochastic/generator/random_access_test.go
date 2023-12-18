@@ -66,7 +66,7 @@ func TestRandomAccessSimple(t *testing.T) {
 		qpdf[i] = 1.0 / float64(statistics.QueueLen)
 	}
 	ra = NewRandomAccess(rg, 1000, 5.0, qpdf)
-	for i := 0; i < minRandomAccessSize; i++ {
+	for i := 0; i < MinRandomAccessSize; i++ {
 		copy(queue, ra.queue)
 		if idx := ra.NextIndex(statistics.RecentValueID); idx < 1 || idx > ra.numElem || !containsQ(queue, idx-1) {
 			t.Fatalf("index access not in queue")
@@ -228,14 +228,14 @@ func TestRandomAccessLimits(t *testing.T) {
 	if idx := ra.NextIndex(statistics.NewValueID); idx != -1 {
 		t.Fatalf("Fails to detect cardinality integer overflow.")
 	}
-	ra = NewRandomAccess(rg, minRandomAccessSize, 5.0, qpdf)
+	ra = NewRandomAccess(rg, MinRandomAccessSize, 5.0, qpdf)
 	if err := ra.DeleteIndex(0); err == nil {
 		t.Fatalf("Fails to detect deleting zero element.")
 	}
 	if err := ra.DeleteIndex(1); err == nil {
 		t.Fatalf("Fails to detect depletion of elements.")
 	}
-	if ra := NewRandomAccess(rg, minRandomAccessSize-1, 5.0, qpdf); ra != nil {
+	if ra := NewRandomAccess(rg, MinRandomAccessSize-1, 5.0, qpdf); ra != nil {
 		t.Fatalf("Fails to detect low cardinality.")
 	}
 }

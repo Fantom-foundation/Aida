@@ -92,7 +92,7 @@ func newCountingChart(title string, subtitle string, lambda float64, ecdf [][2]f
 // renderCounting renders counting statistics.
 func renderCounting(w http.ResponseWriter, r *http.Request) {
 	events := GetEventsData()
-	contracts := newCountingChart("Counting Statistics", "for Contract-Addresses",
+	contracts := newCountingChart("Counting Statistics", "for Address-Addresses",
 		events.Contracts.Lambda,
 		events.Contracts.ECdf,
 		events.Contracts.Cdf)
@@ -174,7 +174,7 @@ func renderQueuing(w http.ResponseWriter, r *http.Request) {
 			Title:    "Queuing Probabilities",
 			Subtitle: "for contract-addresses, storage-keys, and storage-values",
 		}))
-	scatter.AddSeries("Contract", convertQueuingData(events.Contracts.QPdf)).AddSeries("Keys", convertQueuingData(events.Keys.QPdf)).AddSeries("Values", convertQueuingData(events.Values.QPdf))
+	scatter.AddSeries("Address", convertQueuingData(events.Contracts.QPdf)).AddSeries("Keys", convertQueuingData(events.Keys.QPdf)).AddSeries("Values", convertQueuingData(events.Values.QPdf))
 	scatter.Render(w)
 }
 

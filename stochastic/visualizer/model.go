@@ -73,17 +73,17 @@ func (e *EventData) PopulateEventData(d *stochastic.EventRegistryJSON) {
 	// Sort entries of the stationary distribution and populate
 	n := len(d.Operations)
 	stationary, _ := stationary.ComputeDistribution(d.StochasticMatrix)
-	data := []OpData{}
+	opData := []OpData{}
 	for i := 0; i < n; i++ {
-		data = append(data, OpData{
+		opData = append(opData, OpData{
 			label: d.Operations[i],
 			value: stationary[i],
 		})
 	}
-	sort.Slice(data, func(i, j int) bool {
-		return data[i].value < data[j].value
+	sort.Slice(opData, func(i, j int) bool {
+		return opData[i].value < opData[j].value
 	})
-	e.Stationary = data
+	e.Stationary = opData
 
 	// compute average number of operations per transaction
 
@@ -92,14 +92,14 @@ func (e *EventData) PopulateEventData(d *stochastic.EventRegistryJSON) {
 	blockProb := 0.0
 	syncPeriodProb := 0.0
 	for i := 0; i < n; i++ {
-		sop, _, _, _ := stochastic.DecodeOpcode(d.Operations[i])
-		if sop == stochastic.BeginTransactionID {
+		data := stochastic.DecodeOpcode(d.Operations[i])
+		if data.Operation == stochastic.BeginTransactionID {
 			txProb = stationary[i]
 		}
-		if sop == stochastic.BeginBlockID {
+		if data.Operation == stochastic.BeginBlockID {
 			blockProb = stationary[i]
 		}
-		if sop == stochastic.BeginSyncPeriodID {
+		if data.Operation == stochastic.BeginSyncPeriodID {
 			syncPeriodProb = stationary[i]
 		}
 	}
@@ -118,7 +118,7 @@ func (e *EventData) PopulateEventData(d *stochastic.EventRegistryJSON) {
 				// sum all versions of an operation and normalize the value with the transaction's probability
 				sum := 0.0
 				for i := 0; i < n; i++ {
-					if sop, _, _, _ := stochastic.DecodeOpcode(d.Operations[i]); sop == op {
+					if data := stochastic.DecodeOpcode(d.Operations[i]); data.Operation == op {
 						sum += stationary[i]
 					}
 				}
@@ -145,14 +145,14 @@ func (e *EventData) PopulateEventData(d *stochastic.EventRegistryJSON) {
 
 	// reduce stochastic matrix to a simplified matrix
 	for i := 0; i < n; i++ {
-		iop, _, _, _ := stochastic.DecodeOpcode(d.Operations[i])
+		iData := stochastic.DecodeOpcode(d.Operations[i])
 		for j := 0; j < n; j++ {
-			jop, _, _, _ := stochastic.DecodeOpcode(d.Operations[j])
-			e.SimplifiedMatrix[iop][jop] += d.StochasticMatrix[i][j]
+			jData := stochastic.DecodeOpcode(d.Operations[j])
+			e.SimplifiedMatrix[iData.Operation][jData.Operation] += d.StochasticMatrix[i][j]
 		}
 	}
 
-	// normalize row data after reduction
+	// normalize row opData after reduction
 	for i := 0; i < stochastic.NumOps; i++ {
 		sum := 0.0
 		for j := 0; j < stochastic.NumOps; j++ {

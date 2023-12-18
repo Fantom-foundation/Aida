@@ -54,9 +54,9 @@ func TestOperationOpcode(t *testing.T) {
 						opcode := EncodeOpcode(op, addr, key, value)
 
 						// decode argument-encoded operation
-						dop, daddr, dkey, dvalue := DecodeOpcode(opcode)
+						data := DecodeOpcode(opcode)
 
-						if op != dop || addr != daddr || key != dkey || value != dvalue {
+						if op != data.Operation || addr != data.Address || key != data.Key || value != data.Value {
 							t.Fatalf("Encoding/decoding failed for %v", opcode)
 						}
 					}

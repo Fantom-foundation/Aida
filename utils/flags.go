@@ -64,7 +64,7 @@ var (
 		Name:  "cpu-profile-per-interval",
 		Usage: "enables CPU profiling for individual 100k intervals",
 	}
-	DebugFromFlag = cli.Uint64Flag{
+	DebugFromFlag = cli.IntFlag{
 		Name:  "debug-from",
 		Usage: "sets the first block to print trace debug",
 		Value: 0,
@@ -153,6 +153,10 @@ var (
 	StateDbSrcFlag = cli.PathFlag{
 		Name:  "db-src",
 		Usage: "sets the directory contains source state DB data",
+	}
+	StochasticSimulationFileFlag = cli.PathFlag{
+		Name:  "simulation",
+		Usage: "sets the path to stochastic simulation file",
 	}
 	DbTmpFlag = cli.PathFlag{
 		Name:  "db-tmp",
