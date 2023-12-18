@@ -213,6 +213,7 @@ func TestLiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueO
 		log.EXPECT().Warning(gomock.Any()),
 		db.EXPECT().GetSubstatePostAlloc().Return(substate.SubstateAlloc{}),
 		log.EXPECT().Errorf("Different %s:\nwant: %v\nhave: %v\n", "substate alloc size", 1, 0),
+		log.EXPECT().Errorf("\tmissing key=%v\n", common.Address{0}),
 	)
 
 	ext.PreRun(executor.State[*substate.Substate]{}, ctx)

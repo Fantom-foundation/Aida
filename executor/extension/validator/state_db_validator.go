@@ -243,14 +243,15 @@ func (v *stateDbValidator) printAllocationDiffSummary(want, have *substate.Subst
 	for key := range *want {
 		_, present := (*have)[key]
 		if !present {
-			fmt.Printf("    missing key=%v\n", key)
+			v.log.Errorf("\tmissing key=%v\n", key)
+
 		}
 	}
 
 	for key := range *have {
 		_, present := (*want)[key]
 		if !present {
-			fmt.Printf("    extra key=%v\n", key)
+			v.log.Errorf("\textra key=%v\n", key)
 		}
 	}
 
@@ -272,14 +273,14 @@ func (v *stateDbValidator) printAccountDiffSummary(label string, want, have *sub
 	for key, val := range want.Storage {
 		_, present := have.Storage[key]
 		if !present && (val != common.Hash{}) {
-			fmt.Printf("    %s.Storage misses key %v val %v\n", label, key, val)
+			v.log.Errorf("\t%s.Storage misses key %v val %v\n", label, key, val)
 		}
 	}
 
 	for key := range have.Storage {
 		_, present := want.Storage[key]
 		if !present {
-			fmt.Printf("    %s.Storage has extra key %v\n", label, key)
+			v.log.Errorf("\t%s.Storage has extra key %v\n", label, key)
 		}
 	}
 
