@@ -44,6 +44,7 @@ var StochasticReplayCommand = cli.Command{
 		&utils.ShadowDbImplementationFlag,
 		&utils.ShadowDbVariantFlag,
 		&logger.LogLevelFlag,
+		&utils.StochasticSimulationFileFlag,
 	},
 	Description: `
 The stochastic replay command requires two argument:
