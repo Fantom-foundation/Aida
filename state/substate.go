@@ -123,7 +123,7 @@ func getHash(addr common.Address, code []byte) common.Hash {
 }
 
 // MakeOffTheChainStateDB returns an in-memory *state.StateDB initialized with alloc
-func MakeOffTheChainStateDB(alloc substate.SubstateAlloc) (StateDB, error) {
+func MakeOffTheChainStateDB(alloc substate.SubstateAlloc, block uint64) (StateDB, error) {
 	statedb := NewOffTheChainStateDB()
 	for addr, a := range alloc {
 		statedb.SetPrehashedCode(addr, getHash(addr, a.Code), a.Code)
@@ -139,7 +139,7 @@ func MakeOffTheChainStateDB(alloc substate.SubstateAlloc) (StateDB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("cannot commit ofTheChainDb; %v", err)
 	}
-	return &gethStateDB{db: statedb}, nil
+	return &gethStateDB{db: statedb, block: block}, nil
 }
 
 func ReleaseCache() {
