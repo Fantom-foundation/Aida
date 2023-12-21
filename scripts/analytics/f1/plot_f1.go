@@ -14,6 +14,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/Fantom-foundation/Aida/scripts/analytics/html"
 
 	// db
 	"github.com/jmoiron/sqlx"
@@ -35,17 +36,21 @@ const (
 	last                    int    = 22_832_168
 	logLevel                string = "Debug"
 	connection              string = "/var/opera/Aida/tmp-rapolt/register/s5-f1.db"
-	sqlite3_SelectFromStats string = `
-		SELECT start, end, memory, disk, tx_rate, gas_rate, overall_tx_rate, overall_gas_rate
-		FROM stats
-		WHERE start>=:start AND end<=:end;
-	`
 
 	workerCount int = 10
 	bucketCount int = 223
 
 	// report
 	pHtml = "report_f1.html"
+)
+
+// DB-related const
+const (
+	sqlite3_SelectFromStats string = `
+		SELECT start, end, memory, disk, tx_rate, gas_rate, overall_tx_rate, overall_gas_rate
+		FROM stats
+		WHERE start>=:start AND end<=:end;
+	`
 )
 
 type query struct {
@@ -212,22 +217,128 @@ func main() {
 	log.Infof("postprocessing - time taken: %f s", time.Since(start).Seconds())
 
 	// Charts start here
-	page := components.NewPage().AddCharts(
-		ScatterWithTitle(scatter("Memory", buckets, memoryByBucket), "Memory", ""),
-		ScatterWithTitle(scatter("Disk", buckets, diskByBucket), "Disk", ""),
-		ScatterWithTitle(scatter("Tx Rate", buckets, txRateByBucket), "Tx Rate", ""),
-		ScatterWithTitle(scatter("Gas Rate", buckets, gasRateByBucket), "Gas Rate", ""),
-		ScatterWithTitle(scatter("Overall Tx Rate", buckets, overallTxRateByBucket), "Overall Tx Rate", ""),
-		ScatterWithTitle(scatter("Overall Gas Rate", buckets, overallGasRateByBucket), "Overall Gas Rate", ""),
-	)
-
 	f, err := os.Create(pHtml)
 	if err != nil {
 		log.Errorf("Unable to create html documents at %s", pHtml)
 		os.Exit(1)
 	}
 
-	page.Render(io.MultiWriter(f))
+	writer := io.MultiWriter(f)
+	
+	// Report header
+	writer.Write(html.Div(
+		html.H1("F1 - Functional Correctness of LiveDB using Testnet"),
+		html.P(time.Now().Format("2006-01-02")),
+	))
+
+	// Experimental setup
+	var (
+		machine string = "wasuwee-x249(65.109.70.227)"
+		cpu string = "AMD Ryzen 9 5950X 16-Core Processor"
+		ram string = "125GB RAM"
+		disk string = "Samsung Electronics Disk, WDC WUH721816AL, Samsung Electronics Disk, WDC WUH721816AL"
+		os string = "Agent pid 1400011 Ubuntu 22.04.2 LTS"
+		goVersion string = "go1.21.1 linux/amd64"
+		aidaVersion string = "81703de9537bb746c1e4e67c51b9fcae3f89e1e8"
+		stateDbType string = "carmen(go-file 5)"
+		vmType string = "lfvm"
+		dbPath string = connection
+	)
+
+	writer.Write(html.Div(
+		html.H2("1. Experimental Setup"),
+		html.P(`The experiment is run on the machine <b>%s</b> - CPU: <b>%s</b>, Ram: <b>%s</b>, Disk: <b>%s</b>.`, machine, cpu, ram, disk),
+		html.P(`The operating system is <b>%s</b>. The system has installed go version <b>%s</b>`, os, goVersion),
+		html.P(`The github hash of the Aida repository is <b>%s</b>. For this experiment, we use <b>%s</b> as a StateDB and <b>%s</b> as a virtual machine. The profiling result for this experiment is stored in the database <b>%s</b>.`, aidaVersion, stateDbType, vmType, dbPath),
+	))
+
+	// Tx Rate
+
+	var(
+		maxTxRate float64 = 23965.1
+		maxTxRateBlockHeight int = 700000
+	)
+
+	writer.Write(html.Div(
+		html.H2("2. Transaction Rate"),
+		html.P(`The experiment was conducted for the block range from <b>%d</b> to <b>%d</b>.`, first, last),
+		html.P(`For the entire run, the max transaction rate is <b>%f</b> TPM, at block height <b>%d</b> `, maxTxRate, maxTxRateBlockHeight),	
+	))
+
+	components.NewPage().AddCharts(
+		ScatterWithTitle(
+			ScatterWithCustomXy(
+				scatter("Tx Rate", buckets, txRateByBucket), 
+				"Block Height", "Transactions", "TPM",
+			), "Tx Rate", "",
+		),
+		ScatterWithTitle(
+			ScatterWithCustomXy(
+				scatter("Overall Tx Rate", buckets, overallTxRateByBucket),
+				"Block Height", "Transactions", "TPM",
+			), "Overall Tx Rate", "",
+		),
+	).Render(writer)
+
+	// Gas Rate
+
+	var(
+		maxGasRate float64 = 1575026886
+		maxGasRateBlockHeight int = 800000
+	)
+
+	writer.Write(html.Div(
+		html.H2("3. Gas Rate"),
+		html.P(`The experiment was conducted for the block range from <b>%d</b> to <b>%d</b>.`, first, last),
+		html.P(`For the entire run, the max gas rate is <b>%f</b> TPM, at block height <b>%d</b> `, maxGasRate, maxGasRateBlockHeight),	
+	))
+
+
+	components.NewPage().AddCharts(
+		ScatterWithTitle(
+			ScatterWithCustomXy(
+				scatter("Gas Rate", buckets, gasRateByBucket), 
+				"Block Height", "Gas", "GPM",
+			), "Gas Rate", "",
+		),
+		ScatterWithTitle(
+			ScatterWithCustomXy(
+				scatter("Overall Gas Rate", buckets, overallGasRateByBucket), 
+				"Block Height", "Gas", "GPM", 
+			), "Overall Gas Rate", "",
+		),
+	).Render(writer)
+	// memory and disk usage
+	var (
+		maxRam float64 = 6.687
+		maxRamBlockHeight int = 22600000
+		maxDisk float64 = 4.215
+		maxDiskBlockHeight int = 17900000
+	)
+
+	writer.Write(html.Div(
+		html.H2("4. Memory and Disk Usage"),
+		html.P(`The experiment was conducted for the block range from <b>%d</b> to <b>%d</b>.`, first, last),
+		html.P(`For the entire run, max RAM Usage the run is <b>%f</b> Gigabytes at block height <b>%d</b>.`, maxRam, maxRamBlockHeight),
+		html.P(`For the entire run, max Disk Usage throughout the run is <b>%f</b> Gigabytes at block height <b>%d</b>.`, maxDisk, maxDiskBlockHeight),	
+	))
+
+	// memory and disk chart
+	components.NewPage().AddCharts(
+		ScatterWithTitle(
+			ScatterWithCustomXy(
+				scatter("RAM", buckets, memoryByBucket),
+				"Block Height", "RAM Consumption", "Byte",
+			), "Memory Usage", "",
+		),
+		ScatterWithTitle(
+			ScatterWithCustomXy(
+				scatter("Disk", buckets, diskByBucket), 
+				"Block Height", "Disk Consumption", "Byte", 
+			), "Disk", "",
+		),
+	).Render(writer)
+
 	log.Infof("Rendered to %s", pHtml)
 }
 
