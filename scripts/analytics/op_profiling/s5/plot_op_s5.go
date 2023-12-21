@@ -255,7 +255,7 @@ func main() {
 	// start a thread to digest bucket-wise response from DB
 	for w := 0; w < bucketMsgWorkerCount; w++ {
 		bWg.Add(1)
-		go func(id int) {
+		go func() {
 			defer bWg.Done()
 			for m := range bc {
 				countTotal += m.count
@@ -263,14 +263,14 @@ func main() {
 				timeTotal += m.time
 				timeByBucket[m.bucket] += m.time
 			}
-		}(w)
+		}()
 	}
 
 	// start a thread to digest op-wise response from DB
 	var ol sync.Mutex
 	for w := 0; w < opMsgWorkerCount; w++ {
 		oWg.Add(1)
-		go func(id int) {
+		go func() {
 			defer oWg.Done()
 			for m := range oc {
 				ol.Lock()
@@ -295,7 +295,7 @@ func main() {
 				*/
 				ol.Unlock()
 			}
-		}(w)
+		}()
 	}
 
 	// generate queries here
