@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/logger"
-	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/Fantom-foundation/Aida/tracer/operation"
-	xmath "github.com/Fantom-foundation/Aida/utils/math"
 	"github.com/Fantom-foundation/Aida/scripts/analytics/html"
+	"github.com/Fantom-foundation/Aida/tracer/operation"
+	"github.com/Fantom-foundation/Aida/utils"
+	xmath "github.com/Fantom-foundation/Aida/utils/math"
 
 	// db
 	"github.com/jmoiron/sqlx"
@@ -28,14 +28,14 @@ import (
 
 // all configuration goes here
 const (
-	first                        int    = 0
-	last                         int    = 65_436_418
-	logLevel                     string = "Debug"
-	connection                   string = "/var/opera/Aida/tmp-rapolt/op-profiling/s5-op-profiling.db"
+	first      int    = 0
+	last       int    = 65_436_418
+	logLevel   string = "Debug"
+	connection string = "/var/opera/Aida/tmp-rapolt/op-profiling/s5-op-profiling.db"
 
-	queryWorkerCount int = 10
+	queryWorkerCount     int = 10
 	bucketMsgWorkerCount int = 1
-	opMsgWorkerCount int = 2
+	opMsgWorkerCount     int = 2
 
 	bucketCount int = 654
 	opCount     int = 50
@@ -285,13 +285,13 @@ func main() {
 					meanByBucketByOpId[m.opid][m.bucket] = timeByBucketByOpId[m.opid][m.bucket] / countByBucketByOpId[m.opid][m.bucket]
 				}
 
-				// Defect in DB 
+				// Defect in DB
 				/*
-				if _, ok := opNameByOpId[m.opid]; !ok {
-					fmt.Println(m)
-					opIds = append(opIds, m.opid)
-					opNameByOpId[m.opid] = m.opname
-				}
+					if _, ok := opNameByOpId[m.opid]; !ok {
+						fmt.Println(m)
+						opIds = append(opIds, m.opid)
+						opNameByOpId[m.opid] = m.opname
+					}
 				*/
 				ol.Unlock()
 			}
@@ -328,15 +328,14 @@ func main() {
 			opNameByOpId[opId] = ops[byte(opId)]
 		}
 	}
-	
+
 	sort.Slice(opIds, func(i, j int) bool {
-	      return opIds[i] < opIds[j]
-        })
-	
+		return opIds[i] < opIds[j]
+	})
 
 	log.Infof("postprocessing - time taken: %d s", time.Since(start).Seconds())
 	log.Infof("total: %d, time total: %f", countTotal, timeTotal)
-	
+
 	// generate report
 
 	f, err := os.Create(pHtml)
@@ -344,7 +343,7 @@ func main() {
 		log.Errorf("Unable to create html at %s.", pHtml)
 	}
 
-	writer := io.MultiWriter(f) 
+	writer := io.MultiWriter(f)
 
 	// style for table
 	writer.Write([]byte(`
@@ -371,23 +370,23 @@ func main() {
 
 	// experimental setup
 	var (
-		machine string = "wasuwee-x249(65.109.70.227)"
-		cpu string = "AMD Ryzen 9 5950X 16-Core Processor"
-		ram string = "125GB RAM"
-		disk string = "Samsung Electronics Disk, WDC WUH721816AL, Samsung Electronics Disk, WDC WUH721816AL"
-		os string = "Agent pid 1400011 Ubuntu 22.04.2 LTS"
-		goVersion string = "go1.21.1 linux/amd64"
+		machine     string = "wasuwee-x249(65.109.70.227)"
+		cpu         string = "AMD Ryzen 9 5950X 16-Core Processor"
+		ram         string = "125GB RAM"
+		disk        string = "Samsung Electronics Disk, WDC WUH721816AL, Samsung Electronics Disk, WDC WUH721816AL"
+		os          string = "Agent pid 1400011 Ubuntu 22.04.2 LTS"
+		goVersion   string = "go1.21.1 linux/amd64"
 		aidaVersion string = "81703de9537bb746c1e4e67c51b9fcae3f89e1e8"
 		stateDbType string = "carmen(go-file 5)"
-		vmType string = "lfvm"
-		dbPath string = connection
+		vmType      string = "lfvm"
+		dbPath      string = connection
 	)
 
 	writer.Write(html.Div(
-			html.H2("1. Experimental Setup"),
-			html.P(`The experiment is run on the machine <b>%s</b> - CPU: <b>%s</b>, Ram: <b>%s</b>, Disk: <b>%s</b>.`, machine, cpu, ram, disk),
-			html.P(`The operating system is <b>%s</b>. The system has installed go version <b>%s</b>`, os, goVersion),
-			html.P(`The github hash of the Aida repository is <b>%s</b>. For this experiment, we use <b>%s</b> as a StateDB and <b>%s</b> as a virtual machine. The profiling result for this experiment is stored in the database <b>%s</b>.`, aidaVersion, stateDbType, vmType, dbPath),
+		html.H2("1. Experimental Setup"),
+		html.P(`The experiment is run on the machine <b>%s</b> - CPU: <b>%s</b>, Ram: <b>%s</b>, Disk: <b>%s</b>.`, machine, cpu, ram, disk),
+		html.P(`The operating system is <b>%s</b>. The system has installed go version <b>%s</b>`, os, goVersion),
+		html.P(`The github hash of the Aida repository is <b>%s</b>. For this experiment, we use <b>%s</b> as a StateDB and <b>%s</b> as a virtual machine. The profiling result for this experiment is stored in the database <b>%s</b>.`, aidaVersion, stateDbType, vmType, dbPath),
 	))
 
 	// total operation count
@@ -456,12 +455,12 @@ func main() {
 		if countByOpId[op] == 0 {
 			continue
 		}
-	
+
 		// add glossary tag
 		writer.Write(html.Div(
 			html.H3("[%d] %s", op, opNameByOpId[op]),
 		))
-	
+
 		// add charts for glossary
 		components.NewPage().AddCharts(
 			ScatterWithTitle(
@@ -490,7 +489,7 @@ func main() {
 			),
 		).Render(writer)
 	}
-	
+
 	log.Infof("Rendered to %s", pHtml)
 }
 
@@ -739,19 +738,19 @@ func PieWithTitle(p *charts.Pie, title string, subtitle string) *charts.Pie {
 
 func tableFromTopX(headers []string, byOpId map[int]float64, opNameByOpId map[int]string, x int) []byte {
 	var values []map[string]string
-	
+
 	type kv struct {
-       		k int
-        	v float64
+		k int
+		v float64
 	}
 
 	var kvs []kv
 	for k, v := range byOpId {
-		kvs = append(kvs, kv{k, v})	
+		kvs = append(kvs, kv{k, v})
 	}
 
 	sort.Slice(kvs, func(i, j int) bool {
-	        return kvs[i].v > kvs[j].v
+		return kvs[i].v > kvs[j].v
 	})
 
 	for _, kv := range kvs[:x] {
@@ -763,4 +762,3 @@ func tableFromTopX(headers []string, byOpId map[int]float64, opNameByOpId map[in
 
 	return html.Table(headers, values)
 }
-

@@ -1,8 +1,8 @@
 package html
 
 import (
-	"fmt"
 	"bytes"
+	"fmt"
 )
 
 func Div(contents ...[]byte) []byte {
@@ -96,7 +96,6 @@ func List(items []string) []byte {
 
 	// end tag
 	b.WriteString("</ul>\n")
-
 
 	return b.Bytes()
 }

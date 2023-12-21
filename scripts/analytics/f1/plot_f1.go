@@ -13,8 +13,8 @@ import (
 	"golang.org/x/exp/constraints"
 
 	"github.com/Fantom-foundation/Aida/logger"
-	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Aida/scripts/analytics/html"
+	"github.com/Fantom-foundation/Aida/utils"
 
 	// db
 	"github.com/jmoiron/sqlx"
@@ -32,10 +32,10 @@ type Number interface {
 
 const (
 	// db
-	first                   int    = 479_327
-	last                    int    = 22_832_168
-	logLevel                string = "Debug"
-	connection              string = "/var/opera/Aida/tmp-rapolt/register/s5-f1.db"
+	first      int    = 479_327
+	last       int    = 22_832_168
+	logLevel   string = "Debug"
+	connection string = "/var/opera/Aida/tmp-rapolt/register/s5-f1.db"
 
 	workerCount int = 10
 	bucketCount int = 223
@@ -224,7 +224,7 @@ func main() {
 	}
 
 	writer := io.MultiWriter(f)
-	
+
 	// Report header
 	writer.Write(html.Div(
 		html.H1("F1 - Functional Correctness of LiveDB using Testnet"),
@@ -233,16 +233,16 @@ func main() {
 
 	// Experimental setup
 	var (
-		machine string = "wasuwee-x249(65.109.70.227)"
-		cpu string = "AMD Ryzen 9 5950X 16-Core Processor"
-		ram string = "125GB RAM"
-		disk string = "Samsung Electronics Disk, WDC WUH721816AL, Samsung Electronics Disk, WDC WUH721816AL"
-		os string = "Agent pid 1400011 Ubuntu 22.04.2 LTS"
-		goVersion string = "go1.21.1 linux/amd64"
+		machine     string = "wasuwee-x249(65.109.70.227)"
+		cpu         string = "AMD Ryzen 9 5950X 16-Core Processor"
+		ram         string = "125GB RAM"
+		disk        string = "Samsung Electronics Disk, WDC WUH721816AL, Samsung Electronics Disk, WDC WUH721816AL"
+		os          string = "Agent pid 1400011 Ubuntu 22.04.2 LTS"
+		goVersion   string = "go1.21.1 linux/amd64"
 		aidaVersion string = "81703de9537bb746c1e4e67c51b9fcae3f89e1e8"
 		stateDbType string = "carmen(go-file 5)"
-		vmType string = "lfvm"
-		dbPath string = connection
+		vmType      string = "lfvm"
+		dbPath      string = connection
 	)
 
 	writer.Write(html.Div(
@@ -254,21 +254,21 @@ func main() {
 
 	// Tx Rate
 
-	var(
-		maxTxRate float64 = 23965.1
-		maxTxRateBlockHeight int = 700000
+	var (
+		maxTxRate            float64 = 23965.1
+		maxTxRateBlockHeight int     = 700000
 	)
 
 	writer.Write(html.Div(
 		html.H2("2. Transaction Rate"),
 		html.P(`The experiment was conducted for the block range from <b>%d</b> to <b>%d</b>.`, first, last),
-		html.P(`For the entire run, the max transaction rate is <b>%f</b> TPM, at block height <b>%d</b> `, maxTxRate, maxTxRateBlockHeight),	
+		html.P(`For the entire run, the max transaction rate is <b>%f</b> TPM, at block height <b>%d</b> `, maxTxRate, maxTxRateBlockHeight),
 	))
 
 	components.NewPage().AddCharts(
 		ScatterWithTitle(
 			ScatterWithCustomXy(
-				scatter("Tx Rate", buckets, txRateByBucket), 
+				scatter("Tx Rate", buckets, txRateByBucket),
 				"Block Height", "Transactions", "TPM",
 			), "Tx Rate", "",
 		),
@@ -282,45 +282,44 @@ func main() {
 
 	// Gas Rate
 
-	var(
-		maxGasRate float64 = 1575026886
-		maxGasRateBlockHeight int = 800000
+	var (
+		maxGasRate            float64 = 1575026886
+		maxGasRateBlockHeight int     = 800000
 	)
 
 	writer.Write(html.Div(
 		html.H2("3. Gas Rate"),
 		html.P(`The experiment was conducted for the block range from <b>%d</b> to <b>%d</b>.`, first, last),
-		html.P(`For the entire run, the max gas rate is <b>%f</b> TPM, at block height <b>%d</b> `, maxGasRate, maxGasRateBlockHeight),	
+		html.P(`For the entire run, the max gas rate is <b>%f</b> TPM, at block height <b>%d</b> `, maxGasRate, maxGasRateBlockHeight),
 	))
-
 
 	components.NewPage().AddCharts(
 		ScatterWithTitle(
 			ScatterWithCustomXy(
-				scatter("Gas Rate", buckets, gasRateByBucket), 
+				scatter("Gas Rate", buckets, gasRateByBucket),
 				"Block Height", "Gas", "GPM",
 			), "Gas Rate", "",
 		),
 		ScatterWithTitle(
 			ScatterWithCustomXy(
-				scatter("Overall Gas Rate", buckets, overallGasRateByBucket), 
-				"Block Height", "Gas", "GPM", 
+				scatter("Overall Gas Rate", buckets, overallGasRateByBucket),
+				"Block Height", "Gas", "GPM",
 			), "Overall Gas Rate", "",
 		),
 	).Render(writer)
 	// memory and disk usage
 	var (
-		maxRam float64 = 6.687
-		maxRamBlockHeight int = 22600000
-		maxDisk float64 = 4.215
-		maxDiskBlockHeight int = 17900000
+		maxRam             float64 = 6.687
+		maxRamBlockHeight  int     = 22600000
+		maxDisk            float64 = 4.215
+		maxDiskBlockHeight int     = 17900000
 	)
 
 	writer.Write(html.Div(
 		html.H2("4. Memory and Disk Usage"),
 		html.P(`The experiment was conducted for the block range from <b>%d</b> to <b>%d</b>.`, first, last),
 		html.P(`For the entire run, max RAM Usage the run is <b>%f</b> Gigabytes at block height <b>%d</b>.`, maxRam, maxRamBlockHeight),
-		html.P(`For the entire run, max Disk Usage throughout the run is <b>%f</b> Gigabytes at block height <b>%d</b>.`, maxDisk, maxDiskBlockHeight),	
+		html.P(`For the entire run, max Disk Usage throughout the run is <b>%f</b> Gigabytes at block height <b>%d</b>.`, maxDisk, maxDiskBlockHeight),
 	))
 
 	// memory and disk chart
@@ -333,8 +332,8 @@ func main() {
 		),
 		ScatterWithTitle(
 			ScatterWithCustomXy(
-				scatter("Disk", buckets, diskByBucket), 
-				"Block Height", "Disk Consumption", "Byte", 
+				scatter("Disk", buckets, diskByBucket),
+				"Block Height", "Disk Consumption", "Byte",
 			), "Disk", "",
 		),
 	).Render(writer)
