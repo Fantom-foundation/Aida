@@ -208,7 +208,7 @@ func main() {
 		maxByBucketByOpId[b] = map[int]float64{}
 	}
 
-	log.Infof("Bucket: %d, Interval: %d, Worker: %d", bucketCount, interval, queryWorkerCount)
+	log.Noticef("Bucket: %d, Interval: %d, Worker: %d", bucketCount, interval, queryWorkerCount)
 
 	qc := make(chan query, bucketCount)
 	bc := make(chan bucketMsg, bucketCount)
@@ -312,7 +312,7 @@ func main() {
 	close(ec) // no more error
 	eWg.Wait()
 
-	log.Infof("queries - time taken: %d s", time.Since(start).Seconds())
+	log.Noticef("queries - time taken: %d s", time.Since(start).Seconds())
 
 	close(bc)
 	bWg.Wait()
@@ -333,8 +333,8 @@ func main() {
 		return opIds[i] < opIds[j]
 	})
 
-	log.Infof("postprocessing - time taken: %d s", time.Since(start).Seconds())
-	log.Infof("total: %d, time total: %f", countTotal, timeTotal)
+	log.Noticef("postprocessing - time taken: %d s", time.Since(start).Seconds())
+	log.Noticef("total: %d, time total: %f", countTotal, timeTotal)
 
 	// generate report
 
@@ -490,7 +490,7 @@ func main() {
 		).Render(writer)
 	}
 
-	log.Infof("Rendered to %s", pHtml)
+	log.Noticef("Rendered to %s", pHtml)
 }
 
 func BarWithTitle(b *charts.Bar, title string, subtitle string) *charts.Bar {

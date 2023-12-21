@@ -139,7 +139,7 @@ func main() {
 		overallGasRateByBucket map[int]float64 = make(map[int]float64, bucketCount)
 	)
 
-	log.Infof("Bucket: %d, Interval: %d, Worker: %d", bucketCount, interval, workerCount)
+	log.Noticef("Bucket: %d, Interval: %d, Worker: %d", bucketCount, interval, workerCount)
 
 	qc := make(chan query, bucketCount)
 	bc := make(chan bucketMsg, bucketCount)
@@ -209,12 +209,12 @@ func main() {
 	close(ec) // no more error
 	eWg.Wait()
 
-	log.Infof("queries - time taken: %f s", time.Since(start).Seconds())
+	log.Noticef("queries - time taken: %f s", time.Since(start).Seconds())
 
 	close(bc)
 	bWg.Wait()
 
-	log.Infof("postprocessing - time taken: %f s", time.Since(start).Seconds())
+	log.Noticef("postprocessing - time taken: %f s", time.Since(start).Seconds())
 
 	// Charts start here
 	f, err := os.Create(pHtml)
@@ -338,7 +338,7 @@ func main() {
 		),
 	).Render(writer)
 
-	log.Infof("Rendered to %s", pHtml)
+	log.Noticef("Rendered to %s", pHtml)
 }
 
 func BarWithTitle(b *charts.Bar, title string, subtitle string) *charts.Bar {
