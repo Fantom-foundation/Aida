@@ -46,7 +46,7 @@ const (
 
 // DB-related const
 const (
-	sqlite3_SelectFromStats string = `
+	sqlite3SelectFromStats string = `
 		SELECT start, end, memory, disk, tx_rate, gas_rate, overall_tx_rate, overall_gas_rate
 		FROM stats
 		WHERE start>=:start AND end<=:end;
@@ -86,7 +86,7 @@ func worker(id int, qc <-chan query, bc chan<- bucketMsg, ec chan<- error) {
 		ec <- err
 	}
 
-	stmt, err := db.PrepareNamed(sqlite3_SelectFromStats)
+	stmt, err := db.PrepareNamed(sqlite3SelectFromStats)
 	if err != nil {
 		ec <- err
 	}

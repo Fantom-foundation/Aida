@@ -46,7 +46,7 @@ const (
 
 // DB-related const
 const (
-	sqlite3_SelectFromOperations string = `
+	sqlite3SelectFromOperations string = `
 		SELECT blockId, txId, opId, opName, count, sum, mean, min, max
 		FROM ops_transaction
 		WHERE blockId>=:start AND blockId<=:end AND count > 0;
@@ -99,7 +99,7 @@ func worker(id int, opCount int,
 		ec <- err
 	}
 
-	stmt, err := db.PrepareNamed(sqlite3_SelectFromOperations)
+	stmt, err := db.PrepareNamed(sqlite3SelectFromOperations)
 	if err != nil {
 		ec <- err
 	}
