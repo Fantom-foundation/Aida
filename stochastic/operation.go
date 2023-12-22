@@ -176,6 +176,13 @@ var argId = map[byte]int{
 	'r': statistics.RandomValueID,
 }
 
+type Data struct {
+	Operation int
+	Address   int
+	Key       int
+	Value     int
+}
+
 // OpMnemo returns the mnemonic code for an operation.
 func OpMnemo(op int) string {
 	if op < 0 || op >= NumOps {
@@ -185,11 +192,11 @@ func OpMnemo(op int) string {
 }
 
 // checkArgOp checks whether op/argument combination is valid.
-func checkArgOp(op int, contract int, key int, value int) bool {
+func checkArgOp(op int, address int, key int, value int) bool {
 	if op < 0 || op >= NumOps {
 		return false
 	}
-	if contract < 0 || contract >= statistics.NumClasses {
+	if address < 0 || address >= statistics.NumClasses {
 		return false
 	}
 	if key < 0 || key >= statistics.NumClasses {
@@ -200,19 +207,19 @@ func checkArgOp(op int, contract int, key int, value int) bool {
 	}
 	switch opNumArgs[op] {
 	case 0:
-		return contract == statistics.NoArgID &&
+		return address == statistics.NoArgID &&
 			key == statistics.NoArgID &&
 			value == statistics.NoArgID
 	case 1:
-		return contract != statistics.NoArgID &&
+		return address != statistics.NoArgID &&
 			key == statistics.NoArgID &&
 			value == statistics.NoArgID
 	case 2:
-		return contract != statistics.NoArgID &&
+		return address != statistics.NoArgID &&
 			key != statistics.NoArgID &&
 			value == statistics.NoArgID
 	case 3:
-		return contract != statistics.NoArgID &&
+		return address != statistics.NoArgID &&
 			key != statistics.NoArgID &&
 			value != statistics.NoArgID
 	default:
@@ -225,8 +232,8 @@ func IsValidArgOp(argop int) bool {
 	if argop < 0 || argop >= numArgOps {
 		return false
 	}
-	op, contract, key, value := DecodeArgOp(argop)
-	return checkArgOp(op, contract, key, value)
+	op, address, key, value := DecodeArgOp(argop)
+	return checkArgOp(op, address, key, value)
 }
 
 // EncodeArgOp encodes operation and argument classes via Horner's scheme to a single value.
@@ -276,7 +283,7 @@ func validateArg(argMnemo byte) bool {
 }
 
 // DecodeOpcode decodes opcode producing the operation id and its argument classes
-func DecodeOpcode(opc string) (int, int, int, int) {
+func DecodeOpcode(opc string) Data {
 	mnemo := opc[:2]
 	op, ok := opId[mnemo]
 	if !ok {
@@ -285,25 +292,25 @@ func DecodeOpcode(opc string) (int, int, int, int) {
 	if len(opc) != 2+opNumArgs[op] {
 		log.Fatalf("DecodeOpcode: wrong opcode length for %v", opc)
 	}
-	var contract, key, value int
+	var address, key, value int
 	switch len(opc) - 2 {
 	case 0:
-		contract, key, value = statistics.NoArgID, statistics.NoArgID, statistics.NoArgID
+		address, key, value = statistics.NoArgID, statistics.NoArgID, statistics.NoArgID
 	case 1:
 		if !validateArg(opc[2]) {
 			log.Fatalf("DecodeOpcode: wrong argument code")
 		}
-		contract, key, value = argId[opc[2]], statistics.NoArgID, statistics.NoArgID
+		address, key, value = argId[opc[2]], statistics.NoArgID, statistics.NoArgID
 	case 2:
 		if !validateArg(opc[2]) || !validateArg(opc[3]) {
 			log.Fatalf("DecodeOpcode: wrong argument code")
 		}
-		contract, key, value = argId[opc[2]], argId[opc[3]], statistics.NoArgID
+		address, key, value = argId[opc[2]], argId[opc[3]], statistics.NoArgID
 	case 3:
 		if !validateArg(opc[2]) || !validateArg(opc[3]) || !validateArg(opc[4]) {
 			log.Fatalf("DecodeOpcode: wrong argument code")
 		}
-		contract, key, value = argId[opc[2]], argId[opc[3]], argId[opc[4]]
+		address, key, value = argId[opc[2]], argId[opc[3]], argId[opc[4]]
 	}
-	return op, contract, key, value
+	return Data{op, address, key, value}
 }

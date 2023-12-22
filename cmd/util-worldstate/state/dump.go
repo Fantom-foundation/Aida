@@ -26,7 +26,7 @@ import (
 //   - Balance
 //   - Nonce
 //   - Code (hash + separate storage)
-//   - Contract Storage
+//   - Address Storage
 var CmdDumpState = cli.Command{
 	Action:  dumpState,
 	Name:    "dump",
@@ -36,7 +36,7 @@ var CmdDumpState = cli.Command{
 		- Balance
 		- Nonce
 		- Code (separate storage slot is used to store code data)
-		- Contract Storage`,
+		- Address Storage`,
 	ArgsUsage: "<root> <input-db> <input-db-name> <input-db-type> <workers>",
 	Flags: []cli.Flag{
 		&utils.OperaDbFlag,

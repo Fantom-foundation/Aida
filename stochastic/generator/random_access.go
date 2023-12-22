@@ -9,10 +9,10 @@ import (
 	"github.com/Fantom-foundation/Aida/stochastic/statistics"
 )
 
-// minRandomAccessSize must be substantially larger than statistics.QueueLen
+// MinRandomAccessSize must be substantially larger than statistics.QueueLen
 // (Otherwise sampling for arguments with class RandomValueID may
 // take a very long time and would slow down the simulation.)
-const minRandomAccessSize = 10 * statistics.QueueLen
+const MinRandomAccessSize = 10 * statistics.QueueLen
 
 // RandomAccess data structure for producing random index accesses.
 type RandomAccess struct {
@@ -36,7 +36,7 @@ type RandomAccess struct {
 
 // NewAccess creates a new access index.
 func NewRandomAccess(rg *rand.Rand, numElem int64, lambda float64, qpdf []float64) *RandomAccess {
-	if numElem < minRandomAccessSize {
+	if numElem < MinRandomAccessSize {
 		return nil
 	}
 
@@ -120,7 +120,7 @@ func (a *RandomAccess) DeleteIndex(v int64) error {
 
 	// reduce cardinality by one
 	a.numElem--
-	if a.numElem < minRandomAccessSize {
+	if a.numElem < MinRandomAccessSize {
 		return fmt.Errorf("DeleteIndex: cardinality of set too low")
 	}
 

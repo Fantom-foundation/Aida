@@ -15,10 +15,10 @@ func TestDeterministicNextState(t *testing.T) {
 	rg := rand.New(rand.NewSource(999))
 
 	var A = [][]float64{{0.0, 1.0}, {1.0, 0.0}}
-	if nextState(rg, A, 0) != 1 {
+	if NextState(rg, A, 0) != 1 {
 		t.Fatalf("Illegal state transition (row 0)")
 	}
-	if nextState(rg, A, 1) != 0 {
+	if NextState(rg, A, 1) != 0 {
 		t.Fatalf("Illegal state transition (row 1)")
 	}
 }
@@ -33,13 +33,13 @@ func TestDeterministicNextState2(t *testing.T) {
 		{0.0, 0.0, 1.0},
 		{1.0, 0.0, 0.0},
 	}
-	if nextState(rg, A, 0) != 1 {
+	if NextState(rg, A, 0) != 1 {
 		t.Fatalf("Illegal state transition (row 0)")
 	}
-	if nextState(rg, A, 1) != 2 {
+	if NextState(rg, A, 1) != 2 {
 		t.Fatalf("Illegal state transition (row 1)")
 	}
-	if nextState(rg, A, 2) != 0 {
+	if NextState(rg, A, 2) != 0 {
 		t.Fatalf("Illegal state transition (row 1)")
 	}
 }
@@ -51,10 +51,10 @@ func TestNextStateFail(t *testing.T) {
 	rg := rand.New(rand.NewSource(999))
 
 	var A = [][]float64{{0.0, 0.0}, {math.NaN(), 0.0}}
-	if nextState(rg, A, 0) != -1 {
+	if NextState(rg, A, 0) != -1 {
 		t.Fatalf("Could not capture faulty stochastic matrix")
 	}
-	if nextState(rg, A, 1) != -1 {
+	if NextState(rg, A, 1) != -1 {
 		t.Fatalf("Could not capture faulty stochastic matrix")
 	}
 }
@@ -78,7 +78,7 @@ func checkMarkovChain(A [][]float64, numSteps int) error {
 	state := 0
 	for steps := 0; steps < numSteps; steps++ {
 		oldState := state
-		state = nextState(rg, A, state)
+		state = NextState(rg, A, state)
 		if state != -1 {
 			counts[state]++
 		} else {

@@ -3,6 +3,7 @@ package executor
 import (
 	"errors"
 	"fmt"
+	"math/big"
 
 	"github.com/Fantom-foundation/Aida/state"
 	substate "github.com/Fantom-foundation/Substate"
@@ -42,6 +43,12 @@ func Lt(limit float64) gomock.Matcher {
 // Gt matches every value greater than the given limit.
 func Gt(limit float64) gomock.Matcher {
 	return gt{limit}
+}
+
+// WithBigIntOfAnySize any size of big.Int. This is used for stochastic
+// testing, where we cannot concretely determine the value
+func WithBigIntOfAnySize() gomock.Matcher {
+	return withBigIntOfAnySize{}
 }
 
 // ----------------------------------------------------------------------------
@@ -145,4 +152,15 @@ func (m gt) Matches(value any) bool {
 
 func (m gt) String() string {
 	return fmt.Sprintf("greater than %v", m.limit)
+}
+
+type withBigIntOfAnySize struct{}
+
+func (m withBigIntOfAnySize) Matches(value any) bool {
+	_, ok := value.(*big.Int)
+	return ok
+}
+
+func (m withBigIntOfAnySize) String() string {
+	return fmt.Sprintf("must be big.Int")
 }
