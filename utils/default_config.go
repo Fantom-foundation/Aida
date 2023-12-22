@@ -1,6 +1,9 @@
 package utils
 
 import (
+	"fmt"
+	"reflect"
+
 	"github.com/Fantom-foundation/Aida/cmd/util-db/flags"
 	"github.com/Fantom-foundation/Aida/logger"
 	substate "github.com/Fantom-foundation/Substate"
@@ -8,160 +11,184 @@ import (
 )
 
 // createConfigFromFlags returns Config instance with user specified values or the default ones
-func createConfigFromFlags(ctx *cli.Context) *Config {
+func createConfigFromFlags(ctx *cli.Context) (*Config, map[string]bool, error) {
 	cfg := &Config{
 		AppName:     ctx.App.HelpName,
 		CommandName: ctx.Command.Name,
-
-		AidaDb:                 getFlagValue(ctx, AidaDbFlag).(string),
-		ArchiveMaxQueryAge:     getFlagValue(ctx, ArchiveMaxQueryAgeFlag).(int),
-		ArchiveMode:            getFlagValue(ctx, ArchiveModeFlag).(bool),
-		ArchiveQueryRate:       getFlagValue(ctx, ArchiveQueryRateFlag).(int),
-		ArchiveVariant:         getFlagValue(ctx, ArchiveVariantFlag).(string),
-		BalanceRange:           getFlagValue(ctx, BalanceRangeFlag).(int64),
-		BasicBlockProfiling:    getFlagValue(ctx, BasicBlockProfilingFlag).(bool),
-		BlockLength:            getFlagValue(ctx, BlockLengthFlag).(uint64),
-		CPUProfile:             getFlagValue(ctx, CpuProfileFlag).(string),
-		CPUProfilePerInterval:  getFlagValue(ctx, CpuProfilePerIntervalFlag).(bool),
-		Cache:                  getFlagValue(ctx, CacheFlag).(int),
-		CarmenSchema:           getFlagValue(ctx, CarmenSchemaFlag).(int),
-		ChainID:                ChainID(getFlagValue(ctx, ChainIDFlag).(int)),
-		ChannelBufferSize:      getFlagValue(ctx, ChannelBufferSizeFlag).(int),
-		CompactDb:              getFlagValue(ctx, CompactDbFlag).(bool),
-		ContinueOnFailure:      getFlagValue(ctx, ContinueOnFailureFlag).(bool),
-		ContractNumber:         getFlagValue(ctx, ContractNumberFlag).(int64),
-		DbComponent:            getFlagValue(ctx, DbComponentFlag).(string),
-		DbImpl:                 getFlagValue(ctx, StateDbImplementationFlag).(string),
-		DbLogging:              getFlagValue(ctx, StateDbLoggingFlag).(string),
-		DbTmp:                  getFlagValue(ctx, DbTmpFlag).(string),
-		DbVariant:              getFlagValue(ctx, StateDbVariantFlag).(string),
-		Debug:                  getFlagValue(ctx, TraceDebugFlag).(bool),
-		DebugFrom:              getFlagValue(ctx, DebugFromFlag).(uint64),
-		DeleteSourceDbs:        getFlagValue(ctx, DeleteSourceDbsFlag).(bool),
-		DeletionDb:             getFlagValue(ctx, DeletionDbFlag).(string),
-		DiagnosticServer:       getFlagValue(ctx, DiagnosticServerFlag).(int64),
-		ErrorLogging:           getFlagValue(ctx, ErrorLoggingFlag).(string),
-		Genesis:                getFlagValue(ctx, GenesisFlag).(string),
-		IncludeStorage:         getFlagValue(ctx, IncludeStorageFlag).(bool),
-		KeepDb:                 getFlagValue(ctx, KeepDbFlag).(bool),
-		KeysNumber:             getFlagValue(ctx, KeysNumberFlag).(int64),
-		LogLevel:               getFlagValue(ctx, logger.LogLevelFlag).(string),
-		MaxNumErrors:           getFlagValue(ctx, MaxNumErrorsFlag).(int),
-		MaxNumTransactions:     getFlagValue(ctx, MaxNumTransactionsFlag).(int),
-		MemoryBreakdown:        getFlagValue(ctx, MemoryBreakdownFlag).(bool),
-		MemoryProfile:          getFlagValue(ctx, MemoryProfileFlag).(string),
-		MicroProfiling:         getFlagValue(ctx, MicroProfilingFlag).(bool),
-		NoHeartbeatLogging:     getFlagValue(ctx, NoHeartbeatLoggingFlag).(bool),
-		NonceRange:             getFlagValue(ctx, NonceRangeFlag).(int),
-		OnlySuccessful:         getFlagValue(ctx, OnlySuccessfulFlag).(bool),
-		OperaBinary:            getFlagValue(ctx, OperaBinaryFlag).(string),
-		OperaDb:                getFlagValue(ctx, OperaDbFlag).(string),
-		Output:                 getFlagValue(ctx, OutputFlag).(string),
-		PrimeRandom:            getFlagValue(ctx, RandomizePrimingFlag).(bool),
-		PrimeThreshold:         getFlagValue(ctx, PrimeThresholdFlag).(int),
-		Profile:                getFlagValue(ctx, ProfileFlag).(bool),
-		ProfileBlocks:          getFlagValue(ctx, ProfileBlocksFlag).(bool),
-		ProfileDB:              getFlagValue(ctx, ProfileDBFlag).(string),
-		ProfileDepth:           getFlagValue(ctx, ProfileDepthFlag).(int),
-		ProfileEVMCall:         getFlagValue(ctx, ProfileEVMCallFlag).(bool),
-		ProfileFile:            getFlagValue(ctx, ProfileFileFlag).(string),
-		ProfileInterval:        getFlagValue(ctx, ProfileIntervalFlag).(uint64),
-		ProfileSqlite3:         getFlagValue(ctx, ProfileSqlite3Flag).(string),
-		ProfilingDbName:        getFlagValue(ctx, ProfilingDbNameFlag).(string),
-		RandomSeed:             getFlagValue(ctx, RandomSeedFlag).(int64),
-		RpcRecordingFile:       getFlagValue(ctx, RpcRecordingFileFlag).(string),
-		ShadowDb:               getFlagValue(ctx, ShadowDb).(bool),
-		ShadowImpl:             getFlagValue(ctx, ShadowDbImplementationFlag).(string),
-		ShadowVariant:          getFlagValue(ctx, ShadowDbVariantFlag).(string),
-		SkipMetadata:           getFlagValue(ctx, flags.SkipMetadata).(bool),
-		SkipPriming:            getFlagValue(ctx, SkipPrimingFlag).(bool),
-		SkipStateHashScrapping: getFlagValue(ctx, SkipStateHashScrappingFlag).(bool),
-		SnapshotDepth:          getFlagValue(ctx, SnapshotDepthFlag).(int),
-		SourceTableName:        getFlagValue(ctx, SourceTableNameFlag).(string),
-		SrcDbReadonly:          false,
-		StateDbSrc:             getFlagValue(ctx, StateDbSrcFlag).(string),
-		StateValidationMode:    EqualityCheck,
-		SubstateDb:             getFlagValue(ctx, substate.SubstateDbFlag).(string),
-		SyncPeriodLength:       getFlagValue(ctx, SyncPeriodLengthFlag).(uint64),
-		TargetBlock:            getFlagValue(ctx, TargetBlockFlag).(uint64),
-		TargetDb:               getFlagValue(ctx, TargetDbFlag).(string),
-		TargetEpoch:            getFlagValue(ctx, TargetEpochFlag).(uint64),
-		Trace:                  getFlagValue(ctx, TraceFlag).(bool),
-		TraceDirectory:         getFlagValue(ctx, TraceDirectoryFlag).(string),
-		TraceFile:              getFlagValue(ctx, TraceFileFlag).(string),
-		TrackProgress:          getFlagValue(ctx, TrackProgressFlag).(bool),
-		TransactionLength:      getFlagValue(ctx, TransactionLengthFlag).(uint64),
-		TrieRootHash:           getFlagValue(ctx, TrieRootHashFlag).(string),
-		UpdateBufferSize:       getFlagValue(ctx, UpdateBufferSizeFlag).(uint64),
-		UpdateDb:               getFlagValue(ctx, UpdateDbFlag).(string),
-		UpdateOnFailure:        getFlagValue(ctx, UpdateOnFailure).(bool),
-		UpdateType:             getFlagValue(ctx, UpdateTypeFlag).(string),
-		Validate:               getFlagValue(ctx, ValidateFlag).(bool),
-		ValidateStateHashes:    getFlagValue(ctx, ValidateStateHashesFlag).(bool),
-		ValidateTxState:        getFlagValue(ctx, ValidateTxStateFlag).(bool),
-		ValuesNumber:           getFlagValue(ctx, ValuesNumberFlag).(int64),
-		VmImpl:                 getFlagValue(ctx, VmImplementation).(string),
-		Workers:                getFlagValue(ctx, substate.WorkersFlag).(int),
-		WorldStateDb:           getFlagValue(ctx, WorldStateFlag).(string),
 	}
 
-	return cfg
+	// string of this map has to exactly match the name of the field in Config struct
+	cfgFlags := map[string]interface{}{
+		"AidaDb":                 AidaDbFlag,
+		"ArchiveMaxQueryAge":     ArchiveMaxQueryAgeFlag,
+		"ArchiveMode":            ArchiveModeFlag,
+		"ArchiveQueryRate":       ArchiveQueryRateFlag,
+		"ArchiveVariant":         ArchiveVariantFlag,
+		"BalanceRange":           BalanceRangeFlag,
+		"BasicBlockProfiling":    BasicBlockProfilingFlag,
+		"BlockLength":            BlockLengthFlag,
+		"Cache":                  CacheFlag,
+		"CarmenSchema":           CarmenSchemaFlag,
+		"ChainID":                ChainIDFlag,
+		"ChannelBufferSize":      ChannelBufferSizeFlag,
+		"CompactDb":              CompactDbFlag,
+		"ContinueOnFailure":      ContinueOnFailureFlag,
+		"ContractNumber":         ContractNumberFlag,
+		"CPUProfile":             CpuProfileFlag,
+		"CPUProfilePerInterval":  CpuProfilePerIntervalFlag,
+		"DbComponent":            DbComponentFlag,
+		"DbImpl":                 StateDbImplementationFlag,
+		"DbLogging":              StateDbLoggingFlag,
+		"DbTmp":                  DbTmpFlag,
+		"DbVariant":              StateDbVariantFlag,
+		"Debug":                  TraceDebugFlag,
+		"DebugFrom":              DebugFromFlag,
+		"DeleteSourceDbs":        DeleteSourceDbsFlag,
+		"DeletionDb":             DeletionDbFlag,
+		"DiagnosticServer":       DiagnosticServerFlag,
+		"ErrorLogging":           ErrorLoggingFlag,
+		"Genesis":                GenesisFlag,
+		"IncludeStorage":         IncludeStorageFlag,
+		"KeepDb":                 KeepDbFlag,
+		"KeysNumber":             KeysNumberFlag,
+		"LogLevel":               logger.LogLevelFlag,
+		"MaxNumErrors":           MaxNumErrorsFlag,
+		"MaxNumTransactions":     MaxNumTransactionsFlag,
+		"MemoryBreakdown":        MemoryBreakdownFlag,
+		"MemoryProfile":          MemoryProfileFlag,
+		"MicroProfiling":         MicroProfilingFlag,
+		"NoHeartbeatLogging":     NoHeartbeatLoggingFlag,
+		"NonceRange":             NonceRangeFlag,
+		"OnlySuccessful":         OnlySuccessfulFlag,
+		"OperaBinary":            OperaBinaryFlag,
+		"OperaDb":                OperaDbFlag,
+		"Output":                 OutputFlag,
+		"PrimeRandom":            RandomizePrimingFlag,
+		"PrimeThreshold":         PrimeThresholdFlag,
+		"Profile":                ProfileFlag,
+		"ProfileBlocks":          ProfileBlocksFlag,
+		"ProfileDB":              ProfileDBFlag,
+		"ProfileDepth":           ProfileDepthFlag,
+		"ProfileEVMCall":         ProfileEVMCallFlag,
+		"ProfileFile":            ProfileFileFlag,
+		"ProfileInterval":        ProfileIntervalFlag,
+		"ProfileSqlite3":         ProfileSqlite3Flag,
+		"ProfilingDbName":        ProfilingDbNameFlag,
+		"RandomSeed":             RandomSeedFlag,
+		"RpcRecordingFile":       RpcRecordingFileFlag,
+		"ShadowDb":               ShadowDb,
+		"ShadowImpl":             ShadowDbImplementationFlag,
+		"ShadowVariant":          ShadowDbVariantFlag,
+		"SkipMetadata":           flags.SkipMetadata,
+		"SkipPriming":            SkipPrimingFlag,
+		"SkipStateHashScrapping": SkipStateHashScrappingFlag,
+		"SnapshotDepth":          SnapshotDepthFlag,
+		"SourceTableName":        SourceTableNameFlag,
+		"StateDbSrc":             StateDbSrcFlag,
+		"SubstateDb":             substate.SubstateDbFlag,
+		"SyncPeriodLength":       SyncPeriodLengthFlag,
+		"TargetBlock":            TargetBlockFlag,
+		"TargetDb":               TargetDbFlag,
+		"TargetEpoch":            TargetEpochFlag,
+		"Trace":                  TraceFlag,
+		"TraceDirectory":         TraceDirectoryFlag,
+		"TraceFile":              TraceFileFlag,
+		"TrackProgress":          TrackProgressFlag,
+		"TransactionLength":      TransactionLengthFlag,
+		"TrieRootHash":           TrieRootHashFlag,
+		"UpdateBufferSize":       UpdateBufferSizeFlag,
+		"UpdateDb":               UpdateDbFlag,
+		"UpdateOnFailure":        UpdateOnFailure,
+		"UpdateType":             UpdateTypeFlag,
+		"Validate":               ValidateFlag,
+		"ValidateStateHashes":    ValidateStateHashesFlag,
+		"ValidateTxState":        ValidateTxStateFlag,
+		"ValuesNumber":           ValuesNumberFlag,
+		"VmImpl":                 VmImplementation,
+		"Workers":                substate.WorkersFlag,
+		"WorldStateDb":           WorldStateFlag,
+	}
+
+	cfgValue := reflect.ValueOf(cfg).Elem()
+
+	specifiedFlags := make(map[string]bool)
+
+	for cfgName, flag := range cfgFlags {
+		value, isSpecified, flagName := getFlagValue(ctx, flag)
+		if isSpecified {
+			specifiedFlags[flagName] = true
+		}
+
+		field := cfgValue.FieldByName(cfgName)
+		if !field.IsValid() {
+			return nil, nil, fmt.Errorf("field %s is not valid", flagName)
+		}
+		if !field.CanSet() {
+			return nil, nil, fmt.Errorf("field %s cannot be set", flagName)
+		}
+
+		field.Set(reflect.ValueOf(value))
+	}
+
+	return cfg, specifiedFlags, nil
 }
 
 // getFlagValue returns value specified by user if flag is present in cli context, otherwise return default flag value
-func getFlagValue(ctx *cli.Context, flag interface{}) interface{} {
+func getFlagValue(ctx *cli.Context, flag interface{}) (interface{}, bool, string) {
 	cmdFlags := ctx.Command.Flags
 	for _, cmdFlag := range cmdFlags {
 		switch f := flag.(type) {
 		case cli.IntFlag:
 			if cmdFlag.Names()[0] == f.Name {
-				return ctx.Int(f.Name)
+				if cmdFlag.Names()[0] == ChainIDFlag.Name {
+					return ChainID(ctx.Int(f.Name)), true, f.Name
+				}
+				return ctx.Int(f.Name), true, f.Name
 			}
 
 		case cli.Uint64Flag:
 			if cmdFlag.Names()[0] == UpdateBufferSizeFlag.Name {
-				return ctx.Uint64(f.Name) * 1_000_000
+				return ctx.Uint64(f.Name) * 1_000_000, true, f.Name
 			} else if cmdFlag.Names()[0] == f.Name {
-				return ctx.Uint64(f.Name)
+				return ctx.Uint64(f.Name), true, f.Name
 			}
 
 		case cli.Int64Flag:
 			if cmdFlag.Names()[0] == f.Name {
-				return ctx.Int64(f.Name)
+				return ctx.Int64(f.Name), true, f.Name
 			}
 
 		case cli.StringFlag:
 			if cmdFlag.Names()[0] == f.Name {
-				return ctx.String(f.Name)
+				return ctx.String(f.Name), true, f.Name
 			}
 
 		case cli.PathFlag:
 			if cmdFlag.Names()[0] == f.Name {
-				return ctx.Path(f.Name)
+				return ctx.Path(f.Name), true, f.Name
 			}
 
 		case cli.BoolFlag:
 			if cmdFlag.Names()[0] == f.Name {
-				return ctx.Bool(f.Name)
+				return ctx.Bool(f.Name), true, f.Name
 			}
 		}
 	}
 
-	// If flag not found, return the default value of the flag
+	// If flag not found, return the default value of the flag and false
 	switch f := flag.(type) {
 	case cli.IntFlag:
-		return f.Value
+		return f.Value, false, f.Name
 	case cli.Uint64Flag:
-		return f.Value
+		return f.Value, false, f.Name
 	case cli.Int64Flag:
-		return f.Value
+		return f.Value, false, f.Name
 	case cli.StringFlag:
-		return f.Value
+		return f.Value, false, f.Name
 	case cli.PathFlag:
-		return f.Value
+		return f.Value, false, f.Name
 	case cli.BoolFlag:
-		return f.Value
+		return f.Value, false, f.Name
 	}
-
-	return nil
+	return nil, false, ""
 }
