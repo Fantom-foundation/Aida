@@ -51,6 +51,12 @@ func TestChainConduit_IsFinalise(t *testing.T) {
 		{
 			isEthereum:  true,
 			chainConfig: params.MainnetChainConfig,
+			block:       big.NewInt(2_674_999),
+			want:        false,
+		},
+		{
+			isEthereum:  true,
+			chainConfig: params.MainnetChainConfig,
 			block:       big.NewInt(2_675_000),
 			want:        false,
 		},
@@ -92,6 +98,12 @@ func TestChainConduit_DeleteEmptyObjects(t *testing.T) {
 		{
 			isEthereum:  true,
 			chainConfig: params.MainnetChainConfig,
+			block:       big.NewInt(2_674_999),
+			want:        false,
+		},
+		{
+			isEthereum:  true,
+			chainConfig: params.MainnetChainConfig,
 			block:       big.NewInt(2_675_000),
 			want:        true,
 		},
@@ -105,12 +117,6 @@ func TestChainConduit_DeleteEmptyObjects(t *testing.T) {
 			isEthereum:  true,
 			chainConfig: params.MainnetChainConfig,
 			block:       big.NewInt(4_370_000),
-			want:        true,
-		},
-		{
-			isEthereum:  true,
-			chainConfig: params.MainnetChainConfig,
-			block:       big.NewInt(4_370_001),
 			want:        true,
 		},
 		{

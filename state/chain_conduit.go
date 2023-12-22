@@ -31,6 +31,8 @@ func (c *ChainConduit) DeleteEmptyObjects(block *big.Int) bool {
 	if !c.isEthereum {
 		return true
 	} else {
-		return c.chainConfig.IsByzantium(block) || c.chainConfig.IsEIP158(block)
+		bz := c.chainConfig.IsByzantium(block)
+		ei := c.chainConfig.IsEIP158(block)
+		return bz || ei
 	}
 }
