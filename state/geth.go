@@ -160,7 +160,7 @@ func (s *gethStateDB) EndTransaction() {
 
 func (s *gethStateDB) BeginBlock(number uint64) {
 	s.openStateDB()
-	s.block.SetUint64(number)
+	s.block = new(big.Int).SetUint64(number)
 }
 
 func (s *gethStateDB) EndBlock() {
