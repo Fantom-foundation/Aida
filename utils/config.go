@@ -654,7 +654,6 @@ func (cc *configContext) reportNewConfig() {
 		log.Infof("Register Run to: %v", cfg.RegisterRun)
 	}
 
-
 	if cfg.ShadowDb {
 		log.Warning("DB shadowing enabled, reducing Tx throughput and increasing memory and storage usage")
 	}
