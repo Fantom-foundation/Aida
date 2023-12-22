@@ -1,6 +1,8 @@
 package register
 
 import (
+	"fmt"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -53,9 +55,13 @@ func MakeRegisterProgress(cfg *utils.Config, reportFrequency int) executor.Exten
 		log:      logger.NewLogger(cfg.LogLevel, "Register-Progress-Logger"),
 		interval: utils.NewInterval(cfg.First, cfg.Last, uint64(reportFrequency)),
 		ps:       utils.NewPrinters(),
+		id:       MakeRunIdentity(time.Now().Unix(), cfg),
 	}
 
-	p2db, err := utils.NewPrinterToSqlite3(rp.sqlite3(cfg.RegisterRun))
+	connection := filepath.Join(cfg.RegisterRun, fmt.Sprintf("%s.db", rp.GetId()))
+	rp.log.Noticef(connection)
+
+	p2db, err := utils.NewPrinterToSqlite3(rp.sqlite3(connection))
 	if err != nil {
 		rp.log.Debugf("Unable to register at %s", cfg.RegisterRun)
 	} else {
@@ -89,6 +95,8 @@ type registerProgress struct {
 	totalGas     uint64
 	directory    string
 	memory       *state.MemoryUsage
+
+	id *RunIdentity
 }
 
 func (rp *registerProgress) PreRun(_ executor.State[*substate.Substate], ctx *executor.Context) error {
@@ -143,6 +151,11 @@ func (rp *registerProgress) Reset() {
 	rp.lastUpdate = time.Now()
 	rp.txCount = 0
 	rp.gas = 0
+}
+
+// GetId returns a unique id based on the run metadata.
+func (rp *registerProgress) GetId() string {
+	return rp.id.GetId()
 }
 
 func (rp *registerProgress) sqlite3(conn string) (string, string, string, func() [][]any) {

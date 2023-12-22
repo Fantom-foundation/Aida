@@ -1,6 +1,7 @@
 package register
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -53,10 +54,11 @@ func TestRegisterProgress_DoNothingIfDisabled(t *testing.T) {
 
 func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 	var (
-		dummyStateDbPath string = filepath.Join(t.TempDir(), "dummy.txt")
-		connection       string = filepath.Join(t.TempDir(), "tmp.db")
+		tmpDir           string = t.TempDir()
+		dummyStateDbPath string = filepath.Join(tmpDir, "dummy.txt")
+		dbName           string = "tmp"
+		connection       string = filepath.Join(tmpDir, fmt.Sprintf("%s.db", dbName))
 	)
-
 	// Check if path to state db is writable
 	if err := os.WriteFile(dummyStateDbPath, []byte("hello world"), 0x600); err != nil {
 		t.Fatalf("failed to prepare disk content for %s.", dummyStateDbPath)
@@ -82,17 +84,19 @@ func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 	stateDb := state.NewMockStateDB(ctrl)
 
 	cfg := &utils.Config{}
-	cfg.RegisterRun = connection // enabled here
+	cfg.RegisterRun = tmpDir // enabled here
+	cfg.OverwriteRunId = dbName
 	cfg.First = 5
 	cfg.Last = 25
 	interval := 10
 	// expects [5-9]P[10-19]P[20-24]P, where P is print
 
-	itv := utils.NewInterval(cfg.First, cfg.Last, uint64(interval))
 	ext := MakeRegisterProgress(cfg, interval)
 	if _, err := ext.(extension.NilExtension[*substate.Substate]); err {
 		t.Errorf("RegisterProgress is disabled even though enabled in configuration.")
 	}
+
+	itv := utils.NewInterval(cfg.First, cfg.Last, uint64(interval))
 
 	ctx := &executor.Context{State: stateDb, StateDbPath: dummyStateDbPath}
 
