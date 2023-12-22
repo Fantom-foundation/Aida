@@ -2,14 +2,14 @@ package register
 
 import (
 	"os"
-	"testing"
 	"path/filepath"
+	"testing"
 
-	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/utils"
+	substate "github.com/Fantom-foundation/Substate"
 
 	//db
 	"github.com/jmoiron/sqlx"
@@ -27,8 +27,8 @@ const (
 )
 
 type query struct {
-	Start  int `db:"start"`
-	End    int `db:"end"`
+	Start int `db:"start"`
+	End   int `db:"end"`
 }
 
 type statsResponse struct {
@@ -54,7 +54,7 @@ func TestRegisterProgress_DoNothingIfDisabled(t *testing.T) {
 func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 	var (
 		dummyStateDbPath string = filepath.Join(t.TempDir(), "dummy.txt")
-		connection string = filepath.Join(t.TempDir(), "tmp.db")
+		connection       string = filepath.Join(t.TempDir(), "tmp.db")
 	)
 
 	// Check if path to state db is writable
@@ -77,7 +77,7 @@ func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to prepare statement using db at %s. \n%s", connection, err)
 	}
-	
+
 	ctrl := gomock.NewController(t)
 	stateDb := state.NewMockStateDB(ctrl)
 
@@ -87,7 +87,7 @@ func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 	cfg.Last = 25
 	interval := 10
 	// expects [5-9]P[10-19]P[20-24]P, where P is print
-	
+
 	itv := utils.NewInterval(cfg.First, cfg.Last, uint64(interval))
 	ext := MakeRegisterProgress(cfg, interval)
 	if _, err := ext.(extension.NilExtension[*substate.Substate]); err {
@@ -96,9 +96,9 @@ func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 
 	ctx := &executor.Context{State: stateDb, StateDbPath: dummyStateDbPath}
 
-	s := &substate.Substate {
+	s := &substate.Substate{
 		Result: &substate.SubstateResult{
-			Status: 0,
+			Status:  0,
 			GasUsed: 100,
 		},
 	}
@@ -114,7 +114,7 @@ func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 
 	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
 
-	for b := int(cfg.First) ; b < int(cfg.Last); b++ {
+	for b := int(cfg.First); b < int(cfg.Last); b++ {
 		ext.PreBlock(executor.State[*substate.Substate]{Block: b, Data: s}, ctx)
 
 		// check if a print happens here
@@ -134,7 +134,7 @@ func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 	}
 
 	ext.PostRun(executor.State[*substate.Substate]{}, ctx, nil)
-	
+
 	// check if a print happens here
 	expectedRowCount++
 	stats := []statsResponse{}
