@@ -51,13 +51,19 @@ func TestChainConduit_IsFinalise(t *testing.T) {
 		{
 			isEthereum:  true,
 			chainConfig: params.MainnetChainConfig,
-			block:       big.NewInt(1),
+			block:       big.NewInt(2_675_000),
 			want:        false,
 		},
 		{
 			isEthereum:  true,
 			chainConfig: params.MainnetChainConfig,
-			block:       big.NewInt(2),
+			block:       big.NewInt(4_369_999),
+			want:        false,
+		},
+		{
+			isEthereum:  true,
+			chainConfig: params.MainnetChainConfig,
+			block:       big.NewInt(4_370_000),
 			want:        true,
 		},
 		{
@@ -71,7 +77,7 @@ func TestChainConduit_IsFinalise(t *testing.T) {
 		c := NewChainConduit(test.isEthereum, test.chainConfig)
 		got := c.IsFinalise(test.block)
 		if got != test.want {
-			t.Errorf("ChainConduit.IsFinalise(%v, %v) = %v, want %v", test.isEthereum, test.chainConfig, test.block, test.want)
+			t.Errorf("ChainConduit.IsFinalise(%v)[%v, %v] = %v, want %v", test.block, test.isEthereum, test.chainConfig, got, test.want)
 		}
 	}
 }
@@ -86,13 +92,25 @@ func TestChainConduit_DeleteEmptyObjects(t *testing.T) {
 		{
 			isEthereum:  true,
 			chainConfig: params.MainnetChainConfig,
-			block:       big.NewInt(1),
-			want:        false,
+			block:       big.NewInt(2_675_000),
+			want:        true,
 		},
 		{
 			isEthereum:  true,
 			chainConfig: params.MainnetChainConfig,
-			block:       big.NewInt(2),
+			block:       big.NewInt(4_369_999),
+			want:        true,
+		},
+		{
+			isEthereum:  true,
+			chainConfig: params.MainnetChainConfig,
+			block:       big.NewInt(4_370_000),
+			want:        true,
+		},
+		{
+			isEthereum:  true,
+			chainConfig: params.MainnetChainConfig,
+			block:       big.NewInt(4_370_001),
 			want:        true,
 		},
 		{
@@ -106,7 +124,7 @@ func TestChainConduit_DeleteEmptyObjects(t *testing.T) {
 		c := NewChainConduit(test.isEthereum, test.chainConfig)
 		got := c.DeleteEmptyObjects(test.block)
 		if got != test.want {
-			t.Errorf("ChainConduit.DeleteEmptyObjects(%v, %v) = %v, want %v", test.isEthereum, test.chainConfig, test.block, test.want)
+			t.Errorf("ChainConduit.DeleteEmptyObjects(%v)[%v, %v] = %v, want %v", test.block, test.isEthereum, test.chainConfig, got, test.want)
 		}
 	}
 }
