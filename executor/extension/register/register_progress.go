@@ -13,9 +13,9 @@ import (
 )
 
 const (
-	RegisterProgress_DefaultReportFrequency = 100_000 // in blocks
+	RegisterProgressDefaultReportFrequency = 100_000 // in blocks
 
-	RegisterProgress_CreateTableIfNotExist = `
+	RegisterProgressCreateTableIfNotExist = `
 		CREATE TABLE IF NOT EXISTS stats (
   			start INTEGER NOT NULL,
 	  		end INTEGER NOT NULL,
@@ -27,7 +27,7 @@ const (
   			overall_gas_rate float
 		)
 	`
-	RegisterProgress_InsertOrReplace = `
+	RegisterProgressInsertOrReplace = `
 		INSERT or REPLACE INTO stats (
 			start, end, memory, disk, tx_rate, gas_rate, overall_tx_rate, overall_gas_rate
 		) VALUES (
@@ -45,7 +45,7 @@ func MakeRegisterProgress(cfg *utils.Config, reportFrequency int) executor.Exten
 	}
 
 	if reportFrequency == 0 {
-		reportFrequency = RegisterProgress_DefaultReportFrequency
+		reportFrequency = RegisterProgressDefaultReportFrequency
 	}
 
 	rp := &registerProgress{
@@ -146,7 +146,7 @@ func (rp *registerProgress) Reset() {
 }
 
 func (rp *registerProgress) sqlite3(conn string) (string, string, string, func() [][]any) {
-	return conn, RegisterProgress_CreateTableIfNotExist, RegisterProgress_InsertOrReplace,
+	return conn, RegisterProgressCreateTableIfNotExist, RegisterProgressInsertOrReplace,
 		func() [][]any {
 			values := [][]any{}
 
