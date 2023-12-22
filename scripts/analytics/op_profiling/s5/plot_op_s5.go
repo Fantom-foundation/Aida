@@ -145,18 +145,6 @@ func worker(id int, opCount int,
 		bc <- bucketMsg{q.bucket, count, time}
 
 		for id := 0; id < opCount; id++ {
-			if q.bucket == 0 {
-				fmt.Println(opMsg{
-					q.bucket,
-					id,
-					opNameByOpId[id],
-					countByOpId[id],
-					timeByOpId[id],
-					meanByOpId[id],
-					minByOpId[id],
-					maxByOpId[id],
-				})
-			}
 			if countByOpId[id] > 0 {
 				oc <- opMsg{
 					q.bucket,
@@ -284,15 +272,6 @@ func main() {
 				if m.count > 0 {
 					meanByBucketByOpId[m.opid][m.bucket] = timeByBucketByOpId[m.opid][m.bucket] / countByBucketByOpId[m.opid][m.bucket]
 				}
-
-				// Defect in DB
-				/*
-					if _, ok := opNameByOpId[m.opid]; !ok {
-						fmt.Println(m)
-						opIds = append(opIds, m.opid)
-						opNameByOpId[m.opid] = m.opname
-					}
-				*/
 				ol.Unlock()
 			}
 		}()
@@ -412,7 +391,10 @@ func main() {
 			),
 			"Total Op Count / 100,000 Blocks", "",
 		),
-		stackedBar("Percentage", buckets, countByBucket, opIds, countByOpId, countByBucketByOpId, opNameByOpId),
+		BarWithTitle(
+			stackedBar("Percentage", buckets, countByBucket, opIds, countByOpId, countByBucketByOpId, opNameByOpId),
+			"Percentage of Time Spent", "",
+		),
 	).Render(writer)
 
 	// total operation processing time
@@ -437,7 +419,10 @@ func main() {
 			),
 			"Total Op Runtime  / 100,000 Blocks", "",
 		),
-		stackedBar("Percentage", buckets, timeByBucket, opIds, timeByOpId, timeByBucketByOpId, opNameByOpId),
+		BarWithTitle(
+			stackedBar("Percentage", buckets, timeByBucket, opIds, timeByOpId, timeByBucketByOpId, opNameByOpId),
+			"Percentage of Time Spent", "",
+		),
 	).Render(writer)
 
 	// Glossary
@@ -577,7 +562,7 @@ func stackedBar(title string, buckets []int, byBucket map[int]float64, opIds []i
 		}),
 		charts.WithLegendOpts(opts.Legend{
 			Show:         true,
-			SelectedMode: "false",
+			SelectedMode: "single",
 			Orient:       "vertical",
 			X:            "right",
 			Y:            "center",
