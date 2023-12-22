@@ -24,7 +24,7 @@ const (
 	  		tx_rate float,
 			gas_rate float,
   			overall_tx_rate float,
-  			overall_gas_rate float,
+  			overall_gas_rate float
 		)
 	`
 	RegisterProgress_InsertOrReplace = `
@@ -56,7 +56,6 @@ func MakeRegisterProgress(cfg *utils.Config, reportFrequency int) executor.Exten
 	}
 
 	p2db, err := utils.NewPrinterToSqlite3(rp.sqlite3(cfg.RegisterRun))
-
 	if err != nil {
 		rp.log.Debugf("Unable to register at %s", cfg.RegisterRun)
 	} else {
@@ -165,7 +164,12 @@ func (rp *registerProgress) sqlite3(conn string) (string, string, string, func()
 			totalGas = rp.totalGas
 			rp.lock.Unlock()
 
-			disk, _ := utils.GetDirectorySize(rp.directory)
+			disk, err := utils.GetDirectorySize(rp.directory)
+			if err != nil {
+				rp.log.Errorf("Unable to get directory size from %s", rp.directory)
+				return [][]any{}
+			}
+
 			mem := rp.memory.UsedBytes
 
 			txRate := float64(txCount) / time.Since(rp.lastUpdate).Seconds()
