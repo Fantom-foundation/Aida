@@ -45,6 +45,6 @@ type temporaryOffTheChainStatePrepper struct {
 // PreTransaction creates new fresh StateDb
 func (temporaryOffTheChainStatePrepper) PreTransaction(state executor.State[*substate.Substate], ctx *executor.Context) error {
 	var err error
-	ctx.State, err = statedb.MakeOffTheChainStateDB(state.Data.InputAlloc)
+	ctx.State, err = statedb.MakeOffTheChainStateDB(state.Data.InputAlloc, uint64(state.Block))
 	return err
 }

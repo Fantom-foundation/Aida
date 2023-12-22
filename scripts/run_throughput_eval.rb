@@ -38,15 +38,15 @@ MODEs = [
 # Define the list of EVMs to be used. The cross-product of each EVM listed here
 # and storage solution configured below will be executed.
 EVMs = [
-  "geth",
+  #"geth",
   "lfvm",
-  "lfvm-si",
+  #"lfvm-si",
   "evmzero",
 ]
 
 # Define the storage solutions to be evaluted.
 DB_IMPLs = [
-#  "memory",  # < this is the substate-only option
+  "memory",  # < this is the substate-only option
 #  "geth",
   #  carmen is enabled if any of the variants is enabled
 ]
@@ -57,7 +57,7 @@ CARMEN_VARIANTs = [
   "go-file",
 #  "go-ldb",
 #  "cpp-memory",
-  "cpp-file",
+#  "cpp-file",
 #  "cpp-ldb",
 ]
 
@@ -66,27 +66,32 @@ CARMEN_VARIANTs = [
 CARMEN_SCHEMAs = [
 #    1,   # address and key indexed, no reincarnation numbers
 #    2,   # address indexed, keys not, no reincarnation numbers
-    3,   # address indexed, keys not, using reincarnation numbers
+#    3,   # address indexed, keys not, using reincarnation numbers
+#    4,   # MPT with SHA2 based hashing
+    5,   # Ethereum compatible MPT
 ]
 
 # If set to true, the evaluation will run in a loop continiously.
 ENDLESS = false
 
 # The start of the range of blocks to be evaluated.
-StartBlock = 0
+StartBlock = "zero"
 
 # The end of the range of blocks to be evaluated.
-EndBlock = 70000000
+EndBlock = "last"
 
 # An uper bound on the time spend on evaluating a single configuration before aborting it
 # and moving on to the next configuration.
-MaxDuration = "72h"
+MaxDuration = "96h"
 
 # The prefix to be used for CPU profile files collected.
 PROFILE_FILE_PREFIX="/tmp/aida_profile_#{DateTime.now.strftime("%Y-%m-%d_%H%M%S")}"
 
-# The directories containing the Aida DB.
+# The directory containing the Aida DB.
 AidaDb = "/var/data/aida-db"
+
+# The directory where to place temporary data.
+TempDir = "/tmp"
 
 # Optional extra flags to be passed to Aida.
 ExtraFlags = ""
@@ -112,6 +117,13 @@ def runAida (mode, evm, db, variant, schema, iteration)
     extraFlags = ExtraFlags
     if mode == "archive" then
         extraFlags += " --archive"
+        if schema == 5 then
+            extraFlags += " --archive-variant s5"
+        elsif schema == 4 then 
+            extraFlags += " --archive-variant s4"
+        else
+            extraFlags += " --archive-variant ldb"
+        end
     end
 
     if !schema then
@@ -121,11 +133,11 @@ def runAida (mode, evm, db, variant, schema, iteration)
     puts "Running #{mode} with #{evm} and #{db}/#{variant}/s#{schema} .."
     cmd = ""
     cmd += "timeout #{MaxDuration} "
-    cmd += "./build/aida-vm-sdb --aida-db #{AidaDb} "
+    cmd += "./build/aida-vm-sdb substate --aida-db #{AidaDb} "
     cmd += "--db-impl #{db} --db-variant \"#{variant}\" --carmen-schema \"#{schema}\" "
+    cmd += "--db-tmp #{TempDir} "
     cmd += "--vm-impl #{evm} "
     cmd += "--track-progress "
-    cmd += "--cpu-profile=#{PROFILE_FILE_PREFIX}_profile_#{mode}_#{evm}_#{db}_#{variant}_#{StartBlock}_#{EndBlock}_#{iteration}.dat "
     cmd += "#{extraFlags} "
     cmd += "#{StartBlock} #{EndBlock}"
 
@@ -144,15 +156,15 @@ def runAida (mode, evm, db, variant, schema, iteration)
     }
 
     res = []
-    pattern = /.*Track: block (\d+), memory (\d+), disk (\d+), interval_tx_rate (\d+.\d*), interval_gas_rate (\d+.\d*), overall_tx_rate (\d+.\d*), overall_gas_rate (\d+.\d*)/
-    out.scan(pattern) { |block,mem_usage,disk_usage,interval_tx_rate,interval_gas_rate,overall_tx_rate,overall_gas_rate| res.append([block,mem_usage,disk_usage,interval_tx_rate,interval_gas_rate,overall_tx_rate,overall_gas_rate]) }
+    pattern = /.*Track: block (\d+), memory (\d+), disk (\d+), interval_blk_rate (\d+.\d*), interval_tx_rate (\d+.\d*), interval_gas_rate (\d+.\d*), overall_blk_rate (\d+.\d*), overall_tx_rate (\d+.\d*), overall_gas_rate (\d+.\d*)/
+    out.scan(pattern) { |block,mem_usage,disk_usage,interval_blk_rate,interval_tx_rate,interval_gas_rate,overall_blk_rate,overall_tx_rate,overall_gas_rate| res.append([block,mem_usage,disk_usage,interval_blk_rate,interval_tx_rate,interval_gas_rate,overall_blk_rate,overall_tx_rate,overall_gas_rate]) }
     return res
 end
 
-$res = ["mode, vm, db, variant, schema, iteration, interval_end, mem_usage, disk_usage, interval_tx_rate, interval_gas_rate, overall_tx_rate, overall_gas_rate"]
+$res = ["mode, vm, db, variant, schema, iteration, interval_end, mem_usage, disk_usage, interval_blk_rate, interval_tx_rate, interval_gas_rate, overall_blk_rate, overall_tx_rate, overall_gas_rate"]
 def addResult (mode, vm, db, variant, schema, iteration, rates)
-    rates.each{|block,mem_usage,disk_usage,interval_tx_rate,interval_gas_rate,overall_tx_rate,overall_gas_rate| 
-        $res.append("#{mode}, #{vm}, #{db}, #{variant}, #{schema}, #{iteration}, #{block}, #{mem_usage}, #{disk_usage}, #{interval_tx_rate}, #{interval_gas_rate}, #{overall_tx_rate}, #{overall_gas_rate}")
+    rates.each{|block,mem_usage,disk_usage,interval_blk_rate,interval_tx_rate,interval_gas_rate,overall_blk_rate,overall_tx_rate,overall_gas_rate| 
+        $res.append("#{mode}, #{vm}, #{db}, #{variant}, #{schema}, #{iteration}, #{block}, #{mem_usage}, #{disk_usage}, #{interval_blk_rate}, #{interval_tx_rate}, #{interval_gas_rate}, #{overall_blk_rate}, #{overall_tx_rate}, #{overall_gas_rate}")
     }
     $res.each{ |l| puts "#{l}\n" }
 end
