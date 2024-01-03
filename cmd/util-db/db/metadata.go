@@ -185,6 +185,22 @@ func insertMetadata(ctx *cli.Context) error {
 		if err = md.SetDbHash(hash); err != nil {
 			return err
 		}
+	case substate.UpdatesetIntervalKey:
+		val, err = strconv.ParseUint(valArg, 10, 64)
+		if err != nil {
+			return fmt.Errorf("cannot parse uint %v; %v", valArg, err)
+		}
+		if err = md.SetUpdatesetInterval(val); err != nil {
+			return err
+		}
+	case substate.UpdatesetSizeKey:
+		val, err = strconv.ParseUint(valArg, 10, 64)
+		if err != nil {
+			return fmt.Errorf("cannot parse uint %v; %v", valArg, err)
+		}
+		if err = md.SetUpdatesetSize(val); err != nil {
+			return err
+		}
 	default:
 		return fmt.Errorf("incorrect keyArg: %v", keyArg)
 	}

@@ -14,7 +14,7 @@ import (
 
 const (
 	ProgressTrackerDefaultReportFrequency = 100_000 // in blocks
-	progressTrackerReportFormat           = "Track: block %d, memory %d, disk %d, interval_tx_rate %.2f, interval_gas_rate %.2f, overall_tx_rate %.2f, overall_gas_rate %.2f"
+	progressTrackerReportFormat           = "Track: block %d, memory %d, disk %d, interval_blk_rate %.2f, interval_tx_rate %.2f, interval_gas_rate %.2f, overall_blk_rate %.2f, overall_tx_rate %.2f, overall_gas_rate %.2f"
 )
 
 // MakeProgressTracker creates a progressTracker that depends on the
@@ -60,7 +60,7 @@ type processInfo struct {
 	gas             uint64
 }
 
-func (t *progressTracker) PreRun(_ executor.State[*substate.Substate], _ *executor.Context) error {
+func (t *progressTracker) PreRun(state executor.State[*substate.Substate], _ *executor.Context) error {
 	now := time.Now()
 	t.startOfRun = now
 	t.startOfLastInterval = now
@@ -78,8 +78,7 @@ func (t *progressTracker) PostTransaction(state executor.State[*substate.Substat
 	return nil
 }
 
-// PostBlock sends the state to the report goroutine.
-// We only care about total number of transactions we can do this here rather in PostTransaction.
+// PostBlock registers the completed block and may trigger the logging of an update.
 func (t *progressTracker) PostBlock(state executor.State[*substate.Substate], ctx *executor.Context) error {
 	boundary := state.Block - (state.Block % t.reportFrequency)
 
@@ -107,14 +106,21 @@ func (t *progressTracker) PostBlock(state executor.State[*substate.Substate], ct
 		memory = m.UsedBytes
 	}
 
+	intervalBlkRate := float64(t.reportFrequency) / interval.Seconds()
 	intervalTxRate := float64(info.numTransactions-t.lastIntervalInfo.numTransactions) / interval.Seconds()
 	intervalGasRate := float64(info.gas-t.lastIntervalInfo.gas) / interval.Seconds()
 	t.lastIntervalInfo = info
 
+	overallBlkRate := float64(state.Block-int(t.cfg.First)) / overall.Seconds()
 	overallTxRate := float64(info.numTransactions) / overall.Seconds()
 	overallGasRate := float64(info.gas) / overall.Seconds()
 
-	t.log.Noticef(progressTrackerReportFormat, boundary, memory, disk, intervalTxRate, intervalGasRate, overallTxRate, overallGasRate)
+	t.log.Noticef(
+		progressTrackerReportFormat,
+		boundary, memory, disk,
+		intervalBlkRate, intervalTxRate, intervalGasRate,
+		overallBlkRate, overallTxRate, overallGasRate,
+	)
 
 	t.lastReportedBlock = boundary
 	t.startOfLastInterval = now
