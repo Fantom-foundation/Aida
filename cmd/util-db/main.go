@@ -25,8 +25,6 @@ var UtilDbApp = cli.App{
 		&db.MergeCommand,
 		&db.UpdateCommand,
 		&db.InfoCommand,
-		&db.InsertMetadataCommand,
-		&db.RemoveMetadataCommand,
 		&db.ValidateCommand,
 		&db.GenDeletedAccountsCommand,
 		&db.SubstateDumpCommand,
@@ -35,6 +33,7 @@ var UtilDbApp = cli.App{
 		&db.PrintPrefixHashCommand,
 		&db.PrintTableHashCommand,
 		&db.ScrapeCommand,
+		&db.MetadataCommand,
 	},
 }
 

@@ -369,53 +369,41 @@ func PrintMetadata(pathToDb string) error {
 		return err
 	}
 
-	var (
-		firstBlock, lastBlock uint64
-		ok                    bool
-	)
+	lastBlock := md.GetLastBlock()
 
-	lastBlock = md.GetLastBlock()
-
-	firstBlock = md.GetFirstBlock()
-
-	if firstBlock == 0 && lastBlock == 0 {
-		substate.SetSubstateDb(pathToDb)
-		substate.OpenSubstateDBReadOnly()
-		defer substate.CloseSubstateDB()
-
-		firstBlock, lastBlock, ok = utils.FindBlockRangeInSubstate()
-		if !ok {
-			return fmt.Errorf("no substate found")
-		}
-	}
+	firstBlock := md.GetFirstBlock()
 
 	// CHAIN-ID
 	chainID := md.GetChainID()
 
-	log.Infof("Chain-ID: %v", chainID)
+	if firstBlock == 0 && lastBlock == 0 && chainID == 0 {
+		log.Error("your db does not contain metadata; please use metadata generate command")
+	} else {
+		log.Infof("Chain-ID: %v", chainID)
 
-	// BLOCKS
-	log.Infof("First Block: %v", firstBlock)
+		// BLOCKS
+		log.Infof("First Block: %v", firstBlock)
 
-	log.Infof("Last Block: %v", lastBlock)
+		log.Infof("Last Block: %v", lastBlock)
 
-	// EPOCHS
-	firstEpoch := md.GetFirstEpoch()
+		// EPOCHS
+		firstEpoch := md.GetFirstEpoch()
 
-	log.Infof("First Epoch: %v", firstEpoch)
+		log.Infof("First Epoch: %v", firstEpoch)
 
-	lastEpoch := md.GetLastEpoch()
+		lastEpoch := md.GetLastEpoch()
 
-	log.Infof("Last Epoch: %v", lastEpoch)
+		log.Infof("Last Epoch: %v", lastEpoch)
 
-	dbHash := md.GetDbHash()
+		dbHash := md.GetDbHash()
 
-	log.Infof("Db Hash: %v", hex.EncodeToString(dbHash))
+		log.Infof("Db Hash: %v", hex.EncodeToString(dbHash))
 
-	// TIMESTAMP
-	timestamp := md.GetTimestamp()
+		// TIMESTAMP
+		timestamp := md.GetTimestamp()
 
-	log.Infof("Created: %v", time.Unix(int64(timestamp), 0))
+		log.Infof("Created: %v", time.Unix(int64(timestamp), 0))
+	}
 
 	// UPDATE-SET
 	printUpdateSetInfo(md)

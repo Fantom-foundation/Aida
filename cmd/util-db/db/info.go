@@ -21,7 +21,6 @@ var InfoCommand = cli.Command{
 	Name:  "info",
 	Usage: "Prints information about AidaDb",
 	Subcommands: []*cli.Command{
-		&cmdMetadata,
 		&cmdDelAcc,
 		&cmdCount,
 		&cmdRange,
@@ -64,15 +63,6 @@ var cmdDelAcc = cli.Command{
 	},
 }
 
-var cmdMetadata = cli.Command{
-	Action: printMetadataCmd,
-	Name:   "metadata",
-	Usage:  "Prints metadata",
-	Flags: []cli.Flag{
-		&utils.AidaDbFlag,
-	},
-}
-
 var cmdPrintStateHash = cli.Command{
 	Action:    printStateHash,
 	Name:      "state-hash",
@@ -81,15 +71,6 @@ var cmdPrintStateHash = cli.Command{
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
 	},
-}
-
-func printMetadataCmd(ctx *cli.Context) error {
-	cfg, argErr := utils.NewConfig(ctx, utils.NoArgs)
-	if argErr != nil {
-		return argErr
-	}
-
-	return utildb.PrintMetadata(cfg.AidaDb)
 }
 
 // printCount prints count of given db component in given AidaDb

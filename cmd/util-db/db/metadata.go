@@ -2,6 +2,7 @@ package db
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -12,10 +13,80 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+var MetadataCommand = cli.Command{
+	Name:  "metadata",
+	Usage: "Does action with AidaDb metadata",
+	Subcommands: []*cli.Command{
+		&cmdPrintMetadata,
+		&cmdGenerateMetadata,
+		&InsertMetadataCommand,
+		&RemoveMetadataCommand,
+	},
+}
+
+var cmdPrintMetadata = cli.Command{
+	Action: printMetadata,
+	Name:   "print",
+	Usage:  "Prints metadata",
+	Flags: []cli.Flag{
+		&utils.AidaDbFlag,
+	},
+}
+
+func printMetadata(ctx *cli.Context) error {
+	cfg, argErr := utils.NewConfig(ctx, utils.NoArgs)
+	if argErr != nil {
+		return argErr
+	}
+
+	return utildb.PrintMetadata(cfg.AidaDb)
+}
+
+var cmdGenerateMetadata = cli.Command{
+	Action: generateMetadata,
+	Name:   "generate",
+	Usage:  "Generates new metadata for given chain-id",
+	Flags: []cli.Flag{
+		&utils.AidaDbFlag,
+		&utils.ChainIDFlag,
+	},
+}
+
+func generateMetadata(ctx *cli.Context) error {
+	cfg, argErr := utils.NewConfig(ctx, utils.NoArgs)
+	if argErr != nil {
+		return argErr
+	}
+
+	aidaDb, err := rawdb.NewLevelDBDatabase(cfg.AidaDb, 1024, 100, "profiling", false)
+	if err != nil {
+		return fmt.Errorf("cannot open aida-db; %v", err)
+	}
+	substate.SetSubstateDbBackend(aidaDb)
+	fb, lb, ok := utils.FindBlockRangeInSubstate()
+	if !ok {
+		return errors.New("cannot find block range in substate")
+	}
+
+	md := utils.NewAidaDbMetadata(aidaDb, "INFO")
+	md.FirstBlock = fb
+	md.LastBlock = lb
+	if err = md.SetFreshMetadata(cfg.ChainID); err != nil {
+		return err
+	}
+
+	if err = aidaDb.Close(); err != nil {
+		return fmt.Errorf("cannot close aida-db; %v", err)
+	}
+
+	return utildb.PrintMetadata(cfg.AidaDb)
+
+}
+
 // InsertMetadataCommand is a generic command for inserting any metadata key/value pair into AidaDb
 var InsertMetadataCommand = cli.Command{
 	Action: insertMetadata,
-	Name:   "insert-metadata",
+	Name:   "insert",
 	Usage:  "inserts key/value metadata pair into AidaDb",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
@@ -25,36 +96,6 @@ Inserts key/value pair into AidaDb according to arguments:
 <key> <value>
 If given key is not metadata-key, operation fails.
 `,
-}
-
-// RemoveMetadataCommand is a command used for creating testing environment without metadata
-var RemoveMetadataCommand = cli.Command{
-	Action: removeMetadata,
-	Name:   "remove-metadata",
-	Usage:  "remove metadata from aidaDb",
-	Flags: []cli.Flag{
-		&utils.AidaDbFlag,
-	},
-	Description: `
-Removes block and epoch range and ChainID from metadata for given AidaDb.
-`,
-}
-
-// removeMetadata command is used for testing scenario where AidaDb does not have metadata and a patch
-// is applied onto it
-func removeMetadata(ctx *cli.Context) error {
-	aidaDbPath := ctx.String(utils.AidaDbFlag.Name)
-
-	// open db
-	aidaDb, err := rawdb.NewLevelDBDatabase(aidaDbPath, 1024, 100, "profiling", false)
-	if err != nil {
-		return fmt.Errorf("cannot open targetDb. Error: %v", err)
-	}
-
-	md := utils.NewAidaDbMetadata(aidaDb, "DEBUG")
-	md.DeleteMetadata()
-
-	return nil
 }
 
 // insertMetadata key/value pair into AidaDb
@@ -163,6 +204,36 @@ func insertMetadata(ctx *cli.Context) error {
 	default:
 		return fmt.Errorf("incorrect keyArg: %v", keyArg)
 	}
+
+	return nil
+}
+
+// RemoveMetadataCommand is a command used for creating testing environment without metadata
+var RemoveMetadataCommand = cli.Command{
+	Action: removeMetadata,
+	Name:   "remove",
+	Usage:  "remove metadata from aidaDb",
+	Flags: []cli.Flag{
+		&utils.AidaDbFlag,
+	},
+	Description: `
+Removes block and epoch range and ChainID from metadata for given AidaDb.
+`,
+}
+
+// removeMetadata command is used for testing scenario where AidaDb does not have metadata and a patch
+// is applied onto it
+func removeMetadata(ctx *cli.Context) error {
+	aidaDbPath := ctx.String(utils.AidaDbFlag.Name)
+
+	// open db
+	aidaDb, err := rawdb.NewLevelDBDatabase(aidaDbPath, 1024, 100, "profiling", false)
+	if err != nil {
+		return fmt.Errorf("cannot open targetDb. Error: %v", err)
+	}
+
+	md := utils.NewAidaDbMetadata(aidaDb, "DEBUG")
+	md.DeleteMetadata()
 
 	return nil
 }
