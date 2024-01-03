@@ -7,6 +7,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension/aidadb"
 	"github.com/Fantom-foundation/Aida/executor/extension/primer"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
+	"github.com/Fantom-foundation/Aida/executor/extension/register"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/executor/extension/validator"
@@ -65,6 +66,7 @@ func runSubstates(
 		tracker.MakeProgressLogger[*substate.Substate](cfg, 15*time.Second),
 		tracker.MakeErrorLogger[*substate.Substate](cfg),
 		tracker.MakeProgressTracker(cfg, 100_000),
+		register.MakeRegisterProgress(cfg, 100_000),
 		primer.MakeStateDbPrimer[*substate.Substate](cfg),
 		profiler.MakeMemoryUsagePrinter[*substate.Substate](cfg),
 		profiler.MakeMemoryProfiler[*substate.Substate](cfg),

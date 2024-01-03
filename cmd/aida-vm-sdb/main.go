@@ -73,6 +73,10 @@ var RunSubstateCmd = cli.Command{
 		&utils.ProfileDBFlag,
 		&utils.ProfileBlocksFlag,
 
+		// RegisterRun
+		&utils.RegisterRunFlag,
+		&utils.OverwriteRunIdFlag,
+
 		// Priming
 		&utils.RandomizePrimingFlag,
 		&utils.SkipPrimingFlag,
