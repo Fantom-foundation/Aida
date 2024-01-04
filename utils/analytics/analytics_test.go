@@ -5,6 +5,7 @@ import (
 	"math"
 	"math/rand"
 	"testing"
+	"time"
 
 	"gonum.org/v1/gonum/stat"
 )
@@ -186,6 +187,7 @@ func TestAnalyticsWithAlternativeBigSmall(t *testing.T) {
 // Generate using a defined gaussian distributions, and using the observations to reason about the population
 func TestAnalyticsWithGaussianDistribution(t *testing.T) {
 	type argument struct {
+		seed     int64 // -1 = don't use my seed, random something for me
 		amount   uint64
 		mean     float64
 		variance float64
@@ -202,9 +204,9 @@ func TestAnalyticsWithGaussianDistribution(t *testing.T) {
 	}
 
 	tests := []testcase{
-		{args: argument{1e8, 0, 1}, want: result{0, 1}},
-		{args: argument{1e8, 25, 10000}, want: result{25, 10000}},
-		{args: argument{1e8, 1e10, 1e20}, want: result{1e10, 1e20}},
+		{args: argument{258, 1e8, 0, 1}, want: result{0, 1}},
+		{args: argument{258, 1e8, 25, 10000}, want: result{25, 10000}},
+		{args: argument{258, 1e8, 1e10, 1e20}, want: result{1e10, 1e20}},
 	}
 
 	type Sut struct {
@@ -223,8 +225,15 @@ func TestAnalyticsWithGaussianDistribution(t *testing.T) {
 				a := sut.a
 				a.Reset()
 
+				var r *rand.Rand
+				if test.args.seed != 0 && test.args.seed != -1 {
+					r = rand.New(rand.NewSource(test.args.seed))
+				} else {
+					r = rand.New(rand.NewSource(time.Now().UnixNano()))
+				}
+
 				for i := uint64(0); i < test.args.amount; i++ {
-					x := rand.NormFloat64()*math.Sqrt(test.args.variance) + test.args.mean
+					x := r.NormFloat64()*math.Sqrt(test.args.variance) + test.args.mean
 					a.Update(0, x)
 				}
 				got := result{a.GetMean(0), a.GetVariance(0)}

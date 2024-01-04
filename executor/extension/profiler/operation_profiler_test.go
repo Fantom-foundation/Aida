@@ -138,11 +138,10 @@ func TestOperationProfiler_WithRandomInput(t *testing.T) {
 	}
 
 	tests := []testcase{
-		{args: argument{"50-100/block, interval=1", -1, 50, 100, 1, 100, 1}},
-		{args: argument{"50-100/block, several intervals", -1, 50, 100, 1, 100, 10}},
-		{args: argument{"50-100/block, seeded several intervals", 258, 50, 100, 4000, 8000, 1000}},
-		{args: argument{"50-100/block, 1 interval", -1, 50, 100, 1, 100, 10000}},
-		{args: argument{"50-100/block, first=last", -1, 50, 100, 100, 100, 12}},
+		{args: argument{"50-100/block, interval=1", 258, 50, 100, 1, 100, 1}},
+		{args: argument{"50-100/block, several intervals", 258, 50, 100, 1, 100, 10}},
+		{args: argument{"50-100/block, 1 interval", 258, 50, 100, 1, 100, 10000}},
+		{args: argument{"50-100/block, first=last", 258, 50, 100, 100, 100, 12}},
 	}
 
 	for _, test := range tests {
@@ -157,7 +156,7 @@ func TestOperationProfiler_WithRandomInput(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			// initialize rng with seed
 			var r *rand.Rand
-			if test.args.seed != 0 && test.args.seed != 1 {
+			if test.args.seed != 0 && test.args.seed != -1 {
 				r = rand.New(rand.NewSource(test.args.seed))
 			} else {
 				r = rand.New(rand.NewSource(time.Now().UnixNano()))
