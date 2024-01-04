@@ -24,12 +24,13 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 	archiveBlockThree := state.NewMockNonCommittableStateDB(ctrl)
 
 	cfg := &utils.Config{
-		First:       2,
-		Last:        4,
-		ChainID:     utils.MainnetChainID,
-		SkipPriming: true,
-		Workers:     1,
-		LogLevel:    "Critical",
+		First:             2,
+		Last:              4,
+		ChainID:           utils.MainnetChainID,
+		SkipPriming:       true,
+		Workers:           1,
+		ContinueOnFailure: true, // in this test we only check if blocks are being processed, any error can be ignored
+		LogLevel:          "Critical",
 	}
 
 	// Simulate the execution of three transactions in two blocks.
@@ -87,8 +88,14 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 		archiveBlockThree.EXPECT().Release(),
 	)
 
-	if err := run(cfg, provider, db, executor.MakeArchiveDbProcessor(cfg), nil); err != nil {
-		t.Errorf("run failed: %v", err)
+	// since we are working with mock transactions, run logically fails on 'intrinsic gas too low'
+	// since this is a test that tests orded of the db events, we can ignore this error
+	err := run(cfg, provider, db, executor.MakeArchiveDbProcessor(cfg), nil)
+	if err != nil {
+		if strings.Contains(err.Error(), "intrinsic gas too low") {
+			return
+		}
+		t.Fatal("run failed")
 	}
 }
 

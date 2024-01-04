@@ -56,16 +56,20 @@ func TestProgressTrackerExtension_LoggingHappens(t *testing.T) {
 		db.EXPECT().GetMemoryUsage().Return(&state.MemoryUsage{UsedBytes: 1234}),
 		log.EXPECT().Noticef(progressTrackerReportFormat,
 			6, uint64(1234), int64(11),
+			MatchRate(gomock.All(executor.Gt(3), executor.Lt(5)), "blkRate"),
 			MatchRate(gomock.All(executor.Gt(7), executor.Lt(9)), "txRate"),
 			MatchRate(gomock.All(executor.Gt(700), executor.Lt(900)), "gasRate"),
+			MatchRate(gomock.All(executor.Gt(3), executor.Lt(5)), "blkRate"),
 			MatchRate(gomock.All(executor.Gt(7), executor.Lt(9)), "txRate"),
 			MatchRate(gomock.All(executor.Gt(700), executor.Lt(900)), "gasRate"),
 		),
 		db.EXPECT().GetMemoryUsage().Return(&state.MemoryUsage{UsedBytes: 4321}),
 		log.EXPECT().Noticef(progressTrackerReportFormat,
 			8, uint64(4321), int64(11),
+			MatchRate(gomock.All(executor.Gt(3), executor.Lt(5)), "blkRate"),
 			MatchRate(gomock.All(executor.Gt(1), executor.Lt(2)), "txRate"),
 			MatchRate(gomock.All(executor.Gt(180), executor.Lt(220)), "gasRate"),
+			MatchRate(gomock.All(executor.Gt(3), executor.Lt(5)), "blkRate"),
 			MatchRate(gomock.All(executor.Gt(4), executor.Lt(6)), "txRate"),
 			MatchRate(gomock.All(executor.Gt(400), executor.Lt(600)), "gasRate"),
 		),
@@ -144,8 +148,8 @@ func TestProgressTrackerExtension_FirstLoggingIsIgnored(t *testing.T) {
 
 func Test_LoggingFormatMatchesRubyScript(t *testing.T) {
 	// NOTE: keep this in sync with the pattern used by scripts/run_throughput_eval.rb
-	pattern := `Track: block \d+, memory \d+, disk \d+, interval_tx_rate \d+.\d*, interval_gas_rate \d+.\d*, overall_tx_rate \d+.\d*, overall_gas_rate \d+.\d*`
-	example := fmt.Sprintf(progressTrackerReportFormat, 1, 2, 3, 4.5, 6.7, 8.9, 0.1)
+	pattern := `Track: block \d+, memory \d+, disk \d+, interval_blk_rate \d+.\d*, interval_tx_rate \d+.\d*, interval_gas_rate \d+.\d*, overall_blk_rate \d+.\d*, overall_tx_rate \d+.\d*, overall_gas_rate \d+.\d*`
+	example := fmt.Sprintf(progressTrackerReportFormat, 1, 2, 3, 4.5, 6.7, 8.9, 0.1, 2.3, 4.5)
 	if match, err := regexp.Match(pattern, []byte(example)); !match || err != nil {
 		t.Errorf("Logging format '%v' does not match required format '%v'; err %v", example, pattern, err)
 	}

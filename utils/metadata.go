@@ -1070,30 +1070,38 @@ func (md *AidaDbMetadata) getBlockRange() (uint64, uint64, error) {
 	md.FirstBlock = md.GetFirstBlock()
 	md.LastBlock = md.GetLastBlock()
 
+	// TODO rewrite getBlockRange shoudn't overwrite metadata of aidaDb
+	// TODO temporary fix - still fails because aidaDb (from getMdBlockRange) is open as ReadOnly,
+	// but because of this fail at least the block range specified by the user doesn't get changed - resulting in desired behavior.
+	// this function gave panic without staticSubstateDb being initialized temporary fixed in getMdBlockRange
+
 	// check if AidaDb has block range
 	if md.LastBlock == 0 {
-		var ok bool
+		// SHOULD be fixed in another PR
+		return 0, 0, fmt.Errorf("cannot find block range in AidaDb metadata")
 
-		md.FirstBlock, md.LastBlock, ok = FindBlockRangeInSubstate()
-		if !ok || md.LastBlock == 0 {
-			return 0, 0, errors.New("your AidaDb does not seem to contain substates")
-		}
-
-		err := md.SetBlockRange(md.FirstBlock, md.LastBlock)
-		if err != nil {
-			return 0, 0, fmt.Errorf("cannot set block range; %v", err)
-		}
-
-		// try to find epochs, function returns error if blocks does not start and end an epoch, so we do not save it
-		if err = md.findEpochs(); err == nil {
-			if err = md.SetFirstEpoch(md.FirstEpoch); err != nil {
-				md.log.Warningf("cannot set first epoch; %v", err)
-			}
-
-			if err = md.SetLastEpoch(md.LastEpoch); err != nil {
-				md.log.Warningf("cannot set first epoch; %v", err)
-			}
-		}
+		//var ok bool
+		//
+		//md.FirstBlock, md.LastBlock, ok = FindBlockRangeInSubstate()
+		//if !ok || md.LastBlock == 0 {
+		//	return 0, 0, errors.New("your AidaDb does not seem to contain substates")
+		//}
+		//
+		//err := md.SetBlockRange(md.FirstBlock, md.LastBlock)
+		//if err != nil {
+		//	return 0, 0, fmt.Errorf("cannot set block range; %v", err)
+		//}
+		//
+		//// try to find epochs, function returns error if blocks does not start and end an epoch, so we do not save it
+		//if err = md.findEpochs(); err == nil {
+		//	if err = md.SetFirstEpoch(md.FirstEpoch); err != nil {
+		//		md.log.Warningf("cannot set first epoch; %v", err)
+		//	}
+		//
+		//	if err = md.SetLastEpoch(md.LastEpoch); err != nil {
+		//		md.log.Warningf("cannot set first epoch; %v", err)
+		//	}
+		//}
 	}
 
 	return md.FirstBlock, md.LastBlock, nil
@@ -1130,4 +1138,27 @@ func HasStateHashPatch(path string) (bool, error) {
 // SetHasHashPatch marks AidaDb that it already has HashPatch merged so it will not get downloaded next update.
 func (md *AidaDbMetadata) SetHasHashPatch() error {
 	return md.Db.Put([]byte(HasStateHashPatchPrefix), []byte{1})
+}
+
+func (md *AidaDbMetadata) SetUpdatesetInterval(val uint64) error {
+	byteInterval := make([]byte, 8)
+	binary.BigEndian.PutUint64(byteInterval, val)
+
+	if err := md.Db.Put([]byte(substate.UpdatesetIntervalKey), byteInterval); err != nil {
+		return err
+	}
+	md.log.Info("METADATA: Updateset interval saved successfully")
+
+	return nil
+}
+
+func (md *AidaDbMetadata) SetUpdatesetSize(val uint64) error {
+	sizeInterval := make([]byte, 8)
+	binary.BigEndian.PutUint64(sizeInterval, val)
+
+	if err := md.Db.Put([]byte(substate.UpdatesetSizeKey), sizeInterval); err != nil {
+		return err
+	}
+	md.log.Info("METADATA: Updateset size saved successfully")
+	return nil
 }

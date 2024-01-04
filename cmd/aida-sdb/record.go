@@ -5,6 +5,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
+	"github.com/Fantom-foundation/Aida/executor/extension/validator"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -66,15 +67,17 @@ func record(
 		tracker.MakeProgressLogger[*substate.Substate](cfg, 0),
 		tracker.MakeProgressTracker(cfg, 0),
 		statedb.MakeTemporaryStatePrepper(cfg),
-		statedb.MakeTemporaryProxyRecorderPrepper(cfg),
+		statedb.MakeProxyRecorderPrepper(cfg),
+		validator.MakeLiveDbValidator(cfg),
 	}
 
 	extensions = append(extensions, extra...)
 
 	return executor.NewExecutor(provider, cfg.LogLevel).Run(
 		executor.Params{
-			From: int(cfg.First),
-			To:   int(cfg.Last) + 1,
+			From:                   int(cfg.First),
+			To:                     int(cfg.Last) + 1,
+			ParallelismGranularity: executor.TransactionLevel,
 		},
 		processor,
 		extensions,

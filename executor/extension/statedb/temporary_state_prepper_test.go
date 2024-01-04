@@ -12,7 +12,8 @@ func TestTemporaryStatePrepper_DefaultDbImplementationIsOffTheChainStateDb(t *te
 
 	ext := MakeTemporaryStatePrepper(cfg)
 
-	if _, ok := ext.(temporaryOffTheChainStatePrepper); !ok {
+	// check that temporaryOffTheChainStatePrepper is default
+	if _, ok := ext.(*temporaryOffTheChainStatePrepper); !ok {
 		t.Fatal("unexpected extension type")
 	}
 }
@@ -23,7 +24,7 @@ func TestTemporaryStatePrepper_OffTheChainDbImplementation(t *testing.T) {
 
 	ext := MakeTemporaryStatePrepper(cfg)
 
-	if _, ok := ext.(temporaryOffTheChainStatePrepper); !ok {
+	if _, ok := ext.(*temporaryOffTheChainStatePrepper); !ok {
 		t.Fatal("unexpected extension type")
 	}
 

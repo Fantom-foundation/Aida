@@ -20,7 +20,7 @@ const (
 	imgUpperLimit    = 4 * 1024 * 1024
 )
 
-func MakeGethStateDB(directory, variant string, rootHash common.Hash, isArchiveMode bool) (StateDB, error) {
+func MakeGethStateDB(directory, variant string, rootHash common.Hash, isArchiveMode bool, chainConduit *ChainConduit) (StateDB, error) {
 	if variant != "" {
 		return nil, fmt.Errorf("unknown variant: %v", variant)
 	}
@@ -28,19 +28,21 @@ func MakeGethStateDB(directory, variant string, rootHash common.Hash, isArchiveM
 	const fileHandle = 128
 	ldb, err := rawdb.NewLevelDBDatabase(directory, cacheSize, fileHandle, "", false)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to create a new Level DB. %v", err)
+		return nil, fmt.Errorf("failed to create a new Level DB. %v", err)
 	}
 	evmState := geth.NewDatabase(ldb)
 	db, err := geth.New(rootHash, evmState, nil)
 	if err != nil {
 		return nil, err
 	}
+
 	return &gethStateDB{
 		db:            db,
 		evmState:      evmState,
 		stateRoot:     rootHash,
 		triegc:        prque.New(nil),
 		isArchiveMode: isArchiveMode,
+		chainConduit:  chainConduit,
 	}, nil
 }
 
@@ -57,7 +59,8 @@ type gethStateDB struct {
 	stateRoot     common.Hash   // lastest root hash
 	triegc        *prque.Prque
 	isArchiveMode bool
-	block         uint64
+	chainConduit  *ChainConduit // chain configuration
+	block         *big.Int
 }
 
 func (s *gethStateDB) CreateAccount(addr common.Address) {
@@ -146,12 +149,18 @@ func (s *gethStateDB) BeginTransaction(number uint32) {
 }
 
 func (s *gethStateDB) EndTransaction() {
-	s.Finalise(true)
+	if s.chainConduit == nil || s.chainConduit.IsFinalise(s.block) {
+		// Opera or Ethereum after Byzantium
+		s.Finalise(true)
+	} else {
+		// Ethereum before Byzantium
+		s.IntermediateRoot(s.chainConduit.DeleteEmptyObjects(s.block))
+	}
 }
 
 func (s *gethStateDB) BeginBlock(number uint64) {
 	s.openStateDB()
-	s.block = number
+	s.block = new(big.Int).SetUint64(number)
 }
 
 func (s *gethStateDB) EndBlock() {
@@ -350,9 +359,9 @@ func (s *gethStateDB) trieCommit() error {
 	} else {
 		// Full but not archive node, do proper garbage collection
 		triedb.Reference(s.stateRoot, common.Hash{}) // metadata reference to keep trie alive
-		s.triegc.Push(s.stateRoot, -int64(s.block))
+		s.triegc.Push(s.stateRoot, -int64(s.block.Uint64()))
 
-		if current := uint64(s.block); current > triesInMemory {
+		if current := s.block.Uint64(); current > triesInMemory {
 			// If we exceeded our memory allowance, flush matured singleton nodes to disk
 			s.trieCap()
 
@@ -378,7 +387,7 @@ func (s *gethStateDB) trieCleanCommit() error {
 	// Don't need to reference the current state root
 	// due to it already be referenced on `Commit()` function
 	triedb := s.evmState.TrieDB()
-	if current := uint64(s.block); current > triesInMemory {
+	if current := s.block.Uint64(); current > triesInMemory {
 		// Find the next state trie we need to commit
 		chosen := current - triesInMemory
 		// Garbage collect all below the chosen block

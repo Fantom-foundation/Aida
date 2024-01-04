@@ -20,6 +20,7 @@ var UtilDbApp = cli.App{
 		&db.CloneCommand,
 		&db.CompactCommand,
 		&db.GenerateCommand,
+		&db.ExtractEthereumGenesisCommand,
 		&db.LachesisUpdateCommand,
 		&db.MergeCommand,
 		&db.UpdateCommand,

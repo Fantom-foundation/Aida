@@ -3,6 +3,7 @@ package validator
 import (
 	"bytes"
 	"fmt"
+	"math/big"
 	"sync/atomic"
 
 	"github.com/Fantom-foundation/Aida/executor"
@@ -11,6 +12,8 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 )
 
 // MakeLiveDbValidator creates an extension which validates LIVE StateDb
@@ -36,7 +39,7 @@ type liveDbTxValidator struct {
 
 // PreTransaction validates InputAlloc in given substate
 func (v *liveDbTxValidator) PreTransaction(state executor.State[*substate.Substate], ctx *executor.Context) error {
-	err := validateSubstateAlloc(ctx.State, state.Data.InputAlloc, v.cfg)
+	err := v.validateSubstateAlloc(ctx.State, state.Data.InputAlloc)
 	if err == nil {
 		return nil
 	}
@@ -52,7 +55,7 @@ func (v *liveDbTxValidator) PreTransaction(state executor.State[*substate.Substa
 
 // PostTransaction validates OutputAlloc in given substate
 func (v *liveDbTxValidator) PostTransaction(state executor.State[*substate.Substate], ctx *executor.Context) error {
-	err := validateSubstateAlloc(ctx.State, state.Data.OutputAlloc, v.cfg)
+	err := v.validateSubstateAlloc(ctx.State, state.Data.OutputAlloc)
 	if err == nil {
 		return nil
 	}
@@ -89,7 +92,7 @@ type archiveDbValidator struct {
 
 // PreTransaction validates InputAlloc in given substate
 func (v *archiveDbValidator) PreTransaction(state executor.State[*substate.Substate], ctx *executor.Context) error {
-	err := validateSubstateAlloc(ctx.Archive, state.Data.InputAlloc, v.cfg)
+	err := v.validateSubstateAlloc(ctx.Archive, state.Data.InputAlloc)
 	if err == nil {
 		return nil
 	}
@@ -105,7 +108,7 @@ func (v *archiveDbValidator) PreTransaction(state executor.State[*substate.Subst
 
 // PostTransaction validates VmAlloc
 func (v *archiveDbValidator) PostTransaction(state executor.State[*substate.Substate], ctx *executor.Context) error {
-	err := validateSubstateAlloc(ctx.Archive, state.Data.OutputAlloc, v.cfg)
+	err := v.validateSubstateAlloc(ctx.Archive, state.Data.OutputAlloc)
 	if err == nil {
 		return nil
 	}
@@ -175,19 +178,118 @@ func (v *stateDbValidator) isErrFatal(err error, ch chan error) bool {
 // validateSubstateAlloc compares states of accounts in stateDB to an expected set of states.
 // If fullState mode, check if expected state is contained in stateDB.
 // If partialState mode, check for equality of sets.
-func validateSubstateAlloc(db state.VmStateDB, expectedAlloc substate.SubstateAlloc, cfg *utils.Config) error {
+func (v *stateDbValidator) validateSubstateAlloc(db state.VmStateDB, expectedAlloc substate.SubstateAlloc) error {
 	var err error
-	switch cfg.StateValidationMode {
+	switch v.cfg.StateValidationMode {
 	case utils.SubsetCheck:
-		err = doSubsetValidation(expectedAlloc, db, cfg.UpdateOnFailure)
+		err = doSubsetValidation(expectedAlloc, db, v.cfg.UpdateOnFailure)
 	case utils.EqualityCheck:
 		vmAlloc := db.GetSubstatePostAlloc()
 		isEqual := expectedAlloc.Equal(vmAlloc)
 		if !isEqual {
 			err = fmt.Errorf("inconsistent output: alloc")
+			v.printAllocationDiffSummary(&expectedAlloc, &vmAlloc)
+
+			return err
 		}
 	}
 	return err
+}
+
+// printIfDifferent compares two values of any types and reports differences if any.
+func printIfDifferent[T comparable](label string, want, have T, log logger.Logger) bool {
+	if want != have {
+		log.Errorf("Different %s:\nwant: %v\nhave: %v\n", label, want, have)
+		return true
+	}
+	return false
+}
+
+// printIfDifferentBytes compares two values of byte type and reports differences if any.
+func (v *stateDbValidator) printIfDifferentBytes(label string, want, have []byte) bool {
+	if !bytes.Equal(want, have) {
+		v.log.Errorf("Different %s:\nwant: %v\nhave: %v\n", label, want, have)
+		return true
+	}
+	return false
+}
+
+// printIfDifferentBigInt compares two values of big int type and reports differences if any.
+func (v *stateDbValidator) printIfDifferentBigInt(label string, want, have *big.Int) bool {
+	if want == nil && have == nil {
+		return false
+	}
+	if want == nil || have == nil || want.Cmp(have) != 0 {
+		v.log.Errorf("Different %s:\nwant: %v\nhave: %v\n", label, want, have)
+		return true
+	}
+	return false
+}
+
+// printLogDiffSummary compares two tx logs and reports differences if any.
+func (v *stateDbValidator) printLogDiffSummary(label string, want, have *types.Log) {
+	printIfDifferent(fmt.Sprintf("%s.address", label), want.Address, have.Address, v.log)
+	if !printIfDifferent(fmt.Sprintf("%s.Topics size", label), len(want.Topics), len(have.Topics), v.log) {
+		for i := range want.Topics {
+			printIfDifferent(fmt.Sprintf("%s.Topics[%d]", label, i), want.Topics[i], have.Topics[i], v.log)
+		}
+	}
+	v.printIfDifferentBytes(fmt.Sprintf("%s.data", label), want.Data, have.Data)
+}
+
+// printAllocationDiffSummary compares atrributes and existence of accounts and reports differences if any.
+func (v *stateDbValidator) printAllocationDiffSummary(want, have *substate.SubstateAlloc) {
+	printIfDifferent("substate alloc size", len(*want), len(*have), v.log)
+	for key := range *want {
+		_, present := (*have)[key]
+		if !present {
+			v.log.Errorf("\tmissing key=%v\n", key)
+
+		}
+	}
+
+	for key := range *have {
+		_, present := (*want)[key]
+		if !present {
+			v.log.Errorf("\textra key=%v\n", key)
+		}
+	}
+
+	for key, is := range *have {
+		should, present := (*want)[key]
+		if present {
+			v.printAccountDiffSummary(fmt.Sprintf("key=%v:", key), should, is)
+		}
+	}
+}
+
+// PrintAccountDiffSummary compares attributes of two accounts and reports differences if any.
+func (v *stateDbValidator) printAccountDiffSummary(label string, want, have *substate.SubstateAccount) {
+	printIfDifferent(fmt.Sprintf("%s.Nonce", label), want.Nonce, have.Nonce, v.log)
+	v.printIfDifferentBigInt(fmt.Sprintf("%s.Balance", label), want.Balance, have.Balance)
+	v.printIfDifferentBytes(fmt.Sprintf("%s.Code", label), want.Code, have.Code)
+
+	printIfDifferent(fmt.Sprintf("len(%s.Storage)", label), len(want.Storage), len(have.Storage), v.log)
+	for key, val := range want.Storage {
+		_, present := have.Storage[key]
+		if !present && (val != common.Hash{}) {
+			v.log.Errorf("\t%s.Storage misses key %v val %v\n", label, key, val)
+		}
+	}
+
+	for key := range have.Storage {
+		_, present := want.Storage[key]
+		if !present {
+			v.log.Errorf("\t%s.Storage has extra key %v\n", label, key)
+		}
+	}
+
+	for key, is := range have.Storage {
+		should, present := want.Storage[key]
+		if present {
+			printIfDifferent(fmt.Sprintf("%s.Storage[%v]", label, key), should, is, v.log)
+		}
+	}
 }
 
 // doSubsetValidation validates whether the given alloc is contained in the db object.

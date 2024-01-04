@@ -11,7 +11,7 @@ import (
 const N = 1000
 
 func fillDb(t *testing.T, directory string) (common.Hash, error) {
-	db, err := MakeGethStateDB(directory, "", common.Hash{}, false)
+	db, err := MakeGethStateDB(directory, "", common.Hash{}, false, nil)
 	if err != nil {
 		t.Fatalf("Failed to create DB: %v", err)
 	}
@@ -57,7 +57,7 @@ func TestGethDbReloadData(t *testing.T) {
 	}
 
 	// Re-open the data base.
-	db, err := MakeGethStateDB(dir, "", hash, false)
+	db, err := MakeGethStateDB(dir, "", hash, false, nil)
 	if err != nil {
 		t.Fatalf("Failed to open DB: %v", err)
 	}

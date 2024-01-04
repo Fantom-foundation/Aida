@@ -85,9 +85,11 @@ func runSubstates(
 
 	return executor.NewExecutor(provider, cfg.LogLevel).Run(
 		executor.Params{
-			From:  int(cfg.First),
-			To:    int(cfg.Last) + 1,
-			State: stateDb,
+			From:                   int(cfg.First),
+			To:                     int(cfg.Last) + 1,
+			NumWorkers:             1, // vm-sdb can run only with one worker
+			State:                  stateDb,
+			ParallelismGranularity: executor.BlockLevel,
 		},
 		processor,
 		extensionList,

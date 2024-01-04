@@ -54,7 +54,7 @@ func TestCompileVMResult(t *testing.T) {
 	reciept_fail := &evmcore.ExecutionResult{UsedGas: 100, Err: fmt.Errorf("Test Error")}
 	contract := common.HexToAddress("0x0000000000085a12481aEdb59eb3200332aCA541")
 
-	sr := compileVMResult(logs, reciept_fail, contract)
+	sr := compileVMResult(logs, reciept_fail.UsedGas, reciept_fail.Failed(), contract)
 
 	if sr.ContractAddress != contract {
 		t.Fatalf("Wrong contract address")
@@ -67,7 +67,7 @@ func TestCompileVMResult(t *testing.T) {
 	}
 
 	reciept_success := &evmcore.ExecutionResult{UsedGas: 100, Err: nil}
-	sr = compileVMResult(logs, reciept_success, contract)
+	sr = compileVMResult(logs, reciept_success.UsedGas, reciept_success.Failed(), contract)
 
 	if sr.Status != types.ReceiptStatusSuccessful {
 		t.Fatalf("Wrong transaction status")

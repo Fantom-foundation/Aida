@@ -2,7 +2,6 @@ package utils
 
 import (
 	"fmt"
-	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -65,7 +64,7 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 			return nil, "", fmt.Errorf("failed to create a temporary directory; %v", err)
 		}
 
-		size, err := FindDirSize(cfg.StateDbSrc)
+		size, err := GetDirectorySize(cfg.StateDbSrc)
 		if err != nil {
 			return nil, "", err
 		}
@@ -190,7 +189,7 @@ func makeStateDBVariant(directory, impl, variant, archiveVariant string, carmenS
 	case "memory":
 		return state.MakeEmptyGethInMemoryStateDB(variant)
 	case "geth":
-		return state.MakeGethStateDB(directory, variant, rootHash, cfg.ArchiveMode)
+		return state.MakeGethStateDB(directory, variant, rootHash, cfg.ArchiveMode, state.NewChainConduit(cfg.ChainID == EthereumChainID, GetChainConfig(cfg.ChainID)))
 	case "carmen":
 		// Disable archive if not enabled.
 		if !cfg.ArchiveMode {
@@ -258,23 +257,8 @@ func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *Config, target ui
 	return nil
 }
 
-// GetDirectorySize computes the size of all files in the given directory in bytes.
-func GetDirectorySize(directory string) int64 {
-	var sum int64 = 0
-	filepath.Walk(directory, func(path string, info fs.FileInfo, err error) error {
-		if err != nil {
-			return nil
-		}
-		if !info.IsDir() {
-			sum += info.Size()
-		}
-		return nil
-	})
-	return sum
-}
-
-// FindDirSize iterates over all files inside given directory (including subdirectories) and returns size in bytes.
-func FindDirSize(path string) (int64, error) {
+// GetDirectorySize iterates over all files inside given directory (including subdirectories) and returns size in bytes.
+func GetDirectorySize(path string) (int64, error) {
 	var size int64
 	err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
 		if err != nil {
