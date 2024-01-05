@@ -4,6 +4,7 @@ package state
 import (
 	"errors"
 	"fmt"
+	"math/big"
 	"sync"
 
 	substate "github.com/Fantom-foundation/Substate"
@@ -123,7 +124,7 @@ func getHash(addr common.Address, code []byte) common.Hash {
 }
 
 // MakeOffTheChainStateDB returns an in-memory *state.StateDB initialized with alloc
-func MakeOffTheChainStateDB(alloc substate.SubstateAlloc, block uint64) (StateDB, error) {
+func MakeOffTheChainStateDB(alloc substate.SubstateAlloc, block uint64, chainConduit *ChainConduit) (StateDB, error) {
 	statedb := NewOffTheChainStateDB()
 	for addr, a := range alloc {
 		statedb.SetPrehashedCode(addr, getHash(addr, a.Code), a.Code)
@@ -137,9 +138,11 @@ func MakeOffTheChainStateDB(alloc substate.SubstateAlloc, block uint64) (StateDB
 	// Commit and re-open to start with a clean state.
 	_, err := statedb.Commit(false)
 	if err != nil {
-		return nil, fmt.Errorf("cannot commit ofTheChainDb; %v", err)
+		return nil, fmt.Errorf("cannot commit offTheChainDb; %v", err)
 	}
-	return &gethStateDB{db: statedb, block: block}, nil
+
+	blk := new(big.Int).SetUint64(block)
+	return &gethStateDB{db: statedb, block: blk, chainConduit: chainConduit}, nil
 }
 
 func ReleaseCache() {

@@ -22,7 +22,7 @@ func makeTestShadowDB(t *testing.T, ctc state.CarmenStateTestCase) state.StateDB
 		t.Fatalf("failed to create carmen state DB: %v", err)
 	}
 
-	gsDB, err := state.MakeGethStateDB(t.TempDir(), "", common.Hash{}, false)
+	gsDB, err := state.MakeGethStateDB(t.TempDir(), "", common.Hash{}, false, nil)
 
 	if err != nil {
 		t.Fatalf("failed to create geth state DB: %v", err)
@@ -606,7 +606,7 @@ func TestShadowState_GetShadowDB(t *testing.T) {
 				t.Fatalf("failed to create carmen state DB: %v", err)
 			}
 
-			gsDB, err := state.MakeGethStateDB(t.TempDir(), "", common.Hash{}, false)
+			gsDB, err := state.MakeGethStateDB(t.TempDir(), "", common.Hash{}, false, nil)
 
 			if err != nil {
 				t.Fatalf("failed to create geth state DB: %v", err)
