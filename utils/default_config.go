@@ -96,7 +96,7 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		TrieRootHash:           getFlagValue(ctx, TrieRootHashFlag).(string),
 		UpdateBufferSize:       getFlagValue(ctx, UpdateBufferSizeFlag).(uint64),
 		UpdateDb:               getFlagValue(ctx, UpdateDbFlag).(string),
-		UpdateOnFailure:        getFlagValue(ctx, UpdateOnFailure).(bool),
+		UpdateOnFailure:        getFlagValue(ctx, UpdateOnFailureFlag).(bool),
 		UpdateType:             getFlagValue(ctx, UpdateTypeFlag).(string),
 		Validate:               getFlagValue(ctx, ValidateFlag).(bool),
 		ValidateStateHashes:    getFlagValue(ctx, ValidateStateHashesFlag).(bool),

@@ -86,6 +86,7 @@ var RunSubstateCmd = cli.Command{
 		&substate.WorkersFlag,
 		&utils.ChainIDFlag,
 		&utils.ContinueOnFailureFlag,
+		&utils.UpdateOnFailureFlag,
 		&utils.SyncPeriodLengthFlag,
 		&utils.KeepDbFlag,
 		//&utils.MaxNumTransactionsFlag,
