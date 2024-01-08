@@ -38,7 +38,7 @@ The github hash of the Aida repository is `r params$GitHash`.
 For this experiment, we use **`r params$StateDB`** as a StateDB and **`r params$VM`** as a virtual machine.
 The data set for this experiment is stored in the database `r params$db`.
 
-## 2. Memroy and Disk Usage
+## 2. Memory and Disk Usage
 
 ```{r, echo=FALSE, message=FALSE}
 maxMemory <- TxData %>% filter(memory == max(memory))
