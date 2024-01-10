@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+	"strconv"
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
@@ -72,6 +73,7 @@ func MakeRegisterProgress(cfg *utils.Config, reportFrequency int) executor.Exten
 	if err != nil {
 		rp.log.Debugf("Unable to create run metadata because %s.", err)
 	} else {
+		rp.meta = rm	
 		rm.Print()
 	}
 
@@ -104,6 +106,7 @@ type registerProgress struct {
 	memory       *state.MemoryUsage
 
 	id *RunIdentity
+	meta *RunMetadata
 }
 
 func (rp *registerProgress) PreRun(_ executor.State[*substate.Substate], ctx *executor.Context) error {
@@ -149,6 +152,10 @@ func (rp *registerProgress) PostRun(_ executor.State[*substate.Substate], ctx *e
 	rp.ps.Print()
 	rp.Reset()
 	rp.ps.Close()
+
+	rp.meta.meta["Runtime"] = strconv.Itoa(int(time.Since(rp.startOfRun).Seconds()))
+	rp.meta.Print()
+	rp.meta.Close()
 
 	return nil
 }

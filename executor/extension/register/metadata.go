@@ -13,7 +13,7 @@ import (
 const (
 	MetadataCreateTableIfNotExist = `
 		CREATE TABLE IF NOT EXISTS metadata (
-			key STRING NOT NULL,
+			key STRING NOT NULL PRIMARY KEY,
 			value STRING NUT NULL
 		)
 	`
@@ -104,6 +104,10 @@ func MakeRunMetadata(connection string, id *RunIdentity) (*RunMetadata, error) {
 
 func (rm *RunMetadata) Print() {
 	rm.ps.Print()
+}
+
+func (rm *RunMetadata) Close() {
+	rm.ps.Close()
 }
 
 func (rm *RunMetadata) bash(cmd string) (string, error) {
