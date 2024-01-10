@@ -200,8 +200,8 @@ func (rp *registerProgress) sqlite3(conn string) (string, string, string, func()
 			values = append(values, []any{
 				rp.interval.Start(),
 				rp.interval.End(),
-				disk,
 				mem,
+				disk,
 				txRate,
 				gasRate,
 				overallTxRate,
