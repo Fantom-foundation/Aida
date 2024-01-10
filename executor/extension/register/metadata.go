@@ -60,7 +60,7 @@ func MakeRunMetadata(connection string, id *RunIdentity) (*RunMetadata, error) {
 	rm.meta["VmImpl"] = id.Cfg.VmImpl
 	rm.meta["ArchiveMode"] = strconv.FormatBool(id.Cfg.ArchiveMode)
 	rm.meta["ArchiveQueryRate"] = strconv.Itoa(id.Cfg.ArchiveQueryRate)
-	rm.meta["ArchiveVariant"] = id.Cfg.ArchiveVarianta
+	rm.meta["ArchiveVariant"] = id.Cfg.ArchiveVariant
 
 	rm.meta["First"] = strconv.Itoa(int(id.Cfg.First))
 	rm.meta["Last"] = strconv.Itoa(int(id.Cfg.Last))
