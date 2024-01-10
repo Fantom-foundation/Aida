@@ -1,7 +1,6 @@
 package tracker
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
@@ -75,9 +74,6 @@ func (t *rpcProgressTracker) PostTransaction(state executor.State[*rpc.RequestAn
 	overallReqRate := float64(overallCount) / overall.Seconds()
 	overallGasRate := float64(overallGas) / overall.Seconds()
 
-	if boundary == 12 {
-		fmt.Println("a")
-	}
 	t.log.Noticef(
 		rpcProgressTrackerReportFormat, boundary,
 		intervalReqRate, intervalGasRate,
