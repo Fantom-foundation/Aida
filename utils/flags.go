@@ -106,7 +106,7 @@ var (
 	}
 	ProfileDepthFlag = cli.IntFlag{
 		Name:  "profile-depth",
-		Usage: "0=interval, 1=block, 2=transaction",
+		Usage: "0=interval, 1=interval+block, 2=interval+block+transaction",
 		Value: 0,
 	}
 	ProfileSqlite3Flag = cli.StringFlag{
@@ -121,6 +121,14 @@ var (
 		Name:  "profile-interval",
 		Usage: "Frequency of logging block statistics",
 		Value: 1_000_000_000,
+	}
+	RegisterRunFlag = cli.StringFlag{
+		Name:  "register-run",
+		Usage: "When enabled, register results/metadata to an external service.",
+	}
+	OverwriteRunIdFlag = cli.StringFlag{
+		Name:  "overwrite-run-id",
+		Usage: "Use provided run id instead of auto-generating run id",
 	}
 	RandomizePrimingFlag = cli.BoolFlag{
 		Name:  "prime-random",
