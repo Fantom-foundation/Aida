@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension/logger"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
@@ -57,8 +58,9 @@ func run(
 ) error {
 	var extensionList = []executor.Extension[*rpc.RequestAndResults]{
 		profiler.MakeCpuProfiler[*rpc.RequestAndResults](cfg),
-		tracker.MakeProgressLogger[*rpc.RequestAndResults](cfg, 15*time.Second),
-		tracker.MakeErrorLogger[*rpc.RequestAndResults](cfg),
+		logger.MakeProgressLogger[*rpc.RequestAndResults](cfg, 15*time.Second),
+		logger.MakeErrorLogger[*rpc.RequestAndResults](cfg),
+		tracker.MakeRpcProgressTracker(cfg, 100_000),
 		statedb.MakeTemporaryArchivePrepper(),
 		validator.MakeRpcComparator(cfg),
 	}

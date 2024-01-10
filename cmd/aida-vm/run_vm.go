@@ -4,9 +4,9 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension/logger"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
-	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/executor/extension/validator"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -53,14 +53,14 @@ func run(
 		extensions = append(
 			extensions,
 			statedb.MakeTemporaryStatePrepper(cfg),
-			tracker.MakeDbLogger[*substate.Substate](cfg),
+			logger.MakeDbLogger[*substate.Substate](cfg),
 		)
 	}
 
 	extensions = append(
 		extensions,
-		tracker.MakeErrorLogger[*substate.Substate](cfg),
-		tracker.MakeProgressLogger[*substate.Substate](cfg, 15*time.Second),
+		logger.MakeErrorLogger[*substate.Substate](cfg),
+		logger.MakeProgressLogger[*substate.Substate](cfg, 15*time.Second),
 		validator.MakeLiveDbValidator(cfg),
 	)
 	extensions = append(extensions, extra...)

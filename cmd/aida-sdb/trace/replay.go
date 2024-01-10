@@ -2,10 +2,10 @@ package trace
 
 import (
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension/logger"
 	"github.com/Fantom-foundation/Aida/executor/extension/primer"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
-	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
@@ -74,7 +74,7 @@ func replay(
 ) error {
 	var extensionList = []executor.Extension[[]operation.Operation]{
 		profiler.MakeCpuProfiler[[]operation.Operation](cfg),
-		tracker.MakeProgressLogger[[]operation.Operation](cfg, 0),
+		logger.MakeProgressLogger[[]operation.Operation](cfg, 0),
 		profiler.MakeMemoryUsagePrinter[[]operation.Operation](cfg),
 		profiler.MakeMemoryProfiler[[]operation.Operation](cfg),
 		statedb.MakeStateDbManager[[]operation.Operation](cfg),

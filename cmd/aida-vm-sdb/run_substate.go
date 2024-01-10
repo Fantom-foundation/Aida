@@ -5,6 +5,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension/aidadb"
+	"github.com/Fantom-foundation/Aida/executor/extension/logger"
 	"github.com/Fantom-foundation/Aida/executor/extension/primer"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/register"
@@ -53,7 +54,7 @@ func runSubstates(
 			extensionList,
 			statedb.MakeStateDbManager[*substate.Substate](cfg),
 			statedb.MakeLiveDbBlockChecker[*substate.Substate](cfg),
-			tracker.MakeDbLogger[*substate.Substate](cfg),
+			logger.MakeDbLogger[*substate.Substate](cfg),
 		)
 	}
 
@@ -63,9 +64,9 @@ func runSubstates(
 		profiler.MakeThreadLocker[*substate.Substate](),
 		aidadb.MakeAidaDbManager[*substate.Substate](cfg),
 		profiler.MakeVirtualMachineStatisticsPrinter[*substate.Substate](cfg),
-		tracker.MakeProgressLogger[*substate.Substate](cfg, 15*time.Second),
-		tracker.MakeErrorLogger[*substate.Substate](cfg),
-		tracker.MakeProgressTracker(cfg, 100_000),
+		logger.MakeProgressLogger[*substate.Substate](cfg, 15*time.Second),
+		logger.MakeErrorLogger[*substate.Substate](cfg),
+		tracker.MakeSubstateProgressTracker(cfg, 100_000),
 		register.MakeRegisterProgress(cfg, 100_000),
 		primer.MakeStateDbPrimer[*substate.Substate](cfg),
 		profiler.MakeMemoryUsagePrinter[*substate.Substate](cfg),

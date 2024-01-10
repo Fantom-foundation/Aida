@@ -4,10 +4,10 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension/logger"
 	"github.com/Fantom-foundation/Aida/executor/extension/primer"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
-	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/executor/extension/validator"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -64,7 +64,7 @@ func runTransactions(
 	extensionList = append(extensionList, []executor.Extension[*GeneratedTransaction]{
 		profiler.MakeThreadLocker[*GeneratedTransaction](),
 		profiler.MakeVirtualMachineStatisticsPrinter[*GeneratedTransaction](cfg),
-		tracker.MakeProgressLogger[*GeneratedTransaction](cfg, 15*time.Second),
+		logger.MakeProgressLogger[*GeneratedTransaction](cfg, 15*time.Second),
 		//tracker.MakeProgressTracker(cfg, 100_000),
 		primer.MakeStateDbPrimer[*GeneratedTransaction](cfg),
 		profiler.MakeMemoryUsagePrinter[*GeneratedTransaction](cfg),

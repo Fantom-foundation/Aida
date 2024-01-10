@@ -2,11 +2,12 @@ package main
 
 import (
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension/logger"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/executor/extension/validator"
-	"github.com/Fantom-foundation/Aida/logger"
+	log "github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
@@ -28,7 +29,7 @@ var RecordCommand = cli.Command{
 		&utils.TraceDebugFlag,
 		&utils.DebugFromFlag,
 		&utils.AidaDbFlag,
-		&logger.LogLevelFlag,
+		&log.LogLevelFlag,
 	},
 	Description: `
 The trace record command requires two arguments:
@@ -64,8 +65,8 @@ func record(
 ) error {
 	var extensions = []executor.Extension[*substate.Substate]{
 		profiler.MakeCpuProfiler[*substate.Substate](cfg),
-		tracker.MakeProgressLogger[*substate.Substate](cfg, 0),
-		tracker.MakeProgressTracker(cfg, 0),
+		logger.MakeProgressLogger[*substate.Substate](cfg, 0),
+		tracker.MakeSubstateProgressTracker(cfg, 0),
 		statedb.MakeTemporaryStatePrepper(cfg),
 		statedb.MakeProxyRecorderPrepper(cfg),
 		validator.MakeLiveDbValidator(cfg),

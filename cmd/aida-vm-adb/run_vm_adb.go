@@ -2,9 +2,9 @@ package main
 
 import (
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension/logger"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
-	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/executor/extension/validator"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -48,8 +48,8 @@ func run(
 	extensionList := []executor.Extension[*substate.Substate]{
 		profiler.MakeCpuProfiler[*substate.Substate](cfg),
 		statedb.MakeArchivePrepper(),
-		tracker.MakeProgressLogger[*substate.Substate](cfg, 0),
-		tracker.MakeErrorLogger[*substate.Substate](cfg),
+		logger.MakeProgressLogger[*substate.Substate](cfg, 0),
+		logger.MakeErrorLogger[*substate.Substate](cfg),
 		validator.MakeArchiveDbValidator(cfg),
 	}
 
@@ -58,7 +58,7 @@ func run(
 			extensionList,
 			statedb.MakeStateDbManager[*substate.Substate](cfg),
 			statedb.MakeArchiveBlockChecker[*substate.Substate](cfg),
-			tracker.MakeDbLogger[*substate.Substate](cfg),
+			logger.MakeDbLogger[*substate.Substate](cfg),
 		)
 	}
 
