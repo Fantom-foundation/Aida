@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/trie"
 )
 
@@ -80,13 +81,10 @@ func (db *offTheChainDB) TrieDB() *trie.Database {
 }
 
 // NewOffTheChainStateDB returns an empty in-memory *state.StateDB without disk caches
-func NewOffTheChainStateDB() *state.StateDB {
-	// backend in-memory key-value database
-	kvdb := rawdb.NewMemoryDatabase()
-
+func NewOffTheChainStateDB(db ethdb.Database) *state.StateDB {
 	// zeroed trie.Config to disable Cache, Journal, Preimages, ...
 	zerodConfig := &trie.Config{}
-	tdb := trie.NewDatabaseWithConfig(kvdb, zerodConfig)
+	tdb := trie.NewDatabaseWithConfig(db, zerodConfig)
 
 	sdb := &offTheChainDB{
 		db: tdb,
@@ -125,7 +123,7 @@ func getHash(addr common.Address, code []byte) common.Hash {
 
 // MakeOffTheChainStateDB returns an in-memory *state.StateDB initialized with alloc
 func MakeOffTheChainStateDB(alloc substate.SubstateAlloc, block uint64, chainConduit *ChainConduit) (StateDB, error) {
-	statedb := NewOffTheChainStateDB()
+	statedb := NewOffTheChainStateDB(rawdb.NewMemoryDatabase())
 	for addr, a := range alloc {
 		statedb.SetPrehashedCode(addr, getHash(addr, a.Code), a.Code)
 		statedb.SetNonce(addr, a.Nonce)
@@ -142,7 +140,7 @@ func MakeOffTheChainStateDB(alloc substate.SubstateAlloc, block uint64, chainCon
 	}
 
 	blk := new(big.Int).SetUint64(block)
-	return &gethStateDB{db: statedb, block: blk, chainConduit: chainConduit}, nil
+	return NewInMemoryGethStateDB(statedb, chainConduit, blk), nil
 }
 
 func ReleaseCache() {

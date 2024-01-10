@@ -20,6 +20,14 @@ const (
 	imgUpperLimit    = 4 * 1024 * 1024
 )
 
+func NewInMemoryGethStateDB(db vm.StateDB, chainConduit *ChainConduit, block *big.Int) StateDB {
+	return &gethStateDB{
+		db:           db,
+		chainConduit: chainConduit,
+		block:        block,
+	}
+}
+
 func MakeGethStateDB(directory, variant string, rootHash common.Hash, isArchiveMode bool, chainConduit *ChainConduit) (StateDB, error) {
 	if variant != "" {
 		return nil, fmt.Errorf("unknown variant: %v", variant)

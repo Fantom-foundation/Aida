@@ -30,6 +30,7 @@ const (
 	LastBlockArg                       // requires 1 argument: last block
 	NoArgs                             // requires no arguments
 	OneToNArgs                         // requires at least one argument, but accepts up to N
+	PathArg                            // requires 1 argument: path to file
 )
 
 const (
@@ -199,6 +200,7 @@ type Config struct {
 	VmImpl                 string         // vm implementation (geth/lfvm)
 	Workers                int            // number of worker threads
 	WorldStateDb           string         // path to worldstate
+	ArgPath                string
 }
 
 type configContext struct {
@@ -517,6 +519,7 @@ func (cc *configContext) updateConfigBlockRange(args []string, mode ArgumentMode
 	var (
 		first uint64
 		last  uint64
+		path  string
 	)
 
 	switch mode {
@@ -564,12 +567,32 @@ func (cc *configContext) updateConfigBlockRange(args []string, mode ArgumentMode
 			return errors.New("this command requires at least 1 argument")
 		}
 	case NoArgs:
+	case PathArg:
+		if len(args) != 1 {
+			return fmt.Errorf("path argument (%v) is required to run this command", args[0])
+		}
+
+		_, err := os.Stat(args[0])
+		if err != nil {
+			if os.IsNotExist(err) {
+				return fmt.Errorf("given path (%v) argument does not exist", args[0])
+			}
+			return fmt.Errorf("cannot read argument path (%v)", err)
+		}
+
+		path = args[0]
+
 	default:
 		return errors.New("unknown mode; unable to process commandline arguments")
 	}
 
-	cc.cfg.First = first
-	cc.cfg.Last = last
+	if path != "" {
+		cc.cfg.First = first
+		cc.cfg.Last = last
+	} else {
+		cc.cfg.ArgPath = path
+	}
+
 	return nil
 }
 
