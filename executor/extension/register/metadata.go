@@ -40,8 +40,8 @@ func MakeRunMetadata(connection string, id *RunIdentity) (*RunMetadata, error) {
 	meta["DbVariant"] = id.Cfg.DbVariant
 	meta["CarmenSchema"] = strconv.Itoa(id.Cfg.CarmenSchema)
 	meta["VmImpl"] = id.Cfg.VmImpl
-	meta["ArchiveMode"] = id.Cfg.ArchiveMode
-	meta["ArchiveQueryRate"] = id.Cfg.ArchiveQueryRate
+	meta["ArchiveMode"] = strconv.FormatBool(id.Cfg.ArchiveMode)
+	meta["ArchiveQueryRate"] = strconv.Itoa(id.Cfg.ArchiveQueryRate)
 	meta["ArchiveVariant"] = id.Cfg.ArchiveVariant
 
 	meta["First"] = strconv.Itoa(int(id.Cfg.First))
