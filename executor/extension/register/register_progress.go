@@ -68,6 +68,13 @@ func MakeRegisterProgress(cfg *utils.Config, reportFrequency int) executor.Exten
 		rp.ps.AddPrinter(p2db)
 	}
 
+	rm, err := MakeRunMetadata(connection, rp.id)
+	if err != nil {
+		rp.log.Debugf("Unable to create run metadata because %s.", err)
+	} else {
+		rm.Print()
+	}
+
 	return rp
 }
 
