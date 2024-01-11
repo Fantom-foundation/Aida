@@ -214,9 +214,14 @@ func (rp *registerProgress) sqlite3(conn string) (string, string, string, func()
 				lDisk = 0
 			}
 
-			aDisk, err := utils.GetDirectorySize(rp.pathToArchiveDb)
-			if err != nil {
-				rp.log.Errorf("Unable to get directory size from %s", rp.pathToArchiveDb)
+			var aDisk int64
+			if rp.cfg.ArchiveMode {
+				aDisk, err = utils.GetDirectorySize(rp.pathToArchiveDb)
+				if err != nil {
+					rp.log.Errorf("Unable to get directory size from %s", rp.pathToArchiveDb)
+					aDisk = 0
+				}
+			} else {
 				aDisk = 0
 			}
 
