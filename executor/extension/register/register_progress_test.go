@@ -25,6 +25,11 @@ const (
 		from stats
 		where start>=:start and end<=:end;
 	`
+	sqlite3SelectFromMetadata string = `
+		select key, value
+		from metadata
+		where key=:key;
+	`
 )
 
 type query struct {
@@ -41,6 +46,15 @@ type statsResponse struct {
 	GasRate        float64 `db:"gas_rate"`
 	OverallTxRate  float64 `db:"overall_tx_rate"`
 	OverallGasRate float64 `db:"overall_gas_rate"`
+}
+
+type metadataQuery struct {
+	Key string `db:"key"`
+}
+
+type metadataResponse struct {
+	Key   string `db:"key"`
+	Value string `db:"value"`
 }
 
 func TestRegisterProgress_DoNothingIfDisabled(t *testing.T) {
@@ -75,7 +89,17 @@ func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 		t.Fatalf("Unable to create stats table at database %s.\n%s", connection, err)
 	}
 
+	_, err = sDb.Exec(MetadataCreateTableIfNotExist)
+	if err != nil {
+		t.Fatalf("Unable to create metadata table at database %s.\n%s", connection, err)
+	}
+
 	stmt, err := sDb.PrepareNamed(sqlite3SelectFromStats)
+	if err != nil {
+		t.Fatalf("Failed to prepare statement using db at %s. \n%s", connection, err)
+	}
+
+	meta, err := sDb.PrepareNamed(sqlite3SelectFromMetadata)
 	if err != nil {
 		t.Fatalf("Failed to prepare statement using db at %s. \n%s", connection, err)
 	}
@@ -147,6 +171,20 @@ func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 		t.Errorf("Expected #Row: %d, Actual #Row: %d", expectedRowCount, len(stats))
 	}
 
+	// Check that metadata is not duplicated
+	ms := []metadataResponse{}
+	meta.Select(&ms, metadataQuery{"Processor"})
+	if len(ms) != 1 {
+		t.Errorf("Expected runtime to be recorded once, Actual: #Row: %d", len(ms))
+	}
+
+	// check if runtime is recorded after postrun
+	meta.Select(&ms, metadataQuery{"Runtime"})
+	if len(ms) != 1 {
+		t.Errorf("Expected runtime to be recorded once, Actual: #Row: %d", len(ms))
+	}
+
+	meta.Close()
 	stmt.Close()
 	sDb.Close()
 }
