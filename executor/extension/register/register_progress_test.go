@@ -176,7 +176,7 @@ func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 	ms := []metadataResponse{}
 	meta.Select(&ms, metadataQuery{"Processor"})
 	if len(ms) != 1 {
-		t.Errorf("Expected runtime to be recorded once, Actual: #Row %d", len(ms))
+		t.Errorf("Expected runtime to be recorded once, Actual #Row: %d", len(ms))
 	}
 
 	// check if runtime is recorded after postrun
@@ -192,6 +192,12 @@ func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 	}
 	if ms[0].Value != strconv.FormatBool(true) {
 		t.Errorf("RunSucceed expected to be true, Actual #Row: %s", ms[0].Value)
+	}
+
+	// check if RunError is not recorded
+	meta.Select(&ms, metadataQuery{"RunError"})
+	if len(ms) != 0 {
+		t.Errorf("Expected RunError should not be recorded, Actual: #Row: %d", len(ms))
 	}
 
 	meta.Close()
@@ -258,7 +264,7 @@ func TestRegisterProgress_IfErrorRecordIntoMetadata(t *testing.T) {
 	ms := []metadataResponse{}
 	meta.Select(&ms, metadataQuery{"RunSucceed"})
 	if len(ms) != 1 {
-		t.Errorf("Expected RunSucceed to be recorded once, Actual: #Row: %d", len(ms))
+		t.Errorf("Expected RunSucceed to be recorded once, Actual #Row: %d", len(ms))
 	}
 	if ms[0].Value != strconv.FormatBool(false) {
 		t.Errorf("RunSucceed expected to be true, Actual #Row: %s", ms[0].Value)
@@ -267,10 +273,12 @@ func TestRegisterProgress_IfErrorRecordIntoMetadata(t *testing.T) {
 	// check if RunError is recorded after postrun
 	meta.Select(&ms, metadataQuery{"RunError"})
 	if len(ms) != 1 {
-		t.Errorf("Expected RunErrorto be recorded once, Actual: #Row: %d", len(ms))
+		t.Errorf("Expected RunErrorto be recorded once, Actual #Row: %d", len(ms))
 	}
 	if ms[0].Value != errorText {
 		t.Errorf("RunError expected to be %s, Actual #Row: %s", errorText, ms[0].Value)
 	}
 
+	meta.Close()
+	sDb.Close()
 }
