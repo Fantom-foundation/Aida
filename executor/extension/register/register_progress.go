@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	LiveDbDirectoryName = "live"
+	LiveDbDirectoryName    = "live"
 	ArchiveDbDirectoryName = "archive"
 
 	RegisterProgressDefaultReportFrequency = 100_000 // in blocks
@@ -104,15 +104,15 @@ type registerProgress struct {
 	lastProcessedBlock int
 
 	// Stats
-	startOfRun   time.Time
-	lastUpdate   time.Time
-	txCount      uint64
-	gas          uint64
-	totalTxCount uint64
-	totalGas     uint64
-	pathToLiveDb string
+	startOfRun      time.Time
+	lastUpdate      time.Time
+	txCount         uint64
+	gas             uint64
+	totalTxCount    uint64
+	totalGas        uint64
+	pathToLiveDb    string
 	pathToArchiveDb string
-	memory       *state.MemoryUsage
+	memory          *state.MemoryUsage
 
 	id   *RunIdentity
 	meta *RunMetadata
@@ -213,7 +213,7 @@ func (rp *registerProgress) sqlite3(conn string) (string, string, string, func()
 				rp.log.Errorf("Unable to get directory size from %s", rp.pathToLiveDb)
 				lDisk = 0
 			}
-			
+
 			aDisk, err := utils.GetDirectorySize(rp.pathToArchiveDb)
 			if err != nil {
 				rp.log.Errorf("Unable to get directory size from %s", rp.pathToArchiveDb)
