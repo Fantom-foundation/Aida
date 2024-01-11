@@ -16,6 +16,9 @@ import (
 )
 
 const (
+	LiveDbDirectoryName = "live"
+	ArchiveDbDirectoryName = "archive"
+
 	RegisterProgressDefaultReportFrequency = 100_000 // in blocks
 
 	RegisterProgressCreateTableIfNotExist = `
@@ -23,7 +26,8 @@ const (
   			start INTEGER NOT NULL,
 	  		end INTEGER NOT NULL,
 			memory int,
-			disk int,
+			live_disk int,
+			archive_disk int,
 	  		tx_rate float,
 			gas_rate float,
   			overall_tx_rate float,
@@ -32,9 +36,13 @@ const (
 	`
 	RegisterProgressInsertOrReplace = `
 		INSERT or REPLACE INTO stats (
-			start, end, memory, disk, tx_rate, gas_rate, overall_tx_rate, overall_gas_rate
+			start, end, 
+			memory, live_disk, archive_disk, 
+			tx_rate, gas_rate, overall_tx_rate, overall_gas_rate
 		) VALUES (
-			?, ?, ?, ?, ?, ?, ?, ?
+			?, ?, 
+			?, ?, ?, 
+			?, ?, ?, ?
 		)
 	`
 )
@@ -102,7 +110,8 @@ type registerProgress struct {
 	gas          uint64
 	totalTxCount uint64
 	totalGas     uint64
-	directory    string
+	pathToLiveDb string
+	pathToArchiveDb string
 	memory       *state.MemoryUsage
 
 	id   *RunIdentity
@@ -113,7 +122,8 @@ func (rp *registerProgress) PreRun(_ executor.State[*substate.Substate], ctx *ex
 	now := time.Now()
 	rp.startOfRun = now
 	rp.lastUpdate = now
-	rp.directory = ctx.StateDbPath
+	rp.pathToLiveDb = filepath.Join(ctx.StateDbPath, LiveDbDirectoryName)
+	rp.pathToArchiveDb = filepath.Join(ctx.StateDbPath, ArchiveDbDirectoryName)
 	return nil
 }
 
@@ -198,10 +208,16 @@ func (rp *registerProgress) sqlite3(conn string) (string, string, string, func()
 			totalGas = rp.totalGas
 			rp.lock.Unlock()
 
-			disk, err := utils.GetDirectorySize(rp.directory)
+			lDisk, err := utils.GetDirectorySize(rp.pathToLiveDb)
 			if err != nil {
-				rp.log.Errorf("Unable to get directory size from %s", rp.directory)
-				return [][]any{}
+				rp.log.Errorf("Unable to get directory size from %s", rp.pathToLiveDb)
+				lDisk = 0
+			}
+			
+			aDisk, err := utils.GetDirectorySize(rp.pathToArchiveDb)
+			if err != nil {
+				rp.log.Errorf("Unable to get directory size from %s", rp.pathToArchiveDb)
+				aDisk = 0
 			}
 
 			mem := rp.memory.UsedBytes
@@ -215,7 +231,8 @@ func (rp *registerProgress) sqlite3(conn string) (string, string, string, func()
 				rp.interval.Start(),
 				rp.interval.End(),
 				mem,
-				disk,
+				lDisk,
+				aDisk,
 				txRate,
 				gasRate,
 				overallTxRate,
