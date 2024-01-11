@@ -64,14 +64,14 @@ func MakeRegisterProgress(cfg *utils.Config, reportFrequency int) executor.Exten
 
 	p2db, err := utils.NewPrinterToSqlite3(rp.sqlite3(connection))
 	if err != nil {
-		rp.log.Debugf("Unable to register at %s", cfg.RegisterRun)
+		rp.log.Errorf("Unable to register at %s", cfg.RegisterRun)
 	} else {
 		rp.ps.AddPrinter(p2db)
 	}
 
 	rm, err := MakeRunMetadata(connection, rp.id)
 	if err != nil {
-		rp.log.Debugf("Unable to create run metadata because %s.", err)
+		rp.log.Errorf("Unable to create run metadata because %s.", err)
 	} else {
 		rp.meta = rm
 		rm.Print()
