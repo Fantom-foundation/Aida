@@ -147,13 +147,20 @@ func (rp *registerProgress) PostTransaction(state executor.State[*substate.Subst
 }
 
 // PostRun prints the remaining statistics and terminates any printer resources.
-func (rp *registerProgress) PostRun(_ executor.State[*substate.Substate], ctx *executor.Context, _ error) error {
+func (rp *registerProgress) PostRun(_ executor.State[*substate.Substate], ctx *executor.Context, err error) error {
 	rp.memory = ctx.State.GetMemoryUsage()
 	rp.ps.Print()
 	rp.Reset()
 	rp.ps.Close()
 
 	rp.meta.meta["Runtime"] = strconv.Itoa(int(time.Since(rp.startOfRun).Seconds()))
+	if err != nil {
+		rp.meta.meta["RunSucceed"] = strconv.FormatBool(false)
+		rp.meta.meta["RunError"] = fmt.Sprintf("%v", err)
+	} else {
+		rp.meta.meta["RunSucceed"] = strconv.FormatBool(true)
+	}
+
 	rp.meta.Print()
 	rp.meta.Close()
 

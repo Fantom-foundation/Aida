@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/executor"
@@ -133,7 +134,7 @@ func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 
 	expectedRowCount := 0
 
-	// prints 3 times
+	/// prints 3 times
 	gomock.InOrder(
 		stateDb.EXPECT().GetMemoryUsage().Return(&state.MemoryUsage{UsedBytes: 1234}),
 		stateDb.EXPECT().GetMemoryUsage().Return(&state.MemoryUsage{UsedBytes: 4321}),
@@ -175,16 +176,109 @@ func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 	ms := []metadataResponse{}
 	meta.Select(&ms, metadataQuery{"Processor"})
 	if len(ms) != 1 {
-		t.Errorf("Expected runtime to be recorded once, Actual: #Row: %d", len(ms))
+		t.Errorf("Expected runtime to be recorded once, Actual #Row: %d", len(ms))
 	}
 
 	// check if runtime is recorded after postrun
 	meta.Select(&ms, metadataQuery{"Runtime"})
 	if len(ms) != 1 {
-		t.Errorf("Expected runtime to be recorded once, Actual: #Row: %d", len(ms))
+		t.Errorf("Expected runtime to be recorded once, Actual #Row: %d", len(ms))
+	}
+
+	// check if RunSucceed is recorded after postrun
+	meta.Select(&ms, metadataQuery{"RunSucceed"})
+	if len(ms) != 1 {
+		t.Errorf("Expected RunSucceed to be recorded once, Actual #Row: %d", len(ms))
+	}
+	if ms[0].Value != strconv.FormatBool(true) {
+		t.Errorf("RunSucceed expected to be true, Actual #Row: %s", ms[0].Value)
+	}
+
+	// check if RunError is not recorded
+	meta.Select(&ms, metadataQuery{"RunError"})
+	if len(ms) != 0 {
+		t.Errorf("Expected RunError should not be recorded, Actual: #Row: %d", len(ms))
 	}
 
 	meta.Close()
 	stmt.Close()
+	sDb.Close()
+}
+
+func TestRegisterProgress_IfErrorRecordIntoMetadata(t *testing.T) {
+	var (
+		tmpDir           string = t.TempDir()
+		dummyStateDbPath string = filepath.Join(tmpDir, "dummy.txt")
+		dbName           string = "tmp"
+		connection       string = filepath.Join(tmpDir, fmt.Sprintf("%s.db", dbName))
+	)
+	// Check if path to state db is writable
+	if err := os.WriteFile(dummyStateDbPath, []byte("hello world"), 0x600); err != nil {
+		t.Fatalf("failed to prepare disk content for %s.", dummyStateDbPath)
+	}
+
+	// Check if path to stats db is writable
+	sDb, err := sqlx.Open("sqlite3", connection)
+	if err != nil {
+		t.Fatalf("Failed to connect to database at %s.", connection)
+	}
+
+	_, err = sDb.Exec(RegisterProgressCreateTableIfNotExist)
+	if err != nil {
+		t.Fatalf("Unable to create stats table at database %s.\n%s", connection, err)
+	}
+
+	_, err = sDb.Exec(MetadataCreateTableIfNotExist)
+	if err != nil {
+		t.Fatalf("Unable to create metadata table at database %s.\n%s", connection, err)
+	}
+
+	meta, err := sDb.PrepareNamed(sqlite3SelectFromMetadata)
+	if err != nil {
+		t.Fatalf("Failed to prepare statement using db at %s. \n%s", connection, err)
+	}
+
+	ctrl := gomock.NewController(t)
+	stateDb := state.NewMockStateDB(ctrl)
+
+	cfg := &utils.Config{}
+	cfg.RegisterRun = tmpDir // enabled here
+	cfg.OverwriteRunId = dbName
+
+	ctx := &executor.Context{State: stateDb, StateDbPath: dummyStateDbPath}
+	gomock.InOrder(
+		stateDb.EXPECT().GetMemoryUsage().Return(&state.MemoryUsage{UsedBytes: 1234}),
+	)
+
+	ext := MakeRegisterProgress(cfg, 123)
+	if _, err := ext.(extension.NilExtension[*substate.Substate]); err {
+		t.Errorf("RegisterProgress is disabled even though enabled in configuration.")
+	}
+
+	// this is the run
+	errorText := "This is one random error!"
+	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
+	ext.PostRun(executor.State[*substate.Substate]{}, ctx, fmt.Errorf(errorText))
+
+	// check if RunSucceed is recorded after postrun
+	ms := []metadataResponse{}
+	meta.Select(&ms, metadataQuery{"RunSucceed"})
+	if len(ms) != 1 {
+		t.Errorf("Expected RunSucceed to be recorded once, Actual #Row: %d", len(ms))
+	}
+	if ms[0].Value != strconv.FormatBool(false) {
+		t.Errorf("RunSucceed expected to be true, Actual #Row: %s", ms[0].Value)
+	}
+
+	// check if RunError is recorded after postrun
+	meta.Select(&ms, metadataQuery{"RunError"})
+	if len(ms) != 1 {
+		t.Errorf("Expected RunErrorto be recorded once, Actual #Row: %d", len(ms))
+	}
+	if ms[0].Value != errorText {
+		t.Errorf("RunError expected to be %s, Actual #Row: %s", errorText, ms[0].Value)
+	}
+
+	meta.Close()
 	sDb.Close()
 }
