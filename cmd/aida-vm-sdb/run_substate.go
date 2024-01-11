@@ -66,7 +66,6 @@ func runSubstates(
 		tracker.MakeProgressLogger[*substate.Substate](cfg, 15*time.Second),
 		tracker.MakeErrorLogger[*substate.Substate](cfg),
 		tracker.MakeProgressTracker(cfg, 100_000),
-		register.MakeRegisterProgress(cfg, 100_000),
 		primer.MakeStateDbPrimer[*substate.Substate](cfg),
 		profiler.MakeMemoryUsagePrinter[*substate.Substate](cfg),
 		profiler.MakeMemoryProfiler[*substate.Substate](cfg),
@@ -77,6 +76,13 @@ func runSubstates(
 		validator.MakeLiveDbValidator(cfg),
 
 		profiler.MakeOperationProfiler[*substate.Substate](cfg),
+
+		// RegisterProgress should be the last to receive postRun.
+		// This is because it collects the error and records it externally.
+		// Otherwise, error that happen afterwards will not be correcly recorded.
+		// Put here as second-last, to make sure that MakeBlockRuntimeAndGasCollector functions as expected.
+		register.MakeRegisterProgress(cfg, 100_000),
+
 		// block profile extension should be always last because:
 		// 1) Pre-Func are called forwards so this is called last and
 		// 2) Post-Func are called backwards so this is called first
