@@ -13,7 +13,6 @@ import (
 
 	rpc "github.com/Fantom-foundation/Aida/rpc"
 	operation "github.com/Fantom-foundation/Aida/tracer/operation"
-	substate "github.com/Fantom-foundation/Substate"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -41,7 +40,7 @@ func (m *MockTxConsumer) EXPECT() *MockTxConsumerMockRecorder {
 }
 
 // Consume mocks base method.
-func (m *MockTxConsumer) Consume(block, transaction int, substate *substate.Substate) error {
+func (m *MockTxConsumer) Consume(block, transaction int, substate TransactionData) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Consume", block, transaction, substate)
 	ret0, _ := ret[0].(error)

@@ -3,20 +3,19 @@ package statedb
 import (
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
-	substate "github.com/Fantom-foundation/Substate"
 )
 
 // MakeArchivePrepper creates an extension for retrieving archive. Archive is assigned to context.Archive.
-func MakeArchivePrepper() executor.Extension[*substate.Substate] {
+func MakeArchivePrepper() executor.Extension[executor.TransactionData] {
 	return &archivePrepper{}
 }
 
 type archivePrepper struct {
-	extension.NilExtension[*substate.Substate]
+	extension.NilExtension[executor.TransactionData]
 }
 
 // PreBlock sends needed archive to the processor.
-func (r *archivePrepper) PreBlock(state executor.State[*substate.Substate], ctx *executor.Context) error {
+func (r *archivePrepper) PreBlock(state executor.State[executor.TransactionData], ctx *executor.Context) error {
 	var err error
 	ctx.Archive, err = ctx.State.GetArchiveState(uint64(state.Block) - 1)
 	if err != nil {
@@ -27,7 +26,7 @@ func (r *archivePrepper) PreBlock(state executor.State[*substate.Substate], ctx 
 }
 
 // PostBlock releases the Archive StateDb
-func (r *archivePrepper) PostBlock(_ executor.State[*substate.Substate], ctx *executor.Context) error {
+func (r *archivePrepper) PostBlock(_ executor.State[executor.TransactionData], ctx *executor.Context) error {
 	ctx.Archive.Release()
 	return nil
 }

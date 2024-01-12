@@ -12,7 +12,6 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
 )
 
 const (
@@ -42,9 +41,9 @@ const (
 // MakeRegisterProgress creates an extention that
 //  1. Track Progress e.g. ProgressTracker
 //  2. Register the intermediate results to an external service (sqlite3 db)
-func MakeRegisterProgress(cfg *utils.Config, reportFrequency int) executor.Extension[*substate.Substate] {
+func MakeRegisterProgress(cfg *utils.Config, reportFrequency int) executor.Extension[executor.TransactionData] {
 	if cfg.RegisterRun == "" {
-		return extension.NilExtension[*substate.Substate]{}
+		return extension.NilExtension[executor.TransactionData]{}
 	}
 
 	if reportFrequency == 0 {
@@ -83,7 +82,7 @@ func MakeRegisterProgress(cfg *utils.Config, reportFrequency int) executor.Exten
 // registerProgress logs progress every XXX blocks depending on reportFrequency.
 // Default is 100_000 blocks. This is mainly used for gathering information about process.
 type registerProgress struct {
-	extension.NilExtension[*substate.Substate]
+	extension.NilExtension[executor.TransactionData]
 
 	// Configuration
 	cfg  *utils.Config
@@ -109,7 +108,7 @@ type registerProgress struct {
 	meta *RunMetadata
 }
 
-func (rp *registerProgress) PreRun(_ executor.State[*substate.Substate], ctx *executor.Context) error {
+func (rp *registerProgress) PreRun(_ executor.State[executor.TransactionData], ctx *executor.Context) error {
 	now := time.Now()
 	rp.startOfRun = now
 	rp.lastUpdate = now
@@ -121,7 +120,7 @@ func (rp *registerProgress) PreRun(_ executor.State[*substate.Substate], ctx *ex
 // We only care about total number of transactions we can do this here rather in Pre/PostTransaction.
 //
 // This is done in PreBlock because some blocks do not have transaction.
-func (rp *registerProgress) PreBlock(state executor.State[*substate.Substate], ctx *executor.Context) error {
+func (rp *registerProgress) PreBlock(state executor.State[executor.TransactionData], ctx *executor.Context) error {
 	if uint64(state.Block) > rp.interval.End() {
 		rp.memory = ctx.State.GetMemoryUsage()
 		rp.ps.Print()
@@ -133,21 +132,23 @@ func (rp *registerProgress) PreBlock(state executor.State[*substate.Substate], c
 }
 
 // PostTransaction increments number of transactions and saves gas used in last substate.
-func (rp *registerProgress) PostTransaction(state executor.State[*substate.Substate], _ *executor.Context) error {
+func (rp *registerProgress) PostTransaction(state executor.State[executor.TransactionData], _ *executor.Context) error {
+	res := state.Data.GetResult()
+
 	rp.lock.Lock()
 	defer rp.lock.Unlock()
 
 	rp.totalTxCount++
 	rp.txCount++
 
-	rp.totalGas += state.Data.Result.GasUsed
-	rp.gas += state.Data.Result.GasUsed
+	rp.totalGas += res.GasUsed
+	rp.gas += res.GasUsed
 
 	return nil
 }
 
 // PostRun prints the remaining statistics and terminates any printer resources.
-func (rp *registerProgress) PostRun(_ executor.State[*substate.Substate], ctx *executor.Context, err error) error {
+func (rp *registerProgress) PostRun(_ executor.State[executor.TransactionData], ctx *executor.Context, err error) error {
 	rp.memory = ctx.State.GetMemoryUsage()
 	rp.ps.Print()
 	rp.Reset()

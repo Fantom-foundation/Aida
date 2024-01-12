@@ -28,7 +28,7 @@ type LiveDbProcessor struct {
 }
 
 // Process transaction inside state into given LIVE StateDb
-func (p *LiveDbProcessor) Process(state State[*substate.Substate], ctx *Context) error {
+func (p *LiveDbProcessor) Process(state State[TransactionData], ctx *Context) error {
 	var err error
 
 	err = p.ProcessTransaction(ctx.State, state.Block, state.Transaction, state.Data)
@@ -54,7 +54,7 @@ type ArchiveDbProcessor struct {
 }
 
 // Process transaction inside state into given ARCHIVE StateDb
-func (p *ArchiveDbProcessor) Process(state State[*substate.Substate], ctx *Context) error {
+func (p *ArchiveDbProcessor) Process(state State[TransactionData], ctx *Context) error {
 	var err error
 
 	err = p.ProcessTransaction(ctx.Archive, state.Block, state.Transaction, state.Data)
@@ -97,16 +97,16 @@ func (s *SubstateProcessor) isErrFatal() bool {
 	return true
 }
 
-func (s *SubstateProcessor) ProcessTransaction(db state.VmStateDB, block int, tx int, st *substate.Substate) error {
+func (s *SubstateProcessor) ProcessTransaction(db state.VmStateDB, block int, tx int, st TransactionData) error {
 	if tx >= utils.PseudoTx {
-		s.processPseudoTx(st.OutputAlloc, db)
+		s.processPseudoTx(st.GetOutputAlloc(), db)
 		return nil
 	}
 	return s.processRegularTx(db, block, tx, st)
 }
 
 // processRegularTx executes VM on a chosen storage system.
-func (s *SubstateProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st *substate.Substate) (finalError error) {
+func (s *SubstateProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st TransactionData) (finalError error) {
 	db.BeginTransaction(uint32(tx))
 	defer db.EndTransaction()
 
@@ -118,11 +118,11 @@ func (s *SubstateProcessor) processRegularTx(db state.VmStateDB, block int, tx i
 }
 
 // fantomTx processes a transaction in Fantom Opera EVM configuration
-func (s *SubstateProcessor) fantomTx(db state.VmStateDB, block int, tx int, st *substate.Substate) (finalError error) {
+func (s *SubstateProcessor) fantomTx(db state.VmStateDB, block int, tx int, st TransactionData) (finalError error) {
 	var (
 		gaspool   = new(evmcore.GasPool)
 		txHash    = common.HexToHash(fmt.Sprintf("0x%016d%016d", block, tx))
-		inputEnv  = st.Env
+		inputEnv  = st.GetEnv()
 		hashError error
 		validate  = s.cfg.ValidateTxState
 	)
@@ -136,9 +136,9 @@ func (s *SubstateProcessor) fantomTx(db state.VmStateDB, block int, tx int, st *
 
 	chainConfig := utils.GetChainConfig(s.cfg.ChainID)
 
-	// prepare tx
+	// prepare data
 	gaspool.AddGas(inputEnv.GasLimit)
-	msg := st.Message.AsMessage()
+	msg := st.GetMessage()
 	db.Prepare(txHash, tx)
 	blockCtx := prepareBlockCtx(inputEnv, &hashError)
 	txCtx := evmcore.NewEVMTxContext(msg)
@@ -174,7 +174,7 @@ func (s *SubstateProcessor) fantomTx(db state.VmStateDB, block int, tx int, st *
 			contract = crypto.CreateAddress(evm.TxContext.Origin, msg.Nonce())
 		}
 		vmResult := compileVMResult(logs, msgResult.UsedGas, msgResult.Failed(), contract)
-		if err = validateVMResult(vmResult, st.Result); err != nil {
+		if err = validateVMResult(vmResult, st.GetResult()); err != nil {
 			finalError = errors.Join(finalError, err)
 		}
 	}
@@ -182,11 +182,11 @@ func (s *SubstateProcessor) fantomTx(db state.VmStateDB, block int, tx int, st *
 }
 
 // ethereumTx processes a transaction in Ethereum EVM configuration
-func (s *SubstateProcessor) ethereumTx(db state.VmStateDB, block int, tx int, st *substate.Substate) (finalError error) {
+func (s *SubstateProcessor) ethereumTx(db state.VmStateDB, block int, tx int, st TransactionData) (finalError error) {
 	var (
 		gaspool   = new(core.GasPool)
 		txHash    = common.HexToHash(fmt.Sprintf("0x%016d%016d", block, tx))
-		inputEnv  = st.Env
+		inputEnv  = st.GetEnv()
 		hashError error
 		validate  = s.cfg.ValidateTxState
 	)
@@ -200,9 +200,9 @@ func (s *SubstateProcessor) ethereumTx(db state.VmStateDB, block int, tx int, st
 
 	chainConfig := utils.GetChainConfig(s.cfg.ChainID)
 
-	// prepare tx
+	// prepare data
 	gaspool.AddGas(inputEnv.GasLimit)
-	msg := st.Message.AsMessage()
+	msg := st.GetMessage()
 	db.Prepare(txHash, tx)
 	blockCtx := prepareBlockCtx(inputEnv, &hashError)
 	txCtx := core.NewEVMTxContext(msg)
@@ -238,7 +238,7 @@ func (s *SubstateProcessor) ethereumTx(db state.VmStateDB, block int, tx int, st
 			contract = crypto.CreateAddress(evm.TxContext.Origin, msg.Nonce())
 		}
 		vmResult := compileVMResult(logs, msgResult.UsedGas, msgResult.Failed(), contract)
-		if err = validateVMResult(vmResult, st.Result); err != nil {
+		if err = validateVMResult(vmResult, st.GetResult()); err != nil {
 			finalError = errors.Join(finalError, err)
 		}
 	}

@@ -14,10 +14,6 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-type GeneratedTransaction struct {
-	// todo fill with transaction info from the generator
-}
-
 // RunTxGenerator performs sequential block processing on a StateDb using transaction generator
 func RunTxGenerator(ctx *cli.Context) error {
 	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
@@ -36,44 +32,44 @@ type txProcessor struct {
 	cfg *utils.Config
 }
 
-func (p txProcessor) Process(state executor.State[*GeneratedTransaction], ctx *executor.Context) error {
+func (p txProcessor) Process(state executor.State[executor.TransactionData], ctx *executor.Context) error {
 	// todo apply data onto StateDb
 	return nil
 }
 
 func runTransactions(
 	cfg *utils.Config,
-	provider executor.Provider[*GeneratedTransaction],
+	provider executor.Provider[executor.TransactionData],
 	stateDb state.StateDB,
 	disableStateDbExtension bool,
 ) error {
 	// order of extensionList has to be maintained
-	var extensionList = []executor.Extension[*GeneratedTransaction]{
-		profiler.MakeCpuProfiler[*GeneratedTransaction](cfg),
-		profiler.MakeDiagnosticServer[*GeneratedTransaction](cfg),
+	var extensionList = []executor.Extension[executor.TransactionData]{
+		profiler.MakeCpuProfiler[executor.TransactionData](cfg),
+		profiler.MakeDiagnosticServer[executor.TransactionData](cfg),
 	}
 
 	if !disableStateDbExtension {
 		extensionList = append(
 			extensionList,
-			statedb.MakeStateDbManager[*GeneratedTransaction](cfg),
-			statedb.MakeLiveDbBlockChecker[*GeneratedTransaction](cfg),
+			statedb.MakeStateDbManager[executor.TransactionData](cfg),
+			statedb.MakeLiveDbBlockChecker[executor.TransactionData](cfg),
 		)
 	}
 
-	extensionList = append(extensionList, []executor.Extension[*GeneratedTransaction]{
-		profiler.MakeThreadLocker[*GeneratedTransaction](),
-		profiler.MakeVirtualMachineStatisticsPrinter[*GeneratedTransaction](cfg),
-		tracker.MakeProgressLogger[*GeneratedTransaction](cfg, 15*time.Second),
+	extensionList = append(extensionList, []executor.Extension[executor.TransactionData]{
+		profiler.MakeThreadLocker[executor.TransactionData](),
+		profiler.MakeVirtualMachineStatisticsPrinter[executor.TransactionData](cfg),
+		tracker.MakeProgressLogger[executor.TransactionData](cfg, 15*time.Second),
 		//tracker.MakeProgressTracker(cfg, 100_000),
-		primer.MakeStateDbPrimer[*GeneratedTransaction](cfg),
-		profiler.MakeMemoryUsagePrinter[*GeneratedTransaction](cfg),
-		profiler.MakeMemoryProfiler[*GeneratedTransaction](cfg),
+		primer.MakeStateDbPrimer[executor.TransactionData](cfg),
+		profiler.MakeMemoryUsagePrinter[executor.TransactionData](cfg),
+		profiler.MakeMemoryProfiler[executor.TransactionData](cfg),
 		//statedb.MakeStateDbPrepper(),
 		//statedb.MakeArchiveInquirer(cfg),
-		validator.MakeStateHashValidator[*GeneratedTransaction](cfg),
-		statedb.MakeBlockEventEmitter[*GeneratedTransaction](),
-		profiler.MakeOperationProfiler[*GeneratedTransaction](cfg),
+		validator.MakeStateHashValidator[executor.TransactionData](cfg),
+		statedb.MakeBlockEventEmitter[executor.TransactionData](),
+		profiler.MakeOperationProfiler[executor.TransactionData](cfg),
 		// block profile extension should be always last because:
 		// 1) Pre-Func are called forwards so this is called last and
 		// 2) Post-Func are called backwards so this is called first

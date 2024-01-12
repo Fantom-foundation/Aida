@@ -58,13 +58,13 @@ func RecordStateDbTrace(ctx *cli.Context) error {
 
 func record(
 	cfg *utils.Config,
-	provider executor.Provider[*substate.Substate],
-	processor executor.Processor[*substate.Substate],
-	extra []executor.Extension[*substate.Substate],
+	provider executor.Provider[executor.TransactionData],
+	processor executor.Processor[executor.TransactionData],
+	extra []executor.Extension[executor.TransactionData],
 ) error {
-	var extensions = []executor.Extension[*substate.Substate]{
-		profiler.MakeCpuProfiler[*substate.Substate](cfg),
-		tracker.MakeProgressLogger[*substate.Substate](cfg, 0),
+	var extensions = []executor.Extension[executor.TransactionData]{
+		profiler.MakeCpuProfiler[executor.TransactionData](cfg),
+		tracker.MakeProgressLogger[executor.TransactionData](cfg, 0),
 		tracker.MakeProgressTracker(cfg, 0),
 		statedb.MakeTemporaryStatePrepper(cfg),
 		statedb.MakeProxyRecorderPrepper(cfg),

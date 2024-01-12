@@ -155,7 +155,7 @@ func TestSubstateProvider_IterationCanBeAbortedByConsumer(t *testing.T) {
 	}
 }
 
-func openSubstateDb(path string) (Provider[*substate.Substate], error) {
+func openSubstateDb(path string) (Provider[TransactionData], error) {
 	cfg := utils.Config{}
 	cfg.AidaDb = path
 	cfg.Workers = 1

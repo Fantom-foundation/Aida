@@ -6,7 +6,6 @@ import (
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/profile/graphutil"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -94,20 +93,22 @@ func interfere(u, v AddressSet) bool {
 }
 
 // findTxAddresses gets wallet/contract addresses of a transaction.
-func findTxAddresses(tx executor.State[*substate.Substate]) AddressSet {
+func findTxAddresses(tx executor.State[executor.TransactionData]) AddressSet {
 	addresses := AddressSet{}
-	for addr := range tx.Data.InputAlloc {
+	for addr := range tx.Data.GetInputAlloc() {
 		addresses[addr] = struct{}{}
 	}
-	for addr := range tx.Data.OutputAlloc {
+	for addr := range tx.Data.GetOutputAlloc() {
 		addresses[addr] = struct{}{}
 	}
+
+	msg := tx.Data.GetMessage()
 	var zero common.Address
-	if tx.Data.Message.From != zero {
-		addresses[tx.Data.Message.From] = struct{}{}
+	if msg.From() != zero {
+		addresses[msg.From()] = struct{}{}
 	}
-	if tx.Data.Message.To != nil {
-		addresses[*tx.Data.Message.To] = struct{}{}
+	if msg.To() != nil {
+		addresses[*msg.To()] = struct{}{}
 	}
 	return addresses
 }
@@ -145,7 +146,7 @@ func (ctx *Context) dependencies(addresses AddressSet) graphutil.OrdinalSet {
 }
 
 // RecordTransaction collects addresses and computes earliest time.
-func (ctx *Context) RecordTransaction(state executor.State[*substate.Substate], tTransaction time.Duration) error {
+func (ctx *Context) RecordTransaction(state executor.State[executor.TransactionData], tTransaction time.Duration) error {
 	overheadTimer := time.Now()
 
 	// update time for block and transaction
@@ -154,7 +155,7 @@ func (ctx *Context) RecordTransaction(state executor.State[*substate.Substate], 
 	ctx.tTypes = append(ctx.tTypes, getTransactionType(state))
 
 	// update gas used for block and transaction
-	gasUsed := state.Data.Result.GasUsed
+	gasUsed := state.Data.GetResult().GasUsed
 	ctx.gasBlock += gasUsed
 	ctx.gasTransactions = append(ctx.gasTransactions, gasUsed)
 
@@ -258,11 +259,11 @@ func (ctx *Context) GetProfileData(curBlock uint64, tBlock time.Duration) (*Prof
 }
 
 // getTransactionType reads a message and determines a transaction type.
-func getTransactionType(tx executor.State[*substate.Substate]) TxType {
-	msg := tx.Data.Message
-	to := msg.To
-	from := msg.From
-	alloc := tx.Data.InputAlloc
+func getTransactionType(tx executor.State[executor.TransactionData]) TxType {
+	msg := tx.Data.GetMessage()
+	to := msg.To()
+	from := msg.From()
+	alloc := tx.Data.GetInputAlloc()
 
 	zero := common.HexToAddress("0x0000000000000000000000000000000000000000")
 

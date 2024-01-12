@@ -17,9 +17,9 @@ import (
 )
 
 // MakeLiveDbValidator creates an extension which validates LIVE StateDb
-func MakeLiveDbValidator(cfg *utils.Config) executor.Extension[*substate.Substate] {
+func MakeLiveDbValidator(cfg *utils.Config) executor.Extension[executor.TransactionData] {
 	if !cfg.ValidateTxState {
-		return extension.NilExtension[*substate.Substate]{}
+		return extension.NilExtension[executor.TransactionData]{}
 	}
 
 	log := logger.NewLogger(cfg.LogLevel, "Tx-Verifier")
@@ -38,8 +38,8 @@ type liveDbTxValidator struct {
 }
 
 // PreTransaction validates InputAlloc in given substate
-func (v *liveDbTxValidator) PreTransaction(state executor.State[*substate.Substate], ctx *executor.Context) error {
-	err := v.validateSubstateAlloc(ctx.State, state.Data.InputAlloc)
+func (v *liveDbTxValidator) PreTransaction(state executor.State[executor.TransactionData], ctx *executor.Context) error {
+	err := v.validateSubstateAlloc(ctx.State, state.Data.GetInputAlloc())
 	if err == nil {
 		return nil
 	}
@@ -54,8 +54,8 @@ func (v *liveDbTxValidator) PreTransaction(state executor.State[*substate.Substa
 }
 
 // PostTransaction validates OutputAlloc in given substate
-func (v *liveDbTxValidator) PostTransaction(state executor.State[*substate.Substate], ctx *executor.Context) error {
-	err := v.validateSubstateAlloc(ctx.State, state.Data.OutputAlloc)
+func (v *liveDbTxValidator) PostTransaction(state executor.State[executor.TransactionData], ctx *executor.Context) error {
+	err := v.validateSubstateAlloc(ctx.State, state.Data.GetOutputAlloc())
 	if err == nil {
 		return nil
 	}
@@ -70,9 +70,9 @@ func (v *liveDbTxValidator) PostTransaction(state executor.State[*substate.Subst
 }
 
 // MakeArchiveDbValidator creates an extension which validates ARCHIVE StateDb
-func MakeArchiveDbValidator(cfg *utils.Config) executor.Extension[*substate.Substate] {
+func MakeArchiveDbValidator(cfg *utils.Config) executor.Extension[executor.TransactionData] {
 	if !cfg.ValidateTxState {
-		return extension.NilExtension[*substate.Substate]{}
+		return extension.NilExtension[executor.TransactionData]{}
 	}
 
 	log := logger.NewLogger(cfg.LogLevel, "Tx-Verifier")
@@ -91,8 +91,8 @@ type archiveDbValidator struct {
 }
 
 // PreTransaction validates InputAlloc in given substate
-func (v *archiveDbValidator) PreTransaction(state executor.State[*substate.Substate], ctx *executor.Context) error {
-	err := v.validateSubstateAlloc(ctx.Archive, state.Data.InputAlloc)
+func (v *archiveDbValidator) PreTransaction(state executor.State[executor.TransactionData], ctx *executor.Context) error {
+	err := v.validateSubstateAlloc(ctx.Archive, state.Data.GetInputAlloc())
 	if err == nil {
 		return nil
 	}
@@ -107,8 +107,8 @@ func (v *archiveDbValidator) PreTransaction(state executor.State[*substate.Subst
 }
 
 // PostTransaction validates VmAlloc
-func (v *archiveDbValidator) PostTransaction(state executor.State[*substate.Substate], ctx *executor.Context) error {
-	err := v.validateSubstateAlloc(ctx.Archive, state.Data.OutputAlloc)
+func (v *archiveDbValidator) PostTransaction(state executor.State[executor.TransactionData], ctx *executor.Context) error {
+	err := v.validateSubstateAlloc(ctx.Archive, state.Data.GetOutputAlloc())
 	if err == nil {
 		return nil
 	}
@@ -134,14 +134,14 @@ func makeStateDbValidator(cfg *utils.Config, log logger.Logger) *stateDbValidato
 }
 
 type stateDbValidator struct {
-	extension.NilExtension[*substate.Substate]
+	extension.NilExtension[executor.TransactionData]
 	cfg            *utils.Config
 	log            logger.Logger
 	numberOfErrors *atomic.Int32
 }
 
 // PreRun informs the user that stateDbValidator is enabled and that they should expect slower processing speed.
-func (v *stateDbValidator) PreRun(executor.State[*substate.Substate], *executor.Context) error {
+func (v *stateDbValidator) PreRun(executor.State[executor.TransactionData], *executor.Context) error {
 	v.log.Warning("Transaction verification is enabled, this may slow down the block processing.")
 
 	if v.cfg.ContinueOnFailure {

@@ -48,7 +48,7 @@ func TestPrepareBlockCtx(t *testing.T) {
 	}
 }
 
-// TestCompileVMResult tests a construction of substate.Result from tx output
+// TestCompileVMResult tests a construction of substate.Result from data output
 func TestCompileVMResult(t *testing.T) {
 	var logs []*types.Log
 	reciept_fail := &evmcore.ExecutionResult{UsedGas: 100, Err: fmt.Errorf("Test Error")}
@@ -74,7 +74,7 @@ func TestCompileVMResult(t *testing.T) {
 	}
 }
 
-// TestValidateVMResult tests validatation of tx result.
+// TestValidateVMResult tests validatation of data result.
 func TestValidateVMResult(t *testing.T) {
 	expectedResult := newDummyResult(t)
 	vmResult := newDummyResult(t)

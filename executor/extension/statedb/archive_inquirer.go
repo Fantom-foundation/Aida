@@ -13,18 +13,17 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
 )
 
 // MakeArchiveInquirer creates an extension running historic queries against
 // archive states in the background to the main executor process.
-func MakeArchiveInquirer(cfg *utils.Config) executor.Extension[*substate.Substate] {
+func MakeArchiveInquirer(cfg *utils.Config) executor.Extension[executor.TransactionData] {
 	return makeArchiveInquirer(cfg, logger.NewLogger(cfg.LogLevel, "Archive Inquirer"))
 }
 
-func makeArchiveInquirer(cfg *utils.Config, log logger.Logger) executor.Extension[*substate.Substate] {
+func makeArchiveInquirer(cfg *utils.Config, log logger.Logger) executor.Extension[executor.TransactionData] {
 	if cfg.ArchiveQueryRate <= 0 {
-		return extension.NilExtension[*substate.Substate]{}
+		return extension.NilExtension[executor.TransactionData]{}
 	}
 	return &archiveInquirer{
 		ArchiveDbProcessor: executor.MakeArchiveDbProcessor(cfg),
@@ -38,7 +37,7 @@ func makeArchiveInquirer(cfg *utils.Config, log logger.Logger) executor.Extensio
 }
 
 type archiveInquirer struct {
-	extension.NilExtension[*substate.Substate]
+	extension.NilExtension[executor.TransactionData]
 	*executor.ArchiveDbProcessor
 
 	cfg   *utils.Config
@@ -59,10 +58,10 @@ type archiveInquirer struct {
 	gasCounter                 atomic.Uint64
 	totalQueryTimeMilliseconds atomic.Uint64
 
-	validator executor.Extension[*substate.Substate]
+	validator executor.Extension[executor.TransactionData]
 }
 
-func (i *archiveInquirer) PreRun(_ executor.State[*substate.Substate], ctx *executor.Context) error {
+func (i *archiveInquirer) PreRun(_ executor.State[executor.TransactionData], ctx *executor.Context) error {
 	if !i.cfg.ArchiveMode {
 		i.finished.Signal()
 		return fmt.Errorf("can not run archive queries without enabled archive (missing --%s flag)", utils.ArchiveModeFlag.Name)
@@ -80,7 +79,7 @@ func (i *archiveInquirer) PreRun(_ executor.State[*substate.Substate], ctx *exec
 	return nil
 }
 
-func (i *archiveInquirer) PostTransaction(state executor.State[*substate.Substate], _ *executor.Context) error {
+func (i *archiveInquirer) PostTransaction(state executor.State[executor.TransactionData], _ *executor.Context) error {
 	// We only sample the very first transaction in each block since other transactions
 	// may depend on the effects of its predecessors in the same block.
 	if state.Transaction != 0 {
@@ -98,7 +97,7 @@ func (i *archiveInquirer) PostTransaction(state executor.State[*substate.Substat
 	return nil
 }
 
-func (i *archiveInquirer) PostRun(executor.State[*substate.Substate], *executor.Context, error) error {
+func (i *archiveInquirer) PostRun(executor.State[executor.TransactionData], *executor.Context, error) error {
 	i.finished.Signal()
 	i.done.Wait()
 	return nil
@@ -157,7 +156,7 @@ func (i *archiveInquirer) doInquiry(rnd *rand.Rand, errCh chan error) {
 	}
 	defer archive.Release()
 
-	state := executor.State[*substate.Substate]{
+	state := executor.State[executor.TransactionData]{
 		Block:       transaction.block,
 		Transaction: transaction.number,
 		Data:        transaction.substate,
@@ -192,7 +191,7 @@ func (i *archiveInquirer) doInquiry(rnd *rand.Rand, errCh chan error) {
 	}
 
 	i.transactionCounter.Add(1)
-	i.gasCounter.Add(transaction.substate.Result.GasUsed)
+	i.gasCounter.Add(transaction.substate.GetResult().GasUsed)
 	i.totalQueryTimeMilliseconds.Add(uint64(duration.Milliseconds()))
 }
 
@@ -233,7 +232,7 @@ func (i *archiveInquirer) runProgressReport() {
 type historicTransaction struct {
 	block    int
 	number   int
-	substate *substate.Substate
+	substate executor.TransactionData
 }
 
 type circularBuffer[T any] struct {
