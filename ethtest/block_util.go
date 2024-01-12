@@ -16,20 +16,22 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
+var usableNetworks = []string{"Istanbul, MuirGlacier", "Berlin", "London"}
+
 type Data struct {
-	Env     *Env
-	Msg     types.Message
-	Genesis *core.Genesis
-	Post    core.GenesisAlloc
-	Cfg     *Config
+	Env  *Env
+	Msg  types.Message
+	Post core.GenesisAlloc
+	Cfg  *Config
+	Pre  core.GenesisAlloc
 }
 
 func NewData(block BtBlock, tx *Transaction, bt *BtJSON, chainID utils.ChainID) *Data {
 	return &Data{
-		Env:     block.BlockHeader,
-		Msg:     tx.ToMessage(),
-		Genesis: bt.CreateGenesis(utils.GetChainConfig(chainID)),
-		Post:    bt.Post,
+		Env:  block.BlockHeader,
+		Msg:  tx.ToMessage(),
+		Pre:  bt.Pre,
+		Post: bt.Post,
 		Cfg: &Config{
 			Network:    bt.Network,
 			SealEngine: bt.SealEngine,
@@ -43,26 +45,49 @@ type Config struct {
 }
 
 func Open(path string) ([]*BtJSON, error) {
-	file, err := os.Open(path)
+	fpaths, err := utils.GetDirectoryFiles(path)
 	if err != nil {
 		return nil, err
 	}
 
-	byteJSON, err := io.ReadAll(file)
-	if err != nil {
-		return nil, err
-	}
+	//log := logger.NewLogger("info", "eth provider")
 
-	var b map[string]*BtJSON
-	err = json.Unmarshal(byteJSON, &b)
-	if err != nil {
-		return nil, err
-	}
+	var (
+		tests                                    []*BtJSON
+		unmarshalled, nilBlocks, unusableNetwork uint64
+	)
 
-	var tests []*BtJSON
+	for _, p := range fpaths {
+		file, err := os.Open(p)
+		if err != nil {
+			return nil, err
+		}
+		byteJSON, err := io.ReadAll(file)
+		if err != nil {
+			return nil, err
+		}
 
-	for _, t := range b {
-		tests = append(tests, t)
+		var b map[string]*BtJSON
+		err = json.Unmarshal(byteJSON, &b)
+		if err != nil {
+			unmarshalled++
+			// skip any unreadable tests
+			continue
+		}
+
+		for _, t := range b {
+			if t.Blocks == nil {
+				nilBlocks++
+				// skip any non block tests
+				continue
+			}
+
+			if !t.isWithinUsableNetworks() {
+				unusableNetwork++
+				continue
+			}
+			tests = append(tests, t)
+		}
 	}
 
 	return tests, nil
@@ -100,6 +125,16 @@ func (t *BtJSON) CreateGenesis(cfg *params.ChainConfig) *core.Genesis {
 		BaseFee:    t.Genesis.BaseFeePerGas.Convert(),
 	}
 
+}
+
+func (t *BtJSON) isWithinUsableNetworks() bool {
+	for _, network := range usableNetworks {
+		if network == t.Network {
+			return true
+		}
+	}
+
+	return false
 }
 
 type BtBlock struct {

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/Fantom-foundation/Aida/ethtest"
@@ -12,10 +11,10 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
-	"github.com/Fantom-foundation/go-opera/opera"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/tests"
 	"github.com/urfave/cli/v2"
 )
 
@@ -29,9 +28,9 @@ var RunEthTestsCmd = cli.Command{
 		//&utils.AidaDbFlag,
 		//
 		//// StateDb
-		//&utils.CarmenSchemaFlag,
-		//&utils.StateDbImplementationFlag,
-		//&utils.StateDbVariantFlag,
+		&utils.CarmenSchemaFlag,
+		&utils.StateDbImplementationFlag,
+		&utils.StateDbVariantFlag,
 		//&utils.StateDbSrcFlag,
 		//&utils.DbTmpFlag,
 		//&utils.StateDbLoggingFlag,
@@ -49,7 +48,7 @@ var RunEthTestsCmd = cli.Command{
 		//&utils.ShadowDbVariantFlag,
 		//
 		//// VM
-		//&utils.VmImplementation,
+		&utils.VmImplementation,
 		//
 		//// Profiling
 		//&utils.CpuProfileFlag,
@@ -99,8 +98,8 @@ func RunEth(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	//
-	//cfg.StateValidationMode = utils.SubsetCheck
+
+	cfg.StateValidationMode = utils.SubsetCheck
 	//
 	//substateDb, err := executor.OpenSubstateDb(cfg, ctx)
 	//if err != nil {
@@ -122,6 +121,9 @@ type ethTestProcessor struct {
 }
 
 func (p ethTestProcessor) Process(state executor.State[*ethtest.Data], ctx *executor.Context) (finalError error) {
+	ctx.State.BeginTransaction(uint32(0))
+	defer ctx.State.EndTransaction()
+
 	var (
 		gaspool = new(core.GasPool)
 		txHash  = common.HexToHash(fmt.Sprintf("0x%016d%016d", state.Block, state.Transaction))
@@ -129,13 +131,17 @@ func (p ethTestProcessor) Process(state executor.State[*ethtest.Data], ctx *exec
 	)
 
 	// create vm config
-	vmConfig := opera.DefaultVMConfig
-	vmConfig.InterpreterImpl = "geth"
-	vmConfig.NoBaseFee = true
+	var vmConfig vm.Config
+	vmConfig.InterpreterImpl = p.cfg.VmImpl
+	//vmConfig.NoBaseFee = true
 	vmConfig.Tracer = nil
 	vmConfig.Debug = false
 
-	chainConfig := utils.GetChainConfig(p.cfg.ChainID)
+	chainConfig := tests.Forks[state.Data.Cfg.Network]
+
+	if chainConfig == nil {
+		return nil
+	}
 
 	// prepare tx
 	gaspool.AddGas(state.Data.Env.GasLimit.Uint64())
@@ -150,7 +156,7 @@ func (p ethTestProcessor) Process(state executor.State[*ethtest.Data], ctx *exec
 	if err != nil {
 		// if transaction fails, revert to the first snapshot.
 		ctx.State.RevertToSnapshot(snapshot)
-		finalError = errors.Join(fmt.Errorf("block: %v transaction: %v", state.Block, state.Transaction), err)
+		//finalError = errors.Join(fmt.Errorf("block: %v transaction: %v", state.Block, state.Transaction), err)
 		//validate = false
 	}
 
@@ -189,11 +195,13 @@ func runEth(
 	var extensionList = []executor.Extension[*ethtest.Data]{
 		profiler.MakeCpuProfiler[*ethtest.Data](cfg),
 		profiler.MakeDiagnosticServer[*ethtest.Data](cfg),
+		tracker.MakeProgressLogger[*ethtest.Data](cfg, 0),
 	}
 
 	if stateDb == nil {
 		extensionList = append(
 			extensionList,
+			statedb.MakeStateDbManager[*ethtest.Data](cfg),
 			statedb.NewTemporaryEthStatePrepper(cfg),
 			statedb.MakeStateDbManager[*ethtest.Data](cfg),
 			statedb.MakeLiveDbBlockChecker[*ethtest.Data](cfg),

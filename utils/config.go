@@ -519,7 +519,6 @@ func (cc *configContext) updateConfigBlockRange(args []string, mode ArgumentMode
 	var (
 		first uint64
 		last  uint64
-		path  string
 	)
 
 	switch mode {
@@ -580,18 +579,14 @@ func (cc *configContext) updateConfigBlockRange(args []string, mode ArgumentMode
 			return fmt.Errorf("cannot read argument path (%v)", err)
 		}
 
-		path = args[0]
+		cc.cfg.ArgPath = args[0]
 
 	default:
 		return errors.New("unknown mode; unable to process commandline arguments")
 	}
 
-	if path != "" {
-		cc.cfg.First = first
-		cc.cfg.Last = last
-	} else {
-		cc.cfg.ArgPath = path
-	}
+	cc.cfg.First = first
+	cc.cfg.Last = last
 
 	return nil
 }
