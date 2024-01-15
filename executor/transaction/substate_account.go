@@ -65,3 +65,7 @@ func (a *substateAccount) ForEachStorage(h storageHandler) {
 func (a *substateAccount) Equal(y Account) bool {
 	return accountEqual(a, y)
 }
+
+func (a *substateAccount) String() string {
+	return accountString(a)
+}

@@ -44,45 +44,23 @@ type Result interface {
 	Equal(y Result) bool
 }
 
-type resultEqual struct{}
-
-func (r *resultEqual) GetStatus() uint64 { return 0 }
-
-func (r *resultEqual) SetStatus(uint64) {}
-
-func (r *resultEqual) GetBloom() types.Bloom { return types.Bloom{} }
-
-func (r *resultEqual) SetBloom(types.Bloom) {}
-
-func (r *resultEqual) GetLogs() []*types.Log { return nil }
-
-func (r *resultEqual) SetLogs([]*types.Log) {}
-
-func (r *resultEqual) GetContractAddress() common.Address { return common.Address{} }
-
-func (r *resultEqual) SetContractAddress(common.Address) {}
-
-func (r *resultEqual) GetGasUsed() uint64 { return 0 }
-
-func (r *resultEqual) SetGasUsed(uint64) {}
-
-func (r *resultEqual) Equal(y Result) bool {
-	if r == y {
+func resultEqual(x, y Result) bool {
+	if x == y {
 		return true
 	}
 
-	if (r == nil || y == nil) && r != y {
+	if (x == nil || y == nil) && x != y {
 		return false
 	}
 
-	rLogs := r.GetLogs()
+	rLogs := x.GetLogs()
 	yLogs := y.GetLogs()
 
-	equal := r.GetStatus() == y.GetStatus() &&
-		r.GetBloom() == y.GetBloom() &&
+	equal := x.GetStatus() == y.GetStatus() &&
+		x.GetBloom() == y.GetBloom() &&
 		(len(rLogs)) == len(yLogs) &&
-		r.GetContractAddress() == y.GetContractAddress() &&
-		r.GetGasUsed() == y.GetGasUsed()
+		x.GetContractAddress() == y.GetContractAddress() &&
+		x.GetGasUsed() == y.GetGasUsed()
 	if !equal {
 		return false
 	}

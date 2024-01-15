@@ -5,11 +5,11 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/Fantom-foundation/Aida/executor/transaction"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils/analytics"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
@@ -381,11 +381,11 @@ func (p *ProfilerProxy) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 }
 
 // GetSubstatePostAlloc gets substate post allocation.
-func (p *ProfilerProxy) GetSubstatePostAlloc() substate.SubstateAlloc {
+func (p *ProfilerProxy) GetSubstatePostAlloc() transaction.Alloc {
 	return p.db.GetSubstatePostAlloc()
 }
 
-func (p *ProfilerProxy) PrepareSubstate(substate *substate.SubstateAlloc, block uint64) {
+func (p *ProfilerProxy) PrepareSubstate(substate transaction.Alloc, block uint64) {
 	p.db.PrepareSubstate(substate, block)
 }
 

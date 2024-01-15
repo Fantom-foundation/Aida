@@ -6,6 +6,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/executor/extension/validator"
+	"github.com/Fantom-foundation/Aida/executor/transaction"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/urfave/cli/v2"
@@ -39,25 +40,25 @@ func RunVmAdb(ctx *cli.Context) error {
 
 func run(
 	cfg *utils.Config,
-	provider executor.Provider[executor.TransactionData],
+	provider executor.Provider[transaction.SubstateData],
 	stateDb state.StateDB,
-	processor executor.Processor[executor.TransactionData],
-	extra []executor.Extension[executor.TransactionData],
+	processor executor.Processor[transaction.SubstateData],
+	extra []executor.Extension[transaction.SubstateData],
 ) error {
-	extensionList := []executor.Extension[executor.TransactionData]{
-		profiler.MakeCpuProfiler[executor.TransactionData](cfg),
+	extensionList := []executor.Extension[transaction.SubstateData]{
+		profiler.MakeCpuProfiler[transaction.SubstateData](cfg),
 		statedb.MakeArchivePrepper(),
-		tracker.MakeProgressLogger[executor.TransactionData](cfg, 0),
-		tracker.MakeErrorLogger[executor.TransactionData](cfg),
+		tracker.MakeProgressLogger[transaction.SubstateData](cfg, 0),
+		tracker.MakeErrorLogger[transaction.SubstateData](cfg),
 		validator.MakeArchiveDbValidator(cfg),
 	}
 
 	if stateDb == nil {
 		extensionList = append(
 			extensionList,
-			statedb.MakeStateDbManager[executor.TransactionData](cfg),
-			statedb.MakeArchiveBlockChecker[executor.TransactionData](cfg),
-			tracker.MakeDbLogger[executor.TransactionData](cfg),
+			statedb.MakeStateDbManager[transaction.SubstateData](cfg),
+			statedb.MakeArchiveBlockChecker[transaction.SubstateData](cfg),
+			tracker.MakeDbLogger[transaction.SubstateData](cfg),
 		)
 	}
 

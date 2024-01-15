@@ -53,3 +53,7 @@ func (a oldSubstateAlloc) Len() int {
 func (a oldSubstateAlloc) Delete(addr common.Address) {
 	delete(a.alloc, addr)
 }
+
+func (a oldSubstateAlloc) String() string {
+	return allocString(a)
+}

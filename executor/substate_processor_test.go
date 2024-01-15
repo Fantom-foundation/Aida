@@ -6,19 +6,23 @@ import (
 	"strings"
 	"testing"
 
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Aida/executor/transaction"
+	substateCommon "github.com/Fantom-foundation/Substate/geth/common"
+	substateTypes "github.com/Fantom-foundation/Substate/geth/types"
+	"github.com/Fantom-foundation/Substate/substate"
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-func newDummyResult(t *testing.T) *substate.SubstateResult {
-	return &substate.SubstateResult{
-		Logs:            []*types.Log{},
-		ContractAddress: common.HexToAddress("0x0000000000085a12481aEdb59eb3200332aCA541"),
+func newDummyResult(t *testing.T) transaction.Result {
+	r := &substate.Result{
+		Logs:            []*substateTypes.Log{},
+		ContractAddress: substateCommon.HexToAddress("0x0000000000085a12481aEdb59eb3200332aCA541"),
 		GasUsed:         1000000,
 		Status:          types.ReceiptStatusSuccessful,
 	}
+	return transaction.NewSubstateResult(r)
 }
 
 // TestPrepareBlockCtx tests a creation of block context from substate environment.
@@ -26,16 +30,10 @@ func TestPrepareBlockCtx(t *testing.T) {
 	gaslimit := uint64(10000000)
 	blocknum := uint64(4600000)
 	basefee := big.NewInt(12345)
-	env := &substate.SubstateEnv{
-		Difficulty: big.NewInt(1),
-		GasLimit:   gaslimit,
-		Number:     blocknum,
-		Timestamp:  1675961395,
-		BaseFee:    basefee,
-	}
+	env := transaction.NewSubstateEnv(&substate.Env{Difficulty: big.NewInt(1), GasLimit: gaslimit, Number: blocknum, Timestamp: 1675961395, BaseFee: basefee})
 
 	// BlockHashes are nil, expect an error
-	blockCtx := prepareBlockCtx(env, nil)
+	blockCtx := prepareBlockCtx(env)
 
 	if blocknum != blockCtx.BlockNumber.Uint64() {
 		t.Fatalf("Wrong block number")
@@ -56,20 +54,20 @@ func TestCompileVMResult(t *testing.T) {
 
 	sr := compileVMResult(logs, reciept_fail.UsedGas, reciept_fail.Failed(), contract)
 
-	if sr.ContractAddress != contract {
+	if sr.GetContractAddress() != contract {
 		t.Fatalf("Wrong contract address")
 	}
-	if sr.GasUsed != reciept_fail.UsedGas {
+	if sr.GetGasUsed() != reciept_fail.UsedGas {
 		t.Fatalf("Wrong amount of gas used")
 	}
-	if sr.Status != types.ReceiptStatusFailed {
+	if sr.GetStatus() != types.ReceiptStatusFailed {
 		t.Fatalf("Wrong transaction status")
 	}
 
 	reciept_success := &evmcore.ExecutionResult{UsedGas: 100, Err: nil}
 	sr = compileVMResult(logs, reciept_success.UsedGas, reciept_success.Failed(), contract)
 
-	if sr.Status != types.ReceiptStatusSuccessful {
+	if sr.GetStatus() != types.ReceiptStatusSuccessful {
 		t.Fatalf("Wrong transaction status")
 	}
 }
@@ -87,14 +85,14 @@ func TestValidateVMResult(t *testing.T) {
 
 	// test negative
 	// mismatched contract
-	vmResult.ContractAddress = common.HexToAddress("0x0000000000085a12481aEdb59eb3200332aCA542")
+	vmResult.SetContractAddress(common.HexToAddress("0x0000000000085a12481aEdb59eb3200332aCA542"))
 	err = validateVMResult(vmResult, expectedResult)
 	if err == nil {
 		t.Fatalf("Failed to validate VM output. Expect contract address mismatch error.")
 	}
 	// mismatched gas used
 	vmResult = newDummyResult(t)
-	vmResult.GasUsed = 0
+	vmResult.SetGasUsed(0)
 	err = validateVMResult(vmResult, expectedResult)
 	if err == nil {
 		t.Fatalf("Failed to validate VM output. Expect gas used mismatch error.")
@@ -102,7 +100,7 @@ func TestValidateVMResult(t *testing.T) {
 
 	// mismatched gas used
 	vmResult = newDummyResult(t)
-	vmResult.Status = types.ReceiptStatusFailed
+	vmResult.SetStatus(types.ReceiptStatusFailed)
 	err = validateVMResult(vmResult, expectedResult)
 	if err == nil {
 		t.Fatalf("Failed to validate VM output. Expect staatus mismatch error.")
@@ -114,7 +112,7 @@ func TestValidateVMResult_ErrorIsInCorrectFormat(t *testing.T) {
 	vmResult := newDummyResult(t)
 
 	// change result so validation fails
-	expectedResult.GasUsed = 15000
+	expectedResult.SetGasUsed(15000)
 
 	err := validateVMResult(vmResult, expectedResult)
 	if err == nil {
@@ -134,16 +132,16 @@ func TestValidateVMResult_ErrorIsInCorrectFormat(t *testing.T) {
 		"\tlogs: %v\n"+
 		"\tcontract address: %v\n"+
 		"\tgas used: %v\n",
-		vmResult.Status,
-		vmResult.Bloom.Big().Uint64(),
-		vmResult.Logs,
-		vmResult.ContractAddress,
-		vmResult.GasUsed,
-		expectedResult.Status,
-		expectedResult.Bloom.Big().Uint64(),
-		expectedResult.Logs,
-		expectedResult.ContractAddress,
-		expectedResult.GasUsed,
+		vmResult.GetStatus(),
+		vmResult.GetBloom().Big().Uint64(),
+		vmResult.GetLogs(),
+		vmResult.GetContractAddress(),
+		vmResult.GetGasUsed(),
+		expectedResult.GetStatus(),
+		expectedResult.GetBloom().Big().Uint64(),
+		expectedResult.GetLogs(),
+		expectedResult.GetContractAddress(),
+		expectedResult.GetGasUsed(),
 	)
 	got := err.Error()
 

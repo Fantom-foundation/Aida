@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/transaction"
 	"github.com/Fantom-foundation/Aida/profile/graphutil"
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -93,14 +94,16 @@ func interfere(u, v AddressSet) bool {
 }
 
 // findTxAddresses gets wallet/contract addresses of a transaction.
-func findTxAddresses(tx executor.State[executor.TransactionData]) AddressSet {
+func findTxAddresses(tx executor.State[transaction.SubstateData]) AddressSet {
 	addresses := AddressSet{}
-	for addr := range tx.Data.GetInputAlloc() {
+
+	tx.Data.GetInputAlloc().ForEach(func(addr common.Address, acc transaction.Account) {
 		addresses[addr] = struct{}{}
-	}
-	for addr := range tx.Data.GetOutputAlloc() {
+	})
+
+	tx.Data.GetOutputAlloc().ForEach(func(addr common.Address, acc transaction.Account) {
 		addresses[addr] = struct{}{}
-	}
+	})
 
 	msg := tx.Data.GetMessage()
 	var zero common.Address
@@ -146,7 +149,7 @@ func (ctx *Context) dependencies(addresses AddressSet) graphutil.OrdinalSet {
 }
 
 // RecordTransaction collects addresses and computes earliest time.
-func (ctx *Context) RecordTransaction(state executor.State[executor.TransactionData], tTransaction time.Duration) error {
+func (ctx *Context) RecordTransaction(state executor.State[transaction.SubstateData], tTransaction time.Duration) error {
 	overheadTimer := time.Now()
 
 	// update time for block and transaction
@@ -155,7 +158,7 @@ func (ctx *Context) RecordTransaction(state executor.State[executor.TransactionD
 	ctx.tTypes = append(ctx.tTypes, getTransactionType(state))
 
 	// update gas used for block and transaction
-	gasUsed := state.Data.GetResult().GasUsed
+	gasUsed := state.Data.GetResult().GetGasUsed()
 	ctx.gasBlock += gasUsed
 	ctx.gasTransactions = append(ctx.gasTransactions, gasUsed)
 
@@ -259,7 +262,7 @@ func (ctx *Context) GetProfileData(curBlock uint64, tBlock time.Duration) (*Prof
 }
 
 // getTransactionType reads a message and determines a transaction type.
-func getTransactionType(tx executor.State[executor.TransactionData]) TxType {
+func getTransactionType(tx executor.State[transaction.SubstateData]) TxType {
 	msg := tx.Data.GetMessage()
 	to := msg.To()
 	from := msg.From()
@@ -268,9 +271,9 @@ func getTransactionType(tx executor.State[executor.TransactionData]) TxType {
 	zero := common.HexToAddress("0x0000000000000000000000000000000000000000")
 
 	if to != nil {
-		account, exist := alloc[*to]
+		account := alloc.Get(*to)
 		// regular transaction
-		if !exist || len(account.Code) == 0 {
+		if account == nil || len(account.GetCode()) == 0 {
 			return TransferTx
 			// CALL transaction with contract bytecode
 		} else {

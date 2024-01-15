@@ -11,28 +11,27 @@ import (
 // todo logs
 
 func NewSubstateResult(res *substate.Result) Result {
-	return &substateResult{res: res}
+	return &substateResult{res}
 }
 
 type substateResult struct {
-	resultEqual
-	res *substate.Result
+	*substate.Result
 }
 
 func (r *substateResult) GetStatus() uint64 {
-	return r.res.Status
+	return r.Status
 }
 
 func (r *substateResult) SetStatus(status uint64) {
-	r.res.Status = status
+	r.Status = status
 }
 
 func (r *substateResult) GetBloom() types.Bloom {
-	return types.Bloom(r.res.Bloom)
+	return types.Bloom(r.Bloom)
 }
 
 func (r *substateResult) SetBloom(bloom types.Bloom) {
-	r.res.Bloom = substateTypes.Bloom(bloom)
+	r.Bloom = substateTypes.Bloom(bloom)
 }
 
 func (r *substateResult) GetLogs() []*types.Log {
@@ -44,17 +43,21 @@ func (r *substateResult) SetLogs(logs []*types.Log) {
 }
 
 func (r *substateResult) GetContractAddress() common.Address {
-	return common.Address(r.res.ContractAddress)
+	return common.Address(r.ContractAddress)
 }
 
 func (r *substateResult) SetContractAddress(contractAddress common.Address) {
-	r.res.ContractAddress = substateCommon.Address(contractAddress)
+	r.ContractAddress = substateCommon.Address(contractAddress)
 }
 
 func (r *substateResult) GetGasUsed() uint64 {
-	return r.res.GasUsed
+	return r.GasUsed
 }
 
 func (r *substateResult) SetGasUsed(gasUsed uint64) {
-	r.res.GasUsed = gasUsed
+	r.GasUsed = gasUsed
+}
+
+func (r *substateResult) Equal(y Result) bool {
+	return resultEqual(r, y)
 }

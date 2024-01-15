@@ -1,6 +1,10 @@
 package transaction
 
 import (
+	"fmt"
+	"sort"
+	"strings"
+
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -30,6 +34,10 @@ type Alloc interface {
 
 	// Delete the record for given address
 	Delete(addr common.Address)
+
+	// String returns human-readable version of alloc.
+	// Note: Have a look at allocString()
+	String() string
 }
 
 type accountHandler func(addr common.Address, acc Account)
@@ -53,4 +61,23 @@ func allocEqual(x, y Alloc) (isEqual bool) {
 	})
 
 	return true
+}
+
+func allocString(a Alloc) string {
+	builder := strings.Builder{}
+	builder.WriteString(fmt.Sprintf("SubstateAlloc{\n\tsize: %d\n", a.Len()))
+	var addresses []common.Address
+
+	a.ForEach(func(addr common.Address, acc Account) {
+		addresses = append(addresses, addr)
+	})
+
+	sort.Slice(addresses, func(i, j int) bool { return addresses[i].String() < addresses[j].String() })
+
+	builder.WriteString("\tAccounts:\n")
+	for _, addr := range addresses {
+		builder.WriteString(fmt.Sprintf("\t\t%x: %v\n", addr, a.Get(addr).String()))
+	}
+	builder.WriteString("}")
+	return builder.String()
 }

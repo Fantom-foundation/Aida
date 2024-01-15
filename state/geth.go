@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"math/big"
 
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Aida/executor/transaction"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/prque"
 	"github.com/ethereum/go-ethereum/core/rawdb"
@@ -219,15 +219,16 @@ func (s *gethStateDB) Prepare(thash common.Hash, ti int) {
 	}
 }
 
-func (s *gethStateDB) PrepareSubstate(substate *substate.SubstateAlloc, block uint64) {
+func (s *gethStateDB) PrepareSubstate(substate transaction.Alloc, block uint64) {
 	// ignored
 }
 
-func (s *gethStateDB) GetSubstatePostAlloc() substate.SubstateAlloc {
+func (s *gethStateDB) GetSubstatePostAlloc() transaction.Alloc {
 	if db, ok := s.db.(*geth.StateDB); ok {
-		return db.GetSubstatePostAlloc()
+		return transaction.NewOldSubstateAlloc(db.GetSubstatePostAlloc())
 	}
-	return substate.SubstateAlloc{}
+
+	return nil
 }
 
 func (s *gethStateDB) Close() error {

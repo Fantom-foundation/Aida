@@ -10,6 +10,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/executor/extension/validator"
+	"github.com/Fantom-foundation/Aida/executor/transaction"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -17,13 +18,13 @@ import (
 
 // MakeArchiveInquirer creates an extension running historic queries against
 // archive states in the background to the main executor process.
-func MakeArchiveInquirer(cfg *utils.Config) executor.Extension[executor.TransactionData] {
+func MakeArchiveInquirer(cfg *utils.Config) executor.Extension[transaction.SubstateData] {
 	return makeArchiveInquirer(cfg, logger.NewLogger(cfg.LogLevel, "Archive Inquirer"))
 }
 
-func makeArchiveInquirer(cfg *utils.Config, log logger.Logger) executor.Extension[executor.TransactionData] {
+func makeArchiveInquirer(cfg *utils.Config, log logger.Logger) executor.Extension[transaction.SubstateData] {
 	if cfg.ArchiveQueryRate <= 0 {
-		return extension.NilExtension[executor.TransactionData]{}
+		return extension.NilExtension[transaction.SubstateData]{}
 	}
 	return &archiveInquirer{
 		ArchiveDbProcessor: executor.MakeArchiveDbProcessor(cfg),
@@ -37,7 +38,7 @@ func makeArchiveInquirer(cfg *utils.Config, log logger.Logger) executor.Extensio
 }
 
 type archiveInquirer struct {
-	extension.NilExtension[executor.TransactionData]
+	extension.NilExtension[transaction.SubstateData]
 	*executor.ArchiveDbProcessor
 
 	cfg   *utils.Config
@@ -58,10 +59,10 @@ type archiveInquirer struct {
 	gasCounter                 atomic.Uint64
 	totalQueryTimeMilliseconds atomic.Uint64
 
-	validator executor.Extension[executor.TransactionData]
+	validator executor.Extension[transaction.SubstateData]
 }
 
-func (i *archiveInquirer) PreRun(_ executor.State[executor.TransactionData], ctx *executor.Context) error {
+func (i *archiveInquirer) PreRun(_ executor.State[transaction.SubstateData], ctx *executor.Context) error {
 	if !i.cfg.ArchiveMode {
 		i.finished.Signal()
 		return fmt.Errorf("can not run archive queries without enabled archive (missing --%s flag)", utils.ArchiveModeFlag.Name)
@@ -79,7 +80,7 @@ func (i *archiveInquirer) PreRun(_ executor.State[executor.TransactionData], ctx
 	return nil
 }
 
-func (i *archiveInquirer) PostTransaction(state executor.State[executor.TransactionData], _ *executor.Context) error {
+func (i *archiveInquirer) PostTransaction(state executor.State[transaction.SubstateData], _ *executor.Context) error {
 	// We only sample the very first transaction in each block since other transactions
 	// may depend on the effects of its predecessors in the same block.
 	if state.Transaction != 0 {
@@ -97,7 +98,7 @@ func (i *archiveInquirer) PostTransaction(state executor.State[executor.Transact
 	return nil
 }
 
-func (i *archiveInquirer) PostRun(executor.State[executor.TransactionData], *executor.Context, error) error {
+func (i *archiveInquirer) PostRun(executor.State[transaction.SubstateData], *executor.Context, error) error {
 	i.finished.Signal()
 	i.done.Wait()
 	return nil
@@ -131,35 +132,35 @@ func (i *archiveInquirer) runInquiry(errCh chan error) {
 }
 
 func (i *archiveInquirer) doInquiry(rnd *rand.Rand, errCh chan error) {
-	// Pick a random transaction that is covered by the current archive block height.
-	transaction, found := i.getRandomTransaction(rnd)
+	// Pick a random tx that is covered by the current archive block height.
+	tx, found := i.getRandomTransaction(rnd)
 	for found {
 		height, empty, err := i.state.GetArchiveBlockHeight()
 		if err != nil {
 			i.log.Warningf("failed to obtain archive block height: %v", err)
 			return
 		}
-		if !empty && uint64(transaction.block) <= height {
+		if !empty && uint64(tx.block) <= height {
 			break
 		}
-		transaction, found = i.getRandomTransaction(rnd)
+		tx, found = i.getRandomTransaction(rnd)
 	}
 	if !found {
 		return
 	}
 
 	// Perform historic query.
-	archive, err := i.state.GetArchiveState(uint64(transaction.block))
+	archive, err := i.state.GetArchiveState(uint64(tx.block))
 	if err != nil {
-		errCh <- fmt.Errorf("failed to obtain access to archive at block height %d: %v", transaction.block, err)
+		errCh <- fmt.Errorf("failed to obtain access to archive at block height %d: %v", tx.block, err)
 		return
 	}
 	defer archive.Release()
 
-	state := executor.State[executor.TransactionData]{
-		Block:       transaction.block,
-		Transaction: transaction.number,
-		Data:        transaction.substate,
+	state := executor.State[transaction.SubstateData]{
+		Block:       tx.block,
+		Transaction: tx.number,
+		Data:        tx.substate,
 	}
 	ctx := &executor.Context{
 		Archive:    archive,
@@ -191,7 +192,7 @@ func (i *archiveInquirer) doInquiry(rnd *rand.Rand, errCh chan error) {
 	}
 
 	i.transactionCounter.Add(1)
-	i.gasCounter.Add(transaction.substate.GetResult().GasUsed)
+	i.gasCounter.Add(tx.substate.GetResult().GetGasUsed())
 	i.totalQueryTimeMilliseconds.Add(uint64(duration.Milliseconds()))
 }
 
@@ -232,7 +233,7 @@ func (i *archiveInquirer) runProgressReport() {
 type historicTransaction struct {
 	block    int
 	number   int
-	substate executor.TransactionData
+	substate transaction.SubstateData
 }
 
 type circularBuffer[T any] struct {

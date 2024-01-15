@@ -7,6 +7,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
+	"github.com/Fantom-foundation/Aida/executor/transaction"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 )
@@ -18,9 +19,9 @@ const (
 
 // MakeProgressTracker creates a progressTracker that depends on the
 // PostBlock event and is only useful as part of a sequential evaluation.
-func MakeProgressTracker(cfg *utils.Config, reportFrequency int) executor.Extension[executor.TransactionData] {
+func MakeProgressTracker(cfg *utils.Config, reportFrequency int) executor.Extension[transaction.SubstateData] {
 	if !cfg.TrackProgress {
-		return extension.NilExtension[executor.TransactionData]{}
+		return extension.NilExtension[transaction.SubstateData]{}
 	}
 
 	if reportFrequency == 0 {
@@ -42,7 +43,7 @@ func makeProgressTracker(cfg *utils.Config, reportFrequency int, log logger.Logg
 // progressTracker logs progress every XXX blocks depending on reportFrequency.
 // Default is 100_000 blocks. This is mainly used for gathering information about process.
 type progressTracker struct {
-	extension.NilExtension[executor.TransactionData]
+	extension.NilExtension[transaction.SubstateData]
 	cfg                 *utils.Config
 	log                 logger.Logger
 	reportFrequency     int
@@ -59,7 +60,7 @@ type processInfo struct {
 	gas             uint64
 }
 
-func (t *progressTracker) PreRun(state executor.State[executor.TransactionData], _ *executor.Context) error {
+func (t *progressTracker) PreRun(state executor.State[transaction.SubstateData], _ *executor.Context) error {
 	now := time.Now()
 	t.startOfRun = now
 	t.startOfLastInterval = now
@@ -67,18 +68,18 @@ func (t *progressTracker) PreRun(state executor.State[executor.TransactionData],
 }
 
 // PostTransaction increments number of transactions and saves gas used in last substate.
-func (t *progressTracker) PostTransaction(state executor.State[executor.TransactionData], _ *executor.Context) error {
+func (t *progressTracker) PostTransaction(state executor.State[transaction.SubstateData], _ *executor.Context) error {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
 	t.overallInfo.numTransactions++
-	t.overallInfo.gas += state.Data.GetResult().GasUsed
+	t.overallInfo.gas += state.Data.GetResult().GetGasUsed()
 
 	return nil
 }
 
 // PostBlock registers the completed block and may trigger the logging of an update.
-func (t *progressTracker) PostBlock(state executor.State[executor.TransactionData], ctx *executor.Context) error {
+func (t *progressTracker) PostBlock(state executor.State[transaction.SubstateData], ctx *executor.Context) error {
 	boundary := state.Block - (state.Block % t.reportFrequency)
 
 	if state.Block-t.lastReportedBlock < t.reportFrequency {

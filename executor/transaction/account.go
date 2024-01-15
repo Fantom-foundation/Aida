@@ -2,7 +2,10 @@ package transaction
 
 import (
 	"bytes"
+	"fmt"
 	"math/big"
+	"sort"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -45,6 +48,10 @@ type Account interface {
 	// Equal checks if the current account is equal to the provided account.
 	// Note: Have a look at allocEqual.
 	Equal(y Account) bool
+
+	// String returns human-readable version of alloc.
+	// Note: Have a look at accountString
+	String() string
 }
 
 type storageHandler func(keyHash common.Hash, valueHash common.Hash)
@@ -82,4 +89,23 @@ func accountEqual(a, y Account) (isEqual bool) {
 	})
 
 	return true
+}
+
+func accountString(a Account) string {
+	builder := strings.Builder{}
+	builder.WriteString(fmt.Sprintf("Account{\n\t\t\tnonce: %d\n\t\t\tbalance %v\n", a.GetNonce(), a.GetBalance()))
+
+	builder.WriteString("\t\t\tStorage{\n")
+	var keyHashes []common.Hash
+
+	a.ForEachStorage(func(keyHash common.Hash, _ common.Hash) {
+		keyHashes = append(keyHashes, keyHash)
+	})
+
+	sort.Slice(keyHashes, func(i, j int) bool { return keyHashes[i].String() < keyHashes[j].String() })
+	for _, key := range keyHashes {
+		builder.WriteString(fmt.Sprintf("\t\t\t\t%v=%v\n", key, a.GetStorageAt(key)))
+	}
+	builder.WriteString("\t\t\t}\n\t\t}")
+	return builder.String()
 }

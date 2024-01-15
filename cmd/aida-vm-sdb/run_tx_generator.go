@@ -9,6 +9,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/executor/extension/validator"
+	"github.com/Fantom-foundation/Aida/executor/transaction"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/urfave/cli/v2"
@@ -32,44 +33,44 @@ type txProcessor struct {
 	cfg *utils.Config
 }
 
-func (p txProcessor) Process(state executor.State[executor.TransactionData], ctx *executor.Context) error {
+func (p txProcessor) Process(state executor.State[transaction.SubstateData], ctx *executor.Context) error {
 	// todo apply data onto StateDb
 	return nil
 }
 
 func runTransactions(
 	cfg *utils.Config,
-	provider executor.Provider[executor.TransactionData],
+	provider executor.Provider[transaction.SubstateData],
 	stateDb state.StateDB,
 	disableStateDbExtension bool,
 ) error {
 	// order of extensionList has to be maintained
-	var extensionList = []executor.Extension[executor.TransactionData]{
-		profiler.MakeCpuProfiler[executor.TransactionData](cfg),
-		profiler.MakeDiagnosticServer[executor.TransactionData](cfg),
+	var extensionList = []executor.Extension[transaction.SubstateData]{
+		profiler.MakeCpuProfiler[transaction.SubstateData](cfg),
+		profiler.MakeDiagnosticServer[transaction.SubstateData](cfg),
 	}
 
 	if !disableStateDbExtension {
 		extensionList = append(
 			extensionList,
-			statedb.MakeStateDbManager[executor.TransactionData](cfg),
-			statedb.MakeLiveDbBlockChecker[executor.TransactionData](cfg),
+			statedb.MakeStateDbManager[transaction.SubstateData](cfg),
+			statedb.MakeLiveDbBlockChecker[transaction.SubstateData](cfg),
 		)
 	}
 
-	extensionList = append(extensionList, []executor.Extension[executor.TransactionData]{
-		profiler.MakeThreadLocker[executor.TransactionData](),
-		profiler.MakeVirtualMachineStatisticsPrinter[executor.TransactionData](cfg),
-		tracker.MakeProgressLogger[executor.TransactionData](cfg, 15*time.Second),
+	extensionList = append(extensionList, []executor.Extension[transaction.SubstateData]{
+		profiler.MakeThreadLocker[transaction.SubstateData](),
+		profiler.MakeVirtualMachineStatisticsPrinter[transaction.SubstateData](cfg),
+		tracker.MakeProgressLogger[transaction.SubstateData](cfg, 15*time.Second),
 		//tracker.MakeProgressTracker(cfg, 100_000),
-		primer.MakeStateDbPrimer[executor.TransactionData](cfg),
-		profiler.MakeMemoryUsagePrinter[executor.TransactionData](cfg),
-		profiler.MakeMemoryProfiler[executor.TransactionData](cfg),
+		primer.MakeStateDbPrimer[transaction.SubstateData](cfg),
+		profiler.MakeMemoryUsagePrinter[transaction.SubstateData](cfg),
+		profiler.MakeMemoryProfiler[transaction.SubstateData](cfg),
 		//statedb.MakeStateDbPrepper(),
 		//statedb.MakeArchiveInquirer(cfg),
-		validator.MakeStateHashValidator[executor.TransactionData](cfg),
-		statedb.MakeBlockEventEmitter[executor.TransactionData](),
-		profiler.MakeOperationProfiler[executor.TransactionData](cfg),
+		validator.MakeStateHashValidator[transaction.SubstateData](cfg),
+		statedb.MakeBlockEventEmitter[transaction.SubstateData](),
+		profiler.MakeOperationProfiler[transaction.SubstateData](cfg),
 		// block profile extension should be always last because:
 		// 1) Pre-Func are called forwards so this is called last and
 		// 2) Post-Func are called backwards so this is called first

@@ -11,6 +11,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/executor/extension/validator"
+	"github.com/Fantom-foundation/Aida/executor/transaction"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/urfave/cli/v2"
@@ -36,49 +37,49 @@ func RunSubstate(ctx *cli.Context) error {
 
 func runSubstates(
 	cfg *utils.Config,
-	provider executor.Provider[executor.TransactionData],
+	provider executor.Provider[transaction.SubstateData],
 	stateDb state.StateDB,
-	processor executor.Processor[executor.TransactionData],
-	extra []executor.Extension[executor.TransactionData],
+	processor executor.Processor[transaction.SubstateData],
+	extra []executor.Extension[transaction.SubstateData],
 ) error {
 	// order of extensionList has to be maintained
-	var extensionList = []executor.Extension[executor.TransactionData]{
-		profiler.MakeCpuProfiler[executor.TransactionData](cfg),
-		profiler.MakeDiagnosticServer[executor.TransactionData](cfg),
+	var extensionList = []executor.Extension[transaction.SubstateData]{
+		profiler.MakeCpuProfiler[transaction.SubstateData](cfg),
+		profiler.MakeDiagnosticServer[transaction.SubstateData](cfg),
 	}
 
 	if stateDb == nil {
 		extensionList = append(
 			extensionList,
-			statedb.MakeStateDbManager[executor.TransactionData](cfg),
-			statedb.MakeLiveDbBlockChecker[executor.TransactionData](cfg),
-			tracker.MakeDbLogger[executor.TransactionData](cfg),
+			statedb.MakeStateDbManager[transaction.SubstateData](cfg),
+			statedb.MakeLiveDbBlockChecker[transaction.SubstateData](cfg),
+			tracker.MakeDbLogger[transaction.SubstateData](cfg),
 		)
 	}
 
 	extensionList = append(extensionList, extra...)
 
-	extensionList = append(extensionList, []executor.Extension[executor.TransactionData]{
+	extensionList = append(extensionList, []executor.Extension[transaction.SubstateData]{
 		register.MakeRegisterProgress(cfg, 100_000),
 		// RegisterProgress should be the first on the list = last to receive PostRun.
 		// This is because it collects the error and records it externally.
 		// If not, error that happen afterwards (e.g. on top of) will not be correcly recorded.
 
-		profiler.MakeThreadLocker[executor.TransactionData](),
-		aidadb.MakeAidaDbManager[executor.TransactionData](cfg),
-		profiler.MakeVirtualMachineStatisticsPrinter[executor.TransactionData](cfg),
-		tracker.MakeProgressLogger[executor.TransactionData](cfg, 15*time.Second),
-		tracker.MakeErrorLogger[executor.TransactionData](cfg),
+		profiler.MakeThreadLocker[transaction.SubstateData](),
+		aidadb.MakeAidaDbManager[transaction.SubstateData](cfg),
+		profiler.MakeVirtualMachineStatisticsPrinter[transaction.SubstateData](cfg),
+		tracker.MakeProgressLogger[transaction.SubstateData](cfg, 15*time.Second),
+		tracker.MakeErrorLogger[transaction.SubstateData](cfg),
 		tracker.MakeProgressTracker(cfg, 100_000),
-		primer.MakeStateDbPrimer[executor.TransactionData](cfg),
-		profiler.MakeMemoryUsagePrinter[executor.TransactionData](cfg),
-		profiler.MakeMemoryProfiler[executor.TransactionData](cfg),
+		primer.MakeStateDbPrimer[transaction.SubstateData](cfg),
+		profiler.MakeMemoryUsagePrinter[transaction.SubstateData](cfg),
+		profiler.MakeMemoryProfiler[transaction.SubstateData](cfg),
 		statedb.MakeStateDbPrepper(),
 		statedb.MakeArchiveInquirer(cfg),
-		validator.MakeStateHashValidator[executor.TransactionData](cfg),
-		statedb.MakeBlockEventEmitter[executor.TransactionData](),
+		validator.MakeStateHashValidator[transaction.SubstateData](cfg),
+		statedb.MakeBlockEventEmitter[transaction.SubstateData](),
 		validator.MakeLiveDbValidator(cfg),
-		profiler.MakeOperationProfiler[executor.TransactionData](cfg),
+		profiler.MakeOperationProfiler[transaction.SubstateData](cfg),
 
 		// block profile extension should be always last because:
 		// 1) Pre-Func are called forwards so this is called last and

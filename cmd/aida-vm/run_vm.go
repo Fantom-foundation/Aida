@@ -8,6 +8,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/executor/extension/validator"
+	"github.com/Fantom-foundation/Aida/executor/transaction"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/urfave/cli/v2"
@@ -37,29 +38,29 @@ func RunVm(ctx *cli.Context) error {
 // execution, in particular during unit tests.
 func run(
 	cfg *utils.Config,
-	provider executor.Provider[executor.TransactionData],
+	provider executor.Provider[transaction.SubstateData],
 	stateDb state.StateDB,
-	processor executor.Processor[executor.TransactionData],
-	extra []executor.Extension[executor.TransactionData],
+	processor executor.Processor[transaction.SubstateData],
+	extra []executor.Extension[transaction.SubstateData],
 ) error {
-	extensions := []executor.Extension[executor.TransactionData]{
-		profiler.MakeCpuProfiler[executor.TransactionData](cfg),
-		profiler.MakeDiagnosticServer[executor.TransactionData](cfg),
-		profiler.MakeVirtualMachineStatisticsPrinter[executor.TransactionData](cfg),
+	extensions := []executor.Extension[transaction.SubstateData]{
+		profiler.MakeCpuProfiler[transaction.SubstateData](cfg),
+		profiler.MakeDiagnosticServer[transaction.SubstateData](cfg),
+		profiler.MakeVirtualMachineStatisticsPrinter[transaction.SubstateData](cfg),
 	}
 
 	if stateDb == nil {
 		extensions = append(
 			extensions,
 			statedb.MakeTemporaryStatePrepper(cfg),
-			tracker.MakeDbLogger[executor.TransactionData](cfg),
+			tracker.MakeDbLogger[transaction.SubstateData](cfg),
 		)
 	}
 
 	extensions = append(
 		extensions,
-		tracker.MakeErrorLogger[executor.TransactionData](cfg),
-		tracker.MakeProgressLogger[executor.TransactionData](cfg, 15*time.Second),
+		tracker.MakeErrorLogger[transaction.SubstateData](cfg),
+		tracker.MakeProgressLogger[transaction.SubstateData](cfg, 15*time.Second),
 		validator.MakeLiveDbValidator(cfg),
 	)
 	extensions = append(extensions, extra...)

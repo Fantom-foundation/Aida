@@ -5,10 +5,10 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/Fantom-foundation/Aida/executor/transaction"
 	cc "github.com/Fantom-foundation/Carmen/go/common"
 	carmen "github.com/Fantom-foundation/Carmen/go/state"
 	_ "github.com/Fantom-foundation/Carmen/go/state/cppstate"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
@@ -277,13 +277,13 @@ func (s *carmenVmStateDB) Prepare(thash common.Hash, ti int) {
 	// ignored
 }
 
-func (s *carmenStateDB) PrepareSubstate(substate *substate.SubstateAlloc, block uint64) {
+func (s *carmenStateDB) PrepareSubstate(substate transaction.Alloc, block uint64) {
 	// ignored
 }
 
-func (s *carmenVmStateDB) GetSubstatePostAlloc() substate.SubstateAlloc {
+func (s *carmenVmStateDB) GetSubstatePostAlloc() transaction.Alloc {
 	// ignored
-	return substate.SubstateAlloc{}
+	return nil
 }
 
 func (s *carmenVmStateDB) AddPreimage(common.Hash, []byte) {
