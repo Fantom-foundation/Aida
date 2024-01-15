@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/transaction"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/state/proxy"
@@ -68,7 +69,9 @@ func genDeletedAccountsTask(
 	ch := make(chan proxy.ContractLiveliness, channelSize)
 	var statedb state.StateDB
 	var err error
-	statedb, err = state.MakeOffTheChainStateDB(tx.Substate.InputAlloc, tx.Block, state.NewChainConduit(cfg.ChainID == utils.EthereumChainID, utils.GetChainConfig(cfg.ChainID)))
+	ss := transaction.NewOldSubstateData(tx.Substate)
+
+	statedb, err = state.MakeOffTheChainStateDB(ss.GetInputAlloc(), tx.Block, state.NewChainConduit(cfg.ChainID == utils.EthereumChainID, utils.GetChainConfig(cfg.ChainID)))
 	if err != nil {
 		return err
 	}
@@ -76,7 +79,7 @@ func genDeletedAccountsTask(
 	//wrapper
 	statedb = proxy.NewDeletionProxy(statedb, ch, cfg.LogLevel)
 
-	err = processor.ProcessTransaction(statedb, int(tx.Block), tx.Transaction, tx.Substate)
+	err = processor.ProcessTransaction(statedb, int(tx.Block), tx.Transaction, ss)
 	if err != nil {
 		return nil
 	}
