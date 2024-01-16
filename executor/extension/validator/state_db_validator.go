@@ -309,6 +309,7 @@ func doSubsetValidation(alloc substate.SubstateAlloc, db state.VmStateDB, update
 				"    want %v\n",
 				addr.Hex(), balance, account.Balance)
 			if updateOnFail {
+				err = ""
 				db.SubBalance(addr, balance)
 				db.AddBalance(addr, account.Balance)
 			}
