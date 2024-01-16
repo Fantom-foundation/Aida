@@ -8,7 +8,7 @@ import (
 type ExecutionData interface {
 	// GetEnv returns the transaction environment.
 	// This is used for creating the correct block environment for execution.
-	GetEnv() Env
+	GetEnv() BlockEnvironment
 
 	// GetMessage returns the message of the transaction.
 	// Message holds data needed by the EVM to execute the transaction.

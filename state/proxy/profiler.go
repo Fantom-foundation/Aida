@@ -381,11 +381,11 @@ func (p *ProfilerProxy) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 }
 
 // GetSubstatePostAlloc gets substate post allocation.
-func (p *ProfilerProxy) GetSubstatePostAlloc() transaction.Alloc {
+func (p *ProfilerProxy) GetSubstatePostAlloc() transaction.WorldState {
 	return p.db.GetSubstatePostAlloc()
 }
 
-func (p *ProfilerProxy) PrepareSubstate(substate transaction.Alloc, block uint64) {
+func (p *ProfilerProxy) PrepareSubstate(substate transaction.WorldState, block uint64) {
 	p.db.PrepareSubstate(substate, block)
 }
 

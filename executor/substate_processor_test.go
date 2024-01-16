@@ -15,7 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-func newDummyResult(t *testing.T) transaction.Result {
+func newDummyResult(t *testing.T) transaction.TransactionReceipt {
 	r := &substate.Result{
 		Logs:            []*substateTypes.Log{},
 		ContractAddress: substateCommon.HexToAddress("0x0000000000085a12481aEdb59eb3200332aCA541"),

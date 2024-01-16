@@ -20,15 +20,15 @@ type substateData struct {
 	*substate.Substate
 }
 
-func (t *substateData) GetInputAlloc() Alloc {
+func (t *substateData) GetInputAlloc() WorldState {
 	return NewSubstateAlloc(t.InputAlloc)
 }
 
-func (t *substateData) GetOutputAlloc() Alloc {
+func (t *substateData) GetOutputAlloc() WorldState {
 	return NewSubstateAlloc(t.OutputAlloc)
 }
 
-func (t *substateData) GetEnv() Env {
+func (t *substateData) GetEnv() BlockEnvironment {
 	return NewSubstateEnv(t.Env)
 }
 
@@ -44,6 +44,6 @@ func (t *substateData) GetMessage() types.Message {
 	return types.NewMessage(common.Address(t.Message.From), (*common.Address)(t.Message.To), t.Message.Nonce, t.Message.Value, t.Message.Gas, t.Message.GasPrice, t.Message.GasFeeCap, t.Message.GasTipCap, t.Message.Data, list, !t.Message.CheckNonce)
 }
 
-func (t *substateData) GetResult() Result {
+func (t *substateData) GetResult() TransactionReceipt {
 	return NewSubstateResult(t.Result)
 }

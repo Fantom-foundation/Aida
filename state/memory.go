@@ -20,14 +20,14 @@ func MakeEmptyGethInMemoryStateDB(variant string) (StateDB, error) {
 
 // MakeInMemoryStateDB creates a StateDB instance reflecting the state
 // captured by the provided Substate allocation.
-func MakeInMemoryStateDB(alloc transaction.Alloc, block uint64) StateDB {
+func MakeInMemoryStateDB(alloc transaction.WorldState, block uint64) StateDB {
 	return &inMemoryStateDB{alloc: alloc, state: makeSnapshot(nil, 0), blockNum: block}
 }
 
 // inMemoryStateDB implements the interface of a state.StateDB and can be
 // used as a fast, in-memory replacement of the state DB.
 type inMemoryStateDB struct {
-	alloc            transaction.Alloc
+	alloc            transaction.WorldState
 	state            *snapshot
 	snapshot_counter int
 	blockNum         uint64
@@ -346,7 +346,7 @@ func (s *inMemoryStateDB) Error() error {
 	return nil
 }
 
-func (db *inMemoryStateDB) GetEffects() transaction.Alloc {
+func (db *inMemoryStateDB) GetEffects() transaction.WorldState {
 	// collect all modified accounts
 	touched := map[common.Address]int{}
 	for state := db.state; state != nil; state = state.parent {
@@ -383,7 +383,7 @@ func (db *inMemoryStateDB) GetEffects() transaction.Alloc {
 	return transaction.NewSubstateAlloc(res)
 }
 
-func (db *inMemoryStateDB) GetSubstatePostAlloc() transaction.Alloc {
+func (db *inMemoryStateDB) GetSubstatePostAlloc() transaction.WorldState {
 	// Use the pre-alloc ...
 	res := db.alloc
 
@@ -470,7 +470,7 @@ func (s *inMemoryStateDB) GetArchiveBlockHeight() (uint64, bool, error) {
 	return 0, false, fmt.Errorf("archive states are not (yet) supported by this DB implementation")
 }
 
-func (db *inMemoryStateDB) PrepareSubstate(alloc transaction.Alloc, block uint64) {
+func (db *inMemoryStateDB) PrepareSubstate(alloc transaction.WorldState, block uint64) {
 	db.alloc = alloc
 	db.state = makeSnapshot(nil, 0)
 	db.blockNum = block

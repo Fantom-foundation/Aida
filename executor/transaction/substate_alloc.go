@@ -8,7 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func NewSubstateAlloc(alloc substate.Alloc) Alloc {
+func NewSubstateAlloc(alloc substate.Alloc) WorldState {
 	return substateAlloc{alloc: alloc}
 }
 
@@ -21,7 +21,7 @@ func (a substateAlloc) Has(addr common.Address) bool {
 	return ok
 }
 
-func (a substateAlloc) Equal(y Alloc) bool {
+func (a substateAlloc) Equal(y WorldState) bool {
 	return allocEqual(a, y)
 }
 

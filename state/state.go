@@ -84,7 +84,7 @@ type VmStateDB interface {
 	// ---- Optional Development & Debugging Features ----
 
 	// Substate specific
-	GetSubstatePostAlloc() transaction.Alloc
+	GetSubstatePostAlloc() transaction.WorldState
 }
 
 // NonCommittableStateDB is an extension of the VmStateDB interface and is intended
@@ -166,7 +166,7 @@ type StateDB interface {
 
 	// Used to initiate the state DB for the next transaction.
 	// This is mainly for development purposes to support in-memory DB implementations.
-	PrepareSubstate(substate transaction.Alloc, block uint64)
+	PrepareSubstate(substate transaction.WorldState, block uint64)
 
 	// Used to retrieve the shadow DB (if there is one) for testing purposes so that
 	// the shadow DB can be used to query state directly. If there is no shadow DB,

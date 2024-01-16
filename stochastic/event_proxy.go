@@ -321,12 +321,12 @@ func (p *EventProxy) Error() error {
 }
 
 // GetSubstatePostAlloc gets substate post allocation.
-func (p *EventProxy) GetSubstatePostAlloc() transaction.Alloc {
+func (p *EventProxy) GetSubstatePostAlloc() transaction.WorldState {
 	// call real StateDB
 	return p.db.GetSubstatePostAlloc()
 }
 
-func (p *EventProxy) PrepareSubstate(substate transaction.Alloc, block uint64) {
+func (p *EventProxy) PrepareSubstate(substate transaction.WorldState, block uint64) {
 	p.db.PrepareSubstate(substate, block)
 }
 

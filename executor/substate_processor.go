@@ -215,7 +215,7 @@ func (s *SubstateProcessor) fantomTx(db state.VmStateDB, block int, tx int, st t
 
 // processPseudoTx processes pseudo transactions in Lachesis by applying the change in db state.
 // The pseudo transactions includes Lachesis SFC, lachesis genesis and lachesis-opera transition.
-func (s *SubstateProcessor) processPseudoTx(alloc transaction.Alloc, db state.VmStateDB) {
+func (s *SubstateProcessor) processPseudoTx(alloc transaction.WorldState, db state.VmStateDB) {
 	db.BeginTransaction(utils.PseudoTx)
 	defer db.EndTransaction()
 
@@ -248,7 +248,7 @@ func createVmConfig(cfg *utils.Config) vm.Config {
 }
 
 // prepareBlockCtx creates a block context for evm call from an environment of a substate.
-func prepareBlockCtx(inputEnv transaction.Env) *vm.BlockContext {
+func prepareBlockCtx(inputEnv transaction.BlockEnvironment) *vm.BlockContext {
 	blockCtx := &vm.BlockContext{
 		CanTransfer: core.CanTransfer,
 		Transfer:    core.Transfer,
@@ -268,7 +268,7 @@ func prepareBlockCtx(inputEnv transaction.Env) *vm.BlockContext {
 }
 
 // compileVMResult creates a result of a transaction as SubstateResult struct.
-func compileVMResult(logs []*types.Log, receiptUsedGas uint64, receiptFailed bool, contract common.Address) transaction.Result {
+func compileVMResult(logs []*types.Log, receiptUsedGas uint64, receiptFailed bool, contract common.Address) transaction.TransactionReceipt {
 	var status uint64
 	if receiptFailed {
 		status = types.ReceiptStatusFailed
@@ -284,7 +284,7 @@ func compileVMResult(logs []*types.Log, receiptUsedGas uint64, receiptFailed boo
 }
 
 // validateVMResult compares the result of a transaction to an expected value.
-func validateVMResult(vmResult, expectedResult transaction.Result) error {
+func validateVMResult(vmResult, expectedResult transaction.TransactionReceipt) error {
 	if !expectedResult.Equal(vmResult) {
 		return fmt.Errorf("inconsistent output\n"+
 			"\ngot:\n"+

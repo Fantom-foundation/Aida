@@ -13,15 +13,15 @@ type oldSubstateData struct {
 	*substate.Substate
 }
 
-func (t *oldSubstateData) GetInputAlloc() Alloc {
+func (t *oldSubstateData) GetInputAlloc() WorldState {
 	return NewOldSubstateAlloc(t.InputAlloc)
 }
 
-func (t *oldSubstateData) GetOutputAlloc() Alloc {
+func (t *oldSubstateData) GetOutputAlloc() WorldState {
 	return NewOldSubstateAlloc(t.OutputAlloc)
 }
 
-func (t *oldSubstateData) GetEnv() Env {
+func (t *oldSubstateData) GetEnv() BlockEnvironment {
 	return NewOldSubstateEnv(t.Env)
 }
 
@@ -29,6 +29,6 @@ func (t *oldSubstateData) GetMessage() types.Message {
 	return t.Message.AsMessage()
 }
 
-func (t *oldSubstateData) GetResult() Result {
+func (t *oldSubstateData) GetResult() TransactionReceipt {
 	return NewOldSubstateResult(t.Result)
 }

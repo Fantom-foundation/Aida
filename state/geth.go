@@ -219,11 +219,11 @@ func (s *gethStateDB) Prepare(thash common.Hash, ti int) {
 	}
 }
 
-func (s *gethStateDB) PrepareSubstate(substate transaction.Alloc, block uint64) {
+func (s *gethStateDB) PrepareSubstate(substate transaction.WorldState, block uint64) {
 	// ignored
 }
 
-func (s *gethStateDB) GetSubstatePostAlloc() transaction.Alloc {
+func (s *gethStateDB) GetSubstatePostAlloc() transaction.WorldState {
 	if db, ok := s.db.(*geth.StateDB); ok {
 		return transaction.NewOldSubstateAlloc(db.GetSubstatePostAlloc())
 	}

@@ -8,8 +8,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-// Alloc represents an interface for managing and interacting with a collection of Ethereum-like accounts.
-type Alloc interface {
+// WorldState represents an interface for managing and interacting with a collection of Ethereum-like accounts.
+type WorldState interface {
 	// Get retrieves the account associated with the given address.
 	// Get should return nil if account is not found.
 	Get(addr common.Address) Account
@@ -30,7 +30,7 @@ type Alloc interface {
 	// Two allocations are considered equal if they have the same accounts associated with
 	// the same addresses. If any account is missing, allocs are considered non-equal.
 	// Note: Have a look at allocEqual()
-	Equal(Alloc) bool
+	Equal(WorldState) bool
 
 	// Delete the record for given address
 	Delete(addr common.Address)
@@ -42,7 +42,7 @@ type Alloc interface {
 
 type accountHandler func(addr common.Address, acc Account)
 
-func allocEqual(x, y Alloc) (isEqual bool) {
+func allocEqual(x, y WorldState) (isEqual bool) {
 	if x.Len() != y.Len() {
 		return false
 	}
@@ -63,7 +63,7 @@ func allocEqual(x, y Alloc) (isEqual bool) {
 	return true
 }
 
-func allocString(a Alloc) string {
+func allocString(a WorldState) string {
 	builder := strings.Builder{}
 	builder.WriteString(fmt.Sprintf("SubstateAlloc{\n\tsize: %d\n", a.Len()))
 	var addresses []common.Address

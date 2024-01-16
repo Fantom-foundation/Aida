@@ -306,11 +306,11 @@ func (r *RecorderProxy) Error() error {
 }
 
 // GetSubstatePostAlloc gets substate post allocation.
-func (r *RecorderProxy) GetSubstatePostAlloc() transaction.Alloc {
+func (r *RecorderProxy) GetSubstatePostAlloc() transaction.WorldState {
 	return r.db.GetSubstatePostAlloc()
 }
 
-func (r *RecorderProxy) PrepareSubstate(substate transaction.Alloc, block uint64) {
+func (r *RecorderProxy) PrepareSubstate(substate transaction.WorldState, block uint64) {
 	r.db.PrepareSubstate(substate, block)
 }
 

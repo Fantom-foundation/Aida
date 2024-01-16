@@ -124,7 +124,7 @@ func getHash(addr common.Address, code []byte) common.Hash {
 }
 
 // MakeOffTheChainStateDB returns an in-memory *state.StateDB initialized with alloc
-func MakeOffTheChainStateDB(alloc transaction.Alloc, block uint64, chainConduit *ChainConduit) (StateDB, error) {
+func MakeOffTheChainStateDB(alloc transaction.WorldState, block uint64, chainConduit *ChainConduit) (StateDB, error) {
 	statedb := NewOffTheChainStateDB()
 	alloc.ForEach(func(addr common.Address, acc transaction.Account) {
 		code := acc.GetCode()

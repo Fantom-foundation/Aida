@@ -6,8 +6,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-// Env represents an interface for retrieving and modifying Ethereum-like blockchain environment information.
-type Env interface {
+// BlockEnvironment represents an interface for retrieving and modifying Ethereum-like blockchain environment information.
+type BlockEnvironment interface {
 	// GetCoinbase returns the coinbase address.
 	GetCoinbase() common.Address
 

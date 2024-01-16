@@ -7,8 +7,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-// Result represents an interface for managing and retrieving the result of a blockchain transaction or contract execution.
-type Result interface {
+// TransactionReceipt represents an interface for managing and retrieving the result of a blockchain transaction or contract execution.
+type TransactionReceipt interface {
 	// GetStatus returns the status code indicating the success or failure of the transaction or execution.
 	GetStatus() uint64
 
@@ -40,11 +40,11 @@ type Result interface {
 	SetGasUsed(gasUsed uint64)
 
 	// Equal checks if the current result is equal to the provided result.
-	// Note: Have a look at resultEqual.
-	Equal(y Result) bool
+	// Note: Have a look at transactionReceiptEqual.
+	Equal(y TransactionReceipt) bool
 }
 
-func resultEqual(x, y Result) bool {
+func transactionReceiptEqual(x, y TransactionReceipt) bool {
 	if x == y {
 		return true
 	}

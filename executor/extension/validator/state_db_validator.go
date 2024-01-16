@@ -178,7 +178,7 @@ func (v *stateDbValidator) isErrFatal(err error, ch chan error) bool {
 // validateSubstateAlloc compares states of accounts in stateDB to an expected set of states.
 // If fullState mode, check if expected state is contained in stateDB.
 // If partialState mode, check for equality of sets.
-func (v *stateDbValidator) validateSubstateAlloc(db state.VmStateDB, expectedAlloc transaction.Alloc) error {
+func (v *stateDbValidator) validateSubstateAlloc(db state.VmStateDB, expectedAlloc transaction.WorldState) error {
 	var err error
 	switch v.cfg.StateValidationMode {
 	case utils.SubsetCheck:
@@ -238,7 +238,7 @@ func (v *stateDbValidator) printLogDiffSummary(label string, want, have *types.L
 }
 
 // printAllocationDiffSummary compares atrributes and existence of accounts and reports differences if any.
-func (v *stateDbValidator) printAllocationDiffSummary(want, have transaction.Alloc) {
+func (v *stateDbValidator) printAllocationDiffSummary(want, have transaction.WorldState) {
 	printIfDifferent("substate alloc size", want.Len(), have.Len(), v.log)
 
 	want.ForEach(func(addr common.Address, acc transaction.Account) {
@@ -291,7 +291,7 @@ func (v *stateDbValidator) printAccountDiffSummary(label string, want, have tran
 
 // doSubsetValidation validates whether the given alloc is contained in the db object.
 // NB: We can only check what must be in the db (but cannot check whether db stores more).
-func doSubsetValidation(alloc transaction.Alloc, db state.VmStateDB, updateOnFail bool) error {
+func doSubsetValidation(alloc transaction.WorldState, db state.VmStateDB, updateOnFail bool) error {
 	var err string
 
 	alloc.ForEach(func(addr common.Address, acc transaction.Account) {

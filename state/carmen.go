@@ -277,11 +277,11 @@ func (s *carmenVmStateDB) Prepare(thash common.Hash, ti int) {
 	// ignored
 }
 
-func (s *carmenStateDB) PrepareSubstate(substate transaction.Alloc, block uint64) {
+func (s *carmenStateDB) PrepareSubstate(substate transaction.WorldState, block uint64) {
 	// ignored
 }
 
-func (s *carmenVmStateDB) GetSubstatePostAlloc() transaction.Alloc {
+func (s *carmenVmStateDB) GetSubstatePostAlloc() transaction.WorldState {
 	// ignored
 	return nil
 }

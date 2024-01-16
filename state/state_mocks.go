@@ -332,10 +332,10 @@ func (mr *MockVmStateDBMockRecorder) GetState(arg0, arg1 any) *gomock.Call {
 }
 
 // GetSubstatePostAlloc mocks base method.
-func (m *MockVmStateDB) GetSubstatePostAlloc() transaction.Alloc {
+func (m *MockVmStateDB) GetSubstatePostAlloc() transaction.WorldState {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetSubstatePostAlloc")
-	ret0, _ := ret[0].(transaction.Alloc)
+	ret0, _ := ret[0].(transaction.WorldState)
 	return ret0
 }
 
@@ -826,10 +826,10 @@ func (mr *MockNonCommittableStateDBMockRecorder) GetState(arg0, arg1 any) *gomoc
 }
 
 // GetSubstatePostAlloc mocks base method.
-func (m *MockNonCommittableStateDB) GetSubstatePostAlloc() transaction.Alloc {
+func (m *MockNonCommittableStateDB) GetSubstatePostAlloc() transaction.WorldState {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetSubstatePostAlloc")
-	ret0, _ := ret[0].(transaction.Alloc)
+	ret0, _ := ret[0].(transaction.WorldState)
 	return ret0
 }
 
@@ -1494,10 +1494,10 @@ func (mr *MockStateDBMockRecorder) GetState(arg0, arg1 any) *gomock.Call {
 }
 
 // GetSubstatePostAlloc mocks base method.
-func (m *MockStateDB) GetSubstatePostAlloc() transaction.Alloc {
+func (m *MockStateDB) GetSubstatePostAlloc() transaction.WorldState {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "GetSubstatePostAlloc")
-	ret0, _ := ret[0].(transaction.Alloc)
+	ret0, _ := ret[0].(transaction.WorldState)
 	return ret0
 }
 
@@ -1560,7 +1560,7 @@ func (mr *MockStateDBMockRecorder) PrepareAccessList(sender, dest, precompiles, 
 }
 
 // PrepareSubstate mocks base method.
-func (m *MockStateDB) PrepareSubstate(substate transaction.Alloc, block uint64) {
+func (m *MockStateDB) PrepareSubstate(substate transaction.WorldState, block uint64) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "PrepareSubstate", substate, block)
 }

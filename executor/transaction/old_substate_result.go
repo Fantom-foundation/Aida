@@ -8,7 +8,7 @@ import (
 
 // todo logs
 
-func NewOldSubstateResult(res *substate.SubstateResult) Result {
+func NewOldSubstateResult(res *substate.SubstateResult) TransactionReceipt {
 	return &oldSubstateResult{res}
 }
 
@@ -56,6 +56,6 @@ func (r *oldSubstateResult) SetGasUsed(gasUsed uint64) {
 	r.GasUsed = gasUsed
 }
 
-func (r *oldSubstateResult) Equal(y Result) bool {
-	return resultEqual(r, y)
+func (r *oldSubstateResult) Equal(y TransactionReceipt) bool {
+	return transactionReceiptEqual(r, y)
 }

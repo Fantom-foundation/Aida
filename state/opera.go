@@ -296,11 +296,11 @@ func (s *operaStateDB) ForEachStorage(addr common.Address, cb func(common.Hash, 
 	return s.db.ForEachStorage(addr, cb)
 }
 
-func (s *operaStateDB) GetSubstatePostAlloc() transaction.Alloc {
+func (s *operaStateDB) GetSubstatePostAlloc() transaction.WorldState {
 	return transaction.NewOldSubstateAlloc(s.db.GetSubstatePostAlloc())
 }
 
-func (s *operaStateDB) PrepareSubstate(substate transaction.Alloc, block uint64) {
+func (s *operaStateDB) PrepareSubstate(substate transaction.WorldState, block uint64) {
 	// ignored
 }
 

@@ -5,7 +5,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-func NewVmResult(status uint64, bloom types.Bloom, logs []*types.Log, contractAddress common.Address, gasUsed uint64) Result {
+func NewVmResult(status uint64, bloom types.Bloom, logs []*types.Log, contractAddress common.Address, gasUsed uint64) TransactionReceipt {
 	return &vmResult{status: status, bloom: bloom, logs: logs, contractAddress: contractAddress, gasUsed: gasUsed}
 }
 
@@ -57,6 +57,6 @@ func (r *vmResult) SetGasUsed(gasUsed uint64) {
 	r.gasUsed = gasUsed
 }
 
-func (r *vmResult) Equal(y Result) bool {
-	return resultEqual(r, y)
+func (r *vmResult) Equal(y TransactionReceipt) bool {
+	return transactionReceiptEqual(r, y)
 }

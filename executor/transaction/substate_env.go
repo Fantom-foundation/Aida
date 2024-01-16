@@ -8,7 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func NewSubstateEnv(env *substate.Env) Env {
+func NewSubstateEnv(env *substate.Env) BlockEnvironment {
 	return &substateEnv{env}
 }
 
