@@ -42,7 +42,7 @@ func (a oldSubstateAlloc) Add(addr common.Address, acc Account) {
 	a.alloc[addr] = oldSubstate.NewSubstateAccount(acc.GetNonce(), new(big.Int).Set(acc.GetBalance()), acc.GetCode())
 }
 
-func (a oldSubstateAlloc) ForEach(h accountHandler) {
+func (a oldSubstateAlloc) ForEachAccount(h accountHandler) {
 	for addr, acc := range a.alloc {
 		h(addr, NewOldSubstateAccount(acc))
 	}

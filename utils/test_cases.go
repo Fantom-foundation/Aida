@@ -6,7 +6,8 @@ import (
 	"testing"
 	"time"
 
-	substate "github.com/Fantom-foundation/Substate"
+	substateCommon "github.com/Fantom-foundation/Substate/geth/common"
+	"github.com/Fantom-foundation/Substate/substate"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -57,14 +58,14 @@ func GetRandom(rangeLower int, rangeUpper int) int {
 }
 
 // MakeAccountStorage generates randomized account storage with testAccountStorageSize length
-func MakeAccountStorage(t *testing.T) map[common.Hash]common.Hash {
+func MakeAccountStorage(t *testing.T) map[substateCommon.Hash]substateCommon.Hash {
 	// create storage map
-	storage := map[common.Hash]common.Hash{}
+	storage := map[substateCommon.Hash]substateCommon.Hash{}
 
 	// fill the storage map
 	for j := 0; j < testAccountStorageSize; j++ {
-		k := common.BytesToHash(MakeRandomByteSlice(t, 32))
-		storage[k] = common.BytesToHash(MakeRandomByteSlice(t, 32))
+		k := substateCommon.BytesToHash(MakeRandomByteSlice(t, 32))
+		storage[k] = substateCommon.BytesToHash(MakeRandomByteSlice(t, 32))
 	}
 
 	return storage
@@ -97,12 +98,12 @@ func MakeTestConfig(testCase StateDbTestCase) *Config {
 }
 
 // MakeWorldState generates randomized world state containing 100 accounts
-func MakeWorldState(t *testing.T) (substate.SubstateAlloc, []common.Address) {
+func MakeWorldState(t *testing.T) (substate.Alloc, []common.Address) {
 	// create list of addresses
 	var addrList []common.Address
 
 	// create world state
-	ws := substate.SubstateAlloc{}
+	ws := make(substate.Alloc)
 
 	for i := 0; i < 100; i++ {
 		// create random address
@@ -111,13 +112,16 @@ func MakeWorldState(t *testing.T) (substate.SubstateAlloc, []common.Address) {
 		// add to address list
 		addrList = append(addrList, addr)
 
-		// create account
-		ws[addr] = &substate.SubstateAccount{
+		acc := substate.Account{
 			Nonce:   uint64(GetRandom(1, 1000*5000)),
 			Balance: big.NewInt(int64(GetRandom(1, 1000*5000))),
 			Storage: MakeAccountStorage(t),
 			Code:    MakeRandomByteSlice(t, 2048),
 		}
+		ws[substateCommon.Address(addr)] = &acc
+
+		// create account
+
 	}
 
 	return ws, addrList

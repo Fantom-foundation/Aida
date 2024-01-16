@@ -19,9 +19,9 @@ type WorldState interface {
 	// Add adds the provided account to the collection, associated with the given address.
 	Add(addr common.Address, acc Account)
 
-	// ForEach iterates over each account in the collection and
+	// ForEachAccount iterates over each account in the collection and
 	// invokes the provided accountHandler function for each account.
-	ForEach(accountHandler)
+	ForEachAccount(accountHandler)
 
 	// Len returns the number of accounts in the collection.
 	Len() int
@@ -47,7 +47,7 @@ func allocEqual(x, y WorldState) (isEqual bool) {
 		return false
 	}
 
-	x.ForEach(func(addr common.Address, acc Account) {
+	x.ForEachAccount(func(addr common.Address, acc Account) {
 		yVal := y.Get(addr)
 		if yVal == nil {
 			isEqual = false
@@ -68,7 +68,7 @@ func allocString(a WorldState) string {
 	builder.WriteString(fmt.Sprintf("SubstateAlloc{\n\tsize: %d\n", a.Len()))
 	var addresses []common.Address
 
-	a.ForEach(func(addr common.Address, acc Account) {
+	a.ForEachAccount(func(addr common.Address, acc Account) {
 		addresses = append(addresses, addr)
 	})
 

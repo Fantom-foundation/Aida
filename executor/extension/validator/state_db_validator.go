@@ -241,19 +241,19 @@ func (v *stateDbValidator) printLogDiffSummary(label string, want, have *types.L
 func (v *stateDbValidator) printAllocationDiffSummary(want, have transaction.WorldState) {
 	printIfDifferent("substate alloc size", want.Len(), have.Len(), v.log)
 
-	want.ForEach(func(addr common.Address, acc transaction.Account) {
+	want.ForEachAccount(func(addr common.Address, acc transaction.Account) {
 		if have.Get(addr) == nil {
 			v.log.Errorf("\tmissing address=%v\n", addr)
 		}
 	})
 
-	have.ForEach(func(addr common.Address, acc transaction.Account) {
+	have.ForEachAccount(func(addr common.Address, acc transaction.Account) {
 		if want.Get(addr) == nil {
 			v.log.Errorf("\textra address=%v\n", addr)
 		}
 	})
 
-	have.ForEach(func(addr common.Address, acc transaction.Account) {
+	have.ForEachAccount(func(addr common.Address, acc transaction.Account) {
 		wantAcc := want.Get(addr)
 		v.printAccountDiffSummary(fmt.Sprintf("key=%v:", addr), wantAcc, acc)
 	})
@@ -294,7 +294,7 @@ func (v *stateDbValidator) printAccountDiffSummary(label string, want, have tran
 func doSubsetValidation(alloc transaction.WorldState, db state.VmStateDB, updateOnFail bool) error {
 	var err string
 
-	alloc.ForEach(func(addr common.Address, acc transaction.Account) {
+	alloc.ForEachAccount(func(addr common.Address, acc transaction.Account) {
 		if !db.Exist(addr) {
 			err += fmt.Sprintf("  Account %v does not exist\n", addr.Hex())
 			if updateOnFail {

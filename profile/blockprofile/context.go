@@ -97,11 +97,11 @@ func interfere(u, v AddressSet) bool {
 func findTxAddresses(tx executor.State[transaction.SubstateData]) AddressSet {
 	addresses := AddressSet{}
 
-	tx.Data.GetInputAlloc().ForEach(func(addr common.Address, acc transaction.Account) {
+	tx.Data.GetInputAlloc().ForEachAccount(func(addr common.Address, acc transaction.Account) {
 		addresses[addr] = struct{}{}
 	})
 
-	tx.Data.GetOutputAlloc().ForEach(func(addr common.Address, acc transaction.Account) {
+	tx.Data.GetOutputAlloc().ForEachAccount(func(addr common.Address, acc transaction.Account) {
 		addresses[addr] = struct{}{}
 	})
 

@@ -219,7 +219,7 @@ func (s *SubstateProcessor) processPseudoTx(alloc transaction.WorldState, db sta
 	db.BeginTransaction(utils.PseudoTx)
 	defer db.EndTransaction()
 
-	alloc.ForEach(func(addr common.Address, acc transaction.Account) {
+	alloc.ForEachAccount(func(addr common.Address, acc transaction.Account) {
 		db.SubBalance(addr, db.GetBalance(addr))
 		db.AddBalance(addr, acc.GetBalance())
 		db.SetNonce(addr, acc.GetNonce())

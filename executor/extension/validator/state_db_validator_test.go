@@ -9,10 +9,12 @@ import (
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
+	"github.com/Fantom-foundation/Aida/executor/transaction"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
+	substateCommon "github.com/Fantom-foundation/Substate/geth/common"
+	"github.com/Fantom-foundation/Substate/substate"
 	"github.com/ethereum/go-ethereum/common"
 	"go.uber.org/mock/gomock"
 )
@@ -39,7 +41,7 @@ func TestLiveTxValidator_NoValidatorIsCreatedIfDisabled(t *testing.T) {
 
 	ext := MakeLiveDbValidator(cfg)
 
-	if _, ok := ext.(extension.NilExtension[*substate.Substate]); !ok {
+	if _, ok := ext.(extension.NilExtension[transaction.SubstateData]); !ok {
 		t.Errorf("Validator is enabled although not set in configuration")
 	}
 }
@@ -54,7 +56,7 @@ func TestLiveTxValidator_ValidatorIsEnabled(t *testing.T) {
 	ext := makeLiveDbValidator(cfg, log)
 
 	log.EXPECT().Warning(gomock.Any())
-	ext.PreRun(executor.State[*substate.Substate]{}, nil)
+	ext.PreRun(executor.State[transaction.SubstateData]{}, nil)
 }
 
 func TestLiveTxValidator_ValidatorDoesNotFailWithEmptySubstate(t *testing.T) {
@@ -69,12 +71,12 @@ func TestLiveTxValidator_ValidatorDoesNotFailWithEmptySubstate(t *testing.T) {
 	ext := makeLiveDbValidator(cfg, log)
 
 	log.EXPECT().Warning(gomock.Any())
-	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
+	ext.PreRun(executor.State[transaction.SubstateData]{}, ctx)
 
-	err := ext.PostTransaction(executor.State[*substate.Substate]{
+	err := ext.PostTransaction(executor.State[transaction.SubstateData]{
 		Block:       1,
 		Transaction: 1,
-		Data:        &substate.Substate{},
+		Data:        transaction.NewSubstateData(&substate.Substate{}),
 	}, ctx)
 
 	if err != nil {
@@ -102,9 +104,9 @@ func TestLiveTxValidator_SingleErrorInPreTransactionDoesNotEndProgramWithContinu
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 	)
 
-	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
+	ext.PreRun(executor.State[transaction.SubstateData]{}, ctx)
 
-	err := ext.PreTransaction(executor.State[*substate.Substate]{
+	err := ext.PreTransaction(executor.State[transaction.SubstateData]{
 		Block:       1,
 		Transaction: 1,
 		Data:        getIncorrectTestSubstateAlloc(),
@@ -134,9 +136,9 @@ func TestLiveTxValidator_SingleErrorInPreTransactionReturnsErrorWithNoContinueOn
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 	)
 
-	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
+	ext.PreRun(executor.State[transaction.SubstateData]{}, ctx)
 
-	err := ext.PreTransaction(executor.State[*substate.Substate]{
+	err := ext.PreTransaction(executor.State[transaction.SubstateData]{
 		Block:       1,
 		Transaction: 1,
 		Data:        getIncorrectTestSubstateAlloc(),
@@ -175,9 +177,9 @@ func TestLiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueO
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 	)
 
-	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
+	ext.PreRun(executor.State[transaction.SubstateData]{}, ctx)
 
-	err := ext.PostTransaction(executor.State[*substate.Substate]{
+	err := ext.PostTransaction(executor.State[transaction.SubstateData]{
 		Block:       1,
 		Transaction: 1,
 		Data:        getIncorrectTestSubstateAlloc(),
@@ -211,14 +213,14 @@ func TestLiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueO
 
 	gomock.InOrder(
 		log.EXPECT().Warning(gomock.Any()),
-		db.EXPECT().GetSubstatePostAlloc().Return(substate.SubstateAlloc{}),
+		db.EXPECT().GetSubstatePostAlloc().Return(transaction.NewSubstateAlloc(substate.Alloc{})),
 		log.EXPECT().Errorf("Different %s:\nwant: %v\nhave: %v\n", "substate alloc size", 1, 0),
 		log.EXPECT().Errorf("\tmissing key=%v\n", common.Address{0}),
 	)
 
-	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
+	ext.PreRun(executor.State[transaction.SubstateData]{}, ctx)
 
-	err := ext.PostTransaction(executor.State[*substate.Substate]{
+	err := ext.PostTransaction(executor.State[transaction.SubstateData]{
 		Block:       1,
 		Transaction: 1,
 		Data:        getIncorrectTestSubstateAlloc(),
@@ -266,9 +268,9 @@ func TestLiveTxValidator_TwoErrorsDoNotReturnAnErrorWhenContinueOnFailureIsEnabl
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 	)
 
-	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
+	ext.PreRun(executor.State[transaction.SubstateData]{}, ctx)
 
-	err := ext.PreTransaction(executor.State[*substate.Substate]{
+	err := ext.PreTransaction(executor.State[transaction.SubstateData]{
 		Block:       1,
 		Transaction: 1,
 		Data:        getIncorrectTestSubstateAlloc(),
@@ -278,7 +280,7 @@ func TestLiveTxValidator_TwoErrorsDoNotReturnAnErrorWhenContinueOnFailureIsEnabl
 		t.Errorf("PreTransaction must not return an error because continue on failure is true!")
 	}
 
-	err = ext.PostTransaction(executor.State[*substate.Substate]{
+	err = ext.PostTransaction(executor.State[transaction.SubstateData]{
 		Block:       1,
 		Transaction: 1,
 		Data:        getIncorrectTestSubstateAlloc(),
@@ -320,9 +322,9 @@ func TestLiveTxValidator_TwoErrorsDoReturnErrorOnEventWhenContinueOnFailureIsEna
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 	)
 
-	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
+	ext.PreRun(executor.State[transaction.SubstateData]{}, ctx)
 
-	err := ext.PreTransaction(executor.State[*substate.Substate]{
+	err := ext.PreTransaction(executor.State[transaction.SubstateData]{
 		Block:       1,
 		Transaction: 1,
 		Data:        getIncorrectTestSubstateAlloc(),
@@ -332,7 +334,7 @@ func TestLiveTxValidator_TwoErrorsDoReturnErrorOnEventWhenContinueOnFailureIsEna
 		t.Errorf("PreTransaction must not return an error because continue on failure is true, got %v", err)
 	}
 
-	err = ext.PostTransaction(executor.State[*substate.Substate]{
+	err = ext.PostTransaction(executor.State[transaction.SubstateData]{
 		Block:       1,
 		Transaction: 1,
 		Data:        getIncorrectTestSubstateAlloc(),
@@ -355,14 +357,16 @@ func TestLiveTxValidator_PreTransactionDoesNotFailWithIncorrectOutput(t *testing
 
 	ext := MakeLiveDbValidator(cfg)
 
-	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
+	ext.PreRun(executor.State[transaction.SubstateData]{}, ctx)
 
-	err := ext.PreTransaction(executor.State[*substate.Substate]{
+	alloc := &substate.Substate{
+		OutputAlloc: getIncorrectSubstateAlloc(),
+	}
+
+	err := ext.PreTransaction(executor.State[transaction.SubstateData]{
 		Block:       1,
 		Transaction: 1,
-		Data: &substate.Substate{
-			OutputAlloc: getIncorrectSubstateAlloc(),
-		},
+		Data:        transaction.NewSubstateData(alloc),
 	}, ctx)
 
 	if err != nil {
@@ -382,14 +386,16 @@ func TestLiveTxValidator_PostTransactionDoesNotFailWithIncorrectInput(t *testing
 
 	ext := MakeLiveDbValidator(cfg)
 
-	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
+	ext.PreRun(executor.State[transaction.SubstateData]{}, ctx)
 
-	err := ext.PostTransaction(executor.State[*substate.Substate]{
+	alloc := &substate.Substate{
+		InputAlloc: getIncorrectSubstateAlloc(),
+	}
+
+	err := ext.PostTransaction(executor.State[transaction.SubstateData]{
 		Block:       1,
 		Transaction: 1,
-		Data: &substate.Substate{
-			InputAlloc: getIncorrectSubstateAlloc(),
-		},
+		Data:        transaction.NewSubstateData(alloc),
 	}, ctx)
 
 	if err != nil {
@@ -403,7 +409,7 @@ func TestArchiveTxValidator_NoValidatorIsCreatedIfDisabled(t *testing.T) {
 
 	ext := MakeArchiveDbValidator(cfg)
 
-	if _, ok := ext.(extension.NilExtension[*substate.Substate]); !ok {
+	if _, ok := ext.(extension.NilExtension[transaction.SubstateData]); !ok {
 		t.Errorf("Validator is enabled although not set in configuration")
 	}
 }
@@ -418,7 +424,7 @@ func TestArchiveTxValidator_ValidatorIsEnabled(t *testing.T) {
 	ext := makeArchiveDbValidator(cfg, log)
 
 	log.EXPECT().Warning(gomock.Any())
-	ext.PreRun(executor.State[*substate.Substate]{}, nil)
+	ext.PreRun(executor.State[transaction.SubstateData]{}, nil)
 }
 
 func TestArchiveTxValidator_ValidatorDoesNotFailWithEmptySubstate(t *testing.T) {
@@ -433,12 +439,12 @@ func TestArchiveTxValidator_ValidatorDoesNotFailWithEmptySubstate(t *testing.T) 
 	ext := makeArchiveDbValidator(cfg, log)
 
 	log.EXPECT().Warning(gomock.Any())
-	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
+	ext.PreRun(executor.State[transaction.SubstateData]{}, ctx)
 
-	err := ext.PostTransaction(executor.State[*substate.Substate]{
+	err := ext.PostTransaction(executor.State[transaction.SubstateData]{
 		Block:       1,
 		Transaction: 1,
-		Data:        &substate.Substate{},
+		Data:        transaction.NewSubstateData(&substate.Substate{}),
 	}, ctx)
 
 	if err != nil {
@@ -466,9 +472,9 @@ func TestArchiveTxValidator_SingleErrorInPreTransactionDoesNotEndProgramWithCont
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 	)
 
-	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
+	ext.PreRun(executor.State[transaction.SubstateData]{}, ctx)
 
-	err := ext.PreTransaction(executor.State[*substate.Substate]{
+	err := ext.PreTransaction(executor.State[transaction.SubstateData]{
 		Block:       1,
 		Transaction: 1,
 		Data:        getIncorrectTestSubstateAlloc(),
@@ -498,9 +504,9 @@ func TestArchiveTxValidator_SingleErrorInPreTransactionReturnsErrorWithNoContinu
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 	)
 
-	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
+	ext.PreRun(executor.State[transaction.SubstateData]{}, ctx)
 
-	err := ext.PreTransaction(executor.State[*substate.Substate]{
+	err := ext.PreTransaction(executor.State[transaction.SubstateData]{
 		Block:       1,
 		Transaction: 1,
 		Data:        getIncorrectTestSubstateAlloc(),
@@ -539,9 +545,9 @@ func TestArchiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContin
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 	)
 
-	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
+	ext.PreRun(executor.State[transaction.SubstateData]{}, ctx)
 
-	err := ext.PostTransaction(executor.State[*substate.Substate]{
+	err := ext.PostTransaction(executor.State[transaction.SubstateData]{
 		Block:       1,
 		Transaction: 1,
 		Data:        getIncorrectTestSubstateAlloc(),
@@ -572,11 +578,11 @@ func TestArchiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContin
 
 	ext := MakeArchiveDbValidator(cfg)
 
-	db.EXPECT().GetSubstatePostAlloc().Return(substate.SubstateAlloc{})
+	db.EXPECT().GetSubstatePostAlloc().Return(substate.Alloc{})
 
-	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
+	ext.PreRun(executor.State[transaction.SubstateData]{}, ctx)
 
-	err := ext.PostTransaction(executor.State[*substate.Substate]{
+	err := ext.PostTransaction(executor.State[transaction.SubstateData]{
 		Block:       1,
 		Transaction: 1,
 		Data:        getIncorrectTestSubstateAlloc(),
@@ -624,9 +630,9 @@ func TestArchiveTxValidator_TwoErrorsDoNotReturnAnErrorWhenContinueOnFailureIsEn
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 	)
 
-	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
+	ext.PreRun(executor.State[transaction.SubstateData]{}, ctx)
 
-	err := ext.PreTransaction(executor.State[*substate.Substate]{
+	err := ext.PreTransaction(executor.State[transaction.SubstateData]{
 		Block:       1,
 		Transaction: 1,
 		Data:        getIncorrectTestSubstateAlloc(),
@@ -636,7 +642,7 @@ func TestArchiveTxValidator_TwoErrorsDoNotReturnAnErrorWhenContinueOnFailureIsEn
 		t.Errorf("PreTransaction must not return an error because continue on failure is true!")
 	}
 
-	err = ext.PostTransaction(executor.State[*substate.Substate]{
+	err = ext.PostTransaction(executor.State[transaction.SubstateData]{
 		Block:       1,
 		Transaction: 1,
 		Data:        getIncorrectTestSubstateAlloc(),
@@ -678,9 +684,9 @@ func TestArchiveTxValidator_TwoErrorsDoReturnErrorOnEventWhenContinueOnFailureIs
 		db.EXPECT().GetCode(common.Address{0}).Return([]byte{0}),
 	)
 
-	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
+	ext.PreRun(executor.State[transaction.SubstateData]{}, ctx)
 
-	err := ext.PreTransaction(executor.State[*substate.Substate]{
+	err := ext.PreTransaction(executor.State[transaction.SubstateData]{
 		Block:       1,
 		Transaction: 1,
 		Data:        getIncorrectTestSubstateAlloc(),
@@ -690,7 +696,7 @@ func TestArchiveTxValidator_TwoErrorsDoReturnErrorOnEventWhenContinueOnFailureIs
 		t.Errorf("PreTransaction must not return an error because continue on failure is true, got %v", err)
 	}
 
-	err = ext.PostTransaction(executor.State[*substate.Substate]{
+	err = ext.PostTransaction(executor.State[transaction.SubstateData]{
 		Block:       1,
 		Transaction: 1,
 		Data:        getIncorrectTestSubstateAlloc(),
@@ -713,14 +719,14 @@ func TestArchiveTxValidator_PreTransactionDoesNotFailWithIncorrectOutput(t *test
 
 	ext := MakeArchiveDbValidator(cfg)
 
-	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
+	ext.PreRun(executor.State[transaction.SubstateData]{}, ctx)
 
-	err := ext.PreTransaction(executor.State[*substate.Substate]{
+	err := ext.PreTransaction(executor.State[transaction.SubstateData]{
 		Block:       1,
 		Transaction: 1,
-		Data: &substate.Substate{
+		Data: transaction.NewSubstateData(&substate.Substate{
 			OutputAlloc: getIncorrectSubstateAlloc(),
-		},
+		}),
 	}, ctx)
 
 	if err != nil {
@@ -740,14 +746,14 @@ func TestArchiveTxValidator_PostTransactionDoesNotFailWithIncorrectInput(t *test
 
 	ext := MakeLiveDbValidator(cfg)
 
-	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
+	ext.PreRun(executor.State[transaction.SubstateData]{}, ctx)
 
-	err := ext.PostTransaction(executor.State[*substate.Substate]{
+	err := ext.PostTransaction(executor.State[transaction.SubstateData]{
 		Block:       1,
 		Transaction: 1,
-		Data: &substate.Substate{
+		Data: transaction.NewSubstateData(&substate.Substate{
 			InputAlloc: getIncorrectSubstateAlloc(),
-		},
+		}),
 	}, ctx)
 
 	if err != nil {
@@ -776,7 +782,8 @@ func TestValidateStateDb_ValidationDoesNotFail(t *testing.T) {
 			}(sDB)
 
 			// Generating randomized world state
-			ws, _ := utils.MakeWorldState(t)
+			alloc, _ := utils.MakeWorldState(t)
+			ws := transaction.NewSubstateAlloc(alloc)
 
 			log := logger.NewLogger("INFO", "TestStateDb")
 
@@ -816,7 +823,8 @@ func TestValidateStateDb_ValidationDoesNotFailWithPriming(t *testing.T) {
 			}(sDB)
 
 			// Generating randomized world state
-			ws, _ := utils.MakeWorldState(t)
+			alloc, _ := utils.MakeWorldState(t)
+			ws := transaction.NewSubstateAlloc(alloc)
 
 			log := logger.NewLogger("INFO", "TestStateDb")
 
@@ -829,12 +837,14 @@ func TestValidateStateDb_ValidationDoesNotFailWithPriming(t *testing.T) {
 			addr := common.BytesToAddress(utils.MakeRandomByteSlice(t, 40))
 
 			// create new account
-			ws[addr] = &substate.SubstateAccount{
+			subAcc := &substate.Account{
 				Nonce:   uint64(utils.GetRandom(1, 1000*5000)),
 				Balance: big.NewInt(int64(utils.GetRandom(1, 1000*5000))),
 				Storage: utils.MakeAccountStorage(t),
 				Code:    utils.MakeRandomByteSlice(t, 2048),
 			}
+
+			ws.Add(addr, transaction.NewSubstateAccount(subAcc))
 
 			// Call for state DB validation with update enabled and subsequent checks if the update was made correctly
 			err = doSubsetValidation(ws, sDB, true)
@@ -842,23 +852,25 @@ func TestValidateStateDb_ValidationDoesNotFailWithPriming(t *testing.T) {
 				t.Fatalf("failed to throw errors while validating state DB: %v", err)
 			}
 
-			if sDB.GetBalance(addr).Cmp(ws[addr].Balance) != 0 {
-				t.Fatalf("failed to prime account balance; Is: %v; Should be: %v", sDB.GetBalance(addr), ws[addr].Balance)
+			acc := ws.Get(addr)
+			if sDB.GetBalance(addr).Cmp(acc.GetBalance()) != 0 {
+				t.Fatalf("failed to prime account balance; Is: %v; Should be: %v", sDB.GetBalance(addr), acc.GetBalance())
 			}
 
-			if sDB.GetNonce(addr) != ws[addr].Nonce {
-				t.Fatalf("failed to prime account nonce; Is: %v; Should be: %v", sDB.GetNonce(addr), ws[addr].Nonce)
+			if sDB.GetNonce(addr) != acc.GetNonce() {
+				t.Fatalf("failed to prime account nonce; Is: %v; Should be: %v", sDB.GetNonce(addr), acc.GetNonce())
 			}
 
-			if bytes.Compare(sDB.GetCode(addr), ws[addr].Code) != 0 {
-				t.Fatalf("failed to prime account code; Is: %v; Should be: %v", sDB.GetCode(addr), ws[addr].Code)
+			if bytes.Compare(sDB.GetCode(addr), acc.GetCode()) != 0 {
+				t.Fatalf("failed to prime account code; Is: %v; Should be: %v", sDB.GetCode(addr), acc.GetCode())
 			}
 
-			for sKey, sValue := range ws[addr].Storage {
-				if sDB.GetState(addr, sKey) != sValue {
-					t.Fatalf("failed to prime account storage; Is: %v; Should be: %v", sDB.GetState(addr, sKey), sValue)
+			acc.ForEachStorage(func(keyHash common.Hash, valueHash common.Hash) {
+				if sDB.GetState(addr, keyHash) != valueHash {
+					t.Fatalf("failed to prime account storage; Is: %v; Should be: %v", sDB.GetState(addr, keyHash), valueHash)
 				}
-			}
+			})
+
 		})
 	}
 }
@@ -866,21 +878,21 @@ func TestValidateStateDb_ValidationDoesNotFailWithPriming(t *testing.T) {
 // getIncorrectTestSubstateAlloc returns an error
 // Substate with incorrect InputAlloc and OutputAlloc.
 // This func is only used in testing.
-func getIncorrectTestSubstateAlloc() *substate.Substate {
+func getIncorrectTestSubstateAlloc() transaction.SubstateData {
 	sub := &substate.Substate{
 		InputAlloc:  getIncorrectSubstateAlloc(),
 		OutputAlloc: getIncorrectSubstateAlloc(),
 	}
 
-	return sub
+	return transaction.NewSubstateData(sub)
 }
 
-func getIncorrectSubstateAlloc() substate.SubstateAlloc {
-	alloc := make(substate.SubstateAlloc)
-	alloc[common.Address{0}] = &substate.SubstateAccount{
+func getIncorrectSubstateAlloc() substate.Alloc {
+	alloc := substate.NewAlloc()
+	alloc[substateCommon.Address{0}] = &substate.Account{
 		Nonce:   0,
 		Balance: new(big.Int),
-		Storage: make(map[common.Hash]common.Hash),
+		Storage: make(map[substateCommon.Hash]substateCommon.Hash),
 		Code:    make([]byte, 0),
 	}
 

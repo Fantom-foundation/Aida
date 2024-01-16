@@ -9,9 +9,10 @@ import (
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
+	"github.com/Fantom-foundation/Aida/executor/transaction"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Substate/substate"
 
 	//db
 	"github.com/jmoiron/sqlx"
@@ -62,7 +63,7 @@ func TestRegisterProgress_DoNothingIfDisabled(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.RegisterRun = ""
 	ext := MakeRegisterProgress(cfg, 0)
-	if _, ok := ext.(extension.NilExtension[*substate.Substate]); !ok {
+	if _, ok := ext.(extension.NilExtension[transaction.SubstateData]); !ok {
 		t.Errorf("RegisterProgress is enabled even though not disabled in configuration.")
 	}
 }
@@ -117,7 +118,7 @@ func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 	// expects [5-9]P[10-19]P[20-24]P, where P is print
 
 	ext := MakeRegisterProgress(cfg, interval)
-	if _, err := ext.(extension.NilExtension[*substate.Substate]); err {
+	if _, err := ext.(extension.NilExtension[transaction.SubstateData]); err {
 		t.Errorf("RegisterProgress is disabled even though enabled in configuration.")
 	}
 
@@ -126,7 +127,7 @@ func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 	ctx := &executor.Context{State: stateDb, StateDbPath: dummyStateDbPath}
 
 	s := &substate.Substate{
-		Result: &substate.SubstateResult{
+		Result: &substate.Result{
 			Status:  0,
 			GasUsed: 100,
 		},
@@ -141,10 +142,12 @@ func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 		stateDb.EXPECT().GetMemoryUsage().Return(&state.MemoryUsage{UsedBytes: 5555}),
 	)
 
-	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
+	ext.PreRun(executor.State[transaction.SubstateData]{}, ctx)
+
+	sub := transaction.NewSubstateData(s)
 
 	for b := int(cfg.First); b < int(cfg.Last); b++ {
-		ext.PreBlock(executor.State[*substate.Substate]{Block: b, Data: s}, ctx)
+		ext.PreBlock(executor.State[transaction.SubstateData]{Block: b, Data: sub}, ctx)
 
 		// check if a print happens here
 		if b > int(itv.End()) {
@@ -157,12 +160,12 @@ func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 			t.Errorf("Expected #Row: %d, Actual #Row: %d", expectedRowCount, len(stats))
 		}
 
-		ext.PreTransaction(executor.State[*substate.Substate]{Data: s}, ctx)
-		ext.PostTransaction(executor.State[*substate.Substate]{Data: s}, ctx)
-		ext.PostBlock(executor.State[*substate.Substate]{Block: b, Data: s}, ctx)
+		ext.PreTransaction(executor.State[transaction.SubstateData]{Data: sub}, ctx)
+		ext.PostTransaction(executor.State[transaction.SubstateData]{Data: sub}, ctx)
+		ext.PostBlock(executor.State[transaction.SubstateData]{Block: b, Data: sub}, ctx)
 	}
 
-	ext.PostRun(executor.State[*substate.Substate]{}, ctx, nil)
+	ext.PostRun(executor.State[transaction.SubstateData]{}, ctx, nil)
 
 	// check if a print happens here
 	expectedRowCount++
@@ -251,14 +254,14 @@ func TestRegisterProgress_IfErrorRecordIntoMetadata(t *testing.T) {
 	)
 
 	ext := MakeRegisterProgress(cfg, 123)
-	if _, err := ext.(extension.NilExtension[*substate.Substate]); err {
+	if _, err := ext.(extension.NilExtension[transaction.SubstateData]); err {
 		t.Errorf("RegisterProgress is disabled even though enabled in configuration.")
 	}
 
 	// this is the run
 	errorText := "This is one random error!"
-	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
-	ext.PostRun(executor.State[*substate.Substate]{}, ctx, fmt.Errorf(errorText))
+	ext.PreRun(executor.State[transaction.SubstateData]{}, ctx)
+	ext.PostRun(executor.State[transaction.SubstateData]{}, ctx, fmt.Errorf(errorText))
 
 	// check if RunSucceed is recorded after postrun
 	ms := []metadataResponse{}

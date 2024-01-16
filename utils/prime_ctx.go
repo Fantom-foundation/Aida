@@ -43,7 +43,7 @@ func (pc *PrimeContext) mayApplyBulkLoad() error {
 // PrimeStateDB primes database with accounts from the world state.
 func (pc *PrimeContext) PrimeStateDB(ws transaction.WorldState, db state.StateDB) error {
 	numValues := 0 // number of storage values
-	ws.ForEach(func(address common.Address, account transaction.Account) {
+	ws.ForEachAccount(func(address common.Address, account transaction.Account) {
 		numValues += account.GetStorageSize()
 	})
 
@@ -62,7 +62,7 @@ func (pc *PrimeContext) PrimeStateDB(ws transaction.WorldState, db state.StateDB
 		pc.load = db.StartBulkLoad(pc.block)
 
 		var forEachError error
-		ws.ForEach(func(addr common.Address, acc transaction.Account) {
+		ws.ForEachAccount(func(addr common.Address, acc transaction.Account) {
 			if err := pc.primeOneAccount(addr, acc, pt); err != nil {
 				forEachError = err
 				return
@@ -121,7 +121,7 @@ func (pc *PrimeContext) primeOneAccount(addr common.Address, acc transaction.Acc
 // PrimeStateDBRandom primes database with accounts from the world state in random order.
 func (pc *PrimeContext) PrimeStateDBRandom(ws transaction.WorldState, db state.StateDB, pt *ProgressTracker) error {
 	contracts := make([]string, 0, ws.Len())
-	ws.ForEach(func(addr common.Address, _ transaction.Account) {
+	ws.ForEachAccount(func(addr common.Address, _ transaction.Account) {
 		contracts = append(contracts, addr.Hex())
 	})
 

@@ -389,7 +389,7 @@ func (db *inMemoryStateDB) GetSubstatePostAlloc() transaction.WorldState {
 
 	// ... and extend with effects
 	alloc := db.GetEffects()
-	alloc.ForEach(func(addr common.Address, acc transaction.Account) {
+	alloc.ForEachAccount(func(addr common.Address, acc transaction.Account) {
 		entry := res.Get(addr)
 		if entry == nil {
 			res.Add(addr, acc)
@@ -415,7 +415,7 @@ func (db *inMemoryStateDB) GetSubstatePostAlloc() transaction.WorldState {
 	}
 
 	// delete any suicided or empty accounts
-	res.ForEach(func(addr common.Address, _ transaction.Account) {
+	res.ForEachAccount(func(addr common.Address, _ transaction.Account) {
 		if db.HasSuicided(addr) || db.Empty(addr) {
 			res.Delete(addr)
 		}
