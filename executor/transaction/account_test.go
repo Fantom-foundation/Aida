@@ -55,14 +55,14 @@ func TestAccount_EqualStorage(t *testing.T) {
 
 	// then compare different value for same key
 	oldAccount.SetStorageAt(hashOne, hashThree)
-	if newAccount.Equal(oldAccount) {
-		t.Fatal("accounts storages are different but equal returned true")
+	if !newAccount.Equal(oldAccount) {
+		t.Fatal("accounts storages are same but equal returned false")
 	}
 
 	// then compare same
 	oldAccount.SetStorageAt(hashOne, hashTwo)
 	if !newAccount.Equal(oldAccount) {
-		t.Fatal("accounts storages are same but equal returned false")
+		t.Fatal("accounts storages are different but equal returned true")
 	}
 
 	// then compare different keys
