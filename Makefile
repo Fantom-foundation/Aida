@@ -34,21 +34,21 @@ tosca:
 aida-rpc: carmen tosca
 	GOPROXY=$(GOPROXY) \
 	GOPRIVATE=github.com/Fantom-foundation/Carmen \
-	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
+	go build -ldflags "-extldflags=-Wl,--allow-multiple-definition -s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-rpc \
 	./cmd/aida-rpc
 
 aida-stochastic-sdb: carmen tosca
 	GOPROXY=$(GOPROXY) \
 	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/go-opera-fvm \
-	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
+	go build -ldflags "-extldflags=-Wl,--allow-multiple-definition -s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-stochastic-sdb \
 	./cmd/aida-stochastic-sdb
 
 aida-vm-adb: carmen tosca
 	GOPROXY=$(GOPROXY) \
 	GOPRIVATE=github.com/Fantom-foundation/Carmen \
-	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
+	go build -ldflags "-extldflags=-Wl,--allow-multiple-definition -s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-vm-adb \
 	./cmd/aida-vm-adb
 
@@ -56,21 +56,21 @@ aida-vm-sdb: carmen tosca
 	GOPROXY=$(GOPROXY) \
 	GOPRIVATE=github.com/Fantom-foundation/Carmen \
 	CGO_CFLAGS="-g -O2  -DMDBX_FORCE_ASSERTIONS=1 -Wno-error=strict-prototypes" \
-	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
+	go build -ldflags "-extldflags=-Wl,--allow-multiple-definition -s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-vm-sdb \
 	./cmd/aida-vm-sdb
 
 aida-vm: carmen tosca
 	GOPROXY=$(GOPROXY) \
 	GOPRIVATE=github.com/Fantom-foundation/Carmen,github.com/Fantom-foundation/go-opera-fvm \
-	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
+	go build -ldflags "-extldflags=-Wl,--allow-multiple-definition -s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-vm \
 	./cmd/aida-vm
 
 aida-sdb: carmen tosca
 	GOPROXY=$(GOPROXY) \
 	GOPRIVATE=github.com/Fantom-foundation/Carmen \
-	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
+	go build -ldflags "-extldflags=-Wl,--allow-multiple-definition -s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-sdb \
 	./cmd/aida-sdb
 
@@ -78,25 +78,25 @@ aida-profile: carmen tosca
 	GOPROXY=$(GOPROXY) \
 	GOPRIVATE=github.com/Fantom-foundation/Carmen \
 	CGO_CFLAGS="-g -O2  -DMDBX_FORCE_ASSERTIONS=1 -Wno-error=strict-prototypes" \
-	go build -ldflags "-s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
+	go build -ldflags "-extldflags=-Wl,--allow-multiple-definition -s -w -X 'github.com/Fantom-foundation/Aida/utils.GitCommit=$(BUILD_COMMIT)'" \
 	-o $(GO_BIN)/aida-profile \
 	./cmd/aida-profile
 
 util-updateset: carmen tosca
 	GOPROXY=$(GOPROXY) \
-	go build -ldflags "-s -w" \
+	go build -ldflags "-extldflags=-Wl,--allow-multiple-definition -s -w" \
 	-o $(GO_BIN)/util-updateset \
 	./cmd/util-updateset
 
 util-db: carmen tosca
 	GOPROXY=$(GOPROXY) \
-	go build -ldflags "-s -w" \
+	go build -ldflags "-extldflags=-Wl,--allow-multiple-definition -s -w" \
 	-o $(GO_BIN)/util-db \
 	./cmd/util-db
 
 util-worldstate: carmen tosca
 	@go build \
-		-ldflags="-X 'github.com/Fantom-foundation/Aida/cmd/util-worldstate/version.Version=$(APP_VERSION)' -X 'github.com/Fantom-foundation/Aida/cmd/util-worldstate/version.Time=$(BUILD_DATE)' -X 'github.com/Fantom-foundation/Aida/cmd/util-worldstate/version.Compiler=$(BUILD_COMPILER)' -X 'github.com/Fantom-foundation/Aida/cmd/util-worldstate/version.Commit=$(BUILD_COMMIT)' -X 'github.com/Fantom-foundation/Aida/cmd/util-worldstate/version.CommitTime=$(BUILD_COMMIT_TIME)'" \
+		-ldflags="-extldflags=-Wl,--allow-multiple-definition -X 'github.com/Fantom-foundation/Aida/cmd/util-worldstate/version.Version=$(APP_VERSION)' -X 'github.com/Fantom-foundation/Aida/cmd/util-worldstate/version.Time=$(BUILD_DATE)' -X 'github.com/Fantom-foundation/Aida/cmd/util-worldstate/version.Compiler=$(BUILD_COMPILER)' -X 'github.com/Fantom-foundation/Aida/cmd/util-worldstate/version.Commit=$(BUILD_COMMIT)' -X 'github.com/Fantom-foundation/Aida/cmd/util-worldstate/version.CommitTime=$(BUILD_COMMIT_TIME)'" \
 		-o $(GO_BIN)/util-worldstate \
 		-v \
 		./cmd/util-worldstate
