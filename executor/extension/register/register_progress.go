@@ -16,7 +16,6 @@ import (
 )
 
 const (
-	LiveDbDirectoryName    = "live"
 	ArchiveDbDirectoryName = "archive"
 
 	RegisterProgressDefaultReportFrequency = 100_000 // in blocks
@@ -110,7 +109,7 @@ type registerProgress struct {
 	gas             uint64
 	totalTxCount    uint64
 	totalGas        uint64
-	pathToLiveDb    string
+	pathToStateDb   string
 	pathToArchiveDb string
 	memory          *state.MemoryUsage
 
@@ -122,7 +121,7 @@ func (rp *registerProgress) PreRun(_ executor.State[*substate.Substate], ctx *ex
 	now := time.Now()
 	rp.startOfRun = now
 	rp.lastUpdate = now
-	rp.pathToLiveDb = filepath.Join(ctx.StateDbPath, LiveDbDirectoryName)
+	rp.pathToStateDb = ctx.StateDbPath
 	rp.pathToArchiveDb = filepath.Join(ctx.StateDbPath, ArchiveDbDirectoryName)
 	return nil
 }
@@ -208,21 +207,21 @@ func (rp *registerProgress) sqlite3(conn string) (string, string, string, func()
 			totalGas = rp.totalGas
 			rp.lock.Unlock()
 
-			lDisk, err := utils.GetDirectorySize(rp.pathToLiveDb)
+			lDisk, err := utils.GetDirectorySize(rp.pathToStateDb)
 			if err != nil {
-				rp.log.Errorf("Unable to get directory size from %s", rp.pathToLiveDb)
+				rp.log.Errorf("Unable to get directory size from pathToStateDb: %s", rp.pathToStateDb)
 				lDisk = 0
 			}
 
-			var aDisk int64
+			var aDisk int64 = 0
 			if rp.cfg.ArchiveMode {
 				aDisk, err = utils.GetDirectorySize(rp.pathToArchiveDb)
 				if err != nil {
-					rp.log.Errorf("Unable to get directory size from %s", rp.pathToArchiveDb)
 					aDisk = 0
+					rp.log.Errorf("Unable to get directory size from pathToArchiveDB: %s", rp.pathToArchiveDb)
+				} else {
+					lDisk -= aDisk
 				}
-			} else {
-				aDisk = 0
 			}
 
 			mem := rp.memory.UsedBytes
