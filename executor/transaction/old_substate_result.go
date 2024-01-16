@@ -8,10 +8,14 @@ import (
 
 // todo logs
 
+// Deprecated: This is a workaround before oldSubstate repository is migrated to new structure.
+// Use NewSubstateResult instead.
 func NewOldSubstateResult(res *substate.SubstateResult) TransactionReceipt {
 	return &oldSubstateResult{res}
 }
 
+// Deprecated: This is a workaround before oldSubstate repository is migrated to new structure.
+// Use substateResult instead.
 type oldSubstateResult struct {
 	*substate.SubstateResult
 }

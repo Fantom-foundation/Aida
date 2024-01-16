@@ -7,10 +7,14 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+// Deprecated: This is a workaround before oldSubstate repository is migrated to new structure.
+// Use NewSubstateEnv instead.
 func NewOldSubstateEnv(env *substate.SubstateEnv) BlockEnvironment {
 	return &oldSubstateEnv{env}
 }
 
+// Deprecated: This is a workaround before oldSubstate repository is migrated to new structure.
+// Use substateEnv instead.
 type oldSubstateEnv struct {
 	*substate.SubstateEnv
 }

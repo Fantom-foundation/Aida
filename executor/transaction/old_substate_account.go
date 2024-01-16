@@ -7,10 +7,14 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+// Deprecated: This is a workaround before oldSubstate repository is migrated to new structure.
+// Use NewSubstateAccount instead.
 func NewOldSubstateAccount(acc *oldSubstate.SubstateAccount) Account {
 	return &oldSubstateAccount{acc}
 }
 
+// Deprecated: This is a workaround before oldSubstate repository is migrated to new structure.
+// Use substateAccount instead.
 type oldSubstateAccount struct {
 	*oldSubstate.SubstateAccount
 }

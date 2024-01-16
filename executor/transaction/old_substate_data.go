@@ -5,10 +5,14 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
+// Deprecated: This is a workaround before oldSubstate repository is migrated to new structure.
+// Use NewSubstateData instead.
 func NewOldSubstateData(data *substate.Substate) SubstateData {
 	return &oldSubstateData{data}
 }
 
+// Deprecated: This is a workaround before oldSubstate repository is migrated to new structure.
+// Use substateData instead.
 type oldSubstateData struct {
 	*substate.Substate
 }

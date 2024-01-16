@@ -7,6 +7,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+// Deprecated: This is a workaround before oldSubstate repository is migrated to new structure.
+// Use NewSubstateAlloc instead.
 func NewOldSubstateAlloc(alloc oldSubstate.SubstateAlloc) WorldState {
 	return oldSubstateAlloc{alloc: alloc}
 }
