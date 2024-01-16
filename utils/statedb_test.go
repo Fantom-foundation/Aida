@@ -12,7 +12,6 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	substate "github.com/Fantom-foundation/Substate"
-	substateCommon "github.com/Fantom-foundation/Substate/geth/common"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 )
@@ -45,7 +44,8 @@ func TestStatedb_DeleteDestroyedAccountsFromWorldState(t *testing.T) {
 		t.Run(fmt.Sprintf("DB variant: %s; shadowImpl: %s; archive variant: %s", tc.Variant, tc.ShadowImpl, tc.ArchiveVariant), func(t *testing.T) {
 			cfg := MakeTestConfig(tc)
 			// Generating randomized world state
-			ws, addrList := MakeWorldState(t)
+			alloc, addrList := MakeWorldState(t)
+			ws := transaction.NewSubstateAlloc(alloc)
 			// Init directory for destroyed accounts DB
 			deletionDb := t.TempDir()
 			// Pick two account which will represent destroyed ones
@@ -85,7 +85,7 @@ func TestStatedb_DeleteDestroyedAccountsFromWorldState(t *testing.T) {
 			}
 
 			// check if accounts are not present anymore
-			if ws[substateCommon.Address(destroyedAccounts[0])] != nil || ws[substateCommon.Address(destroyedAccounts[1])] != nil {
+			if ws.Get(destroyedAccounts[0]) != nil || ws.Get(destroyedAccounts[1]) != nil {
 				t.Fatalf("failed to delete accounts from the world state")
 			}
 		})

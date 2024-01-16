@@ -5,12 +5,11 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/Fantom-foundation/Aida/executor/transaction"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/state/proxy"
 	oldSubstate "github.com/Fantom-foundation/Substate"
-	substateCommon "github.com/Fantom-foundation/Substate/geth/common"
-	"github.com/Fantom-foundation/Substate/substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/google/martian/log"
 )
@@ -206,7 +205,7 @@ func makeStateDBVariant(directory, impl, variant, archiveVariant string, carmenS
 
 // DeleteDestroyedAccountsFromWorldState removes previously suicided accounts from
 // the world state.
-func DeleteDestroyedAccountsFromWorldState(ws substate.Alloc, cfg *Config, target uint64) error {
+func DeleteDestroyedAccountsFromWorldState(ws transaction.WorldState, cfg *Config, target uint64) error {
 	log := logger.NewLogger(cfg.LogLevel, "DelDestAcc")
 
 	src, err := oldSubstate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
@@ -219,9 +218,9 @@ func DeleteDestroyedAccountsFromWorldState(ws substate.Alloc, cfg *Config, targe
 		return err
 	}
 	for _, cur := range list {
-		if _, found := ws[substateCommon.Address(cur)]; found {
+		if ws.Has(cur) {
 			log.Debugf("Remove %v from world state", cur)
-			delete(ws, substateCommon.Address(cur))
+			ws.Delete(cur)
 		}
 	}
 	return nil

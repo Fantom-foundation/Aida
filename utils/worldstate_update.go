@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/Fantom-foundation/Aida/executor/transaction"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
@@ -90,7 +91,7 @@ func GenerateWorldStateFromUpdateDB(cfg *Config, target uint64) (substate.Substa
 		return nil, err
 	}
 	ws.Merge(update)
-	err = DeleteDestroyedAccountsFromWorldState(ws, cfg, target)
+	err = DeleteDestroyedAccountsFromWorldState(transaction.NewOldSubstateAlloc(ws), cfg, target)
 	return ws, err
 }
 
