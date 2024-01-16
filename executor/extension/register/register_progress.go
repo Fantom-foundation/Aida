@@ -3,6 +3,7 @@ package register
 import (
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"time"
 
@@ -63,9 +64,17 @@ func MakeRegisterProgress(cfg *utils.Config, reportFrequency int) executor.Exten
 
 	p2db, err := utils.NewPrinterToSqlite3(rp.sqlite3(connection))
 	if err != nil {
-		rp.log.Debugf("Unable to register at %s", cfg.RegisterRun)
+		rp.log.Errorf("Unable to register at %s", cfg.RegisterRun)
 	} else {
 		rp.ps.AddPrinter(p2db)
+	}
+
+	rm, err := MakeRunMetadata(connection, rp.id)
+	if err != nil {
+		rp.log.Errorf("Unable to create run metadata because %s.", err)
+	} else {
+		rp.meta = rm
+		rm.Print()
 	}
 
 	return rp
@@ -96,7 +105,8 @@ type registerProgress struct {
 	directory    string
 	memory       *state.MemoryUsage
 
-	id *RunIdentity
+	id   *RunIdentity
+	meta *RunMetadata
 }
 
 func (rp *registerProgress) PreRun(_ executor.State[*substate.Substate], ctx *executor.Context) error {
@@ -137,11 +147,22 @@ func (rp *registerProgress) PostTransaction(state executor.State[*substate.Subst
 }
 
 // PostRun prints the remaining statistics and terminates any printer resources.
-func (rp *registerProgress) PostRun(_ executor.State[*substate.Substate], ctx *executor.Context, _ error) error {
+func (rp *registerProgress) PostRun(_ executor.State[*substate.Substate], ctx *executor.Context, err error) error {
 	rp.memory = ctx.State.GetMemoryUsage()
 	rp.ps.Print()
 	rp.Reset()
 	rp.ps.Close()
+
+	rp.meta.meta["Runtime"] = strconv.Itoa(int(time.Since(rp.startOfRun).Seconds()))
+	if err != nil {
+		rp.meta.meta["RunSucceed"] = strconv.FormatBool(false)
+		rp.meta.meta["RunError"] = fmt.Sprintf("%v", err)
+	} else {
+		rp.meta.meta["RunSucceed"] = strconv.FormatBool(true)
+	}
+
+	rp.meta.Print()
+	rp.meta.Close()
 
 	return nil
 }
@@ -193,8 +214,8 @@ func (rp *registerProgress) sqlite3(conn string) (string, string, string, func()
 			values = append(values, []any{
 				rp.interval.Start(),
 				rp.interval.End(),
-				disk,
 				mem,
+				disk,
 				txRate,
 				gasRate,
 				overallTxRate,

@@ -1,0 +1,103 @@
+---
+title: "F1 Report - Transaction Processing Time"
+date: "`r Sys.Date()`"
+params:
+  HwInfo: (Hardware Info)
+  OsInfo: (OS Info)
+  Machine: (Machine Info)
+  GoInfo: (GO Info)
+  GitHash: (GithubKey)
+  StateDB: (StateDB)
+  VM: (VM)
+  db: /var/opera/Aida/tmp-rapolt/register/s5-f1.db
+  first: 479327
+  last: 22832168
+---
+
+```{r, include = FALSE}
+library(ggplot2)
+library(dplyr)
+library(RSQLite)
+library(gt)
+
+# open database
+con <- dbConnect(SQLite(), params$db)
+
+# load block and transaction tables into data frames and exclude lachesis transition block
+TxData <- dbReadTable(con, 'stats') %>% filter(start >= params$first & end <= params$last)
+
+# close database connection
+dbDisconnect(con)
+```
+
+## 1. Experimental Setup
+The experiment is run on the machine `r params$Machine`, which is a `r params$HwInfo` computer.
+The operating system is `r params$OsInfo`.
+The system has installed `r params$GoInfo`.
+The github hash of the Aida repository is `r params$GitHash`.
+For this experiment, we use **`r params$StateDB`** as a StateDB and **`r params$VM`** as a virtual machine.
+The data set for this experiment is stored in the database `r params$db`.
+
+## 2. Memory and Disk Usage
+
+```{r, echo=FALSE, message=FALSE}
+maxMemory <- TxData %>% filter(memory == max(memory))
+maxDisk <- TxData %>% filter(disk == max(disk))
+```
+
+The experiment was conducted for the block range from **`r format(min(TxData$start),big.mark=",")`**  to **`r format(max(TxData$end),big.mark=",")`**.
+
+Max RAM Usage throughout the run is **`r format(maxMemory$memory, big.mark=",")`** bytes at block height **`r format(maxMemory$start, big.mark=",")`**. 
+
+```{r, echo=FALSE, message=FALSE, fig.width=12, fig.height=8}
+TxData %>% mutate(memory = as.numeric(memory)) %>%
+   ggplot(aes(x = start, y = memory)) +
+   geom_point(alpha=0.3) +
+   labs(x="Block Height", y="Ram Consumption (Bytes)", title="Memory Usage")
+```
+
+Max Disk Usage throughout the run is **`r format(maxMemory$disk, big.mark=",")`** bytes at block height **`r format(maxMemory$start, big.mark=",")`**
+
+```{r, echo=FALSE, message=FALSE, fig.width=12, fig.height=8}
+TxData %>% mutate(disk = as.numeric(disk)) %>%
+   ggplot(aes(x = start, y = disk)) +
+   geom_point(alpha=0.3) +
+   labs(x="Block Height", y="Disk Consumption (Bytes)", title="Disk Usage")
+```
+
+## 3. Transaction Rate
+
+```{r, echo=FALSE, message=FALSE}
+maxTxRate <- TxData %>% filter(tx_rate == max(tx_rate))
+```
+
+On average, the transaction rate is **`r format(mean(TxData$tx_rate), big.mark=",")`** TPM. The max transaction rate  is **`r format(maxTxRate$tx_rate, big.mark=",")`** TPM at block height **`r format(maxTxRate$start, big.mark=",")`**. 
+
+The dashed line shows the average transaction rate achieve up until the block height.
+
+```{r, echo=FALSE, message=FALSE, fig.width=12, fig.height=8}
+TxData %>% mutate(tx_rate = as.numeric(tx_rate)) %>%
+   ggplot(aes(x = start, y = tx_rate)) +
+   geom_line(aes(x = start, y = overall_tx_rate), linetype = "longdash", color = "tomato") +
+   geom_point(alpha=0.3) +
+   labs(x="Block Height", y="Transaction Per Minute", title="Transaction Rate")
+```
+
+
+## 4. Gas Rate
+
+```{r, echo=FALSE, message=FALSE}
+maxGasRate <- TxData %>% filter(gas_rate == max(gas_rate))
+```
+On average, the gas rate is **`r format(mean(TxData$gas_rate), big.mark=",")`** GPM. The max transaction rate  is **`r format(maxGasRate$gas_rate, big.mark=",")`** TPM at block height **`r format(maxGasRate$start, big.mark=",")`**. 
+
+The dashed line shows the average gas rate achieve up until the block height.
+
+```{r, echo=FALSE, message=FALSE, fig.width=12, fig.height=8}
+TxData %>% mutate(gas_rate = as.numeric(gas_rate)) %>%
+   ggplot(aes(x = start, y = gas_rate)) +
+   geom_line(aes(x = start, y = overall_gas_rate), linetype = "longdash", color = "tomato") +
+   geom_point(alpha=0.3) +
+   labs(x="Block Height", y="Gas Per Minute", title="Gas Rate")
+```
+
