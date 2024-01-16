@@ -41,7 +41,7 @@ jobs:
         run: diff -u <(echo -n)  <(find . \( -path "./carmen" -o -path "./tosca" \) -prune -o  -name '*.go' -exec gofmt -d -s {} \;)
 
       - name: Build
-        run: make
+        run: make -e CGO_ENABLED=0
 
       - name: Test
         run: go test -v ./...

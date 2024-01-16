@@ -37,7 +37,7 @@ jobs:
          key: bazel-osx
 
       - name: Build
-        run: make
+        run: make -e CGO_ENABLED=0
 
       - name: Test
         run: go test -v ./...
