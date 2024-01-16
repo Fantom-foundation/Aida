@@ -7,7 +7,6 @@ import (
 
 	"github.com/Fantom-foundation/Aida/executor/transaction"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/Fantom-foundation/Substate/db"
 	"github.com/urfave/cli/v2"
 )
@@ -56,6 +55,6 @@ func (s substateProvider) Run(from int, to int, consumer Consumer[transaction.Su
 	return nil
 }
 
-func (substateProvider) Close() {
-	substate.CloseSubstateDB()
+func (s substateProvider) Close() {
+	s.db.Close()
 }
