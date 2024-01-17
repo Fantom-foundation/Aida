@@ -11,7 +11,7 @@ package executor
 import (
 	reflect "reflect"
 
-	"github.com/Fantom-foundation/Aida/executor/transaction"
+	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
 	rpc "github.com/Fantom-foundation/Aida/rpc"
 	operation "github.com/Fantom-foundation/Aida/tracer/operation"
 	gomock "go.uber.org/mock/gomock"
@@ -41,7 +41,7 @@ func (m *MockTxConsumer) EXPECT() *MockTxConsumerMockRecorder {
 }
 
 // Consume mocks base method.
-func (m *MockTxConsumer) Consume(block, transaction int, substate transaction.SubstateData) error {
+func (m *MockTxConsumer) Consume(block, transaction int, substate substate_transaction.SubstateData) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Consume", block, transaction, substate)
 	ret0, _ := ret[0].(error)

@@ -6,15 +6,15 @@ import (
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
-	"github.com/Fantom-foundation/Aida/executor/transaction"
+	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/profile/blockprofile"
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
-func MakeBlockRuntimeAndGasCollector(cfg *utils.Config) executor.Extension[transaction.SubstateData] {
+func MakeBlockRuntimeAndGasCollector(cfg *utils.Config) executor.Extension[substate_transaction.SubstateData] {
 	if !cfg.ProfileBlocks {
-		return extension.NilExtension[transaction.SubstateData]{}
+		return extension.NilExtension[substate_transaction.SubstateData]{}
 	}
 	return &BlockRuntimeAndGasCollector{
 		cfg: cfg,
@@ -23,7 +23,7 @@ func MakeBlockRuntimeAndGasCollector(cfg *utils.Config) executor.Extension[trans
 }
 
 type BlockRuntimeAndGasCollector struct {
-	extension.NilExtension[transaction.SubstateData]
+	extension.NilExtension[substate_transaction.SubstateData]
 	log        logger.Logger
 	cfg        *utils.Config
 	profileDb  *blockprofile.ProfileDB
@@ -33,7 +33,7 @@ type BlockRuntimeAndGasCollector struct {
 }
 
 // PreRun prepares the ProfileDB
-func (b *BlockRuntimeAndGasCollector) PreRun(executor.State[transaction.SubstateData], *executor.Context) error {
+func (b *BlockRuntimeAndGasCollector) PreRun(executor.State[substate_transaction.SubstateData], *executor.Context) error {
 	var err error
 	b.profileDb, err = blockprofile.NewProfileDB(b.cfg.ProfileDB)
 	if err != nil {
@@ -50,13 +50,13 @@ func (b *BlockRuntimeAndGasCollector) PreRun(executor.State[transaction.Substate
 }
 
 // PreTransaction resets the transaction timer.
-func (b *BlockRuntimeAndGasCollector) PreTransaction(executor.State[transaction.SubstateData], *executor.Context) error {
+func (b *BlockRuntimeAndGasCollector) PreTransaction(executor.State[substate_transaction.SubstateData], *executor.Context) error {
 	b.txTimer = time.Now()
 	return nil
 }
 
 // PostTransaction records tx into profile context.
-func (b *BlockRuntimeAndGasCollector) PostTransaction(state executor.State[transaction.SubstateData], _ *executor.Context) error {
+func (b *BlockRuntimeAndGasCollector) PostTransaction(state executor.State[substate_transaction.SubstateData], _ *executor.Context) error {
 	err := b.ctx.RecordTransaction(state, time.Since(b.txTimer))
 	if err != nil {
 		return fmt.Errorf("cannot record transaction; %v", err)
@@ -65,14 +65,14 @@ func (b *BlockRuntimeAndGasCollector) PostTransaction(state executor.State[trans
 }
 
 // PreBlock resets the block times and profile context.
-func (b *BlockRuntimeAndGasCollector) PreBlock(executor.State[transaction.SubstateData], *executor.Context) error {
+func (b *BlockRuntimeAndGasCollector) PreBlock(executor.State[substate_transaction.SubstateData], *executor.Context) error {
 	b.ctx = blockprofile.NewContext()
 	b.blockTimer = time.Now()
 	return nil
 }
 
 // PostBlock extracts data from profile context and writes them to ProfileDB.
-func (b *BlockRuntimeAndGasCollector) PostBlock(state executor.State[transaction.SubstateData], _ *executor.Context) error {
+func (b *BlockRuntimeAndGasCollector) PostBlock(state executor.State[substate_transaction.SubstateData], _ *executor.Context) error {
 	data, err := b.ctx.GetProfileData(uint64(state.Block), time.Since(b.blockTimer))
 	if err != nil {
 		return fmt.Errorf("cannot get profile data from context; %v", err)
@@ -87,7 +87,7 @@ func (b *BlockRuntimeAndGasCollector) PostBlock(state executor.State[transaction
 }
 
 // PostRun closes ProfileDB
-func (b *BlockRuntimeAndGasCollector) PostRun(executor.State[transaction.SubstateData], *executor.Context, error) error {
+func (b *BlockRuntimeAndGasCollector) PostRun(executor.State[substate_transaction.SubstateData], *executor.Context, error) error {
 	defer func() {
 		if r := recover(); r != nil {
 			b.log.Errorf("recovered panic in block-profiler; %v", r)

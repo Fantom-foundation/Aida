@@ -1,14 +1,15 @@
-package transaction
+package substate_transaction
 
 import (
 	"math/big"
 
+	"github.com/Fantom-foundation/Aida/executor/transaction"
 	substateCommon "github.com/Fantom-foundation/Substate/geth/common"
 	"github.com/Fantom-foundation/Substate/substate"
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func NewSubstateAccount(acc *substate.Account) Account {
+func NewSubstateAccount(acc *substate.Account) transaction.Account {
 	return &substateAccount{acc}
 }
 
@@ -56,16 +57,16 @@ func (a *substateAccount) GetStorageSize() int {
 	return len(a.Storage)
 }
 
-func (a *substateAccount) ForEachStorage(h storageHandler) {
+func (a *substateAccount) ForEachStorage(h transaction.StorageHandler) {
 	for keyHash, valueHash := range a.Storage {
 		h(common.Hash(keyHash), common.Hash(valueHash))
 	}
 }
 
-func (a *substateAccount) Equal(y Account) bool {
-	return accountEqual(a, y)
+func (a *substateAccount) Equal(y transaction.Account) bool {
+	return transaction.AccountEqual(a, y)
 }
 
 func (a *substateAccount) String() string {
-	return accountString(a)
+	return transaction.AccountString(a)
 }

@@ -1,6 +1,7 @@
-package transaction
+package substate_transaction
 
 import (
+	"github.com/Fantom-foundation/Aida/executor/transaction"
 	substateCommon "github.com/Fantom-foundation/Substate/geth/common"
 	substateTypes "github.com/Fantom-foundation/Substate/geth/types"
 	"github.com/Fantom-foundation/Substate/substate"
@@ -10,7 +11,7 @@ import (
 
 // todo logs
 
-func NewSubstateResult(res *substate.Result) TransactionReceipt {
+func NewSubstateResult(res *substate.Result) transaction.Receipt {
 	return &substateResult{res}
 }
 
@@ -58,6 +59,6 @@ func (r *substateResult) SetGasUsed(gasUsed uint64) {
 	r.GasUsed = gasUsed
 }
 
-func (r *substateResult) Equal(y TransactionReceipt) bool {
-	return transactionReceiptEqual(r, y)
+func (r *substateResult) Equal(y transaction.Receipt) bool {
+	return transaction.ReceiptEqual(r, y)
 }

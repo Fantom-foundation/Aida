@@ -5,6 +5,7 @@ import (
 	"math/big"
 
 	"github.com/Fantom-foundation/Aida/executor/transaction"
+	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/prque"
 	"github.com/ethereum/go-ethereum/core/rawdb"
@@ -225,7 +226,7 @@ func (s *gethStateDB) PrepareSubstate(substate transaction.WorldState, block uin
 
 func (s *gethStateDB) GetSubstatePostAlloc() transaction.WorldState {
 	if db, ok := s.db.(*geth.StateDB); ok {
-		return transaction.NewOldSubstateAlloc(db.GetSubstatePostAlloc())
+		return substate_transaction.NewOldSubstateAlloc(db.GetSubstatePostAlloc())
 	}
 
 	return nil

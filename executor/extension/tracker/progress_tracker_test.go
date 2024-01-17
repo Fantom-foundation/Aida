@@ -9,7 +9,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
-	"github.com/Fantom-foundation/Aida/executor/transaction"
+	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -23,7 +23,7 @@ func TestProgressTrackerExtension_NoLoggerIsCreatedIfDisabled(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.TrackProgress = false
 	ext := MakeProgressTracker(cfg, testStateDbInfoFrequency)
-	if _, ok := ext.(extension.NilExtension[transaction.SubstateData]); !ok {
+	if _, ok := ext.(extension.NilExtension[substate_transaction.SubstateData]); !ok {
 		t.Errorf("Logger is enabled although not set in configuration")
 	}
 
@@ -46,7 +46,7 @@ func TestProgressTrackerExtension_LoggingHappens(t *testing.T) {
 
 	ctx := &executor.Context{State: db, StateDbPath: dummyStateDbPath}
 
-	s := transaction.NewOldSubstateData(&substate.Substate{
+	s := substate_transaction.NewOldSubstateData(&substate.Substate{
 		Result: &substate.SubstateResult{
 			Status:  0,
 			GasUsed: 100,
@@ -76,12 +76,12 @@ func TestProgressTrackerExtension_LoggingHappens(t *testing.T) {
 		),
 	)
 
-	ext.PreRun(executor.State[transaction.SubstateData]{}, ctx)
+	ext.PreRun(executor.State[substate_transaction.SubstateData]{}, ctx)
 
 	// first processed block
-	ext.PostTransaction(executor.State[transaction.SubstateData]{Data: s}, ctx)
-	ext.PostTransaction(executor.State[transaction.SubstateData]{Data: s}, ctx)
-	ext.PostBlock(executor.State[transaction.SubstateData]{
+	ext.PostTransaction(executor.State[substate_transaction.SubstateData]{Data: s}, ctx)
+	ext.PostTransaction(executor.State[substate_transaction.SubstateData]{Data: s}, ctx)
+	ext.PostBlock(executor.State[substate_transaction.SubstateData]{
 		Block: 5,
 		Data:  s,
 	}, ctx)
@@ -89,17 +89,17 @@ func TestProgressTrackerExtension_LoggingHappens(t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 
 	// second processed block
-	ext.PostTransaction(executor.State[transaction.SubstateData]{Data: s}, ctx)
-	ext.PostTransaction(executor.State[transaction.SubstateData]{Data: s}, ctx)
-	ext.PostBlock(executor.State[transaction.SubstateData]{
+	ext.PostTransaction(executor.State[substate_transaction.SubstateData]{Data: s}, ctx)
+	ext.PostTransaction(executor.State[substate_transaction.SubstateData]{Data: s}, ctx)
+	ext.PostBlock(executor.State[substate_transaction.SubstateData]{
 		Block: 6,
 		Data:  s,
 	}, ctx)
 
 	time.Sleep(500 * time.Millisecond)
 
-	ext.PostTransaction(executor.State[transaction.SubstateData]{Data: s}, ctx)
-	ext.PostBlock(executor.State[transaction.SubstateData]{
+	ext.PostTransaction(executor.State[substate_transaction.SubstateData]{Data: s}, ctx)
+	ext.PostBlock(executor.State[substate_transaction.SubstateData]{
 		Block: 8,
 		Data:  s,
 	}, ctx)
@@ -117,30 +117,30 @@ func TestProgressTrackerExtension_FirstLoggingIsIgnored(t *testing.T) {
 
 	ctx := &executor.Context{State: db}
 
-	s := transaction.NewOldSubstateData(&substate.Substate{
+	s := substate_transaction.NewOldSubstateData(&substate.Substate{
 		Result: &substate.SubstateResult{
 			Status:  0,
 			GasUsed: 10,
 		},
 	})
 
-	ext.PreRun(executor.State[transaction.SubstateData]{
+	ext.PreRun(executor.State[substate_transaction.SubstateData]{
 		Block:       4,
 		Transaction: 0,
 		Data:        s,
 	}, ctx)
 
-	ext.PostTransaction(executor.State[transaction.SubstateData]{
+	ext.PostTransaction(executor.State[substate_transaction.SubstateData]{
 		Block:       4,
 		Transaction: 0,
 		Data:        s,
 	}, ctx)
-	ext.PostTransaction(executor.State[transaction.SubstateData]{
+	ext.PostTransaction(executor.State[substate_transaction.SubstateData]{
 		Block:       4,
 		Transaction: 1,
 		Data:        s,
 	}, ctx)
-	ext.PostBlock(executor.State[transaction.SubstateData]{
+	ext.PostBlock(executor.State[substate_transaction.SubstateData]{
 		Block:       5,
 		Transaction: 0,
 		Data:        s,

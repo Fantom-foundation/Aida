@@ -8,7 +8,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/executor/extension/validator"
-	"github.com/Fantom-foundation/Aida/executor/transaction"
+	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/urfave/cli/v2"
@@ -38,29 +38,29 @@ func RunVm(ctx *cli.Context) error {
 // execution, in particular during unit tests.
 func run(
 	cfg *utils.Config,
-	provider executor.Provider[transaction.SubstateData],
+	provider executor.Provider[substate_transaction.SubstateData],
 	stateDb state.StateDB,
-	processor executor.Processor[transaction.SubstateData],
-	extra []executor.Extension[transaction.SubstateData],
+	processor executor.Processor[substate_transaction.SubstateData],
+	extra []executor.Extension[substate_transaction.SubstateData],
 ) error {
-	extensions := []executor.Extension[transaction.SubstateData]{
-		profiler.MakeCpuProfiler[transaction.SubstateData](cfg),
-		profiler.MakeDiagnosticServer[transaction.SubstateData](cfg),
-		profiler.MakeVirtualMachineStatisticsPrinter[transaction.SubstateData](cfg),
+	extensions := []executor.Extension[substate_transaction.SubstateData]{
+		profiler.MakeCpuProfiler[substate_transaction.SubstateData](cfg),
+		profiler.MakeDiagnosticServer[substate_transaction.SubstateData](cfg),
+		profiler.MakeVirtualMachineStatisticsPrinter[substate_transaction.SubstateData](cfg),
 	}
 
 	if stateDb == nil {
 		extensions = append(
 			extensions,
 			statedb.MakeTemporaryStatePrepper(cfg),
-			tracker.MakeDbLogger[transaction.SubstateData](cfg),
+			tracker.MakeDbLogger[substate_transaction.SubstateData](cfg),
 		)
 	}
 
 	extensions = append(
 		extensions,
-		tracker.MakeErrorLogger[transaction.SubstateData](cfg),
-		tracker.MakeProgressLogger[transaction.SubstateData](cfg, 15*time.Second),
+		tracker.MakeErrorLogger[substate_transaction.SubstateData](cfg),
+		tracker.MakeProgressLogger[substate_transaction.SubstateData](cfg, 15*time.Second),
 		validator.MakeLiveDbValidator(cfg),
 	)
 	extensions = append(extensions, extra...)

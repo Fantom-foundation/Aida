@@ -5,7 +5,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
-	"github.com/Fantom-foundation/Aida/executor/transaction"
+	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -93,7 +93,7 @@ func (p *stateDbPrimer[T]) prime(stateDb state.StateDB) error {
 		// Prime StateDB
 		if totalSize+incrementalSize > p.cfg.UpdateBufferSize {
 			p.log.Infof("\tPriming...")
-			if err = p.ctx.PrimeStateDB(transaction.NewOldSubstateAlloc(update), stateDb); err != nil {
+			if err = p.ctx.PrimeStateDB(substate_transaction.NewOldSubstateAlloc(update), stateDb); err != nil {
 				return fmt.Errorf("cannot prime state-db; %v", err)
 			}
 
@@ -122,7 +122,7 @@ func (p *stateDbPrimer[T]) prime(stateDb state.StateDB) error {
 
 	// if update set is not empty, prime the remaining
 	if len(update) > 0 {
-		if err = p.ctx.PrimeStateDB(transaction.NewOldSubstateAlloc(update), stateDb); err != nil {
+		if err = p.ctx.PrimeStateDB(substate_transaction.NewOldSubstateAlloc(update), stateDb); err != nil {
 			return fmt.Errorf("cannot prime state-db; %v", err)
 		}
 		update = make(substate.SubstateAlloc)
@@ -141,7 +141,7 @@ func (p *stateDbPrimer[T]) prime(stateDb state.StateDB) error {
 		if hasPrimed {
 			p.ctx.SuicideAccounts(stateDb, deletedAccounts)
 		}
-		if err = p.ctx.PrimeStateDB(transaction.NewOldSubstateAlloc(update), stateDb); err != nil {
+		if err = p.ctx.PrimeStateDB(substate_transaction.NewOldSubstateAlloc(update), stateDb); err != nil {
 			return fmt.Errorf("cannot prime state-db; %v", err)
 		}
 	}

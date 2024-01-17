@@ -6,6 +6,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/transaction"
+	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
 	"github.com/Fantom-foundation/Aida/profile/graphutil"
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -94,7 +95,7 @@ func interfere(u, v AddressSet) bool {
 }
 
 // findTxAddresses gets wallet/contract addresses of a transaction.
-func findTxAddresses(tx executor.State[transaction.SubstateData]) AddressSet {
+func findTxAddresses(tx executor.State[substate_transaction.SubstateData]) AddressSet {
 	addresses := AddressSet{}
 
 	tx.Data.GetInputAlloc().ForEachAccount(func(addr common.Address, acc transaction.Account) {
@@ -149,7 +150,7 @@ func (ctx *Context) dependencies(addresses AddressSet) graphutil.OrdinalSet {
 }
 
 // RecordTransaction collects addresses and computes earliest time.
-func (ctx *Context) RecordTransaction(state executor.State[transaction.SubstateData], tTransaction time.Duration) error {
+func (ctx *Context) RecordTransaction(state executor.State[substate_transaction.SubstateData], tTransaction time.Duration) error {
 	overheadTimer := time.Now()
 
 	// update time for block and transaction
@@ -262,7 +263,7 @@ func (ctx *Context) GetProfileData(curBlock uint64, tBlock time.Duration) (*Prof
 }
 
 // getTransactionType reads a message and determines a transaction type.
-func getTransactionType(tx executor.State[transaction.SubstateData]) TxType {
+func getTransactionType(tx executor.State[substate_transaction.SubstateData]) TxType {
 	msg := tx.Data.GetMessage()
 	to := msg.To()
 	from := msg.From()

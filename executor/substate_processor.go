@@ -7,6 +7,7 @@ import (
 	"sync/atomic"
 
 	"github.com/Fantom-foundation/Aida/executor/transaction"
+	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -29,7 +30,7 @@ type LiveDbProcessor struct {
 }
 
 // Process transaction inside state into given LIVE StateDb
-func (p *LiveDbProcessor) Process(state State[transaction.SubstateData], ctx *Context) error {
+func (p *LiveDbProcessor) Process(state State[substate_transaction.SubstateData], ctx *Context) error {
 	var err error
 
 	err = p.ProcessTransaction(ctx.State, state.Block, state.Transaction, state.Data)
@@ -55,7 +56,7 @@ type ArchiveDbProcessor struct {
 }
 
 // Process transaction inside state into given ARCHIVE StateDb
-func (p *ArchiveDbProcessor) Process(state State[transaction.SubstateData], ctx *Context) error {
+func (p *ArchiveDbProcessor) Process(state State[substate_transaction.SubstateData], ctx *Context) error {
 	var err error
 
 	err = p.ProcessTransaction(ctx.Archive, state.Block, state.Transaction, state.Data)
@@ -99,7 +100,7 @@ func (s *SubstateProcessor) isErrFatal() bool {
 	return true
 }
 
-func (s *SubstateProcessor) ProcessTransaction(db state.VmStateDB, block int, tx int, data transaction.SubstateData) error {
+func (s *SubstateProcessor) ProcessTransaction(db state.VmStateDB, block int, tx int, data substate_transaction.SubstateData) error {
 	if tx >= utils.PseudoTx {
 		s.processPseudoTx(data.GetOutputAlloc(), db)
 		return nil
@@ -109,7 +110,7 @@ func (s *SubstateProcessor) ProcessTransaction(db state.VmStateDB, block int, tx
 }
 
 // processRegularTx executes VM on a chosen storage system.
-func (s *SubstateProcessor) processRegularTx(db state.VmStateDB, block int, tx int, data transaction.SubstateData) (finalError error) {
+func (s *SubstateProcessor) processRegularTx(db state.VmStateDB, block int, tx int, data substate_transaction.SubstateData) (finalError error) {
 	db.BeginTransaction(uint32(tx))
 	defer db.EndTransaction()
 
@@ -161,7 +162,7 @@ func (s *SubstateProcessor) processRegularTx(db state.VmStateDB, block int, tx i
 }
 
 // fantomTx processes a transaction in Fantom Opera EVM configuration
-func (s *SubstateProcessor) fantomTx(db state.VmStateDB, block int, tx int, st transaction.SubstateData) (finalError error) {
+func (s *SubstateProcessor) fantomTx(db state.VmStateDB, block int, tx int, st substate_transaction.SubstateData) (finalError error) {
 	var (
 		gaspool  = new(evmcore.GasPool)
 		txHash   = common.HexToHash(fmt.Sprintf("0x%016d%016d", block, tx))
@@ -266,7 +267,7 @@ func prepareBlockCtx(inputEnv transaction.BlockEnvironment) *vm.BlockContext {
 }
 
 // compileVMResult creates a result of a transaction as SubstateResult struct.
-func compileVMResult(logs []*types.Log, receiptUsedGas uint64, receiptFailed bool, contract common.Address) transaction.TransactionReceipt {
+func compileVMResult(logs []*types.Log, receiptUsedGas uint64, receiptFailed bool, contract common.Address) transaction.Receipt {
 	vmResult := &substate.SubstateResult{
 		ContractAddress: contract,
 		GasUsed:         receiptUsedGas,
@@ -279,11 +280,11 @@ func compileVMResult(logs []*types.Log, receiptUsedGas uint64, receiptFailed boo
 		vmResult.Status = types.ReceiptStatusSuccessful
 	}
 
-	return transaction.NewOldSubstateResult(vmResult)
+	return substate_transaction.NewOldSubstateResult(vmResult)
 }
 
 // validateVMResult compares the result of a transaction to an expected value.
-func validateVMResult(vmResult, expectedResult transaction.TransactionReceipt) error {
+func validateVMResult(vmResult, expectedResult transaction.Receipt) error {
 	if !expectedResult.Equal(vmResult) {
 		return fmt.Errorf("inconsistent output\n"+
 			"\ngot:\n"+

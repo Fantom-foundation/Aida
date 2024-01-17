@@ -1,14 +1,15 @@
-package transaction
+package substate_transaction
 
 import (
 	"math/big"
 
+	"github.com/Fantom-foundation/Aida/executor/transaction"
 	substateCommon "github.com/Fantom-foundation/Substate/geth/common"
 	"github.com/Fantom-foundation/Substate/substate"
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func NewSubstateEnv(env *substate.Env) BlockEnvironment {
+func NewSubstateEnv(env *substate.Env) transaction.BlockEnvironment {
 	return &substateEnv{env}
 }
 

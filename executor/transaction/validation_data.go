@@ -14,7 +14,7 @@ type OutputValidationData interface {
 	// This is mainly used for confirming that StateDb has correct data AFTER execution.
 	GetOutputAlloc() WorldState
 
-	// GetResult returns the TransactionReceipt of the transaction.
+	// GetResult returns the Receipt of the transaction.
 	// This is used for comparing result returned by the StateDb.
-	GetResult() TransactionReceipt
+	GetResult() Receipt
 }

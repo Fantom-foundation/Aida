@@ -1,6 +1,7 @@
-package transaction
+package substate_transaction
 
 import (
+	"github.com/Fantom-foundation/Aida/executor/transaction"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -10,7 +11,7 @@ import (
 
 // Deprecated: This is a workaround before oldSubstate repository is migrated to new structure.
 // Use NewSubstateResult instead.
-func NewOldSubstateResult(res *substate.SubstateResult) TransactionReceipt {
+func NewOldSubstateResult(res *substate.SubstateResult) transaction.Receipt {
 	return &oldSubstateResult{res}
 }
 
@@ -60,6 +61,6 @@ func (r *oldSubstateResult) SetGasUsed(gasUsed uint64) {
 	r.GasUsed = gasUsed
 }
 
-func (r *oldSubstateResult) Equal(y TransactionReceipt) bool {
-	return transactionReceiptEqual(r, y)
+func (r *oldSubstateResult) Equal(y transaction.Receipt) bool {
+	return transaction.ReceiptEqual(r, y)
 }

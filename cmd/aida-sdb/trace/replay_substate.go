@@ -7,7 +7,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/executor/extension/validator"
-	"github.com/Fantom-foundation/Aida/executor/transaction"
+	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
@@ -37,8 +37,8 @@ func ReplaySubstate(ctx *cli.Context) error {
 
 	processor := makeSubstateProcessor(cfg, rCtx, operationProvider)
 
-	var extra = []executor.Extension[transaction.SubstateData]{
-		profiler.MakeReplayProfiler[transaction.SubstateData](cfg, rCtx),
+	var extra = []executor.Extension[substate_transaction.SubstateData]{
+		profiler.MakeReplayProfiler[substate_transaction.SubstateData](cfg, rCtx),
 	}
 
 	return replaySubstate(cfg, substateProvider, processor, nil, extra)
@@ -56,7 +56,7 @@ type substateProcessor struct {
 	operationProvider executor.Provider[[]operation.Operation]
 }
 
-func (p substateProcessor) Process(state executor.State[transaction.SubstateData], ctx *executor.Context) error {
+func (p substateProcessor) Process(state executor.State[substate_transaction.SubstateData], ctx *executor.Context) error {
 	return p.operationProvider.Run(state.Block, state.Block, func(t executor.TransactionInfo[[]operation.Operation]) error {
 		p.runTransaction(uint64(state.Block), t.Data, ctx.State)
 		return nil
@@ -65,21 +65,21 @@ func (p substateProcessor) Process(state executor.State[transaction.SubstateData
 
 func replaySubstate(
 	cfg *utils.Config,
-	provider executor.Provider[transaction.SubstateData],
-	processor executor.Processor[transaction.SubstateData],
+	provider executor.Provider[substate_transaction.SubstateData],
+	processor executor.Processor[substate_transaction.SubstateData],
 	stateDb state.StateDB,
-	extra []executor.Extension[transaction.SubstateData],
+	extra []executor.Extension[substate_transaction.SubstateData],
 ) error {
-	var extensionList = []executor.Extension[transaction.SubstateData]{
-		profiler.MakeCpuProfiler[transaction.SubstateData](cfg),
-		tracker.MakeProgressLogger[transaction.SubstateData](cfg, 0),
-		profiler.MakeMemoryUsagePrinter[transaction.SubstateData](cfg),
-		profiler.MakeMemoryProfiler[transaction.SubstateData](cfg),
+	var extensionList = []executor.Extension[substate_transaction.SubstateData]{
+		profiler.MakeCpuProfiler[substate_transaction.SubstateData](cfg),
+		tracker.MakeProgressLogger[substate_transaction.SubstateData](cfg, 0),
+		profiler.MakeMemoryUsagePrinter[substate_transaction.SubstateData](cfg),
+		profiler.MakeMemoryProfiler[substate_transaction.SubstateData](cfg),
 		validator.MakeLiveDbValidator(cfg),
 	}
 
 	if stateDb == nil {
-		extensionList = append(extensionList, statedb.MakeStateDbManager[transaction.SubstateData](cfg))
+		extensionList = append(extensionList, statedb.MakeStateDbManager[substate_transaction.SubstateData](cfg))
 	}
 
 	if cfg.DbImpl == "memory" {

@@ -6,7 +6,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/executor/extension/validator"
-	"github.com/Fantom-foundation/Aida/executor/transaction"
+	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -59,13 +59,13 @@ func RecordStateDbTrace(ctx *cli.Context) error {
 
 func record(
 	cfg *utils.Config,
-	provider executor.Provider[transaction.SubstateData],
-	processor executor.Processor[transaction.SubstateData],
-	extra []executor.Extension[transaction.SubstateData],
+	provider executor.Provider[substate_transaction.SubstateData],
+	processor executor.Processor[substate_transaction.SubstateData],
+	extra []executor.Extension[substate_transaction.SubstateData],
 ) error {
-	var extensions = []executor.Extension[transaction.SubstateData]{
-		profiler.MakeCpuProfiler[transaction.SubstateData](cfg),
-		tracker.MakeProgressLogger[transaction.SubstateData](cfg, 0),
+	var extensions = []executor.Extension[substate_transaction.SubstateData]{
+		profiler.MakeCpuProfiler[substate_transaction.SubstateData](cfg),
+		tracker.MakeProgressLogger[substate_transaction.SubstateData](cfg, 0),
 		tracker.MakeProgressTracker(cfg, 0),
 		statedb.MakeTemporaryStatePrepper(cfg),
 		statedb.MakeProxyRecorderPrepper(cfg),

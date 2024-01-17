@@ -7,8 +7,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-// TransactionReceipt represents an interface for managing and retrieving the result of a blockchain transaction or contract execution.
-type TransactionReceipt interface {
+// Receipt represents an interface for managing and retrieving the result of a blockchain transaction or contract execution.
+type Receipt interface {
 	// GetStatus returns the status code indicating the success or failure of the transaction or execution.
 	GetStatus() uint64
 
@@ -40,11 +40,11 @@ type TransactionReceipt interface {
 	SetGasUsed(gasUsed uint64)
 
 	// Equal checks if the current result is equal to the provided result.
-	// Note: Have a look at transactionReceiptEqual.
-	Equal(y TransactionReceipt) bool
+	// Note: Have a look at ReceiptEqual.
+	Equal(y Receipt) bool
 }
 
-func transactionReceiptEqual(x, y TransactionReceipt) bool {
+func ReceiptEqual(x, y Receipt) bool {
 	if x == y {
 		return true
 	}

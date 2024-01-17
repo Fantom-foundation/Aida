@@ -1,15 +1,16 @@
-package transaction
+package substate_transaction
 
 import (
+	"github.com/Fantom-foundation/Aida/executor/transaction"
 	"github.com/Fantom-foundation/Substate/substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
 type SubstateData interface {
-	InputValidationData
-	ExecutionData
-	OutputValidationData
+	transaction.InputValidationData
+	transaction.ExecutionData
+	transaction.OutputValidationData
 }
 
 func NewSubstateData(data *substate.Substate) SubstateData {
@@ -20,15 +21,15 @@ type substateData struct {
 	*substate.Substate
 }
 
-func (t *substateData) GetInputAlloc() WorldState {
+func (t *substateData) GetInputAlloc() transaction.WorldState {
 	return NewSubstateAlloc(t.InputAlloc)
 }
 
-func (t *substateData) GetOutputAlloc() WorldState {
+func (t *substateData) GetOutputAlloc() transaction.WorldState {
 	return NewSubstateAlloc(t.OutputAlloc)
 }
 
-func (t *substateData) GetEnv() BlockEnvironment {
+func (t *substateData) GetEnv() transaction.BlockEnvironment {
 	return NewSubstateEnv(t.Env)
 }
 
@@ -44,6 +45,6 @@ func (t *substateData) GetMessage() types.Message {
 	return types.NewMessage(common.Address(t.Message.From), (*common.Address)(t.Message.To), t.Message.Nonce, t.Message.Value, t.Message.Gas, t.Message.GasPrice, t.Message.GasFeeCap, t.Message.GasTipCap, t.Message.Data, list, !t.Message.CheckNonce)
 }
 
-func (t *substateData) GetResult() TransactionReceipt {
+func (t *substateData) GetResult() transaction.Receipt {
 	return NewSubstateResult(t.Result)
 }

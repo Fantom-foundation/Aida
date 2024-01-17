@@ -20,8 +20,8 @@ type WorldState interface {
 	Add(addr common.Address, acc Account)
 
 	// ForEachAccount iterates over each account in the collection and
-	// invokes the provided accountHandler function for each account.
-	ForEachAccount(accountHandler)
+	// invokes the provided AccountHandler function for each account.
+	ForEachAccount(AccountHandler)
 
 	// Len returns the number of accounts in the collection.
 	Len() int
@@ -29,20 +29,20 @@ type WorldState interface {
 	// Equal checks if the current allocation is equal to the provided allocation.
 	// Two allocations are considered equal if they have the same accounts associated with
 	// the same addresses. If any account is missing, allocs are considered non-equal.
-	// Note: Have a look at allocEqual()
+	// Note: Have a look at WorldStateEqual()
 	Equal(WorldState) bool
 
 	// Delete the record for given address
 	Delete(addr common.Address)
 
 	// String returns human-readable version of alloc.
-	// Note: Have a look at allocString()
+	// Note: Have a look at WorldStateString()
 	String() string
 }
 
-type accountHandler func(addr common.Address, acc Account)
+type AccountHandler func(addr common.Address, acc Account)
 
-func allocEqual(x, y WorldState) (isEqual bool) {
+func WorldStateEqual(x, y WorldState) (isEqual bool) {
 	if x.Len() != y.Len() {
 		return false
 	}
@@ -63,7 +63,7 @@ func allocEqual(x, y WorldState) (isEqual bool) {
 	return true
 }
 
-func allocString(a WorldState) string {
+func WorldStateString(a WorldState) string {
 	builder := strings.Builder{}
 	builder.WriteString(fmt.Sprintf("SubstateAlloc{\n\tsize: %d\n", a.Len()))
 	var addresses []common.Address

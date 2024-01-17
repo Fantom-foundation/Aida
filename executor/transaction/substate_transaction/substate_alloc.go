@@ -1,14 +1,15 @@
-package transaction
+package substate_transaction
 
 import (
 	"math/big"
 
+	"github.com/Fantom-foundation/Aida/executor/transaction"
 	substateCommon "github.com/Fantom-foundation/Substate/geth/common"
 	"github.com/Fantom-foundation/Substate/substate"
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func NewSubstateAlloc(alloc substate.Alloc) WorldState {
+func NewSubstateAlloc(alloc substate.Alloc) transaction.WorldState {
 	return substateAlloc{alloc: alloc}
 }
 
@@ -21,11 +22,11 @@ func (a substateAlloc) Has(addr common.Address) bool {
 	return ok
 }
 
-func (a substateAlloc) Equal(y WorldState) bool {
-	return allocEqual(a, y)
+func (a substateAlloc) Equal(y transaction.WorldState) bool {
+	return transaction.WorldStateEqual(a, y)
 }
 
-func (a substateAlloc) Get(addr common.Address) Account {
+func (a substateAlloc) Get(addr common.Address) transaction.Account {
 	acc, ok := a.alloc[substateCommon.Address(addr)]
 	if !ok {
 		return nil
@@ -34,11 +35,11 @@ func (a substateAlloc) Get(addr common.Address) Account {
 	return NewSubstateAccount(acc)
 }
 
-func (a substateAlloc) Add(addr common.Address, acc Account) {
+func (a substateAlloc) Add(addr common.Address, acc transaction.Account) {
 	a.alloc[substateCommon.Address(addr)] = substate.NewAccount(acc.GetNonce(), new(big.Int).Set(acc.GetBalance()), acc.GetCode())
 }
 
-func (a substateAlloc) ForEachAccount(h accountHandler) {
+func (a substateAlloc) ForEachAccount(h transaction.AccountHandler) {
 	for addr, acc := range a.alloc {
 		h(common.Address(addr), NewSubstateAccount(acc))
 	}
@@ -53,5 +54,5 @@ func (a substateAlloc) Delete(addr common.Address) {
 }
 
 func (a substateAlloc) String() string {
-	return allocString(a)
+	return transaction.WorldStateString(a)
 }

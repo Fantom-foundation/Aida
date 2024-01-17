@@ -6,7 +6,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/executor/extension/validator"
-	"github.com/Fantom-foundation/Aida/executor/transaction"
+	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/urfave/cli/v2"
@@ -40,25 +40,25 @@ func RunVmAdb(ctx *cli.Context) error {
 
 func run(
 	cfg *utils.Config,
-	provider executor.Provider[transaction.SubstateData],
+	provider executor.Provider[substate_transaction.SubstateData],
 	stateDb state.StateDB,
-	processor executor.Processor[transaction.SubstateData],
-	extra []executor.Extension[transaction.SubstateData],
+	processor executor.Processor[substate_transaction.SubstateData],
+	extra []executor.Extension[substate_transaction.SubstateData],
 ) error {
-	extensionList := []executor.Extension[transaction.SubstateData]{
-		profiler.MakeCpuProfiler[transaction.SubstateData](cfg),
+	extensionList := []executor.Extension[substate_transaction.SubstateData]{
+		profiler.MakeCpuProfiler[substate_transaction.SubstateData](cfg),
 		statedb.MakeArchivePrepper(),
-		tracker.MakeProgressLogger[transaction.SubstateData](cfg, 0),
-		tracker.MakeErrorLogger[transaction.SubstateData](cfg),
+		tracker.MakeProgressLogger[substate_transaction.SubstateData](cfg, 0),
+		tracker.MakeErrorLogger[substate_transaction.SubstateData](cfg),
 		validator.MakeArchiveDbValidator(cfg),
 	}
 
 	if stateDb == nil {
 		extensionList = append(
 			extensionList,
-			statedb.MakeStateDbManager[transaction.SubstateData](cfg),
-			statedb.MakeArchiveBlockChecker[transaction.SubstateData](cfg),
-			tracker.MakeDbLogger[transaction.SubstateData](cfg),
+			statedb.MakeStateDbManager[substate_transaction.SubstateData](cfg),
+			statedb.MakeArchiveBlockChecker[substate_transaction.SubstateData](cfg),
+			tracker.MakeDbLogger[substate_transaction.SubstateData](cfg),
 		)
 	}
 

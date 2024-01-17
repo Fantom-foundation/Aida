@@ -5,6 +5,7 @@ import (
 	"math/big"
 
 	"github.com/Fantom-foundation/Aida/executor/transaction"
+	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -14,7 +15,7 @@ func MakeEmptyGethInMemoryStateDB(variant string) (StateDB, error) {
 	if variant != "" {
 		return nil, fmt.Errorf("unknown variant: %v", variant)
 	}
-	return MakeInMemoryStateDB(transaction.NewOldSubstateAlloc(substate.SubstateAlloc{}), 0), nil
+	return MakeInMemoryStateDB(substate_transaction.NewOldSubstateAlloc(substate.SubstateAlloc{}), 0), nil
 }
 
 // MakeInMemoryStateDB creates a StateDB instance reflecting the state
@@ -379,7 +380,7 @@ func (db *inMemoryStateDB) GetEffects() transaction.WorldState {
 		res[addr] = cur
 	}
 
-	return transaction.NewOldSubstateAlloc(res)
+	return substate_transaction.NewOldSubstateAlloc(res)
 }
 
 func (db *inMemoryStateDB) GetSubstatePostAlloc() transaction.WorldState {

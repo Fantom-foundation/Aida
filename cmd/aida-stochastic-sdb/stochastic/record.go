@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
-	"github.com/Fantom-foundation/Aida/executor/transaction"
+	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/stochastic"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -103,9 +103,9 @@ func stochasticRecordAction(ctx *cli.Context) error {
 		}
 
 		var statedb state.StateDB
-		statedb = state.MakeInMemoryStateDB(transaction.NewOldSubstateAlloc(tx.Substate.InputAlloc), tx.Block)
+		statedb = state.MakeInMemoryStateDB(substate_transaction.NewOldSubstateAlloc(tx.Substate.InputAlloc), tx.Block)
 		statedb = stochastic.NewEventProxy(statedb, &eventRegistry)
-		if err = processor.ProcessTransaction(statedb, int(tx.Block), tx.Transaction, transaction.NewOldSubstateData(tx.Substate)); err != nil {
+		if err = processor.ProcessTransaction(statedb, int(tx.Block), tx.Transaction, substate_transaction.NewOldSubstateData(tx.Substate)); err != nil {
 			return err
 		}
 

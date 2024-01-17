@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/executor"
-	"github.com/Fantom-foundation/Aida/executor/transaction"
+	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -18,7 +18,7 @@ var testingAddress = common.Address{1}
 
 func TestVmAdb_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	provider := executor.NewMockProvider[transaction.SubstateData](ctrl)
+	provider := executor.NewMockProvider[substate_transaction.SubstateData](ctrl)
 	db := state.NewMockStateDB(ctrl)
 	archiveBlockOne := state.NewMockNonCommittableStateDB(ctrl)
 	archiveBlockTwo := state.NewMockNonCommittableStateDB(ctrl)
@@ -37,14 +37,14 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 	// Simulate the execution of three transactions in two blocks.
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
-		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[transaction.SubstateData]) error {
+		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[substate_transaction.SubstateData]) error {
 			// Block 2
-			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 1, Data: transaction.NewOldSubstateData(emptyTx)})
-			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 2, Data: transaction.NewOldSubstateData(emptyTx)})
+			consumer(executor.TransactionInfo[substate_transaction.SubstateData]{Block: 2, Transaction: 1, Data: substate_transaction.NewOldSubstateData(emptyTx)})
+			consumer(executor.TransactionInfo[substate_transaction.SubstateData]{Block: 2, Transaction: 2, Data: substate_transaction.NewOldSubstateData(emptyTx)})
 			// Block 3
-			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 3, Transaction: 1, Data: transaction.NewOldSubstateData(emptyTx)})
+			consumer(executor.TransactionInfo[substate_transaction.SubstateData]{Block: 3, Transaction: 1, Data: substate_transaction.NewOldSubstateData(emptyTx)})
 			// Block 4
-			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 4, Transaction: utils.PseudoTx, Data: transaction.NewOldSubstateData(emptyTx)})
+			consumer(executor.TransactionInfo[substate_transaction.SubstateData]{Block: 4, Transaction: utils.PseudoTx, Data: substate_transaction.NewOldSubstateData(emptyTx)})
 			return nil
 		})
 
@@ -102,7 +102,7 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 
 func TestVmAdb_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	provider := executor.NewMockProvider[transaction.SubstateData](ctrl)
+	provider := executor.NewMockProvider[substate_transaction.SubstateData](ctrl)
 	db := state.NewMockStateDB(ctrl)
 	archiveBlockOne := state.NewMockNonCommittableStateDB(ctrl)
 	archiveBlockTwo := state.NewMockNonCommittableStateDB(ctrl)
@@ -121,14 +121,14 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 	// Simulate the execution of three transactions in two blocks.
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
-		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[transaction.SubstateData]) error {
+		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[substate_transaction.SubstateData]) error {
 			// Block 2
-			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 1, Data: transaction.NewOldSubstateData(emptyTx)})
-			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 2, Data: transaction.NewOldSubstateData(emptyTx)})
+			consumer(executor.TransactionInfo[substate_transaction.SubstateData]{Block: 2, Transaction: 1, Data: substate_transaction.NewOldSubstateData(emptyTx)})
+			consumer(executor.TransactionInfo[substate_transaction.SubstateData]{Block: 2, Transaction: 2, Data: substate_transaction.NewOldSubstateData(emptyTx)})
 			// Block 3
-			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 3, Transaction: 1, Data: transaction.NewOldSubstateData(emptyTx)})
+			consumer(executor.TransactionInfo[substate_transaction.SubstateData]{Block: 3, Transaction: 1, Data: substate_transaction.NewOldSubstateData(emptyTx)})
 			// Block 4
-			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 4, Transaction: utils.PseudoTx, Data: transaction.NewOldSubstateData(emptyTx)})
+			consumer(executor.TransactionInfo[substate_transaction.SubstateData]{Block: 4, Transaction: utils.PseudoTx, Data: substate_transaction.NewOldSubstateData(emptyTx)})
 			return nil
 		})
 
@@ -194,11 +194,11 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 
 func TestVmAdb_AllTransactionsAreProcessedInOrder_Sequential(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	provider := executor.NewMockProvider[transaction.SubstateData](ctrl)
+	provider := executor.NewMockProvider[substate_transaction.SubstateData](ctrl)
 	db := state.NewMockStateDB(ctrl)
 	archive := state.NewMockNonCommittableStateDB(ctrl)
-	ext := executor.NewMockExtension[transaction.SubstateData](ctrl)
-	processor := executor.NewMockProcessor[transaction.SubstateData](ctrl)
+	ext := executor.NewMockExtension[substate_transaction.SubstateData](ctrl)
+	processor := executor.NewMockProcessor[substate_transaction.SubstateData](ctrl)
 
 	config := &utils.Config{
 		First:    2,
@@ -211,14 +211,14 @@ func TestVmAdb_AllTransactionsAreProcessedInOrder_Sequential(t *testing.T) {
 	// Simulate the execution of three transactions in two blocks.
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
-		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[transaction.SubstateData]) error {
+		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[substate_transaction.SubstateData]) error {
 			// Block 2
-			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 1, Data: transaction.NewOldSubstateData(emptyTx)})
-			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 2, Data: transaction.NewOldSubstateData(emptyTx)})
+			consumer(executor.TransactionInfo[substate_transaction.SubstateData]{Block: 2, Transaction: 1, Data: substate_transaction.NewOldSubstateData(emptyTx)})
+			consumer(executor.TransactionInfo[substate_transaction.SubstateData]{Block: 2, Transaction: 2, Data: substate_transaction.NewOldSubstateData(emptyTx)})
 			// Block 3
-			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 3, Transaction: 1, Data: transaction.NewOldSubstateData(emptyTx)})
+			consumer(executor.TransactionInfo[substate_transaction.SubstateData]{Block: 3, Transaction: 1, Data: substate_transaction.NewOldSubstateData(emptyTx)})
 			// Block 4
-			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 4, Transaction: utils.PseudoTx, Data: transaction.NewOldSubstateData(emptyTx)})
+			consumer(executor.TransactionInfo[substate_transaction.SubstateData]{Block: 4, Transaction: utils.PseudoTx, Data: substate_transaction.NewOldSubstateData(emptyTx)})
 			return nil
 		})
 
@@ -228,55 +228,55 @@ func TestVmAdb_AllTransactionsAreProcessedInOrder_Sequential(t *testing.T) {
 	// all blocks and transactions need to be in order.
 
 	gomock.InOrder(
-		ext.EXPECT().PreRun(executor.AtBlock[transaction.SubstateData](2), gomock.Any()),
+		ext.EXPECT().PreRun(executor.AtBlock[substate_transaction.SubstateData](2), gomock.Any()),
 
 		// Block 2
 		// Tx 1
 		db.EXPECT().GetArchiveState(uint64(1)).Return(archive, nil),
-		ext.EXPECT().PreBlock(executor.AtBlock[transaction.SubstateData](2), gomock.Any()),
-		ext.EXPECT().PreTransaction(executor.AtTransaction[transaction.SubstateData](2, 1), gomock.Any()),
-		processor.EXPECT().Process(executor.AtTransaction[transaction.SubstateData](2, 1), gomock.Any()),
-		ext.EXPECT().PostTransaction(executor.AtTransaction[transaction.SubstateData](2, 1), gomock.Any()),
+		ext.EXPECT().PreBlock(executor.AtBlock[substate_transaction.SubstateData](2), gomock.Any()),
+		ext.EXPECT().PreTransaction(executor.AtTransaction[substate_transaction.SubstateData](2, 1), gomock.Any()),
+		processor.EXPECT().Process(executor.AtTransaction[substate_transaction.SubstateData](2, 1), gomock.Any()),
+		ext.EXPECT().PostTransaction(executor.AtTransaction[substate_transaction.SubstateData](2, 1), gomock.Any()),
 		// Tx 2
-		ext.EXPECT().PreTransaction(executor.AtTransaction[transaction.SubstateData](2, 2), gomock.Any()),
-		processor.EXPECT().Process(executor.AtTransaction[transaction.SubstateData](2, 2), gomock.Any()),
-		ext.EXPECT().PostTransaction(executor.AtTransaction[transaction.SubstateData](2, 2), gomock.Any()),
-		ext.EXPECT().PostBlock(executor.AtTransaction[transaction.SubstateData](2, 2), gomock.Any()),
+		ext.EXPECT().PreTransaction(executor.AtTransaction[substate_transaction.SubstateData](2, 2), gomock.Any()),
+		processor.EXPECT().Process(executor.AtTransaction[substate_transaction.SubstateData](2, 2), gomock.Any()),
+		ext.EXPECT().PostTransaction(executor.AtTransaction[substate_transaction.SubstateData](2, 2), gomock.Any()),
+		ext.EXPECT().PostBlock(executor.AtTransaction[substate_transaction.SubstateData](2, 2), gomock.Any()),
 		archive.EXPECT().Release(),
 
 		// Block 3
 		db.EXPECT().GetArchiveState(uint64(2)).Return(archive, nil),
-		ext.EXPECT().PreBlock(executor.AtBlock[transaction.SubstateData](3), gomock.Any()),
-		ext.EXPECT().PreTransaction(executor.AtTransaction[transaction.SubstateData](3, 1), gomock.Any()),
-		processor.EXPECT().Process(executor.AtTransaction[transaction.SubstateData](3, 1), gomock.Any()),
-		ext.EXPECT().PostTransaction(executor.AtTransaction[transaction.SubstateData](3, 1), gomock.Any()),
-		ext.EXPECT().PostBlock(executor.AtTransaction[transaction.SubstateData](3, 1), gomock.Any()),
+		ext.EXPECT().PreBlock(executor.AtBlock[substate_transaction.SubstateData](3), gomock.Any()),
+		ext.EXPECT().PreTransaction(executor.AtTransaction[substate_transaction.SubstateData](3, 1), gomock.Any()),
+		processor.EXPECT().Process(executor.AtTransaction[substate_transaction.SubstateData](3, 1), gomock.Any()),
+		ext.EXPECT().PostTransaction(executor.AtTransaction[substate_transaction.SubstateData](3, 1), gomock.Any()),
+		ext.EXPECT().PostBlock(executor.AtTransaction[substate_transaction.SubstateData](3, 1), gomock.Any()),
 		archive.EXPECT().Release(),
 
 		// Block 4
 		db.EXPECT().GetArchiveState(uint64(3)).Return(archive, nil),
-		ext.EXPECT().PreBlock(executor.AtBlock[transaction.SubstateData](4), gomock.Any()),
-		ext.EXPECT().PreTransaction(executor.AtTransaction[transaction.SubstateData](4, utils.PseudoTx), gomock.Any()),
-		processor.EXPECT().Process(executor.AtTransaction[transaction.SubstateData](4, utils.PseudoTx), gomock.Any()),
-		ext.EXPECT().PostTransaction(executor.AtTransaction[transaction.SubstateData](4, utils.PseudoTx), gomock.Any()),
-		ext.EXPECT().PostBlock(executor.AtTransaction[transaction.SubstateData](4, utils.PseudoTx), gomock.Any()),
+		ext.EXPECT().PreBlock(executor.AtBlock[substate_transaction.SubstateData](4), gomock.Any()),
+		ext.EXPECT().PreTransaction(executor.AtTransaction[substate_transaction.SubstateData](4, utils.PseudoTx), gomock.Any()),
+		processor.EXPECT().Process(executor.AtTransaction[substate_transaction.SubstateData](4, utils.PseudoTx), gomock.Any()),
+		ext.EXPECT().PostTransaction(executor.AtTransaction[substate_transaction.SubstateData](4, utils.PseudoTx), gomock.Any()),
+		ext.EXPECT().PostBlock(executor.AtTransaction[substate_transaction.SubstateData](4, utils.PseudoTx), gomock.Any()),
 		archive.EXPECT().Release(),
 
-		ext.EXPECT().PostRun(executor.AtBlock[transaction.SubstateData](5), gomock.Any(), nil),
+		ext.EXPECT().PostRun(executor.AtBlock[substate_transaction.SubstateData](5), gomock.Any(), nil),
 	)
 
-	if err := run(config, provider, db, processor, []executor.Extension[transaction.SubstateData]{ext}); err != nil {
+	if err := run(config, provider, db, processor, []executor.Extension[substate_transaction.SubstateData]{ext}); err != nil {
 		t.Errorf("run failed: %v", err)
 	}
 }
 
 func TestVmAdb_AllTransactionsAreProcessed_Parallel(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	provider := executor.NewMockProvider[transaction.SubstateData](ctrl)
+	provider := executor.NewMockProvider[substate_transaction.SubstateData](ctrl)
 	db := state.NewMockStateDB(ctrl)
 	archive := state.NewMockNonCommittableStateDB(ctrl)
-	ext := executor.NewMockExtension[transaction.SubstateData](ctrl)
-	processor := executor.NewMockProcessor[transaction.SubstateData](ctrl)
+	ext := executor.NewMockExtension[substate_transaction.SubstateData](ctrl)
+	processor := executor.NewMockProcessor[substate_transaction.SubstateData](ctrl)
 
 	config := &utils.Config{
 		First:    2,
@@ -289,14 +289,14 @@ func TestVmAdb_AllTransactionsAreProcessed_Parallel(t *testing.T) {
 	// Simulate the execution of three transactions in two blocks.
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
-		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[transaction.SubstateData]) error {
+		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[substate_transaction.SubstateData]) error {
 			// Block 2
-			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 1, Data: transaction.NewOldSubstateData(emptyTx)})
-			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 2, Data: transaction.NewOldSubstateData(emptyTx)})
+			consumer(executor.TransactionInfo[substate_transaction.SubstateData]{Block: 2, Transaction: 1, Data: substate_transaction.NewOldSubstateData(emptyTx)})
+			consumer(executor.TransactionInfo[substate_transaction.SubstateData]{Block: 2, Transaction: 2, Data: substate_transaction.NewOldSubstateData(emptyTx)})
 			// Block 3
-			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 3, Transaction: 1, Data: transaction.NewOldSubstateData(emptyTx)})
+			consumer(executor.TransactionInfo[substate_transaction.SubstateData]{Block: 3, Transaction: 1, Data: substate_transaction.NewOldSubstateData(emptyTx)})
 			// Block 4
-			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 4, Transaction: utils.PseudoTx, Data: transaction.NewOldSubstateData(emptyTx)})
+			consumer(executor.TransactionInfo[substate_transaction.SubstateData]{Block: 4, Transaction: utils.PseudoTx, Data: substate_transaction.NewOldSubstateData(emptyTx)})
 			return nil
 		})
 
@@ -304,56 +304,56 @@ func TestVmAdb_AllTransactionsAreProcessed_Parallel(t *testing.T) {
 	// are properly opened, prepared, executed, and closed.
 	// Since we are running parallel mode with multiple workers block
 	// order does not have to be preserved, only transaction order matters.
-	ext.EXPECT().PreRun(executor.AtBlock[transaction.SubstateData](2), gomock.Any())
+	ext.EXPECT().PreRun(executor.AtBlock[substate_transaction.SubstateData](2), gomock.Any())
 
 	// Block 2
 	gomock.InOrder(
 		db.EXPECT().GetArchiveState(uint64(1)).Return(archive, nil),
-		ext.EXPECT().PreBlock(executor.AtBlock[transaction.SubstateData](2), gomock.Any()),
+		ext.EXPECT().PreBlock(executor.AtBlock[substate_transaction.SubstateData](2), gomock.Any()),
 		// Tx 1
-		ext.EXPECT().PreTransaction(executor.AtTransaction[transaction.SubstateData](2, 1), gomock.Any()),
-		processor.EXPECT().Process(executor.AtTransaction[transaction.SubstateData](2, 1), gomock.Any()),
-		ext.EXPECT().PostTransaction(executor.AtTransaction[transaction.SubstateData](2, 1), gomock.Any()),
+		ext.EXPECT().PreTransaction(executor.AtTransaction[substate_transaction.SubstateData](2, 1), gomock.Any()),
+		processor.EXPECT().Process(executor.AtTransaction[substate_transaction.SubstateData](2, 1), gomock.Any()),
+		ext.EXPECT().PostTransaction(executor.AtTransaction[substate_transaction.SubstateData](2, 1), gomock.Any()),
 		// Tx 2
-		ext.EXPECT().PreTransaction(executor.AtTransaction[transaction.SubstateData](2, 2), gomock.Any()),
-		processor.EXPECT().Process(executor.AtTransaction[transaction.SubstateData](2, 2), gomock.Any()),
-		ext.EXPECT().PostTransaction(executor.AtTransaction[transaction.SubstateData](2, 2), gomock.Any()),
-		ext.EXPECT().PostBlock(executor.AtBlock[transaction.SubstateData](2), gomock.Any()),
+		ext.EXPECT().PreTransaction(executor.AtTransaction[substate_transaction.SubstateData](2, 2), gomock.Any()),
+		processor.EXPECT().Process(executor.AtTransaction[substate_transaction.SubstateData](2, 2), gomock.Any()),
+		ext.EXPECT().PostTransaction(executor.AtTransaction[substate_transaction.SubstateData](2, 2), gomock.Any()),
+		ext.EXPECT().PostBlock(executor.AtBlock[substate_transaction.SubstateData](2), gomock.Any()),
 		archive.EXPECT().Release(),
 	)
 
 	// Block 3
 	gomock.InOrder(
 		db.EXPECT().GetArchiveState(uint64(2)).Return(archive, nil),
-		ext.EXPECT().PreBlock(executor.AtBlock[transaction.SubstateData](3), gomock.Any()),
-		ext.EXPECT().PreTransaction(executor.AtTransaction[transaction.SubstateData](3, 1), gomock.Any()),
-		processor.EXPECT().Process(executor.AtTransaction[transaction.SubstateData](3, 1), gomock.Any()),
-		ext.EXPECT().PostTransaction(executor.AtTransaction[transaction.SubstateData](3, 1), gomock.Any()),
-		ext.EXPECT().PostBlock(executor.AtTransaction[transaction.SubstateData](3, 1), gomock.Any()),
+		ext.EXPECT().PreBlock(executor.AtBlock[substate_transaction.SubstateData](3), gomock.Any()),
+		ext.EXPECT().PreTransaction(executor.AtTransaction[substate_transaction.SubstateData](3, 1), gomock.Any()),
+		processor.EXPECT().Process(executor.AtTransaction[substate_transaction.SubstateData](3, 1), gomock.Any()),
+		ext.EXPECT().PostTransaction(executor.AtTransaction[substate_transaction.SubstateData](3, 1), gomock.Any()),
+		ext.EXPECT().PostBlock(executor.AtTransaction[substate_transaction.SubstateData](3, 1), gomock.Any()),
 		archive.EXPECT().Release(),
 	)
 
 	// Block 4
 	gomock.InOrder(
 		db.EXPECT().GetArchiveState(uint64(3)).Return(archive, nil),
-		ext.EXPECT().PreBlock(executor.AtBlock[transaction.SubstateData](4), gomock.Any()),
-		ext.EXPECT().PreTransaction(executor.AtTransaction[transaction.SubstateData](4, utils.PseudoTx), gomock.Any()),
-		processor.EXPECT().Process(executor.AtTransaction[transaction.SubstateData](4, utils.PseudoTx), gomock.Any()),
-		ext.EXPECT().PostTransaction(executor.AtTransaction[transaction.SubstateData](4, utils.PseudoTx), gomock.Any()),
-		ext.EXPECT().PostBlock(executor.AtTransaction[transaction.SubstateData](4, utils.PseudoTx), gomock.Any()),
+		ext.EXPECT().PreBlock(executor.AtBlock[substate_transaction.SubstateData](4), gomock.Any()),
+		ext.EXPECT().PreTransaction(executor.AtTransaction[substate_transaction.SubstateData](4, utils.PseudoTx), gomock.Any()),
+		processor.EXPECT().Process(executor.AtTransaction[substate_transaction.SubstateData](4, utils.PseudoTx), gomock.Any()),
+		ext.EXPECT().PostTransaction(executor.AtTransaction[substate_transaction.SubstateData](4, utils.PseudoTx), gomock.Any()),
+		ext.EXPECT().PostBlock(executor.AtTransaction[substate_transaction.SubstateData](4, utils.PseudoTx), gomock.Any()),
 		archive.EXPECT().Release(),
 	)
 
-	ext.EXPECT().PostRun(executor.AtBlock[transaction.SubstateData](5), gomock.Any(), nil)
+	ext.EXPECT().PostRun(executor.AtBlock[substate_transaction.SubstateData](5), gomock.Any(), nil)
 
-	if err := run(config, provider, db, processor, []executor.Extension[transaction.SubstateData]{ext}); err != nil {
+	if err := run(config, provider, db, processor, []executor.Extension[substate_transaction.SubstateData]{ext}); err != nil {
 		t.Errorf("run failed: %v", err)
 	}
 }
 
 func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	provider := executor.NewMockProvider[transaction.SubstateData](ctrl)
+	provider := executor.NewMockProvider[substate_transaction.SubstateData](ctrl)
 	db := state.NewMockStateDB(ctrl)
 	archive := state.NewMockNonCommittableStateDB(ctrl)
 
@@ -368,8 +368,8 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) 
 
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
-		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[transaction.SubstateData]) error {
-			return consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 1, Data: transaction.NewOldSubstateData(testTx)})
+		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[substate_transaction.SubstateData]) error {
+			return consumer(executor.TransactionInfo[substate_transaction.SubstateData]{Block: 2, Transaction: 1, Data: substate_transaction.NewOldSubstateData(testTx)})
 		})
 
 	gomock.InOrder(
@@ -405,7 +405,7 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) 
 
 func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Parallel(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	provider := executor.NewMockProvider[transaction.SubstateData](ctrl)
+	provider := executor.NewMockProvider[substate_transaction.SubstateData](ctrl)
 	db := state.NewMockStateDB(ctrl)
 	archive := state.NewMockNonCommittableStateDB(ctrl)
 	cfg := &utils.Config{
@@ -419,8 +419,8 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Parallel(t *testing.T) {
 
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
-		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[transaction.SubstateData]) error {
-			return consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 1, Data: transaction.NewOldSubstateData(testTx)})
+		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[substate_transaction.SubstateData]) error {
+			return consumer(executor.TransactionInfo[substate_transaction.SubstateData]{Block: 2, Transaction: 1, Data: substate_transaction.NewOldSubstateData(testTx)})
 		})
 
 	gomock.InOrder(
@@ -456,7 +456,7 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Parallel(t *testing.T) {
 
 func TestVmAdb_ValidationFailsOnInvalidTransaction_Sequential(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	provider := executor.NewMockProvider[transaction.SubstateData](ctrl)
+	provider := executor.NewMockProvider[substate_transaction.SubstateData](ctrl)
 	db := state.NewMockStateDB(ctrl)
 	archive := state.NewMockNonCommittableStateDB(ctrl)
 	cfg := &utils.Config{
@@ -469,8 +469,8 @@ func TestVmAdb_ValidationFailsOnInvalidTransaction_Sequential(t *testing.T) {
 
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
-		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[transaction.SubstateData]) error {
-			return consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 1, Data: transaction.NewOldSubstateData(testTx)})
+		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[substate_transaction.SubstateData]) error {
+			return consumer(executor.TransactionInfo[substate_transaction.SubstateData]{Block: 2, Transaction: 1, Data: substate_transaction.NewOldSubstateData(testTx)})
 		})
 
 	gomock.InOrder(
@@ -497,7 +497,7 @@ func TestVmAdb_ValidationFailsOnInvalidTransaction_Sequential(t *testing.T) {
 
 func TestVmAdb_ValidationFailsOnInvalidTransaction_Parallel(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	provider := executor.NewMockProvider[transaction.SubstateData](ctrl)
+	provider := executor.NewMockProvider[substate_transaction.SubstateData](ctrl)
 	db := state.NewMockStateDB(ctrl)
 	archive := state.NewMockNonCommittableStateDB(ctrl)
 	cfg := &utils.Config{
@@ -511,8 +511,8 @@ func TestVmAdb_ValidationFailsOnInvalidTransaction_Parallel(t *testing.T) {
 
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
-		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[transaction.SubstateData]) error {
-			return consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 1, Data: transaction.NewOldSubstateData(testTx)})
+		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[substate_transaction.SubstateData]) error {
+			return consumer(executor.TransactionInfo[substate_transaction.SubstateData]{Block: 2, Transaction: 1, Data: substate_transaction.NewOldSubstateData(testTx)})
 		})
 
 	gomock.InOrder(

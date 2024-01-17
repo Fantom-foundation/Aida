@@ -42,21 +42,21 @@ type Account interface {
 	GetStorageSize() int
 
 	// ForEachStorage iterates over each account's storage in the collection
-	// and invokes the provided accountHandler function for each account.
-	ForEachStorage(storageHandler)
+	// and invokes the provided AccountHandler function for each account.
+	ForEachStorage(StorageHandler)
 
 	// Equal checks if the current account is equal to the provided account.
-	// Note: Have a look at allocEqual.
+	// Note: Have a look at WorldStateEqual.
 	Equal(y Account) bool
 
 	// String returns human-readable version of alloc.
-	// Note: Have a look at accountString
+	// Note: Have a look at AccountString
 	String() string
 }
 
-type storageHandler func(keyHash common.Hash, valueHash common.Hash)
+type StorageHandler func(keyHash common.Hash, valueHash common.Hash)
 
-func accountEqual(a, y Account) (isEqual bool) {
+func AccountEqual(a, y Account) (isEqual bool) {
 	if a == y {
 		return true
 	}
@@ -91,7 +91,7 @@ func accountEqual(a, y Account) (isEqual bool) {
 	return true
 }
 
-func accountString(a Account) string {
+func AccountString(a Account) string {
 	builder := strings.Builder{}
 	builder.WriteString(fmt.Sprintf("Account{\n\t\t\tnonce: %d\n\t\t\tbalance %v\n", a.GetNonce(), a.GetBalance()))
 

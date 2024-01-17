@@ -9,6 +9,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/executor/transaction"
+	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -104,7 +105,7 @@ func TestPrime_PrimeStateDB(t *testing.T) {
 
 			// Generating randomized world state
 			alloc, _ := utils.MakeWorldState(t)
-			ws := transaction.NewOldSubstateAlloc(alloc)
+			ws := substate_transaction.NewOldSubstateAlloc(alloc)
 
 			pc := utils.NewPrimeContext(cfg, sDB, log)
 			// Priming state DB

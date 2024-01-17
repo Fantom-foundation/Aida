@@ -7,6 +7,7 @@ import (
 	"path"
 
 	"github.com/Fantom-foundation/Aida/executor/transaction"
+	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/go-opera/cmd/opera/launcher"
 	"github.com/Fantom-foundation/go-opera/gossip"
@@ -297,7 +298,7 @@ func (s *operaStateDB) ForEachStorage(addr common.Address, cb func(common.Hash, 
 }
 
 func (s *operaStateDB) GetSubstatePostAlloc() transaction.WorldState {
-	return transaction.NewOldSubstateAlloc(s.db.GetSubstatePostAlloc())
+	return substate_transaction.NewOldSubstateAlloc(s.db.GetSubstatePostAlloc())
 }
 
 func (s *operaStateDB) PrepareSubstate(substate transaction.WorldState, block uint64) {

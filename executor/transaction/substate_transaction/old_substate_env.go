@@ -1,15 +1,16 @@
-package transaction
+package substate_transaction
 
 import (
 	"math/big"
 
+	"github.com/Fantom-foundation/Aida/executor/transaction"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 )
 
 // Deprecated: This is a workaround before oldSubstate repository is migrated to new structure.
 // Use NewSubstateEnv instead.
-func NewOldSubstateEnv(env *substate.SubstateEnv) BlockEnvironment {
+func NewOldSubstateEnv(env *substate.SubstateEnv) transaction.BlockEnvironment {
 	return &oldSubstateEnv{env}
 }
 

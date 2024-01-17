@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Fantom-foundation/Aida/executor/transaction"
+	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	substate "github.com/Fantom-foundation/Substate"
@@ -45,7 +45,7 @@ func TestStatedb_DeleteDestroyedAccountsFromWorldState(t *testing.T) {
 			cfg := MakeTestConfig(tc)
 			// Generating randomized world state
 			alloc, addrList := MakeWorldState(t)
-			ws := transaction.NewOldSubstateAlloc(alloc)
+			ws := substate_transaction.NewOldSubstateAlloc(alloc)
 			// Init directory for destroyed accounts DB
 			deletionDb := t.TempDir()
 			// Pick two account which will represent destroyed ones
@@ -99,7 +99,7 @@ func TestStatedb_DeleteDestroyedAccountsFromStateDB(t *testing.T) {
 			cfg := MakeTestConfig(tc)
 			// Generating randomized world state
 			alloc, addrList := MakeWorldState(t)
-			ws := transaction.NewOldSubstateAlloc(alloc)
+			ws := substate_transaction.NewOldSubstateAlloc(alloc)
 			// Init directory for destroyed accounts DB
 			deletedAccountsDir := t.TempDir()
 			// Pick two account which will represent destroyed ones

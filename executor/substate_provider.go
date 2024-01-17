@@ -5,7 +5,7 @@ package executor
 import (
 	"fmt"
 
-	"github.com/Fantom-foundation/Aida/executor/transaction"
+	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
@@ -16,7 +16,7 @@ import (
 // ----------------------------------------------------------------------------
 
 // OpenSubstateDb opens a substate database as configured in the given parameters.
-func OpenSubstateDb(cfg *utils.Config, ctxt *cli.Context) (res Provider[transaction.SubstateData], err error) {
+func OpenSubstateDb(cfg *utils.Config, ctxt *cli.Context) (res Provider[substate_transaction.SubstateData], err error) {
 	// Substate is panicking if we are opening a non-existing directory. To mitigate
 	// the damage, we recover here and forward an error instead.
 	defer func() {
@@ -37,7 +37,7 @@ type substateProvider struct {
 	numParallelDecoders int
 }
 
-func (s substateProvider) Run(from int, to int, consumer Consumer[transaction.SubstateData]) error {
+func (s substateProvider) Run(from int, to int, consumer Consumer[substate_transaction.SubstateData]) error {
 	iter := substate.NewSubstateIterator(uint64(from), s.numParallelDecoders)
 	defer iter.Release()
 	for iter.Next() {
@@ -45,7 +45,7 @@ func (s substateProvider) Run(from int, to int, consumer Consumer[transaction.Su
 		if tx.Block >= uint64(to) {
 			return nil
 		}
-		if err := consumer(TransactionInfo[transaction.SubstateData]{int(tx.Block), tx.Transaction, transaction.NewOldSubstateData(tx.Substate)}); err != nil {
+		if err := consumer(TransactionInfo[substate_transaction.SubstateData]{int(tx.Block), tx.Transaction, substate_transaction.NewOldSubstateData(tx.Substate)}); err != nil {
 			return err
 		}
 	}

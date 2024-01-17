@@ -8,7 +8,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
-	"github.com/Fantom-foundation/Aida/executor/transaction"
+	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -20,7 +20,7 @@ import (
 func TestArchiveInquirer_DisabledIfNoQueryRateIsGiven(t *testing.T) {
 	config := utils.Config{}
 	ext := MakeArchiveInquirer(&config)
-	if _, ok := ext.(extension.NilExtension[transaction.SubstateData]); !ok {
+	if _, ok := ext.(extension.NilExtension[substate_transaction.SubstateData]); !ok {
 		t.Errorf("inquirer should not be active by default")
 	}
 }
@@ -32,7 +32,7 @@ func TestArchiveInquirer_ReportsErrorIfNoArchiveIsPresent(t *testing.T) {
 	cfg.ArchiveQueryRate = 100
 	ext := makeArchiveInquirer(&cfg, log)
 
-	state := executor.State[transaction.SubstateData]{}
+	state := executor.State[substate_transaction.SubstateData]{}
 	if err := ext.PreRun(state, nil); err == nil {
 		t.Errorf("expected an error, got nothing")
 	}
@@ -51,7 +51,7 @@ func TestArchiveInquirer_CanStartUpAndShutdownGracefully(t *testing.T) {
 	cfg.ArchiveQueryRate = 100
 	ext := makeArchiveInquirer(&cfg, log)
 
-	state := executor.State[transaction.SubstateData]{}
+	state := executor.State[substate_transaction.SubstateData]{}
 	context := executor.Context{State: db}
 
 	if err := ext.PreRun(state, &context); err != nil {
@@ -74,7 +74,7 @@ func TestArchiveInquirer_RunsRandomTransactionsInBackground(t *testing.T) {
 	cfg.ArchiveMaxQueryAge = 100
 	cfg.ChainID = utils.TestnetChainID
 
-	state := executor.State[transaction.SubstateData]{}
+	state := executor.State[substate_transaction.SubstateData]{}
 	context := executor.Context{State: db}
 
 	substate1 := makeValidSubstate()
@@ -127,7 +127,7 @@ func TestArchiveInquirer_RunsRandomTransactionsInBackground(t *testing.T) {
 	}
 }
 
-func makeValidSubstate() transaction.SubstateData {
+func makeValidSubstate() substate_transaction.SubstateData {
 	// This Substate is a minimal substate that can be successfully processed.
 	sub := &substate.Substate{
 		Env: &substate.SubstateEnv{
@@ -142,7 +142,7 @@ func makeValidSubstate() transaction.SubstateData {
 			GasUsed: 1,
 		},
 	}
-	return transaction.NewOldSubstateData(sub)
+	return substate_transaction.NewOldSubstateData(sub)
 }
 
 func TestCircularBuffer_EnforcesSize(t *testing.T) {

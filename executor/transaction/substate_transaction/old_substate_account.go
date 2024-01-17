@@ -1,15 +1,16 @@
-package transaction
+package substate_transaction
 
 import (
 	"math/big"
 
+	"github.com/Fantom-foundation/Aida/executor/transaction"
 	oldSubstate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 )
 
 // Deprecated: This is a workaround before oldSubstate repository is migrated to new structure.
 // Use NewSubstateAccount instead.
-func NewOldSubstateAccount(acc *oldSubstate.SubstateAccount) Account {
+func NewOldSubstateAccount(acc *oldSubstate.SubstateAccount) transaction.Account {
 	return &oldSubstateAccount{acc}
 }
 
@@ -59,16 +60,16 @@ func (a *oldSubstateAccount) GetStorageSize() int {
 	return len(a.Storage)
 }
 
-func (a *oldSubstateAccount) ForEachStorage(h storageHandler) {
+func (a *oldSubstateAccount) ForEachStorage(h transaction.StorageHandler) {
 	for keyHash, valueHash := range a.Storage {
 		h(keyHash, valueHash)
 	}
 }
 
-func (a *oldSubstateAccount) Equal(y Account) bool {
-	return accountEqual(a, y)
+func (a *oldSubstateAccount) Equal(y transaction.Account) bool {
+	return transaction.AccountEqual(a, y)
 }
 
 func (a *oldSubstateAccount) String() string {
-	return accountString(a)
+	return transaction.AccountString(a)
 }

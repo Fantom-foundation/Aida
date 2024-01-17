@@ -1,7 +1,7 @@
 package executor
 
 import (
-	"github.com/Fantom-foundation/Aida/executor/transaction"
+	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
 	"github.com/Fantom-foundation/Aida/rpc"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 )
@@ -14,11 +14,11 @@ import (
 //---------------------------------------------------------------------------------//
 
 type TxConsumer interface {
-	Consume(block int, transaction int, substate transaction.SubstateData) error
+	Consume(block int, transaction int, substate substate_transaction.SubstateData) error
 }
 
-func toSubstateConsumer(c TxConsumer) Consumer[transaction.SubstateData] {
-	return func(info TransactionInfo[transaction.SubstateData]) error {
+func toSubstateConsumer(c TxConsumer) Consumer[substate_transaction.SubstateData] {
+	return func(info TransactionInfo[substate_transaction.SubstateData]) error {
 		return c.Consume(info.Block, info.Transaction, info.Data)
 	}
 }
