@@ -27,6 +27,8 @@ TxData <- dbReadTable(con, 'stats') %>% filter(start >= as.integer(first$value) 
 dbDisconnect(con)
 ```
 
+## ##############################################################################
+
 ```{r, echo=FALSE, message=FALSE}
 hostname <- Metadata %>% filter(key == "Hostname")
 ip <- Metadata %>% filter(key == "IpAddress")
@@ -49,6 +51,8 @@ The system has installed **`r GoInfo$value`**.
 The github hash of the Aida repository is **`r aidaHash$value`**.
 For this experiment, we use **`r dbImpl$value`**(**`r dbVariant$value`** **`r carmenSchema$value`**) as a StateDB and **`r vmImpl$value`** as a virtual machine.  
 The data set for this experiment is stored in the database **`r params$db`**.
+
+## ##############################################################################
 
 ## 2. Memory and Disk Usage
 
@@ -78,6 +82,8 @@ TxData %>% mutate(live_disk = as.numeric(live_disk)) %>%
    labs(x="Block Height", y="Disk Consumption (Bytes)", title="Disk Usage")
 ```
 
+## ##############################################################################
+
 ## 3. Transaction Rate
 
 ```{r, echo=FALSE, message=FALSE}
@@ -96,6 +102,7 @@ TxData %>% mutate(tx_rate = as.numeric(tx_rate)) %>%
    labs(x="Block Height", y="Transaction Per Minute", title="Transaction Rate")
 ```
 
+## ##############################################################################
 
 ## 4. Gas Rate
 
