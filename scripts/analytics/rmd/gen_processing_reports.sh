@@ -20,8 +20,5 @@ db=$1
 rmd=$2
 outputdir=$3
 
-
 log "render f1 report ..."
-./knit.R -d $db \
-	 -f html -o f1.html \
-	 -O $outputdir $rmd
+./knit.R -d $db -f html -o f1.html -O $outputdir $rmd
