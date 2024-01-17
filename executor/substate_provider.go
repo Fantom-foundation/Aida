@@ -42,7 +42,6 @@ type substateProvider struct {
 
 func (s substateProvider) Run(from int, to int, consumer Consumer[transaction.SubstateData]) error {
 	iter := s.db.NewSubstateIterator(from, s.numParallelDecoders)
-	defer iter.Release()
 	for iter.Next() {
 		tx := iter.Value()
 		if tx.Block >= uint64(to) {
@@ -52,7 +51,9 @@ func (s substateProvider) Run(from int, to int, consumer Consumer[transaction.Su
 			return err
 		}
 	}
-	return nil
+	iter.Release()
+
+	return iter.Error()
 }
 
 func (s substateProvider) Close() {

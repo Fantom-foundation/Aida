@@ -145,3 +145,6 @@ replace github.com/ethereum/go-ethereum => github.com/Fantom-foundation/go-ether
 replace github.com/Fantom-foundation/go-opera => github.com/Fantom-foundation/go-opera-substate v1.0.1-0.20230523093256-e592c59c5996
 
 replace github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
+
+// todo REMOVE BEFORE MERGE!
+replace github.com/Fantom-foundation/Substate => /Users/petrhanzl/Projects/Work/Substate
