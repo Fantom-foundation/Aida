@@ -12,7 +12,7 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/Fantom-foundation/Substate/substate"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"go.uber.org/mock/gomock"
 )
@@ -130,19 +130,19 @@ func TestArchiveInquirer_RunsRandomTransactionsInBackground(t *testing.T) {
 func makeValidSubstate() transaction.SubstateData {
 	// This Substate is a minimal substate that can be successfully processed.
 	sub := &substate.Substate{
-		Env: &substate.Env{
+		Env: &substate.SubstateEnv{
 			GasLimit: 100_000_000,
 		},
-		Message: &substate.Message{
+		Message: &substate.SubstateMessage{
 			Gas:      100_000,
 			GasPrice: big.NewInt(0),
 			Value:    big.NewInt(0),
 		},
-		Result: &substate.Result{
+		Result: &substate.SubstateResult{
 			GasUsed: 1,
 		},
 	}
-	return transaction.NewSubstateData(sub)
+	return transaction.NewOldSubstateData(sub)
 }
 
 func TestCircularBuffer_EnforcesSize(t *testing.T) {

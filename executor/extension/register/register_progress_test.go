@@ -12,7 +12,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/transaction"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/Fantom-foundation/Substate/substate"
+	substate "github.com/Fantom-foundation/Substate"
 
 	//db
 	"github.com/jmoiron/sqlx"
@@ -127,7 +127,7 @@ func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 	ctx := &executor.Context{State: stateDb, StateDbPath: dummyStateDbPath}
 
 	s := &substate.Substate{
-		Result: &substate.Result{
+		Result: &substate.SubstateResult{
 			Status:  0,
 			GasUsed: 100,
 		},
@@ -144,7 +144,7 @@ func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 
 	ext.PreRun(executor.State[transaction.SubstateData]{}, ctx)
 
-	sub := transaction.NewSubstateData(s)
+	sub := transaction.NewOldSubstateData(s)
 
 	for b := int(cfg.First); b < int(cfg.Last); b++ {
 		ext.PreBlock(executor.State[transaction.SubstateData]{Block: b, Data: sub}, ctx)

@@ -10,7 +10,7 @@ import (
 	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/Fantom-foundation/Substate/substate"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"go.uber.org/mock/gomock"
 )
@@ -34,8 +34,8 @@ func TestSdbReplaySubstate_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		Run(0, 1, gomock.Any()).
 		DoAndReturn(func(from int, to int, consumer executor.Consumer[transaction.SubstateData]) error {
 			for i := from; i < to; i++ {
-				consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 0, Transaction: 0, Data: transaction.NewSubstateData(testTx)})
-				consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 0, Transaction: 1, Data: transaction.NewSubstateData(testTx)})
+				consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 0, Transaction: 0, Data: transaction.NewOldSubstateData(testTx)})
+				consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 0, Transaction: 1, Data: transaction.NewOldSubstateData(testTx)})
 			}
 			return nil
 		})
@@ -79,7 +79,7 @@ func TestSdbReplaySubstate_StateDbPrepperIsAddedIfDbImplIsMemory(t *testing.T) {
 		Run(0, 1, gomock.Any()).
 		DoAndReturn(func(from int, to int, consumer executor.Consumer[transaction.SubstateData]) error {
 			for i := from; i < to; i++ {
-				consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 0, Transaction: 0, Data: transaction.NewSubstateData(testTx)})
+				consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 0, Transaction: 0, Data: transaction.NewOldSubstateData(testTx)})
 			}
 			return nil
 		})
@@ -120,7 +120,7 @@ func TestSdbReplaySubstate_TxPrimerIsAddedIfDbImplIsNotMemory(t *testing.T) {
 		Run(1, 2, gomock.Any()).
 		DoAndReturn(func(from int, to int, consumer executor.Consumer[transaction.SubstateData]) error {
 			for i := from; i < to; i++ {
-				consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 1, Transaction: 0, Data: transaction.NewSubstateData(testTx)})
+				consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 1, Transaction: 0, Data: transaction.NewOldSubstateData(testTx)})
 			}
 			return nil
 		})
@@ -159,12 +159,12 @@ var testOperationsB = []operation.Operation{
 
 // testTx is a dummy substate that will be processed without crashing.
 var testTx = &substate.Substate{
-	Env: &substate.Env{},
-	Message: &substate.Message{
+	Env: &substate.SubstateEnv{},
+	Message: &substate.SubstateMessage{
 		Gas:      10000,
 		GasPrice: big.NewInt(0),
 	},
-	Result: &substate.Result{
+	Result: &substate.SubstateResult{
 		GasUsed: 1,
 	},
 }

@@ -9,9 +9,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/transaction"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
-	substateCommon "github.com/Fantom-foundation/Substate/geth/common"
-	substateTypes "github.com/Fantom-foundation/Substate/geth/types"
-	"github.com/Fantom-foundation/Substate/substate"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/Fantom-foundation/go-opera/opera"
 	"github.com/ethereum/go-ethereum/common"
@@ -269,18 +267,19 @@ func prepareBlockCtx(inputEnv transaction.BlockEnvironment) *vm.BlockContext {
 
 // compileVMResult creates a result of a transaction as SubstateResult struct.
 func compileVMResult(logs []*types.Log, receiptUsedGas uint64, receiptFailed bool, contract common.Address) transaction.TransactionReceipt {
-	var status uint64
+	vmResult := &substate.SubstateResult{
+		ContractAddress: contract,
+		GasUsed:         receiptUsedGas,
+		Logs:            logs,
+		Bloom:           types.BytesToBloom(types.LogsBloom(logs)),
+	}
 	if receiptFailed {
-		status = types.ReceiptStatusFailed
+		vmResult.Status = types.ReceiptStatusFailed
 	} else {
-		status = types.ReceiptStatusSuccessful
+		vmResult.Status = types.ReceiptStatusSuccessful
 	}
 
-	substateResult := substate.NewResult(status, substateTypes.BytesToBloom(types.LogsBloom(logs)), nil, substateCommon.Address(contract), receiptUsedGas)
-
-	// todo logs
-	vmResult := transaction.NewSubstateResult(substateResult)
-	return vmResult
+	return transaction.NewOldSubstateResult(vmResult)
 }
 
 // validateVMResult compares the result of a transaction to an expected value.

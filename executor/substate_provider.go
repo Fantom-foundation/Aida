@@ -7,7 +7,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/executor/transaction"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/Fantom-foundation/Substate/db"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -25,37 +25,33 @@ func OpenSubstateDb(cfg *utils.Config, ctxt *cli.Context) (res Provider[transact
 			err = fmt.Errorf("failed to open substate DB: %v", issue)
 		}
 	}()
-	db, err := db.NewDefaultSubstateDB(cfg.AidaDb)
-	if err != nil {
-		return nil, err
-	}
-	return &substateProvider{db, ctxt, cfg.Workers}, nil
+	substate.SetSubstateDb(cfg.AidaDb)
+	substate.OpenSubstateDBReadOnly()
+	return &substateProvider{ctxt, cfg.Workers}, nil
 }
 
 // substateProvider is an adapter of Aida's SubstateProvider interface defined above to the
 // current substate implementation offered by github.com/Fantom-foundation/Substate.
 type substateProvider struct {
-	db                  db.SubstateDB
 	ctxt                *cli.Context
 	numParallelDecoders int
 }
 
 func (s substateProvider) Run(from int, to int, consumer Consumer[transaction.SubstateData]) error {
-	iter := s.db.NewSubstateIterator(from, s.numParallelDecoders)
+	iter := substate.NewSubstateIterator(uint64(from), s.numParallelDecoders)
+	defer iter.Release()
 	for iter.Next() {
 		tx := iter.Value()
 		if tx.Block >= uint64(to) {
 			return nil
 		}
-		if err := consumer(TransactionInfo[transaction.SubstateData]{int(tx.Block), tx.Transaction, transaction.NewSubstateData(tx)}); err != nil {
+		if err := consumer(TransactionInfo[transaction.SubstateData]{int(tx.Block), tx.Transaction, transaction.NewOldSubstateData(tx.Substate)}); err != nil {
 			return err
 		}
 	}
-	iter.Release()
-
-	return iter.Error()
+	return nil
 }
 
-func (s substateProvider) Close() {
-	s.db.Close()
+func (substateProvider) Close() {
+	//substate.CloseSubstateDB()
 }

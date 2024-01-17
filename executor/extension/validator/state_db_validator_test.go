@@ -13,8 +13,7 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
-	substateCommon "github.com/Fantom-foundation/Substate/geth/common"
-	"github.com/Fantom-foundation/Substate/substate"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"go.uber.org/mock/gomock"
 )
@@ -76,7 +75,7 @@ func TestLiveTxValidator_ValidatorDoesNotFailWithEmptySubstate(t *testing.T) {
 	err := ext.PostTransaction(executor.State[transaction.SubstateData]{
 		Block:       1,
 		Transaction: 1,
-		Data:        transaction.NewSubstateData(&substate.Substate{}),
+		Data:        transaction.NewOldSubstateData(&substate.Substate{}),
 	}, ctx)
 
 	if err != nil {
@@ -213,7 +212,7 @@ func TestLiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueO
 
 	gomock.InOrder(
 		log.EXPECT().Warning(gomock.Any()),
-		db.EXPECT().GetSubstatePostAlloc().Return(transaction.NewSubstateAlloc(substate.Alloc{})),
+		db.EXPECT().GetSubstatePostAlloc().Return(transaction.NewOldSubstateAlloc(substate.SubstateAlloc{})),
 		log.EXPECT().Errorf("Different %s:\nwant: %v\nhave: %v\n", "substate alloc size", 1, 0),
 		log.EXPECT().Errorf("\tmissing key=%v\n", common.Address{0}),
 	)
@@ -366,7 +365,7 @@ func TestLiveTxValidator_PreTransactionDoesNotFailWithIncorrectOutput(t *testing
 	err := ext.PreTransaction(executor.State[transaction.SubstateData]{
 		Block:       1,
 		Transaction: 1,
-		Data:        transaction.NewSubstateData(alloc),
+		Data:        transaction.NewOldSubstateData(alloc),
 	}, ctx)
 
 	if err != nil {
@@ -395,7 +394,7 @@ func TestLiveTxValidator_PostTransactionDoesNotFailWithIncorrectInput(t *testing
 	err := ext.PostTransaction(executor.State[transaction.SubstateData]{
 		Block:       1,
 		Transaction: 1,
-		Data:        transaction.NewSubstateData(alloc),
+		Data:        transaction.NewOldSubstateData(alloc),
 	}, ctx)
 
 	if err != nil {
@@ -444,7 +443,7 @@ func TestArchiveTxValidator_ValidatorDoesNotFailWithEmptySubstate(t *testing.T) 
 	err := ext.PostTransaction(executor.State[transaction.SubstateData]{
 		Block:       1,
 		Transaction: 1,
-		Data:        transaction.NewSubstateData(&substate.Substate{}),
+		Data:        transaction.NewOldSubstateData(&substate.Substate{}),
 	}, ctx)
 
 	if err != nil {
@@ -578,7 +577,7 @@ func TestArchiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContin
 
 	ext := MakeArchiveDbValidator(cfg)
 
-	db.EXPECT().GetSubstatePostAlloc().Return(substate.Alloc{})
+	db.EXPECT().GetSubstatePostAlloc().Return(substate.SubstateAlloc{})
 
 	ext.PreRun(executor.State[transaction.SubstateData]{}, ctx)
 
@@ -724,7 +723,7 @@ func TestArchiveTxValidator_PreTransactionDoesNotFailWithIncorrectOutput(t *test
 	err := ext.PreTransaction(executor.State[transaction.SubstateData]{
 		Block:       1,
 		Transaction: 1,
-		Data: transaction.NewSubstateData(&substate.Substate{
+		Data: transaction.NewOldSubstateData(&substate.Substate{
 			OutputAlloc: getIncorrectSubstateAlloc(),
 		}),
 	}, ctx)
@@ -751,7 +750,7 @@ func TestArchiveTxValidator_PostTransactionDoesNotFailWithIncorrectInput(t *test
 	err := ext.PostTransaction(executor.State[transaction.SubstateData]{
 		Block:       1,
 		Transaction: 1,
-		Data: transaction.NewSubstateData(&substate.Substate{
+		Data: transaction.NewOldSubstateData(&substate.Substate{
 			InputAlloc: getIncorrectSubstateAlloc(),
 		}),
 	}, ctx)
@@ -783,7 +782,7 @@ func TestValidateStateDb_ValidationDoesNotFail(t *testing.T) {
 
 			// Generating randomized world state
 			alloc, _ := utils.MakeWorldState(t)
-			ws := transaction.NewSubstateAlloc(alloc)
+			ws := transaction.NewOldSubstateAlloc(alloc)
 
 			log := logger.NewLogger("INFO", "TestStateDb")
 
@@ -824,7 +823,7 @@ func TestValidateStateDb_ValidationDoesNotFailWithPriming(t *testing.T) {
 
 			// Generating randomized world state
 			alloc, _ := utils.MakeWorldState(t)
-			ws := transaction.NewSubstateAlloc(alloc)
+			ws := transaction.NewOldSubstateAlloc(alloc)
 
 			log := logger.NewLogger("INFO", "TestStateDb")
 
@@ -837,14 +836,14 @@ func TestValidateStateDb_ValidationDoesNotFailWithPriming(t *testing.T) {
 			addr := common.BytesToAddress(utils.MakeRandomByteSlice(t, 40))
 
 			// create new account
-			subAcc := &substate.Account{
+			subAcc := &substate.SubstateAccount{
 				Nonce:   uint64(utils.GetRandom(1, 1000*5000)),
 				Balance: big.NewInt(int64(utils.GetRandom(1, 1000*5000))),
 				Storage: utils.MakeAccountStorage(t),
 				Code:    utils.MakeRandomByteSlice(t, 2048),
 			}
 
-			ws.Add(addr, transaction.NewSubstateAccount(subAcc))
+			ws.Add(addr, transaction.NewOldSubstateAccount(subAcc))
 
 			// Call for state DB validation with update enabled and subsequent checks if the update was made correctly
 			err = doSubsetValidation(ws, sDB, true)
@@ -884,15 +883,15 @@ func getIncorrectTestSubstateAlloc() transaction.SubstateData {
 		OutputAlloc: getIncorrectSubstateAlloc(),
 	}
 
-	return transaction.NewSubstateData(sub)
+	return transaction.NewOldSubstateData(sub)
 }
 
-func getIncorrectSubstateAlloc() substate.Alloc {
-	alloc := substate.NewAlloc()
-	alloc[substateCommon.Address{0}] = &substate.Account{
+func getIncorrectSubstateAlloc() substate.SubstateAlloc {
+	alloc := make(substate.SubstateAlloc)
+	alloc[common.Address{0}] = &substate.SubstateAccount{
 		Nonce:   0,
 		Balance: new(big.Int),
-		Storage: make(map[substateCommon.Hash]substateCommon.Hash),
+		Storage: make(map[common.Hash]common.Hash),
 		Code:    make([]byte, 0),
 	}
 

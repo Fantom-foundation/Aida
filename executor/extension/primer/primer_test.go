@@ -104,7 +104,7 @@ func TestPrime_PrimeStateDB(t *testing.T) {
 
 			// Generating randomized world state
 			alloc, _ := utils.MakeWorldState(t)
-			ws := transaction.NewSubstateAlloc(alloc)
+			ws := transaction.NewOldSubstateAlloc(alloc)
 
 			pc := utils.NewPrimeContext(cfg, sDB, log)
 			// Priming state DB

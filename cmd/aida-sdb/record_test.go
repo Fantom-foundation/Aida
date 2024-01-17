@@ -7,8 +7,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/transaction"
 	"github.com/Fantom-foundation/Aida/utils"
-	substateCommon "github.com/Fantom-foundation/Substate/geth/common"
-	"github.com/Fantom-foundation/Substate/substate"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"go.uber.org/mock/gomock"
 )
@@ -34,8 +33,8 @@ func TestSdbRecord_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		Run(10, 12, gomock.Any()).
 		DoAndReturn(func(from int, to int, consumer executor.Consumer[transaction.SubstateData]) error {
 			for i := from; i < to; i++ {
-				consumer(executor.TransactionInfo[transaction.SubstateData]{Block: i, Transaction: 3, Data: transaction.NewSubstateData(emptyTx)})
-				consumer(executor.TransactionInfo[transaction.SubstateData]{Block: i, Transaction: utils.PseudoTx, Data: transaction.NewSubstateData(emptyTx)})
+				consumer(executor.TransactionInfo[transaction.SubstateData]{Block: i, Transaction: 3, Data: transaction.NewOldSubstateData(emptyTx)})
+				consumer(executor.TransactionInfo[transaction.SubstateData]{Block: i, Transaction: utils.PseudoTx, Data: transaction.NewOldSubstateData(emptyTx)})
 			}
 			return nil
 		})
@@ -72,23 +71,23 @@ func TestSdbRecord_AllDbEventsAreIssuedInOrder(t *testing.T) {
 
 // emptyTx is a dummy substate that will be processed without crashing.
 var emptyTx = &substate.Substate{
-	Env: &substate.Env{},
-	Message: &substate.Message{
+	Env: &substate.SubstateEnv{},
+	Message: &substate.SubstateMessage{
 		GasPrice: big.NewInt(12),
 	},
-	Result: &substate.Result{
+	Result: &substate.SubstateResult{
 		GasUsed: 1,
 	},
 }
 
 // testTx is a dummy substate used for testing validation.
 var testTx = &substate.Substate{
-	InputAlloc: substate.Alloc{substateCommon.Address(testingAddress): substate.NewAccount(1, new(big.Int).SetUint64(1), []byte{})},
-	Env:        &substate.Env{},
-	Message: &substate.Message{
+	InputAlloc: substate.SubstateAlloc{testingAddress: substate.NewSubstateAccount(1, new(big.Int).SetUint64(1), []byte{})},
+	Env:        &substate.SubstateEnv{},
+	Message: &substate.SubstateMessage{
 		GasPrice: big.NewInt(12),
 	},
-	Result: &substate.Result{
+	Result: &substate.SubstateResult{
 		GasUsed: 1,
 	},
 }

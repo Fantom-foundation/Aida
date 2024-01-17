@@ -5,8 +5,7 @@ import (
 	"math/big"
 
 	"github.com/Fantom-foundation/Aida/executor/transaction"
-	substateCommon "github.com/Fantom-foundation/Substate/geth/common"
-	"github.com/Fantom-foundation/Substate/substate"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
@@ -15,7 +14,7 @@ func MakeEmptyGethInMemoryStateDB(variant string) (StateDB, error) {
 	if variant != "" {
 		return nil, fmt.Errorf("unknown variant: %v", variant)
 	}
-	return MakeInMemoryStateDB(transaction.NewSubstateAlloc(substate.Alloc{}), 0), nil
+	return MakeInMemoryStateDB(transaction.NewOldSubstateAlloc(substate.SubstateAlloc{}), 0), nil
 }
 
 // MakeInMemoryStateDB creates a StateDB instance reflecting the state
@@ -356,13 +355,13 @@ func (db *inMemoryStateDB) GetEffects() transaction.WorldState {
 	}
 
 	// build state of all touched addresses
-	res := make(substate.Alloc)
+	res := make(substate.SubstateAlloc)
 	for addr := range touched {
-		cur := new(substate.Account)
+		cur := new(substate.SubstateAccount)
 		cur.Nonce = db.GetNonce(addr)
 		cur.Balance = db.GetBalance(addr)
 		cur.Code = db.GetCode(addr)
-		cur.Storage = make(map[substateCommon.Hash]substateCommon.Hash)
+		cur.Storage = make(map[common.Hash]common.Hash)
 
 		reported := map[common.Hash]int{}
 		for state := db.state; state != nil; state = state.parent {
@@ -371,16 +370,16 @@ func (db *inMemoryStateDB) GetEffects() transaction.WorldState {
 					_, exist := reported[key.key]
 					if !exist {
 						reported[key.key] = 0
-						cur.Storage[substateCommon.Hash(key.key)] = substateCommon.Hash(value)
+						cur.Storage[key.key] = value
 					}
 				}
 			}
 		}
 
-		res[substateCommon.Address(addr)] = cur
+		res[addr] = cur
 	}
 
-	return transaction.NewSubstateAlloc(res)
+	return transaction.NewOldSubstateAlloc(res)
 }
 
 func (db *inMemoryStateDB) GetSubstatePostAlloc() transaction.WorldState {

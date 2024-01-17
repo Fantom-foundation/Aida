@@ -9,7 +9,7 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/state/proxy"
-	oldSubstate "github.com/Fantom-foundation/Substate"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/google/martian/log"
 )
@@ -208,7 +208,7 @@ func makeStateDBVariant(directory, impl, variant, archiveVariant string, carmenS
 func DeleteDestroyedAccountsFromWorldState(ws transaction.WorldState, cfg *Config, target uint64) error {
 	log := logger.NewLogger(cfg.LogLevel, "DelDestAcc")
 
-	src, err := oldSubstate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
+	src, err := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
 	if err != nil {
 		return err
 	}
@@ -231,7 +231,7 @@ func DeleteDestroyedAccountsFromWorldState(ws transaction.WorldState, cfg *Confi
 func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *Config, target uint64) error {
 	log := logger.NewLogger(cfg.LogLevel, "DelDestAcc")
 
-	src, err := oldSubstate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
+	src, err := substate.OpenDestroyedAccountDBReadOnly(cfg.DeletionDb)
 	if err != nil {
 		return err
 	}

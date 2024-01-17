@@ -6,8 +6,7 @@ import (
 	"testing"
 	"time"
 
-	substateCommon "github.com/Fantom-foundation/Substate/geth/common"
-	"github.com/Fantom-foundation/Substate/substate"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -58,14 +57,14 @@ func GetRandom(rangeLower int, rangeUpper int) int {
 }
 
 // MakeAccountStorage generates randomized account storage with testAccountStorageSize length
-func MakeAccountStorage(t *testing.T) map[substateCommon.Hash]substateCommon.Hash {
+func MakeAccountStorage(t *testing.T) map[common.Hash]common.Hash {
 	// create storage map
-	storage := map[substateCommon.Hash]substateCommon.Hash{}
+	storage := map[common.Hash]common.Hash{}
 
 	// fill the storage map
 	for j := 0; j < testAccountStorageSize; j++ {
-		k := substateCommon.BytesToHash(MakeRandomByteSlice(t, 32))
-		storage[k] = substateCommon.BytesToHash(MakeRandomByteSlice(t, 32))
+		k := common.BytesToHash(MakeRandomByteSlice(t, 32))
+		storage[k] = common.BytesToHash(MakeRandomByteSlice(t, 32))
 	}
 
 	return storage
@@ -98,12 +97,12 @@ func MakeTestConfig(testCase StateDbTestCase) *Config {
 }
 
 // MakeWorldState generates randomized world state containing 100 accounts
-func MakeWorldState(t *testing.T) (substate.Alloc, []common.Address) {
+func MakeWorldState(t *testing.T) (substate.SubstateAlloc, []common.Address) {
 	// create list of addresses
 	var addrList []common.Address
 
 	// create world state
-	ws := make(substate.Alloc)
+	ws := make(substate.SubstateAlloc)
 
 	for i := 0; i < 100; i++ {
 		// create random address
@@ -112,13 +111,13 @@ func MakeWorldState(t *testing.T) (substate.Alloc, []common.Address) {
 		// add to address list
 		addrList = append(addrList, addr)
 
-		acc := substate.Account{
+		acc := substate.SubstateAccount{
 			Nonce:   uint64(GetRandom(1, 1000*5000)),
 			Balance: big.NewInt(int64(GetRandom(1, 1000*5000))),
 			Storage: MakeAccountStorage(t),
 			Code:    MakeRandomByteSlice(t, 2048),
 		}
-		ws[substateCommon.Address(addr)] = &acc
+		ws[addr] = &acc
 
 		// create account
 

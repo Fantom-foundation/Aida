@@ -35,11 +35,11 @@ func (r *substateResult) SetBloom(bloom types.Bloom) {
 }
 
 func (r *substateResult) GetLogs() []*types.Log {
-	panic("how to return without iterating") // todo mby some transformations like bloom
+	panic("how to return without iterating")
 }
 
 func (r *substateResult) SetLogs(logs []*types.Log) {
-	panic("how to set without iterating") // todo mby some transformations like bloom
+	panic("how to set without iterating")
 }
 
 func (r *substateResult) GetContractAddress() common.Address {

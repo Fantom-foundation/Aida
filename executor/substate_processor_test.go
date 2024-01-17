@@ -7,22 +7,20 @@ import (
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/executor/transaction"
-	substateCommon "github.com/Fantom-foundation/Substate/geth/common"
-	substateTypes "github.com/Fantom-foundation/Substate/geth/types"
-	"github.com/Fantom-foundation/Substate/substate"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
 func newDummyResult(t *testing.T) transaction.TransactionReceipt {
-	r := &substate.Result{
-		Logs:            []*substateTypes.Log{},
-		ContractAddress: substateCommon.HexToAddress("0x0000000000085a12481aEdb59eb3200332aCA541"),
+	r := &substate.SubstateResult{
+		Logs:            []*types.Log{},
+		ContractAddress: common.HexToAddress("0x0000000000085a12481aEdb59eb3200332aCA541"),
 		GasUsed:         1000000,
 		Status:          types.ReceiptStatusSuccessful,
 	}
-	return transaction.NewSubstateResult(r)
+	return transaction.NewOldSubstateResult(r)
 }
 
 // TestPrepareBlockCtx tests a creation of block context from substate environment.
@@ -30,7 +28,7 @@ func TestPrepareBlockCtx(t *testing.T) {
 	gaslimit := uint64(10000000)
 	blocknum := uint64(4600000)
 	basefee := big.NewInt(12345)
-	env := transaction.NewSubstateEnv(&substate.Env{Difficulty: big.NewInt(1), GasLimit: gaslimit, Number: blocknum, Timestamp: 1675961395, BaseFee: basefee})
+	env := transaction.NewOldSubstateEnv(&substate.SubstateEnv{Difficulty: big.NewInt(1), GasLimit: gaslimit, Number: blocknum, Timestamp: 1675961395, BaseFee: basefee})
 
 	// BlockHashes are nil, expect an error
 	blockCtx := prepareBlockCtx(env)

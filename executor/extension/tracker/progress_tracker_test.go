@@ -13,7 +13,7 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/Fantom-foundation/Substate/substate"
+	substate "github.com/Fantom-foundation/Substate"
 	"go.uber.org/mock/gomock"
 )
 
@@ -46,8 +46,8 @@ func TestProgressTrackerExtension_LoggingHappens(t *testing.T) {
 
 	ctx := &executor.Context{State: db, StateDbPath: dummyStateDbPath}
 
-	s := transaction.NewSubstateData(&substate.Substate{
-		Result: &substate.Result{
+	s := transaction.NewOldSubstateData(&substate.Substate{
+		Result: &substate.SubstateResult{
 			Status:  0,
 			GasUsed: 100,
 		},
@@ -117,8 +117,8 @@ func TestProgressTrackerExtension_FirstLoggingIsIgnored(t *testing.T) {
 
 	ctx := &executor.Context{State: db}
 
-	s := transaction.NewSubstateData(&substate.Substate{
-		Result: &substate.Result{
+	s := transaction.NewOldSubstateData(&substate.Substate{
+		Result: &substate.SubstateResult{
 			Status:  0,
 			GasUsed: 10,
 		},

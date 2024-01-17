@@ -6,14 +6,13 @@ import (
 	"strings"
 	"testing"
 
-	oldSubstate "github.com/Fantom-foundation/Substate"
-	"github.com/Fantom-foundation/Substate/substate"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 )
 
 func TestAccount_EqualNonce(t *testing.T) {
-	newAccount := NewSubstateAccount(substate.NewAccount(2, new(big.Int).SetUint64(1), []byte{1}))
-	oldAccount := NewOldSubstateAccount(oldSubstate.NewSubstateAccount(1, new(big.Int).SetUint64(1), []byte{1}))
+	newAccount := NewOldSubstateAccount(substate.NewSubstateAccount(2, new(big.Int).SetUint64(1), []byte{1}))
+	oldAccount := NewOldSubstateAccount(substate.NewSubstateAccount(1, new(big.Int).SetUint64(1), []byte{1}))
 
 	if newAccount.Equal(oldAccount) {
 		t.Fatal("accounts nonce are different but equal returned true")
@@ -26,8 +25,8 @@ func TestAccount_EqualNonce(t *testing.T) {
 }
 
 func TestAccount_EqualBalance(t *testing.T) {
-	newAccount := NewSubstateAccount(substate.NewAccount(1, new(big.Int).SetUint64(2), []byte{1}))
-	oldAccount := NewOldSubstateAccount(oldSubstate.NewSubstateAccount(1, new(big.Int).SetUint64(1), []byte{1}))
+	newAccount := NewOldSubstateAccount(substate.NewSubstateAccount(1, new(big.Int).SetUint64(2), []byte{1}))
+	oldAccount := NewOldSubstateAccount(substate.NewSubstateAccount(1, new(big.Int).SetUint64(1), []byte{1}))
 
 	if newAccount.Equal(oldAccount) {
 		t.Fatal("accounts balances are different but equal returned true")
@@ -44,11 +43,11 @@ func TestAccount_EqualStorage(t *testing.T) {
 	hashTwo := common.BigToHash(new(big.Int).SetUint64(2))
 	hashThree := common.BigToHash(new(big.Int).SetUint64(3))
 
-	newAccount := NewSubstateAccount(substate.NewAccount(1, new(big.Int).SetUint64(1), []byte{1}))
+	newAccount := NewOldSubstateAccount(substate.NewSubstateAccount(1, new(big.Int).SetUint64(1), []byte{1}))
 	newAccount.SetStorageAt(hashOne, hashTwo)
 
 	// first compare with no storage
-	oldAccount := NewOldSubstateAccount(oldSubstate.NewSubstateAccount(1, new(big.Int).SetUint64(1), []byte{1}))
+	oldAccount := NewOldSubstateAccount(substate.NewSubstateAccount(1, new(big.Int).SetUint64(1), []byte{1}))
 	if newAccount.Equal(oldAccount) {
 		t.Fatal("accounts storages are different but equal returned true")
 	}
@@ -74,8 +73,8 @@ func TestAccount_EqualStorage(t *testing.T) {
 }
 
 func TestAccount_EqualCode(t *testing.T) {
-	newAccount := NewSubstateAccount(substate.NewAccount(1, new(big.Int).SetUint64(1), []byte{2}))
-	oldAccount := NewOldSubstateAccount(oldSubstate.NewSubstateAccount(1, new(big.Int).SetUint64(1), []byte{1}))
+	newAccount := NewOldSubstateAccount(substate.NewSubstateAccount(1, new(big.Int).SetUint64(1), []byte{2}))
+	oldAccount := NewOldSubstateAccount(substate.NewSubstateAccount(1, new(big.Int).SetUint64(1), []byte{1}))
 
 	if newAccount.Equal(oldAccount) {
 		t.Fatal("accounts codes are different but equal returned true")
@@ -92,7 +91,7 @@ func TestAccount_String(t *testing.T) {
 	hashOne := common.BigToHash(new(big.Int).SetUint64(1))
 	hashTwo := common.BigToHash(new(big.Int).SetUint64(2))
 
-	acc := NewSubstateAccount(substate.NewAccount(1, new(big.Int).SetUint64(1), []byte{1}))
+	acc := NewOldSubstateAccount(substate.NewSubstateAccount(1, new(big.Int).SetUint64(1), []byte{1}))
 	acc.SetStorageAt(hashOne, hashTwo)
 
 	got := accountString(acc)

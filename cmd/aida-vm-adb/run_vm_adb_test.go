@@ -9,8 +9,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/transaction"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
-	substateCommon "github.com/Fantom-foundation/Substate/geth/common"
-	"github.com/Fantom-foundation/Substate/substate"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"go.uber.org/mock/gomock"
 )
@@ -40,12 +39,12 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 		Run(2, 5, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[transaction.SubstateData]) error {
 			// Block 2
-			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 1, Data: transaction.NewSubstateData(emptyTx)})
-			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 2, Data: transaction.NewSubstateData(emptyTx)})
+			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 1, Data: transaction.NewOldSubstateData(emptyTx)})
+			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 2, Data: transaction.NewOldSubstateData(emptyTx)})
 			// Block 3
-			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 3, Transaction: 1, Data: transaction.NewSubstateData(emptyTx)})
+			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 3, Transaction: 1, Data: transaction.NewOldSubstateData(emptyTx)})
 			// Block 4
-			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 4, Transaction: utils.PseudoTx, Data: transaction.NewSubstateData(emptyTx)})
+			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 4, Transaction: utils.PseudoTx, Data: transaction.NewOldSubstateData(emptyTx)})
 			return nil
 		})
 
@@ -124,12 +123,12 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 		Run(2, 5, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[transaction.SubstateData]) error {
 			// Block 2
-			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 1, Data: transaction.NewSubstateData(emptyTx)})
-			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 2, Data: transaction.NewSubstateData(emptyTx)})
+			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 1, Data: transaction.NewOldSubstateData(emptyTx)})
+			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 2, Data: transaction.NewOldSubstateData(emptyTx)})
 			// Block 3
-			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 3, Transaction: 1, Data: transaction.NewSubstateData(emptyTx)})
+			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 3, Transaction: 1, Data: transaction.NewOldSubstateData(emptyTx)})
 			// Block 4
-			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 4, Transaction: utils.PseudoTx, Data: transaction.NewSubstateData(emptyTx)})
+			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 4, Transaction: utils.PseudoTx, Data: transaction.NewOldSubstateData(emptyTx)})
 			return nil
 		})
 
@@ -214,12 +213,12 @@ func TestVmAdb_AllTransactionsAreProcessedInOrder_Sequential(t *testing.T) {
 		Run(2, 5, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[transaction.SubstateData]) error {
 			// Block 2
-			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 1, Data: transaction.NewSubstateData(emptyTx)})
-			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 2, Data: transaction.NewSubstateData(emptyTx)})
+			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 1, Data: transaction.NewOldSubstateData(emptyTx)})
+			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 2, Data: transaction.NewOldSubstateData(emptyTx)})
 			// Block 3
-			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 3, Transaction: 1, Data: transaction.NewSubstateData(emptyTx)})
+			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 3, Transaction: 1, Data: transaction.NewOldSubstateData(emptyTx)})
 			// Block 4
-			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 4, Transaction: utils.PseudoTx, Data: transaction.NewSubstateData(emptyTx)})
+			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 4, Transaction: utils.PseudoTx, Data: transaction.NewOldSubstateData(emptyTx)})
 			return nil
 		})
 
@@ -292,12 +291,12 @@ func TestVmAdb_AllTransactionsAreProcessed_Parallel(t *testing.T) {
 		Run(2, 5, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[transaction.SubstateData]) error {
 			// Block 2
-			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 1, Data: transaction.NewSubstateData(emptyTx)})
-			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 2, Data: transaction.NewSubstateData(emptyTx)})
+			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 1, Data: transaction.NewOldSubstateData(emptyTx)})
+			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 2, Data: transaction.NewOldSubstateData(emptyTx)})
 			// Block 3
-			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 3, Transaction: 1, Data: transaction.NewSubstateData(emptyTx)})
+			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 3, Transaction: 1, Data: transaction.NewOldSubstateData(emptyTx)})
 			// Block 4
-			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 4, Transaction: utils.PseudoTx, Data: transaction.NewSubstateData(emptyTx)})
+			consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 4, Transaction: utils.PseudoTx, Data: transaction.NewOldSubstateData(emptyTx)})
 			return nil
 		})
 
@@ -370,7 +369,7 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) 
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[transaction.SubstateData]) error {
-			return consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 1, Data: transaction.NewSubstateData(testTx)})
+			return consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 1, Data: transaction.NewOldSubstateData(testTx)})
 		})
 
 	gomock.InOrder(
@@ -421,7 +420,7 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Parallel(t *testing.T) {
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[transaction.SubstateData]) error {
-			return consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 1, Data: transaction.NewSubstateData(testTx)})
+			return consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 1, Data: transaction.NewOldSubstateData(testTx)})
 		})
 
 	gomock.InOrder(
@@ -471,7 +470,7 @@ func TestVmAdb_ValidationFailsOnInvalidTransaction_Sequential(t *testing.T) {
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[transaction.SubstateData]) error {
-			return consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 1, Data: transaction.NewSubstateData(testTx)})
+			return consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 1, Data: transaction.NewOldSubstateData(testTx)})
 		})
 
 	gomock.InOrder(
@@ -513,7 +512,7 @@ func TestVmAdb_ValidationFailsOnInvalidTransaction_Parallel(t *testing.T) {
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[transaction.SubstateData]) error {
-			return consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 1, Data: transaction.NewSubstateData(testTx)})
+			return consumer(executor.TransactionInfo[transaction.SubstateData]{Block: 2, Transaction: 1, Data: transaction.NewOldSubstateData(testTx)})
 		})
 
 	gomock.InOrder(
@@ -540,23 +539,23 @@ func TestVmAdb_ValidationFailsOnInvalidTransaction_Parallel(t *testing.T) {
 
 // emptyTx is a dummy substate that will be processed without crashing.
 var emptyTx = &substate.Substate{
-	Env: &substate.Env{},
-	Message: &substate.Message{
+	Env: &substate.SubstateEnv{},
+	Message: &substate.SubstateMessage{
 		GasPrice: big.NewInt(12),
 	},
-	Result: &substate.Result{
+	Result: &substate.SubstateResult{
 		GasUsed: 1,
 	},
 }
 
 // testTx is a dummy substate used for testing validation.
 var testTx = &substate.Substate{
-	InputAlloc: substate.Alloc{substateCommon.Address(testingAddress): substate.NewAccount(1, new(big.Int).SetUint64(1), []byte{})},
-	Env:        &substate.Env{},
-	Message: &substate.Message{
+	InputAlloc: substate.SubstateAlloc{testingAddress: substate.NewSubstateAccount(1, new(big.Int).SetUint64(1), []byte{})},
+	Env:        &substate.SubstateEnv{},
+	Message: &substate.SubstateMessage{
 		GasPrice: big.NewInt(12),
 	},
-	Result: &substate.Result{
+	Result: &substate.SubstateResult{
 		GasUsed: 1,
 	},
 }

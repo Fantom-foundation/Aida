@@ -45,7 +45,7 @@ func TestStatedb_DeleteDestroyedAccountsFromWorldState(t *testing.T) {
 			cfg := MakeTestConfig(tc)
 			// Generating randomized world state
 			alloc, addrList := MakeWorldState(t)
-			ws := transaction.NewSubstateAlloc(alloc)
+			ws := transaction.NewOldSubstateAlloc(alloc)
 			// Init directory for destroyed accounts DB
 			deletionDb := t.TempDir()
 			// Pick two account which will represent destroyed ones
@@ -99,7 +99,7 @@ func TestStatedb_DeleteDestroyedAccountsFromStateDB(t *testing.T) {
 			cfg := MakeTestConfig(tc)
 			// Generating randomized world state
 			alloc, addrList := MakeWorldState(t)
-			ws := transaction.NewSubstateAlloc(alloc)
+			ws := transaction.NewOldSubstateAlloc(alloc)
 			// Init directory for destroyed accounts DB
 			deletedAccountsDir := t.TempDir()
 			// Pick two account which will represent destroyed ones
