@@ -1,16 +1,13 @@
 #!/bin/bash
 # Name:
-#    gen_processing_reports.sh -  script for generating the block processing reports
+#    gen_processing_reports.sh -  script for generating the f1 reports
 #
 # Synopsis: 
 #    gen_processing_report.sh <output-dir>
 #
 # Description: 
-#    Produces block processing reports in the HTML format.
+#    Produces f1 reports in the HTML format.
 #
-#    The script requires a linux environment with installed commands hwinfo, free, git, go, sqlite3, and curl.
-#    The script must be invoked in the main directory of the Aida repository.
-# 
 
 # check the number of command line arguments
 if [ "$#" -ne 1 ]; then
