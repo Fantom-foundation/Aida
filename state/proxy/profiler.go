@@ -5,10 +5,10 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/Fantom-foundation/Aida/executor/transaction"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils/analytics"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -346,7 +346,7 @@ func (p *ProfilerProxy) ForEachStorage(addr common.Address, fn func(common.Hash,
 	return err
 }
 
-// Prepare sets the current transaction hash and index.
+// Prepare sets the current txcontext hash and index.
 func (p *ProfilerProxy) Prepare(thash common.Hash, ti int) {
 	p.do(operation.PrepareID, func() {
 		p.db.Prepare(thash, ti)
@@ -362,7 +362,7 @@ func (p *ProfilerProxy) Finalise(deleteEmptyObjects bool) {
 
 // IntermediateRoot computes the current hash of the StateDB.
 // It is called in between transactions to get the root hash that
-// goes into transaction receipts.
+// goes into txcontext receipts.
 func (p *ProfilerProxy) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	var hash common.Hash
 	p.do(operation.IntermediateRootID, func() {
@@ -381,11 +381,11 @@ func (p *ProfilerProxy) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 }
 
 // GetSubstatePostAlloc gets substate post allocation.
-func (p *ProfilerProxy) GetSubstatePostAlloc() transaction.WorldState {
+func (p *ProfilerProxy) GetSubstatePostAlloc() txcontext.WorldState {
 	return p.db.GetSubstatePostAlloc()
 }
 
-func (p *ProfilerProxy) PrepareSubstate(substate transaction.WorldState, block uint64) {
+func (p *ProfilerProxy) PrepareSubstate(substate txcontext.WorldState, block uint64) {
 	p.db.PrepareSubstate(substate, block)
 }
 

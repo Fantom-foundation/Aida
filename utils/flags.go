@@ -106,7 +106,7 @@ var (
 	}
 	ProfileDepthFlag = cli.IntFlag{
 		Name:  "profile-depth",
-		Usage: "0=interval, 1=interval+block, 2=interval+block+transaction",
+		Usage: "0=interval, 1=interval+block, 2=interval+block+txcontext",
 		Value: 0,
 	}
 	ProfileSqlite3Flag = cli.StringFlag{
@@ -221,7 +221,7 @@ var (
 	}
 	ValidateTxStateFlag = cli.BoolFlag{
 		Name:  "validate-tx",
-		Usage: "enables validation after transaction processing",
+		Usage: "enables validation after txcontext processing",
 	}
 	VmImplementation = cli.StringFlag{
 		Name:  "vm-impl",
@@ -278,8 +278,8 @@ var (
 		Value: 1_000,
 	}
 	TransactionLengthFlag = cli.Uint64Flag{
-		Name:  "transaction-length",
-		Usage: "Determines indirectly the length of a transaction",
+		Name:  "txcontext-length",
+		Usage: "Determines indirectly the length of a txcontext",
 		Value: 10,
 	}
 	SnapshotDepthFlag = cli.IntFlag{

@@ -5,7 +5,7 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/Fantom-foundation/Aida/executor/transaction"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	cc "github.com/Fantom-foundation/Carmen/go/common"
 	carmen "github.com/Fantom-foundation/Carmen/go/state"
 	_ "github.com/Fantom-foundation/Carmen/go/state/cppstate"
@@ -277,11 +277,11 @@ func (s *carmenVmStateDB) Prepare(thash common.Hash, ti int) {
 	// ignored
 }
 
-func (s *carmenStateDB) PrepareSubstate(substate transaction.WorldState, block uint64) {
+func (s *carmenStateDB) PrepareSubstate(substate txcontext.WorldState, block uint64) {
 	// ignored
 }
 
-func (s *carmenVmStateDB) GetSubstatePostAlloc() transaction.WorldState {
+func (s *carmenVmStateDB) GetSubstatePostAlloc() txcontext.WorldState {
 	// ignored
 	return nil
 }

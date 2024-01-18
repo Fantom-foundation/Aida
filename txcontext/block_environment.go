@@ -1,4 +1,4 @@
-package transaction
+package txcontext
 
 import (
 	"math/big"
@@ -28,25 +28,4 @@ type BlockEnvironment interface {
 
 	// GetBaseFee returns the base fee for transactions in the current block.
 	GetBaseFee() *big.Int
-
-	// SetCoinbase sets the coinbase address.
-	SetCoinbase(addr common.Address)
-
-	// SetDifficulty sets the difficulty level.
-	SetDifficulty(difficulty *big.Int)
-
-	// SetGasLimit sets the maximum amount of gas that can be used in a block.
-	SetGasLimit(gasLimit uint64)
-
-	// SetNumber sets the current block number.
-	SetNumber(blockNumber uint64)
-
-	// SetTimestamp sets the timestamp of the current block.
-	SetTimestamp(timestamp uint64)
-
-	// SetBlockHash sets the hash of the block with the given number.
-	SetBlockHash(blockNumber uint64, hash common.Hash)
-
-	// SetBaseFee sets the base fee for transactions in the current block.
-	SetBaseFee(baseFee *big.Int)
 }

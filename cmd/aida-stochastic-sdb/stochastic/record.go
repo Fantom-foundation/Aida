@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
-	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/stochastic"
+	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
@@ -47,7 +47,7 @@ func stochasticRecordAction(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	// force enable transaction validation
+	// force enable txcontext validation
 	cfg.ValidateTxState = true
 
 	// start CPU profiling if enabled.
@@ -103,9 +103,9 @@ func stochasticRecordAction(ctx *cli.Context) error {
 		}
 
 		var statedb state.StateDB
-		statedb = state.MakeInMemoryStateDB(substate_transaction.NewOldSubstateAlloc(tx.Substate.InputAlloc), tx.Block)
+		statedb = state.MakeInMemoryStateDB(substatecontext.NewWorldState(tx.Substate.InputAlloc), tx.Block)
 		statedb = stochastic.NewEventProxy(statedb, &eventRegistry)
-		if err = processor.ProcessTransaction(statedb, int(tx.Block), tx.Transaction, substate_transaction.NewOldSubstateData(tx.Substate)); err != nil {
+		if err = processor.ProcessTransaction(statedb, int(tx.Block), tx.Transaction, substatecontext.NewTxContextWithValidation(tx.Substate)); err != nil {
 			return err
 		}
 

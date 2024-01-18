@@ -5,9 +5,9 @@ import (
 	"math/rand"
 	"sort"
 
-	"github.com/Fantom-foundation/Aida/executor/transaction"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -41,9 +41,9 @@ func (pc *PrimeContext) mayApplyBulkLoad() error {
 }
 
 // PrimeStateDB primes database with accounts from the world state.
-func (pc *PrimeContext) PrimeStateDB(ws transaction.WorldState, db state.StateDB) error {
+func (pc *PrimeContext) PrimeStateDB(ws txcontext.WorldState, db state.StateDB) error {
 	numValues := 0 // number of storage values
-	ws.ForEachAccount(func(address common.Address, account transaction.Account) {
+	ws.ForEachAccount(func(address common.Address, account txcontext.Account) {
 		numValues += account.GetStorageSize()
 	})
 
@@ -62,7 +62,7 @@ func (pc *PrimeContext) PrimeStateDB(ws transaction.WorldState, db state.StateDB
 		pc.load = db.StartBulkLoad(pc.block)
 
 		var forEachError error
-		ws.ForEachAccount(func(addr common.Address, acc transaction.Account) {
+		ws.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
 			if err := pc.primeOneAccount(addr, acc, pt); err != nil {
 				forEachError = err
 				return
@@ -88,7 +88,7 @@ func (pc *PrimeContext) PrimeStateDB(ws transaction.WorldState, db state.StateDB
 }
 
 // primeOneAccount initializes an account on stateDB with substate
-func (pc *PrimeContext) primeOneAccount(addr common.Address, acc transaction.Account, pt *ProgressTracker) error {
+func (pc *PrimeContext) primeOneAccount(addr common.Address, acc txcontext.Account, pt *ProgressTracker) error {
 	// if an account was previously primed, skip acc creation.
 	if exist, found := pc.exist[addr]; !found || !exist {
 		pc.load.CreateAccount(addr)
@@ -119,9 +119,9 @@ func (pc *PrimeContext) primeOneAccount(addr common.Address, acc transaction.Acc
 }
 
 // PrimeStateDBRandom primes database with accounts from the world state in random order.
-func (pc *PrimeContext) PrimeStateDBRandom(ws transaction.WorldState, db state.StateDB, pt *ProgressTracker) error {
+func (pc *PrimeContext) PrimeStateDBRandom(ws txcontext.WorldState, db state.StateDB, pt *ProgressTracker) error {
 	contracts := make([]string, 0, ws.Len())
-	ws.ForEachAccount(func(addr common.Address, _ transaction.Account) {
+	ws.ForEachAccount(func(addr common.Address, _ txcontext.Account) {
 		contracts = append(contracts, addr.Hex())
 	})
 

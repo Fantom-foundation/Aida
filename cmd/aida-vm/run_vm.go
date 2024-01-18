@@ -8,8 +8,8 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/executor/extension/validator"
-	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/urfave/cli/v2"
 )
@@ -38,29 +38,29 @@ func RunVm(ctx *cli.Context) error {
 // execution, in particular during unit tests.
 func run(
 	cfg *utils.Config,
-	provider executor.Provider[substate_transaction.SubstateData],
+	provider executor.Provider[txcontext.WithValidation],
 	stateDb state.StateDB,
-	processor executor.Processor[substate_transaction.SubstateData],
-	extra []executor.Extension[substate_transaction.SubstateData],
+	processor executor.Processor[txcontext.WithValidation],
+	extra []executor.Extension[txcontext.WithValidation],
 ) error {
-	extensions := []executor.Extension[substate_transaction.SubstateData]{
-		profiler.MakeCpuProfiler[substate_transaction.SubstateData](cfg),
-		profiler.MakeDiagnosticServer[substate_transaction.SubstateData](cfg),
-		profiler.MakeVirtualMachineStatisticsPrinter[substate_transaction.SubstateData](cfg),
+	extensions := []executor.Extension[txcontext.WithValidation]{
+		profiler.MakeCpuProfiler[txcontext.WithValidation](cfg),
+		profiler.MakeDiagnosticServer[txcontext.WithValidation](cfg),
+		profiler.MakeVirtualMachineStatisticsPrinter[txcontext.WithValidation](cfg),
 	}
 
 	if stateDb == nil {
 		extensions = append(
 			extensions,
 			statedb.MakeTemporaryStatePrepper(cfg),
-			tracker.MakeDbLogger[substate_transaction.SubstateData](cfg),
+			tracker.MakeDbLogger[txcontext.WithValidation](cfg),
 		)
 	}
 
 	extensions = append(
 		extensions,
-		tracker.MakeErrorLogger[substate_transaction.SubstateData](cfg),
-		tracker.MakeProgressLogger[substate_transaction.SubstateData](cfg, 15*time.Second),
+		tracker.MakeErrorLogger[txcontext.WithValidation](cfg),
+		tracker.MakeProgressLogger[txcontext.WithValidation](cfg, 15*time.Second),
 		validator.MakeLiveDbValidator(cfg),
 	)
 	extensions = append(extensions, extra...)

@@ -1,9 +1,9 @@
 package executor
 
 import (
-	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
 	"github.com/Fantom-foundation/Aida/rpc"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
+	"github.com/Fantom-foundation/Aida/txcontext"
 )
 
 //go:generate mockgen -source test_consumer.go -destination test_consumer_mocks.go -package executor
@@ -14,11 +14,11 @@ import (
 //---------------------------------------------------------------------------------//
 
 type TxConsumer interface {
-	Consume(block int, transaction int, substate substate_transaction.SubstateData) error
+	Consume(block int, transaction int, substate txcontext.WithValidation) error
 }
 
-func toSubstateConsumer(c TxConsumer) Consumer[substate_transaction.SubstateData] {
-	return func(info TransactionInfo[substate_transaction.SubstateData]) error {
+func toSubstateConsumer(c TxConsumer) Consumer[txcontext.WithValidation] {
+	return func(info TransactionInfo[txcontext.WithValidation]) error {
 		return c.Consume(info.Block, info.Transaction, info.Data)
 	}
 }

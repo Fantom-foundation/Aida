@@ -27,7 +27,7 @@ The aida-profile code-size command requires two arguments:
 <blockNumFirst> and <blockNumLast> are the first and
 last block of the inclusive range of blocks to replay transactions.
 
-Output log format: (block, timestamp, transaction, account, code size, nonce, transaction type)`,
+Output log format: (block, timestamp, txcontext, account, code size, nonce, txcontext type)`,
 }
 
 func GetTxType(to *common.Address, alloc substate.SubstateAlloc) string {

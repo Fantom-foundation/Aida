@@ -81,7 +81,7 @@ func collectStats[T comparable](dest chan<- T, extract Extractor[T], block uint6
 		st:    st,
 	}
 
-	// Collect all references triggered by this transaction.
+	// Collect all references triggered by this txcontext.
 	accessed_references := map[T]int{}
 	for _, reference := range extract(&info) {
 		accessed_references[reference] = 0
@@ -125,7 +125,7 @@ func getReferenceStatsActionWithConsumer[T comparable](ctx *cli.Context, cli_com
 	refs := make(chan T, 100)
 	go runStatCollector(&stats, refs, done)
 
-	// Create per-transaction task.
+	// Create per-txcontext task.
 	task := func(block uint64, tx int, st *substate.Substate, taskPool *substate.SubstateTaskPool) error {
 		return collectStats(refs, extract, block, tx, st, taskPool)
 	}

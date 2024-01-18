@@ -91,7 +91,7 @@ var keywordBlocks = map[ChainID]map[string]uint64{
 	},
 }
 
-// special transaction number for pseudo transactions
+// special txcontext number for pseudo transactions
 const PseudoTx = 99999
 
 // GitCommit represents the GitHub commit hash the app was built from.
@@ -156,7 +156,7 @@ type Config struct {
 	PrimeThreshold         int            // set account threshold before commit
 	Profile                bool           // enable micro profiling
 	ProfileBlocks          bool           // enables block profiler extension
-	ProfileDB              string         // profile db for parallel transaction execution
+	ProfileDB              string         // profile db for parallel txcontext execution
 	ProfileDepth           int            // 0 = Interval, 1 = Interval+Block, 2 = Interval+Block+Tx
 	ProfileEVMCall         bool           // enable profiling for EVM call
 	ProfileFile            string         // output file containing profiling result
@@ -186,7 +186,7 @@ type Config struct {
 	TraceDirectory         string         // name of trace directory
 	TraceFile              string         // name of trace file
 	TrackProgress          bool           // enables track progress logging
-	TransactionLength      uint64         // determines indirectly the length of a transaction
+	TransactionLength      uint64         // determines indirectly the length of a txcontext
 	TrieRootHash           string         // represents a hash of a state trie root to be decoded
 	UpdateBufferSize       uint64         // cache size in Bytes
 	UpdateDb               string         // update-set directory
@@ -194,7 +194,7 @@ type Config struct {
 	UpdateType             string         // download datatype
 	Validate               bool           // validate validate aida-db
 	ValidateStateHashes    bool           // if this is true state hash validation is enabled in Executor
-	ValidateTxState        bool           // validate stateDB before and after transaction
+	ValidateTxState        bool           // validate stateDB before and after txcontext
 	ValuesNumber           int64          // number of values to generate
 	VmImpl                 string         // vm implementation (geth/lfvm)
 	Workers                int            // number of worker threads
@@ -590,7 +590,7 @@ func (cc *configContext) adjustMissingConfigValues() error {
 		log.Warning("Enable continue-on-failure mode because error logging is used.")
 	}
 
-	// --continue-on-failure implicitly enables transaction state validation
+	// --continue-on-failure implicitly enables txcontext state validation
 	cfg.ValidateTxState = cfg.Validate || cfg.ValidateTxState || cfg.ContinueOnFailure
 
 	if cfg.RandomSeed < 0 {

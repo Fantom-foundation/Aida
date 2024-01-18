@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/Fantom-foundation/Aida/executor/transaction"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
@@ -280,12 +280,12 @@ func (s *loggingVmStateDb) Prepare(thash common.Hash, ti int) {
 	s.writeLog("Prepare, %v, %v", thash, ti)
 }
 
-func (s *LoggingStateDb) PrepareSubstate(substate transaction.WorldState, block uint64) {
+func (s *LoggingStateDb) PrepareSubstate(substate txcontext.WorldState, block uint64) {
 	s.state.PrepareSubstate(substate, block)
 	s.writeLog("PrepareSubstate, %v", substate.String())
 }
 
-func (s *loggingVmStateDb) GetSubstatePostAlloc() transaction.WorldState {
+func (s *loggingVmStateDb) GetSubstatePostAlloc() txcontext.WorldState {
 	res := s.db.GetSubstatePostAlloc()
 	s.writeLog("GetSubstatePostAlloc, %v", res.String())
 	return res

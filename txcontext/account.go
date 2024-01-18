@@ -1,4 +1,4 @@
-package transaction
+package txcontext
 
 import (
 	"bytes"
@@ -26,28 +26,12 @@ type Account interface {
 	// GetCode returns the bytecode of the account.
 	GetCode() []byte
 
-	// SetNonce sets the nonce of the account to the provided value.
-	SetNonce(nonce uint64)
-
-	// SetBalance sets the balance of the account to the provided value.
-	SetBalance(balance *big.Int)
-
-	// SetStorageAt sets the value at the specified storage key of the account.
-	SetStorageAt(key common.Hash, value common.Hash)
-
-	// SetCode sets the bytecode of the account.
-	SetCode(code []byte)
-
 	// GetStorageSize returns the size of Accounts Storage.
 	GetStorageSize() int
 
 	// ForEachStorage iterates over each account's storage in the collection
 	// and invokes the provided AccountHandler function for each account.
 	ForEachStorage(StorageHandler)
-
-	// Equal checks if the current account is equal to the provided account.
-	// Note: Have a look at WorldStateEqual.
-	Equal(y Account) bool
 
 	// String returns human-readable version of alloc.
 	// Note: Have a look at AccountString

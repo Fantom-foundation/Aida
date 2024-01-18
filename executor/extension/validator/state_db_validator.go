@@ -8,19 +8,18 @@ import (
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
-	"github.com/Fantom-foundation/Aida/executor/transaction"
-	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
 // MakeLiveDbValidator creates an extension which validates LIVE StateDb
-func MakeLiveDbValidator(cfg *utils.Config) executor.Extension[substate_transaction.SubstateData] {
+func MakeLiveDbValidator(cfg *utils.Config) executor.Extension[txcontext.WithValidation] {
 	if !cfg.ValidateTxState {
-		return extension.NilExtension[substate_transaction.SubstateData]{}
+		return extension.NilExtension[txcontext.WithValidation]{}
 	}
 
 	log := logger.NewLogger(cfg.LogLevel, "Tx-Verifier")
@@ -39,8 +38,8 @@ type liveDbTxValidator struct {
 }
 
 // PreTransaction validates InputAlloc in given substate
-func (v *liveDbTxValidator) PreTransaction(state executor.State[substate_transaction.SubstateData], ctx *executor.Context) error {
-	err := v.validateSubstateAlloc(ctx.State, state.Data.GetInputAlloc())
+func (v *liveDbTxValidator) PreTransaction(state executor.State[txcontext.WithValidation], ctx *executor.Context) error {
+	err := v.validateSubstateAlloc(ctx.State, state.Data.GetInputState())
 	if err == nil {
 		return nil
 	}
@@ -55,8 +54,8 @@ func (v *liveDbTxValidator) PreTransaction(state executor.State[substate_transac
 }
 
 // PostTransaction validates OutputAlloc in given substate
-func (v *liveDbTxValidator) PostTransaction(state executor.State[substate_transaction.SubstateData], ctx *executor.Context) error {
-	err := v.validateSubstateAlloc(ctx.State, state.Data.GetOutputAlloc())
+func (v *liveDbTxValidator) PostTransaction(state executor.State[txcontext.WithValidation], ctx *executor.Context) error {
+	err := v.validateSubstateAlloc(ctx.State, state.Data.GetOutputState())
 	if err == nil {
 		return nil
 	}
@@ -71,9 +70,9 @@ func (v *liveDbTxValidator) PostTransaction(state executor.State[substate_transa
 }
 
 // MakeArchiveDbValidator creates an extension which validates ARCHIVE StateDb
-func MakeArchiveDbValidator(cfg *utils.Config) executor.Extension[substate_transaction.SubstateData] {
+func MakeArchiveDbValidator(cfg *utils.Config) executor.Extension[txcontext.WithValidation] {
 	if !cfg.ValidateTxState {
-		return extension.NilExtension[substate_transaction.SubstateData]{}
+		return extension.NilExtension[txcontext.WithValidation]{}
 	}
 
 	log := logger.NewLogger(cfg.LogLevel, "Tx-Verifier")
@@ -92,8 +91,8 @@ type archiveDbValidator struct {
 }
 
 // PreTransaction validates InputAlloc in given substate
-func (v *archiveDbValidator) PreTransaction(state executor.State[substate_transaction.SubstateData], ctx *executor.Context) error {
-	err := v.validateSubstateAlloc(ctx.Archive, state.Data.GetInputAlloc())
+func (v *archiveDbValidator) PreTransaction(state executor.State[txcontext.WithValidation], ctx *executor.Context) error {
+	err := v.validateSubstateAlloc(ctx.Archive, state.Data.GetInputState())
 	if err == nil {
 		return nil
 	}
@@ -108,8 +107,8 @@ func (v *archiveDbValidator) PreTransaction(state executor.State[substate_transa
 }
 
 // PostTransaction validates VmAlloc
-func (v *archiveDbValidator) PostTransaction(state executor.State[substate_transaction.SubstateData], ctx *executor.Context) error {
-	err := v.validateSubstateAlloc(ctx.Archive, state.Data.GetOutputAlloc())
+func (v *archiveDbValidator) PostTransaction(state executor.State[txcontext.WithValidation], ctx *executor.Context) error {
+	err := v.validateSubstateAlloc(ctx.Archive, state.Data.GetOutputState())
 	if err == nil {
 		return nil
 	}
@@ -135,18 +134,18 @@ func makeStateDbValidator(cfg *utils.Config, log logger.Logger) *stateDbValidato
 }
 
 type stateDbValidator struct {
-	extension.NilExtension[substate_transaction.SubstateData]
+	extension.NilExtension[txcontext.WithValidation]
 	cfg            *utils.Config
 	log            logger.Logger
 	numberOfErrors *atomic.Int32
 }
 
 // PreRun informs the user that stateDbValidator is enabled and that they should expect slower processing speed.
-func (v *stateDbValidator) PreRun(executor.State[substate_transaction.SubstateData], *executor.Context) error {
+func (v *stateDbValidator) PreRun(executor.State[txcontext.WithValidation], *executor.Context) error {
 	v.log.Warning("Transaction verification is enabled, this may slow down the block processing.")
 
 	if v.cfg.ContinueOnFailure {
-		v.log.Warningf("Continue on Failure for transaction validation is enabled, yet "+
+		v.log.Warningf("Continue on Failure for txcontext validation is enabled, yet "+
 			"block processing will stop after %v encountered issues. (0 is endless)", v.cfg.MaxNumErrors)
 	}
 
@@ -179,7 +178,7 @@ func (v *stateDbValidator) isErrFatal(err error, ch chan error) bool {
 // validateSubstateAlloc compares states of accounts in stateDB to an expected set of states.
 // If fullState mode, check if expected state is contained in stateDB.
 // If partialState mode, check for equality of sets.
-func (v *stateDbValidator) validateSubstateAlloc(db state.VmStateDB, expectedAlloc transaction.WorldState) error {
+func (v *stateDbValidator) validateSubstateAlloc(db state.VmStateDB, expectedAlloc txcontext.WorldState) error {
 	var err error
 	switch v.cfg.StateValidationMode {
 	case utils.SubsetCheck:
@@ -239,22 +238,22 @@ func (v *stateDbValidator) printLogDiffSummary(label string, want, have *types.L
 }
 
 // printAllocationDiffSummary compares atrributes and existence of accounts and reports differences if any.
-func (v *stateDbValidator) printAllocationDiffSummary(want, have transaction.WorldState) {
+func (v *stateDbValidator) printAllocationDiffSummary(want, have txcontext.WorldState) {
 	printIfDifferent("substate alloc size", want.Len(), have.Len(), v.log)
 
-	want.ForEachAccount(func(addr common.Address, acc transaction.Account) {
+	want.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
 		if have.Get(addr) == nil {
 			v.log.Errorf("\tmissing address=%v\n", addr)
 		}
 	})
 
-	have.ForEachAccount(func(addr common.Address, acc transaction.Account) {
+	have.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
 		if want.Get(addr) == nil {
 			v.log.Errorf("\textra address=%v\n", addr)
 		}
 	})
 
-	have.ForEachAccount(func(addr common.Address, acc transaction.Account) {
+	have.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
 		wantAcc := want.Get(addr)
 		v.printAccountDiffSummary(fmt.Sprintf("key=%v:", addr), wantAcc, acc)
 	})
@@ -262,7 +261,7 @@ func (v *stateDbValidator) printAllocationDiffSummary(want, have transaction.Wor
 }
 
 // PrintAccountDiffSummary compares attributes of two accounts and reports differences if any.
-func (v *stateDbValidator) printAccountDiffSummary(label string, want, have transaction.Account) {
+func (v *stateDbValidator) printAccountDiffSummary(label string, want, have txcontext.Account) {
 	printIfDifferent(fmt.Sprintf("%s.Nonce", label), want.GetNonce(), have.GetNonce(), v.log)
 	v.printIfDifferentBigInt(fmt.Sprintf("%s.Balance", label), want.GetBalance(), have.GetBalance())
 	v.printIfDifferentBytes(fmt.Sprintf("%s.Code", label), want.GetCode(), have.GetCode())
@@ -292,10 +291,10 @@ func (v *stateDbValidator) printAccountDiffSummary(label string, want, have tran
 
 // doSubsetValidation validates whether the given alloc is contained in the db object.
 // NB: We can only check what must be in the db (but cannot check whether db stores more).
-func doSubsetValidation(alloc transaction.WorldState, db state.VmStateDB, updateOnFail bool) error {
+func doSubsetValidation(alloc txcontext.WorldState, db state.VmStateDB, updateOnFail bool) error {
 	var err string
 
-	alloc.ForEachAccount(func(addr common.Address, acc transaction.Account) {
+	alloc.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
 		if !db.Exist(addr) {
 			err += fmt.Sprintf("  Account %v does not exist\n", addr.Hex())
 			if updateOnFail {

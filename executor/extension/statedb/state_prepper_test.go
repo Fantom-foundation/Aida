@@ -5,6 +5,8 @@ import (
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/txcontext"
+	substate2 "github.com/Fantom-foundation/Aida/txcontext/substate"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
 	"go.uber.org/mock/gomock"
@@ -25,14 +27,14 @@ func TestStatePrepper_PreparesStateBeforeEachTransaction(t *testing.T) {
 
 	prepper := MakeStateDbPrepper()
 
-	prepper.PreTransaction(executor.State[*substate.Substate]{
+	prepper.PreTransaction(executor.State[txcontext.WithValidation]{
 		Block: 5,
-		Data:  &substate.Substate{InputAlloc: allocA},
+		Data:  substate2.NewTxContextWithValidation(&substate.Substate{InputAlloc: allocA}),
 	}, ctx)
 
-	prepper.PreTransaction(executor.State[*substate.Substate]{
+	prepper.PreTransaction(executor.State[txcontext.WithValidation]{
 		Block: 7,
-		Data:  &substate.Substate{InputAlloc: allocB},
+		Data:  substate2.NewTxContextWithValidation(&substate.Substate{InputAlloc: allocB}),
 	}, ctx)
 }
 
@@ -42,7 +44,7 @@ func TestStatePrepper_DoesNotCrashOnMissingStateOrSubstate(t *testing.T) {
 	ctx := &executor.Context{State: db}
 
 	prepper := MakeStateDbPrepper()
-	prepper.PreTransaction(executor.State[*substate.Substate]{Block: 5}, nil)                             // misses both
-	prepper.PreTransaction(executor.State[*substate.Substate]{Block: 5}, ctx)                             // misses the substate
-	prepper.PreTransaction(executor.State[*substate.Substate]{Block: 5, Data: &substate.Substate{}}, nil) // misses the state
+	prepper.PreTransaction(executor.State[txcontext.WithValidation]{Block: 5}, nil)                                                                   // misses both
+	prepper.PreTransaction(executor.State[txcontext.WithValidation]{Block: 5}, ctx)                                                                   // misses the substate
+	prepper.PreTransaction(executor.State[txcontext.WithValidation]{Block: 5, Data: substate2.NewTxContextWithValidation(&substate.Substate{})}, nil) // misses the state
 }

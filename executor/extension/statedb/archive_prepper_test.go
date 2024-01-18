@@ -5,7 +5,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/state"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"go.uber.org/mock/gomock"
 )
 
@@ -21,7 +21,7 @@ func TestArchivePrepper_ArchiveGetsReleasedInPostBlock(t *testing.T) {
 		archive.EXPECT().Release(),
 	)
 
-	state := executor.State[*substate.Substate]{
+	state := executor.State[txcontext.WithValidation]{
 		Block: 2,
 	}
 	ctx := &executor.Context{

@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
+	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
@@ -37,7 +37,7 @@ func GenerateUpdateSet(first uint64, last uint64, cfg *Config) (substate.Substat
 			break
 		}
 
-		// if this transaction has suicided accounts, clear their states.
+		// if this txcontext has suicided accounts, clear their states.
 		destroyed, resurrected, err := deletedAccountDB.GetDestroyedAccounts(tx.Block, tx.Transaction)
 
 		if !(err == nil || errors.Is(err, leveldb.ErrNotFound)) {
@@ -91,7 +91,7 @@ func GenerateWorldStateFromUpdateDB(cfg *Config, target uint64) (substate.Substa
 		return nil, err
 	}
 	ws.Merge(update)
-	err = DeleteDestroyedAccountsFromWorldState(substate_transaction.NewOldSubstateAlloc(ws), cfg, target)
+	err = DeleteDestroyedAccountsFromWorldState(substatecontext.NewWorldState(ws), cfg, target)
 	return ws, err
 }
 

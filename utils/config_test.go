@@ -20,7 +20,7 @@ func prepareMockCliContext() *cli.Context {
 	flagSet := flag.NewFlagSet("utils_config_test", 0)
 	flagSet.Uint64(SyncPeriodLengthFlag.Name, 1000, "Number of blocks")
 	flagSet.Bool(ValidateFlag.Name, true, "enables validation")
-	flagSet.Bool(ValidateTxStateFlag.Name, true, "enables transaction state validation")
+	flagSet.Bool(ValidateTxStateFlag.Name, true, "enables txcontext state validation")
 	flagSet.Bool(ContinueOnFailureFlag.Name, true, "continue execute after validation failure detected")
 	flagSet.String(AidaDbFlag.Name, "./test.db", "set substate, updateset and deleted accounts directory")
 	flagSet.String(logger.LogLevelFlag.Name, "info", "Level of the logging of the app action (\"critical\", \"error\", \"warning\", \"notice\", \"info\", \"debug\"; default: NOTICE)")

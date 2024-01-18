@@ -4,10 +4,10 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
-	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/state/proxy"
+	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
@@ -57,7 +57,7 @@ func readAccounts(ch chan proxy.ContractLiveliness, deleteHistory *map[common.Ad
 	return deletedAccounts, resurrectedAccounts
 }
 
-// genDeletedAccountsTask process a transaction substate then records self-destructed accounts
+// genDeletedAccountsTask process a txcontext substate then records self-destructed accounts
 // and resurrected accounts to a database.
 func genDeletedAccountsTask(
 	tx *substate.Transaction,
@@ -69,9 +69,9 @@ func genDeletedAccountsTask(
 	ch := make(chan proxy.ContractLiveliness, channelSize)
 	var statedb state.StateDB
 	var err error
-	ss := substate_transaction.NewOldSubstateData(tx.Substate)
+	ss := substatecontext.NewTxContextWithValidation(tx.Substate)
 
-	statedb, err = state.MakeOffTheChainStateDB(ss.GetInputAlloc(), tx.Block, state.NewChainConduit(cfg.ChainID == utils.EthereumChainID, utils.GetChainConfig(cfg.ChainID)))
+	statedb, err = state.MakeOffTheChainStateDB(ss.GetInputState(), tx.Block, state.NewChainConduit(cfg.ChainID == utils.EthereumChainID, utils.GetChainConfig(cfg.ChainID)))
 	if err != nil {
 		return err
 	}
@@ -87,7 +87,7 @@ func genDeletedAccountsTask(
 	close(ch)
 	des, res := readAccounts(ch, deleteHistory)
 	if len(des)+len(res) > 0 {
-		// if transaction completed successfully, put destroyed accounts
+		// if txcontext completed successfully, put destroyed accounts
 		// and resurrected accounts to a database
 		if tx.Substate.Result.Status == types.ReceiptStatusSuccessful {
 			err = ddb.SetDestroyedAccounts(tx.Block, tx.Transaction, des, res)

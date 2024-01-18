@@ -262,7 +262,7 @@ func main() {
 	writer.Write(html.Div(
 		html.H2("2. Transaction Rate"),
 		html.P(`The experiment was conducted for the block range from <b>%d</b> to <b>%d</b>.`, first, last),
-		html.P(`For the entire run, the max transaction rate is <b>%f</b> TPM, at block height <b>%d</b> `, maxTxRate, maxTxRateBlockHeight),
+		html.P(`For the entire run, the max txcontext rate is <b>%f</b> TPM, at block height <b>%d</b> `, maxTxRate, maxTxRateBlockHeight),
 	))
 
 	components.NewPage().AddCharts(

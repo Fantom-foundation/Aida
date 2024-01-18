@@ -1,4 +1,4 @@
-package transaction
+package txcontext
 
 import (
 	"fmt"
@@ -15,9 +15,6 @@ type WorldState interface {
 	Get(addr common.Address) Account
 
 	Has(addr common.Address) bool
-
-	// Add adds the provided account to the collection, associated with the given address.
-	Add(addr common.Address, acc Account)
 
 	// ForEachAccount iterates over each account in the collection and
 	// invokes the provided AccountHandler function for each account.
@@ -48,13 +45,13 @@ func WorldStateEqual(x, y WorldState) (isEqual bool) {
 	}
 
 	x.ForEachAccount(func(addr common.Address, acc Account) {
-		yVal := y.Get(addr)
-		if yVal == nil {
+		yAcc := y.Get(addr)
+		if yAcc == nil {
 			isEqual = false
 			return
 		}
 
-		if !yVal.Equal(yVal) {
+		if !AccountEqual(acc, yAcc) {
 			isEqual = false
 			return
 		}

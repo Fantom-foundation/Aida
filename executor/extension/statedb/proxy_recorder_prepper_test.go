@@ -7,8 +7,8 @@ import (
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/state/proxy"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
 	"go.uber.org/mock/gomock"
 )
 
@@ -22,12 +22,12 @@ func TestTemporaryProxyRecorderPrepper_PreTransactionCreatesRecorderProxy(t *tes
 
 	ctx := &executor.Context{}
 
-	err := p.PreRun(executor.State[*substate.Substate]{}, ctx)
+	err := p.PreRun(executor.State[txcontext.WithValidation]{}, ctx)
 	if err != nil {
 		t.Fatalf("unexpected error; %v", err)
 	}
 
-	err = p.PreTransaction(executor.State[*substate.Substate]{}, ctx)
+	err = p.PreTransaction(executor.State[txcontext.WithValidation]{}, ctx)
 	if err != nil {
 		t.Fatalf("unexpected error; %v", err)
 	}
@@ -38,7 +38,7 @@ func TestTemporaryProxyRecorderPrepper_PreTransactionCreatesRecorderProxy(t *tes
 	}
 
 	// close the file gracefully
-	err = p.PostRun(executor.State[*substate.Substate]{}, ctx, nil)
+	err = p.PostRun(executor.State[txcontext.WithValidation]{}, ctx, nil)
 	if err != nil {
 		t.Fatalf("unexpected error; %v", err)
 	}
@@ -54,17 +54,17 @@ func TestProxyRecorderPrepper_PreBlockWritesABeginBlockOperation(t *testing.T) {
 
 	ctx := &executor.Context{}
 
-	err := p.PreRun(executor.State[*substate.Substate]{}, ctx)
+	err := p.PreRun(executor.State[txcontext.WithValidation]{}, ctx)
 	if err != nil {
 		t.Fatalf("unexpected error; %v", err)
 	}
 
-	err = p.PreTransaction(executor.State[*substate.Substate]{}, ctx)
+	err = p.PreTransaction(executor.State[txcontext.WithValidation]{}, ctx)
 	if err != nil {
 		t.Fatalf("unexpected error; %v", err)
 	}
 
-	err = p.PreBlock(executor.State[*substate.Substate]{}, ctx)
+	err = p.PreBlock(executor.State[txcontext.WithValidation]{}, ctx)
 	if err != nil {
 		t.Fatalf("unexpected error; %v", err)
 	}
@@ -93,17 +93,17 @@ func TestProxyRecorderPrepper_PostBlockWritesAnEndBlockOperation(t *testing.T) {
 
 	ctx := &executor.Context{}
 
-	err := p.PreRun(executor.State[*substate.Substate]{}, ctx)
+	err := p.PreRun(executor.State[txcontext.WithValidation]{}, ctx)
 	if err != nil {
 		t.Fatalf("unexpected error; %v", err)
 	}
 
-	err = p.PreTransaction(executor.State[*substate.Substate]{}, ctx)
+	err = p.PreTransaction(executor.State[txcontext.WithValidation]{}, ctx)
 	if err != nil {
 		t.Fatalf("unexpected error; %v", err)
 	}
 
-	err = p.PostBlock(executor.State[*substate.Substate]{}, ctx)
+	err = p.PostBlock(executor.State[txcontext.WithValidation]{}, ctx)
 	if err != nil {
 		t.Fatalf("unexpected error; %v", err)
 	}
@@ -132,13 +132,13 @@ func TestProxyRecorderPrepper_PostRunWritesAnEndSynchPeriodOperation(t *testing.
 
 	ctx := &executor.Context{}
 
-	err := p.PreRun(executor.State[*substate.Substate]{}, ctx)
+	err := p.PreRun(executor.State[txcontext.WithValidation]{}, ctx)
 	if err != nil {
 		t.Fatalf("unexpected error; %v", err)
 	}
 
 	// close the file gracefully
-	err = p.PostRun(executor.State[*substate.Substate]{}, ctx, nil)
+	err = p.PostRun(executor.State[txcontext.WithValidation]{}, ctx, nil)
 	if err != nil {
 		t.Fatalf("unexpected error; %v", err)
 	}
@@ -167,9 +167,9 @@ func TestProxyRecorderPrepper_PreTransactionCreatesNewLoggerProxy(t *testing.T) 
 	ext := MakeProxyRecorderPrepper(cfg)
 
 	// ctx.State is not yet a RecorderProxy hence PreTransaction assigns it
-	err := ext.PreTransaction(executor.State[*substate.Substate]{}, ctx)
+	err := ext.PreTransaction(executor.State[txcontext.WithValidation]{}, ctx)
 	if err != nil {
-		t.Fatalf("pre-transaction failed; %v", err)
+		t.Fatalf("pre-txcontext failed; %v", err)
 	}
 
 	if _, ok := ctx.State.(*proxy.RecorderProxy); !ok {
@@ -192,18 +192,18 @@ func TestProxyRecorderPrepper_PreTransactionDoesNotCreateNewLoggerProxy(t *testi
 	ext := MakeProxyRecorderPrepper(cfg)
 
 	// first call PreTransaction to assign the proxy
-	err := ext.PreTransaction(executor.State[*substate.Substate]{}, ctx)
+	err := ext.PreTransaction(executor.State[txcontext.WithValidation]{}, ctx)
 	if err != nil {
-		t.Fatalf("pre-transaction failed; %v", err)
+		t.Fatalf("pre-txcontext failed; %v", err)
 	}
 
 	// save original state to make sure next call to PreTransaction will not have changed the ctx.State
 	originalDb := ctx.State
 
 	// then make sure it is not re-assigned again
-	err = ext.PreTransaction(executor.State[*substate.Substate]{}, ctx)
+	err = ext.PreTransaction(executor.State[txcontext.WithValidation]{}, ctx)
 	if err != nil {
-		t.Fatalf("pre-transaction failed; %v", err)
+		t.Fatalf("pre-txcontext failed; %v", err)
 	}
 
 	if originalDb != ctx.State {

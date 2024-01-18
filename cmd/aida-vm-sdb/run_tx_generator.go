@@ -1,21 +1,15 @@
 package main
 
 import (
-	"time"
-
 	"github.com/Fantom-foundation/Aida/executor"
-	"github.com/Fantom-foundation/Aida/executor/extension/primer"
-	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
-	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
-	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
-	"github.com/Fantom-foundation/Aida/executor/extension/validator"
-	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/urfave/cli/v2"
 )
 
-// RunTxGenerator performs sequential block processing on a StateDb using transaction generator
+// RunTxGenerator performs sequential block processing on a StateDb using txcontext generator
 func RunTxGenerator(ctx *cli.Context) error {
 	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if err != nil {
@@ -28,56 +22,42 @@ func RunTxGenerator(ctx *cli.Context) error {
 
 	return runTransactions(cfg, nil, nil, false)
 }
+func newGenerateData() txcontext.ExecutionData {
+	return &generateData{}
+}
+
+type generateData struct {
+}
+
+func (g generateData) GetBlockEnvironment() txcontext.BlockEnvironment {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (g generateData) GetMessage() types.Message {
+	//TODO implement me
+	panic("implement me")
+}
 
 type txProcessor struct {
 	cfg *utils.Config
 }
 
-func (p txProcessor) Process(state executor.State[substate_transaction.SubstateData], ctx *executor.Context) error {
+func (p txProcessor) Process(state executor.State[txcontext.ExecutionData], ctx *executor.Context) error {
 	// todo apply data onto StateDb
 	return nil
 }
 
 func runTransactions(
 	cfg *utils.Config,
-	provider executor.Provider[substate_transaction.SubstateData],
+	provider executor.Provider[txcontext.ExecutionData],
 	stateDb state.StateDB,
 	disableStateDbExtension bool,
 ) error {
 	// order of extensionList has to be maintained
-	var extensionList = []executor.Extension[substate_transaction.SubstateData]{
-		profiler.MakeCpuProfiler[substate_transaction.SubstateData](cfg),
-		profiler.MakeDiagnosticServer[substate_transaction.SubstateData](cfg),
+	var extensionList = []executor.Extension[txcontext.ExecutionData]{
+		// todo choose extensions
 	}
-
-	if !disableStateDbExtension {
-		extensionList = append(
-			extensionList,
-			statedb.MakeStateDbManager[substate_transaction.SubstateData](cfg),
-			statedb.MakeLiveDbBlockChecker[substate_transaction.SubstateData](cfg),
-		)
-	}
-
-	extensionList = append(extensionList, []executor.Extension[substate_transaction.SubstateData]{
-		profiler.MakeThreadLocker[substate_transaction.SubstateData](),
-		profiler.MakeVirtualMachineStatisticsPrinter[substate_transaction.SubstateData](cfg),
-		tracker.MakeProgressLogger[substate_transaction.SubstateData](cfg, 15*time.Second),
-		//tracker.MakeProgressTracker(cfg, 100_000),
-		primer.MakeStateDbPrimer[substate_transaction.SubstateData](cfg),
-		profiler.MakeMemoryUsagePrinter[substate_transaction.SubstateData](cfg),
-		profiler.MakeMemoryProfiler[substate_transaction.SubstateData](cfg),
-		//statedb.MakeStateDbPrepper(),
-		//statedb.MakeArchiveInquirer(cfg),
-		validator.MakeStateHashValidator[substate_transaction.SubstateData](cfg),
-		statedb.MakeBlockEventEmitter[substate_transaction.SubstateData](),
-		profiler.MakeOperationProfiler[substate_transaction.SubstateData](cfg),
-		// block profile extension should be always last because:
-		// 1) Pre-Func are called forwards so this is called last and
-		// 2) Post-Func are called backwards so this is called first
-		// that means the gap between time measurements will be as small as possible
-		//profiler.MakeBlockRuntimeAndGasCollector(cfg),
-	}...,
-	)
 
 	return executor.NewExecutor(provider, cfg.LogLevel).Run(
 		executor.Params{

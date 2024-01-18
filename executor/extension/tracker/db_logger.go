@@ -25,7 +25,7 @@ type dbLogger[T any] struct {
 	wg     *sync.WaitGroup
 }
 
-// MakeDbLogger creates an extensions which logs any Db transaction into a file and log level DEBUG
+// MakeDbLogger creates an extensions which logs any Db txcontext into a file and log level DEBUG
 func MakeDbLogger[T any](cfg *utils.Config) executor.Extension[T] {
 	if cfg.DbLogging == "" {
 		return extension.NilExtension[T]{}

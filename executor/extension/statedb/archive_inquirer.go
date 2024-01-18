@@ -10,21 +10,21 @@ import (
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/executor/extension/validator"
-	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
 // MakeArchiveInquirer creates an extension running historic queries against
 // archive states in the background to the main executor process.
-func MakeArchiveInquirer(cfg *utils.Config) executor.Extension[substate_transaction.SubstateData] {
+func MakeArchiveInquirer(cfg *utils.Config) executor.Extension[txcontext.WithValidation] {
 	return makeArchiveInquirer(cfg, logger.NewLogger(cfg.LogLevel, "Archive Inquirer"))
 }
 
-func makeArchiveInquirer(cfg *utils.Config, log logger.Logger) executor.Extension[substate_transaction.SubstateData] {
+func makeArchiveInquirer(cfg *utils.Config, log logger.Logger) executor.Extension[txcontext.WithValidation] {
 	if cfg.ArchiveQueryRate <= 0 {
-		return extension.NilExtension[substate_transaction.SubstateData]{}
+		return extension.NilExtension[txcontext.WithValidation]{}
 	}
 	return &archiveInquirer{
 		ArchiveDbProcessor: executor.MakeArchiveDbProcessor(cfg),
@@ -38,7 +38,7 @@ func makeArchiveInquirer(cfg *utils.Config, log logger.Logger) executor.Extensio
 }
 
 type archiveInquirer struct {
-	extension.NilExtension[substate_transaction.SubstateData]
+	extension.NilExtension[txcontext.WithValidation]
 	*executor.ArchiveDbProcessor
 
 	cfg   *utils.Config
@@ -59,10 +59,10 @@ type archiveInquirer struct {
 	gasCounter                 atomic.Uint64
 	totalQueryTimeMilliseconds atomic.Uint64
 
-	validator executor.Extension[substate_transaction.SubstateData]
+	validator executor.Extension[txcontext.WithValidation]
 }
 
-func (i *archiveInquirer) PreRun(_ executor.State[substate_transaction.SubstateData], ctx *executor.Context) error {
+func (i *archiveInquirer) PreRun(_ executor.State[txcontext.WithValidation], ctx *executor.Context) error {
 	if !i.cfg.ArchiveMode {
 		i.finished.Signal()
 		return fmt.Errorf("can not run archive queries without enabled archive (missing --%s flag)", utils.ArchiveModeFlag.Name)
@@ -80,14 +80,14 @@ func (i *archiveInquirer) PreRun(_ executor.State[substate_transaction.SubstateD
 	return nil
 }
 
-func (i *archiveInquirer) PostTransaction(state executor.State[substate_transaction.SubstateData], _ *executor.Context) error {
-	// We only sample the very first transaction in each block since other transactions
+func (i *archiveInquirer) PostTransaction(state executor.State[txcontext.WithValidation], _ *executor.Context) error {
+	// We only sample the very first txcontext in each block since other transactions
 	// may depend on the effects of its predecessors in the same block.
 	if state.Transaction != 0 {
 		return nil
 	}
 
-	// Add current transaction as a candidate for replays.
+	// Add current txcontext as a candidate for replays.
 	i.historyMutex.Lock()
 	defer i.historyMutex.Unlock()
 	i.history.Add(historicTransaction{
@@ -98,7 +98,7 @@ func (i *archiveInquirer) PostTransaction(state executor.State[substate_transact
 	return nil
 }
 
-func (i *archiveInquirer) PostRun(executor.State[substate_transaction.SubstateData], *executor.Context, error) error {
+func (i *archiveInquirer) PostRun(executor.State[txcontext.WithValidation], *executor.Context, error) error {
 	i.finished.Signal()
 	i.done.Wait()
 	return nil
@@ -157,7 +157,7 @@ func (i *archiveInquirer) doInquiry(rnd *rand.Rand, errCh chan error) {
 	}
 	defer archive.Release()
 
-	state := executor.State[substate_transaction.SubstateData]{
+	state := executor.State[txcontext.WithValidation]{
 		Block:       tx.block,
 		Transaction: tx.number,
 		Data:        tx.substate,
@@ -192,7 +192,7 @@ func (i *archiveInquirer) doInquiry(rnd *rand.Rand, errCh chan error) {
 	}
 
 	i.transactionCounter.Add(1)
-	i.gasCounter.Add(tx.substate.GetResult().GetGasUsed())
+	i.gasCounter.Add(tx.substate.GetReceipt().GetGasUsed())
 	i.totalQueryTimeMilliseconds.Add(uint64(duration.Milliseconds()))
 }
 
@@ -233,7 +233,7 @@ func (i *archiveInquirer) runProgressReport() {
 type historicTransaction struct {
 	block    int
 	number   int
-	substate substate_transaction.SubstateData
+	substate txcontext.WithValidation
 }
 
 type circularBuffer[T any] struct {

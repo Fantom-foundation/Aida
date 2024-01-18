@@ -5,8 +5,8 @@ package stochastic
 import (
 	"math/big"
 
-	"github.com/Fantom-foundation/Aida/executor/transaction"
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
@@ -288,7 +288,7 @@ func (p *EventProxy) ForEachStorage(address common.Address, fn func(common.Hash,
 	return p.db.ForEachStorage(address, fn)
 }
 
-// Prepare sets the current transaction hash and index.
+// Prepare sets the current txcontext hash and index.
 func (p *EventProxy) Prepare(thash common.Hash, ti int) {
 	// call real StateDB
 	p.db.Prepare(thash, ti)
@@ -321,12 +321,12 @@ func (p *EventProxy) Error() error {
 }
 
 // GetSubstatePostAlloc gets substate post allocation.
-func (p *EventProxy) GetSubstatePostAlloc() transaction.WorldState {
+func (p *EventProxy) GetSubstatePostAlloc() txcontext.WorldState {
 	// call real StateDB
 	return p.db.GetSubstatePostAlloc()
 }
 
-func (p *EventProxy) PrepareSubstate(substate transaction.WorldState, block uint64) {
+func (p *EventProxy) PrepareSubstate(substate txcontext.WorldState, block uint64) {
 	p.db.PrepareSubstate(substate, block)
 }
 

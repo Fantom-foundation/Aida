@@ -6,13 +6,13 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/Fantom-foundation/Aida/executor/transaction"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
 // VmStateDB is the basic StateDB interface required by the EVM and related
-// transaction processing components for interacting with the StateDB.
+// txcontext processing components for interacting with the StateDB.
 type VmStateDB interface {
 	// Account management.
 	CreateAccount(common.Address)
@@ -84,12 +84,12 @@ type VmStateDB interface {
 	// ---- Optional Development & Debugging Features ----
 
 	// Substate specific
-	GetSubstatePostAlloc() transaction.WorldState
+	GetSubstatePostAlloc() txcontext.WorldState
 }
 
 // NonCommittableStateDB is an extension of the VmStateDB interface and is intended
 // to serve as the type used for referencing immutable historical state, in particular
-// state views obtained from Archive DBs. While transaction-local updates and
+// state views obtained from Archive DBs. While txcontext-local updates and
 // modifications are allowed, the interface does not provide means for persisting those
 // changes (=commit them).
 type NonCommittableStateDB interface {
@@ -164,9 +164,9 @@ type StateDB interface {
 
 	// ---- Optional Development & Debugging Features ----
 
-	// Used to initiate the state DB for the next transaction.
+	// Used to initiate the state DB for the next txcontext.
 	// This is mainly for development purposes to support in-memory DB implementations.
-	PrepareSubstate(substate transaction.WorldState, block uint64)
+	PrepareSubstate(substate txcontext.WorldState, block uint64)
 
 	// Used to retrieve the shadow DB (if there is one) for testing purposes so that
 	// the shadow DB can be used to query state directly. If there is no shadow DB,

@@ -6,8 +6,8 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/executor/extension/validator"
-	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/urfave/cli/v2"
 )
@@ -40,25 +40,25 @@ func RunVmAdb(ctx *cli.Context) error {
 
 func run(
 	cfg *utils.Config,
-	provider executor.Provider[substate_transaction.SubstateData],
+	provider executor.Provider[txcontext.WithValidation],
 	stateDb state.StateDB,
-	processor executor.Processor[substate_transaction.SubstateData],
-	extra []executor.Extension[substate_transaction.SubstateData],
+	processor executor.Processor[txcontext.WithValidation],
+	extra []executor.Extension[txcontext.WithValidation],
 ) error {
-	extensionList := []executor.Extension[substate_transaction.SubstateData]{
-		profiler.MakeCpuProfiler[substate_transaction.SubstateData](cfg),
+	extensionList := []executor.Extension[txcontext.WithValidation]{
+		profiler.MakeCpuProfiler[txcontext.WithValidation](cfg),
 		statedb.MakeArchivePrepper(),
-		tracker.MakeProgressLogger[substate_transaction.SubstateData](cfg, 0),
-		tracker.MakeErrorLogger[substate_transaction.SubstateData](cfg),
+		tracker.MakeProgressLogger[txcontext.WithValidation](cfg, 0),
+		tracker.MakeErrorLogger[txcontext.WithValidation](cfg),
 		validator.MakeArchiveDbValidator(cfg),
 	}
 
 	if stateDb == nil {
 		extensionList = append(
 			extensionList,
-			statedb.MakeStateDbManager[substate_transaction.SubstateData](cfg),
-			statedb.MakeArchiveBlockChecker[substate_transaction.SubstateData](cfg),
-			tracker.MakeDbLogger[substate_transaction.SubstateData](cfg),
+			statedb.MakeStateDbManager[txcontext.WithValidation](cfg),
+			statedb.MakeArchiveBlockChecker[txcontext.WithValidation](cfg),
+			tracker.MakeDbLogger[txcontext.WithValidation](cfg),
 		)
 	}
 

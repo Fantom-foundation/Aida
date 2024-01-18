@@ -6,8 +6,8 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/executor/extension/validator"
-	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
 	"github.com/Fantom-foundation/Aida/logger"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
@@ -44,7 +44,7 @@ func RecordStateDbTrace(ctx *cli.Context) error {
 		return err
 	}
 
-	// force enable transaction validation
+	// force enable txcontext validation
 	cfg.ValidateTxState = true
 
 	substate.RecordReplay = true
@@ -59,13 +59,13 @@ func RecordStateDbTrace(ctx *cli.Context) error {
 
 func record(
 	cfg *utils.Config,
-	provider executor.Provider[substate_transaction.SubstateData],
-	processor executor.Processor[substate_transaction.SubstateData],
-	extra []executor.Extension[substate_transaction.SubstateData],
+	provider executor.Provider[txcontext.WithValidation],
+	processor executor.Processor[txcontext.WithValidation],
+	extra []executor.Extension[txcontext.WithValidation],
 ) error {
-	var extensions = []executor.Extension[substate_transaction.SubstateData]{
-		profiler.MakeCpuProfiler[substate_transaction.SubstateData](cfg),
-		tracker.MakeProgressLogger[substate_transaction.SubstateData](cfg, 0),
+	var extensions = []executor.Extension[txcontext.WithValidation]{
+		profiler.MakeCpuProfiler[txcontext.WithValidation](cfg),
+		tracker.MakeProgressLogger[txcontext.WithValidation](cfg, 0),
 		tracker.MakeProgressTracker(cfg, 0),
 		statedb.MakeTemporaryStatePrepper(cfg),
 		statedb.MakeProxyRecorderPrepper(cfg),

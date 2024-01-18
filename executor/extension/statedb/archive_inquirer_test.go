@@ -8,9 +8,10 @@ import (
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
-	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/txcontext"
+	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
@@ -20,7 +21,7 @@ import (
 func TestArchiveInquirer_DisabledIfNoQueryRateIsGiven(t *testing.T) {
 	config := utils.Config{}
 	ext := MakeArchiveInquirer(&config)
-	if _, ok := ext.(extension.NilExtension[substate_transaction.SubstateData]); !ok {
+	if _, ok := ext.(extension.NilExtension[txcontext.WithValidation]); !ok {
 		t.Errorf("inquirer should not be active by default")
 	}
 }
@@ -32,7 +33,7 @@ func TestArchiveInquirer_ReportsErrorIfNoArchiveIsPresent(t *testing.T) {
 	cfg.ArchiveQueryRate = 100
 	ext := makeArchiveInquirer(&cfg, log)
 
-	state := executor.State[substate_transaction.SubstateData]{}
+	state := executor.State[txcontext.WithValidation]{}
 	if err := ext.PreRun(state, nil); err == nil {
 		t.Errorf("expected an error, got nothing")
 	}
@@ -51,7 +52,7 @@ func TestArchiveInquirer_CanStartUpAndShutdownGracefully(t *testing.T) {
 	cfg.ArchiveQueryRate = 100
 	ext := makeArchiveInquirer(&cfg, log)
 
-	state := executor.State[substate_transaction.SubstateData]{}
+	state := executor.State[txcontext.WithValidation]{}
 	context := executor.Context{State: db}
 
 	if err := ext.PreRun(state, &context); err != nil {
@@ -74,7 +75,7 @@ func TestArchiveInquirer_RunsRandomTransactionsInBackground(t *testing.T) {
 	cfg.ArchiveMaxQueryAge = 100
 	cfg.ChainID = utils.TestnetChainID
 
-	state := executor.State[substate_transaction.SubstateData]{}
+	state := executor.State[txcontext.WithValidation]{}
 	context := executor.Context{State: db}
 
 	substate1 := makeValidSubstate()
@@ -105,19 +106,19 @@ func TestArchiveInquirer_RunsRandomTransactionsInBackground(t *testing.T) {
 		t.Errorf("failed PreRun, got %v", err)
 	}
 
-	// Add two transaction to the pool
+	// Add two txcontext to the pool
 	state.Block = 13
 	state.Transaction = 0
 	state.Data = substate1
 	if err := ext.PostTransaction(state, &context); err != nil {
-		t.Fatalf("failed to add transaction to pool: %v", err)
+		t.Fatalf("failed to add txcontext to pool: %v", err)
 	}
 
 	state.Block = 15
 	state.Transaction = 0
 	state.Data = substate2
 	if err := ext.PostTransaction(state, &context); err != nil {
-		t.Fatalf("failed to add transaction to pool: %v", err)
+		t.Fatalf("failed to add txcontext to pool: %v", err)
 	}
 
 	time.Sleep(time.Second)
@@ -127,7 +128,7 @@ func TestArchiveInquirer_RunsRandomTransactionsInBackground(t *testing.T) {
 	}
 }
 
-func makeValidSubstate() substate_transaction.SubstateData {
+func makeValidSubstate() txcontext.WithValidation {
 	// This Substate is a minimal substate that can be successfully processed.
 	sub := &substate.Substate{
 		Env: &substate.SubstateEnv{
@@ -142,7 +143,7 @@ func makeValidSubstate() substate_transaction.SubstateData {
 			GasUsed: 1,
 		},
 	}
-	return substate_transaction.NewOldSubstateData(sub)
+	return substatecontext.NewTxContextWithValidation(sub)
 }
 
 func TestCircularBuffer_EnforcesSize(t *testing.T) {

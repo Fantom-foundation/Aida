@@ -14,28 +14,28 @@ import (
 type EndTransaction struct {
 }
 
-// GetId returns the end-transaction operation identifier.
+// GetId returns the end-txcontext operation identifier.
 func (op *EndTransaction) GetId() byte {
 	return EndTransactionID
 }
 
-// NewEndTransaction creates a new end-transaction operation.
+// NewEndTransaction creates a new end-txcontext operation.
 func NewEndTransaction() *EndTransaction {
 	return &EndTransaction{}
 }
 
-// ReadEndTransaction reads a new end-transaction operation from file.
+// ReadEndTransaction reads a new end-txcontext operation from file.
 func ReadEndTransaction(io.Reader) (Operation, error) {
 	return new(EndTransaction), nil
 }
 
-// Write the end-transaction operation to file.
+// Write the end-txcontext operation to file.
 func (op *EndTransaction) Write(f io.Writer) error {
 	err := binary.Write(f, binary.LittleEndian, *op)
 	return err
 }
 
-// Execute the end-transaction operation.
+// Execute the end-txcontext operation.
 func (op *EndTransaction) Execute(db state.StateDB, ctx *context.Replay) time.Duration {
 	ctx.InitSnapshot()
 	start := time.Now()
@@ -43,6 +43,6 @@ func (op *EndTransaction) Execute(db state.StateDB, ctx *context.Replay) time.Du
 	return time.Since(start)
 }
 
-// Debug prints a debug message for the end-transaction operation.
+// Debug prints a debug message for the end-txcontext operation.
 func (op *EndTransaction) Debug(*context.Context) {
 }

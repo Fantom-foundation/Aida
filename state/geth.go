@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/Fantom-foundation/Aida/executor/transaction"
-	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
+	"github.com/Fantom-foundation/Aida/txcontext"
+	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/prque"
 	"github.com/ethereum/go-ethereum/core/rawdb"
@@ -220,13 +220,13 @@ func (s *gethStateDB) Prepare(thash common.Hash, ti int) {
 	}
 }
 
-func (s *gethStateDB) PrepareSubstate(substate transaction.WorldState, block uint64) {
+func (s *gethStateDB) PrepareSubstate(substate txcontext.WorldState, block uint64) {
 	// ignored
 }
 
-func (s *gethStateDB) GetSubstatePostAlloc() transaction.WorldState {
+func (s *gethStateDB) GetSubstatePostAlloc() txcontext.WorldState {
 	if db, ok := s.db.(*geth.StateDB); ok {
-		return substate_transaction.NewOldSubstateAlloc(db.GetSubstatePostAlloc())
+		return substatecontext.NewWorldState(db.GetSubstatePostAlloc())
 	}
 
 	return nil

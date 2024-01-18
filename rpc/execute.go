@@ -120,7 +120,7 @@ func executeCall(evm *EvmExecutor) (out *StateDBData) {
 	return
 }
 
-// executeEstimateGas into EvmExecutor which calculates gas needed for a transaction
+// executeEstimateGas into EvmExecutor which calculates gas needed for a txcontext
 func executeEstimateGas(evm *EvmExecutor) (out *StateDBData) {
 	out = new(StateDBData)
 

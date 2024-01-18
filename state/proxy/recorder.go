@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/Fantom-foundation/Aida/executor/transaction"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
@@ -279,7 +279,7 @@ func (r *RecorderProxy) ForEachStorage(addr common.Address, fn func(common.Hash,
 	return err
 }
 
-// Prepare sets the current transaction hash and index.
+// Prepare sets the current txcontext hash and index.
 func (r *RecorderProxy) Prepare(thash common.Hash, ti int) {
 	r.db.Prepare(thash, ti)
 }
@@ -292,7 +292,7 @@ func (r *RecorderProxy) Finalise(deleteEmptyObjects bool) {
 
 // IntermediateRoot computes the current hash of the StateDB.
 // It is called in between transactions to get the root hash that
-// goes into transaction receipts.
+// goes into txcontext receipts.
 func (r *RecorderProxy) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	return r.db.IntermediateRoot(deleteEmptyObjects)
 }
@@ -306,11 +306,11 @@ func (r *RecorderProxy) Error() error {
 }
 
 // GetSubstatePostAlloc gets substate post allocation.
-func (r *RecorderProxy) GetSubstatePostAlloc() transaction.WorldState {
+func (r *RecorderProxy) GetSubstatePostAlloc() txcontext.WorldState {
 	return r.db.GetSubstatePostAlloc()
 }
 
-func (r *RecorderProxy) PrepareSubstate(substate transaction.WorldState, block uint64) {
+func (r *RecorderProxy) PrepareSubstate(substate txcontext.WorldState, block uint64) {
 	r.db.PrepareSubstate(substate, block)
 }
 

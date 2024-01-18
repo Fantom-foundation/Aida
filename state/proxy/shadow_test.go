@@ -364,13 +364,13 @@ func TestShadowState_AccessListOperations(t *testing.T) {
 
 			for _, txAccess := range txAccesses {
 				if !shadowDB.AddressInAccessList(txAccess.Address) {
-					t.Fatal("failed to add transaction access address to access list")
+					t.Fatal("failed to add txcontext access address to access list")
 				}
 
 				for _, storageKey := range txAccess.StorageKeys {
 					addrOK, slotOK := shadowDB.SlotInAccessList(txAccess.Address, storageKey)
 					if !addrOK || !slotOK {
-						t.Fatal("failed to add transaction access address to access list")
+						t.Fatal("failed to add txcontext access address to access list")
 					}
 				}
 			}

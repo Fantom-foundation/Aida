@@ -9,8 +9,9 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
-	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
 	"github.com/Fantom-foundation/Aida/profile/graphutil"
+	"github.com/Fantom-foundation/Aida/txcontext"
+	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/ethereum/go-ethereum/common"
 
 	substate "github.com/Fantom-foundation/Substate"
@@ -107,7 +108,7 @@ func TestEarliestToRunFirst(t *testing.T) {
 	}
 }
 
-// TestEarliestToRunSimple tests the computation of the earliest time to run for a block with one transaction
+// TestEarliestToRunSimple tests the computation of the earliest time to run for a block with one txcontext
 func TestEarliestToRunSimple(t *testing.T) {
 	ctx := NewContext()
 	ctx.n = 1
@@ -121,7 +122,7 @@ func TestEarliestToRunSimple(t *testing.T) {
 	}
 }
 
-// TestEarliestToRunSimple2 tests the computation of the earliest time to run for a block with one transaction
+// TestEarliestToRunSimple2 tests the computation of the earliest time to run for a block with one txcontext
 func TestEarliestToRunSimple2(t *testing.T) {
 	ctx := NewContext()
 	ctx.n = 1
@@ -135,7 +136,7 @@ func TestEarliestToRunSimple2(t *testing.T) {
 	}
 }
 
-// TestEarliestToRunSimple3 tests the computation of the earliest time to run for a block with two transaction
+// TestEarliestToRunSimple3 tests the computation of the earliest time to run for a block with two txcontext
 func TestEarliestToRunSimple3(t *testing.T) {
 	ctx := NewContext()
 	ctx.n = 2
@@ -158,7 +159,7 @@ func TestDependenciesEmpty(t *testing.T) {
 	}
 }
 
-// TestDependenciesSimple test finding the dependencies for a block with one transaction
+// TestDependenciesSimple test finding the dependencies for a block with one txcontext
 func TestDependenciesSmple(t *testing.T) {
 	ctx := NewContext()
 	ctx.n = 1
@@ -172,7 +173,7 @@ func TestDependenciesSmple(t *testing.T) {
 	}
 }
 
-// TestDependenciesSimple2 tests finding the dependencies for a block with one transaction
+// TestDependenciesSimple2 tests finding the dependencies for a block with one txcontext
 func TestDependenciesSimple2(t *testing.T) {
 	ctx := NewContext()
 	ctx.n = 1
@@ -208,11 +209,11 @@ func TestDependenciesSimple3(t *testing.T) {
 	}
 }
 
-// TestFindTxAddresses tests finding contract/wallet addresses of a transaction
+// TestFindTxAddresses tests finding contract/wallet addresses of a txcontext
 func TestFindTxAddresses(t *testing.T) {
 	// test substate.Transaction with empty fields
-	testTransaction := executor.State[substate_transaction.SubstateData]{
-		Data: substate_transaction.NewOldSubstateData(&substate.Substate{
+	testTransaction := executor.State[txcontext.WithValidation]{
+		Data: substatecontext.NewTxContextWithValidation(&substate.Substate{
 			InputAlloc:  substate.SubstateAlloc{},
 			OutputAlloc: substate.SubstateAlloc{},
 			Message:     &substate.SubstateMessage{},
@@ -229,8 +230,8 @@ func TestFindTxAddresses(t *testing.T) {
 	addr2 := common.HexToAddress("0xFC00FACE00000000000000000000000000000002")
 	addr3 := common.HexToAddress("0xFC00FACE00000000000000000000000000000003")
 	addrs := []common.Address{addr1, addr2, addr3}
-	testTransaction = executor.State[substate_transaction.SubstateData]{
-		Data: substate_transaction.NewOldSubstateData(&substate.Substate{
+	testTransaction = executor.State[txcontext.WithValidation]{
+		Data: substatecontext.NewTxContextWithValidation(&substate.Substate{
 			InputAlloc:  substate.SubstateAlloc{addr1: &substate.SubstateAccount{}},
 			OutputAlloc: substate.SubstateAlloc{addr2: &substate.SubstateAccount{}, addr3: &substate.SubstateAccount{}},
 			Message:     &substate.SubstateMessage{},
@@ -248,8 +249,8 @@ func TestFindTxAddresses(t *testing.T) {
 
 	// test if substate.SubstateMessage.To == nil and substate.SubstateMessage.From == zero
 	var zero common.Address
-	testTransaction = executor.State[substate_transaction.SubstateData]{
-		Data: substate_transaction.NewOldSubstateData(&substate.Substate{
+	testTransaction = executor.State[txcontext.WithValidation]{
+		Data: substatecontext.NewTxContextWithValidation(&substate.Substate{
 			InputAlloc:  substate.SubstateAlloc{addr1: &substate.SubstateAccount{}},
 			OutputAlloc: substate.SubstateAlloc{addr2: &substate.SubstateAccount{}, addr1: &substate.SubstateAccount{}},
 			Message: &substate.SubstateMessage{
@@ -273,12 +274,12 @@ func TestFindTxAddresses(t *testing.T) {
 func TestRecordTransaction(t *testing.T) {
 	ctx := NewContext()
 
-	// construct first transaction
+	// construct first txcontext
 	addr1 := common.HexToAddress("0xFC00FACE00000000000000000000000000000001")
 	addr2 := common.HexToAddress("0xFC00FACE00000000000000000000000000000002")
 	addr3 := common.HexToAddress("0xFC00FACE00000000000000000000000000000003")
-	tx := executor.State[substate_transaction.SubstateData]{
-		Data: substate_transaction.NewOldSubstateData(&substate.Substate{
+	tx := executor.State[txcontext.WithValidation]{
+		Data: substatecontext.NewTxContextWithValidation(&substate.Substate{
 			InputAlloc:  substate.SubstateAlloc{addr1: &substate.SubstateAccount{}},
 			OutputAlloc: substate.SubstateAlloc{addr2: &substate.SubstateAccount{}, addr3: &substate.SubstateAccount{}},
 			Message: &substate.SubstateMessage{
@@ -339,15 +340,15 @@ func TestRecordTransaction(t *testing.T) {
 			t.Errorf("Unexpected addresses")
 		}
 	} else {
-		t.Errorf("Unexpected number of transaction addresses")
+		t.Errorf("Unexpected number of txcontext addresses")
 	}
 	if len(ctx.txDependencies) != 1 || len(ctx.txDependencies[0]) != 0 {
 		t.Errorf("Unexpected dependencies")
 	}
 
-	// construct second transaction
-	tx2 := executor.State[substate_transaction.SubstateData]{
-		Data: substate_transaction.NewOldSubstateData(&substate.Substate{
+	// construct second txcontext
+	tx2 := executor.State[txcontext.WithValidation]{
+		Data: substatecontext.NewTxContextWithValidation(&substate.Substate{
 			InputAlloc:  substate.SubstateAlloc{addr1: &substate.SubstateAccount{}},
 			OutputAlloc: substate.SubstateAlloc{addr2: &substate.SubstateAccount{}, addr3: &substate.SubstateAccount{}},
 			Message: &substate.SubstateMessage{
@@ -389,13 +390,13 @@ func TestRecordTransaction(t *testing.T) {
 
 	if len(ctx.txAddresses) == 2 && len(ctx.txAddresses[0]) == 3 && len(ctx.txAddresses[0]) == 3 {
 		if !checkAddr(ctx.txAddresses[0]) {
-			t.Errorf("Unexpected addresses in first transaction")
+			t.Errorf("Unexpected addresses in first txcontext")
 		}
 		if !checkAddr(ctx.txAddresses[1]) {
-			t.Errorf("Unexpected addresses in second transaction")
+			t.Errorf("Unexpected addresses in second txcontext")
 		}
 	} else {
-		t.Errorf("Unexpected number of transaction addresses")
+		t.Errorf("Unexpected number of txcontext addresses")
 	}
 	if len(ctx.txDependencies) != 2 || len(ctx.txDependencies[0]) != 0 || len(ctx.txDependencies[1]) != 1 {
 		fmt.Printf("%v\n", ctx.txDependencies)
@@ -485,47 +486,47 @@ func TestGetTransactionType(t *testing.T) {
 		InputAlloc: substate.SubstateAlloc{},
 		Message:    &substate.SubstateMessage{},
 	}
-	data := substate_transaction.NewOldSubstateData(sub)
+	data := substatecontext.NewTxContextWithValidation(sub)
 
-	testTransaction := executor.State[substate_transaction.SubstateData]{
+	testTransaction := executor.State[txcontext.WithValidation]{
 		Data:        data,
 		Transaction: 0,
 	}
 
 	// expect create type, to address is nil
 	if tt := getTransactionType(testTransaction); tt != CreateTx {
-		t.Errorf("incorrect transaction type, got: %v, expected %v", TypeLabel[tt], TypeLabel[CreateTx])
+		t.Errorf("incorrect txcontext type, got: %v, expected %v", TypeLabel[tt], TypeLabel[CreateTx])
 	}
 
 	// expect transafer type
 	sub.Message.To = &toAddr
-	testTransaction.Data = substate_transaction.NewOldSubstateData(sub)
+	testTransaction.Data = substatecontext.NewTxContextWithValidation(sub)
 	// to address doesn't exist in input substate
 	if tt := getTransactionType(testTransaction); tt != TransferTx {
-		t.Errorf("incorrect transaction type, got: %v, expected %v", TypeLabel[tt], TypeLabel[TransferTx])
+		t.Errorf("incorrect txcontext type, got: %v, expected %v", TypeLabel[tt], TypeLabel[TransferTx])
 	}
 	// to address exists in input substate but doesn't have byte-code
 	sub.InputAlloc[toAddr] = substate.NewSubstateAccount(1, big.NewInt(1), []byte{})
-	testTransaction.Data = substate_transaction.NewOldSubstateData(sub)
+	testTransaction.Data = substatecontext.NewTxContextWithValidation(sub)
 	if tt := getTransactionType(testTransaction); tt != TransferTx {
-		t.Errorf("incorrect transaction type, got: %v, expected %v", TypeLabel[tt], TypeLabel[TransferTx])
+		t.Errorf("incorrect txcontext type, got: %v, expected %v", TypeLabel[tt], TypeLabel[TransferTx])
 	}
 
 	// expect call type
 	// to address exists in input substate and has byte-code
 	sub.InputAlloc[toAddr].Code = []byte{1, 2, 3, 4}
 	sub.Message.From = fromAddr1
-	testTransaction.Data = substate_transaction.NewOldSubstateData(sub)
+	testTransaction.Data = substatecontext.NewTxContextWithValidation(sub)
 	if tt := getTransactionType(testTransaction); tt != CallTx {
-		t.Errorf("incorrect transaction type, got: %v, expected %v", TypeLabel[tt], TypeLabel[CallTx])
+		t.Errorf("incorrect txcontext type, got: %v, expected %v", TypeLabel[tt], TypeLabel[CallTx])
 	}
 
 	// expect epoch sealing type
 	// from address 0 to an sfc address (with byte-code
 	sub.Message.From = fromAddr2
 	sub.InputAlloc[toAddr] = substate.NewSubstateAccount(1, big.NewInt(1), []byte{1, 2, 3, 4})
-	testTransaction.Data = substate_transaction.NewOldSubstateData(sub)
+	testTransaction.Data = substatecontext.NewTxContextWithValidation(sub)
 	if tt := getTransactionType(testTransaction); tt != MaintenanceTx {
-		t.Errorf("incorrect transaction type, got: %v, expected %v", TypeLabel[tt], TypeLabel[MaintenanceTx])
+		t.Errorf("incorrect txcontext type, got: %v, expected %v", TypeLabel[tt], TypeLabel[MaintenanceTx])
 	}
 }

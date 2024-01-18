@@ -7,7 +7,7 @@ import (
 	"math/big"
 	"sync"
 
-	"github.com/Fantom-foundation/Aida/executor/transaction"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
@@ -123,10 +123,10 @@ func getHash(addr common.Address, code []byte) common.Hash {
 	return res
 }
 
-// MakeOffTheChainStateDB returns an in-memory *state.StateDB initialized with alloc
-func MakeOffTheChainStateDB(alloc transaction.WorldState, block uint64, chainConduit *ChainConduit) (StateDB, error) {
+// MakeOffTheChainStateDB returns an in-memory *state.StateDB initialized with ws
+func MakeOffTheChainStateDB(alloc txcontext.WorldState, block uint64, chainConduit *ChainConduit) (StateDB, error) {
 	statedb := NewOffTheChainStateDB()
-	alloc.ForEachAccount(func(addr common.Address, acc transaction.Account) {
+	alloc.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
 		code := acc.GetCode()
 		statedb.SetPrehashedCode(addr, getHash(addr, code), code)
 		statedb.SetNonce(addr, acc.GetNonce())

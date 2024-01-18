@@ -6,9 +6,9 @@ import (
 	"math/big"
 	"sync/atomic"
 
-	"github.com/Fantom-foundation/Aida/executor/transaction"
-	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/txcontext"
+	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/Fantom-foundation/go-opera/evmcore"
@@ -20,7 +20,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
-// MakeLiveDbProcessor creates a executor.Processor which processes transaction into LIVE StateDb.
+// MakeLiveDbProcessor creates a executor.Processor which processes txcontext into LIVE StateDb.
 func MakeLiveDbProcessor(cfg *utils.Config) *LiveDbProcessor {
 	return &LiveDbProcessor{&SubstateProcessor{cfg: cfg}}
 }
@@ -29,8 +29,8 @@ type LiveDbProcessor struct {
 	*SubstateProcessor
 }
 
-// Process transaction inside state into given LIVE StateDb
-func (p *LiveDbProcessor) Process(state State[substate_transaction.SubstateData], ctx *Context) error {
+// Process txcontext inside state into given LIVE StateDb
+func (p *LiveDbProcessor) Process(state State[txcontext.WithValidation], ctx *Context) error {
 	var err error
 
 	err = p.ProcessTransaction(ctx.State, state.Block, state.Transaction, state.Data)
@@ -46,7 +46,7 @@ func (p *LiveDbProcessor) Process(state State[substate_transaction.SubstateData]
 	return err
 }
 
-// MakeArchiveDbProcessor creates a executor.Processor which processes transaction into ARCHIVE StateDb.
+// MakeArchiveDbProcessor creates a executor.Processor which processes txcontext into ARCHIVE StateDb.
 func MakeArchiveDbProcessor(cfg *utils.Config) *ArchiveDbProcessor {
 	return &ArchiveDbProcessor{&SubstateProcessor{cfg: cfg}}
 }
@@ -55,8 +55,8 @@ type ArchiveDbProcessor struct {
 	*SubstateProcessor
 }
 
-// Process transaction inside state into given ARCHIVE StateDb
-func (p *ArchiveDbProcessor) Process(state State[substate_transaction.SubstateData], ctx *Context) error {
+// Process txcontext inside state into given ARCHIVE StateDb
+func (p *ArchiveDbProcessor) Process(state State[txcontext.WithValidation], ctx *Context) error {
 	var err error
 
 	err = p.ProcessTransaction(ctx.Archive, state.Block, state.Transaction, state.Data)
@@ -99,16 +99,16 @@ func (s *SubstateProcessor) isErrFatal() bool {
 	return true
 }
 
-func (s *SubstateProcessor) ProcessTransaction(db state.VmStateDB, block int, tx int, st substate_transaction.SubstateData) error {
+func (s *SubstateProcessor) ProcessTransaction(db state.VmStateDB, block int, tx int, st txcontext.WithValidation) error {
 	if tx >= utils.PseudoTx {
-		s.processPseudoTx(st.GetOutputAlloc(), db)
+		s.processPseudoTx(st.GetOutputState(), db)
 		return nil
 	}
 	return s.processRegularTx(db, block, tx, st)
 }
 
 // processRegularTx executes VM on a chosen storage system.
-func (s *SubstateProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st substate_transaction.SubstateData) (finalError error) {
+func (s *SubstateProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st txcontext.WithValidation) (finalError error) {
 	db.BeginTransaction(uint32(tx))
 	defer db.EndTransaction()
 
@@ -119,12 +119,12 @@ func (s *SubstateProcessor) processRegularTx(db state.VmStateDB, block int, tx i
 	}
 }
 
-// fantomTx processes a transaction in Fantom Opera EVM configuration
-func (s *SubstateProcessor) fantomTx(db state.VmStateDB, block int, tx int, st substate_transaction.SubstateData) (finalError error) {
+// fantomTx processes a txcontext in Fantom Opera EVM configuration
+func (s *SubstateProcessor) fantomTx(db state.VmStateDB, block int, tx int, st txcontext.WithValidation) (finalError error) {
 	var (
 		gaspool   = new(evmcore.GasPool)
 		txHash    = common.HexToHash(fmt.Sprintf("0x%016d%016d", block, tx))
-		inputEnv  = st.GetEnv()
+		inputEnv  = st.GetBlockEnvironment()
 		hashError error
 		validate  = s.cfg.ValidateTxState
 	)
@@ -150,9 +150,9 @@ func (s *SubstateProcessor) fantomTx(db state.VmStateDB, block int, tx int, st s
 	// apply
 	msgResult, err := evmcore.ApplyMessage(evm, msg, gaspool)
 	if err != nil {
-		// if transaction fails, revert to the first snapshot.
+		// if txcontext fails, revert to the first snapshot.
 		db.RevertToSnapshot(snapshot)
-		finalError = errors.Join(fmt.Errorf("block: %v transaction: %v", block, tx), err)
+		finalError = errors.Join(fmt.Errorf("block: %v txcontext: %v", block, tx), err)
 		// discontinue output alloc validation on error
 		validate = false
 	}
@@ -176,19 +176,19 @@ func (s *SubstateProcessor) fantomTx(db state.VmStateDB, block int, tx int, st s
 			contract = crypto.CreateAddress(evm.TxContext.Origin, msg.Nonce())
 		}
 		vmResult := compileVMResult(logs, msgResult.UsedGas, msgResult.Failed(), contract)
-		if err = validateVMResult(vmResult, st.GetResult()); err != nil {
+		if err = validateVMResult(vmResult, st.GetReceipt()); err != nil {
 			finalError = errors.Join(finalError, err)
 		}
 	}
 	return
 }
 
-// ethereumTx processes a transaction in Ethereum EVM configuration
-func (s *SubstateProcessor) ethereumTx(db state.VmStateDB, block int, tx int, st substate_transaction.SubstateData) (finalError error) {
+// ethereumTx processes a txcontext in Ethereum EVM configuration
+func (s *SubstateProcessor) ethereumTx(db state.VmStateDB, block int, tx int, st txcontext.WithValidation) (finalError error) {
 	var (
 		gaspool  = new(core.GasPool)
 		txHash   = common.HexToHash(fmt.Sprintf("0x%016d%016d", block, tx))
-		inputEnv = st.GetEnv()
+		inputEnv = st.GetBlockEnvironment()
 		validate = s.cfg.ValidateTxState
 	)
 
@@ -213,9 +213,9 @@ func (s *SubstateProcessor) ethereumTx(db state.VmStateDB, block int, tx int, st
 	// apply
 	msgResult, err := core.ApplyMessage(evm, msg, gaspool)
 	if err != nil {
-		// if transaction fails, revert to the first snapshot.
+		// if txcontext fails, revert to the first snapshot.
 		db.RevertToSnapshot(snapshot)
-		finalError = errors.Join(fmt.Errorf("block: %v transaction: %v", block, tx), err)
+		finalError = errors.Join(fmt.Errorf("block: %v txcontext: %v", block, tx), err)
 		// discontinue output alloc validation on error
 		validate = false
 	}
@@ -232,7 +232,7 @@ func (s *SubstateProcessor) ethereumTx(db state.VmStateDB, block int, tx int, st
 			contract = crypto.CreateAddress(evm.TxContext.Origin, msg.Nonce())
 		}
 		vmResult := compileVMResult(logs, msgResult.UsedGas, msgResult.Failed(), contract)
-		if err = validateVMResult(vmResult, st.GetResult()); err != nil {
+		if err = validateVMResult(vmResult, st.GetReceipt()); err != nil {
 			finalError = errors.Join(finalError, err)
 		}
 	}
@@ -241,11 +241,11 @@ func (s *SubstateProcessor) ethereumTx(db state.VmStateDB, block int, tx int, st
 
 // processPseudoTx processes pseudo transactions in Lachesis by applying the change in db state.
 // The pseudo transactions includes Lachesis SFC, lachesis genesis and lachesis-opera transition.
-func (s *SubstateProcessor) processPseudoTx(ws transaction.WorldState, db state.VmStateDB) {
+func (s *SubstateProcessor) processPseudoTx(ws txcontext.WorldState, db state.VmStateDB) {
 	db.BeginTransaction(utils.PseudoTx)
 	defer db.EndTransaction()
 
-	ws.ForEachAccount(func(addr common.Address, acc transaction.Account) {
+	ws.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
 		db.SubBalance(addr, db.GetBalance(addr))
 		db.AddBalance(addr, acc.GetBalance())
 		db.SetNonce(addr, acc.GetNonce())
@@ -258,7 +258,7 @@ func (s *SubstateProcessor) processPseudoTx(ws transaction.WorldState, db state.
 }
 
 // prepareBlockCtx creates a block context for evm call from an environment of a substate.
-func prepareBlockCtx(inputEnv transaction.BlockEnvironment) *vm.BlockContext {
+func prepareBlockCtx(inputEnv txcontext.BlockEnvironment) *vm.BlockContext {
 	blockCtx := &vm.BlockContext{
 		CanTransfer: core.CanTransfer,
 		Transfer:    core.Transfer,
@@ -277,8 +277,8 @@ func prepareBlockCtx(inputEnv transaction.BlockEnvironment) *vm.BlockContext {
 	return blockCtx
 }
 
-// compileVMResult creates a result of a transaction as SubstateResult struct.
-func compileVMResult(logs []*types.Log, recieptUsedGas uint64, recieptFailed bool, contract common.Address) transaction.Receipt {
+// compileVMResult creates a result of a txcontext as SubstateResult struct.
+func compileVMResult(logs []*types.Log, recieptUsedGas uint64, recieptFailed bool, contract common.Address) txcontext.Receipt {
 	vmResult := &substate.SubstateResult{
 		ContractAddress: contract,
 		GasUsed:         recieptUsedGas,
@@ -290,11 +290,11 @@ func compileVMResult(logs []*types.Log, recieptUsedGas uint64, recieptFailed boo
 	} else {
 		vmResult.Status = types.ReceiptStatusSuccessful
 	}
-	return substate_transaction.NewOldSubstateResult(vmResult)
+	return substatecontext.NewReceipt(vmResult)
 }
 
-// validateVMResult compares the result of a transaction to an expected value.
-func validateVMResult(vmResult, expectedResult transaction.Receipt) error {
+// validateVMResult compares the result of a txcontext to an expected value.
+func validateVMResult(vmResult, expectedResult txcontext.Receipt) error {
 	if !expectedResult.Equal(vmResult) {
 		return fmt.Errorf("inconsistent output\n"+
 			"\ngot:\n"+

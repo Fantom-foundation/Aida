@@ -7,10 +7,10 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/executor/extension/validator"
-	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/urfave/cli/v2"
 )
@@ -37,8 +37,8 @@ func ReplaySubstate(ctx *cli.Context) error {
 
 	processor := makeSubstateProcessor(cfg, rCtx, operationProvider)
 
-	var extra = []executor.Extension[substate_transaction.SubstateData]{
-		profiler.MakeReplayProfiler[substate_transaction.SubstateData](cfg, rCtx),
+	var extra = []executor.Extension[txcontext.WithValidation]{
+		profiler.MakeReplayProfiler[txcontext.WithValidation](cfg, rCtx),
 	}
 
 	return replaySubstate(cfg, substateProvider, processor, nil, extra)
@@ -56,7 +56,7 @@ type substateProcessor struct {
 	operationProvider executor.Provider[[]operation.Operation]
 }
 
-func (p substateProcessor) Process(state executor.State[substate_transaction.SubstateData], ctx *executor.Context) error {
+func (p substateProcessor) Process(state executor.State[txcontext.WithValidation], ctx *executor.Context) error {
 	return p.operationProvider.Run(state.Block, state.Block, func(t executor.TransactionInfo[[]operation.Operation]) error {
 		p.runTransaction(uint64(state.Block), t.Data, ctx.State)
 		return nil
@@ -65,21 +65,21 @@ func (p substateProcessor) Process(state executor.State[substate_transaction.Sub
 
 func replaySubstate(
 	cfg *utils.Config,
-	provider executor.Provider[substate_transaction.SubstateData],
-	processor executor.Processor[substate_transaction.SubstateData],
+	provider executor.Provider[txcontext.WithValidation],
+	processor executor.Processor[txcontext.WithValidation],
 	stateDb state.StateDB,
-	extra []executor.Extension[substate_transaction.SubstateData],
+	extra []executor.Extension[txcontext.WithValidation],
 ) error {
-	var extensionList = []executor.Extension[substate_transaction.SubstateData]{
-		profiler.MakeCpuProfiler[substate_transaction.SubstateData](cfg),
-		tracker.MakeProgressLogger[substate_transaction.SubstateData](cfg, 0),
-		profiler.MakeMemoryUsagePrinter[substate_transaction.SubstateData](cfg),
-		profiler.MakeMemoryProfiler[substate_transaction.SubstateData](cfg),
+	var extensionList = []executor.Extension[txcontext.WithValidation]{
+		profiler.MakeCpuProfiler[txcontext.WithValidation](cfg),
+		tracker.MakeProgressLogger[txcontext.WithValidation](cfg, 0),
+		profiler.MakeMemoryUsagePrinter[txcontext.WithValidation](cfg),
+		profiler.MakeMemoryProfiler[txcontext.WithValidation](cfg),
 		validator.MakeLiveDbValidator(cfg),
 	}
 
 	if stateDb == nil {
-		extensionList = append(extensionList, statedb.MakeStateDbManager[substate_transaction.SubstateData](cfg))
+		extensionList = append(extensionList, statedb.MakeStateDbManager[txcontext.WithValidation](cfg))
 	}
 
 	if cfg.DbImpl == "memory" {

@@ -42,7 +42,7 @@ func EvolveState(stateDB *StateDB, firstBlock uint64, targetBlock uint64, worker
 	return lastProcessedBlock, nil
 }
 
-// evolveSubstate evolves world state db supplied substate.substateOut containing data of accounts at the end of one transaction
+// evolveSubstate evolves world state db supplied substate.substateOut containing data of accounts at the end of one txcontext
 func evolveSubstate(tx *substate.Transaction, stateDB *StateDB, validate func(error)) error {
 	sub := tx.Substate
 	// validation of InputAlloc state

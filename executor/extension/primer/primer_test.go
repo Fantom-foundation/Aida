@@ -8,10 +8,10 @@ import (
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
-	"github.com/Fantom-foundation/Aida/executor/transaction"
-	"github.com/Fantom-foundation/Aida/executor/transaction/substate_transaction"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/txcontext"
+	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"go.uber.org/mock/gomock"
@@ -105,14 +105,14 @@ func TestPrime_PrimeStateDB(t *testing.T) {
 
 			// Generating randomized world state
 			alloc, _ := utils.MakeWorldState(t)
-			ws := substate_transaction.NewOldSubstateAlloc(alloc)
+			ws := substatecontext.NewWorldState(alloc)
 
 			pc := utils.NewPrimeContext(cfg, sDB, log)
 			// Priming state DB
 			pc.PrimeStateDB(ws, sDB)
 
 			// Checks if state DB was primed correctly
-			ws.ForEachAccount(func(addr common.Address, acc transaction.Account) {
+			ws.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
 				if sDB.GetBalance(addr).Cmp(acc.GetBalance()) != 0 {
 					t.Fatalf("failed to prime account balance; Is: %v; Should be: %v", sDB.GetBalance(addr), acc.GetBalance())
 				}

@@ -71,7 +71,7 @@ func TestRPCComparator_PostTransactionDoesNotFailIfContinueOnFailureIsTrue(t *te
 	ctx.ErrorInput = make(chan error, 10)
 	err := c.PostTransaction(s, ctx)
 	if err != nil {
-		t.Errorf("unexpected error in post transaction; %v", err)
+		t.Errorf("unexpected error in post txcontext; %v", err)
 	}
 
 }
@@ -106,7 +106,7 @@ func TestRPCComparator_PostTransactionFailsWhenContinueOnFailureIsNotEnabled(t *
 	c := makeRPCComparator(cfg, log)
 	err := c.PostTransaction(s, nil)
 	if err == nil {
-		t.Errorf("post transaction must return error; %v", err)
+		t.Errorf("post txcontext must return error; %v", err)
 	}
 
 }
