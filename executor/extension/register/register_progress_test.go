@@ -22,7 +22,7 @@ import (
 
 const (
 	sqlite3SelectFromStats string = `
-		select start, end, memory, disk, tx_rate, gas_rate, overall_tx_rate, overall_gas_rate
+		select start, end, memory, live_disk, archive_disk, tx_rate, gas_rate, overall_tx_rate, overall_gas_rate
 		from stats
 		where start>=:start and end<=:end;
 	`
@@ -42,7 +42,8 @@ type statsResponse struct {
 	Start          int     `db:"start"`
 	End            int     `db:"end"`
 	Memory         int     `db:"memory"`
-	Disk           int     `db:"disk"`
+	LiveDisk       int     `db:"live_disk"`
+	ArchiveDisk    int     `db:"archive_disk"`
 	TxRate         float64 `db:"tx_rate"`
 	GasRate        float64 `db:"gas_rate"`
 	OverallTxRate  float64 `db:"overall_tx_rate"`

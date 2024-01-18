@@ -16,6 +16,8 @@ import (
 )
 
 const (
+	ArchiveDbDirectoryName = "archive"
+
 	RegisterProgressDefaultReportFrequency = 100_000 // in blocks
 
 	RegisterProgressCreateTableIfNotExist = `
@@ -23,7 +25,8 @@ const (
   			start INTEGER NOT NULL,
 	  		end INTEGER NOT NULL,
 			memory int,
-			disk int,
+			live_disk int,
+			archive_disk int,
 	  		tx_rate float,
 			gas_rate float,
   			overall_tx_rate float,
@@ -32,9 +35,13 @@ const (
 	`
 	RegisterProgressInsertOrReplace = `
 		INSERT or REPLACE INTO stats (
-			start, end, memory, disk, tx_rate, gas_rate, overall_tx_rate, overall_gas_rate
+			start, end, 
+			memory, live_disk, archive_disk, 
+			tx_rate, gas_rate, overall_tx_rate, overall_gas_rate
 		) VALUES (
-			?, ?, ?, ?, ?, ?, ?, ?
+			?, ?, 
+			?, ?, ?, 
+			?, ?, ?, ?
 		)
 	`
 )
@@ -96,14 +103,15 @@ type registerProgress struct {
 	lastProcessedBlock int
 
 	// Stats
-	startOfRun   time.Time
-	lastUpdate   time.Time
-	txCount      uint64
-	gas          uint64
-	totalTxCount uint64
-	totalGas     uint64
-	directory    string
-	memory       *state.MemoryUsage
+	startOfRun      time.Time
+	lastUpdate      time.Time
+	txCount         uint64
+	gas             uint64
+	totalTxCount    uint64
+	totalGas        uint64
+	pathToStateDb   string
+	pathToArchiveDb string
+	memory          *state.MemoryUsage
 
 	id   *RunIdentity
 	meta *RunMetadata
@@ -113,7 +121,8 @@ func (rp *registerProgress) PreRun(_ executor.State[*substate.Substate], ctx *ex
 	now := time.Now()
 	rp.startOfRun = now
 	rp.lastUpdate = now
-	rp.directory = ctx.StateDbPath
+	rp.pathToStateDb = ctx.StateDbPath
+	rp.pathToArchiveDb = filepath.Join(ctx.StateDbPath, ArchiveDbDirectoryName)
 	return nil
 }
 
@@ -198,10 +207,21 @@ func (rp *registerProgress) sqlite3(conn string) (string, string, string, func()
 			totalGas = rp.totalGas
 			rp.lock.Unlock()
 
-			disk, err := utils.GetDirectorySize(rp.directory)
+			lDisk, err := utils.GetDirectorySize(rp.pathToStateDb)
 			if err != nil {
-				rp.log.Errorf("Unable to get directory size from %s", rp.directory)
-				return [][]any{}
+				rp.log.Errorf("Unable to get directory size from pathToStateDb: %s", rp.pathToStateDb)
+				lDisk = 0
+			}
+
+			var aDisk int64 = 0
+			if rp.cfg.ArchiveMode {
+				aDisk, err = utils.GetDirectorySize(rp.pathToArchiveDb)
+				if err != nil {
+					aDisk = 0
+					rp.log.Errorf("Unable to get directory size from pathToArchiveDB: %s", rp.pathToArchiveDb)
+				} else {
+					lDisk -= aDisk
+				}
 			}
 
 			mem := rp.memory.UsedBytes
@@ -215,7 +235,8 @@ func (rp *registerProgress) sqlite3(conn string) (string, string, string, func()
 				rp.interval.Start(),
 				rp.interval.End(),
 				mem,
-				disk,
+				lDisk,
+				aDisk,
 				txRate,
 				gasRate,
 				overallTxRate,
