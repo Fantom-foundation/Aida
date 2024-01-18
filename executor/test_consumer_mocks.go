@@ -13,7 +13,7 @@ import (
 
 	rpc "github.com/Fantom-foundation/Aida/rpc"
 	operation "github.com/Fantom-foundation/Aida/tracer/operation"
-	transaction "github.com/Fantom-foundation/Aida/txcontext"
+	txcontext "github.com/Fantom-foundation/Aida/txcontext"
 	gomock "go.uber.org/mock/gomock"
 )
 
@@ -41,7 +41,7 @@ func (m *MockTxConsumer) EXPECT() *MockTxConsumerMockRecorder {
 }
 
 // Consume mocks base method.
-func (m *MockTxConsumer) Consume(block, transaction int, substate txcontext.WithValidation) error {
+func (m *MockTxConsumer) Consume(block, transaction int, substate txcontext.TxContext) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Consume", block, transaction, substate)
 	ret0, _ := ret[0].(error)
