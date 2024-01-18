@@ -14,7 +14,7 @@ import (
 const (
 	ProgressLoggerDefaultReportFrequency = 15 * time.Second // how often will ticker trigger
 	progressLoggerReportFormat           = "Elapsed time: %v; current block %d; last interval rate ~%.2f Tx/s, ~%.2f MGas/s"
-	finalSummaryProgressReportFormat     = "Total elapsed time: %v; last block %d; total txcontext rate ~%.2f Tx/s, ~%.2f MGas/s"
+	finalSummaryProgressReportFormat     = "Total elapsed time: %v; last block %d; total transaction rate ~%.2f Tx/s, ~%.2f MGas/s"
 )
 
 // MakeProgressLogger creates progress logger. It logs progress about processor depending on reportFrequency.

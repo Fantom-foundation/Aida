@@ -80,7 +80,7 @@ func TestVmSdb_Substate_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		db.EXPECT().RevertToSnapshot(19),
 		db.EXPECT().EndTransaction(),
 		db.EXPECT().EndBlock(),
-		// Pseudo txcontext do not use snapshots.
+		// Pseudo transaction do not use snapshots.
 		db.EXPECT().BeginBlock(uint64(4)),
 		db.EXPECT().PrepareSubstate(gomock.Any(), uint64(4)),
 		db.EXPECT().BeginTransaction(uint32(utils.PseudoTx)),
@@ -222,7 +222,7 @@ func TestVmSdb_Substate_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 		t.Errorf("run must fail")
 	}
 
-	expectedErr := strings.TrimSpace("block: 2 txcontext: 1\nintrinsic gas too low: have 0, want 53000")
+	expectedErr := strings.TrimSpace("block: 2 transaction: 1\nintrinsic gas too low: have 0, want 53000")
 	returnedErr := strings.TrimSpace(err.Error())
 
 	if strings.Compare(returnedErr, expectedErr) != 0 {

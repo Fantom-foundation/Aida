@@ -8,7 +8,7 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
-// MakeTxPrimer creates an extension that primes StateDb before each txcontext
+// MakeTxPrimer creates an extension that primes StateDb before each transaction
 func MakeTxPrimer(cfg *utils.Config) executor.Extension[txcontext.WithValidation] {
 	return makeTxPrimer(cfg, logger.NewLogger(cfg.LogLevel, "TxPrimer"))
 }

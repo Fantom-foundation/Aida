@@ -7,9 +7,9 @@ import (
 )
 
 // MakeStateDbPrepper creates an executor extension calling PrepareSubstate on
-// an optional StateDB instance before each txcontext of an execution. Its main
+// an optional StateDB instance before each transaction of an execution. Its main
 // purpose is to support Aida's in-memory DB implementation by feeding it data
-// information before each txcontext in tools like `aida-vm-sdb`.
+// information before each transaction in tools like `aida-vm-sdb`.
 func MakeStateDbPrepper() executor.Extension[txcontext.WithValidation] {
 	return &statePrepper{}
 }

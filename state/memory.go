@@ -335,7 +335,7 @@ func collectLogs(s *snapshot) []*types.Log {
 
 func (db *inMemoryStateDB) GetLogs(txHash common.Hash, blockHash common.Hash) []*types.Log {
 	// Since the in-memory stateDB is only to be used for a single
-	// txcontext, all logs are from the same transactions. But
+	// transaction, all logs are from the same transactions. But
 	// those need to be collected in the right order (inverse order
 	// snapshots).
 	return collectLogs(db.state)

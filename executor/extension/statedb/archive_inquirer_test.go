@@ -106,19 +106,19 @@ func TestArchiveInquirer_RunsRandomTransactionsInBackground(t *testing.T) {
 		t.Errorf("failed PreRun, got %v", err)
 	}
 
-	// Add two txcontext to the pool
+	// Add two transaction to the pool
 	state.Block = 13
 	state.Transaction = 0
 	state.Data = substate1
 	if err := ext.PostTransaction(state, &context); err != nil {
-		t.Fatalf("failed to add txcontext to pool: %v", err)
+		t.Fatalf("failed to add transaction to pool: %v", err)
 	}
 
 	state.Block = 15
 	state.Transaction = 0
 	state.Data = substate2
 	if err := ext.PostTransaction(state, &context); err != nil {
-		t.Fatalf("failed to add txcontext to pool: %v", err)
+		t.Fatalf("failed to add transaction to pool: %v", err)
 	}
 
 	time.Sleep(time.Second)

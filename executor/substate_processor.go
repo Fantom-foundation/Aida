@@ -20,7 +20,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
-// MakeLiveDbProcessor creates a executor.Processor which processes txcontext into LIVE StateDb.
+// MakeLiveDbProcessor creates a executor.Processor which processes transaction into LIVE StateDb.
 func MakeLiveDbProcessor(cfg *utils.Config) *LiveDbProcessor {
 	return &LiveDbProcessor{&SubstateProcessor{cfg: cfg}}
 }
@@ -29,7 +29,7 @@ type LiveDbProcessor struct {
 	*SubstateProcessor
 }
 
-// Process txcontext inside state into given LIVE StateDb
+// Process transaction inside state into given LIVE StateDb
 func (p *LiveDbProcessor) Process(state State[txcontext.WithValidation], ctx *Context) error {
 	var err error
 
@@ -46,7 +46,7 @@ func (p *LiveDbProcessor) Process(state State[txcontext.WithValidation], ctx *Co
 	return err
 }
 
-// MakeArchiveDbProcessor creates a executor.Processor which processes txcontext into ARCHIVE StateDb.
+// MakeArchiveDbProcessor creates a executor.Processor which processes transaction into ARCHIVE StateDb.
 func MakeArchiveDbProcessor(cfg *utils.Config) *ArchiveDbProcessor {
 	return &ArchiveDbProcessor{&SubstateProcessor{cfg: cfg}}
 }
@@ -55,7 +55,7 @@ type ArchiveDbProcessor struct {
 	*SubstateProcessor
 }
 
-// Process txcontext inside state into given ARCHIVE StateDb
+// Process transaction inside state into given ARCHIVE StateDb
 func (p *ArchiveDbProcessor) Process(state State[txcontext.WithValidation], ctx *Context) error {
 	var err error
 
@@ -119,7 +119,7 @@ func (s *SubstateProcessor) processRegularTx(db state.VmStateDB, block int, tx i
 	}
 }
 
-// fantomTx processes a txcontext in Fantom Opera EVM configuration
+// fantomTx processes a transaction in Fantom Opera EVM configuration
 func (s *SubstateProcessor) fantomTx(db state.VmStateDB, block int, tx int, st txcontext.WithValidation) (finalError error) {
 	var (
 		gaspool   = new(evmcore.GasPool)
@@ -150,9 +150,9 @@ func (s *SubstateProcessor) fantomTx(db state.VmStateDB, block int, tx int, st t
 	// apply
 	msgResult, err := evmcore.ApplyMessage(evm, msg, gaspool)
 	if err != nil {
-		// if txcontext fails, revert to the first snapshot.
+		// if transaction fails, revert to the first snapshot.
 		db.RevertToSnapshot(snapshot)
-		finalError = errors.Join(fmt.Errorf("block: %v txcontext: %v", block, tx), err)
+		finalError = errors.Join(fmt.Errorf("block: %v transaction: %v", block, tx), err)
 		// discontinue output alloc validation on error
 		validate = false
 	}
@@ -183,7 +183,7 @@ func (s *SubstateProcessor) fantomTx(db state.VmStateDB, block int, tx int, st t
 	return
 }
 
-// ethereumTx processes a txcontext in Ethereum EVM configuration
+// ethereumTx processes a transaction in Ethereum EVM configuration
 func (s *SubstateProcessor) ethereumTx(db state.VmStateDB, block int, tx int, st txcontext.WithValidation) (finalError error) {
 	var (
 		gaspool  = new(core.GasPool)
@@ -213,9 +213,9 @@ func (s *SubstateProcessor) ethereumTx(db state.VmStateDB, block int, tx int, st
 	// apply
 	msgResult, err := core.ApplyMessage(evm, msg, gaspool)
 	if err != nil {
-		// if txcontext fails, revert to the first snapshot.
+		// if transaction fails, revert to the first snapshot.
 		db.RevertToSnapshot(snapshot)
-		finalError = errors.Join(fmt.Errorf("block: %v txcontext: %v", block, tx), err)
+		finalError = errors.Join(fmt.Errorf("block: %v transaction: %v", block, tx), err)
 		// discontinue output alloc validation on error
 		validate = false
 	}
@@ -277,7 +277,7 @@ func prepareBlockCtx(inputEnv txcontext.BlockEnvironment) *vm.BlockContext {
 	return blockCtx
 }
 
-// compileVMResult creates a result of a txcontext as SubstateResult struct.
+// compileVMResult creates a result of a transaction as SubstateResult struct.
 func compileVMResult(logs []*types.Log, recieptUsedGas uint64, recieptFailed bool, contract common.Address) txcontext.Receipt {
 	vmResult := &substate.SubstateResult{
 		ContractAddress: contract,
@@ -293,7 +293,7 @@ func compileVMResult(logs []*types.Log, recieptUsedGas uint64, recieptFailed boo
 	return substatecontext.NewReceipt(vmResult)
 }
 
-// validateVMResult compares the result of a txcontext to an expected value.
+// validateVMResult compares the result of a transaction to an expected value.
 func validateVMResult(vmResult, expectedResult txcontext.Receipt) error {
 	if !expectedResult.Equal(vmResult) {
 		return fmt.Errorf("inconsistent output\n"+

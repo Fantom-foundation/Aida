@@ -415,7 +415,7 @@ func TestFlushProfileData(t *testing.T) {
 		gasTransactions: []uint64{111111, 222222, 333333, 444444},
 	}
 
-	// start db txcontext
+	// start db transaction
 	tx, err := db.sql.Begin()
 	require.NoError(err)
 	res, err := tx.Stmt(db.blockStmt).Exec(ProfileData.curBlock, ProfileData.tBlock, ProfileData.tSequential, ProfileData.tCritical,

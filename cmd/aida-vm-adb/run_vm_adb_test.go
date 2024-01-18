@@ -83,7 +83,7 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 		archiveBlockTwo.EXPECT().EndTransaction(),
 		archiveBlockTwo.EXPECT().Release(),
 		// Block 4
-		// Pseudo txcontext do not use snapshots.
+		// Pseudo transaction do not use snapshots.
 		db.EXPECT().GetArchiveState(uint64(3)).Return(archiveBlockThree, nil),
 		archiveBlockThree.EXPECT().BeginTransaction(uint32(utils.PseudoTx)),
 		archiveBlockThree.EXPECT().EndTransaction(),
@@ -136,7 +136,7 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 	// The expectation is that all of those blocks and transactions
 	// are properly opened, prepared, executed, and closed.
 	// Since we are running parallel mode with multiple workers,
-	// block order does not have to preserved, only txcontext order matters.
+	// block order does not have to preserved, only transaction order matters.
 
 	// Block 2
 	gomock.InOrder(
@@ -176,7 +176,7 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 	// Block 4
 	gomock.InOrder(
 		db.EXPECT().GetArchiveState(uint64(3)).Return(archiveBlockThree, nil),
-		// Pseudo txcontext do not use snapshots.
+		// Pseudo transaction do not use snapshots.
 		archiveBlockThree.EXPECT().BeginTransaction(uint32(utils.PseudoTx)),
 		archiveBlockThree.EXPECT().EndTransaction(),
 		archiveBlockThree.EXPECT().Release(),
@@ -304,7 +304,7 @@ func TestVmAdb_AllTransactionsAreProcessed_Parallel(t *testing.T) {
 	// The expectation is that all of those blocks and transactions
 	// are properly opened, prepared, executed, and closed.
 	// Since we are running parallel mode with multiple workers block
-	// order does not have to be preserved, only txcontext order matters.
+	// order does not have to be preserved, only transaction order matters.
 	ext.EXPECT().PreRun(executor.AtBlock[txcontext.WithValidation](2), gomock.Any())
 
 	// Block 2
@@ -396,7 +396,7 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) 
 		t.Errorf("run must fail")
 	}
 
-	expectedErr := strings.TrimSpace("block: 2 txcontext: 1\nintrinsic gas too low: have 0, want 53000")
+	expectedErr := strings.TrimSpace("block: 2 transaction: 1\nintrinsic gas too low: have 0, want 53000")
 	returnedErr := strings.TrimSpace(err.Error())
 
 	if strings.Compare(returnedErr, expectedErr) != 0 {
@@ -447,7 +447,7 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Parallel(t *testing.T) {
 		t.Errorf("run must fail")
 	}
 
-	expectedErr := strings.TrimSpace("block: 2 txcontext: 1\nintrinsic gas too low: have 0, want 53000")
+	expectedErr := strings.TrimSpace("block: 2 transaction: 1\nintrinsic gas too low: have 0, want 53000")
 	returnedErr := strings.TrimSpace(err.Error())
 
 	if strings.Compare(returnedErr, expectedErr) != 0 {

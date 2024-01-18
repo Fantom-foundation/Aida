@@ -85,7 +85,7 @@ func (e *EventData) PopulateEventData(d *stochastic.EventRegistryJSON) {
 	})
 	e.Stationary = data
 
-	// compute average number of operations per txcontext
+	// compute average number of operations per transaction
 
 	// find the BeginTransaction probability in the stationary distribution
 	txProb := 0.0
@@ -115,7 +115,7 @@ func (e *EventData) PopulateEventData(d *stochastic.EventRegistryJSON) {
 		for op := 0; op < stochastic.NumOps; op++ {
 			// exclude scoping operations
 			if op != stochastic.BeginBlockID && op != stochastic.EndBlockID && op != stochastic.BeginSyncPeriodID && op != stochastic.EndSyncPeriodID && op != stochastic.BeginTransactionID && op != stochastic.EndTransactionID {
-				// sum all versions of an operation and normalize the value with the txcontext's probability
+				// sum all versions of an operation and normalize the value with the transaction's probability
 				sum := 0.0
 				for i := 0; i < n; i++ {
 					if sop, _, _, _ := stochastic.DecodeOpcode(d.Operations[i]); sop == op {

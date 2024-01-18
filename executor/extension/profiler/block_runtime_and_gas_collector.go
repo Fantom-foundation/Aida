@@ -49,7 +49,7 @@ func (b *BlockRuntimeAndGasCollector) PreRun(executor.State[txcontext.WithValida
 	return nil
 }
 
-// PreTransaction resets the txcontext timer.
+// PreTransaction resets the transaction timer.
 func (b *BlockRuntimeAndGasCollector) PreTransaction(executor.State[txcontext.WithValidation], *executor.Context) error {
 	b.txTimer = time.Now()
 	return nil
@@ -59,7 +59,7 @@ func (b *BlockRuntimeAndGasCollector) PreTransaction(executor.State[txcontext.Wi
 func (b *BlockRuntimeAndGasCollector) PostTransaction(state executor.State[txcontext.WithValidation], _ *executor.Context) error {
 	err := b.ctx.RecordTransaction(state, time.Since(b.txTimer))
 	if err != nil {
-		return fmt.Errorf("cannot record txcontext; %v", err)
+		return fmt.Errorf("cannot record transaction; %v", err)
 	}
 	return nil
 }

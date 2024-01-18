@@ -12,7 +12,7 @@ import (
 )
 
 // VmStateDB is the basic StateDB interface required by the EVM and related
-// txcontext processing components for interacting with the StateDB.
+// transaction processing components for interacting with the StateDB.
 type VmStateDB interface {
 	// Account management.
 	CreateAccount(common.Address)
@@ -89,7 +89,7 @@ type VmStateDB interface {
 
 // NonCommittableStateDB is an extension of the VmStateDB interface and is intended
 // to serve as the type used for referencing immutable historical state, in particular
-// state views obtained from Archive DBs. While txcontext-local updates and
+// state views obtained from Archive DBs. While transaction-local updates and
 // modifications are allowed, the interface does not provide means for persisting those
 // changes (=commit them).
 type NonCommittableStateDB interface {
@@ -164,7 +164,7 @@ type StateDB interface {
 
 	// ---- Optional Development & Debugging Features ----
 
-	// Used to initiate the state DB for the next txcontext.
+	// Used to initiate the state DB for the next transaction.
 	// This is mainly for development purposes to support in-memory DB implementations.
 	PrepareSubstate(substate txcontext.WorldState, block uint64)
 

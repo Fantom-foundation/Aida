@@ -145,7 +145,7 @@ func (v *stateDbValidator) PreRun(executor.State[txcontext.WithValidation], *exe
 	v.log.Warning("Transaction verification is enabled, this may slow down the block processing.")
 
 	if v.cfg.ContinueOnFailure {
-		v.log.Warningf("Continue on Failure for txcontext validation is enabled, yet "+
+		v.log.Warningf("Continue on Failure for transaction validation is enabled, yet "+
 			"block processing will stop after %v encountered issues. (0 is endless)", v.cfg.MaxNumErrors)
 	}
 

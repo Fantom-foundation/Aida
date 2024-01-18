@@ -150,7 +150,7 @@ func MakeOperationProfiler[T any](cfg *utils.Config) executor.Extension[T] {
 	return p
 }
 
-// operationProfiler can profile at interval, block or txcontext level
+// operationProfiler can profile at interval, block or transaction level
 type operationProfiler[T any] struct {
 	extension.NilExtension[T]
 
@@ -182,7 +182,7 @@ func (p *operationProfiler[T]) PreRun(_ executor.State[T], ctx *executor.Context
 
 func (p *operationProfiler[T]) PreBlock(state executor.State[T], _ *executor.Context) error {
 	// On Interval Change -> Print and reset interval level analytics
-	// Since there are blocks without txcontext, change can only be detected at the beginning of the upcoming block
+	// Since there are blocks without transaction, change can only be detected at the beginning of the upcoming block
 	if uint64(state.Block) > p.interval.End() {
 		p.log.Debug(p.prettyTable().Render())
 		p.ps[IntervalLevel].Print()

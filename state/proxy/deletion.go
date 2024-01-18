@@ -218,7 +218,7 @@ func (r *DeletionProxy) ForEachStorage(addr common.Address, fn func(common.Hash,
 	return err
 }
 
-// Prepare sets the current txcontext hash and index.
+// Prepare sets the current transactionhash and index.
 func (r *DeletionProxy) Prepare(thash common.Hash, ti int) {
 	r.db.Prepare(thash, ti)
 }
@@ -230,7 +230,7 @@ func (r *DeletionProxy) Finalise(deleteEmptyObjects bool) {
 
 // IntermediateRoot computes the current hash of the StateDB.
 // It is called in between transactions to get the root hash that
-// goes into txcontext receipts.
+// goes into transactionreceipts.
 func (r *DeletionProxy) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	return r.db.IntermediateRoot(deleteEmptyObjects)
 }

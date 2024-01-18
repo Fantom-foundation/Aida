@@ -37,7 +37,7 @@ func GenerateUpdateSet(first uint64, last uint64, cfg *Config) (substate.Substat
 			break
 		}
 
-		// if this txcontext has suicided accounts, clear their states.
+		// if this transaction has suicided accounts, clear their states.
 		destroyed, resurrected, err := deletedAccountDB.GetDestroyedAccounts(tx.Block, tx.Transaction)
 
 		if !(err == nil || errors.Is(err, leveldb.ErrNotFound)) {

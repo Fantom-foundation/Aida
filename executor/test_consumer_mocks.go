@@ -13,7 +13,7 @@ import (
 
 	rpc "github.com/Fantom-foundation/Aida/rpc"
 	operation "github.com/Fantom-foundation/Aida/tracer/operation"
-	txcontext "github.com/Fantom-foundation/Aida/txcontext"
+	transaction "github.com/Fantom-foundation/Aida/txcontext"
 	gomock "go.uber.org/mock/gomock"
 )
 

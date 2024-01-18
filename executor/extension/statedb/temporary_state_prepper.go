@@ -30,7 +30,7 @@ func MakeTemporaryStatePrepper(cfg *utils.Config) executor.Extension[txcontext.W
 }
 
 // temporaryInMemoryStatePrepper is an extension that introduces a fresh in-memory
-// StateDB instance before each txcontext execution.
+// StateDB instance before each transaction execution.
 type temporaryInMemoryStatePrepper struct {
 	extension.NilExtension[txcontext.WithValidation]
 }
@@ -43,7 +43,7 @@ func (temporaryInMemoryStatePrepper) PreTransaction(state executor.State[txconte
 }
 
 // temporaryOffTheChainStatePrepper is an extension that introduces a fresh offTheChain
-// StateDB instance before each txcontext execution.
+// StateDB instance before each transaction execution.
 type temporaryOffTheChainStatePrepper struct {
 	extension.NilExtension[txcontext.WithValidation]
 	cfg *utils.Config

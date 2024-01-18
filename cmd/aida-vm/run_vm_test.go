@@ -72,7 +72,7 @@ func TestVm_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
 		db.EXPECT().RevertToSnapshot(19),
 		db.EXPECT().EndTransaction(),
-		// Pseudo txcontext do not use snapshots.
+		// Pseudo transaction do not use snapshots.
 		db.EXPECT().BeginTransaction(uint32(utils.PseudoTx)),
 		db.EXPECT().EndTransaction(),
 	)
@@ -144,7 +144,7 @@ func TestVm_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 
 	// Block 4 Tx 1
 	gomock.InOrder(
-		// Pseudo txcontext do not use snapshots.
+		// Pseudo transaction do not use snapshots.
 		db.EXPECT().BeginTransaction(uint32(utils.PseudoTx)),
 		db.EXPECT().EndTransaction(),
 	)
@@ -338,7 +338,7 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) 
 	}
 
 	// we expected error with low gas, which means the validation passed
-	expectedErr := strings.TrimSpace("block: 2 txcontext: 1\nintrinsic gas too low: have 0, want 53000")
+	expectedErr := strings.TrimSpace("block: 2 transaction: 1\nintrinsic gas too low: have 0, want 53000")
 	returnedErr := strings.TrimSpace(err.Error())
 
 	if strings.Compare(returnedErr, expectedErr) != 0 {
@@ -388,7 +388,7 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Parallel(t *testing.T) {
 	}
 
 	// we expected error with low gas, which means the validation passed
-	expectedErr := strings.TrimSpace("block: 2 txcontext: 1\nintrinsic gas too low: have 0, want 53000")
+	expectedErr := strings.TrimSpace("block: 2 transaction: 1\nintrinsic gas too low: have 0, want 53000")
 	returnedErr := strings.TrimSpace(err.Error())
 
 	if strings.Compare(returnedErr, expectedErr) != 0 {

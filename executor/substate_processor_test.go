@@ -59,14 +59,14 @@ func TestCompileVMResult(t *testing.T) {
 		t.Fatalf("Wrong amount of gas used")
 	}
 	if sr.GetStatus() != types.ReceiptStatusFailed {
-		t.Fatalf("Wrong txcontext status")
+		t.Fatalf("Wrong transaction status")
 	}
 
 	reciept_success := &evmcore.ExecutionResult{UsedGas: 100, Err: nil}
 	sr = compileVMResult(logs, reciept_success.UsedGas, reciept_success.Failed(), contract)
 
 	if sr.GetStatus() != types.ReceiptStatusSuccessful {
-		t.Fatalf("Wrong txcontext status")
+		t.Fatalf("Wrong transaction status")
 	}
 }
 

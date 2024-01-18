@@ -288,7 +288,7 @@ func (p *EventProxy) ForEachStorage(address common.Address, fn func(common.Hash,
 	return p.db.ForEachStorage(address, fn)
 }
 
-// Prepare sets the current txcontext hash and index.
+// Prepare sets the current transactionhash and index.
 func (p *EventProxy) Prepare(thash common.Hash, ti int) {
 	// call real StateDB
 	p.db.Prepare(thash, ti)

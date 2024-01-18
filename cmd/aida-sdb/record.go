@@ -44,7 +44,7 @@ func RecordStateDbTrace(ctx *cli.Context) error {
 		return err
 	}
 
-	// force enable txcontext validation
+	// force enable transaction validation
 	cfg.ValidateTxState = true
 
 	substate.RecordReplay = true

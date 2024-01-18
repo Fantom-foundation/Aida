@@ -63,7 +63,7 @@ func lachesisUpdate(ctx *cli.Context) error {
 		// update untracked changes
 		log.Notice("Calculate difference set")
 		untrackedState = opera.Diff(lachesis)
-		// create a transition txcontext
+		// create a transition transaction
 		lastTx.Env.Number = lachesisLastBlock
 		transitionTx := substate.NewSubstate(
 			make(substate.SubstateAlloc),
@@ -83,7 +83,7 @@ func lachesisUpdate(ctx *cli.Context) error {
 			len(untrackedState))
 		substate.PutSubstate(lachesisLastBlock, utils.PseudoTx, transitionTx)
 	} else {
-		log.Warningf("Transition txcontext has already been produced. Skip writing")
+		log.Warningf("Transition tx has already been produced. Skip writing")
 	}
 	return nil
 }

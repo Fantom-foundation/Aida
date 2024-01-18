@@ -106,7 +106,7 @@ func TestRPCComparator_PostTransactionFailsWhenContinueOnFailureIsNotEnabled(t *
 	c := makeRPCComparator(cfg, log)
 	err := c.PostTransaction(s, nil)
 	if err == nil {
-		t.Errorf("post txcontext must return error; %v", err)
+		t.Errorf("post transaction must return error; %v", err)
 	}
 
 }

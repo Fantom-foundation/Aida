@@ -108,7 +108,7 @@ func TestEarliestToRunFirst(t *testing.T) {
 	}
 }
 
-// TestEarliestToRunSimple tests the computation of the earliest time to run for a block with one txcontext
+// TestEarliestToRunSimple tests the computation of the earliest time to run for a block with one transaction
 func TestEarliestToRunSimple(t *testing.T) {
 	ctx := NewContext()
 	ctx.n = 1
@@ -122,7 +122,7 @@ func TestEarliestToRunSimple(t *testing.T) {
 	}
 }
 
-// TestEarliestToRunSimple2 tests the computation of the earliest time to run for a block with one txcontext
+// TestEarliestToRunSimple2 tests the computation of the earliest time to run for a block with one transaction
 func TestEarliestToRunSimple2(t *testing.T) {
 	ctx := NewContext()
 	ctx.n = 1
@@ -136,7 +136,7 @@ func TestEarliestToRunSimple2(t *testing.T) {
 	}
 }
 
-// TestEarliestToRunSimple3 tests the computation of the earliest time to run for a block with two txcontext
+// TestEarliestToRunSimple3 tests the computation of the earliest time to run for a block with two transaction
 func TestEarliestToRunSimple3(t *testing.T) {
 	ctx := NewContext()
 	ctx.n = 2
@@ -159,7 +159,7 @@ func TestDependenciesEmpty(t *testing.T) {
 	}
 }
 
-// TestDependenciesSimple test finding the dependencies for a block with one txcontext
+// TestDependenciesSimple test finding the dependencies for a block with one transaction
 func TestDependenciesSmple(t *testing.T) {
 	ctx := NewContext()
 	ctx.n = 1
@@ -173,7 +173,7 @@ func TestDependenciesSmple(t *testing.T) {
 	}
 }
 
-// TestDependenciesSimple2 tests finding the dependencies for a block with one txcontext
+// TestDependenciesSimple2 tests finding the dependencies for a block with one transaction
 func TestDependenciesSimple2(t *testing.T) {
 	ctx := NewContext()
 	ctx.n = 1
@@ -209,7 +209,7 @@ func TestDependenciesSimple3(t *testing.T) {
 	}
 }
 
-// TestFindTxAddresses tests finding contract/wallet addresses of a txcontext
+// TestFindTxAddresses tests finding contract/wallet addresses of a transaction
 func TestFindTxAddresses(t *testing.T) {
 	// test substate.Transaction with empty fields
 	testTransaction := executor.State[txcontext.WithValidation]{
@@ -274,7 +274,7 @@ func TestFindTxAddresses(t *testing.T) {
 func TestRecordTransaction(t *testing.T) {
 	ctx := NewContext()
 
-	// construct first txcontext
+	// construct first transaction
 	addr1 := common.HexToAddress("0xFC00FACE00000000000000000000000000000001")
 	addr2 := common.HexToAddress("0xFC00FACE00000000000000000000000000000002")
 	addr3 := common.HexToAddress("0xFC00FACE00000000000000000000000000000003")
@@ -340,13 +340,13 @@ func TestRecordTransaction(t *testing.T) {
 			t.Errorf("Unexpected addresses")
 		}
 	} else {
-		t.Errorf("Unexpected number of txcontext addresses")
+		t.Errorf("Unexpected number of transactionaddresses")
 	}
 	if len(ctx.txDependencies) != 1 || len(ctx.txDependencies[0]) != 0 {
 		t.Errorf("Unexpected dependencies")
 	}
 
-	// construct second txcontext
+	// construct second transaction
 	tx2 := executor.State[txcontext.WithValidation]{
 		Data: substatecontext.NewTxContextWithValidation(&substate.Substate{
 			InputAlloc:  substate.SubstateAlloc{addr1: &substate.SubstateAccount{}},
@@ -390,13 +390,13 @@ func TestRecordTransaction(t *testing.T) {
 
 	if len(ctx.txAddresses) == 2 && len(ctx.txAddresses[0]) == 3 && len(ctx.txAddresses[0]) == 3 {
 		if !checkAddr(ctx.txAddresses[0]) {
-			t.Errorf("Unexpected addresses in first txcontext")
+			t.Errorf("Unexpected addresses in first transaction")
 		}
 		if !checkAddr(ctx.txAddresses[1]) {
-			t.Errorf("Unexpected addresses in second txcontext")
+			t.Errorf("Unexpected addresses in second transaction")
 		}
 	} else {
-		t.Errorf("Unexpected number of txcontext addresses")
+		t.Errorf("Unexpected number of transactionaddresses")
 	}
 	if len(ctx.txDependencies) != 2 || len(ctx.txDependencies[0]) != 0 || len(ctx.txDependencies[1]) != 1 {
 		fmt.Printf("%v\n", ctx.txDependencies)
@@ -495,7 +495,7 @@ func TestGetTransactionType(t *testing.T) {
 
 	// expect create type, to address is nil
 	if tt := getTransactionType(testTransaction); tt != CreateTx {
-		t.Errorf("incorrect txcontext type, got: %v, expected %v", TypeLabel[tt], TypeLabel[CreateTx])
+		t.Errorf("incorrect transactiontype, got: %v, expected %v", TypeLabel[tt], TypeLabel[CreateTx])
 	}
 
 	// expect transafer type
@@ -503,13 +503,13 @@ func TestGetTransactionType(t *testing.T) {
 	testTransaction.Data = substatecontext.NewTxContextWithValidation(sub)
 	// to address doesn't exist in input substate
 	if tt := getTransactionType(testTransaction); tt != TransferTx {
-		t.Errorf("incorrect txcontext type, got: %v, expected %v", TypeLabel[tt], TypeLabel[TransferTx])
+		t.Errorf("incorrect transactiontype, got: %v, expected %v", TypeLabel[tt], TypeLabel[TransferTx])
 	}
 	// to address exists in input substate but doesn't have byte-code
 	sub.InputAlloc[toAddr] = substate.NewSubstateAccount(1, big.NewInt(1), []byte{})
 	testTransaction.Data = substatecontext.NewTxContextWithValidation(sub)
 	if tt := getTransactionType(testTransaction); tt != TransferTx {
-		t.Errorf("incorrect txcontext type, got: %v, expected %v", TypeLabel[tt], TypeLabel[TransferTx])
+		t.Errorf("incorrect transactiontype, got: %v, expected %v", TypeLabel[tt], TypeLabel[TransferTx])
 	}
 
 	// expect call type
@@ -518,7 +518,7 @@ func TestGetTransactionType(t *testing.T) {
 	sub.Message.From = fromAddr1
 	testTransaction.Data = substatecontext.NewTxContextWithValidation(sub)
 	if tt := getTransactionType(testTransaction); tt != CallTx {
-		t.Errorf("incorrect txcontext type, got: %v, expected %v", TypeLabel[tt], TypeLabel[CallTx])
+		t.Errorf("incorrect transactiontype, got: %v, expected %v", TypeLabel[tt], TypeLabel[CallTx])
 	}
 
 	// expect epoch sealing type
@@ -527,6 +527,6 @@ func TestGetTransactionType(t *testing.T) {
 	sub.InputAlloc[toAddr] = substate.NewSubstateAccount(1, big.NewInt(1), []byte{1, 2, 3, 4})
 	testTransaction.Data = substatecontext.NewTxContextWithValidation(sub)
 	if tt := getTransactionType(testTransaction); tt != MaintenanceTx {
-		t.Errorf("incorrect txcontext type, got: %v, expected %v", TypeLabel[tt], TypeLabel[MaintenanceTx])
+		t.Errorf("incorrect transactiontype, got: %v, expected %v", TypeLabel[tt], TypeLabel[MaintenanceTx])
 	}
 }

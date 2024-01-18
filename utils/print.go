@@ -136,7 +136,7 @@ func (p *PrinterToDb) Print() error {
 		}
 	}
 
-	defer stmt.Close() // Stmt to be open/close each time a txcontext happens
+	defer stmt.Close() // Stmt to be open/close each time a transaction happens
 	return tx.Commit()
 }
 

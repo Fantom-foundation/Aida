@@ -57,7 +57,7 @@ func readAccounts(ch chan proxy.ContractLiveliness, deleteHistory *map[common.Ad
 	return deletedAccounts, resurrectedAccounts
 }
 
-// genDeletedAccountsTask process a txcontext substate then records self-destructed accounts
+// genDeletedAccountsTask process a transaction substate then records self-destructed accounts
 // and resurrected accounts to a database.
 func genDeletedAccountsTask(
 	tx *substate.Transaction,
@@ -87,7 +87,7 @@ func genDeletedAccountsTask(
 	close(ch)
 	des, res := readAccounts(ch, deleteHistory)
 	if len(des)+len(res) > 0 {
-		// if txcontext completed successfully, put destroyed accounts
+		// if transaction completed successfully, put destroyed accounts
 		// and resurrected accounts to a database
 		if tx.Substate.Result.Status == types.ReceiptStatusSuccessful {
 			err = ddb.SetDestroyedAccounts(tx.Block, tx.Transaction, des, res)

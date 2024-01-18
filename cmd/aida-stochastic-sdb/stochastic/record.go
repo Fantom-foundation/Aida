@@ -47,7 +47,7 @@ func stochasticRecordAction(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	// force enable txcontext validation
+	// force enable transaction validation
 	cfg.ValidateTxState = true
 
 	// start CPU profiling if enabled.

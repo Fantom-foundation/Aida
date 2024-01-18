@@ -81,13 +81,13 @@ func (i *archiveInquirer) PreRun(_ executor.State[txcontext.WithValidation], ctx
 }
 
 func (i *archiveInquirer) PostTransaction(state executor.State[txcontext.WithValidation], _ *executor.Context) error {
-	// We only sample the very first txcontext in each block since other transactions
+	// We only sample the very first transaction in each block since other transactions
 	// may depend on the effects of its predecessors in the same block.
 	if state.Transaction != 0 {
 		return nil
 	}
 
-	// Add current txcontext as a candidate for replays.
+	// Add current transaction as a candidate for replays.
 	i.historyMutex.Lock()
 	defer i.historyMutex.Unlock()
 	i.history.Add(historicTransaction{

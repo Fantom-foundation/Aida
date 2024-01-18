@@ -17,7 +17,7 @@ type temporaryArchivePrepper struct {
 	extension.NilExtension[*rpc.RequestAndResults]
 }
 
-// PreTransaction creates temporary archive that is released after txcontext is executed.
+// PreTransaction creates temporary archive that is released after transaction is executed.
 func (r *temporaryArchivePrepper) PreTransaction(state executor.State[*rpc.RequestAndResults], ctx *executor.Context) error {
 	block := findBlockNumber(state.Data)
 

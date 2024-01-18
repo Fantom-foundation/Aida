@@ -72,7 +72,7 @@ func TestDbLoggerExtension_LoggingHappens(t *testing.T) {
 
 	err = ext.PreTransaction(executor.State[any]{}, ctx)
 	if err != nil {
-		t.Fatalf("pre-txcontext returned err; %v", err)
+		t.Fatalf("pre-transaction returned err; %v", err)
 	}
 
 	balance := new(big.Int).SetInt64(10)
@@ -151,7 +151,7 @@ func TestDbLoggerExtension_PreTransactionCreatesNewLoggerProxy(t *testing.T) {
 	// ctx.State is not yet a LoggerProxy hence PreTransaction assigns it
 	err := ext.PreTransaction(executor.State[any]{}, ctx)
 	if err != nil {
-		t.Fatalf("pre-txcontext failed; %v", err)
+		t.Fatalf("pre-transaction failed; %v", err)
 	}
 
 	if _, ok := ctx.State.(*proxy.LoggingStateDb); !ok {
@@ -175,7 +175,7 @@ func TestDbLoggerExtension_PreTransactionDoesNotCreateNewLoggerProxy(t *testing.
 	// first call PreTransaction to assign the proxy
 	err := ext.PreTransaction(executor.State[any]{}, ctx)
 	if err != nil {
-		t.Fatalf("pre-txcontext failed; %v", err)
+		t.Fatalf("pre-transaction failed; %v", err)
 	}
 
 	// save original state to make sure next call to PreTransaction will not have changed the ctx.State
@@ -184,7 +184,7 @@ func TestDbLoggerExtension_PreTransactionDoesNotCreateNewLoggerProxy(t *testing.
 	// then make sure it is not re-assigned again
 	err = ext.PreTransaction(executor.State[any]{}, ctx)
 	if err != nil {
-		t.Fatalf("pre-txcontext failed; %v", err)
+		t.Fatalf("pre-transaction failed; %v", err)
 	}
 
 	if originalDb != ctx.State {
@@ -207,7 +207,7 @@ func TestDbLoggerExtension_PreRunCreatesNewLoggerProxyIfStateIsNotNil(t *testing
 
 	err := ext.PreRun(executor.State[any]{}, ctx)
 	if err != nil {
-		t.Fatalf("pre-txcontext failed; %v", err)
+		t.Fatalf("pre-transaction failed; %v", err)
 	}
 
 	if _, ok := ctx.State.(*proxy.LoggingStateDb); !ok {
@@ -226,7 +226,7 @@ func TestDbLoggerExtension_PreRunDoesNotCreateNewLoggerProxyIfStateIsNil(t *test
 
 	err := ext.PreRun(executor.State[any]{}, ctx)
 	if err != nil {
-		t.Fatalf("pre-txcontext failed; %v", err)
+		t.Fatalf("pre-transaction failed; %v", err)
 	}
 
 	if ctx.State != nil {

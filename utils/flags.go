@@ -221,7 +221,7 @@ var (
 	}
 	ValidateTxStateFlag = cli.BoolFlag{
 		Name:  "validate-tx",
-		Usage: "enables validation after txcontext processing",
+		Usage: "enables validation after transaction processing",
 	}
 	VmImplementation = cli.StringFlag{
 		Name:  "vm-impl",
@@ -279,7 +279,7 @@ var (
 	}
 	TransactionLengthFlag = cli.Uint64Flag{
 		Name:  "txcontext-length",
-		Usage: "Determines indirectly the length of a txcontext",
+		Usage: "Determines indirectly the length of a transaction",
 		Value: 10,
 	}
 	SnapshotDepthFlag = cli.IntFlag{

@@ -9,7 +9,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// RunTxGenerator performs sequential block processing on a StateDb using txcontext generator
+// RunTxGenerator performs sequential block processing on a StateDb using transaction generator
 func RunTxGenerator(ctx *cli.Context) error {
 	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if err != nil {

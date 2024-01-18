@@ -20,7 +20,7 @@ INSERT INTO blockProfile (
 	?, ?, ?, ?, ?, ?, ?, ?, ?
 )
 `
-	// SQL statement for inserting a profile record of a new txcontext
+	// SQL statement for inserting a profile record of a new transaction
 	insertTxSQL = `
 INSERT INTO txProfile (
 block, tx, txType, duration, gas
@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS txProfile (
 type ProfileDB struct {
 	sql       *sql.DB       // Sqlite3 database
 	blockStmt *sql.Stmt     // Prepared insert statement for a block
-	txStmt    *sql.Stmt     // Prepared insert statement for a txcontext
+	txStmt    *sql.Stmt     // Prepared insert statement for a transaction
 	buffer    []ProfileData // record buffer
 }
 
@@ -116,7 +116,7 @@ func (db *ProfileDB) Add(ProfileData ProfileData) error {
 
 // Flush the profiling records in the database.
 func (db *ProfileDB) Flush() error {
-	// open new txcontext
+	// open new transaction
 	tx, err := db.sql.Begin()
 	if err != nil {
 		return err
@@ -141,7 +141,7 @@ func (db *ProfileDB) Flush() error {
 	}
 	// clear buffer
 	db.buffer = db.buffer[:0]
-	// commit txcontext
+	// commit transaction
 	return tx.Commit()
 }
 

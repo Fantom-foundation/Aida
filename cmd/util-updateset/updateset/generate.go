@@ -147,7 +147,7 @@ func GenUpdateSet(cfg *utils.Config, udb *substate.UpdateDB, ddb *substate.Destr
 	defer iter.Release()
 
 	var (
-		txCount       uint64                 // txcontext counter
+		txCount       uint64                 // transaction counter
 		curBlock      uint64                 // current block
 		checkPoint    uint64                 // block number of the next interval
 		isFirst       = true                 // first block
@@ -195,7 +195,7 @@ func GenUpdateSet(cfg *utils.Config, udb *substate.UpdateDB, ddb *substate.Destr
 		}
 
 		// clear storage of destroyed and resurrected accounts in
-		// the current txcontext before merging its substate
+		// the current transaction before merging its substate
 		destroyed, resurrected, err := ddb.GetDestroyedAccounts(curBlock, tx.Transaction)
 		if !(err == nil || errors.Is(err, leveldb.ErrNotFound)) {
 			return err

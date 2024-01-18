@@ -29,7 +29,7 @@ The util-db storage-size command requires two arguments:
 <blockNumFirst> and <blockNumLast> are the first and
 last block of the inclusive range of blocks to vm transactions.
 
-Output log format: (block, timestamp, txcontext, account, storage update size, storage size in input substate, storage size in output substate)`,
+Output log format: (block, timestamp, transaction, account, storage update size, storage size in input substate, storage size in output substate)`,
 }
 
 // computeStorageSize computes the number of non-zero storage entries
@@ -76,7 +76,7 @@ func computeStorageSizes(inUpdateSet map[common.Hash]common.Hash, outUpdateSet m
 	return deltaSize * int64(wordSize), inUpdateSize * wordSize, outUpdateSize * wordSize
 }
 
-// getStorageUpdateSizeTask replays storage access of accounts in each txcontext
+// getStorageUpdateSizeTask replays storage access of accounts in each transaction
 func getStorageUpdateSizeTask(block uint64, tx int, st *substate.Substate, taskPool *substate.SubstateTaskPool) error {
 
 	timestamp := st.Env.Timestamp

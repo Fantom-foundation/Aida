@@ -168,7 +168,7 @@ func TestProxyRecorderPrepper_PreTransactionCreatesNewLoggerProxy(t *testing.T) 
 	// ctx.State is not yet a RecorderProxy hence PreTransaction assigns it
 	err := ext.PreTransaction(executor.State[any]{}, ctx)
 	if err != nil {
-		t.Fatalf("pre-txcontext failed; %v", err)
+		t.Fatalf("pre-transaction failed; %v", err)
 	}
 
 	if _, ok := ctx.State.(*proxy.RecorderProxy); !ok {
@@ -193,7 +193,7 @@ func TestProxyRecorderPrepper_PreTransactionDoesNotCreateNewLoggerProxy(t *testi
 	// first call PreTransaction to assign the proxy
 	err := ext.PreTransaction(executor.State[any]{}, ctx)
 	if err != nil {
-		t.Fatalf("pre-txcontext failed; %v", err)
+		t.Fatalf("pre-transaction failed; %v", err)
 	}
 
 	// save original state to make sure next call to PreTransaction will not have changed the ctx.State
@@ -202,7 +202,7 @@ func TestProxyRecorderPrepper_PreTransactionDoesNotCreateNewLoggerProxy(t *testi
 	// then make sure it is not re-assigned again
 	err = ext.PreTransaction(executor.State[any]{}, ctx)
 	if err != nil {
-		t.Fatalf("pre-txcontext failed; %v", err)
+		t.Fatalf("pre-transaction failed; %v", err)
 	}
 
 	if originalDb != ctx.State {
