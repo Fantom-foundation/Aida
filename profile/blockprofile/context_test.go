@@ -1,7 +1,6 @@
 package blockprofile
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"math/big"
@@ -324,11 +323,11 @@ func TestRecordTransaction(t *testing.T) {
 		secondAddr := false
 		thirdAddr := false
 		for key := range s {
-			if bytes.Compare(key.Bytes(), addr1.Bytes()) != 0 {
+			if key == addr1 {
 				firstAddr = true
-			} else if bytes.Compare(key.Bytes(), addr2.Bytes()) != 0 {
+			} else if key == addr2 {
 				secondAddr = true
-			} else if bytes.Compare(key.Bytes(), addr3.Bytes()) != 0 {
+			} else if key == addr3 {
 				thirdAddr = true
 			}
 		}

@@ -479,7 +479,8 @@ func TestVm_ValidationFailsOnInvalidTransaction_Parallel(t *testing.T) {
 var emptyTx = &substate.Substate{
 	Env: &substate.SubstateEnv{},
 	Message: &substate.SubstateMessage{
-		GasPrice: big.NewInt(12),
+		Gas:      10000,
+		GasPrice: big.NewInt(0),
 	},
 	Result: &substate.SubstateResult{
 		GasUsed: 1,

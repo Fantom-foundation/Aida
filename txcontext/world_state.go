@@ -62,7 +62,7 @@ func WorldStateEqual(x, y WorldState) (isEqual bool) {
 
 func WorldStateString(a WorldState) string {
 	builder := strings.Builder{}
-	builder.WriteString(fmt.Sprintf("SubstateAlloc{\n\tsize: %d\n", a.Len()))
+	builder.WriteString(fmt.Sprintf("World State {\n\tsize: %d\n", a.Len()))
 	var addresses []common.Address
 
 	a.ForEachAccount(func(addr common.Address, acc Account) {

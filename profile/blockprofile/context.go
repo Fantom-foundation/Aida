@@ -96,22 +96,20 @@ func interfere(u, v AddressSet) bool {
 // findTxAddresses gets wallet/contract addresses of a transaction.
 func findTxAddresses(tx executor.State[txcontext.TxContext]) AddressSet {
 	addresses := AddressSet{}
-
 	tx.Data.GetInputState().ForEachAccount(func(addr common.Address, acc txcontext.Account) {
 		addresses[addr] = struct{}{}
 	})
-
 	tx.Data.GetOutputState().ForEachAccount(func(addr common.Address, acc txcontext.Account) {
 		addresses[addr] = struct{}{}
 	})
-
-	msg := tx.Data.GetMessage()
 	var zero common.Address
-	if msg.From() != zero {
-		addresses[msg.From()] = struct{}{}
+	from := tx.Data.GetMessage().From()
+	if from != zero {
+		addresses[from] = struct{}{}
 	}
-	if msg.To() != nil {
-		addresses[*msg.To()] = struct{}{}
+	to := tx.Data.GetMessage().To()
+	if to != nil {
+		addresses[*to] = struct{}{}
 	}
 	return addresses
 }
@@ -271,9 +269,9 @@ func getTransactionType(tx executor.State[txcontext.TxContext]) TxType {
 	zero := common.HexToAddress("0x0000000000000000000000000000000000000000")
 
 	if to != nil {
-		account := alloc.Get(*to)
+		acc := alloc.Get(*to)
 		// regular transaction
-		if account == nil || len(account.GetCode()) == 0 {
+		if acc == nil || len(acc.GetCode()) == 0 {
 			return TransferTx
 			// CALL transaction with contract bytecode
 		} else {

@@ -215,7 +215,7 @@ func TestLiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueO
 		log.EXPECT().Warning(gomock.Any()),
 		db.EXPECT().GetSubstatePostAlloc().Return(substatecontext.NewWorldState(substate.SubstateAlloc{})),
 		log.EXPECT().Errorf("Different %s:\nwant: %v\nhave: %v\n", "substate alloc size", 1, 0),
-		log.EXPECT().Errorf("\tmissing key=%v\n", common.Address{0}),
+		log.EXPECT().Errorf("\tmissing address=%v\n", common.Address{0}),
 	)
 
 	ext.PreRun(executor.State[txcontext.TxContext]{}, ctx)
@@ -578,7 +578,7 @@ func TestArchiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContin
 
 	ext := MakeArchiveDbValidator(cfg)
 
-	db.EXPECT().GetSubstatePostAlloc().Return(substate.SubstateAlloc{})
+	db.EXPECT().GetSubstatePostAlloc().Return(substatecontext.NewWorldState(substate.SubstateAlloc{}))
 
 	ext.PreRun(executor.State[txcontext.TxContext]{}, ctx)
 
