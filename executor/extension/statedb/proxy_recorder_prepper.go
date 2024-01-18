@@ -8,30 +8,29 @@ import (
 	"github.com/Fantom-foundation/Aida/state/proxy"
 	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
-	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
 // MakeProxyRecorderPrepper creates an extension which
 // creates a temporary RecorderProxy before each txcontext
-func MakeProxyRecorderPrepper(cfg *utils.Config) executor.Extension[txcontext.WithValidation] {
-	return makeProxyRecorderPrepper(cfg)
+func MakeProxyRecorderPrepper[T any](cfg *utils.Config) executor.Extension[T] {
+	return makeProxyRecorderPrepper[T](cfg)
 }
 
-func makeProxyRecorderPrepper(cfg *utils.Config) *proxyRecorderPrepper {
-	return &proxyRecorderPrepper{
+func makeProxyRecorderPrepper[T any](cfg *utils.Config) *proxyRecorderPrepper[T] {
+	return &proxyRecorderPrepper[T]{
 		cfg: cfg,
 	}
 }
 
-type proxyRecorderPrepper struct {
-	extension.NilExtension[txcontext.WithValidation]
+type proxyRecorderPrepper[T any] struct {
+	extension.NilExtension[T]
 	cfg        *utils.Config
 	rCtx       *context.Record
 	syncPeriod uint64
 }
 
-func (p *proxyRecorderPrepper) PreRun(state executor.State[txcontext.WithValidation], _ *executor.Context) error {
+func (p *proxyRecorderPrepper[T]) PreRun(state executor.State[T], _ *executor.Context) error {
 	var err error
 	p.rCtx, err = context.NewRecord(p.cfg.TraceFile, p.cfg.First)
 	if err != nil {
@@ -47,7 +46,7 @@ func (p *proxyRecorderPrepper) PreRun(state executor.State[txcontext.WithValidat
 	return nil
 }
 
-func (p *proxyRecorderPrepper) PreBlock(state executor.State[txcontext.WithValidation], ctx *executor.Context) error {
+func (p *proxyRecorderPrepper[T]) PreBlock(state executor.State[T], ctx *executor.Context) error {
 	// calculate the syncPeriod for given block
 	newSyncPeriod := uint64(state.Block) / p.cfg.SyncPeriodLength
 
@@ -64,7 +63,7 @@ func (p *proxyRecorderPrepper) PreBlock(state executor.State[txcontext.WithValid
 
 // PreTransaction checks whether ctx.State has not been overwritten by temporary prepper,
 // if so it creates RecorderProxy.
-func (p *proxyRecorderPrepper) PreTransaction(_ executor.State[txcontext.WithValidation], ctx *executor.Context) error {
+func (p *proxyRecorderPrepper[T]) PreTransaction(_ executor.State[T], ctx *executor.Context) error {
 	// if ctx.State has not been change, no need to slow down the app by creating new Proxy
 	if _, ok := ctx.State.(*proxy.RecorderProxy); ok {
 		return nil
@@ -74,12 +73,12 @@ func (p *proxyRecorderPrepper) PreTransaction(_ executor.State[txcontext.WithVal
 	return nil
 }
 
-func (p *proxyRecorderPrepper) PostBlock(executor.State[txcontext.WithValidation], *executor.Context) error {
+func (p *proxyRecorderPrepper[T]) PostBlock(executor.State[T], *executor.Context) error {
 	operation.WriteOp(p.rCtx, operation.NewEndBlock())
 	return nil
 }
 
-func (p *proxyRecorderPrepper) PostRun(_ executor.State[txcontext.WithValidation], ctx *executor.Context, err error) error {
+func (p *proxyRecorderPrepper[T]) PostRun(_ executor.State[T], ctx *executor.Context, err error) error {
 	operation.WriteOp(p.rCtx, operation.NewEndSyncPeriod())
 	p.rCtx.Close()
 	return nil

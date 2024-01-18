@@ -45,6 +45,6 @@ func TestStatePrepper_DoesNotCrashOnMissingStateOrSubstate(t *testing.T) {
 
 	prepper := MakeStateDbPrepper()
 	prepper.PreTransaction(executor.State[txcontext.WithValidation]{Block: 5}, nil)                                                                   // misses both
-	prepper.PreTransaction(executor.State[txcontext.WithValidation]{Block: 5}, ctx)                                                                   // misses the substate
+	prepper.PreTransaction(executor.State[txcontext.WithValidation]{Block: 5}, ctx)                                                                   // misses the data
 	prepper.PreTransaction(executor.State[txcontext.WithValidation]{Block: 5, Data: substate2.NewTxContextWithValidation(&substate.Substate{})}, nil) // misses the state
 }

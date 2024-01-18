@@ -129,7 +129,7 @@ func TestArchiveInquirer_RunsRandomTransactionsInBackground(t *testing.T) {
 }
 
 func makeValidSubstate() txcontext.WithValidation {
-	// This Substate is a minimal substate that can be successfully processed.
+	// This Substate is a minimal data that can be successfully processed.
 	sub := &substate.Substate{
 		Env: &substate.SubstateEnv{
 			GasLimit: 100_000_000,

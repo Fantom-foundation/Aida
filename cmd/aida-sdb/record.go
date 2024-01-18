@@ -68,7 +68,7 @@ func record(
 		tracker.MakeProgressLogger[txcontext.WithValidation](cfg, 0),
 		tracker.MakeProgressTracker(cfg, 0),
 		statedb.MakeTemporaryStatePrepper(cfg),
-		statedb.MakeProxyRecorderPrepper(cfg),
+		statedb.MakeProxyRecorderPrepper[txcontext.WithValidation](cfg),
 		validator.MakeLiveDbValidator(cfg),
 	}
 

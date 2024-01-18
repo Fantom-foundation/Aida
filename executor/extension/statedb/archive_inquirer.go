@@ -91,9 +91,9 @@ func (i *archiveInquirer) PostTransaction(state executor.State[txcontext.WithVal
 	i.historyMutex.Lock()
 	defer i.historyMutex.Unlock()
 	i.history.Add(historicTransaction{
-		block:    state.Block - 1,
-		number:   state.Transaction,
-		substate: state.Data,
+		block:  state.Block - 1,
+		number: state.Transaction,
+		data:   state.Data,
 	})
 	return nil
 }
@@ -160,7 +160,7 @@ func (i *archiveInquirer) doInquiry(rnd *rand.Rand, errCh chan error) {
 	state := executor.State[txcontext.WithValidation]{
 		Block:       tx.block,
 		Transaction: tx.number,
-		Data:        tx.substate,
+		Data:        tx.data,
 	}
 	ctx := &executor.Context{
 		Archive:    archive,
@@ -192,7 +192,7 @@ func (i *archiveInquirer) doInquiry(rnd *rand.Rand, errCh chan error) {
 	}
 
 	i.transactionCounter.Add(1)
-	i.gasCounter.Add(tx.substate.GetReceipt().GetGasUsed())
+	i.gasCounter.Add(tx.data.GetReceipt().GetGasUsed())
 	i.totalQueryTimeMilliseconds.Add(uint64(duration.Milliseconds()))
 }
 
@@ -231,9 +231,9 @@ func (i *archiveInquirer) runProgressReport() {
 }
 
 type historicTransaction struct {
-	block    int
-	number   int
-	substate txcontext.WithValidation
+	block  int
+	number int
+	data   txcontext.WithValidation
 }
 
 type circularBuffer[T any] struct {

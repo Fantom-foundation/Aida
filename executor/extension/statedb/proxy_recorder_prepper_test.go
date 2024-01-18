@@ -7,7 +7,6 @@ import (
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/state/proxy"
-	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 	"go.uber.org/mock/gomock"
 )
@@ -18,16 +17,16 @@ func TestTemporaryProxyRecorderPrepper_PreTransactionCreatesRecorderProxy(t *tes
 	cfg.TraceFile = path
 	cfg.SyncPeriodLength = 1
 
-	p := MakeProxyRecorderPrepper(cfg)
+	p := MakeProxyRecorderPrepper[any](cfg)
 
 	ctx := &executor.Context{}
 
-	err := p.PreRun(executor.State[txcontext.WithValidation]{}, ctx)
+	err := p.PreRun(executor.State[any]{}, ctx)
 	if err != nil {
 		t.Fatalf("unexpected error; %v", err)
 	}
 
-	err = p.PreTransaction(executor.State[txcontext.WithValidation]{}, ctx)
+	err = p.PreTransaction(executor.State[any]{}, ctx)
 	if err != nil {
 		t.Fatalf("unexpected error; %v", err)
 	}
@@ -38,7 +37,7 @@ func TestTemporaryProxyRecorderPrepper_PreTransactionCreatesRecorderProxy(t *tes
 	}
 
 	// close the file gracefully
-	err = p.PostRun(executor.State[txcontext.WithValidation]{}, ctx, nil)
+	err = p.PostRun(executor.State[any]{}, ctx, nil)
 	if err != nil {
 		t.Fatalf("unexpected error; %v", err)
 	}
@@ -50,21 +49,21 @@ func TestProxyRecorderPrepper_PreBlockWritesABeginBlockOperation(t *testing.T) {
 	cfg.TraceFile = path
 	cfg.SyncPeriodLength = 1
 
-	p := makeProxyRecorderPrepper(cfg)
+	p := makeProxyRecorderPrepper[any](cfg)
 
 	ctx := &executor.Context{}
 
-	err := p.PreRun(executor.State[txcontext.WithValidation]{}, ctx)
+	err := p.PreRun(executor.State[any]{}, ctx)
 	if err != nil {
 		t.Fatalf("unexpected error; %v", err)
 	}
 
-	err = p.PreTransaction(executor.State[txcontext.WithValidation]{}, ctx)
+	err = p.PreTransaction(executor.State[any]{}, ctx)
 	if err != nil {
 		t.Fatalf("unexpected error; %v", err)
 	}
 
-	err = p.PreBlock(executor.State[txcontext.WithValidation]{}, ctx)
+	err = p.PreBlock(executor.State[any]{}, ctx)
 	if err != nil {
 		t.Fatalf("unexpected error; %v", err)
 	}
@@ -89,21 +88,21 @@ func TestProxyRecorderPrepper_PostBlockWritesAnEndBlockOperation(t *testing.T) {
 	cfg.TraceFile = path
 	cfg.SyncPeriodLength = 1
 
-	p := makeProxyRecorderPrepper(cfg)
+	p := makeProxyRecorderPrepper[any](cfg)
 
 	ctx := &executor.Context{}
 
-	err := p.PreRun(executor.State[txcontext.WithValidation]{}, ctx)
+	err := p.PreRun(executor.State[any]{}, ctx)
 	if err != nil {
 		t.Fatalf("unexpected error; %v", err)
 	}
 
-	err = p.PreTransaction(executor.State[txcontext.WithValidation]{}, ctx)
+	err = p.PreTransaction(executor.State[any]{}, ctx)
 	if err != nil {
 		t.Fatalf("unexpected error; %v", err)
 	}
 
-	err = p.PostBlock(executor.State[txcontext.WithValidation]{}, ctx)
+	err = p.PostBlock(executor.State[any]{}, ctx)
 	if err != nil {
 		t.Fatalf("unexpected error; %v", err)
 	}
@@ -128,17 +127,17 @@ func TestProxyRecorderPrepper_PostRunWritesAnEndSynchPeriodOperation(t *testing.
 	cfg.TraceFile = path
 	cfg.SyncPeriodLength = 1
 
-	p := MakeProxyRecorderPrepper(cfg)
+	p := MakeProxyRecorderPrepper[any](cfg)
 
 	ctx := &executor.Context{}
 
-	err := p.PreRun(executor.State[txcontext.WithValidation]{}, ctx)
+	err := p.PreRun(executor.State[any]{}, ctx)
 	if err != nil {
 		t.Fatalf("unexpected error; %v", err)
 	}
 
 	// close the file gracefully
-	err = p.PostRun(executor.State[txcontext.WithValidation]{}, ctx, nil)
+	err = p.PostRun(executor.State[any]{}, ctx, nil)
 	if err != nil {
 		t.Fatalf("unexpected error; %v", err)
 	}
@@ -164,10 +163,10 @@ func TestProxyRecorderPrepper_PreTransactionCreatesNewLoggerProxy(t *testing.T) 
 	ctx := new(executor.Context)
 	ctx.State = db
 
-	ext := MakeProxyRecorderPrepper(cfg)
+	ext := MakeProxyRecorderPrepper[any](cfg)
 
 	// ctx.State is not yet a RecorderProxy hence PreTransaction assigns it
-	err := ext.PreTransaction(executor.State[txcontext.WithValidation]{}, ctx)
+	err := ext.PreTransaction(executor.State[any]{}, ctx)
 	if err != nil {
 		t.Fatalf("pre-txcontext failed; %v", err)
 	}
@@ -189,10 +188,10 @@ func TestProxyRecorderPrepper_PreTransactionDoesNotCreateNewLoggerProxy(t *testi
 	ctx := new(executor.Context)
 	ctx.State = db
 
-	ext := MakeProxyRecorderPrepper(cfg)
+	ext := MakeProxyRecorderPrepper[any](cfg)
 
 	// first call PreTransaction to assign the proxy
-	err := ext.PreTransaction(executor.State[txcontext.WithValidation]{}, ctx)
+	err := ext.PreTransaction(executor.State[any]{}, ctx)
 	if err != nil {
 		t.Fatalf("pre-txcontext failed; %v", err)
 	}
@@ -201,7 +200,7 @@ func TestProxyRecorderPrepper_PreTransactionDoesNotCreateNewLoggerProxy(t *testi
 	originalDb := ctx.State
 
 	// then make sure it is not re-assigned again
-	err = ext.PreTransaction(executor.State[txcontext.WithValidation]{}, ctx)
+	err = ext.PreTransaction(executor.State[any]{}, ctx)
 	if err != nil {
 		t.Fatalf("pre-txcontext failed; %v", err)
 	}
