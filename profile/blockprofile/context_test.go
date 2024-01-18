@@ -340,7 +340,7 @@ func TestRecordTransaction(t *testing.T) {
 			t.Errorf("Unexpected addresses")
 		}
 	} else {
-		t.Errorf("Unexpected number of transactionaddresses")
+		t.Errorf("Unexpected number of transaction addresses")
 	}
 	if len(ctx.txDependencies) != 1 || len(ctx.txDependencies[0]) != 0 {
 		t.Errorf("Unexpected dependencies")
@@ -396,7 +396,7 @@ func TestRecordTransaction(t *testing.T) {
 			t.Errorf("Unexpected addresses in second transaction")
 		}
 	} else {
-		t.Errorf("Unexpected number of transactionaddresses")
+		t.Errorf("Unexpected number of transaction addresses")
 	}
 	if len(ctx.txDependencies) != 2 || len(ctx.txDependencies[0]) != 0 || len(ctx.txDependencies[1]) != 1 {
 		fmt.Printf("%v\n", ctx.txDependencies)

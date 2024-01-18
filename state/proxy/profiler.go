@@ -346,7 +346,7 @@ func (p *ProfilerProxy) ForEachStorage(addr common.Address, fn func(common.Hash,
 	return err
 }
 
-// Prepare sets the current transactionhash and index.
+// Prepare sets the current transaction hash and index.
 func (p *ProfilerProxy) Prepare(thash common.Hash, ti int) {
 	p.do(operation.PrepareID, func() {
 		p.db.Prepare(thash, ti)
@@ -362,7 +362,7 @@ func (p *ProfilerProxy) Finalise(deleteEmptyObjects bool) {
 
 // IntermediateRoot computes the current hash of the StateDB.
 // It is called in between transactions to get the root hash that
-// goes into transactionreceipts.
+// goes into transaction receipts.
 func (p *ProfilerProxy) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	var hash common.Hash
 	p.do(operation.IntermediateRootID, func() {

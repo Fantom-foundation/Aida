@@ -16,7 +16,7 @@ type BeginTransaction struct {
 	TransactionNumber uint32 // transaction number
 }
 
-// GetId returns the begin-transactionoperation identifier.
+// GetId returns the begin-transaction operation identifier.
 func (op *BeginTransaction) GetId() byte {
 	return BeginTransactionID
 }

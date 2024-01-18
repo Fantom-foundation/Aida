@@ -161,7 +161,7 @@ func (e *EvmExecutor) sendCall() (*evmcore.ExecutionResult, error) {
 }
 
 // sendEstimateGas executes estimateGas method in the EvmExecutor
-// It calculates how much gas would transactionneed if it was executed
+// It calculates how much gas would transaction need if it was executed
 func (e *EvmExecutor) sendEstimateGas() (hexutil.Uint64, error) {
 	hi, lo, cap, err := e.findHiLoCap()
 	if err != nil {
@@ -174,7 +174,7 @@ func (e *EvmExecutor) sendEstimateGas() (hexutil.Uint64, error) {
 		failed, _, err := e.executable(mid)
 
 		// If the error is not nil(consensus error), it means the provided message
-		// call or transactionwill never be accepted no matter how much gas it is
+		// call or transaction will never be accepted no matter how much gas it is
 		// assigned. Return the error directly, don't struggle anymore.
 		if err != nil {
 			return 0, err
@@ -185,7 +185,7 @@ func (e *EvmExecutor) sendEstimateGas() (hexutil.Uint64, error) {
 			hi = mid
 		}
 	}
-	// Reject the transactionas invalid if it still fails at the highest allowance
+	// Reject the transaction as invalid if it still fails at the highest allowance
 	if hi == cap {
 		failed, result, err := e.executable(hi)
 		if err != nil {
