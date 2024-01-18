@@ -94,7 +94,7 @@ func interfere(u, v AddressSet) bool {
 }
 
 // findTxAddresses gets wallet/contract addresses of a transaction.
-func findTxAddresses(tx executor.State[txcontext.WithValidation]) AddressSet {
+func findTxAddresses(tx executor.State[txcontext.TxContext]) AddressSet {
 	addresses := AddressSet{}
 
 	tx.Data.GetInputState().ForEachAccount(func(addr common.Address, acc txcontext.Account) {
@@ -149,7 +149,7 @@ func (ctx *Context) dependencies(addresses AddressSet) graphutil.OrdinalSet {
 }
 
 // RecordTransaction collects addresses and computes earliest time.
-func (ctx *Context) RecordTransaction(state executor.State[txcontext.WithValidation], tTransaction time.Duration) error {
+func (ctx *Context) RecordTransaction(state executor.State[txcontext.TxContext], tTransaction time.Duration) error {
 	overheadTimer := time.Now()
 
 	// update time for block and transaction
@@ -262,7 +262,7 @@ func (ctx *Context) GetProfileData(curBlock uint64, tBlock time.Duration) (*Prof
 }
 
 // getTransactionType reads a message and determines a transaction type.
-func getTransactionType(tx executor.State[txcontext.WithValidation]) TxType {
+func getTransactionType(tx executor.State[txcontext.TxContext]) TxType {
 	msg := tx.Data.GetMessage()
 	to := msg.To()
 	from := msg.From()

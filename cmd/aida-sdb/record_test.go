@@ -17,9 +17,9 @@ var testingAddress = common.Address{1}
 
 func TestSdbRecord_AllDbEventsAreIssuedInOrder(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	provider := executor.NewMockProvider[txcontext.WithValidation](ctrl)
-	processor := executor.NewMockProcessor[txcontext.WithValidation](ctrl)
-	ext := executor.NewMockExtension[txcontext.WithValidation](ctrl)
+	provider := executor.NewMockProvider[txcontext.TxContext](ctrl)
+	processor := executor.NewMockProcessor[txcontext.TxContext](ctrl)
+	ext := executor.NewMockExtension[txcontext.TxContext](ctrl)
 	path := t.TempDir() + "test_trace"
 	cfg := &utils.Config{
 		First:            10,
@@ -32,40 +32,40 @@ func TestSdbRecord_AllDbEventsAreIssuedInOrder(t *testing.T) {
 
 	provider.EXPECT().
 		Run(10, 12, gomock.Any()).
-		DoAndReturn(func(from int, to int, consumer executor.Consumer[txcontext.WithValidation]) error {
+		DoAndReturn(func(from int, to int, consumer executor.Consumer[txcontext.TxContext]) error {
 			for i := from; i < to; i++ {
-				consumer(executor.TransactionInfo[txcontext.WithValidation]{Block: i, Transaction: 3, Data: substatecontext.NewTxContextWithValidation(emptyTx)})
-				consumer(executor.TransactionInfo[txcontext.WithValidation]{Block: i, Transaction: utils.PseudoTx, Data: substatecontext.NewTxContextWithValidation(emptyTx)})
+				consumer(executor.TransactionInfo[txcontext.TxContext]{Block: i, Transaction: 3, Data: substatecontext.NewTxContextWithValidation(emptyTx)})
+				consumer(executor.TransactionInfo[txcontext.TxContext]{Block: i, Transaction: utils.PseudoTx, Data: substatecontext.NewTxContextWithValidation(emptyTx)})
 			}
 			return nil
 		})
 
 	// All transactions are processed in order
 	gomock.InOrder(
-		ext.EXPECT().PreRun(executor.AtBlock[txcontext.WithValidation](10), gomock.Any()),
+		ext.EXPECT().PreRun(executor.AtBlock[txcontext.TxContext](10), gomock.Any()),
 
 		// block 10
-		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.WithValidation](10, 3), gomock.Any()),
-		processor.EXPECT().Process(executor.AtTransaction[txcontext.WithValidation](10, 3), gomock.Any()),
-		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.WithValidation](10, 3), gomock.Any()),
+		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](10, 3), gomock.Any()),
+		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](10, 3), gomock.Any()),
+		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](10, 3), gomock.Any()),
 
-		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.WithValidation](10, utils.PseudoTx), gomock.Any()),
-		processor.EXPECT().Process(executor.AtTransaction[txcontext.WithValidation](10, utils.PseudoTx), gomock.Any()),
-		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.WithValidation](10, utils.PseudoTx), gomock.Any()),
+		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](10, utils.PseudoTx), gomock.Any()),
+		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](10, utils.PseudoTx), gomock.Any()),
+		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](10, utils.PseudoTx), gomock.Any()),
 
 		// block 11
-		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.WithValidation](11, 3), gomock.Any()),
-		processor.EXPECT().Process(executor.AtTransaction[txcontext.WithValidation](11, 3), gomock.Any()),
-		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.WithValidation](11, 3), gomock.Any()),
+		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](11, 3), gomock.Any()),
+		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](11, 3), gomock.Any()),
+		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](11, 3), gomock.Any()),
 
-		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.WithValidation](11, utils.PseudoTx), gomock.Any()),
-		processor.EXPECT().Process(executor.AtTransaction[txcontext.WithValidation](11, utils.PseudoTx), gomock.Any()),
-		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.WithValidation](11, utils.PseudoTx), gomock.Any()),
+		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](11, utils.PseudoTx), gomock.Any()),
+		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](11, utils.PseudoTx), gomock.Any()),
+		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](11, utils.PseudoTx), gomock.Any()),
 
-		ext.EXPECT().PostRun(executor.AtBlock[txcontext.WithValidation](12), gomock.Any(), nil),
+		ext.EXPECT().PostRun(executor.AtBlock[txcontext.TxContext](12), gomock.Any(), nil),
 	)
 
-	if err := record(cfg, provider, processor, []executor.Extension[txcontext.WithValidation]{ext}); err != nil {
+	if err := record(cfg, provider, processor, []executor.Extension[txcontext.TxContext]{ext}); err != nil {
 		t.Errorf("record failed: %v", err)
 	}
 }

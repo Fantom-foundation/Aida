@@ -42,9 +42,9 @@ const (
 // MakeRegisterProgress creates an extention that
 //  1. Track Progress e.g. ProgressTracker
 //  2. Register the intermediate results to an external service (sqlite3 db)
-func MakeRegisterProgress(cfg *utils.Config, reportFrequency int) executor.Extension[txcontext.WithValidation] {
+func MakeRegisterProgress(cfg *utils.Config, reportFrequency int) executor.Extension[txcontext.TxContext] {
 	if cfg.RegisterRun == "" {
-		return extension.NilExtension[txcontext.WithValidation]{}
+		return extension.NilExtension[txcontext.TxContext]{}
 	}
 
 	if reportFrequency == 0 {
@@ -83,7 +83,7 @@ func MakeRegisterProgress(cfg *utils.Config, reportFrequency int) executor.Exten
 // registerProgress logs progress every XXX blocks depending on reportFrequency.
 // Default is 100_000 blocks. This is mainly used for gathering information about process.
 type registerProgress struct {
-	extension.NilExtension[txcontext.WithValidation]
+	extension.NilExtension[txcontext.TxContext]
 
 	// Configuration
 	cfg  *utils.Config
@@ -109,7 +109,7 @@ type registerProgress struct {
 	meta *RunMetadata
 }
 
-func (rp *registerProgress) PreRun(_ executor.State[txcontext.WithValidation], ctx *executor.Context) error {
+func (rp *registerProgress) PreRun(_ executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	now := time.Now()
 	rp.startOfRun = now
 	rp.lastUpdate = now
@@ -121,7 +121,7 @@ func (rp *registerProgress) PreRun(_ executor.State[txcontext.WithValidation], c
 // We only care about total number of transactions we can do this here rather in Pre/PostTransaction.
 //
 // This is done in PreBlock because some blocks do not have txcontext.
-func (rp *registerProgress) PreBlock(state executor.State[txcontext.WithValidation], ctx *executor.Context) error {
+func (rp *registerProgress) PreBlock(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	if uint64(state.Block) > rp.interval.End() {
 		rp.memory = ctx.State.GetMemoryUsage()
 		rp.ps.Print()
@@ -133,7 +133,7 @@ func (rp *registerProgress) PreBlock(state executor.State[txcontext.WithValidati
 }
 
 // PostTransaction increments number of transactions and saves gas used in last substate.
-func (rp *registerProgress) PostTransaction(state executor.State[txcontext.WithValidation], _ *executor.Context) error {
+func (rp *registerProgress) PostTransaction(state executor.State[txcontext.TxContext], _ *executor.Context) error {
 	res := state.Data.GetReceipt()
 
 	rp.lock.Lock()
@@ -149,7 +149,7 @@ func (rp *registerProgress) PostTransaction(state executor.State[txcontext.WithV
 }
 
 // PostRun prints the remaining statistics and terminates any printer resources.
-func (rp *registerProgress) PostRun(_ executor.State[txcontext.WithValidation], ctx *executor.Context, err error) error {
+func (rp *registerProgress) PostRun(_ executor.State[txcontext.TxContext], ctx *executor.Context, err error) error {
 	rp.memory = ctx.State.GetMemoryUsage()
 	rp.ps.Print()
 	rp.Reset()

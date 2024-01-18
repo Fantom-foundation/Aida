@@ -14,11 +14,11 @@ import (
 //---------------------------------------------------------------------------------//
 
 type TxConsumer interface {
-	Consume(block int, transaction int, substate txcontext.WithValidation) error
+	Consume(block int, transaction int, substate txcontext.TxContext) error
 }
 
-func toSubstateConsumer(c TxConsumer) Consumer[txcontext.WithValidation] {
-	return func(info TransactionInfo[txcontext.WithValidation]) error {
+func toSubstateConsumer(c TxConsumer) Consumer[txcontext.TxContext] {
+	return func(info TransactionInfo[txcontext.TxContext]) error {
 		return c.Consume(info.Block, info.Transaction, info.Data)
 	}
 }

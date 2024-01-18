@@ -10,15 +10,15 @@ import (
 // an optional StateDB instance before each transaction of an execution. Its main
 // purpose is to support Aida's in-memory DB implementation by feeding it data
 // information before each transaction in tools like `aida-vm-sdb`.
-func MakeStateDbPrepper() executor.Extension[txcontext.WithValidation] {
+func MakeStateDbPrepper() executor.Extension[txcontext.TxContext] {
 	return &statePrepper{}
 }
 
 type statePrepper struct {
-	extension.NilExtension[txcontext.WithValidation]
+	extension.NilExtension[txcontext.TxContext]
 }
 
-func (e *statePrepper) PreTransaction(state executor.State[txcontext.WithValidation], ctx *executor.Context) error {
+func (e *statePrepper) PreTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	if ctx != nil && ctx.State != nil && state.Data != nil {
 		alloc := state.Data.GetInputState()
 		ctx.State.PrepareSubstate(alloc, uint64(state.Block))

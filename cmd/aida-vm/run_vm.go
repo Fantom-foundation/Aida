@@ -38,29 +38,29 @@ func RunVm(ctx *cli.Context) error {
 // execution, in particular during unit tests.
 func run(
 	cfg *utils.Config,
-	provider executor.Provider[txcontext.WithValidation],
+	provider executor.Provider[txcontext.TxContext],
 	stateDb state.StateDB,
-	processor executor.Processor[txcontext.WithValidation],
-	extra []executor.Extension[txcontext.WithValidation],
+	processor executor.Processor[txcontext.TxContext],
+	extra []executor.Extension[txcontext.TxContext],
 ) error {
-	extensions := []executor.Extension[txcontext.WithValidation]{
-		profiler.MakeCpuProfiler[txcontext.WithValidation](cfg),
-		profiler.MakeDiagnosticServer[txcontext.WithValidation](cfg),
-		profiler.MakeVirtualMachineStatisticsPrinter[txcontext.WithValidation](cfg),
+	extensions := []executor.Extension[txcontext.TxContext]{
+		profiler.MakeCpuProfiler[txcontext.TxContext](cfg),
+		profiler.MakeDiagnosticServer[txcontext.TxContext](cfg),
+		profiler.MakeVirtualMachineStatisticsPrinter[txcontext.TxContext](cfg),
 	}
 
 	if stateDb == nil {
 		extensions = append(
 			extensions,
 			statedb.MakeTemporaryStatePrepper(cfg),
-			tracker.MakeDbLogger[txcontext.WithValidation](cfg),
+			tracker.MakeDbLogger[txcontext.TxContext](cfg),
 		)
 	}
 
 	extensions = append(
 		extensions,
-		tracker.MakeErrorLogger[txcontext.WithValidation](cfg),
-		tracker.MakeProgressLogger[txcontext.WithValidation](cfg, 15*time.Second),
+		tracker.MakeErrorLogger[txcontext.TxContext](cfg),
+		tracker.MakeProgressLogger[txcontext.TxContext](cfg, 15*time.Second),
 		validator.MakeLiveDbValidator(cfg),
 	)
 	extensions = append(extensions, extra...)

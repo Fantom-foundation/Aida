@@ -15,7 +15,7 @@ func TestBlockProfilerExtension_NoProfileIsCollectedIfDisabled(t *testing.T) {
 	config := &utils.Config{}
 	ext := MakeBlockRuntimeAndGasCollector(config)
 
-	if _, ok := ext.(extension.NilExtension[txcontext.WithValidation]); !ok {
+	if _, ok := ext.(extension.NilExtension[txcontext.TxContext]); !ok {
 		t.Errorf("profiler is enabled although not set in configuration")
 	}
 }
@@ -28,7 +28,7 @@ func TestBlockProfilerExtension_ProfileDbIsCreated(t *testing.T) {
 
 	ext := MakeBlockRuntimeAndGasCollector(config)
 
-	if err := ext.PreRun(executor.State[txcontext.WithValidation]{}, nil); err != nil {
+	if err := ext.PreRun(executor.State[txcontext.TxContext]{}, nil); err != nil {
 		t.Fatalf("unexpected error during pre-run; %v", err)
 	}
 

@@ -7,7 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-func NewTxContextWithValidation(data *substate.Substate) txcontext.WithValidation {
+func NewTxContextWithValidation(data *substate.Substate) txcontext.TxContext {
 	return &substateData{data}
 }
 

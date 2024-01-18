@@ -19,9 +19,9 @@ const (
 
 // MakeProgressTracker creates a progressTracker that depends on the
 // PostBlock event and is only useful as part of a sequential evaluation.
-func MakeProgressTracker(cfg *utils.Config, reportFrequency int) executor.Extension[txcontext.WithValidation] {
+func MakeProgressTracker(cfg *utils.Config, reportFrequency int) executor.Extension[txcontext.TxContext] {
 	if !cfg.TrackProgress {
-		return extension.NilExtension[txcontext.WithValidation]{}
+		return extension.NilExtension[txcontext.TxContext]{}
 	}
 
 	if reportFrequency == 0 {
@@ -43,7 +43,7 @@ func makeProgressTracker(cfg *utils.Config, reportFrequency int, log logger.Logg
 // progressTracker logs progress every XXX blocks depending on reportFrequency.
 // Default is 100_000 blocks. This is mainly used for gathering information about process.
 type progressTracker struct {
-	extension.NilExtension[txcontext.WithValidation]
+	extension.NilExtension[txcontext.TxContext]
 	cfg                 *utils.Config
 	log                 logger.Logger
 	reportFrequency     int
@@ -60,7 +60,7 @@ type processInfo struct {
 	gas             uint64
 }
 
-func (t *progressTracker) PreRun(state executor.State[txcontext.WithValidation], _ *executor.Context) error {
+func (t *progressTracker) PreRun(state executor.State[txcontext.TxContext], _ *executor.Context) error {
 	now := time.Now()
 	t.startOfRun = now
 	t.startOfLastInterval = now
@@ -68,7 +68,7 @@ func (t *progressTracker) PreRun(state executor.State[txcontext.WithValidation],
 }
 
 // PostTransaction increments number of transactions and saves gas used in last substate.
-func (t *progressTracker) PostTransaction(state executor.State[txcontext.WithValidation], _ *executor.Context) error {
+func (t *progressTracker) PostTransaction(state executor.State[txcontext.TxContext], _ *executor.Context) error {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
@@ -79,7 +79,7 @@ func (t *progressTracker) PostTransaction(state executor.State[txcontext.WithVal
 }
 
 // PostBlock registers the completed block and may trigger the logging of an update.
-func (t *progressTracker) PostBlock(state executor.State[txcontext.WithValidation], ctx *executor.Context) error {
+func (t *progressTracker) PostBlock(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	boundary := state.Block - (state.Block % t.reportFrequency)
 
 	if state.Block-t.lastReportedBlock < t.reportFrequency {

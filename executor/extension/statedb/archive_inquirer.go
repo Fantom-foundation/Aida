@@ -18,13 +18,13 @@ import (
 
 // MakeArchiveInquirer creates an extension running historic queries against
 // archive states in the background to the main executor process.
-func MakeArchiveInquirer(cfg *utils.Config) executor.Extension[txcontext.WithValidation] {
+func MakeArchiveInquirer(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
 	return makeArchiveInquirer(cfg, logger.NewLogger(cfg.LogLevel, "Archive Inquirer"))
 }
 
-func makeArchiveInquirer(cfg *utils.Config, log logger.Logger) executor.Extension[txcontext.WithValidation] {
+func makeArchiveInquirer(cfg *utils.Config, log logger.Logger) executor.Extension[txcontext.TxContext] {
 	if cfg.ArchiveQueryRate <= 0 {
-		return extension.NilExtension[txcontext.WithValidation]{}
+		return extension.NilExtension[txcontext.TxContext]{}
 	}
 	return &archiveInquirer{
 		ArchiveDbProcessor: executor.MakeArchiveDbProcessor(cfg),
@@ -38,7 +38,7 @@ func makeArchiveInquirer(cfg *utils.Config, log logger.Logger) executor.Extensio
 }
 
 type archiveInquirer struct {
-	extension.NilExtension[txcontext.WithValidation]
+	extension.NilExtension[txcontext.TxContext]
 	*executor.ArchiveDbProcessor
 
 	cfg   *utils.Config
@@ -59,10 +59,10 @@ type archiveInquirer struct {
 	gasCounter                 atomic.Uint64
 	totalQueryTimeMilliseconds atomic.Uint64
 
-	validator executor.Extension[txcontext.WithValidation]
+	validator executor.Extension[txcontext.TxContext]
 }
 
-func (i *archiveInquirer) PreRun(_ executor.State[txcontext.WithValidation], ctx *executor.Context) error {
+func (i *archiveInquirer) PreRun(_ executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	if !i.cfg.ArchiveMode {
 		i.finished.Signal()
 		return fmt.Errorf("can not run archive queries without enabled archive (missing --%s flag)", utils.ArchiveModeFlag.Name)
@@ -80,7 +80,7 @@ func (i *archiveInquirer) PreRun(_ executor.State[txcontext.WithValidation], ctx
 	return nil
 }
 
-func (i *archiveInquirer) PostTransaction(state executor.State[txcontext.WithValidation], _ *executor.Context) error {
+func (i *archiveInquirer) PostTransaction(state executor.State[txcontext.TxContext], _ *executor.Context) error {
 	// We only sample the very first transaction in each block since other transactions
 	// may depend on the effects of its predecessors in the same block.
 	if state.Transaction != 0 {
@@ -98,7 +98,7 @@ func (i *archiveInquirer) PostTransaction(state executor.State[txcontext.WithVal
 	return nil
 }
 
-func (i *archiveInquirer) PostRun(executor.State[txcontext.WithValidation], *executor.Context, error) error {
+func (i *archiveInquirer) PostRun(executor.State[txcontext.TxContext], *executor.Context, error) error {
 	i.finished.Signal()
 	i.done.Wait()
 	return nil
@@ -157,7 +157,7 @@ func (i *archiveInquirer) doInquiry(rnd *rand.Rand, errCh chan error) {
 	}
 	defer archive.Release()
 
-	state := executor.State[txcontext.WithValidation]{
+	state := executor.State[txcontext.TxContext]{
 		Block:       tx.block,
 		Transaction: tx.number,
 		Data:        tx.data,
@@ -233,7 +233,7 @@ func (i *archiveInquirer) runProgressReport() {
 type historicTransaction struct {
 	block  int
 	number int
-	data   txcontext.WithValidation
+	data   txcontext.TxContext
 }
 
 type circularBuffer[T any] struct {

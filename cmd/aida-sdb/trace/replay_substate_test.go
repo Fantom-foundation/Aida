@@ -20,9 +20,9 @@ var testingAddress = common.Address{1}
 
 func TestSdbReplaySubstate_AllDbEventsAreIssuedInOrder(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	provider := executor.NewMockProvider[txcontext.WithValidation](ctrl)
-	processor := executor.NewMockProcessor[txcontext.WithValidation](ctrl)
-	ext := executor.NewMockExtension[txcontext.WithValidation](ctrl)
+	provider := executor.NewMockProvider[txcontext.TxContext](ctrl)
+	processor := executor.NewMockProcessor[txcontext.TxContext](ctrl)
+	ext := executor.NewMockExtension[txcontext.TxContext](ctrl)
 
 	cfg := &utils.Config{}
 	cfg.DbImpl = "carmen"
@@ -33,39 +33,39 @@ func TestSdbReplaySubstate_AllDbEventsAreIssuedInOrder(t *testing.T) {
 
 	provider.EXPECT().
 		Run(0, 1, gomock.Any()).
-		DoAndReturn(func(from int, to int, consumer executor.Consumer[txcontext.WithValidation]) error {
+		DoAndReturn(func(from int, to int, consumer executor.Consumer[txcontext.TxContext]) error {
 			for i := from; i < to; i++ {
-				consumer(executor.TransactionInfo[txcontext.WithValidation]{Block: 0, Transaction: 0, Data: substatecontext.NewTxContextWithValidation(testTx)})
-				consumer(executor.TransactionInfo[txcontext.WithValidation]{Block: 0, Transaction: 1, Data: substatecontext.NewTxContextWithValidation(testTx)})
+				consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 0, Transaction: 0, Data: substatecontext.NewTxContextWithValidation(testTx)})
+				consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 0, Transaction: 1, Data: substatecontext.NewTxContextWithValidation(testTx)})
 			}
 			return nil
 		})
 
 	// All transactions are processed in order
 	gomock.InOrder(
-		ext.EXPECT().PreRun(executor.AtBlock[txcontext.WithValidation](0), gomock.Any()),
+		ext.EXPECT().PreRun(executor.AtBlock[txcontext.TxContext](0), gomock.Any()),
 
 		// tx 0
-		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.WithValidation](0, 0), gomock.Any()),
-		processor.EXPECT().Process(executor.AtTransaction[txcontext.WithValidation](0, 0), gomock.Any()),
-		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.WithValidation](0, 0), gomock.Any()),
+		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](0, 0), gomock.Any()),
+		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](0, 0), gomock.Any()),
+		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](0, 0), gomock.Any()),
 
 		// tx 1
-		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.WithValidation](0, 1), gomock.Any()),
-		processor.EXPECT().Process(executor.AtTransaction[txcontext.WithValidation](0, 1), gomock.Any()),
-		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.WithValidation](0, 1), gomock.Any()),
+		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](0, 1), gomock.Any()),
+		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](0, 1), gomock.Any()),
+		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](0, 1), gomock.Any()),
 
-		ext.EXPECT().PostRun(executor.AtBlock[txcontext.WithValidation](1), gomock.Any(), nil),
+		ext.EXPECT().PostRun(executor.AtBlock[txcontext.TxContext](1), gomock.Any(), nil),
 	)
 
-	if err := replaySubstate(cfg, provider, processor, nil, []executor.Extension[txcontext.WithValidation]{ext}); err != nil {
+	if err := replaySubstate(cfg, provider, processor, nil, []executor.Extension[txcontext.TxContext]{ext}); err != nil {
 		t.Errorf("record failed: %v", err)
 	}
 }
 
 func TestSdbReplaySubstate_StateDbPrepperIsAddedIfDbImplIsMemory(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	substateProvider := executor.NewMockProvider[txcontext.WithValidation](ctrl)
+	substateProvider := executor.NewMockProvider[txcontext.TxContext](ctrl)
 	operationProvider := executor.NewMockProvider[[]operation.Operation](ctrl)
 	db := state.NewMockStateDB(ctrl)
 
@@ -78,9 +78,9 @@ func TestSdbReplaySubstate_StateDbPrepperIsAddedIfDbImplIsMemory(t *testing.T) {
 
 	substateProvider.EXPECT().
 		Run(0, 1, gomock.Any()).
-		DoAndReturn(func(from int, to int, consumer executor.Consumer[txcontext.WithValidation]) error {
+		DoAndReturn(func(from int, to int, consumer executor.Consumer[txcontext.TxContext]) error {
 			for i := from; i < to; i++ {
-				consumer(executor.TransactionInfo[txcontext.WithValidation]{Block: 0, Transaction: 0, Data: substatecontext.NewTxContextWithValidation(testTx)})
+				consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 0, Transaction: 0, Data: substatecontext.NewTxContextWithValidation(testTx)})
 			}
 			return nil
 		})
@@ -105,7 +105,7 @@ func TestSdbReplaySubstate_StateDbPrepperIsAddedIfDbImplIsMemory(t *testing.T) {
 
 func TestSdbReplaySubstate_TxPrimerIsAddedIfDbImplIsNotMemory(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	substateProvider := executor.NewMockProvider[txcontext.WithValidation](ctrl)
+	substateProvider := executor.NewMockProvider[txcontext.TxContext](ctrl)
 	operationProvider := executor.NewMockProvider[[]operation.Operation](ctrl)
 	db := state.NewMockStateDB(ctrl)
 	bulkLoad := state.NewMockBulkLoad(ctrl)
@@ -119,9 +119,9 @@ func TestSdbReplaySubstate_TxPrimerIsAddedIfDbImplIsNotMemory(t *testing.T) {
 
 	substateProvider.EXPECT().
 		Run(1, 2, gomock.Any()).
-		DoAndReturn(func(from int, to int, consumer executor.Consumer[txcontext.WithValidation]) error {
+		DoAndReturn(func(from int, to int, consumer executor.Consumer[txcontext.TxContext]) error {
 			for i := from; i < to; i++ {
-				consumer(executor.TransactionInfo[txcontext.WithValidation]{Block: 1, Transaction: 0, Data: substatecontext.NewTxContextWithValidation(testTx)})
+				consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 1, Transaction: 0, Data: substatecontext.NewTxContextWithValidation(testTx)})
 			}
 			return nil
 		})

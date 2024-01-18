@@ -37,49 +37,49 @@ func RunSubstate(ctx *cli.Context) error {
 
 func runSubstates(
 	cfg *utils.Config,
-	provider executor.Provider[txcontext.WithValidation],
+	provider executor.Provider[txcontext.TxContext],
 	stateDb state.StateDB,
-	processor executor.Processor[txcontext.WithValidation],
-	extra []executor.Extension[txcontext.WithValidation],
+	processor executor.Processor[txcontext.TxContext],
+	extra []executor.Extension[txcontext.TxContext],
 ) error {
 	// order of extensionList has to be maintained
-	var extensionList = []executor.Extension[txcontext.WithValidation]{
-		profiler.MakeCpuProfiler[txcontext.WithValidation](cfg),
-		profiler.MakeDiagnosticServer[txcontext.WithValidation](cfg),
+	var extensionList = []executor.Extension[txcontext.TxContext]{
+		profiler.MakeCpuProfiler[txcontext.TxContext](cfg),
+		profiler.MakeDiagnosticServer[txcontext.TxContext](cfg),
 	}
 
 	if stateDb == nil {
 		extensionList = append(
 			extensionList,
-			statedb.MakeStateDbManager[txcontext.WithValidation](cfg),
-			statedb.MakeLiveDbBlockChecker[txcontext.WithValidation](cfg),
-			tracker.MakeDbLogger[txcontext.WithValidation](cfg),
+			statedb.MakeStateDbManager[txcontext.TxContext](cfg),
+			statedb.MakeLiveDbBlockChecker[txcontext.TxContext](cfg),
+			tracker.MakeDbLogger[txcontext.TxContext](cfg),
 		)
 	}
 
 	extensionList = append(extensionList, extra...)
 
-	extensionList = append(extensionList, []executor.Extension[txcontext.WithValidation]{
+	extensionList = append(extensionList, []executor.Extension[txcontext.TxContext]{
 		register.MakeRegisterProgress(cfg, 100_000),
 		// RegisterProgress should be the first on the list = last to receive PostRun.
 		// This is because it collects the error and records it externally.
 		// If not, error that happen afterwards (e.g. on top of) will not be correcly recorded.
 
-		profiler.MakeThreadLocker[txcontext.WithValidation](),
-		aidadb.MakeAidaDbManager[txcontext.WithValidation](cfg),
-		profiler.MakeVirtualMachineStatisticsPrinter[txcontext.WithValidation](cfg),
-		tracker.MakeProgressLogger[txcontext.WithValidation](cfg, 15*time.Second),
-		tracker.MakeErrorLogger[txcontext.WithValidation](cfg),
+		profiler.MakeThreadLocker[txcontext.TxContext](),
+		aidadb.MakeAidaDbManager[txcontext.TxContext](cfg),
+		profiler.MakeVirtualMachineStatisticsPrinter[txcontext.TxContext](cfg),
+		tracker.MakeProgressLogger[txcontext.TxContext](cfg, 15*time.Second),
+		tracker.MakeErrorLogger[txcontext.TxContext](cfg),
 		tracker.MakeProgressTracker(cfg, 100_000),
-		primer.MakeStateDbPrimer[txcontext.WithValidation](cfg),
-		profiler.MakeMemoryUsagePrinter[txcontext.WithValidation](cfg),
-		profiler.MakeMemoryProfiler[txcontext.WithValidation](cfg),
+		primer.MakeStateDbPrimer[txcontext.TxContext](cfg),
+		profiler.MakeMemoryUsagePrinter[txcontext.TxContext](cfg),
+		profiler.MakeMemoryProfiler[txcontext.TxContext](cfg),
 		statedb.MakeStateDbPrepper(),
 		statedb.MakeArchiveInquirer(cfg),
-		validator.MakeStateHashValidator[txcontext.WithValidation](cfg),
-		statedb.MakeBlockEventEmitter[txcontext.WithValidation](),
+		validator.MakeStateHashValidator[txcontext.TxContext](cfg),
+		statedb.MakeBlockEventEmitter[txcontext.TxContext](),
 		validator.MakeLiveDbValidator(cfg),
-		profiler.MakeOperationProfiler[txcontext.WithValidation](cfg),
+		profiler.MakeOperationProfiler[txcontext.TxContext](cfg),
 
 		// block profile extension should be always last because:
 		// 1) Pre-Func are called forwards so this is called last and

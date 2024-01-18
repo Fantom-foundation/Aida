@@ -27,12 +27,12 @@ func TestStatePrepper_PreparesStateBeforeEachTransaction(t *testing.T) {
 
 	prepper := MakeStateDbPrepper()
 
-	prepper.PreTransaction(executor.State[txcontext.WithValidation]{
+	prepper.PreTransaction(executor.State[txcontext.TxContext]{
 		Block: 5,
 		Data:  substate2.NewTxContextWithValidation(&substate.Substate{InputAlloc: allocA}),
 	}, ctx)
 
-	prepper.PreTransaction(executor.State[txcontext.WithValidation]{
+	prepper.PreTransaction(executor.State[txcontext.TxContext]{
 		Block: 7,
 		Data:  substate2.NewTxContextWithValidation(&substate.Substate{InputAlloc: allocB}),
 	}, ctx)
@@ -44,7 +44,7 @@ func TestStatePrepper_DoesNotCrashOnMissingStateOrSubstate(t *testing.T) {
 	ctx := &executor.Context{State: db}
 
 	prepper := MakeStateDbPrepper()
-	prepper.PreTransaction(executor.State[txcontext.WithValidation]{Block: 5}, nil)                                                                   // misses both
-	prepper.PreTransaction(executor.State[txcontext.WithValidation]{Block: 5}, ctx)                                                                   // misses the data
-	prepper.PreTransaction(executor.State[txcontext.WithValidation]{Block: 5, Data: substate2.NewTxContextWithValidation(&substate.Substate{})}, nil) // misses the state
+	prepper.PreTransaction(executor.State[txcontext.TxContext]{Block: 5}, nil)                                                                   // misses both
+	prepper.PreTransaction(executor.State[txcontext.TxContext]{Block: 5}, ctx)                                                                   // misses the data
+	prepper.PreTransaction(executor.State[txcontext.TxContext]{Block: 5, Data: substate2.NewTxContextWithValidation(&substate.Substate{})}, nil) // misses the state
 }

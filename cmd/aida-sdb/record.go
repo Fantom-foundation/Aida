@@ -59,16 +59,16 @@ func RecordStateDbTrace(ctx *cli.Context) error {
 
 func record(
 	cfg *utils.Config,
-	provider executor.Provider[txcontext.WithValidation],
-	processor executor.Processor[txcontext.WithValidation],
-	extra []executor.Extension[txcontext.WithValidation],
+	provider executor.Provider[txcontext.TxContext],
+	processor executor.Processor[txcontext.TxContext],
+	extra []executor.Extension[txcontext.TxContext],
 ) error {
-	var extensions = []executor.Extension[txcontext.WithValidation]{
-		profiler.MakeCpuProfiler[txcontext.WithValidation](cfg),
-		tracker.MakeProgressLogger[txcontext.WithValidation](cfg, 0),
+	var extensions = []executor.Extension[txcontext.TxContext]{
+		profiler.MakeCpuProfiler[txcontext.TxContext](cfg),
+		tracker.MakeProgressLogger[txcontext.TxContext](cfg, 0),
 		tracker.MakeProgressTracker(cfg, 0),
 		statedb.MakeTemporaryStatePrepper(cfg),
-		statedb.MakeProxyRecorderPrepper[txcontext.WithValidation](cfg),
+		statedb.MakeProxyRecorderPrepper[txcontext.TxContext](cfg),
 		validator.MakeLiveDbValidator(cfg),
 	}
 

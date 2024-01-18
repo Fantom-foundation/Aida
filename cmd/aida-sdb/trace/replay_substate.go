@@ -37,8 +37,8 @@ func ReplaySubstate(ctx *cli.Context) error {
 
 	processor := makeSubstateProcessor(cfg, rCtx, operationProvider)
 
-	var extra = []executor.Extension[txcontext.WithValidation]{
-		profiler.MakeReplayProfiler[txcontext.WithValidation](cfg, rCtx),
+	var extra = []executor.Extension[txcontext.TxContext]{
+		profiler.MakeReplayProfiler[txcontext.TxContext](cfg, rCtx),
 	}
 
 	return replaySubstate(cfg, substateProvider, processor, nil, extra)
@@ -56,7 +56,7 @@ type substateProcessor struct {
 	operationProvider executor.Provider[[]operation.Operation]
 }
 
-func (p substateProcessor) Process(state executor.State[txcontext.WithValidation], ctx *executor.Context) error {
+func (p substateProcessor) Process(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	return p.operationProvider.Run(state.Block, state.Block, func(t executor.TransactionInfo[[]operation.Operation]) error {
 		p.runTransaction(uint64(state.Block), t.Data, ctx.State)
 		return nil
@@ -65,21 +65,21 @@ func (p substateProcessor) Process(state executor.State[txcontext.WithValidation
 
 func replaySubstate(
 	cfg *utils.Config,
-	provider executor.Provider[txcontext.WithValidation],
-	processor executor.Processor[txcontext.WithValidation],
+	provider executor.Provider[txcontext.TxContext],
+	processor executor.Processor[txcontext.TxContext],
 	stateDb state.StateDB,
-	extra []executor.Extension[txcontext.WithValidation],
+	extra []executor.Extension[txcontext.TxContext],
 ) error {
-	var extensionList = []executor.Extension[txcontext.WithValidation]{
-		profiler.MakeCpuProfiler[txcontext.WithValidation](cfg),
-		tracker.MakeProgressLogger[txcontext.WithValidation](cfg, 0),
-		profiler.MakeMemoryUsagePrinter[txcontext.WithValidation](cfg),
-		profiler.MakeMemoryProfiler[txcontext.WithValidation](cfg),
+	var extensionList = []executor.Extension[txcontext.TxContext]{
+		profiler.MakeCpuProfiler[txcontext.TxContext](cfg),
+		tracker.MakeProgressLogger[txcontext.TxContext](cfg, 0),
+		profiler.MakeMemoryUsagePrinter[txcontext.TxContext](cfg),
+		profiler.MakeMemoryProfiler[txcontext.TxContext](cfg),
 		validator.MakeLiveDbValidator(cfg),
 	}
 
 	if stateDb == nil {
-		extensionList = append(extensionList, statedb.MakeStateDbManager[txcontext.WithValidation](cfg))
+		extensionList = append(extensionList, statedb.MakeStateDbManager[txcontext.TxContext](cfg))
 	}
 
 	if cfg.DbImpl == "memory" {

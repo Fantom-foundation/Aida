@@ -156,7 +156,7 @@ func TestSubstateProvider_IterationCanBeAbortedByConsumer(t *testing.T) {
 	}
 }
 
-func openSubstateDb(path string) (Provider[txcontext.WithValidation], error) {
+func openSubstateDb(path string) (Provider[txcontext.TxContext], error) {
 	cfg := utils.Config{}
 	cfg.AidaDb = path
 	cfg.Workers = 1

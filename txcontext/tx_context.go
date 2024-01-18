@@ -2,24 +2,24 @@ package txcontext
 
 import "github.com/ethereum/go-ethereum/core/types"
 
-// WithValidation implements all three interfaces necessary for
+// TxContext implements all three interfaces necessary for
 // Input/Output validation and Transaction execution
-type WithValidation interface {
-	InputValidationData
-	ExecutionData
-	OutputValidationData
+type TxContext interface {
+	InputState
+	Transaction
+	OutputState
 }
 
-// InputValidationData represents what is necessary to implement if input validation is required.
-type InputValidationData interface {
+// InputState represents what is necessary to implement if input validation is required.
+type InputState interface {
 	// GetInputState returns the state of the WorldState BEFORE executing the transaction.
 	// This is mainly used for confirming that StateDb has correct data before execution.
 	// And/Or for creating an InMemory StateDb which lifespan is a single transaction.
 	GetInputState() WorldState
 }
 
-// ExecutionData represents what is necessary to implement to be able to execute a transaction using the Executor.
-type ExecutionData interface {
+// Transaction represents what is necessary to implement to be able to execute a transaction using the Executor.
+type Transaction interface {
 	// GetBlockEnvironment returns the transaction environment.
 	// This is used for creating the correct block environment for execution.
 	GetBlockEnvironment() BlockEnvironment
@@ -29,8 +29,8 @@ type ExecutionData interface {
 	GetMessage() types.Message
 }
 
-// OutputValidationData represents what is necessary to implement if output validation is required.
-type OutputValidationData interface {
+// OutputState represents what is necessary to implement if output validation is required.
+type OutputState interface {
 	// GetOutputState returns the state of the WorldState AFTER executing the transaction.
 	// This is mainly used for confirming that StateDb has correct data AFTER execution.
 	GetOutputState() WorldState

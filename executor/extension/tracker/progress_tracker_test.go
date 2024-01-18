@@ -24,7 +24,7 @@ func TestProgressTrackerExtension_NoLoggerIsCreatedIfDisabled(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.TrackProgress = false
 	ext := MakeProgressTracker(cfg, testStateDbInfoFrequency)
-	if _, ok := ext.(extension.NilExtension[txcontext.WithValidation]); !ok {
+	if _, ok := ext.(extension.NilExtension[txcontext.TxContext]); !ok {
 		t.Errorf("Logger is enabled although not set in configuration")
 	}
 
@@ -77,12 +77,12 @@ func TestProgressTrackerExtension_LoggingHappens(t *testing.T) {
 		),
 	)
 
-	ext.PreRun(executor.State[txcontext.WithValidation]{}, ctx)
+	ext.PreRun(executor.State[txcontext.TxContext]{}, ctx)
 
 	// first processed block
-	ext.PostTransaction(executor.State[txcontext.WithValidation]{Data: s}, ctx)
-	ext.PostTransaction(executor.State[txcontext.WithValidation]{Data: s}, ctx)
-	ext.PostBlock(executor.State[txcontext.WithValidation]{
+	ext.PostTransaction(executor.State[txcontext.TxContext]{Data: s}, ctx)
+	ext.PostTransaction(executor.State[txcontext.TxContext]{Data: s}, ctx)
+	ext.PostBlock(executor.State[txcontext.TxContext]{
 		Block: 5,
 		Data:  s,
 	}, ctx)
@@ -90,17 +90,17 @@ func TestProgressTrackerExtension_LoggingHappens(t *testing.T) {
 	time.Sleep(500 * time.Millisecond)
 
 	// second processed block
-	ext.PostTransaction(executor.State[txcontext.WithValidation]{Data: s}, ctx)
-	ext.PostTransaction(executor.State[txcontext.WithValidation]{Data: s}, ctx)
-	ext.PostBlock(executor.State[txcontext.WithValidation]{
+	ext.PostTransaction(executor.State[txcontext.TxContext]{Data: s}, ctx)
+	ext.PostTransaction(executor.State[txcontext.TxContext]{Data: s}, ctx)
+	ext.PostBlock(executor.State[txcontext.TxContext]{
 		Block: 6,
 		Data:  s,
 	}, ctx)
 
 	time.Sleep(500 * time.Millisecond)
 
-	ext.PostTransaction(executor.State[txcontext.WithValidation]{Data: s}, ctx)
-	ext.PostBlock(executor.State[txcontext.WithValidation]{
+	ext.PostTransaction(executor.State[txcontext.TxContext]{Data: s}, ctx)
+	ext.PostBlock(executor.State[txcontext.TxContext]{
 		Block: 8,
 		Data:  s,
 	}, ctx)
@@ -125,23 +125,23 @@ func TestProgressTrackerExtension_FirstLoggingIsIgnored(t *testing.T) {
 		},
 	})
 
-	ext.PreRun(executor.State[txcontext.WithValidation]{
+	ext.PreRun(executor.State[txcontext.TxContext]{
 		Block:       4,
 		Transaction: 0,
 		Data:        s,
 	}, ctx)
 
-	ext.PostTransaction(executor.State[txcontext.WithValidation]{
+	ext.PostTransaction(executor.State[txcontext.TxContext]{
 		Block:       4,
 		Transaction: 0,
 		Data:        s,
 	}, ctx)
-	ext.PostTransaction(executor.State[txcontext.WithValidation]{
+	ext.PostTransaction(executor.State[txcontext.TxContext]{
 		Block:       4,
 		Transaction: 1,
 		Data:        s,
 	}, ctx)
-	ext.PostBlock(executor.State[txcontext.WithValidation]{
+	ext.PostBlock(executor.State[txcontext.TxContext]{
 		Block:       5,
 		Transaction: 0,
 		Data:        s,

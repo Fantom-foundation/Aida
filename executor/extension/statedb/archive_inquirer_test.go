@@ -21,7 +21,7 @@ import (
 func TestArchiveInquirer_DisabledIfNoQueryRateIsGiven(t *testing.T) {
 	config := utils.Config{}
 	ext := MakeArchiveInquirer(&config)
-	if _, ok := ext.(extension.NilExtension[txcontext.WithValidation]); !ok {
+	if _, ok := ext.(extension.NilExtension[txcontext.TxContext]); !ok {
 		t.Errorf("inquirer should not be active by default")
 	}
 }
@@ -33,7 +33,7 @@ func TestArchiveInquirer_ReportsErrorIfNoArchiveIsPresent(t *testing.T) {
 	cfg.ArchiveQueryRate = 100
 	ext := makeArchiveInquirer(&cfg, log)
 
-	state := executor.State[txcontext.WithValidation]{}
+	state := executor.State[txcontext.TxContext]{}
 	if err := ext.PreRun(state, nil); err == nil {
 		t.Errorf("expected an error, got nothing")
 	}
@@ -52,7 +52,7 @@ func TestArchiveInquirer_CanStartUpAndShutdownGracefully(t *testing.T) {
 	cfg.ArchiveQueryRate = 100
 	ext := makeArchiveInquirer(&cfg, log)
 
-	state := executor.State[txcontext.WithValidation]{}
+	state := executor.State[txcontext.TxContext]{}
 	context := executor.Context{State: db}
 
 	if err := ext.PreRun(state, &context); err != nil {
@@ -75,7 +75,7 @@ func TestArchiveInquirer_RunsRandomTransactionsInBackground(t *testing.T) {
 	cfg.ArchiveMaxQueryAge = 100
 	cfg.ChainID = utils.TestnetChainID
 
-	state := executor.State[txcontext.WithValidation]{}
+	state := executor.State[txcontext.TxContext]{}
 	context := executor.Context{State: db}
 
 	substate1 := makeValidSubstate()
@@ -128,7 +128,7 @@ func TestArchiveInquirer_RunsRandomTransactionsInBackground(t *testing.T) {
 	}
 }
 
-func makeValidSubstate() txcontext.WithValidation {
+func makeValidSubstate() txcontext.TxContext {
 	// This Substate is a minimal data that can be successfully processed.
 	sub := &substate.Substate{
 		Env: &substate.SubstateEnv{

@@ -22,7 +22,7 @@ func RunTxGenerator(ctx *cli.Context) error {
 
 	return runTransactions(cfg, nil, nil, false)
 }
-func newGenerateData() txcontext.ExecutionData {
+func newGenerateData() txcontext.Transaction {
 	return &generateData{}
 }
 
@@ -43,19 +43,19 @@ type txProcessor struct {
 	cfg *utils.Config
 }
 
-func (p txProcessor) Process(state executor.State[txcontext.ExecutionData], ctx *executor.Context) error {
+func (p txProcessor) Process(state executor.State[txcontext.Transaction], ctx *executor.Context) error {
 	// todo apply data onto StateDb
 	return nil
 }
 
 func runTransactions(
 	cfg *utils.Config,
-	provider executor.Provider[txcontext.ExecutionData],
+	provider executor.Provider[txcontext.Transaction],
 	stateDb state.StateDB,
 	disableStateDbExtension bool,
 ) error {
 	// order of extensionList has to be maintained
-	var extensionList = []executor.Extension[txcontext.ExecutionData]{
+	var extensionList = []executor.Extension[txcontext.Transaction]{
 		// todo choose extensions
 	}
 

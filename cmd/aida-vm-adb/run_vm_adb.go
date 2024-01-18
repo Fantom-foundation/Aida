@@ -40,25 +40,25 @@ func RunVmAdb(ctx *cli.Context) error {
 
 func run(
 	cfg *utils.Config,
-	provider executor.Provider[txcontext.WithValidation],
+	provider executor.Provider[txcontext.TxContext],
 	stateDb state.StateDB,
-	processor executor.Processor[txcontext.WithValidation],
-	extra []executor.Extension[txcontext.WithValidation],
+	processor executor.Processor[txcontext.TxContext],
+	extra []executor.Extension[txcontext.TxContext],
 ) error {
-	extensionList := []executor.Extension[txcontext.WithValidation]{
-		profiler.MakeCpuProfiler[txcontext.WithValidation](cfg),
-		statedb.MakeArchivePrepper[txcontext.WithValidation](),
-		tracker.MakeProgressLogger[txcontext.WithValidation](cfg, 0),
-		tracker.MakeErrorLogger[txcontext.WithValidation](cfg),
+	extensionList := []executor.Extension[txcontext.TxContext]{
+		profiler.MakeCpuProfiler[txcontext.TxContext](cfg),
+		statedb.MakeArchivePrepper[txcontext.TxContext](),
+		tracker.MakeProgressLogger[txcontext.TxContext](cfg, 0),
+		tracker.MakeErrorLogger[txcontext.TxContext](cfg),
 		validator.MakeArchiveDbValidator(cfg),
 	}
 
 	if stateDb == nil {
 		extensionList = append(
 			extensionList,
-			statedb.MakeStateDbManager[txcontext.WithValidation](cfg),
-			statedb.MakeArchiveBlockChecker[txcontext.WithValidation](cfg),
-			tracker.MakeDbLogger[txcontext.WithValidation](cfg),
+			statedb.MakeStateDbManager[txcontext.TxContext](cfg),
+			statedb.MakeArchiveBlockChecker[txcontext.TxContext](cfg),
+			tracker.MakeDbLogger[txcontext.TxContext](cfg),
 		)
 	}
 

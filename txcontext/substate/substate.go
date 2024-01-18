@@ -8,7 +8,7 @@ import (
 
 // Deprecated: This is a workaround before oldSubstate repository is migrated to new structure.
 // Use Newtransaction instead.
-func NewTxContextWithValidation(data *substate.Substate) txcontext.WithValidation {
+func NewTxContextWithValidation(data *substate.Substate) txcontext.TxContext {
 	return &substateData{data}
 }
 

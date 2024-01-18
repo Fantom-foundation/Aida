@@ -212,7 +212,7 @@ func TestDependenciesSimple3(t *testing.T) {
 // TestFindTxAddresses tests finding contract/wallet addresses of a transaction
 func TestFindTxAddresses(t *testing.T) {
 	// test substate.Transaction with empty fields
-	testTransaction := executor.State[txcontext.WithValidation]{
+	testTransaction := executor.State[txcontext.TxContext]{
 		Data: substatecontext.NewTxContextWithValidation(&substate.Substate{
 			InputAlloc:  substate.SubstateAlloc{},
 			OutputAlloc: substate.SubstateAlloc{},
@@ -230,7 +230,7 @@ func TestFindTxAddresses(t *testing.T) {
 	addr2 := common.HexToAddress("0xFC00FACE00000000000000000000000000000002")
 	addr3 := common.HexToAddress("0xFC00FACE00000000000000000000000000000003")
 	addrs := []common.Address{addr1, addr2, addr3}
-	testTransaction = executor.State[txcontext.WithValidation]{
+	testTransaction = executor.State[txcontext.TxContext]{
 		Data: substatecontext.NewTxContextWithValidation(&substate.Substate{
 			InputAlloc:  substate.SubstateAlloc{addr1: &substate.SubstateAccount{}},
 			OutputAlloc: substate.SubstateAlloc{addr2: &substate.SubstateAccount{}, addr3: &substate.SubstateAccount{}},
@@ -249,7 +249,7 @@ func TestFindTxAddresses(t *testing.T) {
 
 	// test if substate.SubstateMessage.To == nil and substate.SubstateMessage.From == zero
 	var zero common.Address
-	testTransaction = executor.State[txcontext.WithValidation]{
+	testTransaction = executor.State[txcontext.TxContext]{
 		Data: substatecontext.NewTxContextWithValidation(&substate.Substate{
 			InputAlloc:  substate.SubstateAlloc{addr1: &substate.SubstateAccount{}},
 			OutputAlloc: substate.SubstateAlloc{addr2: &substate.SubstateAccount{}, addr1: &substate.SubstateAccount{}},
@@ -278,7 +278,7 @@ func TestRecordTransaction(t *testing.T) {
 	addr1 := common.HexToAddress("0xFC00FACE00000000000000000000000000000001")
 	addr2 := common.HexToAddress("0xFC00FACE00000000000000000000000000000002")
 	addr3 := common.HexToAddress("0xFC00FACE00000000000000000000000000000003")
-	tx := executor.State[txcontext.WithValidation]{
+	tx := executor.State[txcontext.TxContext]{
 		Data: substatecontext.NewTxContextWithValidation(&substate.Substate{
 			InputAlloc:  substate.SubstateAlloc{addr1: &substate.SubstateAccount{}},
 			OutputAlloc: substate.SubstateAlloc{addr2: &substate.SubstateAccount{}, addr3: &substate.SubstateAccount{}},
@@ -347,7 +347,7 @@ func TestRecordTransaction(t *testing.T) {
 	}
 
 	// construct second transaction
-	tx2 := executor.State[txcontext.WithValidation]{
+	tx2 := executor.State[txcontext.TxContext]{
 		Data: substatecontext.NewTxContextWithValidation(&substate.Substate{
 			InputAlloc:  substate.SubstateAlloc{addr1: &substate.SubstateAccount{}},
 			OutputAlloc: substate.SubstateAlloc{addr2: &substate.SubstateAccount{}, addr3: &substate.SubstateAccount{}},
@@ -488,7 +488,7 @@ func TestGetTransactionType(t *testing.T) {
 	}
 	data := substatecontext.NewTxContextWithValidation(sub)
 
-	testTransaction := executor.State[txcontext.WithValidation]{
+	testTransaction := executor.State[txcontext.TxContext]{
 		Data:        data,
 		Transaction: 0,
 	}
