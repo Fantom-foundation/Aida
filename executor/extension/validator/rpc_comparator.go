@@ -148,6 +148,8 @@ func compare(state executor.State[*rpc.RequestAndResults]) *comparatorError {
 		return compareCode(state.Data, state.Block)
 	case "getStorageAt":
 		return compareStorageAt(state.Data, state.Block)
+	case "getLogs":
+		return compareLogs(state.Data, state.Block)
 	}
 
 	return nil
@@ -497,6 +499,11 @@ func compareStorageAt(data *rpc.RequestAndResults, block int) *comparatorError {
 	if !strings.EqualFold(recordedString, dbString) {
 		return newComparatorError(dbString, recordedString, data, block, noMatchingResult)
 	}
+
+	return nil
+}
+
+func compareLogs(data *rpc.RequestAndResults, block int) *comparatorError {
 
 	return nil
 }

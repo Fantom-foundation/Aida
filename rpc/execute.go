@@ -57,9 +57,17 @@ func Execute(block uint64, rec *RequestAndResults, archive state.NonCommittableS
 	case "getStorageAt":
 		return executeGetStorageAt(rec.Query.Params, archive)
 
+	case "getLogs":
+		return executeGetLogs(rec.Query.Params, archive)
+
 	default:
 		break
 	}
+	return nil
+}
+
+func executeGetLogs(params []interface{}, archive state.VmStateDB) *StateDBData {
+	archive.GetLogs(common.Hash{}, common.Hash{})
 	return nil
 }
 

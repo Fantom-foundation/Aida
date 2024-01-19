@@ -39,6 +39,9 @@ func (r *temporaryArchivePrepper) PostTransaction(_ executor.State[*rpc.RequestA
 
 // findBlockNumber finds what block number request wants
 func findBlockNumber(data *rpc.RequestAndResults) uint64 {
+	// todo remve
+	return 7
+
 	l := len(data.Query.Params)
 	var block uint64
 	if data.Response != nil {

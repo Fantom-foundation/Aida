@@ -45,8 +45,10 @@ func (r rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc.Request
 		}
 
 		if req.Response != nil {
+			req.Response.BlockID = 7
 			blockNumber = int(req.Response.BlockID)
 		} else {
+			req.Error.BlockID = 7
 			blockNumber = int(req.Error.BlockID)
 		}
 
