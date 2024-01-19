@@ -10,7 +10,7 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
-const rpcProgressTrackerReportFormat = "Track: request %d, interval_total_req_rate %.2f, interval_gas_rate %.2f, overall_total_req_count %d, overall_gas_rate %.2f"
+const rpcProgressTrackerReportFormat = "Track: request %d, interval_total_req_rate %.2f, interval_gas_rate %.2f, overall_total_req_rate %.2f, overall_gas_rate %.2f"
 
 // MakeRpcProgressTracker creates a substateProgressTracker that depends on the
 // PostBlock event and is only useful as part of a sequential evaluation.
@@ -48,6 +48,12 @@ type rpcProcessInfo struct {
 
 // PostTransaction increments number of transactions and saves gas used in last substate.
 func (t *rpcProgressTracker) PostTransaction(state executor.State[*rpc.RequestAndResults], _ *executor.Context) error {
+	// getLogs is not yet implemented - this causes nil result.
+	// todo it should get implemented in upcoming PR
+	if state.Data.StateDB == nil {
+		return nil
+	}
+
 	// add data and get snapshot of it as quickly as possible
 	t.lock.Lock()
 	t.overallInfo.numRequests++
