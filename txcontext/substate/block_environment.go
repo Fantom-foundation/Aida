@@ -21,11 +21,10 @@ type blockEnvironment struct {
 }
 
 func (e *blockEnvironment) GetBlockHash(block uint64) common.Hash {
+	if e.BlockHashes == nil {
+		return common.Hash{}
+	}
 	return e.BlockHashes[block]
-}
-
-func (e *blockEnvironment) SetBlockHash(block uint64, hash common.Hash) {
-	e.BlockHashes[block] = hash
 }
 
 func (e *blockEnvironment) GetCoinbase() common.Address {

@@ -17,6 +17,9 @@ type blockEnvironment struct {
 }
 
 func (e *blockEnvironment) GetBlockHash(block uint64) common.Hash {
+	if e.BlockHashes == nil {
+		return common.Hash{}
+	}
 	return common.Hash(e.BlockHashes[block])
 }
 

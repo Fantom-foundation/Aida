@@ -142,7 +142,7 @@ func (s *SubstateProcessor) fantomTx(db state.VmStateDB, block int, tx int, st t
 	gaspool.AddGas(inputEnv.GetGasLimit())
 	msg := st.GetMessage()
 	db.Prepare(txHash, tx)
-	blockCtx := prepareBlockCtx(inputEnv)
+	blockCtx := prepareBlockCtx(inputEnv, &hashError)
 	txCtx := evmcore.NewEVMTxContext(msg)
 	evm := vm.NewEVM(*blockCtx, txCtx, db, chainConfig, vmConfig)
 	snapshot := db.Snapshot()
@@ -186,10 +186,11 @@ func (s *SubstateProcessor) fantomTx(db state.VmStateDB, block int, tx int, st t
 // ethereumTx processes a transaction in Ethereum EVM configuration
 func (s *SubstateProcessor) ethereumTx(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (finalError error) {
 	var (
-		gaspool  = new(core.GasPool)
-		txHash   = common.HexToHash(fmt.Sprintf("0x%016d%016d", block, tx))
-		inputEnv = st.GetBlockEnvironment()
-		validate = s.cfg.ValidateTxState
+		gaspool   = new(core.GasPool)
+		txHash    = common.HexToHash(fmt.Sprintf("0x%016d%016d", block, tx))
+		inputEnv  = st.GetBlockEnvironment()
+		validate  = s.cfg.ValidateTxState
+		hashError error
 	)
 
 	// create vm config
@@ -205,7 +206,7 @@ func (s *SubstateProcessor) ethereumTx(db state.VmStateDB, block int, tx int, st
 	gaspool.AddGas(inputEnv.GetGasLimit())
 	msg := st.GetMessage()
 	db.Prepare(txHash, tx)
-	blockCtx := prepareBlockCtx(inputEnv)
+	blockCtx := prepareBlockCtx(inputEnv, &hashError)
 	txCtx := core.NewEVMTxContext(msg)
 	evm := vm.NewEVM(*blockCtx, txCtx, db, chainConfig, vmConfig)
 	snapshot := db.Snapshot()
@@ -216,6 +217,13 @@ func (s *SubstateProcessor) ethereumTx(db state.VmStateDB, block int, tx int, st
 		// if transaction fails, revert to the first snapshot.
 		db.RevertToSnapshot(snapshot)
 		finalError = errors.Join(fmt.Errorf("block: %v transaction: %v", block, tx), err)
+		// discontinue output alloc validation on error
+		validate = false
+	}
+
+	// check whether getHash func produced an error
+	if hashError != nil {
+		finalError = errors.Join(finalError, hashError)
 		// discontinue output alloc validation on error
 		validate = false
 	}
@@ -258,7 +266,15 @@ func (s *SubstateProcessor) processPseudoTx(ws txcontext.WorldState, db state.Vm
 }
 
 // prepareBlockCtx creates a block context for evm call from an environment of a substate.
-func prepareBlockCtx(inputEnv txcontext.BlockEnvironment) *vm.BlockContext {
+func prepareBlockCtx(inputEnv txcontext.BlockEnvironment, hashError *error) *vm.BlockContext {
+	getHash := func(num uint64) common.Hash {
+		h := inputEnv.GetBlockHash(num)
+		if h == (common.Hash{}) {
+			*hashError = fmt.Errorf("hash for block %v was not found", num)
+		}
+		return h
+	}
+
 	blockCtx := &vm.BlockContext{
 		CanTransfer: core.CanTransfer,
 		Transfer:    core.Transfer,
@@ -267,7 +283,7 @@ func prepareBlockCtx(inputEnv txcontext.BlockEnvironment) *vm.BlockContext {
 		Time:        new(big.Int).SetUint64(inputEnv.GetTimestamp()),
 		Difficulty:  inputEnv.GetDifficulty(),
 		GasLimit:    inputEnv.GetGasLimit(),
-		GetHash:     inputEnv.GetBlockHash,
+		GetHash:     getHash,
 	}
 	// If currentBaseFee is defined, add it to the vmContext.
 	baseFee := inputEnv.GetBaseFee()
