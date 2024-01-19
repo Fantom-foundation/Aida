@@ -48,13 +48,14 @@ type rpcProcessInfo struct {
 
 // PostTransaction increments number of transactions and saves gas used in last substate.
 func (t *rpcProgressTracker) PostTransaction(state executor.State[*rpc.RequestAndResults], _ *executor.Context) error {
+	// add data and get snapshot of it as quickly as possible
 	t.lock.Lock()
-	defer t.lock.Unlock()
-
 	t.overallInfo.numRequests++
 	t.overallInfo.gas += state.Data.StateDB.GasUsed
+	overallInfo := t.overallInfo
+	t.lock.Unlock()
 
-	overallCount := t.overallInfo.numRequests
+	overallCount := overallInfo.numRequests
 	if overallCount-t.lastReportedRequestCount < uint64(t.reportFrequency) {
 		return nil
 	}
@@ -65,7 +66,7 @@ func (t *rpcProgressTracker) PostTransaction(state executor.State[*rpc.RequestAn
 	overall := now.Sub(t.startOfRun)
 	interval := now.Sub(t.startOfLastInterval)
 
-	overallGas := t.overallInfo.gas
+	overallGas := overallInfo.gas
 	intervalGas := t.lastIntervalInfo.gas
 
 	intervalReqRate := float64(t.reportFrequency) / interval.Seconds()
@@ -80,7 +81,7 @@ func (t *rpcProgressTracker) PostTransaction(state executor.State[*rpc.RequestAn
 		overallReqRate, overallGasRate,
 	)
 
-	t.lastIntervalInfo = t.overallInfo
+	t.lastIntervalInfo = overallInfo
 
 	t.lastReportedRequestCount = boundary
 	t.startOfLastInterval = now
