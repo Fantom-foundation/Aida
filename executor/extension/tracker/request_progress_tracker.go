@@ -12,7 +12,7 @@ import (
 
 const rpcProgressTrackerReportFormat = "Track: request %d, interval_total_req_rate %.2f, interval_gas_rate %.2f, overall_total_req_rate %.2f, overall_gas_rate %.2f"
 
-// MakeRequestProgressTracker creates a transactionProgressTracker that depends on the
+// MakeRequestProgressTracker creates a blockProgressTracker that depends on the
 // PostBlock event and is only useful as part of a sequential evaluation.
 func MakeRequestProgressTracker(cfg *utils.Config, reportFrequency int) executor.Extension[*rpc.RequestAndResults] {
 	if !cfg.TrackProgress {
@@ -54,12 +54,12 @@ func (t *requestProgressTracker) PostTransaction(state executor.State[*rpc.Reque
 		return nil
 	}
 
-	// add data and get snapshot of it as quickly as possible
 	t.lock.Lock()
+	defer t.lock.Unlock()
+
 	t.overallInfo.numRequests++
 	t.overallInfo.gas += state.Data.StateDB.GasUsed
 	overallInfo := t.overallInfo
-	t.lock.Unlock()
 
 	overallCount := overallInfo.numRequests
 	if overallCount-t.lastReportedRequestCount < uint64(t.reportFrequency) {
