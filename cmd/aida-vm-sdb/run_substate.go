@@ -54,20 +54,24 @@ func runSubstates(
 			extensionList,
 			statedb.MakeStateDbManager[*substate.Substate](cfg),
 			statedb.MakeLiveDbBlockChecker[*substate.Substate](cfg),
-			logger.MakeDbLogger[*substate.Substate](cfg),
+			tracker.MakeDbLogger[*substate.Substate](cfg),
 		)
 	}
 
 	extensionList = append(extensionList, extra...)
 
 	extensionList = append(extensionList, []executor.Extension[*substate.Substate]{
+		register.MakeRegisterProgress(cfg, 100_000),
+		// RegisterProgress should be the first on the list = last to receive PostRun.
+		// This is because it collects the error and records it externally.
+		// If not, error that happen afterwards (e.g. on top of) will not be correcly recorded.
+
 		profiler.MakeThreadLocker[*substate.Substate](),
 		aidadb.MakeAidaDbManager[*substate.Substate](cfg),
 		profiler.MakeVirtualMachineStatisticsPrinter[*substate.Substate](cfg),
-		logger.MakeProgressLogger[*substate.Substate](cfg, 15*time.Second),
-		logger.MakeErrorLogger[*substate.Substate](cfg),
-		tracker.MakeTransactionProgressTracker(cfg, 100_000),
-		register.MakeRegisterProgress(cfg, 100_000),
+		tracker.MakeProgressLogger[*substate.Substate](cfg, 15*time.Second),
+		tracker.MakeErrorLogger[*substate.Substate](cfg),
+		tracker.MakeProgressTracker(cfg, 100_000),
 		primer.MakeStateDbPrimer[*substate.Substate](cfg),
 		profiler.MakeMemoryUsagePrinter[*substate.Substate](cfg),
 		profiler.MakeMemoryProfiler[*substate.Substate](cfg),
@@ -76,8 +80,8 @@ func runSubstates(
 		validator.MakeStateHashValidator[*substate.Substate](cfg),
 		statedb.MakeBlockEventEmitter[*substate.Substate](),
 		validator.MakeLiveDbValidator(cfg),
-
 		profiler.MakeOperationProfiler[*substate.Substate](cfg),
+
 		// block profile extension should be always last because:
 		// 1) Pre-Func are called forwards so this is called last and
 		// 2) Post-Func are called backwards so this is called first

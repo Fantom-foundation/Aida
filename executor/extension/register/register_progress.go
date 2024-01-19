@@ -3,6 +3,7 @@ package register
 import (
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"time"
 
@@ -15,6 +16,8 @@ import (
 )
 
 const (
+	ArchiveDbDirectoryName = "archive"
+
 	RegisterProgressDefaultReportFrequency = 100_000 // in blocks
 
 	RegisterProgressCreateTableIfNotExist = `
@@ -22,7 +25,8 @@ const (
   			start INTEGER NOT NULL,
 	  		end INTEGER NOT NULL,
 			memory int,
-			disk int,
+			live_disk int,
+			archive_disk int,
 	  		tx_rate float,
 			gas_rate float,
   			overall_tx_rate float,
@@ -31,9 +35,13 @@ const (
 	`
 	RegisterProgressInsertOrReplace = `
 		INSERT or REPLACE INTO stats (
-			start, end, memory, disk, tx_rate, gas_rate, overall_tx_rate, overall_gas_rate
+			start, end, 
+			memory, live_disk, archive_disk, 
+			tx_rate, gas_rate, overall_tx_rate, overall_gas_rate
 		) VALUES (
-			?, ?, ?, ?, ?, ?, ?, ?
+			?, ?, 
+			?, ?, ?, 
+			?, ?, ?, ?
 		)
 	`
 )
@@ -63,9 +71,17 @@ func MakeRegisterProgress(cfg *utils.Config, reportFrequency int) executor.Exten
 
 	p2db, err := utils.NewPrinterToSqlite3(rp.sqlite3(connection))
 	if err != nil {
-		rp.log.Debugf("Unable to register at %s", cfg.RegisterRun)
+		rp.log.Errorf("Unable to register at %s", cfg.RegisterRun)
 	} else {
 		rp.ps.AddPrinter(p2db)
+	}
+
+	rm, err := MakeRunMetadata(connection, rp.id)
+	if err != nil {
+		rp.log.Errorf("Unable to create run metadata because %s.", err)
+	} else {
+		rp.meta = rm
+		rm.Print()
 	}
 
 	return rp
@@ -87,23 +103,26 @@ type registerProgress struct {
 	lastProcessedBlock int
 
 	// Stats
-	startOfRun   time.Time
-	lastUpdate   time.Time
-	txCount      uint64
-	gas          uint64
-	totalTxCount uint64
-	totalGas     uint64
-	directory    string
-	memory       *state.MemoryUsage
+	startOfRun      time.Time
+	lastUpdate      time.Time
+	txCount         uint64
+	gas             uint64
+	totalTxCount    uint64
+	totalGas        uint64
+	pathToStateDb   string
+	pathToArchiveDb string
+	memory          *state.MemoryUsage
 
-	id *RunIdentity
+	id   *RunIdentity
+	meta *RunMetadata
 }
 
 func (rp *registerProgress) PreRun(_ executor.State[*substate.Substate], ctx *executor.Context) error {
 	now := time.Now()
 	rp.startOfRun = now
 	rp.lastUpdate = now
-	rp.directory = ctx.StateDbPath
+	rp.pathToStateDb = ctx.StateDbPath
+	rp.pathToArchiveDb = filepath.Join(ctx.StateDbPath, ArchiveDbDirectoryName)
 	return nil
 }
 
@@ -137,11 +156,22 @@ func (rp *registerProgress) PostTransaction(state executor.State[*substate.Subst
 }
 
 // PostRun prints the remaining statistics and terminates any printer resources.
-func (rp *registerProgress) PostRun(_ executor.State[*substate.Substate], ctx *executor.Context, _ error) error {
+func (rp *registerProgress) PostRun(_ executor.State[*substate.Substate], ctx *executor.Context, err error) error {
 	rp.memory = ctx.State.GetMemoryUsage()
 	rp.ps.Print()
 	rp.Reset()
 	rp.ps.Close()
+
+	rp.meta.meta["Runtime"] = strconv.Itoa(int(time.Since(rp.startOfRun).Seconds()))
+	if err != nil {
+		rp.meta.meta["RunSucceed"] = strconv.FormatBool(false)
+		rp.meta.meta["RunError"] = fmt.Sprintf("%v", err)
+	} else {
+		rp.meta.meta["RunSucceed"] = strconv.FormatBool(true)
+	}
+
+	rp.meta.Print()
+	rp.meta.Close()
 
 	return nil
 }
@@ -177,10 +207,21 @@ func (rp *registerProgress) sqlite3(conn string) (string, string, string, func()
 			totalGas = rp.totalGas
 			rp.lock.Unlock()
 
-			disk, err := utils.GetDirectorySize(rp.directory)
+			lDisk, err := utils.GetDirectorySize(rp.pathToStateDb)
 			if err != nil {
-				rp.log.Errorf("Unable to get directory size from %s", rp.directory)
-				return [][]any{}
+				rp.log.Errorf("Unable to get directory size from pathToStateDb: %s", rp.pathToStateDb)
+				lDisk = 0
+			}
+
+			var aDisk int64 = 0
+			if rp.cfg.ArchiveMode {
+				aDisk, err = utils.GetDirectorySize(rp.pathToArchiveDb)
+				if err != nil {
+					aDisk = 0
+					rp.log.Errorf("Unable to get directory size from pathToArchiveDB: %s", rp.pathToArchiveDb)
+				} else {
+					lDisk -= aDisk
+				}
 			}
 
 			mem := rp.memory.UsedBytes
@@ -193,8 +234,9 @@ func (rp *registerProgress) sqlite3(conn string) (string, string, string, func()
 			values = append(values, []any{
 				rp.interval.Start(),
 				rp.interval.End(),
-				disk,
 				mem,
+				lDisk,
+				aDisk,
 				txRate,
 				gasRate,
 				overallTxRate,
