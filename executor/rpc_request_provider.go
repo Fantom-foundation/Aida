@@ -44,6 +44,11 @@ func (r rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc.Request
 			return nil
 		}
 
+		// get logs is not yet implemented, skip these for now
+		if req.Query.MethodBase == "getLogs" {
+			return nil
+		}
+
 		if req.Response != nil {
 			blockNumber = int(req.Response.BlockID)
 		} else {

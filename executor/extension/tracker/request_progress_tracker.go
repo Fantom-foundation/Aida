@@ -48,12 +48,6 @@ type rpcProcessInfo struct {
 
 // PostTransaction increments number of transactions and saves gas used in last substate.
 func (t *requestProgressTracker) PostTransaction(state executor.State[*rpc.RequestAndResults], _ *executor.Context) error {
-	// getLogs is not yet implemented - this causes nil result.
-	// todo it should get implemented in upcoming PR
-	if state.Data.StateDB == nil {
-		return nil
-	}
-
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
