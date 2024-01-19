@@ -46,7 +46,7 @@ func (s substateProvider) Run(from int, to int, consumer Consumer[txcontext.TxCo
 		if tx.Block >= uint64(to) {
 			return nil
 		}
-		if err := consumer(TransactionInfo[txcontext.TxContext]{int(tx.Block), tx.Transaction, substatecontext.NewTxContextWithValidation(tx.Substate)}); err != nil {
+		if err := consumer(TransactionInfo[txcontext.TxContext]{int(tx.Block), tx.Transaction, substatecontext.NewTxContext(tx.Substate)}); err != nil {
 			return err
 		}
 	}
@@ -54,5 +54,5 @@ func (s substateProvider) Run(from int, to int, consumer Consumer[txcontext.TxCo
 }
 
 func (substateProvider) Close() {
-	//substate.CloseSubstateDB()
+	substate.CloseSubstateDB()
 }

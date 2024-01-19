@@ -76,7 +76,7 @@ func TestLiveTxValidator_ValidatorDoesNotFailWithEmptySubstate(t *testing.T) {
 	err := ext.PostTransaction(executor.State[txcontext.TxContext]{
 		Block:       1,
 		Transaction: 1,
-		Data:        substatecontext.NewTxContextWithValidation(&substate.Substate{}),
+		Data:        substatecontext.NewTxContext(&substate.Substate{}),
 	}, ctx)
 
 	if err != nil {
@@ -366,7 +366,7 @@ func TestLiveTxValidator_PreTransactionDoesNotFailWithIncorrectOutput(t *testing
 	err := ext.PreTransaction(executor.State[txcontext.TxContext]{
 		Block:       1,
 		Transaction: 1,
-		Data:        substatecontext.NewTxContextWithValidation(alloc),
+		Data:        substatecontext.NewTxContext(alloc),
 	}, ctx)
 
 	if err != nil {
@@ -395,7 +395,7 @@ func TestLiveTxValidator_PostTransactionDoesNotFailWithIncorrectInput(t *testing
 	err := ext.PostTransaction(executor.State[txcontext.TxContext]{
 		Block:       1,
 		Transaction: 1,
-		Data:        substatecontext.NewTxContextWithValidation(alloc),
+		Data:        substatecontext.NewTxContext(alloc),
 	}, ctx)
 
 	if err != nil {
@@ -444,7 +444,7 @@ func TestArchiveTxValidator_ValidatorDoesNotFailWithEmptySubstate(t *testing.T) 
 	err := ext.PostTransaction(executor.State[txcontext.TxContext]{
 		Block:       1,
 		Transaction: 1,
-		Data:        substatecontext.NewTxContextWithValidation(&substate.Substate{}),
+		Data:        substatecontext.NewTxContext(&substate.Substate{}),
 	}, ctx)
 
 	if err != nil {
@@ -724,7 +724,7 @@ func TestArchiveTxValidator_PreTransactionDoesNotFailWithIncorrectOutput(t *test
 	err := ext.PreTransaction(executor.State[txcontext.TxContext]{
 		Block:       1,
 		Transaction: 1,
-		Data: substatecontext.NewTxContextWithValidation(&substate.Substate{
+		Data: substatecontext.NewTxContext(&substate.Substate{
 			OutputAlloc: getIncorrectSubstateAlloc(),
 		}),
 	}, ctx)
@@ -751,7 +751,7 @@ func TestArchiveTxValidator_PostTransactionDoesNotFailWithIncorrectInput(t *test
 	err := ext.PostTransaction(executor.State[txcontext.TxContext]{
 		Block:       1,
 		Transaction: 1,
-		Data: substatecontext.NewTxContextWithValidation(&substate.Substate{
+		Data: substatecontext.NewTxContext(&substate.Substate{
 			InputAlloc: getIncorrectSubstateAlloc(),
 		}),
 	}, ctx)
@@ -883,7 +883,7 @@ func getIncorrectTestSubstateAlloc() txcontext.TxContext {
 		OutputAlloc: getIncorrectSubstateAlloc(),
 	}
 
-	return substatecontext.NewTxContextWithValidation(sub)
+	return substatecontext.NewTxContext(sub)
 }
 
 func getIncorrectSubstateAlloc() substate.SubstateAlloc {

@@ -36,7 +36,7 @@ type stochasticState struct {
 	values         *generator.RandomAccess   // index access generator for values
 	snapshotLambda float64                   // lambda parameter for snapshot delta distribution
 	totalTx        uint64                    // total number of transactions
-	txNum          uint32                    // current transactionnumber
+	txNum          uint32                    // current transaction number
 	blockNum       uint64                    // current block number
 	syncPeriodNum  uint64                    // current sync-period number
 	snapshot       []int                     // stack of active snapshots

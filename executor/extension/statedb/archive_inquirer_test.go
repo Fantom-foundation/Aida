@@ -143,7 +143,7 @@ func makeValidSubstate() txcontext.TxContext {
 			GasUsed: 1,
 		},
 	}
-	return substatecontext.NewTxContextWithValidation(sub)
+	return substatecontext.NewTxContext(sub)
 }
 
 func TestCircularBuffer_EnforcesSize(t *testing.T) {

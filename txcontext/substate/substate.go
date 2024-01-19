@@ -6,14 +6,10 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-// Deprecated: This is a workaround before oldSubstate repository is migrated to new structure.
-// Use Newtransaction instead.
-func NewTxContextWithValidation(data *substate.Substate) txcontext.TxContext {
+func NewTxContext(data *substate.Substate) txcontext.TxContext {
 	return &substateData{data}
 }
 
-// Deprecated: This is a workaround before oldSubstate repository is migrated to new structure.
-// Use substateData instead.
 type substateData struct {
 	*substate.Substate
 }

@@ -47,7 +47,7 @@ func TestProgressTrackerExtension_LoggingHappens(t *testing.T) {
 
 	ctx := &executor.Context{State: db, StateDbPath: dummyStateDbPath}
 
-	s := substatecontext.NewTxContextWithValidation(&substate.Substate{
+	s := substatecontext.NewTxContext(&substate.Substate{
 		Result: &substate.SubstateResult{
 			Status:  0,
 			GasUsed: 100,
@@ -118,7 +118,7 @@ func TestProgressTrackerExtension_FirstLoggingIsIgnored(t *testing.T) {
 
 	ctx := &executor.Context{State: db}
 
-	s := substatecontext.NewTxContextWithValidation(&substate.Substate{
+	s := substatecontext.NewTxContext(&substate.Substate{
 		Result: &substate.SubstateResult{
 			Status:  0,
 			GasUsed: 10,

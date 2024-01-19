@@ -89,7 +89,7 @@ func (pc *PrimeContext) PrimeStateDB(ws txcontext.WorldState, db state.StateDB) 
 
 // primeOneAccount initializes an account on stateDB with substate
 func (pc *PrimeContext) primeOneAccount(addr common.Address, acc txcontext.Account, pt *ProgressTracker) error {
-	// if an account was previously primed, skip acc creation.
+	// if an account was previously primed, skip account creation.
 	if exist, found := pc.exist[addr]; !found || !exist {
 		pc.load.CreateAccount(addr)
 		pc.exist[addr] = true
