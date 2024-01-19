@@ -66,7 +66,7 @@ func runSubstates(
 		profiler.MakeVirtualMachineStatisticsPrinter[*substate.Substate](cfg),
 		logger.MakeProgressLogger[*substate.Substate](cfg, 15*time.Second),
 		logger.MakeErrorLogger[*substate.Substate](cfg),
-		tracker.MakeSubstateProgressTracker(cfg, 100_000),
+		tracker.MakeTransactionProgressTracker(cfg, 100_000),
 		register.MakeRegisterProgress(cfg, 100_000),
 		primer.MakeStateDbPrimer[*substate.Substate](cfg),
 		profiler.MakeMemoryUsagePrinter[*substate.Substate](cfg),

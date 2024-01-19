@@ -60,7 +60,7 @@ func run(
 		profiler.MakeCpuProfiler[*rpc.RequestAndResults](cfg),
 		logger.MakeProgressLogger[*rpc.RequestAndResults](cfg, 15*time.Second),
 		logger.MakeErrorLogger[*rpc.RequestAndResults](cfg),
-		tracker.MakeRpcProgressTracker(cfg, 100_000),
+		tracker.MakeRequestProgressTracker(cfg, 100_000),
 		statedb.MakeTemporaryArchivePrepper(),
 		validator.MakeRpcComparator(cfg),
 	}

@@ -21,7 +21,7 @@ const testStateDbInfoFrequency = 2
 func TestSubstateProgressTrackerExtension_NoLoggerIsCreatedIfDisabled(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.TrackProgress = false
-	ext := MakeSubstateProgressTracker(cfg, testStateDbInfoFrequency)
+	ext := MakeTransactionProgressTracker(cfg, testStateDbInfoFrequency)
 	if _, ok := ext.(extension.NilExtension[*substate.Substate]); !ok {
 		t.Errorf("Logger is enabled although not set in configuration")
 	}
@@ -41,7 +41,7 @@ func TestSubstateProgressTrackerExtension_LoggingHappens(t *testing.T) {
 		t.Fatalf("failed to prepare disk content")
 	}
 
-	ext := makeSubstateProgressTracker(cfg, testStateDbInfoFrequency, log)
+	ext := makeTransactionProgressTracker(cfg, testStateDbInfoFrequency, log)
 
 	ctx := &executor.Context{State: db, StateDbPath: dummyStateDbPath}
 
@@ -112,7 +112,7 @@ func TestSubstateProgressTrackerExtension_FirstLoggingIsIgnored(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.First = 4
 
-	ext := makeSubstateProgressTracker(cfg, testStateDbInfoFrequency, log)
+	ext := makeTransactionProgressTracker(cfg, testStateDbInfoFrequency, log)
 
 	ctx := &executor.Context{State: db}
 

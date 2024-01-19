@@ -19,7 +19,7 @@ import (
 func TestRpcProgressTrackerExtension_NoLoggerIsCreatedIfDisabled(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.TrackProgress = false
-	ext := MakeRpcProgressTracker(cfg, testStateDbInfoFrequency)
+	ext := MakeRequestProgressTracker(cfg, testStateDbInfoFrequency)
 	if _, ok := ext.(extension.NilExtension[*rpc.RequestAndResults]); !ok {
 		t.Errorf("Logger is enabled although not set in configuration")
 	}
@@ -32,7 +32,7 @@ func TestRpcProgressTrackerExtension_LoggingHappens(t *testing.T) {
 
 	cfg := &utils.Config{}
 
-	ext := makeRpcProgressTracker(cfg, 6, log)
+	ext := makeRequestProgressTracker(cfg, 6, log)
 
 	ctx := &executor.Context{}
 
@@ -87,7 +87,7 @@ func TestRpcProgressTrackerExtension_FirstLoggingIsIgnored(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.First = 4
 
-	ext := makeRpcProgressTracker(cfg, testStateDbInfoFrequency, log)
+	ext := makeRequestProgressTracker(cfg, testStateDbInfoFrequency, log)
 
 	ctx := &executor.Context{State: db}
 

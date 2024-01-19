@@ -13,9 +13,9 @@ import (
 
 const substateProgressTrackerReportFormat = "Track: block %d, memory %d, disk %d, interval_blk_rate %.2f, interval_tx_rate %.2f, interval_gas_rate %.2f, overall_blk_rate %.2f, overall_tx_rate %.2f, overall_gas_rate %.2f"
 
-// MakeSubstateProgressTracker creates a substateProgressTracker that depends on the
+// MakeTransactionProgressTracker creates a transactionProgressTracker that depends on the
 // PostBlock event and is only useful as part of a sequential evaluation.
-func MakeSubstateProgressTracker(cfg *utils.Config, reportFrequency int) executor.Extension[*substate.Substate] {
+func MakeTransactionProgressTracker(cfg *utils.Config, reportFrequency int) executor.Extension[*substate.Substate] {
 	if !cfg.TrackProgress {
 		return extension.NilExtension[*substate.Substate]{}
 	}
@@ -24,19 +24,19 @@ func MakeSubstateProgressTracker(cfg *utils.Config, reportFrequency int) executo
 		reportFrequency = ProgressTrackerDefaultReportFrequency
 	}
 
-	return makeSubstateProgressTracker(cfg, reportFrequency, logger.NewLogger(cfg.LogLevel, "ProgressTracker"))
+	return makeTransactionProgressTracker(cfg, reportFrequency, logger.NewLogger(cfg.LogLevel, "ProgressTracker"))
 }
 
-func makeSubstateProgressTracker(cfg *utils.Config, reportFrequency int, log logger.Logger) *substateProgressTracker {
-	return &substateProgressTracker{
+func makeTransactionProgressTracker(cfg *utils.Config, reportFrequency int, log logger.Logger) *transactionProgressTracker {
+	return &transactionProgressTracker{
 		progressTracker:   newProgressTracker[*substate.Substate](cfg, reportFrequency, log),
 		lastReportedBlock: int(cfg.First) - (int(cfg.First) % reportFrequency),
 	}
 }
 
-// substateProgressTracker logs progress every XXX blocks depending on reportFrequency.
+// transactionProgressTracker logs progress every XXX blocks depending on reportFrequency.
 // Default is 100_000 blocks. This is mainly used for gathering information about process.
-type substateProgressTracker struct {
+type transactionProgressTracker struct {
 	*progressTracker[*substate.Substate]
 	overallInfo       substateProcessInfo
 	lastIntervalInfo  substateProcessInfo
@@ -48,7 +48,7 @@ type substateProcessInfo struct {
 	gas             uint64
 }
 
-func (t *substateProgressTracker) PreRun(executor.State[*substate.Substate], *executor.Context) error {
+func (t *transactionProgressTracker) PreRun(executor.State[*substate.Substate], *executor.Context) error {
 	now := time.Now()
 	t.startOfRun = now
 	t.startOfLastInterval = now
@@ -56,7 +56,7 @@ func (t *substateProgressTracker) PreRun(executor.State[*substate.Substate], *ex
 }
 
 // PostTransaction increments number of transactions and saves gas used in last substate.
-func (t *substateProgressTracker) PostTransaction(state executor.State[*substate.Substate], _ *executor.Context) error {
+func (t *transactionProgressTracker) PostTransaction(state executor.State[*substate.Substate], _ *executor.Context) error {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
@@ -67,7 +67,7 @@ func (t *substateProgressTracker) PostTransaction(state executor.State[*substate
 }
 
 // PostBlock registers the completed block and may trigger the logging of an update.
-func (t *substateProgressTracker) PostBlock(state executor.State[*substate.Substate], ctx *executor.Context) error {
+func (t *transactionProgressTracker) PostBlock(state executor.State[*substate.Substate], ctx *executor.Context) error {
 	boundary := state.Block - (state.Block % t.reportFrequency)
 
 	if state.Block-t.lastReportedBlock < t.reportFrequency {

@@ -66,7 +66,7 @@ func record(
 	var extensions = []executor.Extension[*substate.Substate]{
 		profiler.MakeCpuProfiler[*substate.Substate](cfg),
 		logger.MakeProgressLogger[*substate.Substate](cfg, 0),
-		tracker.MakeSubstateProgressTracker(cfg, 0),
+		tracker.MakeTransactionProgressTracker(cfg, 0),
 		statedb.MakeTemporaryStatePrepper(cfg),
 		statedb.MakeProxyRecorderPrepper(cfg),
 		validator.MakeLiveDbValidator(cfg),

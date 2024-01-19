@@ -12,9 +12,9 @@ import (
 
 const rpcProgressTrackerReportFormat = "Track: request %d, interval_total_req_rate %.2f, interval_gas_rate %.2f, overall_total_req_rate %.2f, overall_gas_rate %.2f"
 
-// MakeRpcProgressTracker creates a substateProgressTracker that depends on the
+// MakeRequestProgressTracker creates a transactionProgressTracker that depends on the
 // PostBlock event and is only useful as part of a sequential evaluation.
-func MakeRpcProgressTracker(cfg *utils.Config, reportFrequency int) executor.Extension[*rpc.RequestAndResults] {
+func MakeRequestProgressTracker(cfg *utils.Config, reportFrequency int) executor.Extension[*rpc.RequestAndResults] {
 	if !cfg.TrackProgress {
 		return extension.NilExtension[*rpc.RequestAndResults]{}
 	}
@@ -23,18 +23,18 @@ func MakeRpcProgressTracker(cfg *utils.Config, reportFrequency int) executor.Ext
 		reportFrequency = ProgressTrackerDefaultReportFrequency
 	}
 
-	return makeRpcProgressTracker(cfg, reportFrequency, logger.NewLogger(cfg.LogLevel, "ProgressTracker"))
+	return makeRequestProgressTracker(cfg, reportFrequency, logger.NewLogger(cfg.LogLevel, "ProgressTracker"))
 }
 
-func makeRpcProgressTracker(cfg *utils.Config, reportFrequency int, log logger.Logger) *rpcProgressTracker {
-	return &rpcProgressTracker{
+func makeRequestProgressTracker(cfg *utils.Config, reportFrequency int, log logger.Logger) *requestProgressTracker {
+	return &requestProgressTracker{
 		progressTracker: newProgressTracker[*rpc.RequestAndResults](cfg, reportFrequency, log),
 	}
 }
 
-// substateProgressTracker logs progress every XXX blocks depending on reportFrequency.
+// requestProgressTracker logs progress every XXX blocks depending on reportFrequency.
 // Default is 100_000 blocks. This is mainly used for gathering information about process.
-type rpcProgressTracker struct {
+type requestProgressTracker struct {
 	*progressTracker[*rpc.RequestAndResults]
 	lastReportedRequestCount uint64
 	overallInfo              rpcProcessInfo
@@ -47,7 +47,7 @@ type rpcProcessInfo struct {
 }
 
 // PostTransaction increments number of transactions and saves gas used in last substate.
-func (t *rpcProgressTracker) PostTransaction(state executor.State[*rpc.RequestAndResults], _ *executor.Context) error {
+func (t *requestProgressTracker) PostTransaction(state executor.State[*rpc.RequestAndResults], _ *executor.Context) error {
 	// getLogs is not yet implemented - this causes nil result.
 	// todo it should get implemented in upcoming PR
 	if state.Data.StateDB == nil {
