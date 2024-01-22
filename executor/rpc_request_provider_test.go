@@ -126,7 +126,7 @@ var validResp = &rpc.RequestAndResults{
 }
 
 var errResp = &rpc.RequestAndResults{
-	Query:    nil,
+	Query:    &rpc.Body{},
 	Response: nil,
 	Error: &rpc.ErrorResponse{
 		Version:   "2.0",
