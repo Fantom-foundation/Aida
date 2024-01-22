@@ -10,6 +10,8 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/txcontext"
+	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
@@ -19,7 +21,7 @@ import (
 func TestArchiveInquirer_DisabledIfNoQueryRateIsGiven(t *testing.T) {
 	config := utils.Config{}
 	ext := MakeArchiveInquirer(&config)
-	if _, ok := ext.(extension.NilExtension[*substate.Substate]); !ok {
+	if _, ok := ext.(extension.NilExtension[txcontext.TxContext]); !ok {
 		t.Errorf("inquirer should not be active by default")
 	}
 }
@@ -31,7 +33,7 @@ func TestArchiveInquirer_ReportsErrorIfNoArchiveIsPresent(t *testing.T) {
 	cfg.ArchiveQueryRate = 100
 	ext := makeArchiveInquirer(&cfg, log)
 
-	state := executor.State[*substate.Substate]{}
+	state := executor.State[txcontext.TxContext]{}
 	if err := ext.PreRun(state, nil); err == nil {
 		t.Errorf("expected an error, got nothing")
 	}
@@ -50,7 +52,7 @@ func TestArchiveInquirer_CanStartUpAndShutdownGracefully(t *testing.T) {
 	cfg.ArchiveQueryRate = 100
 	ext := makeArchiveInquirer(&cfg, log)
 
-	state := executor.State[*substate.Substate]{}
+	state := executor.State[txcontext.TxContext]{}
 	context := executor.Context{State: db}
 
 	if err := ext.PreRun(state, &context); err != nil {
@@ -73,7 +75,7 @@ func TestArchiveInquirer_RunsRandomTransactionsInBackground(t *testing.T) {
 	cfg.ArchiveMaxQueryAge = 100
 	cfg.ChainID = utils.TestnetChainID
 
-	state := executor.State[*substate.Substate]{}
+	state := executor.State[txcontext.TxContext]{}
 	context := executor.Context{State: db}
 
 	substate1 := makeValidSubstate()
@@ -126,9 +128,9 @@ func TestArchiveInquirer_RunsRandomTransactionsInBackground(t *testing.T) {
 	}
 }
 
-func makeValidSubstate() *substate.Substate {
-	// This Substate is a minimal substate that can be successfully processed.
-	return &substate.Substate{
+func makeValidSubstate() txcontext.TxContext {
+	// This Substate is a minimal data that can be successfully processed.
+	sub := &substate.Substate{
 		Env: &substate.SubstateEnv{
 			GasLimit: 100_000_000,
 		},
@@ -141,6 +143,7 @@ func makeValidSubstate() *substate.Substate {
 			GasUsed: 1,
 		},
 	}
+	return substatecontext.NewTxContext(sub)
 }
 
 func TestCircularBuffer_EnforcesSize(t *testing.T) {

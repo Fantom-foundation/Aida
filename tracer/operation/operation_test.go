@@ -10,7 +10,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/tracer/context"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -244,13 +244,13 @@ func (s *MockStateDB) GetLogs(hash common.Hash, blockHash common.Hash) []*types.
 	return nil
 }
 
-func (s *MockStateDB) PrepareSubstate(substate *substate.SubstateAlloc, block uint64) {
+func (s *MockStateDB) PrepareSubstate(substate txcontext.WorldState, block uint64) {
 	// ignored
 }
 
-func (s *MockStateDB) GetSubstatePostAlloc() substate.SubstateAlloc {
+func (s *MockStateDB) GetSubstatePostAlloc() txcontext.WorldState {
 	// ignored
-	return substate.SubstateAlloc{}
+	return nil
 }
 
 func (s *MockStateDB) Close() error {

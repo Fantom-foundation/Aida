@@ -13,8 +13,8 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension/validator"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -116,46 +116,50 @@ func RunSubstate(ctx *cli.Context) error {
 
 func runSubstates(
 	cfg *utils.Config,
-	provider executor.Provider[*substate.Substate],
+	provider executor.Provider[txcontext.TxContext],
 	stateDb state.StateDB,
-	processor executor.Processor[*substate.Substate],
-	extra []executor.Extension[*substate.Substate],
+	processor executor.Processor[txcontext.TxContext],
+	extra []executor.Extension[txcontext.TxContext],
 ) error {
 	// order of extensionList has to be maintained
-	var extensionList = []executor.Extension[*substate.Substate]{
-		profiler.MakeCpuProfiler[*substate.Substate](cfg),
-		profiler.MakeDiagnosticServer[*substate.Substate](cfg),
+	var extensionList = []executor.Extension[txcontext.TxContext]{
+		profiler.MakeCpuProfiler[txcontext.TxContext](cfg),
+		profiler.MakeDiagnosticServer[txcontext.TxContext](cfg),
 	}
 
 	if stateDb == nil {
 		extensionList = append(
 			extensionList,
-			statedb.MakeStateDbManager[*substate.Substate](cfg),
-			statedb.MakeLiveDbBlockChecker[*substate.Substate](cfg),
-			tracker.MakeDbLogger[*substate.Substate](cfg),
+			statedb.MakeStateDbManager[txcontext.TxContext](cfg),
+			statedb.MakeLiveDbBlockChecker[txcontext.TxContext](cfg),
+			tracker.MakeDbLogger[txcontext.TxContext](cfg),
 		)
 	}
 
 	extensionList = append(extensionList, extra...)
 
-	extensionList = append(extensionList, []executor.Extension[*substate.Substate]{
-		profiler.MakeThreadLocker[*substate.Substate](),
-		aidadb.MakeAidaDbManager[*substate.Substate](cfg),
-		profiler.MakeVirtualMachineStatisticsPrinter[*substate.Substate](cfg),
-		tracker.MakeProgressLogger[*substate.Substate](cfg, 15*time.Second),
-		tracker.MakeErrorLogger[*substate.Substate](cfg),
-		tracker.MakeProgressTracker(cfg, 100_000),
+	extensionList = append(extensionList, []executor.Extension[txcontext.TxContext]{
 		register.MakeRegisterProgress(cfg, 100_000),
-		primer.MakeStateDbPrimer[*substate.Substate](cfg),
-		profiler.MakeMemoryUsagePrinter[*substate.Substate](cfg),
-		profiler.MakeMemoryProfiler[*substate.Substate](cfg),
+		// RegisterProgress should be the first on the list = last to receive PostRun.
+		// This is because it collects the error and records it externally.
+		// If not, error that happen afterwards (e.g. on top of) will not be correcly recorded.
+
+		profiler.MakeThreadLocker[txcontext.TxContext](),
+		aidadb.MakeAidaDbManager[txcontext.TxContext](cfg),
+		profiler.MakeVirtualMachineStatisticsPrinter[txcontext.TxContext](cfg),
+		tracker.MakeProgressLogger[txcontext.TxContext](cfg, 15*time.Second),
+		tracker.MakeErrorLogger[txcontext.TxContext](cfg),
+		tracker.MakeProgressTracker(cfg, 100_000),
+		primer.MakeStateDbPrimer[txcontext.TxContext](cfg),
+		profiler.MakeMemoryUsagePrinter[txcontext.TxContext](cfg),
+		profiler.MakeMemoryProfiler[txcontext.TxContext](cfg),
 		statedb.MakeStateDbPrepper(),
 		statedb.MakeArchiveInquirer(cfg),
-		validator.MakeStateHashValidator[*substate.Substate](cfg),
-		statedb.MakeBlockEventEmitter[*substate.Substate](),
+		validator.MakeStateHashValidator[txcontext.TxContext](cfg),
+		statedb.MakeBlockEventEmitter[txcontext.TxContext](),
 		validator.MakeLiveDbValidator(cfg),
+		profiler.MakeOperationProfiler[txcontext.TxContext](cfg),
 
-		profiler.MakeOperationProfiler[*substate.Substate](cfg),
 		// block profile extension should be always last because:
 		// 1) Pre-Func are called forwards so this is called last and
 		// 2) Post-Func are called backwards so this is called first

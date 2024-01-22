@@ -4,11 +4,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/txcontext"
+	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 
@@ -21,9 +24,14 @@ import (
 
 const (
 	sqlite3SelectFromStats string = `
-		select start, end, memory, disk, tx_rate, gas_rate, overall_tx_rate, overall_gas_rate
+		select start, end, memory, live_disk, archive_disk, tx_rate, gas_rate, overall_tx_rate, overall_gas_rate
 		from stats
 		where start>=:start and end<=:end;
+	`
+	sqlite3SelectFromMetadata string = `
+		select key, value
+		from metadata
+		where key=:key;
 	`
 )
 
@@ -36,18 +44,28 @@ type statsResponse struct {
 	Start          int     `db:"start"`
 	End            int     `db:"end"`
 	Memory         int     `db:"memory"`
-	Disk           int     `db:"disk"`
+	LiveDisk       int     `db:"live_disk"`
+	ArchiveDisk    int     `db:"archive_disk"`
 	TxRate         float64 `db:"tx_rate"`
 	GasRate        float64 `db:"gas_rate"`
 	OverallTxRate  float64 `db:"overall_tx_rate"`
 	OverallGasRate float64 `db:"overall_gas_rate"`
 }
 
+type metadataQuery struct {
+	Key string `db:"key"`
+}
+
+type metadataResponse struct {
+	Key   string `db:"key"`
+	Value string `db:"value"`
+}
+
 func TestRegisterProgress_DoNothingIfDisabled(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.RegisterRun = ""
 	ext := MakeRegisterProgress(cfg, 0)
-	if _, ok := ext.(extension.NilExtension[*substate.Substate]); !ok {
+	if _, ok := ext.(extension.NilExtension[txcontext.TxContext]); !ok {
 		t.Errorf("RegisterProgress is enabled even though not disabled in configuration.")
 	}
 }
@@ -75,7 +93,17 @@ func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 		t.Fatalf("Unable to create stats table at database %s.\n%s", connection, err)
 	}
 
+	_, err = sDb.Exec(MetadataCreateTableIfNotExist)
+	if err != nil {
+		t.Fatalf("Unable to create metadata table at database %s.\n%s", connection, err)
+	}
+
 	stmt, err := sDb.PrepareNamed(sqlite3SelectFromStats)
+	if err != nil {
+		t.Fatalf("Failed to prepare statement using db at %s. \n%s", connection, err)
+	}
+
+	meta, err := sDb.PrepareNamed(sqlite3SelectFromMetadata)
 	if err != nil {
 		t.Fatalf("Failed to prepare statement using db at %s. \n%s", connection, err)
 	}
@@ -92,7 +120,7 @@ func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 	// expects [5-9]P[10-19]P[20-24]P, where P is print
 
 	ext := MakeRegisterProgress(cfg, interval)
-	if _, err := ext.(extension.NilExtension[*substate.Substate]); err {
+	if _, err := ext.(extension.NilExtension[txcontext.TxContext]); err {
 		t.Errorf("RegisterProgress is disabled even though enabled in configuration.")
 	}
 
@@ -109,17 +137,19 @@ func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 
 	expectedRowCount := 0
 
-	// prints 3 times
+	/// prints 3 times
 	gomock.InOrder(
 		stateDb.EXPECT().GetMemoryUsage().Return(&state.MemoryUsage{UsedBytes: 1234}),
 		stateDb.EXPECT().GetMemoryUsage().Return(&state.MemoryUsage{UsedBytes: 4321}),
 		stateDb.EXPECT().GetMemoryUsage().Return(&state.MemoryUsage{UsedBytes: 5555}),
 	)
 
-	ext.PreRun(executor.State[*substate.Substate]{}, ctx)
+	ext.PreRun(executor.State[txcontext.TxContext]{}, ctx)
+
+	sub := substatecontext.NewTxContext(s)
 
 	for b := int(cfg.First); b < int(cfg.Last); b++ {
-		ext.PreBlock(executor.State[*substate.Substate]{Block: b, Data: s}, ctx)
+		ext.PreBlock(executor.State[txcontext.TxContext]{Block: b, Data: sub}, ctx)
 
 		// check if a print happens here
 		if b > int(itv.End()) {
@@ -132,12 +162,12 @@ func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 			t.Errorf("Expected #Row: %d, Actual #Row: %d", expectedRowCount, len(stats))
 		}
 
-		ext.PreTransaction(executor.State[*substate.Substate]{Data: s}, ctx)
-		ext.PostTransaction(executor.State[*substate.Substate]{Data: s}, ctx)
-		ext.PostBlock(executor.State[*substate.Substate]{Block: b, Data: s}, ctx)
+		ext.PreTransaction(executor.State[txcontext.TxContext]{Data: sub}, ctx)
+		ext.PostTransaction(executor.State[txcontext.TxContext]{Data: sub}, ctx)
+		ext.PostBlock(executor.State[txcontext.TxContext]{Block: b, Data: sub}, ctx)
 	}
 
-	ext.PostRun(executor.State[*substate.Substate]{}, ctx, nil)
+	ext.PostRun(executor.State[txcontext.TxContext]{}, ctx, nil)
 
 	// check if a print happens here
 	expectedRowCount++
@@ -147,6 +177,113 @@ func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 		t.Errorf("Expected #Row: %d, Actual #Row: %d", expectedRowCount, len(stats))
 	}
 
+	// Check that metadata is not duplicated
+	ms := []metadataResponse{}
+	meta.Select(&ms, metadataQuery{"Processor"})
+	if len(ms) != 1 {
+		t.Errorf("Expected runtime to be recorded once, Actual #Row: %d", len(ms))
+	}
+
+	// check if runtime is recorded after postrun
+	meta.Select(&ms, metadataQuery{"Runtime"})
+	if len(ms) != 1 {
+		t.Errorf("Expected runtime to be recorded once, Actual #Row: %d", len(ms))
+	}
+
+	// check if RunSucceed is recorded after postrun
+	meta.Select(&ms, metadataQuery{"RunSucceed"})
+	if len(ms) != 1 {
+		t.Errorf("Expected RunSucceed to be recorded once, Actual #Row: %d", len(ms))
+	}
+	if ms[0].Value != strconv.FormatBool(true) {
+		t.Errorf("RunSucceed expected to be true, Actual #Row: %s", ms[0].Value)
+	}
+
+	// check if RunError is not recorded
+	meta.Select(&ms, metadataQuery{"RunError"})
+	if len(ms) != 0 {
+		t.Errorf("Expected RunError should not be recorded, Actual: #Row: %d", len(ms))
+	}
+
+	meta.Close()
 	stmt.Close()
+	sDb.Close()
+}
+
+func TestRegisterProgress_IfErrorRecordIntoMetadata(t *testing.T) {
+	var (
+		tmpDir           string = t.TempDir()
+		dummyStateDbPath string = filepath.Join(tmpDir, "dummy.txt")
+		dbName           string = "tmp"
+		connection       string = filepath.Join(tmpDir, fmt.Sprintf("%s.db", dbName))
+	)
+	// Check if path to state db is writable
+	if err := os.WriteFile(dummyStateDbPath, []byte("hello world"), 0x600); err != nil {
+		t.Fatalf("failed to prepare disk content for %s.", dummyStateDbPath)
+	}
+
+	// Check if path to stats db is writable
+	sDb, err := sqlx.Open("sqlite3", connection)
+	if err != nil {
+		t.Fatalf("Failed to connect to database at %s.", connection)
+	}
+
+	_, err = sDb.Exec(RegisterProgressCreateTableIfNotExist)
+	if err != nil {
+		t.Fatalf("Unable to create stats table at database %s.\n%s", connection, err)
+	}
+
+	_, err = sDb.Exec(MetadataCreateTableIfNotExist)
+	if err != nil {
+		t.Fatalf("Unable to create metadata table at database %s.\n%s", connection, err)
+	}
+
+	meta, err := sDb.PrepareNamed(sqlite3SelectFromMetadata)
+	if err != nil {
+		t.Fatalf("Failed to prepare statement using db at %s. \n%s", connection, err)
+	}
+
+	ctrl := gomock.NewController(t)
+	stateDb := state.NewMockStateDB(ctrl)
+
+	cfg := &utils.Config{}
+	cfg.RegisterRun = tmpDir // enabled here
+	cfg.OverwriteRunId = dbName
+
+	ctx := &executor.Context{State: stateDb, StateDbPath: dummyStateDbPath}
+	gomock.InOrder(
+		stateDb.EXPECT().GetMemoryUsage().Return(&state.MemoryUsage{UsedBytes: 1234}),
+	)
+
+	ext := MakeRegisterProgress(cfg, 123)
+	if _, err := ext.(extension.NilExtension[txcontext.TxContext]); err {
+		t.Errorf("RegisterProgress is disabled even though enabled in configuration.")
+	}
+
+	// this is the run
+	errorText := "This is one random error!"
+	ext.PreRun(executor.State[txcontext.TxContext]{}, ctx)
+	ext.PostRun(executor.State[txcontext.TxContext]{}, ctx, fmt.Errorf(errorText))
+
+	// check if RunSucceed is recorded after postrun
+	ms := []metadataResponse{}
+	meta.Select(&ms, metadataQuery{"RunSucceed"})
+	if len(ms) != 1 {
+		t.Errorf("Expected RunSucceed to be recorded once, Actual #Row: %d", len(ms))
+	}
+	if ms[0].Value != strconv.FormatBool(false) {
+		t.Errorf("RunSucceed expected to be true, Actual #Row: %s", ms[0].Value)
+	}
+
+	// check if RunError is recorded after postrun
+	meta.Select(&ms, metadataQuery{"RunError"})
+	if len(ms) != 1 {
+		t.Errorf("Expected RunErrorto be recorded once, Actual #Row: %d", len(ms))
+	}
+	if ms[0].Value != errorText {
+		t.Errorf("RunError expected to be %s, Actual #Row: %s", errorText, ms[0].Value)
+	}
+
+	meta.Close()
 	sDb.Close()
 }

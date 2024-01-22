@@ -9,8 +9,8 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/executor/extension/validator"
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -38,29 +38,29 @@ func RunVm(ctx *cli.Context) error {
 // execution, in particular during unit tests.
 func run(
 	cfg *utils.Config,
-	provider executor.Provider[*substate.Substate],
+	provider executor.Provider[txcontext.TxContext],
 	stateDb state.StateDB,
-	processor executor.Processor[*substate.Substate],
-	extra []executor.Extension[*substate.Substate],
+	processor executor.Processor[txcontext.TxContext],
+	extra []executor.Extension[txcontext.TxContext],
 ) error {
-	extensions := []executor.Extension[*substate.Substate]{
-		profiler.MakeCpuProfiler[*substate.Substate](cfg),
-		profiler.MakeDiagnosticServer[*substate.Substate](cfg),
-		profiler.MakeVirtualMachineStatisticsPrinter[*substate.Substate](cfg),
+	extensions := []executor.Extension[txcontext.TxContext]{
+		profiler.MakeCpuProfiler[txcontext.TxContext](cfg),
+		profiler.MakeDiagnosticServer[txcontext.TxContext](cfg),
+		profiler.MakeVirtualMachineStatisticsPrinter[txcontext.TxContext](cfg),
 	}
 
 	if stateDb == nil {
 		extensions = append(
 			extensions,
 			statedb.MakeTemporaryStatePrepper(cfg),
-			tracker.MakeDbLogger[*substate.Substate](cfg),
+			tracker.MakeDbLogger[txcontext.TxContext](cfg),
 		)
 	}
 
 	extensions = append(
 		extensions,
-		tracker.MakeErrorLogger[*substate.Substate](cfg),
-		tracker.MakeProgressLogger[*substate.Substate](cfg, 15*time.Second),
+		tracker.MakeErrorLogger[txcontext.TxContext](cfg),
+		tracker.MakeProgressLogger[txcontext.TxContext](cfg, 15*time.Second),
 		validator.MakeLiveDbValidator(cfg),
 	)
 	extensions = append(extensions, extra...)

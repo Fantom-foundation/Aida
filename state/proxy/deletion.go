@@ -5,7 +5,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
@@ -248,11 +248,11 @@ func (r *DeletionProxy) Error() error {
 }
 
 // GetSubstatePostAlloc gets substate post allocation.
-func (r *DeletionProxy) GetSubstatePostAlloc() substate.SubstateAlloc {
+func (r *DeletionProxy) GetSubstatePostAlloc() txcontext.WorldState {
 	return r.db.GetSubstatePostAlloc()
 }
 
-func (r *DeletionProxy) PrepareSubstate(substate *substate.SubstateAlloc, block uint64) {
+func (r *DeletionProxy) PrepareSubstate(substate txcontext.WorldState, block uint64) {
 	r.db.PrepareSubstate(substate, block)
 }
 
