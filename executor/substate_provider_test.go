@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"go.uber.org/mock/gomock"
@@ -155,7 +156,7 @@ func TestSubstateProvider_IterationCanBeAbortedByConsumer(t *testing.T) {
 	}
 }
 
-func openSubstateDb(path string) (Provider[*substate.Substate], error) {
+func openSubstateDb(path string) (Provider[txcontext.TxContext], error) {
 	cfg := utils.Config{}
 	cfg.AidaDb = path
 	cfg.Workers = 1

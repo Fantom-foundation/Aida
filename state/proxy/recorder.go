@@ -7,7 +7,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
@@ -306,11 +306,11 @@ func (r *RecorderProxy) Error() error {
 }
 
 // GetSubstatePostAlloc gets substate post allocation.
-func (r *RecorderProxy) GetSubstatePostAlloc() substate.SubstateAlloc {
+func (r *RecorderProxy) GetSubstatePostAlloc() txcontext.WorldState {
 	return r.db.GetSubstatePostAlloc()
 }
 
-func (r *RecorderProxy) PrepareSubstate(substate *substate.SubstateAlloc, block uint64) {
+func (r *RecorderProxy) PrepareSubstate(substate txcontext.WorldState, block uint64) {
 	r.db.PrepareSubstate(substate, block)
 }
 

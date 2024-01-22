@@ -6,7 +6,7 @@ import (
 	"math/big"
 
 	"github.com/Fantom-foundation/Aida/state"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
@@ -321,12 +321,12 @@ func (p *EventProxy) Error() error {
 }
 
 // GetSubstatePostAlloc gets substate post allocation.
-func (p *EventProxy) GetSubstatePostAlloc() substate.SubstateAlloc {
+func (p *EventProxy) GetSubstatePostAlloc() txcontext.WorldState {
 	// call real StateDB
 	return p.db.GetSubstatePostAlloc()
 }
 
-func (p *EventProxy) PrepareSubstate(substate *substate.SubstateAlloc, block uint64) {
+func (p *EventProxy) PrepareSubstate(substate txcontext.WorldState, block uint64) {
 	p.db.PrepareSubstate(substate, block)
 }
 

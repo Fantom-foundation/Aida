@@ -7,7 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
-// MakeTemporaryArchivePrepper creates an extension for retrieving temporary archive before every transaction.
+// MakeTemporaryArchivePrepper creates an extension for retrieving temporary archive before every txcontext.
 // Archive is assigned to context.Archive. Archive is released after transaction.
 func MakeTemporaryArchivePrepper() executor.Extension[*rpc.RequestAndResults] {
 	return &temporaryArchivePrepper{}

@@ -8,6 +8,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/executor/extension/validator"
 	log "github.com/Fantom-foundation/Aida/logger"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
@@ -59,16 +60,15 @@ func RecordStateDbTrace(ctx *cli.Context) error {
 
 func record(
 	cfg *utils.Config,
-	provider executor.Provider[*substate.Substate],
-	processor executor.Processor[*substate.Substate],
-	extra []executor.Extension[*substate.Substate],
+	provider executor.Provider[txcontext.TxContext],
+	processor executor.Processor[txcontext.TxContext],
+	extra []executor.Extension[txcontext.TxContext],
 ) error {
-	var extensions = []executor.Extension[*substate.Substate]{
-		profiler.MakeCpuProfiler[*substate.Substate](cfg),
-		logger.MakeProgressLogger[*substate.Substate](cfg, 0),
+	var extensions = []executor.Extension[txcontext.TxContext]{
+		profiler.MakeCpuProfiler[txcontext.TxContext](cfg),
 		tracker.MakeBlockProgressTracker(cfg, 0),
 		statedb.MakeTemporaryStatePrepper(cfg),
-		statedb.MakeProxyRecorderPrepper(cfg),
+		statedb.MakeProxyRecorderPrepper[txcontext.TxContext](cfg),
 		validator.MakeLiveDbValidator(cfg),
 	}
 

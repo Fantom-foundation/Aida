@@ -7,7 +7,8 @@ import (
 	"path"
 
 	"github.com/Fantom-foundation/Aida/logger"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Aida/txcontext"
+	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/go-opera/cmd/opera/launcher"
 	"github.com/Fantom-foundation/go-opera/gossip"
 	"github.com/Fantom-foundation/go-opera/integration"
@@ -296,11 +297,11 @@ func (s *operaStateDB) ForEachStorage(addr common.Address, cb func(common.Hash, 
 	return s.db.ForEachStorage(addr, cb)
 }
 
-func (s *operaStateDB) GetSubstatePostAlloc() substate.SubstateAlloc {
-	return s.db.GetSubstatePostAlloc()
+func (s *operaStateDB) GetSubstatePostAlloc() txcontext.WorldState {
+	return substatecontext.NewWorldState(s.db.GetSubstatePostAlloc())
 }
 
-func (s *operaStateDB) PrepareSubstate(substate *substate.SubstateAlloc, block uint64) {
+func (s *operaStateDB) PrepareSubstate(substate txcontext.WorldState, block uint64) {
 	// ignored
 }
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Aida/world-state/db/snapshot"
 	substate "github.com/Fantom-foundation/Substate"
@@ -32,7 +33,7 @@ func CreateLachesisWorldState(cfg *utils.Config) (substate.SubstateAlloc, error)
 		return nil, err
 	}
 	// remove deleted accounts
-	if err := utils.DeleteDestroyedAccountsFromWorldState(lachesis, cfg, lachesisLastBlock); err != nil {
+	if err := utils.DeleteDestroyedAccountsFromWorldState(substatecontext.NewWorldState(lachesis), cfg, lachesisLastBlock); err != nil {
 		return nil, err
 	}
 	return lachesis, nil

@@ -6,7 +6,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/profile/graphutil"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -94,20 +94,22 @@ func interfere(u, v AddressSet) bool {
 }
 
 // findTxAddresses gets wallet/contract addresses of a transaction.
-func findTxAddresses(tx executor.State[*substate.Substate]) AddressSet {
+func findTxAddresses(tx executor.State[txcontext.TxContext]) AddressSet {
 	addresses := AddressSet{}
-	for addr := range tx.Data.InputAlloc {
+	tx.Data.GetInputState().ForEachAccount(func(addr common.Address, acc txcontext.Account) {
 		addresses[addr] = struct{}{}
-	}
-	for addr := range tx.Data.OutputAlloc {
+	})
+	tx.Data.GetOutputState().ForEachAccount(func(addr common.Address, acc txcontext.Account) {
 		addresses[addr] = struct{}{}
-	}
+	})
 	var zero common.Address
-	if tx.Data.Message.From != zero {
-		addresses[tx.Data.Message.From] = struct{}{}
+	from := tx.Data.GetMessage().From()
+	if from != zero {
+		addresses[from] = struct{}{}
 	}
-	if tx.Data.Message.To != nil {
-		addresses[*tx.Data.Message.To] = struct{}{}
+	to := tx.Data.GetMessage().To()
+	if to != nil {
+		addresses[*to] = struct{}{}
 	}
 	return addresses
 }
@@ -145,7 +147,7 @@ func (ctx *Context) dependencies(addresses AddressSet) graphutil.OrdinalSet {
 }
 
 // RecordTransaction collects addresses and computes earliest time.
-func (ctx *Context) RecordTransaction(state executor.State[*substate.Substate], tTransaction time.Duration) error {
+func (ctx *Context) RecordTransaction(state executor.State[txcontext.TxContext], tTransaction time.Duration) error {
 	overheadTimer := time.Now()
 
 	// update time for block and transaction
@@ -154,7 +156,7 @@ func (ctx *Context) RecordTransaction(state executor.State[*substate.Substate], 
 	ctx.tTypes = append(ctx.tTypes, getTransactionType(state))
 
 	// update gas used for block and transaction
-	gasUsed := state.Data.Result.GasUsed
+	gasUsed := state.Data.GetReceipt().GetGasUsed()
 	ctx.gasBlock += gasUsed
 	ctx.gasTransactions = append(ctx.gasTransactions, gasUsed)
 
@@ -258,18 +260,18 @@ func (ctx *Context) GetProfileData(curBlock uint64, tBlock time.Duration) (*Prof
 }
 
 // getTransactionType reads a message and determines a transaction type.
-func getTransactionType(tx executor.State[*substate.Substate]) TxType {
-	msg := tx.Data.Message
-	to := msg.To
-	from := msg.From
-	alloc := tx.Data.InputAlloc
+func getTransactionType(tx executor.State[txcontext.TxContext]) TxType {
+	msg := tx.Data.GetMessage()
+	to := msg.To()
+	from := msg.From()
+	alloc := tx.Data.GetInputState()
 
 	zero := common.HexToAddress("0x0000000000000000000000000000000000000000")
 
 	if to != nil {
-		account, exist := alloc[*to]
+		acc := alloc.Get(*to)
 		// regular transaction
-		if !exist || len(account.Code) == 0 {
+		if acc == nil || len(acc.GetCode()) == 0 {
 			return TransferTx
 			// CALL transaction with contract bytecode
 		} else {

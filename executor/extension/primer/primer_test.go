@@ -10,7 +10,10 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/txcontext"
+	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/ethereum/go-ethereum/common"
 	"go.uber.org/mock/gomock"
 )
 
@@ -101,32 +104,35 @@ func TestPrime_PrimeStateDB(t *testing.T) {
 			}(sDB)
 
 			// Generating randomized world state
-			ws, _ := utils.MakeWorldState(t)
+			alloc, _ := utils.MakeWorldState(t)
+			ws := substatecontext.NewWorldState(alloc)
 
 			pc := utils.NewPrimeContext(cfg, sDB, log)
 			// Priming state DB
 			pc.PrimeStateDB(ws, sDB)
 
 			// Checks if state DB was primed correctly
-			for key, account := range ws {
-				if sDB.GetBalance(key).Cmp(account.Balance) != 0 {
-					t.Fatalf("failed to prime account balance; Is: %v; Should be: %v", sDB.GetBalance(key), account.Balance)
+			ws.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
+				if sDB.GetBalance(addr).Cmp(acc.GetBalance()) != 0 {
+					t.Fatalf("failed to prime account balance; Is: %v; Should be: %v", sDB.GetBalance(addr), acc.GetBalance())
 				}
 
-				if sDB.GetNonce(key) != account.Nonce {
-					t.Fatalf("failed to prime account nonce; Is: %v; Should be: %v", sDB.GetNonce(key), account.Nonce)
+				if sDB.GetNonce(addr) != acc.GetNonce() {
+					t.Fatalf("failed to prime account nonce; Is: %v; Should be: %v", sDB.GetNonce(addr), acc.GetNonce())
 				}
 
-				if bytes.Compare(sDB.GetCode(key), account.Code) != 0 {
-					t.Fatalf("failed to prime account code; Is: %v; Should be: %v", sDB.GetCode(key), account.Code)
+				if bytes.Compare(sDB.GetCode(addr), acc.GetCode()) != 0 {
+					t.Fatalf("failed to prime account code; Is: %v; Should be: %v", sDB.GetCode(addr), acc.GetCode())
 				}
 
-				for sKey, sValue := range account.Storage {
-					if sDB.GetState(key, sKey) != sValue {
-						t.Fatalf("failed to prime account storage; Is: %v; Should be: %v", sDB.GetState(key, sKey), sValue)
+				acc.ForEachStorage(func(keyHash common.Hash, valueHash common.Hash) {
+					if sDB.GetState(addr, keyHash) != valueHash {
+						t.Fatalf("failed to prime account storage; Is: %v; Should be: %v", sDB.GetState(addr, keyHash), valueHash)
 					}
-				}
-			}
+				})
+
+			})
+
 		})
 	}
 }
