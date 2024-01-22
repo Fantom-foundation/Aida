@@ -27,19 +27,19 @@ func makeArchiveInquirer(cfg *utils.Config, log logger.Logger) executor.Extensio
 		return extension.NilExtension[txcontext.TxContext]{}
 	}
 	return &archiveInquirer{
-		ArchiveDbProcessor: executor.MakeArchiveDbProcessor(cfg),
-		cfg:                cfg,
-		log:                log,
-		throttler:          newThrottler(cfg.ArchiveQueryRate),
-		finished:           utils.MakeEvent(),
-		history:            newBuffer[historicTransaction](cfg.ArchiveMaxQueryAge),
-		validator:          validator.MakeArchiveDbValidator(cfg),
+		ArchiveDbTxProcessor: executor.MakeArchiveDbTxProcessor(cfg),
+		cfg:                  cfg,
+		log:                  log,
+		throttler:            newThrottler(cfg.ArchiveQueryRate),
+		finished:             utils.MakeEvent(),
+		history:              newBuffer[historicTransaction](cfg.ArchiveMaxQueryAge),
+		validator:            validator.MakeArchiveDbValidator(cfg),
 	}
 }
 
 type archiveInquirer struct {
 	extension.NilExtension[txcontext.TxContext]
-	*executor.ArchiveDbProcessor
+	*executor.ArchiveDbTxProcessor
 
 	cfg   *utils.Config
 	log   logger.Logger

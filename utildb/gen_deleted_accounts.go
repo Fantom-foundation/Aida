@@ -61,7 +61,7 @@ func readAccounts(ch chan proxy.ContractLiveliness, deleteHistory *map[common.Ad
 // and resurrected accounts to a database.
 func genDeletedAccountsTask(
 	tx *substate.Transaction,
-	processor *executor.SubstateProcessor,
+	processor *executor.TxProcessor,
 	ddb *substate.DestroyedAccountDB,
 	deleteHistory *map[common.Address]bool,
 	cfg *utils.Config,
@@ -123,7 +123,7 @@ func GenDeletedAccountsAction(cfg *utils.Config, ddb *substate.DestroyedAccountD
 	iter := substate.NewSubstateIterator(firstBlock, cfg.Workers)
 	defer iter.Release()
 
-	processor := executor.MakeSubstateProcessor(cfg)
+	processor := executor.MakeTxProcessor(cfg)
 
 	for iter.Next() {
 		tx := iter.Value()

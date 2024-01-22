@@ -92,7 +92,7 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 
 	// since we are working with mock transactions, run logically fails on 'intrinsic gas too low'
 	// since this is a test that tests orded of the db events, we can ignore this error
-	err := run(cfg, provider, db, executor.MakeArchiveDbProcessor(cfg), nil)
+	err := run(cfg, provider, db, executor.MakeArchiveDbTxProcessor(cfg), nil)
 	if err != nil {
 		if strings.Contains(err.Error(), "intrinsic gas too low") {
 			return
@@ -184,7 +184,7 @@ func TestVmAdb_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 
 	// since we are working with mock transactions, run logically fails on 'intrinsic gas too low'
 	// since this is a test that tests orded of the db events, we can ignore this error
-	err := run(cfg, provider, db, executor.MakeArchiveDbProcessor(cfg), nil)
+	err := run(cfg, provider, db, executor.MakeArchiveDbTxProcessor(cfg), nil)
 	if err != nil {
 		if strings.Contains(err.Error(), "intrinsic gas too low") {
 			return
@@ -391,7 +391,7 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) 
 	)
 
 	// run fails but not on validation
-	err := run(cfg, provider, db, executor.MakeArchiveDbProcessor(cfg), nil)
+	err := run(cfg, provider, db, executor.MakeArchiveDbTxProcessor(cfg), nil)
 	if err == nil {
 		t.Errorf("run must fail")
 	}
@@ -442,7 +442,7 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Parallel(t *testing.T) {
 	)
 
 	// run fails but not on validation
-	err := run(cfg, provider, db, executor.MakeArchiveDbProcessor(cfg), nil)
+	err := run(cfg, provider, db, executor.MakeArchiveDbTxProcessor(cfg), nil)
 	if err == nil {
 		t.Errorf("run must fail")
 	}
@@ -482,7 +482,7 @@ func TestVmAdb_ValidationFailsOnInvalidTransaction_Sequential(t *testing.T) {
 		archive.EXPECT().GetCode(testingAddress).Return([]byte{}),
 	)
 
-	err := run(cfg, provider, db, executor.MakeArchiveDbProcessor(cfg), nil)
+	err := run(cfg, provider, db, executor.MakeArchiveDbTxProcessor(cfg), nil)
 	if err == nil {
 		t.Errorf("validation must fail")
 	}
@@ -524,7 +524,7 @@ func TestVmAdb_ValidationFailsOnInvalidTransaction_Parallel(t *testing.T) {
 		archive.EXPECT().GetCode(testingAddress).Return([]byte{}),
 	)
 
-	err := run(cfg, provider, db, executor.MakeArchiveDbProcessor(cfg), nil)
+	err := run(cfg, provider, db, executor.MakeArchiveDbTxProcessor(cfg), nil)
 	if err == nil {
 		t.Errorf("validation must fail")
 	}

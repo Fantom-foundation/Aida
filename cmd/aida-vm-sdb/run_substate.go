@@ -32,7 +32,7 @@ func RunSubstate(ctx *cli.Context) error {
 	}
 	defer substateDb.Close()
 
-	return runSubstates(cfg, substateDb, nil, executor.MakeLiveDbProcessor(cfg), nil)
+	return runSubstates(cfg, substateDb, nil, executor.MakeLiveDbTxProcessor(cfg), nil)
 }
 
 func runSubstates(

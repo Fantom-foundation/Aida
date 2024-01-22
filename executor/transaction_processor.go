@@ -19,17 +19,17 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 )
 
-// MakeLiveDbProcessor creates a executor.Processor which processes transaction into LIVE StateDb.
-func MakeLiveDbProcessor(cfg *utils.Config) *LiveDbProcessor {
-	return &LiveDbProcessor{MakeSubstateProcessor(cfg)}
+// MakeLiveDbTxProcessor creates a executor.Processor which processes transaction into LIVE StateDb.
+func MakeLiveDbTxProcessor(cfg *utils.Config) *LiveDbTxProcessor {
+	return &LiveDbTxProcessor{MakeTxProcessor(cfg)}
 }
 
-type LiveDbProcessor struct {
-	*SubstateProcessor
+type LiveDbTxProcessor struct {
+	*TxProcessor
 }
 
 // Process transaction inside state into given LIVE StateDb
-func (p *LiveDbProcessor) Process(state State[txcontext.TxContext], ctx *Context) error {
+func (p *LiveDbTxProcessor) Process(state State[txcontext.TxContext], ctx *Context) error {
 	var err error
 
 	state.ExecutionResult, err = p.ProcessTransaction(ctx.State, state.Block, state.Transaction, state.Data)
@@ -45,17 +45,17 @@ func (p *LiveDbProcessor) Process(state State[txcontext.TxContext], ctx *Context
 	return err
 }
 
-// MakeArchiveDbProcessor creates a executor.Processor which processes transaction into ARCHIVE StateDb.
-func MakeArchiveDbProcessor(cfg *utils.Config) *ArchiveDbProcessor {
-	return &ArchiveDbProcessor{MakeSubstateProcessor(cfg)}
+// MakeArchiveDbTxProcessor creates a executor.Processor which processes transaction into ARCHIVE StateDb.
+func MakeArchiveDbTxProcessor(cfg *utils.Config) *ArchiveDbTxProcessor {
+	return &ArchiveDbTxProcessor{MakeTxProcessor(cfg)}
 }
 
-type ArchiveDbProcessor struct {
-	*SubstateProcessor
+type ArchiveDbTxProcessor struct {
+	*TxProcessor
 }
 
 // Process transaction inside state into given ARCHIVE StateDb
-func (p *ArchiveDbProcessor) Process(state State[txcontext.TxContext], ctx *Context) error {
+func (p *ArchiveDbTxProcessor) Process(state State[txcontext.TxContext], ctx *Context) error {
 	var err error
 
 	state.ExecutionResult, err = p.ProcessTransaction(ctx.Archive, state.Block, state.Transaction, state.Data)
@@ -71,14 +71,14 @@ func (p *ArchiveDbProcessor) Process(state State[txcontext.TxContext], ctx *Cont
 	return err
 }
 
-type SubstateProcessor struct {
+type TxProcessor struct {
 	cfg       *utils.Config
 	numErrors *atomic.Int32 // transactions can be processed in parallel, so this needs to be thread safe
 	vmCfg     vm.Config
 	chainCfg  *params.ChainConfig
 }
 
-func MakeSubstateProcessor(cfg *utils.Config) *SubstateProcessor {
+func MakeTxProcessor(cfg *utils.Config) *TxProcessor {
 	var vmCfg vm.Config
 	switch cfg.ChainID {
 	case utils.EthereumChainID:
@@ -95,7 +95,7 @@ func MakeSubstateProcessor(cfg *utils.Config) *SubstateProcessor {
 	vmCfg.Tracer = nil
 	vmCfg.Debug = false
 
-	return &SubstateProcessor{
+	return &TxProcessor{
 		cfg:       cfg,
 		numErrors: new(atomic.Int32),
 		vmCfg:     vmCfg,
@@ -103,7 +103,7 @@ func MakeSubstateProcessor(cfg *utils.Config) *SubstateProcessor {
 	}
 }
 
-func (s *SubstateProcessor) isErrFatal() bool {
+func (s *TxProcessor) isErrFatal() bool {
 	if !s.cfg.ContinueOnFailure {
 		return true
 	}
@@ -153,7 +153,7 @@ func (e *executionResult) Equal(y txcontext.Receipt) bool {
 	return txcontext.ReceiptEqual(e, y)
 }
 
-func (s *SubstateProcessor) ProcessTransaction(db state.VmStateDB, block int, tx int, st txcontext.Transaction) (txcontext.Receipt, error) {
+func (s *TxProcessor) ProcessTransaction(db state.VmStateDB, block int, tx int, st txcontext.Transaction) (txcontext.Receipt, error) {
 	if tx >= utils.PseudoTx {
 		s.processPseudoTx(st.GetOutputState(), db)
 		return nil, nil
@@ -162,7 +162,7 @@ func (s *SubstateProcessor) ProcessTransaction(db state.VmStateDB, block int, tx
 }
 
 // processRegularTx executes VM on a chosen storage system.
-func (s *SubstateProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st txcontext.Transaction) (res *executionResult, finalError error) {
+func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st txcontext.Transaction) (res *executionResult, finalError error) {
 	db.BeginTransaction(uint32(tx))
 	defer db.EndTransaction()
 
@@ -212,7 +212,7 @@ func (s *SubstateProcessor) processRegularTx(db state.VmStateDB, block int, tx i
 
 // processPseudoTx processes pseudo transactions in Lachesis by applying the change in db state.
 // The pseudo transactions includes Lachesis SFC, lachesis genesis and lachesis-opera transition.
-func (s *SubstateProcessor) processPseudoTx(ws txcontext.WorldState, db state.VmStateDB) {
+func (s *TxProcessor) processPseudoTx(ws txcontext.WorldState, db state.VmStateDB) {
 	db.BeginTransaction(utils.PseudoTx)
 	defer db.EndTransaction()
 
@@ -228,7 +228,7 @@ func (s *SubstateProcessor) processPseudoTx(ws txcontext.WorldState, db state.Vm
 
 }
 
-// prepareBlockCtx creates a block context for evm call from an environment of a substate.
+// prepareBlockCtx creates a block context for evm call from given BlockEnvironment.
 func prepareBlockCtx(inputEnv txcontext.BlockEnvironment, hashError *error) *vm.BlockContext {
 	getHash := func(num uint64) common.Hash {
 		h := inputEnv.GetBlockHash(num)

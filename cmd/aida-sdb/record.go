@@ -54,7 +54,7 @@ func RecordStateDbTrace(ctx *cli.Context) error {
 	}
 	defer substateDb.Close()
 
-	return record(cfg, substateDb, executor.MakeLiveDbProcessor(cfg), nil)
+	return record(cfg, substateDb, executor.MakeLiveDbTxProcessor(cfg), nil)
 }
 
 func record(

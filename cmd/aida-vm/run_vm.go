@@ -27,7 +27,7 @@ func RunVm(ctx *cli.Context) error {
 	}
 	defer substateDb.Close()
 
-	return run(cfg, substateDb, nil, executor.MakeLiveDbProcessor(cfg), nil)
+	return run(cfg, substateDb, nil, executor.MakeLiveDbTxProcessor(cfg), nil)
 }
 
 // run executes the actual block-processing evaluation for RunVm above.
