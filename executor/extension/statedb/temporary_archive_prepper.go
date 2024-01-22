@@ -8,7 +8,7 @@ import (
 )
 
 // MakeTemporaryArchivePrepper creates an extension for retrieving temporary archive before every txcontext.
-// Archive is assigned to context.Archive. Archive is released after txcontext.
+// Archive is assigned to context.Archive. Archive is released after transaction.
 func MakeTemporaryArchivePrepper() executor.Extension[*rpc.RequestAndResults] {
 	return &temporaryArchivePrepper{}
 }

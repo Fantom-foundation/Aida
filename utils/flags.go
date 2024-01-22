@@ -106,7 +106,7 @@ var (
 	}
 	ProfileDepthFlag = cli.IntFlag{
 		Name:  "profile-depth",
-		Usage: "0=interval, 1=interval+block, 2=interval+block+txcontext",
+		Usage: "0=interval, 1=interval+block, 2=interval+block+transaction",
 		Value: 0,
 	}
 	ProfileSqlite3Flag = cli.StringFlag{
@@ -278,7 +278,7 @@ var (
 		Value: 1_000,
 	}
 	TransactionLengthFlag = cli.Uint64Flag{
-		Name:  "txcontext-length",
+		Name:  "transaction-length",
 		Usage: "Determines indirectly the length of a transaction",
 		Value: 10,
 	}

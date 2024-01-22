@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+// TestWorldState_Equal tests whether Equal if Worlds States are same.
 func TestWorldState_Equal(t *testing.T) {
 	ws := substate.SubstateAlloc{common.Address{1}: &substate.SubstateAccount{Nonce: 1, Balance: new(big.Int).SetUint64(1), Code: []byte{1}}}
 	comparedWorldState := substate.SubstateAlloc{common.Address{1}: &substate.SubstateAccount{Nonce: 1, Balance: new(big.Int).SetUint64(1), Code: []byte{1}}}
@@ -20,6 +21,7 @@ func TestWorldState_Equal(t *testing.T) {
 	}
 }
 
+// TestWorldState_NotEqual tests whether Equal if Worlds States are not same.
 func TestWorldState_NotEqual(t *testing.T) {
 	ws := substate.SubstateAlloc{common.Address{1}: &substate.SubstateAccount{Nonce: 1, Balance: new(big.Int).SetUint64(1), Code: []byte{1}}}
 	comparedWorldState := substate.SubstateAlloc{common.Address{2}: &substate.SubstateAccount{Nonce: 1, Balance: new(big.Int).SetUint64(1), Code: []byte{1}}}
@@ -29,6 +31,7 @@ func TestWorldState_NotEqual(t *testing.T) {
 	}
 }
 
+// TestWorldState_Equal_DifferentLen tests whether Equal if Worlds States have different len.
 func TestWorldState_Equal_DifferentLen(t *testing.T) {
 	ws := substate.SubstateAlloc{common.Address{1}: &substate.SubstateAccount{Nonce: 1, Balance: new(big.Int).SetUint64(1), Code: []byte{1}}}
 	comparedWorldState := substate.SubstateAlloc{common.Address{1}: &substate.SubstateAccount{Nonce: 1, Balance: new(big.Int).SetUint64(1), Code: []byte{1}}}
@@ -41,6 +44,7 @@ func TestWorldState_Equal_DifferentLen(t *testing.T) {
 	}
 }
 
+// TestWorldState_String tests whether Stringify method has correct format.
 func TestWorldState_String(t *testing.T) {
 	ws := substate.SubstateAlloc{common.Address{1}: &substate.SubstateAccount{Nonce: 1, Balance: new(big.Int).SetUint64(1), Code: []byte{1}}}
 

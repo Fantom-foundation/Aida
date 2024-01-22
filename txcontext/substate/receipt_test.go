@@ -9,6 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
+// TestReceipt_EqualStatus tests whether Equal works with status.
 func TestReceipt_EqualStatus(t *testing.T) {
 	res := &substate.SubstateResult{Status: 0}
 	comparedRes := &substate.SubstateResult{Status: 1}
@@ -23,6 +24,7 @@ func TestReceipt_EqualStatus(t *testing.T) {
 	}
 }
 
+// TestReceipt_EqualBloom tests whether Equal works with bloom.
 func TestReceipt_EqualBloom(t *testing.T) {
 	res := &substate.SubstateResult{Bloom: types.Bloom{0}}
 	comparedRes := &substate.SubstateResult{Bloom: types.Bloom{1}}
@@ -37,6 +39,7 @@ func TestReceipt_EqualBloom(t *testing.T) {
 	}
 }
 
+// TestReceipt_EqualLogs tests whether Equal works with logs.
 func TestReceipt_EqualLogs(t *testing.T) {
 	res := &substate.SubstateResult{Logs: []*types.Log{{Address: common.Address{0}}}}
 	comparedRes := &substate.SubstateResult{Logs: []*types.Log{{Address: common.Address{1}}}}
@@ -51,6 +54,7 @@ func TestReceipt_EqualLogs(t *testing.T) {
 	}
 }
 
+// TestReceipt_EqualContractAddress tests whether Equal works with contract address.
 func TestReceipt_EqualContractAddress(t *testing.T) {
 	res := &substate.SubstateResult{ContractAddress: common.Address{0}}
 	comparedRes := &substate.SubstateResult{ContractAddress: common.Address{1}}
@@ -65,6 +69,7 @@ func TestReceipt_EqualContractAddress(t *testing.T) {
 	}
 }
 
+// TestReceipt_EqualGasUsed tests whether Equal works with contract has correct format.
 func TestReceipt_EqualGasUsed(t *testing.T) {
 	res := &substate.SubstateResult{GasUsed: 0}
 	comparedRes := &substate.SubstateResult{GasUsed: 1}

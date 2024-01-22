@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+// TestAccount_EqualNonce tests whether Equal works with nonce.
 func TestAccount_EqualNonce(t *testing.T) {
 	newAccount := substate.NewSubstateAccount(2, new(big.Int).SetUint64(1), []byte{1})
 	oldAccount := substate.NewSubstateAccount(1, new(big.Int).SetUint64(1), []byte{1})
@@ -25,6 +26,7 @@ func TestAccount_EqualNonce(t *testing.T) {
 	}
 }
 
+// TestAccount_EqualBalance tests whether Equal works with balance.
 func TestAccount_EqualBalance(t *testing.T) {
 	newAccount := substate.NewSubstateAccount(1, new(big.Int).SetUint64(2), []byte{1})
 	oldAccount := substate.NewSubstateAccount(1, new(big.Int).SetUint64(1), []byte{1})
@@ -38,6 +40,7 @@ func TestAccount_EqualBalance(t *testing.T) {
 	}
 }
 
+// TestAccount_EqualStorage tests whether Equal works with storage.
 func TestAccount_EqualStorage(t *testing.T) {
 	hashOne := common.BigToHash(new(big.Int).SetUint64(1))
 	hashTwo := common.BigToHash(new(big.Int).SetUint64(2))
@@ -72,6 +75,7 @@ func TestAccount_EqualStorage(t *testing.T) {
 
 }
 
+// TestAccount_EqualCode tests whether Equal works with code.
 func TestAccount_EqualCode(t *testing.T) {
 	newAccount := substate.NewSubstateAccount(1, new(big.Int).SetUint64(1), []byte{2})
 	oldAccount := substate.NewSubstateAccount(1, new(big.Int).SetUint64(1), []byte{1})
@@ -86,6 +90,7 @@ func TestAccount_EqualCode(t *testing.T) {
 
 }
 
+// TestAccount_String tests whether Stringify method works correctly.
 func TestAccount_String(t *testing.T) {
 	hashOne := common.BigToHash(new(big.Int).SetUint64(1))
 	hashTwo := common.BigToHash(new(big.Int).SetUint64(2))
