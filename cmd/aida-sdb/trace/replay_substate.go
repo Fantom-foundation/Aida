@@ -10,8 +10,8 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/tracer/context"
 	"github.com/Fantom-foundation/Aida/tracer/operation"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -37,8 +37,8 @@ func ReplaySubstate(ctx *cli.Context) error {
 
 	processor := makeSubstateProcessor(cfg, rCtx, operationProvider)
 
-	var extra = []executor.Extension[*substate.Substate]{
-		profiler.MakeReplayProfiler[*substate.Substate](cfg, rCtx),
+	var extra = []executor.Extension[txcontext.TxContext]{
+		profiler.MakeReplayProfiler[txcontext.TxContext](cfg, rCtx),
 	}
 
 	return replaySubstate(cfg, substateProvider, processor, nil, extra)
@@ -56,7 +56,7 @@ type substateProcessor struct {
 	operationProvider executor.Provider[[]operation.Operation]
 }
 
-func (p substateProcessor) Process(state executor.State[*substate.Substate], ctx *executor.Context) error {
+func (p substateProcessor) Process(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	return p.operationProvider.Run(state.Block, state.Block, func(t executor.TransactionInfo[[]operation.Operation]) error {
 		p.runTransaction(uint64(state.Block), t.Data, ctx.State)
 		return nil
@@ -65,21 +65,21 @@ func (p substateProcessor) Process(state executor.State[*substate.Substate], ctx
 
 func replaySubstate(
 	cfg *utils.Config,
-	provider executor.Provider[*substate.Substate],
-	processor executor.Processor[*substate.Substate],
+	provider executor.Provider[txcontext.TxContext],
+	processor executor.Processor[txcontext.TxContext],
 	stateDb state.StateDB,
-	extra []executor.Extension[*substate.Substate],
+	extra []executor.Extension[txcontext.TxContext],
 ) error {
-	var extensionList = []executor.Extension[*substate.Substate]{
-		profiler.MakeCpuProfiler[*substate.Substate](cfg),
-		tracker.MakeProgressLogger[*substate.Substate](cfg, 0),
-		profiler.MakeMemoryUsagePrinter[*substate.Substate](cfg),
-		profiler.MakeMemoryProfiler[*substate.Substate](cfg),
+	var extensionList = []executor.Extension[txcontext.TxContext]{
+		profiler.MakeCpuProfiler[txcontext.TxContext](cfg),
+		tracker.MakeProgressLogger[txcontext.TxContext](cfg, 0),
+		profiler.MakeMemoryUsagePrinter[txcontext.TxContext](cfg),
+		profiler.MakeMemoryProfiler[txcontext.TxContext](cfg),
 		validator.MakeLiveDbValidator(cfg),
 	}
 
 	if stateDb == nil {
-		extensionList = append(extensionList, statedb.MakeStateDbManager[*substate.Substate](cfg))
+		extensionList = append(extensionList, statedb.MakeStateDbManager[txcontext.TxContext](cfg))
 	}
 
 	if cfg.DbImpl == "memory" {

@@ -37,7 +37,7 @@ func getTotalOpCount(a *analytics.IncrementalAnalytics) int {
 
 // This generates exactly one call per operation and test if the following are true:
 // - That op profiler correctly proxies any StateDB implementation
-// - This is repeated for each depth level -> interval, block and transaction
+// - This is repeated for each depth level -> interval, block and txcontext
 // - Call each function exactly once
 //   - Make explicit the fact that some StateDB are not proxied (see black list below)
 

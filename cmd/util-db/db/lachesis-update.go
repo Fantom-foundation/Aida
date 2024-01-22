@@ -83,7 +83,7 @@ func lachesisUpdate(ctx *cli.Context) error {
 			len(untrackedState))
 		substate.PutSubstate(lachesisLastBlock, utils.PseudoTx, transitionTx)
 	} else {
-		log.Warningf("Transition transaction has already been produced. Skip writing")
+		log.Warningf("Transition tx has already been produced. Skip writing")
 	}
 	return nil
 }

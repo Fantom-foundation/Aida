@@ -10,7 +10,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
@@ -270,11 +270,11 @@ func (s *shadowVmStateDb) Prepare(thash common.Hash, ti int) {
 	s.run("Prepare", func(s state.VmStateDB) { s.Prepare(thash, ti) })
 }
 
-func (s *shadowStateDb) PrepareSubstate(substate *substate.SubstateAlloc, block uint64) {
+func (s *shadowStateDb) PrepareSubstate(substate txcontext.WorldState, block uint64) {
 	s.run("PrepareSubstate", func(s state.StateDB) { s.PrepareSubstate(substate, block) })
 }
 
-func (s *shadowVmStateDb) GetSubstatePostAlloc() substate.SubstateAlloc {
+func (s *shadowVmStateDb) GetSubstatePostAlloc() txcontext.WorldState {
 	// Skip comparing those results.
 	s.shadow.GetSubstatePostAlloc()
 	return s.prime.GetSubstatePostAlloc()

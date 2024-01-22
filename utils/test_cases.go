@@ -102,7 +102,7 @@ func MakeWorldState(t *testing.T) (substate.SubstateAlloc, []common.Address) {
 	var addrList []common.Address
 
 	// create world state
-	ws := substate.SubstateAlloc{}
+	ws := make(substate.SubstateAlloc)
 
 	for i := 0; i < 100; i++ {
 		// create random address
@@ -111,13 +111,16 @@ func MakeWorldState(t *testing.T) (substate.SubstateAlloc, []common.Address) {
 		// add to address list
 		addrList = append(addrList, addr)
 
-		// create account
-		ws[addr] = &substate.SubstateAccount{
+		acc := substate.SubstateAccount{
 			Nonce:   uint64(GetRandom(1, 1000*5000)),
 			Balance: big.NewInt(int64(GetRandom(1, 1000*5000))),
 			Storage: MakeAccountStorage(t),
 			Code:    MakeRandomByteSlice(t, 2048),
 		}
+		ws[addr] = &acc
+
+		// create account
+
 	}
 
 	return ws, addrList

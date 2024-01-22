@@ -7,7 +7,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -41,33 +41,43 @@ func (pc *PrimeContext) mayApplyBulkLoad() error {
 }
 
 // PrimeStateDB primes database with accounts from the world state.
-func (pc *PrimeContext) PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB) error {
+func (pc *PrimeContext) PrimeStateDB(ws txcontext.WorldState, db state.StateDB) error {
 	numValues := 0 // number of storage values
-	for _, account := range ws {
-		numValues += len(account.Storage)
-	}
-	pc.log.Infof("\tLoading %d accounts with %d values ..", len(ws), numValues)
+	ws.ForEachAccount(func(address common.Address, account txcontext.Account) {
+		numValues += account.GetStorageSize()
+	})
+
+	pc.log.Infof("\tLoading %d accounts with %d values ..", ws.Len(), numValues)
 
 	pt := NewProgressTracker(numValues, pc.log)
 	if pc.cfg.PrimeRandom {
 		//if 0, commit once after priming all accounts
 		if pc.cfg.PrimeThreshold == 0 {
-			pc.cfg.PrimeThreshold = len(ws)
+			pc.cfg.PrimeThreshold = ws.Len()
 		}
 		if err := pc.PrimeStateDBRandom(ws, db, pt); err != nil {
 			return fmt.Errorf("failed to prime StateDB: %v", err)
 		}
 	} else {
 		pc.load = db.StartBulkLoad(pc.block)
-		for addr, account := range ws {
-			if err := pc.primeOneAccount(addr, account, pt); err != nil {
-				return err
+
+		var forEachError error
+		ws.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
+			if err := pc.primeOneAccount(addr, acc, pt); err != nil {
+				forEachError = err
+				return
 			}
 			// commit to stateDB after process n operations
 			if err := pc.mayApplyBulkLoad(); err != nil {
-				return err
+				forEachError = err
+				return
 			}
+		})
+
+		if forEachError != nil {
+			return forEachError
 		}
+
 		if err := pc.load.Close(); err != nil {
 			return fmt.Errorf("failed to prime StateDB: %v", err)
 		}
@@ -78,34 +88,42 @@ func (pc *PrimeContext) PrimeStateDB(ws substate.SubstateAlloc, db state.StateDB
 }
 
 // primeOneAccount initializes an account on stateDB with substate
-func (pc *PrimeContext) primeOneAccount(addr common.Address, account *substate.SubstateAccount, pt *ProgressTracker) error {
+func (pc *PrimeContext) primeOneAccount(addr common.Address, acc txcontext.Account, pt *ProgressTracker) error {
 	// if an account was previously primed, skip account creation.
 	if exist, found := pc.exist[addr]; !found || !exist {
 		pc.load.CreateAccount(addr)
 		pc.exist[addr] = true
 		pc.operations++
 	}
-	pc.load.SetBalance(addr, account.Balance)
-	pc.load.SetNonce(addr, account.Nonce)
-	pc.load.SetCode(addr, account.Code)
+	pc.load.SetBalance(addr, acc.GetBalance())
+	pc.load.SetNonce(addr, acc.GetNonce())
+	pc.load.SetCode(addr, acc.GetCode())
 	pc.operations = pc.operations + 3
-	for key, value := range account.Storage {
-		pc.load.SetState(addr, key, value)
+
+	var forEachError error
+	acc.ForEachStorage(func(keyHash common.Hash, valueHash common.Hash) {
+		pc.load.SetState(addr, keyHash, valueHash)
 		pt.PrintProgress()
 		pc.operations++
 		if err := pc.mayApplyBulkLoad(); err != nil {
-			return err
+			forEachError = err
+			return
 		}
+	})
+
+	if forEachError != nil {
+		return forEachError
 	}
+
 	return nil
 }
 
 // PrimeStateDBRandom primes database with accounts from the world state in random order.
-func (pc *PrimeContext) PrimeStateDBRandom(ws substate.SubstateAlloc, db state.StateDB, pt *ProgressTracker) error {
-	contracts := make([]string, 0, len(ws))
-	for addr := range ws {
+func (pc *PrimeContext) PrimeStateDBRandom(ws txcontext.WorldState, db state.StateDB, pt *ProgressTracker) error {
+	contracts := make([]string, 0, ws.Len())
+	ws.ForEachAccount(func(addr common.Address, _ txcontext.Account) {
 		contracts = append(contracts, addr.Hex())
-	}
+	})
 
 	sort.Strings(contracts)
 	// shuffle contract order
@@ -117,7 +135,7 @@ func (pc *PrimeContext) PrimeStateDBRandom(ws substate.SubstateAlloc, db state.S
 	pc.load = db.StartBulkLoad(pc.block)
 	for _, c := range contracts {
 		addr := common.HexToAddress(c)
-		account := ws[addr]
+		account := ws.Get(addr)
 		if err := pc.primeOneAccount(addr, account, pt); err != nil {
 			return err
 		}

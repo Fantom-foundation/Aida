@@ -7,7 +7,7 @@ import (
 	"math/big"
 	"sync"
 
-	substate "github.com/Fantom-foundation/Substate"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
@@ -123,18 +123,20 @@ func getHash(addr common.Address, code []byte) common.Hash {
 	return res
 }
 
-// MakeOffTheChainStateDB returns an in-memory *state.StateDB initialized with alloc
-func MakeOffTheChainStateDB(alloc substate.SubstateAlloc, block uint64, chainConduit *ChainConduit) (StateDB, error) {
+// MakeOffTheChainStateDB returns an in-memory *state.StateDB initialized with ws
+func MakeOffTheChainStateDB(alloc txcontext.WorldState, block uint64, chainConduit *ChainConduit) (StateDB, error) {
 	statedb := NewOffTheChainStateDB()
-	for addr, a := range alloc {
-		statedb.SetPrehashedCode(addr, getHash(addr, a.Code), a.Code)
-		statedb.SetNonce(addr, a.Nonce)
-		statedb.SetBalance(addr, a.Balance)
+	alloc.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
+		code := acc.GetCode()
+		statedb.SetPrehashedCode(addr, getHash(addr, code), code)
+		statedb.SetNonce(addr, acc.GetNonce())
+		statedb.SetBalance(addr, acc.GetBalance())
 		// DON'T USE SetStorage because it makes REVERT and dirtyStorage unavailble
-		for k, v := range a.Storage {
-			statedb.SetState(addr, k, v)
-		}
-	}
+		acc.ForEachStorage(func(keyHash common.Hash, valueHash common.Hash) {
+			statedb.SetState(addr, keyHash, valueHash)
+		})
+	})
+
 	// Commit and re-open to start with a clean state.
 	_, err := statedb.Commit(false)
 	if err != nil {
