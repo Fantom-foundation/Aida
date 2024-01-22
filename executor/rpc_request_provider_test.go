@@ -111,7 +111,7 @@ func TestRPCRequestProvider_ErrorReturnedByIteratorEndsTheApp(t *testing.T) {
 }
 
 var validResp = &rpc.RequestAndResults{
-	Query: nil,
+	Query: &rpc.Body{},
 	Response: &rpc.Response{
 		Version:   "2.0",
 		ID:        json.RawMessage{1},
