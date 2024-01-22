@@ -1,7 +1,7 @@
 package executor
 
 import (
-	"github.com/Fantom-foundation/Aida/ethtest"
+	statetest "github.com/Fantom-foundation/Aida/ethtest/state_test"
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
@@ -11,7 +11,7 @@ import (
 // geth/tests/block_test.go for blockchain tests
 // geth/tests/block_test_util.go for unmarshalling
 
-func NewEthTestProvider(cfg *utils.Config) Provider[*ethtest.Data] {
+func NewEthTestProvider(cfg *utils.Config) Provider[statetest.Context] {
 	return ethTestProvider{cfg}
 }
 
@@ -19,30 +19,36 @@ type ethTestProvider struct {
 	cfg *utils.Config
 }
 
-func (e ethTestProvider) Run(_ int, _ int, consumer Consumer[*ethtest.Data]) error {
+func (e ethTestProvider) Run(_ int, _ int, consumer Consumer[statetest.Context]) error {
 	// todo redo to a dir
-	b, err := ethtest.Open(e.cfg.ArgPath)
+	b, err := statetest.Open(e.cfg.ArgPath)
 	if err != nil {
 		return err
 	}
 
 	// iterate all bt json files
 	for _, bt := range b {
+		//fmt.Println(bt)
+		err = consumer(TransactionInfo[statetest.Context]{
+			Block:       0,
+			Transaction: 0,
+			Data:        bt,
+		})
 		// iterate all blocks inside one file
-		for blockNumber, block := range bt.Blocks {
-			// iterate all transactions inside one block
-			for txNumber, tx := range block.Transactions {
-				err = consumer(TransactionInfo[*ethtest.Data]{
-					Block:       blockNumber,
-					Transaction: txNumber,
-					Data:        ethtest.NewData(block, tx, bt, e.cfg.ChainID),
-				})
-				if err != nil {
-					return err
-				}
-			}
-
-		}
+		//for blockNumber, block := range bt.Blocks {
+		//	// iterate all transactions inside one block
+		//	for txNumber, tx := range block.Transactions {
+		//		err = consumer(TransactionInfo[txcontext.TxContext]{
+		//			Block:       blockNumber,
+		//			Transaction: txNumber,
+		//			Data:        ethtest.NewData(block, tx, bt, e.cfg.ChainID),
+		//		})
+		//		if err != nil {
+		//			return err
+		//		}
+		//	}
+		//
+		//}
 	}
 
 	return nil

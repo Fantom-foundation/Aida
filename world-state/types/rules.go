@@ -73,7 +73,7 @@ type GasRulesRLPV1 struct {
 	EventGas     uint64
 	ParentGas    uint64
 	ExtraDataGas uint64
-	// Post-LLR fields
+	// post-LLR fields
 	BlockVotesBaseGas    uint64
 	BlockVoteGas         uint64
 	EpochVoteGas         uint64

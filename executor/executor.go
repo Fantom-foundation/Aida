@@ -131,7 +131,7 @@ type Processor[T any] interface {
 // a range of transactions. During various stages, methods of extensions are
 // called, enabling them to monitor and/or interfere with the execution.
 // Since blocks may be processed in parallel, callbacks are generally
-// required to be thread safe (with the exception of the Pre-/ and PostRun)
+// required to be thread safe (with the exception of the pre-/ and PostRun)
 // callback.
 type Extension[T any] interface {
 	// PreRun is called before the begin of the execution of a block range,
@@ -188,7 +188,7 @@ type State[T any] struct {
 	Transaction int
 
 	// Data is the input required for processing the current transaction. It is
-	// only valid for Pre- and PostTransaction events.
+	// only valid for pre- and PostTransaction events.
 	Data T
 }
 

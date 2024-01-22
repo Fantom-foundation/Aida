@@ -15,6 +15,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
+	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
 )
 
@@ -161,8 +162,8 @@ func runSubstates(
 		profiler.MakeOperationProfiler[txcontext.TxContext](cfg),
 
 		// block profile extension should be always last because:
-		// 1) Pre-Func are called forwards so this is called last and
-		// 2) Post-Func are called backwards so this is called first
+		// 1) pre-Func are called forwards so this is called last and
+		// 2) post-Func are called backwards so this is called first
 		// that means the gap between time measurements will be as small as possible
 		profiler.MakeBlockRuntimeAndGasCollector(cfg),
 	}...,

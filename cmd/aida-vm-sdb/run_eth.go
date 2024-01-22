@@ -1,9 +1,7 @@
 package main
 
 import (
-	"fmt"
-
-	"github.com/Fantom-foundation/Aida/ethtest"
+	statetest "github.com/Fantom-foundation/Aida/ethtest/state_test"
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
@@ -11,10 +9,6 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/tests"
 	"github.com/urfave/cli/v2"
 )
 
@@ -113,99 +107,31 @@ func RunEth(ctx *cli.Context) error {
 	//
 	//fmt.Println(b)
 
-	return runEth(cfg, executor.NewEthTestProvider(cfg), nil, ethTestProcessor{cfg}, nil)
-}
-
-type ethTestProcessor struct {
-	cfg *utils.Config
-}
-
-func (p ethTestProcessor) Process(state executor.State[*ethtest.Data], ctx *executor.Context) (finalError error) {
-	ctx.State.BeginTransaction(uint32(0))
-	defer ctx.State.EndTransaction()
-
-	var (
-		gaspool = new(core.GasPool)
-		txHash  = common.HexToHash(fmt.Sprintf("0x%016d%016d", state.Block, state.Transaction))
-		//validate = p.cfg.Validate
-	)
-
-	// create vm config
-	var vmConfig vm.Config
-	vmConfig.InterpreterImpl = p.cfg.VmImpl
-	//vmConfig.NoBaseFee = true
-	vmConfig.Tracer = nil
-	vmConfig.Debug = false
-
-	chainConfig := tests.Forks[state.Data.Cfg.Network]
-
-	if chainConfig == nil {
-		return nil
-	}
-
-	// prepare tx
-	gaspool.AddGas(state.Data.Env.GasLimit.Uint64())
-	ctx.State.Prepare(txHash, state.Transaction)
-	blockCtx := prepareBlockCtx(state.Data.Env)
-	txCtx := core.NewEVMTxContext(state.Data.Msg)
-	evm := vm.NewEVM(*blockCtx, txCtx, ctx.State, chainConfig, vmConfig)
-	snapshot := ctx.State.Snapshot()
-
-	// apply
-	_, err := core.ApplyMessage(evm, state.Data.Msg, gaspool)
-	if err != nil {
-		// if transaction fails, revert to the first snapshot.
-		ctx.State.RevertToSnapshot(snapshot)
-		//finalError = errors.Join(fmt.Errorf("block: %v transaction: %v", state.Block, state.Transaction), err)
-		//validate = false
-	}
-
-	return
-}
-
-func prepareBlockCtx(env *ethtest.Env) *vm.BlockContext {
-	getHash := func(_ uint64) common.Hash {
-		return env.Hash
-	}
-	blockCtx := &vm.BlockContext{
-		CanTransfer: core.CanTransfer,
-		Transfer:    core.Transfer,
-		Coinbase:    env.Coinbase,
-		BlockNumber: env.Number.Convert(),
-		Time:        env.Timestamp.Convert(),
-		Difficulty:  env.Difficulty.Convert(),
-		GasLimit:    env.GasLimit.Uint64(),
-		GetHash:     getHash,
-	}
-	// If currentBaseFee is defined, add it to the vmContext.
-	if env.BaseFee != nil {
-		blockCtx.BaseFee = env.BaseFee.Convert()
-	}
-	return blockCtx
+	return runEth(cfg, executor.NewEthTestProvider(cfg), nil, executor.MakeLiveDbProcessor(cfg), nil)
 }
 
 func runEth(
 	cfg *utils.Config,
-	provider executor.Provider[*ethtest.Data],
+	provider executor.Provider[statetest.Context],
 	stateDb state.StateDB,
-	processor executor.Processor[*ethtest.Data],
-	extra []executor.Extension[*ethtest.Data],
+	processor executor.Processor[statetest.Context],
+	extra []executor.Extension[statetest.Context],
 ) error {
 	// order of extensionList has to be maintained
-	var extensionList = []executor.Extension[*ethtest.Data]{
-		profiler.MakeCpuProfiler[*ethtest.Data](cfg),
-		profiler.MakeDiagnosticServer[*ethtest.Data](cfg),
-		tracker.MakeProgressLogger[*ethtest.Data](cfg, 0),
+	var extensionList = []executor.Extension[statetest.Context]{
+		profiler.MakeCpuProfiler[statetest.Context](cfg),
+		profiler.MakeDiagnosticServer[statetest.Context](cfg),
+		tracker.MakeProgressLogger[statetest.Context](cfg, 0),
 	}
 
 	if stateDb == nil {
 		extensionList = append(
 			extensionList,
-			statedb.MakeStateDbManager[*ethtest.Data](cfg),
+			statedb.MakeStateDbManager[statetest.Context](cfg),
 			statedb.NewTemporaryEthStatePrepper(cfg),
-			statedb.MakeStateDbManager[*ethtest.Data](cfg),
-			statedb.MakeLiveDbBlockChecker[*ethtest.Data](cfg),
-			tracker.MakeDbLogger[*ethtest.Data](cfg),
+			statedb.MakeStateDbManager[statetest.Context](cfg),
+			statedb.MakeLiveDbBlockChecker[statetest.Context](cfg),
+			tracker.MakeDbLogger[statetest.Context](cfg),
 		)
 	}
 

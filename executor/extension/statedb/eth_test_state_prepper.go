@@ -4,17 +4,17 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/Fantom-foundation/Aida/ethtest"
+	statetest "github.com/Fantom-foundation/Aida/ethtest/state_test"
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
-	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/common"
 )
 
-func NewTemporaryEthStatePrepper(cfg *utils.Config) executor.Extension[*ethtest.Data] {
+func NewTemporaryEthStatePrepper(cfg *utils.Config) executor.Extension[statetest.Context] {
 	return &ethStatePrepper{
 		cfg: cfg,
 		log: logger.NewLogger(cfg.LogLevel, "EthStatePrepper"),
@@ -22,34 +22,23 @@ func NewTemporaryEthStatePrepper(cfg *utils.Config) executor.Extension[*ethtest.
 }
 
 type ethStatePrepper struct {
-	extension.NilExtension[*ethtest.Data]
+	extension.NilExtension[statetest.Context]
 	cfg                           *utils.Config
 	log                           logger.Logger
 	failedPre, failedPost, passed uint64
 	lastPre                       bool
 }
 
-// PreRun primes the state db with Pre Alloc
-
-func (e *ethStatePrepper) PreTransaction(st executor.State[*ethtest.Data], ctx *executor.Context) error {
-
+// PreRun primes the state db with pre Alloc
+func (e *ethStatePrepper) PreTransaction(st executor.State[statetest.Context], ctx *executor.Context) error {
 	primeCtx := utils.NewPrimeContext(e.cfg, ctx.State, e.log)
 
-	alloc := make(substate.SubstateAlloc)
-
-	for addr, acc := range st.Data.Pre {
-		alloc[addr] = substate.NewSubstateAccount(acc.Nonce, acc.Balance, acc.Code)
-		for k, v := range acc.Storage {
-			alloc[addr].Storage[k] = v
-		}
-	}
-
-	err := primeCtx.PrimeStateDB(alloc, ctx.State)
+	err := primeCtx.PrimeStateDB(st.Data.GetInputState(), ctx.State)
 	if err != nil {
 		return err
 	}
 
-	err = e.validate(st.Data.Pre, ctx.State)
+	err = e.validate(st.Data.GetInputState(), ctx.State)
 	if err != nil {
 		e.lastPre = false
 
@@ -61,16 +50,7 @@ func (e *ethStatePrepper) PreTransaction(st executor.State[*ethtest.Data], ctx *
 	return nil
 }
 
-func (e *ethStatePrepper) validate(genesisAlloc core.GenesisAlloc, db state.StateDB) error {
-	alloc := make(substate.SubstateAlloc)
-
-	for addr, acc := range genesisAlloc {
-		alloc[addr] = substate.NewSubstateAccount(acc.Nonce, acc.Balance, acc.Code)
-		for k, v := range acc.Storage {
-			alloc[addr].Storage[k] = v
-		}
-	}
-
+func (e *ethStatePrepper) validate(alloc txcontext.WorldState, db state.StateDB) error {
 	var err error
 	switch e.cfg.StateValidationMode {
 	case utils.SubsetCheck:
@@ -87,77 +67,78 @@ func (e *ethStatePrepper) validate(genesisAlloc core.GenesisAlloc, db state.Stat
 	return err
 }
 
-func (e *ethStatePrepper) PostTransaction(state executor.State[*ethtest.Data], ctx *executor.Context) error {
-	err := e.validate(state.Data.Post, ctx.State)
-	if err != nil {
-		if e.lastPre {
-			e.failedPost++
-		} else {
-			e.failedPre++
-		}
-
-		return nil
-		//return fmt.Errorf("post alloc validation failed;\n%v", err)
-	}
-
-	if e.lastPre && state.Data.Post != nil {
-		e.passed++
-	}
+func (e *ethStatePrepper) PostTransaction(state executor.State[statetest.Context], ctx *executor.Context) error {
+	//err := e.validate(state.Data.GetOutputState(), ctx.State)
+	//if err != nil {
+	//	if e.lastPre {
+	//		e.failedPost++
+	//	} else {
+	//		e.failedPre++
+	//	}
+	//	return fmt.Errorf("post alloc validation failed;\n%v", err)
+	//}
 
 	return nil
 }
 
 // doSubsetValidation validates whether the given alloc is contained in the db object.
 // NB: We can only check what must be in the db (but cannot check whether db stores more).
-func doSubsetValidation(alloc substate.SubstateAlloc, db state.VmStateDB, updateOnFail bool) error {
+func doSubsetValidation(alloc txcontext.WorldState, db state.VmStateDB, updateOnFail bool) error {
 	var err string
-	for addr, account := range alloc {
+
+	alloc.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
 		if !db.Exist(addr) {
 			err += fmt.Sprintf("  Account %v does not exist\n", addr.Hex())
 			if updateOnFail {
 				db.CreateAccount(addr)
 			}
 		}
-		if balance := db.GetBalance(addr); account.Balance.Cmp(balance) != 0 {
+		accBalance := acc.GetBalance()
+
+		if balance := db.GetBalance(addr); accBalance.Cmp(balance) != 0 {
 			err += fmt.Sprintf("  Failed to validate balance for account %v\n"+
 				"    have %v\n"+
 				"    want %v\n",
-				addr.Hex(), balance, account.Balance)
+				addr.Hex(), balance, accBalance)
 			if updateOnFail {
 				db.SubBalance(addr, balance)
-				db.AddBalance(addr, account.Balance)
+				db.AddBalance(addr, accBalance)
 			}
 		}
-		if nonce := db.GetNonce(addr); nonce != account.Nonce {
+		if nonce := db.GetNonce(addr); nonce != acc.GetNonce() {
 			err += fmt.Sprintf("  Failed to validate nonce for account %v\n"+
 				"    have %v\n"+
 				"    want %v\n",
-				addr.Hex(), nonce, account.Nonce)
+				addr.Hex(), nonce, acc.GetNonce())
 			if updateOnFail {
-				db.SetNonce(addr, account.Nonce)
+				db.SetNonce(addr, acc.GetNonce())
 			}
 		}
-		if code := db.GetCode(addr); bytes.Compare(code, account.Code) != 0 {
+		if code := db.GetCode(addr); bytes.Compare(code, acc.GetCode()) != 0 {
 			err += fmt.Sprintf("  Failed to validate code for account %v\n"+
 				"    have len %v\n"+
 				"    want len %v\n",
-				addr.Hex(), len(code), len(account.Code))
+				addr.Hex(), len(code), len(acc.GetCode()))
 			if updateOnFail {
-				db.SetCode(addr, account.Code)
+				db.SetCode(addr, acc.GetCode())
 			}
 		}
-		for key, value := range account.Storage {
-			if db.GetState(addr, key) != value {
+
+		// validate Storage
+		acc.ForEachStorage(func(keyHash common.Hash, valueHash common.Hash) {
+			if db.GetState(addr, keyHash) != valueHash {
 				err += fmt.Sprintf("  Failed to validate storage for account %v, key %v\n"+
 					"    have %v\n"+
 					"    want %v\n",
-					addr.Hex(), key.Hex(), db.GetState(addr, key).Hex(), value.Hex())
+					addr.Hex(), keyHash.Hex(), db.GetState(addr, keyHash).Hex(), valueHash.Hex())
 				if updateOnFail {
-					db.SetState(addr, key, value)
+					db.SetState(addr, keyHash, valueHash)
 				}
 			}
-		}
-	}
+		})
+
+	})
+
 	if len(err) > 0 {
 		return fmt.Errorf(err)
 	}

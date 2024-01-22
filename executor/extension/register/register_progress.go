@@ -127,7 +127,7 @@ func (rp *registerProgress) PreRun(_ executor.State[txcontext.TxContext], ctx *e
 }
 
 // PreBlock sends the state to the report goroutine.
-// We only care about total number of transactions we can do this here rather in Pre/PostTransaction.
+// We only care about total number of transactions we can do this here rather in pre/PostTransaction.
 //
 // This is done in PreBlock because some blocks do not have txcontext.
 func (rp *registerProgress) PreBlock(state executor.State[txcontext.TxContext], ctx *executor.Context) error {

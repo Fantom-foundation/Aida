@@ -35,7 +35,7 @@ func SendRpcRequest(payload JsonRPCRequest, chainId ChainID) (map[string]interfa
 		return nil, fmt.Errorf("cannot marshal req with first block; %v", err)
 	}
 
-	//resp, err := http.Post(RPCMainnet, "application/json", bytes.NewBuffer(jsonReq))
+	//resp, err := http.post(RPCMainnet, "application/json", bytes.NewBuffer(jsonReq))
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonReq))
 	if err != nil {
 		return nil, err
