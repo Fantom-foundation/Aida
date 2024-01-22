@@ -5,6 +5,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension/aidadb"
+	"github.com/Fantom-foundation/Aida/executor/extension/logger"
 	"github.com/Fantom-foundation/Aida/executor/extension/primer"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/register"
@@ -53,7 +54,7 @@ func runSubstates(
 			extensionList,
 			statedb.MakeStateDbManager[txcontext.TxContext](cfg),
 			statedb.MakeLiveDbBlockChecker[txcontext.TxContext](cfg),
-			tracker.MakeDbLogger[txcontext.TxContext](cfg),
+			logger.MakeDbLogger[txcontext.TxContext](cfg),
 		)
 	}
 
@@ -68,9 +69,9 @@ func runSubstates(
 		profiler.MakeThreadLocker[txcontext.TxContext](),
 		aidadb.MakeAidaDbManager[txcontext.TxContext](cfg),
 		profiler.MakeVirtualMachineStatisticsPrinter[txcontext.TxContext](cfg),
-		tracker.MakeProgressLogger[txcontext.TxContext](cfg, 15*time.Second),
-		tracker.MakeErrorLogger[txcontext.TxContext](cfg),
-		tracker.MakeProgressTracker(cfg, 100_000),
+		logger.MakeProgressLogger[txcontext.TxContext](cfg, 15*time.Second),
+		logger.MakeErrorLogger[txcontext.TxContext](cfg),
+		tracker.MakeBlockProgressTracker(cfg, 100_000),
 		primer.MakeStateDbPrimer[txcontext.TxContext](cfg),
 		profiler.MakeMemoryUsagePrinter[txcontext.TxContext](cfg),
 		profiler.MakeMemoryProfiler[txcontext.TxContext](cfg),

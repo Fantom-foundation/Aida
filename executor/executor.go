@@ -95,7 +95,7 @@ func newExecutor[T any](provider Provider[T], log logger.Logger) Executor[T] {
 type ParallelismGranularity byte
 
 const (
-	TransactionLevel ParallelismGranularity = iota
+	TransactionLevel ParallelismGranularity = iota // Post and Pre Transactions() need to be Thread-Safe
 	BlockLevel
 )
 
