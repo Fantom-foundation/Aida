@@ -39,34 +39,12 @@ type liveDbTxValidator struct {
 
 // PreTransaction validates InputAlloc in given substate
 func (v *liveDbTxValidator) PreTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
-	err := v.validateSubstateAlloc(ctx.State, state.Data.GetInputState())
-	if err == nil {
-		return nil
-	}
-
-	err = fmt.Errorf("live-db-validator err:\nblock %v tx %v\n input alloc is not contained in the state-db\n %v\n", state.Block, state.Transaction, err)
-
-	if v.isErrFatal(err, ctx.ErrorInput) {
-		return err
-	}
-
-	return nil
+	return v.runPreTxValidation("live-db-validator", ctx.State, state, ctx.ErrorInput)
 }
 
 // PostTransaction validates OutputAlloc in given substate
 func (v *liveDbTxValidator) PostTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
-	err := v.validateSubstateAlloc(ctx.State, state.Data.GetOutputState())
-	if err == nil {
-		return nil
-	}
-
-	err = fmt.Errorf("live-db-validator err:\noutput error at block %v tx %v; %v", state.Block, state.Transaction, err)
-
-	if v.isErrFatal(err, ctx.ErrorInput) {
-		return err
-	}
-
-	return nil
+	return v.runPostTxValidation("live-db-validator", ctx.State, state, ctx.ErrorInput)
 }
 
 // MakeArchiveDbValidator creates an extension which validates ARCHIVE StateDb
@@ -90,36 +68,14 @@ type archiveDbValidator struct {
 	*stateDbValidator
 }
 
-// PreTransaction validates InputAlloc in given substate
+// PreTransaction validates the input WorldState before transaction is executed.
 func (v *archiveDbValidator) PreTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
-	err := v.validateSubstateAlloc(ctx.Archive, state.Data.GetInputState())
-	if err == nil {
-		return nil
-	}
-
-	err = fmt.Errorf("archive-db-validator err:\nblock %v tx %v\n input alloc is not contained in the state-db\n %v\n", state.Block, state.Transaction, err)
-
-	if v.isErrFatal(err, ctx.ErrorInput) {
-		return err
-	}
-
-	return nil
+	return v.runPreTxValidation("archive-db-validator", ctx.Archive, state, ctx.ErrorInput)
 }
 
-// PostTransaction validates VmAlloc
+// PostTransaction validates the resulting WorldState after transaction is executed.
 func (v *archiveDbValidator) PostTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
-	err := v.validateSubstateAlloc(ctx.Archive, state.Data.GetOutputState())
-	if err == nil {
-		return nil
-	}
-
-	err = fmt.Errorf("archive-db-validator err:\noutput error at block %v tx %v; %v", state.Block, state.Transaction, err)
-
-	if v.isErrFatal(err, ctx.ErrorInput) {
-		return err
-	}
-
-	return nil
+	return v.runPostTxValidation("archive-db-validator", ctx.Archive, state, ctx.ErrorInput)
 }
 
 // makeStateDbValidator creates an extension that validates StateDb.
@@ -152,6 +108,44 @@ func (v *stateDbValidator) PreRun(executor.State[txcontext.TxContext], *executor
 	return nil
 }
 
+func (v *stateDbValidator) runPreTxValidation(tool string, db state.VmStateDB, state executor.State[txcontext.TxContext], errOutput chan error) error {
+	err := v.validateWorldState(db, state.Data.GetInputState())
+	if err == nil {
+		return nil
+	}
+
+	err = fmt.Errorf("%v err:\nblock %v tx %v\n world-state input is not contained in the state-db\n %v\n", tool, state.Block, state.Transaction, err)
+
+	if v.isErrFatal(err, errOutput) {
+		return err
+	}
+
+	return nil
+}
+
+func (v *stateDbValidator) runPostTxValidation(tool string, db state.VmStateDB, state executor.State[txcontext.TxContext], errOutput chan error) error {
+	if err := v.validateWorldState(db, state.Data.GetOutputState()); err != nil {
+		err = fmt.Errorf("%v err:\nworld-state output error at block %v tx %v; %v", tool, state.Block, state.Transaction, err)
+		if v.isErrFatal(err, errOutput) {
+			return err
+		}
+	}
+
+	// pseudo transactions does not create result
+	if state.ExecutionResult == nil {
+		return nil
+	}
+
+	if err := v.validateVmResult(state.ExecutionResult, state.Data.GetReceipt()); err != nil {
+		err = fmt.Errorf("%v err:\nvm-result error at block %v tx %v; %v", tool, state.Block, state.Transaction, err)
+		if v.isErrFatal(err, errOutput) {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // isErrFatal decides whether given error should stop the program or not depending on ContinueOnFailure and MaxNumErrors.
 func (v *stateDbValidator) isErrFatal(err error, ch chan error) bool {
 	// ContinueOnFailure is disabled, return the error and exit the program
@@ -175,10 +169,10 @@ func (v *stateDbValidator) isErrFatal(err error, ch chan error) bool {
 	return false
 }
 
-// validateSubstateAlloc compares states of accounts in stateDB to an expected set of states.
+// validateWorldState compares states of accounts in stateDB to an expected set of states.
 // If fullState mode, check if expected state is contained in stateDB.
 // If partialState mode, check for equality of sets.
-func (v *stateDbValidator) validateSubstateAlloc(db state.VmStateDB, expectedAlloc txcontext.WorldState) error {
+func (v *stateDbValidator) validateWorldState(db state.VmStateDB, expectedAlloc txcontext.WorldState) error {
 	var err error
 	switch v.cfg.StateValidationMode {
 	case utils.SubsetCheck:
@@ -194,6 +188,38 @@ func (v *stateDbValidator) validateSubstateAlloc(db state.VmStateDB, expectedAll
 		}
 	}
 	return err
+}
+
+// validateVmResult compares result from vm against the expected one.
+// Error is returned if any mismatch is found.
+func (v *stateDbValidator) validateVmResult(got, want txcontext.Receipt) error {
+	if !got.Equal(want) {
+		return fmt.Errorf(
+			"\ngot:\n"+
+				"\tstatus: %v\n"+
+				"\tbloom: %v\n"+
+				"\tlogs: %v\n"+
+				"\tcontract address: %v\n"+
+				"\tgas used: %v\n"+
+				"\nwant:\n"+
+				"\tstatus: %v\n"+
+				"\tbloom: %v\n"+
+				"\tlogs: %v\n"+
+				"\tcontract address: %v\n"+
+				"\tgas used: %v\n",
+			got.GetStatus(),
+			got.GetBloom().Big().Uint64(),
+			got.GetLogs(),
+			got.GetContractAddress(),
+			got.GetGasUsed(),
+			want.GetStatus(),
+			want.GetBloom().Big().Uint64(),
+			want.GetLogs(),
+			want.GetContractAddress(),
+			want.GetGasUsed())
+	}
+
+	return nil
 }
 
 // printIfDifferent compares two values of any types and reports differences if any.

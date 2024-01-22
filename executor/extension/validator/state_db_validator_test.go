@@ -16,23 +16,24 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"go.uber.org/mock/gomock"
 )
 
 const (
-	liveDbIncorrectInputTestErr  = "live-db-validator err:\nblock 1 tx 1\n input alloc is not contained in the state-db\n   Account 0x0000000000000000000000000000000000000000 does not exist\n  Failed to validate code for account 0x0000000000000000000000000000000000000000\n    have len 1\n    want len 0"
-	liveDbIncorrectOutputTestErr = "live-db-validator err:\noutput error at block 1 tx 1;   Account 0x0000000000000000000000000000000000000000 does not exist\n  " +
+	liveDbIncorrectInputTestErr  = "live-db-validator err:\nblock 1 tx 1\n world-state input is not contained in the state-db\n   Account 0x0000000000000000000000000000000000000000 does not exist\n  Failed to validate code for account 0x0000000000000000000000000000000000000000\n    have len 1\n    want len 0"
+	liveDbIncorrectOutputTestErr = "live-db-validator err:\nworld-state output error at block 1 tx 1;   Account 0x0000000000000000000000000000000000000000 does not exist\n  " +
 		"Failed to validate code for account 0x0000000000000000000000000000000000000000\n    " +
 		"have len 1\n    " +
 		"want len 0\n"
-	liveDbIncorrectOutputAllocErr = "live-db-validator err:\noutput error at block 1 tx 1; inconsistent output: alloc"
+	liveDbIncorrectOutputAllocErr = "live-db-validator err:\nworld-state output error at block 1 tx 1; inconsistent output: alloc"
 
-	archiveDbIncorrectInputTestErr  = "archive-db-validator err:\nblock 1 tx 1\n input alloc is not contained in the state-db\n   Account 0x0000000000000000000000000000000000000000 does not exist\n  Failed to validate code for account 0x0000000000000000000000000000000000000000\n    have len 1\n    want len 0"
-	archiveDbIncorrectOutputTestErr = "archive-db-validator err:\noutput error at block 1 tx 1;   Account 0x0000000000000000000000000000000000000000 does not exist\n  " +
+	archiveDbIncorrectInputTestErr  = "archive-db-validator err:\nblock 1 tx 1\n world-state input is not contained in the state-db\n   Account 0x0000000000000000000000000000000000000000 does not exist\n  Failed to validate code for account 0x0000000000000000000000000000000000000000\n    have len 1\n    want len 0"
+	archiveDbIncorrectOutputTestErr = "archive-db-validator err:\nworld-state output error at block 1 tx 1;   Account 0x0000000000000000000000000000000000000000 does not exist\n  " +
 		"Failed to validate code for account 0x0000000000000000000000000000000000000000\n    " +
 		"have len 1\n    " +
 		"want len 0\n"
-	archiveDbIncorrectOutputAllocErr = "archive-db-validator err:\noutput error at block 1 tx 1; inconsistent output: alloc"
+	archiveDbIncorrectOutputAllocErr = "archive-db-validator err:\nworld-state output error at block 1 tx 1; inconsistent output: alloc"
 )
 
 func TestLiveTxValidator_NoValidatorIsCreatedIfDisabled(t *testing.T) {
@@ -896,4 +897,105 @@ func getIncorrectSubstateAlloc() substate.SubstateAlloc {
 	}
 
 	return alloc
+}
+
+func newDummyResult(t *testing.T) *substate.SubstateResult {
+	r := &substate.SubstateResult{
+		Logs:            []*types.Log{},
+		ContractAddress: common.HexToAddress("0x0000000000085a12481aEdb59eb3200332aCA541"),
+		GasUsed:         1000000,
+		Status:          types.ReceiptStatusSuccessful,
+	}
+	return r
+}
+
+// TestValidateVMResult tests validatation of data result.
+func TestValidateVMResult(t *testing.T) {
+	expectedResult := newDummyResult(t)
+	vmResult := newDummyResult(t)
+
+	cfg := &utils.Config{}
+	cfg.ValidateTxState = true
+
+	validator := makeStateDbValidator(cfg, logger.NewMockLogger(gomock.NewController(t)))
+
+	// test positive
+	err := validator.validateVmResult(substatecontext.NewReceipt(vmResult), substatecontext.NewReceipt(expectedResult))
+	if err != nil {
+		t.Fatalf("Failed to validate VM output. %v", err)
+	}
+
+	// test negative
+	// mismatched contract
+	vmResult.ContractAddress = common.HexToAddress("0x0000000000085a12481aEdb59eb3200332aCA542")
+	err = validator.validateVmResult(substatecontext.NewReceipt(vmResult), substatecontext.NewReceipt(expectedResult))
+	if err == nil {
+		t.Fatalf("Failed to validate VM output. Expect contract address mismatch error.")
+	}
+	// mismatched gas used
+	vmResult = newDummyResult(t)
+	vmResult.GasUsed = 0
+	err = validator.validateVmResult(substatecontext.NewReceipt(vmResult), substatecontext.NewReceipt(expectedResult))
+	if err == nil {
+		t.Fatalf("Failed to validate VM output. Expect gas used mismatch error.")
+	}
+
+	// mismatched gas used
+	vmResult = newDummyResult(t)
+	vmResult.Status = types.ReceiptStatusFailed
+	err = validator.validateVmResult(substatecontext.NewReceipt(vmResult), substatecontext.NewReceipt(expectedResult))
+	if err == nil {
+		t.Fatalf("Failed to validate VM output. Expect staatus mismatch error.")
+	}
+}
+
+func TestValidateVMResult_ErrorIsInCorrectFormat(t *testing.T) {
+	expectedResult := newDummyResult(t)
+	vmResult := newDummyResult(t)
+
+	cfg := &utils.Config{}
+	cfg.ValidateTxState = true
+
+	validator := makeStateDbValidator(cfg, logger.NewMockLogger(gomock.NewController(t)))
+
+	// change result so validation fails
+	expectedResult.GasUsed = 15000
+
+	vmRes := substatecontext.NewReceipt(vmResult)
+	expRes := substatecontext.NewReceipt(expectedResult)
+
+	err := validator.validateVmResult(vmRes, expRes)
+	if err == nil {
+		t.Fatal("validation must fail")
+	}
+
+	want := fmt.Sprintf(
+		"\ngot:\n"+
+			"\tstatus: %v\n"+
+			"\tbloom: %v\n"+
+			"\tlogs: %v\n"+
+			"\tcontract address: %v\n"+
+			"\tgas used: %v\n"+
+			"\nwant:\n"+
+			"\tstatus: %v\n"+
+			"\tbloom: %v\n"+
+			"\tlogs: %v\n"+
+			"\tcontract address: %v\n"+
+			"\tgas used: %v\n",
+		vmRes.GetStatus(),
+		vmRes.GetBloom().Big().Uint64(),
+		vmRes.GetLogs(),
+		vmRes.GetContractAddress(),
+		vmRes.GetGasUsed(),
+		expRes.GetStatus(),
+		expRes.GetBloom().Big().Uint64(),
+		expRes.GetLogs(),
+		expRes.GetContractAddress(),
+		expRes.GetGasUsed(),
+	)
+	got := err.Error()
+
+	if strings.Compare(got, want) != 0 {
+		t.Fatalf("unexpected err\ngot: %v\n want: %v\n", got, want)
+	}
 }

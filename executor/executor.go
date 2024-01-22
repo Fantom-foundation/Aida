@@ -10,6 +10,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/ethdb"
 )
@@ -190,6 +191,10 @@ type State[T any] struct {
 	// Data is the input required for processing the current transaction. It is
 	// only valid for Pre- and PostTransaction events.
 	Data T
+
+	// ExecutionResult is set after transaction is processed.
+	// It is used for validation
+	ExecutionResult txcontext.Receipt
 }
 
 // Context summarizes context data for the current execution and is passed

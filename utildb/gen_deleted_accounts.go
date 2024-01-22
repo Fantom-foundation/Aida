@@ -79,7 +79,7 @@ func genDeletedAccountsTask(
 	//wrapper
 	statedb = proxy.NewDeletionProxy(statedb, ch, cfg.LogLevel)
 
-	err = processor.ProcessTransaction(statedb, int(tx.Block), tx.Transaction, ss)
+	_, err = processor.ProcessTransaction(statedb, int(tx.Block), tx.Transaction, ss)
 	if err != nil {
 		return nil
 	}
