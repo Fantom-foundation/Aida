@@ -47,7 +47,7 @@ func run(
 ) error {
 	extensionList := []executor.Extension[txcontext.TxContext]{
 		profiler.MakeCpuProfiler[txcontext.TxContext](cfg),
-		statedb.MakeArchivePrepper(),
+		statedb.MakeArchivePrepper[txcontext.TxContext](),
 		logger.MakeProgressLogger[txcontext.TxContext](cfg, 0),
 		logger.MakeErrorLogger[txcontext.TxContext](cfg),
 		validator.MakeArchiveDbValidator(cfg),

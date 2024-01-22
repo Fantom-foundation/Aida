@@ -23,7 +23,7 @@ const testStateDbInfoFrequency = 2
 func TestSubstateProgressTrackerExtension_NoLoggerIsCreatedIfDisabled(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.TrackProgress = false
-	ext := MakeProgressTracker(cfg, testStateDbInfoFrequency)
+	ext := MakeBlockProgressTracker(cfg, testStateDbInfoFrequency)
 	if _, ok := ext.(extension.NilExtension[txcontext.TxContext]); !ok {
 		t.Errorf("Logger is enabled although not set in configuration")
 	}
