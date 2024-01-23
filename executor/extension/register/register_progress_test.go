@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"testing"
-	"errors"
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
@@ -75,18 +74,18 @@ func TestRegisterProgress_TerminatesIfPathDoesNotExist(t *testing.T) {
 	var (
 		tmpDir           string = t.TempDir()
 		dummyStateDbPath string = filepath.Join(tmpDir, "dummy.txt")
-		pathToFolder string = filepath.Join("does", "not", "exist")
+		pathToFolder     string = filepath.Join("does", "not", "exist")
 	)
-	
+
 	cfg := &utils.Config{}
 	cfg.RegisterRun = pathToFolder // enabled here
 	cfg.First = 5
 	cfg.Last = 25
 	interval := 10
-	
+
 	ctrl := gomock.NewController(t)
 	stateDb := state.NewMockStateDB(ctrl)
-	
+
 	ext := MakeRegisterProgress(cfg, interval)
 	if _, err := ext.(extension.NilExtension[txcontext.TxContext]); err {
 		t.Errorf("RegisterProgress is disabled even though enabled in configuration.")
