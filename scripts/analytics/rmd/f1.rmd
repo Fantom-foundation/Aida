@@ -1,5 +1,5 @@
 ---
-title: "F1 Report - Transaction Processing Time"
+title: "Substate Report - Transaction Processing Time"
 date: "`r Sys.Date()`"
 params:
   db: /var/opera/Aida/tmp-rapolt/register/s5-f1-test.db
@@ -38,7 +38,7 @@ disks <- Metadata %>% filter(key == "Disks")
 OsInfo <- Metadata %>% filter(key == "Os")
 GoInfo <- Metadata %>% filter(key == "GoVersion")
 aidaHash <- Metadata %>% filter(key == "AidaGitHash")
-caarmenHash <- Metadata %>% filter(key == "CarmenGitHash")
+carmenHash <- Metadata %>% filter(key == "CarmenGitHash")
 dbImpl <- Metadata %>% filter(key == "DbImpl")
 dbVariant <- Metadata %>% filter(key == "DbVariant")
 carmenSchema <- Metadata %>% filter(key == "CarmenSchema")
@@ -62,9 +62,9 @@ For this experiment, we use **`r dbImpl$value`**(**`r dbVariant$value`** **`r ca
 ## 2. Memory and Disk Usage
 
 ```{r, echo=FALSE, message=FALSE}
-maxMemory <- TxData %>% filter(memory == max(memory)) %>% distinct(memory) 
-maxLiveDisk <- TxData %>% filter(live_disk == max(live_disk)) %>% distinct(live_disk) 
-maxArchiveDisk <- TxData %>% filter(archive_disk == max(archive_disk)) %>% distinct(archive_disk) 
+maxMemory <- TxData %>% filter(memory == max(memory)) %>% distinct(memory, start) 
+maxLiveDisk <- TxData %>% filter(live_disk == max(live_disk)) %>% distinct(live_disk, start) 
+maxArchiveDisk <- TxData %>% filter(archive_disk == max(archive_disk)) %>% distinct(archive_disk, start) 
 ```
 
 The experiment was conducted for the block range from **`r format(min(TxData$start),big.mark=",")`**  to **`r format(max(TxData$end),big.mark=",")`**.
@@ -92,7 +92,7 @@ TxData %>% mutate(live_disk = as.numeric(live_disk)) %>%
 ## 3. Transaction Rate
 
 ```{r, echo=FALSE, message=FALSE}
-maxTxRate <- TxData %>% filter(tx_rate == max(tx_rate)) %>% distinct(tx_rate)
+maxTxRate <- TxData %>% filter(tx_rate == max(tx_rate)) %>% distinct(tx_rate, start)
 ```
 
 On average, the transaction rate is **`r format(mean(TxData$tx_rate), big.mark=",")`** TPM. The max transaction rate  is **`r format(maxTxRate$tx_rate, big.mark=",")`** TPM at block height **`r format(maxTxRate$start, big.mark=",")`**. 
@@ -112,7 +112,7 @@ TxData %>% mutate(tx_rate = as.numeric(tx_rate)) %>%
 ## 4. Gas Rate
 
 ```{r, echo=FALSE, message=FALSE}
-maxGasRate <- TxData %>% filter(gas_rate == max(gas_rate)) %>% distinct(gas_rate) 
+maxGasRate <- TxData %>% filter(gas_rate == max(gas_rate)) %>% distinct(gas_rate, start) 
 ```
 On average, the gas rate is **`r format(mean(TxData$gas_rate), big.mark=",")`** GPS. The max gas rate  is **`r format(maxGasRate$gas_rate, big.mark=",")`** GPS at block height **`r format(maxGasRate$start, big.mark=",")`**. 
 
