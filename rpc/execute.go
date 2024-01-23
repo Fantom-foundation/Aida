@@ -16,6 +16,7 @@ type StateDBData struct {
 	Result      any
 	Error       error
 	IsRecovered bool
+	GasUsed     uint64
 }
 
 func Execute(block uint64, rec *RequestAndResults, archive state.NonCommittableStateDB, cfg *utils.Config) *StateDBData {
@@ -116,6 +117,7 @@ func executeCall(evm *EvmExecutor) (out *StateDBData) {
 
 	out.Error = result.Err
 	out.Result = result.Return()
+	out.GasUsed = result.UsedGas
 
 	return
 }
