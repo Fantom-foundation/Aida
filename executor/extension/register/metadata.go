@@ -42,8 +42,11 @@ type RunMetadata struct {
 	ps   *utils.Printers
 }
 
+// MakeRunMetadata create RunMetadata and write it into the DB.
+// 1. collect run config, timestamp and app name.
+// 2. fetch environment information about where the run is executed.
+// On Print(), print all metadata into the corresponding table.
 func MakeRunMetadata(connection string, id *RunIdentity) (*RunMetadata, error) {
-
 	rm := &RunMetadata{
 		meta: make(map[string]string),
 		ps:   utils.NewPrinters(),
@@ -68,7 +71,28 @@ func MakeRunMetadata(connection string, id *RunIdentity) (*RunMetadata, error) {
 	rm.meta["RunId"] = id.GetId()
 	rm.meta["Timestamp"] = strconv.Itoa(int(id.Timestamp))
 
-	// fetch information from machine
+	p2db, err := utils.NewPrinterToSqlite3(rm.sqlite3(connection))
+	if err != nil {
+		return nil, err
+	}
+	rm.ps.AddPrinter(p2db)
+
+	// commands that failed are to be logged, but they are not fatal.
+	warnings := rm.fetchEnvInfo()
+	return rm, warnings
+}
+
+func (rm *RunMetadata) Print() {
+	rm.ps.Print()
+}
+
+func (rm *RunMetadata) Close() {
+	rm.ps.Close()
+}
+
+// fetchEnvInfo fetches exec environment info by executing a number of linux commands.
+// Any failed error are collected and is returned.
+func (rm *RunMetadata) fetchEnvInfo() error {
 	var errs error
 	for tag, f := range map[string]func() (string, error){
 		"Processor":     rm.GetProcessor,
@@ -82,32 +106,14 @@ func MakeRunMetadata(connection string, id *RunIdentity) (*RunMetadata, error) {
 		"Hostname":      rm.GetHostname,
 		"IpAddress":     rm.GetIpAddress,
 	} {
-
 		out, err := f()
 		if err != nil {
 			errs = errors.Join(errs, errors.New(fmt.Sprintf("Couldn't get %s: %s.", tag, err)))
 		}
 		rm.meta[tag] = out
 	}
-	if errs != nil {
-		return nil, errs
-	}
 
-	p2db, err := utils.NewPrinterToSqlite3(rm.sqlite3(connection))
-	if err != nil {
-		return nil, err
-	}
-	rm.ps.AddPrinter(p2db)
-
-	return rm, nil
-}
-
-func (rm *RunMetadata) Print() {
-	rm.ps.Print()
-}
-
-func (rm *RunMetadata) Close() {
-	rm.ps.Close()
+	return errs
 }
 
 func (rm *RunMetadata) bash(cmd string) (string, error) {

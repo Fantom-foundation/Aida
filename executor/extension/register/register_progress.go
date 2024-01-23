@@ -2,6 +2,7 @@ package register
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strconv"
 	"sync"
@@ -58,33 +59,13 @@ func MakeRegisterProgress(cfg *utils.Config, reportFrequency int) executor.Exten
 		reportFrequency = RegisterProgressDefaultReportFrequency
 	}
 
-	rp := &registerProgress{
+	return &registerProgress{
 		cfg:      cfg,
 		log:      logger.NewLogger(cfg.LogLevel, "Register-Progress-Logger"),
 		interval: utils.NewInterval(cfg.First, cfg.Last, uint64(reportFrequency)),
 		ps:       utils.NewPrinters(),
 		id:       MakeRunIdentity(time.Now().Unix(), cfg),
 	}
-
-	connection := filepath.Join(cfg.RegisterRun, fmt.Sprintf("%s.db", rp.GetId()))
-	rp.log.Noticef(connection)
-
-	p2db, err := utils.NewPrinterToSqlite3(rp.sqlite3(connection))
-	if err != nil {
-		rp.log.Errorf("Unable to register at %s", cfg.RegisterRun)
-	} else {
-		rp.ps.AddPrinter(p2db)
-	}
-
-	rm, err := MakeRunMetadata(connection, rp.id)
-	if err != nil {
-		rp.log.Errorf("Unable to create run metadata because %s.", err)
-	} else {
-		rp.meta = rm
-		rm.Print()
-	}
-
-	return rp
 }
 
 // registerProgress logs progress every XXX blocks depending on reportFrequency.
@@ -117,7 +98,40 @@ type registerProgress struct {
 	meta *RunMetadata
 }
 
+// PreRun checks the following items:
+// 1. if directory does not exists -> fatal, throw error
+// 2. if database could not be created -> fatal, throw error
+// 3. if metadata table could not be createded -> fatal, throw error
 func (rp *registerProgress) PreRun(_ executor.State[txcontext.TxContext], ctx *executor.Context) error {
+	connection := filepath.Join(rp.cfg.RegisterRun, fmt.Sprintf("%s.db", rp.GetId()))
+	rp.log.Noticef("Registering to: %s", connection)
+
+	// 1. if directory does not exists -> fatal, throw error
+	if _, err := os.Stat(rp.cfg.RegisterRun); err != nil {
+		return err
+	}
+
+	// 2. if database could be created -> fatal, throw error
+	p2db, err := utils.NewPrinterToSqlite3(rp.sqlite3(connection))
+	if err != nil {
+		return err
+	}
+	rp.ps.AddPrinter(p2db)
+
+	// 3. if metadata could be fetched -> continue without the failed metadata
+	rm, err := MakeRunMetadata(connection, rp.id)
+
+	// if this were to happened, it should happen already at 2 but added again just in case
+	if rm == nil {
+		return err
+	}
+	if err != nil {
+		rp.log.Errorf("Metadata warning: %s.", err)
+	}
+	rp.meta = rm
+	rm.Print()
+
+	// Proceed
 	now := time.Now()
 	rp.startOfRun = now
 	rp.lastUpdate = now
