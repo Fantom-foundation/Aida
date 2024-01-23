@@ -29,6 +29,31 @@ dbDisconnect(con)
 
 ## ##############################################################################
 
+## 1. Summary
+
+```{r, echo=FALSE, message=FALSE}
+maxMemory <- TxData %>% filter(memory == max(memory)) %>% distinct(memory, start) 
+maxLiveDisk <- TxData %>% filter(live_disk == max(live_disk)) %>% distinct(live_disk, start) 
+maxArchiveDisk <- TxData %>% filter(archive_disk == max(archive_disk)) %>% distinct(archive_disk, start) 
+maxTxRate <- TxData %>% filter(tx_rate == max(tx_rate)) %>% distinct(tx_rate, start)
+maxGasRate <- TxData %>% filter(gas_rate == max(gas_rate)) %>% distinct(gas_rate, start) 
+
+Property <- c("Memory", "Disk - LiveDb", "Disk - ArchiveDb", "Transaction Rate", "Gas Rate")
+Unit <- c("Gb", "Gb", "Gb", "TPS", "GPS")
+Conv <- c(1e-9, 1e-9, 1e-9, 1, 1)
+Mean <- c(mean(TxData$memory), mean(TxData$live_disk), mean(TxData$archive_disk), mean(TxData$tx_rate), mean(TxData$gas_rate))
+Max <- c(max(TxData$memory), max(TxData$live_disk), max(TxData$archive_disk), max(TxData$tx_rate), max(TxData$gas_rate))
+
+summary <- data.frame(Property, Mean, Max) %>% 
+	mutate(Mean = as.numeric(Mean) * as.numeric(Conv), Max = as.numeric(Max) * as.numeric(Conv)) %>%
+	mutate(Mean = paste(Mean, Unit), Max = paste(Max, Unit))
+
+gt(summary)
+```
+
+
+## ##############################################################################
+
 ```{r, echo=FALSE, message=FALSE}
 hostname <- Metadata %>% filter(key == "Hostname")
 ip <- Metadata %>% filter(key == "IpAddress")
@@ -45,7 +70,7 @@ carmenSchema <- Metadata %>% filter(key == "CarmenSchema")
 vmImpl <- Metadata %>% filter(key == "VmImpl")
 ```
 
-## 1. Experimental Setup
+## 2. Experimental Setup
 The experiment is run on the machine **`r hostname$value`**(**`r ip$value`**), which is a **`r processor$value`**, **`r memory$value`** computer.
 The operating system is **`r OsInfo$value`**.
 The system has installed **`r GoInfo$value`**.
@@ -59,13 +84,8 @@ For this experiment, we use **`r dbImpl$value`**(**`r dbVariant$value`** **`r ca
 
 ## ##############################################################################
 
-## 2. Memory and Disk Usage
+## 3. Memory and Disk Usage
 
-```{r, echo=FALSE, message=FALSE}
-maxMemory <- TxData %>% filter(memory == max(memory)) %>% distinct(memory, start) 
-maxLiveDisk <- TxData %>% filter(live_disk == max(live_disk)) %>% distinct(live_disk, start) 
-maxArchiveDisk <- TxData %>% filter(archive_disk == max(archive_disk)) %>% distinct(archive_disk, start) 
-```
 
 The experiment was conducted for the block range from **`r format(min(TxData$start),big.mark=",")`**  to **`r format(max(TxData$end),big.mark=",")`**.
 
@@ -89,13 +109,9 @@ TxData %>% mutate(live_disk = as.numeric(live_disk)) %>%
 
 ## ##############################################################################
 
-## 3. Transaction Rate
+## 4. Transaction Rate
 
-```{r, echo=FALSE, message=FALSE}
-maxTxRate <- TxData %>% filter(tx_rate == max(tx_rate)) %>% distinct(tx_rate, start)
-```
-
-On average, the transaction rate is **`r format(mean(TxData$tx_rate), big.mark=",")`** TPM. The max transaction rate  is **`r format(maxTxRate$tx_rate, big.mark=",")`** TPM at block height **`r format(maxTxRate$start, big.mark=",")`**. 
+The average transaction rate is **`r format(mean(TxData$tx_rate), big.mark=",")`** TPS. The max transaction rate  is **`r format(maxTxRate$tx_rate, big.mark=",")`** TPM at block height **`r format(maxTxRate$start, big.mark=",")`**. 
 
 The dashed line shows the average transaction rate achieve up until the block height.
 
@@ -109,12 +125,9 @@ TxData %>% mutate(tx_rate = as.numeric(tx_rate)) %>%
 
 ## ##############################################################################
 
-## 4. Gas Rate
+## 5. Gas Rate
 
-```{r, echo=FALSE, message=FALSE}
-maxGasRate <- TxData %>% filter(gas_rate == max(gas_rate)) %>% distinct(gas_rate, start) 
-```
-On average, the gas rate is **`r format(mean(TxData$gas_rate), big.mark=",")`** GPS. The max gas rate  is **`r format(maxGasRate$gas_rate, big.mark=",")`** GPS at block height **`r format(maxGasRate$start, big.mark=",")`**. 
+The average gas rate is **`r format(mean(TxData$gas_rate), big.mark=",")`** GPS. The max gas rate  is **`r format(maxGasRate$gas_rate, big.mark=",")`** GPS at block height **`r format(maxGasRate$start, big.mark=",")`**. 
 
 The dashed line shows the average gas rate achieve up until the block height.
 
