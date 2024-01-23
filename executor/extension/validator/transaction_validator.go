@@ -44,7 +44,7 @@ func (v *liveDbTxValidator) PreTransaction(state executor.State[txcontext.TxCont
 
 // PostTransaction validates OutputAlloc in given substate
 func (v *liveDbTxValidator) PostTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
-	return v.runPostTxValidation("live-db-validator", ctx.State, state, ctx.ErrorInput)
+	return v.runPostTxValidation("live-db-validator", ctx.State, state, ctx.ExecutionResult, ctx.ErrorInput)
 }
 
 // MakeArchiveDbValidator creates an extension which validates ARCHIVE StateDb
@@ -75,7 +75,7 @@ func (v *archiveDbValidator) PreTransaction(state executor.State[txcontext.TxCon
 
 // PostTransaction validates the resulting WorldState after transaction is executed.
 func (v *archiveDbValidator) PostTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
-	return v.runPostTxValidation("archive-db-validator", ctx.Archive, state, ctx.ErrorInput)
+	return v.runPostTxValidation("archive-db-validator", ctx.Archive, state, ctx.ExecutionResult, ctx.ErrorInput)
 }
 
 // makeStateDbValidator creates an extension that validates StateDb.
@@ -123,7 +123,7 @@ func (v *stateDbValidator) runPreTxValidation(tool string, db state.VmStateDB, s
 	return nil
 }
 
-func (v *stateDbValidator) runPostTxValidation(tool string, db state.VmStateDB, state executor.State[txcontext.TxContext], errOutput chan error) error {
+func (v *stateDbValidator) runPostTxValidation(tool string, db state.VmStateDB, state executor.State[txcontext.TxContext], res txcontext.Receipt, errOutput chan error) error {
 	if err := v.validateWorldState(db, state.Data.GetOutputState()); err != nil {
 		err = fmt.Errorf("%v err:\nworld-state output error at block %v tx %v; %v", tool, state.Block, state.Transaction, err)
 		if v.isErrFatal(err, errOutput) {
@@ -131,12 +131,7 @@ func (v *stateDbValidator) runPostTxValidation(tool string, db state.VmStateDB, 
 		}
 	}
 
-	// pseudo transactions does not create result
-	if state.ExecutionResult == nil {
-		return nil
-	}
-
-	if err := v.validateVmResult(state.ExecutionResult, state.Data.GetReceipt()); err != nil {
+	if err := v.validateReceipt(res, state.Data.GetReceipt()); err != nil {
 		err = fmt.Errorf("%v err:\nvm-result error at block %v tx %v; %v", tool, state.Block, state.Transaction, err)
 		if v.isErrFatal(err, errOutput) {
 			return err
@@ -190,9 +185,9 @@ func (v *stateDbValidator) validateWorldState(db state.VmStateDB, expectedAlloc 
 	return err
 }
 
-// validateVmResult compares result from vm against the expected one.
+// validateReceipt compares result from vm against the expected one.
 // Error is returned if any mismatch is found.
-func (v *stateDbValidator) validateVmResult(got, want txcontext.Receipt) error {
+func (v *stateDbValidator) validateReceipt(got, want txcontext.Receipt) error {
 	if !got.Equal(want) {
 		return fmt.Errorf(
 			"\ngot:\n"+

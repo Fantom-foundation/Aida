@@ -32,7 +32,7 @@ type LiveDbTxProcessor struct {
 func (p *LiveDbTxProcessor) Process(state State[txcontext.TxContext], ctx *Context) error {
 	var err error
 
-	state.ExecutionResult, err = p.ProcessTransaction(ctx.State, state.Block, state.Transaction, state.Data)
+	ctx.ExecutionResult, err = p.ProcessTransaction(ctx.State, state.Block, state.Transaction, state.Data)
 	if err == nil {
 		return nil
 	}
@@ -58,7 +58,7 @@ type ArchiveDbTxProcessor struct {
 func (p *ArchiveDbTxProcessor) Process(state State[txcontext.TxContext], ctx *Context) error {
 	var err error
 
-	state.ExecutionResult, err = p.ProcessTransaction(ctx.Archive, state.Block, state.Transaction, state.Data)
+	ctx.ExecutionResult, err = p.ProcessTransaction(ctx.Archive, state.Block, state.Transaction, state.Data)
 	if err == nil {
 		return nil
 	}
@@ -155,8 +155,8 @@ func (e *executionResult) Equal(y txcontext.Receipt) bool {
 
 func (s *TxProcessor) ProcessTransaction(db state.VmStateDB, block int, tx int, st txcontext.Transaction) (txcontext.Receipt, error) {
 	if tx >= utils.PseudoTx {
-		s.processPseudoTx(st.GetOutputState(), db)
-		return nil, nil
+
+		return s.processPseudoTx(st.GetOutputState(), db), nil
 	}
 	return s.processRegularTx(db, block, tx, st)
 }
@@ -212,7 +212,7 @@ func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st
 
 // processPseudoTx processes pseudo transactions in Lachesis by applying the change in db state.
 // The pseudo transactions includes Lachesis SFC, lachesis genesis and lachesis-opera transition.
-func (s *TxProcessor) processPseudoTx(ws txcontext.WorldState, db state.VmStateDB) {
+func (s *TxProcessor) processPseudoTx(ws txcontext.WorldState, db state.VmStateDB) txcontext.Receipt {
 	db.BeginTransaction(utils.PseudoTx)
 	defer db.EndTransaction()
 
@@ -225,7 +225,7 @@ func (s *TxProcessor) processPseudoTx(ws txcontext.WorldState, db state.VmStateD
 			db.SetState(addr, keyHash, valueHash)
 		})
 	})
-
+	return newPseudoExecutionResult()
 }
 
 // prepareBlockCtx creates a block context for evm call from given BlockEnvironment.
@@ -275,4 +275,14 @@ func newExecutionResult(logs []*types.Log, msg types.Message, msgResult *evmcore
 	}
 
 	return res
+}
+
+func newPseudoExecutionResult() txcontext.Receipt {
+	return &executionResult{
+		status:          types.ReceiptStatusSuccessful,
+		bloom:           types.Bloom{},
+		logs:            nil,
+		contractAddress: common.Address{},
+		gasUsed:         0,
+	}
 }

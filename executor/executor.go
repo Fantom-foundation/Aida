@@ -191,10 +191,6 @@ type State[T any] struct {
 	// Data is the input required for processing the current transaction. It is
 	// only valid for Pre- and PostTransaction events.
 	Data T
-
-	// ExecutionResult is set after transaction is processed.
-	// It is used for validation
-	ExecutionResult txcontext.Receipt
 }
 
 // Context summarizes context data for the current execution and is passed
@@ -218,6 +214,10 @@ type Context struct {
 	// of the run, we log all errors into a file. This chanel should be only used for processing errors,
 	// hence any non-fatal errors. Any fatal should still be returned so that the app ends.
 	ErrorInput chan error
+
+	// ExecutionResult is set after transaction is processed.
+	// It is used for validation
+	ExecutionResult txcontext.Receipt
 }
 
 // ----------------------------------------------------------------------------

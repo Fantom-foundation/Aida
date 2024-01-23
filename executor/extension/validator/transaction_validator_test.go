@@ -920,7 +920,7 @@ func TestValidateVMResult(t *testing.T) {
 	validator := makeStateDbValidator(cfg, logger.NewMockLogger(gomock.NewController(t)))
 
 	// test positive
-	err := validator.validateVmResult(substatecontext.NewReceipt(vmResult), substatecontext.NewReceipt(expectedResult))
+	err := validator.validateReceipt(substatecontext.NewReceipt(vmResult), substatecontext.NewReceipt(expectedResult))
 	if err != nil {
 		t.Fatalf("Failed to validate VM output. %v", err)
 	}
@@ -928,14 +928,14 @@ func TestValidateVMResult(t *testing.T) {
 	// test negative
 	// mismatched contract
 	vmResult.ContractAddress = common.HexToAddress("0x0000000000085a12481aEdb59eb3200332aCA542")
-	err = validator.validateVmResult(substatecontext.NewReceipt(vmResult), substatecontext.NewReceipt(expectedResult))
+	err = validator.validateReceipt(substatecontext.NewReceipt(vmResult), substatecontext.NewReceipt(expectedResult))
 	if err == nil {
 		t.Fatalf("Failed to validate VM output. Expect contract address mismatch error.")
 	}
 	// mismatched gas used
 	vmResult = newDummyResult(t)
 	vmResult.GasUsed = 0
-	err = validator.validateVmResult(substatecontext.NewReceipt(vmResult), substatecontext.NewReceipt(expectedResult))
+	err = validator.validateReceipt(substatecontext.NewReceipt(vmResult), substatecontext.NewReceipt(expectedResult))
 	if err == nil {
 		t.Fatalf("Failed to validate VM output. Expect gas used mismatch error.")
 	}
@@ -943,7 +943,7 @@ func TestValidateVMResult(t *testing.T) {
 	// mismatched gas used
 	vmResult = newDummyResult(t)
 	vmResult.Status = types.ReceiptStatusFailed
-	err = validator.validateVmResult(substatecontext.NewReceipt(vmResult), substatecontext.NewReceipt(expectedResult))
+	err = validator.validateReceipt(substatecontext.NewReceipt(vmResult), substatecontext.NewReceipt(expectedResult))
 	if err == nil {
 		t.Fatalf("Failed to validate VM output. Expect staatus mismatch error.")
 	}
@@ -964,7 +964,7 @@ func TestValidateVMResult_ErrorIsInCorrectFormat(t *testing.T) {
 	vmRes := substatecontext.NewReceipt(vmResult)
 	expRes := substatecontext.NewReceipt(expectedResult)
 
-	err := validator.validateVmResult(vmRes, expRes)
+	err := validator.validateReceipt(vmRes, expRes)
 	if err == nil {
 		t.Fatal("validation must fail")
 	}
