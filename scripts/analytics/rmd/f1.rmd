@@ -38,6 +38,7 @@ disks <- Metadata %>% filter(key == "Disks")
 OsInfo <- Metadata %>% filter(key == "Os")
 GoInfo <- Metadata %>% filter(key == "GoVersion")
 aidaHash <- Metadata %>% filter(key == "AidaGitHash")
+caarmenHash <- Metadata %>% filter(key == "CarmenGitHash")
 dbImpl <- Metadata %>% filter(key == "DbImpl")
 dbVariant <- Metadata %>% filter(key == "DbVariant")
 carmenSchema <- Metadata %>% filter(key == "CarmenSchema")
@@ -45,12 +46,16 @@ vmImpl <- Metadata %>% filter(key == "VmImpl")
 ```
 
 ## 1. Experimental Setup
-The experiment is run on the machine **`r hostname$value`**(**`r ip$value`**), which is a **`r processor$value`**, **`r memory$value`**.
+The experiment is run on the machine **`r hostname$value`**(**`r ip$value`**), which is a **`r processor$value`**, **`r memory$value`** computer.
 The operating system is **`r OsInfo$value`**.
 The system has installed **`r GoInfo$value`**.
-The github hash of the Aida repository is **`r aidaHash$value`**.
-For this experiment, we use **`r dbImpl$value`**(**`r dbVariant$value`** **`r carmenSchema$value`**) as a StateDB and **`r vmImpl$value`** as a virtual machine.  
-The data set for this experiment is stored in the database **`r params$db`**.
+
+The github hash of the libraries are:
+
+* Aida: **`r aidaHash$value`**
+* Carmen: **`r carmenHash$value`**
+
+For this experiment, we use **`r dbImpl$value`**(**`r dbVariant$value`** **`r carmenSchema$value`**) as a StateDB and **`r vmImpl$value`** as a virtual machine.  The data set for this experiment is stored in the database **`r params$db`**.
 
 ## ##############################################################################
 
