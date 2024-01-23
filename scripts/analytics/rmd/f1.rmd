@@ -1,5 +1,5 @@
 ---
-title: "Substate Report - Transaction Processing Time"
+title: "Block Processing Report"
 date: "`r Sys.Date()`"
 params:
   db: /var/opera/Aida/tmp-rapolt/register/s5-f1-test.db
