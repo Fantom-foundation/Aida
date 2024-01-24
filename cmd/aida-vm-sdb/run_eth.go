@@ -1,12 +1,12 @@
 package main
 
 import (
-	statetest "github.com/Fantom-foundation/Aida/ethtest/state_test"
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension/logger"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"github.com/urfave/cli/v2"
@@ -112,26 +112,26 @@ func RunEth(ctx *cli.Context) error {
 
 func runEth(
 	cfg *utils.Config,
-	provider executor.Provider[statetest.Context],
+	provider executor.Provider[txcontext.TxContext],
 	stateDb state.StateDB,
-	processor executor.Processor[statetest.Context],
-	extra []executor.Extension[statetest.Context],
+	processor executor.Processor[txcontext.TxContext],
+	extra []executor.Extension[txcontext.TxContext],
 ) error {
 	// order of extensionList has to be maintained
-	var extensionList = []executor.Extension[statetest.Context]{
-		profiler.MakeCpuProfiler[statetest.Context](cfg),
-		profiler.MakeDiagnosticServer[statetest.Context](cfg),
-		logger.MakeProgressLogger[statetest.Context](cfg, 0),
+	var extensionList = []executor.Extension[txcontext.TxContext]{
+		profiler.MakeCpuProfiler[txcontext.TxContext](cfg),
+		profiler.MakeDiagnosticServer[txcontext.TxContext](cfg),
+		logger.MakeProgressLogger[txcontext.TxContext](cfg, 0),
 	}
 
 	if stateDb == nil {
 		extensionList = append(
 			extensionList,
-			statedb.MakeStateDbManager[statetest.Context](cfg),
+			statedb.MakeStateDbManager[txcontext.TxContext](cfg),
 			statedb.NewTemporaryEthStatePrepper(cfg),
-			statedb.MakeStateDbManager[statetest.Context](cfg),
-			statedb.MakeLiveDbBlockChecker[statetest.Context](cfg),
-			logger.MakeDbLogger[statetest.Context](cfg),
+			statedb.MakeStateDbManager[txcontext.TxContext](cfg),
+			statedb.MakeLiveDbBlockChecker[txcontext.TxContext](cfg),
+			logger.MakeDbLogger[txcontext.TxContext](cfg),
 		)
 	}
 

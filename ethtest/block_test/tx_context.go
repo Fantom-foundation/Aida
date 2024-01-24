@@ -22,7 +22,7 @@ func (d *txContext) GetBlockEnvironment() txcontext.BlockEnvironment {
 	return d.env
 }
 
-func (d *txContext) GetMessage() types.Message {
+func (d *txContext) GetMessage() core.Message {
 	return d.msg
 }
 

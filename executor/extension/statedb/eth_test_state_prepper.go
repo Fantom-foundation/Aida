@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 
-	statetest "github.com/Fantom-foundation/Aida/ethtest/state_test"
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
@@ -14,7 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func NewTemporaryEthStatePrepper(cfg *utils.Config) executor.Extension[statetest.Context] {
+func NewTemporaryEthStatePrepper(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
 	return &ethStatePrepper{
 		cfg: cfg,
 		log: logger.NewLogger(cfg.LogLevel, "EthStatePrepper"),
@@ -22,7 +21,7 @@ func NewTemporaryEthStatePrepper(cfg *utils.Config) executor.Extension[statetest
 }
 
 type ethStatePrepper struct {
-	extension.NilExtension[statetest.Context]
+	extension.NilExtension[txcontext.TxContext]
 	cfg                           *utils.Config
 	log                           logger.Logger
 	failedPre, failedPost, passed uint64
@@ -30,7 +29,7 @@ type ethStatePrepper struct {
 }
 
 // PreRun primes the state db with pre Alloc
-func (e *ethStatePrepper) PreTransaction(st executor.State[statetest.Context], ctx *executor.Context) error {
+func (e *ethStatePrepper) PreTransaction(st executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	primeCtx := utils.NewPrimeContext(e.cfg, ctx.State, e.log)
 
 	err := primeCtx.PrimeStateDB(st.Data.GetInputState(), ctx.State)
@@ -67,7 +66,8 @@ func (e *ethStatePrepper) validate(alloc txcontext.WorldState, db state.StateDB)
 	return err
 }
 
-func (e *ethStatePrepper) PostTransaction(state executor.State[statetest.Context], ctx *executor.Context) error {
+func (e *ethStatePrepper) PostTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
+	fmt.Println("")
 	//err := e.validate(state.Data.GetOutputState(), ctx.State)
 	//if err != nil {
 	//	if e.lastPre {

@@ -20,20 +20,14 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
-type Context interface {
-	txcontext.InputState
-	txcontext.Transaction
-	PostState
-}
-
-func Open(path string) ([]Context, error) {
+func Open(path string) ([]txcontext.TxContext, error) {
 	fpaths, err := utils.GetDirectoryFiles(path)
 	if err != nil {
 		return nil, err
 	}
 
 	var (
-		tests []Context
+		tests []txcontext.TxContext
 	)
 
 	for _, p := range fpaths {
@@ -61,6 +55,7 @@ func Open(path string) ([]Context, error) {
 }
 
 type stJSON struct {
+	txcontext.NilTxContext
 	Env  stEnv                    `json:"env"`
 	Pre  core.GenesisAlloc        `json:"pre"`
 	Tx   stTransaction            `json:"transaction"`
@@ -81,7 +76,7 @@ func (s *stJSON) GetBlockEnvironment() txcontext.BlockEnvironment {
 	return &s.Env
 }
 
-func (s *stJSON) GetMessage() types.Message {
+func (s *stJSON) GetMessage() core.Message {
 	baseFee := s.Env.BaseFee
 	if baseFee == nil {
 		// Retesteth uses `0x10` for genesis baseFee. Therefore, it defaults to
@@ -94,7 +89,7 @@ func (s *stJSON) GetMessage() types.Message {
 		panic(err)
 	}
 
-	return *msg
+	return msg
 }
 
 type stTransaction struct {
