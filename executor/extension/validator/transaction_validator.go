@@ -100,8 +100,8 @@ type stateDbValidator struct {
 
 // ValidateTxTarget serves for the validator to determine what type of validation to run
 type ValidateTxTarget struct {
-	WorldState bool // WorldState will validate StateDb PostAlloc
-	Receipt    bool // Receipt will validate the TxReceipt after
+	WorldState bool // validate state before and after processing a transaction
+	Receipt    bool // validate content of transaction receipt
 }
 
 // PreRun informs the user that stateDbValidator is enabled and that they should expect slower processing speed.
