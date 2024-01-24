@@ -90,7 +90,7 @@ func TestVmSdb_Substate_AllDbEventsAreIssuedInOrder(t *testing.T) {
 
 	// since we are working with mock transactions, run logically fails on 'intrinsic gas too low'
 	// since this is a test that tests orded of the db events, we can ignore this error
-	err := runSubstates(cfg, provider, db, executor.MakeLiveDbProcessor(cfg), nil)
+	err := runSubstates(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
 	if err != nil {
 		errors.Unwrap(err)
 		if strings.Contains(err.Error(), "intrinsic gas too low") {
@@ -217,7 +217,7 @@ func TestVmSdb_Substate_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 	)
 
 	// run fails but not on validation
-	err := runSubstates(cfg, provider, db, executor.MakeLiveDbProcessor(cfg), nil)
+	err := runSubstates(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
 	if err == nil {
 		t.Errorf("run must fail")
 	}
@@ -257,12 +257,12 @@ func TestVmSdb_Substate_ValidationFailsOnInvalidTransaction(t *testing.T) {
 		db.EXPECT().GetCode(testingAddress).Return([]byte{}),
 	)
 
-	err := runSubstates(cfg, provider, db, executor.MakeLiveDbProcessor(cfg), nil)
+	err := runSubstates(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
 	if err == nil {
 		t.Errorf("validation must fail")
 	}
 
-	expectedErr := strings.TrimSpace("live-db-validator err:\nblock 2 tx 1\n input alloc is not contained in the state-db\n   Account 0x0100000000000000000000000000000000000000 does not exist")
+	expectedErr := strings.TrimSpace("live-db-validator err:\nblock 2 tx 1\n world-state input is not contained in the state-db\n   Account 0x0100000000000000000000000000000000000000 does not exist")
 	returnedErr := strings.TrimSpace(err.Error())
 
 	if strings.Compare(returnedErr, expectedErr) != 0 {

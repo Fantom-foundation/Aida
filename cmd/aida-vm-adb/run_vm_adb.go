@@ -35,7 +35,7 @@ func RunVmAdb(ctx *cli.Context) error {
 	}
 	defer substateDb.Close()
 
-	return run(cfg, substateDb, nil, executor.MakeArchiveDbProcessor(cfg), nil)
+	return run(cfg, substateDb, nil, executor.MakeArchiveDbTxProcessor(cfg), nil)
 }
 
 func run(
@@ -50,7 +50,7 @@ func run(
 		statedb.MakeArchivePrepper[txcontext.TxContext](),
 		logger.MakeProgressLogger[txcontext.TxContext](cfg, 0),
 		logger.MakeErrorLogger[txcontext.TxContext](cfg),
-		validator.MakeArchiveDbValidator(cfg),
+		validator.MakeArchiveDbValidator(cfg, validator.ValidateTxTarget{WorldState: true, Receipt: true}),
 	}
 
 	if stateDb == nil {

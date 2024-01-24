@@ -75,7 +75,7 @@ func replaySubstate(
 		logger.MakeProgressLogger[txcontext.TxContext](cfg, 0),
 		profiler.MakeMemoryUsagePrinter[txcontext.TxContext](cfg),
 		profiler.MakeMemoryProfiler[txcontext.TxContext](cfg),
-		validator.MakeLiveDbValidator(cfg),
+		validator.MakeLiveDbValidator(cfg, validator.ValidateTxTarget{WorldState: true, Receipt: true}),
 	}
 
 	if stateDb == nil {

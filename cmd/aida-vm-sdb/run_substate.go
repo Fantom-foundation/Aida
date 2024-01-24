@@ -33,7 +33,7 @@ func RunSubstate(ctx *cli.Context) error {
 	}
 	defer substateDb.Close()
 
-	return runSubstates(cfg, substateDb, nil, executor.MakeLiveDbProcessor(cfg), nil)
+	return runSubstates(cfg, substateDb, nil, executor.MakeLiveDbTxProcessor(cfg), nil)
 }
 
 func runSubstates(
@@ -79,7 +79,7 @@ func runSubstates(
 		statedb.MakeArchiveInquirer(cfg),
 		validator.MakeStateHashValidator[txcontext.TxContext](cfg),
 		statedb.MakeBlockEventEmitter[txcontext.TxContext](),
-		validator.MakeLiveDbValidator(cfg),
+		validator.MakeLiveDbValidator(cfg, validator.ValidateTxTarget{WorldState: true, Receipt: true}),
 		profiler.MakeOperationProfiler[txcontext.TxContext](cfg),
 
 		// block profile extension should be always last because:

@@ -54,7 +54,7 @@ func RecordStateDbTrace(ctx *cli.Context) error {
 	}
 	defer substateDb.Close()
 
-	return record(cfg, substateDb, executor.MakeLiveDbProcessor(cfg), nil)
+	return record(cfg, substateDb, executor.MakeLiveDbTxProcessor(cfg), nil)
 }
 
 func record(
@@ -68,7 +68,7 @@ func record(
 		tracker.MakeBlockProgressTracker(cfg, 0),
 		statedb.MakeTemporaryStatePrepper(cfg),
 		statedb.MakeProxyRecorderPrepper[txcontext.TxContext](cfg),
-		validator.MakeLiveDbValidator(cfg),
+		validator.MakeLiveDbValidator(cfg, validator.ValidateTxTarget{WorldState: true, Receipt: true}),
 	}
 
 	extensions = append(extensions, extra...)

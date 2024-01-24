@@ -17,19 +17,19 @@ import (
 )
 
 // MakeLiveDbValidator creates an extension which validates LIVE StateDb
-func MakeLiveDbValidator(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
+func MakeLiveDbValidator(cfg *utils.Config, target ValidateTxTarget) executor.Extension[txcontext.TxContext] {
 	if !cfg.ValidateTxState {
 		return extension.NilExtension[txcontext.TxContext]{}
 	}
 
 	log := logger.NewLogger(cfg.LogLevel, "Tx-Verifier")
 
-	return makeLiveDbValidator(cfg, log)
+	return makeLiveDbValidator(cfg, log, target)
 }
 
-func makeLiveDbValidator(cfg *utils.Config, log logger.Logger) *liveDbTxValidator {
+func makeLiveDbValidator(cfg *utils.Config, log logger.Logger, target ValidateTxTarget) *liveDbTxValidator {
 	return &liveDbTxValidator{
-		makeStateDbValidator(cfg, log),
+		makeStateDbValidator(cfg, log, target),
 	}
 }
 
@@ -39,50 +39,28 @@ type liveDbTxValidator struct {
 
 // PreTransaction validates InputAlloc in given substate
 func (v *liveDbTxValidator) PreTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
-	err := v.validateSubstateAlloc(ctx.State, state.Data.GetInputState())
-	if err == nil {
-		return nil
-	}
-
-	err = fmt.Errorf("live-db-validator err:\nblock %v tx %v\n input alloc is not contained in the state-db\n %v\n", state.Block, state.Transaction, err)
-
-	if v.isErrFatal(err, ctx.ErrorInput) {
-		return err
-	}
-
-	return nil
+	return v.runPreTxValidation("live-db-validator", ctx.State, state, ctx.ErrorInput)
 }
 
 // PostTransaction validates OutputAlloc in given substate
 func (v *liveDbTxValidator) PostTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
-	err := v.validateSubstateAlloc(ctx.State, state.Data.GetOutputState())
-	if err == nil {
-		return nil
-	}
-
-	err = fmt.Errorf("live-db-validator err:\noutput error at block %v tx %v; %v", state.Block, state.Transaction, err)
-
-	if v.isErrFatal(err, ctx.ErrorInput) {
-		return err
-	}
-
-	return nil
+	return v.runPostTxValidation("live-db-validator", ctx.State, state, ctx.ExecutionResult, ctx.ErrorInput)
 }
 
 // MakeArchiveDbValidator creates an extension which validates ARCHIVE StateDb
-func MakeArchiveDbValidator(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
+func MakeArchiveDbValidator(cfg *utils.Config, target ValidateTxTarget) executor.Extension[txcontext.TxContext] {
 	if !cfg.ValidateTxState {
 		return extension.NilExtension[txcontext.TxContext]{}
 	}
 
 	log := logger.NewLogger(cfg.LogLevel, "Tx-Verifier")
 
-	return makeArchiveDbValidator(cfg, log)
+	return makeArchiveDbValidator(cfg, log, target)
 }
 
-func makeArchiveDbValidator(cfg *utils.Config, log logger.Logger) *archiveDbValidator {
+func makeArchiveDbValidator(cfg *utils.Config, log logger.Logger, target ValidateTxTarget) *archiveDbValidator {
 	return &archiveDbValidator{
-		makeStateDbValidator(cfg, log),
+		makeStateDbValidator(cfg, log, target),
 	}
 }
 
@@ -90,46 +68,25 @@ type archiveDbValidator struct {
 	*stateDbValidator
 }
 
-// PreTransaction validates InputAlloc in given substate
+// PreTransaction validates the input WorldState before transaction is executed.
 func (v *archiveDbValidator) PreTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
-	err := v.validateSubstateAlloc(ctx.Archive, state.Data.GetInputState())
-	if err == nil {
-		return nil
-	}
-
-	err = fmt.Errorf("archive-db-validator err:\nblock %v tx %v\n input alloc is not contained in the state-db\n %v\n", state.Block, state.Transaction, err)
-
-	if v.isErrFatal(err, ctx.ErrorInput) {
-		return err
-	}
-
-	return nil
+	return v.runPreTxValidation("archive-db-validator", ctx.Archive, state, ctx.ErrorInput)
 }
 
-// PostTransaction validates VmAlloc
+// PostTransaction validates the resulting WorldState after transaction is executed.
 func (v *archiveDbValidator) PostTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
-	err := v.validateSubstateAlloc(ctx.Archive, state.Data.GetOutputState())
-	if err == nil {
-		return nil
-	}
-
-	err = fmt.Errorf("archive-db-validator err:\noutput error at block %v tx %v; %v", state.Block, state.Transaction, err)
-
-	if v.isErrFatal(err, ctx.ErrorInput) {
-		return err
-	}
-
-	return nil
+	return v.runPostTxValidation("archive-db-validator", ctx.Archive, state, ctx.ExecutionResult, ctx.ErrorInput)
 }
 
 // makeStateDbValidator creates an extension that validates StateDb.
 // stateDbValidator should always be inherited depending on what
 // type of StateDb we are working with
-func makeStateDbValidator(cfg *utils.Config, log logger.Logger) *stateDbValidator {
+func makeStateDbValidator(cfg *utils.Config, log logger.Logger, target ValidateTxTarget) *stateDbValidator {
 	return &stateDbValidator{
 		cfg:            cfg,
 		log:            log,
 		numberOfErrors: new(atomic.Int32),
+		target:         target,
 	}
 }
 
@@ -138,6 +95,13 @@ type stateDbValidator struct {
 	cfg            *utils.Config
 	log            logger.Logger
 	numberOfErrors *atomic.Int32
+	target         ValidateTxTarget
+}
+
+// ValidateTxTarget serves for the validator to determine what type of validation to run
+type ValidateTxTarget struct {
+	WorldState bool // validate state before and after processing a transaction
+	Receipt    bool // validate content of transaction receipt
 }
 
 // PreRun informs the user that stateDbValidator is enabled and that they should expect slower processing speed.
@@ -147,6 +111,47 @@ func (v *stateDbValidator) PreRun(executor.State[txcontext.TxContext], *executor
 	if v.cfg.ContinueOnFailure {
 		v.log.Warningf("Continue on Failure for transaction validation is enabled, yet "+
 			"block processing will stop after %v encountered issues. (0 is endless)", v.cfg.MaxNumErrors)
+	}
+
+	return nil
+}
+
+func (v *stateDbValidator) runPreTxValidation(tool string, db state.VmStateDB, state executor.State[txcontext.TxContext], errOutput chan error) error {
+	if !v.target.WorldState {
+		return nil
+	}
+
+	err := v.validateWorldState(db, state.Data.GetInputState())
+	if err == nil {
+		return nil
+	}
+
+	err = fmt.Errorf("%v err:\nblock %v tx %v\n world-state input is not contained in the state-db\n %v\n", tool, state.Block, state.Transaction, err)
+
+	if v.isErrFatal(err, errOutput) {
+		return err
+	}
+
+	return nil
+}
+
+func (v *stateDbValidator) runPostTxValidation(tool string, db state.VmStateDB, state executor.State[txcontext.TxContext], res txcontext.Receipt, errOutput chan error) error {
+	if v.target.WorldState {
+		if err := v.validateWorldState(db, state.Data.GetOutputState()); err != nil {
+			err = fmt.Errorf("%v err:\nworld-state output error at block %v tx %v; %v", tool, state.Block, state.Transaction, err)
+			if v.isErrFatal(err, errOutput) {
+				return err
+			}
+		}
+	}
+
+	if v.target.Receipt {
+		if err := v.validateReceipt(res, state.Data.GetReceipt()); err != nil {
+			err = fmt.Errorf("%v err:\nvm-result error at block %v tx %v; %v", tool, state.Block, state.Transaction, err)
+			if v.isErrFatal(err, errOutput) {
+				return err
+			}
+		}
 	}
 
 	return nil
@@ -175,10 +180,10 @@ func (v *stateDbValidator) isErrFatal(err error, ch chan error) bool {
 	return false
 }
 
-// validateSubstateAlloc compares states of accounts in stateDB to an expected set of states.
+// validateWorldState compares states of accounts in stateDB to an expected set of states.
 // If fullState mode, check if expected state is contained in stateDB.
 // If partialState mode, check for equality of sets.
-func (v *stateDbValidator) validateSubstateAlloc(db state.VmStateDB, expectedAlloc txcontext.WorldState) error {
+func (v *stateDbValidator) validateWorldState(db state.VmStateDB, expectedAlloc txcontext.WorldState) error {
 	var err error
 	switch v.cfg.StateValidationMode {
 	case utils.SubsetCheck:
@@ -194,6 +199,38 @@ func (v *stateDbValidator) validateSubstateAlloc(db state.VmStateDB, expectedAll
 		}
 	}
 	return err
+}
+
+// validateReceipt compares result from vm against the expected one.
+// Error is returned if any mismatch is found.
+func (v *stateDbValidator) validateReceipt(got, want txcontext.Receipt) error {
+	if !got.Equal(want) {
+		return fmt.Errorf(
+			"\ngot:\n"+
+				"\tstatus: %v\n"+
+				"\tbloom: %v\n"+
+				"\tlogs: %v\n"+
+				"\tcontract address: %v\n"+
+				"\tgas used: %v\n"+
+				"\nwant:\n"+
+				"\tstatus: %v\n"+
+				"\tbloom: %v\n"+
+				"\tlogs: %v\n"+
+				"\tcontract address: %v\n"+
+				"\tgas used: %v\n",
+			got.GetStatus(),
+			got.GetBloom().Big().Uint64(),
+			got.GetLogs(),
+			got.GetContractAddress(),
+			got.GetGasUsed(),
+			want.GetStatus(),
+			want.GetBloom().Big().Uint64(),
+			want.GetLogs(),
+			want.GetContractAddress(),
+			want.GetGasUsed())
+	}
+
+	return nil
 }
 
 // printIfDifferent compares two values of any types and reports differences if any.

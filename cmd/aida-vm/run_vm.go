@@ -27,7 +27,7 @@ func RunVm(ctx *cli.Context) error {
 	}
 	defer substateDb.Close()
 
-	return run(cfg, substateDb, nil, executor.MakeLiveDbProcessor(cfg), nil)
+	return run(cfg, substateDb, nil, executor.MakeLiveDbTxProcessor(cfg), nil)
 }
 
 // run executes the actual block-processing evaluation for RunVm above.
@@ -61,7 +61,7 @@ func run(
 		extensions,
 		logger.MakeErrorLogger[txcontext.TxContext](cfg),
 		logger.MakeProgressLogger[txcontext.TxContext](cfg, 15*time.Second),
-		validator.MakeLiveDbValidator(cfg),
+		validator.MakeLiveDbValidator(cfg, validator.ValidateTxTarget{WorldState: true, Receipt: true}),
 	)
 	extensions = append(extensions, extra...)
 
