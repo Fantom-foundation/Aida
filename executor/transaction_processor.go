@@ -29,7 +29,7 @@ type LiveDbTxProcessor struct {
 }
 
 // Process transaction inside state into given LIVE StateDb
-func (p *LiveDbTxProcessor) Process(state State[txcontext.Transaction], ctx *Context) error {
+func (p *LiveDbTxProcessor) Process(state State[txcontext.TxContext], ctx *Context) error {
 	var err error
 
 	ctx.ExecutionResult, err = p.ProcessTransaction(ctx.State, state.Block, state.Transaction, state.Data)
@@ -55,7 +55,7 @@ type ArchiveDbTxProcessor struct {
 }
 
 // Process transaction inside state into given ARCHIVE StateDb
-func (p *ArchiveDbTxProcessor) Process(state State[txcontext.Transaction], ctx *Context) error {
+func (p *ArchiveDbTxProcessor) Process(state State[txcontext.TxContext], ctx *Context) error {
 	var err error
 
 	ctx.ExecutionResult, err = p.ProcessTransaction(ctx.Archive, state.Block, state.Transaction, state.Data)
@@ -153,7 +153,7 @@ func (e *executionResult) Equal(y txcontext.Receipt) bool {
 	return txcontext.ReceiptEqual(e, y)
 }
 
-func (s *TxProcessor) ProcessTransaction(db state.VmStateDB, block int, tx int, st txcontext.Transaction) (txcontext.Receipt, error) {
+func (s *TxProcessor) ProcessTransaction(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (txcontext.Receipt, error) {
 	if tx >= utils.PseudoTx {
 
 		return s.processPseudoTx(st.GetOutputState(), db), nil
@@ -162,7 +162,7 @@ func (s *TxProcessor) ProcessTransaction(db state.VmStateDB, block int, tx int, 
 }
 
 // processRegularTx executes VM on a chosen storage system.
-func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st txcontext.Transaction) (res *executionResult, finalError error) {
+func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (res *executionResult, finalError error) {
 	db.BeginTransaction(uint32(tx))
 	defer db.EndTransaction()
 
