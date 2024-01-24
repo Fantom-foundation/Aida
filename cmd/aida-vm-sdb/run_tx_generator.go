@@ -5,7 +5,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/urfave/cli/v2"
 )
 
@@ -22,11 +22,12 @@ func RunTxGenerator(ctx *cli.Context) error {
 
 	return runTransactions(cfg, nil, nil, false)
 }
-func newGenerateData() txcontext.Transaction {
+func newGenerateData() txcontext.TxContext {
 	return &generateData{}
 }
 
 type generateData struct {
+	txcontext.NilTxContext
 }
 
 func (g generateData) GetOutputState() txcontext.WorldState {
@@ -39,7 +40,7 @@ func (g generateData) GetBlockEnvironment() txcontext.BlockEnvironment {
 	panic("implement me")
 }
 
-func (g generateData) GetMessage() types.Message {
+func (g generateData) GetMessage() core.Message {
 	//TODO implement me
 	panic("implement me")
 }
@@ -48,19 +49,19 @@ type txProcessor struct {
 	cfg *utils.Config
 }
 
-func (p txProcessor) Process(state executor.State[txcontext.Transaction], ctx *executor.Context) error {
+func (p txProcessor) Process(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	// todo apply data onto StateDb
 	return nil
 }
 
 func runTransactions(
 	cfg *utils.Config,
-	provider executor.Provider[txcontext.Transaction],
+	provider executor.Provider[txcontext.TxContext],
 	stateDb state.StateDB,
 	disableStateDbExtension bool,
 ) error {
 	// order of extensionList has to be maintained
-	var extensionList = []executor.Extension[txcontext.Transaction]{
+	var extensionList = []executor.Extension[txcontext.TxContext]{
 		// todo choose extensions
 	}
 

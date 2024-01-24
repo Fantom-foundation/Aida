@@ -153,7 +153,7 @@ func (e *executionResult) Equal(y txcontext.Receipt) bool {
 	return txcontext.ReceiptEqual(e, y)
 }
 
-func (s *TxProcessor) ProcessTransaction(db state.VmStateDB, block int, tx int, st txcontext.Transaction) (txcontext.Receipt, error) {
+func (s *TxProcessor) ProcessTransaction(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (txcontext.Receipt, error) {
 	if tx >= utils.PseudoTx {
 
 		return s.processPseudoTx(st.GetOutputState(), db), nil
@@ -162,7 +162,7 @@ func (s *TxProcessor) ProcessTransaction(db state.VmStateDB, block int, tx int, 
 }
 
 // processRegularTx executes VM on a chosen storage system.
-func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st txcontext.Transaction) (res *executionResult, finalError error) {
+func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (res *executionResult, finalError error) {
 	db.BeginTransaction(uint32(tx))
 	defer db.EndTransaction()
 
@@ -256,7 +256,7 @@ func prepareBlockCtx(inputEnv txcontext.BlockEnvironment, hashError *error) *vm.
 	return blockCtx
 }
 
-func newExecutionResult(logs []*types.Log, msg types.Message, msgResult *evmcore.ExecutionResult, origin common.Address) *executionResult {
+func newExecutionResult(logs []*types.Log, msg core.Message, msgResult *evmcore.ExecutionResult, origin common.Address) *executionResult {
 	var contract common.Address
 	if to := msg.To(); to == nil {
 		contract = crypto.CreateAddress(origin, msg.Nonce())
