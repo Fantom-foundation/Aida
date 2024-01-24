@@ -26,32 +26,6 @@ type Context interface {
 	PostState
 }
 
-func (s *stJSON) GetStateRoot() common.Hash {
-	return s.Post["london"][0].RootHash
-}
-
-func (s *stJSON) GetLogs() common.Hash {
-	return s.Post["london"][0].LogsHash
-}
-
-func (s *stJSON) GetTxBytes() hexutil.Bytes {
-	return s.Post["london"][0].TxBytes
-}
-
-func (s *stJSON) GetExpectException() string {
-	return s.Post["london"][0].ExpectException
-}
-
-func (s *stJSON) GetIndexes() Index {
-	return s.Post["london"][0].indexes
-}
-
-type Index struct {
-	Data  int `json:"data"`
-	Gas   int `json:"gas"`
-	Value int `json:"value"`
-}
-
 func Open(path string) ([]Context, error) {
 	fpaths, err := utils.GetDirectoryFiles(path)
 	if err != nil {
@@ -92,6 +66,11 @@ type stJSON struct {
 	Tx   stTransaction            `json:"transaction"`
 	Out  hexutil.Bytes            `json:"out"`
 	Post map[string][]stPostState `json:"post"`
+}
+
+func (s *stJSON) GetOutputState() txcontext.WorldState {
+	// we dont execute pseudo transactions here
+	return nil
 }
 
 func (s *stJSON) GetInputState() txcontext.WorldState {

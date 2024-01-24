@@ -3,9 +3,9 @@ package main
 import (
 	statetest "github.com/Fantom-foundation/Aida/ethtest/state_test"
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension/logger"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
-	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -107,7 +107,7 @@ func RunEth(ctx *cli.Context) error {
 	//
 	//fmt.Println(b)
 
-	return runEth(cfg, executor.NewEthTestProvider(cfg), nil, executor.MakeLiveDbProcessor(cfg), nil)
+	return runEth(cfg, executor.NewEthTestProvider(cfg), nil, executor.MakeLiveDbTxProcessor(cfg), nil)
 }
 
 func runEth(
@@ -121,7 +121,7 @@ func runEth(
 	var extensionList = []executor.Extension[statetest.Context]{
 		profiler.MakeCpuProfiler[statetest.Context](cfg),
 		profiler.MakeDiagnosticServer[statetest.Context](cfg),
-		tracker.MakeProgressLogger[statetest.Context](cfg, 0),
+		logger.MakeProgressLogger[statetest.Context](cfg, 0),
 	}
 
 	if stateDb == nil {
@@ -131,7 +131,7 @@ func runEth(
 			statedb.NewTemporaryEthStatePrepper(cfg),
 			statedb.MakeStateDbManager[statetest.Context](cfg),
 			statedb.MakeLiveDbBlockChecker[statetest.Context](cfg),
-			tracker.MakeDbLogger[statetest.Context](cfg),
+			logger.MakeDbLogger[statetest.Context](cfg),
 		)
 	}
 

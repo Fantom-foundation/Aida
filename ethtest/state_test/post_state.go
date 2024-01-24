@@ -20,3 +20,29 @@ type stPostState struct {
 	ExpectException string        `json:"expectException"`
 	indexes         Index
 }
+
+type Index struct {
+	Data  int `json:"data"`
+	Gas   int `json:"gas"`
+	Value int `json:"value"`
+}
+
+func (s *stJSON) GetStateRoot() common.Hash {
+	return s.Post["london"][0].RootHash
+}
+
+func (s *stJSON) GetLogs() common.Hash {
+	return s.Post["london"][0].LogsHash
+}
+
+func (s *stJSON) GetTxBytes() hexutil.Bytes {
+	return s.Post["london"][0].TxBytes
+}
+
+func (s *stJSON) GetExpectException() string {
+	return s.Post["london"][0].ExpectException
+}
+
+func (s *stJSON) GetIndexes() Index {
+	return s.Post["london"][0].indexes
+}
