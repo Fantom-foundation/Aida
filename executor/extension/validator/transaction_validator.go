@@ -17,19 +17,19 @@ import (
 )
 
 // MakeLiveDbValidator creates an extension which validates LIVE StateDb
-func MakeLiveDbValidator(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
+func MakeLiveDbValidator(cfg *utils.Config, target ValidateTxTarget) executor.Extension[txcontext.TxContext] {
 	if !cfg.ValidateTxState {
 		return extension.NilExtension[txcontext.TxContext]{}
 	}
 
 	log := logger.NewLogger(cfg.LogLevel, "Tx-Verifier")
 
-	return makeLiveDbValidator(cfg, log)
+	return makeLiveDbValidator(cfg, log, target)
 }
 
-func makeLiveDbValidator(cfg *utils.Config, log logger.Logger) *liveDbTxValidator {
+func makeLiveDbValidator(cfg *utils.Config, log logger.Logger, target ValidateTxTarget) *liveDbTxValidator {
 	return &liveDbTxValidator{
-		makeStateDbValidator(cfg, log),
+		makeStateDbValidator(cfg, log, target),
 	}
 }
 
@@ -48,19 +48,19 @@ func (v *liveDbTxValidator) PostTransaction(state executor.State[txcontext.TxCon
 }
 
 // MakeArchiveDbValidator creates an extension which validates ARCHIVE StateDb
-func MakeArchiveDbValidator(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
+func MakeArchiveDbValidator(cfg *utils.Config, target ValidateTxTarget) executor.Extension[txcontext.TxContext] {
 	if !cfg.ValidateTxState {
 		return extension.NilExtension[txcontext.TxContext]{}
 	}
 
 	log := logger.NewLogger(cfg.LogLevel, "Tx-Verifier")
 
-	return makeArchiveDbValidator(cfg, log)
+	return makeArchiveDbValidator(cfg, log, target)
 }
 
-func makeArchiveDbValidator(cfg *utils.Config, log logger.Logger) *archiveDbValidator {
+func makeArchiveDbValidator(cfg *utils.Config, log logger.Logger, target ValidateTxTarget) *archiveDbValidator {
 	return &archiveDbValidator{
-		makeStateDbValidator(cfg, log),
+		makeStateDbValidator(cfg, log, target),
 	}
 }
 
@@ -81,11 +81,12 @@ func (v *archiveDbValidator) PostTransaction(state executor.State[txcontext.TxCo
 // makeStateDbValidator creates an extension that validates StateDb.
 // stateDbValidator should always be inherited depending on what
 // type of StateDb we are working with
-func makeStateDbValidator(cfg *utils.Config, log logger.Logger) *stateDbValidator {
+func makeStateDbValidator(cfg *utils.Config, log logger.Logger, target ValidateTxTarget) *stateDbValidator {
 	return &stateDbValidator{
 		cfg:            cfg,
 		log:            log,
 		numberOfErrors: new(atomic.Int32),
+		target:         target,
 	}
 }
 
@@ -94,6 +95,13 @@ type stateDbValidator struct {
 	cfg            *utils.Config
 	log            logger.Logger
 	numberOfErrors *atomic.Int32
+	target         ValidateTxTarget
+}
+
+// ValidateTxTarget serves for the validator to determine what type of validation to run
+type ValidateTxTarget struct {
+	WorldState bool // WorldState will validate StateDb PostAlloc
+	Receipt    bool // Receipt will validate the TxReceipt after
 }
 
 // PreRun informs the user that stateDbValidator is enabled and that they should expect slower processing speed.
@@ -109,6 +117,10 @@ func (v *stateDbValidator) PreRun(executor.State[txcontext.TxContext], *executor
 }
 
 func (v *stateDbValidator) runPreTxValidation(tool string, db state.VmStateDB, state executor.State[txcontext.TxContext], errOutput chan error) error {
+	if !v.target.WorldState {
+		return nil
+	}
+
 	err := v.validateWorldState(db, state.Data.GetInputState())
 	if err == nil {
 		return nil
@@ -124,17 +136,21 @@ func (v *stateDbValidator) runPreTxValidation(tool string, db state.VmStateDB, s
 }
 
 func (v *stateDbValidator) runPostTxValidation(tool string, db state.VmStateDB, state executor.State[txcontext.TxContext], res txcontext.Receipt, errOutput chan error) error {
-	if err := v.validateWorldState(db, state.Data.GetOutputState()); err != nil {
-		err = fmt.Errorf("%v err:\nworld-state output error at block %v tx %v; %v", tool, state.Block, state.Transaction, err)
-		if v.isErrFatal(err, errOutput) {
-			return err
+	if v.target.WorldState {
+		if err := v.validateWorldState(db, state.Data.GetOutputState()); err != nil {
+			err = fmt.Errorf("%v err:\nworld-state output error at block %v tx %v; %v", tool, state.Block, state.Transaction, err)
+			if v.isErrFatal(err, errOutput) {
+				return err
+			}
 		}
 	}
 
-	if err := v.validateReceipt(res, state.Data.GetReceipt()); err != nil {
-		err = fmt.Errorf("%v err:\nvm-result error at block %v tx %v; %v", tool, state.Block, state.Transaction, err)
-		if v.isErrFatal(err, errOutput) {
-			return err
+	if v.target.Receipt {
+		if err := v.validateReceipt(res, state.Data.GetReceipt()); err != nil {
+			err = fmt.Errorf("%v err:\nvm-result error at block %v tx %v; %v", tool, state.Block, state.Transaction, err)
+			if v.isErrFatal(err, errOutput) {
+				return err
+			}
 		}
 	}
 

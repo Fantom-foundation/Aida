@@ -61,7 +61,7 @@ func run(
 		extensions,
 		logger.MakeErrorLogger[txcontext.TxContext](cfg),
 		logger.MakeProgressLogger[txcontext.TxContext](cfg, 15*time.Second),
-		validator.MakeLiveDbValidator(cfg),
+		validator.MakeLiveDbValidator(cfg, validator.ValidateTxTarget{WorldState: true, Receipt: true}),
 	)
 	extensions = append(extensions, extra...)
 

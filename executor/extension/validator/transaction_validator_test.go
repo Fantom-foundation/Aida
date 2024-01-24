@@ -40,49 +40,50 @@ func TestLiveTxValidator_NoValidatorIsCreatedIfDisabled(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.ValidateTxState = false
 
-	ext := MakeLiveDbValidator(cfg)
+	ext := MakeLiveDbValidator(cfg, ValidateTxTarget{WorldState: true, Receipt: false})
 
 	if _, ok := ext.(extension.NilExtension[txcontext.TxContext]); !ok {
 		t.Errorf("Validator is enabled although not set in configuration")
 	}
 }
 
-func TestLiveTxValidator_ValidatorIsEnabled(t *testing.T) {
+func TestLiveTxValidator_ValidatorIsEnabledWhenOnlyWorldStateIsTested(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
 
 	cfg := &utils.Config{}
 	cfg.ValidateTxState = true
 
-	ext := makeLiveDbValidator(cfg, log)
+	ext := makeLiveDbValidator(cfg, log, ValidateTxTarget{WorldState: true, Receipt: false})
 
 	log.EXPECT().Warning(gomock.Any())
 	ext.PreRun(executor.State[txcontext.TxContext]{}, nil)
 }
 
-func TestLiveTxValidator_ValidatorDoesNotFailWithEmptySubstate(t *testing.T) {
+func TestLiveTxValidator_ValidatorIsEnabledWhenOnlyReceiptIsTested(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
-	db := state.NewMockStateDB(ctrl)
-	ctx := &executor.Context{State: db}
 
 	cfg := &utils.Config{}
 	cfg.ValidateTxState = true
 
-	ext := makeLiveDbValidator(cfg, log)
+	ext := makeLiveDbValidator(cfg, log, ValidateTxTarget{WorldState: false, Receipt: false})
 
 	log.EXPECT().Warning(gomock.Any())
-	ext.PreRun(executor.State[txcontext.TxContext]{}, ctx)
+	ext.PreRun(executor.State[txcontext.TxContext]{}, nil)
+}
 
-	err := ext.PostTransaction(executor.State[txcontext.TxContext]{
-		Block:       1,
-		Transaction: 1,
-		Data:        substatecontext.NewTxContext(&substate.Substate{}),
-	}, ctx)
+func TestLiveTxValidator_ValidatorIsEnabledWhenBothAreTested(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	log := logger.NewMockLogger(ctrl)
 
-	if err != nil {
-		t.Errorf("PostTransaction must not return an error, got %v", err)
-	}
+	cfg := &utils.Config{}
+	cfg.ValidateTxState = true
+
+	ext := makeLiveDbValidator(cfg, log, ValidateTxTarget{WorldState: true, Receipt: false})
+
+	log.EXPECT().Warning(gomock.Any())
+	ext.PreRun(executor.State[txcontext.TxContext]{}, nil)
 }
 
 func TestLiveTxValidator_SingleErrorInPreTransactionDoesNotEndProgramWithContinueOnFailure(t *testing.T) {
@@ -96,7 +97,7 @@ func TestLiveTxValidator_SingleErrorInPreTransactionDoesNotEndProgramWithContinu
 	cfg.ContinueOnFailure = true
 	cfg.MaxNumErrors = 2
 
-	ext := MakeLiveDbValidator(cfg)
+	ext := MakeLiveDbValidator(cfg, ValidateTxTarget{WorldState: true, Receipt: false})
 
 	gomock.InOrder(
 		db.EXPECT().Exist(common.Address{0}).Return(false),
@@ -128,7 +129,7 @@ func TestLiveTxValidator_SingleErrorInPreTransactionReturnsErrorWithNoContinueOn
 	cfg.ValidateTxState = true
 	cfg.ContinueOnFailure = false
 
-	ext := MakeLiveDbValidator(cfg)
+	ext := MakeLiveDbValidator(cfg, ValidateTxTarget{WorldState: true, Receipt: false})
 
 	gomock.InOrder(
 		db.EXPECT().Exist(common.Address{0}).Return(false),
@@ -169,7 +170,7 @@ func TestLiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueO
 	cfg.ContinueOnFailure = false
 	cfg.StateValidationMode = utils.SubsetCheck
 
-	ext := MakeLiveDbValidator(cfg)
+	ext := MakeLiveDbValidator(cfg, ValidateTxTarget{WorldState: true, Receipt: false})
 
 	gomock.InOrder(
 		db.EXPECT().Exist(common.Address{0}).Return(false),
@@ -210,7 +211,7 @@ func TestLiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContinueO
 	cfg.ContinueOnFailure = false
 	cfg.StateValidationMode = utils.EqualityCheck
 
-	ext := makeLiveDbValidator(cfg, log)
+	ext := makeLiveDbValidator(cfg, log, ValidateTxTarget{WorldState: true, Receipt: false})
 
 	gomock.InOrder(
 		log.EXPECT().Warning(gomock.Any()),
@@ -251,7 +252,7 @@ func TestLiveTxValidator_TwoErrorsDoNotReturnAnErrorWhenContinueOnFailureIsEnabl
 	cfg.ContinueOnFailure = true
 	cfg.MaxNumErrors = 3
 
-	ext := makeLiveDbValidator(cfg, log)
+	ext := makeLiveDbValidator(cfg, log, ValidateTxTarget{WorldState: true, Receipt: false})
 
 	gomock.InOrder(
 		// PreRun
@@ -305,7 +306,7 @@ func TestLiveTxValidator_TwoErrorsDoReturnErrorOnEventWhenContinueOnFailureIsEna
 	cfg.ContinueOnFailure = true
 	cfg.MaxNumErrors = 2
 
-	ext := makeLiveDbValidator(cfg, log)
+	ext := makeLiveDbValidator(cfg, log, ValidateTxTarget{WorldState: true, Receipt: false})
 
 	gomock.InOrder(
 		// PreRun
@@ -356,7 +357,7 @@ func TestLiveTxValidator_PreTransactionDoesNotFailWithIncorrectOutput(t *testing
 	cfg.ValidateTxState = true
 	cfg.ContinueOnFailure = false
 
-	ext := MakeLiveDbValidator(cfg)
+	ext := MakeLiveDbValidator(cfg, ValidateTxTarget{WorldState: true, Receipt: false})
 
 	ext.PreRun(executor.State[txcontext.TxContext]{}, ctx)
 
@@ -385,7 +386,7 @@ func TestLiveTxValidator_PostTransactionDoesNotFailWithIncorrectInput(t *testing
 	cfg.ValidateTxState = true
 	cfg.ContinueOnFailure = false
 
-	ext := MakeLiveDbValidator(cfg)
+	ext := MakeLiveDbValidator(cfg, ValidateTxTarget{WorldState: true, Receipt: false})
 
 	ext.PreRun(executor.State[txcontext.TxContext]{}, ctx)
 
@@ -408,7 +409,7 @@ func TestArchiveTxValidator_NoValidatorIsCreatedIfDisabled(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.ValidateTxState = false
 
-	ext := MakeArchiveDbValidator(cfg)
+	ext := MakeArchiveDbValidator(cfg, ValidateTxTarget{WorldState: true, Receipt: false})
 
 	if _, ok := ext.(extension.NilExtension[txcontext.TxContext]); !ok {
 		t.Errorf("Validator is enabled although not set in configuration")
@@ -422,7 +423,7 @@ func TestArchiveTxValidator_ValidatorIsEnabled(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.ValidateTxState = true
 
-	ext := makeArchiveDbValidator(cfg, log)
+	ext := makeArchiveDbValidator(cfg, log, ValidateTxTarget{WorldState: true, Receipt: false})
 
 	log.EXPECT().Warning(gomock.Any())
 	ext.PreRun(executor.State[txcontext.TxContext]{}, nil)
@@ -437,7 +438,7 @@ func TestArchiveTxValidator_ValidatorDoesNotFailWithEmptySubstate(t *testing.T) 
 	cfg := &utils.Config{}
 	cfg.ValidateTxState = true
 
-	ext := makeArchiveDbValidator(cfg, log)
+	ext := makeArchiveDbValidator(cfg, log, ValidateTxTarget{WorldState: true, Receipt: false})
 
 	log.EXPECT().Warning(gomock.Any())
 	ext.PreRun(executor.State[txcontext.TxContext]{}, ctx)
@@ -464,7 +465,7 @@ func TestArchiveTxValidator_SingleErrorInPreTransactionDoesNotEndProgramWithCont
 	cfg.ContinueOnFailure = true
 	cfg.MaxNumErrors = 2
 
-	ext := MakeArchiveDbValidator(cfg)
+	ext := MakeArchiveDbValidator(cfg, ValidateTxTarget{WorldState: true, Receipt: false})
 
 	gomock.InOrder(
 		db.EXPECT().Exist(common.Address{0}).Return(false),
@@ -496,7 +497,7 @@ func TestArchiveTxValidator_SingleErrorInPreTransactionReturnsErrorWithNoContinu
 	cfg.ValidateTxState = true
 	cfg.ContinueOnFailure = false
 
-	ext := MakeArchiveDbValidator(cfg)
+	ext := MakeArchiveDbValidator(cfg, ValidateTxTarget{WorldState: true, Receipt: false})
 
 	gomock.InOrder(
 		db.EXPECT().Exist(common.Address{0}).Return(false),
@@ -537,7 +538,7 @@ func TestArchiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContin
 	cfg.ContinueOnFailure = false
 	cfg.StateValidationMode = utils.SubsetCheck
 
-	ext := MakeArchiveDbValidator(cfg)
+	ext := MakeArchiveDbValidator(cfg, ValidateTxTarget{WorldState: true, Receipt: false})
 
 	gomock.InOrder(
 		db.EXPECT().Exist(common.Address{0}).Return(false),
@@ -577,7 +578,7 @@ func TestArchiveTxValidator_SingleErrorInPostTransactionReturnsErrorWithNoContin
 	cfg.ContinueOnFailure = false
 	cfg.StateValidationMode = utils.EqualityCheck
 
-	ext := MakeArchiveDbValidator(cfg)
+	ext := MakeArchiveDbValidator(cfg, ValidateTxTarget{WorldState: true, Receipt: false})
 
 	db.EXPECT().GetSubstatePostAlloc().Return(substatecontext.NewWorldState(substate.SubstateAlloc{}))
 
@@ -613,7 +614,7 @@ func TestArchiveTxValidator_TwoErrorsDoNotReturnAnErrorWhenContinueOnFailureIsEn
 	cfg.ContinueOnFailure = true
 	cfg.MaxNumErrors = 3
 
-	ext := makeArchiveDbValidator(cfg, log)
+	ext := makeArchiveDbValidator(cfg, log, ValidateTxTarget{WorldState: true, Receipt: false})
 
 	gomock.InOrder(
 		// PreRun
@@ -667,7 +668,7 @@ func TestArchiveTxValidator_TwoErrorsDoReturnErrorOnEventWhenContinueOnFailureIs
 	cfg.ContinueOnFailure = true
 	cfg.MaxNumErrors = 2
 
-	ext := makeArchiveDbValidator(cfg, log)
+	ext := makeArchiveDbValidator(cfg, log, ValidateTxTarget{WorldState: true, Receipt: false})
 
 	gomock.InOrder(
 		// PreRun
@@ -718,7 +719,7 @@ func TestArchiveTxValidator_PreTransactionDoesNotFailWithIncorrectOutput(t *test
 	cfg.ValidateTxState = true
 	cfg.ContinueOnFailure = false
 
-	ext := MakeArchiveDbValidator(cfg)
+	ext := MakeArchiveDbValidator(cfg, ValidateTxTarget{WorldState: true, Receipt: false})
 
 	ext.PreRun(executor.State[txcontext.TxContext]{}, ctx)
 
@@ -745,7 +746,7 @@ func TestArchiveTxValidator_PostTransactionDoesNotFailWithIncorrectInput(t *test
 	cfg.ValidateTxState = true
 	cfg.ContinueOnFailure = false
 
-	ext := MakeLiveDbValidator(cfg)
+	ext := MakeLiveDbValidator(cfg, ValidateTxTarget{WorldState: true, Receipt: false})
 
 	ext.PreRun(executor.State[txcontext.TxContext]{}, ctx)
 
@@ -875,88 +876,55 @@ func TestValidateStateDb_ValidationDoesNotFailWithPriming(t *testing.T) {
 	}
 }
 
-// getIncorrectTestSubstateAlloc returns an error
-// Substate with incorrect InputAlloc and OutputAlloc.
-// This func is only used in testing.
-func getIncorrectTestSubstateAlloc() txcontext.TxContext {
-	sub := &substate.Substate{
-		InputAlloc:  getIncorrectSubstateAlloc(),
-		OutputAlloc: getIncorrectSubstateAlloc(),
-	}
-
-	return substatecontext.NewTxContext(sub)
-}
-
-func getIncorrectSubstateAlloc() substate.SubstateAlloc {
-	alloc := make(substate.SubstateAlloc)
-	alloc[common.Address{0}] = &substate.SubstateAccount{
-		Nonce:   0,
-		Balance: new(big.Int),
-		Storage: make(map[common.Hash]common.Hash),
-		Code:    make([]byte, 0),
-	}
-
-	return alloc
-}
-
-func newDummyResult(t *testing.T) *substate.SubstateResult {
-	r := &substate.SubstateResult{
-		Logs:            []*types.Log{},
-		ContractAddress: common.HexToAddress("0x0000000000085a12481aEdb59eb3200332aCA541"),
-		GasUsed:         1000000,
-		Status:          types.ReceiptStatusSuccessful,
-	}
-	return r
-}
-
 // TestValidateVMResult tests validatation of data result.
-func TestValidateVMResult(t *testing.T) {
-	expectedResult := newDummyResult(t)
-	vmResult := newDummyResult(t)
+func TestValidateStateDb_ValidateReceipt(t *testing.T) {
+	sub := &substate.Substate{Result: getDummyResult()}
+	ctx := new(executor.Context)
+	ctx.ExecutionResult = substatecontext.NewReceipt(getDummyResult())
 
 	cfg := &utils.Config{}
 	cfg.ValidateTxState = true
 
-	validator := makeStateDbValidator(cfg, logger.NewMockLogger(gomock.NewController(t)))
+	ext := makeLiveDbValidator(cfg, logger.NewMockLogger(gomock.NewController(t)), ValidateTxTarget{WorldState: false, Receipt: true})
 
 	// test positive
-	err := validator.validateReceipt(substatecontext.NewReceipt(vmResult), substatecontext.NewReceipt(expectedResult))
+	err := ext.PostTransaction(executor.State[txcontext.TxContext]{Data: substatecontext.NewTxContext(sub)}, ctx)
 	if err != nil {
 		t.Fatalf("Failed to validate VM output. %v", err)
 	}
 
 	// test negative
 	// mismatched contract
-	vmResult.ContractAddress = common.HexToAddress("0x0000000000085a12481aEdb59eb3200332aCA542")
-	err = validator.validateReceipt(substatecontext.NewReceipt(vmResult), substatecontext.NewReceipt(expectedResult))
+	sub.Result.ContractAddress = common.HexToAddress("0x0000000000085a12481aEdb59eb3200332aCA542")
+	err = ext.PostTransaction(executor.State[txcontext.TxContext]{Data: substatecontext.NewTxContext(sub)}, ctx)
 	if err == nil {
 		t.Fatalf("Failed to validate VM output. Expect contract address mismatch error.")
 	}
 	// mismatched gas used
-	vmResult = newDummyResult(t)
-	vmResult.GasUsed = 0
-	err = validator.validateReceipt(substatecontext.NewReceipt(vmResult), substatecontext.NewReceipt(expectedResult))
+	sub = &substate.Substate{Result: getDummyResult()}
+	sub.Result.GasUsed = 0
+	err = ext.PostTransaction(executor.State[txcontext.TxContext]{Data: substatecontext.NewTxContext(sub)}, ctx)
 	if err == nil {
 		t.Fatalf("Failed to validate VM output. Expect gas used mismatch error.")
 	}
 
 	// mismatched gas used
-	vmResult = newDummyResult(t)
-	vmResult.Status = types.ReceiptStatusFailed
-	err = validator.validateReceipt(substatecontext.NewReceipt(vmResult), substatecontext.NewReceipt(expectedResult))
+	sub = &substate.Substate{Result: getDummyResult()}
+	sub.Result.Status = types.ReceiptStatusFailed
+	err = ext.PostTransaction(executor.State[txcontext.TxContext]{Data: substatecontext.NewTxContext(sub)}, ctx)
 	if err == nil {
 		t.Fatalf("Failed to validate VM output. Expect staatus mismatch error.")
 	}
 }
 
 func TestValidateVMResult_ErrorIsInCorrectFormat(t *testing.T) {
-	expectedResult := newDummyResult(t)
-	vmResult := newDummyResult(t)
+	expectedResult := getDummyResult()
+	vmResult := getDummyResult()
 
 	cfg := &utils.Config{}
 	cfg.ValidateTxState = true
 
-	validator := makeStateDbValidator(cfg, logger.NewMockLogger(gomock.NewController(t)))
+	ext := makeStateDbValidator(cfg, logger.NewMockLogger(gomock.NewController(t)), ValidateTxTarget{WorldState: true, Receipt: false})
 
 	// change result so validation fails
 	expectedResult.GasUsed = 15000
@@ -964,7 +932,7 @@ func TestValidateVMResult_ErrorIsInCorrectFormat(t *testing.T) {
 	vmRes := substatecontext.NewReceipt(vmResult)
 	expRes := substatecontext.NewReceipt(expectedResult)
 
-	err := validator.validateReceipt(vmRes, expRes)
+	err := ext.validateReceipt(vmRes, expRes)
 	if err == nil {
 		t.Fatal("validation must fail")
 	}
@@ -998,4 +966,38 @@ func TestValidateVMResult_ErrorIsInCorrectFormat(t *testing.T) {
 	if strings.Compare(got, want) != 0 {
 		t.Fatalf("unexpected err\ngot: %v\n want: %v\n", got, want)
 	}
+}
+
+// getIncorrectTestSubstateAlloc returns an error
+// Substate with incorrect InputAlloc and OutputAlloc.
+// This func is only used in testing.
+func getIncorrectTestSubstateAlloc() txcontext.TxContext {
+	sub := &substate.Substate{
+		InputAlloc:  getIncorrectSubstateAlloc(),
+		OutputAlloc: getIncorrectSubstateAlloc(),
+	}
+
+	return substatecontext.NewTxContext(sub)
+}
+
+func getIncorrectSubstateAlloc() substate.SubstateAlloc {
+	alloc := make(substate.SubstateAlloc)
+	alloc[common.Address{0}] = &substate.SubstateAccount{
+		Nonce:   0,
+		Balance: new(big.Int),
+		Storage: make(map[common.Hash]common.Hash),
+		Code:    make([]byte, 0),
+	}
+
+	return alloc
+}
+
+func getDummyResult() *substate.SubstateResult {
+	r := &substate.SubstateResult{
+		Logs:            []*types.Log{},
+		ContractAddress: common.HexToAddress("0x0000000000085a12481aEdb59eb3200332aCA541"),
+		GasUsed:         1000000,
+		Status:          types.ReceiptStatusSuccessful,
+	}
+	return r
 }

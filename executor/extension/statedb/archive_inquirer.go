@@ -33,7 +33,7 @@ func makeArchiveInquirer(cfg *utils.Config, log logger.Logger) executor.Extensio
 		throttler:            newThrottler(cfg.ArchiveQueryRate),
 		finished:             utils.MakeEvent(),
 		history:              newBuffer[historicTransaction](cfg.ArchiveMaxQueryAge),
-		validator:            validator.MakeArchiveDbValidator(cfg),
+		validator:            validator.MakeArchiveDbValidator(cfg, validator.ValidateTxTarget{WorldState: true, Receipt: true}),
 	}
 }
 

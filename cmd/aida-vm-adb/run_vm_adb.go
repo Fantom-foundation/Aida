@@ -50,7 +50,7 @@ func run(
 		statedb.MakeArchivePrepper[txcontext.TxContext](),
 		logger.MakeProgressLogger[txcontext.TxContext](cfg, 0),
 		logger.MakeErrorLogger[txcontext.TxContext](cfg),
-		validator.MakeArchiveDbValidator(cfg),
+		validator.MakeArchiveDbValidator(cfg, validator.ValidateTxTarget{WorldState: true, Receipt: true}),
 	}
 
 	if stateDb == nil {
