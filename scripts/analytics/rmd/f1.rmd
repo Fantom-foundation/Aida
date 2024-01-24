@@ -38,6 +38,20 @@ maxArchiveDisk <- TxData %>% filter(archive_disk == max(archive_disk)) %>% disti
 maxTxRate <- TxData %>% filter(tx_rate == max(tx_rate)) %>% distinct(tx_rate, start)
 maxGasRate <- TxData %>% filter(gas_rate == max(gas_rate)) %>% distinct(gas_rate, start) 
 
+runId <- Metadata %>% filter(key == "RunId")
+runSucceed <- Metadata %>% filter(key == "RunSucceed")
+runtime <- Metadata %>% filter(key == "Runtime")
+
+success <- runSucceed$value == "true"
+```
+
+**Run `r runId$value`** `r if(success){
+	paste0("completed successfully")
+} else {
+	paste0("failed")
+}`. The runtime is **`r format(round(as.numeric(runtime$value)/3600, 2), nsmall=2)`** hours.
+
+```{r, echo=FALSE, message=FALSE}
 Property <- c("Memory", "Disk - LiveDb", "Disk - ArchiveDb", "Transaction Rate", "Gas Rate")
 Unit <- c("Gb", "Gb", "Gb", "TPS", "GPS")
 Conv <- c(1e-9, 1e-9, 1e-9, 1, 1)
