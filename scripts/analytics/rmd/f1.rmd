@@ -53,6 +53,10 @@ colorize <- function(x, color) {
 		sprintf("<span style='color: %s;'>%s</span>", color, x)
 	} else x
 }
+
+fmt <- function(x, scale, unit, d) {
+	paste(format(as.numeric(x) * scale, digit=d, nsmall=0), unit)
+}
 ```
 
 Run `r runId$value` **`r if(isRunSuccess){
@@ -62,11 +66,11 @@ Run `r runId$value` **`r if(isRunSuccess){
 }`**. The runtime is **`r format(round(as.numeric(runtime$value)/3600, 2), digit=3)`** hours.
 
 ```{r, echo=FALSE, message=FALSE}
-rTx  <- data.frame(Property="Transaction Rate", Mean=paste(mean(TxData$tx_rate), "TPS"), Max=paste(max(TxData$tx_rate), "TPS"))
-rGas <- data.frame(Property="Gas Rate", Mean=paste(mean(TxData$gas_rate), "MGasPS"), Max=paste(max(TxData$gas_rate), "MGasPS"))
-rMem <- data.frame(Property="Memory", Mean="", Max=paste(max(TxData$memory), "GB"))
-rLDb <- data.frame(Property="Disk - LiveDB", Mean="", Max=paste(max(TxData$live_disk), "GB"))
-rADb <- data.frame(Property="Disk - ArchiveDB", Mean="", Max=paste(max(TxData$archive_disk), "GB"))
+rTx  <- data.frame(Property="Transaction Rate", Mean=fmt(mean(TxData$tx_rate), 1, "TPS", 4), Max=fmt(max(TxData$tx_rate), 1, "TPS", 4))
+rGas <- data.frame(Property="Gas Rate", Mean=fmt(mean(TxData$gas_rate), 1e-6, "MGasPS", 4), Max=fmt(max(TxData$gas_rate), 1e-6, "MGasPS", 4))
+rMem <- data.frame(Property="Memory", Mean="", Max=fmt(max(TxData$memory), 1e-9, "GB", 4))
+rLDb <- data.frame(Property="Disk - LiveDB", Mean="", Max=fmt(max(TxData$live_disk), 1e-9, "GB", 4))
+rADb <- data.frame(Property="Disk - ArchiveDB", Mean="", Max=fmt(max(TxData$archive_disk), 1e-9, "GB", 4))
 
 
 summary <- rbind(rTx, rGas, rMem, rLDb)
@@ -154,25 +158,25 @@ TxData %>%
 
 The experiment was conducted for the block range from **`r format(min(TxData$start),big.mark=",")`**  to **`r format(max(TxData$end),big.mark=",")`**.
 
-Max RAM Usage throughout the run is **`r format(as.numeric(maxMemory$memory) * 1e-9, big.mark=",", digit=3)`** Gb at block height **`r format(maxMemory$start, big.mark=",")`**. 
+Max RAM Usage throughout the run is **`r format(as.numeric(maxMemory$memory) * 1e-9, big.mark=",", digit=3)`** GB at block height **`r format(maxMemory$start, big.mark=",")`**. 
 
 ```{r, echo=FALSE, message=FALSE, fig.width=12, fig.height=8}
 TxData %>% mutate(memory = as.numeric(memory) * 1e-9, start = as.numeric(start) * 1e-6) %>%
    ggplot(aes(x = start, y = memory)) +
    geom_point(alpha=0.3) +
    scale_x_continuous(labels = scales::unit_format(unit="M")) +
-   scale_y_continuous(labels = scales::unit_format(unit="Gb")) +
+   scale_y_continuous(labels = scales::unit_format(unit="GB")) +
    labs(x="Block Height", y="Ram Consumption", title="Memory Usage")
 ```
 
-Max Disk Usage throughout the run is **`r format(as.numeric(maxLiveDisk$live_disk) * 1e-9, big.mark=",", digit=3)`** Gb at block height **`r format(maxLiveDisk$start, big.mark=",")`**
+Max Disk Usage throughout the run is **`r format(as.numeric(maxLiveDisk$live_disk) * 1e-9, big.mark=",", digit=3)`** GB at block height **`r format(maxLiveDisk$start, big.mark=",")`**
 
 ```{r, echo=FALSE, message=FALSE, fig.width=12, fig.height=8}
 TxData %>% mutate(live_disk = as.numeric(live_disk) * 1e-9, start = as.numeric(start) * 1e-6) %>%
    ggplot(aes(x = start, y = live_disk)) +
    geom_point(alpha=0.3) +
    scale_x_continuous(labels = scales::unit_format(unit="M")) +
-   scale_y_continuous(labels = scales::unit_format(unit="Gb")) +
+   scale_y_continuous(labels = scales::unit_format(unit="GB")) +
    labs(x="Block Height", y="Disk Consumption", title="Disk Usage")
 ```
 
