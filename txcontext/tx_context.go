@@ -1,7 +1,7 @@
 package txcontext
 
 import (
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core"
 )
 
 // TxContext implements all three interfaces necessary for
@@ -28,7 +28,7 @@ type Transaction interface {
 
 	// GetMessage returns the message of the transaction.
 	// Message holds data needed by the EVM to execute the transaction.
-	GetMessage() types.Message
+	GetMessage() core.Message
 
 	// GetOutputState returns the state of the WorldState AFTER executing the transaction.
 	// This is mainly used for confirming that StateDb has correct data AFTER execution

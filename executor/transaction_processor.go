@@ -256,7 +256,7 @@ func prepareBlockCtx(inputEnv txcontext.BlockEnvironment, hashError *error) *vm.
 	return blockCtx
 }
 
-func newExecutionResult(logs []*types.Log, msg types.Message, msgResult *evmcore.ExecutionResult, origin common.Address) *executionResult {
+func newExecutionResult(logs []*types.Log, msg core.Message, msgResult *evmcore.ExecutionResult, origin common.Address) *executionResult {
 	var contract common.Address
 	if to := msg.To(); to == nil {
 		contract = crypto.CreateAddress(origin, msg.Nonce())
