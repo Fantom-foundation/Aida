@@ -31,6 +31,7 @@ func main() {
 			&utils.ValidateFlag,
 			&utils.NoHeartbeatLoggingFlag,
 			&utils.ErrorLoggingFlag,
+			&utils.TrackProgressFlag,
 
 			// ShadowDB
 			&utils.ShadowDb,

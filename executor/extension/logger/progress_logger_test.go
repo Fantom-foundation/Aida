@@ -1,7 +1,6 @@
-package tracker
+package logger
 
 import (
-	"fmt"
 	"testing"
 	"time"
 
@@ -61,14 +60,14 @@ func TestProgressLoggerExtension_LoggingHappens(t *testing.T) {
 		// scheduled logging
 		log.EXPECT().Infof(progressLoggerReportFormat,
 			gomock.Any(), 1,
-			MatchRate(gomock.All(executor.Gt(0.9), executor.Lt(1.1)), "txRate"),
-			MatchRate(gomock.All(executor.Gt(90), executor.Lt(100)), "gasRate"),
+			executor.MatchRate(gomock.All(executor.Gt(0.9), executor.Lt(1.1)), "txRate"),
+			executor.MatchRate(gomock.All(executor.Gt(90), executor.Lt(100)), "gasRate"),
 		),
 		// defer logging
 		log.EXPECT().Noticef(finalSummaryProgressReportFormat,
 			gomock.Any(), 1,
-			MatchRate(gomock.All(executor.Gt(0.6), executor.Lt(0.7)), "txRate"),
-			MatchRate(gomock.All(executor.Gt(60), executor.Lt(70)), "gasRate"),
+			executor.MatchRate(gomock.All(executor.Gt(0.6), executor.Lt(0.7)), "txRate"),
+			executor.MatchRate(gomock.All(executor.Gt(60), executor.Lt(70)), "gasRate"),
 		),
 	)
 
@@ -102,8 +101,8 @@ func TestProgressLoggerExtension_LoggingHappensEvenWhenProgramEndsBeforeTickerTi
 
 	log.EXPECT().Noticef(finalSummaryProgressReportFormat,
 		gomock.Any(), 1,
-		MatchRate(gomock.All(executor.Gt(0.6), executor.Lt(0.7)), "txRate"),
-		MatchRate(gomock.All(executor.Gt(60), executor.Lt(70)), "gasRate"),
+		executor.MatchRate(gomock.All(executor.Gt(0.6), executor.Lt(0.7)), "txRate"),
+		executor.MatchRate(gomock.All(executor.Gt(60), executor.Lt(70)), "gasRate"),
 	)
 
 	// fill the logger with some data
@@ -121,23 +120,4 @@ func TestProgressLoggerExtension_LoggingHappensEvenWhenProgramEndsBeforeTickerTi
 	time.Sleep((3 * testProgressReportFrequency) / 2)
 
 	ext.PostRun(executor.State[*substate.Substate]{}, nil, nil)
-}
-
-// MATCHERS
-func MatchRate(constraint gomock.Matcher, name string) gomock.Matcher {
-	return matchRate{constraint, name}
-}
-
-type matchRate struct {
-	constraint gomock.Matcher
-	name       string
-}
-
-func (m matchRate) Matches(value any) bool {
-	txRate, ok := value.(float64)
-	return ok && m.constraint.Matches(txRate)
-}
-
-func (m matchRate) String() string {
-	return fmt.Sprintf("log should have a %v that is %v", m.name, m.constraint)
 }

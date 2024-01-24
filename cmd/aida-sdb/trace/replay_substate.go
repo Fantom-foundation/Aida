@@ -2,10 +2,10 @@ package trace
 
 import (
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension/logger"
 	"github.com/Fantom-foundation/Aida/executor/extension/primer"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
-	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/executor/extension/validator"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/tracer/context"
@@ -72,10 +72,10 @@ func replaySubstate(
 ) error {
 	var extensionList = []executor.Extension[txcontext.TxContext]{
 		profiler.MakeCpuProfiler[txcontext.TxContext](cfg),
-		tracker.MakeProgressLogger[txcontext.TxContext](cfg, 0),
+		logger.MakeProgressLogger[txcontext.TxContext](cfg, 0),
 		profiler.MakeMemoryUsagePrinter[txcontext.TxContext](cfg),
 		profiler.MakeMemoryProfiler[txcontext.TxContext](cfg),
-		validator.MakeLiveDbValidator(cfg),
+		validator.MakeLiveDbValidator(cfg, validator.ValidateTxTarget{WorldState: true, Receipt: true}),
 	}
 
 	if stateDb == nil {

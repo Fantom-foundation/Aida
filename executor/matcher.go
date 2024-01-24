@@ -146,3 +146,23 @@ func (m gt) Matches(value any) bool {
 func (m gt) String() string {
 	return fmt.Sprintf("greater than %v", m.limit)
 }
+
+// ----------------------------------------------------------------------------
+
+func MatchRate(constraint gomock.Matcher, name string) gomock.Matcher {
+	return matchRate{constraint, name}
+}
+
+type matchRate struct {
+	constraint gomock.Matcher
+	name       string
+}
+
+func (m matchRate) Matches(value any) bool {
+	txRate, ok := value.(float64)
+	return ok && m.constraint.Matches(txRate)
+}
+
+func (m matchRate) String() string {
+	return fmt.Sprintf("log should have a %v that is %v", m.name, m.constraint)
+}

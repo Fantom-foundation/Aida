@@ -1,6 +1,8 @@
 package txcontext
 
-import "github.com/ethereum/go-ethereum/core/types"
+import (
+	"github.com/ethereum/go-ethereum/core/types"
+)
 
 // TxContext implements all three interfaces necessary for
 // Input/Output validation and Transaction execution
@@ -27,14 +29,17 @@ type Transaction interface {
 	// GetMessage returns the message of the transaction.
 	// Message holds data needed by the EVM to execute the transaction.
 	GetMessage() types.Message
+
+	// GetOutputState returns the state of the WorldState AFTER executing the transaction.
+	// This is mainly used for confirming that StateDb has correct data AFTER execution
+	// and executing pseudo transaction in the beginning of the chain.
+	// Note: If no pseudo transactions (transactions marked as number 99) are present
+	// within the data-set and PostTx validation is not planned this can return nil.
+	GetOutputState() WorldState
 }
 
 // OutputState represents what is necessary to implement if output validation is required.
 type OutputState interface {
-	// GetOutputState returns the state of the WorldState AFTER executing the transaction.
-	// This is mainly used for confirming that StateDb has correct data AFTER execution.
-	GetOutputState() WorldState
-
 	// GetReceipt returns the Receipt of the transaction.
 	// This is used for comparing result returned by the StateDb.
 	GetReceipt() Receipt

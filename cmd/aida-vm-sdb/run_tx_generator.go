@@ -29,6 +29,11 @@ func newGenerateData() txcontext.Transaction {
 type generateData struct {
 }
 
+func (g generateData) GetOutputState() txcontext.WorldState {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (g generateData) GetBlockEnvironment() txcontext.BlockEnvironment {
 	//TODO implement me
 	panic("implement me")
