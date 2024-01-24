@@ -42,7 +42,7 @@ type RunMetadata struct {
 	ps   *utils.Printers
 }
 
-// MakeRunMetadata create RunMetadata and write it into the DB.
+// MakeRunMetadata creates RunMetadata and write it into the DB.
 // 1. collect run config, timestamp and app name.
 // 2. fetch environment information about where the run is executed.
 // On Print(), print all metadata into the corresponding table.
@@ -90,8 +90,8 @@ func (rm *RunMetadata) Close() {
 	rm.ps.Close()
 }
 
-// fetchEnvInfo fetches exec environment info by executing a number of linux commands.
-// Any failed error are collected and is returned.
+// fetchEnvInfo fetches environment info by executing a number of linux commands.
+// Any errors are collected and returned.
 func (rm *RunMetadata) fetchEnvInfo() error {
 	var errs error
 	for tag, f := range map[string]func() (string, error){

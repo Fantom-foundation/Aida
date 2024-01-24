@@ -101,7 +101,7 @@ type registerProgress struct {
 // PreRun checks the following items:
 // 1. if directory does not exists -> fatal, throw error
 // 2. if database could not be created -> fatal, throw error
-// 3. if metadata table could not be createded -> fatal, throw error
+// 3. if metadata table could not be created -> fatal, throw error
 func (rp *registerProgress) PreRun(_ executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	connection := filepath.Join(rp.cfg.RegisterRun, fmt.Sprintf("%s.db", rp.GetId()))
 	rp.log.Noticef("Registering to: %s", connection)
