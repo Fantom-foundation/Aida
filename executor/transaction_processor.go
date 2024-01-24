@@ -29,7 +29,7 @@ type LiveDbTxProcessor struct {
 }
 
 // Process transaction inside state into given LIVE StateDb
-func (p *LiveDbTxProcessor) Process(state State[txcontext.TxContext], ctx *Context) error {
+func (p *LiveDbTxProcessor) Process(state State[txcontext.Transaction], ctx *Context) error {
 	var err error
 
 	ctx.ExecutionResult, err = p.ProcessTransaction(ctx.State, state.Block, state.Transaction, state.Data)
@@ -55,7 +55,7 @@ type ArchiveDbTxProcessor struct {
 }
 
 // Process transaction inside state into given ARCHIVE StateDb
-func (p *ArchiveDbTxProcessor) Process(state State[txcontext.TxContext], ctx *Context) error {
+func (p *ArchiveDbTxProcessor) Process(state State[txcontext.Transaction], ctx *Context) error {
 	var err error
 
 	ctx.ExecutionResult, err = p.ProcessTransaction(ctx.Archive, state.Block, state.Transaction, state.Data)
