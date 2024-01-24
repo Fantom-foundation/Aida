@@ -41,15 +41,26 @@ maxGasRate <- TxData %>% filter(gas_rate == max(gas_rate)) %>% distinct(gas_rate
 runId <- Metadata %>% filter(key == "RunId")
 runSucceed <- Metadata %>% filter(key == "RunSucceed")
 runtime <- Metadata %>% filter(key == "Runtime")
+isRunSuccess <- runSucceed$value == "true"
 
-success <- runSucceed$value == "true"
+archiveMode <- Metadata %>% filter(key == "ArchiveMode")
+isArchiveActive <- archiveMode$value == "true"
+
+colorize <- function(x, color) {
+	if (knitr::is_latex_output()) {
+		sprintf("\\textcolor{%s}{%s}", color, x)
+	} else if (knitr::is_html_output()) {
+		sprintf("<span style='color: %s;'>%s</span>", color, x)
+	} else x
+}
+
 ```
 
-**Run `r runId$value`** `r if(success){
-	paste0("completed successfully")
+Run `r runId$value` **`r if(isRunSuccess){
+	colorize(paste0("completed successfully"), "green")
 } else {
-	paste0("failed")
-}`. The runtime is **`r format(round(as.numeric(runtime$value)/3600, 2), digit=3)`** hours.
+	colorize(paste0("failed"), "red")
+}`**. The runtime is **`r format(round(as.numeric(runtime$value)/3600, 2), digit=3)`** hours.
 
 ```{r, echo=FALSE, message=FALSE}
 Property <- c("Memory", "Disk - LiveDb", "Disk - ArchiveDb", "Transaction Rate", "Gas Rate")
