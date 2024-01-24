@@ -53,7 +53,6 @@ colorize <- function(x, color) {
 		sprintf("<span style='color: %s;'>%s</span>", color, x)
 	} else x
 }
-
 ```
 
 Run `r runId$value` **`r if(isRunSuccess){
@@ -63,15 +62,18 @@ Run `r runId$value` **`r if(isRunSuccess){
 }`**. The runtime is **`r format(round(as.numeric(runtime$value)/3600, 2), digit=3)`** hours.
 
 ```{r, echo=FALSE, message=FALSE}
-Property <- c("Memory", "Disk - LiveDb", "Disk - ArchiveDb", "Transaction Rate", "Gas Rate")
-Unit <- c("Gb", "Gb", "Gb", "TPS", "MGasPS")
-Conv <- c(1e-9, 1e-9, 1e-9, 1, 1e-6)
-Mean <- c(mean(TxData$memory), mean(TxData$live_disk), mean(TxData$archive_disk), mean(TxData$tx_rate), mean(TxData$gas_rate))
-Max <- c(max(TxData$memory), max(TxData$live_disk), max(TxData$archive_disk), max(TxData$tx_rate), max(TxData$gas_rate))
+rTx  <- data.frame(Property="Transaction Rate", Mean=paste(mean(TxData$tx_rate), "TPS"), Max=paste(max(TxData$tx_rate), "TPS"))
+rGas <- data.frame(Property="Gas Rate", Mean=paste(mean(TxData$gas_rate), "MGasPS"), Max=paste(max(TxData$gas_rate), "MGasPS"))
+rMem <- data.frame(Property="Memory", Mean="", Max=paste(max(TxData$memory), "GB"))
+rLDb <- data.frame(Property="Disk - LiveDB", Mean="", Max=paste(max(TxData$live_disk), "GB"))
+rADb <- data.frame(Property="Disk - ArchiveDB", Mean="", Max=paste(max(TxData$archive_disk), "GB"))
 
-summary <- data.frame(Property, Mean, Max) %>% 
-	mutate(Mean = as.numeric(Mean) * as.numeric(Conv), Max = as.numeric(Max) * as.numeric(Conv)) %>%
-	mutate(Mean = paste(Mean, Unit), Max = paste(Max, Unit))
+
+summary <- rbind(rTx, rGas, rMem, rLDb)
+
+if (isArchiveActive) {
+	summary <- rbind(summary, rADb)
+}
 
 gt(summary)
 ```
