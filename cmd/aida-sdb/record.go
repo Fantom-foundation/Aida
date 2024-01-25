@@ -6,7 +6,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/executor/extension/validator"
-	"github.com/Fantom-foundation/Aida/logger"
+	log "github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
@@ -29,7 +29,7 @@ var RecordCommand = cli.Command{
 		&utils.TraceDebugFlag,
 		&utils.DebugFromFlag,
 		&utils.AidaDbFlag,
-		&logger.LogLevelFlag,
+		&log.LogLevelFlag,
 	},
 	Description: `
 The trace record command requires two arguments:
@@ -54,7 +54,7 @@ func RecordStateDbTrace(ctx *cli.Context) error {
 	}
 	defer substateDb.Close()
 
-	return record(cfg, substateDb, executor.MakeLiveDbProcessor(cfg), nil)
+	return record(cfg, substateDb, executor.MakeLiveDbTxProcessor(cfg), nil)
 }
 
 func record(
@@ -65,11 +65,10 @@ func record(
 ) error {
 	var extensions = []executor.Extension[txcontext.TxContext]{
 		profiler.MakeCpuProfiler[txcontext.TxContext](cfg),
-		tracker.MakeProgressLogger[txcontext.TxContext](cfg, 0),
-		tracker.MakeProgressTracker(cfg, 0),
+		tracker.MakeBlockProgressTracker(cfg, 0),
 		statedb.MakeTemporaryStatePrepper(cfg),
 		statedb.MakeProxyRecorderPrepper[txcontext.TxContext](cfg),
-		validator.MakeLiveDbValidator(cfg),
+		validator.MakeLiveDbValidator(cfg, validator.ValidateTxTarget{WorldState: true, Receipt: true}),
 	}
 
 	extensions = append(extensions, extra...)

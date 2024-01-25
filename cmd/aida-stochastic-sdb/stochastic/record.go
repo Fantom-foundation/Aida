@@ -56,7 +56,7 @@ func stochasticRecordAction(ctx *cli.Context) error {
 	}
 	defer utils.StopCPUProfile(cfg)
 
-	processor := executor.MakeLiveDbProcessor(cfg)
+	processor := executor.MakeLiveDbTxProcessor(cfg)
 
 	// iterate through subsets in sequence
 	substate.SetSubstateDb(cfg.AidaDb)
@@ -105,7 +105,7 @@ func stochasticRecordAction(ctx *cli.Context) error {
 		var statedb state.StateDB
 		statedb = state.MakeInMemoryStateDB(substatecontext.NewWorldState(tx.Substate.InputAlloc), tx.Block)
 		statedb = stochastic.NewEventProxy(statedb, &eventRegistry)
-		if err = processor.ProcessTransaction(statedb, int(tx.Block), tx.Transaction, substatecontext.NewTxContext(tx.Substate)); err != nil {
+		if _, err = processor.ProcessTransaction(statedb, int(tx.Block), tx.Transaction, substatecontext.NewTxContext(tx.Substate)); err != nil {
 			return err
 		}
 

@@ -4,9 +4,9 @@ import (
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension/logger"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
-	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/executor/extension/validator"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
@@ -27,7 +27,7 @@ func RunVm(ctx *cli.Context) error {
 	}
 	defer substateDb.Close()
 
-	return run(cfg, substateDb, nil, executor.MakeLiveDbProcessor(cfg), nil)
+	return run(cfg, substateDb, nil, executor.MakeLiveDbTxProcessor(cfg), nil)
 }
 
 // run executes the actual block-processing evaluation for RunVm above.
@@ -53,15 +53,15 @@ func run(
 		extensions = append(
 			extensions,
 			statedb.MakeTemporaryStatePrepper(cfg),
-			tracker.MakeDbLogger[txcontext.TxContext](cfg),
+			logger.MakeDbLogger[txcontext.TxContext](cfg),
 		)
 	}
 
 	extensions = append(
 		extensions,
-		tracker.MakeErrorLogger[txcontext.TxContext](cfg),
-		tracker.MakeProgressLogger[txcontext.TxContext](cfg, 15*time.Second),
-		validator.MakeLiveDbValidator(cfg),
+		logger.MakeErrorLogger[txcontext.TxContext](cfg),
+		logger.MakeProgressLogger[txcontext.TxContext](cfg, 15*time.Second),
+		validator.MakeLiveDbValidator(cfg, validator.ValidateTxTarget{WorldState: true, Receipt: true}),
 	)
 	extensions = append(extensions, extra...)
 

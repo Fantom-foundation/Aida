@@ -3,7 +3,7 @@ package substate
 import (
 	"github.com/Fantom-foundation/Aida/txcontext"
 	substate "github.com/Fantom-foundation/Substate"
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core"
 )
 
 func NewTxContext(data *substate.Substate) txcontext.TxContext {
@@ -26,7 +26,7 @@ func (t *substateData) GetBlockEnvironment() txcontext.BlockEnvironment {
 	return NewBlockEnvironment(t.Env)
 }
 
-func (t *substateData) GetMessage() types.Message {
+func (t *substateData) GetMessage() core.Message {
 	return t.Message.AsMessage()
 }
 

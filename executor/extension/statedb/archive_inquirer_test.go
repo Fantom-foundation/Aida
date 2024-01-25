@@ -30,6 +30,7 @@ func TestArchiveInquirer_ReportsErrorIfNoArchiveIsPresent(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	log := logger.NewMockLogger(ctrl)
 	cfg := utils.Config{}
+	cfg.ChainID = utils.MainnetChainID
 	cfg.ArchiveQueryRate = 100
 	ext := makeArchiveInquirer(&cfg, log)
 
@@ -48,6 +49,7 @@ func TestArchiveInquirer_CanStartUpAndShutdownGracefully(t *testing.T) {
 	db := state.NewMockStateDB(ctrl)
 
 	cfg := utils.Config{}
+	cfg.ChainID = utils.MainnetChainID
 	cfg.ArchiveMode = true
 	cfg.ArchiveQueryRate = 100
 	ext := makeArchiveInquirer(&cfg, log)
