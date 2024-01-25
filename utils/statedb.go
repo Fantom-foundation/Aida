@@ -257,18 +257,3 @@ func DeleteDestroyedAccountsFromStateDB(db state.StateDB, cfg *Config, target ui
 	db.EndSyncPeriod()
 	return nil
 }
-
-// GetDirectorySize iterates over all files inside given directory (including subdirectories) and returns size in bytes.
-func GetDirectorySize(path string) (int64, error) {
-	var size int64
-	err := filepath.Walk(path, func(_ string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if !info.IsDir() {
-			size += info.Size()
-		}
-		return err
-	})
-	return size, err
-}
