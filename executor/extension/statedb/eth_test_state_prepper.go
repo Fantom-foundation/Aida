@@ -66,7 +66,7 @@ func (e *ethStatePrepper) PostTransaction(state executor.State[txcontext.TxConte
 	got := ctx.State.GetHash()
 
 	if got != want {
-		e.log.Errorf("different hashes\ngot: %v\nwant:%v", got.Hex(), want.Hex())
+		return fmt.Errorf("different hashes\ngot: %v\nwant:%v", got.Hex(), want.Hex())
 	} else {
 		e.log.Noticef("found passing test! block: %v; tx: %v\nhash:%v", state.Block, state.Transaction, got.Hex())
 	}
