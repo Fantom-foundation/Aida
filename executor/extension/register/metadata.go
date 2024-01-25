@@ -1,5 +1,7 @@
 package register
 
+generate mockgen -source metadata.go -destination metadata_mocks.go -package register
+
 import (
 	"errors"
 	"fmt"
@@ -90,9 +92,13 @@ func (rm *RunMetadata) Close() {
 	rm.ps.Close()
 }
 
+type EnvInfoFetcher interface {
+	FetchEnvInfo() error
+}
+
 // fetchEnvInfo fetches environment info by executing a number of linux commands.
 // Any errors are collected and returned.
-func (rm *RunMetadata) fetchEnvInfo() error {
+func (rm *RunMetadata) FetchEnvInfo() error {
 	var errs error
 	for tag, f := range map[string]func() (string, error){
 		"Processor":     rm.GetProcessor,
