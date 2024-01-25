@@ -17,6 +17,7 @@ var RunVMApp = cli.App{
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Commands: []*cli.Command{
 		&RunSubstateCmd,
+		&RunTxGeneratorCmd,
 	},
 	Description: `
 The aida-vm-sdb command requires two arguments: <blockNumFirst> <blockNumLast>
@@ -104,10 +105,9 @@ the inclusive range of blocks.`,
 }
 
 var RunTxGeneratorCmd = cli.Command{
-	Action:    RunTxGenerator,
-	Name:      "tx-generator",
-	Usage:     "Iterates over generated transactions that are executed into a StateDb",
-	ArgsUsage: "<blockNumFirst> <blockNumLast>",
+	Action: RunTxGenerator,
+	Name:   "tx-generator",
+	Usage:  "Iterates over generated transactions that are executed into a StateDb",
 	Flags: []cli.Flag{
 		// StateDb
 		&utils.CarmenSchemaFlag,

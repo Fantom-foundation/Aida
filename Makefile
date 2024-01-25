@@ -52,7 +52,7 @@ aida-vm-adb: carmen tosca
 	-o $(GO_BIN)/aida-vm-adb \
 	./cmd/aida-vm-adb
 
-aida-vm-sdb: carmen tosca
+aida-vm-sdb:
 	GOPROXY=$(GOPROXY) \
 	GOPRIVATE=github.com/Fantom-foundation/Carmen \
 	CGO_CFLAGS="-g -O2  -DMDBX_FORCE_ASSERTIONS=1 -Wno-error=strict-prototypes" \
