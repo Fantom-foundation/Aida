@@ -72,7 +72,7 @@ func TestRegisterProgress_DoNothingIfDisabled(t *testing.T) {
 
 func TestRegisterProgress_TerminatesIfPathDoesNotExist(t *testing.T) {
 	var (
-		pathToFolder     string = filepath.Join("does", "not", "exist")
+		pathToFolder string = filepath.Join("does", "not", "exist")
 	)
 
 	cfg := &utils.Config{}
