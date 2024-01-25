@@ -11,6 +11,8 @@ import (
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/rlp"
+	"golang.org/x/crypto/sha3"
 )
 
 func NewTemporaryEthStatePrepper(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
@@ -65,9 +67,18 @@ func (e *ethStatePrepper) validate(alloc txcontext.WorldState, db state.StateDB)
 
 	return err
 }
+func rlpHash(x interface{}) (h common.Hash) {
+	hw := sha3.NewLegacyKeccak256()
+	rlp.Encode(hw, x)
+	hw.Sum(h[:0])
+	return h
+}
 
 func (e *ethStatePrepper) PostTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
-	fmt.Println("")
+	h := ctx.State.GetHash()
+	fmt.Println(h.Hex())
+	logs := ctx.ExecutionResult.GetLogs()
+	fmt.Println(logs)
 	//err := e.validate(state.Data.GetOutputState(), ctx.State)
 	//if err != nil {
 	//	if e.lastPre {

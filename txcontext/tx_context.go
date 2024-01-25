@@ -12,6 +12,9 @@ type TxContext interface {
 	OutputState
 }
 
+type EthPostState interface {
+}
+
 // InputState represents what is necessary to implement if input validation is required.
 type InputState interface {
 	// GetInputState returns the state of the WorldState BEFORE executing the transaction.
@@ -43,4 +46,7 @@ type OutputState interface {
 	// GetReceipt returns the Receipt of the transaction.
 	// This is used for comparing result returned by the StateDb.
 	GetReceipt() Receipt
+
+	// todo implement for geth tests
+	//GetStateHash() common.Hash
 }

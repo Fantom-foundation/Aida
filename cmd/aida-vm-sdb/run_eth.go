@@ -93,7 +93,10 @@ func RunEth(ctx *cli.Context) error {
 		return err
 	}
 
+	cfg.ChainID = utils.EthereumChainID
+
 	cfg.StateValidationMode = utils.SubsetCheck
+	cfg.ValidateTxState = true
 	//
 	//substateDb, err := executor.OpenSubstateDb(cfg, ctx)
 	//if err != nil {

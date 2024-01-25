@@ -1,6 +1,8 @@
 package executor
 
 import (
+	"math"
+
 	statetest "github.com/Fantom-foundation/Aida/ethtest/state_test"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -31,7 +33,7 @@ func (e ethTestProvider) Run(_ int, _ int, consumer Consumer[txcontext.TxContext
 	for _, bt := range b {
 		//fmt.Println(bt)
 		err = consumer(TransactionInfo[txcontext.TxContext]{
-			Block:       0,
+			Block:       math.MaxInt,
 			Transaction: 0,
 			Data:        bt,
 		})

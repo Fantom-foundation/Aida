@@ -37,6 +37,7 @@ func Open(path string) ([]*BtJSON, error) {
 		var b map[string]*BtJSON
 		err = json.Unmarshal(byteJSON, &b)
 		if err != nil {
+			// todo try the other unmarshaling
 			unmarshalled++
 			// skip any unreadable tests
 			continue
