@@ -72,8 +72,6 @@ func TestRegisterProgress_DoNothingIfDisabled(t *testing.T) {
 
 func TestRegisterProgress_TerminatesIfPathDoesNotExist(t *testing.T) {
 	var (
-		tmpDir           string = t.TempDir()
-		dummyStateDbPath string = filepath.Join(tmpDir, "dummy.txt")
 		pathToFolder     string = filepath.Join("does", "not", "exist")
 	)
 
