@@ -1,6 +1,7 @@
 package txcontext
 
 import (
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 )
 
@@ -43,4 +44,8 @@ type OutputState interface {
 	// GetReceipt returns the Receipt of the transaction.
 	// This is used for comparing result returned by the StateDb.
 	GetReceipt() Receipt
+
+	// GetStateHash returns expected State Hash. This is only used
+	// by Eth JSON tests and can be ignored for most implementations.
+	GetStateHash() common.Hash
 }
