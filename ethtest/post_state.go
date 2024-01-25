@@ -27,22 +27,22 @@ type Index struct {
 	Value int `json:"value"`
 }
 
-func (s *StJSON) GetStateRoot() common.Hash {
+func (s *stJSON) GetStateRoot() common.Hash {
 	return s.getPostState().RootHash
 }
 
-func (s *StJSON) GetLogs() common.Hash {
+func (s *stJSON) GetLogs() common.Hash {
 	return s.getPostState().LogsHash
 }
 
-func (s *StJSON) GetTxBytes() hexutil.Bytes {
+func (s *stJSON) GetTxBytes() hexutil.Bytes {
 	return s.getPostState().TxBytes
 }
 
-func (s *StJSON) GetExpectException() string {
+func (s *stJSON) GetExpectException() string {
 	return s.getPostState().ExpectException
 }
 
-func (s *StJSON) GetIndexes() Index {
+func (s *stJSON) GetIndexes() Index {
 	return s.getPostState().indexes
 }
