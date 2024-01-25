@@ -80,7 +80,7 @@ func MakeRunMetadata(connection string, id *RunIdentity) (*RunMetadata, error) {
 	rm.ps.AddPrinter(p2db)
 
 	// commands that failed are to be logged, but they are not fatal.
-	warnings := rm.fetchEnvInfo()
+	warnings := rm.FetchEnvInfo()
 	return rm, warnings
 }
 

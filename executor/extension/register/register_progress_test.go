@@ -83,17 +83,12 @@ func TestRegisterProgress_TerminatesIfPathDoesNotExist(t *testing.T) {
 	cfg.Last = 25
 	interval := 10
 
-	ctrl := gomock.NewController(t)
-	stateDb := state.NewMockStateDB(ctrl)
-
 	ext := MakeRegisterProgress(cfg, interval)
 	if _, err := ext.(extension.NilExtension[txcontext.TxContext]); err {
 		t.Errorf("RegisterProgress is disabled even though enabled in configuration.")
 	}
 
-	ctx := &executor.Context{State: stateDb, StateDbPath: dummyStateDbPath}
-
-	err := ext.PreRun(executor.State[txcontext.TxContext]{}, ctx)
+	err := ext.PreRun(executor.State[txcontext.TxContext]{}, nil)
 	if err == nil {
 		t.Errorf("Folder %s does not exist but no error was thrown.", pathToFolder)
 	}
