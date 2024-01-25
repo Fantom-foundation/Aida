@@ -1,6 +1,6 @@
 package register
 
-generate mockgen -source metadata.go -destination metadata_mocks.go -package register
+//go:generate mockgen -source metadata.go -destination metadata_mocks.go -package register
 
 import (
 	"errors"
