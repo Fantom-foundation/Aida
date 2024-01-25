@@ -1,6 +1,7 @@
 package register
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -308,4 +309,34 @@ func TestRegisterProgress_IfErrorRecordIntoMetadata(t *testing.T) {
 
 	meta.Close()
 	sDb.Close()
+}
+
+func TestRegisterProgress_ExtensionContinuesDespiteFetchEnvFailure(t *testing.T) {
+	var (
+		tmpDir     string = t.TempDir()
+		dbName     string = "tmp"
+		connection string = filepath.Join(tmpDir, fmt.Sprintf("%s.db", dbName))
+		noBash     error  = errors.New("I'm using Windows! I need help!")
+	)
+
+	mockEnvInfoFetcher := func() (map[string]string, error) {
+		var errs error
+		return map[string]string{}, errors.Join(errs, noBash)
+	}
+
+	rm, err := makeRunMetadata(
+		connection,
+		func() (map[string]string, error) { return map[string]string{}, nil },
+		mockEnvInfoFetcher,
+	)
+
+	if rm == nil {
+		t.Errorf("Metadata fails to continue even though it should.")
+	}
+	if err == nil {
+		t.Errorf("User cannot execute bash script, but error is not thrown.")
+	}
+	if !errors.Is(err, noBash) {
+		t.Errorf("Error not from intended source: %v.", noBash)
+	}
 }
