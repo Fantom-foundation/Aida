@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
+	"strconv"
 
 	"github.com/Fantom-foundation/Aida/utils"
 )
@@ -41,4 +42,29 @@ func (id *RunIdentity) hash() string {
 	})
 
 	return b.String()
+}
+
+func (id *RunIdentity) fetchConfigInfo() (map[string]string, error) {
+	info := map[string]string{
+		"AppName":        id.Cfg.AppName,
+		"CommandName":    id.Cfg.CommandName,
+		"RegisterRun":    id.Cfg.RegisterRun,
+		"OverwriteRunId": id.Cfg.OverwriteRunId,
+
+		"DbImpl":           id.Cfg.DbImpl,
+		"DbVariant":        id.Cfg.DbVariant,
+		"CarmenSchema":     strconv.Itoa(id.Cfg.CarmenSchema),
+		"VmImpl":           id.Cfg.VmImpl,
+		"ArchiveMode":      strconv.FormatBool(id.Cfg.ArchiveMode),
+		"ArchiveQueryRate": strconv.Itoa(id.Cfg.ArchiveQueryRate),
+		"ArchiveVariant":   id.Cfg.ArchiveVariant,
+
+		"First": strconv.Itoa(int(id.Cfg.First)),
+		"Last":  strconv.Itoa(int(id.Cfg.Last)),
+
+		"RunId":     id.GetId(),
+		"Timestamp": strconv.Itoa(int(id.Timestamp)),
+	}
+
+	return info, nil
 }
