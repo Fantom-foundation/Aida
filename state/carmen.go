@@ -9,6 +9,7 @@ import (
 	cc "github.com/Fantom-foundation/Carmen/go/common"
 	carmen "github.com/Fantom-foundation/Carmen/go/state"
 	_ "github.com/Fantom-foundation/Carmen/go/state/cppstate"
+	_ "github.com/Fantom-foundation/Carmen/go/state/gostate"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
@@ -41,7 +42,7 @@ func MakeCarmenStateDB(directory, variant, archive string, schema int) (StateDB,
 	}
 	params := carmen.Parameters{
 		Variant:   carmen.Variant(variant),
-		Schema:    carmen.StateSchema(schema),
+		Schema:    carmen.Schema(schema),
 		Directory: directory,
 		Archive:   archiveType,
 	}
