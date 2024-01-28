@@ -10,6 +10,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
+	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/ethdb"
 )
@@ -95,7 +96,7 @@ func newExecutor[T any](provider Provider[T], log logger.Logger) Executor[T] {
 type ParallelismGranularity byte
 
 const (
-	TransactionLevel ParallelismGranularity = iota
+	TransactionLevel ParallelismGranularity = iota // Post and Pre Transactions() need to be Thread-Safe
 	BlockLevel
 )
 
@@ -213,6 +214,10 @@ type Context struct {
 	// of the run, we log all errors into a file. This chanel should be only used for processing errors,
 	// hence any non-fatal errors. Any fatal should still be returned so that the app ends.
 	ErrorInput chan error
+
+	// ExecutionResult is set after transaction is processed.
+	// It is used for validation
+	ExecutionResult txcontext.Receipt
 }
 
 // ----------------------------------------------------------------------------

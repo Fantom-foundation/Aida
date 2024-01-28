@@ -77,7 +77,7 @@ func TestVm_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 		db.EXPECT().EndTransaction(),
 	)
 
-	run(cfg, provider, db, executor.MakeLiveDbProcessor(cfg), nil)
+	run(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
 }
 
 func TestVm_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
@@ -149,7 +149,7 @@ func TestVm_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 		db.EXPECT().EndTransaction(),
 	)
 
-	run(cfg, provider, db, executor.MakeLiveDbProcessor(cfg), nil)
+	run(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
 }
 
 func TestVm_AllTransactionsAreProcessedInOrder_Sequential(t *testing.T) {
@@ -332,7 +332,7 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) 
 	)
 
 	// run fails but not on validation
-	err := run(cfg, provider, db, executor.MakeLiveDbProcessor(cfg), nil)
+	err := run(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
 	if err == nil {
 		t.Errorf("run must fail")
 	}
@@ -382,7 +382,7 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Parallel(t *testing.T) {
 	)
 
 	// run fails but not on validation
-	err := run(cfg, provider, db, executor.MakeLiveDbProcessor(cfg), nil)
+	err := run(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
 	if err == nil {
 		t.Fatal("run must fail")
 	}
@@ -423,12 +423,12 @@ func TestVm_ValidationFailsOnInvalidTransaction_Sequential(t *testing.T) {
 		db.EXPECT().GetCode(testingAddress).Return([]byte{}),
 	)
 
-	err := run(cfg, provider, db, executor.MakeLiveDbProcessor(cfg), nil)
+	err := run(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
 	if err == nil {
 		t.Errorf("validation must fail")
 	}
 
-	expectedErr := strings.TrimSpace("live-db-validator err:\nblock 2 tx 1\n input alloc is not contained in the state-db\n   Account 0x0100000000000000000000000000000000000000 does not exist")
+	expectedErr := strings.TrimSpace("live-db-validator err:\nblock 2 tx 1\n world-state input is not contained in the state-db\n   Account 0x0100000000000000000000000000000000000000 does not exist")
 	returnedErr := strings.TrimSpace(err.Error())
 
 	if strings.Compare(returnedErr, expectedErr) != 0 {
@@ -462,12 +462,12 @@ func TestVm_ValidationFailsOnInvalidTransaction_Parallel(t *testing.T) {
 		db.EXPECT().GetCode(testingAddress).Return([]byte{}),
 	)
 
-	err := run(cfg, provider, db, executor.MakeLiveDbProcessor(cfg), nil)
+	err := run(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
 	if err == nil {
 		t.Fatal("validation must fail")
 	}
 
-	expectedErr := strings.TrimSpace("live-db-validator err:\nblock 2 tx 1\n input alloc is not contained in the state-db\n   Account 0x0100000000000000000000000000000000000000 does not exist")
+	expectedErr := strings.TrimSpace("live-db-validator err:\nblock 2 tx 1\n world-state input is not contained in the state-db\n   Account 0x0100000000000000000000000000000000000000 does not exist")
 	returnedErr := strings.TrimSpace(err.Error())
 
 	if strings.Compare(returnedErr, expectedErr) != 0 {

@@ -4,6 +4,7 @@ import (
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Substate/substate"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
@@ -27,7 +28,7 @@ func (t *substateData) GetBlockEnvironment() txcontext.BlockEnvironment {
 	return NewBlockEnvironment(t.Env)
 }
 
-func (t *substateData) GetMessage() types.Message {
+func (t *substateData) GetMessage() core.Message {
 	var list types.AccessList
 	for _, tuple := range t.Message.AccessList {
 		var keys []common.Hash

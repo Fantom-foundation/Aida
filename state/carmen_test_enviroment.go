@@ -7,6 +7,8 @@ import (
 	"time"
 
 	carmen "github.com/Fantom-foundation/Carmen/go/state"
+	_ "github.com/Fantom-foundation/Carmen/go/state/cppstate"
+	_ "github.com/Fantom-foundation/Carmen/go/state/gostate"
 )
 
 type CarmenStateTestCase struct {
@@ -15,58 +17,29 @@ type CarmenStateTestCase struct {
 	Archive string
 }
 
+func NewCarmenStateTestCase(variant string, schema int, archive string) CarmenStateTestCase {
+	return CarmenStateTestCase{Variant: variant, Schema: schema, Archive: archive}
+}
+
 func (c CarmenStateTestCase) String() string {
 	return fmt.Sprintf("DB Variant: %s, Schema: %d, Archive type: %v", c.Variant, c.Schema, c.Archive)
 }
 
-// All combinations of carmen db configuration for testing db creation/close function in Aida
+// A combination of all carmen db configurations for testing interface
 func GetAllCarmenConfigurations() []CarmenStateTestCase {
-	archives := []string{
-		"none",
-		"leveldb",
-		"sqlite",
-		"s4",
-		"s5",
+	var res []CarmenStateTestCase
+	for cfg := range carmen.GetAllRegisteredStateFactories() {
+		res = append(res, NewCarmenStateTestCase(string(cfg.Variant), int(cfg.Schema), string(cfg.Archive)))
 	}
-
-	var testCases []CarmenStateTestCase
-
-	for _, variant := range carmen.GetAllVariants() {
-		for _, schema := range carmen.GetAllSchemas() {
-			for _, archive := range archives {
-				testCases = append(testCases, CarmenStateTestCase{
-					Variant: string(variant),
-					Schema:  int(schema),
-					Archive: archive,
-				})
-			}
-		}
-	}
-
-	return testCases
+	return res
 }
 
-// A combination of carmen db configuration for testing interface
+// A minimal combination of carmen db configuration for testing interface
 func GetCarmenStateTestCases() []CarmenStateTestCase {
-	archives := []string{
-		"none",
-		"leveldb",
+	return []CarmenStateTestCase{
+		NewCarmenStateTestCase("go-file", 3, "none"),
+		NewCarmenStateTestCase("go-file", 3, "leveldb"),
 	}
-
-	variant := "go-file"
-	schema := 3
-
-	var testCases []CarmenStateTestCase
-
-	for _, archive := range archives {
-		testCases = append(testCases, CarmenStateTestCase{
-			Variant: variant,
-			Schema:  schema,
-			Archive: archive,
-		})
-	}
-
-	return testCases
 }
 
 // MakeRandomByteSlice creates byte slice of given length with randomized values
