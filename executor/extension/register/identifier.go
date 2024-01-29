@@ -58,6 +58,7 @@ func (id *RunIdentity) fetchConfigInfo() (map[string]string, error) {
 		"ArchiveMode":      strconv.FormatBool(id.Cfg.ArchiveMode),
 		"ArchiveQueryRate": strconv.Itoa(id.Cfg.ArchiveQueryRate),
 		"ArchiveVariant":   id.Cfg.ArchiveVariant,
+		"ChainId":          strconv.Itoa(int(id.Cfg.ChainID)),
 
 		"First": strconv.Itoa(int(id.Cfg.First)),
 		"Last":  strconv.Itoa(int(id.Cfg.Last)),
