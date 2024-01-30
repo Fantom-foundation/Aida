@@ -145,7 +145,8 @@ func (v *stateDbValidator) runPostTxValidation(tool string, db state.VmStateDB, 
 		}
 	}
 
-	if v.target.Receipt {
+	// TODO remove state.Transaction < 99999 after patch aida-db
+	if v.target.Receipt && state.Transaction < 99999 {
 		if err := v.validateReceipt(res, state.Data.GetReceipt()); err != nil {
 			err = fmt.Errorf("%v err:\nvm-result error at block %v tx %v; %v", tool, state.Block, state.Transaction, err)
 			if v.isErrFatal(err, errOutput) {
