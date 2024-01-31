@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/Fantom-foundation/Aida/ethtest"
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
@@ -27,9 +28,18 @@ type ethStatePrepper struct {
 }
 
 func (e *ethStatePrepper) PreTransaction(st executor.State[txcontext.TxContext], ctx *executor.Context) error {
+	var err error
+	// todo move this to a separate extension
+	// todo logic in some tests is probably gonna need to run multiple transactions with same statedb
+	// todo if other than memory database is used all databases have to be in tmp folder and deleted correctly
+	ctx.State, ctx.StateDbPath, err = utils.PrepareStateDB(e.cfg)
+	if err != nil {
+		return fmt.Errorf("failed to prepare statedb; %v", err)
+	}
+
 	primeCtx := utils.NewPrimeContext(e.cfg, ctx.State, e.log)
 
-	err := primeCtx.PrimeStateDB(st.Data.GetInputState(), ctx.State)
+	err = primeCtx.PrimeStateDB(st.Data.GetInputState(), ctx.State)
 	if err != nil {
 		return err
 	}
@@ -65,10 +75,18 @@ func (e *ethStatePrepper) PostTransaction(state executor.State[txcontext.TxConte
 	want := state.Data.GetStateHash()
 	got := ctx.State.GetHash()
 
+	// cast state.Data to stJSON
+	c := state.Data.(*ethtest.StJSON)
+
 	if got != want {
-		return fmt.Errorf("different hashes\ngot: %v\nwant:%v", got.Hex(), want.Hex())
+		err := fmt.Errorf("%v - (%v) FAIL\ndifferent hashes\ngot: %v\nwant:%v", c.TestLabel, c.UsedNetwork, got.Hex(), want.Hex())
+		if e.cfg.ContinueOnFailure {
+			e.log.Error(err)
+		} else {
+			return err
+		}
 	} else {
-		e.log.Noticef("found passing test! block: %v; tx: %v\nhash:%v", state.Block, state.Transaction, got.Hex())
+		e.log.Noticef("%v - (%v) PASS\nblock: %v; tx: %v\nhash:%v", c.TestLabel, c.UsedNetwork, state.Block, state.Transaction, got.Hex())
 	}
 
 	return nil

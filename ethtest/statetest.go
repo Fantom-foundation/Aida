@@ -20,17 +20,17 @@ import (
 )
 
 // OpenStateTests opens
-func OpenStateTests(path string) ([]*stJSON, error) {
+func OpenStateTests(path string) ([]*StJSON, error) {
 	info, err := os.Stat(path)
 	if err != nil {
 		return nil, err
 	}
 
-	var tests []*stJSON
+	var tests []*StJSON
 
 	if info.IsDir() {
 		// todo iterating all files always fail validation
-		tests, err = GetTestsWithinPath[*stJSON](path, StateTests)
+		tests, err = GetTestsWithinPath[*StJSON](path, StateTests)
 		if err != nil {
 			return nil, err
 		}
@@ -39,32 +39,45 @@ func OpenStateTests(path string) ([]*stJSON, error) {
 		// although this test does not work when iterating all tests
 
 	} else {
-		file, err := os.Open(path)
+		tests, err = readTestsFromFile(path)
 		if err != nil {
 			return nil, err
-		}
-		byteJSON, err := io.ReadAll(file)
-		if err != nil {
-			return nil, err
-		}
-
-		var b map[string]*stJSON
-		err = json.Unmarshal(byteJSON, &b)
-		if err != nil {
-			return nil, fmt.Errorf("cannot unmarshal file %v", path)
-		}
-
-		for _, t := range b {
-			tests = append(tests, t)
 		}
 	}
 
 	return tests, nil
 }
 
-type stJSON struct {
+func readTestsFromFile(path string) ([]*StJSON, error) {
+	var tests []*StJSON
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	byteJSON, err := io.ReadAll(file)
+	if err != nil {
+		return nil, err
+	}
+
+	var b map[string]*StJSON
+	err = json.Unmarshal(byteJSON, &b)
+	if err != nil {
+		return nil, fmt.Errorf("cannot unmarshal file %v", path)
+	}
+
+	testLabel := getTestLabel(path)
+
+	for _, t := range b {
+		t.TestLabel = testLabel
+		tests = append(tests, t)
+	}
+	return tests, nil
+}
+
+type StJSON struct {
 	txcontext.NilTxContext
-	usedNetwork string
+	TestLabel   string
+	UsedNetwork string
 	Env         stEnv                    `json:"env"`
 	Pre         core.GenesisAlloc        `json:"pre"`
 	Tx          stTransaction            `json:"transaction"`
@@ -72,7 +85,7 @@ type stJSON struct {
 	Post        map[string][]stPostState `json:"post"`
 }
 
-func (s *stJSON) GetStateHash() common.Hash {
+func (s *StJSON) GetStateHash() common.Hash {
 	for _, n := range usableForks {
 		if p, ok := s.Post[n]; ok {
 			return p[0].RootHash
@@ -83,20 +96,20 @@ func (s *stJSON) GetStateHash() common.Hash {
 	return common.Hash{}
 }
 
-func (s *stJSON) GetOutputState() txcontext.WorldState {
+func (s *StJSON) GetOutputState() txcontext.WorldState {
 	// we dont execute pseudo transactions here
 	return nil
 }
 
-func (s *stJSON) GetInputState() txcontext.WorldState {
+func (s *StJSON) GetInputState() txcontext.WorldState {
 	return NewGethWorldState(s.Pre)
 }
 
-func (s *stJSON) GetBlockEnvironment() txcontext.BlockEnvironment {
+func (s *StJSON) GetBlockEnvironment() txcontext.BlockEnvironment {
 	return &s.Env
 }
 
-func (s *stJSON) GetMessage() core.Message {
+func (s *StJSON) GetMessage() core.Message {
 	baseFee := s.Env.BaseFee
 	if baseFee == nil {
 		// Retesteth uses `0x10` for genesis baseFee. Therefore, it defaults to
@@ -113,20 +126,20 @@ func (s *stJSON) GetMessage() core.Message {
 	return msg
 }
 
-func (s *stJSON) getPostState() stPostState {
-	return s.Post[s.usedNetwork][0]
+func (s *StJSON) getPostState() stPostState {
+	return s.Post[s.UsedNetwork][0]
 }
 
 // Divide iterates usableForks and validation data in ETH JSON State tests and creates test for each fork
-func (s *stJSON) Divide(chainId utils.ChainID) (dividedTests []*stJSON) {
+func (s *StJSON) Divide(chainId utils.ChainID) (dividedTests []*StJSON) {
 	// each test contains multiple validation data for different forks.
 	// we create a test for each usable fork
 
 	for _, fork := range usableForks {
-		var test stJSON
+		var test StJSON
 		if _, ok := s.Post[fork]; ok {
 			test = *s               // copy all the test data
-			test.usedNetwork = fork // add correct fork name
+			test.UsedNetwork = fork // add correct fork name
 
 			// add block number to env (+1 just to make sure we are within wanted fork)
 			test.Env.blockNumber = utils.KeywordBlocks[chainId][fork] + 1
@@ -260,4 +273,24 @@ func (s *stEnv) GetBlockHash(blockNumber uint64) common.Hash {
 
 func (s *stEnv) GetBaseFee() *big.Int {
 	return s.BaseFee.Convert()
+}
+
+// getTestLabel returns the last folder name and the filename of the given path
+func getTestLabel(path string) string {
+	// Split the path into components
+	pathComponents := strings.Split(path, "/")
+
+	var lastFolderName = ""
+	var filename = ""
+
+	if len(pathComponents) > 1 {
+		// Extract the last folder name
+		lastFolderName = pathComponents[len(pathComponents)-2]
+	}
+
+	if len(pathComponents) > 0 {
+		// Extract the filename
+		filename = pathComponents[len(pathComponents)-1]
+	}
+	return lastFolderName + "/" + filename
 }
