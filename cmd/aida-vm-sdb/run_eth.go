@@ -15,7 +15,7 @@ import (
 var RunEthTestsCmd = cli.Command{
 	Action:    RunEth,
 	Name:      "geth",
-	Usage:     "Iterates over substates that are executed into a StateDb",
+	Usage:     "Execute ethereum tests",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		//// AidaDb

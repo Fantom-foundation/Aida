@@ -21,7 +21,7 @@ var usableForks = []string{"London", "Berlin", "Istanbul", "MuirGlacier"}
 type jsonTestType byte
 
 type jsonTest interface {
-	*stJSON
+	*StJSON
 }
 
 // GetTestsWithinPath returns all tests in given directory (and subdirectories)
@@ -29,12 +29,18 @@ type jsonTest interface {
 func GetTestsWithinPath[T jsonTest](path string, testType jsonTestType) ([]T, error) {
 	switch testType {
 	case StateTests:
-		path += "/GeneralStateTests"
+		//gst := path + "/GeneralStateTests"
+		//_, err := os.Stat(gst)
+		//if !os.IsNotExist(err) {
+		//	path = gst
+		//}
+
 	case BlockTests:
 		return nil, errors.New("block testType not yet implemented")
 	default:
 		return nil, errors.New("please chose which testType do you want to read")
 	}
+
 	paths, err := utils.GetDirectoryFiles(path)
 	if err != nil {
 		return nil, fmt.Errorf("cannot read files within directory %v; %v", path, err)
@@ -57,6 +63,7 @@ func GetTestsWithinPath[T jsonTest](path string, testType jsonTestType) ([]T, er
 			continue
 		}
 
+		// TODO merge usability with readTestsFromFile
 		file, err := os.Open(p)
 		if err != nil {
 			return nil, err
@@ -69,10 +76,15 @@ func GetTestsWithinPath[T jsonTest](path string, testType jsonTestType) ([]T, er
 		var b map[string]T
 		err = json.Unmarshal(byteJSON, &b)
 		if err != nil {
-			return nil, fmt.Errorf("cannot unmarshal file %v", p)
+			//return nil, fmt.Errorf("cannot unmarshal file %v", p)
+			fmt.Printf("SKIPPED: cannot unmarshal file %v", p)
+			continue
 		}
 
+		testLabel := getTestLabel(p)
+
 		for _, t := range b {
+			(*t).TestLabel = testLabel
 			tests = append(tests, t)
 		}
 	}
