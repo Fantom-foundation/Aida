@@ -15,7 +15,7 @@ library(gt)
 con <- dbConnect(SQLite(), params$db)
 
 # Fetch RunMetadata
-Metadata <- dbReadTable(con, 'metadata')
+Metadata <- dbSendQuery(con, 'SELECT key, cast(value as text) as value FROM metadata;') %>% dbFetch
 
 first <- Metadata %>% filter(key == "First")
 last <- Metadata %>% filter(key == "Last")
@@ -32,9 +32,9 @@ dbDisconnect(con)
 ## 1. Summary
 
 ```{r, echo=FALSE, message=FALSE}
-maxMemory <- TxData %>% filter(memory == max(memory)) %>% distinct(memory, start) 
-maxLiveDisk <- TxData %>% filter(live_disk == max(live_disk)) %>% distinct(live_disk, start) 
-maxArchiveDisk <- TxData %>% filter(archive_disk == max(archive_disk)) %>% distinct(archive_disk, start) 
+maxMemory <- TxData %>% filter(memory == max(memory)) %>% filter(start == min(start)) %>% distinct(memory, start) 
+maxLiveDisk <- TxData %>% filter(live_disk == max(live_disk)) %>% filter(start == min(start)) %>% distinct(live_disk, start) 
+maxArchiveDisk <- TxData %>% filter(archive_disk == max(archive_disk)) %>% filter(start == min(start)) %>% distinct(archive_disk, start) 
 maxTxRate <- TxData %>% filter(tx_rate == max(tx_rate)) %>% filter(start == min(start)) %>% distinct(tx_rate, start)
 maxGasRate <- TxData %>% filter(gas_rate == max(gas_rate)) %>% filter(start == min(start)) %>% distinct(gas_rate, start) 
 
