@@ -69,6 +69,8 @@ func (r rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc.Request
 		}
 
 		if blockNumber > to {
+			fmt.Println("return nil")
+			fmt.Println(blockNumber)
 			return nil
 		}
 
