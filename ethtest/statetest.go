@@ -138,7 +138,7 @@ func (s *StJSON) Divide(chainId utils.ChainID) (dividedTests []*StJSON) {
 			test.UsedNetwork = fork // add correct fork name
 
 			// add block number to env (+1 just to make sure we are within wanted fork)
-			test.Env.blockNumber = utils.KeywordBlocks[chainId][fork] + 1
+			test.Env.blockNumber = utils.KeywordBlocks[chainId][strings.ToLower(fork)] + 1
 			dividedTests = append(dividedTests, &test)
 		}
 	}
