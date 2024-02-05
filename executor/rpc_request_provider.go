@@ -58,8 +58,13 @@ func (r rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc.Request
 
 		blockNumber = 10
 
+		fmt.Println("from")
+		fmt.Println(from)
+		fmt.Println("to")
+		fmt.Println(to)
 		// are we skipping requests?
 		if blockNumber < from {
+			fmt.Println("skip")
 			continue
 		}
 
