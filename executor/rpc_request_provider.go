@@ -46,7 +46,7 @@ func (r rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc.Request
 
 		// get logs is not yet implemented, skip these for now
 		if req.Query.MethodBase == "getLogs" {
-			return nil
+			continue
 		}
 
 		if req.Response != nil {
