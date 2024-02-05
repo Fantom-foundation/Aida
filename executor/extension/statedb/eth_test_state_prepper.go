@@ -28,9 +28,6 @@ type ethStatePrepper struct {
 	log logger.Logger
 }
 
-var currentTest string
-var currentFork string
-
 func (e *ethStatePrepper) PreTransaction(st executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	var err error
 
