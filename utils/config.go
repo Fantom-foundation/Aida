@@ -48,6 +48,8 @@ const (
 	AidaDbRepositoryEthereumUrl = "https://aida.ethereum.repository.fantom.network"
 )
 
+const maxLastBlock = math.MaxUint64 - 1 // we decrease the value by one because params are always +1
+
 var (
 	FirstOperaBlock     uint64 // id of the first block in substate
 	AidaDbRepositoryUrl string // url of the Aida DB repository
@@ -71,7 +73,7 @@ var KeywordBlocks = map[ChainID]map[string]uint64{
 		"Berlin":      37_455_223,
 		"London":      37_534_833,
 		"first":       0,
-		"last":        math.MaxUint64,
+		"last":        maxLastBlock,
 		"lastpatch":   0,
 	},
 	TestnetChainID: {
@@ -82,7 +84,7 @@ var KeywordBlocks = map[ChainID]map[string]uint64{
 		"Berlin":      1_559_470,
 		"London":      7_513_335,
 		"first":       0,
-		"last":        math.MaxUint64,
+		"last":        maxLastBlock,
 		"lastpatch":   0,
 	},
 	// ethereum fork blocks are not stored in this structure as ethereum has already prepared config
@@ -95,7 +97,7 @@ var KeywordBlocks = map[ChainID]map[string]uint64{
 		"Berlin":      12_244_000,
 		"London":      12_965_000,
 		"first":       0,
-		"last":        math.MaxUint64,
+		"last":        maxLastBlock,
 		"lastpatch":   0,
 	},
 }
