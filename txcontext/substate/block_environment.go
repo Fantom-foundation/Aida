@@ -1,6 +1,7 @@
 package substate
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/Fantom-foundation/Aida/txcontext"
@@ -20,11 +21,15 @@ type blockEnvironment struct {
 	*substate.SubstateEnv
 }
 
-func (e *blockEnvironment) GetBlockHash(block uint64) common.Hash {
+func (e *blockEnvironment) GetBlockHash(block uint64) (common.Hash, error) {
 	if e.BlockHashes == nil {
-		return common.Hash{}
+		return common.Hash{}, fmt.Errorf("getHash(%d) invoked, no blockhashes provided", block)
 	}
-	return e.BlockHashes[block]
+	h, ok := e.BlockHashes[block]
+	if !ok {
+		return common.Hash(h), fmt.Errorf("getHash(%d) invoked, blockhash for that block not provided", block)
+	}
+	return common.Hash(h), nil
 }
 
 func (e *blockEnvironment) GetCoinbase() common.Address {
