@@ -20,7 +20,7 @@ func RunTxGenerator(ctx *cli.Context) error {
 
 	cfg.StateValidationMode = utils.SubsetCheck
 
-	cfg.DbImpl = "carmen"
+	cfg.DbImpl = "geth"
 
 	statedb, _, err := utils.PrepareStateDB(cfg)
 	if err != nil {

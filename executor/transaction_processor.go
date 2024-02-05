@@ -178,8 +178,6 @@ func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st
 	// prepare tx
 	gasPool.AddGas(inputEnv.GetGasLimit())
 
-	fmt.Printf("TX HASH: %v\n", txHash.String())
-
 	db.Prepare(txHash, tx)
 	blockCtx := prepareBlockCtx(inputEnv, &hashError)
 	txCtx := evmcore.NewEVMTxContext(msg)
