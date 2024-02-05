@@ -35,9 +35,6 @@ func OpenStateTests(path string) ([]*StJSON, error) {
 			return nil, err
 		}
 
-		// todo only one test was found to work located in GeneralStateTests/stBugs/evmBytecode.json
-		// although this test does not work when iterating all tests
-
 	} else {
 		tests, err = readTestsFromFile(path)
 		if err != nil {

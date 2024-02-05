@@ -29,12 +29,11 @@ type jsonTest interface {
 func GetTestsWithinPath[T jsonTest](path string, testType jsonTestType) ([]T, error) {
 	switch testType {
 	case StateTests:
-		//gst := path + "/GeneralStateTests"
-		//_, err := os.Stat(gst)
-		//if !os.IsNotExist(err) {
-		//	path = gst
-		//}
-
+		gst := path + "/GeneralStateTests"
+		_, err := os.Stat(gst)
+		if !os.IsNotExist(err) {
+			path = gst
+		}
 	case BlockTests:
 		return nil, errors.New("block testType not yet implemented")
 	default:
@@ -77,7 +76,7 @@ func GetTestsWithinPath[T jsonTest](path string, testType jsonTestType) ([]T, er
 		err = json.Unmarshal(byteJSON, &b)
 		if err != nil {
 			//return nil, fmt.Errorf("cannot unmarshal file %v", p)
-			fmt.Printf("SKIPPED: cannot unmarshal file %v", p)
+			fmt.Printf("SKIPPED: cannot unmarshal file %v\n", p)
 			continue
 		}
 
