@@ -4,6 +4,7 @@ import (
 	"math"
 
 	"github.com/Fantom-foundation/Aida/executor"
+	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -39,6 +40,7 @@ func runTransactions(
 ) error {
 	// order of extensionList has to be maintained
 	var extensionList = []executor.Extension[txcontext.TxContext]{
+		statedb.MakeTxGeneratorBlockEventEmitter[txcontext.TxContext](),
 		//validator.MakeLiveDbValidator(cfg, validator.ValidateTxTarget{WorldState: false, Receipt: true}),
 		// todo choose extensions
 	}

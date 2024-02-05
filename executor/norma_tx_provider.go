@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"sync"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
@@ -26,7 +27,6 @@ const testTreasureAccountPrivateKey = "12345678901234567890123456789012345678901
 // transactions generator.
 type normaTxProvider struct {
 	cfg     *utils.Config
-	rpc     NormaRpcClient
 	stateDb state.StateDB
 }
 
@@ -34,7 +34,6 @@ type normaTxProvider struct {
 func NewNormaTxProvider(cfg *utils.Config, stateDb state.StateDB) Provider[txcontext.TxContext] {
 	return normaTxProvider{
 		cfg:     cfg,
-		rpc:     newFakeRpcClient(stateDb),
 		stateDb: stateDb,
 	}
 }
@@ -42,19 +41,25 @@ func NewNormaTxProvider(cfg *utils.Config, stateDb state.StateDB) Provider[txcon
 // Run runs the norma tx provider.
 func (r normaTxProvider) Run(from int, to int, consumer Consumer[txcontext.TxContext]) error {
 	wg := sync.WaitGroup{}
-	txChan := r.rpc.OutTxs()
+	fakeRpc := newFakeRpcClient(r.stateDb)
+	txChan := fakeRpc.OutTxs()
+
+	currentBlock := from + 1
+	currentTx := 0
 
 	wg.Add(1)
 	// listen for transactions emitted by the RPC client and apply them to the
-	// consumer
+	// consumer, this goroutine will finish when the contract is deployed and
+	// accounts are funded
 	go func() {
 		defer wg.Done()
 		for tx := range txChan {
-			fmt.Printf("nonce %d, addr %s\n", tx.Nonce())
 			data := newNormaTx(tx)
-			if err := consumer(TransactionInfo[txcontext.TxContext]{Block: 1, Transaction: 1, Data: data}); err != nil {
+			if err := consumer(TransactionInfo[txcontext.TxContext]{Block: currentBlock, Transaction: currentTx, Data: data}); err != nil {
 				fmt.Printf("failed to consume transaction; %v\n", err)
 			}
+			//currentTx++
+			currentBlock++
 		}
 	}()
 
@@ -71,7 +76,13 @@ func (r normaTxProvider) Run(from int, to int, consumer Consumer[txcontext.TxCon
 
 	amount := big.NewInt(params.Ether)
 	amount = amount.Mul(amount, big.NewInt(100000))
+
+	r.stateDb.BeginBlock(0)
+	r.stateDb.BeginTransaction(0)
+	r.stateDb.CreateAccount(fromAddress)
 	r.stateDb.AddBalance(fromAddress, amount)
+	r.stateDb.EndTransaction()
+	r.stateDb.EndBlock()
 
 	// initialize the norma application
 	primaryAccount, err := app.NewAccount(0, testTreasureAccountPrivateKey, int64(r.cfg.ChainID))
@@ -79,19 +90,25 @@ func (r normaTxProvider) Run(from int, to int, consumer Consumer[txcontext.TxCon
 		return err
 	}
 
-	app, err := app.NewCounterApplication(r.rpc, primaryAccount, 0, 0, 0)
+	app, err := app.NewCounterApplication(fakeRpc, primaryAccount, 0, 0, 0)
 	if err != nil {
 		return err
 	}
 
-	user, err := app.CreateUser(r.rpc)
+	user, err := app.CreateUser(fakeRpc)
 	if err != nil {
 		return err
 	}
 
-	if err = app.WaitUntilApplicationIsDeployed(r.rpc); err != nil {
+	if err = app.WaitUntilApplicationIsDeployed(fakeRpc); err != nil {
 		return err
 	}
+
+	// from now on, we don't need the rpc anymore, it was needed just for the
+	// deployment of the contract, so we can close it so that the goroutine
+	// listening for transactions emitted by the RPC client can finish
+	wg.Wait()
+	fakeRpc.Close()
 
 	for i := 0; i < 10; i++ {
 		tx, err := user.GenerateTx()
@@ -108,7 +125,7 @@ func (r normaTxProvider) Run(from int, to int, consumer Consumer[txcontext.TxCon
 }
 
 func (r normaTxProvider) Close() {
-
+	// nothing to do
 }
 
 func newNormaTx(tx *types.Transaction) txcontext.TxContext {
@@ -146,17 +163,22 @@ func (e normaTxBlockEnv) GetGasLimit() uint64 {
 
 // GetNumber returns the current block number.
 func (e normaTxBlockEnv) GetNumber() uint64 {
-	return 1
+	// not used
+	return 0
 }
 
 // GetTimestamp returns the timestamp of the current block.
 func (e normaTxBlockEnv) GetTimestamp() uint64 {
-	return 1
+	// use current timestamp as the block timestamp
+	// since we don't have a real block
+	return uint64(time.Now().Unix())
 }
 
 // GetBlockHash returns the hash of the block with the given number.
 func (e normaTxBlockEnv) GetBlockHash(blockNumber uint64) common.Hash {
-	return common.HexToHash("0x1")
+	// transform the block number into a hash
+	// we don't have real block hashes, so we just use the block number
+	return common.BigToHash(big.NewInt(int64(blockNumber)))
 }
 
 // GetBaseFee returns the base fee for transactions in the current block.
@@ -169,6 +191,12 @@ type normaTxBlockEnv struct {
 }
 
 func (ntx normaTx) GetMessage() core.Message {
+
+	if ntx.tx.To() != nil {
+		fmt.Printf("receiver: %s\n", ntx.tx.To().String())
+		fmt.Printf("Value %d\n", ntx.tx.Value().Uint64())
+	}
+
 	// extract sender from tx by passing it through the signer
 	// we expect that the tx is signed
 	sender, _ := types.Sender(types.NewEIP155Signer(ntx.tx.ChainId()), ntx.tx)
@@ -220,6 +248,12 @@ func (f fakeRpcClient) OutTxs() <-chan *types.Transaction {
 // SendTransaction injects the transaction into the pending pool for execution.
 func (f fakeRpcClient) SendTransaction(_ context.Context, tx *types.Transaction) error {
 	fmt.Print("SendTransaction\n")
+	// create account if it doesn't exist
+	// this is necessary because the receiver of the transaction must exist
+	// in the state database, otherwise the receiver won't be able to receive
+	if tx.To() != nil && !f.stateDb.Exist(*tx.To()) {
+		f.stateDb.CreateAccount(*tx.To())
+	}
 	f.outTxs <- tx
 	return nil
 }
@@ -237,13 +271,12 @@ func (f fakeRpcClient) NonceAt(_ context.Context, account common.Address, _ *big
 }
 
 func (f fakeRpcClient) BalanceAt(ctx context.Context, account common.Address, blockNumber *big.Int) (*big.Int, error) {
-	// todo implement me
-	fmt.Print("BalanceAt\n")
-	return big.NewInt(0), nil
+	balance := f.stateDb.GetBalance(account)
+	fmt.Printf("BalanceAt: %d, Addr: %s\n", balance, account.String())
+	return balance, nil
 }
 
 func (f fakeRpcClient) Close() {
-	fmt.Print("Close\n")
 	close(f.outTxs)
 }
 
@@ -262,11 +295,9 @@ func (f fakeRpcClient) CallContract(ctx context.Context, call ethereum.CallMsg, 
 // HeaderByNumber returns a block header from the current canonical chain. If
 // number is nil, the latest known header is returned.
 func (f fakeRpcClient) HeaderByNumber(ctx context.Context, number *big.Int) (*types.Header, error) {
-	// todo implement me
-	fmt.Print("HeaderByNumber\n")
-	return &types.Header{
-		Number: big.NewInt(1),
-	}, nil
+	// this method is called to obtain GasFeeCap, which was introduced in EIP-1559
+	// since this is ethereum thing, we can just return an empty header
+	return &types.Header{}, nil
 }
 
 // PendingCodeAt returns the code of the given account in the pending state.
@@ -286,15 +317,15 @@ func (f fakeRpcClient) PendingNonceAt(ctx context.Context, account common.Addres
 // SuggestGasPrice retrieves the currently suggested gas price to allow a timely
 // execution of a transaction.
 func (f fakeRpcClient) SuggestGasPrice(ctx context.Context) (*big.Int, error) {
-	// todo implement me
-	fmt.Print("SuggestGasPrice\n")
-	return big.NewInt(20_000), nil
+	// use lower gas price, so we don't run out of gas
+	// too quickly since estimation is overestimating
+	return big.NewInt(1), nil
 }
 
 // SuggestGasTipCap retrieves the currently suggested 1559 priority fee to allow
 // a timely execution of a transaction.
 func (f fakeRpcClient) SuggestGasTipCap(ctx context.Context) (*big.Int, error) {
-	fmt.Print("SuggestGasTipCap\n")
+	// not used
 	return big.NewInt(0), nil
 }
 
@@ -304,23 +335,21 @@ func (f fakeRpcClient) SuggestGasTipCap(ctx context.Context) (*big.Int, error) {
 // transactions may be added or removed by miners, but it should provide a basis
 // for setting a reasonable default.
 func (f fakeRpcClient) EstimateGas(ctx context.Context, call ethereum.CallMsg) (gas uint64, err error) {
-	// todo implement me
-	fmt.Print("EstimateGas\n")
-	return 60_000, nil
+	// use more gas than should be needed
+	// TODO: use the vm for gas estimation
+	return 500_000, nil
 }
 
 // FilterLogs executes a log filter operation, blocking during execution and
 // returning all the results in one batch.
 func (f fakeRpcClient) FilterLogs(ctx context.Context, query ethereum.FilterQuery) ([]types.Log, error) {
-	// todo implement me
-	fmt.Print("FilterLogs\n")
+	// not used
 	return nil, nil
 }
 
 // SubscribeFilterLogs creates a background log filtering operation, returning
 // a subscription immediately, which can be used to stream the found events.
 func (f fakeRpcClient) SubscribeFilterLogs(ctx context.Context, query ethereum.FilterQuery, ch chan<- types.Log) (ethereum.Subscription, error) {
-	// todo implement me
-	fmt.Print("SubscribeFilterLogs\n")
+	// not used
 	return nil, nil
 }
