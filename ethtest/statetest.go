@@ -29,7 +29,6 @@ func OpenStateTests(path string) ([]*StJSON, error) {
 	var tests []*StJSON
 
 	if info.IsDir() {
-		// todo iterating all files always fail validation
 		tests, err = GetTestsWithinPath[*StJSON](path, StateTests)
 		if err != nil {
 			return nil, err
@@ -264,8 +263,8 @@ func (s *stEnv) GetTimestamp() uint64 {
 	return s.Timestamp.Uint64()
 }
 
-func (s *stEnv) GetBlockHash(blockNumber uint64) common.Hash {
-	return common.Hash{}
+func (s *stEnv) GetBlockHash(blockNumber uint64) (common.Hash, error) {
+	return common.Hash{}, nil
 }
 
 func (s *stEnv) GetBaseFee() *big.Int {
