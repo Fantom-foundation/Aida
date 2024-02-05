@@ -110,6 +110,33 @@ func TestRPCRequestProvider_ErrorReturnedByIteratorEndsTheApp(t *testing.T) {
 	}
 }
 
+func TestRPCRequestProvider_GetLogMethodDoesNotEndIteration(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	consumer := NewMockRPCReqConsumer(ctrl)
+	i := rpc.NewMockIterator(ctrl)
+
+	cfg := &utils.Config{}
+
+	provider := openRpcRecording(i, cfg, nil)
+
+	defer provider.Close()
+
+	gomock.InOrder(
+		i.EXPECT().Next().Return(true),
+		i.EXPECT().Error().Return(nil),
+		i.EXPECT().Value().Return(logResp),
+		i.EXPECT().Next().Return(true),
+		i.EXPECT().Error().Return(nil),
+		i.EXPECT().Value().Return(logResp),
+		i.EXPECT().Next().Return(false),
+		i.EXPECT().Close(),
+	)
+
+	if err := provider.Run(10, 11, toRPCConsumer(consumer)); err != nil {
+		t.Fatal("test cannot fail")
+	}
+}
+
 var validResp = &rpc.RequestAndResults{
 	Query: &rpc.Body{},
 	Response: &rpc.Response{
@@ -139,6 +166,23 @@ var errResp = &rpc.RequestAndResults{
 		},
 		Payload: nil,
 	},
+	ParamsRaw:   nil,
+	ResponseRaw: nil,
+}
+
+var logResp = &rpc.RequestAndResults{
+	Query: &rpc.Body{
+		MethodBase: "getLogs",
+	},
+	Response: &rpc.Response{
+		Version:   "2.0",
+		ID:        json.RawMessage{1},
+		BlockID:   10,
+		Timestamp: 10,
+		Result:    nil,
+		Payload:   nil,
+	},
+	Error:       nil,
 	ParamsRaw:   nil,
 	ResponseRaw: nil,
 }
