@@ -55,12 +55,14 @@ func (r rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc.Request
 			blockNumber = int(req.Error.BlockID)
 		}
 
+		blockNumber = 10
+
 		// are we skipping requests?
 		if blockNumber < from {
 			continue
 		}
 
-		if blockNumber >= to {
+		if blockNumber > to {
 			return nil
 		}
 

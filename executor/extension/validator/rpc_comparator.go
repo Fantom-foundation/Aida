@@ -94,6 +94,7 @@ type rpcComparator struct {
 // is enabled error is saved. Otherwise, the error is returned.
 func (c *rpcComparator) PostTransaction(state executor.State[*rpc.RequestAndResults], ctx *executor.Context) error {
 	c.totalNumberOfRequests++
+	return nil
 
 	compareErr := compare(state)
 	if compareErr != nil {

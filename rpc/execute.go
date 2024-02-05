@@ -43,7 +43,7 @@ func Execute(block uint64, rec *RequestAndResults, archive state.NonCommittableS
 		}
 
 		if timestamp == 0 {
-			return nil
+			timestamp = 10000
 		}
 
 		evm := newEvmExecutor(block, archive, cfg, rec.Query.Params[0].(map[string]interface{}), timestamp)

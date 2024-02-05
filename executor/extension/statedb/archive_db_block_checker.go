@@ -6,6 +6,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	umath "github.com/Fantom-foundation/Aida/utils/math"
 )
@@ -13,6 +14,7 @@ import (
 type archiveBlockChecker[T any] struct {
 	extension.NilExtension[T]
 	cfg *utils.Config
+	log logger.Logger
 }
 
 // MakeArchiveBlockChecker creates an executor.Extension which checks if given
@@ -20,6 +22,7 @@ type archiveBlockChecker[T any] struct {
 func MakeArchiveBlockChecker[T any](cfg *utils.Config) executor.Extension[T] {
 	return &archiveBlockChecker[T]{
 		cfg: cfg,
+		log: logger.NewLogger(cfg.LogLevel, "archive-block-checker"),
 	}
 }
 
@@ -61,7 +64,9 @@ func (c *archiveBlockChecker[T]) PreRun(executor.State[T], *executor.Context) er
 	}
 
 	if c.cfg.Last > lastBlock {
-		return fmt.Errorf("last block of given archive-db (%v) is smaller than given last block (%v), please choose a block in range", lastBlock, c.cfg.Last)
+		c.cfg.Last = lastBlock
+		c.log.Warningf("given last block (%v) is greater than last block of given archive-db (%v)", c.cfg.Last, lastBlock)
+		c.log.Warningf("setting last block to %v", lastBlock)
 	}
 
 	return nil
