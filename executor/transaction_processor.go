@@ -231,10 +231,8 @@ func (s *TxProcessor) processPseudoTx(ws txcontext.WorldState, db state.VmStateD
 // prepareBlockCtx creates a block context for evm call from given BlockEnvironment.
 func prepareBlockCtx(inputEnv txcontext.BlockEnvironment, hashError *error) *vm.BlockContext {
 	getHash := func(num uint64) common.Hash {
-		h := inputEnv.GetBlockHash(num)
-		if h == (common.Hash{}) {
-			*hashError = fmt.Errorf("hash for block %v was not found", num)
-		}
+		var h common.Hash
+		h, *hashError = inputEnv.GetBlockHash(num)
 		return h
 	}
 
