@@ -32,6 +32,7 @@ type rpcRequestProvider struct {
 
 func (r rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc.RequestAndResults]) error {
 	var blockNumber int
+	var number int
 
 	for r.iter.Next() {
 		if r.iter.Error() != nil {
@@ -69,7 +70,10 @@ func (r rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc.Request
 		if err := consumer(TransactionInfo[*rpc.RequestAndResults]{blockNumber, 0, req}); err != nil {
 			return err
 		}
+		number++
 	}
+
+	fmt.Println(number)
 
 	return nil
 }
