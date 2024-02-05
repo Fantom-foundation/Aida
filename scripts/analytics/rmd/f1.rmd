@@ -21,7 +21,10 @@ first <- Metadata %>% filter(key == "First")
 last <- Metadata %>% filter(key == "Last")
 
 # load block and transaction tables into data frames and exclude lachesis transition block
-TxData <- dbReadTable(con, 'stats') %>% filter(start >= as.integer(first$value) & end <= as.integer(last$value))
+TxData <- dbReadTable(con, 'stats') %>% 
+	filter(start >= as.integer(first$value) & end <= as.integer(last$value)) %>%
+	mutate(total_disk = as.numeric(live_disk) + as.numeric(archive_disk))
+
 
 # close database connection
 dbDisconnect(con)
@@ -174,9 +177,13 @@ TxData %>% mutate(memory = as.numeric(memory) * 1e-9, start = as.numeric(start) 
    labs(x="Block Height", y="Ram Consumption", title="Memory Usage")
 ```
 
-Max Disk Usage throughout the run is **`r format(as.numeric(maxLiveDisk$live_disk) * 1e-9, big.mark=",", digit=3)`** GB at block height **`r format(maxLiveDisk$start, big.mark=",")`**
+Max Live Disk Usage throughout the run is **`r format(as.numeric(maxLiveDisk$live_disk) * 1e-9, big.mark=",", digit=3)`** GB at block height **`r format(maxLiveDisk$start, big.mark=",")`**
 
-```{r, echo=FALSE, message=FALSE, fig.width=12, fig.height=8}
+`r if(isArchiveActive){
+paste0("Max Archive Disk Usage throughout the run is **", format(as.numeric(maxArchiveDisk$archive_disk) * 1e-9, big.mark=",", digit=3), "** GB at block height **", format(maxArchiveDisk$start, big.mark=","), "**.")
+}`
+
+```{r, echo=FALSE, message=FALSE, fig.width=12, fig.height=8, eval=!isArchiveActive}
 TxData %>% mutate(live_disk = as.numeric(live_disk) * 1e-9, start = as.numeric(start) * 1e-6) %>%
    ggplot(aes(x = start, y = live_disk)) +
    geom_point(alpha=0.3) +
@@ -184,4 +191,17 @@ TxData %>% mutate(live_disk = as.numeric(live_disk) * 1e-9, start = as.numeric(s
    scale_y_continuous(labels = scales::unit_format(unit="GB")) +
    labs(x="Block Height", y="Disk Consumption", title="Disk Usage")
 ```
+
+```{r, echo=FALSE, message=FALSE, fig.width=12, fig.height=8, eval=isArchiveActive}
+ArchivedTxData <- TxData %>%
+   mutate(live_disk = as.numeric(live_disk) * 1e-9, archive_disk = as.numeric(archive_disk) * 1e-9, total_disk = as.numeric(total_disk) * 1e-9, start = as.numeric(start) * 1e-6)
+
+ggplot() +
+   geom_point(data = ArchivedTxData, aes(x = start, y = live_disk, color="Live"), alpha=0.3) +
+   geom_point(data = ArchivedTxData, aes(x = start, y = archive_disk, color="Archive"), alpha=0.3) +
+   scale_x_continuous(labels = scales::unit_format(unit="M")) +
+   scale_y_continuous(labels = scales::unit_format(unit="GB")) +
+   labs(x="Block Height", y="Disk Consumption", title="Disk Usage")
+```
+
 
