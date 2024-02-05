@@ -8,7 +8,6 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
-	substate "github.com/Fantom-foundation/Substate"
 )
 
 const (
@@ -35,10 +34,15 @@ func makeProgressLogger[T any](cfg *utils.Config, reportFrequency time.Duration,
 	return &progressLogger[T]{
 		cfg:             cfg,
 		log:             logger,
-		inputCh:         make(chan executor.State[T], cfg.Workers*10),
+		inputCh:         make(chan txProgressInfo, cfg.Workers*10),
 		wg:              new(sync.WaitGroup),
 		reportFrequency: reportFrequency,
 	}
+}
+
+type txProgressInfo struct {
+	block   int
+	gasUsed uint64
 }
 
 // progressLogger logs human-readable information about progress
@@ -47,7 +51,7 @@ type progressLogger[T any] struct {
 	extension.NilExtension[T]
 	cfg             *utils.Config
 	log             logger.Logger
-	inputCh         chan executor.State[T]
+	inputCh         chan txProgressInfo
 	wg              *sync.WaitGroup
 	reportFrequency time.Duration
 }
@@ -69,8 +73,8 @@ func (l *progressLogger[T]) PostRun(executor.State[T], *executor.Context, error)
 	return nil
 }
 
-func (l *progressLogger[T]) PostTransaction(state executor.State[T], _ *executor.Context) error {
-	l.inputCh <- state
+func (l *progressLogger[T]) PostTransaction(state executor.State[T], ctx *executor.Context) error {
+	l.inputCh <- txProgressInfo{state.Block, ctx.ExecutionResult.GetGasUsed()}
 	return nil
 }
 
@@ -98,7 +102,7 @@ func (l *progressLogger[T]) startReport(reportFrequency time.Duration) {
 	}()
 
 	var (
-		in executor.State[T]
+		in txProgressInfo
 		ok bool
 	)
 	for {
@@ -108,18 +112,15 @@ func (l *progressLogger[T]) startReport(reportFrequency time.Duration) {
 				return
 			}
 
-			if in.Block > currentBlock {
-				currentBlock = in.Block
+			if in.block > currentBlock {
+				currentBlock = in.block
 			}
 
 			currentIntervalTx++
 			totalTx++
 
-			var content any = in.Data
-			if substate, ok := content.(*substate.Substate); ok {
-				currentIntervalGas += substate.Result.GasUsed
-				totalGas += substate.Result.GasUsed
-			}
+			currentIntervalGas += in.gasUsed
+			totalGas += in.gasUsed
 
 		case now := <-ticker.C:
 			// skip if no data are present

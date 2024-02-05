@@ -171,8 +171,8 @@ func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st
 		txHash    = common.HexToHash(fmt.Sprintf("0x%016d%016d", block, tx))
 		inputEnv  = st.GetBlockEnvironment()
 		msg       = st.GetMessage()
-		validate  = s.cfg.ValidateTxState
 		hashError error
+		validate  = false
 	)
 
 	// prepare tx
@@ -191,14 +191,12 @@ func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st
 		db.RevertToSnapshot(snapshot)
 		finalError = errors.Join(fmt.Errorf("block: %v transaction: %v", block, tx), err)
 		// discontinue output alloc validation on error
-		validate = false
 	}
 
 	// check whether getHash func produced an error
 	if hashError != nil {
 		finalError = errors.Join(finalError, hashError)
 		// discontinue output alloc validation on error
-		validate = false
 	}
 
 	// if validation is enabled we create result and pass it to the data

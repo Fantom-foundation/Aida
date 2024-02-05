@@ -49,12 +49,12 @@ type substateProcessInfo struct {
 }
 
 // PostTransaction increments number of transactions and saves gas used in last substate.
-func (t *blockProgressTracker) PostTransaction(state executor.State[txcontext.TxContext], _ *executor.Context) error {
+func (t *blockProgressTracker) PostTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
 	t.overallInfo.numTransactions++
-	t.overallInfo.gas += state.Data.GetReceipt().GetGasUsed()
+	t.overallInfo.gas += ctx.ExecutionResult.GetGasUsed()
 
 	return nil
 }
