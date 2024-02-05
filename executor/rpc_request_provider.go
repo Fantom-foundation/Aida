@@ -34,6 +34,11 @@ func (r rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc.Request
 	var blockNumber int
 	var number int
 
+	fmt.Println("from")
+	fmt.Println(from)
+	fmt.Println("to")
+	fmt.Println(to)
+
 	for r.iter.Next() {
 		if r.iter.Error() != nil {
 			return fmt.Errorf("iterator returned error; %v", r.iter.Error())
@@ -47,7 +52,7 @@ func (r rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc.Request
 
 		// get logs is not yet implemented, skip these for now
 		if req.Query.MethodBase == "getLogs" {
-			return nil
+			continue
 		}
 
 		if req.Response != nil {
@@ -58,10 +63,6 @@ func (r rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc.Request
 
 		blockNumber = 10
 
-		fmt.Println("from")
-		fmt.Println(from)
-		fmt.Println("to")
-		fmt.Println(to)
 		// are we skipping requests?
 		if blockNumber < from {
 			fmt.Println("skip")
@@ -75,12 +76,14 @@ func (r rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc.Request
 		}
 
 		if err := consumer(TransactionInfo[*rpc.RequestAndResults]{blockNumber, 0, req}); err != nil {
+			fmt.Println("err")
 			fmt.Println(err)
 			return err
 		}
 		number++
 	}
 
+	fmt.Println("number")
 	fmt.Println(number)
 
 	return nil
