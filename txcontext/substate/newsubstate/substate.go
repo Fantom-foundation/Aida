@@ -16,6 +16,10 @@ type substateData struct {
 	*substate.Substate
 }
 
+func (t *substateData) GetStateHash() common.Hash {
+	return common.Hash{}
+}
+
 func (t *substateData) GetInputState() txcontext.WorldState {
 	return NewWorldState(t.InputAlloc)
 }
