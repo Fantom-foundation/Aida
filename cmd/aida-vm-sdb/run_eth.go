@@ -116,7 +116,7 @@ func runEth(
 	if stateDb == nil {
 		extensionList = append(
 			extensionList,
-			statedb.NewTemporaryEthStatePrepper(cfg),
+			statedb.MakeTemporaryEthStatePrepper(cfg),
 			statedb.MakeLiveDbBlockChecker[txcontext.TxContext](cfg),
 			logger.MakeDbLogger[txcontext.TxContext](cfg),
 			logger.MakeErrorLogger[txcontext.TxContext](cfg),

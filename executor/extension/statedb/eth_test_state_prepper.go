@@ -15,10 +15,14 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func NewTemporaryEthStatePrepper(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
+func MakeTemporaryEthStatePrepper(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
+	return makeTemporaryEthStatePrepper(logger.NewLogger(cfg.LogLevel, "EthStatePrepper"), cfg)
+}
+
+func makeTemporaryEthStatePrepper(log logger.Logger, cfg *utils.Config) *ethStatePrepper {
 	return &ethStatePrepper{
 		cfg: cfg,
-		log: logger.NewLogger(cfg.LogLevel, "EthStatePrepper"),
+		log: log,
 	}
 }
 
