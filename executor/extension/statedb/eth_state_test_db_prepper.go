@@ -29,6 +29,13 @@ type ethStateTestDbPrepper struct {
 }
 
 func (e *ethStateTestDbPrepper) PreTransaction(st executor.State[txcontext.TxContext], ctx *executor.Context) error {
+	if ctx.State != nil {
+		err := ctx.State.Close()
+		if err != nil {
+			return fmt.Errorf("cannot close db %v; %v", ctx.StateDbPath, err)
+		}
+	}
+
 	err := os.RemoveAll(ctx.StateDbPath)
 	if err != nil {
 		return fmt.Errorf("cannot remove db %v; %v", ctx.StateDbPath, err)
