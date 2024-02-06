@@ -75,7 +75,7 @@ var RunEthTestsCmd = cli.Command{
 		//&utils.KeepDbFlag,
 		////&utils.MaxNumTransactionsFlag,
 		//&utils.ValidateTxStateFlag,
-		//&utils.ValidateFlag,
+		&utils.ValidateFlag,
 		//&logger.LogLevelFlag,
 		//&utils.NoHeartbeatLoggingFlag,
 		//&utils.TrackProgressFlag,
