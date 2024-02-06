@@ -68,7 +68,7 @@ var KeywordBlocks = map[ChainID]map[string]uint64{
 	MainnetChainID: {
 		"zero":        0,
 		"opera":       4_564_026,
-		"iistanbul":   0, // todo istanbul block for mainnet?
+		"istanbul":    0, // todo istanbul block for mainnet?
 		"muirglacier": 0, // todo muirglacier block for mainnet?
 		"berlin":      37_455_223,
 		"london":      37_534_833,

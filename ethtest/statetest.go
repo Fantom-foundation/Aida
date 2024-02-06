@@ -7,6 +7,7 @@ import (
 	"io"
 	"math/big"
 	"os"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -19,6 +20,8 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 )
+
+const testDefaultValue = 11111
 
 // OpenStateTests opens
 func OpenStateTests(path string) ([]*StJSON, error) {
@@ -82,8 +85,30 @@ type StJSON struct {
 	Post        map[string][]stPostState `json:"post"`
 }
 
-func CreateTestData(t *testing.T) txcontext.TxContext {
-	bInt := new(big.Int).SetUint64(1)
+func CreateTestDataFile(t *testing.T) string {
+	path := t.TempDir()
+	pathFile := path + "/test.json"
+	stData := CreateTestData(t)
+
+	jsonData, err := json.Marshal(stData)
+	if err != nil {
+		t.Errorf("Marshal() error = %v, wantErr %v", err, nil)
+	}
+
+	jsonStr := "{ \"test\" : " + string(jsonData) + "}"
+	// TODO rewrite, needed because json.Marshal doesn't convert big.Int to hex string
+	jsonStr = strings.ReplaceAll(jsonStr, strconv.Itoa(testDefaultValue), "\"0x1\"")
+	jsonData = []byte(jsonStr)
+	// Initialize pathFile
+	err = os.WriteFile(pathFile, jsonData, 0644)
+	if err != nil {
+		t.Errorf("WriteFile() error = %v, wantErr %v", err, nil)
+	}
+	return pathFile
+}
+
+func CreateTestData(t *testing.T) *StJSON {
+	bInt := new(big.Int).SetUint64(testDefaultValue)
 	return &StJSON{
 		TestLabel:   "TestLabel",
 		UsedNetwork: "TestNetwork",
@@ -118,7 +143,7 @@ func CreateTestData(t *testing.T) txcontext.TxContext {
 			PrivateKey:           hexutil.MustDecode("0x45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8"),
 		},
 		Post: map[string][]stPostState{
-			"TestNetwork": {
+			"Istanbul": {
 				{
 					RootHash: common.HexToHash("0x20"),
 					LogsHash: common.HexToHash("0x30"),
@@ -126,6 +151,7 @@ func CreateTestData(t *testing.T) txcontext.TxContext {
 				},
 			},
 		},
+		//Out: hexutil.Bytes("0x0"),
 	}
 }
 

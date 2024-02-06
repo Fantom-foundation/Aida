@@ -15,10 +15,11 @@ import (
 )
 
 var RunEthTestsCmd = cli.Command{
-	Action:    RunEth,
-	Name:      "geth",
+	Action:    RunEthereumTest,
+	Name:      "ethereum-test",
 	Usage:     "Execute ethereum tests",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
+	Aliases:   []string{"ethtest"},
 	Flags: []cli.Flag{
 		//// AidaDb
 		//&utils.AidaDbFlag,
@@ -86,8 +87,8 @@ var RunEthTestsCmd = cli.Command{
 The aida-vm-sdb geth-state-tests command requires one argument: <pathToJsonTest or pathToDirWithJsonTests>`,
 }
 
-// RunEth performs sequential block processing on a StateDb
-func RunEth(ctx *cli.Context) error {
+// RunEthereumTest performs sequential block processing on a StateDb
+func RunEthereumTest(ctx *cli.Context) error {
 	cfg, err := utils.NewConfig(ctx, utils.PathArg)
 	if err != nil {
 		return err
