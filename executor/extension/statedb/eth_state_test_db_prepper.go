@@ -29,18 +29,7 @@ type ethStateTestDbPrepper struct {
 }
 
 func (e *ethStateTestDbPrepper) PreTransaction(st executor.State[txcontext.TxContext], ctx *executor.Context) error {
-	if ctx.State != nil {
-		err := ctx.State.Close()
-		if err != nil {
-			return fmt.Errorf("cannot close db %v; %v", ctx.StateDbPath, err)
-		}
-	}
-
-	err := os.RemoveAll(ctx.StateDbPath)
-	if err != nil {
-		return fmt.Errorf("cannot remove db %v; %v", ctx.StateDbPath, err)
-	}
-
+	var err error
 	ctx.State, ctx.StateDbPath, err = utils.PrepareStateDB(e.cfg)
 	if err != nil {
 		return fmt.Errorf("failed to prepare statedb; %v", err)
@@ -51,6 +40,22 @@ func (e *ethStateTestDbPrepper) PreTransaction(st executor.State[txcontext.TxCon
 	err = primeCtx.PrimeStateDB(st.Data.GetInputState(), ctx.State)
 	if err != nil {
 		return err
+	}
+
+	return nil
+}
+
+func (e ethStateTestDbPrepper) PostTransaction(_ executor.State[txcontext.TxContext], ctx *executor.Context) error {
+	if ctx.State != nil {
+		err := ctx.State.Close()
+		if err != nil {
+			return fmt.Errorf("cannot close db %v; %v", ctx.StateDbPath, err)
+		}
+	}
+
+	err := os.RemoveAll(ctx.StateDbPath)
+	if err != nil {
+		return fmt.Errorf("cannot remove db %v; %v", ctx.StateDbPath, err)
 	}
 
 	return nil

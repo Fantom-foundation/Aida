@@ -96,7 +96,16 @@ func CreateTestData(t *testing.T) txcontext.TxContext {
 			Timestamp:   &BigInt{*bInt},
 			BaseFee:     &BigInt{*bInt},
 		},
-		Pre: make(core.GenesisAlloc),
+		Pre: core.GenesisAlloc{
+			common.HexToAddress("0x1"): core.GenesisAccount{
+				Balance: big.NewInt(1000),
+				Nonce:   1,
+			},
+			common.HexToAddress("0x2"): core.GenesisAccount{
+				Balance: big.NewInt(2000),
+				Nonce:   2,
+			},
+		},
 		Tx: stTransaction{
 			GasPrice:             &BigInt{*bInt},
 			MaxFeePerGas:         &BigInt{*bInt},

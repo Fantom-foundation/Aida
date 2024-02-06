@@ -6,6 +6,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/validator"
+	log "github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -28,8 +29,8 @@ var RunEthTestsCmd = cli.Command{
 		&utils.StateDbVariantFlag,
 		&utils.ContinueOnFailureFlag,
 		//&utils.StateDbSrcFlag,
-		//&utils.DbTmpFlag,
-		//&utils.StateDbLoggingFlag,
+		&utils.DbTmpFlag,
+		&utils.StateDbLoggingFlag,
 		//&utils.ValidateStateHashesFlag,
 		//
 		//// ArchiveDb
@@ -47,20 +48,20 @@ var RunEthTestsCmd = cli.Command{
 		&utils.VmImplementation,
 		//
 		//// Profiling
-		//&utils.CpuProfileFlag,
-		//&utils.CpuProfilePerIntervalFlag,
-		//&utils.DiagnosticServerFlag,
-		//&utils.MemoryBreakdownFlag,
-		//&utils.MemoryProfileFlag,
-		//&utils.RandomSeedFlag,
-		//&utils.PrimeThresholdFlag,
-		//&utils.ProfileFlag,
-		//&utils.ProfileDepthFlag,
-		//&utils.ProfileFileFlag,
-		//&utils.ProfileSqlite3Flag,
-		//&utils.ProfileIntervalFlag,
-		//&utils.ProfileDBFlag,
-		//&utils.ProfileBlocksFlag,
+		&utils.CpuProfileFlag,
+		&utils.CpuProfilePerIntervalFlag,
+		&utils.DiagnosticServerFlag,
+		&utils.MemoryBreakdownFlag,
+		&utils.MemoryProfileFlag,
+		&utils.RandomSeedFlag,
+		&utils.PrimeThresholdFlag,
+		&utils.ProfileFlag,
+		&utils.ProfileDepthFlag,
+		&utils.ProfileFileFlag,
+		&utils.ProfileSqlite3Flag,
+		&utils.ProfileIntervalFlag,
+		&utils.ProfileDBFlag,
+		&utils.ProfileBlocksFlag,
 		//
 		//// Priming
 		//&utils.RandomizePrimingFlag,
@@ -76,10 +77,10 @@ var RunEthTestsCmd = cli.Command{
 		////&utils.MaxNumTransactionsFlag,
 		//&utils.ValidateTxStateFlag,
 		&utils.ValidateFlag,
-		//&logger.LogLevelFlag,
+		&log.LogLevelFlag,
 		//&utils.NoHeartbeatLoggingFlag,
-		//&utils.TrackProgressFlag,
-		//&utils.ErrorLoggingFlag,
+		&utils.TrackProgressFlag,
+		&utils.ErrorLoggingFlag,
 	},
 	Description: `
 The aida-vm-sdb geth-state-tests command requires one argument: <pathToJsonTest or pathToDirWithJsonTests>`,

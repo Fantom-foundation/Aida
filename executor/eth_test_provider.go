@@ -6,12 +6,6 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
-// blockHeader is env?
-// []transactions is message
-
-// geth/tests/block_test.go for blockchain tests
-// geth/tests/block_test_util.go for unmarshalling
-
 func NewEthStateTestProvider(cfg *utils.Config) Provider[txcontext.TxContext] {
 	return ethTestProvider{cfg}
 }
