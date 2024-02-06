@@ -112,6 +112,7 @@ func runEth(
 		profiler.MakeCpuProfiler[txcontext.TxContext](cfg),
 		profiler.MakeDiagnosticServer[txcontext.TxContext](cfg),
 		logger.MakeProgressLogger[txcontext.TxContext](cfg, 0),
+		logger.MakeErrorLogger[txcontext.TxContext](cfg),
 	}
 
 	if stateDb == nil {

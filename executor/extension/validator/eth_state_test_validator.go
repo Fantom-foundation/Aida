@@ -12,6 +12,9 @@ import (
 )
 
 func MakeEthStateTestValidator(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
+	if !cfg.Validate {
+		return extension.NilExtension[txcontext.TxContext]{}
+	}
 	return makeEthStateTestValidator(cfg, logger.NewLogger(cfg.LogLevel, "EthStateTestValidator"))
 }
 
