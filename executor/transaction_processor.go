@@ -6,6 +6,7 @@ import (
 	"math/big"
 	"sync/atomic"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -76,6 +77,7 @@ type TxProcessor struct {
 	numErrors *atomic.Int32 // transactions can be processed in parallel, so this needs to be thread safe
 	vmCfg     vm.Config
 	chainCfg  *params.ChainConfig
+	log       logger.Logger
 }
 
 func MakeTxProcessor(cfg *utils.Config) *TxProcessor {
@@ -100,6 +102,7 @@ func MakeTxProcessor(cfg *utils.Config) *TxProcessor {
 		numErrors: new(atomic.Int32),
 		vmCfg:     vmCfg,
 		chainCfg:  utils.GetChainConfig(cfg.ChainID),
+		log:       logger.NewLogger(cfg.LogLevel, "TxProcessor"),
 	}
 }
 
@@ -192,6 +195,11 @@ func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st
 		finalError = errors.Join(fmt.Errorf("block: %v transaction: %v", block, tx), err)
 		// discontinue output alloc validation on error
 		validate = false
+	}
+
+	// inform about failing transaction
+	if msgResult.Failed() {
+		s.log.Debugf("Block: %v\nTransaction %v\n Status: Failed", block, tx)
 	}
 
 	// check whether getHash func produced an error
