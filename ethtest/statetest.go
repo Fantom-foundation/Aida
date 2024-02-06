@@ -88,7 +88,7 @@ func CreateTestData(t *testing.T) txcontext.TxContext {
 		TestLabel:   "TestLabel",
 		UsedNetwork: "TestNetwork",
 		Env: stEnv{
-			blockNumber: 0,
+			blockNumber: 1,
 			Coinbase:    common.Address{},
 			Difficulty:  &BigInt{*bInt},
 			GasLimit:    &BigInt{*bInt},

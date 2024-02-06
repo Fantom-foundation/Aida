@@ -5,6 +5,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension/logger"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
+	"github.com/Fantom-foundation/Aida/executor/extension/validator"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -116,12 +117,18 @@ func runEth(
 	if stateDb == nil {
 		extensionList = append(
 			extensionList,
-			statedb.MakeTemporaryEthStateManager(cfg),
+			statedb.MakeEthStateTestDbPrepper(cfg),
 			statedb.MakeLiveDbBlockChecker[txcontext.TxContext](cfg),
 			logger.MakeDbLogger[txcontext.TxContext](cfg),
 			logger.MakeErrorLogger[txcontext.TxContext](cfg),
 		)
 	}
+
+	extensionList = append(
+		extensionList,
+		validator.MakeEthStateTestValidator(cfg),
+		statedb.MakeEthStateTestBlockEventEmitter(),
+	)
 
 	extensionList = append(extensionList, extra...)
 
