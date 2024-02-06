@@ -1,4 +1,4 @@
-package statedb
+package validator
 
 import (
 	"fmt"
@@ -38,7 +38,7 @@ func TestEthStatePrepper_PostTransactionLogsErrorAndDoesNotReturnIt(t *testing.T
 		log.EXPECT().Error(expectedErr),
 	)
 
-	ext := makeTemporaryEthStateManager(log, cfg)
+	ext := makeEthStateTestValidator(cfg, log)
 
 	err := ext.PostTransaction(st, ctx)
 	if err != nil {
@@ -66,7 +66,7 @@ func TestEthStatePrepper_PostTransactionLogsPass(t *testing.T) {
 		log.EXPECT().Noticef("%v - (%v) PASS\nblock: %v; tx: %v\nhash:%v", "TestLabel", "TestNetwork", 1, 1, want.Hex()),
 	)
 
-	ext := makeTemporaryEthStateManager(log, cfg)
+	ext := makeEthStateTestValidator(cfg, log)
 
 	err := ext.PostTransaction(st, ctx)
 	if err != nil {
@@ -92,7 +92,7 @@ func TestEthStatePrepper_PostTransactionReturnsError(t *testing.T) {
 
 	db.EXPECT().GetHash().Return(got)
 
-	ext := makeTemporaryEthStateManager(log, cfg)
+	ext := makeEthStateTestValidator(cfg, log)
 
 	err := ext.PostTransaction(st, ctx)
 	if err == nil {
