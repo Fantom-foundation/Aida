@@ -8,6 +8,7 @@ import (
 	"math/big"
 	"os"
 	"strings"
+	"testing"
 
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -79,6 +80,45 @@ type StJSON struct {
 	Tx          stTransaction            `json:"transaction"`
 	Out         hexutil.Bytes            `json:"out"`
 	Post        map[string][]stPostState `json:"post"`
+}
+
+func CreateTestData(t *testing.T) txcontext.TxContext {
+	bInt := new(big.Int).SetUint64(1)
+	return &StJSON{
+		TestLabel:   "TestLabel",
+		UsedNetwork: "TestNetwork",
+		Env: stEnv{
+			blockNumber: 0,
+			Coinbase:    common.Address{},
+			Difficulty:  &BigInt{*bInt},
+			GasLimit:    &BigInt{*bInt},
+			Number:      &BigInt{*bInt},
+			Timestamp:   &BigInt{*bInt},
+			BaseFee:     &BigInt{*bInt},
+		},
+		Pre: make(core.GenesisAlloc),
+		Tx: stTransaction{
+			GasPrice:             &BigInt{*bInt},
+			MaxFeePerGas:         &BigInt{*bInt},
+			MaxPriorityFeePerGas: &BigInt{*bInt},
+			Nonce:                &BigInt{*bInt},
+			To:                   "0x1",
+			Data:                 []string{"data0", "data1"},
+			AccessLists:          make([]*types.AccessList, 0),
+			GasLimit:             []*BigInt{{*bInt}},
+			Value:                []string{"value0", "value2"},
+			PrivateKey:           hexutil.MustDecode("0x10"),
+		},
+		Post: map[string][]stPostState{
+			"test": {
+				{
+					RootHash: common.HexToHash("0x2"),
+					LogsHash: common.HexToHash("0x3"),
+					indexes:  Index{},
+				},
+			},
+		},
+	}
 }
 
 func (s *StJSON) GetStateHash() common.Hash {
