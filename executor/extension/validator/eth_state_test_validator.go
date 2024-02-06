@@ -61,7 +61,6 @@ func (e *ethStateTestValidator) PostTransaction(s executor.State[txcontext.TxCon
 	}
 
 	e.overall++
-	e.log.Noticef("%v/%v tests passed.", e.passed, e.overall)
 	return nil
 }
 
