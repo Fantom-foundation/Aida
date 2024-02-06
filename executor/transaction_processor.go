@@ -172,7 +172,6 @@ func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st
 		inputEnv  = st.GetBlockEnvironment()
 		msg       = st.GetMessage()
 		hashError error
-		validate  = false
 	)
 
 	// prepare tx
@@ -190,21 +189,16 @@ func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st
 		// if transaction fails, revert to the first snapshot.
 		db.RevertToSnapshot(snapshot)
 		finalError = errors.Join(fmt.Errorf("block: %v transaction: %v", block, tx), err)
-		// discontinue output alloc validation on error
 	}
 
 	// check whether getHash func produced an error
 	if hashError != nil {
 		finalError = errors.Join(finalError, hashError)
-		// discontinue output alloc validation on error
 	}
 
-	// if validation is enabled we create result and pass it to the data
-	if validate {
-		blockHash := common.HexToHash(fmt.Sprintf("0x%016d", block))
-		res = newExecutionResult(db.GetLogs(txHash, blockHash), msg, msgResult, evm.TxContext.Origin)
-	}
-
+	// if no prior error, create result and pass it to the data.
+	blockHash := common.HexToHash(fmt.Sprintf("0x%016d", block))
+	res = newExecutionResult(db.GetLogs(txHash, blockHash), msg, msgResult, evm.TxContext.Origin)
 	return
 }
 
@@ -253,24 +247,32 @@ func prepareBlockCtx(inputEnv txcontext.BlockEnvironment, hashError *error) *vm.
 }
 
 func newExecutionResult(logs []*types.Log, msg core.Message, msgResult *evmcore.ExecutionResult, origin common.Address) *executionResult {
-	var contract common.Address
+	var (
+		contract common.Address
+		gasUsed  uint64
+		status   uint64
+	)
+
 	if to := msg.To(); to == nil {
 		contract = crypto.CreateAddress(origin, msg.Nonce())
 	}
-	res := &executionResult{
+
+	if msgResult != nil {
+		gasUsed = msgResult.UsedGas
+		if msgResult.Failed() {
+			status = types.ReceiptStatusFailed
+		} else {
+			status = types.ReceiptStatusSuccessful
+		}
+	}
+
+	return &executionResult{
 		contractAddress: contract,
-		gasUsed:         msgResult.UsedGas,
+		gasUsed:         gasUsed,
 		logs:            logs,
 		bloom:           types.BytesToBloom(types.LogsBloom(logs)),
+		status:          status,
 	}
-
-	if msgResult.Failed() {
-		res.status = types.ReceiptStatusFailed
-	} else {
-		res.status = types.ReceiptStatusSuccessful
-	}
-
-	return res
 }
 
 func newPseudoExecutionResult() txcontext.Receipt {

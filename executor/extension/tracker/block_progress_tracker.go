@@ -54,7 +54,9 @@ func (t *blockProgressTracker) PostTransaction(state executor.State[txcontext.Tx
 	defer t.lock.Unlock()
 
 	t.overallInfo.numTransactions++
-	t.overallInfo.gas += ctx.ExecutionResult.GetGasUsed()
+	if ctx.ExecutionResult != nil {
+		t.overallInfo.gas += ctx.ExecutionResult.GetGasUsed()
+	}
 
 	return nil
 }

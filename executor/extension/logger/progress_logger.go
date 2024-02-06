@@ -40,6 +40,7 @@ func makeProgressLogger[T any](cfg *utils.Config, reportFrequency time.Duration,
 	}
 }
 
+// txProgressInfo keeps information to be reported from a transaction.
 type txProgressInfo struct {
 	block   int
 	gasUsed uint64
@@ -74,7 +75,11 @@ func (l *progressLogger[T]) PostRun(executor.State[T], *executor.Context, error)
 }
 
 func (l *progressLogger[T]) PostTransaction(state executor.State[T], ctx *executor.Context) error {
-	l.inputCh <- txProgressInfo{state.Block, ctx.ExecutionResult.GetGasUsed()}
+	var gas uint64
+	if ctx.ExecutionResult != nil {
+		gas = ctx.ExecutionResult.GetGasUsed()
+	}
+	l.inputCh <- txProgressInfo{block: state.Block, gasUsed: gas}
 	return nil
 }
 
