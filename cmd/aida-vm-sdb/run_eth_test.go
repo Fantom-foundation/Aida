@@ -31,22 +31,14 @@ func TestVmSdb_Eth_AllDbEventsAreIssuedInOrder(t *testing.T) {
 
 	data := ethtest.CreateTestData(t)
 
-	// Simulate the execution of three transactions in two blocks.
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[txcontext.TxContext]) error {
-			// Block 2
 			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 1, Transaction: 1, Data: data})
-			//consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 1, Transaction: 2, Data: ethtest.CreateTestData(t)})
-			//// Block 3
-			//consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 1, Transaction: 3, Data: ethtest.CreateTestData(t)})
-			//// Block 4
-			//consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 1, Transaction: 4, Data: ethtest.CreateTestData(t)})
+			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 1, Transaction: 2, Data: data})
 			return nil
 		})
 
-	// The expectation is that all of those blocks and transactions
-	// are properly opened, prepared, executed, and closed.
 	gomock.InOrder(
 		// Tx 1
 		db.EXPECT().BeginBlock(uint64(1)),
@@ -60,40 +52,20 @@ func TestVmSdb_Eth_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		db.EXPECT().RevertToSnapshot(15),
 		db.EXPECT().EndTransaction(),
 		db.EXPECT().EndBlock(),
-		// Tx 2
-		//db.EXPECT().BeginBlock(uint64(1)),
-		//db.EXPECT().BeginTransaction(uint32(2)),
-		//db.EXPECT().Prepare(gomock.Any(), 2),
-		//db.EXPECT().Snapshot().Return(17),
-		//db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
-		//db.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
-		//db.EXPECT().RevertToSnapshot(17),
-		//db.EXPECT().EndTransaction(),
-		//db.EXPECT().EndBlock(),
-		//// Tx 3
-		//db.EXPECT().BeginBlock(uint64(1)),
-		//db.EXPECT().BeginTransaction(uint32(3)),
-		//db.EXPECT().Prepare(gomock.Any(), 1),
-		//db.EXPECT().Snapshot().Return(19),
-		//db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
-		//db.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
-		//db.EXPECT().RevertToSnapshot(19),
-		//db.EXPECT().EndTransaction(),
-		//db.EXPECT().EndBlock(),
-		//// Tx 4
-		//db.EXPECT().BeginBlock(uint64(1)),
-		//db.EXPECT().BeginTransaction(uint32(4)),
-		//db.EXPECT().Prepare(gomock.Any(), 1),
-		//db.EXPECT().Snapshot().Return(25),
-		//db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
-		//db.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
-		//db.EXPECT().RevertToSnapshot(25),
-		//db.EXPECT().EndTransaction(),
-		//db.EXPECT().EndBlock(),
+
+		db.EXPECT().BeginBlock(uint64(1)),
+		db.EXPECT().BeginTransaction(uint32(2)),
+		db.EXPECT().Prepare(gomock.Any(), 2),
+		db.EXPECT().Snapshot().Return(15),
+		db.EXPECT().GetNonce(data.GetMessage().From()).Return(uint64(1)),
+		db.EXPECT().GetCodeHash(data.GetMessage().From()).Return(common.HexToHash("0x0")),
+		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
+		db.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
+		db.EXPECT().RevertToSnapshot(15),
+		db.EXPECT().EndTransaction(),
+		db.EXPECT().EndBlock(),
 	)
 
-	// since we are working with mock transactions, run logically fails on 'intrinsic gas too low'
-	// since this is a test that tests orded of the db events, we can ignore this error
 	err := runEth(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
 	if err != nil {
 		errors.Unwrap(err)
