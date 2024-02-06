@@ -61,13 +61,45 @@ colorize <- function(x, color) {
 fmt <- function(x, scale, unit, d) {
 	paste(format(as.numeric(x) * scale, digit=d, nsmall=0), unit)
 }
+
+pluralize <- function(n, word) {
+	if (n == 0) {
+		""
+	} else if (n == 1) {
+		paste(n, word)
+	} else {
+		paste0(n, " ", word, "s")
+	}
+}
+
+add_whitespace <- function(text) {
+	if (text == "") {
+		text
+	} else {
+		paste(text, " ")
+	}
+}
+
+fmt_duration <- function(seconds) {
+	paste0(
+		add_whitespace(pluralize(floor(seconds / (24*60*60)), "day")),
+		add_whitespace(pluralize(floor(seconds / (60*60)) %% 24 , "hour")),
+		add_whitespace(pluralize(floor(seconds / 60) %% 60, "minute")),
+		pluralize(seconds %% 60, "second")
+	)
+}
+
+b <- function(text) {
+	paste0("**", text, "**")
+}
+
 ```
 
-Run `r runId$value` **`r if(isRunSuccess){
-	colorize(paste0("completed successfully"), "green")
+Run `r runId$value` `r if(isRunSuccess){
+	b(colorize(paste0("completed successfully"), "green"))
 } else {
-	colorize(paste0("failed"), "red")
-}`**. The runtime is **`r format(round(as.numeric(runtime$value)/3600, 2), digit=3)`** hours.
+	b(colorize(paste0("failed"), "red"))
+}`. The runtime is `r b(fmt_duration(as.numeric(runtime$value)))`.
 
     `r if(!isRunSuccess) {
         runError$value
