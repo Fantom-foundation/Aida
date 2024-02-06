@@ -102,18 +102,17 @@ func CreateTestData(t *testing.T) txcontext.TxContext {
 			MaxFeePerGas:         &BigInt{*bInt},
 			MaxPriorityFeePerGas: &BigInt{*bInt},
 			Nonce:                &BigInt{*bInt},
-			To:                   "0x1",
-			Data:                 []string{"data0", "data1"},
-			AccessLists:          make([]*types.AccessList, 0),
+			To:                   common.HexToAddress("0x10").Hex(),
+			Data:                 []string{"0x"},
 			GasLimit:             []*BigInt{{*bInt}},
-			Value:                []string{"value0", "value2"},
-			PrivateKey:           hexutil.MustDecode("0x10"),
+			Value:                []string{"0x00"},
+			PrivateKey:           hexutil.MustDecode("0x45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8"),
 		},
 		Post: map[string][]stPostState{
-			"test": {
+			"TestNetwork": {
 				{
-					RootHash: common.HexToHash("0x2"),
-					LogsHash: common.HexToHash("0x3"),
+					RootHash: common.HexToHash("0x20"),
+					LogsHash: common.HexToHash("0x30"),
 					indexes:  Index{},
 				},
 			},
