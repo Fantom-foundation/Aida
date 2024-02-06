@@ -15,31 +15,30 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func MakeTemporaryEthStatePrepper(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
-	return makeTemporaryEthStatePrepper(logger.NewLogger(cfg.LogLevel, "EthStatePrepper"), cfg)
+func MakeTemporaryEthStateManager(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
+	return makeTemporaryEthStateManager(logger.NewLogger(cfg.LogLevel, "EthStatePrepper"), cfg)
 }
 
-func makeTemporaryEthStatePrepper(log logger.Logger, cfg *utils.Config) *ethStatePrepper {
-	return &ethStatePrepper{
+func makeTemporaryEthStateManager(log logger.Logger, cfg *utils.Config) *ethStateManager {
+	return &ethStateManager{
 		cfg: cfg,
 		log: log,
 	}
 }
 
-type ethStatePrepper struct {
+type ethStateManager struct {
 	extension.NilExtension[txcontext.TxContext]
 	cfg *utils.Config
 	log logger.Logger
 }
 
-func (e *ethStatePrepper) PreTransaction(st executor.State[txcontext.TxContext], ctx *executor.Context) error {
+func (e *ethStateManager) PreTransaction(st executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	var err error
 
 	ctx.State, ctx.StateDbPath, err = utils.PrepareStateDB(e.cfg)
 	if err != nil {
 		return fmt.Errorf("failed to prepare statedb; %v", err)
 	}
-	//}
 
 	primeCtx := utils.NewPrimeContext(e.cfg, ctx.State, e.log)
 
@@ -53,10 +52,12 @@ func (e *ethStatePrepper) PreTransaction(st executor.State[txcontext.TxContext],
 		return fmt.Errorf("pre alloc validation failed; %v", err)
 	}
 
+	ctx.State.BeginBlock(st.Data.GetBlockEnvironment().GetNumber())
+
 	return nil
 }
 
-func (e *ethStatePrepper) validate(alloc txcontext.WorldState, db state.StateDB) error {
+func (e *ethStateManager) validate(alloc txcontext.WorldState, db state.StateDB) error {
 
 	var err error
 	switch e.cfg.StateValidationMode {
@@ -74,8 +75,10 @@ func (e *ethStatePrepper) validate(alloc txcontext.WorldState, db state.StateDB)
 	return err
 }
 
-func (e *ethStatePrepper) PostTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
+func (e *ethStateManager) PostTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	defer os.RemoveAll(ctx.StateDbPath)
+
+	ctx.State.EndBlock()
 
 	want := state.Data.GetStateHash()
 	got := ctx.State.GetHash()
