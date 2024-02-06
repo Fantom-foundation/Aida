@@ -198,7 +198,7 @@ func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st
 	}
 
 	// inform about failing transaction
-	if msgResult.Failed() {
+	if msgResult != nil && msgResult.Failed() {
 		s.log.Debugf("Block: %v\nTransaction %v\n Status: Failed", block, tx)
 	}
 
