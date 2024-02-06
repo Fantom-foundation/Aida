@@ -27,8 +27,9 @@ func makeEthStateTestValidator(cfg *utils.Config, log logger.Logger) executor.Ex
 
 type ethStateTestValidator struct {
 	extension.NilExtension[txcontext.TxContext]
-	cfg *utils.Config
-	log logger.Logger
+	cfg             *utils.Config
+	log             logger.Logger
+	overall, passed int
 }
 
 func (e *ethStateTestValidator) PreTransaction(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
@@ -55,7 +56,16 @@ func (e *ethStateTestValidator) PostTransaction(s executor.State[txcontext.TxCon
 			return err
 		}
 	} else {
+		e.passed++
 		e.log.Noticef("%v - (%v) PASS\nblock: %v; tx: %v\nhash:%v", c.TestLabel, c.UsedNetwork, s.Block, s.Transaction, got.Hex())
 	}
+
+	e.overall++
+	e.log.Noticef("%v/%v tests passed.", e.passed, e.overall)
+	return nil
+}
+
+func (e *ethStateTestValidator) PostRun(executor.State[txcontext.TxContext], *executor.Context, error) error {
+	e.log.Noticef("%v/%v tests passed.", e.passed, e.overall)
 	return nil
 }
