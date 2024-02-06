@@ -24,7 +24,7 @@ type BlockEnvironment interface {
 	GetTimestamp() uint64
 
 	// GetBlockHash returns the hash of the block with the given number.
-	GetBlockHash(blockNumber uint64) common.Hash
+	GetBlockHash(blockNumber uint64) (common.Hash, error)
 
 	// GetBaseFee returns the base fee for transactions in the current block.
 	GetBaseFee() *big.Int

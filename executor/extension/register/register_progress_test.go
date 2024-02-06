@@ -1,6 +1,7 @@
 package register
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -67,6 +68,28 @@ func TestRegisterProgress_DoNothingIfDisabled(t *testing.T) {
 	ext := MakeRegisterProgress(cfg, 0)
 	if _, ok := ext.(extension.NilExtension[txcontext.TxContext]); !ok {
 		t.Errorf("RegisterProgress is enabled even though not disabled in configuration.")
+	}
+}
+
+func TestRegisterProgress_TerminatesIfPathDoesNotExist(t *testing.T) {
+	var (
+		pathToFolder string = filepath.Join("does", "not", "exist")
+	)
+
+	cfg := &utils.Config{}
+	cfg.RegisterRun = pathToFolder // enabled here
+	cfg.First = 5
+	cfg.Last = 25
+	interval := 10
+
+	ext := MakeRegisterProgress(cfg, interval)
+	if _, err := ext.(extension.NilExtension[txcontext.TxContext]); err {
+		t.Errorf("RegisterProgress is disabled even though enabled in configuration.")
+	}
+
+	err := ext.PreRun(executor.State[txcontext.TxContext]{}, nil)
+	if err == nil {
+		t.Errorf("Folder %s does not exist but no error was thrown.", pathToFolder)
 	}
 }
 
@@ -286,4 +309,34 @@ func TestRegisterProgress_IfErrorRecordIntoMetadata(t *testing.T) {
 
 	meta.Close()
 	sDb.Close()
+}
+
+func TestRegisterProgress_ExtensionContinuesDespiteFetchEnvFailure(t *testing.T) {
+	var (
+		tmpDir     string = t.TempDir()
+		dbName     string = "tmp"
+		connection string = filepath.Join(tmpDir, fmt.Sprintf("%s.db", dbName))
+		noBash     error  = errors.New("I'm using Windows! I need help!")
+	)
+
+	mockEnvInfoFetcher := func() (map[string]string, error) {
+		var errs error
+		return map[string]string{}, errors.Join(errs, noBash)
+	}
+
+	rm, err := makeRunMetadata(
+		connection,
+		func() (map[string]string, error) { return map[string]string{}, nil },
+		mockEnvInfoFetcher,
+	)
+
+	if rm == nil {
+		t.Errorf("Metadata fails to continue even though it should.")
+	}
+	if err == nil {
+		t.Errorf("User cannot execute bash script, but error is not thrown.")
+	}
+	if !errors.Is(err, noBash) {
+		t.Errorf("Error not from intended source: %v.", noBash)
+	}
 }

@@ -48,6 +48,8 @@ const (
 	AidaDbRepositoryEthereumUrl = "https://aida.ethereum.repository.fantom.network"
 )
 
+const maxLastBlock = math.MaxUint64 - 1 // we decrease the value by one because params are always +1
+
 var (
 	FirstOperaBlock     uint64 // id of the first block in substate
 	AidaDbRepositoryUrl string // url of the Aida DB repository
@@ -66,23 +68,23 @@ var KeywordBlocks = map[ChainID]map[string]uint64{
 	MainnetChainID: {
 		"zero":        0,
 		"opera":       4_564_026,
-		"Istanbul":    0, // todo Istanbul block for mainnet?
-		"MuirGlacier": 0, // todo MuirGlacier block for mainnet?
-		"Berlin":      37_455_223,
-		"London":      37_534_833,
+		"iistanbul":   0, // todo istanbul block for mainnet?
+		"muirglacier": 0, // todo muirglacier block for mainnet?
+		"berlin":      37_455_223,
+		"london":      37_534_833,
 		"first":       0,
-		"last":        math.MaxUint64,
+		"last":        maxLastBlock,
 		"lastpatch":   0,
 	},
 	TestnetChainID: {
 		"zero":        0,
 		"opera":       479_327,
-		"Istanbul":    0, // todo Istanbul block for testnet?
-		"MuirGlacier": 0, // todo MuirGlacier block for testnet?
-		"Berlin":      1_559_470,
-		"London":      7_513_335,
+		"istanbul":    0, // todo istanbul block for testnet?
+		"muirglacier": 0, // todo muirglacier block for testnet?
+		"berlin":      1_559_470,
+		"london":      7_513_335,
 		"first":       0,
-		"last":        math.MaxUint64,
+		"last":        maxLastBlock,
 		"lastpatch":   0,
 	},
 	// ethereum fork blocks are not stored in this structure as ethereum has already prepared config
@@ -90,12 +92,12 @@ var KeywordBlocks = map[ChainID]map[string]uint64{
 	EthereumChainID: {
 		"zero":        0,
 		"opera":       0,
-		"Istanbul":    9_069_000,
-		"MuirGlacier": 9_200_000,
-		"Berlin":      12_244_000,
-		"London":      12_965_000,
+		"istanbul":    9_069_000,
+		"muirglacier": 9_200_000,
+		"berlin":      12_244_000,
+		"london":      12_965_000,
 		"first":       0,
-		"last":        math.MaxUint64,
+		"last":        maxLastBlock,
 		"lastpatch":   0,
 	},
 }

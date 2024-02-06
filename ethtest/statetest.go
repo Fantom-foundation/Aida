@@ -29,14 +29,10 @@ func OpenStateTests(path string) ([]*StJSON, error) {
 	var tests []*StJSON
 
 	if info.IsDir() {
-		// todo iterating all files always fail validation
 		tests, err = GetTestsWithinPath[*StJSON](path, StateTests)
 		if err != nil {
 			return nil, err
 		}
-
-		// todo only one test was found to work located in GeneralStateTests/stBugs/evmBytecode.json
-		// although this test does not work when iterating all tests
 
 	} else {
 		tests, err = readTestsFromFile(path)
@@ -142,7 +138,7 @@ func (s *StJSON) Divide(chainId utils.ChainID) (dividedTests []*StJSON) {
 			test.UsedNetwork = fork // add correct fork name
 
 			// add block number to env (+1 just to make sure we are within wanted fork)
-			test.Env.blockNumber = utils.KeywordBlocks[chainId][fork] + 1
+			test.Env.blockNumber = utils.KeywordBlocks[chainId][strings.ToLower(fork)] + 1
 			dividedTests = append(dividedTests, &test)
 		}
 	}
@@ -267,8 +263,8 @@ func (s *stEnv) GetTimestamp() uint64 {
 	return s.Timestamp.Uint64()
 }
 
-func (s *stEnv) GetBlockHash(blockNumber uint64) common.Hash {
-	return common.Hash{}
+func (s *stEnv) GetBlockHash(blockNumber uint64) (common.Hash, error) {
+	return common.Hash{}, nil
 }
 
 func (s *stEnv) GetBaseFee() *big.Int {

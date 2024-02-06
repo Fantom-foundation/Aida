@@ -1,10 +1,12 @@
 package register
 
+//go:generate mockgen -source metadata.go -destination metadata_mocks.go -package register
+
 import (
 	"errors"
 	"fmt"
+	"maps"
 	"os/exec"
-	"strconv"
 	"strings"
 
 	"github.com/Fantom-foundation/Aida/utils"
@@ -42,64 +44,48 @@ type RunMetadata struct {
 	ps   *utils.Printers
 }
 
-func MakeRunMetadata(connection string, id *RunIdentity) (*RunMetadata, error) {
+type FetchInfo func() (map[string]string, error)
 
+func MakeRunMetadata(connection string, id *RunIdentity) (*RunMetadata, error) {
+	return makeRunMetadata(connection, id.fetchConfigInfo, fetchUnixInfo)
+}
+
+// makeRunMetadata creates RunMetadata to keep track of metadata about the run.
+// 1. collect run config, timestamp and app name.
+// 2. fetch environment information about where the run is executed.
+// 3. On Print(), print all metadata into the corresponding table.
+func makeRunMetadata(connection string, fetchCfg FetchInfo, fetchEnv FetchInfo) (*RunMetadata, error) {
 	rm := &RunMetadata{
 		meta: make(map[string]string),
 		ps:   utils.NewPrinters(),
 	}
 
-	rm.meta["AppName"] = id.Cfg.AppName
-	rm.meta["CommandName"] = id.Cfg.CommandName
-	rm.meta["RegisterRun"] = id.Cfg.RegisterRun
-	rm.meta["OverwriteRunId"] = id.Cfg.OverwriteRunId
+	var warnings error
 
-	rm.meta["DbImpl"] = id.Cfg.DbImpl
-	rm.meta["DbVariant"] = id.Cfg.DbVariant
-	rm.meta["CarmenSchema"] = strconv.Itoa(id.Cfg.CarmenSchema)
-	rm.meta["VmImpl"] = id.Cfg.VmImpl
-	rm.meta["ArchiveMode"] = strconv.FormatBool(id.Cfg.ArchiveMode)
-	rm.meta["ArchiveQueryRate"] = strconv.Itoa(id.Cfg.ArchiveQueryRate)
-	rm.meta["ArchiveVariant"] = id.Cfg.ArchiveVariant
-
-	rm.meta["First"] = strconv.Itoa(int(id.Cfg.First))
-	rm.meta["Last"] = strconv.Itoa(int(id.Cfg.Last))
-
-	rm.meta["RunId"] = id.GetId()
-	rm.meta["Timestamp"] = strconv.Itoa(int(id.Timestamp))
-
-	// fetch information from machine
-	var errs error
-	for tag, f := range map[string]func() (string, error){
-		"Processor":     rm.GetProcessor,
-		"Memory":        rm.GetMemory,
-		"Disks":         rm.GetDisks,
-		"Os":            rm.GetOs,
-		"AidaGitHash":   rm.GetAidaGitHash,
-		"CarmenGitHash": rm.GetCarmenGitHash,
-		"ToscaGitHash":  rm.GetToscaGitHash,
-		"GoVersion":     rm.GetGoVersion,
-		"Hostname":      rm.GetHostname,
-		"IpAddress":     rm.GetIpAddress,
-	} {
-
-		out, err := f()
-		if err != nil {
-			errs = errors.Join(errs, errors.New(fmt.Sprintf("Couldn't get %s: %s.", tag, err)))
-		}
-		rm.meta[tag] = out
+	// 1. collect run config, timestamp and app name.
+	cfgInfo, w := fetchCfg()
+	if w != nil {
+		// commands that failed are to be logged, but they are not fatal.
+		warnings = errors.Join(warnings, w)
 	}
-	if errs != nil {
-		return nil, errs
-	}
+	maps.Copy(rm.meta, cfgInfo)
 
+	// 2. fetch environment information about where the run is executed.
+	envInfo, w := fetchEnv()
+	if w != nil {
+		// commands that failed are to be logged, but they are not fatal.
+		warnings = errors.Join(warnings, w)
+	}
+	maps.Copy(rm.meta, envInfo)
+
+	// 3. On Print(), print all metadata into the corresponding table.
 	p2db, err := utils.NewPrinterToSqlite3(rm.sqlite3(connection))
 	if err != nil {
 		return nil, err
 	}
 	rm.ps.AddPrinter(p2db)
 
-	return rm, nil
+	return rm, warnings
 }
 
 func (rm *RunMetadata) Print() {
@@ -110,52 +96,40 @@ func (rm *RunMetadata) Close() {
 	rm.ps.Close()
 }
 
-func (rm *RunMetadata) bash(cmd string) (string, error) {
+// fetchEnvInfo fetches environment info by executing a number of linux commands.
+// Any errors are collected and returned.
+func fetchUnixInfo() (map[string]string, error) {
+	cmds := map[string]func() (string, error){
+		"Processor":     func() (string, error) { return bash(bashCmdProcessor) },
+		"Memory":        func() (string, error) { return bash(bashCmdMemory) },
+		"Disks":         func() (string, error) { return bash(bashCmdDisks) },
+		"Os":            func() (string, error) { return bash(bashCmdOs) },
+		"AidaGitHash":   func() (string, error) { return bash(bashCmdAidaGitHash) },
+		"CarmenGitHash": func() (string, error) { return bash(bashCmdCarmenGitHash) },
+		"ToscaGitHash":  func() (string, error) { return bash(bashCmdToscaGitHash) },
+		"GoVersion":     func() (string, error) { return bash(bashCmdGoVersion) },
+		"Hostname":      func() (string, error) { return bash(bashCmdHostname) },
+		"IpAddress":     func() (string, error) { return bash(bashCmdIpAddress) },
+	}
+
+	envs := make(map[string]string, len(cmds))
+	var errs error
+	for tag, f := range cmds {
+		out, err := f()
+		if err != nil {
+			errs = errors.Join(errs, errors.New(fmt.Sprintf("Couldn't get %s: %s.", tag, err)))
+		}
+		envs[tag] = out
+	}
+	return envs, errs
+}
+
+func bash(cmd string) (string, error) {
 	out, err := exec.Command("bash", "-c", cmd).Output()
 	if err != nil {
 		return "", err
 	}
 	return strings.TrimSpace(string(out)), nil
-}
-
-func (rm *RunMetadata) GetProcessor() (string, error) {
-	return rm.bash(bashCmdProcessor)
-}
-
-func (rm *RunMetadata) GetMemory() (string, error) {
-	return rm.bash(bashCmdMemory)
-}
-
-func (rm *RunMetadata) GetDisks() (string, error) {
-	return rm.bash(bashCmdDisks)
-}
-
-func (rm *RunMetadata) GetOs() (string, error) {
-	return rm.bash(bashCmdOs)
-}
-
-func (rm *RunMetadata) GetAidaGitHash() (string, error) {
-	return rm.bash(bashCmdAidaGitHash)
-}
-
-func (rm *RunMetadata) GetCarmenGitHash() (string, error) {
-	return rm.bash(bashCmdCarmenGitHash)
-}
-
-func (rm *RunMetadata) GetToscaGitHash() (string, error) {
-	return rm.bash(bashCmdToscaGitHash)
-}
-
-func (rm *RunMetadata) GetGoVersion() (string, error) {
-	return rm.bash(bashCmdGoVersion)
-}
-
-func (rm *RunMetadata) GetHostname() (string, error) {
-	return rm.bash(bashCmdHostname)
-}
-
-func (rm *RunMetadata) GetIpAddress() (string, error) {
-	return rm.bash(bashCmdIpAddress)
 }
 
 func (rm *RunMetadata) sqlite3(conn string) (string, string, string, func() [][]any) {

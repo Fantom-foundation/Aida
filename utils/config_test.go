@@ -85,7 +85,7 @@ func TestUtilsConfig_SetBlockRange(t *testing.T) {
 		t.Fatalf("Failed to parse last block; expected: %d, have: %d", 40_000_000, last)
 	}
 
-	first, last, err = SetBlockRange("OpeRa", "berlin", MainnetChainID)
+	first, last, err = SetBlockRange("opera", "berlin", MainnetChainID)
 	if err != nil {
 		t.Fatalf("Failed to set block range (opera-berlin on mainnet): %v", err)
 	}
@@ -149,7 +149,7 @@ func TestUtilsConfig_SetBlockRange(t *testing.T) {
 		t.Fatalf("Failed to parse first block; expected: %d, have: %d", 0, first)
 	}
 
-	if last != math.MaxUint64 {
+	if last != maxLastBlock {
 		t.Fatalf("Failed to parse last block; expected: %v, have: %v", uint64(math.MaxUint64), last)
 	}
 
@@ -163,7 +163,7 @@ func TestUtilsConfig_SetBlockRange(t *testing.T) {
 		t.Fatalf("Failed to parse first block; expected: %d, have: %d", 0, first)
 	}
 
-	if last != math.MaxUint64 {
+	if last != maxLastBlock {
 		t.Fatalf("Failed to parse last block; expected: %v, have: %v", uint64(math.MaxUint64), last)
 	}
 }

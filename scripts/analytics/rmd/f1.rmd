@@ -1,5 +1,5 @@
 ---
-title: "F1 Report - Transaction Processing Time"
+title: "Block Processing Report"
 date: "`r Sys.Date()`"
 params:
   db: /var/opera/Aida/tmp-rapolt/register/s5-f1-test.db
@@ -15,7 +15,7 @@ library(gt)
 con <- dbConnect(SQLite(), params$db)
 
 # Fetch RunMetadata
-Metadata <- dbReadTable(con, 'metadata')
+Metadata <- dbSendQuery(con, 'SELECT key, cast(value as text) as value FROM metadata;') %>% dbFetch
 
 first <- Metadata %>% filter(key == "First")
 last <- Metadata %>% filter(key == "Last")
@@ -29,6 +29,69 @@ dbDisconnect(con)
 
 ## ##############################################################################
 
+## 1. Summary
+
+```{r, echo=FALSE, message=FALSE}
+maxMemory <- TxData %>% filter(memory == max(memory)) %>% filter(start == min(start)) %>% distinct(memory, start) 
+maxLiveDisk <- TxData %>% filter(live_disk == max(live_disk)) %>% filter(start == min(start)) %>% distinct(live_disk, start) 
+maxArchiveDisk <- TxData %>% filter(archive_disk == max(archive_disk)) %>% filter(start == min(start)) %>% distinct(archive_disk, start) 
+maxTxRate <- TxData %>% filter(tx_rate == max(tx_rate)) %>% filter(start == min(start)) %>% distinct(tx_rate, start)
+maxGasRate <- TxData %>% filter(gas_rate == max(gas_rate)) %>% filter(start == min(start)) %>% distinct(gas_rate, start) 
+
+runId <- Metadata %>% filter(key == "RunId")
+runSucceed <- Metadata %>% filter(key == "RunSucceed")
+runtime <- Metadata %>% filter(key == "Runtime")
+runError <- Metadata %>% filter(key == "RunError")
+isRunSuccess <- runSucceed$value == "true"
+
+archiveMode <- Metadata %>% filter(key == "ArchiveMode")
+isArchiveActive <- archiveMode$value == "true"
+
+colorize <- function(x, color) {
+	if (knitr::is_latex_output()) {
+		sprintf("\\textcolor{%s}{%s}", color, x)
+	} else if (knitr::is_html_output()) {
+		sprintf("<span style='color: %s;'>%s</span>", color, x)
+	} else x
+}
+
+fmt <- function(x, scale, unit, d) {
+	paste(format(as.numeric(x) * scale, digit=d, nsmall=0), unit)
+}
+```
+
+Run `r runId$value` **`r if(isRunSuccess){
+	colorize(paste0("completed successfully"), "green")
+} else {
+	colorize(paste0("failed"), "red")
+}`**. The runtime is **`r format(round(as.numeric(runtime$value)/3600, 2), digit=3)`** hours.
+
+    `r if(!isRunSuccess) {
+        runError$value
+    }`
+
+```{r, echo=FALSE, message=FALSE}
+rTx  <- data.frame(Property="Transaction Rate", Mean=fmt(mean(TxData$tx_rate), 1, "TPS", 4), Max=fmt(max(TxData$tx_rate), 1, "TPS", 4))
+rGas <- data.frame(Property="Gas Rate", Mean=fmt(mean(TxData$gas_rate), 1e-6, "MGasPS", 4), Max=fmt(max(TxData$gas_rate), 1e-6, "MGasPS", 4))
+rMem <- data.frame(Property="Memory", Mean="", Max=fmt(max(TxData$memory), 1e-9, "GB", 4))
+rLDb <- data.frame(Property="Disk - LiveDB", Mean="", Max=fmt(max(TxData$live_disk), 1e-9, "GB", 4))
+rADb <- data.frame(Property="Disk - ArchiveDB", Mean="", Max=fmt(max(TxData$archive_disk), 1e-9, "GB", 4))
+
+
+summary <- rbind(rTx, rGas, rMem, rLDb)
+
+if (isArchiveActive) {
+	summary <- rbind(summary, rADb)
+}
+
+gt(summary)
+```
+
+
+## ##############################################################################
+
+## 2. Experimental Setup
+
 ```{r, echo=FALSE, message=FALSE}
 hostname <- Metadata %>% filter(key == "Hostname")
 ip <- Metadata %>% filter(key == "IpAddress")
@@ -38,86 +101,87 @@ disks <- Metadata %>% filter(key == "Disks")
 OsInfo <- Metadata %>% filter(key == "Os")
 GoInfo <- Metadata %>% filter(key == "GoVersion")
 aidaHash <- Metadata %>% filter(key == "AidaGitHash")
+carmenHash <- Metadata %>% filter(key == "CarmenGitHash")
 dbImpl <- Metadata %>% filter(key == "DbImpl")
 dbVariant <- Metadata %>% filter(key == "DbVariant")
 carmenSchema <- Metadata %>% filter(key == "CarmenSchema")
 vmImpl <- Metadata %>% filter(key == "VmImpl")
 ```
 
-## 1. Experimental Setup
-The experiment is run on the machine **`r hostname$value`**(**`r ip$value`**), which is a **`r processor$value`**, **`r memory$value`**, disks: **`r disks$value`** computer.
+The experiment is run on the machine **`r hostname$value`**(**`r ip$value`**), which is a **`r processor$value`**, **`r memory$value`** computer.
 The operating system is **`r OsInfo$value`**.
 The system has installed **`r GoInfo$value`**.
-The github hash of the Aida repository is **`r aidaHash$value`**.
-For this experiment, we use **`r dbImpl$value`**(**`r dbVariant$value`** **`r carmenSchema$value`**) as a StateDB and **`r vmImpl$value`** as a virtual machine.  
-The data set for this experiment is stored in the database **`r params$db`**.
 
-## ##############################################################################
+The github hash of the libraries are:
 
-## 2. Memory and Disk Usage
+* Aida: **`r aidaHash$value`**
+* Carmen: **`r carmenHash$value`**
 
-```{r, echo=FALSE, message=FALSE}
-maxMemory <- TxData %>% filter(memory == max(memory))
-maxLiveDisk <- TxData %>% filter(live_disk == max(live_disk))
-maxArchiveDisk <- TxData %>% filter(archive_disk == max(archive_disk))
-```
-
-The experiment was conducted for the block range from **`r format(min(TxData$start),big.mark=",")`**  to **`r format(max(TxData$end),big.mark=",")`**.
-
-Max RAM Usage throughout the run is **`r format(maxMemory$memory, big.mark=",")`** bytes at block height **`r format(maxMemory$start, big.mark=",")`**. 
-
-```{r, echo=FALSE, message=FALSE, fig.width=12, fig.height=8}
-TxData %>% mutate(memory = as.numeric(memory)) %>%
-   ggplot(aes(x = start, y = memory)) +
-   geom_point(alpha=0.3) +
-   labs(x="Block Height", y="Ram Consumption (Bytes)", title="Memory Usage")
-```
-
-Max Disk Usage throughout the run is **`r format(maxLiveDisk$live_disk, big.mark=",")`** bytes at block height **`r format(maxLiveDisk$start, big.mark=",")`**
-
-```{r, echo=FALSE, message=FALSE, fig.width=12, fig.height=8}
-TxData %>% mutate(live_disk = as.numeric(live_disk)) %>%
-   ggplot(aes(x = start, y = live_disk)) +
-   geom_point(alpha=0.3) +
-   labs(x="Block Height", y="Disk Consumption (Bytes)", title="Disk Usage")
-```
+For this experiment, we use **`r dbImpl$value`**(**`r dbVariant$value`** **`r carmenSchema$value`**) as a StateDB and **`r vmImpl$value`** as a virtual machine.  The data set for this experiment is stored in the database **`r params$db`**.
 
 ## ##############################################################################
 
 ## 3. Transaction Rate
 
-```{r, echo=FALSE, message=FALSE}
-maxTxRate <- TxData %>% filter(tx_rate == max(tx_rate))
-```
-
-On average, the transaction rate is **`r format(mean(TxData$tx_rate), big.mark=",")`** TPM. The max transaction rate  is **`r format(maxTxRate$tx_rate, big.mark=",")`** TPM at block height **`r format(maxTxRate$start, big.mark=",")`**. 
+The average transaction rate is **`r format(mean(TxData$tx_rate), big.mark=",", digit=4)`** TPS. The max transaction rate  is **`r format(maxTxRate$tx_rate, big.mark=",", digit=4)`** TPS at block height **`r format(maxTxRate$start, big.mark=",")`**. 
 
 The dashed line shows the average transaction rate achieve up until the block height.
 
 ```{r, echo=FALSE, message=FALSE, fig.width=12, fig.height=8}
-TxData %>% mutate(tx_rate = as.numeric(tx_rate)) %>%
+TxData %>% 
+   mutate(tx_rate = as.numeric(tx_rate), start = as.numeric(start) * 1e-6) %>%
    ggplot(aes(x = start, y = tx_rate)) +
    geom_line(aes(x = start, y = overall_tx_rate), linetype = "longdash", color = "tomato") +
    geom_point(alpha=0.3) +
-   labs(x="Block Height", y="Transaction Per Minute", title="Transaction Rate")
+   scale_x_continuous(labels = scales::unit_format(unit="M")) +
+   labs(x="Block Height", y="Transaction Per Second", title="Transaction Rate")
 ```
 
 ## ##############################################################################
 
 ## 4. Gas Rate
 
-```{r, echo=FALSE, message=FALSE}
-maxGasRate <- TxData %>% filter(gas_rate == max(gas_rate))
-```
-On average, the gas rate is **`r format(mean(TxData$gas_rate), big.mark=",")`** GPM. The max transaction rate  is **`r format(maxGasRate$gas_rate, big.mark=",")`** TPM at block height **`r format(maxGasRate$start, big.mark=",")`**. 
+The average gas rate is **`r format(mean(TxData$gas_rate) * 1e-6, big.mark=",", digit=4)`** MGasPS. The max gas rate  is **`r format(maxGasRate$gas_rate * 1e-6, big.mark=",", digit=4)`** MGasPS at block height **`r format(maxGasRate$start, big.mark=",")`**. 
 
 The dashed line shows the average gas rate achieve up until the block height.
 
 ```{r, echo=FALSE, message=FALSE, fig.width=12, fig.height=8}
-TxData %>% mutate(gas_rate = as.numeric(gas_rate)) %>%
+TxData %>% 
+   mutate(gas_rate = as.numeric(gas_rate) * 1e-6, start = as.numeric(start) * 1e-6, overall_gas_rate = as.numeric(overall_gas_rate) * 1e-6) %>%
    ggplot(aes(x = start, y = gas_rate)) +
    geom_line(aes(x = start, y = overall_gas_rate), linetype = "longdash", color = "tomato") +
    geom_point(alpha=0.3) +
-   labs(x="Block Height", y="Gas Per Minute", title="Gas Rate")
+   scale_x_continuous(labels = scales::unit_format(unit="M")) +
+   scale_y_continuous(labels = scales::unit_format(unit="MGasPS")) +
+   labs(x="Block Height", y="Million Gas Per Second", title="Gas Rate")
+```
+
+## ##############################################################################
+
+## 5. Memory and Disk Usage
+
+
+The experiment was conducted for the block range from **`r format(min(TxData$start),big.mark=",")`**  to **`r format(max(TxData$end),big.mark=",")`**.
+
+Max RAM Usage throughout the run is **`r format(as.numeric(maxMemory$memory) * 1e-9, big.mark=",", digit=3)`** GB at block height **`r format(maxMemory$start, big.mark=",")`**. 
+
+```{r, echo=FALSE, message=FALSE, fig.width=12, fig.height=8}
+TxData %>% mutate(memory = as.numeric(memory) * 1e-9, start = as.numeric(start) * 1e-6) %>%
+   ggplot(aes(x = start, y = memory)) +
+   geom_point(alpha=0.3) +
+   scale_x_continuous(labels = scales::unit_format(unit="M")) +
+   scale_y_continuous(labels = scales::unit_format(unit="GB")) +
+   labs(x="Block Height", y="Ram Consumption", title="Memory Usage")
+```
+
+Max Disk Usage throughout the run is **`r format(as.numeric(maxLiveDisk$live_disk) * 1e-9, big.mark=",", digit=3)`** GB at block height **`r format(maxLiveDisk$start, big.mark=",")`**
+
+```{r, echo=FALSE, message=FALSE, fig.width=12, fig.height=8}
+TxData %>% mutate(live_disk = as.numeric(live_disk) * 1e-9, start = as.numeric(start) * 1e-6) %>%
+   ggplot(aes(x = start, y = live_disk)) +
+   geom_point(alpha=0.3) +
+   scale_x_continuous(labels = scales::unit_format(unit="M")) +
+   scale_y_continuous(labels = scales::unit_format(unit="GB")) +
+   labs(x="Block Height", y="Disk Consumption", title="Disk Usage")
 ```
 

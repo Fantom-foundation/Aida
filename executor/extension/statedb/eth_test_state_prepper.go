@@ -3,6 +3,7 @@ package statedb
 import (
 	"bytes"
 	"fmt"
+	"os"
 
 	"github.com/Fantom-foundation/Aida/ethtest"
 	"github.com/Fantom-foundation/Aida/executor"
@@ -29,13 +30,12 @@ type ethStatePrepper struct {
 
 func (e *ethStatePrepper) PreTransaction(st executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	var err error
-	// todo move this to a separate extension
-	// todo logic in some tests is probably gonna need to run multiple transactions with same statedb
-	// todo if other than memory database is used all databases have to be in tmp folder and deleted correctly
+
 	ctx.State, ctx.StateDbPath, err = utils.PrepareStateDB(e.cfg)
 	if err != nil {
 		return fmt.Errorf("failed to prepare statedb; %v", err)
 	}
+	//}
 
 	primeCtx := utils.NewPrimeContext(e.cfg, ctx.State, e.log)
 
@@ -46,7 +46,6 @@ func (e *ethStatePrepper) PreTransaction(st executor.State[txcontext.TxContext],
 
 	err = e.validate(st.Data.GetInputState(), ctx.State)
 	if err != nil {
-
 		return fmt.Errorf("pre alloc validation failed; %v", err)
 	}
 
@@ -72,6 +71,8 @@ func (e *ethStatePrepper) validate(alloc txcontext.WorldState, db state.StateDB)
 }
 
 func (e *ethStatePrepper) PostTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
+	defer os.RemoveAll(ctx.StateDbPath)
+
 	want := state.Data.GetStateHash()
 	got := ctx.State.GetHash()
 
