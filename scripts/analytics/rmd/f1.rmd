@@ -112,7 +112,7 @@ rGas <- data.frame(Property="Gas Rate", Mean=fmt(mean(TxData$gas_rate), 1e-6, "M
 rMem <- data.frame(Property="Memory", Mean="", Max=fmt(max(TxData$memory), 1e-9, "GB", 4))
 rLDb <- data.frame(Property="Disk - LiveDB", Mean="", Max=fmt(max(TxData$live_disk), 1e-9, "GB", 4))
 rADb <- data.frame(Property="Disk - ArchiveDB", Mean="", Max=fmt(max(TxData$archive_disk), 1e-9, "GB", 4))
-rTDb <- data.frame(Property="Disk - Total", Mean="", Max=fmt(max(TxData$live_disk)+max(TxData$archive_disk), 1e-9, "GB", 4))
+rTDb <- data.frame(Property="Disk - Total", Mean="", Max=fmt(max(TxData$total_disk), 1e-9, "GB", 4))
 
 summary <- rbind(rTx, rGas, rMem, rLDb)
 
