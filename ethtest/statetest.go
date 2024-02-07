@@ -107,7 +107,7 @@ func CreateTestData(t *testing.T) *StJSON {
 	bInt := new(big.Int).SetUint64(1)
 	return &StJSON{
 		TestLabel:   "TestLabel",
-		UsedNetwork: "Istanbul",
+		UsedNetwork: "TestNetwork",
 		Env: stEnv{
 			blockNumber: 1,
 			Coinbase:    common.Address{},
@@ -139,7 +139,7 @@ func CreateTestData(t *testing.T) *StJSON {
 			PrivateKey:           hexutil.MustDecode("0x45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8"),
 		},
 		Post: map[string][]stPostState{
-			"Istanbul": {
+			"TestNetwork": {
 				{
 					RootHash: common.HexToHash("0x20"),
 					LogsHash: common.HexToHash("0x30"),
