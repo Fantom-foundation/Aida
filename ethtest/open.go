@@ -20,13 +20,13 @@ var usableForks = []string{"London", "Berlin", "Istanbul", "MuirGlacier"}
 
 type jsonTestType byte
 
-type jsonTest interface {
+type stateTest interface {
 	*StJSON
 }
 
 // GetTestsWithinPath returns all tests in given directory (and subdirectories)
 // T is the type into which we want to unmarshal the tests.
-func GetTestsWithinPath[T jsonTest](path string, testType jsonTestType) ([]T, error) {
+func GetTestsWithinPath[T stateTest](path string, testType jsonTestType) ([]T, error) {
 	switch testType {
 	case StateTests:
 		gst := path + "/GeneralStateTests"

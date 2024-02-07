@@ -15,7 +15,6 @@ type ethTestProvider struct {
 }
 
 func (e ethTestProvider) Run(_ int, _ int, consumer Consumer[txcontext.TxContext]) error {
-	// todo redo to a dir
 	b, err := statetest.OpenStateTests(e.cfg.ArgPath)
 	if err != nil {
 		return err
