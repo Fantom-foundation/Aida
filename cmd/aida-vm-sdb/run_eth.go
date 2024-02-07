@@ -21,34 +21,22 @@ var RunEthTestsCmd = cli.Command{
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Aliases:   []string{"ethtest"},
 	Flags: []cli.Flag{
-		//// AidaDb
-		//&utils.AidaDbFlag,
-		//
-		//// StateDb
+		// StateDb
 		&utils.CarmenSchemaFlag,
 		&utils.StateDbImplementationFlag,
 		&utils.StateDbVariantFlag,
-		&utils.ContinueOnFailureFlag,
-		//&utils.StateDbSrcFlag,
 		&utils.DbTmpFlag,
 		&utils.StateDbLoggingFlag,
-		//&utils.ValidateStateHashesFlag,
-		//
-		//// ArchiveDb
-		//&utils.ArchiveModeFlag,
-		//&utils.ArchiveQueryRateFlag,
-		//&utils.ArchiveMaxQueryAgeFlag,
-		//&utils.ArchiveVariantFlag,
-		//
+
 		//// ShadowDb
 		//&utils.ShadowDb,
 		//&utils.ShadowDbImplementationFlag,
 		//&utils.ShadowDbVariantFlag,
-		//
-		//// VM
+
+		// VM
 		&utils.VmImplementation,
-		//
-		//// Profiling
+
+		// Profiling
 		&utils.CpuProfileFlag,
 		&utils.CpuProfilePerIntervalFlag,
 		&utils.DiagnosticServerFlag,
@@ -63,23 +51,13 @@ var RunEthTestsCmd = cli.Command{
 		&utils.ProfileIntervalFlag,
 		&utils.ProfileDBFlag,
 		&utils.ProfileBlocksFlag,
-		//
-		//// Priming
-		//&utils.RandomizePrimingFlag,
-		//&utils.SkipPrimingFlag,
-		//&utils.UpdateBufferSizeFlag,
-		//
-		//// Utils
+
+		// Utils
 		&substate.WorkersFlag,
 		&utils.ChainIDFlag,
-		//&utils.ContinueOnFailureFlag,
-		//&utils.SyncPeriodLengthFlag,
-		//&utils.KeepDbFlag,
-		////&utils.MaxNumTransactionsFlag,
-		//&utils.ValidateTxStateFlag,
+		&utils.ContinueOnFailureFlag,
 		&utils.ValidateFlag,
 		&log.LogLevelFlag,
-		//&utils.NoHeartbeatLoggingFlag,
 		&utils.TrackProgressFlag,
 		&utils.ErrorLoggingFlag,
 	},
@@ -93,8 +71,6 @@ func RunEthereumTest(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-
-	//cfg.ChainID = utils.EthereumChainID
 
 	cfg.StateValidationMode = utils.SubsetCheck
 	cfg.ValidateTxState = true

@@ -168,7 +168,7 @@ func (s *StJSON) GetOutputState() txcontext.WorldState {
 }
 
 func (s *StJSON) GetInputState() txcontext.WorldState {
-	return NewGethWorldState(s.Pre)
+	return NewWorldState(s.Pre)
 }
 
 func (s *StJSON) GetBlockEnvironment() txcontext.BlockEnvironment {
@@ -178,7 +178,7 @@ func (s *StJSON) GetBlockEnvironment() txcontext.BlockEnvironment {
 func (s *StJSON) GetMessage() core.Message {
 	baseFee := s.Env.BaseFee
 	if baseFee == nil {
-		// Retesteth uses `0x10` for genesis baseFee. Therefore, it defaults to
+		// ethereum uses `0x10` for genesis baseFee. Therefore, it defaults to
 		// parent - 2 : 0xa as the basefee for 'this' context.
 		baseFee = &BigInt{*big.NewInt(0x0a)}
 	}
@@ -370,7 +370,6 @@ func (s *stEnv) GetGasLimit() uint64 {
 }
 
 func (s *stEnv) GetNumber() uint64 {
-	//return s.Number.Uint64() todo i think this is not correct, json has always number 1
 	return s.blockNumber
 }
 

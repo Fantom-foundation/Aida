@@ -6,7 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 )
 
-func NewGethWorldState(alloc core.GenesisAlloc) txcontext.WorldState {
+func NewWorldState(alloc core.GenesisAlloc) txcontext.WorldState {
 	return worldStateAlloc{alloc}
 }
 
