@@ -7,7 +7,6 @@ import (
 	"io"
 	"math/big"
 	"os"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -20,8 +19,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 )
-
-const testDefaultValue = 11111
 
 // OpenStateTests opens
 func OpenStateTests(path string) ([]*StJSON, error) {
@@ -96,8 +93,7 @@ func CreateTestDataFile(t *testing.T) string {
 	}
 
 	jsonStr := "{ \"test\" : " + string(jsonData) + "}"
-	// TODO rewrite, needed because json.Marshal doesn't convert big.Int to hex string
-	jsonStr = strings.ReplaceAll(jsonStr, strconv.Itoa(testDefaultValue), "\"0x1\"")
+
 	jsonData = []byte(jsonStr)
 	// Initialize pathFile
 	err = os.WriteFile(pathFile, jsonData, 0644)
@@ -108,7 +104,7 @@ func CreateTestDataFile(t *testing.T) string {
 }
 
 func CreateTestData(t *testing.T) *StJSON {
-	bInt := new(big.Int).SetUint64(testDefaultValue)
+	bInt := new(big.Int).SetUint64(1)
 	return &StJSON{
 		TestLabel:   "TestLabel",
 		UsedNetwork: "TestNetwork",
@@ -233,6 +229,31 @@ type stTransaction struct {
 	PrivateKey           hexutil.Bytes       `json:"secretKey"`
 }
 
+func (tx *stTransaction) MarshalJSON() ([]byte, error) {
+	gasLimitArr := make([]string, len(tx.GasLimit))
+	for i, v := range tx.GasLimit {
+		gasLimitArr[i] = "0x" + v.Text(16)
+	}
+
+	// Create a new data structure that has the same fields as stTransaction but is a valid format for json.Marshal
+	type Alias stTransaction
+	return json.Marshal(&struct {
+		GasPrice             string   `json:"gasPrice"`
+		MaxFeePerGas         string   `json:"maxFeePerGas"`
+		MaxPriorityFeePerGas string   `json:"maxPriorityFeePerGas"`
+		Nonce                string   `json:"nonce"`
+		GasLimit             []string `json:"gasLimit"`
+		*Alias
+	}{
+		GasPrice:             "0x" + tx.GasPrice.Text(16),
+		MaxFeePerGas:         "0x" + tx.MaxFeePerGas.Text(16),
+		MaxPriorityFeePerGas: "0x" + tx.MaxPriorityFeePerGas.Text(16),
+		Nonce:                "0x" + tx.Nonce.Text(16),
+		GasLimit:             gasLimitArr,
+		Alias:                (*Alias)(tx),
+	})
+}
+
 func (tx *stTransaction) toMessage(ps stPostState, baseFee *BigInt) (*types.Message, error) {
 	// Derive sender from private key if present.
 	var from common.Address
@@ -314,6 +335,26 @@ type stEnv struct {
 	Number      *BigInt        `json:"currentNumber"     gencodec:"required"`
 	Timestamp   *BigInt        `json:"currentTimestamp"  gencodec:"required"`
 	BaseFee     *BigInt        `json:"currentBaseFee"  gencodec:"optional"`
+}
+
+func (env *stEnv) MarshalJSON() ([]byte, error) {
+	// Create a new data structure that has the same fields as stEnv but is a valid format for json.Marshal
+	type Alias stEnv
+	return json.Marshal(&struct {
+		Difficulty string `json:"currentDifficulty"`
+		GasLimit   string `json:"currentGasLimit"`
+		Number     string `json:"currentNumber"`
+		Timestamp  string `json:"currentTimestamp"`
+		BaseFee    string `json:"currentBaseFee"`
+		*Alias
+	}{
+		Difficulty: "0x" + env.Difficulty.Text(16),
+		GasLimit:   "0x" + env.GasLimit.Text(16),
+		Number:     "0x" + env.Number.Text(16),
+		Timestamp:  "0x" + env.Timestamp.Text(16),
+		BaseFee:    "0x" + env.BaseFee.Text(16),
+		Alias:      (*Alias)(env),
+	})
 }
 
 func (s *stEnv) GetCoinbase() common.Address {
