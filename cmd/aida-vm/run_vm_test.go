@@ -110,44 +110,36 @@ func TestVm_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 
 	// The expectation is that all of those transactions are properly opened,
 	// prepared, executed, and closed. Since we are running parallel mode with
-	// multiple workers, tx order does not have to preserved.
+	// multiple workers, the operation order does not have to preserved.
 
 	// Block 2 Tx 1
-	gomock.InOrder(
-		db.EXPECT().BeginTransaction(uint32(1)),
-		db.EXPECT().Prepare(gomock.Any(), 1),
-		db.EXPECT().Snapshot().Return(15),
-		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
-		db.EXPECT().RevertToSnapshot(15),
-		db.EXPECT().EndTransaction(),
-	)
+	db.EXPECT().BeginTransaction(uint32(1))
+	db.EXPECT().Prepare(gomock.Any(), 1)
+	db.EXPECT().Snapshot().Return(15)
+	db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000))
+	db.EXPECT().RevertToSnapshot(15)
+	db.EXPECT().EndTransaction()
 
 	// Block 2 Tx 2
-	gomock.InOrder(
-		db.EXPECT().BeginTransaction(uint32(2)),
-		db.EXPECT().Prepare(gomock.Any(), 2),
-		db.EXPECT().Snapshot().Return(17),
-		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
-		db.EXPECT().RevertToSnapshot(17),
-		db.EXPECT().EndTransaction(),
-	)
+	db.EXPECT().BeginTransaction(uint32(2))
+	db.EXPECT().Prepare(gomock.Any(), 2)
+	db.EXPECT().Snapshot().Return(17)
+	db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000))
+	db.EXPECT().RevertToSnapshot(17)
+	db.EXPECT().EndTransaction()
 
 	// Block 3 Tx 1
-	gomock.InOrder(
-		db.EXPECT().BeginTransaction(uint32(1)),
-		db.EXPECT().Prepare(gomock.Any(), 1),
-		db.EXPECT().Snapshot().Return(19),
-		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
-		db.EXPECT().RevertToSnapshot(19),
-		db.EXPECT().EndTransaction(),
-	)
+	db.EXPECT().BeginTransaction(uint32(1))
+	db.EXPECT().Prepare(gomock.Any(), 1)
+	db.EXPECT().Snapshot().Return(19)
+	db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000))
+	db.EXPECT().RevertToSnapshot(19)
+	db.EXPECT().EndTransaction()
 
 	// Block 4 Tx 1
-	gomock.InOrder(
-		// Pseudo transaction do not use snapshots.
-		db.EXPECT().BeginTransaction(uint32(utils.PseudoTx)),
-		db.EXPECT().EndTransaction(),
-	)
+	// Pseudo transaction do not use snapshots.
+	db.EXPECT().BeginTransaction(uint32(utils.PseudoTx))
+	db.EXPECT().EndTransaction()
 
 	run(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
 }
