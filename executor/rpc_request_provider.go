@@ -32,6 +32,7 @@ type rpcRequestProvider struct {
 
 func (r rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc.RequestAndResults]) error {
 	var blockNumber int
+	var first bool
 
 	for r.iter.Next() {
 		if r.iter.Error() != nil {
@@ -55,6 +56,13 @@ func (r rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc.Request
 			blockNumber = int(req.Error.BlockID)
 		}
 
+		if first {
+			fmt.Println("first")
+			fmt.Println(blockNumber)
+		}
+
+		continue
+
 		// are we skipping requests?
 		if blockNumber < from {
 			continue
@@ -68,6 +76,9 @@ func (r rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc.Request
 			return err
 		}
 	}
+
+	fmt.Println("last")
+	fmt.Println(blockNumber)
 
 	return nil
 }
