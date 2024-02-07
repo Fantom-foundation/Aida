@@ -16,7 +16,7 @@ const (
 	StateTests
 )
 
-var usableForks = []string{"London", "Berlin", "Istanbul", "MuirGlacier"}
+var usableForks = []string{"London", "Berlin", "Istanbul", "MuirGlacier", "TestNetwork"}
 
 type jsonTestType byte
 
