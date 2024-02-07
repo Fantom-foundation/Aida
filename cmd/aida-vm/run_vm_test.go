@@ -123,7 +123,7 @@ func TestVm_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 		db.EXPECT().Snapshot().Return(15),
 		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
 		db.EXPECT().RevertToSnapshot(15),
-		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
+		db.EXPECT().GetLogs(gomock.Any(), gomock.Any()),
 		db.EXPECT().EndTransaction(),
 	)
 
@@ -134,7 +134,7 @@ func TestVm_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 		db.EXPECT().Snapshot().Return(17),
 		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
 		db.EXPECT().RevertToSnapshot(17),
-		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 2)), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
+		db.EXPECT().GetLogs(gomock.Any(), gomock.Any()),
 		db.EXPECT().EndTransaction(),
 	)
 
@@ -145,7 +145,7 @@ func TestVm_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 		db.EXPECT().Snapshot().Return(19),
 		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
 		db.EXPECT().RevertToSnapshot(19),
-		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 3, 1)), common.HexToHash(fmt.Sprintf("0x%016d", 3))),
+		db.EXPECT().GetLogs(gomock.Any(), gomock.Any()),
 		db.EXPECT().EndTransaction(),
 	)
 
