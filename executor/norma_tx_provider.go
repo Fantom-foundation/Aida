@@ -93,7 +93,7 @@ func (r normaTxProvider) Run(from int, to int, consumer Consumer[txcontext.TxCon
 		return err
 	}
 
-	app, err := app.NewCounterApplication(fakeRpc, primaryAccount, 0, 0, 0)
+	app, err := app.NewERC20Application(fakeRpc, primaryAccount, 0, 0, 0)
 	if err != nil {
 		return err
 	}
@@ -112,6 +112,10 @@ func (r normaTxProvider) Run(from int, to int, consumer Consumer[txcontext.TxCon
 	// listening for transactions emitted by the RPC client can finish
 	fakeRpc.Close()
 	wg.Wait()
+
+	// increment block number and start generating transactions
+	currentBlock++
+	currentTx = 0
 
 	for i := 0; i < 10; i++ {
 		tx, err := user.GenerateTx()
@@ -197,7 +201,7 @@ type normaTxBlockEnv struct {
 func (ntx normaTx) GetMessage() core.Message {
 	// extract sender from tx by passing it through the signer
 	// we expect that the tx is signed
-	sender, _ := types.Sender(types.NewEIP155Signer(ntx.tx.ChainId()), ntx.tx)
+	sender, _ := extractSender(ntx.tx)
 	return types.NewMessage(
 		sender,
 		ntx.tx.To(),
@@ -228,13 +232,16 @@ type fakeRpcClient struct {
 	outTxs chan *types.Transaction
 	// stateDb is a state database.
 	stateDb state.StateDB
+	// pendingCodes is a map of pending codes.
+	pendingCodes map[common.Address][]byte
 }
 
 // newFakeRpcClient creates a new fakeRpcClient.
 func newFakeRpcClient(stateDb state.StateDB) fakeRpcClient {
 	return fakeRpcClient{
-		outTxs:  make(chan *types.Transaction, 1000),
-		stateDb: stateDb,
+		outTxs:       make(chan *types.Transaction, 1000),
+		stateDb:      stateDb,
+		pendingCodes: make(map[common.Address][]byte),
 	}
 }
 
@@ -244,6 +251,20 @@ func (f fakeRpcClient) OutTxs() <-chan *types.Transaction {
 
 // SendTransaction injects the transaction into the pending pool for execution.
 func (f fakeRpcClient) SendTransaction(_ context.Context, tx *types.Transaction) error {
+	// if the transaction is a contract deployment, we need to store the code
+	// in the pending codes map
+	if tx.To() == nil {
+		// extract sender from tx
+		sender, err := extractSender(tx)
+		if err != nil {
+			return err
+		}
+		// get the expected contract address
+		contractAddress := crypto.CreateAddress(sender, tx.Nonce())
+		// store the code in the pending codes map
+		f.pendingCodes[contractAddress] = tx.Data()
+	}
+	// send the transaction to the outTxs channel
 	f.outTxs <- tx
 	return nil
 }
@@ -267,9 +288,9 @@ func (f fakeRpcClient) Close() {
 	close(f.outTxs)
 }
 
-func (f fakeRpcClient) CodeAt(_ context.Context, _ common.Address, _ *big.Int) ([]byte, error) {
-	// not used
-	return nil, nil
+func (f fakeRpcClient) CodeAt(_ context.Context, address common.Address, _ *big.Int) ([]byte, error) {
+	code := f.stateDb.GetCode(address)
+	return code, nil
 }
 
 func (f fakeRpcClient) CallContract(_ context.Context, _ ethereum.CallMsg, _ *big.Int) ([]byte, error) {
@@ -286,9 +307,8 @@ func (f fakeRpcClient) HeaderByNumber(_ context.Context, _ *big.Int) (*types.Hea
 }
 
 // PendingCodeAt returns the code of the given account in the pending state.
-func (f fakeRpcClient) PendingCodeAt(_ context.Context, _ common.Address) ([]byte, error) {
-	// not used
-	return nil, nil
+func (f fakeRpcClient) PendingCodeAt(_ context.Context, address common.Address) ([]byte, error) {
+	return f.pendingCodes[address], nil
 }
 
 // PendingNonceAt retrieves the current pending nonce associated with an account.
@@ -319,8 +339,8 @@ func (f fakeRpcClient) SuggestGasTipCap(_ context.Context) (*big.Int, error) {
 // for setting a reasonable default.
 func (f fakeRpcClient) EstimateGas(_ context.Context, _ ethereum.CallMsg) (gas uint64, err error) {
 	// use more gas than should be needed
-	// TODO: use the vm for gas estimation
-	return 500_000, nil
+	// it is only used for contract deployment
+	return 600_000, nil
 }
 
 // FilterLogs executes a log filter operation, blocking during execution and
@@ -335,4 +355,11 @@ func (f fakeRpcClient) FilterLogs(_ context.Context, _ ethereum.FilterQuery) ([]
 func (f fakeRpcClient) SubscribeFilterLogs(_ context.Context, _ ethereum.FilterQuery, _ chan<- types.Log) (ethereum.Subscription, error) {
 	// not used
 	return nil, nil
+}
+
+// extractSender extracts the sender from the transaction.
+func extractSender(tx *types.Transaction) (common.Address, error) {
+	// extract sender from tx by passing it through the signer
+	// we expect that the tx is signed
+	return types.Sender(types.NewEIP155Signer(tx.ChainId()), tx)
 }
