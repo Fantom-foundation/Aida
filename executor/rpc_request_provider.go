@@ -32,7 +32,7 @@ type rpcRequestProvider struct {
 
 func (r rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc.RequestAndResults]) error {
 	var blockNumber int
-	var first bool
+	var first = true
 
 	for r.iter.Next() {
 		if r.iter.Error() != nil {
@@ -57,6 +57,7 @@ func (r rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc.Request
 		}
 
 		if first {
+			first = false
 			fmt.Println("first")
 			fmt.Println(blockNumber)
 		}
