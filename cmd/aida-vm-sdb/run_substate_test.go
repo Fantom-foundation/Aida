@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 	"strings"
 	"testing"
@@ -58,6 +59,7 @@ func TestVmSdb_Substate_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
 		db.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
 		db.EXPECT().RevertToSnapshot(15),
+		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
 		db.EXPECT().EndTransaction(),
 		// Tx 2
 		db.EXPECT().PrepareSubstate(gomock.Any(), uint64(2)),
@@ -67,6 +69,7 @@ func TestVmSdb_Substate_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
 		db.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
 		db.EXPECT().RevertToSnapshot(17),
+		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 2)), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
 		db.EXPECT().EndTransaction(),
 		db.EXPECT().EndBlock(),
 		// Block 3
@@ -78,6 +81,7 @@ func TestVmSdb_Substate_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
 		db.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
 		db.EXPECT().RevertToSnapshot(19),
+		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 3, 1)), common.HexToHash(fmt.Sprintf("0x%016d", 3))),
 		db.EXPECT().EndTransaction(),
 		db.EXPECT().EndBlock(),
 		// Pseudo transaction do not use snapshots.
@@ -96,7 +100,7 @@ func TestVmSdb_Substate_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		if strings.Contains(err.Error(), "intrinsic gas too low") {
 			return
 		}
-		t.Fatal("run failed")
+		t.Fatalf("run failed; %v", err)
 	}
 }
 
@@ -213,6 +217,7 @@ func TestVmSdb_Substate_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
 		db.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
 		db.EXPECT().RevertToSnapshot(15),
+		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
 		db.EXPECT().EndTransaction(),
 	)
 
