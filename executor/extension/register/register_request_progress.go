@@ -170,7 +170,7 @@ func (rp *registerRequestProgress) sqlite3(conn string) (string, string, string,
 		RegisterRequestProgressInsertOrReplace,
 		func() [][]any {
 			return [][]any{
-				[]any{
+				{
 					rp.boundary,
 					rp.intervalReqRate,
 					rp.intervalGasRate,
