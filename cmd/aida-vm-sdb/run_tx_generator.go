@@ -5,6 +5,7 @@ import (
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/urfave/cli/v2"
 )
@@ -28,6 +29,11 @@ func newGenerateData() txcontext.TxContext {
 
 type generateData struct {
 	txcontext.NilTxContext
+}
+
+func (g generateData) GetStateHash() common.Hash {
+	// ignored
+	return common.Hash{}
 }
 
 func (g generateData) GetOutputState() txcontext.WorldState {

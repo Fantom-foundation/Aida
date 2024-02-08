@@ -85,7 +85,7 @@ func TestUtilsConfig_SetBlockRange(t *testing.T) {
 		t.Fatalf("Failed to parse last block; expected: %d, have: %d", 40_000_000, last)
 	}
 
-	first, last, err = SetBlockRange("OpeRa", "berlin", MainnetChainID)
+	first, last, err = SetBlockRange("opera", "berlin", MainnetChainID)
 	if err != nil {
 		t.Fatalf("Failed to set block range (opera-berlin on mainnet): %v", err)
 	}
@@ -215,8 +215,8 @@ func TestUtilsConfig_adjustBlockRange(t *testing.T) {
 		err               error
 	)
 	chainId = MainnetChainID
-	keywordBlocks[chainId]["first"] = 1000
-	keywordBlocks[chainId]["last"] = 2000
+	KeywordBlocks[chainId]["first"] = 1000
+	KeywordBlocks[chainId]["last"] = 2000
 
 	cfg := &Config{ChainID: chainId, LogLevel: "NOTICE"}
 	cc := NewConfigContext(cfg)
@@ -250,8 +250,8 @@ func TestUtilsConfig_adjustBlockRange(t *testing.T) {
 		t.Fatalf("wrong block range; expected %v:%v, have %v:%v", firstArg, firstArg, first, last)
 	}
 	// reset keywords for the following tests
-	keywordBlocks[chainId]["first"] = 0
-	keywordBlocks[chainId]["last"] = math.MaxUint64
+	KeywordBlocks[chainId]["first"] = 0
+	KeywordBlocks[chainId]["last"] = math.MaxUint64
 }
 
 func TestUtilsConfig_getMdBlockRange(t *testing.T) {
@@ -259,7 +259,7 @@ func TestUtilsConfig_getMdBlockRange(t *testing.T) {
 	// create new leveldb
 	var (
 		logLevel   = "NOTICE"
-		firstBlock = keywordBlocks[MainnetChainID]["opera"]
+		firstBlock = KeywordBlocks[MainnetChainID]["opera"]
 		lastBlock  = uint64(20001704)
 		chainId    = MainnetChainID
 	)
@@ -740,7 +740,7 @@ func TestUtilsConfig_adjustMissingConfigValuesWrongDbTmp(t *testing.T) {
 func createFakeAidaDb(cfg *Config) error {
 	// fake metadata values
 	var (
-		firstBlock        = keywordBlocks[MainnetChainID]["opera"]
+		firstBlock        = KeywordBlocks[MainnetChainID]["opera"]
 		lastBlock  uint64 = 20001704
 		firstEpoch uint64 = 100
 		lastEpoch  uint64 = 200

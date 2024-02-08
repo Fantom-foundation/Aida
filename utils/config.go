@@ -30,6 +30,7 @@ const (
 	LastBlockArg                       // requires 1 argument: last block
 	NoArgs                             // requires no arguments
 	OneToNArgs                         // requires at least one argument, but accepts up to N
+	PathArg                            // requires 1 argument: path to file
 )
 
 const (
@@ -63,33 +64,41 @@ const (
 )
 
 // A map of key blocks on Fantom chain
-var keywordBlocks = map[ChainID]map[string]uint64{
+var KeywordBlocks = map[ChainID]map[string]uint64{
 	MainnetChainID: {
-		"zero":      0,
-		"opera":     4_564_026,
-		"berlin":    37_455_223,
-		"london":    37_534_833,
-		"first":     0,
-		"last":      maxLastBlock,
-		"lastpatch": 0,
+		"zero":        0,
+		"opera":       4_564_026,
+		"istanbul":    0, // todo istanbul block for mainnet?
+		"muirglacier": 0, // todo muirglacier block for mainnet?
+		"berlin":      37_455_223,
+		"london":      37_534_833,
+		"first":       0,
+		"last":        maxLastBlock,
+		"lastpatch":   0,
 	},
 	TestnetChainID: {
-		"zero":      0,
-		"opera":     479_327,
-		"berlin":    1_559_470,
-		"london":    7_513_335,
-		"first":     0,
-		"last":      maxLastBlock,
-		"lastpatch": 0,
+		"zero":        0,
+		"opera":       479_327,
+		"istanbul":    0, // todo istanbul block for testnet?
+		"muirglacier": 0, // todo muirglacier block for testnet?
+		"berlin":      1_559_470,
+		"london":      7_513_335,
+		"first":       0,
+		"last":        maxLastBlock,
+		"lastpatch":   0,
 	},
 	// ethereum fork blocks are not stored in this structure as ethereum has already prepared config
 	// at params.MainnetChainConfig and it has bigger amount of forks than Fantom chain
 	EthereumChainID: {
-		"zero":      0,
-		"opera":     0,
-		"first":     0,
-		"last":      math.MaxUint64,
-		"lastpatch": 0,
+		"zero":        0,
+		"opera":       0,
+		"istanbul":    9_069_000,
+		"muirglacier": 9_200_000,
+		"berlin":      12_244_000,
+		"london":      12_965_000,
+		"first":       0,
+		"last":        maxLastBlock,
+		"lastpatch":   0,
 	},
 }
 
@@ -112,6 +121,7 @@ type Config struct {
 	ArchiveMode            bool           // enable archive mode
 	ArchiveQueryRate       int            // the queries per second send to the archive
 	ArchiveVariant         string         // selects the implementation variant of the archive
+	ArgPath                string         // path to file or directory given as argument
 	BalanceRange           int64          // balance range for stochastic simulation/replay
 	BasicBlockProfiling    bool           // enable profiling of basic block
 	BlockLength            uint64         // length of a block in number of transactions
@@ -262,7 +272,7 @@ func (cc *configContext) setFirstOperaBlock() {
 	if !(cc.cfg.ChainID == MainnetChainID || cc.cfg.ChainID == TestnetChainID || cc.cfg.ChainID == EthereumChainID) {
 		log.Fatalf("unknown chain id %v", cc.cfg.ChainID)
 	}
-	FirstOperaBlock = keywordBlocks[cc.cfg.ChainID]["opera"]
+	FirstOperaBlock = KeywordBlocks[cc.cfg.ChainID]["opera"]
 }
 
 // setAidaDbRepositoryUrl based on chain id selects correct aida-db repository url
@@ -296,8 +306,8 @@ func GetChainConfig(chainId ChainID) *params.ChainConfig {
 	chainConfig := *params.AllEthashProtocolChanges
 	chainConfig.ChainID = big.NewInt(int64(chainId))
 
-	chainConfig.BerlinBlock = new(big.Int).SetUint64(keywordBlocks[chainId]["berlin"])
-	chainConfig.LondonBlock = new(big.Int).SetUint64(keywordBlocks[chainId]["london"])
+	chainConfig.BerlinBlock = new(big.Int).SetUint64(KeywordBlocks[chainId]["berlin"])
+	chainConfig.LondonBlock = new(big.Int).SetUint64(KeywordBlocks[chainId]["london"])
 	return &chainConfig
 }
 
@@ -357,7 +367,7 @@ func setBlockNumber(arg string, chainId ChainID) (uint64, error) {
 		keyword = strings.ToLower(arg)
 	}
 	// find base block number from keyword
-	if val, ok := keywordBlocks[chainId][keyword]; ok {
+	if val, ok := KeywordBlocks[chainId][keyword]; ok {
 		blkNum = val
 	} else {
 		return 0, fmt.Errorf("block number not a valid keyword or integer")
@@ -395,7 +405,7 @@ func splitKeywordOffset(arg string, symbol string) (string, uint64, bool) {
 	res := strings.Split(arg, symbol)
 
 	// if the keyword doesn't exist, return.
-	if _, ok := keywordBlocks[MainnetChainID][strings.ToLower(res[0])]; !ok {
+	if _, ok := KeywordBlocks[MainnetChainID][strings.ToLower(res[0])]; !ok {
 		return "", 0, false
 	}
 
@@ -421,9 +431,9 @@ func offsetBlockNum(blkNum uint64, symbol string, offset uint64) uint64 {
 
 // getMdBlockRange gets block range from aidaDB metadata
 func (cc *configContext) getMdBlockRange() (uint64, uint64, uint64, error) {
-	defaultFirst := keywordBlocks[cc.cfg.ChainID]["first"]
-	defaultLast := keywordBlocks[cc.cfg.ChainID]["last"]
-	defaultLastPatch := keywordBlocks[cc.cfg.ChainID]["lastpatch"]
+	defaultFirst := KeywordBlocks[cc.cfg.ChainID]["first"]
+	defaultLast := KeywordBlocks[cc.cfg.ChainID]["last"]
+	defaultLastPatch := KeywordBlocks[cc.cfg.ChainID]["lastpatch"]
 
 	if !directoryExists(cc.cfg.AidaDb) {
 		cc.log.Warningf("Unable to open Aida-db in %s", cc.cfg.AidaDb)
@@ -459,8 +469,8 @@ func (cc *configContext) getMdBlockRange() (uint64, uint64, uint64, error) {
 // adjustBlockRange finds overlap between metadata block range and block range specified by user in command line
 func (cc *configContext) adjustBlockRange(firstArg, lastArg uint64) (uint64, uint64, error) {
 	var first, last, firstMd, lastMd uint64
-	firstMd = keywordBlocks[cc.cfg.ChainID]["first"]
-	lastMd = keywordBlocks[cc.cfg.ChainID]["last"]
+	firstMd = KeywordBlocks[cc.cfg.ChainID]["first"]
+	lastMd = KeywordBlocks[cc.cfg.ChainID]["last"]
 
 	if lastArg >= firstMd && lastMd >= firstArg {
 		// get first block number
@@ -530,9 +540,9 @@ func (cc *configContext) updateConfigBlockRange(args []string, mode ArgumentMode
 			if err != nil {
 				return err
 			}
-			keywordBlocks[cc.cfg.ChainID]["first"] = firstMd
-			keywordBlocks[cc.cfg.ChainID]["last"] = lastMd
-			keywordBlocks[cc.cfg.ChainID]["lastpatch"] = lastPatchMd
+			KeywordBlocks[cc.cfg.ChainID]["first"] = firstMd
+			KeywordBlocks[cc.cfg.ChainID]["last"] = lastMd
+			KeywordBlocks[cc.cfg.ChainID]["lastpatch"] = lastPatchMd
 
 			// try to parse and check block range
 			firstArg, lastArg, argErr := SetBlockRange(args[0], args[1], cc.cfg.ChainID)
@@ -566,6 +576,20 @@ func (cc *configContext) updateConfigBlockRange(args []string, mode ArgumentMode
 			return errors.New("this command requires at least 1 argument")
 		}
 	case NoArgs:
+	case PathArg:
+		if len(args) != 1 {
+			return fmt.Errorf("path argument (%v) is required to run this command", args[0])
+		}
+
+		_, err := os.Stat(args[0])
+		if err != nil {
+			if os.IsNotExist(err) {
+				return fmt.Errorf("given path (%v) argument does not exist", args[0])
+			}
+			return fmt.Errorf("cannot read argument path (%v)", err)
+		}
+
+		cc.cfg.ArgPath = args[0]
 	default:
 		return errors.New("unknown mode; unable to process commandline arguments")
 	}
