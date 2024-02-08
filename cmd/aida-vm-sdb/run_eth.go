@@ -29,9 +29,9 @@ var RunEthTestsCmd = cli.Command{
 		&utils.StateDbLoggingFlag,
 
 		//// ShadowDb
-		//&utils.ShadowDb,
-		//&utils.ShadowDbImplementationFlag,
-		//&utils.ShadowDbVariantFlag,
+		&utils.ShadowDb,
+		&utils.ShadowDbImplementationFlag,
+		&utils.ShadowDbVariantFlag,
 
 		// VM
 		&utils.VmImplementation,
