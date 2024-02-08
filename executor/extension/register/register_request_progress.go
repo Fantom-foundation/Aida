@@ -60,8 +60,8 @@ func makeRegisterRequestProgress(cfg *utils.Config, reportFrequency int, log log
 	}
 }
 
-// registerRequestProgress logs progress every XXX blocks depending on reportFrequency.
-// Default is 100_000 blocks. This is mainly used for gathering information about process.
+// registerRequestProgress logs progress every XXX requests depending on reportFrequency.
+// Default is 100_000 requests. This is mainly used for gathering information about process.
 type registerRequestProgress struct {
 	extension.NilExtension[*rpc.RequestAndResults]
 
