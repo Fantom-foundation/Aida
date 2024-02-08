@@ -147,8 +147,6 @@ func (p *PrinterToDb) Close() {
 func NewPrinterToSqlite3(conn string, create string, insert string, f func() [][]any) (*PrinterToDb, error) {
 	var err error
 
-	fmt.Printf("conn: ", conn)
-
 	db, err := sql.Open("sqlite3", conn)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to open connection to sqlite3 %s: %v", conn, err)
