@@ -199,6 +199,8 @@ type Config struct {
 	VmImpl                 string         // vm implementation (geth/lfvm)
 	Workers                int            // number of worker threads
 	WorldStateDb           string         // path to worldstate
+	TxGeneratorAppType     string         // type of the application used for transaction generation
+	TxGeneratorTxsPerBlock uint64         // number of transactions per block
 }
 
 type configContext struct {

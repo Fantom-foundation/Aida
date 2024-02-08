@@ -5,13 +5,11 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"math/big"
-	"sync"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/Fantom-foundation/Norma/driver/rpc"
 	"github.com/Fantom-foundation/Norma/load/app"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
@@ -21,7 +19,11 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 )
 
-const testTreasureAccountPrivateKey = "1234567890123456789012345678901234567890123456789012345678901234"
+// treasureAccountPrivateKey is the private key of the treasure account.
+const treasureAccountPrivateKey = "1234567890123456789012345678901234567890123456789012345678901234"
+
+// normaConsumer is a consumer of norma transactions.
+type normaConsumer func(transaction *types.Transaction) error
 
 // normaTxProvider is a Provider that generates transactions using the norma
 // transactions generator.
@@ -39,116 +41,120 @@ func NewNormaTxProvider(cfg *utils.Config, stateDb state.StateDB) Provider[txcon
 }
 
 // Run runs the norma tx provider.
-func (r normaTxProvider) Run(from int, to int, consumer Consumer[txcontext.TxContext]) error {
-	wg := sync.WaitGroup{}
-	fakeRpc := newFakeRpcClient(r.stateDb)
-	txChan := fakeRpc.OutTxs()
-
-	currentBlock := from
-	currentTx := 0
-
-	// create and fun an account with a lot of ether
-	// this account will be used to deploy the contract and to fund the accounts
-	privateKey, err := crypto.HexToECDSA(testTreasureAccountPrivateKey)
+func (p normaTxProvider) Run(from int, to int, consumer Consumer[txcontext.TxContext]) error {
+	// initialize the treasure account
+	primaryAccount, err := p.initializeTreasureAccount(from)
 	if err != nil {
 		return err
 	}
-	publicKey := privateKey.Public()
-	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-	if !ok {
-		return fmt.Errorf("failed to cast public key to ECDSA")
-	}
-	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
 
-	amount := big.NewInt(params.Ether)
-	amount = amount.Mul(amount, big.NewInt(2_000_000_000))
+	// define the current block and transaction numbers,
+	// we start from the next block after the `from` block
+	// because on the `from` block we initialized and funded
+	// the treasure account
+	currentBlock := from + 1
+	nextTxNumber := 0
 
-	r.stateDb.BeginBlock(uint64(currentBlock))
-	r.stateDb.BeginTransaction(uint32(currentTx))
-	r.stateDb.CreateAccount(fromAddress)
-	r.stateDb.AddBalance(fromAddress, amount)
-	r.stateDb.EndTransaction()
-	r.stateDb.EndBlock()
-	// also increment the block number
-	currentBlock++
-
-	wg.Add(1)
-	// listen for transactions emitted by the RPC client and apply them to the
-	// consumer, this goroutine will finish when the contract is deployed and
-	// accounts are funded
-	go func() {
-		defer wg.Done()
-		for tx := range txChan {
-			data := newNormaTx(tx)
-			if err := consumer(TransactionInfo[txcontext.TxContext]{Block: currentBlock, Transaction: currentTx, Data: data}); err != nil {
-				fmt.Printf("failed to consume transaction; %v\n", err)
-			}
-			currentTx++
+	// define norma consumer that will be used to consume transactions
+	// this is the only place that is responsible for incrementing block and tx numbers
+	nc := func(tx *types.Transaction) error {
+		data := newNormaTx(tx)
+		err := consumer(TransactionInfo[txcontext.TxContext]{Block: currentBlock, Transaction: nextTxNumber, Data: data})
+		if err != nil {
+			return err
 		}
-	}()
+		// increment the transaction number for next transaction
+		// if we reached the maximum number of transactions per block, increment the block number
+		nextTxNumber++
+		// greater or equal, because transactions are indexed from 0
+		if uint64(nextTxNumber) >= p.cfg.TxGeneratorTxsPerBlock {
+			currentBlock++
+			nextTxNumber = 0
+		}
+		return nil
+	}
 
-	// initialize the norma application
-	primaryAccount, err := app.NewAccount(0, testTreasureAccountPrivateKey, int64(r.cfg.ChainID))
+	fakeRpc := newFakeRpcClient(p.stateDb, nc)
+
+	// create the application and the user
+	application, err := app.NewApplication(p.cfg.TxGeneratorAppType, fakeRpc, primaryAccount, 1, 0, 0)
 	if err != nil {
 		return err
 	}
-
-	app, err := app.NewERC20Application(fakeRpc, primaryAccount, 0, 0, 0)
+	user, err := application.CreateUser(fakeRpc)
 	if err != nil {
 		return err
 	}
-
-	user, err := app.CreateUser(fakeRpc)
-	if err != nil {
+	if err = application.WaitUntilApplicationIsDeployed(fakeRpc); err != nil {
 		return err
 	}
 
-	if err = app.WaitUntilApplicationIsDeployed(fakeRpc); err != nil {
-		return err
-	}
-
-	// from now on, we don't need the rpc anymore, it was needed just for the
-	// deployment of the contract, so we can close it so that the goroutine
-	// listening for transactions emitted by the RPC client can finish
-	fakeRpc.Close()
-	wg.Wait()
-
-	// increment block number and start generating transactions
-	currentBlock++
-	currentTx = 0
-
-	for i := 0; i < 10; i++ {
+	// generate transactions until the `to` block is reached
+	// `currentBlock` is incremented in the `nc` function
+	for currentBlock <= to {
+		// generate tx
 		tx, err := user.GenerateTx()
 		if err != nil {
 			return err
 		}
-		data := newNormaTx(tx)
-		if err := consumer(TransactionInfo[txcontext.TxContext]{Block: currentBlock, Transaction: currentTx, Data: data}); err != nil {
-			fmt.Printf("failed to consume transaction; %v\n", err)
+		// apply tx to the consumer
+		if err = nc(tx); err != nil {
+			return err
 		}
-		currentTx++
 	}
 
 	return nil
 }
 
-func (r normaTxProvider) Close() {
+func (p normaTxProvider) Close() {
 	// nothing to do
+}
+
+// initializeTreasureAccount initializes the treasure account.
+// The treasure account is an account with a lot of ether that is used to fund
+// the accounts and deploy the contract.
+func (p normaTxProvider) initializeTreasureAccount(blkNumber int) (*app.Account, error) {
+	// extract the address from the treasure account private key
+	privateKey, err := crypto.HexToECDSA(treasureAccountPrivateKey)
+	if err != nil {
+		return nil, err
+	}
+	publicKey := privateKey.Public()
+	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+	if !ok {
+		return nil, fmt.Errorf("failed to cast public key to ECDSA")
+	}
+	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
+
+	// fund the treasure account directly in the state database
+	amount := big.NewInt(0).Mul(big.NewInt(params.Ether), big.NewInt(2_000_000_000))
+	// we need to begin and end the block and transaction to be able to create an account
+	// and add balance to it (otherwise the account would not be funded for geth storage implementation)
+	p.stateDb.BeginBlock(uint64(blkNumber))
+	p.stateDb.BeginTransaction(uint32(0))
+	p.stateDb.CreateAccount(fromAddress)
+	p.stateDb.AddBalance(fromAddress, amount)
+	p.stateDb.EndTransaction()
+	p.stateDb.EndBlock()
+
+	return app.NewAccount(0, treasureAccountPrivateKey, int64(p.cfg.ChainID))
 }
 
 func newNormaTx(tx *types.Transaction) txcontext.TxContext {
 	return &normaTx{tx: tx}
 }
 
+// normaTx is a norma transaction.
+// it implements the txcontext.TxContext interface.
 type normaTx struct {
 	txcontext.NilTxContext
 	tx *types.Transaction
 }
 
-//func (g normaTx) GetOutputState() txcontext.WorldState {
-//	//TODO implement me
-//	panic("implement me")
-//}
+// normaTxBlockEnv is a block environment for norma transactions.
+type normaTxBlockEnv struct {
+	tx *types.Transaction
+}
 
 func (ntx normaTx) GetBlockEnvironment() txcontext.BlockEnvironment {
 	return normaTxBlockEnv{tx: ntx.tx}
@@ -194,10 +200,6 @@ func (e normaTxBlockEnv) GetBaseFee() *big.Int {
 	return big.NewInt(0)
 }
 
-type normaTxBlockEnv struct {
-	tx *types.Transaction
-}
-
 func (ntx normaTx) GetMessage() core.Message {
 	// extract sender from tx by passing it through the signer
 	// we expect that the tx is signed
@@ -217,36 +219,24 @@ func (ntx normaTx) GetMessage() core.Message {
 	)
 }
 
-// NormaRpcClient is an interface that abstracts the RPC client used by the norma
-// transactions generator.
-type NormaRpcClient interface {
-	rpc.RpcClient
-	// OutTxs returns a channel to which the RPC client will send transactions.
-	OutTxs() <-chan *types.Transaction
-}
-
 // fakeRpcClient is a fake RPC client that generates fake data. It is used to provide
 // data for norma transactions generator.
 type fakeRpcClient struct {
-	// outTxs is a channel to which the RPC client will send transactions.
-	outTxs chan *types.Transaction
 	// stateDb is a state database.
 	stateDb state.StateDB
+	// consumer is a consumer of transactions.
+	consumer normaConsumer
 	// pendingCodes is a map of pending codes.
 	pendingCodes map[common.Address][]byte
 }
 
 // newFakeRpcClient creates a new fakeRpcClient.
-func newFakeRpcClient(stateDb state.StateDB) fakeRpcClient {
+func newFakeRpcClient(stateDb state.StateDB, consumer normaConsumer) fakeRpcClient {
 	return fakeRpcClient{
-		outTxs:       make(chan *types.Transaction, 1000),
 		stateDb:      stateDb,
+		consumer:     consumer,
 		pendingCodes: make(map[common.Address][]byte),
 	}
-}
-
-func (f fakeRpcClient) OutTxs() <-chan *types.Transaction {
-	return f.outTxs
 }
 
 // SendTransaction injects the transaction into the pending pool for execution.
@@ -264,9 +254,7 @@ func (f fakeRpcClient) SendTransaction(_ context.Context, tx *types.Transaction)
 		// store the code in the pending codes map
 		f.pendingCodes[contractAddress] = tx.Data()
 	}
-	// send the transaction to the outTxs channel
-	f.outTxs <- tx
-	return nil
+	return f.consumer(tx)
 }
 
 func (f fakeRpcClient) Call(_ interface{}, _ string, _ ...interface{}) error {
@@ -285,7 +273,7 @@ func (f fakeRpcClient) BalanceAt(_ context.Context, account common.Address, _ *b
 }
 
 func (f fakeRpcClient) Close() {
-	close(f.outTxs)
+	// do nothing
 }
 
 func (f fakeRpcClient) CodeAt(_ context.Context, address common.Address, _ *big.Int) ([]byte, error) {
@@ -302,7 +290,7 @@ func (f fakeRpcClient) CallContract(_ context.Context, _ ethereum.CallMsg, _ *bi
 // number is nil, the latest known header is returned.
 func (f fakeRpcClient) HeaderByNumber(_ context.Context, _ *big.Int) (*types.Header, error) {
 	// this method is called to obtain GasFeeCap, which was introduced in EIP-1559
-	// since this is ethereum thing, we can just return an empty header
+	// since this is an ethereum thing, we can just return an empty header
 	return &types.Header{}, nil
 }
 
@@ -340,7 +328,7 @@ func (f fakeRpcClient) SuggestGasTipCap(_ context.Context) (*big.Int, error) {
 func (f fakeRpcClient) EstimateGas(_ context.Context, _ ethereum.CallMsg) (gas uint64, err error) {
 	// use more gas than should be needed
 	// it is only used for contract deployment
-	return 600_000, nil
+	return 1_200_000, nil
 }
 
 // FilterLogs executes a log filter operation, blocking during execution and

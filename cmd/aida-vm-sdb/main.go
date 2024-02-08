@@ -107,8 +107,12 @@ the inclusive range of blocks.`,
 var RunTxGeneratorCmd = cli.Command{
 	Action: RunTxGenerator,
 	Name:   "tx-generator",
-	Usage:  "Iterates over generated transactions that are executed into a StateDb",
+	Usage:  "Generates transactions for specified block range and executes them over StateDb",
 	Flags: []cli.Flag{
+		// TxGenerator specific flags
+		&utils.TxGeneratorAppTypeFlag,
+		&utils.TxGeneratorTxsPerBlockFlag,
+
 		// StateDb
 		&utils.CarmenSchemaFlag,
 		&utils.StateDbImplementationFlag,
@@ -117,17 +121,6 @@ var RunTxGeneratorCmd = cli.Command{
 		&utils.DbTmpFlag,
 		&utils.StateDbLoggingFlag,
 		&utils.ValidateStateHashesFlag,
-
-		// ArchiveDb
-		&utils.ArchiveModeFlag,
-		&utils.ArchiveQueryRateFlag,
-		&utils.ArchiveMaxQueryAgeFlag,
-		&utils.ArchiveVariantFlag,
-
-		// ShadowDb
-		&utils.ShadowDb,
-		&utils.ShadowDbImplementationFlag,
-		&utils.ShadowDbVariantFlag,
 
 		// VM
 		&utils.VmImplementation,
@@ -138,28 +131,17 @@ var RunTxGeneratorCmd = cli.Command{
 		&utils.DiagnosticServerFlag,
 		&utils.MemoryBreakdownFlag,
 		&utils.MemoryProfileFlag,
-		&utils.RandomSeedFlag,
-		&utils.PrimeThresholdFlag,
 		&utils.ProfileFlag,
 		&utils.ProfileFileFlag,
 		&utils.ProfileIntervalFlag,
 		&utils.ProfileDBFlag,
 		&utils.ProfileBlocksFlag,
 
-		// Priming
-		&utils.RandomizePrimingFlag,
-		&utils.SkipPrimingFlag,
-		&utils.UpdateBufferSizeFlag,
-
 		// Utils
 		&substate.WorkersFlag,
 		&utils.ChainIDFlag,
 		&utils.ContinueOnFailureFlag,
-		&utils.SyncPeriodLengthFlag,
 		&utils.KeepDbFlag,
-		//&utils.MaxNumTransactionsFlag,
-		&utils.ValidateTxStateFlag,
-		//&utils.ValidateWorldStateFlag,
 		&utils.ValidateFlag,
 		&logger.LogLevelFlag,
 		&utils.NoHeartbeatLoggingFlag,
