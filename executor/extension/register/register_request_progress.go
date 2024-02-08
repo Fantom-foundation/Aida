@@ -171,7 +171,7 @@ func (rp *registerRequestProgress) PostTransaction(state executor.State[*rpc.Req
 }
 
 func (rp *registerRequestProgress) sqlite3(conn string) (string, string, string, func() [][]any) {
-	return  conn,
+	return conn,
 		RegisterRequestProgressCreateTableIfNotExist,
 		RegisterRequestProgressInsertOrReplace,
 		func() [][]any {
