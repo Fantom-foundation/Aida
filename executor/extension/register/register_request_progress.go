@@ -2,10 +2,10 @@ package register
 
 import (
 	"fmt"
-	"time"
-	"sync"
 	"os"
 	"path/filepath"
+	"sync"
+	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
@@ -49,12 +49,12 @@ func MakeRegisterRequestProgress(cfg *utils.Config, reportFrequency int) executo
 
 func makeRegisterRequestProgress(cfg *utils.Config, reportFrequency int, log logger.Logger) *registerRequestProgress {
 
-	return  &registerRequestProgress{
-		cfg: cfg,
-		log: log,
+	return &registerRequestProgress{
+		cfg:             cfg,
+		log:             log,
 		reportFrequency: reportFrequency,
-		ps: utils.NewPrinters(),
-		id: MakeRunIdentity(time.Now().Unix(), cfg),
+		ps:              utils.NewPrinters(),
+		id:              MakeRunIdentity(time.Now().Unix(), cfg),
 	}
 }
 
@@ -63,28 +63,28 @@ func makeRegisterRequestProgress(cfg *utils.Config, reportFrequency int, log log
 type registerRequestProgress struct {
 	extension.NilExtension[*rpc.RequestAndResults]
 
-	cfg                 *utils.Config
-	log                 logger.Logger
-	lock 		    sync.Mutex
-	ps   		    *utils.Printers
-	
+	cfg  *utils.Config
+	log  logger.Logger
+	lock sync.Mutex
+	ps   *utils.Printers
+
 	// Where am I?
 	lastReportedRequestCount uint64
 	overallInfo              rpcProcessInfo
 	lastIntervalInfo         rpcProcessInfo
-	
+
 	// Stats
-	reportFrequency    	int
-	startOfRun      	time.Time
-	lastUpdate      	time.Time
-	boundary	    	int
-	intervalReqRate		float64
-	intervalGasRate		float64
-	overallReqRate		float64
-	overallGasRate		float64
-	
-	id   			*RunIdentity
-	meta 			*RunMetadata
+	reportFrequency int
+	startOfRun      time.Time
+	lastUpdate      time.Time
+	boundary        int
+	intervalReqRate float64
+	intervalGasRate float64
+	overallReqRate  float64
+	overallGasRate  float64
+
+	id   *RunIdentity
+	meta *RunMetadata
 }
 
 type rpcProcessInfo struct {
@@ -134,8 +134,8 @@ func (rp *registerRequestProgress) PostTransaction(state executor.State[*rpc.Req
 
 	overallInfo := rp.overallInfo
 	overallCount := overallInfo.numRequests
-	
-	if overallCount - rp.lastReportedRequestCount < uint64(rp.reportFrequency) {
+
+	if overallCount-rp.lastReportedRequestCount < uint64(rp.reportFrequency) {
 		return nil
 	}
 
@@ -165,12 +165,12 @@ func (rp *registerRequestProgress) PostTransaction(state executor.State[*rpc.Req
 }
 
 func (rp *registerRequestProgress) sqlite3(conn string) (string, string, string, func() [][]any) {
-	return 	conn, 
-		RegisterRequestProgressCreateTableIfNotExist, 
+	return conn,
+		RegisterRequestProgressCreateTableIfNotExist,
 		RegisterRequestProgressInsertOrReplace,
 		func() [][]any {
-			return [][]any{ 
-				[]any {
+			return [][]any{
+				[]any{
 					rp.boundary,
 					rp.intervalReqRate,
 					rp.intervalGasRate,
