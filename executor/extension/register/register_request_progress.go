@@ -16,14 +16,16 @@ import (
 
 const (
 	RegisterRequestProgressCreateTableIfNotExist = `
-		count INTEGER NOT NULL,
-		req_rate float,
-		gas_rate float,
-		overall_req_rate float,
-		overall_gas_rate float
+		CREATE TABLE IF NOT EXISTS stats_rpc (
+			count INTEGER NOT NULL,
+			req_rate float,
+			gas_rate float,
+			overall_req_rate float,
+			overall_gas_rate float
+		)
 	`
 	RegisterRequestProgressInsertOrReplace = `
-		INSERT or REPLACE INTO stats (
+		INSERT or REPLACE INTO stats_rpc (
 			count,
 			req_rate, gas_rate, overall_req_rate, overall_gas_rate
 		) VALUES (
@@ -101,13 +103,17 @@ func (rp *registerRequestProgress) PreRun(executor.State[*rpc.RequestAndResults]
 		return err
 	}
 
-	p2db, err := utils.NewPrinterToSqlite3(rp.sqlite3(rp.cfg.RegisterRun))
+	// 2. if database could be created -> fatal, throw error
+	p2db, err := utils.NewPrinterToSqlite3(rp.sqlite3(connection))
 	if err != nil {
 		return err
 	}
 	rp.ps.AddPrinter(p2db)
 
-	rm, err := MakeRunMetadata(rp.cfg.RegisterRun, rp.id)
+	// 3. if metadata could be fetched -> continue without the failed metadata
+	rm, err := MakeRunMetadata(connection, rp.id)
+
+	// if this were to happened, it should happen already at 2 but added again just in case
 	if rm == nil {
 		return err
 	}
@@ -165,7 +171,7 @@ func (rp *registerRequestProgress) PostTransaction(state executor.State[*rpc.Req
 }
 
 func (rp *registerRequestProgress) sqlite3(conn string) (string, string, string, func() [][]any) {
-	return conn,
+	return  conn,
 		RegisterRequestProgressCreateTableIfNotExist,
 		RegisterRequestProgressInsertOrReplace,
 		func() [][]any {
