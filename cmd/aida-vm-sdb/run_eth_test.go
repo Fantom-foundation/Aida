@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 	"strings"
 	"testing"
@@ -50,6 +51,7 @@ func TestVmSdb_Eth_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
 		db.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
 		db.EXPECT().RevertToSnapshot(15),
+		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 1, 1)), common.HexToHash(fmt.Sprintf("0x%016d", 1))),
 		db.EXPECT().EndTransaction(),
 		db.EXPECT().EndBlock(),
 
@@ -62,6 +64,7 @@ func TestVmSdb_Eth_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
 		db.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
 		db.EXPECT().RevertToSnapshot(15),
+		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 1, 2)), common.HexToHash(fmt.Sprintf("0x%016d", 1))),
 		db.EXPECT().EndTransaction(),
 		db.EXPECT().EndBlock(),
 	)
@@ -189,6 +192,7 @@ func TestVmSdb_Eth_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
 		db.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
 		db.EXPECT().RevertToSnapshot(15),
+		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
 		db.EXPECT().EndTransaction(),
 	)
 
