@@ -58,10 +58,10 @@ func run(
 
 ) error {
 	var extensionList = []executor.Extension[*rpc.RequestAndResults]{
-		register.MakeRegisterRequestProgress(cfg, 100_000),
 		// RegisterProgress should be the first on the list = last to receive PostRun.
 		// This is because it collects the error and records it externally.
 		// If not, error that happen afterwards (e.g. on top of) will not be correcly recorded.
+		register.MakeRegisterRequestProgress(cfg, 100_000),
 
 		profiler.MakeCpuProfiler[*rpc.RequestAndResults](cfg),
 		logger.MakeProgressLogger[*rpc.RequestAndResults](cfg, 15*time.Second),
