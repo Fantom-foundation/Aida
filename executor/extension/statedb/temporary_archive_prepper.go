@@ -54,6 +54,8 @@ func findBlockNumber(data *rpc.RequestAndResults) uint64 {
 
 	switch str {
 	case "pending":
+		// validation for pending requests does not work, skip them
+		data.SkipValidation = true
 		// pending should be treated as latest
 		fallthrough
 	case "latest":

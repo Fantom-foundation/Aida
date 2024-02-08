@@ -93,7 +93,18 @@ type rpcComparator struct {
 // PostTransaction compares result with recording. If ContinueOnFailure
 // is enabled error is saved. Otherwise, the error is returned.
 func (c *rpcComparator) PostTransaction(state executor.State[*rpc.RequestAndResults], ctx *executor.Context) error {
+	defer func() {
+		p := recover()
+		if p != nil {
+			panic("rpcComparator")
+		}
+	}()
 	c.totalNumberOfRequests++
+
+	// pending block numbers are not validatable
+	if state.Data.SkipValidation || state.Data.StateDB == nil {
+		return nil
+	}
 
 	compareErr := compare(state)
 	if compareErr != nil {
