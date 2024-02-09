@@ -95,6 +95,11 @@ type rpcComparator struct {
 func (c *rpcComparator) PostTransaction(state executor.State[*rpc.RequestAndResults], ctx *executor.Context) error {
 	c.totalNumberOfRequests++
 
+	// pending block numbers are not validatable
+	if state.Data.SkipValidation || state.Data.StateDB == nil {
+		return nil
+	}
+
 	compareErr := compare(state)
 	if compareErr != nil {
 		// lot errors are recorded wrongly, for this case we resend the request and compare it again
