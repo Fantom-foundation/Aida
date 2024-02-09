@@ -189,10 +189,10 @@ func (e normaTxBlockEnv) GetTimestamp() uint64 {
 }
 
 // GetBlockHash returns the hash of the block with the given number.
-func (e normaTxBlockEnv) GetBlockHash(blockNumber uint64) common.Hash {
+func (e normaTxBlockEnv) GetBlockHash(blockNumber uint64) (common.Hash, error) {
 	// transform the block number into a hash
 	// we don't have real block hashes, so we just use the block number
-	return common.BigToHash(big.NewInt(int64(blockNumber)))
+	return common.BigToHash(big.NewInt(int64(blockNumber))), nil
 }
 
 // GetBaseFee returns the base fee for transactions in the current block.
