@@ -140,10 +140,19 @@ func (rp *registerRequestProgress) PreRun(executor.State[*rpc.RequestAndResults]
 func (rp *registerRequestProgress) PostTransaction(state executor.State[*rpc.RequestAndResults], _ *executor.Context) error {
 
 	rp.lock.Lock()
-	defer rp.lock.Unlock()
+	defer func() {
+		rp.lock.Unlock()
+	
+		r := recover()
+		if r != nil {
+			panic("registerRequestProgress")
+		}
+	}()
 
 	rp.overallInfo.numRequests++
-	rp.overallInfo.gas += state.Data.StateDB.GasUsed
+	if state.Data.StateDB != nil {
+		rp.overallInfo.gas += state.Data.StateDB.GasUsed
+	}
 
 	overallInfo := rp.overallInfo
 	overallCount := overallInfo.numRequests
@@ -151,7 +160,7 @@ func (rp *registerRequestProgress) PostTransaction(state executor.State[*rpc.Req
 	if overallCount-rp.lastReportedRequestCount < uint64(rp.reportFrequency) {
 		return nil
 	}
-
+	
 	boundary := overallCount - (overallCount % uint64(rp.reportFrequency))
 	rp.boundary = int(boundary)
 
