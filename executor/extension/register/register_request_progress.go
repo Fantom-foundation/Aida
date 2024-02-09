@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+	"strconv"
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
@@ -127,7 +128,7 @@ func (rp *registerRequestProgress) PreRun(executor.State[*rpc.RequestAndResults]
 		rp.log.Errorf("Metadata warning: %s.", err)
 	}
 	rp.meta = rm
-	rm.Print()
+	rp.meta.Print()
 
 	now := time.Now()
 	rp.startOfRun = now
@@ -140,7 +141,7 @@ func (rp *registerRequestProgress) PostTransaction(state executor.State[*rpc.Req
 
 	rp.lock.Lock()
 	defer rp.lock.Unlock()
-
+	
 	rp.overallInfo.numRequests++
 	rp.overallInfo.gas += state.Data.StateDB.GasUsed
 
@@ -172,6 +173,25 @@ func (rp *registerRequestProgress) PostTransaction(state executor.State[*rpc.Req
 	rp.lastIntervalInfo = overallInfo
 	rp.lastReportedRequestCount = boundary
 	rp.lastUpdate = now
+
+	return nil
+}
+
+// PostRun prints the remaining statistics and terminates any printer resources.
+func (rp *registerRequestProgress) PostRun(_ executor.State[*rpc.RequestAndResults], ctx *executor.Context, err error) error {
+	rp.ps.Print()
+	rp.ps.Close()
+
+	rp.meta.meta["Runtime"] = strconv.Itoa(int(time.Since(rp.startOfRun).Seconds()))
+	if err != nil {
+		rp.meta.meta["RunSucceed"] = strconv.FormatBool(false)
+		rp.meta.meta["RunError"] = fmt.Sprintf("%v", err)
+	} else {
+		rp.meta.meta["RunSucceed"] = strconv.FormatBool(true)
+	}
+
+	rp.meta.Print()
+	rp.meta.Close()
 
 	return nil
 }
