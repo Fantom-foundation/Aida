@@ -45,12 +45,15 @@ func TestSubstateProgressTrackerExtension_LoggingHappens(t *testing.T) {
 
 	ext := makeBlockProgressTracker(cfg, testStateDbInfoFrequency, log)
 
-	ctx := &executor.Context{State: db, StateDbPath: dummyStateDbPath}
+	ctx := &executor.Context{
+		State:           db,
+		StateDbPath:     dummyStateDbPath,
+		ExecutionResult: substatecontext.NewReceipt(&substate.SubstateResult{GasUsed: 100}),
+	}
 
 	s := substatecontext.NewTxContext(&substate.Substate{
 		Result: &substate.SubstateResult{
-			Status:  0,
-			GasUsed: 100,
+			Status: 0,
 		},
 	})
 
@@ -84,7 +87,6 @@ func TestSubstateProgressTrackerExtension_LoggingHappens(t *testing.T) {
 	ext.PostTransaction(executor.State[txcontext.TxContext]{Data: s}, ctx)
 	ext.PostBlock(executor.State[txcontext.TxContext]{
 		Block: 5,
-		Data:  s,
 	}, ctx)
 
 	time.Sleep(500 * time.Millisecond)
@@ -94,7 +96,6 @@ func TestSubstateProgressTrackerExtension_LoggingHappens(t *testing.T) {
 	ext.PostTransaction(executor.State[txcontext.TxContext]{Data: s}, ctx)
 	ext.PostBlock(executor.State[txcontext.TxContext]{
 		Block: 6,
-		Data:  s,
 	}, ctx)
 
 	time.Sleep(500 * time.Millisecond)
@@ -102,7 +103,6 @@ func TestSubstateProgressTrackerExtension_LoggingHappens(t *testing.T) {
 	ext.PostTransaction(executor.State[txcontext.TxContext]{Data: s}, ctx)
 	ext.PostBlock(executor.State[txcontext.TxContext]{
 		Block: 8,
-		Data:  s,
 	}, ctx)
 }
 
@@ -116,12 +116,14 @@ func TestSubstateProgressTrackerExtension_FirstLoggingIsIgnored(t *testing.T) {
 
 	ext := makeBlockProgressTracker(cfg, testStateDbInfoFrequency, log)
 
-	ctx := &executor.Context{State: db}
+	ctx := &executor.Context{
+		State:           db,
+		ExecutionResult: substatecontext.NewReceipt(&substate.SubstateResult{GasUsed: 10}),
+	}
 
 	s := substatecontext.NewTxContext(&substate.Substate{
 		Result: &substate.SubstateResult{
-			Status:  0,
-			GasUsed: 10,
+			Status: 0,
 		},
 	})
 

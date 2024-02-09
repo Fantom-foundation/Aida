@@ -21,7 +21,10 @@ first <- Metadata %>% filter(key == "First")
 last <- Metadata %>% filter(key == "Last")
 
 # load block and transaction tables into data frames and exclude lachesis transition block
-TxData <- dbReadTable(con, 'stats') %>% filter(start >= as.integer(first$value) & end <= as.integer(last$value))
+TxData <- dbReadTable(con, 'stats') %>% 
+	filter(start >= as.integer(first$value) & end <= as.integer(last$value)) %>%
+	mutate(total_disk = as.numeric(live_disk) + as.numeric(archive_disk))
+
 
 # close database connection
 dbDisconnect(con)
@@ -33,6 +36,7 @@ dbDisconnect(con)
 
 ```{r, echo=FALSE, message=FALSE}
 maxMemory <- TxData %>% filter(memory == max(memory)) %>% filter(start == min(start)) %>% distinct(memory, start) 
+maxTotalDisk <- TxData %>% filter(total_disk == max(total_disk)) %>% filter(start == min(start)) %>% distinct(total_disk, start) 
 maxLiveDisk <- TxData %>% filter(live_disk == max(live_disk)) %>% filter(start == min(start)) %>% distinct(live_disk, start) 
 maxArchiveDisk <- TxData %>% filter(archive_disk == max(archive_disk)) %>% filter(start == min(start)) %>% distinct(archive_disk, start) 
 maxTxRate <- TxData %>% filter(tx_rate == max(tx_rate)) %>% filter(start == min(start)) %>% distinct(tx_rate, start)
@@ -58,13 +62,45 @@ colorize <- function(x, color) {
 fmt <- function(x, scale, unit, d) {
 	paste(format(as.numeric(x) * scale, digit=d, nsmall=0), unit)
 }
+
+pluralize <- function(n, word) {
+	if (n == 0) {
+		""
+	} else if (n == 1) {
+		paste(n, word)
+	} else {
+		paste0(n, " ", word, "s")
+	}
+}
+
+add_whitespace <- function(text) {
+	if (text == "") {
+		text
+	} else {
+		paste(text, " ")
+	}
+}
+
+fmt_duration <- function(seconds) {
+	paste0(
+		add_whitespace(pluralize(floor(seconds / (24*60*60)), "day")),
+		add_whitespace(pluralize(floor(seconds / (60*60)) %% 24 , "hour")),
+		add_whitespace(pluralize(floor(seconds / 60) %% 60, "minute")),
+		pluralize(seconds %% 60, "second")
+	)
+}
+
+b <- function(text) {
+	paste0("**", text, "**")
+}
+
 ```
 
-Run `r runId$value` **`r if(isRunSuccess){
-	colorize(paste0("completed successfully"), "green")
+Run `r runId$value` `r if(isRunSuccess){
+	b(colorize(paste0("completed successfully"), "green"))
 } else {
-	colorize(paste0("failed"), "red")
-}`**. The runtime is **`r format(round(as.numeric(runtime$value)/3600, 2), digit=3)`** hours.
+	b(colorize(paste0("failed"), "red"))
+}`. The runtime is `r b(fmt_duration(as.numeric(runtime$value)))`.
 
     `r if(!isRunSuccess) {
         runError$value
@@ -76,12 +112,13 @@ rGas <- data.frame(Property="Gas Rate", Mean=fmt(mean(TxData$gas_rate), 1e-6, "M
 rMem <- data.frame(Property="Memory", Mean="", Max=fmt(max(TxData$memory), 1e-9, "GB", 4))
 rLDb <- data.frame(Property="Disk - LiveDB", Mean="", Max=fmt(max(TxData$live_disk), 1e-9, "GB", 4))
 rADb <- data.frame(Property="Disk - ArchiveDB", Mean="", Max=fmt(max(TxData$archive_disk), 1e-9, "GB", 4))
-
+rTDb <- data.frame(Property="Disk - Total", Mean="", Max=fmt(max(TxData$total_disk), 1e-9, "GB", 4))
 
 summary <- rbind(rTx, rGas, rMem, rLDb)
 
 if (isArchiveActive) {
 	summary <- rbind(summary, rADb)
+	summary <- rbind(summary, rTDb)
 }
 
 gt(summary)
@@ -174,9 +211,21 @@ TxData %>% mutate(memory = as.numeric(memory) * 1e-9, start = as.numeric(start) 
    labs(x="Block Height", y="Ram Consumption", title="Memory Usage")
 ```
 
-Max Disk Usage throughout the run is **`r format(as.numeric(maxLiveDisk$live_disk) * 1e-9, big.mark=",", digit=3)`** GB at block height **`r format(maxLiveDisk$start, big.mark=",")`**
 
-```{r, echo=FALSE, message=FALSE, fig.width=12, fig.height=8}
+`r if(isArchiveActive){
+paste(
+	paste0("Total Disk Usage throughout the run is ", b(format(as.numeric(maxTotalDisk$total_disk) * 1e-9, big.mark=",", digit=3)), " GB at block height ", b(format(maxTotalDisk$start, big.mark=",")), " - " ),
+	paste0("Live: ",  b(fmt(as.numeric(maxLiveDisk$live_disk), 1e-9, "GB", 4)), "(", fmt(100 * as.numeric(maxLiveDisk$live_disk) / as.numeric(maxTotalDisk$total_disk), 1, "%", 3), "), "),
+	paste0("Archive: ",  b(fmt(as.numeric(maxArchiveDisk$archive_disk), 1e-9, "GB", 4)), "(", fmt(100 * as.numeric(maxArchiveDisk$archive_disk) / as.numeric(maxTotalDisk$total_disk), 1, "%", 3), ").")
+)
+
+} else {
+
+paste0("Max Live Disk Usage throughout the run is ", b(format(as.numeric(maxLiveDisk$live_disk) * 1e-9, big.mark=",", digit=3)), " GB at block height ", b(format(maxLiveDisk$start, big.mark=",")), ".")
+
+}`
+
+```{r, echo=FALSE, message=FALSE, fig.width=12, fig.height=8, eval=!isArchiveActive}
 TxData %>% mutate(live_disk = as.numeric(live_disk) * 1e-9, start = as.numeric(start) * 1e-6) %>%
    ggplot(aes(x = start, y = live_disk)) +
    geom_point(alpha=0.3) +
@@ -184,4 +233,19 @@ TxData %>% mutate(live_disk = as.numeric(live_disk) * 1e-9, start = as.numeric(s
    scale_y_continuous(labels = scales::unit_format(unit="GB")) +
    labs(x="Block Height", y="Disk Consumption", title="Disk Usage")
 ```
+
+```{r, echo=FALSE, message=FALSE, fig.width=12, fig.height=8, eval=isArchiveActive}
+ArchivedTxData <- TxData %>%
+   mutate(live_disk = as.numeric(live_disk) * 1e-9, archive_disk = as.numeric(archive_disk) * 1e-9, total_disk = as.numeric(total_disk) * 1e-9, start = as.numeric(start) * 1e-6)
+
+ggplot() +
+   geom_point(data = ArchivedTxData, aes(x = start, y = total_disk, color="Total"), color="black", alpha=0.3) +
+   geom_point(data = ArchivedTxData, aes(x = start, y = live_disk, color="Live"), alpha=0.3) +
+   geom_point(data = ArchivedTxData, aes(x = start, y = archive_disk, color="Archive"), alpha=0.3) +
+   scale_x_continuous(labels = scales::unit_format(unit="M")) +
+   scale_y_continuous(labels = scales::unit_format(unit="GB")) +
+   labs(x="Block Height", y="Disk Consumption", title="Disk Usage", color="Legend") +
+   theme(legend.justification = c(0, 1), legend.position = c(0.025, 0.975))
+```
+
 
