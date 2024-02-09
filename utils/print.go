@@ -149,12 +149,12 @@ func NewPrinterToSqlite3(conn string, create string, insert string, f func() [][
 
 	db, err := sql.Open("sqlite3", conn)
 	if err != nil {
-		return nil, fmt.Errorf("unable to open connection to sqlite3 %s", conn)
+		return nil, fmt.Errorf("Failed to open connection to sqlite3 %s: %v", conn, err)
 	}
 
 	_, err = db.Exec(create)
 	if err != nil {
-		return nil, fmt.Errorf("Could not confirm if table exists")
+		return nil, fmt.Errorf("Failed to create/replace table on %s: %v", conn, err)
 	}
 
 	db.Exec("PRAGMA synchronous = OFF")     // so that insert does not block
