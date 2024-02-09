@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"time"
-	"strconv"
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
@@ -141,7 +141,7 @@ func (rp *registerRequestProgress) PostTransaction(state executor.State[*rpc.Req
 
 	rp.lock.Lock()
 	defer rp.lock.Unlock()
-	
+
 	rp.overallInfo.numRequests++
 	rp.overallInfo.gas += state.Data.StateDB.GasUsed
 
