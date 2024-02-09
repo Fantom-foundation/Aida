@@ -11,6 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+// TODO FIX!
 const falsyContract = "0xe0c38b2a8d09aad53f1c67734b9a95e43d5981c0"
 
 // StateDBData represents data that StateDB returned for requests recorded on API server
