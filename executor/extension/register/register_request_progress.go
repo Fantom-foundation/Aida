@@ -142,7 +142,7 @@ func (rp *registerRequestProgress) PostTransaction(state executor.State[*rpc.Req
 	rp.lock.Lock()
 	defer func() {
 		rp.lock.Unlock()
-	
+
 		r := recover()
 		if r != nil {
 			panic("registerRequestProgress")
@@ -160,7 +160,7 @@ func (rp *registerRequestProgress) PostTransaction(state executor.State[*rpc.Req
 	if overallCount-rp.lastReportedRequestCount < uint64(rp.reportFrequency) {
 		return nil
 	}
-	
+
 	boundary := overallCount - (overallCount % uint64(rp.reportFrequency))
 	rp.boundary = int(boundary)
 
