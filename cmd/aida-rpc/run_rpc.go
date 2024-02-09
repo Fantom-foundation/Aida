@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
@@ -45,6 +46,9 @@ type rpcProcessor struct {
 
 func (p rpcProcessor) Process(state executor.State[*rpc.RequestAndResults], ctx *executor.Context) error {
 	state.Data.StateDB = rpc.Execute(uint64(state.Block), state.Data, ctx.Archive, p.cfg)
+	if state.Data.StateDB == nil {
+		fmt.Println("nil")
+	}
 	return nil
 }
 
