@@ -94,8 +94,8 @@ func TestStatedbInfo_RenameTempStateDbDirectory(t *testing.T) {
 // TestStatedbInfo_RenameTempStateDbDirectory tests renaming temporary state DB directory into a custom name.
 func TestStatedbInfo_RenameTempStateDbDirectoryToCustomName(t *testing.T) {
 	cfg := &Config{
-		DbImpl:         "geth",
-		DbVariant:      "",
+		DbImpl:       "geth",
+		DbVariant:    "",
 		CustomDbName: "TestName",
 	}
 	// Update config for state DB preparation by providing additional information
