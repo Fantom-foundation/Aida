@@ -24,8 +24,6 @@ func Test_ethTestProvider_Run(t *testing.T) {
 
 	gomock.InOrder(
 		consumer.EXPECT().Consume(1, 0, gomock.Any()),
-		//consumer.EXPECT().Consume(1, 1, gomock.Any()),
-		//consumer.EXPECT().Consume(1, 2, gomock.Any()),
 	)
 
 	err := provider.Run(0, 0, toSubstateConsumer(consumer))

@@ -135,7 +135,7 @@ func CreateTestData(t *testing.T) *StJSON {
 			To:                   common.HexToAddress("0x10").Hex(),
 			Data:                 []string{"0x"},
 			GasLimit:             []*BigInt{{*bInt}},
-			Value:                []string{"0x00"},
+			Value:                []string{"0x01"},
 			PrivateKey:           hexutil.MustDecode("0x45a915e4d060149eb4365960e6a7a45f334393093061116b197e3240065ff2d8"),
 		},
 		Post: map[string][]stPostState{
@@ -229,29 +229,10 @@ type stTransaction struct {
 	PrivateKey           hexutil.Bytes       `json:"secretKey"`
 }
 
-func (tx *stTransaction) MarshalJSON() ([]byte, error) {
-	gasLimitArr := make([]string, len(tx.GasLimit))
-	for i, v := range tx.GasLimit {
-		gasLimitArr[i] = "0x" + v.Text(16)
-	}
-
-	// Create a new data structure that has the same fields as stTransaction but is a valid format for json.Marshal
-	type Alias stTransaction
-	return json.Marshal(&struct {
-		GasPrice             string   `json:"gasPrice"`
-		MaxFeePerGas         string   `json:"maxFeePerGas"`
-		MaxPriorityFeePerGas string   `json:"maxPriorityFeePerGas"`
-		Nonce                string   `json:"nonce"`
-		GasLimit             []string `json:"gasLimit"`
-		*Alias
-	}{
-		GasPrice:             "0x" + tx.GasPrice.Text(16),
-		MaxFeePerGas:         "0x" + tx.MaxFeePerGas.Text(16),
-		MaxPriorityFeePerGas: "0x" + tx.MaxPriorityFeePerGas.Text(16),
-		Nonce:                "0x" + tx.Nonce.Text(16),
-		GasLimit:             gasLimitArr,
-		Alias:                (*Alias)(tx),
-	})
+// needed for stTransaction and stEnv bigInt conversions
+func (i *BigInt) MarshalJSON() ([]byte, error) {
+	str := "0x" + i.Text(16)
+	return json.Marshal(str)
 }
 
 func (tx *stTransaction) toMessage(ps stPostState, baseFee *BigInt) (*types.Message, error) {
@@ -335,26 +316,6 @@ type stEnv struct {
 	Number      *BigInt        `json:"currentNumber"     gencodec:"required"`
 	Timestamp   *BigInt        `json:"currentTimestamp"  gencodec:"required"`
 	BaseFee     *BigInt        `json:"currentBaseFee"  gencodec:"optional"`
-}
-
-func (env *stEnv) MarshalJSON() ([]byte, error) {
-	// Create a new data structure that has the same fields as stEnv but is a valid format for json.Marshal
-	type Alias stEnv
-	return json.Marshal(&struct {
-		Difficulty string `json:"currentDifficulty"`
-		GasLimit   string `json:"currentGasLimit"`
-		Number     string `json:"currentNumber"`
-		Timestamp  string `json:"currentTimestamp"`
-		BaseFee    string `json:"currentBaseFee"`
-		*Alias
-	}{
-		Difficulty: "0x" + env.Difficulty.Text(16),
-		GasLimit:   "0x" + env.GasLimit.Text(16),
-		Number:     "0x" + env.Number.Text(16),
-		Timestamp:  "0x" + env.Timestamp.Text(16),
-		BaseFee:    "0x" + env.BaseFee.Text(16),
-		Alias:      (*Alias)(env),
-	})
 }
 
 func (s *stEnv) GetCoinbase() common.Address {

@@ -38,6 +38,10 @@ type Account interface {
 	String() string
 }
 
+func NewNilAccount() Account {
+	return &account{}
+}
+
 func NewAccount(code []byte, storage map[common.Hash]common.Hash, balance *big.Int, nonce uint64) Account {
 	return &account{Code: code, Storage: storage, Balance: balance, Nonce: nonce}
 }

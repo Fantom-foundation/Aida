@@ -15,7 +15,7 @@ type ethStateBlockEventEmitter struct {
 }
 
 func (e ethStateBlockEventEmitter) PreTransaction(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
-	ctx.State.BeginBlock(s.Data.GetBlockEnvironment().GetNumber())
+	ctx.State.BeginBlock(uint64(s.Block))
 	return nil
 }
 

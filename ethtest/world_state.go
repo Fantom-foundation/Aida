@@ -17,7 +17,7 @@ type worldStateAlloc struct {
 func (w worldStateAlloc) Get(addr common.Address) txcontext.Account {
 	acc, ok := w.alloc[addr]
 	if !ok {
-		return nil
+		return txcontext.NewNilAccount()
 	}
 	return txcontext.NewAccount(acc.Code, acc.Storage, acc.Balance, acc.Nonce)
 }
