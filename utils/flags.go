@@ -80,7 +80,11 @@ var (
 	}
 	KeepDbFlag = cli.BoolFlag{
 		Name:  "keep-db",
-		Usage: "if set, statedb is not deleted after run",
+		Usage: "if set, state-db is not deleted after run",
+	}
+	CustomDbNameFlag = cli.StringFlag{
+		Name:  "custom-db-name",
+		Usage: "sets the name of state-db direcotry when --keep-db is enabled",
 	}
 	MemoryProfileFlag = cli.StringFlag{
 		Name:  "memory-profile",

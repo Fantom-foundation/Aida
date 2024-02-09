@@ -61,24 +61,25 @@ func TestStatedbInfo_WriteReadStateDbInfo(t *testing.T) {
 	}
 }
 
-// TestStatedbInfo_RenameTempStateDBDirectory tests renaming temporary state DB directory into something more meaningful
-func TestStatedbInfo_RenameTempStateDBDirectory(t *testing.T) {
+// TestStatedbInfo_RenameTempStateDbDirectory tests renaming temporary state DB directory into something more meaningful
+func TestStatedbInfo_RenameTempStateDbDirectory(t *testing.T) {
 	for _, tc := range GetStateDbTestCases() {
 		t.Run(fmt.Sprintf("DB variant: %s; shadowImpl: %s; archive variant: %s", tc.Variant, tc.ShadowImpl, tc.ArchiveVariant), func(t *testing.T) {
 			cfg := MakeTestConfig(tc)
 			// Update config for state DB preparation by providing additional information
 			cfg.DbTmp = t.TempDir()
-			cfg.StateDbSrc = t.TempDir()
+			oldDirectory := t.TempDir()
+			block := uint64(2)
 
 			// Call for renaming temporary state DB directory
-			RenameTempStateDBDirectory(cfg, cfg.StateDbSrc, 2)
+			RenameTempStateDbDirectory(cfg, oldDirectory, block)
 
 			// Generating directory name in the same format
 			var newName string
 			if cfg.DbImpl != "geth" {
-				newName = fmt.Sprintf("state_db_%v_%v_%v", cfg.DbImpl, cfg.DbVariant, 2)
+				newName = fmt.Sprintf("state_db_%v_%v_%v", cfg.DbImpl, cfg.DbVariant, block)
 			} else {
-				newName = fmt.Sprintf("state_db_%v_%v", cfg.DbImpl, 2)
+				newName = fmt.Sprintf("state_db_%v_%v", cfg.DbImpl, block)
 			}
 
 			// trying to find renamed directory
@@ -87,5 +88,27 @@ func TestStatedbInfo_RenameTempStateDBDirectory(t *testing.T) {
 				t.Fatalf("failed to rename temporary state DB directory")
 			}
 		})
+	}
+}
+
+// TestStatedbInfo_RenameTempStateDbDirectory tests renaming temporary state DB directory into a custom name.
+func TestStatedbInfo_RenameTempStateDbDirectoryToCustomName(t *testing.T) {
+	cfg := &Config{
+		DbImpl:       "geth",
+		DbVariant:    "",
+		CustomDbName: "TestName",
+	}
+	// Update config for state DB preparation by providing additional information
+	cfg.DbTmp = t.TempDir()
+	oldDirectory := t.TempDir()
+	block := uint64(2)
+
+	// Call for renaming temporary state DB directory
+	RenameTempStateDbDirectory(cfg, oldDirectory, block)
+
+	// trying to find renamed directory
+	newName := filepath.Join(cfg.DbTmp, cfg.CustomDbName)
+	if _, err := os.Stat(newName); os.IsNotExist(err) {
+		t.Fatalf("failed to rename temporary state DB directory")
 	}
 }
