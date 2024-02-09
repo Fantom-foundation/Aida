@@ -72,6 +72,7 @@ func run(
 			extensionList,
 			statedb.MakeStateDbManager[*rpc.RequestAndResults](cfg),
 			statedb.MakeArchiveBlockChecker[*rpc.RequestAndResults](cfg),
+			logger.MakeDbLogger[*rpc.RequestAndResults](cfg),
 		)
 
 	}
