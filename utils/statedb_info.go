@@ -126,10 +126,13 @@ func ReadStateDbInfo(filename string) (StateDbInfo, error) {
 	return dbinfo, err
 }
 
-// RenameTempStateDBDirectory renames a temp directory to a meaningful name
-func RenameTempStateDBDirectory(cfg *Config, oldDirectory string, block uint64) string {
+// RenameTempStateDbDirectory renames a temp directory to a meaningful name
+func RenameTempStateDbDirectory(cfg *Config, oldDirectory string, block uint64) string {
 	var newDirectory string
-	if cfg.DbImpl != "geth" {
+	// if custom db name is given, use it. Otherwise, generate readable name from db info.
+	if cfg.CustomDbName != "" {
+		newDirectory = cfg.CustomDbName
+	} else if cfg.DbImpl != "geth" {
 		newDirectory = fmt.Sprintf("state_db_%v_%v_%v", cfg.DbImpl, cfg.DbVariant, block)
 	} else {
 		newDirectory = fmt.Sprintf("state_db_%v_%v", cfg.DbImpl, block)

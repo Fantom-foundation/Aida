@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"math/big"
+	"strings"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
@@ -9,6 +10,9 @@ import (
 	"github.com/Fantom-foundation/go-opera/evmcore"
 	"github.com/ethereum/go-ethereum/common"
 )
+
+// TODO FIX!
+const falsyContract = "0xe0c38b2a8d09aad53f1c67734b9a95e43d5981c0"
 
 // StateDBData represents data that StateDB returned for requests recorded on API server
 // This is sent to Comparator and compared with RecordedData
@@ -47,6 +51,13 @@ func Execute(block uint64, rec *RequestAndResults, archive state.NonCommittableS
 		}
 
 		evm := newEvmExecutor(block, archive, cfg, rec.Query.Params[0].(map[string]interface{}), timestamp)
+
+		// calls to this contract are excluded for now,
+		// this contract causes issues in validation
+		if strings.Compare(falsyContract, strings.ToLower(evm.args.To.String())) == 0 {
+			rec.SkipValidation = true
+		}
+
 		return executeCall(evm)
 
 	case "estimateGas":

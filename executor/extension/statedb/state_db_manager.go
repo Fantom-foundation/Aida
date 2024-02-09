@@ -116,7 +116,7 @@ func (m *stateDbManager[T]) PostRun(state executor.State[T], ctx *executor.Conte
 		return fmt.Errorf("failed to close state-db; %v", err)
 	}
 
-	newName := utils.RenameTempStateDBDirectory(m.cfg, ctx.StateDbPath, lastProcessedBlock)
+	newName := utils.RenameTempStateDbDirectory(m.cfg, ctx.StateDbPath, lastProcessedBlock)
 	m.log.Noticef("State-db directory: %v", newName)
 	return nil
 }
