@@ -30,6 +30,7 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		CompactDb:              getFlagValue(ctx, CompactDbFlag).(bool),
 		ContinueOnFailure:      getFlagValue(ctx, ContinueOnFailureFlag).(bool),
 		ContractNumber:         getFlagValue(ctx, ContractNumberFlag).(int64),
+		CustomDbName:           getFlagValue(ctx, CustomDbNameFlag).(string),
 		DbComponent:            getFlagValue(ctx, DbComponentFlag).(string),
 		DbImpl:                 getFlagValue(ctx, StateDbImplementationFlag).(string),
 		DbLogging:              getFlagValue(ctx, StateDbLoggingFlag).(string),

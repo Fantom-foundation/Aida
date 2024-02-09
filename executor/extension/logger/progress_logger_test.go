@@ -7,6 +7,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
+	substatecontext "github.com/Fantom-foundation/Aida/txcontext/substate"
 	"github.com/Fantom-foundation/Aida/utils"
 	substate "github.com/Fantom-foundation/Substate"
 	"go.uber.org/mock/gomock"
@@ -75,12 +76,10 @@ func TestProgressLoggerExtension_LoggingHappens(t *testing.T) {
 	ext.PostTransaction(executor.State[*substate.Substate]{
 		Block:       1,
 		Transaction: 1,
-		Data: &substate.Substate{
-			Result: &substate.SubstateResult{
-				GasUsed: 100_000_000,
-			},
-		},
-	}, nil)
+		Data:        nil,
+	}, &executor.Context{
+		ExecutionResult: substatecontext.NewReceipt(&substate.SubstateResult{GasUsed: 100_000_000}),
+	})
 
 	// we must wait for the ticker to tick
 	time.Sleep((3 * testProgressReportFrequency) / 2)
@@ -109,12 +108,10 @@ func TestProgressLoggerExtension_LoggingHappensEvenWhenProgramEndsBeforeTickerTi
 	ext.PostTransaction(executor.State[*substate.Substate]{
 		Block:       1,
 		Transaction: 1,
-		Data: &substate.Substate{
-			Result: &substate.SubstateResult{
-				GasUsed: 100_000_000,
-			},
-		},
-	}, nil)
+		Data:        nil,
+	}, &executor.Context{
+		ExecutionResult: substatecontext.NewReceipt(&substate.SubstateResult{GasUsed: 100_000_000}),
+	})
 
 	// wait for data to get into logger
 	time.Sleep((3 * testProgressReportFrequency) / 2)

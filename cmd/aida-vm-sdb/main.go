@@ -89,6 +89,7 @@ var RunSubstateCmd = cli.Command{
 		&utils.ContinueOnFailureFlag,
 		&utils.SyncPeriodLengthFlag,
 		&utils.KeepDbFlag,
+		&utils.CustomDbNameFlag,
 		//&utils.MaxNumTransactionsFlag,
 		&utils.ValidateTxStateFlag,
 		&utils.ValidateFlag,

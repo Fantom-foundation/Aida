@@ -47,6 +47,8 @@ const (
 	AidaDbRepositoryEthereumUrl = "https://aida.ethereum.repository.fantom.network"
 )
 
+const maxLastBlock = math.MaxUint64 - 1 // we decrease the value by one because params are always +1
+
 var (
 	FirstOperaBlock     uint64 // id of the first block in substate
 	AidaDbRepositoryUrl string // url of the Aida DB repository
@@ -68,7 +70,7 @@ var keywordBlocks = map[ChainID]map[string]uint64{
 		"berlin":    37_455_223,
 		"london":    37_534_833,
 		"first":     0,
-		"last":      math.MaxUint64,
+		"last":      maxLastBlock,
 		"lastpatch": 0,
 	},
 	TestnetChainID: {
@@ -77,7 +79,7 @@ var keywordBlocks = map[ChainID]map[string]uint64{
 		"berlin":    1_559_470,
 		"london":    7_513_335,
 		"first":     0,
-		"last":      math.MaxUint64,
+		"last":      maxLastBlock,
 		"lastpatch": 0,
 	},
 	// ethereum fork blocks are not stored in this structure as ethereum has already prepared config
@@ -122,6 +124,7 @@ type Config struct {
 	CompactDb              bool           // compact database after merging
 	ContinueOnFailure      bool           // continue validation when an error detected
 	ContractNumber         int64          // number of contracts to create
+	CustomDbName           string         // name of state-db directory
 	DbComponent            string         // options for util-db info are 'all', 'substate', 'delete', 'update', 'state-hash'
 	DbImpl                 string         // storage implementation
 	DbLogging              string         // set to true if all DB operations should be logged
