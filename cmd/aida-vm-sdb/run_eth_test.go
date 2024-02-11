@@ -150,53 +150,111 @@ func TestVmSdb_Eth_AllTransactionsAreProcessedInOrder(t *testing.T) {
 	}
 }
 
-// TODO Create valid test data
-//func TestVmSdb_Eth_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
-//	ctrl := gomock.NewController(t)
-//	provider := executor.NewMockProvider[txcontext.TxContext](ctrl)
-//	db := state.NewMockStateDB(ctrl)
-//	cfg := &utils.Config{
-//		First:           2,
-//		Last:            4,
-//		ChainID:         utils.MainnetChainID,
-//		ValidateTxState: true,
-//		SkipPriming:     true,
-//	}
-//
-//	data := ethtest.CreateTestData(t)
-//	data.Tx.GasLimit = []*ethtest.BigInt{new(ethtest.BigInt)}
-//
-//	provider.EXPECT().
-//		Run(2, 5, gomock.Any()).
-//		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[txcontext.TxContext]) error {
-//			return consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 1, Data: data})
-//		})
-//
-//	gomock.InOrder(
-//		db.EXPECT().BeginBlock(uint64(2)),
-//
-//		db.EXPECT().BeginTransaction(uint32(1)),
-//		db.EXPECT().Prepare(gomock.Any(), 1),
-//		db.EXPECT().Snapshot().Return(15),
-//		db.EXPECT().GetNonce(gomock.Any()).Return(uint64(1)),
-//		db.EXPECT().GetCodeHash(data.GetMessage().From()).Return(common.HexToHash("0x0")),
-//		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1)),
-//		db.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
-//		db.EXPECT().RevertToSnapshot(15),
-//		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
-//		db.EXPECT().EndTransaction(),
-//	)
-//
-//	// run fails but not on validation
-//	err := runEth(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
-//	if err == nil {
-//		t.Fatalf("run must fail")
-//	}
-//
-//	expectedErr := strings.TrimSpace("block: 2 transaction: 1\nintrinsic gas too low: have 0, want 21000")
-//	returnedErr := strings.TrimSpace(err.Error())
-//
-//	if strings.Compare(returnedErr, expectedErr) != 0 {
-//		t.Errorf("unexpected error; \n got: %v\n want: %v", err.Error(), expectedErr)
-//	}
-//}
+func TestVmSdb_Eth_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	provider := executor.NewMockProvider[txcontext.TxContext](ctrl)
+	db := state.NewMockStateDB(ctrl)
+	cfg := &utils.Config{
+		First:       2,
+		Last:        4,
+		ChainID:     utils.MainnetChainID,
+		SkipPriming: true,
+		Validate:    true,
+		LogLevel:    "Critical",
+	}
+
+	data := ethtest.CreateTestData(t)
+
+	provider.EXPECT().
+		Run(2, 5, gomock.Any()).
+		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[txcontext.TxContext]) error {
+			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 1, Data: data})
+			return nil
+		})
+
+	gomock.InOrder(
+		// Tx 1
+		// Validation
+		db.EXPECT().Exist(common.HexToAddress("0x1")).Return(true),
+		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
+		db.EXPECT().GetNonce(common.HexToAddress("0x1")).Return(uint64(1)),
+		db.EXPECT().GetCode(common.HexToAddress("0x1")).Return([]byte{}),
+		db.EXPECT().Exist(common.HexToAddress("0x2")).Return(true),
+		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(2000)),
+		db.EXPECT().GetNonce(common.HexToAddress("0x2")).Return(uint64(2)),
+		db.EXPECT().GetCode(common.HexToAddress("0x2")).Return([]byte{}),
+
+		// Tx execution
+		db.EXPECT().BeginBlock(uint64(2)),
+		db.EXPECT().BeginTransaction(uint32(1)),
+		db.EXPECT().Prepare(gomock.Any(), 1),
+		db.EXPECT().Snapshot().Return(15),
+		db.EXPECT().GetNonce(data.GetMessage().From()).Return(uint64(1)),
+		db.EXPECT().GetCodeHash(data.GetMessage().From()).Return(common.HexToHash("0x0")),
+		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
+		db.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
+		db.EXPECT().RevertToSnapshot(15),
+		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
+		db.EXPECT().EndTransaction(),
+	)
+
+	err := runEth(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
+	if err != nil {
+		errors.Unwrap(err)
+		if strings.Contains(err.Error(), "intrinsic gas too low") {
+			return
+		}
+		t.Fatal("run failed")
+	}
+}
+
+func TestVmSdb_Eth_ValidationDoesFailOnInvalidTransaction(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	provider := executor.NewMockProvider[txcontext.TxContext](ctrl)
+	db := state.NewMockStateDB(ctrl)
+	cfg := &utils.Config{
+		First:       2,
+		Last:        4,
+		ChainID:     utils.MainnetChainID,
+		SkipPriming: true,
+		Validate:    true,
+		LogLevel:    "Critical",
+	}
+
+	data := ethtest.CreateTestData(t)
+
+	provider.EXPECT().
+		Run(2, 5, gomock.Any()).
+		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[txcontext.TxContext]) error {
+			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 1, Data: data})
+			return nil
+		})
+
+	gomock.InOrder(
+		// Tx 1
+		// Validation fails on incorrect input so no db events are expected
+		// first account has correct data
+		db.EXPECT().Exist(common.HexToAddress("0x1")).Return(true),
+		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
+		db.EXPECT().GetNonce(common.HexToAddress("0x1")).Return(uint64(1)),
+		db.EXPECT().GetCode(common.HexToAddress("0x1")).Return([]byte{}),
+
+		// second account has incorrect balance
+		db.EXPECT().Exist(common.HexToAddress("0x2")).Return(true),
+		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(9999)), // incorrect balance
+		db.EXPECT().GetNonce(common.HexToAddress("0x2")).Return(uint64(2)),
+		db.EXPECT().GetCode(common.HexToAddress("0x2")).Return([]byte{}),
+		db.EXPECT().BeginBlock(uint64(2)),
+	)
+
+	err := runEth(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
+	if err == nil {
+		t.Fatal("run must fail")
+	}
+
+	errors.Unwrap(err)
+	if !strings.Contains(err.Error(), "pre alloc validation failed") {
+		t.Fatalf("unexpected error\ngot: %v\n want: %v", err, "pre alloc validation failed")
+	}
+
+}
