@@ -464,6 +464,7 @@ func TestRpc_ValidationFailsOnValidTransaction_Parallel(t *testing.T) {
 }
 
 var reqBlockTwo = &rpc.RequestAndResults{
+	RequestedBlock: 2,
 	Query: &rpc.Body{
 		Version:    "2.0",
 		ID:         json.RawMessage{1},
@@ -481,6 +482,7 @@ var reqBlockTwo = &rpc.RequestAndResults{
 }
 
 var reqBlockThree = &rpc.RequestAndResults{
+	RequestedBlock: 3,
 	Query: &rpc.Body{
 		Version:    "2.0",
 		ID:         json.RawMessage{1},
@@ -498,6 +500,7 @@ var reqBlockThree = &rpc.RequestAndResults{
 }
 
 var reqBlockFour = &rpc.RequestAndResults{
+	RequestedBlock: 4,
 	Query: &rpc.Body{
 		Version:    "2.0",
 		ID:         json.RawMessage{1},
