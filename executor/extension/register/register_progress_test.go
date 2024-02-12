@@ -71,13 +71,13 @@ func TestRegisterProgress_DoNothingIfDisabled(t *testing.T) {
 	}
 }
 
-func TestRegisterProgress_TerminatesIfPathDoesNotExist(t *testing.T) {
+func TestRegisterProgress_TerminatesIfPathToRegisterDirDoesNotExist(t *testing.T) {
 	var (
-		pathToFolder string = filepath.Join("does", "not", "exist")
+		pathToRegisterDir string = filepath.Join("does", "not", "exist")
 	)
 
 	cfg := &utils.Config{}
-	cfg.RegisterRun = pathToFolder // enabled here
+	cfg.RegisterRun = pathToRegisterDir // enabled here
 	cfg.First = 5
 	cfg.Last = 25
 	interval := 10
@@ -89,7 +89,7 @@ func TestRegisterProgress_TerminatesIfPathDoesNotExist(t *testing.T) {
 
 	err := ext.PreRun(executor.State[txcontext.TxContext]{}, nil)
 	if err == nil {
-		t.Errorf("Folder %s does not exist but no error was thrown.", pathToFolder)
+		t.Errorf("Folder %s does not exist but no error was thrown.", cfg.RegisterRun)
 	}
 }
 
