@@ -140,7 +140,7 @@ func (rp *registerRequestProgress) PreRun(executor.State[*rpc.RequestAndResults]
 func (rp *registerRequestProgress) PostTransaction(state executor.State[*rpc.RequestAndResults], _ *executor.Context) error {
 
 	rp.lock.Lock()
-	rp.lock.Unlock()
+	defer rp.lock.Unlock()
 
 	rp.overallInfo.numRequests++
 	if state.Data.StateDB != nil {
