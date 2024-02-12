@@ -35,3 +35,10 @@ func (l *txGeneratorBlockEventEmitter[T]) PreTransaction(state executor.State[T]
 	}
 	return nil
 }
+func (l *txGeneratorBlockEventEmitter[T]) PostRun(state executor.State[T], ctx *executor.Context, _ error) error {
+	// end the last block
+	if l.lastBlock != nil {
+		ctx.State.EndBlock()
+	}
+	return nil
+}

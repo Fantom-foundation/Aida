@@ -18,6 +18,7 @@ func TestTxGeneratorBlockEventEmitter_SingleBlock(t *testing.T) {
 		mockStateDB.EXPECT().BeginBlock(uint64(0)),
 		mockStateDB.EXPECT().EndBlock(),
 		mockStateDB.EXPECT().BeginBlock(uint64(1)),
+		mockStateDB.EXPECT().EndBlock(),
 	)
 
 	state := executor.State[any]{
@@ -35,5 +36,10 @@ func TestTxGeneratorBlockEventEmitter_SingleBlock(t *testing.T) {
 	state.Block = 1
 	if err := ext.PreTransaction(state, ctx); err != nil {
 		t.Fatalf("failed to to run pre-transaction: %v", err)
+	}
+
+	// call post run to end the last block
+	if err := ext.PostRun(state, ctx, nil); err != nil {
+		t.Fatalf("failed to to run post-run: %v", err)
 	}
 }

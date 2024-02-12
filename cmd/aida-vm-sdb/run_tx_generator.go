@@ -29,7 +29,7 @@ func RunTxGenerator(ctx *cli.Context) error {
 
 	provider := executor.NewNormaTxProvider(cfg, db)
 
-	return runTransactions(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg))
+	return runTransactions(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
 }
 
 func runTransactions(
@@ -37,6 +37,7 @@ func runTransactions(
 	provider executor.Provider[txcontext.TxContext],
 	stateDb state.StateDB,
 	processor executor.Processor[txcontext.TxContext],
+	extra []executor.Extension[txcontext.TxContext],
 ) error {
 	// order of extensionList has to be maintained
 	var extensionList = []executor.Extension[txcontext.TxContext]{
@@ -51,6 +52,8 @@ func runTransactions(
 		profiler.MakeMemoryUsagePrinter[txcontext.TxContext](cfg),
 		statedb.MakeTxGeneratorBlockEventEmitter[txcontext.TxContext](),
 	}
+
+	extensionList = append(extensionList, extra...)
 
 	return executor.NewExecutor(provider, cfg.LogLevel).Run(
 		executor.Params{
