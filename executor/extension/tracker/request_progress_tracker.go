@@ -49,7 +49,7 @@ type rpcProcessInfo struct {
 // PostTransaction increments number of transactions and saves gas used in last substate.
 func (t *requestProgressTracker) PostTransaction(state executor.State[*rpc.RequestAndResults], _ *executor.Context) error {
 	t.lock.Lock()
-	t.lock.Unlock()
+	defer t.lock.Unlock()
 
 	t.overallInfo.numRequests++
 	if state.Data.StateDB != nil {
