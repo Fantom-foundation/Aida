@@ -93,6 +93,35 @@ func TestRegisterProgress_TerminatesIfPathToRegisterDirDoesNotExist(t *testing.T
 	}
 }
 
+func TestRegisterProgress_TerminatesIfPathToStateDBDoesNotExist(t *testing.T) {
+	var (
+		tmpDir           string = t.TempDir()
+		dummyStateDbPath string = filepath.Join("does", "not", "exist")
+		dbName           string = "tmp"
+		connection       string = filepath.Join(tmpDir, fmt.Sprintf("%s.db", dbName))
+	)
+	cfg := &utils.Config{}
+	cfg.RegisterRun = pathToRegisterDir // enabled here
+	cfg.First = 5
+	cfg.Last = 25
+	interval := 10
+
+	ctrl := gomock.NewController(t)
+	stateDb := state.NewMockStateDB(ctrl)
+
+	ext := MakeRegisterProgress(cfg, interval)
+	if _, err := ext.(extension.NilExtension[txcontext.TxContext]); err {
+		t.Errorf("RegisterProgress is disabled even though enabled in configuration.")
+	}
+
+	ctx := &executor.Context{State: stateDb, StateDbPath: dummyStateDbPath}
+
+	err = ext.PreRun(executor.State[txcontext.TxContext]{}, ctx)
+	if err == nil {
+		t.Errorf("Dummy State DB does not exist but error is nil.")
+	}
+}
+
 func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 	var (
 		tmpDir           string = t.TempDir()
