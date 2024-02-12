@@ -139,7 +139,7 @@ func (rp *registerProgress) PreRun(_ executor.State[txcontext.TxContext], ctx *e
 	rp.pathToArchiveDb = filepath.Join(ctx.StateDbPath, ArchiveDbDirectoryName)
 
 	// Check if any path-to-state-db is not initialized, terminate now if so
-	_, err := utils.GetDirectorySize(rp.pathToStateDb)
+	_, err = utils.GetDirectorySize(rp.pathToStateDb)
 	if err != nil {
 		rp.log.Errorf("Unable to get directory size of state db at path: %s", rp.pathToStateDb)
 		return err
@@ -147,7 +147,7 @@ func (rp *registerProgress) PreRun(_ executor.State[txcontext.TxContext], ctx *e
 
 	if rp.cfg.ArchiveMode {
 		_, err = utils.GetDirectorySize(rp.pathToArchiveDb)
-		if err != nil {
+		if err == nil {
 			rp.log.Errorf("Unable to get directory size of archive db at path: %s", rp.pathToStateDb)
 			return err
 		}
