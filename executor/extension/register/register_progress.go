@@ -137,6 +137,22 @@ func (rp *registerProgress) PreRun(_ executor.State[txcontext.TxContext], ctx *e
 	rp.lastUpdate = now
 	rp.pathToStateDb = ctx.StateDbPath
 	rp.pathToArchiveDb = filepath.Join(ctx.StateDbPath, ArchiveDbDirectoryName)
+
+	// Check if any path-to-state-db is not initialized, terminate now if so
+	_, err := utils.GetDirectorySize(rp.pathToStateDb)
+	if err != nil {
+		rp.log.Errorf("Unable to get directory size of state db at path: %s", rp.pathToStateDb)
+		return err
+	}
+		
+	if rp.cfg.ArchiveMode {
+		_, err = utils.GetDirectorySize(rp.pathToArchiveDb)
+		if err != nil {
+			rp.log.Errorf("Unable to get directory size of archive db at path: %s", rp.pathToStateDb)
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -225,7 +241,7 @@ func (rp *registerProgress) sqlite3(conn string) (string, string, string, func()
 
 			lDisk, err := utils.GetDirectorySize(rp.pathToStateDb)
 			if err != nil {
-				rp.log.Errorf("Unable to get directory size from pathToStateDb: %s", rp.pathToStateDb)
+				// silent defaults to 0 if anything happens to path at runtime
 				lDisk = 0
 			}
 
@@ -233,8 +249,8 @@ func (rp *registerProgress) sqlite3(conn string) (string, string, string, func()
 			if rp.cfg.ArchiveMode {
 				aDisk, err = utils.GetDirectorySize(rp.pathToArchiveDb)
 				if err != nil {
+					// silent defaults to 0 if anything happens to path at runtime
 					aDisk = 0
-					rp.log.Errorf("Unable to get directory size from pathToArchiveDB: %s", rp.pathToArchiveDb)
 				} else {
 					lDisk -= aDisk
 				}
