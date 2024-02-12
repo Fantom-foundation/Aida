@@ -89,19 +89,17 @@ func TestRegisterProgress_TerminatesIfPathToRegisterDirDoesNotExist(t *testing.T
 
 	err := ext.PreRun(executor.State[txcontext.TxContext]{}, nil)
 	if err == nil {
-		t.Errorf("Folder %s does not exist but no error was thrown.", cfg.RegisterRun)
+		t.Errorf("Path to Register %s does not exist but error is nil.", cfg.RegisterRun)
 	}
 }
 
 func TestRegisterProgress_TerminatesIfPathToStateDBDoesNotExist(t *testing.T) {
 	var (
-		tmpDir           string = t.TempDir()
 		dummyStateDbPath string = filepath.Join("does", "not", "exist")
-		dbName           string = "tmp"
-		connection       string = filepath.Join(tmpDir, fmt.Sprintf("%s.db", dbName))
 	)
+
 	cfg := &utils.Config{}
-	cfg.RegisterRun = pathToRegisterDir // enabled here
+	cfg.RegisterRun = dummyStateDbPath // enabled here
 	cfg.First = 5
 	cfg.Last = 25
 	interval := 10
@@ -116,9 +114,9 @@ func TestRegisterProgress_TerminatesIfPathToStateDBDoesNotExist(t *testing.T) {
 
 	ctx := &executor.Context{State: stateDb, StateDbPath: dummyStateDbPath}
 
-	err = ext.PreRun(executor.State[txcontext.TxContext]{}, ctx)
+	err := ext.PreRun(executor.State[txcontext.TxContext]{}, ctx)
 	if err == nil {
-		t.Errorf("Dummy State DB does not exist but error is nil.")
+		t.Errorf("Path to Dummy State DB does not exist but error is nil.")
 	}
 }
 
