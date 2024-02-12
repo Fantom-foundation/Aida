@@ -7,6 +7,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor/extension/logger"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
+	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
@@ -45,11 +46,13 @@ func runTransactions(
 		// This is because it collects the error and records it externally.
 		// If not, error that happen afterwards (e.g. on top of) will not be correcly recorded.
 
-		profiler.MakeThreadLocker[txcontext.TxContext](),
+		logger.MakeDbLogger[txcontext.TxContext](cfg),
 		profiler.MakeVirtualMachineStatisticsPrinter[txcontext.TxContext](cfg),
 		logger.MakeProgressLogger[txcontext.TxContext](cfg, 15*time.Second),
 		logger.MakeErrorLogger[txcontext.TxContext](cfg),
+		tracker.MakeBlockProgressTracker(cfg, 100),
 		profiler.MakeMemoryUsagePrinter[txcontext.TxContext](cfg),
+		profiler.MakeMemoryProfiler[txcontext.TxContext](cfg),
 		statedb.MakeTxGeneratorBlockEventEmitter[txcontext.TxContext](),
 	}
 

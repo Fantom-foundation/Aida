@@ -119,6 +119,10 @@ func (ctx testTxCtx) GetBlockEnvironment() txcontext.BlockEnvironment {
 	return ctx.env
 }
 
+func (ctx testTxCtx) GetStateHash() common.Hash {
+	return common.Hash{}
+}
+
 // testTxBlkEnv is a dummy block environment used for testing.
 type testTxBlkEnv struct {
 	blkNumber uint64

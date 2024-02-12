@@ -160,6 +160,10 @@ func (ntx normaTx) GetBlockEnvironment() txcontext.BlockEnvironment {
 	return normaTxBlockEnv{tx: ntx.tx}
 }
 
+func (ntx normaTx) GetStateHash() common.Hash {
+	return common.Hash{}
+}
+
 // GetCoinbase returns the coinbase address.
 func (e normaTxBlockEnv) GetCoinbase() common.Address {
 	return common.HexToAddress("0x1")
