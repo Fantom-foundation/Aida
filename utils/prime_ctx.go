@@ -47,7 +47,7 @@ func (pc *PrimeContext) PrimeStateDB(ws txcontext.WorldState, db state.StateDB) 
 		numValues += account.GetStorageSize()
 	})
 
-	pc.log.Infof("\tLoading %d accounts with %d values ..", ws.Len(), numValues)
+	pc.log.Debugf("\tLoading %d accounts with %d values ..", ws.Len(), numValues)
 
 	pt := NewProgressTracker(numValues, pc.log)
 	if pc.cfg.PrimeRandom {
@@ -83,7 +83,7 @@ func (pc *PrimeContext) PrimeStateDB(ws txcontext.WorldState, db state.StateDB) 
 		}
 		pc.block++
 	}
-	pc.log.Infof("\t\tPriming completed ...")
+	pc.log.Debugf("\t\tPriming completed ...")
 	return nil
 }
 

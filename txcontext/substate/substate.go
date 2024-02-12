@@ -3,6 +3,7 @@ package substate
 import (
 	"github.com/Fantom-foundation/Aida/txcontext"
 	substate "github.com/Fantom-foundation/Substate"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 )
 
@@ -12,6 +13,11 @@ func NewTxContext(data *substate.Substate) txcontext.TxContext {
 
 type substateData struct {
 	*substate.Substate
+}
+
+func (t *substateData) GetStateHash() common.Hash {
+	// ignored
+	return common.Hash{}
 }
 
 func (t *substateData) GetInputState() txcontext.WorldState {
