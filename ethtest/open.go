@@ -90,3 +90,74 @@ func GetTestsWithinPath[T stateTest](path string, testType jsonTestType) ([]T, e
 
 	return tests, err
 }
+
+// OpenStateTests opens
+func OpenStateTests(path string) ([]*StJSON, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var tests []*StJSON
+
+	if info.IsDir() {
+		tests, err = GetTestsWithinPath[*StJSON](path, StateTests)
+		if err != nil {
+			return nil, err
+		}
+
+	} else {
+		tests, err = readTestsFromFile(path)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return tests, nil
+}
+
+func readTestsFromFile(path string) ([]*StJSON, error) {
+	var tests []*StJSON
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	byteJSON, err := io.ReadAll(file)
+	if err != nil {
+		return nil, err
+	}
+
+	var b map[string]*StJSON
+	err = json.Unmarshal(byteJSON, &b)
+	if err != nil {
+		return nil, fmt.Errorf("cannot unmarshal file %v", path)
+	}
+
+	testLabel := getTestLabel(path)
+
+	for _, t := range b {
+		t.TestLabel = testLabel
+		tests = append(tests, t)
+	}
+	return tests, nil
+}
+
+// getTestLabel returns the last folder name and the filename of the given path
+func getTestLabel(path string) string {
+	// Split the path into components
+	pathComponents := strings.Split(path, "/")
+
+	var lastFolderName = ""
+	var filename = ""
+
+	if len(pathComponents) > 1 {
+		// Extract the last folder name
+		lastFolderName = pathComponents[len(pathComponents)-2]
+	}
+
+	if len(pathComponents) > 0 {
+		// Extract the filename
+		filename = pathComponents[len(pathComponents)-1]
+	}
+	return lastFolderName + "/" + filename
+}

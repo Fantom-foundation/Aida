@@ -2,6 +2,8 @@ package executor
 
 import (
 	_ "embed"
+	"encoding/json"
+	"os"
 	"testing"
 
 	"github.com/Fantom-foundation/Aida/ethtest"
@@ -10,7 +12,7 @@ import (
 )
 
 func Test_ethTestProvider_Run(t *testing.T) {
-	pathFile := ethtest.CreateTestDataFile(t)
+	pathFile := createTestDataFile(t)
 
 	cfg := &utils.Config{
 		ArgPath: pathFile,
@@ -30,4 +32,25 @@ func Test_ethTestProvider_Run(t *testing.T) {
 	if err != nil {
 		t.Errorf("Run() error = %v, wantErr %v", err, nil)
 	}
+}
+
+func createTestDataFile(t *testing.T) string {
+	path := t.TempDir()
+	pathFile := path + "/test.json"
+	stData := ethtest.CreateTestData(t)
+
+	jsonData, err := json.Marshal(stData)
+	if err != nil {
+		t.Errorf("Marshal() error = %v, wantErr %v", err, nil)
+	}
+
+	jsonStr := "{ \"test\" : " + string(jsonData) + "}"
+
+	jsonData = []byte(jsonStr)
+	// Initialize pathFile
+	err = os.WriteFile(pathFile, jsonData, 0644)
+	if err != nil {
+		t.Errorf("WriteFile() error = %v, wantErr %v", err, nil)
+	}
+	return pathFile
 }

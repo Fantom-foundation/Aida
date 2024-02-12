@@ -28,3 +28,8 @@ func (i *BigInt) UnmarshalJSON(b []byte) error {
 
 	return nil
 }
+
+func (i *BigInt) MarshalJSON() ([]byte, error) {
+	str := "0x" + i.Text(16)
+	return json.Marshal(str)
+}

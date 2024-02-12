@@ -44,13 +44,6 @@ var RunEthTestsCmd = cli.Command{
 		&utils.MemoryProfileFlag,
 		&utils.RandomSeedFlag,
 		&utils.PrimeThresholdFlag,
-		&utils.ProfileFlag,
-		&utils.ProfileDepthFlag,
-		&utils.ProfileFileFlag,
-		&utils.ProfileSqlite3Flag,
-		&utils.ProfileIntervalFlag,
-		&utils.ProfileDBFlag,
-		&utils.ProfileBlocksFlag,
 
 		// Utils
 		&substate.WorkersFlag,
@@ -58,7 +51,6 @@ var RunEthTestsCmd = cli.Command{
 		&utils.ContinueOnFailureFlag,
 		&utils.ValidateFlag,
 		&log.LogLevelFlag,
-		&utils.TrackProgressFlag,
 		&utils.ErrorLoggingFlag,
 	},
 	Description: `
