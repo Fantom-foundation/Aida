@@ -33,6 +33,10 @@ func main() {
 			&utils.ErrorLoggingFlag,
 			&utils.TrackProgressFlag,
 
+			// Register
+			&utils.RegisterRunFlag,
+			&utils.OverwriteRunIdFlag,
+
 			// ShadowDB
 			&utils.ShadowDb,
 

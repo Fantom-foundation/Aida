@@ -52,7 +52,9 @@ func (t *requestProgressTracker) PostTransaction(state executor.State[*rpc.Reque
 	defer t.lock.Unlock()
 
 	t.overallInfo.numRequests++
-	t.overallInfo.gas += state.Data.StateDB.GasUsed
+	if state.Data.StateDB != nil {
+		t.overallInfo.gas += state.Data.StateDB.GasUsed
+	}
 	overallInfo := t.overallInfo
 
 	overallCount := overallInfo.numRequests

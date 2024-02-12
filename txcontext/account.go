@@ -38,6 +38,56 @@ type Account interface {
 	String() string
 }
 
+func NewNilAccount() Account {
+	return &account{}
+}
+
+func NewAccount(code []byte, storage map[common.Hash]common.Hash, balance *big.Int, nonce uint64) Account {
+	return &account{Code: code, Storage: storage, Balance: balance, Nonce: nonce}
+}
+
+type account struct {
+	Code    []byte
+	Storage map[common.Hash]common.Hash
+	Balance *big.Int
+	Nonce   uint64
+}
+
+func (a *account) GetNonce() uint64 {
+	return a.Nonce
+}
+
+func (a *account) GetBalance() *big.Int {
+	return new(big.Int).Set(a.Balance)
+}
+
+func (a *account) HasStorageAt(key common.Hash) bool {
+	_, ok := a.Storage[key]
+	return ok
+}
+
+func (a *account) GetStorageAt(key common.Hash) common.Hash {
+	return a.Storage[key]
+}
+
+func (a *account) GetCode() []byte {
+	return a.Code
+}
+
+func (a *account) GetStorageSize() int {
+	return len(a.Storage)
+}
+
+func (a *account) ForEachStorage(h StorageHandler) {
+	for k, v := range a.Storage {
+		h(k, v)
+	}
+}
+
+func (a *account) String() string {
+	return AccountString(a)
+}
+
 type StorageHandler func(keyHash common.Hash, valueHash common.Hash)
 
 func AccountEqual(a, y Account) (isEqual bool) {

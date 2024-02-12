@@ -17,6 +17,7 @@ var RunVMApp = cli.App{
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Commands: []*cli.Command{
 		&RunSubstateCmd,
+		&RunEthTestsCmd,
 		&RunTxGeneratorCmd,
 	},
 	Description: `
