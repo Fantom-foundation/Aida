@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/Fantom-foundation/Aida/ethtest/util"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -104,15 +105,15 @@ func (bb *BtBlock) Decode() (*types.Block, error) {
 type Transaction struct {
 	To         *common.Address
 	From       common.Address `json:"sender"`
-	Nonce      *BigInt
-	GasLimit   *BigInt
-	GasPrice   *BigInt
-	GasFeeCap  *BigInt
-	GasTipCap  *BigInt
+	Nonce      *util.BigInt
+	GasLimit   *util.BigInt
+	GasPrice   *util.BigInt
+	GasFeeCap  *util.BigInt
+	GasTipCap  *util.BigInt
 	Data       string
 	AccessList types.AccessList
-	Value      *BigInt
-	Amount     *BigInt
+	Value      *util.BigInt
+	Amount     *util.BigInt
 	IsFake     bool
 }
 

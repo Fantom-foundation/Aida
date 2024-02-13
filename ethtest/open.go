@@ -20,7 +20,7 @@ const (
 type jsonTestType byte
 
 type stateTest interface {
-	*state_test.StJSON
+	*statetest.StJSON
 }
 
 // GetTestsWithinPath returns all tests in given directory (and subdirectories)
@@ -91,16 +91,16 @@ func GetTestsWithinPath[T stateTest](path string, testType jsonTestType) ([]T, e
 }
 
 // OpenStateTests opens
-func OpenStateTests(path string) ([]*state_test.StJSON, error) {
+func OpenStateTests(path string) ([]*statetest.StJSON, error) {
 	info, err := os.Stat(path)
 	if err != nil {
 		return nil, err
 	}
 
-	var tests []*state_test.StJSON
+	var tests []*statetest.StJSON
 
 	if info.IsDir() {
-		tests, err = GetTestsWithinPath[*state_test.StJSON](path, StateTests)
+		tests, err = GetTestsWithinPath[*statetest.StJSON](path, StateTests)
 		if err != nil {
 			return nil, err
 		}
@@ -115,8 +115,8 @@ func OpenStateTests(path string) ([]*state_test.StJSON, error) {
 	return tests, nil
 }
 
-func readTestsFromFile(path string) ([]*state_test.StJSON, error) {
-	var tests []*state_test.StJSON
+func readTestsFromFile(path string) ([]*statetest.StJSON, error) {
+	var tests []*statetest.StJSON
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -126,7 +126,7 @@ func readTestsFromFile(path string) ([]*state_test.StJSON, error) {
 		return nil, err
 	}
 
-	var b map[string]*state_test.StJSON
+	var b map[string]*statetest.StJSON
 	err = json.Unmarshal(byteJSON, &b)
 	if err != nil {
 		return nil, fmt.Errorf("cannot unmarshal file %v", path)

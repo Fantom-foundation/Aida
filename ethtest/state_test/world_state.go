@@ -1,4 +1,4 @@
-package state_test
+package statetest
 
 import (
 	"github.com/Fantom-foundation/Aida/txcontext"

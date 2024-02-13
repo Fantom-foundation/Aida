@@ -37,7 +37,7 @@ func Test_ethTestProvider_Run(t *testing.T) {
 func createTestDataFile(t *testing.T) string {
 	path := t.TempDir()
 	pathFile := path + "/test.json"
-	stData := state_test.CreateTestData(t)
+	stData := statetest.CreateTestData(t)
 
 	jsonData, err := json.Marshal(stData)
 	if err != nil {

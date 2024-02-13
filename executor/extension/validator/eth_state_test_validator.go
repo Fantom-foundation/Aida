@@ -46,7 +46,7 @@ func (e *ethStateTestValidator) PostTransaction(s executor.State[txcontext.TxCon
 	got := ctx.State.GetHash()
 
 	// cast state.Data to stJSON
-	c := s.Data.(*state_test.StJSON)
+	c := s.Data.(*statetest.StJSON)
 
 	if got != want {
 		err := fmt.Errorf("%v - (%v) FAIL\ndifferent hashes\ngot: %v\nwant:%v", c.TestLabel, c.UsedNetwork, got.Hex(), want.Hex())

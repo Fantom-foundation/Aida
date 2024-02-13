@@ -1,21 +1,20 @@
 package blocktest
 
 import (
-	"encoding/json"
 	"math/big"
-	"strings"
 
+	"github.com/Fantom-foundation/Aida/ethtest/util"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
 type blockEnvironment struct {
-	baseFee          *BigInt `json:"currentBaseFee"`
+	baseFee          *util.BigInt `json:"currentBaseFee"`
 	bloom            types.Bloom
 	coinbase         common.Address `json:"currentCoinbase"`
 	mixHash          common.Hash
 	nonce            types.BlockNonce
-	number           *BigInt `json:"currentNumber"`
+	number           *util.BigInt `json:"currentNumber"`
 	hash             common.Hash
 	parentHash       common.Hash
 	receiptTrie      common.Hash
@@ -23,11 +22,11 @@ type blockEnvironment struct {
 	transactionsTrie common.Hash
 	uncleHash        common.Hash
 	extraData        []byte
-	difficulty       *BigInt `json:"currentDifficulty"`
-	gasLimit         *BigInt `json:"currentGasLimit"`
-	gasUsed          *BigInt
-	timestamp        *BigInt `json:"currentTimestamp"`
-	baseFeePerGas    *BigInt
+	difficulty       *util.BigInt `json:"currentDifficulty"`
+	gasLimit         *util.BigInt `json:"currentGasLimit"`
+	gasUsed          *util.BigInt
+	timestamp        *util.BigInt `json:"currentTimestamp"`
+	baseFeePerGas    *util.BigInt
 }
 
 func (b *blockEnvironment) GetCoinbase() common.Address {
@@ -56,27 +55,4 @@ func (b *blockEnvironment) GetBlockHash(uint64) (common.Hash, error) {
 
 func (b *blockEnvironment) GetBaseFee() *big.Int {
 	return b.baseFee.Convert()
-}
-
-type BigInt struct {
-	big.Int
-}
-
-func (i *BigInt) Convert() *big.Int {
-	if i == nil {
-		return new(big.Int)
-	}
-	return &i.Int
-}
-
-func (i *BigInt) UnmarshalJSON(b []byte) error {
-	var val string
-	err := json.Unmarshal(b, &val)
-	if err != nil {
-		return err
-	}
-
-	i.SetString(strings.TrimPrefix(val, "0x"), 16)
-
-	return nil
 }
