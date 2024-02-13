@@ -141,7 +141,7 @@ func (rp *registerProgress) PreRun(_ executor.State[txcontext.TxContext], ctx *e
 	// Check if any path-to-state-db is not initialized, terminate now if so
 	_, err = utils.GetDirectorySize(rp.pathToStateDb)
 	if err != nil {
-		rp.log.Errorf("failed to get directory size of state db at path: %s", rp.pathToStateDb)
+		rp.log.Errorf("Failed to get directory size of state db at path: %s", rp.pathToStateDb)
 		return err
 	}
 
