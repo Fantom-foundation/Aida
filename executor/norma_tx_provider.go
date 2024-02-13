@@ -22,7 +22,7 @@ import (
 const treasureAccountPrivateKey = "1234567890123456789012345678901234567890123456789012345678901234"
 
 // normaConsumer is a consumer of norma transactions.
-type normaConsumer func(transaction *types.Transaction) error
+type normaConsumer func(*types.Transaction, *common.Address) error
 
 // normaTxProvider is a Provider that generates transactions using the norma
 // transactions generator.
@@ -56,8 +56,8 @@ func (p normaTxProvider) Run(from int, to int, consumer Consumer[txcontext.TxCon
 
 	// define norma consumer that will be used to consume transactions
 	// this is the only place that is responsible for incrementing block and tx numbers
-	nc := func(tx *types.Transaction) error {
-		data, err := txgenerator.NewNormaTxContext(tx, uint64(currentBlock))
+	nc := func(tx *types.Transaction, sender *common.Address) error {
+		data, err := txgenerator.NewNormaTxContext(tx, uint64(currentBlock), sender)
 		if err != nil {
 			return err
 		}
@@ -84,6 +84,7 @@ func (p normaTxProvider) Run(from int, to int, consumer Consumer[txcontext.TxCon
 		return err
 	}
 	user, err := application.CreateUser(fakeRpc)
+	userAddr := user.SenderAddress()
 	if err != nil {
 		return err
 	}
@@ -100,7 +101,7 @@ func (p normaTxProvider) Run(from int, to int, consumer Consumer[txcontext.TxCon
 			return err
 		}
 		// apply tx to the consumer
-		if err = nc(tx); err != nil {
+		if err = nc(tx, &userAddr); err != nil {
 			return err
 		}
 	}
@@ -177,7 +178,7 @@ func (f fakeRpcClient) SendTransaction(_ context.Context, tx *types.Transaction)
 		// store the code in the pending codes map
 		f.pendingCodes[contractAddress] = tx.Data()
 	}
-	return f.consumer(tx)
+	return f.consumer(tx, nil)
 }
 
 func (f fakeRpcClient) Call(_ interface{}, _ string, _ ...interface{}) error {
