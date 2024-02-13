@@ -85,8 +85,9 @@ type PrinterToFile struct {
 func (p *PrinterToFile) Print() error {
 	file, err := os.OpenFile(p.filepath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		return fmt.Errorf("unable to print to file %s - %v", p.filepath, err)
+		return fmt.Errorf("unable to print to file %s; %v", p.filepath, err)
 	}
+
 	defer file.Close()
 	file.WriteString(p.f())
 	return nil
@@ -119,12 +120,12 @@ func (p *PrinterToDb) Print() error {
 	// Transaction is used to improve efficiency over bulk insert
 	tx, err := p.db.Begin()
 	if err != nil {
-		return fmt.Errorf("unable to begin tx")
+		return fmt.Errorf("unable to begin a transaction; %v", err)
 	}
 
 	stmt, err := p.db.Prepare(p.insert)
 	if err != nil {
-		return fmt.Errorf("unable to prepare statement, %s", p.insert)
+		return fmt.Errorf("unable to prepare statement %s; %v", p.insert, err)
 	}
 
 	values := p.f()
@@ -149,12 +150,12 @@ func NewPrinterToSqlite3(conn string, create string, insert string, f func() [][
 
 	db, err := sql.Open("sqlite3", conn)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to open connection to sqlite3 %s: %v", conn, err)
+		return nil, fmt.Errorf("failed to open connection to sqlite3 %s; %v", conn, err)
 	}
 
 	_, err = db.Exec(create)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to create/replace table on %s: %v", conn, err)
+		return nil, fmt.Errorf("failed to create/replace table on %s; %v", conn, err)
 	}
 
 	db.Exec("PRAGMA synchronous = OFF")     // so that insert does not block

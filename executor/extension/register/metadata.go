@@ -117,7 +117,7 @@ func fetchUnixInfo() (map[string]string, error) {
 	for tag, f := range cmds {
 		out, err := f()
 		if err != nil {
-			errs = errors.Join(errs, errors.New(fmt.Sprintf("Couldn't get %s: %s.", tag, err)))
+			errs = errors.Join(errs, errors.New(fmt.Sprintf("Bash cmd failed to get %s; %s; %s.",, f, tag, err)))
 		}
 		envs[tag] = out
 	}
