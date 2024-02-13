@@ -89,7 +89,7 @@ func TestRegisterProgress_TerminatesIfPathToRegisterDirDoesNotExist(t *testing.T
 
 	err := ext.PreRun(executor.State[txcontext.TxContext]{}, nil)
 	if err == nil {
-		t.Fatalf("Dir %s does not exist but no error was thrown.", pathToFolder)
+		t.Fatalf("Error is nil even though registered path is %s.", pathToRegisterDir)
 	}
 }
 
@@ -116,7 +116,7 @@ func TestRegisterProgress_TerminatesIfPathToStateDBDoesNotExist(t *testing.T) {
 
 	err := ext.PreRun(executor.State[txcontext.TxContext]{}, ctx)
 	if err == nil {
-		t.Fatalf("Error is nil even though dummyStateDBPath is %s.", dummyStateDBPath)
+		t.Fatalf("Error is nil even though dummyStateDbPath is %s.", dummyStateDbPath)
 	}
 }
 
