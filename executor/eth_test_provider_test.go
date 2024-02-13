@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/Fantom-foundation/Aida/ethtest"
+	"github.com/Fantom-foundation/Aida/ethtest/state_test"
 	"github.com/Fantom-foundation/Aida/utils"
 	"go.uber.org/mock/gomock"
 )
@@ -37,7 +37,7 @@ func Test_ethTestProvider_Run(t *testing.T) {
 func createTestDataFile(t *testing.T) string {
 	path := t.TempDir()
 	pathFile := path + "/test.json"
-	stData := ethtest.CreateTestData(t)
+	stData := state_test.CreateTestData(t)
 
 	jsonData, err := json.Marshal(stData)
 	if err != nil {

@@ -3,7 +3,7 @@ package statedb
 import (
 	"testing"
 
-	"github.com/Fantom-foundation/Aida/ethtest"
+	"github.com/Fantom-foundation/Aida/ethtest/state_test"
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
@@ -18,7 +18,7 @@ func TestEthStateBlockEventEmitter_PreTransactionCallsBeginBlock(t *testing.T) {
 
 	db.EXPECT().BeginBlock(uint64(1))
 
-	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: ethtest.CreateTestData(t)}
+	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: state_test.CreateTestData(t)}
 	ctx := &executor.Context{State: db}
 	err := ext.PreTransaction(st, ctx)
 	if err != nil {
@@ -34,7 +34,7 @@ func TestEthStateBlockEventEmitter_PostTransactionCallsEndBlock(t *testing.T) {
 
 	db.EXPECT().EndBlock()
 
-	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: ethtest.CreateTestData(t)}
+	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: state_test.CreateTestData(t)}
 	ctx := &executor.Context{State: db}
 	err := ext.PostTransaction(st, ctx)
 	if err != nil {

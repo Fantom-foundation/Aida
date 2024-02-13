@@ -1,15 +1,18 @@
-package ethtest
+package state_test
 
 import (
 	"math/big"
 	"strings"
 
+	"github.com/Fantom-foundation/Aida/ethtest/util"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
 )
+
+var usableForks = []string{"London", "Berlin", "Istanbul", "MuirGlacier", "TestNetwork"}
 
 type StJSON struct {
 	txcontext.NilTxContext
@@ -51,7 +54,7 @@ func (s *StJSON) GetMessage() core.Message {
 	if baseFee == nil {
 		// ethereum uses `0x10` for genesis baseFee. Therefore, it defaults to
 		// parent - 2 : 0xa as the basefee for 'this' context.
-		baseFee = &BigInt{*big.NewInt(0x0a)}
+		baseFee = &util.BigInt{*big.NewInt(0x0a)}
 	}
 
 	msg, err := s.Tx.toMessage(s.getPostState(), baseFee)

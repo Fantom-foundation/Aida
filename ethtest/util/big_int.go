@@ -1,4 +1,4 @@
-package ethtest
+package util
 
 import (
 	"encoding/json"

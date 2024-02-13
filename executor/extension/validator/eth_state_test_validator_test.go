@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Fantom-foundation/Aida/ethtest"
+	"github.com/Fantom-foundation/Aida/ethtest/state_test"
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
@@ -23,7 +23,7 @@ func TestEthStatePrepper_PostTransactionLogsErrorAndDoesNotReturnIt(t *testing.T
 	log := logger.NewMockLogger(ctrl)
 	db := state.NewMockStateDB(ctrl)
 
-	data := ethtest.CreateTestData(t)
+	data := state_test.CreateTestData(t)
 	ctx := new(executor.Context)
 	ctx.State = db
 	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: data}
@@ -54,7 +54,7 @@ func TestEthStatePrepper_PostTransactionLogsPass(t *testing.T) {
 	log := logger.NewMockLogger(ctrl)
 	db := state.NewMockStateDB(ctrl)
 
-	data := ethtest.CreateTestData(t)
+	data := state_test.CreateTestData(t)
 	ctx := new(executor.Context)
 	ctx.State = db
 	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: data}
@@ -82,7 +82,7 @@ func TestEthStatePrepper_PostTransactionReturnsError(t *testing.T) {
 	log := logger.NewMockLogger(ctrl)
 	db := state.NewMockStateDB(ctrl)
 
-	data := ethtest.CreateTestData(t)
+	data := state_test.CreateTestData(t)
 	ctx := new(executor.Context)
 	ctx.State = db
 	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: data}

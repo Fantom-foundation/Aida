@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/Fantom-foundation/Aida/ethtest/state_test"
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
@@ -16,12 +17,10 @@ const (
 	StateTests
 )
 
-var usableForks = []string{"London", "Berlin", "Istanbul", "MuirGlacier", "TestNetwork"}
-
 type jsonTestType byte
 
 type stateTest interface {
-	*StJSON
+	*state_test.StJSON
 }
 
 // GetTestsWithinPath returns all tests in given directory (and subdirectories)
@@ -92,16 +91,16 @@ func GetTestsWithinPath[T stateTest](path string, testType jsonTestType) ([]T, e
 }
 
 // OpenStateTests opens
-func OpenStateTests(path string) ([]*StJSON, error) {
+func OpenStateTests(path string) ([]*state_test.StJSON, error) {
 	info, err := os.Stat(path)
 	if err != nil {
 		return nil, err
 	}
 
-	var tests []*StJSON
+	var tests []*state_test.StJSON
 
 	if info.IsDir() {
-		tests, err = GetTestsWithinPath[*StJSON](path, StateTests)
+		tests, err = GetTestsWithinPath[*state_test.StJSON](path, StateTests)
 		if err != nil {
 			return nil, err
 		}
@@ -116,8 +115,8 @@ func OpenStateTests(path string) ([]*StJSON, error) {
 	return tests, nil
 }
 
-func readTestsFromFile(path string) ([]*StJSON, error) {
-	var tests []*StJSON
+func readTestsFromFile(path string) ([]*state_test.StJSON, error) {
+	var tests []*state_test.StJSON
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -127,7 +126,7 @@ func readTestsFromFile(path string) ([]*StJSON, error) {
 		return nil, err
 	}
 
-	var b map[string]*StJSON
+	var b map[string]*state_test.StJSON
 	err = json.Unmarshal(byteJSON, &b)
 	if err != nil {
 		return nil, fmt.Errorf("cannot unmarshal file %v", path)

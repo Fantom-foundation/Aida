@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Fantom-foundation/Aida/ethtest"
+	"github.com/Fantom-foundation/Aida/ethtest/state_test"
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
@@ -29,7 +29,7 @@ func TestVmSdb_Eth_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		LogLevel:          "Critical",
 	}
 
-	data := ethtest.CreateTestData(t)
+	data := state_test.CreateTestData(t)
 
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
@@ -92,7 +92,7 @@ func TestVmSdb_Eth_AllTransactionsAreProcessedInOrder(t *testing.T) {
 		SkipPriming: true,
 	}
 
-	data := ethtest.CreateTestData(t)
+	data := state_test.CreateTestData(t)
 
 	// Simulate the execution of three transactions in two blocks.
 	provider.EXPECT().
@@ -163,7 +163,7 @@ func TestVmSdb_Eth_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 		LogLevel:    "Critical",
 	}
 
-	data := ethtest.CreateTestData(t)
+	data := state_test.CreateTestData(t)
 
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).
@@ -221,7 +221,7 @@ func TestVmSdb_Eth_ValidationDoesFailOnInvalidTransaction(t *testing.T) {
 		LogLevel:    "Critical",
 	}
 
-	data := ethtest.CreateTestData(t)
+	data := state_test.CreateTestData(t)
 
 	provider.EXPECT().
 		Run(2, 5, gomock.Any()).

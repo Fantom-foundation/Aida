@@ -3,7 +3,7 @@ package validator
 import (
 	"fmt"
 
-	"github.com/Fantom-foundation/Aida/ethtest"
+	"github.com/Fantom-foundation/Aida/ethtest/state_test"
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
@@ -46,7 +46,7 @@ func (e *ethStateTestValidator) PostTransaction(s executor.State[txcontext.TxCon
 	got := ctx.State.GetHash()
 
 	// cast state.Data to stJSON
-	c := s.Data.(*ethtest.StJSON)
+	c := s.Data.(*state_test.StJSON)
 
 	if got != want {
 		err := fmt.Errorf("%v - (%v) FAIL\ndifferent hashes\ngot: %v\nwant:%v", c.TestLabel, c.UsedNetwork, got.Hex(), want.Hex())
