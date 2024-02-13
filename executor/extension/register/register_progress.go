@@ -148,7 +148,7 @@ func (rp *registerProgress) PreRun(_ executor.State[txcontext.TxContext], ctx *e
 	if rp.cfg.ArchiveMode {
 		_, err = utils.GetDirectorySize(rp.pathToArchiveDb)
 		if err == nil {
-			rp.log.Errorf("failed to get directory size of archive db at path: %s", rp.pathToStateDb)
+			rp.log.Errorf("Failed to get directory size of archive db at path: %s", rp.pathToStateDb)
 			return err
 		}
 	}
