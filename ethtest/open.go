@@ -21,7 +21,7 @@ const (
 type jsonTestType byte
 
 type ethTest interface {
-	*statetest.StJSON | *blocktest.BtBlock
+	*statetest.StJSON | *blocktest.BtJSON
 	SetLabel(string)
 }
 
@@ -36,7 +36,11 @@ func GetTestsWithinPath[T ethTest](path string, testType jsonTestType) ([]T, err
 			path = gst
 		}
 	case BlockTests:
-		return nil, errors.New("block testType not yet implemented")
+		gst := path + "/BlockchainTests"
+		_, err := os.Stat(gst)
+		if !os.IsNotExist(err) {
+			path = gst
+		}
 	default:
 		return nil, errors.New("please chose which testType do you want to read")
 	}
@@ -93,20 +97,21 @@ func GetTestsWithinPath[T ethTest](path string, testType jsonTestType) ([]T, err
 }
 
 // OpenBlockTests opens
-func OpenBlockTests(path string) ([]*blocktest.BtBlock, error) {
+func OpenBlockTests(path string) ([]*blocktest.BtJSON, error) {
 	info, err := os.Stat(path)
 	if err != nil {
 		return nil, err
 	}
 
-	var tests []*blocktest.BtBlock
+	var tests []*blocktest.BtJSON
 
 	if info.IsDir() {
-		tests, err = GetTestsWithinPath[*blocktest.BtBlock](path, StateTests)
+		tests, err = GetTestsWithinPath[*blocktest.BtJSON](path, StateTests)
 		if err != nil {
 			return nil, err
 		}
 
+		tests[0].Blocks[0].BlockHeader.GetGasLimit()
 	} else {
 		// todo read from file
 		//tests, err = readTestsFromFile(path)

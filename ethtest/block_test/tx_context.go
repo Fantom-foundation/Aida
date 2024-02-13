@@ -8,7 +8,7 @@ import (
 )
 
 type txContext struct {
-	env  *blockEnvironment
+	env  *BlockEnvironment
 	msg  types.Message
 	post core.GenesisAlloc
 	Cfg  *Config

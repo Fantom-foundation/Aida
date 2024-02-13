@@ -66,14 +66,18 @@ func Open(path string) ([]*BtJSON, error) {
 var usableNetworks = []string{"Istanbul, MuirGlacier", "Berlin", "London"}
 
 type BtJSON struct {
+	TestLabel  string
 	Blocks     []BtBlock         `json:"blocks"`
-	Genesis    blockEnvironment  `json:"genesisBlockHeader"`
+	Genesis    BlockEnvironment  `json:"genesisBlockHeader"`
 	Pre        core.GenesisAlloc `json:"pre"`
 	Post       core.GenesisAlloc `json:"postState"`
 	Network    string            `json:"network"`
 	SealEngine string            `json:"sealEngine"`
 }
 
+func (t *BtJSON) SetLabel(label string) {
+	t.TestLabel = label
+}
 func (t *BtJSON) isWithinUsableNetworks() bool {
 	for _, network := range usableNetworks {
 		if network == t.Network {
@@ -85,17 +89,12 @@ func (t *BtJSON) isWithinUsableNetworks() bool {
 }
 
 type BtBlock struct {
-	TestLabel       string
 	UsedNetwork     string
-	BlockHeader     *blockEnvironment `json:"blockHeader"`
+	BlockHeader     *BlockEnvironment `json:"blockHeader"`
 	ExpectException string
 	Rlp             string              `json:"rlp"`
-	UncleHeaders    []*blockEnvironment `json:"uncleHeaders"`
+	UncleHeaders    []*BlockEnvironment `json:"uncleHeaders"`
 	Transactions    []*Transaction
-}
-
-func (bb *BtBlock) SetLabel(label string) {
-	bb.TestLabel = label
 }
 
 func (bb *BtBlock) Decode() (*types.Block, error) {
@@ -125,4 +124,24 @@ type Transaction struct {
 
 func (t Transaction) ToMessage() types.Message {
 	return types.NewMessage(t.From, t.To, t.Nonce.Uint64(), t.Amount.Convert(), t.GasLimit.Uint64(), t.GasPrice.Convert(), t.GasFeeCap.Convert(), t.GasTipCap.Convert(), hexutil.MustDecode(t.Data), t.AccessList, t.IsFake)
+}
+
+func (bb *BtBlock) Divide(chainId utils.ChainID) (dividedTests []*BtBlock) {
+	// each test contains multiple validation data for different forks.
+	// we create a test for each usable fork
+
+	//	for _, fork := range usableForks {
+	//		var test StJSON
+	//		if _, ok := s.Post[fork]; ok {
+	//			test = *s               // copy all the test data
+	//			test.UsedNetwork = fork // add correct fork name
+	//
+	//			// add block number to env (+1 just to make sure we are within wanted fork)
+	//			test.Env.blockNumber = utils.KeywordBlocks[chainId][strings.ToLower(fork)] + 1
+	//			dividedTests = append(dividedTests, &test)
+	//		}
+	//	}
+	//
+	//	return dividedTests
+	return nil
 }

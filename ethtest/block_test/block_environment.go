@@ -8,51 +8,51 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-type blockEnvironment struct {
-	baseFee          *util.BigInt `json:"currentBaseFee"`
-	bloom            types.Bloom
-	coinbase         common.Address `json:"currentCoinbase"`
-	mixHash          common.Hash
-	nonce            types.BlockNonce
-	number           *util.BigInt `json:"currentNumber"`
-	hash             common.Hash
-	parentHash       common.Hash
-	receiptTrie      common.Hash
-	stateRoot        common.Hash
-	transactionsTrie common.Hash
-	uncleHash        common.Hash
-	extraData        []byte
-	difficulty       *util.BigInt `json:"currentDifficulty"`
-	gasLimit         *util.BigInt `json:"currentGasLimit"`
-	gasUsed          *util.BigInt
-	timestamp        *util.BigInt `json:"currentTimestamp"`
-	baseFeePerGas    *util.BigInt
+type BlockEnvironment struct {
+	BaseFee          *util.BigInt //`json:"currentBaseFee"`
+	Bloom            types.Bloom
+	Coinbase         common.Address //`json:"currentCoinbase"`
+	MixHash          common.Hash
+	Nonce            types.BlockNonce
+	Number           *util.BigInt //`json:"currentNumber"`
+	Hash             common.Hash
+	ParentHash       common.Hash
+	ReceiptTrie      common.Hash
+	StateRoot        common.Hash
+	TransactionsTrie common.Hash
+	UncleHash        common.Hash
+	ExtraData        []byte
+	Difficulty       *util.BigInt //`json:"currentDifficulty"`
+	GasLimit         *util.BigInt //`json:"GasLimit"`
+	GasUsed          *util.BigInt
+	Timestamp        *util.BigInt //`json:"currentTimestamp"`
+	BaseFeePerGas    *util.BigInt
 }
 
-func (b *blockEnvironment) GetCoinbase() common.Address {
-	return b.coinbase
+func (b *BlockEnvironment) GetCoinbase() common.Address {
+	return b.Coinbase
 }
 
-func (b *blockEnvironment) GetDifficulty() *big.Int {
-	return b.difficulty.Convert()
+func (b *BlockEnvironment) GetDifficulty() *big.Int {
+	return b.Difficulty.Convert()
 }
 
-func (b *blockEnvironment) GetGasLimit() uint64 {
-	return b.gasLimit.Uint64()
+func (b *BlockEnvironment) GetGasLimit() uint64 {
+	return b.GasLimit.Uint64()
 }
 
-func (b *blockEnvironment) GetNumber() uint64 {
-	return b.number.Uint64()
+func (b *BlockEnvironment) GetNumber() uint64 {
+	return b.Number.Uint64()
 }
 
-func (b *blockEnvironment) GetTimestamp() uint64 {
-	return b.timestamp.Uint64()
+func (b *BlockEnvironment) GetTimestamp() uint64 {
+	return b.Timestamp.Uint64()
 }
 
-func (b *blockEnvironment) GetBlockHash(uint64) (common.Hash, error) {
-	return b.hash, nil // todo is this correct?
+func (b *BlockEnvironment) GetBlockHash(uint64) (common.Hash, error) {
+	return b.Hash, nil // todo maybe use this instead of calculating hash in transaction_processor
 }
 
-func (b *blockEnvironment) GetBaseFee() *big.Int {
-	return b.baseFee.Convert()
+func (b *BlockEnvironment) GetBaseFee() *big.Int {
+	return b.BaseFee.Convert()
 }

@@ -14,12 +14,12 @@ type ethStateBlockEventEmitter struct {
 	extension.NilExtension[txcontext.TxContext]
 }
 
-func (e ethStateBlockEventEmitter) PreTransaction(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
+func (e ethStateBlockEventEmitter) PreBlock(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	ctx.State.BeginBlock(uint64(s.Block))
 	return nil
 }
 
-func (e ethStateBlockEventEmitter) PostTransaction(_ executor.State[txcontext.TxContext], ctx *executor.Context) error {
+func (e ethStateBlockEventEmitter) PostBlock(_ executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	ctx.State.EndBlock()
 	return nil
 }

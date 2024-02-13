@@ -96,7 +96,8 @@ func runEth(
 
 	extensionList = append(
 		extensionList,
-		validator.MakeEthStateTestValidator(cfg),
+		//validator.MakeEthStateTestValidator(cfg),
+		validator.MakeEthBlockTestValidator(cfg),
 		statedb.MakeEthStateTestBlockEventEmitter(),
 	)
 
@@ -108,7 +109,7 @@ func runEth(
 			To:                     int(cfg.Last) + 1,
 			NumWorkers:             1,
 			State:                  stateDb,
-			ParallelismGranularity: executor.TransactionLevel,
+			ParallelismGranularity: executor.BlockLevel, // todo what?
 		},
 		processor,
 		extensionList,

@@ -28,7 +28,7 @@ type ethStateTestDbPrepper struct {
 	log logger.Logger
 }
 
-func (e ethStateTestDbPrepper) PreTransaction(st executor.State[txcontext.TxContext], ctx *executor.Context) error {
+func (e ethStateTestDbPrepper) PreBlock(st executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	var err error
 	ctx.State, ctx.StateDbPath, err = utils.PrepareStateDB(e.cfg)
 	if err != nil {
@@ -45,7 +45,7 @@ func (e ethStateTestDbPrepper) PreTransaction(st executor.State[txcontext.TxCont
 	return nil
 }
 
-func (e ethStateTestDbPrepper) PostTransaction(_ executor.State[txcontext.TxContext], ctx *executor.Context) error {
+func (e ethStateTestDbPrepper) PostBlock(_ executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	if ctx.State != nil {
 		err := ctx.State.Close()
 		if err != nil {
