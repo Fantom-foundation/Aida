@@ -405,4 +405,9 @@ var (
 		Usage:    "db component to be used (\"all\", \"substate\", \"delete\", \"update\", \"state-hash\")",
 		Required: true,
 	}
+	TxGeneratorTypeFlag = cli.StringFlag{
+		Name:  "tx-type",
+		Usage: "tx generator application type (\"erc20\", \"counter\", \"store\", \"uniswap\")",
+		Value: "erc20",
+	}
 )
