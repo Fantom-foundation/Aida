@@ -67,7 +67,7 @@ func (p normaTxProvider) Run(from int, to int, consumer Consumer[txcontext.TxCon
 		// if we reached the maximum number of transactions per block, increment the block number
 		nextTxNumber++
 		// greater or equal, because transactions are indexed from 0
-		if uint64(nextTxNumber) >= p.cfg.TxGeneratorTxsPerBlock {
+		if uint64(nextTxNumber) >= p.cfg.BlockLength {
 			currentBlock++
 			nextTxNumber = 0
 		}
@@ -77,7 +77,7 @@ func (p normaTxProvider) Run(from int, to int, consumer Consumer[txcontext.TxCon
 	fakeRpc := newFakeRpcClient(p.stateDb, nc)
 
 	// create the application and the user
-	application, err := app.NewApplication(p.cfg.TxGeneratorAppType, fakeRpc, primaryAccount, 1, 0, 0)
+	application, err := app.NewApplication(p.cfg.TxGeneratorType, fakeRpc, primaryAccount, 1, 0, 0)
 	if err != nil {
 		return err
 	}

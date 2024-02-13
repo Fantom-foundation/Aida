@@ -112,8 +112,7 @@ var RunTxGeneratorCmd = cli.Command{
 	Usage:  "Generates transactions for specified block range and executes them over StateDb",
 	Flags: []cli.Flag{
 		// TxGenerator specific flags
-		&utils.TxGeneratorAppTypeFlag,
-		&utils.TxGeneratorTxsPerBlockFlag,
+		&utils.TxGeneratorTypeFlag,
 
 		// StateDb
 		&utils.CarmenSchemaFlag,
@@ -133,11 +132,6 @@ var RunTxGeneratorCmd = cli.Command{
 		&utils.DiagnosticServerFlag,
 		&utils.MemoryBreakdownFlag,
 		&utils.MemoryProfileFlag,
-		&utils.ProfileFlag,
-		&utils.ProfileFileFlag,
-		&utils.ProfileIntervalFlag,
-		&utils.ProfileDBFlag,
-		&utils.ProfileBlocksFlag,
 
 		// Utils
 		&substate.WorkersFlag,

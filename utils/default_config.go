@@ -106,8 +106,7 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		VmImpl:                 getFlagValue(ctx, VmImplementation).(string),
 		Workers:                getFlagValue(ctx, substate.WorkersFlag).(int),
 		WorldStateDb:           getFlagValue(ctx, WorldStateFlag).(string),
-		TxGeneratorAppType:     getFlagValue(ctx, TxGeneratorAppTypeFlag).(string),
-		TxGeneratorTxsPerBlock: getFlagValue(ctx, TxGeneratorTxsPerBlockFlag).(uint64),
+		TxGeneratorType:        getFlagValue(ctx, TxGeneratorTypeFlag).(string),
 	}
 
 	return cfg

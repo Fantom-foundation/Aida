@@ -15,8 +15,8 @@ func TestNormaTxProvider_Run(t *testing.T) {
 	dbMock := state.NewMockStateDB(ctrl)
 
 	cfg := &utils.Config{
-		TxGeneratorTxsPerBlock: uint64(3),
-		TxGeneratorAppType:     "counter",
+		BlockLength:     uint64(3),
+		TxGeneratorType: "counter",
 	}
 	provider := NewNormaTxProvider(cfg, dbMock)
 	consumer := NewMockTxConsumer(ctrl)

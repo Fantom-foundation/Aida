@@ -42,10 +42,6 @@ func runTransactions(
 ) error {
 	// order of extensionList has to be maintained
 	var extensionList = []executor.Extension[txcontext.TxContext]{
-		// RegisterProgress should be the first on the list = last to receive PostRun.
-		// This is because it collects the error and records it externally.
-		// If not, error that happen afterwards (e.g. on top of) will not be correcly recorded.
-
 		logger.MakeDbLogger[txcontext.TxContext](cfg),
 		profiler.MakeVirtualMachineStatisticsPrinter[txcontext.TxContext](cfg),
 		logger.MakeProgressLogger[txcontext.TxContext](cfg, 15*time.Second),

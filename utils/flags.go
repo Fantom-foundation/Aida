@@ -405,14 +405,9 @@ var (
 		Usage:    "db component to be used (\"all\", \"substate\", \"delete\", \"update\", \"state-hash\")",
 		Required: true,
 	}
-	TxGeneratorAppTypeFlag = cli.StringFlag{
-		Name:  "tx-gen-type",
+	TxGeneratorTypeFlag = cli.StringFlag{
+		Name:  "tx-type",
 		Usage: "tx generator application type (\"erc20\", \"counter\", \"store\", \"uniswap\")",
 		Value: "erc20",
-	}
-	TxGeneratorTxsPerBlockFlag = cli.Uint64Flag{
-		Name:  "tx-gen-txs-per-block",
-		Usage: "number of transactions per block",
-		Value: 100,
 	}
 )
