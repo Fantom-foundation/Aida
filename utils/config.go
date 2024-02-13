@@ -129,6 +129,7 @@ type Config struct {
 	CPUProfilePerInterval  bool           // a different CPU profile is taken per 100k block interval
 	Cache                  int            // Cache for StateDb or Priming
 	CarmenSchema           int            // the current DB schema ID to use in Carmen
+	CarmenStateCacheSize   int            // the number of values cached in the Carmen StateDB (0 for default value)
 	CarmenNodeCacheSize    int            // the size of the in-memory cache to be used by a Carmen LiveDB in byte (0 for default value)
 	ChainID                ChainID        // Blockchain ID (mainnet: 250/testnet: 4002)
 	ChannelBufferSize      int            // set a buffer size for profiling channel

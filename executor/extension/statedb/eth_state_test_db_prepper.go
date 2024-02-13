@@ -34,6 +34,7 @@ func (e ethStateTestDbPrepper) PreTransaction(st executor.State[txcontext.TxCont
 	// We reduce the node cache size to be used by Carmen to 1 MB
 	// reduce the cache creation and flush time, and thus to improve
 	// the processing time of each transaction.
+	cfg.CarmenStateCacheSize = 1000
 	cfg.CarmenNodeCacheSize = (1 << 20) // = 1 MiB
 	ctx.State, ctx.StateDbPath, err = utils.PrepareStateDB(cfg)
 	if err != nil {
