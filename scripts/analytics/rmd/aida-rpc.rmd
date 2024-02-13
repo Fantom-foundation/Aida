@@ -178,3 +178,10 @@ TxData %>%
    labs(x="Number of Requests", y="Gas Rate (Million Gas Per Second)", title="Gas Rate")
 ```
 
+## ##############################################################################
+
+## Appendix A. Metadata
+
+```{r, echo=FALSE, message=FALSE}
+gt(Metadata)
+```

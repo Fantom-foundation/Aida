@@ -248,4 +248,10 @@ ggplot() +
    theme(legend.justification = c(0, 1), legend.position = c(0.025, 0.975))
 ```
 
+## ##############################################################################
 
+## Appendix A. Metadata
+
+```{r, echo=FALSE, message=FALSE}
+gt(Metadata)
+```
