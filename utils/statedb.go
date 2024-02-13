@@ -196,7 +196,7 @@ func makeStateDBVariant(directory, impl, variant, archiveVariant string, carmenS
 		if !cfg.ArchiveMode {
 			archiveVariant = "none"
 		}
-		return state.MakeCarmenStateDB(directory, variant, archiveVariant, carmenSchema)
+		return state.MakeCarmenStateDBWithCacheSize(directory, variant, archiveVariant, carmenSchema, cfg.CarmenNodeCacheSize)
 	case "opera":
 		return state.MakeOperaStateDB(directory, variant, cfg.LogLevel)
 	}
