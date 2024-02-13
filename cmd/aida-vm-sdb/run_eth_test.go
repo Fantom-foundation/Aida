@@ -219,6 +219,7 @@ func TestVmSdb_Eth_ValidationDoesFailOnInvalidTransaction(t *testing.T) {
 		SkipPriming: true,
 		Validate:    true,
 		LogLevel:    "Critical",
+		Workers:     1,
 	}
 
 	data := ethtest.CreateTestData(t)
