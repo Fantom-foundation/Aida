@@ -25,6 +25,10 @@ type StJSON struct {
 	Post        map[string][]stPostState `json:"post"`
 }
 
+func (s *StJSON) SetLabel(label string) {
+	s.TestLabel = label
+}
+
 func (s *StJSON) GetStateHash() common.Hash {
 	for _, n := range usableForks {
 		if p, ok := s.Post[n]; ok {

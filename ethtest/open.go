@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 
+	blocktest "github.com/Fantom-foundation/Aida/ethtest/block_test"
 	"github.com/Fantom-foundation/Aida/ethtest/state_test"
 	"github.com/Fantom-foundation/Aida/utils"
 )
@@ -19,13 +20,14 @@ const (
 
 type jsonTestType byte
 
-type stateTest interface {
-	*statetest.StJSON
+type ethTest interface {
+	*statetest.StJSON | *blocktest.BtBlock
+	SetLabel(string)
 }
 
 // GetTestsWithinPath returns all tests in given directory (and subdirectories)
 // T is the type into which we want to unmarshal the tests.
-func GetTestsWithinPath[T stateTest](path string, testType jsonTestType) ([]T, error) {
+func GetTestsWithinPath[T ethTest](path string, testType jsonTestType) ([]T, error) {
 	switch testType {
 	case StateTests:
 		gst := path + "/GeneralStateTests"
@@ -82,12 +84,38 @@ func GetTestsWithinPath[T stateTest](path string, testType jsonTestType) ([]T, e
 		testLabel := getTestLabel(p)
 
 		for _, t := range b {
-			(*t).TestLabel = testLabel
+			t.SetLabel(testLabel)
 			tests = append(tests, t)
 		}
 	}
 
 	return tests, err
+}
+
+// OpenBlockTests opens
+func OpenBlockTests(path string) ([]*blocktest.BtBlock, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var tests []*blocktest.BtBlock
+
+	if info.IsDir() {
+		tests, err = GetTestsWithinPath[*blocktest.BtBlock](path, StateTests)
+		if err != nil {
+			return nil, err
+		}
+
+	} else {
+		// todo read from file
+		//tests, err = readTestsFromFile(path)
+		//if err != nil {
+		//	return nil, err
+		//}
+	}
+
+	return tests, nil
 }
 
 // OpenStateTests opens

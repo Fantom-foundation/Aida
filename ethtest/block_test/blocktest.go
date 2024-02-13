@@ -85,11 +85,17 @@ func (t *BtJSON) isWithinUsableNetworks() bool {
 }
 
 type BtBlock struct {
+	TestLabel       string
+	UsedNetwork     string
 	BlockHeader     *blockEnvironment `json:"blockHeader"`
 	ExpectException string
 	Rlp             string              `json:"rlp"`
 	UncleHeaders    []*blockEnvironment `json:"uncleHeaders"`
 	Transactions    []*Transaction
+}
+
+func (bb *BtBlock) SetLabel(label string) {
+	bb.TestLabel = label
 }
 
 func (bb *BtBlock) Decode() (*types.Block, error) {
