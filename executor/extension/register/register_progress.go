@@ -126,7 +126,7 @@ func (rp *registerProgress) PreRun(_ executor.State[txcontext.TxContext], ctx *e
 		return err
 	}
 	if err != nil {
-		rp.log.Errorf("Metadata warning: %s.", err)
+		rp.log.Errorf("Metadata warnings: %s.", err)
 	}
 	rp.meta = rm
 	rm.Print()
@@ -141,14 +141,14 @@ func (rp *registerProgress) PreRun(_ executor.State[txcontext.TxContext], ctx *e
 	// Check if any path-to-state-db is not initialized, terminate now if so
 	_, err = utils.GetDirectorySize(rp.pathToStateDb)
 	if err != nil {
-		rp.log.Errorf("Unable to get directory size of state db at path: %s", rp.pathToStateDb)
+		rp.log.Errorf("Failed to get directory size of state db at path: %s", rp.pathToStateDb)
 		return err
 	}
 
 	if rp.cfg.ArchiveMode {
 		_, err = utils.GetDirectorySize(rp.pathToArchiveDb)
 		if err == nil {
-			rp.log.Errorf("Unable to get directory size of archive db at path: %s", rp.pathToStateDb)
+			rp.log.Errorf("Failed to get directory size of archive db at path: %s", rp.pathToStateDb)
 			return err
 		}
 	}
