@@ -5,15 +5,14 @@ import (
 	"crypto/ecdsa"
 	"fmt"
 	"math/big"
-	"time"
 
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
+	"github.com/Fantom-foundation/Aida/txcontext/txgenerator"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/Fantom-foundation/Norma/load/app"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
@@ -58,8 +57,11 @@ func (p normaTxProvider) Run(from int, to int, consumer Consumer[txcontext.TxCon
 	// define norma consumer that will be used to consume transactions
 	// this is the only place that is responsible for incrementing block and tx numbers
 	nc := func(tx *types.Transaction) error {
-		data := newNormaTx(tx)
-		err := consumer(TransactionInfo[txcontext.TxContext]{Block: currentBlock, Transaction: nextTxNumber, Data: data})
+		data, err := txgenerator.NewNormaTxContext(tx, uint64(currentBlock))
+		if err != nil {
+			return err
+		}
+		err = consumer(TransactionInfo[txcontext.TxContext]{Block: currentBlock, Transaction: nextTxNumber, Data: data})
 		if err != nil {
 			return err
 		}
@@ -140,89 +142,6 @@ func (p normaTxProvider) initializeTreasureAccount(blkNumber int) (*app.Account,
 	return app.NewAccount(0, treasureAccountPrivateKey, int64(p.cfg.ChainID))
 }
 
-func newNormaTx(tx *types.Transaction) txcontext.TxContext {
-	return &normaTx{tx: tx}
-}
-
-// normaTx is a norma transaction.
-// it implements the txcontext.TxContext interface.
-type normaTx struct {
-	txcontext.NilTxContext
-	tx *types.Transaction
-}
-
-// normaTxBlockEnv is a block environment for norma transactions.
-type normaTxBlockEnv struct {
-	tx *types.Transaction
-}
-
-func (ntx normaTx) GetBlockEnvironment() txcontext.BlockEnvironment {
-	return normaTxBlockEnv{tx: ntx.tx}
-}
-
-func (ntx normaTx) GetStateHash() common.Hash {
-	return common.Hash{}
-}
-
-// GetCoinbase returns the coinbase address.
-func (e normaTxBlockEnv) GetCoinbase() common.Address {
-	return common.HexToAddress("0x1")
-}
-
-// GetDifficulty returns the current difficulty level.
-func (e normaTxBlockEnv) GetDifficulty() *big.Int {
-	return big.NewInt(1)
-}
-
-// GetGasLimit returns the maximum amount of gas that can be used in a block.
-func (e normaTxBlockEnv) GetGasLimit() uint64 {
-	return 1_000_000_000_000
-}
-
-// GetNumber returns the current block number.
-func (e normaTxBlockEnv) GetNumber() uint64 {
-	// not used
-	return 0
-}
-
-// GetTimestamp returns the timestamp of the current block.
-func (e normaTxBlockEnv) GetTimestamp() uint64 {
-	// use current timestamp as the block timestamp
-	// since we don't have a real block
-	return uint64(time.Now().Unix())
-}
-
-// GetBlockHash returns the hash of the block with the given number.
-func (e normaTxBlockEnv) GetBlockHash(blockNumber uint64) (common.Hash, error) {
-	// transform the block number into a hash
-	// we don't have real block hashes, so we just use the block number
-	return common.BigToHash(big.NewInt(int64(blockNumber))), nil
-}
-
-// GetBaseFee returns the base fee for transactions in the current block.
-func (e normaTxBlockEnv) GetBaseFee() *big.Int {
-	return big.NewInt(0)
-}
-
-func (ntx normaTx) GetMessage() core.Message {
-	// extract sender from tx by passing it through the signer
-	// we expect that the tx is signed
-	sender, _ := extractSender(ntx.tx)
-	return types.NewMessage(
-		sender,
-		ntx.tx.To(),
-		ntx.tx.Nonce(),
-		ntx.tx.Value(),
-		ntx.tx.Gas(),
-		ntx.tx.GasPrice(),
-		ntx.tx.GasFeeCap(),
-		ntx.tx.GasTipCap(),
-		ntx.tx.Data(),
-		ntx.tx.AccessList(),
-		false,
-	)
-}
-
 // fakeRpcClient is a fake RPC client that generates fake data. It is used to provide
 // data for norma transactions generator.
 type fakeRpcClient struct {
@@ -249,7 +168,7 @@ func (f fakeRpcClient) SendTransaction(_ context.Context, tx *types.Transaction)
 	// in the pending codes map
 	if tx.To() == nil {
 		// extract sender from tx
-		sender, err := extractSender(tx)
+		sender, err := types.Sender(types.NewEIP155Signer(tx.ChainId()), tx)
 		if err != nil {
 			return err
 		}
@@ -347,11 +266,4 @@ func (f fakeRpcClient) FilterLogs(_ context.Context, _ ethereum.FilterQuery) ([]
 func (f fakeRpcClient) SubscribeFilterLogs(_ context.Context, _ ethereum.FilterQuery, _ chan<- types.Log) (ethereum.Subscription, error) {
 	// not used
 	return nil, nil
-}
-
-// extractSender extracts the sender from the transaction.
-func extractSender(tx *types.Transaction) (common.Address, error) {
-	// extract sender from tx by passing it through the signer
-	// we expect that the tx is signed
-	return types.Sender(types.NewEIP155Signer(tx.ChainId()), tx)
 }

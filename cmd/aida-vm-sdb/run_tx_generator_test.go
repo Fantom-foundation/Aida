@@ -8,9 +8,9 @@ import (
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
+	"github.com/Fantom-foundation/Aida/txcontext/txgenerator"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"go.uber.org/mock/gomock"
 )
@@ -34,12 +34,12 @@ func TestVmSdb_TxGenerator_AllTransactionsAreProcessedInOrder(t *testing.T) {
 		Run(2, 4, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[txcontext.TxContext]) error {
 			// Block 2
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 1, Data: newTestTxCtx()})
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 2, Data: newTestTxCtx()})
+			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 1, Data: newTestTxCtx(2)})
+			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 2, Data: newTestTxCtx(2)})
 			// Block 3
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 3, Transaction: 1, Data: newTestTxCtx()})
+			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 3, Transaction: 1, Data: newTestTxCtx(3)})
 			// Block 4
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 4, Transaction: 1, Data: newTestTxCtx()})
+			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 4, Transaction: 1, Data: newTestTxCtx(4)})
 			return nil
 		})
 
@@ -85,17 +85,10 @@ func TestVmSdb_TxGenerator_AllTransactionsAreProcessedInOrder(t *testing.T) {
 	}
 }
 
-// testTxCtx is a dummy tx context used for testing.
-type testTxCtx struct {
-	txcontext.NilTxContext
-	env txcontext.BlockEnvironment
-	msg core.Message
-}
-
-func newTestTxCtx() txcontext.TxContext {
-	return testTxCtx{
-		env: &testTxBlkEnv{1},
-		msg: types.NewMessage(
+func newTestTxCtx(blkNumber uint64) txcontext.TxContext {
+	return txgenerator.NewTxContext(
+		testTxBlkEnv{blkNumber},
+		types.NewMessage(
 			common.Address{0x1},
 			&common.Address{0x2},
 			0,
@@ -108,19 +101,7 @@ func newTestTxCtx() txcontext.TxContext {
 			types.AccessList{},
 			false,
 		),
-	}
-}
-
-func (ctx testTxCtx) GetMessage() core.Message {
-	return ctx.msg
-}
-
-func (ctx testTxCtx) GetBlockEnvironment() txcontext.BlockEnvironment {
-	return ctx.env
-}
-
-func (ctx testTxCtx) GetStateHash() common.Hash {
-	return common.Hash{}
+	)
 }
 
 // testTxBlkEnv is a dummy block environment used for testing.
@@ -141,8 +122,7 @@ func (env testTxBlkEnv) GetGasLimit() uint64 {
 }
 
 func (env testTxBlkEnv) GetNumber() uint64 {
-	// not used
-	return 0
+	return env.blkNumber
 }
 
 func (env testTxBlkEnv) GetTimestamp() uint64 {
