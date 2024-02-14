@@ -110,14 +110,11 @@ func OpenBlockTests(path string) ([]*blocktest.BtJSON, error) {
 		if err != nil {
 			return nil, err
 		}
-
-		tests[0].Blocks[0].BlockHeader.GetGasLimit()
 	} else {
-		// todo read from file
-		//tests, err = readTestsFromFile(path)
-		//if err != nil {
-		//	return nil, err
-		//}
+		tests, err = readTestsFromFile[*blocktest.BtJSON](path)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return tests, nil
@@ -139,7 +136,7 @@ func OpenStateTests(path string) ([]*statetest.StJSON, error) {
 		}
 
 	} else {
-		tests, err = readTestsFromFile(path)
+		tests, err = readTestsFromFile[*statetest.StJSON](path)
 		if err != nil {
 			return nil, err
 		}
@@ -148,8 +145,8 @@ func OpenStateTests(path string) ([]*statetest.StJSON, error) {
 	return tests, nil
 }
 
-func readTestsFromFile(path string) ([]*statetest.StJSON, error) {
-	var tests []*statetest.StJSON
+func readTestsFromFile[T ethTest](path string) ([]T, error) {
+	var tests []T
 	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -159,16 +156,16 @@ func readTestsFromFile(path string) ([]*statetest.StJSON, error) {
 		return nil, err
 	}
 
-	var b map[string]*statetest.StJSON
+	var b map[string]T
 	err = json.Unmarshal(byteJSON, &b)
 	if err != nil {
-		return nil, fmt.Errorf("cannot unmarshal file %v", path)
+		return nil, fmt.Errorf("cannot unmarshal file %v; %v", path, err)
 	}
 
 	testLabel := getTestLabel(path)
 
 	for _, t := range b {
-		t.TestLabel = testLabel
+		t.SetLabel(testLabel)
 		tests = append(tests, t)
 	}
 	return tests, nil
