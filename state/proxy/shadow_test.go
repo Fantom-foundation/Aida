@@ -10,6 +10,7 @@ import (
 	carmen "github.com/Fantom-foundation/Carmen/go/state"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"go.uber.org/mock/gomock"
 )
 
 func makeTestShadowDB(t *testing.T, ctc state.CarmenStateTestCase) state.StateDB {
@@ -627,5 +628,60 @@ func TestShadowState_GetShadowDB(t *testing.T) {
 			}
 
 		})
+	}
+}
+
+func TestShadowState_GetLogsSuccessful(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	pdb := state.NewMockStateDB(ctrl)
+	sdb := state.NewMockStateDB(ctrl)
+	db := NewShadowProxy(pdb, sdb)
+	txHash := common.HexToHash("0x1")
+	blockHash := common.HexToHash("0x2")
+	log1 := &types.Log{}
+
+	pdb.EXPECT().GetLogs(txHash, blockHash).Return([]*types.Log{log1})
+	sdb.EXPECT().GetLogs(txHash, blockHash).Return([]*types.Log{log1})
+
+	db.GetLogs(txHash, blockHash)
+	if err := db.Error(); err != nil {
+		t.Fatalf("Failed to compare logs; %v", err)
+	}
+}
+
+func TestShadowState_GetLogsExpectError_LengthDifferent(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	pdb := state.NewMockStateDB(ctrl)
+	sdb := state.NewMockStateDB(ctrl)
+	db := NewShadowProxy(pdb, sdb)
+	txHash := common.HexToHash("0x1")
+	blockHash := common.HexToHash("0x2")
+	log1 := &types.Log{}
+
+	pdb.EXPECT().GetLogs(txHash, blockHash).Return(nil)
+	sdb.EXPECT().GetLogs(txHash, blockHash).Return([]*types.Log{log1})
+
+	db.GetLogs(txHash, blockHash)
+	if err := db.Error(); err == nil {
+		t.Fatal("Expect error in GetLogs lengths")
+	}
+}
+
+func TestShadowState_GetLogsExpectError_BloomDifferent(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	pdb := state.NewMockStateDB(ctrl)
+	sdb := state.NewMockStateDB(ctrl)
+	db := NewShadowProxy(pdb, sdb)
+	txHash := common.HexToHash("0x1")
+	blockHash := common.HexToHash("0x2")
+	log1 := &types.Log{}
+	log2 := &types.Log{Address: common.HexToAddress("0x3")}
+
+	pdb.EXPECT().GetLogs(txHash, blockHash).Return([]*types.Log{log1})
+	sdb.EXPECT().GetLogs(txHash, blockHash).Return([]*types.Log{log2})
+
+	db.GetLogs(txHash, blockHash)
+	if err := db.Error(); err == nil {
+		t.Fatal("Expect error in GetLogs lengths")
 	}
 }
