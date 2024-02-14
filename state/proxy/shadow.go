@@ -227,12 +227,11 @@ func (s *shadowVmStateDb) GetLogs(hash common.Hash, blockHash common.Hash) []*ty
 
 	equal := len(logsP) == len(logsS)
 	if equal {
-		for i, logP := range logsP {
-			logS := logsS[i]
-			if logP != logS {
-				equal = false
-				break
-			}
+		// check bloom
+		bloomP := types.BytesToBloom(types.LogsBloom(logsP))
+		bloomS := types.BytesToBloom(types.LogsBloom(logsS))
+		if bloomP != bloomS {
+			equal = false
 		}
 	}
 	if !equal {
