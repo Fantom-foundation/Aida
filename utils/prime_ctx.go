@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"math/rand"
 	"sort"
+	"strconv"
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 func NewPrimeContext(cfg *Config, db state.StateDB, log logger.Logger) *PrimeContext {
@@ -83,25 +85,38 @@ func (pc *PrimeContext) PrimeStateDB(ws txcontext.WorldState, db state.StateDB) 
 		}
 		pc.block++
 	}
-	pc.log.Debugf("\t\tPriming completed ...")
+	pc.log.Debugf("Priming complete!")
 	return nil
 }
 
 // primeOneAccount initializes an account on stateDB with substate
 func (pc *PrimeContext) primeOneAccount(addr common.Address, acc txcontext.Account, pt *ProgressTracker) error {
+	pc.log.Debugf("Priming account %v", addr.Hex())
+
 	// if an account was previously primed, skip account creation.
 	if exist, found := pc.exist[addr]; !found || !exist {
 		pc.load.CreateAccount(addr)
 		pc.exist[addr] = true
 		pc.operations++
 	}
-	pc.load.SetBalance(addr, acc.GetBalance())
-	pc.load.SetNonce(addr, acc.GetNonce())
-	pc.load.SetCode(addr, acc.GetCode())
+
+	balance := acc.GetBalance()
+	pc.log.Debugf("\tSetting balance to 0x%x", balance)
+	pc.load.SetBalance(addr, balance)
+
+	code := acc.GetCode()
+	pc.log.Debugf("\tSetting code to %v", hexutil.Encode(code))
+	pc.load.SetCode(addr, code)
+
+	nonce := acc.GetNonce()
+	pc.log.Debugf("\tSetting nonce to 0x%v", strconv.FormatUint(nonce, 16))
+	pc.load.SetNonce(addr, nonce)
+
 	pc.operations = pc.operations + 3
 
 	var forEachError error
 	acc.ForEachStorage(func(keyHash common.Hash, valueHash common.Hash) {
+		pc.log.Debugf("\tSetting state %v: %v", keyHash.Hex(), valueHash.Hex())
 		pc.load.SetState(addr, keyHash, valueHash)
 		pt.PrintProgress()
 		pc.operations++
