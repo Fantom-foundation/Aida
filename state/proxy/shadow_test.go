@@ -663,7 +663,7 @@ func TestShadowState_GetLogsExpectError_LengthDifferent(t *testing.T) {
 
 	db.GetLogs(txHash, blockHash)
 	if err := db.Error(); err == nil {
-		t.Fatal("Expect error in GetLogs lengths")
+		t.Fatal("Expect mismatched GetLogs lengths")
 	}
 }
 
@@ -682,6 +682,6 @@ func TestShadowState_GetLogsExpectError_BloomDifferent(t *testing.T) {
 
 	db.GetLogs(txHash, blockHash)
 	if err := db.Error(); err == nil {
-		t.Fatal("Expect error in GetLogs lengths")
+		t.Fatal("Expect mismatched log values")
 	}
 }
