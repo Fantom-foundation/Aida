@@ -79,7 +79,7 @@ func replaySubstate(
 	}
 
 	if stateDb == nil {
-		extensionList = append(extensionList, statedb.MakeStateDbManager[txcontext.TxContext](cfg))
+		extensionList = append(extensionList, statedb.MakeStateDbManager[txcontext.TxContext](cfg, ""))
 	}
 
 	if cfg.DbImpl == "memory" {

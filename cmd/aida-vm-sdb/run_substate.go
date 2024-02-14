@@ -52,7 +52,7 @@ func runSubstates(
 	if stateDb == nil {
 		extensionList = append(
 			extensionList,
-			statedb.MakeStateDbManager[txcontext.TxContext](cfg),
+			statedb.MakeStateDbManager[txcontext.TxContext](cfg, ""),
 			statedb.MakeLiveDbBlockChecker[txcontext.TxContext](cfg),
 			logger.MakeDbLogger[txcontext.TxContext](cfg),
 		)
