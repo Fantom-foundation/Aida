@@ -19,7 +19,7 @@ import (
 func TestStateDbManager_DbClosureWithoutKeepDb(t *testing.T) {
 	cfg := &utils.Config{}
 
-	ext := MakeStateDbManager[any](cfg)
+	ext := MakeStateDbManager[any](cfg, "")
 
 	mockCtrl := gomock.NewController(t)
 	mockStateDB := state.NewMockStateDB(mockCtrl)
@@ -46,7 +46,7 @@ func TestStateDbManager_DbClosureWithKeepDb(t *testing.T) {
 	cfg.KeepDb = true
 	cfg.ChainID = utils.MainnetChainID
 
-	ext := MakeStateDbManager[any](cfg)
+	ext := MakeStateDbManager[any](cfg, "")
 
 	mockCtrl := gomock.NewController(t)
 	mockStateDB := state.NewMockStateDB(mockCtrl)
@@ -77,7 +77,7 @@ func TestStateDbManager_DoNotKeepDb(t *testing.T) {
 	cfg.KeepDb = false
 	cfg.ChainID = utils.MainnetChainID
 
-	ext := MakeStateDbManager[any](cfg)
+	ext := MakeStateDbManager[any](cfg, "")
 
 	state := executor.State[any]{
 		Block: 0,
@@ -111,7 +111,7 @@ func TestStateDbManager_KeepDbAndDoesntUnderflowBellowZero(t *testing.T) {
 	cfg.KeepDb = true
 	cfg.ChainID = utils.MainnetChainID
 
-	ext := MakeStateDbManager[any](cfg)
+	ext := MakeStateDbManager[any](cfg, "")
 
 	state := executor.State[any]{
 		Block: 0,
@@ -145,7 +145,7 @@ func TestStateDbManager_StateDbInfoExistence(t *testing.T) {
 	cfg.KeepDb = true
 	cfg.ChainID = utils.MainnetChainID
 
-	ext := MakeStateDbManager[any](cfg)
+	ext := MakeStateDbManager[any](cfg, "")
 
 	state := executor.State[any]{
 		Block: 0,
@@ -182,7 +182,7 @@ func TestStateDbManager_NonExistentStateDbSrc(t *testing.T) {
 	cfg.KeepDb = true
 	cfg.ChainID = utils.MainnetChainID
 
-	ext := MakeStateDbManager[any](cfg)
+	ext := MakeStateDbManager[any](cfg, "")
 
 	state := executor.State[any]{
 		Block: 0,
@@ -210,7 +210,7 @@ func TestStateDbManager_StateDbSrcStateDbIsReadOnly(t *testing.T) {
 	cfg.KeepDb = true
 	cfg.ChainID = utils.MainnetChainID
 
-	ext := MakeStateDbManager[any](cfg)
+	ext := MakeStateDbManager[any](cfg, "")
 
 	state0 := executor.State[any]{
 		Block: 0,
@@ -243,7 +243,7 @@ func TestStateDbManager_StateDbSrcStateDbIsReadOnly(t *testing.T) {
 	cfg.KeepDb = false
 	cfg.SrcDbReadonly = true
 
-	ext = MakeStateDbManager[any](cfg)
+	ext = MakeStateDbManager[any](cfg, "")
 
 	ctx = &executor.Context{}
 
@@ -290,7 +290,7 @@ func TestStateDbManager_UsingExistingSourceDb(t *testing.T) {
 	cfg.KeepDb = true
 	cfg.ChainID = utils.MainnetChainID
 
-	ext := MakeStateDbManager[any](cfg)
+	ext := MakeStateDbManager[any](cfg, "")
 
 	state0 := executor.State[any]{
 		Block: 0,
@@ -321,7 +321,7 @@ func TestStateDbManager_UsingExistingSourceDb(t *testing.T) {
 	cfg.DbTmp = tmpOutDir
 	cfg.StateDbSrc = sourcePath
 
-	ext = MakeStateDbManager[any](cfg)
+	ext = MakeStateDbManager[any](cfg, "")
 
 	ctx = &executor.Context{}
 
@@ -383,7 +383,7 @@ func TestStateDbManager_StateDbBlockNumberDecrements(t *testing.T) {
 	cfg.KeepDb = true
 	cfg.ChainID = utils.MainnetChainID
 
-	ext := MakeStateDbManager[any](cfg)
+	ext := MakeStateDbManager[any](cfg, "")
 
 	state := executor.State[any]{
 		Block: 10,
