@@ -6,6 +6,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension/logger"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
+	"github.com/Fantom-foundation/Aida/executor/extension/register"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/executor/extension/validator"
@@ -57,6 +58,11 @@ func run(
 
 ) error {
 	var extensionList = []executor.Extension[*rpc.RequestAndResults]{
+		// RegisterProgress should be the first on the list = last to receive PostRun.
+		// This is because it collects the error and records it externally.
+		// If not, error that happen afterwards (e.g. on top of) will not be correcly recorded.
+		register.MakeRegisterRequestProgress(cfg, 100_000),
+
 		profiler.MakeCpuProfiler[*rpc.RequestAndResults](cfg),
 		logger.MakeProgressLogger[*rpc.RequestAndResults](cfg, 15*time.Second),
 		logger.MakeErrorLogger[*rpc.RequestAndResults](cfg),
@@ -72,6 +78,7 @@ func run(
 			extensionList,
 			statedb.MakeStateDbManager[*rpc.RequestAndResults](cfg),
 			statedb.MakeArchiveBlockChecker[*rpc.RequestAndResults](cfg),
+			logger.MakeDbLogger[*rpc.RequestAndResults](cfg),
 		)
 
 	}
