@@ -139,11 +139,11 @@ func (rp *registerProgress) PreRun(_ executor.State[txcontext.TxContext], ctx *e
 	rp.pathToArchiveDb = filepath.Join(ctx.StateDbPath, ArchiveDbDirectoryName)
 
 	// Check if any path-to-state-db is not initialized, terminate now if so
-	_, err = utils.GetDirectorySize(rp.pathToStateDb)
-	if err != nil {
-		rp.log.Errorf("Failed to get directory size of state db at path: %s", rp.pathToStateDb)
-		return err
-	}
+	//_, err = utils.GetDirectorySize(rp.pathToStateDb)
+	//if err != nil {
+	//rp.log.Errorf("Failed to get directory size of state db at path: %s", rp.pathToStateDb)
+	//return err
+	//}
 
 	if rp.cfg.ArchiveMode {
 		_, err = utils.GetDirectorySize(rp.pathToArchiveDb)
@@ -172,8 +172,9 @@ func (rp *registerProgress) PreBlock(state executor.State[txcontext.TxContext], 
 }
 
 // PostTransaction increments number of transactions and saves gas used in last substate.
-func (rp *registerProgress) PostTransaction(state executor.State[txcontext.TxContext], _ *executor.Context) error {
-	res := state.Data.GetReceipt()
+func (rp *registerProgress) PostTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
+
+	res := ctx.ExecutionResult
 
 	rp.lock.Lock()
 	defer rp.lock.Unlock()
@@ -230,6 +231,8 @@ func (rp *registerProgress) sqlite3(conn string) (string, string, string, func()
 				gas          uint64
 				totalTxCount uint64
 				totalGas     uint64
+				lDisk        int64
+				aDisk        int64
 			)
 
 			rp.lock.Lock()
@@ -239,15 +242,14 @@ func (rp *registerProgress) sqlite3(conn string) (string, string, string, func()
 			totalGas = rp.totalGas
 			rp.lock.Unlock()
 
-			lDisk, err := utils.GetDirectorySize(rp.pathToStateDb)
-			if err != nil {
-				// silent defaults to 0 if anything happens to path at runtime
-				lDisk = 0
-			}
+			//lDisk, err := utils.GetDirectorySize(rp.pathToStateDb)
+			//if err != nil {
+			// silent defaults to 0 if anything happens to path at runtime
+			lDisk = 0
+			//}
 
-			var aDisk int64 = 0
 			if rp.cfg.ArchiveMode {
-				aDisk, err = utils.GetDirectorySize(rp.pathToArchiveDb)
+				aDisk, err := utils.GetDirectorySize(rp.pathToArchiveDb)
 				if err != nil {
 					// silent defaults to 0 if anything happens to path at runtime
 					aDisk = 0

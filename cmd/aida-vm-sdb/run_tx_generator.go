@@ -6,6 +6,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension/logger"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
+	"github.com/Fantom-foundation/Aida/executor/extension/register"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/state"
@@ -50,6 +51,12 @@ func runTransactions(
 		profiler.MakeMemoryUsagePrinter[txcontext.TxContext](cfg),
 		profiler.MakeMemoryProfiler[txcontext.TxContext](cfg),
 		statedb.MakeStateDbManager[txcontext.TxContext](cfg),
+
+		register.MakeRegisterProgress(cfg, 100_000),
+		// RegisterProgress should be the first on the list = last to receive PostRun.
+		// This is because it collects the error and records it externally.
+		// If not, error that happen afterwards (e.g. on top of) will not be correctly recorded.
+
 		statedb.MakeTxGeneratorBlockEventEmitter[txcontext.TxContext](),
 	}
 
