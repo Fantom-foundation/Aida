@@ -9,12 +9,12 @@ import (
 )
 
 type BlockEnvironment struct {
-	BaseFee          *util.BigInt //`json:"currentBaseFee"`
+	BaseFee          *util.BigInt
 	Bloom            types.Bloom
-	Coinbase         common.Address //`json:"currentCoinbase"`
+	Coinbase         common.Address
 	MixHash          common.Hash
 	Nonce            types.BlockNonce
-	Number           *util.BigInt //`json:"currentNumber"`
+	Number           *util.BigInt
 	Hash             common.Hash
 	ParentHash       common.Hash
 	ReceiptTrie      common.Hash
@@ -22,10 +22,10 @@ type BlockEnvironment struct {
 	TransactionsTrie common.Hash
 	UncleHash        common.Hash
 	ExtraData        []byte
-	Difficulty       *util.BigInt //`json:"currentDifficulty"`
-	GasLimit         *util.BigInt //`json:"GasLimit"`
+	Difficulty       *util.BigInt
+	GasLimit         *util.BigInt
 	GasUsed          *util.BigInt
-	Timestamp        *util.BigInt //`json:"currentTimestamp"`
+	Timestamp        *util.BigInt
 	BaseFeePerGas    *util.BigInt
 }
 

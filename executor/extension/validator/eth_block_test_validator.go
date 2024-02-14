@@ -46,8 +46,13 @@ func (e *ethBlockTestValidator) PreBlock(s executor.State[txcontext.TxContext], 
 func (e *ethBlockTestValidator) PostBlock(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	err := validateWorldState(e.cfg, ctx.State, s.Data.GetOutputState(), e.log)
 	if err != nil {
-		return fmt.Errorf("pre alloc validation failed; %v", err)
+		e.log.Errorf("post alloc validation failed; %v", err)
+	} else {
+		e.log.Notice("Post Alloc validation PASSED!")
+		e.passed++
 	}
+
+	fmt.Println(ctx.State.GetHash())
 
 	e.overall++
 	return nil

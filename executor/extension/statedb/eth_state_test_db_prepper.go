@@ -51,6 +51,7 @@ func (e ethStateTestDbPrepper) PostBlock(_ executor.State[txcontext.TxContext], 
 		if err != nil {
 			return fmt.Errorf("cannot close db %v; %v", ctx.StateDbPath, err)
 		}
+		ctx.State = nil
 	}
 
 	err := os.RemoveAll(ctx.StateDbPath)
