@@ -123,6 +123,11 @@ var RunTxGeneratorCmd = cli.Command{
 		&utils.StateDbLoggingFlag,
 		&utils.ValidateStateHashesFlag,
 
+		// ShadowDb
+		&utils.ShadowDb,
+		&utils.ShadowDbImplementationFlag,
+		&utils.ShadowDbVariantFlag,
+
 		// VM
 		&utils.VmImplementation,
 
@@ -141,6 +146,7 @@ var RunTxGeneratorCmd = cli.Command{
 		&utils.ValidateFlag,
 		&logger.LogLevelFlag,
 		&utils.NoHeartbeatLoggingFlag,
+		&utils.BlockLengthFlag,
 	},
 	Description: `
 The aida-vm-sdb tx-generator command requires two arguments: <blockNumFirst> <blockNumLast>
