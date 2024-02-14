@@ -49,6 +49,7 @@ func runTransactions(
 		tracker.MakeBlockProgressTracker(cfg, 100),
 		profiler.MakeMemoryUsagePrinter[txcontext.TxContext](cfg),
 		profiler.MakeMemoryProfiler[txcontext.TxContext](cfg),
+		statedb.MakeStateDbManager[txcontext.TxContext](cfg),
 		statedb.MakeTxGeneratorBlockEventEmitter[txcontext.TxContext](),
 	}
 

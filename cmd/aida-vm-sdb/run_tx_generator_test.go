@@ -78,6 +78,9 @@ func TestVmSdb_TxGenerator_AllTransactionsAreProcessedInOrder(t *testing.T) {
 		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](4, 1), gomock.Any()),
 		ext.EXPECT().PostRun(executor.AtBlock[txcontext.TxContext](4), gomock.Any(), nil),
 		db.EXPECT().EndBlock(),
+
+		// db_manager closes the db
+		db.EXPECT().Close(),
 	)
 
 	if err := runTransactions(cfg, provider, db, processor, []executor.Extension[txcontext.TxContext]{ext}); err != nil {

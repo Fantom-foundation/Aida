@@ -27,9 +27,11 @@ type stateDbManager[T any] struct {
 
 func (m *stateDbManager[T]) PreRun(_ executor.State[T], ctx *executor.Context) error {
 	var err error
-	ctx.State, ctx.StateDbPath, err = utils.PrepareStateDB(m.cfg)
-	if err != nil {
-		return err
+	if ctx.State == nil {
+		ctx.State, ctx.StateDbPath, err = utils.PrepareStateDB(m.cfg)
+		if err != nil {
+			return err
+		}
 	}
 
 	if !m.cfg.ShadowDb {
