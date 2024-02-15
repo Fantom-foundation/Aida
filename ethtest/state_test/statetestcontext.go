@@ -12,8 +12,6 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 )
 
-var usableForks = []string{"London", "Berlin", "Istanbul", "MuirGlacier", "TestNetwork"}
-
 type StJSON struct {
 	txcontext.NilTxContext
 	TestLabel   string
@@ -30,7 +28,7 @@ func (s *StJSON) SetLabel(label string) {
 }
 
 func (s *StJSON) GetStateHash() common.Hash {
-	for _, n := range usableForks {
+	for _, n := range util.UsableForks {
 		if p, ok := s.Post[n]; ok {
 			return p[0].RootHash
 		}
@@ -93,7 +91,7 @@ func (s *StJSON) Divide(chainId utils.ChainID) (dividedTests []*StJSON) {
 	// each test contains multiple validation data for different forks.
 	// we create a test for each usable fork
 
-	for _, fork := range usableForks {
+	for _, fork := range util.UsableForks {
 		var test StJSON
 		if _, ok := s.Post[fork]; ok {
 			test = *s               // copy all the test data

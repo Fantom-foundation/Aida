@@ -11,10 +11,10 @@ import (
 )
 
 func MakeEthBlockTestValidator(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
-	if !cfg.Validate {
-		return extension.NilExtension[txcontext.TxContext]{}
+	if cfg.Validate && cfg.EthTestType == utils.EthBlockTests {
+		return makeEthBlockTestValidator(cfg, logger.NewLogger(cfg.LogLevel, "EthBlockTestValidator"))
 	}
-	return makeEthBlockTestValidator(cfg, logger.NewLogger(cfg.LogLevel, "EthBlockTestValidator"))
+	return extension.NilExtension[txcontext.TxContext]{}
 }
 
 func makeEthBlockTestValidator(cfg *utils.Config, log logger.Logger) executor.Extension[txcontext.TxContext] {

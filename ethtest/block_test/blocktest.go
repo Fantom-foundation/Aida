@@ -89,6 +89,7 @@ func (t *BtJSON) isWithinUsableNetworks() bool {
 }
 
 type BtBlock struct {
+	TestLabel       string
 	UsedNetwork     string
 	BlockHeader     *BlockEnvironment `json:"blockHeader"`
 	ExpectException string
@@ -124,24 +125,4 @@ type Transaction struct {
 
 func (t Transaction) ToMessage() types.Message {
 	return types.NewMessage(t.From, t.To, t.Nonce.Uint64(), t.Amount.Convert(), t.GasLimit.Uint64(), t.GasPrice.Convert(), t.GasFeeCap.Convert(), t.GasTipCap.Convert(), hexutil.MustDecode(t.Data), t.AccessList, t.IsFake)
-}
-
-func (bb *BtBlock) Divide(chainId utils.ChainID) (dividedTests []*BtBlock) {
-	// each test contains multiple validation data for different forks.
-	// we create a test for each usable fork
-
-	//	for _, fork := range usableForks {
-	//		var test StJSON
-	//		if _, ok := s.Post[fork]; ok {
-	//			test = *s               // copy all the test data
-	//			test.UsedNetwork = fork // add correct fork name
-	//
-	//			// add block number to env (+1 just to make sure we are within wanted fork)
-	//			test.Env.blockNumber = utils.KeywordBlocks[chainId][strings.ToLower(fork)] + 1
-	//			dividedTests = append(dividedTests, &test)
-	//		}
-	//	}
-	//
-	//	return dividedTests
-	return nil
 }

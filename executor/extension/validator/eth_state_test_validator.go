@@ -12,10 +12,10 @@ import (
 )
 
 func MakeEthStateTestValidator(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
-	if !cfg.Validate {
-		return extension.NilExtension[txcontext.TxContext]{}
+	if cfg.Validate && cfg.EthTestType == utils.EthStateTests {
+		return makeEthStateTestValidator(cfg, logger.NewLogger(cfg.LogLevel, "EthStateTestValidator"))
 	}
-	return makeEthStateTestValidator(cfg, logger.NewLogger(cfg.LogLevel, "EthStateTestValidator"))
+	return extension.NilExtension[txcontext.TxContext]{}
 }
 
 func makeEthStateTestValidator(cfg *utils.Config, log logger.Logger) executor.Extension[txcontext.TxContext] {
@@ -32,7 +32,7 @@ type ethStateTestValidator struct {
 	overall, passed int
 }
 
-func (e *ethStateTestValidator) PreTransaction(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
+func (e *ethStateTestValidator) PreBlock(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	err := validateWorldState(e.cfg, ctx.State, s.Data.GetInputState(), e.log)
 	if err != nil {
 		return fmt.Errorf("pre alloc validation failed; %v", err)
@@ -41,7 +41,7 @@ func (e *ethStateTestValidator) PreTransaction(s executor.State[txcontext.TxCont
 	return nil
 }
 
-func (e *ethStateTestValidator) PostTransaction(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
+func (e *ethStateTestValidator) PostBlock(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	want := s.Data.GetStateHash()
 	got := ctx.State.GetHash()
 

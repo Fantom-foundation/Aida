@@ -405,4 +405,9 @@ var (
 		Usage:    "db component to be used (\"all\", \"substate\", \"delete\", \"update\", \"state-hash\")",
 		Required: true,
 	}
+	EthTestTypeFlag = cli.StringFlag{
+		Name:  "eth-test-type",
+		Usage: "choose which eth test type (\"state\", \"block\")",
+		Value: "",
+	}
 )

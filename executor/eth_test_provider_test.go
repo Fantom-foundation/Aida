@@ -18,7 +18,7 @@ func Test_ethTestProvider_Run(t *testing.T) {
 		ArgPath: pathFile,
 	}
 
-	provider := NewEthStateTestProvider(cfg)
+	provider := NewEthTestProvider(cfg)
 
 	ctrl := gomock.NewController(t)
 

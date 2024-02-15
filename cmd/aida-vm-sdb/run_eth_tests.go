@@ -1,6 +1,8 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension/logger"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
@@ -15,8 +17,8 @@ import (
 )
 
 var RunEthTestsCmd = cli.Command{
-	Action:    RunEthereumTest,
-	Name:      "ethereum-test",
+	Action:    RunEthereumTests,
+	Name:      "ethereum-tests",
 	Usage:     "Execute ethereum tests",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Aliases:   []string{"ethtest"},
@@ -28,7 +30,7 @@ var RunEthTestsCmd = cli.Command{
 		&utils.DbTmpFlag,
 		&utils.StateDbLoggingFlag,
 
-		//// ShadowDb
+		// ShadowDb
 		&utils.ShadowDb,
 		&utils.ShadowDbImplementationFlag,
 		&utils.ShadowDbVariantFlag,
@@ -52,22 +54,30 @@ var RunEthTestsCmd = cli.Command{
 		&utils.ValidateFlag,
 		&log.LogLevelFlag,
 		&utils.ErrorLoggingFlag,
+		&utils.EthTestTypeFlag,
 	},
 	Description: `
 The aida-vm-sdb geth-state-tests command requires one argument: <pathToJsonTest or pathToDirWithJsonTests>`,
 }
 
-// RunEthereumTest performs sequential block processing on a StateDb
-func RunEthereumTest(ctx *cli.Context) error {
+// RunEthereumTests performs sequential block processing on a StateDb
+func RunEthereumTests(ctx *cli.Context) error {
 	cfg, err := utils.NewConfig(ctx, utils.PathArg)
 	if err != nil {
 		return err
 	}
 
+	switch cfg.EthTestType {
+	case utils.EthStateTests:
+	case utils.EthBlockTests:
+	default:
+		return fmt.Errorf("please choose correct ethereum test type (--%v)", utils.EthTestTypeFlag.Name)
+	}
+
 	cfg.StateValidationMode = utils.SubsetCheck
 	cfg.ValidateTxState = true
 
-	return runEth(cfg, executor.NewEthStateTestProvider(cfg), nil, executor.MakeLiveDbTxProcessor(cfg), nil)
+	return runEth(cfg, executor.NewEthTestProvider(cfg), nil, executor.MakeLiveDbTxProcessor(cfg), nil)
 }
 
 func runEth(
@@ -88,7 +98,7 @@ func runEth(
 	if stateDb == nil {
 		extensionList = append(
 			extensionList,
-			statedb.MakeEthStateTestDbPrepper(cfg),
+			statedb.MakeEthTestDbPrepper(cfg),
 			statedb.MakeLiveDbBlockChecker[txcontext.TxContext](cfg),
 			logger.MakeDbLogger[txcontext.TxContext](cfg),
 		)
@@ -96,9 +106,9 @@ func runEth(
 
 	extensionList = append(
 		extensionList,
-		//validator.MakeEthStateTestValidator(cfg),
+		validator.MakeEthStateTestValidator(cfg),
 		validator.MakeEthBlockTestValidator(cfg),
-		statedb.MakeEthStateTestBlockEventEmitter(),
+		statedb.MakeBlockEventEmitter[txcontext.TxContext](),
 	)
 
 	extensionList = append(extensionList, extra...)
@@ -109,7 +119,7 @@ func runEth(
 			To:                     int(cfg.Last) + 1,
 			NumWorkers:             1,
 			State:                  stateDb,
-			ParallelismGranularity: executor.BlockLevel, // todo what?
+			ParallelismGranularity: executor.BlockLevel,
 		},
 		processor,
 		extensionList,

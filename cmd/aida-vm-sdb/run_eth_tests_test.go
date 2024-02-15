@@ -21,6 +21,7 @@ func TestVmSdb_Eth_AllDbEventsAreIssuedInOrder(t *testing.T) {
 	provider := executor.NewMockProvider[txcontext.TxContext](ctrl)
 	db := state.NewMockStateDB(ctrl)
 	cfg := &utils.Config{
+		EthTestType:       utils.EthStateTests,
 		First:             2,
 		Last:              4,
 		ChainID:           utils.MainnetChainID,
@@ -35,7 +36,7 @@ func TestVmSdb_Eth_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		Run(2, 5, gomock.Any()).
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[txcontext.TxContext]) error {
 			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 1, Data: data})
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 2, Data: data})
+			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 3, Transaction: 2, Data: data})
 			return nil
 		})
 
@@ -54,7 +55,7 @@ func TestVmSdb_Eth_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		db.EXPECT().EndTransaction(),
 		db.EXPECT().EndBlock(),
 
-		db.EXPECT().BeginBlock(uint64(2)),
+		db.EXPECT().BeginBlock(uint64(3)),
 		db.EXPECT().BeginTransaction(uint32(2)),
 		db.EXPECT().Prepare(gomock.Any(), 2),
 		db.EXPECT().Snapshot().Return(15),
@@ -63,7 +64,7 @@ func TestVmSdb_Eth_AllDbEventsAreIssuedInOrder(t *testing.T) {
 		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
 		db.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
 		db.EXPECT().RevertToSnapshot(15),
-		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 2)), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
+		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 3, 2)), common.HexToHash(fmt.Sprintf("0x%016d", 3))),
 		db.EXPECT().EndTransaction(),
 		db.EXPECT().EndBlock(),
 	)
@@ -85,6 +86,7 @@ func TestVmSdb_Eth_AllTransactionsAreProcessedInOrder(t *testing.T) {
 	ext := executor.NewMockExtension[txcontext.TxContext](ctrl)
 	processor := executor.NewMockProcessor[txcontext.TxContext](ctrl)
 	cfg := &utils.Config{
+		EthTestType: utils.EthStateTests,
 		First:       2,
 		Last:        4,
 		ChainID:     utils.MainnetChainID,
@@ -100,11 +102,11 @@ func TestVmSdb_Eth_AllTransactionsAreProcessedInOrder(t *testing.T) {
 		DoAndReturn(func(_ int, _ int, consumer executor.Consumer[txcontext.TxContext]) error {
 			// Block 2
 			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 1, Data: data})
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 2, Transaction: 2, Data: data})
+			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 3, Transaction: 2, Data: data})
 			// Block 3
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 3, Transaction: 1, Data: data})
+			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 4, Transaction: 1, Data: data})
 			//// Block 4
-			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 4, Transaction: utils.PseudoTx, Data: data})
+			consumer(executor.TransactionInfo[txcontext.TxContext]{Block: 5, Transaction: utils.PseudoTx, Data: data})
 			return nil
 		})
 
@@ -115,33 +117,30 @@ func TestVmSdb_Eth_AllTransactionsAreProcessedInOrder(t *testing.T) {
 	gomock.InOrder(
 		ext.EXPECT().PreRun(executor.AtBlock[txcontext.TxContext](2), gomock.Any()),
 
-		// Block 2
-		// Tx 1
 		db.EXPECT().BeginBlock(uint64(2)),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](2, 1), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](2, 1), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](2, 1), gomock.Any()),
 		db.EXPECT().EndBlock(),
-		// Tx 2
-		db.EXPECT().BeginBlock(uint64(2)),
-		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](2, 2), gomock.Any()),
-		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](2, 2), gomock.Any()),
-		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](2, 2), gomock.Any()),
-		db.EXPECT().EndBlock(),
-		//
-		//// Block 3
+
 		db.EXPECT().BeginBlock(uint64(3)),
-		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](3, 1), gomock.Any()),
-		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](3, 1), gomock.Any()),
-		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](3, 1), gomock.Any()),
+		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](3, 2), gomock.Any()),
+		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](3, 2), gomock.Any()),
+		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](3, 2), gomock.Any()),
 		db.EXPECT().EndBlock(),
-		//
-		//// Block 4
+
 		db.EXPECT().BeginBlock(uint64(4)),
-		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](4, utils.PseudoTx), gomock.Any()),
-		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](4, utils.PseudoTx), gomock.Any()),
-		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](4, utils.PseudoTx), gomock.Any()),
+		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](4, 1), gomock.Any()),
+		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](4, 1), gomock.Any()),
+		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](4, 1), gomock.Any()),
 		db.EXPECT().EndBlock(),
+
+		db.EXPECT().BeginBlock(uint64(5)),
+		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](5, utils.PseudoTx), gomock.Any()),
+		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](5, utils.PseudoTx), gomock.Any()),
+		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](5, utils.PseudoTx), gomock.Any()),
+		db.EXPECT().EndBlock(),
+
 		ext.EXPECT().PostRun(executor.AtBlock[txcontext.TxContext](5), gomock.Any(), nil),
 	)
 
@@ -155,6 +154,7 @@ func TestVmSdb_Eth_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 	provider := executor.NewMockProvider[txcontext.TxContext](ctrl)
 	db := state.NewMockStateDB(ctrl)
 	cfg := &utils.Config{
+		EthTestType: utils.EthStateTests,
 		First:       2,
 		Last:        4,
 		ChainID:     utils.MainnetChainID,
@@ -213,6 +213,7 @@ func TestVmSdb_Eth_ValidationDoesFailOnInvalidTransaction(t *testing.T) {
 	provider := executor.NewMockProvider[txcontext.TxContext](ctrl)
 	db := state.NewMockStateDB(ctrl)
 	cfg := &utils.Config{
+		EthTestType: utils.EthStateTests,
 		First:       2,
 		Last:        4,
 		ChainID:     utils.MainnetChainID,

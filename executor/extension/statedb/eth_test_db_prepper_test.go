@@ -17,7 +17,7 @@ func Test_ethStateTestDbPrepper_PreTransactionPriming(t *testing.T) {
 		ChainID:  1,
 		LogLevel: "critical",
 	}
-	ext := ethStateTestDbPrepper{cfg: cfg, log: logger.NewLogger(cfg.LogLevel, "EthStatePrepper")}
+	ext := ethTestDbPrepper{cfg: cfg, log: logger.NewLogger(cfg.LogLevel, "EthStatePrepper")}
 
 	testData := statetest.CreateTestData(t)
 	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: testData}
@@ -47,7 +47,7 @@ func Test_ethStateTestDbPrepper_CleaningTmpDir(t *testing.T) {
 		ChainID:  1,
 		LogLevel: "critical",
 	}
-	ext := ethStateTestDbPrepper{cfg: cfg, log: logger.NewLogger(cfg.LogLevel, "EthStatePrepper")}
+	ext := ethTestDbPrepper{cfg: cfg, log: logger.NewLogger(cfg.LogLevel, "EthStatePrepper")}
 
 	testData := statetest.CreateTestData(t)
 	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: testData}

@@ -10,15 +10,9 @@ import (
 
 	blocktest "github.com/Fantom-foundation/Aida/ethtest/block_test"
 	"github.com/Fantom-foundation/Aida/ethtest/state_test"
+	"github.com/Fantom-foundation/Aida/ethtest/util"
 	"github.com/Fantom-foundation/Aida/utils"
 )
-
-const (
-	BlockTests jsonTestType = iota
-	StateTests
-)
-
-type jsonTestType byte
 
 type ethTest interface {
 	*statetest.StJSON | *blocktest.BtJSON
@@ -27,15 +21,15 @@ type ethTest interface {
 
 // GetTestsWithinPath returns all tests in given directory (and subdirectories)
 // T is the type into which we want to unmarshal the tests.
-func GetTestsWithinPath[T ethTest](path string, testType jsonTestType) ([]T, error) {
+func GetTestsWithinPath[T ethTest](path string, testType string) ([]T, error) {
 	switch testType {
-	case StateTests:
+	case utils.EthStateTests:
 		gst := path + "/GeneralStateTests"
 		_, err := os.Stat(gst)
 		if !os.IsNotExist(err) {
 			path = gst
 		}
-	case BlockTests:
+	case utils.EthBlockTests:
 		gst := path + "/BlockchainTests"
 		_, err := os.Stat(gst)
 		if !os.IsNotExist(err) {
@@ -67,82 +61,14 @@ func GetTestsWithinPath[T ethTest](path string, testType jsonTestType) ([]T, err
 			continue
 		}
 
-		// TODO merge usability with readTestsFromFile
-		file, err := os.Open(p)
+		t, err := readTestsFromFile[T](p)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("cannot read tests from file %v; %w", p, err)
 		}
-		byteJSON, err := io.ReadAll(file)
-		if err != nil {
-			return nil, err
-		}
-
-		var b map[string]T
-		err = json.Unmarshal(byteJSON, &b)
-		if err != nil {
-			//return nil, fmt.Errorf("cannot unmarshal file %v", p)
-			fmt.Printf("SKIPPED: cannot unmarshal file %v\n", p)
-			continue
-		}
-
-		testLabel := getTestLabel(p)
-
-		for _, t := range b {
-			t.SetLabel(testLabel)
-			tests = append(tests, t)
-		}
+		tests = append(tests, t...)
 	}
 
 	return tests, err
-}
-
-// OpenBlockTests opens
-func OpenBlockTests(path string) ([]*blocktest.BtJSON, error) {
-	info, err := os.Stat(path)
-	if err != nil {
-		return nil, err
-	}
-
-	var tests []*blocktest.BtJSON
-
-	if info.IsDir() {
-		tests, err = GetTestsWithinPath[*blocktest.BtJSON](path, StateTests)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		tests, err = readTestsFromFile[*blocktest.BtJSON](path)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return tests, nil
-}
-
-// OpenStateTests opens
-func OpenStateTests(path string) ([]*statetest.StJSON, error) {
-	info, err := os.Stat(path)
-	if err != nil {
-		return nil, err
-	}
-
-	var tests []*statetest.StJSON
-
-	if info.IsDir() {
-		tests, err = GetTestsWithinPath[*statetest.StJSON](path, StateTests)
-		if err != nil {
-			return nil, err
-		}
-
-	} else {
-		tests, err = readTestsFromFile[*statetest.StJSON](path)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return tests, nil
 }
 
 func readTestsFromFile[T ethTest](path string) ([]T, error) {
@@ -168,6 +94,66 @@ func readTestsFromFile[T ethTest](path string) ([]T, error) {
 		t.SetLabel(testLabel)
 		tests = append(tests, t)
 	}
+	return tests, nil
+}
+
+// OpenBlockTests opens
+func OpenBlockTests(path string) ([]*blocktest.BtJSON, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var allTests []*blocktest.BtJSON
+
+	if info.IsDir() {
+		allTests, err = GetTestsWithinPath[*blocktest.BtJSON](path, utils.EthBlockTests)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		allTests, err = readTestsFromFile[*blocktest.BtJSON](path)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	var dividedTests []*blocktest.BtJSON
+	for _, t := range allTests {
+		for _, n := range util.UsableForks {
+			if t.Network == n {
+				t.Blocks[0].BlockHeader.Number.SetUint64(utils.KeywordBlocks[250][strings.ToLower(n)] + 1)
+				dividedTests = append(dividedTests, t)
+				continue
+			}
+		}
+	}
+
+	return dividedTests, nil
+}
+
+// OpenStateTests opens
+func OpenStateTests(path string) ([]*statetest.StJSON, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return nil, err
+	}
+
+	var tests []*statetest.StJSON
+
+	if info.IsDir() {
+		tests, err = GetTestsWithinPath[*statetest.StJSON](path, utils.EthStateTests)
+		if err != nil {
+			return nil, err
+		}
+
+	} else {
+		tests, err = readTestsFromFile[*statetest.StJSON](path)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	return tests, nil
 }
 
