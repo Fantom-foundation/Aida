@@ -104,8 +104,13 @@ func (p normaTxProvider) Run(from int, to int, consumer Consumer[txcontext.TxCon
 
 	// generate transactions until the `to` block is reached
 	// `currentBlock` is incremented in the `nc` function
-	for currentBlock <= to {
+	shouldBreak := false
+	for {
 		for _, user := range users {
+			if currentBlock > to {
+				shouldBreak = true
+				break
+			}
 			// generate tx
 			tx, err := user.GenerateTx()
 			if err != nil {
@@ -116,6 +121,9 @@ func (p normaTxProvider) Run(from int, to int, consumer Consumer[txcontext.TxCon
 			if err = nc(tx, &addr); err != nil {
 				return err
 			}
+		}
+		if shouldBreak {
+			break
 		}
 	}
 
