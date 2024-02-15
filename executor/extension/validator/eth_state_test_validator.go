@@ -12,6 +12,7 @@ import (
 )
 
 func MakeEthStateTestValidator(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
+	// only allow this Extension for a specific type of eth tests
 	if cfg.Validate && cfg.EthTestType == utils.EthStateTests {
 		return makeEthStateTestValidator(cfg, logger.NewLogger(cfg.LogLevel, "EthStateTestValidator"))
 	}
