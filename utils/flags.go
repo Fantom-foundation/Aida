@@ -408,6 +408,6 @@ var (
 	TxGeneratorTypeFlag = cli.StringSliceFlag{
 		Name:  "tx-type",
 		Usage: "list of tx generator application type (\"all\" | <\"erc20\", \"counter\", \"store\", \"uniswap\">)",
-		Value: cli.NewStringSlice("erc20"),
+		Value: cli.NewStringSlice("all"),
 	}
 )
