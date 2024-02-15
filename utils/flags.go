@@ -405,9 +405,9 @@ var (
 		Usage:    "db component to be used (\"all\", \"substate\", \"delete\", \"update\", \"state-hash\")",
 		Required: true,
 	}
-	TxGeneratorTypeFlag = cli.StringFlag{
+	TxGeneratorTypeFlag = cli.StringSliceFlag{
 		Name:  "tx-type",
-		Usage: "tx generator application type (\"erc20\", \"counter\", \"store\", \"uniswap\")",
-		Value: "erc20",
+		Usage: "list of tx generator application type (\"all\" | <\"erc20\", \"counter\", \"store\", \"uniswap\">)",
+		Value: cli.NewStringSlice("all"),
 	}
 )
