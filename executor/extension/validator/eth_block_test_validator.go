@@ -12,7 +12,7 @@ import (
 
 func MakeEthBlockTestValidator(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
 	// only allow this Extension for a specific type of eth tests
-	if cfg.Validate && cfg.EthTestType == utils.EthBlockTests {
+	if cfg.Validate && cfg.EthTestType == utils.EthBlockChainTests {
 		return makeEthBlockTestValidator(cfg, logger.NewLogger(cfg.LogLevel, "EthBlockTestValidator"))
 	}
 	return extension.NilExtension[txcontext.TxContext]{}

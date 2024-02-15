@@ -103,8 +103,8 @@ var KeywordBlocks = map[ChainID]map[string]uint64{
 }
 
 const (
-	EthStateTests = "state"
-	EthBlockTests = "block"
+	EthStateTests      = "state"
+	EthBlockChainTests = "blockchain"
 )
 
 type EthTestType byte
@@ -123,37 +123,37 @@ type Config struct {
 	First uint64 // first block
 	Last  uint64 // last block
 
-	AidaDb                 string         // directory to profiling database containing substate, update, delete accounts data
-	ArchiveMaxQueryAge     int            // the maximum age for archive queries (in blocks)
-	ArchiveMode            bool           // enable archive mode
-	ArchiveQueryRate       int            // the queries per second send to the archive
-	ArchiveVariant         string         // selects the implementation variant of the archive
-	ArgPath                string         // path to file or directory given as argument
-	BalanceRange           int64          // balance range for stochastic simulation/replay
-	BasicBlockProfiling    bool           // enable profiling of basic block
-	BlockLength            uint64         // length of a block in number of transactions
-	CPUProfile             string         // pprof cpu profile output file name
-	CPUProfilePerInterval  bool           // a different CPU profile is taken per 100k block interval
-	Cache                  int            // Cache for StateDb or Priming
-	CarmenSchema           int            // the current DB schema ID to use in Carmen
-	CarmenStateCacheSize   int            // the number of values cached in the Carmen StateDB (0 for default value)
-	CarmenNodeCacheSize    int            // the size of the in-memory cache to be used by a Carmen LiveDB in byte (0 for default value)
-	ChainID                ChainID        // Blockchain ID (mainnet: 250/testnet: 4002)
-	ChannelBufferSize      int            // set a buffer size for profiling channel
-	CompactDb              bool           // compact database after merging
-	ContinueOnFailure      bool           // continue validation when an error detected
-	ContractNumber         int64          // number of contracts to create
-	CustomDbName           string         // name of state-db directory
-	DbComponent            string         // options for util-db info are 'all', 'substate', 'delete', 'update', 'state-hash'
-	DbImpl                 string         // storage implementation
-	DbLogging              string         // set to true if all DB operations should be logged
-	DbTmp                  string         // path to temporary database
-	DbVariant              string         // database variant
-	Debug                  bool           // enable trace debug flag
-	DebugFrom              uint64         // the first block to print trace debug
-	DeleteSourceDbs        bool           // delete source databases
-	DeletionDb             string         // directory of deleted account database
-	DiagnosticServer       int64          // if not zero, the port used for hosting a HTTP server for performance diagnostics
+	AidaDb                 string  // directory to profiling database containing substate, update, delete accounts data
+	ArchiveMaxQueryAge     int     // the maximum age for archive queries (in blocks)
+	ArchiveMode            bool    // enable archive mode
+	ArchiveQueryRate       int     // the queries per second send to the archive
+	ArchiveVariant         string  // selects the implementation variant of the archive
+	ArgPath                string  // path to file or directory given as argument
+	BalanceRange           int64   // balance range for stochastic simulation/replay
+	BasicBlockProfiling    bool    // enable profiling of basic block
+	BlockLength            uint64  // length of a block in number of transactions
+	CPUProfile             string  // pprof cpu profile output file name
+	CPUProfilePerInterval  bool    // a different CPU profile is taken per 100k block interval
+	Cache                  int     // Cache for StateDb or Priming
+	CarmenSchema           int     // the current DB schema ID to use in Carmen
+	CarmenStateCacheSize   int     // the number of values cached in the Carmen StateDB (0 for default value)
+	CarmenNodeCacheSize    int     // the size of the in-memory cache to be used by a Carmen LiveDB in byte (0 for default value)
+	ChainID                ChainID // Blockchain ID (mainnet: 250/testnet: 4002)
+	ChannelBufferSize      int     // set a buffer size for profiling channel
+	CompactDb              bool    // compact database after merging
+	ContinueOnFailure      bool    // continue validation when an error detected
+	ContractNumber         int64   // number of contracts to create
+	CustomDbName           string  // name of state-db directory
+	DbComponent            string  // options for util-db info are 'all', 'substate', 'delete', 'update', 'state-hash'
+	DbImpl                 string  // storage implementation
+	DbLogging              string  // set to true if all DB operations should be logged
+	DbTmp                  string  // path to temporary database
+	DbVariant              string  // database variant
+	Debug                  bool    // enable trace debug flag
+	DebugFrom              uint64  // the first block to print trace debug
+	DeleteSourceDbs        bool    // delete source databases
+	DeletionDb             string  // directory of deleted account database
+	DiagnosticServer       int64   // if not zero, the port used for hosting a HTTP server for performance diagnostics
 	EthTestType            string
 	ErrorLogging           string         // if defined, error logging to file is enabled
 	Genesis                string         // genesis file

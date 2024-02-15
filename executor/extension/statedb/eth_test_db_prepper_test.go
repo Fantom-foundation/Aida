@@ -4,14 +4,14 @@ import (
 	"os"
 	"testing"
 
-	"github.com/Fantom-foundation/Aida/ethtest/state_test"
+	statetest "github.com/Fantom-foundation/Aida/ethtest/state_test"
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
-func Test_ethStateTestDbPrepper_PreTransactionPriming(t *testing.T) {
+func Test_ethStateTestDbPrepper_PreBlockPrimes(t *testing.T) {
 	cfg := &utils.Config{
 		DbImpl:   "geth",
 		ChainID:  1,
@@ -22,7 +22,7 @@ func Test_ethStateTestDbPrepper_PreTransactionPriming(t *testing.T) {
 	testData := statetest.CreateTestData(t)
 	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: testData}
 	ctx := &executor.Context{}
-	err := ext.PreTransaction(st, ctx)
+	err := ext.PreBlock(st, ctx)
 	if err != nil {
 		t.Fatalf("unexpected err; %v", err)
 	}
@@ -36,12 +36,12 @@ func Test_ethStateTestDbPrepper_PreTransactionPriming(t *testing.T) {
 	isEqual := expectedAlloc.Equal(vmAlloc)
 	if !isEqual {
 		if err != nil {
-			t.Fatalf("failed to prime database with test data")
+			t.Fatalf("failed to prime database with test data\ngot: %v\nwant: %v", vmAlloc.String(), expectedAlloc.String())
 		}
 	}
 }
 
-func Test_ethStateTestDbPrepper_CleaningTmpDir(t *testing.T) {
+func Test_ethStateTestDbPrepper_PostBlockDeletesDatabase(t *testing.T) {
 	cfg := &utils.Config{
 		DbImpl:   "geth",
 		ChainID:  1,
@@ -52,20 +52,20 @@ func Test_ethStateTestDbPrepper_CleaningTmpDir(t *testing.T) {
 	testData := statetest.CreateTestData(t)
 	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: testData}
 	ctx := &executor.Context{}
-	err := ext.PreTransaction(st, ctx)
+	err := ext.PreBlock(st, ctx)
 	if err != nil {
 		t.Fatalf("unexpected err; %v", err)
 	}
 	dirPath := ctx.StateDbPath
 	// check if exists before removing
 	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
-		t.Fatalf("tmp dir not found")
+		t.Fatal("tmp dir not found")
 	}
 
-	err = ext.PostTransaction(st, ctx)
+	err = ext.PostBlock(st, ctx)
 
 	// check if tmp dir is removed
 	if _, err := os.Stat(dirPath); !os.IsNotExist(err) {
-		t.Fatalf("tmp dir not removed")
+		t.Fatal("tmp dir not removed")
 	}
 }

@@ -3,7 +3,7 @@ package validator
 import (
 	"fmt"
 
-	"github.com/Fantom-foundation/Aida/ethtest/state_test"
+	statetest "github.com/Fantom-foundation/Aida/ethtest/state_test"
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"

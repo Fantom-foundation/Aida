@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/Fantom-foundation/Aida/ethtest/state_test"
+	statetest "github.com/Fantom-foundation/Aida/ethtest/state_test"
 	"github.com/Fantom-foundation/Aida/utils"
 	"go.uber.org/mock/gomock"
 )
@@ -15,7 +15,8 @@ func Test_ethTestProvider_Run(t *testing.T) {
 	pathFile := createTestDataFile(t)
 
 	cfg := &utils.Config{
-		ArgPath: pathFile,
+		ArgPath:     pathFile,
+		EthTestType: utils.EthStateTests,
 	}
 
 	provider := NewEthTestProvider(cfg)

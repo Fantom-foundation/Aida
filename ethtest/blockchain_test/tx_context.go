@@ -1,4 +1,4 @@
-package blocktest
+package blockchaintest
 
 import (
 	"github.com/Fantom-foundation/Aida/txcontext"

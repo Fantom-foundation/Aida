@@ -2,7 +2,7 @@ package executor
 
 import (
 	"github.com/Fantom-foundation/Aida/ethtest"
-	blocktest "github.com/Fantom-foundation/Aida/ethtest/block_test"
+	blocktest "github.com/Fantom-foundation/Aida/ethtest/blockchain_test"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 )
@@ -19,8 +19,8 @@ func (e ethTestProvider) Run(_ int, _ int, consumer Consumer[txcontext.TxContext
 	switch e.cfg.EthTestType {
 	case utils.EthStateTests:
 		return e.runStateTests(consumer)
-	case utils.EthBlockTests:
-		return e.runBlockTests(consumer)
+	case utils.EthBlockChainTests:
+		return e.runBlockChainTests(consumer)
 	}
 
 	return nil
@@ -54,8 +54,8 @@ func (e ethTestProvider) runStateTests(consumer Consumer[txcontext.TxContext]) e
 	return nil
 }
 
-func (e ethTestProvider) runBlockTests(consumer Consumer[txcontext.TxContext]) error {
-	b, err := ethtest.OpenBlockTests(e.cfg.ArgPath)
+func (e ethTestProvider) runBlockChainTests(consumer Consumer[txcontext.TxContext]) error {
+	b, err := ethtest.OpenBlockChainTests(e.cfg.ArgPath)
 	if err != nil {
 		return err
 	}

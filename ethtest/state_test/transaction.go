@@ -37,6 +37,7 @@ func (tx *stTransaction) toMessage(ps stPostState, baseFee *util.BigInt) (*types
 		}
 		from = crypto.PubkeyToAddress(key.PublicKey)
 	}
+	fmt.Println(from.Hex())
 	// Parse recipient if present.
 	var to *common.Address
 	if tx.To != "" {

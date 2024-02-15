@@ -8,14 +8,14 @@ import (
 	"os"
 	"strings"
 
-	blocktest "github.com/Fantom-foundation/Aida/ethtest/block_test"
+	"github.com/Fantom-foundation/Aida/ethtest/blockchain_test"
 	"github.com/Fantom-foundation/Aida/ethtest/state_test"
 	"github.com/Fantom-foundation/Aida/ethtest/util"
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
 type ethTest interface {
-	*statetest.StJSON | *blocktest.BtJSON
+	*statetest.StJSON | *blockchaintest.BtJSON
 	SetLabel(string)
 }
 
@@ -29,14 +29,14 @@ func GetTestsWithinPath[T ethTest](path string, testType string) ([]T, error) {
 		if !os.IsNotExist(err) {
 			path = gst
 		}
-	case utils.EthBlockTests:
+	case utils.EthBlockChainTests:
 		gst := path + "/BlockchainTests"
 		_, err := os.Stat(gst)
 		if !os.IsNotExist(err) {
 			path = gst
 		}
 	default:
-		return nil, errors.New("please chose which testType do you want to read")
+		return nil, errors.New("please choose which testType do you want to read")
 	}
 
 	paths, err := utils.GetDirectoryFiles(path)
@@ -97,28 +97,28 @@ func readTestsFromFile[T ethTest](path string) ([]T, error) {
 	return tests, nil
 }
 
-// OpenBlockTests opens
-func OpenBlockTests(path string) ([]*blocktest.BtJSON, error) {
+// OpenBlockChainTests opens
+func OpenBlockChainTests(path string) ([]*blockchaintest.BtJSON, error) {
 	info, err := os.Stat(path)
 	if err != nil {
 		return nil, err
 	}
 
-	var allTests []*blocktest.BtJSON
+	var allTests []*blockchaintest.BtJSON
 
 	if info.IsDir() {
-		allTests, err = GetTestsWithinPath[*blocktest.BtJSON](path, utils.EthBlockTests)
+		allTests, err = GetTestsWithinPath[*blockchaintest.BtJSON](path, utils.EthBlockChainTests)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		allTests, err = readTestsFromFile[*blocktest.BtJSON](path)
+		allTests, err = readTestsFromFile[*blockchaintest.BtJSON](path)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	var dividedTests []*blocktest.BtJSON
+	var dividedTests []*blockchaintest.BtJSON
 	for _, t := range allTests {
 		for _, n := range util.UsableForks {
 			if t.Network == n {

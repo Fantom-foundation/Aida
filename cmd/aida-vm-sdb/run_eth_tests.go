@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/Fantom-foundation/Aida/executor"
@@ -69,7 +70,8 @@ func RunEthereumTests(ctx *cli.Context) error {
 
 	switch cfg.EthTestType {
 	case utils.EthStateTests:
-	case utils.EthBlockTests:
+	case utils.EthBlockChainTests:
+		return errors.New("the block-chain tests are not yet supported")
 	default:
 		return fmt.Errorf("please choose correct ethereum test type (--%v)", utils.EthTestTypeFlag.Name)
 	}

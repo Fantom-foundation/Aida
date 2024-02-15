@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Fantom-foundation/Aida/ethtest/state_test"
+	statetest "github.com/Fantom-foundation/Aida/ethtest/state_test"
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
@@ -118,27 +118,35 @@ func TestVmSdb_Eth_AllTransactionsAreProcessedInOrder(t *testing.T) {
 		ext.EXPECT().PreRun(executor.AtBlock[txcontext.TxContext](2), gomock.Any()),
 
 		db.EXPECT().BeginBlock(uint64(2)),
+		ext.EXPECT().PreBlock(executor.AtBlock[txcontext.TxContext](2), gomock.Any()),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](2, 1), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](2, 1), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](2, 1), gomock.Any()),
+		ext.EXPECT().PostBlock(executor.AtTransaction[txcontext.TxContext](2, 1), gomock.Any()),
 		db.EXPECT().EndBlock(),
 
 		db.EXPECT().BeginBlock(uint64(3)),
+		ext.EXPECT().PreBlock(executor.AtBlock[txcontext.TxContext](3), gomock.Any()),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](3, 2), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](3, 2), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](3, 2), gomock.Any()),
+		ext.EXPECT().PostBlock(executor.AtTransaction[txcontext.TxContext](3, 2), gomock.Any()),
 		db.EXPECT().EndBlock(),
 
 		db.EXPECT().BeginBlock(uint64(4)),
+		ext.EXPECT().PreBlock(executor.AtBlock[txcontext.TxContext](4), gomock.Any()),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](4, 1), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](4, 1), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](4, 1), gomock.Any()),
+		ext.EXPECT().PostBlock(executor.AtTransaction[txcontext.TxContext](4, 1), gomock.Any()),
 		db.EXPECT().EndBlock(),
 
 		db.EXPECT().BeginBlock(uint64(5)),
+		ext.EXPECT().PreBlock(executor.AtBlock[txcontext.TxContext](5), gomock.Any()),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](5, utils.PseudoTx), gomock.Any()),
 		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](5, utils.PseudoTx), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](5, utils.PseudoTx), gomock.Any()),
+		ext.EXPECT().PostBlock(executor.AtTransaction[txcontext.TxContext](5, utils.PseudoTx), gomock.Any()),
 		db.EXPECT().EndBlock(),
 
 		ext.EXPECT().PostRun(executor.AtBlock[txcontext.TxContext](5), gomock.Any(), nil),
@@ -172,6 +180,7 @@ func TestVmSdb_Eth_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 			return nil
 		})
 
+	// map is unordered, so we need two different 'InOrder' calls
 	gomock.InOrder(
 		// Tx 1
 		// Validation
@@ -183,7 +192,8 @@ func TestVmSdb_Eth_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(2000)),
 		db.EXPECT().GetNonce(common.HexToAddress("0x2")).Return(uint64(2)),
 		db.EXPECT().GetCode(common.HexToAddress("0x2")).Return([]byte{}),
-
+	)
+	gomock.InOrder(
 		// Tx execution
 		db.EXPECT().BeginBlock(uint64(2)),
 		db.EXPECT().BeginTransaction(uint32(1)),

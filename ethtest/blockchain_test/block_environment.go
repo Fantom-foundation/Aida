@@ -1,4 +1,4 @@
-package blocktest
+package blockchaintest
 
 import (
 	"math/big"
