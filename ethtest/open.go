@@ -8,8 +8,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Fantom-foundation/Aida/ethtest/blockchain_test"
-	"github.com/Fantom-foundation/Aida/ethtest/state_test"
+	blockchaintest "github.com/Fantom-foundation/Aida/ethtest/blockchain_test"
+	statetest "github.com/Fantom-foundation/Aida/ethtest/state_test"
 	"github.com/Fantom-foundation/Aida/ethtest/util"
 	"github.com/Fantom-foundation/Aida/utils"
 )
