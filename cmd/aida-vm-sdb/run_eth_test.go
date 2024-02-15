@@ -230,6 +230,7 @@ func TestVmSdb_Eth_ValidationDoesFailOnInvalidTransaction(t *testing.T) {
 			return nil
 		})
 
+	// state map contains two accounts, but the validation order of map is not guaranteed
 	gomock.InOrder(
 		// Tx 1
 		// Validation fails on incorrect input so no db events are expected
@@ -238,14 +239,15 @@ func TestVmSdb_Eth_ValidationDoesFailOnInvalidTransaction(t *testing.T) {
 		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
 		db.EXPECT().GetNonce(common.HexToAddress("0x1")).Return(uint64(1)),
 		db.EXPECT().GetCode(common.HexToAddress("0x1")).Return([]byte{}),
-
+	)
+	gomock.InOrder(
 		// second account has incorrect balance
 		db.EXPECT().Exist(common.HexToAddress("0x2")).Return(true),
 		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(9999)), // incorrect balance
 		db.EXPECT().GetNonce(common.HexToAddress("0x2")).Return(uint64(2)),
 		db.EXPECT().GetCode(common.HexToAddress("0x2")).Return([]byte{}),
-		db.EXPECT().BeginBlock(uint64(2)),
 	)
+	db.EXPECT().BeginBlock(uint64(2))
 
 	err := runEth(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
 	if err == nil {

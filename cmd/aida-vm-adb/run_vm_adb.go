@@ -56,7 +56,7 @@ func run(
 	if stateDb == nil {
 		extensionList = append(
 			extensionList,
-			statedb.MakeStateDbManager[txcontext.TxContext](cfg),
+			statedb.MakeStateDbManager[txcontext.TxContext](cfg, ""),
 			statedb.MakeArchiveBlockChecker[txcontext.TxContext](cfg),
 			logger.MakeDbLogger[txcontext.TxContext](cfg),
 		)
