@@ -6,6 +6,7 @@ import (
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension/logger"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
+	"github.com/Fantom-foundation/Aida/executor/extension/register"
 	"github.com/Fantom-foundation/Aida/executor/extension/statedb"
 	"github.com/Fantom-foundation/Aida/executor/extension/tracker"
 	"github.com/Fantom-foundation/Aida/state"
@@ -45,6 +46,10 @@ func runTransactions(
 	var extensionList = []executor.Extension[txcontext.TxContext]{
 		profiler.MakeVirtualMachineStatisticsPrinter[txcontext.TxContext](cfg),
 		statedb.MakeStateDbManager[txcontext.TxContext](cfg, stateDbPath),
+		register.MakeRegisterProgress(cfg, 100_000),
+		// RegisterProgress should be the as top-most as possible on the list
+		// In this case, after StateDb is created.
+		// Any error that happen in extension above it will not be correctly recorded.
 		logger.MakeDbLogger[txcontext.TxContext](cfg),
 		logger.MakeProgressLogger[txcontext.TxContext](cfg, 15*time.Second),
 		logger.MakeErrorLogger[txcontext.TxContext](cfg),

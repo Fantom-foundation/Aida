@@ -176,7 +176,11 @@ func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 
 	itv := utils.NewInterval(cfg.First, cfg.Last, uint64(interval))
 
-	ctx := &executor.Context{State: stateDb, StateDbPath: dummyStateDbPath}
+	ctx := &executor.Context{
+		State:           stateDb,
+		StateDbPath:     dummyStateDbPath,
+		ExecutionResult: substatecontext.NewReceipt(&substate.SubstateResult{GasUsed: 100}),
+	}
 
 	s := &substate.Substate{
 		Result: &substate.SubstateResult{

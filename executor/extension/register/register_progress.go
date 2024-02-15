@@ -172,8 +172,9 @@ func (rp *registerProgress) PreBlock(state executor.State[txcontext.TxContext], 
 }
 
 // PostTransaction increments number of transactions and saves gas used in last substate.
-func (rp *registerProgress) PostTransaction(state executor.State[txcontext.TxContext], _ *executor.Context) error {
-	res := state.Data.GetReceipt()
+func (rp *registerProgress) PostTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
+
+	res := ctx.ExecutionResult
 
 	rp.lock.Lock()
 	defer rp.lock.Unlock()
@@ -230,6 +231,8 @@ func (rp *registerProgress) sqlite3(conn string) (string, string, string, func()
 				gas          uint64
 				totalTxCount uint64
 				totalGas     uint64
+				lDisk        int64
+				aDisk        int64
 			)
 
 			rp.lock.Lock()
@@ -245,7 +248,6 @@ func (rp *registerProgress) sqlite3(conn string) (string, string, string, func()
 				lDisk = 0
 			}
 
-			var aDisk int64 = 0
 			if rp.cfg.ArchiveMode {
 				aDisk, err = utils.GetDirectorySize(rp.pathToArchiveDb)
 				if err != nil {
