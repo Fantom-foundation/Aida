@@ -47,9 +47,9 @@ func runTransactions(
 		profiler.MakeVirtualMachineStatisticsPrinter[txcontext.TxContext](cfg),
 		statedb.MakeStateDbManager[txcontext.TxContext](cfg, stateDbPath),
 		register.MakeRegisterProgress(cfg, 100_000),
-		// RegisterProgress should be the first on the list = last to receive PostRun.
-		// This is because it collects the error and records it externally.
-		// If not, error that happen afterwards (e.g. on top of) will not be correctly recorded.
+		// RegisterProgress should be the as top-most as possible on the list
+		// In this case, after StateDb is created.
+		// Any error that happen in extension above it will not be correctly recorded.
 		logger.MakeDbLogger[txcontext.TxContext](cfg),
 		logger.MakeProgressLogger[txcontext.TxContext](cfg, 15*time.Second),
 		logger.MakeErrorLogger[txcontext.TxContext](cfg),
