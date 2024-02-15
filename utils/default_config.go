@@ -106,7 +106,7 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		VmImpl:                 getFlagValue(ctx, VmImplementation).(string),
 		Workers:                getFlagValue(ctx, substate.WorkersFlag).(int),
 		WorldStateDb:           getFlagValue(ctx, WorldStateFlag).(string),
-		TxGeneratorType:        getFlagValue(ctx, TxGeneratorTypeFlag).(string),
+		TxGeneratorType:        getFlagValue(ctx, TxGeneratorTypeFlag).([]string),
 	}
 
 	return cfg
@@ -147,6 +147,10 @@ func getFlagValue(ctx *cli.Context, flag interface{}) interface{} {
 		case cli.BoolFlag:
 			if cmdFlag.Names()[0] == f.Name {
 				return ctx.Bool(f.Name)
+			}
+		case cli.StringSliceFlag:
+			if cmdFlag.Names()[0] == f.Name {
+				return ctx.StringSlice(f.Name)
 			}
 		}
 	}

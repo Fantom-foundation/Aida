@@ -16,7 +16,7 @@ func TestNormaTxProvider_Run(t *testing.T) {
 
 	cfg := &utils.Config{
 		BlockLength:     uint64(3),
-		TxGeneratorType: "counter",
+		TxGeneratorType: []string{"counter"},
 	}
 	provider := NewNormaTxProvider(cfg, dbMock)
 	consumer := NewMockTxConsumer(ctrl)

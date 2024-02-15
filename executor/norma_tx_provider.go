@@ -77,32 +77,45 @@ func (p normaTxProvider) Run(from int, to int, consumer Consumer[txcontext.TxCon
 	}
 
 	fakeRpc := newFakeRpcClient(p.stateDb, nc)
+	defer fakeRpc.Close()
 
-	// create the application and the user
-	application, err := app.NewApplication(p.cfg.TxGeneratorType, fakeRpc, primaryAccount, 1, 0, 0)
-	if err != nil {
-		return err
+	// initialize the list of app types
+	appTypes := p.cfg.TxGeneratorType
+	if len(appTypes) == 1 && appTypes[0] == "all" {
+		appTypes = []string{"erc20", "counter", "store", "uniswap"}
 	}
-	user, err := application.CreateUser(fakeRpc)
-	userAddr := user.SenderAddress()
-	if err != nil {
-		return err
-	}
-	if err = application.WaitUntilApplicationIsDeployed(fakeRpc); err != nil {
-		return err
+
+	// create users for each app type
+	users := make([]app.User, 0)
+	for ix, appType := range appTypes {
+		application, err := app.NewApplication(appType, fakeRpc, primaryAccount, 1, uint32(ix), uint32(ix))
+		if err != nil {
+			return err
+		}
+		user, err := application.CreateUser(fakeRpc)
+		if err != nil {
+			return err
+		}
+		if err = application.WaitUntilApplicationIsDeployed(fakeRpc); err != nil {
+			return err
+		}
+		users = append(users, user)
 	}
 
 	// generate transactions until the `to` block is reached
 	// `currentBlock` is incremented in the `nc` function
 	for currentBlock <= to {
-		// generate tx
-		tx, err := user.GenerateTx()
-		if err != nil {
-			return err
-		}
-		// apply tx to the consumer
-		if err = nc(tx, &userAddr); err != nil {
-			return err
+		for _, user := range users {
+			// generate tx
+			tx, err := user.GenerateTx()
+			if err != nil {
+				return err
+			}
+			// apply tx to the consumer
+			addr := user.SenderAddress()
+			if err = nc(tx, &addr); err != nil {
+				return err
+			}
 		}
 	}
 
