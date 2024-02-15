@@ -15,6 +15,10 @@ import (
 )
 
 func MakeCarmenStateDB(directory, variant, archive string, schema int) (StateDB, error) {
+	return MakeCarmenStateDBWithCacheSize(directory, variant, archive, schema, 0, 0)
+}
+
+func MakeCarmenStateDBWithCacheSize(directory, variant, archive string, schema int, stateCacheSize int, nodeCacheByteSize int) (StateDB, error) {
 	var archiveType carmen.ArchiveType
 	switch strings.ToLower(archive) {
 	case "none":
@@ -45,13 +49,14 @@ func MakeCarmenStateDB(directory, variant, archive string, schema int) (StateDB,
 		Schema:    carmen.Schema(schema),
 		Directory: directory,
 		Archive:   archiveType,
+		LiveCache: int64(nodeCacheByteSize),
 	}
 
 	state, err := carmen.NewState(params)
 	if err != nil {
 		return nil, err
 	}
-	db := carmen.CreateStateDBUsing(state)
+	db := carmen.CreateCustomStateDBUsing(state, stateCacheSize)
 	return &carmenStateDB{
 		carmenVmStateDB: carmenVmStateDB{db},
 		stateDb:         db,

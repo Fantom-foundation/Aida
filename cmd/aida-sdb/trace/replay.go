@@ -77,7 +77,7 @@ func replay(
 		logger.MakeProgressLogger[[]operation.Operation](cfg, 0),
 		profiler.MakeMemoryUsagePrinter[[]operation.Operation](cfg),
 		profiler.MakeMemoryProfiler[[]operation.Operation](cfg),
-		statedb.MakeStateDbManager[[]operation.Operation](cfg),
+		statedb.MakeStateDbManager[[]operation.Operation](cfg, ""),
 		primer.MakeStateDbPrimer[[]operation.Operation](cfg),
 	}
 

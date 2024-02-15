@@ -76,7 +76,7 @@ func run(
 	if stateDb == nil {
 		extensionList = append(
 			extensionList,
-			statedb.MakeStateDbManager[*rpc.RequestAndResults](cfg),
+			statedb.MakeStateDbManager[*rpc.RequestAndResults](cfg, ""),
 			statedb.MakeArchiveBlockChecker[*rpc.RequestAndResults](cfg),
 			logger.MakeDbLogger[*rpc.RequestAndResults](cfg),
 		)

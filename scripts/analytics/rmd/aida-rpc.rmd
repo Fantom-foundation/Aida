@@ -89,6 +89,14 @@ b <- function(text) {
 	paste0("**", text, "**")
 }
 
+fmt_stateDb <- function(dbImpl, dbVariant, carmenSchema) {
+	if (dbImpl == "geth") {
+		dbImpl
+	} else {
+		paste0(b(dbImpl), "(", b(dbVariant), " ", b(carmenSchema), ")")
+	}
+}
+
 ```
 
 Run `r runId$value` `r if(isRunSuccess){
@@ -129,6 +137,10 @@ dbImpl <- Metadata %>% filter(key == "DbImpl")
 dbVariant <- Metadata %>% filter(key == "DbVariant")
 carmenSchema <- Metadata %>% filter(key == "CarmenSchema")
 vmImpl <- Metadata %>% filter(key == "VmImpl")
+dbSrc <- Metadata %>% filter(key == "DbSrc")
+rpcRecordings <- Metadata %>% filter(key == "RpcRecordings")
+
+
 ```
 
 The experiment is run on the machine **`r hostname$value`**(**`r ip$value`**), which is a **`r processor$value`**, **`r memory$value`** computer.
@@ -137,10 +149,17 @@ The system has installed **`r GoInfo$value`**.
 
 The github hash of the libraries are:
 
-* Aida: **`r aidaHash$value`**
-* Carmen: **`r carmenHash$value`**
+* Aida: `r b(aidaHash$value)`
+* Carmen: `r b(carmenHash$value)`
 
-For this experiment, we use **`r dbImpl$value`**(**`r dbVariant$value`** **`r carmenSchema$value`**) as a StateDB and **`r vmImpl$value`** as a virtual machine.  The data set for this experiment is stored in the database **`r params$db`**.
+For this experiment, the following configurations were made:
+
+* StateDB: `r b(fmt_stateDb(dbImpl$value, dbVariant$value, carmenSchema$value))`
+* Virtual Machine: `r b(vmImpl$value)`
+
+StateDB used is stored under the path `r b(dbSrc$value)`. The RPC Recordings used is stored under the path `r b(rpcRecordings$value)`
+
+The data set used for this experiment is stored in the database `r b(params$db)`.
 
 ## ##############################################################################
 
@@ -178,3 +197,10 @@ TxData %>%
    labs(x="Number of Requests", y="Gas Rate (Million Gas Per Second)", title="Gas Rate")
 ```
 
+## ##############################################################################
+
+## Appendix A. Metadata
+
+```{r, echo=FALSE, message=FALSE}
+gt(Metadata)
+```

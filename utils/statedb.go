@@ -161,7 +161,7 @@ func makeNewStateDB(cfg *Config) (state.StateDB, string, error) {
 	// create primary db
 	stateDb, err = makeStateDBVariant(stateDbPath, cfg.DbImpl, cfg.DbVariant, cfg.ArchiveVariant, cfg.CarmenSchema, common.Hash{}, cfg)
 	if err != nil {
-		return nil, "", fmt.Errorf("cannnot make stateDb; %v", err)
+		return nil, "", fmt.Errorf("cannot make stateDb; %v", err)
 	}
 
 	if !cfg.ShadowDb {
@@ -178,7 +178,7 @@ func makeNewStateDB(cfg *Config) (state.StateDB, string, error) {
 	// open shadow db
 	shadowDb, err = makeStateDBVariant(shadowDbPath, cfg.ShadowImpl, cfg.ShadowVariant, cfg.ArchiveVariant, cfg.CarmenSchema, common.Hash{}, cfg)
 	if err != nil {
-		return nil, "", fmt.Errorf("cannnot make shadowDb; %v", err)
+		return nil, "", fmt.Errorf("cannot make shadowDb; %v", err)
 	}
 
 	return proxy.NewShadowProxy(stateDb, shadowDb), tmpDir, nil
@@ -196,7 +196,7 @@ func makeStateDBVariant(directory, impl, variant, archiveVariant string, carmenS
 		if !cfg.ArchiveMode {
 			archiveVariant = "none"
 		}
-		return state.MakeCarmenStateDB(directory, variant, archiveVariant, carmenSchema)
+		return state.MakeCarmenStateDBWithCacheSize(directory, variant, archiveVariant, carmenSchema, cfg.CarmenStateCacheSize, cfg.CarmenNodeCacheSize)
 	case "opera":
 		return state.MakeOperaStateDB(directory, variant, cfg.LogLevel)
 	}

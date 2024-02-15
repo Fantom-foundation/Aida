@@ -140,7 +140,7 @@ func MakeOperationProfiler[T any](cfg *utils.Config) executor.Extension[T] {
 	p2db, err := utils.NewPrinterToSqlite3(p.sqlite3(cfg.ProfileSqlite3, p.depth))
 
 	if err != nil {
-		p.log.Debugf("Unable to open sqlite3 db at %s", cfg.ProfileSqlite3)
+		p.log.Debugf("Failed to connect to sqlite3 DB at %s; %v", cfg.ProfileSqlite3, err)
 	} else {
 		p2buffer, f2db := p2db.Bufferize(BufferSize)
 		ps[p.depth].AddPrinter(p2buffer)   // print to buffer at configured depth

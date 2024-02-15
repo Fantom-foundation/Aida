@@ -12,24 +12,30 @@ import (
 )
 
 // MakeStateDbManager creates a executor.Extension that commits state of StateDb if keep-db is enabled
-func MakeStateDbManager[T any](cfg *utils.Config) executor.Extension[T] {
+func MakeStateDbManager[T any](cfg *utils.Config, knownDbPath string) executor.Extension[T] {
 	return &stateDbManager[T]{
-		cfg: cfg,
-		log: logger.NewLogger(cfg.LogLevel, "Db manager"),
+		cfg:    cfg,
+		log:    logger.NewLogger(cfg.LogLevel, "Db manager"),
+		dbPath: knownDbPath,
 	}
 }
 
 type stateDbManager[T any] struct {
 	extension.NilExtension[T]
-	cfg *utils.Config
-	log logger.Logger
+	cfg    *utils.Config
+	log    logger.Logger
+	dbPath string // state db path if the  db is created out side of this extension
 }
 
 func (m *stateDbManager[T]) PreRun(_ executor.State[T], ctx *executor.Context) error {
 	var err error
-	ctx.State, ctx.StateDbPath, err = utils.PrepareStateDB(m.cfg)
-	if err != nil {
-		return err
+	if ctx.State == nil {
+		ctx.State, ctx.StateDbPath, err = utils.PrepareStateDB(m.cfg)
+		if err != nil {
+			return err
+		}
+	} else {
+		ctx.StateDbPath = m.dbPath
 	}
 
 	if !m.cfg.ShadowDb {

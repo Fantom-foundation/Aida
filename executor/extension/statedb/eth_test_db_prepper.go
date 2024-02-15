@@ -30,7 +30,13 @@ type ethTestDbPrepper struct {
 
 func (e ethTestDbPrepper) PreBlock(st executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	var err error
-	ctx.State, ctx.StateDbPath, err = utils.PrepareStateDB(e.cfg)
+	cfg := e.cfg
+	// We reduce the node cache size to be used by Carmen to 1 MB
+	// reduce the cache creation and flush time, and thus to improve
+	// the processing time of each transaction.
+	cfg.CarmenStateCacheSize = 1000
+	cfg.CarmenNodeCacheSize = (1 << 20) // = 1 MiB
+	ctx.State, ctx.StateDbPath, err = utils.PrepareStateDB(cfg)
 	if err != nil {
 		return fmt.Errorf("failed to prepare statedb; %v", err)
 	}

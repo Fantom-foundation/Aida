@@ -54,7 +54,7 @@ func TestOperationProfiler_WithEachOpOnce(t *testing.T) {
 	t.Run(name, func(t *testing.T) {
 		ext, ok := MakeOperationProfiler[any](cfg).(*operationProfiler[any])
 		if !ok {
-			t.Fatalf("Fail to create Operation Profiler despite valid config")
+			t.Fatalf("Failed to create OperationProfiler despite valid config")
 		}
 
 		ac := len(ext.anlts)
@@ -96,7 +96,7 @@ func TestOperationProfiler_WithEachOpOnce(t *testing.T) {
 			for depth := IntervalLevel; depth <= ext.depth; depth++ {
 				c := ext.anlts[int(depth)].GetCount(op)
 				if c != 1 {
-					t.Errorf("op %d:%s occurs %d times, expecting exactly 1", op, ops[op], c)
+					t.Errorf("Op %d:%s occurs %d times, expecting exactly 1", op, ops[op], c)
 				}
 				totalOpCount[depth] += int(c)
 			}
@@ -164,7 +164,7 @@ func TestOperationProfiler_WithRandomInput(t *testing.T) {
 
 			ext, ok := MakeOperationProfiler[any](cfg).(*operationProfiler[any])
 			if !ok {
-				t.Fatalf("Fail to create Operation Profiler despite valid config")
+				t.Fatalf("Failed to create Operation Profiler despite valid config")
 			}
 
 			ctrl := gomock.NewController(t)
@@ -192,13 +192,13 @@ func TestOperationProfiler_WithRandomInput(t *testing.T) {
 				if b > intervalEnd {
 					// make sure that the stats is reset
 					if getTotalOpCount(ext.anlts[0]) != 0 {
-						t.Errorf("Should be reset but found %d ops", getTotalOpCount(ext.anlts[0]))
+						t.Errorf("Analytics should have been reset but found %d ops", getTotalOpCount(ext.anlts[0]))
 					}
 				}
 
 				// ensure 0 index
 				if ext.interval.Start() != cfg.First && ext.interval.Start()%cfg.ProfileInterval != 0 {
-					t.Fatalf("interval is not using 0-index, found %d", ext.interval.Start()%cfg.ProfileInterval)
+					t.Fatalf("Interval is not using 0-index, found %d", ext.interval.Start()%cfg.ProfileInterval)
 				}
 
 				gap := test.args.maxOpsPerBlock - test.args.minOpsPerBlock
@@ -257,7 +257,7 @@ func TestOperationProfiler_WithMalformedConfig(t *testing.T) {
 		})
 
 		if _, ok := ext.(extension.NilExtension[any]); !ok {
-			t.Errorf("profiler is enabled although configuration not set or malformed")
+			t.Fatalf("OperationProfiler is enabled although configuration not set or malformed")
 		}
 	}
 }

@@ -410,4 +410,9 @@ var (
 		Usage: "choose which eth test type (\"state\", \"block\")",
 		Value: "",
 	}
+	TxGeneratorTypeFlag = cli.StringFlag{
+		Name:  "tx-type",
+		Usage: "tx generator application type (\"erc20\", \"counter\", \"store\", \"uniswap\")",
+		Value: "erc20",
+	}
 )
