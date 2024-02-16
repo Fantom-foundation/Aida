@@ -45,11 +45,6 @@ func runSubstates(
 ) error {
 	// order of extensionList has to be maintained
 	var extensionList = []executor.Extension[txcontext.TxContext]{
-		register.MakeRegisterProgress(cfg, 100_000),
-		// RegisterProgress should be the first on the list = last to receive PostRun.
-		// This is because it collects the error and records it externally.
-		// If not, error that happen afterwards (e.g. on top of) will not be correctly recorded.
-
 		profiler.MakeCpuProfiler[txcontext.TxContext](cfg),
 		profiler.MakeDiagnosticServer[txcontext.TxContext](cfg),
 	}
@@ -57,7 +52,7 @@ func runSubstates(
 	if stateDb == nil {
 		extensionList = append(
 			extensionList,
-			statedb.MakeStateDbManager[txcontext.TxContext](cfg),
+			statedb.MakeStateDbManager[txcontext.TxContext](cfg, ""),
 			statedb.MakeLiveDbBlockChecker[txcontext.TxContext](cfg),
 			logger.MakeDbLogger[txcontext.TxContext](cfg),
 		)
@@ -66,6 +61,11 @@ func runSubstates(
 	extensionList = append(extensionList, extra...)
 
 	extensionList = append(extensionList, []executor.Extension[txcontext.TxContext]{
+		register.MakeRegisterProgress(cfg, 100_000),
+		// RegisterProgress should be the first on the list = last to receive PostRun.
+		// This is because it collects the error and records it externally.
+		// If not, error that happen afterwards (e.g. on top of) will not be correctly recorded.
+
 		profiler.MakeThreadLocker[txcontext.TxContext](),
 		aidadb.MakeAidaDbManager[txcontext.TxContext](cfg),
 		profiler.MakeVirtualMachineStatisticsPrinter[txcontext.TxContext](cfg),

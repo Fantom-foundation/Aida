@@ -67,29 +67,56 @@ func TestRegisterProgress_DoNothingIfDisabled(t *testing.T) {
 	cfg.RegisterRun = ""
 	ext := MakeRegisterProgress(cfg, 0)
 	if _, ok := ext.(extension.NilExtension[txcontext.TxContext]); !ok {
-		t.Errorf("RegisterProgress is enabled even though not disabled in configuration.")
+		t.Fatalf("extension RegisterProgress is enabled even though not disabled in configuration.")
 	}
 }
 
-func TestRegisterProgress_TerminatesIfPathDoesNotExist(t *testing.T) {
+func TestRegisterProgress_TerminatesIfPathToRegisterDirDoesNotExist(t *testing.T) {
 	var (
-		pathToFolder string = filepath.Join("does", "not", "exist")
+		pathToRegisterDir string = filepath.Join("does", "not", "exist")
 	)
 
 	cfg := &utils.Config{}
-	cfg.RegisterRun = pathToFolder // enabled here
+	cfg.RegisterRun = pathToRegisterDir // enabled here
 	cfg.First = 5
 	cfg.Last = 25
 	interval := 10
 
 	ext := MakeRegisterProgress(cfg, interval)
 	if _, err := ext.(extension.NilExtension[txcontext.TxContext]); err {
-		t.Errorf("RegisterProgress is disabled even though enabled in configuration.")
+		t.Fatalf("Extension RegisterProgress is disabled even though enabled in configuration.")
 	}
 
 	err := ext.PreRun(executor.State[txcontext.TxContext]{}, nil)
 	if err == nil {
-		t.Errorf("Folder %s does not exist but no error was thrown.", pathToFolder)
+		t.Fatalf("Error is nil even though registered path is %s.", pathToRegisterDir)
+	}
+}
+
+func TestRegisterProgress_TerminatesIfPathToStateDBDoesNotExist(t *testing.T) {
+	var (
+		dummyStateDbPath string = filepath.Join("does", "not", "exist")
+	)
+
+	cfg := &utils.Config{}
+	cfg.RegisterRun = dummyStateDbPath // enabled here
+	cfg.First = 5
+	cfg.Last = 25
+	interval := 10
+
+	ctrl := gomock.NewController(t)
+	stateDb := state.NewMockStateDB(ctrl)
+
+	ext := MakeRegisterProgress(cfg, interval)
+	if _, err := ext.(extension.NilExtension[txcontext.TxContext]); err {
+		t.Fatalf("Extension RegisterProgress is disabled even though enabled in configuration.")
+	}
+
+	ctx := &executor.Context{State: stateDb, StateDbPath: dummyStateDbPath}
+
+	err := ext.PreRun(executor.State[txcontext.TxContext]{}, ctx)
+	if err == nil {
+		t.Fatalf("Error is nil even though dummyStateDbPath is %s.", dummyStateDbPath)
 	}
 }
 
@@ -102,7 +129,7 @@ func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 	)
 	// Check if path to state db is writable
 	if err := os.WriteFile(dummyStateDbPath, []byte("hello world"), 0x600); err != nil {
-		t.Fatalf("failed to prepare disk content for %s.", dummyStateDbPath)
+		t.Fatalf("Failed to prepare disk content for %s.", dummyStateDbPath)
 	}
 
 	// Check if path to stats db is writable
@@ -144,7 +171,7 @@ func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 
 	ext := MakeRegisterProgress(cfg, interval)
 	if _, err := ext.(extension.NilExtension[txcontext.TxContext]); err {
-		t.Errorf("RegisterProgress is disabled even though enabled in configuration.")
+		t.Fatalf("Extension RegisterProgress is disabled even though enabled in configuration.")
 	}
 
 	itv := utils.NewInterval(cfg.First, cfg.Last, uint64(interval))
@@ -219,7 +246,7 @@ func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 		t.Errorf("Expected RunSucceed to be recorded once, Actual #Row: %d", len(ms))
 	}
 	if ms[0].Value != strconv.FormatBool(true) {
-		t.Errorf("RunSucceed expected to be true, Actual #Row: %s", ms[0].Value)
+		t.Errorf("Expected RunSucceed expected to be true, Actual #Row: %s", ms[0].Value)
 	}
 
 	// check if RunError is not recorded
@@ -280,7 +307,7 @@ func TestRegisterProgress_IfErrorRecordIntoMetadata(t *testing.T) {
 
 	ext := MakeRegisterProgress(cfg, 123)
 	if _, err := ext.(extension.NilExtension[txcontext.TxContext]); err {
-		t.Errorf("RegisterProgress is disabled even though enabled in configuration.")
+		t.Fatalf("RegisterProgress is disabled even though enabled in configuration.")
 	}
 
 	// this is the run
@@ -295,16 +322,16 @@ func TestRegisterProgress_IfErrorRecordIntoMetadata(t *testing.T) {
 		t.Errorf("Expected RunSucceed to be recorded once, Actual #Row: %d", len(ms))
 	}
 	if ms[0].Value != strconv.FormatBool(false) {
-		t.Errorf("RunSucceed expected to be true, Actual #Row: %s", ms[0].Value)
+		t.Errorf("Expected RunSucceed expected to be true, Actual #Row: %s", ms[0].Value)
 	}
 
 	// check if RunError is recorded after postrun
 	meta.Select(&ms, metadataQuery{"RunError"})
 	if len(ms) != 1 {
-		t.Errorf("Expected RunErrorto be recorded once, Actual #Row: %d", len(ms))
+		t.Errorf("Expected RunError to be recorded once, Actual #Row: %d", len(ms))
 	}
 	if ms[0].Value != errorText {
-		t.Errorf("RunError expected to be %s, Actual #Row: %s", errorText, ms[0].Value)
+		t.Errorf("Expected RunError expected to be %s, Actual #Row: %s", errorText, ms[0].Value)
 	}
 
 	meta.Close()
@@ -331,12 +358,12 @@ func TestRegisterProgress_ExtensionContinuesDespiteFetchEnvFailure(t *testing.T)
 	)
 
 	if rm == nil {
-		t.Errorf("Metadata fails to continue even though it should.")
+		t.Fatalf("Object RunMetadata is nil where it should not.")
 	}
 	if err == nil {
-		t.Errorf("User cannot execute bash script, but error is not thrown.")
+		t.Fatalf("Error is nil even though user cannot execute bash script.")
 	}
 	if !errors.Is(err, noBash) {
-		t.Errorf("Error not from intended source: %v.", noBash)
+		t.Fatalf("Error not from intended source: %v.", noBash)
 	}
 }

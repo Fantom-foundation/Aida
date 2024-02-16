@@ -4,13 +4,15 @@ import "encoding/json"
 
 // RequestAndResults encapsulates request query and response for post-processing.
 type RequestAndResults struct {
-	Query          *Body
-	Response       *Response
-	Error          *ErrorResponse
-	ParamsRaw      []byte
-	ResponseRaw    []byte
-	StateDB        *StateDBData
-	SkipValidation bool
+	Query             *Body
+	Response          *Response
+	Error             *ErrorResponse
+	ParamsRaw         []byte
+	ResponseRaw       []byte
+	StateDB           *StateDBData
+	SkipValidation    bool
+	RequestedBlock    int
+	RecordedTimestamp uint64
 }
 
 // Body represents a decoded payload of a balancer.

@@ -17,6 +17,8 @@ var RunVMApp = cli.App{
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Commands: []*cli.Command{
 		&RunSubstateCmd,
+		&RunEthTestsCmd,
+		&RunTxGeneratorCmd,
 	},
 	Description: `
 The aida-vm-sdb command requires two arguments: <blockNumFirst> <blockNumLast>
@@ -105,11 +107,13 @@ the inclusive range of blocks.`,
 }
 
 var RunTxGeneratorCmd = cli.Command{
-	Action:    RunTxGenerator,
-	Name:      "tx-generator",
-	Usage:     "Iterates over generated transactions that are executed into a StateDb",
-	ArgsUsage: "<blockNumFirst> <blockNumLast>",
+	Action: RunTxGenerator,
+	Name:   "tx-generator",
+	Usage:  "Generates transactions for specified block range and executes them over StateDb",
 	Flags: []cli.Flag{
+		// TxGenerator specific flags
+		&utils.TxGeneratorTypeFlag,
+
 		// StateDb
 		&utils.CarmenSchemaFlag,
 		&utils.StateDbImplementationFlag,
@@ -118,12 +122,6 @@ var RunTxGeneratorCmd = cli.Command{
 		&utils.DbTmpFlag,
 		&utils.StateDbLoggingFlag,
 		&utils.ValidateStateHashesFlag,
-
-		// ArchiveDb
-		&utils.ArchiveModeFlag,
-		&utils.ArchiveQueryRateFlag,
-		&utils.ArchiveMaxQueryAgeFlag,
-		&utils.ArchiveVariantFlag,
 
 		// ShadowDb
 		&utils.ShadowDb,
@@ -139,32 +137,16 @@ var RunTxGeneratorCmd = cli.Command{
 		&utils.DiagnosticServerFlag,
 		&utils.MemoryBreakdownFlag,
 		&utils.MemoryProfileFlag,
-		&utils.RandomSeedFlag,
-		&utils.PrimeThresholdFlag,
-		&utils.ProfileFlag,
-		&utils.ProfileFileFlag,
-		&utils.ProfileIntervalFlag,
-		&utils.ProfileDBFlag,
-		&utils.ProfileBlocksFlag,
-
-		// Priming
-		&utils.RandomizePrimingFlag,
-		&utils.SkipPrimingFlag,
-		&utils.UpdateBufferSizeFlag,
 
 		// Utils
 		&substate.WorkersFlag,
 		&utils.ChainIDFlag,
 		&utils.ContinueOnFailureFlag,
-		&utils.SyncPeriodLengthFlag,
 		&utils.KeepDbFlag,
-		&utils.CustomDbNameFlag,
-		//&utils.MaxNumTransactionsFlag,
-		&utils.ValidateTxStateFlag,
-		//&utils.ValidateWorldStateFlag,
 		&utils.ValidateFlag,
 		&logger.LogLevelFlag,
 		&utils.NoHeartbeatLoggingFlag,
+		&utils.BlockLengthFlag,
 	},
 	Description: `
 The aida-vm-sdb tx-generator command requires two arguments: <blockNumFirst> <blockNumLast>
