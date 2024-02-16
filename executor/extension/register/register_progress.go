@@ -2,6 +2,7 @@ package register
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -56,7 +57,12 @@ func MakeRegisterProgress(cfg *utils.Config, reportFrequency int) executor.Exten
 	}
 
 	if reportFrequency == 0 {
-		reportFrequency = RegisterProgressDefaultReportFrequency
+		switch {
+		case cfg.CommandName == "tx-gaenerator" && cfg.BlockLength != 0:
+			reportFrequency = int(math.Ceil(float64(50_000) / float64(cfg.BlockLength)))
+		default:
+			reportFrequency = RegisterProgressDefaultReportFrequency
+		}
 	}
 
 	return &registerProgress{
