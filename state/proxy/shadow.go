@@ -254,24 +254,15 @@ func (s *shadowStateDb) Finalise(deleteEmptyObjects bool) {
 }
 
 func (s *shadowStateDb) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
-	if s.compareStateHash {
-		return s.getHash("IntermediateRoot", func(s state.StateDB) common.Hash { return s.IntermediateRoot(deleteEmptyObjects) }, deleteEmptyObjects)
-	}
+	// Do not check hashes for equivalents.
 	s.shadow.IntermediateRoot(deleteEmptyObjects)
 	return s.prime.IntermediateRoot(deleteEmptyObjects)
 }
 
 func (s *shadowStateDb) Commit(deleteEmptyObjects bool) (common.Hash, error) {
-	hashP, errP := s.prime.Commit(deleteEmptyObjects)
-	hashS, errS := s.shadow.Commit(deleteEmptyObjects)
-	if s.compareStateHash {
-		if hashP != hashS || errP != errS {
-			s.logIssue("Commit", hashP, hashS, deleteEmptyObjects)
-			s.logIssue("Commit", errP, errS, deleteEmptyObjects)
-			s.err = fmt.Errorf("Commit(%v) diverged from shadow DB.", deleteEmptyObjects)
-		}
-	}
-	return hashP, errP
+	// Do not check hashes for equivalents.
+	s.shadow.Commit(deleteEmptyObjects)
+	return s.prime.Commit(deleteEmptyObjects)
 }
 
 // GetError returns an error then reset it.

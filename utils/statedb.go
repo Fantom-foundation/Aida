@@ -131,8 +131,7 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 		return nil, "", fmt.Errorf("cannot create ShadowDb; %v", err)
 	}
 
-	compareHash := hasComparableStateHash(cfg.DbImpl, cfg.ShadowImpl, cfg.CarmenSchema)
-	return proxy.NewShadowProxy(stateDb, shadowDb, compareHash), cfg.StateDbSrc, nil
+	return proxy.NewShadowProxy(stateDb, shadowDb, cfg.ValidateStateHashes), cfg.StateDbSrc, nil
 }
 
 // makeNewStateDB creates a DB instance with a potential shadow instance.
@@ -182,25 +181,7 @@ func makeNewStateDB(cfg *Config) (state.StateDB, string, error) {
 		return nil, "", fmt.Errorf("cannot make shadowDb; %v", err)
 	}
 
-	compareHash := hasComparableStateHash(cfg.DbImpl, cfg.ShadowImpl, cfg.CarmenSchema)
-	return proxy.NewShadowProxy(stateDb, shadowDb, compareHash), tmpDir, nil
-}
-
-// hasComparableStateHash checks if prime db and shadow db have comparable state hashes.
-func hasComparableStateHash(prime, shadow string, schema int) bool {
-	p := produceValidStateHash(prime, schema)
-	s := produceValidStateHash(shadow, schema)
-	return p && s
-}
-
-// produceValidStateHash checks type of db implementation and returns whether the db can produce valid state hashes.
-func produceValidStateHash(dbimpl string, schema int) bool {
-	if dbimpl == "geth" {
-		return true
-	} else if dbimpl == "carmen" && (schema == 5 || schema == 0) {
-		return true
-	}
-	return false
+	return proxy.NewShadowProxy(stateDb, shadowDb, cfg.ValidateStateHashes), tmpDir, nil
 }
 
 // makeStateDBVariant creates a DB instance of the requested kind.
