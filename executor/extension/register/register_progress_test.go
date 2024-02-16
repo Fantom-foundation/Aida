@@ -374,7 +374,7 @@ func TestRegisterProgress_ExtensionContinuesDespiteFetchEnvFailure(t *testing.T)
 
 func TestRegisterProgress_ChecksDefaultReportInterval(t *testing.T) {
 	tests := map[*utils.Config]uint64{
-		&utils.Config{
+		{
 			RegisterRun: "enabled",
 			CommandName: "substate",
 			First:       0,
@@ -382,7 +382,7 @@ func TestRegisterProgress_ChecksDefaultReportInterval(t *testing.T) {
 			BlockLength: 0,
 		}: RegisterProgressDefaultReportFrequency,
 
-		&utils.Config{
+		{
 			RegisterRun: "enabled",
 			CommandName: "tx-generator",
 			First:       0,
@@ -390,7 +390,7 @@ func TestRegisterProgress_ChecksDefaultReportInterval(t *testing.T) {
 			BlockLength: 50_000,
 		}: 1,
 
-		&utils.Config{
+		{
 			RegisterRun: "enabled",
 			CommandName: "tx-generator",
 			First:       0,
@@ -398,7 +398,7 @@ func TestRegisterProgress_ChecksDefaultReportInterval(t *testing.T) {
 			BlockLength: 1,
 		}: 50_000,
 
-		&utils.Config{
+		{
 			RegisterRun: "enabled",
 			CommandName: "tx-generator",
 			First:       0,
