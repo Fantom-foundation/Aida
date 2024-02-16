@@ -3,7 +3,6 @@ package validator
 import (
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
-	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 )
@@ -24,7 +23,6 @@ func makeShadowDbValidator(cfg *utils.Config) executor.Extension[txcontext.TxCon
 type shadowDbValidator struct {
 	extension.NilExtension[txcontext.TxContext]
 	cfg *utils.Config
-	log logger.Logger
 }
 
 func (e *shadowDbValidator) PostTransaction(s executor.State[txcontext.TxContext], ctx *executor.Context) error {

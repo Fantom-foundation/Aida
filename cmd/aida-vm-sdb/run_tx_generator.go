@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/Fantom-foundation/Aida/executor/extension/validator"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor"
@@ -56,6 +57,7 @@ func runTransactions(
 		tracker.MakeBlockProgressTracker(cfg, 100),
 		profiler.MakeMemoryUsagePrinter[txcontext.TxContext](cfg),
 		profiler.MakeMemoryProfiler[txcontext.TxContext](cfg),
+		validator.MakeShadowDbValidator(cfg),
 		statedb.MakeTxGeneratorBlockEventEmitter[txcontext.TxContext](),
 	}
 

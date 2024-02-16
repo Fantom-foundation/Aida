@@ -15,7 +15,6 @@ import (
 
 func TestShadowDbValidator_PostTransactionPass(t *testing.T) {
 	cfg := &utils.Config{}
-	cfg.ContinueOnFailure = false
 
 	ctrl := gomock.NewController(t)
 	db := state.NewMockStateDB(ctrl)
@@ -25,10 +24,8 @@ func TestShadowDbValidator_PostTransactionPass(t *testing.T) {
 	ctx.State = db
 	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: data}
 
-	want := data.GetStateHash()
-
 	gomock.InOrder(
-		db.EXPECT().GetHash().Return(want),
+		db.EXPECT().GetHash(),
 		db.EXPECT().Error().Return(nil),
 	)
 
@@ -42,7 +39,6 @@ func TestShadowDbValidator_PostTransactionPass(t *testing.T) {
 
 func TestShadowDbValidator_PostTransactionReturnsError(t *testing.T) {
 	cfg := &utils.Config{}
-	cfg.ContinueOnFailure = false
 
 	ctrl := gomock.NewController(t)
 	db := state.NewMockStateDB(ctrl)
@@ -52,12 +48,10 @@ func TestShadowDbValidator_PostTransactionReturnsError(t *testing.T) {
 	ctx.State = db
 	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: data}
 
-	want := data.GetStateHash()
-
 	expectedErr := errors.New("FAIL")
 
 	gomock.InOrder(
-		db.EXPECT().GetHash().Return(want),
+		db.EXPECT().GetHash(),
 		db.EXPECT().Error().Return(expectedErr),
 	)
 
