@@ -19,7 +19,7 @@ import (
 // operation on both of them, cross checking results. If the results are not equal, an error
 // is logged and the result of the primary instance is returned.
 func NewShadowProxy(prime, shadow state.StateDB) state.StateDB {
-	return &shadowStateDb{
+	return &ShadowStateDb{
 		shadowVmStateDb: shadowVmStateDb{
 			prime:     prime,
 			shadow:    shadow,
@@ -45,7 +45,7 @@ type shadowNonCommittableStateDb struct {
 	shadow state.NonCommittableStateDB
 }
 
-type shadowStateDb struct {
+type ShadowStateDb struct {
 	shadowVmStateDb
 	prime  state.StateDB
 	shadow state.StateDB
@@ -149,23 +149,23 @@ func (s *shadowVmStateDb) EndTransaction() {
 	s.run("EndTransaction", func(s state.VmStateDB) { s.EndTransaction() })
 }
 
-func (s *shadowStateDb) BeginBlock(blk uint64) {
+func (s *ShadowStateDb) BeginBlock(blk uint64) {
 	s.run("BeginBlock", func(s state.StateDB) { s.BeginBlock(blk) })
 }
 
-func (s *shadowStateDb) EndBlock() {
+func (s *ShadowStateDb) EndBlock() {
 	s.run("EndBlock", func(s state.StateDB) { s.EndBlock() })
 }
 
-func (s *shadowStateDb) BeginSyncPeriod(number uint64) {
+func (s *ShadowStateDb) BeginSyncPeriod(number uint64) {
 	s.run("BeginSyncPeriod", func(s state.StateDB) { s.BeginSyncPeriod(number) })
 }
 
-func (s *shadowStateDb) EndSyncPeriod() {
+func (s *ShadowStateDb) EndSyncPeriod() {
 	s.run("EndSyncPeriod", func(s state.StateDB) { s.EndSyncPeriod() })
 }
 
-func (s *shadowStateDb) GetHash() common.Hash {
+func (s *ShadowStateDb) GetHash() common.Hash {
 	return s.prime.GetHash()
 }
 
@@ -173,7 +173,7 @@ func (s *shadowNonCommittableStateDb) GetHash() common.Hash {
 	return s.prime.GetHash()
 }
 
-func (s *shadowStateDb) Close() error {
+func (s *ShadowStateDb) Close() error {
 	return s.getError("Close", func(s state.StateDB) error { return s.Close() })
 }
 
@@ -241,17 +241,17 @@ func (s *shadowVmStateDb) GetLogs(hash common.Hash, blockHash common.Hash) []*ty
 	return logsP
 }
 
-func (s *shadowStateDb) Finalise(deleteEmptyObjects bool) {
+func (s *ShadowStateDb) Finalise(deleteEmptyObjects bool) {
 	s.run("Finalise", func(s state.StateDB) { s.Finalise(deleteEmptyObjects) })
 }
 
-func (s *shadowStateDb) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
+func (s *ShadowStateDb) IntermediateRoot(deleteEmptyObjects bool) common.Hash {
 	// Do not check hashes for equivalents.
 	s.shadow.IntermediateRoot(deleteEmptyObjects)
 	return s.prime.IntermediateRoot(deleteEmptyObjects)
 }
 
-func (s *shadowStateDb) Commit(deleteEmptyObjects bool) (common.Hash, error) {
+func (s *ShadowStateDb) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 	// Do not check hashes for equivalents.
 	s.shadow.Commit(deleteEmptyObjects)
 	return s.prime.Commit(deleteEmptyObjects)
@@ -269,7 +269,7 @@ func (s *shadowVmStateDb) Prepare(thash common.Hash, ti int) {
 	s.run("Prepare", func(s state.VmStateDB) { s.Prepare(thash, ti) })
 }
 
-func (s *shadowStateDb) PrepareSubstate(substate txcontext.WorldState, block uint64) {
+func (s *ShadowStateDb) PrepareSubstate(substate txcontext.WorldState, block uint64) {
 	s.run("PrepareSubstate", func(s state.StateDB) { s.PrepareSubstate(substate, block) })
 }
 
@@ -288,11 +288,11 @@ func (s *shadowVmStateDb) ForEachStorage(common.Address, func(common.Hash, commo
 	panic("ForEachStorage not implemented")
 }
 
-func (s *shadowStateDb) StartBulkLoad(block uint64) state.BulkLoad {
+func (s *ShadowStateDb) StartBulkLoad(block uint64) state.BulkLoad {
 	return &shadowBulkLoad{s.prime.StartBulkLoad(block), s.shadow.StartBulkLoad(block)}
 }
 
-func (s *shadowStateDb) GetArchiveState(block uint64) (state.NonCommittableStateDB, error) {
+func (s *ShadowStateDb) GetArchiveState(block uint64) (state.NonCommittableStateDB, error) {
 	var prime, shadow state.NonCommittableStateDB
 	var err error
 	if prime, err = s.prime.GetArchiveState(block); err != nil {
@@ -314,7 +314,7 @@ func (s *shadowStateDb) GetArchiveState(block uint64) (state.NonCommittableState
 	}, nil
 }
 
-func (s *shadowStateDb) GetArchiveBlockHeight() (uint64, bool, error) {
+func (s *ShadowStateDb) GetArchiveBlockHeight() (uint64, bool, error) {
 	// There is no strict need for both archives to be on the same level.
 	// Thus, we report the minimum of the two available block heights.
 	pBlock, pEmpty, pErr := s.prime.GetArchiveBlockHeight()
@@ -343,7 +343,7 @@ func (s stringStringer) String() string {
 	return s.str
 }
 
-func (s *shadowStateDb) GetMemoryUsage() *state.MemoryUsage {
+func (s *ShadowStateDb) GetMemoryUsage() *state.MemoryUsage {
 	var (
 		breakdown strings.Builder
 		usedBytes uint64 = 0
@@ -371,7 +371,7 @@ func (s *shadowStateDb) GetMemoryUsage() *state.MemoryUsage {
 	}
 }
 
-func (s *shadowStateDb) GetShadowDB() state.StateDB {
+func (s *ShadowStateDb) GetShadowDB() state.StateDB {
 	return s.shadow
 }
 
@@ -422,7 +422,7 @@ func (s *shadowNonCommittableStateDb) run(opName string, op func(s state.NonComm
 	op(s.shadow)
 }
 
-func (s *shadowStateDb) run(opName string, op func(s state.StateDB)) {
+func (s *ShadowStateDb) run(opName string, op func(s state.StateDB)) {
 	op(s.prime)
 	op(s.shadow)
 }
@@ -507,7 +507,7 @@ func (s *shadowVmStateDb) getError(opName string, op func(s state.VmStateDB) err
 	return resP
 }
 
-func (s *shadowStateDb) getError(opName string, op func(s state.StateDB) error, args ...any) error {
+func (s *ShadowStateDb) getError(opName string, op func(s state.StateDB) error, args ...any) error {
 	resP := op(s.prime)
 	resS := op(s.shadow)
 	if resP != resS {
