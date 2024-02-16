@@ -144,6 +144,10 @@ func (e *executionResult) GetLogs() []*types.Log {
 	return e.logs
 }
 
+func (e *executionResult) GetResult() txcontext.EvmResult {
+	return txcontext.EvmResult{}
+}
+
 func (e *executionResult) GetContractAddress() common.Address {
 	return e.contractAddress
 }

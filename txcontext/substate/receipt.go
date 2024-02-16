@@ -40,6 +40,10 @@ func (r *receipt) GetGasUsed() uint64 {
 	return r.GasUsed
 }
 
+func (r *receipt) GetResult() txcontext.EvmResult {
+	return txcontext.EvmResult{}
+}
+
 func (r *receipt) Equal(y txcontext.Receipt) bool {
 	return txcontext.ReceiptEqual(r, y)
 }

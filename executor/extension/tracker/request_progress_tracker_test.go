@@ -3,7 +3,6 @@ package tracker
 import (
 	"encoding/json"
 	"errors"
-	"math/big"
 	"testing"
 	"time"
 
@@ -34,8 +33,6 @@ func TestRpcProgressTrackerExtension_LoggingHappens(t *testing.T) {
 
 	ext := makeRequestProgressTracker(cfg, 6, log)
 
-	ctx := &executor.Context{}
-
 	gomock.InOrder(
 		log.EXPECT().Noticef(rpcProgressTrackerReportFormat,
 			uint64(6), // boundary
@@ -53,28 +50,51 @@ func TestRpcProgressTrackerExtension_LoggingHappens(t *testing.T) {
 		),
 	)
 
+	ctx := new(executor.Context)
+
+	goodRes := rpc.NewStatusSuccessfulResult(10, []byte{})
+	errRes := rpc.NewErrorResult(11, errors.New("test error"))
+
 	ext.PreRun(executor.State[*rpc.RequestAndResults]{}, ctx)
 
+	ctx.ExecutionResult = goodRes
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: validReq}, ctx)
+
+	ctx.ExecutionResult = errRes
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: errReq}, ctx)
 	time.Sleep(500 * time.Millisecond)
 
+	ctx.ExecutionResult = goodRes
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: validReq}, ctx)
+
+	ctx.ExecutionResult = errRes
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: errReq}, ctx)
 	time.Sleep(500 * time.Millisecond)
 
+	ctx.ExecutionResult = goodRes
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: validReq}, ctx)
+
+	ctx.ExecutionResult = errRes
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: errReq}, ctx)
 
+	ctx.ExecutionResult = goodRes
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: validReq}, ctx)
+
+	ctx.ExecutionResult = errRes
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: errReq}, ctx)
 	time.Sleep(500 * time.Millisecond)
 
+	ctx.ExecutionResult = goodRes
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: validReq}, ctx)
+
+	ctx.ExecutionResult = errRes
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: errReq}, ctx)
 	time.Sleep(500 * time.Millisecond)
 
+	ctx.ExecutionResult = goodRes
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: validReq}, ctx)
+
+	ctx.ExecutionResult = errRes
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: errReq}, ctx)
 
 }
@@ -89,7 +109,10 @@ func TestRpcProgressTrackerExtension_FirstLoggingIsIgnored(t *testing.T) {
 
 	ext := makeRequestProgressTracker(cfg, testStateDbInfoFrequency, log)
 
-	ctx := &executor.Context{State: db}
+	ctx := &executor.Context{
+		State:           db,
+		ExecutionResult: rpc.NewStatusSuccessfulResult(21000, []byte{}),
+	}
 
 	ext.PreRun(executor.State[*rpc.RequestAndResults]{
 		Block:       4,
@@ -113,12 +136,6 @@ var validReq = &rpc.RequestAndResults{
 		Namespace:  "eth",
 		MethodBase: "getBalance",
 	},
-	StateDB: &rpc.StateDBData{
-		Result:      new(big.Int),
-		Error:       nil,
-		IsRecovered: false,
-		GasUsed:     10,
-	},
 	Response: &rpc.Response{
 		Version:   "2.0",
 		ID:        json.RawMessage{1},
@@ -135,12 +152,6 @@ var errReq = &rpc.RequestAndResults{
 		Method:     "eth_getBalance",
 		Namespace:  "eth",
 		MethodBase: "getBalance",
-	},
-	StateDB: &rpc.StateDBData{
-		Result:      nil,
-		Error:       errors.New("test error"),
-		IsRecovered: false,
-		GasUsed:     11,
 	},
 	Error: &rpc.ErrorResponse{
 		Version:   "2.0",

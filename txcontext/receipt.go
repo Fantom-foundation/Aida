@@ -27,6 +27,15 @@ type Receipt interface {
 	// Equal checks if the current result is equal to the provided result.
 	// Note: Have a look at ReceiptEqual.
 	Equal(y Receipt) bool
+
+	// GetResult returns EVM/StateDb result containing either result message or result error.
+	// Note that this error does not have to be implicitly fatal.
+	GetResult() EvmResult
+}
+
+type EvmResult struct {
+	Message []byte
+	Err     error
 }
 
 func ReceiptEqual(x, y Receipt) bool {

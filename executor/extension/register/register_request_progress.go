@@ -137,15 +137,13 @@ func (rp *registerRequestProgress) PreRun(executor.State[*rpc.RequestAndResults]
 }
 
 // PostTransaction increments number of transactions and saves gas used in last substate.
-func (rp *registerRequestProgress) PostTransaction(state executor.State[*rpc.RequestAndResults], _ *executor.Context) error {
+func (rp *registerRequestProgress) PostTransaction(state executor.State[*rpc.RequestAndResults], ctx *executor.Context) error {
 
 	rp.lock.Lock()
 	defer rp.lock.Unlock()
 
 	rp.overallInfo.numRequests++
-	if state.Data.StateDB != nil {
-		rp.overallInfo.gas += state.Data.StateDB.GasUsed
-	}
+	rp.overallInfo.gas += ctx.ExecutionResult.GetGasUsed()
 
 	overallInfo := rp.overallInfo
 	overallCount := overallInfo.numRequests
