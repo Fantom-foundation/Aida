@@ -1,8 +1,9 @@
 package main
 
 import (
-	"github.com/Fantom-foundation/Aida/executor/extension/validator"
 	"time"
+
+	"github.com/Fantom-foundation/Aida/executor/extension/validator"
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension/logger"
