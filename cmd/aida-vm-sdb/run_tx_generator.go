@@ -3,6 +3,8 @@ package main
 import (
 	"time"
 
+	"github.com/Fantom-foundation/Aida/executor/extension/validator"
+
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension/logger"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
@@ -56,6 +58,7 @@ func runTransactions(
 		tracker.MakeBlockProgressTracker(cfg, 100),
 		profiler.MakeMemoryUsagePrinter[txcontext.TxContext](cfg),
 		profiler.MakeMemoryProfiler[txcontext.TxContext](cfg),
+		validator.MakeShadowDbValidator(cfg),
 		statedb.MakeTxGeneratorBlockEventEmitter[txcontext.TxContext](),
 	}
 
