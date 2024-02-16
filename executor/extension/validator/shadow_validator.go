@@ -9,7 +9,7 @@ import (
 )
 
 func MakeShadowDbValidator(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
-	if cfg.ShadowDb {
+	if !cfg.ShadowDb {
 		return extension.NilExtension[txcontext.TxContext]{}
 	}
 	return makeShadowDbValidator(cfg)
