@@ -181,6 +181,9 @@ func resendRequest(state executor.State[*rpc.RequestAndResults]) *comparatorErro
 	// append correct block number
 	retriedReq.Params[len(retriedReq.Params)-1] = hexutil.EncodeUint64(uint64(state.Data.RequestedBlock))
 
+	fmt.Println(retriedReq.Params)
+	fmt.Println(state.Data.Query.Params)
+
 	// we only record on mainnet, so we can safely put mainnet chainID constant here
 	m, err := utils.SendRpcRequest(retriedReq, utils.MainnetChainID)
 	if err != nil {

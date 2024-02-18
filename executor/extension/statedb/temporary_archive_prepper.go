@@ -19,7 +19,7 @@ type temporaryArchivePrepper struct {
 // PreTransaction creates temporary archive that is released after transaction is executed.
 func (r *temporaryArchivePrepper) PreTransaction(state executor.State[*rpc.RequestAndResults], ctx *executor.Context) error {
 	var err error
-	ctx.Archive, err = ctx.State.GetArchiveState(uint64(state.Data.RequestedBlock))
+	ctx.Archive, err = ctx.State.GetArchiveState(uint64(state.Data.RequestedBlock) - 1)
 	if err != nil {
 		return err
 	}

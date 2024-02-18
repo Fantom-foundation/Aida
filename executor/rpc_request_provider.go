@@ -65,10 +65,6 @@ func (r rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc.Request
 			continue
 		}
 
-		if req.RequestedBlock >= to {
-			return nil
-		}
-
 		if err := consumer(TransactionInfo[*rpc.RequestAndResults]{recordedBlockNumber, 0, req}); err != nil {
 			return err
 		}
