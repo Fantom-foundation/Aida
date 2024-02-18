@@ -52,19 +52,19 @@ func TestRpc_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 	// Since we are running sequential mode with 1 worker, they all need to be in order.
 	gomock.InOrder(
 		// Req 1
-		db.EXPECT().GetArchiveState(uint64(2)).Return(archiveOne, nil),
+		db.EXPECT().GetArchiveState(uint64(reqBlockTwo.RequestedBlock-1)).Return(archiveOne, nil),
 		archiveOne.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(big.Int).SetInt64(1)),
 		archiveOne.EXPECT().Release(),
 		// Req 2
-		db.EXPECT().GetArchiveState(uint64(2)).Return(archiveTwo, nil),
+		db.EXPECT().GetArchiveState(uint64(reqBlockTwo.RequestedBlock-1)).Return(archiveTwo, nil),
 		archiveTwo.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(big.Int).SetInt64(1)),
 		archiveTwo.EXPECT().Release(),
 		// Req 3
-		db.EXPECT().GetArchiveState(uint64(3)).Return(archiveThree, nil),
+		db.EXPECT().GetArchiveState(uint64(reqBlockThree.RequestedBlock-1)).Return(archiveThree, nil),
 		archiveThree.EXPECT().GetNonce(common.HexToAddress(testingAddress)).Return(uint64(1)),
 		archiveThree.EXPECT().Release(),
 		// Req 4
-		db.EXPECT().GetArchiveState(uint64(4)).Return(archiveFour, nil),
+		db.EXPECT().GetArchiveState(uint64(reqBlockFour.RequestedBlock-1)).Return(archiveFour, nil),
 		archiveFour.EXPECT().GetCode(common.HexToAddress(testingAddress)).Return(hexutil.MustDecode("0x10")),
 		archiveFour.EXPECT().Release(),
 	)
@@ -109,25 +109,25 @@ func TestRpc_AllDbEventsAreIssuedInOrder_Parallel(t *testing.T) {
 	// Since we are running sequential mode with 1 worker, they all need to be in order.
 	gomock.InOrder(
 		// Req 1
-		db.EXPECT().GetArchiveState(uint64(2)).Return(archiveOne, nil),
+		db.EXPECT().GetArchiveState(uint64(reqBlockTwo.RequestedBlock-1)).Return(archiveOne, nil),
 		archiveOne.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(big.Int).SetInt64(1)),
 		archiveOne.EXPECT().Release(),
 	)
 	gomock.InOrder(
 		// Req 2
-		db.EXPECT().GetArchiveState(uint64(2)).Return(archiveTwo, nil),
+		db.EXPECT().GetArchiveState(uint64(reqBlockTwo.RequestedBlock-1)).Return(archiveTwo, nil),
 		archiveTwo.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(big.Int).SetInt64(1)),
 		archiveTwo.EXPECT().Release(),
 	)
 	gomock.InOrder(
 		// Req 3
-		db.EXPECT().GetArchiveState(uint64(3)).Return(archiveThree, nil),
+		db.EXPECT().GetArchiveState(uint64(reqBlockThree.RequestedBlock-1)).Return(archiveThree, nil),
 		archiveThree.EXPECT().GetNonce(common.HexToAddress(testingAddress)).Return(uint64(1)),
 		archiveThree.EXPECT().Release(),
 	)
 	gomock.InOrder(
 		// Req 4
-		db.EXPECT().GetArchiveState(uint64(4)).Return(archiveFour, nil),
+		db.EXPECT().GetArchiveState(uint64(reqBlockFour.RequestedBlock-1)).Return(archiveFour, nil),
 		archiveFour.EXPECT().GetCode(common.HexToAddress(testingAddress)).Return(hexutil.MustDecode("0x10")),
 		archiveFour.EXPECT().Release(),
 	)
@@ -176,28 +176,28 @@ func TestRpc_AllTransactionsAreProcessedInOrder_Sequential(t *testing.T) {
 		ext.EXPECT().PreRun(executor.AtBlock[*rpc.RequestAndResults](2), gomock.Any()),
 
 		// Req 1
-		db.EXPECT().GetArchiveState(uint64(2)).Return(archive, nil),
+		db.EXPECT().GetArchiveState(uint64(reqBlockTwo.RequestedBlock-1)).Return(archive, nil),
 		ext.EXPECT().PreTransaction(executor.AtBlock[*rpc.RequestAndResults](2), gomock.Any()),
 		processor.EXPECT().Process(executor.AtBlock[*rpc.RequestAndResults](2), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtBlock[*rpc.RequestAndResults](2), gomock.Any()),
 		archive.EXPECT().Release(),
 
 		// Req 2
-		db.EXPECT().GetArchiveState(uint64(2)).Return(archive, nil),
+		db.EXPECT().GetArchiveState(uint64(reqBlockTwo.RequestedBlock-1)).Return(archive, nil),
 		ext.EXPECT().PreTransaction(executor.AtBlock[*rpc.RequestAndResults](2), gomock.Any()),
 		processor.EXPECT().Process(executor.AtBlock[*rpc.RequestAndResults](2), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtBlock[*rpc.RequestAndResults](2), gomock.Any()),
 		archive.EXPECT().Release(),
 
 		// Req 3
-		db.EXPECT().GetArchiveState(uint64(3)).Return(archive, nil),
+		db.EXPECT().GetArchiveState(uint64(reqBlockThree.RequestedBlock-1)).Return(archive, nil),
 		ext.EXPECT().PreTransaction(executor.AtBlock[*rpc.RequestAndResults](3), gomock.Any()),
 		processor.EXPECT().Process(executor.AtBlock[*rpc.RequestAndResults](3), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtBlock[*rpc.RequestAndResults](3), gomock.Any()),
 		archive.EXPECT().Release(),
 
 		// Block 4
-		db.EXPECT().GetArchiveState(uint64(4)).Return(archive, nil),
+		db.EXPECT().GetArchiveState(uint64(reqBlockFour.RequestedBlock-1)).Return(archive, nil),
 		ext.EXPECT().PreTransaction(executor.AtBlock[*rpc.RequestAndResults](4), gomock.Any()),
 		processor.EXPECT().Process(executor.AtBlock[*rpc.RequestAndResults](4), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtBlock[*rpc.RequestAndResults](4), gomock.Any()),
@@ -252,7 +252,7 @@ func TestRpc_AllTransactionsAreProcessed_Parallel(t *testing.T) {
 	gomock.InOrder(
 		pre,
 		// Req 1
-		db.EXPECT().GetArchiveState(uint64(2)).Return(archive, nil),
+		db.EXPECT().GetArchiveState(uint64(reqBlockTwo.RequestedBlock-1)).Return(archive, nil),
 		ext.EXPECT().PreTransaction(executor.AtBlock[*rpc.RequestAndResults](2), gomock.Any()),
 		processor.EXPECT().Process(executor.AtBlock[*rpc.RequestAndResults](2), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtBlock[*rpc.RequestAndResults](2), gomock.Any()),
@@ -262,7 +262,7 @@ func TestRpc_AllTransactionsAreProcessed_Parallel(t *testing.T) {
 	gomock.InOrder(
 		pre,
 		// Req 2
-		db.EXPECT().GetArchiveState(uint64(2)).Return(archive, nil),
+		db.EXPECT().GetArchiveState(uint64(reqBlockTwo.RequestedBlock-1)).Return(archive, nil),
 		ext.EXPECT().PreTransaction(executor.AtBlock[*rpc.RequestAndResults](2), gomock.Any()),
 		processor.EXPECT().Process(executor.AtBlock[*rpc.RequestAndResults](2), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtBlock[*rpc.RequestAndResults](2), gomock.Any()),
@@ -272,7 +272,7 @@ func TestRpc_AllTransactionsAreProcessed_Parallel(t *testing.T) {
 	gomock.InOrder(
 		pre,
 		// Req 3
-		db.EXPECT().GetArchiveState(uint64(3)).Return(archive, nil),
+		db.EXPECT().GetArchiveState(uint64(reqBlockThree.RequestedBlock-1)).Return(archive, nil),
 		ext.EXPECT().PreTransaction(executor.AtBlock[*rpc.RequestAndResults](3), gomock.Any()),
 		processor.EXPECT().Process(executor.AtBlock[*rpc.RequestAndResults](3), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtBlock[*rpc.RequestAndResults](3), gomock.Any()),
@@ -282,7 +282,7 @@ func TestRpc_AllTransactionsAreProcessed_Parallel(t *testing.T) {
 	gomock.InOrder(
 		pre,
 		// Req 4
-		db.EXPECT().GetArchiveState(uint64(4)).Return(archive, nil),
+		db.EXPECT().GetArchiveState(uint64(reqBlockFour.RequestedBlock-1)).Return(archive, nil),
 		ext.EXPECT().PreTransaction(executor.AtBlock[*rpc.RequestAndResults](4), gomock.Any()),
 		processor.EXPECT().Process(executor.AtBlock[*rpc.RequestAndResults](4), gomock.Any()),
 		ext.EXPECT().PostTransaction(executor.AtBlock[*rpc.RequestAndResults](4), gomock.Any()),
@@ -323,7 +323,7 @@ func TestRpc_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) {
 		})
 
 	gomock.InOrder(
-		db.EXPECT().GetArchiveState(uint64(2)).Return(archive, nil),
+		db.EXPECT().GetArchiveState(uint64(reqBlockTwo.RequestedBlock-1)).Return(archive, nil),
 		archive.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(big.Int).SetInt64(1)),
 		archive.EXPECT().Release(),
 	)
@@ -363,7 +363,7 @@ func TestRpc_ValidationDoesNotFailOnValidTransaction_Parallel(t *testing.T) {
 		})
 
 	gomock.InOrder(
-		db.EXPECT().GetArchiveState(uint64(2)).Return(archive, nil),
+		db.EXPECT().GetArchiveState(uint64(reqBlockTwo.RequestedBlock-1)).Return(archive, nil),
 		archive.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(big.Int).SetInt64(1)),
 		archive.EXPECT().Release(),
 	)
@@ -403,7 +403,7 @@ func TestRpc_ValidationFailsOnValidTransaction_Sequential(t *testing.T) {
 		})
 
 	gomock.InOrder(
-		db.EXPECT().GetArchiveState(uint64(2)).Return(archive, nil),
+		db.EXPECT().GetArchiveState(uint64(reqBlockTwo.RequestedBlock-1)).Return(archive, nil),
 		archive.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(big.Int).SetInt64(2)),
 		archive.EXPECT().Release(),
 	)
@@ -447,7 +447,7 @@ func TestRpc_ValidationFailsOnValidTransaction_Parallel(t *testing.T) {
 		})
 
 	gomock.InOrder(
-		db.EXPECT().GetArchiveState(uint64(2)).Return(archive, nil),
+		db.EXPECT().GetArchiveState(uint64(reqBlockTwo.RequestedBlock-1)).Return(archive, nil),
 		archive.EXPECT().GetBalance(common.HexToAddress(testingAddress)).Return(new(big.Int).SetInt64(2)),
 		archive.EXPECT().Release(),
 	)
