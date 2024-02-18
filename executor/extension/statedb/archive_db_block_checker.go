@@ -6,6 +6,7 @@ import (
 
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/utils"
 	umath "github.com/Fantom-foundation/Aida/utils/math"
 )
@@ -13,6 +14,7 @@ import (
 type archiveBlockChecker[T any] struct {
 	extension.NilExtension[T]
 	cfg *utils.Config
+	log logger.Logger
 }
 
 // MakeArchiveBlockChecker creates an executor.Extension which checks if given
@@ -20,12 +22,13 @@ type archiveBlockChecker[T any] struct {
 func MakeArchiveBlockChecker[T any](cfg *utils.Config) executor.Extension[T] {
 	return &archiveBlockChecker[T]{
 		cfg: cfg,
+		log: logger.NewLogger(cfg.LogLevel, "Archive-Block-Checker"),
 	}
 }
 
 // PreRun checks whether given block range is within given ArchiveDb
 func (c *archiveBlockChecker[T]) PreRun(executor.State[T], *executor.Context) error {
-	var lastBlock uint64
+	var archiveLastBlock uint64
 
 	if c.cfg.ShadowDb {
 		primeDbInfo, err := utils.ReadStateDbInfo(filepath.Join(c.cfg.StateDbSrc, utils.PathToPrimaryStateDb, utils.PathToDbInfo))
@@ -46,7 +49,7 @@ func (c *archiveBlockChecker[T]) PreRun(executor.State[T], *executor.Context) er
 			return fmt.Errorf("shadow state db %v does not contain archive", filepath.Join(c.cfg.StateDbSrc, utils.PathToShadowStateDb))
 		}
 
-		lastBlock = umath.Min(shadowDbInfo.Block, primeDbInfo.Block)
+		archiveLastBlock = umath.Min(shadowDbInfo.Block, primeDbInfo.Block)
 
 	} else {
 		stateDbInfo, err := utils.ReadStateDbInfo(filepath.Join(c.cfg.StateDbSrc, utils.PathToDbInfo))
@@ -57,11 +60,12 @@ func (c *archiveBlockChecker[T]) PreRun(executor.State[T], *executor.Context) er
 		if !stateDbInfo.ArchiveMode {
 			return fmt.Errorf("state db %v does not contain archive", c.cfg.StateDbSrc)
 		}
-		lastBlock = stateDbInfo.Block
+		archiveLastBlock = stateDbInfo.Block
 	}
 
-	if c.cfg.Last > lastBlock {
-		return fmt.Errorf("last block of given archive-db (%v) is smaller than given last block (%v), please choose a block in range", lastBlock, c.cfg.Last)
+	if c.cfg.Last > archiveLastBlock {
+		c.log.Noticef("Last block of given archive-db (%v) is smaller than given last block (%v). Adjust last block to %v", archiveLastBlock, c.cfg.Last, archiveLastBlock)
+		c.cfg.Last = archiveLastBlock
 	}
 
 	return nil
