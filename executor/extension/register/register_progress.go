@@ -20,6 +20,8 @@ import (
 const (
 	ArchiveDbDirectoryName = "archive"
 
+	TxGeneratorCommandName = "tx-generator"
+
 	RegisterProgressDefaultReportFrequency = 100_000 // in blocks
 
 	RegisterProgressCreateTableIfNotExist = `
@@ -58,7 +60,7 @@ func MakeRegisterProgress(cfg *utils.Config, reportFrequency int) executor.Exten
 
 	if reportFrequency == 0 {
 		switch {
-		case cfg.CommandName == "tx-generator" && cfg.BlockLength != 0:
+		case cfg.CommandName == TxGeneratorCommandName && cfg.BlockLength != 0:
 			reportFrequency = int(math.Ceil(float64(50_000) / float64(cfg.BlockLength)))
 		default:
 			reportFrequency = RegisterProgressDefaultReportFrequency
