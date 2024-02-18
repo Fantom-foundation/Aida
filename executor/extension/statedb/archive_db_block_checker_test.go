@@ -46,14 +46,8 @@ func TestArchiveDbBlockChecker_PreRunReturnsErrorIfStateDbDoesNotContainGivenBlo
 
 	ext := MakeArchiveBlockChecker[any](cfg)
 	err = ext.PreRun(executor.State[any]{}, nil)
-	if err == nil {
-		t.Fatalf("pre-run must return error")
-	}
-
-	wantedErr := "last block of given archive-db (10) is smaller than given last block (11), please choose a block in range"
-
-	if strings.Compare(err.Error(), wantedErr) != 0 {
-		t.Fatalf("unexpected err\ngot: %v\n want: %v", err, wantedErr)
+	if err != nil || cfg.Last != 10 {
+		t.Fatalf("Failed to adjust last block")
 	}
 }
 
@@ -110,14 +104,8 @@ func TestArchiveDbBlockChecker_PreRunReturnsErrorIfPrimeStateDbDoesNotContainGiv
 
 	ext := MakeArchiveBlockChecker[any](cfg)
 	err = ext.PreRun(executor.State[any]{}, nil)
-	if err == nil {
-		t.Fatalf("pre-run must return error")
-	}
-
-	wantedErr := "last block of given archive-db (10) is smaller than given last block (11), please choose a block in range"
-
-	if strings.Compare(err.Error(), wantedErr) != 0 {
-		t.Fatalf("unexpected err\ngot: %v\n want: %v", err, wantedErr)
+	if err != nil || cfg.Last != 10 {
+		t.Fatalf("Failed to adjust last block")
 	}
 }
 
@@ -149,14 +137,8 @@ func TestArchiveDbBlockChecker_PreRunReturnsErrorIfShadowStateDbDoesNotContainGi
 
 	ext := MakeArchiveBlockChecker[any](cfg)
 	err = ext.PreRun(executor.State[any]{}, nil)
-	if err == nil {
-		t.Fatalf("pre-run must return error")
-	}
-
-	wantedErr := "last block of given archive-db (10) is smaller than given last block (11), please choose a block in range"
-
-	if strings.Compare(err.Error(), wantedErr) != 0 {
-		t.Fatalf("unexpected err\ngot: %v\n want: %v", err, wantedErr)
+	if err != nil || cfg.Last != 10 {
+		t.Fatalf("fail to adjust last block")
 	}
 }
 
