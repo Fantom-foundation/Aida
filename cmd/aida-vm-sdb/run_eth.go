@@ -97,6 +97,7 @@ func runEth(
 
 	extensionList = append(
 		extensionList,
+		logger.MakeEthStateTestLogger(cfg),
 		validator.MakeEthStateTestValidator(cfg),
 		validator.MakeShadowDbValidator(cfg),
 		statedb.MakeEthStateTestBlockEventEmitter(),
