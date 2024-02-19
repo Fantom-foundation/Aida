@@ -5,7 +5,6 @@ import (
 
 	"github.com/Fantom-foundation/Aida/rpc"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/urfave/cli/v2"
 )
 
@@ -32,7 +31,7 @@ type rpcRequestProvider struct {
 }
 
 func (r rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc.RequestAndResults]) error {
-	var recordedBlockNumber int
+	var blockNumber int
 
 	for r.iter.Next() {
 		if r.iter.Error() != nil {
@@ -51,55 +50,26 @@ func (r rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc.Request
 		}
 
 		if req.Response != nil {
-			recordedBlockNumber = int(req.Response.BlockID)
-			req.RecordedTimestamp = req.Response.Timestamp
+			blockNumber = int(req.Response.BlockID)
 		} else {
-			recordedBlockNumber = int(req.Error.BlockID)
-			req.RecordedTimestamp = req.Error.Timestamp
+			blockNumber = int(req.Error.BlockID)
 		}
 
-		req.RequestedBlock = findRequestedBlockNumber(req, recordedBlockNumber)
-
 		// are we skipping requests?
-		if req.RequestedBlock < from {
+		if blockNumber < from {
 			continue
 		}
 
-		if req.RequestedBlock >= to {
+		if blockNumber >= to {
 			return nil
 		}
 
-		if err := consumer(TransactionInfo[*rpc.RequestAndResults]{recordedBlockNumber, 0, req}); err != nil {
+		if err := consumer(TransactionInfo[*rpc.RequestAndResults]{blockNumber, 0, req}); err != nil {
 			return err
 		}
 	}
 
 	return nil
-}
-
-func findRequestedBlockNumber(data *rpc.RequestAndResults, recordedBlockNumber int) int {
-	l := len(data.Query.Params)
-	if l < 2 {
-		return recordedBlockNumber
-	}
-
-	str := data.Query.Params[l-1].(string)
-
-	switch str {
-	case "pending":
-		// validation for pending requests does not work, skip them
-		data.SkipValidation = true
-		// pending should be treated as latest
-		fallthrough
-	case "latest":
-		return recordedBlockNumber
-	case "earliest":
-		return 0
-
-	default:
-		// botched params are not recorded, so this will  never panic
-		return int(hexutil.MustDecodeUint64(str))
-	}
 }
 
 func (r rpcRequestProvider) Close() {
