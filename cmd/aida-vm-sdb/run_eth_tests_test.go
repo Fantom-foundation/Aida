@@ -182,17 +182,18 @@ func TestVmSdb_Eth_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 
 	// map is unordered, so we need two different 'InOrder' calls
 	gomock.InOrder(
-		// Tx 1
-		// Validation
 		db.EXPECT().Exist(common.HexToAddress("0x1")).Return(true),
 		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
 		db.EXPECT().GetNonce(common.HexToAddress("0x1")).Return(uint64(1)),
 		db.EXPECT().GetCode(common.HexToAddress("0x1")).Return([]byte{}),
+	)
+	gomock.InOrder(
 		db.EXPECT().Exist(common.HexToAddress("0x2")).Return(true),
 		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(2000)),
 		db.EXPECT().GetNonce(common.HexToAddress("0x2")).Return(uint64(2)),
 		db.EXPECT().GetCode(common.HexToAddress("0x2")).Return([]byte{}),
 	)
+
 	gomock.InOrder(
 		// Tx execution
 		db.EXPECT().BeginBlock(uint64(2)),

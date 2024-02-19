@@ -111,6 +111,7 @@ func runEth(
 		validator.MakeEthStateTestValidator(cfg),
 		validator.MakeEthBlockTestValidator(cfg),
 		statedb.MakeBlockEventEmitter[txcontext.TxContext](),
+		validator.MakeShadowDbValidator(cfg),
 	)
 
 	extensionList = append(extensionList, extra...)

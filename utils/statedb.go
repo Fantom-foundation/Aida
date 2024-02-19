@@ -131,7 +131,7 @@ func useExistingStateDB(cfg *Config) (state.StateDB, string, error) {
 		return nil, "", fmt.Errorf("cannot create ShadowDb; %v", err)
 	}
 
-	return proxy.NewShadowProxy(stateDb, shadowDb), cfg.StateDbSrc, nil
+	return proxy.NewShadowProxy(stateDb, shadowDb, cfg.ValidateStateHashes), cfg.StateDbSrc, nil
 }
 
 // makeNewStateDB creates a DB instance with a potential shadow instance.
@@ -181,7 +181,7 @@ func makeNewStateDB(cfg *Config) (state.StateDB, string, error) {
 		return nil, "", fmt.Errorf("cannot make shadowDb; %v", err)
 	}
 
-	return proxy.NewShadowProxy(stateDb, shadowDb), tmpDir, nil
+	return proxy.NewShadowProxy(stateDb, shadowDb, cfg.ValidateStateHashes), tmpDir, nil
 }
 
 // makeStateDBVariant creates a DB instance of the requested kind.
