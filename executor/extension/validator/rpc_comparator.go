@@ -102,17 +102,13 @@ func (c *rpcComparator) PostTransaction(state executor.State[*rpc.RequestAndResu
 
 	compareErr := compare(state)
 	if compareErr != nil {
-		// some records are recorded wrongly, for this case we resend the request and compare it again
-		if !state.Data.StateDB.IsRecovered {
+		// lot errors are recorded wrongly, for this case we resend the request and compare it again
+		if !state.Data.StateDB.IsRecovered && state.Data.Error != nil {
 			c.log.Debugf("retrying %v request", state.Data.Query.Method)
 			c.numberOfRetriedRequests++
 			c.log.Debugf("current ration retried against total %v/%v", c.numberOfRetriedRequests, c.totalNumberOfRequests)
 			state.Data.StateDB.IsRecovered = true
-
-			if err := resendRequest(state); err != nil {
-				return err
-			}
-			compareErr = compare(state)
+			compareErr = retryRequest(state)
 			if compareErr == nil {
 				return nil
 			}
@@ -162,16 +158,8 @@ func compare(state executor.State[*rpc.RequestAndResults]) *comparatorError {
 	return nil
 }
 
-func resendRequest(state executor.State[*rpc.RequestAndResults]) *comparatorError {
-	var payload []byte
-
-	if state.Data.Response != nil {
-		payload = state.Data.Response.Payload
-	} else {
-		payload = state.Data.Error.Payload
-	}
-
-	retriedReq := utils.JsonRPCRequest{
+func retryRequest(state executor.State[*rpc.RequestAndResults]) *comparatorError {
+	payload := utils.JsonRPCRequest{
 		Method:  state.Data.Query.Method,
 		Params:  state.Data.Query.Params,
 		ID:      0,
@@ -179,62 +167,36 @@ func resendRequest(state executor.State[*rpc.RequestAndResults]) *comparatorErro
 	}
 
 	// append correct block number
-	retriedReq.Params[len(retriedReq.Params)-1] = hexutil.EncodeUint64(uint64(state.Data.RequestedBlock))
+	payload.Params[len(payload.Params)-1] = "0x" + strconv.FormatInt(int64(state.Block), 16)
 
-	// we only record on mainnet, so we can safely put mainnet chainID constant here
-	m, err := utils.SendRpcRequest(retriedReq, utils.MainnetChainID)
+	// we only state on mainnet, so we can safely put mainnet chainID constant here
+	m, err := utils.SendRpcRequest(payload, utils.MainnetChainID)
 	if err != nil {
 		return newComparatorError(nil, nil, state.Data, state.Block, cannotSendRpcRequest)
 	}
 
-	// remove the data
-	state.Data.Response = nil
-	state.Data.Error = nil
-
 	s, ok := m["result"].(string)
-	if ok { // valid result
-		result, err := json.Marshal(s)
-		if err != nil {
-			return newComparatorError(nil, nil, state.Data, state.Block, cannotUnmarshalResult)
-		}
-
-		state.Data.Response = &rpc.Response{
-			Version:   "2.0",
-			ID:        json.RawMessage{1},
-			BlockID:   uint64(state.Data.RequestedBlock),
-			Timestamp: state.Data.RecordedTimestamp,
-			Result:    result,
-			Payload:   payload,
-		}
-	} else { // error result
-		resMap, ok := m["error"].(map[string]interface{})
-		if !ok {
-			return newComparatorError(nil, nil, state.Data, state.Block, cannotUnmarshalResult)
-		}
-
-		// rpc sometimes returns float
-		var code int
-		c, ok := resMap["code"].(float64)
-		if ok {
-			code = int(c)
-		} else {
-			code = resMap["code"].(int)
-		}
-
-		state.Data.Error = &rpc.ErrorResponse{
-			Version:   "2.0",
-			Id:        json.RawMessage{1},
-			BlockID:   uint64(state.Data.RequestedBlock),
-			Timestamp: state.Data.RecordedTimestamp,
-			Error: rpc.ErrorMessage{
-				Code:    code,
-				Message: resMap["message"].(string),
-			},
-			Payload: payload,
-		}
+	if !ok {
+		return newComparatorError(nil, nil, state.Data, state.Block, cannotUnmarshalResult)
 	}
 
-	return nil
+	result, err := json.Marshal(s)
+	if err != nil {
+		return newComparatorError(nil, nil, state.Data, state.Block, cannotUnmarshalResult)
+	}
+
+	state.Data.Response = &rpc.Response{
+		Version:   state.Data.Error.Version,
+		ID:        state.Data.Error.Id,
+		BlockID:   state.Data.Error.BlockID,
+		Timestamp: state.Data.Error.Timestamp,
+		Result:    result,
+		Payload:   state.Data.Error.Payload,
+	}
+
+	state.Data.Error = nil
+
+	return compare(state)
 }
 
 // compareBalance compares getBalance data recorded on API server with data returned by StateDB
