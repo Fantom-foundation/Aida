@@ -103,24 +103,24 @@ func (c *rpcComparator) PostTransaction(state executor.State[*rpc.RequestAndResu
 	compareErr := compare(state)
 	if compareErr != nil {
 		// some records are recorded wrongly, for this case we resend the request and compare it again
-		if !state.Data.StateDB.IsRecovered {
-			c.log.Debugf("retrying %v request", state.Data.Query.Method)
-			c.numberOfRetriedRequests++
-			c.log.Debugf("current ration retried against total %v/%v", c.numberOfRetriedRequests, c.totalNumberOfRequests)
-			state.Data.StateDB.IsRecovered = true
-
-			if err := resendRequest(state); err != nil {
-				return err
-			}
-			compareErr = compare(state)
-			if compareErr == nil {
-				return nil
-			}
-		}
-
-		if compareErr.typ == cannotUnmarshalResult {
-			return nil
-		}
+		//if !state.Data.StateDB.IsRecovered {
+		//	c.log.Debugf("retrying %v request", state.Data.Query.Method)
+		//	c.numberOfRetriedRequests++
+		//	c.log.Debugf("current ration retried against total %v/%v", c.numberOfRetriedRequests, c.totalNumberOfRequests)
+		//	state.Data.StateDB.IsRecovered = true
+		//
+		//	if err := resendRequest(state); err != nil {
+		//		return err
+		//	}
+		//	compareErr = compare(state)
+		//	if compareErr == nil {
+		//		return nil
+		//	}
+		//}
+		//
+		//if compareErr.typ == cannotUnmarshalResult {
+		//	return nil
+		//}
 
 		if !c.cfg.ContinueOnFailure {
 			return compareErr
