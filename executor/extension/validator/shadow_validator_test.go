@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Fantom-foundation/Aida/ethtest"
+	statetest "github.com/Fantom-foundation/Aida/ethtest/state_test"
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/state"
 	"github.com/Fantom-foundation/Aida/txcontext"
@@ -13,13 +13,13 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestShadowDbValidator_PostTransactionPass(t *testing.T) {
+func TestShadowDbValidator_PostBlockReturnsNilError(t *testing.T) {
 	cfg := &utils.Config{}
 
 	ctrl := gomock.NewController(t)
 	db := state.NewMockStateDB(ctrl)
 
-	data := ethtest.CreateTestData(t)
+	data := statetest.CreateTestData(t)
 	ctx := new(executor.Context)
 	ctx.State = db
 	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: data}
@@ -31,19 +31,19 @@ func TestShadowDbValidator_PostTransactionPass(t *testing.T) {
 
 	ext := makeShadowDbValidator(cfg)
 
-	err := ext.PostTransaction(st, ctx)
+	err := ext.PostBlock(st, ctx)
 	if err != nil {
 		t.Fatalf("post-transaction cannot return error; %v", err)
 	}
 }
 
-func TestShadowDbValidator_PostTransactionReturnsError(t *testing.T) {
+func TestShadowDbValidator_PostBlockReturnsError(t *testing.T) {
 	cfg := &utils.Config{}
 
 	ctrl := gomock.NewController(t)
 	db := state.NewMockStateDB(ctrl)
 
-	data := ethtest.CreateTestData(t)
+	data := statetest.CreateTestData(t)
 	ctx := new(executor.Context)
 	ctx.State = db
 	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: data}
@@ -57,7 +57,7 @@ func TestShadowDbValidator_PostTransactionReturnsError(t *testing.T) {
 
 	ext := makeShadowDbValidator(cfg)
 
-	err := ext.PostTransaction(st, ctx)
+	err := ext.PostBlock(st, ctx)
 	if err == nil {
 		t.Fatalf("post-transaction must return error; %v", err)
 	}
