@@ -50,6 +50,7 @@ var RunEthTestsCmd = cli.Command{
 		&utils.ChainIDFlag,
 		&utils.ContinueOnFailureFlag,
 		&utils.ValidateFlag,
+		&utils.ValidateStateHashesFlag,
 		&log.LogLevelFlag,
 		&utils.ErrorLoggingFlag,
 	},
