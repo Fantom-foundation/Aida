@@ -79,9 +79,18 @@ func TestRPCRequestProvider_NilRequestDoesNotGetToConsumer(t *testing.T) {
 		i.EXPECT().Close(),
 	)
 
-	if err := provider.Run(10, 11, toRPCConsumer(consumer)); err != nil {
-		t.Fatalf("failed to iterate through requests: %v", err)
+	err := provider.Run(10, 11, toRPCConsumer(consumer))
+	if err == nil {
+		t.Fatal("provider must return error")
 	}
+
+	got := err.Error()
+	want := "iterator returned nil request"
+
+	if strings.Compare(got, want) != 0 {
+		t.Fatalf("unexpected error\ngot: %v\nwant:%v", got, want)
+	}
+
 }
 
 func TestRPCRequestProvider_ErrorReturnedByIteratorEndsTheApp(t *testing.T) {

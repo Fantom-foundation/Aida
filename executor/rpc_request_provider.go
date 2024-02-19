@@ -95,7 +95,7 @@ func (r rpcRequestProvider) processFirst(from int, consumer Consumer[*rpc.Reques
 
 		// are we skipping requests?
 		if req.RecordedBlock < from {
-			r.log.Noticef("Skipping %v blocks.\nThis might take a while, skip rate is ~50k Req/s "+
+			r.log.Noticef("Skipping %v blocks. This might take a while, skip rate is ~50k Req/s "+
 				"and there is up to 2500 Requests in a block.", from-req.RecordedBlock)
 			return nil
 		}

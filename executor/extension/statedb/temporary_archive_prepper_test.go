@@ -10,7 +10,7 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestTemporaryArchivePrepper_PreTransactionMarksPendingBlockAsSkipValidation(t *testing.T) {
+func TestTemporaryArchivePrepper_PreTransactionGetsArchiveForRequestedBlock(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	db := state.NewMockStateDB(ctrl)
 	ext := MakeTemporaryArchivePrepper()
@@ -23,13 +23,10 @@ func TestTemporaryArchivePrepper_PreTransactionMarksPendingBlockAsSkipValidation
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	if !data.SkipValidation {
-		t.Fatal("SkipValidation must be true")
-	}
 }
 
 var data = &rpc.RequestAndResults{
+	RequestedBlock: 10,
 	Query: &rpc.Body{
 		Params: []interface{}{"test", "pending"},
 	},
