@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	statetest "github.com/Fantom-foundation/Aida/ethtest/state_test"
+	statetest "github.com/Fantom-foundation/Aida/ethtest/statetest"
 	"github.com/Fantom-foundation/Aida/utils"
 	"go.uber.org/mock/gomock"
 )

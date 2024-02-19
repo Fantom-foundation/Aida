@@ -2,7 +2,7 @@ package executor
 
 import (
 	"github.com/Fantom-foundation/Aida/ethtest"
-	blocktest "github.com/Fantom-foundation/Aida/ethtest/blockchain_test"
+	blocktest "github.com/Fantom-foundation/Aida/ethtest/blockchaintest"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 )
