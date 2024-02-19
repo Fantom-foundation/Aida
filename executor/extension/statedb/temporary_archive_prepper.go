@@ -1,6 +1,8 @@
 package statedb
 
 import (
+	"fmt"
+
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/rpc"
@@ -59,12 +61,20 @@ func findBlockNumber(data *rpc.RequestAndResults) uint64 {
 		// pending should be treated as latest
 		fallthrough
 	case "latest":
+		if data.SkipValidation {
+			fmt.Printf("pending %v", block)
+		} else {
+			fmt.Printf("latest %v", block)
+		}
 		return block
 	case "earliest":
 		return 0
 
 	default:
 		// botched params are not recorded, so this will  never panic
-		return hexutil.MustDecodeUint64(str)
+
+		b := hexutil.MustDecodeUint64(str)
+		fmt.Printf("hex %v", b)
+		return b
 	}
 }
