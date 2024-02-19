@@ -184,7 +184,7 @@ func (c *rpcComparator) resendRequest(state executor.State[*rpc.RequestAndResult
 	b := hexutil.EncodeUint64(uint64(state.Data.RequestedBlock))
 	l := len(retriedReq.Params)
 	// this is a corner case where request does not have block number
-	if l == 1 {
+	if l <= 1 {
 		retriedReq.Params = append(retriedReq.Params, b)
 	} else {
 		retriedReq.Params[len(retriedReq.Params)-1] = b

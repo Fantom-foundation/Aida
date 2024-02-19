@@ -14,7 +14,6 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/status-im/keycard-go/hexutils"
-	"go.uber.org/mock/gomock"
 )
 
 const (
@@ -39,9 +38,6 @@ func TestRPCComparator_RPCComparatorIsNotCreatedIfNotEnabled(t *testing.T) {
 }
 
 func TestRPCComparator_PostTransactionDoesNotFailIfContinueOnFailureIsTrue(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	log := logger.NewMockLogger(ctrl)
-
 	cfg := &utils.Config{}
 	cfg.Validate = true
 	cfg.ContinueOnFailure = true
@@ -52,6 +48,7 @@ func TestRPCComparator_PostTransactionDoesNotFailIfContinueOnFailureIsTrue(t *te
 	data := &rpc.RequestAndResults{
 		Query: &rpc.Body{
 			MethodBase: "getBalance",
+			Method:     "eth_getBalance",
 		},
 		Response: &rpc.Response{
 			Result: rec,
@@ -65,7 +62,7 @@ func TestRPCComparator_PostTransactionDoesNotFailIfContinueOnFailureIsTrue(t *te
 		Data: data,
 	}
 
-	c := makeRPCComparator(cfg, log)
+	c := makeRPCComparator(cfg, logger.NewLogger("critical", "rpc-test"))
 
 	ctx := new(executor.Context)
 	ctx.ErrorInput = make(chan error, 10)
@@ -77,9 +74,6 @@ func TestRPCComparator_PostTransactionDoesNotFailIfContinueOnFailureIsTrue(t *te
 }
 
 func TestRPCComparator_PostTransactionFailsWhenContinueOnFailureIsNotEnabled(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	log := logger.NewMockLogger(ctrl)
-
 	cfg := &utils.Config{}
 	cfg.Validate = true
 	cfg.ContinueOnFailure = false
@@ -95,7 +89,8 @@ func TestRPCComparator_PostTransactionFailsWhenContinueOnFailureIsNotEnabled(t *
 			Result: rec,
 		},
 		StateDB: &rpc.StateDBData{
-			Result: bigRes,
+			Result:      bigRes,
+			IsRecovered: true,
 		},
 	}
 
@@ -103,7 +98,7 @@ func TestRPCComparator_PostTransactionFailsWhenContinueOnFailureIsNotEnabled(t *
 		Data: data,
 	}
 
-	c := makeRPCComparator(cfg, log)
+	c := makeRPCComparator(cfg, logger.NewLogger("critical", "rpc-test"))
 	err := c.PostTransaction(s, nil)
 	if err == nil {
 		t.Errorf("post transaction must return error; %v", err)
