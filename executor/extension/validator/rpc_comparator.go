@@ -138,7 +138,7 @@ func (c *rpcComparator) PostTransaction(state executor.State[*rpc.RequestAndResu
 			return compareErr
 		}
 	}
-
+	c.log.Info("comparator ok")
 	return nil
 }
 
