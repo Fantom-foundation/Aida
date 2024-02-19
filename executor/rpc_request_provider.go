@@ -92,11 +92,11 @@ func findRequestedBlockNumber(data *rpc.RequestAndResults, recordedBlockNumber i
 		// pending should be treated as latest
 		fallthrough
 	case "latest":
-		if data.SkipValidation {
-			fmt.Printf("pending %v", recordedBlockNumber)
-		} else {
-			fmt.Printf("latest %v", recordedBlockNumber)
-		}
+		//if data.SkipValidation {
+		//	fmt.Printf("pending %v", recordedBlockNumber)
+		//} else {
+		//	fmt.Printf("latest %v", recordedBlockNumber)
+		//}
 		return recordedBlockNumber
 	case "earliest":
 		return 0
@@ -105,7 +105,7 @@ func findRequestedBlockNumber(data *rpc.RequestAndResults, recordedBlockNumber i
 		// botched params are not recorded, so this will  never panic
 
 		b := hexutil.MustDecodeUint64(str)
-		fmt.Printf("hex %v", b)
+		//fmt.Printf("hex %v", b)
 		return int(b)
 	}
 }
