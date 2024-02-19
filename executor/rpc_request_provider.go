@@ -59,6 +59,7 @@ func (r rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc.Request
 		}
 
 		req.RequestedBlock = findRequestedBlockNumber(req, recordedBlockNumber)
+		req.RequestedBlock--
 
 		// are we skipping requests?
 		if req.RequestedBlock < from {
