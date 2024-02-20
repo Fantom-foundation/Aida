@@ -2,30 +2,32 @@ package rpc
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 // RequestAndResults encapsulates request query and response for post-processing.
 type RequestAndResults struct {
-	Query                                    *Body
-	Response                                 *Response
-	Error                                    *ErrorResponse
-	ParamsRaw                                []byte
-	ResponseRaw                              []byte
-	StateDB                                  *StateDBData
-	SkipValidation                           bool
-	RecordedBlock, RequestedBlock, Timestamp int
+	Query                         *Body
+	Response                      *Response
+	Error                         *ErrorResponse
+	ParamsRaw                     []byte
+	ResponseRaw                   []byte
+	StateDB                       *StateDBData
+	SkipValidation                bool
+	RecordedBlock, RequestedBlock int
+	Timestamp                     uint64
 }
 
 // DecodeInfo finds recorded and requested block numbers as well as timestamp of the recorded block.
 func (r *RequestAndResults) DecodeInfo() {
 	if r.Response != nil {
 		r.RecordedBlock = int(r.Response.BlockID)
-		r.Timestamp = int(r.Response.Timestamp)
+		r.Timestamp = uint64(time.Unix(0, int64(r.Response.Timestamp)).Unix())
 	} else {
 		r.RecordedBlock = int(r.Error.BlockID)
-		r.Timestamp = int(r.Error.Timestamp)
+		r.Timestamp = uint64(time.Unix(0, int64(r.Error.Timestamp)).Unix())
 	}
 	r.findRequestedBlock()
 }

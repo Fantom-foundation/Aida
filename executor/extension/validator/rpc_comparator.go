@@ -102,6 +102,17 @@ func (c *rpcComparator) PostTransaction(state executor.State[*rpc.RequestAndResu
 
 	compareErr := compare(state)
 	if compareErr != nil {
+		// request method base 'call' cannot be resent, because we need timestamp of the block that executed
+		// this request. As of right now there we cannot get the timestamp, hence we skip these requests
+		if state.Data.Query.MethodBase == "call" {
+			// Only requests containing an error result are not being treated as data
+			// mismatch, request with a non-error result are recorded correctly
+			if state.Data.Error != nil {
+				return nil
+			} else {
+				return compareErr
+			}
+		}
 		// lot errors are recorded wrongly, for this case we resend the request and compare it again
 		if !state.Data.StateDB.IsRecovered {
 			c.log.Debugf("retrying %v request", state.Data.Query.Method)
