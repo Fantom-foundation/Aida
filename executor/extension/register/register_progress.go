@@ -170,10 +170,14 @@ func (rp *registerProgress) PreRun(_ executor.State[txcontext.TxContext], ctx *e
 // This is done in PreBlock because some blocks do not have txcontext.
 func (rp *registerProgress) PreBlock(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	if uint64(state.Block) > rp.interval.End() {
+		rp.log.Infof("RegisterProgress will now insert to db: %d-%d, because current block is %d.", rp.interval.Start(), rp.interval.End(), state.Block)
+
 		rp.memory = ctx.State.GetMemoryUsage()
 		rp.ps.Print()
 		rp.Reset()
 		rp.interval.Next()
+
+		rp.log.Infof("Next Printing will be from %d-%d", rp.interval.Start(), rp.interval.End())
 	}
 
 	return nil
@@ -285,7 +289,6 @@ func (rp *registerProgress) sqlite3(conn string) (string, string, string, func()
 				overallGasRate,
 			})
 
-			rp.log.Infof("RegisterProgress insert to db: %d-%d", rp.interval.Start(), rp.interval.End())
 			return values
 		}
 }
