@@ -176,7 +176,11 @@ func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 
 	itv := utils.NewInterval(cfg.First, cfg.Last, uint64(interval))
 
-	ctx := &executor.Context{State: stateDb, StateDbPath: dummyStateDbPath}
+	ctx := &executor.Context{
+		State:           stateDb,
+		StateDbPath:     dummyStateDbPath,
+		ExecutionResult: substatecontext.NewReceipt(&substate.SubstateResult{GasUsed: 100}),
+	}
 
 	s := &substate.Substate{
 		Result: &substate.SubstateResult{
@@ -365,5 +369,57 @@ func TestRegisterProgress_ExtensionContinuesDespiteFetchEnvFailure(t *testing.T)
 	}
 	if !errors.Is(err, noBash) {
 		t.Fatalf("Error not from intended source: %v.", noBash)
+	}
+}
+
+func TestRegisterProgress_ChecksDefaultReportInterval(t *testing.T) {
+	tests := map[*utils.Config]uint64{
+		{
+			RegisterRun: "enabled",
+			CommandName: "substate",
+			First:       0,
+			Last:        1_000_000,
+			BlockLength: 0,
+		}: RegisterProgressDefaultReportFrequency,
+
+		{
+			RegisterRun: "enabled",
+			CommandName: "tx-generator",
+			First:       0,
+			Last:        1_000_000,
+			BlockLength: 50_000,
+		}: 1,
+
+		{
+			RegisterRun: "enabled",
+			CommandName: "tx-generator",
+			First:       0,
+			Last:        1_000_000,
+			BlockLength: 1,
+		}: 50_000,
+
+		{
+			RegisterRun: "enabled",
+			CommandName: "tx-generator",
+			First:       0,
+			Last:        1_000_000,
+			BlockLength: 5_000_000,
+		}: 1,
+	}
+
+	for cfg, expectedFreq := range tests {
+		ext := MakeRegisterProgress(cfg, 0) // 0 to see defaults
+		if _, ok := ext.(extension.NilExtension[txcontext.TxContext]); ok {
+			t.Fatalf("Extension RegisterProgress is disabled even though enabled in configuration.")
+		}
+
+		rp, ok := ext.(*registerProgress)
+		if !ok {
+			t.Errorf("Could not cast extension to registerProgress even though it should be possible.")
+		}
+
+		if rp.interval.End()-rp.interval.Start()+1 != expectedFreq {
+			t.Errorf("Printing Interval incorrect. Expected = %d, Actual: %d", expectedFreq, rp.interval.End()-rp.interval.Start()+1)
+		}
 	}
 }

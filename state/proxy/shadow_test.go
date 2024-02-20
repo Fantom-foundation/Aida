@@ -29,7 +29,7 @@ func makeTestShadowDB(t *testing.T, ctc state.CarmenStateTestCase) state.StateDB
 		t.Fatalf("failed to create geth state DB: %v", err)
 	}
 
-	shadowDB := NewShadowProxy(csDB, gsDB)
+	shadowDB := NewShadowProxy(csDB, gsDB, false)
 
 	return shadowDB
 }
@@ -613,7 +613,7 @@ func TestShadowState_GetShadowDB(t *testing.T) {
 				t.Fatalf("failed to create geth state DB: %v", err)
 			}
 
-			shadowDB := NewShadowProxy(csDB, gsDB)
+			shadowDB := NewShadowProxy(csDB, gsDB, false)
 
 			// Close DB after test ends
 			defer func(shadowDB state.StateDB) {
@@ -631,11 +631,11 @@ func TestShadowState_GetShadowDB(t *testing.T) {
 	}
 }
 
-func TestShadowState_GetLogsSuccessful(t *testing.T) {
+func TestShadowState_GetLogs_Success(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	pdb := state.NewMockStateDB(ctrl)
 	sdb := state.NewMockStateDB(ctrl)
-	db := NewShadowProxy(pdb, sdb)
+	db := NewShadowProxy(pdb, sdb, false)
 	txHash := common.HexToHash("0x1")
 	blockHash := common.HexToHash("0x2")
 	log1 := &types.Log{}
@@ -653,7 +653,7 @@ func TestShadowState_GetLogsExpectError_LengthDifferent(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	pdb := state.NewMockStateDB(ctrl)
 	sdb := state.NewMockStateDB(ctrl)
-	db := NewShadowProxy(pdb, sdb)
+	db := NewShadowProxy(pdb, sdb, false)
 	txHash := common.HexToHash("0x1")
 	blockHash := common.HexToHash("0x2")
 	log1 := &types.Log{}
@@ -671,7 +671,7 @@ func TestShadowState_GetLogsExpectError_BloomDifferent(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	pdb := state.NewMockStateDB(ctrl)
 	sdb := state.NewMockStateDB(ctrl)
-	db := NewShadowProxy(pdb, sdb)
+	db := NewShadowProxy(pdb, sdb, false)
 	txHash := common.HexToHash("0x1")
 	blockHash := common.HexToHash("0x2")
 	log1 := &types.Log{}
@@ -683,5 +683,54 @@ func TestShadowState_GetLogsExpectError_BloomDifferent(t *testing.T) {
 	db.GetLogs(txHash, blockHash)
 	if err := db.Error(); err == nil {
 		t.Fatal("Expect mismatched log values")
+	}
+}
+
+func TestShadowState_GetHash_SuccessWithValidate(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	pdb := state.NewMockStateDB(ctrl)
+	sdb := state.NewMockStateDB(ctrl)
+	db := NewShadowProxy(pdb, sdb, true)
+	expectedHash := common.HexToHash("0x1")
+
+	pdb.EXPECT().GetHash().Return(expectedHash)
+	sdb.EXPECT().GetHash().Return(expectedHash)
+
+	db.GetHash()
+	if err := db.Error(); err != nil {
+		t.Fatalf("Failed to execute GetHash; %v", err)
+	}
+}
+
+func TestShadowState_GetHash_SuccessWithoutValidate(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	pdb := state.NewMockStateDB(ctrl)
+	sdb := state.NewMockStateDB(ctrl)
+	db := NewShadowProxy(pdb, sdb, false)
+	primeHash := common.HexToHash("0x1")
+
+	// hash of shadow is not called
+	pdb.EXPECT().GetHash().Return(primeHash)
+
+	db.GetHash()
+	if err := db.Error(); err != nil {
+		t.Fatalf("Failed to execute GetHash; %v", err)
+	}
+}
+
+func TestShadowState_GetHash_FailWithValidate(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	pdb := state.NewMockStateDB(ctrl)
+	sdb := state.NewMockStateDB(ctrl)
+	db := NewShadowProxy(pdb, sdb, true)
+	primeHash := common.HexToHash("0x1")
+	shadowHash := common.HexToHash("0x2")
+
+	pdb.EXPECT().GetHash().Return(primeHash)
+	sdb.EXPECT().GetHash().Return(shadowHash)
+
+	db.GetHash()
+	if err := db.Error(); err == nil {
+		t.Fatal("Expect a mistach of state hashes")
 	}
 }

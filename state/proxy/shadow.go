@@ -18,13 +18,14 @@ import (
 // NewShadowProxy creates a StateDB instance bundling two other instances and running each
 // operation on both of them, cross checking results. If the results are not equal, an error
 // is logged and the result of the primary instance is returned.
-func NewShadowProxy(prime, shadow state.StateDB) state.StateDB {
+func NewShadowProxy(prime, shadow state.StateDB, compareStateHash bool) state.StateDB {
 	return &shadowStateDb{
 		shadowVmStateDb: shadowVmStateDb{
-			prime:     prime,
-			shadow:    shadow,
-			snapshots: []snapshotPair{},
-			err:       nil,
+			prime:            prime,
+			shadow:           shadow,
+			snapshots:        []snapshotPair{},
+			err:              nil,
+			compareStateHash: compareStateHash,
 		},
 		prime:  prime,
 		shadow: shadow,
@@ -32,11 +33,12 @@ func NewShadowProxy(prime, shadow state.StateDB) state.StateDB {
 }
 
 type shadowVmStateDb struct {
-	prime     state.VmStateDB
-	shadow    state.VmStateDB
-	snapshots []snapshotPair
-	err       error
-	log       logger.Logger
+	prime            state.VmStateDB
+	shadow           state.VmStateDB
+	snapshots        []snapshotPair
+	err              error
+	log              logger.Logger
+	compareStateHash bool
 }
 
 type shadowNonCommittableStateDb struct {
@@ -166,10 +168,16 @@ func (s *shadowStateDb) EndSyncPeriod() {
 }
 
 func (s *shadowStateDb) GetHash() common.Hash {
+	if s.compareStateHash {
+		return s.getHash("GetHash", func(s state.StateDB) common.Hash { return s.GetHash() })
+	}
 	return s.prime.GetHash()
 }
 
 func (s *shadowNonCommittableStateDb) GetHash() common.Hash {
+	if s.compareStateHash {
+		return s.getHash("GetHash", func(s state.NonCommittableStateDB) common.Hash { return s.GetHash() })
+	}
 	return s.prime.GetHash()
 }
 
@@ -458,6 +466,26 @@ func (s *shadowVmStateDb) getInt(opName string, op func(s state.VmStateDB) int, 
 }
 
 func (s *shadowVmStateDb) getUint64(opName string, op func(s state.VmStateDB) uint64, args ...any) uint64 {
+	resP := op(s.prime)
+	resS := op(s.shadow)
+	if resP != resS {
+		s.logIssue(opName, resP, resS, args)
+		s.err = fmt.Errorf("%v diverged from shadow DB.", getOpcodeString(opName, args))
+	}
+	return resP
+}
+
+func (s *shadowStateDb) getHash(opName string, op func(s state.StateDB) common.Hash, args ...any) common.Hash {
+	resP := op(s.prime)
+	resS := op(s.shadow)
+	if resP != resS {
+		s.logIssue(opName, resP, resS, args)
+		s.err = fmt.Errorf("%v diverged from shadow DB.", getOpcodeString(opName, args))
+	}
+	return resP
+}
+
+func (s *shadowNonCommittableStateDb) getHash(opName string, op func(s state.NonCommittableStateDB) common.Hash, args ...any) common.Hash {
 	resP := op(s.prime)
 	resS := op(s.shadow)
 	if resP != resS {

@@ -128,6 +128,10 @@ var RunTxGeneratorCmd = cli.Command{
 		&utils.ShadowDbImplementationFlag,
 		&utils.ShadowDbVariantFlag,
 
+		// RegisterRun
+		&utils.RegisterRunFlag,
+		&utils.OverwriteRunIdFlag,
+
 		// VM
 		&utils.VmImplementation,
 
