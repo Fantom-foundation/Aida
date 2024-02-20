@@ -285,6 +285,7 @@ func (rp *registerProgress) sqlite3(conn string) (string, string, string, func()
 				overallGasRate,
 			})
 
+			rp.log.Infof("RegisterProgress insert to db: %d-%d", rp.interval.Start(), rp.interval.End())
 			return values
 		}
 }
