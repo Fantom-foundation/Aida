@@ -58,7 +58,7 @@ func MakeRegisterProgress(cfg *utils.Config, reportFrequency int) executor.Exten
 		return extension.NilExtension[txcontext.TxContext]{}
 	}
 
-	if reportFrequency == 0 {
+	if reportFrequency <= 0 {
 		switch {
 		case cfg.CommandName == TxGeneratorCommandName && cfg.BlockLength != 0:
 			reportFrequency = int(math.Ceil(float64(50_000) / float64(cfg.BlockLength)))
