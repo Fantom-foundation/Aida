@@ -371,4 +371,3 @@ func TestRegisterProgress_ExtensionContinuesDespiteFetchEnvFailure(t *testing.T)
 		t.Fatalf("Error not from intended source: %v.", noBash)
 	}
 }
-
