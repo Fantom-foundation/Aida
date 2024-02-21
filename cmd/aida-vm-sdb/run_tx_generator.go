@@ -17,6 +17,10 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const (
+	TxGenerator_DefaultProgressReportFrequency = 100
+)
+
 // RunTxGenerator performs sequential block processing on a StateDb using transaction generator
 func RunTxGenerator(ctx *cli.Context) error {
 	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
@@ -44,11 +48,17 @@ func runTransactions(
 	processor executor.Processor[txcontext.TxContext],
 	extra []executor.Extension[txcontext.TxContext],
 ) error {
+
+	progressReportFrequency := DefaultProgressReportFrequency
+	if cfg.BlockLength <= 0 {
+		progressReportFrequency = int(math.Ceil(float64(50_000) / float64(cfg.BlockLength))
+	}
+
 	// order of extensionList has to be maintained
 	var extensionList = []executor.Extension[txcontext.TxContext]{
 		profiler.MakeVirtualMachineStatisticsPrinter[txcontext.TxContext](cfg),
 		statedb.MakeStateDbManager[txcontext.TxContext](cfg, stateDbPath),
-		register.MakeRegisterProgress(cfg, 0),
+		register.MakeRegisterProgress(cfg, progressReportFrequency),
 		// RegisterProgress should be the as top-most as possible on the list
 		// In this case, after StateDb is created.
 		// Any error that happen in extension above it will not be correctly recorded.

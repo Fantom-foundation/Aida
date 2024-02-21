@@ -16,6 +16,10 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+const (
+	Rpc_DefaultProgressReportFrequency = 100_000
+)
+
 func RunRpc(ctx *cli.Context) error {
 	cfg, err := utils.NewConfig(ctx, utils.BlockRangeArgs)
 	if err != nil {
@@ -61,8 +65,7 @@ func run(
 		// RegisterProgress should be the first on the list = last to receive PostRun.
 		// This is because it collects the error and records it externally.
 		// If not, error that happen afterwards (e.g. on top of) will not be correcly recorded.
-		register.MakeRegisterRequestProgress(cfg, 100_000),
-
+		register.MakeRegisterRequestProgress(cfg, Rpc_DefaultProgressReportFrequency),
 		profiler.MakeCpuProfiler[*rpc.RequestAndResults](cfg),
 		logger.MakeProgressLogger[*rpc.RequestAndResults](cfg, 15*time.Second),
 		logger.MakeErrorLogger[*rpc.RequestAndResults](cfg),
