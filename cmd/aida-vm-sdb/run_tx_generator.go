@@ -1,6 +1,7 @@
 package main
 
 import (
+	"math"
 	"time"
 
 	"github.com/Fantom-foundation/Aida/executor/extension/validator"
@@ -49,9 +50,9 @@ func runTransactions(
 	extra []executor.Extension[txcontext.TxContext],
 ) error {
 
-	progressReportFrequency := DefaultProgressReportFrequency
+	progressReportFrequency := TxGenerator_DefaultProgressReportFrequency
 	if cfg.BlockLength <= 0 {
-		progressReportFrequency = int(math.Ceil(float64(50_000) / float64(cfg.BlockLength))
+		progressReportFrequency = int(math.Ceil(float64(50_000) / float64(cfg.BlockLength)))
 	}
 
 	// order of extensionList has to be maintained
