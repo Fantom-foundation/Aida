@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	Substate_DefaultProgressReportFrequency = 100_000
+	SubstateDefaultProgressReportFrequency = 100_000
 )
 
 // RunSubstate performs sequential block processing on a StateDb
@@ -66,7 +66,7 @@ func runSubstates(
 	extensionList = append(extensionList, extra...)
 
 	extensionList = append(extensionList, []executor.Extension[txcontext.TxContext]{
-		register.MakeRegisterProgress(cfg, Substate_DefaultProgressReportFrequency),
+		register.MakeRegisterProgress(cfg, SubstateDefaultProgressReportFrequency),
 		// RegisterProgress should be the as top-most as possible on the list
 		// In this case, after StateDb is created.
 		// Any error that happen in extension above it will not be correctly recorded.

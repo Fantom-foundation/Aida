@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	TxGenerator_DefaultProgressReportFrequency = 100
+	TxGeneratorDefaultProgressReportFrequency = 100
 )
 
 // RunTxGenerator performs sequential block processing on a StateDb using transaction generator
@@ -50,8 +50,8 @@ func runTransactions(
 	extra []executor.Extension[txcontext.TxContext],
 ) error {
 
-	progressReportFrequency := TxGenerator_DefaultProgressReportFrequency
-	if cfg.BlockLength <= 0 {
+	progressReportFrequency := TxGeneratorDefaultProgressReportFrequency
+	if cfg.BlockLength > 0 {
 		progressReportFrequency = int(math.Ceil(float64(50_000) / float64(cfg.BlockLength)))
 	}
 

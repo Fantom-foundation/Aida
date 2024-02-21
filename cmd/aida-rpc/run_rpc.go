@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	Rpc_DefaultProgressReportFrequency = 100_000
+	RpcDefaultProgressReportFrequency = 100_000
 )
 
 func RunRpc(ctx *cli.Context) error {
@@ -65,7 +65,7 @@ func run(
 		// RegisterProgress should be the first on the list = last to receive PostRun.
 		// This is because it collects the error and records it externally.
 		// If not, error that happen afterwards (e.g. on top of) will not be correcly recorded.
-		register.MakeRegisterRequestProgress(cfg, Rpc_DefaultProgressReportFrequency),
+		register.MakeRegisterRequestProgress(cfg, RpcDefaultProgressReportFrequency),
 		profiler.MakeCpuProfiler[*rpc.RequestAndResults](cfg),
 		logger.MakeProgressLogger[*rpc.RequestAndResults](cfg, 15*time.Second),
 		logger.MakeErrorLogger[*rpc.RequestAndResults](cfg),
