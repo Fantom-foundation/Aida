@@ -20,9 +20,8 @@ import (
 type WhenToPrint int
 
 const (
-	OnPreBlock	WhenToPrint = iota
+	OnPreBlock WhenToPrint = iota
 	OnPreTransaction
-
 )
 
 const (
@@ -87,7 +86,7 @@ func MakeRegisterProgress(cfg *utils.Config, reportFrequency int) executor.Exten
 		cfg:      cfg,
 		log:      logger.NewLogger(cfg.LogLevel, "Register-Progress-Logger"),
 		interval: utils.NewInterval(cfg.First, cfg.Last, uint64(reportFrequency)),
-		when:	  when,
+		when:     when,
 		ps:       utils.NewPrinters(),
 		id:       MakeRunIdentity(time.Now().Unix(), cfg),
 	}
