@@ -17,6 +17,13 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
+type WhenToPrint int
+
+const (
+	OnPreBlock WhenToPrint = iota
+	OnPreTransaction
+)
+
 const (
 	ArchiveDbDirectoryName = "archive"
 
@@ -67,10 +74,19 @@ func MakeRegisterProgress(cfg *utils.Config, reportFrequency int) executor.Exten
 		}
 	}
 
+	var when WhenToPrint
+	switch {
+	case cfg.CommandName == TxGeneratorCommandName:
+		when = OnPreTransaction
+	default:
+		when = OnPreBlock
+	}
+
 	return &registerProgress{
 		cfg:      cfg,
 		log:      logger.NewLogger(cfg.LogLevel, "Register-Progress-Logger"),
 		interval: utils.NewInterval(cfg.First, cfg.Last, uint64(reportFrequency)),
+		when:     when,
 		ps:       utils.NewPrinters(),
 		id:       MakeRunIdentity(time.Now().Unix(), cfg),
 	}
@@ -86,6 +102,7 @@ type registerProgress struct {
 	log  logger.Logger
 	lock sync.Mutex
 	ps   *utils.Printers
+	when WhenToPrint
 
 	// Where am I?
 	interval           *utils.Interval
@@ -164,17 +181,36 @@ func (rp *registerProgress) PreRun(_ executor.State[txcontext.TxContext], ctx *e
 	return nil
 }
 
-// PreBlock sends the state to the report goroutine.
-// We only care about total number of transactions we can do this here rather in Pre/PostTransaction.
-//
-// This is done in PreBlock because some blocks do not have txcontext.
 func (rp *registerProgress) PreBlock(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
-	if uint64(state.Block) > rp.interval.End() {
-		rp.memory = ctx.State.GetMemoryUsage()
-		rp.ps.Print()
-		rp.Reset()
-		rp.interval.Next()
+	if rp.when != OnPreBlock {
+		return nil
 	}
+
+	if uint64(state.Block) > rp.interval.End() {
+		return rp.printAndReset(ctx)
+	}
+
+	return nil
+}
+
+func (rp *registerProgress) PreTransaction(state executor.State[txcontext.TxContext], ctx *executor.Context) error {
+	if rp.when != OnPreTransaction {
+		return nil
+	}
+
+	if uint64(state.Block) > rp.interval.End() {
+		return rp.printAndReset(ctx)
+	}
+
+	return nil
+}
+
+// printAndReset sends the state to the report goroutine and reset current-interval tracker.
+func (rp *registerProgress) printAndReset(ctx *executor.Context) error {
+	rp.memory = ctx.State.GetMemoryUsage()
+	rp.ps.Print()
+	rp.Reset()
+	rp.interval.Next()
 
 	return nil
 }
