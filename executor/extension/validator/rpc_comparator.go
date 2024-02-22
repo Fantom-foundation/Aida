@@ -102,14 +102,24 @@ func (c *rpcComparator) PostTransaction(state executor.State[*rpc.RequestAndResu
 
 	compareErr := compare(state)
 	if compareErr != nil {
-		// some records are recorded wrongly, for this case we resend the request and compare it again
+		// request method base 'call' cannot be resent, because we need timestamp of the block that executed
+		// this request. As of right now there we cannot get the timestamp, hence we skip these requests
+		if state.Data.Query.MethodBase == "call" {
+			// Only requests containing an error result are not being treated as data
+			// mismatch, request with a non-error result are recorded correctly
+			if state.Data.Error != nil {
+				return nil
+			} else {
+				return compareErr
+			}
+		}
+		// lot errors are recorded wrongly, for this case we resend the request and compare it again
 		if !state.Data.StateDB.IsRecovered {
 			c.log.Debugf("retrying %v request", state.Data.Query.Method)
 			c.numberOfRetriedRequests++
 			c.log.Debugf("current ration retried against total %v/%v", c.numberOfRetriedRequests, c.totalNumberOfRequests)
 			state.Data.StateDB.IsRecovered = true
-
-			if err := resendRequest(state); err != nil {
+			if err := c.resendRequest(state); err != nil {
 				return err
 			}
 			compareErr = compare(state)
@@ -162,13 +172,15 @@ func compare(state executor.State[*rpc.RequestAndResults]) *comparatorError {
 	return nil
 }
 
-func resendRequest(state executor.State[*rpc.RequestAndResults]) *comparatorError {
+func (c *rpcComparator) resendRequest(state executor.State[*rpc.RequestAndResults]) *comparatorError {
 	var payload []byte
 
 	if state.Data.Response != nil {
 		payload = state.Data.Response.Payload
+		c.log.Debugf("Previously recorded: %v", state.Data.Response.Result)
 	} else {
 		payload = state.Data.Error.Payload
+		c.log.Debugf("Previously recorded: %v", state.Data.Error.Error)
 	}
 
 	retriedReq := utils.JsonRPCRequest{
@@ -178,9 +190,18 @@ func resendRequest(state executor.State[*rpc.RequestAndResults]) *comparatorErro
 		JSONRPC: "2.0",
 	}
 
-	// append correct block number
-	retriedReq.Params[len(retriedReq.Params)-1] = hexutil.EncodeUint64(uint64(state.Data.RequestedBlock))
+	c.log.Debugf("Previous params: %v", state.Data.Query.Params)
 
+	b := hexutil.EncodeUint64(uint64(state.Data.RequestedBlock))
+	l := len(retriedReq.Params)
+	// this is a corner case where request does not have block number
+	if l <= 1 {
+		retriedReq.Params = append(retriedReq.Params, b)
+	} else {
+		retriedReq.Params[len(retriedReq.Params)-1] = b
+	}
+
+	c.log.Debugf("Retried params: %v", retriedReq.Params)
 	// we only record on mainnet, so we can safely put mainnet chainID constant here
 	m, err := utils.SendRpcRequest(retriedReq, utils.MainnetChainID)
 	if err != nil {
@@ -199,12 +220,11 @@ func resendRequest(state executor.State[*rpc.RequestAndResults]) *comparatorErro
 		}
 
 		state.Data.Response = &rpc.Response{
-			Version:   "2.0",
-			ID:        json.RawMessage{1},
-			BlockID:   uint64(state.Data.RequestedBlock),
-			Timestamp: state.Data.RecordedTimestamp,
-			Result:    result,
-			Payload:   payload,
+			Version: "2.0",
+			ID:      json.RawMessage{1},
+			BlockID: uint64(state.Data.RequestedBlock),
+			Result:  result,
+			Payload: payload,
 		}
 	} else { // error result
 		resMap, ok := m["error"].(map[string]interface{})
@@ -222,10 +242,9 @@ func resendRequest(state executor.State[*rpc.RequestAndResults]) *comparatorErro
 		}
 
 		state.Data.Error = &rpc.ErrorResponse{
-			Version:   "2.0",
-			Id:        json.RawMessage{1},
-			BlockID:   uint64(state.Data.RequestedBlock),
-			Timestamp: state.Data.RecordedTimestamp,
+			Version: "2.0",
+			Id:      json.RawMessage{1},
+			BlockID: uint64(state.Data.RequestedBlock),
 			Error: rpc.ErrorMessage{
 				Code:    code,
 				Message: resMap["message"].(string),

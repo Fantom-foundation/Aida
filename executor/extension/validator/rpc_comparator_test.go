@@ -14,7 +14,6 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/status-im/keycard-go/hexutils"
-	"go.uber.org/mock/gomock"
 )
 
 const (
@@ -39,9 +38,6 @@ func TestRPCComparator_RPCComparatorIsNotCreatedIfNotEnabled(t *testing.T) {
 }
 
 func TestRPCComparator_PostTransactionDoesNotFailIfContinueOnFailureIsTrue(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	log := logger.NewMockLogger(ctrl)
-
 	cfg := &utils.Config{}
 	cfg.Validate = true
 	cfg.ContinueOnFailure = true
@@ -52,13 +48,13 @@ func TestRPCComparator_PostTransactionDoesNotFailIfContinueOnFailureIsTrue(t *te
 	data := &rpc.RequestAndResults{
 		Query: &rpc.Body{
 			MethodBase: "getBalance",
+			Method:     "eth_getBalance",
 		},
 		Response: &rpc.Response{
 			Result: rec,
 		},
 		StateDB: &rpc.StateDBData{
-			Result:      bigRes,
-			IsRecovered: true,
+			Result: bigRes,
 		},
 	}
 
@@ -66,7 +62,7 @@ func TestRPCComparator_PostTransactionDoesNotFailIfContinueOnFailureIsTrue(t *te
 		Data: data,
 	}
 
-	c := makeRPCComparator(cfg, log)
+	c := makeRPCComparator(cfg, logger.NewLogger("critical", "rpc-test"))
 
 	ctx := new(executor.Context)
 	ctx.ErrorInput = make(chan error, 10)
@@ -78,9 +74,6 @@ func TestRPCComparator_PostTransactionDoesNotFailIfContinueOnFailureIsTrue(t *te
 }
 
 func TestRPCComparator_PostTransactionFailsWhenContinueOnFailureIsNotEnabled(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	log := logger.NewMockLogger(ctrl)
-
 	cfg := &utils.Config{}
 	cfg.Validate = true
 	cfg.ContinueOnFailure = false
@@ -105,7 +98,7 @@ func TestRPCComparator_PostTransactionFailsWhenContinueOnFailureIsNotEnabled(t *
 		Data: data,
 	}
 
-	c := makeRPCComparator(cfg, log)
+	c := makeRPCComparator(cfg, logger.NewLogger("critical", "rpc-test"))
 	err := c.PostTransaction(s, nil)
 	if err == nil {
 		t.Errorf("post transaction must return error; %v", err)
@@ -541,95 +534,4 @@ func Test_compareStorageAtErrorNoMatchingResult(t *testing.T) {
 		t.Errorf("error must be type 'noMatchingResult'; err: %v", err)
 	}
 
-}
-func TestRetryRequest_WorksWithErrorReq(t *testing.T) {
-	data := &rpc.RequestAndResults{
-		RequestedBlock:    62815228,
-		RecordedTimestamp: 99999999,
-		Query: &rpc.Body{
-			Version: "2.0",
-			ID:      json.RawMessage{1},
-			Method:  "eth_call",
-			Params: []any{
-				map[string]interface{}{
-					"data": "0x19cba6b4",
-					"from": "0x9dfaad69e2a344edda14b5e63edc47ee2357400d",
-					"to":   "0x94d9e02d115646dfc407abde75fa45256d66e0a43", // address is too long, hence error is expected
-				},
-				"0x0",
-			},
-			Namespace:  "eth",
-			MethodBase: "call",
-		},
-		Response: &rpc.Response{
-			Version:   "2.0",
-			ID:        json.RawMessage{1},
-			BlockID:   62815228,
-			Timestamp: 99999999,
-		},
-	}
-	st := executor.State[*rpc.RequestAndResults]{Block: 1, Transaction: 1, Data: data}
-	if err := resendRequest(st); err != nil {
-		t.Fatalf("unexpected err; %v", err)
-	}
-
-	wantedBlock := "0x3be7bfc"
-
-	if strings.Compare(data.Query.Params[1].(string), wantedBlock) != 0 {
-		t.Fatalf("different block number\ngot: %v\nwant: %v", data.Query.Params[1], wantedBlock)
-	}
-
-	if data.Error == nil {
-		t.Fatal("error is expected")
-	}
-
-	if data.Response != nil {
-		t.Fatal("response must be nil")
-	}
-}
-
-func TestRetryRequest_WorksWithValidReq(t *testing.T) {
-	data := &rpc.RequestAndResults{
-		RequestedBlock:    62815228,
-		RecordedTimestamp: 99999999,
-		Query: &rpc.Body{
-			Version: "2.0",
-			ID:      json.RawMessage{1},
-			Method:  "eth_call",
-			Params: []any{
-				map[string]interface{}{
-					"data": "0x19cba6b4",
-					"from": "0x9dfaad69e2a344edda14b5e63edc47ee2357400d",
-					"to":   "0x94d9e02d115646dfc407abde75fa45256d66e043",
-				},
-				"0x0",
-			},
-			Namespace:  "eth",
-			MethodBase: "call",
-		},
-		Response: &rpc.Response{
-			Version:   "2.0",
-			ID:        json.RawMessage{1},
-			BlockID:   62815228,
-			Timestamp: 99999999,
-		},
-	}
-	st := executor.State[*rpc.RequestAndResults]{Block: 1, Transaction: 1, Data: data}
-	if err := resendRequest(st); err != nil {
-		t.Fatalf("unexpected err; %v", err)
-	}
-
-	wantedBlock := "0x3be7bfc"
-
-	if strings.Compare(data.Query.Params[1].(string), wantedBlock) != 0 {
-		t.Fatalf("different block number\ngot: %v\nwant: %v", data.Query.Params[1], wantedBlock)
-	}
-
-	if data.Error != nil {
-		t.Fatal("error must be nil")
-	}
-
-	if data.Response == nil {
-		t.Fatal("response is expected")
-	}
 }
