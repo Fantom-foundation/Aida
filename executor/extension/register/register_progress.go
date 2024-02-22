@@ -59,17 +59,9 @@ const (
 // MakeRegisterProgress creates an extention that
 //  1. Track Progress e.g. ProgressTracker
 //  2. Register the intermediate results to an external service (sqlite3 db)
-func MakeRegisterProgress(cfg *utils.Config, reportFrequency int) executor.Extension[txcontext.TxContext] {
+func MakeRegisterProgress(cfg *utils.Config, reportFrequency int, when WhenToPrint) executor.Extension[txcontext.TxContext] {
 	if cfg.RegisterRun == "" {
 		return extension.NilExtension[txcontext.TxContext]{}
-	}
-
-	var when WhenToPrint
-	switch {
-	case cfg.CommandName == TxGeneratorCommandName:
-		when = OnPreTransaction
-	default:
-		when = OnPreBlock
 	}
 
 	return &registerProgress{

@@ -38,7 +38,7 @@ const (
 
 // MakeRegisterRequestProgress creates a blockProgressTracker that depends on the
 // PostBlock event and is only useful as part of a sequential evaluation.
-func MakeRegisterRequestProgress(cfg *utils.Config, reportFrequency int) executor.Extension[*rpc.RequestAndResults] {
+func MakeRegisterRequestProgress(cfg *utils.Config, reportFrequency int, when WhenToPrint) executor.Extension[*rpc.RequestAndResults] {
 	// As temporary measure: issue a warning to user if both RegisterRun and TrackProgress is on.
 	log := logger.NewLogger(cfg.LogLevel, "RegisterRequestProgress")
 	if cfg.RegisterRun != "" && cfg.TrackProgress {
@@ -53,15 +53,16 @@ func MakeRegisterRequestProgress(cfg *utils.Config, reportFrequency int) executo
 		reportFrequency = RegisterProgressDefaultReportFrequency
 	}
 
-	return makeRegisterRequestProgress(cfg, reportFrequency, log)
+	return makeRegisterRequestProgress(cfg, reportFrequency, when, log)
 }
 
-func makeRegisterRequestProgress(cfg *utils.Config, reportFrequency int, log logger.Logger) *registerRequestProgress {
+func makeRegisterRequestProgress(cfg *utils.Config, reportFrequency int, when WhenToPrint, log logger.Logger) *registerRequestProgress {
 
 	return &registerRequestProgress{
 		cfg:             cfg,
 		log:             log,
 		reportFrequency: reportFrequency,
+		when:            when,
 		ps:              utils.NewPrinters(),
 		id:              MakeRunIdentity(time.Now().Unix(), cfg),
 	}
@@ -76,6 +77,7 @@ type registerRequestProgress struct {
 	log  logger.Logger
 	lock sync.Mutex
 	ps   *utils.Printers
+	when WhenToPrint
 
 	// Where am I?
 	lastReportedRequestCount uint64

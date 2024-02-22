@@ -65,7 +65,10 @@ func run(
 		// RegisterProgress should be the first on the list = last to receive PostRun.
 		// This is because it collects the error and records it externally.
 		// If not, error that happen afterwards (e.g. on top of) will not be correcly recorded.
-		register.MakeRegisterRequestProgress(cfg, RpcDefaultProgressReportFrequency),
+		register.MakeRegisterRequestProgress(cfg,
+			RpcDefaultProgressReportFrequency,
+			register.OnPreBlock,
+		),
 		profiler.MakeCpuProfiler[*rpc.RequestAndResults](cfg),
 		logger.MakeProgressLogger[*rpc.RequestAndResults](cfg, 15*time.Second),
 		logger.MakeErrorLogger[*rpc.RequestAndResults](cfg),

@@ -59,7 +59,10 @@ func runTransactions(
 	var extensionList = []executor.Extension[txcontext.TxContext]{
 		profiler.MakeVirtualMachineStatisticsPrinter[txcontext.TxContext](cfg),
 		statedb.MakeStateDbManager[txcontext.TxContext](cfg, stateDbPath),
-		register.MakeRegisterProgress(cfg, progressReportFrequency),
+		register.MakeRegisterProgress(cfg,
+			progressReportFrequency,
+			register.OnPreTransaction,
+		),
 		// RegisterProgress should be the as top-most as possible on the list
 		// In this case, after StateDb is created.
 		// Any error that happen in extension above it will not be correctly recorded.
