@@ -26,10 +26,6 @@ const (
 const (
 	ArchiveDbDirectoryName = "archive"
 
-	TxGeneratorCommandName = "tx-generator"
-
-	RegisterProgressDefaultReportFrequency = 100_000 // in blocks
-
 	RegisterProgressCreateTableIfNotExist = `
 		CREATE TABLE IF NOT EXISTS stats (
   			start INTEGER NOT NULL,

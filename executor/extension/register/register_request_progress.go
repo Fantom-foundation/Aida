@@ -49,10 +49,6 @@ func MakeRegisterRequestProgress(cfg *utils.Config, reportFrequency int, when Wh
 		return extension.NilExtension[*rpc.RequestAndResults]{}
 	}
 
-	if reportFrequency == 0 {
-		reportFrequency = RegisterProgressDefaultReportFrequency
-	}
-
 	return makeRegisterRequestProgress(cfg, reportFrequency, when, log)
 }
 
