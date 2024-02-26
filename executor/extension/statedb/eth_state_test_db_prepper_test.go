@@ -11,7 +11,7 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
-func Test_ethStateTestDbPrepper_PreTransactionPrepairsAStateDB(t *testing.T) {
+func Test_ethStateTestDbPrepper_PreTransactionPreparesAStateDB(t *testing.T) {
 	cfg := &utils.Config{
 		DbImpl:   "geth",
 		ChainID:  1,
