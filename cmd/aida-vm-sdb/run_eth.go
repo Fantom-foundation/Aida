@@ -92,7 +92,7 @@ func runEth(
 			statedb.MakeEthStateTestDbPrepper(cfg),
 			statedb.MakeLiveDbBlockChecker[txcontext.TxContext](cfg),
 			logger.MakeDbLogger[txcontext.TxContext](cfg),
-			statedb.MakeEthStateTestDbPrimer(cfg),
+			statedb.MakeEthStateTestDbPrimer(cfg), // < to be placed after the DbLogger to log priming operations
 		)
 	}
 
