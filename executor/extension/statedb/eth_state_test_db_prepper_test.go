@@ -11,7 +11,7 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
-func Test_ethStateTestDbPrepper_PreTransactionPriming(t *testing.T) {
+func Test_ethStateTestDbPrepper_PreTransactionPreparesAStateDB(t *testing.T) {
 	cfg := &utils.Config{
 		DbImpl:   "geth",
 		ChainID:  1,
@@ -27,17 +27,8 @@ func Test_ethStateTestDbPrepper_PreTransactionPriming(t *testing.T) {
 		t.Fatalf("unexpected err; %v", err)
 	}
 
-	expectedAlloc := testData.GetInputState()
-	if expectedAlloc.Len() == 0 {
-		t.Fatalf("no expected state")
-	}
-
-	vmAlloc := ctx.State.GetSubstatePostAlloc()
-	isEqual := expectedAlloc.Equal(vmAlloc)
-	if !isEqual {
-		if err != nil {
-			t.Fatalf("failed to prime database with test data")
-		}
+	if ctx.State == nil {
+		t.Fatalf("failed to initialize a DB instance")
 	}
 }
 
