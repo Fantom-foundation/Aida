@@ -10,15 +10,16 @@ import (
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 )
+
 func Test_ethStateTestDbPrepper_PreBlockPreparesAStateDB(t *testing.T) {
 	cfg := &utils.Config{
 		DbImpl:   "geth",
 		ChainID:  1,
 		LogLevel: "critical",
 	}
-	ext := ethStateTestDbPrepper{cfg: cfg, log: logger.NewLogger(cfg.LogLevel, "EthStatePrepper")}
+	ext := makeEthTestDbPrepper(logger.NewLogger(cfg.LogLevel, "EthStatePrepper"), cfg)
 
-	testData := ethtest.CreateTestData(t)
+	testData := statetest.CreateTestData(t)
 	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: testData}
 	ctx := &executor.Context{}
 	err := ext.PreBlock(st, ctx)
@@ -37,7 +38,7 @@ func Test_ethStateTestDbPrepper_PostBlockDeletesDatabase(t *testing.T) {
 		ChainID:  1,
 		LogLevel: "critical",
 	}
-	ext := ethTestDbPrepper{cfg: cfg, log: logger.NewLogger(cfg.LogLevel, "EthStatePrepper")}
+	ext := makeEthTestDbPrepper(logger.NewLogger(cfg.LogLevel, "EthStatePrepper"), cfg)
 
 	testData := statetest.CreateTestData(t)
 	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: testData}
