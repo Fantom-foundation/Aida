@@ -79,9 +79,18 @@ func TestRPCRequestProvider_NilRequestDoesNotGetToConsumer(t *testing.T) {
 		i.EXPECT().Close(),
 	)
 
-	if err := provider.Run(10, 11, toRPCConsumer(consumer)); err != nil {
-		t.Fatalf("failed to iterate through requests: %v", err)
+	err := provider.Run(10, 11, toRPCConsumer(consumer))
+	if err == nil {
+		t.Fatal("provider must return error")
 	}
+
+	got := err.Error()
+	want := "iterator returned nil request"
+
+	if strings.Compare(got, want) != 0 {
+		t.Fatalf("unexpected error\ngot: %v\nwant:%v", got, want)
+	}
+
 }
 
 func TestRPCRequestProvider_ErrorReturnedByIteratorEndsTheApp(t *testing.T) {
@@ -137,35 +146,6 @@ func TestRPCRequestProvider_GetLogMethodDoesNotEndIteration(t *testing.T) {
 	}
 }
 
-func TestRPCRequestProvider_PendingBlocksSkipValidation(t *testing.T) {
-	ctrl := gomock.NewController(t)
-	consumer := NewMockRPCReqConsumer(ctrl)
-	i := rpc.NewMockIterator(ctrl)
-
-	cfg := &utils.Config{}
-
-	provider := openRpcRecording(i, cfg, nil)
-
-	defer provider.Close()
-
-	gomock.InOrder(
-		i.EXPECT().Next().Return(true),
-		i.EXPECT().Error().Return(nil),
-		i.EXPECT().Value().Return(pendingReq),
-		consumer.EXPECT().Consume(10, 0, pendingReq),
-		i.EXPECT().Next().Return(false),
-		i.EXPECT().Close(),
-	)
-
-	if err := provider.Run(10, 11, toRPCConsumer(consumer)); err != nil {
-		t.Fatal("test cannot fail")
-	}
-
-	if !pendingReq.SkipValidation {
-		t.Fatal("this request must be marked to skip validation")
-	}
-}
-
 var validResp = &rpc.RequestAndResults{
 	Query: &rpc.Body{},
 	Response: &rpc.Response{
@@ -214,18 +194,4 @@ var logResp = &rpc.RequestAndResults{
 	Error:       nil,
 	ParamsRaw:   nil,
 	ResponseRaw: nil,
-}
-
-var pendingReq = &rpc.RequestAndResults{
-	RequestedBlock: 10,
-	Query: &rpc.Body{
-		Params: []interface{}{"test", "pending"},
-	},
-	Response: &rpc.Response{
-		Version:   "2.0",
-		ID:        json.RawMessage{1},
-		BlockID:   10,
-		Timestamp: 10,
-	},
-	SkipValidation: false,
 }

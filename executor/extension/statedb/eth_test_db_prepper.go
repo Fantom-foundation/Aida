@@ -41,13 +41,6 @@ func (e ethTestDbPrepper) PreBlock(st executor.State[txcontext.TxContext], ctx *
 		return fmt.Errorf("failed to prepare statedb; %v", err)
 	}
 
-	primeCtx := utils.NewPrimeContext(e.cfg, ctx.State, e.log)
-
-	err = primeCtx.PrimeStateDB(st.Data.GetInputState(), ctx.State)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 

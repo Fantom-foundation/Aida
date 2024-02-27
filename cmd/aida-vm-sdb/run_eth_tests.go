@@ -53,6 +53,7 @@ var RunEthTestsCmd = cli.Command{
 		&utils.ChainIDFlag,
 		&utils.ContinueOnFailureFlag,
 		&utils.ValidateFlag,
+		&utils.ValidateStateHashesFlag,
 		&log.LogLevelFlag,
 		&utils.ErrorLoggingFlag,
 		&utils.EthTestTypeFlag,
@@ -103,11 +104,13 @@ func runEth(
 			statedb.MakeEthTestDbPrepper(cfg),
 			statedb.MakeLiveDbBlockChecker[txcontext.TxContext](cfg),
 			logger.MakeDbLogger[txcontext.TxContext](cfg),
+			statedb.MakeEthStateTestDbPrimer(cfg), // < to be placed after the DbLogger to log priming operations
 		)
 	}
 
 	extensionList = append(
 		extensionList,
+		logger.MakeEthStateTestLogger(cfg),
 		validator.MakeEthStateTestValidator(cfg),
 		validator.MakeEthBlockTestValidator(cfg),
 		statedb.MakeBlockEventEmitter[txcontext.TxContext](),

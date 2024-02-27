@@ -31,11 +31,11 @@ func Execute(block uint64, rec *RequestAndResults, archive state.NonCommittableS
 		return executeGetTransactionCount(rec.Query.Params[0], archive)
 
 	case "call":
-		if rec.RecordedTimestamp == 0 {
+		if rec.Timestamp == 0 {
 			return nil
 		}
 
-		evm := newEvmExecutor(block, archive, cfg, rec.Query.Params[0].(map[string]interface{}), rec.RecordedTimestamp)
+		evm := newEvmExecutor(block, archive, cfg, rec.Query.Params[0].(map[string]interface{}), rec.Timestamp)
 
 		// calls to this contract are excluded for now,
 		// this contract causes issues in validation

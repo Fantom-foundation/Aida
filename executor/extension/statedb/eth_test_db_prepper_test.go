@@ -10,16 +10,15 @@ import (
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 )
-
-func Test_ethStateTestDbPrepper_PreBlockPrimes(t *testing.T) {
+func Test_ethStateTestDbPrepper_PreBlockPreparesAStateDB(t *testing.T) {
 	cfg := &utils.Config{
 		DbImpl:   "geth",
 		ChainID:  1,
 		LogLevel: "critical",
 	}
-	ext := ethTestDbPrepper{cfg: cfg, log: logger.NewLogger(cfg.LogLevel, "EthStatePrepper")}
+	ext := ethStateTestDbPrepper{cfg: cfg, log: logger.NewLogger(cfg.LogLevel, "EthStatePrepper")}
 
-	testData := statetest.CreateTestData(t)
+	testData := ethtest.CreateTestData(t)
 	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: testData}
 	ctx := &executor.Context{}
 	err := ext.PreBlock(st, ctx)
@@ -27,17 +26,8 @@ func Test_ethStateTestDbPrepper_PreBlockPrimes(t *testing.T) {
 		t.Fatalf("unexpected err; %v", err)
 	}
 
-	expectedAlloc := testData.GetInputState()
-	if expectedAlloc.Len() == 0 {
-		t.Fatalf("no expected state")
-	}
-
-	vmAlloc := ctx.State.GetSubstatePostAlloc()
-	isEqual := expectedAlloc.Equal(vmAlloc)
-	if !isEqual {
-		if err != nil {
-			t.Fatalf("failed to prime database with test data\ngot: %v\nwant: %v", vmAlloc.String(), expectedAlloc.String())
-		}
+	if ctx.State == nil {
+		t.Fatalf("failed to initialize a DB instance")
 	}
 }
 
