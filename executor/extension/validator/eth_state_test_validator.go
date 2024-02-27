@@ -3,7 +3,7 @@ package validator
 import (
 	"fmt"
 
-	"github.com/Fantom-foundation/Aida/ethtest"
+	statetest "github.com/Fantom-foundation/Aida/ethtest/statetest"
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
@@ -12,10 +12,11 @@ import (
 )
 
 func MakeEthStateTestValidator(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
-	if !cfg.Validate {
-		return extension.NilExtension[txcontext.TxContext]{}
+	// only allow this Extension for a specific type of eth tests
+	if cfg.Validate && cfg.EthTestType == utils.EthStateTests {
+		return makeEthStateTestValidator(cfg, logger.NewLogger(cfg.LogLevel, "EthStateTestValidator"))
 	}
-	return makeEthStateTestValidator(cfg, logger.NewLogger(cfg.LogLevel, "EthStateTestValidator"))
+	return extension.NilExtension[txcontext.TxContext]{}
 }
 
 func makeEthStateTestValidator(cfg *utils.Config, log logger.Logger) executor.Extension[txcontext.TxContext] {
@@ -32,7 +33,7 @@ type ethStateTestValidator struct {
 	overall, passed int
 }
 
-func (e *ethStateTestValidator) PreTransaction(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
+func (e *ethStateTestValidator) PreBlock(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	err := validateWorldState(e.cfg, ctx.State, s.Data.GetInputState(), e.log)
 	if err != nil {
 		return fmt.Errorf("pre alloc validation failed; %v", err)
@@ -41,12 +42,12 @@ func (e *ethStateTestValidator) PreTransaction(s executor.State[txcontext.TxCont
 	return nil
 }
 
-func (e *ethStateTestValidator) PostTransaction(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
+func (e *ethStateTestValidator) PostBlock(s executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	want := s.Data.GetStateHash()
 	got := ctx.State.GetHash()
 
 	// cast state.Data to stJSON
-	c := s.Data.(*ethtest.StJSON)
+	c := s.Data.(*statetest.StJSON)
 
 	if got != want {
 		err := fmt.Errorf("%v - (%v) FAIL\ndifferent hashes\ngot: %v\nwant:%v", c.TestLabel, c.UsedNetwork, got.Hex(), want.Hex())

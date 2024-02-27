@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/Fantom-foundation/Aida/ethtest"
+	statetest "github.com/Fantom-foundation/Aida/ethtest/statetest"
 	"github.com/Fantom-foundation/Aida/utils"
 	"go.uber.org/mock/gomock"
 )
@@ -15,10 +15,11 @@ func Test_ethTestProvider_Run(t *testing.T) {
 	pathFile := createTestDataFile(t)
 
 	cfg := &utils.Config{
-		ArgPath: pathFile,
+		ArgPath:     pathFile,
+		EthTestType: utils.EthStateTests,
 	}
 
-	provider := NewEthStateTestProvider(cfg)
+	provider := NewEthTestProvider(cfg)
 
 	ctrl := gomock.NewController(t)
 
@@ -37,7 +38,7 @@ func Test_ethTestProvider_Run(t *testing.T) {
 func createTestDataFile(t *testing.T) string {
 	path := t.TempDir()
 	pathFile := path + "/test.json"
-	stData := ethtest.CreateTestData(t)
+	stData := statetest.CreateTestData(t)
 
 	jsonData, err := json.Marshal(stData)
 	if err != nil {

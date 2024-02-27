@@ -1,9 +1,10 @@
-package ethtest
+package statetest
 
 import (
 	"math/big"
 	"strings"
 
+	"github.com/Fantom-foundation/Aida/ethtest/util"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 	"github.com/ethereum/go-ethereum/common"
@@ -22,8 +23,12 @@ type StJSON struct {
 	Post        map[string][]stPostState `json:"post"`
 }
 
+func (s *StJSON) SetLabel(label string) {
+	s.TestLabel = label
+}
+
 func (s *StJSON) GetStateHash() common.Hash {
-	for _, n := range usableForks {
+	for _, n := range util.UsableForks {
 		if p, ok := s.Post[n]; ok {
 			return p[0].RootHash
 		}
@@ -51,7 +56,7 @@ func (s *StJSON) GetMessage() core.Message {
 	if baseFee == nil {
 		// ethereum uses `0x10` for genesis baseFee. Therefore, it defaults to
 		// parent - 2 : 0xa as the basefee for 'this' context.
-		baseFee = &BigInt{*big.NewInt(0x0a)}
+		baseFee = &util.BigInt{*big.NewInt(0x0a)}
 	}
 
 	msg, err := s.Tx.toMessage(s.getPostState(), baseFee)
@@ -86,7 +91,7 @@ func (s *StJSON) Divide(chainId utils.ChainID) (dividedTests []*StJSON) {
 	// each test contains multiple validation data for different forks.
 	// we create a test for each usable fork
 
-	for _, fork := range usableForks {
+	for _, fork := range util.UsableForks {
 		var test StJSON
 		if _, ok := s.Post[fork]; ok {
 			test = *s               // copy all the test data

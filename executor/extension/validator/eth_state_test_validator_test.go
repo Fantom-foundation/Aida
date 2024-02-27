@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Fantom-foundation/Aida/ethtest"
+	statetest "github.com/Fantom-foundation/Aida/ethtest/statetest"
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
@@ -15,7 +15,7 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func TestEthStatePrepper_PostTransactionLogsErrorAndDoesNotReturnIt(t *testing.T) {
+func TestEthStateTestValidator_PostTransactionLogsErrorAndDoesNotReturnIt(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.ContinueOnFailure = true
 
@@ -23,7 +23,7 @@ func TestEthStatePrepper_PostTransactionLogsErrorAndDoesNotReturnIt(t *testing.T
 	log := logger.NewMockLogger(ctrl)
 	db := state.NewMockStateDB(ctrl)
 
-	data := ethtest.CreateTestData(t)
+	data := statetest.CreateTestData(t)
 	ctx := new(executor.Context)
 	ctx.State = db
 	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: data}
@@ -40,13 +40,13 @@ func TestEthStatePrepper_PostTransactionLogsErrorAndDoesNotReturnIt(t *testing.T
 
 	ext := makeEthStateTestValidator(cfg, log)
 
-	err := ext.PostTransaction(st, ctx)
+	err := ext.PostBlock(st, ctx)
 	if err != nil {
 		t.Fatalf("post-transaction cannot return error; %v", err)
 	}
 }
 
-func TestEthStatePrepper_PostTransactionLogsPass(t *testing.T) {
+func TestEthStateTestValidator_PostTransactionLogsPass(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.ContinueOnFailure = false
 
@@ -54,7 +54,7 @@ func TestEthStatePrepper_PostTransactionLogsPass(t *testing.T) {
 	log := logger.NewMockLogger(ctrl)
 	db := state.NewMockStateDB(ctrl)
 
-	data := ethtest.CreateTestData(t)
+	data := statetest.CreateTestData(t)
 	ctx := new(executor.Context)
 	ctx.State = db
 	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: data}
@@ -68,13 +68,13 @@ func TestEthStatePrepper_PostTransactionLogsPass(t *testing.T) {
 
 	ext := makeEthStateTestValidator(cfg, log)
 
-	err := ext.PostTransaction(st, ctx)
+	err := ext.PostBlock(st, ctx)
 	if err != nil {
 		t.Fatalf("post-transaction cannot return error; %v", err)
 	}
 }
 
-func TestEthStatePrepper_PostTransactionReturnsError(t *testing.T) {
+func TestEthStateTestValidator_PostTransactionReturnsError(t *testing.T) {
 	cfg := &utils.Config{}
 	cfg.ContinueOnFailure = false
 
@@ -82,7 +82,7 @@ func TestEthStatePrepper_PostTransactionReturnsError(t *testing.T) {
 	log := logger.NewMockLogger(ctrl)
 	db := state.NewMockStateDB(ctrl)
 
-	data := ethtest.CreateTestData(t)
+	data := statetest.CreateTestData(t)
 	ctx := new(executor.Context)
 	ctx.State = db
 	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: data}
@@ -94,7 +94,7 @@ func TestEthStatePrepper_PostTransactionReturnsError(t *testing.T) {
 
 	ext := makeEthStateTestValidator(cfg, log)
 
-	err := ext.PostTransaction(st, ctx)
+	err := ext.PostBlock(st, ctx)
 	if err == nil {
 		t.Fatalf("post-transaction must return error; %v", err)
 	}

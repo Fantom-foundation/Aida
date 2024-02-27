@@ -11,24 +11,24 @@ import (
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
-func MakeEthStateTestDbPrepper(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
-	return makeEthStateTestDbPrepper(logger.NewLogger(cfg.LogLevel, "EthStatePrepper"), cfg)
+func MakeEthTestDbPrepper(cfg *utils.Config) executor.Extension[txcontext.TxContext] {
+	return makeEthTestDbPrepper(logger.NewLogger(cfg.LogLevel, "EthStatePrepper"), cfg)
 }
 
-func makeEthStateTestDbPrepper(log logger.Logger, cfg *utils.Config) *ethStateTestDbPrepper {
-	return &ethStateTestDbPrepper{
+func makeEthTestDbPrepper(log logger.Logger, cfg *utils.Config) *ethTestDbPrepper {
+	return &ethTestDbPrepper{
 		cfg: cfg,
 		log: log,
 	}
 }
 
-type ethStateTestDbPrepper struct {
+type ethTestDbPrepper struct {
 	extension.NilExtension[txcontext.TxContext]
 	cfg *utils.Config
 	log logger.Logger
 }
 
-func (e ethStateTestDbPrepper) PreTransaction(st executor.State[txcontext.TxContext], ctx *executor.Context) error {
+func (e ethTestDbPrepper) PreBlock(st executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	var err error
 	cfg := e.cfg
 	// We reduce the node cache size to be used by Carmen to 1 MB
@@ -44,12 +44,13 @@ func (e ethStateTestDbPrepper) PreTransaction(st executor.State[txcontext.TxCont
 	return nil
 }
 
-func (e ethStateTestDbPrepper) PostTransaction(_ executor.State[txcontext.TxContext], ctx *executor.Context) error {
+func (e ethTestDbPrepper) PostBlock(_ executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	if ctx.State != nil {
 		err := ctx.State.Close()
 		if err != nil {
 			return fmt.Errorf("cannot close db %v; %v", ctx.StateDbPath, err)
 		}
+		ctx.State = nil
 	}
 
 	err := os.RemoveAll(ctx.StateDbPath)

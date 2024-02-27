@@ -1,12 +1,13 @@
 package executor
 
 import (
-	statetest "github.com/Fantom-foundation/Aida/ethtest"
+	"github.com/Fantom-foundation/Aida/ethtest"
+	blocktest "github.com/Fantom-foundation/Aida/ethtest/blockchaintest"
 	"github.com/Fantom-foundation/Aida/txcontext"
 	"github.com/Fantom-foundation/Aida/utils"
 )
 
-func NewEthStateTestProvider(cfg *utils.Config) Provider[txcontext.TxContext] {
+func NewEthTestProvider(cfg *utils.Config) Provider[txcontext.TxContext] {
 	return ethTestProvider{cfg}
 }
 
@@ -15,21 +16,11 @@ type ethTestProvider struct {
 }
 
 func (e ethTestProvider) Run(_ int, _ int, consumer Consumer[txcontext.TxContext]) error {
-	b, err := statetest.OpenStateTests(e.cfg.ArgPath)
-	if err != nil {
-		return err
-	}
-
-	// iterate all state json files
-	for _, t := range b {
-		// divide them by fork
-		for i, dt := range t.Divide(e.cfg.ChainID) {
-			err = consumer(TransactionInfo[txcontext.TxContext]{
-				Block:       int(dt.Env.GetNumber()),
-				Transaction: i,
-				Data:        dt,
-			})
-		}
+	switch e.cfg.EthTestType {
+	case utils.EthStateTests:
+		return e.runStateTests(consumer)
+	case utils.EthBlockChainTests:
+		return e.runBlockChainTests(consumer)
 	}
 
 	return nil
@@ -37,4 +28,57 @@ func (e ethTestProvider) Run(_ int, _ int, consumer Consumer[txcontext.TxContext
 
 func (e ethTestProvider) Close() {
 	// ignored
+}
+
+func (e ethTestProvider) runStateTests(consumer Consumer[txcontext.TxContext]) error {
+	s, err := ethtest.OpenStateTests(e.cfg.ArgPath)
+	if err != nil {
+		return err
+	}
+
+	// iterate all state json files
+	for _, t := range s {
+		// divide them by fork
+		for i, dt := range t.Divide(e.cfg.ChainID) {
+			err = consumer(TransactionInfo[txcontext.TxContext]{
+				Block:       int(dt.Env.GetNumber()),
+				Transaction: i,
+				Data:        dt,
+			})
+
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func (e ethTestProvider) runBlockChainTests(consumer Consumer[txcontext.TxContext]) error {
+	b, err := ethtest.OpenBlockChainTests(e.cfg.ArgPath)
+	if err != nil {
+		return err
+	}
+
+	var blkCount int
+	// iterate all tests
+	for _, bt := range b {
+		// iterate blocks inside tests
+		for _, blk := range bt.Blocks {
+			blkCount++
+			// iterate txs inside block
+			for txCount, tx := range blk.Transactions {
+				err = consumer(TransactionInfo[txcontext.TxContext]{
+					Block:       blkCount + 1, // zero block is genesis
+					Transaction: txCount,
+					Data:        blocktest.NewData(blk, tx, bt),
+				})
+
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+	return nil
 }

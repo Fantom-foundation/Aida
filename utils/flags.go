@@ -405,6 +405,11 @@ var (
 		Usage:    "db component to be used (\"all\", \"substate\", \"delete\", \"update\", \"state-hash\")",
 		Required: true,
 	}
+	EthTestTypeFlag = cli.StringFlag{
+		Name:  "eth-test-type",
+		Usage: "choose which eth test type (\"state\", \"block\")",
+		Value: "",
+	}
 	TxGeneratorTypeFlag = cli.StringSliceFlag{
 		Name:  "tx-type",
 		Usage: "list of tx generator application type (\"all\" | <\"erc20\", \"counter\", \"store\", \"uniswap\">)",

@@ -1,19 +1,20 @@
-package ethtest
+package statetest
 
 import (
 	"math/big"
 
+	"github.com/Fantom-foundation/Aida/ethtest/util"
 	"github.com/ethereum/go-ethereum/common"
 )
 
 type stEnv struct {
 	blockNumber uint64
 	Coinbase    common.Address `json:"currentCoinbase"   gencodec:"required"`
-	Difficulty  *BigInt        `json:"currentDifficulty" gencodec:"required"`
-	GasLimit    *BigInt        `json:"currentGasLimit"   gencodec:"required"`
-	Number      *BigInt        `json:"currentNumber"     gencodec:"required"`
-	Timestamp   *BigInt        `json:"currentTimestamp"  gencodec:"required"`
-	BaseFee     *BigInt        `json:"currentBaseFee"  gencodec:"optional"`
+	Difficulty  *util.BigInt   `json:"currentDifficulty" gencodec:"required"`
+	GasLimit    *util.BigInt   `json:"currentGasLimit"   gencodec:"required"`
+	Number      *util.BigInt   `json:"currentNumber"     gencodec:"required"`
+	Timestamp   *util.BigInt   `json:"currentTimestamp"  gencodec:"required"`
+	BaseFee     *util.BigInt   `json:"currentBaseFee"  gencodec:"optional"`
 }
 
 func (s *stEnv) GetCoinbase() common.Address {
