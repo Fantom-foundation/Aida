@@ -1,7 +1,7 @@
 package logger
 
 import (
-	"github.com/Fantom-foundation/Aida/ethtest/statetest"
+	"github.com/Fantom-foundation/Aida/ethtest"
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension"
 	"github.com/Fantom-foundation/Aida/logger"
@@ -31,7 +31,7 @@ func makeEthStateTestLogger(cfg *utils.Config, log logger.Logger) executor.Exten
 // PreTransaction reports test name and fork.
 func (l *ethStateTestLogger) PreTransaction(s executor.State[txcontext.TxContext], _ *executor.Context) error {
 	// cast state.Data to stJSON
-	c := s.Data.(*statetest.StJSON)
+	c := s.Data.(*ethtest.StJSON)
 	l.log.Noticef("Run %v - (%v)", c.TestLabel, c.UsedNetwork)
 	l.overall++
 	return nil

@@ -1,9 +1,6 @@
 package main
 
 import (
-	"errors"
-	"fmt"
-
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/executor/extension/logger"
 	"github.com/Fantom-foundation/Aida/executor/extension/profiler"
@@ -18,8 +15,8 @@ import (
 )
 
 var RunEthTestsCmd = cli.Command{
-	Action:    RunEthereumTests,
-	Name:      "ethereum-tests",
+	Action:    RunEthereumTest,
+	Name:      "ethereum-test",
 	Usage:     "Execute ethereum tests",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Aliases:   []string{"ethtest"},
@@ -31,7 +28,7 @@ var RunEthTestsCmd = cli.Command{
 		&utils.DbTmpFlag,
 		&utils.StateDbLoggingFlag,
 
-		// ShadowDb
+		//// ShadowDb
 		&utils.ShadowDb,
 		&utils.ShadowDbImplementationFlag,
 		&utils.ShadowDbVariantFlag,
@@ -56,31 +53,22 @@ var RunEthTestsCmd = cli.Command{
 		&utils.ValidateStateHashesFlag,
 		&log.LogLevelFlag,
 		&utils.ErrorLoggingFlag,
-		&utils.EthTestTypeFlag,
 	},
 	Description: `
 The aida-vm-sdb geth-state-tests command requires one argument: <pathToJsonTest or pathToDirWithJsonTests>`,
 }
 
-// RunEthereumTests performs sequential block processing on a StateDb
-func RunEthereumTests(ctx *cli.Context) error {
+// RunEthereumTest performs sequential block processing on a StateDb
+func RunEthereumTest(ctx *cli.Context) error {
 	cfg, err := utils.NewConfig(ctx, utils.PathArg)
 	if err != nil {
 		return err
 	}
 
-	switch cfg.EthTestType {
-	case utils.EthStateTests:
-	case utils.EthBlockChainTests:
-		return errors.New("the block-chain tests are not yet supported")
-	default:
-		return fmt.Errorf("please choose correct ethereum test type (--%v)", utils.EthTestTypeFlag.Name)
-	}
-
 	cfg.StateValidationMode = utils.SubsetCheck
 	cfg.ValidateTxState = true
 
-	return runEth(cfg, executor.NewEthTestProvider(cfg), nil, executor.MakeLiveDbTxProcessor(cfg), nil)
+	return runEth(cfg, executor.NewEthStateTestProvider(cfg), nil, executor.MakeLiveDbTxProcessor(cfg), nil)
 }
 
 func runEth(
@@ -101,7 +89,7 @@ func runEth(
 	if stateDb == nil {
 		extensionList = append(
 			extensionList,
-			statedb.MakeEthTestDbPrepper(cfg),
+			statedb.MakeEthStateTestDbPrepper(cfg),
 			statedb.MakeLiveDbBlockChecker[txcontext.TxContext](cfg),
 			logger.MakeDbLogger[txcontext.TxContext](cfg),
 			statedb.MakeEthStateTestDbPrimer(cfg), // < to be placed after the DbLogger to log priming operations
@@ -112,9 +100,8 @@ func runEth(
 		extensionList,
 		logger.MakeEthStateTestLogger(cfg),
 		validator.MakeEthStateTestValidator(cfg),
-		validator.MakeEthBlockTestValidator(cfg),
-		statedb.MakeBlockEventEmitter[txcontext.TxContext](),
 		validator.MakeShadowDbValidator(cfg),
+		statedb.MakeEthStateTestBlockEventEmitter(),
 	)
 
 	extensionList = append(extensionList, extra...)
@@ -125,7 +112,7 @@ func runEth(
 			To:                     int(cfg.Last) + 1,
 			NumWorkers:             1,
 			State:                  stateDb,
-			ParallelismGranularity: executor.BlockLevel,
+			ParallelismGranularity: executor.TransactionLevel,
 		},
 		processor,
 		extensionList,

@@ -1,4 +1,4 @@
-package statetest
+package ethtest
 
 import (
 	"encoding/hex"
@@ -6,7 +6,6 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/Fantom-foundation/Aida/ethtest/util"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
@@ -15,19 +14,19 @@ import (
 )
 
 type stTransaction struct {
-	GasPrice             *util.BigInt        `json:"gasPrice"`
-	MaxFeePerGas         *util.BigInt        `json:"maxFeePerGas"`
-	MaxPriorityFeePerGas *util.BigInt        `json:"maxPriorityFeePerGas"`
-	Nonce                *util.BigInt        `json:"nonce"`
+	GasPrice             *BigInt             `json:"gasPrice"`
+	MaxFeePerGas         *BigInt             `json:"maxFeePerGas"`
+	MaxPriorityFeePerGas *BigInt             `json:"maxPriorityFeePerGas"`
+	Nonce                *BigInt             `json:"nonce"`
 	To                   string              `json:"to"`
 	Data                 []string            `json:"data"`
 	AccessLists          []*types.AccessList `json:"accessLists,omitempty"`
-	GasLimit             []*util.BigInt      `json:"gasLimit"`
+	GasLimit             []*BigInt           `json:"gasLimit"`
 	Value                []string            `json:"value"`
 	PrivateKey           hexutil.Bytes       `json:"secretKey"`
 }
 
-func (tx *stTransaction) toMessage(ps stPostState, baseFee *util.BigInt) (*types.Message, error) {
+func (tx *stTransaction) toMessage(ps stPostState, baseFee *BigInt) (*types.Message, error) {
 	// Derive sender from private key if present.
 	var from common.Address
 	if len(tx.PrivateKey) > 0 {
@@ -37,7 +36,6 @@ func (tx *stTransaction) toMessage(ps stPostState, baseFee *util.BigInt) (*types
 		}
 		from = crypto.PubkeyToAddress(key.PublicKey)
 	}
-	fmt.Println(from.Hex())
 	// Parse recipient if present.
 	var to *common.Address
 	if tx.To != "" {
@@ -84,12 +82,12 @@ func (tx *stTransaction) toMessage(ps stPostState, baseFee *util.BigInt) (*types
 			tx.MaxFeePerGas = gasPrice
 		}
 		if tx.MaxFeePerGas == nil {
-			tx.MaxFeePerGas = new(util.BigInt)
+			tx.MaxFeePerGas = new(BigInt)
 		}
 		if tx.MaxPriorityFeePerGas == nil {
 			tx.MaxPriorityFeePerGas = tx.MaxFeePerGas
 		}
-		gasPrice = &util.BigInt{*math.BigMin(new(big.Int).Add(tx.MaxPriorityFeePerGas.Convert(), baseFee.Convert()),
+		gasPrice = &BigInt{*math.BigMin(new(big.Int).Add(tx.MaxPriorityFeePerGas.Convert(), baseFee.Convert()),
 			tx.MaxFeePerGas.Convert())}
 	}
 	if gasPrice == nil {

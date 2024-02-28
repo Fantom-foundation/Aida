@@ -25,7 +25,7 @@ type ethStateTestDbPrimer struct {
 	log logger.Logger
 }
 
-func (e ethStateTestDbPrimer) PreBlock(st executor.State[txcontext.TxContext], ctx *executor.Context) error {
+func (e ethStateTestDbPrimer) PreTransaction(st executor.State[txcontext.TxContext], ctx *executor.Context) error {
 	primeCtx := utils.NewPrimeContext(e.cfg, ctx.State, e.log)
 	return primeCtx.PrimeStateDB(st.Data.GetInputState(), ctx.State)
 }

@@ -3,7 +3,7 @@ package statedb
 import (
 	"testing"
 
-	"github.com/Fantom-foundation/Aida/ethtest/statetest"
+	"github.com/Fantom-foundation/Aida/ethtest"
 	"github.com/Fantom-foundation/Aida/executor"
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/state"
@@ -12,11 +12,11 @@ import (
 	"go.uber.org/mock/gomock"
 )
 
-func Test_ethStateTestDbPrimer_PreBlockPriming(t *testing.T) {
+func Test_ethStateTestDbPrimer_PreTransactionPriming(t *testing.T) {
 	cfg := &utils.Config{}
 	ext := ethStateTestDbPrimer{cfg: cfg, log: logger.NewLogger(cfg.LogLevel, "EthStatePrimer")}
 
-	testData := statetest.CreateTestData(t)
+	testData := ethtest.CreateTestData(t)
 	st := executor.State[txcontext.TxContext]{Block: 1, Transaction: 1, Data: testData}
 	ctx := &executor.Context{}
 
@@ -35,7 +35,7 @@ func Test_ethStateTestDbPrimer_PreBlockPriming(t *testing.T) {
 
 	ctx.State = mockState
 
-	err := ext.PreBlock(st, ctx)
+	err := ext.PreTransaction(st, ctx)
 	if err != nil {
 		t.Fatalf("unexpected err; %v", err)
 	}

@@ -178,7 +178,7 @@ func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st
 	)
 
 	// prepare tx
-	gasPool.AddGas(inputEnv.GetGasLimit()) // todo is this correct for substate???
+	gasPool.AddGas(inputEnv.GetGasLimit())
 
 	db.Prepare(txHash, tx)
 	blockCtx := prepareBlockCtx(inputEnv, &hashError)
