@@ -15,7 +15,7 @@ import (
 )
 
 func Open(path string) ([]*BtJSON, error) {
-	fpaths, err := utils.GetDirectoryFiles(path)
+	fpaths, err := utils.GetDirectoryFiles(".json", path)
 	if err != nil {
 		return nil, err
 	}

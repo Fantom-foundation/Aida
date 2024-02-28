@@ -73,7 +73,7 @@ func createConfigFromFlags(ctx *cli.Context) *Config {
 		ProfilingDbName:        getFlagValue(ctx, ProfilingDbNameFlag).(string),
 		RandomSeed:             getFlagValue(ctx, RandomSeedFlag).(int64),
 		RegisterRun:            getFlagValue(ctx, RegisterRunFlag).(string),
-		RpcRecordingFile:       getFlagValue(ctx, RpcRecordingFileFlag).(string),
+		RpcRecordingPath:       getFlagValue(ctx, RpcRecordingFileFlag).(string),
 		ShadowDb:               getFlagValue(ctx, ShadowDb).(bool),
 		ShadowImpl:             getFlagValue(ctx, ShadowDbImplementationFlag).(string),
 		ShadowVariant:          getFlagValue(ctx, ShadowDbVariantFlag).(string),
