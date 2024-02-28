@@ -207,7 +207,7 @@ TxData %>%
    labs(x="Block Height", y="Million Gas Per Second", title="Gas Rate")
 ```
 
-In the most recent 10 million blocks, the average gas rate is **`r format(mean(RecentTxData$gas_rate), big.mark=",", digit=4)`** MGasPS.
+In the most recent 10 million blocks, the average gas rate is **`r format(mean(RecentTxData$gas_rate) * 1e-6, big.mark=",", digit=4)`** MGasPS.
 
 ```{r, echo=FALSE, message=FALSE, fig.width=12, fig.height=8}
 RecentTxData %>% 
