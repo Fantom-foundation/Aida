@@ -20,6 +20,10 @@ type RequestAndResults struct {
 	Timestamp                     uint64
 }
 
+func (r *RequestAndResults) ParamsToString() string {
+	return string(r.ParamsRaw)
+}
+
 // DecodeInfo finds recorded and requested block numbers as well as timestamp of the recorded block.
 func (r *RequestAndResults) DecodeInfo() {
 	if r.Response != nil {

@@ -155,7 +155,7 @@ func Test_compareBalanceErrorNoMatchingResult(t *testing.T) {
 		return
 	}
 
-	if err.typ != noMatchingResult {
+	if err.code != noMatchingResult {
 		t.Errorf("error must be type 'noMatchingResult'; err: %v", err)
 	}
 
@@ -209,7 +209,7 @@ func Test_compareTransactionCountErrorNoMatchingResult(t *testing.T) {
 		return
 	}
 
-	if err.typ != noMatchingResult {
+	if err.code != noMatchingResult {
 		t.Errorf("error must be type 'noMatchingResult'; err: %v", err)
 	}
 
@@ -261,7 +261,7 @@ func Test_compareCallErrorNoMatchingResult(t *testing.T) {
 		return
 	}
 
-	if err.typ != noMatchingResult {
+	if err.code != noMatchingResult {
 		t.Errorf("error must be type 'noMatchingResult'; err: %v", err)
 	}
 
@@ -288,7 +288,7 @@ func Test_compareCallErrorExpectedResultGotErr(t *testing.T) {
 		return
 	}
 
-	if err.typ != expectedResultGotError {
+	if err.code != expectedResultGotError {
 		t.Errorf("error must be type 'expectedResultGotError'; err: %v", err)
 	}
 
@@ -318,7 +318,7 @@ func Test_compareCallErrorExpectedErrGotResult(t *testing.T) {
 		return
 	}
 
-	if err.typ != expectedErrorGotResult {
+	if err.code != expectedErrorGotResult {
 		t.Errorf("error must be type 'expectedErrorGotResult'; err: %v", err)
 	}
 
@@ -370,7 +370,7 @@ func Test_compareEstimateGasErrorNoMatchingResult(t *testing.T) {
 		return
 	}
 
-	if err.typ != noMatchingResult {
+	if err.code != noMatchingResult {
 		t.Errorf("error must be type 'noMatchingResult'; err: %v", err)
 	}
 
@@ -397,7 +397,7 @@ func Test_compareEstimateGasErrorExpectedResultGotErr(t *testing.T) {
 		return
 	}
 
-	if err.typ != expectedResultGotError {
+	if err.code != expectedResultGotError {
 		t.Errorf("error must be type 'expectedResultGotError'; err: %v", err)
 	}
 }
@@ -426,7 +426,7 @@ func Test_compareEstimateGasErrorExpectedErrGotResult(t *testing.T) {
 		return
 	}
 
-	if err.typ != expectedErrorGotResult {
+	if err.code != expectedErrorGotResult {
 		t.Errorf("error must be type 'expectedErrorGotResult'; err: %v", err)
 	}
 
@@ -478,7 +478,7 @@ func Test_compareCodeErrorNoMatchingResult(t *testing.T) {
 		return
 	}
 
-	if err.typ != noMatchingResult {
+	if err.code != noMatchingResult {
 		t.Errorf("error must be type 'noMatchingResult'; err: %v", err)
 	}
 
@@ -530,7 +530,7 @@ func Test_compareStorageAtErrorNoMatchingResult(t *testing.T) {
 		return
 	}
 
-	if err.typ != noMatchingResult {
+	if err.code != noMatchingResult {
 		t.Errorf("error must be type 'noMatchingResult'; err: %v", err)
 	}
 
