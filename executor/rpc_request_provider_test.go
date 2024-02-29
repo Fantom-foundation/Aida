@@ -19,7 +19,7 @@ func TestRPCRequestProvider_WorksWithValidResponse(t *testing.T) {
 
 	cfg := &utils.Config{}
 
-	provider := openRpcRecording(i, cfg, nil, nil, []string{"testfile"})
+	provider := openRpcRecording(i, cfg, logger.NewLogger("critical", "rpc-provider-test"), nil, []string{"testfile"})
 
 	defer provider.Close()
 
@@ -44,7 +44,7 @@ func TestRPCRequestProvider_WorksWithErrorResponse(t *testing.T) {
 
 	cfg := &utils.Config{}
 
-	provider := openRpcRecording(i, cfg, nil, nil, []string{"testfile"})
+	provider := openRpcRecording(i, cfg, logger.NewLogger("critical", "rpc-provider-test"), nil, []string{"testfile"})
 
 	defer provider.Close()
 
@@ -69,7 +69,7 @@ func TestRPCRequestProvider_NilRequestDoesNotGetToConsumer(t *testing.T) {
 
 	cfg := &utils.Config{}
 
-	provider := openRpcRecording(i, cfg, nil, nil, []string{"testfile"})
+	provider := openRpcRecording(i, cfg, logger.NewLogger("critical", "rpc-provider-test"), nil, []string{"testfile"})
 
 	defer provider.Close()
 
@@ -101,7 +101,7 @@ func TestRPCRequestProvider_ErrorReturnedByIteratorEndsTheApp(t *testing.T) {
 
 	cfg := &utils.Config{}
 
-	provider := openRpcRecording(i, cfg, nil, nil, []string{"testfile"})
+	provider := openRpcRecording(i, cfg, logger.NewLogger("critical", "rpc-provider-test"), nil, []string{"testfile"})
 
 	defer provider.Close()
 
@@ -127,7 +127,7 @@ func TestRPCRequestProvider_GetLogMethodDoesNotEndIteration(t *testing.T) {
 
 	cfg := &utils.Config{}
 
-	provider := openRpcRecording(i, cfg, nil, nil, []string{"testfile"})
+	provider := openRpcRecording(i, cfg, logger.NewLogger("critical", "rpc-provider-test"), nil, []string{"testfile"})
 
 	defer provider.Close()
 
@@ -147,7 +147,7 @@ func TestRPCRequestProvider_GetLogMethodDoesNotEndIteration(t *testing.T) {
 	}
 }
 
-func TestRPCRequestProvider_ReportsLastFileWhenError(t *testing.T) {
+func TestRPCRequestProvider_ReportsAboutRun(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	consumer := NewMockRPCReqConsumer(ctrl)
 	log := logger.NewMockLogger(ctrl)
