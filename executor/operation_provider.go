@@ -41,7 +41,7 @@ func (p operationProvider) Run(from int, to int, consumer Consumer[[]operation.O
 			}
 
 			// this condition must be kept for replay_substate tool;
-			// it indicates that we require only one transactionResult to be passed to consumer
+			// it indicates that we require only one transaction to be passed to consumer
 			if from == to {
 				return nil
 			}
@@ -57,7 +57,7 @@ func (p operationProvider) Run(from int, to int, consumer Consumer[[]operation.O
 
 		switch t := op.(type) {
 		case *operation.BeginTransaction:
-			// extract transactionResult number with operation.BeginTransaction
+			// extract transaction number with operation.BeginTransaction
 			transactionNumber = int(t.TransactionNumber)
 		case *operation.EndTransaction:
 			// send the united operations to consumer with operation.EndTransaction

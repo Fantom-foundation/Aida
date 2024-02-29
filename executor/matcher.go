@@ -19,7 +19,7 @@ func AtBlock[T any](block int) gomock.Matcher {
 }
 
 // AtBlock matches executor.State instances with the given block and
-// transactionResult number.
+// transaction number.
 func AtTransaction[T any](block int, transaction int) gomock.Matcher {
 	return atTransaction[T]{block, transaction}
 }
@@ -70,7 +70,7 @@ func (m atTransaction[T]) Matches(value any) bool {
 }
 
 func (m atTransaction[T]) String() string {
-	return fmt.Sprintf("at transactionResult %d/%d", m.expectedBlock, m.expectedTransaction)
+	return fmt.Sprintf("at transaction %d/%d", m.expectedBlock, m.expectedTransaction)
 }
 
 type withState struct {

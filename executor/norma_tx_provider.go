@@ -47,7 +47,7 @@ func (p normaTxProvider) Run(from int, to int, consumer Consumer[txcontext.TxCon
 		return err
 	}
 
-	// define the current block and transactionResult numbers,
+	// define the current block and transaction numbers,
 	// we start from the next block after the `from` block
 	// because on the `from` block we initialized and funded
 	// the treasure account
@@ -65,7 +65,7 @@ func (p normaTxProvider) Run(from int, to int, consumer Consumer[txcontext.TxCon
 		if err != nil {
 			return err
 		}
-		// increment the transactionResult number for next transactionResult
+		// increment the transaction number for next transaction
 		// if we reached the maximum number of transactions per block, increment the block number
 		nextTxNumber++
 		// greater or equal, because transactions are indexed from 0
@@ -152,7 +152,7 @@ func (p normaTxProvider) initializeTreasureAccount(blkNumber int) (*app.Account,
 
 	// fund the treasure account directly in the state database
 	amount := big.NewInt(0).Mul(big.NewInt(params.Ether), big.NewInt(2_000_000_000))
-	// we need to begin and end the block and transactionResult to be able to create an account
+	// we need to begin and end the block and transaction to be able to create an account
 	// and add balance to it (otherwise the account would not be funded for geth storage implementation)
 	p.stateDb.BeginBlock(uint64(blkNumber))
 	p.stateDb.BeginTransaction(uint32(0))
@@ -184,9 +184,9 @@ func newFakeRpcClient(stateDb state.StateDB, consumer normaConsumer) fakeRpcClie
 	}
 }
 
-// SendTransaction injects the transactionResult into the pending pool for execution.
+// SendTransaction injects the transaction into the pending pool for execution.
 func (f fakeRpcClient) SendTransaction(_ context.Context, tx *types.Transaction) error {
-	// if the transactionResult is a contract deployment, we need to store the code
+	// if the transaction is a contract deployment, we need to store the code
 	// in the pending codes map
 	if tx.To() == nil {
 		// extract sender from tx
@@ -251,7 +251,7 @@ func (f fakeRpcClient) PendingNonceAt(_ context.Context, _ common.Address) (uint
 }
 
 // SuggestGasPrice retrieves the currently suggested gas price to allow a timely
-// execution of a transactionResult.
+// execution of a transaction.
 func (f fakeRpcClient) SuggestGasPrice(_ context.Context) (*big.Int, error) {
 	// use lower gas price, so we don't run out of gas
 	// too quickly since estimation is overestimating
@@ -259,14 +259,14 @@ func (f fakeRpcClient) SuggestGasPrice(_ context.Context) (*big.Int, error) {
 }
 
 // SuggestGasTipCap retrieves the currently suggested 1559 priority fee to allow
-// a timely execution of a transactionResult.
+// a timely execution of a transaction.
 func (f fakeRpcClient) SuggestGasTipCap(_ context.Context) (*big.Int, error) {
 	// not used
 	return big.NewInt(0), nil
 }
 
 // EstimateGas tries to estimate the gas needed to execute a specific
-// transactionResult based on the current pending state of the backend blockchain.
+// transaction based on the current pending state of the backend blockchain.
 // There is no guarantee that this is the true gas limit requirement as other
 // transactions may be added or removed by miners, but it should provide a basis
 // for setting a reasonable default.
