@@ -27,7 +27,7 @@ TxData <- dbReadTable(con, 'stats') %>%
 	mutate(total_disk = as.numeric(live_disk) + as.numeric(archive_disk))
 
 RecentTxData <- TxData %>% 
-	filter(start >= as.integer(recent) & end <= as.integer(last$value))
+	filter(start >= as.integer(recent))
 
 # close database connection
 dbDisconnect(con)
@@ -177,9 +177,20 @@ TxData %>%
    labs(x="Block Height", y="Transaction Per Second", title="Transaction Rate")
 ```
 
-In the most recent 10 million blocks, the average transaction rate is **`r format(mean(RecentTxData$tx_rate), big.mark=",", digit=4)`** TPS.
+```{r, echo=FALSE, message=FALSE}
+thresholdRecent <- 0.40 # print if recent is smaller than %total. 0 to always print.
+isRecentPrintable <- thresholdRecent < (as.integer(last$value) - recent) / (as.integer(last$value) - as.integer(first$value))
+```
 
-```{r, echo=FALSE, message=FALSE, fig.width=12, fig.height=8}
+`r 
+if(isRecentPrintable){
+paste(
+	paste0("In the most recent 10 million blocks, the average transaction rate is ", b(format(mean(RecentTxData$tx_rate), big.mark=",", digit=4)), " TPS. ")
+)
+}
+`
+
+```{r, echo=FALSE, message=FALSE, fig.width=12, fig.height=8, eval=isRecentPrintable}
 RecentTxData %>% 
    mutate(tx_rate = as.numeric(tx_rate), start = as.numeric(start) * 1e-6) %>%
    ggplot(aes(x = start, y = tx_rate)) +
@@ -207,9 +218,15 @@ TxData %>%
    labs(x="Block Height", y="Million Gas Per Second", title="Gas Rate")
 ```
 
-In the most recent 10 million blocks, the average gas rate is **`r format(mean(RecentTxData$gas_rate) * 1e-6, big.mark=",", digit=4)`** MGasPS.
+`r 
+if(isRecentPrintable){
+paste(
+	paste0("In the most recent 10 million blocks, the average gas rate is ", b(format(mean(RecentTxData$gas_rate) * 1e-6, big.mark=",", digit=4)), " MGasPS ")
+)
+}
+`
 
-```{r, echo=FALSE, message=FALSE, fig.width=12, fig.height=8}
+```{r, echo=FALSE, message=FALSE, fig.width=12, fig.height=8, eval=isRecentPrintable}
 RecentTxData %>% 
    mutate(gas_rate = as.numeric(gas_rate) * 1e-6, start = as.numeric(start) * 1e-6) %>%
    ggplot(aes(x = start, y = gas_rate)) +
