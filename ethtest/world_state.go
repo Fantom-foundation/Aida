@@ -1,4 +1,4 @@
-package statetest
+package ethtest
 
 import (
 	"github.com/Fantom-foundation/Aida/txcontext"

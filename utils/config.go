@@ -102,13 +102,6 @@ var KeywordBlocks = map[ChainID]map[string]uint64{
 	},
 }
 
-const (
-	EthStateTests      = "state"
-	EthBlockChainTests = "blockchain"
-)
-
-type EthTestType byte
-
 // special transaction number for pseudo transactions
 const PseudoTx = 99999
 
@@ -155,7 +148,6 @@ type Config struct {
 	DeletionDb             string         // directory of deleted account database
 	DiagnosticServer       int64          // if not zero, the port used for hosting a HTTP server for performance diagnostics
 	ErrorLogging           string         // if defined, error logging to file is enabled
-	EthTestType            string         // defines type of replayed eth test
 	Genesis                string         // genesis file
 	IncludeStorage         bool           // represents a flag for contract storage inclusion in an operation
 	IsExistingStateDb      bool           // this is true if we are using an existing StateDb
