@@ -800,10 +800,10 @@ func TestProcessor_SignalsAreDeliveredInConcurrentExecution_TransactionLevelPara
 			return nil
 		})
 
-	// For each transactionResult, PreTransaction, Process, and PostTransaction
+	// For each transaction, PreTransaction, Process, and PostTransaction
 	// should happen in order. However, Transactions may be processed
 	// out-of-order.
-	// Note: In the transactionResult level parallel context there is no block boundary.
+	// Note: In the transaction level parallel context there is no block boundary.
 	pre := extension.EXPECT().PreRun(AtBlock[any](10), gomock.Any())
 	post := extension.EXPECT().PostRun(AtBlock[any](12), gomock.Any(), nil)
 
@@ -867,10 +867,10 @@ func TestProcessor_SignalsAreDeliveredInConcurrentExecution_BlockLevelParallelis
 		})
 
 	// For each block PreBlock and PostBlock should happen then,
-	// for each transactionResult, PreTransaction, Process, PostTransaction
+	// for each transaction, PreTransaction, Process, PostTransaction
 	// should happen in order. However, Transactions may be processed
 	// out-of-order.
-	// Note: In the transactionResult level parallel context there is no block boundary.
+	// Note: In the transaction level parallel context there is no block boundary.
 	pre := extension.EXPECT().PreRun(AtBlock[any](10), gomock.Any())
 	post := extension.EXPECT().PostRun(AtBlock[any](12), gomock.Any(), nil)
 

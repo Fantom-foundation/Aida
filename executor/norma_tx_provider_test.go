@@ -51,7 +51,7 @@ func TestNormaTxProvider_Run(t *testing.T) {
 		// of funded accounts, since we did no funding, then nonce is 0
 		dbMock.EXPECT().GetNonce(gomock.Any()).Return(uint64(0)).AnyTimes(),
 
-		// generating transactions, starting from transactionResult 1 (0 was contract deployment)
+		// generating transactions, starting from transaction 1 (0 was contract deployment)
 		consumer.EXPECT().Consume(2, 1, gomock.Any()).Return(nil),
 		consumer.EXPECT().Consume(2, 2, gomock.Any()).Return(nil),
 		consumer.EXPECT().Consume(3, 0, gomock.Any()).Return(nil),
