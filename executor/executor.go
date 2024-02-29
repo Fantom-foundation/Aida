@@ -216,7 +216,7 @@ type Context struct {
 	ErrorInput chan error
 
 	// ExecutionResult is set after the execution.
-	// It is used for validation. And gas measurements.
+	// It is used for validation and gas measurements.
 	ExecutionResult txcontext.Result
 }
 
