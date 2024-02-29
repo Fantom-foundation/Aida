@@ -19,4 +19,4 @@ func (NilTxContext) GetMessage() core.Message { return nil }
 
 func (NilTxContext) GetOutputState() WorldState { return nil }
 
-func (NilTxContext) GetReceipt() Receipt { return nil }
+func (NilTxContext) GetResult() Result { return nil }

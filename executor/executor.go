@@ -28,9 +28,9 @@ import (
 //	PreRun()
 //	for each block {
 //	   PreBlock()
-//	   for each transaction {
+//	   for each transactionResult {
 //	       PreTransaction()
-//	       Processor.Process(transaction)
+//	       Processor.Process(transactionResult)
 //	       PostTransaction()
 //	   }
 //	   PostBlock()
@@ -40,9 +40,9 @@ import (
 // When running with multiple workers on TransactionLevel granularity, the execution is structures like this:
 //
 //	PreRun()
-//	for transaction in parallel {
+//	for transactionResult in parallel {
 //	    PreTransaction()
-//	    Processor.Process(transaction)
+//	    Processor.Process(transactionResult)
 //	    PostTransaction()
 //	}
 //	PostRun()
@@ -54,9 +54,9 @@ import (
 //	PreRun()
 //	for block in parallel {
 //	   PreBlock()
-//	   for each transaction {
+//	   for each transactionResult {
 //	       PreTransaction()
-//	       Processor.Process(transaction)
+//	       Processor.Process(transactionResult)
 //	       PostTransaction()
 //	   }
 //	   PostBlock()
@@ -115,14 +115,14 @@ type Params struct {
 	// is guranteed. Any number <= 1 is considered to be 1, thus the default
 	// value of 0 is valid.
 	NumWorkers int
-	// ParallelismGranularity determines whether parallelism is done on block or transaction level
+	// ParallelismGranularity determines whether parallelism is done on block or transactionResult level
 	ParallelismGranularity ParallelismGranularity
 }
 
 // Processor is an interface for the entity to which an executor is feeding
 // transactions to.
 type Processor[T any] interface {
-	// Process is called on each transaction in the range of blocks covered
+	// Process is called on each transactionResult in the range of blocks covered
 	// by an Executor run. When running with multiple workers, the Process
 	// function is required to be thread safe.
 	Process(State[T], *Context) error
@@ -147,7 +147,7 @@ type Extension[T any] interface {
 	// the Processor or any Extension, or in a failure state, if errors
 	// have been produced. In case of a successful execution, the provided
 	// state lists the first non-executiond block, while in an error case
-	// it references the last transaction attempted to be processed. Also,
+	// it references the last transactionResult attempted to be processed. Also,
 	// the second parameter contains the error causing the abort.
 	PostRun(State[T], *Context, error) error
 
@@ -157,21 +157,21 @@ type Extension[T any] interface {
 	PreBlock(State[T], *Context) error
 
 	// PostBlock is called once after the end of processing a block with
-	// the state containing the number of the Block and the last transaction
+	// the state containing the number of the Block and the last transactionResult
 	// processed in the block. This function is not called when running with
 	// multiple workers.
 	PostBlock(State[T], *Context) error
 
-	// PreTransaction is called once before each transaction with the state
-	// listing the block number, the transaction number, and the substate data
-	// providing the input for the subsequent execution of the transaction.
+	// PreTransaction is called once before each transactionResult with the state
+	// listing the block number, the transactionResult number, and the substate data
+	// providing the input for the subsequent execution of the transactionResult.
 	// When running with multiple workers, this function may be called
 	// concurrently, and must thus be thread safe.
 	PreTransaction(State[T], *Context) error
 
-	// PostTransaction is called once after each transaction with the state
-	// listing the block number, the transaction number, and the substate data
-	// providing the input for the subsequent execution of the transaction.
+	// PostTransaction is called once after each transactionResult with the state
+	// listing the block number, the transactionResult number, and the substate data
+	// providing the input for the subsequent execution of the transactionResult.
 	// When running with multiple workers, this function may be called
 	// concurrently, and must thus be thread safe.
 	PostTransaction(State[T], *Context) error
@@ -183,12 +183,12 @@ type State[T any] struct {
 	// Block the current block number, valid for all call-backs.
 	Block int
 
-	// Transaction is the transaction number of the current transaction within
+	// Transaction is the transactionResult number of the current transactionResult within
 	// its respective block. It is only valid for PreTransaction, PostTransaction,
 	// PostBlock, and for PostRun events in case of an abort.
 	Transaction int
 
-	// Data is the input required for processing the current transaction. It is
+	// Data is the input required for processing the current transactionResult. It is
 	// only valid for Pre- and PostTransaction events.
 	Data T
 }
@@ -215,9 +215,9 @@ type Context struct {
 	// hence any non-fatal errors. Any fatal should still be returned so that the app ends.
 	ErrorInput chan error
 
-	// ExecutionResult is set after transaction is processed.
-	// It is used for validation
-	ExecutionResult txcontext.Receipt
+	// ExecutionResult is set after the execution.
+	// It is used for validation. And gas measurements.
+	ExecutionResult txcontext.Result
 }
 
 // ----------------------------------------------------------------------------
@@ -264,7 +264,7 @@ func (e *executor[T]) Run(params Params, processor Processor[T], extensions []Ex
 	}
 }
 
-// runBlock runs transaction execution in a block
+// runBlock runs transactionResult execution in a block
 func runBlock[T any](
 	workerNumber int,
 	blocks chan []*TransactionInfo[T],

@@ -20,7 +20,7 @@ import (
 	"github.com/ethereum/go-ethereum/params"
 )
 
-// MakeLiveDbTxProcessor creates a executor.Processor which processes transaction into LIVE StateDb.
+// MakeLiveDbTxProcessor creates a executor.Processor which processes transactionResult into LIVE StateDb.
 func MakeLiveDbTxProcessor(cfg *utils.Config) *LiveDbTxProcessor {
 	return &LiveDbTxProcessor{MakeTxProcessor(cfg)}
 }
@@ -29,7 +29,7 @@ type LiveDbTxProcessor struct {
 	*TxProcessor
 }
 
-// Process transaction inside state into given LIVE StateDb
+// Process transactionResult inside state into given LIVE StateDb
 func (p *LiveDbTxProcessor) Process(state State[txcontext.TxContext], ctx *Context) error {
 	var err error
 
@@ -46,7 +46,7 @@ func (p *LiveDbTxProcessor) Process(state State[txcontext.TxContext], ctx *Conte
 	return err
 }
 
-// MakeArchiveDbTxProcessor creates a executor.Processor which processes transaction into ARCHIVE StateDb.
+// MakeArchiveDbTxProcessor creates a executor.Processor which processes transactionResult into ARCHIVE StateDb.
 func MakeArchiveDbTxProcessor(cfg *utils.Config) *ArchiveDbTxProcessor {
 	return &ArchiveDbTxProcessor{MakeTxProcessor(cfg)}
 }
@@ -55,7 +55,7 @@ type ArchiveDbTxProcessor struct {
 	*TxProcessor
 }
 
-// Process transaction inside state into given ARCHIVE StateDb
+// Process transactionResult inside state into given ARCHIVE StateDb
 func (p *ArchiveDbTxProcessor) Process(state State[txcontext.TxContext], ctx *Context) error {
 	var err error
 
@@ -124,39 +124,7 @@ func (s *TxProcessor) isErrFatal() bool {
 	return true
 }
 
-type executionResult struct {
-	status          uint64
-	bloom           types.Bloom
-	logs            []*types.Log
-	contractAddress common.Address
-	gasUsed         uint64
-}
-
-func (e *executionResult) GetStatus() uint64 {
-	return e.status
-}
-
-func (e *executionResult) GetBloom() types.Bloom {
-	return e.bloom
-}
-
-func (e *executionResult) GetLogs() []*types.Log {
-	return e.logs
-}
-
-func (e *executionResult) GetContractAddress() common.Address {
-	return e.contractAddress
-}
-
-func (e *executionResult) GetGasUsed() uint64 {
-	return e.gasUsed
-}
-
-func (e *executionResult) Equal(y txcontext.Receipt) bool {
-	return txcontext.ReceiptEqual(e, y)
-}
-
-func (s *TxProcessor) ProcessTransaction(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (txcontext.Receipt, error) {
+func (s *TxProcessor) ProcessTransaction(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (txcontext.Result, error) {
 	if tx >= utils.PseudoTx {
 
 		return s.processPseudoTx(st.GetOutputState(), db), nil
@@ -165,7 +133,7 @@ func (s *TxProcessor) ProcessTransaction(db state.VmStateDB, block int, tx int, 
 }
 
 // processRegularTx executes VM on a chosen storage system.
-func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (res *executionResult, finalError error) {
+func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (res transactionResult, finalError error) {
 	db.BeginTransaction(uint32(tx))
 	defer db.EndTransaction()
 
@@ -189,12 +157,12 @@ func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st
 	// apply
 	msgResult, err := evmcore.ApplyMessage(evm, msg, gasPool)
 	if err != nil {
-		// if transaction fails, revert to the first snapshot.
+		// if transactionResult fails, revert to the first snapshot.
 		db.RevertToSnapshot(snapshot)
-		finalError = errors.Join(fmt.Errorf("block: %v transaction: %v", block, tx), err)
+		finalError = errors.Join(fmt.Errorf("block: %v transactionResult: %v", block, tx), err)
 	}
 
-	// inform about failing transaction
+	// inform about failing transactionResult
 	if msgResult != nil && msgResult.Failed() {
 		s.log.Debugf("Block: %v\nTransaction %v\n Status: Failed", block, tx)
 	}
@@ -206,13 +174,13 @@ func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st
 
 	// if no prior error, create result and pass it to the data.
 	blockHash := common.HexToHash(fmt.Sprintf("0x%016d", block))
-	res = newExecutionResult(db.GetLogs(txHash, blockHash), msg, msgResult, evm.TxContext.Origin)
+	res = newTransactionResult(db.GetLogs(txHash, blockHash), msg, msgResult, err, evm.TxContext.Origin)
 	return
 }
 
 // processPseudoTx processes pseudo transactions in Lachesis by applying the change in db state.
 // The pseudo transactions includes Lachesis SFC, lachesis genesis and lachesis-opera transition.
-func (s *TxProcessor) processPseudoTx(ws txcontext.WorldState, db state.VmStateDB) txcontext.Receipt {
+func (s *TxProcessor) processPseudoTx(ws txcontext.WorldState, db state.VmStateDB) txcontext.Result {
 	db.BeginTransaction(utils.PseudoTx)
 	defer db.EndTransaction()
 
@@ -254,7 +222,7 @@ func prepareBlockCtx(inputEnv txcontext.BlockEnvironment, hashError *error) *vm.
 	return blockCtx
 }
 
-func newExecutionResult(logs []*types.Log, msg core.Message, msgResult *evmcore.ExecutionResult, origin common.Address) *executionResult {
+func newTransactionResult(logs []*types.Log, msg core.Message, msgResult *evmcore.ExecutionResult, err error, origin common.Address) transactionResult {
 	var (
 		contract common.Address
 		gasUsed  uint64
@@ -274,17 +242,21 @@ func newExecutionResult(logs []*types.Log, msg core.Message, msgResult *evmcore.
 		}
 	}
 
-	return &executionResult{
+	return transactionResult{
+		result:          msgResult.Return(),
+		err:             err,
 		contractAddress: contract,
-		gasUsed:         gasUsed,
 		logs:            logs,
 		bloom:           types.BytesToBloom(types.LogsBloom(logs)),
 		status:          status,
+		gasUsed:         gasUsed,
 	}
 }
 
-func newPseudoExecutionResult() txcontext.Receipt {
-	return &executionResult{
+func newPseudoExecutionResult() txcontext.Result {
+	return transactionResult{
+		result:          []byte{},
+		err:             nil,
 		status:          types.ReceiptStatusSuccessful,
 		bloom:           types.Bloom{},
 		logs:            nil,
