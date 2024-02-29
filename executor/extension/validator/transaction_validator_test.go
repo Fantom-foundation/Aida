@@ -880,7 +880,7 @@ func TestValidateStateDb_ValidationDoesNotFailWithPriming(t *testing.T) {
 func TestValidateStateDb_ValidateReceipt(t *testing.T) {
 	sub := &substate.Substate{Result: getDummyResult()}
 	ctx := new(executor.Context)
-	ctx.ExecutionResult = substatecontext.NewReceipt(getDummyResult())
+	ctx.ExecutionResult = substatecontext.NewResult(getDummyResult())
 
 	cfg := &utils.Config{}
 	cfg.ValidateTxState = true
@@ -929,8 +929,8 @@ func TestValidateVMResult_ErrorIsInCorrectFormat(t *testing.T) {
 	// change result so validation fails
 	expectedResult.GasUsed = 15000
 
-	vmRes := substatecontext.NewReceipt(vmResult)
-	expRes := substatecontext.NewReceipt(expectedResult)
+	vmRes := substatecontext.NewResult(vmResult)
+	expRes := substatecontext.NewResult(expectedResult)
 
 	err := ext.validateReceipt(vmRes, expRes)
 	if err == nil {

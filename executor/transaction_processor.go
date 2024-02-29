@@ -14,9 +14,7 @@ import (
 	"github.com/Fantom-foundation/go-opera/opera"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
 )
 
@@ -124,39 +122,7 @@ func (s *TxProcessor) isErrFatal() bool {
 	return true
 }
 
-type executionResult struct {
-	status          uint64
-	bloom           types.Bloom
-	logs            []*types.Log
-	contractAddress common.Address
-	gasUsed         uint64
-}
-
-func (e *executionResult) GetStatus() uint64 {
-	return e.status
-}
-
-func (e *executionResult) GetBloom() types.Bloom {
-	return e.bloom
-}
-
-func (e *executionResult) GetLogs() []*types.Log {
-	return e.logs
-}
-
-func (e *executionResult) GetContractAddress() common.Address {
-	return e.contractAddress
-}
-
-func (e *executionResult) GetGasUsed() uint64 {
-	return e.gasUsed
-}
-
-func (e *executionResult) Equal(y txcontext.Receipt) bool {
-	return txcontext.ReceiptEqual(e, y)
-}
-
-func (s *TxProcessor) ProcessTransaction(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (txcontext.Receipt, error) {
+func (s *TxProcessor) ProcessTransaction(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (txcontext.Result, error) {
 	if tx >= utils.PseudoTx {
 
 		return s.processPseudoTx(st.GetOutputState(), db), nil
@@ -165,7 +131,7 @@ func (s *TxProcessor) ProcessTransaction(db state.VmStateDB, block int, tx int, 
 }
 
 // processRegularTx executes VM on a chosen storage system.
-func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (res *executionResult, finalError error) {
+func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (res transactionResult, finalError error) {
 	db.BeginTransaction(uint32(tx))
 	defer db.EndTransaction()
 
@@ -206,13 +172,13 @@ func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st
 
 	// if no prior error, create result and pass it to the data.
 	blockHash := common.HexToHash(fmt.Sprintf("0x%016d", block))
-	res = newExecutionResult(db.GetLogs(txHash, blockHash), msg, msgResult, evm.TxContext.Origin)
+	res = newTransactionResult(db.GetLogs(txHash, blockHash), msg, msgResult, err, evm.TxContext.Origin)
 	return
 }
 
 // processPseudoTx processes pseudo transactions in Lachesis by applying the change in db state.
 // The pseudo transactions includes Lachesis SFC, lachesis genesis and lachesis-opera transition.
-func (s *TxProcessor) processPseudoTx(ws txcontext.WorldState, db state.VmStateDB) txcontext.Receipt {
+func (s *TxProcessor) processPseudoTx(ws txcontext.WorldState, db state.VmStateDB) txcontext.Result {
 	db.BeginTransaction(utils.PseudoTx)
 	defer db.EndTransaction()
 
@@ -252,43 +218,4 @@ func prepareBlockCtx(inputEnv txcontext.BlockEnvironment, hashError *error) *vm.
 		blockCtx.BaseFee = new(big.Int).Set(baseFee)
 	}
 	return blockCtx
-}
-
-func newExecutionResult(logs []*types.Log, msg core.Message, msgResult *evmcore.ExecutionResult, origin common.Address) *executionResult {
-	var (
-		contract common.Address
-		gasUsed  uint64
-		status   uint64
-	)
-
-	if to := msg.To(); to == nil {
-		contract = crypto.CreateAddress(origin, msg.Nonce())
-	}
-
-	if msgResult != nil {
-		gasUsed = msgResult.UsedGas
-		if msgResult.Failed() {
-			status = types.ReceiptStatusFailed
-		} else {
-			status = types.ReceiptStatusSuccessful
-		}
-	}
-
-	return &executionResult{
-		contractAddress: contract,
-		gasUsed:         gasUsed,
-		logs:            logs,
-		bloom:           types.BytesToBloom(types.LogsBloom(logs)),
-		status:          status,
-	}
-}
-
-func newPseudoExecutionResult() txcontext.Receipt {
-	return &executionResult{
-		status:          types.ReceiptStatusSuccessful,
-		bloom:           types.Bloom{},
-		logs:            nil,
-		contractAddress: common.Address{},
-		gasUsed:         0,
-	}
 }

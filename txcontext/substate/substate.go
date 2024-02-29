@@ -15,6 +15,10 @@ type substateData struct {
 	*substate.Substate
 }
 
+func (t *substateData) GetResult() txcontext.Result {
+	return NewResult(t.Result)
+}
+
 func (t *substateData) GetStateHash() common.Hash {
 	// ignored
 	return common.Hash{}
@@ -36,6 +40,20 @@ func (t *substateData) GetMessage() core.Message {
 	return t.Message.AsMessage()
 }
 
-func (t *substateData) GetReceipt() txcontext.Receipt {
-	return NewReceipt(t.Result)
+type substateResult struct {
+}
+
+func (s substateResult) GetReceipt() txcontext.Receipt {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s substateResult) GetRawResult() ([]byte, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s substateResult) GetGasUsed() uint64 {
+	//TODO implement me
+	panic("implement me")
 }

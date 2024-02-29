@@ -9,34 +9,42 @@ import (
 
 // todo logs
 
-func NewReceipt(res *substate.Result) txcontext.Receipt {
-	return &receipt{res}
+func NewReceipt(res *substate.Result) *result {
+	return &result{res}
 }
 
-type receipt struct {
+type result struct {
 	*substate.Result
 }
 
-func (r *receipt) GetStatus() uint64 {
+func (r *result) GetReceipt() txcontext.Receipt {
+	return r
+}
+
+func (r *result) GetRawResult() ([]byte, error) {
+	return nil, nil
+}
+
+func (r *result) GetStatus() uint64 {
 	return r.Status
 }
 
-func (r *receipt) GetBloom() types.Bloom {
+func (r *result) GetBloom() types.Bloom {
 	return types.Bloom(r.Bloom)
 }
 
-func (r *receipt) GetLogs() []*types.Log {
+func (r *result) GetLogs() []*types.Log {
 	panic("how to return without iterating")
 }
 
-func (r *receipt) GetContractAddress() common.Address {
+func (r *result) GetContractAddress() common.Address {
 	return common.Address(r.ContractAddress)
 }
 
-func (r *receipt) GetGasUsed() uint64 {
+func (r *result) GetGasUsed() uint64 {
 	return r.GasUsed
 }
 
-func (r *receipt) Equal(y txcontext.Receipt) bool {
+func (r *result) Equal(y txcontext.Receipt) bool {
 	return txcontext.ReceiptEqual(r, y)
 }

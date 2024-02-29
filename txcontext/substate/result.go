@@ -11,35 +11,45 @@ import (
 
 // Deprecated: This is a workaround before oldSubstate repository is migrated to new structure.
 // Use NewSubstateResult instead.
-func NewReceipt(res *substate.SubstateResult) txcontext.Receipt {
-	return &receipt{res}
+func NewResult(res *substate.SubstateResult) *result {
+	return &result{res}
 }
 
 // Deprecated: This is a workaround before oldSubstate repository is migrated to new structure.
 // Use substateResult instead.
-type receipt struct {
+type result struct {
 	*substate.SubstateResult
 }
 
-func (r *receipt) GetStatus() uint64 {
+func (r *result) GetRawResult() ([]byte, error) {
+	// we do not have access to this in substate
+	return nil, nil
+}
+
+func (r *result) GetReceipt() txcontext.Receipt {
+	// result implements both txcontext.Result and txcontext.Receipt
+	return r
+}
+
+func (r *result) GetStatus() uint64 {
 	return r.Status
 }
-func (r *receipt) GetBloom() types.Bloom {
+func (r *result) GetBloom() types.Bloom {
 	return r.Bloom
 }
 
-func (r *receipt) GetLogs() []*types.Log {
+func (r *result) GetLogs() []*types.Log {
 	return r.Logs
 }
 
-func (r *receipt) GetContractAddress() common.Address {
+func (r *result) GetContractAddress() common.Address {
 	return r.ContractAddress
 }
 
-func (r *receipt) GetGasUsed() uint64 {
+func (r *result) GetGasUsed() uint64 {
 	return r.GasUsed
 }
 
-func (r *receipt) Equal(y txcontext.Receipt) bool {
+func (r *result) Equal(y txcontext.Receipt) bool {
 	return txcontext.ReceiptEqual(r, y)
 }

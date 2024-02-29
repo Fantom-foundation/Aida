@@ -41,9 +41,9 @@ type Transaction interface {
 
 // OutputState represents what is necessary to implement if output validation is required.
 type OutputState interface {
-	// GetReceipt returns the Receipt of the transaction.
+	// GetResult returns the Result of the execution.
 	// This is used for comparing result returned by the StateDb.
-	GetReceipt() Receipt
+	GetResult() Result
 
 	// GetStateHash returns expected State Hash. This is only used
 	// by Eth JSON tests and can be ignored for most implementations.

@@ -44,6 +44,6 @@ func (t *substateData) GetMessage() core.Message {
 	return types.NewMessage(common.Address(t.Message.From), (*common.Address)(t.Message.To), t.Message.Nonce, t.Message.Value, t.Message.Gas, t.Message.GasPrice, t.Message.GasFeeCap, t.Message.GasTipCap, t.Message.Data, list, !t.Message.CheckNonce)
 }
 
-func (t *substateData) GetReceipt() txcontext.Receipt {
+func (t *substateData) GetResult() txcontext.Result {
 	return NewReceipt(t.Result)
 }

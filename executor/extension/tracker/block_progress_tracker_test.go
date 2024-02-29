@@ -48,7 +48,7 @@ func TestSubstateProgressTrackerExtension_LoggingHappens(t *testing.T) {
 	ctx := &executor.Context{
 		State:           db,
 		StateDbPath:     dummyStateDbPath,
-		ExecutionResult: substatecontext.NewReceipt(&substate.SubstateResult{GasUsed: 100}),
+		ExecutionResult: substatecontext.NewResult(&substate.SubstateResult{GasUsed: 100}),
 	}
 
 	s := substatecontext.NewTxContext(&substate.Substate{
@@ -118,7 +118,7 @@ func TestSubstateProgressTrackerExtension_FirstLoggingIsIgnored(t *testing.T) {
 
 	ctx := &executor.Context{
 		State:           db,
-		ExecutionResult: substatecontext.NewReceipt(&substate.SubstateResult{GasUsed: 10}),
+		ExecutionResult: substatecontext.NewResult(&substate.SubstateResult{GasUsed: 10}),
 	}
 
 	s := substatecontext.NewTxContext(&substate.Substate{

@@ -215,9 +215,9 @@ type Context struct {
 	// hence any non-fatal errors. Any fatal should still be returned so that the app ends.
 	ErrorInput chan error
 
-	// ExecutionResult is set after transaction is processed.
-	// It is used for validation
-	ExecutionResult txcontext.Receipt
+	// ExecutionResult is set after the execution.
+	// It is used for validation and gas measurements.
+	ExecutionResult txcontext.Result
 }
 
 // ----------------------------------------------------------------------------
