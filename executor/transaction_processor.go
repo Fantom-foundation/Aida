@@ -233,7 +233,9 @@ func newTransactionResult(logs []*types.Log, msg core.Message, msgResult *evmcor
 		contract = crypto.CreateAddress(origin, msg.Nonce())
 	}
 
+	var returnData []byte
 	if msgResult != nil {
+		returnData = msgResult.Return()
 		gasUsed = msgResult.UsedGas
 		if msgResult.Failed() {
 			status = types.ReceiptStatusFailed
@@ -243,7 +245,7 @@ func newTransactionResult(logs []*types.Log, msg core.Message, msgResult *evmcor
 	}
 
 	return transactionResult{
-		result:          msgResult.Return(),
+		result:          returnData,
 		err:             err,
 		contractAddress: contract,
 		logs:            logs,
