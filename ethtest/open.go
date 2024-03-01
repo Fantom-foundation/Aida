@@ -40,7 +40,7 @@ func GetTestsWithinPath[T stateTest](path string, testType jsonTestType) ([]T, e
 		return nil, errors.New("please chose which testType do you want to read")
 	}
 
-	paths, err := utils.GetDirectoryFiles(path)
+	paths, err := utils.GetDirectoryFiles(".json", path)
 	if err != nil {
 		return nil, fmt.Errorf("cannot read files within directory %v; %v", path, err)
 	}

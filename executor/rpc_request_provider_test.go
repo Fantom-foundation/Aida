@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/rpc"
 	"github.com/Fantom-foundation/Aida/utils"
 	"go.uber.org/mock/gomock"
@@ -18,7 +19,7 @@ func TestRPCRequestProvider_WorksWithValidResponse(t *testing.T) {
 
 	cfg := &utils.Config{}
 
-	provider := openRpcRecording(i, cfg, nil)
+	provider := openRpcRecording(i, cfg, logger.NewLogger("critical", "rpc-provider-test"), nil, []string{"testfile"})
 
 	defer provider.Close()
 
@@ -43,7 +44,7 @@ func TestRPCRequestProvider_WorksWithErrorResponse(t *testing.T) {
 
 	cfg := &utils.Config{}
 
-	provider := openRpcRecording(i, cfg, nil)
+	provider := openRpcRecording(i, cfg, logger.NewLogger("critical", "rpc-provider-test"), nil, []string{"testfile"})
 
 	defer provider.Close()
 
@@ -68,7 +69,7 @@ func TestRPCRequestProvider_NilRequestDoesNotGetToConsumer(t *testing.T) {
 
 	cfg := &utils.Config{}
 
-	provider := openRpcRecording(i, cfg, nil)
+	provider := openRpcRecording(i, cfg, logger.NewLogger("critical", "rpc-provider-test"), nil, []string{"testfile"})
 
 	defer provider.Close()
 
@@ -100,7 +101,7 @@ func TestRPCRequestProvider_ErrorReturnedByIteratorEndsTheApp(t *testing.T) {
 
 	cfg := &utils.Config{}
 
-	provider := openRpcRecording(i, cfg, nil)
+	provider := openRpcRecording(i, cfg, logger.NewLogger("critical", "rpc-provider-test"), nil, []string{"testfile"})
 
 	defer provider.Close()
 
@@ -126,7 +127,7 @@ func TestRPCRequestProvider_GetLogMethodDoesNotEndIteration(t *testing.T) {
 
 	cfg := &utils.Config{}
 
-	provider := openRpcRecording(i, cfg, nil)
+	provider := openRpcRecording(i, cfg, logger.NewLogger("critical", "rpc-provider-test"), nil, []string{"testfile"})
 
 	defer provider.Close()
 
@@ -143,6 +144,37 @@ func TestRPCRequestProvider_GetLogMethodDoesNotEndIteration(t *testing.T) {
 
 	if err := provider.Run(10, 11, toRPCConsumer(consumer)); err != nil {
 		t.Fatal("test cannot fail")
+	}
+}
+
+func TestRPCRequestProvider_ReportsAboutRun(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	consumer := NewMockRPCReqConsumer(ctrl)
+	log := logger.NewMockLogger(ctrl)
+	i := rpc.NewMockIterator(ctrl)
+
+	cfg := &utils.Config{}
+	cfg.RpcRecordingPath = "test_file"
+
+	provider := openRpcRecording(i, cfg, log, nil, []string{cfg.RpcRecordingPath})
+
+	defer provider.Close()
+
+	gomock.InOrder(
+		i.EXPECT().Next().Return(true),
+		i.EXPECT().Error().Return(nil),
+		i.EXPECT().Value().Return(validResp),
+		log.EXPECT().Noticef("Iterating file %v/%v path: %v", 1, 1, "test_file"),
+		log.EXPECT().Noticef("First block of recording: %v", 10),
+		consumer.EXPECT().Consume(10, gomock.Any(), validResp).Return(errors.New("err")),
+		log.EXPECT().Infof("Last iterated file: %v", "test_file"),
+
+		//i.EXPECT().Next().Return(false),
+		i.EXPECT().Close(),
+	)
+
+	if err := provider.Run(10, 11, toRPCConsumer(consumer)); err == nil {
+		t.Fatal("run must fail")
 	}
 }
 

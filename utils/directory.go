@@ -23,7 +23,7 @@ func GetDirectorySize(path string) (int64, error) {
 
 // GetDirectoryFiles returns all filenames within given directory.
 // Note: Files inside any subdirectories are included.
-func GetDirectoryFiles(path string) ([]string, error) {
+func GetDirectoryFiles(suffix, path string) ([]string, error) {
 	var files []string
 
 	err := filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
@@ -32,7 +32,7 @@ func GetDirectoryFiles(path string) ([]string, error) {
 		}
 		// Check if the path represents a regular file (not a directory)
 		if !info.IsDir() {
-			if strings.HasSuffix(path, ".json") {
+			if strings.HasSuffix(path, suffix) {
 				files = append(files, path)
 			}
 		}

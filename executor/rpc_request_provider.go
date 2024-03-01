@@ -3,6 +3,7 @@ package executor
 import (
 	"errors"
 	"fmt"
+	"os"
 
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/rpc"
@@ -11,19 +12,40 @@ import (
 )
 
 func OpenRpcRecording(cfg *utils.Config, ctx *cli.Context) (Provider[*rpc.RequestAndResults], error) {
-	iter, err := rpc.NewFileReader(ctx.Context, cfg.RpcRecordingFile)
+	fileInfo, err := os.Stat(cfg.RpcRecordingPath)
+	if err != nil {
+		return nil, fmt.Errorf("cannot stat the rpc path; %w", err)
+	}
+
+	log := logger.NewLogger(cfg.LogLevel, "rpc-provider")
+	if !fileInfo.IsDir() {
+		iter, err := rpc.NewFileReader(ctx.Context, cfg.RpcRecordingPath)
+		if err != nil {
+			return nil, fmt.Errorf("cannot open rpc recording file; %v", err)
+		}
+		return openRpcRecording(iter, cfg, log, ctx, []string{cfg.RpcRecordingPath}), nil
+	}
+
+	files, err := utils.GetDirectoryFiles("", cfg.RpcRecordingPath)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get files from dir %v; %w", cfg.RpcRecordingPath, err)
+	}
+
+	iter, err := rpc.NewFileReader(ctx.Context, files[0])
 	if err != nil {
 		return nil, fmt.Errorf("cannot open rpc recording file; %v", err)
 	}
-	return openRpcRecording(iter, cfg, ctx), nil
+	return openRpcRecording(iter, cfg, log, ctx, files), nil
+
 }
 
-func openRpcRecording(iter rpc.Iterator, cfg *utils.Config, ctxt *cli.Context) Provider[*rpc.RequestAndResults] {
-	return rpcRequestProvider{
+func openRpcRecording(iter rpc.Iterator, cfg *utils.Config, log logger.Logger, ctxt *cli.Context, files []string) Provider[*rpc.RequestAndResults] {
+	return &rpcRequestProvider{
 		ctxt:     ctxt,
-		fileName: cfg.RpcRecordingFile,
+		fileName: cfg.RpcRecordingPath,
 		iter:     iter,
-		log:      logger.NewLogger(cfg.LogLevel, "rpc-provider"),
+		files:    files,
+		log:      log,
 	}
 }
 
@@ -32,10 +54,20 @@ type rpcRequestProvider struct {
 	fileName string
 	iter     rpc.Iterator
 	log      logger.Logger
+	files    []string
+	nextFile int
 }
 
-func (r rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc.RequestAndResults]) error {
-	if err := r.processFirst(from, consumer); err != nil {
+func (r *rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc.RequestAndResults]) (err error) {
+	r.nextFile++
+
+	defer func() {
+		if err != nil {
+			r.log.Infof("Last iterated file: %v", r.files[r.nextFile-1])
+		}
+	}()
+
+	if err = r.processFirst(from, consumer); err != nil {
 		return err
 	}
 
@@ -66,20 +98,29 @@ func (r rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc.Request
 			return nil
 		}
 
-		if err := consumer(TransactionInfo[*rpc.RequestAndResults]{req.RecordedBlock, 0, req}); err != nil {
+		if err = consumer(TransactionInfo[*rpc.RequestAndResults]{req.RecordedBlock, 0, req}); err != nil {
 			return err
 		}
+	}
+
+	if r.nextFile < len(r.files) {
+		var err error
+		r.iter, err = rpc.NewFileReader(r.ctxt.Context, r.files[r.nextFile])
+		if err != nil {
+			return fmt.Errorf("cannot open rpc recording file %v; %w", r.files[r.nextFile], err)
+		}
+		return r.Run(from, to, consumer)
 	}
 
 	return nil
 }
 
-func (r rpcRequestProvider) Close() {
+func (r *rpcRequestProvider) Close() {
 	r.iter.Close()
 }
 
 // processFirst takes first request and logs information about run.
-func (r rpcRequestProvider) processFirst(from int, consumer Consumer[*rpc.RequestAndResults]) error {
+func (r *rpcRequestProvider) processFirst(from int, consumer Consumer[*rpc.RequestAndResults]) error {
 	if r.iter.Next() {
 		if r.iter.Error() != nil {
 			return fmt.Errorf("iterator returned error; %v", r.iter.Error())
@@ -91,6 +132,7 @@ func (r rpcRequestProvider) processFirst(from int, consumer Consumer[*rpc.Reques
 		}
 
 		req.DecodeInfo()
+		r.log.Noticef("Iterating file %v/%v path: %v", r.nextFile, len(r.files), r.files[r.nextFile-1])
 		r.log.Noticef("First block of recording: %v", req.RecordedBlock)
 
 		// are we skipping requests?
