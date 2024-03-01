@@ -2,7 +2,6 @@ package rpc
 
 import (
 	"encoding/binary"
-	"fmt"
 	"strings"
 	"unsafe"
 
@@ -27,7 +26,6 @@ func Execute(block uint64, rec *RequestAndResults, archive state.NonCommittableS
 
 	case "call":
 		if rec.Timestamp == 0 {
-			fmt.Println("timestamp nil")
 			return nil
 		}
 		evm := newEvmExecutor(block, archive, cfg, rec.Query.Params[0].(map[string]interface{}), rec.Timestamp)
@@ -36,11 +34,7 @@ func Execute(block uint64, rec *RequestAndResults, archive state.NonCommittableS
 		if strings.Compare(falsyContract, strings.ToLower(evm.args.To.String())) == 0 {
 			rec.SkipValidation = true
 		}
-		r := executeCall(evm)
-		if re, e := r.GetRawResult(); re == nil && e == nil {
-			fmt.Println("execute nil")
-		}
-		return r
+		return executeCall(evm)
 
 	case "estimateGas":
 		// estimateGas is currently not suitable for rpc replay since the estimation  in geth is always calculated for current state
@@ -84,8 +78,11 @@ func executeCall(evm *EvmExecutor) *result {
 	if exRes != nil {
 		gasUsed = exRes.UsedGas
 	}
+
+	// this situation can happen if request is valid but the response from EVM is empty
+	// EVM returns nil instead of an empty result
 	var res []byte
-	if exRes.ReturnData == nil {
+	if exRes.ReturnData == nil && err == nil && exRes.Err == nil {
 		res = []byte{}
 	} else {
 		res = exRes.ReturnData
