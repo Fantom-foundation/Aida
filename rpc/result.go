@@ -10,6 +10,14 @@ type result struct {
 	err     error
 }
 
+func NewResult(res []byte, err error, gasUsed uint64) txcontext.Result {
+	return &result{
+		gasUsed: gasUsed,
+		result:  res,
+		err:     err,
+	}
+}
+
 func (r *result) GetReceipt() txcontext.Receipt {
 	// unused for rpc
 	return nil

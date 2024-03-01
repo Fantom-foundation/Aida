@@ -678,10 +678,9 @@ func newUnexpectedDataTypeErr(data *rpc.RequestAndResults) *comparatorError {
 	if data.Response != nil {
 		res = string(data.Response.Result)
 	} else {
-		res = string(data.Error.Error.Code) + ": " + data.Error.Error.Message
+		res = string(rune(data.Error.Error.Code)) + ": " + data.Error.Error.Message
 	}
 	return &comparatorError{
-
 		error: fmt.Errorf("unexpected data type:\n"+
 			"params: %v\n"+
 			"method: %v\n"+
