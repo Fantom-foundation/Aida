@@ -179,7 +179,7 @@ func TestRegisterProgress_InsertToDbIfEnabled(t *testing.T) {
 	ctx := &executor.Context{
 		State:           stateDb,
 		StateDbPath:     dummyStateDbPath,
-		ExecutionResult: substatecontext.NewReceipt(&substate.SubstateResult{GasUsed: 100}),
+		ExecutionResult: substatecontext.NewResult(&substate.SubstateResult{GasUsed: 100}),
 	}
 
 	s := &substate.Substate{

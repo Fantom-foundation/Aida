@@ -7,6 +7,12 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
+type Result interface {
+	GetReceipt() Receipt
+	GetRawResult() ([]byte, error)
+	GetGasUsed() uint64
+}
+
 // Receipt represents an interface for managing and retrieving the result of a blockchain transaction or contract execution.
 type Receipt interface {
 	// GetStatus returns the status code indicating the success or failure of the transaction or execution.

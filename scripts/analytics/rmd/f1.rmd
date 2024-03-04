@@ -253,5 +253,6 @@ ggplot() +
 ## Appendix A. Metadata
 
 ```{r, echo=FALSE, message=FALSE}
-gt(Metadata)
+sorted_metadata <- Metadata %>% arrange(key)
+gt(sorted_metadata)
 ```

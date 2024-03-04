@@ -156,7 +156,7 @@ func (ctx *Context) RecordTransaction(state executor.State[txcontext.TxContext],
 	ctx.tTypes = append(ctx.tTypes, getTransactionType(state))
 
 	// update gas used for block and transaction
-	gasUsed := state.Data.GetReceipt().GetGasUsed()
+	gasUsed := state.Data.GetResult().GetGasUsed()
 	ctx.gasBlock += gasUsed
 	ctx.gasTransactions = append(ctx.gasTransactions, gasUsed)
 

@@ -78,7 +78,7 @@ func TestProgressLoggerExtension_LoggingHappens(t *testing.T) {
 		Transaction: 1,
 		Data:        nil,
 	}, &executor.Context{
-		ExecutionResult: substatecontext.NewReceipt(&substate.SubstateResult{GasUsed: 100_000_000}),
+		ExecutionResult: substatecontext.NewResult(&substate.SubstateResult{GasUsed: 100_000_000}),
 	})
 
 	// we must wait for the ticker to tick
@@ -110,7 +110,7 @@ func TestProgressLoggerExtension_LoggingHappensEvenWhenProgramEndsBeforeTickerTi
 		Transaction: 1,
 		Data:        nil,
 	}, &executor.Context{
-		ExecutionResult: substatecontext.NewReceipt(&substate.SubstateResult{GasUsed: 100_000_000}),
+		ExecutionResult: substatecontext.NewResult(&substate.SubstateResult{GasUsed: 100_000_000}),
 	})
 
 	// wait for data to get into logger
