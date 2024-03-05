@@ -12,7 +12,7 @@ import (
 	"github.com/Fantom-foundation/Aida/logger"
 	"github.com/Fantom-foundation/Aida/rpc"
 	"github.com/Fantom-foundation/Aida/utils"
-	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/Fantom-foundation/lachesis-base/common/littleendian"
 	"github.com/status-im/keycard-go/hexutils"
 )
 
@@ -53,9 +53,6 @@ func TestRPCComparator_PostTransactionDoesNotFailIfContinueOnFailureIsTrue(t *te
 		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &rpc.StateDBData{
-			Result: bigRes,
-		},
 	}
 
 	s := executor.State[*rpc.RequestAndResults]{
@@ -66,6 +63,7 @@ func TestRPCComparator_PostTransactionDoesNotFailIfContinueOnFailureIsTrue(t *te
 
 	ctx := new(executor.Context)
 	ctx.ErrorInput = make(chan error, 10)
+	ctx.ExecutionResult = rpc.NewResult(bigRes.Bytes(), nil, 10)
 	err := c.PostTransaction(s, ctx)
 	if err != nil {
 		t.Errorf("unexpected error in post transaction; %v", err)
@@ -88,18 +86,16 @@ func TestRPCComparator_PostTransactionFailsWhenContinueOnFailureIsNotEnabled(t *
 		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &rpc.StateDBData{
-			Result:      bigRes,
-			IsRecovered: true,
-		},
+		IsRecovered: true,
 	}
 
 	s := executor.State[*rpc.RequestAndResults]{
 		Data: data,
 	}
 
+	res := rpc.NewResult(bigRes.Bytes(), nil, 10)
 	c := makeRPCComparator(cfg, logger.NewLogger("critical", "rpc-test"))
-	err := c.PostTransaction(s, nil)
+	err := c.PostTransaction(s, &executor.Context{ExecutionResult: res})
 	if err == nil {
 		t.Errorf("post transaction must return error; %v", err)
 	}
@@ -119,12 +115,10 @@ func Test_compareBalanceOK(t *testing.T) {
 		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &rpc.StateDBData{
-			Result: bigRes,
-		},
 	}
 
-	err := compareBalance(data, 0)
+	res := rpc.NewResult(bigRes.Bytes(), nil, 10)
+	err := compareBalance(res, data, 0)
 	if err != nil {
 		t.Errorf("error must be nil; err: %v", err)
 	}
@@ -144,12 +138,9 @@ func Test_compareBalanceErrorNoMatchingResult(t *testing.T) {
 		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &rpc.StateDBData{
-			Result: bigRes,
-		},
 	}
-
-	err := compareBalance(data, 0)
+	res := rpc.NewResult(bigRes.Bytes(), nil, 10)
+	err := compareBalance(res, data, 0)
 	if err == nil {
 		t.Errorf("error must not be nil; err: %v", err)
 		return
@@ -173,12 +164,10 @@ func Test_compareTransactionCountOK(t *testing.T) {
 		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &rpc.StateDBData{
-			Result: uint64(1),
-		},
 	}
 
-	err := compareTransactionCount(data, 0)
+	res := rpc.NewResult(littleendian.Uint64ToBytes(1), nil, 10)
+	err := compareTransactionCount(res, data, 0)
 
 	if err != nil {
 		t.Errorf("error must be nil; err: %v", err)
@@ -198,12 +187,10 @@ func Test_compareTransactionCountErrorNoMatchingResult(t *testing.T) {
 		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &rpc.StateDBData{
-			Result: uint64(1),
-		},
 	}
 
-	err := compareTransactionCount(data, 0)
+	res := rpc.NewResult(littleendian.Uint64ToBytes(1), nil, 10)
+	err := compareTransactionCount(res, data, 0)
 	if err == nil {
 		t.Errorf("error must not be nil; err: %v", err)
 		return
@@ -227,12 +214,10 @@ func Test_compareCallOK(t *testing.T) {
 		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &rpc.StateDBData{
-			Result: hexutils.HexToBytes(strings.TrimPrefix(longHexOne, "0x")),
-		},
 	}
 
-	err := compareCall(data, 0)
+	res := rpc.NewResult(hexutils.HexToBytes(strings.TrimPrefix(longHexOne, "0x")), nil, 10)
+	err := compareCall(res, data, 0)
 	if err != nil {
 		t.Errorf("error must be nil; err: %v", err)
 	}
@@ -250,12 +235,10 @@ func Test_compareCallErrorNoMatchingResult(t *testing.T) {
 		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &rpc.StateDBData{
-			Result: hexutils.HexToBytes(strings.TrimPrefix(longHexZero, "0x")),
-		},
 	}
 
-	err := compareCall(data, 0)
+	res := rpc.NewResult(hexutils.HexToBytes(strings.TrimPrefix(longHexZero, "0x")), nil, 10)
+	err := compareCall(res, data, 0)
 	if err == nil {
 		t.Errorf("error must not be nil; err: %v", err)
 		return
@@ -277,12 +260,10 @@ func Test_compareCallErrorExpectedResultGotErr(t *testing.T) {
 		Response: &rpc.Response{
 			Result: []byte(hexOne),
 		},
-		StateDB: &rpc.StateDBData{
-			Error: errors.New("err"),
-		},
 	}
 
-	err := compareCall(data, 0)
+	res := rpc.NewResult(nil, errors.New("err"), 10)
+	err := compareCall(res, data, 0)
 	if err == nil {
 		t.Errorf("error must not be nil; err: %v", err)
 		return
@@ -307,12 +288,10 @@ func Test_compareCallErrorExpectedErrGotResult(t *testing.T) {
 				Message: "error",
 			},
 		},
-		StateDB: &rpc.StateDBData{
-			Result: hexutils.HexToBytes(strings.TrimPrefix(longHexZero, "0x")),
-		},
 	}
 
-	err := compareCall(data, 0)
+	res := rpc.NewResult(hexutils.HexToBytes(strings.TrimPrefix(longHexZero, "0x")), nil, 10)
+	err := compareCall(res, data, 0)
 	if err == nil {
 		t.Errorf("error must not be null")
 		return
@@ -336,12 +315,10 @@ func Test_compareEstimateGasOK(t *testing.T) {
 		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &rpc.StateDBData{
-			Result: hexutil.Uint64(1),
-		},
 	}
 
-	err := compareEstimateGas(data, 0)
+	res := rpc.NewResult(littleendian.Uint64ToBytes(uint64(1)), nil, 10)
+	err := compareEstimateGas(res, data, 0)
 	if err != nil {
 		t.Errorf("error must be nil; err: %v", err)
 	}
@@ -359,12 +336,10 @@ func Test_compareEstimateGasErrorNoMatchingResult(t *testing.T) {
 		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &rpc.StateDBData{
-			Result: hexutil.Uint64(0),
-		},
 	}
 
-	err := compareEstimateGas(data, 0)
+	res := rpc.NewResult(littleendian.Uint64ToBytes(uint64(0)), nil, 10)
+	err := compareEstimateGas(res, data, 0)
 	if err == nil {
 		t.Errorf("error must not be null")
 		return
@@ -386,12 +361,10 @@ func Test_compareEstimateGasErrorExpectedResultGotErr(t *testing.T) {
 		Response: &rpc.Response{
 			Result: []byte(hexOne),
 		},
-		StateDB: &rpc.StateDBData{
-			Error: errors.New("error"),
-		},
 	}
 
-	err := compareEstimateGas(data, 0)
+	res := rpc.NewResult(nil, errors.New("error"), 10)
+	err := compareEstimateGas(res, data, 0)
 	if err == nil {
 		t.Errorf("error must be nil; err: %v", err)
 		return
@@ -415,12 +388,9 @@ func Test_compareEstimateGasErrorExpectedErrGotResult(t *testing.T) {
 				Message: "error",
 			},
 		},
-		StateDB: &rpc.StateDBData{
-			Result: hexutil.Uint64(0),
-		},
 	}
-
-	err := compareEstimateGas(data, 0)
+	res := rpc.NewResult(littleendian.Uint64ToBytes(uint64(0)), nil, 10)
+	err := compareEstimateGas(res, data, 0)
 	if err == nil {
 		t.Errorf("error must not be null")
 		return
@@ -444,12 +414,10 @@ func Test_compareCodeOK(t *testing.T) {
 		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &rpc.StateDBData{
-			Result: hexutils.HexToBytes(strings.TrimPrefix(longHexOne, "0x")),
-		},
 	}
 
-	err := compareCode(data, 0)
+	res := rpc.NewResult(hexutils.HexToBytes(strings.TrimPrefix(longHexOne, "0x")), nil, 10)
+	err := compareCode(res, data, 0)
 	if err != nil {
 		t.Errorf("error must be nil; err: %v", err)
 	}
@@ -467,12 +435,10 @@ func Test_compareCodeErrorNoMatchingResult(t *testing.T) {
 		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &rpc.StateDBData{
-			Result: hexutils.HexToBytes(strings.TrimPrefix(longHexZero, "0x")),
-		},
 	}
 
-	err := compareCode(data, 0)
+	res := rpc.NewResult(hexutils.HexToBytes(strings.TrimPrefix(longHexZero, "0x")), nil, 10)
+	err := compareCode(res, data, 0)
 	if err == nil {
 		t.Errorf("error must not be nil; err: %v", err)
 		return
@@ -496,12 +462,10 @@ func Test_compareStorageAtOK(t *testing.T) {
 		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &rpc.StateDBData{
-			Result: hexutils.HexToBytes(strings.TrimPrefix(longHexOne, "0x")),
-		},
 	}
 
-	err := compareStorageAt(data, 0)
+	res := rpc.NewResult(hexutils.HexToBytes(strings.TrimPrefix(longHexOne, "0x")), nil, 10)
+	err := compareStorageAt(res, data, 0)
 	if err != nil {
 		t.Errorf("error must be nil; err: %v", err)
 	}
@@ -519,12 +483,11 @@ func Test_compareStorageAtErrorNoMatchingResult(t *testing.T) {
 		Response: &rpc.Response{
 			Result: rec,
 		},
-		StateDB: &rpc.StateDBData{
-			Result: hexutils.HexToBytes(strings.TrimPrefix(longHexZero, "0x")),
-		},
 	}
 
-	err := compareStorageAt(data, 0)
+	res := rpc.NewResult(hexutils.HexToBytes(strings.TrimPrefix(longHexZero, "0x")), nil, 10)
+
+	err := compareStorageAt(res, data, 0)
 	if err == nil {
 		t.Errorf("error must not be nil; err: %v", err)
 		return
