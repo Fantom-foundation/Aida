@@ -61,7 +61,7 @@ func (id *RunIdentity) fetchConfigInfo() (map[string]string, error) {
 		"ChainId":          strconv.Itoa(int(id.Cfg.ChainID)),
 
 		"DbSrc":         id.Cfg.StateDbSrc,
-		"RpcRecordings": id.Cfg.RpcRecordingFile,
+		"RpcRecordings": id.Cfg.RpcRecordingPath,
 
 		"First": strconv.Itoa(int(id.Cfg.First)),
 		"Last":  strconv.Itoa(int(id.Cfg.Last)),

@@ -180,7 +180,7 @@ type Config struct {
 	ProfilingDbName        string         // set a database name for storing micro-profiling results
 	RandomSeed             int64          // set random seed for stochastic testing
 	RegisterRun            string         // register run to the provided connection string
-	RpcRecordingFile       string         // path to source file with recorded RPC requests
+	RpcRecordingPath       string         // path to source file (or dir with files) with recorded RPC requests
 	ShadowDb               bool           // defines we want to open an existing db as shadow
 	ShadowImpl             string         // implementation of the shadow DB to use, empty if disabled
 	ShadowVariant          string         // database variant of the shadow DB to be used
