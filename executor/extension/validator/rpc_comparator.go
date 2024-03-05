@@ -216,7 +216,7 @@ func (c *rpcComparator) resendRequest(result txcontext.Result, state executor.St
 
 	s, ok := m["result"].(string)
 	if ok { // valid result
-		res, err := json.Marshal(s)
+		resentResult, err := json.Marshal(s)
 		if err != nil {
 			return newComparatorError(result, nil, nil, state.Data, state.Block, cannotUnmarshalResult)
 		}
@@ -225,7 +225,7 @@ func (c *rpcComparator) resendRequest(result txcontext.Result, state executor.St
 			Version: "2.0",
 			ID:      json.RawMessage{1},
 			BlockID: uint64(state.Data.RequestedBlock),
-			Result:  res,
+			Result:  resentResult,
 			Payload: payload,
 		}
 	} else { // error result
