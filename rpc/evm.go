@@ -105,7 +105,8 @@ func (e *EvmExecutor) newEVM(msg eth.Message) *vm.EVM {
 	)
 
 	getHash = func(_ uint64) common.Hash {
-		return e.archive.GetHash()
+		h, _ := e.archive.GetHash() // todo
+		return h
 	}
 
 	blockCtx = vm.BlockContext{
