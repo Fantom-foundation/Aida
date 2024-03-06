@@ -71,7 +71,8 @@ var CloneCustom = cli.Command{
 		&logger.LogLevelFlag,
 	},
 	Description: `
-Creates custom clone db is used to create subset of aida-db with only specific component.
+Clone custom is a specialized clone tool which copies specific components in aida-db from 
+ the given block range.
 `,
 }
 
