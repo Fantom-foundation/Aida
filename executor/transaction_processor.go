@@ -132,8 +132,8 @@ func (s *TxProcessor) ProcessTransaction(db state.VmStateDB, block int, tx int, 
 
 // processRegularTx executes VM on a chosen storage system.
 func (s *TxProcessor) processRegularTx(db state.VmStateDB, block int, tx int, st txcontext.TxContext) (res transactionResult, finalError error) {
-	db.BeginTransaction(uint32(tx))
-	defer db.EndTransaction()
+	//db.BeginTransaction(uint32(tx)) todo remove?
+	//defer db.EndTransaction()
 
 	var (
 		gasPool   = new(evmcore.GasPool)
