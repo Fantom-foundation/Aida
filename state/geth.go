@@ -145,11 +145,12 @@ func (s *gethStateDB) Error() error {
 	return nil
 }
 
-func (s *gethStateDB) BeginTransaction(number uint32) {
+func (s *gethStateDB) BeginTransaction(number uint32) error {
 	// ignored
+	return nil
 }
 
-func (s *gethStateDB) EndTransaction() {
+func (s *gethStateDB) EndTransaction() error {
 	if s.chainConduit == nil || s.chainConduit.IsFinalise(s.block) {
 		// Opera or Ethereum after Byzantium
 		s.Finalise(true)
@@ -157,14 +158,16 @@ func (s *gethStateDB) EndTransaction() {
 		// Ethereum before Byzantium
 		s.IntermediateRoot(s.chainConduit.DeleteEmptyObjects(s.block))
 	}
+	return nil
 }
 
-func (s *gethStateDB) BeginBlock(number uint64) {
+func (s *gethStateDB) BeginBlock(number uint64) error {
 	s.openStateDB()
 	s.block = new(big.Int).SetUint64(number)
+	return nil
 }
 
-func (s *gethStateDB) EndBlock() {
+func (s *gethStateDB) EndBlock() error {
 	var err error
 	//commit at the end of a block
 	s.stateRoot, err = s.Commit(true)
@@ -176,6 +179,7 @@ func (s *gethStateDB) EndBlock() {
 		s.trieCommit()
 		s.trieCap()
 	}
+	return nil
 }
 
 func (s *gethStateDB) BeginSyncPeriod(number uint64) {
@@ -190,8 +194,8 @@ func (s *gethStateDB) EndSyncPeriod() {
 	}
 }
 
-func (s *gethStateDB) GetHash() common.Hash {
-	return s.IntermediateRoot(true)
+func (s *gethStateDB) GetHash() (common.Hash, error) {
+	return s.IntermediateRoot(true), nil
 }
 
 func (s *gethStateDB) Finalise(deleteEmptyObjects bool) {

@@ -98,11 +98,15 @@ func (s *shadowVmStateDb) SetNonce(addr common.Address, value uint64) {
 }
 
 func (s *shadowVmStateDb) GetCommittedState(addr common.Address, key common.Hash) common.Hash {
-	return s.getHash("GetCommittedState", func(s state.VmStateDB) common.Hash { return s.GetCommittedState(addr, key) }, addr, key)
+	// error here cannot happen
+	h, _ := s.getHash("GetCommittedState", func(s state.VmStateDB) (common.Hash, error) { return s.GetCommittedState(addr, key), nil }, addr, key)
+	return h
 }
 
 func (s *shadowVmStateDb) GetState(addr common.Address, key common.Hash) common.Hash {
-	return s.getHash("GetState", func(s state.VmStateDB) common.Hash { return s.GetState(addr, key) }, addr, key)
+	// error here cannot happen
+	h, _ := s.getHash("GetState", func(s state.VmStateDB) (common.Hash, error) { return s.GetState(addr, key), nil }, addr, key)
+	return h
 }
 
 func (s *shadowVmStateDb) SetState(addr common.Address, key common.Hash, value common.Hash) {
@@ -118,7 +122,9 @@ func (s *shadowVmStateDb) GetCodeSize(addr common.Address) int {
 }
 
 func (s *shadowVmStateDb) GetCodeHash(addr common.Address) common.Hash {
-	return s.getHash("GetCodeHash", func(s state.VmStateDB) common.Hash { return s.GetCodeHash(addr) }, addr)
+	// error here cannot happen
+	h, _ := s.getHash("GetCodeHash", func(s state.VmStateDB) (common.Hash, error) { return s.GetCodeHash(addr), nil }, addr)
+	return h
 }
 
 func (s *shadowVmStateDb) SetCode(addr common.Address, code []byte) {
@@ -142,21 +148,25 @@ func (s *shadowVmStateDb) RevertToSnapshot(id int) {
 	s.shadow.RevertToSnapshot(s.snapshots[id].shadow)
 }
 
-func (s *shadowVmStateDb) BeginTransaction(tx uint32) {
+func (s *shadowVmStateDb) BeginTransaction(tx uint32) error {
 	s.snapshots = s.snapshots[0:0]
 	s.run("BeginTransaction", func(s state.VmStateDB) { s.BeginTransaction(tx) })
+	return nil
 }
 
-func (s *shadowVmStateDb) EndTransaction() {
+func (s *shadowVmStateDb) EndTransaction() error {
 	s.run("EndTransaction", func(s state.VmStateDB) { s.EndTransaction() })
+	return nil
 }
 
-func (s *shadowStateDb) BeginBlock(blk uint64) {
+func (s *shadowStateDb) BeginBlock(blk uint64) error {
 	s.run("BeginBlock", func(s state.StateDB) { s.BeginBlock(blk) })
+	return nil
 }
 
-func (s *shadowStateDb) EndBlock() {
+func (s *shadowStateDb) EndBlock() error {
 	s.run("EndBlock", func(s state.StateDB) { s.EndBlock() })
+	return nil
 }
 
 func (s *shadowStateDb) BeginSyncPeriod(number uint64) {
@@ -167,16 +177,20 @@ func (s *shadowStateDb) EndSyncPeriod() {
 	s.run("EndSyncPeriod", func(s state.StateDB) { s.EndSyncPeriod() })
 }
 
-func (s *shadowStateDb) GetHash() common.Hash {
+func (s *shadowStateDb) GetHash() (common.Hash, error) {
 	if s.compareStateHash {
-		return s.getHash("GetHash", func(s state.StateDB) common.Hash { return s.GetHash() })
+		return s.getHash("GetHash", func(s state.StateDB) (common.Hash, error) {
+			return s.GetHash()
+		})
 	}
 	return s.prime.GetHash()
 }
 
-func (s *shadowNonCommittableStateDb) GetHash() common.Hash {
+func (s *shadowNonCommittableStateDb) GetHash() (common.Hash, error) {
 	if s.compareStateHash {
-		return s.getHash("GetHash", func(s state.NonCommittableStateDB) common.Hash { return s.GetHash() })
+		return s.getHash("GetHash", func(s state.NonCommittableStateDB) (common.Hash, error) {
+			return s.GetHash()
+		})
 	}
 	return s.prime.GetHash()
 }
@@ -185,8 +199,9 @@ func (s *shadowStateDb) Close() error {
 	return s.getError("Close", func(s state.StateDB) error { return s.Close() })
 }
 
-func (s *shadowNonCommittableStateDb) Release() {
+func (s *shadowNonCommittableStateDb) Release() error {
 	s.run("Release", func(s state.NonCommittableStateDB) { s.Release() })
+	return nil
 }
 
 func (s *shadowVmStateDb) AddRefund(amount uint64) {
@@ -475,34 +490,55 @@ func (s *shadowVmStateDb) getUint64(opName string, op func(s state.VmStateDB) ui
 	return resP
 }
 
-func (s *shadowStateDb) getHash(opName string, op func(s state.StateDB) common.Hash, args ...any) common.Hash {
-	resP := op(s.prime)
-	resS := op(s.shadow)
+func (s *shadowStateDb) getHash(opName string, op func(s state.StateDB) (common.Hash, error), args ...any) (common.Hash, error) {
+	resP, err := op(s.prime)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	resS, err := op(s.shadow)
+	if err != nil {
+		return common.Hash{}, err
+	}
 	if resP != resS {
 		s.logIssue(opName, resP, resS, args)
 		s.err = fmt.Errorf("%v diverged from shadow DB.", getOpcodeString(opName, args))
+		return common.Hash{}, s.err
 	}
-	return resP
+	return resP, nil
 }
 
-func (s *shadowNonCommittableStateDb) getHash(opName string, op func(s state.NonCommittableStateDB) common.Hash, args ...any) common.Hash {
-	resP := op(s.prime)
-	resS := op(s.shadow)
+func (s *shadowNonCommittableStateDb) getHash(opName string, op func(s state.NonCommittableStateDB) (common.Hash, error), args ...any) (common.Hash, error) {
+	resP, err := op(s.prime)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	resS, err := op(s.shadow)
+	if err != nil {
+		return common.Hash{}, err
+	}
 	if resP != resS {
 		s.logIssue(opName, resP, resS, args)
 		s.err = fmt.Errorf("%v diverged from shadow DB.", getOpcodeString(opName, args))
+		return common.Hash{}, s.err
 	}
-	return resP
+	return resP, fmt.Errorf("%v diverged from shadow DB.", getOpcodeString(opName, args))
 }
 
-func (s *shadowVmStateDb) getHash(opName string, op func(s state.VmStateDB) common.Hash, args ...any) common.Hash {
-	resP := op(s.prime)
-	resS := op(s.shadow)
+func (s *shadowVmStateDb) getHash(opName string, op func(s state.VmStateDB) (common.Hash, error), args ...any) (common.Hash, error) {
+	resP, err := op(s.prime)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	resS, err := op(s.shadow)
+	if err != nil {
+		return common.Hash{}, err
+	}
 	if resP != resS {
 		s.logIssue(opName, resP, resS, args)
 		s.err = fmt.Errorf("%v diverged from shadow DB.", getOpcodeString(opName, args))
+		return common.Hash{}, s.err
 	}
-	return resP
+	return resP, nil
 }
 
 func (s *shadowVmStateDb) getBigInt(opName string, op func(s state.VmStateDB) *big.Int, args ...any) *big.Int {

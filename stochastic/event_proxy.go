@@ -312,7 +312,7 @@ func (p *EventProxy) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 	return p.db.Commit(deleteEmptyObjects)
 }
 
-func (p *EventProxy) GetHash() common.Hash {
+func (p *EventProxy) GetHash() (common.Hash, error) {
 	return p.db.GetHash()
 }
 
@@ -330,7 +330,7 @@ func (p *EventProxy) PrepareSubstate(substate txcontext.WorldState, block uint64
 	p.db.PrepareSubstate(substate, block)
 }
 
-func (p *EventProxy) BeginTransaction(number uint32) {
+func (p *EventProxy) BeginTransaction(number uint32) error {
 	// register event
 	p.registry.RegisterOp(BeginTransactionID)
 
@@ -339,9 +339,10 @@ func (p *EventProxy) BeginTransaction(number uint32) {
 
 	// clear all snapshots
 	p.snapshots = []int{}
+	return nil
 }
 
-func (p *EventProxy) EndTransaction() {
+func (p *EventProxy) EndTransaction() error {
 	// register event
 	p.registry.RegisterOp(EndTransactionID)
 
@@ -350,22 +351,25 @@ func (p *EventProxy) EndTransaction() {
 
 	// clear all snapshots
 	p.snapshots = []int{}
+	return nil
 }
 
-func (p *EventProxy) BeginBlock(number uint64) {
+func (p *EventProxy) BeginBlock(number uint64) error {
 	// register event
 	p.registry.RegisterOp(BeginBlockID)
 
 	// call real StateDB
 	p.db.BeginBlock(number)
+	return nil
 }
 
-func (p *EventProxy) EndBlock() {
+func (p *EventProxy) EndBlock() error {
 	// register event
 	p.registry.RegisterOp(EndBlockID)
 
 	// call real StateDB
 	p.db.EndBlock()
+	return nil
 }
 
 func (p *EventProxy) BeginSyncPeriod(number uint64) {

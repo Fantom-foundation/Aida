@@ -239,7 +239,7 @@ func (r *DeletionProxy) Commit(deleteEmptyObjects bool) (common.Hash, error) {
 	return r.db.Commit(deleteEmptyObjects)
 }
 
-func (r *DeletionProxy) GetHash() common.Hash {
+func (r *DeletionProxy) GetHash() (common.Hash, error) {
 	return r.db.GetHash()
 }
 
@@ -256,20 +256,24 @@ func (r *DeletionProxy) PrepareSubstate(substate txcontext.WorldState, block uin
 	r.db.PrepareSubstate(substate, block)
 }
 
-func (r *DeletionProxy) BeginTransaction(number uint32) {
+func (r *DeletionProxy) BeginTransaction(number uint32) error {
 	r.db.BeginTransaction(number)
+	return nil
 }
 
-func (r *DeletionProxy) EndTransaction() {
+func (r *DeletionProxy) EndTransaction() error {
 	r.db.EndTransaction()
+	return nil
 }
 
-func (r *DeletionProxy) BeginBlock(number uint64) {
+func (r *DeletionProxy) BeginBlock(number uint64) error {
 	r.db.BeginBlock(number)
+	return nil
 }
 
-func (r *DeletionProxy) EndBlock() {
+func (r *DeletionProxy) EndBlock() error {
 	r.db.EndBlock()
+	return nil
 }
 
 func (r *DeletionProxy) BeginSyncPeriod(number uint64) {

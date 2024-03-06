@@ -273,28 +273,32 @@ func (p *ProfilerProxy) do(opId byte, op func()) {
 	p.anlt.Update(opId, float64(elapsed))
 }
 
-func (p *ProfilerProxy) BeginTransaction(number uint32) {
+func (p *ProfilerProxy) BeginTransaction(number uint32) error {
 	p.do(operation.BeginTransactionID, func() {
 		p.db.BeginTransaction(number)
 	})
+	return nil
 }
 
-func (p *ProfilerProxy) EndTransaction() {
+func (p *ProfilerProxy) EndTransaction() error {
 	p.do(operation.EndTransactionID, func() {
 		p.db.EndTransaction()
 	})
+	return nil
 }
 
-func (p *ProfilerProxy) BeginBlock(number uint64) {
+func (p *ProfilerProxy) BeginBlock(number uint64) error {
 	p.do(operation.BeginBlockID, func() {
 		p.db.BeginBlock(number)
 	})
+	return nil
 }
 
-func (p *ProfilerProxy) EndBlock() {
+func (p *ProfilerProxy) EndBlock() error {
 	p.do(operation.EndBlockID, func() {
 		p.db.EndBlock()
 	})
+	return nil
 }
 
 func (p *ProfilerProxy) BeginSyncPeriod(number uint64) {
@@ -309,7 +313,7 @@ func (p *ProfilerProxy) EndSyncPeriod() {
 	})
 }
 
-func (p *ProfilerProxy) GetHash() common.Hash {
+func (p *ProfilerProxy) GetHash() (common.Hash, error) {
 	// TODO: add profiling for this operation
 	return p.db.GetHash()
 }
