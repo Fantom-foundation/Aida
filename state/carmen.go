@@ -341,8 +341,7 @@ func (s *carmenStateDB) GetMemoryUsage() *MemoryUsage {
 	//if usage == nil {
 	//	return &MemoryUsage{uint64(0), nil}
 	//}
-	//return &MemoryUsage{uint64(usage.Total()), usage}
-	panic("GetMemoryUsage; waiting for implementation from carmen side")
+	return &MemoryUsage{uint64(0), nil}
 }
 
 func (s *carmenStateDB) GetShadowDB() StateDB {
