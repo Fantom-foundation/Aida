@@ -23,7 +23,7 @@ type cloner struct {
 	cfg             *utils.Config
 	log             logger.Logger
 	aidaDb, cloneDb ethdb.Database
-	customRead      dbcomponent.DbComponent
+	cloneComponent  dbcomponent.DbComponent
 	count           uint64
 	typ             utils.AidaDbType
 	writeCh         chan rawEntry
@@ -87,15 +87,15 @@ func Clone(cfg *utils.Config, aidaDb, cloneDb ethdb.Database, cloneType utils.Ai
 
 	start := time.Now()
 	c := cloner{
-		cfg:        cfg,
-		cloneDb:    cloneDb,
-		aidaDb:     aidaDb,
-		log:        log,
-		typ:        cloneType,
-		customRead: dbComponent,
-		writeCh:    make(chan rawEntry, cloneWriteChanSize),
-		errCh:      make(chan error, 1),
-		stopCh:     make(chan any),
+		cfg:            cfg,
+		cloneDb:        cloneDb,
+		aidaDb:         aidaDb,
+		log:            log,
+		typ:            cloneType,
+		cloneComponent: dbComponent,
+		writeCh:        make(chan rawEntry, cloneWriteChanSize),
+		errCh:          make(chan error, 1),
+		stopCh:         make(chan any),
 	}
 
 	if err = c.clone(isFirstGenerationFromGenesis); err != nil {
@@ -290,12 +290,12 @@ func (c *cloner) readUpdateSet(isFirstGenerationFromGenesis bool) uint64 {
 		return false, nil
 	}
 
-	if c.typ == utils.CloneType || c.typ == utils.CustomType {
+	if c.typ == utils.CloneType {
 		c.read([]byte(substate.SubstateAllocPrefix), 0, endCond)
 
 		// if there is no updateset before interval (first 1M blocks) then 0 is returned
 		return lastUpdateBeforeRange
-	} else if c.typ == utils.PatchType {
+	} else if c.typ == utils.PatchType || c.typ == utils.CustomType {
 		var wantedBlock uint64
 
 		// if we are working with first patch that was created from genesis we need to move the start of the iterator minus one block
@@ -436,8 +436,9 @@ func (c *cloner) stop() {
 	}
 }
 
+// readDataCustom retrieves data from source AidaDb based on given dbComponent
 func (c *cloner) readDataCustom() error {
-	if c.customRead == dbcomponent.Substate || c.customRead == dbcomponent.All {
+	if c.cloneComponent == dbcomponent.Substate || c.cloneComponent == dbcomponent.All {
 		c.read([]byte(substate.Stage1CodePrefix), 0, nil)
 		err := c.readSubstate()
 		if err != nil {
@@ -445,19 +446,19 @@ func (c *cloner) readDataCustom() error {
 		}
 	}
 
-	if c.customRead == dbcomponent.Delete || c.customRead == dbcomponent.All {
+	if c.cloneComponent == dbcomponent.Delete || c.cloneComponent == dbcomponent.All {
 		err := c.readDeletions(c.cfg.First)
 		if err != nil {
 			return fmt.Errorf("cannot read deletions; %v", err)
 		}
 	}
 
-	if c.customRead == dbcomponent.Update || c.customRead == dbcomponent.All {
+	if c.cloneComponent == dbcomponent.Update || c.cloneComponent == dbcomponent.All {
 		lastUpdateBeforeRange := c.readUpdateSet(false)
 		c.log.Noticef("Last updateset found at block %v", lastUpdateBeforeRange)
 	}
 
-	if c.customRead == dbcomponent.StateHash || c.customRead == dbcomponent.All {
+	if c.cloneComponent == dbcomponent.StateHash || c.cloneComponent == dbcomponent.All {
 		err := c.readStateHashes()
 		if err != nil {
 			return err
