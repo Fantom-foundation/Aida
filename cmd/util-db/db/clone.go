@@ -60,7 +60,7 @@ Creates clone db is used to create subset of aida-db to have more compact databa
 var CloneCustom = cli.Command{
 	Action:    createCustomClone,
 	Name:      "custom",
-	Usage:     "clone db creates aida-db custom subset",
+	Usage:     "clone custom creates a copy of aida-db components from specified range",
 	ArgsUsage: "<blockNumFirst> <blockNumLast>",
 	Flags: []cli.Flag{
 		&utils.AidaDbFlag,
