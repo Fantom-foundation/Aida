@@ -56,10 +56,10 @@ func MemoryBreakdown(db state.StateDB, cfg *Config, log logger.Logger) {
 	}
 }
 
-// PrintEvmStatistics prints EVM implementation specific stastical information
+// PrintEvmStatistics prints EVM implementation specific statical information
 // to the console. Does nothing, if such information is not offered.
 func PrintEvmStatistics(cfg *Config) {
-	pvm, ok := vm.GetVirtualMachine(cfg.VmImpl).(vm.ProfilingVM)
+	pvm, ok := vm.GetInterpreter(cfg.VmImpl).(vm.ProfilingInterpreter)
 	if pvm != nil && ok {
 		pvm.DumpProfile()
 	}
