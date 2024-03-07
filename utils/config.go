@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"github.com/Fantom-foundation/Aida/logger"
-	_ "github.com/Fantom-foundation/Tosca/go/vm"
+	_ "github.com/Fantom-foundation/Tosca/go/geth_adapter"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	_ "github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/params"
