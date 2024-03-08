@@ -140,6 +140,9 @@ func (i *archiveInquirer) doInquiry(rnd *rand.Rand, errCh chan error) {
 			i.log.Warningf("failed to obtain archive block height: %v", err)
 			return
 		}
+		if empty {
+			i.log.Warning("cannot run inquiry - archive is empty")
+		}
 		if !empty && uint64(tx.block) <= height {
 			break
 		}

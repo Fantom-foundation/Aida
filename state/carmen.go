@@ -56,6 +56,12 @@ type carmenHeadState struct {
 	blkCtx carmen.HeadBlockContext
 }
 
+type carmenHistoricState struct {
+	carmenStateDB
+	blkCtx    carmen.HistoricBlockContext
+	blkNumber uint64
+}
+
 func (s *carmenStateDB) CreateAccount(addr common.Address) {
 	s.txCtx.CreateAccount(carmen.Address(addr))
 }
@@ -285,12 +291,6 @@ func (s *carmenStateDB) ForEachStorage(common.Address, func(common.Hash, common.
 func (s *carmenStateDB) Error() error {
 	// ignored
 	return nil
-}
-
-type carmenHistoricState struct {
-	carmenStateDB
-	blkCtx    carmen.HistoricBlockContext
-	blkNumber uint64
 }
 
 func (s *carmenHistoricState) BeginTransaction(tx uint32) error {
