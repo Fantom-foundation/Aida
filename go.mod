@@ -3,7 +3,7 @@ module github.com/Fantom-foundation/Aida
 go 1.21
 
 require (
-	github.com/Fantom-foundation/Carmen/go v0.0.0-20240305171800-5a779f32d114
+	github.com/Fantom-foundation/Carmen/go v0.0.0-20240307173438-03f243835c3c
 	github.com/Fantom-foundation/Norma v0.0.0-20240213145200-b0df3997c6e0
 	github.com/Fantom-foundation/Substate v0.0.0-20240117110940-3ffd9c344809
 	github.com/Fantom-foundation/Tosca v0.0.0-20230527064715-aa1fc97baebe
