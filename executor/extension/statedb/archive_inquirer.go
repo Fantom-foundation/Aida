@@ -158,7 +158,6 @@ func (i *archiveInquirer) doInquiry(rnd *rand.Rand, errCh chan error) {
 		errCh <- fmt.Errorf("failed to obtain access to archive at block height %d: %v", tx.block, err)
 		return
 	}
-	defer archive.Release()
 
 	state := executor.State[txcontext.TxContext]{
 		Block:       tx.block,
@@ -169,6 +168,19 @@ func (i *archiveInquirer) doInquiry(rnd *rand.Rand, errCh chan error) {
 		Archive:    archive,
 		ErrorInput: errCh,
 	}
+
+	// todo rework
+	err = archive.BeginTransaction(uint32(tx.number))
+	if err != nil {
+		// ArchiveInquirer should not end the app, hence we just send the error to the errorLogger
+		errCh <- err
+		return
+	}
+
+	defer func() {
+		archive.EndTransaction()
+		archive.Release()
+	}()
 
 	err = i.validator.PreTransaction(state, ctx)
 	if err != nil {

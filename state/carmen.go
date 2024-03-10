@@ -332,7 +332,7 @@ func (s *carmenHeadState) GetArchiveBlockHeight() (uint64, bool, error) {
 	if blk == -1 {
 		return 0, false, nil
 	}
-	return uint64(blk), true, nil
+	return uint64(blk), false, nil
 }
 
 func (s *carmenStateDB) GetMemoryUsage() *MemoryUsage {
