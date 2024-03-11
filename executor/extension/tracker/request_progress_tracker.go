@@ -47,13 +47,13 @@ type rpcProcessInfo struct {
 }
 
 // PostTransaction increments number of transactions and saves gas used in last substate.
-func (t *requestProgressTracker) PostTransaction(state executor.State[*rpc.RequestAndResults], _ *executor.Context) error {
+func (t *requestProgressTracker) PostTransaction(state executor.State[*rpc.RequestAndResults], ctx *executor.Context) error {
 	t.lock.Lock()
 	defer t.lock.Unlock()
 
 	t.overallInfo.numRequests++
-	if state.Data.StateDB != nil {
-		t.overallInfo.gas += state.Data.StateDB.GasUsed
+	if ctx.ExecutionResult != nil {
+		t.overallInfo.gas += ctx.ExecutionResult.GetGasUsed()
 	}
 	overallInfo := t.overallInfo
 

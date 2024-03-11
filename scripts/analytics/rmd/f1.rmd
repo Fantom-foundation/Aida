@@ -19,12 +19,15 @@ Metadata <- dbSendQuery(con, 'SELECT key, cast(value as text) as value FROM meta
 
 first <- Metadata %>% filter(key == "First")
 last <- Metadata %>% filter(key == "Last")
+recent <- max(as.integer(last$value) - 10000000, as.integer(first$value))
 
 # load block and transaction tables into data frames and exclude lachesis transition block
 TxData <- dbReadTable(con, 'stats') %>% 
 	filter(start >= as.integer(first$value) & end <= as.integer(last$value)) %>%
 	mutate(total_disk = as.numeric(live_disk) + as.numeric(archive_disk))
 
+RecentTxData <- TxData %>% 
+	filter(start >= as.integer(recent))
 
 # close database connection
 dbDisconnect(con)
@@ -174,6 +177,28 @@ TxData %>%
    labs(x="Block Height", y="Transaction Per Second", title="Transaction Rate")
 ```
 
+```{r, echo=FALSE, message=FALSE}
+thresholdRecent <- 0.40 # print if recent is smaller than %total. 0 to always print.
+isRecentPrintable <- thresholdRecent < (as.integer(last$value) - recent) / (as.integer(last$value) - as.integer(first$value))
+```
+
+`r 
+if(isRecentPrintable){
+paste(
+	paste0("In the most recent 10 million blocks, the average transaction rate is ", b(format(mean(RecentTxData$tx_rate), big.mark=",", digit=4)), " TPS. ")
+)
+}
+`
+
+```{r, echo=FALSE, message=FALSE, fig.width=12, fig.height=8, eval=isRecentPrintable}
+RecentTxData %>% 
+   mutate(tx_rate = as.numeric(tx_rate), start = as.numeric(start) * 1e-6) %>%
+   ggplot(aes(x = start, y = tx_rate)) +
+   geom_point(alpha=0.3) +
+   scale_x_continuous(labels = scales::unit_format(unit="M")) +
+   labs(x="Block Height", y="Transaction Per Second", title="Transaction Rate of Most Recent 10M Blocks")
+```
+
 ## ##############################################################################
 
 ## 4. Gas Rate
@@ -192,6 +217,25 @@ TxData %>%
    scale_y_continuous(labels = scales::unit_format(unit="MGasPS")) +
    labs(x="Block Height", y="Million Gas Per Second", title="Gas Rate")
 ```
+
+`r 
+if(isRecentPrintable){
+paste(
+	paste0("In the most recent 10 million blocks, the average gas rate is ", b(format(mean(RecentTxData$gas_rate) * 1e-6, big.mark=",", digit=4)), " MGasPS ")
+)
+}
+`
+
+```{r, echo=FALSE, message=FALSE, fig.width=12, fig.height=8, eval=isRecentPrintable}
+RecentTxData %>% 
+   mutate(gas_rate = as.numeric(gas_rate) * 1e-6, start = as.numeric(start) * 1e-6) %>%
+   ggplot(aes(x = start, y = gas_rate)) +
+   geom_point(alpha=0.3) +
+   scale_x_continuous(labels = scales::unit_format(unit="M")) +
+   scale_y_continuous(labels = scales::unit_format(unit="MGasPS")) +
+   labs(x="Block Height", y="Million Gas Per Second", title="Gas Rate of Most Recent 10M Blocks")
+```
+
 
 ## ##############################################################################
 
