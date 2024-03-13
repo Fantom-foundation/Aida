@@ -29,7 +29,7 @@ require (
 	github.com/stretchr/testify v1.8.2
 	github.com/syndtr/goleveldb v1.0.1-0.20220614013038-64ee5596c38a
 	github.com/urfave/cli/v2 v2.25.7
-	go.uber.org/mock v0.2.0
+	go.uber.org/mock v0.4.0
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
 	golang.org/x/text v0.14.0
 	gonum.org/v1/gonum v0.12.0
