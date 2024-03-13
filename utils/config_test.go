@@ -320,7 +320,7 @@ func TestUtilsConfig_getMdBlockRange(t *testing.T) {
 
 // TestUtilsConfig_VmImplsAreRegistered checks if interpreters are correctly registered
 func TestUtilsConfig_VmImplsAreRegistered(t *testing.T) {
-	checkedImpls := []string{"lfvm", "lfvm-si", "geth"}
+	checkedImpls := []string{"lfvm", "lfvm-si", "geth", "evmzero", "evmone"}
 
 	statedb := state.MakeInMemoryStateDB(nil, 0)
 	defer func(statedb state.StateDB) {
