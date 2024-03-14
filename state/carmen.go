@@ -321,6 +321,7 @@ func (s *carmenHeadState) GetArchiveState(block uint64) (NonCommittableStateDB, 
 	return &carmenHistoricState{
 		carmenStateDB: s.carmenStateDB,
 		blkCtx:        historicBlkCtx,
+		blkNumber:     block,
 	}, nil
 }
 
