@@ -68,8 +68,8 @@ github.com/Fantom-foundation/Norma v0.0.0-20240213145200-b0df3997c6e0/go.mod h1:
 github.com/Fantom-foundation/Substate v0.0.0-20230224090651-4c8c024214f4/go.mod h1:/yIHWCDDJcdKMJYvOLdYOnHt5eUBF9XWnrvrNE+90ik=
 github.com/Fantom-foundation/Substate v0.0.0-20240117110940-3ffd9c344809 h1:3ufCktc5ngN2dbmAhgd0cgoyuZqOuW/BGh2z8fTVB4g=
 github.com/Fantom-foundation/Substate v0.0.0-20240117110940-3ffd9c344809/go.mod h1:HjYEJRhJV7l6j+i2LI5mxtpYf55TSfE2SI26T2J3P90=
-github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20230621093123-9c5132fd78c1 h1:yUK9WxGvVWGOQmFXu5RGIkrpiO7+42sM+obmkCsyL+g=
-github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20230621093123-9c5132fd78c1/go.mod h1:Hu8U9SrXP6ABqtSNfJHw8lRGnr6tyma9PNZvwTweDjQ=
+github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20230331085425-52296093a646 h1:wlo+TbNH2ZekB7uFMR69Z13ie6LvVdIIERXXojEc0ws=
+github.com/Fantom-foundation/go-ethereum-substate v1.1.1-0.20230331085425-52296093a646/go.mod h1:Hu8U9SrXP6ABqtSNfJHw8lRGnr6tyma9PNZvwTweDjQ=
 github.com/Fantom-foundation/go-opera-substate v1.0.1-0.20230523093256-e592c59c5996 h1:YzgxEAK3dCLNvmY1pgLEgPuPOsGHFMxT6QLpZnXuxM8=
 github.com/Fantom-foundation/go-opera-substate v1.0.1-0.20230523093256-e592c59c5996/go.mod h1:qby4+H/H4DzhsQADpib01uxmECmlSJJyPozppP+Pbsk=
 github.com/Fantom-foundation/lachesis-base v0.0.0-20221208123620-82a6d15f995c h1:hgy6GWSddbPyLxRLMykSEImCqv+XuXgLYbqOgI1CBvk=
