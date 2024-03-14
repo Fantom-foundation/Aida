@@ -107,7 +107,7 @@ func TestPrime_PrimeStateDB(t *testing.T) {
 			alloc, _ := utils.MakeWorldState(t)
 			ws := substatecontext.NewWorldState(alloc)
 
-			pc := utils.NewPrimeContext(cfg, sDB, log)
+			pc := utils.NewPrimeContext(cfg, sDB, 0, log)
 			// Priming state DB
 			err = pc.PrimeStateDB(ws, sDB)
 			if err != nil {
