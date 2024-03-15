@@ -25,6 +25,14 @@ func (r *archivePrepper[T]) PreBlock(state executor.State[T], ctx *executor.Cont
 	return nil
 }
 
+func (r *archivePrepper[T]) PreTransaction(state executor.State[T], ctx *executor.Context) error {
+	return ctx.Archive.BeginTransaction(uint32(state.Transaction))
+}
+
+func (r *archivePrepper[T]) PostTransaction(_ executor.State[T], ctx *executor.Context) error {
+	return ctx.Archive.EndTransaction()
+}
+
 // PostBlock releases the Archive StateDb
 func (r *archivePrepper[T]) PostBlock(_ executor.State[T], ctx *executor.Context) error {
 	ctx.Archive.Release()
