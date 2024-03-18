@@ -150,7 +150,7 @@ func (p *stateDbPrimer[T]) prime(stateDb state.StateDB, block uint64) error {
 
 	// advance from the latest precomputed update-set to the target block
 	// if the first block is 1, target must prime the genesis block
-	if block <= p.cfg.First-1 || p.cfg.First-1 == 0 {
+	if block < p.cfg.First || p.cfg.First-1 == 0 {
 		log.Infof("\tPriming using substate from %v to %v", block, p.cfg.First-1)
 		update, deletedAccounts, err := utils.GenerateUpdateSet(block, p.cfg.First-1, p.cfg)
 		if err != nil {
