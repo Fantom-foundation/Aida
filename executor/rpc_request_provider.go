@@ -88,7 +88,6 @@ func (r *rpcRequestProvider) Run(from int, to int, consumer Consumer[*rpc.Reques
 		}
 
 		req.DecodeInfo()
-
 		// are we skipping requests?
 		if req.RecordedBlock < from {
 			continue

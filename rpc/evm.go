@@ -133,11 +133,11 @@ func (e *EvmExecutor) newEVM(msg eth.Message) *vm.EVM {
 // sendCall executes the call method in the EvmExecutor with given archive
 func (e *EvmExecutor) sendCall() (*evmcore.ExecutionResult, error) {
 	var (
-		gp     *evmcore.GasPool
-		result *evmcore.ExecutionResult
-		err    error
-		msg    eth.Message
-		evm    *vm.EVM
+		gp              *evmcore.GasPool
+		executionResult *evmcore.ExecutionResult
+		err             error
+		msg             eth.Message
+		evm             *vm.EVM
 	)
 
 	gp = new(evmcore.GasPool).AddGas(math.MaxUint64) // based in opera
@@ -148,16 +148,19 @@ func (e *EvmExecutor) sendCall() (*evmcore.ExecutionResult, error) {
 
 	evm = e.newEVM(msg)
 
-	result, err = evmcore.ApplyMessage(evm, msg, gp)
+	executionResult, err = evmcore.ApplyMessage(evm, msg, gp)
+	if executionResult.Err != nil {
+
+	}
 
 	// If the timer caused an abort, return an appropriate error message
 	if evm.Cancelled() {
 		return nil, fmt.Errorf("execution aborted: timeout")
 	}
 	if err != nil {
-		return result, fmt.Errorf("err: %v (supplied gas %v)", err, e.args.Gas)
+		return executionResult, fmt.Errorf("err: %v (supplied gas %v)", err, e.args.Gas)
 	}
-	return result, nil
+	return executionResult, nil
 
 }
 

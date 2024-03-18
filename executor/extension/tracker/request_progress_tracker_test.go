@@ -55,26 +55,44 @@ func TestRpcProgressTrackerExtension_LoggingHappens(t *testing.T) {
 
 	ext.PreRun(executor.State[*rpc.RequestAndResults]{}, ctx)
 
+	ctx.ExecutionResult = rpc.NewResult(new(big.Int).Bytes(), nil, 10)
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: validReq}, ctx)
+
+	ctx.ExecutionResult = rpc.NewResult(nil, errors.New("test error"), 11)
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: errReq}, ctx)
 	time.Sleep(500 * time.Millisecond)
 
+	ctx.ExecutionResult = rpc.NewResult(new(big.Int).Bytes(), nil, 10)
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: validReq}, ctx)
+
+	ctx.ExecutionResult = rpc.NewResult(nil, errors.New("test error"), 11)
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: errReq}, ctx)
 	time.Sleep(500 * time.Millisecond)
 
+	ctx.ExecutionResult = rpc.NewResult(new(big.Int).Bytes(), nil, 10)
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: validReq}, ctx)
+
+	ctx.ExecutionResult = rpc.NewResult(nil, errors.New("test error"), 11)
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: errReq}, ctx)
 
+	ctx.ExecutionResult = rpc.NewResult(new(big.Int).Bytes(), nil, 10)
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: validReq}, ctx)
+
+	ctx.ExecutionResult = rpc.NewResult(nil, errors.New("test error"), 11)
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: errReq}, ctx)
 	time.Sleep(500 * time.Millisecond)
 
+	ctx.ExecutionResult = rpc.NewResult(new(big.Int).Bytes(), nil, 10)
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: validReq}, ctx)
+
+	ctx.ExecutionResult = rpc.NewResult(nil, errors.New("test error"), 11)
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: errReq}, ctx)
 	time.Sleep(500 * time.Millisecond)
 
+	ctx.ExecutionResult = rpc.NewResult(new(big.Int).Bytes(), nil, 10)
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: validReq}, ctx)
+
+	ctx.ExecutionResult = rpc.NewResult(nil, errors.New("test error"), 11)
 	ext.PostTransaction(executor.State[*rpc.RequestAndResults]{Data: errReq}, ctx)
 
 }
@@ -113,12 +131,6 @@ var validReq = &rpc.RequestAndResults{
 		Namespace:  "eth",
 		MethodBase: "getBalance",
 	},
-	StateDB: &rpc.StateDBData{
-		Result:      new(big.Int),
-		Error:       nil,
-		IsRecovered: false,
-		GasUsed:     10,
-	},
 	Response: &rpc.Response{
 		Version:   "2.0",
 		ID:        json.RawMessage{1},
@@ -135,12 +147,6 @@ var errReq = &rpc.RequestAndResults{
 		Method:     "eth_getBalance",
 		Namespace:  "eth",
 		MethodBase: "getBalance",
-	},
-	StateDB: &rpc.StateDBData{
-		Result:      nil,
-		Error:       errors.New("test error"),
-		IsRecovered: false,
-		GasUsed:     11,
 	},
 	Error: &rpc.ErrorResponse{
 		Version:   "2.0",
