@@ -55,6 +55,7 @@ func TestStateDbPrimerExtension_PrimingDoesTriggerForNonExistingStateDb(t *testi
 
 	gomock.InOrder(
 		log.EXPECT().Infof("Update buffer size: %v bytes", cfg.UpdateBufferSize),
+		log.EXPECT().Noticef("Priming from block %v...", uint64(0)),
 		log.EXPECT().Noticef("Priming to block %v...", cfg.First-1),
 	)
 
@@ -164,8 +165,129 @@ func TestStateDbPrimerExtension_UserIsInformedAboutRandomPriming(t *testing.T) {
 	gomock.InOrder(
 		log.EXPECT().Infof("Randomized Priming enabled; Seed: %v, threshold: %v", int64(111), 10),
 		log.EXPECT().Infof("Update buffer size: %v bytes", uint64(1024)),
+		log.EXPECT().Noticef("Priming from block %v...", uint64(0)),
 		log.EXPECT().Noticef("Priming to block %v...", uint64(9)),
 	)
 
 	ext.PreRun(executor.State[any]{}, &executor.Context{})
+}
+
+// make sure that the stateDb contains data from both the first and the second priming
+func TestStateDbPrimerExtension_ContinuousPrimingFromExistingDb(t *testing.T) {
+	log := logger.NewLogger("Warning", "TestPrimeStateDB")
+	for _, tc := range utils.GetStateDbTestCases() {
+		t.Run(fmt.Sprintf("DB variant: %s; shadowImpl: %s; archive variant: %s", tc.Variant, tc.ShadowImpl, tc.ArchiveVariant), func(t *testing.T) {
+			cfg := utils.MakeTestConfig(tc)
+
+			// Initialization of state DB
+			sDB, sDbDir, err := utils.PrepareStateDB(cfg)
+			defer os.RemoveAll(sDbDir)
+
+			if err != nil {
+				t.Fatalf("failed to create state DB: %v", err)
+			}
+
+			// Generating randomized world state
+			alloc, addresses := utils.MakeWorldState(t)
+			ws := substatecontext.NewWorldState(alloc)
+
+			pc := utils.NewPrimeContext(cfg, sDB, 0, log)
+			// Priming state DB
+			err = pc.PrimeStateDB(ws, sDB)
+			if err != nil {
+				t.Fatalf("failed to prime state DB: %v", err)
+			}
+
+			// Closing of state DB
+			err = sDB.Close()
+			if err != nil {
+				t.Fatalf("failed to close state DB: %v", err)
+			}
+
+			cfg.StateDbSrc = sDbDir
+			// Call for json creation and writing into it
+			err = utils.WriteStateDbInfo(cfg.StateDbSrc, cfg, 2, common.Hash{})
+			if err != nil {
+				t.Fatalf("failed to write into DB info json file: %v", err)
+			}
+
+			// Initialization of state DB
+			sDB2, sDbDir2, err := utils.PrepareStateDB(cfg)
+			defer os.RemoveAll(sDbDir2)
+			if err != nil {
+				t.Fatalf("failed to create state DB2: %v", err)
+			}
+
+			defer func() {
+				// Closing of state DB
+				err = sDB2.Close()
+				if err != nil {
+					t.Fatalf("failed to close state DB: %v", err)
+				}
+			}()
+
+			// Generating randomized world state
+			alloc2, addresses2 := utils.MakeWorldState(t)
+
+			//check if the adddresses are not clashing with addresses2
+			for _, addr := range addresses {
+				for _, addr2 := range addresses2 {
+					if addr == addr2 {
+						t.Fatalf("address %v is clashing; such small possibility shouldn't ever occure rerun the test", addr)
+					}
+				}
+			}
+
+			ws2 := substatecontext.NewWorldState(alloc2)
+
+			pc2 := utils.NewPrimeContext(cfg, sDB2, 0, log)
+			// Priming state DB
+			err = pc2.PrimeStateDB(ws2, sDB2)
+			if err != nil {
+				t.Fatalf("failed to prime state DB2: %v", err)
+			}
+
+			// Checks if state DB was primed correctly
+			ws.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
+				if sDB2.GetBalance(addr).Cmp(acc.GetBalance()) != 0 {
+					t.Fatalf("failed to prime account balance; Is: %v; Should be: %v", sDB2.GetBalance(addr), acc.GetBalance())
+				}
+
+				if sDB2.GetNonce(addr) != acc.GetNonce() {
+					t.Fatalf("failed to prime account nonce; Is: %v; Should be: %v", sDB2.GetNonce(addr), acc.GetNonce())
+				}
+
+				if bytes.Compare(sDB2.GetCode(addr), acc.GetCode()) != 0 {
+					t.Fatalf("failed to prime account code; Is: %v; Should be: %v", sDB2.GetCode(addr), acc.GetCode())
+				}
+
+				acc.ForEachStorage(func(keyHash common.Hash, valueHash common.Hash) {
+					if sDB2.GetState(addr, keyHash) != valueHash {
+						t.Fatalf("failed to prime account storage; Is: %v; Should be: %v", sDB2.GetState(addr, keyHash), valueHash)
+					}
+				})
+			})
+
+			// Checks if state DB was primed correctly
+			ws2.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
+				if sDB2.GetBalance(addr).Cmp(acc.GetBalance()) != 0 {
+					t.Fatalf("failed to prime account balance; Is: %v; Should be: %v", sDB2.GetBalance(addr), acc.GetBalance())
+				}
+
+				if sDB2.GetNonce(addr) != acc.GetNonce() {
+					t.Fatalf("failed to prime account nonce; Is: %v; Should be: %v", sDB2.GetNonce(addr), acc.GetNonce())
+				}
+
+				if bytes.Compare(sDB2.GetCode(addr), acc.GetCode()) != 0 {
+					t.Fatalf("failed to prime account code; Is: %v; Should be: %v", sDB2.GetCode(addr), acc.GetCode())
+				}
+
+				acc.ForEachStorage(func(keyHash common.Hash, valueHash common.Hash) {
+					if sDB2.GetState(addr, keyHash) != valueHash {
+						t.Fatalf("failed to prime account storage; Is: %v; Should be: %v", sDB2.GetState(addr, keyHash), valueHash)
+					}
+				})
+			})
+		})
+	}
 }
