@@ -56,11 +56,26 @@ func TestShadowState_AccountLifecycle(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(shadowDB state.StateDB) {
-				err := shadowDB.Close()
-				if err != nil {
-					t.Fatalf("failed to close shadow state DB: %v", err)
+				if err := shadowDB.EndTransaction(); err != nil {
+					t.Fatalf("cannot end tx; %v", err)
+				}
+				if err := shadowDB.EndBlock(); err != nil {
+					t.Fatalf("cannot end block; %v", err)
+				}
+				if err := shadowDB.Close(); err != nil {
+					t.Fatalf("cannot close db; %v", err)
 				}
 			}(shadowDB)
+
+			// this is needed because new carmen API needs txCtx for db interactions
+			err := shadowDB.BeginBlock(1)
+			if err != nil {
+				t.Fatalf("cannot begin block; %v", err)
+			}
+			err = shadowDB.BeginTransaction(0)
+			if err != nil {
+				t.Fatalf("cannot begin tx; %v", err)
+			}
 
 			addr := common.BytesToAddress(state.MakeRandomByteSlice(t, 40))
 
@@ -93,11 +108,26 @@ func TestShadowState_AccountBalanceOperations(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(shadowDB state.StateDB) {
-				err := shadowDB.Close()
-				if err != nil {
-					t.Fatalf("failed to close shadow state DB: %v", err)
+				if err := shadowDB.EndTransaction(); err != nil {
+					t.Fatalf("cannot end tx; %v", err)
+				}
+				if err := shadowDB.EndBlock(); err != nil {
+					t.Fatalf("cannot end block; %v", err)
+				}
+				if err := shadowDB.Close(); err != nil {
+					t.Fatalf("cannot close db; %v", err)
 				}
 			}(shadowDB)
+
+			// this is needed because new carmen API needs txCtx for db interactions
+			err := shadowDB.BeginBlock(1)
+			if err != nil {
+				t.Fatalf("cannot begin block; %v", err)
+			}
+			err = shadowDB.BeginTransaction(0)
+			if err != nil {
+				t.Fatalf("cannot begin tx; %v", err)
+			}
 
 			addr := common.BytesToAddress(state.MakeRandomByteSlice(t, 40))
 
@@ -133,11 +163,26 @@ func TestShadowState_NonceOperations(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(shadowDB state.StateDB) {
-				err := shadowDB.Close()
-				if err != nil {
-					t.Fatalf("failed to close shadow state DB: %v", err)
+				if err := shadowDB.EndTransaction(); err != nil {
+					t.Fatalf("cannot end tx; %v", err)
+				}
+				if err := shadowDB.EndBlock(); err != nil {
+					t.Fatalf("cannot end block; %v", err)
+				}
+				if err := shadowDB.Close(); err != nil {
+					t.Fatalf("cannot close db; %v", err)
 				}
 			}(shadowDB)
+
+			// this is needed because new carmen API needs txCtx for db interactions
+			err := shadowDB.BeginBlock(1)
+			if err != nil {
+				t.Fatalf("cannot begin block; %v", err)
+			}
+			err = shadowDB.BeginTransaction(0)
+			if err != nil {
+				t.Fatalf("cannot begin tx; %v", err)
+			}
 
 			addr := common.BytesToAddress(state.MakeRandomByteSlice(t, 40))
 
@@ -163,11 +208,26 @@ func TestShadowState_CodeOperations(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(shadowDB state.StateDB) {
-				err := shadowDB.Close()
-				if err != nil {
-					t.Fatalf("failed to close shadow state DB: %v", err)
+				if err := shadowDB.EndTransaction(); err != nil {
+					t.Fatalf("cannot end tx; %v", err)
+				}
+				if err := shadowDB.EndBlock(); err != nil {
+					t.Fatalf("cannot end block; %v", err)
+				}
+				if err := shadowDB.Close(); err != nil {
+					t.Fatalf("cannot close db; %v", err)
 				}
 			}(shadowDB)
+
+			// this is needed because new carmen API needs txCtx for db interactions
+			err := shadowDB.BeginBlock(1)
+			if err != nil {
+				t.Fatalf("cannot begin block; %v", err)
+			}
+			err = shadowDB.BeginTransaction(0)
+			if err != nil {
+				t.Fatalf("cannot begin tx; %v", err)
+			}
 
 			addr := common.BytesToAddress(state.MakeRandomByteSlice(t, 40))
 
@@ -201,11 +261,26 @@ func TestShadowState_StateOperations(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(shadowDB state.StateDB) {
-				err := shadowDB.Close()
-				if err != nil {
-					t.Fatalf("failed to close shadow state DB: %v", err)
+				if err := shadowDB.EndTransaction(); err != nil {
+					t.Fatalf("cannot end tx; %v", err)
+				}
+				if err := shadowDB.EndBlock(); err != nil {
+					t.Fatalf("cannot end block; %v", err)
+				}
+				if err := shadowDB.Close(); err != nil {
+					t.Fatalf("cannot close db; %v", err)
 				}
 			}(shadowDB)
+
+			// this is needed because new carmen API needs txCtx for db interactions
+			err := shadowDB.BeginBlock(1)
+			if err != nil {
+				t.Fatalf("cannot begin block; %v", err)
+			}
+			err = shadowDB.BeginTransaction(0)
+			if err != nil {
+				t.Fatalf("cannot begin tx; %v", err)
+			}
 
 			addr := common.BytesToAddress(state.MakeRandomByteSlice(t, 40))
 
@@ -270,11 +345,26 @@ func TestShadowState_RefundOperations(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(shadowDB state.StateDB) {
-				err := shadowDB.Close()
-				if err != nil {
-					t.Fatalf("failed to close shadow state DB: %v", err)
+				if err := shadowDB.EndTransaction(); err != nil {
+					t.Fatalf("cannot end tx; %v", err)
+				}
+				if err := shadowDB.EndBlock(); err != nil {
+					t.Fatalf("cannot end block; %v", err)
+				}
+				if err := shadowDB.Close(); err != nil {
+					t.Fatalf("cannot close db; %v", err)
 				}
 			}(shadowDB)
+
+			// this is needed because new carmen API needs txCtx for db interactions
+			err := shadowDB.BeginBlock(1)
+			if err != nil {
+				t.Fatalf("cannot begin block; %v", err)
+			}
+			err = shadowDB.BeginTransaction(0)
+			if err != nil {
+				t.Fatalf("cannot begin tx; %v", err)
+			}
 
 			refundValue := uint64(state.GetRandom(10000*4000, 10000*5000))
 			shadowDB.AddRefund(refundValue)
@@ -302,11 +392,26 @@ func TestShadowState_AccessListOperations(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(shadowDB state.StateDB) {
-				err := shadowDB.Close()
-				if err != nil {
-					t.Fatalf("failed to close shadow state DB: %v", err)
+				if err := shadowDB.EndTransaction(); err != nil {
+					t.Fatalf("cannot end tx; %v", err)
+				}
+				if err := shadowDB.EndBlock(); err != nil {
+					t.Fatalf("cannot end block; %v", err)
+				}
+				if err := shadowDB.Close(); err != nil {
+					t.Fatalf("cannot close db; %v", err)
 				}
 			}(shadowDB)
+
+			// this is needed because new carmen API needs txCtx for db interactions
+			err := shadowDB.BeginBlock(1)
+			if err != nil {
+				t.Fatalf("cannot begin block; %v", err)
+			}
+			err = shadowDB.BeginTransaction(0)
+			if err != nil {
+				t.Fatalf("cannot begin tx; %v", err)
+			}
 
 			// prepare content of access list
 			sender := common.BytesToAddress(state.MakeRandomByteSlice(t, 40))
@@ -392,9 +497,14 @@ func TestShadowState_SetBalanceUsingBulkInsertion(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(shadowDB state.StateDB) {
-				err := shadowDB.Close()
-				if err != nil {
-					t.Fatalf("failed to close shadow state DB: %v", err)
+				if err := shadowDB.EndTransaction(); err != nil {
+					t.Fatalf("cannot end tx; %v", err)
+				}
+				if err := shadowDB.EndBlock(); err != nil {
+					t.Fatalf("cannot end block; %v", err)
+				}
+				if err := shadowDB.Close(); err != nil {
+					t.Fatalf("cannot close db; %v", err)
 				}
 			}(shadowDB)
 
@@ -416,6 +526,16 @@ func TestShadowState_SetBalanceUsingBulkInsertion(t *testing.T) {
 				t.Fatalf("failed to close bulk load: %v", err)
 			}
 
+			// this is needed because new carmen API needs txCtx for db interactions
+			err = shadowDB.BeginBlock(1)
+			if err != nil {
+				t.Fatalf("cannot begin block; %v", err)
+			}
+			err = shadowDB.BeginTransaction(0)
+			if err != nil {
+				t.Fatalf("cannot begin tx; %v", err)
+			}
+
 			if shadowDB.GetBalance(addr).Cmp(newBalance) != 0 {
 				t.Fatal("failed to update account balance")
 			}
@@ -431,9 +551,14 @@ func TestShadowState_SetNonceUsingBulkInsertion(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(shadowDB state.StateDB) {
-				err := shadowDB.Close()
-				if err != nil {
-					t.Fatalf("failed to close shadow state DB: %v", err)
+				if err := shadowDB.EndTransaction(); err != nil {
+					t.Fatalf("cannot end tx; %v", err)
+				}
+				if err := shadowDB.EndBlock(); err != nil {
+					t.Fatalf("cannot end block; %v", err)
+				}
+				if err := shadowDB.Close(); err != nil {
+					t.Fatalf("cannot close db; %v", err)
 				}
 			}(shadowDB)
 
@@ -456,6 +581,16 @@ func TestShadowState_SetNonceUsingBulkInsertion(t *testing.T) {
 				t.Fatalf("failed to close bulk load: %v", err)
 			}
 
+			// this is needed because new carmen API needs txCtx for db interactions
+			err = shadowDB.BeginBlock(1)
+			if err != nil {
+				t.Fatalf("cannot begin block; %v", err)
+			}
+			err = shadowDB.BeginTransaction(0)
+			if err != nil {
+				t.Fatalf("cannot begin tx; %v", err)
+			}
+
 			if shadowDB.GetNonce(addr) != newNonce {
 				t.Fatal("failed to update account nonce")
 			}
@@ -471,16 +606,20 @@ func TestShadowState_SetStateUsingBulkInsertion(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(shadowDB state.StateDB) {
-				err := shadowDB.Close()
-				if err != nil {
-					t.Fatalf("failed to close shadow state DB: %v", err)
+				if err := shadowDB.EndTransaction(); err != nil {
+					t.Fatalf("cannot end tx; %v", err)
+				}
+				if err := shadowDB.EndBlock(); err != nil {
+					t.Fatalf("cannot end block; %v", err)
+				}
+				if err := shadowDB.Close(); err != nil {
+					t.Fatalf("cannot close db; %v", err)
 				}
 			}(shadowDB)
 
 			cbl, err := shadowDB.StartBulkLoad(0)
 			if err != nil {
 				t.Fatal(err)
-
 			}
 
 			addr := common.BytesToAddress(state.MakeRandomByteSlice(t, 40))
@@ -498,6 +637,16 @@ func TestShadowState_SetStateUsingBulkInsertion(t *testing.T) {
 				t.Fatalf("failed to close bulk load: %v", err)
 			}
 
+			//this is needed because new carmen API needs txCtx for db interactions
+			err = shadowDB.BeginBlock(1)
+			if err != nil {
+				t.Fatalf("cannot begin block; %v", err)
+			}
+			err = shadowDB.BeginTransaction(0)
+			if err != nil {
+				t.Fatalf("cannot begin tx; %v", err)
+			}
+
 			if shadowDB.GetState(addr, key) != value {
 				t.Fatal("failed to update account state")
 			}
@@ -513,9 +662,14 @@ func TestShadowState_SetCodeUsingBulkInsertion(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(shadowDB state.StateDB) {
-				err := shadowDB.Close()
-				if err != nil {
-					t.Fatalf("failed to close shadow state DB: %v", err)
+				if err := shadowDB.EndTransaction(); err != nil {
+					t.Fatalf("cannot end tx; %v", err)
+				}
+				if err := shadowDB.EndBlock(); err != nil {
+					t.Fatalf("cannot end block; %v", err)
+				}
+				if err := shadowDB.Close(); err != nil {
+					t.Fatalf("cannot close db; %v", err)
 				}
 			}(shadowDB)
 
@@ -539,6 +693,16 @@ func TestShadowState_SetCodeUsingBulkInsertion(t *testing.T) {
 				t.Fatalf("failed to close bulk load: %v", err)
 			}
 
+			// this is needed because new carmen API needs txCtx for db interactions
+			err = shadowDB.BeginBlock(1)
+			if err != nil {
+				t.Fatalf("cannot begin block; %v", err)
+			}
+			err = shadowDB.BeginTransaction(0)
+			if err != nil {
+				t.Fatalf("cannot begin tx; %v", err)
+			}
+
 			if bytes.Compare(shadowDB.GetCode(addr), code) != 0 {
 				t.Fatal("failed to update account code")
 			}
@@ -555,12 +719,29 @@ func TestShadowState_BulkloadOperations(t *testing.T) {
 			// generate 100 randomized accounts
 			accounts := [100]common.Address{}
 
+			// this is needed because new carmen API needs txCtx for db interactions
+			err := shadowDB.BeginBlock(1)
+			if err != nil {
+				t.Fatalf("cannot begin block; %v", err)
+			}
+			err = shadowDB.BeginTransaction(0)
+			if err != nil {
+				t.Fatalf("cannot begin tx; %v", err)
+			}
+
 			for i := 0; i < len(accounts); i++ {
 				accounts[i] = common.BytesToAddress(state.MakeRandomByteSlice(t, 40))
 				shadowDB.CreateAccount(accounts[i])
 			}
 
-			cbl, err := shadowDB.StartBulkLoad(0)
+			if err := shadowDB.EndTransaction(); err != nil {
+				t.Fatalf("cannot end tx; %v", err)
+			}
+			if err := shadowDB.EndBlock(); err != nil {
+				t.Fatalf("cannot end block; %v", err)
+			}
+
+			cbl, err := shadowDB.StartBulkLoad(2)
 			if err != nil {
 				t.Fatal(err)
 
@@ -713,8 +894,8 @@ func TestShadowState_GetHash_SuccessWithValidate(t *testing.T) {
 	db := NewShadowProxy(pdb, sdb, true)
 	expectedHash := common.HexToHash("0x1")
 
-	pdb.EXPECT().GetHash().Return(expectedHash)
-	sdb.EXPECT().GetHash().Return(expectedHash)
+	pdb.EXPECT().GetHash().Return(expectedHash, nil)
+	sdb.EXPECT().GetHash().Return(expectedHash, nil)
 
 	db.GetHash()
 	if err := db.Error(); err != nil {
@@ -730,7 +911,7 @@ func TestShadowState_GetHash_SuccessWithoutValidate(t *testing.T) {
 	primeHash := common.HexToHash("0x1")
 
 	// hash of shadow is not called
-	pdb.EXPECT().GetHash().Return(primeHash)
+	pdb.EXPECT().GetHash().Return(primeHash, nil)
 
 	db.GetHash()
 	if err := db.Error(); err != nil {
@@ -746,8 +927,8 @@ func TestShadowState_GetHash_FailWithValidate(t *testing.T) {
 	primeHash := common.HexToHash("0x1")
 	shadowHash := common.HexToHash("0x2")
 
-	pdb.EXPECT().GetHash().Return(primeHash)
-	sdb.EXPECT().GetHash().Return(shadowHash)
+	pdb.EXPECT().GetHash().Return(primeHash, nil)
+	sdb.EXPECT().GetHash().Return(shadowHash, nil)
 
 	db.GetHash()
 	if err := db.Error(); err == nil {

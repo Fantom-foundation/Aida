@@ -136,7 +136,7 @@ func TestSdbReplaySubstate_TxPrimerIsAddedIfDbImplIsNotMemory(t *testing.T) {
 
 	processor := makeSubstateProcessor(cfg, context.NewReplay(), operationProvider)
 
-	db.EXPECT().StartBulkLoad(uint64(0)).Return(bulkLoad)
+	db.EXPECT().StartBulkLoad(uint64(0)).Return(bulkLoad, nil)
 	bulkLoad.EXPECT().Close()
 
 	if err := replaySubstate(cfg, substateProvider, processor, db, nil); err != nil {

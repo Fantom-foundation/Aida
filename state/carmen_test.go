@@ -64,11 +64,26 @@ func TestCarmenState_AccountLifecycle(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(csDB StateDB) {
-				err = csDB.Close()
-				if err != nil {
-					t.Fatalf("failed to close carmen state DB: %v", err)
+				if err = csDB.EndTransaction(); err != nil {
+					t.Fatalf("cannot end tx; %v", err)
+				}
+				if err = csDB.EndBlock(); err != nil {
+					t.Fatalf("cannot end block; %v", err)
+				}
+				if err = csDB.Close(); err != nil {
+					t.Fatalf("cannot close db; %v", err)
 				}
 			}(csDB)
+
+			// this is needed because new carmen API needs txCtx for db interactions
+			err = csDB.BeginBlock(1)
+			if err != nil {
+				t.Fatalf("cannot begin block; %v", err)
+			}
+			err = csDB.BeginTransaction(0)
+			if err != nil {
+				t.Fatalf("cannot begin tx; %v", err)
+			}
 
 			addr := common.BytesToAddress(MakeRandomByteSlice(t, 40))
 
@@ -108,11 +123,26 @@ func TestCarmenState_AccountBalanceOperations(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(csDB StateDB) {
-				err = csDB.Close()
-				if err != nil {
-					t.Fatalf("failed to close carmen state DB: %v", err)
+				if err = csDB.EndTransaction(); err != nil {
+					t.Fatalf("cannot end tx; %v", err)
+				}
+				if err = csDB.EndBlock(); err != nil {
+					t.Fatalf("cannot end block; %v", err)
+				}
+				if err = csDB.Close(); err != nil {
+					t.Fatalf("cannot close db; %v", err)
 				}
 			}(csDB)
+
+			// this is needed because new carmen API needs txCtx for db interactions
+			err = csDB.BeginBlock(1)
+			if err != nil {
+				t.Fatalf("cannot begin block; %v", err)
+			}
+			err = csDB.BeginTransaction(0)
+			if err != nil {
+				t.Fatalf("cannot begin tx; %v", err)
+			}
 
 			addr := common.BytesToAddress(MakeRandomByteSlice(t, 40))
 
@@ -155,11 +185,26 @@ func TestCarmenState_NonceOperations(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(csDB StateDB) {
-				err = csDB.Close()
-				if err != nil {
-					t.Fatalf("failed to close carmen state DB: %v", err)
+				if err = csDB.EndTransaction(); err != nil {
+					t.Fatalf("cannot end tx; %v", err)
+				}
+				if err = csDB.EndBlock(); err != nil {
+					t.Fatalf("cannot end block; %v", err)
+				}
+				if err = csDB.Close(); err != nil {
+					t.Fatalf("cannot close db; %v", err)
 				}
 			}(csDB)
+
+			// this is needed because new carmen API needs txCtx for db interactions
+			err = csDB.BeginBlock(1)
+			if err != nil {
+				t.Fatalf("cannot begin block; %v", err)
+			}
+			err = csDB.BeginTransaction(0)
+			if err != nil {
+				t.Fatalf("cannot begin tx; %v", err)
+			}
 
 			addr := common.BytesToAddress(MakeRandomByteSlice(t, 40))
 
@@ -192,11 +237,26 @@ func TestCarmenState_CodeOperations(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(csDB StateDB) {
-				err = csDB.Close()
-				if err != nil {
-					t.Fatalf("failed to close carmen state DB: %v", err)
+				if err = csDB.EndTransaction(); err != nil {
+					t.Fatalf("cannot end tx; %v", err)
+				}
+				if err = csDB.EndBlock(); err != nil {
+					t.Fatalf("cannot end block; %v", err)
+				}
+				if err = csDB.Close(); err != nil {
+					t.Fatalf("cannot close db; %v", err)
 				}
 			}(csDB)
+
+			// this is needed because new carmen API needs txCtx for db interactions
+			err = csDB.BeginBlock(1)
+			if err != nil {
+				t.Fatalf("cannot begin block; %v", err)
+			}
+			err = csDB.BeginTransaction(0)
+			if err != nil {
+				t.Fatalf("cannot begin tx; %v", err)
+			}
 
 			addr := common.BytesToAddress(MakeRandomByteSlice(t, 40))
 
@@ -237,11 +297,26 @@ func TestCarmenState_StateOperations(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(csDB StateDB) {
-				err = csDB.Close()
-				if err != nil {
-					t.Fatalf("failed to close carmen state DB: %v", err)
+				if err = csDB.EndTransaction(); err != nil {
+					t.Fatalf("cannot end tx; %v", err)
+				}
+				if err = csDB.EndBlock(); err != nil {
+					t.Fatalf("cannot end block; %v", err)
+				}
+				if err = csDB.Close(); err != nil {
+					t.Fatalf("cannot close db; %v", err)
 				}
 			}(csDB)
+
+			// this is needed because new carmen API needs txCtx for db interactions
+			err = csDB.BeginBlock(1)
+			if err != nil {
+				t.Fatalf("cannot begin block; %v", err)
+			}
+			err = csDB.BeginTransaction(0)
+			if err != nil {
+				t.Fatalf("cannot begin tx; %v", err)
+			}
 
 			addr := common.BytesToAddress(MakeRandomByteSlice(t, 40))
 
@@ -320,11 +395,26 @@ func TestCarmenState_RefundOperations(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(csDB StateDB) {
-				err = csDB.Close()
-				if err != nil {
-					t.Fatalf("failed to close carmen state DB: %v", err)
+				if err = csDB.EndTransaction(); err != nil {
+					t.Fatalf("cannot end tx; %v", err)
+				}
+				if err = csDB.EndBlock(); err != nil {
+					t.Fatalf("cannot end block; %v", err)
+				}
+				if err = csDB.Close(); err != nil {
+					t.Fatalf("cannot close db; %v", err)
 				}
 			}(csDB)
+
+			// this is needed because new carmen API needs txCtx for db interactions
+			err = csDB.BeginBlock(1)
+			if err != nil {
+				t.Fatalf("cannot begin block; %v", err)
+			}
+			err = csDB.BeginTransaction(0)
+			if err != nil {
+				t.Fatalf("cannot begin tx; %v", err)
+			}
 
 			refundValue := uint64(GetRandom(10000*4000, 10000*5000))
 			csDB.AddRefund(refundValue)
@@ -359,11 +449,26 @@ func TestCarmenState_AccessListOperations(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(csDB StateDB) {
-				err = csDB.Close()
-				if err != nil {
-					t.Fatalf("failed to close carmen state DB: %v", err)
+				if err = csDB.EndTransaction(); err != nil {
+					t.Fatalf("cannot end tx; %v", err)
+				}
+				if err = csDB.EndBlock(); err != nil {
+					t.Fatalf("cannot end block; %v", err)
+				}
+				if err = csDB.Close(); err != nil {
+					t.Fatalf("cannot close db; %v", err)
 				}
 			}(csDB)
+
+			// this is needed because new carmen API needs txCtx for db interactions
+			err = csDB.BeginBlock(1)
+			if err != nil {
+				t.Fatalf("cannot begin block; %v", err)
+			}
+			err = csDB.BeginTransaction(0)
+			if err != nil {
+				t.Fatalf("cannot begin tx; %v", err)
+			}
 
 			// prepare content of access list
 			sender := common.BytesToAddress(MakeRandomByteSlice(t, 40))
@@ -517,9 +622,14 @@ func TestCarmenState_SetBalanceUsingBulkInsertion(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(csDB StateDB) {
-				err = csDB.Close()
-				if err != nil {
-					t.Fatalf("failed to close carmen state DB: %v", err)
+				if err = csDB.EndTransaction(); err != nil {
+					t.Fatalf("cannot end tx; %v", err)
+				}
+				if err = csDB.EndBlock(); err != nil {
+					t.Fatalf("cannot end block; %v", err)
+				}
+				if err = csDB.Close(); err != nil {
+					t.Fatalf("cannot close db; %v", err)
 				}
 			}(csDB)
 
@@ -538,6 +648,16 @@ func TestCarmenState_SetBalanceUsingBulkInsertion(t *testing.T) {
 			err = cbl.Close()
 			if err != nil {
 				t.Fatalf("failed to close bulk load: %v", err)
+			}
+
+			// this is needed because new carmen API needs txCtx for db interactions
+			err = csDB.BeginBlock(1)
+			if err != nil {
+				t.Fatalf("cannot begin block; %v", err)
+			}
+			err = csDB.BeginTransaction(0)
+			if err != nil {
+				t.Fatalf("cannot begin tx; %v", err)
 			}
 
 			if csDB.GetBalance(addr).Cmp(newBalance) != 0 {
@@ -560,11 +680,16 @@ func TestCarmenState_SetNonceUsingBulkInsertion(t *testing.T) {
 				t.Fatalf("failed to create carmen state DB: %v", err)
 			}
 
-			// Close DB after test ends
+			// Closing of state DB
 			defer func(csDB StateDB) {
-				err = csDB.Close()
-				if err != nil {
-					t.Fatalf("failed to close carmen state DB: %v", err)
+				if err = csDB.EndTransaction(); err != nil {
+					t.Fatalf("cannot end tx; %v", err)
+				}
+				if err = csDB.EndBlock(); err != nil {
+					t.Fatalf("cannot end block; %v", err)
+				}
+				if err = csDB.Close(); err != nil {
+					t.Fatalf("cannot close db; %v", err)
 				}
 			}(csDB)
 
@@ -584,6 +709,16 @@ func TestCarmenState_SetNonceUsingBulkInsertion(t *testing.T) {
 			err = cbl.Close()
 			if err != nil {
 				t.Fatalf("failed to close bulk load: %v", err)
+			}
+
+			// this is needed because new carmen API needs txCtx for db interactions
+			err = csDB.BeginBlock(1)
+			if err != nil {
+				t.Fatalf("cannot begin block; %v", err)
+			}
+			err = csDB.BeginTransaction(0)
+			if err != nil {
+				t.Fatalf("cannot begin tx; %v", err)
 			}
 
 			if csDB.GetNonce(addr) != newNonce {
@@ -608,9 +743,14 @@ func TestCarmenState_SetStateUsingBulkInsertion(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(csDB StateDB) {
-				err = csDB.Close()
-				if err != nil {
-					t.Fatalf("failed to close carmen state DB: %v", err)
+				if err = csDB.EndTransaction(); err != nil {
+					t.Fatalf("cannot end tx; %v", err)
+				}
+				if err = csDB.EndBlock(); err != nil {
+					t.Fatalf("cannot end block; %v", err)
+				}
+				if err = csDB.Close(); err != nil {
+					t.Fatalf("cannot close db; %v", err)
 				}
 			}(csDB)
 
@@ -632,6 +772,16 @@ func TestCarmenState_SetStateUsingBulkInsertion(t *testing.T) {
 			err = cbl.Close()
 			if err != nil {
 				t.Fatalf("failed to close bulk load: %v", err)
+			}
+
+			// this is needed because new carmen API needs txCtx for db interactions
+			err = csDB.BeginBlock(1)
+			if err != nil {
+				t.Fatalf("cannot begin block; %v", err)
+			}
+			err = csDB.BeginTransaction(0)
+			if err != nil {
+				t.Fatalf("cannot begin tx; %v", err)
 			}
 
 			if csDB.GetState(addr, key) != value {
@@ -656,9 +806,14 @@ func TestCarmenState_SetCodeUsingBulkInsertion(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(csDB StateDB) {
-				err = csDB.Close()
-				if err != nil {
-					t.Fatalf("failed to close carmen state DB: %v", err)
+				if err = csDB.EndTransaction(); err != nil {
+					t.Fatalf("cannot end tx; %v", err)
+				}
+				if err = csDB.EndBlock(); err != nil {
+					t.Fatalf("cannot end block; %v", err)
+				}
+				if err = csDB.Close(); err != nil {
+					t.Fatalf("cannot close db; %v", err)
 				}
 			}(csDB)
 
@@ -679,6 +834,16 @@ func TestCarmenState_SetCodeUsingBulkInsertion(t *testing.T) {
 			err = cbl.Close()
 			if err != nil {
 				t.Fatalf("failed to close bulk load: %v", err)
+			}
+
+			// this is needed because new carmen API needs txCtx for db interactions
+			err = csDB.BeginBlock(1)
+			if err != nil {
+				t.Fatalf("cannot begin block; %v", err)
+			}
+			err = csDB.BeginTransaction(0)
+			if err != nil {
+				t.Fatalf("cannot begin tx; %v", err)
 			}
 
 			if !bytes.Equal(csDB.GetCode(addr), code) {
@@ -703,11 +868,20 @@ func TestCarmenState_BulkloadOperations(t *testing.T) {
 
 			// Close DB after test ends
 			defer func(csDB StateDB) {
-				err = csDB.Close()
-				if err != nil {
-					t.Fatalf("failed to close carmen state DB: %v", err)
+				if err = csDB.Close(); err != nil {
+					t.Fatalf("cannot close db; %v", err)
 				}
 			}(csDB)
+
+			// this is needed because new carmen API needs txCtx for db interactions
+			err = csDB.BeginBlock(1)
+			if err != nil {
+				t.Fatalf("cannot begin block; %v", err)
+			}
+			err = csDB.BeginTransaction(0)
+			if err != nil {
+				t.Fatalf("cannot begin tx; %v", err)
+			}
 
 			// generate 100 randomized accounts
 			accounts := [100]common.Address{}
@@ -717,7 +891,14 @@ func TestCarmenState_BulkloadOperations(t *testing.T) {
 				csDB.CreateAccount(accounts[i])
 			}
 
-			cbl, err := csDB.StartBulkLoad(0)
+			if err = csDB.EndTransaction(); err != nil {
+				t.Fatalf("cannot end tx; %v", err)
+			}
+			if err = csDB.EndBlock(); err != nil {
+				t.Fatalf("cannot end block; %v", err)
+			}
+
+			cbl, err := csDB.StartBulkLoad(2)
 			if err != nil {
 				t.Fatal(err)
 			}

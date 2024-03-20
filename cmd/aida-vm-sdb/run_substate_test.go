@@ -145,12 +145,16 @@ func TestVmSdb_Substate_AllTransactionsAreProcessedInOrder(t *testing.T) {
 		db.EXPECT().BeginBlock(uint64(2)),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](2, 1), gomock.Any()),
 		db.EXPECT().PrepareSubstate(gomock.Any(), uint64(2)),
+		db.EXPECT().BeginTransaction(uint32(1)),
 		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](2, 1), gomock.Any()),
+		db.EXPECT().EndTransaction(),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](2, 1), gomock.Any()),
-		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](2, 2), gomock.Any()),
 		// Tx 2
+		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](2, 2), gomock.Any()),
 		db.EXPECT().PrepareSubstate(gomock.Any(), uint64(2)),
+		db.EXPECT().BeginTransaction(uint32(2)),
 		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](2, 2), gomock.Any()),
+		db.EXPECT().EndTransaction(),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](2, 2), gomock.Any()),
 		db.EXPECT().EndBlock(),
 		ext.EXPECT().PostBlock(executor.AtTransaction[txcontext.TxContext](2, 2), gomock.Any()),
@@ -160,7 +164,9 @@ func TestVmSdb_Substate_AllTransactionsAreProcessedInOrder(t *testing.T) {
 		db.EXPECT().BeginBlock(uint64(3)),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](3, 1), gomock.Any()),
 		db.EXPECT().PrepareSubstate(gomock.Any(), uint64(3)),
+		db.EXPECT().BeginTransaction(uint32(1)),
 		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](3, 1), gomock.Any()),
+		db.EXPECT().EndTransaction(),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](3, 1), gomock.Any()),
 		db.EXPECT().EndBlock(),
 		ext.EXPECT().PostBlock(executor.AtTransaction[txcontext.TxContext](3, 1), gomock.Any()),
@@ -170,7 +176,9 @@ func TestVmSdb_Substate_AllTransactionsAreProcessedInOrder(t *testing.T) {
 		db.EXPECT().BeginBlock(uint64(4)),
 		ext.EXPECT().PreTransaction(executor.AtTransaction[txcontext.TxContext](4, utils.PseudoTx), gomock.Any()),
 		db.EXPECT().PrepareSubstate(gomock.Any(), uint64(4)),
+		db.EXPECT().BeginTransaction(uint32(utils.PseudoTx)),
 		processor.EXPECT().Process(executor.AtTransaction[txcontext.TxContext](4, utils.PseudoTx), gomock.Any()),
+		db.EXPECT().EndTransaction(),
 		ext.EXPECT().PostTransaction(executor.AtTransaction[txcontext.TxContext](4, utils.PseudoTx), gomock.Any()),
 		db.EXPECT().EndBlock(),
 		ext.EXPECT().PostBlock(executor.AtTransaction[txcontext.TxContext](4, utils.PseudoTx), gomock.Any()),
@@ -204,21 +212,20 @@ func TestVmSdb_Substate_ValidationDoesNotFailOnValidTransaction(t *testing.T) {
 	gomock.InOrder(
 		db.EXPECT().BeginBlock(uint64(2)),
 		db.EXPECT().PrepareSubstate(gomock.Any(), uint64(2)),
+		db.EXPECT().BeginTransaction(uint32(1)),
 
 		// we return correct expected data so tx does not fail
 		db.EXPECT().Exist(testingAddress).Return(true),
 		db.EXPECT().GetBalance(testingAddress).Return(new(big.Int).SetUint64(1)),
 		db.EXPECT().GetNonce(testingAddress).Return(uint64(1)),
 		db.EXPECT().GetCode(testingAddress).Return([]byte{}),
-
-		db.EXPECT().BeginTransaction(uint32(1)),
 		db.EXPECT().Prepare(gomock.Any(), 1),
 		db.EXPECT().Snapshot().Return(15),
 		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
 		db.EXPECT().SubBalance(gomock.Any(), gomock.Any()),
 		db.EXPECT().RevertToSnapshot(15),
 		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
-		db.EXPECT().EndTransaction(),
+		// EndTransaction does not get called because execution fails
 	)
 
 	// run fails but not on validation
@@ -256,10 +263,12 @@ func TestVmSdb_Substate_ValidationFailsOnInvalidTransaction(t *testing.T) {
 	gomock.InOrder(
 		db.EXPECT().BeginBlock(uint64(2)),
 		db.EXPECT().PrepareSubstate(gomock.Any(), uint64(2)),
+		db.EXPECT().BeginTransaction(uint32(1)),
 		db.EXPECT().Exist(testingAddress).Return(false), // address does not exist
 		db.EXPECT().GetBalance(testingAddress).Return(new(big.Int).SetUint64(1)),
 		db.EXPECT().GetNonce(testingAddress).Return(uint64(1)),
 		db.EXPECT().GetCode(testingAddress).Return([]byte{}),
+		// EndTransaction does not get called because validation fails
 	)
 
 	err := runSubstates(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)

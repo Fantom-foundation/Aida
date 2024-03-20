@@ -544,7 +544,6 @@ func (s *shadowVmStateDb) getHash(opName string, op func(s state.VmStateDB) (com
 	if resP != resS {
 		s.logIssue(opName, resP, resS, args)
 		s.err = fmt.Errorf("%v diverged from shadow DB.", getOpcodeString(opName, args))
-		return common.Hash{}, s.err
 	}
 	return resP, nil
 }

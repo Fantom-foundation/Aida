@@ -97,9 +97,14 @@ func TestPrime_PrimeStateDB(t *testing.T) {
 
 			// Closing of state DB
 			defer func(sDB state.StateDB) {
-				err = sDB.Close()
-				if err != nil {
-					t.Fatalf("failed to close state DB: %v", err)
+				if err = sDB.EndTransaction(); err != nil {
+					t.Fatalf("cannot end tx; %v", err)
+				}
+				if err = sDB.EndBlock(); err != nil {
+					t.Fatalf("cannot end block; %v", err)
+				}
+				if err = sDB.Close(); err != nil {
+					t.Fatalf("cannot close db; %v", err)
 				}
 			}(sDB)
 
@@ -109,10 +114,24 @@ func TestPrime_PrimeStateDB(t *testing.T) {
 
 			pc := utils.NewPrimeContext(cfg, sDB, log)
 			// Priming state DB
-			pc.PrimeStateDB(ws, sDB)
+			err = pc.PrimeStateDB(ws, sDB)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// this is needed because new carmen API needs txCtx for db interactions
+			err = sDB.BeginBlock(1)
+			if err != nil {
+				t.Fatalf("cannot begin block; %v", err)
+			}
+			err = sDB.BeginTransaction(0)
+			if err != nil {
+				t.Fatalf("cannot begin tx; %v", err)
+			}
 
 			// Checks if state DB was primed correctly
 			ws.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
+
 				if sDB.GetBalance(addr).Cmp(acc.GetBalance()) != 0 {
 					t.Fatalf("failed to prime account balance; Is: %v; Should be: %v", sDB.GetBalance(addr), acc.GetBalance())
 				}

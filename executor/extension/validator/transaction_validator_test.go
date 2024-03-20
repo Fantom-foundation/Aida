@@ -777,9 +777,14 @@ func TestValidateStateDb_ValidationDoesNotFail(t *testing.T) {
 
 			// Closing of state DB
 			defer func(sDB state.StateDB) {
-				err = sDB.Close()
-				if err != nil {
-					t.Fatalf("failed to close state DB: %v", err)
+				if err = sDB.EndTransaction(); err != nil {
+					t.Fatalf("cannot end tx; %v", err)
+				}
+				if err = sDB.EndBlock(); err != nil {
+					t.Fatalf("cannot end block; %v", err)
+				}
+				if err = sDB.Close(); err != nil {
+					t.Fatalf("cannot close db; %v", err)
 				}
 			}(sDB)
 
@@ -792,7 +797,18 @@ func TestValidateStateDb_ValidationDoesNotFail(t *testing.T) {
 			// Create new prime context
 			pc := utils.NewPrimeContext(cfg, sDB, log)
 			// Priming state DB with given world state
-			pc.PrimeStateDB(ws, sDB)
+			if err = pc.PrimeStateDB(ws, sDB); err != nil {
+				t.Fatal(err)
+			}
+			// this is needed because new carmen API needs txCtx for db interactions
+			err = sDB.BeginBlock(1)
+			if err != nil {
+				t.Fatalf("cannot begin block; %v", err)
+			}
+			err = sDB.BeginTransaction(0)
+			if err != nil {
+				t.Fatalf("cannot begin tx; %v", err)
+			}
 
 			// Call for state DB validation and subsequent check for error
 			err = doSubsetValidation(ws, sDB, false)
@@ -818,9 +834,14 @@ func TestValidateStateDb_ValidationDoesNotFailWithPriming(t *testing.T) {
 
 			// Closing of state DB
 			defer func(sDB state.StateDB) {
-				err = sDB.Close()
-				if err != nil {
-					t.Fatalf("failed to close state DB: %v", err)
+				if err = sDB.EndTransaction(); err != nil {
+					t.Fatalf("cannot end tx; %v", err)
+				}
+				if err = sDB.EndBlock(); err != nil {
+					t.Fatalf("cannot end block; %v", err)
+				}
+				if err = sDB.Close(); err != nil {
+					t.Fatalf("cannot close db; %v", err)
 				}
 			}(sDB)
 
@@ -846,6 +867,16 @@ func TestValidateStateDb_ValidationDoesNotFailWithPriming(t *testing.T) {
 			}
 
 			ws[addr] = subAcc
+
+			// this is needed because new carmen API needs txCtx for db interactions
+			err = sDB.BeginBlock(1)
+			if err != nil {
+				t.Fatalf("cannot begin block; %v", err)
+			}
+			err = sDB.BeginTransaction(0)
+			if err != nil {
+				t.Fatalf("cannot begin tx; %v", err)
+			}
 
 			// Call for state DB validation with update enabled and subsequent checks if the update was made correctly
 			err = doSubsetValidation(substatecontext.NewWorldState(ws), sDB, true)
