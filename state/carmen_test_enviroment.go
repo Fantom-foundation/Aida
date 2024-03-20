@@ -6,18 +6,19 @@ import (
 	"testing"
 	"time"
 
-	carmen "github.com/Fantom-foundation/Carmen/go/state"
+	"github.com/Fantom-foundation/Carmen/go/carmen"
+	carmenstate "github.com/Fantom-foundation/Carmen/go/state"
 	_ "github.com/Fantom-foundation/Carmen/go/state/cppstate"
 	_ "github.com/Fantom-foundation/Carmen/go/state/gostate"
 )
 
 type CarmenStateTestCase struct {
-	Variant string
-	Schema  int
-	Archive string
+	Variant carmen.Variant
+	Schema  carmen.Schema
+	Archive carmen.Archive
 }
 
-func NewCarmenStateTestCase(variant string, schema int, archive string) CarmenStateTestCase {
+func NewCarmenStateTestCase(variant carmen.Variant, schema carmen.Schema, archive carmen.Archive) CarmenStateTestCase {
 	return CarmenStateTestCase{Variant: variant, Schema: schema, Archive: archive}
 }
 
@@ -28,8 +29,9 @@ func (c CarmenStateTestCase) String() string {
 // A combination of all carmen db configurations for testing interface
 func GetAllCarmenConfigurations() []CarmenStateTestCase {
 	var res []CarmenStateTestCase
-	for cfg := range carmen.GetAllRegisteredStateFactories() {
-		res = append(res, NewCarmenStateTestCase(string(cfg.Variant), int(cfg.Schema), string(cfg.Archive)))
+
+	for cfg := range carmenstate.GetAllRegisteredStateFactories() {
+		res = append(res, NewCarmenStateTestCase(carmen.Variant(cfg.Variant), carmen.Schema(cfg.Schema), carmen.Archive(cfg.Archive)))
 	}
 	return res
 }
