@@ -310,11 +310,15 @@ func (s *loggingVmStateDb) ForEachStorage(addr common.Address, op func(common.Ha
 	return s.db.ForEachStorage(addr, op)
 }
 
-func (s *LoggingStateDb) StartBulkLoad(block uint64) state.BulkLoad {
-	return &loggingBulkLoad{
-		nested:   s.state.StartBulkLoad(block),
-		writeLog: s.writeLog,
+func (s *LoggingStateDb) StartBulkLoad(block uint64) (state.BulkLoad, error) {
+	bl, err := s.state.StartBulkLoad(block)
+	if err != nil {
+		return nil, fmt.Errorf("cannot start bulkload; %w", err)
 	}
+	return &loggingBulkLoad{
+		nested:   bl,
+		writeLog: s.writeLog,
+	}, nil
 }
 
 func (s *LoggingStateDb) GetArchiveState(block uint64) (state.NonCommittableStateDB, error) {

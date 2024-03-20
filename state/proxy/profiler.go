@@ -401,9 +401,9 @@ func (p *ProfilerProxy) Close() error {
 	return err
 }
 
-func (p *ProfilerProxy) StartBulkLoad(block uint64) state.BulkLoad {
+func (p *ProfilerProxy) StartBulkLoad(block uint64) (state.BulkLoad, error) {
 	p.log.Fatal("StartBulkLoad not supported by ProfilerProxy")
-	return nil
+	return nil, nil
 }
 
 func (p *ProfilerProxy) GetArchiveState(block uint64) (state.NonCommittableStateDB, error) {

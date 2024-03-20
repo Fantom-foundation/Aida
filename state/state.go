@@ -137,7 +137,7 @@ type StateDB interface {
 	// may be active at any time and no other concurrent operations on the StateDB are
 	// while it is alive. Data inserted during a bulk-load will appear as if it was inserted
 	// in a single block.
-	StartBulkLoad(block uint64) BulkLoad
+	StartBulkLoad(block uint64) (BulkLoad, error)
 
 	// GetArchiveState creates a state instance linked to a historic block state in an
 	// optionally present archive. The operation fails if there is no archive or the

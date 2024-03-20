@@ -492,8 +492,8 @@ func (db *inMemoryStateDB) PrepareSubstate(alloc txcontext.WorldState, block uin
 	db.blockNum = block
 }
 
-func (s *inMemoryStateDB) StartBulkLoad(block uint64) BulkLoad {
-	return &gethInMemoryBulkLoad{}
+func (s *inMemoryStateDB) StartBulkLoad(uint64) (BulkLoad, error) {
+	return &gethInMemoryBulkLoad{}, nil
 }
 
 func (s *inMemoryStateDB) GetShadowDB() StateDB {

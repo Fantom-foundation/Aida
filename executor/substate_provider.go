@@ -54,5 +54,5 @@ func (s substateProvider) Run(from int, to int, consumer Consumer[txcontext.TxCo
 }
 
 func (substateProvider) Close() {
-	//substate.CloseSubstateDB()
+	substate.CloseSubstateDB()
 }

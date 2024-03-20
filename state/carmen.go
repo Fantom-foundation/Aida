@@ -304,12 +304,12 @@ func (s *carmenHistoricState) GetHash() (common.Hash, error) {
 	return common.Hash(h), err
 }
 
-func (s *carmenStateDB) StartBulkLoad(block uint64) BulkLoad {
+func (s *carmenStateDB) StartBulkLoad(block uint64) (BulkLoad, error) {
 	bl, err := s.db.StartBulkLoad(block)
 	if err != nil {
-		return nil
+		return nil, fmt.Errorf("cannot start bulkload; %w", err)
 	}
-	return &carmenBulkLoad{bl}
+	return &carmenBulkLoad{bl}, nil
 }
 
 func (s *carmenHeadState) GetArchiveState(block uint64) (NonCommittableStateDB, error) {

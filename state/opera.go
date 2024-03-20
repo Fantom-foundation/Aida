@@ -258,9 +258,9 @@ func (s *operaStateDB) Close() error {
 	return db.DiskDB().Close()
 }
 
-func (s *operaStateDB) StartBulkLoad(block uint64) BulkLoad {
+func (s *operaStateDB) StartBulkLoad(block uint64) (BulkLoad, error) {
 	s.log.Fatal("bulkload not yet implemented for opera statedb")
-	return nil
+	return nil, nil
 }
 
 func (s *operaStateDB) GetArchiveState(block uint64) (NonCommittableStateDB, error) {

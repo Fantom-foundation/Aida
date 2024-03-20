@@ -311,8 +311,16 @@ func (s *shadowVmStateDb) ForEachStorage(common.Address, func(common.Hash, commo
 	panic("ForEachStorage not implemented")
 }
 
-func (s *shadowStateDb) StartBulkLoad(block uint64) state.BulkLoad {
-	return &shadowBulkLoad{s.prime.StartBulkLoad(block), s.shadow.StartBulkLoad(block)}
+func (s *shadowStateDb) StartBulkLoad(block uint64) (state.BulkLoad, error) {
+	pbl, err := s.prime.StartBulkLoad(block)
+	if err != nil {
+		return nil, fmt.Errorf("cannot start prime bulkload; %w", err)
+	}
+	sbl, err := s.shadow.StartBulkLoad(block)
+	if err != nil {
+		return nil, fmt.Errorf("cannot start shadow bulkload; %w", err)
+	}
+	return &shadowBulkLoad{pbl, sbl}, nil
 }
 
 func (s *shadowStateDb) GetArchiveState(block uint64) (state.NonCommittableStateDB, error) {

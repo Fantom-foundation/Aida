@@ -392,7 +392,7 @@ func (p *EventProxy) Close() error {
 	return p.db.Close()
 }
 
-func (p *EventProxy) StartBulkLoad(uint64) state.BulkLoad {
+func (p *EventProxy) StartBulkLoad(uint64) (state.BulkLoad, error) {
 	panic("StartBulkLoad not supported by EventProxy")
 }
 

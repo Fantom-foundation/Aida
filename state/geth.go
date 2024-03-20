@@ -162,7 +162,9 @@ func (s *gethStateDB) EndTransaction() error {
 }
 
 func (s *gethStateDB) BeginBlock(number uint64) error {
-	s.openStateDB()
+	if err := s.openStateDB(); err != nil {
+		return fmt.Errorf("cannot open geth state-db; %w", err)
+	}
 	s.block = new(big.Int).SetUint64(number)
 	return nil
 }
@@ -302,10 +304,14 @@ func (s *gethStateDB) GetLogs(hash common.Hash, blockHash common.Hash) []*types.
 	return []*types.Log{}
 }
 
-func (s *gethStateDB) StartBulkLoad(block uint64) BulkLoad {
-	s.BeginBlock(block)
-	s.BeginTransaction(0)
-	return &gethBulkLoad{db: s}
+func (s *gethStateDB) StartBulkLoad(block uint64) (BulkLoad, error) {
+	if err := s.BeginBlock(block); err != nil {
+		return nil, err
+	}
+	if err := s.BeginTransaction(0); err != nil {
+		return nil, err
+	}
+	return &gethBulkLoad{db: s}, nil
 }
 
 func (s *gethStateDB) GetArchiveState(block uint64) (NonCommittableStateDB, error) {

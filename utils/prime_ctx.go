@@ -35,7 +35,12 @@ func (pc *PrimeContext) mayApplyBulkLoad() error {
 			return fmt.Errorf("failed to prime StateDB: %v", err)
 		}
 		pc.block++
-		pc.load = pc.db.StartBulkLoad(pc.block)
+
+		var err error
+		pc.load, err = pc.db.StartBulkLoad(pc.block)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -59,7 +64,11 @@ func (pc *PrimeContext) PrimeStateDB(ws txcontext.WorldState, db state.StateDB) 
 			return fmt.Errorf("failed to prime StateDB: %v", err)
 		}
 	} else {
-		pc.load = db.StartBulkLoad(pc.block)
+		var err error
+		pc.load, err = db.StartBulkLoad(pc.block)
+		if err != nil {
+			return err
+		}
 
 		var forEachError error
 		ws.ForEachAccount(func(addr common.Address, acc txcontext.Account) {
@@ -96,6 +105,9 @@ func (pc *PrimeContext) primeOneAccount(addr common.Address, acc txcontext.Accou
 	}
 	// if an account was previously primed, skip account creation.
 	if !found || !exist {
+		if pc.load == nil {
+			fmt.Println("a")
+		}
 		pc.load.CreateAccount(addr)
 		pc.exist[addr] = true
 		pc.operations++
@@ -137,7 +149,11 @@ func (pc *PrimeContext) PrimeStateDBRandom(ws txcontext.WorldState, db state.Sta
 		contracts[i], contracts[j] = contracts[j], contracts[i]
 	})
 
-	pc.load = db.StartBulkLoad(pc.block)
+	var err error
+	pc.load, err = pc.db.StartBulkLoad(pc.block)
+	if err != nil {
+		return err
+	}
 	for _, c := range contracts {
 		addr := common.HexToAddress(c)
 		account := ws.Get(addr)
@@ -150,7 +166,7 @@ func (pc *PrimeContext) PrimeStateDBRandom(ws txcontext.WorldState, db state.Sta
 		}
 
 	}
-	err := pc.load.Close()
+	err = pc.load.Close()
 	pc.block++
 	return err
 }

@@ -296,9 +296,9 @@ func (r *DeletionProxy) Close() error {
 	return r.db.Close()
 }
 
-func (r *DeletionProxy) StartBulkLoad(uint64) state.BulkLoad {
+func (r *DeletionProxy) StartBulkLoad(uint64) (state.BulkLoad, error) {
 	r.log.Fatal("StartBulkLoad not supported by DeletionProxy")
-	return nil
+	return nil, nil
 }
 
 func (r *DeletionProxy) GetMemoryUsage() *state.MemoryUsage {

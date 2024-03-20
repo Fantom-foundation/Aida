@@ -365,7 +365,7 @@ func (r *RecorderProxy) Close() error {
 	return r.db.Close()
 }
 
-func (r *RecorderProxy) StartBulkLoad(uint64) state.BulkLoad {
+func (r *RecorderProxy) StartBulkLoad(uint64) (state.BulkLoad, error) {
 	panic("StartBulkLoad not supported by RecorderProxy")
 }
 
