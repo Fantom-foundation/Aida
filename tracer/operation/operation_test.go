@@ -153,7 +153,7 @@ func (s *MockStateDB) EndSyncPeriod() {
 	s.recording = append(s.recording, Record{EndSyncPeriodID, []any{}})
 }
 
-func (s *MockStateDB) StartBulkLoad(uint64) state.BulkLoad {
+func (s *MockStateDB) StartBulkLoad(uint64) (state.BulkLoad, error) {
 	panic("Bulk load not supported in mock")
 }
 

@@ -398,7 +398,11 @@ func TestShadowState_SetBalanceUsingBulkInsertion(t *testing.T) {
 				}
 			}(shadowDB)
 
-			cbl := shadowDB.StartBulkLoad(0)
+			cbl, err := shadowDB.StartBulkLoad(0)
+			if err != nil {
+				t.Fatal(err)
+
+			}
 
 			addr := common.BytesToAddress(state.MakeRandomByteSlice(t, 40))
 
@@ -407,7 +411,7 @@ func TestShadowState_SetBalanceUsingBulkInsertion(t *testing.T) {
 			newBalance := big.NewInt(int64(state.GetRandom(1, 1000*5000)))
 			cbl.SetBalance(addr, newBalance)
 
-			err := cbl.Close()
+			err = cbl.Close()
 			if err != nil {
 				t.Fatalf("failed to close bulk load: %v", err)
 			}
@@ -433,7 +437,11 @@ func TestShadowState_SetNonceUsingBulkInsertion(t *testing.T) {
 				}
 			}(shadowDB)
 
-			cbl := shadowDB.StartBulkLoad(0)
+			cbl, err := shadowDB.StartBulkLoad(0)
+			if err != nil {
+				t.Fatal(err)
+
+			}
 
 			addr := common.BytesToAddress(state.MakeRandomByteSlice(t, 40))
 
@@ -443,7 +451,7 @@ func TestShadowState_SetNonceUsingBulkInsertion(t *testing.T) {
 
 			cbl.SetNonce(addr, newNonce)
 
-			err := cbl.Close()
+			err = cbl.Close()
 			if err != nil {
 				t.Fatalf("failed to close bulk load: %v", err)
 			}
@@ -469,7 +477,11 @@ func TestShadowState_SetStateUsingBulkInsertion(t *testing.T) {
 				}
 			}(shadowDB)
 
-			cbl := shadowDB.StartBulkLoad(0)
+			cbl, err := shadowDB.StartBulkLoad(0)
+			if err != nil {
+				t.Fatal(err)
+
+			}
 
 			addr := common.BytesToAddress(state.MakeRandomByteSlice(t, 40))
 
@@ -481,7 +493,7 @@ func TestShadowState_SetStateUsingBulkInsertion(t *testing.T) {
 
 			cbl.SetState(addr, key, value)
 
-			err := cbl.Close()
+			err = cbl.Close()
 			if err != nil {
 				t.Fatalf("failed to close bulk load: %v", err)
 			}
@@ -507,7 +519,11 @@ func TestShadowState_SetCodeUsingBulkInsertion(t *testing.T) {
 				}
 			}(shadowDB)
 
-			cbl := shadowDB.StartBulkLoad(0)
+			cbl, err := shadowDB.StartBulkLoad(0)
+			if err != nil {
+				t.Fatal(err)
+
+			}
 
 			addr := common.BytesToAddress(state.MakeRandomByteSlice(t, 40))
 
@@ -518,7 +534,7 @@ func TestShadowState_SetCodeUsingBulkInsertion(t *testing.T) {
 
 			cbl.SetCode(addr, code)
 
-			err := cbl.Close()
+			err = cbl.Close()
 			if err != nil {
 				t.Fatalf("failed to close bulk load: %v", err)
 			}
@@ -544,7 +560,11 @@ func TestShadowState_BulkloadOperations(t *testing.T) {
 				shadowDB.CreateAccount(accounts[i])
 			}
 
-			cbl := shadowDB.StartBulkLoad(0)
+			cbl, err := shadowDB.StartBulkLoad(0)
+			if err != nil {
+				t.Fatal(err)
+
+			}
 
 			for _, account := range accounts {
 				// randomized operation
@@ -580,7 +600,7 @@ func TestShadowState_BulkloadOperations(t *testing.T) {
 				}
 			}
 
-			err := cbl.Close()
+			err = cbl.Close()
 			if err != nil {
 				t.Fatalf("failed to close bulk load: %v", err)
 			}
