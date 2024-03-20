@@ -138,9 +138,9 @@ func (s *carmenStateDB) RevertToSnapshot(id int) {
 	s.txCtx.RevertToSnapshot(id)
 }
 
-func (s *carmenHeadState) BeginTransaction(tx uint32) error {
+func (s *carmenHeadState) BeginTransaction(uint32) error {
 	var err error
-	s.txCtx, err = s.blkCtx.BeginTransaction(int(tx))
+	s.txCtx, err = s.blkCtx.BeginTransaction()
 	return err
 }
 
@@ -293,9 +293,9 @@ func (s *carmenStateDB) Error() error {
 	return nil
 }
 
-func (s *carmenHistoricState) BeginTransaction(tx uint32) error {
+func (s *carmenHistoricState) BeginTransaction(uint32) error {
 	var err error
-	s.txCtx, err = s.blkCtx.BeginTransaction(int(tx))
+	s.txCtx, err = s.blkCtx.BeginTransaction()
 	return err
 }
 
@@ -326,7 +326,7 @@ func (s *carmenHeadState) GetArchiveState(block uint64) (NonCommittableStateDB, 
 }
 
 func (s *carmenHeadState) GetArchiveBlockHeight() (uint64, bool, error) {
-	blk, err := s.db.GetBlockHeight()
+	blk, err := s.db.GetArchiveBlockHeight()
 	if err != nil {
 		return 0, false, err
 	}
