@@ -304,6 +304,7 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Parallel(t *testing.T) {
 		db.EXPECT().GetNonce(testingAddress).Return(uint64(1)),
 		db.EXPECT().GetCode(testingAddress).Return([]byte{}),
 
+		db.EXPECT().BeginTransaction(uint32(1)),
 		db.EXPECT().Prepare(gomock.Any(), 1),
 		db.EXPECT().Snapshot().Return(15),
 		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
@@ -351,6 +352,7 @@ func TestVm_ValidationFailsOnInvalidTransaction_Sequential(t *testing.T) {
 		db.EXPECT().GetBalance(testingAddress).Return(new(big.Int).SetUint64(1)),
 		db.EXPECT().GetNonce(testingAddress).Return(uint64(1)),
 		db.EXPECT().GetCode(testingAddress).Return([]byte{}),
+		db.EXPECT().BeginTransaction(uint32(1)),
 	)
 
 	err := run(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
@@ -390,6 +392,7 @@ func TestVm_ValidationFailsOnInvalidTransaction_Parallel(t *testing.T) {
 		db.EXPECT().GetBalance(testingAddress).Return(new(big.Int).SetUint64(1)),
 		db.EXPECT().GetNonce(testingAddress).Return(uint64(1)),
 		db.EXPECT().GetCode(testingAddress).Return([]byte{}),
+		db.EXPECT().BeginTransaction(uint32(1)),
 	)
 
 	err := run(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
