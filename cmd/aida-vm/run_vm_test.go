@@ -53,23 +53,32 @@ func TestVm_AllDbEventsAreIssuedInOrder_Sequential(t *testing.T) {
 	gomock.InOrder(
 		// Block 2
 		// Tx 1
+		db.EXPECT().BeginTransaction(uint32(1)),
 		db.EXPECT().Prepare(gomock.Any(), 1),
 		db.EXPECT().Snapshot().Return(15),
 		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
 		db.EXPECT().RevertToSnapshot(15),
 		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 1)), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
+		db.EXPECT().EndTransaction(),
 		// Tx 2
+		db.EXPECT().BeginTransaction(uint32(2)),
 		db.EXPECT().Prepare(gomock.Any(), 2),
 		db.EXPECT().Snapshot().Return(17),
 		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
 		db.EXPECT().RevertToSnapshot(17),
 		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 2, 2)), common.HexToHash(fmt.Sprintf("0x%016d", 2))),
+		db.EXPECT().EndTransaction(),
 		// Block 3
+		db.EXPECT().BeginTransaction(uint32(1)),
 		db.EXPECT().Prepare(gomock.Any(), 1),
 		db.EXPECT().Snapshot().Return(19),
 		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
 		db.EXPECT().RevertToSnapshot(19),
 		db.EXPECT().GetLogs(common.HexToHash(fmt.Sprintf("0x%016d%016d", 3, 1)), common.HexToHash(fmt.Sprintf("0x%016d", 3))),
+		db.EXPECT().EndTransaction(),
+		// Pseudo Tx
+		db.EXPECT().BeginTransaction(uint32(utils.PseudoTx)),
+		db.EXPECT().EndTransaction(),
 	)
 
 	run(cfg, provider, db, executor.MakeLiveDbTxProcessor(cfg), nil)
@@ -245,6 +254,7 @@ func TestVmAdb_ValidationDoesNotFailOnValidTransaction_Sequential(t *testing.T) 
 		db.EXPECT().GetNonce(testingAddress).Return(uint64(1)),
 		db.EXPECT().GetCode(testingAddress).Return([]byte{}),
 
+		db.EXPECT().BeginTransaction(uint32(1)),
 		db.EXPECT().Prepare(gomock.Any(), 1),
 		db.EXPECT().Snapshot().Return(15),
 		db.EXPECT().GetBalance(gomock.Any()).Return(big.NewInt(1000)),
