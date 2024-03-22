@@ -153,24 +153,7 @@ func (i *archiveInquirer) doInquiry(rnd *rand.Rand, errCh chan error) {
 	}
 
 	// Perform historic query.
-	archive, err := i.state.GetArchiveState(uint64(tx.block))
-	if err != nil {
-		errCh <- fmt.Errorf("failed to obtain access to archive at block height %d: %v", tx.block, err)
-		return
-	}
-
-	state := executor.State[txcontext.TxContext]{
-		Block:       tx.block,
-		Transaction: tx.number,
-		Data:        tx.data,
-	}
-	ctx := &executor.Context{
-		Archive:    archive,
-		ErrorInput: errCh,
-	}
-
-	// todo rework
-	err = archive.BeginTransaction(uint32(tx.number))
+	archive, err := i.getArchive(uint64(tx.block), uint32(tx.number))
 	if err != nil {
 		// ArchiveInquirer should not end the app, hence we just send the error to the errorLogger
 		errCh <- err
@@ -182,6 +165,17 @@ func (i *archiveInquirer) doInquiry(rnd *rand.Rand, errCh chan error) {
 		archive.Release()
 	}()
 
+	state := executor.State[txcontext.TxContext]{
+		Block:       tx.block,
+		Transaction: tx.number,
+		Data:        tx.data,
+	}
+	ctx := &executor.Context{
+		Archive:    archive,
+		ErrorInput: errCh,
+	}
+
+	// input validation
 	err = i.validator.PreTransaction(state, ctx)
 	if err != nil {
 		// ArchiveInquirer should not end the app, hence we just send the error to the errorLogger
@@ -243,6 +237,20 @@ func (i *archiveInquirer) runProgressReport() {
 			return
 		}
 	}
+}
+
+func (i *archiveInquirer) getArchive(blk uint64, tx uint32) (state.NonCommittableStateDB, error) {
+	archive, err := i.state.GetArchiveState(blk)
+	if err != nil {
+		return nil, fmt.Errorf("failed to obtain access to archive blk %d, tx %d: %w", blk, tx, err)
+	}
+
+	err = archive.BeginTransaction(tx)
+	if err != nil {
+		return nil, fmt.Errorf("cannot begin transaction blk: %d, tx: %d; %w", blk, tx, err)
+	}
+
+	return archive, nil
 }
 
 type historicTransaction struct {

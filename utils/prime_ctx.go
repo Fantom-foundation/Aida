@@ -105,9 +105,6 @@ func (pc *PrimeContext) primeOneAccount(addr common.Address, acc txcontext.Accou
 	}
 	// if an account was previously primed, skip account creation.
 	if !found || !exist {
-		if pc.load == nil {
-			fmt.Println("a")
-		}
 		pc.load.CreateAccount(addr)
 		pc.exist[addr] = true
 		pc.operations++

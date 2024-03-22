@@ -99,14 +99,11 @@ func (s *shadowVmStateDb) SetNonce(addr common.Address, value uint64) {
 
 func (s *shadowVmStateDb) GetCommittedState(addr common.Address, key common.Hash) common.Hash {
 	// error here cannot happen
-	h, _ := s.getHash("GetCommittedState", func(s state.VmStateDB) (common.Hash, error) { return s.GetCommittedState(addr, key), nil }, addr, key)
-	return h
+	return s.getHash("GetCommittedState", func(s state.VmStateDB) common.Hash { return s.GetCommittedState(addr, key) }, addr, key)
 }
 
 func (s *shadowVmStateDb) GetState(addr common.Address, key common.Hash) common.Hash {
-	// error here cannot happen
-	h, _ := s.getHash("GetState", func(s state.VmStateDB) (common.Hash, error) { return s.GetState(addr, key), nil }, addr, key)
-	return h
+	return s.getHash("GetState", func(s state.VmStateDB) common.Hash { return s.GetState(addr, key) }, addr, key)
 }
 
 func (s *shadowVmStateDb) SetState(addr common.Address, key common.Hash, value common.Hash) {
@@ -122,9 +119,7 @@ func (s *shadowVmStateDb) GetCodeSize(addr common.Address) int {
 }
 
 func (s *shadowVmStateDb) GetCodeHash(addr common.Address) common.Hash {
-	// error here cannot happen
-	h, _ := s.getHash("GetCodeHash", func(s state.VmStateDB) (common.Hash, error) { return s.GetCodeHash(addr), nil }, addr)
-	return h
+	return s.getHash("GetCodeHash", func(s state.VmStateDB) common.Hash { return s.GetCodeHash(addr) }, addr)
 }
 
 func (s *shadowVmStateDb) SetCode(addr common.Address, code []byte) {
@@ -532,7 +527,7 @@ func (s *shadowNonCommittableStateDb) getHash(opName string, op func(s state.Non
 	return resP, fmt.Errorf("%v diverged from shadow DB.", getOpcodeString(opName, args))
 }
 
-func (s *shadowVmStateDb) getHash(opName string, op func(s state.VmStateDB) (common.Hash, error), args ...any) (common.Hash, error) {
+func (s *shadowVmStateDb) getStateHash(opName string, op func(s state.VmStateDB) (common.Hash, error), args ...any) (common.Hash, error) {
 	resP, err := op(s.prime)
 	if err != nil {
 		return common.Hash{}, err
@@ -546,6 +541,16 @@ func (s *shadowVmStateDb) getHash(opName string, op func(s state.VmStateDB) (com
 		s.err = fmt.Errorf("%v diverged from shadow DB.", getOpcodeString(opName, args))
 	}
 	return resP, nil
+}
+
+func (s *shadowVmStateDb) getHash(opName string, op func(s state.VmStateDB) common.Hash, args ...any) common.Hash {
+	resP := op(s.prime)
+	resS := op(s.shadow)
+	if resP != resS {
+		s.logIssue(opName, resP, resS, args)
+		s.err = fmt.Errorf("%v diverged from shadow DB.", getOpcodeString(opName, args))
+	}
+	return resP
 }
 
 func (s *shadowVmStateDb) getBigInt(opName string, op func(s state.VmStateDB) *big.Int, args ...any) *big.Int {

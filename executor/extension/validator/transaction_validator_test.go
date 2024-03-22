@@ -800,7 +800,7 @@ func TestValidateStateDb_ValidationDoesNotFail(t *testing.T) {
 			if err = pc.PrimeStateDB(ws, sDB); err != nil {
 				t.Fatal(err)
 			}
-			// this is needed because new carmen API needs txCtx for db interactions
+			// this is necessary because Carmen requires txCtx for db interactions
 			err = sDB.BeginBlock(1)
 			if err != nil {
 				t.Fatalf("cannot begin block; %v", err)
@@ -868,7 +868,7 @@ func TestValidateStateDb_ValidationDoesNotFailWithPriming(t *testing.T) {
 
 			ws[addr] = subAcc
 
-			// this is needed because new carmen API needs txCtx for db interactions
+			// this is necessary because Carmen requires txCtx for db interactions
 			err = sDB.BeginBlock(1)
 			if err != nil {
 				t.Fatalf("cannot begin block; %v", err)

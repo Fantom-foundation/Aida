@@ -119,7 +119,7 @@ func TestPrime_PrimeStateDB(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			// this is needed because new carmen API needs txCtx for db interactions
+			// this is necessary because Carmen requires txCtx for db interactions
 			err = sDB.BeginBlock(1)
 			if err != nil {
 				t.Fatalf("cannot begin block; %v", err)

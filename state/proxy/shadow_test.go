@@ -67,7 +67,7 @@ func TestShadowState_AccountLifecycle(t *testing.T) {
 				}
 			}(shadowDB)
 
-			// this is needed because new carmen API needs txCtx for db interactions
+			// this is necessary because Carmen requires txCtx for db interactions
 			err := shadowDB.BeginBlock(1)
 			if err != nil {
 				t.Fatalf("cannot begin block; %v", err)
@@ -119,7 +119,7 @@ func TestShadowState_AccountBalanceOperations(t *testing.T) {
 				}
 			}(shadowDB)
 
-			// this is needed because new carmen API needs txCtx for db interactions
+			// this is necessary because Carmen requires txCtx for db interactions
 			err := shadowDB.BeginBlock(1)
 			if err != nil {
 				t.Fatalf("cannot begin block; %v", err)
@@ -174,7 +174,7 @@ func TestShadowState_NonceOperations(t *testing.T) {
 				}
 			}(shadowDB)
 
-			// this is needed because new carmen API needs txCtx for db interactions
+			// this is necessary because Carmen requires txCtx for db interactions
 			err := shadowDB.BeginBlock(1)
 			if err != nil {
 				t.Fatalf("cannot begin block; %v", err)
@@ -219,7 +219,7 @@ func TestShadowState_CodeOperations(t *testing.T) {
 				}
 			}(shadowDB)
 
-			// this is needed because new carmen API needs txCtx for db interactions
+			// this is necessary because Carmen requires txCtx for db interactions
 			err := shadowDB.BeginBlock(1)
 			if err != nil {
 				t.Fatalf("cannot begin block; %v", err)
@@ -272,7 +272,7 @@ func TestShadowState_StateOperations(t *testing.T) {
 				}
 			}(shadowDB)
 
-			// this is needed because new carmen API needs txCtx for db interactions
+			// this is necessary because Carmen requires txCtx for db interactions
 			err := shadowDB.BeginBlock(1)
 			if err != nil {
 				t.Fatalf("cannot begin block; %v", err)
@@ -356,7 +356,7 @@ func TestShadowState_RefundOperations(t *testing.T) {
 				}
 			}(shadowDB)
 
-			// this is needed because new carmen API needs txCtx for db interactions
+			// this is necessary because Carmen requires txCtx for db interactions
 			err := shadowDB.BeginBlock(1)
 			if err != nil {
 				t.Fatalf("cannot begin block; %v", err)
@@ -403,7 +403,7 @@ func TestShadowState_AccessListOperations(t *testing.T) {
 				}
 			}(shadowDB)
 
-			// this is needed because new carmen API needs txCtx for db interactions
+			// this is necessary because Carmen requires txCtx for db interactions
 			err := shadowDB.BeginBlock(1)
 			if err != nil {
 				t.Fatalf("cannot begin block; %v", err)
@@ -526,7 +526,7 @@ func TestShadowState_SetBalanceUsingBulkInsertion(t *testing.T) {
 				t.Fatalf("failed to close bulk load: %v", err)
 			}
 
-			// this is needed because new carmen API needs txCtx for db interactions
+			// this is necessary because Carmen requires txCtx for db interactions
 			err = shadowDB.BeginBlock(1)
 			if err != nil {
 				t.Fatalf("cannot begin block; %v", err)
@@ -581,7 +581,7 @@ func TestShadowState_SetNonceUsingBulkInsertion(t *testing.T) {
 				t.Fatalf("failed to close bulk load: %v", err)
 			}
 
-			// this is needed because new carmen API needs txCtx for db interactions
+			// this is necessary because Carmen requires txCtx for db interactions
 			err = shadowDB.BeginBlock(1)
 			if err != nil {
 				t.Fatalf("cannot begin block; %v", err)
@@ -693,7 +693,7 @@ func TestShadowState_SetCodeUsingBulkInsertion(t *testing.T) {
 				t.Fatalf("failed to close bulk load: %v", err)
 			}
 
-			// this is needed because new carmen API needs txCtx for db interactions
+			// this is necessary because Carmen requires txCtx for db interactions
 			err = shadowDB.BeginBlock(1)
 			if err != nil {
 				t.Fatalf("cannot begin block; %v", err)
@@ -719,7 +719,7 @@ func TestShadowState_BulkloadOperations(t *testing.T) {
 			// generate 100 randomized accounts
 			accounts := [100]common.Address{}
 
-			// this is needed because new carmen API needs txCtx for db interactions
+			// this is necessary because Carmen requires txCtx for db interactions
 			err := shadowDB.BeginBlock(1)
 			if err != nil {
 				t.Fatalf("cannot begin block; %v", err)

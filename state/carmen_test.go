@@ -75,7 +75,7 @@ func TestCarmenState_AccountLifecycle(t *testing.T) {
 				}
 			}(csDB)
 
-			// this is needed because new carmen API needs txCtx for db interactions
+			// this is necessary because Carmen requires txCtx for db interactions
 			err = csDB.BeginBlock(1)
 			if err != nil {
 				t.Fatalf("cannot begin block; %v", err)
@@ -134,7 +134,7 @@ func TestCarmenState_AccountBalanceOperations(t *testing.T) {
 				}
 			}(csDB)
 
-			// this is needed because new carmen API needs txCtx for db interactions
+			// this is necessary because Carmen requires txCtx for db interactions
 			err = csDB.BeginBlock(1)
 			if err != nil {
 				t.Fatalf("cannot begin block; %v", err)
@@ -196,7 +196,7 @@ func TestCarmenState_NonceOperations(t *testing.T) {
 				}
 			}(csDB)
 
-			// this is needed because new carmen API needs txCtx for db interactions
+			// this is necessary because Carmen requires txCtx for db interactions
 			err = csDB.BeginBlock(1)
 			if err != nil {
 				t.Fatalf("cannot begin block; %v", err)
@@ -248,7 +248,7 @@ func TestCarmenState_CodeOperations(t *testing.T) {
 				}
 			}(csDB)
 
-			// this is needed because new carmen API needs txCtx for db interactions
+			// this is necessary because Carmen requires txCtx for db interactions
 			err = csDB.BeginBlock(1)
 			if err != nil {
 				t.Fatalf("cannot begin block; %v", err)
@@ -308,7 +308,7 @@ func TestCarmenState_StateOperations(t *testing.T) {
 				}
 			}(csDB)
 
-			// this is needed because new carmen API needs txCtx for db interactions
+			// this is necessary because Carmen requires txCtx for db interactions
 			err = csDB.BeginBlock(1)
 			if err != nil {
 				t.Fatalf("cannot begin block; %v", err)
@@ -406,7 +406,7 @@ func TestCarmenState_RefundOperations(t *testing.T) {
 				}
 			}(csDB)
 
-			// this is needed because new carmen API needs txCtx for db interactions
+			// this is necessary because Carmen requires txCtx for db interactions
 			err = csDB.BeginBlock(1)
 			if err != nil {
 				t.Fatalf("cannot begin block; %v", err)
@@ -460,7 +460,7 @@ func TestCarmenState_AccessListOperations(t *testing.T) {
 				}
 			}(csDB)
 
-			// this is needed because new carmen API needs txCtx for db interactions
+			// this is necessary because Carmen requires txCtx for db interactions
 			err = csDB.BeginBlock(1)
 			if err != nil {
 				t.Fatalf("cannot begin block; %v", err)
@@ -650,7 +650,7 @@ func TestCarmenState_SetBalanceUsingBulkInsertion(t *testing.T) {
 				t.Fatalf("failed to close bulk load: %v", err)
 			}
 
-			// this is needed because new carmen API needs txCtx for db interactions
+			// this is necessary because Carmen requires txCtx for db interactions
 			err = csDB.BeginBlock(1)
 			if err != nil {
 				t.Fatalf("cannot begin block; %v", err)
@@ -711,7 +711,7 @@ func TestCarmenState_SetNonceUsingBulkInsertion(t *testing.T) {
 				t.Fatalf("failed to close bulk load: %v", err)
 			}
 
-			// this is needed because new carmen API needs txCtx for db interactions
+			// this is necessary because Carmen requires txCtx for db interactions
 			err = csDB.BeginBlock(1)
 			if err != nil {
 				t.Fatalf("cannot begin block; %v", err)
@@ -774,7 +774,7 @@ func TestCarmenState_SetStateUsingBulkInsertion(t *testing.T) {
 				t.Fatalf("failed to close bulk load: %v", err)
 			}
 
-			// this is needed because new carmen API needs txCtx for db interactions
+			// this is necessary because Carmen requires txCtx for db interactions
 			err = csDB.BeginBlock(1)
 			if err != nil {
 				t.Fatalf("cannot begin block; %v", err)
@@ -836,7 +836,7 @@ func TestCarmenState_SetCodeUsingBulkInsertion(t *testing.T) {
 				t.Fatalf("failed to close bulk load: %v", err)
 			}
 
-			// this is needed because new carmen API needs txCtx for db interactions
+			// this is necessary because Carmen requires txCtx for db interactions
 			err = csDB.BeginBlock(1)
 			if err != nil {
 				t.Fatalf("cannot begin block; %v", err)
@@ -873,7 +873,7 @@ func TestCarmenState_BulkloadOperations(t *testing.T) {
 				}
 			}(csDB)
 
-			// this is needed because new carmen API needs txCtx for db interactions
+			// this is necessary because Carmen requires txCtx for db interactions
 			err = csDB.BeginBlock(1)
 			if err != nil {
 				t.Fatalf("cannot begin block; %v", err)

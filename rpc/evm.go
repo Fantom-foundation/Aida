@@ -96,7 +96,7 @@ func newTxArgs(params map[string]interface{}) ethapi.TransactionArgs {
 }
 
 // newEVM creates new instance of EVM with given parameters
-func (e *EvmExecutor) newEVM(msg eth.Message) *vm.EVM {
+func (e *EvmExecutor) newEVM(msg eth.Message, hashErr *error) *vm.EVM {
 	var (
 		getHash  func(uint64) common.Hash
 		blockCtx vm.BlockContext
@@ -105,7 +105,8 @@ func (e *EvmExecutor) newEVM(msg eth.Message) *vm.EVM {
 	)
 
 	getHash = func(_ uint64) common.Hash {
-		h, _ := e.archive.GetHash() // todo
+		h, err := e.archive.GetHash()
+		*hashErr = err
 		return h
 	}
 
@@ -146,11 +147,16 @@ func (e *EvmExecutor) sendCall() (*evmcore.ExecutionResult, error) {
 		return nil, err
 	}
 
-	evm = e.newEVM(msg)
+	var hashErr *error
+	evm = e.newEVM(msg, hashErr)
 
 	executionResult, err = evmcore.ApplyMessage(evm, msg, gp)
 	if executionResult.Err != nil {
+		return nil, fmt.Errorf("execution returned err; %w", err)
+	}
 
+	if hashErr != nil {
+		return nil, fmt.Errorf("cannot get state hash; %w", *hashErr)
 	}
 
 	// If the timer caused an abort, return an appropriate error message

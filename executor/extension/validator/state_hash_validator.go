@@ -65,7 +65,10 @@ func (e *stateHashValidator[T]) PostBlock(state executor.State[T], ctx *executor
 
 	// NOTE: ContinueOnFailure does not make sense here, if hash does not
 	// match every block after this block would have different hash
-	got, _ := ctx.State.GetHash()
+	got, err := ctx.State.GetHash()
+	if err != nil {
+		return fmt.Errorf("cannot get state hash; %w", err)
+	}
 	if want != got {
 		return fmt.Errorf("unexpected hash for Live block %d\nwanted %v\n   got %v", state.Block, want, got)
 	}
