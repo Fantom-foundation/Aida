@@ -34,7 +34,28 @@ func (r *result) GetBloom() types.Bloom {
 }
 
 func (r *result) GetLogs() []*types.Log {
-	panic("how to return without iterating")
+	// todo how to avoid iterating
+	logs := make([]*types.Log, 0)
+	for _, l := range r.Logs {
+		topics := make([]common.Hash, 0)
+		for _, t := range l.Topics {
+			topics = append(topics, common.Hash(t))
+		}
+
+		logs = append(logs, &types.Log{
+			Address:     common.Address(l.Address),
+			Topics:      topics,
+			Data:        l.Data,
+			BlockNumber: l.BlockNumber,
+			TxHash:      common.Hash(l.TxHash),
+			TxIndex:     l.TxIndex,
+			BlockHash:   common.Hash(l.BlockHash),
+			Index:       l.Index,
+			Removed:     l.Removed,
+		})
+	}
+
+	return logs
 }
 
 func (r *result) GetContractAddress() common.Address {

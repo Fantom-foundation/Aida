@@ -21,11 +21,11 @@ func (t *substateData) GetStateHash() common.Hash {
 }
 
 func (t *substateData) GetInputState() txcontext.WorldState {
-	return NewWorldState(t.InputAlloc)
+	return NewWorldState(t.PreState)
 }
 
 func (t *substateData) GetOutputState() txcontext.WorldState {
-	return NewWorldState(t.OutputAlloc)
+	return NewWorldState(t.PostState)
 }
 
 func (t *substateData) GetBlockEnvironment() txcontext.BlockEnvironment {

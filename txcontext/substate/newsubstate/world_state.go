@@ -2,21 +2,21 @@ package newsubstate
 
 import (
 	"github.com/Fantom-foundation/Aida/txcontext"
-	substateCommon "github.com/Fantom-foundation/Substate/geth/common"
 	"github.com/Fantom-foundation/Substate/substate"
+	"github.com/Fantom-foundation/Substate/types"
 	"github.com/ethereum/go-ethereum/common"
 )
 
-func NewWorldState(alloc substate.Alloc) txcontext.WorldState {
+func NewWorldState(alloc substate.WorldState) txcontext.WorldState {
 	return worldState{alloc: alloc}
 }
 
 type worldState struct {
-	alloc substate.Alloc
+	alloc substate.WorldState
 }
 
 func (a worldState) Has(addr common.Address) bool {
-	_, ok := a.alloc[substateCommon.Address(addr)]
+	_, ok := a.alloc[types.Address(addr)]
 	return ok
 }
 
@@ -25,7 +25,7 @@ func (a worldState) Equal(y txcontext.WorldState) bool {
 }
 
 func (a worldState) Get(addr common.Address) txcontext.Account {
-	acc, ok := a.alloc[substateCommon.Address(addr)]
+	acc, ok := a.alloc[types.Address(addr)]
 	if !ok {
 		return nil
 	}
@@ -44,7 +44,7 @@ func (a worldState) Len() int {
 }
 
 func (a worldState) Delete(addr common.Address) {
-	delete(a.alloc, substateCommon.Address(addr))
+	delete(a.alloc, types.Address(addr))
 }
 
 func (a worldState) String() string {
